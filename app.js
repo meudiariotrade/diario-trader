@@ -466,11 +466,11 @@ const V=ks.map(k=>sn[k][mk].v),Q=ks.map(k=>sn[k][mk].c),al=V.concat(Q),mn=Math.m
 return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto"><polyline points="${pt(Q)}" fill="none" stroke="#8a93a3" stroke-width="1.5" stroke-dasharray="4 3"/><polyline points="${pt(V)}" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linejoin="round"/></svg><div class="sm mut top"><span>${fd(ks[0])}</span><span>linha cheia: patrimônio · tracejada: investido</span><span>${fd(ks[ks.length-1])}</span></div>`}
 let CARMSG='';
 async function carPrecos(){const c=cfg();if(!c){alert('Configure o Supabase em config.js para buscar preços.');return}
-let k=ls.get('diario-pxkey');if(!k){k=prompt('Senha dos preços (o APP_SECRET que você definiu no Supabase):');if(!k)return;ls.set('diario-pxkey',k)}
+if(!SESS){alert('Entre na sua conta (Mais → Conta) para buscar preços.');return}
 const C=carCalc(),br=C.BR.pos.map(o=>o.tk),us=C.US.pos.map(o=>o.tk);if(!br.length&&!us.length){alert('Lance uma posição primeiro.');return}
 CARMSG='Buscando preços…';render();
-try{const r=await fetch(c.url+'/functions/v1/precos',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+c.key,'x-app-key':k},body:JSON.stringify({br,us})});
-if(r.status===401){ls.del('diario-pxkey');throw new Error('Senha incorreta ou função sem permissão.')}
+try{await tok();const r=await fetch(c.url+'/functions/v1/precos',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify({br,us})});
+if(r.status===401)throw new Error('Entre na sua conta de novo (Mais → Conta).')
 const j=await r.json();if(!r.ok)throw new Error(j.erro||('Erro '+r.status));
 const cc=(S.cart??={lanc:[],px:{},snap:{}}),td=loc().slice(0,10);let n=0;
 for(const[mk,o]of[['BR',j.br||{}],['US',j.us||{}]])for(const t in o)if(o[t]>0){(cc.px??={})[mk+':'+t]={p:o[t],d:td};n++}

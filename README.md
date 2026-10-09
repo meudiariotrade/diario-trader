@@ -9,7 +9,7 @@ App estático: `index.html`, `app.js`, `style.css`, `sw.js`, `manifest.webmanife
 4. Em 1 a 2 minutos o site abre em `https://SEU-USUARIO.github.io/diario-trader/`.
 5. No iPhone: abra o link no Safari → Compartilhar → **Adicionar à Tela de Início**. No Android (Chrome): menu → **Instalar app**.
 
-Atenção: no plano gratuito, o GitHub Pages costuma exigir repositório público. O `config.js` só deve ter a URL e a chave **anon** do Supabase. **Nunca** coloque no repositório: chave `service_role`, BRAPI_TOKEN, TWELVE_KEY ou o APP_SECRET.
+Atenção: no plano gratuito, o GitHub Pages costuma exigir repositório público. O `config.js` só deve ter a URL e a chave **anon** do Supabase. **Nunca** coloque no repositório: chave `service_role`, BRAPI_TOKEN, TWELVE_KEY .
 
 ## 2) Atualizar o app depois
 Troque os arquivos no repositório (Add file → Upload files, mesmo nome sobrescreve). Em `sw.js`, aumente o número em `diario-vNN` a cada versão, para o celular baixar a novidade. Depois feche e abra o app.
@@ -18,11 +18,12 @@ Troque os arquivos no repositório (Add file → Upload files, mesmo nome sobres
 1. Crie conta grátis na **brapi.dev** (copie o token) e na **twelvedata.com** (copie a API key).
 2. No painel do Supabase do seu projeto: **Edge Functions → Deploy a new function** (pelo editor). Nome: `precos`. Cole o conteúdo de `supabase/functions/precos/index.ts` e faça o deploy. (Os nomes dos menus podem mudar um pouco.)
 3. Em **Edge Functions → Secrets**, crie:
-   - `APP_SECRET`: uma senha que você inventa;
    - `BRAPI_TOKEN`: token da brapi;
    - `TWELVE_KEY`: key da Twelve Data;
    - `BRAPI_LOTE` (opcional): tickers por chamada na brapi; o padrão é 1.
-4. No app: Mais → Carteiras → **Atualizar preços**. Na primeira vez ele pede o APP_SECRET.
+4. No app: entre na sua conta (Mais → Conta) e vá em Mais → Carteiras → **Atualizar preços**. Cada amigo usa a própria conta; a função só responde a quem está logado. Não existe senha compartilhada.
+
+Atenção: a cota gratuita das APIs é dividida entre todos que usam o app, e os planos gratuitos costumam ser para uso pessoal. Leia os termos da brapi e da Twelve Data antes de abrir para muita gente.
 
 Limites do plano gratuito da Twelve Data: 8 créditos por minuto. Com mais de 7 ações americanas, algumas voltam sem preço; toque de novo depois de 1 minuto. Tesouro não tem busca automática: digite o preço no cartão.
 
