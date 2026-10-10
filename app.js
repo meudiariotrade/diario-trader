@@ -467,7 +467,7 @@ setTimeout(tapeLoad,1200);setInterval(tapeLoad,60000)})();
 const css=document.createElement('style');
 css.textContent='nav{display:none!important}#app{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))!important}#fab{bottom:calc(20px + env(safe-area-inset-bottom,0px))!important}#fabm{bottom:calc(86px + env(safe-area-inset-bottom,0px))!important}#mbtn{position:absolute;left:0;top:env(safe-area-inset-top,0px);width:46px;height:46px;display:flex;align-items:center;justify-content:center;background:#05070a;color:#e5e7eb;border:0;border-right:1px solid #1f6f3a;z-index:3;cursor:pointer;padding:0}#tape .tradingview-widget-container,#tape .mq{margin-left:46px}#mdr{position:fixed;left:0;top:0;right:0;bottom:0;z-index:90}#mdr .mbk{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.55)}#mdr .mpn{position:absolute;left:0;top:0;bottom:0;width:min(84vw,330px);background:var(--bg);color:var(--tx);border-right:1px solid var(--bd);overflow-y:auto;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(16px + env(safe-area-inset-bottom,0px));animation:mdi .18s ease-out}@keyframes mdi{from{transform:translateX(-100%)}}#mdr .mhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}#mdr .mhd button{background:none;border:0;color:var(--tx);font-size:24px;padding:4px 8px}#mdr .ms{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:14px 4px 6px}#mdr .mit{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-radius:12px;padding:10px;color:var(--tx);font:inherit;cursor:pointer}#mdr .mit small{display:block;color:var(--mut);font-size:12px}#mdr .mit.on{background:color-mix(in srgb,var(--ac) 18%,var(--bg))}#mdr .mi{width:28px;display:flex;justify-content:center;font-size:20px;flex:none}';
 document.head.appendChild(css);
-const A=[['home','🏠','Início','Resumo do dia'],['trades','📸','Day trade','Operações e fotos'],['swing','🌊','Swing','Posições e scanner'],['opc','🎯','Opções','Abertas e performance'],['dia','🌙','Meu dia','Antes e depois do mercado'],['stats','📊','Estatísticas','Resultados e feedback']],
+const A=[['home','🏠','Início','Resumo do dia'],['mercado','📰','Mercado','Agenda, notícias e alertas'],['trades','📸','Day trade','Operações e fotos'],['swing','🌊','Swing','Posições e scanner'],['opc','🎯','Opções','Abertas e performance'],['dia','🌙','Meu dia','Antes e depois do mercado'],['stats','📊','Estatísticas','Resultados e feedback']],
 B=[['regras','Regras','Seu plano escrito'],['graf','Gráficos','TradingView e níveis'],['painel','Painel','Mesa, metas e backup'],['rev','Revisão','Calendário do mês'],['estudos','Estudos','Livros e padrões de candles'],['ativos','Ativos','Margem, risco e lote'],['contratos','Contratos','Lotes pelo capital e volatilidade'],['carteiras','Carteiras','Brasil e EUA, evolução'],['analise','Análise IA','Relatório da carteira'],['imposto','Imposto de renda','Notas, custos e DARF'],['import','Importar','Relatório do Profit (CSV)'],['conta','Conta','Sincronização']];
 const it=(k,i,t,d)=>`<button class="mit${tab===k?' on':''}" data-a="gotab" data-id="${k}"><span class="mi">${i}</span><span><b>${t}</b><small>${d}</small></span></button>`;
 function mClose(){const m=document.getElementById('mdr');if(m)m.remove();document.body.style.overflow=T?'hidden':''}
@@ -613,7 +613,7 @@ S.trades=(Array.isArray(S.trades)?S.trades:[]).filter(t=>t&&typeof t==='object')
 S.days=o(S.days);for(const k of Object.keys(S.days)){const v=S.days[k]=o(S.days[k]);if(!(v.chk&&typeof v.chk==='object'&&!Array.isArray(v.chk)))v.chk={}}
 S.rules=(Array.isArray(S.rules)?S.rules:[]).filter(r=>r&&typeof r==='object');
 ['ax','rev','pn','del'].forEach(k=>{if(S[k]!=null&&(typeof S[k]!=='object'||Array.isArray(S[k])))S[k]={}});}
-function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:vDia,regras:vRegras,stats:vStats,graf:vGraf,painel:vPainel,rev:vRev,conta:vConta,estudos:vEstudos,livro:vLivro,ativos:vAtivos,contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis()}
+function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:vMercado,mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:vDia,regras:vRegras,stats:vStats,graf:vGraf,painel:vPainel,rev:vRev,conta:vConta,estudos:vEstudos,livro:vLivro,ativos:vAtivos,contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis()}
 function render(){try{render0()}catch(e){console.error(e);const ap=$('#app');if(ap)ap.innerHTML='<div class="warn" style="margin:12px 0"><b>Não consegui abrir esta tela ('+esc(tab)+').</b><div class="sm" style="margin-top:6px">'+esc(String(e&&e.message||e))+'</div><div class="sm mut" style="margin-top:6px">'+esc(String((e&&e.stack||'').split('\n')[1]||'').trim().slice(0,160))+'</div></div><div class="mut sm">Abra o menu (☰) e tente outra tela. Se o erro continuar, me mande esta mensagem.</div>'}}
 document.addEventListener('click',async e=>{if(!e.target.closest('#fab,#fabm'))$('#fabm').style.display='none';const sg=e.target.closest('[data-seg]');if(sg&&T){T[sg.dataset.seg]=sg.dataset.v;if(sg.dataset.seg==='tipo')tipoMud();showSheet();return}const ds=e.target.closest('[data-dseg]');if(ds){const dd=(S.days[D]??={chk:{}});dd[ds.dataset.dseg]=ds.dataset.v;dd.u=Date.now();save();render();return}const im=e.target.closest('.pv img');if(im){zoom(im.src);return}const li=e.target.closest('#lb img');if(li){li.style.width=li.style.width==='260%'?'100%':'260%';return}const b=e.target.closest('[data-a],[data-tab]');if(!b)return;if(b.dataset.tab){tab=b.dataset.tab==='trades'?LT:b.dataset.tab;if(['trades','swing','opc'].includes(tab))LT=tab;render();scrollTo(0,0);return}const a=b.dataset.a,id=b.dataset.id;
 if(a==='am'){AM=b.dataset.id;SY.msg='';render()}
@@ -875,3 +875,505 @@ function anxDel(id,w){const i=+id;
 /* ===ANX-END=== */
 (async()=>{applyTheme();await open();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}const s=await idb('kv','get','s');if(s)S=Object.assign(S,s);fixS();if(!S.seed){seedRules();S.seed=1;persist()}if(!S.mt&&(S.trades.length||Object.keys(S.days).length||S.prop))S.mt=Date.now();SESS=ls.get('diario-sess');if(window.CLOUD_OK&&cfg())await hashAuth();render();if(SESS)sync()})();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* ---------- Interatividade: gestos, transições e feedback de toque ---------- */
+(function(){
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ORDER=['home','mercado','trades','swing','opc','dia','stats'];
+const css=document.createElement('style');
+css.textContent=
+'html,body{overscroll-behavior-y:contain}'+
+'.btn,.chip,.seg button,.mit,.tile,[data-a],[data-seg],[data-dseg]{-webkit-tap-highlight-color:transparent;touch-action:manipulation}'+
+'.btn,.chip,.seg button,.mit,.tile,#fab,#btop{transition:transform .12s ease,filter .12s ease,background-color .15s ease}'+
+'.btn:active,.chip:active,.seg button:active,.tile:active,#fab:active,#btop:active{transform:scale(.95);filter:brightness(1.15)}'+
+'.mit:active{transform:scale(.98);filter:brightness(1.2)}'+
+'.card[data-a]:active{transform:scale(.99)}'+
+'.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.mit:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ac);outline-offset:2px}'+
+'#ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 56px);width:38px;height:38px;margin-left:-19px;border-radius:50%;background:var(--card,#111);color:var(--tx);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:18px;z-index:60;opacity:0;pointer-events:none;transform:translateY(-60px)}'+
+'#ptr.go{color:var(--g)}#ptr.spin span{display:inline-block;animation:ptrs .7s linear infinite}@keyframes ptrs{to{transform:rotate(360deg)}}'+
+'#btop{position:fixed;left:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:42px;height:42px;border-radius:50%;background:var(--card,#111);color:var(--tx);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:18px;z-index:40;opacity:0;transform:translateY(16px) scale(.9);pointer-events:none;transition:opacity .2s ease,transform .2s ease;padding:0}'+
+'#btop.on{opacity:1;transform:none;pointer-events:auto}'+
+'#tst{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);max-width:86vw;background:var(--card,#111);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:10px 14px;font-size:14px;z-index:120;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}'+
+'#tst.on{opacity:1;transform:translate(-50%,0)}'+
+'@media (prefers-reduced-motion: reduce){.btn:active,.chip:active,.seg button:active,.tile:active,#fab:active,#btop:active{transform:none}#ptr.spin span{animation:none}}';
+document.head.appendChild(css);
+
+const mk=(tag,id,html)=>{const e=document.createElement(tag);e.id=id;if(html)e.innerHTML=html;document.body.appendChild(e);return e};
+const ptr=mk('div','ptr','<span>↓</span>'),bt=mk('button','btop','↑'),tst=mk('div','tst');
+bt.setAttribute('aria-label','Voltar ao topo');tst.setAttribute('role','status');
+let tT;
+window.toast=function(m,ms){tst.textContent=m;tst.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>tst.classList.remove('on'),ms||2200)};
+const buzz=n=>{try{navigator.vibrate&&navigator.vibrate(n||8)}catch(e){}};
+
+/* transição direcional ao trocar de tela */
+const idx=t=>ORDER.indexOf(t);
+let lastTab=tab;
+const r0=render0;
+render0=function(){r0();if(tab===lastTab)return;const a=idx(lastTab),b=idx(tab);lastTab=tab;if(RM)return;const ap=document.getElementById('app');if(!ap||!ap.animate)return;const dir=a>=0&&b>=0?(b>a?1:-1):0;ap.animate([{opacity:0,transform:dir?'translateX('+(dir*28)+'px)':'translateY(10px)'},{opacity:1,transform:'none'}],{duration:200,easing:'cubic-bezier(.2,.7,.2,1)'})};
+
+/* utilitários de gesto */
+const blocked=el=>{
+  if(!el||!el.closest)return true;
+  if(el.closest('input,textarea,select,canvas,iframe,video,#lb,#mdr,#zz,.pv,.tradingview-widget-container,[data-noswipe]'))return true;
+  if(T||document.body.style.overflow==='hidden')return true;
+  for(let n=el;n&&n!==document.body;n=n.parentElement){const o=getComputedStyle(n).overflowX;if((o==='auto'||o==='scroll')&&n.scrollWidth>n.clientWidth+4)return true}
+  return false};
+
+let g=null;
+document.addEventListener('touchstart',e=>{
+  if(e.touches.length!==1){g=null;return}
+  const t=e.touches[0];
+  g={x:t.clientX,y:t.clientY,t0:Date.now(),edge:t.clientX<16,top:scrollY<=0,ok:!blocked(e.target),mode:null,dx:0,dy:0};
+},{passive:true});
+
+document.addEventListener('touchmove',e=>{
+  if(!g)return;
+  const t=e.touches[0];g.dx=t.clientX-g.x;g.dy=t.clientY-g.y;
+  if(!g.mode){
+    if(Math.abs(g.dx)<10&&Math.abs(g.dy)<10)return;
+    g.mode=Math.abs(g.dx)>Math.abs(g.dy)*1.4?'h':(g.dy>0&&g.top&&g.ok&&scrollY<=0?'p':'v');
+  }
+  if(g.mode==='p'){
+    const d=Math.min(g.dy,120)*.6;
+    ptr.style.opacity=Math.min(1,d/40);
+    ptr.style.transform='translateY('+(d-40)+'px)';
+    ptr.firstChild.style.transform='rotate('+(d*5)+'deg)';
+    ptr.classList.toggle('go',d>=45);
+  }
+},{passive:true});
+
+document.addEventListener('touchend',()=>{
+  if(!g)return;
+  const d=g,dt=Date.now()-d.t0;g=null;
+  const fast=dt<600;
+  if(d.mode==='p'){
+    const pull=Math.min(d.dy,120)*.6;
+    if(pull>=45){
+      buzz(12);ptr.classList.add('spin');ptr.style.transform='translateY(8px)';ptr.firstChild.style.transform='';
+      const done=()=>{ptr.classList.remove('spin','go');ptr.style.opacity=0;ptr.style.transform='translateY(-60px)'};
+      if(typeof SESS!=='undefined'&&SESS){Promise.resolve(sync(true)).finally(()=>setTimeout(done,300))}
+      else{render();setTimeout(done,500)}
+    }else{ptr.style.opacity=0;ptr.style.transform='translateY(-60px)';ptr.classList.remove('go')}
+    return;
+  }
+  if(d.mode!=='h'||!fast)return;
+  /* deslizar da borda esquerda abre o menu */
+  if(d.edge&&d.dx>70){const b=document.getElementById('mbtn');if(b){buzz();b.click()}return}
+  /* deslizar de lado troca de aba principal */
+  if(!d.ok||Math.abs(d.dx)<80)return;
+  const i=idx(tab);if(i<0)return;
+  const n=d.dx<0?i+1:i-1;if(n<0||n>=ORDER.length)return;
+  buzz();tab=ORDER[n];if(['trades','swing','opc'].includes(tab))LT=tab;render();scrollTo(0,0);
+},{passive:true});
+
+/* menu: arrastar o painel para a esquerda fecha */
+let m=null;
+document.addEventListener('touchstart',e=>{
+  const p=e.target.closest&&e.target.closest('#mdr .mpn');
+  m=p&&e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY,p,dx:0,on:0}:null;
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if(!m)return;const t=e.touches[0],dx=t.clientX-m.x,dy=t.clientY-m.y;
+  if(!m.on){if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.5&&dx<0)m.on=1;else return}
+  m.dx=Math.min(0,dx);m.p.style.animation='none';m.p.style.transform='translateX('+m.dx+'px)';
+  const bk=m.p.previousElementSibling;if(bk)bk.style.opacity=Math.max(0,1+m.dx/300);
+},{passive:true});
+document.addEventListener('touchend',()=>{
+  if(!m)return;const s=m;m=null;if(!s.on)return;
+  if(s.dx<-90){buzz();const x=document.querySelector('#mdr [data-m="x"]');if(x)x.click()}
+  else{s.p.style.transition='transform .15s ease';s.p.style.transform='';const bk=s.p.previousElementSibling;if(bk)bk.style.opacity='';setTimeout(()=>{s.p.style.transition=''},180)}
+},{passive:true});
+
+/* vibração leve nos toques em botões e seletores */
+document.addEventListener('click',e=>{
+  if(e.target.closest('.btn,.chip,.seg button,.mit,[data-seg],[data-dseg],#fab'))buzz(6);
+},true);
+
+/* botão de voltar ao topo */
+let ticking=0;
+addEventListener('scroll',()=>{if(ticking)return;ticking=1;requestAnimationFrame(()=>{ticking=0;bt.classList.toggle('on',scrollY>700&&!document.getElementById('mdr'))})},{passive:true});
+bt.addEventListener('click',()=>{buzz();scrollTo({top:0,behavior:RM?'auto':'smooth'})});
+
+/* aviso de conexão */
+addEventListener('offline',()=>toast('Sem conexão — o diário continua salvando neste aparelho',3200));
+addEventListener('online',()=>{toast('Conexão de volta');if(typeof SESS!=='undefined'&&SESS)sync()});
+})();
+
+/* ---------- Aba Mercado: agenda econômica + notícias do dia ---------- */
+const MKT={tab:ls.get('diario-mkt-tab')||'ag',ct:ls.get('diario-mkt-ct')||'br,us',im:ls.get('diario-mkt-im')||'0,1',nf:'all',items:null,ts:0,busy:0,err:'',tm:null};
+const MK_CT=[['br,us','Brasil + EUA'],['br','Brasil'],['us','EUA'],['br,us,eu,cn,gb,jp,de','Mundo']];
+const MK_IM=[['-1,0,1','Todos'],['0,1','Médio e alto'],['1','Só alto']];
+const MK_NF=[['all','Todas'],['urgente','Urgente'],['ibovespa','Ibovespa'],['dolar','Dólar'],['juros','Juros']];
+const mkBtn=(k,v,l,on)=>`<button class="btn${on?'':' s'}" data-mk="${k}" data-v="${esc(v)}">${esc(l)}</button>`;
+const mkRow=h=>`<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">${h}</div>`;
+const mkDark=()=>{const t=document.documentElement.getAttribute('data-theme');return t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches};
+const mkNorm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const mkAgo=iso=>{const m=Math.max(0,Math.round((Date.now()-new Date(iso))/6e4));if(m<1)return 'agora';if(m<60)return 'há '+m+' min';const h=Math.floor(m/60);if(h<24)return 'há '+h+' h';return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'America/Sao_Paulo'})};
+const mkDia=iso=>new Date(iso).toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
+
+function vMercado(){
+  const t=MKT.tab;
+  const tabs=mkRow(mkBtn('tab','ag','📅 Agenda',t==='ag')+mkBtn('tab','nt','📰 Notícias',t==='nt')+mkBtn('tab','al','🔔 Alertas',t==='al'));
+  if(t==='al')return vAlertas(tabs);
+  if(t==='ag')return `<div class="card"><div class="top"><b>Agenda econômica</b></div>${tabs}<div class="sm mut">País</div>${mkRow(MK_CT.map(([v,l])=>mkBtn('ct',v,l,MKT.ct===v)).join(''))}<div class="sm mut">Importância</div>${mkRow(MK_IM.map(([v,l])=>mkBtn('im',v,l,MKT.im===v)).join(''))}<div id="mkcal" style="min-height:560px"></div><div class="sm mut" style="margin-top:6px">Horários no fuso do seu aparelho. Dados do TradingView.</div></div>`;
+  return `<div class="card"><div class="top"><b>Notícias do dia</b><button class="btn s" data-mk="rf" aria-label="Atualizar notícias">↻ Atualizar</button></div>${tabs}${mkRow(MK_NF.map(([v,l])=>mkBtn('nf',v,l,MKT.nf===v)).join(''))}<div id="mknews"></div><div class="sm mut" style="margin-top:8px">Fonte: Money Times. Toque na manchete para ler a matéria no site.</div></div>`;
+}
+
+function mkCal(){
+  const box=document.getElementById('mkcal');if(!box)return;
+  box.innerHTML='<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>';
+  const s=document.createElement('script');
+  s.src='https://s3.tradingview.com/external-embedding/embed-widget-events.js';s.async=true;
+  s.innerHTML=JSON.stringify({colorTheme:mkDark()?'dark':'light',isTransparent:true,locale:'br',countryFilter:MKT.ct,importanceFilter:MKT.im,width:'100%',height:560});
+  box.firstChild.appendChild(s);
+}
+
+function mkPaint(){
+  const box=document.getElementById('mknews');if(!box)return;
+  if(MKT.busy&&!MKT.items){box.innerHTML='<div class="mut sm" style="padding:12px 0">Buscando notícias…</div>';return}
+  if(!MKT.items){box.innerHTML=`<div class="warn">${esc(MKT.err||'Sem notícias por enquanto.')}</div>`;return}
+  const hoje=mkDia(new Date().toISOString());
+  let L=MKT.items.slice();
+  if(MKT.nf!=='all'){const f=MKT.nf;L=L.filter(i=>(i.c||[]).some(c=>{const n=mkNorm(c);return f==='juros'?(n.includes('juros')||n.includes('selic')):n.includes(f)}))}
+  const td=L.filter(i=>mkDia(i.d)===hoje);
+  let nota='';
+  if(td.length>=5)L=td;else{L=L.slice(0,15);nota='<div class="sm mut" style="margin-bottom:6px">Poucas notícias hoje, mostrando as mais recentes.</div>'}
+  L=L.slice(0,25);
+  if(!L.length){box.innerHTML='<div class="mut sm" style="padding:12px 0">Nenhuma notícia neste filtro.</div>';return}
+  box.innerHTML=(MKT.err?`<div class="warn" style="margin-bottom:8px">${esc(MKT.err)} Mostrando a última cópia.</div>`:'')+nota+L.map(i=>{
+    const ur=(i.c||[]).some(c=>mkNorm(c)==='urgente');
+    return `<a class="card" href="${esc(i.l)}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:var(--tx);margin:6px 0"><div style="font-weight:600;line-height:1.35">${ur?'<span style="color:var(--r);font-size:12px;margin-right:6px">URGENTE</span>':''}${esc(i.t)}</div><div class="sm mut" style="margin-top:4px">${esc(mkAgo(i.d))}${i.a?' · '+esc(i.a):''}</div></a>`}).join('');
+}
+
+async function mkLoad(force){
+  if(MKT.busy)return;
+  if(!force&&MKT.items&&Date.now()-MKT.ts<3e5)return;
+  const c=cfg();
+  if(!c){MKT.err='Configure o Supabase na aba Conta para carregar as notícias.';mkPaint();return}
+  MKT.busy=1;MKT.err='';mkPaint();
+  try{
+    let r;
+    try{r=await fetch(c.url+'/functions/v1/noticias',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:'{}'})}
+    catch(e){throw new Error('Sem conexão com a função "noticias". Confira se ela foi publicada e se há internet.')}
+    if(!r.ok){let m='';try{m=(await r.json()).error||''}catch(e){}throw new Error(r.status===401?'A função exige login: publique com --no-verify-jwt.':r.status===404?'Função "noticias" não encontrada: publique-a no Supabase.':(m||'Erro '+r.status))}
+    const j=await r.json();
+    if(!Array.isArray(j.itens))throw new Error('Resposta inesperada da função.');
+    MKT.items=j.itens;MKT.ts=Date.now();
+  }catch(e){MKT.err=e.message||String(e)}
+  MKT.busy=0;
+  if(tab==='mercado'&&MKT.tab==='nt')mkPaint();
+}
+
+function mkAfter(){
+  if(MKT.tm){clearInterval(MKT.tm);MKT.tm=null}
+  if(MKT.tab==='al'){alAfter();return}
+  if(MKT.tab==='ag'){mkCal();return}
+  mkPaint();mkLoad(false);
+  MKT.tm=setInterval(()=>{if(tab==='mercado'&&MKT.tab==='nt'&&!document.hidden)mkLoad(true);else if(tab!=='mercado'){clearInterval(MKT.tm);MKT.tm=null}},3e5);
+}
+
+(function(){
+  const r1=render0;
+  render0=function(){r1();if(tab==='mercado')mkAfter()};
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-mk]');if(!b)return;
+    const k=b.dataset.mk,v=b.dataset.v;
+    if(k==='tab'){MKT.tab=v;ls.set('diario-mkt-tab',v);render()}
+    else if(k==='ct'){MKT.ct=v;ls.set('diario-mkt-ct',v);render()}
+    else if(k==='im'){MKT.im=v;ls.set('diario-mkt-im',v);render()}
+    else if(k==='nf'){MKT.nf=v;render()}
+    else if(k==='rf'){mkLoad(true)}
+  });
+})();
+
+/* ---------- Meu dia: rotinas, limites, disciplina, sequência e notas rápidas ---------- */
+const ROT0={
+  m:['Olhei a agenda econômica e as notícias do dia','Marquei meus níveis e cenários dos ativos','Defini o risco máximo do dia (R) e o máximo de trades','Li minhas regras e o erro que não quero repetir hoje','Fiz o ensaio mental do que pode dar errado','Conferi capital e limites da mesa ou corretora'],
+  n:['Vi a agenda e as notícias dos EUA para esta noite','Conferi posições abertas e stops antes da sessão','Revisei o plano e o limite de risco da sessão','Chequei meu estado emocional (sem revanche)']
+};
+const rotS=()=>S.rot&&Array.isArray(S.rot.m)&&Array.isArray(S.rot.n)?S.rot:(S.rot={m:ROT0.m.map((t,i)=>({id:'m'+(i+1),t})),n:ROT0.n.map((t,i)=>({id:'n'+(i+1),t}))});
+const rotDone=(d,k)=>rotS()[k].filter(x=>d&&d.rt&&d.rt[k]&&d.rt[k][x.id]).length;
+const dayTr=k=>S.trades.filter(t=>t.dt.slice(0,10)===k).map(t=>({...t,c:calc(t)}));
+const dayR=ts=>sum(ts.filter(t=>t.c.r!=null).map(t=>t.c.r));
+const isWk=k=>{const w=new Date(k+'T12:00').getDay();return w===0||w===6};
+const addD=(k,n)=>{const d=new Date(k+'T12:00');d.setDate(d.getDate()+n);return isoD(d)};
+
+/* nota de disciplina do dia (0 a 100), só com o que existe no dia */
+function dscore(k){
+  const d=S.days[k]||{},ts=dayTr(k);
+  if(!ts.length&&!d.rt&&!(d.chk&&Object.keys(d.chk).length)&&!(typeof dHas==='function'&&dHas(d)))return null;
+  const P=[],mL=rotS().m.length;
+  if(mL)P.push([rotDone(d,'m')/mL,30]);
+  if(S.rules.length)P.push([Object.values(d.chk||{}).filter(Boolean).length/S.rules.length,20]);
+  if(ts.length)P.push([ts.filter(t=>!(t.err&&t.err!=='Nenhum')&&t.rules!=='n').length/ts.length,35]);
+  const mR=+d.maxR,mT=+d.maxT;
+  if(mR>0||mT>0)P.push([(mT>0&&ts.length>mT)||(mR>0&&dayR(ts)<=-mR)?0:1,15]);
+  const w=sum(P.map(x=>x[1]));
+  return w?Math.round(sum(P.map(x=>x[0]*x[1]))/w*100):null;
+}
+function streak(){
+  const today=loc().slice(0,10),mL=rotS().m.length;if(!mL)return 0;
+  let n=0,k=today;
+  for(let i=0;i<150;i++,k=addD(k,-1)){
+    if(isWk(k))continue;
+    const ok=rotDone(S.days[k],'m')===mL;
+    if(ok)n++;else if(k!==today)break;
+  }
+  return n;
+}
+const scCol=p=>p==null?'var(--bd)':p>=80?'var(--g)':p>=50?'#d9a400':'var(--r)';
+
+function disHtml(){
+  const sc=dscore(D),st=streak(),today=loc().slice(0,10);
+  const cells=[];for(let i=13;i>=0;i--){const k=addD(today,-i),p=dscore(k);cells.push(`<button data-a="cday" data-id="${k}" aria-label="${k}" title="${k}${p!=null?': '+p+'%':''}" style="width:100%;aspect-ratio:1;border-radius:8px;border:${k===D?'2px solid var(--tx)':'1px solid var(--bd)'};background:${p==null?'transparent':scCol(p)};opacity:${isWk(k)&&p==null?.35:1};color:${p==null?'var(--mut)':'#fff'};font-size:11px;padding:0">${+k.slice(8)}</button>`)}
+  return `<div class="top"><b>Disciplina</b><span class="sm mut">${st?'🔥 '+st+(st>1?' dias':' dia')+' com a rotina da manhã completa':'Complete a rotina da manhã para iniciar uma sequência'}</span></div>
+<div style="display:flex;align-items:center;gap:10px;margin:10px 0 8px"><b style="font-size:28px;color:${scCol(sc)}">${sc==null?'–':sc+'%'}</b><div class="sm mut" style="line-height:1.35">${sc==null?'A nota do dia aparece conforme você marca rotinas e registra trades.':'Nota do dia: rotinas, regras, trades dentro das regras e limites respeitados.'}</div></div>
+<div style="display:grid;grid-template-columns:repeat(14,1fr);gap:3px">${cells.join('')}</div><div class="sm mut" style="margin-top:4px">Últimos 14 dias. Toque para abrir o dia.</div>`;
+}
+function limHtml(){
+  const d=S.days[D]||{},ts=dayTr(D),R=dayR(ts),mR=+d.maxR,mT=+d.maxT,out=[];
+  const bar=(p,l,v)=>{const c=p>1?'var(--r)':p>.6?'#d9a400':'var(--g)';return `<div style="margin:8px 0"><div class="sm" style="display:flex;justify-content:space-between"><span>${l}</span><b style="color:${c}">${v}</b></div><div style="height:6px;border-radius:3px;background:var(--bd);overflow:hidden;margin-top:3px"><div style="height:100%;width:${Math.min(100,p*100)}%;background:${c};transition:width .3s"></div></div></div>`};
+  if(mT>0)out.push(bar(ts.length/mT,'Trades do dia',ts.length+' de '+mT));
+  if(mR>0)out.push(bar(Math.max(0,-R)/mR,'Perda do dia',fr(Math.min(0,R))+' de -'+f2(mR)+'R'));
+  const hit=(mT>0&&ts.length>=mT)||(mR>0&&R<=-mR);
+  if(!out.length)return '<div class="sm mut" style="margin-top:6px">Defina seus limites para acompanhar em tempo real e receber o alerta de parar.</div>';
+  return out.join('')+(hit?'<div class="warn" style="margin-top:8px">🛑 Limite do dia atingido. Pelo seu plano, é hora de parar de operar.</div>':'');
+}
+function tlHtml(){
+  const ts=dayTr(D).sort((a,b)=>a.dt.localeCompare(b.dt));
+  if(!ts.length)return '';
+  return `<details class="card" style="margin-top:8px"><summary class="sm"><b>Trades do dia (${ts.length})</b></summary>${ts.map(t=>`<div class="sm" style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--bd)"><span>${esc(t.dt.slice(11,16))} · ${esc(t.ativo||'')} ${t.side==='C'?'C':'V'}${t.err&&t.err!=='Nenhum'?' ⚠️':''}</span><b class="${cls(t.c.r)}">${t.c.r==null?'aberto':fr(t.c.r)}</b></div>`).join('')}</details>`;
+}
+function ntHtml(){
+  const L=((S.days[D]||{}).nt||[]).map((n,i)=>({...n,i})).reverse();
+  return `<div style="display:flex;gap:6px"><input id="qn" placeholder="O que está sentindo ou vendo agora?" style="margin:0;flex:1"><button class="btn" data-dn="add">Anotar</button></div>`+(L.length?L.map(n=>`<div class="sm" style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--bd)"><span class="mut" style="flex:none">${esc(n.h)}</span><span style="flex:1;overflow-wrap:anywhere">${esc(n.x)}</span><button class="x" data-dn="del" data-i="${n.i}" aria-label="Apagar nota">✕</button></div>`).join(''):'<div class="sm mut" style="margin-top:6px">Anote rápido durante o pregão. Depois use no debriefing.</div>');
+}
+function rotCard(k,title,sub){
+  const d=S.days[D]||{},L=rotS()[k],n=rotDone(d,k),p=L.length?n/L.length:0;
+  return `<div class="card" id="rot-${k}"><div class="top"><b>${title}</b><span class="sm ${p===1?'g':'mut'}" data-rc="${k}">${n}/${L.length}</span></div><div class="sm mut" style="margin:2px 0 6px">${sub}</div>${L.map(x=>`<label class="ck"><input type="checkbox" data-rt="${k}:${x.id}"${d.rt&&d.rt[k]&&d.rt[k][x.id]?' checked':''}><span>${esc(x.t)}</span></label>`).join('')||'<span class="mut sm">Sem itens. Adicione abaixo.</span>'}<div style="height:4px;border-radius:2px;background:var(--bd);margin-top:8px;overflow:hidden"><div data-rb="${k}" style="height:100%;width:${p*100}%;background:var(--g);transition:width .25s"></div></div></div>`;
+}
+let ROTO=0;
+function rotEdit(){
+  const blk=(k,t)=>`<div class="sm" style="margin:10px 0 4px"><b>${t}</b></div>${rotS()[k].map(x=>`<div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin:4px 0"><input data-rot="${k}:${x.id}" value="${esc(x.t)}" style="margin:0"><button class="x" data-rtx="del" data-k="${k}" data-id="${x.id}" aria-label="Remover item">✕</button></div>`).join('')}<div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin:6px 0"><input id="rtn-${k}" placeholder="Novo item" style="margin:0"><button class="btn s" data-rtx="add" data-k="${k}">Adicionar</button></div>`;
+  return `<details class="card" id="rtd"${ROTO?' open':''}><summary class="sm"><b>✏️ Editar itens das rotinas</b></summary>${blk('m','Rotina da manhã')}${blk('n','Abertura americana')}</details>`;
+}
+function lastLesson(){
+  for(let i=1;i<=10;i++){const k=addD(D,-i),d=S.days[k];if(d&&(d.prevn||d.aprend)){
+    const dt=new Date(k+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+    return `<div class="card" style="margin-top:8px"><div class="sm mut">💡 Do seu debriefing de ${esc(dt)}</div>${d.prevn?`<div style="margin-top:4px"><b>Para não repetir:</b> ${esc(d.prevn)}</div>`:''}${d.aprend?`<div style="margin-top:4px"><b>Aprendizado:</b> ${esc(d.aprend)}</div>`:''}</div>`}}
+  return '';
+}
+
+const vDia0=vDia;
+vDia=function(){
+  const h=vDia0();if(DV==='hist')return h;
+  const today=D===loc().slice(0,10),d=S.days[D]||{};
+  const pend=today&&new Date().getHours()>=8&&rotS().m.length&&rotDone(d,'m')<rotS().m.length?'<div class="warn" style="margin-bottom:8px">☀️ A rotina da manhã ainda está pendente.</div>':'';
+  const top=`${pend}<div class="card" id="dis">${disHtml()}</div>
+<div class="card" style="margin-top:8px"><b>🛑 Limites do dia</b><div class="g2" style="margin-top:6px"><label>Perda máxima (R)<input type="number" inputmode="decimal" step="0.5" min="0" data-d="maxR" value="${esc(d.maxR||'')}" placeholder="ex.: 3"></label><label>Máx. de trades<input type="number" inputmode="numeric" step="1" min="0" data-d="maxT" value="${esc(d.maxT||'')}" placeholder="ex.: 5"></label></div><div id="limr">${limHtml()}</div></div>${tlHtml()}${lastLesson()}
+<div class="card" style="margin-top:8px"><b>📝 Notas rápidas do pregão</b><div id="ntx" style="margin-top:6px">${ntHtml()}</div></div>`;
+  const noite=rotCard('n','🌐 Abertura americana','Faça antes da sessão noturna.')+rotEdit();
+  const e2=`<label>Como estou ao fim do dia?</label><div class="chips2">${EMO.map((e,i)=>`<button class="${d.energia2==i+1?'on':''}" data-dseg="energia2" data-v="${i+1}">${e}</button>`).join('')}</div>`;
+  let o=h;
+  const sw=(a,b)=>{if(o.includes(a))o=o.replace(a,()=>b)};
+  sw('<h2>☀️ Antes do mercado</h2>',top+'<h2>☀️ Antes do mercado</h2>'+rotCard('m','Rotina da manhã','Faça antes de abrir o mercado.'));
+  sw('<h2>🌙 Depois do mercado (debriefing)</h2>',noite+'<h2>🌙 Depois do mercado (debriefing)</h2>');
+  sw('<label>Aprendizado principal<textarea',e2+'<label>Aprendizado principal<textarea');
+  return o;
+};
+
+(function(){
+  const refresh=k=>{
+    const d=S.days[D]||{},L=rotS()[k],n=rotDone(d,k);
+    document.querySelectorAll('[data-rc="'+k+'"]').forEach(e=>{e.textContent=n+'/'+L.length;e.className='sm '+(n===L.length&&L.length?'g':'mut')});
+    document.querySelectorAll('[data-rb="'+k+'"]').forEach(e=>{e.style.width=(L.length?n/L.length*100:0)+'%'});
+    const x=document.getElementById('dis');if(x)x.innerHTML=disHtml();
+    if(L.length&&n===L.length&&window.toast)toast(k==='m'?'✅ Rotina da manhã completa':'✅ Abertura americana pronta');
+  };
+  document.addEventListener('change',e=>{
+    const t=e.target;if(!t.dataset||!t.dataset.rt)return;
+    const[k,id]=t.dataset.rt.split(':'),dd=(S.days[D]??={chk:{}});
+    ((dd.rt??={m:{},n:{}})[k]??={})[id]=t.checked;dd.u=Date.now();save();refresh(k);
+  });
+  document.addEventListener('input',e=>{
+    const t=e.target;if(!t.dataset)return;
+    if(t.dataset.rot){const[k,id]=t.dataset.rot.split(':'),it=rotS()[k].find(x=>x.id===id);if(it){it.t=t.value;S.mt=Date.now();save()}return}
+    if(t.dataset.d==='maxR'||t.dataset.d==='maxT'){const l=document.getElementById('limr');if(l)l.innerHTML=limHtml();const x=document.getElementById('dis');if(x)x.innerHTML=disHtml()}
+  });
+  document.addEventListener('toggle',e=>{if(e.target&&e.target.id==='rtd')ROTO=e.target.open},true);
+  document.addEventListener('click',e=>{
+    const x=e.target.closest('[data-rtx]');
+    if(x){
+      const k=x.dataset.k;
+      if(x.dataset.rtx==='del'){rotS()[k]=rotS()[k].filter(i=>i.id!==x.dataset.id);S.mt=Date.now();save();render()}
+      else{const inp=document.getElementById('rtn-'+k),v=inp&&inp.value.trim();if(v){rotS()[k].push({id:uid(),t:v});S.mt=Date.now();save();ROTO=1;render()}}
+      return;
+    }
+    const n=e.target.closest('[data-dn]');
+    if(n){
+      const dd=(S.days[D]??={chk:{}});
+      if(n.dataset.dn==='add'){const inp=document.getElementById('qn'),v=inp&&inp.value.trim();if(!v)return;(dd.nt??=[]).push({h:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),x:v})}
+      else{(dd.nt||[]).splice(+n.dataset.i,1)}
+      dd.u=Date.now();save();const b=document.getElementById('ntx');if(b)b.innerHTML=ntHtml();
+      if(n.dataset.dn==='add'){const q=document.getElementById('qn');if(q)q.focus()}
+    }
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='qn'){e.preventDefault();const b=document.querySelector('[data-dn="add"]');if(b)b.click()}});
+})();
+
+/* ---------- Alertas: notificações push, preferências e próximos eventos ---------- */
+const NP=Object.assign({m:'08:00',n:'18:50',lead:5,cur:['USD'],imp:'high'},ls.get('diario-np')||{});
+NP.on=Object.assign({m:true,n:true,ev:true},NP.on||{});
+const AL={ok:null,msg:'',busy:0,sub:null,ev:null,evTs:0,evErr:'',sy:null};
+const AL_CUR=[['USD','EUA'],['EUR','Euro'],['GBP','Reino Unido'],['JPY','Japão'],['CNY','China'],['CAD','Canadá'],['AUD','Austrália']];
+const alSup=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+const alSave=()=>ls.set('diario-np',NP);
+const u8=b=>{const s=(b+'='.repeat((4-b.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'),r=atob(s);return Uint8Array.from(r,c=>c.charCodeAt(0))};
+
+async function alFn(acao,extra){
+  const c=cfg();if(!c)throw new Error('Configure o Supabase na aba Conta.');
+  let r;
+  try{r=await fetch(c.url+'/functions/v1/notificar',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:JSON.stringify(Object.assign({acao},extra||{}))})}
+  catch(e){throw new Error('Sem conexão com a função "notificar". Confira a internet e se ela foi publicada.')}
+  let j={};try{j=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(j.error||(r.status===404?'Função "notificar" não encontrada: publique-a no Supabase.':r.status===401?'A função exige login: publique com --no-verify-jwt.':'Erro '+r.status));
+  return j;
+}
+
+async function alState(){
+  if(!alSup()){AL.ok='nosup';return}
+  if(Notification.permission==='denied'){AL.ok='denied';return}
+  try{const reg=await navigator.serviceWorker.ready;AL.sub=await reg.pushManager.getSubscription()}catch(e){AL.sub=null}
+  AL.ok=AL.sub&&Notification.permission==='granted'?'on':'off';
+}
+
+async function alEnable(){
+  AL.busy=1;AL.msg='';alPaint();
+  try{
+    if(!alSup())throw new Error('Este navegador não suporta notificações push.');
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted')throw new Error('Permissão negada. Libere as notificações nas configurações do navegador ou do app instalado.');
+    const reg=await navigator.serviceWorker.ready,k=(await alFn('chave')).chave;
+    let sub=await reg.pushManager.getSubscription();
+    if(sub){try{await alFn('cancelar',{endpoint:sub.endpoint})}catch(e){}await sub.unsubscribe()}
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(k)});
+    await alFn('inscrever',{sub:sub.toJSON(),prefs:NP});
+    AL.sub=sub;AL.ok='on';AL.msg='Notificações ativadas neste aparelho.';
+  }catch(e){AL.msg=e.message||String(e)}
+  AL.busy=0;await alState();alPaint();
+}
+async function alDisable(){
+  AL.busy=1;AL.msg='';alPaint();
+  try{if(AL.sub){try{await alFn('cancelar',{endpoint:AL.sub.endpoint})}catch(e){}await AL.sub.unsubscribe()}AL.sub=null;AL.msg='Notificações desativadas neste aparelho.'}
+  catch(e){AL.msg=e.message||String(e)}
+  AL.busy=0;await alState();alPaint();
+}
+async function alTest(){
+  AL.busy=1;AL.msg='';alPaint();
+  try{await alFn('teste',{endpoint:AL.sub.endpoint});AL.msg='Teste enviado. A notificação deve chegar em alguns segundos.'}
+  catch(e){AL.msg=e.message||String(e)}
+  AL.busy=0;alPaint();
+}
+function alPush(){
+  alSave();clearTimeout(AL.sy);
+  if(AL.ok!=='on'||!AL.sub)return;
+  AL.sy=setTimeout(()=>{alFn('inscrever',{sub:AL.sub.toJSON(),prefs:NP}).then(()=>{AL.msg='Preferências salvas.';alPaint()}).catch(e=>{AL.msg=e.message;alPaint()})},700);
+}
+async function alLoadEv(force){
+  if(!force&&AL.ev&&Date.now()-AL.evTs<18e5)return;
+  try{const j=await alFn('eventos');AL.ev=j.itens||[];AL.evTs=Date.now();AL.evErr=''}
+  catch(e){AL.evErr=e.message||String(e)}
+}
+
+const alWhen=iso=>{const d=new Date(iso),w=d.toLocaleDateString('pt-BR',{weekday:'short',timeZone:'America/Sao_Paulo'}),h=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});return w.replace('.','')+' '+h};
+const alIn=iso=>{const m=Math.round((new Date(iso)-Date.now())/6e4);if(m<=0)return 'agora';if(m<60)return 'em '+m+' min';const h=Math.floor(m/60);return h<24?'em '+h+' h':'em '+Math.floor(h/24)+' d'};
+const alEvList=()=>{
+  if(!AL.ev)return `<div class="mut sm">${esc(AL.evErr||'Carregando eventos…')}</div>`;
+  const L=AL.ev.filter(e=>NP.cur.includes(e.cur)&&(NP.imp==='med'||e.imp==='high')&&new Date(e.d)>Date.now()-36e5).slice(0,10);
+  if(!L.length)return '<div class="mut sm">Nenhum evento com esses filtros nos próximos dias.</div>';
+  return L.map(e=>`<div class="card" style="margin:6px 0"><div style="font-weight:600;line-height:1.3">${e.imp==='high'?'<span style="color:var(--r);font-size:12px;margin-right:6px">ALTO</span>':'<span class="mut" style="font-size:12px;margin-right:6px">MÉDIO</span>'}${esc(e.t)} <span class="mut sm">(${esc(e.cur)})</span></div><div class="sm mut" style="margin-top:3px">${esc(alWhen(e.d))} · ${esc(alIn(e.d))}${e.f?' · prev. '+esc(e.f):''}${e.p?' · ant. '+esc(e.p):''}</div></div>`).join('')+(AL.evErr?`<div class="sm mut">${esc(AL.evErr)}</div>`:'');
+};
+
+function alHtml(){
+  const b=(a,l,s)=>`<button class="btn${s?' s':''}" data-alb="${a}"${AL.busy?' disabled':''}>${l}</button>`;
+  let st;
+  if(AL.ok==null)st='<div class="mut sm">Verificando…</div>';
+  else if(AL.ok==='nosup')st='<div class="warn">Este navegador não suporta notificações push. No iPhone, instale o app na Tela de Início e abra por lá (iOS 16.4 ou mais novo).</div>';
+  else if(AL.ok==='denied')st='<div class="warn">As notificações estão bloqueadas para este app. Libere nas configurações do navegador ou do app instalado e volte aqui.</div>';
+  else if(AL.ok==='off')st=`<div class="sm" style="margin-bottom:8px">Receba lembretes dos checklists e um aviso antes das notícias importantes, mesmo com o app fechado.</div>${b('on','🔔 Ativar notificações')}`;
+  else st=`<div class="sm g" style="margin-bottom:8px">✅ Ativas neste aparelho</div><div style="display:flex;gap:6px;flex-wrap:wrap">${b('test','Enviar teste',1)}${b('off','Desativar',1)}</div>`;
+  const ck=(k,l)=>`<label class="ck"><input type="checkbox" data-al="on.${k}"${NP.on[k]?' checked':''}><span>${l}</span></label>`;
+  return `${st}${AL.msg?`<div class="sm" style="margin-top:8px">${esc(AL.msg)}</div>`:''}
+<h3 style="margin-top:14px">Quando avisar</h3>
+${ck('m','☀️ Checklist da manhã')}<label>Horário<input type="time" data-al="m" value="${esc(NP.m)}"></label>
+${ck('n','🌐 Checklist da abertura americana')}<label>Horário<input type="time" data-al="n" value="${esc(NP.n)}"></label>
+${ck('ev','⏰ Notícias importantes')}
+<div class="g2"><label>Avisar antes<select data-al="lead">${opt([[3,'3 min'],[5,'5 min'],[10,'10 min'],[15,'15 min'],[30,'30 min']],NP.lead)}</select></label><label>Impacto<select data-al="imp">${opt([['high','Só alto'],['med','Médio e alto']],NP.imp)}</select></label></div>
+<div class="sm mut" style="margin-top:6px">Países</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">${AL_CUR.map(([c,l])=>`<button class="btn${NP.cur.includes(c)?'':' s'}" data-alc="${c}">${esc(l)}</button>`).join('')}</div>
+<div class="sm mut">Checklists: segunda a sexta, horário de Brasília. O calendário vem do Forex Factory e não inclui eventos do Brasil.</div>
+<h3 style="margin-top:14px">Próximos eventos</h3>${alEvList()}`;
+}
+function alPaint(){const e=document.getElementById('alx');if(e)e.innerHTML=alHtml()}
+function vAlertas(tabs){return `<div class="card"><div class="top"><b>Alertas</b></div>${tabs}<div id="alx">${alHtml()}</div></div>`}
+async function alAfter(){
+  alPaint();
+  await alState();alPaint();
+  if(!AL.ev){await alLoadEv();alPaint()}else alLoadEv().then(alPaint);
+}
+
+(function(){
+  document.addEventListener('click',e=>{
+    const c=e.target.closest('[data-alc]');
+    if(c){const k=c.dataset.alc,i=NP.cur.indexOf(k);if(i>=0){if(NP.cur.length>1)NP.cur.splice(i,1)}else NP.cur.push(k);alPush();alPaint();return}
+    const b=e.target.closest('[data-alb]');if(!b)return;
+    const a=b.dataset.alb;
+    if(a==='on')alEnable();else if(a==='off')alDisable();else if(a==='test')alTest();
+  });
+  document.addEventListener('change',e=>{
+    const t=e.target,k=t.dataset&&t.dataset.al;if(!k)return;
+    if(k.startsWith('on.'))NP.on[k.slice(3)]=t.checked;
+    else if(k==='m'||k==='n'){if(/^\d\d:\d\d$/.test(t.value))NP[k]=t.value}
+    else if(k==='lead')NP.lead=+t.value;
+    else if(k==='imp')NP.imp=t.value;
+    alPush();alPaint();
+  });
+})();
+
+/* lembretes locais (só funcionam com o app aberto; usam a mesma "tag" da notificação do servidor, então não duplicam) */
+(function(){
+  const TZ='America/Sao_Paulo',seen=ls.get('diario-nl')||{};
+  const mark=k=>{seen[k]=Date.now();Object.keys(seen).forEach(x=>{if(Date.now()-seen[x]>2*864e5)delete seen[x]});ls.set('diario-nl',seen)};
+  async function show(tag,title,body,data){try{const reg=await navigator.serviceWorker.ready;await reg.showNotification(title,{body,tag,icon:'icon-192.png',badge:'icon-192.png',data})}catch(e){}}
+  async function loop(){
+    if(!alSup()||Notification.permission!=='granted')return;
+    const now=new Date(),P=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now).map(x=>[x.type,x.value]));
+    const dia=P.year+'-'+P.month+'-'+P.day,min=+P.hour*60+ +P.minute,util=!['Sat','Sun'].includes(P.weekday),tm=s=>+s.slice(0,2)*60+ +s.slice(3,5);
+    if(util&&NP.on.m&&min-tm(NP.m)>=0&&min-tm(NP.m)<3&&!seen['m'+dia]){mark('m'+dia);show('chk-m-'+dia,'☀️ Hora do checklist da manhã','Revise a agenda, defina seu risco do dia e marque a rotina antes de operar.',{go:'dia',r:'m'})}
+    if(util&&NP.on.n&&min-tm(NP.n)>=0&&min-tm(NP.n)<3&&!seen['n'+dia]){mark('n'+dia);show('chk-n-'+dia,'🌐 Checklist da abertura americana','Faça o checklist de novo antes da sessão noturna. Confirme seu limite de risco.',{go:'dia',r:'n'})}
+    if(NP.on.ev){
+      if(!AL.ev||Date.now()-AL.evTs>18e5)await alLoadEv();
+      (AL.ev||[]).forEach(e=>{
+        if(!NP.cur.includes(e.cur)||(NP.imp==='high'&&e.imp!=='high'))return;
+        const m=(new Date(e.d)-now)/6e4,k='e'+e.id+NP.lead;
+        if(m>0&&m<=NP.lead&&!seen[k]){mark(k);show('ev-'+e.id,'⏰ Em '+Math.max(1,Math.round(m))+' min: '+e.t+' ('+e.cur+')',(e.imp==='high'?'Alto':'Médio')+' impacto às '+alWhen(e.d).split(' ').pop()+(e.f?' · Previsão '+e.f:'')+(e.p?' · Anterior '+e.p:''),{go:'mercado'})}
+      });
+    }
+  }
+  setInterval(()=>{if(!document.hidden)loop()},30000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)loop()});
+})();
+
+/* abrir direto na tela certa ao tocar na notificação */
+const GO={r:null};
+(function(){
+  const go=(g,r)=>{if(!['dia','mercado','home'].includes(g))return false;tab=g;if(g==='dia'){D=loc().slice(0,10);DV='ed'}GO.r=r||null;return true};
+  const q=new URLSearchParams(location.search);
+  if(q.get('go')){go(q.get('go'),q.get('r'));history.replaceState(null,'',location.pathname+location.hash)}
+  if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.go&&go(d.go,d.r)){render();scrollTo(0,0)}});
+  const r2=render0;
+  render0=function(){
+    r2();
+    if(GO.r&&tab==='dia'){const el=document.getElementById('rot-'+GO.r);GO.r=null;if(el){setTimeout(()=>{el.scrollIntoView({behavior:'smooth',block:'center'});if(el.animate)el.animate([{boxShadow:'0 0 0 3px var(--ac)'},{boxShadow:'0 0 0 0 transparent'}],{duration:1600,easing:'ease-out'})},120)}}
+  };
+})();
