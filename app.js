@@ -1377,3 +1377,86 @@ const GO={r:null};
     if(GO.r&&tab==='dia'){const el=document.getElementById('rot-'+GO.r);GO.r=null;if(el){setTimeout(()=>{el.scrollIntoView({behavior:'smooth',block:'center'});if(el.animate)el.animate([{boxShadow:'0 0 0 3px var(--ac)'},{boxShadow:'0 0 0 0 transparent'}],{duration:1600,easing:'ease-out'})},120)}}
   };
 })();
+
+/* ---------- Início: radar de ADRs brasileiras (com pré-mercado) ---------- */
+const ADR0=['WEGZY','BBSEY','BDORY','SUZ','SID','GGB','ITUB','PBR','VALE','ABEV','BBD'];
+const AD={list:(ls.get('diario-adr')||ADR0).slice(),data:ls.get('diario-adr-d'),busy:0,err:'',sort:ls.get('diario-adr-o')||'lista',edit:0,tm:null};
+const adN=n=>n==null?'–':(+n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const adP=n=>n==null?'–':(n>0?'+':'')+adN(n)+'%';
+const adSt={pre:'🟡 Pré-mercado',reg:'🟢 Pregão aberto',post:'🟠 Pós-mercado',closed:'⚪ Fechado'};
+const adState=L=>{const c={};L.forEach(i=>{c[i.state]=(c[i.state]||0)+1});return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]||'closed'};
+
+function adRow(i){
+  const sub=(l,x)=>x?`${l} ${adN(x.px)} <span class="${cls(x.chp)}">${adP(x.chp)}</span>`:'';
+  const sec=i.state==='pre'?'Fech. '+adN(i.base):i.state==='reg'?sub('Pré',i.pre):sub('Pós',i.pos);
+  return `<div style="display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:9px 0;border-top:1px solid var(--bd)"><div style="min-width:0"><b>${esc(i.s)}</b>${i.state==='pre'?' <span class="sm" style="color:#d9a400;font-weight:600">PRÉ</span>':''}<div class="sm mut" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(i.n)}</div></div><div style="text-align:right"><b>${adN(i.px)}</b> <span class="sm ${cls(i.chp)}">${adP(i.chp)}</span><div class="sm mut">${sec||'&nbsp;'}</div></div></div>`;
+}
+
+function adrHtml(){
+  let L=((AD.data&&AD.data.itens)||[]).filter(i=>AD.list.includes(i.s));
+  const st=L.length?adState(L):'closed',avg=L.length?sum(L.map(i=>i.chp))/L.length:null;
+  if(AD.sort==='alta')L=L.slice().sort((a,b)=>b.chp-a.chp);
+  else if(AD.sort==='queda')L=L.slice().sort((a,b)=>a.chp-b.chp);
+  else L=L.slice().sort((a,b)=>AD.list.indexOf(a.s)-AD.list.indexOf(b.s));
+  const ob=(k,l)=>`<button class="btn${AD.sort===k?'':' s'}" data-adr="o:${k}">${l}</button>`;
+  const ed=AD.edit?`<div class="card" style="margin:8px 0"><div style="display:flex;flex-wrap:wrap;gap:6px">${AD.list.map(s=>`<button class="btn s" data-adr="x:${esc(s)}" aria-label="Remover ${esc(s)}">${esc(s)} ✕</button>`).join('')}</div><div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:8px"><input id="adn" placeholder="Novo ticker (ex.: ERJ)" autocapitalize="characters" style="margin:0"><button class="btn" data-adr="add">Adicionar</button><button class="btn s" data-adr="reset">Padrão</button></div></div>`:'';
+  return `<div class="top"><b>🇧🇷 ADRs brasileiras</b><span class="sm">${adSt[st]}</span></div>
+<div class="sm mut" style="margin:4px 0 8px">Média ${avg==null?'–':`<b class="${cls(avg)}">${adP(avg)}</b>`}${AD.data?' · atualizado às '+hm(AD.data.ts):''}${AD.busy?' · buscando…':''}</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">${ob('lista','Lista')}${ob('alta','Maiores altas')}${ob('queda','Maiores quedas')}<button class="btn s" data-adr="rf" aria-label="Atualizar" ${AD.busy?'disabled':''}>↻</button><button class="btn${AD.edit?'':' s'}" data-adr="ed" aria-label="Editar lista">✏️</button></div>${ed}
+${AD.err?`<div class="warn" style="margin-top:8px">${esc(AD.err)}</div>`:''}
+<div style="margin-top:6px">${L.length?L.map(adRow).join(''):`<div class="mut sm" style="padding:12px 0">${AD.busy?'Buscando cotações…':'Sem cotações ainda.'}</div>`}</div>
+<div class="sm mut" style="margin-top:6px">Yahoo Finance, com possível atraso. No pré-mercado o número grande já é o preço de pré e a variação é contra o último fechamento. ADRs de balcão (WEGZY, BBSEY, BDORY) não têm pré-mercado.</div>`;
+}
+function adrPaint(){const e=document.getElementById('adr');if(e)e.innerHTML=adrHtml()}
+
+async function adrLoad(force){
+  if(AD.busy)return;
+  const L=(AD.data&&AD.data.itens)||[],closed=L.length&&adState(L)==='closed';
+  if(!force&&AD.data&&Date.now()-AD.data.ts<(closed?3e5:5e4))return;
+  const c=cfg();
+  if(!c){AD.err='Configure o Supabase na aba Conta para ver as cotações.';adrPaint();return}
+  AD.busy=1;AD.err='';adrPaint();
+  try{
+    let r;
+    try{r=await fetch(c.url+'/functions/v1/adrs',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:JSON.stringify({symbols:AD.list})})}
+    catch(e){throw new Error('Sem conexão. Mostrando a última cotação salva.')}
+    let j={};try{j=await r.json()}catch(e){}
+    if(!r.ok)throw new Error(j.error||(r.status===404?'Função "adrs" não encontrada: publique-a no Supabase.':r.status===401?'A função exige login: publique com --no-verify-jwt.':'Erro '+r.status));
+    AD.data={ts:Date.now(),itens:j.itens||[]};ls.set('diario-adr-d',AD.data);
+    if((j.erros||[]).length)AD.err='Sem dados de: '+j.erros.map(x=>String(x).split(':')[0]).join(', ')+'.';
+  }catch(e){AD.err=e.message||String(e)}
+  AD.busy=0;adrPaint();
+}
+function adrAfter(){
+  adrPaint();adrLoad(false);
+  if(AD.tm)return;
+  AD.tm=setInterval(()=>{if(tab!=='home'){clearInterval(AD.tm);AD.tm=null;return}if(!document.hidden)adrLoad(false)},30000);
+}
+
+(function(){
+  const h0=vHome;
+  vHome=function(){
+    const h=h0(),card=`<div class="card" id="adr" style="margin-top:12px">${adrHtml()}</div>`;
+    let ct='';try{ct=capTotal()}catch(e){}
+    if(ct&&h.includes(ct))return h.replace(ct,()=>card+ct);
+    const m='<h2>Posições abert';
+    return h.includes(m)?h.replace(m,()=>card+m):card+h;
+  };
+  const r3=render0;
+  render0=function(){r3();if(tab==='home')adrAfter()};
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&tab==='home')adrLoad(false)});
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-adr]');if(!b)return;
+    const v=b.dataset.adr;
+    if(v==='rf'){adrLoad(true);return}
+    if(v==='ed'){AD.edit=!AD.edit;adrPaint();return}
+    if(v.startsWith('o:')){AD.sort=v.slice(2);ls.set('diario-adr-o',AD.sort);adrPaint();return}
+    if(v.startsWith('x:')){if(AD.list.length>1){AD.list=AD.list.filter(s=>s!==v.slice(2));ls.set('diario-adr',AD.list);adrPaint();adrLoad(true)}return}
+    if(v==='reset'){AD.list=ADR0.slice();ls.set('diario-adr',AD.list);adrPaint();adrLoad(true);return}
+    if(v==='add'){
+      const i=document.getElementById('adn'),s=i&&i.value.trim().toUpperCase();
+      if(!s||!/^[A-Z0-9.\-]{1,10}$/.test(s)||AD.list.includes(s)||AD.list.length>=40)return;
+      AD.list.push(s);ls.set('diario-adr',AD.list);adrPaint();adrLoad(true);
+    }
+  });
+})();
