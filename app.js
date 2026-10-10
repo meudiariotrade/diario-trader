@@ -467,7 +467,7 @@ setTimeout(tapeLoad,1200);setInterval(tapeLoad,60000)})();
 const css=document.createElement('style');
 css.textContent='nav{display:none!important}#app{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))!important}#fab{bottom:calc(20px + env(safe-area-inset-bottom,0px))!important}#fabm{bottom:calc(86px + env(safe-area-inset-bottom,0px))!important}#mbtn{position:absolute;left:0;top:env(safe-area-inset-top,0px);width:46px;height:46px;display:flex;align-items:center;justify-content:center;background:#05070a;color:#e5e7eb;border:0;border-right:1px solid #1f6f3a;z-index:3;cursor:pointer;padding:0}#tape .tradingview-widget-container,#tape .mq{margin-left:46px}#mdr{position:fixed;left:0;top:0;right:0;bottom:0;z-index:90}#mdr .mbk{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.55)}#mdr .mpn{position:absolute;left:0;top:0;bottom:0;width:min(84vw,330px);background:var(--bg);color:var(--tx);border-right:1px solid var(--bd);overflow-y:auto;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(16px + env(safe-area-inset-bottom,0px));animation:mdi .18s ease-out}@keyframes mdi{from{transform:translateX(-100%)}}#mdr .mhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}#mdr .mhd button{background:none;border:0;color:var(--tx);font-size:24px;padding:4px 8px}#mdr .ms{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:14px 4px 6px}#mdr .mit{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-radius:12px;padding:10px;color:var(--tx);font:inherit;cursor:pointer}#mdr .mit small{display:block;color:var(--mut);font-size:12px}#mdr .mit.on{background:color-mix(in srgb,var(--ac) 18%,var(--bg))}#mdr .mi{width:28px;display:flex;justify-content:center;font-size:20px;flex:none}';
 document.head.appendChild(css);
-const A=[['home','🏠','Início','Resumo do dia'],['mercado','📰','Mercado','Agenda, notícias e alertas'],['trades','📸','Day trade','Operações e fotos'],['swing','🌊','Swing','Posições e scanner'],['opc','🎯','Opções','Abertas e performance'],['dia','🌙','Meu dia','Antes e depois do mercado'],['stats','📊','Estatísticas','Resultados e feedback']],
+const A=[['home','🏠','Início','Resumo do dia'],['mercado','📰','Mercado','Agenda, notícias, cotações e alertas'],['juros','📚','Juros e DI','Selic, DI futuro e curva de juros'],['trades','📸','Day trade','Operações e fotos'],['swing','🌊','Swing','Posições e scanner'],['opc','🎯','Opções','Abertas e performance'],['dia','🌙','Meu dia','Antes e depois do mercado'],['stats','📊','Estatísticas','Resultados e feedback']],
 B=[['regras','Regras','Seu plano escrito'],['graf','Gráficos','TradingView e níveis'],['painel','Painel','Mesa, metas e backup'],['rev','Revisão','Calendário do mês'],['estudos','Estudos','Livros e padrões de candles'],['ativos','Ativos','Margem, risco e lote'],['contratos','Contratos','Lotes pelo capital e volatilidade'],['carteiras','Carteiras','Brasil e EUA, evolução'],['analise','Análise IA','Relatório da carteira'],['imposto','Imposto de renda','Notas, custos e DARF'],['import','Importar','Relatório do Profit (CSV)'],['conta','Conta','Sincronização']];
 const it=(k,i,t,d)=>`<button class="mit${tab===k?' on':''}" data-a="gotab" data-id="${k}"><span class="mi">${i}</span><span><b>${t}</b><small>${d}</small></span></button>`;
 function mClose(){const m=document.getElementById('mdr');if(m)m.remove();document.body.style.overflow=T?'hidden':''}
@@ -613,7 +613,7 @@ S.trades=(Array.isArray(S.trades)?S.trades:[]).filter(t=>t&&typeof t==='object')
 S.days=o(S.days);for(const k of Object.keys(S.days)){const v=S.days[k]=o(S.days[k]);if(!(v.chk&&typeof v.chk==='object'&&!Array.isArray(v.chk)))v.chk={}}
 S.rules=(Array.isArray(S.rules)?S.rules:[]).filter(r=>r&&typeof r==='object');
 ['ax','rev','pn','del'].forEach(k=>{if(S[k]!=null&&(typeof S[k]!=='object'||Array.isArray(S[k])))S[k]={}});}
-function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:vMercado,mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:vDia,regras:vRegras,stats:vStats,graf:vGraf,painel:vPainel,rev:vRev,conta:vConta,estudos:vEstudos,livro:vLivro,ativos:vAtivos,contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis()}
+function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:vMercado,juros:vJuros,mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:vDia,regras:vRegras,stats:vStats,graf:vGraf,painel:vPainel,rev:vRev,conta:vConta,estudos:vEstudos,livro:vLivro,ativos:vAtivos,contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis()}
 function render(){try{render0()}catch(e){console.error(e);const ap=$('#app');if(ap)ap.innerHTML='<div class="warn" style="margin:12px 0"><b>Não consegui abrir esta tela ('+esc(tab)+').</b><div class="sm" style="margin-top:6px">'+esc(String(e&&e.message||e))+'</div><div class="sm mut" style="margin-top:6px">'+esc(String((e&&e.stack||'').split('\n')[1]||'').trim().slice(0,160))+'</div></div><div class="mut sm">Abra o menu (☰) e tente outra tela. Se o erro continuar, me mande esta mensagem.</div>'}}
 document.addEventListener('click',async e=>{if(!e.target.closest('#fab,#fabm'))$('#fabm').style.display='none';const sg=e.target.closest('[data-seg]');if(sg&&T){T[sg.dataset.seg]=sg.dataset.v;if(sg.dataset.seg==='tipo')tipoMud();showSheet();return}const ds=e.target.closest('[data-dseg]');if(ds){const dd=(S.days[D]??={chk:{}});dd[ds.dataset.dseg]=ds.dataset.v;dd.u=Date.now();save();render();return}const im=e.target.closest('.pv img');if(im){zoom(im.src);return}const li=e.target.closest('#lb img');if(li){li.style.width=li.style.width==='260%'?'100%':'260%';return}const b=e.target.closest('[data-a],[data-tab]');if(!b)return;if(b.dataset.tab){tab=b.dataset.tab==='trades'?LT:b.dataset.tab;if(['trades','swing','opc'].includes(tab))LT=tab;render();scrollTo(0,0);return}const a=b.dataset.a,id=b.dataset.id;
 if(a==='am'){AM=b.dataset.id;SY.msg='';render()}
@@ -1013,7 +1013,8 @@ const mkDia=iso=>new Date(iso).toLocaleDateString('en-CA',{timeZone:'America/Sao
 
 function vMercado(){
   const t=MKT.tab;
-  const tabs=mkRow(mkBtn('tab','ag','📅 Agenda',t==='ag')+mkBtn('tab','nt','📰 Notícias',t==='nt')+mkBtn('tab','al','🔔 Alertas',t==='al'));
+  const tabs=mkRow(mkBtn('tab','ag','📅 Agenda',t==='ag')+mkBtn('tab','nt','📰 Notícias',t==='nt')+mkBtn('tab','cot','📊 Cotações',t==='cot')+mkBtn('tab','al','🔔 Alertas',t==='al'));
+  if(t==='cot')return vCot(tabs);
   if(t==='al')return vAlertas(tabs);
   if(t==='ag')return `<div class="card"><div class="top"><b>Agenda econômica</b></div>${tabs}<div class="sm mut">País</div>${mkRow(MK_CT.map(([v,l])=>mkBtn('ct',v,l,MKT.ct===v)).join(''))}<div class="sm mut">Importância</div>${mkRow(MK_IM.map(([v,l])=>mkBtn('im',v,l,MKT.im===v)).join(''))}<div id="mkcal" style="min-height:560px"></div><div class="sm mut" style="margin-top:6px">Horários no fuso do seu aparelho. Dados do TradingView.</div></div>`;
   return `<div class="card"><div class="top"><b>Notícias do dia</b><button class="btn s" data-mk="rf" aria-label="Atualizar notícias">↻ Atualizar</button></div>${tabs}${mkRow(MK_NF.map(([v,l])=>mkBtn('nf',v,l,MKT.nf===v)).join(''))}<div id="mknews"></div><div class="sm mut" style="margin-top:8px">Fonte: Money Times. Toque na manchete para ler a matéria no site.</div></div>`;
@@ -1066,6 +1067,7 @@ async function mkLoad(force){
 
 function mkAfter(){
   if(MKT.tm){clearInterval(MKT.tm);MKT.tm=null}
+  if(MKT.tab==='cot'){cotAfter();return}
   if(MKT.tab==='al'){alAfter();return}
   if(MKT.tab==='ag'){mkCal();return}
   mkPaint();mkLoad(false);
@@ -1458,5 +1460,151 @@ function adrAfter(){
       if(!s||!/^[A-Z0-9.\-]{1,10}$/.test(s)||AD.list.includes(s)||AD.list.length>=40)return;
       AD.list.push(s);ls.set('diario-adr',AD.list);adrPaint();adrLoad(true);
     }
+  });
+})();
+
+/* ---------- Juros: painel do Banco Central, cotações e aba educativa ---------- */
+const JR={data:ls.get('diario-jr'),busy:0,err:''};
+const jrN=(n,d=2)=>n==null||!isFinite(n)?'–':(+n).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const jrNum=s=>{const v=parseFloat(String(s||'').trim().replace(/\./g,'').replace(',','.'));return isFinite(v)?v:null};
+
+/* --- painel Selic / CDI / IPCA / juro real (Banco Central) --- */
+function jrPanelHtml(){
+  const d=JR.data;
+  if(!d)return `<div class="mut sm" style="padding:8px 0">${esc(JR.err||(JR.busy?'Buscando dados do Banco Central…':'Sem dados ainda.'))}</div>`;
+  const s=d.selic,kv=(l,v,sub)=>`<div class="card" style="margin:0"><span class="mut sm">${l}</span><div><b style="font-size:20px">${v}</b></div><span class="mut sm">${sub||''}</span></div>`;
+  const mud=s&&s.completo?(s.ant!=null&&s.ant!==s.v?`mudou de ${jrN(s.ant)}% em ${esc(s.desde)}`:`sem mudança desde ${esc(s.desde)}`):'';
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${kv('Selic meta',s?jrN(s.v)+'%':'–',mud)}${kv('CDI (ano)',d.cdi?jrN(d.cdi.v)+'%':'–',d.cdi?esc(d.cdi.d):'')}${kv('IPCA 12 meses',d.ipca12?jrN(d.ipca12.v)+'%':'–',d.ipca12?'ref. '+esc(d.ipca12.d.slice(3)):'')}${kv('Juro real (Selic − IPCA)',d.real!=null?jrN(d.real)+'%':'–','ex-post, ao ano')}</div>${JR.err?`<div class="warn" style="margin-top:8px">${esc(JR.err)}</div>`:''}<div class="sm mut" style="margin-top:6px">Banco Central do Brasil${JR.ts?' · atualizado às '+hm(JR.ts):''}</div>`;
+}
+function jrPaint(){const e=document.getElementById('jrp');if(e)e.innerHTML=jrPanelHtml()}
+async function jrLoad(force){
+  if(JR.busy)return;
+  if(!force&&JR.data&&JR.ts&&Date.now()-JR.ts<36e5)return;
+  const c=cfg();
+  if(!c){JR.err='Configure o Supabase na aba Conta para ver os juros.';jrPaint();return}
+  JR.busy=1;JR.err='';jrPaint();
+  try{
+    let r;
+    try{r=await fetch(c.url+'/functions/v1/juros',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:'{}'})}
+    catch(e){throw new Error('Sem conexão. Mostrando o último valor salvo.')}
+    let j={};try{j=await r.json()}catch(e){}
+    if(!r.ok)throw new Error(j.error||(r.status===404?'Função "juros" não encontrada: publique-a no Supabase.':'Erro '+r.status));
+    JR.data=j;JR.ts=Date.now();ls.set('diario-jr',j);
+  }catch(e){JR.err=e.message||String(e)}
+  JR.busy=0;jrPaint();
+}
+
+/* --- aba Mercado > Cotações: petróleo, minério e curva de DI (widget do TradingView) --- */
+function vCot(tabs){
+  return `<div class="card"><div class="top"><b>Cotações</b><button class="btn s" data-mk="cr" aria-label="Atualizar">↻</button></div>${tabs}<h3 style="margin-top:6px">Juros do Brasil</h3><div id="jrp">${jrPanelHtml()}</div><h3 style="margin-top:14px">Petróleo, minério e juros futuros</h3><div id="mkq" style="min-height:560px"></div><div class="sm mut" style="margin-top:6px">Dados do TradingView, com atraso nos mercados da B3 e da SGX. Se alguma linha vier vazia, o TradingView não liberou aquele contrato no plano gratuito. Quer entender os números? Veja a aba Juros e DI no menu.</div></div>`;
+}
+function cotAfter(){
+  jrPaint();jrLoad(false);
+  const box=document.getElementById('mkq');if(!box)return;
+  const y=new Date().getFullYear(),di=[1,2,3,5].map(n=>({name:'BMFBOVESPA:DI1F'+(y+n),displayName:'DI1F'+String(y+n).slice(2)+' (jan/'+(y+n)+')'}));
+  box.innerHTML='<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>';
+  const s=document.createElement('script');
+  s.src='https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js';s.async=true;
+  s.innerHTML=JSON.stringify({width:'100%',height:560,symbolsGroups:[
+    {name:'Petróleo e minério',symbols:[{name:'TVC:USOIL',displayName:'WTI (USOIL)'},{name:'TVC:UKOIL',displayName:'Brent (UKOIL)'},{name:'SGX:FEF1!',displayName:'FEF1 minério (1º venc.)'},{name:'SGX:FEF2!',displayName:'FEF2 minério (2º venc.)'}]},
+    {name:'Juros',symbols:[{name:'TVC:US10Y',displayName:'Treasury 10 anos (EUA)'},{name:'BMFBOVESPA:DI11!',displayName:'DI1 contínuo'}].concat(di)}
+  ],showSymbolLogo:false,colorTheme:mkDark()?'dark':'light',isTransparent:true,locale:'br'});
+  box.firstChild.appendChild(s);
+}
+
+/* --- cálculos de juros --- */
+const jrPU=(t,du)=>1e5/Math.pow(1+t/100,du/252);
+const jrTaxa=(pu,du)=>(Math.pow(1e5/pu,252/du)-1)*100;
+const jrFwd=(t1,d1,t2,d2)=>(Math.pow(Math.pow(1+t2/100,d2/252)/Math.pow(1+t1/100,d1/252),252/(d2-d1))-1)*100;
+function jrEaster(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=(h+l-7*m+114)%31+1;return new Date(y,mo-1,da)}
+const jrHol={};
+function jrHolidays(y){
+  if(jrHol[y])return jrHol[y];
+  const E=jrEaster(y),s=new Set(),k=d=>d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate();
+  [[0,1],[3,21],[4,1],[8,7],[9,12],[10,2],[10,15],[10,20],[11,25]].forEach(([m,d])=>s.add(y+'-'+m+'-'+d));
+  [-48,-47,-2,60].forEach(n=>{const d=new Date(E);d.setDate(d.getDate()+n);s.add(k(d))});
+  return jrHol[y]=s;
+}
+const jrBD=d=>{const w=d.getDay();return w!==0&&w!==6&&!jrHolidays(d.getFullYear()).has(d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate())};
+function jrVenc(y,m){const d=new Date(y,m,1);while(!jrBD(d))d.setDate(d.getDate()+1);return d}
+function jrDu(venc){const d=new Date();d.setHours(12,0,0,0);let n=0;const v=new Date(venc);v.setHours(12,0,0,0);while(d<v){if(jrBD(d))n++;d.setDate(d.getDate()+1)}return n}
+function jrDuMes(val){const m=/^(\d{4})-(\d{2})$/.exec(val||'');if(!m)return null;return jrDu(jrVenc(+m[1],+m[2]-1))}
+const jrCod='FGHJKMNQUVXZ';
+const jrContrato=val=>{const m=/^(\d{4})-(\d{2})$/.exec(val||'');return m?'DI1'+jrCod[+m[2]-1]+String(m[1]).slice(2):''};
+
+function jrCalc(){
+  const o1=document.getElementById('jr-o1'),o2=document.getElementById('jr-o2'),g=id=>jrNum((document.getElementById(id)||{}).value);
+  if(o1){
+    const t=g('jr-t'),du=g('jr-du'),pu=g('jr-pu');let h='';
+    if(du>0&&pu>0){h=`Taxa implícita: <b>${jrN(jrTaxa(pu,du),3)}% a.a.</b>`}
+    else if(du>0&&t!=null){const p=jrPU(t,du),p2=jrPU(t+0.1,du);h=`PU: <b>R$ ${jrN(p,2)}</b><br>Se a taxa subir 0,10 ponto, o PU cai <b>R$ ${jrN(p-p2,2)}</b> por contrato. Quem está comprado em taxa ganha esse valor, quem está vendido perde.`}
+    else h='<span class="mut">Preencha taxa e dias úteis, ou PU e dias úteis.</span>';
+    o1.innerHTML=h;
+  }
+  if(o2){
+    const t1=g('jr-t1'),d1=g('jr-d1'),t2=g('jr-t2'),d2=g('jr-d2');
+    o2.innerHTML=t1!=null&&t2!=null&&d1>0&&d2>d1?`Taxa a termo entre os dois vencimentos: <b>${jrN(jrFwd(t1,d1,t2,d2),3)}% a.a.</b>`:'<span class="mut">Preencha as duas taxas e os dias úteis (o segundo prazo tem que ser maior).</span>';
+  }
+}
+
+/* --- aba educativa --- */
+let JRO=ls.get('diario-jr-open')||'sel';
+function vJuros(){
+  const sec=(k,t,b)=>`<details class="card" data-jrs="${k}"${JRO===k?' open':''} style="margin-top:8px"><summary><b>${t}</b></summary><div class="sm" style="margin-top:8px;line-height:1.5">${b}</div></details>`;
+  const p=t=>`<p style="margin:8px 0">${t}</p>`;
+  const nx=new Date().getFullYear()+1,mes0=nx+'-01',du0=jrDuMes(mes0);
+  return `<h1>Juros e DI</h1><div class="card"><div class="top"><b>Painel de juros</b><button class="btn s" data-mk="jr" aria-label="Atualizar">↻</button></div><div id="jrp" style="margin-top:8px">${jrPanelHtml()}</div></div>
+${sec('sel','1. Selic, CDI e o Copom',
+ p('A <b>Selic meta</b> é a taxa básica de juros da economia. Quem decide é o <b>Copom</b>, o comitê do Banco Central. Ele se reúne <b>8 vezes por ano</b>, em dois dias, e o resultado sai na quarta-feira à noite.')+
+ p('A <b>Selic over</b> (ou efetiva) é a taxa que de fato se paga nos empréstimos de um dia entre bancos com títulos públicos. Ela fica colada na meta, em geral uns 0,10 ponto abaixo. O <b>CDI</b> é parecido: é a taxa dos empréstimos de um dia entre bancos, sem lastro em título público, e anda praticamente junto com a Selic.')+
+ p('<b>Por que o Copom mexe nela?</b> O objetivo é manter a inflação perto da meta (hoje 3% ao ano, com tolerância de 1,5 ponto para cima ou para baixo). Inflação alta: o BC sobe os juros, o crédito encarece, o consumo esfria e os preços perdem força. Economia fraca e inflação sob controle: ele pode cortar.')+
+ p('<b>Efeito nos mercados (tendência, não regra):</b> juros altos deixam a renda fixa mais atraente e pressionam ações de empresas endividadas e sensíveis a crédito, como construção e varejo. Juros em queda costumam ajudar a bolsa e essas empresas.'))}
+${sec('real','2. Juro real',
+ p('Juro real é o que sobra do juro depois de descontar a inflação. A conta é <b>(1 + Selic) ÷ (1 + inflação) − 1</b>.')+
+ p('O painel acima usa o IPCA dos últimos 12 meses (juro real <b>ex-post</b>). O mercado também olha o juro real <b>ex-ante</b>, que usa a inflação esperada para os próximos 12 meses (pesquisa Focus). É esse que mostra o quanto a política está apertada ou frouxa.'))}
+${sec('di','3. O que é o DI futuro (DI1)',
+ p('É um contrato da B3 que negocia a <b>taxa média do DI (CDI) entre hoje e o vencimento</b>. A cotação do contrato é uma <b>taxa de juros efetiva ao ano, base 252 dias úteis</b>.')+
+ p('O contrato vale <b>R$ 100.000 no vencimento</b>. Antes disso, o valor é o <b>PU</b> (preço unitário), que é R$ 100.000 trazidos a valor presente pela taxa: <b>PU = 100.000 ÷ (1 + taxa)^(dias úteis ÷ 252)</b>.')+
+ p('<b>Taxa e PU andam em sentidos opostos.</b> Taxa sobe, PU cai. Por isso se diz <b>comprado em taxa</b> (ganha se os juros sobem) e <b>vendido em taxa</b> (ganha se os juros caem).')+
+ p('<b>Vencimentos:</b> o contrato vence no 1º dia útil do mês. As letras dos meses são F (jan), G (fev), H (mar), J (abr), K (mai), M (jun), N (jul), Q (ago), U (set), V (out), X (nov) e Z (dez). Exemplo: <b>DI1F27</b> = vence em janeiro de 2027.')+
+ p('O resultado é ajustado todo dia, então ganhos e perdas entram na conta diariamente. Bancos e empresas usam para se proteger de juros, e fundos usam para apostar na direção deles.'))}
+${sec('curva','4. Como ler a curva de juros futuros',
+ p('Cada vencimento do DI1 é um ponto (<b>vértice</b>) da curva. A taxa de um vértice é, aproximadamente, a <b>média do CDI que o mercado espera até aquela data</b>, mais um prêmio de risco.')+
+ p('<b>Vértices curtos</b> (próximos meses) refletem o que o mercado espera do próximo Copom. <b>Vértices longos</b> (2 a 5 anos) refletem inflação futura, risco fiscal e juros lá fora (os Treasuries dos EUA).')+
+ p('<b>Curva inclinada para cima:</b> taxas longas maiores que as curtas. <b>Curva invertida:</b> juros altos hoje e o mercado esperando cortes. O que importa para o dia a dia é a <b>variação</b>: DI subindo (taxa subindo) pressiona o índice, e DI caindo costuma aliviar.')+
+ p('<b>Taxa a termo:</b> dá para extrair a taxa que o mercado projeta <i>entre</i> dois vértices. Use a calculadora logo abaixo.'))}
+${sec('move','5. O que move os DIs',
+ '<ul style="margin:8px 0 0 18px;padding:0"><li>Decisão e comunicado do Copom, e a ata uma semana depois</li><li>IPCA e prévias de inflação (a surpresa em relação ao esperado é o que mexe)</li><li>Relatório Focus, toda segunda-feira de manhã</li><li>Risco fiscal: contas do governo, arcabouço, gastos</li><li>Juros nos EUA: Fed e rendimento do Treasury de 10 anos</li><li>Dólar, petróleo e atividade econômica</li></ul>')}
+${sec('calc','6. Calculadora: taxa, PU e dias úteis',
+ p('Escolha o mês de vencimento (o app estima os dias úteis) ou digite os dias úteis você mesmo.')+
+ `<label>Vencimento (mês)<input type="month" id="jr-mes" value="${mes0}"></label><div class="sm mut" id="jr-cod" style="margin:-4px 0 6px">${esc(jrContrato(mes0))}</div>
+<div class="g2"><label>Dias úteis<input id="jr-du" inputmode="numeric" value="${du0==null?'':du0}"></label><label>Taxa (% a.a.)<input id="jr-t" inputmode="decimal" placeholder="ex.: 14,20"></label></div>
+<label>PU (opcional, para achar a taxa)<input id="jr-pu" inputmode="decimal" placeholder="ex.: 85.000,00"></label>
+<div class="card" id="jr-o1" style="margin-top:8px"><span class="mut">Preencha taxa e dias úteis.</span></div>
+<div class="sm mut" style="margin-top:6px">Os dias úteis são uma estimativa (fins de semana e feriados nacionais). Confira com a B3 antes de operar.</div>`)}
+${sec('fwd','7. Calculadora: taxa a termo entre dois vértices',
+ p('Exemplo: se o DI1F27 está em 14,0% com 80 dias úteis e o DI1F28 em 13,0% com 330 dias úteis, a calculadora mostra a taxa embutida entre esses dois vencimentos.')+
+ `<div class="g2"><label>Taxa 1 (% a.a.)<input id="jr-t1" inputmode="decimal" placeholder="14,00"></label><label>Dias úteis 1<input id="jr-d1" inputmode="numeric" placeholder="80"></label></div>
+<div class="g2"><label>Taxa 2 (% a.a.)<input id="jr-t2" inputmode="decimal" placeholder="13,00"></label><label>Dias úteis 2<input id="jr-d2" inputmode="numeric" placeholder="330"></label></div>
+<div class="card" id="jr-o2" style="margin-top:8px"><span class="mut">Preencha os campos.</span></div>`)}
+${sec('gloss','8. Glossário rápido',
+ '<ul style="margin:8px 0 0 18px;padding:0"><li><b>Copom:</b> comitê do Banco Central que define a Selic</li><li><b>Selic meta:</b> taxa básica decidida pelo Copom</li><li><b>CDI:</b> taxa dos empréstimos de um dia entre bancos, quase igual à Selic over</li><li><b>DI1:</b> contrato futuro da taxa de DI na B3</li><li><b>PU:</b> preço unitário, o valor do contrato em reais</li><li><b>Vértice:</b> um vencimento da curva de juros</li><li><b>Dias úteis (du):</b> contagem usada na base 252</li><li><b>Prêmio de risco:</b> parte da taxa que remunera incerteza, além da expectativa de Selic</li><li><b>Focus:</b> pesquisa semanal do BC com as projeções de analistas</li><li><b>Carry:</b> ganho de manter uma posição pela diferença de juros</li></ul>')}
+<div class="sm mut" style="margin:12px 0">Conteúdo educativo, não é recomendação de investimento.</div>`;
+}
+function jrAfter(){jrPaint();jrLoad(false);jrCalc()}
+
+(function(){
+  const r4=render0;
+  render0=function(){r4();if(tab==='juros')jrAfter()};
+  document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.jrs&&d.open){JRO=d.dataset.jrs;ls.set('diario-jr-open',JRO)}},true);
+  const jrIn=e=>{
+    const t=e.target;if(!t.id||t.id.indexOf('jr-')!==0)return;
+    if(t.id==='jr-mes'){const du=jrDuMes(t.value),d=document.getElementById('jr-du'),c=document.getElementById('jr-cod');if(d&&du!=null)d.value=du;if(c)c.textContent=jrContrato(t.value)}
+    jrCalc();
+  };
+  document.addEventListener('input',jrIn);document.addEventListener('change',jrIn);
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-mk="cr"],[data-mk="jr"]');if(!b)return;
+    jrLoad(true);if(b.dataset.mk==='cr')cotAfter();
   });
 })();
