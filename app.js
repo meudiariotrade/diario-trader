@@ -1367,15 +1367,16 @@ async function alAfter(){
 })();
 
 /* abrir direto na tela certa ao tocar na notificação */
-const GO={r:null};
+const GO={r:null,book:null};
 (function(){
-  const go=(g,r)=>{if(!['dia','mercado','home'].includes(g))return false;tab=g;if(g==='dia'){D=loc().slice(0,10);DV='ed'}GO.r=r||null;return true};
+  const go=(g,r)=>{if(!['dia','mercado','home','estudos','livro'].includes(g))return false;if(g==='livro'){GO.book=r||null;tab='estudos';return true}tab=g;if(g==='dia'){D=loc().slice(0,10);DV='ed'}GO.r=r||null;return true};
   const q=new URLSearchParams(location.search);
   if(q.get('go')){go(q.get('go'),q.get('r'));history.replaceState(null,'',location.pathname+location.hash)}
   if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.go&&go(d.go,d.r)){render();scrollTo(0,0)}});
   const r2=render0;
   render0=function(){
     r2();
+    if(GO.book&&(S.books||[]).some(x=>x.id===GO.book)){BID=GO.book;BV='not';tab='livro';GO.book=null;render();return}
     if(GO.r&&tab==='dia'){const el=document.getElementById('rot-'+GO.r);GO.r=null;if(el){setTimeout(()=>{el.scrollIntoView({behavior:'smooth',block:'center'});if(el.animate)el.animate([{boxShadow:'0 0 0 3px var(--ac)'},{boxShadow:'0 0 0 0 transparent'}],{duration:1600,easing:'ease-out'})},120)}}
   };
 })();
@@ -1461,6 +1462,207 @@ function adrAfter(){
       AD.list.push(s);ls.set('diario-adr',AD.list);adrPaint();adrLoad(true);
     }
   });
+})();
+
+/* ---------- Estudos: resumo de livros com IA, gerado em segundo plano ---------- */
+const RS_MAX=50*1024*1024;
+const RS={up:{},jobs:ls.get('diario-rs')||{},loading:0,loadedAt:0,poll:null,clock:null,err:'',started:0,auto:ls.get('diario-rs-auto')!==false};
+const RS_PEND=['na_fila','processando'];
+const rsPend=j=>!!j&&RS_PEND.includes(j.status);
+const rsChip=j=>({na_fila:'⏳ Na fila',processando:'⚙️ Gerando…',concluido:'✅ Resumo concluído',erro:'⚠️ Erro'}[j.status]||'');
+const rsMin=iso=>{const s=Math.max(0,Math.round((Date.now()-new Date(iso))/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const rsParado=j=>j.status==='processando'&&Date.now()-new Date(j.atualizado||j.criado)>6*6e4;
+
+async function rsFn(acao,extra){
+  const c=cfg();if(!c)throw new Error('Configure o Supabase na aba Conta.');
+  if(!SESS||!SESS.at)throw new Error('Entre na sua conta (Mais → Conta) para gerar resumos.');
+  await tok();
+  let r;
+  try{r=await fetch(c.url+'/functions/v1/resumo',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify(Object.assign({acao},extra||{}))})}
+  catch(e){throw new Error('Sem conexão. Se o pedido já foi enviado, o resumo continua sendo gerado no servidor.')}
+  let j={};try{j=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(j.erro||(r.status===404?'Função "resumo" não encontrada: publique-a no Supabase.':r.status===401?'Entre na sua conta de novo (Mais → Conta).':'Erro '+r.status));
+  return j;
+}
+const rsTela=()=>tab==='estudos'||tab==='livro';
+function rsRefresh(){
+  if(!rsTela())return;
+  const a=document.activeElement;
+  if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.value)return; // não atrapalha quem está digitando
+  render();
+}
+
+async function rsLoad(force){
+  if(RS.loading||!SESS)return;
+  if(!force&&Date.now()-RS.loadedAt<15000)return;
+  RS.loading=1;
+  try{
+    const j=await rsFn('listar'),novo={},prontos=[];let mudou=0;
+    for(const it of j.itens||[]){
+      const ant=RS.jobs[it.book_id],mesmo=ant&&ant.id===it.id,item=Object.assign({},mesmo?ant:{},it);
+      if(it.status==='concluido'&&(!item.resultado||(mesmo&&ant.concluido!==it.concluido))){
+        try{item.resultado=(await rsFn('obter',{id:it.id})).item.resultado}catch(e){}
+      }
+      if(mesmo&&rsPend(ant)&&it.status==='concluido')prontos.push(it);
+      if(!mesmo||ant.status!==it.status)mudou=1;
+      novo[it.book_id]=item;
+    }
+    if(Object.keys(RS.jobs).some(k=>!novo[k]))mudou=1;
+    RS.jobs=novo;ls.set('diario-rs',novo);RS.err='';RS.loadedAt=Date.now();
+    prontos.forEach(it=>{if(window.toast)toast('📖 Resumo concluído: '+it.titulo,4000)});
+    if(mudou)rsRefresh();
+  }catch(e){RS.err=e.message}
+  RS.loading=0;rsPoll();
+}
+function rsPoll(){
+  const pend=Object.values(RS.jobs).some(rsPend);
+  if(pend&&!RS.poll)RS.poll=setInterval(()=>{if(!document.hidden)rsLoad(true)},6000);
+  if(!pend&&RS.poll){clearInterval(RS.poll);RS.poll=null}
+  if(pend&&!RS.clock)RS.clock=setInterval(()=>{document.querySelectorAll('[data-rs-t]').forEach(e=>{e.textContent=rsMin(e.dataset.rsT)})},1000);
+  if(!pend&&RS.clock){clearInterval(RS.clock);RS.clock=null}
+}
+
+const rsPdfErro=f=>!f?'':(!(f.type==='application/pdf'||/\.pdf$/i.test(f.name))?'Envie um arquivo PDF.':f.size<=0?'O PDF está vazio.':f.size>RS_MAX?'O PDF passa de 50 MB ('+(f.size/1048576).toFixed(1).replace('.',',')+' MB). Escolha um arquivo menor.':'');
+function rsUpload(file,b,onp){
+  return new Promise((ok,fail)=>{
+    const c=cfg();if(!c)return fail(new Error('Configure o Supabase na aba Conta.'));
+    tok().then(()=>{
+      const path=SESS.uid+'/'+b.id+'-'+Date.now()+'.pdf',x=new XMLHttpRequest();
+      x.open('POST',c.url+'/storage/v1/object/livros/'+path);
+      x.setRequestHeader('apikey',c.key);x.setRequestHeader('Authorization','Bearer '+SESS.at);x.setRequestHeader('Content-Type','application/pdf');x.setRequestHeader('x-upsert','false');
+      x.timeout=10*60e3;
+      x.upload.onprogress=e=>{if(e.lengthComputable&&onp)onp(Math.round(e.loaded/e.total*100))};
+      x.onload=()=>{if(x.status>=200&&x.status<300)return ok(path);let m='';try{m=JSON.parse(x.responseText).message||''}catch(e){}fail(new Error(x.status===413?'O PDF passa do limite de envio do servidor (50 MB).':m||'Não consegui enviar o PDF (erro '+x.status+').'))};
+      x.onerror=()=>fail(new Error('Falha de rede no envio do PDF. Tente de novo.'));x.ontimeout=()=>fail(new Error('O envio do PDF demorou demais.'));
+      x.send(file);
+    }).catch(fail);
+  });
+}
+function rsUpUi(id,p){
+  document.querySelectorAll('[data-rs-up="'+id+'"]').forEach(e=>{e.textContent=p+'%'});
+  document.querySelectorAll('[data-rs-upbar="'+id+'"]').forEach(e=>{e.style.width=p+'%'});
+}
+
+async function rsCriar(b,foco,file){
+  RS.err='';
+  try{
+    let endpoint;
+    try{const reg=await navigator.serviceWorker.ready,s=await reg.pushManager.getSubscription();endpoint=s&&s.endpoint}catch(e){}
+    let arquivo;
+    if(file){
+      const er=rsPdfErro(file);if(er)throw new Error(er);
+      RS.up[b.id]={p:0};rsRefresh();
+      try{arquivo=await rsUpload(file,b,p=>{RS.up[b.id].p=p;rsUpUi(b.id,p)})}finally{delete RS.up[b.id]}
+    }
+    const j=await rsFn('criar',{book_id:b.id,titulo:b.t,autor:b.a||'',foco:foco||'',endpoint,arquivo});
+    const agora=new Date().toISOString();
+    RS.jobs[b.id]={id:j.id,book_id:b.id,titulo:b.t,autor:b.a||'',status:j.status||'na_fila',criado:agora,atualizado:agora};
+    ls.set('diario-rs',RS.jobs);
+    if(window.toast)toast('Resumo na fila. Pode sair da tela, avisamos quando terminar.',3500);
+  }catch(e){RS.err=e.message;if(window.toast)toast(e.message,4500)}
+  rsRefresh();rsPoll();
+}
+
+const rsPushHint=()=>typeof Notification!=='undefined'&&Notification.permission==='granted'?'Você também recebe uma notificação quando terminar.':'Quer ser avisado com o app fechado? Ative em Mercado → Alertas.';
+function rsView(b,j){
+  const r=j.resultado;
+  if(!r)return '<div class="sm mut" style="margin:6px 0">Carregando o resumo…</div>';
+  const sec=(t,h,open)=>`<details class="rs-sec"${open?' open':''}><summary><b>${t}</b></summary><div class="sm" style="margin-top:6px;line-height:1.55">${h}</div></details>`;
+  const P=a=>(a||[]).map(x=>`<p style="margin:6px 0">${esc(x)}</p>`).join('');
+  const L=(a,k1,k2)=>(a||[]).map(x=>`<div style="margin:8px 0"><b>${esc(x[k1])}</b><div>${esc(x[k2])}</div></div>`).join('');
+  const cor={alta:'var(--g)','média':'#d9a400',baixa:'var(--r)'}[r.confianca]||'var(--mut)';
+  const dt=j.concluido?new Date(j.concluido).toLocaleDateString('pt-BR'):'';
+  return `<div class="sm mut" style="margin-top:4px">${esc(r.autor||b.a||'')}${r.ano_publicacao&&r.ano_publicacao!=='sem dado'?' · '+esc(r.ano_publicacao):''}${r.tema?' · '+esc(r.tema):''}</div>
+<div class="sm" style="margin:6px 0">Confiança da IA: <b style="color:${cor}">${esc(r.confianca)}</b>${r.nota_confianca?' · '+esc(r.nota_confianca):''}</div>
+${r.tese_central?`<div class="card" style="margin:8px 0"><div class="sm mut">Tese central</div><div style="margin-top:2px">${esc(r.tese_central)}</div></div>`:''}
+${r.resumo_executivo.length?sec('📄 Resumo executivo',P(r.resumo_executivo),1):''}
+${r.ideias_principais.length?sec('💡 Ideias principais ('+r.ideias_principais.length+')',L(r.ideias_principais,'titulo','explicacao')):''}
+${r.estrutura.length?sec('🗂️ Estrutura do livro',L(r.estrutura,'parte','resumo')):''}
+${r.conceitos_chave.length?sec('🔑 Conceitos-chave',L(r.conceitos_chave,'termo','definicao')):''}
+${r.aplicacao_no_trading.length?sec('🎯 Como aplicar no trading',L(r.aplicacao_no_trading,'ideia','como_aplicar')):''}
+${r.criticas_e_limites.length?sec('⚖️ Críticas e limites',P(r.criticas_e_limites)):''}
+${r.para_quem_e?sec('👤 Para quem é',P([r.para_quem_e])):''}
+${r.perguntas_de_revisao.length?sec('❓ Perguntas de revisão','<ol style="margin:6px 0;padding-left:20px">'+r.perguntas_de_revisao.map(x=>`<li style="margin:4px 0">${esc(x)}</li>`).join('')+'</ol>'):''}
+${r.fontes_consultadas.length?sec('🔗 Fontes consultadas',P(r.fontes_consultadas)):''}
+<div class="sm mut" style="margin:8px 0">${r.origem==='pdf'?'Baseado no PDF que você enviou.':'Baseado no conhecimento do modelo e em busca na web, sem leitura do livro.'} Gerado por IA${dt?' em '+dt:''}. Pode haver imprecisões, confira no livro.</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-rs="note" data-id="${b.id}">📝 Salvar nas anotações</button><button class="btn s" data-rs="again" data-id="${b.id}">Gerar de novo</button><button class="btn s" data-rs="del" data-id="${b.id}">Apagar</button></div>`;
+}
+function rsCard(b){
+  const j=RS.jobs[b.id];
+  let h='<div class="card" id="rs-card" style="margin:10px 0"><div class="top"><b>✨ Resumo com IA</b>'+(j?`<span class="sm">${rsChip(j)}</span>`:'')+'</div>';
+  if(!SESS)h+='<div class="sm mut" style="margin-top:6px">Entre na sua conta (Mais → Conta) para gerar resumos.</div>';
+  else if(RS.up[b.id])h+=`<div class="sm" style="margin:8px 0 6px">⬆️ Enviando o PDF… <b data-rs-up="${b.id}">${RS.up[b.id].p}%</b></div><div style="height:4px;border-radius:2px;background:var(--bd);overflow:hidden"><div data-rs-upbar="${b.id}" style="height:100%;width:${RS.up[b.id].p}%;background:var(--ac)"></div></div><div class="sm mut" style="margin-top:6px">Mantenha o app aberto até o envio terminar. Depois pode sair da tela.</div>`;
+  else if(!j)h+=`<div class="sm mut" style="margin:6px 0 8px">O Gemini usa o que conhece do livro (e busca na web) para montar um resumo detalhado aqui. Leva de 30 s a 2 min e roda em segundo plano: pode sair da tela.</div><label>Foco (opcional)<input id="rsfoco" placeholder="ex.: gestão de risco e psicologia"></label><label>📎 PDF do livro (opcional, até 50 MB)<input type="file" id="rspdf2" accept="application/pdf,.pdf"></label><div class="sm mut">Com o PDF o resumo é feito a partir do texto real do livro. O arquivo é enviado ao Gemini (Google) e apagado do seu armazenamento assim que o resumo fica pronto.</div><button class="btn" style="margin-top:8px" data-rs="gen" data-id="${b.id}">✨ Gerar resumo</button>`;
+  else if(rsPend(j))h+=`<div class="sm" style="margin:8px 0 6px">${j.status==='na_fila'?'Na fila…':'Gerando o resumo…'} <b data-rs-t="${esc(j.criado)}">${rsMin(j.criado)}</b></div><div style="height:4px;border-radius:2px;background:var(--bd);overflow:hidden"><div class="rs-bar"></div></div><div class="sm mut" style="margin-top:6px">Pode sair desta tela. ${rsPushHint()}</div>${rsParado(j)?`<button class="btn s" style="margin-top:8px" data-rs="retry" data-id="${b.id}">Parece travado: tentar de novo</button>`:''}`;
+  else if(j.status==='erro')h+=`<div class="warn" style="margin:8px 0">${esc(j.erro||'Não consegui gerar o resumo.')}</div><div style="display:flex;gap:6px"><button class="btn" data-rs="retry" data-id="${b.id}">Tentar de novo</button><button class="btn s" data-rs="del" data-id="${b.id}">Descartar</button></div>`;
+  else h+=rsView(b,j);
+  return h+(RS.err?`<div class="sm mut" style="margin-top:6px">${esc(RS.err)}</div>`:'')+'</div>';
+}
+function rsNote(b){
+  const j=RS.jobs[b.id],r=j&&j.resultado;if(!r)return;
+  const x=['Tese central: '+r.tese_central,'','Ideias principais:',...r.ideias_principais.map((i,n)=>(n+1)+'. '+i.titulo+': '+i.explicacao),'','Como aplicar no trading:',...r.aplicacao_no_trading.map(a=>'• '+a.ideia+': '+a.como_aplicar)].join('\n');
+  (b.notes??=[]).unshift({id:uid(),t:'Resumo (IA): '+(r.titulo||b.t),p:'',x,u:Date.now()});
+  save();render();if(window.toast)toast('Anotação criada com os pontos principais');
+}
+
+(function(){
+  const st=document.createElement('style');
+  st.textContent='.rs-sec{border-top:1px solid var(--bd);padding:8px 0}.rs-sec summary{cursor:pointer}.rs-bar{height:100%;width:40%;background:var(--ac);border-radius:2px;animation:rsb 1.3s ease-in-out infinite}@keyframes rsb{0%{margin-left:-40%}100%{margin-left:100%}}@media (prefers-reduced-motion: reduce){.rs-bar{animation:none;width:100%}}';
+  document.head.appendChild(st);
+
+  const e0=vEstudos;
+  vEstudos=function(){
+    let h=e0();
+    const btn='<button class="btn" style="margin-top:10px" data-a="addbook">+ Adicionar livro</button>';
+    if(h.includes(btn))h=h.replace(btn,()=>`<label style="margin-top:8px">📎 PDF do livro (opcional, até 50 MB)<input type="file" id="rspdf" accept="application/pdf,.pdf"></label><label class="ck" style="margin-top:8px"><input type="checkbox" id="rsauto"${RS.auto?' checked':''}><span>✨ Gerar resumo com IA ao adicionar</span></label>`+btn);
+    (S.books||[]).forEach(b=>{
+      const j=RS.jobs[b.id];if(!j)return;
+      const a=h.indexOf('data-a="openbook" data-id="'+b.id+'"');if(a<0)return;
+      const fim=h.indexOf('</div></div></div>',a);if(fim<0)return;
+      const chip=`<div class="sm" style="margin-top:2px">${rsChip(j)}</div>`;
+      h=h.slice(0,fim+6)+chip+h.slice(fim+6);
+    });
+    const pend=Object.values(RS.jobs).filter(rsPend);
+    if(pend.length){
+      const m='<div class="card"><div class="g2"><label>Livro';
+      if(h.includes(m))h=h.replace(m,()=>`<div class="card" style="margin-bottom:8px"><b>⏳ Gerando resumo${pend.length>1?'s':''}</b>${pend.map(j=>`<div class="sm" style="margin-top:4px">${esc(j.titulo)} · <b data-rs-t="${esc(j.criado)}">${rsMin(j.criado)}</b></div>`).join('')}<div class="sm mut" style="margin-top:4px">Pode sair da tela. ${rsPushHint()}</div></div>`+m);
+    }
+    return h;
+  };
+  const l0=vLivro;
+  vLivro=function(){
+    const h=l0(),b=(S.books||[]).find(x=>x.id===BID);
+    if(!b)return h;
+    const m='</select></label>',i=h.indexOf(m);
+    return i<0?h:h.slice(0,i+m.length)+rsCard(b)+h.slice(i+m.length);
+  };
+  const r6=render0;
+  render0=function(){
+    r6();
+    if(!RS.started&&SESS){RS.started=1;rsLoad(true)}
+    if(rsTela()){rsLoad(false);rsPoll()}
+  };
+  /* ao adicionar um livro com a opção marcada, o pedido do resumo sai junto (captura: lê os campos antes de a tela redesenhar) */
+  document.addEventListener('click',e=>{
+    const a=e.target.closest('[data-a="addbook"]');if(!a)return;
+    const v=id=>((document.getElementById(id)||{}).value||'').trim(),cb=document.getElementById('rsauto'),t=v('bt'),au=v('ba');
+    const fi=document.getElementById('rspdf'),file=fi&&fi.files&&fi.files[0]||null;
+    if(cb){RS.auto=cb.checked;ls.set('diario-rs-auto',RS.auto)}
+    if(!t||!(file||(cb&&cb.checked)))return;
+    const er=rsPdfErro(file);if(er){if(window.toast)toast(er+' O livro foi adicionado sem resumo.',5000);return}
+    setTimeout(()=>{const nb=(S.books||[]).find(x=>x.t===t&&(x.a||'')===au&&Date.now()-(x.u||0)<5000);if(nb)rsCriar(nb,'',file)},60);
+  },true);
+  document.addEventListener('click',async e=>{
+    const x=e.target.closest('[data-rs]');if(!x)return;
+    const b=(S.books||[]).find(k=>k.id===x.dataset.id);if(!b)return;
+    const j=RS.jobs[b.id],k=x.dataset.rs;
+    if(k==='gen'){const fi=document.getElementById('rspdf2'),file=fi&&fi.files&&fi.files[0]||null,er=rsPdfErro(file);if(er){if(window.toast)toast(er,5000);return}rsCriar(b,((document.getElementById('rsfoco')||{}).value||'').trim(),file)}
+    else if(k==='again'){if(confirm('Gerar um novo resumo? O atual será substituído.'))rsCriar(b,'')}
+    else if(k==='note')rsNote(b);
+    else if(k==='retry'&&j){try{await rsFn('retomar',{id:j.id});j.status='na_fila';j.atualizado=new Date().toISOString();j.erro=null;ls.set('diario-rs',RS.jobs)}catch(err){if(window.toast)toast(err.message,4000)}rsRefresh();rsPoll()}
+    else if(k==='del'&&j){if(!confirm('Apagar este resumo?'))return;try{await rsFn('apagar',{id:j.id})}catch(err){}delete RS.jobs[b.id];ls.set('diario-rs',RS.jobs);rsRefresh()}
+  });
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&SESS&&Object.values(RS.jobs).some(rsPend))rsLoad(true)});
 })();
 
 /* ---------- Juros: painel do Banco Central, cotações e aba educativa ---------- */
