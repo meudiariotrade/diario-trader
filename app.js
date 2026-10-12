@@ -11,17 +11,17 @@ const opt=(a,v)=>a.map(x=>{const[k,l]=Array.isArray(x)?x:[x,x];return `<option v
 const loc=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString()};
 const fdt=s=>s.slice(8,10)+'/'+s.slice(5,7)+' '+s.slice(11,16);
 let S={trades:[],days:{},rules:[],seed:0},tab='home',T=null,orig={},isNew=0,delArm=0,D=loc().slice(0,10),db=null,M={},U={},st,PER='all',AUTO=0,TIPO='all',OPEN={},QM=0,VW={},LT='trades',SV=0,DV='ed',DX=null,LF={f:'all',q:''},CH={},SESS=null,AM='in',RECOV=null,SY={msg:'',email:''},sT;
-const inPer=dt=>{if(PER==='all')return 1;const d=dt.slice(0,10),t=loc().slice(0,10);if(PER==='hoje')return d===t;if(PER==='mes')return d.slice(0,7)===t.slice(0,7);const c=new Date(Date.now()-(PER==='7'?7:30)*864e5);return d>=new Date(c-c.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const inPer=dt=>noPeriodo(dt.slice(0,10),PER,loc().slice(0,10));
 const tipoSel=()=>`<label>Tipo<select id="tp">${opt([['all','Todos'],['D','Só day trade'],['S','Só swing'],['O','Só opções']],TIPO)}</select></label>`;
 const sym=s=>{s=s.trim().toUpperCase();return s.includes(':')?s:'BMFBOVESPA:'+s};
-const perSel=()=>`<label>Período<select id="per">${opt([['all','Tudo'],['hoje','Hoje'],['7','Últimos 7 dias'],['30','Últimos 30 dias'],['mes','Este mês']],PER)}</select></label>`;
+const perSel=()=>`<label>Período<select id="per">${opt(PERIODOS,PER)}</select></label>`;
 const open=()=>new Promise(r=>{try{const q=indexedDB.open('diario-trader',1);q.onupgradeneeded=()=>{q.result.createObjectStore('kv');q.result.createObjectStore('img')};q.onsuccess=()=>{db=q.result;r()};q.onerror=()=>r()}catch(e){r()}});
 const idb=(s,m,...a)=>new Promise(r=>{if(!db)return r();try{const q=db.transaction(s,m==='get'?'readonly':'readwrite').objectStore(s)[m](...a);q.onsuccess=()=>r(q.result);q.onerror=()=>r()}catch(e){r()}});
 const persist=()=>{clearTimeout(st);st=setTimeout(()=>idb('kv','put',S,'s'),250)},save=()=>{S.mt=Date.now();SV=Date.now();persist();syncSoon();svUi()};
 const shrink=f=>new Promise(r=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1100/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);c.toBlob(r,'image/jpeg',.7)};i.onerror=()=>r(null);i.src=URL.createObjectURL(f)});
 async function fillImgs(){for(const e of document.querySelectorAll('img[data-img]')){const id=e.dataset.img;if(!U[id]){const b=M[id]||await idb('img','get',id);if(b)U[id]=URL.createObjectURL(b)}if(U[id])e.src=U[id]}}
-const isOpen=t=>!(t.exit!==''&&t.exit!=null&&isFinite(+t.exit));
-function calc(t){const d=t.side==='C'?1:-1,pv=+t.pv||1,q=+t.qty||0,e=+t.entry,s=+t.stop,x=+t.exit,has=t.exit!==''&&t.exit!=null&&isFinite(x),risk=Math.abs(e-s)*q*pv,pl=has?(x-e)*d*q*pv-(+t.cost||0):null,r=has&&risk>0?pl/risk:null,rr=t.target!==''&&t.target!=null&&e!==s&&isFinite(+t.target)?Math.abs(+t.target-e)/Math.abs(e-s):null;return{risk,pl,r,rr}}
+
+
 /* ---------- Trades ---------- */
 /* ---------- Capital por modalidade (day trade, opções, swing) ---------- */
 const CAPN={D:'Day trade',O:'Opções',S:'Swing trade'},CAPU={D:'contrato',O:'lote',S:'lote'};let CAPO=0,CAPC=0;
@@ -126,7 +126,7 @@ return `<h1>Painel</h1><h2>🛡️ Mesa proprietária</h2><p class="mut sm">Pree
 <h2>🎯 Metas de processo</h2><div class="g2"><label>Máx. de trades por dia<input type="number" data-g="maxTr" value="${esc(G.maxTr)}"></label><label>Regras seguidas na semana (%)<input type="number" data-g="regPct" value="${esc(G.regPct)}"></label></div><div id="gg" style="margin-top:8px"></div>
 <h2>🧮 Tamanho da posição</h2><div class="g2">${z('cap','Capital (R$)')}${z('pct','Risco por trade (%)')}</div><div class="g3">${z('entry','Entrada')}${z('stop','Stop')}${z('pv','R$/ponto')}</div><div class="prev" id="zz"></div><div class="mut sm">R$/ponto: WIN 0,20 · WDO 10 · ações 1.</div>
 <h2>💾 Backup completo</h2><p class="mut sm">Salva trades, fotos, dias, regras e painel em um arquivo .json. Restaurar mescla com o que já existe neste aparelho.</p><div class="g2"><button class="btn" data-a="bk">Exportar backup</button><label class="btn s" style="margin:0;text-align:center;color:var(--tx)">Restaurar backup<input type="file" accept=".json,application/json" hidden id="bkf"></label></div><div id="bm" class="mut sm" style="margin-top:8px">${S.lastBackup?'Último backup: '+S.lastBackup.split('-').reverse().join('/'):'Nenhum backup feito ainda.'}</div>`}
-function ppOut(){const e=$('#pp');if(!e)return;const P=S.prop||{},cl=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null).sort((a,b)=>a.dt.localeCompare(b.dt)),cap=+P.cap||0,td=loc().slice(0,10),dm={};let eq=cap,pk=cap;cl.forEach(t=>{eq+=t.c.pl;pk=Math.max(pk,eq);const d=(t.dtx||t.dt).slice(0,10);dm[d]=(dm[d]||0)+t.c.pl});
+function ppOut(){const e=$('#pp');if(!e)return;const P=S.prop||{},cl=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null).sort(cmpCron),cap=+P.cap||0,td=loc().slice(0,10),dm={};let eq=cap,pk=cap;cl.forEach(t=>{eq+=t.c.pl;pk=Math.max(pk,eq);const d=(t.dtx||t.dt).slice(0,10);dm[d]=(dm[d]||0)+t.c.pl});
 const tot=eq-cap,ddv=P.ddTipo==='fixo'?Math.max(0,cap-eq):pk-eq,hoje=dm[td]||0,dv=Object.values(dm),best=dv.length?Math.max(...dv):0,L=n=>+P[n]||0;
 const bar=(v,max,inv)=>{const p=max>0?Math.min(100,Math.max(0,v/max*100)):0,c=inv?(p>=80?'var(--r)':p>=50?'#e8a317':'var(--g)'):'var(--ac)';return `<div style="height:8px;background:var(--bg);border-radius:6px;margin:4px 0;border:1px solid var(--bd)"><div style="height:100%;width:${p}%;background:${c};border-radius:6px"></div></div>`},row=(t,m,sb,b)=>`<div class="card"><b>${t}</b> <span class="mut sm">${sb}</span><div>${m}</div>${b}</div>`;let h='';
 if(L('perdaDia')){const u=Math.max(0,-hoje);h+=row('Perda diária hoje',`${money(u)} de ${money(L('perdaDia'))}`,'restam '+money(Math.max(0,L('perdaDia')-u)),bar(u,L('perdaDia'),1))+(u>=L('perdaDia')*.8?'<div class="warn">⚠ Perto (ou acima) do limite de perda diária: pare de operar hoje.</div>':'')}
@@ -348,7 +348,7 @@ else if(a==='dsave'){clearTimeout(st);await idb('kv','put',S,'s');SV=Date.now();
 let AV='at',OD={s:'EURUSD',side:'C',entry:'',stop:'',target:'',lots:'',nota:''},OC={},LD={d:'',s:'',v:'',n:''},AOF='all',APF='all',OX=null;
 const unionU=(a,b,del)=>{const m=new Map();[...(a||[]),...(b||[])].forEach(x=>{const o=m.get(x.id);if(!o||(x.u||0)>=(o.u||0))m.set(x.id,x)});return [...m.values()].filter(x=>!(del[x.id]&&del[x.id]>=(x.u||0)))};
 const asOf=s=>AS.find(a=>a[0]===s),csvQ=v=>'"'+String(v??'').replace(/"/g,'""')+'"',cN=v=>v==null||!isFinite(v)?'':(+v).toFixed(2).replace('.',',');
-const apIn=d=>{if(APF==='all')return 1;const t=loc().slice(0,10);if(APF==='hoje')return d===t;if(APF==='mes')return d.slice(0,7)===t.slice(0,7);return d>=isoD(new Date(Date.now()-(APF==='7'?7:30)*864e5))};
+const apIn=d=>noPeriodo(d,APF,loc().slice(0,10));
 function barChartU(id,vals,labels){if(!vals.length)return '';const m=Math.max(...vals.map(Math.abs),1);return `<div class="card"><div class="mut sm" id="chr-${id}">Toque numa barra</div><div class="bars">${vals.map((v,i)=>`<button class="bar" data-a="bar" data-id="${id}" data-t="${esc(labels[i])} · ${usd(v)}" style="height:${Math.max(4,Math.abs(v)/m*100)}%;background:var(${v>=0?'--g':'--r'})"></button>`).join('')}</div></div>`}
 function opCalc(o){const a=asOf(o.s);if(!a)return null;const c=ac(a),e=+o.entry,st=+o.stop,tg=+o.target,dir=o.side==='C'?1:-1;if(!(e&&st))return{a,c,need:1};const sp=Math.abs(e-st)/a[7],risk1=sp*c.pv,lots=+o.lots>0?+o.lots:(risk1>0?Math.floor(axg('risco',100)/risk1*100+1e-9)/100:0),tp=tg?Math.abs(tg-e)/a[7]:null;return{a,c,sp,risk1,lots,risk:lots*risk1,gain:tp!=null?lots*tp*c.pv:null,rr:tp!=null&&sp>0?tp/sp:null,margin:lots*c.margin,wrong:(e-st)*dir<=0,wrongT:!!tg&&(tg-e)*dir<=0}}
 function opRes(o,x,cost){const a=asOf(o.s),c=ac(a);return ((+x-+o.entry)*(o.side==='C'?1:-1)/a[7])*c.pv*(+o.lots)-(+cost||0)}
@@ -358,13 +358,13 @@ function opPanel(o){const b=(a,l,c='s')=>`<button class="btn ${c}" data-a="${a}"
 if(o.st==='open')h+=`<div class="g3" style="margin-top:8px">${ci('exit','Saída (preço)')}${ci('res','Resultado US$ (opc.)')}${ci('cost','Custos US$')}</div><div class="mut sm" id="ocv" style="margin-top:6px">Informe o preço de saída (o resultado sai do valor do pip) ou o resultado direto.</div><div class="g2" style="margin-top:8px">${b('opfin','✅ Encerrar','')}${b('opdel','🗑 Excluir')}</div>`;
 else if(o.st==='plan')h+=`<div class="g3" style="margin-top:8px">${b('opgo','▶ Entrei','')}${b('opedit','✏️ Editar')}${b('opdel','🗑 Excluir')}</div>`;
 else h+=`<div class="sm" style="margin-top:6px">${o.x!==''&&o.x!=null?'Saída '+esc(o.x)+' · ':''}custos ${usd(o.cost||0)}</div><div class="g3" style="margin-top:8px">${b('opre','↩ Reabrir')}${b('opedit','✏️ Editar')}${b('opdel','🗑 Excluir')}</div>`;return h+'</div>'}
-function opCard(o){const a=asOf(o.s)||[,,,,,,,1],sp=Math.abs(+o.entry-+o.stop)/a[7],tp=+o.target?Math.abs(+o.target-+o.entry)/a[7]:null,rr=tp&&sp?tp/sp:null,R=o.st==='closed'&&o.rk>0?o.res/o.rk:null,stt={plan:'📝 Planejada',open:'▶ Em andamento',closed:'✅ Encerrada'}[o.st];
+function opCard(o){const a=asOf(o.s)||[,,,,,,,1],sp=(numN(o.entry)!=null&&numN(o.stop)!=null)?Math.abs(numN(o.entry)-numN(o.stop))/a[7]:null,tp=(numN(o.target)!=null&&numN(o.entry)!=null)?Math.abs(numN(o.target)-numN(o.entry))/a[7]:null,rr=tp&&sp?tp/sp:null,R=o.st==='closed'&&o.rk>0?o.res/o.rk:null,stt={plan:'📝 Planejada',open:'▶ Em andamento',closed:'✅ Encerrada'}[o.st];
 return `<div class="card"><div class="top" data-a="opx" data-id="${o.id}" style="cursor:pointer"><div><b>${esc(o.s)}</b> · ${o.side==='C'?'Compra':'Venda'} ${f2(o.lots)} lote(s)<div class="mut sm">${stt} · entrada ${esc(o.entry)} · stop ${esc(o.stop)}${o.target?' · alvo '+esc(o.target):''}${rr?' · R:R '+f2(rr):''}</div></div><div class="rt ${o.st==='closed'?cls(o.res):''}">${o.st==='closed'?usd(o.res)+(R!=null?`<div class="sm">${fr(R)}</div>`:''):'<span class="mut sm">'+usd(o.rk||0)+' em risco</span>'}</div></div>${OX===o.id?opPanel(o):''}</div>`}
 function vOps(){const O=S.ops||[],ed=!!OD.id,a=asOf(OD.s),px=a?ac(a).px:'',lst=O.filter(o=>AOF==='all'||o.st===AOF).sort((x,y)=>(y.dt||'').localeCompare(x.dt||'')),fi=(k,l,ph)=>`<label>${l}<input type="number" step="any" inputmode="decimal" data-od="${k}" value="${esc(OD[k])}" placeholder="${esc(ph||'')}"></label>`;
 return `<div class="card"><b>${ed?'Editar operação':'Montar operação'}</b><label>Ativo<select data-od="s">${AS.map(x=>`<option value="${x[0]}"${OD.s===x[0]?' selected':''}>${x[0]} · ${esc(x[1])}</option>`).join('')}</select></label><label>Lado</label><div class="chips2"><button class="${OD.side==='C'?'on g':''}" data-a="odside" data-id="C">Compra</button><button class="${OD.side==='V'?'on r':''}" data-a="odside" data-id="V">Venda</button></div><div class="g3">${fi('entry','Entrada',px)}${fi('stop','Stop')}${fi('target','Alvo')}</div><div class="g2">${fi('lots','Lotes (vazio = pelo risco)','auto')}<label>Anotação<input data-od="nota" value="${esc(OD.nota)}"></label></div><div id="opv" style="margin-top:10px"></div><button class="btn" style="width:100%;margin-top:10px" data-a="opadd">${ed?'💾 Salvar alterações':'➕ Adicionar à lista'}</button>${ed?'<button class="btn s" style="width:100%;margin-top:6px" data-a="opcancel">Cancelar edição</button>':''}</div>
 <div class="chips2" style="margin-top:8px">${[['all','Todas'],['plan','Planejadas'],['open','Em andamento'],['closed','Encerradas']].map(([k,l])=>`<button class="${AOF===k?'on':''}" data-a="opf" data-id="${k}">${l}</button>`).join('')}</div>${lst.length?lst.map(opCard).join(''):'<p class="mut">Nenhuma operação nesta lista. Monte a primeira acima.</p>'}`}
 function lcItems(){const it=[];(S.ops||[]).filter(o=>o.st==='closed').forEach(o=>it.push({id:o.id,d:(o.dtx||o.dt||'').slice(0,10),s:o.s,v:+o.res,n:'Operação '+(o.side==='C'?'de compra':'de venda'),op:1,rk:o.rk}));(S.lanc||[]).forEach(l=>it.push({id:l.id,d:l.d,s:l.s,v:+l.v,n:l.n||'',op:0}));return it.sort((a,b)=>a.d.localeCompare(b.d))}
-function vLucros(){const it=lcItems(),td=loc().slice(0,10),wk=isoD(new Date(Date.now()-6*864e5)),mo=td.slice(0,7),sm=f=>sum(it.filter(f).map(x=>x.v)),cap=axg('cap',0),tot=sm(()=>1),h=sm(x=>x.d===td),dm={};it.forEach(x=>dm[x.d]=(dm[x.d]||0)+x.v);const dk=Object.keys(dm).sort();let c=0;const cum=dk.map(k=>c+=dm[k]),lb=k=>k.slice(8)+'/'+k.slice(5,7),k7=dk.slice(-20);
+function vLucros(){const it=lcItems(),td=loc().slice(0,10),wk=diasMais(td,-6),mo=td.slice(0,7),sm=f=>sum(it.filter(f).map(x=>x.v)),cap=axg('cap',0),tot=sm(()=>1),h=sm(x=>x.d===td),dm={};it.forEach(x=>dm[x.d]=(dm[x.d]||0)+x.v);const dk=Object.keys(dm).sort();let c=0;const cum=dk.map(k=>c+=dm[k]),lb=k=>k.slice(8)+'/'+k.slice(5,7),k7=dk.slice(-20);
 return `<div class="kv">${KV('Hoje',usd(h),cls(h),brl(h))}${KV('Últimos 7 dias',usd(sm(x=>x.d>=wk)),cls(sm(x=>x.d>=wk)),brl(sm(x=>x.d>=wk)))}${KV('Este mês',usd(sm(x=>x.d.slice(0,7)===mo)),cls(sm(x=>x.d.slice(0,7)===mo)),brl(sm(x=>x.d.slice(0,7)===mo)))}${KV('Total',usd(tot),cls(tot),cap>0?f2(tot/cap*100)+'% do capital':brl(tot))}</div>
 ${dk.length>1?`<h2>Evolução</h2>${lineChart('lcum',cum,dk.map(lb),v=>usd(v))}<h2>Resultado por dia</h2>${barChartU('ldia',k7.map(k=>dm[k]),k7.map(lb))}`:''}
 <div class="card" style="margin-top:12px"><b>Registrar lucro ou prejuízo</b><div class="g2"><label>Data<input type="date" data-lf="d" value="${esc(LD.d||td)}"></label><label>Valor (US$, negativo = prejuízo)<input type="number" step="any" inputmode="decimal" data-lf="v" value="${esc(LD.v)}"></label></div><div class="g2"><label>Ativo (opcional)<select data-lf="s"><option value="">–</option>${AS.map(x=>`<option value="${x[0]}"${LD.s===x[0]?' selected':''}>${x[0]}</option>`).join('')}</select></label><label>Anotação<input data-lf="n" value="${esc(LD.n)}"></label></div><button class="btn" style="width:100%;margin-top:10px" data-a="lcadd">➕ Adicionar</button><div class="mut sm" style="margin-top:6px">Operações encerradas na aba Operações entram aqui sozinhas.</div></div>
@@ -1808,5 +1808,266 @@ function jrAfter(){jrPaint();jrLoad(false);jrCalc()}
   document.addEventListener('click',e=>{
     const b=e.target.closest('[data-mk="cr"],[data-mk="jr"]');if(!b)return;
     jrLoad(true);if(b.dataset.mk==='cr')cotAfter();
+  });
+})();
+
+/* ==== ESTATISTICAS:INICIO (bloco puro e testado em tests/estatisticas.test.mjs: sem DOM e sem variáveis do app) ==== */
+
+/* ---- números: campo vazio NUNCA vira zero ---- */
+function numN(v){
+  if(v==null)return null;
+  if(typeof v==='number')return isFinite(v)?v:null;
+  const s=String(v).trim();
+  if(s===''||s==='-')return null;
+  if(!/^[+-]?(\d+([.,]\d*)?|[.,]\d+)(e[+-]?\d+)?$/i.test(s))return null;
+  const n=Number(s.replace(',','.'));
+  return isFinite(n)?n:null;
+}
+function isOpen(t){return numN(t.exit)==null}
+
+/* risk e r ficam null quando falta o stop (antes viravam entrada × qtd, porque '' virava 0) */
+function calc(t){
+  const d=t.side==='C'?1:-1,pv=numN(t.pv)||1,q=numN(t.qty)||0,e=numN(t.entry),s=numN(t.stop),x=numN(t.exit),cost=numN(t.cost)||0,tg=numN(t.target);
+  const has=x!=null&&e!=null;
+  const risk=e!=null&&s!=null?Math.abs(e-s)*q*pv:null;
+  const pl=has?(x-e)*d*q*pv-cost:null;
+  const r=has&&risk>0?pl/risk:null;
+  const rr=e!=null&&s!=null&&tg!=null&&e!==s?Math.abs(tg-e)/Math.abs(e-s):null;
+  return {risk,pl,r,rr,semStop:e!=null&&s==null};
+}
+
+/* ---- períodos: uma definição só para todas as telas (datas AAAA-MM-DD, sem depender de fuso nem de horário de verão) ---- */
+function diasMais(d,n){const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)}
+function segundaDe(d){const x=new Date(d+'T12:00:00Z');return diasMais(d,-((x.getUTCDay()+6)%7))}
+/* hoje | sem (segunda até hoje) | 7 e 30 (últimos N dias, contando hoje) | mes | ano | all */
+function intervalo(per,hoje){
+  switch(per){
+    case 'hoje':return [hoje,hoje];
+    case 'sem':return [segundaDe(hoje),hoje];
+    case '7':return [diasMais(hoje,-6),hoje];
+    case '30':return [diasMais(hoje,-29),hoje];
+    case 'mes':return [hoje.slice(0,8)+'01',hoje];
+    case 'ano':return [hoje.slice(0,4)+'-01-01',hoje];
+    default:return [null,null];
+  }
+}
+function noPeriodo(d,per,hoje){const [a,b]=intervalo(per,hoje);return !a||(d>=a&&d<=b)}
+const PERIODOS=[['all','Tudo'],['hoje','Hoje'],['sem','Esta semana'],['7','Últimos 7 dias'],['30','Últimos 30 dias'],['mes','Este mês'],['ano','Este ano']];
+
+/* ---- ordem cronológica: pela SAÍDA (resultado realizado); empate pela entrada; depois pela posição original ---- */
+function quando(t){const x=t.dtx||t.dt||'';return x.length===10?x+'T23:59':x}
+function cmpCron(a,b){
+  const x=quando(a),y=quando(b);if(x!==y)return x<y?-1:1;
+  const p=a.dt||'',q=b.dt||'';return p<q?-1:p>q?1:0;
+}
+function ordenaCron(ts){return ts.map((t,i)=>({t,i})).sort((a,b)=>cmpCron(a.t,b.t)||a.i-b.i).map(o=>o.t)}
+
+/* ---- métricas ---- */
+const _soma=a=>a.reduce((s,x)=>s+x,0);
+const _media=a=>a.length?_soma(a)/a.length:null;
+function _grupo(k,v){
+  const rs=v.filter(x=>x.c.r!=null).map(x=>x.c.r),pls=v.map(x=>x.c.pl);
+  return {k,n:v.length,nR:rs.length,acerto:v.length?pls.filter(p=>p>0).length/v.length:null,mediaR:_media(rs),somaR:_soma(rs),somaPL:_soma(pls)};
+}
+function agrupa(rows,fn,ordem){
+  const g=new Map();
+  rows.forEach(r=>{const k=fn(r)||'—';if(!g.has(k))g.set(k,[]);g.get(k).push(r)});
+  const a=[...g].map(([k,v])=>_grupo(k,v));
+  if(ordem)a.sort((x,y)=>ordem.indexOf(x.k)-ordem.indexOf(y.k));
+  return a;
+}
+const SEM=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const semDe=dt=>dt&&dt.length>=10?SEM[new Date(dt.slice(0,10)+'T12:00:00Z').getUTCDay()]:null;
+const horaDe=dt=>dt&&dt.length>=13?dt.slice(11,13)+'h':null;
+const minutosEntre=(a,b)=>{if(!a||!b||a.length<16||b.length<16)return null;const m=(Date.parse(b.slice(0,16)+':00Z')-Date.parse(a.slice(0,16)+':00Z'))/6e4;return m>=0?m:null};
+const SQN_ESCALA=[[1.6,'Abaixo do tradável'],[2,'Fraco, mas operável'],[2.5,'Médio'],[3,'Bom'],[5,'Excelente'],[7,'Soberbo'],[Infinity,'Santo Graal']];
+const qualSQN=x=>x==null?'sem dado':SQN_ESCALA.find(([l])=>x<l)[1];
+
+/* Trades abertos até `janelaMin` minutos depois do FIM de uma perda (possível operação de revanche) contra os demais. */
+function revancheDe(rr,janelaMin=15){
+  const T=x=>Date.parse(String(x).slice(0,16)+':00Z');
+  const fins=rr.filter(t=>t.c.r<0&&t.dtx&&t.dtx.length>=16).map(t=>({t,f:T(t.dtx)})).filter(x=>isFinite(x.f));
+  const rev=[],resto=[];
+  rr.forEach(t=>{const a=t.dt&&t.dt.length>=16?T(t.dt):NaN;(isFinite(a)&&fins.some(p=>p.t!==t&&a>=p.f&&a-p.f<=janelaMin*6e4)?rev:resto).push(t.c.r)});
+  if(rev.length<5||resto.length<5)return null;
+  return {janelaMin,rev:{n:rev.length,exp:_media(rev)},resto:{n:resto.length,exp:_media(resto)}};
+}
+
+/* ts: trades já com c=calc(t). Só entram os fechados (com saída). */
+function estat(ts){
+  const rows=ordenaCron(ts.filter(t=>t.c&&t.c.pl!=null)),n=rows.length;
+  const pls=rows.map(t=>t.c.pl),ganhos=pls.filter(p=>p>0),perdas=pls.filter(p=>p<0);
+  const gW=_soma(ganhos),gL=_soma(perdas),mediaGanho=_media(ganhos),mediaPerda=_media(perdas);
+  const rr=rows.filter(t=>t.c.r!=null),rs=rr.map(t=>t.c.r),nR=rs.length,mR=_media(rs);
+  const sd=nR>1?Math.sqrt(_soma(rs.map(r=>(r-mR)**2))/(nR-1)):null,ratio=sd?mR/sd:null;
+  const curvaR=[];let ac=0,pk=0,dd=0,ddR=[],ddMax=0,ddAt=-1;
+  rs.forEach((r,i)=>{ac+=r;curvaR.push(ac);pk=Math.max(pk,ac);dd=ac-pk;ddR.push(dd);if(-dd>ddMax){ddMax=-dd;ddAt=i}});
+  const curvaPL=[];let ap=0,pp=0,ddPL=0,ddPLMax=0;
+  pls.forEach(p=>{ap+=p;curvaPL.push(ap);pp=Math.max(pp,ap);ddPL=ap-pp;if(-ddPL>ddPLMax)ddPLMax=-ddPL});
+  let mg=0,mp=0,cg=0,cp=0;
+  pls.forEach(p=>{if(p>0){cg++;cp=0}else if(p<0){cp++;cg=0}else{cg=0;cp=0}mg=Math.max(mg,cg);mp=Math.max(mp,cp)});
+  const dias=new Map();
+  rows.forEach(t=>{const k=(t.dtx||t.dt||'').slice(0,10);const d=dias.get(k)||{k,pl:0,r:0,n:0};d.pl+=t.c.pl;d.r+=t.c.r||0;d.n++;dias.set(k,d)});
+  const dl=[...dias.values()].sort((a,b)=>a.k<b.k?-1:1),dpl=dl.map(d=>d.pl);
+  const dg=[],dp=[];
+  rows.forEach(t=>{const m=minutosEntre(t.dt,t.dtx);if(m!=null)(t.c.pl>0?dg:t.c.pl<0?dp:[]).push(m)});
+  const cap=rr.filter(t=>t.c.pl>0&&t.c.rr>0).map(t=>t.c.r/t.c.rr);
+  const semErro=t=>!(t.err&&t.err!=='Nenhum'),ok=rows.filter(t=>semErro(t)&&t.rules!=='n'),quebrou=rows.filter(t=>t.rules==='n'),comErro=rows.filter(t=>!semErro(t));
+  const heat={};rows.forEach(t=>{const w=semDe(t.dt),h=horaDe(t.dt);if(!w||!h)return;const k=w+'|'+h;(heat[k]??={n:0,somaR:0});heat[k].n++;heat[k].somaR+=t.c.r||0});
+  const grande=rs.filter(r=>r<-1.05).length,perdasR=rs.filter(r=>r<0).length;
+  const num=v=>numN(v)||0;
+  return {
+    rows,n,nR,semStop:n-nR,
+    resultado:_soma(pls),ganhoBruto:gW,perdaBruta:gL,custos:_soma(rows.map(t=>num(t.cost))),
+    acerto:n?ganhos.length/n:null,nGanhos:ganhos.length,nPerdas:perdas.length,
+    mediaGanho,mediaPerda,payoff:mediaPerda?mediaGanho/-mediaPerda:null,profitFactor:gL<0?gW/-gL:null,expectativaPL:n?_soma(pls)/n:null,
+    mediaR:mR,desvioR:sd,sqn:ratio==null?null:ratio*Math.sqrt(Math.min(nR,100)),sqn100:ratio==null?null:ratio*10,
+    mediaGanhoR:_media(rs.filter(r=>r>0)),mediaPerdaR:_media(rs.filter(r=>r<0)),maiorR:nR?Math.max(...rs):null,menorR:nR?Math.min(...rs):null,
+    perdasAcima1R:grande,nPerdasR:perdasR,
+    curvaR,ddR,ddMaxR:ddMax,ddMaxEm:ddAt>=0?rr[ddAt].dtx||rr[ddAt].dt:null,ddAtualR:ddR.length?-ddR[ddR.length-1]:0,
+    curvaPL,ddMaxPL:ddPLMax,ddAtualPL:curvaPL.length?pp-ap:0,
+    maxSeqGanhos:mg,maxSeqPerdas:mp,seqAtual:cg?{tipo:'ganho',n:cg}:cp?{tipo:'perda',n:cp}:null,
+    dias:dl,diasGanhos:dpl.filter(x=>x>0).length,diasPerdidos:dpl.filter(x=>x<0).length,melhorDia:dpl.length?Math.max(...dpl):null,piorDia:dpl.length?Math.min(...dpl):null,
+    durGanhoMin:_media(dg),durPerdaMin:_media(dp),nDurGanho:dg.length,nDurPerda:dp.length,
+    captura:_media(cap),nCaptura:cap.length,
+    regras:{ok:ok.length,quebrou:quebrou.length,erros:comErro.length,mediaOk:_media(ok.filter(t=>t.c.r!=null).map(t=>t.c.r)),mediaQuebrou:_media(quebrou.filter(t=>t.c.r!=null).map(t=>t.c.r)),rErros:_soma(comErro.map(t=>t.c.r||0)),rSemErro:_soma(rows.filter(semErro).map(t=>t.c.r||0))},
+    porDia:agrupa(rows,t=>semDe(t.dt),['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']),porHora:agrupa(rows,t=>horaDe(t.dt)).sort((a,b)=>a.k<b.k?-1:1),
+    porSetup:agrupa(rows,t=>t.setup),porMercado:agrupa(rows,t=>t.mkt),porAtivo:agrupa(rows,t=>(t.ativo||'').toUpperCase()),porErro:agrupa(comErro,t=>t.err),
+    heat,revanche:revancheDe(rr),
+  };
+}
+
+/* ---- diagnósticos: regras fixas, cada uma com os números que a justificam (a IA só interpreta) ---- */
+const _f=(x,d=2)=>x==null?'–':x.toFixed(d).replace('.',',');
+const _R=x=>x==null?'–':(x>0?'+':'')+_f(x)+'R';
+const _pct=x=>x==null?'–':_f(x*100,0)+'%';
+function diagnosticos(e){
+  const D=[],add=(nivel,id,titulo,texto)=>D.push({nivel,id,titulo,texto});
+  if(!e.n)return D;
+  if(e.semStop>0)add('alerta','sem-stop',`${e.semStop} trade(s) fechado(s) sem stop`,`Sem stop não existe 1R. Esses trades ficam fora de expectância, SQN e drawdown em R, e só entram no resultado em dinheiro. Preencha o stop inicial para medir tudo.`);
+  if(e.n<30)add('info','amostra',`Amostra pequena (${e.n} trades)`,`Com menos de 30 trades os números ainda oscilam muito. Use como pista, não como conclusão.`);
+  if(e.nR>=20&&e.mediaR!=null){
+    if(e.mediaR<=0)add('alerta','expectancia',`Expectância negativa: ${_R(e.mediaR)} por trade`,`Em ${e.nR} trades com stop, a média de R é ${_R(e.mediaR)}. Nesse ritmo o sistema perde dinheiro mesmo com disciplina; revise setup, stop e alvo antes de aumentar o risco.`);
+    else add('ok','expectancia',`Expectância positiva: ${_R(e.mediaR)} por trade`,`Em ${e.nR} trades com stop a média de R é ${_R(e.mediaR)} (SQN padronizado ${_f(e.sqn100)}: ${qualSQN(e.sqn100)}).`);
+  }
+  if(e.nPerdasR>=5&&e.perdasAcima1R/e.nPerdasR>0.3)add('alerta','stop-nao-respeitado',`${e.perdasAcima1R} de ${e.nPerdasR} perdas passaram de 1R`,`Perdas bem acima de 1R sugerem stop movido, não executado ou tamanho fora do plano. A pior foi ${_R(e.menorR)}.`);
+  if(e.nCaptura>=5&&e.captura!=null&&e.captura<0.6)add('alerta','saida-cedo',`Você captura só ${_pct(e.captura)} do alvo planejado`,`Nos ${e.nCaptura} ganhos com alvo definido, o R realizado foi em média ${_pct(e.captura)} do R planejado. Há sinal de saída antecipada; compare com o que o preço fez depois.`);
+  if(e.nDurGanho>=5&&e.nDurPerda>=5&&e.durGanhoMin<e.durPerdaMin*0.7)add('alerta','ganho-curto-perda-longa',`Ganhos duram menos que perdas`,`Ganhos ficam em média ${_f(e.durGanhoMin,0)} min e perdas ${_f(e.durPerdaMin,0)} min. É o padrão de realizar rápido e segurar o que dá errado.`);
+  if(e.regras.erros>=3&&e.regras.rErros<0)add('alerta','custo-erros',`Trades com erro custaram ${_R(e.regras.rErros)}`,`${e.regras.erros} trades tiveram erro registrado e somam ${_R(e.regras.rErros)}; os demais somam ${_R(e.regras.rSemErro)}.`);
+  if(e.regras.quebrou>=5&&e.regras.mediaOk!=null&&e.regras.mediaQuebrou!=null&&e.regras.mediaQuebrou<e.regras.mediaOk)add('alerta','regras',`Quebrar regras piora o resultado`,`Seguindo as regras a média é ${_R(e.regras.mediaOk)}; quebrando, ${_R(e.regras.mediaQuebrou)} (${e.regras.quebrou} trades).`);
+  const fraco=(g,nome)=>{const c=g.filter(x=>x.n>=8&&x.nR>=8&&x.mediaR<0).sort((a,b)=>a.somaR-b.somaR)[0];if(c)add('info','fraco-'+nome,`Ponto fraco: ${nome} ${c.k}`,`${c.n} trades, média ${_R(c.mediaR)}, soma ${_R(c.somaR)}. Considere evitar ou reduzir o tamanho aqui.`)};
+  fraco(e.porDia,'dia da semana');fraco(e.porHora,'horário');fraco(e.porSetup,'setup');
+  if(e.dias.length>=10){
+    const ns=e.dias.map(d=>d.n).sort((a,b)=>a-b),med=ns[Math.floor(ns.length/2)],muito=e.dias.filter(d=>d.n>med),pouco=e.dias.filter(d=>d.n<=med);
+    if(muito.length>=3&&pouco.length>=3){const a=_media(muito.map(d=>d.r/d.n)),b=_media(pouco.map(d=>d.r/d.n));if(a<b-0.2)add('alerta','overtrading','Dias com mais trades rendem menos',`Em dias acima de ${med} trade(s) a média é ${_R(a)} por trade, contra ${_R(b)} nos demais. Pode ser excesso de operações.`)}
+  }
+  if(e.revanche&&e.revanche.rev.exp<e.revanche.resto.exp-0.2)add('alerta','revanche','Trades logo depois de uma perda rendem menos',`Entradas até ${e.revanche.janelaMin} min depois do fim de uma perda: ${_R(e.revanche.rev.exp)} por trade (${e.revanche.rev.n} trades), contra ${_R(e.revanche.resto.exp)} nos demais. Pode ser revanche; espere antes de operar de novo.`);
+  if(e.seqAtual&&e.seqAtual.tipo==='perda'&&e.seqAtual.n>=3)add('alerta','sequencia',`${e.seqAtual.n} perdas seguidas`,`Sequência de perdas é o momento de maior risco emocional. Considere parar o dia e revisar os últimos trades.`);
+  if(e.ddMaxR>0&&e.ddAtualR>0&&e.ddAtualR>=e.ddMaxR*0.5)add('info','drawdown',`Drawdown atual de ${_f(e.ddAtualR)}R`,`O máximo histórico é ${_f(e.ddMaxR)}R; você está a ${_pct(e.ddAtualR/e.ddMaxR)} dele.`);
+  if(e.profitFactor!=null&&e.n>=20&&e.profitFactor<1)add('alerta','profit-factor',`Profit factor abaixo de 1 (${_f(e.profitFactor)})`,`Os ganhos brutos não cobrem as perdas brutas.`);
+  if(e.ganhoBruto>0&&e.custos/e.ganhoBruto>0.3)add('info','custos',`Custos consomem ${_pct(e.custos/e.ganhoBruto)} dos ganhos brutos`,`Corretagem e taxas somam ${_f(e.custos)} contra ${_f(e.ganhoBruto)} de ganho bruto.`);
+  return D;
+}
+/* ==== ESTATISTICAS:FIM ==== */
+
+/* ---------- Estatísticas: tela nova (todos os números vêm do bloco testado acima; a IA só interpreta) ---------- */
+const ST={aba:ls.get('diario-st-aba')||'geral',ia:Object.assign({busy:0,err:'',rel:null,chave:'',em:0},ls.get('diario-st-ia')||{},{busy:0,err:''})};
+const ST_ABAS=[['geral','Visão geral'],['risco','Risco e disciplina'],['onde','Quando e onde'],['diag','Diagnóstico']];
+const frN=x=>x==null?'–':fr(x),f2N=x=>x==null?'–':f2(x),pcN=x=>x==null?'–':pc(x);
+
+function stRows(){
+  const hoje=loc().slice(0,10);
+  return S.trades.filter(t=>TIPO==='all'||(t.tipo||'D')===TIPO).map(t=>({...t,c:calc(t)}))
+    .filter(t=>t.c.pl!=null&&noPeriodo((t.dtx||t.dt||'').slice(0,10),PER,hoje));
+}
+const stTbl=(nome,g)=>g.length?tbl([nome,'Nº','Acerto','Média','R total'],g.map(x=>`<tr><td>${esc(x.k)}</td><td>${x.n}</td><td>${pcN(x.acerto)}</td><td class="${cls(x.mediaR)}">${frN(x.mediaR)}</td><td class="${cls(x.somaR)}">${frN(x.nR?x.somaR:null)}</td></tr>`).join('')):'';
+function stHeat(e){
+  const ks=Object.keys(e.heat);if(!ks.length)return '';
+  const dias=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].filter(d=>ks.some(k=>k.startsWith(d+'|'))),horas=[...new Set(ks.map(k=>k.split('|')[1]))].sort();
+  const mx=Math.max(...Object.values(e.heat).map(c=>Math.abs(c.somaR)),1);
+  const cel=(d,h)=>{const c=e.heat[d+'|'+h];if(!c)return '<td></td>';const a=Math.min(.85,.18+Math.abs(c.somaR)/mx*.67);return `<td style="background:${c.somaR>=0?`rgba(46,160,67,${a})`:`rgba(229,83,75,${a})`};text-align:center;padding:6px 4px;font-size:12px" title="${c.n} trade(s)">${c.somaR>0?'+':''}${f2(c.somaR)}<div style="opacity:.75;font-size:10px">${c.n}x</div></td>`};
+  return `<div class="card" style="overflow-x:auto"><table style="min-width:${70+horas.length*54}px"><tr><th></th>${horas.map(h=>`<th>${h}</th>`).join('')}</tr>${dias.map(d=>`<tr><th>${d}</th>${horas.map(h=>cel(d,h)).join('')}</tr>`).join('')}</table></div><div class="sm mut">Soma de R por dia da semana e hora de entrada. Verde ganha, vermelho perde; o número pequeno é a quantidade de trades.</div>`;
+}
+const ST_NIV={alerta:['⚠️','var(--r)'],info:['ℹ️','#d9a400'],ok:['✅','var(--g)']};
+const stDiagHtml=D=>D.length?D.map(d=>{const [i,c]=ST_NIV[d.nivel]||ST_NIV.info;return `<div class="card" style="border-left:4px solid ${c};margin:8px 0"><b>${i} ${esc(d.titulo)}</b><div class="sm" style="margin-top:4px;line-height:1.5">${esc(d.texto)}</div></div>`}).join(''):'<p class="mut">Nenhum ponto de atenção com os dados atuais.</p>';
+
+/* pacote com os números já calculados que a IA vai interpretar (nunca os trades crus) */
+function stPacote(e,D){
+  const r=x=>x==null?null:+(+x).toFixed(2),g=a=>a.slice(0,8).map(x=>({grupo:x.k,trades:x.n,acerto_pct:x.acerto==null?null:Math.round(x.acerto*100),media_R:r(x.mediaR),soma_R:r(x.somaR)}));
+  return {
+    resumo:{periodo:(PERIODOS.find(p=>p[0]===PER)||[])[1]||PER,tipo:TIPO,trades_fechados:e.n,trades_com_stop:e.nR,trades_sem_stop:e.semStop,resultado:r(e.resultado),acerto_pct:e.acerto==null?null:Math.round(e.acerto*100),
+      expectancia_R:r(e.mediaR),desvio_R:r(e.desvioR),sqn:r(e.sqn),sqn_padronizado_100:r(e.sqn100),profit_factor:r(e.profitFactor),payoff:r(e.payoff),
+      media_ganho_R:r(e.mediaGanhoR),media_perda_R:r(e.mediaPerdaR),maior_ganho_R:r(e.maiorR),maior_perda_R:r(e.menorR),perdas_acima_1R:e.perdasAcima1R,perdas_em_R:e.nPerdasR,
+      drawdown_max_R:r(e.ddMaxR),drawdown_atual_R:r(e.ddAtualR),max_seq_ganhos:e.maxSeqGanhos,max_seq_perdas:e.maxSeqPerdas,seq_atual:e.seqAtual,
+      captura_do_alvo_pct:e.captura==null?null:Math.round(e.captura*100),duracao_ganhos_min:r(e.durGanhoMin),duracao_perdas_min:r(e.durPerdaMin),custos:r(e.custos),
+      regras_seguidas:e.regras.ok,regras_quebradas:e.regras.quebrou,trades_com_erro:e.regras.erros,R_dos_trades_com_erro:r(e.regras.rErros),media_R_regras_seguidas:r(e.regras.mediaOk),media_R_regras_quebradas:r(e.regras.mediaQuebrou)},
+    diagnosticos:D.map(d=>({nivel:d.nivel,titulo:d.titulo,texto:d.texto})),
+    grupos:{por_dia_da_semana:g(e.porDia),por_hora:g(e.porHora),por_setup:g(e.porSetup),por_mercado:g(e.porMercado),por_erro:g(e.porErro)}
+  };
+}
+async function stIA(e,D){
+  if(ST.ia.busy)return;
+  const p=stPacote(e,D),chave=hs(JSON.stringify(p));
+  ST.ia.busy=1;ST.ia.err='';render();
+  try{
+    const j=await anxCall({modo:'estatisticas',resumo:p.resumo,diagnosticos:p.diagnosticos,grupos:p.grupos});
+    ST.ia.rel=j.relatorio||null;ST.ia.chave=chave;ST.ia.em=Date.now();
+    ls.set('diario-st-ia',{rel:ST.ia.rel,chave,em:ST.ia.em});
+    if(!ST.ia.rel)ST.ia.err='A IA não devolveu a interpretação. Tente de novo.';
+  }catch(err){ST.ia.err=err.message||String(err)}
+  ST.ia.busy=0;render();
+}
+const stT=x=>typeof x==='string'?esc(x):x&&typeof x==='object'?Object.entries(x).map(([k,v])=>`<b>${esc(k)}:</b> ${esc(String(v))}`).join(' · '):'';
+function stIAHtml(e,D){
+  const I=ST.ia,chave=hs(JSON.stringify(stPacote(e,D))),rel=I.rel,L=a=>Array.isArray(a)?a:[];
+  const btn=`<button class="btn" data-st="ia"${I.busy?' disabled':''}>${I.busy?'Interpretando…':rel?'🤖 Interpretar de novo':'🤖 Interpretar com IA'}</button>`;
+  let h=`<div class="card" style="margin:12px 0"><div class="top"><b>🤖 Leitura da IA</b></div><div class="sm mut" style="margin:4px 0 8px">Todos os números abaixo foram calculados pelo app. A IA só explica o que eles significam e sugere um plano de ação.</div>${btn}${I.err?`<div class="warn" style="margin-top:8px">${esc(I.err)}</div>`:''}`;
+  if(rel){
+    if(I.chave!==chave)h+='<div class="sm mut" style="margin-top:8px">Os números mudaram desde esta leitura. Gere de novo para atualizar.</div>';
+    const sec=(t,x)=>x?`<div style="margin-top:12px"><b>${t}</b>${x}</div>`:'';
+    const P=a=>L(a).map(x=>`<p style="margin:6px 0;line-height:1.5">${stT(x)}</p>`).join('');
+    const C=a=>L(a).map(x=>`<div class="card" style="margin:6px 0"><b>${esc(x.tema||'')}</b>${x.evidencia?`<div class="sm mut" style="margin-top:2px">${esc(x.evidencia)}</div>`:''}<div class="sm" style="margin-top:4px">${esc(x.acao||x.por_que_importa||'')}</div></div>`).join('');
+    h+=sec('Leitura geral',P(rel.leitura_geral))+sec('Pontos fortes',C(rel.pontos_fortes))+sec('Pontos de melhoria',C(rel.pontos_de_melhoria))+sec('Padrões de comportamento',P(rel.padroes_de_comportamento))
+      +sec('Plano para os próximos 20 trades',L(rel.plano_proximos_20_trades).length?'<ol style="margin:6px 0;padding-left:20px">'+L(rel.plano_proximos_20_trades).map(x=>`<li style="margin:4px 0">${stT(x)}</li>`).join('')+'</ol>':'')+sec('Alertas',P(rel.alertas))
+      +`<div class="sm mut" style="margin-top:10px">Gerada por IA${I.em?' em '+new Date(I.em).toLocaleDateString('pt-BR'):''}. Não é recomendação de investimento.</div>`;
+  }
+  return h+'</div>';
+}
+
+function vStats(){
+  const head='<div class="top"><h1>Estatísticas</h1><button class="btn s" data-a="csv" id="csvb">Exportar CSV</button></div>';
+  const filtros=perSel()+tipoSel()+'<div class="sm mut" style="margin:-2px 0 8px">O período vale pela data de saída de cada trade.</div>';
+  const e=estat(stRows());
+  if(!e.n)return head+filtros+'<p class="mut">Feche trades (com saída) para ver as estatísticas. Para medir em R, informe também o stop inicial. Tharp recomenda juntar de 100 a 200 trades.</p>';
+  const D=diagnosticos(e),alertas=D.filter(d=>d.nivel==='alerta').length;
+  const abas=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${ST_ABAS.map(([k,l])=>`<button class="btn${ST.aba===k?'':' s'}" data-st="${k}">${l}${k==='diag'&&alertas?` <span style="color:var(--r)">●${alertas}</span>`:''}</button>`).join('')}</div>`;
+  const kpi=`<div class="kv" style="margin-top:8px">${KV('Resultado',money(e.resultado),cls(e.resultado),e.n+' trades · custos '+money(e.custos))}${KV('Expectância',frN(e.mediaR),cls(e.mediaR),'média de R ('+e.nR+' com stop)')}${KV('Acerto',pcN(e.acerto),'',e.nGanhos+' ganhos · '+e.nPerdas+' perdas')}${KV('Profit factor',f2N(e.profitFactor),e.profitFactor!=null&&e.profitFactor<1?'r':'','payoff '+f2N(e.payoff))}${KV('SQN',f2N(e.sqn100),'',qualSQN(e.sqn100)+' (padrão de 100 trades)')}${KV('Drawdown máx.',f2(e.ddMaxR)+'R','r','atual '+f2(e.ddAtualR)+'R · '+money(e.ddMaxPL))}</div>`;
+  const aviso=(e.semStop?`<div class="warn" style="margin-top:8px">${e.semStop} trade(s) fechado(s) sem stop: entram no resultado em dinheiro, mas ficam fora das métricas em R.</div>`:'')+(e.n<30?`<div class="warn" style="margin-top:8px">Amostra pequena (${e.n} trades): use os números como pista, não como conclusão.</div>`:'');
+  const rr=e.rows.filter(t=>t.c.r!=null),lab=rr.map(t=>fdt(t.dtx||t.dt).slice(0,5)+' '+(t.ativo||''));
+  let corpo='';
+  if(ST.aba==='geral'){
+    const dk=e.dias.slice(-20);
+    corpo=`<h2>Curva de capital (em R)</h2>${e.nR?lineChart('eq',e.curvaR,lab,v=>fr(v)):'<p class="mut sm">Sem trades com stop para a curva em R.</p>'}<h2>Drawdown (em R)</h2>${e.nR?lineChart('dd',e.ddR,lab,v=>f2(v)+'R'):''}<h2>Resultado por dia</h2>${barChart('dia',dk.map(d=>d.pl),dk.map(d=>d.k.slice(8)+'/'+d.k.slice(5,7)))}<div class="kv">${KV('Dias ganhos / perdidos',e.diasGanhos+' / '+e.diasPerdidos)}${KV('Melhor / pior dia',money(e.melhorDia)+' / '+money(e.piorDia))}</div><h2>Distribuição dos R</h2>${e.nR?hist(rr.map(t=>t.c.r)):''}`;
+  }else if(ST.aba==='risco'){
+    const R=e.regras;
+    corpo=`<div class="kv" style="margin-top:8px">${KV('Média dos ganhos',frN(e.mediaGanhoR),'g')}${KV('Média das perdas',frN(e.mediaPerdaR),'r')}${KV('Maior ganho / perda',frN(e.maiorR)+' / '+frN(e.menorR))}${KV('Perdas acima de 1R',e.perdasAcima1R+' de '+e.nPerdasR,e.nPerdasR&&e.perdasAcima1R>e.nPerdasR*.3?'r':'','se muitas passam de 1R, o stop não está sendo respeitado')}${KV('Desvio-padrão de R',f2N(e.desvioR)+'R')}${KV('SQN (amostra atual)',f2N(e.sqn),'','usa no máximo 100 trades')}${KV('Captura do alvo',e.captura==null?'–':pc(e.captura),e.captura!=null&&e.captura<.6?'r':'','R realizado ÷ R planejado nos ganhos ('+e.nCaptura+')')}${KV('Duração: ganhos × perdas',(e.durGanhoMin==null?'–':f2(e.durGanhoMin)+' min')+' × '+(e.durPerdaMin==null?'–':f2(e.durPerdaMin)+' min'))}</div>
+<div class="rings">${ring((e.acerto||0)*100,'Acerto')}${ring(e.n?R.ok/e.n*100:0,'Regras seguidas','var(--g)')}${ring(e.n?(e.n-R.erros)/e.n*100:0,'Sem erro','#e8a317')}</div>
+<h2>Disciplina e erros</h2><div class="kv">${KV('Trades sem erro',pcN(e.n?(e.n-R.erros)/e.n:null),R.erros?'':'g')}${KV('Erros a cada 100 trades',f2(e.n?R.erros/e.n*100:0))}${KV('R líquido dos trades com erro',frN(R.rErros),cls(R.rErros))}${KV('Regras seguidas × quebradas',frN(R.mediaOk)+' × '+frN(R.mediaQuebrou),'','média de R de cada grupo')}</div>${stTbl('Erro',e.porErro)}
+<h2>Sequências</h2><div class="kv">${KV('Maior sequência de ganhos',e.maxSeqGanhos,'g')}${KV('Maior sequência de perdas',e.maxSeqPerdas,'r')}${KV('Sequência atual',e.seqAtual?e.seqAtual.n+' '+e.seqAtual.tipo+(e.seqAtual.n>1?'s':''):'–',e.seqAtual?(e.seqAtual.tipo==='ganho'?'g':'r'):'')}</div>`;
+  }else if(ST.aba==='onde'){
+    const op=e.rows.filter(t=>t.tipo==='O');
+    corpo=`<h2>Mapa de calor: dia × hora</h2>${stHeat(e)}<h2>Por dia da semana</h2>${stTbl('Dia',e.porDia)}<h2>Por horário de entrada</h2>${stTbl('Hora',e.porHora)}<h2>Por setup</h2>${stTbl('Setup',e.porSetup)}<h2>Por tipo de mercado</h2>${stTbl('Mercado',e.porMercado)}<h2>Por ativo</h2>${stTbl('Ativo',e.porAtivo.slice().sort((a,b)=>b.n-a.n).slice(0,15))}${op.length?`<h2>Opções por estrutura</h2>${stTbl('Estrutura',agrupa(op,t=>t.estr))}`:''}`;
+  }else{
+    corpo=`<h2>Pontos de atenção</h2>${stDiagHtml(D)}${stIAHtml(e,D)}`;
+  }
+  return head+filtros+abas+kpi+aviso+corpo;
+}
+
+(function(){
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-st]');if(!b)return;
+    const k=b.dataset.st;
+    if(k==='ia'){const x=estat(stRows());stIA(x,diagnosticos(x));return}
+    ST.aba=k;ls.set('diario-st-aba',k);render();
   });
 })();
