@@ -1988,7 +1988,7 @@ ${c?`<div class="sm mut" style="margin:4px 0">${c.palavras.toLocaleString('pt-BR
 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn" data-ep="ler" data-id="${b.id}">📖 Ler</button><button class="btn s" data-ep="pdf" data-id="${b.id}">🖨️ Salvar em PDF</button><button class="btn s" data-ep="md" data-id="${b.id}">⬇️ Baixar texto (.md)</button></div></div>`;
 }
 function rsExtrasCard(b,j){
-  const f=RS.full[b.id],ex=(f&&f.extras)||[],busy=RS.extraBusy[b.id];
+  const f=RS.full[b.id],ex=((f&&f.extras)||[]).filter(x=>x.tipo!=='quiz'),busy=RS.extraBusy[b.id];
   return `<div class="card" style="margin:10px 0"><div class="top"><b>🧩 Perguntar ao resumo</b></div>
 <div class="sm mut" style="margin:4px 0 6px">Rode um prompt seu (ou um modelo) em cima deste resumo: flashcards, checklist, regras para o seu plano…</div>
 <select id="rsxsel">${rspOpts('','Escrever agora…')}</select>
@@ -2190,6 +2190,124 @@ ${RSP0.map((m,i)=>`<div class="card"><div class="top"><b>${esc(m[0])}</b><button
   };
 })();
 /* ==== ESTUDOS2:FIM ==== */
+/* ==== SIMULADO:INICIO ==== perguntas de múltipla escolha sobre o resumo (fácil → difícil), respondidas no app */
+var QZ={n:30,nivel:'progressivo',parte:-1,busy:{},run:null};
+const QZ_NIV=['fácil','média','difícil'],QZ_COR={'fácil':'var(--g)','média':'#d9a400','difícil':'var(--r)'};
+const qzLista=b=>(((RS.full[b.id]||{}).extras)||[]).filter(x=>x.tipo==='quiz');
+const qzHist=b=>((S.ax||{})['rsq.'+b.id]||[]);
+function qzStats(b,qid){const h=qzHist(b).filter(x=>x.q===qid&&!x.parcial);if(!h.length)return '';const best=h.reduce((a,x)=>x.a/x.t>a.a/a.t?x:a);return `Melhor: <b>${best.a}/${best.t}</b> · ${h.length} tentativa${h.length>1?'s':''}`}
+
+function qzCard(b,j){
+  const f=RS.full[b.id],ps=rsPartes(f),L=qzLista(b),busy=QZ.busy[b.id];
+  const sg=(k,v,l)=>`<button class="${QZ[k]==v?'on':''}" data-qz="set" data-k="${k}" data-v="${v}" data-id="${b.id}">${l}</button>`;
+  return `<div class="card" style="margin:10px 0"><div class="top"><b>🎯 Simulado</b>${L.length?`<span class="sm mut">${L.length} gerado${L.length>1?'s':''}</span>`:''}</div>
+<div class="sm mut" style="margin:4px 0 8px">A IA monta perguntas de múltipla escolha a partir deste resumo, das mais leves às mais difíceis. Você responde aqui e vê a explicação de cada uma.</div>
+<div class="sm" style="margin-bottom:4px">Quantidade</div><div class="seg" style="margin-bottom:8px">${sg('n',10,'10')}${sg('n',20,'20')}${sg('n',30,'30')}</div>
+<div class="sm" style="margin-bottom:4px">Dificuldade</div><div class="seg" style="margin-bottom:8px">${sg('nivel','progressivo','Fácil → difícil')}${sg('nivel','dificil','Só difíceis')}</div>
+${ps.length?`<label>Assunto<select data-qz="parte" data-id="${b.id}"><option value="-1">Livro inteiro</option>${ps.map((p,i)=>`<option value="${i}"${QZ.parte===i?' selected':''}>${esc(p.titulo)}</option>`).join('')}</select></label>`:''}
+<button class="btn" style="width:100%;margin-top:8px" data-qz="gen" data-id="${b.id}"${busy?' disabled':''}>${busy?'⏳ Montando as perguntas… (até 2 min)':'✨ Gerar '+QZ.n+' perguntas'}</button>
+${f?L.map(q=>`<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:8px 0;border-top:1px solid var(--bd);margin-top:8px"><div style="min-width:0"><div class="sm"><b>${esc(q.titulo)}</b></div><div class="sm mut">${new Date(q.criado).toLocaleDateString('pt-BR')}${qzStats(b,q.id)?' · '+qzStats(b,q.id):' · ainda não respondido'}</div></div><button class="btn" data-qz="play" data-id="${b.id}" data-q="${q.id}">▶️ Responder</button><button class="x" data-qz="del" data-id="${b.id}" data-q="${q.id}" aria-label="Apagar simulado">✕</button></div>`).join(''):`<button class="btn s" style="margin-top:8px" data-ep="carrega" data-id="${b.id}">Ver simulados anteriores</button>`}
+</div>`;
+}
+
+/* ---------- tela de responder ---------- */
+function qzAbre(b,quiz,ordem){
+  QZ.run={b,quiz,ordem:ordem||quiz.perguntas.map((_,i)=>i),i:0,resp:{},parcial:!!ordem,fim:0};
+  let ov=document.getElementById('qz');if(!ov){ov=document.createElement('div');ov.id='qz';document.body.appendChild(ov)}
+  document.body.style.overflow='hidden';qzDesenha();
+}
+function qzFecha(){const ov=document.getElementById('qz');if(ov)ov.remove();QZ.run=null;document.body.style.overflow='';render()}
+function qzResultado(){
+  const R=QZ.run,P=R.quiz.perguntas,por={};let a=0;
+  R.ordem.forEach(k=>{const q=P[k],ok=R.resp[k]===q.correta;por[q.nivel]=por[q.nivel]||[0,0];por[q.nivel][1]++;if(ok){por[q.nivel][0]++;a++}});
+  return{a,t:R.ordem.length,por,erradas:R.ordem.filter(k=>R.resp[k]!==P[k].correta)};
+}
+function qzDesenha(){
+  const R=QZ.run;if(!R)return;const ov=document.getElementById('qz');if(!ov)return;
+  const P=R.quiz.perguntas,tot=R.ordem.length;
+  if(R.fim){
+    const r=qzResultado(),pc=Math.round(r.a/r.t*100),cor=pc>=80?'var(--g)':pc>=60?'#d9a400':'var(--r)';
+    const msg=pc>=90?'Excelente, você domina o conteúdo.':pc>=70?'Bom resultado. Revise as que errou.':pc>=50?'Na média. Vale reler os capítulos das erradas.':'Releia o resumo e tente de novo daqui a alguns dias.';
+    ov.innerHTML=`<div class="qz-top"><button class="btn s" data-qz="x">✕</button><b style="flex:1">Resultado</b></div><div class="qz-body">
+<div style="text-align:center;margin:10px 0 16px"><div style="font-size:46px;font-weight:800;color:${cor}">${r.a}/${r.t}</div><div class="mut">${pc}% de acerto · ${msg}</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${QZ_NIV.map(n=>{const x=r.por[n];return `<div class="card" style="margin:0;text-align:center;padding:10px"><div class="sm" style="color:${QZ_COR[n]};font-weight:700">${n}</div><b style="font-size:20px">${x?x[0]+'/'+x[1]:'–'}</b></div>`}).join('')}</div>
+${r.erradas.length?`<h3 style="margin:18px 0 6px">Para revisar (${r.erradas.length})</h3>${r.erradas.map(k=>{const q=P[k];return `<div class="card" style="padding:10px"><div class="sm" style="color:${QZ_COR[q.nivel]}">${q.nivel}${q.tema?' · '+esc(q.tema):''}</div><div style="margin:4px 0"><b>${esc(q.pergunta)}</b></div><div class="sm r">Você: ${R.resp[k]==null?'(sem resposta)':esc(q.alternativas[R.resp[k]])}</div><div class="sm g">Certa: ${esc(q.alternativas[q.correta])}</div>${q.explicacao?`<div class="sm mut" style="margin-top:4px">${esc(q.explicacao)}</div>`:''}</div>`}).join('')}`:'<div class="card" style="text-align:center">🏆 Nenhum erro!</div>'}
+<div style="display:grid;gap:8px;margin:14px 0 40px">${r.erradas.length?`<button class="btn" data-qz="erradas">🔁 Refazer só as ${r.erradas.length} que errei</button><button class="btn s" data-qz="notas">📝 Salvar as erradas nas anotações do livro</button>`:''}<button class="btn s" data-qz="tudo">Refazer tudo</button><button class="btn s" data-qz="x">Fechar</button></div></div>`;
+    return;
+  }
+  const k=R.ordem[R.i],q=P[k],resp=R.resp[k],res=resp!=null,L='ABCD';
+  const okN=R.ordem.slice(0,R.i+(res?1:0)).filter(x=>R.resp[x]===P[x].correta).length;
+  ov.innerHTML=`<div class="qz-top"><button class="btn s" data-qz="x">✕</button><div style="flex:1;min-width:0"><div class="sm"><b>${R.i+1}</b> de ${tot}${R.parcial?' · revisão':''} <span class="mut">· ${okN} certa${okN===1?'':'s'}</span></div><div style="height:4px;border-radius:2px;background:var(--bd);margin-top:4px;overflow:hidden"><div style="height:100%;width:${Math.round((R.i+(res?1:0))/tot*100)}%;background:var(--ac)"></div></div></div></div>
+<div class="qz-body"><div class="sm" style="margin-bottom:6px"><span style="color:${QZ_COR[q.nivel]};font-weight:700">● ${q.nivel}</span>${q.tema?' <span class="mut">· '+esc(q.tema)+'</span>':''}</div>
+<div style="font-size:18px;font-weight:600;line-height:1.4;margin-bottom:14px">${esc(q.pergunta)}</div>
+${q.alternativas.map((a,i)=>{const st=!res?'':i===q.correta?'border-color:var(--g);background:color-mix(in srgb,var(--g) 18%,transparent)':i===resp?'border-color:var(--r);background:color-mix(in srgb,var(--r) 18%,transparent)':'opacity:.55';return `<button class="qz-op" data-qz="r" data-i="${i}" ${res?'disabled':''} style="${st}"><b>${L[i]}</b><span>${esc(a)}</span>${res&&i===q.correta?' ✓':res&&i===resp?' ✗':''}</button>`}).join('')}
+${res?`<div class="card" style="margin-top:10px;border-left:3px solid ${resp===q.correta?'var(--g)':'var(--r)'}"><b>${resp===q.correta?'✅ Certo!':'❌ Não foi dessa vez.'}</b>${q.explicacao?`<div class="sm" style="margin-top:4px;line-height:1.5">${esc(q.explicacao)}</div>`:''}</div><button class="btn" style="width:100%;margin:10px 0 40px" data-qz="prox">${R.i<tot-1?'Próxima ›':'Ver resultado'}</button>`:''}
+</div>`;
+}
+function qzSalvaTentativa(){
+  const R=QZ.run,r=qzResultado(),h=qzHist(R.b).slice(-29);
+  h.push({q:R.quiz.id,d:Date.now(),a:r.a,t:r.t,parcial:R.parcial?1:0,n:Object.fromEntries(Object.entries(r.por))});
+  (S.ax??={})['rsq.'+R.b.id]=h;save();
+}
+
+(function(){
+  const st=document.createElement('style');
+  st.textContent='#qz{position:fixed;inset:0;z-index:9999;background:var(--bg,#111);display:flex;flex-direction:column}#qz .qz-top{display:flex;gap:10px;align-items:center;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--bd)}#qz .qz-body{flex:1;overflow-y:auto;padding:16px;max-width:680px;width:100%;margin:0 auto;box-sizing:border-box;-webkit-overflow-scrolling:touch}.qz-op{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;padding:12px;margin:0 0 8px;border:1.5px solid var(--bd);border-radius:12px;background:var(--card,transparent);color:inherit;font:inherit;line-height:1.4;cursor:pointer}.qz-op b{flex:0 0 22px;height:22px;border-radius:50%;background:var(--bd);display:flex;align-items:center;justify-content:center;font-size:12px}.qz-op span{flex:1}';
+  document.head.appendChild(st);
+
+  /* o simulado entra no livro, entre o resumo completo e o "Perguntar ao resumo" */
+  const rc0=rsCard;
+  rsCard=function(b){
+    const h=rc0(b),j=RS.jobs[b.id];
+    if(!j||j.status!=='concluido'||RS.novo===b.id)return h;
+    const m='<div class="card" style="margin:10px 0"><div class="top"><b>🧩 Perguntar ao resumo</b>';
+    const i=h.indexOf(m);
+    return i<0?h+qzCard(b,j):h.slice(0,i)+qzCard(b,j)+h.slice(i);
+  };
+
+  document.addEventListener('change',e=>{const s=e.target.closest('[data-qz="parte"]');if(s)QZ.parte=+s.value});
+  document.addEventListener('keydown',e=>{if(QZ.run&&e.key==='Escape')qzFecha()});
+  document.addEventListener('click',async e=>{
+    const x=e.target.closest('[data-qz]');if(!x||x.tagName==='SELECT')return;
+    const k=x.dataset.qz,R=QZ.run;
+    /* dentro da tela de responder */
+    if(k==='x')return qzFecha();
+    if(k==='r'&&R){const kk=R.ordem[R.i];if(R.resp[kk]!=null)return;R.resp[kk]=+x.dataset.i;if(navigator.vibrate)navigator.vibrate(R.resp[kk]===R.quiz.perguntas[kk].correta?15:[30,40,30]);qzDesenha();return}
+    if(k==='prox'&&R){if(R.i<R.ordem.length-1)R.i++;else{R.fim=1;qzSalvaTentativa()}qzDesenha();const bd=document.querySelector('#qz .qz-body');if(bd)bd.scrollTop=0;return}
+    if(k==='erradas'&&R){const er=qzResultado().erradas;qzAbre(R.b,R.quiz,er);return}
+    if(k==='tudo'&&R){qzAbre(R.b,R.quiz);return}
+    if(k==='notas'&&R){
+      const r=qzResultado(),P=R.quiz.perguntas;
+      const tx=r.erradas.map((kk,n)=>{const q=P[kk];return `${n+1}. [${q.nivel}] ${q.pergunta}\n   Certa: ${q.alternativas[q.correta]}${q.explicacao?'\n   Por quê: '+q.explicacao:''}`}).join('\n\n');
+      (R.b.notes??=[]).unshift({id:uid(),t:`Simulado: ${r.erradas.length} para revisar (${r.a}/${r.t})`,p:'',x:tx,u:Date.now()});save();
+      if(window.toast)toast('Salvo nas anotações do livro');return;
+    }
+    /* no livro */
+    const b=(S.books||[]).find(q=>q.id===x.dataset.id);if(!b)return;
+    const j=RS.jobs[b.id];
+    if(k==='set'){QZ[x.dataset.k]=x.dataset.k==='n'?+x.dataset.v:x.dataset.v;render();return}
+    if(k==='gen'){
+      if(!j)return;
+      QZ.busy[b.id]=1;render();
+      try{
+        const r=await rsFn('quiz',{id:j.id,n:QZ.n,nivel:QZ.nivel,parte:QZ.parte});
+        const f=RS.full[b.id]||(await rsFull(b,1));if(f)f.extras=r.extras;
+        delete QZ.busy[b.id];render();
+        if(window.toast)toast('Simulado pronto: '+r.item.n+' perguntas');
+        qzAbre(b,r.item);
+      }catch(err){delete QZ.busy[b.id];render();if(window.toast)toast(err.message,5000)}
+      return;
+    }
+    if(k==='play'){const q=qzLista(b).find(q=>q.id===x.dataset.q);if(q)qzAbre(b,q);return}
+    if(k==='del'){
+      if(!confirm('Apagar este simulado?'))return;
+      try{const r=await rsFn('extra_apagar',{id:j.id,eid:x.dataset.q});if(RS.full[b.id])RS.full[b.id].extras=r.extras}catch(err){if(window.toast)toast(err.message,4000)}
+      render();
+    }
+  });
+})();
+/* ==== SIMULADO:FIM ==== */
+
 
 /* ---------- Juros: painel do Banco Central, cotações e aba educativa ---------- */
 const JR={data:ls.get('diario-jr'),busy:0,err:''};
