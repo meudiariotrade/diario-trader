@@ -35,7 +35,7 @@ function capResumo(tp,c){if(!c)return '⚙️ Configurar capital (toque para pre
 function capCurve(tp,c){if(!c||!c.curve||c.curve.length<2)return '';const v=c.curve.map(p=>p.v),n=v.length,lo=Math.min(...v),hi=Math.max(...v),pad=(hi-lo)*.1||Math.abs(hi)*.05||1,a=lo-pad,b=hi+pad,X=i=>(i/(n-1)*296+2).toFixed(1),Y=x=>(66-(x-a)/(b-a)*60).toFixed(1),pts=v.map((x,i)=>X(i)+','+Y(x)).join(' '),y0=Y(v[0]),up=v[n-1]>=v[0],col=up?'var(--g)':'var(--r)';let pk=v[0],dd=0;v.forEach(x=>{pk=Math.max(pk,x);dd=Math.max(dd,pk-x)});
  return `<details id="capc"${CAPC?' open':''} style="margin-top:8px"><summary class="sm">📈 Curva de capital · ${n-1} operação(ões)</summary><svg viewBox="0 0 300 72" style="width:100%;height:auto;margin-top:6px" role="img" aria-label="Curva de capital ${CAPN[tp]}"><line x1="0" x2="300" y1="${y0}" y2="${y0}" stroke="var(--bd)" stroke-dasharray="3"/><polyline fill="none" stroke="${col}" stroke-width="2" points="${pts}"/><circle cx="${X(n-1)}" cy="${Y(v[n-1])}" r="3.5" fill="${col}"/></svg><div class="top sm mut"><span>Mín. ${money(lo)}</span><span>Máx. ${money(hi)}</span></div><div class="sm mut">Queda máxima (drawdown): <b class="${dd>0?'r':''}">${money(dd)}</b>. Linha tracejada = capital de partida. Conta só trades encerrados desde a data configurada.</div></details>`}
 function capTotal(){const L=['D','O','S'].map(tp=>({tp,c:capCalc(tp)})).filter(x=>x.c);if(!L.length)return `<div class="card"><b>💰 Capital total</b><div class="mut sm" style="margin-top:4px">Defina o capital inicial em cada aba (Day trade, Opções e Swing) e o total aparece aqui.</div></div>`;const at=sum(L.map(x=>x.c.at)),ini=sum(L.map(x=>x.c.ini+x.c.ap)),res=sum(L.map(x=>x.c.res));return `<div class="card"><div class="top"><b>💰 Capital total</b><span class="sm ${cls(res)}">${res>=0?'+':''}${money(res)}</span></div><div style="font-size:26px;font-weight:700;margin-top:4px" class="${at<=0?'r':''}">${money(at)}</div><div class="mut sm">Inicial ${money(ini)}${ini?' · '+(res>=0?'+':'')+f2(res/ini*100)+'%':''}</div>${L.map(x=>`<div class="top sm" style="margin-top:6px"><span>${CAPN[x.tp]}</span><b class="${x.c.at<=0?'r':''}">${money(x.c.at)}</b></div>`).join('')}</div>`}
-function card(t){const c=calc(t),p=t.pplan||t.pin||t.pout;return `<div class="card row" data-a="edit" data-id="${t.id}" data-s="${esc(((t.ativo||'')+' '+(t.setup||'')).toLowerCase())}"><div class="th">${p?`<img data-img="${p}">`:'📈'}</div><div class="fl"><b>${esc(t.ativo)||'<span class="r">⚠ sem ativo</span>'}</b> · ${t.tipo==='O'?(t.side==='C'?'Comprado':'Lançado'):(t.side==='C'?'Compra':'Venda')}<div class="mut sm">${fdt(t.dt)}${t.tipo==='O'&&t.strike?' · '+(t.ot==='P'?'Put':'Call')+' '+esc(t.strike):''}${t.setup?' · '+esc(t.setup):''}</div>${t.err&&t.err!=='Nenhum'?'<span class="tag">⚠ erro</span>':''}${t.rules==='n'?'<span class="tag">fora das regras</span>':''}</div><div class="rt ${cls(c.r)}">${c.r==null?'<span class="mut sm">aberto</span><br><button class="btn s" data-a="enc" data-id="${t.id}" style="margin-top:4px">Encerrar</button>':fr(c.r)}<div class="sm mut">${c.pl==null?'':money(c.pl)}</div></div></div>`}
+function card(t){const c=calc(t),p=t.pplan||t.pin||t.pout;return `<div class="card row" data-a="edit" data-id="${t.id}" data-s="${esc(((t.ativo||'')+' '+(t.setup||'')).toLowerCase())}"><div class="th">${p?`<img data-img="${p}">`:'📈'}</div><div class="fl"><b>${esc(t.ativo)||'<span class="r">⚠ sem ativo</span>'}</b> · ${t.tipo==='O'?(t.side==='C'?'Comprado':'Lançado'):(t.side==='C'?'Compra':'Venda')}<div class="mut sm">${fdt(t.dt)}${t.tipo==='O'&&t.strike?' · '+(t.ot==='P'?'Put':'Call')+' '+esc(t.strike):''}${t.setup?' · '+esc(t.setup):''}</div>${t.err&&t.err!=='Nenhum'?'<span class="tag">⚠ erro</span>':''}${t.rules==='n'?'<span class="tag">fora das regras</span>':''}</div><div class="rt ${cls(c.r)}">${isOpen(t)?`<span class="mut sm">aberto</span><br><button class="btn s" data-a="enc" data-id="${t.id}" style="margin-top:4px">Encerrar</button>`:c.r==null?'<span class="mut sm">sem stop</span>':fr(c.r)}<div class="sm mut">${c.pl==null?'':money(c.pl)}</div></div></div>`}
 /* ---------- Extrato do plano (day trade, swing e opções) ---------- */
 let EXD={},XTO=1;
 document.addEventListener('toggle',e=>{if(e.target&&e.target.id==='xtd')XTO=e.target.open},true);
@@ -291,7 +291,7 @@ function qsheet(){const t=T,nn=(k,l)=>`<label>${l}<input name="${k}" type="numbe
 function zoom(src){const l=$('#lb');l.innerHTML=`<button class="x" data-a="lbx" style="position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:12px;color:#fff;font-size:30px;z-index:2">✕</button><img src="${src}" style="width:100%;display:block;margin:auto">`;l.style.display='block'}
 function bkBanner(){if(tab==='painel'||!S.trades.length)return;if(SESS&&S.lastSyncAt&&Date.now()-S.lastSyncAt<3*864e5)return;const d=S.lastBackup?Math.floor((Date.now()-new Date(S.lastBackup+'T12:00'))/864e5):null;if(d!=null&&d<=7)return;$('#app').insertAdjacentHTML('afterbegin',`<div class="warn" style="margin-bottom:8px">💾 ${d==null?'Você ainda não fez backup.':'Último backup há '+d+' dias.'} Fotos e trades ficam só neste aparelho. <button class="btn s" data-a="gopainel" style="margin-left:6px">Fazer backup</button></div>`)}
 function vHome(){const td=loc().slice(0,10),hj=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&(t.dtx||t.dt).slice(0,10)===td),P=sum(hj.map(t=>t.c.pl)),R=sum(hj.map(t=>t.c.r)),ab=S.trades.filter(isOpen).sort((a,b)=>b.dt.localeCompare(a.dt)),nck=Object.values((S.days[td]||{}).chk||{}).filter(Boolean).length,ven=ab.filter(t=>t.tipo==='O'&&t.venc).map(t=>({t,d:Math.round((new Date(t.venc+'T12:00')-new Date(td+'T12:00'))/864e5)})).filter(x=>x.d<=7).sort((a,b)=>a.d-b.d);
-return `${hero(P,R,hj.length,ab.length,nck)}${capTotal()}${posso(hj,P,nck)}${ven.length?'<h2>⏳ Vencimentos próximos</h2>'+ven.map(x=>`<div class="warn" style="margin:6px 0">${esc(x.t.ativo)} · ${x.d<0?'venceu há '+(-x.d)+' dia(s)':x.d===0?'vence hoje':'vence em '+x.d+' dia(s)'}</div>`).join(''):''}<h2>Posições abertas (${ab.length})</h2>${ab.length?ab.map(card).join(''):'<p class="mut">Nenhuma posição aberta.</p>'}<h2>Limites da mesa</h2><div id="pp"></div><h2>Metas de processo</h2><div id="gg"></div>${calMes()}<div class="g2" style="margin-top:12px"><button class="btn" data-a="new" data-tp="D">+ Day trade</button><button class="btn s" data-a="gotab" data-id="dia">Abrir o dia</button></div>`}
+return `${hero(P,R,hj.length,ab.length,nck)}${capTotal()}${posso(hj,P,nck)}${turnoCard()}${ven.length?'<h2>⏳ Vencimentos próximos</h2>'+ven.map(x=>`<div class="warn" style="margin:6px 0">${esc(x.t.ativo)} · ${x.d<0?'venceu há '+(-x.d)+' dia(s)':x.d===0?'vence hoje':'vence em '+x.d+' dia(s)'}</div>`).join(''):''}<h2>Posições abertas (${ab.length})</h2>${ab.length?ab.map(card).join(''):'<p class="mut">Nenhuma posição aberta.</p>'}<h2>Limites da mesa</h2><div id="pp"></div><h2>Metas de processo</h2><div id="gg"></div>${calMes()}<div class="g2" style="margin-top:12px"><button class="btn" data-a="new" data-tp="D">+ Day trade</button><button class="btn s" data-a="gotab" data-id="dia">Abrir o dia</button></div>`}
 /* ---------- Nuvem (Supabase) ---------- */
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const cfg=()=>window.SUPA_URL&&window.SUPA_KEY?{url:String(window.SUPA_URL).replace(/\/$/,''),key:window.SUPA_KEY}:ls.get('diario-cfg');
@@ -558,15 +558,52 @@ return `<div class="card"><div class="top"><b>${n}</b><span class="rt ${q>0?'g':
 /* ---------- Início: posso operar hoje + calendário ---------- */
 let CMX=0;
 function pCore(hj,P){const g=(k,d)=>+gv('ct',k,d),pr=S.prop||{},nd=g('nd',3),lim=+pr.perdaDia||g('cap',10000)*g('pct',2)/100*nd,perda=Math.max(0,-P),ord=hj.slice().sort((a,b)=>(a.dtx||a.dt).localeCompare(b.dtx||b.dt)),mot=[];let seq=0;for(let i=ord.length-1;i>=0&&ord[i].c.pl<0;i--)seq++;
-if(perda>=lim)mot.push('perda diária no limite');if(seq>=2)mot.push(seq+' stops seguidos');if(hj.length>=nd)mot.push(hj.length+' trades feitos (máx. '+nd+')');return{nd,lim,perda,seq,mot}}
+{const tk=loc().slice(0,10);if(turnoNv(tk)==='r')mot.push('dia de turno '+TH[tcod(tk)]);}if(perda>=lim)mot.push('perda diária no limite');if(seq>=2)mot.push(seq+' stops seguidos');if(hj.length>=nd)mot.push(hj.length+' trades feitos (máx. '+nd+')');return{nd,lim,perda,seq,mot}}
 function pHoje(){const td=loc().slice(0,10),hj=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&(t.dtx||t.dt).slice(0,10)===td);return{td,hj,P:sum(hj.map(t=>t.c.pl))}}
 function pBloq(){const{td,hj,P}=pHoje(),c=pCore(hj,P);if(!c.mot.length)return true;if(!confirm('PARE POR HOJE: '+c.mot.join(', ')+'.\n\nAbrir um novo trade mesmo assim?'))return false;(S.ax??={})['ov.'+td]=(+S.ax['ov.'+td]||0)+1;save();return true}
 function posso(hj,P,nck){const c=pCore(hj,P),{nd,lim,perda,seq,mot}=c,rest=Math.max(0,lim-perda),nr=(S.rules||[]).length,ov=+((S.ax||{})['ov.'+loc().slice(0,10)])||0;
-const lv=mot.length?'r':(perda>=lim*.8||(nr&&nck<nr)?'a':'g'),tt={r:'Pare por hoje',a:'Atenção',g:'Pode operar'}[lv],col={r:'var(--r)',a:'#e8a317',g:'var(--g)'}[lv],kc=(l,v,s)=>`<div class="card"><span class="mut sm">${l}</span><b>${v}</b><span class="mut sm">${s}</span></div>`;
-return `<div class="card" style="border:2px solid ${col}"><div class="top"><b style="font-size:20px;color:${col}">${tt}</b><span class="mut sm">Posso operar hoje?</span></div><div class="sm" style="margin:6px 0">${mot.length?mot.join(' · ')+'. Novo trade pede confirmação.':(nr&&nck<nr?'Falta fechar o checklist de regras.':'Dentro dos limites do dia.')}</div>${ov?`<div class="sm r" style="margin-bottom:6px">Você abriu ${ov} trade(s) depois do aviso hoje.</div>`:''}<div class="kv">${kc('Perda restante',money(rest),'de '+money(lim))}${kc('Trades hoje',hj.length,'máx. '+nd)}${kc('Stops seguidos',seq,'pare em 2')}${kc('Checklist',nck+'/'+nr,'regras de hoje')}</div></div>`}
+const lv=mot.length?'r':(perda>=lim*.8||(nr&&nck<nr)||turnoNv(loc().slice(0,10))==='a'?'a':'g'),tt={r:'Pare por hoje',a:'Atenção',g:'Pode operar'}[lv],col={r:'var(--r)',a:'#e8a317',g:'var(--g)'}[lv],kc=(l,v,s)=>`<div class="card"><span class="mut sm">${l}</span><b>${v}</b><span class="mut sm">${s}</span></div>`;
+return `<div class="card" style="border:2px solid ${col}"><div class="top"><b style="font-size:20px;color:${col}">${tt}</b><span class="mut sm">Posso operar hoje?</span></div><div class="sm" style="margin:6px 0">${mot.length?mot.join(' · ')+'. Novo trade pede confirmação.':((turnoNv(loc().slice(0,10))==='a'?turnoTxt(loc().slice(0,10))+': cuide do horário. ':'')+(nr&&nck<nr?'Falta fechar o checklist de regras.':'Dentro dos limites do dia.'))}</div>${ov?`<div class="sm r" style="margin-bottom:6px">Você abriu ${ov} trade(s) depois do aviso hoje.</div>`:''}<div class="kv">${kc('Perda restante',money(rest),'de '+money(lim))}${kc('Trades hoje',hj.length,'máx. '+nd)}${kc('Stops seguidos',seq,'pare em 2')}${kc('Checklist',nck+'/'+nr,'regras de hoje')}</div></div>`}
 function calMes(){const n=new Date();n.setDate(1);n.setMonth(n.getMonth()+CMX);const y=n.getFullYear(),m=n.getMonth(),pad=x=>String(x).padStart(2,'0'),pre=y+'-'+pad(m+1)+'-',dim=new Date(y,m+1,0).getDate(),off=(new Date(y,m,1).getDay()+6)%7,by={},td=loc().slice(0,10);S.trades.forEach(t=>{const c=calc(t),d=(t.dtx||t.dt).slice(0,10);if(c.pl!=null&&d.startsWith(pre))by[d]=(by[d]||0)+c.pl});const tot=sum(Object.values(by));let cells='';for(let i=0;i<off;i++)cells+='<div></div>';
-for(let d=1;d<=dim;d++){const k=pre+pad(d),v=by[k],bg=v==null?'var(--bg)':`color-mix(in srgb,${v>=0?'var(--g)':'var(--r)'} 30%,var(--card))`;cells+=`<button class="dc" data-a="cday" data-id="${k}" style="background:${bg}${k===td?';outline:2px solid var(--ac)':''}"><span class="mut sm">${d}</span><b>${v==null?'':Math.abs(v)>=1000?(v/1000).toFixed(1).replace('.',',')+'k':Math.round(v)}</b></button>`}
+for(let d=1;d<=dim;d++){const k=pre+pad(d),v=by[k],bg=v==null?'var(--bg)':`color-mix(in srgb,${v>=0?'var(--g)':'var(--r)'} 30%,var(--card))`;cells+=`<button class="dc" data-a="cday" data-id="${k}" style="background:${bg}${k===td?';outline:2px solid var(--ac)':''}"><span class="mut sm">${d}${tcod(k)?' <i style="font-size:9px">'+tcod(k)+'</i>':''}</span><b>${v==null?'':Math.abs(v)>=1000?(v/1000).toFixed(1).replace('.',',')+'k':Math.round(v)}</b></button>`}
 return `<div class="top"><h2>Calendário</h2><div><button class="btn s" data-a="cm" data-id="-1">‹</button> <span class="sm">${n.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</span> <button class="btn s" data-a="cm" data-id="1">›</button></div></div><div class="mc">${['S','T','Q','Q','S','S','D'].map(x=>`<span class="mut sm">${x}</span>`).join('')}${cells}</div><div class="sm" style="margin:6px 0 12px">Resultado do mês: <b class="${tot>=0?'g':'r'}">${money(tot)}</b></div>`}
+
+/* ==== TURNO:INICIO ==== escala de turno (Gerdau): códigos 8, 16, 0 e F; alerta para não operar */
+var TCOD=['8','16','0','F'],TH={'8':'08h–17h','16':'16h–00h','0':'00h–08h','F':'Folga'},TNV0={'8':'r','16':'a','0':'a','F':'g'},TSV=0,TSM=0,TSMSG='';
+function turnoSeed(){const d={};'8,F,16,16,16,F,0,0,8,8,F,F,16,16'.split(',').forEach((c,i)=>{d[diasMais('2026-10-14',i)]=c});return{on:1,letra:'A',dias:d,niv:{...TNV0}}}
+function turnoGet(){const t=(S.ax||{}).turno;return t&&t.dias?{on:1,letra:'A',...t,niv:{...TNV0,...(t.niv||{})}}:turnoSeed()}
+function turnoSet(f){const t=turnoGet();f(t);(S.ax??={}).turno=t;save()}
+function tcod(k){const t=turnoGet();return t.on?(t.dias[k]||''):''}
+function turnoNv(k){const t=turnoGet(),c=t.on&&t.dias[k];return c?(t.niv[c]||'g'):'g'}
+function turnoTxt(k){const c=tcod(k);return c?(c==='F'?'Folga':'Turno '+c+' ('+TH[c]+')'):''}
+/* lê linhas como "14.10.26 qua 8" ou a linha inteira da tabela (A B C D) e pega a coluna da letra */
+function turnoParse(txt,letra){const idx=Math.max(0,'ABCD'.indexOf(String(letra||'A').toUpperCase())),dias={};let ign=0;
+String(txt||'').split(/\r?\n/).forEach(ln=>{const m=ln.match(/(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?/);if(!m){if(ln.trim())ign++;return}
+let y=m[3]?+m[3]:new Date().getFullYear();if(y<100)y+=2000;const dd=+m[1],mm=+m[2];if(dd<1||dd>31||mm<1||mm>12){ign++;return}
+const resto=ln.slice(m.index+m[0].length),tk=(resto.match(/\b(16|8|0|F|folga)\b/gi)||[]).map(x=>/^f/i.test(x)?'F':x);
+if(!tk.length){ign++;return}const c=tk.length>=4?tk[idx]:tk[0];if(!c){ign++;return}
+dias[y+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0')]=c});return{dias,n:Object.keys(dias).length,ign}}
+function turnoCard(){const t=turnoGet(),td=loc().slice(0,10),nm={r:'Não opere',a:'Atenção',g:'Livre'},cl={r:'var(--r)',a:'#e8a317',g:'var(--g)'};
+const ch=Array.from({length:7},(_,i)=>{const k=diasMais(td,i),c=t.dias[k]||'',nv=c?t.niv[c]||'g':'';return `<div style="text-align:center;flex:1;min-width:0"><div class="mut sm">${i?new Date(k+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''):'hoje'}</div><div style="margin-top:3px;padding:6px 0;border-radius:8px;border:${i?1:2}px solid ${nv?cl[nv]:'var(--bd,#8884)'};font-weight:700">${c||'–'}</div></div>`}).join('');
+const hoje=t.on&&t.dias[td]?`<div style="margin:6px 0;color:${cl[turnoNv(td)]}"><b>${turnoTxt(td)}</b> · ${nm[turnoNv(td)]}${turnoNv(td)==='r'?' — hoje não é dia de operar.':''}</div>`:`<div class="mut sm" style="margin:6px 0">${t.on?'Hoje sem turno cadastrado.':'Alerta de turno desligado.'}</div>`;
+return `<div class="card"><div class="top"><b>Escala de turno · letra ${esc(t.letra)}</b><button class="btn s" data-a="tsv">${TSV?'Fechar':'Editar escala'}</button></div>${hoje}<div style="display:flex;gap:4px">${ch}</div>${TSV?turnoEd(t):''}</div>`}
+function turnoEd(t){const n=new Date();n.setDate(1);n.setMonth(n.getMonth()+TSM);const y=n.getFullYear(),m=n.getMonth(),pad=x=>String(x).padStart(2,'0'),dim=new Date(y,m+1,0).getDate(),off=(new Date(y,m,1).getDay()+6)%7,cl={r:'var(--r)',a:'#e8a317',g:'var(--g)'};let cells='';for(let i=0;i<off;i++)cells+='<div></div>';
+for(let d=1;d<=dim;d++){const k=y+'-'+pad(m+1)+'-'+pad(d),c=t.dias[k]||'';cells+=`<button class="dc" data-a="tsc" data-id="${k}" style="${c?'border:2px solid '+cl[t.niv[c]||'g']:''}"><span class="mut sm">${d}</span><b>${c}</b></button>`}
+const nvB=TCOD.map(c=>`<button class="btn s" data-a="tsn" data-id="${c}">${c==='F'?'Folga':c+' · '+TH[c]}: ${({r:'não opere',a:'atenção',g:'livre'})[t.niv[c]]}</button>`).join(' ');
+return `<hr style="border:0;border-top:1px solid #8883;margin:10px 0"><div class="top"><span class="sm">${n.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})} · toque no dia para trocar (vazio → 8 → 16 → 0 → F)</span><div><button class="btn s" data-a="tsm" data-id="-1">‹</button> <button class="btn s" data-a="tsm" data-id="1">›</button></div></div><div class="mc">${['S','T','Q','Q','S','S','D'].map(x=>`<span class="mut sm">${x}</span>`).join('')}${cells}</div>
+<div class="sm" style="margin:10px 0 4px">O que cada turno faz com o aviso (toque para mudar):</div><div style="display:flex;flex-wrap:wrap;gap:6px">${nvB}</div>
+<div class="sm" style="margin:12px 0 4px">Importar: cole as linhas da tabela (ex.: <i>14.10.26 qua 8</i>, ou a linha inteira A B C D) e escolha a sua letra.</div><div style="display:flex;gap:6px"><input id="tsl" value="${esc(t.letra)}" maxlength="1" style="width:46px;text-align:center"><button class="btn s" data-a="tsimp">Importar</button><button class="btn s" data-a="tson">${t.on?'Desligar aviso':'Ligar aviso'}</button><button class="btn s" data-a="tsclr">Limpar</button></div><textarea id="tsx" rows="5" placeholder="14.10.26 qua 8 F 16 0&#10;15.10.26 qui F 16 0 8" style="width:100%;margin-top:6px"></textarea><div class="sm ${TSMSG[0]==='✓'?'g':'r'}" style="margin-top:4px">${esc(TSMSG)}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||!/^ts/.test(b.dataset.a))return;const a=b.dataset.a,id=b.dataset.id;
+if(a==='tsv'){TSV=!TSV;TSMSG=''}
+else if(a==='tsm')TSM+=+id
+else if(a==='tsc')turnoSet(t=>{const c=t.dias[id]||'',i=TCOD.indexOf(c),nx=i+1<TCOD.length?TCOD[i+1]:'';nx?t.dias[id]=nx:delete t.dias[id]})
+else if(a==='tsn')turnoSet(t=>{t.niv[id]={r:'a',a:'g',g:'r'}[t.niv[id]||'g']})
+else if(a==='tson')turnoSet(t=>{t.on=t.on?0:1})
+else if(a==='tsclr'){if(!confirm('Apagar toda a escala cadastrada?'))return;turnoSet(t=>{t.dias={}})}
+else if(a==='tsimp'){const l=(($('#tsl')||{}).value||'A').trim().toUpperCase().slice(0,1)||'A',r=turnoParse(($('#tsx')||{}).value,l);if(!r.n){TSMSG='Não achei datas com turno. Use linhas como: 14.10.26 qua 8';render();return}turnoSet(t=>{t.letra=l;Object.assign(t.dias,r.dias)});TSMSG='✓ '+r.n+' dia(s) importado(s)'+(r.ign?' ('+r.ign+' linha(s) ignorada(s))':'')}
+else return;render()});
+/* ==== TURNO:FIM ==== */
+
 const IC=p=>`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${p}"/></svg>`,
 ICS={live:'M3 12h4l3-8 4 16 3-8h4',regras:'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2',graf:'M3 17l5-6 4 3 8-9M3 21h18',painel:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',rev:'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',estudos:'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19h15',ativos:'M12 3v18M16 7h-5a3 3 0 000 6h2a3 3 0 010 6H8',contratos:'M6 3h12v18H6zM9 7h6M9 12h1M12 12h1M9 16h1M12 16h1',import:'M12 4v11M7 11l5 5 5-5M5 20h14',carteiras:'M12 3v9h9a9 9 0 11-9-9zM15 3.5A9 9 0 0120.5 9H15z',analise:'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',imposto:'M7 3h10v18l-2-1.5L13 21l-2-1.5L9 21l-2-1.5zM10 8h4M10 12h4',conta:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c1-4 4-6 8-6s7 2 8 6'};
 /* ---------- Faixa de mercado no topo (ticker estilo terminal, TradingView) ---------- */
@@ -774,7 +811,7 @@ else if(a==='new'){$('#fabm').style.display='none';if(!pBloq())return;AUTO=0;isN
 else if(a==='edit'){AUTO=0;isNew=0;T={...S.trades.find(x=>x.id===b.dataset.id)};orig={pin:T.pin,pout:T.pout,pplan:T.pplan};showSheet()}
 else if(a==='close')closeSheet();
 else if(a==='iadel')anxDel(id,b.dataset.w);
-else if(a==='savetrade'){if(!String(T.ativo||'').trim()){const m=$('#msg');m.textContent='Informe o ativo (ex.: WINZ26).';m.scrollIntoView&&m.scrollIntoView({block:'center'});return}if(!(+T.entry&&+T.stop)){$('#msg').textContent='Informe entrada e stop inicial para calcular o R.';return}if(QM&&isOpen(T)){$('#msg').textContent='Informe o preço de saída.';return}['pin','pout','pplan'].forEach(k=>{if(orig[k]&&orig[k]!==T[k])idb('img','delete',orig[k])});T.u=Date.now();const i=S.trades.findIndex(x=>x.id===T.id);i>=0?S.trades[i]=T:S.trades.push(T);save();closeSheet(1);render()}
+else if(a==='savetrade'){if(!String(T.ativo||'').trim()){const m=$('#msg');m.textContent='Informe o ativo (ex.: WINZ26).';m.scrollIntoView&&m.scrollIntoView({block:'center'});return}if(!+T.entry){$('#msg').textContent='Informe o preço de entrada.';return}if(!QM&&!+T.stop&&!confirm('Sem stop inicial não dá para calcular o risco (R). Salvar assim mesmo?'))return;if(QM&&isOpen(T)){$('#msg').textContent='Informe o preço de saída.';return}['pin','pout','pplan'].forEach(k=>{if(orig[k]&&orig[k]!==T[k])idb('img','delete',orig[k])});T.u=Date.now();const i=S.trades.findIndex(x=>x.id===T.id);i>=0?S.trades[i]=T:S.trades.push(T);save();closeSheet(1);render()}
 else if(a==='deltrade'){if(!delArm){delArm=1;showSheet();return}['pin','pout','pplan'].forEach(k=>T[k]&&idb('img','delete',T[k]));S.trades=S.trades.filter(x=>x.id!==T.id);(S.del??={})[T.id]=Date.now();save();closeSheet(1);render()}
 else if(a==='addrule'){const t=$('#rt').value.trim();if(!t)return;S.rules.push({id:uid(),cat:+$('#rc').value,t});save();render()}
 else if(a==='delrule'){S.rules=S.rules.filter(r=>r.id!==b.dataset.id);(S.del??={})[b.dataset.id]=Date.now();save();render()}
@@ -1520,8 +1557,10 @@ const GO={r:null,book:null};
 })();
 
 /* ---------- Início: radar de ADRs brasileiras (com pré-mercado) ---------- */
-const ADR0=['WEGZY','BBSEY','BDORY','SUZ','SID','GGB','ITUB','PBR','VALE','ABEV','BBD'];
+const ADR0=['EWZ','WEGZY','BBSEY','BDORY','SUZ','SID','GGB','ITUB','PBR','VALE','ABEV','BBD'];
 const AD={list:(ls.get('diario-adr')||ADR0).slice(),data:ls.get('diario-adr-d'),busy:0,err:'',sort:ls.get('diario-adr-o')||'lista',edit:0,tm:null};
+/* EWZ (ETF do Brasil em NY) entra uma vez nas listas já editadas */
+if(!ls.get('diario-adr-ewz')){if(!AD.list.includes('EWZ')){AD.list.unshift('EWZ');if(ls.get('diario-adr'))ls.set('diario-adr',AD.list)}ls.set('diario-adr-ewz',1)}
 const adN=n=>n==null?'–':(+n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const adP=n=>n==null?'–':(n>0?'+':'')+adN(n)+'%';
 const adSt={pre:'🟡 Pré-mercado',reg:'🟢 Pregão aberto',post:'🟠 Pós-mercado',closed:'⚪ Fechado'};
@@ -1535,7 +1574,8 @@ function adRow(i){
 
 function adrHtml(){
   let L=((AD.data&&AD.data.itens)||[]).filter(i=>AD.list.includes(i.s));
-  const st=L.length?adState(L):'closed',avg=L.length?sum(L.map(i=>i.chp))/L.length:null;
+  const ewz=L.find(i=>i.s==='EWZ');L=L.filter(i=>i.s!=='EWZ');
+  const st=L.length?adState(L):ewz?ewz.state:'closed',avg=L.length?sum(L.map(i=>i.chp))/L.length:null;
   if(AD.sort==='alta')L=L.slice().sort((a,b)=>b.chp-a.chp);
   else if(AD.sort==='queda')L=L.slice().sort((a,b)=>a.chp-b.chp);
   else L=L.slice().sort((a,b)=>AD.list.indexOf(a.s)-AD.list.indexOf(b.s));
@@ -1545,8 +1585,9 @@ function adrHtml(){
 <div class="sm mut" style="margin:4px 0 8px">Média ${avg==null?'–':`<b class="${cls(avg)}">${adP(avg)}</b>`}${AD.data?' · atualizado às '+hm(AD.data.ts):''}${AD.busy?' · buscando…':''}</div>
 <div style="display:flex;flex-wrap:wrap;gap:6px">${ob('lista','Lista')}${ob('alta','Maiores altas')}${ob('queda','Maiores quedas')}<button class="btn s" data-adr="rf" aria-label="Atualizar" ${AD.busy?'disabled':''}>↻</button><button class="btn${AD.edit?'':' s'}" data-adr="ed" aria-label="Editar lista">✏️</button></div>${ed}
 ${AD.err?`<div class="warn" style="margin-top:8px">${esc(AD.err)}</div>`:''}
+${ewz?`<div class="card" style="margin:8px 0 0;padding:8px 10px;border-left:3px solid ${ewz.chp>=0?'var(--g)':'var(--r)'}"><div style="display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center"><div><b>EWZ</b> <span class="sm mut">ETF do Brasil em NY</span><div class="sm mut">termômetro do Ibovespa em dólar</div></div><div style="text-align:right"><b style="font-size:18px">${adN(ewz.px)}</b> <span class="${cls(ewz.chp)}">${adP(ewz.chp)}</span><div class="sm mut">${ewz.state==='pre'?'Pré · fech. '+adN(ewz.base):ewz.state==='reg'?(ewz.pre?'Pré '+adN(ewz.pre.px)+' '+adP(ewz.pre.chp):'&nbsp;'):ewz.pos?'Pós '+adN(ewz.pos.px)+' '+adP(ewz.pos.chp):'&nbsp;'}</div></div></div></div>`:''}
 <div style="margin-top:6px">${L.length?L.map(adRow).join(''):`<div class="mut sm" style="padding:12px 0">${AD.busy?'Buscando cotações…':'Sem cotações ainda.'}</div>`}</div>
-<div class="sm mut" style="margin-top:6px">Yahoo Finance, com possível atraso. No pré-mercado o número grande já é o preço de pré e a variação é contra o último fechamento. ADRs de balcão (WEGZY, BBSEY, BDORY) não têm pré-mercado.</div>`;
+<div class="sm mut" style="margin-top:6px">Yahoo Finance, com possível atraso. No pré-mercado o número grande já é o preço de pré e a variação é contra o último fechamento. ADRs de balcão (WEGZY, BBSEY, BDORY) não têm pré-mercado. A média não inclui o EWZ.</div>`;
 }
 function adrPaint(){const e=document.getElementById('adr');if(e)e.innerHTML=adrHtml()}
 
@@ -1803,6 +1844,353 @@ function rsNote(b){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&SESS&&Object.values(RS.jobs).some(rsPend))rsLoad(true)});
 })();
 
+/* ==== ESTUDOS2:INICIO ==== Meus prompts, resumo completo (100+ páginas), leitor, PDF e prompts extras */
+var ESV='liv',RSNEXT=null;
+const RS_PAGS=[100,150,200],RS_PPAG=400;
+RS.full=RS.full||{};RS.extraBusy={};RS.fullTry={};
+/* modelos prontos: servem como instrução na hora de gerar ou como prompt extra sobre um resumo pronto */
+const RSP0=[
+  ['Regras para o meu plano','Transforme as ideias do livro em regras objetivas que eu possa colocar no meu plano de trading: quando entrar, quando não operar, onde colocar o stop, como dimensionar a posição e quando sair. Para cada regra, diga de qual capítulo ela vem.'],
+  ['Checklist pré-operação','Monte um checklist de 10 a 15 itens para eu revisar antes de cada operação, baseado no livro. Itens curtos, de marcar sim ou não.'],
+  ['Flashcards','Crie 30 flashcards (pergunta e resposta curtas) com os conceitos mais importantes, do básico ao avançado.'],
+  ['Questões de prova','Crie 15 questões de múltipla escolha (4 alternativas) com gabarito comentado, cobrindo os principais conceitos.'],
+  ['Explicar simples','Explique os 10 conceitos mais difíceis em linguagem simples, cada um com um exemplo prático de day trade no mini índice (WIN).'],
+  ['Plano de estudo','Monte um plano de estudo de 4 semanas para eu dominar este conteúdo, com metas por semana e exercícios práticos para fazer no meu diário de trades.'],
+  ['Erros que o livro evita','Liste os erros de trader que o livro ajuda a evitar e, para cada um, o sinal de alerta e o que fazer no momento.'],
+];
+const rspLista=()=>((S.ax||{}).rsp||[]).filter(p=>p&&p.id);
+const rspSet=a=>{(S.ax??={}).rsp=a;save()};
+const rspPref=(k,d)=>{const v=(S.ax||{})['rs.'+k];return v==null?d:v};
+const rspSetPref=(k,v)=>{(S.ax??={})['rs.'+k]=v;save()};
+/* valor do seletor -> texto do prompt */
+function rspTexto(v){if(!v)return '';if(v.startsWith('u:')){const p=rspLista().find(x=>x.id===v.slice(2));return p?p.x:''}if(v.startsWith('m:')){const m=RSP0[+v.slice(2)];return m?m[1]:''}return ''}
+function rspOpts(sel,vazio){
+  const u=rspLista();
+  return `<option value="">${esc(vazio||'Nenhum (prompt padrão do app)')}</option>${u.length?`<optgroup label="Meus prompts">${u.map(p=>`<option value="u:${p.id}"${sel==='u:'+p.id?' selected':''}>${esc(p.n||'Sem nome')}</option>`).join('')}</optgroup>`:''}<optgroup label="Modelos prontos">${RSP0.map((m,i)=>`<option value="m:${i}"${sel==='m:'+i?' selected':''}>${esc(m[0])}</option>`).join('')}</optgroup>`;
+}
+const rsPagTxt=n=>'≈ '+(n||0).toLocaleString('pt-BR')+' página'+(n===1?'':'s');
+
+/* ---------- markdown simples e seguro (escapa tudo antes) ---------- */
+function mdHtml(md){
+  const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?!\*)/g,'$1<i>$2</i>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  const L=String(md||'').replace(/\r/g,'').split('\n');let h='',lst=null,para=[];
+  const fp=()=>{if(para.length){h+='<p>'+inl(para.join(' '))+'</p>';para=[]}},fl=()=>{if(lst){h+='</'+lst+'>';lst=null}};
+  for(const ln of L){let m;
+    if(!ln.trim()){fp();fl();continue}
+    if((m=ln.match(/^(#{1,5})\s+(.*)/))){fp();fl();const n=Math.min(5,m[1].length+1);h+=`<h${n}>${inl(m[2])}</h${n}>`;continue}
+    if((m=ln.match(/^\s*[-*•]\s+(.*)/))){fp();if(lst!=='ul'){fl();h+='<ul>';lst='ul'}h+='<li>'+inl(m[1])+'</li>';continue}
+    if((m=ln.match(/^\s*\d+[.)]\s+(.*)/))){fp();if(lst!=='ol'){fl();h+='<ol>';lst='ol'}h+='<li>'+inl(m[1])+'</li>';continue}
+    if((m=ln.match(/^>\s?(.*)/))){fp();fl();h+='<blockquote>'+inl(m[1])+'</blockquote>';continue}
+    if(/^\s*(-{3,}|\*{3,})\s*$/.test(ln)){fp();fl();h+='<hr>';continue}
+    fl();para.push(ln.trim());
+  }
+  fp();fl();return h;
+}
+
+/* ---------- dados completos (partes e extras) só em memória: não cabem no armazenamento do aparelho ---------- */
+async function rsFull(b,force){
+  const j=RS.jobs[b.id];if(!j)return null;
+  const f=RS.full[b.id];
+  if(f&&f.id===j.id&&!force&&f.at>Date.parse(j.atualizado||0)-1)return f;
+  if(RS.fullBusy)return f||null;
+  RS.fullBusy=1;
+  try{const it=(await rsFn('obter',{id:j.id})).item;RS.full[b.id]={id:it.id,at:Date.now(),longo:it.longo,extras:it.extras||[],prompt:it.prompt||'',resultado:it.resultado};return RS.full[b.id]}
+  catch(e){if(window.toast)toast(e.message,4000);return f||null}
+  finally{RS.fullBusy=0}
+}
+const rsPartes=f=>((f&&f.longo&&f.longo.partes)||[]).filter(p=>p.texto);
+const rsLidas=b=>((S.ax||{})['rsl.'+b.id]||[]);
+
+/* ---------- lista: também redesenha quando o andamento do resumo completo muda ---------- */
+rsLoad=async function(force){
+  if(RS.loading||!SESS)return;
+  if(!force&&Date.now()-RS.loadedAt<15000)return;
+  RS.loading=1;
+  try{
+    const j=await rsFn('listar'),novo={},prontos=[];let mudou=0;
+    for(const it of j.itens||[]){
+      const ant=RS.jobs[it.book_id],mesmo=ant&&ant.id===it.id,item=Object.assign({},mesmo?ant:{},it);
+      if(it.status==='concluido'&&(!item.resultado||(mesmo&&ant.concluido!==it.concluido))){
+        try{item.resultado=(await rsFn('obter',{id:it.id})).item.resultado}catch(e){}
+      }
+      if(mesmo&&rsPend(ant)&&it.status==='concluido')prontos.push(it);
+      if(!mesmo||ant.status!==it.status||JSON.stringify(ant.progresso||null)!==JSON.stringify(it.progresso||null))mudou=1;
+      novo[it.book_id]=item;
+    }
+    if(Object.keys(RS.jobs).some(k=>!novo[k]))mudou=1;
+    RS.jobs=novo;ls.set('diario-rs',novo);RS.err='';RS.loadedAt=Date.now();
+    prontos.forEach(it=>{delete RS.full[it.book_id];if(window.toast)toast((it.modo==='completo'?'📚 Resumo completo pronto: ':'📖 Resumo concluído: ')+it.titulo,4000)});
+    if(mudou)rsRefresh();
+  }catch(e){RS.err=e.message}
+  RS.loading=0;rsPoll();
+};
+
+/* ---------- pedir um resumo (modo, páginas e prompt) ---------- */
+rsCriar=async function(b,foco,file,o){
+  o=o||RSNEXT||{modo:rspPref('modo','padrao'),paginas:rspPref('pag',100),prompt:rspTexto(rspPref('def',''))};RSNEXT=null;
+  RS.err='';
+  try{
+    if(o.modo==='completo'&&!file)throw new Error('O resumo completo (100+ páginas) é feito a partir do PDF: anexe o arquivo do livro.');
+    let endpoint;
+    try{const reg=await navigator.serviceWorker.ready,s=await reg.pushManager.getSubscription();endpoint=s&&s.endpoint}catch(e){}
+    let arquivo;
+    if(file){
+      const er=rsPdfErro(file);if(er)throw new Error(er);
+      RS.up[b.id]={p:0};rsRefresh();
+      try{arquivo=await rsUpload(file,b,p=>{RS.up[b.id].p=p;rsUpUi(b.id,p)})}finally{delete RS.up[b.id]}
+    }
+    const j=await rsFn('criar',{book_id:b.id,titulo:b.t,autor:b.a||'',foco:foco||'',endpoint,arquivo,modo:o.modo,paginas:o.paginas,prompt:o.prompt||''});
+    const agora=new Date().toISOString();
+    RS.jobs[b.id]={id:j.id,book_id:b.id,titulo:b.t,autor:b.a||'',status:j.status||'na_fila',criado:agora,atualizado:agora,modo:o.modo,paginas:o.modo==='completo'?o.paginas:null,progresso:null};
+    delete RS.full[b.id];
+    ls.set('diario-rs',RS.jobs);
+    if(window.toast)toast(o.modo==='completo'?'Resumo completo na fila: leva de 15 a 40 min. Pode fechar o app, avisamos quando terminar.':'Resumo na fila. Pode sair da tela, avisamos quando terminar.',4500);
+  }catch(e){RS.err=e.message;if(window.toast)toast(e.message,4500)}
+  rsRefresh();rsPoll();
+};
+
+/* ---------- formulário de pedido ---------- */
+function rsForm(b){
+  const modo=rspPref('modo','padrao'),pag=rspPref('pag',100),def=rspPref('def','');
+  return `<div class="sm mut" style="margin:6px 0 8px">Escolha o tipo de resumo. Tudo roda em segundo plano: pode sair da tela.</div>
+<div class="seg" style="margin-bottom:8px"><button class="${modo==='padrao'?'on':''}" data-ep="modo" data-id="padrao">📄 Padrão</button><button class="${modo==='completo'?'on':''}" data-ep="modo" data-id="completo">📚 Completo</button></div>
+${modo==='completo'?`<div class="card" style="margin:0 0 8px;background:var(--bg)"><div class="sm"><b>Resumo completo, capítulo a capítulo</b>, com no mínimo:</div><div class="seg" style="margin:6px 0">${RS_PAGS.map(n=>`<button class="${+pag===n?'on':''}" data-ep="pag" data-id="${n}">${n} pág.</button>`).join('')}</div><div class="sm mut">Feito a partir do <b>PDF</b> (obrigatório). O Gemini lê o sumário, faz o resumo geral e escreve cada capítulo em profundidade, com páginas citadas, pontos-chave e aplicação no trading. Leva de 15 a 40 min e usa várias chamadas ao Gemini (custa mais que o padrão). Página = A4, fonte 12, ~${RS_PPAG} palavras.</div></div>`:`<div class="sm mut" style="margin-bottom:8px">Resumo estruturado (tese, ideias, conceitos, aplicação no trading, perguntas). 30 s a 2 min. Com PDF usa o texto real do livro; sem PDF usa o que o Gemini conhece do livro.</div>`}
+<label>🧩 Prompt (opcional)<select id="rspsel">${rspOpts(def)}</select></label>
+<textarea id="rsptx" rows="3" placeholder="Escreva aqui o que você quer além do padrão (ex.: foque em gestão de risco e traga exemplos com mini índice)" style="width:100%;margin-top:4px">${esc(rspTexto(def))}</textarea>
+<div class="sm mut" style="margin-bottom:6px">Seus prompts ficam em Estudos → 🧩 Meus prompts. As regras de fidelidade ao livro continuam valendo.</div>
+<label>Foco (opcional)<input id="rsfoco" placeholder="ex.: gestão de risco e psicologia"></label>
+<label>📎 PDF do livro ${modo==='completo'?'<b>(obrigatório)</b>':'(opcional)'}, até 50 MB<input type="file" id="rspdf2" accept="application/pdf,.pdf"></label>
+<div class="sm mut">O arquivo vai para o Gemini (Google) e é apagado do seu armazenamento e do Gemini assim que o resumo fica pronto.</div>
+<button class="btn" style="margin-top:8px;width:100%" data-ep="gen" data-id="${b.id}">✨ Gerar ${modo==='completo'?'resumo completo (mín. '+pag+' páginas)':'resumo'}</button>`;
+}
+
+/* ---------- andamento do resumo completo ---------- */
+function rsAndamento(b,j){
+  const p=j.progresso||{},meta=p.meta_paginas||j.paginas||100,tot=(p.partes||0)+2,feitas=(p.prontas||0)+(p.geral?1:0)+(p.partes?1:0);
+  const pct=Math.min(99,Math.round(feitas/Math.max(tot,3)*100));
+  const et=!p.partes?'Lendo o sumário do livro…':!p.geral?'Fazendo o resumo geral…':p.etapa==='parte'?`Escrevendo a parte ${p.parte} de ${p.partes}…`:p.etapa==='fim'?'Finalizando…':'Na fila…';
+  const rest=p.partes?Math.max(1,Math.round((p.partes-(p.prontas||0))*1.5)):null;
+  return `<div class="sm" style="margin:8px 0 4px"><b>${et}</b> <span class="mut">· <b data-rs-t="${esc(j.criado)}">${rsMin(j.criado)}</b></span></div>
+<div style="height:6px;border-radius:3px;background:var(--bd);overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--ac);transition:width .4s"></div></div>
+<div class="sm mut" style="margin-top:6px">${p.palavras?(p.palavras.toLocaleString('pt-BR')+' palavras · '+rsPagTxt(p.paginas)+' de '+meta):'Meta: '+meta+' páginas'}${rest?' · faltam ~'+rest+' min':''}</div>
+${j.erro?`<div class="sm" style="margin-top:4px;color:#d9a400">Tentando de novo: ${esc(j.erro)}</div>`:''}
+${p.prontas?`<button class="btn s" style="margin-top:8px" data-ep="ler" data-id="${b.id}">📖 Ler o que já está pronto (${p.prontas} parte${p.prontas>1?'s':''})</button>`:''}
+<div class="sm mut" style="margin-top:6px">Pode fechar o app. ${rsPushHint()}</div>`;
+}
+
+/* ---------- resultado: resumo completo + prompts extras ---------- */
+function rsCompletoCard(b,j){
+  const r=j.resultado||{},c=r.completo,f=RS.full[b.id],lid=rsLidas(b).length;
+  if(!c&&j.modo!=='completo')return '';
+  const n=c?c.partes:rsPartes(f).length;
+  return `<div class="card" style="margin:10px 0;border:1px solid var(--ac)"><div class="top"><b>📚 Resumo completo</b><span class="sm mut">${c?n+' partes · '+rsPagTxt(c.paginas):''}</span></div>
+${c?`<div class="sm mut" style="margin:4px 0">${c.palavras.toLocaleString('pt-BR')} palavras · meta ${c.meta_paginas} páginas${lid?' · '+lid+'/'+n+' partes lidas':''}</div>`:''}
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn" data-ep="ler" data-id="${b.id}">📖 Ler</button><button class="btn s" data-ep="pdf" data-id="${b.id}">🖨️ Salvar em PDF</button><button class="btn s" data-ep="md" data-id="${b.id}">⬇️ Baixar texto (.md)</button></div></div>`;
+}
+function rsExtrasCard(b,j){
+  const f=RS.full[b.id],ex=(f&&f.extras)||[],busy=RS.extraBusy[b.id];
+  return `<div class="card" style="margin:10px 0"><div class="top"><b>🧩 Perguntar ao resumo</b></div>
+<div class="sm mut" style="margin:4px 0 6px">Rode um prompt seu (ou um modelo) em cima deste resumo: flashcards, checklist, regras para o seu plano…</div>
+<select id="rsxsel">${rspOpts('','Escrever agora…')}</select>
+<textarea id="rsxtx" rows="3" placeholder="Ex.: crie um checklist pré-operação com base no livro" style="width:100%;margin-top:4px"></textarea>
+<button class="btn" style="margin-top:6px;width:100%" data-ep="extra" data-id="${b.id}"${busy?' disabled':''}>${busy?'⏳ Gerando… (até 2 min)':'▶️ Rodar prompt'}</button>
+${f?ex.map(x=>`<details class="rs-sec"><summary><b>${esc(x.titulo)}</b> <span class="sm mut">· ${new Date(x.criado).toLocaleDateString('pt-BR')}</span></summary><div class="sm mut" style="margin:6px 0;white-space:pre-wrap">${esc(x.prompt)}</div><div class="md">${mdHtml(x.texto)}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn s" data-ep="xnote" data-id="${b.id}" data-x="${x.id}">📝 Salvar nas anotações</button><button class="btn s" data-ep="xcopy" data-id="${b.id}" data-x="${x.id}">📋 Copiar</button><button class="btn s d" data-ep="xdel" data-id="${b.id}" data-x="${x.id}">Apagar</button></div></details>`).join(''):`<button class="btn s" style="margin-top:8px" data-ep="carrega" data-id="${b.id}">Ver respostas anteriores</button>`}
+</div>`;
+}
+
+rsCard=function(b){
+  const j=RS.jobs[b.id];
+  let h='<div class="card" id="rs-card" style="margin:10px 0"><div class="top"><b>✨ Resumo com IA</b>'+(j?`<span class="sm">${j.modo==='completo'&&rsPend(j)?'📚 Completo · ':''}${rsChip(j)}</span>`:'')+'</div>';
+  if(!SESS)h+='<div class="sm mut" style="margin-top:6px">Entre na sua conta (Mais → Conta) para gerar resumos.</div>';
+  else if(RS.up[b.id])h+=`<div class="sm" style="margin:8px 0 6px">⬆️ Enviando o PDF… <b data-rs-up="${b.id}">${RS.up[b.id].p}%</b></div><div style="height:4px;border-radius:2px;background:var(--bd);overflow:hidden"><div data-rs-upbar="${b.id}" style="height:100%;width:${RS.up[b.id].p}%;background:var(--ac)"></div></div><div class="sm mut" style="margin-top:6px">Mantenha o app aberto até o envio terminar. Depois pode sair da tela.</div>`;
+  else if(!j||RS.novo===b.id)h+=rsForm(b)+(j?`<button class="btn s" style="margin-top:6px;width:100%" data-ep="cancnovo" data-id="${b.id}">Cancelar e voltar ao resumo atual</button>`:'');
+  else if(rsPend(j))h+=(j.modo==='completo'?rsAndamento(b,j):`<div class="sm" style="margin:8px 0 6px">${j.status==='na_fila'?'Na fila…':'Gerando o resumo…'} <b data-rs-t="${esc(j.criado)}">${rsMin(j.criado)}</b></div><div style="height:4px;border-radius:2px;background:var(--bd);overflow:hidden"><div class="rs-bar"></div></div><div class="sm mut" style="margin-top:6px">Pode sair desta tela. ${rsPushHint()}</div>`)+(rsParado(j)?`<button class="btn s" style="margin-top:8px" data-rs="retry" data-id="${b.id}">Parece travado: tentar de novo</button>`:'');
+  else if(j.status==='erro')h+=`<div class="warn" style="margin:8px 0">${esc(j.erro||'Não consegui gerar o resumo.')}</div>${j.progresso&&j.progresso.prontas?`<div class="sm mut" style="margin-bottom:6px">${j.progresso.prontas} de ${j.progresso.partes} partes já prontas (${rsPagTxt(j.progresso.paginas)}).</div>`:''}<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-rs="retry" data-id="${b.id}">${j.modo==='completo'?'Continuar de onde parou':'Tentar de novo'}</button>${j.progresso&&j.progresso.prontas?`<button class="btn s" data-ep="ler" data-id="${b.id}">📖 Ler o que ficou pronto</button>`:''}<button class="btn s" data-rs="del" data-id="${b.id}">Descartar</button></div>`;
+  else h+=rsView(b,j);
+  return h+(RS.err?`<div class="sm mut" style="margin-top:6px">${esc(RS.err)}</div>`:'')+'</div>'+(j&&j.status==='concluido'&&RS.novo!==b.id?rsCompletoCard(b,j)+rsExtrasCard(b,j):'');
+};
+/* "Gerar de novo" abre o formulário (com modo e prompt) em vez de repetir o pedido igual */
+const rsView0=rsView;
+rsView=function(b,j){return rsView0(b,j).replace(`data-rs="again" data-id="${b.id}"`,`data-ep="novo" data-id="${b.id}"`)};
+
+/* ---------- leitor ---------- */
+let RL=null;
+function rlAbre(b,f,i){
+  const ps=rsPartes(f);if(!ps.length){if(window.toast)toast('Ainda não há partes prontas.');return}
+  RL={b,f,i:Math.max(0,Math.min(i||0,ps.length-1)),fs:+(ls.get('diario-rl-fs')||17)};
+  let ov=document.getElementById('rl');
+  if(!ov){ov=document.createElement('div');ov.id='rl';document.body.appendChild(ov)}
+  rlDesenha();document.body.style.overflow='hidden';
+}
+function rlFecha(){const ov=document.getElementById('rl');if(ov)ov.remove();RL=null;document.body.style.overflow='';render()}
+function rlDesenha(){
+  if(!RL)return;const ov=document.getElementById('rl');if(!ov)return;
+  const ps=rsPartes(RL.f),p=ps[RL.i],lid=rsLidas(RL.b),li=lid.includes(p.titulo);
+  ov.innerHTML=`<div class="rl-top"><button class="btn s" data-rl="x">✕</button><select data-rl="sel" style="flex:1;min-width:0">${ps.map((x,k)=>`<option value="${k}"${k===RL.i?' selected':''}>${lid.includes(x.titulo)?'✓ ':''}${k+1}. ${esc(x.titulo)}</option>`).join('')}</select><button class="btn s" data-rl="a-">A−</button><button class="btn s" data-rl="a+">A+</button></div>
+<div class="rl-body md" style="font-size:${RL.fs}px">${RL.i===0&&RL.f.resultado&&RL.f.resultado.tese_central?`<div class="card" style="margin-bottom:14px"><div class="sm mut">Tese central</div>${esc(RL.f.resultado.tese_central)}</div>`:''}${mdHtml(p.texto)}
+<div class="sm mut" style="margin:18px 0 8px">${(p.palavras||0).toLocaleString('pt-BR')} palavras${p.paginas?' · p. '+esc(p.paginas)+' do PDF':''} · parte ${RL.i+1} de ${ps.length}</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:40px"><button class="btn s" data-rl="ant"${RL.i?'':' disabled'}>‹ Anterior</button><button class="btn ${li?'s':''}" data-rl="lida">${li?'✓ Lida':'Marcar como lida'}</button><button class="btn s" data-rl="prox"${RL.i<ps.length-1?'':' disabled'}>Próxima ›</button></div></div>`;
+  const bd=ov.querySelector('.rl-body');if(bd)bd.scrollTop=0;
+}
+document.addEventListener('click',e=>{
+  const x=e.target.closest('[data-rl]');if(!x||!RL)return;const k=x.dataset.rl,ps=rsPartes(RL.f);
+  if(k==='x')return rlFecha();
+  if(k==='ant'&&RL.i>0)RL.i--;
+  else if(k==='prox'&&RL.i<ps.length-1)RL.i++;
+  else if(k==='a+'||k==='a-'){RL.fs=Math.max(13,Math.min(24,RL.fs+(k==='a+'?1:-1)));ls.set('diario-rl-fs',RL.fs)}
+  else if(k==='lida'){const t=ps[RL.i].titulo,a=rsLidas(RL.b).slice(),i=a.indexOf(t);i<0?a.push(t):a.splice(i,1);(S.ax??={})['rsl.'+RL.b.id]=a;save();if(i<0&&RL.i<ps.length-1){RL.i++}}
+  else return;
+  rlDesenha();
+});
+document.addEventListener('change',e=>{const s=e.target.closest('[data-rl="sel"]');if(s&&RL){RL.i=+s.value;rlDesenha()}});
+document.addEventListener('keydown',e=>{if(!RL)return;if(e.key==='Escape')rlFecha();else if(e.key==='ArrowRight'){const ps=rsPartes(RL.f);if(RL.i<ps.length-1){RL.i++;rlDesenha()}}else if(e.key==='ArrowLeft'&&RL.i>0){RL.i--;rlDesenha()}});
+
+/* ---------- exportar: PDF (impressão A4) e markdown ---------- */
+function rsMd(b,f){
+  const r=f.resultado||{},L=['# '+(r.titulo||b.t),(r.autor||b.a)?'*'+(r.autor||b.a)+'*':'',''];
+  if(r.tese_central)L.push('## Tese central','',r.tese_central,'');
+  if((r.resumo_executivo||[]).length)L.push('## Resumo executivo','',...r.resumo_executivo.flatMap(x=>[x,'']));
+  if((r.ideias_principais||[]).length)L.push('## Ideias principais','',...r.ideias_principais.map((x,i)=>`${i+1}. **${x.titulo}**: ${x.explicacao}`),'');
+  if((r.conceitos_chave||[]).length)L.push('## Conceitos-chave','',...r.conceitos_chave.map(x=>`- **${x.termo}**: ${x.definicao}`),'');
+  if((r.aplicacao_no_trading||[]).length)L.push('## Como aplicar no trading','',...r.aplicacao_no_trading.map(x=>`- **${x.ideia}**: ${x.como_aplicar}`),'');
+  const ps=rsPartes(f);
+  if(ps.length)L.push('# Resumo capítulo a capítulo','',...ps.flatMap(p=>[p.texto,'']));
+  if((r.perguntas_de_revisao||[]).length)L.push('## Perguntas de revisão','',...r.perguntas_de_revisao.map((x,i)=>`${i+1}. ${x}`),'');
+  L.push('---','Resumo gerado por IA (Gemini) a partir do PDF. Pode haver imprecisões: confira no livro.');
+  return L.join('\n');
+}
+const rsArq=(b,ext)=>String(b.t||'resumo').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'-').replace(/^-|-$/g,'').toLowerCase().slice(0,60)+'-resumo.'+ext;
+function rsBaixa(nome,txt,tipo){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:tipo}));a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}
+function rsHtmlImpressao(b,f){
+  const r=f.resultado||{},ps=rsPartes(f),c=r.completo||{},hoje=new Date().toLocaleDateString('pt-BR');
+  const geral=mdHtml(rsMd(b,{resultado:r,longo:null}).split('\n').slice(3).filter(x=>!/^---$|Resumo gerado por IA/.test(x)).join('\n'));
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(r.titulo||b.t)} — resumo</title><style>
+@page{size:A4;margin:2.5cm 2.3cm}*{box-sizing:border-box}body{font:12pt/1.62 Georgia,'Times New Roman',serif;color:#111;margin:0}
+.capa{height:24cm;display:flex;flex-direction:column;justify-content:center;text-align:center;page-break-after:always}.capa h1{font-size:30pt;margin:0 0 10px}.capa .a{font-size:15pt;color:#444}.capa .m{margin-top:40px;color:#666;font-size:10.5pt}
+h1{font-size:20pt}h2{font-size:17pt;margin:0 0 10px;page-break-after:avoid}h3{font-size:13.5pt;margin:18px 0 6px;page-break-after:avoid}h4,h5{font-size:12pt;margin:14px 0 4px}
+p{margin:0 0 9px;text-align:justify;orphans:3;widows:3}li{margin:3px 0}blockquote{margin:8px 0;padding-left:12px;border-left:3px solid #999;color:#333}
+.parte{page-break-before:always}.sum li{margin:4px 0}.nota{font-size:9.5pt;color:#666;margin-top:30px}code{font-size:10.5pt}
+@media screen{body{max-width:820px;margin:20px auto;padding:0 16px}}</style></head><body>
+<div class="capa"><h1>${esc(r.titulo||b.t)}</h1><div class="a">${esc(r.autor||b.a||'')}</div><div class="m">Resumo capítulo a capítulo${c.paginas?' · '+rsPagTxt(c.paginas):''}<br>Gerado por IA em ${hoje} a partir do PDF</div></div>
+<h2>Sumário</h2><ol class="sum"><li>Visão geral</li>${ps.map(p=>`<li>${esc(p.titulo)}</li>`).join('')}</ol>
+<div class="parte"><h2>Visão geral</h2>${geral}</div>
+${ps.map(p=>`<div class="parte">${mdHtml(p.texto)}</div>`).join('')}
+<p class="nota">Resumo gerado por IA (Gemini) a partir do PDF enviado. Pode haver imprecisões: confira no livro.</p>
+<script>window.onload=function(){setTimeout(function(){try{window.print()}catch(e){}},500)}<\/script></body></html>`;
+}
+function rsPdf(b,f){
+  const h=rsHtmlImpressao(b,f);
+  let w=null;try{w=window.open(URL.createObjectURL(new Blob([h],{type:'text/html'})),'_blank')}catch(e){}
+  if(!w){rsBaixa(rsArq(b,'html'),h,'text/html');if(window.toast)toast('Baixei o arquivo .html: abra e use Imprimir → Salvar como PDF.',5000)}
+  else if(window.toast)toast('Na tela de impressão, escolha "Salvar como PDF".',4000);
+}
+
+/* ---------- aba Meus prompts ---------- */
+function vPrompts(){
+  const u=rspLista(),def=rspPref('def','');
+  return `<div class="card"><b>Prompt usado automaticamente</b><div class="sm mut" style="margin:4px 0 6px">Vale para os resumos gerados ao adicionar um livro. No livro você pode escolher outro na hora.</div><select data-ep="def">${rspOpts(def)}</select></div>
+<div class="top" style="margin-top:12px"><h2 style="margin:0">Meus prompts (${u.length})</h2><button class="btn" data-ep="pnovo">+ Novo prompt</button></div>
+${u.length?u.map(p=>`<div class="card"><div class="top"><input data-epn="${p.id}" value="${esc(p.n)}" placeholder="Nome do prompt" style="flex:1;font-weight:600"><button class="x" data-ep="pdel" data-id="${p.id}">✕</button></div><textarea data-epx="${p.id}" rows="4" placeholder="O que a IA deve fazer" style="width:100%;margin-top:6px">${esc(p.x)}</textarea><div class="sm mut">${(p.x||'').length}/4000 caracteres${def==='u:'+p.id?' · <b>usado automaticamente</b>':''}</div></div>`).join(''):'<p class="mut sm">Nenhum prompt ainda. Crie um ou copie um modelo abaixo.</p>'}
+<h2 style="margin-top:16px">Modelos prontos</h2><div class="sm mut" style="margin-bottom:6px">Use direto no livro ou copie para editar do seu jeito.</div>
+${RSP0.map((m,i)=>`<div class="card"><div class="top"><b>${esc(m[0])}</b><button class="btn s" data-ep="pcop" data-id="${i}">Copiar</button></div><div class="sm" style="margin-top:4px">${esc(m[1])}</div></div>`).join('')}
+<div class="sm mut" style="margin:10px 0">Dica: o prompt muda foco, profundidade e estilo do resumo. Ele não desliga as regras de fidelidade ao livro (a IA não inventa capítulos nem citações).</div>`;
+}
+
+(function(){
+  const st=document.createElement('style');
+  st.textContent='#rl{position:fixed;inset:0;z-index:9999;background:var(--bg,#111);display:flex;flex-direction:column}#rl .rl-top{display:flex;gap:6px;align-items:center;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--bd)}#rl .rl-body{flex:1;overflow-y:auto;overflow-x:hidden;box-sizing:border-box;overflow-wrap:anywhere;padding:16px;max-width:760px;width:100%;margin:0 auto;line-height:1.65;-webkit-overflow-scrolling:touch}.md h2{font-size:1.35em;margin:6px 0 10px}.md h3{font-size:1.12em;margin:18px 0 6px}.md h4,.md h5{font-size:1em;margin:14px 0 4px}.md p{margin:0 0 10px}.md ul,.md ol{padding-left:22px;margin:6px 0 10px}.md li{margin:3px 0}.md blockquote{margin:8px 0;padding-left:10px;border-left:3px solid var(--bd);opacity:.9}.md code{font-size:.92em;background:var(--bd);padding:0 4px;border-radius:4px}';
+  document.head.appendChild(st);
+
+  const e1=vEstudos;
+  vEstudos=function(){
+    const sg=`<div class="seg" style="margin:8px 0 10px"><button class="${ESV==='liv'?'on':''}" data-ep="esv" data-id="liv">📚 Livros</button><button class="${ESV==='pr'?'on':''}" data-ep="esv" data-id="pr">🧩 Meus prompts</button></div>`;
+    if(ESV==='pr')return `<h1>Estudos</h1>${sg}${vPrompts()}`;
+    let h=e1();
+    h=h.replace('</p>','</p>'+sg);
+    /* no cadastro do livro: tipo de resumo e prompt */
+    const m='<span>✨ Gerar resumo com IA ao adicionar</span></label>';
+    if(h.includes(m))h=h.replace(m,()=>m+`<div class="g2" style="margin-top:6px"><label>Tipo<select id="rsmodo0"><option value="padrao"${rspPref('modo','padrao')==='padrao'?' selected':''}>📄 Padrão</option>${RS_PAGS.map(n=>`<option value="c${n}"${rspPref('modo','padrao')==='completo'&&+rspPref('pag',100)===n?' selected':''}>📚 Completo · ${n} pág. (com PDF)</option>`).join('')}</select></label><label>Prompt<select id="rsp0">${rspOpts(rspPref('def',''))}</select></label></div>`);
+    /* andamento do completo no chip da lista */
+    (S.books||[]).forEach(b=>{const j=RS.jobs[b.id];if(!j||j.modo!=='completo'||!rsPend(j)||!j.progresso||!j.progresso.partes)return;const c=rsChip(j);h=h.replace(`<div class="sm" style="margin-top:2px">${c}</div>`,()=>`<div class="sm" style="margin-top:2px">📚 ${j.progresso.prontas}/${j.progresso.partes} partes · ${rsPagTxt(j.progresso.paginas)}</div>`)});
+    return h;
+  };
+
+  /* lê tipo e prompt do cadastro antes do pedido sair (o pedido sai 60 ms depois, pelo bloco anterior) */
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('[data-a="addbook"]'))return;
+    const m=(document.getElementById('rsmodo0')||{}).value||'padrao',p=(document.getElementById('rsp0')||{}).value||'',fi=document.getElementById('rspdf'),file=fi&&fi.files&&fi.files[0];
+    const completo=m[0]==='c'&&!!file;
+    if(m[0]==='c'&&!file&&window.toast)toast('Resumo completo precisa do PDF: vou fazer o resumo padrão.',4500);
+    RSNEXT={modo:completo?'completo':'padrao',paginas:completo?+m.slice(1):100,prompt:rspTexto(p)};
+    setTimeout(()=>{RSNEXT=null},3000);
+  },true);
+
+  document.addEventListener('change',e=>{
+    const t=e.target;
+    if(t.id==='rspsel'){const x=document.getElementById('rsptx');if(x)x.value=rspTexto(t.value)}
+    else if(t.id==='rsxsel'){const x=document.getElementById('rsxtx');if(x)x.value=rspTexto(t.value)}
+    else if(t.dataset&&t.dataset.ep==='def'){rspSetPref('def',t.value);render()}
+    else if(t.dataset&&t.dataset.epn){const a=rspLista().map(p=>p.id===t.dataset.epn?{...p,n:t.value.trim().slice(0,60),u:Date.now()}:p);rspSet(a)}
+    else if(t.dataset&&t.dataset.epx){const a=rspLista().map(p=>p.id===t.dataset.epx?{...p,x:t.value.slice(0,4000),u:Date.now()}:p);rspSet(a);render()}
+  });
+
+  document.addEventListener('click',async e=>{
+    const x=e.target.closest('[data-ep]');if(!x||x.tagName==='SELECT')return;
+    const k=x.dataset.ep,id=x.dataset.id,b=(S.books||[]).find(q=>q.id===id);
+    if(k==='esv'){ESV=id;render();scrollTo(0,0);return}
+    if(k==='modo'){rspSetPref('modo',id);render();return}
+    if(k==='pag'){rspSetPref('pag',+id);render();return}
+    if(k==='pnovo'){rspSet([{id:uid(),n:'Novo prompt',x:'',u:Date.now()},...rspLista()]);render();setTimeout(()=>{const t=document.querySelector('[data-epx]');if(t)t.focus()},50);return}
+    if(k==='pcop'){const m=RSP0[+id];rspSet([{id:uid(),n:m[0],x:m[1],u:Date.now()},...rspLista()]);if(window.toast)toast('Copiado para Meus prompts');render();return}
+    if(k==='pdel'){if(!confirm('Apagar este prompt?'))return;rspSet(rspLista().filter(p=>p.id!==id));if(rspPref('def','')==='u:'+id)rspSetPref('def','');render();return}
+    if(!b)return;
+    const j=RS.jobs[b.id];
+    if(k==='gen'){
+      const fi=document.getElementById('rspdf2'),file=fi&&fi.files&&fi.files[0]||null,er=rsPdfErro(file);
+      if(er){if(window.toast)toast(er,5000);return}
+      const modo=rspPref('modo','padrao');
+      if(modo==='completo'&&!file){if(window.toast)toast('Anexe o PDF do livro para o resumo completo.',4500);return}
+      const prompt=((document.getElementById('rsptx')||{}).value||'').trim();
+      if(j&&RS.novo===b.id&&!confirm('Gerar um novo resumo? O atual será substituído.'))return;
+      RS.novo=null;
+      rsCriar(b,((document.getElementById('rsfoco')||{}).value||'').trim(),file,{modo,paginas:+rspPref('pag',100),prompt});
+    }
+    else if(k==='novo'){RS.novo=b.id;render();const c=document.getElementById('rs-card');if(c)c.scrollIntoView({block:'start'})}
+    else if(k==='cancnovo'){RS.novo=null;render()}
+    else if(k==='ler'||k==='pdf'||k==='md'){
+      x.disabled=true;const f=await rsFull(b,rsPend(j)||(j&&j.status==='erro'));x.disabled=false;if(!f)return;
+      if(k==='ler')rlAbre(b,f,0);
+      else if(k==='md')rsBaixa(rsArq(b,'md'),rsMd(b,f),'text/markdown');
+      else rsPdf(b,f);
+    }
+    else if(k==='carrega'){await rsFull(b,1);render()}
+    else if(k==='extra'){
+      const pr=((document.getElementById('rsxtx')||{}).value||'').trim(),sel=document.getElementById('rsxsel');
+      if(pr.length<3){if(window.toast)toast('Escreva o prompt ou escolha um modelo.');return}
+      const nome=sel&&sel.value?sel.options[sel.selectedIndex].text:pr.slice(0,50);
+      RS.extraBusy[b.id]=1;render();
+      try{const r=await rsFn('extra',{id:j.id,titulo:nome,prompt:pr});const f=RS.full[b.id]||(await rsFull(b,1));if(f)f.extras=r.extras;if(window.toast)toast('Resposta pronta ✓')}
+      catch(err){if(window.toast)toast(err.message,5000)}
+      delete RS.extraBusy[b.id];render();
+    }
+    else if(k==='xdel'){if(!confirm('Apagar esta resposta?'))return;try{const r=await rsFn('extra_apagar',{id:j.id,eid:x.dataset.x});if(RS.full[b.id])RS.full[b.id].extras=r.extras}catch(err){if(window.toast)toast(err.message,4000)}render()}
+    else if(k==='xnote'||k==='xcopy'){
+      const it=((RS.full[b.id]||{}).extras||[]).find(q=>q.id===x.dataset.x);if(!it)return;
+      if(k==='xcopy'){try{await navigator.clipboard.writeText(it.texto);if(window.toast)toast('Copiado')}catch(err){if(window.toast)toast('Não consegui copiar.')}}
+      else{(b.notes??=[]).unshift({id:uid(),t:'IA: '+it.titulo,p:'',x:it.texto,u:Date.now()});save();render();if(window.toast)toast('Salvo nas anotações')}
+    }
+  });
+
+  /* abre o leitor/carrega as respostas ao entrar num livro concluído */
+  const l1=vLivro;
+  vLivro=function(){
+    const h=l1(),b=(S.books||[]).find(x=>x.id===BID),j=b&&RS.jobs[b.id];
+    if(j&&j.status==='concluido'&&!RS.full[b.id]&&!RS.fullBusy&&SESS&&Date.now()-(RS.fullTry[b.id]||0)>60000&&(RS.fullTry[b.id]=Date.now()))setTimeout(()=>{rsFull(b).then(f=>{if(f&&tab==='livro'&&BID===b.id)rsRefresh()})},0);
+    return h;
+  };
+})();
+/* ==== ESTUDOS2:FIM ==== */
+
 /* ---------- Juros: painel do Banco Central, cotações e aba educativa ---------- */
 const JR={data:ls.get('diario-jr'),busy:0,err:''};
 const jrN=(n,d=2)=>n==null||!isFinite(n)?'–':(+n).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -1932,6 +2320,153 @@ ${sec('gloss','8. Glossário rápido',
 <div class="sm mut" style="margin:12px 0">Conteúdo educativo, não é recomendação de investimento.</div>`;
 }
 function jrAfter(){jrPaint();jrLoad(false);jrCalc()}
+
+/* ==== JUROS2:INICIO ==== painel de juros detalhado, curva de DI futuro (B3), cotações do TradingView */
+const j2d=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?m[3]+'/'+m[2]:(s||'').slice(0,5)};
+const j2pb=n=>n==null?'–':(n>0?'+':'')+String(Math.round(n*10)/10).replace('.',',')+' pb';
+const j2pc=(n,d=2)=>n==null||!isFinite(n)?'–':jrN(n,d)+'%';
+const j2tv=s=>'https://www.tradingview.com/chart/?symbol='+encodeURIComponent(s);
+const J2META=3,J2TETO=4.5; // meta de inflação contínua (CMN) e teto da tolerância
+
+/* decisão esperada em palavras */
+function j2dec(atual,esp){if(atual==null||esp==null)return '';const d=Math.round((esp-atual)*100);return d===0?'manutenção':d<0?'corte de '+(-d)+' pb':'alta de '+d+' pb'}
+
+jrPanelHtml=function(){
+  const d=JR.data;
+  if(!d)return `<div class="mut sm" style="padding:8px 0">${esc(JR.err||(JR.busy?'Buscando dados do Banco Central…':'Sem dados ainda.'))}</div>`;
+  const s=d.selic,f=d.focus||{},cp=d.copom||{},y=new Date().getFullYear(),ci=d.curva_info;
+  const kv=(l,v,sub,cor)=>`<div class="card" style="margin:0;padding:10px"><span class="mut sm">${l}</span><div><b style="font-size:19px${cor?';color:'+cor:''}">${v}</b></div><span class="mut sm" style="line-height:1.3;display:block">${sub||''}</span></div>`;
+  const mud=s&&s.completo?(s.mud_pb?`${s.mud_pb<0?'corte':'alta'} de ${Math.abs(s.mud_pb)} pb em ${esc(s.desde)}`:`sem mudança desde ${esc(s.desde)}`):(s?'desde '+esc(s.desde):'');
+  const ipCor=d.ipca12?(d.ipca12.v>J2TETO?'var(--r)':d.ipca12.v>J2META?'#d9a400':'var(--g)'):'';
+  let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+${kv('Selic meta',s?j2pc(s.v):'–',mud)}
+${kv('CDI · Selic over',d.cdi?j2pc(d.cdi.v):'–',(d.over?'over '+j2pc(d.over.v)+' · ':'')+(d.cdi?esc(d.cdi.d):''))}
+${kv('IPCA 12 meses',d.ipca12?j2pc(d.ipca12.v):'–',(d.ipcaMes?'no mês: '+j2pc(d.ipcaMes.v)+' ('+esc(d.ipcaMes.d.slice(3))+')':'')+`<br>meta ${J2META}% · teto ${jrN(J2TETO,1)}%`,ipCor)}
+${kv('Juro real',d.real!=null?j2pc(d.real):'–','ex-post (Selic − IPCA 12m)'+(d.real_exante?`<br>ex-ante <b>${j2pc(d.real_exante.v)}</b> (DI 1 ano − IPCA esperado)`:''))}
+</div>`;
+  /* Copom */
+  if(cp.proxima){
+    const fr=f.reuniao,esp=fr?j2dec(s&&s.v,fr.mediana):'';
+    const dt=new Date(cp.proxima.decisao+'T12:00:00');
+    h+=`<div class="card" style="margin:8px 0 0;padding:10px;border-left:3px solid var(--ac)"><div class="top"><b>🏛️ Próximo Copom</b><span class="sm mut">em ${cp.proxima.dias} dia${cp.proxima.dias===1?'':'s'}</span></div>
+<div class="sm" style="margin-top:4px">${j2d(cp.proxima.inicio)} e ${dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} · decisão na quarta à noite (~18h30) · ${cp.restantes_ano>1?cp.restantes_ano+' reuniões até o fim do ano':'última do ano'}</div>
+${fr?`<div class="sm" style="margin-top:4px">Focus espera <b>${j2pc(fr.mediana)}</b>${esp?' → <b>'+esp+'</b>':''}</div>`:''}
+${ci&&ci.curto_vs_cdi_pb!=null?`<div class="sm" style="margin-top:4px">Curva: ${esc(ci.curto)} está <b>${j2pb(ci.curto_vs_cdi_pb)}</b> ${ci.curto_vs_cdi_pb<0?'abaixo':'acima'} do CDI → o mercado ${ci.curto_vs_cdi_pb<=-15?'precifica cortes':ci.curto_vs_cdi_pb>=15?'precifica altas':'não precifica mudança grande'} até esse vencimento.</div>`:''}</div>`;
+  }
+  /* Focus */
+  if(f.selic||f.ipca){
+    const c=(l,a,b)=>`<tr><td>${l}</td><td style="text-align:right"><b>${j2pc(a)}</b></td><td style="text-align:right"><b>${j2pc(b)}</b></td></tr>`;
+    h+=`<div class="card" style="margin:8px 0 0;padding:10px"><div class="top"><b>📊 Focus (mediana do mercado)</b><span class="sm mut">${f.data?j2d(f.data):''}</span></div>
+<table class="sm" style="width:100%;margin-top:4px;border-collapse:collapse"><tr class="mut"><td></td><td style="text-align:right">fim de ${y}</td><td style="text-align:right">fim de ${y+1}</td></tr>${c('Selic',f.selic&&f.selic[y],f.selic&&f.selic[y+1])}${c('IPCA',f.ipca&&f.ipca[y],f.ipca&&f.ipca[y+1])}</table>
+${f.ipca12m?`<div class="sm mut" style="margin-top:4px">IPCA esperado para os próximos 12 meses: <b>${j2pc(f.ipca12m.v)}</b></div>`:''}</div>`;
+  }
+  /* IPCA mês a mês */
+  if(d.ipcaMes&&d.ipcaMes.hist&&d.ipcaMes.hist.length>2){
+    const H=d.ipcaMes.hist,mx=Math.max(.5,...H.map(x=>Math.abs(x.v))),w=100/H.length;
+    h+=`<div class="card" style="margin:8px 0 0;padding:10px"><b class="sm">IPCA mês a mês</b><svg viewBox="0 0 100 34" preserveAspectRatio="none" style="width:100%;height:60px;margin-top:6px">${H.map((x,i)=>{const hh=Math.abs(x.v)/mx*15;return `<rect x="${i*w+w*.15}" y="${x.v>=0?17-hh:17}" width="${w*.7}" height="${Math.max(.4,hh)}" fill="${x.v>=0?'var(--r)':'var(--g)'}" opacity=".8"><title>${esc(x.m)}: ${jrN(x.v)}%</title></rect>`}).join('')}<line x1="0" x2="100" y1="17" y2="17" stroke="var(--bd)" stroke-width=".3"/></svg><div class="sm mut" style="display:flex;justify-content:space-between"><span>${esc(H[0].m)}</span><span>${esc(H[H.length-1].m)}: ${j2pc(H[H.length-1].v)}</span></div></div>`;
+  }
+  return h+(JR.err?`<div class="warn" style="margin-top:8px">${esc(JR.err)}</div>`:'')+`<div class="sm mut" style="margin-top:6px">Banco Central (SGS e Focus)${JR.ts?' · atualizado às '+hm(JR.ts):''}</div>`;
+};
+
+/* --- curva de juros (DI1 da B3) --- */
+function j2CurvaSvg(c){
+  const W=320,H=150,P={l:34,r:8,t:10,b:22},xs=c.map(p=>p.du),ys=c.flatMap(p=>[p.taxa,p.ant]).filter(v=>v!=null);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys)-.1,y1=Math.max(...ys)+.1;
+  const X=v=>P.l+(v-x0)/(x1-x0||1)*(W-P.l-P.r),Y=v=>P.t+(y1-v)/(y1-y0||1)*(H-P.t-P.b);
+  const ln=k=>c.filter(p=>p[k]!=null).map((p,i)=>(i?'L':'M')+X(p.du).toFixed(1)+','+Y(p[k]).toFixed(1)).join('');
+  const ticks=[y0+.1,(y0+y1)/2,y1-.1];
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:6px" role="img" aria-label="Curva de juros futuros">
+${ticks.map(t=>`<line x1="${P.l}" x2="${W-P.r}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--bd)" stroke-width=".5"/><text x="${P.l-4}" y="${Y(t)+3}" font-size="9" text-anchor="end" fill="var(--mut)">${jrN(t,2)}</text>`).join('')}
+<path d="${ln('ant')}" fill="none" stroke="var(--mut)" stroke-width="1.2" stroke-dasharray="3 3"/>
+<path d="${ln('taxa')}" fill="none" stroke="var(--ac)" stroke-width="2"/>
+${c.map(p=>`<circle cx="${X(p.du)}" cy="${Y(p.taxa)}" r="2.6" fill="var(--ac)"><title>${p.cod}: ${jrN(p.taxa,3)}%</title></circle>`).join('')}
+${c.filter((p,i)=>i===0||p.cod.startsWith('DI1F')&&i%2===0||i===c.length-1).map(p=>`<text x="${X(p.du)}" y="${H-8}" font-size="8.5" text-anchor="middle" fill="var(--mut)">${p.cod.slice(3)}</text>`).join('')}
+</svg><div class="sm mut" style="display:flex;gap:12px;justify-content:center"><span><b style="color:var(--ac)">━</b> hoje</span><span>┅ fechamento anterior</span></div>`;
+}
+function jrCurvaHtml(){
+  const d=JR.data,c=d&&d.curva,ci=d&&d.curva_info;
+  if(!c||c.length<2)return d&&d.tv&&!d.tv.ok?`<div class="sm mut">A curva vem do TradingView, que não respondeu agora (${esc(d.tv.erro||'')}).</div>`:'<div class="sm mut">Sem dados da curva ainda.</div>';
+  const corPb=v=>v==null?'':v>0?'r':v<0?'g':'';
+  return `${ci?`<div class="sm" style="margin:2px 0 4px;line-height:1.45">Curva <b>${esc(ci.forma)}</b>: ${esc(ci.longo)} − ${esc(ci.curto)} = <b>${j2pb(ci.inclinacao_pb)}</b>.${ci.dia?` Hoje os DIs estão <b>${esc(ci.dia)}</b> (média ${j2pb(ci.var_media_pb)}).`:''}${ci.taxa_1a!=null?` Taxa de 1 ano: <b>${j2pc(ci.taxa_1a,3)}</b>.`:''}</div>`:''}
+${j2CurvaSvg(c)}
+<div style="overflow-x:auto;margin-top:6px"><table class="sm" style="width:100%;border-collapse:collapse;white-space:nowrap">
+<tr class="mut"><td style="padding:4px 2px">Vértice</td><td style="text-align:right">Taxa</td><td style="text-align:right">Var.</td><td style="text-align:right">PU (R$)</td><td style="text-align:right">du</td><td style="text-align:right">Termo</td></tr>
+${c.map(p=>`<tr style="border-top:1px solid var(--bd)"><td style="padding:6px 2px"><a href="${j2tv('BMFBOVESPA:'+p.cod.slice(0,4)+p.venc.slice(0,4))}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none"><b>${esc(p.cod)}</b><div class="mut" style="font-size:11px">${esc(p.rotulo)}</div></a></td><td style="text-align:right"><b>${jrN(p.taxa,3)}</b></td><td style="text-align:right" class="${corPb(p.var_pb)}">${j2pb(p.var_pb)}</td><td style="text-align:right">${jrN(p.pu,0)}</td><td style="text-align:right">${p.du}</td><td style="text-align:right" class="mut">${p.termo==null?'–':jrN(p.termo,2)}</td></tr>`).join('')}
+</table></div>
+<div class="sm mut" style="margin-top:6px;line-height:1.45">Taxa em % ao ano (base 252). <b>Var.</b> em pontos-base (1 pb = 0,01 ponto): <span class="r">positivo = taxa subindo</span>, que costuma pesar no Ibovespa. <b>Termo</b> = taxa embutida entre o vértice anterior e este. TradingView, ~15 min de atraso. Toque no vértice para abrir o gráfico.</div>`;
+}
+
+/* --- petróleo, minério, juros lá fora --- */
+function jrCotHtml(){
+  const d=JR.data,c=d&&d.cot;
+  if(!c||!Object.keys(c).length)return '';
+  const nm={wti:'WTI (USOIL)',brent:'Brent (UKOIL)',fef1:'Minério · 1º venc.',fef2:'Minério · 2º venc.',ust2:'Treasury 2 anos',ust10:'Treasury 10 anos',ust30:'Treasury 30 anos',dxy:'DXY (dólar global)'};
+  const row=k=>{const x=c[k];if(!x)return `<tr style="border-top:1px solid var(--bd)"><td style="padding:7px 2px">${nm[k]}</td><td colspan="2" class="mut" style="text-align:right">sem cotação</td></tr>`;
+    const tx=k.startsWith('ust'),sub=k.startsWith('fef')?(x.alt>=2?'COMEX '+x.s.split(':')[1]+' · SGX indisponível':'SGX '+x.s.split(':')[1]):x.s;
+    return `<tr style="border-top:1px solid var(--bd)"><td style="padding:7px 2px"><a href="${j2tv(x.s)}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none">${nm[k]}<div class="mut" style="font-size:11px">${esc(sub)}</div></a></td><td style="text-align:right"><b>${jrN(x.close,tx?3:2)}${tx?'%':''}</b></td><td style="text-align:right" class="${cls(tx?x.cha:x.chp)}">${tx?j2pb(x.cha==null?null:x.cha*100):(x.chp==null?'–':(x.chp>0?'+':'')+jrN(x.chp)+'%')}</td></tr>`};
+  const grp=(t,ks)=>`<tr><td colspan="3" class="mut" style="padding:10px 2px 2px;font-weight:700;letter-spacing:.04em;font-size:11px">${t}</td></tr>`+ks.map(row).join('');
+  return `<table class="sm" style="width:100%;border-collapse:collapse">${grp('PETRÓLEO E MINÉRIO',['wti','brent','fef1','fef2'])}${grp('JUROS E DÓLAR LÁ FORA',['ust2','ust10','ust30','dxy'])}</table>
+<div class="sm mut" style="margin-top:6px">TradingView, ~15 min de atraso. Minério: contrato FEF da SGX (Singapura); quando a SGX não libera a cotação, mostra o contrato TIO da COMEX, que é o mesmo minério 62% Fe em US$/t.</div>`;
+}
+
+/* --- pinta tudo e recarrega a cada 3 min enquanto a tela está aberta --- */
+jrPaint=function(){
+  const a=document.getElementById('jrp');if(a)a.innerHTML=jrPanelHtml();
+  const b=document.getElementById('jrc');if(b)b.innerHTML=jrCurvaHtml();
+  const q=document.getElementById('mkq');
+  if(q&&JR.data&&JR.data.cot&&Object.keys(JR.data.cot).length){q.style.minHeight='';q.innerHTML=jrCotHtml()}
+  else if(q&&JR.data&&!q.dataset.w&&!JR.busy){q.dataset.w=1;cotWidget()}
+};
+jrLoad=async function(force){
+  if(JR.busy)return;
+  if(!force&&JR.data&&JR.ts&&Date.now()-JR.ts<18e4)return;
+  const c=cfg();
+  if(!c){JR.err='Configure o Supabase na aba Conta para ver os juros.';jrPaint();return}
+  JR.busy=1;JR.err='';jrPaint();
+  try{
+    let r;
+    try{r=await fetch(c.url+'/functions/v1/juros',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:'{}'})}
+    catch(e){throw new Error('Sem conexão. Mostrando o último valor salvo.')}
+    let j={};try{j=await r.json()}catch(e){}
+    if(!r.ok)throw new Error(j.error||(r.status===404?'Função "juros" não encontrada: publique-a no Supabase.':'Erro '+r.status));
+    JR.data=j;JR.ts=Date.now();ls.set('diario-jr',j);
+  }catch(e){JR.err=e.message||String(e)}
+  JR.busy=0;jrPaint();
+};
+/* reserva: o quadro do TradingView (se a função ainda for a antiga ou o scanner falhar) */
+function cotWidget(){
+  const box=document.getElementById('mkq');if(!box)return;
+  const y=new Date().getFullYear(),di=[1,2,3,4,5,6,7,8,10].map(n=>({name:'BMFBOVESPA:DI1F'+(y+n),displayName:'DI1F'+String(y+n).slice(2)+' (jan/'+(y+n)+')'}));
+  box.style.minHeight='560px';
+  box.innerHTML='<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>';
+  const s=document.createElement('script');
+  s.src='https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js';s.async=true;
+  s.innerHTML=JSON.stringify({width:'100%',height:720,symbolsGroups:[
+    {name:'Petróleo e minério',symbols:[{name:'TVC:USOIL',displayName:'WTI (USOIL)'},{name:'TVC:UKOIL',displayName:'Brent (UKOIL)'},{name:'COMEX:TIO1!',displayName:'Minério 62% (COMEX, 1º venc.)'},{name:'COMEX:TIO2!',displayName:'Minério 62% (COMEX, 2º venc.)'}]},
+    {name:'DI futuro (B3)',symbols:[{name:'BMFBOVESPA:DI11!',displayName:'DI1 contínuo'}].concat(di)},
+    {name:'Juros lá fora',symbols:[{name:'TVC:US02Y',displayName:'Treasury 2 anos'},{name:'TVC:US10Y',displayName:'Treasury 10 anos'}]}
+  ],showSymbolLogo:false,colorTheme:mkDark()?'dark':'light',isTransparent:true,locale:'br'});
+  box.firstChild.appendChild(s);
+}
+vCot=function(tabs){
+  return `<div class="card"><div class="top"><b>Cotações</b><button class="btn s" data-mk="cr" aria-label="Atualizar">↻</button></div>${tabs}
+<h3 style="margin-top:6px">Juros do Brasil</h3><div id="jrp">${jrPanelHtml()}</div>
+<h3 style="margin-top:14px">Curva de juros · DI futuro (B3)</h3><div id="jrc">${jrCurvaHtml()}</div>
+<h3 style="margin-top:14px">Petróleo, minério e juros lá fora</h3><div id="mkq">${jrCotHtml()}</div>
+<div class="sm mut" style="margin-top:8px">Quer entender os números? Veja a aba Juros e DI no menu.</div></div>`;
+};
+cotAfter=function(){jrPaint();jrLoad(false)};
+(function(){
+  const v0=vJuros;
+  vJuros=function(){
+    const h=v0(),m='<details class="card" data-jrs="sel"';
+    const i=h.indexOf(m);
+    return i<0?h:h.slice(0,i)+`<div class="card" style="margin-top:8px"><b>📈 Curva de juros futuros (DI1)</b><div id="jrc" style="margin-top:6px">${jrCurvaHtml()}</div></div>\n`+h.slice(i);
+  };
+  /* recarrega sozinho a cada 3 min com a tela aberta */
+  setInterval(()=>{if(!document.hidden&&(document.getElementById('jrp')||document.getElementById('jrc')))jrLoad(false)},6e4);
+})();
+/* ==== JUROS2:FIM ==== */
 
 (function(){
   const r4=render0;
