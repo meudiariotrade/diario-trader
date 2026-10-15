@@ -4206,13 +4206,46 @@ async function rdLoad(force){
   RD.ts=Date.now();RD.busy=0;rdPaint();
 }
 const RD_FR=[0.618,1,1.618],rdPct=r=>(r*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+const RD_TFN={D:'diário',W:'semanal',M:'mensal'};
+const rdTf=()=>((S.ax||{})['rd.tf'])||'D';
 const rdMeu=s=>{const m=((S.ax||{}).rdfib||{})[s.ticker+s.lado];return m&&m.dia===rdHoje()?m:null};
-/** Plano efetivo: o seu Fibonacci (se traçou) ou o automático do radar. Stop = C (pivô); alvos = C + (B − A) × 61,8/100/161,8%. */
+const rdData=(d,tf)=>{if(!d)return '';const[y,m,dd]=d.split('-');return tf==='M'?['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+m-1]+'/'+y.slice(2):tf==='W'?'sem. '+dd+'/'+m+'/'+y.slice(2):dd+'/'+m+'/'+y.slice(2)};
+/** Fibonacci do tempo escolhido (diário, semanal ou mensal); se não houver pivô válido nele, usa o principal do radar. */
+function rdFibTf(s){
+  const f=s.fib||null,T=f&&f.tempos,tf=rdTf();
+  if(T&&T[tf])return{f:T[tf],tf,falta:null};
+  if(T)return{f:T[f.tf]||f,tf:f.tf||'D',falta:tf in T?tf:null};
+  return{f,tf:'D',falta:null};
+}
+/** Plano efetivo: o seu Fibonacci (se traçou) ou o do radar. Stop = C (pivô); alvos = C + (B − A) × 61,8/100/161,8%. */
 function rdPlano(s){
-  const m=rdMeu(s),f=m||s.fib||null,e=+s.entrada;
-  if(!f||![f.a,f.b,f.c].every(v=>isFinite(+v)&&+v>0))return{meu:false,stop:+s.stop,alvos:[s.alvo1,s.alvo2].filter(v=>v!=null).map((v,i)=>({r:RD_FR[i],v:+v,rr:Math.abs(v-e)/Math.abs(e-s.stop)}))};
+  const m=rdMeu(s),ft=rdFibTf(s),f=m||ft.f,e=+s.entrada;
+  if(!f||![f.a,f.b,f.c].every(v=>isFinite(+v)&&+v>0))return{meu:false,tf:ft.tf,stop:+s.stop,alvos:[s.alvo1,s.alvo2].filter(v=>v!=null).map((v,i)=>({r:RD_FR[i],v:+v,rr:Math.abs(v-e)/Math.abs(e-s.stop)}))};
   const dir=s.lado==='C'?1:-1,risco=(e-+f.c)*dir;
-  return{meu:!!m,a:+f.a,b:+f.b,c:+f.c,stop:+f.c,alvos:RD_FR.map(r=>{const v=+f.c+(+f.b-+f.a)*r;return{r,v,rr:risco>0?(v-e)*dir/risco:null}})};
+  return{meu:!!m,tf:ft.tf,falta:ft.falta,f:ft.f,a:+f.a,b:+f.b,c:+f.c,stop:+f.c,alvos:RD_FR.map(r=>{const v=+f.c+(+f.b-+f.a)*r;return{r,v,rr:risco>0?(v-e)*dir/risco:null}})};
+}
+/** Gráfico do Fibonacci: candles do tempo escolhido, pivôs A-B-C marcados com data, stop e alvos. */
+function rdSvg(s,pl){
+  const f=pl.f,C=(f&&f.cs)||[];if(C.length<3)return '';
+  const W=360,H=230,pl0=4,pr=70,pt=14,pb=20,n=C.length,cw=(W-pl0-pr)/n,cp=s.lado==='C';
+  const lv=[pl.stop,...pl.alvos.map(x=>x.v),+s.entrada].filter(v=>isFinite(v));
+  let lo=Math.min(...C.map(c=>c[3]),...lv),hi=Math.max(...C.map(c=>c[2]),...lv);const pad=(hi-lo)*.05||1;lo-=pad;hi+=pad;
+  const Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb),X=i=>pl0+(i+.5)*cw,fp=v=>rdN(v);
+  let g='';
+  C.forEach((c,i)=>{const up=c[4]>=c[1],cor=up?'var(--g,#22c55e)':'var(--r,#ef4444)',y1=Y(Math.max(c[1],c[4])),y2=Y(Math.min(c[1],c[4]));
+    g+=`<line x1="${X(i)}" x2="${X(i)}" y1="${Y(c[2])}" y2="${Y(c[3])}" stroke="${cor}" stroke-width="1" opacity=".85"/><rect x="${X(i)-Math.max(.5,cw*.32)}" y="${y1}" width="${Math.max(1,cw*.64)}" height="${Math.max(.8,y2-y1)}" fill="${cor}" opacity=".85"/>`});
+  const ix=d=>C.findIndex(c=>c[0]===d),iA=ix(f.da),iB=ix(f.db),iC=ix(f.dc),x0=iC>=0&&!pl.meu?X(iC):pl0;
+  const hl=(v,cor,l,forte)=>v<lo||v>hi?'':`<line x1="${x0}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${cor}" stroke-width="${forte?1.4:1}" stroke-dasharray="${forte?'':'5 3'}"/><rect x="${W-pr+1}" y="${Y(v)-7}" width="${pr-2}" height="14" rx="3" fill="${cor}"/><text x="${W-pr+4}" y="${Y(v)+3.5}" font-size="9" fill="#fff" font-weight="700">${l}</text>`;
+  pl.alvos.forEach(x=>{g+=hl(x.v,'#16a34a',rdPct(x.r)+' '+fp(x.v))});
+  g+=hl(pl.stop,'#dc2626','Stop '+fp(pl.stop),1);
+  g+=`<line x1="${pl0}" x2="${W-pr}" y1="${Y(+s.entrada)}" y2="${Y(+s.entrada)}" stroke="#3b82f6" stroke-width=".8" stroke-dasharray="2 3"/><circle cx="${X(n-1)}" cy="${Y(+s.entrada)}" r="3.5" fill="#3b82f6" stroke="#fff" stroke-width="1.2"/>`;
+  if(!pl.meu&&iA>=0&&iB>=0&&iC>=0){
+    const pts=[[iA,f.a,'A',cp?1:0],[iB,f.b,'B',cp?0:1],[iC,f.c,'C',cp?1:0]];
+    g+=`<polyline points="${pts.map(p=>X(p[0])+','+Y(p[1])).join(' ')}" fill="none" stroke="#f59e0b" stroke-width="1.6" stroke-dasharray="4 2"/>`;
+    pts.forEach(([i,v,l,baixo])=>{const y=Y(v),ty=baixo?y+15:y-8,cabe=ty>9&&ty<H-pb-1;g+=`<circle cx="${X(i)}" cy="${y}" r="4" fill="#f59e0b" stroke="#fff" stroke-width="1.2"/><text x="${cabe?X(i):X(i)-8}" y="${cabe?ty:y+4}" text-anchor="${cabe?'middle':'end'}" font-size="11" font-weight="800" fill="#f59e0b">${l}</text>`});
+  }
+  [0,Math.floor(n/2),n-1].forEach((i,k)=>{g+=`<text x="${k===0?pl0:k===2?W-pr:X(i)}" y="${H-5}" font-size="9" fill="var(--mut,#94a3b8)" text-anchor="${k===0?'start':k===2?'end':'middle'}">${rdData(C[i][0],pl.tf)}</text>`});
+  return `<svg class="rd-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico ${RD_TFN[pl.tf]} com os pivôs e a projeção de Fibonacci">${g}</svg>`;
 }
 function rdVivoTxt(s){
   const p=typeof LV!=='undefined'&&LV.px&&LV.px[s.ticker]?+LV.px[s.ticker].ult:0;if(!(p>0)||!(+s.entrada>0))return '';
@@ -4221,24 +4254,28 @@ function rdVivoTxt(s){
 }
 function rdItem(s){
   const set=Array.isArray(s.setups)?s.setups:[],sc=s.score>=75?'g':s.score>=60?'y':'m',k=s.ticker+s.lado,ab=RD.ab===k,ct=Array.isArray(s.contra)?s.contra:[],pl=rdPlano(s),c=s.lado==='C';
-  const p=typeof LV!=='undefined'&&LV.px&&LV.px[s.ticker]?+LV.px[s.ticker].ult:0;
+  const p=typeof LV!=='undefined'&&LV.px&&LV.px[s.ticker]?+LV.px[s.ticker].ult:0,T=(s.fib&&s.fib.tempos)||null;
   const alv=pl.alvos.map(x=>{const ok=p>0&&(c?p>=x.v:p<=x.v);return `<div class="rd-fa${ok?' ok':''}"><small>${rdPct(x.r)}</small><b>${rdN(x.v)}</b><small>${x.rr!=null&&isFinite(x.rr)?rdN(x.rr)+':1':''}</small></div>`}).join('');
-  const f=pl.meu?pl:(s.fib||{}),ed=rdMeu(s)||s.fib||{};
+  const f=pl.f||{},ed=rdMeu(s)||pl.f||s.fib||{},tp=c?['fundo','topo','fundo']:['topo','fundo','topo'];
+  const piv=!pl.meu&&f.da?`<div class="rd-piv"><div><b class="rd-p">A</b> ${tp[0]} <b>${rdN(f.a)}</b> em ${rdData(f.da,pl.tf)} <span class="mut">· origem do impulso</span></div><div><b class="rd-p">B</b> ${tp[1]} <b>${rdN(f.b)}</b> em ${rdData(f.db,pl.tf)} <span class="mut">· fim do impulso</span></div><div><b class="rd-p">C</b> ${tp[2]} <b>${rdN(f.c)}</b> em ${rdData(f.dc,pl.tf)} <span class="mut">· fim da correção = <b class="r">stop</b></span></div><div class="mut">Alvos = C ${c?'+':'−'} (${c?'B − A':'A − B'}) × proporção: ${pl.alvos.map(x=>`${rdN(f.c)} ${c?'+':'−'} ${rdN(Math.abs(f.b-f.a))} × ${String(x.r).replace('.',',')} = <b>${rdN(x.v)}</b>`).join(' · ')}</div></div>`:'';
   return `<div class="rd-it${s.ativo?'':' off'}" data-rdab="${esc(k)}">
   <div class="rd-l1"><b>${esc(s.ticker)}</b><span class="rd-sc ${sc}" title="Pontuação do setup (0 a 100)">${s.score}</span><span class="rd-st">${esc(set.map(x=>x.nome).join(' + '))}</span></div>
-  <div class="rd-fib"><div class="rd-fh sm">${pl.meu?'📐 Alvos do <b>seu</b> Fibonacci':'Alvos · projeção de Fibonacci'}</div><div class="rd-fg">${alv}</div></div>
+  <div class="rd-fib"><div class="rd-fh sm">${pl.meu?'📐 Alvos do <b>seu</b> Fibonacci':`Alvos · Fibonacci no <b>${RD_TFN[pl.tf]}</b>`}</div><div class="rd-fg">${alv}</div></div>
   <div class="rd-l2"><span>Entrada <b>${rdN(s.entrada)}</b></span><span>Stop no ${c?'fundo':'topo'} do pivô <b class="r">${rdN(pl.stop)}</b></span></div>
   <div class="rd-l3 sm" data-rdv="${esc(k)}">${rdVivoTxt(s)}</div>
-  ${s.comentario&&!pl.meu?`<div class="rd-ia">✨ ${esc(s.comentario)}</div>`:''}
+  ${s.comentario&&!pl.meu&&(!s.fib||!s.fib.tf||pl.tf===s.fib.tf)?`<div class="rd-ia">✨ ${esc(s.comentario)}</div>`:''}
   ${ct.length?`<div class="rd-ct">⚠️ ${esc(ct.join(' · '))}</div>`:''}
-  ${ab?`<div class="rd-det">${set.map(x=>`<div>• ${esc(x.detalhe)}</div>`).join('')}
-    ${f.a?`<div class="mut">Pontos ${pl.meu?'que você traçou':'do radar'}: A ${rdN(f.a)}${f.da?' ('+f.da.slice(8,10)+'/'+f.da.slice(5,7)+')':''} · B ${rdN(f.b)}${f.db?' ('+f.db.slice(8,10)+'/'+f.db.slice(5,7)+')':''} · C ${rdN(f.c)}${f.dc?' ('+f.dc.slice(8,10)+'/'+f.dc.slice(5,7)+')':''}</div>`:''}
+  ${ab?`<div class="rd-det">
+    ${T?`<div class="seg rd-tf">${['D','W','M'].map(t=>`<button class="${pl.tf===t&&!pl.meu?'on':''}${T[t]?'':' sem'}" data-rdtf="${t}">${RD_TFN[t][0].toUpperCase()+RD_TFN[t].slice(1)}${T[t]?'':' ·  —'}</button>`).join('')}</div>`:''}
+    ${pl.falta?`<div class="sm am">Sem pivô válido no ${RD_TFN[pl.falta]} (o preço já perdeu o último ${c?'fundo':'topo'} ou a correção passou da origem). Mostrando o ${RD_TFN[pl.tf]}.</div>`:''}
+    ${pl.meu?'':rdSvg(s,pl)}${piv}
+    ${set.map(x=>`<div>• ${esc(x.detalhe)}</div>`).join('')}
     <div class="mut">RSI ${rdN(s.rsi)} · tendência diária ${esc(s.tendencia||'—')}${s.vol_rel!=null?` · volume projetado ${rdN(s.vol_rel)}× a média`:''} · no radar desde ${hm(Date.parse(s.primeiro))}</div>
     <div class="rd-meu"><div class="sm"><b>📐 Traçar meu Fibonacci</b> <span class="mut">(${c?'A = fundo de origem · B = topo do impulso · C = fundo da correção (stop)':'A = topo de origem · B = fundo do impulso · C = topo da correção (stop)'})</span></div>
       <div class="rd-mg">${['a','b','c'].map(x=>`<label>${x.toUpperCase()}<input inputmode="decimal" data-rdf="${x}" value="${ed[x]!=null?String(+(+ed[x]).toFixed(2)).replace('.',','):''}"></label>`).join('')}</div>
-      <div class="rd-bt"><button class="btn s" data-rdfok="${esc(k)}">Calcular alvos</button>${pl.meu?`<button class="btn s" data-rdfauto="${esc(k)}">Voltar ao automático</button>`:''}<button class="btn s" data-rdtv="${esc(s.ticker)}">📈 Ver gráfico</button></div>
+      <div class="rd-bt"><button class="btn s" data-rdfok="${esc(k)}">Calcular alvos</button>${pl.meu?`<button class="btn s" data-rdfauto="${esc(k)}">Voltar ao automático</button>`:''}<button class="btn s" data-rdtv="${esc(s.ticker)}">📈 Ver no TradingView</button></div>
       <div class="sm r" data-rdferr></div></div>
-  </div>`:`<div class="rd-mais sm mut">Toque para ver os detalhes ou traçar seu Fibonacci</div>`}
+  </div>`:`<div class="rd-mais sm mut">Toque para ver o gráfico com os pivôs, escolher diário/semanal/mensal ou traçar seu Fibonacci</div>`}
   </div>`;
 }
 function rdFibSalva(k,auto){
@@ -4295,6 +4332,7 @@ document.addEventListener('click',e=>{
   if((b=t.closest('[data-rdlado]'))){RD.lado=b.dataset.rdlado;RD.ab=null;rdPaint();return}
   if((b=t.closest('[data-rdtv]'))){if(typeof tvAbre==='function')tvAbre(b.dataset.rdtv,'BR');return}
   if(t.closest('[data-rdnow]')){if(!RD.run)rdAgora();return}
+  if((b=t.closest('[data-rdtf]'))){(S.ax??={})['rd.tf']=b.dataset.rdtf;save();rdPaint();return}
   if((b=t.closest('[data-rdfok]'))){rdFibSalva(b.dataset.rdfok);return}
   if((b=t.closest('[data-rdfauto]'))){rdFibSalva(b.dataset.rdfauto,true);return}
   if(t.closest('.rd-meu'))return;
@@ -4335,5 +4373,10 @@ document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('[d
 .rd-meu{margin-top:8px;padding:8px;border-radius:8px;border:1px dashed var(--bd,rgba(127,127,127,.35));display:grid;gap:6px}
 .rd-mg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.rd-mg label{font-size:12px}.rd-mg input{font-size:16px;width:100%}
 .rd-bt{display:flex;gap:6px;flex-wrap:wrap}
+.rd-svg{width:100%;height:auto;display:block;margin:6px 0 2px;background:color-mix(in srgb,var(--tx,#fff) 3%,transparent);border-radius:8px}
+.rd-tf{margin:2px 0 4px}.rd-tf button.sem{opacity:.45}
+.rd-piv{display:grid;gap:3px;font-size:13px;line-height:1.4;padding:8px;border-radius:8px;background:rgba(245,158,11,.08)}
+.rd-p{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#f59e0b;color:#111;font-size:11px;margin-right:2px}
+.am{color:#f59e0b}
 `;document.head.appendChild(st)})();
 /* ==== EXTRAS2 (gráfico TradingView):FIM ==== */
