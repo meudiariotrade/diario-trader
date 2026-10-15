@@ -320,7 +320,7 @@ return `<h1>Conta</h1><div class="card"><b>${esc(SESS.email)}</b><div class="mut
 /* ---------- Visual e interação ---------- */
 const EMO=['😫','😕','😐','🙂','😄'];
 const segs=(name,cur,items)=>`<div class="chips2">${items.map(([v,l,c])=>`<button class="${cur==v?'on '+(c||''):''}" data-seg="${name}" data-v="${v}">${l}</button>`).join('')}</div>`;
-const segT=cur=>`<div class="seg hub" style="margin:2px 0 12px">${[['trades','Day trade'],['swing','Swing'],['opc','Opções'],['stats','Estatísticas'],['rev','Revisão']].map(([k,l])=>`<button class="${k===cur?'on':''}" data-a="gotab" data-id="${k}">${l}</button>`).join('')}</div>`;
+const segT=cur=>`<div class="seg hub" style="margin:2px 0 12px">${[['trades','Day trade'],['swing','Swing'],['opc','Opções'],['ativos','Forex'],['stats','Estatísticas'],['rev','Revisão']].map(([k,l])=>`<button class="${k===cur?'on':''}" data-a="gotab" data-id="${k}">${l}</button>`).join('')}</div>`;
 const fl=ts=>ts.filter(t=>{const c=calc(t);return LF.f==='all'||(LF.f==='ab'&&c.r==null)||(LF.f==='g'&&c.pl>0)||(LF.f==='p'&&c.pl<0)});
 const filtBar=()=>`<div class="chips2" style="margin-top:8px">${[['all','Todos'],['ab','Abertas'],['g','Ganhos'],['p','Perdas']].map(([k,l])=>`<button class="${LF.f===k?'on':''}" data-a="flt" data-id="${k}">${l}</button>`).join('')}</div><input id="lq" placeholder="🔍 Buscar ativo ou setup" value="${esc(LF.q)}" style="margin-top:8px">`;
 function applyQ(){if(!LF.q)return;document.querySelectorAll('.card[data-s]').forEach(c=>c.style.display=c.dataset.s.includes(LF.q)?'':'none')}
@@ -509,7 +509,7 @@ function pfAll(rows){const n=sum(rows.map(r=>r.n)),gw=sum(rows.map(r=>r.gw)),gl=
 function vPerf(){const rows=pfRows(),t=pfAll(rows);return `<div class="chips2">${[['all','Tudo'],['hoje','Hoje'],['7','7 dias'],['30','30 dias'],['mes','Este mês']].map(([k,l])=>`<button class="${APF===k?'on':''}" data-a="apf" data-id="${k}">${l}</button>`).join('')}</div>`+(rows.length?`<div class="kv" style="margin-top:8px">${KV('Resultado',usd(t.tot),cls(t.tot),t.n+' lançamento(s)/operação(ões)')}${KV('Acerto',pc(t.win))}${KV('Fator de lucro',t.pf==null?'–':f2(t.pf),'','ganhos ÷ perdas')}${KV('Payoff',t.payoff==null?'–':f2(t.payoff),'','ganho médio ÷ perda média')}${KV('Melhor',usd(t.best),'g')}${KV('Pior',usd(t.worst),'r')}</div><h2>Resultado por ativo</h2>${barChartU('pfa',rows.map(r=>r.tot),rows.map(r=>r.s))}<div class="card"><table><tr><th>Ativo</th><th>Nº</th><th>Acerto</th><th>Resultado</th><th>Média</th></tr>${rows.map(r=>`<tr><td>${esc(r.s)}</td><td>${r.n}</td><td>${pc(r.win)}</td><td class="${cls(r.tot)}">${usd(r.tot)}</td><td class="${cls(r.avg)}">${usd(r.avg)}</td></tr>`).join('')}</table></div>`:'<p class="mut" style="margin-top:10px">Sem resultados neste período. Encerre operações ou registre lucros para ver a performance.</p>')+`<h3>Exportar</h3><div class="g2"><button class="btn" data-a="pfexp">⬇️ Performance por ativo</button><button class="btn s" data-a="opexp">⬇️ Todas as operações</button></div><div class="mut sm" style="margin-top:6px">Arquivos CSV (separador ponto e vírgula, vírgula decimal) que abrem direto no Excel em português. Respeitam o período escolhido acima.</div>`}
 async function pfExport(kind){const D0=new Date(),nm=isoD(D0);if(kind==='pf'){const rows=pfRows(),t=pfAll(rows),h=['ativo','operacoes','acerto_pct','resultado_usd','media_usd','ganhos_usd','perdas_usd','R_medio','melhor_usd','pior_usd'];const L=rows.map(r=>[r.s,r.n,cN(r.win*100),cN(r.tot),cN(r.avg),cN(r.gw),cN(r.gl),cN(r.R),cN(r.best),cN(r.worst)].map(csvQ).join(';'));L.push(['TOTAL',t.n,cN(t.win*100),cN(t.tot),'',cN(t.gw),cN(t.gl),'',cN(t.best),cN(t.worst)].map(csvQ).join(';'));await saveFile('performance-ativos-'+nm+'.csv','\ufeff'+h.join(';')+'\n'+L.join('\n'))}
 else{const h=['tipo','data','ativo','lado','entrada','stop','alvo','lotes','saida','resultado_usd','risco_usd','R','status','anotacao'],L=[];(S.ops||[]).filter(o=>apIn((o.dtx||o.dt||'').slice(0,10))).forEach(o=>L.push(['Operação',(o.dtx||o.dt||'').slice(0,10),o.s,o.side==='C'?'Compra':'Venda',o.entry,o.stop,o.target,o.lots,o.x,o.st==='closed'?cN(o.res):'',cN(o.rk),o.st==='closed'&&o.rk>0?cN(o.res/o.rk):'',{plan:'Planejada',open:'Em andamento',closed:'Encerrada'}[o.st],o.nota].map(csvQ).join(';')));(S.lanc||[]).filter(l=>apIn(l.d)).forEach(l=>L.push(['Lançamento',l.d,l.s,'','','','','','',cN(l.v),'','','',l.n].map(csvQ).join(';')));await saveFile('operacoes-ativos-'+nm+'.csv','\ufeff'+h.join(';')+'\n'+L.join('\n'))}}
-function vAtivos(){const sg=[['at','Ativos'],['op','Operações'],['lu','Lucros'],['pf','Performance']];return `<h1>Ativos</h1><div class="seg">${sg.map(([k,l])=>`<button class="${AV===k?'on':''}" data-a="avv" data-id="${k}">${l}</button>`).join('')}</div>`+(AV==='op'?vOps():AV==='lu'?vLucros():AV==='pf'?vPerf():vAtivos0())}
+function vAtivos(){const sg=[['at','Ativos'],['op','Operações'],['lu','Lucros'],['pf','Performance']];return `<h1>Forex</h1><div class="seg">${sg.map(([k,l])=>`<button class="${AV===k?'on':''}" data-a="avv" data-id="${k}">${l}</button>`).join('')}</div>`+(AV==='op'?vOps():AV==='lu'?vLucros():AV==='pf'?vPerf():vAtivos0())}
 document.addEventListener('input',e=>{const t=e.target,d=t.dataset||{};if(d.od!==undefined){OD[d.od]=t.value;opPrev()}else if(d.lf!==undefined)LD[d.lf]=t.value;else if(d.oc!==undefined){OC[d.oc]=t.value;const o=(S.ops||[]).find(x=>x.id===OC.id),v=$('#ocv');if(o&&v){const x=OC.exit,rs=OC.res;v.textContent=rs!==undefined&&rs!==''?'Resultado informado: '+usd(+rs):x!==undefined&&x!==''?'Resultado estimado: '+usd(opRes(o,x,OC.cost)):'Informe o preço de saída ou o resultado.'}}});
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id,fnd=()=>(S.ops||[]).find(x=>x.id===id),msg=m=>{const v=$('#opv');if(v)v.innerHTML='<div class="warn">'+m+'</div>'};
 if(a==='avv'){AV=id;render()}
@@ -785,7 +785,7 @@ S.trades=(Array.isArray(S.trades)?S.trades:[]).filter(t=>t&&typeof t==='object')
 S.days=o(S.days);for(const k of Object.keys(S.days)){const v=S.days[k]=o(S.days[k]);if(!(v.chk&&typeof v.chk==='object'&&!Array.isArray(v.chk)))v.chk={}}
 S.rules=(Array.isArray(S.rules)?S.rules:[]).filter(r=>r&&typeof r==='object');
 ['ax','rev','pn','del'].forEach(k=>{if(S[k]!=null&&(typeof S[k]!=='object'||Array.isArray(S[k])))S[k]={}});}
-function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:()=>segM('mercado:'+MKT.tab)+vMercado(),juros:()=>segM('juros')+vJuros(),mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:()=>segD('dia')+vDia(),regras:()=>segD('regras')+vRegras(),stats:()=>segT('stats')+vStats(),graf:()=>segM('graf')+vGraf(),painel:vPainel,rev:()=>segT('rev')+vRev(),conta:vConta,live:()=>segM('live')+vLive(),estudos:vEstudos,livro:vLivro,ativos:vAtivos,contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis();lvPaint();lvcPaint();if(tab==='live')lvPoll()}
+function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:()=>segM('mercado:'+MKT.tab)+vMercado(),juros:()=>segM('juros')+vJuros(),mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:()=>segD('dia')+vDia(),regras:()=>segD('regras')+vRegras(),stats:()=>segT('stats')+vStats(),graf:()=>segM('graf')+vGraf(),painel:vPainel,rev:()=>segT('rev')+vRev(),conta:vConta,live:()=>segM('live')+vLive(),estudos:vEstudos,livro:vLivro,ativos:()=>segT('ativos')+vAtivos(),contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport,mesa:()=>vMesa(),carreira:()=>vCarreira()}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis();lvPaint();lvcPaint();if(tab==='live')lvPoll()}
 function render(){try{render0()}catch(e){console.error(e);const ap=$('#app');if(ap)ap.innerHTML='<div class="warn" style="margin:12px 0"><b>Não consegui abrir esta tela ('+esc(tab)+').</b><div class="sm" style="margin-top:6px">'+esc(String(e&&e.message||e))+'</div><div class="sm mut" style="margin-top:6px">'+esc(String((e&&e.stack||'').split('\n')[1]||'').trim().slice(0,160))+'</div></div><div class="mut sm">Abra o menu (☰) e tente outra tela. Se o erro continuar, me mande esta mensagem.</div>'}}
 document.addEventListener('click',async e=>{if(!e.target.closest('#fab,#fabm'))$('#fabm').style.display='none';const sg=e.target.closest('[data-seg]');if(sg&&T){T[sg.dataset.seg]=sg.dataset.v;if(sg.dataset.seg==='tipo')tipoMud();showSheet();return}const ds=e.target.closest('[data-dseg]');if(ds){const dd=(S.days[D]??={chk:{}});dd[ds.dataset.dseg]=ds.dataset.v;dd.u=Date.now();save();render();return}const im=e.target.closest('.pv img');if(im){zoom(im.src);return}const li=e.target.closest('#lb img');if(li){li.style.width=li.style.width==='260%'?'100%':'260%';return}const b=e.target.closest('[data-a],[data-tab]');if(!b)return;if(b.dataset.tab){tab=b.dataset.tab==='trades'?LT:b.dataset.tab;if(['trades','swing','opc'].includes(tab))LT=tab;render();scrollTo(0,0);return}const a=b.dataset.a,id=b.dataset.id;
 if(a==='am'){AM=b.dataset.id;SY.msg='';render()}
@@ -1544,7 +1544,7 @@ async function alAfter(){
 /* abrir direto na tela certa ao tocar na notificação */
 const GO={r:null,book:null};
 (function(){
-  const go=(g,r)=>{if(!['dia','mercado','home','estudos','livro'].includes(g))return false;if(g==='livro'){GO.book=r||null;tab='estudos';return true}tab=g;if(g==='dia'){D=loc().slice(0,10);DV='ed'}GO.r=r||null;return true};
+  const go=(g,r)=>{if(!['dia','mercado','home','estudos','livro','rev','mesa','carreira','import'].includes(g))return false;if(g==='rev')RP='w0';if(g==='livro'){GO.book=r||null;tab='estudos';return true}tab=g;if(g==='dia'){D=loc().slice(0,10);DV='ed'}GO.r=r||null;return true};
   const q=new URLSearchParams(location.search);
   if(q.get('go')){go(q.get('go'),q.get('r'));history.replaceState(null,'',location.pathname+location.hash)}
   if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.go&&go(d.go,d.r)){render();scrollTo(0,0)}});
@@ -3089,7 +3089,7 @@ document.addEventListener('DOMContentLoaded',()=>limpa(document.body));
 
 /* ---------- barra de navegação inferior ---------- */
 const NAV=[['home','home','Início'],['dia','moon','Meu dia'],['novo','',''],['trades','chart','Operações'],['mercado','news','Mercado']];
-const grupo=t=>t==='home'?'home':['dia','regras'].includes(t)?'dia':['trades','swing','opc','stats','rev'].includes(t)?'trades':['mercado','live','juros','graf'].includes(t)?'mercado':'';
+const grupo=t=>t==='home'?'home':['dia','regras'].includes(t)?'dia':['trades','swing','opc','ativos','stats','rev'].includes(t)?'trades':['mercado','live','juros','graf'].includes(t)?'mercado':'';
 function navPinta(){
   let n=document.getElementById('bnav');
   if(!n){n=document.createElement('div');n.id='bnav';n.setAttribute('role','navigation');n.setAttribute('aria-label','Navegação principal');document.body.appendChild(n);
@@ -3133,9 +3133,9 @@ html body .seg.hub.fim{-webkit-mask-image:none;mask-image:none}
 #mdr2 .ft svg{width:17px;height:17px;margin:0}`;
   document.head.appendChild(css);
   const I=n=>window.icoSvg?window.icoSvg(n):'';
-  const AREAS=[['home','home','Início','Resumo do dia'],['ops','chart','Operações','Day trade, swing, opções e estatísticas'],['mercado','news','Mercado','Agenda, notícias, cotações, juros e DI'],['dia','moon','Meu dia','Rotina, diário e regras'],['estudos','book','Estudos','Livros, resumos e simulados'],['ferr','grid','Ferramentas','Painel, ativos, impostos e mais']];
-  const FERR=[['painel','shield','Painel','Mesa, metas e backup'],['ativos','target','Ativos','Margem, risco e lote'],['contratos','calc','Contratos','Lotes pelo capital e volatilidade'],['carteiras','wallet','Carteiras','Brasil e EUA, evolução'],['analise','bot','Análise IA','Relatório da carteira'],['imposto','receipt','Imposto de renda','Notas, custos e DARF'],['import','inbox','Importar','Relatório do Profit (CSV)']];
-  const area=t=>t==='home'?'home':['trades','swing','opc','stats','rev'].includes(t)?'ops':['mercado','live','juros','graf'].includes(t)?'mercado':['dia','regras'].includes(t)?'dia':['estudos','livro'].includes(t)?'estudos':FERR.some(f=>f[0]===t)?'ferr':'';
+  const AREAS=[['home','home','Início','Resumo do dia'],['ops','chart','Operações','Day trade, swing, opções, forex e estatísticas'],['mercado','news','Mercado','Agenda, notícias, cotações, juros e DI'],['dia','moon','Meu dia','Rotina, diário e regras'],['estudos','book','Estudos','Livros, resumos e simulados'],['ferr','grid','Ferramentas','Mesa, plano de transição, impostos e mais']];
+  const FERR=[['mesa','shield','Mesa proprietária','Regras, meta e quanto posso perder hoje'],['carreira','star','Plano de transição','Quando dá para sair da CLT'],['painel','target','Painel','Metas, tamanho da posição e backup'],['contratos','calc','Contratos','Lotes pelo capital e volatilidade'],['carteiras','wallet','Carteiras','Brasil e EUA, evolução'],['analise','bot','Análise IA','Relatório da carteira'],['imposto','receipt','Imposto de renda','Notas, custos e DARF'],['import','inbox','Importar do Profit','Automático pela ponte ou CSV']];
+  const area=t=>t==='home'?'home':['trades','swing','opc','ativos','stats','rev'].includes(t)?'ops':['mercado','live','juros','graf'].includes(t)?'mercado':['dia','regras'].includes(t)?'dia':['estudos','livro'].includes(t)?'estudos':FERR.some(f=>f[0]===t)?'ferr':'';
   let sub=0;
   function desenha(){
     const p=document.querySelector('#mdr2 .pn');if(!p)return;
@@ -3503,3 +3503,389 @@ function bkStatus(){
   setTimeout(()=>{try{if(typeof jrLoad==='function'&&cfg())jrLoad(false)}catch(e){}turnoPushSync(false)},4000);
 })();
 /* ==== MELHORIAS:FIM ==== */
+/* ==== EXTRAS2:INICIO ==== revisão semanal guiada (B3 + Forex) com lembrete de domingo, gráfico de candles na ficha,
+   painel da mesa proprietária, plano de transição (sair da CLT) e importação automática do Profit */
+const dOf=t=>String(t.dtx||t.dt||'').slice(0,10);
+const fmtD=d=>String(d||'').split('-').reverse().join('/');
+const dsem=d=>['dom','seg','ter','qua','qui','sex','sáb'][new Date(d+'T12:00').getDay()];
+const usdBrl=()=>+axg('brl',5.4)||5.4;
+const pct0=v=>v==null||!isFinite(v)?'–':Math.round(v*100)+'%';
+const ic2=n=>window.icoSvg?window.icoSvg(n):'';
+const barra=(f,cor)=>`<div style="height:8px;border-radius:6px;background:var(--card2);overflow:hidden;margin-top:6px"><div style="height:100%;width:${Math.max(0,Math.min(100,(f||0)*100)).toFixed(1)}%;background:${cor||'var(--ac)'};border-radius:6px"></div></div>`;
+
+/* =====================================================================================
+   1) REVISÃO SEMANAL GUIADA — Brasil (R$) e Forex (US$)
+   ===================================================================================== */
+function semResumo(a,b){
+  const ts=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&dOf(t)>=a&&dOf(t)<=b);
+  const plB=t=>emBRL(t.c.pl,moedaT(t));
+  const dB={};ts.forEach(t=>{const d=dOf(t);dB[d]=(dB[d]||0)+plB(t)});
+  const eg={};ts.forEach(t=>tagsDe(t).forEach(g=>{(eg[g]??={v:0,n:0}).v+=plB(t);eg[g].n++}));
+  const erro=Object.entries(eg).filter(([,x])=>x.v<0).sort((x,y)=>x[1].v-y[1].v)[0]||null;
+  const lim=Object.keys(dB).map(d=>({d,l:limPerda(S.days[d]||{}),v:dB[d]})).filter(x=>x.l>0);
+  const estouro=ts.filter(t=>t.c.r!=null&&t.c.r<-1.15);
+  const dk=Object.keys(dB).sort((x,y)=>dB[y]-dB[x]);
+  const b3={n:ts.length,soma:somaMoedas(ts),tot:sum(ts.map(plB)),acerto:ts.length?ts.filter(t=>t.c.pl>0).length/ts.length:null,dias:dB,
+    melhor:dk.length?dk[0]:null,pior:dk.length?dk[dk.length-1]:null,erro,lim,limOk:lim.filter(x=>x.v>=-x.l).length,estouro,
+    regras:ts.length?ts.filter(t=>t.rules!=='n').length/ts.length:null,semStop:ts.filter(t=>numN(t.stop)==null).length};
+  const it=lcItems().filter(x=>x.d>=a&&x.d<=b),ops=(S.ops||[]).filter(o=>o.st==='closed'&&String(o.dtx||o.dt||'').slice(0,10)>=a&&String(o.dtx||o.dt||'').slice(0,10)<=b);
+  const dF={};it.forEach(x=>{dF[x.d]=(dF[x.d]||0)+x.v});const fk=Object.keys(dF).sort((x,y)=>dF[y]-dF[x]);
+  const fx={n:it.length,ops:ops.length,tot:sum(it.map(x=>x.v)),acerto:it.length?it.filter(x=>x.v>0).length/it.length:null,dias:dF,
+    melhor:fk.length?fk[0]:null,pior:fk.length?fk[fk.length-1]:null,estouro:ops.filter(o=>+o.rk>0&&+o.res<-(+o.rk)*1.15)};
+  return {a,b,b3,fx,vazio:!b3.n&&!fx.n};
+}
+/* resumo curto que vai para o servidor (o servidor não lê os seus trades): sai no push de domingo */
+function semPush(){
+  const [a,b]=rng('w0'),R=semResumo(a,b),p=[];
+  if(R.b3.n)p.push(`Brasil: ${mnyMix(R.b3.soma)} em ${R.b3.n} trade${R.b3.n>1?'s':''}`);
+  if(R.fx.n)p.push(`Forex: ${mnyC(R.fx.tot,'USD')}`);
+  if(R.b3.erro)p.push(`erro mais caro: ${R.b3.erro[0]}`);
+  const est=R.b3.estouro.length+R.fx.estouro.length;if(est)p.push(`${est} perda${est>1?'s':''} além do stop`);
+  const corpo=(p.length?p.join(' · ')+'. ':'Semana sem operações registradas. ')+'Toque para fazer a revisão.';
+  return {id:a,titulo:'📋 Revisão da semana',corpo:corpo.length>240?corpo.slice(0,237)+'…':corpo};
+}
+const semPassos=(R,rv)=>{
+  const L=[['Stop e limites',!!rv.g_stop],['Erro mais caro',!R.b3.erro||!!String(rv.g_erro||'').trim()],['Forex',!R.fx.n||!!String(rv.g_fx||'').trim()],['Plano da próxima semana',!!String((rv.plano||'')+(rv.repetir||'')+(rv.parar||'')).trim()],['Concluir',!!rv.feita]];
+  return {L,ok:L.filter(x=>x[1]).length};
+};
+function semCard(R,key,rv){
+  const B=R.b3,F=R.fx,P=semPassos(R,rv);
+  const lin=(l,v,k='')=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--bd)"><span class="sm mut">${l}</span><b class="${k}" style="text-align:right">${v}</b></div>`;
+  const dd=d=>d?dsem(d)+' '+fmtD(d).slice(0,5):'–';
+  const lin2=(l,v,k='')=>`<div style="padding:6px 0;border-top:1px solid var(--bd)"><div class="sm mut">${l}</div><b class="${k}">${v}</b></div>`;
+  const col=(tit,X,fmt,extra)=>`<div class="card" style="margin:0;padding:10px 12px"><b>${tit}</b>${X.n?lin2('Resultado',fmt(X),cls(X.tot))+lin2('Operações',X.n+(X.acerto!=null?' · '+pct0(X.acerto)+' de acerto':''))+lin2('Melhor dia',X.melhor?dd(X.melhor)+' '+(X===B?money(X.dias[X.melhor]):mnyC(X.dias[X.melhor],'USD')):'–')+lin2('Pior dia',X.pior?dd(X.pior)+' '+(X===B?money(X.dias[X.pior]):mnyC(X.dias[X.pior],'USD')):'–')+(extra||''):'<div class="sm mut" style="margin-top:6px">Nenhuma operação.</div>'}</div>`;
+  const dias=[...new Set([...Object.keys(B.dias),...Object.keys(F.dias)])].sort();
+  const btn=(k,v,l,cor)=>`<button class="btn ${rv[k]===v?'':'s'}" data-rvb="${k}:${v}"${rv[k]===v&&cor?` style="background:${cor};border-color:${cor}"`:''}>${l}</button>`;
+  const ta=(k,l,ph='')=>`<label>${l}<textarea data-rv="${k}" placeholder="${esc(ph)}">${esc(rv[k])}</textarea></label>`;
+  const passo=(i,t)=>`<h3 style="display:flex;align-items:center;gap:8px;margin:18px 0 6px"><span style="width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;background:${P.L[i]&&P.L[i][1]?'var(--g)':'var(--card2)'};color:${P.L[i]&&P.L[i][1]?'#fff':'var(--tx)'};flex:none">${P.L[i]&&P.L[i][1]?'✓':i+1}</span>${t}</h3>`;
+  const lembr=`<div class="sm mut" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px">${ic2('clock')}<label class="ck" style="margin:0"><input type="checkbox" data-semon${(NP.on||{}).sem===false?'':' checked'}><span>Lembrete todo domingo às</span></label><input type="time" data-semh value="${esc(NP.sem||'18:00')}" style="width:auto;padding:4px 8px;margin:0"></div>`;
+  return `<section class="card" id="semrev" style="padding:14px">
+<div class="top"><b style="font-size:17px">Revisão guiada</b><span class="chip">${P.ok} de 5 passos</span></div>${barra(P.ok/5,P.ok===5?'var(--g)':'var(--ac)')}
+${rv.feita?`<div class="sm g" style="margin-top:8px">${ic2('ok')} Revisão concluída em ${new Date(rv.feita).toLocaleDateString('pt-BR')}.</div>`:''}
+<h3 style="margin:16px 0 6px">Números da semana</h3>
+<div class="g2" style="gap:8px">${col('Brasil (R$)',B,X=>mnyMix(X.soma),lin2('Regras seguidas',pct0(B.regras)))}${col('Forex (US$)',F,X=>mnyC(X.tot,'USD'))}</div>
+${dias.length?`<div class="card" style="margin-top:8px;padding:8px 12px"><table><tr><th>Dia</th><th>Brasil</th><th>Forex</th></tr>${dias.map(d=>`<tr><td>${dd(d)}</td><td class="${cls(B.dias[d]||0)}">${B.dias[d]!=null?money(B.dias[d]):'–'}</td><td class="${cls(F.dias[d]||0)}">${F.dias[d]!=null?mnyC(F.dias[d],'USD'):'–'}</td></tr>`).join('')}</table></div>`:''}
+${passo(0,'Stop e limites')}
+<div class="sm">${B.n?`Brasil: ${B.lim.length?`respeitou a perda máxima do dia em <b>${B.limOk} de ${B.lim.length}</b> dia(s).`:'você não definiu perda máxima nos dias operados (Meu dia).'}`:''} ${B.estouro.length+F.estouro.length?`<span class="r">Perdas maiores que o stop planejado: <b>${B.estouro.length}</b> no Brasil${F.n?` e <b>${F.estouro.length}</b> no Forex`:''}.</span>`:B.n||F.n?'<span class="g">Nenhuma perda passou do stop planejado.</span>':''}${B.semStop?` <span class="am">${B.semStop} trade(s) sem stop registrado.</span>`:''}</div>
+<div class="sm" style="margin:8px 0 4px">Nesta semana eu tirei o stop, mexi nele ou deixei a perda correr?</div><div class="g2">${btn('g_stop','n','Não, respeitei','var(--g)')}${btn('g_stop','s','Sim, aconteceu','var(--r)')}</div>
+${rv.g_stop==='s'?ta('g_stop_txt','O que eu estava sentindo e o que vou fazer na próxima vez (ex.: ordem de stop na plataforma antes de entrar)?'):''}
+${passo(1,'Erro mais caro')}
+${B.erro?`<div class="card" style="margin:0 0 6px">Erro mais caro: <b>${esc(B.erro[0])}</b> <span class="r" style="white-space:nowrap">${money(B.erro[1].v)}</span> <span class="sm mut">(${B.erro[1].n}x)</span></div>${ta('g_erro','Por que aconteceu e o que vai impedir na próxima semana?')}`:'<div class="sm g">Nenhum erro marcado nos trades desta semana.</div>'}
+${passo(2,'Forex')}
+${F.n?ta('g_fx','Na conta de fora, segui o plano (lote, stop, horário)? O que ajustar?'):'<div class="sm mut">Sem operações no Forex nesta semana.</div>'}
+${passo(3,'Plano da próxima semana')}
+${ta('repetir','O que vou repetir (o que funcionou)?')}${ta('parar','O que vou parar de fazer?')}${ta('plano','Foco para a próxima semana','Ex.: só 2 trades por dia; stop sempre na plataforma')}
+${passo(4,'Concluir')}
+<button class="btn" style="width:100%" data-rvok="1">${rv.feita?'Revisão concluída ✓':'Concluir a revisão'}</button>${lembr}</section>`;
+}
+(function(){
+  const vr0=vRev;
+  vRev=function(){
+    if(RP[0]!=='w')return vr0();
+    const [a,b,key]=rng(RP),rv=(S.rev||{})[key]||{},R=semResumo(a,b);
+    return `<h1>Revisão</h1>${cal()}<h2>Revisão da semana</h2><label>Período<select id="rp">${opt([['w0','Esta semana'],['w1','Semana passada'],['m0','Este mês'],['m1','Mês passado']],RP)}</select></label><div class="mut sm" style="margin-bottom:10px">${fmtD(a)} a ${fmtD(b)}</div>${semCard(R,key,rv)}`;
+  };
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-rvb]');
+    if(b){const [k,v]=b.dataset.rvb.split(':');((S.rev??={})[rng(RP)[2]]??={})[k]=v;save();render();return}
+    if(e.target.closest('[data-rvok]')){const r=((S.rev??={})[rng(RP)[2]]??={});r.feita=new Date().toISOString();save();render();if(window.toast)toast('Revisão da semana concluída. Boa semana!',3000);return}
+    const g=e.target.closest('[data-semgo]');if(g){RP=g.dataset.semgo;tab='rev';render();scrollTo(0,0)}
+  });
+  document.addEventListener('change',e=>{
+    const on=e.target.closest('[data-semon]'),h=e.target.closest('[data-semh]');
+    if(!on&&!h)return;NP.on=Object.assign({m:true,n:true,ev:true},NP.on||{});
+    if(on)NP.on.sem=on.checked;if(h&&/^\d\d:\d\d$/.test(h.value))NP.sem=h.value;
+    alSave();turnoPushSync(true);if(window.toast)toast(NP.on.sem===false?'Lembrete de domingo desligado.':'Lembrete de domingo às '+(NP.sem||'18:00')+'.',2500);
+  });
+  /* o resumo da semana vai junto com as preferências de notificação (servidor manda o push no domingo) */
+  const npc0=npComTurno;npComTurno=function(){const np=npc0();try{np.semana=semPush()}catch(e){}if(!np.sem)np.sem=NP.sem||'18:00';return np};
+  let tS=0;document.addEventListener('click',e=>{if(e.target.closest('[data-a="savetrade"],[data-qkok]')){clearTimeout(tS);tS=setTimeout(()=>turnoPushSync(false),8000)}});
+})();
+/* aviso no Início: domingo à tarde (semana atual) e segunda (semana passada) se a revisão não foi feita */
+function semAviso(){
+  if(tab!=='home'||document.getElementById('semav'))return;
+  const n=new Date(),dw=n.getDay(),k=dw===0&&n.getHours()>=12?'w0':dw===1?'w1':null;if(!k)return;
+  const [a,b,key]=rng(k),rv=(S.rev||{})[key]||{};if(rv.feita)return;
+  const R=semResumo(a,b);if(R.vazio)return;
+  const ap=document.getElementById('app');if(!ap)return;
+  ap.insertAdjacentHTML('afterbegin',`<div class="card" id="semav" style="display:flex;align-items:center;gap:10px;border-color:var(--ac)">${ic2('pen')}<div style="flex:1"><b>Revisão da semana pendente</b><div class="sm mut">${fmtD(a).slice(0,5)} a ${fmtD(b).slice(0,5)} · 5 passos, uns 10 minutos</div></div><button class="btn" data-semgo="${k}">Fazer</button></div>`);
+}
+
+/* =====================================================================================
+   2) GRÁFICO DE CANDLES NA FICHA DA OPERAÇÃO (função "candles" no Supabase)
+   ===================================================================================== */
+const CDL={};
+const epBR=x=>{const m=/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?/.exec(String(x||''));return m?Date.parse(`${m[1]}T${m[2]||'12'}:${m[3]||'00'}:00-03:00`)/1000:NaN};
+function cdlSvg(j,t){
+  const C=j.candles||[];if(!C.length)return '<div class="sm mut">Sem candles para esse período.</div>';
+  const W=360,H=210,pl=6,pr=58,pt=10,pb=22,n=C.length,cw=(W-pl-pr)/n;
+  const e=numN(t.entry),s=numN(t.stop),x=numN(t.exit),tg=numN(t.target),preco=!j.proxy;
+  let lo=Math.min(...C.map(c=>c[3])),hi=Math.max(...C.map(c=>c[2]));
+  if(preco)[e,s,x,tg].forEach(v=>{if(v!=null&&v>lo-(hi-lo)*.6&&v<hi+(hi-lo)*.6){lo=Math.min(lo,v);hi=Math.max(hi,v)}});
+  const pad=(hi-lo)*.06||1;lo-=pad;hi+=pad;
+  const Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb),X=i=>pl+(i+.5)*cw;
+  const idx=ts=>{if(!isFinite(ts))return null;if(ts<C[0][0]-86400*3||ts>C[n-1][0]+86400*3)return null;let k=0;for(let i=0;i<n;i++)if(C[i][0]<=ts)k=i;return k};
+  const dec=hi>1000?0:hi>20?2:4,fp=v=>v.toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  let g='';
+  for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3;g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--bd)" stroke-width=".6"/><text x="${W-pr+4}" y="${Y(v)+3}" font-size="9" fill="var(--mut)">${fp(v)}</text>`}
+  C.forEach((c,i)=>{const up=c[4]>=c[1],cor=up?'var(--g)':'var(--r)',y1=Y(Math.max(c[1],c[4])),y2=Y(Math.min(c[1],c[4]));
+    g+=`<line x1="${X(i)}" x2="${X(i)}" y1="${Y(c[2])}" y2="${Y(c[3])}" stroke="${cor}" stroke-width="1"/><rect x="${X(i)-Math.max(.6,cw*.35)}" y="${y1}" width="${Math.max(1.2,cw*.7)}" height="${Math.max(.8,y2-y1)}" fill="${cor}"/>`});
+  const iE=idx(epBR(t.dt)),iX=t.dtx?idx(epBR(t.dtx)):null;
+  const vl=(i,cor,l,baixo)=>i==null?'':`<line x1="${X(i)}" x2="${X(i)}" y1="${pt}" y2="${H-pb}" stroke="${cor}" stroke-width="1.2" stroke-dasharray="3 3"/><text x="${X(i)>W-pr-44?X(i)-3:X(i)+3}" text-anchor="${X(i)>W-pr-44?'end':'start'}" y="${baixo?H-pb-5:pt+9}" font-size="9.5" font-weight="700" fill="${cor}">${l}</text>`;
+  if(iE!=null&&iX!=null&&iX>iE)g+=`<rect x="${X(iE)}" y="${pt}" width="${X(iX)-X(iE)}" height="${H-pt-pb}" fill="var(--ac)" opacity=".09"/>`;
+  const hl=(v,cor,l)=>v==null||!preco||v<lo||v>hi?'':`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${cor}" stroke-width="1" stroke-dasharray="5 3" opacity=".9"/><rect x="${W-pr+1}" y="${Y(v)-7}" width="${pr-2}" height="13" rx="3" fill="${cor}"/><text x="${W-pr+4}" y="${Y(v)+3}" font-size="9" fill="#fff" font-weight="700">${l}</text>`;
+  g+=vl(iE,'var(--ac)','Entrada')+vl(iX,'var(--tx)','Saída',1);
+  g+=hl(s,'var(--r)','Stop')+hl(tg,'var(--g)','Alvo')+hl(e,'var(--ac)','Entr.')+hl(x,'#6b7280','Saída');
+  if(preco&&iE!=null&&e!=null)g+=`<circle cx="${X(iE)}" cy="${Y(e)}" r="4" fill="var(--ac)" stroke="#fff" stroke-width="1.5"/>`;
+  if(preco&&iX!=null&&x!=null)g+=`<circle cx="${X(iX)}" cy="${Y(x)}" r="4" fill="var(--tx)" stroke="var(--bg)" stroke-width="1.5"/>`;
+  const fT=ts=>{const d=new Date(ts*1000);return j.intervalo==='1d'?d.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit'}):d.toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})+(j.intervalo==='60m'?' '+d.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit'}):'')};
+  [0,Math.floor(n/2),n-1].forEach((i,k)=>{g+=`<text x="${k===0?pl:k===2?W-pr:X(i)}" y="${H-6}" font-size="9" fill="var(--mut)" text-anchor="${k===0?'start':k===2?'end':'middle'}">${fT(C[i][0])}</text>`});
+  const iv={'5m':'5 minutos','60m':'1 hora','1d':'1 dia'}[j.intervalo]||j.intervalo;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Gráfico de candles do trade">${g}</svg>
+<div class="sm mut" style="margin-top:6px">${esc(j.simbolo)} · candles de ${iv} · Yahoo Finance (com atraso)${iE==null?' · horário da entrada fora do gráfico':''}</div>${j.nota?`<div class="sm ${j.proxy?'am':'mut'}" style="margin-top:4px">${esc(j.nota)}</div>`:''}`;
+}
+async function fxCandles(t){
+  const box=document.getElementById('fxc');if(!box||!t)return;
+  const c=cfg();if(!c){box.innerHTML='<div class="sm mut">Entre na conta (Supabase) para ver o gráfico do trade.</div>';return}
+  const k=[t.id,t.ativo,t.sub,t.dt,t.dtx].join('|');
+  if(!CDL[k])CDL[k]=fetch(c.url+'/functions/v1/candles',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:JSON.stringify({ativo:t.ativo,sub:t.sub||'',de:t.dt,ate:t.dtx||''})})
+    .then(async r=>{let j={};try{j=await r.json()}catch(e){}if(!r.ok){const m=j.error||'';throw new Error(m||(r.status===404?'Função "candles" não encontrada: publique-a no Supabase (veja o passo a passo).':'Erro '+r.status))}return j})
+    .catch(e=>({erro:e.message||String(e)}));
+  const j=await CDL[k];if(j.erro)delete CDL[k];
+  const b2=document.getElementById('fxc');if(!b2||b2.dataset.fxc!==t.id)return;
+  b2.innerHTML=j.erro?`<div class="sm mut">${esc(j.erro)}</div>`:cdlSvg(j,t);
+}
+(function(){
+  const fh0=fxHtml;
+  fxHtml=function(){
+    let h=fh0();const t=FX&&S.trades.find(x=>x.id===FX.id);if(!h||!t)return h;
+    if(t.orig==='profit'&&numN(t.stop)==null)h=h.replace('<h2>Plano × execução</h2>',`<div class="warn" style="margin:10px 0">${ic2('bolt')} Importado do Profit. Toque em <b>Editar</b> para completar stop, setup e erros.</div><h2>Plano × execução</h2>`);
+    if(String(t.ativo||'').trim()&&t.dt)h=h.replace('<h2>Plano × execução</h2>',`<h2>Gráfico</h2><div class="card" id="fxc" data-fxc="${esc(t.id)}" style="padding:10px"><div class="sm mut">Carregando o gráfico…</div></div><h2>Plano × execução</h2>`);
+    return h;
+  };
+  const fd0=fxDesenha;
+  fxDesenha=function(){fd0();if(FX)fxCandles(S.trades.find(x=>x.id===FX.id))};
+})();
+
+/* =====================================================================================
+   3) MESA PROPRIETÁRIA — regras, status do teste e "quanto posso perder hoje"
+   ===================================================================================== */
+/* regras que você já tinha anotado de cada mesa; confira sempre no regulamento atual da mesa */
+const MESA_PRESETS={
+  euro25:{nome:'Euro Global Prop 25k',moeda:'USD',fonte:'usd',capital:25000,meta:1500,perdaDia:0,perdaTotal:1500,dd:'eod',trava:1,consist:40,capDia:0,diasMin:5,diasTipo:'pos',prazo:30,pregao:19,contratos:3,obs:'Até 3 minis ou 30 micros. Drawdown no fechamento do dia. Pregão das 19h às 18h.'},
+  mide:{nome:'MIDE Exame Arrojado',moeda:'BRL',fonte:'b3',capital:0,meta:2400,perdaDia:0,perdaTotal:3300,dd:'fixo',trava:0,consist:0,capDia:50,diasMin:5,diasTipo:'op',prazo:0,pregao:0,contratos:20,obs:'Sem stop diário no exame, mas o resultado de cada dia conta no máximo 50% da meta.'},
+  euroinv:{nome:'Euro Invest Júnior',moeda:'BRL',fonte:'b3',capital:0,meta:1400,perdaDia:0,perdaTotal:2835,dd:'fixo',trava:0,consist:40,capDia:0,diasMin:5,diasTipo:'pos',prazo:0,pregao:0,contratos:10,obs:'Conta turbinada.'},
+  fpips:{nome:'FundingPips 50k',moeda:'USD',fonte:'fx',capital:50000,meta:0,perdaDia:1500,perdaTotal:2500,dd:'fixo',trava:0,consist:15,capDia:0,diasMin:7,diasTipo:'pos',prazo:0,pregao:0,contratos:0,obs:'Perda máxima 5% e diária 3%. Preencha a meta da fase.'},
+  custom:{nome:'Minha mesa',moeda:'BRL',fonte:'b3',capital:0,meta:0,perdaDia:0,perdaTotal:0,dd:'fixo',trava:0,consist:0,capDia:0,diasMin:0,diasTipo:'pos',prazo:0,pregao:0,contratos:0,obs:''},
+};
+function mesaCfg(){
+  const c=(S.ax||{}).mesa;if(c&&c.preset)return c;
+  const P=S.prop||{};if(+P.meta>0||+P.ddTotal>0)return {...MESA_PRESETS.custom,preset:'custom',capital:+P.cap||0,meta:+P.meta||0,perdaDia:+P.perdaDia||0,perdaTotal:+P.ddTotal||0,dd:P.ddTipo==='fixo'?'fixo':'trail',consist:+P.consist||0,inicio:'',_antigo:1};
+  return null;
+}
+const mesaSalva=c=>{delete c._antigo;(S.ax??={}).mesa=c;save()};
+const mesaDia=(dt,pregao)=>{const d=String(dt).slice(0,10),h=+String(dt).slice(11,13)||0;return pregao>0&&h>=pregao?diasMais(d,1):d};
+function mesaItens(c){
+  const pre=String(c.ativos||'').toUpperCase().split(/[\s,;]+/).filter(Boolean),okA=a=>!pre.length||pre.some(p=>String(a||'').toUpperCase().startsWith(p));
+  let it=[];
+  if(c.fonte==='fx')it=lcItems().map(x=>({d:x.d,t:x.d+'T12:00',v:x.v,q:null}));
+  else it=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&moedaT(t)===(c.fonte==='usd'?'USD':'BRL')&&okA(t.ativo)).map(t=>({d:mesaDia(t.dtx||t.dt,+c.pregao||0),t:t.dtx||t.dt,v:t.c.pl,q:numN(t.qty),a:t.ativo}));
+  if(c.inicio)it=it.filter(x=>x.d>=c.inicio);
+  return it.sort((a,b)=>a.t.localeCompare(b.t));
+}
+function mesaCalc(c,agora){
+  const it=mesaItens(c),pt=+c.perdaTotal||0,pd=+c.perdaDia||0,meta=+c.meta||0,hoje=mesaDia(agora||loc().slice(0,16),+c.pregao||0);
+  const dias={};it.forEach(x=>{dias[x.d]=(dias[x.d]||0)+x.v});const ks=Object.keys(dias).sort();
+  const pisoDe=pk=>!pt?-Infinity:c.dd==='fixo'?-pt:(c.trava?Math.min(pk-pt,0):pk-pt);
+  let eq=0,pk=0,quebra=null,diaQ=null;
+  if(c.dd==='trail'){it.forEach(x=>{eq+=x.v;if(!quebra&&eq<=pisoDe(pk))quebra=x.d;pk=Math.max(pk,eq)})}
+  else ks.forEach(d=>{eq+=dias[d];if(!quebra&&eq<=pisoDe(pk))quebra=d;if(d!==hoje)pk=Math.max(pk,eq)});
+  if(pd>0)ks.forEach(d=>{if(!diaQ&&dias[d]<=-pd)diaQ=d});
+  const saldo=eq,piso=pisoDe(pk),margem=pt?saldo-piso:null,plHoje=dias[hoje]||0;
+  const cap=+c.capDia>0&&meta>0?meta*c.capDia/100:0;
+  const lucroEf=ks.reduce((s,d)=>s+(cap&&dias[d]>cap?cap:dias[d]),0);
+  const pos=ks.filter(d=>dias[d]>0),maior=pos.length?Math.max(...pos.map(d=>dias[d])):0;
+  const cons=+c.consist>0&&saldo>0?maior/saldo:null,consOk=+c.consist>0?(saldo>0?cons<=c.consist/100:null):true;
+  const precisaTotal=+c.consist>0&&maior>0?maior/(c.consist/100):0;
+  const nDias=c.diasTipo==='op'?ks.length:pos.length,diasOk=!(+c.diasMin>0)||nDias>=+c.diasMin;
+  const restDia=pd>0?pd+Math.min(plHoje,0):null; // limite do dia − perda já feita hoje
+  const cand=[];if(restDia!=null)cand.push(['o limite diário',restDia]);if(margem!=null)cand.push(['o limite de perda total',margem]);
+  const lp=(()=>{const d=S.days[loc().slice(0,10)]||{},l=limPerda(d);if(!(l>0)||c.fonte!=='b3')return null;const ph=dayPL(dayTr(loc().slice(0,10)));return l+Math.min(ph,0)})();
+  if(lp!=null)cand.push(['o seu limite do dia (Meu dia)',lp]);
+  const pode=cand.length?cand.reduce((m,x)=>x[1]<m[1]?x:m):null;
+  const ganhoMaxHoje=+c.consist>0&&meta>0?Math.max(0,Math.max(meta,saldo)*c.consist/100):cap||null;
+  const fimPrazo=+c.prazo>0&&c.inicio?diasMais(c.inicio,+c.prazo-1):null,restam=fimPrazo?Math.round((new Date(fimPrazo+'T12:00')-new Date(loc().slice(0,10)+'T12:00'))/864e5)+1:null;
+  const acima=+c.contratos>0?it.filter(x=>x.q!=null&&x.q>+c.contratos).length:0;
+  let st=['Em andamento','var(--ac)'];
+  if(quebra)st=['Reprovado: perda total','var(--r)'];else if(diaQ)st=['Reprovado: perda diária','var(--r)'];
+  else if(meta>0&&lucroEf>=meta){st=diasOk&&consOk!==false?['Meta batida','var(--g)']:['Meta batida, falta '+(!diasOk?'dias':'consistência'),'var(--am)']}
+  else if(restam!=null&&restam<=0)st=['Prazo encerrado','var(--r)'];
+  return {it,dias,ks,saldo,piso,pk,margem,plHoje,hoje,lucroEf,cap,maior,cons,consOk,precisaTotal,nDias,diasOk,pode,ganhoMaxHoje,fimPrazo,restam,acima,quebra,diaQ,st,meta,pt,pd};
+}
+const mFmt=(c,v)=>mnyC(v,c.moeda==='USD'?'USD':'BRL');
+function mesaMini(){
+  const c=mesaCfg();if(!c)return '';const M=mesaCalc(c);
+  return `<div class="card" style="padding:12px 14px"><div class="top"><b>${esc(c.nome)}</b><span class="chip" style="color:${M.st[1]};border-color:${M.st[1]}">${M.st[0]}</span></div>
+${M.pode?`<div class="sm mut" style="margin-top:8px">Hoje você ainda pode perder</div><div style="font-size:22px;font-weight:750" class="${M.pode[1]<=0?'r':''}">${M.pode[1]<=0?'Nada: pare por hoje':mFmt(c,M.pode[1])}</div><div class="sm mut">antes de bater ${M.pode[0]}</div>`:''}
+${M.meta>0?`<div class="sm" style="margin-top:8px;display:flex;justify-content:space-between"><span>Meta ${mFmt(c,M.meta)}</span><b class="${cls(M.lucroEf)}">${mFmt(c,M.lucroEf)}</b></div>${barra(M.lucroEf/M.meta,'var(--g)')}`:''}
+<button class="btn s" style="width:100%;margin-top:10px" data-m2="mesa">Abrir o painel da mesa</button></div>`;
+}
+function vMesa(){
+  const c=mesaCfg();
+  const escolhe=`<div class="g2" style="gap:8px">${Object.entries(MESA_PRESETS).map(([k,p])=>`<button class="btn ${c&&c.preset===k?'':'s'}" data-msp="${k}" style="text-align:left;white-space:normal;line-height:1.25">${esc(p.nome)}</button>`).join('')}</div>`;
+  if(!c)return `<h1>Mesa proprietária</h1><p class="mut">Escolha a sua mesa para o app acompanhar a meta, a perda máxima, os dias mínimos e a consistência com os seus trades. As regras já vêm preenchidas com o que você anotou; confira no regulamento da mesa e ajuste.</p>${escolhe}`;
+  const M=mesaCalc(c),F=v=>mFmt(c,v);
+  const kv=(l,v,sub='',k='')=>`<div class="card" style="margin:0;padding:10px"><span class="sm mut">${l}</span><div><b class="${k}" style="font-size:16px">${v}</b></div>${sub?`<div class="sm mut">${sub}</div>`:''}</div>`;
+  const al=[];
+  if(M.cap&&M.ks.some(d=>M.dias[d]>M.cap))al.push(`Em ${M.ks.filter(d=>M.dias[d]>M.cap).length} dia(s) o ganho passou de ${F(M.cap)} (${c.capDia}% da meta): o excedente não conta para a meta.`);
+  if(M.consOk===false)al.push(`Consistência: o maior dia (${F(M.maior)}) é ${pct0(M.cons)} do lucro. O limite é ${c.consist}%: o lucro total precisa chegar a ${F(M.precisaTotal)}.`);
+  if(M.acima)al.push(`${M.acima} trade(s) com mais de ${c.contratos} contrato(s).`);
+  if(M.plHoje>0&&M.ganhoMaxHoje&&M.plHoje>=M.ganhoMaxHoje*.9)al.push(`Hoje você já ganhou ${F(M.plHoje)}: perto do máximo recomendado para o dia (${F(M.ganhoMaxHoje)}). Pense em parar.`);
+  const last=M.ks.slice(-15).reverse();let ac=M.saldo;const saldoAte={};[...M.ks].reverse().forEach(d=>{saldoAte[d]=ac;ac-=M.dias[d]});
+  const f=(k,l,tp='number',extra='')=>`<label>${l}<input type="${tp}" ${tp==='number'?'step="any" inputmode="decimal"':''} data-ms="${k}" value="${esc(c[k]??'')}" ${extra}></label>`;
+  return `<h1>Mesa proprietária</h1>
+<div class="hero" style="margin-top:0"><div class="top"><span class="chip" style="color:${M.st[1]};border-color:${M.st[1]}">${M.st[0]}</span><span class="sm mut">${esc(c.nome)}</span></div>
+${M.pode?`<div class="sm mut" style="margin-top:10px">Hoje você ainda pode perder</div><div class="big ${M.pode[1]<=0?'r':''}">${M.pode[1]<=0?'Nada: pare por hoje':F(M.pode[1])}</div><div class="sm mut">antes de bater ${M.pode[0]}${M.plHoje?` · hoje: <b class="${cls(M.plHoje)}">${F(M.plHoje)}</b>`:''}</div>`:`<div class="sm mut" style="margin-top:10px">Preencha a perda máxima (diária ou total) para ver quanto pode perder hoje.</div>`}
+${M.ganhoMaxHoje?`<div class="sm" style="margin-top:6px">Ganho máximo recomendado no dia: <b>${F(M.ganhoMaxHoje)}</b>${c.capDia>0?' (acima disso não conta)':' (consistência)'}</div>`:''}
+${M.meta>0?`<div class="sm" style="margin-top:12px;display:flex;justify-content:space-between"><span>Meta ${F(M.meta)}</span><b>${pct0(Math.max(0,M.lucroEf)/M.meta)}</b></div>${barra(M.lucroEf/M.meta,'var(--g)')}`:''}</div>
+${al.map(x=>`<div class="warn" style="margin:8px 0">${x}</div>`).join('')}
+<div class="kv" style="margin-top:10px">${kv('Resultado no teste',F(M.saldo),M.it.length+' operação(ões) desde '+(c.inicio?fmtD(c.inicio):'o início'),cls(M.saldo))}
+${kv('Até a perda total',M.margem==null?'–':F(M.margem),M.pt?(c.dd==='fixo'?'limite fixo de '+F(M.pt):'piso em '+F(M.piso)+' (pico '+F(M.pk)+')'):'sem limite',M.margem!=null&&M.margem<M.pt*.3?'r':'')}
+${kv(c.diasTipo==='op'?'Dias operados':'Dias positivos',M.nDias+(+c.diasMin>0?' de '+c.diasMin:''),M.diasOk?'mínimo cumprido':'faltam '+(c.diasMin-M.nDias),M.diasOk?'g':'')}
+${kv('Consistência',+c.consist>0?(M.cons==null?'–':pct0(M.cons)):'sem regra',+c.consist>0?'maior dia ≤ '+c.consist+'% do lucro':'',M.consOk===false?'r':M.consOk?'g':'')}
+${M.fimPrazo?kv('Prazo',M.restam>0?M.restam+' dia(s)':'encerrado','até '+fmtD(M.fimPrazo)):''}${+c.contratos>0?kv('Contratos',`até ${c.contratos}`,M.acima?M.acima+' trade(s) acima':'tudo dentro',M.acima?'r':'g'):''}</div>
+${last.length?`<h2>Dia a dia</h2><div class="card"><table><tr><th>Pregão</th><th>Resultado</th><th>Acumulado</th></tr>${last.map(d=>`<tr><td>${dsem(d)} ${fmtD(d).slice(0,5)}</td><td class="${cls(M.dias[d])}">${F(M.dias[d])}${M.cap&&M.dias[d]>M.cap?' <span class="sm am">(conta '+F(M.cap)+')</span>':''}</td><td>${F(saldoAte[d])}</td></tr>`).join('')}</table></div>`:'<p class="mut">Nenhuma operação desta mesa ainda. Confira a data de início e de onde vêm os trades nas regras abaixo.</p>'}
+<h2>Regras da mesa</h2>${c._antigo?'<div class="warn">Usando as regras do Painel antigo. Escolha a sua mesa abaixo para completar.</div>':''}${escolhe}
+${c.obs?`<div class="sm mut" style="margin:8px 0">${esc(c.obs)}</div>`:''}<div class="sm am" style="margin:6px 0 10px">Confira sempre no regulamento atual da mesa: as regras mudam.</div>
+<div class="card"><div class="g2">${f('nome','Nome','text')}${f('inicio','Início do teste','date')}</div>
+<div class="g2"><label>Trades que contam<select data-ms="fonte">${opt([['b3','Day trade/swing em R$ (B3)'],['usd','Day trade em US$ (futuros EUA)'],['fx','Aba Forex']],c.fonte)}</select></label>${f('ativos','Só estes ativos (opcional)','text','placeholder="WIN, WDO"')}</div>
+<div class="g2"><label>Moeda<select data-ms="moeda">${opt([['BRL','R$'],['USD','US$']],c.moeda)}</select></label>${f('capital','Tamanho da conta')}</div>
+<div class="g2">${f('meta','Meta de lucro')}${f('perdaTotal','Perda máxima total')}</div>
+<div class="g2"><label>Tipo da perda total<select data-ms="dd">${opt([['fixo','Fixa (do saldo inicial)'],['eod','Móvel no fechamento do dia'],['trail','Móvel a cada trade']],c.dd)}</select></label>${f('perdaDia','Perda máxima diária (0 = não tem)')}</div>
+${c.dd!=='fixo'?`<label class="ck"><input type="checkbox" data-ms="trava"${c.trava?' checked':''}><span>A perda móvel para de subir no saldo inicial</span></label>`:''}
+<div class="g2">${f('consist','Consistência: maior dia ≤ % do lucro')}${f('capDia','Ganho do dia conta até % da meta')}</div>
+<div class="g2">${f('diasMin','Dias mínimos')}<label>Contar dias<select data-ms="diasTipo">${opt([['pos','Positivos'],['op','Operados']],c.diasTipo)}</select></label></div>
+<div class="g3">${f('prazo','Prazo (dias)')}${f('pregao','Pregão começa às (h)')}${f('contratos','Máx. contratos')}</div></div>`;
+}
+(function(){
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-msp]');if(!b)return;const c0=mesaCfg(),p=MESA_PRESETS[b.dataset.msp];
+    if(c0&&!c0._antigo&&c0.preset!==b.dataset.msp&&!confirm('Trocar para '+p.nome+'? As regras serão substituídas.'))return;
+    mesaSalva({...p,preset:b.dataset.msp,inicio:(c0&&c0.inicio)||loc().slice(0,10)});render()});
+  document.addEventListener('change',e=>{const i=e.target.closest('[data-ms]');if(!i)return;const c=mesaCfg()||{...MESA_PRESETS.custom,preset:'custom'},k=i.dataset.ms;
+    c[k]=i.type==='checkbox'?(i.checked?1:0):i.type==='number'?(i.value===''?0:+i.value):i.value;mesaSalva(c);render()});
+  /* Início: o cartão "Limites da mesa" mostra o painel novo quando a mesa está configurada */
+  HB_NOMES.lim='Mesa proprietária';
+  const pp0=ppOut;ppOut=function(){pp0();if(tab==='home'&&mesaCfg()){const e=document.getElementById('pp');if(e){e.innerHTML=mesaMini();const h=e.previousElementSibling;if(h&&h.tagName==='H2')h.textContent='Mesa proprietária'}}};
+  /* Painel: atalho para o painel completo */
+  const vp0=vPainel;vPainel=function(){return vp0().replace('<h2>🛡️ Mesa proprietária</h2>','<div class="card" style="display:flex;align-items:center;gap:10px"><div style="flex:1"><b>Painel completo da mesa</b><div class="sm mut">Regras prontas das suas mesas, status do teste e quanto pode perder hoje.</div></div><button class="btn" data-m2="mesa">Abrir</button></div><h2>🛡️ Mesa proprietária (básico)</h2>')};
+  /* aviso quando a mesa não deixa perder mais nada hoje */
+  const lc0=limiteConfere;limiteConfere=function(){lc0();try{const c=mesaCfg();if(!c)return;const M=mesaCalc(c),k='mesa.av.'+M.hoje;if(!M.pode||M.pode[1]>0||(S.ax||{})[k])return;(S.ax??={})[k]=1;save();if(window.toast)toast('🛑 Mesa: você chegou a '+M.pode[0]+'. Pare por hoje.',6000)}catch(e){}};
+})();
+
+/* =====================================================================================
+   4) PLANO DE TRANSIÇÃO — quando dá para viver do trading (sair da CLT)
+   ===================================================================================== */
+const CR_PADRAO={renda:0,custo:0,reserva:0,mesesReserva:12,mesesPos:12,alvo:0,ir:20,fx:1};
+const crCfg=()=>({...CR_PADRAO,...((S.ax||{}).carreira||{})});
+function crMeses(c){
+  const m={},add=(ym,k,v)=>{(m[ym]??={b3:0,fx:0,n:0})[k]+=v;m[ym].n++};
+  S.trades.forEach(t=>{const x=calc(t);if(x.pl!=null)add(dOf(t).slice(0,7),'b3',emBRL(x.pl,moedaT(t)))});
+  if(c.fx)lcItems().forEach(x=>add(x.d.slice(0,7),'fx',x.v*usdBrl()));
+  const ks=Object.keys(m).filter(k=>/^\d{4}-\d{2}$/.test(k)).sort();if(!ks.length)return [];
+  const out=[],fim=loc().slice(0,7);let y=+ks[0].slice(0,4),mo=+ks[0].slice(5,7),prej=0;
+  for(;;){const k=y+'-'+String(mo).padStart(2,'0');if(k>fim)break;const r=m[k]||{b3:0,fx:0,n:0},bruto=r.b3+r.fx;
+    let ir=0;if(bruto<0)prej+=-bruto;else{const base=Math.max(0,bruto-prej);prej=Math.max(0,prej-bruto);ir=base*(+c.ir||0)/100}
+    out.push({k,b3:r.b3,fx:r.fx,bruto,ir,liq:bruto-ir,n:r.n,atual:k===fim});if(++mo>12){mo=1;y++}}
+  return out;
+}
+function crCalc(c){
+  const M=crMeses(c),fe=M.filter(x=>!x.atual),alvo=+c.alvo||+c.renda||0,custo=+c.custo||0;
+  let seq=0;for(let i=fe.length-1;i>=0&&fe[i].liq>0;i--)seq++;
+  const med=n=>{const L=fe.slice(-n);return L.length?sum(L.map(x=>x.liq))/L.length:null};
+  const u6=fe.slice(-6),pior6=u6.length?Math.min(...u6.map(x=>x.liq)):null;
+  const de=diasMais(loc().slice(0,10),-90),t90=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&dOf(t)>=de),disc=t90.length?t90.filter(t=>t.rules!=='n').length/t90.length:null;
+  const resM=custo>0?(+c.reserva||0)/custo:null,resAlvo=custo*(+c.mesesReserva||0);
+  const crit=[
+    {t:`${c.mesesPos} meses positivos seguidos`,v:`${seq} de ${c.mesesPos}`,ok:seq>=+c.mesesPos,f:Math.min(1,seq/(+c.mesesPos||1)),falta:seq>=+c.mesesPos?'':`faltam ${c.mesesPos-seq} mês(es) positivos seguidos`},
+    {t:'Média dos últimos 6 meses ≥ renda alvo',v:med(6)==null?'–':money(med(6))+' / '+money(alvo),ok:alvo>0&&fe.length>=6&&med(6)>=alvo,f:alvo>0&&med(6)!=null?Math.max(0,Math.min(1,med(6)/alvo)):0,falta:!alvo?'preencha a renda alvo':fe.length<6?'precisa de 6 meses de histórico':med(6)>=alvo?'':'faltam '+money(alvo-med(6))+' por mês'},
+    {t:'Nenhum mês (6m) com perda maior que 1 mês de custo',v:pior6==null?'–':'pior: '+money(pior6),ok:custo>0&&pior6!=null&&fe.length>=6&&pior6>=-custo,f:pior6==null||!custo?0:pior6>=-custo?1:Math.max(0,1-(-pior6-custo)/custo),falta:!custo?'preencha o custo de vida':''},
+    {t:`Reserva de ${c.mesesReserva} meses de custo`,v:resM==null?'–':resM.toFixed(1).replace('.',',')+' meses',ok:custo>0&&(+c.reserva||0)>=resAlvo,f:resAlvo>0?Math.min(1,(+c.reserva||0)/resAlvo):0,falta:!custo?'preencha o custo de vida':(+c.reserva||0)>=resAlvo?'':'faltam '+money(resAlvo-(+c.reserva||0))},
+    {t:'Disciplina: regras seguidas em 90% dos trades (90 dias)',v:pct0(disc),ok:disc!=null&&disc>=.9&&t90.length>=20,f:disc||0,falta:t90.length<20?'precisa de pelo menos 20 trades nos últimos 90 dias':''},
+  ];
+  return {M,fe,seq,med3:med(3),med6:med(6),med12:med(12),alvo,custo,pior6,disc,resM,crit,ok:crit.filter(x=>x.ok).length,pos:fe.length?fe.filter(x=>x.liq>0).length/fe.length:null};
+}
+function crGraf(R){
+  const L=R.M.slice(-12);if(!L.length)return '';
+  const W=360,H=170,pl=4,pr=4,pt=14,pb=22,vals=L.map(x=>x.liq).concat(R.alvo?[R.alvo]:[],[0]);
+  const hi=Math.max(...vals)*1.1||1,lo=Math.min(0,...vals)*1.1,Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb),bw=(W-pl-pr)/L.length;
+  let g=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--bd)"/>`;
+  L.forEach((x,i)=>{const y=Y(Math.max(0,x.liq)),h=Math.abs(Y(x.liq)-Y(0));g+=`<rect x="${pl+i*bw+bw*.15}" y="${y}" width="${bw*.7}" height="${Math.max(1,h)}" rx="3" fill="${x.liq>=0?'var(--g)':'var(--r)'}" opacity="${x.atual?.5:1}"/><text x="${pl+i*bw+bw/2}" y="${H-6}" font-size="9" text-anchor="middle" fill="var(--mut)">${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+x.k.slice(5)-1]}</text>`});
+  if(R.alvo)g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(R.alvo)}" y2="${Y(R.alvo)}" stroke="var(--ac)" stroke-dasharray="5 4"/><text x="${W-pr}" y="${Y(R.alvo)-4}" font-size="9.5" text-anchor="end" fill="var(--ac)" font-weight="700">renda alvo</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Resultado líquido por mês">${g}</svg>`;
+}
+function vCarreira(){
+  const c=crCfg(),R=crCalc(c),f=(k,l)=>`<label>${l}<input type="number" step="any" inputmode="decimal" data-cr="${k}" value="${esc(c[k]||'')}"></label>`;
+  const vazio=!(+c.renda>0||+c.custo>0);
+  const ver=R.ok===5?['Os números permitem planejar a saída','var(--g)','Monte a data com calma: avise com antecedência, mantenha a reserva intocada e converse com um contador sobre impostos e INSS.']
+    :R.ok>=3?['Perto, mas ainda não','var(--am)','Mantenha a CLT e feche os critérios que faltam. Sair antes da hora transforma o trading em obrigação de pagar contas, o que piora as decisões.']
+    :['Ainda não: mantenha a CLT','var(--r)','Use o salário como base e construa histórico. O critério que mais pesa é a sequência de meses positivos com disciplina.'];
+  return `<h1>Plano de transição</h1><p class="mut sm" style="margin-top:-4px">Quando dá para viver do trading com segurança. Usa os seus resultados (Brasil${c.fx?' + Forex convertido pelo dólar de hoje':''}) já descontando o IR estimado.</p>
+${vazio?'<div class="warn">Preencha o salário, o custo de vida e a reserva no fim da página para o plano funcionar.</div>':''}
+<div class="hero" style="margin-top:8px"><div class="top"><span class="chip" style="color:${ver[1]};border-color:${ver[1]}">${R.ok} de 5 critérios</span><span class="sm mut">prontidão</span></div><div class="big" style="color:${ver[1]}">${Math.round(R.ok/5*100)}%</div>${barra(R.ok/5,ver[1])}<div style="margin-top:10px;font-weight:650">${ver[0]}</div><div class="sm mut" style="margin-top:4px">${ver[2]}</div></div>
+<h2>Critérios</h2>${R.crit.map(x=>`<div class="card" style="padding:10px 12px"><div style="display:flex;gap:8px;align-items:flex-start"><b class="${x.ok?'g':'r'}" style="flex:none">${x.ok?'✓':'✗'}</b><div style="flex:1"><div>${x.t}</div><b style="font-size:15px">${x.v}</b>${barra(x.f,x.ok?'var(--g)':'var(--ac)')}${x.falta?`<div class="sm mut" style="margin-top:4px">${x.falta}</div>`:''}</div></div></div>`).join('')}
+<h2>Resultado por mês (líquido de IR)</h2>${R.M.length?`<div class="card">${crGraf(R)}</div>
+<div class="kv">${KV('Média 3 meses',R.med3==null?'–':money(R.med3),cls(R.med3||0))}${KV('Média 6 meses',R.med6==null?'–':money(R.med6),cls(R.med6||0),R.alvo?'alvo '+money(R.alvo):'')}${KV('Média 12 meses',R.med12==null?'–':money(R.med12),cls(R.med12||0))}${KV('Meses positivos',pct0(R.pos),'',R.seq+' seguido(s) agora')}${KV('Média 6m × custo de vida',R.custo&&R.med6!=null?Math.round(R.med6/R.custo*100)+'%':'–')}${KV('Reserva',R.resM==null?'–':R.resM.toFixed(1).replace('.',',')+' meses','','de custo de vida')}</div>
+<div class="card"><table><tr><th>Mês</th><th>Brasil</th>${c.fx?'<th>Forex</th>':''}<th>Líquido</th></tr>${R.M.slice(-12).reverse().map(x=>`<tr><td>${x.k.slice(5)}/${x.k.slice(2,4)}${x.atual?' <span class="sm mut">(em curso)</span>':''}</td><td class="${cls(x.b3)}">${money(x.b3)}</td>${c.fx?`<td class="${cls(x.fx)}">${money(x.fx)}</td>`:''}<td class="${cls(x.liq)}"><b>${money(x.liq)}</b>${x.ir?`<div class="sm mut">IR ${money(x.ir)}</div>`:''}</td></tr>`).join('')}</table></div>`:'<p class="mut">Sem trades fechados ainda.</p>'}
+<h2>Seus números</h2><div class="card"><div class="g2">${f('renda','Salário líquido hoje (R$/mês)')}${f('custo','Custo de vida (R$/mês)')}</div><div class="g2">${f('alvo','Renda alvo do trading (R$/mês)')}${f('reserva','Reserva guardada (R$)')}</div><div class="g3">${f('mesesReserva','Reserva (meses)')}${f('mesesPos','Meses positivos seguidos')}${f('ir','IR estimado (%)')}</div>
+<label class="ck"><input type="checkbox" data-cr="fx"${c.fx?' checked':''}><span>Somar o Forex (convertido em reais)</span></label>
+<div class="sm mut" style="margin-top:6px">Se a renda alvo ficar vazia, o app usa o salário. O IR é estimado sobre o lucro de cada mês, compensando prejuízos anteriores. Não é recomendação financeira: é um termômetro dos seus próprios números.</div></div>`;
+}
+document.addEventListener('change',e=>{const i=e.target.closest('[data-cr]');if(!i)return;const c=crCfg();c[i.dataset.cr]=i.type==='checkbox'?(i.checked?1:0):(i.value===''?0:+i.value);(S.ax??={}).carreira=c;save();render()});
+
+/* =====================================================================================
+   5) IMPORTAÇÃO AUTOMÁTICA DO PROFIT — a ponte grava em "operacoes_profit" e o app puxa ao abrir
+   ===================================================================================== */
+const PFX={busy:0,err:'',ult:ls.get('diario-pf-ult')||'',n:0,off:0};
+const pvDe=a=>{const s=String(a||'').toUpperCase();return /^WIN/.test(s)?0.2:/^IND/.test(s)?1:/^WDO/.test(s)?10:/^DOL/.test(s)?50:/^BIT/.test(s)?0.1:null};
+const brLocal=x=>{if(!x)return '';const d=new Date(x);if(isNaN(d))return String(x).slice(0,16);return d.toLocaleString('sv-SE',{timeZone:'America/Sao_Paulo'}).slice(0,16).replace(' ','T')};
+function pfTrade(o){
+  const e=+o.preco_entrada,x=o.preco_saida==null?null:+o.preco_saida,q=+o.qtd||1,dir=o.lado==='V'?-1:1;
+  let pv=+o.valor_ponto||pvDe(o.ativo);
+  if(!pv&&o.resultado!=null&&x!=null&&x!==e)pv=Math.abs((+o.resultado+(+o.custos||0))/((x-e)*dir*q))||1;
+  const dt=brLocal(o.abertura),dtx=x==null?'':brLocal(o.fechamento||o.abertura);
+  return {id:uid(),tipo:dt.slice(0,10)!==(dtx||dt).slice(0,10)?'S':'D',ativo:String(o.ativo||'').toUpperCase(),side:dir<0?'V':'C',qty:String(q),entry:String(e),exit:x==null?'':String(x),stop:'',target:'',pv:String(pv||1),cost:o.custos!=null?String(o.custos):'',dt,dtx,setup:'',err:'Nenhum',rules:'',nota:'',ext:'profit:'+o.id_externo,orig:'profit',u:Date.now()};
+}
+async function profitImporta(manual){
+  if(!SESS||!cfg()||PFX.busy||(PFX.off&&!manual))return;PFX.busy=1;
+  try{
+    const L=await(await rq('/rest/v1/operacoes_profit?select=*&importado=eq.false&order=abertura.asc&limit=500')).json();
+    const ja=new Set(S.trades.map(t=>t.ext).filter(Boolean)),novos=[],ids=[];
+    (L||[]).forEach(o=>{ids.push(o.id);const k='profit:'+o.id_externo;if(ja.has(k)||!o.ativo||!isFinite(+o.preco_entrada))return;ja.add(k);novos.push(pfTrade(o))});
+    if(novos.length){S.trades.push(...novos);save();render();if(window.toast)toast(`${novos.length} operação(ões) importada(s) do Profit. Complete stop e setup na ficha.`,5000);setTimeout(()=>{try{limiteConfere()}catch(e){}},300)}
+    else if(manual&&window.toast)toast('Nenhuma operação nova do Profit.',2500);
+    if(ids.length)await rq('/rest/v1/operacoes_profit?id=in.('+ids.join(',')+')',{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({importado:true})});
+    PFX.n+=novos.length;PFX.ult=new Date().toISOString();ls.set('diario-pf-ult',PFX.ult);PFX.err='';PFX.off=0;
+  }catch(e){PFX.err=e.status===404||/operacoes_profit/.test(e.message||'')?'Falta criar a tabela: rode o SQL "profit-importacao.sql" no Supabase.':(e.message||String(e));if(e.status===404)PFX.off=1}
+  PFX.busy=0;if(tab==='import')render();
+}
+(function(){
+  const vi0=vImport;
+  vImport=function(){
+    const h=vi0();
+    return `<div class="card" style="padding:14px"><div class="top"><b style="font-size:16px">${ic2('bolt')} Importação automática do Profit</b><span class="chip" style="color:${PFX.err?'var(--am)':'var(--g)'};border-color:${PFX.err?'var(--am)':'var(--g)'}">${PFX.err?'atenção':SESS?'ligada':'entre na conta'}</span></div>
+<div class="sm mut" style="margin:6px 0">A ponte no seu computador grava cada operação encerrada no Profit na sua conta; o app traz para o diário sozinho quando abre (e a cada 2 minutos enquanto está aberto). Depois é só completar stop, setup e erros na ficha.</div>
+${PFX.err?`<div class="warn">${esc(PFX.err)}</div>`:''}<div class="sm">${PFX.ult?'Última busca: '+new Date(PFX.ult).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Ainda não buscou.'}${PFX.n?' · '+PFX.n+' importada(s) nesta sessão':''}</div>
+<button class="btn s" style="width:100%;margin-top:10px" data-pfnow="1"${SESS?'':' disabled'}>Buscar agora</button></div>`+h;
+  };
+  document.addEventListener('click',e=>{if(e.target.closest('[data-pfnow]'))profitImporta(true)});
+  setTimeout(()=>profitImporta(false),6000);
+  setInterval(()=>{if(document.visibilityState==='visible')profitImporta(false)},120000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>profitImporta(false),1500)});
+})();
+
+/* ---------- ganchos de tela ---------- */
+(function(){
+  const r0=render0;
+  render0=function(){r0.apply(this,arguments);try{semAviso()}catch(e){console.error(e)}};
+})();
+/* ==== EXTRAS2:FIM ==== */
