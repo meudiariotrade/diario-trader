@@ -4205,21 +4205,52 @@ async function rdLoad(force){
   catch(e){RD.err=e.status===404||/radar_|schema cache/.test(String(e.message))?'tabela':String(e.message||e)}
   RD.ts=Date.now();RD.busy=0;rdPaint();
 }
+const RD_FR=[0.618,1,1.618],rdPct=r=>(r*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+const rdMeu=s=>{const m=((S.ax||{}).rdfib||{})[s.ticker+s.lado];return m&&m.dia===rdHoje()?m:null};
+/** Plano efetivo: o seu Fibonacci (se traçou) ou o automático do radar. Stop = C (pivô); alvos = C + (B − A) × 61,8/100/161,8%. */
+function rdPlano(s){
+  const m=rdMeu(s),f=m||s.fib||null,e=+s.entrada;
+  if(!f||![f.a,f.b,f.c].every(v=>isFinite(+v)&&+v>0))return{meu:false,stop:+s.stop,alvos:[s.alvo1,s.alvo2].filter(v=>v!=null).map((v,i)=>({r:RD_FR[i],v:+v,rr:Math.abs(v-e)/Math.abs(e-s.stop)}))};
+  const dir=s.lado==='C'?1:-1,risco=(e-+f.c)*dir;
+  return{meu:!!m,a:+f.a,b:+f.b,c:+f.c,stop:+f.c,alvos:RD_FR.map(r=>{const v=+f.c+(+f.b-+f.a)*r;return{r,v,rr:risco>0?(v-e)*dir/risco:null}})};
+}
 function rdVivoTxt(s){
   const p=typeof LV!=='undefined'&&LV.px&&LV.px[s.ticker]?+LV.px[s.ticker].ult:0;if(!(p>0)||!(+s.entrada>0))return '';
-  const c=s.lado==='C',mv=(p/s.entrada-1)*100*(c?1:-1),stop=c?p<=s.stop:p>=s.stop,alvo=c?p>=s.alvo1:p<=s.alvo1;
-  return `Agora <b>${rdN(p)}</b> · <span class="${mv>=0?'g':'r'}">${mv>=0?'+':''}${rdN(mv)}% ${mv>=0?'a favor':'contra'}</span>${stop?' · <b class="r">bateu o stop</b>':alvo?' · <b class="g">chegou no alvo 1</b>':''}`;
+  const c=s.lado==='C',pl=rdPlano(s),mv=(p/s.entrada-1)*100*(c?1:-1),stop=c?p<=pl.stop:p>=pl.stop,feitos=pl.alvos.filter(x=>c?p>=x.v:p<=x.v);
+  return `Agora <b>${rdN(p)}</b> · <span class="${mv>=0?'g':'r'}">${mv>=0?'+':''}${rdN(mv)}% ${mv>=0?'a favor':'contra'}</span>${stop?' · <b class="r">bateu o stop</b>':feitos.length?` · <b class="g">atingiu ${rdPct(feitos[feitos.length-1].r)}</b>`:''}`;
 }
 function rdItem(s){
-  const set=Array.isArray(s.setups)?s.setups:[],sc=s.score>=75?'g':s.score>=60?'y':'m',k=s.ticker+s.lado,ab=RD.ab===k,ct=Array.isArray(s.contra)?s.contra:[];
+  const set=Array.isArray(s.setups)?s.setups:[],sc=s.score>=75?'g':s.score>=60?'y':'m',k=s.ticker+s.lado,ab=RD.ab===k,ct=Array.isArray(s.contra)?s.contra:[],pl=rdPlano(s),c=s.lado==='C';
+  const p=typeof LV!=='undefined'&&LV.px&&LV.px[s.ticker]?+LV.px[s.ticker].ult:0;
+  const alv=pl.alvos.map(x=>{const ok=p>0&&(c?p>=x.v:p<=x.v);return `<div class="rd-fa${ok?' ok':''}"><small>${rdPct(x.r)}</small><b>${rdN(x.v)}</b><small>${x.rr!=null&&isFinite(x.rr)?rdN(x.rr)+':1':''}</small></div>`}).join('');
+  const f=pl.meu?pl:(s.fib||{}),ed=rdMeu(s)||s.fib||{};
   return `<div class="rd-it${s.ativo?'':' off'}" data-rdab="${esc(k)}">
   <div class="rd-l1"><b>${esc(s.ticker)}</b><span class="rd-sc ${sc}" title="Pontuação do setup (0 a 100)">${s.score}</span><span class="rd-st">${esc(set.map(x=>x.nome).join(' + '))}</span></div>
-  <div class="rd-l2"><span>Entrada <b>${rdN(s.entrada)}</b></span><span>Stop <b class="r">${rdN(s.stop)}</b></span><span>Alvo <b class="g">${rdN(s.alvo1)}</b></span><span class="rd-rr">${rdN(s.rr)}:1</span></div>
+  <div class="rd-fib"><div class="rd-fh sm">${pl.meu?'📐 Alvos do <b>seu</b> Fibonacci':'Alvos · projeção de Fibonacci'}</div><div class="rd-fg">${alv}</div></div>
+  <div class="rd-l2"><span>Entrada <b>${rdN(s.entrada)}</b></span><span>Stop no ${c?'fundo':'topo'} do pivô <b class="r">${rdN(pl.stop)}</b></span></div>
   <div class="rd-l3 sm" data-rdv="${esc(k)}">${rdVivoTxt(s)}</div>
-  ${s.comentario?`<div class="rd-ia">✨ ${esc(s.comentario)}</div>`:''}
+  ${s.comentario&&!pl.meu?`<div class="rd-ia">✨ ${esc(s.comentario)}</div>`:''}
   ${ct.length?`<div class="rd-ct">⚠️ ${esc(ct.join(' · '))}</div>`:''}
-  ${ab?`<div class="rd-det">${set.map(x=>`<div>• ${esc(x.detalhe)}</div>`).join('')}<div class="mut">Alvo 2 ${rdN(s.alvo2)} · RSI ${rdN(s.rsi)} · tendência diária ${esc(s.tendencia||'—')}${s.vol_rel!=null?` · volume projetado ${rdN(s.vol_rel)}× a média`:''} · no radar desde ${hm(Date.parse(s.primeiro))}</div><div class="rd-bt"><button class="btn s" data-rdtv="${esc(s.ticker)}">📈 Ver gráfico</button></div></div>`:`<div class="rd-mais sm mut">Toque para ver os detalhes</div>`}
+  ${ab?`<div class="rd-det">${set.map(x=>`<div>• ${esc(x.detalhe)}</div>`).join('')}
+    ${f.a?`<div class="mut">Pontos ${pl.meu?'que você traçou':'do radar'}: A ${rdN(f.a)}${f.da?' ('+f.da.slice(8,10)+'/'+f.da.slice(5,7)+')':''} · B ${rdN(f.b)}${f.db?' ('+f.db.slice(8,10)+'/'+f.db.slice(5,7)+')':''} · C ${rdN(f.c)}${f.dc?' ('+f.dc.slice(8,10)+'/'+f.dc.slice(5,7)+')':''}</div>`:''}
+    <div class="mut">RSI ${rdN(s.rsi)} · tendência diária ${esc(s.tendencia||'—')}${s.vol_rel!=null?` · volume projetado ${rdN(s.vol_rel)}× a média`:''} · no radar desde ${hm(Date.parse(s.primeiro))}</div>
+    <div class="rd-meu"><div class="sm"><b>📐 Traçar meu Fibonacci</b> <span class="mut">(${c?'A = fundo de origem · B = topo do impulso · C = fundo da correção (stop)':'A = topo de origem · B = fundo do impulso · C = topo da correção (stop)'})</span></div>
+      <div class="rd-mg">${['a','b','c'].map(x=>`<label>${x.toUpperCase()}<input inputmode="decimal" data-rdf="${x}" value="${ed[x]!=null?String(+(+ed[x]).toFixed(2)).replace('.',','):''}"></label>`).join('')}</div>
+      <div class="rd-bt"><button class="btn s" data-rdfok="${esc(k)}">Calcular alvos</button>${pl.meu?`<button class="btn s" data-rdfauto="${esc(k)}">Voltar ao automático</button>`:''}<button class="btn s" data-rdtv="${esc(s.ticker)}">📈 Ver gráfico</button></div>
+      <div class="sm r" data-rdferr></div></div>
+  </div>`:`<div class="rd-mais sm mut">Toque para ver os detalhes ou traçar seu Fibonacci</div>`}
   </div>`;
+}
+function rdFibSalva(k,auto){
+  const s=RD.l.find(x=>x.ticker+x.lado===k);if(!s)return;
+  S.ax??={};const m={...(S.ax.rdfib||{})};
+  for(const kk of Object.keys(m))if(m[kk].dia!==rdHoje())delete m[kk];
+  if(auto){delete m[k];S.ax.rdfib=m;save();rdPaint();return}
+  const box=document.querySelector(`[data-rdab="${k}"]`),v=x=>{const t=String((box.querySelector(`[data-rdf="${x}"]`)||{}).value||'').trim().replace(/\./g,'').replace(',','.');return t===''?NaN:+t};
+  const a=v('a'),b=v('b'),c=v('c'),err=box.querySelector('[data-rdferr]'),cp=s.lado==='C';
+  const msg=![a,b,c].every(x=>isFinite(x)&&x>0)?'Preencha A, B e C com preços.':cp&&!(b>a&&c<b&&c>a)?'Na compra: A (fundo) < C (fundo da correção) < B (topo).':!cp&&!(b<a&&c>b&&c<a)?'Na venda: A (topo) > C (topo da correção) > B (fundo).':'';
+  if(msg){if(err)err.textContent=msg;return}
+  m[k]={a,b,c,dia:rdHoje()};S.ax.rdfib=m;save();RD.ab=k;rdPaint();
 }
 function rdPaint(){
   const b=document.getElementById('rdbox');if(!b)return;
@@ -4264,6 +4295,9 @@ document.addEventListener('click',e=>{
   if((b=t.closest('[data-rdlado]'))){RD.lado=b.dataset.rdlado;RD.ab=null;rdPaint();return}
   if((b=t.closest('[data-rdtv]'))){if(typeof tvAbre==='function')tvAbre(b.dataset.rdtv,'BR');return}
   if(t.closest('[data-rdnow]')){if(!RD.run)rdAgora();return}
+  if((b=t.closest('[data-rdfok]'))){rdFibSalva(b.dataset.rdfok);return}
+  if((b=t.closest('[data-rdfauto]'))){rdFibSalva(b.dataset.rdfauto,true);return}
+  if(t.closest('.rd-meu'))return;
   if(t.closest('.rd-ft,select,input,details>summary'))return;
   if((b=t.closest('[data-rdab]'))){RD.ab=RD.ab===b.dataset.rdab?null:b.dataset.rdab;rdPaint()}
 });
@@ -4292,5 +4326,14 @@ document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('[d
 .rd-ft{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd,rgba(127,127,127,.2))}
 .rd-pu{display:flex;align-items:center;gap:6px}.rd-pu select{width:auto;min-width:72px;padding:6px 26px 6px 10px;font-size:16px;text-align:left}
 .rd-av{margin-top:8px;font-size:11px;line-height:1.4}
+.rd-fib{margin-top:8px}.rd-fh{margin-bottom:4px;opacity:.85}
+.rd-fg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.rd-fa{display:flex;flex-direction:column;align-items:center;padding:6px 4px;border-radius:8px;background:rgba(34,197,94,.10);font-variant-numeric:tabular-nums;line-height:1.25}
+.rd-fa b{font-size:15px;color:#22c55e}.rd-fa small{font-size:11px;opacity:.8}
+.rd-fa.ok{background:rgba(34,197,94,.28);outline:1px solid #22c55e}
+.rd-l2{grid-template-columns:auto 1fr !important}
+.rd-meu{margin-top:8px;padding:8px;border-radius:8px;border:1px dashed var(--bd,rgba(127,127,127,.35));display:grid;gap:6px}
+.rd-mg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.rd-mg label{font-size:12px}.rd-mg input{font-size:16px;width:100%}
+.rd-bt{display:flex;gap:6px;flex-wrap:wrap}
 `;document.head.appendChild(st)})();
 /* ==== EXTRAS2 (gráfico TradingView):FIM ==== */
