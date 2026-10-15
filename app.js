@@ -2,7 +2,7 @@ const MK=['Alta calma','Alta volátil','Lateral calma','Lateral volátil','Baixa
 const ERR=['Nenhum','Entrei por dica/emoção (fora do sistema)','Não saí no stop','Risco grande demais','Saí cedo por emoção','Não segui minha rotina','Operei fora do tipo de mercado','Foquei na entrada, não no risco/retorno','Entrei sem saída predeterminada','Precisava estar certo (realizei cedo/segurei perda)','Operei demais (perdi o controle)','Outro'];
 const ESTR=['Compra de call','Compra de put','Venda coberta de call','Venda de put','Trava de alta','Trava de baixa','Financiamento / collar','Straddle / strangle','Borboleta / condor','Calendário','Outra'];
 const CATS=['Plano de trade','Gestão de risco','Rotina','Psicologia'];
-const SEED=[[0,'Só entro com setup do meu sistema (nunca por dica ou emoção)'],[0,'Defino a saída predeterminada antes de entrar'],[0,'Só opero o tipo de mercado para o qual meu sistema foi feito'],[1,'Defino o stop inicial (1R) antes de entrar'],[1,'Risco máximo de 1% do capital por trade'],[1,'Só pego trade com potencial de pelo menos 3R'],[1,'Saio quando o stop é atingido'],[2,'Faço autoavaliação e ensaio mental antes de abrir o mercado'],[2,'Registro todo trade com seu R-múltiplo'],[2,'Faço o debriefing no fim do dia'],[3,'Assumo a responsabilidade pelo resultado, sem culpar o mercado'],[3,'Aceito a perda no stop: não preciso estar certo']];
+const SEED=[[0,'Só entro com setup do meu sistema (nunca por dica ou emoção)'],[0,'Defino a saída predeterminada antes de entrar'],[0,'Só opero o tipo de mercado para o qual meu sistema foi feito'],[1,'Defino o stop inicial antes de entrar'],[1,'Risco máximo de 1% do capital por trade'],[1,'Só pego trade com alvo de pelo menos 3 vezes o risco'],[1,'Saio quando o stop é atingido'],[2,'Faço autoavaliação e ensaio mental antes de abrir o mercado'],[2,'Registro todo trade com resultado e fotos'],[2,'Faço o debriefing no fim do dia'],[3,'Assumo a responsabilidade pelo resultado, sem culpar o mercado'],[3,'Aceito a perda no stop: não preciso estar certo']];
 const $=s=>document.querySelector(s),uid=()=>Math.random().toString(36).slice(2,10),sum=a=>a.reduce((x,y)=>x+y,0),avg=a=>a.length?sum(a)/a.length:0;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const f2=n=>n==null||!isFinite(n)?'–':n.toFixed(2).replace('.',','),fr=r=>(r>0?'+':'')+f2(r)+'R',pc=x=>Math.round(x*100)+'%',cls=n=>n>0?'g':n<0?'r':'';
@@ -35,7 +35,7 @@ function capResumo(tp,c){if(!c)return '⚙️ Configurar capital (toque para pre
 function capCurve(tp,c){if(!c||!c.curve||c.curve.length<2)return '';const v=c.curve.map(p=>p.v),n=v.length,lo=Math.min(...v),hi=Math.max(...v),pad=(hi-lo)*.1||Math.abs(hi)*.05||1,a=lo-pad,b=hi+pad,X=i=>(i/(n-1)*296+2).toFixed(1),Y=x=>(66-(x-a)/(b-a)*60).toFixed(1),pts=v.map((x,i)=>X(i)+','+Y(x)).join(' '),y0=Y(v[0]),up=v[n-1]>=v[0],col=up?'var(--g)':'var(--r)';let pk=v[0],dd=0;v.forEach(x=>{pk=Math.max(pk,x);dd=Math.max(dd,pk-x)});
  return `<details id="capc"${CAPC?' open':''} style="margin-top:8px"><summary class="sm">📈 Curva de capital · ${n-1} operação(ões)</summary><svg viewBox="0 0 300 72" style="width:100%;height:auto;margin-top:6px" role="img" aria-label="Curva de capital ${CAPN[tp]}"><line x1="0" x2="300" y1="${y0}" y2="${y0}" stroke="var(--bd)" stroke-dasharray="3"/><polyline fill="none" stroke="${col}" stroke-width="2" points="${pts}"/><circle cx="${X(n-1)}" cy="${Y(v[n-1])}" r="3.5" fill="${col}"/></svg><div class="top sm mut"><span>Mín. ${money(lo)}</span><span>Máx. ${money(hi)}</span></div><div class="sm mut">Queda máxima (drawdown): <b class="${dd>0?'r':''}">${money(dd)}</b>. Linha tracejada = capital de partida. Conta só trades encerrados desde a data configurada.</div></details>`}
 function capTotal(){const L=['D','O','S'].map(tp=>({tp,c:capCalc(tp)})).filter(x=>x.c);if(!L.length)return `<div class="card"><b>💰 Capital total</b><div class="mut sm" style="margin-top:4px">Defina o capital inicial em cada aba (Day trade, Opções e Swing) e o total aparece aqui.</div></div>`;const at=sum(L.map(x=>x.c.at)),ini=sum(L.map(x=>x.c.ini+x.c.ap)),res=sum(L.map(x=>x.c.res));return `<div class="card"><div class="top"><b>💰 Capital total</b><span class="sm ${cls(res)}">${res>=0?'+':''}${money(res)}</span></div><div style="font-size:26px;font-weight:700;margin-top:4px" class="${at<=0?'r':''}">${money(at)}</div><div class="mut sm">Inicial ${money(ini)}${ini?' · '+(res>=0?'+':'')+f2(res/ini*100)+'%':''}</div>${L.map(x=>`<div class="top sm" style="margin-top:6px"><span>${CAPN[x.tp]}</span><b class="${x.c.at<=0?'r':''}">${money(x.c.at)}</b></div>`).join('')}</div>`}
-function card(t){const c=calc(t),p=t.pplan||t.pin||t.pout;return `<div class="card row" data-a="edit" data-id="${t.id}" data-s="${esc(((t.ativo||'')+' '+(t.setup||'')).toLowerCase())}"><div class="th">${p?`<img data-img="${p}">`:'📈'}</div><div class="fl"><b>${esc(t.ativo)||'<span class="r">⚠ sem ativo</span>'}</b> · ${t.tipo==='O'?(t.side==='C'?'Comprado':'Lançado'):(t.side==='C'?'Compra':'Venda')}<div class="mut sm">${fdt(t.dt)}${t.tipo==='O'&&t.strike?' · '+(t.ot==='P'?'Put':'Call')+' '+esc(t.strike):''}${t.setup?' · '+esc(t.setup):''}</div>${t.err&&t.err!=='Nenhum'?'<span class="tag">⚠ erro</span>':''}${t.rules==='n'?'<span class="tag">fora das regras</span>':''}</div><div class="rt ${cls(c.r)}">${isOpen(t)?`<span class="mut sm">aberto</span><br><button class="btn s" data-a="enc" data-id="${t.id}" style="margin-top:4px">Encerrar</button>`:c.r==null?'<span class="mut sm">sem stop</span>':fr(c.r)}<div class="sm mut">${c.pl==null?'':money(c.pl)}</div></div></div>`}
+function card(t){const c=calc(t),p=t.pplan||t.pin||t.pout;return `<div class="card row" data-a="edit" data-id="${t.id}" data-s="${esc(((t.ativo||'')+' '+(t.setup||'')).toLowerCase())}"><div class="th">${p?`<img data-img="${p}">`:'📈'}</div><div class="fl"><b>${esc(t.ativo)||'<span class="r">⚠ sem ativo</span>'}</b> · ${t.tipo==='O'?(t.side==='C'?'Comprado':'Lançado'):(t.side==='C'?'Compra':'Venda')}<div class="mut sm">${fdt(t.dt)}${t.tipo==='O'&&t.strike?' · '+(t.ot==='P'?'Put':'Call')+' '+esc(t.strike):''}${t.setup?' · '+esc(t.setup):''}</div>${t.err&&t.err!=='Nenhum'?'<span class="tag">⚠ erro</span>':''}${t.rules==='n'?'<span class="tag">fora das regras</span>':''}</div><div class="rt ${cls(c.r)}">${isOpen(t)?`<span class="mut sm">aberto</span><br><button class="btn s" data-a="enc" data-id="${t.id}" style="margin-top:4px">Encerrar</button>`:c.pl==null?'<span class="mut sm">–</span>':mT(t,c.pl)}<div class="sm mut">${c.pl==null?'':pctConta(c.pl,moedaT(t),t.tipo||'D')}</div></div></div>`}
 /* ---------- Extrato do plano (day trade, swing e opções) ---------- */
 let EXD={},XTO=1;
 document.addEventListener('toggle',e=>{if(e.target&&e.target.id==='xtd')XTO=e.target.open},true);
@@ -64,9 +64,9 @@ function extrato(tp){const g=k=>gv('cap',tp+'_'+k,''),ini=g('ini');if(ini===''||
  <div class="chips2" style="margin-top:8px"><button class="${sel==='all'?'on':''}" data-a="exd" data-tp="${tp}" data-id="all">Ciclo</button>${days.map(d=>`<button class="${sel===d?'on':''}" data-a="exd" data-tp="${tp}" data-id="${d}">${d.slice(8,10)}/${d.slice(5,7)}</button>`).join('')}</div>
  <div class="xt-top"><div class="xt-g">${xtGauge(cres,meta,stp)}<div class="xt-gc"><b class="${cls(cres)}">${sg(cres)}</b><div class="mut">${meta>0?Math.round(cres/meta*100)+'% da meta do ciclo':'defina meta e stop em ⚙️ Configurar capital'}</div></div></div>
  <div class="xt-s">${cell('PL inicial',money(pi))}${cell('Resultado',sg(res)+(pi>0?' <span class="sm mut">('+(res>=0?'+':'')+f2(res/pi*100)+'%)</span>':''),cls(res))}${cell('PL atual',money(pa),pa<=0?'r':'')}${cell('Estado (ciclo)',est)}${cell('Score emocional',sc==null?'–':sc+'/100 · '+scL,scC)}${cell('Meta / stop',(meta>0?money(meta):'–')+' / '+(stp>0?'-'+money(stp):'–'))}</div></div>
- <div class="xt-m">${all.some(x=>x.c.pl==null)?'<span>Em aberto (ao vivo) <b id="lvopen" data-tp="'+tp+'">–</b></span>':''}<span>ROI <b class="${cls(res)}">${pi>0?(res>=0?'+':'')+f2(res/pi*100)+'%':'–'}</b></span><span>RR planejado <b>${rrP!=null?f2(rrP)+':1':'–'}</b></span><span>RR realizado <b>${rrR!=null?f2(rrR)+':1':'–'}</b></span><span>Trades <b>${rows.length}</b>${rows.length!==rc.length?' <span class="sm">('+(rows.length-rc.length)+' aberto'+(rows.length-rc.length>1?'s':'')+')</span>':''}</span><span>WR <b>${wr!=null?f2(wr*100)+'%':'–'}</b>${rc.length?' <span class="sm">('+w.length+'/'+rc.length+')</span>':''}</span></div>
+ <div class="xt-m">${all.some(x=>x.c.pl==null)?'<span>Em aberto (ao vivo) <b id="lvopen" data-tp="'+tp+'">–</b></span>':''}<span>ROI <b class="${cls(res)}">${pi>0?(res>=0?'+':'')+f2(res/pi*100)+'%':'–'}</b></span><span>Ganho/risco planejado <b>${rrP!=null?f2(rrP)+':1':'–'}</b></span><span>Ganho/risco realizado <b>${rrR!=null?f2(rrR)+':1':'–'}</b></span><span>Trades <b>${rows.length}</b>${rows.length!==rc.length?' <span class="sm">('+(rows.length-rc.length)+' aberto'+(rows.length-rc.length>1?'s':'')+')</span>':''}</span><span>WR <b>${wr!=null?f2(wr*100)+'%':'–'}</b>${rc.length?' <span class="sm">('+w.length+'/'+rc.length+')</span>':''}</span></div>
  ${rows.length?`<div class="xt-w"><table><tr><th>#</th><th>Data</th><th>Ativo</th><th>Emo</th><th>RO</th><th>RR</th><th>Resultado</th><th>Acum. dia</th><th>Acum. ciclo</th><th>Status</th></tr>${tr}</table></div>`:'<p class="mut sm" style="margin-top:10px">Nenhuma operação neste período.</p>'}
- <div class="mut sm" style="margin-top:8px">RO = risco do trade (1R) sobre o PL inicial. Velocímetro, estado e meta/stop são do ciclo inteiro; o restante acompanha o dia escolhido. Toque numa linha para editar.</div></details>`}
+ <div class="mut sm" style="margin-top:8px">RO = risco do trade sobre o PL inicial. Velocímetro, estado e meta/stop são do ciclo inteiro; o restante acompanha o dia escolhido. Toque numa linha para editar.</div></details>`}
 /*ANALISE*//* ---------- Análise do plano (sub-aba de Day trade, Swing e Opções) ---------- */
 let XV={};
 (function(){const c=document.createElement('style');c.textContent='.an-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:700px){.an-g{grid-template-columns:1fr}}.an{margin:0!important}.an-h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut,#8b95a5);display:flex;align-items:center;gap:6px;margin-bottom:10px}.an-h i{font-style:normal}.an-h small{text-transform:none;letter-spacing:0;opacity:.7}.an-k{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}.an-k.c4{grid-template-columns:repeat(4,1fr)}@media(max-width:700px){.an-k.c4{grid-template-columns:1fr 1fr}}.an-k .l{font-size:11px;color:var(--mut,#8b95a5)}.an-k .v{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;margin:2px 0}.an-k .s{font-size:11px;color:var(--mut,#8b95a5);line-height:1.5}.an-bar{height:6px;border-radius:9px;background:var(--bd,#2a3140);overflow:hidden;margin-top:8px}.an-bar>i{display:block;height:100%}.an-box{border:1px solid var(--bd,#2a3140);border-radius:10px;padding:10px;text-align:center}.an-box .v{font-size:19px;font-weight:700;margin:2px 0}.an-box .l,.an-box .s{font-size:10px;color:var(--mut,#8b95a5)}.an-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.an-hr{border:0;border-top:1px solid var(--bd,#2a3140);margin:12px 0}.an-amb{color:#e8a317}.an-blu{color:#5aa9ff}.an-tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;border:1px solid var(--bd,#2a3140);color:var(--mut,#8b95a5)}.an-ev.bad{border-color:rgba(248,81,73,.45)}';document.head.appendChild(c)})();
@@ -119,7 +119,7 @@ function analise(tp){const g=k=>gv('cap',tp+'_'+k,''),ini=g('ini');
  const ass=`<div class="card an"><div class="an-h"><i>🎯</i>Assimetria de risco</div><div class="an-k">
   ${kv('Win rate',f2(wr*100)+'%',be!=null?'Mínimo p/ empatar (RR '+f2(rrP)+':1): <b class="an-amb">'+f2(be*100)+'%</b> '+gc(wr-be,(wr>=be?'↑ +':'↓ ')+f2(Math.abs(wr-be)*100)+' p.p.'):'Sem alvo informado nos trades')}
   ${kv('Payoff',pay!=null?'<span class="'+(pay>=1?'g':'r')+'">'+f2(pay)+'x</span>':'–','W: <b class="g">'+(aw!=null?money(aw):'–')+'</b> L: <b class="r">'+(al!=null?money(al):'–')+'</b>')}
-  ${kv('Risco W/L',rkWL!=null?'<span class="an-blu">'+f2(rkWL)+'x</span>':'–','W: <b>'+(rW.length?money(avg(rW)):'–')+'</b> L: <b>'+(rL.length?money(avg(rL)):'–')+'</b> <span class="mut">(risco médio 1R)</span>')}
+  ${kv('Risco W/L',rkWL!=null?'<span class="an-blu">'+f2(rkWL)+'x</span>':'–','W: <b>'+(rW.length?money(avg(rW)):'–')+'</b> L: <b>'+(rL.length?money(avg(rL)):'–')+'</b> <span class="mut">(risco médio por trade)</span>')}
   <div><div class="l">Utiliz. RO</div>${util!=null?'<div class="v an-amb">'+Math.round(util*100)+'%</div><div class="an-bar"><i style="width:'+Math.min(100,util*100)+'%;background:'+(util>1?'var(--r)':'#e8a317')+'"></i></div><div class="s">risco médio ÷ risco máx. ('+f2(rk)+'% do PL = '+money(rkMax)+')</div>':'<div class="v">–</div><div class="s">defina "Risco por trade (%)" em ⚙️ Configurar capital</div>'}</div>
  </div></div>`;
  const ev=`<div class="card an an-ev ${gap!=null&&gap<0?'bad':''}"><div class="an-h"><i>📉</i>EV ${gap!=null&&evE>0?(gap<0?'<b class="r" style="letter-spacing:0">'+Math.round(-gap/evE*100)+'% de perda</b>':'<b class="g" style="letter-spacing:0">no esperado ou acima</b>'):''}</div>
@@ -134,8 +134,8 @@ function analise(tp){const g=k=>gv('cap',tp+'_'+k,''),ini=g('ini');
   <div class="sm mut" style="margin-top:10px">Tempo médio geral <b style="color:var(--tx,inherit)">${xtDur(aT)}</b> ${estilo?'<span class="an-tag">'+estilo+'</span>':''}</div></div>`;
  const info=`<details class="card" style="margin-top:10px"><summary class="sm">ⓘ Como cada número é calculado</summary><div class="sm mut" style="margin-top:8px;line-height:1.55">
  <b>Saldo</b> = capital inicial + aportes + resultado. <b>Drawdown do topo</b> = queda do saldo desde o maior saldo já atingido; "Máx." é a maior queda do ciclo. <b>Profit factor</b> = soma dos ganhos ÷ soma das perdas. <b>Conformidade</b> = % de trades com "segui minhas regras = Sim". <b>Sorte</b> = % dos ganhos obtidos quebrando regra ou com erro marcado.<br>
- <b>Payoff</b> = ganho médio ÷ perda média. <b>Mínimo p/ empatar</b> = 1 ÷ (1 + RR planejado médio). <b>Risco W/L</b> = 1R médio dos ganhos ÷ 1R médio das perdas. <b>Utiliz. RO</b> = 1R médio ÷ (capital × risco por trade).<br>
- <b>EV esperado</b> = win rate × ganho planejado até o alvo − (1 − win rate) × risco 1R. <b>EV real</b> = resultado médio por trade. <b>Gap</b> = real − esperado.<br>
+ <b>Payoff</b> = ganho médio ÷ perda média. <b>Mínimo p/ empatar</b> = 1 ÷ (1 + RR planejado médio). <b>Risco W/L</b> = risco médio dos ganhos ÷ risco médio das perdas. <b>Utiliz. RO</b> = risco médio ÷ (capital × risco por trade).<br>
+ <b>EV esperado</b> = win rate × ganho planejado até o alvo − (1 − win rate) × risco. <b>EV real</b> = resultado médio por trade. <b>Gap</b> = real − esperado.<br>
  <b>Sharpe</b> = (retorno diário médio − Selic diária) ÷ desvio dos retornos diários × √252 (com poucos dias é pouco confiável). <b>CV norm.</b> = desvio ÷ |média| do resultado por trade (até 1 consistente, até 2 moderado, acima errático). <b>MEP / MEN</b> = melhor / pior preço atingido dentro do trade, em % da entrada (campos opcionais no trade). <b>Tempo W vs L</b> = duração média (entrada → saída) dos ganhos contra as perdas.</div></details>`;
  return `<div class="an-g">${fin}${ass}${ev}${con}</div>${info}`}
 /*LIVE*//* ---------- Cotações ao vivo (ponte Profit → Supabase → app) ---------- */
@@ -150,7 +150,7 @@ function lvPaint(){const ap=$('#app');if(!ap||!LVT.includes(tab))return;const ab
  bar.innerHTML=fq.length&&!LV.err?'<span class="g">🟢 Ao vivo</span> <span class="mut">· '+esc(fq.sort((a,b)=>b.up-a.up)[0].hor||'')+' · '+fq.length+' ativo(s) chegando'+(nd.length?' · '+nd.length+' com atraso':'')+'</span>':nd.length?'<span class="an-amb">🟡 Cotação com atraso</span> <span class="mut">· brapi/Twelve Data, ~15 min · '+nd.length+' ativo(s) · atualiza a cada 1 min</span>':'<span class="mut">⚪ Sem cotações.'+(LV.err?' Ponte: '+esc(LV.err)+'.':'')+(LV.ed?' Fonte com atraso: '+esc(LV.ed)+'.':' Ponte do Profit desligada e a fonte com atraso não trouxe os ativos abertos (futuros e opções não têm fonte gratuita).')+'</span>';
  const f=n=>Math.abs(n)>=10?Math.round(n):f2(n),open={};
  ab.forEach(t=>{const r=lvCalc(t);let h='';if(r){(open[t.tipo||'D']??=[]).push(r.pl);if(r.st&&LV.hit[t.id]!==r.st){LV.hit[t.id]=r.st;buzz([200,100,200])}if(!r.st)delete LV.hit[t.id];
-  h='<span class="'+(r.d?'an-amb':'g')+'">●</span> último <b>'+f2(r.px)+'</b>'+(r.d?' <span class="mut">(atraso)</span>':'')+' · aberto <b class="'+cls(r.pl)+'">'+(r.pl>0?'+':'')+money(r.pl)+'</b>'+(r.r!=null?' <span class="'+cls(r.pl)+'">('+fr(r.r)+')</span>':'')+(r.ds!=null?' · stop a '+f(r.ds):'')+(r.dt!=null?' · alvo a '+f(r.dt):'')+(r.st?' <b class="'+(r.st==='stop'?'r':'g')+'">'+(r.st==='stop'?'⚠ STOP ATINGIDO':'🎯 ALVO ATINGIDO')+'</b>':'')}
+  h='<span class="'+(r.d?'an-amb':'g')+'">●</span> último <b>'+f2(r.px)+'</b>'+(r.d?' <span class="mut">(atraso)</span>':'')+' · aberto <b class="'+cls(r.pl)+'">'+(r.pl>0?'+':'')+money(r.pl)+'</b>'+(r.pl!=null&&pctConta(r.pl)?' <span class="'+cls(r.pl)+'">('+pctConta(r.pl)+')</span>':'')+(r.ds!=null?' · stop a '+f(r.ds):'')+(r.dt!=null?' · alvo a '+f(r.dt):'')+(r.st?' <b class="'+(r.st==='stop'?'r':'g')+'">'+(r.st==='stop'?'⚠ STOP ATINGIDO':'🎯 ALVO ATINGIDO')+'</b>':'')}
   const c=ap.querySelector('.card.row[data-id="'+t.id+'"]');if(c){const b=c.querySelector('.fl')||c;let e=b.querySelector('.lv');if(!e){e=document.createElement('div');e.className='lv sm';e.style.marginTop='4px';b.appendChild(e)}e.innerHTML=h}
   const x=ap.querySelector('td.lvr[data-lvid="'+t.id+'"]');if(x)x.innerHTML=r?'<b class="'+cls(r.pl)+'" title="ao vivo">'+(r.pl>0?'+':'')+money(r.pl)+' <span class="g">●</span></b>':'<b>–</b>'});
  const o=ap.querySelector('#lvopen');if(o){const a=open[o.dataset.tp]||[];o.innerHTML=a.length?'<span class="'+cls(sum(a))+'">'+(sum(a)>0?'+':'')+money(sum(a))+'</span>':'–'}}
@@ -171,7 +171,7 @@ function lvcPaint(){if(tab!=='live')return;const b=$('#lvcb'),bar=$('#lvcbar');i
  if(LVC.f==='all'||LVC.f==='meus')r.sort((p,q)=>p.k<q.k?-1:1);
  b.innerHTML=r.length?r.map(x=>`<tr class="${x.st?'mut':''}"><td><b>${mine.has(x.k)?'★ ':''}${esc(x.k)}</b></td><td style="text-align:right">${f2(x.u)}</td><td class="${x.st?'':cls(x.v)}" style="text-align:right">${x.v==null?'–':(x.v>0?'+':'')+f2(x.v)+'%'}</td><td class="sm mut" style="text-align:right">${x.st?esc(x.d.slice(0,5)):esc(x.h)}</td></tr>`).join(''):'<tr><td colspan="4" class="mut" style="padding:10px 0">Nada para mostrar.</td></tr>'}
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='cq'){LVC.q=e.target.value.trim().toUpperCase();lvcPaint()}});
-function vList(tp='D'){if(XV[tp]==='an')return xtHead(tp)+xtSw(tp)+analise(tp);const sw=tp==='S',ts=S.trades.filter(t=>(t.tipo||'D')===tp&&inPer(t.dt)).sort((a,b)=>b.dt.localeCompare(a.dt));const cr=ts.map(t=>calc(t).r).filter(x=>x!=null);return `<div class="top"><h1>${{D:'Day trade',S:'Swing trade',O:'Opções'}[tp]}</h1><button class="btn" data-a="new" data-tp="${tp}">+ Novo trade</button></div>${xtSw(tp)}${capCard(tp)}${extrato(tp)}${perSel()}${filtBar()}${cr.length?`<div class="mut sm" style="margin-top:8px">${cr.length} fechado(s) · ${ts.length-cr.length} aberto(s) · expectância <b class="${cls(avg(cr))}">${fr(avg(cr))}</b></div>`:''}`+(ts.length?(fl(ts).map(card).join('')||'<p class="mut">Nada com esse filtro.</p>'):`<p class="mut">Nenhum trade ainda. ${tp==='O'?'Registre a opção com strike, vencimento e prêmios. O stop em prêmio define 1R.':sw?'Envie a foto do planejamento (entrada, stop e alvos), o stop inicial define 1R.':'Registre o primeiro, com as fotos de entrada e saída, o stop inicial (1R) e o resultado.'}</p>`)}
+function vList(tp='D'){if(XV[tp]==='an')return xtHead(tp)+xtSw(tp)+analise(tp);const sw=tp==='S',ts=S.trades.filter(t=>(t.tipo||'D')===tp&&inPer(t.dt)).sort((a,b)=>b.dt.localeCompare(a.dt));const crT=ts.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null),cr=crT.map(t=>t.c.pl);return `<div class="top"><h1>${{D:'Day trade',S:'Swing trade',O:'Opções'}[tp]}</h1><button class="btn" data-a="new" data-tp="${tp}">+ Novo trade</button></div>${xtSw(tp)}${capCard(tp)}${extrato(tp)}${perSel()}${filtBar()}${cr.length?`<div class="mut sm" style="margin-top:8px">${cr.length} fechado(s) · ${ts.length-cr.length} aberto(s) · resultado <b class="${cls(sum(cr))}">${mnyMix(somaMoedas(crT))}</b> · média por trade <b class="${cls(avg(cr))}">${mnyMix(mediaMoedas(crT))}</b></div>`:''}`+(ts.length?(fl(ts).map(card).join('')||'<p class="mut">Nada com esse filtro.</p>'):`<p class="mut">Nenhum trade ainda. ${tp==='O'?'Registre a opção com strike, vencimento e prêmios. O stop em prêmio define o risco.':sw?'Envie a foto do planejamento (entrada, stop e alvos), o stop inicial define o risco.':'Registre o primeiro, com as fotos de entrada e saída, o stop inicial e o resultado.'}</p>`)}
 function sheet(){const t=T,slot=(k,l)=>`<div class="ph"><label>${l}</label><div class="pv">${t[k]?`<img data-img="${t[k]}">`:''}</div><label class="btn s" style="color:var(--tx)">${t[k]?'Trocar':'Adicionar'} foto<input type="file" accept="image/*" hidden data-k="${k}"></label></div>`,n=(k,l,ph='')=>`<label>${l}<input name="${k}" type="number" step="any" inputmode="decimal" value="${esc(t[k])}" placeholder="${ph}"></label>`;
 return `<div class="ov"><div class="sh"><div class="top"><h2 style="margin:0">${isNew?'Novo trade':'Editar trade'}${t.tipo==='S'?' (swing)':t.tipo==='O'?' (opção)':''}</h2><button class="x" data-a="close">✕</button></div>
 ${isNew?'':`<label>Tipo de operação</label>${segs('tipo',t.tipo||'D',[['D','Day trade'],['S','Swing'],['O','Opção']])}<div class="mut sm" style="margin:-4px 0 8px">Ao salvar, o trade passa para a aba escolhida.</div>`}<label>Data e hora<input type="datetime-local" name="dt" value="${t.dt}"></label>
@@ -190,14 +190,14 @@ ${t.tipo==='S'||t.tipo==='O'?`<div class="g2">${n('target2','Alvo 2')}${n('targe
 <label>Anotações (por que entrei, o que senti, o que aprendi)<textarea name="nota">${esc(t.nota)}</textarea></label>${iaBlock(t.ia,calc(t),'t')}
 <div id="msg" class="r" style="margin:8px 0"></div>
 <div class="g2"><button class="btn" data-a="savetrade">Salvar</button>${isNew?'':`<button class="btn d" data-a="deltrade">${delArm?'Confirmar exclusão':'Excluir'}</button>`}</div></div></div>`}
-function prev(){const p=$('#prev');if(!p||!T)return;const c=calc(T),d=T.side==='C'?1:-1,e=+T.entry,s=+T.stop;let h='';if(!(e&&s))h='<span class="mut">Informe entrada e stop inicial: sem stop não existe 1R.</span>';else{if((e-s)*d<=0)h+='<div class="r">⚠ Stop do lado errado da entrada para '+(T.tipo==='O'?(T.side==='C'?'Comprado':'Lançado'):(T.side==='C'?'Compra':'Venda'))+'. Confira o Lado: se estiver errado, o resultado sai com o sinal trocado.</div>';h+=`1R (risco inicial): <b>${money(c.risk)}</b>`;if(c.rr!=null)h+=` · R:R planejado <b>${f2(c.rr)}:1</b>${c.rr<3?' <span class="r">(abaixo de 3:1)</span>':''}`;if(T.tipo==='S'||T.tipo==='O')['target2','target3'].forEach((k,i)=>{if(+T[k])h+=` · Alvo ${i+2}: <b>${f2(Math.abs(+T[k]-e)/Math.abs(e-s))}:1</b>`});if(c.r!=null)h+=`<br>Resultado: <b class="${cls(c.pl)}">${money(c.pl)}</b> = <b class="${cls(c.r)}">${fr(c.r)}</b>${c.r<-1.05?' <span class="r">perda maior que 1R: stop respeitado?</span>':''}`}if(T.tipo==='O'&&e&&s){const k=+T.strike,dte=T.venc?Math.round((new Date(T.venc+'T12:00')-new Date(T.dt.slice(0,10)+'T12:00'))/864e5):null;h+='<br>';if(dte!=null)h+=`DTE: <b>${dte}</b> dia(s)${dte<=7?' <span class="r">(vencimento próximo: o tempo corrói o prêmio mais rápido)</span>':''} · `;if(k)h+=`Breakeven (opção simples): <b>${f2(T.ot==='P'?k-e:k+e)}</b> · `;h+=`Risco: <b>${pc(Math.abs(e-s)/e)}</b> do prêmio`}{const cc=capCalc(T.tipo||'D');if(cc&&cc.lotes!=null)h+='<br>Capital atual permite até <b>'+cc.lotes+'</b> '+CAPU[T.tipo||'D']+(cc.lotes===1?'':'s')+'.'}p.innerHTML=h}
+function prev(){const p=$('#prev');if(!p||!T)return;const c=calc(T),d=T.side==='C'?1:-1,e=+T.entry,s=+T.stop;let h='';if(!(e&&s))h='<span class="mut">Informe entrada e stop inicial: sem stop não dá para medir o risco.</span>';else{if((e-s)*d<=0)h+='<div class="r">⚠ Stop do lado errado da entrada para '+(T.tipo==='O'?(T.side==='C'?'Comprado':'Lançado'):(T.side==='C'?'Compra':'Venda'))+'. Confira o Lado: se estiver errado, o resultado sai com o sinal trocado.</div>';h+=`Risco planejado: <b>${mT(T,c.risk)}</b>${pctConta(c.risk,moedaT(T),T.tipo)?' ('+pctConta(c.risk,moedaT(T),T.tipo).replace('+','')+')':''}`;if(c.rr!=null)h+=` · ganho/risco planejado <b>${f2(c.rr)} para 1</b>${c.rr<3?' <span class="r">(abaixo de 3 para 1)</span>':''}`;if(T.tipo==='S'||T.tipo==='O')['target2','target3'].forEach((k,i)=>{if(+T[k])h+=` · Alvo ${i+2}: <b>${f2(Math.abs(+T[k]-e)/Math.abs(e-s))}:1</b>`});if(c.pl!=null)h+=`<br>Resultado: <b class="${cls(c.pl)}">${mT(T,c.pl)}</b>${pctConta(c.pl,moedaT(T),T.tipo)?' <span class="'+cls(c.pl)+'">('+pctConta(c.pl,moedaT(T),T.tipo)+')</span>':''}${c.r!=null&&c.r<-1.05?' <span class="r">perda maior que o risco planejado: o stop foi respeitado?</span>':''}`}if(T.tipo==='O'&&e&&s){const k=+T.strike,dte=T.venc?Math.round((new Date(T.venc+'T12:00')-new Date(T.dt.slice(0,10)+'T12:00'))/864e5):null;h+='<br>';if(dte!=null)h+=`DTE: <b>${dte}</b> dia(s)${dte<=7?' <span class="r">(vencimento próximo: o tempo corrói o prêmio mais rápido)</span>':''} · `;if(k)h+=`Breakeven (opção simples): <b>${f2(T.ot==='P'?k-e:k+e)}</b> · `;h+=`Risco: <b>${pc(Math.abs(e-s)/e)}</b> do prêmio`}{const cc=capCalc(T.tipo||'D');if(cc&&cc.lotes!=null)h+='<br>Capital atual permite até <b>'+cc.lotes+'</b> '+CAPU[T.tipo||'D']+(cc.lotes===1?'':'s')+'.'}p.innerHTML=h}
 function showSheet(){const o=document.querySelector('#sh .ov'),y=o?o.scrollTop:0;$('#sh').innerHTML=T?(QM?qsheet():sheet()):'';const o2=document.querySelector('#sh .ov');if(o2&&y)o2.scrollTop=y;document.body.style.overflow=T?'hidden':'';$('#fab').style.display=T?'none':fabDisp();fillImgs();prev()}
 function closeSheet(keep){if(T&&!keep)['pin','pout','pplan'].forEach(k=>{if(T[k]&&T[k]!==orig[k])idb('img','delete',T[k])});T=null;QM=0;delArm=0;showSheet()}
 /* ---------- Dia ---------- */
-function vDia(){const d=S.days[D]||{chk:{}},ts=S.trades.filter(t=>t.dt.slice(0,10)===D).map(t=>({...t,c:calc(t)})),cl=ts.filter(t=>t.c.r!=null),R=sum(cl.map(t=>t.c.r)),P=sum(cl.map(t=>t.c.pl)),er=ts.filter(t=>t.err&&t.err!=='Nenhum').length;
+function vDia(){const d=S.days[D]||{chk:{}},ts=S.trades.filter(t=>t.dt.slice(0,10)===D).map(t=>({...t,c:calc(t)})),cl=ts.filter(t=>t.c.pl!=null),R=sum(cl.map(t=>t.c.r||0)),P=totBRL(somaMoedas(cl)),er=ts.filter(t=>t.err&&t.err!=='Nenhum').length;
 const ta=(k,l,h='')=>`<label>${l}<textarea data-d="${k}" placeholder="${h}">${esc(d[k])}</textarea></label>`;
 if(DV==='hist')return vDiaHist();return `<h1>Meu dia</h1>${diaSeg()}<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:end"><button class="btn s" data-a="dprev">‹</button><label style="margin:0">Data<input type="date" id="dd" value="${D}"></label><button class="btn s" data-a="dnext">›</button></div>${D!==loc().slice(0,10)?'<button class="btn s" style="margin-top:6px" data-a="dtoday">Ir para hoje</button>':''}<div class="mut sm" id="svs" style="margin-top:6px"></div>
-<div class="card" style="margin-top:12px"><b>Resumo automático</b><div class="mut">${ts.length} trade(s) · <span class="${cls(R)}">${fr(R)}</span> · <span class="${cls(P)}">${money(P)}</span> · ${er} erro(s)</div></div>
+<div class="card" style="margin-top:12px"><b>Resumo automático</b><div class="mut">${ts.length} trade(s) · <span class="${cls(P)}">${mnyMix(somaMoedas(cl))}</span>${pctConta(P)?' · <span class="'+cls(P)+'">'+pctConta(P)+'</span>':''} · ${er} erro(s)</div></div>
 <h2>☀️ Antes do mercado</h2>
 <label>Como estou hoje?</label><div class="chips2">${EMO.map((e,i)=>`<button class="${d.energia==i+1?'on':''}" data-dseg="energia" data-v="${i+1}">${e}</button>`).join('')}</div><div class="g2" style="grid-template-columns:1fr"><label>Tipo de mercado hoje<select data-d="mkt"><option value="">–</option>${opt(MK,d.mkt)}</select></label></div>
 ${ta('plano','Plano do dia','Cenário, níveis, o que vou operar…')}
@@ -271,17 +271,17 @@ if(L('consist')&&tot>0){const sh=best/tot*100;h+=row('Consistência',`Maior dia:
 e.innerHTML=h||'<p class="mut sm">Preencha os limites acima para ver o painel.</p>'}
 function ggOut(){const e=$('#gg');if(!e)return;const G=S.goals||{},td=loc().slice(0,10),n=S.trades.filter(t=>t.dt.slice(0,10)===td).length,[a,b]=rng('w0'),w=S.trades.filter(t=>{const d=t.dt.slice(0,10);return d>=a&&d<=b}),ok=w.filter(t=>t.rules!=='n'&&(!t.err||t.err==='Nenhum')).length,ds=[...new Set([...S.trades.map(t=>t.dt.slice(0,10)),...Object.keys(S.days).filter(d=>S.days[d].resumo||S.days[d].erros)])].sort(),clean=d=>!S.trades.some(t=>t.dt.slice(0,10)===d&&(t.rules==='n'||(t.err&&t.err!=='Nenhum')))&&(S.days[d]||{}).erros!=='s';let run=0,best=0;ds.forEach(d=>{run=clean(d)?run+1:0;best=Math.max(best,run)});const over=+G.maxTr&&n>+G.maxTr,pr=w.length?ok/w.length*100:null;
 e.innerHTML=`<div class="kv">${KV('Dias seguidos sem erro',run,run?'g':'','melhor: '+best)}${KV('Trades hoje',n+(+G.maxTr?' / '+G.maxTr:''),over?'r':'',over?'acima do limite: pare':'')}${KV('Regras seguidas (semana)',pr==null?'–':Math.round(pr)+'%',pr!=null&&+G.regPct&&pr<+G.regPct?'r':'g',+G.regPct?'meta '+G.regPct+'%':'')}</div>`}
-function zzOut(){const e=$('#zz');if(!e)return;const P=S.prop||{},cap=+(Z.cap||P.cap),pct=+Z.pct,en=+Z.entry,st=+Z.stop,pv=+Z.pv||1;if(!(cap&&pct&&en&&st&&en!==st)){e.innerHTML='<span class="mut">Informe capital, % de risco, entrada e stop.</span>';return}const R=cap*pct/100,ru=Math.abs(en-st)*pv,q=Math.floor(R/ru);e.innerHTML=`Risco por trade (1R): <b>${money(R)}</b><br>Risco por unidade: ${money(ru)}<br>Tamanho sugerido: <b>${q}</b> ${q<1?'<span class="r">(stop largo demais para esse risco)</span>':`<br>Risco real: ${money(q*ru)} (${f2(q*ru/cap*100)}% do capital)`}`}
+function zzOut(){const e=$('#zz');if(!e)return;const P=S.prop||{},cap=+(Z.cap||P.cap),pct=+Z.pct,en=+Z.entry,st=+Z.stop,pv=+Z.pv||1;if(!(cap&&pct&&en&&st&&en!==st)){e.innerHTML='<span class="mut">Informe capital, % de risco, entrada e stop.</span>';return}const R=cap*pct/100,ru=Math.abs(en-st)*pv,q=Math.floor(R/ru);e.innerHTML=`Risco por trade: <b>${money(R)}</b><br>Risco por unidade: ${money(ru)}<br>Tamanho sugerido: <b>${q}</b> ${q<1?'<span class="r">(stop largo demais para esse risco)</span>':`<br>Risco real: ${money(q*ru)} (${f2(q*ru/cap*100)}% do capital)`}`}
 /* ---------- Revisão ---------- */
 const MES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function cal(){const[y,m]=CM.split('-').map(Number),dim=new Date(y,m,0).getDate(),off=new Date(y,m-1,1).getDay(),dm={};S.trades.forEach(t=>{const c=calc(t);if(c.pl!=null&&(t.dtx||t.dt).slice(0,7)===CM){const d=(t.dtx||t.dt).slice(0,10);dm[d]=(dm[d]||0)+c.pl}});
 let h=`<div class="top"><button class="btn s" data-a="cprev">‹</button><b>${MES[m-1]} ${y}</b><button class="btn s" data-a="cnext">›</button></div><div class="cal">${['D','S','T','Q','Q','S','S'].map(x=>`<i class="mut sm">${x}</i>`).join('')}`+'<i></i>'.repeat(off);for(let i=1;i<=dim;i++){const d=`${CM}-${String(i).padStart(2,'0')}`,v=dm[d];h+=`<button data-a="cday" data-id="${d}" class="${v>0?'cg':v<0?'cr':''}">${i}<span>${v==null?'':Math.round(v)}</span></button>`}return h+'</div><div class="mut sm">Verde: dia positivo · Vermelho: dia negativo (R$). Toque no dia para abrir o registro.</div>'}
-function vRev(){const[a,b,key]=rng(RP),ts=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>{const d=t.dt.slice(0,10);return d>=a&&d<=b&&t.c.r!=null}),n=ts.length,rs=ts.map(t=>t.c.r),rv=(S.rev||{})[key]||{},ds=Object.keys(S.days).filter(d=>d>=a&&d<=b),nt=ds.map(d=>S.days[d].nota).filter(x=>x!==''&&x!=null).map(Number),eg={};ts.filter(t=>t.err&&t.err!=='Nenhum').forEach(t=>{eg[t.err]=(eg[t.err]||0)+t.c.r});const top=Object.entries(eg).sort((x,y)=>x[1]-y[1])[0],ta=(k,l)=>`<label>${l}<textarea data-rv="${k}">${esc(rv[k])}</textarea></label>`;
-return `<h1>Revisão</h1>${cal()}<h2>Revisão do período</h2><label>Período<select id="rp">${opt([['w0','Esta semana'],['w1','Semana passada'],['m0','Este mês'],['m1','Mês passado']],RP)}</select></label><div class="mut sm">${a.split('-').reverse().join('/')} a ${b.split('-').reverse().join('/')}</div>`+(n?`<div class="kv" style="margin-top:8px">${KV('Trades',n,'',pc(rs.filter(r=>r>0).length/n)+' de acerto')}${KV('R total',fr(sum(rs)),cls(sum(rs)),'expectância '+fr(avg(rs)))}${KV('Resultado',money(sum(ts.map(t=>t.c.pl))),cls(sum(rs)))}${KV('Regras seguidas',pc(ts.filter(t=>t.rules!=='n').length/n))}${KV('Nota média do dia',nt.length?f2(avg(nt)):'–')}${KV('Dias registrados',ds.length)}</div>${top?`<div class="card">Erro mais caro: <b>${esc(top[0])}</b> <span class="r">${fr(top[1])}</span></div>`:'<div class="card g">Nenhum erro registrado no período 👏</div>'}`:'<p class="mut">Sem trades fechados neste período.</p>')+ta('repetir','O que vou repetir (o que funcionou)?')+ta('parar','O que vou parar de fazer?')+ta('plano','Foco para o próximo período')}
+function vRev(){const[a,b,key]=rng(RP),ts=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>{const d=t.dt.slice(0,10);return d>=a&&d<=b&&t.c.pl!=null}),n=ts.length,rs=ts.map(t=>t.c.pl),rv=(S.rev||{})[key]||{},ds=Object.keys(S.days).filter(d=>d>=a&&d<=b),nt=ds.map(d=>S.days[d].nota).filter(x=>x!==''&&x!=null).map(Number),eg={};ts.filter(t=>t.err&&t.err!=='Nenhum').forEach(t=>{eg[t.err]=(eg[t.err]||0)+emBRL(t.c.pl,moedaT(t))});const top=Object.entries(eg).sort((x,y)=>x[1]-y[1])[0],ta=(k,l)=>`<label>${l}<textarea data-rv="${k}">${esc(rv[k])}</textarea></label>`;
+return `<h1>Revisão</h1>${cal()}<h2>Revisão do período</h2><label>Período<select id="rp">${opt([['w0','Esta semana'],['w1','Semana passada'],['m0','Este mês'],['m1','Mês passado']],RP)}</select></label><div class="mut sm">${a.split('-').reverse().join('/')} a ${b.split('-').reverse().join('/')}</div>`+(n?`<div class="kv" style="margin-top:8px">${KV('Trades',n,'',pc(rs.filter(r=>r>0).length/n)+' de acerto')}${KV('Resultado',mnyMix(somaMoedas(ts)),cls(sum(rs)),pctConta(totBRL(somaMoedas(ts))))}${KV('Média por trade',mnyMix(mediaMoedas(ts)),cls(avg(rs)))}${KV('Regras seguidas',pc(ts.filter(t=>t.rules!=='n').length/n))}${KV('Nota média do dia',nt.length?f2(avg(nt)):'–')}${KV('Dias registrados',ds.length)}</div>${top?`<div class="card">Erro mais caro: <b>${esc(top[0])}</b> <span class="r">${money(top[1])}</span></div>`:'<div class="card g">Nenhum erro registrado no período 👏</div>'}`:'<p class="mut">Sem trades fechados neste período.</p>')+ta('repetir','O que vou repetir (o que funcionou)?')+ta('parar','O que vou parar de fazer?')+ta('plano','Foco para o próximo período')}
 function vTrades(tp='D'){if(tp==='D')return vList(tp);if(XV[tp]==='an')return xtHead(tp)+xtSw(tp)+analise(tp);const vw=VW[tp]||'ab',ts=S.trades.filter(t=>t.tipo===tp&&inPer(t.dt)),ab=ts.filter(isOpen).sort((a,b)=>b.dt.localeCompare(a.dt));
 return `<div class="top"><h1>${tp==='O'?'Opções':'Swing trade'}</h1><button class="btn" data-a="new" data-tp="${tp}">+ Novo trade</button></div>${xtSw(tp)}${capCard(tp)}${extrato(tp)}<div class="${tp==='S'?'g3':'g2'}" style="margin:8px 0"><button class="btn ${vw==='ab'?'':'s'}" data-a="vw" data-tp="${tp}" data-id="ab">Abertas (${ab.length})</button><button class="btn ${vw==='pf'?'':'s'}" data-a="vw" data-tp="${tp}" data-id="pf">Performance</button>${tp==='S'?`<button class="btn ${vw==='sc'?'':'s'}" data-a="vw" data-tp="S" data-id="sc">Scanner</button>`:''}</div>${vw==='sc'?'':perSel()}${vw==='pf'?filtBar():''}`+(vw==='sc'&&tp==='S'?vScan():vw==='ab'?(ab.length?ab.map(card).join(''):`<p class="mut">Nenhuma posição aberta. ${tp==='O'?'Registre a montagem com strike, vencimento e prêmio de entrada.':'Registre a entrada com o planejamento (entrada, stop e alvos).'} Depois use o botão Encerrar quando sair.</p>`):perfView(ts))}
-function perfView(ts){const cl=fl(ts).map(t=>({...t,c:calc(t)})).filter(t=>t.c.r!=null).sort((a,b)=>(b.dtx||b.dt).localeCompare(a.dtx||a.dt));if(!cl.length)return '<p class="mut">Nenhuma operação encerrada no período.</p>';const rs=cl.map(t=>t.c.r),P=sum(cl.map(t=>t.c.pl));
-return `<div class="kv" style="margin-top:8px">${KV('Resultado',money(P),cls(P),cl.length+' operação(ões)')}${KV('R total',fr(sum(rs)),cls(sum(rs)),'expectância '+fr(avg(rs)))}${KV('Acerto',pc(rs.filter(r=>r>0).length/rs.length))}${KV('Maior ganho / perda',fr(Math.max(...rs))+' / '+fr(Math.min(...rs)))}</div><div class="card" style="margin-top:8px"><table><tr><th>Ativo</th><th>Entrada</th><th>Saída</th><th>Resultado</th></tr>${cl.map(t=>`<tr data-a="edit" data-id="${t.id}" style="cursor:pointer"><td>${esc(t.ativo)||'—'}<div class="mut sm">${fdt(t.dtx||t.dt).slice(0,5)}${t.tipo==='O'&&t.strike?' · '+(t.ot==='P'?'Put':'Call')+' '+esc(t.strike):''}</div></td><td>${esc(t.entry)}</td><td>${esc(t.exit)}</td><td class="${cls(t.c.pl)}">${money(t.c.pl)}<div class="sm">${fr(t.c.r)}</div></td></tr>`).join('')}</table></div>`}
+function perfView(ts){const cl=fl(ts).map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null).sort((a,b)=>(b.dtx||b.dt).localeCompare(a.dtx||a.dt));if(!cl.length)return '<p class="mut">Nenhuma operação encerrada no período.</p>';const rs=cl.map(t=>t.c.pl),P=sum(rs),mo=moedaT(cl[0]),tp0=cl[0].tipo||'D';
+return `<div class="kv" style="margin-top:8px">${KV('Resultado',mnyMix(somaMoedas(cl)),cls(P),cl.length+' operação(ões)'+(pctConta(P,mo,tp0)?' · '+pctConta(P,mo,tp0):''))}${KV('Média por trade',mnyMix(mediaMoedas(cl)),cls(avg(rs)))}${KV('Acerto',pc(rs.filter(r=>r>0).length/rs.length))}${KV('Maior ganho / perda',mnyC(Math.max(...rs),mo)+' / '+mnyC(Math.min(...rs),mo))}</div><div class="card" style="margin-top:8px"><table><tr><th>Ativo</th><th>Entrada</th><th>Saída</th><th>Resultado</th></tr>${cl.map(t=>`<tr data-a="edit" data-id="${t.id}" style="cursor:pointer"><td>${esc(t.ativo)||'—'}<div class="mut sm">${fdt(t.dtx||t.dt).slice(0,5)}${t.tipo==='O'&&t.strike?' · '+(t.ot==='P'?'Put':'Call')+' '+esc(t.strike):''}</div></td><td>${esc(t.entry)}</td><td>${esc(t.exit)}</td><td class="${cls(t.c.pl)}">${mT(t,t.c.pl)}<div class="sm">${pctConta(t.c.pl,moedaT(t),t.tipo||'D')}</div></td></tr>`).join('')}</table></div>`}
 function qsheet(){const t=T,nn=(k,l)=>`<label>${l}<input name="${k}" type="number" step="any" inputmode="decimal" value="${esc(t[k])}"></label>`;return `<div class="ov"><div class="sh"><div class="top"><h2 style="margin:0">Encerrar posição</h2><button class="x" data-a="close">✕</button></div>${String(t.ativo||'').trim()?`<div class="card"><b>${esc(t.ativo)}</b></div>`:`<label>Ativo (obrigatório)<input name="ativo" value="" placeholder="WINZ26" autocapitalize="characters"></label>`}<label>Lado</label>${segs('side',t.side,t.tipo==='O'?[['C','Comprado','g'],['V','Lançado','r']]:[['C','Compra','g'],['V','Venda','r']])}<div class="g3">${nn('entry',t.tipo==='O'?'Prêmio de entrada':'Entrada')}${nn('stop',t.tipo==='O'?'Prêmio do stop':'Stop inicial')}${nn('qty','Qtd.')}</div>${t.tipo==='O'?'':nn('pv','R$/ponto')}
 <div class="g2">${nn('mep','Melhor preço (MEP)')}${nn('men','Pior preço (MEN)')}</div><label>${t.tipo==='O'?'Prêmio de saída':'Preço de saída'}<input name="exit" type="number" step="any" inputmode="decimal" value="${esc(t.exit)}"></label>
 <div class="g2"><label>Custos totais (R$)<input name="cost" type="number" step="any" inputmode="decimal" value="${esc(t.cost)}"></label><label>Data e hora da saída<input type="datetime-local" name="dtx" value="${esc(t.dtx)}"></label></div><div class="prev" id="prev"></div>
@@ -291,7 +291,7 @@ function qsheet(){const t=T,nn=(k,l)=>`<label>${l}<input name="${k}" type="numbe
 function zoom(src){const l=$('#lb');l.innerHTML=`<button class="x" data-a="lbx" style="position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:12px;color:#fff;font-size:30px;z-index:2">✕</button><img src="${src}" style="width:100%;display:block;margin:auto">`;l.style.display='block'}
 function bkBanner(){if(tab==='painel'||!S.trades.length)return;if(SESS&&S.lastSyncAt&&Date.now()-S.lastSyncAt<3*864e5)return;const d=S.lastBackup?Math.floor((Date.now()-new Date(S.lastBackup+'T12:00'))/864e5):null;if(d!=null&&d<=7)return;$('#app').insertAdjacentHTML('afterbegin',`<div class="warn" style="margin-bottom:8px">💾 ${d==null?'Você ainda não fez backup.':'Último backup há '+d+' dias.'} Fotos e trades ficam só neste aparelho. <button class="btn s" data-a="gopainel" style="margin-left:6px">Fazer backup</button></div>`)}
 function vHome(){const td=loc().slice(0,10),hj=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&(t.dtx||t.dt).slice(0,10)===td),P=sum(hj.map(t=>t.c.pl)),R=sum(hj.map(t=>t.c.r)),ab=S.trades.filter(isOpen).sort((a,b)=>b.dt.localeCompare(a.dt)),nck=Object.values((S.days[td]||{}).chk||{}).filter(Boolean).length,ven=ab.filter(t=>t.tipo==='O'&&t.venc).map(t=>({t,d:Math.round((new Date(t.venc+'T12:00')-new Date(td+'T12:00'))/864e5)})).filter(x=>x.d<=7).sort((a,b)=>a.d-b.d);
-return `${hero(P,R,hj.length,ab.length,nck)}${capTotal()}${posso(hj,P,nck)}${turnoCard()}${ven.length?'<h2>⏳ Vencimentos próximos</h2>'+ven.map(x=>`<div class="warn" style="margin:6px 0">${esc(x.t.ativo)} · ${x.d<0?'venceu há '+(-x.d)+' dia(s)':x.d===0?'vence hoje':'vence em '+x.d+' dia(s)'}</div>`).join(''):''}<h2>Posições abertas (${ab.length})</h2>${ab.length?ab.map(card).join(''):'<p class="mut">Nenhuma posição aberta.</p>'}<h2>Limites da mesa</h2><div id="pp"></div><h2>Metas de processo</h2><div id="gg"></div>${calMes()}<div class="g2" style="margin-top:12px"><button class="btn" data-a="new" data-tp="D">+ Day trade</button><button class="btn s" data-a="gotab" data-id="dia">Abrir o dia</button></div>`}
+return `<section data-hb="hero">${hero(P,R,hj.length,ab.length,nck)}</section><section data-hb="cap">${capTotal()}</section><section data-hb="posso">${posso(hj,P,nck)}</section><section data-hb="turno">${turnoCard()}</section><section data-hb="venc">${ven.length?'<h2>⏳ Vencimentos próximos</h2>'+ven.map(x=>`<div class="warn" style="margin:6px 0">${esc(x.t.ativo)} · ${x.d<0?'venceu há '+(-x.d)+' dia(s)':x.d===0?'vence hoje':'vence em '+x.d+' dia(s)'}</div>`).join(''):''}</section><section data-hb="pos"><h2>Posições abertas (${ab.length})</h2>${ab.length?ab.map(card).join(''):'<p class="mut">Nenhuma posição aberta.</p>'}</section><section data-hb="lim"><h2>Limites da mesa</h2><div id="pp"></div></section><section data-hb="metas"><h2>Metas de processo</h2><div id="gg"></div></section><section data-hb="cal">${calMes()}</section><section data-hb="acoes"><div class="g2" style="margin-top:12px"><button class="btn" data-a="new" data-tp="D">+ Day trade</button><button class="btn s" data-a="gotab" data-id="dia">Abrir o dia</button></div></section>`}
 /* ---------- Nuvem (Supabase) ---------- */
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const cfg=()=>window.SUPA_URL&&window.SUPA_KEY?{url:String(window.SUPA_URL).replace(/\/$/,''),key:window.SUPA_KEY}:ls.get('diario-cfg');
@@ -320,7 +320,7 @@ return `<h1>Conta</h1><div class="card"><b>${esc(SESS.email)}</b><div class="mut
 /* ---------- Visual e interação ---------- */
 const EMO=['😫','😕','😐','🙂','😄'];
 const segs=(name,cur,items)=>`<div class="chips2">${items.map(([v,l,c])=>`<button class="${cur==v?'on '+(c||''):''}" data-seg="${name}" data-v="${v}">${l}</button>`).join('')}</div>`;
-const segT=cur=>`<div class="seg">${[['trades','📸 Day trade'],['swing','🌊 Swing'],['opc','🎯 Opções']].map(([k,l])=>`<button class="${k===cur?'on':''}" data-a="gotab" data-id="${k}">${l}</button>`).join('')}</div>`;
+const segT=cur=>`<div class="seg hub" style="margin:2px 0 12px">${[['trades','Day trade'],['swing','Swing'],['opc','Opções'],['stats','Estatísticas'],['rev','Revisão']].map(([k,l])=>`<button class="${k===cur?'on':''}" data-a="gotab" data-id="${k}">${l}</button>`).join('')}</div>`;
 const fl=ts=>ts.filter(t=>{const c=calc(t);return LF.f==='all'||(LF.f==='ab'&&c.r==null)||(LF.f==='g'&&c.pl>0)||(LF.f==='p'&&c.pl<0)});
 const filtBar=()=>`<div class="chips2" style="margin-top:8px">${[['all','Todos'],['ab','Abertas'],['g','Ganhos'],['p','Perdas']].map(([k,l])=>`<button class="${LF.f===k?'on':''}" data-a="flt" data-id="${k}">${l}</button>`).join('')}</div><input id="lq" placeholder="🔍 Buscar ativo ou setup" value="${esc(LF.q)}" style="margin-top:8px">`;
 function applyQ(){if(!LF.q)return;document.querySelectorAll('.card[data-s]').forEach(c=>c.style.display=c.dataset.s.includes(LF.q)?'':'none')}
@@ -328,7 +328,7 @@ function applyTheme(){const t=ls.get('diario-theme'),e=document.documentElement;
 function animCount(){document.querySelectorAll('[data-count]').forEach(e=>{const v=+e.dataset.count,t0=performance.now(),f=t=>{const k=Math.min(1,(t-t0)/700);e.textContent=money(v*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(f)};requestAnimationFrame(f)})}
 function streak(){const ds=[...new Set([...S.trades.map(t=>t.dt.slice(0,10)),...Object.keys(S.days).filter(d=>S.days[d].resumo||S.days[d].erros)])].sort(),clean=d=>!S.trades.some(t=>t.dt.slice(0,10)===d&&(t.rules==='n'||(t.err&&t.err!=='Nenhum')))&&(S.days[d]||{}).erros!=='s';let run=0;ds.forEach(d=>{run=clean(d)?run+1:0});return run}
 function spark(){const cl=S.trades.map(t=>({t,c:calc(t)})).filter(x=>x.c.pl!=null).sort((a,b)=>(a.t.dtx||a.t.dt).localeCompare(b.t.dtx||b.t.dt)).slice(-30);if(cl.length<2)return '';let c=0;const v=cl.map(x=>c+=x.c.pl),lo=Math.min(0,...v),hi=Math.max(0,...v),sc=y=>46-(y-lo)/((hi-lo)||1)*40,pts=v.map((y,i)=>(i/(v.length-1)*300)+','+sc(y)).join(' ');return `<svg viewBox="0 0 300 50" style="width:100%;margin-top:8px"><polygon points="0,50 ${pts} 300,50" fill="var(--ac)" opacity=".15"/><polyline fill="none" stroke="var(--ac)" stroke-width="2" points="${pts}"/></svg><div class="sm mut">evolução dos últimos 30 trades</div>`}
-function hero(P,R,n,nab,nck){const d=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'}),st=streak();return `<div class="hero"><div class="mut sm" style="text-transform:capitalize">${d}</div><div class="sm" style="margin-top:6px">Resultado de hoje</div><div class="big ${cls(P)}" data-count="${P}">${money(P)}</div><div class="sm mut">${fr(R)} · ${n} encerrado(s)</div>${spark()}<div>${st?`<span class="chip">🔥 ${st} dia(s) sem erro</span>`:''}<span class="chip">📂 ${nab} aberta(s)</span><span class="chip">✅ ${nck}/${S.rules.length} regras hoje</span></div></div>`}
+function hero(P,R,n,nab,nck){const d=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'}),st=streak();return `<div class="hero"><div class="mut sm cap1">${d}</div><div class="sm" style="margin-top:6px">Resultado de hoje</div><div class="big ${cls(P)}" data-count="${P}">${money(P)}</div><div class="sm mut">${pctConta(P)?pctConta(P)+' · ':''}${n} encerrado(s)</div>${spark()}<div>${st?`<span class="chip">🔥 ${st} dia(s) sem erro</span>`:''}<span class="chip">📂 ${nab} aberta(s)</span><span class="chip">✅ ${nck}/${S.rules.length} regras hoje</span></div></div>`}
 function vMais(){const T2=[['regras','📏','Regras','Seu plano escrito'],['graf','📺','Gráficos','TradingView e níveis'],['painel','🛡️','Painel','Mesa, metas e backup'],['rev','📅','Revisão','Calendário do mês'],['estudos','📚','Estudos','Livros e padrões de candles'],['live','⚡','Cotações ao vivo','Ponte do Profit'],['ativos','💹','Ativos','Margem, risco e lote'],['contratos','🧮','Contratos','Lotes pelo capital e volatilidade'],['carteiras','🥧','Carteiras','Brasil e EUA, evolução'],['analise','✨','Análise IA','Gemini: relatório da carteira ou de um ativo'],['imposto','🧾','Imposto de renda','Notas, custos e DARF'],['import','📥','Importar','Relatório do Profit (CSV)'],['conta','👤','Conta','Sincronização']],th=ls.get('diario-theme')||'auto';return `<h1>Mais</h1><div class="tiles">${T2.map(([k,i,t,d])=>`<button class="tile" data-a="gotab" data-id="${k}"><span>${IC(ICS[k])}</span><b>${t}</b><small>${d}</small></button>`).join('')}</div><h2>Aparência</h2><div class="seg">${[['auto','Automático'],['light','Claro'],['dark','Escuro']].map(([k,l])=>`<button class="${th===k?'on':''}" data-a="theme" data-id="${k}">${l}</button>`).join('')}</div>`}
 const ring=(p,l,c='var(--ac)')=>{const r=26,C=2*Math.PI*r,d=C*Math.min(100,Math.max(0,p))/100;return `<div class="ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--bd)" stroke-width="7"/><circle cx="32" cy="32" r="${r}" fill="none" stroke="${c}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${d} ${C}" transform="rotate(-90 32 32)"/><text x="32" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor">${Math.round(p)}%</text></svg><span class="mut sm">${l}</span></div>`};
 function lineChart(id,vals,labels,unit){CH[id]={vals,labels,unit};const n=vals.length,lo=Math.min(0,...vals),hi=Math.max(0,...vals),sc=v=>90-(v-lo)/((hi-lo)||1)*80,X=i=>n>1?i/(n-1)*300:150,pt=vals.map((v,i)=>X(i)+','+sc(v)).join(' ');return `<div class="card"><div class="mut sm" id="chr-${id}">Toque ou arraste no gráfico</div><svg viewBox="0 0 300 100" data-ch="${id}" style="width:100%;touch-action:pan-y"><line x1="0" x2="300" y1="${sc(0)}" y2="${sc(0)}" stroke="var(--bd)"/><polyline fill="none" stroke="var(--ac)" stroke-width="2" points="${pt}"/><line id="chl-${id}" y1="0" y2="100" stroke="var(--mut)" stroke-dasharray="3" style="display:none"/><circle id="chc-${id}" r="4" fill="var(--ac)" style="display:none"/></svg></div>`}
@@ -470,8 +470,8 @@ function svUi(){const e=$('#svs');if(!e)return;e.textContent=SV?('✓ Salvo às 
 const DF=[['plano','☀️ Plano do dia'],['pre','Ensaio mental'],['resumo','🌙 Como foi o dia'],['cond','Condições dos erros'],['prevn','Para não repetir'],['bem','O que fiz bem'],['aprend','Aprendizado']];
 const dHas=d=>!!d&&(DF.some(([k])=>d[k])||d.nota||d.energia||d.erros||d.mkt||Object.values(d.chk||{}).some(Boolean));
 const diaSeg=()=>`<div class="seg"><button class="${DV==='ed'?'on':''}" data-a="dv" data-id="ed">✍️ Escrever</button><button class="${DV==='hist'?'on':''}" data-a="dv" data-id="hist">📜 Histórico</button></div>`;
-function vDiaHist(){const ks=Object.keys(S.days).filter(k=>dHas(S.days[k])).sort().reverse();return `<h1>Meu dia</h1>${diaSeg()}<input id="lq" placeholder="🔍 Buscar nos meus relatórios" value="${esc(LF.q)}" style="margin-bottom:8px">`+(ks.length?ks.map(k=>{const d=S.days[k],ts=S.trades.filter(t=>(t.dtx||t.dt).slice(0,10)===k).map(t=>calc(t)).filter(c=>c.r!=null),R=sum(ts.map(c=>c.r)),txt=DF.map(([f])=>d[f]||'').join(' ').trim(),nck=Object.values(d.chk||{}).filter(Boolean).length,open=DX===k,ds=new Date(k+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit'});
-return `<div class="card" data-s="${esc((k+' '+ds+' '+txt).toLowerCase())}"><div class="top" data-a="dhx" data-id="${k}" style="cursor:pointer"><div style="min-width:0"><b>${esc(ds)}</b> ${d.energia?EMO[d.energia-1]:''}<div class="mut sm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62vw">${esc(d.resumo||d.plano||d.aprend||'(sem texto)')}</div></div><div class="sm mut" style="text-align:right;white-space:nowrap">${d.nota!==undefined&&d.nota!==''?'nota '+esc(d.nota)+' · ':''}${ts.length?`<span class="${cls(R)}">${fr(R)}</span> ·`:''} ${open?'▴':'▾'}</div></div>${open?`<div style="margin-top:10px">${DF.filter(([f])=>d[f]).map(([f,l])=>`<div class="sm mut" style="margin-top:8px">${l}</div><div style="white-space:pre-wrap">${esc(d[f])}</div>`).join('')}${d.erros?`<div class="sm mut" style="margin-top:8px">Cometi erro?</div><div>${d.erros==='s'?'Sim':'Não'}</div>`:''}${nck?`<div class="sm mut" style="margin-top:8px">Checklist</div><div>${nck}/${S.rules.length} regras marcadas</div>`:''}<button class="btn s" style="margin-top:12px" data-a="dedit" data-id="${k}">✏️ Editar este dia</button></div>`:''}</div>`}).join(''):'<p class="mut">Nenhum dia registrado ainda. Escreva o primeiro na aba Escrever.</p>')}
+function vDiaHist(){const ks=Object.keys(S.days).filter(k=>dHas(S.days[k])).sort().reverse();return `<h1>Meu dia</h1>${diaSeg()}<input id="lq" placeholder="🔍 Buscar nos meus relatórios" value="${esc(LF.q)}" style="margin-bottom:8px">`+(ks.length?ks.map(k=>{const d=S.days[k],ts=S.trades.filter(t=>(t.dtx||t.dt).slice(0,10)===k).map(t=>calc(t)).filter(c=>c.pl!=null),R=sum(ts.map(c=>c.pl)),txt=DF.map(([f])=>d[f]||'').join(' ').trim(),nck=Object.values(d.chk||{}).filter(Boolean).length,open=DX===k,ds=new Date(k+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit'});
+return `<div class="card" data-s="${esc((k+' '+ds+' '+txt).toLowerCase())}"><div class="top" data-a="dhx" data-id="${k}" style="cursor:pointer"><div style="min-width:0"><b>${esc(ds)}</b> ${d.energia?EMO[d.energia-1]:''}<div class="mut sm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62vw">${esc(d.resumo||d.plano||d.aprend||'(sem texto)')}</div></div><div class="sm mut" style="text-align:right;white-space:nowrap">${d.nota!==undefined&&d.nota!==''?'nota '+esc(d.nota)+' · ':''}${ts.length?`<span class="${cls(R)}">${money(R)}</span> ·`:''} ${open?'▴':'▾'}</div></div>${open?`<div style="margin-top:10px">${DF.filter(([f])=>d[f]).map(([f,l])=>`<div class="sm mut" style="margin-top:8px">${l}</div><div style="white-space:pre-wrap">${esc(d[f])}</div>`).join('')}${d.erros?`<div class="sm mut" style="margin-top:8px">Cometi erro?</div><div>${d.erros==='s'?'Sim':'Não'}</div>`:''}${nck?`<div class="sm mut" style="margin-top:8px">Checklist</div><div>${nck}/${S.rules.length} regras marcadas</div>`:''}<button class="btn s" style="margin-top:12px" data-a="dedit" data-id="${k}">✏️ Editar este dia</button></div>`:''}</div>`}).join(''):'<p class="mut">Nenhum dia registrado ainda. Escreva o primeiro na aba Escrever.</p>')}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;
 if(a==='dv'){DV=id;render();scrollTo(0,0)}
 else if(a==='dhx'){DX=DX===id?null:id;render()}
@@ -487,14 +487,14 @@ const apIn=d=>noPeriodo(d,APF,loc().slice(0,10));
 function barChartU(id,vals,labels){if(!vals.length)return '';const m=Math.max(...vals.map(Math.abs),1);return `<div class="card"><div class="mut sm" id="chr-${id}">Toque numa barra</div><div class="bars">${vals.map((v,i)=>`<button class="bar" data-a="bar" data-id="${id}" data-t="${esc(labels[i])} · ${usd(v)}" style="height:${Math.max(4,Math.abs(v)/m*100)}%;background:var(${v>=0?'--g':'--r'})"></button>`).join('')}</div></div>`}
 function opCalc(o){const a=asOf(o.s);if(!a)return null;const c=ac(a),e=+o.entry,st=+o.stop,tg=+o.target,dir=o.side==='C'?1:-1;if(!(e&&st))return{a,c,need:1};const sp=Math.abs(e-st)/a[7],risk1=sp*c.pv,lots=+o.lots>0?+o.lots:(risk1>0?Math.floor(axg('risco',100)/risk1*100+1e-9)/100:0),tp=tg?Math.abs(tg-e)/a[7]:null;return{a,c,sp,risk1,lots,risk:lots*risk1,gain:tp!=null?lots*tp*c.pv:null,rr:tp!=null&&sp>0?tp/sp:null,margin:lots*c.margin,wrong:(e-st)*dir<=0,wrongT:!!tg&&(tg-e)*dir<=0}}
 function opRes(o,x,cost){const a=asOf(o.s),c=ac(a);return ((+x-+o.entry)*(o.side==='C'?1:-1)/a[7])*c.pv*(+o.lots)-(+cost||0)}
-function opPrev(){const e=$('#opv');if(!e)return;const r=opCalc(OD);if(!r||r.need){e.innerHTML='<span class="mut sm">Informe entrada e stop para ver risco, lotes e R:R.</span>';return}const u=r.a[11],cap=axg('cap',0);
-e.innerHTML=`${r.wrong?'<div class="warn" style="margin-bottom:6px">⚠ O stop está do lado errado da entrada.</div>':''}${r.wrongT?'<div class="warn" style="margin-bottom:6px">⚠ O alvo está do lado errado da entrada.</div>':''}<div class="kv">${KV('Stop',f2(r.sp)+' '+u,'',usd(r.risk1)+' por lote')}${KV('Lotes',f2(r.lots),'',+OD.lots>0?'informado':'sugerido p/ risco de '+usd(axg('risco',100)))}${KV('Risco total',usd(r.risk),'r',cap>0?f2(r.risk/cap*100)+'% do capital':'')}${KV('Ganho no alvo',r.gain==null?'–':usd(r.gain),'g',r.rr==null?'informe o alvo':'R:R '+f2(r.rr)+':1')}</div><div class="mut sm" style="margin-top:6px">Margem: ${usd(r.margin)}${cap>0&&r.margin>cap?' <span class="r">⚠ maior que o capital</span>':''}</div>`}
+function opPrev(){const e=$('#opv');if(!e)return;const r=opCalc(OD);if(!r||r.need){e.innerHTML='<span class="mut sm">Informe entrada e stop para ver risco, lotes e ganho/risco.</span>';return}const u=r.a[11],cap=axg('cap',0);
+e.innerHTML=`${r.wrong?'<div class="warn" style="margin-bottom:6px">⚠ O stop está do lado errado da entrada.</div>':''}${r.wrongT?'<div class="warn" style="margin-bottom:6px">⚠ O alvo está do lado errado da entrada.</div>':''}<div class="kv">${KV('Stop',f2(r.sp)+' '+u,'',usd(r.risk1)+' por lote')}${KV('Lotes',f2(r.lots),'',+OD.lots>0?'informado':'sugerido p/ risco de '+usd(axg('risco',100)))}${KV('Risco total',usd(r.risk),'r',cap>0?f2(r.risk/cap*100)+'% do capital':'')}${KV('Ganho no alvo',r.gain==null?'–':usd(r.gain),'g',r.rr==null?'informe o alvo':'ganho/risco '+f2(r.rr)+' para 1')}</div><div class="mut sm" style="margin-top:6px">Margem: ${usd(r.margin)}${cap>0&&r.margin>cap?' <span class="r">⚠ maior que o capital</span>':''}</div>`}
 function opPanel(o){const b=(a,l,c='s')=>`<button class="btn ${c}" data-a="${a}" data-id="${o.id}">${l}</button>`,mine=OC.id===o.id,ci=(k,l)=>`<label>${l}<input type="number" step="any" inputmode="decimal" data-oc="${k}" value="${esc(mine?OC[k]:'')}"></label>`;let h='<div style="margin-top:10px">'+(o.nota?`<div class="sm mut" style="white-space:pre-wrap">${esc(o.nota)}</div>`:'');
 if(o.st==='open')h+=`<div class="g3" style="margin-top:8px">${ci('exit','Saída (preço)')}${ci('res','Resultado US$ (opc.)')}${ci('cost','Custos US$')}</div><div class="mut sm" id="ocv" style="margin-top:6px">Informe o preço de saída (o resultado sai do valor do pip) ou o resultado direto.</div><div class="g2" style="margin-top:8px">${b('opfin','✅ Encerrar','')}${b('opdel','🗑 Excluir')}</div>`;
 else if(o.st==='plan')h+=`<div class="g3" style="margin-top:8px">${b('opgo','▶ Entrei','')}${b('opedit','✏️ Editar')}${b('opdel','🗑 Excluir')}</div>`;
 else h+=`<div class="sm" style="margin-top:6px">${o.x!==''&&o.x!=null?'Saída '+esc(o.x)+' · ':''}custos ${usd(o.cost||0)}</div><div class="g3" style="margin-top:8px">${b('opre','↩ Reabrir')}${b('opedit','✏️ Editar')}${b('opdel','🗑 Excluir')}</div>`;return h+'</div>'}
 function opCard(o){const a=asOf(o.s)||[,,,,,,,1],sp=(numN(o.entry)!=null&&numN(o.stop)!=null)?Math.abs(numN(o.entry)-numN(o.stop))/a[7]:null,tp=(numN(o.target)!=null&&numN(o.entry)!=null)?Math.abs(numN(o.target)-numN(o.entry))/a[7]:null,rr=tp&&sp?tp/sp:null,R=o.st==='closed'&&o.rk>0?o.res/o.rk:null,stt={plan:'📝 Planejada',open:'▶ Em andamento',closed:'✅ Encerrada'}[o.st];
-return `<div class="card"><div class="top" data-a="opx" data-id="${o.id}" style="cursor:pointer"><div><b>${esc(o.s)}</b> · ${o.side==='C'?'Compra':'Venda'} ${f2(o.lots)} lote(s)<div class="mut sm">${stt} · entrada ${esc(o.entry)} · stop ${esc(o.stop)}${o.target?' · alvo '+esc(o.target):''}${rr?' · R:R '+f2(rr):''}</div></div><div class="rt ${o.st==='closed'?cls(o.res):''}">${o.st==='closed'?usd(o.res)+(R!=null?`<div class="sm">${fr(R)}</div>`:''):'<span class="mut sm">'+usd(o.rk||0)+' em risco</span>'}</div></div>${OX===o.id?opPanel(o):''}</div>`}
+return `<div class="card"><div class="top" data-a="opx" data-id="${o.id}" style="cursor:pointer"><div><b>${esc(o.s)}</b> · ${o.side==='C'?'Compra':'Venda'} ${f2(o.lots)} lote(s)<div class="mut sm">${stt} · entrada ${esc(o.entry)} · stop ${esc(o.stop)}${o.target?' · alvo '+esc(o.target):''}${rr?' · ganho/risco '+f2(rr)+' para 1':''}</div></div><div class="rt ${o.st==='closed'?cls(o.res):''}">${o.st==='closed'?usd(o.res):'<span class="mut sm">'+usd(o.rk||0)+' em risco</span>'}</div></div>${OX===o.id?opPanel(o):''}</div>`}
 function vOps(){const O=S.ops||[],ed=!!OD.id,a=asOf(OD.s),px=a?ac(a).px:'',lst=O.filter(o=>AOF==='all'||o.st===AOF).sort((x,y)=>(y.dt||'').localeCompare(x.dt||'')),fi=(k,l,ph)=>`<label>${l}<input type="number" step="any" inputmode="decimal" data-od="${k}" value="${esc(OD[k])}" placeholder="${esc(ph||'')}"></label>`;
 return `<div class="card"><b>${ed?'Editar operação':'Montar operação'}</b><label>Ativo<select data-od="s">${AS.map(x=>`<option value="${x[0]}"${OD.s===x[0]?' selected':''}>${x[0]} · ${esc(x[1])}</option>`).join('')}</select></label><label>Lado</label><div class="chips2"><button class="${OD.side==='C'?'on g':''}" data-a="odside" data-id="C">Compra</button><button class="${OD.side==='V'?'on r':''}" data-a="odside" data-id="V">Venda</button></div><div class="g3">${fi('entry','Entrada',px)}${fi('stop','Stop')}${fi('target','Alvo')}</div><div class="g2">${fi('lots','Lotes (vazio = pelo risco)','auto')}<label>Anotação<input data-od="nota" value="${esc(OD.nota)}"></label></div><div id="opv" style="margin-top:10px"></div><button class="btn" style="width:100%;margin-top:10px" data-a="opadd">${ed?'💾 Salvar alterações':'➕ Adicionar à lista'}</button>${ed?'<button class="btn s" style="width:100%;margin-top:6px" data-a="opcancel">Cancelar edição</button>':''}</div>
 <div class="chips2" style="margin-top:8px">${[['all','Todas'],['plan','Planejadas'],['open','Em andamento'],['closed','Encerradas']].map(([k,l])=>`<button class="${AOF===k?'on':''}" data-a="opf" data-id="${k}">${l}</button>`).join('')}</div>${lst.length?lst.map(opCard).join(''):'<p class="mut">Nenhuma operação nesta lista. Monte a primeira acima.</p>'}`}
@@ -506,7 +506,7 @@ ${dk.length>1?`<h2>Evolução</h2>${lineChart('lcum',cum,dk.map(lb),v=>usd(v))}<
 <h3>Lançamentos</h3>${it.length?[...it].reverse().slice(0,80).map(x=>`<div class="card g2" style="grid-template-columns:1fr auto;align-items:center"><div><b>${x.d.slice(8)}/${x.d.slice(5,7)}/${x.d.slice(2,4)}</b> ${x.s?'· '+esc(x.s):''}<div class="mut sm">${esc(x.n)}${x.op?' · da aba Operações':''}</div></div><div style="text-align:right"><b class="${cls(x.v)}">${usd(x.v)}</b>${x.op?'':`<button class="x" data-a="lcdel" data-id="${x.id}">✕</button>`}</div></div>`).join(''):'<p class="mut">Nenhum lançamento ainda.</p>'}`}
 function pfRows(){const g={};lcItems().filter(x=>apIn(x.d)).forEach(x=>(g[x.s||'(sem ativo)']??=[]).push(x));return Object.entries(g).map(([s,a])=>{const v=a.map(x=>x.v),w=v.filter(z=>z>0),l=v.filter(z=>z<0),rs=a.filter(x=>x.op&&x.rk>0).map(x=>x.v/x.rk);return{s,n:a.length,win:w.length/a.length,tot:sum(v),avg:avg(v),gw:sum(w),gl:sum(l),R:rs.length?avg(rs):null,best:Math.max(...v),worst:Math.min(...v)}}).sort((x,y)=>y.tot-x.tot)}
 function pfAll(rows){const n=sum(rows.map(r=>r.n)),gw=sum(rows.map(r=>r.gw)),gl=sum(rows.map(r=>r.gl)),nw=rows.reduce((a,r)=>a+Math.round(r.win*r.n),0),nl=lcItems().filter(x=>apIn(x.d)&&x.v<0).length;return{n,tot:sum(rows.map(r=>r.tot)),gw,gl,win:n?nw/n:0,pf:gl<0?gw/-gl:null,payoff:nw&&nl&&gl<0?(gw/nw)/(-gl/nl):null,best:rows.length?Math.max(...rows.map(r=>r.best)):0,worst:rows.length?Math.min(...rows.map(r=>r.worst)):0}}
-function vPerf(){const rows=pfRows(),t=pfAll(rows);return `<div class="chips2">${[['all','Tudo'],['hoje','Hoje'],['7','7 dias'],['30','30 dias'],['mes','Este mês']].map(([k,l])=>`<button class="${APF===k?'on':''}" data-a="apf" data-id="${k}">${l}</button>`).join('')}</div>`+(rows.length?`<div class="kv" style="margin-top:8px">${KV('Resultado',usd(t.tot),cls(t.tot),t.n+' lançamento(s)/operação(ões)')}${KV('Acerto',pc(t.win))}${KV('Fator de lucro',t.pf==null?'–':f2(t.pf),'','ganhos ÷ perdas')}${KV('Payoff',t.payoff==null?'–':f2(t.payoff),'','ganho médio ÷ perda média')}${KV('Melhor',usd(t.best),'g')}${KV('Pior',usd(t.worst),'r')}</div><h2>Resultado por ativo</h2>${barChartU('pfa',rows.map(r=>r.tot),rows.map(r=>r.s))}<div class="card"><table><tr><th>Ativo</th><th>Nº</th><th>Acerto</th><th>Resultado</th><th>Média</th><th>R méd.</th></tr>${rows.map(r=>`<tr><td>${esc(r.s)}</td><td>${r.n}</td><td>${pc(r.win)}</td><td class="${cls(r.tot)}">${usd(r.tot)}</td><td class="${cls(r.avg)}">${usd(r.avg)}</td><td>${r.R==null?'–':fr(r.R)}</td></tr>`).join('')}</table></div>`:'<p class="mut" style="margin-top:10px">Sem resultados neste período. Encerre operações ou registre lucros para ver a performance.</p>')+`<h3>Exportar</h3><div class="g2"><button class="btn" data-a="pfexp">⬇️ Performance por ativo</button><button class="btn s" data-a="opexp">⬇️ Todas as operações</button></div><div class="mut sm" style="margin-top:6px">Arquivos CSV (separador ponto e vírgula, vírgula decimal) que abrem direto no Excel em português. Respeitam o período escolhido acima.</div>`}
+function vPerf(){const rows=pfRows(),t=pfAll(rows);return `<div class="chips2">${[['all','Tudo'],['hoje','Hoje'],['7','7 dias'],['30','30 dias'],['mes','Este mês']].map(([k,l])=>`<button class="${APF===k?'on':''}" data-a="apf" data-id="${k}">${l}</button>`).join('')}</div>`+(rows.length?`<div class="kv" style="margin-top:8px">${KV('Resultado',usd(t.tot),cls(t.tot),t.n+' lançamento(s)/operação(ões)')}${KV('Acerto',pc(t.win))}${KV('Fator de lucro',t.pf==null?'–':f2(t.pf),'','ganhos ÷ perdas')}${KV('Payoff',t.payoff==null?'–':f2(t.payoff),'','ganho médio ÷ perda média')}${KV('Melhor',usd(t.best),'g')}${KV('Pior',usd(t.worst),'r')}</div><h2>Resultado por ativo</h2>${barChartU('pfa',rows.map(r=>r.tot),rows.map(r=>r.s))}<div class="card"><table><tr><th>Ativo</th><th>Nº</th><th>Acerto</th><th>Resultado</th><th>Média</th></tr>${rows.map(r=>`<tr><td>${esc(r.s)}</td><td>${r.n}</td><td>${pc(r.win)}</td><td class="${cls(r.tot)}">${usd(r.tot)}</td><td class="${cls(r.avg)}">${usd(r.avg)}</td></tr>`).join('')}</table></div>`:'<p class="mut" style="margin-top:10px">Sem resultados neste período. Encerre operações ou registre lucros para ver a performance.</p>')+`<h3>Exportar</h3><div class="g2"><button class="btn" data-a="pfexp">⬇️ Performance por ativo</button><button class="btn s" data-a="opexp">⬇️ Todas as operações</button></div><div class="mut sm" style="margin-top:6px">Arquivos CSV (separador ponto e vírgula, vírgula decimal) que abrem direto no Excel em português. Respeitam o período escolhido acima.</div>`}
 async function pfExport(kind){const D0=new Date(),nm=isoD(D0);if(kind==='pf'){const rows=pfRows(),t=pfAll(rows),h=['ativo','operacoes','acerto_pct','resultado_usd','media_usd','ganhos_usd','perdas_usd','R_medio','melhor_usd','pior_usd'];const L=rows.map(r=>[r.s,r.n,cN(r.win*100),cN(r.tot),cN(r.avg),cN(r.gw),cN(r.gl),cN(r.R),cN(r.best),cN(r.worst)].map(csvQ).join(';'));L.push(['TOTAL',t.n,cN(t.win*100),cN(t.tot),'',cN(t.gw),cN(t.gl),'',cN(t.best),cN(t.worst)].map(csvQ).join(';'));await saveFile('performance-ativos-'+nm+'.csv','\ufeff'+h.join(';')+'\n'+L.join('\n'))}
 else{const h=['tipo','data','ativo','lado','entrada','stop','alvo','lotes','saida','resultado_usd','risco_usd','R','status','anotacao'],L=[];(S.ops||[]).filter(o=>apIn((o.dtx||o.dt||'').slice(0,10))).forEach(o=>L.push(['Operação',(o.dtx||o.dt||'').slice(0,10),o.s,o.side==='C'?'Compra':'Venda',o.entry,o.stop,o.target,o.lots,o.x,o.st==='closed'?cN(o.res):'',cN(o.rk),o.st==='closed'&&o.rk>0?cN(o.res/o.rk):'',{plan:'Planejada',open:'Em andamento',closed:'Encerrada'}[o.st],o.nota].map(csvQ).join(';')));(S.lanc||[]).filter(l=>apIn(l.d)).forEach(l=>L.push(['Lançamento',l.d,l.s,'','','','','','',cN(l.v),'','','',l.n].map(csvQ).join(';')));await saveFile('operacoes-ativos-'+nm+'.csv','\ufeff'+h.join(';')+'\n'+L.join('\n'))}}
 function vAtivos(){const sg=[['at','Ativos'],['op','Operações'],['lu','Lucros'],['pf','Performance']];return `<h1>Ativos</h1><div class="seg">${sg.map(([k,l])=>`<button class="${AV===k?'on':''}" data-a="avv" data-id="${k}">${l}</button>`).join('')}</div>`+(AV==='op'?vOps():AV==='lu'?vLucros():AV==='pf'?vPerf():vAtivos0())}
@@ -785,7 +785,7 @@ S.trades=(Array.isArray(S.trades)?S.trades:[]).filter(t=>t&&typeof t==='object')
 S.days=o(S.days);for(const k of Object.keys(S.days)){const v=S.days[k]=o(S.days[k]);if(!(v.chk&&typeof v.chk==='object'&&!Array.isArray(v.chk)))v.chk={}}
 S.rules=(Array.isArray(S.rules)?S.rules:[]).filter(r=>r&&typeof r==='object');
 ['ax','rev','pn','del'].forEach(k=>{if(S[k]!=null&&(typeof S[k]!=='object'||Array.isArray(S[k])))S[k]={}});}
-function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:vMercado,juros:vJuros,mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:vDia,regras:vRegras,stats:vStats,graf:vGraf,painel:vPainel,rev:vRev,conta:vConta,live:vLive,estudos:vEstudos,livro:vLivro,ativos:vAtivos,contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis();lvPaint();lvcPaint();if(tab==='live')lvPoll()}
+function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:()=>segM('mercado:'+MKT.tab)+vMercado(),juros:()=>segM('juros')+vJuros(),mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:()=>segD('dia')+vDia(),regras:()=>segD('regras')+vRegras(),stats:()=>segT('stats')+vStats(),graf:()=>segM('graf')+vGraf(),painel:vPainel,rev:()=>segT('rev')+vRev(),conta:vConta,live:()=>segM('live')+vLive(),estudos:vEstudos,livro:vLivro,ativos:vAtivos,contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis();lvPaint();lvcPaint();if(tab==='live')lvPoll()}
 function render(){try{render0()}catch(e){console.error(e);const ap=$('#app');if(ap)ap.innerHTML='<div class="warn" style="margin:12px 0"><b>Não consegui abrir esta tela ('+esc(tab)+').</b><div class="sm" style="margin-top:6px">'+esc(String(e&&e.message||e))+'</div><div class="sm mut" style="margin-top:6px">'+esc(String((e&&e.stack||'').split('\n')[1]||'').trim().slice(0,160))+'</div></div><div class="mut sm">Abra o menu (☰) e tente outra tela. Se o erro continuar, me mande esta mensagem.</div>'}}
 document.addEventListener('click',async e=>{if(!e.target.closest('#fab,#fabm'))$('#fabm').style.display='none';const sg=e.target.closest('[data-seg]');if(sg&&T){T[sg.dataset.seg]=sg.dataset.v;if(sg.dataset.seg==='tipo')tipoMud();showSheet();return}const ds=e.target.closest('[data-dseg]');if(ds){const dd=(S.days[D]??={chk:{}});dd[ds.dataset.dseg]=ds.dataset.v;dd.u=Date.now();save();render();return}const im=e.target.closest('.pv img');if(im){zoom(im.src);return}const li=e.target.closest('#lb img');if(li){li.style.width=li.style.width==='260%'?'100%':'260%';return}const b=e.target.closest('[data-a],[data-tab]');if(!b)return;if(b.dataset.tab){tab=b.dataset.tab==='trades'?LT:b.dataset.tab;if(['trades','swing','opc'].includes(tab))LT=tab;render();scrollTo(0,0);return}const a=b.dataset.a,id=b.dataset.id;
 if(a==='am'){AM=b.dataset.id;SY.msg='';render()}
@@ -1024,12 +1024,12 @@ function anxItem(j,key,tk){const R=j.relatorio||{},A=anxArr(R.ativos),m=key==='i
  it.txt=anxTx(a?a.resumo:(R.sumario_executivo||R.resumo)).slice(0,900);
  it.rec=String(c.recomendacao||'').toUpperCase();it.vies=String((a&&(a.vies||a.valuation))||R.vies||'').toUpperCase();
  if(c.preco_alvo!=null&&c.preco_alvo!=='')it.alvo=c.preco_alvo;
- if(a&&a.plano_de_trade&&typeof a.plano_de_trade==='object'){const p=a.plano_de_trade;it.plano='Entrada '+anxTx(p.entrada||'–')+' · Stop '+anxTx(p.stop||'–')+' · Alvo 1 '+anxTx(p.alvo_1||'–')+' · Alvo 2 '+anxTx(p.alvo_2||'–')+' · R:R '+anxTx(p.risco_retorno||'–')}
+ if(a&&a.plano_de_trade&&typeof a.plano_de_trade==='object'){const p=a.plano_de_trade;it.plano='Entrada '+anxTx(p.entrada||'–')+' · Stop '+anxTx(p.stop||'–')+' · Alvo 1 '+anxTx(p.alvo_1||'–')+' · Alvo 2 '+anxTx(p.alvo_2||'–')+' · ganho/risco '+anxTx(p.risco_retorno||'–')}
  return it}
 function anxSaveBox(j,key,m){
  if(m==='pos')return `<div class="card" style="margin-top:12px"><b>💾 Guardar no diário</b><div class="sm mut">Anexa a análise de cada posição ao respectivo trade, para comparar com o resultado depois.</div><button class="btn" style="width:100%;margin-top:8px" data-an="savepos">Guardar em cada trade</button></div>`;
  const td=loc().slice(0,10),R=j.relatorio||{},tks=new Set([...anxArr(j.ativos).map(a=>String(a.tk||'').toUpperCase()),String(R.ativo_lido||'').toUpperCase(),String(ANX.tk||'').toUpperCase()].filter(Boolean)),mt=t=>[t.ativo,t.sub].some(x=>x&&tks.has(String(x).trim().toUpperCase())),L=S.trades.slice().sort((a,b)=>(mt(b)-mt(a))||b.dt.localeCompare(a.dt)).slice(0,30);
- const o=[['d:'+td,'📅 Meu dia de hoje'],...L.map(t=>[t.id,(mt(t)?'★ ':'')+(t.ativo||'sem ativo')+' · '+fdt(t.dt)+' · '+(isOpen(t)?'aberto':calc(t).r==null?'fechado':fr(calc(t).r))])];
+ const o=[['d:'+td,'📅 Meu dia de hoje'],...L.map(t=>[t.id,(mt(t)?'★ ':'')+(t.ativo||'sem ativo')+' · '+fdt(t.dt)+' · '+(isOpen(t)?'aberto':calc(t).pl==null?'fechado':mT(t,calc(t).pl))])];
  return `<div class="card" style="margin-top:12px"><b>💾 Guardar no diário</b><div class="sm mut">Anexa um resumo deste relatório a um trade ou ao dia, para comparar depois com o resultado.</div><label>Anexar a<select id="anx_dest">${opt(o,o[0][0])}</select></label><button class="btn" style="width:100%;margin-top:8px" data-an="save" data-v="${esc(key)}">Anexar</button></div>`}
 function anxSave(key){const j=ANX.res[key],sel=$('#anx_dest');if(!j||!sel)return;const dest=sel.value;let tg,tk,nm;
  if(dest.slice(0,2)==='d:'){const k=dest.slice(2);tg=(S.days[k]??={chk:{}});tk=(ANX.tkA||'').trim().toUpperCase();nm='ao dia '+k.slice(8,10)+'/'+k.slice(5,7)}
@@ -1042,7 +1042,7 @@ function anxSavePos(){const j=ANX.res.pos;if(!j)return;const P=anxArr((j.relator
   t.ia=[...(t.ia||[]),{id:uid(),m:'pos',tk:String(p.ativo||t.ativo||'').toUpperCase(),g,mod:j.modelo||'',dia:j.dia||loc().slice(0,10),rec:String(p.acao_sugerida||'').toUpperCase(),vies:String(p.situacao||'').toUpperCase(),txt:[p.stop&&'Stop: '+anxTx(p.stop),p.alvos&&'Alvos: '+anxTx(p.alvos),p.vencimento&&'Vencimento: '+anxTx(p.vencimento),p.justificativa&&anxTx(p.justificativa)].filter(Boolean).join(' · ').slice(0,900),plano:ns&&!/sem dado/i.test(ns)?'Novo stop sugerido: '+ns:''}];t.u=Date.now();n++});
  if(n)save();ANX.ok=n?'✓ Análise guardada em '+n+' trade(s).':'Nada novo para guardar (já guardado ou posição não encontrada).';render()}
 function iaBlock(L,c,w){if(!Array.isArray(L)||!L.length)return '';const MN={tec:'Técnica',fun:'Fundamentalista',img:'Foto do gráfico',pos:'Revisão de posição'};
- const res=c&&c.r!=null?`<div class="sm mut">${w==='d'?'Resultado do dia':'Resultado do trade'}: <b class="${cls(c.r)}">${fr(c.r)}</b>${c.pl!=null?' · '+money(c.pl):''}</div>`:`<div class="sm mut">${w==='d'?'Sem trades encerrados neste dia ainda.':'Trade ainda aberto: compare com o relatório quando encerrar.'}</div>`;
+ const res=c&&c.pl!=null?`<div class="sm mut">${w==='d'?'Resultado do dia':'Resultado do trade'}: <b class="${cls(c.pl)}">${money(c.pl)}</b>${pctConta(c.pl)?' · '+pctConta(c.pl):''}</div>`:`<div class="sm mut">${w==='d'?'Sem trades encerrados neste dia ainda.':'Trade ainda aberto: compare com o relatório quando encerrar.'}</div>`;
  return `<h3>🤖 Relatórios de IA guardados</h3>${res}`+L.map((x,i)=>`<details class="card"><summary class="sm"><b>${esc(MN[x.m]||'IA')}</b> · ${esc(x.tk||'')} · ${esc(new Date(x.g).toLocaleDateString('pt-BR'))} ${x.rec?anxVb(x.rec,iaCol(x.rec)):x.vies?anxVb(x.vies,iaCol(x.vies)):''}</summary>${x.txt?`<div class="sm" style="margin-top:6px">${esc(x.txt)}</div>`:''}${x.plano?`<div class="sm mut" style="margin-top:4px">${esc(x.plano)}</div>`:''}${x.alvo!=null?`<div class="sm mut">Preço-alvo da IA: ${esc(x.alvo)}</div>`:''}<button class="btn s" style="margin-top:8px" data-a="iadel" data-id="${i}" data-w="${w}">Remover</button></details>`).join('')}
 function anxDel(id,w){const i=+id;
  if(w==='t'){if(!T)return;const arr=(T.ia||[]).filter((_,k)=>k!==i);T.ia=arr;const s=S.trades.find(x=>x.id===T.id);if(s){s.ia=arr.slice();s.u=Date.now();save()}showSheet()}
@@ -1188,7 +1188,7 @@ const mkDia=iso=>new Date(iso).toLocaleDateString('en-CA',{timeZone:'America/Sao
 
 function vMercado(){
   const t=MKT.tab;
-  const tabs=mkRow(mkBtn('tab','ag','📅 Agenda',t==='ag')+mkBtn('tab','nt','📰 Notícias',t==='nt')+mkBtn('tab','cot','📊 Cotações',t==='cot')+mkBtn('tab','al','🔔 Alertas',t==='al'));
+  const tabs='<div class="seg mk-seg" style="margin:10px 0">'+mkBtn('tab','ag','Agenda',t==='ag')+mkBtn('tab','nt','Notícias',t==='nt')+mkBtn('tab','cot','Cotações',t==='cot')+mkBtn('tab','al','Alertas',t==='al')+'</div>';
   if(t==='cot')return vCot(tabs);
   if(t==='al')return vAlertas(tabs);
   if(t==='ag')return `<div class="card"><div class="top"><b>Agenda econômica</b></div>${tabs}<div class="sm mut">País</div>${mkRow(MK_CT.map(([v,l])=>mkBtn('ct',v,l,MKT.ct===v)).join(''))}<div class="sm mut">Importância</div>${mkRow(MK_IM.map(([v,l])=>mkBtn('im',v,l,MKT.im===v)).join(''))}<div id="mkcal" style="min-height:560px"></div><div class="sm mut" style="margin-top:6px">Horários no fuso do seu aparelho. Dados do TradingView.</div></div>`;
@@ -1283,8 +1283,8 @@ function dscore(k){
   if(mL)P.push([rotDone(d,'m')/mL,30]);
   if(S.rules.length)P.push([Object.values(d.chk||{}).filter(Boolean).length/S.rules.length,20]);
   if(ts.length)P.push([ts.filter(t=>!(t.err&&t.err!=='Nenhum')&&t.rules!=='n').length/ts.length,35]);
-  const mR=+d.maxR,mT=+d.maxT;
-  if(mR>0||mT>0)P.push([(mT>0&&ts.length>mT)||(mR>0&&dayR(ts)<=-mR)?0:1,15]);
+  const mR=limPerda(d),mT=+d.maxT;
+  if(mR>0||mT>0)P.push([(mT>0&&ts.length>mT)||(mR>0&&dayPL(ts)<=-mR)?0:1,15]);
   const w=sum(P.map(x=>x[1]));
   return w?Math.round(sum(P.map(x=>x[0]*x[1]))/w*100):null;
 }
@@ -1308,10 +1308,10 @@ function disHtml(){
 <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:3px">${cells.join('')}</div><div class="sm mut" style="margin-top:4px">Últimos 14 dias. Toque para abrir o dia.</div>`;
 }
 function limHtml(){
-  const d=S.days[D]||{},ts=dayTr(D),R=dayR(ts),mR=+d.maxR,mT=+d.maxT,out=[];
+  const d=S.days[D]||{},ts=dayTr(D),R=dayPL(ts),mR=limPerda(d),mT=+d.maxT,out=[];
   const bar=(p,l,v)=>{const c=p>1?'var(--r)':p>.6?'#d9a400':'var(--g)';return `<div style="margin:8px 0"><div class="sm" style="display:flex;justify-content:space-between"><span>${l}</span><b style="color:${c}">${v}</b></div><div style="height:6px;border-radius:3px;background:var(--bd);overflow:hidden;margin-top:3px"><div style="height:100%;width:${Math.min(100,p*100)}%;background:${c};transition:width .3s"></div></div></div>`};
   if(mT>0)out.push(bar(ts.length/mT,'Trades do dia',ts.length+' de '+mT));
-  if(mR>0)out.push(bar(Math.max(0,-R)/mR,'Perda do dia',fr(Math.min(0,R))+' de -'+f2(mR)+'R'));
+  if(mR>0)out.push(bar(Math.max(0,-R)/mR,'Perda do dia',money(Math.min(0,R))+' de -'+money(mR)));
   const hit=(mT>0&&ts.length>=mT)||(mR>0&&R<=-mR);
   if(!out.length)return '<div class="sm mut" style="margin-top:6px">Defina seus limites para acompanhar em tempo real e receber o alerta de parar.</div>';
   return out.join('')+(hit?'<div class="warn" style="margin-top:8px">🛑 Limite do dia atingido. Pelo seu plano, é hora de parar de operar.</div>':'');
@@ -1319,7 +1319,7 @@ function limHtml(){
 function tlHtml(){
   const ts=dayTr(D).sort((a,b)=>a.dt.localeCompare(b.dt));
   if(!ts.length)return '';
-  return `<details class="card" style="margin-top:8px"><summary class="sm"><b>Trades do dia (${ts.length})</b></summary>${ts.map(t=>`<div class="sm" style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--bd)"><span>${esc(t.dt.slice(11,16))} · ${esc(t.ativo||'')} ${t.side==='C'?'C':'V'}${t.err&&t.err!=='Nenhum'?' ⚠️':''}</span><b class="${cls(t.c.r)}">${t.c.r==null?'aberto':fr(t.c.r)}</b></div>`).join('')}</details>`;
+  return `<details class="card" style="margin-top:8px"><summary class="sm"><b>Trades do dia (${ts.length})</b></summary>${ts.map(t=>`<div class="sm" style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--bd)"><span>${esc(t.dt.slice(11,16))} · ${esc(t.ativo||'')} ${t.side==='C'?'C':'V'}${t.err&&t.err!=='Nenhum'?' ⚠️':''}</span><b class="${cls(t.c.pl)}">${t.c.pl==null?'aberto':mT(t,t.c.pl)}</b></div>`).join('')}</details>`;
 }
 function ntHtml(){
   const L=((S.days[D]||{}).nt||[]).map((n,i)=>({...n,i})).reverse();
@@ -1347,7 +1347,7 @@ vDia=function(){
   const today=D===loc().slice(0,10),d=S.days[D]||{};
   const pend=today&&new Date().getHours()>=8&&rotS().m.length&&rotDone(d,'m')<rotS().m.length?'<div class="warn" style="margin-bottom:8px">☀️ A rotina da manhã ainda está pendente.</div>':'';
   const top=`${pend}<div class="card" id="dis">${disHtml()}</div>
-<div class="card" style="margin-top:8px"><b>🛑 Limites do dia</b><div class="g2" style="margin-top:6px"><label>Perda máxima (R)<input type="number" inputmode="decimal" step="0.5" min="0" data-d="maxR" value="${esc(d.maxR||'')}" placeholder="ex.: 3"></label><label>Máx. de trades<input type="number" inputmode="numeric" step="1" min="0" data-d="maxT" value="${esc(d.maxT||'')}" placeholder="ex.: 5"></label></div><div id="limr">${limHtml()}</div></div>${tlHtml()}${lastLesson()}
+<div class="card" style="margin-top:8px"><b>🛑 Limites do dia</b><div class="g2" style="margin-top:6px"><label>Perda máxima (R$)<input type="number" inputmode="decimal" step="10" min="0" data-d="maxP" value="${esc(d.maxP||(limPerda(d)?Math.round(limPerda(d)):''))}" placeholder="ex.: 300"></label><label>Máx. de trades<input type="number" inputmode="numeric" step="1" min="0" data-d="maxT" value="${esc(d.maxT||'')}" placeholder="ex.: 5"></label></div><div id="limr">${limHtml()}</div></div>${tlHtml()}${lastLesson()}
 <div class="card" style="margin-top:8px"><b>📝 Notas rápidas do pregão</b><div id="ntx" style="margin-top:6px">${ntHtml()}</div></div>`;
   const noite=rotCard('n','🌐 Abertura americana','Faça antes da sessão noturna.')+rotEdit();
   const e2=`<label>Como estou ao fim do dia?</label><div class="chips2">${EMO.map((e,i)=>`<button class="${d.energia2==i+1?'on':''}" data-dseg="energia2" data-v="${i+1}">${e}</button>`).join('')}</div>`;
@@ -1375,7 +1375,7 @@ vDia=function(){
   document.addEventListener('input',e=>{
     const t=e.target;if(!t.dataset)return;
     if(t.dataset.rot){const[k,id]=t.dataset.rot.split(':'),it=rotS()[k].find(x=>x.id===id);if(it){it.t=t.value;S.mt=Date.now();save()}return}
-    if(t.dataset.d==='maxR'||t.dataset.d==='maxT'){const l=document.getElementById('limr');if(l)l.innerHTML=limHtml();const x=document.getElementById('dis');if(x)x.innerHTML=disHtml()}
+    if(t.dataset.d==='maxR'||t.dataset.d==='maxP'||t.dataset.d==='maxT'){const l=document.getElementById('limr');if(l)l.innerHTML=limHtml();const x=document.getElementById('dis');if(x)x.innerHTML=disHtml()}
   });
   document.addEventListener('toggle',e=>{if(e.target&&e.target.id==='rtd')ROTO=e.target.open},true);
   document.addEventListener('click',e=>{
@@ -1434,7 +1434,7 @@ async function alEnable(){
     let sub=await reg.pushManager.getSubscription();
     if(sub){try{await alFn('cancelar',{endpoint:sub.endpoint})}catch(e){}await sub.unsubscribe()}
     sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(k)});
-    await alFn('inscrever',{sub:sub.toJSON(),prefs:NP});
+    await alFn('inscrever',{sub:sub.toJSON(),prefs:npComTurno()});
     AL.sub=sub;AL.ok='on';AL.msg='Notificações ativadas neste aparelho.';
   }catch(e){AL.msg=e.message||String(e)}
   AL.busy=0;await alState();alPaint();
@@ -1454,7 +1454,7 @@ async function alTest(){
 function alPush(){
   alSave();clearTimeout(AL.sy);
   if(AL.ok!=='on'||!AL.sub)return;
-  AL.sy=setTimeout(()=>{alFn('inscrever',{sub:AL.sub.toJSON(),prefs:NP}).then(()=>{AL.msg='Preferências salvas.';alPaint()}).catch(e=>{AL.msg=e.message;alPaint()})},700);
+  AL.sy=setTimeout(()=>{alFn('inscrever',{sub:AL.sub.toJSON(),prefs:npComTurno()}).then(()=>{AL.msg='Preferências salvas.';alPaint()}).catch(e=>{AL.msg=e.message;alPaint()})},700);
 }
 async function alLoadEv(force){
   if(!force&&AL.ev&&Date.now()-AL.evTs<18e5)return;
@@ -1579,11 +1579,11 @@ function adrHtml(){
   if(AD.sort==='alta')L=L.slice().sort((a,b)=>b.chp-a.chp);
   else if(AD.sort==='queda')L=L.slice().sort((a,b)=>a.chp-b.chp);
   else L=L.slice().sort((a,b)=>AD.list.indexOf(a.s)-AD.list.indexOf(b.s));
-  const ob=(k,l)=>`<button class="btn${AD.sort===k?'':' s'}" data-adr="o:${k}">${l}</button>`;
+  const ob=(k,l)=>`<button class="${AD.sort===k?'on':''}" data-adr="o:${k}">${l}</button>`;
   const ed=AD.edit?`<div class="card" style="margin:8px 0"><div style="display:flex;flex-wrap:wrap;gap:6px">${AD.list.map(s=>`<button class="btn s" data-adr="x:${esc(s)}" aria-label="Remover ${esc(s)}">${esc(s)} ✕</button>`).join('')}</div><div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:8px"><input id="adn" placeholder="Novo ticker (ex.: ERJ)" autocapitalize="characters" style="margin:0"><button class="btn" data-adr="add">Adicionar</button><button class="btn s" data-adr="reset">Padrão</button></div></div>`:'';
   return `<div class="top"><b>🇧🇷 ADRs brasileiras</b><span class="sm">${adSt[st]}</span></div>
 <div class="sm mut" style="margin:4px 0 8px">Média ${avg==null?'–':`<b class="${cls(avg)}">${adP(avg)}</b>`}${AD.data?' · atualizado às '+hm(AD.data.ts):''}${AD.busy?' · buscando…':''}</div>
-<div style="display:flex;flex-wrap:wrap;gap:6px">${ob('lista','Lista')}${ob('alta','Maiores altas')}${ob('queda','Maiores quedas')}<button class="btn s" data-adr="rf" aria-label="Atualizar" ${AD.busy?'disabled':''}>↻</button><button class="btn${AD.edit?'':' s'}" data-adr="ed" aria-label="Editar lista">✏️</button></div>${ed}
+<div style="display:flex;gap:6px;align-items:center"><div class="seg" style="flex:1">${ob('lista','Lista')}${ob('alta','Altas')}${ob('queda','Quedas')}</div><button class="btn s ib" data-adr="rf" aria-label="Atualizar" ${AD.busy?'disabled':''}>↻</button><button class="btn ib${AD.edit?'':' s'}" data-adr="ed" aria-label="Editar lista">✏️</button></div>${ed}
 ${AD.err?`<div class="warn" style="margin-top:8px">${esc(AD.err)}</div>`:''}
 ${ewz?`<div class="card" style="margin:8px 0 0;padding:8px 10px;border-left:3px solid ${ewz.chp>=0?'var(--g)':'var(--r)'}"><div style="display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center"><div><b>EWZ</b> <span class="sm mut">ETF do Brasil em NY</span><div class="sm mut">termômetro do Ibovespa em dólar</div></div><div style="text-align:right"><b style="font-size:18px">${adN(ewz.px)}</b> <span class="${cls(ewz.chp)}">${adP(ewz.chp)}</span><div class="sm mut">${ewz.state==='pre'?'Pré · fech. '+adN(ewz.base):ewz.state==='reg'?(ewz.pre?'Pré '+adN(ewz.pre.px)+' '+adP(ewz.pre.chp):'&nbsp;'):ewz.pos?'Pós '+adN(ewz.pos.px)+' '+adP(ewz.pos.chp):'&nbsp;'}</div></div></div></div>`:''}
 <div style="margin-top:6px">${L.length?L.map(adRow).join(''):`<div class="mut sm" style="padding:12px 0">${AD.busy?'Buscando cotações…':'Sem cotações ainda.'}</div>`}</div>
@@ -2602,6 +2602,30 @@ cotAfter=function(){jrPaint();jrLoad(false)};
   });
 })();
 
+
+/* ==== MOEDA:INICIO ==== resultados em R$ / US$ (moeda do ativo) e % da conta, no lugar de R */
+function moedaAtv(a){const s=String(a||'').toUpperCase().replace(/\s/g,'');if(!s)return 'BRL';
+  if(/^(WIN|WDO|IND|DOL|BGI|CCM|ICF|SFI|DI1|BIT|ETR)[FGHJKMNQUVXZ]?\d{0,2}$/.test(s))return 'BRL';
+  if(/^(M?ES|M?NQ|M?YM|M2K|RTY|M?CL|M?GC|SI|SIL|NG|HG|ZB|ZN|ZF|6[EJBACS]|M6[EAB]|MBT|MET|VX)([FGHJKMNQUVXZ]\d{1,2})?!?$/.test(s))return 'USD';
+  if(/^[A-Z]{4}\d{1,2}F?$/.test(s)||/^[A-Z]{4}[A-X]\d{2,3}[A-Z]?$/.test(s))return 'BRL';
+  if(/^(EUR|GBP|AUD|NZD|USD|CAD|CHF|JPY|XAU|XAG)(USD|JPY|CHF|CAD|EUR|GBP|AUD|NZD)$/.test(s)||/USDT?$/.test(s)||/^(BTC|ETH|SOL|XRP)/.test(s)||/^(US30|US100|NAS100|SPX500|US500|GER40|DJI|NDX|SPX)/.test(s))return 'USD';
+  if(/^[A-Z]{1,5}(\.[A-Z])?$/.test(s))return 'USD';
+  return 'BRL'}
+function moedaT(t){return (t&&t.moeda)||moedaAtv(t&&t.ativo)}
+function mnyC(v,c){if(v==null||!isFinite(v))return '–';return c==='USD'?(v<0?'-':'')+'US$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):money(v)}
+function mT(t,v){return mnyC(v,moedaT(t))}
+function emBRL(v,c){return c==='USD'?v*(+axg('brl',5.4)||5.4):v}
+/* capital de referência: o PL inicial da aba (Day trade, Swing ou Opções) se configurado; senão o capital da conta */
+function capRef(tp){const g=k=>+gv('cap',k+'_ini','')||0;if(tp){const v=g(tp);if(v>0)return v}const c=+gv('ct','cap',0)||0;if(c>0)return c;return g('D')+g('S')+g('O')}
+function pctConta(v,c,tp){const cap=capRef(tp);if(v==null||!isFinite(v)||!cap)return '';const p=emBRL(v,c||'BRL')/cap*100;return (p>0?'+':'')+p.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% da conta'}
+function riscoTrade(){return (+gv('ct','cap',0)||0)*(+gv('ct','pct',0)||0)/100}
+function somaMoedas(ts){const o={};ts.forEach(t=>{const c=t.c||calc(t);if(c.pl!=null){const m=moedaT(t);o[m]=(o[m]||0)+c.pl}});return o}
+function mediaMoedas(ts){const o={},n={};ts.forEach(t=>{const c=t.c||calc(t);if(c.pl!=null){const m=moedaT(t);o[m]=(o[m]||0)+c.pl;n[m]=(n[m]||0)+1}});Object.keys(o).forEach(k=>o[k]/=n[k]);return o}
+function mnyMix(o){const k=Object.keys(o);if(!k.length)return money(0);return k.sort().map(c=>mnyC(o[c],c)).join(' · ')}
+function totBRL(o){return Object.entries(o).reduce((s,[c,v])=>s+emBRL(v,c),0)}
+const dayPL=ts=>sum(ts.filter(t=>t.c.pl!=null).map(t=>emBRL(t.c.pl,moedaT(t))));
+function limPerda(d){return +d.maxP>0?+d.maxP:(+d.maxR>0&&riscoTrade()>0?+d.maxR*riscoTrade():0)}
+/* ==== MOEDA:FIM ==== */
 /* ==== ESTATISTICAS:INICIO (bloco puro e testado em tests/estatisticas.test.mjs: sem DOM e sem variáveis do app) ==== */
 
 /* ---- números: campo vazio NUNCA vira zero ---- */
@@ -2658,7 +2682,7 @@ const _soma=a=>a.reduce((s,x)=>s+x,0);
 const _media=a=>a.length?_soma(a)/a.length:null;
 function _grupo(k,v){
   const rs=v.filter(x=>x.c.r!=null).map(x=>x.c.r),pls=v.map(x=>x.c.pl);
-  return {k,n:v.length,nR:rs.length,acerto:v.length?pls.filter(p=>p>0).length/v.length:null,mediaR:_media(rs),somaR:_soma(rs),somaPL:_soma(pls)};
+  return {k,n:v.length,nR:rs.length,acerto:v.length?pls.filter(p=>p>0).length/v.length:null,mediaR:_media(rs),somaR:_soma(rs),somaPL:_soma(pls),mediaPL:_media(pls)};
 }
 function agrupa(rows,fn,ordem){
   const g=new Map();
@@ -2678,10 +2702,10 @@ const qualSQN=x=>x==null?'sem dado':SQN_ESCALA.find(([l])=>x<l)[1];
 function revancheDe(rr,janelaMin=15){
   const T=x=>Date.parse(String(x).slice(0,16)+':00Z');
   const fins=rr.filter(t=>t.c.r<0&&t.dtx&&t.dtx.length>=16).map(t=>({t,f:T(t.dtx)})).filter(x=>isFinite(x.f));
-  const rev=[],resto=[];
-  rr.forEach(t=>{const a=t.dt&&t.dt.length>=16?T(t.dt):NaN;(isFinite(a)&&fins.some(p=>p.t!==t&&a>=p.f&&a-p.f<=janelaMin*6e4)?rev:resto).push(t.c.r)});
+  const rev=[],resto=[],revP=[],restoP=[];
+  rr.forEach(t=>{const a=t.dt&&t.dt.length>=16?T(t.dt):NaN,ehRev=isFinite(a)&&fins.some(p=>p.t!==t&&a>=p.f&&a-p.f<=janelaMin*6e4);(ehRev?rev:resto).push(t.c.r);(ehRev?revP:restoP).push(t.c.pl)});
   if(rev.length<5||resto.length<5)return null;
-  return {janelaMin,rev:{n:rev.length,exp:_media(rev)},resto:{n:resto.length,exp:_media(resto)}};
+  return {janelaMin,rev:{n:rev.length,exp:_media(rev),expPL:_media(revP)},resto:{n:resto.length,exp:_media(resto),expPL:_media(restoP)}};
 }
 
 /* ts: trades já com c=calc(t). Só entram os fechados (com saída). */
@@ -2721,7 +2745,8 @@ function estat(ts){
     dias:dl,diasGanhos:dpl.filter(x=>x>0).length,diasPerdidos:dpl.filter(x=>x<0).length,melhorDia:dpl.length?Math.max(...dpl):null,piorDia:dpl.length?Math.min(...dpl):null,
     durGanhoMin:_media(dg),durPerdaMin:_media(dp),nDurGanho:dg.length,nDurPerda:dp.length,
     captura:_media(cap),nCaptura:cap.length,
-    regras:{ok:ok.length,quebrou:quebrou.length,erros:comErro.length,mediaOk:_media(ok.filter(t=>t.c.r!=null).map(t=>t.c.r)),mediaQuebrou:_media(quebrou.filter(t=>t.c.r!=null).map(t=>t.c.r)),rErros:_soma(comErro.map(t=>t.c.r||0)),rSemErro:_soma(rows.filter(semErro).map(t=>t.c.r||0))},
+    maiorPL:pls.length?Math.max(...pls):null,menorPL:pls.length?Math.min(...pls):null,
+    regras:{plErros:_soma(comErro.map(t=>t.c.pl)),plSemErro:_soma(rows.filter(semErro).map(t=>t.c.pl)),mediaPlOk:_media(ok.map(t=>t.c.pl)),mediaPlQuebrou:_media(quebrou.map(t=>t.c.pl)),ok:ok.length,quebrou:quebrou.length,erros:comErro.length,mediaOk:_media(ok.filter(t=>t.c.r!=null).map(t=>t.c.r)),mediaQuebrou:_media(quebrou.filter(t=>t.c.r!=null).map(t=>t.c.r)),rErros:_soma(comErro.map(t=>t.c.r||0)),rSemErro:_soma(rows.filter(semErro).map(t=>t.c.r||0))},
     porDia:agrupa(rows,t=>semDe(t.dt),['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']),porHora:agrupa(rows,t=>horaDe(t.dt)).sort((a,b)=>a.k<b.k?-1:1),
     porSetup:agrupa(rows,t=>t.setup),porMercado:agrupa(rows,t=>t.mkt),porAtivo:agrupa(rows,t=>(t.ativo||'').toUpperCase()),porErro:agrupa(comErro,t=>t.err),
     heat,revanche:revancheDe(rr),
@@ -2732,38 +2757,40 @@ function estat(ts){
 const _f=(x,d=2)=>x==null?'–':x.toFixed(d).replace('.',',');
 const _R=x=>x==null?'–':(x>0?'+':'')+_f(x)+'R';
 const _pct=x=>x==null?'–':_f(x*100,0)+'%';
-function diagnosticos(e){
+function diagnosticos(e,fm){
   const D=[],add=(nivel,id,titulo,texto)=>D.push({nivel,id,titulo,texto});
+  const M=fm||(x=>x==null?'–':(x<0?'-':'')+'R$ '+Math.abs(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}));
+  const Ms=x=>x==null?'–':(x>0?'+':'')+M(x);
   if(!e.n)return D;
-  if(e.semStop>0)add('alerta','sem-stop',`${e.semStop} trade(s) fechado(s) sem stop`,`Sem stop não existe 1R. Esses trades ficam fora de expectância, SQN e drawdown em R, e só entram no resultado em dinheiro. Preencha o stop inicial para medir tudo.`);
+  if(e.semStop>0)add('alerta','sem-stop',`${e.semStop} trade(s) fechado(s) sem stop`,`Sem o stop inicial o app não consegue medir quanto você arriscou. Esses trades entram no resultado, mas ficam fora das contas de risco (perdas maiores que o planejado, captura do alvo e qualidade do sistema). Preencha o stop inicial.`);
   if(e.n<30)add('info','amostra',`Amostra pequena (${e.n} trades)`,`Com menos de 30 trades os números ainda oscilam muito. Use como pista, não como conclusão.`);
   if(e.nR>=20&&e.mediaR!=null){
-    if(e.mediaR<=0)add('alerta','expectancia',`Expectância negativa: ${_R(e.mediaR)} por trade`,`Em ${e.nR} trades com stop, a média de R é ${_R(e.mediaR)}. Nesse ritmo o sistema perde dinheiro mesmo com disciplina; revise setup, stop e alvo antes de aumentar o risco.`);
-    else add('ok','expectancia',`Expectância positiva: ${_R(e.mediaR)} por trade`,`Em ${e.nR} trades com stop a média de R é ${_R(e.mediaR)} (SQN padronizado ${_f(e.sqn100)}: ${qualSQN(e.sqn100)}).`);
+    if(e.mediaR<=0)add('alerta','expectancia',`Média negativa: ${Ms(e.expectativaPL)} por trade`,`Em ${e.n} trades você perde em média ${M(Math.abs(e.expectativaPL||0))} por operação. Nesse ritmo o sistema perde dinheiro mesmo com disciplina; revise setup, stop e alvo antes de aumentar a mão.`);
+    else add('ok','expectancia',`Média positiva: ${Ms(e.expectativaPL)} por trade`,`Em ${e.n} trades você ganha em média ${M(e.expectativaPL)} por operação. Qualidade do sistema: ${qualSQN(e.sqn100).toLowerCase()} (nota ${_f(e.sqn100)}).`);
   }
-  if(e.nPerdasR>=5&&e.perdasAcima1R/e.nPerdasR>0.3)add('alerta','stop-nao-respeitado',`${e.perdasAcima1R} de ${e.nPerdasR} perdas passaram de 1R`,`Perdas bem acima de 1R sugerem stop movido, não executado ou tamanho fora do plano. A pior foi ${_R(e.menorR)}.`);
-  if(e.nCaptura>=5&&e.captura!=null&&e.captura<0.6)add('alerta','saida-cedo',`Você captura só ${_pct(e.captura)} do alvo planejado`,`Nos ${e.nCaptura} ganhos com alvo definido, o R realizado foi em média ${_pct(e.captura)} do R planejado. Há sinal de saída antecipada; compare com o que o preço fez depois.`);
+  if(e.nPerdasR>=5&&e.perdasAcima1R/e.nPerdasR>0.3)add('alerta','stop-nao-respeitado',`${e.perdasAcima1R} de ${e.nPerdasR} perdas passaram do stop planejado`,`Perder mais do que o risco planejado indica stop movido, não executado ou mão maior que o plano. A pior perda foi ${M(e.menorPL)}.`);
+  if(e.nCaptura>=5&&e.captura!=null&&e.captura<0.6)add('alerta','saida-cedo',`Você realiza só ${_pct(e.captura)} do ganho planejado`,`Nos ${e.nCaptura} ganhos com alvo definido, você saiu em média com ${_pct(e.captura)} do que ganharia no alvo. Há sinal de saída antecipada; compare com o que o preço fez depois.`);
   if(e.nDurGanho>=5&&e.nDurPerda>=5&&e.durGanhoMin<e.durPerdaMin*0.7)add('alerta','ganho-curto-perda-longa',`Ganhos duram menos que perdas`,`Ganhos ficam em média ${_f(e.durGanhoMin,0)} min e perdas ${_f(e.durPerdaMin,0)} min. É o padrão de realizar rápido e segurar o que dá errado.`);
-  if(e.regras.erros>=3&&e.regras.rErros<0)add('alerta','custo-erros',`Trades com erro custaram ${_R(e.regras.rErros)}`,`${e.regras.erros} trades tiveram erro registrado e somam ${_R(e.regras.rErros)}; os demais somam ${_R(e.regras.rSemErro)}.`);
-  if(e.regras.quebrou>=5&&e.regras.mediaOk!=null&&e.regras.mediaQuebrou!=null&&e.regras.mediaQuebrou<e.regras.mediaOk)add('alerta','regras',`Quebrar regras piora o resultado`,`Seguindo as regras a média é ${_R(e.regras.mediaOk)}; quebrando, ${_R(e.regras.mediaQuebrou)} (${e.regras.quebrou} trades).`);
-  const fraco=(g,nome)=>{const c=g.filter(x=>x.n>=8&&x.nR>=8&&x.mediaR<0).sort((a,b)=>a.somaR-b.somaR)[0];if(c)add('info','fraco-'+nome,`Ponto fraco: ${nome} ${c.k}`,`${c.n} trades, média ${_R(c.mediaR)}, soma ${_R(c.somaR)}. Considere evitar ou reduzir o tamanho aqui.`)};
+  if(e.regras.erros>=3&&e.regras.rErros<0)add('alerta','custo-erros',`Trades com erro custaram ${M(e.regras.plErros)}`,`${e.regras.erros} trades tiveram erro registrado e somam ${Ms(e.regras.plErros)}; os demais somam ${Ms(e.regras.plSemErro)}.`);
+  if(e.regras.quebrou>=5&&e.regras.mediaOk!=null&&e.regras.mediaQuebrou!=null&&e.regras.mediaQuebrou<e.regras.mediaOk)add('alerta','regras',`Quebrar regras piora o resultado`,`Seguindo as regras a média é ${Ms(e.regras.mediaPlOk)} por trade; quebrando, ${Ms(e.regras.mediaPlQuebrou)} (${e.regras.quebrou} trades).`);
+  const fraco=(g,nome)=>{const c=g.filter(x=>x.n>=8&&x.nR>=8&&x.mediaR<0).sort((a,b)=>a.somaR-b.somaR)[0];if(c)add('info','fraco-'+nome,`Ponto fraco: ${nome} ${c.k}`,`${c.n} trades, média de ${Ms(c.mediaPL)} por trade, total ${Ms(c.somaPL)}. Considere evitar ou reduzir a mão aqui.`)};
   fraco(e.porDia,'dia da semana');fraco(e.porHora,'horário');fraco(e.porSetup,'setup');
   if(e.dias.length>=10){
     const ns=e.dias.map(d=>d.n).sort((a,b)=>a-b),med=ns[Math.floor(ns.length/2)],muito=e.dias.filter(d=>d.n>med),pouco=e.dias.filter(d=>d.n<=med);
-    if(muito.length>=3&&pouco.length>=3){const a=_media(muito.map(d=>d.r/d.n)),b=_media(pouco.map(d=>d.r/d.n));if(a<b-0.2)add('alerta','overtrading','Dias com mais trades rendem menos',`Em dias acima de ${med} trade(s) a média é ${_R(a)} por trade, contra ${_R(b)} nos demais. Pode ser excesso de operações.`)}
+    if(muito.length>=3&&pouco.length>=3){const a=_media(muito.map(d=>d.r/d.n)),b=_media(pouco.map(d=>d.r/d.n));if(a<b-0.2){const ap=_media(muito.map(d=>d.pl/d.n)),bp=_media(pouco.map(d=>d.pl/d.n));add('alerta','overtrading','Dias com mais trades rendem menos',`Em dias acima de ${med} trade(s) a média é ${Ms(ap)} por trade, contra ${Ms(bp)} nos demais. Pode ser excesso de operações.`)}}
   }
-  if(e.revanche&&e.revanche.rev.exp<e.revanche.resto.exp-0.2)add('alerta','revanche','Trades logo depois de uma perda rendem menos',`Entradas até ${e.revanche.janelaMin} min depois do fim de uma perda: ${_R(e.revanche.rev.exp)} por trade (${e.revanche.rev.n} trades), contra ${_R(e.revanche.resto.exp)} nos demais. Pode ser revanche; espere antes de operar de novo.`);
+  if(e.revanche&&e.revanche.rev.exp<e.revanche.resto.exp-0.2)add('alerta','revanche','Trades logo depois de uma perda rendem menos',`Entradas até ${e.revanche.janelaMin} min depois de uma perda: ${Ms(e.revanche.rev.expPL)} por trade (${e.revanche.rev.n} trades), contra ${Ms(e.revanche.resto.expPL)} nos demais. Pode ser revanche; espere antes de operar de novo.`);
   if(e.seqAtual&&e.seqAtual.tipo==='perda'&&e.seqAtual.n>=3)add('alerta','sequencia',`${e.seqAtual.n} perdas seguidas`,`Sequência de perdas é o momento de maior risco emocional. Considere parar o dia e revisar os últimos trades.`);
-  if(e.ddMaxR>0&&e.ddAtualR>0&&e.ddAtualR>=e.ddMaxR*0.5)add('info','drawdown',`Drawdown atual de ${_f(e.ddAtualR)}R`,`O máximo histórico é ${_f(e.ddMaxR)}R; você está a ${_pct(e.ddAtualR/e.ddMaxR)} dele.`);
-  if(e.profitFactor!=null&&e.n>=20&&e.profitFactor<1)add('alerta','profit-factor',`Profit factor abaixo de 1 (${_f(e.profitFactor)})`,`Os ganhos brutos não cobrem as perdas brutas.`);
-  if(e.ganhoBruto>0&&e.custos/e.ganhoBruto>0.3)add('info','custos',`Custos consomem ${_pct(e.custos/e.ganhoBruto)} dos ganhos brutos`,`Corretagem e taxas somam ${_f(e.custos)} contra ${_f(e.ganhoBruto)} de ganho bruto.`);
+  if(e.ddMaxR>0&&e.ddAtualR>0&&e.ddAtualR>=e.ddMaxR*0.5)add('info','drawdown',`Você está ${M(e.ddAtualPL)} abaixo do seu melhor momento`,`O maior recuo da conta até hoje foi de ${M(e.ddMaxPL)}; o recuo atual já está perto da metade disso.`);
+  if(e.profitFactor!=null&&e.n>=20&&e.profitFactor<1)add('alerta','profit-factor',`Ganhos não cobrem as perdas (fator ${_f(e.profitFactor)})`,`Para cada R$ 1 perdido você ganhou ${M(e.profitFactor)}. Abaixo de 1 o resultado fica negativo.`);
+  if(e.ganhoBruto>0&&e.custos/e.ganhoBruto>0.3)add('info','custos',`Custos consomem ${_pct(e.custos/e.ganhoBruto)} dos ganhos brutos`,`Corretagem e taxas somam ${M(e.custos)} contra ${M(e.ganhoBruto)} de ganho bruto.`);
   return D;
 }
 /* ==== ESTATISTICAS:FIM ==== */
 
 /* ---------- Estatísticas: tela nova (todos os números vêm do bloco testado acima; a IA só interpreta) ---------- */
 const ST={aba:ls.get('diario-st-aba')||'geral',ia:Object.assign({busy:0,err:'',rel:null,chave:'',em:0},ls.get('diario-st-ia')||{},{busy:0,err:''})};
-const ST_ABAS=[['geral','Visão geral'],['risco','Risco e disciplina'],['onde','Quando e onde'],['diag','Diagnóstico']];
+const ST_ABAS=[['geral','Geral'],['risco','Risco'],['onde','Quando e onde'],['diag','Diagnóstico']];
 const frN=x=>x==null?'–':fr(x),f2N=x=>x==null?'–':f2(x),pcN=x=>x==null?'–':pc(x);
 
 function stRows(){
@@ -2771,27 +2798,36 @@ function stRows(){
   return S.trades.filter(t=>TIPO==='all'||(t.tipo||'D')===TIPO).map(t=>({...t,c:calc(t)}))
     .filter(t=>t.c.pl!=null&&noPeriodo((t.dtx||t.dt||'').slice(0,10),PER,hoje));
 }
-const stTbl=(nome,g)=>g.length?tbl([nome,'Nº','Acerto','Média','R total'],g.map(x=>`<tr><td>${esc(x.k)}</td><td>${x.n}</td><td>${pcN(x.acerto)}</td><td class="${cls(x.mediaR)}">${frN(x.mediaR)}</td><td class="${cls(x.somaR)}">${frN(x.nR?x.somaR:null)}</td></tr>`).join('')):'';
-function stHeat(e){
-  const ks=Object.keys(e.heat);if(!ks.length)return '';
+/* moeda da tela: a dos trades; se misturar R$ e US$, converte tudo para R$ (cotação do dólar do app) */
+function stCtx(){
+  const rows=stRows(),ms=[...new Set(rows.map(moedaT))],mix=ms.length>1,mo=mix?'BRL':(ms[0]||'BRL');
+  const rr=mix?rows.map(t=>({...t,c:{...t.c,pl:emBRL(t.c.pl,moedaT(t)),risk:t.c.risk==null?null:emBRL(t.c.risk,moedaT(t))}})):rows;
+  return {rows:rr,mo,mix,fm:v=>mnyC(v,mo),fs:v=>v==null?'–':(v>0?'+':'')+mnyC(v,mo)};
+}
+const stTbl=(nome,g,fs)=>g.length?tbl([nome,'Nº','Acerto','Média','Total'],g.map(x=>`<tr><td>${esc(x.k)}</td><td>${x.n}</td><td>${pcN(x.acerto)}</td><td class="${cls(x.mediaPL)}">${fs(x.mediaPL)}</td><td class="${cls(x.somaPL)}">${fs(x.somaPL)}</td></tr>`).join('')):'';
+function stHeat(e,fs){
+  const H={};e.rows.forEach(t=>{const w=semDe(t.dt),h=horaDe(t.dt);if(!w||!h)return;const k=w+'|'+h;(H[k]??={n:0,pl:0});H[k].n++;H[k].pl+=t.c.pl});
+  const ks=Object.keys(H);if(!ks.length)return '';
   const dias=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].filter(d=>ks.some(k=>k.startsWith(d+'|'))),horas=[...new Set(ks.map(k=>k.split('|')[1]))].sort();
-  const mx=Math.max(...Object.values(e.heat).map(c=>Math.abs(c.somaR)),1);
-  const cel=(d,h)=>{const c=e.heat[d+'|'+h];if(!c)return '<td></td>';const a=Math.min(.85,.18+Math.abs(c.somaR)/mx*.67);return `<td style="background:${c.somaR>=0?`rgba(46,160,67,${a})`:`rgba(229,83,75,${a})`};text-align:center;padding:6px 4px;font-size:12px" title="${c.n} trade(s)">${c.somaR>0?'+':''}${f2(c.somaR)}<div style="opacity:.75;font-size:10px">${c.n}x</div></td>`};
-  return `<div class="card" style="overflow-x:auto"><table style="min-width:${70+horas.length*54}px"><tr><th></th>${horas.map(h=>`<th>${h}</th>`).join('')}</tr>${dias.map(d=>`<tr><th>${d}</th>${horas.map(h=>cel(d,h)).join('')}</tr>`).join('')}</table></div><div class="sm mut">Soma de R por dia da semana e hora de entrada. Verde ganha, vermelho perde; o número pequeno é a quantidade de trades.</div>`;
+  const mx=Math.max(...Object.values(H).map(c=>Math.abs(c.pl)),1),cp=v=>{const a=Math.abs(v);return (v<0?'-':v>0?'+':'')+(a>=1000?(a/1000).toFixed(1).replace('.',',')+'k':Math.round(a))};
+  const cel=(d,h)=>{const c=H[d+'|'+h];if(!c)return '<td></td>';const a=Math.min(.85,.18+Math.abs(c.pl)/mx*.67);return `<td style="background:${c.pl>=0?`rgba(46,160,67,${a})`:`rgba(229,83,75,${a})`};text-align:center;padding:6px 4px;font-size:12px" title="${c.n} trade(s): ${fs(c.pl)}">${cp(c.pl)}<div style="opacity:.75;font-size:10px">${c.n}x</div></td>`};
+  return `<div class="card" style="overflow-x:auto"><table style="min-width:${70+horas.length*54}px"><tr><th></th>${horas.map(h=>`<th>${h}</th>`).join('')}</tr>${dias.map(d=>`<tr><th>${d}</th>${horas.map(h=>cel(d,h)).join('')}</tr>`).join('')}</table></div><div class="sm mut">Resultado somado por dia da semana e hora de entrada. Verde ganha, vermelho perde; o número pequeno é a quantidade de trades.</div>`;
 }
 const ST_NIV={alerta:['⚠️','var(--r)'],info:['ℹ️','#d9a400'],ok:['✅','var(--g)']};
 const stDiagHtml=D=>D.length?D.map(d=>{const [i,c]=ST_NIV[d.nivel]||ST_NIV.info;return `<div class="card" style="border-left:4px solid ${c};margin:8px 0"><b>${i} ${esc(d.titulo)}</b><div class="sm" style="margin-top:4px;line-height:1.5">${esc(d.texto)}</div></div>`}).join(''):'<p class="mut">Nenhum ponto de atenção com os dados atuais.</p>';
 
-/* pacote com os números já calculados que a IA vai interpretar (nunca os trades crus) */
-function stPacote(e,D){
-  const r=x=>x==null?null:+(+x).toFixed(2),g=a=>a.slice(0,8).map(x=>({grupo:x.k,trades:x.n,acerto_pct:x.acerto==null?null:Math.round(x.acerto*100),media_R:r(x.mediaR),soma_R:r(x.somaR)}));
+/* pacote com os números já calculados que a IA vai interpretar (nunca os trades crus), em dinheiro e % */
+function stPacote(e,D,X){
+  X=X||stCtx();
+  const r=x=>x==null?null:+(+x).toFixed(2),g=a=>a.slice(0,8).map(x=>({grupo:x.k,trades:x.n,acerto_pct:x.acerto==null?null:Math.round(x.acerto*100),media_por_trade:r(x.mediaPL),total:r(x.somaPL)}));
   return {
-    resumo:{periodo:(PERIODOS.find(p=>p[0]===PER)||[])[1]||PER,tipo:TIPO,trades_fechados:e.n,trades_com_stop:e.nR,trades_sem_stop:e.semStop,resultado:r(e.resultado),acerto_pct:e.acerto==null?null:Math.round(e.acerto*100),
-      expectancia_R:r(e.mediaR),desvio_R:r(e.desvioR),sqn:r(e.sqn),sqn_padronizado_100:r(e.sqn100),profit_factor:r(e.profitFactor),payoff:r(e.payoff),
-      media_ganho_R:r(e.mediaGanhoR),media_perda_R:r(e.mediaPerdaR),maior_ganho_R:r(e.maiorR),maior_perda_R:r(e.menorR),perdas_acima_1R:e.perdasAcima1R,perdas_em_R:e.nPerdasR,
-      drawdown_max_R:r(e.ddMaxR),drawdown_atual_R:r(e.ddAtualR),max_seq_ganhos:e.maxSeqGanhos,max_seq_perdas:e.maxSeqPerdas,seq_atual:e.seqAtual,
+    resumo:{periodo:(PERIODOS.find(p=>p[0]===PER)||[])[1]||PER,tipo:TIPO,moeda:X.mo==='USD'?'dólar (US$)':'real (R$)',trades_fechados:e.n,trades_sem_stop:e.semStop,resultado:r(e.resultado),
+      media_por_trade:r(e.expectativaPL),acerto_pct:e.acerto==null?null:Math.round(e.acerto*100),fator_de_lucro:r(e.profitFactor),ganho_medio_sobre_perda_media:r(e.payoff),
+      ganho_medio:r(e.mediaGanho),perda_media:r(e.mediaPerda),maior_ganho:r(e.maiorPL),maior_perda:r(e.menorPL),perdas_maiores_que_o_stop:e.perdasAcima1R,perdas_com_stop_definido:e.nPerdasR,
+      maior_recuo_da_conta:r(e.ddMaxPL),recuo_atual:r(e.ddAtualPL),qualidade_do_sistema_sqn:r(e.sqn100),max_seq_ganhos:e.maxSeqGanhos,max_seq_perdas:e.maxSeqPerdas,seq_atual:e.seqAtual,
       captura_do_alvo_pct:e.captura==null?null:Math.round(e.captura*100),duracao_ganhos_min:r(e.durGanhoMin),duracao_perdas_min:r(e.durPerdaMin),custos:r(e.custos),
-      regras_seguidas:e.regras.ok,regras_quebradas:e.regras.quebrou,trades_com_erro:e.regras.erros,R_dos_trades_com_erro:r(e.regras.rErros),media_R_regras_seguidas:r(e.regras.mediaOk),media_R_regras_quebradas:r(e.regras.mediaQuebrou)},
+      regras_seguidas:e.regras.ok,regras_quebradas:e.regras.quebrou,trades_com_erro:e.regras.erros,resultado_dos_trades_com_erro:r(e.regras.plErros),media_seguindo_regras:r(e.regras.mediaPlOk),media_quebrando_regras:r(e.regras.mediaPlQuebrou),
+      observacao_para_a_ia:'Fale sempre em dinheiro (R$ ou US$) e em porcentagem. Não use R-múltiplo nem a letra R para resultados; o usuário não usa essa medida.'},
     diagnosticos:D.map(d=>({nivel:d.nivel,titulo:d.titulo,texto:d.texto})),
     grupos:{por_dia_da_semana:g(e.porDia),por_hora:g(e.porHora),por_setup:g(e.porSetup),por_mercado:g(e.porMercado),por_erro:g(e.porErro)}
   };
@@ -2828,26 +2864,27 @@ function stIAHtml(e,D){
 function vStats(){
   const head='<div class="top"><h1>Estatísticas</h1><button class="btn s" data-a="csv" id="csvb">Exportar CSV</button></div>';
   const filtros=perSel()+tipoSel()+'<div class="sm mut" style="margin:-2px 0 8px">O período vale pela data de saída de cada trade.</div>';
-  const e=estat(stRows());
-  if(!e.n)return head+filtros+'<p class="mut">Feche trades (com saída) para ver as estatísticas. Para medir em R, informe também o stop inicial. Tharp recomenda juntar de 100 a 200 trades.</p>';
-  const D=diagnosticos(e),alertas=D.filter(d=>d.nivel==='alerta').length;
-  const abas=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${ST_ABAS.map(([k,l])=>`<button class="btn${ST.aba===k?'':' s'}" data-st="${k}">${l}${k==='diag'&&alertas?` <span style="color:var(--r)">●${alertas}</span>`:''}</button>`).join('')}</div>`;
-  const kpi=`<div class="kv" style="margin-top:8px">${KV('Resultado',money(e.resultado),cls(e.resultado),e.n+' trades · custos '+money(e.custos))}${KV('Expectância',frN(e.mediaR),cls(e.mediaR),'média de R ('+e.nR+' com stop)')}${KV('Acerto',pcN(e.acerto),'',e.nGanhos+' ganhos · '+e.nPerdas+' perdas')}${KV('Profit factor',f2N(e.profitFactor),e.profitFactor!=null&&e.profitFactor<1?'r':'','payoff '+f2N(e.payoff))}${KV('SQN',f2N(e.sqn100),'',qualSQN(e.sqn100)+' (padrão de 100 trades)')}${KV('Drawdown máx.',f2(e.ddMaxR)+'R','r','atual '+f2(e.ddAtualR)+'R · '+money(e.ddMaxPL))}</div>`;
-  const aviso=(e.semStop?`<div class="warn" style="margin-top:8px">${e.semStop} trade(s) fechado(s) sem stop: entram no resultado em dinheiro, mas ficam fora das métricas em R.</div>`:'')+(e.n<30?`<div class="warn" style="margin-top:8px">Amostra pequena (${e.n} trades): use os números como pista, não como conclusão.</div>`:'');
-  const rr=e.rows.filter(t=>t.c.r!=null),lab=rr.map(t=>fdt(t.dtx||t.dt).slice(0,5)+' '+(t.ativo||''));
+  const X=stCtx(),fm=X.fm,fs=X.fs,e=estat(X.rows),tp=TIPO==='all'?undefined:TIPO,pct=v=>pctConta(v,X.mo,tp);
+  if(!e.n)return head+filtros+'<p class="mut">Feche trades (com saída) para ver as estatísticas. Quanto mais trades, mais confiáveis ficam os números: o ideal é juntar de 100 a 200.</p>';
+  const D=diagnosticos(e,fm),alertas=D.filter(d=>d.nivel==='alerta').length;
+  const abas=`<div class="seg" style="margin:8px 0">${ST_ABAS.map(([k,l])=>`<button class="${ST.aba===k?'on':''}" data-st="${k}">${l}${k==='diag'&&alertas?` <span style="color:var(--r)">●${alertas}</span>`:''}</button>`).join('')}</div>`;
+  const kpi=`<div class="kv" style="margin-top:8px">${KV('Resultado',fs(e.resultado),cls(e.resultado),e.n+' trades'+(pct(e.resultado)?' · '+pct(e.resultado):''))}${KV('Média por trade',fs(e.expectativaPL),cls(e.expectativaPL),'quanto você ganha ou perde, em média, por operação')}${KV('Acerto',pcN(e.acerto),'',e.nGanhos+' ganhos · '+e.nPerdas+' perdas')}${KV('Ganho médio ÷ perda média',e.payoff==null?'–':f2(e.payoff)+'x','','ganho médio '+fm(e.mediaGanho)+' · perda média '+fm(e.mediaPerda==null?null:-e.mediaPerda))}${KV('Fator de lucro',f2N(e.profitFactor),e.profitFactor!=null&&e.profitFactor<1?'r':'','ganhos brutos ÷ perdas brutas (acima de 1 = lucro)')}${KV('Maior recuo da conta',fm(e.ddMaxPL),e.ddMaxPL>0?'r':'','atual '+fm(e.ddAtualPL)+(pct(-e.ddMaxPL)?' · '+pct(-e.ddMaxPL).replace(' da conta',' da conta no pior momento'):''))}</div>`;
+  const aviso=(X.mix?`<div class="sm mut" style="margin-top:8px">Você tem trades em R$ e em US$: os valores desta tela foram convertidos para R$ (dólar a ${f2(+axg('brl',5.4)||5.4)}).</div>`:'')+(e.n<30?`<div class="warn" style="margin-top:8px">Amostra pequena (${e.n} trades): use os números como pista, não como conclusão.</div>`:'');
+  const lab=e.rows.map(t=>fdt(t.dtx||t.dt).slice(0,5)+' '+(t.ativo||''));
   let corpo='';
   if(ST.aba==='geral'){
-    const dk=e.dias.slice(-20);
-    corpo=`<h2>Curva de capital (em R)</h2>${e.nR?lineChart('eq',e.curvaR,lab,v=>fr(v)):'<p class="mut sm">Sem trades com stop para a curva em R.</p>'}<h2>Drawdown (em R)</h2>${e.nR?lineChart('dd',e.ddR,lab,v=>f2(v)+'R'):''}<h2>Resultado por dia</h2>${barChart('dia',dk.map(d=>d.pl),dk.map(d=>d.k.slice(8)+'/'+d.k.slice(5,7)))}<div class="kv">${KV('Dias ganhos / perdidos',e.diasGanhos+' / '+e.diasPerdidos)}${KV('Melhor / pior dia',money(e.melhorDia)+' / '+money(e.piorDia))}</div><h2>Distribuição dos R</h2>${e.nR?hist(rr.map(t=>t.c.r)):''}`;
+    const dk=e.dias.slice(-20);let pk=-Infinity;const dd=e.curvaPL.map(v=>{pk=Math.max(pk,v);return v-pk});
+    const ult=e.rows.slice(-30);
+    corpo=`<h2>Evolução do resultado</h2>${lineChart('eq',e.curvaPL,lab,v=>fs(v))}<h2>Recuos da conta</h2>${lineChart('dd',dd,lab,v=>fm(v))}<div class="sm mut">Quanto o resultado acumulado caiu em relação ao melhor momento anterior.</div><h2>Resultado por dia</h2>${barChart('dia',dk.map(d=>d.pl),dk.map(d=>d.k.slice(8)+'/'+d.k.slice(5,7)))}<div class="kv">${KV('Dias ganhos / perdidos',e.diasGanhos+' / '+e.diasPerdidos)}${KV('Melhor / pior dia',fs(e.melhorDia)+' / '+fs(e.piorDia))}</div><h2>Últimos ${ult.length} trades</h2>${barChart('tr',ult.map(t=>t.c.pl),ult.map(t=>fdt(t.dtx||t.dt).slice(0,5)))}`;
   }else if(ST.aba==='risco'){
     const R=e.regras;
-    corpo=`<div class="kv" style="margin-top:8px">${KV('Média dos ganhos',frN(e.mediaGanhoR),'g')}${KV('Média das perdas',frN(e.mediaPerdaR),'r')}${KV('Maior ganho / perda',frN(e.maiorR)+' / '+frN(e.menorR))}${KV('Perdas acima de 1R',e.perdasAcima1R+' de '+e.nPerdasR,e.nPerdasR&&e.perdasAcima1R>e.nPerdasR*.3?'r':'','se muitas passam de 1R, o stop não está sendo respeitado')}${KV('Desvio-padrão de R',f2N(e.desvioR)+'R')}${KV('SQN (amostra atual)',f2N(e.sqn),'','usa no máximo 100 trades')}${KV('Captura do alvo',e.captura==null?'–':pc(e.captura),e.captura!=null&&e.captura<.6?'r':'','R realizado ÷ R planejado nos ganhos ('+e.nCaptura+')')}${KV('Duração: ganhos × perdas',(e.durGanhoMin==null?'–':f2(e.durGanhoMin)+' min')+' × '+(e.durPerdaMin==null?'–':f2(e.durPerdaMin)+' min'))}</div>
+    corpo=`<div class="kv" style="margin-top:8px">${KV('Ganho médio',fm(e.mediaGanho),'g')}${KV('Perda média',fm(e.mediaPerda),'r')}${KV('Maior ganho / maior perda',fs(e.maiorPL)+' / '+fs(e.menorPL))}${KV('Perdas maiores que o stop planejado',e.perdasAcima1R+' de '+e.nPerdasR,e.nPerdasR&&e.perdasAcima1R>e.nPerdasR*.3?'r':'','se muitas perdas passam do stop, ele não está sendo respeitado')}${KV('Qualidade do sistema',f2N(e.sqn100),'',qualSQN(e.sqn100)+' (nota SQN, padrão de 100 trades)')}${KV('Captura do alvo',e.captura==null?'–':pc(e.captura),e.captura!=null&&e.captura<.6?'r':'','quanto do ganho planejado até o alvo você realiza ('+e.nCaptura+' ganhos)')}${KV('Duração: ganhos × perdas',(e.durGanhoMin==null?'–':f2(e.durGanhoMin)+' min')+' × '+(e.durPerdaMin==null?'–':f2(e.durPerdaMin)+' min'))}</div>
 <div class="rings">${ring((e.acerto||0)*100,'Acerto')}${ring(e.n?R.ok/e.n*100:0,'Regras seguidas','var(--g)')}${ring(e.n?(e.n-R.erros)/e.n*100:0,'Sem erro','#e8a317')}</div>
-<h2>Disciplina e erros</h2><div class="kv">${KV('Trades sem erro',pcN(e.n?(e.n-R.erros)/e.n:null),R.erros?'':'g')}${KV('Erros a cada 100 trades',f2(e.n?R.erros/e.n*100:0))}${KV('R líquido dos trades com erro',frN(R.rErros),cls(R.rErros))}${KV('Regras seguidas × quebradas',frN(R.mediaOk)+' × '+frN(R.mediaQuebrou),'','média de R de cada grupo')}</div>${stTbl('Erro',e.porErro)}
+<h2>Disciplina e erros</h2><div class="kv">${KV('Trades sem erro',pcN(e.n?(e.n-R.erros)/e.n:null),R.erros?'':'g')}${KV('Erros a cada 100 trades',f2(e.n?R.erros/e.n*100:0))}${KV('Resultado dos trades com erro',fs(R.plErros),cls(R.plErros))}${KV('Média: regras seguidas × quebradas',fs(R.mediaPlOk)+' × '+fs(R.mediaPlQuebrou),'','resultado médio por trade em cada grupo')}</div>${stTbl('Erro',e.porErro,fs)}
 <h2>Sequências</h2><div class="kv">${KV('Maior sequência de ganhos',e.maxSeqGanhos,'g')}${KV('Maior sequência de perdas',e.maxSeqPerdas,'r')}${KV('Sequência atual',e.seqAtual?e.seqAtual.n+' '+e.seqAtual.tipo+(e.seqAtual.n>1?'s':''):'–',e.seqAtual?(e.seqAtual.tipo==='ganho'?'g':'r'):'')}</div>`;
   }else if(ST.aba==='onde'){
     const op=e.rows.filter(t=>t.tipo==='O');
-    corpo=`<h2>Mapa de calor: dia × hora</h2>${stHeat(e)}<h2>Por dia da semana</h2>${stTbl('Dia',e.porDia)}<h2>Por horário de entrada</h2>${stTbl('Hora',e.porHora)}<h2>Por setup</h2>${stTbl('Setup',e.porSetup)}<h2>Por tipo de mercado</h2>${stTbl('Mercado',e.porMercado)}<h2>Por ativo</h2>${stTbl('Ativo',e.porAtivo.slice().sort((a,b)=>b.n-a.n).slice(0,15))}${op.length?`<h2>Opções por estrutura</h2>${stTbl('Estrutura',agrupa(op,t=>t.estr))}`:''}`;
+    corpo=`<h2>Mapa de calor: dia × hora</h2>${stHeat(e,fs)}<h2>Por dia da semana</h2>${stTbl('Dia',e.porDia,fs)}<h2>Por horário de entrada</h2>${stTbl('Hora',e.porHora,fs)}<h2>Por setup</h2>${stTbl('Setup',e.porSetup,fs)}<h2>Por tipo de mercado</h2>${stTbl('Mercado',e.porMercado,fs)}<h2>Por ativo</h2>${stTbl('Ativo',e.porAtivo.slice().sort((a,b)=>b.n-a.n).slice(0,15),fs)}${op.length?`<h2>Opções por estrutura</h2>${stTbl('Estrutura',agrupa(op,t=>t.estr),fs)}`:''}`;
   }else{
     corpo=`<h2>Pontos de atenção</h2>${stDiagHtml(D)}${stIAHtml(e,D)}`;
   }
@@ -2858,7 +2895,611 @@ function vStats(){
   document.addEventListener('click',e=>{
     const b=e.target.closest('[data-st]');if(!b)return;
     const k=b.dataset.st;
-    if(k==='ia'){const x=estat(stRows());stIA(x,diagnosticos(x));return}
+    if(k==='ia'){const X=stCtx(),x=estat(X.rows);stIA(x,diagnosticos(x,X.fm));return}
     ST.aba=k;ls.set('diario-st-aba',k);render();
   });
 })();
+/* ==== VISUAL:INICIO ==== tema profissional: cores, tipografia, componentes, ícones de linha e barra inferior */
+(function(){
+const css=`
+:root{--bg:#0a0c10;--card:#12151b;--card2:#191d25;--bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.14);--tx:#e7e9ee;--mut:#8b93a4;--ac:#4c8dff;--ac2:rgba(76,141,255,.14);--g:#22ab94;--r:#f2555f;--am:#e0a43a;--rad:14px;--nav:64px;
+  --fs:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f4f5f7;--card:#ffffff;--card2:#f0f2f5;--bd:rgba(15,23,42,.09);--bd2:rgba(15,23,42,.16);--tx:#111827;--mut:#64748b;--ac:#2563eb;--ac2:rgba(37,99,235,.10);--g:#0f9d84;--r:#e0384a;--am:#b7791f}}
+:root[data-theme="light"]{--bg:#f4f5f7;--card:#ffffff;--card2:#f0f2f5;--bd:rgba(15,23,42,.09);--bd2:rgba(15,23,42,.16);--tx:#111827;--mut:#64748b;--ac:#2563eb;--ac2:rgba(37,99,235,.10);--g:#0f9d84;--r:#e0384a;--am:#b7791f}
+:root[data-theme="dark"]{--bg:#0a0c10;--card:#12151b;--card2:#191d25;--bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.14);--tx:#e7e9ee;--mut:#8b93a4;--ac:#4c8dff;--ac2:rgba(76,141,255,.14);--g:#22ab94;--r:#f2555f;--am:#e0a43a}
+html body{background:var(--bg);color:var(--tx);font-family:var(--fs);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;letter-spacing:-.005em}
+html body #app{max-width:760px;margin:0 auto;padding:14px 16px calc(var(--nav) + 28px + env(safe-area-inset-bottom,0px))!important}
+html body h1{font-size:26px;font-weight:700;letter-spacing:-.025em;margin:6px 0 10px}
+html body h2{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin:22px 0 8px}
+html body h3{font-size:15px;font-weight:650;margin:16px 0 8px}
+html body .sm{font-size:13px}html body .mut{color:var(--mut)}
+html body .g,html body b.g,html body .g b{color:var(--g)}html body .r,html body b.r{color:var(--r)}
+html body .card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rad);padding:14px;margin:10px 0;box-shadow:none}
+html body .card .card{background:var(--card2);border-color:transparent}
+html body .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+html body .row{display:flex;align-items:center;gap:12px}
+html body .fl{flex:1;min-width:0}html body .rt{text-align:right;font-weight:650;white-space:nowrap}
+html body .th{width:46px;height:46px;border-radius:10px;background:var(--card2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none;color:var(--mut)}
+html body .th img{width:100%;height:100%;object-fit:cover}
+html body .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}html body .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+html body .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:8px 14px;border-radius:10px;border:1px solid transparent;background:var(--ac);color:#fff;font:600 14px/1.2 var(--fs);cursor:pointer;transition:filter .15s,background .15s,transform .05s;-webkit-tap-highlight-color:transparent}
+html body .btn:active{transform:scale(.98)}html body .btn:disabled{opacity:.5}
+html body .btn.s{background:var(--card2);color:var(--tx);border-color:var(--bd)}
+html body .btn.d{background:transparent;color:var(--r);border-color:color-mix(in srgb,var(--r) 45%,transparent)}
+html body .x{background:transparent;border:0;color:var(--mut);font-size:18px;width:36px;height:36px;border-radius:10px;cursor:pointer}
+html body .seg{display:flex!important;gap:2px;padding:3px;background:var(--card2);border:1px solid var(--bd);border-radius:12px;overflow-x:auto;scrollbar-width:none}
+html body .seg::-webkit-scrollbar{display:none}
+html body .seg>button{flex:1 0 auto;min-height:34px;padding:6px 12px;border:0;border-radius:9px;background:transparent;color:var(--mut);font:600 13.5px var(--fs);white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+html body .seg>button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 2px rgba(0,0,0,.25),0 0 0 1px var(--bd)}
+html body label{display:block;font-size:12.5px;font-weight:600;color:var(--mut);margin:10px 0 0}
+html body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),html body select,html body textarea{display:block;width:100%;box-sizing:border-box;margin-top:5px;min-height:42px;padding:9px 12px;border-radius:10px;border:1px solid var(--bd2);background:var(--card2);color:var(--tx);font:15px var(--fs);outline:none;-webkit-appearance:none;appearance:none}
+html body select{background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 17px) 55%,calc(100% - 12px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
+html body input:focus,html body select:focus,html body textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac2)}
+html body input[type=file]{margin-top:6px;font-size:13px;color:var(--mut)}
+html body textarea{min-height:84px;line-height:1.45}
+html body .ck{display:flex;align-items:center;gap:8px;font-weight:500;color:var(--tx)}
+html body .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+html body .kv>.card{margin:0;padding:12px;display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--bd)}
+html body .kv>.card>span.mut:first-child{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+html body .kv>.card>b{font-size:20px;font-weight:700;letter-spacing:-.02em}
+html body .warn{border:1px solid color-mix(in srgb,var(--am) 40%,transparent);background:color-mix(in srgb,var(--am) 9%,transparent);color:var(--tx);border-radius:12px;padding:10px 12px;font-size:13.5px}
+html body .chip,html body .tag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:var(--card2);border:1px solid var(--bd);font-size:12.5px;font-weight:600;color:var(--tx);margin:4px 6px 0 0}
+html body .tag{padding:2px 8px;font-size:11.5px;color:var(--am);border-color:color-mix(in srgb,var(--am) 35%,transparent);background:transparent}
+html body .hero{background:linear-gradient(160deg,color-mix(in srgb,var(--ac) 16%,var(--card)) 0%,var(--card) 70%);border:1px solid var(--bd);border-radius:18px;padding:18px;margin:6px 0 12px}
+html body .hero .big,html body .big{font-size:40px;font-weight:750;letter-spacing:-.035em;line-height:1.1;margin:2px 0}
+html body table{width:100%;border-collapse:collapse;font-size:13.5px}
+html body th{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);text-align:left;padding:6px 6px;border-bottom:1px solid var(--bd)}
+html body td{padding:8px 6px;border-top:1px solid var(--bd)}
+html body details>summary{cursor:pointer;list-style:none}html body details>summary::-webkit-details-marker{display:none}
+html body details>summary::before{content:'';display:inline-block;width:7px;height:7px;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(-45deg);margin:0 10px 2px 2px;transition:transform .15s}
+html body details[open]>summary::before{transform:rotate(45deg)}
+html body .rings{display:flex;justify-content:space-around;gap:8px;margin:10px 0}
+html body .mc,html body .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+html body .dc,html body .cal>button{min-height:44px;border-radius:9px;border:1px solid var(--bd);background:var(--card);color:var(--tx);display:flex;flex-direction:column;align-items:center;justify-content:center;font:12px var(--fs);padding:2px}
+html body #sh .ov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);overflow-y:auto;-webkit-overflow-scrolling:touch}
+html body #sh .sh{background:var(--bg);max-width:640px;margin:max(24px,env(safe-area-inset-top)) auto 0;min-height:100%;border-radius:18px 18px 0 0;padding:16px 16px calc(40px + env(safe-area-inset-bottom));border-top:1px solid var(--bd)}
+html body #tst{border-radius:12px!important;background:var(--card2)!important;color:var(--tx)!important;border:1px solid var(--bd2)!important;box-shadow:0 8px 30px rgba(0,0,0,.35)!important}
+/* topo (ticker) e menu */
+html body #tape{background:var(--bg)!important;border-bottom:1px solid var(--bd)!important}
+html body #mbtn{background:var(--bg)!important;color:var(--tx)!important;border-right:1px solid var(--bd)!important}
+html body #mdr .mpn{background:var(--bg)!important}
+html body #mdr .mit{border-radius:12px}html body #mdr .mi{color:var(--ac);display:inline-flex;width:28px;justify-content:center}
+html body #mdr .mi .ico{width:22px;height:22px;margin:0}
+/* botão + acima da barra de baixo */
+html body #fab{position:fixed;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;border:0;z-index:40;bottom:calc(var(--nav) + 16px + env(safe-area-inset-bottom,0px))!important;right:16px!important;width:52px!important;height:52px!important;border-radius:16px!important;background:var(--ac)!important;box-shadow:0 6px 20px rgba(0,0,0,.35)!important}
+html body #fabm{bottom:calc(var(--nav) + 78px + env(safe-area-inset-bottom,0px))!important}
+/* barra inferior */
+#bnav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;justify-content:space-around;align-items:stretch;height:calc(var(--nav) + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid var(--bd)}
+#bnav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:0;color:var(--mut);font:600 10.5px var(--fs);letter-spacing:.01em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#bnav button svg{width:23px;height:23px}
+#bnav button.on{color:var(--ac)}
+body.semnav #bnav{display:none}
+/* ícones no lugar dos emojis */
+.ico{width:1.1em;height:1.1em;vertical-align:-.17em;margin-right:.38em;flex:none;display:inline-block}
+h1 .ico,h2 .ico{margin-right:.3em}.seg .ico,.btn .ico{margin-right:0}
+.dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;margin-right:.4em;vertical-align:.05em}
+html body .chips2{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+html body .chips2>button{min-height:34px;padding:6px 13px;border-radius:999px;border:1px solid var(--bd2);background:var(--card2);color:var(--tx);font:600 13.5px var(--fs);cursor:pointer}
+html body .chips2>button.on{background:var(--ac2);border-color:var(--ac);color:var(--ac)}
+html body .chips2>button.on.g{background:color-mix(in srgb,var(--g) 14%,transparent);border-color:var(--g);color:var(--g)}
+html body .chips2>button.on.r{background:color-mix(in srgb,var(--r) 14%,transparent);border-color:var(--r);color:var(--r)}
+html body #sh .sh .top h2,html body .sh>.top>h2{font-size:19px;text-transform:none;letter-spacing:-.015em;color:var(--tx);margin:0}
+.cap1::first-letter{text-transform:uppercase}
+html body .ib{width:40px;padding:0;flex:none}
+html body #fab{display:none!important}
+html body #fabm{left:50%!important;right:auto!important;transform:translateX(-50%);flex-direction:column;gap:6px;padding:8px;background:var(--card);border:1px solid var(--bd2);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.45);z-index:55;bottom:calc(var(--nav) + 14px + env(safe-area-inset-bottom,0px))!important}
+#bnav .mais{flex:0 0 64px}
+#bnav .mais span.bx{width:48px;height:48px;margin-top:-10px;border-radius:16px;background:var(--ac);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px color-mix(in srgb,var(--ac) 45%,transparent)}
+#bnav .mais span.bx svg{width:26px;height:26px}
+html body .mk-seg>button.btn{flex:1 0 auto;background:transparent;color:var(--mut);border:0;min-height:34px;padding:6px 12px;font-size:13.5px;box-shadow:none}
+html body .mk-seg>button.btn:not(.s){background:var(--card);color:var(--tx);box-shadow:0 1px 2px rgba(0,0,0,.25),0 0 0 1px var(--bd)}
+html body .bars{display:flex;align-items:flex-end;gap:3px;height:120px;margin-top:10px}
+html body .bars .bar{flex:1;min-width:3px;border:0;border-radius:3px 3px 1px 1px;padding:0;cursor:pointer;opacity:.9}
+html body .bars .bar:hover,html body .bars .bar:focus{opacity:1;outline:none}
+html body .kv>.card>b{overflow-wrap:anywhere}
+/* textos de ajuda recolhidos */
+.hint-t{display:inline-flex;align-items:center;gap:5px;margin-top:8px;background:none;border:0;padding:4px 0;color:var(--mut);font:600 12.5px var(--fs);cursor:pointer}
+.hint{display:none}.hint.on{display:block;margin-top:4px}
+`;
+const st=document.createElement('style');st.id='tema';st.textContent=css;
+const pon=()=>document.head.appendChild(st);pon();
+/* garante que o tema fica por último, mesmo com estilos injetados depois */
+setTimeout(pon,0);addEventListener('load',pon);
+
+/* ---------- ícones (traço) ---------- */
+const P={
+ home:'M3 11l9-8 9 8M5 10v10h14V10',bar:'M4 20V10M10 20V4M16 20v-7M2 20h20',up:'M3 17l6-6 4 4 8-8M15 7h6v6',down:'M3 7l6 6 4-4 8 8M15 17h6v-6',
+ cam:'M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z',wave:'M2 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0',
+ target:'M12 21a9 9 0 100-18 9 9 0 000 18zM12 16a4 4 0 100-8 4 4 0 000 8zM12 12h.01',wallet:'M3 7h15a3 3 0 013 3v7a3 3 0 01-3 3H3zM3 7V5h13v2M17 14h.01',
+ receipt:'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h4',clip:'M9 4h6v3H9zM7 5H5v16h14V5h-2M8 11h8M8 15h6',
+ gear:'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-2.7-1.1l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.1-2.7H3a2 2 0 110-4h.1a1.6 1.6 0 001.1-2.7l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 002.7-1.1V3a2 2 0 114 0v.1a1.6 1.6 0 002.7 1.1l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 001.1 2.7H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1.3z',
+ bank:'M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18',book:'M4 19.5A2.5 2.5 0 016.5 17H20V3H6.5A2.5 2.5 0 004 5.5zM4 19.5A2.5 2.5 0 006.5 22H20v-5',
+ spark:'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 3v4M17 5h4',puzzle:'M10 4a2 2 0 114 0v2h4v4h-2a2 2 0 100 4h2v4h-4v-2a2 2 0 10-4 0v2H6v-4h2a2 2 0 100-4H6V6h4z',
+ ok:'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6',alert:'M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0zM12 9v4M12 17h.01',
+ no:'M12 21a9 9 0 100-18 9 9 0 000 18zM9 9l6 6M15 9l-6 6',info:'M12 21a9 9 0 100-18 9 9 0 000 18zM12 11v6M12 7.5h.01',
+ flame:'M12 3c1 4 6 6 6 11a6 6 0 01-12 0c0-3 2-5 3-6 0 3 1 4 2 4 0-4-1-6 1-9z',folder:'M3 6h6l2 2h10v11H3z',cal:'M4 5h16v16H4zM4 9h16M8 3v4M16 3v4',
+ news:'M4 5h13v14a2 2 0 002 2H6a2 2 0 01-2-2zM17 9h3v10a2 2 0 01-2 2M7 9h7M7 13h7M7 17h4',bell:'M6 16v-5a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0',
+ bolt:'M13 2L4 14h7l-1 8 9-12h-7z',moon:'M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z',sun:'M12 17a5 5 0 100-10 5 5 0 000 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',
+ pen:'M4 20h4L19 9l-4-4L4 16zM14 6l4 4',redo:'M20 11a8 8 0 00-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0014.3 4.9L20 16M20 20v-4h-4',
+ dl:'M12 3v12M7 10l5 5 5-5M4 21h16',ul:'M12 21V9M7 14l5-5 5 5M4 3h16',print:'M6 9V3h12v6M6 17H4v-6h16v6h-2M7 14h10v7H7z',play:'M7 4l13 8-13 8z',
+ trophy:'M8 4h8v5a4 4 0 01-8 0zM8 6H4a4 4 0 004 4M16 6h4a4 4 0 01-4 4M12 13v4M8 21h8',wait:'M6 3h12M6 21h12M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9',
+ stop:'M8 3h8l5 5v8l-5 5H8l-5-5V8zM8 12h8',search:'M11 18a7 7 0 100-14 7 7 0 000 14zM21 21l-5-5',link:'M10 14a4 4 0 006 0l3-3a4 4 0 00-6-6l-1 1M14 10a4 4 0 00-6 0l-3 3a4 4 0 006 6l1-1',
+ bulb:'M9 18h6M10 21h4M12 3a6 6 0 00-4 10.5c.8.8 1 1.7 1 2.5h6c0-.8.2-1.7 1-2.5A6 6 0 0012 3z',key:'M8 15a4 4 0 100-8 4 4 0 000 8zM11 11h10M18 11v3M15 11v2',
+ user:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',help:'M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9a2.5 2.5 0 015 0c0 2-2.5 2-2.5 4M12 17h.01',
+ bot:'M5 8h14v11H5zM12 4v4M9 13h.01M15 13h.01M9 16h6',globe:'M12 21a9 9 0 100-18 9 9 0 000 18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+ candle:'M8 3v4M8 17v4M6 7h4v10H6zM16 3v5M16 14v7M14 8h4v6h-4z',dollar:'M12 3v18M16 7h-6a3 3 0 000 6h4a3 3 0 010 6H8',box:'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',
+ pin:'M12 21s7-6 7-11a7 7 0 00-14 0c0 5 7 11 7 11zM12 12a2 2 0 100-4 2 2 0 000 4z',lock:'M5 11h14v10H5zM8 11V7a4 4 0 018 0v4',mail:'M3 5h18v14H3zM3 5l9 7 9-7',
+ star:'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z',
+ clock:'M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 3',file:'M6 3h9l4 4v14H6zM14 3v5h5',paper:'M21 11l-9 9a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a2 2 0 01-3-3l8-8',
+ save:'M5 3h12l3 3v15H5zM8 3v6h8V3M8 21v-7h8v7',calc:'M6 3h12v18H6zM9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01',inbox:'M4 13h4l2 3h4l2-3h4M4 13l3-8h10l3 8v7H4z',
+ phone:'M7 2h10v20H7zM11 18h2',chart:'M3 3v18h18M7 15l4-4 3 3 5-6',list:'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01',grid:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+ menu:'M4 7h16M4 12h16M4 17h16',swap:'M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7',shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+ heart:'M12 20s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.5-7 10-7 10z',coffee:'M4 8h13v6a5 5 0 01-5 5H9a5 5 0 01-5-5zM17 10h2a2 2 0 010 4h-2M8 2v3M12 2v3',
+};
+const E={'📸':'cam','📷':'cam','🌊':'wave','🎯':'target','💰':'wallet','💵':'wallet','💸':'wallet','💲':'dollar','🧾':'receipt','📋':'clip','📊':'bar','📈':'up','📉':'down','⚙':'gear','🏛':'bank','📚':'book','📘':'book','📖':'book','📕':'book','📗':'book',
+ '✨':'spark','🧩':'puzzle','✅':'ok','✔':'ok','☑':'ok','⚠':'alert','❌':'no','❗':'alert','‼':'alert','ℹ':'info','🔥':'flame','📂':'folder','📁':'folder','🗂':'folder','📅':'cal','🗓':'cal','📆':'cal','📰':'news','🔔':'bell','⚡':'bolt','🌙':'moon','☀':'sun','🌅':'sun',
+ '✏':'pen','📝':'pen','🖊':'pen','🔁':'redo','🔄':'redo','⬇':'dl','📥':'inbox','⬆':'ul','📤':'ul','🖨':'print','▶':'play','🏆':'trophy','⏳':'wait','⌛':'wait','🛑':'stop','⛔':'stop','🔎':'search','🔍':'search','🔗':'link','💡':'bulb','🔑':'key','🔐':'lock','🔒':'lock',
+ '👤':'user','❓':'help','❔':'help','🤖':'bot','🌎':'globe','🌍':'globe','🌐':'globe','🕯':'candle','📦':'box','📌':'pin','📍':'pin','✉':'mail','📧':'mail','⭐':'star','🌟':'star','👁':'eye','⏰':'clock','🕒':'clock','⏱':'clock','📄':'file','📃':'file','📑':'file','📎':'paper',
+ '💾':'save','🧮':'calc','📱':'phone','📏':'chart','🧭':'target','🏠':'home','🎉':'spark','🧠':'bulb','🛡':'shield','❤':'heart','☕':'coffee','🔀':'swap','📣':'bell','🧪':'spark','🗒':'list','📜':'file','🔬':'search'};
+const DOT={'🟢':'var(--g)','🟡':'var(--am)','🟠':'#f08a3a','🔴':'var(--r)','⚪':'var(--mut)','🔵':'var(--ac)','🟣':'#9b6bff','⚫':'var(--tx)'};
+const ico=n=>`<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+window.icoSvg=ico;
+/* um "emoji" = pictográfico (ou bandeira) + variação/pele/ZWJ; rostos ficam (são conteúdo: energia do dia) */
+const RX=/(?:\p{Regional_Indicator}{2}|(?:\p{Extended_Pictographic})(?:️|⃣|\p{Emoji_Modifier}|‍\p{Extended_Pictographic}️?)*)\s?/gu;
+const FACE=/^[\u{1F600}-\u{1F64F}\u{1F910}-\u{1F92F}\u{1F970}-\u{1F97A}]/u;
+const PULA='INPUT,TEXTAREA,SELECT,SCRIPT,STYLE,SVG,svg,OPTION,IFRAME,CODE,PRE';
+function trocaTexto(node){
+  const t=node.nodeValue;if(!t||!/[←-⯿\u{1F000}-\u{1FAFF}️]/u.test(t))return;
+  RX.lastIndex=0;if(!RX.test(t))return;RX.lastIndex=0;
+  const frag=document.createDocumentFragment();let last=0,m,mudou=0;
+  while((m=RX.exec(t))){
+    const em=m[0].trim(),base=em.replace(/[️⃣]|\p{Emoji_Modifier}/gu,'').split('‍')[0];
+    if(FACE.test(base))continue;
+    if(/^[←-⇿■-◿☀-☃←-↙]$/u.test(base)&&!E[base])continue; // setas e formas simples (▲▼◀▶ etc.) ficam
+    if(m.index>last)frag.appendChild(document.createTextNode(t.slice(last,m.index)));
+    if(DOT[base]){const s=document.createElement('span');s.className='dot';s.style.background=DOT[base];frag.appendChild(s)}
+    else if(E[base]){const s=document.createElement('span');s.innerHTML=ico(E[base]);frag.appendChild(s.firstChild)}
+    last=m.index+m[0].length;mudou=1;
+  }
+  if(!mudou)return;
+  if(last<t.length)frag.appendChild(document.createTextNode(t.slice(last)));
+  node.parentNode.replaceChild(frag,node);
+}
+function limpa(root){
+  if(!root||root.nodeType!==1&&root.nodeType!==11)return;
+  if(root.closest&&root.closest('.tradingview-widget-container,[contenteditable]'))return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{const p=n.parentElement;return !p||p.closest(PULA)||p.closest('.tradingview-widget-container,.noico')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT}});
+  const L=[];while(w.nextNode())L.push(w.currentNode);L.forEach(trocaTexto);
+  ajuda(root);
+}
+/* parágrafos longos de explicação no fim de um cartão viram "Sobre estes dados" */
+function ajuda(root){
+  (root.querySelectorAll?root.querySelectorAll('.card > div.sm.mut:last-child, .card > p.sm.mut:last-child, .card > p.mut:last-child'):[]).forEach(el=>{
+    if(el.dataset.h||el.classList.contains('hint'))return;el.dataset.h=1;
+    const tx=el.textContent.trim();if(tx.length<150||el.querySelector('input,button,select,textarea,a,b[data-rs-t],[data-rs-up]'))return;
+    const b=document.createElement('button');b.className='hint-t';b.type='button';b.innerHTML=ico('info')+'Sobre estes dados';
+    el.classList.add('hint');el.parentNode.insertBefore(b,el);
+  });
+}
+document.addEventListener('click',e=>{const b=e.target.closest('.hint-t');if(!b)return;const n=b.nextElementSibling;if(n){n.classList.toggle('on');b.innerHTML=ico('info')+(n.classList.contains('on')?'Ocultar':'Sobre estes dados')}});
+let fila=new Set(),agendado=0;
+const roda=()=>{agendado=0;const L=[...fila];fila.clear();L.forEach(n=>{if(n.isConnected)limpa(n)})};
+new MutationObserver(ms=>{for(const m of ms){m.addedNodes.forEach(n=>{if(n.nodeType===1)fila.add(n);else if(n.nodeType===3&&n.parentElement)fila.add(n.parentElement)})}if(fila.size&&!agendado){agendado=1;requestAnimationFrame(roda)}}).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('DOMContentLoaded',()=>limpa(document.body));
+
+/* ---------- barra de navegação inferior ---------- */
+const NAV=[['home','home','Início'],['dia','moon','Meu dia'],['novo','',''],['trades','chart','Operações'],['mercado','news','Mercado']];
+const grupo=t=>t==='home'?'home':['dia','regras'].includes(t)?'dia':['trades','swing','opc','stats','rev'].includes(t)?'trades':['mercado','live','juros','graf'].includes(t)?'mercado':'';
+function navPinta(){
+  let n=document.getElementById('bnav');
+  if(!n){n=document.createElement('div');n.id='bnav';n.setAttribute('role','navigation');n.setAttribute('aria-label','Navegação principal');document.body.appendChild(n);
+    n.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k;
+      if(k==='novo')return; // o próprio botão tem data-a="fab": abre o menu de novo trade como o botão + antigo
+      tab=k==='trades'?(typeof LT!=='undefined'&&LT?LT:'trades'):k;if(typeof render==='function')render();scrollTo(0,0)})}
+  const g=grupo(typeof tab!=='undefined'?tab:'home');
+  n.innerHTML=NAV.map(([k,i,l])=>k==='novo'?`<button data-k="novo" data-a="fab" class="mais" aria-label="Novo trade"><span class="bx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>`:`<button data-k="${k}" class="${g===k?'on':''}" aria-label="${l}"${g===k?' aria-current="page"':''}>${ico(i).replace('class="ico"','')}<span>${l}</span></button>`).join('');
+  const sob=!!(document.getElementById('rl')||document.getElementById('qz')||(typeof T!=='undefined'&&T));
+  document.body.classList.toggle('semnav',sob);
+}
+window.navPinta=navPinta;
+if(typeof render0==='function'){const r0=render0;render0=function(){r0.apply(this,arguments);try{navPinta()}catch(e){}}}
+document.addEventListener('click',()=>setTimeout(()=>{try{navPinta()}catch(e){}},0));
+})();
+/* ==== VISUAL:FIM ==== */
+/* ==== MENU:INICIO ==== menu enxuto: 6 áreas, cada uma com abas internas */
+const HUB_M=[['mercado:ag','Agenda'],['mercado:nt','Notícias'],['mercado:cot','Cotações'],['juros','Juros e DI'],['live','Ao vivo'],['graf','Gráficos'],['mercado:al','Alertas']];
+const HUB_D=[['dia','Meu dia'],['regras','Regras']];
+function hubSeg(L,cur){return `<div class="seg hub" style="margin:2px 0 12px">${L.map(([k,l])=>`<button class="${k===cur?'on':''}" data-hub="${k}">${l}</button>`).join('')}</div>`}
+function segM(cur){return hubSeg(HUB_M,cur)}
+function segD(cur){return hubSeg(HUB_D,cur)}
+(function(){
+  const css=document.createElement('style');
+  css.textContent=`#app .mk-seg{display:none!important}
+html body .seg.hub{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+html body .seg.hub.fim{-webkit-mask-image:none;mask-image:none}
+#mdr2{position:fixed;inset:0;z-index:90}#mdr2 .bk{position:absolute;inset:0;background:rgba(0,0,0,.5);animation:m2f .18s ease-out}
+#mdr2 .pn{position:absolute;left:0;top:0;bottom:0;width:min(82vw,320px);background:var(--bg);border-right:1px solid var(--bd);padding:calc(14px + env(safe-area-inset-top,0px)) 12px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;animation:m2s .2s ease-out;overflow-y:auto}
+@keyframes m2s{from{transform:translateX(-30px);opacity:.4}}@keyframes m2f{from{opacity:0}}
+#mdr2 .hd{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 14px}#mdr2 .hd b{font-size:20px;letter-spacing:-.02em}
+#mdr2 .hd button{background:none;border:0;color:var(--mut);font-size:15px;font-weight:600;display:flex;align-items:center;gap:4px;cursor:pointer;padding:6px}
+#mdr2 .it{display:flex;align-items:center;gap:14px;width:100%;padding:12px 10px;border:0;border-radius:12px;background:none;color:var(--tx);text-align:left;cursor:pointer;font:inherit}
+#mdr2 .it.on{background:var(--ac2)}#mdr2 .it.on .ic{color:var(--ac)}
+#mdr2 .it .ic{width:38px;height:38px;border-radius:11px;background:var(--card2);display:flex;align-items:center;justify-content:center;color:var(--tx);flex:none}
+#mdr2 .it .ic svg{width:20px;height:20px;margin:0}
+#mdr2 .it b{display:block;font-size:15.5px;font-weight:650}#mdr2 .it small{display:block;color:var(--mut);font-size:12.5px;margin-top:1px}
+#mdr2 .it .ch{margin-left:auto;color:var(--mut)}
+#mdr2 .ft{margin-top:auto;padding:14px 6px 0;border-top:1px solid var(--bd);display:flex;gap:6px}
+#mdr2 .ft button{flex:1;background:var(--card2);border:1px solid var(--bd);color:var(--tx);border-radius:10px;padding:10px;font:600 13.5px var(--fs);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+#mdr2 .ft svg{width:17px;height:17px;margin:0}`;
+  document.head.appendChild(css);
+  const I=n=>window.icoSvg?window.icoSvg(n):'';
+  const AREAS=[['home','home','Início','Resumo do dia'],['ops','chart','Operações','Day trade, swing, opções e estatísticas'],['mercado','news','Mercado','Agenda, notícias, cotações, juros e DI'],['dia','moon','Meu dia','Rotina, diário e regras'],['estudos','book','Estudos','Livros, resumos e simulados'],['ferr','grid','Ferramentas','Painel, ativos, impostos e mais']];
+  const FERR=[['painel','shield','Painel','Mesa, metas e backup'],['ativos','target','Ativos','Margem, risco e lote'],['contratos','calc','Contratos','Lotes pelo capital e volatilidade'],['carteiras','wallet','Carteiras','Brasil e EUA, evolução'],['analise','bot','Análise IA','Relatório da carteira'],['imposto','receipt','Imposto de renda','Notas, custos e DARF'],['import','inbox','Importar','Relatório do Profit (CSV)']];
+  const area=t=>t==='home'?'home':['trades','swing','opc','stats','rev'].includes(t)?'ops':['mercado','live','juros','graf'].includes(t)?'mercado':['dia','regras'].includes(t)?'dia':['estudos','livro'].includes(t)?'estudos':FERR.some(f=>f[0]===t)?'ferr':'';
+  let sub=0;
+  function desenha(){
+    const p=document.querySelector('#mdr2 .pn');if(!p)return;
+    const a=area(tab);
+    if(!sub)p.innerHTML=`<div class="hd"><b>Menu</b><button data-m2="x" aria-label="Fechar">✕</button></div>${AREAS.map(([k,i,t,d])=>`<button class="it${a===k?' on':''}" data-m2="${k}"><span class="ic">${I(i)}</span><span><b>${t}</b><small>${d}</small></span>${k==='ferr'?'<span class="ch">›</span>':''}</button>`).join('')}<div class="ft"><button data-m2="conta">${I('user')}Conta</button><button data-m2="mais">${I('sun')}Aparência</button></div>`;
+    else p.innerHTML=`<div class="hd"><button data-m2="voltar">‹ Menu</button><button data-m2="x" aria-label="Fechar">✕</button></div><div style="padding:0 6px 8px"><b style="font-size:20px">Ferramentas</b></div>${FERR.map(([k,i,t,d])=>`<button class="it${tab===k?' on':''}" data-m2="${k}"><span class="ic">${I(i)}</span><span><b>${t}</b><small>${d}</small></span></button>`).join('')}`;
+  }
+  function abre(){fecha();sub=area(tab)==='ferr'?1:0;const m=document.createElement('div');m.id='mdr2';m.innerHTML='<div class="bk" data-m2="x"></div><aside class="pn" role="dialog" aria-label="Menu"></aside>';document.body.appendChild(m);document.body.style.overflow='hidden';desenha()}
+  function fecha(){const m=document.getElementById('mdr2');if(m)m.remove();const o=document.getElementById('mdr');if(o)o.remove();document.body.style.overflow=''}
+  function vai(t){tab=t;if(['trades','swing','opc'].includes(t))LT=t;fecha();render();scrollTo(0,0)}
+  /* o botão ☰ abre o menu novo (no lugar do antigo) */
+  document.addEventListener('click',e=>{
+    if(e.target.closest('#mbtn')){e.stopPropagation();e.preventDefault();abre();return}
+    const b=e.target.closest('[data-m2]');
+    if(b){const k=b.dataset.m2;
+      if(k==='x')return fecha();
+      if(k==='ferr'){sub=1;return desenha()}
+      if(k==='voltar'){sub=0;return desenha()}
+      if(k==='ops')return vai(typeof LT!=='undefined'&&LT?LT:'trades');
+      if(k==='estudos'){if(typeof ESV!=='undefined')ESV='liv';return vai('estudos')}
+      return vai(k);
+    }
+    const h=e.target.closest('[data-hub]');
+    if(h){const [t,s]=h.dataset.hub.split(':');if(s&&typeof MKT!=='undefined'){MKT.tab=s;ls.set('diario-mkt-tab',s)}e.stopPropagation();vai(t);return}
+  },true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('mdr2'))fecha()});
+  /* a aba ativa das abas internas aparece inteira (rolagem horizontal) */
+  const r0=render0;
+  render0=function(){r0.apply(this,arguments);const h=document.querySelector('#app .hub');const on=h&&h.querySelector('.on');if(on){const x=on.offsetLeft-(h.clientWidth-on.offsetWidth)/2;h.scrollLeft=Math.max(0,x)};if(h){const f=()=>h.classList.toggle('fim',h.scrollLeft+h.clientWidth>=h.scrollWidth-4);f();h.addEventListener('scroll',f,{passive:true})}};
+})();
+/* ==== MENU:FIM ==== */
+/* ==== MELHORIAS:INICIO ==== backup versionado, registro rápido, Início personalizável, ficha da operação,
+   tags de erro, checklist por setup, aviso de limite, escala nas notificações e dólar automático */
+
+/* ---------- tags de erro (vários por trade, em categorias) ---------- */
+const TAGS_ERRO=[
+  ['Emocional',['Entrei por dica/emoção (fora do sistema)','Saí cedo por emoção','Precisava estar certo (realizei cedo/segurei perda)','Revanche depois de uma perda','Medo de ficar de fora (FOMO)']],
+  ['Gestão de risco',['Não saí no stop','Risco grande demais','Mexi no stop','Aumentei a mão no prejuízo']],
+  ['Processo e análise',['Não segui minha rotina','Operei fora do tipo de mercado','Foquei na entrada, não no risco/retorno','Entrei sem saída predeterminada','Operei demais (perdi o controle)','Entrei atrasado']],
+  ['Outros',['Outro']],
+];
+const catErro=tag=>{for(const [c,L] of TAGS_ERRO)if(L.includes(tag))return c;return 'Outros'};
+/* tags de um trade (trades antigos só têm o campo "err") */
+const tagsDe=t=>Array.isArray(t.tags)&&t.tags.length?t.tags:(t.err&&t.err!=='Nenhum'?[t.err]:[]);
+
+/* ---------- checklist por setup ---------- */
+const chkSetups=()=>((S.ax||{})['chk.setups'])||{};
+const chkDe=setup=>{const m=chkSetups(),k=Object.keys(m).find(x=>x.trim().toLowerCase()===String(setup||'').trim().toLowerCase());return k?m[k].filter(Boolean):[]};
+const chkFrac=t=>{const L=chkDe(t.setup);if(!L.length)return null;const c=t.chk||{};return L.filter((_,i)=>c[i]).length/L.length};
+const setupsConhecidos=()=>[...new Set([...Object.keys(chkSetups()),...S.trades.map(t=>(t.setup||'').trim()).filter(Boolean)])].slice(0,40);
+
+/* a ficha do trade ganha: lista de setups, checklist do setup e tags de erro no lugar do campo único */
+(function(){
+  const s0=sheet;
+  sheet=function(){
+    let h=s0();const t=T;if(!t)return h;
+    const ss=setupsConhecidos();
+    h=h.replace('<label>Setup / estratégia<input name="setup"',()=>`<datalist id="dl-setups">${ss.map(x=>`<option value="${esc(x)}">`).join('')}</datalist><label>Setup / estratégia<input name="setup" list="dl-setups"`);
+    const L=chkDe(t.setup);
+    if(L.length){
+      const c=t.chk||{},feitos=L.filter((_,i)=>c[i]).length;
+      const box=`<div class="card" style="margin:8px 0"><div class="top"><b>Checklist do setup</b><span class="sm ${feitos===L.length?'g':'mut'}">${feitos}/${L.length}</span></div>${L.map((it,i)=>`<label class="ck" style="margin-top:8px"><input type="checkbox" data-ck="${i}"${c[i]?' checked':''}><span>${esc(it)}</span></label>`).join('')}</div>`;
+      h=h.replace(/(<label>Setup \/ estratégia<input[^>]*><\/label>)/,(m)=>m+box);
+    }
+    const tg=tagsDe(t);
+    const chips=`<label>Erros cometidos (erro = não seguir suas regras)</label>${TAGS_ERRO.map(([cat,LL])=>`<div class="sm mut" style="margin:8px 0 2px">${cat}</div><div class="chips2">${LL.map(x=>`<button class="${tg.includes(x)?'on r':''}" data-tg="${esc(x)}">${esc(x)}</button>`).join('')}</div>`).join('')}${tg.length?'':'<div class="sm g" style="margin-top:6px">Nenhum erro marcado.</div>'}`;
+    h=h.replace(/<label>Erro cometido[^<]*<select name="err">[\s\S]*?<\/select><\/label>/,()=>chips);
+    return h;
+  };
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('#sh [data-tg]');if(!b||!T)return;
+    const x=b.dataset.tg,L=tagsDe(T).slice(),i=L.indexOf(x);i<0?L.push(x):L.splice(i,1);
+    T.tags=L;T.err=L[0]||'Nenhum';showSheet();
+  });
+  document.addEventListener('change',e=>{
+    const c=e.target.closest('#sh [data-ck]');
+    if(c&&T){(T.chk??={})[c.dataset.ck]=c.checked;showSheet();return}
+    const s=e.target.closest('#sh input[name="setup"]');
+    if(s&&T){T.setup=s.value;if(!T.chk)T.chk={};showSheet()}
+  });
+})();
+
+/* ---------- registro rápido ---------- */
+const raizAtivo=a=>{const s=String(a||'').toUpperCase().trim(),m=s.match(/^([A-Z]{3})[FGHJKMNQUVXZ]\d{2}$/)||s.match(/^([A-Z]{2,4})[FGHJKMNQUVXZ]\d{1,2}$/);return m?m[1]:s};
+function padraoAtivo(a){
+  const r=raizAtivo(a),u=[...S.trades].filter(t=>raizAtivo(t.ativo)===r&&r).sort((x,y)=>(y.dt||'').localeCompare(x.dt||''))[0];
+  const pv=u&&+u.pv?+u.pv:r==='WIN'?0.2:r==='WDO'?10:r==='MES'?5:r==='MNQ'?2:r==='ES'?50:r==='NQ'?20:1;
+  return {pv,qty:u&&+u.qty?+u.qty:1,setup:u?u.setup||'':'',tipo:u?u.tipo||'D':'D',mkt:u?u.mkt:undefined,cost:u&&u.cost!=null?u.cost:0};
+}
+let QK=null;
+function qkAbre(){
+  if(typeof pBloq==='function'&&!pBloq())return;
+  const recentes=[...new Set([...S.trades].sort((a,b)=>(b.dt||'').localeCompare(a.dt||'')).map(t=>(t.ativo||'').toUpperCase()).filter(Boolean))].slice(0,6);
+  QK={ativo:recentes[0]||'',side:'C',entry:'',stop:'',qty:'',exit:'',tipo:'D',rec:recentes};
+  Object.assign(QK,{qty:padraoAtivo(QK.ativo).qty,tipo:padraoAtivo(QK.ativo).tipo});
+  let ov=document.getElementById('qk');if(!ov){ov=document.createElement('div');ov.id='qk';document.body.appendChild(ov)}
+  document.body.style.overflow='hidden';qkDesenha();
+}
+function qkFecha(){const o=document.getElementById('qk');if(o)o.remove();QK=null;document.body.style.overflow='';try{navPinta()}catch(e){}}
+function qkCalc(){
+  const p=padraoAtivo(QK.ativo),e=numN(QK.entry),s=numN(QK.stop),q=numN(QK.qty)||0,x=numN(QK.exit),d=QK.side==='C'?1:-1,mo=moedaAtv(QK.ativo);
+  const risco=e!=null&&s!=null?Math.abs(e-s)*q*p.pv:null,res=e!=null&&x!=null?(x-e)*d*q*p.pv-(+p.cost||0):null;
+  return {p,risco,res,mo};
+}
+function qkDesenha(){
+  const ov=document.getElementById('qk');if(!ov||!QK)return;
+  const c=qkCalc(),f=(k,l,ph)=>`<label>${l}<input data-qk="${k}" value="${esc(QK[k])}" inputmode="decimal" placeholder="${ph||''}"></label>`;
+  ov.innerHTML=`<div class="qk-bk" data-qkx="1"></div><div class="qk-pn" role="dialog" aria-label="Registro rápido">
+<div class="top"><b style="font-size:19px">Registro rápido</b><button class="x" data-qkx="1" aria-label="Fechar">✕</button></div>
+<label>Ativo<input data-qk="ativo" value="${esc(QK.ativo)}" autocapitalize="characters" autocomplete="off" placeholder="WINZ26"></label>
+${QK.rec.length?`<div class="chips2">${QK.rec.map(a=>`<button class="${a===QK.ativo?'on':''}" data-qka="${esc(a)}">${esc(a)}</button>`).join('')}</div>`:''}
+<div class="seg" style="margin-top:10px"><button class="${QK.side==='C'?'on':''}" data-qks="C" style="${QK.side==='C'?'color:var(--g)':''}">Compra</button><button class="${QK.side==='V'?'on':''}" data-qks="V" style="${QK.side==='V'?'color:var(--r)':''}">Venda</button></div>
+<div class="g3">${f('entry','Entrada')}${f('stop','Stop')}${f('qty','Qtd.')}</div>
+${f('exit','Saída (se já saiu)','deixe vazio se está aberto')}
+<div class="sm" style="margin:10px 0 2px;line-height:1.5">${c.risco!=null?`Risco: <b>${mnyC(c.risco,c.mo)}</b>${pctConta(c.risco,c.mo,QK.tipo)?' ('+pctConta(c.risco,c.mo,QK.tipo).replace('+','')+')':''}`:'<span class="mut">Preencha entrada e stop para ver o risco.</span>'}${c.res!=null?` · Resultado: <b class="${cls(c.res)}">${mnyC(c.res,c.mo)}</b>`:''}</div>
+<div class="sm mut">Usa ${c.p.pv} ${c.mo==='USD'?'US$':'R$'} por ponto${c.p.setup?' e o setup "'+esc(c.p.setup)+'"':''} do seu último ${esc(raizAtivo(QK.ativo)||'trade')}.</div>
+<div id="qkmsg" class="r sm" style="margin-top:6px"></div>
+<div class="g2" style="margin-top:10px"><button class="btn" data-qkok="1">Salvar</button><button class="btn s" data-qkok="2">Salvar e completar</button></div></div>`;
+}
+function qkSalva(completar){
+  const m=document.getElementById('qkmsg'),a=String(QK.ativo||'').trim().toUpperCase();
+  if(!a){if(m)m.textContent='Informe o ativo.';return}
+  if(numN(QK.entry)==null){if(m)m.textContent='Informe a entrada.';return}
+  const p=padraoAtivo(a),agora=loc().slice(0,16),saiu=numN(QK.exit)!=null;
+  const t={id:uid(),tipo:p.tipo||'D',dt:agora,ativo:a,side:QK.side,entry:String(QK.entry),stop:String(QK.stop||''),qty:String(QK.qty||p.qty),pv:String(p.pv),cost:String(p.cost||0),
+    exit:saiu?String(QK.exit):'',dtx:saiu?agora:'',setup:p.setup,mkt:p.mkt||(typeof MK!=='undefined'?MK[0]:''),emo:'3',rules:'s',err:'Nenhum',tags:[],u:Date.now(),rapido:1};
+  if(t.tipo==='O'){t.ot='C';t.estr=typeof ESTR!=='undefined'?ESTR[0]:''}
+  S.trades.push(t);save();qkFecha();render();
+  if(window.toast)toast(saiu?'Trade salvo e encerrado':'Trade salvo como aberto',2500);
+  limiteConfere();
+  if(completar){AUTO=0;isNew=0;T={...t};orig={pin:T.pin,pout:T.pout,pplan:T.pplan};showSheet()}
+}
+document.addEventListener('input',e=>{const i=e.target.closest('#qk [data-qk]');if(!i||!QK)return;QK[i.dataset.qk]=i.dataset.qk==='ativo'?i.value.toUpperCase():i.value;
+  if(i.dataset.qk==='ativo'){const p=padraoAtivo(QK.ativo);QK.qty=QK.qty||p.qty;QK.tipo=p.tipo}
+  const c=qkCalc(),pos=i.selectionStart,k=i.dataset.qk;qkDesenha();const n=document.querySelector(`#qk [data-qk="${k}"]`);if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(_){}}});
+document.addEventListener('click',e=>{
+  if(!QK)return;
+  if(e.target.closest('[data-qkx]'))return qkFecha();
+  const a=e.target.closest('[data-qka]');if(a){QK.ativo=a.dataset.qka;const p=padraoAtivo(QK.ativo);QK.qty=p.qty;QK.tipo=p.tipo;return qkDesenha()}
+  const s=e.target.closest('[data-qks]');if(s){QK.side=s.dataset.qks;return qkDesenha()}
+  const ok=e.target.closest('[data-qkok]');if(ok)qkSalva(ok.dataset.qkok==='2');
+});
+
+/* ---------- ficha visual da operação ---------- */
+let FX=null;
+function fxLista(){return [...S.trades].sort((a,b)=>((b.dtx||b.dt)||'').localeCompare((a.dtx||a.dt)||''))}
+function fxRegua(t,c){
+  const N=k=>numN(t[k]),e=N('entry'),s=N('stop'),x=N('exit'),alvos=['target','target2','target3'].map(N).filter(v=>v!=null),mep=N('mep'),men=N('men');
+  if(e==null)return '<div class="sm mut">Sem preço de entrada.</div>';
+  const P=[e,s,x,mep,men,...alvos].filter(v=>v!=null),lo=Math.min(...P),hi=Math.max(...P),pad=(hi-lo)*.08||Math.abs(e)*.002||1;
+  const W=340,H=240,L=8,Rr=118,y=v=>14+(hi+pad-v)/((hi-lo)+2*pad)*(H-28);
+  const dec=Math.max(...P.map(v=>(String(v).split('.')[1]||'').length),0),fv=v=>(+v).toLocaleString('pt-BR',{minimumFractionDigits:Math.min(dec,4),maximumFractionDigits:Math.min(dec,4)});
+  const linha=(v,cor,rot,tr)=>`<line x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}" stroke="${cor}" stroke-width="${tr?1.4:2}" ${tr?'stroke-dasharray="5 4"':''}/><text x="${W-Rr+8}" y="${y(v)+4}" font-size="11.5" fill="${cor}" font-weight="600">${rot} ${fv(v)}</text>`;
+  const band=(a,b,cor,op)=>`<rect x="${L+70}" y="${Math.min(y(a),y(b))}" width="${W-Rr-L-140}" height="${Math.max(2,Math.abs(y(a)-y(b)))}" fill="${cor}" opacity="${op}" rx="4"/>`;
+  let g='';
+  if(mep!=null&&men!=null)g+=band(mep,men,'var(--mut)',.15);
+  if(s!=null)g+=band(e,s,'var(--r)',.18);
+  alvos.forEach(a=>{g+=band(e,a,'var(--g)',.10)});
+  if(x!=null)g+=`<rect x="${L+100}" y="${Math.min(y(e),y(x))}" width="${W-Rr-L-200}" height="${Math.max(3,Math.abs(y(e)-y(x)))}" fill="${c.pl>=0?'var(--g)':'var(--r)'}" opacity=".85" rx="3"/>`;
+  alvos.forEach((a,i)=>{g+=linha(a,'var(--g)',alvos.length>1?'Alvo '+(i+1):'Alvo',1)});
+  if(s!=null)g+=linha(s,'var(--r)','Stop',1);
+  if(mep!=null)g+=linha(mep,'var(--mut)','Melhor',1);
+  if(men!=null)g+=linha(men,'var(--mut)','Pior',1);
+  g+=linha(e,'var(--ac)','Entrada');
+  if(x!=null)g+=linha(x,'var(--tx)','Saída');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Régua de preços do trade">${g}</svg>
+<div class="sm mut" style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px"><span><b style="color:var(--r)">■</b> risco planejado</span>${alvos.length?'<span><b style="color:var(--g)">■</b> até o alvo</span>':''}${x!=null?'<span>barra cheia = o que você realizou</span>':''}${mep!=null&&men!=null?'<span><b style="color:var(--mut)">■</b> faixa que o preço percorreu</span>':''}</div>`;
+}
+function fxHtml(){
+  const L=fxLista(),i=L.findIndex(t=>t.id===FX.id),t=L[i];if(!t)return '';
+  const c=calc(t),aberto=isOpen(t),mo=moedaT(t),tp=t.tipo||'D',dur=typeof minutosEntre==='function'?minutosEntre(t.dt,t.dtx):null;
+  const durTxt=dur==null?'':dur<60?Math.round(dur)+' min':dur<1440?(dur/60).toFixed(1).replace('.',',')+' h':Math.round(dur/1440)+' dias';
+  const st=aberto?['Aberto','var(--ac)']:c.pl>0?['Ganho','var(--g)']:c.pl<0?['Perda','var(--r)']:['Zero','var(--mut)'];
+  const kv=(l,v,k='')=>`<div class="card" style="margin:0;padding:10px"><span class="sm mut">${l}</span><div><b class="${k}" style="font-size:16px">${v}</b></div></div>`;
+  const vezes=c.r==null?null:(c.r>=0?'ganhou ':'perdeu ')+Math.abs(c.r).toFixed(1).replace('.',',')+'x o que arriscou';
+  const ganhoPlan=c.rr!=null&&c.risk?c.risk*c.rr:null,captura=!aberto&&c.pl>0&&ganhoPlan?c.pl/ganhoPlan:null;
+  const tg=tagsDe(t),ck=chkDe(t.setup),cf=t.chk||{};
+  const fotos=[['pplan','Planejamento'],['pin','Entrada'],['pout','Saída']].filter(([k])=>t[k]);
+  return `<div class="fx-top"><button class="btn s ib" data-fx="x" aria-label="Fechar">✕</button><div style="flex:1;min-width:0;text-align:center"><b>${esc(t.ativo||'Trade')}</b><div class="sm mut">${i+1} de ${L.length}</div></div><button class="btn s ib" data-fx="ant"${i>0?'':' disabled'} aria-label="Anterior">‹</button><button class="btn s ib" data-fx="prox"${i<L.length-1?'':' disabled'} aria-label="Próximo">›</button></div>
+<div class="fx-body">
+<div class="hero" style="margin-top:0"><div class="top"><span class="chip" style="color:${st[1]};border-color:${st[1]}">${st[0]}</span><span class="sm mut">${{D:'Day trade',S:'Swing',O:'Opção'}[tp]} · ${t.side==='C'?(tp==='O'?'Comprado':'Compra'):(tp==='O'?'Lançado':'Venda')}${t.setup?' · '+esc(t.setup):''}</span></div>
+<div class="big ${aberto?'':cls(c.pl)}" style="margin-top:8px">${aberto?'Em aberto':mT(t,c.pl)}</div>
+<div class="sm mut">${aberto?(c.risk!=null?'Risco em jogo: '+mT(t,c.risk):''):pctConta(c.pl,mo,tp)+(vezes?' · '+vezes:'')}</div>
+<div class="sm mut" style="margin-top:6px">${fdt(t.dt)}${t.dtx?' → '+fdt(t.dtx):''}${durTxt?' · '+durTxt:''}</div></div>
+<h2>Plano × execução</h2><div class="card">${fxRegua(t,c)}</div>
+<div class="kv">${kv('Risco planejado',c.risk==null?'sem stop':mT(t,c.risk)+(pctConta(c.risk,mo,tp)?'<div class="sm mut" style="font-weight:500">'+pctConta(c.risk,mo,tp).replace('+','')+'</div>':''))}${kv('Ganho/risco planejado',c.rr==null?'sem alvo':c.rr.toFixed(1).replace('.',',')+' para 1')}${kv('Captura do alvo',captura==null?'–':Math.round(captura*100)+'%',captura!=null&&captura<.6?'r':'')}${kv('Custos',mT(t,+t.cost||0))}</div>
+<h2>Disciplina</h2><div class="card"><div class="sm">Regras: <b class="${t.rules==='n'?'r':'g'}">${t.rules==='n'?'quebrei':'segui'}</b>${t.emo?' · Antes de entrar: '+(EMO[+t.emo-1]||''):''}</div>
+${tg.length?`<div class="chips2" style="margin-top:8px">${tg.map(x=>`<span class="chip" style="color:var(--r);border-color:color-mix(in srgb,var(--r) 40%,transparent)" title="${esc(catErro(x))}">${esc(x)}</span>`).join('')}</div>`:'<div class="sm g" style="margin-top:6px">Nenhum erro marcado.</div>'}
+${ck.length?`<div style="margin-top:10px"><div class="sm mut">Checklist do setup (${ck.filter((_,k)=>cf[k]).length}/${ck.length})</div>${ck.map((x,k)=>`<div class="sm" style="margin-top:4px">${cf[k]?'<span class="g">✓</span>':'<span class="r">✗</span>'} ${esc(x)}</div>`).join('')}</div>`:''}</div>
+${fotos.length?`<h2>Fotos</h2><div class="g${fotos.length>1?'2':''}" style="gap:8px">${fotos.map(([k,l])=>`<div><div class="sm mut" style="margin-bottom:4px">${l}</div><img data-img="${t[k]}" style="width:100%;border-radius:12px;border:1px solid var(--bd);display:block;min-height:80px;background:var(--card2)"></div>`).join('')}</div>`:''}
+${t.nota?`<h2>Comentários</h2><div class="card" style="white-space:pre-wrap;line-height:1.5">${esc(t.nota)}</div>`:''}
+<div class="g2" style="margin:16px 0 30px"><button class="btn" data-fx="editar">Editar</button>${aberto?'<button class="btn s" data-fx="encerrar">Encerrar</button>':'<button class="btn s" data-fx="x">Fechar</button>'}</div></div>`;
+}
+function fxAbre(id){FX={id};let ov=document.getElementById('fx');if(!ov){ov=document.createElement('div');ov.id='fx';document.body.appendChild(ov)}document.body.style.overflow='hidden';fxDesenha()}
+function fxDesenha(){const ov=document.getElementById('fx');if(!ov||!FX)return;ov.innerHTML=fxHtml();try{fillImgs()}catch(e){}const b=ov.querySelector('.fx-body');if(b)b.scrollTop=0;try{navPinta()}catch(e){}}
+function fxFecha(){const o=document.getElementById('fx');if(o)o.remove();FX=null;document.body.style.overflow='';try{navPinta()}catch(e){}}
+/* tocar num trade abre a ficha; "Editar" abre o formulário de sempre */
+document.addEventListener('click',e=>{
+  const f=e.target.closest('[data-fx]');
+  if(f&&FX){const k=f.dataset.fx,L=fxLista(),i=L.findIndex(t=>t.id===FX.id);
+    if(k==='x')return fxFecha();
+    if(k==='ant'&&i>0){FX.id=L[i-1].id;return fxDesenha()}
+    if(k==='prox'&&i<L.length-1){FX.id=L[i+1].id;return fxDesenha()}
+    if(k==='editar'||k==='encerrar'){const id=FX.id;fxFecha();const t=S.trades.find(x=>x.id===id);if(!t)return;AUTO=0;isNew=0;QM=k==='encerrar'?1:0;T={...t,...(QM?{dtx:loc().slice(0,16)}:{})};orig={pin:T.pin,pout:T.pout,pplan:T.pplan};showSheet();return}
+    return;
+  }
+  const c=e.target.closest('#app [data-a="edit"]');
+  if(c&&!e.target.closest('button,a,input,select,textarea,label')&&S.trades.some(t=>t.id===c.dataset.id)){e.stopPropagation();fxAbre(c.dataset.id)}
+},true);
+document.addEventListener('keydown',e=>{if(!FX)return;if(e.key==='Escape')fxFecha();else if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const L=fxLista(),i=L.findIndex(t=>t.id===FX.id),j=i+(e.key==='ArrowRight'?1:-1);if(L[j]){FX.id=L[j].id;fxDesenha()}}});
+
+/* ---------- Início personalizável ---------- */
+const HB_NOMES={hero:'Resultado de hoje',adr:'ADRs brasileiras',cap:'Capital',posso:'Posso operar hoje?',turno:'Escala de turno',venc:'Vencimentos de opções',pos:'Posições abertas',lim:'Limites da mesa',metas:'Metas de processo',cal:'Calendário do mês',acoes:'Atalhos'};
+const HB_PADRAO=['hero','posso','turno','pos','adr','cap','venc','lim','metas','cal','acoes'];
+const hbCfg=()=>{const c=((S.ax||{})['home.layout'])||{};const ordem=(c.ordem||[]).filter(k=>HB_NOMES[k]);HB_PADRAO.forEach(k=>{if(!ordem.includes(k))ordem.push(k)});return {ordem,ocultos:(c.ocultos||[]).filter(k=>HB_NOMES[k])}};
+function hbAplica(){
+  if(tab!=='home')return;const ap=document.getElementById('app');if(!ap)return;
+  const adr=document.getElementById('adr');if(adr&&!adr.closest('[data-hb]')){} // fica onde está; tratado abaixo
+  const blocos={};ap.querySelectorAll('[data-hb]').forEach(el=>{blocos[el.dataset.hb]=el});
+  if(adr){const w=document.createElement('section');w.dataset.hb='adr';adr.parentNode.insertBefore(w,adr);w.appendChild(adr);blocos.adr=w}
+  const {ordem,ocultos}=hbCfg(),fim=document.createElement('div');fim.id='hb-fim';ap.appendChild(fim);
+  ordem.forEach(k=>{const el=blocos[k];if(!el)return;el.style.display=ocultos.includes(k)?'none':'';ap.insertBefore(el,fim)});
+  fim.innerHTML=`<button class="btn s" style="width:100%;margin:14px 0 4px" data-hbp="1">${window.icoSvg?window.icoSvg('pen'):''}Personalizar o Início</button>`;
+}
+function hbEditor(){
+  const {ordem,ocultos}=hbCfg();let ov=document.getElementById('hbe');if(!ov){ov=document.createElement('div');ov.id='hbe';document.body.appendChild(ov)}
+  ov.innerHTML=`<div class="qk-bk" data-hbx="1"></div><div class="qk-pn"><div class="top"><b style="font-size:19px">Personalizar o Início</b><button class="x" data-hbx="1">✕</button></div><div class="sm mut" style="margin:4px 0 10px">Ligue o que quer ver e use as setas para mudar a ordem.</div>
+${ordem.map((k,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd)"><label class="ck" style="flex:1;margin:0"><input type="checkbox" data-hbv="${k}"${ocultos.includes(k)?'':' checked'}><span>${HB_NOMES[k]}</span></label><button class="btn s ib" data-hbm="${k}:-1"${i?'':' disabled'} aria-label="Subir">↑</button><button class="btn s ib" data-hbm="${k}:1"${i<ordem.length-1?'':' disabled'} aria-label="Descer">↓</button></div>`).join('')}
+<button class="btn s" style="width:100%;margin-top:12px" data-hbr="1">Voltar ao padrão</button></div>`;
+  document.body.style.overflow='hidden';
+}
+const hbSalva=c=>{(S.ax??={})['home.layout']=c;save()};
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-hbp]'))return hbEditor();
+  if(e.target.closest('[data-hbx]')){const o=document.getElementById('hbe');if(o)o.remove();document.body.style.overflow='';render();return}
+  const m=e.target.closest('[data-hbm]');if(m){const [k,d]=m.dataset.hbm.split(':'),c=hbCfg(),i=c.ordem.indexOf(k),j=i+ +d;if(j>=0&&j<c.ordem.length){[c.ordem[i],c.ordem[j]]=[c.ordem[j],c.ordem[i]];hbSalva(c);hbEditor()}return}
+  if(e.target.closest('[data-hbr]')){hbSalva({ordem:HB_PADRAO.slice(),ocultos:[]});hbEditor()}
+});
+document.addEventListener('change',e=>{const v=e.target.closest('[data-hbv]');if(!v)return;const c=hbCfg(),k=v.dataset.hbv;c.ocultos=c.ocultos.filter(x=>x!==k);if(!v.checked)c.ocultos.push(k);hbSalva(c)});
+
+/* ---------- aviso de limite do dia ---------- */
+function limiteConfere(){
+  const td=loc().slice(0,10),d=S.days[td]||{},mR=limPerda(d),mT=+d.maxT,ts=dayTr(td),pl=dayPL(ts),n=ts.length,k='lim.'+td;
+  if(((S.ax||{})[k]))return;
+  let msg='';
+  if(mR>0&&pl<=-mR)msg=`Você atingiu a perda máxima do dia (${money(pl)}). Pare por hoje.`;
+  else if(mT>0&&n>=mT)msg=`Você chegou ao máximo de ${mT} trades hoje. Pare por hoje.`;
+  else if(mR>0&&pl<=-mR*.8)msg=`Atenção: perda do dia em ${money(pl)}, perto do limite de ${money(-mR)}.`;
+  if(!msg)return;
+  const fim=/Pare por hoje/.test(msg);if(fim){(S.ax??={})[k]=1;save()}
+  if(window.toast)toast('🛑 '+msg,6000);
+  try{if('Notification' in window&&Notification.permission==='granted')navigator.serviceWorker.ready.then(r=>r.showNotification(fim?'🛑 Pare por hoje':'⚠️ Perto do limite',{body:msg,tag:'limite-'+td,icon:'icon-192.png'}))}catch(e){}
+}
+document.addEventListener('click',e=>{if(e.target.closest('[data-a="savetrade"]'))setTimeout(limiteConfere,80)});
+
+/* ---------- escala de turno nas notificações (o servidor avisa "não opere" de manhã e a véspera à noite) ---------- */
+function npComTurno(){
+  const t=typeof turnoGet==='function'?turnoGet():null,np=Object.assign({},typeof NP!=='undefined'?NP:{});
+  if(t){const hj=loc().slice(0,10),fim=diasMais(hj,60),dias={};Object.keys(t.dias).forEach(k=>{if(k>=diasMais(hj,-1)&&k<=fim)dias[k]=t.dias[k]});np.turno={on:t.on?1:0,niv:t.niv,dias}}
+  return np;
+}
+async function turnoPushSync(force){
+  try{
+    if(!('serviceWorker' in navigator)||typeof alFn!=='function'||!cfg())return;
+    const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(!sub)return;
+    const np=npComTurno(),h=JSON.stringify(np)+loc().slice(0,10);if(!force&&ls.get('diario-np-h')===h)return;
+    await alFn('inscrever',{sub:sub.toJSON(),prefs:np});ls.set('diario-np-h',h);
+  }catch(e){}
+}
+if(typeof turnoSet==='function'){const ts0=turnoSet;turnoSet=function(f){ts0(f);clearTimeout(turnoSet._t);turnoSet._t=setTimeout(()=>turnoPushSync(true),1500)}}
+
+/* ---------- dólar automático (PTAX do Banco Central, pela função "juros") ---------- */
+function dolarAuto(){
+  const d=(typeof JR!=='undefined'&&JR.data&&JR.data.ptax)||null;if(!d||!(d.v>0))return;
+  if(((S.ax||{})['g.brl.manual']))return;
+  const atual=+((S.ax||{})['g.brl'])||0;if(Math.abs(atual-d.v)<0.0001)return;
+  (S.ax??={})['g.brl']=String(d.v);(S.ax)['g.brl.data']=d.d;save();
+}
+if(typeof jrPaint==='function'){const jp0=jrPaint;jrPaint=function(){jp0();dolarAuto()}}
+document.addEventListener('change',e=>{const i=e.target.closest('[data-axg="brl"]');if(i)(S.ax??={})['g.brl.manual']=i.value?1:0});
+
+/* ---------- backup: cópia diária versionada na sua conta (30 dias) ---------- */
+const BK={lista:null,err:'',busy:0};
+async function bkSnapshot(){
+  if(!SESS||!cfg())return;
+  const hj=loc().slice(0,10);if(ls.get('diario-snap-dia')===hj+'|'+SESS.uid)return;
+  try{
+    await rq('/rest/v1/diario_backup',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:SESS.uid,dia:hj,data:pub(),criado:new Date().toISOString()})});
+    ls.set('diario-snap-dia',hj+'|'+SESS.uid);BK.err='';
+    try{await rq('/rest/v1/diario_backup?user_id=eq.'+SESS.uid+'&dia=lt.'+diasMais(hj,-30),{method:'DELETE'})}catch(e){}
+  }catch(e){BK.err=e.status===404||/diario_backup/.test(e.message||'')?'Falta criar a tabela de cópias: rode o SQL "seguranca-backup.sql" no Supabase.':'Não consegui guardar a cópia de hoje: '+(e.message||e)}
+}
+if(typeof sync==='function'){const sy0=sync;sync=async function(m){await sy0(m);if(SESS&&S.lastSyncAt&&Date.now()-S.lastSyncAt<6e4)bkSnapshot()}}
+async function bkListar(){
+  if(!SESS)return;BK.busy=1;
+  try{BK.lista=await(await rq('/rest/v1/diario_backup?select=dia,criado&user_id=eq.'+SESS.uid+'&order=dia.desc&limit=30')).json();BK.err=''}
+  catch(e){BK.lista=[];BK.err=e.status===404?'Falta criar a tabela de cópias: rode o SQL "seguranca-backup.sql" no Supabase.':e.message||String(e)}
+  BK.busy=0;if(tab==='conta')render();
+}
+async function bkRestaura(dia){
+  if(!confirm('Restaurar a cópia de '+dia.split('-').reverse().join('/')+'? O diário deste aparelho e da nuvem volta a ser igual ao daquele dia. (Antes disso, a situação atual é guardada como cópia de hoje.)'))return;
+  try{
+    ls.del('diario-snap-dia');await bkSnapshot();
+    const r=await(await rq('/rest/v1/diario_backup?select=data&user_id=eq.'+SESS.uid+'&dia=eq.'+dia)).json();
+    if(!r[0]||!r[0].data)throw new Error('Cópia não encontrada.');
+    adopt(r[0].data);S.mt=Date.now();save();render();if(window.toast)toast('Cópia restaurada.',3000);
+  }catch(e){if(window.toast)toast('Não consegui restaurar: '+(e.message||e),5000)}
+}
+(function(){
+  const vc0=vConta;
+  vConta=function(){
+    const h=vc0();if(!SESS)return h;
+    if(BK.lista==null&&!BK.busy)setTimeout(bkListar,0);
+    const L=BK.lista||[];
+    return h+`<div class="card"><div class="top"><b>Cópias de segurança</b><span class="sm mut">últimos 30 dias</span></div>
+<div class="sm mut" style="margin:4px 0 8px">Uma vez por dia o app guarda uma cópia completa do diário na sua conta, além da sincronização. Se algo der errado, volte para o dia que quiser.</div>
+${BK.err?`<div class="warn">${esc(BK.err)}</div>`:''}
+${BK.lista==null?'<div class="sm mut">Carregando…</div>':L.length?L.slice(0,10).map(x=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--bd)"><span>${x.dia.split('-').reverse().join('/')}<span class="sm mut"> · ${new Date(x.criado).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></span><button class="btn s" data-bkr="${x.dia}">Restaurar</button></div>`).join(''):'<div class="sm mut">Nenhuma cópia ainda. A primeira é feita na próxima sincronização.</div>'}</div>`;
+  };
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-bkr]');if(b)bkRestaura(b.dataset.bkr)});
+})();
+/* status do backup no Início (logado) e aviso mais claro quando não está */
+function bkStatus(){
+  if(tab!=='home')return;const h=document.querySelector('#app .hero');if(!h||h.querySelector('.bk-st'))return;
+  const d=document.createElement('div');d.className='sm mut bk-st';d.style.marginTop='8px';
+  if(SESS&&S.lastSyncAt){const min=Math.round((Date.now()-S.lastSyncAt)/6e4);d.innerHTML=(window.icoSvg?window.icoSvg('ok'):'')+'Salvo na nuvem '+(min<1?'agora':min<60?'há '+min+' min':'às '+hm(S.lastSyncAt))}
+  else{d.innerHTML=(window.icoSvg?window.icoSvg('alert'):'')+'Backup automático desligado · <a href="#" data-a="gotab" data-id="conta" style="color:var(--ac)">entrar na conta</a>';d.style.color='var(--am)'}
+  h.appendChild(d);
+}
+
+/* ---------- estatísticas: erros pelas tags e checklist ---------- */
+(function(){
+  const vs0=vStats;
+  vStats=function(){
+    let h=vs0();if(ST.aba!=='risco')return h;
+    const X=stCtx(),rows=X.rows,ex=rows.flatMap(t=>tagsDe(t).map(g=>({...t,_g:g,_c:catErro(g)})));
+    const porTag=agrupa(ex,t=>t._g).sort((a,b)=>a.somaPL-b.somaPL),porCat=agrupa(ex,t=>t._c).sort((a,b)=>a.somaPL-b.somaPL);
+    const cks=rows.map(chkFrac).filter(v=>v!=null),ckm=cks.length?cks.reduce((a,b)=>a+b,0)/cks.length:null;
+    const ckOk=rows.filter(t=>chkFrac(t)===1),ckNao=rows.filter(t=>{const f=chkFrac(t);return f!=null&&f<1});
+    const med=a=>a.length?a.reduce((s,t)=>s+t.c.pl,0)/a.length:null;
+    const extra=`${ckm!=null?`<h2>Checklist do setup</h2><div class="kv">${KV('Checklist cumprido',Math.round(ckm*100)+'%','',cks.length+' trades com checklist')}${KV('Média: completo × incompleto',X.fs(med(ckOk))+' × '+X.fs(med(ckNao)),'','resultado médio por trade')}</div>`:''}${ex.length?`<h2>Erros por categoria</h2>${stTbl('Categoria',porCat,X.fs)}<h2>Erros (cada marcação)</h2>${stTbl('Erro',porTag,X.fs)}`:''}`;
+    const i=h.indexOf('<h2>Sequências</h2>');
+    h=h.replace(/<div class="card"><table><tr><th>Erro<\/th>[\s\S]*?<\/table><\/div>/,'');
+    return i<0?h+extra:h.slice(0,i)+extra+h.slice(i);
+  };
+})();
+
+/* ---------- estilos e ganchos ---------- */
+(function(){
+  const st=document.createElement('style');
+  st.textContent=`#qk,#hbe{position:fixed;inset:0;z-index:70}.qk-bk{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.qk-pn{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow-y:auto;background:var(--bg);border-top:1px solid var(--bd);border-radius:20px 20px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));max-width:640px;margin:0 auto;animation:qkS .2s ease-out}
+@keyframes qkS{from{transform:translateY(30px);opacity:.5}}
+#fx{position:fixed;inset:0;z-index:65;background:var(--bg);display:flex;flex-direction:column}
+#fx .fx-top{display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--bd)}
+#fx .fx-body{flex:1;overflow-y:auto;padding:14px 16px;max-width:720px;width:100%;margin:0 auto;box-sizing:border-box;-webkit-overflow-scrolling:touch}
+.bk-st .ico{width:14px;height:14px;vertical-align:-2px}`;
+  document.head.appendChild(st);
+  /* botão de registro rápido no menu do + */
+  const poe=()=>{const m=document.getElementById('fabm');if(!m||m.querySelector('[data-qkn]'))return;const b=document.createElement('button');b.className='btn';b.dataset.qkn='1';b.innerHTML=(window.icoSvg?window.icoSvg('bolt'):'')+'Registro rápido';m.insertBefore(b,m.firstChild)};
+  document.addEventListener('click',e=>{if(e.target.closest('[data-qkn]')){const m=document.getElementById('fabm');if(m)m.style.display='none';qkAbre()}});
+  const r0=render0;
+  render0=function(){r0.apply(this,arguments);try{poe();hbAplica();bkStatus()}catch(e){console.error(e)}};
+  /* dados do dólar e da escala ao abrir o app (silencioso) */
+  setTimeout(()=>{try{if(typeof jrLoad==='function'&&cfg())jrLoad(false)}catch(e){}turnoPushSync(false)},4000);
+})();
+/* ==== MELHORIAS:FIM ==== */
