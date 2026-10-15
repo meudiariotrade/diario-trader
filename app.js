@@ -1650,7 +1650,7 @@ const RS_PEND=['na_fila','processando'];
 const rsPend=j=>!!j&&RS_PEND.includes(j.status);
 const rsChip=j=>({na_fila:'⏳ Na fila',processando:'⚙️ Gerando…',concluido:'✅ Resumo concluído',erro:'⚠️ Erro'}[j.status]||'');
 const rsMin=iso=>{const s=Math.max(0,Math.round((Date.now()-new Date(iso))/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
-const rsParado=j=>j.status==='processando'&&Date.now()-new Date(j.atualizado||j.criado)>6*6e4;
+const rsParado=j=>j.status==='processando'&&Date.now()-new Date(j.atualizado||j.criado)>(j.erro&&/sozinho/.test(j.erro)?35:6)*6e4;
 
 async function rsFn(acao,extra){
   const c=cfg();if(!c)throw new Error('Configure o Supabase na aba Conta.');
@@ -1846,7 +1846,7 @@ function rsNote(b){
 
 /* ==== ESTUDOS2:INICIO ==== Meus prompts, resumo completo (100+ páginas), leitor, PDF e prompts extras */
 var ESV='liv',RSNEXT=null;
-const RS_PAGS=[100,150,200],RS_PPAG=400;
+const RS_PAGS=[50,100,150,200],RS_PPAG=400;
 RS.full=RS.full||{};RS.extraBusy={};RS.fullTry={};
 /* modelos prontos: servem como instrução na hora de gerar ou como prompt extra sobre um resumo pronto */
 const RSP0=[
@@ -1930,7 +1930,7 @@ rsCriar=async function(b,foco,file,o){
   o=o||RSNEXT||{modo:rspPref('modo','padrao'),paginas:rspPref('pag',100),prompt:rspTexto(rspPref('def',''))};RSNEXT=null;
   RS.err='';
   try{
-    if(o.modo==='completo'&&!file)throw new Error('O resumo completo (100+ páginas) é feito a partir do PDF: anexe o arquivo do livro.');
+    if(o.modo==='completo'&&!file)throw new Error('O resumo completo (50+ páginas) é feito a partir do PDF: anexe o arquivo do livro.');
     let endpoint;
     try{const reg=await navigator.serviceWorker.ready,s=await reg.pushManager.getSubscription();endpoint=s&&s.endpoint}catch(e){}
     let arquivo;
@@ -4016,4 +4016,21 @@ ${d&&d.preco_justo!=null?`<div style="display:grid;grid-template-columns:1fr 1fr
 ${p?`<div class="sm" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">Sua posição: preço médio <b>${anxP(p.preco_medio)}</b>${p.quantidade?' · '+anxN(p.quantidade,0)+' ações':''}${p.peso_pct!=null?' · '+anxN(p.peso_pct,1)+'% da carteira':''} · resultado <b class="${cls(p.resultado_pct)}">${(p.resultado_pct>0?'+':'')+anxN(p.resultado_pct,1)}%</b></div>`:''}
 ${x.para_quem_tem?`<div style="margin-top:8px"><b class="sm">Se você tem:</b> ${esc(anxTx(x.para_quem_tem))}</div>`:''}${x.para_quem_nao_tem?`<div style="margin-top:6px"><b class="sm">Se você não tem:</b> ${esc(anxTx(x.para_quem_nao_tem))}</div>`:''}</div>`;
 }
+/* resumo: quando o Gemini está sobrecarregado o servidor espera e tenta sozinho; o cartão avisa sem assustar */
+if(typeof rsCard==='function'){const rc0=rsCard;rsCard=function(b){let h=rc0(b);const j=typeof RS!=='undefined'&&RS.jobs?RS.jobs[b.id]:null;
+  if(j&&typeof rsPend==='function'&&rsPend(j)&&j.erro&&/sozinho/.test(j.erro)){const i=h.lastIndexOf('</div>');if(i>0)h=h.slice(0,i)+`<div class="sm" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--am) 14%,transparent);color:var(--tx)">⏳ ${esc(j.erro)}</div>`+h.slice(i)}
+  return h}}
+/* ---------- zoom travado: o app não amplia com pinça nem com toque duplo (no iPhone o Safari ignora só a meta tag) ----------
+   Dentro dos gráficos do TradingView o zoom com dois dedos continua funcionando (ele é do próprio gráfico). */
+(function(){
+  const c='width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover';
+  let m=document.querySelector('meta[name="viewport"]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m)}m.setAttribute('content',c);
+  const st=document.createElement('style');
+  /* 16px nos campos: o iPhone amplia a tela sozinho ao tocar num campo com letra menor que isso */
+  st.textContent='html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}input,select,textarea{font-size:16px!important}';
+  document.head.appendChild(st);
+  const para=e=>{e.preventDefault()};
+  ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,para,{passive:false}));
+  document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault()},{passive:false});
+})();
 /* ==== EXTRAS2 (gráfico TradingView):FIM ==== */
