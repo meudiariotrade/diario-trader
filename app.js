@@ -2,7 +2,7 @@ const MK=['Alta calma','Alta volátil','Lateral calma','Lateral volátil','Baixa
 const ERR=['Nenhum','Entrei por dica/emoção (fora do sistema)','Não saí no stop','Risco grande demais','Saí cedo por emoção','Não segui minha rotina','Operei fora do tipo de mercado','Foquei na entrada, não no risco/retorno','Entrei sem saída predeterminada','Precisava estar certo (realizei cedo/segurei perda)','Operei demais (perdi o controle)','Outro'];
 const ESTR=['Compra de call','Compra de put','Venda coberta de call','Venda de put','Trava de alta','Trava de baixa','Financiamento / collar','Straddle / strangle','Borboleta / condor','Calendário','Outra'];
 const CATS=['Plano de trade','Gestão de risco','Rotina','Psicologia'];
-const SEED=[[0,'Só entro com setup do meu sistema (nunca por dica ou emoção)'],[0,'Defino a saída predeterminada antes de entrar'],[0,'Só opero o tipo de mercado para o qual meu sistema foi feito'],[1,'Defino o stop inicial antes de entrar'],[1,'Risco máximo de 1% do capital por trade'],[1,'Só pego trade com alvo de pelo menos 3 vezes o risco'],[1,'Saio quando o stop é atingido'],[3,'Assumo a responsabilidade pelo resultado, sem culpar o mercado'],[3,'Aceito a perda no stop: não preciso estar certo']];
+const SEED=[[0,'Só entro com setup do meu sistema (nunca por dica ou emoção)'],[0,'Defino a saída predeterminada antes de entrar'],[0,'Só opero o tipo de mercado para o qual meu sistema foi feito'],[1,'Defino o stop inicial antes de entrar'],[1,'Risco máximo de 1% do capital por trade'],[1,'Só pego trade com alvo de pelo menos 3 vezes o risco'],[1,'Saio quando o stop é atingido'],[2,'Faço autoavaliação e ensaio mental antes de abrir o mercado'],[2,'Registro todo trade com resultado e fotos'],[2,'Faço o debriefing no fim do dia'],[3,'Assumo a responsabilidade pelo resultado, sem culpar o mercado'],[3,'Aceito a perda no stop: não preciso estar certo']];
 const $=s=>document.querySelector(s),uid=()=>Math.random().toString(36).slice(2,10),sum=a=>a.reduce((x,y)=>x+y,0),avg=a=>a.length?sum(a)/a.length:0;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const f2=n=>n==null||!isFinite(n)?'–':n.toFixed(2).replace('.',','),fr=r=>(r>0?'+':'')+f2(r)+'R',pc=x=>Math.round(x*100)+'%',cls=n=>n>0?'g':n<0?'r':'';
@@ -12,7 +12,7 @@ const loc=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).t
 const fdt=s=>s.slice(8,10)+'/'+s.slice(5,7)+' '+s.slice(11,16);
 let S={trades:[],days:{},rules:[],seed:0},tab='home',T=null,orig={},isNew=0,delArm=0,D=loc().slice(0,10),db=null,M={},U={},st,PER='all',AUTO=0,TIPO='all',OPEN={},QM=0,VW={},LT='trades',SV=0,DV='ed',DX=null,LF={f:'all',q:''},CH={},SESS=null,AM='in',RECOV=null,SY={msg:'',email:''},sT;
 const inPer=dt=>noPeriodo(dt.slice(0,10),PER,loc().slice(0,10));
-const tipoSel=()=>`<label>Tipo<select id="tp">${opt([['all','Todos'],['D','Só day trade'],['S','Só swing'],['O','Só opções'],['F','Só Forex']],TIPO)}</select></label>`;
+const tipoSel=()=>`<label>Tipo<select id="tp">${opt([['all','Todos'],['D','Só day trade'],['S','Só swing'],['O','Só opções']],TIPO)}</select></label>`;
 const sym=s=>{s=s.trim().toUpperCase();return s.includes(':')?s:'BMFBOVESPA:'+s};
 const perSel=()=>`<label>Período<select id="per">${opt(PERIODOS,PER)}</select></label>`;
 const open=()=>new Promise(r=>{try{const q=indexedDB.open('diario-trader',1);q.onupgradeneeded=()=>{q.result.createObjectStore('kv');q.result.createObjectStore('img')};q.onsuccess=()=>{db=q.result;r()};q.onerror=()=>r()}catch(e){r()}});
@@ -165,7 +165,7 @@ function lvcPaint(){if(tab!=='live')return;const b=$('#lvcb'),bar=$('#lvcbar');i
   all=(LV.all||[]).map(r=>({k:String(r.ticker).toUpperCase(),u:+r.ult,a:+r.abe,f:+r.fec,vr:r.var==null||r.var===''?null:+r.var,h:r.hor||'',d:r.dat||'',up:Date.parse(r.updated_at)||0})).filter(r=>r.u>0),
   live=all.filter(r=>now-r.up<30000).length,last=all.reduce((m,r)=>Math.max(m,r.up),0);
  bar.innerHTML=LV.err?'<span class="r">⚠️ '+esc(LV.err)+'</span>':!all.length?'<span class="mut">⚪ Nenhuma cotação ainda. Rode a ponte do Profit (iniciar.bat) com o Profit e o Excel abertos.</span>':live?'<span class="g">🟢 Ao vivo</span> <span class="mut">· '+hm(last)+' · '+all.length+' ativos</span>':'<span class="mut">⚪ Ponte parada. Última cotação às '+hm(last)+' ('+all.length+' ativos).</span>';
- let r=all.map(x=>({...x,v:x.vr!=null&&isFinite(x.vr)&&Math.abs(x.vr)<90?x.vr:x.f>0&&x.u/x.f>0.3&&x.u/x.f<3?(x.u/x.f-1)*100:x.a>0&&x.u/x.a>0.3&&x.u/x.a<3?(x.u/x.a-1)*100:null,st:!!x.d&&x.d!==hoje}));
+ let r=all.map(x=>({...x,v:x.vr!=null&&isFinite(x.vr)?x.vr:x.f>0?(x.u/x.f-1)*100:x.a>0?(x.u/x.a-1)*100:null,st:!!x.d&&x.d!==hoje}));
  if(LVC.q)r=r.filter(x=>x.k.includes(LVC.q));
  if(LVC.f==='meus')r=r.filter(x=>mine.has(x.k));else if(LVC.f==='alta')r=r.filter(x=>x.v>0).sort((p,q)=>q.v-p.v);else if(LVC.f==='baixa')r=r.filter(x=>x.v<0).sort((p,q)=>p.v-q.v);
  if(LVC.f==='all'||LVC.f==='meus')r.sort((p,q)=>p.k<q.k?-1:1);
@@ -490,14 +490,14 @@ function opRes(o,x,cost){const a=asOf(o.s),c=ac(a);return ((+x-+o.entry)*(o.side
 function opPrev(){const e=$('#opv');if(!e)return;const r=opCalc(OD);if(!r||r.need){e.innerHTML='<span class="mut sm">Informe entrada e stop para ver risco, lotes e ganho/risco.</span>';return}const u=r.a[11],cap=axg('cap',0);
 e.innerHTML=`${r.wrong?'<div class="warn" style="margin-bottom:6px">⚠ O stop está do lado errado da entrada.</div>':''}${r.wrongT?'<div class="warn" style="margin-bottom:6px">⚠ O alvo está do lado errado da entrada.</div>':''}<div class="kv">${KV('Stop',f2(r.sp)+' '+u,'',usd(r.risk1)+' por lote')}${KV('Lotes',f2(r.lots),'',+OD.lots>0?'informado':'sugerido p/ risco de '+usd(axg('risco',100)))}${KV('Risco total',usd(r.risk),'r',cap>0?f2(r.risk/cap*100)+'% do capital':'')}${KV('Ganho no alvo',r.gain==null?'–':usd(r.gain),'g',r.rr==null?'informe o alvo':'ganho/risco '+f2(r.rr)+' para 1')}</div><div class="mut sm" style="margin-top:6px">Margem: ${usd(r.margin)}${cap>0&&r.margin>cap?' <span class="r">⚠ maior que o capital</span>':''}</div>`}
 function opPanel(o){const b=(a,l,c='s')=>`<button class="btn ${c}" data-a="${a}" data-id="${o.id}">${l}</button>`,mine=OC.id===o.id,ci=(k,l)=>`<label>${l}<input type="number" step="any" inputmode="decimal" data-oc="${k}" value="${esc(mine?OC[k]:'')}"></label>`;let h='<div style="margin-top:10px">'+(o.nota?`<div class="sm mut" style="white-space:pre-wrap">${esc(o.nota)}</div>`:'');
-if(o.st==='open')h+=`<div class="g3" style="margin-top:8px">${ci('exit','Saída (preço)')}${ci('res','Resultado US$ (opc.)')}${ci('cost','Custos US$')}</div><label>Data e hora da saída<input type="datetime-local" data-oc="dtx" value="${esc(mine&&OC.dtx?OC.dtx:loc().slice(0,16))}"></label><div class="mut sm" id="ocv" style="margin-top:6px">Informe o preço de saída (o resultado sai do valor do pip) ou o resultado direto.</div><div class="g2" style="margin-top:8px">${b('opfin','✅ Encerrar','')}${b('opdel','🗑 Excluir')}</div>`;
+if(o.st==='open')h+=`<div class="g3" style="margin-top:8px">${ci('exit','Saída (preço)')}${ci('res','Resultado US$ (opc.)')}${ci('cost','Custos US$')}</div><div class="mut sm" id="ocv" style="margin-top:6px">Informe o preço de saída (o resultado sai do valor do pip) ou o resultado direto.</div><div class="g2" style="margin-top:8px">${b('opfin','✅ Encerrar','')}${b('opdel','🗑 Excluir')}</div>`;
 else if(o.st==='plan')h+=`<div class="g3" style="margin-top:8px">${b('opgo','▶ Entrei','')}${b('opedit','✏️ Editar')}${b('opdel','🗑 Excluir')}</div>`;
 else h+=`<div class="sm" style="margin-top:6px">${o.x!==''&&o.x!=null?'Saída '+esc(o.x)+' · ':''}custos ${usd(o.cost||0)}</div><div class="g3" style="margin-top:8px">${b('opre','↩ Reabrir')}${b('opedit','✏️ Editar')}${b('opdel','🗑 Excluir')}</div>`;return h+'</div>'}
 function opCard(o){const a=asOf(o.s)||[,,,,,,,1],sp=(numN(o.entry)!=null&&numN(o.stop)!=null)?Math.abs(numN(o.entry)-numN(o.stop))/a[7]:null,tp=(numN(o.target)!=null&&numN(o.entry)!=null)?Math.abs(numN(o.target)-numN(o.entry))/a[7]:null,rr=tp&&sp?tp/sp:null,R=o.st==='closed'&&o.rk>0?o.res/o.rk:null,stt={plan:'📝 Planejada',open:'▶ Em andamento',closed:'✅ Encerrada'}[o.st];
-return `<div class="card"><div class="top" data-a="opx" data-id="${o.id}" style="cursor:pointer"><div><b>${esc(o.s)}</b> · ${o.side==='C'?'Compra':'Venda'} ${f2(o.lots)} lote(s)<div class="mut sm">${stt}${opDataTxt(o)} · entrada ${esc(o.entry)} · stop ${esc(o.stop)}${o.target?' · alvo '+esc(o.target):''}${rr?' · ganho/risco '+f2(rr)+' para 1':''}</div></div><div class="rt ${o.st==='closed'?cls(o.res):''}">${o.st==='closed'?usd(o.res):'<span class="mut sm">'+usd(o.rk||0)+' em risco</span>'}</div></div>${OX===o.id?opPanel(o):''}</div>`}
-function vOps(){const O=S.ops||[],ed=!!OD.id,a=asOf(OD.s),px=a?ac(a).px:'',lst=O.filter(o=>AOF==='all'||o.st===AOF).sort((x,y)=>(opQuando(y)||'').localeCompare(opQuando(x)||'')),fi=(k,l,ph)=>`<label>${l}<input type="number" step="any" inputmode="decimal" data-od="${k}" value="${esc(OD[k])}" placeholder="${esc(ph||'')}"></label>`;
-return `<div class="card"><b>${ed?'Editar operação':'Montar operação'}</b><label>Ativo<select data-od="s">${AS.map(x=>`<option value="${x[0]}"${OD.s===x[0]?' selected':''}>${x[0]} · ${esc(x[1])}</option>`).join('')}</select></label><label>Lado</label><div class="chips2"><button class="${OD.side==='C'?'on g':''}" data-a="odside" data-id="C">Compra</button><button class="${OD.side==='V'?'on r':''}" data-a="odside" data-id="V">Venda</button></div><div class="g3">${fi('entry','Entrada',px)}${fi('stop','Stop')}${fi('target','Alvo')}</div><div class="g2">${fi('lots','Lotes (vazio = pelo risco)','auto')}<label>Anotação<input data-od="nota" value="${esc(OD.nota)}"></label></div>${opFormDatas()}<div id="opv" style="margin-top:10px"></div><button class="btn" style="width:100%;margin-top:10px" data-a="opadd">${ed?'💾 Salvar alterações':'➕ Adicionar à lista'}</button>${ed?'<button class="btn s" style="width:100%;margin-top:6px" data-a="opcancel">Cancelar edição</button>':''}</div>
-<div class="chips2" style="margin-top:8px">${[['all','Todas'],['plan','Planejadas'],['open','Em andamento'],['closed','Encerradas']].map(([k,l])=>`<button class="${AOF===k?'on':''}" data-a="opf" data-id="${k}">${l}</button>`).join('')}</div>${lst.length?opLista(lst):'<p class="mut">Nenhuma operação nesta lista. Monte a primeira acima.</p>'}`}
+return `<div class="card"><div class="top" data-a="opx" data-id="${o.id}" style="cursor:pointer"><div><b>${esc(o.s)}</b> · ${o.side==='C'?'Compra':'Venda'} ${f2(o.lots)} lote(s)<div class="mut sm">${stt} · entrada ${esc(o.entry)} · stop ${esc(o.stop)}${o.target?' · alvo '+esc(o.target):''}${rr?' · ganho/risco '+f2(rr)+' para 1':''}</div></div><div class="rt ${o.st==='closed'?cls(o.res):''}">${o.st==='closed'?usd(o.res):'<span class="mut sm">'+usd(o.rk||0)+' em risco</span>'}</div></div>${OX===o.id?opPanel(o):''}</div>`}
+function vOps(){const O=S.ops||[],ed=!!OD.id,a=asOf(OD.s),px=a?ac(a).px:'',lst=O.filter(o=>AOF==='all'||o.st===AOF).sort((x,y)=>(y.dt||'').localeCompare(x.dt||'')),fi=(k,l,ph)=>`<label>${l}<input type="number" step="any" inputmode="decimal" data-od="${k}" value="${esc(OD[k])}" placeholder="${esc(ph||'')}"></label>`;
+return `<div class="card"><b>${ed?'Editar operação':'Montar operação'}</b><label>Ativo<select data-od="s">${AS.map(x=>`<option value="${x[0]}"${OD.s===x[0]?' selected':''}>${x[0]} · ${esc(x[1])}</option>`).join('')}</select></label><label>Lado</label><div class="chips2"><button class="${OD.side==='C'?'on g':''}" data-a="odside" data-id="C">Compra</button><button class="${OD.side==='V'?'on r':''}" data-a="odside" data-id="V">Venda</button></div><div class="g3">${fi('entry','Entrada',px)}${fi('stop','Stop')}${fi('target','Alvo')}</div><div class="g2">${fi('lots','Lotes (vazio = pelo risco)','auto')}<label>Anotação<input data-od="nota" value="${esc(OD.nota)}"></label></div><div id="opv" style="margin-top:10px"></div><button class="btn" style="width:100%;margin-top:10px" data-a="opadd">${ed?'💾 Salvar alterações':'➕ Adicionar à lista'}</button>${ed?'<button class="btn s" style="width:100%;margin-top:6px" data-a="opcancel">Cancelar edição</button>':''}</div>
+<div class="chips2" style="margin-top:8px">${[['all','Todas'],['plan','Planejadas'],['open','Em andamento'],['closed','Encerradas']].map(([k,l])=>`<button class="${AOF===k?'on':''}" data-a="opf" data-id="${k}">${l}</button>`).join('')}</div>${lst.length?lst.map(opCard).join(''):'<p class="mut">Nenhuma operação nesta lista. Monte a primeira acima.</p>'}`}
 function lcItems(){const it=[];(S.ops||[]).filter(o=>o.st==='closed').forEach(o=>it.push({id:o.id,d:(o.dtx||o.dt||'').slice(0,10),s:o.s,v:+o.res,n:'Operação '+(o.side==='C'?'de compra':'de venda'),op:1,rk:o.rk}));(S.lanc||[]).forEach(l=>it.push({id:l.id,d:l.d,s:l.s,v:+l.v,n:l.n||'',op:0}));return it.sort((a,b)=>a.d.localeCompare(b.d))}
 function vLucros(){const it=lcItems(),td=loc().slice(0,10),wk=diasMais(td,-6),mo=td.slice(0,7),sm=f=>sum(it.filter(f).map(x=>x.v)),cap=axg('cap',0),tot=sm(()=>1),h=sm(x=>x.d===td),dm={};it.forEach(x=>dm[x.d]=(dm[x.d]||0)+x.v);const dk=Object.keys(dm).sort();let c=0;const cum=dk.map(k=>c+=dm[k]),lb=k=>k.slice(8)+'/'+k.slice(5,7),k7=dk.slice(-20);
 return `<div class="kv">${KV('Hoje',usd(h),cls(h),brl(h))}${KV('Últimos 7 dias',usd(sm(x=>x.d>=wk)),cls(sm(x=>x.d>=wk)),brl(sm(x=>x.d>=wk)))}${KV('Este mês',usd(sm(x=>x.d.slice(0,7)===mo)),cls(sm(x=>x.d.slice(0,7)===mo)),brl(sm(x=>x.d.slice(0,7)===mo)))}${KV('Total',usd(tot),cls(tot),cap>0?f2(tot/cap*100)+'% do capital':brl(tot))}</div>
@@ -517,10 +517,10 @@ else if(a==='odside'){OD.side=id;render()}
 else if(a==='opf'){AOF=id;render()}
 else if(a==='opx'){OX=OX===id?null:id;OC={id};render()}
 else if(a==='opcancel'){OD={s:OD.s,side:OD.side,entry:'',stop:'',target:'',lots:'',nota:''};render()}
-else if(a==='opadd'){const r=opCalc(OD);if(!r||r.need||r.wrong||!(r.lots>0)){msg('Informe entrada e stop do lado certo (e lotes, se o stop for largo demais para o risco definido).');return}const f={s:OD.s,side:OD.side,entry:OD.entry,stop:OD.stop,target:OD.target||'',lots:r.lots,rk:+r.risk.toFixed(2),nota:OD.nota||'',u:Date.now()};if(OD.id){const o=(S.ops||[]).find(x=>x.id===OD.id);if(o){Object.assign(o,f);if(OD.dt)o.dt=String(OD.dt).slice(0,16);if(OD.dtx&&o.st==='closed')o.dtx=String(OD.dtx).slice(0,16)}}else{const n=opNova(f);if(!n)return;(S.ops??=[]).push(n)}OD={s:OD.s,side:OD.side,entry:'',stop:'',target:'',lots:'',nota:''};save();render()}
-else if(a==='opedit'){const o=fnd();if(!o)return;OD={id:o.id,s:o.s,side:o.side,entry:o.entry,stop:o.stop,target:o.target,lots:o.lots,nota:o.nota,dt:o.dt||'',dtx:o.st==='closed'?(o.dtx||''):''};render();scrollTo(0,0)}
+else if(a==='opadd'){const r=opCalc(OD);if(!r||r.need||r.wrong||!(r.lots>0)){msg('Informe entrada e stop do lado certo (e lotes, se o stop for largo demais para o risco definido).');return}const f={s:OD.s,side:OD.side,entry:OD.entry,stop:OD.stop,target:OD.target||'',lots:r.lots,rk:+r.risk.toFixed(2),nota:OD.nota||'',u:Date.now()};if(OD.id){const o=(S.ops||[]).find(x=>x.id===OD.id);if(o)Object.assign(o,f)}else(S.ops??=[]).push({id:uid(),dt:loc().slice(0,16),st:'plan',...f});OD={s:OD.s,side:OD.side,entry:'',stop:'',target:'',lots:'',nota:''};save();render()}
+else if(a==='opedit'){const o=fnd();if(!o)return;OD={id:o.id,s:o.s,side:o.side,entry:o.entry,stop:o.stop,target:o.target,lots:o.lots,nota:o.nota};render();scrollTo(0,0)}
 else if(a==='opgo'){const o=fnd();if(o){o.st='open';o.u=Date.now();save();render()}}
-else if(a==='opfin'){const o=fnd();if(!o||OC.id!==id)return;const rs=OC.res,x=OC.exit;let res;if(rs!==undefined&&rs!==''&&isFinite(+rs))res=+rs;else if(x!==undefined&&x!==''&&isFinite(+x))res=opRes(o,x,OC.cost);else{const v=$('#ocv');if(v)v.innerHTML='<span class="r">Informe o preço de saída ou o resultado.</span>';return}Object.assign(o,{st:'closed',x:x===undefined?'':x,cost:+OC.cost||0,res:+res.toFixed(2),dtx:String(OC.dtx||loc().slice(0,16)).slice(0,16),u:Date.now()});OC={};OX=null;save();render()}
+else if(a==='opfin'){const o=fnd();if(!o||OC.id!==id)return;const rs=OC.res,x=OC.exit;let res;if(rs!==undefined&&rs!==''&&isFinite(+rs))res=+rs;else if(x!==undefined&&x!==''&&isFinite(+x))res=opRes(o,x,OC.cost);else{const v=$('#ocv');if(v)v.innerHTML='<span class="r">Informe o preço de saída ou o resultado.</span>';return}Object.assign(o,{st:'closed',x:x===undefined?'':x,cost:+OC.cost||0,res:+res.toFixed(2),dtx:loc().slice(0,16),u:Date.now()});OC={};OX=null;save();render()}
 else if(a==='opre'){const o=fnd();if(o){o.st='open';o.u=Date.now();save();render()}}
 else if(a==='opdel'){S.ops=(S.ops||[]).filter(x=>x.id!==id);(S.del??={})[id]=Date.now();OX=null;save();render()}
 else if(a==='lcadd'){const v=+LD.v;if(!isFinite(v)||LD.v===''||v===0)return;(S.lanc??=[]).push({id:uid(),d:LD.d||loc().slice(0,10),s:LD.s||'',v,n:LD.n||'',u:Date.now()});LD={d:LD.d,s:'',v:'',n:''};save();render()}
@@ -1265,7 +1265,7 @@ function mkAfter(){
 
 /* ---------- Meu dia: rotinas, limites, disciplina, sequência e notas rápidas ---------- */
 const ROT0={
-  m:['Olhei a agenda econômica e as notícias do dia','Marquei meus níveis e cenários dos ativos','Li minhas regras e o erro que não quero repetir hoje','Conferi capital e limites da mesa ou corretora'],
+  m:['Olhei a agenda econômica e as notícias do dia','Marquei meus níveis e cenários dos ativos','Defini o risco máximo do dia (R) e o máximo de trades','Li minhas regras e o erro que não quero repetir hoje','Fiz o ensaio mental do que pode dar errado','Conferi capital e limites da mesa ou corretora'],
   n:['Vi a agenda e as notícias dos EUA para esta noite','Conferi posições abertas e stops antes da sessão','Revisei o plano e o limite de risco da sessão','Chequei meu estado emocional (sem revanche)']
 };
 const rotS=()=>S.rot&&Array.isArray(S.rot.m)&&Array.isArray(S.rot.n)?S.rot:(S.rot={m:ROT0.m.map((t,i)=>({id:'m'+(i+1),t})),n:ROT0.n.map((t,i)=>({id:'n'+(i+1),t}))});
@@ -1304,7 +1304,7 @@ function disHtml(){
   const sc=dscore(D),st=streak(),today=loc().slice(0,10);
   const cells=[];for(let i=13;i>=0;i--){const k=addD(today,-i),p=dscore(k);cells.push(`<button data-a="cday" data-id="${k}" aria-label="${k}" title="${k}${p!=null?': '+p+'%':''}" style="width:100%;aspect-ratio:1;border-radius:8px;border:${k===D?'2px solid var(--tx)':'1px solid var(--bd)'};background:${p==null?'transparent':scCol(p)};opacity:${isWk(k)&&p==null?.35:1};color:${p==null?'var(--mut)':'#fff'};font-size:11px;padding:0">${+k.slice(8)}</button>`)}
   return `<div class="top"><b>Disciplina</b><span class="sm mut">${st?'🔥 '+st+(st>1?' dias':' dia')+' com a rotina da manhã completa':'Complete a rotina da manhã para iniciar uma sequência'}</span></div>
-<div style="display:flex;align-items:center;gap:10px;margin:10px 0 8px"><b style="font-size:28px;color:${scCol(sc)}">${sc==null?'–':sc+'%'}</b><div class="sm mut" style="line-height:1.35">${sc==null?'A nota do dia aparece conforme você marca rotinas e registra trades.':'Pontuação de disciplina: rotinas, regras, trades dentro das regras e limites respeitados.'}</div></div>
+<div style="display:flex;align-items:center;gap:10px;margin:10px 0 8px"><b style="font-size:28px;color:${scCol(sc)}">${sc==null?'–':sc+'%'}</b><div class="sm mut" style="line-height:1.35">${sc==null?'A nota do dia aparece conforme você marca rotinas e registra trades.':'Nota do dia: rotinas, regras, trades dentro das regras e limites respeitados.'}</div></div>
 <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:3px">${cells.join('')}</div><div class="sm mut" style="margin-top:4px">Últimos 14 dias. Toque para abrir o dia.</div>`;
 }
 function limHtml(){
@@ -4037,162 +4037,8 @@ if(typeof rsCard==='function'){const rc0=rsCard;rsCard=function(b){let h=rc0(b);
 window.tapeVivo=s=>{
   if(!/^[A-Z]{4}\d{1,2}$/.test(s)||typeof LV==='undefined')return null;
   const r=(LV.all||[]).find(x=>String(x.ticker).toUpperCase()===s);if(!r||!(+r.ult>0)||Date.now()-(Date.parse(r.updated_at)||0)>120000)return null;
-  const v=r.var!=null&&r.var!==''&&isFinite(+r.var)&&Math.abs(+r.var)<90?+r.var:+r.fec>0&&+r.ult/+r.fec>0.3&&+r.ult/+r.fec<3?(+r.ult/+r.fec-1)*100:null;
+  const v=r.var!=null&&r.var!==''&&isFinite(+r.var)?+r.var:+r.fec>0?(+r.ult/+r.fec-1)*100:null;
   return v==null?null:{px:+r.ult,chg:v};
 };
 if(typeof lvcPaint==='function'){const lc0=lvcPaint;lvcPaint=function(){lc0.apply(this,arguments);try{window.tapeRedraw&&window.tapeRedraw()}catch(e){}}}
-/* =====================================================================================
-   7) FOREX NAS ESTATÍSTICAS E CAPITAL DO FOREX
-   ===================================================================================== */
-/* operação encerrada do Forex no formato de trade (para as estatísticas): resultado em US$, risco planejado quando houver */
-function fxComoTrade(o){
-  const res=+o.res,rk=+o.rk>0?+o.rk:null,dt=o.dt||o.dtx||'',dtx=o.dtx||o.dt||'';
-  return {id:'fx:'+o.id,tipo:'F',ativo:o.s,side:o.side,entry:o.entry,stop:o.stop,target:o.target,dt,dtx,moeda:'USD',setup:o.setup||'',nota:o.nota||'',rules:o.rules||'',err:o.err||'',tags:o.tags||[],forex:1,
-    c:{pl:res,risk:rk,r:rk?res/rk:null,rr:null}};
-}
-(function(){
-  const sr0=stRows;
-  stRows=function(){
-    const base=TIPO==='F'?[]:sr0();
-    if(TIPO!=='all'&&TIPO!=='F')return base;
-    const hoje=loc().slice(0,10);
-    const fx=(S.ops||[]).filter(o=>o.st==='closed'&&o.res!==''&&o.res!=null&&isFinite(+o.res)).map(fxComoTrade).filter(t=>noPeriodo((t.dtx||t.dt||'').slice(0,10),PER,hoje));
-    return base.concat(fx);
-  };
-  const vs1=vStats;
-  vStats=function(){
-    let h=vs1();
-    const nfx=(S.ops||[]).filter(o=>o.st==='closed').length,nl=(S.lanc||[]).length;
-    if((TIPO==='all'||TIPO==='F')&&(nfx||nl))h=h.replace('<div class="sm mut" style="margin:-2px 0 8px">O período vale pela data de saída de cada trade.</div>',
-      `<div class="sm mut" style="margin:-2px 0 8px">O período vale pela data de saída de cada trade. Forex: ${nfx} operação(ões) encerrada(s) da aba Forex${nl?` (os ${nl} lucro(s) lançado(s) à mão sem operação não entram nas estatísticas por trade)`:''}.</div>`);
-    return h;
-  };
-})();
-
-/* "% da conta" do Forex: o saldo inicial do Forex está em US$, convertido para R$ como os resultados */
-(function(){const cr0=capRef;capRef=function(tp){if(tp==='F'){const v=+gv('cap','F_ini','')||0;return v>0?emBRL(v,'USD'):cr0()}return cr0(tp)}})();
-/* capital do Forex (conta em US$): sobe e desce com as operações encerradas e os lucros lançados */
-function fxCapCalc(){
-  const g=k=>gv('cap','F_'+k,''),ini=g('ini');if(ini===''||!isFinite(+ini))return null;
-  const de=g('desde'),ap=+g('ap')||0,it=lcItems().filter(x=>!de||x.d>=de).sort((a,b)=>a.d.localeCompare(b.d));
-  const res=sum(it.map(x=>+x.v||0));let acc=+ini+ap;const curve=[{v:acc,l:'Início'}];it.forEach(x=>{acc+=+x.v||0;curve.push({v:acc,l:x.d.slice(8,10)+'/'+x.d.slice(5,7)})});
-  return {ini:+ini,ap,res,at:+ini+ap+res,n:it.length,pct:+ini?res/+ini*100:null,curve};
-}
-function fxCapCard(){
-  const c=fxCapCalc(),g=k=>gv('cap','F_'+k,''),U=v=>mnyC(v,'USD');
-  const f=(k,l,ph,ty='number')=>`<label>${l}<input type="${ty}"${ty==='number'?' step="any" inputmode="decimal"':''} data-ax="cap.F_${k}" value="${esc(g(k))}" placeholder="${ph}"></label>`;
-  let curva='';
-  if(c&&c.curve.length>1){const v=c.curve.map(p=>p.v),n=v.length,lo=Math.min(...v),hi=Math.max(...v),pad=(hi-lo)*.1||Math.abs(hi)*.05||1,a=lo-pad,b=hi+pad,X=i=>(i/(n-1)*296+2).toFixed(1),Y=x=>(66-(x-a)/(b-a)*60).toFixed(1),up=v[n-1]>=v[0],col=up?'var(--g)':'var(--r)';let pk=v[0],dd=0;v.forEach(x=>{pk=Math.max(pk,x);dd=Math.max(dd,pk-x)});
-    curva=`<svg viewBox="0 0 300 72" style="width:100%;height:auto;margin-top:8px" role="img" aria-label="Curva de capital do Forex"><line x1="0" x2="300" y1="${Y(v[0])}" y2="${Y(v[0])}" stroke="var(--bd)" stroke-dasharray="3"/><polyline fill="none" stroke="${col}" stroke-width="2" points="${v.map((x,i)=>X(i)+','+Y(x)).join(' ')}"/><circle cx="${X(n-1)}" cy="${Y(v[n-1])}" r="3.5" fill="${col}"/></svg><div class="top sm mut"><span>Mín. ${U(lo)}</span><span>Máx. ${U(hi)}</span></div><div class="sm mut">Queda máxima: <b class="${dd>0?'r':''}">${U(dd)}</b> · linha tracejada = capital de partida.</div>`}
-  return `<div class="card"><div class="top"><b>💰 Capital · Forex</b>${c?`<span class="sm ${cls(c.res)}">${c.res>=0?'+':''}${U(c.res)}</span>`:''}</div>
-${c?`<div style="font-size:26px;font-weight:700;margin-top:4px" class="${c.at<=0?'r':''}">${U(c.at)}</div><div class="mut sm">Inicial ${U(c.ini)}${c.ap?' · aportes/saques '+U(c.ap):''} · ${c.n} resultado(s)${c.pct!=null?' · '+(c.pct>=0?'+':'')+f2(c.pct)+'% sobre o inicial':''} · ≈ ${money(emBRL(c.at,'USD'))}</div>${curva}`:'<div class="mut sm" style="margin-top:6px">Informe o saldo inicial da conta (em US$) para acompanhar a evolução do capital.</div>'}
-<details style="margin-top:8px"><summary class="sm">⚙️ Configurar capital${c?' · inicial '+U(c.ini):' (toque para preencher)'}</summary><div class="g2" style="margin-top:6px">${f('ini','Saldo inicial (US$)','2000')}${f('desde','Contar a partir de','','date')}</div>${f('ap','Aportes (+) ou saques (−) acumulados (US$)','0')}</div></details></div>`;
-}
-(function(){
-  const va0=vAtivos;
-  vAtivos=function(){const h=va0();const i=h.indexOf('</div>',h.indexOf('<div class="seg">'));return i<0?h:h.slice(0,i+6)+fxCapCard()+h.slice(i+6)};
-  const ct0=capTotal;
-  capTotal=function(){
-    const c=fxCapCalc();if(!c)return ct0();
-    const L=['D','O','S'].map(tp=>({tp,c:capCalc(tp)})).filter(x=>x.c),fxAt=emBRL(c.at,'USD'),fxIni=emBRL(c.ini+c.ap,'USD'),fxRes=emBRL(c.res,'USD');
-    const at=sum(L.map(x=>x.c.at))+fxAt,ini=sum(L.map(x=>x.c.ini+x.c.ap))+fxIni,res=sum(L.map(x=>x.c.res))+fxRes;
-    return `<div class="card"><div class="top"><b>💰 Capital total</b><span class="sm ${cls(res)}">${res>=0?'+':''}${money(res)}</span></div><div style="font-size:26px;font-weight:700;margin-top:4px" class="${at<=0?'r':''}">${money(at)}</div><div class="mut sm">Inicial ${money(ini)}${ini?' · '+(res>=0?'+':'')+f2(res/ini*100)+'%':''} · Forex convertido pelo dólar de hoje</div>${L.map(x=>`<div class="top sm" style="margin-top:6px"><span>${CAPN[x.tp]}</span><b class="${x.c.at<=0?'r':''}">${money(x.c.at)}</b></div>`).join('')}<div class="top sm" style="margin-top:6px"><span>Forex</span><b class="${c.at<=0?'r':''}">${mnyC(c.at,'USD')} <span class="mut" style="font-weight:400">(${money(fxAt)})</span></b></div></div>`;
-  };
-})();
-
-/* =====================================================================================
-   8) MEU DIA ORGANIZADO EM 3 FASES: Pré-mercado · Durante · Pós-mercado (sem tópicos repetidos)
-   ===================================================================================== */
-const DIA_DUP_ROT=['Defini o risco máximo do dia (R) e o máximo de trades','Fiz o ensaio mental do que pode dar errado'];
-const DIA_DUP_REG=['Faço autoavaliação e ensaio mental antes de abrir o mercado','Faço o debriefing no fim do dia','Registro todo trade com resultado e fotos'];
-function diaLimpa(){
-  if((S.ax||{})['dia.v2'])return false;(S.ax??={})['dia.v2']=1;
-  let mudou=0;
-  if(S.rot&&Array.isArray(S.rot.m)){const n=S.rot.m.length;S.rot.m=S.rot.m.filter(x=>!DIA_DUP_ROT.includes(x.t));mudou+=n-S.rot.m.length}
-  if(Array.isArray(S.rules)){const n=S.rules.length;S.rules=S.rules.filter(r=>!DIA_DUP_REG.includes(r.t));mudou+=n-S.rules.length}
-  save();return mudou>0;
-}
-let DFASE=null;
-const diaFaseAuto=()=>{if(D!==loc().slice(0,10))return D<loc().slice(0,10)?'pos':'pre';const h=new Date().getHours();return h<9?'pre':h<18?'dur':'pos'};
-function diaOrganiza(){
-  if(tab!=='dia'||(typeof DV!=='undefined'&&DV==='hist'))return;
-  const ap=document.getElementById('app');if(!ap||ap.querySelector('#dfases'))return;
-  if(diaLimpa()){render();return}
-  const kids=[...ap.children],tx=e=>(e.textContent||'').trim(),find=f=>kids.find(f);
-  const hAntes=find(e=>e.tagName==='H2'&&/Antes do mercado/.test(tx(e))),hChk=find(e=>e.tagName==='H2'&&/Checklist de regras/.test(tx(e))),hDep=find(e=>e.tagName==='H2'&&/Depois do mercado/.test(tx(e)));
-  if(!hAntes||!hChk||!hDep)return; // estrutura diferente: não mexe
-  const ix=e=>kids.indexOf(e),entre=(a,b)=>kids.slice(ix(a)+1,ix(b));
-  const resumo=find(e=>e.classList.contains('card')&&/^Resumo automático/.test(tx(e))),pend=find(e=>e.classList.contains('warn')&&/rotina da manhã/i.test(tx(e)));
-  const lim=find(e=>e.classList.contains('card')&&!!e.querySelector('[data-d="maxP"]')),trd=find(e=>e.tagName==='DETAILS'&&/Trades do dia/.test(tx(e))),notas=find(e=>e.classList.contains('card')&&/Notas rápidas/.test(tx(e)));
-  const antes=entre(hAntes,hChk),chkCard=kids[ix(hChk)+1],meio=entre(chkCard,hDep),depois=kids.slice(ix(hDep)+1);
-  const save=depois.find(e=>e.dataset&&e.dataset.a==='dsave'),dica=save&&save.nextElementSibling&&/salvo automaticamente/.test(tx(save.nextElementSibling))?save.nextElementSibling:null;
-  if(pend)pend.remove();
-  if(resumo){const b=resumo.querySelector('b');if(b)b.textContent='Resultado do dia'}
-  /* painéis */
-  const mk=(id)=>{const d=document.createElement('div');d.className='dfase';d.dataset.fase=id;return d};
-  const pre=mk('pre'),dur=mk('dur'),pos=mk('pos');
-  const tit=(t,sub)=>{const h=document.createElement('div');h.innerHTML=`<h2 style="margin-top:14px">${t}</h2>${sub?`<div class="sm mut" style="margin:-4px 0 8px">${sub}</div>`:''}`;return h};
-  pre.append(tit('Preparação','Antes de abrir o mercado: rotina, estado, limites e plano.'));
-  const rotN=meio.find(e=>e.id==='rot-n'),rtd=meio.find(e=>e.id==='rtd');
-  antes.forEach(e=>{pre.append(e);if(e.id==='rot-m'&&lim)pre.append(lim)});
-  if(lim&&!pre.contains(lim))pre.append(lim);
-  if(rotN)pre.append(rotN);if(rtd)pre.append(rtd);
-  meio.filter(e=>e!==rotN&&e!==rtd).forEach(e=>pre.append(e));
-  dur.append(tit('Durante o pregão','Anote o que sente e o que vê; seus trades do dia ficam aqui.'));
-  if(notas)dur.append(notas);if(trd){trd.open=true;dur.append(trd)}
-  if(!trd&&!notas)dur.insertAdjacentHTML('beforeend','<p class="mut">Nenhum trade hoje.</p>');
-  pos.append(tit('Debriefing','Depois do mercado: avalie o processo, não só o resultado.'));
-  hChk.textContent='Regras que segui hoje ';const cntEl=document.createElement('span');cntEl.className='mut sm';cntEl.id='cnt';hChk.querySelector('#cnt')||hChk.append(cntEl);
-  pos.append(hChk,chkCard);
-  depois.filter(e=>e!==save&&e!==dica).forEach(e=>pos.append(e));
-  /* nomes mais claros e campos que só aparecem quando fazem sentido */
-  const nota=pos.querySelector('input[data-d="nota"]');if(nota){const l=nota.closest('label');if(l&&l.firstChild&&l.firstChild.nodeType===3)l.firstChild.textContent='Minha nota para o dia (0 a 10): '}
-  const erros=pos.querySelector('select[data-d="erros"]'),dd=S.days[D]||{};
-  const cond=['cond','prevn'].map(k=>{const t=pos.querySelector(`textarea[data-d="${k}"]`);return t&&t.closest('label')}).filter(Boolean);
-  const mostra=()=>{const v=erros?erros.value:'';cond.forEach(l=>{const t=l.querySelector('textarea');l.style.display=v==='s'||(t&&t.value.trim())?'':'none'})};
-  if(erros){erros.addEventListener('change',mostra);mostra()}
-  /* fases */
-  DFASE=DFASE&&DFASE.d===D?DFASE:{d:D,f:diaFaseAuto()};
-  const rL=rotS().m.length,rD=rotDone(dd,'m'),preOk=rD+(String(dd.plano||'').trim()?1:0),preT=rL+1;
-  const nChk=Object.values(dd.chk||{}).filter(Boolean).length,posCampos=['resumo','erros','bem','aprend'].filter(k=>String(dd[k]||'').trim()).length+(dd.nota!==undefined&&dd.nota!==''?1:0);
-  const nTr=dayTr(D).length;
-  const seg=document.createElement('div');seg.id='dfases';seg.className='seg';seg.style.cssText='margin:14px 0 4px;display:grid;grid-template-columns:repeat(3,1fr)';
-  const b=(k,l,sub)=>`<button class="${DFASE.f===k?'on':''}" data-dfase="${k}" style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 2px;min-width:0"><span style="font-size:14px;white-space:nowrap">${l}</span><span class="sm mut" style="font-weight:500;white-space:nowrap">${sub}</span></button>`;
-  seg.innerHTML=b('pre','Antes',preOk+' de '+preT)+b('dur','Durante',nTr+' trade'+(nTr===1?'':'s'))+b('pos','Depois',(posCampos+(nChk?1:0))+' de 6');
-  const ancora=dis=>dis;const disEl=ap.querySelector('#dis');
-  const depoisDe=disEl||resumo||ap.querySelector('#svs');
-  if(depoisDe)depoisDe.after(seg);else ap.append(seg);
-  seg.after(pre,dur,pos);
-  [pre,dur,pos].forEach(p=>{p.style.display=p.dataset.fase===DFASE.f?'':'none'});
-  hAntes.remove();hDep.remove();
-  if(save){pos.append(save);if(dica)pos.append(dica)}
-  try{cnt()}catch(e){}
-}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-dfase]');if(!b)return;DFASE={d:D,f:b.dataset.dfase};document.querySelectorAll('#dfases button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('#app .dfase').forEach(p=>{p.style.display=p.dataset.fase===DFASE.f?'':'none'});const s=document.getElementById('dfases');if(s&&s.getBoundingClientRect().top<0)s.scrollIntoView({block:'start'})});
-(function(){const r0=render0;render0=function(){r0.apply(this,arguments);try{diaOrganiza()}catch(e){console.error(e)}}})();
-/* ---------- Forex: data de cada operação e lista separada por dia ---------- */
-const opQuando=o=>String(o.st==='closed'?(o.dtx||o.dt||''):(o.dt||''));
-const opDataTxt=o=>{const q=opQuando(o);if(q.length<10)return '';const hr=q.length>=16?' às '+q.slice(11,16):'';return (o.st==='closed'?' em ':' desde ')+q.slice(8,10)+'/'+q.slice(5,7)+'/'+q.slice(2,4)+hr};
-function opDiaRot(d){const h=loc().slice(0,10);if(d===h)return 'Hoje';if(d===diasMais(h,-1))return 'Ontem';return dsem(d)+' '+d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4)}
-function opLista(lst){
-  const g=new Map();lst.forEach(o=>{const d=opQuando(o).slice(0,10)||'sem data';(g.get(d)||g.set(d,[]).get(d)).push(o)});
-  return [...g.entries()].map(([d,L])=>{const fe=L.filter(o=>o.st==='closed'&&isFinite(+o.res)),tot=sum(fe.map(o=>+o.res));
-    return `<div class="top" style="margin:14px 2px 4px"><b class="sm" style="text-transform:uppercase;letter-spacing:.04em;color:var(--mut)">${d==='sem data'?d:opDiaRot(d)}</b>${fe.length?`<span class="sm ${cls(tot)}"><b>${tot>=0?'+':''}${mnyC(tot,'USD')}</b> · ${fe.length} op.</span>`:''}</div>`+L.map(opCard).join('')}).join('');
-}
-/* ---------- Forex: data de abertura no formulário e registro de trade antigo já encerrado ---------- */
-function opFormDatas(){
-  const fe=!!(OD.dtx||OD.x||OD.res),n=(k,l)=>`<label>${l}<input type="number" step="any" inputmode="decimal" data-od="${k}" value="${esc(OD[k]||'')}"></label>`;
-  return `<label>Abertura (data e hora) <span class="mut" style="font-weight:400">· em branco = agora</span><input type="datetime-local" data-od="dt" value="${esc(OD.dt||'')}"></label>
-<details${fe?' open':''} style="margin-top:8px"><summary class="sm">📅 Registrar trade antigo já encerrado</summary><label>Encerramento (data e hora)<input type="datetime-local" data-od="dtx" value="${esc(OD.dtx||'')}"></label><div class="g3">${n('x','Saída (preço)')}${n('res','Resultado US$')}${n('cost','Custos US$')}</div><div class="sm mut" style="margin-top:4px">Com o encerramento e a saída (ou o resultado), a operação já entra como encerrada, com as datas certas.</div></details>`;
-}
-const opAviso=m=>{const v=document.getElementById('opv');if(v)v.innerHTML=`<span class="r">${esc(m)}</span>`;if(window.toast)toast(m,3500)};
-function opNova(f){
-  const dt=String(OD.dt||loc().slice(0,16)).slice(0,16),o={id:uid(),dt,st:'plan',...f};
-  if(!OD.dtx)return o;
-  const ok=v=>v!==undefined&&v!==null&&v!==''&&isFinite(+v),dtx=String(OD.dtx).slice(0,16);
-  if(!ok(OD.x)&&!ok(OD.res)){opAviso('Para registrar como encerrada, informe a saída ou o resultado em US$.');return null}
-  if(dtx<dt){opAviso('O encerramento não pode ser antes da abertura.');return null}
-  const res=ok(OD.res)?+OD.res:opRes(o,OD.x,OD.cost);
-  return Object.assign(o,{st:'closed',x:ok(OD.x)?OD.x:'',cost:+OD.cost||0,res:+(+res).toFixed(2),dtx});
-}
 /* ==== EXTRAS2 (gráfico TradingView):FIM ==== */
