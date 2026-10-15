@@ -3553,16 +3553,16 @@ function semCard(R,key,rv){
   const lin=(l,v,k='')=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--bd)"><span class="sm mut">${l}</span><b class="${k}" style="text-align:right">${v}</b></div>`;
   const dd=d=>d?dsem(d)+' '+fmtD(d).slice(0,5):'–';
   const lin2=(l,v,k='')=>`<div style="padding:6px 0;border-top:1px solid var(--bd)"><div class="sm mut">${l}</div><b class="${k}">${v}</b></div>`;
-  const col=(tit,X,fmt,extra)=>`<div class="card" style="margin:0;padding:10px 12px"><b>${tit}</b>${X.n?lin2('Resultado',fmt(X),cls(X.tot))+lin2('Operações',X.n+(X.acerto!=null?' · '+pct0(X.acerto)+' de acerto':''))+lin2('Melhor dia',X.melhor?dd(X.melhor)+' '+(X===B?money(X.dias[X.melhor]):mnyC(X.dias[X.melhor],'USD')):'–')+lin2('Pior dia',X.pior?dd(X.pior)+' '+(X===B?money(X.dias[X.pior]):mnyC(X.dias[X.pior],'USD')):'–')+(extra||''):'<div class="sm mut" style="margin-top:6px">Nenhuma operação.</div>'}</div>`;
+  const col=(tit,X,fmt,extra)=>{const vd=d=>`${dd(d)}<br><span style="white-space:nowrap" class="${cls(X.dias[d])}">${X===B?money(X.dias[d]):mnyC(X.dias[d],'USD')}</span>`,nd=Object.keys(X.dias).length;return `<div class="card" style="margin:0;padding:10px 12px"><b>${tit}</b>${X.n?lin2('Resultado','<span style="white-space:nowrap">'+fmt(X)+'</span>',cls(X.tot))+lin2('Operações',X.n+(X.acerto!=null?' · '+pct0(X.acerto)+' de acerto':''))+(nd>1?lin2('Melhor dia',vd(X.melhor))+lin2('Pior dia',vd(X.pior)):lin2('Dia',vd(X.melhor)))+(extra||''):'<div class="sm mut" style="margin-top:6px">Nenhuma operação.</div>'}</div>`};
   const dias=[...new Set([...Object.keys(B.dias),...Object.keys(F.dias)])].sort();
   const btn=(k,v,l,cor)=>`<button class="btn ${rv[k]===v?'':'s'}" data-rvb="${k}:${v}"${rv[k]===v&&cor?` style="background:${cor};border-color:${cor}"`:''}>${l}</button>`;
   const ta=(k,l,ph='')=>`<label>${l}<textarea data-rv="${k}" placeholder="${esc(ph)}">${esc(rv[k])}</textarea></label>`;
-  const passo=(i,t)=>`<h3 style="display:flex;align-items:center;gap:8px;margin:18px 0 6px"><span style="width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;background:${P.L[i]&&P.L[i][1]?'var(--g)':'var(--card2)'};color:${P.L[i]&&P.L[i][1]?'#fff':'var(--tx)'};flex:none">${P.L[i]&&P.L[i][1]?'✓':i+1}</span>${t}</h3>`;
+  const passo=(i,t)=>`<h3 style="display:flex;align-items:center;gap:8px;margin:18px 0 6px;text-transform:none;letter-spacing:0;color:var(--tx);font-size:15.5px"><span style="width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;background:${P.L[i]&&P.L[i][1]?'var(--g)':'var(--card2)'};color:${P.L[i]&&P.L[i][1]?'#fff':'var(--tx)'};flex:none">${P.L[i]&&P.L[i][1]?'✓':i+1}</span>${t}</h3>`;
   const lembr=`<div class="sm mut" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px">${ic2('clock')}<label class="ck" style="margin:0"><input type="checkbox" data-semon${(NP.on||{}).sem===false?'':' checked'}><span>Lembrete todo domingo às</span></label><input type="time" data-semh value="${esc(NP.sem||'18:00')}" style="width:auto;padding:4px 8px;margin:0"></div>`;
   return `<section class="card" id="semrev" style="padding:14px">
 <div class="top"><b style="font-size:17px">Revisão guiada</b><span class="chip">${P.ok} de 5 passos</span></div>${barra(P.ok/5,P.ok===5?'var(--g)':'var(--ac)')}
 ${rv.feita?`<div class="sm g" style="margin-top:8px">${ic2('ok')} Revisão concluída em ${new Date(rv.feita).toLocaleDateString('pt-BR')}.</div>`:''}
-<h3 style="margin:16px 0 6px">Números da semana</h3>
+<h3 style="margin:16px 0 6px;text-transform:none;letter-spacing:0;color:var(--tx);font-size:15.5px">Números da semana</h3>
 <div class="g2" style="gap:8px">${col('Brasil (R$)',B,X=>mnyMix(X.soma),lin2('Regras seguidas',pct0(B.regras)))}${col('Forex (US$)',F,X=>mnyC(X.tot,'USD'))}</div>
 ${dias.length?`<div class="card" style="margin-top:8px;padding:8px 12px"><table><tr><th>Dia</th><th>Brasil</th><th>Forex</th></tr>${dias.map(d=>`<tr><td>${dd(d)}</td><td class="${cls(B.dias[d]||0)}">${B.dias[d]!=null?money(B.dias[d]):'–'}</td><td class="${cls(F.dias[d]||0)}">${F.dias[d]!=null?mnyC(F.dias[d],'USD'):'–'}</td></tr>`).join('')}</table></div>`:''}
 ${passo(0,'Stop e limites')}
@@ -3583,7 +3583,7 @@ ${passo(4,'Concluir')}
   vRev=function(){
     if(RP[0]!=='w')return vr0();
     const [a,b,key]=rng(RP),rv=(S.rev||{})[key]||{},R=semResumo(a,b);
-    return `<h1>Revisão</h1>${cal()}<h2>Revisão da semana</h2><label>Período<select id="rp">${opt([['w0','Esta semana'],['w1','Semana passada'],['m0','Este mês'],['m1','Mês passado']],RP)}</select></label><div class="mut sm" style="margin-bottom:10px">${fmtD(a)} a ${fmtD(b)}</div>${semCard(R,key,rv)}`;
+    return `<h1>Revisão da semana</h1><label>Período<select id="rp">${opt([['w0','Esta semana'],['w1','Semana passada'],['m0','Este mês'],['m1','Mês passado']],RP)}</select></label><div class="mut sm" style="margin-bottom:10px">${fmtD(a)} a ${fmtD(b)}</div>${semCard(R,key,rv)}<h2>Calendário</h2>${cal()}`;
   };
   document.addEventListener('click',e=>{
     const b=e.target.closest('[data-rvb]');
@@ -3853,14 +3853,21 @@ function pfTrade(o){
   let pv=+o.valor_ponto||pvDe(o.ativo);
   if(!pv&&o.resultado!=null&&x!=null&&x!==e)pv=Math.abs((+o.resultado+(+o.custos||0))/((x-e)*dir*q))||1;
   const dt=brLocal(o.abertura),dtx=x==null?'':brLocal(o.fechamento||o.abertura);
-  return {id:uid(),tipo:dt.slice(0,10)!==(dtx||dt).slice(0,10)?'S':'D',ativo:String(o.ativo||'').toUpperCase(),side:dir<0?'V':'C',qty:String(q),entry:String(e),exit:x==null?'':String(x),stop:'',target:'',pv:String(pv||1),cost:o.custos!=null?String(o.custos):'',dt,dtx,setup:'',err:'Nenhum',rules:'',nota:'',ext:'profit:'+o.id_externo,orig:'profit',u:Date.now()};
+  const ativo=String(o.ativo||'').toUpperCase(),opc=!FUT.test(ativo)&&OPT.test(ativo);
+  const t={id:/^imp[0-9a-z]+$/.test(o.id_externo)?o.id_externo:uid(),tipo:opc?'O':FUT.test(ativo)||dt.slice(0,10)===(dtx||dt).slice(0,10)?'D':'S',ativo,side:dir<0?'V':'C',qty:String(q),entry:String(e),exit:x==null?'':String(x),stop:o.stop!=null?String(+o.stop):'',target:'',pv:String(opc?1:pv||1),cost:o.custos!=null?String(o.custos):'',dt,dtx,setup:'',err:'Nenhum',rules:'',nota:'',ext:'profit:'+o.id_externo,orig:'profit',u:Date.now()};
+  if(opc)try{Object.assign(t,optInfo(ativo,new Date(dt+':00')))}catch(e){}
+  return t;
 }
+/* a mesma operação já registrada à mão: mesmo ativo, lado e quantidade, entrada até 10 min de diferença */
+function pfJaTem(n){const t0=Date.parse(n.dt);return S.trades.some(t=>t.orig!=='profit'&&String(t.ativo||'').toUpperCase()===n.ativo&&t.side===n.side&&String(+t.qty)===String(+n.qty)&&Math.abs(Date.parse(t.dt)-t0)<=6e5)}
 async function profitImporta(manual){
   if(!SESS||!cfg()||PFX.busy||(PFX.off&&!manual))return;PFX.busy=1;
   try{
     const L=await(await rq('/rest/v1/operacoes_profit?select=*&importado=eq.false&order=abertura.asc&limit=500')).json();
-    const ja=new Set(S.trades.map(t=>t.ext).filter(Boolean)),novos=[],ids=[];
-    (L||[]).forEach(o=>{ids.push(o.id);const k='profit:'+o.id_externo;if(ja.has(k)||!o.ativo||!isFinite(+o.preco_entrada))return;ja.add(k);novos.push(pfTrade(o))});
+    const ja=new Set(S.trades.flatMap(t=>[t.ext,t.id]).filter(Boolean)),novos=[],ids=[];let manual=0;
+    (L||[]).forEach(o=>{ids.push(o.id);const k='profit:'+o.id_externo;if(ja.has(k)||ja.has(o.id_externo)||!o.ativo||!isFinite(+o.preco_entrada))return;
+      const t=pfTrade(o);if(pfJaTem(t)){manual++;return}ja.add(k);ja.add(t.id);novos.push(t)});
+    if(manual&&!novos.length&&window.toast)toast(manual+' operação(ões) do Profit já estavam no diário.',3000);
     if(novos.length){S.trades.push(...novos);save();render();if(window.toast)toast(`${novos.length} operação(ões) importada(s) do Profit. Complete stop e setup na ficha.`,5000);setTimeout(()=>{try{limiteConfere()}catch(e){}},300)}
     else if(manual&&window.toast)toast('Nenhuma operação nova do Profit.',2500);
     if(ids.length)await rq('/rest/v1/operacoes_profit?id=in.('+ids.join(',')+')',{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({importado:true})});
@@ -3873,7 +3880,7 @@ async function profitImporta(manual){
   vImport=function(){
     const h=vi0();
     return `<div class="card" style="padding:14px"><div class="top"><b style="font-size:16px">${ic2('bolt')} Importação automática do Profit</b><span class="chip" style="color:${PFX.err?'var(--am)':'var(--g)'};border-color:${PFX.err?'var(--am)':'var(--g)'}">${PFX.err?'atenção':SESS?'ligada':'entre na conta'}</span></div>
-<div class="sm mut" style="margin:6px 0">A ponte no seu computador grava cada operação encerrada no Profit na sua conta; o app traz para o diário sozinho quando abre (e a cada 2 minutos enquanto está aberto). Depois é só completar stop, setup e erros na ficha.</div>
+<div class="sm mut" style="margin:6px 0">Exporte no Profit o Histórico de ordens (CSV) para a pasta Downloads do computador: a ponte envia as operações encerradas, com o stop, e o app traz para o diário sozinho (ao abrir e a cada 2 minutos). Depois é só completar setup e erros na ficha.</div>
 ${PFX.err?`<div class="warn">${esc(PFX.err)}</div>`:''}<div class="sm">${PFX.ult?'Última busca: '+new Date(PFX.ult).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Ainda não buscou.'}${PFX.n?' · '+PFX.n+' importada(s) nesta sessão':''}</div>
 <button class="btn s" style="width:100%;margin-top:10px" data-pfnow="1"${SESS?'':' disabled'}>Buscar agora</button></div>`+h;
   };
