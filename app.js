@@ -1587,7 +1587,7 @@ function adrHtml(){
 ${AD.err?`<div class="warn" style="margin-top:8px">${esc(AD.err)}</div>`:''}
 ${ewz?`<div class="card" style="margin:8px 0 0;padding:8px 10px;border-left:3px solid ${ewz.chp>=0?'var(--g)':'var(--r)'}"><div style="display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center"><div><b>EWZ</b> <span class="sm mut">ETF do Brasil em NY</span><div class="sm mut">termômetro do Ibovespa em dólar</div></div><div style="text-align:right"><b style="font-size:18px">${adN(ewz.px)}</b> <span class="${cls(ewz.chp)}">${adP(ewz.chp)}</span><div class="sm mut">${ewz.state==='pre'?'Pré · fech. '+adN(ewz.base):ewz.state==='reg'?(ewz.pre?'Pré '+adN(ewz.pre.px)+' '+adP(ewz.pre.chp):'&nbsp;'):ewz.pos?'Pós '+adN(ewz.pos.px)+' '+adP(ewz.pos.chp):'&nbsp;'}</div></div></div></div>`:''}
 <div style="margin-top:6px">${L.length?L.map(adRow).join(''):`<div class="mut sm" style="padding:12px 0">${AD.busy?'Buscando cotações…':'Sem cotações ainda.'}</div>`}</div>
-<div class="sm mut" style="margin-top:6px">Yahoo Finance, com possível atraso. No pré-mercado o número grande já é o preço de pré e a variação é contra o último fechamento. ADRs de balcão (WEGZY, BBSEY, BDORY) não têm pré-mercado. A média não inclui o EWZ.</div>`;
+<div class="sm mut" style="margin-top:6px">${esc((AD.data&&AD.data.fonte)||'Yahoo Finance')}${AD.data&&AD.data.fonte&&!AD.data.atraso?', sem atraso':', com possível atraso'}. No pré-mercado o número grande já é o preço de pré e a variação é contra o último fechamento. ADRs de balcão (WEGZY, BBSEY, BDORY) não têm pré-mercado. A média não inclui o EWZ.</div>`;
 }
 function adrPaint(){const e=document.getElementById('adr');if(e)e.innerHTML=adrHtml()}
 
@@ -1604,7 +1604,7 @@ async function adrLoad(force){
     catch(e){throw new Error('Sem conexão. Mostrando a última cotação salva.')}
     let j={};try{j=await r.json()}catch(e){}
     if(!r.ok)throw new Error(j.error||(r.status===404?'Função "adrs" não encontrada: publique-a no Supabase.':r.status===401?'A função exige login: publique com --no-verify-jwt.':'Erro '+r.status));
-    AD.data={ts:Date.now(),itens:j.itens||[]};ls.set('diario-adr-d',AD.data);
+    AD.data={ts:Date.now(),itens:j.itens||[],fonte:j.fonte||'',atraso:!!j.atraso};ls.set('diario-adr-d',AD.data);
     if((j.erros||[]).length)AD.err='Sem dados de: '+j.erros.map(x=>String(x).split(':')[0]).join(', ')+'.';
   }catch(e){AD.err=e.message||String(e)}
   AD.busy=0;adrPaint();
