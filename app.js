@@ -143,7 +143,7 @@ const LV={px:{},dl:{},td:0,ts:0,err:'',ed:'',hit:{},busy:0},LVT=['trades','swing
 const lvKey=t=>String(t.ativo||'').trim().toUpperCase();
 function lvQ(k){const b=LV.px[k];if(b&&b.ult>0&&Date.now()-b.up<30000)return{...b,d:0};const d=LV.dl[k];if(d&&d.ult>0&&Date.now()-d.up<180000)return{...d,d:1};return null}
 function lvCalc(t){const q=lvQ(lvKey(t));if(!q)return null;const e=numN(t.entry),s=numN(t.stop),tg=numN(t.target),d=t.side==='C'?1:-1,qt=numN(t.qty)||0,pv=numN(t.pv)||1,cost=numN(t.cost)||0;if(e==null)return null;const pl=(q.ult-e)*d*qt*pv-cost,risk=s!=null?Math.abs(e-s)*qt*pv:null;return{px:q.ult,d:q.d,pl,r:risk>0?pl/risk:null,ds:s!=null?(q.ult-s)*d:null,dt:tg!=null?(tg-q.ult)*d:null,st:s!=null&&(q.ult-s)*d<=0?'stop':tg!=null&&(tg-q.ult)*d<=0?'alvo':''}}
-async function lvPoll(){if(LV.busy||!SESS||!window.CLOUD_OK||document.hidden||!(LVT.includes(tab)||tab==='live')||(tab!=='live'&&!S.trades.some(t=>isOpen(t)&&lvKey(t))))return;LV.busy=1;try{const rows=await(await rq('/rest/v1/cotacoes?select=ticker,ult,abe,hor,dat,updated_at&user_id=eq.'+SESS.uid)).json(),px={};rows.forEach(x=>px[String(x.ticker).toUpperCase()]={ult:+x.ult,hor:x.hor,up:Date.parse(x.updated_at)||0});LV.px=px;LV.all=rows;LV.ts=Date.now();LV.err=''}catch(e){LV.err=e.status===404?'ponte não configurada (tabela "cotacoes" não existe)':String(e.message||e)}try{await lvDelayed()}catch(e){}LV.busy=0;lvPaint();lvcPaint()}
+async function lvPoll(){if(LV.busy||!SESS||!window.CLOUD_OK||document.hidden||!(LVT.includes(tab)||tab==='live')||(tab!=='live'&&!S.trades.some(t=>isOpen(t)&&lvKey(t))))return;LV.busy=1;try{const rows=await(await rq('/rest/v1/cotacoes?select=*&user_id=eq.'+SESS.uid)).json(),px={};rows.forEach(x=>px[String(x.ticker).toUpperCase()]={ult:+x.ult,hor:x.hor,up:Date.parse(x.updated_at)||0});LV.px=px;LV.all=rows;LV.ts=Date.now();LV.err=''}catch(e){LV.err=e.status===404?'ponte não configurada (tabela "cotacoes" não existe)':String(e.message||e)}try{await lvDelayed()}catch(e){}LV.busy=0;lvPaint();lvcPaint()}
 async function lvDelayed(){const c=cfg(),fut=/^(WIN|WDO|IND|DOL|BGI|CCM|ICF|WSP|DI1)/,miss=[...new Set(S.trades.filter(t=>isOpen(t)&&lvKey(t)).map(lvKey))].filter(k=>!fut.test(k)&&!(LV.px[k]&&Date.now()-LV.px[k].up<30000));if(!c||!miss.length||Date.now()-LV.td<60000)return;LV.td=Date.now();try{await tok();const r=await fetch(c.url+'/functions/v1/precos',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify({br:miss.filter(k=>/\d/.test(k)),us:miss.filter(k=>!/\d/.test(k))})});const j=await r.json();if(!r.ok)throw new Error(j.erro||('Erro '+r.status));const h=hm();for(const o of[j.br||{},j.us||{}])for(const k in o)if(o[k]>0)LV.dl[k.toUpperCase()]={ult:+o[k],hor:h,up:Date.now()};LV.ed=''}catch(e){LV.ed=String(e.message||e)}}
 function lvPaint(){const ap=$('#app');if(!ap||!LVT.includes(tab))return;const ab=S.trades.filter(t=>isOpen(t)&&lvKey(t)),old=$('#lvbar');if(!SESS||!window.CLOUD_OK||!ab.length){if(old)old.remove();return}
  const fq=Object.values(LV.px).filter(x=>Date.now()-x.up<30000),nd=Object.values(LV.dl).filter(x=>Date.now()-x.up<180000);let bar=old;if(!bar){ap.insertAdjacentHTML('afterbegin','<div id="lvbar" class="sm" style="margin-bottom:8px"></div>');bar=$('#lvbar')}
@@ -158,14 +158,14 @@ setInterval(lvPoll,2500);
 /* ---------- Tela Cotações ao vivo (lista de todos os ativos da ponte) ---------- */
 let LVC={q:'',f:'all'};
 const lvcHoje=()=>{const d=new Date();return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()};
-function vLive(){return `<h1>Cotações ao vivo</h1><div id="lvcbar" class="sm" style="margin:6px 0"></div><input id="cq" placeholder="🔍 Buscar ativo" value="${esc(LVC.q)}" autocapitalize="characters" autocomplete="off"><div class="chips2" style="margin-top:8px">${[['all','Todos'],['meus','Meus trades'],['alta','Em alta'],['baixa','Em baixa']].map(([k,l])=>`<button class="${LVC.f===k?'on':''}" data-a="lvcf" data-id="${k}">${l}</button>`).join('')}</div><div class="card" style="margin-top:8px;padding:6px 8px"><table style="width:100%"><thead><tr><th style="text-align:left">Ativo</th><th style="text-align:right">Último</th><th style="text-align:right">Var.</th><th style="text-align:right">Hora</th></tr></thead><tbody id="lvcb"></tbody></table></div><div class="mut sm">Atualiza a cada ~3 s enquanto a ponte do Profit estiver rodando. Var. = sobre a abertura do dia. Linhas em cinza não negociaram hoje (aparece a data do último negócio). ★ = ativo de um trade aberto.</div>`}
+function vLive(){return `<h1>Cotações ao vivo</h1><div id="lvcbar" class="sm" style="margin:6px 0"></div><input id="cq" placeholder="🔍 Buscar ativo" value="${esc(LVC.q)}" autocapitalize="characters" autocomplete="off"><div class="chips2" style="margin-top:8px">${[['all','Todos'],['meus','Meus trades'],['alta','Em alta'],['baixa','Em baixa']].map(([k,l])=>`<button class="${LVC.f===k?'on':''}" data-a="lvcf" data-id="${k}">${l}</button>`).join('')}</div><div class="card" style="margin-top:8px;padding:6px 8px"><table style="width:100%"><thead><tr><th style="text-align:left">Ativo</th><th style="text-align:right">Último</th><th style="text-align:right">Var.</th><th style="text-align:right">Hora</th></tr></thead><tbody id="lvcb"></tbody></table></div><div class="mut sm">Atualiza a cada ~3 s enquanto a ponte do Profit estiver rodando. Var. = a mesma do Profit (sobre o fechamento do dia anterior). Se a ponte ainda não mandar a variação, o app calcula sobre a abertura. Linhas em cinza não negociaram hoje (aparece a data do último negócio). ★ = ativo de um trade aberto.</div>`}
 function lvcPaint(){if(tab!=='live')return;const b=$('#lvcb'),bar=$('#lvcbar');if(!b||!bar)return;
  if(!SESS||!window.CLOUD_OK){bar.innerHTML='<span class="mut">Entre na sua conta (Mais → Conta): as cotações chegam pelo Supabase.</span>';b.innerHTML='';return}
  const now=Date.now(),hoje=lvcHoje(),mine=new Set(S.trades.filter(t=>isOpen(t)&&lvKey(t)).map(lvKey)),
-  all=(LV.all||[]).map(r=>({k:String(r.ticker).toUpperCase(),u:+r.ult,a:+r.abe,h:r.hor||'',d:r.dat||'',up:Date.parse(r.updated_at)||0})).filter(r=>r.u>0),
+  all=(LV.all||[]).map(r=>({k:String(r.ticker).toUpperCase(),u:+r.ult,a:+r.abe,f:+r.fec,vr:r.var==null||r.var===''?null:+r.var,h:r.hor||'',d:r.dat||'',up:Date.parse(r.updated_at)||0})).filter(r=>r.u>0),
   live=all.filter(r=>now-r.up<30000).length,last=all.reduce((m,r)=>Math.max(m,r.up),0);
  bar.innerHTML=LV.err?'<span class="r">⚠️ '+esc(LV.err)+'</span>':!all.length?'<span class="mut">⚪ Nenhuma cotação ainda. Rode a ponte do Profit (iniciar.bat) com o Profit e o Excel abertos.</span>':live?'<span class="g">🟢 Ao vivo</span> <span class="mut">· '+hm(last)+' · '+all.length+' ativos</span>':'<span class="mut">⚪ Ponte parada. Última cotação às '+hm(last)+' ('+all.length+' ativos).</span>';
- let r=all.map(x=>({...x,v:x.a>0?(x.u/x.a-1)*100:null,st:!!x.d&&x.d!==hoje}));
+ let r=all.map(x=>({...x,v:x.vr!=null&&isFinite(x.vr)?x.vr:x.f>0?(x.u/x.f-1)*100:x.a>0?(x.u/x.a-1)*100:null,st:!!x.d&&x.d!==hoje}));
  if(LVC.q)r=r.filter(x=>x.k.includes(LVC.q));
  if(LVC.f==='meus')r=r.filter(x=>mine.has(x.k));else if(LVC.f==='alta')r=r.filter(x=>x.v>0).sort((p,q)=>q.v-p.v);else if(LVC.f==='baixa')r=r.filter(x=>x.v<0).sort((p,q)=>p.v-q.v);
  if(LVC.f==='all'||LVC.f==='meus')r.sort((p,q)=>p.k<q.k?-1:1);
@@ -626,14 +626,14 @@ if(document.body)mount();else document.addEventListener('DOMContentLoaded',mount
 css.textContent+='#tape .mq{height:46px;overflow:hidden;display:flex;align-items:center;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}#tape .tr{display:flex;white-space:nowrap;animation:tpm var(--d,60s) linear infinite;will-change:transform}@keyframes tpm{to{transform:translateX(-50%)}}#tape .ti{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 16px;border-right:1px solid #16202b;line-height:1.1;font-size:12px;color:#e5e7eb}#tape .ti b{font-size:13px}#tape .up{color:#22c55e}#tape .dn{color:#ef4444}';
 const TS=[['^BVSP','IBOV'],['BRL=X','USD/BRL'],['DX-Y.NYB','DXY'],['^GSPC','S&P 500'],['^IXIC','NASDAQ'],['^DJI','DOW'],['BTC-USD','BTC'],['ETH-USD','ETH'],['CL=F','WTI'],['GC=F','OURO'],...['PETR4','VALE3','ITUB4','BBDC4','BBAS3','WEGE3','ABEV3','B3SA3','RENT3','SUZB3'].map(x=>[x,x])];
 let TD={},TBUILT=0;
-const tcell=([s,n])=>{const x=TD[s],c=+x.chg||0,u=c>=0;return `<span>${n} <span class="${u?'up':'dn'}">${u?'▲':'▼'}</span></span><span class="${u?'up':'dn'}">${f2(x.px)} <b>${u?'+':''}${f2(c)}%</b></span>`};
+const tcell=([s,n])=>{const x=(window.tapeVivo&&window.tapeVivo(s))||TD[s],c=+x.chg||0,u=c>=0;return `<span>${n} <span class="${u?'up':'dn'}">${u?'▲':'▼'}</span></span><span class="${u?'up':'dn'}">${f2(x.px)} <b>${u?'+':''}${f2(c)}%</b></span>`};
 function tapeDraw(){const t=document.getElementById('tape');if(!t)return;const it=TS.filter(x=>TD[x[0]]);if(it.length<4)return;
 if(TBUILT){t.querySelectorAll('.ti').forEach(e=>{const k=TS.find(x=>x[0]===e.dataset.s);if(k&&TD[k[0]])e.innerHTML=tcell(k)});return}
 const h=it.map(k=>`<div class="ti" data-s="${k[0]}">${tcell(k)}</div>`).join(''),m=document.createElement('div');m.className='mq';
 m.innerHTML=`<div class="tr" style="--d:${Math.max(30,it.length*4)}s">${h}${h}</div>`;
 const w=t.querySelector('.tradingview-widget-container');if(w)w.style.display='none';t.appendChild(m);TBUILT=1}
 async function tapeLoad(){if(document.hidden)return;try{const j=await scFetch(TS.map(x=>x[0]));(j.data||[]).forEach(x=>{if(x&&x.ok&&x.px!=null&&TS.some(k=>k[0]===x.s))TD[x.s]=x});tapeDraw()}catch(e){}}
-setTimeout(tapeLoad,1200);setInterval(tapeLoad,60000)})();
+window.tapeRedraw=tapeDraw;setTimeout(tapeLoad,1200);setInterval(tapeLoad,60000)})();
 /* ---------- Menu hambúrguer (substitui a barra de abas de baixo) ---------- */
 (function(){
 const css=document.createElement('style');
@@ -4033,4 +4033,12 @@ if(typeof rsCard==='function'){const rc0=rsCard;rsCard=function(b){let h=rc0(b);
   ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,para,{passive:false}));
   document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault()},{passive:false});
 })();
+/* ---------- faixa do topo: ações da B3 com a cotação do Profit (ponte) quando ela está chegando ---------- */
+window.tapeVivo=s=>{
+  if(!/^[A-Z]{4}\d{1,2}$/.test(s)||typeof LV==='undefined')return null;
+  const r=(LV.all||[]).find(x=>String(x.ticker).toUpperCase()===s);if(!r||!(+r.ult>0)||Date.now()-(Date.parse(r.updated_at)||0)>120000)return null;
+  const v=r.var!=null&&r.var!==''&&isFinite(+r.var)?+r.var:+r.fec>0?(+r.ult/+r.fec-1)*100:null;
+  return v==null?null:{px:+r.ult,chg:v};
+};
+if(typeof lvcPaint==='function'){const lc0=lvcPaint;lvcPaint=function(){lc0.apply(this,arguments);try{window.tapeRedraw&&window.tapeRedraw()}catch(e){}}}
 /* ==== EXTRAS2 (gráfico TradingView):FIM ==== */
