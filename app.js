@@ -934,13 +934,13 @@ function anxTec(j,key){const R=j.relatorio||{},A=anxArr(j.ativos),ai=t=>anxAiAti
  h+=`<h2>Gráficos e pivôs</h2>${anxTog()}`;
  A.forEach(a=>{const x=ai(a.tk),i=a.ind||{};h+=`<div class="card"><div class="top"><span><b>${esc(a.tk)}</b> <span class="mut sm">${a.moeda==='USD'?'US$':'R$'} ${anxP(a.preco_atual)}</span></span>${anxVies(x.vies)}</div>${anxV(x.resumo)}${anxChart(a)}${anxPivTab(a)}
  <div><span class="chip">RSI ${anxN(i.rsi14,0)}</span><span class="chip">SMA20 ${anxP(i.sma20)}</span><span class="chip">SMA50 ${anxP(i.sma50)}</span><span class="chip">ATR ${anxN(i.atr14_pct,1)}%</span><span class="chip">Volume ${anxN(i.volume_vs_media20,1)}× média</span></div>${anxArr(a.avisos).length?`<div class="sm mut" style="margin-top:6px">${a.avisos.map(esc).join(' · ')}</div>`:''}
- ${anxSec('Tendência',x.tendencia)}${anxSec('Pivôs diários',x.pivos_diarios)}${anxSec('Pivôs semanais',x.pivos_semanais)}${anxSec('Confluências',x.confluencias)}${anxSec('Indicadores',x.indicadores)}${anxSec('Força e volume',x.forca_e_volume)}${anxSec('Plano de trade',x.plano_de_trade)}${anxSec('Zonas de interesse (entrada e saída)',x.zonas_de_interesse)}${anxSec('Cenário de alta',x.cenario_alta)}${anxSec('Cenário de baixa',x.cenario_baixa)}</div>`});
+ ${anxMtf(a,x)}${anxSec('Tendência',x.tendencia)}${anxSec('Pivôs diários',x.pivos_diarios)}${anxSec('Pivôs semanais',x.pivos_semanais)}${anxSec('Confluências',x.confluencias)}${anxSec('Indicadores',x.indicadores)}${anxSec('Força e volume',x.forca_e_volume)}${anxEnt(x.entradas)}${anxSec('Plano de trade (lado do viés)',x.plano_de_trade)}${anxSec('Zonas de interesse (entrada e saída)',x.zonas_de_interesse)}${anxSec('Cenário de alta',x.cenario_alta)}${anxSec('Cenário de baixa',x.cenario_baixa)}</div>`});
  return h+anxBot(R)+(anxArr(R.alertas).length?`<h2>Alertas técnicos</h2><div class="card">${anxV(R.alertas)}</div>`:'')+anxFoot(j)}
 
 function anxFun(j,key){const R=j.relatorio||{},A=anxArr(j.ativos),W={},ai=t=>anxAiAtivos(R).find(x=>String(x.ticker||'').toUpperCase()===t)||{};anxItens(ANX.mk).forEach(o=>W[o.tk]=o.peso);
  const sec={};A.forEach(a=>{const s=(a.fund&&a.fund.setor)||'Sem dado';sec[s]=(sec[s]||0)+(W[a.tk]||0)});
  let h=anxHead(j,key)+anxRaw(R)+anxTop(R)+(R.visao_geral?`<h2>Visão geral</h2><div class="card">${anxV(R.visao_geral)}</div>`:'');
- if(!j.unico)h+=`<h2>Concentração</h2><div class="card">${Object.entries(sec).sort((a,b)=>b[1]-a[1]).map(([s,p])=>anxBar(s,p)).join('')}<h3>Por ativo</h3>${A.slice().sort((a,b)=>(W[b.tk]||0)-(W[a.tk]||0)).map(a=>anxBar(a.tk,W[a.tk]||0,'var(--g)')).join('')}${R.concentracao?`<div style="margin-top:10px">${anxV(R.concentracao)}</div>`:''}</div>`;
+ h+=anxMacro(R,j);if(!j.unico)h+=`<h2>Concentração</h2><div class="card">${Object.entries(sec).sort((a,b)=>b[1]-a[1]).map(([s,p])=>anxBar(s,p)).join('')}<h3>Por ativo</h3>${A.slice().sort((a,b)=>(W[b.tk]||0)-(W[a.tk]||0)).map(a=>anxBar(a.tk,W[a.tk]||0,'var(--g)')).join('')}${R.concentracao?`<div style="margin-top:10px">${anxV(R.concentracao)}</div>`:''}</div>`;
  h+=`<h2>Painel fundamentalista</h2><div class="card anxt"><table><tr><th>Ativo</th><th>P/L</th><th>P/VP</th><th>ROE</th><th>Mrg. líq.</th><th>Dív/PL</th></tr>${A.map(a=>{const f=a.fund||{};return `<tr><td>${esc(a.tk)}</td><td>${anxN(f.pl,1)}</td><td>${anxN(f.p_vp,2)}</td><td>${anxPc(f.roe)}</td><td>${anxPc(f.margem_liquida)}</td><td>${f.divida_pl_pct==null?'–':anxN(f.divida_pl_pct,0)+'%'}</td></tr>`}).join('')}</table></div><div class="sm mut">Dados de brapi, Twelve Data e Yahoo Finance (fontes não oficiais). Dividend yield e dívida/PL podem vir em escalas diferentes entre ativos.</div>`;
  A.forEach(a=>{const f=a.fund||{},x=ai(a.tk),q=String(x.qualidade||'').toUpperCase(),v=String(x.valuation||'').toUpperCase(),m=(l,t)=>`<div>${l}<b>${t}</b></div>`,cp=f.analistas_compra_forte_e_compra||0,mt=f.analistas_manter||0,vd=f.analistas_venda_e_venda_forte||0,tt=cp+mt+vd,up=f.alvo_medio_analistas&&f.preco?(f.alvo_medio_analistas/f.preco-1)*100:null;
   h+=`<div class="card"><div class="top"><span><b>${esc(a.tk)}</b> <span class="mut sm">${esc(f.nome||'')}</span></span><span>${anxVb(q&&'Qualidade '+q,q==='ALTA'?'g':q==='BAIXA'?'r':'w')}${anxVb(v&&v,v==='BARATO'?'g':v==='CARO'?'r':v==='JUSTO'?'w':'n')}</span></div>
@@ -948,7 +948,7 @@ function anxFun(j,key){const R=j.relatorio||{},A=anxArr(j.ativos),W={},ai=t=>anx
   <div class="anxm">${m('P/L',anxN(f.pl,1))}${m('P/VP',anxN(f.p_vp,2))}${m('EV/EBITDA',anxN(f.ev_ebitda,1))}${m('ROE',anxPc(f.roe))}${m('Margem líq.',anxPc(f.margem_liquida))}${m('Dív/PL',f.divida_pl_pct==null?'–':anxN(f.divida_pl_pct,0)+'%')}${m('Cresc. receita',anxPc(f.crescimento_receita))}${m('Cresc. lucro',anxPc(f.crescimento_lucro))}${m('Valor de mercado',anxBig(f.valor_mercado))}${m('Dividend yield',f.dividend_yield==null?'–':anxN(+f.dividend_yield<1?f.dividend_yield*100:f.dividend_yield,1)+'%')}${m('Payout',anxPc(f.payout))}${m('Beta',anxN(f.beta,2))}</div>
   ${[['Margem bruta',f.margem_bruta],['Margem EBITDA',f.margem_ebitda],['Margem operacional',f.margem_operacional],['Margem líquida',f.margem_liquida]].filter(r=>r[1]!=null).map(r=>anxBar(r[0],r[1]*100)).join('')}
   ${tt?`<div class="sm" style="margin-top:10px">Consenso de analistas (${tt}): ${cp} compra · ${mt} manter · ${vd} venda${up!=null?` · alvo médio ${up>=0?'+':''}${anxN(up,1)}% vs preço`:''}</div><div class="anxb"><i style="width:${cp/tt*100}%;background:var(--g)"></i><i style="width:${mt/tt*100}%;background:#e8a317"></i><i style="width:${vd/tt*100}%;background:var(--r)"></i></div>`:''}
-  ${anxSec('Pontos fortes',x.pontos_fortes)}${anxSec('Pontos de atenção',x.pontos_de_atencao)}${anxSec('Rentabilidade e margens',x.rentabilidade_e_margens)}${anxSec('Endividamento e caixa',x.endividamento_e_caixa)}${anxSec('Dividendos',x.dividendos)}${anxSec('Valuation',x.valuation_leitura)}${anxSec('Perspectivas de crescimento',x.perspectivas_de_crescimento)}${anxSec('Riscos e catalisadores',x.riscos_e_catalisadores)}</div>`});
+  ${anxDec(x)}${anxSec('Tese de investimento',x.tese_de_investimento)}${anxSec('Vantagens competitivas',x.vantagens_competitivas)}${anxValRef(a)}${anxCen(x.cenarios)}${anxSec('Métodos de valuation',x.valuation_metodos)}${anxSec('Governança',x.governanca)}${anxSec('Pontos fortes',x.pontos_fortes)}${anxSec('Pontos de atenção',x.pontos_de_atencao)}${anxSec('Rentabilidade e margens',x.rentabilidade_e_margens)}${anxSec('Endividamento e caixa',x.endividamento_e_caixa)}${anxSec('Dividendos',x.dividendos)}${anxSec('Valuation',x.valuation_leitura)}${anxSec('Perspectivas de crescimento',x.perspectivas_de_crescimento)}${anxSec('Riscos e catalisadores',x.riscos_e_catalisadores)}</div>`});
  return h+anxBot(R)+(anxArr(R.alertas).length?`<h2>Alertas fundamentalistas</h2><div class="card">${anxV(R.alertas)}</div>`:'')+anxFoot(j)}
 
 function anxImg(j,key){const R=j.relatorio||{};
@@ -962,8 +962,8 @@ function vAnalise(){anxLoad();const mk=ANX.mk,m=ANX.m,seg=(a,cur,arr)=>`<div cla
  const run=lbl=>`<button class="btn" style="width:100%;margin-top:10px" data-an="run" data-v="${m}"${ANX.busy?' disabled':''}>${b?'Gerando… pode levar até 2 minutos':R?(R.dia===loc().slice(0,10)?'Gerar de novo (usa cota do Gemini)':'Atualizar relatório'):lbl}</button>`;
  let h=`<h1>Análise IA</h1>`+(!SESS?'<div class="warn" style="margin-bottom:8px">Entre na sua conta (Mais → Conta) para usar as análises.</div>':'')+seg('mk',mk,[['BR','🇧🇷 Brasil'],['US','🇺🇸 EUA']])+seg('m',m,[['tec','📈 Técnica'],['fun','🏦 Fundamentos'],['img','🖼️ Foto'],['pos','📌 Posições']]);
  if(m!=='img'&&m!=='pos')h+=`<div class="card"><label>Analisar um ativo específico<input id="anx_ta" autocapitalize="characters" autocomplete="off" placeholder="${mk==='BR'?'PETR4, VALE3…':'AAPL, MSFT…'}" value="${esc(ANX.tkA)}"></label><div class="sm mut" style="margin-top:6px">Digite um ticker (ex.: PETR4 ou AAPL) para analisar só esse ativo. Deixe vazio para analisar a carteira. O mercado (B3 ou EUA) é detectado pelo ticker.</div></div>`;
- if(m==='tec')h+=`<div class="card"><b>📈 Analista técnico sênior · Gemini</b><div class="sm mut">Só análise gráfica: tendência, pivôs <b>diários e semanais</b>, médias, RSI, ATR e volume. Cotações: ${mk==='BR'?'brapi (B3)':'Twelve Data (EUA)'}, com atraso. Não comenta fundamentos.</div><div class="sm mut" style="margin-top:6px">${ta?'Ativo avulso: '+esc(ta)+' ('+(scB3(ta)?'B3 via brapi':'EUA via Twelve Data')+')':el?el+' ativo(s) elegível(is)'+(el>12?' · analisando os 12 maiores':''):'Nenhuma ação, ETF ou FII lançado neste mercado.'}</div>${run('Gerar relatório técnico')}</div>`;
- else if(m==='fun')h+=`<div class="card"><b>🏦 Analista fundamentalista sênior · Gemini</b><div class="sm mut">Só fundamentos: rentabilidade, margens, endividamento, dividendos e valuation. Dados: brapi (B3), Twelve Data (EUA) e Yahoo Finance (fonte não oficial). Não comenta gráfico.</div><div class="sm mut" style="margin-top:6px">${ta?'Ativo avulso: '+esc(ta)+' ('+(scB3(ta)?'B3 via brapi':'EUA via Twelve Data')+')':el?el+' ativo(s) elegível(is)'+(el>12?' · analisando os 12 maiores':''):'Nenhuma ação, ETF ou FII lançado neste mercado.'}</div>${run('Gerar relatório fundamentalista')}</div>`;
+ if(m==='tec')h+=`<div class="card"><b>📈 Analista técnico CNPI-P · Gemini</b><div class="sm mut">Leitura <b>mensal → semanal → diária</b> (top-down), estrutura de topos e fundos, pivôs diários e semanais, médias, RSI, ATR e volume. Cotações: ${mk==='BR'?'brapi (B3)':'Twelve Data (EUA)'}, com atraso. Não comenta fundamentos.</div><div class="sm mut" style="margin-top:6px">${ta?'Ativo avulso: '+esc(ta)+' ('+(scB3(ta)?'B3 via brapi':'EUA via Twelve Data')+')':el?el+' ativo(s) elegível(is)'+(el>12?' · analisando os 12 maiores':''):'Nenhuma ação, ETF ou FII lançado neste mercado.'}</div>${run('Gerar relatório técnico')}</div>`;
+ else if(m==='fun')h+=`<div class="card"><b>🏦 Analista fundamentalista CNPI-P · Gemini</b><div class="sm mut">Tese, qualidade (ROE x Selic), caixa, endividamento, dividendos, valuation por vários métodos (múltiplos, Graham, Bazin, alvo dos analistas) e cenários com probabilidade. Dados: brapi (B3), Twelve Data (EUA) e Yahoo Finance (fonte não oficial). Não comenta gráfico.</div><div class="sm mut" style="margin-top:6px">${ta?'Ativo avulso: '+esc(ta)+' ('+(scB3(ta)?'B3 via brapi':'EUA via Twelve Data')+')':el?el+' ativo(s) elegível(is)'+(el>12?' · analisando os 12 maiores':''):'Nenhuma ação, ETF ou FII lançado neste mercado.'}</div>${run('Gerar relatório fundamentalista')}</div>`;
  else if(m==='pos')h+=`<div class="card"><b>📌 Revisão das posições abertas · Gemini</b><div class="sm mut">Revisa seus trades em aberto (day trade, swing e opções): se o stop faz sentido pelo ATR e pelos pivôs, a distância até os alvos e os vencimentos. Usa cotações da brapi/Twelve Data quando o ativo existe lá; opções usam o subjacente.</div><div class="sm mut" style="margin-top:6px">${anxPosItens().length} posição(ões) aberta(s) no diário</div>${run('Revisar posições abertas')}</div>`;
  else h+=`<div class="card"><b>🖼️ Foto do gráfico · Gemini</b><div class="sm mut">Envie um print ou foto do gráfico e o analista técnico sênior lê tendência, níveis e padrões. Se informar o ticker, o app junta os pivôs calculados com dados reais.</div>
   <label class="btn s" style="margin-top:10px;color:var(--tx);text-align:center">${ANX.img?'Trocar foto':'Escolher foto do gráfico'}<input type="file" accept="image/*" hidden id="anx_f"></label>${ANX.img?`<div style="margin-top:8px"><img src="${ANX.img.url}" alt="Gráfico enviado" style="width:100%;border-radius:8px;border:1px solid var(--bd)"><button class="btn s" style="margin-top:6px" data-an="imgx">Remover foto</button></div>`:''}
@@ -3896,3 +3896,124 @@ ${PFX.err?`<div class="warn">${esc(PFX.err)}</div>`:''}<div class="sm">${PFX.ult
   render0=function(){r0.apply(this,arguments);try{semAviso()}catch(e){console.error(e)}};
 })();
 /* ==== EXTRAS2:FIM ==== */
+
+/* =====================================================================================
+   6) GRÁFICO DO TRADINGVIEW NO RELATÓRIO
+   Cada ativo do relatório mostra o gráfico do próprio TradingView (diário, com zoom e indicadores).
+   Os pivôs do relatório ficam na tabela logo abaixo. O gráfico só carrega quando o cartão aparece na tela.
+   Sem internet fica o gráfico simples de antes (que também é o que vai para o PDF).
+   ===================================================================================== */
+const TVG={n:0,dados:{},obs:null};
+const tvEscuro=()=>{const v=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),m=/^#?([0-9a-f]{6})$/i.exec(v);if(!m)return true;const n=parseInt(m[1],16);return ((n>>16)*.299+((n>>8)&255)*.587+(n&255)*.114)<128};
+const tvSimbolo=(tk,us)=>us?String(tk).toUpperCase():'BMFBOVESPA:'+String(tk).toUpperCase();
+const TV_TEMPOS=[['M','Mensal','60M'],['W','Semanal','24M'],['D','Diário','6M']];
+function tvWidget(box,sym,cheia,iv,rg){
+  box.innerHTML='<div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div>';
+  const sc=document.createElement('script');sc.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';sc.async=true;
+  sc.innerHTML=JSON.stringify({autosize:true,symbol:sym,interval:iv||'D',range:rg||(cheia?'6M':'3M'),timezone:'America/Sao_Paulo',theme:tvEscuro()?'dark':'light',style:'1',locale:'br',allow_symbol_change:!!cheia,hide_side_toolbar:!cheia,hide_top_toolbar:false,withdateranges:!!cheia,save_image:false,calendar:false,support_host:'https://www.tradingview.com'});
+  return sc;
+}
+function tvMontaUm(el){
+  if(el.dataset.ok)return;el.dataset.ok=1;
+  const d=TVG.dados[el.id];if(!d)return;
+  const sv=el.querySelector('.lwc-svg'),cvs=[...el.querySelectorAll('.lwc-cv')];let ok=0;
+  /* enquanto carrega, o gráfico simples continua à mostra; se o TradingView não carregar (sem internet), ele fica */
+  cvs.forEach(cv=>{const box=cv.querySelector('.tvg-box'),sc=tvWidget(box,tvSimbolo(d.tk,d.us),0,cv.dataset.iv,cv.dataset.rg);
+    cv.style.cssText+=';display:block;position:absolute;left:-9999px;width:'+(el.clientWidth||340)+'px';
+    sc.onload=()=>{cv.style.position='';cv.style.left='';cv.style.width='';if(!ok++&&sv)sv.style.display='none'};
+    sc.onerror=()=>{cv.style.display='none'};
+    box.querySelector('.tradingview-widget-container').appendChild(sc)});
+}
+function tvMonta(){
+  const els=[...document.querySelectorAll('.lwc:not([data-ok])')].filter(e=>!e.closest('#pdfov'));if(!els.length)return;
+  if(!('IntersectionObserver' in window)){els.forEach(tvMontaUm);return}
+  if(!TVG.obs)TVG.obs=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){TVG.obs.unobserve(x.target);tvMontaUm(x.target)}}),{rootMargin:'300px 0px'});
+  els.forEach(e=>TVG.obs.observe(e));
+}
+function tvAbre(tk,mk){
+  const ant=document.getElementById('tvfs');if(ant)ant.remove();
+  const sym=tvSimbolo(tk,mk==='US'),ov=document.createElement('div');ov.id='tvfs';ov.dataset.noswipe=1;
+  ov.innerHTML=`<div class="fx-top"><button class="btn s ib" data-tvx="1" aria-label="Fechar">✕</button><div style="flex:1;text-align:center"><b>${esc(tk)}</b><div class="sm mut">TradingView</div></div><a class="btn s" href="https://www.tradingview.com/chart/?symbol=${encodeURIComponent(sym)}" target="_blank" rel="noopener">App</a></div><div class="tvfs-cv" style="flex:1;min-height:0"></div>`;
+  document.body.appendChild(ov);document.body.style.overflow='hidden';
+  const box=ov.querySelector('.tvfs-cv'),sc=tvWidget(box,sym,1);box.querySelector('.tradingview-widget-container').appendChild(sc);
+}
+(function(){
+  const st=document.createElement('style');
+  st.textContent=`.lwc .lwc-cv{margin-top:10px}.lwc .tvg-t{font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.lwc .tvg-box{height:260px;border-radius:10px;overflow:hidden;border:1px solid var(--bd)}
+#tvfs{position:fixed;inset:0;z-index:66;background:var(--bg);display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+#tvfs .fx-top{display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:1px solid var(--bd)}
+#pdfov .lwc-cv{display:none!important}#pdfov .lwc-svg{display:block!important}#pdfov .lwc-bt{display:none!important}`;
+  document.head.appendChild(st);
+  const ac0=anxChart;
+  anxChart=function(a){
+    const h=ac0(a);if(!h)return h;
+    const i=h.lastIndexOf('</svg>')+6,svg=h.slice(0,i),leg=h.slice(i),id='tvg'+(++TVG.n),us=a.moeda==='USD';
+    TVG.dados[id]={tk:a.tk,us};const ids=Object.keys(TVG.dados);if(ids.length>60)delete TVG.dados[ids[0]];
+    return `<div class="lwc" id="${id}" data-noswipe="1"><div class="lwc-svg">${svg}${leg}</div>${TV_TEMPOS.map(([iv,l,rg])=>`<div class="lwc-cv" data-iv="${iv}" data-rg="${rg}" style="display:none"><div class="tvg-t">${l}</div><div class="tvg-box"></div></div>`).join('')}</div>
+<div class="lwc-bt" style="display:flex;gap:6px;margin-top:8px"><button class="btn s" data-tvopen="${esc(a.tk)}|${us?'US':'BR'}" style="flex:1">⤢ Abrir em tela cheia</button></div><div class="sm mut" style="margin-top:4px">Gráficos do TradingView: mensal (tendência primária), semanal (intermediária) e diário (entrada). Os pivôs calculados estão na tabela abaixo.</div>`;
+  };
+  document.addEventListener('click',e=>{
+    const t=e.target.closest('[data-tvopen]');if(t){const [tk,mk]=t.dataset.tvopen.split('|');tvAbre(tk,mk);return}
+    if(e.target.closest('[data-tvx]')){const o=document.getElementById('tvfs');if(o)o.remove();document.body.style.overflow=''}
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){const o=document.getElementById('tvfs');if(o){o.remove();document.body.style.overflow=''}}});
+  const r0=render0;render0=function(){r0.apply(this,arguments);setTimeout(tvMonta,0)};
+})();
+
+/* ---------- relatório: leitura multi-tempo, referências de valuation, cenários e macro ---------- */
+function anxMtf(a,x){
+  const m=a&&a.mtf,ai=(x&&x.multitempo&&typeof x.multitempo==='object')?x.multitempo:{};if(!m&&!Object.keys(ai).length)return '';
+  const cor=t=>t==='alta'?'g':t==='baixa'?'r':'mut';
+  const row=(l,L)=>L?`<tr><td><b>${l}</b></td><td class="${cor(L.tendencia)}">${esc(L.tendencia)}</td><td style="white-space:nowrap;font-size:12px">MM${L.media_rapida.n} ${anxP(L.media_rapida.valor)} ${L.media_rapida.inclinacao==='subindo'?'<span class="g">↑</span>':L.media_rapida.inclinacao==='caindo'?'<span class="r">↓</span>':'→'}<br>MM${L.media_lenta.n} ${anxP(L.media_lenta.valor)}</td><td>${anxN(L.rsi14,0)}</td><td>${L.posicao_na_faixa_pct==null?'–':L.posicao_na_faixa_pct+'%'}</td></tr>`:'';
+  const al=m?m.alinhamento:'';
+  return `<h3>Leitura multi-tempo (mensal → semanal → diário)</h3>${m?`<div class="anxt"><table><tr><th>Tempo</th><th>Tendência</th><th>Médias</th><th>RSI</th><th>Na faixa</th></tr>${row('Mensal',m.mensal)}${row('Semanal',m.semanal)}${row('Diário',m.diario)}</table></div><div class="sm" style="margin:6px 0">Alinhamento: ${anxVb(al,/ALTA/.test(al)?'g':/BAIXA/.test(al)?'r':'w')} <span class="mut">· "Na faixa" = onde o preço está entre a mínima (0%) e a máxima (100%) do período</span></div>`:''}`+
+    [['mensal','Mensal'],['semanal','Semanal'],['diario','Diário']].map(([k,l])=>ai[k]?`<div class="sm" style="margin-top:4px"><b>${l}:</b> ${esc(typeof ai[k]==='string'?ai[k]:anxTx(ai[k]))}</div>`:'').join('')+
+    (ai.leitura_top_down?`<div style="margin-top:6px">${anxV(ai.leitura_top_down)}</div>`:'');
+}
+function anxValRef(a){
+  const v=a&&a.val;if(!v)return '';
+  const up=x=>x==null?'':` <span class="${x>=0?'g':'r'}">(${x>0?'+':''}${anxN(x,1)}%)</span>`;
+  const lin=(l,val,sub)=>`<tr><td>${l}${sub?`<div class="sm mut">${esc(sub)}</div>`:''}</td><td>${val}</td></tr>`;
+  const L=[
+    v.graham&&v.graham.valor!=null?lin('Graham',anxP(v.graham.valor)+up(v.graham.upside_pct),v.graham.conta):'',
+    v.bazin_6pct&&v.bazin_6pct.valor!=null?lin('Bazin (6% a.a.)',anxP(v.bazin_6pct.valor)+up(v.bazin_6pct.upside_pct),v.bazin_6pct.conta):'',
+    v.alvo_medio_analistas&&v.alvo_medio_analistas.valor!=null?lin('Alvo médio dos analistas',anxP(v.alvo_medio_analistas.valor)+up(v.alvo_medio_analistas.upside_pct)):'',
+    v.earnings_yield_pct!=null?lin('Earnings yield (1 ÷ P/L)',anxN(v.earnings_yield_pct,1)+'%'+(v.premio_earnings_yield_sobre_selic_pp!=null?` <span class="${v.premio_earnings_yield_sobre_selic_pp>=0?'g':'r'}">(${v.premio_earnings_yield_sobre_selic_pp>0?'+':''}${anxN(v.premio_earnings_yield_sobre_selic_pp,1)} p.p. vs Selic)</span>`:'')):'',
+    v.roe_menos_selic_pp!=null?lin('ROE − Selic',`<span class="${v.roe_menos_selic_pp>=0?'g':'r'}">${v.roe_menos_selic_pp>0?'+':''}${anxN(v.roe_menos_selic_pp,1)} p.p.</span>`):'',
+    v.fcf_yield_pct!=null?lin('FCF yield (caixa livre ÷ valor de mercado)',anxN(v.fcf_yield_pct,1)+'%'):'',
+    v.posicao_52s_pct!=null?lin('Posição na faixa de 52 semanas',v.posicao_52s_pct+'%'):'',
+  ].join('');
+  return L?`<h3>Referências de valuation (calculadas)</h3><div class="anxt"><table><tr><th>Método</th><th>Valor</th></tr>${L}</table></div><div class="sm mut" style="margin-top:4px">Preço atual ${anxP(v.preco)}. ${esc(v.observacao||'')}</div>`:'';
+}
+function anxCen(c){
+  c=anxArr(c).filter(x=>x&&typeof x==='object');if(!c.length)return '';
+  const ok=c.every(x=>isFinite(+x.probabilidade_pct)&&x.preco!=null&&isFinite(+x.preco)),soma=c.reduce((s,x)=>s+(+x.probabilidade_pct||0),0);
+  const med=ok&&soma>0?c.reduce((s,x)=>s+ +x.preco*(+x.probabilidade_pct),0)/soma:null;
+  const cor=n=>/otim/i.test(n)?'g':/pess/i.test(n)?'r':'';
+  return `<h3>Cenários</h3><div class="anxt"><table><tr><th>Cenário</th><th>Prob.</th><th>Preço</th></tr>${c.map(x=>`<tr><td class="${cor(x.cenario)}"><b>${esc(String(x.cenario||'').replace(/^./,m=>m.toUpperCase()))}</b>${x.premissas?`<div class="sm mut" style="font-weight:400">${esc(anxTx(x.premissas))}</div>`:''}</td><td>${isFinite(+x.probabilidade_pct)?anxN(x.probabilidade_pct,0)+'%':'–'}</td><td>${x.preco==null?'sem dado':anxP(x.preco)}</td></tr>`).join('')}</table></div>${med!=null?`<div class="sm" style="margin-top:4px">Preço ponderado pelas probabilidades: <b>${anxP(med)}</b></div>`:''}`;
+}
+function anxMacro(R,j){
+  const m=j&&j.macro,t=R&&R.contexto_macro;if(!m&&!t)return '';
+  return `<h2>Contexto macro</h2><div class="card">${m?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"><span class="chip">Selic ${anxN(m.selic_pct,2)}%</span><span class="chip">IPCA 12m ${anxN(m.ipca12_pct,2)}%</span><span class="chip">Juro real ${anxN(m.juro_real_pct,2)}%</span></div>`:''}${anxV(t)}</div>`;
+}
+function anxEnt(e){
+  if(!e||typeof e!=='object'||(!e.compra&&!e.venda))return '';
+  const lado=(p,cor)=>{if(!p)return '';const vt=p.vs_tempo_maior==='A FAVOR'?'g':p.vs_tempo_maior==='CONTRA'?'r':'w';
+    const li=(l,v)=>v?`<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--bd)"><span class="sm mut">${l}</span><b style="text-align:right;font-size:13.5px">${esc(v)}</b></div>`:'';
+    return `<div class="card" style="margin:6px 0;border-left:3px solid ${cor}"><div class="top"><b style="color:${cor}">${p.lado==='COMPRA'?'▲ Compra':'▼ Venda'}</b>${anxVb(p.vs_tempo_maior==='A FAVOR'?'a favor do tempo maior':p.vs_tempo_maior==='CONTRA'?'contra o tempo maior':'tempo maior neutro',vt)}</div>
+<div class="sm mut" style="margin:4px 0 6px">${esc(p.tempo)}</div>${p.gatilho?`<div class="sm" style="margin-bottom:6px"><b>Gatilho:</b> ${esc(p.gatilho)}</div>`:''}${li('Entrada',p.entrada)}${li('Stop',p.stop)}${li('Alvo 1',p.alvo_1)}${li('Alvo 2',p.alvo_2)}${p.atende_3_para_1?'':'<div class="sm am" style="margin-top:4px">Sem entrada com risco/retorno de 3:1 por enquanto: espere o gatilho.</div>'}</div>`};
+  return `<h3>Pontos de entrada (compra e venda)</h3>${lado(e.compra,'var(--g)')}${lado(e.venda,'var(--r)')}<div class="sm mut">Números calculados pelo servidor (níveis e ATR); o gatilho é a leitura da IA. Stop é para ficar na plataforma, sempre.</div>`;
+}
+function anxDec(x){
+  const d=x&&x.decisao;if(!d&&!x.para_quem_tem&&!x.para_quem_nao_tem)return '';
+  const z=d?d.zona:'',cor=z==='COMPRAR'?'g':z==='VENDER'||z==='REDUZIR'?'r':z==='MANTER'?'w':'n';
+  const p=d&&d.posicao;
+  const cel=(l,v,k='')=>`<div><span class="sm mut">${l}</span><b class="${k}" style="display:block;font-size:17px">${v}</b></div>`;
+  return `<div class="card" style="margin:10px 0;border:1px solid var(--ac)"><div class="top"><b>Decisão</b>${z&&z!=='SEM DADO'?anxVb(z,cor):anxVb('sem preço justo','n')}</div>
+${d&&d.preco_justo!=null?`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">${cel('Preço justo',anxP(d.preco_justo))}${cel('Comprar até',anxP(d.preco_teto),'g')}${cel('Potencial',(d.upside_pct>0?'+':'')+anxN(d.upside_pct,1)+'%',cls(d.upside_pct))}</div>
+<div class="sm mut" style="margin-top:6px">Preço atual ${esc(d.situacao||'')}. Margem de segurança de ${d.margem_pct}% pela qualidade do negócio. Conta: ${esc(d.conta||'')}</div>`:d?`<div class="sm mut" style="margin-top:6px">Sem preço justo: ${esc(d.conta||'faltaram dados nos cenários')}.</div>`:''}
+${p?`<div class="sm" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">Sua posição: preço médio <b>${anxP(p.preco_medio)}</b>${p.quantidade?' · '+anxN(p.quantidade,0)+' ações':''}${p.peso_pct!=null?' · '+anxN(p.peso_pct,1)+'% da carteira':''} · resultado <b class="${cls(p.resultado_pct)}">${(p.resultado_pct>0?'+':'')+anxN(p.resultado_pct,1)}%</b></div>`:''}
+${x.para_quem_tem?`<div style="margin-top:8px"><b class="sm">Se você tem:</b> ${esc(anxTx(x.para_quem_tem))}</div>`:''}${x.para_quem_nao_tem?`<div style="margin-top:6px"><b class="sm">Se você não tem:</b> ${esc(anxTx(x.para_quem_nao_tem))}</div>`:''}</div>`;
+}
+/* ==== EXTRAS2 (gráfico TradingView):FIM ==== */
