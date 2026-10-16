@@ -1,5 +1,5 @@
 const MK=['Alta calma','Alta volátil','Lateral calma','Lateral volátil','Baixa calma','Baixa volátil'];
-const ERR=['Nenhum','Entrei por dica/emoção (fora do sistema)','Não saí no stop','Risco grande demais','Saí cedo por emoção','Não segui minha rotina','Operei fora do tipo de mercado','Foquei na entrada, não no risco/retorno','Entrei sem saída predeterminada','Precisava estar certo (realizei cedo/segurei perda)','Operei demais (perdi o controle)','Outro'];
+const ERR=['Nenhum','Operei com a trava ativa','Entrei por dica/emoção (fora do sistema)','Não saí no stop','Risco grande demais','Saí cedo por emoção','Não segui minha rotina','Operei fora do tipo de mercado','Foquei na entrada, não no risco/retorno','Entrei sem saída predeterminada','Precisava estar certo (realizei cedo/segurei perda)','Operei demais (perdi o controle)','Outro'];
 const ESTR=['Compra de call','Compra de put','Venda coberta de call','Venda de put','Trava de alta','Trava de baixa','Financiamento / collar','Straddle / strangle','Borboleta / condor','Calendário','Outra'];
 const CATS=['Plano de trade','Gestão de risco','Rotina','Psicologia'];
 const SEED=[[0,'Só entro com setup do meu sistema (nunca por dica ou emoção)'],[0,'Defino a saída predeterminada antes de entrar'],[0,'Só opero o tipo de mercado para o qual meu sistema foi feito'],[1,'Defino o stop inicial antes de entrar'],[1,'Risco máximo de 1% do capital por trade'],[1,'Só pego trade com alvo de pelo menos 3 vezes o risco'],[1,'Saio quando o stop é atingido'],[3,'Assumo a responsabilidade pelo resultado, sem culpar o mercado'],[3,'Aceito a perda no stop: não preciso estar certo']];
@@ -26,7 +26,7 @@ async function fillImgs(){for(const e of document.querySelectorAll('img[data-img
 /* ---------- Capital por modalidade (day trade, opções, swing) ---------- */
 const CAPN={D:'Day trade',O:'Opções',S:'Swing trade'},CAPU={D:'contrato',O:'lote',S:'lote'};let CAPO=0,CAPC=0;
 document.addEventListener('toggle',e=>{if(e.target&&e.target.id==='capd')CAPO=e.target.open;if(e.target&&e.target.id==='capc')CAPC=e.target.open},true);
-function capCalc(tp){const g=(k,d)=>gv('cap',tp+'_'+k,d),ini=g('ini','');if(ini===''||!isFinite(+ini))return null;const de=g('desde',''),ap=+g('ap',0)||0,cl=S.trades.filter(t=>(t.tipo||'D')===tp).map(t=>({t,c:calc(t)})).filter(x=>x.c.pl!=null&&(!de||(x.t.dtx||x.t.dt).slice(0,10)>=de)),res=sum(cl.map(x=>x.c.pl)),at=+ini+ap+res,cpc=+g('cpc',0)||0,rk=+g('rk',0)||0;return{ini:+ini,ap,res,at,n:cl.length,pct:+ini?res/+ini*100:null,cpc,rk,lotes:cpc>0?Math.max(0,Math.floor(at/cpc)):null,risco:rk>0?Math.max(0,at)*rk/100:null,curve:capCurvePts(+ini+ap,cl)}}
+function capCalc(tp){const g=(k,d)=>gv('cap',tp+'_'+k,d),ini=g('ini','');if(ini===''||!isFinite(+ini))return null;const de=g('desde',''),ap=+g('ap',0)||0,cl=S.trades.filter(t=>(t.tipo||'D')===tp).map(t=>({t,c:cBRL(t)})).filter(x=>x.c.pl!=null&&(!de||(x.t.dtx||x.t.dt).slice(0,10)>=de)),res=sum(cl.map(x=>x.c.pl)),at=+ini+ap+res,cpc=+g('cpc',0)||0,rk=+g('rk',0)||0;return{ini:+ini,ap,res,at,n:cl.length,pct:+ini?res/+ini*100:null,cpc,rk,lotes:cpc>0?Math.max(0,Math.floor(at/cpc)):null,risco:rk>0?Math.max(0,at)*rk/100:null,curve:capCurvePts(+ini+ap,cl)}}
 function capCard(tp){const c=capCalc(tp),u=CAPU[tp],g=k=>gv('cap',tp+'_'+k,''),f=(k,l,ph,ty='number')=>`<label>${l}<input type="${ty}"${ty==='number'?' step="any" inputmode="decimal"':''} data-ax="cap.${tp}_${k}" value="${esc(g(k))}" placeholder="${ph}"></label>`;
 return `<div class="card"><div class="top"><b>💰 Capital · ${CAPN[tp]}</b>${c?`<span class="sm ${cls(c.res)}">${c.res>=0?'+':''}${money(c.res)}</span>`:''}</div>${c?`<div style="font-size:26px;font-weight:700;margin-top:4px" class="${c.at<=0?'r':''}">${money(c.at)}</div><div class="mut sm">Inicial ${money(c.ini)}${c.ap?' · aportes/saques '+money(c.ap):''} · ${c.n} operação(ões) encerrada(s)${c.pct!=null?' · '+(c.pct>=0?'+':'')+f2(c.pct)+'% sobre o inicial':''}</div>${c.lotes!=null?`<div style="margin-top:8px">Pode operar até <b>${c.lotes}</b> ${u}${c.lotes===1?'':'s'} <span class="mut sm">(${money(c.cpc)} de capital por ${u})</span></div>`:''}${c.risco!=null?`<div class="sm">Risco por trade (${f2(c.rk)}%): <b>${money(c.risco)}</b></div>`:''}${c.at<=0?'<div class="warn" style="margin-top:6px">Capital zerado ou negativo nesta modalidade.</div>':''}`:'<div class="mut sm" style="margin-top:6px">Informe o capital inicial. Ele sobe e desce com o resultado das operações encerradas, inclusive as importadas do Profit.</div>'}${capCurve(tp,c)}
 <details id="capd" style="margin-top:8px"${CAPO?' open':''}><summary class="sm">${capResumo(tp,c)}</summary><div class="g2" style="margin-top:6px">${f('ini','Capital inicial (R$)','2000')}${f('desde','Contar resultados a partir de','','date')}</div><div class="g2">${f('cpc','Capital por '+u+' (R$)','1000')}${f('rk','Risco por trade (%)','2')}</div><div class="g2">${f('meta','Meta do ciclo (R$)','500')}${f('stp','Stop do ciclo (R$)','300')}</div>${f('ap','Aportes (+) ou saques (−) acumulados (R$)','0')}<div class="mut sm" style="margin-top:6px">Contratos permitidos = capital atual ÷ capital por ${u}. Em branco, a data inicial conta todas as operações já registradas.</div></details></div>`}
@@ -45,7 +45,7 @@ function xtGauge(res,meta,stp){const m=Math.max(Math.abs(res),1),hi=meta>0?meta:
 return `<svg viewBox="0 0 120 74" style="width:100%;max-width:170px;height:auto" role="img" aria-label="Resultado do ciclo frente à meta">${arc(0,.34,'var(--r)')}${arc(.34,.67,'#e8a317')}${arc(.67,1,'var(--g)')}<line x1="${zx}" y1="${zy}" x2="${zx2}" y2="${zy2}" stroke="var(--tx,#fff)" stroke-width="1.2" opacity=".55"/><line x1="60" y1="62" x2="${nx}" y2="${ny}" stroke="var(--tx,#fff)" stroke-width="2.4" stroke-linecap="round"/><circle cx="60" cy="62" r="4" fill="var(--tx,#fff)"/><text x="6" y="73" font-size="7" fill="var(--r)">${stp>0?'-'+Math.round(stp):''}</text><text x="114" y="73" font-size="7" text-anchor="end" fill="var(--g)">${meta>0?Math.round(meta):''}</text></svg>`}
 function extrato(tp){const g=k=>gv('cap',tp+'_'+k,''),ini=g('ini');if(ini===''||!isFinite(+ini))return '';
  const de=g('desde'),ap=+g('ap')||0,base=+ini+ap,meta=+g('meta')||0,stp=+g('stp')||0,dia=t=>(t.dtx||t.dt).slice(0,10);
- const all=S.trades.filter(t=>(t.tipo||'D')===tp&&(!de||dia(t)>=de)).slice().sort(cmpCron).map(t=>({t,c:calc(t)}));
+ const all=S.trades.filter(t=>(t.tipo||'D')===tp&&(!de||dia(t)>=de)).slice().sort(cmpCron).map(t=>({t,c:cBRL(t)}));
  const days=[...new Set(all.map(x=>dia(x.t)))].slice(-6);let sel=EXD[tp]||'all';if(sel!=='all'&&!days.includes(sel))sel='all';
  const cl=all.filter(x=>x.c.pl!=null),cres=sum(cl.map(x=>x.c.pl)),cum={},dc={};let ac=0;
  all.forEach(x=>{if(x.c.pl!=null){ac+=x.c.pl;const d=dia(x.t);dc[d]=(dc[d]||0)+x.c.pl;cum[x.t.id]={cy:ac,dy:dc[d]}}});
@@ -77,7 +77,7 @@ function xtDur(m){if(m==null||!isFinite(m))return '–';m=Math.round(m);if(m<60)
 function analise(tp){const g=k=>gv('cap',tp+'_'+k,''),ini=g('ini');
  if(ini===''||!isFinite(+ini))return '<div class="card"><b>📊 Análise do plano</b><div class="mut sm" style="margin-top:6px">Informe o capital inicial desta aba (⚙️ Configurar capital, na aba Operações) para calcular saldo, drawdown e retorno.</div></div>';
  const de=g('desde'),base=+ini+(+g('ap')||0),rk=+g('rk')||0,dia=t=>(t.dtx||t.dt).slice(0,10),
-  cl=S.trades.filter(t=>(t.tipo||'D')===tp&&(!de||dia(t)>=de)).slice().sort(cmpCron).map(t=>({t,c:calc(t)})).filter(x=>x.c.pl!=null),n=cl.length;
+  cl=S.trades.filter(t=>(t.tipo||'D')===tp&&(!de||dia(t)>=de)).slice().sort(cmpCron).map(t=>({t,c:cBRL(t)})).filter(x=>x.c.pl!=null),n=cl.length;
  if(!n)return '<div class="card"><b>📊 Análise do plano</b><div class="mut sm" style="margin-top:6px">Ainda não há operações encerradas neste ciclo.</div></div>';
  const pls=cl.map(x=>x.c.pl),res=sum(pls),w=cl.filter(x=>x.c.pl>0),l=cl.filter(x=>x.c.pl<0),wr=w.length/n,gw=sum(w.map(x=>x.c.pl)),gl=Math.abs(sum(l.map(x=>x.c.pl))),
   aw=w.length?gw/w.length:null,al=l.length?gl/l.length:null,pay=aw!=null&&al>0?aw/al:null,pf=gl>0?gw/gl:null,
@@ -194,7 +194,7 @@ function prev(){const p=$('#prev');if(!p||!T)return;const c=calc(T),d=T.side==='
 function showSheet(){const o=document.querySelector('#sh .ov'),y=o?o.scrollTop:0;$('#sh').innerHTML=T?(QM?qsheet():sheet()):'';const o2=document.querySelector('#sh .ov');if(o2&&y)o2.scrollTop=y;document.body.style.overflow=T?'hidden':'';$('#fab').style.display=T?'none':fabDisp();fillImgs();prev()}
 function closeSheet(keep){if(T&&!keep)['pin','pout','pplan'].forEach(k=>{if(T[k]&&T[k]!==orig[k])idb('img','delete',T[k])});T=null;QM=0;delArm=0;showSheet()}
 /* ---------- Dia ---------- */
-function vDia(){const d=S.days[D]||{chk:{}},ts=S.trades.filter(t=>t.dt.slice(0,10)===D).map(t=>({...t,c:calc(t)})).concat(typeof fxDia==='function'?fxDia(D):[]),cl=ts.filter(t=>t.c.pl!=null),R=sum(cl.map(t=>t.c.r||0)),P=totBRL(somaMoedas(cl)),er=ts.filter(t=>t.err&&t.err!=='Nenhum').length;
+function vDia(){const d=S.days[D]||{chk:{}},ts=S.trades.filter(t=>t.dt.slice(0,10)===D).map(t=>({...t,c:calc(t)})).concat(typeof fxDia==='function'?fxDia(D):[]),cl=dayFech(D),R=sum(cl.map(t=>t.c.r||0)),P=totBRL(somaMoedas(cl)),er=ts.filter(t=>t.err&&t.err!=='Nenhum').length;
 const ta=(k,l,h='')=>`<label>${l}<textarea data-d="${k}" placeholder="${h}">${esc(d[k])}</textarea></label>`;
 if(DV==='hist')return vDiaHist();return `<h1>Meu dia</h1>${diaSeg()}<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:end"><button class="btn s" data-a="dprev">‹</button><label style="margin:0">Data<input type="date" id="dd" value="${D}"></label><button class="btn s" data-a="dnext">›</button></div>${D!==loc().slice(0,10)?'<button class="btn s" style="margin-top:6px" data-a="dtoday">Ir para hoje</button>':''}<div class="mut sm" id="svs" style="margin-top:6px"></div>
 <div class="card" style="margin-top:12px"><b>Resumo automático</b><div class="mut">${ts.length} trade(s) · <span class="${cls(P)}">${mnyMix(somaMoedas(cl))}</span>${pctConta(P)?' · <span class="'+cls(P)+'">'+pctConta(P)+'</span>':''} · ${er} erro(s)</div></div>
@@ -261,7 +261,7 @@ return `<h1>Painel</h1><h2>🛡️ Mesa proprietária</h2><p class="mut sm">Pree
 <h2>🎯 Metas de processo</h2><div class="g2"><label>Máx. de trades por dia<input type="number" data-g="maxTr" value="${esc(G.maxTr)}"></label><label>Regras seguidas na semana (%)<input type="number" data-g="regPct" value="${esc(G.regPct)}"></label></div><div id="gg" style="margin-top:8px"></div>
 <h2>🧮 Tamanho da posição</h2><div class="g2">${z('cap','Capital (R$)')}${z('pct','Risco por trade (%)')}</div><div class="g3">${z('entry','Entrada')}${z('stop','Stop')}${z('pv','R$/ponto')}</div><div class="prev" id="zz"></div><div class="mut sm">R$/ponto: WIN 0,20 · WDO 10 · ações 1.</div>
 <h2>💾 Backup completo</h2><p class="mut sm">Salva trades, fotos, dias, regras e painel em um arquivo .json. Restaurar mescla com o que já existe neste aparelho.</p><div class="g2"><button class="btn" data-a="bk">Exportar backup</button><label class="btn s" style="margin:0;text-align:center;color:var(--tx)">Restaurar backup<input type="file" accept=".json,application/json" hidden id="bkf"></label></div><div id="bm" class="mut sm" style="margin-top:8px">${S.lastBackup?'Último backup: '+S.lastBackup.split('-').reverse().join('/'):'Nenhum backup feito ainda.'}</div>`}
-function ppOut(){const e=$('#pp');if(!e)return;const P=S.prop||{},cl=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null).sort(cmpCron),cap=+P.cap||0,td=loc().slice(0,10),dm={};let eq=cap,pk=cap;cl.forEach(t=>{eq+=t.c.pl;pk=Math.max(pk,eq);const d=(t.dtx||t.dt).slice(0,10);dm[d]=(dm[d]||0)+t.c.pl});
+function ppOut(){const e=$('#pp');if(!e)return;const P=S.prop||{},cl=S.trades.map(t=>({...t,c:cBRL(t)})).filter(t=>t.c.pl!=null).sort(cmpCron),cap=+P.cap||0,td=loc().slice(0,10),dm={};let eq=cap,pk=cap;cl.forEach(t=>{eq+=t.c.pl;pk=Math.max(pk,eq);const d=(t.dtx||t.dt).slice(0,10);dm[d]=(dm[d]||0)+t.c.pl});
 const tot=eq-cap,ddv=P.ddTipo==='fixo'?Math.max(0,cap-eq):pk-eq,hoje=dm[td]||0,dv=Object.values(dm),best=dv.length?Math.max(...dv):0,L=n=>+P[n]||0;
 const bar=(v,max,inv)=>{const p=max>0?Math.min(100,Math.max(0,v/max*100)):0,c=inv?(p>=80?'var(--r)':p>=50?'#e8a317':'var(--g)'):'var(--ac)';return `<div style="height:8px;background:var(--bg);border-radius:6px;margin:4px 0;border:1px solid var(--bd)"><div style="height:100%;width:${p}%;background:${c};border-radius:6px"></div></div>`},row=(t,m,sb,b)=>`<div class="card"><b>${t}</b> <span class="mut sm">${sb}</span><div>${m}</div>${b}</div>`;let h='';
 if(L('perdaDia')){const u=Math.max(0,-hoje);h+=row('Perda diária hoje',`${money(u)} de ${money(L('perdaDia'))}`,'restam '+money(Math.max(0,L('perdaDia')-u)),bar(u,L('perdaDia'),1))+(u>=L('perdaDia')*.8?'<div class="warn">⚠ Perto (ou acima) do limite de perda diária: pare de operar hoje.</div>':'')}
@@ -269,14 +269,14 @@ if(L('ddTotal'))h+=row('Drawdown '+(P.ddTipo==='fixo'?'fixo':'trailing'),`${mone
 if(L('meta'))h+=row('Meta de lucro',`${money(tot)} de ${money(L('meta'))}`,pc(Math.max(0,tot)/L('meta')),bar(Math.max(0,tot),L('meta')));
 if(L('consist')&&tot>0){const sh=best/tot*100;h+=row('Consistência',`Maior dia: ${money(best)} = ${f2(sh)}% do lucro`,'limite '+L('consist')+'%',bar(sh,L('consist'),1))+(sh>L('consist')?`<div class="warn">⚠ Maior dia acima do limite. O lucro total precisa chegar a ${money(best/(L('consist')/100))} (sem novo dia maior).</div>`:'')}
 e.innerHTML=h||'<p class="mut sm">Preencha os limites acima para ver o painel.</p>'}
-function ggOut(){const e=$('#gg');if(!e)return;const G=S.goals||{},td=loc().slice(0,10),n=S.trades.filter(t=>t.dt.slice(0,10)===td).length+(typeof fxDia==='function'?fxDia(td).length:0),[a,b]=rng('w0'),w=S.trades.filter(t=>{const d=t.dt.slice(0,10);return d>=a&&d<=b}),ok=w.filter(t=>t.rules!=='n'&&(!t.err||t.err==='Nenhum')).length,ds=[...new Set([...S.trades.map(t=>t.dt.slice(0,10)),...Object.keys(S.days).filter(d=>S.days[d].resumo||S.days[d].erros)])].sort(),clean=d=>!S.trades.some(t=>t.dt.slice(0,10)===d&&(t.rules==='n'||(t.err&&t.err!=='Nenhum')))&&(S.days[d]||{}).erros!=='s';let run=0,best=0;ds.forEach(d=>{run=clean(d)?run+1:0;best=Math.max(best,run)});const over=+G.maxTr&&n>+G.maxTr,pr=w.length?ok/w.length*100:null;
+function ggOut(){const e=$('#gg');if(!e)return;const G=S.goals||{},td=loc().slice(0,10),n=S.trades.filter(t=>t.dt.slice(0,10)===td).length+(typeof fxDia==='function'?fxDia(td).length:0),[a,b]=rng('w0'),w=S.trades.filter(t=>{const d=t.dt.slice(0,10);return d>=a&&d<=b}),ok=w.filter(t=>t.rules!=='n'&&(!t.err||t.err==='Nenhum')).length,ds=[...new Set([...S.trades.map(t=>t.dt.slice(0,10)),...Object.keys(S.days).filter(d=>S.days[d].resumo||S.days[d].erros)])].sort(),clean=d=>!S.trades.some(t=>t.dt.slice(0,10)===d&&(t.rules==='n'||(t.err&&t.err!=='Nenhum')))&&(S.days[d]||{}).erros!=='s'&&!(typeof diaRuim==='function'&&diaRuim(d));let run=0,best=0;ds.forEach(d=>{run=clean(d)?run+1:0;best=Math.max(best,run)});const over=+G.maxTr&&n>+G.maxTr,pr=w.length?ok/w.length*100:null;
 e.innerHTML=`<div class="kv">${KV('Dias seguidos sem erro',run,run?'g':'','melhor: '+best)}${KV('Trades hoje',n+(+G.maxTr?' / '+G.maxTr:''),over?'r':'',over?'acima do limite: pare':'')}${KV('Regras seguidas (semana)',pr==null?'–':Math.round(pr)+'%',pr!=null&&+G.regPct&&pr<+G.regPct?'r':'g',+G.regPct?'meta '+G.regPct+'%':'')}</div>`}
 function zzOut(){const e=$('#zz');if(!e)return;const P=S.prop||{},cap=+(Z.cap||P.cap),pct=+Z.pct,en=+Z.entry,st=+Z.stop,pv=+Z.pv||1;if(!(cap&&pct&&en&&st&&en!==st)){e.innerHTML='<span class="mut">Informe capital, % de risco, entrada e stop.</span>';return}const R=cap*pct/100,ru=Math.abs(en-st)*pv,q=Math.floor(R/ru);e.innerHTML=`Risco por trade: <b>${money(R)}</b><br>Risco por unidade: ${money(ru)}<br>Tamanho sugerido: <b>${q}</b> ${q<1?'<span class="r">(stop largo demais para esse risco)</span>':`<br>Risco real: ${money(q*ru)} (${f2(q*ru/cap*100)}% do capital)`}`}
 /* ---------- Revisão ---------- */
 const MES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function cal(){const[y,m]=CM.split('-').map(Number),dim=new Date(y,m,0).getDate(),off=new Date(y,m-1,1).getDay(),dm={};S.trades.forEach(t=>{const c=calc(t);if(c.pl!=null&&(t.dtx||t.dt).slice(0,7)===CM){const d=(t.dtx||t.dt).slice(0,10);dm[d]=(dm[d]||0)+emBRL(c.pl,moedaT(t))}});if(typeof fxPer==='function')fxPer(CM+'-01',CM+'-31').forEach(t=>{const d=t.dtx.slice(0,10);dm[d]=(dm[d]||0)+emBRL(t.c.pl,'USD')});
 let h=`<div class="top"><button class="btn s" data-a="cprev">‹</button><b>${MES[m-1]} ${y}</b><button class="btn s" data-a="cnext">›</button></div><div class="cal">${['D','S','T','Q','Q','S','S'].map(x=>`<i class="mut sm">${x}</i>`).join('')}`+'<i></i>'.repeat(off);for(let i=1;i<=dim;i++){const d=`${CM}-${String(i).padStart(2,'0')}`,v=dm[d];h+=`<button data-a="cday" data-id="${d}" class="${v>0?'cg':v<0?'cr':''}">${i}<span>${v==null?'':Math.round(v)}</span></button>`}return h+'</div><div class="mut sm">Verde: dia positivo · Vermelho: dia negativo (R$, com o Forex convertido pelo dólar das configurações). Toque no dia para abrir o registro.</div>'}
-function vRev(){const[a,b,key]=rng(RP),ts=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>{const d=t.dt.slice(0,10);return d>=a&&d<=b&&t.c.pl!=null}).concat(typeof fxPer==='function'?fxPer(a,b):[]),n=ts.length,rs=ts.map(t=>t.c.pl),rv=(S.rev||{})[key]||{},ds=Object.keys(S.days).filter(d=>d>=a&&d<=b),nt=ds.map(d=>S.days[d].nota).filter(x=>x!==''&&x!=null).map(Number),eg={};ts.filter(t=>t.err&&t.err!=='Nenhum').forEach(t=>{eg[t.err]=(eg[t.err]||0)+emBRL(t.c.pl,moedaT(t))});const top=Object.entries(eg).sort((x,y)=>x[1]-y[1])[0],ta=(k,l)=>`<label>${l}<textarea data-rv="${k}">${esc(rv[k])}</textarea></label>`;
+function vRev(){const[a,b,key]=rng(RP),ts=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>{const d=String(t.dtx||t.dt).slice(0,10);return d>=a&&d<=b&&t.c.pl!=null}).concat(typeof fxPer==='function'?fxPer(a,b):[]),n=ts.length,rs=ts.map(t=>t.c.pl),rv=(S.rev||{})[key]||{},ds=Object.keys(S.days).filter(d=>d>=a&&d<=b),nt=ds.map(d=>S.days[d].nota).filter(x=>x!==''&&x!=null).map(Number),eg={};ts.filter(t=>t.err&&t.err!=='Nenhum').forEach(t=>{eg[t.err]=(eg[t.err]||0)+emBRL(t.c.pl,moedaT(t))});const top=Object.entries(eg).sort((x,y)=>x[1]-y[1])[0],ta=(k,l)=>`<label>${l}<textarea data-rv="${k}">${esc(rv[k])}</textarea></label>`;
 return `<h1>Revisão</h1>${cal()}<h2>Revisão do período</h2><label>Período<select id="rp">${opt([['w0','Esta semana'],['w1','Semana passada'],['m0','Este mês'],['m1','Mês passado']],RP)}</select></label><div class="mut sm">${a.split('-').reverse().join('/')} a ${b.split('-').reverse().join('/')}</div>`+(n?`<div class="kv" style="margin-top:8px">${KV('Trades',n,'',pc(rs.filter(r=>r>0).length/n)+' de acerto')}${KV('Resultado',mnyMix(somaMoedas(ts)),cls(sum(rs)),pctConta(totBRL(somaMoedas(ts))))}${KV('Média por trade',mnyMix(mediaMoedas(ts)),cls(avg(rs)))}${KV('Regras seguidas',pc(ts.filter(t=>t.rules!=='n').length/n))}${KV('Nota média do dia',nt.length?f2(avg(nt)):'–')}${KV('Dias registrados',ds.length)}</div>${top?`<div class="card">Erro mais caro: <b>${esc(top[0])}</b> <span class="r">${money(top[1])}</span></div>`:'<div class="card g">Nenhum erro registrado no período 👏</div>'}`:'<p class="mut">Sem trades fechados neste período.</p>')+ta('repetir','O que vou repetir (o que funcionou)?')+ta('parar','O que vou parar de fazer?')+ta('plano','Foco para o próximo período')}
 function vTrades(tp='D'){if(tp==='D')return vList(tp);if(XV[tp]==='an')return xtHead(tp)+xtSw(tp)+analise(tp);const vw=VW[tp]||'ab',ts=S.trades.filter(t=>t.tipo===tp&&inPer(t.dt)),ab=ts.filter(isOpen).sort((a,b)=>b.dt.localeCompare(a.dt));
 return `<div class="top"><h1>${tp==='O'?'Opções':'Swing trade'}</h1><button class="btn" data-a="new" data-tp="${tp}">+ Novo trade</button></div>${xtSw(tp)}${capCard(tp)}${extrato(tp)}<div class="${tp==='S'?'g3':'g2'}" style="margin:8px 0"><button class="btn ${vw==='ab'?'':'s'}" data-a="vw" data-tp="${tp}" data-id="ab">Abertas (${ab.length})</button><button class="btn ${vw==='pf'?'':'s'}" data-a="vw" data-tp="${tp}" data-id="pf">Performance</button>${tp==='S'?`<button class="btn ${vw==='sc'?'':'s'}" data-a="vw" data-tp="S" data-id="sc">Scanner</button>`:''}</div>${vw==='sc'?'':perSel()}${vw==='pf'?filtBar():''}`+(vw==='sc'&&tp==='S'?vScan():vw==='ab'?(ab.length?ab.map(card).join(''):`<p class="mut">Nenhuma posição aberta. ${tp==='O'?'Registre a montagem com strike, vencimento e prêmio de entrada.':'Registre a entrada com o planejamento (entrada, stop e alvos).'} Depois use o botão Encerrar quando sair.</p>`):perfView(ts))}
@@ -326,7 +326,7 @@ const filtBar=()=>`<div class="chips2" style="margin-top:8px">${[['all','Todos']
 function applyQ(){if(!LF.q)return;document.querySelectorAll('.card[data-s]').forEach(c=>c.style.display=c.dataset.s.includes(LF.q)?'':'none')}
 function applyTheme(){const t=ls.get('diario-theme'),e=document.documentElement;if(!e||!e.setAttribute)return;if(t==='light'||t==='dark')e.setAttribute('data-theme',t);else e.removeAttribute('data-theme')}
 function animCount(){document.querySelectorAll('[data-count]').forEach(e=>{const v=+e.dataset.count,t0=performance.now(),f=t=>{const k=Math.min(1,(t-t0)/700);e.textContent=money(v*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(f)};requestAnimationFrame(f)})}
-function streak(){const ds=[...new Set([...S.trades.map(t=>t.dt.slice(0,10)),...Object.keys(S.days).filter(d=>S.days[d].resumo||S.days[d].erros)])].sort(),clean=d=>!S.trades.some(t=>t.dt.slice(0,10)===d&&(t.rules==='n'||(t.err&&t.err!=='Nenhum')))&&(S.days[d]||{}).erros!=='s';let run=0;ds.forEach(d=>{run=clean(d)?run+1:0});return run}
+function streak(){const ds=[...new Set([...S.trades.map(t=>t.dt.slice(0,10)),...Object.keys(S.days).filter(d=>S.days[d].resumo||S.days[d].erros)])].sort(),clean=d=>!S.trades.some(t=>t.dt.slice(0,10)===d&&(t.rules==='n'||(t.err&&t.err!=='Nenhum')))&&(S.days[d]||{}).erros!=='s'&&!(typeof diaRuim==='function'&&diaRuim(d));let run=0;ds.forEach(d=>{run=clean(d)?run+1:0});return run}
 function spark(){const cl=S.trades.map(t=>({t,c:calc(t)})).filter(x=>x.c.pl!=null).map(x=>({t:x.t,c:{...x.c,pl:emBRL(x.c.pl,moedaT(x.t))}})).concat(typeof fxPer==='function'?fxPer('0000-00-00','9999-12-31').map(t=>({t,c:{...t.c,pl:emBRL(t.c.pl,'USD')}})):[]).sort((a,b)=>(a.t.dtx||a.t.dt).localeCompare(b.t.dtx||b.t.dt)).slice(-30);if(cl.length<2)return '';let c=0;const v=cl.map(x=>c+=x.c.pl),lo=Math.min(0,...v),hi=Math.max(0,...v),sc=y=>46-(y-lo)/((hi-lo)||1)*40,pts=v.map((y,i)=>(i/(v.length-1)*300)+','+sc(y)).join(' ');return `<svg viewBox="0 0 300 50" style="width:100%;margin-top:8px"><polygon points="0,50 ${pts} 300,50" fill="var(--ac)" opacity=".15"/><polyline fill="none" stroke="var(--ac)" stroke-width="2" points="${pts}"/></svg><div class="sm mut">evolução dos últimos 30 trades</div>`}
 function hero(P,R,n,nab,nck){const d=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'}),st=streak();return `<div class="hero"><div class="mut sm cap1">${d}</div><div class="sm" style="margin-top:6px">Resultado de hoje</div><div class="big ${cls(P)}" data-count="${P}">${money(P)}</div><div class="sm mut">${pctConta(P)?pctConta(P)+' · ':''}${n} encerrado(s)</div>${spark()}<div>${st?`<span class="chip">🔥 ${st} dia(s) sem erro</span>`:''}<span class="chip">📂 ${nab} aberta(s)</span><span class="chip">✅ ${nck}/${S.rules.length} regras hoje</span></div></div>`}
 function vMais(){const T2=[['regras','📏','Regras','Seu plano escrito'],['graf','📺','Gráficos','TradingView e níveis'],['painel','🛡️','Painel','Mesa, metas e backup'],['rev','📅','Revisão','Calendário do mês'],['estudos','📚','Estudos','Livros e padrões de candles'],['live','⚡','Cotações ao vivo','Ponte do Profit'],['ativos','💹','Ativos','Margem, risco e lote'],['contratos','🧮','Contratos','Lotes pelo capital e volatilidade'],['carteiras','🥧','Carteiras','Brasil e EUA, evolução'],['analise','✨','Análise IA','Gemini: relatório da carteira ou de um ativo'],['imposto','🧾','Imposto de renda','Notas, custos e DARF'],['import','📥','Importar','Relatório do Profit (CSV)'],['conta','👤','Conta','Sincronização']],th=ls.get('diario-theme')||'auto';return `<h1>Mais</h1><div class="tiles">${T2.map(([k,i,t,d])=>`<button class="tile" data-a="gotab" data-id="${k}"><span>${IC(ICS[k])}</span><b>${t}</b><small>${d}</small></button>`).join('')}</div><h2>Aparência</h2><div class="seg">${[['auto','Automático'],['light','Claro'],['dark','Escuro']].map(([k,l])=>`<button class="${th===k?'on':''}" data-a="theme" data-id="${k}">${l}</button>`).join('')}</div>`}
@@ -470,7 +470,7 @@ function svUi(){const e=$('#svs');if(!e)return;e.textContent=SV?('✓ Salvo às 
 const DF=[['plano','☀️ Plano do dia'],['pre','Ensaio mental'],['resumo','🌙 Como foi o dia'],['cond','Condições dos erros'],['prevn','Para não repetir'],['bem','O que fiz bem'],['aprend','Aprendizado']];
 const dHas=d=>!!d&&(DF.some(([k])=>d[k])||d.nota||d.energia||d.erros||d.mkt||Object.values(d.chk||{}).some(Boolean));
 const diaSeg=()=>`<div class="seg"><button class="${DV==='ed'?'on':''}" data-a="dv" data-id="ed">✍️ Escrever</button><button class="${DV==='hist'?'on':''}" data-a="dv" data-id="hist">📜 Histórico</button></div>`;
-function vDiaHist(){const ks=Object.keys(S.days).filter(k=>dHas(S.days[k])).sort().reverse();return `<h1>Meu dia</h1>${diaSeg()}<input id="lq" placeholder="🔍 Buscar nos meus relatórios" value="${esc(LF.q)}" style="margin-bottom:8px">`+(ks.length?ks.map(k=>{const d=S.days[k],ts=S.trades.filter(t=>(t.dtx||t.dt).slice(0,10)===k).map(t=>calc(t)).filter(c=>c.pl!=null),R=sum(ts.map(c=>c.pl)),txt=DF.map(([f])=>d[f]||'').join(' ').trim(),nck=Object.values(d.chk||{}).filter(Boolean).length,open=DX===k,ds=new Date(k+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit'});
+function vDiaHist(){const ks=Object.keys(S.days).filter(k=>dHas(S.days[k])).sort().reverse();return `<h1>Meu dia</h1>${diaSeg()}<input id="lq" placeholder="🔍 Buscar nos meus relatórios" value="${esc(LF.q)}" style="margin-bottom:8px">`+(ks.length?ks.map(k=>{const d=S.days[k],ts=dayFech(k).map(t=>({...t.c,pl:emBRL(t.c.pl,moedaT(t))})),R=sum(ts.map(c=>c.pl)),txt=DF.map(([f])=>d[f]||'').join(' ').trim(),nck=Object.values(d.chk||{}).filter(Boolean).length,open=DX===k,ds=new Date(k+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit'});
 return `<div class="card" data-s="${esc((k+' '+ds+' '+txt).toLowerCase())}"><div class="top" data-a="dhx" data-id="${k}" style="cursor:pointer"><div style="min-width:0"><b>${esc(ds)}</b> ${d.energia?EMO[d.energia-1]:''}<div class="mut sm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62vw">${esc(d.resumo||d.plano||d.aprend||'(sem texto)')}</div></div><div class="sm mut" style="text-align:right;white-space:nowrap">${d.nota!==undefined&&d.nota!==''?'nota '+esc(d.nota)+' · ':''}${ts.length?`<span class="${cls(R)}">${money(R)}</span> ·`:''} ${open?'▴':'▾'}</div></div>${open?`<div style="margin-top:10px">${DF.filter(([f])=>d[f]).map(([f,l])=>`<div class="sm mut" style="margin-top:8px">${l}</div><div style="white-space:pre-wrap">${esc(d[f])}</div>`).join('')}${d.erros?`<div class="sm mut" style="margin-top:8px">Cometi erro?</div><div>${d.erros==='s'?'Sim':'Não'}</div>`:''}${nck?`<div class="sm mut" style="margin-top:8px">Checklist</div><div>${nck}/${S.rules.length} regras marcadas</div>`:''}<button class="btn s" style="margin-top:12px" data-a="dedit" data-id="${k}">✏️ Editar este dia</button></div>`:''}</div>`}).join(''):'<p class="mut">Nenhum dia registrado ainda. Escreva o primeiro na aba Escrever.</p>')}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;
 if(a==='dv'){DV=id;render();scrollTo(0,0)}
@@ -557,13 +557,13 @@ return `<div class="card"><div class="top"><b>${n}</b><span class="rt ${q>0?'g':
 <div class="g2" style="margin-top:6px">${fi(k+'.px','Último preço',px)}${fi(k+'.vol','Volatilidade (%)',vol)}${fi(k+'.mult','Multiplicador (R$/pt)',mu)}${fi(k+'.stop','Stop manual (pts)',sm||'')}</div></div>`}).join('')+`<p class="mut sm">Stop pela vol = preço × vol% × ${vf}%. Contratos = risco do trade ÷ (stop × multiplicador), arredondado para baixo. O stop manual substitui o stop pela vol. Valores iniciais copiados da sua planilha (aba CÁLCULO DT).</p>`}
 /* ---------- Início: posso operar hoje + calendário ---------- */
 let CMX=0;
-function pCore(hj,P){const g=(k,d)=>+gv('ct',k,d),pr=S.prop||{},nd=g('nd',3),lim=+pr.perdaDia||g('cap',10000)*g('pct',2)/100*nd,perda=Math.max(0,-P),ord=hj.slice().sort((a,b)=>(a.dtx||a.dt).localeCompare(b.dtx||b.dt)),mot=[];let seq=0;for(let i=ord.length-1;i>=0&&ord[i].c.pl<0;i--)seq++;
-{const tk=loc().slice(0,10);if(turnoNv(tk)==='r')mot.push('dia de turno '+TH[tcod(tk)]);}if(perda>=lim)mot.push('perda diária no limite');if(seq>=2)mot.push(seq+' stops seguidos');if(hj.length>=nd)mot.push(hj.length+' trades feitos (máx. '+nd+')');return{nd,lim,perda,seq,mot}}
-function pHoje(){const td=loc().slice(0,10),hj=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&(t.dtx||t.dt).slice(0,10)===td).concat(typeof fxDia==='function'?fxDia(td):[]).map(t=>({...t,c:{...t.c,pl:emBRL(t.c.pl,moedaT(t))}}));return{td,hj,P:sum(hj.map(t=>t.c.pl))}}
+function pCore(hj,P){const g=(k,d)=>+gv('ct',k,d),pr=S.prop||{},TC=typeof trCfg==='function'?trCfg():{},DH=S.days[loc().slice(0,10)]||{},menor=(...v)=>{const x=v.map(Number).filter(n=>n>0);return x.length?Math.min(...x):0},nd=menor(TC.maxTr,DH.maxT)||g('nd',3),lim=menor(TC.perdaDia,limPerda(DH))||+pr.perdaDia||g('cap',10000)*g('pct',2)/100*nd,perda=Math.max(0,-P),ord=hj.slice().sort((a,b)=>(a.dtx||a.dt).localeCompare(b.dtx||b.dt)),mot=[];let seq=0;for(let i=ord.length-1;i>=0&&ord[i].c.pl<0;i--)seq++;
+{const tk=loc().slice(0,10);if(TC.turno!==0&&turnoNv(tk)==='r')mot.push('dia de turno '+TH[tcod(tk)]);}if(perda>=lim)mot.push('perda diária no limite');if(seq>=(+TC.maxStops||2))mot.push(seq+' stops seguidos');const ntr=hj.length+(typeof abertosHoje==='function'?abertosHoje():0);if(ntr>=nd)mot.push(ntr+' trades no dia (máx. '+nd+')');let cum=0,pico=0;ord.forEach(t=>{cum+=emBRL(t.c.pl,moedaT(t));pico=Math.max(pico,cum)});if(TC.lucro!==0&&pico>0&&pico>=lim*.5&&cum<=pico*.5)mot.push('devolveu metade do lucro do dia (pico '+money(pico)+')');if(+TC.meta>0&&P>=+TC.meta)mot.push('bateu a meta do dia ('+money(+TC.meta)+')');return{nd,lim,perda,seq,mot,ntr,pico}}
+function pHoje(){const td=loc().slice(0,10),hj=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&(t.dtx||t.dt).slice(0,10)===td).concat(typeof fxDia==='function'?fxDia(td):[]).map(t=>({...t,moeda:'BRL',c:{...t.c,pl:emBRL(t.c.pl,moedaT(t))}}));return{td,hj,P:sum(hj.map(t=>t.c.pl))}}
 function pBloq(){const{td,hj,P}=pHoje(),c=pCore(hj,P);if(!c.mot.length)return true;if(!confirm('PARE POR HOJE: '+c.mot.join(', ')+'.\n\nAbrir um novo trade mesmo assim?'))return false;(S.ax??={})['ov.'+td]=(+S.ax['ov.'+td]||0)+1;save();return true}
 function posso(hj,P,nck){const c=pCore(hj,P),{nd,lim,perda,seq,mot}=c,rest=Math.max(0,lim-perda),nr=(S.rules||[]).length,ov=+((S.ax||{})['ov.'+loc().slice(0,10)])||0;
 const lv=mot.length?'r':(perda>=lim*.8||(nr&&nck<nr)||turnoNv(loc().slice(0,10))==='a'?'a':'g'),tt={r:'Pare por hoje',a:'Atenção',g:'Pode operar'}[lv],col={r:'var(--r)',a:'#e8a317',g:'var(--g)'}[lv],kc=(l,v,s)=>`<div class="card"><span class="mut sm">${l}</span><b>${v}</b><span class="mut sm">${s}</span></div>`;
-return `<div class="card" style="border:2px solid ${col}"><div class="top"><b style="font-size:20px;color:${col}">${tt}</b><span class="mut sm">Posso operar hoje?</span></div><div class="sm" style="margin:6px 0">${mot.length?mot.join(' · ')+'. Novo trade pede confirmação.':((turnoNv(loc().slice(0,10))==='a'?turnoTxt(loc().slice(0,10))+': cuide do horário. ':'')+(nr&&nck<nr?'Falta fechar o checklist de regras.':'Dentro dos limites do dia.'))}</div>${ov?`<div class="sm r" style="margin-bottom:6px">Você abriu ${ov} trade(s) depois do aviso hoje.</div>`:''}<div class="kv">${kc('Perda restante',money(rest),'de '+money(lim))}${kc('Trades hoje',hj.length,'máx. '+nd)}${kc('Stops seguidos',seq,'pare em 2')}${kc('Checklist',nck+'/'+nr,'regras de hoje')}</div></div>`}
+return `<div class="card" style="border:2px solid ${col}"><div class="top"><b style="font-size:20px;color:${col}">${tt}</b><span class="mut sm">Posso operar hoje?</span></div><div class="sm" style="margin:6px 0">${mot.length?mot.join(' · ')+'. Novo trade pede confirmação.':((turnoNv(loc().slice(0,10))==='a'?turnoTxt(loc().slice(0,10))+': cuide do horário. ':'')+(nr&&nck<nr?'Falta fechar o checklist de regras.':'Dentro dos limites do dia.'))}</div>${ov?`<div class="sm r" style="margin-bottom:6px">Você abriu ${ov} trade(s) depois do aviso hoje.</div>`:''}<div class="kv">${kc('Perda restante',money(rest),'de '+money(lim))}${kc('Trades hoje',c.ntr!=null?c.ntr:hj.length,'máx. '+nd+' · abertos contam')}${kc('Stops seguidos',seq,'pare em '+((typeof trCfg==='function'&&+trCfg().maxStops)||2))}${kc('Checklist',nck+'/'+nr,'regras de hoje')}</div></div>`}
 function calMes(){const n=new Date();n.setDate(1);n.setMonth(n.getMonth()+CMX);const y=n.getFullYear(),m=n.getMonth(),pad=x=>String(x).padStart(2,'0'),pre=y+'-'+pad(m+1)+'-',dim=new Date(y,m+1,0).getDate(),off=(new Date(y,m,1).getDay()+6)%7,by={},td=loc().slice(0,10);S.trades.forEach(t=>{const c=calc(t),d=(t.dtx||t.dt).slice(0,10);if(c.pl!=null&&d.startsWith(pre))by[d]=(by[d]||0)+emBRL(c.pl,moedaT(t))});if(typeof fxPer==='function')fxPer(pre+'01',pre+'31').forEach(t=>{const d=t.dtx.slice(0,10);by[d]=(by[d]||0)+emBRL(t.c.pl,'USD')});const tot=sum(Object.values(by));let cells='';for(let i=0;i<off;i++)cells+='<div></div>';
 for(let d=1;d<=dim;d++){const k=pre+pad(d),v=by[k],bg=v==null?'var(--bg)':`color-mix(in srgb,${v>=0?'var(--g)':'var(--r)'} 30%,var(--card))`;cells+=`<button class="dc" data-a="cday" data-id="${k}" style="background:${bg}${k===td?';outline:2px solid var(--ac)':''}"><span class="mut sm">${d}${tcod(k)?' <i style="font-size:9px">'+tcod(k)+'</i>':''}</span><b>${v==null?'':Math.abs(v)>=1000?(v/1000).toFixed(1).replace('.',',')+'k':Math.round(v)}</b></button>`}
 return `<div class="top"><h2>Calendário</h2><div><button class="btn s" data-a="cm" data-id="-1">‹</button> <span class="sm">${n.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</span> <button class="btn s" data-a="cm" data-id="1">›</button></div></div><div class="mc">${['S','T','Q','Q','S','S','D'].map(x=>`<span class="mut sm">${x}</span>`).join('')}${cells}</div><div class="sm" style="margin:6px 0 12px">Resultado do mês: <b class="${tot>=0?'g':'r'}">${money(tot)}</b></div>`}
@@ -1284,7 +1284,7 @@ function dscore(k){
   if(S.rules.length)P.push([Object.values(d.chk||{}).filter(Boolean).length/S.rules.length,20]);
   if(ts.length)P.push([ts.filter(t=>!(t.err&&t.err!=='Nenhum')&&t.rules!=='n').length/ts.length,35]);
   const mR=limPerda(d),mT=+d.maxT;
-  if(mR>0||mT>0)P.push([(mT>0&&ts.length>mT)||(mR>0&&dayPL(ts)<=-mR)?0:1,15]);
+  if(mR>0||mT>0)P.push([(mT>0&&ts.length>mT)||(mR>0&&dayPL(dayFech(k))<=-mR)?0:1,15]);
   const w=sum(P.map(x=>x[1]));
   return w?Math.round(sum(P.map(x=>x[0]*x[1]))/w*100):null;
 }
@@ -1308,7 +1308,7 @@ function disHtml(){
 <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:3px">${cells.join('')}</div><div class="sm mut" style="margin-top:4px">Últimos 14 dias. Toque para abrir o dia.</div>`;
 }
 function limHtml(){
-  const d=S.days[D]||{},ts=dayTr(D),R=dayPL(ts),mR=limPerda(d),mT=+d.maxT,out=[];
+  const d=S.days[D]||{},ts=dayTr(D),R=dayPL(dayFech(D)),mR=limPerda(d),mT=+d.maxT,out=[];
   const bar=(p,l,v)=>{const c=p>1?'var(--r)':p>.6?'#d9a400':'var(--g)';return `<div style="margin:8px 0"><div class="sm" style="display:flex;justify-content:space-between"><span>${l}</span><b style="color:${c}">${v}</b></div><div style="height:6px;border-radius:3px;background:var(--bd);overflow:hidden;margin-top:3px"><div style="height:100%;width:${Math.min(100,p*100)}%;background:${c};transition:width .3s"></div></div></div>`};
   if(mT>0)out.push(bar(ts.length/mT,'Trades do dia',ts.length+' de '+mT));
   if(mR>0)out.push(bar(Math.max(0,-R)/mR,'Perda do dia',money(Math.min(0,R))+' de -'+money(mR)));
@@ -1400,7 +1400,7 @@ vDia=function(){
 
 /* ---------- Alertas: notificações push, preferências e próximos eventos ---------- */
 const NP=Object.assign({m:'08:00',n:'18:50',lead:5,cur:['USD'],imp:'high'},ls.get('diario-np')||{});
-NP.on=Object.assign({m:true,n:true,ev:true,ab:true,tr:true},NP.on||{});if(!Array.isArray(NP.mk))NP.mk=['b3','ny','tk'];
+NP.on=Object.assign({m:true,n:true,ev:true,ab:true,tr:true,trv:true},NP.on||{});if(!Array.isArray(NP.mk))NP.mk=['b3','ny','tk'];
 const AL={ok:null,msg:'',busy:0,sub:null,ev:null,evTs:0,evErr:'',sy:null};
 const AL_CUR=[['USD','EUA'],['EUR','Euro'],['GBP','Reino Unido'],['JPY','Japão'],['CNY','China'],['CAD','Canadá'],['AUD','Austrália']];
 const alSup=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
@@ -3378,7 +3378,7 @@ document.addEventListener('change',e=>{const v=e.target.closest('[data-hbv]');if
 
 /* ---------- aviso de limite do dia ---------- */
 function limiteConfere(){
-  const td=loc().slice(0,10),d=S.days[td]||{},mR=limPerda(d),mT=+d.maxT,ts=dayTr(td),pl=dayPL(ts),n=ts.length,k='lim.'+td;
+  const td=loc().slice(0,10),d=S.days[td]||{},mR=limPerda(d),mT=+d.maxT,ts=dayTr(td),pl=dayPL(dayFech(td)),n=ts.length,k='lim.'+td;
   if(((S.ax||{})[k]))return;
   let msg='';
   if(mR>0&&pl<=-mR)msg=`Você atingiu a perda máxima do dia (${money(pl)}). Pare por hoje.`;
@@ -3785,7 +3785,7 @@ ${c.dd!=='fixo'?`<label class="ck"><input type="checkbox" data-ms="trava"${c.tra
 /* =====================================================================================
    4) PLANO DE TRANSIÇÃO — quando dá para viver do trading (sair da CLT)
    ===================================================================================== */
-const CR_PADRAO={renda:0,custo:0,reserva:0,mesesReserva:12,mesesPos:12,alvo:0,ir:20,fx:1};
+const CR_PADRAO={renda:0,custo:0,reserva:0,mesesReserva:12,mesesPos:12,alvo:0,ir:20,irDT:20,irSW:15,irFX:15,fx:1};
 const crCfg=()=>({...CR_PADRAO,...((S.ax||{}).carreira||{})});
 function crMeses(c){
   const m={},add=(ym,k,v)=>{(m[ym]??={b3:0,fx:0,n:0})[k]+=v;m[ym].n++};
@@ -3836,9 +3836,9 @@ ${vazio?'<div class="warn">Preencha o salário, o custo de vida e a reserva no f
 <h2>Resultado por mês (líquido de IR)</h2>${R.M.length?`<div class="card">${crGraf(R)}</div>
 <div class="kv">${KV('Média 3 meses',R.med3==null?'–':money(R.med3),cls(R.med3||0))}${KV('Média 6 meses',R.med6==null?'–':money(R.med6),cls(R.med6||0),R.alvo?'alvo '+money(R.alvo):'')}${KV('Média 12 meses',R.med12==null?'–':money(R.med12),cls(R.med12||0))}${KV('Meses positivos',pct0(R.pos),'',R.seq+' seguido(s) agora')}${KV('Média 6m × custo de vida',R.custo&&R.med6!=null?Math.round(R.med6/R.custo*100)+'%':'–')}${KV('Reserva',R.resM==null?'–':R.resM.toFixed(1).replace('.',',')+' meses','','de custo de vida')}</div>
 <div class="card"><table><tr><th>Mês</th><th>Brasil</th>${c.fx?'<th>Forex</th>':''}<th>Líquido</th></tr>${R.M.slice(-12).reverse().map(x=>`<tr><td>${x.k.slice(5)}/${x.k.slice(2,4)}${x.atual?' <span class="sm mut">(em curso)</span>':''}</td><td class="${cls(x.b3)}">${money(x.b3)}</td>${c.fx?`<td class="${cls(x.fx)}">${money(x.fx)}</td>`:''}<td class="${cls(x.liq)}"><b>${money(x.liq)}</b>${x.ir?`<div class="sm mut">IR ${money(x.ir)}</div>`:''}</td></tr>`).join('')}</table></div>`:'<p class="mut">Sem trades fechados ainda.</p>'}
-<h2>Seus números</h2><div class="card"><div class="g2">${f('renda','Salário líquido hoje (R$/mês)')}${f('custo','Custo de vida (R$/mês)')}</div><div class="g2">${f('alvo','Renda alvo do trading (R$/mês)')}${f('reserva','Reserva guardada (R$)')}</div><div class="g3">${f('mesesReserva','Reserva (meses)')}${f('mesesPos','Meses positivos seguidos')}${f('ir','IR estimado (%)')}</div>
+<h2>Seus números</h2><div class="card"><div class="g2">${f('renda','Salário líquido hoje (R$/mês)')}${f('custo','Custo de vida (R$/mês)')}</div><div class="g2">${f('alvo','Renda alvo do trading (R$/mês)')}${f('reserva','Reserva guardada (R$)')}</div><div class="g3">${f('mesesReserva','Reserva (meses)')}${f('mesesPos','Meses positivos seguidos')}</div><div class="g3">${f('irDT','IR day trade (%)')}${f('irSW','IR swing e opções (%)')}${f('irFX','IR exterior/Forex (%)')}</div>
 <label class="ck"><input type="checkbox" data-cr="fx"${c.fx?' checked':''}><span>Somar o Forex (convertido em reais)</span></label>
-<div class="sm mut" style="margin-top:6px">Se a renda alvo ficar vazia, o app usa o salário. O IR é estimado sobre o lucro de cada mês, compensando prejuízos anteriores. Não é recomendação financeira: é um termômetro dos seus próprios números.</div></div>`;
+<div class="sm mut" style="margin-top:6px">Se a renda alvo ficar vazia, o app usa o salário. O IR é estimado por tipo, cada um compensando os próprios prejuízos: day trade (mesmo dia) 20%; swing e opções 15%, com isenção do lucro em ações quando as vendas de ações no mês somam até R$ 20 mil; operações em US$ e Forex/mesa pela alíquota informada (a tributação de payout de mesa proprietária varia: confirme com um contador). Não é recomendação financeira: é um termômetro dos seus próprios números.</div></div>`;
 }
 document.addEventListener('change',e=>{const i=e.target.closest('[data-cr]');if(!i)return;const c=crCfg();c[i.dataset.cr]=i.type==='checkbox'?(i.checked?1:0):(i.value===''?0:+i.value);(S.ax??={}).carreira=c;save();render()});
 
@@ -4468,6 +4468,246 @@ function stExtrasFx(rows){
   return `<h2>Forex por sessão</h2><div class="sm mut" style="margin-bottom:6px">Pela hora de entrada, em Brasília. Lucros lançados sem operação ficam fora (não têm horário).</div>${comHora.length?tb('Sessão',fxGrupos(comHora,t=>fxSessao(t.dt))):'<p class="sm mut">Sem operações com horário.</p>'}<h2>Forex por par</h2>${tb('Par',fxGrupos(fx,t=>String(t.ativo||'—').toUpperCase()))}`;
 }
 {const vs2=vStats;vStats=function(){let h=vs2();try{if(typeof ST!=='undefined'&&(ST.aba==='risco'||ST.aba==='onde')){const rows=stRows().map(t=>t.c?t:{...t,c:calc(t)}).filter(t=>t.c&&t.c.pl!=null);if(rows.length)h+=ST.aba==='risco'?stExtrasRisco(rows):stExtrasFx(rows)}}catch(e){console.error(e)}return h}}
+/* ---------- 19. Varredura: valores em R$ e Forex nos totais; risco aberto e disciplina em tempo real ---------- */
+/** calc() com resultado e risco convertidos para R$ (trades em US$ entram pelo dólar das configurações). */
+function cBRL(t){const c=calc(t);return moedaT(t)==='USD'?{...c,pl:c.pl==null?null:emBRL(c.pl,'USD'),risk:c.risk==null?null:emBRL(c.risk,'USD')}:c}
+/** Trades ENCERRADOS no dia k (pela data de saída), da B3 e do Forex. */
+function dayFech(k){return S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&String(t.dtx||t.dt).slice(0,10)===k).concat(typeof fxDia==='function'?fxDia(k):[])}
+/** Trades abertos HOJE que ainda não foram encerrados (B3 e Forex): contam no máximo de trades do dia. */
+function abertosHoje(){const h=loc().slice(0,10);return S.trades.filter(t=>isOpen(t)&&String(t.dt).slice(0,10)===h).length+(S.ops||[]).filter(o=>o.st==='open'&&String(o.dt||'').slice(0,10)===h).length}
+/** Risco aberto agora: soma do que se perde se TODOS os stops forem atingidos, contra a perda que ainda cabe no dia. */
+function riscoAberto(){
+  const g=(k,d)=>+gv('ct',k,d),cap=g('cap',10000),pct=g('pct',2),porTrade=cap*pct/100,itens=[];
+  S.trades.filter(isOpen).forEach(t=>{const c=calc(t),r=c.risk==null?null:emBRL(c.risk,moedaT(t));itens.push({n:t.ativo||'?',r,sem:c.risk==null,alto:r!=null&&porTrade>0&&r>porTrade*1.5})});
+  (S.ops||[]).filter(o=>o.st==='open').forEach(o=>{const rk=+o.rk>0?emBRL(+o.rk,'USD'):null;itens.push({n:o.s||'Forex',r:rk,sem:rk==null,alto:rk!=null&&porTrade>0&&rk>porTrade*1.5})});
+  return{itens,tot:sum(itens.map(x=>x.r||0)),sem:itens.filter(x=>x.sem),alto:itens.filter(x=>x.alto),porTrade};
+}
+{const po0=posso;posso=function(hj,P,nck){
+  let h=po0(hj,P,nck);try{
+    const A=riscoAberto();if(!A.itens.length)return h;const c=pCore(hj,P),rest=Math.max(0,c.lim-c.perda),passa=A.tot>rest;
+    const linhas=[`Risco aberto: <b class="${passa?'r':''}">${money(A.tot)}</b> em ${A.itens.length} posição(ões) · cabe ${money(rest)} no dia`];
+    if(passa)linhas.push('<b class="r">Se todos os stops baterem, você passa do limite de perda do dia.</b> Reduza a mão ou suba os stops antes de abrir outro trade.');
+    if(A.sem.length)linhas.push(`<b class="r">${A.sem.length} posição(ões) sem stop:</b> ${esc(A.sem.map(x=>x.n).join(', '))}. Sem stop o risco é ilimitado; registre o stop agora.`);
+    if(A.alto.length)linhas.push(`<span class="am">Risco acima do plano (mais de 1,5× ${money(A.porTrade)} por trade):</span> ${esc(A.alto.map(x=>x.n).join(', '))}.`);
+    h=h.replace(/<\/div><\/div>$/,`</div><div class="sm rd-heat" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">${linhas.join('<br>')}</div></div>`);
+  }catch(e){}return h}}
+/* ---------- 20. TRAVA DE OPERAÇÃO + MENTOR (Meu dia) ---------- */
+/* Regras da trava. Afrouxar uma regra com o dia travado só vale a partir de amanhã (para não destravar no impulso). */
+const TR_PAD={on:1,perdaDia:0,meta:0,maxTr:0,maxStops:2,pausaMin:15,chk:1,semStop:1,lucro:1,turno:1};
+function trCfg(){
+  const ax=S.ax||{},hoje=loc().slice(0,10),pend=ax.travaNova;
+  if(pend&&pend.desde<=hoje){(S.ax??={}).trava={...(ax.trava||{}),...pend.cfg};delete S.ax.travaNova;try{save()}catch(e){}}
+  return {...TR_PAD,...((S.ax||{}).trava||{})};
+}
+const TRV={passe:0,aberto:0};
+/** Estado da trava agora: regras duras (só amanhã), pendências que você resolve (stop, checklist) e pausa depois de um stop. */
+function travaEstado(){
+  const cf=trCfg(),{td,hj,P}=pHoje(),c=pCore(hj,P),duro=cf.on?c.mot.slice():[],resolver=[];let pausaAte=0;
+  if(cf.on&&+cf.pausaMin>0){const fe=hj.filter(t=>t.dtx).sort((a,b)=>String(a.dtx).localeCompare(String(b.dtx))),u=fe[fe.length-1];
+    if(u&&u.c.pl<0){const fim=new Date(String(u.dtx).slice(0,16)).getTime()+cf.pausaMin*60000;if(fim>Date.now())pausaAte=fim}}
+  if(cf.on&&cf.semStop){const A=riscoAberto();if(A.sem.length)resolver.push({id:'stop',txt:`${A.sem.length} posição(ões) aberta(s) sem stop: ${A.sem.map(x=>x.n).join(', ')}`,acao:'Registre o stop na ficha da posição.'})}
+  if(cf.on&&cf.chk){const nr=(S.rules||[]).length,nck=Object.values((S.days[td]||{}).chk||{}).filter(Boolean).length;if(nr&&nck<nr)resolver.push({id:'chk',txt:`checklist de regras ${nck}/${nr}`,acao:'Feche o checklist de regras em Meu dia.'})}
+  return {cf,duro,resolver,pausaAte,c,P,hj,travado:!!(duro.length||resolver.length||pausaAte)};
+}
+const trMin=ms=>{const m=Math.ceil(ms/60000);return m>=60?Math.floor(m/60)+'h'+String(m%60).padStart(2,'0'):m+' min'};
+function trViol(E,acao){(S.ax??={}).viol=((S.ax||{}).viol||[]).concat([{d:loc().slice(0,10),h:hm(),mot:[...E.duro,...E.resolver.map(x=>x.txt),...(E.pausaAte?['pausa depois do stop']:[])],a:acao||''}]).slice(-300);save()}
+/* Bloqueio central: todo ponto que abre trade passa por aqui. */
+pBloq=function(){
+  const E=travaEstado();if(!E.travado)return true;
+  if(TRV.passe&&Date.now()<TRV.passe){TRV.passe=0;setTimeout(()=>{try{if(typeof T!=='undefined'&&T&&isNew){T.err='Operei com a trava ativa';T.trava=1;showSheet()}}catch(e){}},0);return true}
+  trvAbre(E);return false;
+};
+function trvHtml(E){
+  const li=(t,cls)=>`<li class="${cls||''}">${t}</li>`;
+  return `<div class="ov" id="trv"><div class="sh trv-sh"><div class="top"><h2 style="margin:0">🔒 Operação travada</h2><button class="x" data-trv="x">✕</button></div>
+  ${E.duro.length?`<div class="trv-b r"><b>Regra dura: acabou o dia</b><ul>${E.duro.map(x=>li(esc(x))).join('')}</ul><div class="sm">Isso não se resolve hoje. Feche a plataforma, faça o debriefing e volte amanhã.</div></div>`:''}
+  ${E.pausaAte?`<div class="trv-b am"><b>⏸️ Pausa depois do stop</b><div>Faltam <b data-trv-cd="${E.pausaAte}">${trMin(E.pausaAte-Date.now())}</b>. Levante, respire, releia o plano. Entrar agora é revanche.</div></div>`:''}
+  ${E.resolver.length?`<div class="trv-b"><b>Resolva antes de entrar</b><ul>${E.resolver.map(x=>li(`${esc(x.txt)}<div class="sm mut">${esc(x.acao)}</div>`)).join('')}</ul>${E.resolver.some(x=>x.id==='chk')?'<button class="btn s" data-trv="dia">Abrir o checklist</button>':''}</div>`:''}
+  <details class="trv-v"><summary class="sm mut">Já operei mesmo assim (registrar como violação)</summary>
+    <div class="sm" style="margin:6px 0">Isto <b>não libera</b> novos trades: serve só para o diário não mentir. O trade fica marcado como "Operei com a trava ativa" e conta na sua nota de disciplina.</div>
+    <label>Digite: QUEBREI MINHA REGRA<input data-trv-frase autocomplete="off" autocapitalize="characters"></label>
+    <button class="btn" data-trv="ok" disabled data-trv-ate="${Date.now()+20000}">Aguarde 20 s</button></details>
+  </div></div>`;
+}
+function trvAbre(E){const a=document.getElementById('trv');if(a)a.remove();document.body.insertAdjacentHTML('beforeend',trvHtml(E));TRV.aberto=1;trvTick()}
+function trvFecha(){const a=document.getElementById('trv');if(a)a.remove();TRV.aberto=0}
+function trvTick(){
+  if(!document.getElementById('trv'))return;
+  document.querySelectorAll('[data-trv-cd]').forEach(e=>{const r=+e.dataset.trvCd-Date.now();e.textContent=r>0?trMin(r):'0 min'});
+  const b=document.querySelector('[data-trv="ok"]'),f=document.querySelector('[data-trv-frase]');
+  if(b){const r=+b.dataset.trvAte-Date.now(),okF=f&&f.value.trim().toUpperCase()==='QUEBREI MINHA REGRA';b.disabled=r>0||!okF;b.textContent=r>0?`Aguarde ${Math.ceil(r/1000)} s`:okF?'Registrar a violação':'Digite a frase'}
+  setTimeout(trvTick,1000);
+}
+document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('[data-trv-frase]')){const b=document.querySelector('[data-trv="ok"]');if(b&&+b.dataset.trvAte<=Date.now()){const ok=e.target.value.trim().toUpperCase()==='QUEBREI MINHA REGRA';b.disabled=!ok;b.textContent=ok?'Registrar a violação':'Digite a frase'}}});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-trv]');if(!b)return;const k=b.dataset.trv;
+  if(k==='x'){trvFecha();return}
+  if(k==='dia'){trvFecha();tab='dia';D=loc().slice(0,10);DV='ed';render();return}
+  if(k==='ok'){if(b.disabled)return;TRV.passe=Date.now()+120000;trvFecha();if(window.toast)toast('Toque de novo para lançar o trade (vale 2 min). Ele vai entrar como violação.',4500);render()}
+});
+/* faixa no topo de todas as telas quando travado */
+{const bk0=bkBanner;bkBanner=function(){bk0();try{const E=travaEstado();if(!E.duro.length&&!E.pausaAte)return;const ap=document.getElementById('app');if(!ap||ap.querySelector('.trv-top'))return;
+  ap.insertAdjacentHTML('afterbegin',`<div class="trv-top">${E.duro.length?`🔒 <b>Travado até amanhã:</b> ${esc(E.duro.join(' · '))}`:`⏸️ <b>Pausa depois do stop:</b> faltam ${trMin(E.pausaAte-Date.now())}`}</div>`)}catch(e){}}}
+/* Forex: "Entrar" numa operação planejada também passa pela trava */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a="opgo"]');if(!b)return;if(!pBloq()){e.stopImmediatePropagation();e.preventDefault()}},true);
+
+/* ---------- mentor ---------- */
+/** Resultado por dia (R$, pela data de saída, B3 + Forex) e trades de cada dia, nos últimos n dias. */
+function mtDias(n){
+  const de=diasMais(loc().slice(0,10),-n),dias={},add=(k,t,v)=>{(dias[k]??={k,pl:0,ts:[]});dias[k].pl+=v;dias[k].ts.push(t)};
+  S.trades.forEach(t=>{const c=calc(t);if(c.pl==null)return;const k=String(t.dtx||t.dt).slice(0,10);if(k>=de)add(k,{...t,c},emBRL(c.pl,moedaT(t)))});
+  if(typeof fxPer==='function')fxPer(de,'9999-12-31').forEach(t=>add(t.dtx.slice(0,10),t,emBRL(t.c.pl,'USD')));
+  return Object.values(dias).sort((a,b)=>a.k.localeCompare(b.k));
+}
+/** O que o mentor cobra: padrões dos últimos 30 dias, do mais grave ao menos grave, cada um com a ação. */
+function mentorAchados(){
+  const cf=trCfg(),{hj,P}=pHoje(),lim=pCore(hj,P).lim,nd=pCore(hj,P).nd,D=mtDias(30),A=[];
+  if(!D.length)return A;
+  const pos=D.filter(d=>d.pl>0),medPos=pos.length?sum(pos.map(d=>d.pl))/pos.length:0,pior=D.reduce((a,b)=>b.pl<a.pl?b:a,D[0]);
+  if(lim>0&&pior.pl<-lim*1.2)A.push({g:3,t:`Seu pior dia (${pior.k.slice(8)}/${pior.k.slice(5,7)}) foi ${money(pior.pl)}: ${(Math.abs(pior.pl)/lim).toFixed(1).replace('.',',')}× o seu limite de ${money(lim)}.`,f:medPos>0?`Um dia assim apaga ${Math.round(Math.abs(pior.pl)/medPos)} dias bons. O limite só existe se for respeitado: a trava agora fecha o dia sozinha quando ele chega.`:'O limite só existe se for respeitado: a trava agora fecha o dia sozinha.'});
+  const acima=D.filter(d=>lim>0&&d.pl<=-lim);if(acima.length>=2)A.push({g:3,t:`${acima.length} dias nos últimos 30 bateram o limite de perda.`,f:'Se o limite é batido com frequência, ele está alto demais para a sua mão ou o stop está sendo arrastado. Reduza o tamanho até passar 20 pregões sem bater.'});
+  const over=D.filter(d=>d.ts.length>nd);if(over.length)A.push({g:2,t:`Passou do máximo de ${nd} trades em ${over.length} dia(s).`,f:`Resultado desses dias: ${money(sum(over.map(d=>d.pl)))}. Overtrading quase sempre é tentativa de recuperar. A trava agora conta inclusive os trades abertos.`});
+  let rev=0,revPL=0;const pm=+cf.pausaMin||15;
+  D.forEach(d=>{const ts=d.ts.filter(t=>t.dt&&t.dtx).sort((a,b)=>String(a.dt).localeCompare(String(b.dt)));ts.forEach((t,i)=>{const ant=ts.slice(0,i).filter(x=>x.c.pl<0&&String(x.dtx)<=String(t.dt)).pop();if(ant&&(new Date(String(t.dt).slice(0,16))-new Date(String(ant.dtx).slice(0,16)))/60000<pm){rev++;revPL+=emBRL(t.c.pl,moedaT(t))}})});
+  if(rev>=2)A.push({g:revPL<0?3:1,t:`${rev} entradas em menos de ${pm} min depois de um stop (resultado ${money(revPL)}).`,f:'Isso é revanche. A pausa depois do stop agora é obrigatória: o app não deixa abrir trade antes do tempo.'});
+  const sem=D.flatMap(d=>d.ts).filter(t=>!t.forex&&t.c&&t.c.semStop).length;if(sem)A.push({g:3,t:`${sem} trade(s) sem stop registrado nos últimos 30 dias.`,f:'Sem stop não existe risco definido. A trava agora bloqueia novos trades enquanto houver posição aberta sem stop.'});
+  const devol=D.filter(d=>{let c=0,pk=0;d.ts.slice().sort((a,b)=>String(a.dtx).localeCompare(String(b.dtx))).forEach(t=>{c+=emBRL(t.c.pl,moedaT(t));pk=Math.max(pk,c)});return lim>0&&pk>=lim*.5&&c<=pk*.5});
+  if(devol.length)A.push({g:2,t:`Em ${devol.length} dia(s) você chegou a estar bem positivo e devolveu metade ou mais.`,f:'Dia verde se protege. A trava agora fecha o dia quando você devolve metade do pico.'});
+  const sem7=diasMais(loc().slice(0,10),-7),vi=((S.ax||{}).viol||[]).filter(v=>v.d>=sem7);if(vi.length)A.push({g:3,t:`${vi.length} violação(ões) da trava nos últimos 7 dias.`,f:'Cada violação é um aviso de que o seu emocional está decidindo. Depois de 2 na semana, opere com metade da mão até completar 5 pregões limpos.'});
+  const ws=D.flatMap(d=>d.ts).filter(t=>t.c&&t.c.pl!=null),g=ws.filter(t=>t.c.pl>0),l=ws.filter(t=>t.c.pl<0);
+  if(g.length>=5&&l.length>=5){const mg=sum(g.map(t=>emBRL(t.c.pl,moedaT(t))))/g.length,ml=-sum(l.map(t=>emBRL(t.c.pl,moedaT(t))))/l.length;if(ml>mg*1.2)A.push({g:2,t:`Sua perda média (${money(ml)}) é maior que o ganho médio (${money(mg)}).`,f:'Você corta ganho cedo ou deixa perda correr. Saia no stop técnico sem negociar e deixe pelo menos metade da posição ir até o alvo.'})}
+  return A.sort((a,b)=>b.g-a.g);
+}
+/** Nota do dia (A a E): regras respeitadas, sem stop, revanche, violações. */
+function mentorNota(k){
+  const d=mtDias(400).find(x=>x.k===k),viol=((S.ax||{}).viol||[]).filter(v=>v.d===k).length,cf=trCfg(),f=[];
+  if(!d&&!viol)return null;
+  const ts=d?d.ts:[],{lim,nd}=pCore([],0);
+  if(viol)f.push(viol+' violação(ões) da trava');
+  if(ts.some(t=>!t.forex&&t.c&&t.c.semStop))f.push('trade sem stop');
+  if(ts.some(t=>t.err==='Operei com a trava ativa'))f.push('operou travado');
+  if(d&&lim>0&&d.pl<-lim)f.push('passou do limite de perda');
+  if(ts.length>nd)f.push('passou do máximo de trades');
+  const or=ts.filter(t=>t.dt&&t.dtx).sort((a,b)=>String(a.dt).localeCompare(String(b.dt)));let rv=0;or.forEach((t,i)=>{const ant=or.slice(0,i).filter(x=>x.c.pl<0&&String(x.dtx)<=String(t.dt)).pop();if(ant&&(new Date(String(t.dt).slice(0,16))-new Date(String(ant.dtx).slice(0,16)))/60000<(+cf.pausaMin||15))rv++});if(rv)f.push(rv+' entrada(s) de revanche');
+  {let cum=0,seq=0,ruim=0;const ms=+cf.maxStops||2,fe=ts.filter(t=>t.dtx).sort((a,b)=>String(a.dtx).localeCompare(String(b.dtx)));
+   ts.filter(t=>t.dt).forEach(t=>{cum=0;seq=0;fe.filter(x=>x!==t&&String(x.dtx)<=String(t.dt)).forEach(x=>{const v=emBRL(x.c.pl,moedaT(x));cum+=v;seq=v<0?seq+1:0});if((lim>0&&cum<=-lim)||seq>=ms)ruim++});
+   if(ruim)f.push(ruim+' entrada(s) depois de bater o limite ou os stops do dia')}
+  const n=f.length,nota=n===0?'A':n===1?'B':n===2?'C':n===3?'D':'E';
+  return {nota,f,pl:d?d.pl:0,ruim:f.length>0};
+}
+function mentorHtml(){
+  const hoje=loc().slice(0,10);if(D!==hoje){const N=mentorNota(D);return N?`<div class="card mt-card"><div class="top"><b>🧭 Mentor</b><span class="mt-nota n${N.nota}">${N.nota}</span></div><div class="sm">${N.f.length?'O que pesou: '+esc(N.f.join(' · '))+'.':'Dia limpo: regras respeitadas.'}</div></div>`:''}
+  const E=travaEstado(),cf=E.cf,A=riscoAberto(),c=E.c,rest=Math.max(0,c.lim-c.perda),N=mentorNota(hoje),ach=mentorAchados().slice(0,3);
+  const st=E.duro.length?['🔒 Travado até amanhã','r']:E.pausaAte?['⏸️ Pausa depois do stop','am']:E.resolver.length?['⚠️ Resolva antes de operar','am']:cf.on?['✅ Liberado, dentro do plano','g']:['Trava desligada','mut'];
+  const barra=(v,max)=>{const p=max>0?Math.min(100,v/max*100):0;return `<div class="mt-bar"><i style="width:${p}%;background:${p>=100?'var(--r)':p>=70?'#e8a317':'var(--g)'}"></i></div>`};
+  const pend=(S.ax||{}).travaNova;
+  const fld=(k,l,ph)=>`<label>${l}<input type="number" step="any" inputmode="decimal" data-trc="${k}" value="${esc(cf[k]||'')}" placeholder="${ph}"></label>`,ck=(k,l)=>`<label class="ck"><input type="checkbox" data-trc="${k}"${cf[k]?' checked':''}><span>${l}</span></label>`;
+  return `<div class="card mt-card"><div class="top"><b>🧭 Mentor</b>${N?`<span class="mt-nota n${N.nota}" title="Nota de hoje">${N.nota}</span>`:''}</div>
+  <div class="mt-st ${st[1]}">${st[0]}</div>
+  ${cf.castigo?`<div class="sm am">🩹 Dia de recuperação (${esc(cf.castigo)}): perda máxima ${money(cf.perdaDia)} e no máximo ${cf.maxTr} trade(s) hoje.</div>`:''}
+  ${E.duro.length?`<div class="sm r">${esc(E.duro.join(' · '))}. Feche a plataforma e vá para o debriefing.</div>`:''}
+  ${E.pausaAte?`<div class="sm">Próxima entrada liberada em <b>${trMin(E.pausaAte-Date.now())}</b>.</div>`:''}
+  ${E.resolver.map(x=>`<div class="sm am">• ${esc(x.txt)}: ${esc(x.acao)}</div>`).join('')}
+  <div class="mt-kpi"><div><span class="sm mut">Perda do dia</span><b>${money(c.perda)}</b><span class="sm mut">de ${money(c.lim)}</span>${barra(c.perda,c.lim)}</div>
+  <div><span class="sm mut">Trades</span><b>${c.ntr!=null?c.ntr:E.hj.length}</b><span class="sm mut">de ${c.nd}</span>${barra(c.ntr||0,c.nd)}</div>
+  <div><span class="sm mut">Stops seguidos</span><b>${c.seq}</b><span class="sm mut">de ${cf.maxStops||2}</span>${barra(c.seq,+cf.maxStops||2)}</div>
+  <div><span class="sm mut">Risco aberto</span><b class="${A.tot>rest?'r':''}">${money(A.tot)}</b><span class="sm mut">cabe ${money(rest)}</span>${barra(A.tot,rest||1)}</div></div>
+  ${ach.length?`<div class="mt-cob"><div class="sm"><b>O que o mentor está vendo (últimos 30 dias)</b></div>${ach.map(a=>`<div class="mt-ach g${a.g}"><div>${esc(a.t)}</div><div class="sm mut">${esc(a.f)}</div></div>`).join('')}</div>`:''}
+  <details class="mt-reg"><summary class="sm"><b>⚙️ Regras da trava</b>${pend?` <span class="am">(mudança vale a partir de ${pend.desde.slice(8)}/${pend.desde.slice(5,7)})</span>`:''}</summary>
+    <div class="g2">${fld('perdaDia','Perda máxima do dia (R$)',money(c.lim).replace('R$','').trim())}${fld('meta','Meta do dia (R$, para parar)','opcional')}</div>
+    <div class="g3">${fld('maxTr','Máx. de trades','3')}${fld('maxStops','Stops seguidos','2')}${fld('pausaMin','Pausa após stop (min)','15')}</div>
+    ${ck('on','Trava ligada')}${ck('semStop','Travar com posição sem stop')}${ck('chk','Exigir o checklist de regras')}${ck('lucro','Parar se devolver metade do lucro do dia')}${ck('turno','Travar em dia de turno')}
+    <div class="sm mut">Com o dia travado, afrouxar uma regra (subir limite, desligar a trava) só vale a partir de amanhã. Apertar vale na hora. Vale a regra mais rígida entre esta e o limite do dia preenchido abaixo.</div></details>
+  <div class="sm mut" style="margin-top:6px">A trava bloqueia lançar trades no app. Ela não bloqueia a corretora: configure também o limite de perda diária na sua plataforma ou corretora, se ela oferecer.</div></div>`;
+}
+/* salvar regras: apertar vale já; afrouxar com o dia travado vale amanhã */
+document.addEventListener('change',e=>{const i=e.target.closest&&e.target.closest('[data-trc]');if(!i)return;
+  const k=i.dataset.trc,v=i.type==='checkbox'?(i.checked?1:0):(i.value===''?0:+i.value),cf=trCfg();
+  const afrouxa=k==='perdaDia'||k==='meta'||k==='maxTr'||k==='maxStops'?(+cf[k]>0&&(v===0||v>+cf[k])):k==='pausaMin'?v<(+cf.pausaMin||0):(cf[k]&&!v);
+  const E=travaEstado();
+  if(afrouxa&&E.travado){const am=diasMais(loc().slice(0,10),1),pn=(S.ax.travaNova&&S.ax.travaNova.cfg)||{};S.ax.travaNova={desde:am,cfg:{...pn,[k]:v}};save();if(window.toast)toast('Dia travado: essa mudança afrouxa a regra e só vale amanhã.',4000);render();return}
+  (S.ax??={}).trava={...((S.ax||{}).trava||{}),[k]:v};save();render();
+});
+{const vd0=vDia;vDia=function(){const h=vd0.apply(this,arguments);if(typeof DV!=='undefined'&&DV==='hist')return h;try{const m=mentorHtml();if(!m)return h;const i=h.indexOf('<div class="card" style="margin-top:12px"><b>Resumo automático</b>');return i>=0?h.slice(0,i)+m+h.slice(i):h+m}catch(e){console.error(e);return h}}}
+/* Posso operar: o título segue a trava */
+{const po1=posso;posso=function(hj,P,nck){let h=po1(hj,P,nck);try{const E=travaEstado();if(E.pausaAte&&!E.duro.length)h=h.replace(/(<div class="sm" style="margin:6px 0">)/,`$1<b class="am">⏸️ Pausa depois do stop: faltam ${trMin(E.pausaAte-Date.now())}.</b> `);if(E.duro.length)h=h.replace('>Pare por hoje<','>🔒 Travado até amanhã<').replace('Novo trade pede confirmação.','O app não deixa lançar trade novo hoje.')}catch(e){}return h}}
+
+/* ---------- IR por tipo no plano de transição ---------- */
+crMeses=function(c){
+  const m={},mk=ym=>(m[ym]??={dt:0,sw:0,swAcoes:0,vendas:0,ext:0,b3:0,fx:0,n:0}),acao=a=>/^[A-Z]{4}(3|4|5|6|11)$/.test(String(a||'').toUpperCase());
+  S.trades.forEach(t=>{const x=calc(t);if(x.pl==null)return;const r=mk(dOf(t).slice(0,7)),v=emBRL(x.pl,moedaT(t));r.n++;r.b3+=v;
+    if(moedaT(t)==='USD'){r.ext+=v;return}
+    const mesmoDia=(t.tipo||'D')==='D'||String(t.dt).slice(0,10)===String(t.dtx||t.dt).slice(0,10);
+    if(mesmoDia){r.dt+=v;return}
+    r.sw+=v;if(t.tipo!=='O'&&acao(t.ativo)){const q=numN(t.qty)||0,pv=numN(t.pv)||1,venda=(t.side==='C'?numN(t.exit):numN(t.entry))||0;r.vendas+=venda*q*pv;r.swAcoes+=v}});
+  if(c.fx)lcItems().forEach(x=>{const r=mk(x.d.slice(0,7)),v=x.v*usdBrl();r.fx+=v;r.ext+=v;r.n++});
+  const ks=Object.keys(m).filter(k=>/^\d{4}-\d{2}$/.test(k)).sort();if(!ks.length)return [];
+  const out=[],fim=loc().slice(0,7),prej={dt:0,sw:0,ext:0},tx=(cat,res,al)=>{if(res<0){prej[cat]+=-res;return 0}const base=Math.max(0,res-prej[cat]);prej[cat]=Math.max(0,prej[cat]-res);return base*al/100};
+  let y=+ks[0].slice(0,4),mo=+ks[0].slice(5,7);
+  for(;;){const k=y+'-'+String(mo).padStart(2,'0');if(k>fim)break;const r=m[k]||{dt:0,sw:0,swAcoes:0,vendas:0,ext:0,b3:0,fx:0,n:0};
+    const isento=r.vendas>0&&r.vendas<=20000&&r.swAcoes>0,swTrib=isento?r.sw-r.swAcoes:r.sw;
+    const irD=tx('dt',r.dt,+c.irDT||20),irS=tx('sw',swTrib,+c.irSW||15),irE=tx('ext',r.ext,c.irFX===0?0:(+c.irFX||15)),ir=irD+irS+irE,bruto=r.b3+r.fx;
+    out.push({k,b3:r.b3,fx:r.fx,bruto,ir,irDet:{dt:irD,sw:irS,ext:irE},isento:isento?r.swAcoes:0,vendas:r.vendas,liq:bruto-ir,n:r.n,atual:k===fim});if(++mo>12){mo=1;y++}}
+  return out;
+};
+(function(){const st=document.createElement('style');st.textContent=`
+.trv-sh{max-width:520px}.trv-b{border:1px solid var(--bd);border-radius:10px;padding:10px;margin:8px 0}.trv-b.r{border-color:var(--r)}.trv-b.am{border-color:#e8a317}.trv-b ul{margin:6px 0 6px 18px;padding:0}.trv-v{margin-top:10px}.trv-v .btn{width:100%;margin-top:6px}
+.trv-top{background:color-mix(in srgb,var(--r) 18%,transparent);border:1px solid var(--r);border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:14px}
+.mt-card{margin-top:12px;border:1px solid color-mix(in srgb,var(--ac,#3b82f6) 45%,var(--bd))}.mt-st{font-size:19px;font-weight:750;margin:4px 0 4px}.mt-st.r{color:var(--r)}.mt-st.am,.am{color:#e8a317}.mt-st.g{color:var(--g)}
+.mt-nota{font-weight:800;font-size:18px;width:32px;height:32px;line-height:32px;text-align:center;border-radius:50%;background:var(--bg);border:2px solid var(--bd)}.mt-nota.nA{color:var(--g);border-color:var(--g)}.mt-nota.nB{color:#7cc46a;border-color:#7cc46a}.mt-nota.nC{color:#e8a317;border-color:#e8a317}.mt-nota.nD,.mt-nota.nE{color:var(--r);border-color:var(--r)}
+.mt-kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.mt-kpi>div{display:flex;flex-direction:column;gap:1px;padding:8px;border-radius:10px;background:var(--bg);border:1px solid var(--bd)}.mt-kpi b{font-size:17px}
+.mt-bar{height:5px;border-radius:4px;background:var(--bd);margin-top:4px;overflow:hidden}.mt-bar i{display:block;height:100%}
+.mt-cob{display:grid;gap:6px;margin:8px 0}.mt-ach{padding:8px;border-radius:8px;border-left:3px solid var(--bd);background:var(--bg);font-size:14px;line-height:1.4}.mt-ach.g3{border-left-color:var(--r)}.mt-ach.g2{border-left-color:#e8a317}
+.mt-reg{margin-top:8px}.mt-reg summary{padding:6px 0;cursor:pointer}
+`;document.head.appendChild(st)})();
+/* ---------- 21. Trava: lembrete de 15 em 15 min, dia ruim na disciplina e bronca ao operar travado ---------- */
+/** Registra a hora em que o dia travou (regras duras, fora o turno) e os motivos: vai para o servidor mandar os lembretes. */
+function trvMarca(E){
+  const h=loc().slice(0,10),k='trava.'+h,mot=E.duro.filter(m=>!/^dia de turno/.test(m));
+  if(!mot.length||!E.cf.on)return (S.ax||{})[k]||null;
+  if(!(S.ax||{})[k]){(S.ax??={})[k]={desde:loc().slice(11,16),mot};save()}
+  else if(JSON.stringify(S.ax[k].mot)!==JSON.stringify(mot)){S.ax[k].mot=mot;save()}
+  return S.ax[k];
+}
+function travaPush(){const h=loc().slice(0,10),r=(S.ax||{})['trava.'+h],nv=((S.ax||{}).viol||[]).filter(v=>v.d===h).length;return r||nv?{dia:h,desde:r?r.desde:'',mot:r?r.mot:[],viol:nv}:null}
+{const npc2=npComTurno;npComTurno=function(){const np=npc2();try{np.trava=travaPush()}catch(e){}return np}}
+/** Dia de recuperação: depois de operar travado, o dia seguinte tem metade do limite de perda e metade dos trades. */
+{const tc0=trCfg;trCfg=function(){const c=tc0(),k=(S.ax||{}).castigo;if(!c.on||!k||k.dia!==loc().slice(0,10))return c;
+  const g=(x,d)=>+gv('ct',x,d),nd=+c.maxTr||g('nd',3),base=+c.perdaDia||+((S.prop||{}).perdaDia)||g('cap',10000)*g('pct',2)/100*nd;
+  return {...c,perdaDia:Math.round(base/2*100)/100,maxTr:Math.max(1,Math.floor(nd/2)),castigo:k.motivo||'violação de ontem'}}}
+/** Trades lançados depois da trava (inclusive importados do Profit): viram violação, levam a marca e disparam a bronca. */
+function trvVigia(){
+  const cf=trCfg();if(!cf.on)return;
+  const h=loc().slice(0,10),r=(S.ax||{})['trava.'+h],turnoR=cf.turno!==0&&typeof turnoNv==='function'&&turnoNv(h)==='r';
+  if(!r&&!turnoR)return;
+  const ack=new Set((S.ax||{}).violAck||[]),depois=dt=>String(dt||'').slice(0,10)===h&&(turnoR||String(dt).slice(11,16)>r.desde),novos=[];
+  S.trades.forEach(t=>{if(!ack.has(t.id)&&depois(t.dt))novos.push({id:t.id,n:t.ativo,t})});
+  (S.ops||[]).forEach(o=>{if(o.st!=='plan'&&!ack.has('fx:'+o.id)&&depois(o.dt))novos.push({id:'fx:'+o.id,n:o.s})});
+  if(!novos.length)return;
+  novos.forEach(x=>{if(x.t&&(!x.t.err||x.t.err==='Nenhum')){x.t.err='Operei com a trava ativa';x.t.u=Date.now()}});
+  const mot=r?r.mot:['dia de turno'];
+  S.ax.violAck=[...ack,...novos.map(x=>x.id)].slice(-500);
+  S.ax.viol=(S.ax.viol||[]).concat(novos.map(x=>({d:h,h:hm(),mot,a:'trade '+(x.n||'')+' depois da trava'}))).slice(-300);
+  S.ax.castigo={dia:diasMais(h,1),motivo:`${novos.length} trade(s) depois da trava em ${h.slice(8)}/${h.slice(5,7)}`};
+  save();trvBronca(novos,mot,r?r.desde:'');clearTimeout(trvVigia._t);trvVigia._t=setTimeout(()=>{try{turnoPushSync(false)}catch(e){}},1500);
+}
+function trvBronca(novos,mot,desde){
+  const a=document.getElementById('trvb');if(a)a.remove();
+  document.body.insertAdjacentHTML('beforeend',`<div class="ov" id="trvb"><div class="sh trv-sh trvb"><h2 style="margin:0 0 8px">🚨 Você operou com a trava ativa</h2>
+  <div>${desde?`Às <b>${esc(desde)}</b> o seu dia travou por <b>${esc(mot.join(', '))}</b>.`:`Hoje é <b>${esc(mot.join(', '))}</b>: o plano era não operar.`} Depois disso entrou: <b>${esc(novos.map(x=>x.n||'?').join(', '))}</b>.</div>
+  <div style="margin:10px 0">Isso não é detalhe. É exatamente o comportamento que transforma um dia ruim numa conta quebrada, e que numa mesa proprietária reprova o teste na hora. O mercado não deve nada a você hoje.</div>
+  <div class="trv-b r"><b>Consequências</b><ul><li>Hoje virou <b>dia ruim</b> na disciplina e a sequência de dias limpos zerou.</li><li>Amanhã é <b>dia de recuperação</b>: metade da perda máxima e metade dos trades.</li><li>O trade ficou marcado como "Operei com a trava ativa".</li></ul></div>
+  <div class="sm">Agora: feche a plataforma e escreva no debriefing o que você sentiu um minuto antes de entrar.</div>
+  <button class="btn" data-trvb disabled data-ate="${Date.now()+10000}" style="width:100%;margin-top:10px">Aguarde 10 s</button></div></div>`);
+  const t=()=>{const b=document.querySelector('[data-trvb]');if(!b)return;const r=+b.dataset.ate-Date.now();b.disabled=r>0;b.textContent=r>0?`Aguarde ${Math.ceil(r/1000)} s`:'Entendi. Vou fechar a plataforma.';if(r>0)setTimeout(t,500)};t();
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-trvb]');if(!b||b.disabled)return;document.getElementById('trvb').remove();tab='dia';D=loc().slice(0,10);DV='ed';render()});
+/** Dia ruim = quebrou alguma regra da trava (violação, operou travado, passou do limite ou dos trades, entrou depois dos stops, sem stop, revanche). */
+function diaRuim(k){try{const N=mentorNota(k);return !!(N&&N.ruim)}catch(e){return false}}
+/* disciplina: nota do dia cai para "dia ruim" e o motivo aparece */
+{const ds0=dscore;dscore=function(k){const v=ds0(k);return diaRuim(k)?(v==null?10:Math.min(v,20)):v}}
+{const dh0=disHtml;disHtml=function(){let h=dh0();try{const N=mentorNota(D);if(N&&N.ruim)h+=`<div class="trv-top" style="margin-top:8px">🚩 <b>Dia ruim:</b> ${esc(N.f.join(' · '))}.</div>`}catch(e){}return h}}
+/* a cada tela: marca a trava, vigia trades lançados depois dela e sincroniza com o servidor das notificações */
+{const bk1=bkBanner;bkBanner=function(){bk1();try{const E=travaEstado();trvMarca(E);trvVigia();clearTimeout(bkBanner._s);bkBanner._s=setTimeout(()=>{try{turnoPushSync(false)}catch(e){}},3000)}catch(e){}}}
 /* ---------- 17. Notificações: abertura dos mercados e stop/alvo dos trades abertos ---------- */
 /** Abertura de Nova York em Brasília (9h30 de lá): 10:30 no horário de verão americano, 11:30 fora dele. */
 function nyAbreBR(d){try{const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',timeZoneName:'shortOffset'}).formatToParts(new Date((d||loc().slice(0,10))+'T15:00:00Z')),m=/GMT([+-]\d+)/.exec((p.find(x=>x.type==='timeZoneName')||{}).value||''),o=m?+m[1]:-5,mi=570+(-3-o)*60;return String(Math.floor(mi/60)).padStart(2,'0')+':'+String(mi%60).padStart(2,'0')}catch(e){return '10:30'}}
@@ -4476,6 +4716,7 @@ function alAbHtml(ck){
   NP.mk=Array.isArray(NP.mk)?NP.mk:['b3','ny','tk'];const mu=nyMudanca(),M=[['b3','🇧🇷 B3 10:00'],['ny',`🇺🇸 Nova York ${nyAbreBR()}`],['tk','🇯🇵 Tóquio 21:00']];
   return `${ck('ab','🔔 Abertura dos mercados')}<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">${M.map(([k,l])=>`<button class="btn${NP.mk.includes(k)?'':' s'}" data-alm="${k}">${l}</button>`).join('')}</div>
   <div class="sm mut" style="margin-bottom:8px">Horário de Brasília. Nova York abre às 9h30 de lá e o app acompanha o horário de verão americano sozinho${mu?`: a partir de ${mu.d.slice(8,10)}/${mu.d.slice(5,7)} passa para <b>${mu.b}</b>`:''}. Sem aviso em fim de semana e feriado da bolsa. Em dia de turno, o aviso lembra que é para não operar.</div>
+  ${ck('trv','🔒 Lembrete de 15 em 15 min quando o dia travar')}<div class="sm mut" style="margin-bottom:8px">Do momento em que bater a regra do dia até as 22h. Se entrar trade depois da trava, chega um alerta na hora.</div>
   ${ck('tr','🎯 Stop e alvo dos trades abertos')}<div class="sm mut" style="margin-bottom:8px">Usa a cotação da ponte do Profit (precisa estar ligada). Avisa uma vez quando o preço tocar o stop ou cada alvo.</div>`;
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-alm]');if(!b)return;const k=b.dataset.alm;NP.mk=Array.isArray(NP.mk)?NP.mk:['b3','ny','tk'];NP.mk=NP.mk.includes(k)?NP.mk.filter(x=>x!==k):NP.mk.concat(k);try{alSave()}catch(x){}alPaint()});
