@@ -4732,6 +4732,101 @@ function notasHtml(){
 (function(){const r1=render0;render0=function(){r1.apply(this,arguments);try{const c=document.querySelector('#app .nt-obs'),pre=document.querySelector('#app .dfase[data-fase="pre"]');if(c&&pre&&!pre.contains(c))pre.append(c)}catch(e){}}})();
 document.addEventListener('click',e=>{const b=e.target.closest('[data-ntok]');if(!b)return;(S.ax??={}).notaVista=((S.ax||{}).notaVista||[]).concat(b.dataset.ntok).slice(-1000);save();render()});
 (function(){const st=document.createElement('style');st.textContent=`.nt-it{padding:8px 0;border-top:1px solid var(--bd)}.nt-it:first-of-type{border-top:0}.nt-tx{margin:4px 0 6px;line-height:1.45}.nt-ok{font-size:13px;padding:4px 10px}`;document.head.appendChild(st)})();
+/* ---------- 23. Gráfico ao vivo: histórico (Yahoo, com atraso) + candle atual com o preço do Profit em tempo real ---------- */
+const LVK={},LVGC={},LVG={tk:'',tf:(()=>{try{return ls.get('diario-lvg-tf')||'5m'}catch(e){return '5m'}})(),hist:null,meta:null,err:'',sel:null,busy:0};
+const LVG_TF={'5m':300,'15m':900,'60m':3600,'1d':86400},LVG_NOME={'5m':'5 min','15m':'15 min','60m':'60 min','1d':'Diário'};
+/** Guarda os preços que chegam do Profit (um por atualização da ponte), para montar os candles de agora. */
+function lvTicks(){(LV.all||[]).forEach(r=>{const k=String(r.ticker).toUpperCase(),p=+r.ult,t=Date.parse(r.updated_at)||0;if(!(p>0)||!t)return;const a=LVK[k]??=[],u=a[a.length-1];if(!u||t>u[0]){a.push([t,p]);if(a.length>8000)a.splice(0,a.length-8000)}})}
+const brtDia=sec=>new Date((sec-10800)*1000).toISOString().slice(0,10);
+/**
+ * Junta o histórico com o tempo real. hist = [[t(s),o,h,l,c]]; row = linha da ponte (ult, abe, max, min); ticks = [[ms,preço]].
+ * Diário: o candle de hoje usa abertura, máxima e mínima do Profit. Intradiário: os candles depois do último do histórico são montados com os ticks do Profit.
+ */
+function lvgBars(hist,tf,row,ticks,agoraMs){
+  const S=LVG_TF[tf],bars=(hist||[]).map(c=>({t:c[0],o:c[1],h:c[2],l:c[3],c:c[4]})),ult=row&&+row.ult>0?+row.ult:null,ag=Math.floor(agoraMs/1000);
+  if(!ult)return bars;
+  if(tf==='1d'){
+    const hoje=brtDia(ag),tk=(ticks||[]).filter(x=>brtDia(Math.floor(x[0]/1000))===hoje).map(x=>x[1]),u=bars[bars.length-1],mesmo=u&&brtDia(u.t)===hoje;
+    const o=+row.abe>0?+row.abe:mesmo?u.o:(tk[0]||ult),h=Math.max(+row.max||0,ult,o,...tk,mesmo?u.h:0),l=Math.min(+row.min>0?+row.min:Infinity,ult,o,...tk,mesmo?u.l:Infinity);
+    const b={t:mesmo?u.t:Date.parse(hoje+'T13:00:00Z')/1000,o,h,l,c:ult,vivo:1};
+    if(mesmo)bars[bars.length-1]=b;else bars.push(b);return bars;
+  }
+  const bk=s=>Math.floor(s/S)*S,lastT=bars.length?bars[bars.length-1].t:0,by=new Map();
+  (ticks||[]).forEach(([ms,p])=>{const k=bk(Math.floor(ms/1000));if(k<lastT)return;const x=by.get(k);if(x){x.h=Math.max(x.h,p);x.l=Math.min(x.l,p);x.c=p}else by.set(k,{t:k,o:p,h:p,l:p,c:p})});
+  const agK=bk(ag);if(!by.has(agK)&&!(lastT===agK))by.set(agK,{t:agK,o:ult,h:ult,l:ult,c:ult});
+  [...by.values()].sort((a,b)=>a.t-b.t).forEach(x=>{if(x.t===lastT){const u=bars[bars.length-1];u.h=Math.max(u.h,x.h);u.l=Math.min(u.l,x.l);u.c=x.c;u.vivo=1}else bars.push({...x,vivo:1})});
+  const u=bars[bars.length-1];if(u&&u.t===agK){u.c=ult;u.h=Math.max(u.h,ult);u.l=Math.min(u.l,ult);u.vivo=1}
+  return bars;
+}
+/** Linhas do seu plano: trades abertos nesse ativo (entrada, stop, alvos) e o sinal do radar de hoje. */
+function lvgLinhas(tk){
+  const L=[];S.trades.filter(t=>isOpen(t)&&lvKey(t)===tk).forEach(t=>{const e=numN(t.entry),s=numN(t.stop);if(e)L.push({v:e,c:'#3b82f6',l:'Entrada'});if(s)L.push({v:s,c:'#dc2626',l:'Stop'});[t.target,t.target2,t.target3].map(numN).filter(Boolean).forEach((v,i)=>L.push({v,c:'#16a34a',l:'Alvo '+(i+1)}))});
+  const r=(typeof RD!=='undefined'&&RD.l||[]).find(x=>x.ticker===tk&&x.ativo);if(r){L.push({v:+r.stop,c:'#f59e0b',l:'Radar stop',d:1});((r.fib&&r.fib.alvos)||[]).forEach(a=>L.push({v:+a.v,c:'#f59e0b',l:'Radar '+String(a.r*100).replace('.',',')+'%',d:1}))}
+  return L.filter(x=>isFinite(x.v)&&x.v>0);
+}
+function lvgSvg(bars,tf,linhas,sel){
+  const B=bars.slice(-70),n=B.length;if(!n)return '<div class="sm mut" style="padding:30px 0;text-align:center">Sem candles ainda.</div>';
+  const W=360,H=250,pl=4,pr=62,pt=10,pb=20,cw=(W-pl-pr)/n,u=B[n-1];
+  let lo=Math.min(...B.map(b=>b.l)),hi=Math.max(...B.map(b=>b.h));const rg=(hi-lo)||Math.abs(hi)*0.01||1;
+  linhas.forEach(x=>{if(x.v>lo-rg*.35&&x.v<hi+rg*.35){lo=Math.min(lo,x.v);hi=Math.max(hi,x.v)}});
+  const pad=(hi-lo)*.05||1;lo-=pad;hi+=pad;
+  const Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb),X=i=>pl+(i+.5)*cw,fp=v=>v.toLocaleString('pt-BR',{minimumFractionDigits:hi>1000?0:2,maximumFractionDigits:hi>1000?0:2});
+  let g='';for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4;g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--bd)" stroke-width=".5"/><text x="${W-pr+4}" y="${Y(v)+3}" font-size="9" fill="var(--mut,#94a3b8)">${fp(v)}</text>`}
+  B.forEach((b,i)=>{const up=b.c>=b.o,cor=up?'#22c55e':'#ef4444',y1=Y(Math.max(b.o,b.c)),y2=Y(Math.min(b.o,b.c));
+    g+=`<line x1="${X(i)}" x2="${X(i)}" y1="${Y(b.h)}" y2="${Y(b.l)}" stroke="${cor}" stroke-width="1"/><rect x="${X(i)-Math.max(.6,cw*.34)}" y="${y1}" width="${Math.max(1.2,cw*.68)}" height="${Math.max(.8,y2-y1)}" fill="${cor}"${b.vivo?' stroke="#fff" stroke-width=".6"':''}/>`});
+  if(sel!=null&&B[sel])g+=`<line x1="${X(sel)}" x2="${X(sel)}" y1="${pt}" y2="${H-pb}" stroke="var(--mut,#94a3b8)" stroke-dasharray="2 2"/>`;
+  const tag=(v,c,l,d)=>v<lo||v>hi?'':`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c}" stroke-width="1" ${d?'stroke-dasharray="5 3"':''}/><rect x="${W-pr+1}" y="${Y(v)-7}" width="${pr-2}" height="14" rx="3" fill="${c}"/><text x="${W-pr+4}" y="${Y(v)+3.5}" font-size="8.5" fill="#fff" font-weight="700">${l}</text>`;
+  linhas.forEach(x=>{g+=tag(x.v,x.c,x.l,x.d)});
+  g+=tag(u.c,u.vivo?'#2563eb':'#64748b',fp(u.c));
+  const ft=b=>tf==='1d'?brtDia(b.t).slice(8)+'/'+brtDia(b.t).slice(5,7):new Date((b.t-10800)*1000).toISOString().slice(11,16);
+  [0,Math.floor(n/2),n-1].forEach((i,k)=>{g+=`<text x="${k===0?pl:k===2?W-pr:X(i)}" y="${H-5}" font-size="9" fill="var(--mut,#94a3b8)" text-anchor="${k===0?'start':k===2?'end':'middle'}">${ft(B[i])}</text>`});
+  return `<svg class="lvg-svg" viewBox="0 0 ${W} ${H}" data-n="${n}" data-cw="${cw}" data-pl="${pl}" role="img" aria-label="Gráfico de candles">${g}</svg>`;
+}
+async function lvgCarrega(){
+  const tk=LVG.tk,tf=LVG.tf,k=tk+'|'+tf,c=cfg();LVG.err='';
+  if(LVGC[k]&&Date.now()-LVGC[k].ts<120000){LVG.hist=LVGC[k].v.proxy?[]:LVGC[k].v.candles;LVG.meta=LVGC[k].v;lvgDesenha();return}
+  if(!c){LVG.err='Configure o Supabase na aba Conta.';lvgDesenha();return}
+  LVG.busy=1;lvgDesenha();
+  try{const r=await fetch(c.url+'/functions/v1/candles',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:JSON.stringify({ativo:tk,intervalo:tf})});const j=await r.json();
+    if(!r.ok)throw new Error(j.error||('Erro '+r.status));LVGC[k]={ts:Date.now(),v:j};if(LVG.tk===tk&&LVG.tf===tf){LVG.hist=j.proxy?[]:j.candles;LVG.meta=j}}
+  catch(e){if(LVG.tk===tk){LVG.hist=[];LVG.meta=null;LVG.err=String(e.message||e)}}
+  LVG.busy=0;lvgDesenha();
+}
+function lvgDesenha(){
+  const box=document.getElementById('lvg');if(!box)return;
+  const tk=LVG.tk,row=(LV.all||[]).find(r=>String(r.ticker).toUpperCase()===tk)||null,bars=lvgBars(LVG.hist||[],LVG.tf,row,LVK[tk]||[],Date.now()),lin=lvgLinhas(tk);
+  const u=+((row||{}).ult)||0,fec=+((row||{}).fec)||0,vr=row&&row.var!=null&&row.var!==''?+row.var:fec>0&&u?(u/fec-1)*100:null,B=bars.slice(-70),sel=LVG.sel!=null&&B[LVG.sel]?B[LVG.sel]:B[B.length-1];
+  const fp=v=>v==null?'–':(+v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  box.querySelector('.lvg-px').innerHTML=u?`<b>${fp(u)}</b> <span class="${vr>=0?'g':'r'}">${vr==null?'':(vr>=0?'+':'')+fp(vr)+'%'}</span> <span class="sm mut">${esc((row||{}).hor||'')}</span>`:'<span class="mut">sem cotação da ponte</span>';
+  box.querySelector('.lvg-ohlc').innerHTML=sel?`<span class="sm">${sel.vivo?'<b class="g">● ao vivo</b> · ':''}A ${fp(sel.o)} · M ${fp(sel.h)} · m ${fp(sel.l)} · F ${fp(sel.c)}</span>`:'';
+  box.querySelector('.lvg-cv').innerHTML=LVG.busy&&!B.length?'<div class="sm mut" style="padding:30px 0;text-align:center">Carregando…</div>':lvgSvg(bars,LVG.tf,lin,LVG.sel);
+  const m=LVG.meta,prox=m&&m.proxy;
+  box.querySelector('.lvg-nota').innerHTML=(LVG.err?`<div class="r">${esc(LVG.err)}</div>`:'')+(prox?`<div class="am">${esc(tk)} não tem histórico gratuito: os candles são montados só com o preço do Profit desde que o app recebeu as cotações (deixe esta tela aberta para o gráfico ir crescendo).</div>`:`<div>Histórico: Yahoo Finance (com atraso de ~15 min). Candles com borda branca: montados agora com o preço do Profit, em tempo real.</div>`)+(lin.length?'<div>Linhas: seus trades abertos e o sinal do radar de hoje.</div>':'');
+}
+function lvgAbre(tk){
+  LVG.tk=tk;LVG.sel=null;LVG.hist=null;LVG.meta=null;const ant=document.getElementById('lvg');if(ant)ant.remove();
+  const ov=document.createElement('div');ov.id='lvg';ov.dataset.noswipe=1;
+  ov.innerHTML=`<div class="fx-top"><button class="btn s ib" data-lvgx="1" aria-label="Fechar">✕</button><div style="flex:1;text-align:center"><b>${esc(tk)}</b><div class="lvg-px sm"></div></div><button class="btn s" data-lvgtv="1">TV</button></div>
+  <div class="seg lvg-tf">${Object.keys(LVG_TF).map(k=>`<button class="${LVG.tf===k?'on':''}" data-lvgtf="${k}">${LVG_NOME[k]}</button>`).join('')}</div>
+  <div class="lvg-ohlc"></div><div class="lvg-cv"></div><div class="lvg-nota sm mut"></div>`;
+  document.body.appendChild(ov);document.body.style.overflow='hidden';lvgDesenha();lvgCarrega();
+}
+function lvgFecha(){const o=document.getElementById('lvg');if(o)o.remove();document.body.style.overflow=''}
+document.addEventListener('click',e=>{
+  const tr=e.target.closest('#lvcb tr');if(tr&&tr.querySelector('td b')){const tk=tr.querySelector('td b').textContent.replace(/[^A-Z0-9$]/gi,'').toUpperCase();if(tk){lvgAbre(tk);return}}
+  if(!document.getElementById('lvg'))return;let b;
+  if(e.target.closest('[data-lvgx]')){lvgFecha();return}
+  if((b=e.target.closest('[data-lvgtf]'))){LVG.tf=b.dataset.lvgtf;try{ls.set('diario-lvg-tf',LVG.tf)}catch(x){}LVG.sel=null;document.querySelectorAll('[data-lvgtf]').forEach(x=>x.classList.toggle('on',x===b));LVG.hist=null;lvgCarrega();return}
+  if(e.target.closest('[data-lvgtv]')){const tk=LVG.tk;lvgFecha();if(typeof tvAbre==='function')tvAbre(tk,/^[A-Z]{4}\d/.test(tk)||/^(WIN|WDO|IND|DOL)/.test(tk)?'BR':'US');return}
+  const sv=e.target.closest('.lvg-svg');if(sv){const r=sv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*360,i=Math.floor((x-+sv.dataset.pl)/+sv.dataset.cw);LVG.sel=i>=0&&i<+sv.dataset.n?i:null;lvgDesenha()}
+});
+if(typeof lvcPaint==='function'){const lc2=lvcPaint;lvcPaint=function(){lc2.apply(this,arguments);try{lvTicks();if(document.getElementById('lvg'))lvgDesenha()}catch(e){}}}
+{const vl1=vLive;vLive=function(){return vl1.apply(this,arguments).replace('<div class="mut sm">Atualiza a cada ~3 s','<div class="mut sm">📈 Toque num ativo para ver o gráfico (histórico + candle do Profit em tempo real). Atualiza a cada ~3 s')}}
+(function(){const st=document.createElement('style');st.textContent=`
+#lvg{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));overflow:auto}
+#lvg .fx-top{display:flex;align-items:center;gap:8px}.lvg-tf{margin:8px 0}.lvg-ohlc{min-height:18px;margin:2px 0 4px;font-variant-numeric:tabular-nums}
+.lvg-svg{width:100%;height:auto;display:block;background:color-mix(in srgb,var(--tx,#fff) 3%,transparent);border-radius:10px}.lvg-nota{margin-top:8px;display:grid;gap:4px;line-height:1.4}
+#lvcb tr{cursor:pointer}`;document.head.appendChild(st)})();
 /* ---------- 17. Notificações: abertura dos mercados e stop/alvo dos trades abertos ---------- */
 /** Abertura de Nova York em Brasília (9h30 de lá): 10:30 no horário de verão americano, 11:30 fora dele. */
 function nyAbreBR(d){try{const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',timeZoneName:'shortOffset'}).formatToParts(new Date((d||loc().slice(0,10))+'T15:00:00Z')),m=/GMT([+-]\d+)/.exec((p.find(x=>x.type==='timeZoneName')||{}).value||''),o=m?+m[1]:-5,mi=570+(-3-o)*60;return String(Math.floor(mi/60)).padStart(2,'0')+':'+String(mi%60).padStart(2,'0')}catch(e){return '10:30'}}
