@@ -4708,6 +4708,30 @@ function diaRuim(k){try{const N=mentorNota(k);return !!(N&&N.ruim)}catch(e){retu
 {const dh0=disHtml;disHtml=function(){let h=dh0();try{const N=mentorNota(D);if(N&&N.ruim)h+=`<div class="trv-top" style="margin-top:8px">🚩 <b>Dia ruim:</b> ${esc(N.f.join(' · '))}.</div>`}catch(e){}return h}}
 /* a cada tela: marca a trava, vigia trades lançados depois dela e sincroniza com o servidor das notificações */
 {const bk1=bkBanner;bkBanner=function(){bk1();try{const E=travaEstado();trvMarca(E);trvVigia();clearTimeout(bkBanner._s);bkBanner._s=setTimeout(()=>{try{turnoPushSync(false)}catch(e){}},3000)}catch(e){}}}
+/* ---------- 22. Pontos para observar: as anotações dos trades (B3 e Forex) aparecem no Meu dia ---------- */
+/** Anotações escritas nos trades dos últimos `dias` dias até o dia D (as automáticas do radar ficam de fora). */
+function notasTrades(ate,dias){
+  const de=diasMais(ate,-dias),vis=new Set((S.ax||{}).notaVista||[]),out=[],ok=n=>{n=String(n||'').trim();return n&&!/^Radar \d/.test(n)?n:''};
+  S.trades.forEach(t=>{const n=ok(t.nota),d=String(t.dtx||t.dt||'').slice(0,10);if(!n||d<de||d>ate||vis.has(t.id))return;const c=calc(t);
+    out.push({id:t.id,d,h:String(t.dtx||t.dt).slice(11,16),a:t.ativo||'—',lado:t.side==='V'?'Venda':'Compra',pl:c.pl,mo:moedaT(t),n,err:t.err&&t.err!=='Nenhum'?t.err:''})});
+  (S.ops||[]).forEach(o=>{const n=ok(o.nota),d=String(o.dtx||o.dt||'').slice(0,10);if(!n||d<de||d>ate||vis.has('fx:'+o.id))return;
+    out.push({id:'fx:'+o.id,d,h:String(o.dtx||o.dt).slice(11,16),a:o.s||'Forex',lado:o.side==='V'?'Venda':'Compra',pl:o.st==='closed'&&o.res!==''&&o.res!=null?+o.res:null,mo:'USD',n,err:''})});
+  return out.sort((a,b)=>(b.d+b.h).localeCompare(a.d+a.h));
+}
+function notasHtml(){
+  const L=notasTrades(D,10);if(!L.length)return '';
+  const dd=d=>new Date(d+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+  return `<div class="card nt-obs" style="margin-top:8px"><div class="top"><span class="sm mut">📌 Pontos para observar · das anotações dos seus trades</span><span class="sm mut">${L.length}</span></div>
+  ${L.slice(0,6).map(x=>`<div class="nt-it"><div class="sm"><b>${esc(x.a)}</b> · ${x.lado} · ${dd(x.d)}${x.h?' '+x.h:''}${x.pl!=null?` · <span class="${x.pl>=0?'g':'r'}">${mnyC(x.pl,x.mo)}</span>`:''}${x.err?` · <span class="am">${esc(x.err)}</span>`:''}</div>
+  <div class="nt-tx">“${esc(x.n)}”</div><button class="btn s nt-ok" data-ntok="${esc(x.id)}">✓ Já absorvi</button></div>`).join('')}
+  ${L.length>6?`<div class="sm mut">+ ${L.length-6} anotação(ões) mais antigas nos últimos 10 dias.</div>`:''}
+  <div class="sm mut" style="margin-top:4px">Releia antes de operar. Marque “Já absorvi” quando virar regra ou não precisar mais lembrar.</div></div>`;
+}
+{const ll0=lastLesson;lastLesson=function(){let h='';try{h=ll0()}catch(e){}try{h+=notasHtml()}catch(e){}return h}}
+/* fica na Preparação (logo depois do cartão do debriefing), para reler antes de operar */
+(function(){const r1=render0;render0=function(){r1.apply(this,arguments);try{const c=document.querySelector('#app .nt-obs'),pre=document.querySelector('#app .dfase[data-fase="pre"]');if(c&&pre&&!pre.contains(c))pre.append(c)}catch(e){}}})();
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ntok]');if(!b)return;(S.ax??={}).notaVista=((S.ax||{}).notaVista||[]).concat(b.dataset.ntok).slice(-1000);save();render()});
+(function(){const st=document.createElement('style');st.textContent=`.nt-it{padding:8px 0;border-top:1px solid var(--bd)}.nt-it:first-of-type{border-top:0}.nt-tx{margin:4px 0 6px;line-height:1.45}.nt-ok{font-size:13px;padding:4px 10px}`;document.head.appendChild(st)})();
 /* ---------- 17. Notificações: abertura dos mercados e stop/alvo dos trades abertos ---------- */
 /** Abertura de Nova York em Brasília (9h30 de lá): 10:30 no horário de verão americano, 11:30 fora dele. */
 function nyAbreBR(d){try{const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',timeZoneName:'shortOffset'}).formatToParts(new Date((d||loc().slice(0,10))+'T15:00:00Z')),m=/GMT([+-]\d+)/.exec((p.find(x=>x.type==='timeZoneName')||{}).value||''),o=m?+m[1]:-5,mi=570+(-3-o)*60;return String(Math.floor(mi/60)).padStart(2,'0')+':'+String(mi%60).padStart(2,'0')}catch(e){return '10:30'}}
