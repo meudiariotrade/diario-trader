@@ -3107,7 +3107,7 @@ document.addEventListener('click',()=>setTimeout(()=>{try{navPinta()}catch(e){}}
 })();
 /* ==== VISUAL:FIM ==== */
 /* ==== MENU:INICIO ==== menu enxuto: 6 áreas, cada uma com abas internas */
-const HUB_M=[['mercado:ag','Agenda'],['mercado:nt','Notícias'],['mercado:cot','Cotações'],['juros','Juros e DI'],['live','Ao vivo'],['graf','Gráficos'],['mercado:al','Alertas']];
+const HUB_M=[['mercado:mu','Mundo'],['mercado:ag','Agenda'],['mercado:nt','Notícias'],['mercado:se','Sentimento'],['mercado:cot','Cotações'],['juros','Juros e DI'],['live','Ao vivo'],['graf','Gráficos'],['mercado:al','Alertas']];
 const HUB_D=[['dia','Meu dia'],['regras','Regras']];
 function hubSeg(L,cur){return `<div class="seg hub" style="margin:2px 0 12px">${L.map(([k,l])=>`<button class="${k===cur?'on':''}" data-hub="${k}">${l}</button>`).join('')}</div>`}
 function segM(cur){return hubSeg(HUB_M,cur)}
@@ -3676,6 +3676,7 @@ const MESA_PRESETS={
   mide:{nome:'MIDE Exame Arrojado',moeda:'BRL',fonte:'b3',capital:0,meta:2400,perdaDia:0,perdaTotal:3300,dd:'fixo',trava:0,consist:0,capDia:50,diasMin:5,diasTipo:'op',prazo:0,pregao:0,contratos:20,obs:'Sem stop diário no exame, mas o resultado de cada dia conta no máximo 50% da meta.'},
   euroinv:{nome:'Euro Invest Júnior',moeda:'BRL',fonte:'b3',capital:0,meta:1400,perdaDia:0,perdaTotal:2835,dd:'fixo',trava:0,consist:40,capDia:0,diasMin:5,diasTipo:'pos',prazo:0,pregao:0,contratos:10,obs:'Conta turbinada.'},
   fpips:{nome:'FundingPips 50k',moeda:'USD',fonte:'fx',capital:50000,meta:0,perdaDia:1500,perdaTotal:2500,dd:'fixo',trava:0,consist:15,capDia:0,diasMin:7,diasTipo:'pos',prazo:0,pregao:0,contratos:0,obs:'Perda máxima 5% e diária 3%. Preencha a meta da fase.'},
+  lvl50:{nome:'LVL Funding CME 50k',moeda:'USD',fonte:'usd',capital:50000,meta:1800,perdaDia:0,perdaTotal:1500,dd:'eod',trava:0,consist:0,capDia:0,diasMin:0,diasTipo:'pos',prazo:0,pregao:0,cme:1,contratos:2,obs:'Futuros CME na Black Arrow Plus. Até 2 minis, 20 micros ou 100 nanos (o app converte micros e nanos em minis). Perda máxima de US$ 1.500 com drawdown no fechamento do dia, no teste e na conta funded. Sem perda diária, sem prazo, sem regra de mediana e sem restrição de notícias ou abertura. Repasse de 90%.'},
   custom:{nome:'Minha mesa',moeda:'BRL',fonte:'b3',capital:0,meta:0,perdaDia:0,perdaTotal:0,dd:'fixo',trava:0,consist:0,capDia:0,diasMin:0,diasTipo:'pos',prazo:0,pregao:0,contratos:0,obs:''},
 };
 function mesaCfg(){
@@ -3684,17 +3685,22 @@ function mesaCfg(){
   return null;
 }
 const mesaSalva=c=>{delete c._antigo;(S.ax??={}).mesa=c;save()};
-const mesaDia=(dt,pregao)=>{const d=String(dt).slice(0,10),h=+String(dt).slice(11,13)||0;return pregao>0&&h>=pregao?diasMais(d,1):d};
+/* pregão da CME: abre às 18h de Nova York = 19h de Brasília no horário de verão americano e 20h fora dele */
+function cmeAbreBR(d){try{const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',timeZoneName:'shortOffset'}).formatToParts(new Date(d+'T15:00:00Z')),m=/GMT([+-]\d+)/.exec((p.find(x=>x.type==='timeZoneName')||{}).value||'');return 18+(-3-(m?+m[1]:-5))}catch(e){return 19}}
+const mesaDia=(dt,pregao,cme)=>{const d=String(dt).slice(0,10),h=+String(dt).slice(11,13)||0,h0=cme?cmeAbreBR(d):pregao;return h0>0&&h>=h0?diasMais(d,1):d};
+/* micros e nanos convertidos em minis (2 minis = 20 micros = 100 nanos) */
+const MESA_MICRO=/^(MES|MNQ|MYM|M2K|MGC|MCL|MBT|MET|MHG|SIL|M6E|M6A|M6B|MJY|MSF|MCD|MIR|MNG|MTN|M10|M2Y|MWN|QI|QO)/;
+const mesaQtd=(a,q)=>{if(q==null)return null;const A=String(a||'').toUpperCase();return /^(NANO|NQN|ESN|N[A-Z]{1,3}N)/.test(A)||/NANO/.test(A)?q/50:MESA_MICRO.test(A)?q/10:q};
 function mesaItens(c){
   const pre=String(c.ativos||'').toUpperCase().split(/[\s,;]+/).filter(Boolean),okA=a=>!pre.length||pre.some(p=>String(a||'').toUpperCase().startsWith(p));
   let it=[];
   if(c.fonte==='fx')it=lcItems().map(x=>({d:x.d,t:x.d+'T12:00',v:x.v,q:null}));
-  else it=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&moedaT(t)===(c.fonte==='usd'?'USD':'BRL')&&okA(t.ativo)).map(t=>({d:mesaDia(t.dtx||t.dt,+c.pregao||0),t:t.dtx||t.dt,v:t.c.pl,q:numN(t.qty),a:t.ativo}));
+  else it=S.trades.map(t=>({...t,c:calc(t)})).filter(t=>t.c.pl!=null&&moedaT(t)===(c.fonte==='usd'?'USD':'BRL')&&okA(t.ativo)).map(t=>({d:mesaDia(t.dtx||t.dt,+c.pregao||0,c.cme),t:t.dtx||t.dt,v:t.c.pl,q:c.fonte==='usd'?mesaQtd(t.ativo,numN(t.qty)):numN(t.qty),a:t.ativo}));
   if(c.inicio)it=it.filter(x=>x.d>=c.inicio);
   return it.sort((a,b)=>a.t.localeCompare(b.t));
 }
 function mesaCalc(c,agora){
-  const it=mesaItens(c),pt=+c.perdaTotal||0,pd=+c.perdaDia||0,meta=+c.meta||0,hoje=mesaDia(agora||loc().slice(0,16),+c.pregao||0);
+  const it=mesaItens(c),pt=+c.perdaTotal||0,pd=+c.perdaDia||0,meta=+c.meta||0,hoje=mesaDia(agora||loc().slice(0,16),+c.pregao||0,c.cme);
   const dias={};it.forEach(x=>{dias[x.d]=(dias[x.d]||0)+x.v});const ks=Object.keys(dias).sort();
   const pisoDe=pk=>!pt?-Infinity:c.dd==='fixo'?-pt:(c.trava?Math.min(pk-pt,0):pk-pt);
   let eq=0,pk=0,quebra=null,diaQ=null;
@@ -3739,7 +3745,7 @@ function vMesa(){
   const al=[];
   if(M.cap&&M.ks.some(d=>M.dias[d]>M.cap))al.push(`Em ${M.ks.filter(d=>M.dias[d]>M.cap).length} dia(s) o ganho passou de ${F(M.cap)} (${c.capDia}% da meta): o excedente não conta para a meta.`);
   if(M.consOk===false)al.push(`Consistência: o maior dia (${F(M.maior)}) é ${pct0(M.cons)} do lucro. O limite é ${c.consist}%: o lucro total precisa chegar a ${F(M.precisaTotal)}.`);
-  if(M.acima)al.push(`${M.acima} trade(s) com mais de ${c.contratos} contrato(s).`);
+  if(M.acima)al.push(`${M.acima} trade(s) com mais de ${c.contratos} contrato(s)${c.fonte==='usd'?' em minis (10 micros ou 50 nanos = 1 mini)':''}.`);
   if(M.plHoje>0&&M.ganhoMaxHoje&&M.plHoje>=M.ganhoMaxHoje*.9)al.push(`Hoje você já ganhou ${F(M.plHoje)}: perto do máximo recomendado para o dia (${F(M.ganhoMaxHoje)}). Pense em parar.`);
   const last=M.ks.slice(-15).reverse();let ac=M.saldo;const saldoAte={};[...M.ks].reverse().forEach(d=>{saldoAte[d]=ac;ac-=M.dias[d]});
   const f=(k,l,tp='number',extra='')=>`<label>${l}<input type="${tp}" ${tp==='number'?'step="any" inputmode="decimal"':''} data-ms="${k}" value="${esc(c[k]??'')}" ${extra}></label>`;
@@ -3765,7 +3771,8 @@ ${c.obs?`<div class="sm mut" style="margin:8px 0">${esc(c.obs)}</div>`:''}<div c
 ${c.dd!=='fixo'?`<label class="ck"><input type="checkbox" data-ms="trava"${c.trava?' checked':''}><span>A perda móvel para de subir no saldo inicial</span></label>`:''}
 <div class="g2">${f('consist','Consistência: maior dia ≤ % do lucro')}${f('capDia','Ganho do dia conta até % da meta')}</div>
 <div class="g2">${f('diasMin','Dias mínimos')}<label>Contar dias<select data-ms="diasTipo">${opt([['pos','Positivos'],['op','Operados']],c.diasTipo)}</select></label></div>
-<div class="g3">${f('prazo','Prazo (dias)')}${f('pregao','Pregão começa às (h)')}${f('contratos','Máx. contratos')}</div></div>`;
+<div class="g3">${f('prazo','Prazo (dias)')}${c.cme?`<label>Pregão começa às<input disabled value="${cmeAbreBR(loc().slice(0,10))}h (CME)"></label>`:f('pregao','Pregão começa às (h)')}${f('contratos',c.fonte==='usd'?'Máx. contratos (em minis)':'Máx. contratos')}</div>
+<label class="ck"><input type="checkbox" data-ms="cme"${c.cme?' checked':''}><span>Pregão da CME: o dia vira às 18h de Nova York (19h de Brasília no horário de verão americano, 20h fora dele), ajustado sozinho</span></label></div>`;
 }
 (function(){
   document.addEventListener('click',e=>{const b=e.target.closest('[data-msp]');if(!b)return;const c0=mesaCfg(),p=MESA_PRESETS[b.dataset.msp];
@@ -4827,6 +4834,184 @@ if(typeof lvcPaint==='function'){const lc2=lvcPaint;lvcPaint=function(){lc2.appl
 #lvg .fx-top{display:flex;align-items:center;gap:8px}.lvg-tf{margin:8px 0}.lvg-ohlc{min-height:18px;margin:2px 0 4px;font-variant-numeric:tabular-nums}
 .lvg-svg{width:100%;height:auto;display:block;background:color-mix(in srgb,var(--tx,#fff) 3%,transparent);border-radius:10px}.lvg-nota{margin-top:8px;display:grid;gap:4px;line-height:1.4}
 #lvcb tr{cursor:pointer}`;document.head.appendChild(st)})();
+/* ---------- 24. Sentimento: Medo e Ganância da B3, dos EUA e das criptos (função "sentimento") ---------- */
+const SNT={v:(()=>{try{return ls.get('diario-snt')||null}catch(e){return null}})(),ts:0,busy:0,err:'',ab:null};
+async function sntCarrega(force){
+  if(SNT.busy||(!force&&SNT.v&&Date.now()-SNT.ts<10*60000))return;const c=cfg();if(!c){SNT.err='Configure o Supabase na aba Conta.';sntPaint();return}
+  SNT.busy=1;SNT.err='';sntPaint();
+  try{const r=await fetch(c.url+'/functions/v1/sentimento',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:'{}'});const j=await r.json();
+    if(!r.ok)throw new Error(r.status===404?'Função "sentimento" não encontrada: publique-a no Supabase.':(j.error||'Erro '+r.status));SNT.v=j;SNT.ts=Date.now();try{ls.set('diario-snt',j)}catch(e){}}
+  catch(e){SNT.err=String(e.message||e)}
+  SNT.busy=0;sntPaint();
+}
+const sntCor=v=>v==null?'#64748b':v<25?'#dc2626':v<45?'#f97316':v<=55?'#eab308':v<=75?'#84cc16':'#16a34a';
+function sntGauge(v){
+  const W=220,H=134,cx=110,cy=112,R=90,pt=a=>[cx+R*Math.cos(Math.PI*(1-a)),cy-R*Math.sin(Math.PI*(1-a))],[mx,my]=pt(v==null?.5:v/100);
+  const arco=(a,b,c)=>{const[x1,y1]=pt(a),[x2,y2]=pt(b);return `<path d="M${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2}" stroke="${c}" stroke-width="16" fill="none" stroke-linecap="${a===0||b===1?'round':'butt'}"/>`};
+  return `<svg viewBox="0 0 ${W} ${H}" class="snt-g" role="img" aria-label="Medidor ${v==null?'sem dado':v}">${arco(0,.25,'#dc2626')}${arco(.25,.45,'#f97316')}${arco(.45,.55,'#eab308')}${arco(.55,.75,'#84cc16')}${arco(.75,1,'#16a34a')}
+  <circle cx="${mx}" cy="${my}" r="11" fill="var(--bg,#111)" stroke="${sntCor(v)}" stroke-width="5"/><text x="${cx}" y="${cy-18}" text-anchor="middle" font-size="40" font-weight="800" fill="var(--tx,#fff)">${v==null?'–':v}</text>
+  <text x="${cx-R}" y="${cy+20}" text-anchor="middle" font-size="10" fill="var(--mut,#94a3b8)">0</text><text x="${cx+R}" y="${cy+20}" text-anchor="middle" font-size="10" fill="var(--mut,#94a3b8)">100</text></svg>`;
+}
+function sntSpark(h){
+  const p=(h||[]).filter(x=>x.v!=null);if(p.length<2)return '';const W=300,H=46;
+  const X=i=>i/(p.length-1)*W,Y=v=>H-4-v/100*(H-8);
+  return `<svg viewBox="0 0 ${W} ${H}" class="snt-sp" preserveAspectRatio="none"><line x1="0" x2="${W}" y1="${Y(50)}" y2="${Y(50)}" stroke="var(--bd)" stroke-dasharray="3 3"/><polyline points="${p.map((x,i)=>X(i)+','+Y(x.v)).join(' ')}" fill="none" stroke="${sntCor(p[p.length-1].v)}" stroke-width="2"/></svg>`;
+}
+/** O que o mentor faz com o número: os extremos são sinais contrários, não gatilhos de entrada. */
+function sntLeitura(v,k){
+  if(v==null)return '';
+  const m=k==='cripto'?'cripto':k==='eua'?'bolsa americana':'bolsa brasileira';
+  return v<25?`Medo extremo na ${m}: quando todo mundo está vendendo, as quedas tendem a ficar exageradas. Não é sinal de compra sozinho: espere o seu setup confirmar e reduza a mão (a volatilidade está alta).`
+    :v<45?`Medo na ${m}: o mercado está defensivo. Favoreça operações a favor da tendência curta e stops técnicos bem definidos.`
+    :v<=55?`Neutro: o sentimento não ajuda nem atrapalha. Vale o seu plano e o gráfico.`
+    :v<=75?`Ganância na ${m}: tendência de alta costuma continuar, mas pullbacks ficam mais rasos. Cuidado com entradas atrasadas em rompimentos esticados.`
+    :`Ganância extrema na ${m}: euforia. Proteja lucros, não aumente a mão no topo e desconfie de rompimentos sem volume.`;
+}
+function sntCard(k,tit,x){
+  if(!x)return `<div class="card snt"><b>${tit}</b><div class="sm mut" style="margin-top:6px">Sem dados agora.</div></div>`;
+  const ab=SNT.ab===k,dl=(a,b)=>a==null||b==null?'':`<span class="${a-b>=0?'g':'r'}">${a-b>=0?'+':''}${a-b}</span>`;
+  const d=x.data?x.data.split('-').reverse().slice(0,2).join('/'):'';
+  return `<div class="card snt" data-sntab="${k}"><div class="top"><b>${tit}</b><span class="sm mut">${d}</span></div>
+  <div class="snt-wrap">${sntGauge(x.valor)}<div class="snt-rot" style="color:${sntCor(x.valor)}">${esc(x.rotulo||'')}</div></div>
+  <div class="snt-cmp sm"><span>Ontem <b>${x.ontem??'–'}</b> ${dl(x.valor,x.ontem)}</span><span>Semana <b>${x.semana??'–'}</b></span><span>Mês <b>${x.mes??'–'}</b></span></div>
+  ${sntSpark(x.hist)}<div class="sm mut" style="text-align:right">últimos 30 dias</div>
+  <div class="sm snt-lei">${esc(sntLeitura(x.valor,k))}</div>
+  ${ab&&x.componentes&&x.componentes.length?`<div class="snt-comps">${x.componentes.map(c=>`<div class="snt-c"><div class="sm">${esc(c.nome)}</div><div class="snt-bar"><i style="width:${c.nota==null?0:c.nota}%;background:${sntCor(c.nota)}"></i></div><div class="sm mut">${c.nota==null?'sem dado':c.nota+' · '+esc(c.leitura)}</div></div>`).join('')}</div>`:x.componentes&&x.componentes.length?'<div class="sm mut">Toque para ver o que compõe o índice.</div>':''}
+  <div class="sm mut snt-fonte">Fonte: ${esc(x.fonte||'')}</div></div>`;
+}
+function vSent(tabs){
+  const v=SNT.v||{};
+  return `<div class="card"><div class="top"><b>Medo e Ganância</b><button class="btn s" data-snt="rf">${SNT.busy?'…':'↻ Atualizar'}</button></div>${tabs||''}<div class="sm mut">Termômetro do humor do mercado de 0 (medo extremo) a 100 (ganância extrema). Use como contexto: os extremos costumam marcar exageros.</div>${SNT.err?`<div class="sm r" style="margin-top:6px">${esc(SNT.err)}</div>`:''}</div>
+  <div id="sntbox">${sntCard('b3','🇧🇷 B3',v.b3)}${sntCard('eua','🇺🇸 EUA',v.eua)}${sntCard('cripto','₿ Cripto',v.cripto)}</div>
+  ${v.gerado?`<div class="sm mut">Atualizado às ${hm(Date.parse(v.gerado))}. B3: índice calculado pelo app (não existe um índice oficial da B3). Cripto: dados de alternative.me.</div>`:''}`;
+}
+function sntPaint(){if(tab!=='mercado'||MKT.tab!=='se')return;render()}
+{const vm0=vMercado;vMercado=function(){if(MKT.tab!=='se')return vm0.apply(this,arguments);setTimeout(()=>sntCarrega(),0);
+  const t=MKT.tab,tabs='<div class="seg mk-seg" style="margin:10px 0">'+mkBtn('tab','ag','Agenda',t==='ag')+mkBtn('tab','nt','Notícias',t==='nt')+mkBtn('tab','cot','Cotações',t==='cot')+mkBtn('tab','se','Sentimento',t==='se')+mkBtn('tab','al','Alertas',t==='al')+'</div>';
+  return vSent(tabs)}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-snt="rf"]');if(b){sntCarrega(true);return}const c=e.target.closest('[data-sntab]');if(c&&!e.target.closest('a,button')){SNT.ab=SNT.ab===c.dataset.sntab?null:c.dataset.sntab;render()}});
+(function(){const st=document.createElement('style');st.textContent=`
+.snt{margin-top:10px}.snt-wrap{position:relative;display:flex;flex-direction:column;align-items:center}.snt-g{width:100%;max-width:300px;height:auto;display:block}.snt-rot{font-weight:800;font-size:18px;margin-top:-6px}
+.snt-cmp{display:flex;justify-content:space-around;gap:6px;margin:8px 0 4px;font-variant-numeric:tabular-nums}.snt-sp{width:100%;height:46px;display:block}
+.snt-lei{margin-top:6px;line-height:1.45}.snt-comps{display:grid;gap:8px;margin-top:8px}.snt-bar{height:6px;border-radius:4px;background:var(--bd);overflow:hidden;margin:3px 0}.snt-bar i{display:block;height:100%}.snt-fonte{margin-top:6px}
+`;document.head.appendChild(st)})();
+/* ---------- 26. Mundo: o que é cada indicador, o peso no seu mercado e o que acontece se vier acima ou abaixo ---------- */
+/* p = peso no seu mercado (3 alto, 2 médio, 1 baixo); m = o que mexe; s = se sobe/vem acima; b = se cai/vem abaixo */
+const MDO_INFO={
+  '^BVSP':{o:'Principal índice da B3: carteira com as ações mais negociadas do Brasil.',p:3,m:'Ibovespa e WIN',s:'O mini índice (WIN) acompanha. Fluxo comprador; tendência de alta favorece compras em pullback.',b:'WIN cai junto. Aversão a risco local; tendência de baixa favorece vendas em repique.'},
+  '^GSPC':{o:'As 500 maiores empresas dos EUA. Termômetro do apetite por risco no mundo.',p:3,m:'Ibovespa, WIN e dólar',s:'Apetite por risco: estrangeiro compra emergentes, Ibovespa tende a subir e o dólar a cair.',b:'Aversão a risco: estrangeiro sai de emergentes, Ibovespa pressionado e dólar (WDO) sobe.'},
+  '^IXIC':{o:'Bolsa de tecnologia dos EUA. Muito sensível aos juros americanos.',p:2,m:'Humor global',s:'Juros americanos aliviando e apetite por risco: ajuda o humor das bolsas.',b:'Geralmente juros americanos subindo: pesa em bolsas e emergentes.'},
+  '^DJI':{o:'As 30 maiores empresas tradicionais dos EUA.',p:1,m:'Humor global',s:'Confirma apetite por risco quando acompanha o S&P.',b:'Confirma aversão a risco quando acompanha o S&P.'},
+  '^GDAXI':{o:'Bolsa da Alemanha. A Europa abre antes do Brasil e mostra o humor da manhã.',p:2,m:'Abertura da B3',s:'Manhã positiva lá fora: abertura da B3 tende a ser melhor.',b:'Manhã negativa: abertura da B3 tende a ser pressionada.'},
+  '^FTSE':{o:'Bolsa de Londres, cheia de mineradoras e petroleiras.',p:1,m:'Commodities',s:'Commodities fortes: ajuda VALE e PETR.',b:'Commodities fracas: pesa em VALE e PETR.'},
+  '^STOXX50E':{o:'As 50 maiores empresas da zona do euro.',p:2,m:'Abertura da B3',s:'Humor europeu positivo antes da abertura.',b:'Humor europeu negativo antes da abertura.'},
+  '^N225':{o:'Bolsa do Japão. Fecha antes da B3 abrir.',p:1,m:'Humor asiático',s:'Ásia positiva na madrugada.',b:'Ásia negativa; queda forte com iene subindo indica aversão a risco global.'},
+  '^HSI':{o:'Bolsa de Hong Kong, a vitrine da China para o mundo.',p:2,m:'Minério, VALE e siderúrgicas',s:'China melhor: mais demanda por minério e aço, bom para VALE3 e siderúrgicas.',b:'China pior: pesa em minério, VALE3 e siderúrgicas.'},
+  '000001.SS':{o:'Bolsa de Xangai (China continental). Reage a estímulos do governo chinês.',p:2,m:'Minério e commodities',s:'Estímulo ou otimismo com a China: bom para commodities e para a B3.',b:'Pessimismo com a China: ruim para commodities.'},
+  'ES=F':{o:'Contrato futuro do S&P 500. Negocia quase 24h e mostra como Nova York deve abrir.',p:3,m:'Abertura da B3 e WIN',s:'Antes das 10h: indica abertura mais positiva para o WIN.',b:'Antes das 10h: indica abertura pressionada para o WIN.'},
+  'NQ=F':{o:'Contrato futuro da Nasdaq. Mostra o humor com tecnologia e juros antes de NY abrir.',p:2,m:'Humor global',s:'Apetite por risco na madrugada.',b:'Aversão a risco na madrugada.'},
+  'EWZ':{o:'Fundo de ações brasileiras negociado em Nova York, em dólar. Mostra o que o estrangeiro fez com o Brasil.',p:3,m:'Abertura do Ibovespa e WIN',s:'Estrangeiro comprando Brasil: abertura tende a ser positiva.',b:'Estrangeiro vendendo Brasil: abertura tende a ser negativa.'},
+  'BRL=X':{o:'Quantos reais custa um dólar (dólar à vista).',p:3,m:'WDO, Ibovespa e exportadoras',s:'Real se desvalorizando: WDO sobe; costuma vir com Ibovespa caindo. Exportadoras (VALE, SUZB, EMBR) se beneficiam.',b:'Real se valorizando: WDO cai; bom para o Ibovespa, varejo e aéreas.'},
+  'DX-Y.NYB':{o:'Índice do dólar contra seis moedas fortes (euro, iene, libra e outras).',p:3,m:'WDO e emergentes',s:'Dólar forte no mundo: pressiona moedas emergentes (WDO tende a subir) e as bolsas emergentes.',b:'Dólar fraco no mundo: alívio para o real e para a B3.'},
+  'EURUSD=X':{o:'Euro contra dólar. É o maior peso do DXY e anda ao contrário dele.',p:2,m:'Dólar global',s:'Dólar enfraquecendo no mundo: bom para emergentes.',b:'Dólar se fortalecendo no mundo: ruim para emergentes.'},
+  'JPY=X':{o:'Quantos ienes custa um dólar.',p:2,m:'Apetite por risco global',s:'Iene fraco: ambiente de apetite por risco (operações de carry trade).',b:'Queda forte = iene se valorizando: desmonte de carry trade e aversão a risco global, ruim para emergentes.'},
+  'GBPUSD=X':{o:'Libra esterlina contra dólar.',p:1,m:'Dólar global',s:'Dólar mais fraco no mundo.',b:'Dólar mais forte no mundo.'},
+  'AUDUSD=X':{o:'Dólar australiano: moeda ligada a commodities e à China.',p:2,m:'Minério e VALE',s:'Commodities e China fortes: bom para VALE3.',b:'Commodities e China fracas: ruim para VALE3.'},
+  'CNY=X':{o:'Quantos yuans custa um dólar.',p:2,m:'Commodities',s:'Yuan se desvalorizando: sinal de economia chinesa fraca, ruim para commodities.',b:'Yuan se valorizando: China mais forte, bom para commodities.'},
+  'MXN=X':{o:'Peso mexicano contra dólar: a moeda emergente que mais anda junto com o real.',p:2,m:'WDO',s:'Emergentes sob pressão: o real tende a acompanhar (WDO sobe).',b:'Alívio para emergentes: o real tende a acompanhar (WDO cai).'},
+  'BZ=F':{o:'Petróleo Brent, a referência de preço da Petrobras.',p:3,m:'PETR4, PRIO3 e inflação',s:'PETR4 e PRIO3 sobem (peso grande no Ibovespa). Também pressiona a inflação e os juros futuros.',b:'Petroleiras caem; alívio para a inflação.'},
+  'CL=F':{o:'Petróleo WTI, a referência americana.',p:2,m:'Petroleiras',s:'Mesma lógica do Brent: bom para petroleiras.',b:'Ruim para petroleiras; alívio para a inflação.'},
+  'TIO=F':{o:'Minério de ferro, o principal produto da Vale (uma das maiores ações do Ibovespa).',p:3,m:'VALE3, CSNA3, GGBR4 e CMIN3',s:'VALE3 e siderúrgicas sobem e ajudam o Ibovespa.',b:'VALE3 e siderúrgicas caem e pesam no Ibovespa.'},
+  'GC=F':{o:'Ouro: proteção em momentos de medo e contra o dólar.',p:1,m:'Sentimento',s:'Alta forte: medo no mercado ou dólar fraco.',b:'Queda: apetite por risco.'},
+  'SI=F':{o:'Prata: metal de proteção e de uso industrial.',p:1,m:'Sentimento',s:'Segue o ouro, com mais volatilidade.',b:'Segue o ouro, com mais volatilidade.'},
+  'HG=F':{o:'Cobre, o "Dr. Copper": termômetro do crescimento da economia global.',p:2,m:'Emergentes e commodities',s:'Expectativa de crescimento global: bom para emergentes.',b:'Expectativa de desaceleração global.'},
+  'ZS=F':{o:'Soja: o principal produto do agronegócio brasileiro.',p:1,m:'Agro e real',s:'Mais dólares entrando no Brasil (real mais forte) e bom para o agro (SLCE3).',b:'Menos dólares entrando; ruim para o agro.'},
+  'ZC=F':{o:'Milho.',p:1,m:'Inflação de alimentos',s:'Pressiona a inflação de alimentos.',b:'Alivia a inflação de alimentos.'},
+  'KC=F':{o:'Café: o Brasil é o maior produtor do mundo.',p:1,m:'Agro e inflação',s:'Bom para exportadores; pressiona a inflação.',b:'Ruim para exportadores; alivia a inflação.'},
+  '^TNX':{o:'Juro dos títulos de 10 anos do governo americano: o "preço do dinheiro" no mundo.',p:3,m:'Dólar, DI e bolsas',s:'Dinheiro volta para os EUA: dólar sobe, DI sobe, bolsas (principalmente emergentes e tecnologia) caem.',b:'Alívio: bom para bolsas e emergentes; dólar e DI tendem a cair.'},
+  '^FVX':{o:'Juro dos títulos de 5 anos dos EUA: mostra o que o mercado espera do Fed.',p:2,m:'Dólar e juros',s:'Mercado espera Fed mais duro: dólar forte.',b:'Mercado espera cortes do Fed: alívio para emergentes.'},
+  'BTC-USD':{o:'Bitcoin: termômetro do apetite por risco especulativo.',p:1,m:'Sentimento (HASH11)',s:'Apetite por risco alto.',b:'Aversão a risco; quedas fortes às vezes antecipam estresse.'},
+  'ETH-USD':{o:'Ethereum, a segunda maior cripto.',p:1,m:'Sentimento',s:'Apetite por risco.',b:'Aversão a risco.'},
+  'Selic meta':{o:'Taxa básica de juros, definida pelo Copom a cada 45 dias.',p:3,m:'DI, Ibovespa e dólar',s:'Alta ou alta acima do esperado: DI sobe, bolsa cai (renda fixa fica mais atraente), real tende a se valorizar.',b:'Corte ou corte maior que o esperado: bolsa sobe (varejo, construção e bancos médios), DI cai.'},
+  'IPCA 12 meses':{o:'Inflação oficial acumulada em 12 meses (IBGE). A meta é 3%.',p:3,m:'DI e Ibovespa',s:'Acima do esperado: mais chance de juros altos por mais tempo; DI sobe e o Ibovespa cai.',b:'Abaixo do esperado: abre espaço para cortes; DI cai e a bolsa sobe.'},
+  'IPCA do mês':{o:'Inflação oficial do mês. Sai às 9h e mexe forte no DI e no WIN no dia da divulgação.',p:3,m:'DI e WIN no dia',s:'Acima do consenso: DI dispara e o WIN costuma cair logo na abertura.',b:'Abaixo do consenso: DI cai e o WIN costuma subir.'},
+  'Desemprego (PNAD)':{o:'Taxa de desocupação medida pelo IBGE (trimestre móvel).',p:2,m:'Juros e varejo',s:'Desemprego maior: economia desacelerando; ajuda a expectativa de cortes, mas pesa no varejo.',b:'Desemprego menor: economia aquecida, pressão sobre a inflação e juros altos por mais tempo.'},
+  'Dívida bruta / PIB':{o:'Tamanho da dívida do governo em relação ao PIB: o termômetro do risco fiscal.',p:2,m:'DI longo, dólar e bolsa',s:'Risco fiscal maior: DI longo sobe, real se desvaloriza e a bolsa fica pressionada.',b:'Alívio fiscal: bom para juros longos, real e bolsa.'},
+  'Atividade (IBC-Br)':{o:'Índice do Banco Central que funciona como uma "prévia do PIB" mensal.',p:2,m:'Bolsa e juros',s:'Acima do esperado: economia forte, bom para lucros das empresas, mas pressiona inflação e juros.',b:'Abaixo do esperado: desaceleração; aumenta a expectativa de cortes de juros.'},
+  'Dólar PTAX':{o:'Dólar oficial calculado pelo Banco Central (média do dia). É a referência de liquidação do WDO.',p:2,m:'WDO no vencimento',s:'Real mais fraco na média do dia.',b:'Real mais forte na média do dia.'},
+  'Focus:IPCA':{o:'Inflação que o mercado espera para o ano (pesquisa Focus do Banco Central, toda segunda).',p:3,m:'DI e Ibovespa',s:'Expectativa subindo (desancorando): Copom tende a ser mais duro; DI sobe, bolsa cai.',b:'Expectativa caindo: abre espaço para cortes de juros; bom para a bolsa.'},
+  'Focus:PIB Total':{o:'Crescimento do PIB esperado pelo mercado para o ano.',p:2,m:'Bolsa (empresas cíclicas)',s:'Mais crescimento esperado: lucros maiores, bom para cíclicas.',b:'Menos crescimento esperado: ruim para cíclicas.'},
+  'Focus:Câmbio':{o:'Dólar esperado pelo mercado para o fim do ano.',p:2,m:'WDO e inflação',s:'Real mais fraco esperado: inflação importada e pressão sobre os juros.',b:'Real mais forte esperado: alívio para a inflação.'},
+  'Focus:Selic':{o:'Selic esperada pelo mercado para o fim do ano.',p:3,m:'DI e Ibovespa',s:'Juros mais altos esperados: ruim para a bolsa.',b:'Juros mais baixos esperados: bom para a bolsa.'},
+};
+const MDO_PESO={3:['Alto','r'],2:['Médio','am'],1:['Baixo','mut']};
+/** dir: +1 subindo/acima, −1 caindo/abaixo, 0 estável. */
+function mdoInfoHtml(k,dir,agora){
+  const x=MDO_INFO[k];if(!x)return '';const[pl,pc]=MDO_PESO[x.p]||['–','mut'];
+  return `<div class="mdo-inf"><div class="sm"><b>O que é:</b> ${esc(x.o)}</div><div class="sm" style="margin-top:4px"><b>Peso no seu mercado:</b> <span class="mdo-peso ${pc}">${pl}</span> <span class="mut">· mexe com ${esc(x.m)}</span></div>
+  <div class="mdo-cen${dir>0?' on':''}"><b>▲ Se sobe ou vem acima</b><div class="sm">${esc(x.s)}</div></div><div class="mdo-cen${dir<0?' on':''}"><b>▼ Se cai ou vem abaixo</b><div class="sm">${esc(x.b)}</div></div>
+  ${agora?`<div class="sm mut">Agora: ${esc(agora)}${dir?' (cenário destacado)':''}</div>`:''}</div>`;
+}
+const MDO_AB={k:null};
+/* ---------- 25. Mundo (inspirado no Trading Economics): pré-abertura da B3, mapa do mercado e Brasil em números ---------- */
+const MDO={v:(()=>{try{return ls.get('diario-mdo')||null}catch(e){return null}})(),ts:0,busy:0,err:''};
+async function mdoCarrega(force){
+  if(MDO.busy||(!force&&MDO.v&&Date.now()-MDO.ts<5*60000))return;const c=cfg();if(!c){MDO.err='Configure o Supabase na aba Conta.';mdoPaint();return}
+  MDO.busy=1;MDO.err='';mdoPaint();
+  try{const r=await fetch(c.url+'/functions/v1/macro',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:'{}'});const j=await r.json();
+    if(!r.ok)throw new Error(r.status===404?'Função "macro" não encontrada: publique-a no Supabase.':(j.error||'Erro '+r.status));MDO.v=j;MDO.ts=Date.now();try{ls.set('diario-mdo',j)}catch(e){}}
+  catch(e){MDO.err=String(e.message||e)}
+  MDO.busy=0;mdoPaint();
+}
+const mdoN=(v,d=2)=>v==null||!isFinite(v)?'–':(+v).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const mdoPc=v=>v==null?'–':(v>0?'+':'')+mdoN(v)+'%';
+function mdoTile(x){
+  const d=x.juro?x.d1bp:x.d1,int=Math.min(1,Math.abs(d||0)/(x.juro?10:2)),bg=d==null?'transparent':d>=0?`rgba(34,197,94,${.10+int*.35})`:`rgba(239,68,68,${.10+int*.35})`;
+  const dp=x.px>1000?0:x.px>10?2:x.juro?3:4;
+  const pi=MDO_INFO[x.s],pe=pi?`<span class="mdo-pp p${pi.p}" title="Peso no seu mercado">${'●'.repeat(pi.p)}</span>`:'';
+  return `<div class="mdo-t${MDO_AB.k===x.s?' sel':''}" style="background:${bg}" data-mdoi="${esc(x.s)}"><div class="sm mdo-n">${pe}${esc(x.n)}</div><b>${mdoN(x.px,dp)}${x.juro?'%':''}</b><div class="sm"><b>${x.juro?(d>0?'+':'')+mdoN(d,1)+' pb':mdoPc(d)}</b> <span class="mut">mês ${x.juro?(x.m1bp>0?'+':'')+mdoN(x.m1bp,0)+' pb':mdoPc(x.m1)}</span></div></div>`;
+}
+function mdoPre(p){
+  if(!p)return '';
+  const cor={positivo:'var(--g)',negativo:'var(--r)',neutro:'#eab308'}[p.vies],h=new Date().getHours(),antes=h<10;
+  return `<div class="card mdo-pre" style="border-color:${cor}"><div class="top"><b>🌅 Pré-abertura da B3</b><span class="sm mut">${antes?'antes das 10h':'contexto do dia'}</span></div>
+  <div class="mdo-vies" style="color:${cor}">Viés ${esc(p.vies)} <span class="sm mut">(${p.nota>0?'+':''}${p.nota})</span></div>
+  <div class="mdo-bar"><i style="left:${50+p.nota/2}%;background:${cor}"></i></div>
+  ${p.itens.map(x=>`<div class="mdo-pi sm"><span>${esc(x.n)}</span><b class="${x.d1>=0?'g':'r'}">${mdoPc(x.d1)}</b><span class="${x.sinal>0?'g':x.sinal<0?'r':'mut'}">${esc(x.efeito)}</span></div>`).join('')}
+  <div class="sm mut" style="margin-top:6px">Contexto, não sinal: viés positivo não manda comprar na abertura. Use para calibrar a mão e saber de onde pode vir a força ou a pressão do dia.</div></div>`;
+}
+function mdoSpark(h){const p=(h||[]).filter(v=>isFinite(v));if(p.length<2)return '';const W=100,H=24,mn=Math.min(...p),mx=Math.max(...p),Y=v=>H-2-(v-mn)/((mx-mn)||1)*(H-4);return `<svg viewBox="0 0 ${W} ${H}" class="mdo-sp" preserveAspectRatio="none"><polyline points="${p.map((v,i)=>i/(p.length-1)*W+','+Y(v)).join(' ')}" fill="none" stroke="var(--ac,#3b82f6)" stroke-width="1.6"/></svg>`}
+function mdoBrasil(b){
+  if(!b||!b.ind||!b.ind.length)return '';
+  const card=x=>{const dv=x.ant!=null?x.v-x.ant:null,dp=x.un==='índice'?1:2,pi=MDO_INFO[x.nome];return `<div class="mdo-b${MDO_AB.k===x.nome?' sel':''}" data-mdoi="${esc(x.nome)}"><div class="sm mut">${pi?`<span class="mdo-pp p${pi.p}">${'●'.repeat(pi.p)}</span>`:''}${esc(x.nome)}</div><b>${mdoN(x.v,dp)}${x.un.startsWith('%')?'%':''}</b><span class="sm mut"> ${x.un.startsWith('%')?x.un.slice(1).trim():esc(x.un)}</span>
+    <div class="sm">${x.mom!=null?`<span class="${x.mom>=0?'g':'r'}">${mdoPc(x.mom)} no mês</span>${x.yoy!=null?` · <span class="${x.yoy>=0?'g':'r'}">${mdoPc(x.yoy)} em 12m</span>`:''}`:dv!=null&&Math.abs(dv)>1e-9?`<span class="mut">antes ${mdoN(x.ant,dp)}</span>`:'<span class="mut">estável</span>'}</div>
+    ${mdoSpark(x.hist)}<div class="sm mut">${esc(x.d)}</div></div>`};
+  const F=b.focus||[],anos=[...new Set(F.map(x=>x.ano))].sort(),nomes={'IPCA':'IPCA (%)','PIB Total':'PIB (%)','Câmbio':'Dólar (R$)','Selic':'Selic (%)'};
+  const cel=x=>x?`${mdoN(x.v)}${x.ant!=null&&Math.abs(x.v-x.ant)>1e-9?` <span class="sm ${x.v>x.ant?'r':'g'}">${x.v>x.ant?'▲':'▼'}</span>`:''}`:'–';
+  return `<div class="card"><div class="top"><b>🇧🇷 Brasil em números</b><span class="sm mut">Banco Central</span></div><div class="mdo-bg">${b.ind.map(card).join('')}</div>${(()=>{const x=b.ind.find(i=>i.nome===MDO_AB.k);if(!x)return '';const dv=x.mom!=null?x.mom:x.ant!=null?x.v-x.ant:0;return mdoInfoHtml(x.nome,dv>1e-9?1:dv<-1e-9?-1:0,x.mom!=null?`${mdoPc(x.mom)} no mês`:x.ant!=null&&Math.abs(x.v-x.ant)>1e-9?`${mdoN(x.ant)} → ${mdoN(x.v)}`:'estável na última leitura')})()}
+  ${F.length?`<h3 style="margin-top:12px">Projeções do mercado (Focus)</h3><table class="mdo-f"><tr><th></th>${anos.map(a=>`<th>${a}</th>`).join('')}</tr>${Object.keys(nomes).filter(k=>F.some(x=>x.ind===k)).map(k=>`<tr data-mdoi="Focus:${k}" class="${MDO_AB.k==='Focus:'+k?'sel':''}"><td>${nomes[k]} <span class="sm mut">ⓘ</span></td>${anos.map(a=>`<td>${cel(F.find(x=>x.ind===k&&x.ano===a))}</td>`).join('')}</tr>`).join('')}</table>${(()=>{if(!String(MDO_AB.k||'').startsWith('Focus:'))return '';const k=MDO_AB.k.slice(6),x=F.filter(f=>f.ind===k).sort((a,b)=>a.ano-b.ano)[0];if(!x)return '';const dv=x.ant!=null?x.v-x.ant:0;return mdoInfoHtml(MDO_AB.k,dv>1e-9?1:dv<-1e-9?-1:0,x.ant!=null?`${x.ano}: ${mdoN(x.ant)} → ${mdoN(x.v)} em ~4 semanas`:'')})()}<div class="sm mut">Toque numa linha para ver o que significa. ▲▼ = mudança na mediana em ~4 semanas. Projeção de inflação subindo pressiona juros futuros (DI) e pesa na bolsa.</div>`:''}</div>`;
+}
+function vMundo(tabs){
+  const v=MDO.v||{},m=v.mercados,b=v.brasil;
+  return `<div class="card"><div class="top"><b>Mundo</b><button class="btn s" data-mdo="rf">${MDO.busy?'…':'↻ Atualizar'}</button></div>${tabs||''}<div class="sm mut">Panorama no estilo do Trading Economics: o que move a B3 antes da abertura, os mercados do mundo e a economia brasileira.</div>${MDO.err?`<div class="sm r" style="margin-top:6px">${esc(MDO.err)}</div>`:''}</div>
+  ${m?mdoPre(m.pre):''}
+  ${m?`<div class="card"><div class="top"><b>🗺️ Mapa do mercado</b><span class="sm mut">${m.em?'às '+hm(Date.parse(m.em)):''}</span></div>${m.grupos.map(g=>{const s=g.itens.find(x=>x.s===MDO_AB.k),d=s?(s.juro?s.d1bp:s.d1):null;return `<h3 style="margin-top:10px">${esc(g.g)}</h3><div class="mdo-grid">${g.itens.map(mdoTile).join('')}</div>${s?mdoInfoHtml(s.s,d>0?1:d<0?-1:0,`${s.n} ${s.juro?(d>0?'+':'')+mdoN(d,1)+' pb':mdoPc(d)} no dia`):''}`}).join('')}<div class="sm mut" style="margin-top:8px">Toque em qualquer quadro para ver o que é, o peso no seu mercado e o que acontece se subir ou cair. ● ● ● = peso alto, ● ● = médio, ● = baixo. Yahoo Finance, com atraso. Juros em pontos-base (pb).</div></div>`:(MDO.busy?'<div class="card sm mut">Carregando…</div>':'')}
+  ${mdoBrasil(b)}`;
+}
+function mdoPaint(){if(tab!=='mercado'||MKT.tab!=='mu')return;render()}
+{const vm1=vMercado;vMercado=function(){if(MKT.tab!=='mu')return vm1.apply(this,arguments);setTimeout(()=>mdoCarrega(),0);return vMundo('')}}
+document.addEventListener('click',e=>{if(e.target.closest('[data-mdo="rf"]')){mdoCarrega(true);return}const i=e.target.closest('[data-mdoi]');if(i&&tab==='mercado'&&MKT.tab==='mu'){MDO_AB.k=MDO_AB.k===i.dataset.mdoi?null:i.dataset.mdoi;const y=window.scrollY;render();window.scrollTo(0,y)}});
+(function(){const st=document.createElement('style');st.textContent=`
+.mdo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}.mdo-t{border:1px solid var(--bd);border-radius:10px;padding:7px 8px;display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums}.mdo-t b{font-size:15px}.mdo-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+.mdo-pre{border-width:2px}.mdo-vies{font-size:20px;font-weight:800;text-transform:capitalize;margin:2px 0}.mdo-bar{position:relative;height:6px;border-radius:4px;background:linear-gradient(90deg,#ef4444,#eab308 50%,#22c55e);margin:6px 0 8px}.mdo-bar i{position:absolute;top:-4px;width:6px;height:14px;border-radius:3px;transform:translateX(-50%);border:2px solid var(--bg)}
+.mdo-pi{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:5px 0;border-top:1px solid var(--bd)}.mdo-pi span:last-child{grid-column:1/3}
+.mdo-bg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mdo-b{border:1px solid var(--bd);border-radius:10px;padding:8px}.mdo-b b{font-size:18px}.mdo-sp{width:100%;height:24px;display:block;margin-top:4px}
+.mdo-t,.mdo-b,.mdo-f tr[data-mdoi]{cursor:pointer}.mdo-t.sel,.mdo-b.sel{outline:2px solid var(--ac,#3b82f6)}.mdo-f tr.sel td{background:color-mix(in srgb,var(--ac,#3b82f6) 12%,transparent)}
+.mdo-pp{font-size:8px;letter-spacing:-1px;margin-right:4px;vertical-align:middle}.mdo-pp.p3{color:#ef4444}.mdo-pp.p2{color:#e8a317}.mdo-pp.p1{color:#94a3b8}
+.mdo-inf{margin:8px 0;padding:10px;border-radius:10px;border:1px solid var(--bd);background:color-mix(in srgb,var(--ac,#3b82f6) 6%,transparent);display:grid;gap:6px}.mdo-peso{font-weight:800}.mdo-peso.r{color:#ef4444}
+.mdo-cen{padding:7px 8px;border-radius:8px;border:1px solid var(--bd);opacity:.7}.mdo-cen.on{opacity:1;border-color:var(--ac,#3b82f6);background:color-mix(in srgb,var(--ac,#3b82f6) 10%,transparent)}
+.mdo-f{width:100%;font-size:14px;border-collapse:collapse;font-variant-numeric:tabular-nums}.mdo-f td,.mdo-f th{padding:6px 4px;border-top:1px solid var(--bd);text-align:right}.mdo-f td:first-child{text-align:left}
+`;document.head.appendChild(st)})();
 /* ---------- 17. Notificações: abertura dos mercados e stop/alvo dos trades abertos ---------- */
 /** Abertura de Nova York em Brasília (9h30 de lá): 10:30 no horário de verão americano, 11:30 fora dele. */
 function nyAbreBR(d){try{const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',timeZoneName:'shortOffset'}).formatToParts(new Date((d||loc().slice(0,10))+'T15:00:00Z')),m=/GMT([+-]\d+)/.exec((p.find(x=>x.type==='timeZoneName')||{}).value||''),o=m?+m[1]:-5,mi=570+(-3-o)*60;return String(Math.floor(mi/60)).padStart(2,'0')+':'+String(mi%60).padStart(2,'0')}catch(e){return '10:30'}}
