@@ -4969,15 +4969,15 @@ function mdoTile(x){
   const d=x.juro?x.d1bp:x.d1,int=Math.min(1,Math.abs(d||0)/(x.juro?10:2)),bg=d==null?'transparent':d>=0?`rgba(34,197,94,${.10+int*.35})`:`rgba(239,68,68,${.10+int*.35})`;
   const dp=x.px>1000?0:x.px>10?2:x.juro?3:4;
   const pi=MDO_INFO[x.s],pe=pi?`<span class="mdo-pp p${pi.p}" title="Peso no seu mercado">${'●'.repeat(pi.p)}</span>`:'';
-  return `<div class="mdo-t${MDO_AB.k===x.s?' sel':''}" style="background:${bg}" data-mdoi="${esc(x.s)}"><div class="sm mdo-n">${pe}${esc(x.n)}</div><b>${mdoN(x.px,dp)}${x.juro?'%':''}</b><div class="sm"><b>${x.juro?(d>0?'+':'')+mdoN(d,1)+' pb':mdoPc(d)}</b> <span class="mut">mês ${x.juro?(x.m1bp>0?'+':'')+mdoN(x.m1bp,0)+' pb':mdoPc(x.m1)}</span></div></div>`;
+  return `<div class="mdo-t${MDO_AB.k===x.s?' sel':''}" style="background:${bg}" data-mdoi="${esc(x.s)}"><div class="sm mdo-n">${pe}${esc(x.n)}</div><b>${mdoN(x.px,dp)}${x.juro?'%':''}</b><div class="sm">${x.suspeito?'<span class="am">sem dado confiável</span>':`<b>${x.juro?(d>0?'+':'')+mdoN(d,1)+' pb':mdoPc(d)}</b>`} <span class="mut">mês ${x.juro?(x.m1bp>0?'+':'')+mdoN(x.m1bp,0)+' pb':mdoPc(x.m1)}</span></div></div>`;
 }
 function mdoPre(p){
   if(!p)return '';
-  const cor={positivo:'var(--g)',negativo:'var(--r)',neutro:'#eab308'}[p.vies],h=new Date().getHours(),antes=h<10;
-  return `<div class="card mdo-pre" style="border-color:${cor}"><div class="top"><b>🌅 Pré-abertura da B3</b><span class="sm mut">${antes?'antes das 10h':'contexto do dia'}</span></div>
+  const cor={positivo:'var(--g)',negativo:'var(--r)',neutro:'#eab308'}[p.vies],h=new Date().getHours(),wd=new Date().getDay(),fds=wd===0||wd===6,antes=!fds&&h<10;
+  return `<div class="card mdo-pre" style="border-color:${cor}"><div class="top"><b>🌅 Pré-abertura da B3</b><span class="sm mut">${fds?'último pregão (sexta)':antes?'antes das 10h':'contexto do dia'}</span></div>
   <div class="mdo-vies" style="color:${cor}">Viés ${esc(p.vies)} <span class="sm mut">(${p.nota>0?'+':''}${p.nota})</span></div>
   <div class="mdo-bar"><i style="left:${50+p.nota/2}%;background:${cor}"></i></div>
-  ${p.itens.map(x=>`<div class="mdo-pi sm"><span>${esc(x.n)}</span><b class="${x.d1>=0?'g':'r'}">${mdoPc(x.d1)}</b><span class="${x.sinal>0?'g':x.sinal<0?'r':'mut'}">${esc(x.efeito)}</span></div>`).join('')}
+  ${p.itens.map(x=>`<div class="mdo-pi sm"><span>${esc(x.n)}</span><b class="${x.d1>0?'g':x.d1<0?'r':'mut'}">${mdoPc(x.d1)}</b><span class="${x.sinal>0?'g':x.sinal<0?'r':'mut'}">${esc(x.efeito)}</span></div>`).join('')}
   <div class="sm mut" style="margin-top:6px">Contexto, não sinal: viés positivo não manda comprar na abertura. Use para calibrar a mão e saber de onde pode vir a força ou a pressão do dia.</div></div>`;
 }
 function mdoSpark(h){const p=(h||[]).filter(v=>isFinite(v));if(p.length<2)return '';const W=100,H=24,mn=Math.min(...p),mx=Math.max(...p),Y=v=>H-2-(v-mn)/((mx-mn)||1)*(H-4);return `<svg viewBox="0 0 ${W} ${H}" class="mdo-sp" preserveAspectRatio="none"><polyline points="${p.map((v,i)=>i/(p.length-1)*W+','+Y(v)).join(' ')}" fill="none" stroke="var(--ac,#3b82f6)" stroke-width="1.6"/></svg>`}
@@ -4995,7 +4995,7 @@ function vMundo(tabs){
   const v=MDO.v||{},m=v.mercados,b=v.brasil;
   return `<div class="card"><div class="top"><b>Mundo</b><button class="btn s" data-mdo="rf">${MDO.busy?'…':'↻ Atualizar'}</button></div>${tabs||''}<div class="sm mut">Panorama no estilo do Trading Economics: o que move a B3 antes da abertura, os mercados do mundo e a economia brasileira.</div>${MDO.err?`<div class="sm r" style="margin-top:6px">${esc(MDO.err)}</div>`:''}</div>
   ${m?mdoPre(m.pre):''}
-  ${m?`<div class="card"><div class="top"><b>🗺️ Mapa do mercado</b><span class="sm mut">${m.em?'às '+hm(Date.parse(m.em)):''}</span></div>${m.grupos.map(g=>{const s=g.itens.find(x=>x.s===MDO_AB.k),d=s?(s.juro?s.d1bp:s.d1):null;return `<h3 style="margin-top:10px">${esc(g.g)}</h3><div class="mdo-grid">${g.itens.map(mdoTile).join('')}</div>${s?mdoInfoHtml(s.s,d>0?1:d<0?-1:0,`${s.n} ${s.juro?(d>0?'+':'')+mdoN(d,1)+' pb':mdoPc(d)} no dia`):''}`}).join('')}<div class="sm mut" style="margin-top:8px">Toque em qualquer quadro para ver o que é, o peso no seu mercado e o que acontece se subir ou cair. ● ● ● = peso alto, ● ● = médio, ● = baixo. Yahoo Finance, com atraso. Juros em pontos-base (pb).</div></div>`:(MDO.busy?'<div class="card sm mut">Carregando…</div>':'')}
+  ${m?`<div class="card"><div class="top"><b>🗺️ Mapa do mercado</b><span class="sm mut">${m.em?'às '+hm(Date.parse(m.em)):''}</span></div>${m.grupos.map(g=>{const s=g.itens.find(x=>x.s===MDO_AB.k),d=s?(s.juro?s.d1bp:s.d1):null;return `<h3 style="margin-top:10px">${esc(g.g)}</h3><div class="mdo-grid">${g.itens.map(mdoTile).join('')}</div>${s?mdoInfoHtml(s.s,d>0?1:d<0?-1:0,`${s.n} ${s.juro?(d>0?'+':'')+mdoN(d,1)+' pb':mdoPc(d)} no dia`):''}`}).join('')}<div class="sm mut" style="margin-top:8px">Toque em qualquer quadro para ver o que é, o peso no seu mercado e o que acontece se subir ou cair. ● ● ● = peso alto, ● ● = médio, ● = baixo. Fonte: ${m.fontes?`TradingView em ${m.fontes.tv} de ${m.fontes.tv+m.fontes.yahoo} ativos${m.fontes.yahoo?`, Yahoo nos outros ${m.fontes.yahoo}`:''}`:'Yahoo Finance'}, com atraso. ${m.fontes&&m.fontes.suspeitos&&m.fontes.suspeitos.length?`Sem variação confiável hoje: ${esc(m.fontes.suspeitos.join(', '))} (a fonte mandou um número absurdo e o app descartou). `:''}Juros em pontos-base (pb).</div></div>`:(MDO.busy?'<div class="card sm mut">Carregando…</div>':'')}
   ${mdoBrasil(b)}`;
 }
 function mdoPaint(){if(tab!=='mercado'||MKT.tab!=='mu')return;render()}
