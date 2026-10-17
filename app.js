@@ -249,7 +249,7 @@ const KV=(a,b,k='',h='')=>`<div class="card"><span class="mut sm">${a}</span><b 
 function hist(rs){const L=['≤ −2R','−2 a −1R','−1 a 0R','0 a 1R','1 a 2R','2 a 3R','> 3R'],c=L.map(()=>0);rs.forEach(r=>c[r<=-2?0:r<=-1?1:r<0?2:r<1?3:r<2?4:r<=3?5:6]++);const m=Math.max(...c,1);return `<div class="card">${L.map((l,i)=>`<div style="display:flex;gap:8px;align-items:center;font-size:12px;margin:3px 0"><span style="width:70px">${l}</span><div style="flex:1"><div style="height:12px;border-radius:4px;width:${c[i]/m*100}%;background:${i<3?'var(--r)':'var(--g)'}"></div></div><b>${c[i]}</b></div>`).join('')}</div>`}
 async function saveFile(n,data,type='text/csv'){try{if(typeof claude!=='undefined'){const dl=await claude.use('downloads');if(dl){await dl.save({filename:n,data});return}}}catch(e){}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=n;document.body.appendChild(a);a.click();a.remove()}
 async function backup(){const imgs={};for(const t of S.trades)for(const k of['pin','pout','pplan'])if(t[k]){const b=M[t[k]]||await idb('img','get',t[k]);if(b)imgs[t[k]]=await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)})}await saveFile('diario-backup-'+loc().slice(0,10)+'.json',JSON.stringify({v:1,S,imgs}),'application/json');S.lastBackup=loc().slice(0,10);save()}
-async function restore(f){try{const j=JSON.parse(await f.text()),o=j.S;if(!o)throw 0;for(const[id,u]of Object.entries(j.imgs||{})){const bin=atob(u.split(',')[1]),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);const b=new Blob([a],{type:'image/jpeg'});M[id]=b;await idb('img','put',b,id)}(o.trades||[]).forEach(t=>{const i=S.trades.findIndex(x=>x.id===t.id);i>=0?S.trades[i]=t:S.trades.push(t)});S.days={...S.days,...(o.days||{})};S.ops=unionU(o.ops,S.ops,{});S.lanc=unionU(o.lanc,S.lanc,{});if((o.rules||[]).length)S.rules=o.rules;S.watch=[...new Set([...(S.watch||[]),...(o.watch||[])])];['prop','goals','rev','pn','ax'].forEach(k=>{if(o[k])S[k]={...(S[k]||{}),...o[k]}});if((o.books||[]).length){const m=new Map((S.books||[]).map(b=>[b.id,b]));o.books.forEach(b=>{const x=m.get(b.id);if(!x||(b.u||0)>=(x.u||0))m.set(b.id,b)});S.books=[...m.values()]}save();return 'Backup restaurado: '+(o.trades||[]).length+' trade(s).'}catch(e){return 'Arquivo de backup inválido.'}}
+async function restore(f){try{const j=JSON.parse(await f.text()),o=j.S;if(!o)throw 0;for(const[id,u]of Object.entries(j.imgs||{})){const bin=atob(u.split(',')[1]),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);const b=new Blob([a],{type:'image/jpeg'});M[id]=b;await idb('img','put',b,id)}(o.trades||[]).forEach(t=>{const i=S.trades.findIndex(x=>x.id===t.id);i>=0?S.trades[i]=t:S.trades.push(t)});S.days={...S.days,...(o.days||{})};S.ops=unionU(o.ops,S.ops,{});S.lanc=unionU(o.lanc,S.lanc,{});S.mesaTr=unionU(o.mesaTr,S.mesaTr,{});if((o.rules||[]).length)S.rules=o.rules;S.watch=[...new Set([...(S.watch||[]),...(o.watch||[])])];['prop','goals','rev','pn','ax'].forEach(k=>{if(o[k])S[k]={...(S[k]||{}),...o[k]}});if((o.books||[]).length){const m=new Map((S.books||[]).map(b=>[b.id,b]));o.books.forEach(b=>{const x=m.get(b.id);if(!x||(b.u||0)>=(x.u||0))m.set(b.id,b)});S.books=[...m.values()]}save();return 'Backup restaurado: '+(o.trades||[]).length+' trade(s).'}catch(e){return 'Arquivo de backup inválido.'}}
 /* ---------- Painel ---------- */
 let Z={pct:1},RP='w0',CM=loc().slice(0,7);
 const ymd=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
@@ -307,7 +307,7 @@ const pub=()=>{const{uid,st,up,lastSyncAt,...x}=S;return x};
 function syncSoon(){clearTimeout(sT);if(SESS)sT=setTimeout(()=>sync(),3000)}
 function uiSy(){const e=$('#sy');if(e)e.textContent=SY.msg}
 function adopt(c){const k={uid:S.uid,up:S.up};S={trades:[],days:{},rules:[],seed:1,...c,...k,st:c.mt};persist()}
-function mergeIn(c){const del={...(c.del||{}),...(S.del||{})},tm=new Map();[...(c.trades||[]),...S.trades].forEach(t=>{const o=tm.get(t.id);if(!o||(t.u||0)>=(o.u||0))tm.set(t.id,t)});const trades=[...tm.values()].filter(t=>!(del[t.id]&&del[t.id]>=(t.u||0))),days={...(c.days||{})};for(const[k,v]of Object.entries(S.days||{}))if(!days[k]||(v.u||0)>=(days[k].u||0))days[k]=v;const rm=new Map();[...(c.rules||[]),...S.rules].forEach(r=>rm.set(r.id,r));const rules=[...rm.values()].filter(r=>!del[r.id]),bkm=new Map(),base=S.mt>=(c.mt||0)?S:c,oth=base===S?c:S;[...(c.books||[]),...(S.books||[])].forEach(b=>{const o=bkm.get(b.id);if(!o||(b.u||0)>=(o.u||0))bkm.set(b.id,b)});const books=[...bkm.values()].filter(b=>!(del[b.id]&&del[b.id]>=(b.u||0)));S={...oth,...base,trades,days,rules,books,del,ops:unionU(c.ops,S.ops,del),lanc:unionU(c.lanc,S.lanc,del),pn:{...(oth.pn||{}),...(base.pn||{})},ax:{...(oth.ax||{}),...(base.ax||{})},rev:{...(oth.rev||{}),...(base.rev||{})},watch:[...new Set([...(c.watch||[]),...(S.watch||[])])],uid:S.uid,up:S.up,st:S.st,mt:Date.now()}}
+function mergeIn(c){const del={...(c.del||{}),...(S.del||{})},tm=new Map();[...(c.trades||[]),...S.trades].forEach(t=>{const o=tm.get(t.id);if(!o||(t.u||0)>=(o.u||0))tm.set(t.id,t)});const trades=[...tm.values()].filter(t=>!(del[t.id]&&del[t.id]>=(t.u||0))),days={...(c.days||{})};for(const[k,v]of Object.entries(S.days||{}))if(!days[k]||(v.u||0)>=(days[k].u||0))days[k]=v;const rm=new Map();[...(c.rules||[]),...S.rules].forEach(r=>rm.set(r.id,r));const rules=[...rm.values()].filter(r=>!del[r.id]),bkm=new Map(),base=S.mt>=(c.mt||0)?S:c,oth=base===S?c:S;[...(c.books||[]),...(S.books||[])].forEach(b=>{const o=bkm.get(b.id);if(!o||(b.u||0)>=(o.u||0))bkm.set(b.id,b)});const books=[...bkm.values()].filter(b=>!(del[b.id]&&del[b.id]>=(b.u||0)));S={...oth,...base,trades,days,rules,books,del,ops:unionU(c.ops,S.ops,del),lanc:unionU(c.lanc,S.lanc,del),mesaTr:unionU(c.mesaTr,S.mesaTr,del),pn:{...(oth.pn||{}),...(base.pn||{})},ax:{...(oth.ax||{}),...(base.ax||{})},rev:{...(oth.rev||{}),...(base.rev||{})},watch:[...new Set([...(c.watch||[]),...(S.watch||[])])],uid:S.uid,up:S.up,st:S.st,mt:Date.now()}}
 async function photos(){const ids=[...new Set(S.trades.flatMap(t=>['pin','pout','pplan'].map(k=>t[k]).filter(Boolean)))];S.up=S.up||{};let got=0;for(const id of ids){const have=M[id]||await idb('img','get',id),path='/storage/v1/object/fotos/'+SESS.uid+'/'+id+'.jpg';if(have&&!S.up[id]){await rq(path,{method:'POST',headers:{'Content-Type':'image/jpeg','x-upsert':'true'},body:have});S.up[id]=1}else if(!have){try{const b=await(await rq(path.replace('/object/','/object/authenticated/'))).blob();M[id]=b;await idb('img','put',b,id);S.up[id]=1;delete U[id];got++}catch(e){if(e.status!==400&&e.status!==404)throw e}}}persist();return got}
 async function up(){const d=pub();await rq('/rest/v1/diario',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:SESS.uid,data:d,updated_at:new Date().toISOString()})});S.st=d.mt;persist()}
 async function sync(manual){if(!SESS||SY.busy)return;SY.busy=1;SY.msg='Sincronizando…';uiSy();try{const rows=await(await rq('/rest/v1/diario?select=data&user_id=eq.'+SESS.uid)).json(),cl=rows[0]&&rows[0].data;let push=false,ch=0;if(!cl)push=true;else{const cm=cl.mt||0,lm=S.mt||0,seen=S.st||0;if(cm>seen&&lm>seen){mergeIn(cl);push=true;ch=1}else if(cm>seen){adopt(cl);ch=1}else if(lm>seen||manual)push=true}S.uid=SESS.uid;const got=await photos();if(push||!S.st)await up();S.lastSyncAt=Date.now();persist();SY.msg='Sincronizado às '+hm();if((got||ch)&&!typing())render()}catch(e){SY.msg='Falha ao sincronizar: '+em(e)}SY.busy=0;uiSy();svUi();if(tab==='conta')render()}
@@ -785,7 +785,7 @@ S.trades=(Array.isArray(S.trades)?S.trades:[]).filter(t=>t&&typeof t==='object')
 S.days=o(S.days);for(const k of Object.keys(S.days)){const v=S.days[k]=o(S.days[k]);if(!(v.chk&&typeof v.chk==='object'&&!Array.isArray(v.chk)))v.chk={}}
 S.rules=(Array.isArray(S.rules)?S.rules:[]).filter(r=>r&&typeof r==='object');
 ['ax','rev','pn','del'].forEach(k=>{if(S[k]!=null&&(typeof S[k]!=='object'||Array.isArray(S[k])))S[k]={}});}
-function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:()=>segM('mercado:'+MKT.tab)+vMercado(),juros:()=>segM('juros')+vJuros(),mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:()=>segD('dia')+vDia(),regras:()=>segD('regras')+vRegras(),stats:()=>segT('stats')+vStats(),graf:()=>segM('graf')+vGraf(),painel:vPainel,rev:()=>segT('rev')+vRev(),conta:vConta,live:()=>segM('live')+vLive(),estudos:vEstudos,livro:vLivro,ativos:()=>segT('ativos')+vAtivos(),contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport,mesa:()=>vMesa(),carreira:()=>vCarreira(),termos:()=>vTermos()}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis();lvPaint();lvcPaint();if(tab==='live')lvPoll()}
+function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:()=>segM('mercado:'+MKT.tab)+vMercado(),juros:()=>segM('juros')+vJuros(),mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:()=>segD('dia')+vDia(),regras:()=>segD('regras')+vRegras(),stats:()=>segT('stats')+vStats(),graf:()=>segM('graf')+vGraf(),painel:vPainel,rev:()=>segT('rev')+vRev(),conta:vConta,live:()=>segM('live')+vLive(),estudos:vEstudos,livro:vLivro,ativos:()=>segT('ativos')+vAtivos(),contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport,mesa:()=>vMesa(),carreira:()=>vCarreira(),termos:()=>vTermos(),status:()=>vStatus()}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis();lvPaint();lvcPaint();if(tab==='live')lvPoll()}
 function render(){try{render0()}catch(e){console.error(e);const ap=$('#app');if(ap)ap.innerHTML='<div class="warn" style="margin:12px 0"><b>Não consegui abrir esta tela ('+esc(tab)+').</b><div class="sm" style="margin-top:6px">'+esc(String(e&&e.message||e))+'</div><div class="sm mut" style="margin-top:6px">'+esc(String((e&&e.stack||'').split('\n')[1]||'').trim().slice(0,160))+'</div></div><div class="mut sm">Abra o menu (☰) e tente outra tela. Se o erro continuar, me mande esta mensagem.</div>'}}
 document.addEventListener('click',async e=>{if(!e.target.closest('#fab,#fabm'))$('#fabm').style.display='none';const sg=e.target.closest('[data-seg]');if(sg&&T){T[sg.dataset.seg]=sg.dataset.v;if(sg.dataset.seg==='tipo')tipoMud();showSheet();return}const ds=e.target.closest('[data-dseg]');if(ds){const dd=(S.days[D]??={chk:{}});dd[ds.dataset.dseg]=ds.dataset.v;dd.u=Date.now();save();render();return}const im=e.target.closest('.pv img');if(im){zoom(im.src);return}const li=e.target.closest('#lb img');if(li){li.style.width=li.style.width==='260%'?'100%':'260%';return}const b=e.target.closest('[data-a],[data-tab]');if(!b)return;if(b.dataset.tab){tab=b.dataset.tab==='trades'?LT:b.dataset.tab;if(['trades','swing','opc'].includes(tab))LT=tab;render();scrollTo(0,0);return}const a=b.dataset.a,id=b.dataset.id;
 if(a==='am'){AM=b.dataset.id;SY.msg='';render()}
@@ -3764,7 +3764,7 @@ ${last.length?`<h2>Dia a dia</h2><div class="card"><table><tr><th>Pregão</th><t
 <h2>Regras da mesa</h2>${c._antigo?'<div class="warn">Usando as regras do Painel antigo. Escolha a sua mesa abaixo para completar.</div>':''}${escolhe}
 ${c.obs?`<div class="sm mut" style="margin:8px 0">${esc(c.obs)}</div>`:''}<div class="sm am" style="margin:6px 0 10px">Confira sempre no regulamento atual da mesa: as regras mudam.</div>
 <div class="card"><div class="g2">${f('nome','Nome','text')}${f('inicio','Início do teste','date')}</div>
-<div class="g2"><label>Trades que contam<select data-ms="fonte">${opt([['b3','Day trade/swing em R$ (B3)'],['usd','Day trade em US$ (futuros EUA)'],['fx','Aba Forex']],c.fonte)}</select></label>${f('ativos','Só estes ativos (opcional)','text','placeholder="WIN, WDO"')}</div>
+<div class="g2"><label>Trades que contam<select data-ms="fonte">${opt([['mesa','Lançados aqui na mesa (separados da sua conta)'],['b3','Do seu diário em R$ (mistura com a sua conta)'],['usd','Do seu diário em US$ (mistura com a sua conta)'],['fx','Da aba Forex (mistura com a sua conta)']],c.fonte)}</select></label>${f('ativos','Só estes ativos (opcional)','text','placeholder="WIN, WDO"')}</div>
 <div class="g2"><label>Moeda<select data-ms="moeda">${opt([['BRL','R$'],['USD','US$']],c.moeda)}</select></label>${f('capital','Tamanho da conta')}</div>
 <div class="g2">${f('meta','Meta de lucro')}${f('perdaTotal','Perda máxima total')}</div>
 <div class="g2"><label>Tipo da perda total<select data-ms="dd">${opt([['fixo','Fixa (do saldo inicial)'],['eod','Móvel no fechamento do dia'],['trail','Móvel a cada trade']],c.dd)}</select></label>${f('perdaDia','Perda máxima diária (0 = não tem)')}</div>
@@ -5150,3 +5150,108 @@ function mesaSemHtml(c){const W=mesaSemana(c),F=v=>mFmt(c,v),M=W.M,dd=d=>`${dsem
   const t=`Mesa: ${F(W.sem)} na semana`+(W.falta!=null?(W.falta<=0?', meta batida':`, faltam ${F(W.falta)} para a meta`):'')+(W.M.margem!=null?`, folga ${F(W.M.margem)}`:'')+'. ';
   r.corpo=t+r.corpo;if(r.corpo.length>240)r.corpo=r.corpo.slice(0,237)+'…'}}catch(e){}return r}}
 (function(){const st=document.createElement('style');st.textContent=`#onb .ck{justify-content:flex-start;align-items:center;margin:6px 0;padding:10px 12px;border:1px solid var(--bd);border-radius:10px}#onb input[type=radio]{width:auto;flex:none;margin:0;accent-color:var(--ac)}#onb .ck:has(input:checked){border-color:var(--ac);background:color-mix(in srgb,var(--ac) 10%,transparent)}[data-termo]{width:auto;flex:none;margin-top:3px}`;document.head.appendChild(st)})();
+
+/* ---------- 29. Mesa proprietária separada da sua conta + Status do sistema ---------- */
+/* A mesa tem as próprias operações (S.mesaTr): não entram em estatísticas, Meu dia, calendário, trava, IR nem no resumo da sua conta. */
+Object.values(MESA_PRESETS).forEach(p=>{p.fonte='mesa'});
+const MT={ed:null};
+const mtLista=()=>(S.mesaTr||[]).filter(x=>!((S.del||{})[x.id]>=(x.u||0)));
+{const mi0=mesaItens;mesaItens=function(c){
+  if(!c||c.fonte!=='mesa')return mi0(c);
+  let it=mtLista().map(x=>({d:mesaDia(x.dt,+c.pregao||0,c.cme),t:x.dt,v:+x.v||0,q:x.q===''||x.q==null?null:(c.moeda==='USD'?mesaQtd(x.a,+x.q):+x.q),a:x.a,id:x.id}));
+  if(c.inicio)it=it.filter(x=>x.d>=c.inicio);
+  return it.sort((a,b)=>a.t.localeCompare(b.t));
+}}
+/** Trades do seu diário que hoje estão sendo contados na mesa (configuração antiga). */
+function mesaCandidatos(c){
+  if(!c||c.fonte==='mesa'||c.fonte==='fx')return [];
+  const pre=String(c.ativos||'').toUpperCase().split(/[\s,;]+/).filter(Boolean),okA=a=>!pre.length||pre.some(p=>String(a||'').toUpperCase().startsWith(p));
+  return S.trades.map(t=>({t,c:calc(t)})).filter(({t,c:k})=>k.pl!=null&&moedaT(t)===(c.fonte==='usd'?'USD':'BRL')&&okA(t.ativo)&&(!c.inicio||mesaDia(t.dtx||t.dt,+c.pregao||0,c.cme)>=c.inicio));
+}
+function mesaMigraHtml(c){
+  if(c.fonte==='mesa')return S.mesaUndo&&Date.now()-S.mesaUndo.em<7*864e5?`<div class="card sm">Você moveu ${S.mesaUndo.trades.length} trade(s) do seu diário para a mesa. <button class="btn s" data-mtx="desfaz" style="margin-left:6px">Desfazer</button></div>`:'';
+  const L=mesaCandidatos(c),F=v=>mFmt(c,v),marca=c.fonte==='usd'||!!String(c.ativos||'').trim();
+  return `<div class="card" style="border-color:var(--am)"><b>⚠️ A mesa está misturada com a sua conta</b><div class="sm" style="margin:6px 0">Hoje os resultados desta mesa saem do seu diário pessoal e entram nas suas estatísticas, no Meu dia e no IR. Separe: as operações da mesa passam a ser lançadas aqui e saem do seu diário.</div>
+  ${L.length?`<div class="sm mut">Marque o que é da mesa (${L.length} encontrado(s) desde o início do teste):</div><div style="max-height:220px;overflow:auto;margin:6px 0">${L.map(({t,c:k})=>`<label class="ck sm" style="margin:4px 0"><input type="checkbox" data-mtmov="${esc(t.id)}"${marca?' checked':''}><span>${fmtD(String(t.dtx||t.dt).slice(0,10)).slice(0,5)} · ${esc(t.ativo)} · ${esc(t.qty||'')} · <b class="${cls(k.pl)}">${F(k.pl)}</b></span></label>`).join('')}</div>
+  <button class="btn" data-mtx="move" style="width:100%">Mover os marcados para a mesa e separar</button>`:''}
+  <button class="btn s" data-mtx="separa" style="width:100%;margin-top:8px">${L.length?'Separar sem mover nada':'Separar: lançar as operações da mesa aqui'}</button></div>`;
+}
+function mtLimite(c,a,q){const n=c.moeda==='USD'?mesaQtd(a,+q):+q;return {n,lim:+c.contratos||0,passa:+c.contratos>0&&n>+c.contratos}}
+function mesaOpsHtml(c){
+  if(c.fonte!=='mesa')return '';
+  const ed=MT.ed?mtLista().find(x=>x.id===MT.ed):null,F=v=>mFmt(c,v),cur=c.moeda==='USD'?'US$':'R$',agora=loc().slice(0,16);
+  const L=[...mtLista()].sort((a,b)=>String(b.dt).localeCompare(String(a.dt))).slice(0,30);
+  const v=k=>esc(ed?(ed[k]??''):'');
+  return `<h2>Operações da mesa</h2><div class="card"><div class="sm mut" style="margin-bottom:6px">Ficam só aqui: não entram nas estatísticas, no Meu dia, no calendário nem no IR da sua conta.</div>
+  <div class="g2"><label>Data e hora da saída<input type="datetime-local" data-mt="dt" value="${ed?esc(ed.dt):agora}"></label><label>Ativo<input data-mt="a" value="${v('a')}" placeholder="${c.moeda==='USD'?'MES, MNQ, ES':'WIN, WDO'}" autocapitalize="characters" autocomplete="off"></label></div>
+  <div class="g3"><label>Lado<select data-mt="sd"><option value="C"${ed&&ed.sd==='V'?'':' selected'}>Compra</option><option value="V"${ed&&ed.sd==='V'?' selected':''}>Venda</option></select></label><label>Contratos<input data-mt="q" inputmode="numeric" value="${v('q')}"></label><label>Resultado (${cur})<input data-mt="v" inputmode="decimal" value="${v('v')}" placeholder="-150 ou 320"></label></div>
+  <div class="g2"><label>Entrada (opcional)<input data-mt="pe" inputmode="decimal" value="${v('pe')}"></label><label>Saída (opcional)<input data-mt="ps" inputmode="decimal" value="${v('ps')}"></label></div>
+  <label>Nota (opcional)<input data-mt="nota" value="${v('nota')}" autocomplete="off"></label>
+  <div class="sm" id="mtav" style="margin-top:6px"></div>
+  <button class="btn" data-mtx="salvar" style="width:100%;margin-top:8px">${ed?'Salvar alteração':'Salvar operação'}</button>${ed?'<button class="btn s" data-mtx="cancela" style="width:100%;margin-top:6px">Cancelar edição</button>':''}</div>
+  ${L.length?`<div class="card">${L.map(x=>`<div class="top" style="padding:6px 0;border-bottom:1px solid var(--bd)"><div class="sm"><b>${esc(x.a)}</b> ${x.sd==='V'?'venda':'compra'}${x.q?` · ${esc(x.q)} contr.`:''}<div class="mut">${dsem(String(x.dt).slice(0,10))} ${fmtD(String(x.dt).slice(0,10)).slice(0,5)} ${String(x.dt).slice(11,16)}${x.nota?' · '+esc(x.nota):''}</div></div><div style="text-align:right"><b class="${cls(+x.v)}">${F(+x.v)}</b><div><button class="btn s" data-mtx="edita" data-id="${esc(x.id)}" style="padding:2px 8px;font-size:12px">Editar</button> <button class="btn s d" data-mtx="apaga" data-id="${esc(x.id)}" style="padding:2px 8px;font-size:12px">Apagar</button></div></div></div>`).join('')}</div>`:''}`;
+}
+{const vm1=vMesa;vMesa=function(){let h=vm1();const c=mesaCfg();if(!c)return h;
+  try{h=h.replace('<h1>Mesa proprietária</h1>','<h1>Mesa proprietária</h1>'+mesaMigraHtml(c));h=h.replace('<h2>Regras da mesa</h2>',mesaOpsHtml(c)+'<h2>Regras da mesa</h2>');
+    if(c.fonte==='mesa')h=h.replace('Nenhuma operação desta mesa ainda. Confira a data de início e de onde vêm os trades nas regras abaixo.','Nenhuma operação da mesa ainda: lance a primeira em "Operações da mesa", logo abaixo.')}catch(e){}
+  return h}}
+function mtAviso(){const c=mesaCfg(),el=document.getElementById('mtav');if(!c||!el)return;const a=($('[data-mt="a"]')||{}).value||'',q=($('[data-mt="q"]')||{}).value||'';
+  if(!(+q>0)){el.textContent='';return}const L=mtLimite(c,a,q),eq=c.moeda==='USD'&&L.n!==+q?` = ${String(+L.n.toFixed(2)).replace('.',',')} mini(s)`:'';
+  el.innerHTML=L.lim?(L.passa?`<span class="r">🛑 ${esc(q)} contrato(s)${eq}: passa do limite da mesa (${L.lim}).</span>`:`<span class="g">✓ ${esc(q)} contrato(s)${eq}: dentro do limite (${L.lim}).</span>`):'';}
+document.addEventListener('input',e=>{if(e.target.closest('[data-mt="a"],[data-mt="q"]'))mtAviso()});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-mtx]');if(!b)return;const c=mesaCfg();if(!c)return;const k=b.dataset.mtx;
+  const fim=()=>{save();render()};
+  if(k==='separa'){c.fonte='mesa';mesaSalva(c);fim()}
+  else if(k==='move'){const ids=[...document.querySelectorAll('[data-mtmov]:checked')].map(x=>x.dataset.mtmov);if(!ids.length){alert('Marque pelo menos um trade, ou toque em "Separar sem mover nada".');return}
+    if(!confirm(`Mover ${ids.length} trade(s) do seu diário para a mesa? Eles saem das suas estatísticas.`))return;
+    const mov=S.trades.filter(t=>ids.includes(t.id)),agora=Date.now();S.mesaTr=S.mesaTr||[];
+    mov.forEach(t=>{S.mesaTr.push({id:'m'+t.id,dt:String(t.dtx||t.dt).slice(0,16),a:t.ativo,sd:t.side==='V'?'V':'C',q:t.qty||'',v:+calc(t).pl||0,pe:t.entry||'',ps:t.exit||'',nota:t.nota||'',u:agora});(S.del??={})[t.id]=agora});
+    S.trades=S.trades.filter(t=>!ids.includes(t.id));S.mesaUndo={em:agora,trades:mov,ids:mov.map(t=>'m'+t.id)};c.fonte='mesa';mesaSalva(c);fim();if(window.toast)toast(`${mov.length} trade(s) movido(s) para a mesa.`)}
+  else if(k==='desfaz'){const U=S.mesaUndo;if(!U||!confirm('Devolver esses trades para o seu diário?'))return;const agora=Date.now();
+    U.trades.forEach(t=>{delete (S.del||{})[t.id];S.trades.push({...t,u:agora})});S.mesaTr=(S.mesaTr||[]).filter(x=>!U.ids.includes(x.id));U.ids.forEach(id=>{(S.del??={})[id]=agora});delete S.mesaUndo;fim()}
+  else if(k==='salvar'){const g=n=>(($(`[data-mt="${n}"]`)||{}).value||'').trim(),num=x=>x===''?'':+String(x).replace(/\./g,'').replace(',','.');
+    const dt=g('dt'),a=g('a').toUpperCase().slice(0,14),q=g('q'),vv=num(g('v'));
+    if(!dt||!a||vv===''||!isFinite(vv)){alert('Preencha a data, o ativo e o resultado.');return}
+    const L=mtLimite(c,a,q);if(L.passa&&!confirm(`Isso passa do limite da mesa (${L.lim} contrato(s)${c.moeda==='USD'?' em minis':''}). Na conta da mesa isso pode reprovar o teste. Salvar mesmo assim?`))return;
+    const o={id:MT.ed||('m'+uid()),dt:dt.slice(0,16),a,sd:g('sd')==='V'?'V':'C',q:q.replace(/\D/g,''),v:vv,pe:g('pe'),ps:g('ps'),nota:g('nota').slice(0,200),u:Date.now()};
+    S.mesaTr=(S.mesaTr||[]).filter(x=>x.id!==o.id);S.mesaTr.push(o);MT.ed=null;fim();if(window.toast)toast('Operação da mesa salva.')}
+  else if(k==='edita'){MT.ed=b.dataset.id;render();document.querySelector('[data-mt="a"]')?.scrollIntoView({block:'center'});mtAviso()}
+  else if(k==='cancela'){MT.ed=null;render()}
+  else if(k==='apaga'){if(!confirm('Apagar esta operação da mesa?'))return;const id=b.dataset.id;S.mesaTr=(S.mesaTr||[]).filter(x=>x.id!==id);(S.del??={})[id]=Date.now();if(MT.ed===id)MT.ed=null;fim()}
+});
+/* resumo de domingo: a sua conta aparece como "Bolsa" (a mesa vem separada, no começo) */
+{const sp1=semPush;semPush=function(){const r=sp1();if(r&&r.corpo)r.corpo=r.corpo.replace('Brasil: ','Bolsa: ');return r}}
+
+/* Status do sistema: testa cada função do Supabase e diz o que fazer */
+const FN_VERSAO='v90';
+const FN_LISTA=[['precos','Cotações das posições abertas'],['screener','Faixa de preços do topo e Screener'],['noticias','Notícias'],['notificar','Notificações'],['adrs','ADRs no Início'],['juros','Juros'],['candles','Gráficos dos trades e Ao vivo'],['macro','Mundo'],['sentimento','Sentimento'],['radar','Radar'],['analise','Análise com IA'],['resumo','Resumo de livros'],['conta','Excluir conta']];
+const SYS={busy:0,res:null,em:0};
+async function sysTesta(quieto){
+  const c=cfg();if(!c||SYS.busy)return;SYS.busy=1;if(!quieto)render();
+  SYS.res=await Promise.all(FN_LISTA.map(async([f,l])=>{
+    try{const r=await fetch(c.url+'/functions/v1/'+f+'?versao=1',{headers:{apikey:c.key}});let j=null;try{j=JSON.parse(await r.text())}catch(e){}
+      if(r.ok&&j&&j.versao)return {f,l,st:j.versao===FN_VERSAO?'ok':'velha',msg:j.versao===FN_VERSAO?'Atualizada ('+j.versao+').':`Versão ${j.versao}: cole o arquivo novo (${FN_VERSAO}).`};
+      if(r.status===404)return {f,l,st:'nao',msg:'Não existe no Supabase com esse nome. Crie a função com o nome exato.'};
+      return {f,l,st:'velha',msg:'Publicada, mas é uma versão antiga. Cole o arquivo novo.'};
+    }catch(e){return {f,l,st:'sem',msg:'Não respondeu: a função não foi publicada, o nome está diferente, ou o ALLOWED_ORIGINS não bate com o endereço do app.'}}
+  }));
+  SYS.busy=0;SYS.em=Date.now();render();
+}
+const sysProblemas=()=>(SYS.res||[]).filter(x=>x.st!=='ok');
+function vStatus(){
+  const c=cfg(),R=SYS.res,ic={ok:'✅',velha:'⚠️',nao:'❌',sem:'❌'};
+  const tudoSem=R&&R.every(x=>x.st==='sem');
+  return `<h1>Status do sistema</h1><p class="sm mut">Testa cada função do Supabase que o app usa e diz o que fazer quando alguma falha. Não mostra nem envia dados seus.</p>
+  <div class="card sm"><div>App: <b>${FN_VERSAO}</b> · funções esperadas: <b>${FN_VERSAO}</b></div><div style="margin-top:4px">Endereço do app (para o ALLOWED_ORIGINS): <b style="user-select:all">${esc(location.origin)}</b></div></div>
+  <button class="btn" data-sys="testa" style="width:100%" ${SYS.busy?'disabled':''}>${SYS.busy?'Testando…':'🩺 Testar agora'}</button>
+  ${tudoSem?`<div class="warn" style="margin-top:10px">Nenhuma função respondeu. Quase sempre é o secret <b>ALLOWED_ORIGINS</b> com um endereço diferente de <b>${esc(location.origin)}</b>: apague o secret ou coloque exatamente esse endereço. Se não for isso, confira a internet.</div>`:''}
+  ${R?`<div class="card" style="margin-top:10px">${R.map(x=>`<div style="padding:7px 0;border-bottom:1px solid var(--bd)"><div><b>${ic[x.st]} ${esc(x.f)}</b> <span class="sm mut">· ${esc(x.l)}</span></div><div class="sm ${x.st==='ok'?'mut':x.st==='velha'?'am':'r'}">${esc(x.msg)}</div></div>`).join('')}</div>
+  <div class="sm mut">Testado às ${hm(SYS.em)}. ${sysProblemas().length?sysProblemas().length+' função(ões) precisam de atenção.':'Tudo certo.'}</div>`:''}
+  <button class="btn s" style="margin-top:12px" data-a="gotab" data-id="conta">‹ Voltar</button>`;
+}
+document.addEventListener('click',e=>{if(e.target.closest('[data-sys="testa"]'))sysTesta()});
+{const vc1=vConta;vConta=function(){let h=vc1();if(!window.CLOUD_OK||!cfg()||RECOV)return h;
+  if(SESS&&!SYS.busy&&Date.now()-SYS.em>6*36e5)setTimeout(()=>sysTesta(true),50);
+  const n=sysProblemas().length;
+  const bt=`<button class="btn s" style="margin-top:8px;width:100%" data-a="gotab" data-id="status">🩺 Status do sistema${n?` · <span class="am">${n} com problema</span>`:''}</button>`;
+  return h.replace('<button class="btn s" style="margin-top:12px;width:100%" data-a="gotab" data-id="termos">',bt+'<button class="btn s" style="margin-top:8px;width:100%" data-a="gotab" data-id="termos">')}}
