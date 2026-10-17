@@ -296,13 +296,13 @@ return `<section data-hb="hero">${hero(P,R,hj.length,ab.length,nck)}</section><s
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const cfg=()=>window.SUPA_URL&&window.SUPA_KEY?{url:String(window.SUPA_URL).replace(/\/$/,''),key:window.SUPA_KEY}:ls.get('diario-cfg');
 const hm=(t=Date.now())=>new Date(t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-const em=e=>{const m=String(e&&e.message||e);return /Invalid login/i.test(m)?'E-mail ou senha incorretos.':/not confirmed/i.test(m)?'Confirme seu e-mail antes de entrar.':/already registered/i.test(m)?'E-mail já cadastrado: use Entrar.':/Failed to fetch|NetworkError|Load failed/i.test(m)?'Sem conexão com a internet.':/at least/i.test(m)?'A senha precisa ter pelo menos 6 caracteres.':m};
+const em=e=>{const m=String(e&&e.message||e);return /Invalid login/i.test(m)?'E-mail ou senha incorretos.':/not confirmed/i.test(m)?'Confirme seu e-mail antes de entrar.':/already registered/i.test(m)?'E-mail já cadastrado: use Entrar.':/Failed to fetch|NetworkError|Load failed/i.test(m)?'Sem conexão com a internet.':/at least/i.test(m)?'Senha fraca: use pelo menos 10 caracteres.':/rate limit|too many|429/i.test(m)?'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.':/deadline|timed? ?out|504|Erro 50[234]/i.test(m)?'O servidor demorou para responder. Sua conta pode ter sido criada: confira seu e-mail (e o spam). Se não chegar em 5 minutos, toque em Reenviar e-mail de confirmação.':/weak|pwned|leaked/i.test(m)?'Essa senha é fraca ou já vazou na internet. Escolha outra.':m};
 const seedRules=()=>{S.rules=SEED.map(([cat,t])=>({id:uid(),cat,t}))};
 async function rq(path,o={},auth=true){const c=cfg();if(!c)throw new Error('Configure o Supabase.');if(auth)await tok();const bt=o.tok||(auth&&SESS?SESS.at:/^eyJ/.test(c.key)?c.key:''),h={apikey:c.key,...(bt?{Authorization:'Bearer '+bt}:{}),...(o.headers||{})},r=await fetch(c.url+path,{...o,headers:h});if(!r.ok){let m='';try{const j=await r.json();m=j.msg||j.message||j.error_description||j.error||''}catch(e){}const x=new Error(m||('Erro '+r.status));x.status=r.status;throw x}return r}
 function setSess(j,email){SESS={at:j.access_token,rt:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000,uid:j.user.id,email:email||j.user.email};ls.set('diario-sess',SESS)}
 async function tok(){if(!SESS)throw new Error('Entre na sua conta.');if(SESS.exp-Date.now()>60000)return;try{const r=await rq('/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:SESS.rt})},false);setSess(await r.json(),SESS.email)}catch(e){if(e.status===400||e.status===401){SESS=null;ls.del('diario-sess');throw new Error('Sessão expirada: entre novamente.')}throw e}}
 async function hashAuth(){const hp=new URLSearchParams(location.hash.slice(1)),at=hp.get('access_token');if(!at)return;history.replaceState(null,'',location.pathname);if(hp.get('type')==='recovery'){RECOV=at;tab='conta';return}try{const u=await(await rq('/auth/v1/user',{tok:at},false)).json();setSess({access_token:at,refresh_token:hp.get('refresh_token'),expires_in:+hp.get('expires_in')||3600,user:u},u.email);tab='conta'}catch(e){}}
-async function doAuth(mode){const e=$('#ce').value.trim(),p=$('#cp').value;SY.email=e;if(!e||p.length<(mode==='up'?10:6)){SY.msg=mode==='up'?'Informe e-mail e uma senha de pelo menos 10 caracteres.':'Informe e-mail e senha.';render();return}SY.msg='Aguarde…';render();try{const body=JSON.stringify({email:e,password:p}),H={'Content-Type':'application/json'};if(mode==='up'){const j=await(await rq('/auth/v1/signup',{method:'POST',headers:H,body},false)).json();if(!j.access_token){SY.msg='Conta criada. Confirme o e-mail que você recebeu e depois toque em Entrar.';AM='in';render();return}setSess(j,e)}else setSess(await(await rq('/auth/v1/token?grant_type=password',{method:'POST',headers:H,body},false)).json(),e);if(S.uid&&S.uid!==SESS.uid){S={trades:[],days:{},rules:[],seed:1,mt:0};seedRules()}SY.msg='';render();await sync(1)}catch(x){SY.msg=em(x);render()}}
+async function doAuth(mode){const e=$('#ce').value.trim(),p=$('#cp').value;SY.email=e;if(!e||p.length<(mode==='up'?10:6)){SY.msg=mode==='up'?'Informe e-mail e uma senha de pelo menos 10 caracteres.':'Informe e-mail e senha.';render();return}if(mode==='up'&&!SY.termo){SY.msg='Para criar a conta, aceite os Termos de uso e a Política de privacidade.';render();return}SY.msg='Aguarde…';render();try{const body=JSON.stringify(mode==='up'?{email:e,password:p,data:{termos:TERMOS_VER,termos_em:new Date().toISOString()}}:{email:e,password:p}),H={'Content-Type':'application/json'};if(mode==='up'){const j=await(await rq('/auth/v1/signup',{method:'POST',headers:H,body},false)).json();if(!j.access_token){SY.msg='Conta criada. Abra o e-mail de confirmação que enviamos (veja também o spam) e depois toque em Entrar.';SY.reenv=e;AM='in';render();return}setSess(j,e)}else setSess(await(await rq('/auth/v1/token?grant_type=password',{method:'POST',headers:H,body},false)).json(),e);if(S.uid&&S.uid!==SESS.uid){S={trades:[],days:{},rules:[],seed:1,mt:0};seedRules()}SY.msg='';render();await sync(1)}catch(x){SY.msg=em(x);render()}}
 const pub=()=>{const{uid,st,up,lastSyncAt,...x}=S;return x};
 function syncSoon(){clearTimeout(sT);if(SESS)sT=setTimeout(()=>sync(),3000)}
 function uiSy(){const e=$('#sy');if(e)e.textContent=SY.msg}
@@ -314,7 +314,7 @@ async function sync(manual){if(!SESS||SY.busy)return;SY.busy=1;SY.msg='Sincroniz
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&SESS)sync()});addEventListener('online',()=>{if(SESS)sync()});
 function vConta(){if(!window.CLOUD_OK)return '<h1>Conta</h1><div class="card">A conta com sincronização na nuvem funciona só na versão hospedada do app (Netlify ou GitHub Pages). Nesta versão, seus dados ficam só neste aparelho: use o backup completo na aba Painel.</div>';const c=cfg(),own=!(window.SUPA_URL&&window.SUPA_KEY);
 if(!c)return `<h1>Conta</h1><p class="mut sm">Cole os dados do seu projeto Supabase (Project Settings → API): a URL e a chave <b>anon public</b>.</p><label>URL do projeto<input id="cu" placeholder="https://xxxx.supabase.co"></label><label>Chave anon<input id="ck"></label><button class="btn" style="margin-top:10px" data-a="savecfg">Salvar</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>`;
-if(RECOV)return `<h1>Nova senha</h1><label>Nova senha (mín. 6)<input id="np" type="password" autocomplete="new-password"></label><button class="btn" style="margin-top:10px" data-a="newpw">Salvar senha</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>`;
+if(RECOV)return `<h1>Nova senha</h1><label>Nova senha (mín. 10 caracteres)<input id="np" type="password" autocomplete="new-password"></label><button class="btn" style="margin-top:10px" data-a="newpw">Salvar senha</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>`;
 if(!SESS)return `<h1>Conta</h1><p class="mut sm">Entre para sincronizar operações e fotos em todos os seus aparelhos.</p><div class="g2" style="margin:8px 0"><button class="btn ${AM==='in'?'':'s'}" data-a="am" data-id="in">Entrar</button><button class="btn ${AM==='up'?'':'s'}" data-a="am" data-id="up">Criar conta</button></div><label>E-mail<input id="ce" type="email" autocomplete="email" value="${esc(SY.email)}"></label><label>${AM==='up'?'Senha (mín. 10 caracteres)':'Senha'}<input id="cp" type="password" autocomplete="${AM==='up'?'new-password':'current-password'}"></label><button class="btn" style="margin-top:10px;width:100%" data-a="auth">${AM==='in'?'Entrar':'Criar conta'}</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>${own?'<button class="btn s" style="margin-top:12px" data-a="clrcfg">Trocar projeto Supabase</button>':''}`;
 return `<h1>Conta</h1><div class="card"><b>${esc(SESS.email)}</b><div class="mut sm" id="sy">${esc(SY.msg||(S.lastSyncAt?'Última sincronização: '+hm(S.lastSyncAt):'Ainda não sincronizado'))}</div></div><div class="g2"><button class="btn" data-a="syncnow">Sincronizar agora</button><button class="btn s" data-a="logout">Sair</button></div><p class="mut sm">Seus dados também ficam salvos neste aparelho, então o app funciona offline e sincroniza quando a internet voltar. Apagar um trade em um aparelho apaga nos outros na próxima sincronização.</p>`}
 /* ---------- Visual e interação ---------- */
@@ -785,7 +785,7 @@ S.trades=(Array.isArray(S.trades)?S.trades:[]).filter(t=>t&&typeof t==='object')
 S.days=o(S.days);for(const k of Object.keys(S.days)){const v=S.days[k]=o(S.days[k]);if(!(v.chk&&typeof v.chk==='object'&&!Array.isArray(v.chk)))v.chk={}}
 S.rules=(Array.isArray(S.rules)?S.rules:[]).filter(r=>r&&typeof r==='object');
 ['ax','rev','pn','del'].forEach(k=>{if(S[k]!=null&&(typeof S[k]!=='object'||Array.isArray(S[k])))S[k]={}});}
-function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:()=>segM('mercado:'+MKT.tab)+vMercado(),juros:()=>segM('juros')+vJuros(),mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:()=>segD('dia')+vDia(),regras:()=>segD('regras')+vRegras(),stats:()=>segT('stats')+vStats(),graf:()=>segM('graf')+vGraf(),painel:vPainel,rev:()=>segT('rev')+vRev(),conta:vConta,live:()=>segM('live')+vLive(),estudos:vEstudos,livro:vLivro,ativos:()=>segT('ativos')+vAtivos(),contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport,mesa:()=>vMesa(),carreira:()=>vCarreira()}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis();lvPaint();lvcPaint();if(tab==='live')lvPoll()}
+function render0(){fixS();const ap=$('#app');ap.style.animation='none';void ap.offsetWidth;ap.style.animation='';ap.innerHTML={home:vHome,mercado:()=>segM('mercado:'+MKT.tab)+vMercado(),juros:()=>segM('juros')+vJuros(),mais:vMais,trades:()=>segT('trades')+vTrades('D'),swing:()=>segT('swing')+vTrades('S'),opc:()=>segT('opc')+vTrades('O'),dia:()=>segD('dia')+vDia(),regras:()=>segD('regras')+vRegras(),stats:()=>segT('stats')+vStats(),graf:()=>segM('graf')+vGraf(),painel:vPainel,rev:()=>segT('rev')+vRev(),conta:vConta,live:()=>segM('live')+vLive(),estudos:vEstudos,livro:vLivro,ativos:()=>segT('ativos')+vAtivos(),contratos:vContratos,imposto:vImposto,carteiras:vCarteiras,analise:vAnalise,import:vImport,mesa:()=>vMesa(),carreira:()=>vCarreira(),termos:()=>vTermos()}[tab]();const GR={home:'home',trades:'trades',swing:'trades',opc:'trades',dia:'dia',stats:'stats'}[tab]||'mais';document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===GR));fillImgs();cnt();ppOut();ggOut();zzOut();animCount();applyQ();svUi();opPrev();if(!db)$('#app').insertAdjacentHTML('afterbegin','<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>');bkBanner();fabVis();lvPaint();lvcPaint();if(tab==='live')lvPoll()}
 function render(){try{render0()}catch(e){console.error(e);const ap=$('#app');if(ap)ap.innerHTML='<div class="warn" style="margin:12px 0"><b>Não consegui abrir esta tela ('+esc(tab)+').</b><div class="sm" style="margin-top:6px">'+esc(String(e&&e.message||e))+'</div><div class="sm mut" style="margin-top:6px">'+esc(String((e&&e.stack||'').split('\n')[1]||'').trim().slice(0,160))+'</div></div><div class="mut sm">Abra o menu (☰) e tente outra tela. Se o erro continuar, me mande esta mensagem.</div>'}}
 document.addEventListener('click',async e=>{if(!e.target.closest('#fab,#fabm'))$('#fabm').style.display='none';const sg=e.target.closest('[data-seg]');if(sg&&T){T[sg.dataset.seg]=sg.dataset.v;if(sg.dataset.seg==='tipo')tipoMud();showSheet();return}const ds=e.target.closest('[data-dseg]');if(ds){const dd=(S.days[D]??={chk:{}});dd[ds.dataset.dseg]=ds.dataset.v;dd.u=Date.now();save();render();return}const im=e.target.closest('.pv img');if(im){zoom(im.src);return}const li=e.target.closest('#lb img');if(li){li.style.width=li.style.width==='260%'?'100%':'260%';return}const b=e.target.closest('[data-a],[data-tab]');if(!b)return;if(b.dataset.tab){tab=b.dataset.tab==='trades'?LT:b.dataset.tab;if(['trades','swing','opc'].includes(tab))LT=tab;render();scrollTo(0,0);return}const a=b.dataset.a,id=b.dataset.id;
 if(a==='am'){AM=b.dataset.id;SY.msg='';render()}
@@ -5048,3 +5048,105 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-a="savetrade"],
   /* o app não abre dentro de outro site (proteção contra clique disfarçado) */
   try{if(window.top!==window.self)window.top.location=window.location.href}catch(e){document.documentElement.innerHTML=''}
 })();
+
+/* ---------- 28. Contas de outras pessoas: termos, cadastro, primeiro acesso, excluir conta e semana da mesa ---------- */
+const TERMOS_VER='2026-10-17',TERMOS_CONTATO='';
+function vTermos(){
+  const s=(t,c)=>`<h2>${t}</h2><div class="card sm" style="line-height:1.55">${c}</div>`;
+  return `<h1>Termos de uso e privacidade</h1><p class="sm mut">Versão de ${fmtD(TERMOS_VER)}. Escrito em linguagem simples, de acordo com a LGPD (Lei 13.709/2018).</p>
+${s('1. O que é o app','O Diário de Trader é um diário pessoal para registrar e estudar as suas operações. <b>Não é recomendação de investimento</b>: análises, radar, sinais e textos da IA são estudo e podem errar. As decisões e os resultados são seus. Para usar é preciso ter 18 anos ou mais.')}
+${s('2. Que dados ficam guardados','<ul style="margin:4px 0 0 18px;padding:0"><li><b>Conta:</b> e-mail e senha (a senha fica criptografada pelo Supabase; ninguém consegue ler).</li><li><b>O que você registra:</b> trades, fotos, dias, anotações, regras, configurações e, se usar, resumos de livros e a ponte do Profit (cotações e operações).</li><li><b>Notificações:</b> o endereço de notificação do seu aparelho e as preferências (horários, trava do dia, stop e alvos dos trades abertos).</li></ul>')}
+${s('3. Para que são usados','Só para o app funcionar para você: sincronizar entre aparelhos, calcular estatísticas, mandar as notificações que você ligou e gerar análises quando você pede. Seus dados <b>não são vendidos</b> nem usados para publicidade.')}
+${s('4. Quem ajuda a processar','<ul style="margin:4px 0 0 18px;padding:0"><li><b>Supabase:</b> banco de dados, login e arquivos (os servidores podem ficar fora do Brasil).</li><li><b>Google Gemini:</b> recebe só o que você manda analisar (foto do gráfico, estatísticas, livro).</li><li><b>Serviço de e-mail:</b> confirmação de cadastro e troca de senha.</li><li><b>Apple e Google:</b> entregam as notificações no aparelho.</li><li><b>Cotações públicas</b> (Yahoo, TradingView, Banco Central, CNN): recebem só o código do ativo, nenhum dado seu.</li></ul>')}
+${s('5. Segurança','Cada conta só consegue ver e alterar os próprios dados (regras de acesso no banco). As conexões são criptografadas. Proteja o seu aparelho com senha ou Face ID: o app guarda uma cópia dos seus dados nele para funcionar sem internet.')}
+${s('6. Por quanto tempo','Enquanto a sua conta existir. Cópias automáticas do diário ficam por até 30 dias. PDFs de livros são apagados depois que o resumo fica pronto.')}
+${s('7. Seus direitos','Você pode, a qualquer momento: <b>ver e baixar</b> os seus dados (Painel → backup), <b>corrigir</b> (no próprio app) e <b>excluir a conta e todos os dados</b> (Conta → Excluir minha conta). Excluir a conta também retira o seu consentimento.'+(TERMOS_CONTATO?` Dúvidas: <b>${esc(TERMOS_CONTATO)}</b>.`:''))}
+${s('8. Mudanças','Se estes termos mudarem, o app avisa e mostra a nova versão.')}
+<button class="btn s" style="margin-top:12px" data-a="gotab" data-id="${SESS?'home':'conta'}">‹ Voltar</button>`;
+}
+
+/* cadastro e login: aceite, esqueci a senha, reenviar confirmação e excluir conta */
+{const vc0=vConta;vConta=function(){let h=vc0();
+  const lt=`<button class="btn s" style="margin-top:12px;width:100%" data-a="gotab" data-id="termos">📄 Termos de uso e privacidade</button>`;
+  if(!window.CLOUD_OK||!cfg()||RECOV)return h;
+  if(!SESS){
+    if(AM==='up')h=h.replace('<button class="btn" style="margin-top:10px;width:100%" data-a="auth">',`<label class="ck" style="margin-top:12px;align-items:flex-start"><input type="checkbox" data-termo${SY.termo?' checked':''}><span class="sm">Tenho 18 anos ou mais e li e aceito os <b>Termos de uso e a Política de privacidade</b> (botão abaixo).</span></label><button class="btn" style="margin-top:10px;width:100%" data-a="auth">`);
+    else h=h.replace('<div class="r sm" style="margin-top:8px">','<button class="btn s" style="margin-top:8px;width:100%" data-cx="esqueci">Esqueci minha senha</button><div class="r sm" style="margin-top:8px">');
+    if(SY.reenv)h=h.replace(/(<div class="r sm" style="margin-top:8px">[^<]*<\/div>)/,'$1<button class="btn s" style="margin-top:8px;width:100%" data-cx="reenviar">Reenviar e-mail de confirmação</button>');
+    return h+lt;
+  }
+  return h+`${lt}<h2>Zona de perigo</h2><div class="card"><b>Excluir minha conta</b><div class="sm mut" style="margin:4px 0 10px">Apaga para sempre a sua conta e todos os seus dados, aqui e na nuvem.</div><button class="btn d" data-cx="excluir">Excluir minha conta</button></div>`;
+}}
+{const da0=doAuth;doAuth=async function(mode){await da0(mode);if(!SESS&&/Confirme seu e-mail|demorou|Conta criada/.test(SY.msg||'')){SY.reenv=SY.reenv||SY.email;render()}}}
+document.addEventListener('change',e=>{const c=e.target.closest('[data-termo]');if(c)SY.termo=c.checked});
+
+function delHtml(){return `<div class="ov" id="delc"><div class="sh"><div class="top"><h2 style="margin:0">Excluir minha conta</h2><button class="x" data-cx="delx">✕</button></div>
+<p>Isto apaga <b>para sempre</b> a sua conta e tudo o que é seu: trades, fotos, dias, regras, resumos de livros, radar, cotações da ponte e notificações. <b>Não dá para desfazer.</b></p>
+<p class="sm mut">Quer guardar uma cópia antes? Faça o backup completo no Painel.</p>
+<label>Sua senha<input id="dsenha" type="password" autocomplete="current-password"></label>
+<label>Digite EXCLUIR para confirmar<input id="dconf" autocapitalize="characters" autocomplete="off"></label>
+<button class="btn d" data-cx="delgo" style="width:100%;margin-top:12px">Excluir minha conta e os meus dados</button><div class="r sm" id="dmsg" style="margin-top:8px"></div></div></div>`}
+/** Apaga tudo o que está guardado neste aparelho (menos o endereço do projeto e o tema). */
+async function limpaAparelho(){
+  SESS=null;S={trades:[],days:{},rules:[],seed:1,mt:0,ax:{onb:Date.now(),turno:{on:0,letra:'A',dias:{}}}};
+  try{Object.keys(localStorage).filter(k=>/^diario-/.test(k)&&!['diario-cfg','diario-theme'].includes(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
+  try{if(db&&db.close)db.close()}catch(e){}
+  await new Promise(ok=>{try{const r=indexedDB.deleteDatabase('diario-trader');r.onsuccess=r.onerror=r.onblocked=()=>ok()}catch(e){ok()}});
+}
+const CX={
+  async esqueci(){const e=(($('#ce')||{}).value||'').trim();SY.email=e;
+    if(!/.+@.+\..+/.test(e)){SY.msg='Digite o seu e-mail acima e toque de novo em Esqueci minha senha.';render();return}
+    SY.msg='Enviando…';render();
+    try{await rq('/auth/v1/recover?redirect_to='+encodeURIComponent(location.origin+location.pathname),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e})},false);SY.msg='Se existir uma conta com esse e-mail, enviamos um link para criar uma senha nova. Veja também o spam.'}
+    catch(x){SY.msg=em(x)}render()},
+  async reenviar(){const e=SY.reenv||(($('#ce')||{}).value||'').trim();if(!e)return;SY.msg='Reenviando…';render();
+    try{await rq('/auth/v1/resend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'signup',email:e})},false);SY.msg='Enviamos de novo o e-mail de confirmação para '+e+'. Veja também o spam.'}
+    catch(x){SY.msg=em(x)}render()},
+  excluir(){document.getElementById('delc')?.remove();document.body.insertAdjacentHTML('beforeend',delHtml())},
+  delx(){document.getElementById('delc')?.remove()},
+  async delgo(b){const m=t=>{const d=$('#dmsg');if(d)d.textContent=t},senha=$('#dsenha').value,cf=$('#dconf').value.trim().toUpperCase(),c=cfg();
+    if(cf!=='EXCLUIR'){m('Digite EXCLUIR para confirmar.');return}if(!senha){m('Digite a sua senha.');return}
+    b.disabled=true;m('Excluindo a conta e os dados…');
+    try{const r=await fetch(c.url+'/functions/v1/conta',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key},body:JSON.stringify({acao:'excluir',senha,confirma:'EXCLUIR'})});
+      const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('Erro '+r.status));
+      await limpaAparelho();document.getElementById('delc')?.remove();tab='conta';SY.msg='Sua conta e os seus dados foram excluídos.';render();
+      setTimeout(()=>{try{location.reload()}catch(e){}},2500);
+    }catch(x){b.disabled=false;m(em(x))}},
+  turnoon(){turnoSet(t=>{t.on=1});render()},
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-cx]');if(!b||!CX[b.dataset.cx])return;e.preventDefault();CX[b.dataset.cx](b)});
+
+/* primeiro acesso: quem chega não herda a escala de turno nem os limites de outra pessoa */
+function contaNova(){const ax=S.ax||{};return !ax.onb&&!ax.turno&&!S.trades.length&&!Object.keys(S.days||{}).length&&!(S.ops||[]).length&&(!SESS||!!S.lastSyncAt)}
+function onbHtml(){const r=(n,v,l,ck)=>`<label class="ck"><input type="radio" name="onb-${n}" value="${v}" data-onb="${n}"${ck?' checked':''}><span>${l}</span></label>`;
+  return `<div class="ov" id="onb"><div class="sh"><h2 style="margin:0 0 4px">👋 Bem-vindo ao Diário de Trader</h2><p class="sm mut">Quatro números para o app calcular o seu risco e travar o dia quando você passar do limite. Dá para mudar depois.</p>
+<div class="g2"><label>Capital para operar (R$)<input type="text" inputmode="decimal" data-onb="cap" placeholder="10000"></label><label>Risco por trade (%)<input type="text" inputmode="decimal" data-onb="pct" value="1"></label></div>
+<div class="g2"><label>Perda máxima no dia (R$)<input type="text" inputmode="decimal" data-onb="pd" placeholder="200"></label><label>Máximo de trades no dia<input type="text" inputmode="numeric" data-onb="nt" value="3"></label></div>
+<div class="sm" style="margin-top:10px"><b>Você trabalha em escala de turno?</b> O app avisa para não operar nos dias de trabalho.</div>${r('turno','n','Não',1)}${r('turno','s','Sim, quero cadastrar a minha escala')}
+<div class="sm" style="margin-top:10px"><b>Está fazendo teste em mesa proprietária?</b></div>${r('mesa','n','Não',1)}${r('mesa','s','Sim, quero acompanhar as regras da mesa')}
+<button class="btn" data-onbx="ok" style="width:100%;margin-top:14px">Começar</button><button class="btn s" data-onbx="pular" style="width:100%;margin-top:8px">Pular por enquanto</button></div></div>`}
+function onbSalva(pular){
+  const v=k=>{const e=document.querySelector(`[data-onb="${k}"]:checked`)||document.querySelector(`input[data-onb="${k}"]:not([type="radio"])`);return e?e.value:''},n=k=>+String(v(k)).replace(',','.')||0;
+  const ax=(S.ax??={}),turno=!pular&&v('turno')==='s',mesa=!pular&&v('mesa')==='s';
+  if(!pular){if(n('cap')>0)ax['ct.cap']=n('cap');if(n('pct')>0)ax['ct.pct']=Math.min(n('pct'),10);if(n('nt')>0)ax['ct.nd']=Math.round(n('nt'));
+    ax.trava={...(ax.trava||{}),...(n('pd')>0?{perdaDia:n('pd')}:{}),...(n('nt')>0?{maxTr:Math.round(n('nt'))}:{})}}
+  ax.turno={on:turno?1:0,letra:'A',dias:{},niv:{...TNV0}};ax.onb=Date.now();save();
+  document.getElementById('onb')?.remove();tab=mesa?'mesa':'home';render();scrollTo(0,0);
+  if(turno&&window.toast)toast('Cadastre a sua escala no cartão "Escala de turno" do Início.',6000);
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-onbx]');if(b)onbSalva(b.dataset.onbx==='pular')});
+{const r0=render;render=function(){r0.apply(this,arguments);try{if(contaNova()&&!['conta','termos'].includes(tab)&&!document.getElementById('onb'))document.body.insertAdjacentHTML('beforeend',onbHtml())}catch(e){}}}
+/* escala de turno desligada: só um convite discreto no Início */
+{const tc0=turnoCard;turnoCard=function(){const t=turnoGet();if(!t.on&&!Object.keys(t.dias||{}).length)return `<div class="card sm" style="display:flex;align-items:center;gap:8px"><span style="flex:1">🕐 Trabalha em escala de turno? O app avisa para não operar nos dias de trabalho.</span><button class="btn s" data-cx="turnoon">Ativar</button></div>`;return tc0()}}
+
+/* mesa proprietária: resumo da semana (no painel e no push de domingo) */
+function mesaSemana(c){const M=mesaCalc(c),[a,b]=rng('w0'),ks=M.ks.filter(d=>d>=a&&d<=b),sem=sum(ks.map(d=>M.dias[d]));
+  const ord=[...ks].sort((x,y)=>M.dias[y]-M.dias[x]);return {M,a,b,ks,sem,melhor:ord[0]||null,pior:ord.length>1?ord[ord.length-1]:null,falta:M.meta>0?Math.max(0,M.meta-M.lucroEf):null}}
+function mesaSemHtml(c){const W=mesaSemana(c),F=v=>mFmt(c,v),M=W.M,dd=d=>`${dsem(d)} ${fmtD(d).slice(0,5)}`;
+  return `<div class="card"><div class="top"><b>📅 Semana na mesa</b><span class="sm mut">${fmtD(W.a).slice(0,5)} a ${fmtD(W.b).slice(0,5)}</span></div>
+  <div class="kv" style="margin-top:8px">${[['Resultado da semana',F(W.sem),cls(W.sem),W.ks.length+' pregão(ões)'],['Falta para a meta',W.falta==null?'–':W.falta<=0?'Batida ✅':F(W.falta),W.falta===0?'g':'',M.meta>0?'meta '+F(M.meta):'sem meta'],['Folga até a perda máxima',M.margem==null?'–':F(M.margem),M.margem!=null&&M.pt&&M.margem<M.pt*.3?'r':'',M.pt?'limite '+F(M.pt):'sem limite'],['Melhor e pior dia',W.melhor?`${F(M.dias[W.melhor])}${W.pior?' / '+F(M.dias[W.pior]):''}`:'–','',W.melhor?dd(W.melhor)+(W.pior?' / '+dd(W.pior):''):'sem operações']].map(([l,v,k,s])=>`<div class="card" style="margin:0;padding:10px"><span class="sm mut">${l}</span><div><b class="${k}" style="font-size:16px">${v}</b></div><div class="sm mut">${s}</div></div>`).join('')}</div></div>`}
+{const vm0=vMesa;vMesa=function(){const h=vm0(),c=mesaCfg();if(!c)return h;try{return h.replace(/(<div class="kv" style="margin-top:10px">)/,mesaSemHtml(c)+'$1')}catch(e){return h}}}
+{const sp0=semPush;semPush=function(){const r=sp0();try{const c=mesaCfg();if(c&&!c._antigo&&r){const W=mesaSemana(c),F=v=>mFmt(c,v);
+  const t=`Mesa: ${F(W.sem)} na semana`+(W.falta!=null?(W.falta<=0?', meta batida':`, faltam ${F(W.falta)} para a meta`):'')+(W.M.margem!=null?`, folga ${F(W.M.margem)}`:'')+'. ';
+  r.corpo=t+r.corpo;if(r.corpo.length>240)r.corpo=r.corpo.slice(0,237)+'…'}}catch(e){}return r}}
+(function(){const st=document.createElement('style');st.textContent=`#onb .ck{justify-content:flex-start;align-items:center;margin:6px 0;padding:10px 12px;border:1px solid var(--bd);border-radius:10px}#onb input[type=radio]{width:auto;flex:none;margin:0;accent-color:var(--ac)}#onb .ck:has(input:checked){border-color:var(--ac);background:color-mix(in srgb,var(--ac) 10%,transparent)}[data-termo]{width:auto;flex:none;margin-top:3px}`;document.head.appendChild(st)})();
