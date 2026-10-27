@@ -1,4 +1,4 @@
-const C='diario-v229',CDN='diario-cdn-1',F=['./','index.html','manifest.webmanifest','config.js','app.js','arte.js','cnpi.js','touro-hero.jpg','ingles.js','style.css','icon-192.png','icon-512.png','icon-180.png','favicon-64.png'];
+const C='diario-v231',CDN='diario-cdn-1',F=['./','index.html','manifest.webmanifest','config.js','app.js','arte.js','cnpi.js','touro-hero.jpg','ingles.js','style.css','icon-192.png','icon-512.png','icon-180.png','favicon-64.png'];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>Promise.all(F.map(u=>c.add(new Request(u,{cache:'reload'})).catch(()=>{})))));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C&&x!==CDN).map(x=>caches.delete(x)))));self.clients.claim()});
