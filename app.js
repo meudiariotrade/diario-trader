@@ -8644,7 +8644,7 @@ document.addEventListener('click',e=>{const x=e.target.closest('[data-rotux]');i
 {const ds101=dsAtual;dsAtual=function(){const r=ds101.apply(this,arguments);if(DSES.d===D&&DSES.s==='n'&&DSES.via!=='mdm')EUS='n';return r}}
 
 /* ---------- 102. Saúde dos dados, modelos no registro rápido, lembretes, bloqueio com Face ID/PIN e acabamento (v177) ---------- */
-const APP_VER='v238';
+const APP_VER='v242';
 /* saúde dos dados */
 function sdEstado(){const hj=loc().slice(0,10),snap=String(ls.get('diario-snap-dia')||'').split('|')[0],logado=typeof SESS!=='undefined'&&!!SESS,nuvem=!!window.CLOUD_OK;
   const sync=S.lastSyncAt?new Date(S.lastSyncAt):null,velho=snap?Math.round((new Date(hj+'T12:00')-new Date(snap+'T12:00'))/864e5):null,erro=(typeof BK!=='undefined'&&BK.err)||'';
@@ -13032,7 +13032,7 @@ function jeSecoes(v){
       jeGrafEmp(E),...E.map(m=>jeMat(m)),jeVarr(),E[0]?jeBarra('Fique de olho',E[0].por_que_importa):'']})}
   // economia brasileira
   {const J=(typeof JR!=='undefined'&&JR.data)||{},dol=cot.find(c=>/^d[oó]lar(?!.*futuro)/i.test(c.n||'')||c.k==='dolar');
-    const cards=[J.selic&&J.selic.v!=null?['Juros (Selic)',J.selic.v+'%','meta do Copom']:null,J.cdi&&J.cdi.v!=null?['CDI',J.cdi.v+'%','ao ano']:null,J.ipca12&&J.ipca12.v!=null?['Inflação (IPCA)',J.ipca12.v+'%','em 12 meses']:null,dol?['Dólar comercial','R$ '+jeNumTxt(dol.px),dol.d1!=null?(dol.d1>=0?'▲ +':'▼ ')+Number(dol.d1).toFixed(2).replace('.',',')+'%':'']:null].filter(Boolean);
+    const pp=x=>Number(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%',cards=[J.selic&&J.selic.v!=null?['Juros (Selic)',pp(J.selic.v),'meta do Copom']:null,J.cdi&&J.cdi.v!=null?['CDI',pp(J.cdi.v),'ao ano']:null,J.ipca12&&J.ipca12.v!=null?['Inflação (IPCA)',pp(J.ipca12.v),'em 12 meses']:null,dol?['Dólar comercial','R$ '+jeNumTxt(dol.px),dol.d1!=null?(dol.d1>=0?'▲ +':'▼ ')+Number(dol.d1).toFixed(2).replace('.',',')+'%':'']:null].filter(Boolean);
     let curva='';try{curva=J.curva&&J.curva.length>1?j2CurvaSvg(J.curva):''}catch(e){}
     if(G.economia.length||cards.length||v.analise){S2.push({ico:'economia',tit:'Economia brasileira',sub:'Juros, câmbio e cenário fiscal',blocos:[
       cards.length?`<div class="jekpis n${cards.length}">${cards.map(([a,b,c])=>`<div><small>${jeEsc(a)}</small><b>${jeEsc(b)}</b><span>${jeEsc(c)}</span></div>`).join('')}</div>`:'',
@@ -13248,6 +13248,360 @@ document.addEventListener('click',e=>{
 #gateov .gfim{width:100%;margin-top:14px;padding:13px;font-size:15px}
 #gateov .gfim[disabled]{opacity:.55}
 `;document.head.appendChild(st163)}
+
+/* ---------- 164. PDF do jornal no formato editorial, desenhado em vetor (v239) ----------
+   Não depende de internet nem de "foto" da tela: texto selecionável, arquivo leve, mesmo layout da imagem de referência. */
+async function jvPdfBytes(v){
+  const PL=await rpLib(),dtL=new Date((v.dia||loc().slice(0,10))+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const L=await rpNovo(PL,{titulo:'Jornal do Pregão · '+dtL,cabecalho:'Jornal do Pregão',data:dtL,tipo:'Jornal'});
+  const {doc,F,W,H,hex}=L;
+  F.s=await doc.embedFont(PL.StandardFonts.TimesRomanBold);F.si=await doc.embedFont(PL.StandardFonts.TimesRomanBoldItalic);
+  const K={nv:hex('#0e2a3b'),nv2:hex('#16425c'),gr:hex('#15905f'),grl:hex('#e8f5ee'),tx:hex('#10202c'),mu:hex('#5b6b77'),bd:hex('#dbe4e8'),cd:hex('#fbfdfc'),up:hex('#12865a'),dn:hex('#d33a3a'),wh:hex('#ffffff'),li:hex('#c9e8db'),sk:hex('#0b2636'),ln:hex('#2ecc8f'),az:hex('#1d4f91'),cz:hex('#f3f6f5')};
+  const M=34,CW=W-2*M,TOP=80,BOT=H-46,GAP=10;
+  const FOTOS={};for(const k of JV_FOTOS){try{const im=await jvFotoImg(['img/jornal/'+k+'.jpg']);const b=im&&jvCrop(im,(CW*.45)/46,1000,.5);if(b)FOTOS[k]=await doc.embedJpg(b)}catch(e){}}
+  L.TOP=TOP;L.BOT=BOT;
+  const T=(s,x,y,o)=>L.t(s,x,y,o),wr=(s,w,z,f='r')=>L.wrap(String(s??''),w,z,f);
+  const cor=ed=>{try{return hex(jrCor(ed)||'#15905f')}catch(e){return K.gr}};
+  // ---------- cabeçalho, rodapé, logo ----------
+  const logo=(x,y,s,claro)=>{const a=claro?K.wh:K.nv;L.rect(x+4*s,y+23*s,6*s,13*s,{fill:a});L.rect(x+13*s,y+17*s,6*s,19*s,{fill:a});L.rect(x+22*s,y+11*s,6*s,25*s,{fill:K.gr});
+    L.path(`M ${4*s} ${18*s} L ${15*s} ${10*s} L ${22*s} ${14*s} L ${35*s} ${4*s}`,x,y,{stroke:K.gr,bw:2.6*s});L.path(`M ${29*s} ${4*s} L ${35*s} ${4*s} L ${35*s} ${10*s}`,x,y,{stroke:K.gr,bw:2.6*s})};
+  const cab=capa=>{const s=capa?1.15:.82;logo(M,capa?16:20,s);T('Jornal do Pregão',M+44*s+4,capa?18:22,{s:capa?32:21,f:'s',c:K.nv});
+    T('INFORMAÇÃO  ·  MERCADOS  ·  ANÁLISE',M+44*s+6,capa?54:46,{s:6.4,f:'b',c:K.gr});
+    T(dtL.charAt(0).toUpperCase()+dtL.slice(1),W-M,capa?24:24,{s:7.6,c:K.tx,al:'r'});T(String(v.nome||''),W-M,capa?35:35,{s:7.6,c:K.mu,al:'r'});
+    L.ln(M,TOP-12,W-M,TOP-12,{c:K.nv,w:1.4})};
+  let sec=null;
+  L.add=()=>{L.pg=doc.addPage([W,H]);L.n++;L.y=TOP;cab(false);if(sec)ban(sec,true)};
+  // ---------- peças ----------
+  const tri=(x,y,up,c)=>L.path(up?'M 0 6 L 3.5 0 L 7 6 Z':'M 0 0 L 7 0 L 3.5 6 Z',x,y,{fill:c});
+  const pct=(d,x,y,z,c0)=>{if(d==null||!isFinite(d))return;const c=c0||(d>0?K.up:d<0?K.dn:K.mu);tri(x,y+1.5,d>=0,c);T(((d>0?'+':'')+Number(d).toFixed(2)).replace('.',',')+'%',x+10,y,{s:z,f:'b',c})};
+  const need=h=>{if(L.y+h>BOT)L.add()};
+  const ico={
+    diario:'M 6 22 V 13 M 12 22 V 7 M 18 22 V 15 M 4 22 H 24',
+    empresas:'M 5 23 H 23 M 7 23 V 9 L 14 5 L 21 9 V 23 M 11 23 V 18 H 17 V 23',
+    economia:'M 5 23 H 23 M 6 11 H 22 M 14 5 L 22 9 H 6 Z M 8 11 V 20 M 12 11 V 20 M 16 11 V 20 M 20 11 V 20',
+    mundo:'M 14 5 A 9 9 0 1 0 14 23 A 9 9 0 1 0 14 5 M 5 14 H 23 M 14 5 C 18 9 18 19 14 23 M 14 5 C 10 9 10 19 14 23',
+    agenda:'M 6 8 H 22 V 23 H 6 Z M 6 12 H 22 M 10 5 V 9 M 18 5 V 9',
+    carteira:'M 5 10 H 23 V 22 H 5 Z M 11 10 V 7 H 17 V 10 M 5 15 H 23',
+    tec:'M 5 19 L 11 12 L 15 15 L 23 6'};
+  const icone=(k,x,y,s=28)=>{L.rr(x,y,s,s,{fill:K.gr,r:5});L.path(ico[k]||ico.diario,x+(s-28)/2,y+(s-28)/2,{stroke:K.wh,bw:1.8})};
+  const ban=(S,cont)=>{const h=cont?26:46;const y=L.y;L.rr(M,y,CW,h,{fill:K.nv,r:4});
+    if(!cont){const fo=FOTOS[S.ico];if(fo){const fx=M+CW*.55,fw=CW*.45;L.pg.drawImage(fo,{x:fx,y:H-y-h,width:fw,height:h});L.rect(fx-2,y,4,h,{fill:K.nv});const n=14,sw=fw*.5/n;for(let i=0;i<n;i++)L.rect(fx+i*sw,y,sw+.6,h,{fill:K.nv,op:1-(i+.5)/n})}else L.path('M 0 34 L 30 28 L 55 31 L 85 20 L 110 23 L 140 12 L 170 16 L 200 5 L 230 8',M+CW-240,y+4,{stroke:K.ln,bw:1.4})}
+    if(cont){T(S.tit.toUpperCase()+'  (continuação)',M+12,y+8.5,{s:9,f:'b',c:K.wh})}
+    else{icone(S.ico,M+10,y+9);T(S.tit.toUpperCase(),M+48,y+10,{s:13,f:'b',c:K.wh});if(S.sub)T(S.sub,M+48,y+27,{s:8.3,c:K.li})}
+    L.y=y+h+GAP};
+  const fita=(t,x,y)=>{const z=7.4,w=L.wd(t.toUpperCase(),z,'b')+22;L.rr(x,y,w,16,{fill:K.gr,r:3});T(t.toUpperCase(),x+11,y+4.5,{s:z,f:'b',c:K.wh});return 16};
+  const caixa=(x,y,w,h,o={})=>L.rr(x,y,w,h,{fill:o.fill||K.cd,stroke:o.stroke===null?undefined:(o.stroke||K.bd),r:o.r??6});
+  // texto que corre pela página (quebra por linha)
+  const corre=(s,o={})=>{const z=o.s||9.3,lh=z*1.43,x=o.x??M,w=o.w??CW;for(const l of wr(s,w,z,o.f||'r')){need(lh);T(l,x,L.y,{s:z,f:o.f||'r',c:o.c||K.tx});L.y+=lh}L.y+=o.gap??4};
+  const barra=(tit,tx)=>{if(!tx)return;const ls=wr(tx,CW-72,8.8);const h=Math.max(46,24+ls.length*12);need(h);const y=L.y;L.rr(M,y,CW,h,{fill:K.nv,r:5});icone('tec',M+12,y+(h-28)/2);
+    T(tit.toUpperCase(),M+52,y+10,{s:8,f:'b',c:K.wh});ls.forEach((l,i)=>T(l,M+52,y+23+i*12,{s:8.8,c:K.li}));L.y=y+h+GAP};
+  const pills=(arr,x,y,w)=>{let cx=x,cy=y;for(const p of arr){const z=7.4,pw=L.wd(p.t,z,'b')+z*1.6;if(cx+pw>x+w){cx=x;cy+=17}L.pill(p.t,cx,cy,{s:z,bg:p.bg||K.cz,c:p.c||K.tx});cx+=pw+5}return cy-y+15};
+  const impPills=i=>{if(!jrTemImp(i))return [];const d=i.direcao,bg=d==='alta'?K.grl:d==='baixa'?hex('#fdf0f0'):K.cz,c=d==='alta'?K.up:d==='baixa'?K.dn:K.mu,pre=d==='alta'?'+ ':d==='baixa'?'- ':'';return [...(i.ativos||[]).map(a=>({t:pre+String(a).toUpperCase(),bg,c})),...(i.setores||[]).map(s=>({t:s,bg:K.cz,c:K.mu}))]};
+  const nums=(N,x,y,w)=>{N=(N||[]).slice(0,6);if(!N.length)return 0;const cols=Math.min(4,N.length),gw=(w-(cols-1)*6)/cols,h=34;
+    N.forEach((n,i)=>{const cx=x+(i%cols)*(gw+6),cy=y+Math.floor(i/cols)*(h+6),vv=String(n.valor||''),c=/^\s*\+/.test(vv)?K.up:/^\s*[-−]/.test(vv)?K.dn:K.tx;caixa(cx,cy,gw,h,{fill:K.wh});T(n.rotulo,cx+7,cy+6,{s:6.6,c:K.mu,w:gw-12});T(vv,cx+7,cy+17,{s:10.5,f:'b',c,w:gw-12})});
+    return Math.ceil(N.length/cols)*(h+6)};
+  const par2=t=>String(t||'').split(/\n\s*\n/).filter(Boolean).join('\n');
+  const jvGraf=(k,x,y,w,h)=>{caixa(x,y,w,h,{fill:K.wh});
+    if(k==='di'){const J=(typeof JR!=='undefined'&&JR.data)||{},cv=(J.curva||[]).filter(p=>isFinite(p.du)&&isFinite(p.taxa));if(cv.length<2){T('Curva de juros indisponível agora.',x+10,y+h/2-4,{s:8.6,c:K.mu});return}
+      const ys=cv.map(p=>p.taxa),xs=cv.map(p=>p.du),y0=Math.min(...ys)-.1,y1=Math.max(...ys)+.1,x0=Math.min(...xs),x1=Math.max(...xs),px=x+40,pw=w-54,py=y+12,ph=h-30,X=q=>px+(q-x0)/(x1-x0||1)*pw,Y=q=>py+(y1-q)/(y1-y0||1)*ph;
+      [y0+.1,(y0+y1)/2,y1-.1].forEach(q=>{L.ln(px,Y(q),px+pw,Y(q),{c:K.bd,w:.5});T(q.toFixed(2).replace('.',',')+'%',px-4,Y(q)-3.5,{s:6.4,c:K.mu,al:'r'})});
+      L.path('M '+cv.map(p=>(X(p.du)-x).toFixed(1)+' '+(Y(p.taxa)-y).toFixed(1)).join(' L '),x,y,{stroke:K.gr,bw:1.6});T('Curva de juros (DI futuro) · prazo em dias úteis',x+10,y+h-12,{s:6.6,c:K.mu});return}
+    const G=JRN.g&&JRN.g[k],d=G&&Array.isArray(G.d)?G.d.filter(z=>z&&[1,2,3,4].every(j=>isFinite(z[j]))):[];if(d.length<5){T('Gráfico indisponível agora.',x+10,y+h/2-4,{s:8.6,c:K.mu});return}
+    const div=(JRG_TK[k]||[0,0,1])[2],hi=Math.max(...d.map(z=>z[2])),lo=Math.min(...d.map(z=>z[3])),px=x+52,pw=w-62,py=y+10,ph=h-28,sl=pw/d.length,cw=Math.max(1,Math.min(7,sl*.68)),Y=q=>py+(hi-q)/(hi-lo||1)*ph;
+    [hi,(hi+lo)/2,lo].forEach(q=>{L.ln(px,Y(q),px+pw,Y(q),{c:K.bd,w:.4});T(jrNumF(q/div,div),px-4,Y(q)-3.5,{s:6.2,c:K.mu,al:'r'})});
+    d.forEach((z,i)=>{const cx=px+sl*(i+.5),c=z[4]>=z[1]?K.up:K.dn;L.ln(cx,Y(z[2]),cx,Y(z[3]),{c,w:.6});const t=Math.min(Y(z[1]),Y(z[4])),bh=Math.max(.8,Math.abs(Y(z[1])-Y(z[4])));L.rect(cx-cw/2,t,cw,bh,{fill:c})});
+    T(String((JRG_TK[k]||['',''])[1])+(G.dia&&G.dia!==loc().slice(0,10)?' · pregão de '+jrDM(G.dia):''),x+10,y+h-12,{s:6.6,c:K.mu})};
+  const materia=(m,o={})=>{if(!m||!m.titulo)return;const tl=wr(m.titulo,CW,14,'s'),fl=m.linha_fina?wr(m.linha_fina,CW,9.4,'i'):[];
+    const hh=12+tl.length*17+fl.length*13+((m.numeros||[]).length?44:0)+40;need(hh);L.y+=2;L.ln(M,L.y,W-M,L.y,{c:K.bd,w:.7});L.y+=8;
+    T(((m.editoria||'')+(m.chapeu?' · '+m.chapeu:'')).toUpperCase(),M,L.y,{s:7,f:'b',c:cor(m.editoria),w:CW});L.y+=12;
+    tl.forEach(l=>{T(l,M,L.y,{s:14,f:'s',c:K.nv});L.y+=17});fl.forEach(l=>{T(l,M,L.y,{s:9.4,f:'i',c:K.mu});L.y+=13});L.y+=3;
+    if((m.numeros||[]).length){const hN=Math.ceil(Math.min(6,m.numeros.length)/Math.min(4,m.numeros.length))*40;need(hN);L.y+=nums(m.numeros,M,L.y,CW)}
+    if(!o.semTexto)for(const p of par2(m.texto).split('\n'))corre(p,{s:9.2});
+    if(m.por_que_importa){const ls=wr('“'+m.por_que_importa+'”',CW-24,8.8,'i'),h=ls.length*12+12;need(h);L.rect(M,L.y,CW,h,{fill:K.grl});L.rect(M,L.y,3,h,{fill:K.gr});ls.forEach((l,i)=>T(l,M+12,L.y+6+i*12,{s:8.8,f:'i',c:K.nv}));L.y+=h+5}
+    const P=impPills(m.impacto);if(P.length){need(18);L.y+=pills(P,M,L.y,CW)+4}
+    L.y+=4};
+  const cot=(c,x,y,w,h,esc)=>{caixa(x,y,w,h,{fill:esc?K.nv:K.wh,stroke:esc?null:K.bd,r:5});T(String(c.n||c.k||'').toUpperCase(),x+8,y+7,{s:6.4,f:'b',c:esc?K.li:K.mu,w:w-14});
+    T(jeNumTxt(c.px),x+8,y+18,{s:14,f:'b',c:esc?K.wh:K.tx,w:w-14});pct(c.d1,x+8,y+36,7.6,esc?(c.d1>0?K.ln:c.d1<0?hex('#ff8a8a'):K.li):null);
+    const s=(String(c.k||'')+' '+String(c.n||'')).toLowerCase(),k=/\bwin\b|mini/.test(s)?'win':/\bwdo\b|futuro/.test(s)?'wdo':null,G=k&&JRN.g&&JRN.g[k];
+    if(!esc&&G&&Array.isArray(G.d)&&G.d.length>=5){const yv=G.d.map(z=>z[4]).filter(isFinite),hi=Math.max(...yv),lo=Math.min(...yv),sw=w-16,sh=14,X=i=>i*sw/(yv.length-1),Y=q=>sh-(q-lo)*sh/Math.max(1e-9,hi-lo);
+      L.path('M '+yv.map((q,i)=>X(i).toFixed(1)+' '+Y(q).toFixed(1)).join(' L '),x+8,y+h-20,{stroke:yv[yv.length-1]>=yv[0]?K.up:K.dn,bw:1})}};
+  const grade=(C,esc)=>{if(!C.length)return;const cols=4,gw=(CW-3*8)/cols,h=esc?50:62;for(let i=0;i<C.length;i+=cols){need(h+8);C.slice(i,i+cols).forEach((c,k)=>cot(c,M+k*(gw+8),L.y,gw,h,esc));L.y+=h+8}L.y+=2};
+  const secao=S=>{sec=null;if(L.y>TOP+20&&BOT-L.y<(BOT-TOP)*.25)L.add();else need(96);sec=S;ban(S,false)};
+  const tabela=(cols,rows,o={})=>{const z=8,pd=5,tw=cols.reduce((a,c)=>a+c.w,0),ws=cols.map(c=>c.w/tw*CW);
+    const hd=()=>{need(18+20);L.rect(M,L.y,CW,18,{fill:K.nv});let x=M;cols.forEach((c,i)=>{T(c.l.toUpperCase(),x+pd,L.y+5.5,{s:6.8,f:'b',c:K.wh});x+=ws[i]});L.y+=18};
+    hd();rows.forEach((r,ri)=>{const cl=r.map((c,i)=>wr(typeof c==='object'?c.t:c,ws[i]-2*pd,z,typeof c==='object'&&c.f||'r')),h=Math.max(...cl.map(x=>x.length))*11+2*pd;if(L.y+h>BOT){L.add();hd()}
+      if(ri%2)L.rect(M,L.y,CW,h,{fill:K.cz});let x=M;cl.forEach((ls,i)=>{const o2=typeof r[i]==='object'?r[i]:{};ls.forEach((l,j)=>T(l,x+pd,L.y+pd+j*11,{s:z,f:o2.f||'r',c:o2.c||K.tx}));x+=ws[i]});L.ln(M,L.y+h,W-M,L.y+h,{c:K.bd,w:.5});L.y+=h});L.y+=GAP};
+  const duo=(fa,fb)=>{const w=(CW-12)/2,ha=fa(null,w),hb=fb?fb(null,w):0,h=Math.max(ha,hb);need(h);const y=L.y;fa({x:M,y,h},w);if(fb)fb({x:M+w+12,y,h},w);L.y=y+h+GAP};
+  // ---------- conteúdo ----------
+  const oc=jrEdOcultas(),it=(v.materias||[]).filter(m=>m&&m.titulo&&!oc.includes(m.editoria)),G={diario:[],empresas:[],economia:[],mundo:[]};it.forEach(m=>G[jeGrupo(m)].push(m));
+  const cots=v.cotacoes||[],intl=cots.filter(c=>/s&p|nasdaq|dow|dxy|brent|ouro|stoxx|nikkei|vix|treasur/i.test((c.n||'')+' '+(c.k||''))),locais=cots.filter(c=>!intl.includes(c));
+  // capa
+  cab(true);L.y=TOP+6;
+  {const imC=await jvFotoImg(['img/jornal/capa.jpg','touro-hero.jpg']),m=v.manchete,tw=imC?CW*.52:CW*.7,tl=wr(m.titulo,tw,23,'s'),fl=m.linha_fina?wr(m.linha_fina,tw,9.6):[],h=Math.max(215,60+tl.length*27+fl.length*13+20),y=L.y;
+    L.rr(M,y,CW,h,{fill:K.nv,r:6});
+    let fotoOk=false;if(imC){try{const fx=M+CW*.42,fw=CW*.58-3,b=jvCrop(imC,fw/(h-6),1100,.25);if(b){const im=await doc.embedJpg(b);L.pg.drawImage(im,{x:fx,y:H-y-h+3,width:fw,height:h-6});L.rect(fx-2,y+2,4,h-4,{fill:K.nv});const n=18,sw=fw*.42/n;for(let i=0;i<n;i++)L.rect(fx+1+i*sw,y+3,sw+.6,h-6,{fill:K.nv,op:1-(i+.5)/n});fotoOk=true}}catch(e){}}
+    if(!fotoOk){
+    [[0,120],[34,90],[60,140],[96,70],[128,110],[160,60],[196,130],[230,85],[262,150],[300,95],[334,125],[370,80],[404,140],[440,100],[476,65]].forEach(([bx,bh])=>{const sh=bh*h/300;L.rect(M+CW-392+bx*.75,y+h-sh,22,sh,{fill:K.sk})});
+    L.path('M 0 150 L 50 138 L 95 143 L 145 120 L 190 126 L 240 100 L 285 106 L 335 76 L 380 84 L 430 54 L 475 60 L 527 30',M,y+h-175,{stroke:K.ln,bw:2.2});}
+    L.pill(String(m.editoria||'Mercados').toUpperCase(),M+18,y+18,{s:7,bg:K.gr,c:K.wh});
+    tl.forEach((l,i)=>T(l,M+18,y+44+i*27,{s:23,f:'s',c:K.wh}));fl.forEach((l,i)=>T(l,M+18,y+50+tl.length*27+i*13,{s:9.6,c:K.li}));L.y=y+h+GAP}
+  grade(locais.slice(0,8),false);
+  barra('Por que importa',v.manchete.por_que_importa);
+  {const m=v.manchete;if((m.numeros||[]).length){need(46);L.y+=nums(m.numeros,M,L.y,CW)}for(const p of String(m.texto||'').split(/\n\s*\n/).filter(Boolean))corre(p,{s:9.4});const P=impPills(m.impacto);if(P.length){need(18);L.y+=pills(P,M,L.y,CW)+6}}
+  // antes da abertura: 5 coisas, fechamento da véspera, altas e baixas e gráfico do dia (v242)
+  {const C5=(v.cinco_coisas||[]).filter(x=>x&&x.titulo),Q=(v.cotacoes||[]).filter(c=>c&&c.px!=null),g=v.grafico_do_dia,V=typeof RK!=='undefined'&&RK.v;
+    if(C5.length||Q.length||g||V){secao({ico:'diario',tit:'Antes da abertura',sub:'5 coisas para saber, fechamento da véspera e o gráfico do dia'});
+      if(C5.length){need(70);fita('5 coisas para saber antes da abertura',M,L.y);L.y+=24;C5.forEach((x,i)=>{const tl=wr(x.titulo,CW-44,10.5,'b'),tx=x.texto?wr(x.texto,CW-44,8.8):[],h=Math.max(30,tl.length*13+tx.length*11.5+8);need(h+6);const y=L.y;L.circ(M+13,y+11,11.5,{fill:K.nv});T(String(i+1),M+13,y+4.5,{s:13,f:'s',c:K.ln,al:'c'});let yy=y;tl.forEach(l=>{T(l,M+34,yy,{s:10.5,f:'b',c:K.tx});yy+=13});tx.forEach(l=>{T(l,M+34,yy,{s:8.8,c:K.mu});yy+=11.5});L.y=y+h;L.ln(M+34,L.y,W-M,L.y,{c:K.bd,w:.5});L.y+=6});L.y+=GAP-6}
+      if(Q.length){need(90);fita('Fechamento da véspera',M,L.y);L.y+=22;if(v.fechamento_texto)corre(v.fechamento_texto,{s:9});tabela([{l:'Ativo',w:40},{l:'Último',w:30},{l:'Variação',w:30}],Q.map(c=>[{t:c.n||c.k,f:'b'},jeNumTxt(c.px),{t:c.d1==null?'–':((c.d1>0?'+':'')+Number(c.d1).toFixed(2)).replace('.',',')+'%',f:'b',c:c.d1>0?K.up:c.d1<0?K.dn:K.mu}]))}
+      if(V){const A=(V.altas||[]).filter(x=>x.var>0).sort((a,b)=>b.var-a.var).slice(0,5),B=(V.baixas||[]).filter(x=>x.var<0).sort((a,b)=>a.var-b.var).slice(0,5);if(A.length||B.length){const n=Math.max(A.length,B.length),h=34+n*16+6;need(h+24);fita('Maiores altas e baixas do Ibovespa',M,L.y);L.y+=22;const y=L.y,gw=(CW-10)/2;[[A,'ALTAS',K.up],[B,'BAIXAS',K.dn]].forEach(([Ls,t,c],k)=>{const x=M+k*(gw+10);caixa(x,y,gw,h,{fill:K.wh});T(t,x+10,y+9,{s:7.4,f:'b',c});Ls.forEach((it,i)=>{const yy=y+28+i*16;T(it.tk,x+10,yy,{s:8.8,f:'b',c:K.tx});T(String(it.nome||''),x+62,yy+.5,{s:7.6,c:K.mu,w:gw-130});T(((it.var>0?'+':'')+Number(it.var).toFixed(2)).replace('.',',')+'%',x+gw-10,yy,{s:8.8,f:'b',c,al:'r'})})});L.y=y+h+GAP}}
+      if(g){const tl=g.titulo?wr(g.titulo,CW-24,12,'s'):[],tx=g.texto?wr(g.texto,CW-24,8.8):[],gh=150,h=36+tl.length*15+tx.length*11.5+gh+14;need(h);const y=L.y;caixa(M,y,CW,h);fita('Gráfico do dia',M+10,y+10);let yy=y+34;tl.forEach(l=>{T(l,M+12,yy,{s:12,f:'s',c:K.nv});yy+=15});tx.forEach(l=>{T(l,M+12,yy,{s:8.8,c:K.tx});yy+=11.5});jvGraf(g.ativo,M+12,yy+4,CW-24,gh);L.y=y+h+GAP}}}
+  // seu dia: hoje você opera?, seu pregão anterior e plano do pregão (v241)
+  {const hj=jrHoje(),on=jrOntem(),PL2=['win','wdo'].map(jrPlano).filter(Boolean),pre=jrPre();
+    if(JRMD()){secao({ico:'tec',tit:'Seu dia de trader',sub:'Hoje você opera? · limite de perda · seu pregão anterior'});
+    {const cc=hj.nv==='dn'?K.dn:hj.nv==='up'?K.up:hex('#b45309'),ls=wr(hj.msg,CW-40,9),h=30+ls.length*12+30;need(h);const y=L.y;caixa(M,y,CW,h,{fill:K.wh});L.rect(M,y,4,h,{fill:cc});T(hj.tit,M+16,y+9,{s:13,f:'s',c:cc});ls.forEach((l,i)=>T(l,M+16,y+27+i*12,{s:9,c:K.tx}));
+      const yk=y+30+ls.length*12,kw=(CW-48)/3;[['LIMITE DE PERDA HOJE',hj.lp>0?money(hj.lp):'não definido'],['CHECKLIST DA MANHÃ',hj.ck?'concluído':'pendente'],['TRAVA DO APP',hj.trava==null?'–':hj.trava?'travado':'liberado']].forEach(([a,b],i)=>{const x=M+16+i*(kw+8);T(a,x,yk,{s:6.4,f:'b',c:K.mu});T(b,x,yk+10,{s:10.5,f:'b',c:K.tx})});L.y=y+h+GAP}
+    if(on){const cards=[['RESULTADO',money(on.brl),on.temR?jrFmtR(on.R):'',on.brl>0?K.up:on.brl<0?K.dn:K.tx],['TRADES',String(on.n),'acerto '+on.acerto+'%',K.tx],['FORA DAS REGRAS',String(on.fora),on.fora?'reveja o motivo':'disciplina em dia',on.fora?K.dn:K.up],['ESTADO ANTES',on.estado?on.estado+'/5':'–',on.ep?'escala '+on.ep.n+' · '+on.ep.txt:'',K.tx]];
+      need(96);fita('Seu pregão de '+jrDM(on.d),M,L.y);L.y+=22;const gw=(CW-24)/4,h=50;cards.forEach(([a,b,c,cor],i)=>{const x=M+i*(gw+8);caixa(x,L.y,gw,h,{fill:K.wh});T(a,x+8,L.y+7,{s:6.4,f:'b',c:K.mu});T(b,x+8,L.y+18,{s:13,f:'b',c:cor,w:gw-14});if(c)T(c,x+8,L.y+35,{s:7,c:K.mu,w:gw-14})});L.y+=h+6;
+      corre(on.erros.length?'Erros marcados: '+on.erros.join(', '):'Nenhum erro marcado nesse dia.',{s:8.6,c:on.erros.length?K.tx:K.mu});if(!on.posop)corre('O diário pós-operação desse dia ficou sem conferir.',{s:8.2,c:hex('#b45309')})}
+    }
+    if(PL2.length||pre){secao({ico:'tec',tit:'Plano do pregão',sub:'Pivô, suportes, resistências e viés da pré-abertura para WIN e WDO'});fita('Plano do pregão: WIN e WDO',M,L.y);L.y+=22;
+      if(pre){const cc=pre.vies==='positivo'?K.up:pre.vies==='negativo'?K.dn:hex('#b45309'),its=pre.itens.map(x=>wr(x.n+(x.d1!=null?' '+((x.d1>0?'+':'')+Number(x.d1).toFixed(2)).replace('.',',')+'%':'')+' · '+(x.efeito||''),CW-34,8.4)),h=26+its.reduce((a,l)=>a+l.length*11+2,0)+6;need(h);const y=L.y;caixa(M,y,CW,h,{fill:K.wh});L.rect(M,y,4,h,{fill:cc});T('Viés da pré-abertura: '+pre.vies+(pre.nota!=null?' (nota '+pre.nota+')':''),M+14,y+9,{s:9.5,f:'b',c:cc});let yy=y+26;its.forEach(l=>{L.circ(M+18,yy+3.4,1.8,{fill:cc});l.forEach(z=>{T(z,M+26,yy,{s:8.4,c:K.tx});yy+=11});yy+=2});L.y=y+h+GAP}
+      if(PL2.length){const gw=(CW-10)/2,bl=PL2.map(t=>{const f=q=>jrNumF(q,t.div);return {t,f,a:wr('Alta: acima de '+f(t.R1)+', o próximo alvo é '+f(t.R2)+'. Perder o pivô ('+f(t.P)+') enfraquece a alta.',gw-20,7.8),b:wr('Baixa: abaixo de '+f(t.S1)+', o próximo alvo é '+f(t.S2)+'. Voltar acima do pivô enfraquece a queda.',gw-20,7.8)}});
+        const h=Math.max(...bl.map(o=>86+(o.a.length+o.b.length)*10.5+16));need(h);const y=L.y;
+        bl.forEach((o,i)=>{const t=o.t,x=M+i*(gw+10),cc=t.tend==='Alta'?K.up:t.tend==='Baixa'?K.dn:K.mu;caixa(x,y,gw,h,{fill:K.wh});T(t.tk,x+10,y+9,{s:13,f:'s',c:K.nv});L.pill(t.tend.toUpperCase(),x+gw-10,y+8,{s:6.8,bg:t.tend==='Alta'?K.grl:t.tend==='Baixa'?hex('#fdf0f0'):K.cz,c:cc,al:'r'});
+          const cw=(gw-20)/5;[['R2',t.R2,K.dn],['R1',t.R1,K.dn],['PIVÔ',t.P,K.tx],['S1',t.S1,K.up],['S2',t.S2,K.up]].forEach(([a,q,c],j)=>{const cx=x+10+j*cw;L.rr(cx+1,y+32,cw-2,32,{fill:K.cz,r:4});T(a,cx+cw/2,y+36,{s:6.4,f:'b',c:K.mu,al:'c'});T(o.f(q),cx+cw/2,y+47,{s:8.4,f:'b',c,al:'c',w:cw-4})});
+          let yy=y+72;o.a.forEach(z=>{T(z,x+10,yy,{s:7.8,c:K.tx});yy+=10.5});yy+=2;o.b.forEach(z=>{T(z,x+10,yy,{s:7.8,c:K.tx});yy+=10.5});
+          T(t.hoje?'Níveis do pregão de hoje (em andamento).':'Calculado com o pregão de '+jrDM(t.dia)+'.',x+10,y+h-14,{s:6.8,c:K.mu,w:gw-20})});L.y=y+h+4;
+        corre('Pivô clássico: P = (máxima + mínima + fechamento) ÷ 3; R1 = 2P - mínima; S1 = 2P - máxima; R2 e S2 somam e subtraem a amplitude do pregão. Contexto, não é recomendação.',{s:7.2,c:K.mu})}}}
+  // diário de trader
+  secao({ico:'diario',tit:'Diário de Trader',sub:'Panorama, notícias e oportunidades do dia'});
+  {const dest=G.diario[0]||it[0],epl=(v.em_poucas_linhas||[]).slice(0,8);
+    duo((b,w)=>{const L2=epl.map(x=>wr(x,w-34,8.6));const h=34+L2.reduce((a,l)=>a+l.length*11.5+4,0)+6;if(!b)return h;caixa(b.x,b.y,w,b.h);fita('Em poucas linhas',b.x+10,b.y+10);let y=b.y+34;L2.forEach(ls=>{L.circ(b.x+16,y+3.5,2,{fill:K.gr});ls.forEach(l=>{T(l,b.x+24,y,{s:8.6,c:K.tx});y+=11.5});y+=4});return h},
+      dest?(b,w)=>{const tl=wr(dest.titulo,w-20,11.5,'s'),fl=dest.linha_fina?wr(dest.linha_fina,w-20,8.4):[],h=10+80+8+tl.length*14+fl.length*11+10;if(!b)return h;caixa(b.x,b.y,w,b.h);
+        L.rr(b.x+8,b.y+8,w-16,80,{fill:cor(dest.editoria),r:5});L.rect(b.x+8,b.y+48,w-16,40,{fill:K.nv,op:.35});T(JR_GLIFO[dest.editoria]||'B3',b.x+w-18,b.y+20,{s:40,f:'s',c:K.wh,al:'r'});T(String(dest.editoria||'').toUpperCase(),b.x+18,b.y+74,{s:6.8,f:'b',c:K.wh});
+        let y=b.y+96;tl.forEach(l=>{T(l,b.x+10,y,{s:11.5,f:'s',c:K.nv});y+=14});fl.forEach(l=>{T(l,b.x+10,y,{s:8.4,c:K.mu});y+=11});return h}:null)}
+  {const R=jrResumo(v);if(R.length){const ls=R.map((m,i)=>wr((i+1)+'. '+m.titulo+(m.por_que_importa?' — '+m.por_que_importa:''),CW-24,8.8));const h=34+ls.reduce((a,l)=>a+l.length*12+3,0)+6;need(h);const y=L.y;caixa(M,y,CW,h);fita('Resumo executivo',M+10,y+10);let yy=y+34;ls.forEach(l=>{l.forEach(x=>{T(x,M+12,yy,{s:8.8,c:K.tx});yy+=12});yy+=3});L.y=y+h+GAP}}
+  if(G.diario.length){need(60);fita('Mais do dia',M,L.y);L.y+=22;G.diario.forEach(m=>materia(m))}
+  // empresas
+  if(G.empresas.length||(JRN.varr&&(JRN.varr.ranking||[]).length)){const E=G.empresas;secao({ico:'empresas',tit:'Empresas e resultados',sub:'Balanços e destaques das companhias'});
+    if(E.length){const rows=E.slice(0,6).map(m=>{const n=(m.numeros||[])[0];return {tk:jeTk(m),tl:wr(m.titulo,CW-90,8.8,'b'),n:n?n.rotulo+': '+n.valor:''}});const h=34+rows.reduce((a,r)=>a+Math.max(18,r.tl.length*11+(r.n?11:0))+6,0);need(h);const y=L.y;caixa(M,y,CW,h);fita('Destaques do trimestre',M+10,y+10);let yy=y+34;
+      rows.forEach(r=>{L.rr(M+10,yy,56,16,{fill:K.nv,r:3});T(r.tk,M+38,yy+4.5,{s:7.4,f:'b',c:K.wh,al:'c',w:52});let y2=yy;r.tl.forEach(l=>{T(l,M+76,y2,{s:8.8,f:'b',c:K.tx});y2+=11});if(r.n){T(r.n,M+76,y2,{s:8,c:K.mu,w:CW-90});y2+=11}yy=Math.max(yy+18,y2)+6});L.y=y+h+GAP}
+    {const it2=E.map(m=>{const N=m.numeros||[],r=N.find(n=>/receita/i.test(n.rotulo)),l=N.find(n=>/lucro/i.test(n.rotulo)),rv=r&&jeVal(r.valor),lv=l&&jeVal(l.valor);return rv!=null&&lv!=null?{tk:jeTk(m),r:rv,l:lv}:null}).filter(Boolean).slice(0,6);
+      if(it2.length>=2){const h=170;need(h);const y=L.y;caixa(M,y,CW,h);T('Desempenho das empresas que divulgaram (R$ bi)',M+12,y+10,{s:8.6,f:'b',c:K.nv});L.rect(W-M-150,y+11,8,8,{fill:K.az});T('Receita',W-M-138,y+11,{s:7.4,c:K.mu});L.rect(W-M-90,y+11,8,8,{fill:K.gr});T('Lucro',W-M-78,y+11,{s:7.4,c:K.mu});
+        const mx=Math.max(...it2.flatMap(q=>[q.r,q.l]),1e-9),base=y+h-24,top=y+40,gp=(CW-30)/it2.length,bw=Math.min(28,gp/2.8),f=q=>q.toLocaleString('pt-BR',{maximumFractionDigits:1}),Y=q=>base-Math.max(0,q)/mx*(base-top);
+        it2.forEach((q,i)=>{const cx=M+15+gp*i+gp/2;L.rect(cx-bw-2,Y(q.r),bw,base-Y(q.r),{fill:K.az});L.rect(cx+2,Y(q.l),bw,base-Y(q.l),{fill:K.gr});T(f(q.r),cx-bw/2-2,Y(q.r)-10,{s:7,c:K.tx,al:'c'});T(f(q.l),cx+2+bw/2,Y(q.l)-10,{s:7,c:K.tx,al:'c'});T(q.tk,cx,base+6,{s:7.6,f:'b',c:K.tx,al:'c'})});
+        L.ln(M+12,base,W-M-12,base,{c:K.mu,w:.7});L.y=y+h+GAP}}
+    {const PL3=E.filter(m=>m.placar||m.consenso);if(PL3.length){need(70);fita('Placar dos balanços',M,L.y);L.y+=22;tabela([{l:'Empresa',w:15},{l:'Resultado',w:47},{l:'Placar',w:14},{l:'O que se esperava',w:36}],PL3.map(m=>[{t:jeTk(m),f:'b'},m.titulo,{t:m.placar||'–',f:'b',c:m.placar==='acima'?K.up:m.placar==='abaixo'?K.dn:K.mu},m.consenso||'']))}}
+    E.forEach(m=>materia(m));
+    {const VR=JRN.varr;if(VR&&(VR.ranking||[]).length){const fm=x=>x==null?'–':Number(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});need(70);fita('Oportunidades fundamentalistas',M,L.y);L.y+=22;if(VR.resumo)corre(VR.resumo,{s:8.8});
+      tabela([{l:'Ação',w:18},{l:'Preço',w:20},{l:'Graham',w:20},{l:'Bazin',w:20},{l:'Potencial',w:22}],VR.ranking.map(r=>[{t:r.tk,f:'b'},fm(r.preco),fm(r.graham),fm(r.bazin),{t:(r.potencial_medio_pct>=0?'+':'')+String(r.potencial_medio_pct).replace('.',',')+'%',f:'b',c:K.up}]));
+      corre('Graham e Bazin, média do potencial de alta. Triagem por números, não é recomendação de compra.',{s:7.4,c:K.mu})}}
+    if(E[0])barra('Fique de olho',E[0].por_que_importa)}
+  // economia brasileira
+  {const J=(typeof JR!=='undefined'&&JR.data)||{},dol=cots.find(c=>/^d[oó]lar(?!.*futuro)/i.test(c.n||'')||c.k==='dolar');
+    const pp=x=>Number(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%',kp=[J.selic&&J.selic.v!=null?['Juros (Selic)',pp(J.selic.v),'meta do Copom']:null,J.cdi&&J.cdi.v!=null?['CDI',pp(J.cdi.v),'ao ano']:null,J.ipca12&&J.ipca12.v!=null?['Inflação (IPCA)',pp(J.ipca12.v),'em 12 meses']:null,dol?['Dólar comercial','R$ '+jeNumTxt(dol.px),'']:null].filter(Boolean),curva=Array.isArray(J.curva)&&J.curva.length>1?J.curva.filter(p=>isFinite(p.du)&&isFinite(p.taxa)):[];
+    if(G.economia.length||kp.length||(v.analise&&v.analise.texto)){secao({ico:'economia',tit:'Economia brasileira',sub:'Juros, câmbio e cenário fiscal'});
+      if(kp.length){const gw=(CW-(kp.length-1)*8)/kp.length,h=56;need(h);kp.forEach(([a,b,c],i)=>{const x=M+i*(gw+8);caixa(x,L.y,gw,h,{fill:K.wh});T(a.toUpperCase(),x+9,L.y+8,{s:6.6,f:'b',c:K.mu,w:gw-14});T(b,x+9,L.y+20,{s:16,f:'b',c:K.tx});if(c)T(c,x+9,L.y+41,{s:7.4,c:K.mu})});L.y+=h+GAP}
+      if(v.analise&&v.analise.texto){const tx=String(v.analise.texto).split(/\n\s*\n/).slice(0,2).join(' ').slice(0,1100);
+        const fa=(b,w)=>{const tl=wr(v.analise.titulo||'Cenário',w-20,11.5,'s'),ls=wr(tx,w-20,8.6),h=14+tl.length*14+ls.length*11.6+10;if(!b)return h;caixa(b.x,b.y,w,b.h);let y=b.y+10;tl.forEach(l=>{T(l,b.x+10,y,{s:11.5,f:'s',c:K.nv});y+=14});ls.forEach(l=>{T(l,b.x+10,y,{s:8.6,c:K.tx});y+=11.6});return h};
+        const fb=curva.length>1?(b,w)=>{const h=170;if(!b)return h;caixa(b.x,b.y,w,b.h);T('Curva de juros (DI futuro)',b.x+10,b.y+10,{s:9,f:'s',c:K.nv});const ys=curva.map(p=>p.taxa),xs=curva.map(p=>p.du),y0=Math.min(...ys)-.1,y1=Math.max(...ys)+.1,x0=Math.min(...xs),x1=Math.max(...xs),px=b.x+34,pw=w-48,py=b.y+30,ph=h-56,X=q=>px+(q-x0)/(x1-x0||1)*pw,Y=q=>py+(y1-q)/(y1-y0||1)*ph;
+          [y0+.1,(y0+y1)/2,y1-.1].forEach(q=>{L.ln(px,Y(q),px+pw,Y(q),{c:K.bd,w:.5});T(q.toFixed(2).replace('.',',')+'%',px-4,Y(q)-3.5,{s:6.4,c:K.mu,al:'r'})});
+          L.path('M '+curva.map(p=>(X(p.du)-b.x).toFixed(1)+' '+(Y(p.taxa)-b.y).toFixed(1)).join(' L '),b.x,b.y,{stroke:K.gr,bw:1.6});curva.forEach(p=>L.circ(X(p.du),Y(p.taxa),1.6,{fill:K.gr}));T('prazo (dias úteis) →',px+pw,py+ph+8,{s:6.4,c:K.mu,al:'r'});return h}:null;
+        if(fb)duo(fa,fb);else{const h=fa(null,CW);need(h);fa({x:M,y:L.y,h},CW);L.y+=h+GAP}}
+      G.economia.forEach(m=>materia(m));if(G.economia[0])barra('Por que importa',G.economia[0].por_que_importa)}}
+  // mercado internacional
+  {const TC=[];if(G.mundo.length||intl.length){secao({ico:'mundo',tit:'Mercado internacional',sub:'O que movimenta o mundo'});
+    grade(intl.slice(0,8),true);G.mundo.forEach(m=>materia(m));
+    if(TC.length){const h=82;need(h+24);fita('Análise técnica',M,L.y);L.y+=22;const gw=(CW-10)/2;TC.forEach((t,i)=>{const x=M+i*(gw+10),f=q=>jrNumF(q,t.div),cc=t.tend==='Alta'?K.up:t.tend==='Baixa'?K.dn:K.mu;caixa(x,L.y,gw,h,{fill:K.wh});T(t.tk,x+10,L.y+9,{s:13,f:'s',c:K.nv});L.pill(t.tend.toUpperCase(),x+gw-10,L.y+8,{s:6.8,bg:t.tend==='Alta'?K.grl:t.tend==='Baixa'?hex('#fdf0f0'):K.cz,c:cc,al:'r'});
+      T('Suporte',x+10,L.y+32,{s:7,c:K.mu});T(f(t.S1),x+10,L.y+42,{s:11,f:'b',c:K.up});T('Pivô',x+gw/2-20,L.y+32,{s:7,c:K.mu});T(f(t.P),x+gw/2-20,L.y+42,{s:11,f:'b',c:K.tx});T('Resistência',x+gw-10,L.y+32,{s:7,c:K.mu,al:'r'});T(f(t.R1),x+gw-10,L.y+42,{s:11,f:'b',c:K.dn,al:'r'});
+      T(`mínima ${f(t.L)} · máxima ${f(t.H)} · último ${f(t.C)}`,x+10,L.y+62,{s:7,c:K.mu,w:gw-20})});L.y+=h+4;corre('Pivô clássico do pregão (candles de 5 min). Não é recomendação.',{s:7.2,c:K.mu})}}}
+  // sua carteira
+  {const A=jrcAtivos();if(A.length){secao({ico:'carteira',tit:'Sua carteira',sub:'Análise fundamentalista e técnica de cada ativo'});
+    for(const o of A){const f=o.fun||{},t=o.tec||{},g=t.gatilhos||{};const campos=[['Fundamentos',f.resumo],['Para quem tem',f.para_quem_tem],['Técnica',t.resumo],['Suportes e resistências',t.zonas_de_interesse],['Gatilhos',[g.compra?'Compra: '+g.compra:'',g.venda?'Venda: '+g.venda:''].filter(Boolean).join(' · ')]].filter(x=>x[1]&&typeof x[1]==='string');
+      const ls=campos.map(([a,b])=>[a,wr(b,CW-24,8.6)]),h=34+ls.reduce((s,[,l])=>s+11+l.length*11.4+4,0);need(Math.min(h,BOT-TOP));const y=L.y;caixa(M,y,CW,h);T(o.tk,M+12,y+10,{s:13,f:'s',c:K.nv});
+      const P=[f.valuation&&{t:f.valuation.toLowerCase(),bg:/BARATO/.test(f.valuation)?K.grl:/CARO/.test(f.valuation)?hex('#fdf0f0'):K.cz,c:/BARATO/.test(f.valuation)?K.up:/CARO/.test(f.valuation)?K.dn:K.mu},f.qualidade&&{t:'qualidade '+f.qualidade.toLowerCase()},t.vies&&{t:'viés '+t.vies.toLowerCase(),bg:t.vies==='ALTA'?K.grl:t.vies==='BAIXA'?hex('#fdf0f0'):K.cz,c:t.vies==='ALTA'?K.up:t.vies==='BAIXA'?K.dn:K.mu}].filter(Boolean);
+      let px=W-M-12;[...P].reverse().forEach(p=>{const pw=L.pill(p.t,px,y+9,{s:6.8,bg:p.bg||K.cz,c:p.c||K.tx,al:'r'});px-=pw+5});
+      let yy=y+32;ls.forEach(([a,l])=>{T(a.toUpperCase(),M+12,yy,{s:6.4,f:'b',c:K.mu});yy+=11;l.forEach(x=>{T(x,M+12,yy,{s:8.6,c:K.tx});yy+=11.4});yy+=4});L.y=y+h+GAP}
+    corre('Leitura da IA com os dados da sua carteira. Não é recomendação de investimento.',{s:7.2,c:K.mu})}}
+  // coluna da mesa (v242)
+  if(v.mesa&&v.mesa.texto){secao({ico:'diario',tit:'Coluna da mesa',sub:'Opinião da redação: o que importa para quem opera hoje'});if(v.mesa.titulo){const tl=wr(v.mesa.titulo,CW,15,'s');need(tl.length*18+40);tl.forEach(l=>{T(l,M,L.y,{s:15,f:'s',c:K.nv});L.y+=18});L.y+=4}for(const p of String(v.mesa.texto).split(/\n\s*\n/).filter(Boolean))corre(p,{s:9.6,f:'i'});corre('Opinião da redação, com os dados do dia. Não é recomendação de investimento.',{s:7.2,c:K.mu})}
+  // agenda econômica e fechamento
+  {const ag=v.agenda||[],corp=ag.filter(a=>/balan/i.test(a.evento||'')),eco=ag.filter(a=>!corp.includes(a)),A=jrImpAgg(v),R=jrResumo(v),dica=GATE_DICAS[new Date().getDate()%GATE_DICAS.length][0];
+    secao({ico:'agenda',tit:'Agenda econômica',sub:'O que observar hoje: impacto, consenso, anterior e resumo do dia'});
+    if(eco.length)tabela([{l:'Quando',w:15},{l:'País',w:13},{l:'Evento',w:40},{l:'Impacto',w:11},{l:'Consenso',w:11},{l:'Anterior',w:11}],eco.map(a=>[{t:a.quando,f:'b'},a.pais||'–',a.evento+(a.por_que?'\n'+a.por_que:''),{t:a.impacto==='alto'?'Alto':a.impacto==='medio'?'Médio':a.impacto==='baixo'?'Baixo':'–',f:'b',c:a.impacto==='alto'?K.dn:a.impacto==='medio'?hex('#b45309'):K.mu},a.consenso||'–',a.anterior||'–']));
+    if(corp.length){const ls=corp.map(a=>wr(a.quando+' · '+String(a.evento).replace(/^Balanço:\s*/i,''),CW-34,8.6));const h=34+ls.reduce((s,l)=>s+l.length*11.5+3,0)+6;need(h);const y=L.y;caixa(M,y,CW,h);fita('Eventos corporativos',M+10,y+10);let yy=y+34;ls.forEach(l=>{L.circ(M+16,yy+3.5,2,{fill:K.gr});l.forEach(x=>{T(x,M+24,yy,{s:8.6,c:K.tx});yy+=11.5});yy+=3});L.y=y+h+GAP}
+    if(A.length){need(60);const y=L.y;const P=A.map(o=>({t:(o.dir==='alta'?'+ ':o.dir==='baixa'?'- ':'')+o.a+(o.n>1?' x'+o.n:''),bg:o.dir==='alta'?K.grl:o.dir==='baixa'?hex('#fdf0f0'):K.cz,c:o.dir==='alta'?K.up:o.dir==='baixa'?K.dn:K.mu}));
+      fita('Impacto nos ativos',M,y);L.y=y+22;L.y+=pills(P,M,L.y,CW)+4;corre('+ a notícia favorece alta · - favorece baixa · sem sinal: efeito misto. Leitura da redação, não é recomendação.',{s:7.2,c:K.mu})}
+    duo((b,w)=>{const it3=(R.length?R:jrItens(v).slice(0,4)).map(m=>wr(m.titulo,w-34,8.4));const h=36+it3.reduce((s,l)=>s+l.length*11+4,0)+6;if(!b)return h;L.rr(b.x,b.y,w,b.h,{fill:K.nv,r:6});T('RESUMO DO DIA',b.x+12,b.y+12,{s:8,f:'b',c:K.ln});let y=b.y+32;it3.forEach(l=>{L.circ(b.x+16,y+3.4,2,{fill:K.ln});l.forEach(x=>{T(x,b.x+24,y,{s:8.4,c:K.wh});y+=11});y+=4});return h},
+      (b,w)=>{const ls=wr('“'+dica+'”',w-28,12,'si');const h=24+ls.length*15+22;if(!b)return h;L.rr(b.x,b.y,w,b.h,{fill:K.gr,r:6});let y=b.y+(b.h-(ls.length*15+16))/2;ls.forEach(l=>{T(l,b.x+14,y,{s:12,f:'si',c:K.wh});y+=15});T("Psicologia Financeira, Celso Sant'Ana",b.x+14,y+4,{s:7,c:K.li});return h});
+    {const ls=wr('Edição escrita pela IA com pesquisa na internet e os números do app. Confira os fatos antes de repassar. Não é recomendação de investimento.',CW-200,7.4),h=Math.max(58,22+ls.length*10);need(h);const y=L.y;L.rr(M,y,CW,h,{fill:K.nv,r:6});logo(M+14,y+(h-38)/2+2,.95,true);T('Jornal do Pregão',M+56,y+h/2-14,{s:16,f:'s',c:K.wh});T('INFORMAÇÃO · MERCADOS · ANÁLISE',M+56,y+h/2+6,{s:5.8,f:'b',c:K.ln});
+      ls.forEach((l,i)=>T(l,W-M-12,y+(h-ls.length*10)/2+i*10,{s:7.4,c:K.li,al:'r'}));L.y=y+h}}
+  // numeração "Página X de N" (cabeçalho e rodapé)
+  const P=doc.getPages(),n=P.length;P.forEach((pg,i)=>{L.pg=pg;const tx=`Página ${i+1} de ${n}`;T(tx,W-M,46,{s:7.6,f:'b',c:K.nv,al:'r'});L.ln(M,H-34,W-M,H-34,{c:K.bd,w:.7});T('Jornal do Pregão · '+dtL,M,H-28,{s:6.8,c:K.mu});T(tx,W-M,H-28,{s:6.8,c:K.mu,al:'r'})});
+  doc.setTitle('Jornal do Pregão · '+dtL);
+  return {bytes:await doc.save(),paginas:n};
+}
+{const jp164=jrPdf;jrPdf=async function(){const v=jrVer();if(!v||!v.manchete)return toast('Abra uma edição primeiro.');toast('Montando o PDF do jornal…',2200);
+  try{const {bytes,paginas}=await jvPdfBytes(v);const blob=new Blob([bytes],{type:'application/pdf'}),nome=`jornal-${v.dia||loc().slice(0,10)}-${v.edicao||''}.pdf`;window.__jrpdf=bytes.length;window.__jrpdfPag=paginas;window.__jvPag=paginas;
+    try{const f=new File([blob],nome,{type:'application/pdf'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Jornal do Pregão'});return}}catch(e){if(e&&e.name==='AbortError')return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast('PDF salvo.')}
+  catch(e){try{errAdd('jornal · PDF editorial (vetor)',e.message||e)}catch(x){}return jp164.apply(this,arguments)}}}
+
+/* ---------- 165. Fotos no jornal: touro na capa e fotos por seção em img/jornal/ (v240) ---------- */
+// carrega a primeira imagem que existir (mesma origem do app); null se nenhuma
+function jvFotoImg(urls){return (async()=>{for(const u of urls){const im=await new Promise(res=>{const i=new Image();i.onload=()=>res(i.naturalWidth?i:null);i.onerror=()=>res(null);i.src=u});if(im)return im}return null})()}
+// recorta no formato pedido (preenche, sem distorcer) e devolve o JPEG; null se o navegador não deixar
+function jvCrop(img,ratio,maxW=1000,yBias=.3){try{const sw=img.naturalWidth,sh=img.naturalHeight;let cw=sw,ch=sw/ratio;if(ch>sh){ch=sh;cw=sh*ratio}
+  const sx=(sw-cw)/2,sy=(sh-ch)*yBias,ow=Math.min(maxW,Math.round(cw)),oh=Math.round(ow/ratio),c=document.createElement('canvas');c.width=ow;c.height=oh;
+  c.getContext('2d').drawImage(img,sx,sy,cw,ch,0,0,ow,oh);const u=c.toDataURL('image/jpeg',.9),b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}catch(e){return null}}
+const JV_FOTOS=['diario','empresas','economia','mundo','carteira','agenda'];
+// manchete no app: foto de fundo (img/jornal/capa.jpg, se existir; senão o touro do app)
+{const jm165=jrMateria;jrMateria=function(m,id,grande){let h=jm165.apply(this,arguments);try{if(grande&&m&&m.titulo)h=h.replace(/<figure class="jrilu"[\s\S]*?<\/figure>/,`<figure class="jrilu jrfoto" aria-hidden="true"><span>${esc(String(m.editoria||'').toUpperCase())}</span></figure>`)}catch(e){}return h}}
+{const st165=document.createElement('style');st165.id='jornal165';st165.textContent=`
+.jrilu.jrfoto{position:relative;aspect-ratio:600/230;background:linear-gradient(90deg,rgba(9,22,32,.92) 0%,rgba(9,22,32,.55) 38%,rgba(9,22,32,0) 70%),url(img/jornal/capa.jpg) right 30%/cover no-repeat,url(touro-hero.jpg) right 30%/cover no-repeat,#0e2a3b;border-radius:12px}
+.jrilu.jrfoto span{position:absolute;left:16px;bottom:14px;color:#fff;font:800 12px/1 system-ui,-apple-system,sans-serif;letter-spacing:.16em;background:#15905f;padding:5px 8px;border-radius:4px}
+@media(min-width:980px){body.pc .jrilu.jrfoto{aspect-ratio:600/170}}
+`;document.head.appendChild(st165)}
+
+/* ---------- 166. Jornal pessoal: Hoje você opera?, Seu pregão anterior e Plano do pregão de WIN e WDO (v241) ---------- */
+const jrDM=d=>d?d.slice(8,10)+'/'+d.slice(5,7):'';
+const jrFmtR=r=>(r>=0?'+':'')+Number(r).toFixed(2).replace('.',',')+'R';
+// último dia (antes de hoje) com trades fechados
+function jrOntem(){const hj=loc().slice(0,10),dia=t=>String(t.dtx||t.dt||'').slice(0,10);
+  const F=(S.trades||[]).filter(t=>{try{return calc(t).pl!=null}catch(e){return false}});
+  const dias=[...new Set(F.map(dia).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&d<hj))].sort(),d=dias[dias.length-1];if(!d)return null;
+  const T=F.filter(t=>dia(t)===d),C=T.map(t=>({t,c:calc(t)}));
+  const brl=C.reduce((a,x)=>{let v=0;try{v=emBRL(x.c.pl,moedaT(x.t))}catch(e){v=x.c.pl}return a+(+v||0)},0);
+  const rs=C.map(x=>x.c.r).filter(x=>x!=null&&isFinite(x)),ganhos=C.filter(x=>x.c.pl>0).length;
+  const erros=[...new Set(T.flatMap(t=>String(t.err||'').split(/\s*[,;|]\s*/)).filter(e=>e&&e!=='Nenhum'))];
+  const dd=S.days[d]||{};let ep=null;try{ep=epeetNota(dd.epeet)}catch(e){}
+  return {d,n:T.length,brl,R:rs.reduce((a,b)=>a+b,0),temR:rs.length>0,acerto:T.length?Math.round(ganhos/T.length*100):0,erros,fora:T.filter(t=>t.rules==='n').length,estado:dd.estado||null,ep,ckok:!!dd.ckok,posop:!!dd.posop}}
+// hoje: turno, limite de perda, checklist e trava
+function jrHoje(){const hj=loc().slice(0,10),d=S.days[hj]||{};let j=null,lp=0,E=null;try{j=janTurno(hj)}catch(e){}try{lp=limPerda(d)}catch(e){}try{E=travaEstado()}catch(e){}
+  const dw=new Date().getDay(),fds=dw===0||dw===6;
+  const nv=fds?'eq':j?(j.nv==='r'?'dn':j.nv==='g'?'up':'eq'):'up';
+  const tit=fds?'Fim de semana: bolsa fechada':nv==='dn'?'Hoje: não opere':nv==='eq'?'Hoje: opere com cautela':'Hoje: dia de operar';
+  const msg=fds?'Bom dia para estudar e revisar a semana.':j?j.txt:'Sem escala de turno cadastrada. Cadastre em Meu dia para o jornal avisar os dias de turno.';
+  return {nv,tit,msg,lp,ck:!!d.ckok,trava:E?!!E.travado:null}}
+function jrHojeHtml(){const h=jrHoje();
+  return `<section class="jrsec jrhoje"><h3>Hoje você opera?</h3><div class="jrhoje-c ${h.nv}"><b>${esc(h.tit)}</b><span>${esc(h.msg)}</span></div>
+<div class="jrkp3"><div><small>Limite de perda hoje</small><b>${h.lp>0?money(h.lp):'não definido'}</b></div><div><small>Checklist da manhã</small><b class="${h.ck?'g':'r'}">${h.ck?'concluído':'pendente'}</b></div>${h.trava!=null?`<div><small>Trava do app</small><b class="${h.trava?'r':'g'}">${h.trava?'travado':'liberado'}</b></div>`:''}</div></section>`}
+function jrOntemHtml(){const o=jrOntem();if(!o)return '';const cls=o.brl>0?'up':o.brl<0?'dn':'eq';
+  return `<section class="jrsec jrmeu"><h3>Seu pregão de ${jrDM(o.d)}</h3><div class="jrkp4">
+<div class="${cls}"><small>Resultado</small><b>${money(o.brl)}</b>${o.temR?`<span>${jrFmtR(o.R)}</span>`:''}</div>
+<div><small>Trades</small><b>${o.n}</b><span>acerto ${o.acerto}%</span></div>
+<div class="${o.fora?'dn':'up'}"><small>Fora das regras</small><b>${o.fora}</b><span>${o.fora?'reveja o que levou a isso':'disciplina em dia'}</span></div>
+<div><small>Estado antes</small><b>${o.estado?o.estado+'/5':'–'}</b>${o.ep?`<span>escala ${o.ep.n} · ${o.ep.txt}</span>`:''}</div></div>
+${o.erros.length?`<div class="sm" style="margin-top:8px"><b>Erros marcados:</b> ${esc(o.erros.join(', '))}</div>`:'<div class="sm mut" style="margin-top:8px">Nenhum erro marcado nesse dia.</div>'}
+${o.posop?'':'<div class="sm am" style="margin-top:4px">O diário pós-operação desse dia ficou sem conferir.</div>'}</section>`}
+// plano do pregão: pivô clássico (R2, R1, P, S1, S2) + cenários + viés da pré-abertura
+function jrPlano(k){const t=jrTecDados(k);if(!t)return null;const A=t.H-t.L;return {...t,R2:t.P+A,S2:t.P-A,hoje:t.dia===loc().slice(0,10)}}
+function jrPre(){try{const p=MDO&&MDO.v&&MDO.v.pre;if(!p||!p.vies)return null;return {vies:p.vies,nota:p.nota,itens:(p.itens||[]).slice().sort((a,b)=>Math.abs(b.sinal||0)-Math.abs(a.sinal||0)).slice(0,4)}}catch(e){return null}}
+jrTecHtml=function(){const L=['win','wdo'].map(jrPlano).filter(Boolean),pre=jrPre();
+  if(!L.length&&!pre)return '<section class="jrsec jrtec" id="jrtec" hidden></section>';
+  const card=t=>{const f=x=>jrNumF(x,t.div),cls=t.tend==='Alta'?'up':t.tend==='Baixa'?'dn':'eq';
+    return `<div class="jrtc"><div class="jrtc-h"><b>${esc(t.tk)}</b><span class="jrtag ${cls}">${t.tend}</span></div>
+<div class="jrniv"><div class="dn"><small>R2</small><b>${f(t.R2)}</b></div><div class="dn"><small>R1</small><b>${f(t.R1)}</b></div><div><small>Pivô</small><b>${f(t.P)}</b></div><div class="up"><small>S1</small><b>${f(t.S1)}</b></div><div class="up"><small>S2</small><b>${f(t.S2)}</b></div></div>
+<div class="jrcen"><p><b class="g">Alta:</b> acima de ${f(t.R1)}, o próximo alvo é ${f(t.R2)}. Perder o pivô (${f(t.P)}) enfraquece a alta.</p><p><b class="r">Baixa:</b> abaixo de ${f(t.S1)}, o próximo alvo é ${f(t.S2)}. Voltar acima do pivô enfraquece a queda.</p></div>
+<div class="sm mut">${t.hoje?'Níveis do pregão de hoje (ainda em andamento).':'Calculado com a máxima, a mínima e o fechamento do pregão de '+jrDM(t.dia)+'.'}</div></div>`};
+  const pv=pre?`<div class="jrpre ${pre.vies==='positivo'?'up':pre.vies==='negativo'?'dn':'eq'}"><b>Viés da pré-abertura: ${esc(pre.vies)}${pre.nota!=null?` (nota ${esc(String(pre.nota))})`:''}</b>${pre.itens.length?`<ul>${pre.itens.map(x=>`<li>${esc(x.n)} <span class="${x.d1>0?'g':x.d1<0?'r':'mut'}">${x.d1!=null?(x.d1>0?'+':'')+Number(x.d1).toFixed(2).replace('.',',')+'%':''}</span> · ${esc(x.efeito||'')}</li>`).join('')}</ul>`:''}</div>`:'';
+  return `<section class="jrsec jrtec" id="jrtec"><h3>Plano do pregão: WIN e WDO</h3>${pv}${L.length?`<div class="jrtcs">${L.map(card).join('')}</div>`:''}<div class="sm mut" style="margin-top:8px">Pivô clássico: P = (máxima + mínima + fechamento) ÷ 3; R1 = 2P − mínima; S1 = 2P − máxima; R2 e S2 somam e subtraem a amplitude do pregão. Contexto, não é recomendação.</div></section>`};
+// coloca no jornal: Hoje e Seu pregão logo depois do painel de mercado
+{const jc166=jrCorpo;jrCorpo=function(){let h=jc166.apply(this,arguments);try{if(!JRN.v||!JRN.v.manchete)return h;const bl=jrHojeHtml()+jrOntemHtml();
+  const i=h.indexOf('<section class="jrsec jrmkt">');if(i>=0){const f=h.indexOf('</section>',i);if(f>0){const p=f+10;h=h.slice(0,p)+bl+h.slice(p)}}else{const a=h.indexOf('<article');if(a>0)h=h.slice(0,a)+bl+h.slice(a)}}catch(e){}return h}}
+{const st166=document.createElement('style');st166.id='jornal166';st166.textContent=`
+.jrhoje-c{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:12px;border-left:4px solid var(--mut);background:var(--card2)}
+.jrhoje-c b{font:700 17px/1.25 Georgia,'Times New Roman',serif}.jrhoje-c span{font-size:14px}
+.jrhoje-c.up{border-left-color:var(--g);background:color-mix(in srgb,var(--g) 10%,var(--card2))}
+.jrhoje-c.dn{border-left-color:var(--r);background:color-mix(in srgb,var(--r) 10%,var(--card2))}
+.jrhoje-c.eq{border-left-color:#d97706;background:color-mix(in srgb,#d97706 10%,var(--card2))}
+.jrkp3,.jrkp4{display:grid;gap:8px;margin-top:10px}.jrkp3{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}.jrkp4{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.jrkp3>div,.jrkp4>div{display:flex;flex-direction:column;gap:2px;padding:9px 11px;border:1px solid var(--bd);border-radius:10px;background:var(--card2);border-left-width:3px}
+.jrkp3 small,.jrkp4 small{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.jrkp3 b,.jrkp4 b{font-size:17px;font-variant-numeric:tabular-nums}.jrkp4 span{font-size:12px;color:var(--mut)}
+.jrkp4>.up{border-left-color:var(--g)}.jrkp4>.up b{color:var(--g)}.jrkp4>.dn{border-left-color:var(--r)}.jrkp4>.dn b{color:var(--r)}
+.jrniv{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:4px 0 8px}
+.jrniv>div{display:flex;flex-direction:column;align-items:center;padding:6px 2px;border-radius:8px;background:var(--card)}
+.jrniv small{font-size:10px;color:var(--mut);font-weight:700}.jrniv b{font-size:13px;font-variant-numeric:tabular-nums}
+.jrniv .dn b{color:var(--r)}.jrniv .up b{color:var(--g)}
+.jrcen p{margin:4px 0;font-size:13.5px;line-height:1.45}
+.jrpre{padding:10px 12px;border-radius:12px;border-left:4px solid var(--mut);background:var(--card2);margin-bottom:10px}
+.jrpre.up{border-left-color:var(--g)}.jrpre.dn{border-left-color:var(--r)}.jrpre.eq{border-left-color:#eab308}
+.jrpre ul{margin:6px 0 0;padding-left:18px}.jrpre li{font-size:13.5px;margin-bottom:3px}
+`;document.head.appendChild(st166)}
+
+/* ---------- 167. Jornal no estilo Bloomberg/Valor: 5 coisas, fechamento da véspera, indicadores, gráfico do dia, placar dos balanços,
+   altas e baixas, coluna da mesa, "O que observar hoje"; "Meu dia" opcional (v242) ---------- */
+FN_ESPERADA.analise='v233';
+// "Meu dia" no jornal: só aparece se você ligar
+const JRMD=()=>{try{return localStorage.getItem('diario-jr-meudia')==='1'}catch(e){return false}};
+{const h0=jrHojeHtml;jrHojeHtml=function(){if(!JRMD())return `<div class="jrmdbar"><button class="btn s" data-jrmd="1">👤 Mostrar meu dia no jornal</button><span class="sm mut">turno, limite de perda e seu pregão anterior (aparece também no PDF)</span></div>`;
+  return h0.apply(this,arguments).replace('<h3>Hoje você opera?</h3>','<h3 class="jrh3b">Hoje você opera? <button class="lnk" data-jrmd="0">ocultar</button></h3>')}}
+{const o0=jrOntemHtml;jrOntemHtml=function(){return JRMD()?o0.apply(this,arguments):''}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-jrmd]');if(!b)return;try{localStorage.setItem('diario-jr-meudia',b.dataset.jrmd)}catch(x){}jrPinta()});
+
+const jrPctTx=d=>d==null||!isFinite(d)?'–':(d>0?'▲ +':d<0?'▼ ':'■ ')+Number(d).toFixed(2).replace('.',',')+'%';
+const jrPxTx=x=>x==null||!isFinite(x)?'–':Number(x).toLocaleString('pt-BR',{maximumFractionDigits:Math.abs(x)>=1000?0:Math.abs(x)<10?4:2});
+// 1) 5 coisas para saber antes da abertura
+function jr5Html(v){const L=(v.cinco_coisas||[]).filter(x=>x&&x.titulo);if(!L.length)return '';
+  return `<section class="jrsec jr5"><h3>5 coisas para saber antes da abertura</h3><ol class="jr5l">${L.map(x=>`<li><b>${esc(x.titulo)}</b>${x.texto?`<span>${esc(x.texto)}</span>`:''}</li>`).join('')}</ol></section>`}
+// 2) fechamento da véspera: números das cotações do app + resumo da redação
+function jrFechHtml(v){const Q=(v.cotacoes||[]).filter(c=>c&&c.px!=null);if(!Q.length)return '';
+  return `<section class="jrsec jrfech"><h3>Fechamento da véspera</h3>${v.fechamento_texto?`<p class="jrtx2">${esc(v.fechamento_texto)}</p>`:''}<div class="jrvtab"><table><thead><tr><th>Ativo</th><th>Último</th><th>Variação</th></tr></thead><tbody>${Q.map(c=>`<tr><td><b>${esc(c.n||c.k)}</b></td><td>${jrPxTx(c.px)}</td><td class="${c.d1>0?'g':c.d1<0?'r':'mut'}"><b>${jrPctTx(c.d1)}</b></td></tr>`).join('')}</tbody></table></div></section>`}
+// 3) painel de indicadores (Selic, CDI, IPCA e juros longos)
+function jrIndHtml(v){const J=(typeof JR!=='undefined'&&JR.data)||{},pp=x=>Number(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+  const di=(v.cotacoes||[]).filter(c=>/\bdi\b|di\d|jan\/\d/i.test((c.n||'')+' '+(c.k||''))).slice(0,2);
+  const I=[J.selic&&J.selic.v!=null?['Selic',pp(J.selic.v),'meta do Copom']:null,J.cdi&&J.cdi.v!=null?['CDI',pp(J.cdi.v),'ao ano']:null,J.ipca12&&J.ipca12.v!=null?['IPCA',pp(J.ipca12.v),'em 12 meses']:null,...di.map(c=>[c.n||c.k,pp(c.px),c.d1!=null?jrPctTx(c.d1):''])].filter(Boolean);
+  if(!I.length){try{if(!JR.data)jrLoad(false)}catch(e){}return ''}
+  return `<section class="jrsec jrind2"><h3>Indicadores</h3><div class="jrkp4">${I.map(([a,b,c])=>`<div><small>${esc(a)}</small><b>${esc(b)}</b><span>${esc(c)}</span></div>`).join('')}</div></section>`}
+// 4) gráfico do dia, escolhido pela redação
+function jrGdHtml(v){const g=v.grafico_do_dia;if(!g||!g.ativo)return '';
+  return `<section class="jrsec jrgd"><h3>Gráfico do dia</h3>${g.titulo?`<h2 class="jrtit">${esc(g.titulo)}</h2>`:''}${g.texto?`<p class="jrtx2">${esc(g.texto)}</p>`:''}${jrGrafHtml(g.ativo==='di'?'di':g.ativo)}</section>`}
+// 5) placar dos balanços: resultado contra o esperado
+function jrPlacarL(v){const oc=jrEdOcultas();return (v.materias||[]).filter(m=>m&&m.editoria==='Empresas'&&!oc.includes(m.editoria)&&(m.placar||m.consenso||/balan/i.test(m.chapeu||'')))}
+const JR_PLC={acima:['acima do esperado','up'],'em linha':['em linha','eq'],abaixo:['abaixo do esperado','dn']};
+function jrPlacarHtml(v){const L=jrPlacarL(v);if(!L.length)return '';
+  return `<section class="jrsec jrplacar"><h3>Placar dos balanços</h3>${L.map(m=>{const p=JR_PLC[m.placar];return `<div class="jrplc"><span class="jrbdg">${esc(jeTk(m))}</span><div><b>${esc(m.titulo)}</b>${m.consenso?`<span class="sm mut">${esc(m.consenso)}</span>`:''}</div>${p?`<span class="jrtag ${p[1]}">${p[0]}</span>`:'<span class="jrtag eq">sem consenso</span>'}</div>`}).join('')}<div class="sm mut" style="margin-top:6px">Comparação com a expectativa dos analistas, quando a pesquisa encontrou o consenso.</div></section>`}
+// 6) altas e baixas do Ibovespa (mesmos dados da tela Altas e baixas)
+let JR_RK_T=0;
+function jrRkHtml(){try{if(typeof RK!=='undefined'&&!RK.v&&!RK.busy&&Date.now()-JR_RK_T>10*60e3){JR_RK_T=Date.now();Promise.resolve(rkCarrega(false)).then(()=>jrPinta()).catch(()=>{})}}catch(e){}
+  const V=typeof RK!=='undefined'&&RK.v;if(!V)return '';const A=(V.altas||[]).filter(x=>x.var>0).sort((a,b)=>b.var-a.var).slice(0,5),B=(V.baixas||[]).filter(x=>x.var<0).sort((a,b)=>a.var-b.var).slice(0,5);if(!A.length&&!B.length)return '';
+  const col=(L,cls)=>L.map(x=>`<div class="jrrk"><b>${esc(x.tk)}</b><span class="sm mut">${esc(x.nome||'')}</span><b class="${cls}">${(x.var>0?'+':'')+Number(x.var).toFixed(2).replace('.',',')}%</b></div>`).join('');
+  return `<section class="jrsec jrrks"><h3>Maiores altas e baixas do Ibovespa</h3><div class="jrrk2"><div><div class="jrrkt g">▲ Altas</div>${col(A,'g')}</div><div><div class="jrrkt r">▼ Baixas</div>${col(B,'r')}</div></div></section>`}
+// 7) coluna da mesa (opinião da redação)
+function jrMesaHtml(v){const m=v.mesa;if(!m||!m.texto)return '';
+  return `<section class="jrsec jrmesa"><h3>Coluna da mesa</h3>${m.titulo?`<h2 class="jrtit">${esc(m.titulo)}</h2>`:''}<div class="jrtxt">${jrPar(m.texto)}</div><div class="sm mut">Opinião da redação, com os dados do dia. Não é recomendação de investimento.</div></section>`}
+// 8) "O que observar hoje": agenda com país, impacto, consenso e anterior
+const JR_IMP={alto:['Alto','dn'],medio:['Médio','eq'],baixo:['Baixo','up']};
+function jrObsHtml(v){const A=v.agenda||[];if(!A.length)return '';
+  return `<section class="jrsec jragenda"><h3>O que observar hoje · Agenda econômica</h3>${A.map(a=>{const im=JR_IMP[a.impacto];return `<div class="jrob"><div class="jrob-h"><b>${esc(a.quando||'')}</b>${a.pais?`<span>${esc(a.pais)}</span>`:''}${im?`<span class="jrtag ${im[1]}">impacto ${im[0].toLowerCase()}</span>`:''}</div><div class="jrob-e">${esc(a.evento)}</div>${a.consenso||a.anterior?`<div class="jrob-n">${a.consenso?`Consenso: <b>${esc(a.consenso)}</b>`:''}${a.consenso&&a.anterior?' · ':''}${a.anterior?`Anterior: <b>${esc(a.anterior)}</b>`:''}</div>`:''}${a.por_que?`<div class="sm mut">${esc(a.por_que)}</div>`:''}</div>`}).join('')}<button class="btn s" data-hub="mercado:ag" style="margin-top:8px">Agenda completa</button></section>`}
+// monta tudo no corpo do jornal
+{const jc167=jrCorpo;jrCorpo=function(){let h=jc167.apply(this,arguments);try{const v=JRN.v;if(!v||!v.manchete)return h;
+  const topo=jr5Html(v)+jrFechHtml(v)+jrIndHtml(v)+jrGdHtml(v);
+  const a=h.indexOf('<article');if(a>0)h=h.slice(0,a)+topo+h.slice(a);
+  const ag=h.search(/<section class="jrsec jragenda">/);const meio=jrPlacarHtml(v)+jrRkHtml()+jrMesaHtml(v);
+  if(ag>=0){const f=h.indexOf('</section>',ag);h=h.slice(0,ag)+meio+jrObsHtml(v)+h.slice(f+10)}else{const b=h.indexOf('<section class="jrsec"><h3>Giro do pregão</h3>');const nv=meio+jrObsHtml(v);if(b>0)h=h.slice(0,b)+nv+h.slice(b);else h+=nv}
+}catch(e){}return h}}
+{const st167=document.createElement('style');st167.id='jornal167';st167.textContent=`
+.jrmdbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 4px;padding:10px 12px;border:1px dashed var(--bd);border-radius:12px}
+.jr5l{margin:0;padding-left:0;list-style:none;counter-reset:c5}
+.jr5l li{counter-increment:c5;position:relative;padding:8px 0 8px 46px;border-bottom:1px solid var(--bd)}
+.jr5l li:last-child{border-bottom:0}
+.jr5l li::before{content:counter(c5);position:absolute;left:0;top:8px;width:34px;height:34px;border-radius:50%;background:#0e2a3b;color:#7fe0b8;font:700 18px/34px Georgia,serif;text-align:center}
+.jr5l li b{display:block;font:700 16px/1.3 Georgia,'Times New Roman',serif}.jr5l li span{display:block;font-size:14px;color:var(--mut);margin-top:2px}
+.jrtx2{font-size:15px;line-height:1.5;margin:0 0 10px}
+.jrplc{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)}.jrplc>div{flex:1;min-width:0}.jrplc>div b{display:block;font-size:14px;line-height:1.35}
+.jrbdg{flex:none;min-width:58px;text-align:center;background:#0e2a3b;color:#fff;font-weight:800;font-size:12px;border-radius:6px;padding:5px 6px}
+.jrrk2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.jrrkt{font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.jrrk{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--bd)}
+.jrrk span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jrmesa .jrtxt p{font-family:Georgia,'Times New Roman',serif;font-style:italic}
+.jrob{padding:10px 0;border-bottom:1px solid var(--bd)}
+.jrob-h{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}.jrob-h span:not(.jrtag){color:var(--mut)}
+.jrob-e{font-weight:700;font-size:15px;margin:3px 0}.jrob-n{font-size:13.5px}
+@media(max-width:430px){.jrrk2{grid-template-columns:1fr}}
+`;document.head.appendChild(st167)}
 
 /* ---------- 35. PDF profissional dos relatórios da Análise IA ----------
    Desenhado direto no PDF (texto de verdade, A4, sem "foto da tela"): capa, indicadores explicados e gráficos.
