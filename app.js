@@ -8644,7 +8644,7 @@ document.addEventListener('click',e=>{const x=e.target.closest('[data-rotux]');i
 {const ds101=dsAtual;dsAtual=function(){const r=ds101.apply(this,arguments);if(DSES.d===D&&DSES.s==='n'&&DSES.via!=='mdm')EUS='n';return r}}
 
 /* ---------- 102. Saúde dos dados, modelos no registro rápido, lembretes, bloqueio com Face ID/PIN e acabamento (v177) ---------- */
-const APP_VER='v242';
+const APP_VER='v245';
 /* saúde dos dados */
 function sdEstado(){const hj=loc().slice(0,10),snap=String(ls.get('diario-snap-dia')||'').split('|')[0],logado=typeof SESS!=='undefined'&&!!SESS,nuvem=!!window.CLOUD_OK;
   const sync=S.lastSyncAt?new Date(S.lastSyncAt):null,velho=snap?Math.round((new Date(hj+'T12:00')-new Date(snap+'T12:00'))/864e5):null,erro=(typeof BK!=='undefined'&&BK.err)||'';
@@ -13258,7 +13258,10 @@ async function jvPdfBytes(v){
   F.s=await doc.embedFont(PL.StandardFonts.TimesRomanBold);F.si=await doc.embedFont(PL.StandardFonts.TimesRomanBoldItalic);
   const K={nv:hex('#0e2a3b'),nv2:hex('#16425c'),gr:hex('#15905f'),grl:hex('#e8f5ee'),tx:hex('#10202c'),mu:hex('#5b6b77'),bd:hex('#dbe4e8'),cd:hex('#fbfdfc'),up:hex('#12865a'),dn:hex('#d33a3a'),wh:hex('#ffffff'),li:hex('#c9e8db'),sk:hex('#0b2636'),ln:hex('#2ecc8f'),az:hex('#1d4f91'),cz:hex('#f3f6f5')};
   const M=34,CW=W-2*M,TOP=80,BOT=H-46,GAP=10;
-  const FOTOS={};for(const k of JV_FOTOS){try{const im=await jvFotoImg(['img/jornal/'+k+'.jpg']);const b=im&&jvCrop(im,(CW*.45)/46,1000,.5);if(b)FOTOS[k]=await doc.embedJpg(b)}catch(e){}}
+  const jvEmb=async fb=>{try{return fb?(fb.png?await doc.embedPng(fb.bytes):await doc.embedJpg(fb.bytes)):null}catch(e){jvFotoErro('formato da imagem: '+(e.message||e));return null}};
+  // desenha a foto preenchendo a área (corta o que sobra), com recorte do próprio PDF
+  const cover=(img,x,y,w,h,yb=.5)=>{const s=Math.max(w/img.width,h/img.height),dw=img.width*s,dh=img.height*s,dx=x+(w-dw)/2,dy=y+(h-dh)*yb;L.pg.pushOperators(PL.pushGraphicsState(),PL.rectangle(x,H-y-h,w,h),PL.clip(),PL.endPath());L.pg.drawImage(img,{x:dx,y:H-dy-dh,width:dw,height:dh});L.pg.pushOperators(PL.popGraphicsState())};
+  const FOTOS={};await Promise.all(JV_FOTOS.map(async k=>{const im=await jvEmb(await jvFotoBytes(['img/jornal/'+k+'.jpg','jornal-'+k+'.jpg']));if(im)FOTOS[k]=im}));
   L.TOP=TOP;L.BOT=BOT;
   const T=(s,x,y,o)=>L.t(s,x,y,o),wr=(s,w,z,f='r')=>L.wrap(String(s??''),w,z,f);
   const cor=ed=>{try{return hex(jrCor(ed)||'#15905f')}catch(e){return K.gr}};
@@ -13285,7 +13288,7 @@ async function jvPdfBytes(v){
     tec:'M 5 19 L 11 12 L 15 15 L 23 6'};
   const icone=(k,x,y,s=28)=>{L.rr(x,y,s,s,{fill:K.gr,r:5});L.path(ico[k]||ico.diario,x+(s-28)/2,y+(s-28)/2,{stroke:K.wh,bw:1.8})};
   const ban=(S,cont)=>{const h=cont?26:46;const y=L.y;L.rr(M,y,CW,h,{fill:K.nv,r:4});
-    if(!cont){const fo=FOTOS[S.ico];if(fo){const fx=M+CW*.55,fw=CW*.45;L.pg.drawImage(fo,{x:fx,y:H-y-h,width:fw,height:h});L.rect(fx-2,y,4,h,{fill:K.nv});const n=14,sw=fw*.5/n;for(let i=0;i<n;i++)L.rect(fx+i*sw,y,sw+.6,h,{fill:K.nv,op:1-(i+.5)/n})}else L.path('M 0 34 L 30 28 L 55 31 L 85 20 L 110 23 L 140 12 L 170 16 L 200 5 L 230 8',M+CW-240,y+4,{stroke:K.ln,bw:1.4})}
+    if(!cont){const fo=FOTOS[S.ico];if(fo){const fx=M+CW*.55,fw=CW*.45;cover(fo,fx,y,fw,h,.5);L.rect(fx-2,y,4,h,{fill:K.nv});const n=14,sw=fw*.5/n;for(let i=0;i<n;i++)L.rect(fx+i*sw,y,sw+.6,h,{fill:K.nv,op:1-(i+.5)/n})}else L.path('M 0 34 L 30 28 L 55 31 L 85 20 L 110 23 L 140 12 L 170 16 L 200 5 L 230 8',M+CW-240,y+4,{stroke:K.ln,bw:1.4})}
     if(cont){T(S.tit.toUpperCase()+'  (continuação)',M+12,y+8.5,{s:9,f:'b',c:K.wh})}
     else{icone(S.ico,M+10,y+9);T(S.tit.toUpperCase(),M+48,y+10,{s:13,f:'b',c:K.wh});if(S.sub)T(S.sub,M+48,y+27,{s:8.3,c:K.li})}
     L.y=y+h+GAP};
@@ -13337,9 +13340,9 @@ async function jvPdfBytes(v){
   const cots=v.cotacoes||[],intl=cots.filter(c=>/s&p|nasdaq|dow|dxy|brent|ouro|stoxx|nikkei|vix|treasur/i.test((c.n||'')+' '+(c.k||''))),locais=cots.filter(c=>!intl.includes(c));
   // capa
   cab(true);L.y=TOP+6;
-  {const imC=await jvFotoImg(['img/jornal/capa.jpg','touro-hero.jpg']),m=v.manchete,tw=imC?CW*.52:CW*.7,tl=wr(m.titulo,tw,23,'s'),fl=m.linha_fina?wr(m.linha_fina,tw,9.6):[],h=Math.max(215,60+tl.length*27+fl.length*13+20),y=L.y;
+  {const imC=await jvEmb(await jvFotoBytes(['img/jornal/capa.jpg','jornal-capa.jpg','touro-hero.jpg'],true)),m=v.manchete,tw=imC?CW*.52:CW*.7,tl=wr(m.titulo,tw,23,'s'),fl=m.linha_fina?wr(m.linha_fina,tw,9.6):[],h=Math.max(215,60+tl.length*27+fl.length*13+20),y=L.y;
     L.rr(M,y,CW,h,{fill:K.nv,r:6});
-    let fotoOk=false;if(imC){try{const fx=M+CW*.42,fw=CW*.58-3,b=jvCrop(imC,fw/(h-6),1100,.25);if(b){const im=await doc.embedJpg(b);L.pg.drawImage(im,{x:fx,y:H-y-h+3,width:fw,height:h-6});L.rect(fx-2,y+2,4,h-4,{fill:K.nv});const n=18,sw=fw*.42/n;for(let i=0;i<n;i++)L.rect(fx+1+i*sw,y+3,sw+.6,h-6,{fill:K.nv,op:1-(i+.5)/n});fotoOk=true}}catch(e){}}
+    let fotoOk=false;if(imC){try{const fx=M+CW*.42,fw=CW*.58-3;{cover(imC,fx,y+3,fw,h-6,.25);L.rect(fx-2,y+2,4,h-4,{fill:K.nv});const n=18,sw=fw*.42/n;for(let i=0;i<n;i++)L.rect(fx+1+i*sw,y+3,sw+.6,h-6,{fill:K.nv,op:1-(i+.5)/n});fotoOk=true}}catch(e){jvFotoErro('capa: '+(e.message||e))}}
     if(!fotoOk){
     [[0,120],[34,90],[60,140],[96,70],[128,110],[160,60],[196,130],[230,85],[262,150],[300,95],[334,125],[370,80],[404,140],[440,100],[476,65]].forEach(([bx,bh])=>{const sh=bh*h/300;L.rect(M+CW-392+bx*.75,y+h-sh,22,sh,{fill:K.sk})});
     L.path('M 0 150 L 50 138 L 95 143 L 145 120 L 190 126 L 240 100 L 285 106 L 335 76 L 380 84 L 430 54 L 475 60 L 527 30',M,y+h-175,{stroke:K.ln,bw:2.2});}
@@ -13402,6 +13405,7 @@ async function jvPdfBytes(v){
     const pp=x=>Number(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%',kp=[J.selic&&J.selic.v!=null?['Juros (Selic)',pp(J.selic.v),'meta do Copom']:null,J.cdi&&J.cdi.v!=null?['CDI',pp(J.cdi.v),'ao ano']:null,J.ipca12&&J.ipca12.v!=null?['Inflação (IPCA)',pp(J.ipca12.v),'em 12 meses']:null,dol?['Dólar comercial','R$ '+jeNumTxt(dol.px),'']:null].filter(Boolean),curva=Array.isArray(J.curva)&&J.curva.length>1?J.curva.filter(p=>isFinite(p.du)&&isFinite(p.taxa)):[];
     if(G.economia.length||kp.length||(v.analise&&v.analise.texto)){secao({ico:'economia',tit:'Economia brasileira',sub:'Juros, câmbio e cenário fiscal'});
       if(kp.length){const gw=(CW-(kp.length-1)*8)/kp.length,h=56;need(h);kp.forEach(([a,b,c],i)=>{const x=M+i*(gw+8);caixa(x,L.y,gw,h,{fill:K.wh});T(a.toUpperCase(),x+9,L.y+8,{s:6.6,f:'b',c:K.mu,w:gw-14});T(b,x+9,L.y+20,{s:16,f:'b',c:K.tx});if(c)T(c,x+9,L.y+41,{s:7.4,c:K.mu})});L.y+=h+GAP}
+      {const FR=jrFocusRows();if(FR){need(96);fita('Boletim Focus: projeções do mercado',M,L.y);L.y+=22;const f2=(r,x,p)=>x==null?'–':r.f(x)+(p!=null&&p!==x?' (era '+r.f(p)+')':'');tabela([{l:'Projeção',w:34},{l:String(FR.a1),w:33},{l:String(FR.a2||''),w:33}],FR.L.map(r=>[{t:r.nome,f:'b'},f2(r,r.v1,r.p1),f2(r,r.v2,r.p2)]));if(FR.reu)corre('Próxima reunião do Copom ('+FR.reu.reuniao+'): o mercado espera a Selic em '+Number(FR.reu.mediana).toLocaleString('pt-BR',{minimumFractionDigits:2})+'%.',{s:8.6});corre('Mediana das projeções dos economistas consultados pelo Banco Central; entre parênteses, o número da semana anterior.',{s:7.2,c:K.mu})}}
       if(v.analise&&v.analise.texto){const tx=String(v.analise.texto).split(/\n\s*\n/).slice(0,2).join(' ').slice(0,1100);
         const fa=(b,w)=>{const tl=wr(v.analise.titulo||'Cenário',w-20,11.5,'s'),ls=wr(tx,w-20,8.6),h=14+tl.length*14+ls.length*11.6+10;if(!b)return h;caixa(b.x,b.y,w,b.h);let y=b.y+10;tl.forEach(l=>{T(l,b.x+10,y,{s:11.5,f:'s',c:K.nv});y+=14});ls.forEach(l=>{T(l,b.x+10,y,{s:8.6,c:K.tx});y+=11.6});return h};
         const fb=curva.length>1?(b,w)=>{const h=170;if(!b)return h;caixa(b.x,b.y,w,b.h);T('Curva de juros (DI futuro)',b.x+10,b.y+10,{s:9,f:'s',c:K.nv});const ys=curva.map(p=>p.taxa),xs=curva.map(p=>p.du),y0=Math.min(...ys)-.1,y1=Math.max(...ys)+.1,x0=Math.min(...xs),x1=Math.max(...xs),px=b.x+34,pw=w-48,py=b.y+30,ph=h-56,X=q=>px+(q-x0)/(x1-x0||1)*pw,Y=q=>py+(y1-q)/(y1-y0||1)*ph;
@@ -13454,11 +13458,16 @@ function jvFotoImg(urls){return (async()=>{for(const u of urls){const im=await n
 function jvCrop(img,ratio,maxW=1000,yBias=.3){try{const sw=img.naturalWidth,sh=img.naturalHeight;let cw=sw,ch=sw/ratio;if(ch>sh){ch=sh;cw=sh*ratio}
   const sx=(sw-cw)/2,sy=(sh-ch)*yBias,ow=Math.min(maxW,Math.round(cw)),oh=Math.round(ow/ratio),c=document.createElement('canvas');c.width=ow;c.height=oh;
   c.getContext('2d').drawImage(img,sx,sy,cw,ch,0,0,ow,oh);const u=c.toDataURL('image/jpeg',.9),b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}catch(e){return null}}
+// baixa o arquivo da foto como está (sem canvas, que falhava em alguns iPhones); null se não existir
+async function jvFotoBytes(urls,avisa){for(const u of urls){try{const r=await fetch(u,{cache:'no-cache'});const ct=(r.headers.get('content-type')||'').toLowerCase();
+    if(!r.ok||!/image\/(jpe?g|png)/.test(ct))continue;const b=new Uint8Array(await r.arrayBuffer());if(b.length<200)continue;return {bytes:b,png:/png/.test(ct)}}catch(e){if(avisa)jvFotoErro(u+': '+(e.message||e))}}
+  if(avisa)jvFotoErro('nenhuma foto da capa encontrada ('+urls.join(', ')+')');return null}
+function jvFotoErro(m){try{errAdd('jornal · foto do PDF',m)}catch(e){}try{(window.__jvFotoErros??=[]).push(String(m))}catch(e){}}
 const JV_FOTOS=['diario','empresas','economia','mundo','carteira','agenda'];
 // manchete no app: foto de fundo (img/jornal/capa.jpg, se existir; senão o touro do app)
 {const jm165=jrMateria;jrMateria=function(m,id,grande){let h=jm165.apply(this,arguments);try{if(grande&&m&&m.titulo)h=h.replace(/<figure class="jrilu"[\s\S]*?<\/figure>/,`<figure class="jrilu jrfoto" aria-hidden="true"><span>${esc(String(m.editoria||'').toUpperCase())}</span></figure>`)}catch(e){}return h}}
 {const st165=document.createElement('style');st165.id='jornal165';st165.textContent=`
-.jrilu.jrfoto{position:relative;aspect-ratio:600/230;background:linear-gradient(90deg,rgba(9,22,32,.92) 0%,rgba(9,22,32,.55) 38%,rgba(9,22,32,0) 70%),url(img/jornal/capa.jpg) right 30%/cover no-repeat,url(touro-hero.jpg) right 30%/cover no-repeat,#0e2a3b;border-radius:12px}
+.jrilu.jrfoto{position:relative;aspect-ratio:600/230;background:linear-gradient(90deg,rgba(9,22,32,.92) 0%,rgba(9,22,32,.55) 38%,rgba(9,22,32,0) 70%),url(img/jornal/capa.jpg) right 30%/cover no-repeat,url(jornal-capa.jpg) right 30%/cover no-repeat,url(touro-hero.jpg) right 30%/cover no-repeat,#0e2a3b;border-radius:12px}
 .jrilu.jrfoto span{position:absolute;left:16px;bottom:14px;color:#fff;font:800 12px/1 system-ui,-apple-system,sans-serif;letter-spacing:.16em;background:#15905f;padding:5px 8px;border-radius:4px}
 @media(min-width:980px){body.pc .jrilu.jrfoto{aspect-ratio:600/170}}
 `;document.head.appendChild(st165)}
@@ -13602,6 +13611,128 @@ function jrObsHtml(v){const A=v.agenda||[];if(!A.length)return '';
 .jrob-e{font-weight:700;font-size:15px;margin:3px 0}.jrob-n{font-size:13.5px}
 @media(max-width:430px){.jrrk2{grid-template-columns:1fr}}
 `;document.head.appendChild(st167)}
+
+/* ---------- 168. Boletim Focus no jornal; controle financeiro, reserva de emergência e casamento no Plano de transição (v243) ---------- */
+FN_ESPERADA.juros='v125';
+// ===== Boletim Focus (Banco Central): mediana das projeções do mercado =====
+function jrFocusRows(){const F=(typeof JR!=='undefined'&&JR.data&&JR.data.focus)||null;if(!F)return null;
+  const anos=Object.keys(F.ipca||F.selic||{}).sort(),a1=anos[0],a2=anos[1];if(!a1)return null;
+  const linha=(k,nome,f)=>{const o=F[k]||{},ant=(F.ant||{})[k]||{};if(o[a1]==null&&o[a2]==null)return null;return {k,nome,f,v1:o[a1],v2:o[a2],p1:ant[a1],p2:ant[a2]}};
+  const pc=x=>Number(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%',rs=x=>'R$ '+Number(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const L=[linha('ipca','IPCA',pc),linha('selic','Selic (fim do ano)',pc),linha('pib','PIB',pc),linha('cambio','Dólar (fim do ano)',rs)].filter(Boolean);
+  return L.length?{a1,a2,L,data:F.data,reu:F.reuniao,i12:F.ipca12m}:null}
+const jrFocusSeta=(v,p)=>v==null||p==null?'':v>p?'▲':v<p?'▼':'=';
+function jrFocusHtml(){const F=jrFocusRows();if(!F){try{if(!JR.data)jrLoad(false)}catch(e){}return ''}
+  const c=(v,p,f)=>v==null?'–':`${f(v)}${p!=null&&p!==v?` <small class="mut">${jrFocusSeta(v,p)} era ${f(p)}</small>`:''}`;
+  return `<section class="jrsec jrfocus"><h3>Boletim Focus</h3><div class="jrvtab"><table><thead><tr><th>Projeção do mercado</th><th>${esc(F.a1)}</th><th>${esc(F.a2||'')}</th></tr></thead><tbody>${F.L.map(r=>`<tr><td><b>${esc(r.nome)}</b></td><td>${c(r.v1,r.p1,r.f)}</td><td>${c(r.v2,r.p2,r.f)}</td></tr>`).join('')}</tbody></table></div>
+${F.reu?`<div class="sm" style="margin-top:6px">Próxima reunião do Copom (${esc(F.reu.reuniao)}): o mercado espera a Selic em <b>${Number(F.reu.mediana).toLocaleString('pt-BR',{minimumFractionDigits:2})}%</b>.</div>`:''}
+${F.i12?`<div class="sm">IPCA esperado para os próximos 12 meses: <b>${Number(F.i12.v).toLocaleString('pt-BR',{minimumFractionDigits:2})}%</b>.</div>`:''}
+<div class="sm mut" style="margin-top:4px">Mediana das projeções dos economistas consultados pelo Banco Central${F.data?' · dados de '+jrDM(F.data)+'/'+F.data.slice(0,4):''}. ▲▼ = mudança contra a semana anterior.</div></section>`}
+{const jc168=jrCorpo;jrCorpo=function(){let h=jc168.apply(this,arguments);try{if(!JRN.v||!JRN.v.manchete)return h;const f=jrFocusHtml();if(!f)return h;
+  const i=h.indexOf('<section class="jrsec jrind2">');if(i>=0){const e=h.indexOf('</section>',i)+10;h=h.slice(0,e)+f+h.slice(e)}else{const a=h.indexOf('<article');if(a>0)h=h.slice(0,a)+f+h.slice(a)}}catch(e){}return h}}
+
+// ===== Finanças pessoais no Plano de transição =====
+const FIN_CAT=['Alimentação','Mercado','Transporte','Casa e contas','Saúde','Lazer','Besteiras e impulso','Assinaturas','Educação','Casamento','Outros'];
+const finNum=x=>{let t=String(x??'').trim().replace(/[R$\s]/g,'');if(t.includes(','))t=t.replace(/\./g,'').replace(',','.');const n=+t;return isFinite(n)?n:NaN};
+const FIN_FORMAS=['Pix','Débito','Dinheiro','Boleto'];
+const FIN={t:'plano',m:loc().slice(0,7)};
+const finD=()=>{const f=(S.fin??={});f.g??=[];f.res??=[];f.cas??={meta:60000,ap:[],data:''};f.cas.ap??=[];if(!(+f.cas.meta>0))f.cas.meta=60000;f.renda??={};return f};
+const finMes=(m,d)=>{const [y,mm]=m.split('-').map(Number),t=new Date(Date.UTC(y,mm-1+d,1));return t.toISOString().slice(0,7)};
+const finNomeMes=m=>{const s=new Date(m+'-15T12:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});return s.charAt(0).toUpperCase()+s.slice(1)};
+const fm0=x=>(x<0?'-':'')+'R$ '+Math.round(Math.abs(+x||0)).toLocaleString('pt-BR');
+const finSoma=L=>L.reduce((a,x)=>a+(+x.v||0),0);
+function finMedia3(){const f=finD(),m0=loc().slice(0,7),ms=[1,2,3].map(i=>finMes(m0,-i)),T=ms.map(m=>finSoma(f.g.filter(x=>String(x.d).startsWith(m)))).filter(x=>x>0);return T.length?T.reduce((a,b)=>a+b,0)/T.length:0}
+// ritmo: média de depósitos por mês nos últimos 3 meses (com algum depósito)
+function finRitmo(ap){const m0=loc().slice(0,7),ms=[0,1,2].map(i=>finMes(m0,-i)),T=ms.map(m=>finSoma(ap.filter(x=>String(x.d).startsWith(m))));const s=T.reduce((a,b)=>a+b,0);return s>0?s/3:0}
+function finPrev(falta,ritmo){if(falta<=0)return 'Meta batida! 🎉';if(!(ritmo>0))return 'Lance depósitos para o app estimar quando você chega lá.';const n=Math.ceil(falta/ritmo),d=new Date();d.setMonth(d.getMonth()+n);return `No ritmo atual (${money(ritmo)}/mês), você chega lá em ${n} ${n>1?'meses':'mês'} (${d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}).`}
+const finBarra=(f,cor)=>`<div class="finbar"><div style="width:${Math.max(0,Math.min(100,f*100)).toFixed(1)}%;background:${cor||'var(--g)'}"></div></div>`;
+const finChips=()=>`<div class="finchips">${[['plano','📈 Plano'],['gastos','💳 Gastos'],['res','🛟 Reserva'],['cas','💍 Casamento']].map(([k,l])=>`<button type="button" class="${FIN.t===k?'on':''}" data-fin-t="${k}">${l}</button>`).join('')}</div>`;
+// --- controle financeiro (planilha de gastos) ---
+function finGastosHtml(){const f=finD(),m=FIN.m,L=f.g.filter(x=>String(x.d).startsWith(m)).sort((a,b)=>String(b.d).localeCompare(String(a.d))),tot=finSoma(L),ant=finSoma(f.g.filter(x=>String(x.d).startsWith(finMes(m,-1)))),renda=+f.renda[m]||0;
+  const porCat=FIN_CAT.map(c=>[c,finSoma(L.filter(x=>x.cat===c))]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]),mx=porCat.length?porCat[0][1]:1;
+  const formas=[...new Set([...FIN_FORMAS,...f.g.map(x=>x.cart).filter(Boolean)])];
+  const porCart=[...new Set(L.map(x=>x.cart||'Sem forma'))].map(c=>[c,finSoma(L.filter(x=>(x.cart||'Sem forma')===c))]).sort((a,b)=>b[1]-a[1]);
+  const bes=finSoma(L.filter(x=>x.cat==='Besteiras e impulso')),dif=ant>0?(tot/ant-1)*100:null,hj=loc().slice(0,10);
+  return `<div class="card"><div class="top"><b>💳 Controle financeiro</b><span class="finmes"><button class="btn s" data-fin-m="-1" aria-label="Mês anterior">‹</button><b>${esc(finNomeMes(m))}</b><button class="btn s" data-fin-m="1" aria-label="Próximo mês">›</button></span></div>
+<p class="sm mut">Lance cada gasto (cartões, contas e as besteiras do dia a dia). O app soma por categoria e por cartão, compara com o mês anterior e mostra quanto sobra para a reserva e para o casamento.</p>
+<div class="fing"><label>Data<input type="date" id="fin_d" value="${m===hj.slice(0,7)?hj:m+'-01'}"></label><label>Descrição<input id="fin_desc" placeholder="Ex.: lanche, Netflix, gasolina"></label>
+<label>Categoria<select id="fin_cat">${FIN_CAT.map(c=>`<option>${c}</option>`).join('')}</select></label><label>Cartão ou forma<input id="fin_cart" list="fin_cartl" placeholder="Ex.: Nubank, Pix"><datalist id="fin_cartl">${formas.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></label>
+<label>Valor (R$)<input type="text" inputmode="decimal" id="fin_v" placeholder="0,00"></label><button class="btn" data-fin-add="1">Adicionar gasto</button></div>
+<div id="fin_msg" class="sm r"></div>
+<div class="kv fin4"><div class="card"><span class="mut sm">Gastos do mês</span><b>${money(tot)}</b><span class="mut sm">${dif==null?'sem mês anterior':(dif>0?'▲ ':'▼ ')+Math.abs(dif).toFixed(0)+'% contra o mês anterior'}</span></div>
+<div class="card"><span class="mut sm">Renda do mês</span><b><input type="text" inputmode="decimal" class="finrenda" data-fin-renda="${m}" value="${renda?String(renda).replace('.',','):''}" placeholder="salário + extras"></b><span class="mut sm">opcional</span></div>
+<div class="card"><span class="mut sm">Sobra do mês</span><b class="${renda-tot>=0?'g':'r'}">${renda?money(renda-tot):'–'}</b><span class="mut sm">${renda?(renda-tot>=0?'pode ir para a reserva ou o casamento':'gastou mais do que entrou'):'informe a renda'}</span></div>
+<div class="card"><span class="mut sm">Besteiras e impulso</span><b class="${bes>0?'r':''}">${money(bes)}</b><span class="mut sm">${tot>0?(bes/tot*100).toFixed(0)+'% dos gastos':''}</span></div></div>
+${porCat.length?`<h3 class="fint">Por categoria</h3>${porCat.map(([c,v])=>`<div class="fincat"><span>${esc(c)}</span><div class="finbar"><div style="width:${(v/mx*100).toFixed(1)}%;background:${c==='Besteiras e impulso'?'var(--r)':'var(--g)'}"></div></div><b>${money(v)}</b></div>`).join('')}`:''}
+${porCart.length?`<h3 class="fint">Por cartão ou forma de pagamento</h3><div class="fincarts">${porCart.map(([c,v])=>`<span><small>${esc(c)}</small><b>${money(v)}</b></span>`).join('')}</div>`:''}
+<h3 class="fint">Lançamentos (${L.length})</h3>${L.length?`<div class="jrvtab fintab"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Cartão</th><th>Valor</th><th></th></tr></thead><tbody>${L.map(x=>`<tr><td>${esc(String(x.d).slice(8,10)+'/'+String(x.d).slice(5,7))}</td><td>${esc(x.desc||'')}</td><td>${esc(x.cat||'')}</td><td>${esc(x.cart||'')}</td><td><b>${money(+x.v)}</b></td><td><button class="lnk" data-fin-del="g:${esc(x.id)}" aria-label="Apagar">🗑</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="sm mut">Nenhum gasto lançado neste mês.</p>'}
+<button class="btn s" data-fin-xls="1" style="margin-top:10px">Exportar para Excel</button></div>`}
+// --- metas com depósitos (reserva e casamento) ---
+function finApHtml(tipo,ap){const L=ap.slice().sort((a,b)=>String(b.d).localeCompare(String(a.d))),hj=loc().slice(0,10);
+  return `<div class="fing fing3"><label>Data<input type="date" id="fin_${tipo}_d" value="${hj}"></label><label>Valor (R$)<input type="text" inputmode="decimal" id="fin_${tipo}_v" placeholder="Ex.: 300,00"></label><label>Observação<input id="fin_${tipo}_o" placeholder="opcional"></label>
+<button class="btn" data-fin-ap="${tipo}">Guardar</button><button class="btn s" data-fin-ap="${tipo}" data-fin-ret="1">Retirar</button></div>
+${L.length?`<div class="jrvtab fintab"><table><thead><tr><th>Data</th><th>Valor</th><th>Observação</th><th></th></tr></thead><tbody>${L.map(x=>`<tr><td>${esc(String(x.d).slice(8,10)+'/'+String(x.d).slice(5,7)+'/'+String(x.d).slice(0,4))}</td><td class="${+x.v>=0?'g':'r'}"><b>${money(+x.v)}</b></td><td>${esc(x.obs||'')}</td><td><button class="lnk" data-fin-del="${tipo}:${esc(x.id)}" aria-label="Apagar">🗑</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="sm mut">Nenhum depósito ainda. Comece com qualquer valor: o importante é o hábito.</p>'}`}
+function finResHtml(){const f=finD(),c=crCfg(),custo=+c.custo||0,meses=+c.mesesReserva||6,alvo=custo*meses,g=finSoma(f.res),fal=Math.max(0,alvo-g),med=finMedia3();
+  return `<div class="card"><div class="top"><b>🛟 Reserva de emergência</b></div>
+<p class="sm mut">Dinheiro para imprevistos, guardado em lugar seguro e com liquidez diária (Tesouro Selic ou CDB de liquidez diária). Não é para operar. A meta é o seu custo de vida multiplicado pelo número de meses.</p>
+<div class="g2"><label>Custo de vida (R$/mês)<input type="number" step="any" inputmode="decimal" data-cr="custo" value="${esc(c.custo||'')}"></label><label>Meses de reserva<input type="number" step="1" inputmode="numeric" data-cr="mesesReserva" value="${esc(c.mesesReserva||6)}"></label></div>
+${med>0&&Math.abs(med-custo)>1?`<div class="sm" style="margin:6px 0">Pelo controle financeiro, você gastou em média <b>${money(med)}</b>/mês nos últimos meses. <button class="lnk" data-fin-usacusto="${med.toFixed(2)}">Usar como custo de vida</button></div>`:''}
+<div class="finmeta"><div><small>Guardado</small><b class="g">${fm0(g)}</b></div><div><small>Meta</small><b>${alvo>0?fm0(alvo):'–'}</b></div><div><small>Falta</small><b>${alvo>0?fm0(fal):'–'}</b></div></div>${alvo>0?'':'<div class="sm mut" style="margin-top:4px">Informe o custo de vida para calcular a meta.</div>'}
+${alvo>0?finBarra(g/alvo)+`<div class="sm" style="margin:6px 0 10px">${(g/alvo*100).toFixed(0)}% da meta · ${finPrev(fal,finRitmo(f.res))}</div>`:''}
+${finApHtml('res',f.res)}<div class="sm mut" style="margin-top:6px">A soma dos depósitos atualiza a "Reserva guardada" do Plano de transição.</div></div>`}
+function finCasHtml(){const f=finD(),C=f.cas,meta=+C.meta||60000,g=finSoma(C.ap),fal=Math.max(0,meta-g);let porMes='';
+  if(C.data){const d=new Date(C.data+'T12:00'),n=(d.getFullYear()-new Date().getFullYear())*12+d.getMonth()-new Date().getMonth();porMes=n>0?`Para chegar até ${d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}, guarde <b>${money(fal/n)}</b> por mês (${n} ${n>1?'meses':'mês'}).`:'A data do casamento já chegou ou é este mês.'}
+  return `<div class="card"><div class="top"><b>💍 Casamento</b></div>
+<p class="sm mut">Meta da festa. Cada vez que guardar dinheiro para o casamento, lance aqui: a barra vai enchendo.</p>
+<div class="g2"><label>Meta (R$)<input type="text" inputmode="decimal" data-fin-cas="meta" value="${esc(String(meta).replace('.',','))}"></label><label>Data do casamento<input type="date" data-fin-cas="data" value="${esc(C.data||'')}"></label></div>
+<div class="finmeta"><div><small>Guardado</small><b class="g">${fm0(g)}</b></div><div><small>Meta</small><b>${fm0(meta)}</b></div><div><small>Falta</small><b>${fm0(fal)}</b></div></div>
+${finBarra(g/meta,'#d4a017')}<div class="sm" style="margin:6px 0 10px">${(g/meta*100).toFixed(0)}% da meta · ${porMes||finPrev(fal,finRitmo(C.ap))}</div>
+${finApHtml('cas',C.ap)}</div>`}
+{const vc168=vCarreira;vCarreira=function(){const t=FIN.t;if(t==='plano'){const h=vc168.apply(this,arguments);return h.replace('<h1>Plano de transição</h1>','<h1>Plano de transição</h1>'+finChips())}
+  return `<h1>Plano de transição</h1>${finChips()}${t==='gastos'?finGastosHtml():t==='res'?finResHtml():finCasHtml()}`}}
+// sincroniza a reserva guardada do plano com os depósitos
+function finSyncRes(){const f=finD();if(!f.res.length)return;(S.ax??={}).carreira={...crCfg(),reserva:+finSoma(f.res).toFixed(2)}}
+// Excel com abas: gastos, resumo por mês, reserva e casamento
+function finXls(){const f=finD(),ms=[...new Set(f.g.map(x=>String(x.d).slice(0,7)))].sort();
+  const g=[['data','descrição','categoria','cartão ou forma','valor'],...f.g.slice().sort((a,b)=>String(a.d).localeCompare(String(b.d))).map(x=>[x.d,x.desc||'',x.cat||'',x.cart||'',(+x.v).toFixed(2)])];
+  const r=[['mês','renda','gastos','sobra',...FIN_CAT],...ms.map(m=>{const L=f.g.filter(x=>String(x.d).startsWith(m)),t=finSoma(L),rd=+f.renda[m]||0;return [m,rd?rd.toFixed(2):'',t.toFixed(2),rd?(rd-t).toFixed(2):'',...FIN_CAT.map(c=>finSoma(L.filter(x=>x.cat===c)).toFixed(2))]})];
+  const ap=L=>[['data','valor','observação'],...L.slice().sort((a,b)=>String(a.d).localeCompare(String(b.d))).map(x=>[x.d,(+x.v).toFixed(2),x.obs||''])];
+  saveFile('controle-financeiro-'+loc().slice(0,10)+'.xls',xlsArquivo([xlsAba('Gastos',g),xlsAba('Resumo por mês',r),xlsAba('Reserva de emergência',ap(f.res)),xlsAba('Casamento',ap(f.cas.ap))]),'application/vnd.ms-excel')}
+document.addEventListener('click',e=>{const q=s=>e.target.closest&&e.target.closest(s);let b;
+  if(b=q('[data-fin-t]')){FIN.t=b.dataset.finT;render();return}
+  if(b=q('[data-fin-m]')){FIN.m=finMes(FIN.m,+b.dataset.finM);render();return}
+  if(b=q('[data-fin-add]')){const v=finNum(document.getElementById('fin_v').value),d=document.getElementById('fin_d').value,desc=document.getElementById('fin_desc').value.trim();
+    if(!(v>0)||!d){const m=document.getElementById('fin_msg');if(m)m.textContent='Informe a data e um valor maior que zero.';return}
+    finD().g.push({id:uid(),d,desc,cat:document.getElementById('fin_cat').value,cart:document.getElementById('fin_cart').value.trim(),v:+v.toFixed(2),u:Date.now()});FIN.m=d.slice(0,7);save();render();toast('Gasto lançado.');return}
+  if(b=q('[data-fin-ap]')){const t=b.dataset.finAp,v=finNum(document.getElementById('fin_'+t+'_v').value),d=document.getElementById('fin_'+t+'_d').value;if(!(v>0)||!d){toast('Informe a data e um valor maior que zero.');return}
+    const reg={id:uid(),d,v:+(b.dataset.finRet?-v:v).toFixed(2),obs:document.getElementById('fin_'+t+'_o').value.trim(),u:Date.now()},f=finD();if(t==='res'){f.res.push(reg);finSyncRes()}else f.cas.ap.push(reg);save();render();toast(b.dataset.finRet?'Retirada lançada.':'Depósito guardado.');return}
+  if(b=q('[data-fin-del]')){const [t,id]=b.dataset.finDel.split(':'),f=finD();if(!confirm('Apagar este lançamento?'))return;if(t==='g')f.g=f.g.filter(x=>x.id!==id);else if(t==='res'){f.res=f.res.filter(x=>x.id!==id);if(f.res.length)finSyncRes();else(S.ax??={}).carreira={...crCfg(),reserva:0}}else f.cas.ap=f.cas.ap.filter(x=>x.id!==id);save();render();return}
+  if(b=q('[data-fin-usacusto]')){(S.ax??={}).carreira={...crCfg(),custo:+b.dataset.finUsacusto};save();render();return}
+  if(q('[data-fin-xls]')){finXls();return}});
+document.addEventListener('change',e=>{const t=e.target;if(!t||!t.closest)return;
+  if(t.matches('[data-fin-renda]')){finD().renda[t.dataset.finRenda]=finNum(t.value)||0;save();render();return}
+  if(t.matches('[data-fin-cas]')){const C=finD().cas;C[t.dataset.finCas]=t.dataset.finCas==='meta'?(finNum(t.value)||60000):t.value;save();render();return}});
+{const st168=document.createElement('style');st168.id='fin168';st168.textContent=`
+.finchips{margin:4px 0 12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}@media(max-width:360px){.finchips{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.finchips button{border:1px solid var(--bd);background:var(--card);color:inherit;border-radius:12px;padding:9px 4px;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.finchips button.on{border-color:var(--g);background:color-mix(in srgb,var(--g) 15%,var(--card))}
+.finmes{display:flex;align-items:center;gap:8px}
+.fing{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;align-items:end;margin:8px 0}
+.fing.fing3{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.fin4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important;margin:10px 0}
+.fin4 .card{display:flex;flex-direction:column;gap:4px}.fin4 b{font-size:19px}
+.finrenda{width:100%;font-size:16px;font-weight:700;padding:4px 6px}
+.fint{margin:14px 0 6px;font-size:14px}
+.fincat{display:grid;grid-template-columns:minmax(110px,1fr) 2fr auto;gap:8px;align-items:center;margin:5px 0;font-size:14px}
+.finbar{height:10px;border-radius:6px;background:var(--card2);overflow:hidden}.finbar>div{height:100%;border-radius:6px}
+.finmeta .finbar,.card>.finbar{height:14px;margin-top:10px}
+.fincarts{display:flex;flex-wrap:wrap;gap:8px}.fincarts span{display:flex;flex-direction:column;padding:8px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card2)}
+.fincarts small{font-size:12px;color:var(--mut)}
+.finmeta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.finmeta>div{display:flex;flex-direction:column;padding:8px;border:1px solid var(--bd);border-radius:10px;background:var(--card2);min-width:0}
+.finmeta small{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}.finmeta b{font-size:clamp(14px,4vw,18px);white-space:nowrap;font-variant-numeric:tabular-nums}
+.fintab td,.fintab th{white-space:normal}
+`;document.head.appendChild(st168)}
 
 /* ---------- 35. PDF profissional dos relatórios da Análise IA ----------
    Desenhado direto no PDF (texto de verdade, A4, sem "foto da tela"): capa, indicadores explicados e gráficos.
