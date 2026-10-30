@@ -8644,7 +8644,7 @@ document.addEventListener('click',e=>{const x=e.target.closest('[data-rotux]');i
 {const ds101=dsAtual;dsAtual=function(){const r=ds101.apply(this,arguments);if(DSES.d===D&&DSES.s==='n'&&DSES.via!=='mdm')EUS='n';return r}}
 
 /* ---------- 102. Saúde dos dados, modelos no registro rápido, lembretes, bloqueio com Face ID/PIN e acabamento (v177) ---------- */
-const APP_VER='v235';
+const APP_VER='v238';
 /* saúde dos dados */
 function sdEstado(){const hj=loc().slice(0,10),snap=String(ls.get('diario-snap-dia')||'').split('|')[0],logado=typeof SESS!=='undefined'&&!!SESS,nuvem=!!window.CLOUD_OK;
   const sync=S.lastSyncAt?new Date(S.lastSyncAt):null,velho=snap?Math.round((new Date(hj+'T12:00')-new Date(snap+'T12:00'))/864e5):null,erro=(typeof BK!=='undefined'&&BK.err)||'';
@@ -12223,21 +12223,25 @@ async function jrPdf(){const v=jrVer();if(!v||!v.manchete)return toast('Abra uma
     /* cabeçalho */
     L.rect(0,0,L.W,92,{fill:L.hex('#f5f1e8')});L.t('Jornal do Pregão',L.W/2,26,{s:30,f:'b',c:L.hex('#111111'),al:'c'});L.t(dt+' · '+(v.nome||''),L.W/2,66,{s:10,c:C.mut,al:'c'});L.y=112;
     const cot=(v.cotacoes||[]).slice(0,8);if(cot.length)L.kpis(cot.map(q=>({l:q.n||q.k,v:q.px!=null?Number(q.px).toLocaleString('pt-BR',{maximumFractionDigits:q.px>1000?0:q.px<10?4:2}):'–',d:q.d1!=null?(q.d1>=0?'+':'')+q.d1.toFixed(2).replace('.',',')+'% no dia':'',c:q.d1>0?C.g:q.d1<0?C.r:C.tx})),{cols:4,h:52,vs:13});
-    const mat=(m,grande)=>{if(!m||!m.titulo)return;L.need(grande?120:90);L.y+=grande?6:10;
+    const mat=(m,grande)=>{if(!m||!m.titulo)return;{const cpl=Math.max(40,L.CW/5.2),ln=t=>Math.ceil(String(t||'').length/cpl),est=36+ln(m.titulo)*(grande?24:18)+(m.linha_fina?ln(m.linha_fina)*14:0)+((m.numeros||[]).length?(m.numeros.length>4?100:50):0)+String(m.texto||'').split(/\n\s*\n/).reduce((a,x)=>a+ln(x)*15+6,0)+(m.por_que_importa?54:0)+(jrTemImp(m.impacto)?20:0);L.need(Math.min(est,grande?320:250))}L.y+=grande?6:10;
       L.t(((m.editoria||'')+(m.chapeu?' · '+m.chapeu:'')).toUpperCase(),M,L.y,{s:8,f:'b',c:L.hex(JR_COR[m.editoria]||'#0f7a55')});L.y+=13;
       L.para(m.titulo,{s:grande?19:14,f:'b',lh:1.22,gap:4});if(m.linha_fina)L.para(m.linha_fina,{s:grande?11:10,c:C.mut,f:'i',gap:6});
-      if(m.numeros&&m.numeros.length)L.kpis(m.numeros.slice(0,4).map(n=>({l:n.rotulo,v:n.valor})),{cols:Math.min(4,m.numeros.length),h:42,vs:12});
+      if(m.numeros&&m.numeros.length)L.kpis(m.numeros.slice(0,6).map(n=>({l:n.rotulo,v:n.valor})),{cols:m.numeros.length>4?3:Math.min(4,m.numeros.length),h:42,vs:12});
       L.para(String(m.texto||'').split(/\n\s*\n/),{s:10.2,gap:6});
-      if(m.por_que_importa)L.caixa('Por que importa',[m.por_que_importa],{s:9.5,barra:C.ac});
+      if(m.por_que_importa)L.caixa('Por que importa',[m.por_que_importa],{s:9.5,barra:C.ac});if(jrTemImp(m.impacto))L.nota('Impacto: '+jrImpTxt(m.impacto));
       if(m.link||m.fonte_url)L.nota((m.fonte_url?'Fonte dos números: '+m.fonte_url:'')+(m.link?(m.fonte_url?' · ':'')+'Documento na CVM: '+m.link:''));
       L.ln(M,L.y+2,M+L.CW,L.y+2,{c:C.bd,w:.6});L.y+=10};
     mat(v.manchete,true);
+    {const RX=jrResumo(v);if(RX.length){L.h2('Resumo executivo');L.bul(RX.map(m=>m.titulo+(m.por_que_importa?' — '+m.por_que_importa:'')))}}
+    {const A=jrImpAgg(v),SE=jrSetAgg(v);if(A.length||SE.length){L.h2('Impacto nos ativos');if(A.length)L.tab([{l:'Ativo',w:30},{l:'Efeito provável',w:50},{l:'Matérias',w:40}],A.map(o=>[{t:o.a,f:'b'},(JR_DIR[o.dir]||JR_DIR[''])[2],String(o.n)]));if(SE.length)L.nota('Setores: '+SE.map(x=>x.s+(x.n>1?' ('+x.n+')':'')).join(' · '));L.nota('Leitura da redação, não é recomendação.')}}
+    {const TC=['win','wdo'].map(jrTecDados).filter(Boolean);if(TC.length){L.h2('Análise técnica');L.tab([{l:'Ativo',w:18},{l:'Tendência',w:20},{l:'Resistência (R1)',w:28},{l:'Pivô',w:24},{l:'Suporte (S1)',w:28}],TC.map(t=>[{t:t.tk,f:'b'},t.tend,jrNumF(t.R1,t.div),jrNumF(t.P,t.div),jrNumF(t.S1,t.div)]));L.nota('Pivô clássico com a máxima, a mínima e o último preço do pregão (candles de 5 min). Não é recomendação.')}}
     if((v.em_poucas_linhas||[]).length){L.h2('Em poucas linhas');L.bul(v.em_poucas_linhas)}
     if((v.materias||[]).length){L.h2('Mais do dia');v.materias.forEach(m=>mat(m,false))}
+    {const VR=JRN.varr;if(VR&&(VR.ranking||[]).length){const fm=x=>x==null?'–':Number(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});L.h2('Oportunidades fundamentalistas');if(VR.resumo)L.para(VR.resumo,{s:10.2,gap:6});L.tab([{l:'Ação',w:20},{l:'Preço',w:24},{l:'Graham',w:24},{l:'Bazin',w:24},{l:'Potencial',w:28}],VR.ranking.map(r=>[{t:r.tk,f:'b'},fm(r.preco),fm(r.graham),fm(r.bazin),(r.potencial_medio_pct>=0?'+':'')+String(r.potencial_medio_pct).replace('.',',')+'%']));(VR.destaques||[]).forEach(d=>L.caixa(d.tk,[d.leitura],{s:9.3}));L.nota('Graham e Bazin, média do potencial de alta. Triagem por números, não é recomendação de compra.')}}
     if(v.conferencia&&v.conferencia.texto){L.h2('A manhã acertou?');L.caixa((JRC_V[v.conferencia.veredito]||['',''])[1],[v.conferencia.texto,...(v.conferencia.pontos||[]).map(p=>({b:`${p.ok?'Acertou':'Errou'}: esperava ${p.previsto}; aconteceu ${p.aconteceu}`}))],{s:9.5})}
     if(v.analise&&v.analise.texto){L.h2('Análise',v.analise.titulo);L.para(String(v.analise.texto).split(/\n\s*\n/),{s:10.2,gap:6});L.nota('Análise da redação, com os dados do dia. Não é recomendação de investimento.')}
     if(v.aula&&v.aula.texto){L.h2('Aula de domingo',v.aula.titulo||v.aula.conceito);L.para(String(v.aula.texto).split(/\n\s*\n/),{s:10.2,gap:6});(v.aula.perguntas||[]).forEach(q=>L.caixa(q.p,[q.r||''],{s:9.3}))}
-    if((v.agenda||[]).length){L.h2('Agenda');L.tab([{l:'Quando',w:26},{l:'Evento',w:44},{l:'Por que importa',w:50}],v.agenda.map(a=>[{t:a.quando,f:'b'},a.evento,a.por_que||'']))}
+    if((v.agenda||[]).length){L.h2('Agenda econômica');L.tab([{l:'Quando',w:26},{l:'Evento',w:44},{l:'Por que importa',w:50}],v.agenda.map(a=>[{t:a.quando,f:'b'},a.evento,a.por_que||'']))}
     if((JRN.pl||[]).length&&!JRN.arq){L.h2('Plantão');JRN.pl.forEach(p=>{L.h3(p.titulo);if(p.linha_fina)L.para(p.linha_fina,{s:9.5,c:C.mut,f:'i'});L.para(String(p.texto||'').split(/\n\s*\n/),{s:10,gap:5})})}
     if((v.fontes||[]).length){L.h2('Fontes');L.bul(v.fontes.map(f=>(f.titulo||'')+(f.url?' — '+f.url:'')),{s:8.5})}
     L.nota('Edição escrita pela IA com pesquisa na internet e os números do app. Confira os fatos antes de repassar. Não é recomendação de investimento.');
@@ -12801,6 +12805,449 @@ function checklistLinhas(){
   const nome=m==='all'?'diario-trades.xls':'diario-trades-'+m+'.xls';
   return saveFile(nome,xlsArquivo(abas),'application/vnd.ms-excel');
 }}
+
+/* ---------- 161. Jornal com cara de jornal financeiro premium (v236) ----------
+   Painel de mercado em cards, manchete com ilustração da editoria, resumo executivo, impacto nos ativos,
+   análise técnica (pivô clássico do pregão) e agenda econômica. Tudo com os dados que o app já tem. */
+const jrEdOcultas=()=>{try{return jrEdP().oc||[]}catch(e){return []}};
+const jrItens=v=>{const oc=jrEdOcultas();return [v&&v.manchete,...((v&&v.materias)||[]).filter(m=>m&&!oc.includes(m.editoria))].filter(m=>m&&m.titulo)};
+const JR_DIR={alta:['▲','up','favorece alta'],baixa:['▼','dn','favorece baixa'],misto:['↕','eq','efeito misto'],'':['•','eq','sem direção clara']};
+const JR_GLIFO={'Mercados':'B3','Macroeconomia':'PIB','Juros e política monetária':'%','Contas públicas':'R$','Empresas':'S.A.','Internacional':'Global','Commodities':'Brent','Eleições e economia':'Voto','Câmbio':'US$'};
+const jrHash=s=>{let h=0;for(const c of String(s||''))h=(h*31+c.charCodeAt(0))|0;return 'i'+Math.abs(h).toString(36)};
+const jrTemImp=i=>!!(i&&(((i.ativos||[]).length)||((i.setores||[]).length)));
+
+// resumo executivo: a manchete e as matérias mais importantes (3 a 5)
+function jrResumo(v){const L=jrItens(v).slice(0,5);return L.length>=3?L:[]}
+function jrResumoHtml(v){const L=jrResumo(v);if(!L.length)return '';
+  return `<section class="jrsec jrexec"><h3>Resumo executivo</h3><ol class="jrexl">${L.map(m=>`<li><b>${esc(m.titulo)}</b>${m.por_que_importa?`<span>${esc(m.por_que_importa)}</span>`:''}</li>`).join('')}</ol></section>`}
+
+// impacto nos ativos: junta o que cada matéria disse
+function jrImpAgg(v){const M=new Map();jrItens(v).forEach(m=>{const i=m.impacto||{};(i.ativos||[]).forEach(a=>{const k=String(a||'').toUpperCase().trim();if(!k)return;const o=M.get(k)||{a:k,d:new Set(),n:0};if(i.direcao)o.d.add(i.direcao);o.n++;M.set(k,o)})});
+  return [...M.values()].map(o=>({a:o.a,n:o.n,dir:o.d.size===1?[...o.d][0]:o.d.size>1?'misto':''})).sort((x,y)=>y.n-x.n).slice(0,14)}
+function jrSetAgg(v){const M=new Map();jrItens(v).forEach(m=>((m.impacto||{}).setores||[]).forEach(s=>{const k=String(s||'').trim();if(k)M.set(k,(M.get(k)||0)+1)}));return [...M.entries()].map(([s,n])=>({s,n})).sort((a,b)=>b.n-a.n).slice(0,10)}
+const jrChip=(a,dir,n)=>{const [s,cls,t]=JR_DIR[dir]||JR_DIR[''];return `<span class="jrchip ${cls}" title="${esc(t)}">${s} ${esc(a)}${n>1?` <small>×${n}</small>`:''}</span>`};
+function jrImpTxt(i){if(!jrTemImp(i))return '';const d=(JR_DIR[i.direcao]||JR_DIR[''])[2];return [(i.ativos||[]).join(', '),(i.setores||[]).length?'setores: '+i.setores.join(', '):'',d].filter(Boolean).join(' · ')}
+function jrImpHtml(v){const A=jrImpAgg(v),S=jrSetAgg(v);if(!A.length&&!S.length)return '';
+  return `<section class="jrsec jrimpac"><h3>Impacto nos ativos</h3>${A.length?`<div class="jrchips">${A.map(o=>jrChip(o.a,o.dir,o.n)).join('')}</div>`:''}${S.length?`<div class="jrsets"><small>Setores</small> ${S.map(x=>`<span>${esc(x.s)}${x.n>1?` <small>×${x.n}</small>`:''}</span>`).join('')}</div>`:''}<div class="sm mut" style="margin-top:8px">▲ a notícia favorece alta · ▼ favorece baixa · ↕ efeito misto. Leitura da redação, não é recomendação.</div></section>`}
+function jrImpLinha(m){const i=m&&m.impacto;if(!jrTemImp(i))return '';return `<div class="jrimp1"><small>Impacto</small>${(i.ativos||[]).map(a=>jrChip(a,i.direcao,1)).join('')}${(i.setores||[]).map(s=>`<span class="jrset1">${esc(s)}</span>`).join('')}</div>`}
+
+// análise técnica do pregão: só com dados confiáveis (20 candles ou mais)
+function jrTecDados(k){const G=JRN.g&&JRN.g[k];if(!G||!Array.isArray(G.d))return null;
+  const d=G.d.filter(x=>x&&[1,2,3,4].every(j=>typeof x[j]==='number'&&isFinite(x[j])));if(d.length<20)return null;
+  const [tk,nome,div]=JRG_TK[k],O=d[0][1]/div,H=Math.max(...d.map(x=>x[2]))/div,Lo=Math.min(...d.map(x=>x[3]))/div,C=d[d.length-1][4]/div,P=(H+Lo+C)/3;
+  const tend=C>P&&C>O?'Alta':C<P&&C<O?'Baixa':'Lateral';
+  return {k,tk,nome,div,O,H,L:Lo,C,P,R1:2*P-Lo,S1:2*P-H,tend,dia:G.dia,n:d.length}}
+const jrNumF=(x,div)=>x.toLocaleString('pt-BR',{minimumFractionDigits:div>1?4:0,maximumFractionDigits:div>1?4:0});
+function jrTecHtml(){const L=['win','wdo'].map(jrTecDados).filter(Boolean);
+  if(!L.length)return '<section class="jrsec jrtec" id="jrtec" hidden></section>';
+  const card=t=>{const f=x=>jrNumF(x,t.div),cls=t.tend==='Alta'?'up':t.tend==='Baixa'?'dn':'eq',outro=t.dia&&t.dia!==loc().slice(0,10);
+    const motivo=t.tend==='Alta'?'acima da abertura e do pivô':t.tend==='Baixa'?'abaixo da abertura e do pivô':'entre a abertura e o pivô';
+    return `<div class="jrtc"><div class="jrtc-h"><b>${esc(t.tk)}</b><span class="jrtag ${cls}">${t.tend}</span></div>
+<div class="jrtc-g"><div><small>Resistência</small><b>${f(t.R1)}</b><span>máxima ${f(t.H)}</span></div><div><small>Pivô</small><b>${f(t.P)}</b><span>último ${f(t.C)}</span></div><div><small>Suporte</small><b>${f(t.S1)}</b><span>mínima ${f(t.L)}</span></div></div>
+<div class="sm mut">Último preço ${motivo}.${outro?` Pregão de ${t.dia.slice(8,10)}/${t.dia.slice(5,7)}.`:''}</div></div>`};
+  return `<section class="jrsec jrtec" id="jrtec"><h3>Análise técnica</h3><div class="jrtcs">${L.map(card).join('')}</div><div class="sm mut" style="margin-top:8px">Pivô clássico com a máxima, a mínima e o último preço do pregão (candles de 5 min). Resistência = R1 e suporte = S1. Não é recomendação.</div></section>`}
+{const jg161=jrGraf;jrGraf=async function(k){const r=await jg161.apply(this,arguments);try{const el=document.getElementById('jrtec');if(el)el.outerHTML=jrTecHtml()}catch(e){}return r}}
+
+// manchete: ilustração da editoria (sem foto de agência; desenho próprio)
+function jrIlu(m){const c=jrCor(m.editoria)||'#334155',g=JR_GLIFO[m.editoria]||'B3',id=jrHash(m.titulo);
+  return `<figure class="jrilu" aria-hidden="true"><svg viewBox="0 0 600 190" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="#0b1220"/></linearGradient><pattern id="${id}p" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="14" stroke="#fff" stroke-opacity=".08" stroke-width="2"/></pattern></defs><rect width="600" height="190" fill="url(#${id})"/><rect width="600" height="190" fill="url(#${id}p)"/><line x1="24" y1="136" x2="200" y2="136" stroke="#fff" stroke-opacity=".6" stroke-width="2"/><text x="576" y="128" text-anchor="end" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="${g.length>3?82:116}" fill="#fff" fill-opacity=".92">${esc(g)}</text><text x="24" y="158" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="700" letter-spacing="2.5" fill="#fff" fill-opacity=".88">${esc(String(m.editoria||'').toUpperCase())}</text></svg></figure>`}
+{const jm161=jrMateria;jrMateria=function(m,id,grande){let h=jm161.apply(this,arguments);try{
+  if(grande&&m&&m.titulo)h=h.replace('<h2 class="jrtit">',jrIlu(m)+'<h2 class="jrtit">');
+  const li=jrImpLinha(m);if(li){const i=h.indexOf('<div class="jrbar">');if(i>0)h=h.slice(0,i)+li+h.slice(i)}
+}catch(e){}return h}}
+
+// monta tudo no corpo do jornal
+{const jc161=jrCorpo;jrCorpo=function(){let h=jc161.apply(this,arguments);try{const v=JRN.v;if(!v||!v.manchete)return h;
+  {const a=h.search(/<div class="jrinds"[^>]*>/);if(a>=0){const f=h.indexOf('</div>',a);if(f>0){const ab=h.slice(a,h.indexOf('>',a)+1).replace('class="jrinds"','class="jrinds jrmk"');h=h.slice(0,a)+'<section class="jrsec jrmkt"><h3>Painel de mercado</h3>'+ab+h.slice(h.indexOf('>',a)+1,f)+'</div></section>'+h.slice(f+6)}}}
+  const im=h.indexOf('id="jra-m"');if(im>0){const fim=h.indexOf('</article>',im);if(fim>0){const p=fim+'</article>'.length;h=h.slice(0,p)+jrResumoHtml(v)+jrImpHtml(v)+h.slice(p)}}
+  {const i2=h.search(/<section class="jrsec"><h3( class="jrh3b")?>Mais do dia/);if(i2>0)h=h.slice(0,i2)+jrTecHtml()+'<section class="jrsec jrmais">'+h.slice(i2+'<section class="jrsec">'.length)}
+  h=h.replace('<section class="jrsec"><h3>Agenda</h3>','<section class="jrsec jragenda"><h3>Agenda econômica</h3>');
+}catch(e){}return h}}
+
+{const st161=document.createElement('style');st161.id='jornal161';st161.textContent=`
+.jrcard{--jr-rule:color-mix(in srgb,var(--tx) 22%,transparent)}
+html body #app .jrcard .jrcab{border-bottom:0;border-top:4px solid var(--tx);padding:12px 0 0;margin-bottom:14px}
+html body #app .jrcard .jrcab::after{content:'';display:block;height:3px;margin-top:12px;border-top:1px solid var(--tx);border-bottom:1px solid var(--tx)}
+html body #app .jrcard .jrnome{font:900 34px/1 Georgia,'Times New Roman',serif;letter-spacing:-.02em}
+html body #app .jrcard .jrdata{text-transform:uppercase;letter-spacing:.09em;font-size:11px}
+html body #app .jrcard .jrsec>h3{display:flex;align-items:center;gap:10px;font:800 11.5px/1.2 system-ui,-apple-system,sans-serif!important;text-transform:uppercase!important;letter-spacing:.14em!important;margin:22px 0 10px!important;color:var(--tx)!important;border:0!important;padding:0!important;background:none!important}
+html body #app .jrcard .jrsec>h3::after{content:'';flex:1;border-top:1px solid var(--jr-rule)}
+html body #app .jrcard .jrman h2.jrtit{font-size:30px!important;line-height:1.12!important;letter-spacing:-.015em!important}
+body.pc #app .jrcard .jrman h2.jrtit{font-size:40px!important}
+.jrmkt+*{margin-top:18px!important}
+.jrilu{margin:4px 0 12px;border-radius:12px;overflow:hidden;line-height:0}
+.jrilu svg{width:100%;height:auto;display:block;aspect-ratio:600/190}
+html body #app .jrcard .jrinds.jrmk{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;overflow:visible;border-bottom:0;padding:0;margin:0}
+.jrmk .jrind{min-width:0;gap:2px;padding:8px 10px;border-radius:10px;border:1px solid var(--bd);border-left-width:3px;background:var(--card2)}
+.jrmk .jrind small{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jrmk .jrind b{font:700 16px/1.2 Georgia,'Times New Roman',serif;font-variant-numeric:tabular-nums}
+.jrmk .jrind i{font-style:normal;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.jrmk .jrind:has(i.g){border-left-color:var(--g);background:color-mix(in srgb,var(--g) 9%,var(--card2))}.jrmk .jrind i.g{color:var(--g)}
+.jrmk .jrind:has(i.r){border-left-color:var(--r);background:color-mix(in srgb,var(--r) 9%,var(--card2))}.jrmk .jrind i.r{color:var(--r)}
+.jrexl{margin:0;padding-left:22px}.jrexl li{margin:0 0 10px;line-height:1.45}
+.jrexl li b{display:block;font:700 16px/1.3 Georgia,'Times New Roman',serif}
+.jrexl li span{display:block;font-size:14px;color:var(--mut)}
+.jrchips{display:flex;flex-wrap:wrap;gap:6px}
+.jrchip{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;font-size:12.5px;font-weight:700;border:1px solid var(--bd);background:var(--card2);white-space:nowrap}
+.jrchip small{font-weight:600;opacity:.7}
+.jrchip.up{color:var(--g);border-color:color-mix(in srgb,var(--g) 45%,transparent);background:color-mix(in srgb,var(--g) 10%,transparent)}
+.jrchip.dn{color:var(--r);border-color:color-mix(in srgb,var(--r) 45%,transparent);background:color-mix(in srgb,var(--r) 10%,transparent)}
+.jrsets{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.jrsets>small{color:var(--mut);text-transform:uppercase;letter-spacing:.08em;font-size:10.5px;margin-right:2px}
+.jrsets span{padding:3px 8px;border-radius:6px;background:var(--card2)}
+.jrimp1{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 4px}
+.jrimp1>small{color:var(--mut);text-transform:uppercase;letter-spacing:.08em;font-size:10.5px;margin-right:2px}
+.jrset1{padding:3px 8px;border-radius:6px;background:var(--card2);font-size:12.5px}
+.jrtcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.jrtc{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;background:var(--card2)}
+.jrtc-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.jrtc-h b{font:700 17px Georgia,'Times New Roman',serif}
+.jrtag{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em}
+.jrtag.up{color:var(--g);background:color-mix(in srgb,var(--g) 14%,transparent)}.jrtag.dn{color:var(--r);background:color-mix(in srgb,var(--r) 14%,transparent)}.jrtag.eq{color:var(--mut);background:color-mix(in srgb,var(--mut) 14%,transparent)}
+.jrtc-g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px}
+.jrtc-g>div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.jrtc-g small{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.jrtc-g b{font-variant-numeric:tabular-nums;font-size:15px}
+.jrtc-g span{font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums}
+.jrtc-g>div:first-child b{color:var(--r)}.jrtc-g>div:last-child b{color:var(--g)}
+.jragenda .jrag{border-left:2px solid var(--jr-rule);padding-left:10px;margin-left:2px}
+@media(min-width:980px){body.pc .jrilu svg{aspect-ratio:600/150}html body.pc #app .jrcard .jrinds.jrmk{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}body.pc #jrbox .jrmais{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;align-items:start}body.pc #jrbox .jrmais>:not(article){grid-column:1/-1}}
+`;document.head.appendChild(st161)}
+FN_ESPERADA.analise='v232';
+
+/* ---------- 162. v237: PDF do Painel por modalidade, carteira no jornal (só no botão) e jornal com o design editorial (azul-marinho e verde, 6 páginas) ---------- */
+FN_ESPERADA.notificar='v232';
+
+/* 162.1 — PDF do Painel por modalidade */
+const DSH_MOD={dt:'Day trade',sw:'Swing trade',op:'Opções',ex:'EUA e Forex',all:'Todas as modalidades'};
+function dshEscolha(){let o=document.getElementById('dshch');if(o)o.remove();o=document.createElement('div');o.id='dshch';
+  const ab=modAtual(),cur=['dt','sw','op','ex'].includes(ab)?ab:null,bt=(k,l,on)=>`<button type="button" class="btn${on?'':' s'}" data-dshm="${k}">${l}</button>`;
+  o.innerHTML=`<div class="csvc"><h2>PDF do Painel de quê?</h2><p class="sm mut">Escolha a modalidade para o relatório não vir misturado.</p><div class="csvg">${cur?bt(cur,'Só '+DSH_MOD[cur]+' (aba atual)',1):''}${['dt','sw','op','ex'].filter(k=>k!==cur).map(k=>bt(k,'Só '+DSH_MOD[k],0)).join('')}${bt('all',DSH_MOD.all,0)}</div>${bt('x','Cancelar',0)}</div>`;
+  document.body.appendChild(o)}
+{const dp162=dshPdf;dshPdf=function(m){
+  if(m===undefined){dshEscolha();return}
+  if(m==='x')return;
+  const todos=S.trades,lc0=lcItems;
+  if(m!=='all'){S.trades=todos.filter(t=>modDe(t)===m);if(m!=='ex')lcItems=function(){return []}}
+  try{dp162()}finally{S.trades=todos;lcItems=lc0}
+  if(m!=='all')try{PDFB.tt=String(PDFB.tt||'Dashboard')+' · '+DSH_MOD[m];PDFB.name=String(PDFB.name||'dashboard.pdf').replace(/\.pdf$/,'-'+m+'.pdf');const t1=document.querySelector('#pdfbody h1');if(t1)t1.textContent=PDFB.tt;pdfBar()}catch(e){}
+}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#dshch [data-dshm]');if(!b)return;const m=b.dataset.dshm;document.getElementById('dshch')?.remove();dshPdf(m)});
+
+/* 162.2 — Sua carteira no jornal: análise fundamentalista e técnica de cada ativo, só quando tocar no botão */
+const JRC={busy:0,msg:'',etapa:''};let JRC_LOAD=0;
+function jrcCarrega(){if(JRC_LOAD)return;JRC_LOAD=1;try{Promise.resolve(idb('kv','get','anx')).then(r=>{if(r&&typeof r==='object'){ANX.res={...r,...(ANX.res||{})};jrPinta()}}).catch(()=>{})}catch(e){}}
+function jrcRes(){const o={};['BR','US'].forEach(mk=>['fun','tec'].forEach(k=>{const r=ANX.res&&ANX.res[mk+':'+k];if(r)o[mk+':'+k]=r}));return o}
+function jrcAtivos(){const M=new Map();for(const [key,r] of Object.entries(jrcRes())){const k=key.slice(3);for(const a of anxArr(((r||{}).relatorio||{}).ativos)){const tk=String(a.ticker||'').toUpperCase();if(!tk)continue;const o=M.get(tk)||{tk};o[k]=a;M.set(tk,o)}}return [...M.values()]}
+function jrcUlt(){const d=Object.values(jrcRes()).map(r=>r&&r.dia).filter(Boolean).sort();return d[d.length-1]||''}
+async function jrcAnalisa(){if(JRC.busy)return;
+  const mks=['BR','US'].filter(mk=>{try{return anxItens(mk).length>0}catch(e){return false}});
+  if(!mks.length){JRC.msg='Lance suas ações, ETFs ou FIIs na carteira primeiro (Mais → Carteiras).';jrPinta();return}
+  JRC.busy=1;JRC.msg='';const falhas=[];
+  for(const mk of mks){const it=anxItens(mk);
+    for(const k of ['fun','tec']){JRC.etapa=(mk==='BR'?'Brasil':'EUA')+', '+(k==='fun'?'fundamentalista':'técnica');jrPinta();
+      try{const r=await anxCall({modo:k==='tec'?'tecnica':'fundamentalista',itens:it});if(!r||r.erro)throw new Error((r&&r.erro)||'sem resposta');r.dia=loc().slice(0,10);r.sig=it.map(x=>x.tk).join(',');(ANX.res??={})[mk+':'+k]=r}
+      catch(e){falhas.push((mk==='BR'?'Brasil':'EUA')+' '+(k==='fun'?'fundamentalista':'técnica')+': '+((e&&e.message)||e))}}}
+  try{idb('kv','put',ANX.res,'anx')}catch(e){}
+  JRC.busy=0;JRC.etapa='';JRC.msg=falhas.length?'Parte da análise não saiu. '+falhas.join(' · '):'';jrPinta()}
+const jrcTag=(t,c)=>`<span class="jrtag ${c}">${esc(t)}</span>`;
+const jrcCls=x=>/BARATO|ALTA/.test(x)?'up':/CARO|BAIXA/.test(x)?'dn':'eq';
+function jrcCard(o){const f=o.fun||{},t=o.tec||{},g=t.gatilhos||{};
+  const p=(rot,tx)=>tx&&typeof tx==='string'?`<p><small>${rot}</small>${esc(tx)}</p>`:'';
+  return `<div class="jrcc"><div class="jrcc-h"><b>${esc(o.tk)}</b><span>${f.valuation?jrcTag(f.valuation.toLowerCase(),jrcCls(f.valuation)):''}${f.qualidade?jrcTag('qualidade '+f.qualidade.toLowerCase(),'eq'):''}${t.vies?jrcTag('viés '+t.vies.toLowerCase(),jrcCls(t.vies)):''}</span></div>
+${p('Fundamentos',f.resumo)}${p('Para quem tem',f.para_quem_tem)}${p('Técnica',t.resumo)}${p('Suportes e resistências',t.zonas_de_interesse)}${g.compra||g.venda?`<p><small>Gatilhos</small>${g.compra?'Compra: '+esc(g.compra)+' ':''}${g.venda?'Venda: '+esc(g.venda):''}</p>`:''}</div>`}
+function jrcHtml(){jrcCarrega();const A=jrcAtivos(),u=jrcUlt();
+  const btn=`<button class="btn" data-jrcart="1"${JRC.busy?' disabled':''}>${JRC.busy?'⏳ Analisando ('+esc(JRC.etapa)+')…':A.length?'↻ Atualizar análise da carteira':'📊 Analisar minha carteira'}</button>`;
+  return `<section class="jrsec jrcart" id="jrcart"><h3>Sua carteira</h3><p class="sm mut" style="margin:0 0 8px">Análise fundamentalista e técnica de cada ativo da sua carteira. Só roda quando você tocar no botão${u?` · última análise em ${u.slice(8,10)}/${u.slice(5,7)}`:''}.</p>${btn}${JRC.msg?`<div class="warn sm" style="margin-top:8px">${esc(JRC.msg)}</div>`:''}${A.length?`<div class="jrccs">${A.map(jrcCard).join('')}</div><div class="sm mut" style="margin-top:8px">Leitura da IA com os dados da sua carteira. Não é recomendação de investimento.</div>`:''}</section>`}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-jrcart]'))jrcAnalisa()});
+
+/* 162.3 — identidade do jornal no app: cabeçalho com logo, faixas azul-marinho com detalhe verde */
+function jeLogo(sz){return `<svg class="jelogo" viewBox="0 0 40 40" width="${sz}" height="${sz}" aria-hidden="true"><rect x="4" y="23" width="6" height="13" rx="1" fill="#0e2a3b"/><rect x="13" y="17" width="6" height="19" rx="1" fill="#0e2a3b"/><rect x="22" y="11" width="6" height="25" rx="1" fill="#15905f"/><path d="M4 18 L15 10 L22 14 L35 4" stroke="#15905f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 4 h6 v6" stroke="#15905f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+{const jc162=jrCorpo;jrCorpo=function(){let h=jc162.apply(this,arguments);try{const v=JRN.v;if(!v||!v.manchete)return h;
+  h=h.replace('<div class="jrnome">Jornal do Pregão</div>',`<div class="jrnome">${jeLogo(34)}<span>Jornal do Pregão</span></div><div class="jrtag2">INFORMAÇÃO · MERCADOS · ANÁLISE</div>`);
+  const i=h.indexOf('<section class="jrsec jrmais">');const c=jrcHtml();if(i>0)h=h.slice(0,i)+c+h.slice(i);else h+=c;
+}catch(e){}return h}}
+
+/* 162.4 — o jornal em PDF no layout editorial: páginas montadas em HTML e fotografadas para o PDF */
+const JEPG={W:794,H:1123};
+const jeEsc=s=>esc(String(s??''));
+const jeNumTxt=x=>x==null||!isFinite(x)?'–':Number(x).toLocaleString('pt-BR',{maximumFractionDigits:Math.abs(x)>=1000?0:Math.abs(x)<10?4:2});
+const jePct=d=>d==null||!isFinite(d)?'':`<i class="${d>0?'up':d<0?'dn':'eq'}">${d>0?'▲':d<0?'▼':'■'} ${(d>0?'+':'')+Number(d).toFixed(2).replace('.',',')}%</i>`;
+const JE_ICO={
+  diario:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  empresas:'<path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5M9 10h.01M15 10h.01" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  economia:'<path d="M3 21h18M4 10h16M12 3l8 4H4l8-4zM6 10v8M10 10v8M14 10v8M18 10v8" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  mundo:'<circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2" fill="none"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" stroke="#fff" stroke-width="2" fill="none"/>',
+  agenda:'<rect x="3" y="5" width="18" height="16" rx="2" stroke="#fff" stroke-width="2" fill="none"/><path d="M3 10h18M8 3v4M16 3v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
+  carteira:'<rect x="3" y="7" width="18" height="13" rx="2" stroke="#fff" stroke-width="2" fill="none"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 13h18" stroke="#fff" stroke-width="2" fill="none"/>',
+  tec:'<path d="M3 17l5-6 4 3 7-9" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'};
+const jeIco=(k,s=22)=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${JE_ICO[k]||JE_ICO.diario}</svg>`;
+function jeBan(ico,tit,sub,cont){return `<div class="jeban"><div class="jeban-i">${jeIco(ico,24)}</div><div class="jeban-t"><b>${jeEsc(tit)}${cont?' <small>(continuação)</small>':''}</b>${sub?`<span>${jeEsc(sub)}</span>`:''}</div><svg class="jeban-art" viewBox="0 0 260 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60 L30 52 L55 56 L85 40 L110 44 L140 28 L170 34 L200 18 L230 22 L260 6" stroke="#2ecc8f" stroke-width="2" fill="none" opacity=".9"/><path d="M0 66 L40 60 L80 62 L120 50 L160 54 L200 40 L260 30" stroke="#2ecc8f" stroke-width="1" fill="none" opacity=".45"/></svg></div>`}
+const jeFita=(t,ico='diario')=>`<div class="jefita">${jeIco(ico,16)}<b>${jeEsc(t)}</b></div>`;
+const jeBarra=(tit,tx)=>tx?`<div class="jebarra"><div class="jebarra-i">${jeIco('tec',22)}</div><div><b>${jeEsc(tit)}</b><span>${jeEsc(tx)}</span></div></div>`:'';
+function jeSpark(k){const G=JRN.g&&JRN.g[k];if(!G||!Array.isArray(G.d)||G.d.length<5)return '';const y=G.d.map(x=>x[4]).filter(x=>isFinite(x));if(y.length<5)return '';
+  const hi=Math.max(...y),lo=Math.min(...y),W=150,H=34,X=i=>i*W/(y.length-1),Y=v=>H-2-(v-lo)*(H-4)/Math.max(1e-9,hi-lo),cor=y[y.length-1]>=y[0]?'#15905f':'#d33a3a';
+  return `<svg class="jespk" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polyline fill="none" stroke="${cor}" stroke-width="1.6" points="${y.map((v,i)=>X(i).toFixed(1)+','+Y(v).toFixed(1)).join(' ')}"/></svg>`}
+const jeSparkDe=c=>{const s=(String(c.k||'')+' '+String(c.n||'')).toLowerCase();return /\bwin\b|mini índice|mini indice/.test(s)?jeSpark('win'):/\bwdo\b|dólar futuro|dolar futuro/.test(s)?jeSpark('wdo'):''};
+function jeCot(c,escuro){return `<div class="jecot${escuro?' esc':''}"><small>${jeEsc(String(c.n||c.k||'').toUpperCase())}</small><b>${jeNumTxt(c.px)}</b>${jePct(c.d1)}${escuro?'':jeSparkDe(c)}</div>`}
+function jeHeroArt(){const B=[[0,120],[34,90],[60,140],[96,70],[128,110],[160,60],[196,130],[230,85],[262,150],[300,95],[334,125],[370,80],[404,140],[440,100],[476,65],[512,120],[548,90],[584,135],[620,75],[656,115],[692,95]];
+  return `<svg class="jehero-art" viewBox="0 0 730 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="jehg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#123a52"/><stop offset="1" stop-color="#071a26"/></linearGradient></defs><rect width="730" height="300" fill="url(#jehg)"/>${[60,120,180,240].map(y=>`<line x1="0" x2="730" y1="${y}" y2="${y}" stroke="#fff" stroke-opacity=".05"/>`).join('')}${B.map(([x,h])=>`<rect x="${x}" y="${300-h}" width="30" height="${h}" fill="#0b2636" opacity=".85"/>`).join('')}<polyline points="0,250 70,230 130,238 200,200 260,210 330,170 390,180 460,130 520,142 590,96 650,104 730,52" fill="none" stroke="#2ecc8f" stroke-width="3" opacity=".9"/><polyline points="0,262 90,248 170,252 250,226 340,232 430,196 520,200 620,160 730,140" fill="none" stroke="#2ecc8f" stroke-width="1.4" opacity=".35"/></svg>`}
+const jePar1=t=>{const p=String(t||'').split(/\n\s*\n/)[0]||'';return p.length>520?p.slice(0,p.lastIndexOf(' ',500))+'…':p};
+function jeNumBox(L){L=(L||[]).slice(0,6);if(!L.length)return '';return `<div class="jenums n${Math.min(L.length,4)}">${L.map(n=>{const v=String(n.valor||''),c=/^\s*\+/.test(v)?'up':/^\s*[-−]/.test(v)?'dn':'';return `<div><small>${jeEsc(n.rotulo)}</small><b class="${c}">${jeEsc(v)}</b></div>`}).join('')}</div>`}
+function jeImp(i){if(!jrTemImp(i))return '';return `<div class="jeimp">${(i.ativos||[]).map(a=>{const [s,c]=JR_DIR[i.direcao]||JR_DIR[''];return `<span class="jechip ${c}">${s} ${jeEsc(a)}</span>`}).join('')}${(i.setores||[]).map(s=>`<span class="jechip set">${jeEsc(s)}</span>`).join('')}</div>`}
+function jeMat(m,opt={}){if(!m||!m.titulo)return '';return `<article class="jemat"><div class="jechap" style="color:${jrCor(m.editoria)}">${jeEsc(String(m.editoria||'').toUpperCase())}${m.chapeu?' · '+jeEsc(String(m.chapeu).toUpperCase()):''}</div><h3>${jeEsc(m.titulo)}</h3>${m.linha_fina?`<p class="jefina">${jeEsc(m.linha_fina)}</p>`:''}${jeNumBox(m.numeros)}${opt.semTexto?'':`<p class="jetx">${jeEsc(jePar1(m.texto))}</p>`}${m.por_que_importa?`<div class="jepq">“${jeEsc(m.por_que_importa)}”</div>`:''}${jeImp(m.impacto)}</article>`}
+const JE_ED={empresas:['Empresas'],economia:['Macroeconomia','Juros e política monetária','Contas públicas','Câmbio'],mundo:['Internacional','Commodities']};
+const jeGrupo=m=>Object.keys(JE_ED).find(k=>JE_ED[k].includes(m.editoria))||'diario';
+const jeTk=m=>{const a=((m.impacto||{}).ativos||[])[0];return a?String(a).toUpperCase():String(m.chapeu||m.editoria||'').split(/\s+/)[0]};
+function jeVal(s){const m=String(s||'').replace(/\s/g,'').match(/(-?[\d.]+(?:,\d+)?)(bi|mi|mil)?/i);if(!m)return null;const n=+m[1].replace(/\./g,'').replace(',','.');if(!isFinite(n))return null;const u=(m[2]||'').toLowerCase();return u==='bi'?n:u==='mi'?n/1000:u==='mil'?n/1e6:null}
+function jeGrafEmp(L){const it=L.map(m=>{const N=m.numeros||[],r=N.find(n=>/receita/i.test(n.rotulo)),l=N.find(n=>/lucro/i.test(n.rotulo));const rv=r&&jeVal(r.valor),lv=l&&jeVal(l.valor);return rv!=null&&lv!=null?{tk:jeTk(m),r:rv,l:lv}:null}).filter(Boolean).slice(0,6);
+  if(it.length<2)return '';const mx=Math.max(...it.flatMap(x=>[x.r,x.l]),1e-9),W=660,H=190,bw=Math.min(46,(W-40)/it.length/2.6),gap=(W-40)/it.length,Y=v=>H-26-Math.max(0,v)/mx*(H-50);
+  const f=x=>x.toLocaleString('pt-BR',{maximumFractionDigits:1});
+  return `<div class="jebox"><div class="jebox-h"><b>Desempenho das empresas que divulgaram (R$ bi)</b><span><i class="lg n"></i>Receita <i class="lg g"></i>Lucro</span></div><svg viewBox="0 0 ${W} ${H}" class="jegraf">${it.map((x,i)=>{const cx=30+gap*i+gap/2;return `<rect x="${(cx-bw-2).toFixed(1)}" y="${Y(x.r).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H-26-Y(x.r)).toFixed(1)}" fill="#1d4f91"/><rect x="${(cx+2).toFixed(1)}" y="${Y(x.l).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H-26-Y(x.l)).toFixed(1)}" fill="#15905f"/><text x="${(cx-bw/2-2).toFixed(1)}" y="${(Y(x.r)-4).toFixed(1)}" text-anchor="middle" font-size="11">${f(x.r)}</text><text x="${(cx+2+bw/2).toFixed(1)}" y="${(Y(x.l)-4).toFixed(1)}" text-anchor="middle" font-size="11">${f(x.l)}</text><text x="${cx.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="12" font-weight="700">${jeEsc(x.tk)}</text>`}).join('')}<line x1="20" x2="${W-10}" y1="${H-26}" y2="${H-26}" stroke="#9fb0bb"/></svg><div class="jenota">Valores lidos dos números das matérias de balanço. Lucro negativo aparece sem barra.</div></div>`}
+function jeVarr(){const VR=JRN.varr;if(!VR||!(VR.ranking||[]).length)return '';const fm=x=>x==null?'–':Number(x).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return `<div class="jebox">${jeFita('Oportunidades fundamentalistas','empresas')}${VR.resumo?`<p class="jetx">${jeEsc(VR.resumo)}</p>`:''}<table class="jetab"><thead><tr><th>Ação</th><th>Preço</th><th>Graham</th><th>Bazin</th><th>Potencial</th></tr></thead><tbody>${VR.ranking.map(r=>`<tr><td><b>${jeEsc(r.tk)}</b></td><td>${fm(r.preco)}</td><td>${fm(r.graham)}</td><td>${fm(r.bazin)}</td><td class="up"><b>${(r.potencial_medio_pct>=0?'+':'')+String(r.potencial_medio_pct).replace('.',',')}%</b></td></tr>`).join('')}</tbody></table><div class="jenota">Graham e Bazin, média do potencial de alta. Triagem por números, não é recomendação de compra.</div></div>`}
+function jeTec(){const L=['win','wdo'].map(jrTecDados).filter(Boolean);if(!L.length)return '';
+  return `<div class="jebox">${jeFita('Análise técnica','tec')}<div class="jetecs">${L.map(t=>{const f=x=>jrNumF(x,t.div);return `<div class="jetec"><div class="jetec-h"><b>${jeEsc(t.tk)}</b><span class="jetag ${t.tend==='Alta'?'up':t.tend==='Baixa'?'dn':'eq'}">${t.tend}</span></div><div>Suporte <b class="up">${f(t.S1)}</b> · Resistência <b class="dn">${f(t.R1)}</b></div><div class="jenota">Pivô ${f(t.P)} · mínima ${f(t.L)} · máxima ${f(t.H)} · último ${f(t.C)}</div></div>`}).join('')}</div><div class="jenota">Pivô clássico do pregão (candles de 5 min). Não é recomendação.</div></div>`}
+function jeSecoes(v){
+  const oc=jrEdOcultas(),it=(v.materias||[]).filter(m=>m&&m.titulo&&!oc.includes(m.editoria)),G={diario:[],empresas:[],economia:[],mundo:[]};it.forEach(m=>G[jeGrupo(m)].push(m));
+  const cot=(v.cotacoes||[]),intl=cot.filter(c=>/s&p|nasdaq|dow|dxy|brent|ouro|stoxx|nikkei|vix|treasur/i.test((c.n||'')+' '+(c.k||''))),loc2=cot.filter(c=>!intl.includes(c));
+  const S2=[];
+  // capa
+  const m0=v.manchete;
+  S2.push({capa:1,blocos:[
+    `<div class="jehero">${jeHeroArt()}<div class="jehero-t"><span class="jeed">${jeEsc(String(m0.editoria||'Mercados').toUpperCase())}</span><h1>${jeEsc(m0.titulo)}</h1>${m0.linha_fina?`<p>${jeEsc(m0.linha_fina)}</p>`:''}</div></div>`,
+    (loc2.length?`<div class="jecots">${loc2.slice(0,8).map(c=>jeCot(c)).join('')}</div>`:''),
+    jeBarra('Por que importa',m0.por_que_importa),
+    `<div class="jemat jeman">${jeNumBox(m0.numeros)}<p class="jetx">${jeEsc(String(m0.texto||'').split(/\n\s*\n/).slice(0,2).join(' '))}</p>${jeImp(m0.impacto)}</div>`]});
+  // diário de trader
+  const dest=G.diario[0]||it[0];
+  S2.push({ico:'diario',tit:'Diário de Trader',sub:'Panorama, notícias e oportunidades do dia',blocos:[
+    `<div class="jeduo"><div class="jebox">${jeFita('Em poucas linhas')}${(v.em_poucas_linhas||[]).length?`<ul class="jelist">${v.em_poucas_linhas.slice(0,8).map(x=>`<li>${jeEsc(x)}</li>`).join('')}</ul>`:'<p class="jenota">Sem notas nesta edição.</p>'}</div>${dest?`<div class="jebox jedest">${jrIlu(dest)}<b>${jeEsc(dest.titulo)}</b>${dest.linha_fina?`<p>${jeEsc(dest.linha_fina)}</p>`:''}</div>`:''}</div>`,
+    (()=>{const R=jrResumo(v);return R.length?`<div class="jebox">${jeFita('Resumo executivo')}<ol class="jeol">${R.map(m=>`<li><b>${jeEsc(m.titulo)}</b>${m.por_que_importa?` — ${jeEsc(m.por_que_importa)}`:''}</li>`).join('')}</ol></div>`:''})(),
+    ...(G.diario.length?[jeFita('Mais do dia'),...G.diario.map(m=>jeMat(m))]:[])]});
+  // empresas
+  if(G.empresas.length||(JRN.varr&&(JRN.varr.ranking||[]).length)){const E=G.empresas;
+    S2.push({ico:'empresas',tit:'Empresas e resultados',sub:'Balanços e destaques das companhias',blocos:[
+      E.length?`<div class="jebox">${jeFita('Destaques do trimestre','empresas')}${E.slice(0,6).map(m=>{const n=(m.numeros||[])[0];return `<div class="jedt"><span class="jebadge">${jeEsc(jeTk(m))}</span><div><b>${jeEsc(m.titulo)}</b>${n?`<span>${jeEsc(n.rotulo)}: ${jeEsc(n.valor)}</span>`:''}</div></div>`}).join('')}</div>`:'',
+      jeGrafEmp(E),...E.map(m=>jeMat(m)),jeVarr(),E[0]?jeBarra('Fique de olho',E[0].por_que_importa):'']})}
+  // economia brasileira
+  {const J=(typeof JR!=='undefined'&&JR.data)||{},dol=cot.find(c=>/^d[oó]lar(?!.*futuro)/i.test(c.n||'')||c.k==='dolar');
+    const cards=[J.selic&&J.selic.v!=null?['Juros (Selic)',J.selic.v+'%','meta do Copom']:null,J.cdi&&J.cdi.v!=null?['CDI',J.cdi.v+'%','ao ano']:null,J.ipca12&&J.ipca12.v!=null?['Inflação (IPCA)',J.ipca12.v+'%','em 12 meses']:null,dol?['Dólar comercial','R$ '+jeNumTxt(dol.px),dol.d1!=null?(dol.d1>=0?'▲ +':'▼ ')+Number(dol.d1).toFixed(2).replace('.',',')+'%':'']:null].filter(Boolean);
+    let curva='';try{curva=J.curva&&J.curva.length>1?j2CurvaSvg(J.curva):''}catch(e){}
+    if(G.economia.length||cards.length||v.analise){S2.push({ico:'economia',tit:'Economia brasileira',sub:'Juros, câmbio e cenário fiscal',blocos:[
+      cards.length?`<div class="jekpis n${cards.length}">${cards.map(([a,b,c])=>`<div><small>${jeEsc(a)}</small><b>${jeEsc(b)}</b><span>${jeEsc(c)}</span></div>`).join('')}</div>`:'',
+      v.analise&&v.analise.texto?`<div class="${curva?'jeduo':'jeuno'}"><div class="jebox"><b class="jebt">${jeEsc(v.analise.titulo||'Cenário')}</b><p class="jetx">${jeEsc(String(v.analise.texto).split(/\n\s*\n/).slice(0,2).join(' ').slice(0,900))}</p></div>${curva?`<div class="jebox"><b class="jebt">Curva de juros (DI futuro)</b>${curva}</div>`:''}</div>`:(curva?`<div class="jebox"><b class="jebt">Curva de juros (DI futuro)</b>${curva}</div>`:''),
+      ...G.economia.map(m=>jeMat(m)),G.economia[0]?jeBarra('Por que importa',G.economia[0].por_que_importa):'']})}}
+  // mercado internacional
+  if(G.mundo.length||intl.length||['win','wdo'].some(k=>jrTecDados(k))){S2.push({ico:'mundo',tit:'Mercado internacional',sub:'O que movimenta o mundo',blocos:[
+    intl.length?`<div class="jecots esc">${intl.slice(0,8).map(c=>jeCot(c,1)).join('')}</div>`:'',
+    ...G.mundo.map(m=>jeMat(m)),jeTec()]})}
+  // sua carteira (se já houver análise)
+  {const A=jrcAtivos();if(A.length)S2.push({ico:'carteira',tit:'Sua carteira',sub:'Análise fundamentalista e técnica de cada ativo',blocos:A.map(o=>`<div class="jebox">${jrcCard(o)}</div>`)})}
+  // agenda econômica e fechamento
+  {const ag=(v.agenda||[]),corp=ag.filter(a=>/balan/i.test(a.evento||'')),eco=ag.filter(a=>!corp.includes(a)),R=jrResumo(v),A=jrImpAgg(v),dica=GATE_DICAS[new Date().getDate()%GATE_DICAS.length][0];
+    S2.push({ico:'agenda',tit:'Agenda econômica',sub:'Principais eventos e resumo do dia',blocos:[
+      eco.length?`<table class="jetab jeag"><thead><tr><th>Quando</th><th>Evento</th><th>Por que importa</th></tr></thead><tbody>${eco.map(a=>`<tr><td><b>${jeEsc(a.quando)}</b></td><td>${jeEsc(a.evento)}</td><td>${jeEsc(a.por_que||'')}</td></tr>`).join('')}</tbody></table>`:'',
+      corp.length?`<div class="jebox">${jeFita('Eventos corporativos','empresas')}<ul class="jelist">${corp.map(a=>`<li><b>${jeEsc(a.quando)}</b> · ${jeEsc(String(a.evento).replace(/^Balanço:\s*/i,''))}</li>`).join('')}</ul></div>`:'',
+      A.length?`<div class="jebox">${jeFita('Impacto nos ativos','tec')}<div class="jeimp">${A.map(o=>{const [s,c]=JR_DIR[o.dir]||JR_DIR[''];return `<span class="jechip ${c}">${s} ${jeEsc(o.a)}${o.n>1?' ×'+o.n:''}</span>`}).join('')}</div></div>`:'',
+      `<div class="jeduo"><div class="jeresumo"><b>Resumo do dia</b><ul>${(R.length?R:jrItens(v).slice(0,4)).map(m=>`<li>${jeEsc(m.titulo)}</li>`).join('')}</ul></div><div class="jedica"><span>“${jeEsc(dica)}”</span><small>Psicologia Financeira, Celso Sant'Ana</small></div></div>`,
+      `<div class="jefim">${jeLogo(40)}<div><b>Jornal do Pregão</b><small>INFORMAÇÃO · MERCADOS · ANÁLISE</small></div><span>Edição escrita pela IA com pesquisa na internet e os números do app. Confira os fatos antes de repassar. Não é recomendação de investimento.</span></div>`]})}
+  return S2}
+function jeCab(v,capa){const dt=new Date((v.dia||loc().slice(0,10))+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  return `<header class="jeh${capa?' capa':''}"><div class="jeh-l">${jeLogo(capa?54:34)}<div><div class="jeh-n">Jornal do Pregão</div><div class="jeh-t">INFORMAÇÃO · MERCADOS · ANÁLISE</div></div></div><div class="jeh-r"><span class="cap1">${jeEsc(dt)}</span><br>${jeEsc(v.nome||'')} | <span class="jepg"></span></div></header>`}
+// usado: altura ocupada pelo conteúdo da página; livre: o que sobra
+const jeUsado=b=>{const u=b.lastElementChild;return u?u.offsetTop-b.offsetTop+u.offsetHeight:0};
+const jeEstoura=b=>b.scrollHeight>b.clientHeight+2;
+// divide uma matéria no parágrafo: o começo fica nesta página e o resto vai para a próxima com "Continuação"
+function jeDivide(b,el){const tx=el.querySelector('.jetx');if(!tx)return null;const orig=el.outerHTML,W=tx.textContent.split(/\s+/).filter(Boolean);if(W.length<40)return null;
+  const kids=[...el.children],depois=kids.slice(kids.indexOf(tx)+1);depois.forEach(x=>x.remove());
+  let lo=0,hi=W.length;while(lo<hi){const mid=Math.ceil((lo+hi)/2);tx.textContent=W.slice(0,mid).join(' ')+' (continua)';if(jeEstoura(b))hi=mid-1;else lo=mid}
+  if(lo<25||W.length-lo<12){el.outerHTML=orig;return null}
+  tx.textContent=W.slice(0,lo).join(' ')+' (continua)';
+  const tit=(el.querySelector('h3')||{}).textContent||'';
+  return `<article class="jemat jecont"><div class="jechap">CONTINUAÇÃO · ${jeEsc(tit)}</div><p class="jetx">${jeEsc(W.slice(lo).join(' '))}</p>${depois.map(x=>x.outerHTML).join('')}</article>`}
+function jeMonta(v){
+  let root=document.getElementById('jeroot');if(root)root.remove();
+  root=document.createElement('div');root.id='jeroot';document.body.appendChild(root);
+  const pages=[];
+  const nova=(sec,cont)=>{const p=document.createElement('div');p.className='jep';p.innerHTML=jeCab(v,sec.capa&&!cont&&!pages.length)+'<div class="jeb"></div><footer class="jef"><span>Jornal do Pregão</span><span class="jepg"></span></footer>';root.appendChild(p);pages.push(p);
+    const b=p.querySelector('.jeb');if(sec.tit)b.insertAdjacentHTML('beforeend',jeBan(sec.ico,sec.tit,sec.sub,cont));return b};
+  let b=null;
+  for(const sec of jeSecoes(v)){
+    // seção nova continua na mesma página se sobrar pelo menos 45% de espaço (evita página quase vazia)
+    if(b&&!sec.capa&&b.clientHeight-jeUsado(b)>=b.clientHeight*.45){b.insertAdjacentHTML('beforeend',jeBan(sec.ico,sec.tit,sec.sub,0));if(jeEstoura(b)){b.lastElementChild.remove();b=nova(sec,0)}}
+    else b=nova(sec,0);
+    let base=b.children.length;
+    for(const h of sec.blocos){if(!h)continue;b.insertAdjacentHTML('beforeend',h);let el=b.lastElementChild;
+      if(!jeEstoura(b))continue;
+      const livre=b.clientHeight-(el.offsetTop-b.offsetTop);
+      const resto=livre>=170?jeDivide(b,el):null;
+      if(resto){b=nova(sec,1);base=b.children.length;b.insertAdjacentHTML('beforeend',resto);el=b.lastElementChild}
+      else if(b.children.length-base>1){el.remove();b=nova(sec,1);base=b.children.length;b.insertAdjacentHTML('beforeend',h);el=b.lastElementChild}
+      if(jeEstoura(b)){const top=el.offsetTop-b.offsetTop;el.style.maxHeight=Math.max(80,b.clientHeight-top-6)+'px';el.classList.add('jecorta')}}}
+  pages.forEach((p,i)=>p.querySelectorAll('.jepg').forEach(x=>x.textContent=`Página ${i+1} de ${pages.length}`));
+  return {root,pages}}
+async function jeH2c(){return window.html2canvas||await pdfLib('html2canvas','https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',()=>window.html2canvas)}
+let JE_BUSY=0;
+{const jp162=jrPdf;jrPdf=async function(){const v=jrVer();if(!v||!v.manchete)return toast('Abra uma edição primeiro.');if(JE_BUSY)return;JE_BUSY=1;
+  let ov=document.createElement('div');ov.id='jeov';ov.innerHTML='<div><b>Montando o jornal em PDF…</b><span>As páginas ficam prontas em alguns segundos.</span></div>';document.body.appendChild(ov);
+  let M=null;
+  try{const h2c=await jeH2c(),PL=await rpLib();M=jeMonta(v);await new Promise(r=>setTimeout(r,60));
+    const doc=await PL.PDFDocument.create();
+    for(const p of M.pages){const cv=await h2c(p,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true,width:JEPG.W,height:JEPG.H,windowWidth:JEPG.W});
+      const url=cv.toDataURL('image/jpeg',0.9),bin=atob(url.split(',')[1]),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+      const img=await doc.embedJpg(u8),pg=doc.addPage([595.28,841.89]);pg.drawImage(img,{x:0,y:0,width:595.28,height:841.89})}
+    doc.setTitle('Jornal do Pregão · '+(v.dia||''));
+    const bytes=await doc.save(),blob=new Blob([bytes],{type:'application/pdf'}),nome=`jornal-${v.dia||loc().slice(0,10)}-${v.edicao||''}.pdf`;window.__jrpdf=bytes.length;window.__jrpdfPag=doc.getPageCount();window.__jePag=M.pages.length;
+    M.root.remove();M=null;ov.remove();ov=null;JE_BUSY=0;
+    try{const f=new File([blob],nome,{type:'application/pdf'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Jornal do Pregão'});return}}catch(e){if(e&&e.name==='AbortError')return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast('PDF salvo.')}
+  catch(e){if(M)M.root.remove();if(ov)ov.remove();JE_BUSY=0;try{errAdd('jornal · PDF editorial',e.message||e)}catch(x){}toast('Sem internet para o layout editorial; gerando o PDF simples.',3500);return jp162.apply(this,arguments)}
+  finally{JE_BUSY=0}}}
+
+{const st162=document.createElement('style');st162.id='jornal162';st162.textContent=`
+#dshch{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+#dshch .csvc{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:18px;width:100%;max-width:420px}
+#dshch .csvg{display:grid;gap:8px;margin:10px 0 12px}#dshch .btn{width:100%}
+/* jornal no app: cabeçalho com logo e faixas azul-marinho com detalhe verde */
+html body #app .jrcard .jrnome{display:flex;align-items:center;justify-content:center;gap:10px}
+.jrtag2{text-align:center;font-size:10px;letter-spacing:.22em;color:var(--mut);margin-top:2px}
+html body #app .jrcard .jrsec>h3{background:linear-gradient(90deg,#0e2a3b,#16425c)!important;color:#fff!important;padding:9px 12px!important;border-radius:8px!important;border-left:4px solid #2ecc8f!important;letter-spacing:.12em!important}
+html body #app .jrcard .jrsec>h3::after{display:none}
+html body #app .jrcard .jrsec>h3 .lnk{color:#bfeedd!important}
+html body #app .jrcard .jrpq{background:#0e2a3b;color:#e8f3ef;border:0;border-left:4px solid #2ecc8f;border-radius:10px;padding:10px 12px}
+html body #app .jrcard .jrpq b{color:#7fe0b8}
+.jrccs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:10px}
+.jrcc{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;background:var(--card2)}
+.jrcc-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.jrcc-h b{font:700 17px Georgia,'Times New Roman',serif}.jrcc-h span{display:flex;gap:4px;flex-wrap:wrap}
+.jrcc p{margin:6px 0;font-size:14px;line-height:1.45}.jrcc p small{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}
+#jeov{position:fixed;inset:0;z-index:100000;background:#0e2a3b;display:flex;align-items:center;justify-content:center;color:#fff;text-align:center;padding:20px}
+#jeov b{display:block;font:700 20px Georgia,serif;margin-bottom:6px}#jeov span{opacity:.75;font-size:14px}
+/* edição em páginas (A4 a 96 dpi), só para o PDF */
+#jeroot{position:absolute;left:0;top:0;width:${JEPG.W}px;z-index:99999;background:#fff}
+.jep{width:${JEPG.W}px;height:${JEPG.H}px;background:#fff;color:#10202c;font:13px/1.45 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;flex-direction:column;padding:26px 34px 18px;box-sizing:border-box;overflow:hidden;position:relative}
+.jep *{box-sizing:border-box}
+.jeh{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #0e2a3b;padding-bottom:10px;margin-bottom:14px}
+.jeh-l{display:flex;align-items:center;gap:10px}.jeh-n{font:700 26px/1 Georgia,'Times New Roman',serif;color:#0e2a3b}.jeh.capa .jeh-n{font-size:44px}
+.jeh-t{font-size:8.5px;letter-spacing:.24em;color:#15905f;margin-top:4px;font-weight:700}
+.jeh-r{text-align:right;font-size:10.5px;color:#4a5b66;line-height:1.5}
+.jeb{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.jef{display:flex;justify-content:space-between;border-top:1px solid #cfd9de;padding-top:6px;margin-top:8px;font-size:10px;color:#6a7a85}
+.jeban{position:relative;display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,#0e2a3b,#16425c);color:#fff;border-radius:6px;padding:14px 16px;overflow:hidden;flex:none}
+.jeban-i{width:40px;height:40px;border-radius:8px;background:#15905f;display:flex;align-items:center;justify-content:center;flex:none}
+.jeban-t b{display:block;font:800 19px/1.15 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase}.jeban-t b small{font-size:11px;font-weight:600;opacity:.7;text-transform:none;letter-spacing:0}
+.jeban-t span{font-size:12px;opacity:.85}
+.jeban-art{position:absolute;right:0;top:0;width:260px;height:100%}
+.jefita{display:flex;align-items:center;gap:8px;background:#15905f;color:#fff;padding:6px 12px;border-radius:4px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;align-self:flex-start;margin-bottom:8px;flex:none}
+.jebox{border:1px solid #dbe4e8;border-radius:8px;padding:12px 14px;background:#fbfdfc;flex:none}
+.jebt{display:block;font:700 14px Georgia,serif;margin-bottom:6px;color:#0e2a3b}
+.jeduo{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:none}
+.jehero{position:relative;border-radius:8px;overflow:hidden;min-height:300px;flex:none;background:#0e2a3b}
+.jehero-art{position:absolute;inset:0;width:100%;height:100%}
+.jehero-t{position:relative;padding:22px 24px;color:#fff;max-width:72%}
+.jeed{display:inline-block;background:#15905f;color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.1em;padding:4px 8px;border-radius:3px;margin-bottom:12px}
+.jehero h1{font:700 30px/1.15 Georgia,'Times New Roman',serif;margin:0 0 10px}
+.jehero p{font-size:13.5px;line-height:1.45;opacity:.92;margin:0}
+.jecots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:none}
+.jecot{border:1px solid #dbe4e8;border-radius:6px;padding:8px 10px;background:#fff;min-width:0}
+.jecot small{display:block;font-size:9.5px;font-weight:800;letter-spacing:.06em;color:#4a5b66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jecot b{display:block;font:700 19px/1.2 system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.jecot i,.jep i.up,.jep i.dn,.jep i.eq{font-style:normal;font-weight:800;font-size:11.5px}
+.jep .up{color:#12865a}.jep .dn{color:#d33a3a}.jep .eq{color:#6a7a85}
+.jespk{display:block;width:100%;height:30px;margin-top:4px}
+.jecots.esc .jecot{background:#0e2a3b;border-color:#0e2a3b;color:#fff}.jecots.esc small{color:#bcd0da}.jecots.esc .up{color:#43d69b}.jecots.esc .dn{color:#ff7b7b}
+.jebarra{display:flex;gap:12px;align-items:center;background:#0e2a3b;color:#fff;border-radius:6px;padding:12px 16px;flex:none}
+.jebarra-i{width:38px;height:38px;border-radius:8px;background:#15905f;display:flex;align-items:center;justify-content:center;flex:none}
+.jebarra b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}.jebarra span{font-size:12.5px;opacity:.92}
+.jemat{border-top:1px solid #dbe4e8;padding-top:10px;flex:none}
+.jeman{border-top:0;padding-top:0}
+.jechap{font-size:10.5px;font-weight:800;letter-spacing:.08em;margin-bottom:4px}
+html body .jep h1,html body .jep h3{text-transform:none!important;letter-spacing:-.005em!important;border:0!important;padding:0!important;background:none!important}
+.jemat h3{font:700 18px/1.25 Georgia,'Times New Roman',serif;margin:0 0 4px;color:#0e2a3b}
+.jeuno{display:block;flex:none}.jecont .jechap{color:#6a7a85}
+.jefina{margin:0 0 8px;color:#4a5b66;font-size:13px}
+.jetx{margin:6px 0;font-size:12.5px;line-height:1.5;color:#22323d}
+.jepq{font-style:italic;color:#0e2a3b;border-left:3px solid #15905f;padding:4px 10px;margin:6px 0;font-size:12.5px;background:#eef7f2}
+.jenums{display:grid;gap:8px;margin:6px 0}.jenums.n1{grid-template-columns:1fr}.jenums.n2{grid-template-columns:repeat(2,1fr)}.jenums.n3{grid-template-columns:repeat(3,1fr)}.jenums.n4{grid-template-columns:repeat(4,1fr)}
+.jenums>div{border:1px solid #dbe4e8;border-radius:6px;padding:6px 8px;background:#fff}
+.jenums small{display:block;font-size:9.5px;color:#4a5b66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jenums b{font-size:14.5px;font-variant-numeric:tabular-nums}
+.jeimp{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.jechip{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;border:1px solid #cfd9de;background:#fff}
+.jechip.up{color:#12865a;border-color:#9bd8bd;background:#eef9f3}.jechip.dn{color:#c12f2f;border-color:#f1b5b5;background:#fdf0f0}.jechip.set{color:#4a5b66}
+.jelist{margin:0;padding-left:18px}.jelist li{margin:0 0 6px;font-size:12.5px}
+.jelist li::marker{color:#15905f}
+.jeol{margin:0;padding-left:20px}.jeol li{margin:0 0 6px;font-size:12.5px}
+.jedest .jrilu{margin:0 0 8px;border-radius:6px}.jedest b{display:block;font:700 15px/1.3 Georgia,serif;color:#0e2a3b;margin-bottom:4px}.jedest p{margin:0;font-size:12px;color:#4a5b66}
+.jedt{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #e6edf0}.jedt:last-child{border-bottom:0}
+.jebadge{flex:none;min-width:56px;text-align:center;background:#0e2a3b;color:#fff;font-weight:800;font-size:11px;border-radius:4px;padding:5px 6px}
+.jedt b{display:block;font-size:12.5px;line-height:1.35}.jedt span{font-size:11.5px;color:#4a5b66}
+.jebox-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.jebox-h b{font-size:12.5px;color:#0e2a3b}.jebox-h span{font-size:11px;color:#4a5b66;display:flex;align-items:center;gap:4px}
+.lg{display:inline-block;width:10px;height:10px;border-radius:2px;margin-left:8px}.lg.n{background:#1d4f91}.lg.g{background:#15905f}
+.jegraf{width:100%;height:auto;display:block}.jegraf text{fill:#22323d;font-family:system-ui,sans-serif}
+.jenota{font-size:10.5px;color:#6a7a85;margin-top:4px}
+.jetab{width:100%;border-collapse:collapse;font-size:12px;flex:none}
+.jetab th{background:#0e2a3b;color:#fff;text-align:left;padding:7px 8px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+.jetab td{padding:7px 8px;border-bottom:1px solid #e1e8ec;vertical-align:top}.jetab tr:nth-child(even) td{background:#f5f9f7}
+.jekpis{display:grid;gap:8px;flex:none}.jekpis.n1{grid-template-columns:1fr}.jekpis.n2{grid-template-columns:repeat(2,1fr)}.jekpis.n3{grid-template-columns:repeat(3,1fr)}.jekpis.n4{grid-template-columns:repeat(4,1fr)}
+.jekpis>div{border:1px solid #dbe4e8;border-radius:6px;padding:10px 12px;background:#fff}.jekpis small{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;color:#4a5b66;text-transform:uppercase}.jekpis b{display:block;font-size:22px;margin:2px 0}.jekpis span{font-size:11px;color:#4a5b66}
+.jebox svg{max-width:100%}
+.jetecs{display:grid;grid-template-columns:1fr 1fr;gap:10px}.jetec{border:1px solid #dbe4e8;border-radius:6px;padding:8px 10px;background:#fff;font-size:12.5px}
+.jetec-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.jetec-h b{font:700 15px Georgia,serif}
+.jetag{font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em;background:#eef2f4}.jetag.up{background:#e3f5ec}.jetag.dn{background:#fbe7e7}
+.jeresumo{background:#0e2a3b;color:#fff;border-radius:8px;padding:14px 16px}.jeresumo b{display:block;letter-spacing:.1em;text-transform:uppercase;font-size:12px;margin-bottom:8px;color:#7fe0b8}
+.jeresumo ul{margin:0;padding-left:18px}.jeresumo li{font-size:12px;margin-bottom:6px}
+.jedica{border-radius:8px;padding:16px;background:linear-gradient(135deg,#15905f,#0e2a3b);color:#fff;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.jedica span{font:italic 700 16px/1.35 Georgia,serif}.jedica small{opacity:.8;font-size:10.5px}
+.jefim{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center;background:#0e2a3b;color:#fff;border-radius:8px;padding:14px 18px;flex:none}
+.jefim b{font:700 20px Georgia,serif;display:block}.jefim small{font-size:8.5px;letter-spacing:.22em;color:#7fe0b8}.jefim>span{grid-column:1/-1;font-size:10.5px;opacity:.8}
+.jefim .jelogo rect[fill="#0e2a3b"]{fill:#fff}
+.jecorta{overflow:hidden;position:relative}.jecorta::after{content:'';position:absolute;left:0;right:0;bottom:0;height:40px;background:linear-gradient(transparent,#fff)}
+`;document.head.appendChild(st162)}
+
+/* ---------- 163. Checklist: só fecha quando você confirmar; escala emocional (EPEET-14) opcional (v238) ---------- */
+// afirmações da escala EPEET-14 (Psicologia Financeira, Celso Sant'Ana). 1 = afirmação de bom estado; -1 = afirmação de mau estado (conta ao contrário)
+const EPEET=[['Sinto-me seguro para encarar o mercado hoje',1],['Percebo meu corpo tenso e os músculos contraídos',-1],['Minha respiração está lenta e tranquila',1],['Percebo-me ansioso para que minhas operações deem certo hoje',-1],['Percebo não haver distrações em minha mente',1],['Sinto-me triste ou com raiva pelas minhas perdas passadas',-1],['Acredito que estou focado e sou capaz de me enxergar alcançando a meta',1],['Percebo meu corpo agitado e inquieto',-1],['Percebo que estou no controle de meus pensamentos',1],['Sinto-me sonolento e cansado',-1],['Sinto-me despreocupado com relação à minha situação financeira',1],['Estou com preocupações da vida cotidiana em minha mente',-1],['Percebo meu corpo descansado e relaxado',1],['Me vejo "batendo meta" ou "stopando" ainda na abertura',-1]];
+function epeetNota(r){r=r||{};const q=EPEET.filter((_,i)=>+r[i]>=1&&+r[i]<=5).length;if(!q)return null;let n=0;EPEET.forEach(([,p],i)=>{const v=+r[i];if(v>=1&&v<=5)n+=p>0?v:6-v});
+  const t=q===14?n:Math.round(n/q*14),cls=t>=52?'up':t<=32?'dn':'eq',txt=t>=52?'estável':t<=32?'instável':'neutro';return {n:t,q,cls,txt}}
+function epeetHtml(d){const r=d.epeet||{},sc=epeetNota(r);
+  return `<div class="gsec"><b>5. Escala emocional <span class="sm mut">(opcional)</span></b>
+<p class="sm mut" style="margin:4px 0 8px">1 discordo completamente · 2 discordo parcialmente · 3 indiferente · 4 concordo parcialmente · 5 concordo completamente</p>
+${EPEET.map(([t],i)=>`<div class="epq"><span>${i+1}. ${esc(t)}</span><div class="epb">${[1,2,3,4,5].map(n=>`<button type="button" class="${+r[i]===n?'on':''}" data-ep="${i}" data-epv="${n}" aria-label="${n}">${n}</button>`).join('')}</div></div>`).join('')}
+${sc?`<div class="epres ${sc.cls}">Termômetro: <b>${sc.n} de 70</b> · ${sc.txt}${sc.q<14?` <span class="sm">(${sc.q} de 14 respondidas; a conta estima o total)</span>`:''}</div>`:''}
+<div class="sm mut" style="margin-top:6px">Afirmações da escala EPEET-14 (Psicologia Financeira, Celso Sant'Ana). A conta é simplificada pelo app: as afirmações de mau estado contam ao contrário, de 14 (instável) a 70 (estável). Não é a pontuação oficial da escala.</div></div>`}
+
+// a manhã só termina quando você tocar em "Concluir checklist"
+{const ge163=gateEstado;gateEstado=function(){const g=ge163.apply(this,arguments);
+  if(g)return g.tipo==='manha'?{...g,pronto:false}:g;
+  if(navigator.webdriver&&!localStorage.getItem('diario-gate-teste'))return null;
+  const ag=new Date(),dw=ag.getDay(),h=ag.getHours();if(dw===0||dw===6||h<8||h>=17)return null;
+  const hj=GATE_D(),dia=S.days[hj]||{};if(dia.ckok)return null;
+  return {tipo:'manha',falta:[],dia,c:dia.chk||{},cl:dia.cl||{},pronto:true}}}
+{const gm163=gateManhaHtml;gateManhaHtml=function(g){let h=gm163.apply(this,arguments);
+  const i=h.indexOf('<div class="gdica');if(i>0)h=h.slice(0,i)+epeetHtml(g.dia||{})+h.slice(i);
+  const bt=`<button type="button" class="btn gfim" data-gate-fim="1"${g.pronto?'':' disabled'}>${g.pronto?'Concluir checklist e começar o dia':'Preencha o obrigatório para concluir'}</button>`;
+  return h.replace(/<\/div>\s*$/,bt+'</div>')}}
+// redesenhar não pode jogar a tela para o topo
+{const ga163=gateAtualiza;gateAtualiza=function(){const el=document.getElementById('gateov'),s=el?el.scrollTop:0;const r=ga163.apply(this,arguments);const e2=document.getElementById('gateov');if(e2&&s)e2.scrollTop=s;return r}}
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('#gateov [data-ep]');
+  if(b){const hj=GATE_D(),d=(S.days[hj]??={chk:{}});(d.epeet??={})[b.dataset.ep]=+b.dataset.epv;d.u=Date.now();save();gateAtualiza();return}
+  const f=e.target.closest&&e.target.closest('#gateov [data-gate-fim]');
+  if(f){if(f.disabled)return;const hj=GATE_D(),d=(S.days[hj]??={chk:{}});d.ckok=Date.now();d.u=Date.now();save();gateAtualiza();toast('Checklist concluído. Bom pregão.')}});
+// Excel: a aba Checklist ganha a escala emocional e se o checklist foi concluído
+{const cl163=checklistLinhas;checklistLinhas=function(){const L=cl163.apply(this,arguments);L[0].push('escala emocional (14 a 70)','checklist concluído');
+  for(let i=1;i<L.length;i++){const d=S.days[L[i][0]]||{},sc=epeetNota(d.epeet);L[i].push(sc?sc.n:'',d.ckok?'sim':'não')}return L}}
+{const st163=document.createElement('style');st163.id='diario163';st163.textContent=`
+#gateov .epq{display:flex;flex-direction:column;gap:6px;padding:9px 0;border-top:1px solid var(--bd);font-size:14px;line-height:1.35}
+#gateov .epb{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+#gateov .epb button{border:1px solid var(--bd);background:var(--card2);color:inherit;border-radius:10px;padding:8px 0;font-weight:700;font-size:14px}
+#gateov .epb button.on{border-color:var(--g);background:color-mix(in srgb,var(--g) 18%,var(--card2))}
+#gateov .epres{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--card2);font-size:14px}
+#gateov .epres.up{background:color-mix(in srgb,var(--g) 14%,var(--card2))}#gateov .epres.dn{background:color-mix(in srgb,var(--r) 14%,var(--card2))}
+#gateov .gfim{width:100%;margin-top:14px;padding:13px;font-size:15px}
+#gateov .gfim[disabled]{opacity:.55}
+`;document.head.appendChild(st163)}
 
 /* ---------- 35. PDF profissional dos relatórios da Análise IA ----------
    Desenhado direto no PDF (texto de verdade, A4, sem "foto da tela"): capa, indicadores explicados e gráficos.
