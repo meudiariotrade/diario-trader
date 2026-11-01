@@ -1,6 +1,32 @@
-# Diário de Trader — revisão v284
+# Diário de Trader — revisão v285
 
 Aplicativo estático publicado no GitHub Pages, com backend no Supabase. As credenciais privadas dos provedores ficam nos Secrets do Supabase.
+
+## Revisão v285
+
+- Diário com relógios por campo: preserva edições independentes em aparelhos diferentes, incluindo checklist e contexto EUA. Conflitos do mesmo campo guardam as versões e aparecem para conferência e recuperação.
+- Gravação na nuvem com comparação atômica (CAS). Se a cópia mudou desde a leitura, o app recebe a versão atual, mescla e tenta novamente até três vezes; não usa sobrescrita sem comparação como fallback.
+- Modo foco no diário e abas internas alinhadas aos grupos do menu.
+- Histórico americano ampliado: busca desde dezembro de 1949; estudos a partir de 1950. Midterms, presidenciais e conjunto de eleições gerais regulares. D-1, D0 e D+1 com datas, fechamentos e variações, além de janelas maiores.
+- S&P: 19 midterms e 19 presidenciais no retorno do pregão seguinte até 2024. Nasdaq 100: 10/10; Dow: 8/9; Russell 2000: 9/10, conforme histórico efetivamente retornado em 01/11/2026. D0 pode não existir; nesse caso não se fabrica cotação e a janela posterior parte da última sessão anterior.
+- Jornal do Pregão: título editorial, margens e rodapés revistos, fontes locais incorporadas e remoção de gráficos decorativos sem dados. Mantém as seções do gerador anterior; evita página só de encerramento.
+- Recursos de apoio do repositório incluídos e referências de ícones corrigidas. Verificação automática de recursos, versões e hashes.
+
+### Instalação
+
+Envie os arquivos desta pasta para a raiz do mesmo repositório do aplicativo, preservando `fonts/`, `scripts/`, `tests/`, `docs/` e os módulos novos. Não envie a pasta como um diretório extra e não apague os dados do navegador. Não basta substituir apenas app.js: todos os scripts e os arquivos do PDF precisam acompanhar index.html e sw.js.
+
+O backend já foi atualizado: macro v285 (versão nativa 39) e RPC `diario_salvar_cas`. Não é necessário reaplicar SQL no projeto atual. Para outro projeto, a definição da RPC está em `supabase/schema/diario_cas.sql`; publicar macro exige também `sazonal-us.ts`.
+
+Atualize todos os aparelhos para a mesma publicação antes de avaliar sincronização concorrente. Clientes antigos continuam usando seu mecanismo anterior.
+
+### Validação
+
+Execute `node scripts/testar.cjs` com Node 24. O teste do jornal usa uma edição demonstrativa e as fontes locais. Não usa notícias, posições ou dados pessoais reais.
+
+Direção visual editável no Canva: https://canva.link/ylccuu1etm1vfx6
+
+**Estado:** backend publicado; interface e PDF prontos neste pacote, sem publicação no GitHub por erro 403 da integração. Validação visual de PDF demonstrativo realizada. A validação completa dos fluxos em iPhone/navegador real, restauração completa entre aparelhos, auditoria fiscal e revisão integral de segurança continuam pendentes. A organização por módulos começou pelas partes alteradas; o legado ainda não foi totalmente reestruturado.
 
 ## Interface e mercado americano v284
 

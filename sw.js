@@ -1,7 +1,7 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v284',CDN='diario-cdn-1';
-const CORE=['./','index.html','manifest.webmanifest','config.js','app.js','style.css','terminal-praticidade.js','diario-profissional.js','mercado-profissional.js'];
-const EXTRA=['arte.js','cnpi.js','estudos.js','ingles.js','pdf-lib.min.js','icon-192.png','icon-512.png'];
+const C='diario-v285',CDN='diario-cdn-1';
+const CORE=['./','index.html','manifest.webmanifest','config.js','app.js','style.css','terminal-praticidade.js','diario-profissional.js','mercado-profissional.js','diario-dados.js','diario-recuperacao.js','pdf-tipografia.js'];
+const EXTRA=['arte.js','cnpi.js','estudos.js','ingles.js','pdf-lib.min.js','icon-192.png','icon-512.png','fontkit.umd.min.js','fonts/sans.ttf','fonts/sans-bold.ttf','fonts/sans-italic.ttf','fonts/serif-bold.ttf','fonts/serif-italic.ttf'];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
 self.addEventListener('install',event=>{
  event.waitUntil((async()=>{

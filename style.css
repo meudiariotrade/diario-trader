@@ -256,3 +256,18 @@ html:root body #app .us-method p{color:var(--mut)}
 html:root body #app .us-seasonality a{color:var(--ac);text-underline-offset:3px}
 @media(max-width:680px){html:root body #app .us-study{padding:14px}html:root body #app .us-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}html:root body #app .us-kpis>div{padding:12px}html:root body #app .us-kpis b{font-size:21px}html:root body #app .us-table :is(td,th){padding:10px 8px}}
 @media(min-width:900px){html:root[data-density=compact] body:not(.trmon) #app .card{padding:12px 14px;margin:7px 0}html:root[data-density=compact] body:not(.trmon) #app .us-table :is(td,th){padding:7px 8px}html:root[data-density=compact] body:not(.trmon) #app .routine-card{padding:16px}html:root[data-density=compact] body:not(.trmon) #app :is(.hero,.hero2){padding:16px!important}}
+
+/* v285 — escrita, recuperação e foco. */
+html:root body #app .diary-toolbar{display:flex;justify-content:flex-end;gap:8px;margin:8px 0}
+html:root body #app .diary-conflicts{border:1px solid var(--ac);font-size:14px;line-height:1.6}
+html:root body #app .diary-conflicts summary{cursor:pointer;font-weight:700;min-height:32px}
+html:root body #app .diary-conflict{padding:14px 0;border-top:1px solid var(--bd)}
+html:root body #app .diary-conflict pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;padding:12px;background:var(--bg);border:1px solid var(--bd);border-radius:8px}
+html:root body #app.journal-view .dfase{max-width:840px;margin-left:auto;margin-right:auto}
+html:root body #app.journal-view :is(h1,h2){text-wrap:balance}
+html:root body #app.journal-view .dfase>label{margin-top:16px}
+html:root body #app.journal-view .dfase textarea{background:var(--card);border:1px solid var(--bd);border-radius:12px;min-height:132px;padding:16px;line-height:1.65}
+html:root body #app.journal-view.diary-focus :is(#dis,.nt-obs){display:none!important}
+html:root body #app.journal-view.diary-focus .dfase textarea{min-height:180px}
+html:root body #app .us-table td{vertical-align:top}
+html:root body #app .us-table td b{display:inline-block;margin:4px 0;font-size:14px}
