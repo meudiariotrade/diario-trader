@@ -1,17 +1,52 @@
-const C='diario-v281',CDN='diario-cdn-1',F=['./','index.html','manifest.webmanifest','config.js','app.js','arte.js','cnpi.js','estudos.js','touro-hero.jpg','ingles.js','style.css','icon-192.png','icon-512.png','icon-180.png','favicon-64.png'];
+/* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
+const C='diario-v282',CDN='diario-cdn-1';
+const CORE=['./','index.html','manifest.webmanifest','config.js','app.js','style.css','terminal-praticidade.js'];
+const EXTRA=['arte.js','cnpi.js','estudos.js','ingles.js','pdf-lib.min.js','icon-192.png','icon-512.png'];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
-self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>Promise.all(F.map(u=>c.add(new Request(u,{cache:'reload'})).catch(()=>{})))));self.skipWaiting()});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C&&x!==CDN).map(x=>caches.delete(x)))));self.clients.claim()});
-/* avisa as telas abertas quando o app.js novo chegou (a próxima abertura já usa a versão nova) */
-const marca=r=>r?(r.headers.get('etag')||'')+'|'+(r.headers.get('last-modified')||'')+'|'+(r.headers.get('content-length')||''):'';
-async function avisaNova(){const L=await self.clients.matchAll({type:'window',includeUncontrolled:true});L.forEach(c=>c.postMessage({novaVersao:1}))}
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);
-  /* bibliotecas das CDNs (PDF, gráficos): guarda a cópia para abrir sem internet */
-  if(u.origin!==location.origin){if(!CDN_OK.test(e.request.url))return;e.respondWith(caches.open(CDN).then(c=>c.match(e.request).then(m=>m||fetch(e.request).then(r=>{if(r.ok)c.put(e.request,r.clone());return r}))));return}
-  const ehApp=/\/app\.js$/.test(u.pathname);
-  /* abre na hora com a cópia guardada e atualiza por trás */
-  const rede=fetch(e.request).then(async r=>{if(r.ok&&r.type==='basic'){const c=await caches.open(C);if(ehApp){const ant=await c.match(e.request,{ignoreSearch:true});if(ant&&marca(ant)!==marca(r))avisaNova()}await c.put(e.request,r.clone())}return r});
-  e.waitUntil(rede.catch(()=>{}));e.respondWith(caches.match(e.request,{ignoreSearch:e.request.mode==='navigate'||ehApp}).then(c=>c||rede.catch(()=>caches.match('index.html'))))});
+self.addEventListener('install',event=>{
+ event.waitUntil((async()=>{
+  const cache=await caches.open(C);
+  try{await cache.addAll(CORE.map(url=>new Request(url,{cache:'reload'})));}
+  catch(error){await caches.delete(C);throw error;}
+  await Promise.all(EXTRA.map(url=>cache.add(new Request(url,{cache:'reload'})).catch(()=>{})));
+  await self.skipWaiting();
+ })());
+});
+self.addEventListener('activate',event=>{
+ event.waitUntil((async()=>{
+  for(const name of await caches.keys())if(name.startsWith('diario-v')&&name!==C)await caches.delete(name);
+  await self.clients.claim();
+  for(const client of await self.clients.matchAll({type:'window',includeUncontrolled:true}))client.postMessage({novaVersao:1,versao:C});
+ })());
+});
+self.addEventListener('fetch',event=>{
+ if(event.request.method!=='GET')return;
+ const url=new URL(event.request.url);
+ if(url.origin!==location.origin){
+  if(!CDN_OK.test(url.href))return;
+  event.respondWith((async()=>{
+   const cache=await caches.open(CDN),cached=await cache.match(event.request);
+   if(cached)return cached;
+   const response=await fetch(event.request);
+   if(response.ok)await cache.put(event.request,response.clone());
+   return response;
+  })());return;
+ }
+ const scope=new URL(self.registration.scope);
+ if(!url.pathname.startsWith(scope.pathname))return;
+ const path=url.pathname.slice(scope.pathname.length)||'index.html';
+ const bundled=CORE.concat(EXTRA).includes(path);
+ if(event.request.mode==='navigate'){
+  event.respondWith((async()=>{const cache=await caches.open(C);return await cache.match('index.html')||fetch(event.request)})());return;
+ }
+ if(bundled){
+  event.respondWith((async()=>{
+   const cache=await caches.open(C),cached=await cache.match(new URL(path,scope).href,{ignoreSearch:true});
+   // Não grava uma versão parcial nesta publicação se o asset opcional não veio.
+   return cached||fetch(event.request);
+  })());
+ }
+});
 /* Notificações push */
 self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch(_){d={title:'Diário de trader',body:e.data?e.data.text():''}}e.waitUntil(self.registration.showNotification(d.title||'Diário de trader',{body:d.body||'',tag:d.tag||undefined,icon:'icon-192.png',badge:'icon-192.png',data:d.data||{}}))});
 self.addEventListener('notificationclick',e=>{e.notification.close();const g=e.notification.data||{},u=new URL('./?go='+encodeURIComponent(g.go||'mercado')+(g.r?'&r='+encodeURIComponent(g.r):''),self.registration.scope).href;e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(l=>{const c=l.find(x=>x.url.startsWith(self.registration.scope));if(c){c.postMessage({go:g.go||'mercado',r:g.r||''});return c.focus()}return self.clients.openWindow(u)}))});

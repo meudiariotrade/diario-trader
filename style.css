@@ -56,3 +56,85 @@ input[type=range]{padding:0;accent-color:var(--ac)}
 .anxm{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}.anxm div{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px;font-size:11px;color:var(--mut)}.anxm b{display:block;font-size:14px;color:var(--tx)}
 .anxb{height:8px;border-radius:4px;background:var(--bd);overflow:hidden;display:flex;margin-top:3px}.anxb i{display:block;height:8px}
 .anxt{overflow-x:auto}.btn[disabled]{opacity:.6;cursor:progress}
+
+
+/* Revisão 1 — seletores específicos para coexistir com os temas do app.js.
+   Nenhuma tela do terminal ou tabela de mercado é reestruturada aqui. */
+html:root body #app{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px));line-height:1.55}
+html:root body #app .hero2{background:linear-gradient(140deg,color-mix(in srgb,var(--ac) 12%,var(--card)),var(--card) 75%)!important;border:1px solid var(--bd)!important;box-shadow:0 8px 26px -20px #0005!important}
+html:root body #app .hero2 .h2art{opacity:.12!important}
+html:root body #app .hero2 .h2c{max-width:100%;isolation:isolate}
+html:root body #app .hero2 .big{font-size:clamp(32px,4.5vw,48px)!important;line-height:1.2!important;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;text-shadow:none!important}
+html:root body #app .hero2 .big:not(.g):not(.r){color:var(--tx)!important}
+html:root body #app .hero2 .big.g{color:var(--g)!important}
+html:root body #app .hero2 .big.r{color:var(--r)!important}
+html:root body #app .hero2 .h2ks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:20px}
+html:root body #app .h2k{min-width:0;min-height:88px;padding:12px 14px!important;gap:4px;background:var(--card)!important}
+html:root body #app .h2k b{font-size:22px!important;font-variant-numeric:tabular-nums}
+html:root body #app .h2k small{font-size:12px!important;line-height:1.4;color:var(--mut)}
+html:root body #app .card{padding:16px;margin-top:10px;margin-bottom:10px}
+html:root body #app .tcard{padding:16px 18px!important}
+html:root body #app .tcard .tc-pl{font-size:20px;line-height:1.3;font-variant-numeric:tabular-nums}
+html:root body #app .tcard .mut{line-height:1.5}
+html:root body #app .sm{font-size:13px;line-height:1.5}
+html:root body #app h1{font-size:clamp(24px,3vw,30px);line-height:1.2;letter-spacing:-.025em}
+html:root body #app h2{font-size:13px;line-height:1.4;letter-spacing:.05em;margin-top:26px}
+html:root body #app .tiles{gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+html:root body #app .tile{padding:18px;min-width:0;min-height:116px;gap:6px;text-align:left}
+html:root body #app .tile small{font-size:13px;line-height:1.5}
+html:root body #app .g2,html:root body #app .g3{gap:12px}
+html:root body #app .g2>*,html:root body #app .g3>*{min-width:0}
+html:root body #app .seg>button{min-height:42px;padding:8px 14px}
+html:root body #app .btn{min-height:44px}
+html:root body #app label{font-size:13px;line-height:1.5}
+html:root body :is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid var(--ac)!important;outline-offset:3px}
+html:root body input[type=checkbox],html:root body input[type=radio]{width:20px;height:20px;flex:0 0 20px;accent-color:var(--ac)}
+html:root body #svs[data-save-state="error"]{color:var(--r)!important;border:1px solid currentColor;border-radius:10px;padding:10px 12px;background:var(--card)}
+html:root body #svs[data-save-state="pending"]{color:var(--mut)!important}
+html:root body #sh .sh{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+@media(min-width:1000px){
+ html:root body #app{max-width:1440px!important;padding-left:28px!important;padding-right:28px!important}
+ html:root body #app .hero2{padding:24px!important}
+ html:root body #app .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+ html:root body #app .pccols{gap:20px}
+}
+@media(max-width:600px){
+ html:root body #app{padding-left:14px!important;padding-right:14px!important}
+ html:root body #app .hero2{padding:18px 14px!important}
+ html:root body #app .h2k{padding:10px!important;min-height:84px}
+ html:root body #app .hero2 .h2ks{gap:7px}
+ html:root body #app .h2k b{font-size:19px!important}
+ html:root body #app .h2k small{font-size:11px!important}
+ html:root body #app .card{padding:14px}
+ html:root body #app .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html:root body #app .tile{min-height:132px;padding:14px}
+ html:root body input:not([type=checkbox]):not([type=radio]):not([type=range]),html:root body select,html:root body textarea{font-size:16px!important;min-height:44px}
+ html:root body #app .cal button{min-width:0;font-size:13px}
+}
+@media(max-width:380px){
+ html:root body #app .g3{grid-template-columns:1fr}
+ html:root body #app .tiles{grid-template-columns:1fr}
+ html:root body #app .tile{min-height:100px}
+}
+@media(prefers-reduced-motion:reduce){
+ html:root body #app,html:root body .sh{animation:none!important}
+ html:root body :is(.btn,.tile,.card,.seg button,.chips2 button){transition:none!important}
+ html:root body #splash{animation:none!important;opacity:0;visibility:hidden}
+ html:root body{scroll-behavior:auto!important}
+}
+
+/* Navegação rápida do Diário Terminal. */
+body.trmon .trquick-strip{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:7px 4px;border-bottom:1px solid #38322a;background:#0b0b0b;color:#eee;font:12px/1.4 ui-monospace,Consolas,monospace}
+.trquick-chip,.trquick-filter{border:1px solid #494135;border-radius:5px;background:#171510;color:#eee;padding:6px 9px;min-height:32px;font:inherit;cursor:pointer}
+.trquick-chip:hover,.trquick-chip.favorite{border-color:#a17617;color:#ffc44d}.trquick-label,.trquick-key{color:#a9a49a;font-size:11px}.trquick-key{margin-left:auto}
+.trquick-dialog{width:min(680px,calc(100vw - 28px));max-height:min(720px,88dvh);padding:18px;border:1px solid #62502c;border-radius:14px;background:#111211;color:#eee;box-shadow:0 24px 80px #0008;font:14px/1.5 system-ui,sans-serif}
+.trquick-dialog::backdrop{background:#000a;backdrop-filter:blur(3px)}
+.trquick-head{display:flex;align-items:center;justify-content:space-between;gap:14px}.trquick-head h2{font-size:19px;color:#ffc44d;margin:0;text-transform:none;letter-spacing:0}.trquick-head button{padding:7px 12px;border:1px solid #555;border-radius:6px;background:#222;color:#eee;font:inherit;cursor:pointer}
+html:root body .trquick-dialog .trquick-search{margin:16px 0 10px;background:#080a09!important;color:#fff!important;border:1px solid #746039!important;min-height:46px;font-size:16px!important;border-radius:8px;padding:11px 12px;width:100%}
+.trquick-filters{display:flex;gap:7px;margin-bottom:10px}.trquick-filter[aria-pressed=true]{background:#ffbd38;color:#111;border-color:#ffbd38}
+.trquick-results{max-height:420px;overflow-y:auto;overscroll-behavior:contain}.trquick-row{display:flex;border-bottom:1px solid #292b28;border-radius:7px}.trquick-row:has(.selected),.trquick-row:hover{background:#26241c}
+.trquick-open{flex:1;min-width:0;display:grid;grid-template-columns:minmax(70px,125px) 1fr;gap:2px 14px;padding:11px;text-align:left;background:none;border:0;color:#eee;font:inherit;cursor:pointer}.trquick-open b{color:#ffcc65;font:700 13px ui-monospace,Consolas,monospace;overflow-wrap:anywhere;grid-row:span 2}.trquick-open span{overflow-wrap:anywhere}.trquick-open small{color:#aaa;font-size:11px}
+.trquick-star{background:none;border:0;color:#ffd179;font-size:23px;width:44px;flex:0 0 44px;cursor:pointer}.trquick-hint,.trquick-empty{color:#aaa;font-size:12px;margin-bottom:0}.trquick-dialog :focus-visible{outline:2px solid #ffca56!important;outline-offset:2px}
+@media(max-width:600px){.trquick-key{display:none}.trquick-dialog{padding:14px}.trquick-open{grid-template-columns:85px 1fr}.trquick-results{max-height:52dvh}.trquick-strip{gap:4px!important}.trquick-chip{min-height:36px}}
+
+.trquick-announcement{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
