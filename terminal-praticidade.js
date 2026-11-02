@@ -32,6 +32,7 @@
   function run(value) {
     const text = command(value); if (!text || !api()) return;
     close();
+    if(window.TraderTerminalActions?.execute(text))return;
     api().roda(text);
     const input = document.getElementById('trcmd');
     if (input) { input.value = ''; input.focus(); }
@@ -57,6 +58,7 @@
       if (/^[A-Z0-9_]{1,20}$/.test(cmd) && typeof description === 'string' && !map.has(cmd))
         map.set(cmd, {cmd, name: description.slice(0, 150), category: 'Comandos'});
     }
+    for(const [cmd,name] of window.TraderTerminalActions?.commands||[])map.set(cmd,{cmd,name,category:'Fluxos integrados'});
     const tk = ticker();
     if (tk) for (const [suffix, label] of [['G', 'Gráfico'], ['DES', 'Visão da empresa'], ['FA', 'Fundamentos']]) {
       const cmd = tk + ' ' + suffix; map.set(cmd, {cmd, name: label + ' · ' + tk, category: 'Ativo do painel'});
@@ -144,6 +146,8 @@
     strip.dataset.signature=signature;strip.replaceChildren();
     const pin=button((fav.includes(now)?'★ ':'☆ ')+now,()=>toggle(now),'trquick-chip');
     pin.title='Favoritar o comando do painel selecionado';pin.setAttribute('aria-pressed',String(fav.includes(now)));strip.append(pin);
+    if(!strip.querySelector('[data-workspace-open]')){const workspace=button('Espaços',()=>window.TraderTerminalActions?.execute('MESA'),'trquick-chip');workspace.dataset.workspaceOpen='';strip.append(workspace);strip.append(button('Guia',()=>window.TraderTerminalActions?.execute('GUIA'),'trquick-chip'));}
+    if(tk)strip.append(button('Pesquisar '+tk,()=>window.TraderTerminalActions?.execute('ATIVO '+tk),'trquick-chip'));
     if(tk) for(const [suffix,label] of [['G','Gráfico'],['FA','Fundamentos']])strip.append(button(label,()=>run(tk+' '+suffix),'trquick-chip'));
     strip.append(button('Qualidade dos dados',()=>run('DQ'),'trquick-chip'));
     if(fav.length) { strip.append(node('span','trquick-label','Favoritos'));for(const cmd of fav.slice(0,6))strip.append(button(cmd,()=>run(cmd),'trquick-chip favorite')); }

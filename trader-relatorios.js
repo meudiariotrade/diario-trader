@@ -69,42 +69,28 @@
     const meta=window.PFX?.META?.()||{};
     const positions=selected?.tipo==='ativo'?snapshot.pos.filter(p=>p.tk===selected.tk):snapshot.pos;
     const assets=positions.map(asset=>{let technical;try{technical=pfTec(asset)}catch{}return {position:asset,meta:meta[asset.tk]||{},technical,report:(state.rel||[]).find(row=>row.tipo==='ativo'&&row.tk===asset.tk)||null}});
-    const research=window.CarteiraExperience?.context?.()||{};return {selected,snapshot,assets,generated:new Date().toISOString(),...research};
+    const research=window.CarteiraExperience?.context?.()||{};return {selected,snapshot,assets,generated:new Date().toISOString(),snapshots:S.cart?.snap||{},asOf:loc().slice(0,10),...research};
   }
   async function portfolioPdf(input){
-    const {selected,snapshot,assets}=input,w=await documentPdf(input.demo?'Carteira · demonstração':'Relatório patrimonial','Evolução, proventos e pesquisa fundamentalista por ativo',selected?.ref||input.generated?.slice(0,10)),p=w.p;
-    const missingPrice=assets.filter(a=>!a.position.tem),missingFx=assets.some(a=>a.position.moeda==='USD')&&!snapshot.fx;
-    w.text('As posições são as cadastradas no momento da exportação. A análise selecionada e as análises individuais podem ter referências distintas, indicadas em cada ficha. Não representa a composição histórica de uma data anterior.',{size:8.5,color:p.C.mut});
-    if(!missingFx)p.kpis([{l:'Valor calculado pelo app',v:'R$ '+number(snapshot.v)},{l:'Custo contabilizado',v:'R$ '+number(snapshot.c)},{l:'Diferença valor − custo',v:'R$ '+number(snapshot.res)},{l:'Ativos no relatório',v:String(assets.length)}],{cols:2,vs:16});
-    else w.text('Consolidação em BRL indisponível: falta cotação de câmbio para posições em USD. Valores em moedas diferentes não foram somados.');
-    w.text('A diferença entre valor e custo não é uma medida de retorno histórico total e não substitui cálculo de retorno com fluxos e proventos.');
-    if(missingPrice.length)w.text('Atenção: sem cotação disponível para '+missingPrice.map(a=>a.position.tk).join(', ')+'. O aplicativo pode usar custo como referência de cálculo; não trate esse valor como preço de mercado.');
-    w.heading('Cobertura dos dados');w.table([['Ativo',20],['Preço',18],['Fundamentos',22],['Técnica',18],['Análise IA',22]],assets.map(a=>[a.position.tk,a.position.tem?'Disponível':'Sem cotação',a.meta.fs?'Parcial / verificar data':'Não disponível',a.technical?.L?.length>=30?'Diário disponível':'Não disponível',a.report?'Registrada':'Não registrada']));
-    w.heading('Evolução e geração de renda');
-    const research=window.CarteiraResearch,incomes=input.income||research?.income(input.ledger||[],input.generated?.slice(0,10));
-    if(input.wealth?.points?.length)researchChart(w,input.wealth.points,'Evolução do valor dos ativos');else w.text(input.wealth?.reason||'Histórico ainda não carregado. Abra a carteira e carregue o histórico antes de exportar para incluir a evolução.');
-    w.text('Compras, vendas e câmbio alteram o valor dos ativos. A curva não mede retorno da estratégia; o caixa não está incluído. Dados insuficientes não são substituídos pelo custo de aquisição.');
-    for(const unit of ['BRL','USD']){const points=Object.entries(incomes?.months||{}).filter(([,v])=>v[unit]!==0).slice(-24).map(([date,v])=>({date,value:v[unit]}));if(points.length){researchChart(w,points,'Proventos recebidos por mês · '+unit,unit,'bar');w.table([['Mês',40],['Recebido ('+unit+')',60]],points.map(row=>[row.date,number(row.value)]))}}
-    if(!incomes?.events?.length)w.text('Não há proventos lançados. Dividend yield de mercado não foi convertido em recebimento presumido.');
-    if(!missingFx){const allocation=(research?.groups(assets,'cl')||[]);if(allocation.length)w.table([['Composição por classe',60],['Valor BRL',40]],allocation.map(row=>[row.date,number(row.value)]))}
-    if(selected?.conteudo&&selected.tipo!=='ativo'){w.heading('Análise consolidada selecionada',`Referência ${selected.ref||'não informada'} · dados até ${selected.dados_em||'não informado'}`);for(const [key,value] of Object.entries(selected.conteudo))w.section(key,value)}
-    if(!assets.length)w.text('Nenhuma posição disponível para construir fichas individuais. Cadastre a carteira ou abra o relatório de um ativo.');
-    for(const asset of assets){
-      const a=asset.position;p.add();w.heading(`${a.tk} · ${a.nome||asset.meta.nome||'Ficha do ativo'}`,`${a.cl||'Classe não informada'} · ${a.moeda||'Moeda não informada'} · ${a.setor||'Setor não informado'}`);
-      w.table([['Dado da posição',45],['Valor',55]],[['Quantidade',number(a.q,6)],['Preço médio cadastrado',number(a.pm)],['Preço usado no cálculo',a.tem?number(a.pa):'Sem cotação; referência de custo'],['Data da cotação',a.pxEm||'Não informada'],['Peso calculado (%)',missingFx?'Indisponível sem câmbio':number(a.peso)],['Resultado calculado em BRL',missingFx?'Indisponível':'R$ '+number(a.lu)]]);
-      w.heading('Fundamentos e cobertura');w.table([['Indicador',55],['Valor informado',45]],fundamentalRows(a,{...asset.meta,fs:{...(asset.meta.fs||{}),...(typeof asset.report?.dados?.fundamentos==='object'?asset.report.dados.fundamentos:{})}}));
-      w.text('Referência contábil: '+(first(asset.meta.fs,['ref','trimestre','data_referencia'])||'não informada pelo cache')+'. Indicadores ausentes não são zero. Métricas de ações não são aplicadas automaticamente a FIIs, ETFs ou renda fixa.',{size:8.2,color:p.C.mut});
-      const research=window.CarteiraResearch,detail=research?.detail(a,input.ledger||[],input.generated?.slice(0,10));
-      if(detail){w.heading('Posição e proventos · '+detail.unit);w.table([['Métrica gerencial',60],['Valor',40]],[['Preço médio líquido de proventos',number(detail.pmIncome,4)],['Proventos lançados no ciclo atual',number(detail.income)],['Proventos em todo o histórico',number(detail.allIncome)],['Resultado não realizado',number(detail.result)],['Não realizado + proventos do ciclo',number(detail.withIncome)],['Variação diária da quantidade atual',number(detail.daily)]]);w.text('Ciclo desde '+(detail.cycleStart||'não identificado')+'. O preço médio líquido é gerencial, não altera o custo fiscal. Proventos do ciclo são os lançados desde o último zeramento; elegibilidade na data-com não é aferida.',{size:8,color:p.C.mut})}
-      const fundamentals=asset.report?.dados?.fundamentos;
-      if(fundamentals&&typeof fundamentals==='object'){
-        for(const [field,title] of [['receita','Receita anual'],['lucro','Lucro líquido anual']]){const rows=(Array.isArray(fundamentals.evolucao_receita_lucro)?fundamentals.evolucao_receita_lucro:[]).filter(r=>typeof r[field]==='number').map(r=>({date:String(r.ano),value:r[field]}));if(rows.length)researchChart(w,rows,title+' · '+a.tk,a.moeda||'BRL','bar')}
+    if(!window.CarteiraFactsheet)throw Error('Atualize todos os arquivos do aplicativo para gerar o relatório de gestão.');
+    return window.CarteiraFactsheet.pdf(input);
+  }
+  let portfolioPreparation=null;
+  function preparePortfolioInput(){
+    if(portfolioPreparation)return portfolioPreparation;
+    const owner=S;
+    if(typeof toast==='function')toast('Preparando relatório: carregando histórico e fundamentos…',5000);
+    portfolioPreparation=(async()=>{
+      if(!window.DIARIO_DEMO){
+        const jobs=[];if(typeof pfHist==='function')jobs.push(Promise.resolve().then(()=>pfHist()));if(typeof pfMeta==='function')jobs.push(Promise.resolve().then(()=>pfMeta()));
+        await Promise.allSettled(jobs);
+        const deadline=Date.now()+20000;
+        while((window.PF?.histBusy||window.PF?.meta)&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,150));
       }
-      if(asset.report){p.need(340);w.heading('Análise individual registrada',`Gerada ${asset.report.gerado||'sem data'} · referência ${asset.report.ref||'não informada'} · dados até ${asset.report.dados_em||'não informado'}`);for(const [key,value] of Object.entries(asset.report.conteudo||{}))if(key!=='identificacao')w.section(key,value);w.text('Fontes registradas: '+(asset.report.fontes||[]).join(' · '),{size:8.2});w.text(`Modelo: ${asset.report.modelo||'não informado'} · execução: ${asset.report.exec_id||'não informada'}`,{size:7.5,color:p.C.mut})}
-      else w.text('Não há análise individual registrada para este ativo. Use a geração individual da carteira para completar a narrativa; a exportação não faz chamadas pagas automaticamente.');
-    }
-    w.heading('Método e limitações');w.text('Fontes: cadastro da carteira, cotações e indicadores já carregados no aplicativo, histórico diário e análises individuais armazenadas. Este documento organiza os dados disponíveis e não certifica sua exatidão ou atualidade. Não há valuation completo quando não há demonstrações, premissas ou projeções suficientes.');
-    return w.finish();
+      if(S!==owner)throw Error('A conta mudou durante o carregamento. Abra o relatório novamente.');
+      return portfolioInput();
+    })().finally(()=>{portfolioPreparation=null});
+    return portfolioPreparation;
   }
   function technicalFromCache(ticker){try{return window.TRM?.tec?.velas(ticker,'1d')?.L||[]}catch{return []}}
   async function weekendPdf(input){
@@ -174,7 +160,7 @@
       if(action==='close')return box.close();if(action==='cancel'){cancel=true;status.textContent='A fila vai parar após o pedido atual.';return}if(action==='journal'){box.close();return window.TraderWorkflow?.journalSettings()}
       if(running)return;running=true;cancel=false;
       try{
-        if(action==='portfolio'){status.textContent='Preparando o documento…';const data=portfolioInput();if(!data.assets.length&&!data.selected)throw Error('Cadastre posições ou abra uma análise da carteira primeiro.');box.close();rpAbrir('Relatório profissional da carteira','carteira-pesquisa-'+loc().slice(0,10)+'.pdf',()=>portfolioPdf(data))}
+        if(action==='portfolio'){status.textContent='Preparando o documento…';const data=await preparePortfolioInput();if(!data.assets.length&&!data.selected)throw Error('Cadastre posições ou abra uma análise da carteira primeiro.');box.close();rpAbrir('Relatório profissional da carteira','carteira-pesquisa-'+loc().slice(0,10)+'.pdf',()=>portfolioPdf(data))}
         if(action==='refresh'){if(window.DIARIO_DEMO)throw Error('Consultas externas desativadas no demo.');status.textContent='Carregando os dados pelos serviços existentes…';if(window.pfQAtualiza)await pfQAtualiza(true);if(window.pfMeta)await pfMeta();if(window.pfVelas)await pfVelas();status.textContent='Atualização concluída. Confira datas e eventuais lacunas no relatório.'}
         const selected=()=>[...new Set(box.querySelector('input').value.split(',').map(t=>t.trim().toUpperCase()).filter(t=>/^[A-Z0-9:^._=/-]{1,24}$/.test(t)))].slice(0,20);
         if(action==='load-weekend'){if(window.DIARIO_DEMO)throw Error('Consultas externas desativadas no demo.');const tickers=selected();for(let i=0;i<tickers.length&&!cancel;i++){status.textContent=`Histórico ${i+1}/${tickers.length}: ${tickers[i]}`;try{await window.TRM?.tec?.pegaVelas(tickers[i],'1d')}catch{}}status.textContent='Consulta encerrada; séries indisponíveis serão identificadas no PDF.'}
@@ -188,6 +174,6 @@
     });document.body.append(box);box.showModal();
   }
   // O botão nativo de impressão passa a abrir um PDF com paginação própria.
-  window.addEventListener('click',event=>{if(!event.target.closest('[data-pf="print"]'))return;event.preventDefault();event.stopImmediatePropagation();try{const data=portfolioInput();rpAbrir('Relatório da carteira','carteira-'+loc().slice(0,10)+'.pdf',()=>portfolioPdf(data))}catch(error){toast(error.message||String(error))}},true);
-  window.TraderReports={openHub,portfolioInput,portfolioPdf,weekendPdf,technicalMagazinePdf,study,weekly,bars,fundamentalRows};
+  window.addEventListener('click',async event=>{if(!event.target.closest('[data-pf="print"]'))return;event.preventDefault();event.stopImmediatePropagation();try{const data=await preparePortfolioInput();rpAbrir('Relatório da carteira','carteira-'+loc().slice(0,10)+'.pdf',()=>portfolioPdf(data))}catch(error){toast(error.message||String(error))}},true);
+  window.TraderReports={openHub,portfolioInput,preparePortfolioInput,portfolioPdf,weekendPdf,technicalMagazinePdf,study,weekly,bars,fundamentalRows};
 })();

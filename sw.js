@@ -1,6 +1,6 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v290',CDN='diario-cdn-1';
-const CORE=['./','index.html','manifest.webmanifest','config.js','app.js','style.css','terminal-praticidade.js','diario-profissional.js','mercado-profissional.js','mercado-monitor.js','diario-dados.js','diario-recuperacao.js','pdf-tipografia.js','trader-runtime.js','trader-modelo.js','trader-fluxos.js','trader-chat.js','trader-relatorios.js','carteira-pesquisa.js','carteira-experiencia.js','revista-modelo.js','revista-fim-semana.js'];
+const C='diario-v291',CDN='diario-cdn-1';
+const CORE=['./','index.html','manifest.webmanifest','config.js','app.js','style.css','terminal-praticidade.js','diario-profissional.js','mercado-profissional.js','mercado-monitor.js','diario-dados.js','diario-recuperacao.js','pdf-tipografia.js','trader-runtime.js','trader-modelo.js','trader-fluxos.js','trader-chat.js','trader-relatorios.js','carteira-pesquisa.js','carteira-experiencia.js','revista-modelo.js','revista-fim-semana.js','carteira-factsheet-modelo.js','carteira-factsheet.js','terminal-workflows.js'];
 CORE.push('pdf-lib.min.js','fontkit.umd.min.js','fonts/sans.ttf','fonts/sans-bold.ttf','fonts/sans-italic.ttf','fonts/serif-bold.ttf','fonts/serif-italic.ttf','assets/jornal/capa.jpg','assets/jornal/diario.jpg','assets/jornal/empresas.jpg','assets/jornal/mundo.jpg');
 const EXTRA=['arte.js','cnpi.js','estudos.js','ingles.js','icon-192.png','icon-512.png'];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
