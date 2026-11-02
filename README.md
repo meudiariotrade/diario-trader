@@ -1,3 +1,45 @@
+# Diário de Trader - revisão geral v308
+
+Padrão visual ampliado para áreas internas, PDFs e imagens compartilhadas. Leia LEIA-ME-V308.md para instalação, cobertura, validações e limites. Amostras em amostras-v308 são fictícias e não alimentam os dados do aplicativo.
+
+A revisão foi preparada e testada localmente. Ainda não foi publicada no GitHub; o ensaio completo com sessão real no iPhone está pendente.
+
+Modelo do relatório no Canva: https://www.canva.com/d/fPV3BCd5rWYaNHL
+
+## Histórico das revisões anteriores
+
+# Diário de Trader — design v307
+
+Atualização visual sobre a v306: abertura com a marca original, início com hierarquia mais clara, atalhos para funções existentes e abas consistentes. Temas claro/escuro, avisos de risco, personalização do início, dados e integrações permanecem disponíveis.
+
+Guia visual editável no Canva: https://www.canva.com/d/L7lr6M1u5mtSGWZ
+
+## Como instalar
+
+Extraia o ZIP e envie o conteúdo da pasta diario-trader-main à raiz do repositório, preservando as demais pastas existentes. Os arquivos alterados desta revisão são index.html, app.js, sw.js, manifest.webmanifest, package.json e release.config.json. Acrescente design-profissional.js e design-profissional.css. A publicação precisa levar o conjunto completo para o cache v307; evite enviar apenas o CSS.
+
+O arquivo design-guia.html é uma referência visual e não faz parte da navegação do aplicativo. O mockup gerado na conversa é ilustrativo: os botões de cadastro mostrados na proposta não foram introduzidos na abertura real. A abertura conserva o encerramento automático já existente, sem aguardar interação ou acrescentar atraso.
+
+## Melhorias
+
+- Marca original na abertura, mensagem breve e apresentação alinhada ao novo tema.
+- Início com saudação por horário de Brasília e data, título claro e acessos para Terminal, Carteiras e Estudos.
+- Cartão existente da rotina reorganizado com acesso Abrir meu dia. Registros, regras e avisos de risco permanecem acessíveis.
+- Abas principais e secundárias com hierarquia visual, indicação de seleção e rolagem horizontal quando necessário, sem criar novos níveis de navegação.
+- Cartões, campos, menus, navegação inferior e botão de registro com dimensões e acabamentos consistentes.
+- Terminal com cabeçalho e abas na paleta do aplicativo, preservando o significado das cores de alta e baixa nas cotações.
+- Tema claro mantido e respeito à preferência de movimento reduzido.
+
+## Validação
+
+Verificação de sintaxe dos JavaScripts alterados; testes diretos com Node para montagem sem duplicação, atalhos, preservação de dados e avisos, navegação acessível e inclusão dos arquivos no cache. Os testes da v306 de Terminal e pré-abertura também foram executados novamente.
+
+Comandos: node tests/design-v307.cjs; node tests/terminal-v306.cjs; node tests/panorama-v306.cjs.
+
+A revisão visual em navegador real/iPhone e o ensaio com sessão autenticada continuam pendentes. O navegador de teste não está disponível neste ambiente. Esta revisão não altera Supabase nem publica no GitHub. O ZIP original não contém os scripts de build/manutenção referenciados no package.json; execute os testes novos diretamente com Node.
+
+## Histórico
+
 # Diário de Trader — revisão v306
 
 Pré-abertura integrada após as ADRs, exportação com rodapé escuro e Terminal com Radar Global, curva DI e notícias Brasil/EUA em abas internas.

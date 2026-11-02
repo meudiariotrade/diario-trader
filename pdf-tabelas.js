@@ -3,7 +3,7 @@
  'use strict';
  function draw(p,columns,rows,options={}){
   if(!columns.length)return;
-  const size=options.s||8.8,line=size*1.35,pad=5,C=p.C,left=p.M;
+  const size=Math.max(8.5,options.s||8.8),line=size*1.35,pad=5,C=p.C,left=p.M;
   const sum=columns.reduce((n,c)=>n+c.w,0),widths=columns.map(c=>c.w/sum*p.CW);
   function wrap(value,width,fontSize,font){
    const text=String(value??'–'),tokens=text.split(/(\s+)/).map(token=>{
@@ -12,11 +12,11 @@
    }).join('');
    return p.wrap(tokens,width,fontSize,font);
   }
-  const headers=columns.map((c,i)=>wrap(String(c.l).toUpperCase(),widths[i]-2*pad,7.4,'b'));
+  const headers=columns.map((c,i)=>wrap(String(c.l).toUpperCase(),widths[i]-2*pad,8,'b'));
   const headerLines=Math.min(3,Math.max(...headers.map(h=>h.length))),headerHeight=headerLines*line+2*pad;
   function header(){
    p.need(headerHeight+line+2*pad);p.rect(left,p.y,p.CW,headerHeight,{fill:C.dk});let x=left;
-   columns.forEach((column,i)=>{headers[i].slice(0,3).forEach((text,j)=>p.t(text,x+pad,p.y+pad+j*line,{s:7.4,f:'b',c:C.wh,w:widths[i]-2*pad}));x+=widths[i]});p.y+=headerHeight;
+   columns.forEach((column,i)=>{headers[i].slice(0,3).forEach((text,j)=>p.t(text,x+pad,p.y+pad+j*line,{s:8,f:'b',c:C.wh,w:widths[i]-2*pad}));x+=widths[i]});p.y+=headerHeight;
   }
   header();
   rows.forEach((row,index)=>{

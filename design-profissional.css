@@ -1,0 +1,83 @@
+/* v307: identidade consistente, leitura e hierarquia. Tema claro continua disponível. */
+html:root{--bg:#f3f5f7;--card:#fff;--tx:#162431;--mut:#566879;--bd:#d8e1e9;--ac:#087c55;--g:#087c55;--r:#bd343b;--surface-raised:#eaf0f4;--radius-card:16px;--space-card:20px;--studio-shadow:0 4px 20px #15283b05}
+html:root[data-theme=dark]{--bg:#0b1119;--card:#121c28;--tx:#edf3f8;--mut:#a0b0c2;--bd:#293848;--ac:#36d998;--g:#36d998;--r:#ff858c;--surface-raised:#182535;--studio-shadow:0 6px 24px #00000012}
+@media(prefers-color-scheme:dark){html:root:not([data-theme=light]){--bg:#0b1119;--card:#121c28;--tx:#edf3f8;--mut:#a0b0c2;--bd:#293848;--ac:#36d998;--g:#36d998;--r:#ff858c;--surface-raised:#182535;--studio-shadow:0 6px 24px #00000012}}
+/* A abertura usa a marca original e mantém a duração já existente. */
+html:root body #splash{background:#0b1119;gap:18px;padding:32px;text-align:center;overflow:hidden}
+html:root body #splash::before{content:'';position:absolute;width:520px;height:520px;border:1px solid #36d99812;border-radius:50%;pointer-events:none}
+html:root body #splash .lg{width:82px;height:82px;z-index:1;filter:none}
+html:root body #splash b{font-size:28px;line-height:1.2;letter-spacing:-.035em;color:#edf3f8;z-index:1}
+#splash .studio-splash-tagline{font:400 15px/1.6 system-ui;color:#a0b0c2;margin:0;max-width:28ch;z-index:1}
+#splash .studio-splash-signature{position:absolute;bottom:calc(44px + env(safe-area-inset-bottom,0px));font:600 10px/1.5 system-ui;letter-spacing:.18em;color:#71869b}
+html:root body.studio-design{font:15px/1.55 system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+html:root body.studio-design #app.ui-standard-screen{padding-bottom:112px}
+html:root body.studio-design #app :is(h1,h2,h3){letter-spacing:-.025em}
+html:root body.studio-design #app :is(.card,.routine-card,.market-monitor,.pro-panel,.pfc){border:1px solid var(--bd);box-shadow:var(--studio-shadow)}
+html:root body.studio-design #app :is(input,textarea,select){background-color:var(--card);color:var(--tx)}
+html:root body.studio-design #app :is(input,textarea,select):disabled{opacity:.65}
+html:root body.studio-design #app :is(.btn,.pfbt){border-radius:11px;font-weight:650}
+html:root body.studio-design #app :is(.btn.s,.pfbt){box-shadow:none}
+html:root body.studio-design #app .btn:not(.s):not(.d){color:var(--bg)}
+html:root body.studio-design #app .studio-intro{padding:14px 0 24px;margin-bottom:0;border-bottom:0;background:none}
+.studio-intro-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px}
+.studio-eyebrow{font-size:11px;font-weight:600;letter-spacing:.025em;color:var(--mut);text-transform:capitalize}
+.studio-intro-tools{display:flex;gap:6px}
+html:root body.studio-design .studio-tool{background:var(--card);border:1px solid var(--bd);border-radius:9px;color:var(--mut);padding:8px 10px;min-height:40px;font:600 11px/1.4 system-ui;cursor:pointer}
+html:root body.studio-design #app .studio-greeting{font-size:14px;color:var(--ac);font-weight:600;margin:0 0 8px}
+html:root body.studio-design #app .studio-intro h1{font-size:clamp(29px,4vw,40px);line-height:1.12;letter-spacing:-.04em;margin:0 0 12px;max-width:20ch}
+html:root body.studio-design #app .studio-intro-copy{color:var(--mut);font-size:14px;line-height:1.6;max-width:46ch;margin:0}
+.studio-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 20px}
+html:root body.studio-design .studio-shortcut{display:grid;grid-template-rows:24px auto 1fr;align-items:start;text-align:left;gap:8px;min-width:0;padding:16px 12px;min-height:120px;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:14px;cursor:pointer;font:inherit;box-shadow:var(--studio-shadow)}
+.studio-shortcut-icon{color:var(--ac);display:flex;height:24px;align-items:center}
+.studio-shortcut-icon svg{width:22px;height:22px}
+.studio-shortcut b{font-size:13px;font-weight:650;line-height:1.3}
+.studio-shortcut small{font-size:11px;color:var(--mut);line-height:1.45}
+html:root body.studio-design .studio-shortcut:hover{border-color:var(--ac)}
+html:root body.studio-design #app .studio-routine{padding:20px;margin-bottom:20px;border-top:2px solid var(--ac);background:var(--card)}
+html:root body.studio-design #app .studio-routine .routine-eyebrow{font-size:10px;letter-spacing:.12em;color:var(--mut)}
+html:root body.studio-design #app .studio-routine #routine-title{font-size:23px!important;font-weight:650;letter-spacing:-.03em!important;margin:8px 0 10px}
+html:root body.studio-design #app .studio-routine .routine-heading p{font-size:13px;line-height:1.6;margin:0 0 18px;color:var(--mut)}
+html:root body.studio-design #app .studio-routine .routine-steps button{box-shadow:none;min-height:64px;border-radius:11px;background:var(--bg);border:1px solid var(--bd)}
+html:root body.studio-design #app .studio-routine .routine-number{background:var(--surface-raised);color:var(--ac);font-size:12px;border-radius:8px}
+html:root body.studio-design #app .studio-routine-action{width:100%;margin-top:16px;min-height:46px;font-size:14px}
+/* O Terminal ganha apenas um acesso no início. Seus painéis seguem intactos. */
+html:root body.studio-home #app > .trhome{display:none}
+html:root body.studio-design #app .workbench-header{padding:8px 0 20px;border-bottom:1px solid var(--bd);margin-bottom:16px;background:transparent}
+html:root body.studio-design #app .workbench-header h1{font-size:29px}
+html:root body.studio-design #app .workbench-header p{font-size:13px;color:var(--mut);line-height:1.6}
+html:root body.studio-design #app .studio-tabs{display:flex;align-items:center;flex-wrap:nowrap;gap:4px;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;scroll-padding-inline:4px;scrollbar-width:thin;max-width:100%;padding:4px;margin:12px 0 18px;border:1px solid var(--bd);border-radius:12px;background:var(--card)}
+html:root body.studio-design #app .studio-tabs button{flex:0 0 auto;white-space:nowrap;scroll-snap-align:start;min-height:42px;padding:9px 13px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--mut);font:600 12px/1.4 system-ui;box-shadow:none}
+html:root body.studio-design #app .studio-tabs button:is(.on,[aria-current=page]){background:var(--surface-raised);color:var(--ac);border-color:var(--bd)}
+html:root body.studio-design #app .pro-tabs.studio-tabs{padding:0;gap:10px;background:transparent;border:0;border-bottom:1px solid var(--bd);border-radius:0}
+html:root body.studio-design #app .pro-tabs.studio-tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;padding:10px 8px;min-height:44px;background:transparent}
+html:root body.studio-design #app .pro-tabs.studio-tabs button:is(.on,[aria-current=page]){border-bottom-color:var(--ac);background:transparent}
+html:root body.studio-design #app .market-monitor{background:var(--card);padding:18px;border-radius:16px}
+html:root body.studio-design #app .market-monitor .cqr{border-bottom:1px solid var(--bd);padding:12px 0}
+html:root body.studio-design #app .adr-quote{padding:14px 0}
+html:root body.studio-design #app .monitor-reference{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:12px}
+/* Barra inferior sólida, alvos confortáveis e menos peso visual no botão de registro. */
+html:root body.studio-design > nav{background:var(--card);border-top:1px solid var(--bd);box-shadow:0 -8px 28px #00000008;backdrop-filter:none;padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+html:root body.studio-design > nav button{min-height:48px;font-size:10px;letter-spacing:0;line-height:1.35;border-radius:10px;color:var(--mut);min-width:0}
+html:root body.studio-design > nav button.on{color:var(--ac);background:transparent}
+html:root body.studio-design > nav button svg{width:21px;height:21px;stroke-width:1.8}
+html:root body.studio-design #fab{width:48px;height:48px;font-size:28px;border-radius:15px;box-shadow:0 3px 12px #00000015;background:var(--ac);color:var(--bg)}
+html:root body.studio-design .wf-chat-launcher{width:44px;height:44px;border-radius:14px;box-shadow:0 3px 12px #00000018}
+html:root body.studio-design :is(dialog,.pro-menu,.pn){backdrop-filter:none}
+html:root body.studio-design :is(.pro-menu-header,.pro-menu-group){border-color:var(--bd)}
+html:root body.studio-design :is(.radar-quote,.radar-news){border-radius:12px}
+@media(min-width:980px){html:root body.studio-design #app.home-view{max-width:1120px}.studio-intro-top{margin-bottom:32px}.studio-shortcuts{max-width:660px}.studio-shortcut{padding:18px!important}.studio-intro{padding-top:24px!important}}
+@media(max-width:480px){html:root{--space-card:16px}.studio-intro-top{gap:8px;margin-bottom:24px;align-items:flex-start}.studio-eyebrow{max-width:140px;line-height:1.6}.studio-intro-tools{gap:4px}html:root body.studio-design .studio-tool{padding:7px 8px;min-height:40px}.studio-shortcuts{gap:8px}html:root body.studio-design .studio-shortcut{padding:13px 10px;min-height:116px}.studio-shortcut small{font-size:10px}html:root body.studio-design #app .studio-routine{padding:16px}html:root body.studio-design #app .studio-tabs button{padding:9px 11px}html:root body.studio-design #app .routine-footer{gap:10px;flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){html:root body.studio-design *{scroll-behavior:auto!important;transition:none!important}html:root body #splash{display:none!important}}
+@media print{html:root body.studio-design .studio-intro-tools,html:root body.studio-design .studio-shortcuts{display:none}html:root body.studio-design #app.ui-standard-screen{padding-bottom:0}}
+/* Terminal: comandos e abas usam a mesma identidade, sem mudar as cores dos preços. */
+html:root body.studio-design.trmon{background:#0b1119}
+body.studio-design.trmon :is(.trbar,.trph){background:#121c28!important;color:#edf3f8!important;border-color:#293848!important}
+body.studio-design.trmon .trp{background:#0b1119!important;border-color:#293848!important;border-radius:12px;overflow:hidden}
+body.studio-design.trmon .trp.foco{border-color:#36d998!important}
+body.studio-design.trmon .trbar .trcmd{background:#0b1119!important;color:#edf3f8!important;border:1px solid #293848!important;border-radius:9px}
+body.studio-design.trmon .trbar .trgo{background:#36d998!important;color:#0b1119!important;border-color:#36d998!important;border-radius:9px}
+body.studio-design.trmon :is(.trbar .trbtn,.trtabs button){background:#182535!important;color:#a0b0c2!important;border:1px solid #293848!important;border-radius:8px;min-height:40px}
+body.studio-design.trmon .trtabs button.on{background:#123328!important;border-color:#36d998!important;color:#36d998!important}
+body.studio-design.trmon .trquick-chip{border-radius:8px;border-color:#293848;background:#121c28;color:#a0b0c2}
+body.studio-design.trmon :is(.trph b,.trlogo b){color:#36d998!important}
+body.studio-design.trmon :is(.trpd,.trph .trx){color:#a0b0c2!important}

@@ -1,0 +1,47 @@
+/* v308: áreas internas, formulários, tabelas, menus e prévias de exportação. */
+html:root body.studio-design #app{--rs-bg:var(--bg);--rs-card:var(--card);--rs-tx:var(--tx);--rs-mut:var(--mut);--rs-bd:var(--bd);--rs-ac:var(--ac);--rs-green:var(--g);--rs-red:var(--r)}
+.platform-area{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 0 16px;margin-bottom:12px;border-bottom:1px solid var(--bd)}
+.platform-area p{margin:0;font:600 10px/1.5 system-ui;color:var(--mut);letter-spacing:.06em;text-transform:uppercase;max-width:75%}
+.platform-area button{min-height:40px;background:var(--card);border:1px solid var(--bd);border-radius:9px;padding:8px 13px;color:var(--tx);font:600 12px system-ui;cursor:pointer}
+html:root body.studio-design #app :is(.pf,.rs-workbench,.cr-section,.rv-magazine){color:var(--tx)}
+html:root body.studio-design #app .pf{--pb:var(--bg);--pc:var(--card);--pc2:var(--surface-raised);--pa:var(--ac);--pt:var(--tx);--pm:var(--mut);--pd:var(--bd);--pg:var(--g);--pr:var(--r)}
+html:root body.studio-design #app :is(.rs-section,.ra-section,.cr-section,.rv-study,.rv-intro,.enl,.duoun-h,.estprox,.au-intro){background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:20px;box-shadow:var(--studio-shadow)}
+html:root body.studio-design #app :is(.rs-section,.ra-section,.cr-section,.rv-study){margin-bottom:20px}
+html:root body.studio-design #app :is(.rs-section,.ra-section,.cr-section,.rv-study) h2{font-size:22px;font-weight:650;line-height:1.3;text-transform:none;letter-spacing:-.025em;margin-top:0}
+html:root body.studio-design #app :is(.rs-note,.cr-note,.rv-source,.wf-note,.quote-reference){font-size:12px;line-height:1.65;color:var(--mut)}
+html:root body.studio-design #app :is(.rs-controls,.rs-actions,.wf-actions,.cc-actions,.cr-actions,.au-lt){gap:8px;flex-wrap:wrap;align-items:center}
+html:root body.studio-design #app :is(.rs-button,.ra-button,.au-play,.au-pb){border-radius:10px;min-height:42px;line-height:1.3}
+html:root body.studio-design #app :is(.rs-table,.wf-table,.ui-table-scroll) table{border-collapse:collapse;font-variant-numeric:tabular-nums}
+html:root body.studio-design #app :is(.rs-table,.wf-table,.ui-table-scroll) th{background:var(--surface-raised);color:var(--mut);font-weight:650;border-bottom:1px solid var(--bd);text-align:left}
+html:root body.studio-design #app :is(.rs-table,.wf-table,.ui-table-scroll) :is(th,td){padding:12px 10px;font-size:12px;line-height:1.5;vertical-align:top}
+html:root body.studio-design #app :is(.rs-table,.wf-table,.ui-table-scroll) td{border-bottom:1px solid var(--bd)}
+html:root body.studio-design #app :is(.rs-table,.wf-table,.ui-table-scroll) :is(td,th).num{text-align:right;white-space:nowrap}
+html:root body.studio-design #app :is(.cr-empty,.rs-empty,.rv-empty){padding:24px;border:1px dashed var(--bd);border-radius:14px;background:var(--card);line-height:1.7;color:var(--mut)}
+html:root body.studio-design #app :is(.rv-cover,.jrcab,.pfcab){background:var(--card)!important;color:var(--tx)!important;border:1px solid var(--bd)!important;border-top:3px solid var(--ac)!important;border-radius:16px!important;padding:24px!important;box-shadow:none!important}
+html:root body.studio-design #app .rv-cover h1{font-size:32px;line-height:1.15;color:var(--tx)}
+html:root body.studio-design #app :is(.rv-cover,.jrcab) :is(p,small){color:var(--mut)}
+html:root body.studio-design #app :is(.jrsec,.jrtc,.jrpre){border-color:var(--bd)!important}
+html:root body.studio-design #app :is(.jrinds,.rv-metrics){gap:10px}
+html:root body.studio-design #app :is(.jrind,.rv-metrics>span){border:1px solid var(--bd)!important;background:var(--surface-raised)!important;border-radius:10px;padding:12px}
+html:root body.studio-design #app :is(.rv-scenarios,.ra-scenario){gap:10px}
+html:root body.studio-design #app .rv-scenarios article{background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:16px}
+html:root body.studio-design #app .au-item{background:var(--card);border:1px solid var(--bd);border-radius:12px;margin:10px 0;padding:14px;align-items:center}
+/* Navegação real do legado, incluindo o botão central que fica dentro de #bnav. */
+html.pro:root body.studio-design #bnav{min-height:64px;background:var(--card)!important;border-top:1px solid var(--bd)!important;backdrop-filter:none!important}
+html.pro:root body.studio-design #bnav button{font-size:10px!important;line-height:1.3!important;min-width:0}
+html.pro:root body.studio-design #bnav .mais span.bx{width:46px!important;height:46px!important;border-radius:14px!important;transform:translateY(-6px)!important;box-shadow:none!important;outline:4px solid var(--bg)!important}
+html.pro:root body.studio-design :is(#privb,#btop){background:var(--card)!important;backdrop-filter:none!important;border:1px solid var(--bd)!important;box-shadow:0 3px 14px #0002!important}
+html:root body.studio-design :is(#mdr2 .pn,#mdr .pn,.wf-dialog,.trpro-dialog,.trquick-dialog){background:var(--card)!important;color:var(--tx)!important;border:1px solid var(--bd)!important;backdrop-filter:none!important;border-radius:16px}
+html:root body.studio-design :is(.pro-menu-header,.pro-menu-search,.pro-menu-group){background:var(--card)!important;color:var(--tx)!important}
+html:root body.studio-design :is(.pro-menu-group>summary,.pro-menu-groups button){min-height:44px}
+html:root body.studio-design :is(.wf-dialog,.trpro-dialog,.trquick-dialog)::backdrop{background:#0008;backdrop-filter:none}
+/* Prévias de PDF e de imagens: controles consistentes e conteúdo com rolagem própria. */
+html:root body.studio-design :is(#pdfov,#imgov,#shrov){background:#0b1119f5!important;color:#edf3f8}
+html:root body.studio-design :is(#pdfbar,.pvbar){background:#121c28!important;color:#edf3f8;border-bottom:1px solid #293848!important;gap:8px;padding:12px;flex-wrap:wrap}
+html:root body.studio-design :is(#pdfbar,.pvbar) button{min-height:42px;padding:10px 14px;border-radius:9px;background:#182535;color:#edf3f8;border:1px solid #293848;font:600 13px system-ui}
+html:root body.studio-design #pdfst{font:13px/1.6 system-ui;padding:12px;color:#a0b0c2}
+html:root body.studio-design #pdfprev{max-width:960px;margin:auto;padding:12px}
+html:root body.studio-design #pdfprev canvas{width:100%;height:auto;display:block;margin:0 auto 18px;box-shadow:0 8px 30px #0004}
+@media(max-width:600px){html:root body.studio-design #app :is(.rs-section,.ra-section,.cr-section,.rv-study,.rv-intro){padding:16px}html:root body.studio-design #app :is(.rv-scenarios,.rs-controls,.rv-metrics){grid-template-columns:repeat(2,minmax(0,1fr))}html:root body.studio-design #app :is(.rs-table,.wf-table,.ui-table-scroll) :is(th,td){padding:10px 8px}html:root body.studio-design :is(dialog,.wf-dialog){max-width:calc(100vw - 20px);max-height:90dvh}.platform-area{margin-bottom:16px}}
+@media(max-width:360px){html:root body.studio-design #app :is(.rv-scenarios,.rv-metrics){grid-template-columns:minmax(0,1fr)}}
+@media print{.platform-area{display:none}html:root body.studio-design #app{color:#203247;background:#fff}html:root body.studio-design #app :is(.card,.rs-section,.rv-study,.cr-section){background:#fff;color:#203247;border-color:#d8e1e9;break-inside:avoid}html:root body.studio-design #app :is(h1,h2,h3){break-after:avoid}}

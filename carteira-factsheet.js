@@ -3,14 +3,14 @@
  'use strict';
  const num=(v,d=2)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}):'Não disponível',pct=v=>typeof v==='number'&&Number.isFinite(v)?num(v)+'%':'Não disponível',money=v=>typeof v==='number'&&Number.isFinite(v)?'R$ '+num(v):'Não disponível';
  async function pdf(input){
-  const M=root.CarteiraFactsheetModel,R=root.CarteiraResearch,d=M.build(input),lib=await rpLib(),p=await rpNovo(lib,{titulo:'Relatório de Gestão de Carteira',cabecalho:'Gestão de carteira',data:d.asOf,tipo:'Factsheet patrimonial e análise fundamentalista'});
-  Object.assign(p.C,{dk:p.hex('#16293e'),ac:p.hex('#008797'),g:p.hex('#087f69'),r:p.hex('#c3444b'),mut:p.hex('#66758a'),tx:p.hex('#203247'),cz:p.hex('#f1f5f8'),bd:p.hex('#dce4eb')});
+  const M=root.CarteiraFactsheetModel,R=root.CarteiraResearch,d=M.build(input),lib=await rpLib(),p=await rpNovo(lib,{titulo:'Relatório de Gestão de Carteira',cabecalho:'Gestão de carteira',data:d.asOf,tipo:'Factsheet patrimonial e análise fundamentalista',demo:!!input.demo});
+  for(const [key,value]of Object.entries(root.TraderExportBrand?.PDF||{}))p.C[key]=p.hex(value);
   const C=p.C,oldPage=p.pg;let section='Gestão de carteira';
   p.add=()=>{p.pg=p.doc.addPage([p.W,p.H]);p.n++;p.y=66;p.rect(0,0,p.W,7,{fill:C.dk});p.t('DIÁRIO DE TRADER / GESTÃO DE CARTEIRA',p.M,26,{s:7,f:'b',c:C.ac});p.t(d.asOf,p.W-p.M,26,{s:7,c:C.mut,al:'r'});p.ln(p.M,44,p.W-p.M,44,{c:C.bd,w:.6})};
   const text=(v,{size=9,color=C.tx,font='r',gap=6}={})=>{for(const line of p.wrap(String(v??''),p.CW,size,font)){p.need(size*1.45+2);p.t(line,p.M,p.y,{s:size,f:font,c:color});p.y+=size*1.45}p.y+=gap};
   const note=v=>text(v,{size:7.3,color:C.mut,gap:8});
   const heading=(v,sub)=>{const lines=p.wrap(v,p.CW,15,'b');p.need(lines.length*21+45);p.y+=5;for(const line of lines){p.t(line,p.M,p.y,{s:15,f:'b',c:C.dk});p.y+=21}if(sub)note(sub)};
-  const page=(title,sub,force=false)=>{section=title;if(force||d.perf.available||p.doc.getPageCount()===1||p.y>p.BOT-280)p.add();heading(title,sub)};
+  const page=(title,sub,force=false)=>{section=title;if(force||p.y>p.BOT-260)p.add();heading(title,sub)};
   const table=(labels,rows,widths)=>p.tab(labels.map((l,i)=>({l,w:widths?.[i]||100/labels.length})),rows,{s:8});
   const empty=v=>{p.need(66);p.rect(p.M,p.y,p.CW,48,{fill:C.cz});const y=p.y;p.y+=10;text(v,{size:8.2,gap:4});p.y=Math.max(p.y,y+58)};
   function lineChart(series,title,caption){
@@ -44,8 +44,8 @@
   text('Relatório de Gestão\nde Carteira',{size:29,font:'b',gap:16});text((input.demo?'EDIÇÃO DEMONSTRATIVA · DADOS FICTÍCIOS':'Análise de investimentos')+' | '+d.asOf,{size:12,font:'b'});note('Desempenho, composição, proventos, risco e pesquisa fundamentalista por ativo.');
   p.y+=12;const cards=[['VALOR DAS POSIÇÕES',d.partial?'Cobertura parcial':money(d.total)],['RETORNO NO MÊS',pct(d.perf.monthReturn)],['RETORNO NO HISTÓRICO',pct(d.perf.return)]];const cw=p.CW/3;
   cards.forEach(([name,value],i)=>{p.rect(p.M+i*cw,p.y,cw-5,66,{fill:C.dk});p.t(name,p.M+i*cw+9,p.y+12,{s:6.4,f:'b',c:C.wh});p.t(value,p.M+i*cw+9,p.y+34,{s:13,f:'b',c:C.wh,w:cw-23})});p.y+=83;
-  if(d.perf.available)lineChart([{name:'Carteira · base 100',color:'#008797',points:d.perf.rows.map(r=>({date:r.date,value:r.index}))},{name:'IBOV',color:'#16293e',points:d.perf.ib},{name:'CDI',color:'#d89824',points:d.perf.cdi}],'Evolução e referências','Índice de retorno calculado pelo aplicativo, com fluxos e proventos registrados. Séries completas alinhadas às mesmas datas; não é auditoria de rentabilidade.');
-  else lineChart([{name:'Valor dos ativos · BRL',color:'#008797',points:d.wealth}],'Evolução patrimonial',d.wealthRecorded?'Registros diários disponíveis, somente BRL. Mudanças na composição afetam a curva. Não mede rentabilidade.':'Valor dos ativos, sem caixa. Aportes, vendas e câmbio afetam o saldo; não mede rentabilidade.');
+  if(d.perf.available)lineChart([{name:'Carteira · base 100',color:'#087c55',points:d.perf.rows.map(r=>({date:r.date,value:r.index}))},{name:'IBOV',color:'#0b1b2b',points:d.perf.ib},{name:'CDI',color:'#d89824',points:d.perf.cdi}],'Evolução e referências','Índice de retorno calculado pelo aplicativo, com fluxos e proventos registrados. Séries completas alinhadas às mesmas datas; não é auditoria de rentabilidade.');
+  else lineChart([{name:'Valor dos ativos · BRL',color:'#087c55',points:d.wealth}],'Evolução patrimonial',d.wealthRecorded?'Registros diários disponíveis, somente BRL. Mudanças na composição afetam a curva. Não mede rentabilidade.':'Valor dos ativos, sem caixa. Aportes, vendas e câmbio afetam o saldo; não mede rentabilidade.');
   note(input.demo?'DADOS FICTÍCIOS. Material ilustrativo para validar o formato; não representa uma carteira real.':'Documento privado. Posições atuais na exportação; análises armazenadas podem ter datas diferentes.');
   if(!d.perf.available)note(d.perf.reason);if(d.partial)note('Sem preço ou câmbio válido para: '+d.missing.join(', ')+'. Valores de custo não foram usados como cotação.');
   page('01  Sumário executivo');

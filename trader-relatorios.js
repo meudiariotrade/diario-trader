@@ -137,7 +137,7 @@
     w.heading('Como usar a revista');w.text('Leia as estruturas diária e semanal em conjunto. Os cenários são condicionais: descrevem o que acompanhar e quando reavaliar. Não têm probabilidade atribuída, preço-alvo próprio ou promessa de resultado. Aberturas, vencimentos e feriados devem ser conferidos no calendário oficial.');
     w.text('Os gráficos à vista não são históricos de WIN ou WDO. Os futuros possuem uma seção própria de snapshot, com os limites de cobertura explícitos. Não se mistura o valor em reais do dólar à vista com os pontos do futuro.');
     for(const s of paper.studies){
-      p.add();w.heading(s.ticker+' · '+s.name,s.available?'Última sessão '+s.asOf+' · histórico desde '+s.from:'Cobertura indisponível');
+      if(s.available||p.y>p.BOT-160)p.add();w.heading(s.ticker+' · '+s.name,s.available?'Última sessão '+s.asOf+' · histórico desde '+s.from:'Cobertura indisponível');
       if(!s.available){w.text(s.reason);continue}
       w.text('Estrutura diária: '+s.dailyTrend+'. Estrutura semanal: '+s.weeklyTrend+'. Variação da última semana disponível: '+number(s.weeklyReturn)+'%. A quantidade de sessões pode variar por feriados.');
       chart(w,s.bars,'Estrutura diária · últimos candles observados',162);
@@ -148,7 +148,7 @@
       w.text('Leitura mecânica: diário usa preço e ordenação das MM20/MM50; semanal usa preço e ordenação das médias de 10/40 semanas. RSI é calculado por suavização de Wilder. A estrutura pode atrasar reversões e não isola causas econômicas.',{size:8,color:p.C.mut});
       w.text('Fonte: '+(s.source||'não informada')+' · consulta '+(s.queried||paper.gerado)+'. Não houve preenchimento de sessões ou projeção de candles futuros.',{size:7.5,color:p.C.mut});
     }
-    for(const f of paper.futures){p.add();w.heading(f.ticker+' · '+f.name,'Contrato futuro · snapshot e cenários de cobertura limitada');
+    for(const f of paper.futures){if(f.available||p.y>p.BOT-180)p.add();w.heading(f.ticker+' · '+f.name,'Contrato futuro · snapshot e cenários de cobertura limitada');
       if(!f.available){w.text(f.reason);continue}
       w.table([['Referência informada',55],['Valor',45]],[['Símbolo retornado',f.symbol],['Último preço do snapshot',number(f.price)],['Máxima do snapshot',number(f.high)],['Mínima do snapshot',number(f.low)],['Abertura informada',number(f.open)],['Consulta',f.queried||'Não informada'],['Fonte',f.source]]);
       w.text(f.note);w.heading('Condições de acompanhamento');
@@ -156,7 +156,7 @@
       w.text('Estes níveis pertencem ao contrato retornado, não ao gráfico à vista. Sem série histórica real do futuro, não foram calculadas médias, tendência semanal ou variação semanal do contrato. Não se desenha uma série de IBOV como WIN nem USD/BRL como WDO.');
       w.heading('Antes de usar os níveis');w.text('Conferir contrato e vencimento, referência de preço na plataforma e horário do dado. Uma troca de contrato pode alterar preços e níveis. Atualizar a leitura após a abertura; o snapshot pode ter atraso.');
     }
-    p.add();w.heading('Quadro de cenários e invalidação');w.table([['Ativo',18],['Alta: referência',27],['Baixa: referência',27],['Reavaliar',28]],paper.studies.filter(s=>s.available).map(s=>[s.ticker,number(s.resistance),number(s.support),'Retorno à faixa em fechamento']));
+    p.need(330);w.heading('Quadro de cenários e invalidação');w.table([['Ativo',18],['Alta: referência',27],['Baixa: referência',27],['Reavaliar',28]],paper.studies.filter(s=>s.available).map(s=>[s.ticker,number(s.resistance),number(s.support),'Retorno à faixa em fechamento']));
     w.heading('Roteiro para o diário');w.text(`1. Conferir agenda, feriados e vencimentos.
 2. Atualizar preços e verificar a confirmação do cenário.
 3. Registrar cenário principal, alternativo e invalidação.
