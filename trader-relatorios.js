@@ -129,6 +129,43 @@
     w.heading('Fontes e método');w.text(input.demo?'Este arquivo usa somente dados sintéticos para validar o projeto gráfico.':'Candles diários disponíveis no aplicativo, agregados semanalmente sem preencher dias ausentes. Narrativa e agenda, quando presentes, vêm da edição já carregada do Jornal do Pregão. Cada estudo mostra sua referência. Não se extrapola histórico para fabricar preços futuros.');
     return w.finish();
   }
+  async function technicalMagazinePdf(paper){
+    const M=window.RevistaModel,title=paper.demo?'Revista técnica · demonstração':'Revista da Semana';
+    const w=await documentPdf(title,'Estudos técnicos de mercado · semana '+paper.window.from+' a '+paper.window.to,paper.window.cutoff),p=w.p;
+    w.text(paper.demo?'DEMONSTRAÇÃO. Todas as séries e cotações deste exemplo são fictícias.':'Edição de estudos do Jornal do Pregão. Corte do histórico: '+paper.window.cutoff+'. Cada ativo mostra sua última sessão disponível. Não contém matérias de notícias nem narrativas macro geradas.');
+    w.heading('Nesta edição');w.text('Ibovespa e dólar à vista · contratos futuros · ações de referência · quadro de cenários · plano da próxima sessão.');
+    w.table([['Estudo',26],['Referência',25],['Diário',24],['Semanal',25]],paper.studies.map(s=>[s.ticker,s.asOf||'Sem histórico',s.dailyTrend||'Não avaliada',s.weeklyTrend||'Não avaliada']));
+    w.heading('Como usar a revista');w.text('Leia as estruturas diária e semanal em conjunto. Os cenários são condicionais: descrevem o que acompanhar e quando reavaliar. Não têm probabilidade atribuída, preço-alvo próprio ou promessa de resultado. Aberturas, vencimentos e feriados devem ser conferidos no calendário oficial.');
+    w.text('Os gráficos à vista não são históricos de WIN ou WDO. Os futuros possuem uma seção própria de snapshot, com os limites de cobertura explícitos. Não se mistura o valor em reais do dólar à vista com os pontos do futuro.');
+    for(const s of paper.studies){
+      p.add();w.heading(s.ticker+' · '+s.name,s.available?'Última sessão '+s.asOf+' · histórico desde '+s.from:'Cobertura indisponível');
+      if(!s.available){w.text(s.reason);continue}
+      w.text('Estrutura diária: '+s.dailyTrend+'. Estrutura semanal: '+s.weeklyTrend+'. Variação da última semana disponível: '+number(s.weeklyReturn)+'%. A quantidade de sessões pode variar por feriados.');
+      chart(w,s.bars,'Estrutura diária · últimos candles observados',162);
+      chart(w,s.weeks,'Estrutura semanal · agregação do histórico',145);
+      w.table([['Métrica do histórico',55],['Valor',45]],[['Último fechamento',number(s.close)],['Média 20 sessões',number(s.ma20)],['Média 50 sessões',number(s.ma50)],['Média 200 sessões',number(s.ma200)],['Média 10 semanas',number(s.w10)],['Média 40 semanas',number(s.w40)],['RSI 14 sessões',number(s.rsi)],['Mínima das 20 sessões anteriores',number(s.support)],['Máxima das 20 sessões anteriores',number(s.resistance)]]);
+      p.need(250);w.heading('Cenários para a semana');
+      for(const c of s.scenarios){w.text(c.name,{font:'b'});w.text(c.condition+' Referência: '+(c.trigger!=null?number(c.trigger):number(c.low)+' a '+number(c.high))+'. Reavaliar: '+c.invalidation)}
+      w.text('Leitura mecânica: diário usa preço e ordenação das MM20/MM50; semanal usa preço e ordenação das médias de 10/40 semanas. RSI é calculado por suavização de Wilder. A estrutura pode atrasar reversões e não isola causas econômicas.',{size:8,color:p.C.mut});
+      w.text('Fonte: '+(s.source||'não informada')+' · consulta '+(s.queried||paper.gerado)+'. Não houve preenchimento de sessões ou projeção de candles futuros.',{size:7.5,color:p.C.mut});
+    }
+    for(const f of paper.futures){p.add();w.heading(f.ticker+' · '+f.name,'Contrato futuro · snapshot e cenários de cobertura limitada');
+      if(!f.available){w.text(f.reason);continue}
+      w.table([['Referência informada',55],['Valor',45]],[['Símbolo retornado',f.symbol],['Último preço do snapshot',number(f.price)],['Máxima do snapshot',number(f.high)],['Mínima do snapshot',number(f.low)],['Abertura informada',number(f.open)],['Consulta',f.queried||'Não informada'],['Fonte',f.source]]);
+      w.text(f.note);w.heading('Condições de acompanhamento');
+      w.text('Acima de '+number(f.high)+': observar sustentação acima da máxima da amostra; reavaliar se retornar à faixa. Abaixo de '+number(f.low)+': observar continuidade abaixo da mínima; reavaliar se recuperar a faixa. Dentro do intervalo: aguardar definição.');
+      w.text('Estes níveis pertencem ao contrato retornado, não ao gráfico à vista. Sem série histórica real do futuro, não foram calculadas médias, tendência semanal ou variação semanal do contrato. Não se desenha uma série de IBOV como WIN nem USD/BRL como WDO.');
+      w.heading('Antes de usar os níveis');w.text('Conferir contrato e vencimento, referência de preço na plataforma e horário do dado. Uma troca de contrato pode alterar preços e níveis. Atualizar a leitura após a abertura; o snapshot pode ter atraso.');
+    }
+    p.add();w.heading('Quadro de cenários e invalidação');w.table([['Ativo',18],['Alta: referência',27],['Baixa: referência',27],['Reavaliar',28]],paper.studies.filter(s=>s.available).map(s=>[s.ticker,number(s.resistance),number(s.support),'Retorno à faixa em fechamento']));
+    w.heading('Roteiro para o diário');w.text(`1. Conferir agenda, feriados e vencimentos.
+2. Atualizar preços e verificar a confirmação do cenário.
+3. Registrar cenário principal, alternativo e invalidação.
+4. Dimensionar risco e revisar o checklist.
+5. Registrar a execução e revisar o processo ao encerrar.`);
+    w.heading('Fontes e método');w.text('Dados históricos das fontes já integradas ao aplicativo, filtrados até o corte da edição; médias, RSI e faixas calculados pelo código. Futuros: snapshot separado do terminal, sem inventar histórico. Sessões ausentes não são preenchidas. A revista é original e não reproduz texto, marca, recomendações ou gráficos de outras publicações.');
+    return w.finish();
+  }
   function openHub(){
     const old=document.getElementById('wf-report-dialog');old?.remove();const box=document.createElement('dialog');box.id='wf-report-dialog';box.className='wf-dialog';
     let list=['IBOV','WIN','WDO','SPX'];try{list.push(...pfCalc().pos.slice(0,6).map(a=>a.tk))}catch{}
@@ -152,5 +189,5 @@
   }
   // O botão nativo de impressão passa a abrir um PDF com paginação própria.
   window.addEventListener('click',event=>{if(!event.target.closest('[data-pf="print"]'))return;event.preventDefault();event.stopImmediatePropagation();try{const data=portfolioInput();rpAbrir('Relatório da carteira','carteira-'+loc().slice(0,10)+'.pdf',()=>portfolioPdf(data))}catch(error){toast(error.message||String(error))}},true);
-  window.TraderReports={openHub,portfolioInput,portfolioPdf,weekendPdf,study,weekly,bars,fundamentalRows};
+  window.TraderReports={openHub,portfolioInput,portfolioPdf,weekendPdf,technicalMagazinePdf,study,weekly,bars,fundamentalRows};
 })();
