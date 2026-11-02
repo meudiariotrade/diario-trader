@@ -39,6 +39,16 @@
     };
     return write;
   }
+  function researchChart(writer,points,title,unit='BRL',kind='line'){
+    const p=writer.p,rows=(points||[]).filter(row=>typeof row.value==='number'&&Number.isFinite(row.value));
+    if(!rows.length){writer.heading(title);writer.text('Sem dados registrados suficientes. Nenhum valor foi estimado.');return}
+    p.need(245);writer.heading(title);const height=152,left=58,width=p.CW-left-8,x=p.M+left,y=p.y;
+    const low=Math.min(0,...rows.map(r=>r.value)),high=Math.max(0,...rows.map(r=>r.value)),span=high-low||1,Y=v=>y+8+(high-v)/span*(height-32),X=i=>x+(rows.length===1?width/2:width*i/(rows.length-1));
+    for(let i=0;i<4;i++){const v=low+span*i/3;p.ln(x,Y(v),x+width,Y(v),{c:p.C.bd,w:.5});p.t(number(v,0),x-7,Y(v)-3,{s:6.8,al:'r',c:p.C.mut})}
+    if(kind==='bar'){const step=width/rows.length;rows.forEach((r,i)=>p.rect(x+i*step+step*.15,Math.min(Y(r.value),Y(0)),step*.7,Math.max(.7,Math.abs(Y(r.value)-Y(0))),{fill:r.value<0?p.C.r:p.C.ac}))}
+    else {for(let i=1;i<rows.length;i++)p.ln(X(i-1),Y(rows[i-1].value),X(i),Y(rows[i].value),{c:p.C.ac,w:1.8})}
+    p.t(rows[0].date,x,y+height-12,{s:7,c:p.C.mut});p.t(rows.at(-1).date,x+width,y+height-12,{s:7,c:p.C.mut,al:'r'});p.y+=height+4;writer.text(unit+' · '+(kind==='bar'?'valores registrados por período':'valor dos ativos, sem caixa; não é rentabilidade'),{size:7.5,color:p.C.mut});
+  }
   function chart(writer,input,title,height=172){
     const p=writer.p,list=bars(input).slice(-50);p.need(height+82);writer.heading(title);
     if(list.length<5){writer.text('Sem série suficiente para exibir um gráfico. Nenhum traçado ilustrativo foi usado como dado.');return}
@@ -48,8 +58,8 @@
     const date=v=>new Date(v.t*1000).toISOString().slice(0,10);p.t(date(list[0]),x,y+height-14,{s:7,c:p.C.mut});p.t(date(list.at(-1)),x+w-right,y+height-14,{s:7,c:p.C.mut,al:'r'});p.y=y+height+8;
   }
   function fundamentalRows(asset,meta){
-    const f=meta?.fs||{},common=[['P/L',['pl']],['P/VP',['pvp']],['Dividend yield (%)',['dy']],['ROE (%)',['roe']],['ROIC (%)',['roic']],['Margem líquida (%)',['margem_liquida','margemLiquida','mliq']],['Margem EBITDA (%)',['margem_ebitda','margemEbitda','mebitda']],['EV/EBITDA',['evebitda','ev_ebitda','evEbitda']],['Dívida líquida / EBITDA',['dl_ebitda','dividaLiquidaEbitda','divliq_ebitda']],['Crescimento de receita (%)',['cagr_receita','cagrReceita','crescimento_receita']]];
-    if(asset.cl==='fii')return [['P/VP',number(first(f,['pvp']))],['Dividend yield (%)',number(first(f,['dy']))],['Vacância (%)',number(first(f,['vacancia']))],['FFO / cota',number(first(f,['ffo_cota','ffo']))],['Rendimento / cota',number(first(f,['rendimento_cota']))]];
+    const f=meta?.fs||{},common=[['P/L',['pl']],['P/VP',['pvp','p_vp']],['Dividend yield (%)',['dy','dividend_yield_pct']],['ROE (%)',['roe','roe_pct']],['ROIC (%)',['roic']],['Margem líquida (%)',['margem_liquida_pct','ml','margem_liquida','margemLiquida','mliq']],['Margem EBITDA (%)',['margem_ebitda_pct','margem_ebitda','margemEbitda','mebitda']],['EV/EBITDA',['evebitda','ev_ebitda','evEbitda']],['Dívida líquida / EBITDA',['div_liq_ebitda','dl_ebitda','dividaLiquidaEbitda','divliq_ebitda']],['Crescimento de receita (%)',['crescimento_receita_pct','cr','cagr_receita','cagrReceita','crescimento_receita']]];
+    if(asset.cl==='fii')return [['P/VP',number(first(f,['pvp','p_vp']))],['Dividend yield (%)',number(first(f,['dy','dividend_yield_pct']))],['Vacância (%)',number(first(f,['vacancia']))],['FFO / cota',number(first(f,['ffo_cota','ffo']))],['Rendimento / cota',number(first(f,['rendimento_cota']))]];
     if(['etf','etf_ext'].includes(asset.cl))return [['Índice de referência',String(first(f,['benchmark','indice'])||'Não disponível')],['Taxa de administração (%)',number(first(f,['taxa_administracao','expenseRatio']))],['Patrimônio do fundo',number(first(f,['patrimonio','totalAssets']))],['Tracking error (%)',number(first(f,['trackingError']))]];
     if(['rf','tesouro','outro'].includes(asset.cl))return [['Critérios de ações', 'Não se aplicam automaticamente a esta classe.'],['Indexador, vencimento e risco do emissor','Consultar o cadastro e o documento do título.']];
     return common.map(([name,keys])=>[name,number(first(f,keys))]);
@@ -59,10 +69,10 @@
     const meta=window.PFX?.META?.()||{};
     const positions=selected?.tipo==='ativo'?snapshot.pos.filter(p=>p.tk===selected.tk):snapshot.pos;
     const assets=positions.map(asset=>{let technical;try{technical=pfTec(asset)}catch{}return {position:asset,meta:meta[asset.tk]||{},technical,report:(state.rel||[]).find(row=>row.tipo==='ativo'&&row.tk===asset.tk)||null}});
-    return {selected,snapshot,assets,generated:new Date().toISOString()};
+    const research=window.CarteiraExperience?.context?.()||{};return {selected,snapshot,assets,generated:new Date().toISOString(),...research};
   }
   async function portfolioPdf(input){
-    const {selected,snapshot,assets}=input,w=await documentPdf(input.demo?'Carteira · demonstração':'Relatório da carteira','Visão consolidada e fichas individuais · fundamentos, técnica, riscos e rastreabilidade',selected?.ref||input.generated?.slice(0,10)),p=w.p;
+    const {selected,snapshot,assets}=input,w=await documentPdf(input.demo?'Carteira · demonstração':'Relatório patrimonial','Evolução, proventos e pesquisa fundamentalista por ativo',selected?.ref||input.generated?.slice(0,10)),p=w.p;
     const missingPrice=assets.filter(a=>!a.position.tem),missingFx=assets.some(a=>a.position.moeda==='USD')&&!snapshot.fx;
     w.text('As posições são as cadastradas no momento da exportação. A análise selecionada e as análises individuais podem ter referências distintas, indicadas em cada ficha. Não representa a composição histórica de uma data anterior.',{size:8.5,color:p.C.mut});
     if(!missingFx)p.kpis([{l:'Valor calculado pelo app',v:'R$ '+number(snapshot.v)},{l:'Custo contabilizado',v:'R$ '+number(snapshot.c)},{l:'Diferença valor − custo',v:'R$ '+number(snapshot.res)},{l:'Ativos no relatório',v:String(assets.length)}],{cols:2,vs:16});
@@ -70,17 +80,26 @@
     w.text('A diferença entre valor e custo não é uma medida de retorno histórico total e não substitui cálculo de retorno com fluxos e proventos.');
     if(missingPrice.length)w.text('Atenção: sem cotação disponível para '+missingPrice.map(a=>a.position.tk).join(', ')+'. O aplicativo pode usar custo como referência de cálculo; não trate esse valor como preço de mercado.');
     w.heading('Cobertura dos dados');w.table([['Ativo',20],['Preço',18],['Fundamentos',22],['Técnica',18],['Análise IA',22]],assets.map(a=>[a.position.tk,a.position.tem?'Disponível':'Sem cotação',a.meta.fs?'Parcial / verificar data':'Não disponível',a.technical?.L?.length>=30?'Diário disponível':'Não disponível',a.report?'Registrada':'Não registrada']));
+    w.heading('Evolução e geração de renda');
+    const research=window.CarteiraResearch,incomes=input.income||research?.income(input.ledger||[],input.generated?.slice(0,10));
+    if(input.wealth?.points?.length)researchChart(w,input.wealth.points,'Evolução do valor dos ativos');else w.text(input.wealth?.reason||'Histórico ainda não carregado. Abra a carteira e carregue o histórico antes de exportar para incluir a evolução.');
+    w.text('Compras, vendas e câmbio alteram o valor dos ativos. A curva não mede retorno da estratégia; o caixa não está incluído. Dados insuficientes não são substituídos pelo custo de aquisição.');
+    for(const unit of ['BRL','USD']){const points=Object.entries(incomes?.months||{}).filter(([,v])=>v[unit]!==0).slice(-24).map(([date,v])=>({date,value:v[unit]}));if(points.length){researchChart(w,points,'Proventos recebidos por mês · '+unit,unit,'bar');w.table([['Mês',40],['Recebido ('+unit+')',60]],points.map(row=>[row.date,number(row.value)]))}}
+    if(!incomes?.events?.length)w.text('Não há proventos lançados. Dividend yield de mercado não foi convertido em recebimento presumido.');
+    if(!missingFx){const allocation=(research?.groups(assets,'cl')||[]);if(allocation.length)w.table([['Composição por classe',60],['Valor BRL',40]],allocation.map(row=>[row.date,number(row.value)]))}
     if(selected?.conteudo&&selected.tipo!=='ativo'){w.heading('Análise consolidada selecionada',`Referência ${selected.ref||'não informada'} · dados até ${selected.dados_em||'não informado'}`);for(const [key,value] of Object.entries(selected.conteudo))w.section(key,value)}
     if(!assets.length)w.text('Nenhuma posição disponível para construir fichas individuais. Cadastre a carteira ou abra o relatório de um ativo.');
     for(const asset of assets){
       const a=asset.position;p.add();w.heading(`${a.tk} · ${a.nome||asset.meta.nome||'Ficha do ativo'}`,`${a.cl||'Classe não informada'} · ${a.moeda||'Moeda não informada'} · ${a.setor||'Setor não informado'}`);
       w.table([['Dado da posição',45],['Valor',55]],[['Quantidade',number(a.q,6)],['Preço médio cadastrado',number(a.pm)],['Preço usado no cálculo',a.tem?number(a.pa):'Sem cotação; referência de custo'],['Data da cotação',a.pxEm||'Não informada'],['Peso calculado (%)',missingFx?'Indisponível sem câmbio':number(a.peso)],['Resultado calculado em BRL',missingFx?'Indisponível':'R$ '+number(a.lu)]]);
-      w.heading('Fundamentos e cobertura');w.table([['Indicador',55],['Valor informado',45]],fundamentalRows(a,asset.meta));
+      w.heading('Fundamentos e cobertura');w.table([['Indicador',55],['Valor informado',45]],fundamentalRows(a,{...asset.meta,fs:{...(asset.meta.fs||{}),...(typeof asset.report?.dados?.fundamentos==='object'?asset.report.dados.fundamentos:{})}}));
       w.text('Referência contábil: '+(first(asset.meta.fs,['ref','trimestre','data_referencia'])||'não informada pelo cache')+'. Indicadores ausentes não são zero. Métricas de ações não são aplicadas automaticamente a FIIs, ETFs ou renda fixa.',{size:8.2,color:p.C.mut});
-      const tech=study(asset.technical?.L);
-      if(tech.available){chart(w,asset.technical.L,'Leitura técnica · candles diários');w.table([['Referência técnica',55],['Valor',45]],[['Série utilizada',tech.from+' a '+tech.to],['Último fechamento da série',number(tech.last.c)],['Média de 20 sessões',number(tech.m20)],['Média de 50 sessões',number(tech.m50)],['Média de 200 sessões',number(tech.m200)],['Mínima das 20 sessões anteriores',number(tech.support)],['Máxima das 20 sessões anteriores',number(tech.resistance)],['RSI informado pelo módulo',number(asset.technical.rsi)]]);
-        w.text('Essas faixas são referências mecânicas do histórico, não preço-alvo ou recomendação. Série diária e cotação da posição podem ter horários diferentes.');
-      }else{w.heading('Leitura técnica');w.text(tech.reason+' Não foram criados gráficos ou níveis sem dados.')}
+      const research=window.CarteiraResearch,detail=research?.detail(a,input.ledger||[],input.generated?.slice(0,10));
+      if(detail){w.heading('Posição e proventos · '+detail.unit);w.table([['Métrica gerencial',60],['Valor',40]],[['Preço médio líquido de proventos',number(detail.pmIncome,4)],['Proventos lançados no ciclo atual',number(detail.income)],['Proventos em todo o histórico',number(detail.allIncome)],['Resultado não realizado',number(detail.result)],['Não realizado + proventos do ciclo',number(detail.withIncome)],['Variação diária da quantidade atual',number(detail.daily)]]);w.text('Ciclo desde '+(detail.cycleStart||'não identificado')+'. O preço médio líquido é gerencial, não altera o custo fiscal. Proventos do ciclo são os lançados desde o último zeramento; elegibilidade na data-com não é aferida.',{size:8,color:p.C.mut})}
+      const fundamentals=asset.report?.dados?.fundamentos;
+      if(fundamentals&&typeof fundamentals==='object'){
+        for(const [field,title] of [['receita','Receita anual'],['lucro','Lucro líquido anual']]){const rows=(Array.isArray(fundamentals.evolucao_receita_lucro)?fundamentals.evolucao_receita_lucro:[]).filter(r=>typeof r[field]==='number').map(r=>({date:String(r.ano),value:r[field]}));if(rows.length)researchChart(w,rows,title+' · '+a.tk,a.moeda||'BRL','bar')}
+      }
       if(asset.report){p.need(340);w.heading('Análise individual registrada',`Gerada ${asset.report.gerado||'sem data'} · referência ${asset.report.ref||'não informada'} · dados até ${asset.report.dados_em||'não informado'}`);for(const [key,value] of Object.entries(asset.report.conteudo||{}))if(key!=='identificacao')w.section(key,value);w.text('Fontes registradas: '+(asset.report.fontes||[]).join(' · '),{size:8.2});w.text(`Modelo: ${asset.report.modelo||'não informado'} · execução: ${asset.report.exec_id||'não informada'}`,{size:7.5,color:p.C.mut})}
       else w.text('Não há análise individual registrada para este ativo. Use a geração individual da carteira para completar a narrativa; a exportação não faz chamadas pagas automaticamente.');
     }
@@ -126,7 +145,7 @@
         if(action==='analysis'){
           if(window.DIARIO_DEMO)throw Error('Geração de IA desativada no demo.');const assets=pfCalc().pos.filter(a=>!pfUltRel(a.tk)).slice(0,24);if(!assets.length){status.textContent='Não há análise individual faltante entre as posições.';return}
           if(!confirm(`Gerar até ${assets.length} análises individuais faltantes usando a cota de IA da sua conta?`))return;
-          for(let i=0;i<assets.length&&!cancel;i++){status.textContent=`Análise ${i+1}/${assets.length}: ${assets[i].tk}`;await pfGeraAtivo(assets[i],false)}if(window.PF)PF.rv=null;status.textContent='Fila encerrada. A exportação informa quais análises estão disponíveis.';
+          for(let i=0;i<assets.length&&!cancel;i++){status.textContent=`Análise ${i+1}/${assets.length}: ${assets[i].tk}`;await pfGeraAtivo(assets[i],false)}if(window.PF)window.PF.rv=null;status.textContent='Fila encerrada. A exportação informa quais análises estão disponíveis.';
         }
       }catch(error){status.textContent=error.message||String(error)}finally{running=false}
     });document.body.append(box);box.showModal();

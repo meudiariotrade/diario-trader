@@ -1,6 +1,6 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v287',CDN='diario-cdn-1';
-const CORE=['./','index.html','manifest.webmanifest','config.js','app.js','style.css','terminal-praticidade.js','diario-profissional.js','mercado-profissional.js','mercado-monitor.js','diario-dados.js','diario-recuperacao.js','pdf-tipografia.js','trader-runtime.js','trader-modelo.js','trader-fluxos.js','trader-chat.js','trader-relatorios.js'];
+const C='diario-v288',CDN='diario-cdn-1';
+const CORE=['./','index.html','manifest.webmanifest','config.js','app.js','style.css','terminal-praticidade.js','diario-profissional.js','mercado-profissional.js','mercado-monitor.js','diario-dados.js','diario-recuperacao.js','pdf-tipografia.js','trader-runtime.js','trader-modelo.js','trader-fluxos.js','trader-chat.js','trader-relatorios.js','carteira-pesquisa.js','carteira-experiencia.js'];
 const EXTRA=['arte.js','cnpi.js','estudos.js','ingles.js','pdf-lib.min.js','icon-192.png','icon-512.png','fontkit.umd.min.js','fonts/sans.ttf','fonts/sans-bold.ttf','fonts/sans-italic.ttf','fonts/serif-bold.ttf','fonts/serif-italic.ttf'];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
 self.addEventListener('install',event=>{
