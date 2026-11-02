@@ -71,7 +71,7 @@
 
  function audit(rows=[],until='9999-12-31'){
   const state={},issues=[],ids=new Set();let cashBRL=0,cashUSD=0;
-  const add=(row,code,message)=>issues.push({id:row.id||'',ticker:row.tk||'',date:row.d||'',code,message});
+  const add=(row,code,message)=>issues.push({id:row.id||'',ticker:row.tk||'',date:row.d||'',index:rows.indexOf(row),code,message});
   for(const row of rows.slice().sort((a,b)=>String(a.d||'').localeCompare(String(b.d||''))||(a.tp==='E')-(b.tp==='E'))){
    if(row.d>until)continue;
    if(!/^\d{4}-\d{2}-\d{2}$/.test(row.d||'')||Number.isNaN(Date.parse(row.d+'T12:00:00Z'))||new Date(row.d+'T12:00:00Z').toISOString().slice(0,10)!==row.d){add(row,'date','Data inválida.');continue}
