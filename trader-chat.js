@@ -1,12 +1,13 @@
 /* Economista existente em painel flutuante. Só envia perguntas por ação explícita. */
 (() => {
   'use strict';
-  const safe=value=>esc(String(value??''));let opened=false,root,button,panel;
+  const safe=value=>esc(String(value??''));let opened=false,root,button,panel,attachedContext='';
   function context(){
     const parts=[`Tela aberta: ${tab}.`];
     if(typeof T!=='undefined'&&T?.ativo)parts.push(`Ativo em edição: ${T.ativo}.`);
     if(window.PF?.sel)parts.push(`Ativo selecionado na carteira: ${window.PF.sel}.`);
     if(tab==='dia')parts.push(`Data do diário: ${D}.`);
+    if(attachedContext)parts.push(attachedContext);
     return parts.join('\n')+'\nNão foram anexados saldos, posições, plano ou textos do diário.';
   }
   function list(title,items){return Array.isArray(items)&&items.length?`<details><summary>${safe(title)}</summary><ul>${items.map(item=>`<li>${safe(typeof item==='string'?item:JSON.stringify(item))}</li>`).join('')}</ul></details>`:''}
@@ -36,7 +37,7 @@
     root.innerHTML=`<button type="button" class="wf-chat-launcher" aria-label="Abrir Economista IA" aria-expanded="false" aria-controls="wf-chat-panel"><span aria-hidden="true">IA</span></button>
       <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Economista IA" hidden><header><div><b>Economista IA</b><small>Assistente virtual · mesma conversa entre telas</small></div><button type="button" data-chat-close aria-label="Minimizar conversa">−</button></header>
       <div class="wf-chat-history" aria-label="Histórico da conversa"></div><div class="wf-chat-status" role="status" aria-live="polite"></div>
-      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Anexar tela e ativo, sem valores ou textos do diário</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-input-label">Sua pergunta<textarea rows="2" maxlength="6000" placeholder="O que você quer entender?"></textarea></label><div class="wf-chat-actions"><button type="button" data-chat-clear>Limpar conversa</button><button type="submit">Enviar</button></div><small>A consulta usa a cota de IA existente. Respostas e cenários podem conter erros; confirme fontes e datas.</small></form></aside>`;
+      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Anexar tela, ativo e indicadores públicos, sem saldos ou textos do diário</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-input-label">Sua pergunta<textarea rows="2" maxlength="6000" placeholder="O que você quer entender?"></textarea></label><div class="wf-chat-actions"><button type="button" data-chat-clear>Limpar conversa</button><button type="submit">Enviar</button></div><small>A consulta utiliza o provedor de IA configurado. Respostas e cenários podem conter erros; confirme fontes e datas.</small></form></aside>`;
     document.body.append(root);button=root.querySelector('.wf-chat-launcher');panel=root.querySelector('aside');
     button.addEventListener('click',()=>{if(!button._dragged)setOpen(!opened);button._dragged=false});
     panel.querySelector('[data-chat-close]').onclick=()=>setOpen(false);
@@ -64,5 +65,5 @@
   });
   try{for(const list of [HUB_M,...MGRP.map(g=>g[1])])for(let i=list.length-1;i>=0;i--)if((Array.isArray(list[i])?list[i][0]:list[i])==='mercado:eco')list.splice(i,1)}catch{}
   if(window.DIARIO_DEMO){for(const name of ['alEnable','alDisable','alTest'])try{window[name]=async()=>toast('Notificações reais desativadas na demonstração.')}catch{}const originalAccount=vConta;vConta=()=>'<h1>Demonstração</h1><p>Conta e sincronização real estão desativadas. Os exemplos usam um banco local separado.</p>'}
-  window.TraderChat={open:()=>setOpen(true),close:()=>setOpen(false),paint,context};
+  window.TraderChat={open:(extra='')=>{attachedContext=typeof extra==='string'?extra:'';setOpen(true)},close:()=>setOpen(false),paint,context};
 })();

@@ -68,7 +68,13 @@
     const state=window.PF||{},selected=(state.rel||[]).find(r=>String(r.id)===String(state.rv)),snapshot=typeof pfCalc==='function'?pfCalc():{pos:[]};
     const meta=window.PFX?.META?.()||{};
     const positions=selected?.tipo==='ativo'?snapshot.pos.filter(p=>p.tk===selected.tk):snapshot.pos;
-    const assets=positions.map(asset=>{let technical;try{technical=pfTec(asset)}catch{}return {position:asset,meta:meta[asset.tk]||{},technical,report:(state.rel||[]).find(row=>row.tipo==='ativo'&&row.tk===asset.tk)||null}});
+    const assets=positions.map(asset=>{
+      let technical;try{technical=pfTec(asset)}catch{}
+      const baseMeta=meta[asset.tk]||{},fundamental=window.TerminalResearchModel?.fundamental(asset.tk,window.TRM?.trGet('fund',{tk:asset.tk})?.v||{},baseMeta),fs={...(baseMeta.fs||{})};
+      const names={pl:'pl',pvp:'pvp',dy:'dy',roe:'roe',margin:'margem_liquida_pct',ev:'evebitda',debt:'div_liq_ebitda',growth:'crescimento_receita_pct'};
+      for(const [key,name]of Object.entries(names))if(fundamental?.metric[key]!=null)fs[name]=fundamental.metric[key];
+      return {position:asset,meta:{...baseMeta,fs},fundamental,technical,report:(state.rel||[]).find(row=>row.tipo==='ativo'&&row.tk===asset.tk)||null};
+    });
     const research=window.CarteiraExperience?.context?.()||{};return {selected,snapshot,assets,generated:new Date().toISOString(),snapshots:S.cart?.snap||{},asOf:loc().slice(0,10),...research};
   }
   async function portfolioPdf(input){
@@ -86,6 +92,13 @@
         await Promise.allSettled(jobs);
         const deadline=Date.now()+20000;
         while((window.PF?.histBusy||window.PF?.meta)&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,150));
+      }
+      if(!window.DIARIO_DEMO&&window.TRM?.trFn){
+        const assets=portfolioInput().assets.map(a=>a.position);
+        for(let i=0;i<assets.length;i+=2){
+          if(S!==owner)throw Error('A conta mudou durante o carregamento.');
+          await Promise.allSettled(assets.slice(i,i+2).filter(a=>['acao','acao_ext','bdr','fii','etf','etf_ext'].includes(a.cl)).map(a=>window.TRM.trFn('fund',{tk:a.tk},600000)));
+        }
       }
       if(S!==owner)throw Error('A conta mudou durante o carregamento. Abra o relatório novamente.');
       return portfolioInput();
@@ -175,5 +188,5 @@
   }
   // O botão nativo de impressão passa a abrir um PDF com paginação própria.
   window.addEventListener('click',async event=>{if(!event.target.closest('[data-pf="print"]'))return;event.preventDefault();event.stopImmediatePropagation();try{const data=await preparePortfolioInput();rpAbrir('Relatório da carteira','carteira-'+loc().slice(0,10)+'.pdf',()=>portfolioPdf(data))}catch(error){toast(error.message||String(error))}},true);
-  window.TraderReports={openHub,portfolioInput,preparePortfolioInput,portfolioPdf,weekendPdf,technicalMagazinePdf,study,weekly,bars,fundamentalRows};
+  window.TraderReports={openHub,portfolioInput,preparePortfolioInput,portfolioPdf,weekendPdf,technicalMagazinePdf,study,weekly,bars,fundamentalRows,researchChart};
 })();
