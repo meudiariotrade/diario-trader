@@ -87,3 +87,16 @@ html:root body nav button.on{color:var(--ac)}
   html:root body #splash{display:none!important}
 }
 @media print{html:root body{background:#fff;color:#111}html:root body :is(nav,#fab,#fabm,#economista-flutuante){display:none!important}}
+
+/* Cotações: separar negociação regular de sessões estendidas e da data de consulta. */
+html:root body #app .adr-quote{padding:16px 0;border-top:1px solid var(--bd);min-width:0}
+.adr-quote-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:12px}
+.adr-quote-heading>div{min-width:0}.adr-quote-heading b{font-size:17px;font-variant-numeric:tabular-nums}
+.adr-quote-heading small{display:block;font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adr-regular{text-align:right}.adr-regular>span{font-size:14px;font-variant-numeric:tabular-nums}
+.adr-quote-reference{display:block;margin-top:8px;color:var(--mut);font-size:11px;line-height:1.5}
+.adr-extra{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;align-items:center;margin-top:10px;padding:10px 12px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);font-size:13px}
+.adr-extra>span:nth-child(2){text-align:right;font-variant-numeric:tabular-nums}.adr-extra small{grid-column:1/-1;color:var(--mut);font-size:11px;overflow-wrap:anywhere}
+.adr-night{border-left:3px solid #a970e5}.adr-night>span:first-child{color:#8751c2;font-weight:600}
+html:root[data-theme=dark] .adr-night>span:first-child{color:#c49bf4}
+.adr-unavailable{font-size:11px;color:var(--mut);margin:8px 0 0;line-height:1.5}

@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const safe=v=>esc(String(v??'')),time=v=>v?new Date(v).toLocaleString('pt-BR'):'não informada';
-  const visible=()=>!document.hidden&&(tab==='home'&&!!document.getElementById('adr')&&document.getElementById('adr').getClientRects().length>0||tab==='mercado'&&MKT.tab==='cq'&&CQ.aba==='adr');
+  const visible=()=>!document.hidden&&(tab==='home'&&!!document.getElementById('market-watch-shortcut')&&document.getElementById('market-watch-shortcut').getClientRects().length>0||tab==='mercado'&&MKT.tab==='cq'&&CQ.aba==='adr');
   let adrJob=null,quoteJob=null;
   const age=()=>AD.data?.ts?Date.now()-AD.data.ts:Infinity;
   const stale=()=>age()>5*60000;
@@ -10,16 +10,17 @@
   adrHtml=function(){
     let html=originalAdrHtml.apply(this,arguments).replace(/atualizado às /g,'consultado às ').replace(', sem atraso',', atraso não confirmado');
     const missing=AD.list.filter(t=>!(AD.data?.itens||[]).some(item=>item.s===t));
-    return `<div class="monitor-reference" role="status"><b>EWZ e ADRs brasileiras</b><span>${AD.busy?'Consultando…':AD.err?'Falha na atualização':!AD.data?'Sem consulta concluída':stale()?'Cópia antiga · confira a referência':'Consulta recente · preço pode ter atraso'}</span><small>Consulta concluída: ${safe(time(AD.data?.ts))}. Horário individual das cotações não fornecido por esta fonte. Fechamento fora do pregão pode ser o último disponível.</small></div>`+html+(missing.length?`<p class="sm mut">Sem cotação nesta consulta: ${safe(missing.join(', '))}.</p>`:'')+`<p class="sm mut">Esta é a mesma lista usada na imagem do panorama. O EWZ é um ETF e fica separado da média das ADRs.</p>`;
+    return `<div class="monitor-reference" role="status"><b>EWZ e ADRs brasileiras</b><span>${AD.busy?'Consultando…':AD.failed?'Falha na atualização':AD.err?'Consulta com aviso':!AD.data?'Sem consulta concluída':stale()?'Cópia antiga · confira a referência':'Consulta automática · confira os horários dos preços'}</span><small>Consulta concluída: ${safe(time(AD.data?.ts))}. O horário de cada preço aparece no ativo; uma consulta nova não significa que houve negócio novo. Horários em Brasília.</small></div>`+html+(missing.length?`<p class="sm mut">Sem cotação nesta consulta: ${safe(missing.join(', '))}.</p>`:'')+`<p class="sm mut">Esta é a mesma lista usada na imagem do panorama. O EWZ é um ETF e fica separado da média das ADRs.</p>`;
   };
   adrLoad=function(force=false){
     if(adrJob)return adrJob;
-    const ttl=adState(AD.data?.itens||[])==='closed'?300000:50000;
+    // Usa o relógio da sessão atual, não o estado fechado que ficou salvo na última consulta.
+    const ttl=window.TraderAdr.phase()==='closed'?300000:25000;
     if(!force&&AD.data&&age()<ttl)return Promise.resolve(true);
     if(window.DIARIO_DEMO)return Promise.resolve(false);
     if(!SESS?.at){AD.err='Entre na sua conta para atualizar as cotações. A cópia anterior, se houver, continua identificada.';adrPaint();return Promise.resolve(false)}
     const symbols=AD.list.slice();
-    AD.busy=1;AD.err='';adrPaint();
+    AD.busy=1;AD.err='';AD.failed=false;adrPaint();
     adrJob=(async()=>{
       try{
         const response=await rq('/functions/v1/adrs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols}),signal:AbortSignal.timeout(25000)});
@@ -27,9 +28,10 @@
         if(symbols.join(',')!==AD.list.join(','))return false;
         const items=data.itens.filter(item=>symbols.includes(item.s)&&typeof item.px==='number'&&Number.isFinite(item.px));
         if(!items.length)throw Error('Nenhuma cotação válida na resposta.');
-        AD.data={ts:Date.now(),itens:items,fonte:data.fonte||'Fonte não informada',atraso:!!data.atraso};ls.set('diario-adr-d',AD.data);
+        const sourceTime=Date.parse(data.consultedAt),receivedAt=Date.now();
+        AD.data={ts:Number.isFinite(sourceTime)&&sourceTime<=receivedAt+60000?sourceTime:receivedAt,receivedAt,itens:items,fonte:data.fonte||'Fonte não informada',atraso:!!data.atraso,revision:data.revision||null};ls.set('diario-adr-d',AD.data);
         const missing=symbols.filter(t=>!items.some(item=>item.s===t));AD.err=[missing.length?'Sem dados de: '+missing.join(', ')+'.':'',data.aviso||''].filter(Boolean).join(' ');return true;
-      }catch(error){AD.err=String(error.message||error);return false}
+      }catch(error){AD.err=String(error.message||error);AD.failed=true;return false}
       finally{AD.busy=0;adrJob=null;adrPaint();paintHomeQuote()}
     })();return adrJob;
   };
@@ -66,12 +68,12 @@
   imgDesenha=function(){
     const source=originalCanvas.apply(this,arguments),canvas=document.createElement('canvas');canvas.width=source.width;canvas.height=source.height+160;
     const ctx=canvas.getContext('2d');ctx.drawImage(source,0,0);ctx.fillStyle='#eef2f1';ctx.fillRect(0,source.height,canvas.width,160);ctx.textAlign='left';ctx.textBaseline='top';ctx.font='22px system-ui';ctx.fillStyle='#334155';
-    const ref=IMG.marketReference||{macro:MDO.ts,adrs:AD.data?.ts},lines=[`Consulta do panorama: ${time(ref.macro)}`,`Consulta de EWZ/ADRs: ${time(ref.adrs)}`,ref.warning?'ATENÇÃO: atualização com falha ou dados parciais; confira as referências.':'Consulta recente não garante cotação em tempo real.', 'Preço pode ter atraso; fora do pregão pode ser o último fechamento.'];
+    const ref=IMG.marketReference||{macro:MDO.ts,adrs:AD.data?.ts},lines=[`Consulta do panorama: ${time(ref.macro)}`,`Consulta de EWZ/ADRs: ${time(ref.adrs)}`,ref.warning?'ATENÇÃO: atualização com falha ou dados parciais; confira as referências.':'Consulta recente não garante negócio recente.', 'Preço principal: regular. Linha adicional: sessão e data indicadas.'];
     lines.forEach((line,index)=>ctx.fillText(line,42,source.height+16+index*32,canvas.width-84));return canvas;
   };
   function homeQuote(){
-    const ewz=AD.data?.itens?.find(row=>row.s==='EWZ');
-    return `<div class="top"><div><b>EWZ e ADRs brasileiras</b><p class="sm mut">${ewz?'EWZ '+safe(adN(ewz.px))+' · '+safe(adP(ewz.chp)):'Sua lista de acompanhamento está no Monitor.'}</p></div><button type="button" class="btn s" data-market-adrs>Abrir lista</button></div><small class="mut">Consulta: ${safe(time(AD.data?.ts))}${stale()?' · cópia antiga':''}. Mesma lista usada na imagem do panorama.</small>`;
+    const ewz=AD.data?.itens?.find(row=>row.s==='EWZ'),view=ewz&&window.TraderAdr.view(ewz),quote=view&&(view.active||view.regular);
+    return `<div class="top"><div><b>EWZ e ADRs brasileiras</b><p class="sm mut">${quote?'EWZ '+safe(window.TraderAdr.price(quote.px))+' · '+safe(adP(quote.chp))+' · '+(view.active?.kind==='overnight'?'overnight':view.active?.kind==='pre'?'pré-mercado':view.active?.kind==='post'?'pós-mercado':'regular'):'Sua lista de acompanhamento está no Monitor.'}</p></div><button type="button" class="btn s" data-market-adrs>Abrir lista</button></div><small class="mut">Consulta: ${safe(time(AD.data?.ts))}${stale()?' · cópia antiga':''}. ${quote?'Preço: '+safe(window.TraderAdr.time(quote.at))+'. ':''}Mesma lista usada na imagem do panorama.</small>`;
   }
   function paintHomeQuote(){const node=document.getElementById('market-watch-shortcut');if(node)node.innerHTML=homeQuote()}
   function decorate(){
@@ -85,7 +87,7 @@
       const anchor=root.querySelector('.routine-card,.workbench-header');if(anchor)anchor.after(node);else root.prepend(node);
     }
     if(tab==='home')root.querySelectorAll('[data-hb="adr"]').forEach(node=>node.remove());
-    if(tab==='mercado'&&MKT.tab==='cq'&&CQ.aba==='adr')adrAfter();
+    if(tab==='home'||tab==='mercado'&&MKT.tab==='cq'&&CQ.aba==='adr')adrAfter();
     root.querySelectorAll('.pro-tabs [aria-current="page"],.pro-subtabs [aria-current="page"]').forEach(node=>{const nav=node.parentElement;if(nav.scrollWidth>nav.clientWidth)node.scrollIntoView({inline:'nearest',block:'nearest'})});
   }
   window.TraderUI.onRender('mercado-monitor',decorate);
@@ -93,6 +95,6 @@
     if(event.target.closest('[data-market-chat]')){event.preventDefault();event.stopImmediatePropagation();window.TraderChat?.open();return}
     if(event.target.closest('[data-market-adrs]')){event.preventDefault();event.stopImmediatePropagation();CQ.aba='adr';ls.set('diario-cq-aba','adr');window.DIARIO_NAV.navigate('mercado:cq')}
   },true);
-  document.addEventListener('visibilitychange',()=>{if(visible())adrLoad(false)});
+  document.addEventListener('visibilitychange',()=>{if(visible())adrLoad(true)});
   window.TraderMarket={decorate,visible,stale,refresh:()=>adrLoad(true)};
 })();
