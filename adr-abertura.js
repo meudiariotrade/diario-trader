@@ -49,6 +49,23 @@ function abHtml(){
 <div class="adr-ab-tab"><table><thead><tr><th>Ativo</th><th>Fech. B3</th><th>Var. esperada</th><th>Abertura teórica</th></tr></thead><tbody>${tab||'<tr><td colspan="4" class="mut">Nenhuma ADR da lista tem ação correspondente mapeada.</td></tr>'}</tbody></table></div>
 <p class="sm mut">Conta: (1 + var. ADR) × (1 + var. dólar) − 1. Usa o pregão regular de Nova York; pós-mercado, notícias e o leilão de abertura podem mudar o preço. Ibovespa estimado pelo EWZ. Não é cotação.</p></div>`;
 }
+
+// Panorama (imagem/PDF): faixa extra com a abertura teórica
+if(typeof imgDesenha==='function'){const o2=imgDesenha;imgDesenha=function(){
+  const src=o2.apply(this,arguments),d=S.dados;if(!d)carrega();if(!d||!d.linhas.length||!src||!src.getContext)return src;
+  const L=d.linhas.slice(0,12),alt=110+L.length*34,c=document.createElement('canvas');c.width=src.width;c.height=src.height+alt;
+  const x=c.getContext('2d');x.drawImage(src,0,0);x.fillStyle='#ffffff';x.fillRect(0,src.height,c.width,alt);
+  const y0=src.height+24,W=c.width;x.textBaseline='top';x.textAlign='left';x.fillStyle='#0f172a';x.font='bold 26px system-ui';
+  x.fillText('Abertura teórica na B3'+(d.b3Fechada?' · B3 fechada hoje':''),42,y0);
+  x.font='20px system-ui';x.fillStyle='#64748b';x.fillText(`(1 + var. ADR) × (1 + var. dólar ${pc(d.usd)}) sobre o fechamento da B3. Estimativa, não cotação.`,42,y0+36,W-84);
+  L.forEach((l,i)=>{const y=y0+76+i*34;x.font='bold 22px system-ui';x.fillStyle='#0f172a';x.textAlign='left';x.fillText(l.loc==='IBOV'?'Ibovespa':l.loc,42,y);
+    x.font='20px system-ui';x.fillStyle='#64748b';x.fillText(`${l.adr} ${pc(l.adrp)}`,W*0.28,y);
+    x.textAlign='right';x.fillStyle='#334155';x.fillText(l.base?nf(l.base,l.loc==='IBOV'?0:2):'—',W*0.6,y);
+    x.font='bold 22px system-ui';x.fillStyle=l.varp>0.05?'#16a34a':l.varp<-0.05?'#dc2626':'#64748b';x.fillText(pc(l.varp),W*0.78,y);
+    x.fillStyle='#0f172a';x.fillText(l.teo?nf(l.teo,l.loc==='IBOV'?0:2):'—',W-42,y)});
+  return c;
+}}
+setTimeout(carrega,6000);setInterval(()=>{if(!document.hidden)carrega()},300000);
 const o=adrHtml;adrHtml=function(){return o.apply(this,arguments)+abHtml()};
 const st=document.createElement('style');st.textContent=`.adr-ab{margin-top:14px;padding-top:12px;border-top:1px solid rgba(127,127,127,.2)}.adr-ab-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.adr-ab-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(250,204,21,.18);color:#b45309}.adr-ab-tab{overflow-x:auto;margin:8px 0}.adr-ab table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}.adr-ab th{text-align:left;font-size:11px;opacity:.65;padding:6px 4px;border-bottom:1px solid rgba(127,127,127,.25)}.adr-ab td{padding:7px 4px;border-bottom:1px solid rgba(127,127,127,.12)}.adr-ab td small{display:block;opacity:.6;font-size:11px}.adr-ab td:nth-child(n+2),.adr-ab th:nth-child(n+2){text-align:right}`;document.head.appendChild(st);
 })();
