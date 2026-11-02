@@ -26,7 +26,7 @@
   function menu(panel) {
     panel.innerHTML = `<div class="pro-menu-header"><div><small>DIÁRIO DE TRADER</small><b>Seu espaço de trabalho</b></div><button type="button" data-navclose aria-label="Fechar menu">×</button></div>
       <label class="pro-menu-search">Encontrar função<input type="search" data-navsearch placeholder="Diário, sazonalidade, risco…" autocomplete="off"></label>
-      <div class="pro-menu-groups">${groups.map(group=>`<details class="pro-menu-group" data-navgroup="${group.id}"${activeGroup()===group.id?' open':''}><summary><span class="pro-menu-icon">${icon(group.icon)}</span><span><b>${group.name}</b><small>${group.description}</small></span></summary><div>${group.items.map(item=>link(item)).join('')}${group.id==='home'?'<button type="button" data-wf="organize-home">Organizar início</button>':''}${group.id==='conta'?'<button type="button" data-wf="quality">Dados e fontes</button><button type="button" data-wf="reports">Relatórios</button>':''}</div></details>`).join('')}</div>
+      <div class="pro-menu-groups">${groups.map(group=>`<details class="pro-menu-group" data-navgroup="${group.id}"${activeGroup()===group.id?' open':''}><summary><span class="pro-menu-icon">${icon(group.icon)}</span><span><b>${group.name}</b><small>${group.description}</small></span></summary><div>${group.items.map(item=>link(item)).join('')}${group.id==='mercado'?'<button type="button" data-research-menu>Pesquisa de investimentos</button><button type="button" data-flow-menu>Fluxo de negócios · Profit</button>':''}${group.id==='home'?'<button type="button" data-wf="organize-home">Organizar início</button>':''}${group.id==='conta'?'<button type="button" data-wf="quality">Dados e fontes</button><button type="button" data-wf="reports">Relatórios</button>':''}</div></details>`).join('')}</div>
       <p class="pro-menu-note">Diário e checklist no centro. Ferramentas agrupadas por tarefa.</p>`;
     panel.querySelector('[data-navclose]')?.addEventListener('click',event=>{
       event.preventDefault();event.stopPropagation();
@@ -40,7 +40,7 @@
       const query=event.target.value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
       panel.querySelectorAll('[data-navgroup]').forEach(element=>{
         let any=false;
-        element.querySelectorAll('[data-navroute],[data-wf]').forEach(button=>{
+        element.querySelectorAll('[data-navroute],[data-wf],[data-research-menu],[data-flow-menu]').forEach(button=>{
           const match=button.textContent.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(query);
           button.hidden=!match;any ||= match;
         });

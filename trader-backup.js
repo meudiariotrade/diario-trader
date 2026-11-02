@@ -74,6 +74,9 @@
       if (local.cart?.lanc || incoming.cart?.lanc) out.cart.lanc = records(local.cart?.lanc, incoming.cart?.lanc, deleted);
     }
     out.watch = [...new Set([...(local.watch || []), ...(incoming.watch || [])])];
+    if(root.AdvancedResearch && (local.ax?.researchAdvanced || incoming.ax?.researchAdvanced)){
+      out.ax??={};out.ax.researchAdvanced=root.AdvancedResearch.merge(local.ax?.researchAdvanced,incoming.ax?.researchAdvanced);
+    }
     // Uma cópia nunca troca a conta conectada nem seus marcadores de sincronização.
     for (const key of identity) { delete out[key]; if (local[key] !== undefined) out[key] = clone(local[key]); }
     return out;

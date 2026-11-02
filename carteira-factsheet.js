@@ -30,6 +30,15 @@
    heading(title);if(!rows.length){empty('Sem dados suficientes.');return}const max=Math.max(...rows.map(r=>Math.abs(r.value)),1);for(const r of rows){p.need(36);p.t(r.name||r.ticker||r.date,p.M,p.y,{s:8,f:'b',w:150});p.rect(p.M+155,p.y,210,9,{fill:C.cz});p.rect(p.M+155,p.y,210*Math.abs(r.value)/max,9,{fill:r.value<0?C.r:C.ac});p.t(valueText(r.value,r),p.W-p.M,p.y,{s:8,al:'r',c:C.tx});p.y+=25}p.y+=8;
   }
   function analysis(title,value){const rows=M.paragraphs(value);if(!rows.length)return;heading(title);for(const row of rows)text(row,{size:8.5,gap:5})}
+  function advancedResearch(asset){
+   const a=asset.advanced;if(!a)return;
+   if(a.history?.length){heading('Histórico de rentabilidade e estrutura');table(['Ano','Margem líquida %','ROE %','CT/PL'],a.history.map(r=>[r.date,num(r.margin),num(r.roe),num(r.leverage)]),[16,28,28,28]);note('Indicadores anuais. CT/PL não equivale a dívida líquida/EBITDA. Lacunas não são preenchidas.');}
+   if(a.peers?.rows?.some(r=>r.n>=3)){heading('Empresa diante da amostra setorial');table(['Indicador','Ativo','P25','Mediana','P75','N'],a.peers.rows.map(r=>[r.label,num(r.current),num(r.q25),num(r.median),num(r.q75),String(r.n)]),[30,15,15,15,15,10]);note(a.peers.source);}
+   if(a.eligible&&a.dividends){heading('Qualidade dos dividendos');if(a.dividends.checks.length)table(['Indicador','Valor','Leitura'],a.dividends.checks.map(r=>[r.label,num(r.value)+(r.unit==='%'?'%':''),r.message]),[30,24,46]);else note('Payout e demonstrações de caixa insuficientes; sustentabilidade não classificada.');note(a.dividends.note);note(a.dividends.recurring);}
+   if(a.changes?.from){heading('Mudanças entre '+a.changes.from+' e '+a.changes.to);table(['Métrica','Anterior','Recente','Variação'],a.changes.rows.map(r=>[r.label,num(r.before),num(r.after),r.change===null?r.explanation:num(r.change)+' '+r.unit]),[26,21,21,32]);note(a.changes.reason);}
+   if(a.eligible&&a.valuation){heading('Valuation por premissas pessoais');const v=a.valuation;note('Cenários registrados pelo usuário em '+v.at+'. FCFE anual base por ação: '+num(v.input.cash)+'. Horizonte: '+v.input.years+' anos. Não é previsão ou preço-alvo.');table(['Cenário','Crescimento %','Capital próprio %','Terminal %','Valor/ação'],v.result.rows.map(r=>[r.name,num(r.growth),num(r.rate),num(r.terminal),r.result.available?num(r.result.value):'Inválido']),[24,19,19,19,19]);note(v.result.rows.find(r=>r.result.available)?.result.method||'Verificar premissas.');}
+   if(a.notes?.length){heading('Linha do tempo da tese');for(const n of a.notes){text(n.at+' / '+n.kind,{font:'b',size:8});text(n.text);if(n.source)note('Fonte informada: '+n.source);note('Consulta dos indicadores no registro: '+(n.queried||'não carregados'));}}
+  }
   // Capa: mesma linguagem editorial do modelo, com métricas identificadas.
   p.pg=oldPage;p.y=60;p.rect(0,0,p.W,12,{fill:C.dk});p.t('GESTÃO DE CARTEIRA / FACTSHEET',p.M,p.y,{s:8,f:'b',c:C.ac});p.y=112;
   text('Relatório de Gestão\nde Carteira',{size:29,font:'b',gap:16});text((input.demo?'EDIÇÃO DEMONSTRATIVA · DADOS FICTÍCIOS':'Análise de investimentos')+' | '+d.asOf,{size:12,font:'b'});note('Desempenho, composição, proventos, risco e pesquisa fundamentalista por ativo.');
@@ -55,6 +64,8 @@
   for(const unit of ['BRL','USD']){const rows=Object.entries(d.income.months).filter(([,v])=>v[unit]!==0).map(([date,v])=>({date,value:v[unit]}));if(rows.length){bars(rows,'Proventos recebidos · '+unit);table(['Mês','Recebido ('+unit+')'],rows.slice(-12).map(r=>[r.date,num(r.value)]),[40,60])}}
   if(!d.income.events.length)empty('Sem proventos lançados. Cadastre dividendos, JCP e rendimentos efetivamente recebidos.');
   page('05  Risco, governança e cenários');
+  if(input.selected?.tipo!=='ativo'&&input.exposure){const x=input.exposure;heading('Exposição direta e composição informada');table(['Setor ou cobertura','Valor BRL','Peso coberto'],x.sectors.map(r=>[r.name,money(r.value),pct(r.weight)]),[48,27,25]);if(x.themes.length)table(['Tema pessoal','Ativos marcados','Peso das posições'],x.themes.map(r=>[r.name,r.tickers.join(', '),pct(r.weight)]),[35,40,25]);note(x.method);note('Composição interna detalhada: '+money(x.detailed)+'. Sem preço: '+(x.missing.join(', ')||'nenhum ativo')+'.');}
+
   table(['Métrica','Valor','Base de cálculo'],[['Volatilidade anualizada',pct(d.perf.vol),d.perf.n>=20?d.perf.n+' intervalos diários':'Exige ao menos 20 intervalos'],['Drawdown do índice de retorno',pct(d.perf.drawdown),'Queda desde o pico do histórico validado'],['Tracking error frente ao IBOV',pct(d.perf.tracking),'Diferenças diárias, anualização por 252'],['Maior posição',d.largest||'Não disponível',pct(d.largestWeight)+' do valor coberto'],['Três maiores posições',pct(d.top3),'Composição atual, não histórica']],[40,25,35]);
   analysis('Riscos apresentados pela IA',input.selected?.conteudo?.riscos);analysis('Cenários condicionais e acompanhamento',{hipoteses:input.selected?.conteudo?.hipoteses,monitorar:input.selected?.conteudo?.monitorar});
   const consolidated=input.selected?.tipo==='ativo'?{}:input.selected?.conteudo||{};
@@ -66,10 +77,11 @@
    if(a.fundamental?.annual?.length){
     const series=a.fundamental.annual;
     const W={p,heading:(title)=>heading(title),text:(value)=>note(value)};
-    root.TraderReports.researchChart(W,series.map(r=>({date:r.date,value:r.revenue})),'Receita anual',a.fundamental.currency,'bar');
-    root.TraderReports.researchChart(W,series.map(r=>({date:r.date,value:r.profit})),'Lucro líquido anual',a.fundamental.currency,'bar');
+    root.TraderReports.researchChart(W,series.map(r=>({date:r.date,value:r.revenue})),'Receita anual',a.fundamental.financialCurrency||'Moeda contábil não confirmada','bar');
+    root.TraderReports.researchChart(W,series.map(r=>({date:r.date,value:r.profit})),'Lucro líquido anual',a.fundamental.financialCurrency||'Moeda contábil não confirmada','bar');
     note('Histórico das fontes de fundamentos do terminal. Consulta: '+(a.fundamental.queried||'não informada')+'. Períodos anuais, sem projeções.');
    }
+   advancedResearch(a);
    const technical=root.TraderReports.study(a.technical?.L||[]);
    if(technical.available){heading('Leitura técnica · dados em '+technical.to);table(['Fechamento','MM20','MM50','MM200','Suporte 20d','Resistência 20d'],[[num(technical.last.c),num(technical.m20),num(technical.m50),num(technical.m200),num(technical.support),num(technical.resistance)]],[17,16,16,16,17,18]);note('Médias simples dos fechamentos e extremos das 20 sessões anteriores. Níveis mecânicos, sem probabilidade ou recomendação. Não há gráfico de candles neste documento.');}
    const contents=report?.conteudo||{};analysis('Análise fundamentalista',{analise_fundamentalista:contents.analise_fundamentalista,fundamentalista:contents.fundamentalista,fatos:contents.fatos});analysis('Tese e interpretação',contents.interpretacoes);analysis('Riscos e cenário',{riscos:contents.riscos,hipoteses:contents.hipoteses});analysis('Análise técnica e pontos de acompanhamento',{analise_tecnica:contents.analise_tecnica,monitorar:contents.monitorar});

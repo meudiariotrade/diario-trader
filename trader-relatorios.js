@@ -73,9 +73,9 @@
       const baseMeta=meta[asset.tk]||{},fundamental=window.TerminalResearchModel?.fundamental(asset.tk,window.TRM?.trGet('fund',{tk:asset.tk})?.v||{},baseMeta),fs={...(baseMeta.fs||{})};
       const names={pl:'pl',pvp:'pvp',dy:'dy',roe:'roe',margin:'margem_liquida_pct',ev:'evebitda',debt:'div_liq_ebitda',growth:'crescimento_receita_pct'};
       for(const [key,name]of Object.entries(names))if(fundamental?.metric[key]!=null)fs[name]=fundamental.metric[key];
-      return {position:asset,meta:{...baseMeta,fs},fundamental,technical,report:(state.rel||[]).find(row=>row.tipo==='ativo'&&row.tk===asset.tk)||null};
+      return {position:asset,meta:{...baseMeta,fs},fundamental,advanced:window.ResearchAdvanced?.pdfData(asset.tk,window.TRM?.trGet('fund',{tk:asset.tk})?.v||{}),technical,report:(state.rel||[]).find(row=>row.tipo==='ativo'&&row.tk===asset.tk)||null};
     });
-    const research=window.CarteiraExperience?.context?.()||{};return {selected,snapshot,assets,generated:new Date().toISOString(),snapshots:S.cart?.snap||{},asOf:loc().slice(0,10),...research};
+    const research=window.CarteiraExperience?.context?.()||{};return {selected,snapshot,assets,generated:new Date().toISOString(),snapshots:S.cart?.snap||{},exposure:window.ResearchAdvanced?.exposureData(snapshot.pos),asOf:loc().slice(0,10),...research};
   }
   async function portfolioPdf(input){
     if(!window.CarteiraFactsheet)throw Error('Atualize todos os arquivos do aplicativo para gerar o relatório de gestão.');
@@ -84,7 +84,7 @@
   let portfolioPreparation=null;
   function preparePortfolioInput(){
     if(portfolioPreparation)return portfolioPreparation;
-    const owner=S;
+    const owner=SESS?.uid||null;
     if(typeof toast==='function')toast('Preparando relatório: carregando histórico e fundamentos…',5000);
     portfolioPreparation=(async()=>{
       if(!window.DIARIO_DEMO){
@@ -96,11 +96,11 @@
       if(!window.DIARIO_DEMO&&window.TRM?.trFn){
         const assets=portfolioInput().assets.map(a=>a.position);
         for(let i=0;i<assets.length;i+=2){
-          if(S!==owner)throw Error('A conta mudou durante o carregamento.');
-          await Promise.allSettled(assets.slice(i,i+2).filter(a=>['acao','acao_ext','bdr','fii','etf','etf_ext'].includes(a.cl)).map(a=>window.TRM.trFn('fund',{tk:a.tk},600000)));
+          if((SESS?.uid||null)!==owner)throw Error('A conta mudou durante o carregamento.');
+          await Promise.allSettled(assets.slice(i,i+2).filter(a=>['acao','acao_ext','bdr','fii','etf','etf_ext'].includes(a.cl)).map(async a=>{const raw=await window.TRM.trFn('fund',{tk:a.tk},600000);if((SESS?.uid||null)===owner&&raw)window.ResearchAdvanced?.onFund(a.tk,raw);return raw}));
         }
       }
-      if(S!==owner)throw Error('A conta mudou durante o carregamento. Abra o relatório novamente.');
+      if((SESS?.uid||null)!==owner)throw Error('A conta mudou durante o carregamento. Abra o relatório novamente.');
       return portfolioInput();
     })().finally(()=>{portfolioPreparation=null});
     return portfolioPreparation;

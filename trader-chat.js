@@ -1,7 +1,7 @@
 /* Economista existente em painel flutuante. Só envia perguntas por ação explícita. */
 (() => {
   'use strict';
-  const safe=value=>esc(String(value??''));let opened=false,root,button,panel,attachedContext='';
+  const safe=value=>esc(String(value??''));let opened=false,root,button,panel,attachedContext='',historyMarkup='';
   function context(){
     const parts=[`Tela aberta: ${tab}.`];
     if(typeof T!=='undefined'&&T?.ativo)parts.push(`Ativo em edição: ${T.ativo}.`);
@@ -23,13 +23,14 @@
   }
   function paint(){
     if(!panel)return;const history=panel.querySelector('.wf-chat-history'),input=panel.querySelector('textarea'),status=panel.querySelector('[role="status"]'),submit=panel.querySelector('[type="submit"]');
-    history.innerHTML=ECO.l.length?ECO.l.map(response).join(''):'<p class="wf-chat-empty">Pergunte sobre juros, notícias, indicadores ou cenários. A conversa acompanha você entre as telas.</p>';
+    const markup=ECO.l.length?ECO.l.map(response).join(''):'<p class="wf-chat-empty">Pergunte sobre juros, notícias, indicadores ou cenários. A conversa acompanha você entre as telas.</p>';
+    if(markup!==historyMarkup){const top=history.scrollTop,follow=history.scrollHeight-history.clientHeight-top<40;history.innerHTML=markup;historyMarkup=markup;history.scrollTop=follow?history.scrollHeight:top}
     status.textContent=ECO.busy?'Preparando a resposta…':ECO.err||'';submit.disabled=!!ECO.busy;input.disabled=!!ECO.busy;
     const preview=panel.querySelector('.wf-chat-context');preview.textContent=context();preview.hidden=!panel.querySelector('[name="context"]').checked;
   }
   function setOpen(value){
     opened=value;panel.hidden=!value;button.setAttribute('aria-expanded',String(value));
-    if(value){paint();panel.querySelector('textarea').focus()}else button.focus();
+    window.TraderUI.refreshScroll();if(value){paint();panel.querySelector('textarea').focus({preventScroll:true})}else button.focus({preventScroll:true});
   }
   function build(){
     if(root)return;

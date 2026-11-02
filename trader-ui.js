@@ -49,7 +49,20 @@
   const originalSheet = showSheet;
   showSheet = function () { return invoke(originalSheet, sheetHooks, this, [...arguments]); };
 
+  // Keep one scroll owner while a dialog, sheet or chat is open (including iOS).
+  let scrollState=null;
+  const overlaySelector='dialog[open],.pfmd,#sh .ov,.wf-chat-panel:not([hidden])';
+  function refreshScroll(){
+    if(!root.document?.documentElement)return;
+    const active=[...document.querySelectorAll(overlaySelector)].some(el=>!el.hidden&&getComputedStyle(el).display!=='none');
+    if(active&&!scrollState){const b=document.body;scrollState={x:root.scrollX||0,y:root.scrollY||0,styles:{}};for(const key of ['position','top','left','right','width'])scrollState.styles[key]=b.style[key];b.classList.add('ui-overlay-open');b.style.position='fixed';b.style.top=-scrollState.y+'px';b.style.left='0';b.style.right='0';b.style.width='100%';}
+    else if(!active&&scrollState){const previous=scrollState;scrollState=null;const b=document.body;for(const [key,value]of Object.entries(previous.styles))b.style[key]=value;b.classList.remove('ui-overlay-open');root.scrollTo(previous.x,previous.y);}
+  }
+  let pending=false;
+  if(root.document?.body&&root.MutationObserver)new root.MutationObserver(()=>{if(pending)return;pending=true;queueMicrotask(()=>{pending=false;refreshScroll()})}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open','hidden','class']});
+
   root.TraderUI = Object.freeze({
+    refreshScroll,
     onRender: (id, hooks) => register(renderHooks, id, hooks),
     onSheet: (id, hooks) => register(sheetHooks, id, hooks),
     inspect: () => ({render: [...renderHooks.keys()], sheet: [...sheetHooks.keys()]}),

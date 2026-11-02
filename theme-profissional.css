@@ -172,12 +172,12 @@ body.trmon .g9help{font-size:11px;margin:4px 0}
 @media(max-width:680px){body.trmon .trbar{gap:4px;padding:4px}body.trmon .trp.maxi .trpb{min-height:65vh}body.trmon .g9b{min-height:32px;padding:4px 7px}html:root body #app .market-monitor .card{padding:12px}}
 @media(max-width:350px){html:root body #app .market-monitor .cqr{grid-template-columns:30px minmax(55px,1fr) auto auto 28px;gap:4px}html:root body #app .market-monitor .cqi{width:29px;height:29px}html:root body #app .market-monitor .cqv{min-width:52px;font-size:11px}}
 /* Pesquisa v301: dados compactos, navegação única e área ampla no telefone. */
-.rs-workbench{--rs-bg:var(--bg,#0e1116);--rs-card:var(--card,#171b22);--rs-tx:var(--tx,#e8ebf0);--rs-mut:var(--mut,#98a2b3);--rs-bd:var(--bd,#262c36);width:min(1100px,96vw);height:min(900px,94dvh);max-height:94dvh;max-width:1100px;padding:0;border:1px solid var(--rs-bd);border-radius:18px;background:var(--rs-bg);color:var(--rs-tx);font:14px/1.5 system-ui,sans-serif;overflow:auto}
+.rs-workbench{--rs-bg:var(--bg,#0e1116);--rs-card:var(--card,#171b22);--rs-tx:var(--tx,#e8ebf0);--rs-mut:var(--mut,#98a2b3);--rs-bd:var(--bd,#262c36);width:min(1100px,96vw);height:min(900px,94dvh);max-height:94dvh;max-width:1100px;padding:0;border:1px solid var(--rs-bd);border-radius:18px;background:var(--rs-bg);color:var(--rs-tx);font:14px/1.5 system-ui,sans-serif;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .rs-workbench::backdrop{background:rgba(0,0,0,.65)}
 .rs-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px 12px;background:var(--rs-card)}
 .rs-header small{font-size:10px;letter-spacing:.12em;color:var(--ac)}.rs-header h2{font-size:20px;margin:2px 0}
-.rs-workbench .rs-tabs{position:sticky;top:0;inset-inline:auto;bottom:auto;z-index:2;display:flex;gap:4px;justify-content:flex-start;overflow-x:auto;padding:8px 18px;background:var(--rs-card);border-bottom:1px solid var(--rs-bd)}
-.rs-workbench .rs-tabs button{flex:none;font:inherit;font-size:13px;padding:8px 12px;white-space:nowrap;color:var(--rs-mut);border:1px solid transparent}
+.rs-workbench .rs-tabs{position:static;inset-inline:auto;bottom:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;overflow:visible;padding:8px 18px;background:var(--rs-card);border-bottom:1px solid var(--rs-bd)}
+.rs-workbench .rs-tabs button{min-width:0;font:inherit;font-size:13px;padding:10px;text-align:left;white-space:normal;color:var(--rs-mut);border:1px solid transparent}
 .rs-workbench .rs-tabs [aria-current=page]{color:var(--ac);border-color:var(--ac);background:color-mix(in srgb,var(--ac) 9%,var(--rs-bg))}
 .rs-content{padding:18px 22px 28px}.rs-button{font:inherit;background:var(--rs-card);color:var(--rs-tx);border:1px solid var(--rs-bd);border-radius:8px;padding:8px 12px;cursor:pointer;min-height:36px}.rs-button:disabled{opacity:.5;cursor:wait}
 .rs-workbench :focus-visible{outline:2px solid var(--ac);outline-offset:3px}.rs-controls{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin-bottom:16px}.rs-controls label{flex:1 1 130px;max-width:260px;color:var(--rs-mut);font-size:12px}.rs-controls input,.rs-controls select{font-size:16px;padding:9px;min-width:0;width:100%;background:var(--rs-card);color:var(--rs-tx)}
@@ -187,7 +187,7 @@ body.trmon .g9help{font-size:11px;margin:4px 0}
 @media(max-width:640px){.rs-workbench{margin:0;width:100%;max-width:100%;height:100dvh;max-height:100dvh;border:0;border-radius:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}.rs-header{padding:14px 14px 10px}.rs-header h2{font-size:18px}.rs-content{padding:14px}.rs-workbench .rs-tabs{padding:8px 12px}.rs-kpis{grid-template-columns:1fr}.rs-kpis>div{display:flex;justify-content:space-between;align-items:center;gap:12px}.rs-kpis b{font-size:18px}.rs-controls label{max-width:none}.rs-table th,.rs-table td{padding:9px 8px}.rs-title b{font-size:24px}}
 
 html:root body .rs-workbench .rs-header h2{font-size:20px;line-height:1.25;text-transform:none;letter-spacing:-.02em;color:var(--tx);margin:3px 0}
-html:root body .rs-workbench .rs-tabs{display:flex;position:sticky;top:0;left:auto;right:auto;bottom:auto;visibility:visible;height:auto;width:auto}
+html:root body .rs-workbench .rs-tabs{display:grid;position:static;top:auto;left:auto;right:auto;bottom:auto;visibility:visible;height:auto;width:auto}
 html:root body .rs-workbench .rs-tabs .rs-button{font:600 13px/1.4 system-ui,sans-serif;min-height:38px}
 @media(max-width:640px){html:root body .rs-workbench .rs-header h2{font-size:18px}}
 
@@ -195,3 +195,20 @@ html:root body .rs-workbench .rs-header h2{font-size:20px!important;font-weight:
 html:root body .rs-workbench .rs-table th:first-child{white-space:normal;min-width:120px;max-width:160px;text-transform:none;letter-spacing:0}
 .rs-controls label:has(input[name=tickers]){flex-basis:100%;max-width:none}
 @media(max-width:640px){html:root body .rs-workbench .rs-header h2{font-size:18px!important}.rs-table th,.rs-table td{font-size:11px;padding:9px 6px}.rs-table td{min-width:78px}.rs-workbench .rs-tabs{scrollbar-width:none}.rs-workbench .rs-tabs::-webkit-scrollbar{display:none}}
+
+/* Pesquisa aprofundada v302: seções recolhíveis dentro da ficha, sem barras paralelas. */
+html:root body #mdr2 .pro-menu-group [data-research-menu]{display:block;width:100%;text-align:left;min-height:44px;border:0;border-radius:8px;padding:10px 12px 10px 48px;background:none;color:var(--tx);font:13px/1.5 system-ui,sans-serif;cursor:pointer}
+.ra-section>summary{padding:6px 0}.ra-scenario{border:1px solid var(--bd);border-radius:10px;margin:12px 0;padding:12px}.ra-scenario legend{font-size:13px;font-weight:650;padding:0 6px;color:var(--tx)}.ra-section h4{font:650 14px/1.5 system-ui,sans-serif;letter-spacing:0;text-transform:none;margin:18px 0 8px}.ra-thesis-text{white-space:pre-wrap;overflow-wrap:anywhere}.ra-exposure{padding:14px 0;border-top:1px solid var(--bd)}.ra-section textarea{min-height:90px;font-size:16px}.ra-section a{color:var(--ac)}
+
+/* v303: explanatory navigation and one scroll owner for overlays. */
+html.ui-overlay-root,body.ui-overlay-open{overscroll-behavior:none}
+body.ui-overlay-open{overflow:hidden!important}
+html:root body :is(.rs-workbench,.wf-dialog,.pfmd,#sh .ov){overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
+.rs-tabs small{display:block;font-size:11px;font-weight:400;line-height:1.45;color:var(--rs-mut);margin-top:3px}
+.rs-intro{padding:0 0 12px;border-bottom:1px solid var(--rs-bd);margin-bottom:18px}.rs-intro h3{font-size:17px;letter-spacing:0;text-transform:none;color:var(--rs-tx);margin:0}.rs-intro p{margin-bottom:0}
+.rs-mobile-comparison{display:none}.rs-mobile-comparison dl{margin:10px 0}.rs-mobile-comparison dl>div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--rs-bd)}.rs-mobile-comparison dt{color:var(--rs-mut)}.rs-mobile-comparison dd{margin:0;font-variant-numeric:tabular-nums;text-align:right;flex-shrink:0}
+.rs-comparison-table>summary{cursor:pointer;font-size:12px;color:var(--rs-mut)}
+.cr-audit-alert{margin:12px 0;padding:14px;border:1px solid var(--bd);border-left:3px solid #d9a52b;border-radius:10px;background:var(--card)}.cr-audit-alert h3{margin:0;text-transform:none;color:var(--tx);font-size:15px;letter-spacing:0}.cr-audit-alert p,.cr-audit li p{font-size:13px;line-height:1.6}.cr-audit li{margin-bottom:16px}.cr-audit{scroll-margin-top:100px}.cr-unavailable{font-size:16px!important}html:root body #app .pfk>small{display:block;font-size:11px;line-height:1.5;color:var(--mut);margin-top:6px}
+html:root body #mdr2 .pro-menu-group [data-flow-menu]{display:block;width:100%;text-align:left;min-height:44px;border:0;border-radius:8px;padding:10px 12px 10px 48px;background:none;color:var(--tx);font:13px/1.5 system-ui,sans-serif;cursor:pointer}
+html:root body .wf-chat-panel{overscroll-behavior:contain;max-height:calc(100dvh - 100px - env(safe-area-inset-top,0px));}.wf-chat-panel>header{flex:none}.wf-chat-history{min-height:0;touch-action:pan-y}.wf-chat-panel form{overscroll-behavior:contain}
+@media(max-width:640px){html:root body .rs-workbench .rs-tabs{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px 14px}.rs-mobile-comparison{display:block}.rs-comparison-table{margin:18px 0}.rs-controls input[type=date]{max-width:100%;min-width:0}.rs-controls label{min-width:0}html:root body .wf-chat-panel{right:8px;left:8px;width:auto;bottom:calc(76px + env(safe-area-inset-bottom,0px));height:calc(100dvh - 100px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}}

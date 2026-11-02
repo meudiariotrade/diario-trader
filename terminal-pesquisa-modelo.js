@@ -21,7 +21,7 @@
   const series=data.sec?.anos?.length?data.sec.anos:data.balancos?.anos||[];
   const annual=series.filter(r=>Number.isInteger(+r.ano)).map(r=>({date:String(r.ano),revenue:num(r.receita),profit:num(r.lucro_liquido)})).sort((a,b)=>a.date.localeCompare(b.date));
   return {ticker:ticker(tk),name:t.description||meta.nome||ticker(tk),sector:data.yahoo?.perfil?.setor||t.sector||meta.setor||'Não informado',metric,origin,annual,
-   currency:data.br===false?'USD':data.br===true?'BRL':/\d$/.test(ticker(tk))?'BRL':'USD',queried:data.em||null,accountingRef:f.ref||f.data_referencia||null,
+   financialCurrency:data.sec?.anos?.length?'USD':data.yahoo?.moeda_contabil||'moeda contábil não confirmada',currency:data.br===false?'USD':data.br===true?'BRL':/\d$/.test(ticker(tk))?'BRL':'USD',queried:data.em||null,accountingRef:f.ref||f.data_referencia||null,
    sources:data.fontes||[],peers:data.pares||[],error:data.error||null};
  }
  function screen(rows,filters={}){
