@@ -24,10 +24,18 @@
   const icon = name => window.icoSvg ? window.icoSvg(name) : '';
   const link = ([route,name],cls='') => `<button type="button" class="${cls}" data-navroute="${safe(route)}"${current()===route?' aria-current="page"':''}>${safe(name)}</button>`;
   function menu(panel) {
-    panel.innerHTML = `<div class="pro-menu-header"><div><small>DIÁRIO DE TRADER</small><b>Seu espaço de trabalho</b></div><button type="button" data-m2="x" aria-label="Fechar menu">×</button></div>
+    panel.innerHTML = `<div class="pro-menu-header"><div><small>DIÁRIO DE TRADER</small><b>Seu espaço de trabalho</b></div><button type="button" data-navclose aria-label="Fechar menu">×</button></div>
       <label class="pro-menu-search">Encontrar função<input type="search" data-navsearch placeholder="Diário, sazonalidade, risco…" autocomplete="off"></label>
       <div class="pro-menu-groups">${groups.map(group=>`<details class="pro-menu-group" data-navgroup="${group.id}"${activeGroup()===group.id?' open':''}><summary><span class="pro-menu-icon">${icon(group.icon)}</span><span><b>${group.name}</b><small>${group.description}</small></span></summary><div>${group.items.map(item=>link(item)).join('')}</div></details>`).join('')}</div>
       <p class="pro-menu-note">Diário e checklist no centro. Ferramentas agrupadas por tarefa.</p>`;
+    panel.querySelector('[data-navclose]')?.addEventListener('click',event=>{
+      event.preventDefault();event.stopPropagation();
+      const desktop=document.body.classList.contains('pc');
+      document.body.classList.remove('pcmenu','trmenu');
+      document.body.style.overflow='';
+      if(!desktop){document.getElementById('mdr2')?.remove();document.getElementById('mdr')?.remove()}
+      document.getElementById(desktop?'pcmenub':'mbtn')?.focus();
+    });
     panel.querySelector('[data-navsearch]')?.addEventListener('input',event=>{
       const query=event.target.value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
       panel.querySelectorAll('[data-navgroup]').forEach(element=>{
@@ -42,6 +50,8 @@
     });
   }
   window.DIARIO_NAV = {groups,marketGroups,menu,navigate};
+  const existingMenu=document.querySelector?.('#mdr2 .pn');
+  if(existingMenu)menu(existingMenu);
   // As abas internas seguem os mesmos grupos do menu, sem taxonomia paralela.
   grpHeader = function(route) {
     const group=groups.find(g=>g.items.some(([key])=>key===route));

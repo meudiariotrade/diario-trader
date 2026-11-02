@@ -88,12 +88,29 @@
   function batchesHtml(){
     return `<section class="card"><h2>Lotes de importação</h2><p class="wf-note">Até 30 lotes recentes. Desfazer preserva operações que você editou depois da importação.</p>${(config().importBatches||[]).slice().reverse().map(batch=>`<div class="wf-batch"><b>${safe(batch.name||'Importação CSV')}</b><p>${new Date(batch.at).toLocaleString('pt-BR')} · ${batch.items.length} alteração(ões)</p>${batch.undoneAt?`<p>Desfeito: ${batch.result.removed} removida(s), ${batch.result.restored} restaurada(s), ${batch.result.skipped.length} preservada(s) por alteração posterior.</p>`:`<button class="btn s" data-wf="undo-batch" data-id="${safe(batch.id)}">Desfazer este lote</button>`}</div>`).join('')||'<p>Nenhum lote registrado nesta versão.</p>'}</section>`;
   }
+  function homePreferences(){
+    const current=config().home;
+    if(current)return current;
+    const legacy=S.ax?.['home.layout'];
+    return legacy?{order:legacy.ordem||[],hidden:legacy.ocultos||[]}:null;
+  }
   function homeSettings(){
-    const nodes=[...document.querySelectorAll('#app [data-hb]')],keys=[...new Set(nodes.map(n=>n.dataset.hb))],saved=config().home||{},order=[...(saved.order||[]).filter(k=>keys.includes(k)),...keys.filter(k=>!saved.order?.includes(k))];
-    dialog('Organizar a tela inicial',`<p class="wf-note">Rotina e avisos de risco permanecem acessíveis. Reordene e oculte os módulos opcionais.</p><div id="wf-home-order">${order.map(key=>`<div class="wf-home-row" data-home-key="${safe(key)}"><label><input type="checkbox"${!saved.hidden?.includes(key)?' checked':''}${['posso','lim','venc'].includes(key)?' disabled':''}> ${safe(nodes.find(n=>n.dataset.hb===key)?.querySelector('h2,b')?.textContent?.slice(0,70)||key)}</label><button class="btn s" data-wf="home-up" aria-label="Mover para cima">↑</button><button class="btn s" data-wf="home-down" aria-label="Mover para baixo">↓</button></div>`).join('')}</div><button class="btn" data-wf="home-save">Salvar organização</button>`);
+    const nodes=[...document.querySelectorAll('#app [data-hb]')],keys=[...new Set(nodes.map(n=>n.dataset.hb))],saved=homePreferences()||{},order=[...(saved.order||[]).filter(k=>keys.includes(k)),...keys.filter(k=>!saved.order?.includes(k))];
+    dialog('Organizar a tela inicial',`<p class="wf-note">Rotina e avisos de risco permanecem acessíveis. Reordene e oculte os módulos opcionais.</p><div id="wf-home-order">${order.map(key=>`<div class="wf-home-row" data-home-key="${safe(key)}"><label><input type="checkbox"${!saved.hidden?.includes(key)?' checked':''}${['posso','lim','venc'].includes(key)?' disabled':''}> ${safe((typeof HB_NOMES!=='undefined'&&HB_NOMES[key])||nodes.find(n=>n.dataset.hb===key)?.querySelector('h2,b')?.textContent?.slice(0,70)||key)}</label><button class="btn s" data-wf="home-up" aria-label="Mover para cima">↑</button><button class="btn s" data-wf="home-down" aria-label="Mover para baixo">↓</button></div>`).join('')}</div><button class="btn" data-wf="home-save">Salvar organização</button>`);
   }
   function applyHome(root){
-    const prefs=config().home;if(!prefs)return;const parents=new Map;
+    root.querySelector('#hb-fim')?.remove();
+    const prefs=homePreferences();
+    if(!prefs){
+      const optional=[...root.querySelectorAll('[data-hb]')].filter(node=>['en','cap','metas'].includes(node.dataset.hb)&&node.textContent.trim());
+      if(optional.length){
+        const box=document.createElement('details');box.className='home-secondary';
+        box.innerHTML='<summary>Patrimônio, metas e estudos</summary><p>Módulos complementares. Use Organizar início para escolher sua disposição.</p>';
+        optional[0].before(box);optional.forEach(node=>box.append(node));
+      }
+      return;
+    }
+    const parents=new Map;
     root.querySelectorAll('[data-hb]').forEach(node=>{const key=node.dataset.hb;node.hidden=!['posso','lim','venc'].includes(key)&&prefs.hidden?.includes(key);const list=parents.get(node.parentNode)||[];list.push(node);parents.set(node.parentNode,list)});
     for(const [parent,nodes] of parents){const marker=document.createComment('home-order');parent.insertBefore(marker,nodes[0]);const order=prefs.order||[];nodes.sort((a,b)=>(order.indexOf(a.dataset.hb)<0?999:order.indexOf(a.dataset.hb))-(order.indexOf(b.dataset.hb)<0?999:order.indexOf(b.dataset.hb))).forEach(n=>parent.insertBefore(n,marker));marker.remove()}
   }
@@ -141,7 +158,7 @@
     if(action==='template-save'||action==='template-apply'){const key=$('#wf-template').value,template={name:M.templates[key].name,plano:$('#wf-template-plan').value,pre:$('#wf-template-pre').value};if(action==='template-save')(config().templates??={})[key]=template;else{const parent=(days()[D]||(S.days[D]={chk:{}})),day=typeof MDM!=='undefined'&&MDM==='us'?(parent.us??={chk:{}}):parent;M.applyTemplate(day,template);parent.u=Date.now()}save();$('#wf-dialog')?.close();render();return}
     if(action==='undo-batch'){const batch=config().importBatches?.find(b=>b.id===id);if(!batch||!confirm('Desfazer alterações deste lote que não foram editadas depois?'))return;const result=M.undoBatch(S,batch);save();render();toast(`${result.removed} removida(s), ${result.restored} restaurada(s), ${result.skipped.length} preservada(s).`);return}
     if(action==='home-up'||action==='home-down'){const row=button.closest('[data-home-key]');if(action==='home-up'&&row.previousElementSibling)row.parentNode.insertBefore(row,row.previousElementSibling);else if(action==='home-down'&&row.nextElementSibling)row.parentNode.insertBefore(row.nextElementSibling,row);return}
-    if(action==='home-save'){const rows=[...document.querySelectorAll('#wf-home-order [data-home-key]')];config().home={order:rows.map(r=>r.dataset.homeKey),hidden:rows.filter(r=>!r.querySelector('input').checked).map(r=>r.dataset.homeKey)};save();$('#wf-dialog')?.close();render();return}
+    if(action==='home-save'){const rows=[...document.querySelectorAll('#wf-home-order [data-home-key]')];config().home={order:rows.map(r=>r.dataset.homeKey),hidden:rows.filter(r=>!r.querySelector('input').checked).map(r=>r.dataset.homeKey)};S.ax['home.layout']={ordem:config().home.order,ocultos:config().home.hidden};save();$('#wf-dialog')?.close();render();return}
     if(action==='journal-save'){config().journal={mode:$('#wf-journal-mode').value,tickers:$('#wf-journal-tickers').value.split(',').map(t=>t.trim().toUpperCase()).filter(Boolean),hidden:[...document.querySelectorAll('[data-journal-editor]')].filter(e=>!e.checked).map(e=>e.dataset.journalEditor)};save();$('#wf-dialog')?.close();toast('Preferências do PDF salvas.');return}
     if(action==='status'){tab='status';$('#wf-dialog')?.close();render()}
   },true);

@@ -1,6 +1,12 @@
 /* Inicialização: armazenamento de demonstração isolado e rede bloqueada no demo. */
 (function(root){
   'use strict';
+  // O banco pode responder antes de os scripts seguintes serem executados.
+  // Só libera a primeira leitura depois de todos os módulos declarados no HTML.
+  root.APP_MODULES_READY=new Promise(resolve=>{
+    if(root.document?.readyState==='loading')root.document.addEventListener('DOMContentLoaded',resolve,{once:true});
+    else resolve();
+  });
   const demo=new URLSearchParams(root.location?.search||'').get('demo')==='1';root.DIARIO_DEMO=demo;
   let nativeStorage;try{nativeStorage=root.localStorage}catch{}
   if(!demo){root.CLOUD_OK=1;root.APP_STORAGE=nativeStorage||{getItem:()=>null,setItem(){},removeItem(){}};root.APP_DEMO_READY=Promise.resolve();return}

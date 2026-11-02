@@ -1,8 +1,50 @@
-# Diário de Trader — revisão v286
+# Diário de Trader — revisão v290
 
 Aplicativo estático publicado no GitHub Pages, com backend no Supabase. As credenciais privadas dos provedores ficam nos Secrets do Supabase.
 
-## Revisão v286 — diário, conversa e pesquisa
+
+## Revisão v290 — estrutura e confiabilidade da manutenção
+
+- Fontes do legado organizadas em 26 arquivos legíveis, com ordem de montagem explícita; app.js e sw.js gerados e verificados.
+- Mapa de depuração com referência às fontes; dependências de desenvolvimento fixadas; workflow de testes sem acesso de escrita ou credenciais de produção.
+- Imagens editoriais extraídas sem recompressão; aplicativo principal reduzido em aproximadamente 190 KB em relação à v289.
+- Limites automáticos para impedir novos aumentos de substituições de funções e estilos históricos. O legado global ainda precisa de migração gradual.
+- Versões e hashes coerentes; fontes PDF e imagens essenciais passam a integrar a instalação atômica. Publicação com recurso essencial ausente não é ativada.
+- Avaliação de regras permanece no Depois, com instruções coerentes; botão do aviso de stop com cores explícitas e legíveis.
+- Um único editor visível para organizar o início, com preservação das preferências antigas. Patrimônio, metas e estudos recolhidos por padrão quando não existe organização personalizada.
+
+Instalação recomendada: extrair o ZIP principal `v290-github.zip` e enviar seu conteúdo à raiz, preservando as subpastas. Os dois ZIPs separados são alternativas para atualização e manutenção. Para manter fontes, ferramentas e testes no GitHub, enviar também o ZIP complementar de manutenção. Nenhum deles altera o Supabase automaticamente. O complemento contém referências locais do backend para os testes.
+
+Veja [manutenção](docs/MANUTENCAO.md) e [índice das fontes](docs/FONTES.md). A v290 está validada localmente; publicação direta bloqueada pela permissão da integração GitHub (403). Não considerar esta revisão instalada até enviar os arquivos e conferir o site.
+
+Os registros abaixo são históricos e descrevem o estado de cada entrega à época. A orientação fundamentalista da função analise v288 foi posteriormente publicada com autorização do usuário; não é uma pendência de implantação da v290.
+
+## Revisão v289 — revista técnica de fim de semana
+
+O fluxo principal do Jornal e seu botão PDF agora abrem a revista técnica no fim de semana. IBOV, dólar à vista e ações têm estudos diários/semanais, níveis e cenários calculados. WIN e WDO usam seção própria com snapshot real do contrato, sem rotular dados à vista como futuro. Notícias não são geradas nessa edição. Não exige nova Edge Function e não consome cota de IA no novo carregamento. Ver docs/REVISAO-v289.md para cobertura, limites e verificações.
+
+Atualização mínima comparada com o GitHub, incluindo só arquivos de execução necessários. Testes visuais no iPhone e ensaio das fontes com sessão real ainda devem ser conferidos após instalar.
+
+## Histórico — Revisão v288 — posição, proventos e pesquisa patrimonial
+
+A IA tratada nesta revisão é a de Carteiras, com análise consolidada e por ativo. A Economista flutuante continua separada. A ficha de posição recebe os dados gerenciais da referência enviada pelo usuário; a análise abre com gráficos de evolução/renda e exporta PDF próprio, sem candles. Receita e lucro anuais aparecem quando disponíveis no relatório individual. Não presume proventos nem histórico onde faltam dados.
+
+A atualização do prompt da Edge Function está preparada, mas foi bloqueada pela revisão automática e ainda não foi publicada. O pacote GitHub não inclui código do backend. A interface utiliza os relatórios existentes; a nova orientação fundamentalista depende da autorização específica para publicar a função analise em produção. Veja docs/REVISAO-v288.md.
+
+Testes: 13 suítes e ensaio DOM; PDF demonstrativo de cinco páginas renderizado e revisado. Testes visuais em iPhone e sincronização real continuam pendentes. Dados reais não foram usados no PDF de demonstração.
+
+## Histórico — Revisão v287 — Monitor, EWZ/ADRs e navegação
+
+- Monitor usa a tela atual de cotações (`cq`), sem o redirecionamento legado para Juros. O endereço antigo `cot` funciona como alias.
+- Quatro áreas: Panorama; Informação (jornal, notícias, agenda); Estudos; Monitor. A barra amarela paralela é removida dessas telas; o terminal permanece acessível no cabeçalho.
+- EWZ e ADRs ficam dentro do Monitor, com a mesma lista personalizada e o mesmo cache usados pela imagem do panorama. Um atalho permanente aparece no início e no panorama.
+- Atualização autenticada, pedidos simultâneos compartilhados e recarga com a lista aberta. Falhas preservam a data da consulta anterior. Consulta recente não é apresentada como prova de cotação em tempo real.
+- Captura força consulta do panorama e ADRs, mantém as cargas auxiliares de agenda/balanços, mostra as referências e exige confirmação para usar dados antigos ou parciais em caso de falha.
+- A implementação não altera Edge Functions, RLS ou dados da conta. Há teste DOM offline do clique Monitor, alias legado, atalho, lista compartilhada, erro de consulta sem adulterar data e cancelamento da captura. Ensaio visual em iPhone/navegador real permanece pendente.
+
+**Pacote mínimo:** comparar hashes com o GitHub atual e enviar somente arquivos de execução novos/alterados. O repositório foi conferido já na v286; faltava a pasta fonts. O ZIP v287 não inclui testes, documentação, código do backend nem arquivos idênticos aos publicados. Preservar a estrutura fonts/ ao enviar. Não apagar os demais arquivos do repositório.
+
+## Histórico — Revisão v286 — diário, conversa e pesquisa
 
 - Economista IA em conversa flutuante entre telas. Contexto opcional inclui somente tela, data e ativo; saldos e textos do diário não são anexados. Usa a análise autenticada e a cota existentes.
 - Busca global de operações, notas, diário Brasil/EUA, regras e livros. Modelos editáveis de day trade, swing e mercado americano preenchem apenas campos vazios.
