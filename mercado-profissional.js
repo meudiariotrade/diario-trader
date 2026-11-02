@@ -1,7 +1,7 @@
 /* Navegação única e estudos dos EUA. Integra as telas existentes. */
 (() => {
   'use strict';
-  FN_ESPERADA.macro = 'v285';
+  FN_ESPERADA.macro = 'v296';
   const groups = [
     {id:'home',name:'Início',icon:'home',description:'Resumo e rotina de hoje',items:[['home','Visão do dia']]},
     {id:'diario',name:'Diário',icon:'book',description:'Preparação, registro e revisão',items:[['dia:ed','Meu dia e checklist'],['dia:hist','Histórico do diário'],['regras','Minhas regras']]},

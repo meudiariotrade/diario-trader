@@ -2,15 +2,15 @@
 html:root {
   --bg:#f3f5f7;--card:#fff;--tx:#18232d;--mut:#536575;--bd:#d8e0e6;
   --ac:#087846;--g:#087846;--r:#bd343b;--surface-raised:#edf2f5;
-  --radius-card:16px;--space-card:20px;color-scheme:light;
+  --amber:#896000;--radius-card:16px;--space-card:20px;color-scheme:light;
 }
 html:root[data-theme=dark] {
   --bg:#0c1117;--card:#131b24;--tx:#edf2f7;--mut:#a1b0c0;--bd:#293748;
-  --ac:#46d992;--g:#46d992;--r:#ff858c;--surface-raised:#1a2531;color-scheme:dark;
+  --ac:#46d992;--g:#46d992;--r:#ff858c;--surface-raised:#1a2531;--amber:#f0b429;color-scheme:dark;
 }
 @media(prefers-color-scheme:dark){html:root:not([data-theme=light]){
   --bg:#0c1117;--card:#131b24;--tx:#edf2f7;--mut:#a1b0c0;--bd:#293748;
-  --ac:#46d992;--g:#46d992;--r:#ff858c;--surface-raised:#1a2531;color-scheme:dark;
+  --ac:#46d992;--g:#46d992;--r:#ff858c;--surface-raised:#1a2531;--amber:#f0b429;color-scheme:dark;
 }}
 html:root body {font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);-webkit-text-size-adjust:100%}
 /* Atualizações de cotações não devem reiniciar a animação de entrada da página. */
@@ -50,7 +50,7 @@ html:root body #app .calendar-heading button{min-width:44px;min-height:44px;flex
 html:root body #app .home-secondary{margin:20px 0;border:1px solid var(--bd);border-radius:14px;background:var(--card)}
 html:root body #app .home-secondary>summary{padding:16px;min-height:48px;color:var(--tx)}
 html:root body #app .home-secondary>p{margin:0 16px 16px;color:var(--mut);font-size:13px}
-html:root body #app .pf{--pb:var(--bg);--pc:var(--card);--pt:var(--tx);--pm:var(--mut);--pd:var(--bd);--pg:var(--g);--pr:var(--r)}
+html:root body #app .pf{--pb:var(--bg);--pc:var(--card);--pc2:var(--surface-raised);--pa:var(--amber);--pt:var(--tx);--pm:var(--mut);--pd:var(--bd);--pg:var(--g);--pr:var(--r)}
 html:root body #app .pf :is(.pfc,.pfk,.cr-position){border-radius:14px;border-color:var(--bd);box-shadow:none}
 html:root body #app .pf>.pfks{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible!important;gap:10px}
 html:root body #app .pf>.pfks .pfk{min-width:0;padding:14px;flex:initial}
@@ -122,3 +122,35 @@ body.trmon .g9help{line-height:1.5;color:#a6afb9;margin:8px 0}
 .cqr>.quote-reference{grid-column:1/-1;width:100%;text-align:left}
 
 body.trmon .g9leg{white-space:normal!important;line-height:1.6;height:auto;overflow-wrap:anywhere}
+
+/* Padrão das telas de apoio: os módulos conservam suas regras e seus dados. */
+html:root{--card2:var(--surface-raised);--bd2:var(--bd);--ac2:color-mix(in srgb,var(--ac) 12%,var(--card));--ui-control-height:44px;--ui-line-height:1.55}
+html:root body #app.ui-standard-screen{overflow-wrap:break-word}
+html:root body #app.ui-standard-screen :is(h1,h2,h3){text-wrap:balance}
+html:root body #app.ui-standard-screen h2{font-size:19px;line-height:1.35;text-transform:none;letter-spacing:-.015em;color:var(--tx);margin:24px 0 12px}
+html:root body #app.ui-standard-screen h3{font-size:13px;line-height:1.45;letter-spacing:.035em}
+html:root body #app.ui-standard-screen :is(.top,.pfacts,.trrow){flex-wrap:wrap;row-gap:10px}
+html:root body #app.ui-standard-screen :is(.top,.g2,.g3,.kv,.tiles)>*{min-width:0}
+html:root body #app.ui-standard-screen :is(.seg,.chips2,.pro-subtabs,.pro-tabs){scrollbar-width:thin;scroll-padding-inline:8px}
+html:root body #app.ui-standard-screen :is(.seg,.chips2,.pro-subtabs,.pro-tabs) button{line-height:1.35;min-height:var(--ui-control-height)}
+html:root body #app.ui-standard-screen :is(.btn,.pfbt){white-space:normal;text-align:center;max-width:100%;overflow-wrap:anywhere}
+html:root body #app.ui-standard-screen label{line-height:1.5}
+html:root body #app.ui-standard-screen :is(.warn,.warning){line-height:1.6;overflow-wrap:anywhere}
+html:root body :is(.sh,.pfmodal,.wf-content){line-height:var(--ui-line-height)}
+html:root body :is(.sh,.pfmodal,.wf-content) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){max-width:100%;min-height:var(--ui-control-height);border-color:var(--bd)}
+html:root body :is(.sh,.pfmodal,.wf-content) .x{min-width:44px;min-height:44px;flex:none}
+html:root body :is(.sh,.pfmodal,.wf-content) textarea{min-height:108px;line-height:1.6}
+.ui-table-scroll{max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin;margin:10px 0 14px;border:1px solid var(--bd);border-radius:10px;isolation:isolate}
+.ui-table-scroll>table{margin:0;width:100%;font-variant-numeric:tabular-nums}
+.ui-table-scroll :is(td,th){padding:11px 10px;font-size:12px;line-height:1.5;vertical-align:top}
+.ui-table-scroll th{background:var(--card2,var(--card));color:var(--mut);font-weight:650}
+.ui-table-scroll tbody tr:nth-child(even){background:color-mix(in srgb,var(--mut) 4%,transparent)}
+.ui-table-scroll tbody tr:last-child td{border-bottom:0}
+.ui-table-scroll .num{white-space:nowrap}
+.ui-table-wide>table{min-width:620px}
+@media(min-width:980px){html:root body #app.ui-standard-screen{max-width:1180px}.ui-table-scroll :is(td,th){font-size:13px;padding:12px}}
+@media(max-width:640px){html:root body #app.ui-standard-screen .g3{grid-template-columns:repeat(2,minmax(0,1fr))}html:root body #app.ui-standard-screen .card{padding:16px}html:root body :is(.sh,.pfmodal,.wf-content) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){font-size:16px}}
+@media(max-width:380px){html:root body #app.ui-standard-screen :is(.g2,.g3){grid-template-columns:minmax(0,1fr)}html:root body #app.ui-standard-screen h1{font-size:24px}html:root body #app.ui-standard-screen .top>.btn{flex-grow:1}}
+/* Campos da mesma linha mantêm a base alinhada, mesmo com rótulos de duas linhas. */
+html:root body #app.ui-standard-screen :is(.g2,.g3)>label:has(>input:not([type=checkbox]):not([type=radio]):not([type=range])),html:root body #app.ui-standard-screen :is(.g2,.g3)>label:has(>select){display:flex;flex-direction:column;gap:6px}
+html:root body #app.ui-standard-screen :is(.g2,.g3)>label>input:not([type=checkbox]):not([type=radio]):not([type=range]),html:root body #app.ui-standard-screen :is(.g2,.g3)>label>select{margin-top:auto}
