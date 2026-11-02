@@ -1,0 +1,1 @@
+{"name":"diario-trader","version":"286.0.0","private":true,"scripts":{"test":"node scripts/testar.cjs && node tests/interface-dom.cjs"},"devDependencies":{"fake-indexeddb":"6.0.0","jsdom":"26.1.0"}}

@@ -3,7 +3,7 @@
   'use strict';
   const copy=v=>v===undefined?undefined:JSON.parse(JSON.stringify(v));
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
-  const ignored=new Set(['_fc','_conflicts','_resolved','u']);
+  const ignored=new Set(['_fc','_conflicts','_resolved','_history','_events','u']);
   const safePath=p=>Array.isArray(p)&&p.length>0&&p.length<30&&p.every(k=>typeof k==='string'&&!['__proto__','prototype','constructor'].includes(k));
   let baseline=null, device='local';
   try {device=root.localStorage?.getItem('diario-device-v285')||('d'+Date.now().toString(36)+Math.random().toString(36).slice(2));root.localStorage?.setItem('diario-device-v285',device)}catch{}
@@ -35,6 +35,7 @@
   }
   function mergeDay(a={},b={}) {
     const av=leaves(a),bv=leaves(b),out={u:Math.max(a.u||0,b.u||0),_fc:{}};
+    if(root.TraderModel){out._history=root.TraderModel.union(a._history,b._history,50);out._events=root.TraderModel.union(a._events,b._events,100)}
     out._resolved={...(a._resolved||{})};
     for(const [id,at] of Object.entries(b._resolved||{}))out._resolved[id]=Math.max(out._resolved[id]||0,+at||0);
     const conflicts=new Map([...(a._conflicts||[]),...(b._conflicts||[])].filter(x=>x&&x.id).map(x=>[x.id,copy(x)]));

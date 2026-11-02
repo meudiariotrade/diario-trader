@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const labels={plano:'Plano',resumo:'Resumo',aprend:'Aprendizado',pre:'Ensaio mental',bem:'O que fiz bem',chk:'Checklist',us:'EUA'};
-  const focused=()=>{try{return localStorage.getItem('diario-foco')==='1'}catch{return false}};
+  const focused=()=>{try{return APP_STORAGE.getItem('diario-foco')==='1'}catch{return false}};
   function decorate() {
     const root=document.getElementById('app');if(!root)return;
     root.classList.toggle('diary-focus',tab==='dia'&&focused());
@@ -28,5 +28,5 @@
     });root.prepend(panel);
   }
   const before=render0;render0=function(){const result=before.apply(this,arguments);decorate();return result};
-  document.addEventListener('click',event=>{if(!event.target.closest('[data-diary-focus]'))return;const active=focused();try{localStorage.setItem('diario-foco',active?'0':'1')}catch{toast('Não foi possível guardar a preferência neste aparelho.')}render()});
+  document.addEventListener('click',event=>{if(!event.target.closest('[data-diary-focus]'))return;const active=focused();try{APP_STORAGE.setItem('diario-foco',active?'0':'1')}catch{toast('Não foi possível guardar a preferência neste aparelho.')}render()});
 })();

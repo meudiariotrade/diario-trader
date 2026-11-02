@@ -1,8 +1,27 @@
-# Diário de Trader — revisão v285
+# Diário de Trader — revisão v286
 
 Aplicativo estático publicado no GitHub Pages, com backend no Supabase. As credenciais privadas dos provedores ficam nos Secrets do Supabase.
 
-## Revisão v285
+## Revisão v286 — diário, conversa e pesquisa
+
+- Economista IA em conversa flutuante entre telas. Contexto opcional inclui somente tela, data e ativo; saldos e textos do diário não são anexados. Usa a análise autenticada e a cota existentes.
+- Busca global de operações, notas, diário Brasil/EUA, regras e livros. Modelos editáveis de day trade, swing e mercado americano preenchem apenas campos vazios.
+- Operações ligadas ao diário da data, prints e avaliação declarada do processo. Regras capturadas no registro; até 50 versões anteriores e 100 eventos por registro, com restauração como nova edição.
+- Revisão semanal com uma ação para o plano da segunda seguinte. Comparação entre seguir o plano, quebrar regras e ausência de avaliação, com moedas separadas e tamanho da amostra.
+- Importação CSV com resumo da prévia e até 30 lotes recentes; desfazer preserva operações alteradas posteriormente. A captura de lotes não abrange importação automática do Profit.
+- Organização dos módulos opcionais do início; avisos essenciais continuam visíveis. Central de dados, fontes e datas disponíveis.
+- Demonstração em `?demo=1`: IndexedDB separado, preferências prefixadas, rede externa e conta real desativadas, dados fictícios identificados.
+- Botão **Relatórios**: pesquisa da carteira com fichas por ativo, fundamentos por classe, técnica, fontes, datas e lacunas. O botão de PDF da análise da carteira também abre o novo documento vetorial.
+- Revista do Pregão com estudos diários e semanais dos ativos selecionados e cenários condicionais mecânicos. Carregue os históricos antes de exportar. Não cria preços nem probabilidades; agenda depende da edição carregada.
+- Preferências do jornal diário: editorias, ativos e texto integral ou resumido. Fontes e paginação locais mantidas.
+
+**Entrega atual:** pacote v286 preparado e validado localmente; publicação no GitHub bloqueada pela revisão automática por limite de uso da integração. Nenhuma alteração adicional no Supabase é necessária para esta versão. O frontend v285 publicado pelo usuário foi usado como base, sem divergências nos arquivos sobrepostos na consulta inicial.
+
+**Testes:** `node scripts/testar.cjs` executa 12 suítes sem instalar dependências. Para ensaio DOM offline do aplicativo completo, `npm ci` e `npm test` (Node 24); são dependências somente de desenvolvimento. A checagem DOM não substitui testes visuais em iPhone/Safari e Chrome. Os PDFs demonstrativos foram gerados pelo mesmo código do app, renderizados e revisados.
+
+**Limites:** não inclui uma auditoria fiscal/contábil integral nem certificação de segurança. A análise fundamentalista depende dos indicadores e relatórios existentes; valuation completo exige demonstrações e premissas suficientes. Históricos começam após a instalação e não substituem backup. IA e carregamentos de mercado só ocorrem por ação do usuário nas ferramentas novas; os módulos legados mantêm seus carregamentos anteriores.
+
+## Histórico — revisão v285
 
 - Diário com relógios por campo: preserva edições independentes em aparelhos diferentes, incluindo checklist e contexto EUA. Conflitos do mesmo campo guardam as versões e aparecem para conferência e recuperação.
 - Gravação na nuvem com comparação atômica (CAS). Se a cópia mudou desde a leitura, o app recebe a versão atual, mescla e tenta novamente até três vezes; não usa sobrescrita sem comparação como fallback.
