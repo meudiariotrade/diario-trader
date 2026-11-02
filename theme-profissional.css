@@ -154,3 +154,20 @@ html:root body :is(.sh,.pfmodal,.wf-content) textarea{min-height:108px;line-heig
 /* Campos da mesma linha mantêm a base alinhada, mesmo com rótulos de duas linhas. */
 html:root body #app.ui-standard-screen :is(.g2,.g3)>label:has(>input:not([type=checkbox]):not([type=radio]):not([type=range])),html:root body #app.ui-standard-screen :is(.g2,.g3)>label:has(>select){display:flex;flex-direction:column;gap:6px}
 html:root body #app.ui-standard-screen :is(.g2,.g3)>label>input:not([type=checkbox]):not([type=radio]):not([type=range]),html:root body #app.ui-standard-screen :is(.g2,.g3)>label>select{margin-top:auto}
+
+/* Leitura compacta do mercado e mais espaço para o gráfico no celular. */
+html:root body #app .market-monitor .cqtabs{gap:4px;padding:4px;overflow-x:auto;flex-wrap:nowrap}
+html:root body #app .market-monitor .cqtabs button{flex:0 0 auto;min-height:40px;padding:7px 11px;font-size:12px}
+html:root body #app .market-monitor .cqr{display:grid;grid-template-columns:36px minmax(70px,1fr) auto auto 32px;gap:7px;padding:10px 0;align-items:center}
+html:root body #app .market-monitor .cqi{width:34px;height:34px;font-size:10px}
+html:root body #app .market-monitor .cqp,html:root body #app .market-monitor .cqv{font-variant-numeric:tabular-nums;text-align:right}
+html:root body #app .market-monitor .cqv{min-width:60px;padding:5px;font-size:12px}
+html:root body #app .market-monitor .cqn small{font-size:11px}
+html:root body #app .market-monitor .cqac{display:flex;flex-direction:column;align-items:center}
+html:root body #app .market-monitor [data-cqr]{min-width:44px;min-height:44px}
+body.trmon .g9cy{stroke:#9ca3af;stroke-width:.7;stroke-dasharray:4 4;pointer-events:none}
+body.trmon .g9cursor-price{fill:#fff;font-size:10px;paint-order:stroke;stroke:#111;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+body.trmon .g9bar{gap:4px;margin:5px 0}
+body.trmon .g9help{font-size:11px;margin:4px 0}
+@media(max-width:680px){body.trmon .trbar{gap:4px;padding:4px}body.trmon .trp.maxi .trpb{min-height:65vh}body.trmon .g9b{min-height:32px;padding:4px 7px}html:root body #app .market-monitor .card{padding:12px}}
+@media(max-width:350px){html:root body #app .market-monitor .cqr{grid-template-columns:30px minmax(55px,1fr) auto auto 28px;gap:4px}html:root body #app .market-monitor .cqi{width:29px;height:29px}html:root body #app .market-monitor .cqv{min-width:52px;font-size:11px}}
