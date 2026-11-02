@@ -140,8 +140,8 @@
     if(tab==='import'){root.insertAdjacentHTML('beforeend',batchesHtml());if(typeof IM!=='undefined'&&IM?.rows)root.insertAdjacentHTML('beforeend',`<p class="wf-note">Prévia: ${IM.rows.length} linha(s) agrupada(s), ${IM.dup?.size||0} duplicada(s), ${IM.off?.size||0} desmarcada(s), ${IM.upd?.size||0} atualização(ões). Confira a prévia acima antes de importar.</p>`)}
     root.querySelectorAll('.tcard[data-id],.card.row[data-a="edit"]').forEach(node=>{if(node.querySelector('[data-wf="trade"]'))return;const id=node.dataset.id;if(!id)return;node.insertAdjacentHTML('beforeend',`<button class="btn s wf-process-button" data-wf="trade" data-id="${safe(id)}">Diário e processo</button>`)});
   }
-  const previousRender=render0;render0=function(){const result=previousRender.apply(this,arguments);decorate();return result};
-  const previousSheet=showSheet;showSheet=function(){const result=previousSheet.apply(this,arguments);const sheet=$('#sh .sh');if(sheet&&T&&!isNew)sheet.insertAdjacentHTML('beforeend',`<div class="wf-actions"><button class="btn s" data-wf="trade" data-id="${safe(T.id)}">Diário, regras e linha do tempo</button></div>`);return result};
+  window.TraderUI.onRender('trader-fluxos',decorate);
+  window.TraderUI.onSheet('trader-fluxos',function(){const sheet=$('#sh .sh');if(sheet&&T&&!isNew)sheet.insertAdjacentHTML('beforeend',`<div class="wf-actions"><button class="btn s" data-wf="trade" data-id="${safe(T.id)}">Diário, regras e linha do tempo</button></div>`)});
   window.TraderWorkflow={beforeSave,reset,captureTrade,prepareJournal:edition=>M.journal(edition,config().journal),openSearch,quality,journalSettings,openTrade};
   document.addEventListener('change',event=>{if(event.target.id==='wf-week'){week=M.monday(event.target.value||today());render()}if(event.target.id==='impf')fileName=event.target.files?.[0]?.name||'Arquivo CSV'});
   window.addEventListener('click',event=>{

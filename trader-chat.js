@@ -58,10 +58,10 @@
   }
   build();
   const previousPaint=ecoPaint;ecoPaint=function(){previousPaint.apply(this,arguments);paint()};
-  const previousRender=render0;render0=function(){
-    const legacy=tab==='mercado'&&MKT.tab==='eco';if(legacy)MKT.tab='mu';const result=previousRender.apply(this,arguments);paint();
-    if(legacy)setOpen(true);return result;
-  };
+  window.TraderUI.onRender('trader-chat',{
+    before(){const legacy=tab==='mercado'&&MKT.tab==='eco';if(legacy)MKT.tab='mu';return legacy},
+    after(legacy){paint();if(legacy)setOpen(true)}
+  });
   try{for(const list of [HUB_M,...MGRP.map(g=>g[1])])for(let i=list.length-1;i>=0;i--)if((Array.isArray(list[i])?list[i][0]:list[i])==='mercado:eco')list.splice(i,1)}catch{}
   if(window.DIARIO_DEMO){for(const name of ['alEnable','alDisable','alTest'])try{window[name]=async()=>toast('Notificações reais desativadas na demonstração.')}catch{}const originalAccount=vConta;vConta=()=>'<h1>Demonstração</h1><p>Conta e sincronização real estão desativadas. Os exemplos usam um banco local separado.</p>'}
   window.TraderChat={open:()=>setOpen(true),close:()=>setOpen(false),paint,context};

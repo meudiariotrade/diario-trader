@@ -31,7 +31,7 @@
    }}
    if(window.PF.aba==='ia'&&!root.querySelector('.cr-research-intro')){const target=root.querySelector('.pf');if(target){const section=document.createElement('section');section.className='cr-research-intro pfc';section.innerHTML='<h3>Relatório patrimonial e fundamentalista</h3><p>Gere a análise consolidada pelos botões desta aba. Ao abrir o relatório, veja evolução, proventos e fichas por ativo; a exportação usa paginação própria.</p><button class="pfbt" data-cr="load">Carregar histórico e fundamentos</button>';target.append(section)}}
  }
- const previous=render0;render0=function(){const result=previous.apply(this,arguments);decorate();return result};
+ window.TraderUI.onRender('carteira-experiencia',decorate);
  window.addEventListener('click',async event=>{
    const button=event.target.closest('[data-cr]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();
    if(button.dataset.cr==='pdf'){const label=button.textContent;button.disabled=true;button.textContent='Carregando dados…';try{const input=await TraderReports.preparePortfolioInput();rpAbrir('Relatório patrimonial e fundamentalista','carteira-pesquisa-'+today()+'.pdf',()=>TraderReports.portfolioPdf(input))}catch(error){toast(error.message||String(error))}finally{button.disabled=false;button.textContent=label}}

@@ -27,6 +27,6 @@
       });panel.append(row);
     });root.prepend(panel);
   }
-  const before=render0;render0=function(){const result=before.apply(this,arguments);decorate();return result};
+  window.TraderUI.onRender('diario-recuperacao',decorate);
   document.addEventListener('click',event=>{if(!event.target.closest('[data-diary-focus]'))return;const active=focused();try{APP_STORAGE.setItem('diario-foco',active?'0':'1')}catch{toast('Não foi possível guardar a preferência neste aparelho.')}render()});
 })();

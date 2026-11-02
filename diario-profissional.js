@@ -64,18 +64,8 @@
       button.setAttribute('aria-label', button.textContent);
     });
   }
-  const previousRender = render0;
-  render0 = function () {
-    const result = previousRender.apply(this, arguments);
-    enhance();
-    return result;
-  };
-  const previousSheet = showSheet;
-  showSheet = function () {
-    const result = previousSheet.apply(this, arguments);
-    enhance();
-    return result;
-  };
+  window.TraderUI.onRender('diario-profissional', enhance);
+  window.TraderUI.onSheet('diario-profissional', enhance);
   document.addEventListener('change', event => {
     if (event.target.matches('input[data-chk]') && app()) checklistProgress(app());
   });

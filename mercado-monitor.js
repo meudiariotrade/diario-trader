@@ -88,7 +88,7 @@
     if(tab==='mercado'&&MKT.tab==='cq'&&CQ.aba==='adr')adrAfter();
     root.querySelectorAll('.pro-tabs [aria-current="page"],.pro-subtabs [aria-current="page"]').forEach(node=>{const nav=node.parentElement;if(nav.scrollWidth>nav.clientWidth)node.scrollIntoView({inline:'nearest',block:'nearest'})});
   }
-  const previous=render0;render0=function(){const result=previous.apply(this,arguments);decorate();return result};
+  window.TraderUI.onRender('mercado-monitor',decorate);
   window.addEventListener('click',event=>{
     if(event.target.closest('[data-market-chat]')){event.preventDefault();event.stopImmediatePropagation();window.TraderChat?.open();return}
     if(event.target.closest('[data-market-adrs]')){event.preventDefault();event.stopImmediatePropagation();CQ.aba='adr';ls.set('diario-cq-aba','adr');window.DIARIO_NAV.navigate('mercado:cq')}
