@@ -25,6 +25,16 @@
  function decorate(){
    if(tab!=='carteiras'||!window.PF||!window.TraderReports)return;let data;try{data=context()}catch{return}
    const root=document.getElementById('app');
+   const quality=R.coverage(data.snapshot.pos,today()),kpis=root.querySelector('.pf > .pfks');
+   if(kpis&&!root.querySelector('.cr-coverage')){
+     const note=document.createElement('p');note.className='cr-note cr-coverage';note.setAttribute('role','status');
+     note.textContent=`Cotações disponíveis: ${quality.priced} de ${quality.total} ativos.`+
+       (quality.missing.length?` Sem preço: ${quality.missing.join(', ')}. Valores consolidados podem incluir custo como referência; não representam patrimônio totalmente marcado a mercado.`:'')+
+       (quality.undated.length?` Data não informada: ${quality.undated.join(', ')}.`:'')+
+       (quality.previous.length?' Há preços de pregões anteriores; confira a referência ao abrir o ativo.':'');
+     kpis.after(note);
+     if(quality.missing.length){const title=kpis.querySelector('.pfk span');if(title)title.textContent='Patrimônio de referência (parcial)'}
+   }
    if(window.PF.sel){const box=root.querySelector('.pfmd[data-pfbk="selx"] .pfmb'),asset=data.snapshot.pos.find(a=>a.k===window.PF.sel);if(box&&asset&&!box.querySelector('.cr-position')){const head=box.querySelector('.pfdh');if(head)head.insertAdjacentHTML('afterend',rowsHtml(asset,data));else box.insertAdjacentHTML('afterbegin',rowsHtml(asset,data));box.querySelectorAll('.pfks.pfks6').forEach(node=>node.remove())}}
    if(window.PF.rv){const box=root.querySelector('.pfprint'),report=(window.PF.rel||[]).find(r=>String(r.id)===String(window.PF.rv));if(box&&!box.querySelector('.cr-report-visual')){
      const wrapper=document.createElement('div');wrapper.className='cr-report-visual';wrapper.innerHTML='<h2>Pesquisa patrimonial</h2><p class="cr-note">Gráficos dos registros atuais da carteira. Referência da análise selecionada: '+safe(report?.ref||'não informada')+'. Não representam a composição histórica de uma análise antiga.</p>'+charts(data)+'<p><button class="pfbt pfam" data-cr="pdf">Baixar relatório profissional em PDF</button></p>';const title=box.querySelector('.pfmodalh,.pfmh');if(title)title.after(wrapper);else box.prepend(wrapper);

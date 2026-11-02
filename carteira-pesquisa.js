@@ -1,7 +1,18 @@
 /* v288 · cálculos e gráficos de patrimônio/proventos, sem candles nem IA para calcular valores. */
 (function(root){
  'use strict';
- const finite=v=>typeof v==='number'&&Number.isFinite(v),num=v=>v==null||v===''?null:Number.isFinite(Number(String(v).replace(',','.')))?Number(String(v).replace(',','.')):null;
+ const finite=v=>typeof v==='number'&&Number.isFinite(v);
+ // Aceita decimal canônico e decimal brasileiro; não interpreta texto, booleanos ou infinito como valores.
+ function num(value){
+   if(finite(value))return value;
+   if(typeof value!=='string'||!value.trim())return null;
+   let text=value.trim();
+   if(text.includes(',')){
+     if(!/^[+-]?(?:\d+|\d{1,3}(?:\.\d{3})+),\d+$/.test(text))return null;
+     text=text.replace(/\./g,'').replace(',','.');
+   }else if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text))return null;
+   const n=Number(text);return Number.isFinite(n)?n:null;
+ }
  const key=r=>(r.mk||'BR')+':'+r.tk;
  const ledger=(rows,until='9999-12-31')=>(rows||[]).filter(r=>r.d&&r.d<=until).slice().sort((a,b)=>a.d.localeCompare(b.d)||(a.tp==='E')-(b.tp==='E'));
  function income(rows,until='9999-12-31'){
@@ -42,5 +53,15 @@
  }
  function seriesMonthly(points){const last=new Map;for(const point of points||[])last.set(point.date.slice(0,7),point);return [...last].map(([date,p])=>({date,value:p.value}))}
  function groups(assets,field){const groups={};for(const a of assets||[]){const p=a.position||a;if(finite(p.v))groups[p[field]||'Não informado']=(groups[p[field]||'Não informado']||0)+p.v}return Object.entries(groups).sort((a,b)=>b[1]-a[1]).map(([date,value])=>({date,value}))}
- root.CarteiraResearch={finite,num,key,ledger,income,detail,wealth,seriesMonthly,groups};
+ function coverage(assets,reference){
+   const today=reference||new Date().toISOString().slice(0,10),missing=[],undated=[],previous=[];
+   for(const a of assets||[]){
+     if(!a.tem||!(num(a.pa)>0)){missing.push(a.tk);continue}
+     const date=String(a.pxEm||'').slice(0,10);
+     if(!/^\d{4}-\d{2}-\d{2}$/.test(date))undated.push(a.tk);
+     else if(date<today)previous.push({ticker:a.tk,date});
+   }
+   return {total:(assets||[]).length,priced:(assets||[]).length-missing.length,missing,undated,previous,complete:!missing.length};
+ }
+ root.CarteiraResearch={finite,num,key,ledger,income,detail,wealth,seriesMonthly,groups,coverage};
 })(typeof window==='undefined'?globalThis:window);

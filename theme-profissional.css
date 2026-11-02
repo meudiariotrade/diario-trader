@@ -1,0 +1,89 @@
+/* Camada visual compartilhada. Sem fontes externas e sem alterar os dados dos módulos. */
+html:root {
+  --bg:#f3f5f7;--card:#fff;--tx:#18232d;--mut:#536575;--bd:#d8e0e6;
+  --ac:#087846;--g:#087846;--r:#bd343b;--surface-raised:#edf2f5;
+  --radius-card:16px;--space-card:20px;color-scheme:light;
+}
+html:root[data-theme=dark] {
+  --bg:#0c1117;--card:#131b24;--tx:#edf2f7;--mut:#a1b0c0;--bd:#293748;
+  --ac:#46d992;--g:#46d992;--r:#ff858c;--surface-raised:#1a2531;color-scheme:dark;
+}
+@media(prefers-color-scheme:dark){html:root:not([data-theme=light]){
+  --bg:#0c1117;--card:#131b24;--tx:#edf2f7;--mut:#a1b0c0;--bd:#293748;
+  --ac:#46d992;--g:#46d992;--r:#ff858c;--surface-raised:#1a2531;color-scheme:dark;
+}}
+html:root body {font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);-webkit-text-size-adjust:100%}
+/* Atualizações de cotações não devem reiniciar a animação de entrada da página. */
+html:root body #app{animation:none!important;opacity:1!important;transform:none!important}
+html:root body :is(button,input,select,textarea){font-family:inherit}
+html:root body :is(button,a,input,textarea,select,summary):focus-visible{outline:3px solid var(--ac)!important;outline-offset:3px}
+html:root body #app :is(h1,h2,h3){letter-spacing:-.018em}
+html:root body #app h1{font-size:clamp(24px,3vw,32px);line-height:1.2}
+html:root body #app :is(.card,.tile,.hero,.hero2,.routine-card,.pro-panel,.market-monitor){border-color:var(--bd);border-radius:var(--radius-card);box-shadow:none}
+html:root body #app :is(.card,.routine-card){padding:var(--space-card)}
+html:root body :is(.btn,.pfbt,.wf-chat-actions button){min-height:44px;line-height:1.3}
+html:root body .btn{background:var(--ac);color:var(--bg);border-radius:10px}
+html:root body .btn.s{background:var(--surface-raised);color:var(--tx);border-color:var(--bd)}
+html:root body :is(.btn.d,button[data-a=deltrade]){background:#b52636!important;color:#fff!important;font-size:14px!important;min-width:112px;min-height:44px;padding:10px 14px!important}
+html:root body #app :is(input:not([type=checkbox]):not([type=range]):not([type=radio]),select,textarea){border-color:var(--bd);border-radius:10px;max-width:100%;min-height:44px}
+html:root body #app textarea{line-height:1.65}
+html:root body #app :is(.g2,.g3,.kv)>*{min-width:0}
+html:root body #app :is(.rt,.kv b,.pfk b,td){font-variant-numeric:tabular-nums}
+html:root body #app :is(.seg,.pro-tabs,.pftabs){gap:4px;scroll-padding:8px}
+html:root body #app :is(.seg,.pro-tabs,.pftabs) button{min-height:44px}
+html:root body #app .routine-card{background:var(--card);margin-bottom:24px}
+html:root body #app #routine-title{font-size:clamp(23px,3vw,30px)!important;line-height:1.2!important;letter-spacing:-.025em!important;text-transform:none!important;color:var(--tx)!important;margin:8px 0}
+html:root body #app .routine-heading p{margin-bottom:16px;max-width:58ch}
+html:root body #app .routine-steps button{background:var(--bg);min-height:76px;border-color:var(--bd)}
+html:root body #app .routine-steps button:hover{border-color:var(--ac)}
+.routine-progress{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 16px;font-size:12px;color:var(--mut)}
+.routine-progress progress{width:120px;max-width:40%;height:6px;appearance:none;border:0;border-radius:99px;overflow:hidden;background:var(--bd);accent-color:var(--ac)}
+.routine-progress progress::-webkit-progress-bar{background:var(--bd)}
+.routine-progress progress::-webkit-progress-value{background:var(--ac);border-radius:99px}
+.routine-progress progress::-moz-progress-bar{background:var(--ac)}
+html:root body #app .journal-checklist .ck{padding:16px 0;font-size:15px}
+html:root body #app .journal-checklist input[type=checkbox]{width:22px;height:22px;accent-color:var(--ac)}
+html:root body #app .month-grid{gap:6px!important;grid-template-columns:repeat(7,minmax(0,1fr))!important}
+html:root body #app .month-grid>button{min-height:52px;font-variant-numeric:tabular-nums;overflow:hidden}
+html:root body #app .calendar-heading{gap:8px}
+html:root body #app .calendar-heading button{min-width:44px;min-height:44px;flex-shrink:0}
+html:root body #app .home-secondary{margin:20px 0;border:1px solid var(--bd);border-radius:14px;background:var(--card)}
+html:root body #app .home-secondary>summary{padding:16px;min-height:48px;color:var(--tx)}
+html:root body #app .home-secondary>p{margin:0 16px 16px;color:var(--mut);font-size:13px}
+html:root body #app .pf{--pb:var(--bg);--pc:var(--card);--pt:var(--tx);--pm:var(--mut);--pd:var(--bd);--pg:var(--g);--pr:var(--r)}
+html:root body #app .pf :is(.pfc,.pfk,.cr-position){border-radius:14px;border-color:var(--bd);box-shadow:none}
+html:root body #app .pf>.pfks{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible!important;gap:10px}
+html:root body #app .pf>.pfks .pfk{min-width:0;padding:14px;flex:initial}
+html:root body #app .pf>.pfks .pfk :is(span,b){white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+html:root body #app .cr-coverage{margin:0 0 16px;font-size:12px;border-left:3px solid var(--bd);padding-left:12px}
+html:root body #app :is(.wf-table,.pro-table-scroll,.anxt){max-width:100%;overflow:auto;overscroll-behavior-x:contain}
+html:root body #app :is(.trcmd,.trcmdbar,.trhead){min-width:0}
+html:root body #app :is(.trbtn,.trb,.trtabs button){min-height:36px}
+html:root body.trmon #app .trv-top{color:#ffe0e5!important}
+html:root body.trmon #app .trv-top b{color:#ffe0e5!important}
+html:root body .wf-chat-launcher{width:48px;height:48px;border-radius:16px;font-size:17px;box-shadow:0 6px 22px #0004}
+html:root body .wf-chat-panel{border-color:var(--bd);background:var(--card);border-radius:18px}
+html:root body .wf-chat-panel form textarea{font-size:16px;line-height:1.5;min-height:84px}
+html:root body .wf-dialog .wf-content{line-height:1.6}
+html:root body nav{background:var(--card);border-color:var(--bd)}
+html:root body nav button{min-height:54px;color:var(--mut)}
+html:root body nav button.on{color:var(--ac)}
+@media(max-width:680px){
+  html:root{--space-card:16px}
+  html:root body #app :is(input:not([type=checkbox]):not([type=range]):not([type=radio]),select,textarea){font-size:16px}
+  html:root body #app .pf>.pfks{grid-template-columns:repeat(2,minmax(0,1fr))}
+  html:root body #app .pf>.pfks .pfk{padding:12px}
+  html:root body #app .pf>.pfks .pfk b{font-size:16px}
+  html:root body #app .routine-steps{gap:8px}
+  html:root body #app .routine-steps button{min-height:64px;padding:12px}
+  html:root body #app .month-grid{gap:4px!important}
+  html:root body #app .month-grid>button{min-height:46px;font-size:12px}
+  html:root body #app .diary-toolbar{flex-wrap:wrap;justify-content:flex-start}
+}
+@media(max-width:360px){html:root body #app .g3{grid-template-columns:minmax(0,1fr)}html:root body #app .routine-footer .btn{width:100%}}
+@media(prefers-reduced-motion:reduce){
+  html:root body *,html:root body *::before,html:root body *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  html:root body :is(#app,.sh){opacity:1!important;transform:none!important}
+  html:root body #splash{display:none!important}
+}
+@media print{html:root body{background:#fff;color:#111}html:root body :is(nav,#fab,#fabm,#economista-flutuante){display:none!important}}

@@ -116,6 +116,9 @@
   }
   function quality(){
     const rows=[];try{rows.push({name:'Sincronização',source:'Supabase',at:S.lastSyncAt,error:SY.msg?.startsWith('Falha')?SY.msg:'',note:SESS?'Conta conectada':'Cópia local; sem sessão'})}catch{}
+    try{rows.push({name:'Salvamento local',source:'IndexedDB deste aparelho',note:LOCAL_SAVE.error||(LOCAL_SAVE.pending?'Gravação em andamento':'Nenhuma gravação pendente')});rows.push({name:'Último backup exportado',source:'Arquivo JSON do usuário',note:S.lastBackup?String(S.lastBackup)+' · guarde o arquivo fora do aparelho':'Nenhuma exportação registrada'})}catch{}
+    const metrics=window.TraderUI.metrics();
+    if(metrics.samples)rows.push({name:'Interface nesta sessão',source:'Medição local, sem envio de dados',note:`${metrics.samples} atualizações medidas · p95 ${Math.round(metrics.p95)} ms · ${metrics.failures} falha(s) observada(s). Não inclui espera por rede.`});
     try{rows.push({name:'Cotações da carteira',source:'Fontes do módulo Carteiras',at:window.PF?.qts,error:window.PF?.qMsg||'',note:'Confira também a data de cada ativo; consulta recente não garante preço em tempo real.'})}catch{}
     try{for(const row of SYS.res||[])rows.push({name:row.fn||row.nome||row.k||'Serviço',source:'Diagnóstico das funções',note:row.msg||row.st||'',at:row.em})}catch{}
     dialog('Qualidade e atualização dos dados',`<p>Data de consulta e data de mercado são diferentes. Ausência de erro não comprova atualização.</p><div class="wf-table"><table><thead><tr><th>Informação</th><th>Fonte</th><th>Última consulta</th><th>Estado / limitação</th></tr></thead><tbody>${rows.map(row=>`<tr><th>${safe(row.name)}</th><td>${safe(row.source)}</td><td>${row.at?safe(new Date(row.at).toLocaleString('pt-BR')):'Não informada'}</td><td>${safe(row.error||row.note||'Sem diagnóstico disponível')}</td></tr>`).join('')}</tbody></table></div><button class="btn s" data-wf="status">Abrir diagnóstico completo</button>`);

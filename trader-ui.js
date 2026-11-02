@@ -7,6 +7,8 @@
   if (root.TraderUI) return;
   const renderHooks = new Map();
   const sheetHooks = new Map();
+  const timings = [];
+  const now = () => root.performance?.now?.() ?? Date.now();
 
   function register(registry, id, hooks) {
     if (typeof id !== 'string' || !/^[a-z][a-z0-9-]{1,63}$/.test(id)) {
@@ -22,6 +24,9 @@
   }
 
   function invoke(base, registry, receiver, args) {
+    const started = now();
+    let failed = true;
+    try {
     // Uma captura por ciclo: mudanças de registro valem na próxima atualização.
     const hooks = [...registry.values()];
     const states = new Map();
@@ -31,7 +36,12 @@
     }
     const result = base.apply(receiver, args);
     for (const hook of hooks) if (hook.after) hook.after.call(receiver, states.get(hook), ...args);
+    failed = false;
     return result;
+    } finally {
+      timings.push({kind: registry === renderHooks ? 'render' : 'sheet', ms: Math.max(0, now() - started), failed});
+      if (timings.length > 100) timings.shift();
+    }
   }
 
   const originalRender = render0;
@@ -42,6 +52,11 @@
   root.TraderUI = Object.freeze({
     onRender: (id, hooks) => register(renderHooks, id, hooks),
     onSheet: (id, hooks) => register(sheetHooks, id, hooks),
-    inspect: () => ({render: [...renderHooks.keys()], sheet: [...sheetHooks.keys()]})
+    inspect: () => ({render: [...renderHooks.keys()], sheet: [...sheetHooks.keys()]}),
+    metrics: () => {
+      const values = timings.filter(t => t.kind === 'render').map(t => t.ms).sort((a, b) => a - b);
+      return {samples: values.length, p95: values.length ? values[Math.ceil(values.length * .95) - 1] : null,
+        last: timings.at(-1)?.ms ?? null, failures: timings.filter(t => t.failed).length};
+    }
   });
 })(window);

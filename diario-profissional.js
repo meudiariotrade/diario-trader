@@ -7,13 +7,15 @@
   function routine() {
     const day = S.days[loc().slice(0, 10)] || {};
     const done = rulesCount(day), total = (S.rules || []).length;
+    const trades = (S.trades || []).filter(trade => String(trade.dt || '').slice(0,10) === loc().slice(0,10));
+    const steps = [hasText(day.plano), trades.length > 0, hasText(day.resumo)];
     const card = document.createElement('section');
     card.className = 'routine-card';
     card.setAttribute('aria-labelledby', 'routine-title');
     card.innerHTML = `<div class="routine-heading"><div><span class="routine-eyebrow">DIÁRIO · BRASIL</span><h2 id="routine-title">Sua rotina de hoje</h2><p>Prepare o dia. Registre suas decisões. Revise o processo.</p></div></div>
-      <div class="routine-steps">
+      <div class="routine-progress"><span>${steps.filter(Boolean).length} de 3 etapas com registro</span><progress max="3" value="${steps.filter(Boolean).length}" aria-label="Etapas da rotina com registro"></progress></div><div class="routine-steps">
         <button type="button" data-routine="pre"><span class="routine-number">01</span><span><b>Preparar</b><small>${hasText(day.plano) ? 'Plano registrado' : 'Estado, limites e plano do dia'}</small></span><span aria-hidden="true">›</span></button>
-        <button type="button" data-routine="dur"><span class="routine-number">02</span><span><b>Registrar</b><small>Trades, emoções e decisões</small></span><span aria-hidden="true">›</span></button>
+        <button type="button" data-routine="dur"><span class="routine-number">02</span><span><b>Registrar</b><small>${trades.length ? trades.length + ' trade(s) registrado(s) hoje' : 'Trades, emoções e decisões'}</small></span><span aria-hidden="true">›</span></button>
         <button type="button" data-routine="pos"><span class="routine-number">03</span><span><b>Revisar</b><small>${hasText(day.resumo) ? 'Reflexão registrada' : 'Aprendizados e regras seguidas'}</small></span><span aria-hidden="true">›</span></button>
       </div><div class="routine-footer"><span>Regras seguidas: <b>${done} de ${total}</b></span><button type="button" class="btn s" data-routine="checklist">${total ? 'Revisar checklist' : 'Definir minhas regras'}</button></div>`;
     return card;
@@ -58,6 +60,18 @@
       button.setAttribute('aria-label', Number(button.dataset.id) < 0 ? 'Mês anterior' : 'Próximo mês');
     });
     if (tab === 'dia') checklistProgress(root);
+    root.querySelectorAll('button[data-a="dprev"],button[data-a="dnext"]').forEach(button => {
+      button.setAttribute('aria-label', button.dataset.a === 'dprev' ? 'Dia anterior' : 'Próximo dia');
+    });
+    root.querySelectorAll('input#dd').forEach(input => input.setAttribute('aria-label', 'Data do diário'));
+    const emotions = {'😫':'Muito mal', '😕':'Mal', '😐':'Neutro', '🙂':'Bem', '😄':'Muito bem'};
+    root.querySelectorAll('.chips2 button').forEach(button => {
+      const label = emotions[button.textContent.trim()];
+      if (label) {
+        button.setAttribute('aria-label', 'Estado emocional: ' + label);
+        button.setAttribute('aria-pressed', String(button.classList.contains('on')));
+      }
+    });
     // Nomes explícitos continuam visíveis mesmo quando um tema troca os ícones.
     document.querySelectorAll('button[data-a="deltrade"]').forEach(button => {
       button.textContent = delArm ? 'Confirmar exclusão' : 'Excluir trade';
