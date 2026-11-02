@@ -6,21 +6,20 @@
     {id:'home',name:'Início',icon:'home',description:'Resumo e rotina de hoje',items:[['home','Visão do dia']]},
     {id:'diario',name:'Diário',icon:'book',description:'Preparação, registro e revisão',items:[['dia:ed','Meu dia e checklist'],['dia:hist','Histórico do diário'],['regras','Minhas regras']]},
     {id:'operacoes',name:'Operações',icon:'chart',description:'Modalidades e desempenho',items:[['ops','Todas as modalidades'],['stats','Estatísticas'],['rev','Revisão da semana']]},
-    {id:'mercado',name:'Mercado',icon:'news',description:'Contexto, monitor e sazonalidade',items:[['mercado:mu','Panorama global'],['mercado:ag','Agenda econômica'],['mercado:nt','Notícias'],['juros','Juros e DI'],['mercado:lab','Sazonalidade e sentimento'],['graf','Gráficos'],['mercado:cot','Cotações'],['live','Ponte do Profit e radar'],['mercado:al','Alertas'],['term','Terminal']]},
+    {id:'mercado',name:'Mercado',icon:'news',description:'Contexto, monitor e sazonalidade',items:[['mercado:mu','Panorama global'],['mercado:jr','Jornal do Pregão'],['mercado:ag','Agenda econômica'],['mercado:nt','Notícias'],['juros','Juros e DI'],['mercado:lab','Sazonalidade e sentimento'],['graf','Gráficos'],['mercado:cq','Cotações e ADRs'],['live','Ponte do Profit e radar'],['mercado:al','Alertas'],['term','Terminal']]},
     {id:'patrimonio',name:'Patrimônio',icon:'wallet',description:'Carteiras, análise e impostos',items:[['carteiras','Carteiras Brasil e EUA'],['analise','Análise IA'],['imposto','Imposto de renda']]},
     {id:'gestao',name:'Gestão',icon:'shield',description:'Risco, capital e processo',items:[['mesa','Mesa proprietária'],['painel','Metas, posição e backup'],['contratos','Dimensionamento de contratos'],['carreira','Plano de transição']]},
     {id:'estudos',name:'Estudos',icon:'book',description:'Biblioteca, cursos e simulados',items:[['estudos','Central de estudos']]},
     {id:'conta',name:'Configurações',icon:'gear',description:'Conta, dados e preferências',items:[['conta','Conta e sincronização'],['import','Importar operações'],['mais','Aparência'],['status','Status das fontes']]},
   ];
   const marketGroups = [
-    {name:'Panorama',items:[['mercado:mu','Mundo'],['juros','Juros e DI']]},
-    {name:'Agenda',items:[['mercado:ag','Agenda econômica']]},
-    {name:'Notícias',items:[['mercado:nt','Notícias']]},
-    {name:'Análise',items:[['mercado:lab','Sazonalidade e sentimento'],['graf','Gráficos']]},
-    {name:'Monitor',items:[['mercado:cot','Cotações'],['live','Profit e radar'],['mercado:al','Alertas'],['term','Terminal']]},
+    {name:'Panorama',items:[['mercado:mu','Mundo'],['juros','Juros e DI'],['mercado:giro','Giro'],['mercado:pn','Painel']]},
+    {name:'Informação',items:[['mercado:jr','Jornal do Pregão'],['mercado:nt','Notícias'],['mercado:ag','Agenda econômica']]},
+    {name:'Estudos',items:[['mercado:lab','Sazonalidade e sentimento'],['graf','Gráficos']]},
+    {name:'Monitor',items:[['mercado:cq','Cotações e ADRs'],['live','Profit e radar'],['mercado:al','Alertas'],['term','Terminal']]},
   ];
   const safe = value => esc(String(value ?? ''));
-  const current = () => tab === 'mercado' ? `mercado:${['saz','se','sazus'].includes(MKT.tab)?'lab':MKT.tab}` : tab==='dia'?`dia:${DV==='hist'?'hist':'ed'}`:tab;
+  const current = () => tab === 'mercado' ? `mercado:${['saz','se','sazus'].includes(MKT.tab)?'lab':MKT.tab==='cot'?'cq':MKT.tab}` : tab==='dia'?`dia:${DV==='hist'?'hist':'ed'}`:tab;
   const activeGroup = () => groups.find(group=>group.items.some(([route])=>route===current()))?.id || (['trades','swing','opc','ativos','dash','opgrade','opfluxo','opcart','swbt','dtrpy'].includes(tab)?'operacoes':'');
   const icon = name => window.icoSvg ? window.icoSvg(name) : '';
   const link = ([route,name],cls='') => `<button type="button" class="${cls}" data-navroute="${safe(route)}"${current()===route?' aria-current="page"':''}>${safe(name)}</button>`;
@@ -42,13 +41,14 @@
       });
     });
   }
-  window.DIARIO_NAV = {groups,marketGroups,menu};
+  window.DIARIO_NAV = {groups,marketGroups,menu,navigate};
   // As abas internas seguem os mesmos grupos do menu, sem taxonomia paralela.
   grpHeader = function(route) {
     const group=groups.find(g=>g.items.some(([key])=>key===route));
     return !group||group.items.length<2?'':`<div class="pro-subtabs" role="navigation" aria-label="${safe(group.name)}">${group.items.map(item=>link(item,item[0]===route?'on':'')).join('')}</div>`;
   };
   function navigate(route) {
+    if(route==='mercado:cot')route='mercado:cq';
     const [screen,sub]=route.split(':');
     if(screen==='dia'){DV=sub||'ed';tab='dia'}
     else if(screen==='mercado'){tab='mercado';MKT.tab=sub||'mu';try{ls.set('diario-mkt-tab',MKT.tab)}catch{}}
@@ -66,7 +66,7 @@
   // Um único conjunto de abas para todas as telas de mercado.
   segM = function () {
     const selected=current(), group=marketGroups.find(g=>g.items.some(([route])=>route===selected))||marketGroups[0];
-    return `<div class="workbench-header"><span class="routine-eyebrow">CONTEXTO DE MERCADO</span><h1>Mercado</h1><p>Do panorama à decisão, com as ferramentas no mesmo lugar.</p></div><div class="pro-tabs" role="navigation" aria-label="Áreas do mercado">${marketGroups.map(g=>link([g.items[0][0],g.name],g===group?'on':'')).join('')}</div>${group.items.length>1?`<div class="pro-subtabs" role="navigation" aria-label="Ferramentas de ${safe(group.name)}">${group.items.map(item=>link(item,current()===item[0]?'on':'')).join('')}</div>`:''}`;
+    return `<div class="workbench-header"><span class="routine-eyebrow">CONTEXTO DE MERCADO</span><div class="market-heading"><h1>Mercado</h1><div><button class="btn s" data-navroute="term">Abrir terminal</button><button class="btn s" data-market-chat>Economista IA</button></div></div><p>Panorama, leitura e acompanhamento em um só espaço.</p></div><div class="pro-tabs" role="navigation" aria-label="Áreas do mercado">${marketGroups.map(g=>link([g.items[0][0],g.name],g===group?'on':'')).join('')}</div>${group.items.length>1?`<div class="pro-subtabs" role="navigation" aria-label="Ferramentas de ${safe(group.name)}">${group.items.map(item=>link(item,current()===item[0]?'on':'')).join('')}</div>`:''}`;
   };
   // Preferências deixa de repetir todas as ferramentas já presentes no menu.
   const previousMore=vMais;
