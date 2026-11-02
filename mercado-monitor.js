@@ -67,7 +67,7 @@
   const originalCanvas=imgDesenha;
   imgDesenha=function(){
     const source=originalCanvas.apply(this,arguments),canvas=document.createElement('canvas');canvas.width=source.width;canvas.height=source.height+160;
-    const ctx=canvas.getContext('2d');ctx.drawImage(source,0,0);ctx.fillStyle='#eef2f1';ctx.fillRect(0,source.height,canvas.width,160);ctx.textAlign='left';ctx.textBaseline='top';ctx.font='22px system-ui';ctx.fillStyle='#334155';
+    const ctx=canvas.getContext('2d');ctx.drawImage(source,0,0);ctx.fillStyle='#09131c';ctx.fillRect(0,source.height,canvas.width,160);ctx.textAlign='left';ctx.textBaseline='top';ctx.font='22px system-ui';ctx.fillStyle='#a8b5c5';
     const ref=IMG.marketReference||{macro:MDO.ts,adrs:AD.data?.ts},lines=[`Consulta do panorama: ${time(ref.macro)}`,`Consulta de EWZ/ADRs: ${time(ref.adrs)}`,ref.warning?'ATENÇÃO: atualização com falha ou dados parciais; confira as referências.':'Consulta recente não garante negócio recente.', 'Preço principal: regular. Linha adicional: sessão e data indicadas.'];
     lines.forEach((line,index)=>ctx.fillText(line,42,source.height+16+index*32,canvas.width-84));return canvas;
   };

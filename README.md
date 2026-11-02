@@ -1,3 +1,35 @@
+# Diário de Trader — revisão v306
+
+Pré-abertura integrada após as ADRs, exportação com rodapé escuro e Terminal com Radar Global, curva DI e notícias Brasil/EUA em abas internas.
+
+**Instalação:** extraia este ZIP e envie os arquivos de `diario-trader-main/` à raiz do repositório do aplicativo, preservando os demais arquivos. Inclua `terminal-radar.js`, `adr-abertura.js`, `mercado-monitor.js`, `app.js`, `index.html` e `sw.js`. O cache v306 instala o conjunto completo.
+
+Não exige alteração no banco ou publicação de Edge Functions. Esta entrega é um pacote atualizado; não foi publicada no GitHub.
+
+Testes desta revisão: `node tests/terminal-v306.cjs` e `node tests/panorama-v306.cjs`. A validação visual no iPhone e o ensaio do frontend com uma sessão autenticada continuam pendentes. O ZIP recebido não inclui os scripts de build/manutenção referenciados no package.json; os testes novos podem ser executados diretamente com Node.
+
+## Alterações
+
+- Abertura teórica no mesmo fluxo do panorama, logo após as ADRs, com colunas de ativo, fechamento, variação estimada e preço teórico; permanece identificada como estimativa.
+- Referências de consulta preservadas em fundo escuro, sem faixa branca.
+- Exportação aguarda o cálculo da pré-abertura; pedidos concorrentes compartilham o trabalho e séries de ações são consultadas em lotes de três.
+- Seletor sólido, compacto, com pesquisa e rolagem: Radar Global, Fluxo, Juros, Central de Inteligência e todos os demais espaços.
+- Último espaço e aba restaurados, com preferências locais separadas por usuário.
+- Radar Global reúne Nasdaq futuro, S&P futuro, WIN, WDO, dólar/real, DXY, VIX e Treasury de dez anos. O futuro Nasdaq permanece identificado separadamente do CFD USTEC da corretora.
+- Abas internas para índices, moedas, commodities, ADRs, DI, Copom/Fed, agenda e notícias Brasil/EUA. Espaços personalizados existentes são preservados.
+- Atualizações usam o ciclo do Terminal: cotações com cache de 30 segundos, DI de 60 segundos e notícias de 3 minutos. São intervalos de consulta, não garantia de tempo real. Consultas novas pausam com a página oculta.
+- WIN/WDO reutilizam a ponte do Profit quando disponível. O Radar distingue data/hora do negócio e horário de recebimento. Preços ausentes ficam sem valor; nenhum dado é simulado na tela.
+
+## Conferência do Supabase — 02/11/2026
+
+Projeto Diário de trader ativo; funções terminal, candles, macro, adrs e juros ativas. Cache quotes/DI disponível e rotina mercado-cache-minuto com últimas execuções concluídas. As tabelas públicas listadas têm RLS habilitada.
+
+A ponte enviava WINFUT, WDOFUT, DI1F29 e DI1F33 com data de negócio de 30/10, embora o recebimento fosse de 02/11. O Radar mostra essas referências separadamente.
+
+O auditor também apontou avisos preexistentes sobre as funções SECURITY DEFINER erros_app_limpa e parceiro_ver, além de proteção contra senhas vazadas desativada. Não foram alterados privilégios nem configurações de autenticação nesta revisão. Referências: https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable e https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.
+
+## Histórico recebido no ZIP original
+
 # Diário de Trader — revisão v290
 
 Aplicativo estático publicado no GitHub Pages, com backend no Supabase. As credenciais privadas dos provedores ficam nos Secrets do Supabase.
