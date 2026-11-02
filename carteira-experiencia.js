@@ -33,6 +33,13 @@
        (quality.undated.length?` Data não informada: ${quality.undated.join(', ')}.`:'')+
        (quality.previous.length?' Há preços de pregões anteriores; confira a referência ao abrir o ativo.':'');
      kpis.after(note);
+     const audit=window.CarteiraCalculo.audit(data.ledger,today()),panel=document.createElement('details');panel.className='cr-audit pfc';
+     panel.innerHTML=`<summary>Conferência dos lançamentos · ${audit.issues.length} pendência(s)</summary><p>Conferência aritmética dos registros até ${safe(today())}. Valores por moeda de origem. Não substitui validação fiscal, extratos ou elegibilidade de proventos.</p>${audit.issues.length?'<ul>'+audit.issues.map(issue=>'<li>'+safe([issue.date,issue.ticker,issue.message].filter(Boolean).join(' · '))+'</li>').join(''):'<p>Nenhuma inconsistência detectada pelas regras desta conferência.</p>'}<div class="wf-table"><table><thead><tr><th>Ativo</th><th>Moeda</th><th>Quantidade</th><th>Preço médio</th><th>Realizado</th><th>Proventos</th></tr></thead><tbody>${audit.positions.map(p=>'<tr><th>'+safe(p.tk)+'</th><td>'+safe(p.unit)+'</td><td>'+safe(p.q.toLocaleString('pt-BR',{maximumFractionDigits:8}))+'</td><td>'+money(p.pm,p.unit,4)+'</td><td>'+money(p.real,p.unit)+'</td><td>'+money(p.prov,p.unit)+'</td></tr>').join('')}</tbody></table></div>`;
+     note.after(panel);
+     if(audit.issues.length){
+       const indices=[2,3,4,5,...(audit.issues.some(i=>i.code==='fx')?[1,6]:[])];
+       for(const i of indices){const card=kpis.children[i],value=card?.querySelector('b');if(value){value.textContent='Conferir lançamentos';value.className='';card.querySelectorAll('em').forEach(el=>el.remove())}}
+     }
      if(quality.missing.length){const title=kpis.querySelector('.pfk span');if(title)title.textContent='Patrimônio de referência (parcial)'}
    }
    if(window.PF.sel){const box=root.querySelector('.pfmd[data-pfbk="selx"] .pfmb'),asset=data.snapshot.pos.find(a=>a.k===window.PF.sel);if(box&&asset&&!box.querySelector('.cr-position')){const head=box.querySelector('.pfdh');if(head)head.insertAdjacentHTML('afterend',rowsHtml(asset,data));else box.insertAdjacentHTML('afterbegin',rowsHtml(asset,data));box.querySelectorAll('.pfks.pfks6').forEach(node=>node.remove())}}
@@ -44,6 +51,7 @@
  window.TraderUI.onRender('carteira-experiencia',decorate);
  window.addEventListener('click',async event=>{
    const button=event.target.closest('[data-cr]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();
+   const label=button.textContent;
    if(button.dataset.cr==='pdf'){const label=button.textContent;button.disabled=true;button.textContent='Carregando dados…';try{const input=await TraderReports.preparePortfolioInput();rpAbrir('Relatório patrimonial e fundamentalista','carteira-pesquisa-'+today()+'.pdf',()=>TraderReports.portfolioPdf(input))}catch(error){toast(error.message||String(error))}finally{button.disabled=false;button.textContent=label}}
    if(button.dataset.cr==='load'){if(window.DIARIO_DEMO)return toast('Consultas externas desativadas na demonstração.');button.disabled=true;try{await Promise.allSettled([pfHist(),pfMeta(),pfRel(true)]);render()}finally{button.disabled=false;button.textContent=label}}
    if(button.dataset.cr==='movements'){const asset=dataFor(button.dataset.key);if(!asset)return;const d=R.detail(asset,(S.cart?.lanc||[]),today()),dialog=document.createElement('dialog');dialog.id='cr-movements';document.getElementById('cr-movements')?.remove();dialog.className='wf-dialog';dialog.innerHTML='<header><h2>'+safe(asset.tk)+' · movimentações</h2><button class="btn s" data-cr="close">Fechar</button></header><div class="wf-content"><div class="wf-table"><table><tr><th>Data</th><th>Tipo</th><th>Quantidade</th><th>Preço / valor</th></tr>'+d.events.map(r=>'<tr><td>'+safe(r.d)+'</td><td>'+safe(({C:'Compra',V:'Venda',P:'Provento',E:'Evento'})[r.tp]||r.tp)+'</td><td>'+safe(r.q||'—')+'</td><td>'+safe(r.p??'—')+'</td></tr>').join('')+'</table></div></div>';document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove());dialog.showModal()}

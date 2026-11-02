@@ -100,3 +100,25 @@ html:root body #app .adr-quote{padding:16px 0;border-top:1px solid var(--bd);min
 .adr-night{border-left:3px solid #a970e5}.adr-night>span:first-child{color:#8751c2;font-weight:600}
 html:root[data-theme=dark] .adr-night>span:first-child{color:#c49bf4}
 .adr-unavailable{font-size:11px;color:var(--mut);margin:8px 0 0;line-height:1.5}
+
+/* Conferência e formulários da carteira: hierarquia e leitura em telas pequenas. */
+html:root body #app .cr-audit{margin:12px 0 20px;padding:16px;border:1px solid var(--bd);background:var(--card);border-radius:12px}
+.cr-audit>summary{cursor:pointer;min-height:32px;font-size:14px;font-weight:650;line-height:1.5;color:var(--tx)}
+.cr-audit :is(p,li){font-size:12px;line-height:1.65;color:var(--mut)}
+.cr-audit table{font-size:12px;white-space:nowrap}.cr-audit :is(td,th){padding:10px 8px}.cr-audit li{margin:8px 0}
+html:root body #app .cr-position dl>div{gap:16px;align-items:start}.cr-position dd{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+html:root body :is(.pfmb,.wf-content){scroll-padding-bottom:24px;overscroll-behavior:contain}
+html:root body #app .pftabs{scrollbar-width:thin}.cr-coverage{overflow-wrap:anywhere}
+@media(max-width:480px){html:root body #app .cr-position dl>div{grid-template-columns:minmax(0,1fr) minmax(0,.85fr)}html:root body #app .cr-position :is(dt,dd){font-size:13px;line-height:1.5}html:root body #app .pfacts{flex-wrap:wrap}html:root body #app .pfacts .pfbt{min-height:44px}}
+
+/* Gráfico navegável: o gesto vertical continua rolando a tela. */
+body.trmon .g9svg{touch-action:pan-y;user-select:none;max-width:100%;outline-offset:2px}
+body.trmon .g9watermark{fill:#fff;opacity:.12;font-size:clamp(32px,8vw,72px);font-weight:800;pointer-events:none}
+body.trmon .g9watermark-sub{fill:#fff;opacity:.22;font-size:13px;pointer-events:none}
+body.trmon .g9bar{flex-wrap:wrap;overflow:visible;gap:5px}
+body.trmon .g9help{line-height:1.5;color:#a6afb9;margin:8px 0}
+.quote-reference{font-size:11px;font-weight:400;color:var(--mut);line-height:1.5;max-width:100%;overflow-wrap:anywhere}
+.quote-reference summary{cursor:pointer;padding:4px 0}
+.cqr>.quote-reference{grid-column:1/-1;width:100%;text-align:left}
+
+body.trmon .g9leg{white-space:normal!important;line-height:1.6;height:auto;overflow-wrap:anywhere}

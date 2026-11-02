@@ -3,16 +3,7 @@
  'use strict';
  const finite=v=>typeof v==='number'&&Number.isFinite(v);
  // Aceita decimal canônico e decimal brasileiro; não interpreta texto, booleanos ou infinito como valores.
- function num(value){
-   if(finite(value))return value;
-   if(typeof value!=='string'||!value.trim())return null;
-   let text=value.trim();
-   if(text.includes(',')){
-     if(!/^[+-]?(?:\d+|\d{1,3}(?:\.\d{3})+),\d+$/.test(text))return null;
-     text=text.replace(/\./g,'').replace(',','.');
-   }else if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text))return null;
-   const n=Number(text);return Number.isFinite(n)?n:null;
- }
+ const num=root.CarteiraCalculo.num;
  const key=r=>(r.mk||'BR')+':'+r.tk;
  const ledger=(rows,until='9999-12-31')=>(rows||[]).filter(r=>r.d&&r.d<=until).slice().sort((a,b)=>a.d.localeCompare(b.d)||(a.tp==='E')-(b.tp==='E'));
  function income(rows,until='9999-12-31'){

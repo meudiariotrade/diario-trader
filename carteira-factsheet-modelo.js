@@ -3,6 +3,7 @@
  'use strict';
  const ok=v=>typeof v==='number'&&Number.isFinite(v),sum=a=>a.reduce((s,v)=>s+v,0),stdev=a=>{if(a.length<2)return null;const mean=sum(a)/a.length;return Math.sqrt(sum(a.map(v=>(v-mean)**2))/(a.length-1))};
  function performance(input){
+  if(root.CarteiraCalculo&&root.CarteiraCalculo.audit(input.ledger||[],input.asOf||'9999-12-31').issues.length)return {available:false,reason:'Há inconsistências nos lançamentos. Retorno e risco omitidos até a conferência.'};
   if(input.selected?.tipo==='ativo')return {available:false,reason:'Ficha individual: retorno e risco da carteira completa não são atribuídos a este ativo.'};
   const p=input.performance,w=input.wealth,asOf=input.asOf||String(input.generated||'9999-12-31').slice(0,10);
   if(!w?.points?.length||!p?.D?.length||p.falhas?.length)return {available:false,reason:w?.reason||'Histórico completo e validado ainda não disponível.'};

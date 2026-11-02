@@ -7,6 +7,11 @@
   const lists = ['trades', 'rules', 'books', 'ops', 'lanc', 'mesaTr', 'olho'];
   const forbidden = new Set(['__proto__', 'prototype', 'constructor']);
   const maxBytes = 50 * 1024 * 1024;
+  async function checksum(state,imgs){
+    if(!root.crypto?.subtle)throw Error('Verificação de integridade indisponível neste ambiente.');
+    const bytes=new TextEncoder().encode(JSON.stringify({S:state,imgs}));
+    return Array.from(new Uint8Array(await root.crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
+  }
   function validate(input) {
     let nodes = 0;
     function walk(value, depth = 0) {
@@ -111,11 +116,12 @@
       for (const [id, blob] of stored) if (references.has(id)) imgs[id] = await dataURL(blob);
       for (const id of requiredMedia(state)) if (!imgs[id]) throw Error('Anexo não encontrado neste aparelho. Sincronize os anexos antes de exportar.');
       const payload = validate({v: 2, createdAt: new Date().toISOString(), S: state, imgs});
+      if(root.crypto?.subtle)payload.integrity={algorithm:'SHA-256',value:await checksum(state,imgs)};
       const text = JSON.stringify(payload);
       if (new Blob([text]).size > maxBytes) throw Error('Backup maior que 50 MB. Exporte pelo computador após revisar os anexos.');
       if (owner() !== account) throw Error('A conta mudou durante a exportação. Tente novamente.');
       await saveFile('diario-backup-' + loc().slice(0, 10) + '.json', text, 'application/json');
-      S.lastBackup = loc().slice(0, 10); save();
+      if(owner()===account){S.lastBackup = loc().slice(0, 10); save();}
     } catch (error) {
       if (typeof root.toast === 'function') root.toast(error.message, 8000);
       else root.alert(error.message);
@@ -129,11 +135,9 @@
       tx.oncomplete = resolve;
       tx.onabort = () => reject(changed ? Error('Os dados mudaram durante a restauração. Nada foi importado; tente novamente.') : tx.error || Error('Falha ao gravar o backup. Nada foi importado.'));
       try {
-        const request = tx.objectStore('kv').put(state, 's');
-        for (const [id, blob] of images) tx.objectStore('img').put(blob, id);
-        request.onsuccess = () => {
-          if (owner() !== account || JSON.stringify(snapshot()) !== before) { changed = true; tx.abort(); }
-        };
+        const guard = () => {if(owner() !== account || JSON.stringify(snapshot()) !== before){changed=true;tx.abort()}};
+        tx.objectStore('kv').put(state, 's').onsuccess=guard;
+        for (const [id, blob] of images) tx.objectStore('img').put(blob, id).onsuccess=guard;
       } catch (error) { tx.abort(); reject(error); }
     });
   }
@@ -145,7 +149,9 @@
       if (file.size > maxBytes) throw Error('Backup excede o limite de 50 MB.');
       const text = await file.text();
       if (new Blob([text]).size > maxBytes) throw Error('Backup excede o limite de 50 MB.');
-      const input = validate(JSON.parse(text)), images = new Map(), existing = await media();
+      const input = validate(JSON.parse(text));
+      if(input.integrity&&(input.integrity.algorithm!=='SHA-256'||input.integrity.value!==await checksum(input.S,input.imgs||{})))throw Error('A verificação de integridade falhou. O arquivo foi alterado ou está corrompido.');
+      const images = new Map(), existing = await media();
       for (const [id, data] of Object.entries(input.imgs || {})) {
         if (existing.has(id)) {
           if (await dataURL(existing.get(id)) !== data) throw Error('Anexo com identificador conflitante. Nada foi importado.');
@@ -162,7 +168,10 @@
       // Cancela a gravação agendada anterior; as transações já abertas terminam antes desta.
       clearTimeout(st);
       await commit(merged, images, before, account);
-      if (owner() !== account) return 'Cópia importada no armazenamento. Reabra a conta de origem para conferir os dados.';
+      if (owner() !== account) {
+        persist();if(typeof persistNow==='function')persistNow();
+        return 'A conta mudou ao concluir. A importação não foi aplicada à sessão atual; confira o backup na conta de origem.';
+      }
       const latest = snapshot();
       S = JSON.stringify(latest) === before ? merged : merge(latest, merged);
       for (const [id, blob] of images) M[id] = blob;

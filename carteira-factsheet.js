@@ -72,6 +72,7 @@
    note('Análise: '+(report?.ref||'não registrada')+' · dados até '+(report?.dados_em||'não informado')+'. Fontes: '+(report?.fontes||[]).join(' · '));
   }
   page('06  Metodologia e cobertura');
+  if(root.CarteiraCalculo){const audit=root.CarteiraCalculo.audit(input.ledger||[],d.asOf);heading('Conferência dos lançamentos');text(audit.issues.length?audit.issues.length+' pendência(s) nos registros. Confira os itens abaixo antes de interpretar resultados.':'Nenhuma inconsistência detectada pelas regras aritméticas desta conferência. Não equivale a auditoria fiscal ou conferência com extratos.');if(audit.issues.length)table(['Data','Ativo','Conferir'],audit.issues.map(i=>[i.date,i.ticker,i.message]),[18,18,64]);}
   text('Posições e movimentações vêm do cadastro da carteira. Valores em USD só são consolidados com câmbio válido. Indicadores e narrativas são os disponíveis no cache e nas análises armazenadas. Exportar não gera uma nova análise paga.');
   text('Retornos, volatilidade, drawdown e tracking error exigem histórico completo validado. As séries de referência são alinhadas à mesma janela. A qualidade depende das movimentações, preços e proventos informados. Dados ausentes não são zero e o custo não é usado como preço histórico.');
   text('A curva de registros diários é mostrada apenas quando aplicável e identificada como patrimônio, nunca como rentabilidade. Ausência de proventos lançados não demonstra ausência de dividendos recebidos. Indicadores de ações não são aplicados automaticamente a outras classes.');
