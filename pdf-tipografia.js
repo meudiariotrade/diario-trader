@@ -15,7 +15,7 @@
     doc.registerFontkit(await library());
     const names={r:'sans',b:'sans-bold',i:'sans-italic',serif:'serif-bold',serifItalic:'serif-italic'};
     if(!bytes)bytes=Promise.all(Object.entries(names).map(async([key,name])=>{
-      const response=await fetch(`fonts/${name}.ttf`,{signal:AbortSignal.timeout(10000)});
+      const response=await fetch(`pdf-${name}.ttf`,{signal:AbortSignal.timeout(10000)});
       if(!response.ok)throw Error('Fonte indisponível: '+name);
       return [key,new Uint8Array(await response.arrayBuffer())];
     })).catch(error=>{bytes=null;throw error});

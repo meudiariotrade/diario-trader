@@ -128,9 +128,13 @@
     if(!observed||owner!==S)reset();
     const root=$('#app');if(!root)return;
     if(window.DIARIO_DEMO&&!document.getElementById('wf-demo-banner')){const banner=document.createElement('div');banner.id='wf-demo-banner';banner.innerHTML='DEMONSTRAÇÃO · registros fictícios · conta e rede externas desativadas. <a href="'+location.pathname+'">Voltar ao aplicativo real</a>';document.body.prepend(banner)}
-    const toolbar=document.createElement('div');toolbar.className='wf-toolbar';toolbar.innerHTML='<button class="btn s" data-wf="search">Buscar registros</button><button class="btn s" data-wf="quality">Dados e fontes</button><button class="btn s" data-wf="reports">Relatórios</button><a class="btn s" href="?demo=1">Demonstração</a>';root.prepend(toolbar);
-    if(tab==='home'){toolbar.insertAdjacentHTML('beforeend','<button class="btn s" data-wf="home">Organizar início</button>');applyHome(root)}
-    if(tab==='dia'&&DV!=='hist'){const anchor=root.querySelector('.diary-toolbar')||toolbar;anchor.insertAdjacentHTML('beforeend','<button class="btn s" data-wf="templates">Modelo do diário</button><button class="btn s" data-wf="history-day">Versões deste dia</button>')}
+    // Ações gerais ficam no menu, sem uma faixa de atalhos em cada tela.
+    if(tab==='home')applyHome(root);
+    if(tab==='dia'&&DV!=='hist'){
+      let anchor=root.querySelector('.diary-toolbar');
+      if(!anchor){anchor=document.createElement('div');anchor.className='diary-toolbar';const title=root.querySelector('h1');if(title)title.after(anchor);else root.prepend(anchor)}
+      anchor.insertAdjacentHTML('beforeend','<button class="btn s" data-wf="templates">Modelo do diário</button><button class="btn s" data-wf="history-day">Versões deste dia</button>');
+    }
     if(tab==='rev')root.insertAdjacentHTML('beforeend',weeklyHtml());
     if(tab==='stats')root.insertAdjacentHTML('beforeend',`<section class="card"><h2>Execução e resultado</h2>${comparisonHtml(M.compare(S.trades,calc,moedaT))}<p class="wf-note">Esta comparação considera todas as operações encerradas, independentemente do filtro das estatísticas acima.</p></section>`);
     if(tab==='import'){root.insertAdjacentHTML('beforeend',batchesHtml());if(typeof IM!=='undefined'&&IM?.rows)root.insertAdjacentHTML('beforeend',`<p class="wf-note">Prévia: ${IM.rows.length} linha(s) agrupada(s), ${IM.dup?.size||0} duplicada(s), ${IM.off?.size||0} desmarcada(s), ${IM.upd?.size||0} atualização(ões). Confira a prévia acima antes de importar.</p>`)}
@@ -144,6 +148,11 @@
     const imp=event.target.closest('[data-a="impgo"]');
     if(imp&&typeof IM!=='undefined'&&IM?.rows){const ids=IM.rows.filter(row=>!IM.dup.has(row.t.id)&&!IM.off.has(row.t.id)).map(row=>row.t.id);pendingImport={id:M.id(),name:fileName,ids,before:Object.fromEntries(S.trades.filter(t=>ids.includes(t.id)).map(t=>[t.id,M.clone(t)]))}}
     const button=event.target.closest('[data-wf]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();const action=button.dataset.wf,id=button.dataset.id;
+    if(button.closest('#mdr2')){
+      document.body.classList.remove('pcmenu','trmenu');document.body.style.overflow='';
+      if(!document.body.classList.contains('pc'))document.getElementById('mdr2')?.remove();
+    }
+    if(action==='organize-home'){window.DIARIO_NAV.navigate('home');return homeSettings()}
     if(action==='close')return $('#wf-dialog')?.close();
     if(action==='search')return openSearch();if(action==='quality')return quality();if(action==='templates')return openTemplates();if(action==='home')return homeSettings();if(action==='journal')return journalSettings();
     if(action==='reports')return window.TraderReports?.openHub();

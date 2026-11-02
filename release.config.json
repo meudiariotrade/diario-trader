@@ -1,17 +1,17 @@
 {
-  "version": 291,
+  "version": 292,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
-    "fonts/sans.ttf",
-    "fonts/sans-bold.ttf",
-    "fonts/sans-italic.ttf",
-    "fonts/serif-bold.ttf",
-    "fonts/serif-italic.ttf",
-    "assets/jornal/capa.jpg",
-    "assets/jornal/diario.jpg",
-    "assets/jornal/empresas.jpg",
-    "assets/jornal/mundo.jpg"
+    "pdf-sans.ttf",
+    "pdf-sans-bold.ttf",
+    "pdf-sans-italic.ttf",
+    "pdf-serif-bold.ttf",
+    "pdf-serif-italic.ttf",
+    "jornal-capa.jpg",
+    "jornal-diario.jpg",
+    "jornal-empresas.jpg",
+    "jornal-mundo.jpg"
   ],
   "lazy": [
     "arte.js",
@@ -20,8 +20,8 @@
     "ingles.js"
   ],
   "licenses": [
-    "fonts/LICENSE-DejaVu.txt",
-    "fonts/LICENSE-fontkit.txt"
+    "LICENSE-fontes.txt",
+    "LICENSE-fontkit.txt"
   ],
   "debug": [
     "app.js.map"
