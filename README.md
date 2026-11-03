@@ -1,3 +1,17 @@
+# Diário de Trader — v310: mais seis temas de cards
+
+Carnaval, Futebol, Páscoa, Festa Junina, Verão e Réveillon, com datas móveis automáticas e seleção manual. Dez estilos no total. Atualização direta; envie também cards-art. Leia LEIA-ME-V310.md.
+
+# Diário de Trader - v309: cards sazonais
+
+Panorama Brasil-EUA e cards personalizados de Mercado, Natal, Halloween e Clássico. Seletor automático/manual e resultado em R removido dos compartilhamentos. Leia LEIA-ME-V309.md antes de instalar e envie também a pasta cards-art.
+
+Pode atualizar diretamente para esta versão. Integrações e cálculos foram preservados. O pacote ainda não foi publicado no GitHub.
+
+Guia dos cards no Canva: https://www.canva.com/d/DJcXJKnH-pf2gRe
+
+## Histórico das revisões anteriores
+
 # Diário de Trader - revisão geral v308
 
 Padrão visual ampliado para áreas internas, PDFs e imagens compartilhadas. Leia LEIA-ME-V308.md para instalação, cobertura, validações e limites. Amostras em amostras-v308 são fictícias e não alimentam os dados do aplicativo.

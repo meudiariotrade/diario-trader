@@ -94,7 +94,6 @@
   const price=v=>{const n=typeof numN==='function'?numN(v):typeof v==='number'?v:Number(String(v??'').replace(',','.'));return v!==null&&v!==undefined&&v!==''&&Number.isFinite(n)?num(n,Math.abs(n)>=10000?0:2):'—'};
   row(ctx,1080,660,'Entrada informada',price(t.entry));
   row(ctx,1080,750,data.op?'Referência disponível':'Saída informada',price(data.op?data.px:t.exit));
-  row(ctx,1080,840,'Resultado em R',finite(data.c?.r)?(data.c.r>0?'+':'')+num(data.c.r)+'R':'—',finite(data.c?.r)?data.c.r>=0?IMAGE.g:IMAGE.r:IMAGE.mut);
   row(ctx,1080,930,'Setup',t.setup||'Não informado');
   if(typeof SHR!=='undefined'&&SHR.rs&&finite(data.c?.pl))row(ctx,1080,1020,'Resultado financeiro',typeof mT==='function'?mT(t,data.c.pl):num(data.c.pl),data.c.pl>=0?IMAGE.g:IMAGE.r);
   text(ctx,'Dados da operação registrados no diário.',56,1140,22,IMAGE.mut,400,'left',968);
@@ -105,8 +104,7 @@
   box(ctx,56,236,968,214);text(ctx,pc(data.pct),80,350,86,finite(data.pct)?data.pct>=0?IMAGE.g:IMAGE.r:IMAGE.mut,700,'left',910);text(ctx,'Resultado sobre o capital de referência cadastrado',80,408,24,IMAGE.mut,400,'left',920);
   row(ctx,1080,528,'Operações encerradas',finite(data.M?.n)?String(data.M.n):'—');
   row(ctx,1080,620,'Acerto',finite(data.M?.acerto)?num(data.M.acerto*100,1)+'%':'—');
-  row(ctx,1080,712,'Resultado em R',finite(data.R)?num(data.R)+'R':'—');
-  const best=data.best?.t?.ativo&&finite(data.best?.c?.r)?data.best.t.ativo+' · '+num(data.best.c.r)+'R':'—';
+  const best=data.best?.t?.ativo||'—';
   row(ctx,1080,804,'Melhor trade',best);
   row(ctx,1080,892,'Regras seguidas',finite(data.seq)?data.seq+' dia(s) seguidos':'—');
   end(ctx,1080,1080,'Amostra pessoal do diário; registros e capital determinam o cálculo.');return c;
