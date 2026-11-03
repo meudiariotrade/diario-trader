@@ -3362,6 +3362,9 @@ const makeButton=(txt,callback,cls='tc326-btn')=>{const b=elem('button',txt,cls)
 function close(){if(!modal)return;const d=modal;modal=null;connectedOwner=null;try{d.close()}catch{}d.remove()}
 function dialog(title){if(!userId())return null;close();connectedOwner=userId();const d=modal=elem('dialog',undefined,'tc326-modal');const head=elem('header',undefined,'tc326-head');head.append(elem('b',title),makeButton('✕',close,'tc326-close'));d.append(head);const body=elem('div',undefined,'tc326-body');d.append(body);d.addEventListener('close',()=>{if(modal===d){modal=null;connectedOwner=null}d.remove()});D.body.append(d);try{d.showModal()}catch{d.setAttribute('open','')};return body}
 const actions=[
+ ['planner328','Planejar Pré-Mercado · Global, WIN, WDO','layout',()=>window.TraderPre328?.open()],
+ ['brief328','Briefing de consulta · Pré-Mercado','file',()=>window.TraderPre328?.briefing()],
+ ['observer328','Observador de mudanças nas cotações','activity',()=>window.TraderObservador328?.settings()],
  ['sessions','Sessões · Pré, Pregão, Pós','clock',()=>window.TraderConsulta325?.open('sessions')],
  ['organize','Restaurar e desfazer layout','rotate',()=>D.querySelector('[data-auto322-open]')?.click()],
  ['workspaces','Gerenciar Workspaces','grid',()=>D.querySelector('[data-ws321-open]')?.click()],
@@ -3371,6 +3374,8 @@ const actions=[
  ['since','Desde a última consulta','bookmark',()=>window.TraderConsulta325?.open('since')],
  ['notices','Radar de atenção','bell',()=>radar()],
  ['prefs','Preferências de automação','settings',()=>settings()],
+ ['focus','Alternar Modo Foco (desktop)','monitor',()=>window.TraderVisual327?.toggleFocus()],
+ ['density','Alternar densidade compacta (desktop)','layout',()=>window.TraderVisual327?.toggleDensity()],
  ['window','Terminal em nova janela (PC)','window',()=>D.querySelector('[data-terminal-window]:not(:disabled)')?.click()]
  ];
 function runAction(act){close();if(act[0]==='window'&&!D.querySelector('[data-terminal-window]:not(:disabled)'))return;try{act[3]()}catch(e){if(typeof window.toast==='function')window.toast('Comando indisponível: '+e.message)}}
@@ -3424,3 +3429,332 @@ const css=elem('style');css.textContent=`
 `;D.head.append(css);
 mount();setupMonitor();window.TraderCommand326={mount,palette,radar,settings,sourceStatus,sessionInfo};
 })();
+
+
+/* v327: ajustes de visualização do Terminal no desktop.
+ * Não altera Workspaces nem executa ordens. Reaproveita grade e drag nativos. */
+(function(){
+'use strict';
+const doc=document;
+const desk=()=>window.matchMedia('(min-width: 900px)').matches;
+const terminal=()=>doc.body.classList.contains('trmon')&&!!doc.querySelector('.trbar');
+const identity=()=>window.DIARIO_DEMO?'demo':(typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:null);
+const key=(part)=>'terminal-v327-'+String(identity()||'anonymous')+'-'+part;
+let previous=null;
+function load(part){try{return localStorage.getItem(key(part))==='1'}catch{return false}}
+function store(part,value){try{localStorage.setItem(key(part),value?'1':'0')}catch{}}
+function apply(){
+ const allowed=desk()&&terminal()&&!!identity();
+ doc.body.classList.toggle('tr327-focus',allowed&&load('focus'));
+ doc.body.classList.toggle('tr327-dense',allowed&&load('dense'));
+ const b=doc.querySelector('[data-tr327-focus]');if(b){b.setAttribute('aria-pressed',String(doc.body.classList.contains('tr327-focus')));b.textContent=doc.body.classList.contains('tr327-focus')?'◧ Sair do foco':'◩ Modo Foco'}
+}
+function toggle(part){if(!desk()||!terminal()||!identity())return false;store(part,!load(part));apply();return true}
+function mount(){const bar=doc.querySelector('.trbar');if(!bar||!desk()||!identity()||window.TRPOP){apply();return}
+ if(!bar.querySelector('[data-tr327-focus]')){
+  const b=doc.createElement('button');b.type='button';b.className='trbtn tr327-focus-btn';b.dataset.tr327Focus='1';b.title='Ocultar elementos secundários do Terminal (Shift+F)';b.addEventListener('click',()=>toggle('focus'));bar.append(b);
+ }
+ apply();
+}
+doc.addEventListener('keydown',e=>{if(!e.shiftKey||e.ctrlKey||e.metaKey||e.altKey||e.key.toLowerCase()!=='f'||e.repeat)return;
+ const el=doc.activeElement;if(el&&(el.matches('input,textarea,select,[contenteditable="true"]')||el.closest('[contenteditable="true"],dialog')))return;
+ if(desk()&&terminal()){e.preventDefault();toggle('focus')}
+});
+if(window.TraderUI?.onRender)window.TraderUI.onRender('desktop-visual-v327',mount);
+window.addEventListener('resize',apply);
+const observer=new MutationObserver(()=>{if(terminal()&&!doc.querySelector('[data-tr327-focus]')&&desk())mount();else if(!terminal()&&doc.body.classList.contains('tr327-focus'))apply()});
+observer.observe(doc.getElementById('app')||doc.body,{childList:true,subtree:false});
+const style=doc.createElement('style');style.textContent=`
+/* V327: somente desktop e somente dentro do Terminal; preserva os painéis nativos. */
+@media(min-width:900px){
+ body.trmon.tr327-focus .trbar{padding:4px 6px!important;gap:4px!important}
+ body.trmon.tr327-focus .trbar .trcmd{min-height:30px!important;height:30px!important}
+ body.trmon.tr327-focus .trbar .trbtn{min-height:30px!important;padding:4px 8px!important;font-size:11px!important}
+ body.trmon.tr327-focus .trrod{display:none!important}
+ body.trmon.tr327-dense .trbar{gap:4px!important;padding:4px 6px!important}
+ body.trmon.tr327-dense .trbar .trbtn{min-height:30px!important;padding:4px 7px!important;font-size:11px!important}
+ body.trmon.tr327-dense .trph{min-height:27px!important;padding:3px 5px!important}
+ body.trmon.tr327-dense .trph .trx{min-height:23px!important;padding:2px 5px!important}
+ body.trmon.tr327-dense .trpb{font-size:12px!important}
+ body.trmon .tr327-focus-btn{border-color:#a47a39!important;color:#ffd38a!important}
+}
+`;doc.head.append(style);
+window.TraderVisual327={toggleFocus:()=>toggle('focus'),toggleDensity:()=>toggle('dense'),apply,mount};
+mount();
+})();
+/* v328 — Planejamento de pré-mercado. Mantém todas as funções existentes e não executa ordens.
+   Atualiza apenas Workspaces v328 com consentimento explícito e cópia de segurança. */
+(function(){
+'use strict';
+if(window.TraderPre328)return;
+const D=document,ID='pre328-dialog', PREFIX='diario-pre328-';
+const presets={
+ global:{name:'Pré-Mercado · Visão Global',desc:'Primeira leitura: exterior, indicadores, agenda, juros e notícias.',panels:[['WEI','Radar global'],['ECO','Agenda e indicadores'],['WIRP','Juros'],['FX','Câmbio'],['NEWS','Notícias'],['EVT','Eventos']]},
+ win:{name:'Pré-Mercado · Foco WIN',desc:'Cenário externo, ações brasileiras, commodities e risco de calendário.',panels:[['WEI','Exterior'],['TOP','Destaques Brasil'],['CMDTY','Commodities'],['ECO','Agenda econômica'],['WIRP','Juros'],['NEWS','Notícias']]},
+ wdo:{name:'Pré-Mercado · Foco WDO',desc:'Dólar global, juros, agenda Brasil/EUA e notícias relevantes.',panels:[['FX','Câmbio'],['WIRP','Curva de juros'],['WEI','Índices globais'],['ECO','Agenda econômica'],['EVT','Eventos'],['NEWS','Notícias']]},
+ live:{name:'Pregão · Radar de Consulta',desc:'Foco no acompanhamento sem recriar a plataforma de execução.',panels:[['WEI','Mercados globais'],['ECO','Indicadores'],['FX','Câmbio'],['WIRP','Juros'],['NEWS','Notícias'],['EVT','Eventos']]},
+ post:{name:'Pós-Pregão · Revisão',desc:'Reconstituir acontecimentos e consultar diário e estatísticas.',panels:[['JORNAL','Jornal do Pregão'],['NEWS','Notícias'],['ECO','Agenda'],['STAT','Estatísticas'],['EVT','Eventos']]}
+};
+const who=()=>window.DIARIO_DEMO?'demo':(typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):null);
+const key=x=>PREFIX+who()+'-'+x;
+function read(name,def){try{const v=JSON.parse(localStorage.getItem(key(name)));return v===null?def:v}catch{return def}}
+function write(name,v){try{if(who())localStorage.setItem(key(name),JSON.stringify(v))}catch{}}
+const copy=x=>JSON.parse(JSON.stringify(x));
+const el=(tag,txt,cls)=>{let x=D.createElement(tag);if(txt!==undefined)x.textContent=txt;if(cls)x.className=cls;return x};
+const button=(txt,fn,cls='pre328-btn')=>{const b=el('button',txt,cls);b.type='button';b.addEventListener('click',fn);return b};
+const state=()=>{const t=window.TRM?.TS?.();if(!t?.wss||!who())throw Error('Terminal indisponível ou sessão expirada.');return t};
+let modal=null;
+function close(){if(!modal)return;const x=modal;modal=null;try{x.close()}catch{}x.remove()}
+function openDialog(title){close();const x=modal=el('dialog',undefined,'pre328-modal');x.id=ID;const h=el('header',undefined,'pre328-head');h.append(el('strong',title),button('✕',close,'pre328-close'));x.append(h);const body=el('section',undefined,'pre328-body');x.append(body);D.body.append(x);x.addEventListener('close',()=>{if(modal===x)modal=null;x.remove()});try{x.showModal()}catch{x.setAttribute('open','')};return body}
+function grid(n){const cols=n<3?1:n<5?2:3;const h=Math.max(6,Math.floor(26/Math.ceil(n/cols)));return Array.from({length:n},(_,i)=>({x:i%cols*12/cols,y:Math.floor(i/cols)*h,w:12/cols,h}));}
+function setWorkspace(kind,ids,force=false){const s=state(),p=presets[kind];if(!p)throw Error('Modelo desconhecido.');const selected=ids.filter(x=>p.panels.some(i=>i[0]===x));if(selected.length<2||selected.length>8)throw Error('Selecione de dois a oito painéis.');const id='ws328_'+kind,found=s.wss[id];if(found&&!force){s.ws=id;window.TRM.TR.foco=0;window.TRM.TR.mob=0;window.TRM.TR.max=-1;save();render();return 'Workspace existente reaberto sem alterações.'}
+ const old={ws:s.ws,existing:found?copy(found):null};write('undo',old);
+ s.wss[id]={n:p.name,p:selected.slice(),g:grid(selected.length)};s.ws=id;window.TRM.TR.foco=0;window.TRM.TR.mob=0;window.TRM.TR.max=-1;save();render();return 'Workspace salvo e aberto. Os demais espaços foram preservados.';}
+function undo(){const prev=read('undo',null);if(!prev)throw Error('Nenhuma troca recente para desfazer.');const s=state(),current=s.ws;if(!current.startsWith('ws328_'))throw Error('O Workspace atual não é do planejador.');if(prev.existing)s.wss[current]=prev.existing;else delete s.wss[current];if(prev.ws&&s.wss[prev.ws])s.ws=prev.ws;window.TRM.TR.foco=0;window.TRM.TR.mob=0;window.TRM.TR.max=-1;write('undo',null);save();render()}
+function quoteReport(){const q=window.TraderConsulta325?.getQuotes?.()||{rows:[],status:'não disponível'};const data=Array.isArray(q.rows)?q.rows:[];const picks=['IBOV','SPX','NDX','DXY','US10Y','WIN','WDO'];const selected=data.filter(v=>picks.some(t=>String(v.pedido||v.s||'').toUpperCase().includes(t))).slice(0,9);return{data,selected,atrasos:data.filter(v=>v.atraso===true).length,semPreco:data.filter(v=>!Number.isFinite(Number(v.px))).length,status:q.status||'Fonte não identificada',stamp:q.timestamp};}
+function briefing(){const body=openDialog('Briefing de consulta · Pré-Mercado'),q=quoteReport();body.append(el('div','RESUMO AUTOMÁTICO BASEADO APENAS NO CACHE DISPONÍVEL','pre328-label'));
+ body.append(el('p','Cenário de consulta: priorize os índices globais, o DXY, os Treasuries, a curva de DI e a agenda econômica antes de analisar WIN e WDO.','pre328-note'));
+ body.append(el('div','Qualidade: '+q.data.length+' cotação(ões) no cache · '+q.atrasos+' com atraso declarado · '+q.semPreco+' sem preço válido.','pre328-alert'));
+ if(q.selected.length){const section=el('div',undefined,'pre328-quotes');for(const a of q.selected){const name=String(a.pedido||a.s||'Ativo');const pct=Number(a.d1);const valid=Number.isFinite(pct);section.append(el('div',name+' · '+(valid?(pct>0?'+':'')+pct.toFixed(2)+'%':'variação indisponível')+(a.atraso===true?' · ATRASADO':'')))}body.append(section)}else body.append(el('p','Ainda não há cotações selecionáveis no cache. Consulte Radar Global e Qualidade dos Dados.','pre328-note'));
+ body.append(el('p','Este briefing não interpreta notícias nem presume causa de movimentos. Dados podem estar atrasados. Confira Agenda e Notícias nos painéis existentes.','pre328-note'));
+ body.append(button('Consultar qualidade das fontes',()=>{close();window.TraderConsulta325?.open?.('quality')}));
+ body.append(button('Abrir planejamento de sessão',()=>open()));}
+function open(){if(!who())return;const root=openDialog('Planejador do Terminal');root.append(el('p','Escolha a finalidade da consulta. O aplicativo reutiliza painéis que já existem, sem abrir ordens nem sobrescrever seus Workspaces.','pre328-note'));
+ const suggestion=window.TraderConsulta325?.currentMode?.();const suggested=({pre:'global',live:'live',post:'post'})[suggestion?.mode]||'global';
+ let mode=read('lastMode',suggested);if(!presets[mode])mode=suggested;
+ const tabs=el('div',undefined,'pre328-tabs'),content=el('div');root.append(tabs,content);
+ function draw(){tabs.replaceChildren();for(const [id,p]of Object.entries(presets)){const b=button(p.name.replace('Pré-Mercado · ','').replace('Pregão · ','').replace('Pós-Pregão · ',''),()=>{mode=id;write('lastMode',id);draw()},'pre328-tab');b.setAttribute('aria-pressed',String(mode===id));tabs.append(b)}
+ content.replaceChildren();const p=presets[mode];content.append(el('h3',p.name),el('p',p.desc,'pre328-note'));
+ const existing=state().wss['ws328_'+mode];content.append(el('p',existing?'Este ambiente já existe. Abrir preserva sua disposição atual; recriar utiliza os painéis selecionados.':'Este ambiente ainda não foi criado.','pre328-note'));
+ const list=el('div',undefined,'pre328-panes');const selected=read('choices-'+mode,p.panels.map(x=>x[0]));for(const [id,label]of p.panels){const row=el('label',undefined,'pre328-item'),cb=el('input');cb.type='checkbox';cb.value=id;cb.checked=selected.includes(id);cb.addEventListener('change',()=>write('choices-'+mode,[...list.querySelectorAll('input:checked')].map(x=>x.value)));row.append(cb,el('span',label),el('small',id));list.append(row)}content.append(list);
+ const status=el('p',undefined,'pre328-note');status.setAttribute('role','status');content.append(status);
+ const actions=el('div',undefined,'pre328-actions');actions.append(button(existing?'Abrir Workspace salvo':'Criar e abrir ambiente',()=>{try{const ids=[...list.querySelectorAll('input:checked')].map(x=>x.value);status.textContent=setWorkspace(mode,ids,false);close()}catch(e){status.textContent=e.message}}));
+ actions.append(button('Recriar usando seleção',()=>{if(!confirm('Recriar este ambiente usando os painéis selecionados? Outros Workspaces serão preservados.'))return;try{const ids=[...list.querySelectorAll('input:checked')].map(x=>x.value);status.textContent=setWorkspace(mode,ids,true);close()}catch(e){status.textContent=e.message}}));
+ content.append(actions)}draw();
+ root.append(button('↶ Desfazer última troca do planejador',()=>{try{undo();close()}catch(e){const p=el('p',e.message,'pre328-alert');root.append(p)}}));
+ root.append(button('Gerar briefing de consulta',briefing));
+ root.append(el('p','A seleção por horário é apenas sugestiva. Feriados, horários especiais e fusos de bolsas devem ser confirmados nas fontes oficiais.','pre328-note'));
+}
+function mount(){const bar=D.querySelector('.trbar');if(!bar||bar.querySelector('[data-pre328]')||window.TRPOP||!who())return;const b=button('◫ Planejar sessão',open,'trbtn pre328-trigger');b.dataset.pre328='1';b.title='Pré-Mercado: Global, WIN ou WDO · Pregão · Pós-Pregão';bar.append(b)}
+const css=el('style');css.textContent=`
+.pre328-modal{box-sizing:border-box;border:1px solid #3a5264;background:#0d1722;color:#f0f5fa;border-radius:10px;padding:0;width:min(650px,calc(100vw - 18px));max-height:86dvh;overflow:auto;font:13px/1.5 system-ui;box-shadow:0 25px 70px #000b}
+.pre328-modal::backdrop{background:#000a}.pre328-head{position:sticky;top:0;background:#152331;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #385266;font-size:16px}.pre328-close{background:#26384a;border:1px solid #455c70;color:#eaf1f6;border-radius:5px;padding:6px 12px;cursor:pointer}.pre328-body{padding:14px 16px}.pre328-note{font-size:12px;color:#a9bdcc;margin:8px 0;line-height:1.5}.pre328-body h3{color:#eed29a;margin:13px 0 2px;font-size:15px}.pre328-label{color:#d7aa69;letter-spacing:1px;font-size:10px;font-weight:700}.pre328-tabs{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0}.pre328-tab{background:#1b2b39;border:1px solid #405366;border-radius:5px;color:#d5e1e9;padding:8px 10px;cursor:pointer;font:inherit}.pre328-tab[aria-pressed=true]{border-color:#e4b567;background:#44341c;color:#ffe2ab}.pre328-panes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:12px 0}.pre328-item{display:flex;align-items:center;gap:8px;background:#192a39;border:1px solid #344a5c;border-radius:6px;padding:9px;min-width:0;cursor:pointer}.pre328-item input{accent-color:#e5b565;width:17px;height:17px;flex:none}.pre328-item span{flex:1}.pre328-item small{color:#8da8ba;font-size:10px}.pre328-btn{background:#20354a;border:1px solid #48617a;color:#edf5fb;border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit;margin:4px 0}.pre328-btn:hover,.pre328-btn:focus-visible{outline:1px solid #e1b874;background:#2b455c}.pre328-actions{display:flex;flex-wrap:wrap;gap:8px}.pre328-alert{border-left:3px solid #e1b874;background:#2a2d2c;padding:9px;color:#f4d5a1}.pre328-quotes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:12px 0}.pre328-quotes div{background:#192a39;padding:8px;border-radius:5px}.pre328-trigger{color:#f0d39e!important;border-color:#9b7945!important}
+@media(max-width:767px){.pre328-modal{max-height:78dvh}.pre328-body{padding:10px}.pre328-panes{grid-template-columns:1fr}.pre328-tabs{gap:3px}.pre328-tab{padding:7px;font-size:11px}.pre328-actions{display:grid;grid-template-columns:1fr}}
+`;D.head.append(css);
+if(window.TraderUI?.onRender)window.TraderUI.onRender('pre328-plan',mount);
+const obs=new MutationObserver(()=>{if(D.querySelector('.trbar')&&!D.querySelector('[data-pre328]'))mount()});obs.observe(D.getElementById('app')||D.body,{childList:true,subtree:false});
+window.TraderPre328={open,briefing,mount,presets,undo,setWorkspace,quoteReport};mount();
+})();
+/* v328 — Registro local opcional de mudanças observadas nas fontes conectadas.
+   Sem feeds adicionais; não representa análise causal, tempo real ou sinal de trade. */
+(function(){
+'use strict';if(window.TraderObservador328)return;
+const D=document;
+const owner=()=>window.DIARIO_DEMO?'demo':(typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):null);
+const storage=k=>'diario-obs328-'+owner()+'-'+k;
+const get=(k,def)=>{try{const v=JSON.parse(localStorage.getItem(storage(k)));return v??def}catch{return def}};
+const set=(k,v)=>{try{if(owner())localStorage.setItem(storage(k),JSON.stringify(v))}catch{}};
+const valid=r=>{const a=Number(r?.d1);return Number.isFinite(a)&&a>-100&&a<1000&&r?.atraso===false};
+let timer=null;
+function snapshot(){const source=window.TraderConsulta325?.getQuotes?.();if(!source?.rows?.length||!owner())return{ok:false,reason:'Sem cotações para comparar.'};
+ const rows=source.rows.filter(valid);if(!rows.length)return{ok:false,reason:'Nenhuma cotação com regime de atraso confirmado como não atrasado.'};
+ const now=Date.now();const curr={at:now,values:{}};for(const r of rows){const symbol=String(r.pedido||r.s||'').slice(0,25);if(symbol)curr.values[symbol]={pct:Number(r.d1),atraso:r.atraso}};
+ const prev=get('snapshot',null);set('snapshot',curr);if(!prev||now-prev.at>3*60*60*1000)return{ok:true,count:0,reason:'Referência inicial registrada.'};
+ let count=0;for(const [sym,v]of Object.entries(curr.values)){const old=prev.values?.[sym];if(!old||!Number.isFinite(old.pct))continue;
+ const diff=v.pct-old.pct;if(Math.abs(diff)<0.75)continue;
+ const tag=sym+'-'+Math.floor(now/(15*60*1000));const seen=get('seen',{});if(seen[tag])continue;
+ window.TraderConsulta325?.appendEvent?.('Mudança observada · '+sym,'Variação informada pela fonte passou de '+old.pct.toFixed(2)+'% para '+v.pct.toFixed(2)+'% entre duas consultas locais. Sem inferência de causa.',now);
+ seen[tag]=now;for(const k of Object.keys(seen))if(now-seen[k]>4*60*60*1000)delete seen[k];set('seen',seen);count++;if(count>=5)break}
+ return{ok:true,count,reason:count?count+' mudança(s) registrada(s) na linha do tempo.':'Sem mudanças acima do limiar desde a última observação.'};}
+function monitor(){if(timer){clearInterval(timer);timer=null}if(!get('enabled',false)||!owner())return;timer=setInterval(()=>{if(D.hidden||!D.querySelector('.trbar')||!owner())return;snapshot()},120000)}
+function settings(){const box=D.createElement('dialog');box.className='obs328-modal';box.setAttribute('aria-label','Observador de mercado');const wrap=D.createElement('section');wrap.className='obs328-content';box.append(wrap);
+ const h=D.createElement('h3');h.textContent='Observador de mercado';wrap.append(h);
+ const intro=D.createElement('p');intro.textContent='Registra alterações observadas no cache de cotações e as envia para a linha do tempo local, sem fazer novas consultas. Não substitui dados oficiais nem executa ordens.';wrap.append(intro);
+ const label=D.createElement('label');const check=D.createElement('input');check.type='checkbox';check.checked=get('enabled',false);label.append(check,D.createTextNode(' Monitorar automaticamente a cada 2 minutos, enquanto o Terminal estiver aberto'));wrap.append(label);
+ const hint=D.createElement('p');hint.textContent='Só utiliza linhas identificadas explicitamente como não atrasadas, com variação percentual válida. Registra mudanças de 0,75 ponto percentual ou mais e limita duplicações. Não infere notícias nem causas.';wrap.append(hint);
+ const message=D.createElement('p');message.setAttribute('role','status');wrap.append(message);
+ check.addEventListener('change',()=>{set('enabled',check.checked);monitor();message.textContent=check.checked?'Monitoramento ativado neste dispositivo.':'Monitoramento desativado.'});
+ const run=D.createElement('button');run.textContent='Comparar agora';run.addEventListener('click',()=>{message.textContent=snapshot().reason});wrap.append(run);
+ const timeline=D.createElement('button');timeline.textContent='Abrir linha do tempo';timeline.addEventListener('click',()=>{box.close();window.TraderConsulta325?.open?.('timeline')});wrap.append(timeline);
+ const close=D.createElement('button');close.textContent='Fechar';close.addEventListener('click',()=>box.close());wrap.append(close);
+ box.addEventListener('close',()=>box.remove());D.body.append(box);try{box.showModal()}catch{box.open=true}}
+function mount(){const bar=D.querySelector('.trbar');if(!bar||bar.querySelector('[data-obs328]')||!owner()||window.TRPOP)return;const b=D.createElement('button');b.type='button';b.className='trbtn';b.dataset.obs328='1';b.textContent='◷ Observador';b.title='Acompanhamento opcional de mudanças nas cotações, sem feeds adicionais';b.addEventListener('click',settings);bar.append(b)}
+const css=D.createElement('style');css.textContent='.obs328-modal{background:#101a25;color:#e5eff8;border:1px solid #4a6073;border-radius:10px;width:min(520px,calc(100vw - 20px));max-height:75dvh;overflow:auto;font:13px/1.6 system-ui}.obs328-modal::backdrop{background:#000a}.obs328-content{padding:12px}.obs328-content p{color:#aec0cf}.obs328-content label{display:flex;gap:9px;align-items:start;background:#1e2f3c;padding:12px;border-radius:6px}.obs328-content input{margin-top:4px;accent-color:#e3b56e}.obs328-content button{display:inline-block;margin:6px 5px 0 0;padding:9px 12px;background:#284157;color:#f1f6fa;border:1px solid #597085;border-radius:5px;cursor:pointer}';D.head.append(css);
+if(window.TraderUI?.onRender)window.TraderUI.onRender('obs328',mount);
+const observer=new MutationObserver(()=>{if(D.querySelector('.trbar')&&!D.querySelector('[data-obs328]'))mount()});observer.observe(D.getElementById('app')||D.body,{childList:true,subtree:false});
+window.TraderObservador328={settings,mount,snapshot,monitor};mount();monitor();
+})();
+
+/* v328: observador acessível também pelo menu de comandos, sem botão redundante. */
+(function(){const style=document.createElement("style");style.textContent=".tc326-ready [data-obs328]{display:none!important}";document.head.appendChild(style)})();
+
+/* v329 — Continuidade do Terminal: janelas, sinais entre abas e agenda local.
+   Não transmite dados financeiros pela BroadcastChannel, não inventa notícias ou cotações. */
+(function(win,doc){
+ 'use strict';
+ if(win.TraderContinuo329)return;
+ const id=()=>win.DIARIO_DEMO?'demo':(typeof SESS!=='undefined'&&SESS&&SESS.uid?String(SESS.uid):null);
+ const key=part=>'diario-v329-'+id()+'-'+part;
+ const get=(name,fallback)=>{try{const x=JSON.parse(localStorage.getItem(key(name)));return x??fallback}catch{return fallback}};
+ const put=(name,value)=>{if(!id())return;try{localStorage.setItem(key(name),JSON.stringify(value))}catch{}};
+ const node=(tag,text,cls)=>{const e=doc.createElement(tag);if(text!=null)e.textContent=text;if(cls)e.className=cls;return e};
+ const btn=(text,cb)=>{const b=node('button',text,'v329-btn');b.type='button';b.addEventListener('click',cb);return b};
+ const owned=()=>Boolean(id())&&Boolean(doc.querySelector('.trbar'));
+ const desktop=()=>win.innerWidth>=980&&!(win.matchMedia&&win.matchMedia('(pointer:coarse)').matches&&win.innerWidth<1200);
+ const tabId=Math.random().toString(36).slice(2);
+ let channel=null,channelOwner=null,lastSignal=0,openWindows=new Map(),dialog=null,notice=null;
+ function connect(){const owner=id();if(!owner||!('BroadcastChannel' in win))return;if(channel&&channelOwner===owner)return;
+  if(channel)channel.close();channelOwner=owner;channel=new BroadcastChannel('diario-trader-v329-'+owner);
+  channel.onmessage=ev=>{const m=ev.data;if(!m||m.from===tabId||m.owner!==id()||!['save','cloud','layout','ping'].includes(m.kind)||typeof m.at!=='number'||Math.abs(Date.now()-m.at)>30000)return;
+   if(m.kind==='save'){lastSignal=m.at;showHint('Checklist/Diário alterados em outra janela. A atualização segura será tentada automaticamente após o salvamento na nuvem.');}
+   if(m.kind==='cloud'){lastSignal=m.at;win.dispatchEvent(new CustomEvent('trader:remote-cloud-save',{detail:{owner:m.owner,at:m.at}}));}
+   if(m.kind==='layout')showHint('Um Workspace foi alterado em outra janela. Atualize a visualização se desejar.');
+  };
+ }
+ function signal(kind){if(!id()||!['save','cloud','layout','ping'].includes(kind))return;connect();try{channel?.postMessage({kind,owner:id(),from:tabId,at:Date.now()})}catch{}}
+ function showHint(message){if(!owned())return;notice?.remove();const bar=doc.querySelector('.trbar');if(!bar)return;notice=node('div',null,'v329-hint');notice.append(node('span',message),btn('Entendi',()=>{notice?.remove();notice=null}));bar.insertAdjacentElement('afterend',notice)}
+ function openPanel(){if(!desktop()){showHint('Janelas destacáveis estão disponíveis no computador.');return}if(!win.TRM?.layAtual)return;const p=win.TRM.layAtual()?.p||[];if(!p.length)return;
+  const root=modal('Destacar painel para outro monitor');root.append(node('p','A janela é nativa do navegador. Você pode arrastá-la para outro monitor; bloqueadores de pop-up e permissões do sistema podem limitar o recurso.','v329-muted'));
+  p.forEach((command,i)=>{const safe=String(command||'').slice(0,80);root.append(btn((i+1)+' · '+safe,()=>{
+   const url=new URL(location.href);url.searchParams.delete('terminal');url.searchParams.set('pop',safe);const name='diario-panel-'+i+'-'+tabId;
+   const winRef=win.open(url.href,name,'popup=yes,width=880,height=720,resizable=yes,scrollbars=yes');if(!winRef){root.append(node('p','O navegador bloqueou a janela. Permita pop-ups para este site.','v329-warn'));return}
+   openWindows.set(name,winRef);try{winRef.focus()}catch{}signal('layout');close();
+  }))});root.append(node('p','Os painéis destacados são visualizações de consulta. Eles não compartilham automaticamente posição, filtros ou dados editáveis.','v329-muted'));
+ }
+ function close(){if(!dialog)return;const d=dialog;dialog=null;try{d.close()}catch{}d.remove()}
+ function modal(title){close();const d=dialog=node('dialog',null,'v329-dialog');const head=node('div',null,'v329-head');head.append(node('b',title),btn('✕',close));d.append(head);const content=node('section',null,'v329-content');d.append(content);doc.body.append(d);d.addEventListener('close',()=>{if(dialog===d)dialog=null;d.remove()});try{d.showModal()}catch{d.setAttribute('open','')};return content}
+ const isoBR=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const hmBR=()=>new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
+ function inferredSession(){const today=isoBR(),weekday=new Date(today+'T12:00:00Z').getUTCDay();const holidays=get('daysOff',[]);if(weekday===0||weekday===6||holidays.includes(today))return{label:'Mercado fechado / feriado configurado',kind:'post'};
+  const t=hmBR();return t<'09:00'?{label:'Pré-Abertura sugerida',kind:'pre'}:t<'18:00'?{label:'Pregão sugerido',kind:'live'}:{label:'Pós-Pregão sugerido',kind:'post'};
+ }
+ function sessionPanel(){const c=modal('Agenda e sessões · horário de Brasília');const i=inferredSession();c.append(node('p','Sugestão local: '+i.label+'. Datas especiais e horários de bolsas devem ser conferidos em fontes oficiais.','v329-info'));
+  c.append(btn('Planejar ambiente recomendado',()=>{close();win.TraderPre328?.open?.()}));
+  const row=node('div',null,'v329-inline'),date=doc.createElement('input');date.type='date';date.value=isoBR();date.setAttribute('aria-label','Data de feriado ou sessão especial');row.append(date,btn('Marcar feriado',()=>{const dates=get('daysOff',[]);if(date.value&&!dates.includes(date.value))dates.push(date.value);put('daysOff',dates.slice(-100));sessionPanel()}),btn('Remover feriado',()=>{put('daysOff',get('daysOff',[]).filter(d=>d!==date.value));sessionPanel()}));c.append(row);
+  c.append(node('p','Feriados locais cadastrados: '+(get('daysOff',[]).sort().join(', ')||'nenhum')+'. Cadastro manual, não é calendário oficial da B3.','v329-muted'));
+ }
+ function eventPanel(){const c=modal('Agenda de alertas locais');c.append(node('p','Cadastre lembretes econômicos com fonte verificada. Não é um feed automático de notícias ou um calendário oficial. Os alertas só aparecem com o aplicativo aberto.','v329-muted'));
+  const form=node('form',null,'v329-form');const input=doc.createElement('input');input.placeholder='Evento (ex.: decisão Copom)';input.maxLength=110;input.required=true;const when=doc.createElement('input');when.type='datetime-local';when.required=true;
+  const src=doc.createElement('input');src.placeholder='Fonte / URL (opcional)';src.maxLength=200;form.append(input,when,src);const add=btn('Adicionar evento',()=>{if(!input.reportValidity()||!when.reportValidity())return;const events=get('events',[]);events.push({id:Date.now()+Math.random(),name:input.value.trim(),when:when.value,source:src.value.trim(),done:false});put('events',events.slice(-70));eventPanel()});form.append(add);c.append(form);
+  const events=get('events',[]).sort((a,b)=>a.when.localeCompare(b.when));events.forEach(ev=>{const r=node('div',null,'v329-event');r.append(node('span',ev.when.replace('T',' ')+' · '+ev.name+(ev.source?' · '+ev.source:'')));r.append(btn('Excluir',()=>{put('events',get('events',[]).filter(x=>x.id!==ev.id));eventPanel()}));c.append(r)});
+ }
+ function checkEvents(){if(!id()||doc.hidden)return;const events=get('events',[]);let updated=false;
+  for(const ev of events){if(ev.done||!ev.when)continue;const ts=new Date(ev.when).getTime();if(!Number.isFinite(ts)||Date.now()<ts||Date.now()-ts>15*60*1000)continue;
+   ev.done=true;updated=true;showHint('Evento cadastrado: '+ev.name+' (verifique a fonte).');win.TraderConsulta325?.appendEvent?.('Lembrete cadastrado · '+ev.name,'Evento manual com horário definido pelo usuário. Não comprova divulgação nem resultado.',ts);
+  }if(updated)put('events',events)}
+ function briefing(){const c=modal('Briefing de consulta · v329');c.append(node('p','Esta síntese utiliza os painéis e o cache existentes. Não contém análise de notícias por IA nem dados novos.','v329-muted'));
+  const info=inferredSession();c.append(node('h3','Sessão: '+info.label));const q=win.TraderConsulta325?.getQuotes?.();if(!q?.rows?.length){c.append(node('p','Cotações não disponíveis; abra o Radar Global e confira as fontes.'));}else{
+   const rows=q.rows.slice(0,12);rows.forEach(r=>{const label=String(r.pedido||r.s||'Ativo').slice(0,30),delta=Number(r.d1);c.append(node('p',label+' · '+(Number.isFinite(delta)?delta.toFixed(2)+'%':'variação indisponível')+' · '+(r.atraso===false?'sem atraso declarado':r.atraso===true?'atrasada':'status de atraso desconhecido'),'v329-quote'))})}
+  c.append(btn('Abrir briefing anterior',()=>{close();win.TraderPre328?.briefing?.()}));
+ }
+ function open(){const c=modal('Central de automação · Terminal');c.append(node('p','Ferramentas de consulta, sem execução de ordens.','v329-muted'));
+  c.append(btn('Destacar painéis em janelas separadas',openPanel),btn('Agenda de sessões e feriados configuráveis',sessionPanel),btn('Alertas de eventos cadastrados',eventPanel),btn('Briefing de consulta',briefing),btn('Linha do tempo existente',()=>{close();win.TraderConsulta325?.open?.('timeline')}));
+  c.append(node('p','Sinais entre abas: '+(channel?'disponíveis neste navegador':'aguardando navegador compatível')+'. Dados do Diário não são transmitidos pelo canal; use a sincronização do aplicativo.','v329-muted'));
+ }
+ function mount(){const bar=doc.querySelector('.trbar');if(!bar||bar.querySelector('[data-v329-open]')||!id()||win.TRPOP)return;connect();const b=btn('Automação +',open);b.className='trbtn v329-open';b.dataset.v329Open='1';bar.append(b)}
+ const style=node('style');style.textContent=`.v329-dialog{background:#0e1823;color:#eaf1f8;border:1px solid #3d596c;border-radius:12px;padding:0;width:min(620px,calc(100vw - 20px));max-height:85dvh;overflow:auto;font:13px/1.55 system-ui}.v329-dialog::backdrop{background:#000a}.v329-head{position:sticky;top:0;background:#17293a;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;z-index:2;border-bottom:1px solid #395064}.v329-content{padding:14px 16px;display:flex;flex-direction:column;gap:9px}.v329-content h3{margin:0}.v329-btn{background:#24394e;color:#eaf1f8;border:1px solid #46617a;border-radius:7px;padding:10px 12px;min-height:40px;text-align:left;cursor:pointer}.v329-btn:hover{border-color:#e0ac5a}.v329-muted{color:#acbbcd;font-size:12px}.v329-info{background:#192f43;padding:12px;border-radius:7px}.v329-inline{display:flex;gap:6px;flex-wrap:wrap}.v329-inline input,.v329-form input{min-height:40px;min-width:0;background:#1a2c3b;color:white;border:1px solid #456178;border-radius:6px;padding:8px}.v329-form{display:flex;flex-direction:column;gap:8px}.v329-event{display:flex;align-items:center;justify-content:space-between;gap:6px;border-top:1px solid #395064;padding:6px 0}.v329-event span{overflow-wrap:anywhere}.v329-quote{border-bottom:1px solid #344c60;padding:5px}.v329-hint{display:flex;justify-content:space-between;gap:10px;background:#23374a;border:1px solid #d5a45d;color:#fff;padding:9px;font:12px/1.4 system-ui}.v329-open{white-space:nowrap}`;doc.head.append(style);
+ win.TraderContinuo329={open,openPanel,sessionPanel,eventPanel,briefing,inferredSession,signal,mount,checkEvents};
+ if(win.TraderUI?.onRender)win.TraderUI.onRender('terminal-v329',mount);
+ const obs=new MutationObserver(()=>{if(owned()&&!doc.querySelector('[data-v329-open]'))mount()});obs.observe(doc.getElementById('app')||doc.body,{childList:true,subtree:false});
+ setInterval(()=>{if(id())connect();checkEvents()},30000);mount();
+})(window,document);
+
+
+/* Terminal de inteligência v330: automações locais opt-in, sem operações, sem feed fictício. */
+(function(win, doc){
+'use strict';if(win.TraderInteligencia330)return;
+const owner=()=>win.DIARIO_DEMO?'demo':(typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):null);
+const key=k=>'diario-intel330-'+owner()+'-'+k;
+const get=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(key(k)));return v==null?f:v}catch{return f}};
+const put=(k,v)=>{if(!owner())return;try{localStorage.setItem(key(k),JSON.stringify(v))}catch{}};
+const node=(tag,txt,cls)=>{const e=doc.createElement(tag);if(txt!==undefined)e.textContent=txt;if(cls)e.className=cls;return e};
+const button=(txt,fn)=>{const e=node('button',txt,'ti330-btn');e.type='button';e.addEventListener('click',fn);return e};
+let dialog=null,tip=null,lastOwner=null,bc=null,peerCount=new Map(),tabId=Math.random().toString(36).slice(2),lastSessionKey='',lastScan=0;
+const timeBR=()=>new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
+const dateBR=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const config=()=>get('options',{sessionReminder:true,earlyEvents:true,quoteAlerts:false,quoteThreshold:1.0,monitorOpen:false});
+function close(){if(!dialog)return;const d=dialog;dialog=null;try{d.close()}catch{}d.remove()}
+function modal(title){close();const d=dialog=node('dialog',undefined,'ti330-modal');const head=node('header',undefined,'ti330-head');head.append(node('strong',title),button('Fechar',close));const body=node('section',undefined,'ti330-body');d.append(head,body);doc.body.append(d);d.addEventListener('close',()=>{if(dialog===d)dialog=null;d.remove()});try{d.showModal()}catch{d.setAttribute('open','')};return body}
+function notify(msg){if(!doc.querySelector('.trbar')||doc.hidden||win.TRPOP)return;tip?.remove();tip=node('div',undefined,'ti330-notice');tip.setAttribute('role','status');tip.append(node('span',msg),button('Dispensar',()=>{tip?.remove();tip=null}));doc.querySelector('.trbar')?.insertAdjacentElement('afterend',tip)}
+function connect(){const id=owner();if(!id)return;if(lastOwner===id&&bc)return;bc?.close();lastOwner=id;peerCount.clear();if(!('BroadcastChannel'in win))return;bc=new BroadcastChannel('diario-intel330-'+id);
+ bc.onmessage=e=>{const m=e.data;if(!m||m.id===tabId||m.owner!==owner()||Math.abs(Date.now()-m.at)>60000)return;if(m.type==='hello'||m.type==='reply'){peerCount.set(m.id,m.at);if(m.type==='hello')send('reply')}if(m.type==='layout-change')notify('Layout modificado em outra janela. Reabra o Workspace aqui para aplicar as mudanças.');};send('hello')}
+function send(type){if(!bc||!owner())return;try{bc.postMessage({type,id:tabId,owner:owner(),at:Date.now()})}catch{}}
+function session(){const s=win.TraderContinuo329?.inferredSession?.();return s||{kind:'unknown',label:'Horário não identificado'}}
+function sessionCheck(){if(!config().sessionReminder||!owner()||doc.hidden||!doc.querySelector('.trbar'))return;const s=session(),mark=dateBR()+':'+s.kind;if(s.kind==='unknown'||lastSessionKey===mark)return;lastSessionKey=mark;const prior=get('sessionPrompt','');if(prior===mark)return;put('sessionPrompt',mark);notify('Sessão sugerida: '+s.label+'. Abra Planejar sessão se quiser adaptar os painéis. Nenhuma janela foi alterada.')}
+function earlyEvents(){if(!config().earlyEvents||!owner()||doc.hidden)return;const events=getV329Events();for(const e of events){if(e.done||!e.when||!e.name)continue;const at=new Date(e.when).getTime(),now=Date.now();if(!Number.isFinite(at)||at-now<0||at-now>15*60000)continue;const k='early-'+String(e.id).slice(0,50);if(get(k,false))continue;put(k,true);notify('Evento cadastrado em '+Math.max(1,Math.ceil((at-now)/60000))+' min: '+e.name+'. Confira a fonte.');record('Pré-aviso de evento cadastrado',e.name+' · lembrete local, não confirmação de divulgação.')}}
+function getV329Events(){try{const v=JSON.parse(localStorage.getItem('diario-v329-'+owner()+'-events'));return Array.isArray(v)?v:[]}catch{return []}}
+function record(title,detail){win.TraderConsulta325?.appendEvent?.(title,detail,Date.now())}
+function quoteScan(){if(!config().quoteAlerts||!owner()||doc.hidden)return;const source=win.TraderConsulta325?.getQuotes?.();if(!Array.isArray(source?.rows))return;const now=Date.now(),current={at:now,rows:{}};
+ for(const r of source.rows){if(r?.atraso!==false)continue;const symbol=String(r.pedido||r.s||'').slice(0,30),val=Number(r.d1);if(symbol&&Number.isFinite(val)&&Math.abs(val)<1000)current.rows[symbol]=val}
+ const old=get('quotes',null);put('quotes',current);if(!old||now-old.at>90*60*1000)return;const limit=Math.max(.25,Math.min(10,Number(config().quoteThreshold)||1));let count=0;
+ for(const [symbol,val] of Object.entries(current.rows)){const prev=old.rows?.[symbol];if(!Number.isFinite(prev)||Math.abs(val-prev)<limit)continue;const mark='quote-'+symbol+'-'+Math.floor(now/(15*60000));if(get(mark,false))continue;put(mark,true);const text=symbol+': variação observada '+prev.toFixed(2)+'% → '+val.toFixed(2)+'% (fonte sinalizada sem atraso).';record('Alerta de mudança observada',text+' Sem afirmação de causa.');notify(text);if(++count>=2)break}}
+function tick(){if(!owner())return;connect();if(doc.hidden||Date.now()-lastScan<25000)return;lastScan=Date.now();sessionCheck();earlyEvents();quoteScan();for(const [id,at] of peerCount){if(Date.now()-at>70000)peerCount.delete(id)}}
+function briefing(){const body=modal('Briefing de contexto · dados existentes');const s=session();body.append(node('p','Sessão sugerida: '+s.label+' · horário Brasília '+timeBR(),'ti330-muted'));
+ const q=win.TraderConsulta325?.getQuotes?.();const rows=Array.isArray(q?.rows)?q.rows:[];const valid=rows.filter(r=>r?.atraso===false&&Number.isFinite(Number(r.d1)));const stale=rows.filter(r=>r?.atraso===true).length;const unknown=rows.length-stale-valid.length;
+ body.append(node('div','Qualidade: '+rows.length+' ativos no cache · '+valid.length+' identificados sem atraso · '+stale+' atrasados · '+unknown+' sem confirmação de atualização.','ti330-info'));
+ const picks=['NASDAQ','SP 500','S&P','IBOV','DXY','DÓLAR','DOLAR','JUROS','WIN','WDO','VIX','PETRÓLEO','PETROLEO'];
+ const chosen=rows.filter(r=>picks.some(p=>String(r.pedido||r.s||'').toUpperCase().includes(p))).slice(0,10);
+ if(!chosen.length)body.append(node('p','Ainda não há indicadores-chave disponíveis no cache. Abra o Radar Global e confirme a qualidade das fontes.','ti330-muted'));
+ for(const r of chosen){const v=Number(r.d1),lbl=String(r.pedido||r.s||'Ativo').slice(0,55);body.append(node('div',lbl+' · '+(Number.isFinite(v)?v.toFixed(2)+'%':'sem variação')+' · '+(r.atraso===true?'ATRASADO':r.atraso===false?'sem atraso declarado':'atualização não confirmada'),'ti330-item'))}
+ body.append(node('p','Leitura orientativa: confira cenário internacional, juros, dólar, agenda e notícias antes de tirar conclusões sobre WIN/WDO. Não é recomendação operacional nem análise de notícias por IA.','ti330-muted'));
+ body.append(button('Abrir planejador Pré / Pregão / Pós',()=>{close();win.TraderPre328?.open?.()}));}
+function health(){const b=modal('Diagnóstico de automação e janelas');const q=win.TraderConsulta325?.getQuotes?.(),r=Array.isArray(q?.rows)?q.rows:[];b.append(node('div','Conta autenticada: '+(owner()?'sim':'não')+' · Fonte de cotações: '+r.length+' linhas no cache.','ti330-info'));
+ b.append(node('p','Canal local entre janelas: '+(bc?'ativo':'indisponível')+' · outras janelas detectadas recentemente: '+peerCount.size+'.','ti330-muted'));
+ b.append(node('p','Esses canais não garantem sincronização do conteúdo do Diário ou resolução de conflitos. Não transmitem operações.','ti330-muted'));
+ b.append(button('Sinalizar presença às outras janelas',()=>{send('hello');notify('Sinal enviado. Abra Diagnóstico novamente para consultar a contagem.')}));
+ b.append(button('Abrir controle de painéis destacados',()=>{close();win.TraderContinuo329?.openPanel?.()}));}
+function settings(){const b=modal('Automações do Terminal');b.append(node('p','Esses recursos funcionam com o Terminal aberto e os dados já disponíveis. Não executam ordens, não contratam APIs e não alteram Workspaces automaticamente.','ti330-muted'));
+ const opts=config();const choices=[['sessionReminder','Sugerir sessão (Pré, Pregão, Pós) sem trocar layouts'],['earlyEvents','Avisar 15 min antes de lembretes cadastrados'],['quoteAlerts','Registrar alertas de variação observada em cotações identificadas como não atrasadas']];
+ for(const [k,label] of choices){const row=node('label',undefined,'ti330-setting'),cb=node('input');cb.type='checkbox';cb.checked=!!opts[k];cb.addEventListener('change',()=>{const p=config();p[k]=cb.checked;put('options',p)});row.append(cb,node('span',label));b.append(row)}
+ const limit=node('label',undefined,'ti330-setting');limit.append(node('span','Limiar de variação em pontos percentuais (0,25 a 10):'));const inp=node('input');inp.type='number';inp.min='.25';inp.max='10';inp.step='.25';inp.value=String(opts.quoteThreshold);inp.addEventListener('change',()=>{const p=config();p.quoteThreshold=Math.max(.25,Math.min(10,Number(inp.value)||1));put('options',p);inp.value=String(p.quoteThreshold)});limit.append(inp);b.append(limit);
+ b.append(button('Ver briefing de contexto',briefing),button('Diagnóstico de janelas',health),button('Abrir calendário e lembretes',()=>{close();win.TraderContinuo329?.eventPanel?.()}));}
+function mount(){const bar=doc.querySelector('.trbar');if(!bar||bar.querySelector('[data-ti330]')||!owner()||win.TRPOP)return;connect();const b=button('Inteligência ▾',settings);b.className='trbtn ti330-open';b.dataset.ti330='1';bar.append(b)}
+const css=node('style');css.textContent=`.ti330-modal{box-sizing:border-box;width:min(590px,calc(100vw - 20px));max-height:85dvh;overflow:auto;border:1px solid #456178;border-radius:10px;background:#0d1824;color:#e9eff7;font:13px/1.5 system-ui;padding:0}.ti330-modal::backdrop{background:#000b}.ti330-head{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;background:#1a2c3d;padding:12px 14px;border-bottom:1px solid #456178}.ti330-body{display:flex;flex-direction:column;gap:10px;padding:14px}.ti330-body p{margin:4px 0}.ti330-muted{color:#b9c7d3}.ti330-btn{padding:9px 12px;border:1px solid #4b6680;border-radius:6px;background:#24394b;color:#f1f5f9;cursor:pointer;text-align:left}.ti330-setting{display:flex;gap:10px;align-items:center;background:#192b3b;padding:11px;border-radius:6px}.ti330-setting input[type=checkbox]{accent-color:#d7ac5c}.ti330-setting input[type=number]{width:75px;background:#102331;color:white;border:1px solid #456178;padding:8px}.ti330-info{border-left:3px solid #d3a85b;background:#263341;padding:10px}.ti330-item{border-bottom:1px solid #304455;padding:6px}.ti330-notice{padding:8px 12px;background:#223749;border-left:3px solid #d7ab5f;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;font:12px/1.5 system-ui}.ti330-open{white-space:nowrap}@media(max-width:767px){.ti330-modal{max-height:78dvh}.ti330-body{padding:10px}}`;doc.head.append(css);
+win.TraderInteligencia330={mount,settings,briefing,health,session,quoteScan,earlyEvents,tick};
+if(win.TraderUI?.onRender)win.TraderUI.onRender('inteligencia-v330',mount);
+new MutationObserver(()=>{if(doc.querySelector('.trbar')&&!doc.querySelector('[data-ti330]'))mount()}).observe(doc.getElementById('app')||doc.body,{childList:true,subtree:false});
+doc.addEventListener('visibilitychange',()=>{if(!doc.hidden){send('hello');tick()}});setInterval(tick,30000);mount();
+})(window,document);
+
+
+/* Radar proativo v332: reaproveita Edge Functions existentes; não negocia nem inventa cotações. */
+(function(win,doc){
+'use strict';if(win.TraderRadar332)return;
+const clean=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const time=s=>{const d=new Date(s);return Number.isFinite(+d)?d.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'horário indisponível'};
+const state={news:[],events:[],updated:0,loading:false,error:'',active:false,enabled:true,lastSignature:'',lastAlert:0,newsSource:'',agendaSource:'',giro:null,giroError:'',giroChecked:0,displayNotifications:false,lastNewsSignature:'',lastUpdateSource:''};
+const findCfg=()=>{try{return typeof cfg==='function'?cfg():null}catch{return null}};
+const session=()=>{try{return typeof SESS!=='undefined'?SESS:null}catch{return null}};
+const userId=()=>session()?.uid||'anon';
+const k=()=>`diario-radar332:${userId()}:enabled`;
+try{state.enabled=localStorage.getItem(k())!=='false'}catch{}
+function notify(msg){
+if(state.displayNotifications&&doc.visibilityState==='visible'&&'Notification'in win&&Notification.permission==='granted')try{new Notification('Radar Proativo',{body:msg,tag:'diario-radar-alerta'})}catch{}
+const box=doc.getElementById('radar332-toast');if(!box)return;box.textContent=msg;box.hidden=false;setTimeout(()=>{box.hidden=true},7000)}
+async function request(slug,payload){const conf=findCfg(),s=session();if(!conf?.url||!conf?.key||!s?.at)throw Error('Entre na sua conta para consultar as fontes existentes.');if(typeof tok==='function')await tok();const current=session();if(!current?.at)throw Error('Sessão indisponível.');const controller=new AbortController(),tid=setTimeout(()=>controller.abort(),12000);try{const resp=await fetch(conf.url+'/functions/v1/'+slug,{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json',apikey:conf.key,Authorization:'Bearer '+current.at},body:JSON.stringify(payload||{})});const data=await resp.json().catch(()=>({}));if(!resp.ok||data.error)throw Error(String(data.error||data.erro||'HTTP '+resp.status));return data}finally{clearTimeout(tid)}}
+const bus=typeof BroadcastChannel!=='undefined'?new BroadcastChannel('diario-radar-v332'):null;
+const instanceId=Math.random().toString(36).slice(2);
+const snapshotKey=()=>`radar332:snapshot:${userId()}`;
+let lastRemote=0;
+function applyShared(packet){
+if(!packet||packet.uid!==userId()||packet.from===instanceId||packet.type!=='snapshot'||!session()?.at)return;
+if(!Number.isFinite(packet.at)||packet.at<=state.updated||Date.now()-packet.at>10*60000)return;
+state.news=normalizeNews({itens:packet.news});state.events=normalizeEvents({itens:packet.events});
+state.updated=packet.at;state.newsSource=packet.newsSource||'Notícias';state.agendaSource=packet.agendaSource||'Terminal';state.error='';state.lastUpdateSource='Outra janela';lastRemote=Date.now();render();
+}
+if(bus)bus.onmessage=e=>applyShared(e.data);
+function publishSnapshot(){if(!bus||!session()?.at)return;bus.postMessage({type:'snapshot',uid:userId(),from:instanceId,at:state.updated,news:state.news,events:state.events,newsSource:state.newsSource,agendaSource:state.agendaSource})}
+function normalizeNews(data){const a=Array.isArray(data?.itens)?data.itens:Array.isArray(data?.noticias)?data.noticias:[];const seen=new Set();return a.map(x=>({title:String(x.t||x.titulo||x.title||'').slice(0,260),url:String(x.l||x.url||x.link||''),date:x.d||x.data||x.date||'',source:String(x.f||x.fonte||data.fonte||'Notícias'),category:Array.isArray(x.c)?x.c:[]})).filter(x=>{if(!x.title||!/^https?:\/\//i.test(x.url)||seen.has(x.url))return false;seen.add(x.url);return true}).slice(0,35)}
+function normalizeEvents(data){const a=Array.isArray(data)?data:Array.isArray(data?.eventos)?data.eventos:Array.isArray(data?.itens)?data.itens:Array.isArray(data?.agenda)?data.agenda:[];const seen=new Set();return a.map(x=>({title:String(x.t||x.titulo||x.title||'').slice(0,200),date:x.d||x.data||x.date||'',country:x.pais||x.country||'',importance:Number(x.imp||x.importancia||0),source:x.fonte||data.fonte||'Agenda',actual:x.atual||'',forecast:x.prev||''})).filter(x=>{const hash=x.title+'|'+x.date;if(!x.title||!Number.isFinite(+new Date(x.date))||seen.has(hash))return false;seen.add(hash);return true}).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,60)}
+function score(n){const text=(n.title+' '+n.category.join(' ')).toLowerCase();let val=0;for(const x of ['copom','selic','fed','fomc','payroll','inflação','inflacao','ipca','pib','juros','dólar','dolar','ibovespa','nasdaq','petróleo','petroleo','china','tarifas'])if(text.includes(x))val+=2;return val}
+function headline(){return [...state.news].sort((a,b)=>score(b)-score(a)||new Date(b.date)-new Date(a.date)).slice(0,6)}
+function upcoming(){const now=Date.now();return state.events.filter(e=>{const d=+new Date(e.date);return d>=now-15*60000&&d<=now+24*3600000}).slice(0,8)}
+function sourceAge(){return state.updated?Math.round((Date.now()-state.updated)/60000):null}
+function render(){const root=doc.getElementById('radar332-body');if(!root)return;const warning=state.error?`<p class="radar332-warn">${clean(state.error)}. Informações anteriores podem estar desatualizadas.</p>`:'';const ago=state.updated?`${time(state.updated)} · consulta há ${sourceAge()} min`:'Ainda não atualizado';const news=headline(),ev=upcoming();root.innerHTML=`<div class="radar332-small">Última consulta: ${clean(ago)} · ${clean(state.lastUpdateSource||'Fonte direta')} · Fontes: ${clean(state.newsSource||'noticias')} / ${clean(state.agendaSource||'terminal')}</div>${warning}<div class="radar332-actions"><button type="button" data-r332="reload" ${state.loading?'disabled':''}>${state.loading?'Atualizando…':'Atualizar agora'}</button><button type="button" data-r332="toggle">Proatividade: ${state.enabled?'ligada':'desligada'}</button><button type="button" data-r332="giro">Consultar giro IA já publicado</button><button type="button" data-r332="avisos">Avisos na tela: ${state.displayNotifications?'ligados':'desligados'}</button></div>${state.giro?`<h3>Giro IA do aplicativo · ${clean(state.giro.dia_giro||state.giro.dia||'data não informada')}</h3><div class="radar332-item">${clean(String(state.giro.texto||'').slice(0,3000))}</div>`:state.giroError?`<p class="radar332-small">${clean(state.giroError)}</p>`:''}<h3>Agenda de atenção</h3>${ev.length?ev.map(x=>`<div class="radar332-item"><b>${clean(x.title)}</b><small>${clean(time(x.date))} · ${clean(x.country)} · importância ${x.importance||'não informada'} · ${clean(x.source)}</small>${x.actual?`<small>Divulgado: ${clean(x.actual)} · esperado: ${clean(x.forecast||'não informado')}</small>`:''}</div>`).join(''):'<p class="radar332-small">Sem eventos confirmados para as próximas 24 horas nesta fonte.</p>'}<h3>Notícias relevantes</h3>${news.length?news.map(x=>`<a class="radar332-item" href="${clean(x.url)}" target="_blank" rel="noopener noreferrer"><b>${clean(x.title)}</b><small>${clean(x.source)} · ${clean(time(x.date))}</small></a>`).join(''):'<p class="radar332-small">Nenhuma notícia disponível. Verifique a autenticação e a fonte.</p>'}<p class="radar332-disclaimer">Relevância por palavras-chave, sem recomendação de operação. Notícias e eventos não explicam, por si só, a causa dos movimentos. Confira horários e atrasos nas fontes.</p>`}
+async function refresh(force=false){if(state.loading||!state.enabled&&!force||doc.hidden||!session()?.at)return;if(!force&&Date.now()-state.updated<4*60000)return;state.loading=true;render();const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());const results=await Promise.allSettled([request('noticias',{}),request('terminal',{acao:'agenda'})]);let ok=0,errors=[];if(results[0].status==='fulfilled'){const d=results[0].value;state.news=normalizeNews(d);state.newsSource=d.fonte||'Notícias';ok++}else errors.push('Notícias: '+results[0].reason.message);if(results[1].status==='fulfilled'){const d=results[1].value;state.events=normalizeEvents(d);state.agendaSource=d.fonte||'Terminal';ok++}else errors.push('Agenda: '+results[1].reason.message);state.error=errors.join(' | ');if(ok){state.updated=Date.now();state.lastUpdateSource='Consulta autenticada';publishSnapshot();const recent=headline().filter(n=>{const d=+new Date(n.date);return Number.isFinite(d)&&Date.now()-d<60*60000});const signature=recent.slice(0,2).map(n=>n.url).join('|');if(state.lastSignature&&signature&&signature!==state.lastSignature&&Date.now()-state.lastAlert>15*60000){notify('Radar Proativo: novas manchetes relevantes disponíveis.');state.lastAlert=Date.now()}state.lastSignature=signature;const urgent=upcoming().find(e=>e.importance>=2&&(+new Date(e.date)-Date.now())>=0&&(+new Date(e.date)-Date.now())<=15*60000);if(urgent){const eventSig='event:'+urgent.title+urgent.date;if(state.lastEvent!==eventSig){state.lastEvent=eventSig;notify('Evento econômico em até 15 min: '+urgent.title)}}}state.loading=false;render()}
+async function giro(){state.giroError='';try{const r=await request('analise',{modo:'giro',ultimo:true,hoje_tambem:true});if(r.erro)throw Error(r.erro);if(!r.texto)throw Error('Giro ainda não publicado na função de IA.');state.giro=r}catch(e){state.giroError='Giro indisponível: '+(e.message||e)}render()}
+function open(){mount();const d=doc.getElementById('radar332-dialog');if(d?.showModal){if(!d.open)d.showModal()}else if(d)d.hidden=false;render();refresh(true)}
+function close(){const d=doc.getElementById('radar332-dialog');if(d?.close)d.close();else if(d)d.hidden=true}
+function mount(){const bar=doc.querySelector('.trbar');if(bar&&!bar.querySelector('[data-radar332]')){const b=doc.createElement('button');b.className='trbtn';b.dataset.radar332='1';b.type='button';b.textContent='Radar Proativo';b.addEventListener('click',open);bar.appendChild(b)}if(doc.getElementById('radar332-dialog'))return;const d=doc.createElement('dialog');d.id='radar332-dialog';d.className='radar332-dialog';d.innerHTML='<header><strong>RADAR PROATIVO · FONTES EXISTENTES</strong><button type="button" data-r332="close" aria-label="Fechar">×</button></header><section id="radar332-body"></section>';d.addEventListener('click',ev=>{const cmd=ev.target.closest('[data-r332]')?.dataset.r332;if(cmd==='close')close();if(cmd==='reload')refresh(true);if(cmd==='giro')giro();if(cmd==='avisos'){state.displayNotifications=!state.displayNotifications;if(state.displayNotifications&&'Notification'in win&&Notification.permission==='default')Notification.requestPermission().catch(()=>{});render()}if(cmd==='toggle'){state.enabled=!state.enabled;try{localStorage.setItem(k(),String(state.enabled))}catch{}render()}});doc.body.append(d);const toast=doc.createElement('div');toast.id='radar332-toast';toast.hidden=true;toast.setAttribute('role','status');doc.body.append(toast);const style=doc.createElement('style');style.textContent='.radar332-dialog{max-width:650px;width:calc(100vw - 26px);max-height:84dvh;overflow:auto;background:#101a25;color:#eaf2f7;border:1px solid #45576b;border-radius:13px;padding:0;font:13px/1.45 system-ui}.radar332-dialog::backdrop{background:#000a}.radar332-dialog header{position:sticky;top:0;background:#1c2b39;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:1}.radar332-dialog button{cursor:pointer}.radar332-dialog header button{border:0;background:transparent;color:#eee;font-size:22px}.radar332-dialog section{padding:12px 16px}.radar332-actions{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}.radar332-actions button{background:#24394b;color:#fff;border:1px solid #536879;border-radius:6px;padding:7px 10px}.radar332-dialog h3{font-size:12px;letter-spacing:.07em;color:#ffbf69;border-bottom:1px solid #344654;padding-bottom:6px;margin:18px 0 6px}.radar332-item{display:block;color:inherit;text-decoration:none;padding:9px 0;border-bottom:1px solid #273544}.radar332-item small{display:block;color:#abb9c7;margin-top:2px}.radar332-warn{color:#ffc789}.radar332-small,.radar332-disclaimer{font-size:11px;color:#a7b7c6}#radar332-toast{position:fixed;bottom:22px;right:20px;z-index:99999;color:#fff;background:#314657;border:1px solid #edb967;border-radius:8px;padding:12px;max-width:310px}#radar332-toast[hidden]{display:none}@media(max-width:640px){.radar332-dialog{width:calc(100vw - 12px)}.radar332-dialog section{padding:10px}}';doc.head.append(style);render()}
+win.TraderRadar332={open,refresh,normalizeNews,normalizeEvents,score,state,giro};if(win.TraderUI?.onRender)win.TraderUI.onRender('radar332',mount);let lastUid=userId();setInterval(()=>{const next=userId();if(next!==lastUid){lastUid=next;state.news=[];state.events=[];state.updated=0;state.giro=null;state.lastSignature='';render()}},15000);const observer=new MutationObserver(()=>{if(doc.querySelector('.trbar')&&!doc.querySelector('[data-radar332]'))mount()});observer.observe(doc.getElementById('app')||doc.body,{childList:true,subtree:false});setInterval(()=>{if(state.enabled&&doc.querySelector('.trbar')&&session()?.at&&Date.now()-state.updated>5*60000)refresh()},60000);mount();
+})(window,document);

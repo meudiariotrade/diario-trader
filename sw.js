@@ -1,5 +1,5 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v326-comandos-automatizacao-01',CDN='diario-cdn-1';
+const C='diario-v333-integracoes-01',CDN='diario-cdn-1';
 const CORE=["./","index.html","recursos.js","inicio.js","app.js","interface.js","manifest.webmanifest","icon-192.png","icon-512.png"];
 const EXTRA=[];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
