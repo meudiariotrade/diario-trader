@@ -1919,38 +1919,50 @@ const AU={lista:null,busy:0,err:'',ts:0};
 const IC={"prev": "<svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M6 5h2v14H6zM20 5v14L9 12z\"/></svg>", "next": "<svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M16 5h2v14h-2zM4 5v14l11-7z\"/></svg>", "play": "<svg viewBox=\"0 0 24 24\" width=\"26\" height=\"26\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M7 4v16l13-8z\"/></svg>", "pause": "<svg viewBox=\"0 0 24 24\" width=\"26\" height=\"26\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M6 4h4v16H6zM14 4h4v16h-4z\"/></svg>", "x": "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6L6 18\"/></svg>", "menu": "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 7h16M4 12h16M4 17h16\"/></svg>"};
 const P={on:0,a:null,i:0,j:0,tok:0,play:0,t:0,wd:0,dados:{},vis:'',wl:null};
 const h=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const lsg=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}};
-const lss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+const ownerKey=()=>window.DIARIO_DEMO?'demo':((typeof SESS!=='undefined'&&SESS&&SESS.uid)||null);
+let aulaOwner=ownerKey();
+const storageKey=k=>/^aulas-(lista|rot|pos|job)/.test(k)?(ownerKey()?'aulas-v318:'+ownerKey()+':'+k:null):k;
+function assertOwner(owner){if(owner!==ownerKey()){const e=new Error('A conta mudou. A operação anterior foi interrompida.');e.code='SESSION_CHANGED';throw e}}
+const lsg=(k,d)=>{try{const key=storageKey(k);if(!key)return d;const v=localStorage.getItem(key);return v==null?d:JSON.parse(v)}catch{return d}};
+const lsd=k=>{try{const key=storageKey(k);if(key)localStorage.removeItem(key)}catch{}};
+const lss=(k,v)=>{try{const key=storageKey(k);if(key)localStorage.setItem(key,JSON.stringify(v))}catch{}};
 const nf=(v,d=2)=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const brl=v=>(v<0?'-':'')+'R$ '+nf(Math.abs(v),2);
 const pct=v=>(v>0?'+':v<0?'-':'')+nf(Math.abs(v),1)+'%';
 const logado=()=>{try{return !!(typeof SESS!=='undefined'&&SESS&&SESS.uid&&cfg())}catch{return false}};
 
+function ensureOwner(){
+ const next=ownerKey();if(next===aulaOwner)return;aulaOwner=next;
+ para();P.on=0;P.a=null;P.dados={};document.getElementById('aup')?.remove();document.getElementById('auModal')?.remove();document.documentElement.classList.remove('au-aberto');
+ clearTimeout(salvaPos.t);AU.lista=null;AU.busy=0;AU.err='';AU.ts=0;
+ if(typeof G!=='undefined'){G.aberto=0;G.livros=null;G.sel='';G.caps={};G.manual='';G.numero='';G.busy=0;G.msg='';G.erro='';G.pdfTask?.destroy?.();G.pdfTask=null;G.request?.abort();G.request=null}
+}
 /* ---------- dados ---------- */
 async function carregaLista(forca){
-  if(AU.busy)return;
-  if(!logado()){AU.lista=lsg(LS_LISTA,[]).concat(window.AULAS_LOCAIS||[]);AU.err=AU.lista.length?'':'login';return}
+  ensureOwner();const owner=ownerKey();if(AU.busy)return;
+  if(!logado()){AU.lista=(window.AULAS_LOCAIS||[]).filter(x=>x.local);AU.err=AU.lista.length?'':'login';return}
   if(!forca&&AU.lista&&Date.now()-AU.ts<60000)return;
   AU.busy=1;AU.err='';
   try{
     await tok();
     const r=await rq('/rest/v1/aulas?select=id,livro,numero,titulo,capitulos,progresso,criado_em,status,min:roteiro->min&user_id=eq.'+SESS.uid+'&order=livro.asc,numero.asc');
-    const l=await r.json();AU.lista=(Array.isArray(l)?l:[]).concat(window.AULAS_LOCAIS||[]);lss(LS_LISTA,l);AU.ts=Date.now();
-  }catch(e){AU.lista=lsg(LS_LISTA,[]);AU.err=/aulas|schema cache|404/.test(String(e.message||e))?'tabela':String(e.message||e)}
+    const l=await r.json();assertOwner(owner);AU.lista=(Array.isArray(l)?l:[]).concat(window.AULAS_LOCAIS||[]);lss(LS_LISTA,l);AU.ts=Date.now();
+  }catch(e){if(owner!==ownerKey())return;AU.lista=lsg(LS_LISTA,[]);AU.err=/aulas|schema cache|404/.test(String(e.message||e))?'tabela':String(e.message||e)}
   AU.busy=0;pinta();
 }
 async function roteiro(a){
+  const owner=ownerKey();
   if(a.roteiro)return a.roteiro;
   const c=lsg(LS_ROT+a.id,null);
   if(c&&c.em===a.criado_em)return c.r;
   await tok();
   const r=await rq('/rest/v1/aulas?select=roteiro&id=eq.'+a.id),l=await r.json();
-  if(!l[0])throw new Error('Aula não encontrada.');
+  assertOwner(owner);if(!l[0])throw new Error('Aula não encontrada.');
   lss(LS_ROT+a.id,{em:a.criado_em,r:l[0].roteiro});
   return l[0].roteiro;
 }
 function salvaPos(fim){
-  const a=P.a;if(!a)return;
+  const a=P.a;if(!a||a._owner!==ownerKey())return;
   const pos={cena:P.i,total:a.r.cenas.length,fim:fim?1:((lsg(LS_POS+a.id,{})||{}).fim||0),em:new Date().toISOString()};
   lss(LS_POS+a.id,pos);
   if(!a.local&&logado()){clearTimeout(salvaPos.t);salvaPos.t=setTimeout(()=>{rq('/rest/v1/aulas?id=eq.'+a.id,{method:'PATCH',headers:{'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({progresso:pos,atualizado_em:pos.em})}).catch(()=>{})},1500)}
@@ -1996,6 +2008,7 @@ const studyStyle=document.createElement('style');studyStyle.textContent=`
 
 /* ---------- lista na aba Estudos ---------- */
 function listaHtml(){
+  ensureOwner();
   if(AU.lista==null){carregaLista();if(AU.lista==null)return'<div class="card"><div class="sm mut">Carregando aulas…</div></div>'}
   let o='';
   if(AU.err==='login')o+='<div class="card warn"><b>Entre na sua conta</b><div class="sm">As aulas ficam guardadas no Supabase. Entre em Mais → Conta para ver a lista.</div></div>';
@@ -2013,6 +2026,7 @@ function listaHtml(){
     }
     o+='</div>';
   }
+  o+='<div class="sm mut" style="margin:6px 2px 14px">PDFs locais agora ficam separados por conta. Reimporte os PDFs das versões anteriores se precisar gerar novas aulas. <button class="lnk sm" data-aulegacyclear="1">Remover PDFs antigos deste aparelho</button></div>';
   o+='<div class="sm mut" style="margin:6px 2px 14px">A narração usa a voz do aparelho. No iPhone, baixe uma voz “Aprimorada” ou “Premium” em português (Ajustes → Acessibilidade → Conteúdo Falado → Vozes) para soar mais natural.</div>';
   return o;
 }
@@ -2052,9 +2066,9 @@ function falasCena(c){
   return out;
 }
 async function abre(id){
-  let a=(AU.lista||[]).find(x=>x.id===id)||(window.AULAS_LOCAIS||[]).find(x=>x.id===id);
+  ensureOwner();const owner=ownerKey();if(P.on)return;let a=(AU.lista||[]).find(x=>x.id===id)||(window.AULAS_LOCAIS||[]).find(x=>x.id===id);
   if(!a)return;
-  try{toast&&toast('Abrindo a aula…');const r=await roteiro(a);P.a={...a,r};}catch(e){toast&&toast('Não abriu: '+(e.message||e));return}
+  try{toast&&toast('Abrindo a aula…');const r=await roteiro(a);assertOwner(owner);P.a={...a,r,_owner:owner};}catch(e){toast&&toast('Não abriu: '+(e.message||e));return}
   P.on=1;P.dados={};const pos=posDe(a);P.i=pos.fim?0:Math.min(pos.cena||0,P.a.r.cenas.length-1);P.j=0;P.play=0;
   document.body.insertAdjacentHTML('beforeend',playerHtml());document.documentElement.classList.add('au-aberto');
   cena(P.i,0);
@@ -2287,7 +2301,7 @@ document.addEventListener('click',e=>{
   if(q('[data-aupp]')){P.play?para():tocar();return}
   if(q('[data-aunext]')){cena(P.i+1,0);return}
   if(q('[data-auprev]')){cena(P.j>1?P.i:P.i-1,0);return}
-  if(q('[data-audel]')){const a=P.a;if(!a||!confirm(`Apagar a aula ${a.numero} de “${a.livro}”? Isso não pode ser desfeito.`))return;rq('/rest/v1/aulas?id=eq.'+a.id,{method:'DELETE',headers:{Prefer:'return=minimal'}}).then(()=>{try{localStorage.removeItem(LS_ROT+a.id);localStorage.removeItem(LS_POS+a.id)}catch{}AU.lista=null;fecha();carregaLista(1);toast&&toast('Aula apagada.')}).catch(e=>toast&&toast('Não apagou: '+(e.message||e)));return}
+  if(q('[data-audel]')){const a=P.a;if(!a||!confirm(`Apagar a aula ${a.numero} de “${a.livro}”? Isso não pode ser desfeito.`))return;rq('/rest/v1/aulas?id=eq.'+a.id,{method:'DELETE',headers:{Prefer:'return=minimal'}}).then(()=>{try{lsd(LS_ROT+a.id);lsd(LS_POS+a.id)}catch{}AU.lista=null;fecha();carregaLista(1);toast&&toast('Aula apagada.')}).catch(e=>toast&&toast('Não apagou: '+(e.message||e)));return}
   if(q('[data-auidx]')){const x=document.getElementById('aupidx');x.hidden=!x.hidden;return}
   if(b=q('[data-aucena]')){document.getElementById('aupidx').hidden=true;cena(+b.dataset.aucena,0);return}
   if(q('.aup-stage')&&!q('select')){P.play?para():tocar()}
@@ -2301,18 +2315,17 @@ document.addEventListener('keydown',e=>{if(!P.on)return;if(document.getElementBy
 /* ---------- gerador: PDF do livro → aula pela IA (função "aulas") ---------- */
 const LS_JOB='aulas-job-v1';
 const G={aberto:0,livros:null,sel:'',novoNome:'',caps:{},manual:'',numero:'',busy:0,msg:'',erro:'',pct:0};
-function idb(){return new Promise((ok,no)=>{const r=indexedDB.open(window.DIARIO_DEMO?'aulas-livros-demo':'aulas-livros',1);r.onupgradeneeded=()=>r.result.createObjectStore('livros',{keyPath:'id'});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
-async function idbOp(modo,fn){const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('livros',modo),st=t.objectStore('livros'),r=fn(st);t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>no(t.error)})}
-async function livrosLista(){try{const L=await idbOp('readonly',st=>st.getAll());G.livros=(L||[]).map(({buf,...x})=>x).sort((a,b)=>b.em.localeCompare(a.em))}catch{G.livros=[]}pinta()}
+function idb(){const owner=ownerKey();if(!owner)return Promise.reject(new Error('Entre na sua conta para abrir os PDFs.'));return new Promise((ok,no)=>{const r=indexedDB.open('aulas-livros-v318:'+owner,1);r.onupgradeneeded=()=>r.result.createObjectStore('livros',{keyPath:'id'});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+async function idbOp(modo,fn){const owner=ownerKey(),d=await idb();assertOwner(owner);return new Promise((ok,no)=>{const t=d.transaction('livros',modo),st=t.objectStore('livros'),r=fn(st);t.oncomplete=()=>{d.close();try{assertOwner(owner);ok(r&&r.result)}catch(e){no(e)}};t.onerror=()=>{d.close();no(t.error)}})}
+async function livrosLista(){const owner=ownerKey();try{const L=await idbOp('readonly',st=>st.getAll());assertOwner(owner);G.livros=(L||[]).map(({buf,...x})=>x).sort((a,b)=>b.em.localeCompare(a.em))}catch{if(owner!==ownerKey())return;G.livros=[]}pinta()}
 const livroBuf=id=>idbOp('readonly',st=>st.get(id)).then(x=>x&&x.buf);
-async function pdfLib(){
-  if(typeof ntLib==='function')return ntLib();
-  if(window.pdfjsLib)return window.pdfjsLib;
-  const b='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
-  await new Promise((ok,no)=>{const s=document.createElement('script');s.src=b+'pdf.min.js';s.onload=ok;s.onerror=()=>no(new Error('Sem internet para carregar o leitor de PDF.'));document.head.appendChild(s)});
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc=b+'pdf.worker.min.js';return window.pdfjsLib;
+async function pdfLib(){return ntLib()}
+async function abrePdf(buf){
+ if(buf.byteLength>50*1024*1024)throw new Error('O PDF deve ter no máximo 50 MB.');
+ const L=await pdfLib(),task=L.getDocument({data:new Uint8Array(buf.slice(0)),isEvalSupported:false,enableScripting:false,maxImageSize:16000000});G.pdfTask=task;
+ const timer=setTimeout(()=>task.destroy(),60000);
+ try{const pdf=await task.promise;if(pdf.numPages>2000){await pdf.destroy();throw new Error('Escolha um PDF com até 2.000 páginas.')}return pdf}finally{clearTimeout(timer);G.pdfTask=null}
 }
-async function abrePdf(buf){const L=await pdfLib();return L.getDocument({data:new Uint8Array(buf.slice(0))}).promise}
 async function sumarioDe(pdf){
   let o=null;try{o=await pdf.getOutline()}catch{}
   if(!o||!o.length)return[];
@@ -2324,16 +2337,18 @@ async function sumarioDe(pdf){
   return r.filter(x=>x.t);
 }
 async function enviaPdf(file){
-  if(!file)return;if(!/pdf$/i.test(file.type)&&!/\.pdf$/i.test(file.name)){G.erro='Escolha um arquivo PDF.';pinta();return}
+  ensureOwner();const owner=ownerKey();if(!owner){G.erro='Entre na sua conta antes de enviar PDFs.';pinta();return}
+  if(!file)return;if(file.size>50*1024*1024){G.erro='O PDF deve ter no máximo 50 MB.';pinta();return}if(!/pdf$/i.test(file.type)&&!/\.pdf$/i.test(file.name)){G.erro='Escolha um arquivo PDF.';pinta();return}
   G.busy=1;G.erro='';G.msg='Lendo o PDF…';pinta();
   try{
     const buf=await file.arrayBuffer(),pdf=await abrePdf(buf),sum=await sumarioDe(pdf);
+    assertOwner(owner);if(pdf.destroy)await pdf.destroy();
     const nome=(G.novoNome||file.name.replace(/\.pdf$/i,'').replace(/[_-]+/g,' ')).trim().slice(0,120);
     const reg={id:'l'+Date.now().toString(36),nome,arquivo:file.name,paginas:pdf.numPages,sumario:sum,tam:file.size,em:new Date().toISOString(),buf};
     await idbOp('readwrite',st=>st.put(reg));
     G.sel=reg.id;G.caps={};G.manual='';G.msg=sum.length?'':'Este PDF não tem sumário embutido: informe as páginas de cada capítulo.';
     await livrosLista();
-  }catch(e){G.erro='Não consegui ler o PDF: '+(e.message||e)}
+  }catch(e){if(owner!==ownerKey())return;G.erro='Não consegui ler o PDF: '+(e.message||e)}
   G.busy=0;pinta();
 }
 function livroSel(){return(G.livros||[]).find(x=>x.id===G.sel)||null}
@@ -2370,17 +2385,17 @@ function gerandoHtml(a){
   const job=lsg(LS_JOB,null),meu=job&&job.id===a.id;
   return`<div class="au-item au-ger"><span class="au-n">…</span><span class="au-tx"><b>Aula ${a.numero} · gerando</b><span class="sm mut">${G.busy&&meu?h(G.msg):meu?'Interrompida. Toque em continuar.':'Em geração em outro aparelho ou interrompida.'}</span></span>${!G.busy&&meu?'<button class="btn s" data-aucont="1">Continuar</button>':''}</div>`;
 }
-async function chamaFn(corpo,ms){
-  await tok();const s=cfg();
-  const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms);
+async function chamaFn(corpo,ms,owner){
+  assertOwner(owner);await tok();assertOwner(owner);const s=cfg();
+  const ac=new AbortController();G.request=ac;const t=setTimeout(()=>ac.abort(),ms);
   try{
     const r=await fetch(s.url+'/functions/v1/aulas',{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json',apikey:s.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify(corpo)});
-    const j=await r.json().catch(()=>({}));
+    const j=await r.json().catch(()=>({}));assertOwner(owner);
     if(r.status===404&&!j.error)throw new Error('A função "aulas" não foi encontrada no Supabase.');
     if(!r.ok){const e=new Error(j.error||'Erro '+r.status);e.status=r.status;throw e}
     return j;
   }catch(e){if(e.name==='AbortError'){const x=new Error('A IA demorou demais para responder.');x.status=504;throw x}throw e}
-  finally{clearTimeout(t)}
+  finally{clearTimeout(t);if(G.request===ac)G.request=null}
 }
 async function paginasTexto(pdf,de,ate,on){
   const L=[];de=Math.max(1,de);ate=Math.min(pdf.numPages,ate);
@@ -2390,7 +2405,7 @@ async function paginasTexto(pdf,de,ate,on){
 // divide cada capítulo em trechos de ~10 páginas (~28 mil letras): cada trecho é uma chamada curta à IA
 function trechos(pags){const B=[];let cur=[],n=0;for(const t of pags){if(n>0&&n+t.length>28000){B.push(cur.join('\n\n'));cur=[];n=0}cur.push(t);n+=t.length}if(cur.length)B.push(cur.join('\n\n'));if(B.length>1&&B[B.length-1].length<7000){const u=B.pop();B[B.length-1]+='\n\n'+u}return B}
 async function gerar(cont){
-  if(G.busy)return;
+  ensureOwner();const generationOwner=ownerKey();if(G.busy)return;
   if(!logado()){G.erro='Entre na sua conta (Mais → Conta) para gerar aulas.';pinta();return}
   let job=cont?lsg(LS_JOB,null):null;
   G.erro='';G.msg='';
@@ -2405,7 +2420,7 @@ async function gerar(cont){
     if(nome.trim()!==lv.nome){try{const x=await idbOp('readonly',st=>st.get(lv.id));x.nome=nome.trim();await idbOp('readwrite',st=>st.put(x));lv.nome=nome.trim()}catch{}}
     job={livroId:lv.id,livro:nome.trim(),numero,partes,feitas:0};
   }
-  G.busy=1;G.pct=1;G.msg='Preparando…';pinta();prendeTela();
+  if(generationOwner!==ownerKey())return;G.busy=1;G.pct=1;G.msg='Preparando…';pinta();prendeTela();
   try{
     const buf=await livroBuf(job.livroId);
     if(!buf)throw new Error('O PDF deste livro não está mais neste aparelho. Envie o PDF de novo.');
@@ -2413,37 +2428,40 @@ async function gerar(cont){
     // 1) lê todos os capítulos no aparelho e monta os trechos
     const blocos=[];
     for(const[ci,p]of job.partes.entries()){
+      assertOwner(generationOwner);
       const pags=await paginasTexto(pdf,p.de,p.ate,(k,t)=>{G.msg=`Lendo “${p.nome}” · página ${k} de ${t}`;G.pct=1+8*(ci+k/t)/job.partes.length;pintaProg()});
-      const tot=pags.join('').replace(/\s/g,'').length;
+      assertOwner(generationOwner);const tot=pags.join('').replace(/\s/g,'').length;
       if(tot<600)throw new Error(`Quase não há texto nas páginas ${p.de}–${p.ate}. O PDF pode ser escaneado (imagem), ou as páginas estão erradas.`);
       const tr=trechos(pags);tr.forEach((texto,bi)=>blocos.push({nome:p.nome,texto,bloco:bi,blocos:tr.length}));
     }
     if(blocos.length>24)throw new Error('Capítulos longos demais para uma aula só. Escolha menos capítulos.');
-    if(!job.id){const r=await chamaFn({acao:'iniciar',livro:job.livro,numero:job.numero,capitulos:job.partes.map(p=>p.nome)},30000);job.id=r.id;lss(LS_JOB,job);AU.lista=null;carregaLista(1)}
+    if(!job.id){const r=await chamaFn({acao:'iniciar',livro:job.livro,numero:job.numero,capitulos:job.partes.map(p=>p.nome)},30000,generationOwner);assertOwner(generationOwner);job.id=r.id;lss(LS_JOB,job);AU.lista=null;carregaLista(1)}
     // 2) a IA escreve um trecho por vez
     const n=blocos.length;
     for(let i=job.feitas;i<n;i++){
+      assertOwner(generationOwner);
       const b=blocos[i],base=10+88*i/n,fatia=88/n;
       G.msg=`A IA está escrevendo “${b.nome}”${b.blocos>1?` (parte ${b.bloco+1} de ${b.blocos})`:''} · ${i+1} de ${n}`;G.pct=base;pintaProg();
       const anda=setInterval(()=>{G.pct=Math.min(base+fatia*.95,G.pct+fatia/90);pintaProg()},1000);
       const corpo={acao:'parte',id:job.id,idx:i,total:n,bloco:b.bloco,blocos:b.blocos,capitulo:b.nome,texto:b.texto};
       try{
-        try{await chamaFn(corpo,165000)}
-        catch(e){if(e.status===502||e.status===504||e.status===500||e.status===546){G.msg='A IA falhou neste trecho. Tentando de novo…';pintaProg();await chamaFn(corpo,165000)}else throw e}
+        try{await chamaFn(corpo,165000,generationOwner)}
+        catch(e){if(e.status===502||e.status===504||e.status===500||e.status===546){G.msg='A IA falhou neste trecho. Tentando de novo…';pintaProg();await chamaFn(corpo,165000,generationOwner)}else throw e}
       }finally{clearInterval(anda)}
-      job.feitas=i+1;lss(LS_JOB,job);G.pct=10+88*(i+1)/n;
+      assertOwner(generationOwner);job.feitas=i+1;lss(LS_JOB,job);G.pct=10+88*(i+1)/n;
     }
-    try{localStorage.removeItem(LS_JOB)}catch{}
+    try{lsd(LS_JOB)}catch{}
     G.busy=0;G.aberto=0;G.msg='';G.caps={};G.numero='';soltaTela();
     AU.lista=null;await carregaLista(1);toast&&toast('Aula pronta! 🎬');
     const nova=(AU.lista||[]).find(a=>a.id===job.id);pinta();if(nova)setTimeout(()=>abre(nova.id),300);
     return;
-  }catch(e){G.erro=(e.message||String(e))+(job.id?' O que já foi feito ficou salvo: toque em “Continuar”.':'');}
+  }catch(e){if(generationOwner!==ownerKey())return;G.erro=(e.message||String(e))+(job.id?' O que já foi feito ficou salvo: toque em “Continuar”.':'');}
   G.busy=0;soltaTela();AU.lista=null;carregaLista(1);pinta();
 }
 function pintaProg(){const g=document.querySelector('.au-ger .au-tx .sm');g&&(g.textContent=G.msg);const e=document.querySelector('.au-prog');if(e){e.querySelector('.sm').textContent=G.msg;const b=e.querySelector('.au-pb i');b&&(b.style.width=G.pct+'%')}else pinta()}
 document.addEventListener('click',e=>{
   const q=s=>e.target.closest(s);let b;
+  if(q('[data-aulegacyclear]')){if(confirm('Apagar os PDFs locais de versões anteriores? As aulas salvas no servidor não serão apagadas. Esta remoção dos PDFs antigos não pode ser desfeita.')){const r=indexedDB.deleteDatabase('aulas-livros');r.onsuccess=()=>toast&&toast('PDFs antigos removidos deste aparelho.');r.onblocked=()=>toast&&toast('Feche outras abas do app e tente novamente.')}return}
   if(q('[data-aunova]')){G.aberto=1;G.erro='';G.msg='';pinta();return}
   if(q('[data-aufecha]')){G.aberto=0;G.erro='';G.msg='';pinta();return}
   if(b=q('[data-aulv]')){G.sel=b.dataset.aulv;G.caps={};G.numero='';G.usarManual=0;G.erro='';G.msg='';pinta();return}
@@ -2542,7 +2560,14 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
 @media (orientation:landscape) and (max-height:520px){.aup-top{padding:4px 10px}.aup-cap{min-height:2.9em;font-size:15px;padding:4px 14px}.aup-ctl{padding:4px 10px 6px}.aup-ctl>button{width:38px;height:38px}.aup-ctl .aup-pp{width:46px;height:46px}.auv-h2{margin-bottom:6px}}
 `;
 const st=document.createElement('style');st.id='aulas-css';st.textContent=css;document.head.appendChild(st);
-window.AULAS={abre,carregaLista,VIS,calcAjuste,_dbg:{cena,P,falasCena}};
+async function limparConta(owner){
+ if(!owner)return;for(const key of Object.keys(localStorage))if(key.startsWith('aulas-v318:'+owner+':')||key==='estudos-v316:'+owner)localStorage.removeItem(key);
+ await new Promise((ok,no)=>{const r=indexedDB.deleteDatabase('aulas-livros-v318:'+owner);r.onsuccess=ok;r.onerror=()=>no(new Error('Não consegui remover os PDFs locais.'));r.onblocked=()=>no(new Error('Feche outras abas do aplicativo para remover os PDFs locais.'))});
+}
+const previousRender=render;render=function(){ensureOwner();return previousRender.apply(this,arguments)};
+// Unowned legacy metadata is not reused. PDFs remain preserved in their old database, never opened by this version.
+try{for(const key of Object.keys(localStorage))if(/^aulas-(lista-v1$|rot-v1:|pos-v1:|job-v1$)/.test(key))localStorage.removeItem(key)}catch{}
+window.AULAS={abre,carregaLista,VIS,calcAjuste,_dbg:{cena,P,falasCena},ensureOwner,limparConta};
 })();
 
 ;
