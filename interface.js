@@ -3050,3 +3050,65 @@ const st=document.createElement('style');st.textContent=`.adr-ab{margin-top:14px
  load('mercado');
 })(window);
 
+;
+/* módulo: aulas-pro-v315.js — camada rápida de estudo e acabamento das videoaulas. */
+(function(){
+ 'use strict';
+ const W=window,D=document;
+ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const txt=e=>String(e&&e.textContent||'').replace(/\s+/g,' ').trim();
+ const clean=s=>String(s||'').replace(/[✓•·]+/g,'').replace(/\s+/g,' ').trim();
+ const key=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const stop=new Set('a o os as um uma de da do das dos para por com sem sobre entre esse essa isso este esta cada como quando onde que qual quais porque entao muito mais menos voce aula cena livro mercado trader'.split(' '));
+ function classify(t){t=key(t);if(/graf|candle|preco|tendencia|suporte|resistencia|volume/.test(t))return ['Gráfico','Leitura visual','au-kind-chart'];if(/exemplo|caso|pratico|calculo|passo/.test(t))return ['Exemplo','Aplicação prática','au-kind-example'];if(/risco|stop|erro|cuidado|alerta|perda|margem/.test(t))return ['Alerta','Controle de risco','au-kind-alert'];if(/resumo|conclus|revis|lembrar/.test(t))return ['Resumo','Memorização','au-kind-review'];if(/pergunta|teste|quiz/.test(t))return ['Quiz','Fixação','au-kind-quiz'];return ['Conceito','Base da aula','au-kind-concept']}
+ function words(source,n=5){const m=new Map;String(source||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').split(/\s+/).forEach(w=>{if(w.length>3&&!stop.has(w))m.set(w,(m.get(w)||0)+1)});return [...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,n).map(x=>x[0])}
+ function scenes(){return [...D.querySelectorAll('#aupidx [data-aucena]')].map((b,i)=>({i,el:b,title:clean(txt(b).replace(/^\d+\s*/,''))||('Cena '+(i+1))}))}
+ function current(){const at=D.querySelector('#aupprog i.at');return at?[...at.parentNode.children].indexOf(at):0}
+ function caption(){return clean(txt(D.getElementById('aupcap')))}
+ function lessonTitle(){return clean(txt(D.querySelector('.aup-tt b')))||'Aula'}
+ function ensure(){const p=D.getElementById('aup');if(!p)return null;
+  if(!p.dataset.pro315){p.dataset.pro315='1';p.insertAdjacentHTML('beforeend','<div class="au-toast" id="auToast" hidden></div>');}
+  const top=p.querySelector('.aup-top');
+  if(top&&!D.getElementById('auProBar'))top.insertAdjacentHTML('afterend','<div class="au-probar"><b id="auProBar"></b></div>');
+  const stage=p.querySelector('.aup-stage');
+  if(stage&&!D.getElementById('auCine'))stage.insertAdjacentHTML('afterbegin','<div class="au-cine" id="auCine"><span>DIÁRIO DE TRADER · AULA PRO</span><em id="auKind">Conceito</em></div>');
+  if(stage&&!D.getElementById('auLower'))stage.insertAdjacentHTML('beforeend','<div class="au-lower" id="auLower"><b>Conceito principal</b><span>Aplicação no mercado</span></div>');
+  if(!D.getElementById('auChapterStrip')){const prog=p.querySelector('#aupprog');prog&&prog.insertAdjacentHTML('afterend','<div class="au-chapters" id="auChapterStrip"></div>')}
+  const ctl=p.querySelector('.aup-ctl');
+  if(ctl&&!D.getElementById('auReviewBtn'))ctl.insertAdjacentHTML('beforeend','<button id="auReviewBtn" class="au-probtn" type="button">Revisar aula</button><button id="auQuizBtn" class="au-probtn" type="button">Quiz</button>');
+  if(!D.getElementById('auBlockCard')){const cap=p.querySelector('#aupcap');cap&&cap.insertAdjacentHTML('afterend','<div class="au-block-card" id="auBlockCard" hidden></div>')}
+  return p;
+ }
+ function update(){const p=ensure();if(!p)return;const sc=scenes(),i=current(),total=Math.max(sc.length,1),cap=caption(),title=sc[i]?.title||'Cena atual',kind=classify(title+' '+cap);
+  p.classList.remove('au-kind-chart','au-kind-example','au-kind-alert','au-kind-review','au-kind-quiz','au-kind-concept');p.classList.add(kind[2]);
+  const bar=D.getElementById('auProBar');bar&&(bar.style.width=Math.max(3,Math.round((i+1)/total*100))+'%');
+  const k=D.getElementById('auKind');k&&(k.textContent=kind[0]);
+  const low=D.getElementById('auLower');if(low){low.querySelector('b').textContent=title;low.querySelector('span').textContent=kind[1]}
+  const strip=D.getElementById('auChapterStrip');if(strip&&strip.dataset.count!==String(sc.length)){strip.dataset.count=String(sc.length);strip.innerHTML=sc.map((s,j)=>`<button type="button" data-aujump="${s.i}"><b>${j+1}</b><span>${esc(s.title)}</span></button>`).join('')}
+  D.querySelectorAll('[data-aujump]').forEach((b,j)=>b.classList.toggle('on',j===i));
+  const card=D.getElementById('auBlockCard');if(card){const terms=words(title+' '+cap,4);const show=(i>0&&((i+1)%3===0||kind[0]==='Resumo'||i===total-1));if(show){card.hidden=false;card.innerHTML=`<b>O que lembrar deste bloco</b><span>${esc(cap||title)}</span>${terms.length?`<small>${terms.map(esc).join(' · ')}</small>`:''}`}else card.hidden=true}
+ }
+ function openReview(mode){const sc=scenes(),i=current(),all=(lessonTitle()+' '+sc.map(s=>s.title).join(' ')+' '+caption()),terms=words(all,8),main=sc.slice(0,6);
+  let body='';
+  if(mode==='quiz'){
+    const qs=[`Qual é a ideia central de ${sc[i]?.title||'esta cena'}?`,`Como você aplicaria esse conceito antes de uma operação real?`,`Qual risco ou cuidado não pode ser ignorado aqui?`];
+    body=`<h2>Quiz rápido</h2><p>Responda mentalmente ou em voz alta antes de continuar a aula.</p><ol>${qs.map(q=>`<li>${esc(q)}</li>`).join('')}</ol><div class="au-hint"><b>Dica:</b> procure usar suas próprias palavras, como se estivesse explicando para outro trader.</div>`;
+  }else{
+    body=`<h2>Revisão da aula</h2><p class="mut">Resumo automático para fixar o conteúdo.</p><h3>Capítulos</h3><ol>${main.map(s=>`<li>${esc(s.title)}</li>`).join('')}</ol><h3>Pontos-chave</h3><div class="au-tags">${(terms.length?terms:['processo','risco','execução']).map(w=>`<span>${esc(w)}</span>`).join('')}</div><h3>Exercício prático</h3><p>Antes da próxima aula, escolha uma operação ou gráfico e explique onde esse conceito aparece no seu processo.</p>`;
+  }
+  closeModal();D.body.insertAdjacentHTML('beforeend',`<div class="au-modal" id="auModal"><div><button type="button" class="au-close" id="auClose">×</button>${body}</div></div>`);
+ }
+ function closeModal(){const m=D.getElementById('auModal');m&&m.remove()}
+ function toast(s){const t=D.getElementById('auToast');if(!t)return;t.hidden=false;t.textContent=s;clearTimeout(toast.t);toast.t=setTimeout(()=>{t.hidden=true},1800)}
+ function inject(){if(D.getElementById('aulas-pro-v315-css'))return;const css=`
+.au-probar{height:3px;background:rgba(255,255,255,.13);overflow:hidden}.au-probar b{display:block;height:100%;width:0;background:linear-gradient(90deg,#36d998,#5b9bff);transition:width .35s ease}
+.au-cine{position:absolute;z-index:7;left:14px;right:14px;top:12px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;font:700 10px/1.2 system-ui;letter-spacing:.14em;color:#dce7f4;text-shadow:0 2px 8px #000}.au-cine em{font-style:normal;border:1px solid rgba(255,255,255,.2);background:rgba(5,10,18,.5);border-radius:999px;padding:5px 9px;letter-spacing:.08em}.aup-stage{position:relative}.aup-stage:before,.aup-stage:after{content:"";position:absolute;left:0;right:0;height:34px;z-index:6;background:linear-gradient(#0009,#0000);pointer-events:none}.aup-stage:before{top:0}.aup-stage:after{bottom:0;transform:rotate(180deg)}
+.au-lower{position:absolute;left:18px;right:18px;bottom:18px;z-index:8;background:linear-gradient(90deg,rgba(5,10,18,.86),rgba(5,10,18,.42));border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:10px 12px;color:#f4f8fb;box-shadow:0 10px 30px #0008;pointer-events:none}.au-lower b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.au-lower span{font-size:11px;color:#b8c7d9}.au-kind-alert .au-lower{border-color:#ff8a8a}.au-kind-chart .au-lower{border-color:#7ab7ff}.au-kind-example .au-lower{border-color:#ffd36a}.au-kind-review .au-lower{border-color:#36d998}
+.au-chapters{display:flex;gap:7px;overflow-x:auto;padding:8px 12px 3px}.au-chapters button{flex:0 0 auto;max-width:185px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#dce7f4;border-radius:999px;padding:7px 10px;font:600 11px/1.1 system-ui;display:flex;gap:7px;align-items:center}.au-chapters button b{background:#36d998;color:#06110c;border-radius:50%;min-width:18px;height:18px;display:grid;place-items:center}.au-chapters button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.au-chapters button.on{background:#36d998;color:#06110c;border-color:#36d998}
+.au-probtn{width:auto!important;padding:8px 10px!important;font-size:12px!important;border-radius:10px!important;border:1px solid rgba(255,255,255,.16)!important;background:rgba(255,255,255,.08)!important;color:#f4f8fb!important}.au-block-card{margin:8px 14px 0;border:1px solid rgba(54,217,152,.35);background:linear-gradient(135deg,rgba(54,217,152,.12),rgba(91,155,255,.08));border-radius:14px;padding:10px 12px;color:#eaf3fa}.au-block-card b{display:block;margin-bottom:3px}.au-block-card span{display:block;font-size:13px}.au-block-card small{display:block;margin-top:5px;color:#aebfd1}.au-modal{position:fixed;inset:0;background:#000b;z-index:9999;display:grid;place-items:center;padding:18px}.au-modal>div{width:min(520px,100%);max-height:86vh;overflow:auto;background:#111923;color:#edf3f8;border:1px solid #2d3c4f;border-radius:18px;padding:18px;box-shadow:0 25px 90px #000}.au-modal h2{margin:0 0 8px;font-size:20px}.au-modal h3{margin:14px 0 6px;color:#36d998;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.au-close{float:right;border:1px solid #405064;background:#172231;color:#edf3f8;border-radius:10px;width:36px;height:36px;font-size:24px}.au-tags{display:flex;flex-wrap:wrap;gap:7px}.au-tags span{border:1px solid #34506b;background:#172231;border-radius:999px;padding:5px 9px}.au-hint{border:1px solid #34506b;background:#172231;border-radius:12px;padding:10px;margin-top:10px}.au-toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:10000;background:#101923;color:#edf3f8;border:1px solid #31465f;border-radius:999px;padding:9px 14px;box-shadow:0 10px 30px #0008;font:600 13px system-ui}
+@media(max-width:520px){.au-lower{left:10px;right:10px;bottom:10px}.au-chapters{padding-left:8px}.au-probtn{padding:7px 8px!important}.au-cine span{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+`;const st=D.createElement('style');st.id='aulas-pro-v315-css';st.textContent=css;D.head.appendChild(st)}
+ D.addEventListener('click',e=>{const j=e.target.closest('[data-aujump]');if(j){e.preventDefault();const target=D.querySelector(`#aupidx [data-aucena="${j.dataset.aujump}"]`);target&&target.click();toast('Capítulo '+(Number(j.dataset.aujump)+1));setTimeout(update,120);return}if(e.target.closest('#auReviewBtn')){e.preventDefault();openReview('review');return}if(e.target.closest('#auQuizBtn')){e.preventDefault();openReview('quiz');return}if(e.target.closest('#auClose')||e.target.id==='auModal')closeModal()});
+ const mo=new MutationObserver(()=>{inject();update()});mo.observe(D.documentElement,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
+ D.addEventListener('DOMContentLoaded',()=>{inject();update()});setInterval(update,1200);W.AulasPro315={update,review:()=>openReview('review'),quiz:()=>openReview('quiz')};
+})();
