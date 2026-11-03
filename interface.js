@@ -3255,3 +3255,36 @@ doc.addEventListener('change',async e=>{if(e.target.id!=='ws321file')return;try{
 const style=doc.createElement('style');style.textContent='#workspace321{background:#101c2b;color:#edf4fb;border:1px solid #35516b;border-radius:18px;padding:20px;width:min(390px,86vw);max-height:85dvh;overflow:auto;box-sizing:border-box;box-shadow:0 20px 70px #0008}#workspace321::backdrop{background:#0009}#workspace321 h2{margin:4px 0 8px;font-size:21px}#workspace321 p,#workspace321 small{font-size:12px;color:#a9bacd;line-height:1.5}#workspace321 button,#workspace321 select,.ws321-upload{display:block;width:100%;box-sizing:border-box;text-align:left;min-height:40px;margin:7px 0;padding:9px 12px;border-radius:9px;border:1px solid #38516a;background:#192b40;color:#edf4fb;font:inherit;font-size:13px;cursor:pointer}#workspace321 button:disabled{opacity:.4;cursor:default}#workspace321 .ws321-close{float:right;width:36px;text-align:center;margin:0;min-height:36px}#ws321error{color:#ffb4b4;font-size:13px;margin-top:10px}';doc.head.appendChild(style);
 if(window.TraderUI)window.TraderUI.onRender('workspaces-tools-v321',mount);mount();window.Workspaces321={validate,snapshot,exportData,copy,restore,rename,remove,importData,importFile,mount};
 })();
+/* v322: restauracao segura e sugestoes de layouts de consulta. Nao executa ordens. */
+(function(){
+'use strict';
+const D=document;
+let last=null,dialog=null,sessionOwner=null;
+const owner=()=>window.DIARIO_DEMO?'demo':(typeof SESS!=='undefined'?SESS?.uid||null:null);
+const copy=x=>JSON.parse(JSON.stringify(x));
+const message=s=>{if(typeof window.toast==='function')window.toast(s)};
+const get=()=>{if(!window.TRM?.TS||!window.TRM?.TR||!window.trWsPad)throw Error('Terminal nao disponivel.');const uid=owner();if(!uid)throw Error('Entre na sua conta.');return{uid,s:window.TRM.TS()}};
+const resetFocus=()=>{const t=window.TRM.TR;t.foco=0;t.mob=0;t.max=-1};
+const persist=()=>{resetFocus();save();close();render()};
+const safe=(fn)=>{try{fn()}catch(e){const target=D.getElementById('auto322-error');if(target)target.textContent=e.message;else message(e.message)}};
+function preserve(){const {uid,s}=get();last={uid,ws:s.ws,wss:copy(s.wss)};}
+function undo(){const {uid,s}=get();if(!last||last.uid!==uid)throw Error('Nao ha alteracao recente para desfazer.');const before={uid,ws:s.ws,wss:copy(s.wss)};s.wss=copy(last.wss);s.ws=last.ws;last=before;persist();}
+function original(){const {s}=get(),current=s.ws;const key=Object.hasOwn(window.trWsPad,current)?current:'br';const base=window.trWsPad[key];if(!base)throw Error('Modelo original nao encontrado.');if(!confirm('Restaurar o modelo original de '+base.n+'? A configuracao atual deste espaco sera substituida. Seus outros Workspaces serao mantidos.'))return;preserve();s.wss[key]=copy(base);s.ws=key;persist();}
+const presets={
+ pre:{name:'Pre-abertura',base:'pre'},
+ live:{name:'Pregao brasileiro',panels:['WEI','ECO','FX','WIRP','NEWS','EVT']},
+ post:{name:'Pos-pregao',panels:['JORNAL','NEWS','ECO','STAT','EVT']}
+};
+function grid(count){const cols=count<=2?1:count<=4?2:3,rows=Math.ceil(count/cols),w=12/cols,h=Math.max(6,Math.floor(26/rows));return Array.from({length:count},(_,i)=>({x:(i%cols)*w,y:Math.floor(i/cols)*h,w,h}));}
+function apply(kind){const {s}=get(),preset=presets[kind];if(!preset)throw Error('Modo invalido.');let layout;if(preset.base){layout=copy(window.trWsPad[preset.base]);if(!layout)throw Error('Modelo ausente.');}else{layout={n:preset.name,p:preset.panels.slice(),g:grid(preset.panels.length)};}
+ // Sempre criar uma copia, para nao substituir o layout atual nem os modelos base.
+ preserve();const id='ws321_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);s.wss[id]=layout;s.ws=id;persist();message('Workspace '+preset.name+' criado.');}
+function close(){if(dialog){try{dialog.close()}catch{}dialog.remove();dialog=null}sessionOwner=null;}
+function show(){const {uid,s}=get();close();sessionOwner=uid;dialog=D.createElement('dialog');dialog.id='auto322';dialog.setAttribute('aria-label','Organizar Terminal');dialog.innerHTML='<div class="auto322-head"><strong>Organizar Terminal</strong><button type="button" data-auto322="close" aria-label="Fechar">×</button></div><p>Escolha um ambiente de consulta. Os modos criam copias e preservam seus Workspaces.</p><div class="auto322-modes"><button type="button" data-auto322="pre">☀ Pré-abertura</button><button type="button" data-auto322="live">◉ Pregão</button><button type="button" data-auto322="post">◷ Pós-pregão</button></div><hr><button type="button" data-auto322="original">↺ Restaurar modelo original</button><button type="button" data-auto322="undo" '+(!last||last.uid!==uid?'disabled':'')+'>↶ Desfazer última mudança</button><small>Restaurar substitui somente o modelo atual, se ele for padrão. Para um Workspace personalizado, recupera o modelo Ações Brasil sem apagar a cópia.</small><div id="auto322-error" role="status"></div>';
+ D.body.appendChild(dialog);dialog.addEventListener('close',()=>{dialog?.remove();dialog=null;sessionOwner=null});try{dialog.showModal()}catch{dialog.setAttribute('open','')};}
+function mount(){const bar=D.querySelector('.trbar');if(!bar||bar.querySelector('[data-auto322-open]')||window.TRPOP)return;const b=D.createElement('button');b.type='button';b.className='trbtn';b.dataset.auto322Open='1';b.textContent='Organizar';b.title='Restaurar original ou criar ambiente de pré-abertura, pregão e pós-pregão';b.addEventListener('click',()=>safe(show));bar.appendChild(b);}
+D.addEventListener('click',e=>{const b=e.target.closest('[data-auto322]');if(!b)return;const action=b.dataset.auto322;if(action==='close'){close();return}safe(()=>{if(sessionOwner!==owner())throw Error('Sua sessao mudou. Reabra o menu.');if(action==='undo')undo();else if(action==='original')original();else apply(action);});});
+const css=D.createElement('style');css.textContent='#auto322{width:min(460px,92vw);box-sizing:border-box;background:#101c2b;color:#edf4fb;border:1px solid #38516a;border-radius:16px;padding:20px;max-height:85dvh;overflow:auto;box-shadow:0 20px 60px #0008}#auto322::backdrop{background:#0009}#auto322 .auto322-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:18px}#auto322 p,#auto322 small{color:#acbfd0;line-height:1.5;font-size:12px}#auto322 button{display:block;width:100%;text-align:left;background:#1a3047;color:#edf4fb;border:1px solid #3a536b;border-radius:9px;padding:11px;min-height:42px;margin:8px 0;cursor:pointer;font:inherit;font-size:13px}#auto322 button:disabled{opacity:.45;cursor:default}#auto322 .auto322-head button{width:38px;text-align:center;margin:0}#auto322 hr{border:0;border-top:1px solid #38516a;margin:16px 0}#auto322-error{color:#ffb4b4;font-size:12px;margin-top:8px}';D.head.appendChild(css);
+if(window.TraderUI?.onRender)window.TraderUI.onRender('terminal-auto-v322',()=>{if(dialog&&sessionOwner!==owner())close();mount();});mount();
+window.TerminalOrganizador322={mount,apply,original,undo,grid};
+})();
