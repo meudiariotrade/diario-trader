@@ -1995,10 +1995,11 @@ function addBtn(s){
 }
 
 /* ---------- voz ---------- */
-function vozes(){let v=[];try{v=speechSynthesis.getVoices().filter(x=>/^pt/i.test(x.lang))}catch{}
-  const q=x=>(/premium/i.test(x.name)?4:/enhanced|aprimorad|melhorad|neural|natural/i.test(x.name)?3:/siri|google/i.test(x.name)?1:0)+(/BR/i.test(x.lang)?2:0);
+function qualidadeVoz(v){const id=String(v.name||'')+' '+String(v.voiceURI||'');return /premium/i.test(id)?50:/enhanced|aprimorad|melhorad/i.test(id)?40:/neural|natural/i.test(id)?35:/siri/i.test(id)?20:/google/i.test(id)?10:0}
+function vozes(){let v=[];try{v=speechSynthesis.getVoices().filter(x=>/^pt(?:[-_]|$)/i.test(x.lang))}catch{}
+  const q=x=>(/^pt[-_]BR$/i.test(x.lang)?100:0)+qualidadeVoz(x)+(x.default?1:0);
   return v.sort((a,b)=>q(b)-q(a)||a.name.localeCompare(b.name))}
-function voz(){const v=vozes(),n=lsg(LS_VOZ,'');return v.find(x=>x.name===n)||v[0]||null}
+function voz(){const v=vozes(),n=lsg(LS_VOZ,'');return v.find(x=>x.voiceURI===n)||v.find(x=>x.name===n)||v[0]||null}
 const temVoz=()=>'speechSynthesis'in window;
 
 /* ---------- player ---------- */
@@ -2023,19 +2024,20 @@ async function abre(id){
 }
 function fecha(){para();salvaPos();P.on=0;P.a=null;const e=document.getElementById('aup');e&&e.remove();document.documentElement.classList.remove('au-aberto');soltaTela();const y=scrollY;render();scrollTo(0,y)}
 function playerHtml(){
-  const a=P.a,vel=lsg(LS_VEL,1);
+  const a=P.a,vel=lsg(LS_VEL,0.95);
   return `<div class="aup" id="aup" role="dialog" aria-label="Aula ${a.numero}">
 <div class="aup-top"><button class="aup-x" data-aux="1" aria-label="Fechar">${IC.x}</button><div class="aup-tt"><b>Aula ${a.numero} · ${h(a.titulo)}</b><span id="aupct"></span></div><button class="aup-ix" data-auidx="1" aria-label="Cenas">${IC.menu}</button></div>
 <div class="aup-stage"><div class="aup-vis" id="aupvis"></div></div>
 <div class="aup-cap" id="aupcap"></div>
 <div class="aup-prog" id="aupprog">${a.r.cenas.map((c,k)=>`<i data-aucena="${k}" title="${h(c.titulo||'')}"></i>`).join('')}</div>
 <div class="aup-ctl"><button data-auprev="1" aria-label="Cena anterior">${IC.prev}</button><button class="aup-pp" data-aupp="1" aria-label="Tocar">${IC.play}</button><button data-aunext="1" aria-label="Próxima cena">${IC.next}</button>
-<select id="aupvel" aria-label="Velocidade">${[0.8,0.9,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
-<select id="aupvoz" aria-label="Voz">${temVoz()?vozOpts():'<option>sem voz</option>'}</select></div>
+<select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
+<select id="aupvoz" aria-label="Voz">${temVoz()?vozOpts():'<option>sem voz</option>'}</select>${temVoz()?'<button data-auvozteste="1" aria-label="Ouvir voz selecionada" style="font-size:12px;width:auto;padding:8px">Ouvir voz</button>':''}</div>
 <div class="aup-idx" id="aupidx" hidden>${a.r.cenas.map((c,k)=>`<button data-aucena="${k}"><span>${k+1}</span>${h(c.titulo||'Cena '+(k+1))}</button>`).join('')}${a.local?'':'<button class="aup-del" data-audel="1"><span>✕</span>Apagar esta aula</button>'}</div>
 </div>`;
 }
-function vozOpts(){const v=vozes(),cur=voz();if(!v.length)return'<option value="">voz padrão</option>';return v.map(x=>`<option value="${h(x.name)}"${cur&&cur.name===x.name?' selected':''}>${h(x.name.replace(/\s*\(.*\)/,''))}${/premium|enhanced|aprimorad/i.test(x.name)?' ★':''}</option>`).join('')}
+function vozOpts(){const v=vozes(),saved=lsg(LS_VOZ,''),best=v[0];let out='<option value=""'+(!saved?' selected':'')+'>Automático'+(best?' · '+h(best.name):' · voz do aparelho')+'</option>';return out+v.map(x=>`<option value="${h(x.voiceURI||x.name)}"${saved&&(saved===x.voiceURI||saved===x.name)?' selected':''}>${h(x.name)}${qualidadeVoz(x)>=35?' ★':''}${/^pt[-_]BR$/i.test(x.lang)?' · Brasil':''}</option>`).join('')}
+function testaVoz(){if(!temVoz())return;para();try{const u=new SpeechSynthesisUtterance('Olá! Vamos estudar com calma, entender os exemplos e conectar cada conceito ao mercado.');const v=voz();u.lang=v?.lang||'pt-BR';if(v)u.voice=v;u.rate=0.95;u.pitch=1;u.volume=1;speechSynthesis.speak(u)}catch{}}
 try{speechSynthesis.addEventListener('voiceschanged',()=>{const s=document.getElementById('aupvoz');s&&(s.innerHTML=vozOpts())})}catch{}
 
 function cena(i,j){
@@ -2062,12 +2064,12 @@ function fala(){
     P.t=setTimeout(()=>{cena(P.i+1,0)},c.pausa!=null?c.pausa:900);return;
   }
   const f=L[P.j];desenha(f.k);legenda(f);
-  const tk=++P.tok,vel=+lsg(LS_VEL,1)||1;
+  const tk=++P.tok,vel=+lsg(LS_VEL,0.95)||0.95;
   const prox=()=>{if(tk!==P.tok)return;clearTimeout(P.wd);P.j++;P.t=setTimeout(fala,f.t.endsWith('?')?900:180)};
   const est=(f.t.length/14.5/vel)*1000;
   if(!temVoz()||lsg('aulas-mudo',0)){P.wd=setTimeout(prox,Math.max(1800,est*1.05));return}
   try{
-    const u=new SpeechSynthesisUtterance(f.t),v=voz();u.lang='pt-BR';v&&(u.voice=v,u.lang=v.lang);u.rate=vel;
+    const u=new SpeechSynthesisUtterance(f.t),v=voz();u.lang='pt-BR';v&&(u.voice=v,u.lang=v.lang);u.rate=vel;u.pitch=1;u.volume=1;
     u.onend=prox;u.onerror=e=>{if(e&&/interrupted|canceled/.test(e.error))return;prox()};
     speechSynthesis.speak(u);
     // vigia: alguns aparelhos não avisam o fim da fala
@@ -2228,6 +2230,7 @@ document.addEventListener('click',e=>{
   if(b=q('[data-auopen]')){e.preventDefault();abre(b.dataset.auopen);return}
   if(q('[data-aurel]')){AU.lista=null;carregaLista(1);pinta();return}
   if(!P.on)return;
+  if(q('[data-auvozteste]')){testaVoz();return}
   if(q('[data-aux]')){fecha();return}
   if(q('[data-aupp]')){P.play?para():tocar();return}
   if(q('[data-aunext]')){cena(P.i+1,0);return}
