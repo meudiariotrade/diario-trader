@@ -1957,6 +1957,43 @@ function salvaPos(fim){
 }
 const posDe=a=>{const l=lsg(LS_POS+a.id,null),s=a.progresso||{};return(l&&(!s.em||l.em>=s.em))?l:s};
 
+
+/* v316: organização local por conta; nenhum pedido adicional à IA. */
+const ST={query:'',filter:'all'};
+const studyKey=()=> 'estudos-v316:'+((typeof SESS!=='undefined'&&SESS&&SESS.uid)||'local');
+function studyData(){const d=lsg(studyKey(),{});return d&&typeof d==='object'&&!Array.isArray(d)?d:{}}
+function studySave(d){try{localStorage.setItem(studyKey(),JSON.stringify(d));return true}catch{toast&&toast('Não foi possível salvar neste aparelho.');return false}}
+const norm=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const progress=a=>{const p=posDe(a);return p.fim?100:p.total?Math.max(0,Math.min(99,Math.round(100*(Number(p.cena)||0)/p.total))):0};
+function studyDashboard(){
+ const all=(AU.lista||[]).filter(a=>a.status!=='gerando'),d=studyData(),done=all.filter(a=>posDe(a).fim).length;
+ const last=all.filter(a=>posDe(a).em&&!posDe(a).fim).sort((a,b)=>String(posDe(b).em).localeCompare(String(posDe(a).em)))[0];
+ return `<section class="card au-dashboard"><div class="au-dash-label">SEU ESPAÇO DE APRENDIZADO</div><h2>Uma aula de cada vez.</h2><div class="au-dash-stats"><span><b>${all.length}</b> aulas</span><span><b>${done}</b> concluídas</span><span><b>${all.filter(a=>d.fav?.[a.id]).length}</b> favoritas</span></div>${last?`<button class="btn" data-auopen="${h(last.id)}">Continuar · ${h(last.titulo)} <small>${progress(last)}%</small></button>`:'<div class="sm mut">Escolha uma aula para começar. Seu progresso fica salvo.</div>'}<p class="sm mut">Favoritos e anotações ficam neste aparelho, separados por conta.</p></section>
+ <div class="au-study-tools"><label for="au-search" class="sm mut">Buscar por livro, título ou capítulo</label><input id="au-search" type="search" placeholder="Encontre sua próxima aula…" value="${h(ST.query)}"><div class="au-study-filters" role="group" aria-label="Filtrar aulas">${[['all','Todas'],['progress','Em andamento'],['done','Concluídas'],['fav','Favoritas']].map(([k,t])=>`<button type="button" data-austfilter="${k}" aria-pressed="${ST.filter===k}" class="btn s${ST.filter===k?' on':''}">${t}</button>`).join('')}</div></div>`;
+}
+function studyMatch(a){const p=posDe(a),d=studyData();return (!ST.query||norm([a.livro,a.titulo,a.capitulos].join(' ')).includes(norm(ST.query)))&&(ST.filter==='all'||ST.filter==='done'&&p.fim||ST.filter==='progress'&&!p.fim&&!!p.em||ST.filter==='fav'&&d.fav?.[a.id])}
+function studyPanel(){
+ if(!P.a)return;para();
+ const a=P.a,d=studyData(),notes=d.notes?.[a.id]||[],c=a.r.cenas[P.i];
+ document.getElementById('au-study-panel')?.remove();
+ document.getElementById('aup').insertAdjacentHTML('beforeend',`<section id="au-study-panel" class="au-study-panel" role="dialog" aria-modal="true" aria-label="Caderno da aula"><div class="au-study-sheet"><button class="btn s" data-austclose="1">Fechar caderno</button><h2>Meu caderno</h2><p>${h(a.titulo)} · Cena ${P.i+1}</p><p class="sm mut">${h(c.titulo||'Cena atual')}</p><label for="au-note">Anotação sobre esta cena</label><textarea id="au-note" maxlength="4000" rows="4" placeholder="O que entendi? Como vou aplicar?"></textarea><button class="btn" data-austsave="1">Salvar anotação</button><p class="sm mut" role="status" id="au-note-status"></p><button class="btn s" data-austexport="1"${notes.length?'':' disabled'}>Baixar notas (.txt)</button><h3>Trechos salvos</h3><div>${notes.length?notes.map(n=>`<article><button class="btn s" data-austjump="${n.scene}">Ir à cena ${n.scene+1}</button><p>${h(n.text)}</p><button class="btn s" data-austdelete="${h(n.id)}">Excluir anotação</button></article>`).join(''):'<p class="sm mut">Suas anotações aparecerão aqui.</p>'}</div></div></section>`);
+ document.getElementById('au-note').focus();
+}
+function studyExport(){const notes=studyData().notes?.[P.a.id]||[];if(!notes.length)return;const text=[P.a.titulo,P.a.livro,'',...notes.map(n=>`Cena ${n.scene+1} · ${n.title}\n${n.text}\n`)].join('\n');const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const el=document.createElement('a');el.href=url;el.download='anotacoes-aula.txt';el.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+document.addEventListener('input',e=>{if(e.target.id!=='au-search')return;const start=e.target.selectionStart;ST.query=e.target.value;pinta();const f=document.getElementById('au-search');f?.focus();try{f?.setSelectionRange(start,start)}catch{}});
+document.addEventListener('click',e=>{let b=e.target.closest('[data-austfilter]');if(b){ST.filter=b.dataset.austfilter;pinta();return}b=e.target.closest('[data-austfav]');if(b){const d=studyData(),id=b.dataset.austfav;d.fav=d.fav||{};d.fav[id]=!d.fav[id];if(studySave(d))pinta();return}
+ if(e.target.closest('[data-austnotes]')){studyPanel();return}
+ if(e.target.closest('[data-austclose]')||e.target.id==='au-study-panel'){document.getElementById('au-study-panel')?.remove();document.querySelector('[data-austnotes]')?.focus();return}
+ if(e.target.closest('[data-austsave]')){const f=document.getElementById('au-note'),text=f.value.trim();if(!text){document.getElementById('au-note-status').textContent='Escreva uma anotação antes de salvar.';return}const d=studyData();d.notes=d.notes||{};const list=d.notes[P.a.id]=d.notes[P.a.id]||[];list.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),scene:P.i,title:P.a.r.cenas[P.i].titulo||'',text,em:new Date().toISOString()});if(studySave(d)){studyPanel();document.getElementById('au-note-status').textContent='Anotação salva neste aparelho.'}return}
+ if(e.target.closest('[data-austexport]')){studyExport();return}
+ b=e.target.closest('[data-austdelete]');if(b){const d=studyData();d.notes[P.a.id]=d.notes[P.a.id].filter(n=>n.id!==b.dataset.austdelete);if(studySave(d))studyPanel();return}
+ b=e.target.closest('[data-austjump]');if(b){document.getElementById('au-study-panel')?.remove();cena(Number(b.dataset.austjump),0);return}
+});
+document.addEventListener('au-study-pause',()=>{if(P.on)para()});
+const studyStyle=document.createElement('style');studyStyle.textContent=`
+.au-dashboard{background:linear-gradient(125deg,var(--card,#132135),var(--bg,#0e1929));border:1px solid #2a6a68;padding:20px}.au-dash-label{font-size:10px;letter-spacing:.14em;color:var(--mut,#81cbbf)}.au-dashboard h2{font-size:24px;margin:9px 0 16px}.au-dash-stats{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:18px}.au-dash-stats b{display:block;font-size:23px}.au-dashboard>.btn{max-width:100%;white-space:normal;text-align:left}.au-dashboard small{margin-left:6px}.au-study-tools{margin:14px 0}.au-study-tools input{width:100%;box-sizing:border-box;margin:6px 0 10px;min-height:44px}.au-study-filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}.au-study-filters .btn{white-space:nowrap;min-height:40px}.au-study-filters [aria-pressed=true]{background:#16594f;color:#fff;border-color:#56d5b1}.au-study-row{display:flex;align-items:center;gap:5px}.au-study-row .au-item{flex:1;min-width:0}.au-fav{flex-shrink:0;background:transparent;color:var(--mut,#8c9eb6);border:1px solid var(--line,#405064);border-radius:12px;min-width:42px;min-height:42px;font-size:21px}.au-fav[aria-pressed=true]{color:#d7a82a}.au-study-panel{position:absolute;inset:0;z-index:150;background:#000b;display:flex;justify-content:flex-end}.au-study-sheet{background:#101c2d;color:#edf4fa;max-width:520px;width:100%;padding:20px;overflow:auto;box-sizing:border-box}.au-study-sheet textarea{display:block;box-sizing:border-box;width:100%;color:#edf4fa;background:#172638;border:1px solid #51647a;border-radius:10px;padding:12px;margin:8px 0;resize:vertical;font:16px/1.5 system-ui}.au-study-sheet article{border-top:1px solid #405064;margin-top:15px;padding-top:15px}.au-study-sheet article p{white-space:pre-wrap;overflow-wrap:anywhere}.au-study-sheet .btn{margin:4px 0}.aup-ctl{flex-wrap:wrap}.aup{overflow-y:auto}.au-study-note-btn{width:auto!important;font-size:12px!important;padding:9px!important}.au-study-row .au-tx{min-width:0;overflow-wrap:anywhere}.au-study-row .au-tx b{white-space:normal}@media(prefers-reduced-motion:reduce){.aup *{animation:none!important;transition:none!important}}
+`;document.head.appendChild(studyStyle);
+
 /* ---------- lista na aba Estudos ---------- */
 function listaHtml(){
   if(AU.lista==null){carregaLista();if(AU.lista==null)return'<div class="card"><div class="sm mut">Carregando aulas…</div></div>'}
@@ -1964,15 +2001,15 @@ function listaHtml(){
   if(AU.err==='login')o+='<div class="card warn"><b>Entre na sua conta</b><div class="sm">As aulas ficam guardadas no Supabase. Entre em Mais → Conta para ver a lista.</div></div>';
   else if(AU.err==='tabela')o+='<div class="card warn"><b>Falta a tabela "aulas" no Supabase</b><div class="sm">Rode o SQL de aulas (supabase-aulas.sql).</div></div>';
   else if(AU.err)o+=`<div class="card warn"><b>Não consegui carregar as aulas</b><div class="sm">${h(AU.err)}</div><button class="btn s" data-aurel="1">Tentar de novo</button></div>`;
-  const g={};for(const a of AU.lista)(g[a.livro]=g[a.livro]||[]).push(a);
-  o+=novaHtml();
+  o+=studyDashboard();const visible=AU.lista.filter(studyMatch);const g={};for(const a of visible)(g[a.livro]=g[a.livro]||[]).push(a);
+  o+=novaHtml();if(AU.lista.length&&!visible.length)o+='<div class="card sm mut">Nenhuma aula neste filtro. Experimente outra busca ou Todas.</div>';
   if(!AU.lista.length&&!AU.err&&!G.aberto)o+='<div class="card"><b>Nenhuma aula ainda</b><div class="sm mut">Toque em “Nova aula”, envie o PDF do livro e escolha os capítulos.</div></div>';
   for(const[livro,L]of Object.entries(g)){
     o+=`<div class="card au-livro"><div class="au-lt">${h(livro)}</div>`;
     for(const a of L){
       if(a.status==='gerando'){o+=gerandoHtml(a);continue}
-      const p=posDe(a),feito=p.fim,pc=p.total?Math.round(100*Math.min(p.cena,p.total)/p.total):0;
-      o+=`<button class="au-item" data-auopen="${h(a.id)}"><span class="au-n">${feito?'✓':a.numero}</span><span class="au-tx"><b>Aula ${a.numero} · ${h(a.titulo)}</b><span class="sm mut">${h(a.capitulos?'Capítulos '+a.capitulos:'')}${a.roteiro_min||a.min?' · ~'+(a.roteiro_min||a.min)+' min':''}${feito?' · concluída':pc?' · parou em '+pc+'%':''}</span>${pc&&!feito?`<span class="au-pb"><i style="width:${pc}%"></i></span>`:''}</span><span class="au-play">▶</span></button>`;
+      const p=posDe(a),feito=p.fim,pc=progress(a);
+      o+=`<div class="au-study-row"><button class="au-item" data-auopen="${h(a.id)}"><span class="au-n">${feito?'✓':a.numero}</span><span class="au-tx"><b>Aula ${a.numero} · ${h(a.titulo)}</b><span class="sm mut">${h(a.capitulos?'Capítulos '+a.capitulos:'')}${a.roteiro_min||a.min?' · ~'+(a.roteiro_min||a.min)+' min':''}${feito?' · concluída':pc?' · parou em '+pc+'%':''}</span>${pc&&!feito?`<span class="au-pb"><i style="width:${pc}%"></i></span>`:''}</span><span class="au-play">▶</span></button><button class="au-fav" type="button" data-austfav="${h(a.id)}" aria-label="Favoritar ${h(a.titulo)}" aria-pressed="${!!studyData().fav?.[a.id]}">${studyData().fav?.[a.id]?'★':'☆'}</button></div>`;
     }
     o+='</div>';
   }
@@ -2031,7 +2068,7 @@ function playerHtml(){
 <div class="aup-cap" id="aupcap"></div>
 <div class="aup-prog" id="aupprog">${a.r.cenas.map((c,k)=>`<i data-aucena="${k}" title="${h(c.titulo||'')}"></i>`).join('')}</div>
 <div class="aup-ctl"><button data-auprev="1" aria-label="Cena anterior">${IC.prev}</button><button class="aup-pp" data-aupp="1" aria-label="Tocar">${IC.play}</button><button data-aunext="1" aria-label="Próxima cena">${IC.next}</button>
-<select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
+<button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
 <select id="aupvoz" aria-label="Voz">${temVoz()?vozOpts():'<option>sem voz</option>'}</select>${temVoz()?'<button data-auvozteste="1" aria-label="Ouvir voz selecionada" style="font-size:12px;width:auto;padding:8px">Ouvir voz</button>':''}</div>
 <div class="aup-idx" id="aupidx" hidden>${a.r.cenas.map((c,k)=>`<button data-aucena="${k}"><span>${k+1}</span>${h(c.titulo||'Cena '+(k+1))}</button>`).join('')}${a.local?'':'<button class="aup-del" data-audel="1"><span>✕</span>Apagar esta aula</button>'}</div>
 </div>`;
@@ -2263,7 +2300,7 @@ document.addEventListener('change',e=>{
   if(e.target.id==='aupvel'){lss(LS_VEL,+e.target.value);if(P.play){const j=P.j;cena(P.i,j)}}
   if(e.target.id==='aupvoz'){lss(LS_VOZ,e.target.value);if(P.play){cena(P.i,P.j)}}
 });
-document.addEventListener('keydown',e=>{if(!P.on)return;if(e.key==='Escape')fecha();else if(e.key===' '){e.preventDefault();P.play?para():tocar()}else if(e.key==='ArrowRight')cena(P.i+1,0);else if(e.key==='ArrowLeft')cena(P.i-1,0)});
+document.addEventListener('keydown',e=>{if(!P.on)return;if(document.getElementById('au-study-panel')){if(e.key==='Escape'){document.getElementById('au-study-panel').remove();document.querySelector('[data-austnotes]')?.focus()}return}if(e.target.closest('input,textarea,select,[contenteditable=true]')||document.getElementById('auModal'))return;if(e.key==='Escape')fecha();else if(e.key===' '){e.preventDefault();P.play?para():tocar()}else if(e.key==='ArrowRight')cena(P.i+1,0);else if(e.key==='ArrowLeft')cena(P.i-1,0)});
 
 /* ---------- gerador: PDF do livro → aula pela IA (função "aulas") ---------- */
 const LS_JOB='aulas-job-v1';
@@ -3088,7 +3125,7 @@ const st=document.createElement('style');st.textContent=`.adr-ab{margin-top:14px
   D.querySelectorAll('[data-aujump]').forEach((b,j)=>b.classList.toggle('on',j===i));
   const card=D.getElementById('auBlockCard');if(card){const terms=words(title+' '+cap,4);const show=(i>0&&((i+1)%3===0||kind[0]==='Resumo'||i===total-1));if(show){card.hidden=false;card.innerHTML=`<b>O que lembrar deste bloco</b><span>${esc(cap||title)}</span>${terms.length?`<small>${terms.map(esc).join(' · ')}</small>`:''}`}else card.hidden=true}
  }
- function openReview(mode){const sc=scenes(),i=current(),all=(lessonTitle()+' '+sc.map(s=>s.title).join(' ')+' '+caption()),terms=words(all,8),main=sc.slice(0,6);
+ function openReview(mode){D.dispatchEvent(new Event('au-study-pause'));const sc=scenes(),i=current(),all=(lessonTitle()+' '+sc.map(s=>s.title).join(' ')+' '+caption()),terms=words(all,8),main=sc.slice(0,6);
   let body='';
   if(mode==='quiz'){
     const qs=[`Qual é a ideia central de ${sc[i]?.title||'esta cena'}?`,`Como você aplicaria esse conceito antes de uma operação real?`,`Qual risco ou cuidado não pode ser ignorado aqui?`];
@@ -3109,6 +3146,6 @@ const st=document.createElement('style');st.textContent=`.adr-ab{margin-top:14px
 @media(max-width:520px){.au-lower{left:10px;right:10px;bottom:10px}.au-chapters{padding-left:8px}.au-probtn{padding:7px 8px!important}.au-cine span{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 `;const st=D.createElement('style');st.id='aulas-pro-v315-css';st.textContent=css;D.head.appendChild(st)}
  D.addEventListener('click',e=>{const j=e.target.closest('[data-aujump]');if(j){e.preventDefault();const target=D.querySelector(`#aupidx [data-aucena="${j.dataset.aujump}"]`);target&&target.click();toast('Capítulo '+(Number(j.dataset.aujump)+1));setTimeout(update,120);return}if(e.target.closest('#auReviewBtn')){e.preventDefault();openReview('review');return}if(e.target.closest('#auQuizBtn')){e.preventDefault();openReview('quiz');return}if(e.target.closest('#auClose')||e.target.id==='auModal')closeModal()});
- const mo=new MutationObserver(()=>{inject();update()});mo.observe(D.documentElement,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
+ // v316: o observador anterior observava suas próprias alterações. A atualização periódica basta.
  D.addEventListener('DOMContentLoaded',()=>{inject();update()});setInterval(update,1200);W.AulasPro315={update,review:()=>openReview('review'),quiz:()=>openReview('quiz')};
 })();
