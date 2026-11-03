@@ -1,6 +1,6 @@
 {
   "name": "diario-trader",
-  "version": "310.0.0",
+  "version": "311.0.0",
   "private": true,
   "scripts": {
     "build": "node scripts/build.cjs",

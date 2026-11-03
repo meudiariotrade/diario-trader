@@ -1,3 +1,7 @@
+# Diário de Trader — v311: artes sem subpastas
+
+Correção da mensagem Arte indisponível e da atualização do cache quando a pasta cards-art não foi enviada ao site. Agora as artes estão em cards-assets.js, na pasta principal. Leia LEIA-ME-V311.md.
+
 # Diário de Trader — v310: mais seis temas de cards
 
 Carnaval, Futebol, Páscoa, Festa Junina, Verão e Réveillon, com datas móveis automáticas e seleção manual. Dez estilos no total. Atualização direta; envie também cards-art. Leia LEIA-ME-V310.md.
