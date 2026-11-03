@@ -3181,3 +3181,77 @@ const st=document.createElement('style');st.textContent=`.adr-ab{margin-top:14px
 #aup .aup-options[hidden]{display:none!important}#aup .aup-options{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;background:#111d2c;border-top:1px solid #26374c;flex:none;align-items:center}#aup .aup-options button,#aup .aup-options select{width:auto!important;min-height:42px!important;max-width:100%;aspect-ratio:auto;border-radius:10px!important;padding:9px 12px!important;font-size:13px!important;line-height:1.3;background:#18273b;color:#eef4fa;border:1px solid #34485f;box-sizing:border-box}#aup .aup-options #aupvoz{max-width:100%;flex:1;min-width:180px}#aup .aup-idx{z-index:100}#aup .au-chapters,#aup .au-cine,#aup .au-lower,#aup .au-block-card{display:none!important}
 @media(orientation:landscape) and (max-height:520px){#aup .aup-stage{min-height:160px}#aup .aup-cap{max-height:4em}}
 `;document.head.appendChild(st)})();
+
+/* v320: janela independente do Terminal; nenhuma execução de ordens. */
+(function(){
+'use strict';
+const dedicated=new URL(location.href).searchParams.get('terminal')==='1';
+function openTerminal(){
+ const url=new URL(location.pathname,location.origin);url.searchParams.set('terminal','1');if(window.DIARIO_DEMO)url.searchParams.set('demo','1');
+ const win=window.open(url.href,'diario-terminal-desktop','popup=yes,width=1440,height=900,resizable=yes,scrollbars=yes');
+ if(!win){if(typeof toast==='function')toast('O navegador bloqueou a janela. Permita pop-ups deste site e tente novamente.');return false}
+ try{win.opener=null;win.focus()}catch{}return true;
+}
+function mount(){
+ const bar=document.querySelector('.trbar');if(!bar||bar.querySelector('[data-terminal-window]'))return;
+ const b=document.createElement('button');b.type='button';b.className='trbtn';b.dataset.terminalWindow='1';
+ b.textContent=dedicated?'Terminal independente':'Abrir em nova janela';b.title=dedicated?'Esta janela mantém o Terminal aberto enquanto você usa o aplicativo principal.':'Abrir o Terminal sem sair desta tela';b.disabled=dedicated;
+ b.addEventListener('click',openTerminal);bar.appendChild(b);
+}
+if(dedicated){
+ document.documentElement.classList.add('terminal-window');
+ const style=document.createElement('style');style.textContent='.terminal-window #mbtn,.terminal-window #fab,.terminal-window #fabm,.terminal-window nav{display:none!important}.terminal-window #app{padding-bottom:12px!important}';document.head.appendChild(style);
+ // Antes de cada renderização: a navegação do aplicativo principal não afeta esta janela.
+ const previous=render;render=function(){const signedIn=typeof SESS!=='undefined'&&!!SESS?.uid;tab=signedIn||window.DIARIO_DEMO?'term':'conta';const result=previous.apply(this,arguments);document.title='Terminal · Diário Trader';mount();return result};
+}
+if(window.TraderUI)window.TraderUI.onRender('terminal-desktop-v320',mount);
+else{const previous=render;render=function(){const result=previous.apply(this,arguments);mount();return result}}
+// Apenas a sessão é compartilhada. Não copia estado de diário/carteira de outra janela.
+window.addEventListener('storage',event=>{
+ if(event.storageArea&&event.storageArea!==localStorage)return;
+ if(event.key!=='diario-sess'||window.DIARIO_DEMO)return;
+ let session=null;try{session=event.newValue?JSON.parse(event.newValue):null}catch{return}
+ const current=typeof SESS!=='undefined'?SESS?.uid||null:null;
+ if((session?.uid||null)!==current){location.reload();return}
+ if(session&&typeof session.at==='string'&&typeof session.rt==='string'&&typeof session.exp==='number')SESS=session;
+});
+window.TerminalDesktop320={open:openTerminal,mount,dedicated};mount();
+})();
+
+/* v321: ferramentas sobre os Workspaces já existentes. Não contém execução de ordens. */
+(function(){
+'use strict';
+const doc=document;let modalOwner=null;
+const owner=()=>window.DIARIO_DEMO?'demo':(typeof SESS!=='undefined'?SESS?.uid||null:null);
+const notify=m=>{if(typeof toast==='function')toast(m)};
+function guard(expected=owner()){if(!expected||expected!==owner())throw Error('Entre na mesma conta para alterar o Workspace.');return expected}
+const state=()=>window.TRM.TS();
+const custom=id=>/^ws321_[a-z0-9_]+$/.test(id)||/^u[a-z0-9]{7,}$/.test(id);
+const integer=(n,min,max)=>Number.isFinite(n)&&Number.isInteger(n)&&n>=min&&n<=max;
+function validate(input){
+ if(!input||input.format!=='diario-terminal-workspace'||input.version!==1)throw Error('Arquivo de Workspace incompatível.');
+ const l=input.layout;if(!l||!Array.isArray(l.p)||!Array.isArray(l.g)||!l.p.length||l.p.length>24||l.g.length!==l.p.length)throw Error('O Workspace deve ter de 1 a 24 painéis.');
+ const p=l.p.map(x=>{if(typeof x!=='string'||!x.trim()||x.length>80||/[\u0000-\u001f\u007f<>]/.test(x))throw Error('Comando de painel inválido.');return x.trim()});
+ const g=l.g.map(v=>{if(!v||!integer(v.x,0,11)||!integer(v.y,0,200)||!integer(v.w,1,12)||!integer(v.h,1,200)||v.x+v.w>12)throw Error('Dimensões de painel inválidas.');return{x:v.x,y:v.y,w:v.w,h:v.h}});
+ return{n:String(l.n||'Meu Workspace').trim().slice(0,40)||'Meu Workspace',p,g};
+}
+function snapshot(){guard();if(window.TRPOP)throw Error('Abra o Terminal completo para salvar um Workspace.');const l=window.TRM.layAtual();return validate({format:'diario-terminal-workspace',version:1,layout:{n:l.n,p:l.p,g:l.g}})}
+function exportData(){return{format:'diario-terminal-workspace',version:1,layout:snapshot()}}
+function commit(){const t=window.TRM.TR;if(t){t.foco=0;t.mob=0;t.max=-1}save();close();render()}
+function copy(name){guard();const l=snapshot();if(!String(name||'').trim())return null;l.n=String(name).trim().slice(0,40);const id='ws321_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),s=state();s.wss[id]=l;s.ws=id;commit();return id}
+function restore(id){guard();const s=state();if(!Object.hasOwn(s.wss,id))throw Error('Workspace não encontrado.');s.ws=id;commit()}
+function rename(name){guard();const s=state();if(!custom(s.ws))throw Error('Duplique o modelo padrão antes de renomear.');if(!String(name||'').trim())return false;s.wss[s.ws].n=String(name).trim().slice(0,40);commit();return true}
+function remove(){guard();const s=state(),id=s.ws;if(!custom(id))throw Error('Os modelos padrão são preservados.');const next=Object.keys(s.wss).find(x=>x!==id);if(!next)throw Error('Mantenha pelo menos um Workspace.');delete s.wss[id];s.ws=next;commit()}
+function importData(data,expected=owner()){guard(expected);const l=validate(data),id='ws321_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),s=state();s.wss[id]=l;s.ws=id;commit();return id}
+async function importFile(file){const expected=guard();if(!file)return;if(file.size>65536)throw Error('O arquivo deve ter no máximo 64 KB.');const raw=await file.text();guard(expected);if(raw.length>65536)throw Error('Arquivo muito grande.');return importData(JSON.parse(raw),expected)}
+function close(){const d=doc.getElementById('workspace321');if(d){try{d.close()}catch{}d.remove()}modalOwner=null}
+function open(){guard();close();modalOwner=owner();const d=doc.createElement('dialog');d.id='workspace321';d.setAttribute('aria-label','Gerenciar Workspaces');d.innerHTML='<form method="dialog"><button class="ws321-close" aria-label="Fechar">×</button><h2>Seus Workspaces</h2><p>Salve e recupere seus painéis de consulta.</p><select id="ws321select" aria-label="Workspace"></select><button type="button" data-ws321="restore">Abrir selecionado</button><button type="button" data-ws321="copy">Salvar cópia dos painéis atuais</button><button type="button" data-ws321="rename">Renomear atual</button><button type="button" data-ws321="delete">Excluir atual</button><hr><button type="button" data-ws321="export">Exportar layout (.json)</button><label class="ws321-upload">Importar layout<input type="file" accept=".json,application/json" id="ws321file" hidden></label><small>Exporta somente nomes, comandos e distribuição dos painéis. Modelos padrão são preservados.</small><div id="ws321error" role="status"></div></form>';
+ const s=state(),select=d.querySelector('select');for(const[id,l]of Object.entries(s.wss)){const o=doc.createElement('option');o.value=id;o.textContent=l.n||id;o.selected=id===s.ws;select.appendChild(o)}for(const x of ['rename','delete'])d.querySelector('[data-ws321="'+x+'"]').disabled=!custom(s.ws);
+ doc.body.appendChild(d);try{d.showModal()}catch{d.setAttribute('open','')};d.addEventListener('close',()=>{d.remove();modalOwner=null});
+}
+function mount(){if(doc.getElementById('workspace321')&&modalOwner!==owner())close();const bar=doc.querySelector('.trbar');if(!bar||bar.querySelector('[data-ws321-open]')||window.TRPOP)return;const b=doc.createElement('button');b.type='button';b.className='trbtn';b.dataset.ws321Open='1';b.textContent='Workspaces';b.title='Duplicar, renomear e exportar os espaços de trabalho';b.onclick=()=>{try{open()}catch(e){notify(e.message)}};bar.appendChild(b)}
+doc.addEventListener('click',e=>{const b=e.target.closest('[data-ws321]');if(!b)return;try{guard(modalOwner);const action=b.dataset.ws321;if(action==='restore')restore(doc.getElementById('ws321select').value);if(action==='copy'){const n=prompt('Nome da cópia:',state().wss[state().ws].n+' — cópia');if(n){guard(modalOwner);copy(n)}}if(action==='rename'){const n=prompt('Novo nome:',state().wss[state().ws].n);if(n){guard(modalOwner);rename(n)}}if(action==='delete'&&confirm('Excluir este Workspace personalizado? Seus registros do diário e da carteira não serão apagados.')){guard(modalOwner);remove()}if(action==='export'){const text=JSON.stringify(exportData(),null,2),url=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=doc.createElement('a');a.href=url;a.download='terminal-workspace.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}}catch(err){const box=doc.getElementById('ws321error');if(box)box.textContent=err.message;else notify(err.message)}});
+doc.addEventListener('change',async e=>{if(e.target.id!=='ws321file')return;try{guard(modalOwner);await importFile(e.target.files?.[0])}catch(err){const box=doc.getElementById('ws321error');if(box)box.textContent=err.message}});
+const style=doc.createElement('style');style.textContent='#workspace321{background:#101c2b;color:#edf4fb;border:1px solid #35516b;border-radius:18px;padding:20px;width:min(390px,86vw);max-height:85dvh;overflow:auto;box-sizing:border-box;box-shadow:0 20px 70px #0008}#workspace321::backdrop{background:#0009}#workspace321 h2{margin:4px 0 8px;font-size:21px}#workspace321 p,#workspace321 small{font-size:12px;color:#a9bacd;line-height:1.5}#workspace321 button,#workspace321 select,.ws321-upload{display:block;width:100%;box-sizing:border-box;text-align:left;min-height:40px;margin:7px 0;padding:9px 12px;border-radius:9px;border:1px solid #38516a;background:#192b40;color:#edf4fb;font:inherit;font-size:13px;cursor:pointer}#workspace321 button:disabled{opacity:.4;cursor:default}#workspace321 .ws321-close{float:right;width:36px;text-align:center;margin:0;min-height:36px}#ws321error{color:#ffb4b4;font-size:13px;margin-top:10px}';doc.head.appendChild(style);
+if(window.TraderUI)window.TraderUI.onRender('workspaces-tools-v321',mount);mount();window.Workspaces321={validate,snapshot,exportData,copy,restore,rename,remove,importData,importFile,mount};
+})();
