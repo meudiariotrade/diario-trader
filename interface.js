@@ -1987,7 +1987,7 @@ function pinta(){if(typeof tab!=='undefined'&&tab==='estudos'&&ESV==='aul'&&!P.o
   base=addBtn(base);
   const m=/<div class="seg"[^>]*>[\s\S]*?<\/div>/.exec(base);
   const topo=m?base.slice(0,m.index+m[0].length).replace(/ class="on"/g,'').replace(/(data-id="aul")/,'class="on" $1'):'<h1>Estudos</h1>';
-  return topo+'<div class="au-intro sm mut">Videoaulas narradas dos seus livros, com gráficos reais e exemplos. Cada aula cobre 2 ou 3 capítulos.</div>'+listaHtml();
+  return topo+'<div class="au-intro sm mut">Videoaulas narradas dos seus livros, agora em modo vídeo com cenas automáticas, legendas e exemplos visuais. Cada aula cobre 2 ou 3 capítulos.</div>'+listaHtml();
 }}
 function addBtn(s){
   if(s.includes('data-id="aul"'))return s;
@@ -2122,8 +2122,27 @@ function diario(cd){const m=new Map();for(const x of cd){const k=dia(x[0]),a=m.g
 function desenha(k){
   const c=P.a.r.cenas[P.i],v=c.vis||{tipo:'titulo',t:c.titulo},el=document.getElementById('aupvis');if(!el)return;
   const chave=P.i+'|'+k+'|'+(P.dados[P.i]?1:0);if(P.vis===chave)return;P.vis=chave;
-  const R=VIS[v.tipo]||VIS.titulo;
-  el.innerHTML=R(v,k,P.dados[P.i],c);el.className='aup-vis au-'+v.tipo;
+  const R=VIS[v.tipo]||VIS.titulo,inner=R(v,k,P.dados[P.i],c);
+  el.innerHTML=videoFrame(c,v,k,inner);el.className='aup-vis au-video au-'+v.tipo;
+}
+function videoTema(c,v,k){
+  const txt=((c.titulo||'')+' '+(v.t||'')+' '+((v.chips||[]).join(' '))).toLowerCase();
+  const temas=[
+    [/op[cç][oõ]es|call|put|payoff|strike|pr[eê]mio/,['OPÇÕES','▵','payoff','risco assimétrico']],
+    [/candles|gr[aá]fico|tend[eê]ncia|pre[cç]o|mercado/,['GRÁFICO','▥','movimento do preço','leitura visual']],
+    [/margem|ajuste|futuro|contrato|d[oó]lar|win|wdo/,['FUTUROS','⇄','ajuste diário','gestão de margem']],
+    [/psicologia|disciplina|rotina|emo[cç][aã]o|risco/,['MENTALIDADE','◉','processo antes do resultado','decisão profissional']],
+    [/fundamento|empresa|balan[cç]o|valuation|receita|lucro/,['FUNDAMENTOS','▦','negócio por trás do preço','análise de valor']],
+    [/juros|fed|copom|macro|infla[cç][aã]o|dxy/,['MACRO','⌁','cenário e liquidez','contexto global']]
+  ];
+  for(const [re,vv] of temas)if(re.test(txt))return vv;
+  return ['AULA','◆','conceito principal','exemplo prático'];
+}
+function videoFrame(c,v,k,inner){
+  const n=Math.max(0,k||0),[tag,ico,lead,sub]=videoTema(c,v,n),titulo=c.titulo||v.t||'Aula';
+  const barras=Array.from({length:16},(_,i)=>`<i style="height:${18+((i*17+n*23)%62)}%"></i>`).join('');
+  const cards=[lead,sub,'ponto-chave '+(n+1)].map((x,i)=>`<span class="auyt-card c${i}">${h(x)}</span>`).join('');
+  return `<div class="auyt auyt-${n%6}" style="--step:${n%8}"><div class="auyt-bg"><span>${ico}</span><span>${ico}</span><span>${ico}</span></div><div class="auyt-head"><b>DIÁRIO DE TRADER · AULA</b><em>${h(tag)}</em></div><div class="auyt-body"><div class="auyt-main">${inner}</div><aside class="auyt-side"><div class="auyt-thumb">${ico}</div><strong>${h(titulo)}</strong><small>Cena ${P.i+1} · tomada ${n+1}</small><div class="auyt-bars">${barras}</div>${cards}</aside></div><div class="auyt-lower"><span>🎬 Modo vídeo</span><span>${h(lead)}</span><span>${String(P.i+1).padStart(2,'0')}/${String(P.a?.r?.cenas?.length||1).padStart(2,'0')}</span></div></div>`;
 }
 const mostra=(x,k)=>x==null||x.em==null||k>=x.em;
 const VIS={
@@ -2476,6 +2495,17 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
 .auv-q{text-align:center;padding:6px}.auv-qq{font-size:clamp(19px,5.2vw,30px);font-weight:800;line-height:1.25}
 .auv-qa{margin-top:20px;font-size:clamp(15px,4.2vw,21px);color:#4ade80;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:14px;padding:14px;opacity:0;transform:translateY(6px);transition:all .5s}.auv-qa.on{opacity:1;transform:none}
 .auv-wait{display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;text-align:center;min-height:160px;border:1px dashed #1e3a5f;border-radius:14px;padding:16px;color:#94a3b8}.auv-wait b{color:#e2e8f0}
+
+.au-video{max-width:960px;overflow:hidden}.auyt{position:relative;min-height:min(62dvh,560px);border:1px solid #1e3a5f;border-radius:24px;overflow:hidden;background:radial-gradient(circle at 18% 18%,rgba(56,189,248,.22),transparent 34%),radial-gradient(circle at 82% 30%,rgba(16,185,129,.18),transparent 35%),linear-gradient(135deg,#08111f,#0f172a 58%,#050816);box-shadow:0 22px 70px rgba(0,0,0,.38);isolation:isolate}
+.auyt:before{content:"";position:absolute;inset:-20%;background:linear-gradient(115deg,transparent 0 22%,rgba(255,255,255,.07) 24%,transparent 28% 52%,rgba(125,211,252,.08) 55%,transparent 62%);transform:translateX(calc((var(--step,0) - 4)*3%));opacity:.8;pointer-events:none;animation:auytmove 9s linear infinite}
+.auyt-bg{position:absolute;inset:0;overflow:hidden;z-index:-1}.auyt-bg span{position:absolute;font-size:clamp(88px,24vw,230px);font-weight:900;line-height:1;color:rgba(255,255,255,.035);filter:blur(.3px);transform:rotate(-12deg)}.auyt-bg span:nth-child(1){left:-3%;top:8%}.auyt-bg span:nth-child(2){right:-4%;bottom:1%;transform:rotate(13deg)}.auyt-bg span:nth-child(3){left:45%;top:45%;font-size:clamp(42px,13vw,120px);opacity:.7;transform:rotate(4deg)}
+.auyt-head{display:flex;justify-content:space-between;gap:10px;padding:14px 16px 0;color:#7dd3fc;font-size:11px;letter-spacing:.13em;text-transform:uppercase}.auyt-head em{font-style:normal;color:#34d399;background:rgba(16,185,129,.11);border:1px solid rgba(52,211,153,.24);border-radius:999px;padding:4px 9px;letter-spacing:.08em}
+.auyt-body{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;padding:18px 18px 14px;align-items:stretch;min-height:430px}.auyt-main{min-width:0;display:flex;align-items:center;justify-content:center;padding:10px}.auyt-main>*{width:100%;animation:auytpop .38s ease}.auyt-side{display:flex;flex-direction:column;gap:10px;align-self:stretch;border-left:1px solid rgba(148,163,184,.18);padding-left:16px;color:#e2e8f0}.auyt-thumb{height:118px;border-radius:18px;display:grid;place-items:center;font-size:54px;background:linear-gradient(135deg,rgba(56,189,248,.18),rgba(16,185,129,.16));border:1px solid rgba(125,211,252,.2);box-shadow:inset 0 1px 18px rgba(255,255,255,.04)}.auyt-side strong{font-size:18px;line-height:1.12}.auyt-side small{color:#94a3b8}.auyt-bars{height:54px;display:flex;align-items:end;gap:3px;margin:2px 0}.auyt-bars i{flex:1;border-radius:5px 5px 1px 1px;background:linear-gradient(#22c55e,#0891b2);opacity:.86;animation:auytbar 1.6s ease-in-out infinite alternate}.auyt-card{display:block;border:1px solid rgba(148,163,184,.18);border-radius:14px;padding:9px 10px;background:rgba(15,23,42,.72);font-size:12px;color:#cbd5e1}.auyt-card.c0{color:#fff;font-weight:800}.auyt-card.c1{color:#7dd3fc}.auyt-card.c2{color:#34d399}
+.auyt-lower{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 18px 16px;padding:10px 12px;border:1px solid rgba(148,163,184,.18);border-radius:14px;background:rgba(2,6,23,.68);backdrop-filter:blur(10px);font-size:12px;color:#cbd5e1}.auyt-lower span:first-child{color:#34d399;font-weight:800}.auyt-lower span:nth-child(2){flex:1;text-align:center;color:#f8fafc}.auyt-lower span:last-child{font-variant-numeric:tabular-nums;color:#94a3b8}
+.auyt-1{background:radial-gradient(circle at 20% 10%,rgba(250,204,21,.18),transparent 33%),linear-gradient(135deg,#09111f,#162033 58%,#050816)}.auyt-2{background:radial-gradient(circle at 75% 20%,rgba(239,68,68,.18),transparent 33%),linear-gradient(135deg,#0e1116,#182032 58%,#050816)}.auyt-3{background:radial-gradient(circle at 18% 72%,rgba(168,85,247,.18),transparent 35%),linear-gradient(135deg,#08111f,#111827 58%,#050816)}.auyt-4{background:radial-gradient(circle at 55% 16%,rgba(20,184,166,.20),transparent 33%),linear-gradient(135deg,#07131d,#13233a 58%,#050816)}.auyt-5{background:radial-gradient(circle at 25% 20%,rgba(59,130,246,.20),transparent 34%),linear-gradient(135deg,#06111e,#102030 58%,#050816)}
+@keyframes auytmove{to{transform:translateX(8%)}}@keyframes auytpop{from{opacity:.3;transform:scale(.985) translateY(8px)}to{opacity:1;transform:none}}@keyframes auytbar{to{opacity:.45;transform:scaleY(.72)}}
+@media(max-width:760px){.auyt{min-height:min(66dvh,620px);border-radius:20px}.auyt-body{grid-template-columns:1fr;gap:10px;min-height:0;padding:12px}.auyt-main{padding:2px}.auyt-side{border-left:0;border-top:1px solid rgba(148,163,184,.18);padding:10px 0 0;display:grid;grid-template-columns:82px 1fr;align-items:center}.auyt-thumb{height:72px;border-radius:14px;font-size:34px;grid-row:span 3}.auyt-bars,.auyt-card.c1,.auyt-card.c2{display:none}.auyt-side strong{font-size:14px}.auyt-lower{margin:0 12px 12px;font-size:11px}.auyt-lower span:nth-child(2){display:none}.aup-stage{padding:4px 8px}.aup-cap{font-size:16px}}
+
 @media (orientation:landscape) and (max-height:520px){.aup-top{padding:4px 10px}.aup-cap{min-height:2.9em;font-size:15px;padding:4px 14px}.aup-ctl{padding:4px 10px 6px}.aup-ctl>button{width:38px;height:38px}.aup-ctl .aup-pp{width:46px;height:46px}.auv-h2{margin-bottom:6px}}
 `;
 const st=document.createElement('style');st.id='aulas-css';st.textContent=css;document.head.appendChild(st);
