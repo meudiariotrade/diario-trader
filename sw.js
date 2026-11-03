@@ -1,8 +1,7 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v311-cards',CDN='diario-cdn-1';
-const CORE=['./','index.html','manifest.webmanifest','config.js','app.js','carteira-calculo.js','pdf-tabelas.js','terminal-graficos.js','componentes-estilos.js','interface-acabamento.js','trader-ui.js','style.css','theme-profissional.css','trader-backup.js','terminal-praticidade.js','diario-profissional.js','mercado-profissional.js','mercado-monitor.js','adrs-modelo.js','diario-dados.js','diario-recuperacao.js','pdf-tipografia.js','trader-runtime.js','trader-modelo.js','trader-fluxos.js','trader-chat.js','trader-relatorios.js','carteira-pesquisa.js','carteira-experiencia.js','carteira-correcao.js','revista-modelo.js','revista-fim-semana.js','carteira-factsheet-modelo.js','carteira-factsheet.js','terminal-workflows.js','terminal-pesquisa-modelo.js','terminal-pesquisa.js','fluxo-importacao.js','pesquisa-avancada-modelo.js','pesquisa-avancada.js','cotacoes-conexao.js','aulas.js','adr-abertura.js','terminal-radar.js','design-profissional.js','design-profissional.css','plataforma-acabamento.js','plataforma-acabamento.css','exports-profissionais.js','cards-assets.js','cards-sazonais.js'];
-CORE.push('pdf-lib.min.js','fontkit.umd.min.js','pdf-sans.ttf','pdf-sans-bold.ttf','pdf-sans-italic.ttf','pdf-serif-bold.ttf','pdf-serif-italic.ttf','jornal-capa.jpg','jornal-diario.jpg','jornal-empresas.jpg','jornal-mundo.jpg');
-const EXTRA=['arte.js','cnpi.js','estudos.js','ingles.js','icon-192.png','icon-512.png'];
+const C='diario-v312-e7c1405cae6d',CDN='diario-cdn-1';
+const CORE=["./","index.html","recursos.js","inicio.js","app.js","interface.js","manifest.webmanifest","icon-192.png","icon-512.png"];
+const EXTRA=[];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
 self.addEventListener('install',event=>{
  event.waitUntil((async()=>{
