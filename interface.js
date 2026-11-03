@@ -1917,7 +1917,7 @@ if(typeof vEstudos!=='function')return;
 const LS_LISTA='aulas-lista-v1',LS_ROT='aulas-rot-v1:',LS_POS='aulas-pos-v1:',LS_VOZ='aulas-voz',LS_VEL='aulas-vel';
 const AU={lista:null,busy:0,err:'',ts:0};
 const IC={"prev": "<svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M6 5h2v14H6zM20 5v14L9 12z\"/></svg>", "next": "<svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M16 5h2v14h-2zM4 5v14l11-7z\"/></svg>", "play": "<svg viewBox=\"0 0 24 24\" width=\"26\" height=\"26\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M7 4v16l13-8z\"/></svg>", "pause": "<svg viewBox=\"0 0 24 24\" width=\"26\" height=\"26\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M6 4h4v16H6zM14 4h4v16h-4z\"/></svg>", "x": "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6L6 18\"/></svg>", "menu": "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 7h16M4 12h16M4 17h16\"/></svg>"};
-const P={on:0,a:null,i:0,j:0,tok:0,play:0,t:0,wd:0,dados:{},vis:'',wl:null};
+const P={on:0,a:null,i:0,j:0,tok:0,play:0,t:0,wd:0,dados:{},vis:'',wl:null,aiImgs:{},aiBusy:0};
 const h=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ownerKey=()=>window.DIARIO_DEMO?'demo':((typeof SESS!=='undefined'&&SESS&&SESS.uid)||null);
 let aulaOwner=ownerKey();
@@ -1933,7 +1933,7 @@ const logado=()=>{try{return !!(typeof SESS!=='undefined'&&SESS&&SESS.uid&&cfg()
 
 function ensureOwner(){
  const next=ownerKey();if(next===aulaOwner)return;aulaOwner=next;
- para();P.on=0;P.a=null;P.dados={};document.getElementById('aup')?.remove();document.getElementById('auModal')?.remove();document.documentElement.classList.remove('au-aberto');
+ para();P.on=0;P.a=null;P.dados={};P.aiImgs={};P.aiBusy=0;document.getElementById('aup')?.remove();document.getElementById('au338-modal')?.remove();document.getElementById('auModal')?.remove();document.documentElement.classList.remove('au-aberto');
  clearTimeout(salvaPos.t);AU.lista=null;AU.busy=0;AU.err='';AU.ts=0;
  if(typeof G!=='undefined'){G.aberto=0;G.livros=null;G.sel='';G.caps={};G.manual='';G.numero='';G.busy=0;G.msg='';G.erro='';G.pdfTask?.destroy?.();G.pdfTask=null;G.request?.abort();G.request=null}
 }
@@ -2069,11 +2069,11 @@ async function abre(id){
   ensureOwner();const owner=ownerKey();if(P.on)return;let a=(AU.lista||[]).find(x=>x.id===id)||(window.AULAS_LOCAIS||[]).find(x=>x.id===id);
   if(!a)return;
   try{toast&&toast('Abrindo a aula…');const r=await roteiro(a);assertOwner(owner);P.a={...a,r,_owner:owner};}catch(e){toast&&toast('Não abriu: '+(e.message||e));return}
-  P.on=1;P.dados={};const pos=posDe(a);P.i=pos.fim?0:Math.min(pos.cena||0,P.a.r.cenas.length-1);P.j=0;P.play=0;
+  P.on=1;P.dados={};P.aiImgs={};P.aiBusy=0;const pos=posDe(a);P.i=pos.fim?0:Math.min(pos.cena||0,P.a.r.cenas.length-1);P.j=0;P.play=0;
   document.body.insertAdjacentHTML('beforeend',playerHtml());document.documentElement.classList.add('au-aberto');
   cena(P.i,0);
 }
-function fecha(){para();salvaPos();P.on=0;P.a=null;const e=document.getElementById('aup');e&&e.remove();document.documentElement.classList.remove('au-aberto');soltaTela();const y=scrollY;render();scrollTo(0,y)}
+function fecha(){document.getElementById('au338-modal')?.remove();P.aiBusy=0;P.aiImgs={};document.getElementById('au336-map')?.remove();tvFecha();para();salvaPos();P.on=0;P.a=null;const e=document.getElementById('aup');e&&e.remove();document.documentElement.classList.remove('au-aberto');soltaTela();const y=scrollY;render();scrollTo(0,y)}
 function playerHtml(){
   const a=P.a,vel=lsg(LS_VEL,0.95);
   return `<div class="aup" id="aup" role="dialog" aria-label="Aula ${a.numero}">
@@ -2082,7 +2082,7 @@ function playerHtml(){
 <div class="aup-cap" id="aupcap"></div>
 <div class="aup-prog" id="aupprog">${a.r.cenas.map((c,k)=>`<i data-aucena="${k}" title="${h(c.titulo||'')}"></i>`).join('')}</div>
 <div class="aup-ctl"><button data-auprev="1" aria-label="Cena anterior">${IC.prev}</button><button class="aup-pp" data-aupp="1" aria-label="Tocar">${IC.play}</button><button data-aunext="1" aria-label="Próxima cena">${IC.next}</button>
-<button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
+<button data-autv="1" class="aup-tv-btn" title="Explorar o exemplo no TradingView" aria-label="Abrir gráfico no TradingView">📈 Gráfico</button><button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><button type="button" data-auvisualmap="1" class="au336-map-btn">🗺️ Mapa visual</button><button type="button" data-au337gerar="1" class="au337-gen-btn">🎨 Gerar imagem desta cena</button><button type="button" data-au338diag="1" class="au338-diag-btn">🧪 Testar aulas</button><span id="au337status" class="au337-status" role="status" aria-live="polite"></span><label class="au336-opt"><input type="checkbox" id="au336-auto" ${lsg("aulas-motor-visual-v336",true)?"checked":""}> Visuais por fala</label><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
 <select id="aupvoz" aria-label="Voz">${temVoz()?vozOpts():'<option>sem voz</option>'}</select>${temVoz()?'<button data-auvozteste="1" aria-label="Ouvir voz selecionada" style="font-size:12px;width:auto;padding:8px">Ouvir voz</button>':''}</div>
 <div class="aup-idx" id="aupidx" hidden>${a.r.cenas.map((c,k)=>`<button data-aucena="${k}"><span>${k+1}</span>${h(c.titulo||'Cena '+(k+1))}</button>`).join('')}${a.local?'':'<button class="aup-del" data-audel="1"><span>✕</span>Apagar esta aula</button>'}</div>
 </div>`;
@@ -2100,6 +2100,7 @@ function cena(i,j){
   document.querySelectorAll('#aupprog i').forEach((e,k)=>{e.className=k<P.i?'ok':k===P.i?'at':''});
   P.vis='';desenha(-1);
   if(c.vis&&c.vis.dados&&!P.dados[P.i])buscaDados(P.i);
+  au337Consultar(P.i);
   salvaPos();
   if(P.play)P.t=setTimeout(fala,350);else legenda(null);
 }
@@ -2172,9 +2173,9 @@ function diario(cd){const m=new Map();for(const x of cd){const k=dia(x[0]),a=m.g
 /* ---------- visuais ---------- */
 function desenha(k){
   const c=P.a.r.cenas[P.i],v=c.vis||{tipo:'titulo',t:c.titulo},el=document.getElementById('aupvis');if(!el)return;
-  const chave=P.i+'|'+k+'|'+(P.dados[P.i]?1:0);if(P.vis===chave)return;P.vis=chave;
+  const momento=visualMomento(c,k);const chave=P.i+'|'+k+'|'+momento.tipo+'|'+(P.dados[P.i]?1:0)+'|'+(lsg('aulas-motor-visual-v336',true)?1:0);if(P.vis===chave)return;P.vis=chave;
   const R=VIS[v.tipo]||VIS.titulo,inner=R(v,k,P.dados[P.i],c);
-  el.innerHTML=videoFrame(c,v,k,inner);el.className='aup-vis au-video au-'+v.tipo;
+  el.innerHTML=videoFrame(c,v,k,inner,momento);el.className='aup-vis au-video au-'+v.tipo;
 }
 function videoTema(c,v,k){
   const txt=((c.titulo||'')+' '+(v.t||'')+' '+((v.chips||[]).join(' '))).toLowerCase();
@@ -2189,7 +2190,126 @@ function videoTema(c,v,k){
   for(const [re,vv] of temas)if(re.test(txt))return vv;
   return ['AULA','◆','conceito principal','exemplo prático'];
 }
-function videoFrame(c,v,k,inner){return `<div class="au-lesson-visual">${inner}</div>`;}
+function visualDidatico(c,v,k){
+  if(!['titulo','topicos'].includes(v.tipo))return '';
+  const tema=((c.titulo||'')+' '+(v.t||'')+' '+((v.chips||[]).join(' '))).toLowerCase();
+  if(!/tend[eê]ncia|suporte|resist[eê]ncia|corre[cç][aã]o|pullback|candles|m[eé]dia m[oó]vel/.test(tema))return '';
+  const up=/baixa|descend|queda|venda/.test(tema)?-1:1;
+  const vals=[26,32,29,37,34,41,39,46,43,52,48,55,52,61,58,65,62,73];
+  const bars=vals.map((raw,i)=>{
+    const y=up===1?raw:100-raw,prev=up===1?(vals[i-1]||23):100-(vals[i-1]||23);
+    const high=Math.min(86,Math.max(y,prev)+5),low=Math.max(6,Math.min(y,prev)-5);
+    const x=18+i*25,sy=z=>125-z*1.12,green=y>=prev;
+    return `<line x1="${x}" y1="${sy(high)}" x2="${x}" y2="${sy(low)}" stroke="${green?'#34d399':'#f87171'}" stroke-width="2"/><rect x="${x-5}" y="${Math.min(sy(y),sy(prev))}" width="10" height="${Math.max(3,Math.abs(sy(y)-sy(prev)))}" rx="1" fill="${green?'#34d399':'#f87171'}"/>`;
+  }).join('');
+  const points=vals.map((raw,i)=>`${18+i*25},${125-(up===1?raw:100-raw)*1.12}`).join(' ');
+  return `<div class="au-viz-edu" aria-label="Diagrama ilustrativo de candles. Não são cotações reais."><div class="au-viz-label">EXEMPLO DIDÁTICO · NÃO É UM GRÁFICO REAL</div><svg role="img" aria-label="Sequência ilustrativa de candles e direção da tendência" viewBox="0 0 470 135" preserveAspectRatio="xMidYMid meet"><g stroke="#234059" stroke-width=".7">${[25,50,75,100].map(y=>`<line x1="8" x2="460" y1="${y}" y2="${y}"/>`).join('')}</g>${bars}<polyline points="${points}" fill="none" stroke="#eac861" stroke-width="1.5" stroke-dasharray="4 5" opacity=".85"/></svg><div class="au-viz-note">Observe a direção dos candles. Toque em <b>📈 Gráfico</b> para estudar um ativo no TradingView.</div></div>`;
+}
+/* v336 — motor local de cenas sem gerar dados financeiros artificiais.
+   Interpreta o roteiro salvo em Supabase; também aceita metadados opcionais "visuais"
+   por fala sem modificar o esquema da tabela aulas. Nunca busca imagens arbitrárias. */
+const AU336_LIB=[
+ {tipo:'suporte',nome:'Suporte e resistência',re:/suporte|resist[eê]ncia|regi[aã]o de pre[cç]os?|piso|teto/i},
+ {tipo:'tendencia',nome:'Tendências e topos/fundos',re:/tend[eê]ncia|topos? e fundos?|tend[eê]ncia intermedi[aá]ria|linha de tend[eê]ncia/i},
+ {tipo:'pullback',nome:'Correção e pullback',re:/pullback|corre[cç][aã]o|retra[cç][aã]o|repique/i},
+ {tipo:'rompimento',nome:'Rompimentos',re:/rompimento|romper|breakout|falso rompimento/i},
+ {tipo:'media',nome:'Médias móveis',re:/m[eé]dia[s]? m[oó]ve[il]|cruzamento de m[eé]dias/i},
+ {tipo:'candles',nome:'Anatomia dos candles',re:/candles?|pavio|corpo real|abertura e fechamento|sombras? do candle/i},
+ {tipo:'risco',nome:'Gestão de risco',re:/stop|risco|retorno|rela[cç][aã]o risco|posi[cç][aã]o|gerenciamento/i},
+ {tipo:'ciclo',nome:'Ciclos e horizontes',re:/ciclos?|curto prazo|longo prazo|intermedi[aá]rio|prazo/i}
+];
+const AU336_TIPOS=new Set(AU336_LIB.map(x=>x.tipo));
+function visualMomento(c,k){
+ const L=falasCena(c)||[],fala=k<0?null:L.find(x=>x.k===k)||L[0], texto=String(fala?.t||'');
+ // Metadados opcionais do roteiro já salvo no Supabase: [{fala:0,tipo:'suporte'}]
+ const personalizados=Array.isArray(c.visuais)?c.visuais:[];
+ const escolhido=personalizados.find(v=>v&&Number(v.fala)===Number(fala?.k)&&AU336_TIPOS.has(v.tipo));
+ if(escolhido)return {tipo:escolhido.tipo,nome:AU336_LIB.find(x=>x.tipo===escolhido.tipo).nome,origem:'roteiro'};
+ const fonte=k<0?(c.titulo||'')+' '+(c.vis?.t||''):texto;
+ const cat=AU336_LIB.find(x=>x.re.test(fonte));
+ return cat?{tipo:cat.tipo,nome:cat.nome,origem:'roteiro'}:{tipo:'',nome:'',origem:''};
+}
+function au336Grafico(tipo){
+ const vals=tipo==='suporte'?[53,47,40,45,54,63,56,49,42,39,47,57,63,59,51,42,40,49,58,61]:tipo==='rompimento'?[43,51,56,48,38,46,54,59,49,55,60,64,69,75,83,79,86,91,95,99]:tipo==='pullback'?[27,33,39,47,53,62,67,61,55,47,50,59,65,73,79,83,76,85,92,97]:tipo==='media'?[23,29,25,34,36,33,40,48,44,55,50,61,62,60,73,72,81,86,85,96]:tipo==='ciclo'?[25,30,39,44,55,49,39,35,41,53,62,71,69,59,47,53,66,75,78,88]:[22,31,28,38,34,45,43,50,46,59,54,64,61,70,67,78,74,84,81,92];
+ const X=i=>22+i*21,Y=v=>118-v, path=vals.map((v,i)=>(i?'L':'M')+X(i)+','+Y(v)).join(' ');
+ const circle=(i,color)=>`<circle cx="${X(i)}" cy="${Y(vals[i])}" r="4" stroke="#071727" stroke-width="2" fill="${color}"/>`;
+ const lines=tipo==='suporte'?`<line x1="12" y1="79" x2="430" y2="79" stroke="#34d399" stroke-dasharray="6 4"/><line x1="12" y1="51" x2="430" y2="51" stroke="#fb7185" stroke-dasharray="6 4"/><text x="320" y="75">SUPORTE</text><text x="320" y="46">RESISTÊNCIA</text>`:tipo==='rompimento'?`<line x1="12" y1="60" x2="430" y2="60" stroke="#facc15" stroke-dasharray="5 5"/><text x="245" y="55">ROMPIMENTO</text>`:tipo==='media'?`<path d="${vals.map((v,i)=>(i?'L':'M')+X(i)+','+Y(vals.slice(Math.max(0,i-4),i+1).reduce((a,b)=>a+b,0)/Math.min(5,i+1))).join(' ')}" stroke="#facc15" stroke-width="2.5" fill="none"/><text x="30" y="22">MÉDIA MÓVEL (SIMULADA)</text>`:tipo==='pullback'?`${circle(6,'#facc15')}${circle(9,'#fb7185')}<text x="140" y="20">CORREÇÃO</text>`:tipo==='tendencia'?`${circle(3,'#facc15')}${circle(9,'#facc15')}<line x1="20" y1="113" x2="430" y2="20" stroke="#facc15" stroke-width="1.7" stroke-dasharray="7 5"/><text x="250" y="18">DIREÇÃO</text>`:'';
+ if(tipo==='candles')return `<svg viewBox="0 0 440 135" role="img" aria-label="Anatomia ilustrativa de um candle"><line x1="145" x2="145" y1="18" y2="118" stroke="#34d399" stroke-width="3"/><rect x="126" y="42" width="38" height="55" rx="2" fill="#34d399"/><line x1="145" y1="29" x2="250" y2="29" stroke="#d2e8ef"/><text x="255" y="33">PAVIO SUPERIOR</text><line x1="164" y1="70" x2="250" y2="70" stroke="#d2e8ef"/><text x="255" y="74">CORPO</text><line x1="145" y1="110" x2="250" y2="110" stroke="#d2e8ef"/><text x="255" y="114">PAVIO INFERIOR</text></svg>`;
+ if(tipo==='risco')return `<svg viewBox="0 0 440 135" role="img" aria-label="Relação risco e retorno, exemplo didático"><line x1="70" y1="18" x2="70" y2="116" stroke="#cbd5e1"/><line x1="58" y1="75" x2="350" y2="75" stroke="#38bdf8" stroke-dasharray="5 4"/><rect x="118" y="75" width="100" height="34" fill="#b91c1c" opacity=".68"/><rect x="228" y="25" width="100" height="50" fill="#059669" opacity=".68"/><text x="123" y="97">RISCO</text><text x="239" y="54">RETORNO</text><text x="75" y="70">ENTRADA</text></svg>`;
+ return `<svg viewBox="0 0 440 135" role="img" aria-label="Esquema financeiro ilustrativo"><g stroke="#24415b" stroke-width=".8">${[22,44,66,88,110].map(y=>`<line x1="10" y1="${y}" x2="432" y2="${y}"/>`).join('')}</g><path d="${path}" fill="none" stroke="#34d399" stroke-width="2.7" stroke-linejoin="round"/>${lines}</svg>`;
+}
+function au336Painel(momento){
+ if(!momento.tipo||!lsg('aulas-motor-visual-v336',true))return '';
+ return `<aside class="au336-example" aria-label="Exemplo didático gerado pelo motor visual"><div class="au336-head"><span>📚 ${h(momento.nome)}</span><small>ESQUEMA DIDÁTICO · SEM COTAÇÕES REAIS</small></div>${au336Grafico(momento.tipo)}<div class="au336-foot">Conceito ilustrativo. Para estudar um ativo real, use <b>📈 Gráfico</b> e confira data, período e fonte.</div></aside>`;
+}
+function au336Mapa(){
+ if(!P.a)return;
+ const aula=P.a,rows=aula.r.cenas.map((c,i)=>{
+  const ls=falasPlano(c),temas=[...new Set([visualMomento(c,-1),...ls.map((f,j)=>visualTipoTexto(c,f,j))].filter(x=>x.tipo).map(x=>x.nome))].slice(0,4);
+  return `<button type="button" data-au336goto="${i}" class="au336-map-row"><b>${i+1}. ${h(c.titulo||'Cena '+(i+1))}</b><span>${temas.length?temas.map(h).join(' · '):'Explicação narrada'}${c.vis?.dados?' · Gráfico histórico':' '}</span></button>`;
+ }).join('');
+ const dialog=document.createElement('div');dialog.className='au336-overlay';dialog.id='au336-map';dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-label','Mapa visual da aula');
+ dialog.innerHTML=`<div class="au336-dialog"><header><strong>🗺️ Roteiro visual · ${h(aula.titulo)}</strong><button type="button" data-au336close="1" aria-label="Fechar mapa visual">✕</button></header><p>Os tópicos são inferidos do roteiro da aula, salvo no Supabase. Não são imagens geradas por IA nem recomendações de negociação.</p><div class="au336-list">${rows}</div></div>`;
+ document.body.appendChild(dialog);dialog.querySelector('[data-au336close]')?.focus();
+}
+function falasPlano(c){return (Array.isArray(c.fala)?c.fala:[]).flatMap(x=>frasesDe(String(x||'')).map(t=>({t}))).slice(0,65)}
+function visualTipoTexto(c,f,j){const manual=(Array.isArray(c.visuais)?c.visuais:[]).find(v=>v&&v.fala===j&&AU336_TIPOS.has(v.tipo));if(manual)return {tipo:manual.tipo,nome:AU336_LIB.find(x=>x.tipo===manual.tipo).nome};const hit=AU336_LIB.find(x=>x.re.test(f.t));return hit?{tipo:hit.tipo,nome:hit.nome}:{tipo:'',nome:''}}
+/* v337 — imagens sob demanda: nenhum gasto automático e acesso somente à aula do usuário autenticado. */
+function au337Imagem(i){
+ const x=P.aiImgs[i];if(!x?.url||x.expira<Date.now())return '';
+ let url;try{const u=new URL(x.url);if(u.protocol!=='https:'||!u.hostname.endsWith('.supabase.co')||!u.pathname.includes('/storage/v1/object/sign/aulas-visuais/'))return '';url=u.href}catch{return ''}
+ return `<figure class="au337-figure"><img src="${h(url)}" alt="Imagem didática gerada por IA para esta cena. Não representa preços reais." loading="lazy" referrerpolicy="no-referrer"><figcaption>IMAGEM GERADA POR IA · ILUSTRAÇÃO DIDÁTICA, SEM COTAÇÕES REAIS</figcaption></figure>`;
+}
+async function au337Requisicao(acao,i){
+ const sessionOwner=ownerKey();const lesson=P.a;if(!logado()||!lesson||lesson.local||!SESS?.at)throw Error('Entre na sua conta e escolha uma aula salva no Supabase.');
+ const s=cfg();if(!s?.url||!s?.key)throw Error('Supabase indisponível.');
+ const response=await fetch(s.url+'/functions/v1/aulas-visuais',{method:'POST',headers:{'Content-Type':'application/json',apikey:s.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify({acao,aula:lesson.id,cena:i}),signal:AbortSignal.timeout(110000)});
+ const data=await response.json().catch(()=>({}));
+ assertOwner(sessionOwner);if(!P.on||P.a?.id!==lesson.id)throw Error('A aula foi fechada.');
+ if(!response.ok)throw Error(String(data.error||'Não foi possível carregar a imagem.'));
+ return data;
+}
+function au337Salvar(i,data){
+ if(!data?.existe||typeof data.url!=='string')return;
+ P.aiImgs[i]={url:data.url,expira:Date.now()+50*60000};
+ if(P.i===i&&P.on){P.vis='';const falaAtual=(falasCena(P.a.r.cenas[P.i])||[])[P.j];desenha(falaAtual?.k??-1)}
+}
+async function au337Consultar(i){
+ if(!P.a||P.a.local||!logado()||P.aiImgs[i]?.expira>Date.now())return;
+ try{const data=await au337Requisicao('consultar',i);au337Salvar(i,data)}catch{/* a aula continua com visuais didáticos se a rede falhar */}
+}
+async function au337Gerar(){
+ if(P.aiBusy)return;
+ const i=P.i;if(!logado()||P.a?.local){toast?.('Entre na conta e abra uma aula salva no Supabase.');return}
+ if(!confirm('Gerar uma imagem ilustrativa para esta cena usando IA? O provedor pode cobrar pela geração. Limite: até 5 imagens por dia na sua conta.'))return;
+ para();P.aiBusy=1;
+ const status=document.getElementById('au337status'),bot=document.querySelector('[data-au337gerar]');
+ if(status)status.textContent='Gerando imagem…';if(bot)bot.disabled=true;
+ try{const data=await au337Requisicao('gerar',i);au337Salvar(i,data);if(status)status.textContent='Imagem salva! Será reutilizada nas próximas reproduções.';toast?.('Imagem didática gerada e salva.');}
+ catch(e){if(status)status.textContent=String(e.message||e).slice(0,160);toast?.('Imagem: '+String(e.message||e).slice(0,100))}
+ finally{P.aiBusy=0;if(bot)bot.disabled=false}
+}
+/* v338 — central de homologação sem gerar imagens nem consumir a cota de IA. */
+function au338RenderDiag(d){
+ const li=(name,ok,tip)=>`<li class="au338-check"><span aria-hidden="true">${ok?'✅':'⚠️'}</span><span><b>${h(name)}</b><small>${h(tip)}</small></span></li>`;
+ return `<div class="au338-modal" id="au338-modal" role="dialog" aria-modal="true" aria-label="Diagnóstico das aulas"><div class="au338-panel"><header><strong>🧪 Testes de Aulas · v338</strong><button type="button" data-au338close="1" aria-label="Fechar diagnóstico">✕</button></header><p>Este diagnóstico não gera imagens nem consome sua cota da IA. Os testes de voz, TradingView e geração ainda precisam de sua confirmação.</p><ul>${li('Conexão',d.online,'O dispositivo precisa estar online para buscar imagens e gráficos.')}${li('Login Supabase',d.login,'Use a conta com a qual salvou a aula.')}${li('Narração',d.voice,'A disponibilidade e qualidade da voz dependem do dispositivo.')}${li('Aula sincronizada',d.lesson,'A cena atual deve corresponder ao texto narrado.')}${li('Imagem da cena',d.image,'Imagem encontrada no armazenamento privado; caso contrário, utilize o botão de gerar.')}${li('Biblioteca no servidor',d.backend,d.backendText)}</ul><div class="au338-actions"><button type="button" data-au338refresh="1">Atualizar diagnóstico</button><button type="button" data-au338graph="1">📈 Testar gráfico</button><button type="button" data-au338close="1">Fechar</button></div><small class="au338-small">Confira também: avançar cenas, pausar narração, retornar à cena, reabrir a aula e verificar se a imagem é reutilizada sem nova cobrança.</small></div></div>`;
+}
+async function au338Diagnostico(){
+ if(!P.on||!P.a)return;
+ para();document.getElementById('au338-modal')?.remove();
+ const s=cfg(),on=navigator.onLine,lg=logado(),i=P.i;
+ const d={online:on,login:lg,voice:temVoz(),lesson:!!P.a.r?.cenas?.[i],image:!!(P.aiImgs[i]?.url&&P.aiImgs[i]?.expira>Date.now()),backend:false,backendText:'Ainda não consultado.'};
+ document.body.insertAdjacentHTML('beforeend',au338RenderDiag(d));
+ if(!lg||!on||P.a.local){d.backendText=P.a.local?'Aula local: geração disponível somente para aulas salvas no Supabase.':'Conecte-se e entre na sua conta.'}
+ else{
+  d.backendText='Consultando a biblioteca privada…';
+  try{const r=await au337Requisicao('consultar',i);d.backend=true;d.backendText=r.existe?'Imagem encontrada e reaproveitável.':'Biblioteca acessível; esta cena ainda não possui imagem.';if(r.existe)au337Salvar(i,r);d.image=!!r.existe}
+  catch(e){d.backendText=String(e.message||e).slice(0,150)}
+ }
+ const modal=document.getElementById('au338-modal');if(modal){modal.outerHTML=au338RenderDiag(d);document.querySelector('[data-au338close]')?.focus()}
+}
+function videoFrame(c,v,k,inner,momento){return `<div class="au-lesson-visual">${inner}${au337Imagem(P.i)}${au336Painel(momento)}${!momento.tipo||!lsg('aulas-motor-visual-v336',true)?visualDidatico(c,v,k):''}</div>`;}
+
 const mostra=(x,k)=>x==null||x.em==null||k>=x.em;
 const VIS={
  titulo(v,k){return`<div class="auv-tit">${v.kicker?`<div class="auv-kick">${h(v.kicker)}</div>`:''}<div class="auv-h">${h(v.t)}</div>${v.sub?`<div class="auv-sub">${h(v.sub)}</div>`:''}${v.chips?`<div class="auv-chips">${v.chips.map(x=>`<span>${h(x)}</span>`).join('')}</div>`:''}</div>`},
@@ -2289,12 +2409,72 @@ function convergencia(v,k){
 ${caso(1,'#38bdf8','futuro acima do à vista (normal)',v.emA)}${caso(-1,'#f97316','futuro abaixo do à vista (invertido)',v.emB)}<path d="${sp}" fill="none" stroke="#e2e8f0" stroke-width=".8"/><text x="${X(.62)}" y="${Y(spot(.62))+3.6}" class="auv-lb">preço à vista</text><circle cx="${X(1)}" cy="${Y(spot(1))}" r="1.1" fill="#facc15"/></svg>${v.nota?`<div class="auv-nota">${h(v.nota)}</div>`:''}</div>`;
 }
 
+/* ---------- TradingView oficial no player de estudos ---------- */
+const TV_ESTUDO=[
+  ['BMFBOVESPA:PETR4','PETR4 · Petrobras'],
+  ['BMFBOVESPA:VALE3','VALE3 · Vale'],
+  ['BMFBOVESPA:IBOV','Ibovespa'],
+  ['BMFBOVESPA:WIN1!','WIN · Futuro'],
+  ['BMFBOVESPA:WDO1!','WDO · Futuro'],
+  ['NASDAQ:NDX','Nasdaq 100'],
+  ['FX_IDC:USDBRL','USD/BRL']
+];
+function tvEscolha(){
+  const c=P.a?.r?.cenas?.[P.i]||{},d=c.vis?.dados,raw=String(d?.ativo||'').toUpperCase();
+  const hit=TV_ESTUDO.find(([s])=>s===raw||s.split(':')[1]===raw);
+  if(hit)return hit[0];
+  const txt=(c.titulo+' '+(c.vis?.t||'')+' '+(P.a?.livro||'')).toLowerCase();
+  if(/nasdaq|eua|americano/.test(txt))return 'NASDAQ:NDX';
+  if(/wdo|d[oó]lar futuro/.test(txt))return 'BMFBOVESPA:WDO1!';
+  if(/win|mini.?[ií]ndice|futuro de [ií]ndice/.test(txt))return 'BMFBOVESPA:WIN1!';
+  if(/vale|min[eé]rio/.test(txt))return 'BMFBOVESPA:VALE3';
+  if(/petr[oó]leo|petr4/.test(txt))return 'BMFBOVESPA:PETR4';
+  return 'BMFBOVESPA:IBOV';
+}
+function tvFecha(){document.getElementById('au-tradingview')?.remove()}
+function tvAbrir(){
+  if(!P.on)return;
+  para();tvFecha();
+  const defaultSymbol=tvEscolha();
+  const wrap=document.createElement('div');wrap.id='au-tradingview';wrap.className='au-tv-overlay';wrap.setAttribute('role','dialog');wrap.setAttribute('aria-modal','true');wrap.setAttribute('aria-label','Gráfico TradingView para estudos');
+  wrap.innerHTML=`<section class="au-tv-panel"><div class="au-tv-top"><strong>📈 Gráfico de estudo · TradingView</strong><button type="button" data-autvclose="1" aria-label="Fechar gráfico">✕</button></div><div class="au-tv-controls"><label>Ativo <select id="au-tv-symbol">${TV_ESTUDO.map(([sym,label])=>`<option value="${h(sym)}" ${sym===defaultSymbol?'selected':''}>${h(label)}</option>`).join('')}</select></label><label>Período <select id="au-tv-interval"><option value="D">Diário</option><option value="60">1 hora</option><option value="15">15 minutos</option><option value="W">Semanal</option></select></label><a id="au-tv-external" target="_blank" rel="noopener noreferrer">Abrir no TradingView ↗</a></div><div id="au-tv-chart" class="au-tv-chart"><div class="au-tv-loading">Carregando gráfico oficial do TradingView…</div></div><div class="au-tv-legal">Gráfico fornecido pelo TradingView, sujeito a disponibilidade, licenças e atrasos da fonte. A aula fica pausada enquanto você estuda. O gráfico ao vivo não corresponde necessariamente ao período histórico narrado.</div></section>`;
+  document.body.appendChild(wrap);
+  tvCarregar();document.querySelector('[data-autvclose]')?.focus();
+}
+function tvCarregar(){
+  const modal=document.getElementById('au-tradingview');if(!modal)return;
+  const symbol=modal.querySelector('#au-tv-symbol')?.value, interval=modal.querySelector('#au-tv-interval')?.value;
+  if(!TV_ESTUDO.some(([s])=>s===symbol)||!['D','60','15','W'].includes(interval))return;
+  modal.querySelector('#au-tv-external').href='https://www.tradingview.com/chart/?symbol='+encodeURIComponent(symbol);
+  const area=modal.querySelector('#au-tv-chart');area.replaceChildren();
+  const container=document.createElement('div');container.className='tradingview-widget-container';container.style.cssText='width:100%;height:100%';
+  const widget=document.createElement('div');widget.className='tradingview-widget-container__widget';widget.style.cssText='width:100%;height:calc(100% - 28px)';
+  const credit=document.createElement('div');credit.className='tradingview-widget-copyright';
+  const link=document.createElement('a');link.href='https://www.tradingview.com/';link.target='_blank';link.rel='noopener noreferrer';link.textContent='Gráficos por TradingView';credit.appendChild(link);
+  const script=document.createElement('script');script.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';script.async=true;
+  script.textContent=JSON.stringify({autosize:true,symbol,interval,timezone:'America/Sao_Paulo',theme:'dark',style:'1',locale:'br',allow_symbol_change:true,calendar:false,hide_side_toolbar:true,hide_top_toolbar:false,withdateranges:true,save_image:true,support_host:'https://www.tradingview.com'});
+  container.append(widget,credit,script);area.append(container);
+  script.onerror=()=>{if(area.contains(container)){container.remove();area.textContent='O widget não carregou. Use “Abrir no TradingView” acima.'}};
+}
 /* ---------- eventos ---------- */
 document.addEventListener('click',e=>{
   const q=s=>e.target.closest(s);let b;
   if(b=q('[data-auopen]')){e.preventDefault();abre(b.dataset.auopen);return}
   if(q('[data-aurel]')){AU.lista=null;carregaLista(1);pinta();return}
+  if(q('[data-au336close]')){document.getElementById('au336-map')?.remove();return}
+  if(b=q('[data-au336goto]')){const i=Number(b.dataset.au336goto);document.getElementById('au336-map')?.remove();if(P.on&&Number.isInteger(i)&&i>=0&&i<P.a.r.cenas.length){para();cena(i,0)}return}
+  if(q('#au336-map')&&!q('.au336-dialog')){document.getElementById('au336-map')?.remove();return}
+  if(q('[data-autvclose]')){tvFecha();return}
+  if(b=q('#au-tv-symbol')||q('#au-tv-interval'))return;
+  if(q('#au-tradingview')&&!q('.au-tv-panel')){tvFecha();return}
   if(!P.on)return;
+  if(q('[data-au338close]')){document.getElementById('au338-modal')?.remove();return}
+  if(q('[data-au338refresh]')){au338Diagnostico();return}
+  if(q('[data-au338graph]')){document.getElementById('au338-modal')?.remove();tvAbrir();return}
+  if(q('[data-au338diag]')){au338Diagnostico();return}
+  if(q('[data-au337gerar]')){au337Gerar();return}
+  if(q('[data-auvisualmap]')){para();document.getElementById('aupoptions').hidden=true;au336Mapa();return}
+  if(q('[data-autv]')){tvAbrir();return}
   if(q('[data-auoptions]')){const el=document.getElementById('aupoptions');el.hidden=!el.hidden;q('[data-auoptions]').setAttribute('aria-expanded',String(!el.hidden));return}
   if(q('[data-auvozteste]')){testaVoz();return}
   if(q('[data-aux]')){fecha();return}
@@ -2307,10 +2487,12 @@ document.addEventListener('click',e=>{
   if(q('.aup-stage')&&!q('select')){P.play?para():tocar()}
 },true);
 document.addEventListener('change',e=>{
+  if(e.target.matches('#au-tv-symbol,#au-tv-interval')){tvCarregar();return}
+  if(e.target.id==='au336-auto'){lss('aulas-motor-visual-v336',!!e.target.checked);P.vis='';if(P.on)desenha(P.j?((falasCena(P.a.r.cenas[P.i])||[])[P.j]||{}).k:-1);return}
   if(e.target.id==='aupvel'){lss(LS_VEL,+e.target.value);if(P.play){const j=P.j;cena(P.i,j)}}
   if(e.target.id==='aupvoz'){lss(LS_VOZ,e.target.value);if(P.play){cena(P.i,P.j)}}
 });
-document.addEventListener('keydown',e=>{if(!P.on)return;if(document.getElementById('au-study-panel')){if(e.key==='Escape'){document.getElementById('au-study-panel').remove();document.querySelector('[data-austnotes]')?.focus()}return}if(e.target.closest('input,textarea,select,[contenteditable=true]')||document.getElementById('auModal'))return;if(e.key==='Escape')fecha();else if(e.key===' '){e.preventDefault();P.play?para():tocar()}else if(e.key==='ArrowRight')cena(P.i+1,0);else if(e.key==='ArrowLeft')cena(P.i-1,0)});
+document.addEventListener('keydown',e=>{if(document.getElementById('au336-map')){if(e.key==='Escape'){e.preventDefault();document.getElementById('au336-map')?.remove()}return}if(document.getElementById('au-tradingview')){if(e.key==='Escape'){e.preventDefault();tvFecha()}return}if(!P.on)return;if(document.getElementById('au-study-panel')){if(e.key==='Escape'){document.getElementById('au-study-panel').remove();document.querySelector('[data-austnotes]')?.focus()}return}if(e.target.closest('input,textarea,select,[contenteditable=true]')||document.getElementById('auModal'))return;if(e.key==='Escape')fecha();else if(e.key===' '){e.preventDefault();P.play?para():tocar()}else if(e.key==='ArrowRight')cena(P.i+1,0);else if(e.key==='ArrowLeft')cena(P.i-1,0)});
 
 /* ---------- gerador: PDF do livro → aula pela IA (função "aulas") ---------- */
 const LS_JOB='aulas-job-v1';
@@ -2479,7 +2661,7 @@ document.addEventListener('change',e=>{
 document.addEventListener('input',e=>{if(e.target.id==='aumanual')G.manual=e.target.value});
 
 /* ---------- estilo ---------- */
-const css=`
+let css=`
 .au-intro{margin:2px 2px 10px}
 .au-livro{padding:12px}.au-lt{font-weight:700;font-size:13px;letter-spacing:.02em;text-transform:uppercase;opacity:.7;margin:0 0 8px 2px}
 .au-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-top:1px solid rgba(127,127,127,.18);padding:12px 2px;color:inherit;font:inherit;cursor:pointer}
@@ -2559,6 +2741,12 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
 
 @media (orientation:landscape) and (max-height:520px){.aup-top{padding:4px 10px}.aup-cap{min-height:2.9em;font-size:15px;padding:4px 14px}.aup-ctl{padding:4px 10px 6px}.aup-ctl>button{width:38px;height:38px}.aup-ctl .aup-pp{width:46px;height:46px}.auv-h2{margin-bottom:6px}}
 `;
+css += '\n/* v335 - estudos visuais + TradingView */\n.aup-ctl .aup-tv-btn{width:auto!important;min-width:80px;padding:6px 12px;font-size:12px;border:1px solid #2a6a97;border-radius:20px;color:#d7f3ff;background:#12334c}\n.au-viz-edu{max-width:660px;margin:14px auto 0;border:1px solid #284d6a;border-radius:14px;padding:12px;background:rgba(3,18,34,.88)}\n.au-viz-label{font-size:10px;letter-spacing:.07em;color:#facc15;font-weight:800}.au-viz-edu svg{width:100%;height:auto;max-height:150px;display:block;margin:8px 0}.au-viz-note{font-size:11px;color:#bcd0e1}\n.au-tv-overlay{position:fixed;inset:0;z-index:100020;background:rgba(2,6,23,.96);display:grid;place-items:center;padding:12px;color:#e2e8f0}.au-tv-panel{width:min(1250px,100%);height:min(92dvh,860px);display:flex;flex-direction:column;background:#0b1728;border:1px solid #38516f;border-radius:16px;padding:12px;gap:10px}.au-tv-top{display:flex;justify-content:space-between;align-items:center;gap:10px}.au-tv-top button{color:#fff;background:#263c56;border:0;border-radius:9px;min-width:40px;min-height:36px}.au-tv-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:end}.au-tv-controls label{margin:0;color:#afc5d8;flex:1 1 140px}.au-tv-controls select{margin:2px 0 0;background:#15263b;color:#fff;border:1px solid #36516d;padding:7px}.au-tv-controls a{color:#7dd3fc;font-size:12px;padding:9px 4px}.au-tv-chart{flex:1;min-height:240px;position:relative}.au-tv-loading{padding:24px;color:#9bb2c9}.au-tv-legal{font-size:11px;color:#9fb4ca;line-height:1.4}.tradingview-widget-copyright{text-align:center;font-size:12px;padding:4px}.tradingview-widget-copyright a{color:#8bbdeb}\n@media(max-width:560px){.au-tv-overlay{padding:4px}.au-tv-panel{padding:8px;height:98dvh}.au-tv-controls label{flex-basis:105px}.au-viz-edu{padding:8px}.aup-ctl .aup-tv-btn{min-width:65px;padding:5px 7px}}\n';
+
+css += '\n/* v336 - motor de cenas, biblioteca de gráficos didáticos e mapa visual */\n.au336-example{margin:12px auto 0;width:min(670px,100%);box-sizing:border-box;border:1px solid #395c75;border-radius:12px;padding:10px;background:#0b2136;color:#e5f4fb}.au336-example svg{display:block;width:100%;height:auto;max-height:158px;margin:8px auto}.au336-example svg text{font-family:system-ui;font-size:10px;fill:#d7e4ef}.au336-head{display:flex;flex-wrap:wrap;align-items:center;gap:7px;justify-content:space-between;font-size:13px;font-weight:700}.au336-head small{font-size:9px;color:#facc15;letter-spacing:.03em}.au336-foot{font-size:10px;color:#b8ccd9}.au336-map-btn{color:#e5f4fb;background:#18344b;border:1px solid #476987;border-radius:7px;padding:6px 10px}.au336-opt{display:flex!important;align-items:center;gap:6px;font-size:12px;color:#bdd2e3;white-space:nowrap}.au336-opt input{accent-color:#2dd4bf}.au336-overlay{position:fixed;inset:0;z-index:100050;display:grid;place-items:center;padding:12px;background:#020817e9}.au336-dialog{width:min(710px,100%);max-height:87dvh;overflow:auto;background:#0d1d2c;border:1px solid #476780;border-radius:13px;color:#e3f0fa;padding:16px;box-sizing:border-box;font:13px/1.5 system-ui}.au336-dialog header{display:flex;align-items:start;justify-content:space-between;gap:10px}.au336-dialog header strong{font-size:16px}.au336-dialog header button{border:1px solid #49657a;border-radius:8px;background:#223b51;color:white;padding:7px 12px}.au336-dialog p{color:#a9c0d2}.au336-list{display:grid;gap:7px}.au336-map-row{display:grid;gap:2px;text-align:left;padding:11px;border:1px solid #304b61;border-radius:8px;background:#142b40;color:#e9f5ff}.au336-map-row span{font-size:11px;color:#abc7d9}@media(max-width:560px){.au336-example{padding:6px;margin:7px auto 0}.au336-example svg{max-height:105px}.au336-head{font-size:11px}.au336-head small{font-size:8px}.au336-dialog{padding:11px}}\n';
+
+css += '\n/* v337 — imagens educacionais geradas e armazenadas de forma privada */\n.au337-figure{width:min(690px,100%);margin:10px auto;border:1px solid #46637b;border-radius:12px;overflow:hidden;background:#09192d}.au337-figure img{width:100%;max-height:230px;object-fit:contain;display:block}.au337-figure figcaption{padding:5px 8px;font-size:9px;color:#facc15;letter-spacing:.04em;text-align:center}.au337-gen-btn{background:#234457;color:#e8f4ff;border:1px solid #417b8e;border-radius:8px;padding:7px 10px;white-space:normal}.au337-gen-btn:disabled{opacity:.5}.au337-status{font-size:11px;color:#bad7e6;flex:1 1 130px}.aup-options{flex-wrap:wrap}@media(max-width:560px){.au337-figure img{max-height:140px}.au337-gen-btn{font-size:11px}}\n';
+css += '\n/* v338: janela de teste para aulas, sem custos de API */\n.au338-diag-btn{background:#233956;color:#d9efff;border:1px solid #476583;border-radius:8px;padding:7px 10px}.au338-modal{position:fixed;inset:0;z-index:2147483646;background:#020e1ccd;display:flex;align-items:center;justify-content:center;padding:16px}.au338-panel{width:min(600px,100%);max-height:86dvh;overflow:auto;padding:18px;background:#102239;color:#eef7ff;border:1px solid #59718b;border-radius:14px;box-shadow:0 18px 70px #0008}.au338-panel header{display:flex;align-items:center;justify-content:space-between;gap:15px}.au338-panel header button{padding:7px 12px;border:1px solid #748ca3;border-radius:8px;background:#23405e;color:#fff}.au338-panel p{font-size:12px;color:#b9cfdf}.au338-panel ul{list-style:none;padding:0;display:grid;gap:5px}.au338-check{display:flex;align-items:start;gap:12px;padding:8px;background:#1b3047;border-radius:9px}.au338-check b{display:block;font-size:13px}.au338-check small{display:block;font-size:11px;color:#b9cfdf}.au338-actions{display:flex;flex-wrap:wrap;gap:8px}.au338-actions button{padding:9px;border:1px solid #517391;background:#244765;color:#fff;border-radius:9px}.au338-small{display:block;margin-top:12px;color:#b5cadb;font-size:11px}\n';
 const st=document.createElement('style');st.id='aulas-css';st.textContent=css;document.head.appendChild(st);
 async function limparConta(owner){
  if(!owner)return;for(const key of Object.keys(localStorage))if(key.startsWith('aulas-v318:'+owner+':')||key==='estudos-v316:'+owner)localStorage.removeItem(key);
