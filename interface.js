@@ -3185,15 +3185,30 @@ const st=document.createElement('style');st.textContent=`.adr-ab{margin-top:14px
 /* v320: janela independente do Terminal; nenhuma execução de ordens. */
 (function(){
 'use strict';
-const dedicated=new URL(location.href).searchParams.get('terminal')==='1';
+// v323: o modo destacado só deve controlar a navegação em telas desktop.
+// No celular uma janela/PWA independente pode abrir na mesma superfície, prendendo o usuário no Terminal.
+const mobileTerminal=(()=>{
+ try{return window.matchMedia('(max-width: 767px)').matches||/iPhone|iPod|Android.*Mobile|Windows Phone/i.test(navigator.userAgent)}catch{return false}
+})();
+const terminalUrl=new URL(location.href);
+const requestedDedicated=terminalUrl.searchParams.get('terminal')==='1';
+const dedicated=requestedDedicated&&!mobileTerminal;
+if(requestedDedicated&&mobileTerminal){
+ // Recuperação automática para links antigos ?terminal=1 no celular.
+ try{terminalUrl.searchParams.delete('terminal');history.replaceState(history.state,'',terminalUrl.href)}catch{}
+}
 function openTerminal(){
+ if(mobileTerminal){if(typeof toast==='function')toast('No celular, use o Terminal nesta tela. A janela independente é exclusiva do computador.');return false}
  const url=new URL(location.pathname,location.origin);url.searchParams.set('terminal','1');if(window.DIARIO_DEMO)url.searchParams.set('demo','1');
  const win=window.open(url.href,'diario-terminal-desktop','popup=yes,width=1440,height=900,resizable=yes,scrollbars=yes');
  if(!win){if(typeof toast==='function')toast('O navegador bloqueou a janela. Permita pop-ups deste site e tente novamente.');return false}
  try{win.opener=null;win.focus()}catch{}return true;
 }
 function mount(){
- const bar=document.querySelector('.trbar');if(!bar||bar.querySelector('[data-terminal-window]'))return;
+ const bar=document.querySelector('.trbar');if(!bar)return;
+ // Esconde apenas a abertura independente no celular; demais controles e abas seguem ativos.
+ if(mobileTerminal){bar.querySelector('[data-terminal-window]')?.remove();return}
+ if(bar.querySelector('[data-terminal-window]'))return;
  const b=document.createElement('button');b.type='button';b.className='trbtn';b.dataset.terminalWindow='1';
  b.textContent=dedicated?'Terminal independente':'Abrir em nova janela';b.title=dedicated?'Esta janela mantém o Terminal aberto enquanto você usa o aplicativo principal.':'Abrir o Terminal sem sair desta tela';b.disabled=dedicated;
  b.addEventListener('click',openTerminal);bar.appendChild(b);
@@ -3269,7 +3284,7 @@ const persist=()=>{resetFocus();save();close();render()};
 const safe=(fn)=>{try{fn()}catch(e){const target=D.getElementById('auto322-error');if(target)target.textContent=e.message;else message(e.message)}};
 function preserve(){const {uid,s}=get();last={uid,ws:s.ws,wss:copy(s.wss)};}
 function undo(){const {uid,s}=get();if(!last||last.uid!==uid)throw Error('Nao ha alteracao recente para desfazer.');const before={uid,ws:s.ws,wss:copy(s.wss)};s.wss=copy(last.wss);s.ws=last.ws;last=before;persist();}
-function original(){const {s}=get(),current=s.ws;const key=Object.hasOwn(window.trWsPad,current)?current:'br';const base=window.trWsPad[key];if(!base)throw Error('Modelo original nao encontrado.');if(!confirm('Restaurar o modelo original de '+base.n+'? A configuracao atual deste espaco sera substituida. Seus outros Workspaces serao mantidos.'))return;preserve();s.wss[key]=copy(base);s.ws=key;persist();}
+function original(){const {s}=get(),current=s.ws;const presetKey=Object.keys(presets).find(k=>current==='ws321_auto_'+k);if(presetKey){const preset=presets[presetKey];const layout=preset.base?copy(window.trWsPad[preset.base]):{n:preset.name,p:preset.panels.slice(),g:grid(preset.panels.length)};if(!layout)throw Error('Modelo original nao encontrado.');if(!confirm('Restaurar a organizacao original de '+preset.name+'?'))return;preserve();s.wss[current]=layout;s.ws=current;persist();return;}const key=Object.hasOwn(window.trWsPad,current)?current:'br';const base=window.trWsPad[key];if(!base)throw Error('Modelo original nao encontrado.');if(!confirm(key===current?'Restaurar o modelo original de '+base.n+'?':'Abrir o modelo padrao '+base.n+'? Seu Workspace personalizado sera preservado.'))return;preserve();s.wss[key]=copy(base);s.ws=key;persist();}
 const presets={
  pre:{name:'Pre-abertura',base:'pre'},
  live:{name:'Pregao brasileiro',panels:['WEI','ECO','FX','WIRP','NEWS','EVT']},
@@ -3277,14 +3292,135 @@ const presets={
 };
 function grid(count){const cols=count<=2?1:count<=4?2:3,rows=Math.ceil(count/cols),w=12/cols,h=Math.max(6,Math.floor(26/rows));return Array.from({length:count},(_,i)=>({x:(i%cols)*w,y:Math.floor(i/cols)*h,w,h}));}
 function apply(kind){const {s}=get(),preset=presets[kind];if(!preset)throw Error('Modo invalido.');let layout;if(preset.base){layout=copy(window.trWsPad[preset.base]);if(!layout)throw Error('Modelo ausente.');}else{layout={n:preset.name,p:preset.panels.slice(),g:grid(preset.panels.length)};}
- // Sempre criar uma copia, para nao substituir o layout atual nem os modelos base.
- preserve();const id='ws321_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);s.wss[id]=layout;s.ws=id;persist();message('Workspace '+preset.name+' criado.');}
+ // Reutiliza um ambiente estavel por sessao em vez de criar uma copia a cada clique.
+ // Workspaces anteriores e personalizados continuam intocados.
+ const id='ws321_auto_'+kind;
+ if(s.ws===id){close();message('Ambiente '+preset.name+' ja esta aberto.');return;}
+ preserve();if(!Object.hasOwn(s.wss,id))s.wss[id]=layout;s.ws=id;persist();message('Ambiente '+preset.name+' selecionado.');}
 function close(){if(dialog){try{dialog.close()}catch{}dialog.remove();dialog=null}sessionOwner=null;}
-function show(){const {uid,s}=get();close();sessionOwner=uid;dialog=D.createElement('dialog');dialog.id='auto322';dialog.setAttribute('aria-label','Organizar Terminal');dialog.innerHTML='<div class="auto322-head"><strong>Organizar Terminal</strong><button type="button" data-auto322="close" aria-label="Fechar">×</button></div><p>Escolha um ambiente de consulta. Os modos criam copias e preservam seus Workspaces.</p><div class="auto322-modes"><button type="button" data-auto322="pre">☀ Pré-abertura</button><button type="button" data-auto322="live">◉ Pregão</button><button type="button" data-auto322="post">◷ Pós-pregão</button></div><hr><button type="button" data-auto322="original">↺ Restaurar modelo original</button><button type="button" data-auto322="undo" '+(!last||last.uid!==uid?'disabled':'')+'>↶ Desfazer última mudança</button><small>Restaurar substitui somente o modelo atual, se ele for padrão. Para um Workspace personalizado, recupera o modelo Ações Brasil sem apagar a cópia.</small><div id="auto322-error" role="status"></div>';
+function show(){const {uid,s}=get();close();sessionOwner=uid;dialog=D.createElement('dialog');dialog.id='auto322';dialog.setAttribute('aria-label','Organizar Terminal');dialog.innerHTML='<div class="auto322-head"><strong>Organizar Terminal</strong><button type="button" data-auto322="close" aria-label="Fechar">×</button></div><p>Escolha um ambiente de consulta. Cada modo reutiliza seu proprio ambiente e preserva seus Workspaces personalizados.</p><div class="auto322-modes"><button type="button" data-auto322="pre">☀ Pré-abertura</button><button type="button" data-auto322="live">◉ Pregão</button><button type="button" data-auto322="post">◷ Pós-pregão</button></div><hr><button type="button" data-auto322="original">↺ Restaurar modelo original</button><button type="button" data-auto322="undo" '+(!last||last.uid!==uid?'disabled':'')+'>↶ Desfazer última mudança</button><small>Restaurar recupera o modelo do modo atual. Para outros Workspaces personalizados, abre Ações Brasil sem apagar suas configurações.</small><div id="auto322-error" role="status"></div>';
  D.body.appendChild(dialog);dialog.addEventListener('close',()=>{dialog?.remove();dialog=null;sessionOwner=null});try{dialog.showModal()}catch{dialog.setAttribute('open','')};}
 function mount(){const bar=D.querySelector('.trbar');if(!bar||bar.querySelector('[data-auto322-open]')||window.TRPOP)return;const b=D.createElement('button');b.type='button';b.className='trbtn';b.dataset.auto322Open='1';b.textContent='Organizar';b.title='Restaurar original ou criar ambiente de pré-abertura, pregão e pós-pregão';b.addEventListener('click',()=>safe(show));bar.appendChild(b);}
 D.addEventListener('click',e=>{const b=e.target.closest('[data-auto322]');if(!b)return;const action=b.dataset.auto322;if(action==='close'){close();return}safe(()=>{if(sessionOwner!==owner())throw Error('Sua sessao mudou. Reabra o menu.');if(action==='undo')undo();else if(action==='original')original();else apply(action);});});
-const css=D.createElement('style');css.textContent='#auto322{width:min(460px,92vw);box-sizing:border-box;background:#101c2b;color:#edf4fb;border:1px solid #38516a;border-radius:16px;padding:20px;max-height:85dvh;overflow:auto;box-shadow:0 20px 60px #0008}#auto322::backdrop{background:#0009}#auto322 .auto322-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:18px}#auto322 p,#auto322 small{color:#acbfd0;line-height:1.5;font-size:12px}#auto322 button{display:block;width:100%;text-align:left;background:#1a3047;color:#edf4fb;border:1px solid #3a536b;border-radius:9px;padding:11px;min-height:42px;margin:8px 0;cursor:pointer;font:inherit;font-size:13px}#auto322 button:disabled{opacity:.45;cursor:default}#auto322 .auto322-head button{width:38px;text-align:center;margin:0}#auto322 hr{border:0;border-top:1px solid #38516a;margin:16px 0}#auto322-error{color:#ffb4b4;font-size:12px;margin-top:8px}';D.head.appendChild(css);
+const css=D.createElement('style');css.textContent='#auto322{width:min(460px,92vw);box-sizing:border-box;background:#101c2b;color:#edf4fb;border:1px solid #38516a;border-radius:16px;padding:20px;max-height:85dvh;overflow:auto;box-shadow:0 20px 60px #0008}#auto322::backdrop{background:#0009}#auto322 .auto322-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:18px}#auto322 p,#auto322 small{color:#acbfd0;line-height:1.5;font-size:12px}#auto322 button{display:block;width:100%;text-align:left;background:#1a3047;color:#edf4fb;border:1px solid #3a536b;border-radius:9px;padding:11px;min-height:42px;margin:8px 0;cursor:pointer;font:inherit;font-size:13px}#auto322 button:disabled{opacity:.45;cursor:default}#auto322 .auto322-head button{width:38px;text-align:center;margin:0}#auto322 hr{border:0;border-top:1px solid #38516a;margin:16px 0}#auto322-error{color:#ffb4b4;font-size:12px;margin-top:8px}@media(max-width:767px){#auto322{width:calc(100vw - 24px);max-height:78dvh;padding:14px;border-radius:14px}#auto322 .auto322-head{font-size:16px}#auto322 button{min-height:38px;padding:9px;margin:5px 0}#auto322 hr{margin:10px 0}#auto322 p{margin:10px 0}#auto322 small{display:block;margin-top:8px}}';D.head.appendChild(css);
 if(window.TraderUI?.onRender)window.TraderUI.onRender('terminal-auto-v322',()=>{if(dialog&&sessionOwner!==owner())close();mount();});mount();
 window.TerminalOrganizador322={mount,apply,original,undo,grid};
+})();
+
+;
+/* v325 — Central de consulta consolidada. Sem execução de ordens, APIs novas ou modificação do Supabase. */
+(function(){
+'use strict';
+if(window.TraderConsulta325)return;
+const doc=document, modes={pre:'Pré-abertura',live:'Pregão',post:'Pós-pregão'};
+const symbols=[['CME_MINI:NQ1!','Nasdaq futuro'],['CME_MINI:ES1!','S&P 500 futuro'],['BMFBOVESPA:WIN1!','WIN'],['BMFBOVESPA:WDO1!','WDO'],['FX_IDC:USDBRL','USD/BRL'],['TVC:DXY','DXY'],['TVC:VIX','VIX'],['TVC:US10Y','Treasury 10 anos']];
+const params={s:symbols.map(x=>x[0])};
+let dialog=null, dialogOwner=null, lastRender=0, timeline=[], lastKnown={}, sessionChannel=null, syncOwner=null, noticeSeen=new Set();
+const owner=()=>window.DIARIO_DEMO?'demo':(typeof SESS!=='undefined'?SESS?.uid||null:null);
+const key=s=>'dt-consulta325-'+s+'-'+owner();
+function safeStorageRead(k,fallback){try{const v=JSON.parse(localStorage.getItem(k));return v===null?fallback:v}catch{return fallback}}
+function safeStorageWrite(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+const dom=(tag,text,cls)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
+function btn(label,fn,cls){const b=dom('button',label,cls||'c325-btn');b.type='button';b.addEventListener('click',fn);return b}
+function userSafe(){if(!owner())throw Error('Faça login para usar as preferências personalizadas.');if(!window.TRM?.TS)throw Error('Terminal indisponível nesta tela.');}
+function feedback(message){const p=doc.querySelector('#c325-feedback');if(p){p.textContent=message;p.setAttribute('role','status')}else if(typeof window.toast==='function')window.toast(message)}
+function close(){if(dialog){const d=dialog;dialog=null;dialogOwner=null;try{d.close()}catch{}d.remove()}}
+function shell(title){userSafe();close();dialogOwner=owner();const d=dialog=dom('dialog',undefined,'c325-dialog');d.setAttribute('aria-label',title);const h=dom('div',undefined,'c325-head');h.append(dom('strong',title),btn('×',close,'c325-close'));d.append(h);d.append(dom('p','Informações de consulta. Sem envio de ordens.','c325-muted'));const content=dom('div',undefined,'c325-content');d.append(content);const status=dom('p','','c325-status');status.id='c325-feedback';d.append(status);d.addEventListener('close',()=>{if(dialog===d){dialog=null;dialogOwner=null}d.remove()});doc.body.append(d);try{d.showModal()}catch{d.setAttribute('open','')};return content}
+function section(parent,title){const box=dom('section',undefined,'c325-section');box.append(dom('h3',title));parent.append(box);return box}
+function timeBR(date){return new Date(date).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+function getQuotes(){const a=window.TRM;if(!a?.trGet)return {rows:[],status:'indisponível',timestamp:null};try{const state=a.trGet('cot',params),rows=state?.v?.itens||[];return {rows,status:state.err?'falha na fonte':!state.v?'aguardando fonte':(Date.now()-Number(state.ts||0)>120000?'consulta antiga':'consulta em cache'),timestamp:state.v?.em||null,error:state.err||null}}catch{return {rows:[],status:'sem leitura',timestamp:null}}}
+function quality(q){if(!q)return 'sem cotação';if(q.atraso===true)return 'com atraso';if(q.atraso===false)return 'tempo real declarado pela fonte';return 'atraso não confirmado'}
+function format(v){return typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('pt-BR',{maximumFractionDigits:4}):'—'}
+function quotesView(parent){const {rows,status,timestamp,error}=getQuotes();parent.append(dom('p','Estado da consulta: '+status+(timestamp?' · '+timeBR(timestamp):'')+'.','c325-muted'));if(error)parent.append(dom('p','Fonte: '+String(error).slice(0,160),'c325-muted'));const table=dom('div',undefined,'c325-rows');for(const [id,label]of symbols){const q=rows.find(r=>r.pedido===id||r.s===id),row=dom('div',undefined,'c325-row');const name=dom('span',label),value=dom('strong',format(q?.px)),source=dom('small',q?(String(q.fonte||'Fonte não informada')+' · '+quality(q)):'sem informação');row.append(name,value,source);table.append(row)}parent.append(table);parent.append(dom('p','Preço, horário e atraso dependem dos provedores existentes. Não presuma tempo real quando o atraso não for confirmado.','c325-muted'));return rows}
+function currentMode(){const dt=new Date(),parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(dt);const val=k=>parts.find(p=>p.type===k)?.value;const weekday=val('weekday'),minutes=Number(val('hour'))*60+Number(val('minute'));if(['Sat','Sun'].includes(weekday))return {mode:'post',reason:'Fim de semana · conferir calendário oficial de pregão'};if(minutes<9*60)return {mode:'pre',reason:'Horário de Brasília, regra indicativa'};if(minutes<18*60)return {mode:'live',reason:'Horário de Brasília, regra indicativa'};return {mode:'post',reason:'Horário de Brasília, regra indicativa'};}
+function adviseMode(parent){const suggestion=currentMode(),prefs=safeStorageRead(key('pref'),{confirm:true});parent.append(dom('p','Sugestão: '+modes[suggestion.mode]+' · '+suggestion.reason+'.','c325-muted'));parent.append(dom('p','Feriados, horários especiais da B3 e mudanças nas sessões dos EUA não são verificados automaticamente aqui.','c325-muted'));for(const [code,label]of Object.entries(modes))parent.append(btn('Abrir '+label,()=>{if(dialogOwner!==owner())return feedback('Sessão alterada.');if(prefs.confirm&&!confirm('Abrir ambiente '+label+'? O Workspace atual será preservado.'))return;try{window.TerminalOrganizador322.apply(code);close()}catch(e){feedback(e.message)}}));const toggle=dom('label',undefined,'c325-check');const check=doc.createElement('input');check.type='checkbox';check.checked=prefs.confirm;check.addEventListener('change',()=>safeStorageWrite(key('pref'),{confirm:check.checked}));toggle.append(check,dom('span','Confirmar antes de trocar o Workspace'));parent.append(toggle)}
+function appendEvent(label,details,stamp){if(!owner())return;const event={id:Date.now()+'-'+Math.random().toString(36).slice(2,6),stamp:stamp||Date.now(),label:String(label).slice(0,90),details:String(details).slice(0,180)};const items=safeStorageRead(key('events'),[]);if(items.some(x=>x.label===event.label&&Math.abs(x.stamp-event.stamp)<180000))return;items.push(event);safeStorageWrite(key('events'),items.slice(-100))}
+function timelineView(parent){const items=safeStorageRead(key('events'),[]);parent.append(dom('p','Histórico local dos eventos registrados neste dispositivo. Não é um histórico completo das cotações ou das notícias.','c325-muted'));if(!items.length)parent.append(dom('p','Sem eventos registrados.'));else for(const e of items.slice(-25).reverse()){const line=dom('p',undefined,'c325-event');line.append(dom('b',timeBR(e.stamp)+' · '+e.label),dom('small',e.details));parent.append(line)}parent.append(btn('Registrar observação do mercado',()=>{const note=prompt('Descreva o evento que você observou (não informe senhas ou dados pessoais):');if(note?.trim()){appendEvent('Observação manual',note.trim());open('timeline')}}));parent.append(btn('Limpar histórico local',()=>{if(!confirm('Apagar apenas o histórico local desta central? Seus Workspaces e Diário não serão afetados.'))return;safeStorageWrite(key('events'),[]);open('timeline')}))}
+function sinceLast(parent){const last=safeStorageRead(key('lastSeen'),0),items=safeStorageRead(key('events'),[]).filter(e=>e.stamp>last);parent.append(dom('p',last?'Última consulta desta central: '+timeBR(last):'Primeira consulta neste dispositivo.','c325-muted'));parent.append(dom('p',items.length+' evento(s) registrados desde a última consulta.'));for(const e of items.slice(-10).reverse())parent.append(dom('p',timeBR(e.stamp)+' · '+e.label+' — '+e.details,'c325-event'));parent.append(btn('Marcar como lido',()=>{safeStorageWrite(key('lastSeen'),Date.now());open('since')}));}
+function context(parent){parent.append(dom('p','Contexto observável a partir das fontes já conectadas. Não é explicação causal nem recomendação de operação.','c325-muted'));const rows=quotesView(parent),found=symbols.map(([id,label])=>({label,q:rows.find(r=>r.pedido===id||r.s===id)})).filter(x=>Number.isFinite(x.q?.d1));if(found.length){parent.append(dom('h3','Variações informadas pelas fontes'));for(const x of found){parent.append(dom('p',x.label+': '+(x.q.d1>0?'+':'')+format(x.q.d1)+'% · '+quality(x.q),'c325-event'))}}parent.append(dom('p','Notícias e agenda continuam nos painéis já existentes (NEWSBR, NEWSUS e EVT). Esta visão não duplica esses feeds.','c325-muted'))}
+function open(page='home'){const root=shell(({home:'Central de Consulta',quality:'Qualidade das cotações',sessions:'Ambientes por sessão',timeline:'Linha do tempo',since:'Desde a última consulta',context:'O que move o mercado?'})[page]||'Central de Consulta');if(page==='home'){root.append(dom('p','Acesso único a recursos complementares; não cria novos feeds nem duplica os painéis existentes.','c325-muted'));for(const [id,label]of [['sessions','Organizar por sessão'],['quality','Qualidade das cotações'],['context','O que move o mercado?'],['timeline','Linha do tempo local'],['since','Desde a última consulta']])root.append(btn(label,()=>open(id)));return}root.append(btn('← Voltar à central',()=>open('home')));if(page==='sessions')adviseMode(root);if(page==='quality')quotesView(root);if(page==='context')context(root);if(page==='timeline')timelineView(root);if(page==='since')sinceLast(root)}
+function mount(){const bar=doc.querySelector('.trbar');if(!bar||bar.querySelector('[data-consulta325]')||window.TRPOP)return;const b=btn('Consulta +',()=>{try{open()}catch(e){feedback(e.message)}},'trbtn');b.dataset.consulta325='1';b.title='Qualidade dos dados, contexto, histórico e ambientes';bar.append(b)}
+const css=dom('style');css.textContent='.c325-dialog{box-sizing:border-box;width:min(490px,calc(100vw - 22px));max-height:78dvh;overflow:auto;margin:auto;padding:17px;border:1px solid #395775;border-radius:16px;background:#101c2b;color:#e9f3fb;font:14px/1.5 system-ui;box-shadow:0 18px 70px #0009}.c325-dialog::backdrop{background:#0009}.c325-head{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:18px}.c325-close{border:1px solid #47637e;border-radius:8px;background:#20334c;color:white;padding:8px 12px;cursor:pointer}.c325-btn{display:block;width:100%;text-align:left;background:#20344d;color:#ecf5ff;border:1px solid #48607b;border-radius:9px;padding:10px 12px;min-height:42px;margin:7px 0;cursor:pointer;font:inherit}.c325-btn:focus-visible,.c325-close:focus-visible{outline:2px solid #39cf93}.c325-muted{color:#a9bac9;font-size:12px}.c325-status{color:#f1bc76;font-size:12px}.c325-section{margin:12px 0}.c325-row{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:8px 0;border-bottom:1px solid #34465d}.c325-row small{grid-column:1/-1;color:#aab6c4}.c325-event{border-bottom:1px solid #2e4459;padding:7px 0;font-size:12px}.c325-event small{display:block;color:#aab6c4}.c325-check{display:flex;align-items:center;gap:9px;padding:10px 0}.c325-check input{width:18px;height:18px}@media(max-width:767px){.c325-dialog{max-height:75dvh;padding:13px}.c325-btn{min-height:38px;padding:8px 11px;margin:5px 0}}';doc.head.append(css);
+if(window.TraderUI?.onRender)window.TraderUI.onRender('terminal-consulta-v325',()=>{if(dialog&&dialogOwner!==owner())close();mount()});mount();window.TraderConsulta325={mount,open,getQuotes,quality,currentMode,appendEvent};
+})();
+
+
+/* v326 — Consolidação visual de comandos, assistente de consulta e observação de cache.
+   Não transmite ordens, não substitui fontes nem a navegação mobile. */
+(function(){
+'use strict';
+if(window.TraderCommand326)return;
+const D=document;
+const storagePrefix='dt-commander326-';
+let modal=null, connectedOwner=null, lastNotice='', autoTimer=null;
+const userId=()=>window.DIARIO_DEMO?'demo':typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):null;
+const storageKey=k=>storagePrefix+(userId()||'anonymous')+'-'+k;
+const read=(k,f)=>{try{let v=JSON.parse(localStorage.getItem(storageKey(k)));return v===null?f:v}catch{return f}};
+const write=(k,v)=>{if(!userId())return;try{localStorage.setItem(storageKey(k),JSON.stringify(v))}catch{}};
+const elem=(tag,txt,cls)=>{const el=D.createElement(tag);if(txt!==undefined)el.textContent=txt;if(cls)el.className=cls;return el};
+const makeButton=(txt,callback,cls='tc326-btn')=>{const b=elem('button',txt,cls);b.type='button';b.addEventListener('click',callback);return b};
+function close(){if(!modal)return;const d=modal;modal=null;connectedOwner=null;try{d.close()}catch{}d.remove()}
+function dialog(title){if(!userId())return null;close();connectedOwner=userId();const d=modal=elem('dialog',undefined,'tc326-modal');const head=elem('header',undefined,'tc326-head');head.append(elem('b',title),makeButton('✕',close,'tc326-close'));d.append(head);const body=elem('div',undefined,'tc326-body');d.append(body);d.addEventListener('close',()=>{if(modal===d){modal=null;connectedOwner=null}d.remove()});D.body.append(d);try{d.showModal()}catch{d.setAttribute('open','')};return body}
+const actions=[
+ ['sessions','Sessões · Pré, Pregão, Pós','clock',()=>window.TraderConsulta325?.open('sessions')],
+ ['organize','Restaurar e desfazer layout','rotate',()=>D.querySelector('[data-auto322-open]')?.click()],
+ ['workspaces','Gerenciar Workspaces','grid',()=>D.querySelector('[data-ws321-open]')?.click()],
+ ['quality','Qualidade das cotações','pulse',()=>window.TraderConsulta325?.open('quality')],
+ ['context','Contexto Brasil / EUA','globe',()=>window.TraderConsulta325?.open('context')],
+ ['timeline','Linha do tempo de observações','history',()=>window.TraderConsulta325?.open('timeline')],
+ ['since','Desde a última consulta','bookmark',()=>window.TraderConsulta325?.open('since')],
+ ['notices','Radar de atenção','bell',()=>radar()],
+ ['prefs','Preferências de automação','settings',()=>settings()],
+ ['window','Terminal em nova janela (PC)','window',()=>D.querySelector('[data-terminal-window]:not(:disabled)')?.click()]
+ ];
+function runAction(act){close();if(act[0]==='window'&&!D.querySelector('[data-terminal-window]:not(:disabled)'))return;try{act[3]()}catch(e){if(typeof window.toast==='function')window.toast('Comando indisponível: '+e.message)}}
+function palette(){const root=dialog('Comandos · Terminal');if(!root)return;root.append(elem('p','CONSULTA DE MERCADO  ·  SEM EXECUÇÃO DE ORDENS','tc326-overline'));const suggestion=read('prefs',{showSuggestion:true}).showSuggestion!==false;if(suggestion){const ses=sessionInfo();const names={pre:'Pré-Abertura',live:'Pregão',post:'Pós-Pregão'};const line=elem('div',undefined,'tc326-suggestion');line.append(elem('span','Sessão sugerida: '+(names[ses.mode]||'Consulta')+' · regra indicativa'));line.append(makeButton('Ver ambientes',()=>runAction(actions[0]),'tc326-mini'));root.append(line)}
+ const field=elem('input',undefined,'tc326-search');field.type='search';field.placeholder='Pesquisar comandos, janelas ou dados…';field.setAttribute('aria-label','Pesquisar comandos do Terminal');root.append(field);
+ const list=elem('div',undefined,'tc326-list');root.append(list);function update(){list.replaceChildren();const term=field.value.trim().toLocaleLowerCase('pt-BR');const found=actions.filter(a=>a[1].toLocaleLowerCase('pt-BR').includes(term));if(!found.length){list.append(elem('p','Nenhum comando encontrado.','tc326-muted'));return}for(const a of found){if(a[0]==='window'&&matchMedia('(max-width:767px)').matches)continue;list.append(makeButton(a[1],()=>runAction(a)))}}field.addEventListener('input',update);field.addEventListener('keydown',e=>{if(e.key==='Enter'){const a=actions.find(a=>a[1].toLocaleLowerCase('pt-BR').includes(field.value.trim().toLocaleLowerCase('pt-BR')));if(a){e.preventDefault();runAction(a)}}});update();if(matchMedia('(min-width:768px)').matches)field.focus();}
+function sourceStatus(){const c=window.TraderConsulta325;const q=c?.getQuotes?.()||{rows:[],status:'não disponível'};const data=q.rows||[];const unavailable=data.filter(x=>!Number.isFinite(Number(x.px))).length;
+ const delayed=data.filter(x=>x.atraso===true).length;const unknown=data.filter(x=>x.atraso!==true&&x.atraso!==false).length;
+ return {state:q.status||'indisponível',count:data.length,unavailable,delayed,unknown,rows:data,stamp:q.timestamp};}
+function sessionInfo(){try{return window.TraderConsulta325?.currentMode?.()||{mode:'pre',reason:'Indisponível'}}catch{return {mode:'pre',reason:'Indisponível'}}}
+function radar(){const root=dialog('Radar de atenção');if(!root)return;const s=sourceStatus();const label={'pre':'Pré-abertura','live':'Pregão','post':'Pós-pregão'}[sessionInfo().mode];
+ root.append(elem('p','SESSÃO SUGERIDA · '+label+' (regra de horário indicativa)','tc326-overline'));
+ const summary=elem('div',undefined,'tc326-cards');for(const [n,v]of [['Fonte',s.state],['Ativos recebidos',String(s.count)],['Atraso declarado',String(s.delayed)],['Sem preço',String(s.unavailable)]]){const card=elem('div',undefined,'tc326-card');card.append(elem('small',n),elem('strong',v));summary.append(card)}root.append(summary);
+ const notes=[];if(s.count===0)notes.push('Sem cotações no cache consultado. Confira os provedores no painel de qualidade.');if(s.delayed)notes.push(s.delayed+' cotação(ões) com atraso informado pela fonte.');if(s.unknown)notes.push(s.unknown+' cotação(ões) sem confirmação do regime de atraso.');if(String(s.state).includes('antiga'))notes.push('Consulta antiga. Não interprete como preço ao vivo.');if(!notes.length)notes.push('Nenhum alerta de qualidade identificável no cache atual. Isso não garante tempo real.');
+ for(const t of notes)root.append(elem('p','• '+t,'tc326-msg'));
+ root.append(elem('p','Atenção: não há monitoramento confiável de notícias ou calendário oficial nesta função. Não deduz operações a partir das variações.','tc326-muted'));
+ root.append(makeButton('Ver fontes e preços',()=>{close();window.TraderConsulta325?.open('quality')}));}
+function settings(){const root=dialog('Preferências · Terminal');if(!root)return;const prefs=read('prefs',{showSuggestion:true,monitorData:false,notifyDelay:true});const safeText=elem('p','A organização automática não altera o Workspace sem sua confirmação. Horários são indicativos; feriados e sessões especiais não são validados.','tc326-muted');root.append(safeText);
+ for(const [id,title,desc]of [['showSuggestion','Sugerir sessão ao abrir','Exibe Pré-Abertura, Pregão ou Pós-Pregão, sem alterar janelas'],['monitorData','Monitorar qualidade das cotações','Analisa o cache existente a cada 90 segundos, apenas com o aplicativo aberto'],['notifyDelay','Avisar sobre atraso declarado','Só avisa quando o cache informar atraso ou falta de dados']]){const row=elem('label',undefined,'tc326-setting');const cb=elem('input');cb.type='checkbox';cb.checked=Boolean(prefs[id]);cb.addEventListener('change',()=>{prefs[id]=cb.checked;write('prefs',prefs);setupMonitor()});const descbox=elem('span');descbox.append(elem('b',title),elem('small',desc));row.append(cb,descbox);root.append(row)}
+ root.append(makeButton('Abrir sessões',()=>{close();window.TraderConsulta325?.open('sessions')}));}
+function setupMonitor(){if(autoTimer){clearInterval(autoTimer);autoTimer=null}if(!read('prefs',{}).monitorData||!userId())return;autoTimer=setInterval(()=>{if(!userId()||D.hidden)return;const s=sourceStatus();let key=[s.state,s.delayed,s.unavailable,s.count].join('|');if(key===lastNotice)return;lastNotice=key;if(s.count===0||s.delayed>0||(s.count&&s.unavailable>0)){const bar=D.querySelector('[data-tc326-status]');if(bar){bar.textContent='● Checar dados';bar.title='Cotações indisponíveis ou com atraso informado';bar.classList.add('tc326-warning')} if(read('prefs',{}).notifyDelay&&typeof window.toast==='function')window.toast('Terminal: verifique a qualidade das cotações.')}} ,90000)}
+function mount(){const bar=D.querySelector('.trbar');if(!bar||window.TRPOP)return;const signed=Boolean(userId());if(!signed)return;if(!bar.querySelector('[data-tc326-menu]')){const btn=makeButton('⌕ Comandos',palette,'trbtn tc326-trigger');btn.dataset.tc326Menu='1';btn.title='Abrir comandos de consulta (Ctrl+K no PC)';bar.append(btn)}
+ if(!bar.querySelector('[data-tc326-status]')){const badge=makeButton('● Dados',radar,'trbtn tc326-status');badge.dataset.tc326Status='1';badge.title='Ver qualidade das fontes';bar.append(badge)}bar.classList.add('tc326-ready');}
+D.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'&&D.querySelector('.trbar')&&!window.TRPOP){e.preventDefault();palette()}if(e.key==='Escape'&&modal)close()});
+D.addEventListener('visibilitychange',()=>{if(!D.hidden&&userId())mount()});
+if(window.TraderUI?.onRender)window.TraderUI.onRender('terminal-commands-v326',()=>{if(modal&&connectedOwner!==userId())close();mount()});
+const observer=new MutationObserver(()=>{if(D.querySelector('.trbar')&&!D.querySelector('[data-tc326-menu]'))mount()});observer.observe(D.body,{childList:true,subtree:true});
+const css=elem('style');css.textContent=`
+.tc326-ready [data-consulta325],.tc326-ready [data-auto322-open],.tc326-ready [data-ws321-open]{display:none!important}
+.tc326-trigger{border-color:#9c793e!important;background:#3a2d1a!important;color:#ffda8c!important;font-weight:700!important}
+.tc326-status{border-color:#3a5e63!important;color:#90dbce!important;font-size:12px!important}
+.tc326-warning{color:#ffd184!important;border-color:#95713c!important}
+.tc326-modal{box-sizing:border-box;border:1px solid #3c5364;background:#0a121b;color:#e6edf2;border-radius:12px;padding:0;width:min(530px,calc(100vw - 18px));max-height:83dvh;overflow:auto;box-shadow:0 25px 85px #000c;font:13px/1.45 system-ui}
+.tc326-modal::backdrop{background:#000a}
+.tc326-head{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;background:#111e29;border-bottom:1px solid #304250;padding:12px 16px;z-index:1;letter-spacing:.2px}
+.tc326-close{cursor:pointer;border:1px solid #354856;background:#1d2e3c;color:#dce7ef;padding:6px 10px;border-radius:5px}
+.tc326-body{padding:14px 16px 18px}
+.tc326-overline{color:#d0a860;letter-spacing:1.1px;text-transform:uppercase;font-size:10px;font-weight:700}
+.tc326-search{display:block;box-sizing:border-box;background:#142332;border:1px solid #466073;color:#fff;border-radius:6px;width:100%;padding:11px;outline-offset:2px;font:inherit}
+.tc326-list{display:grid;grid-template-columns:1fr;gap:5px;margin-top:11px}
+.tc326-btn{width:100%;cursor:pointer;text-align:left;background:#152535;color:#e6edf2;border:1px solid #334958;padding:10px 12px;border-radius:6px;font:inherit;min-height:40px}
+.tc326-btn:hover,.tc326-btn:focus-visible{background:#244157;outline:1px solid #bb914c}
+.tc326-suggestion{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#1c2c38;border:1px solid #3f5666;border-radius:6px;padding:9px;margin:8px 0;color:#dbe7ef;font-size:12px}.tc326-mini{background:#3b301e;color:#ffd08b;border:1px solid #866a3c;border-radius:5px;padding:6px 10px;cursor:pointer;flex:none}.tc326-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0}
+.tc326-card{display:flex;flex-direction:column;gap:5px;background:#152431;border:1px solid #334655;border-radius:6px;padding:12px;min-width:0}
+.tc326-card small{color:#9db1bf}.tc326-card strong{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tc326-muted{font-size:12px;color:#9db1bf;line-height:1.5}
+.tc326-msg{background:#1b2a35;border-left:2px solid #d0a860;padding:8px 10px;font-size:12px}
+.tc326-setting{display:flex;gap:11px;align-items:flex-start;border-bottom:1px solid #263a4a;padding:12px 0;cursor:pointer}
+.tc326-setting input{width:18px;height:18px;flex:none;accent-color:#d0a860}.tc326-setting span{display:grid;gap:3px}.tc326-setting small{color:#91a7b7;font-size:11px}
+@media(max-width:767px){.tc326-modal{max-height:78dvh}.tc326-body{padding:12px}.tc326-head{padding:10px 12px}.tc326-trigger{font-size:12px!important}}
+`;D.head.append(css);
+mount();setupMonitor();window.TraderCommand326={mount,palette,radar,settings,sourceStatus,sessionInfo};
 })();
