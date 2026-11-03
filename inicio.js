@@ -799,72 +799,27 @@ window.SUPA_KEY = "sb_publishable_GNuBD5Oyo2Wk-iE2s4TbUQ_1XiKvzhV";
 })(typeof window === 'undefined' ? globalThis : window);
 
 ;
-/* módulo: terminal-graficos.js */
-/* Navegação do gráfico, sem alterar preços ou criar candles. */
+/* Navegação e escala dos gráficos nativos do Terminal. */
 ((root)=>{
- 'use strict';
- const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
- function view(length,count=140,offset=0){
-  length=Math.max(0,Math.floor(Number(length)||0));
-  count=clamp(Math.round(Number(count)||140),Math.min(10,length||10),Math.min(600,length||600));
-  offset=clamp(Math.round(Number(offset)||0),0,Math.max(0,length-count));
-  return {count,offset,start:Math.max(0,length-offset-count),end:length-offset};
- }
- function change(length,current,action,value=0,anchor=.5){
-  const v=view(length,current.count,current.offset);
-  if(action==='reset')return view(length,140,0);
-  if(action==='latest')return view(length,v.count,0);
-  if(action==='pan')return view(length,v.count,v.offset+value);
-  if(action==='zoom'){
-   const next=view(length,v.count*value,v.offset),a=clamp(anchor,0,1);
-   return view(length,next.count,length-(v.start+v.count*a+next.count*(1-a)));
-  }
-  return v;
- }
- root.TerminalChart={view,change};
- if(!root.document)return;
- const doc=root.document,api=()=>root.TRM?.tec;
- const send=(panel,action,value,anchor)=>api()?.chartView?.(panel,action,value,anchor);
- let drag=null;
- doc.addEventListener('wheel',e=>{
-  const svg=e.target.closest?.('[data-g9svg]');
-  if(!svg||!e.ctrlKey&&!e.metaKey)return;
-  e.preventDefault();const box=svg.getBoundingClientRect();
-  send(+svg.dataset.g9svg,'zoom',e.deltaY<0?1/1.2:1.2,(e.clientX-box.left)/box.width);
- },{passive:false});
- doc.addEventListener('keydown',e=>{
-  const svg=e.target.closest?.('[data-g9svg]');if(!svg)return;
-  const keys={ArrowLeft:['pan',.25],ArrowRight:['pan',-.25],'+':['zoom',1/1.4],'=':['zoom',1/1.4],'-':['zoom',1.4],Home:['reset',0],End:['latest',0]};
-  const command=keys[e.key];if(!command)return;e.preventDefault();
-  send(+svg.dataset.g9svg,command[0]==='pan'?'page':command[0],command[1]);
- });
- // Aplica o gesto ao soltar, para preservar a leitura e o scroll vertical da página.
- doc.addEventListener('pointerdown',e=>{
-  const svg=e.target.closest?.('[data-g9svg]');if(!svg||e.button>0)return;
-  const panel=+svg.dataset.g9svg,box=svg.getBoundingClientRect();
-  if(!drag||drag.panel!==panel)drag={panel,box,points:new Map(),start:new Map(),pinch:false};
-  drag.points.set(e.pointerId,{x:e.clientX,y:e.clientY});drag.start.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(drag.points.size===2)drag.pinch=true;
- });
- doc.addEventListener('pointermove',e=>{if(drag?.points.has(e.pointerId))drag.points.set(e.pointerId,{x:e.clientX,y:e.clientY})});
- function finish(e,cancel){
-  if(!drag?.points.has(e.pointerId))return;
-  const d=drag;
-  if(!cancel){
-   d.points.set(e.pointerId,{x:e.clientX,y:e.clientY});
-   if(d.pinch&&d.points.size===2){
-    const a=[...d.start.values()],b=[...d.points.values()],dist=p=>Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);
-    if(dist(a)>15&&dist(b)>15)send(d.panel,'zoom',dist(a)/dist(b),((a[0].x+a[1].x)/2-d.box.left)/d.box.width);
-   }else if(!d.pinch){
-    const a=d.start.get(e.pointerId),dx=e.clientX-a.x,dy=e.clientY-a.y;
-    if(Math.abs(dx)>15&&Math.abs(dx)>Math.abs(dy)*1.3)send(d.panel,'page',dx/d.box.width);
-   }
-  }
-  drag=null;
- }
- doc.addEventListener('pointerup',e=>finish(e,false));
- doc.addEventListener('pointercancel',e=>finish(e,true));
- doc.addEventListener('dblclick',e=>{const svg=e.target.closest?.('[data-g9svg]');if(svg)send(+svg.dataset.g9svg,'reset',0)});
+'use strict';
+const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+function view(length,count=140,offset=0){length=Math.max(0,Math.floor(Number(length)||0));count=clamp(Math.round(Number(count)||140),Math.min(10,length||10),Math.min(600,length||600));offset=clamp(Math.round(Number(offset)||0),0,Math.max(0,length-count));return{count,offset,start:Math.max(0,length-offset-count),end:length-offset}}
+function change(length,current,action,value=0,anchor=.5){const v=view(length,current.count,current.offset);if(action==='reset')return view(length,140,0);if(action==='latest')return view(length,v.count,0);if(action==='pan')return view(length,v.count,v.offset+value);if(action==='zoom'){const n=view(length,v.count*value,v.offset),a=clamp(anchor,0,1);return view(length,n.count,length-(v.start+v.count*a+n.count*(1-a)))}return v}
+let saved={};try{saved=JSON.parse(root.localStorage?.getItem('terminal-axis-v317')||'{}')||{}}catch{}
+function axis(panel,action,value){const a=saved[panel]||(saved[panel]={log:true,shift:0,zoom:1});if(action==='scale'){a.log=!a.log;a.shift=0;a.zoom=1}if(action==='reset'||action==='priceauto'){a.shift=0;a.zoom=1;a.fraction=0}if(action==='pricepan')a.shift=clamp(a.shift+Number(value||0)*a.zoom,-20,20);if(action==='pricezoom')a.zoom=clamp(a.zoom*Number(value||1),.05,20);if(action){try{root.localStorage?.setItem('terminal-axis-v317',JSON.stringify(saved))}catch{}}return a}
+function price(panel,low,high){const a=axis(panel),log=a.log&&low>0&&high>0;let lo=log?Math.log(low):low,hi=log?Math.log(high):high;if(!Number.isFinite(lo)||!Number.isFinite(hi)){lo=0;hi=1}const span=Math.max(hi-lo,Math.abs(hi)*1e-8,1e-8),mid=(hi+lo)/2+a.shift*span,half=span*a.zoom/2;lo=mid-half;hi=mid+half;const f=x=>log?Math.log(x):x,g=x=>log?Math.exp(x):x;return{log,low:g(lo),high:g(hi),ratio:x=>(hi-f(x))/(hi-lo),at:r=>g(hi-r*(hi-lo))}}
+root.TerminalChart={view,change,axis,price};if(!root.document)return;
+const doc=root.document,send=(p,a,v,x)=>root.TRM?.tec?.chartView?.(p,a,v,x);let drag=null,frame=0;
+const chart=e=>e.target.closest?.('[data-g9svg]');
+doc.addEventListener('click',e=>{const b=e.target.closest?.('[data-g9axis]');if(b){e.preventDefault();send(+b.dataset.panel,b.dataset.g9axis,0)}});
+doc.addEventListener('wheel',e=>{const s=chart(e);if(!s||!e.ctrlKey&&!e.metaKey)return;e.preventDefault();const b=s.getBoundingClientRect();send(+s.dataset.g9svg,'zoom',e.deltaY<0?1/1.2:1.2,(e.clientX-b.left)/b.width)},{passive:false});
+doc.addEventListener('keydown',e=>{const s=chart(e);if(!s)return;const k={ArrowLeft:['page',.25],ArrowRight:['page',-.25],ArrowUp:['pricepan',-.1],ArrowDown:['pricepan',.1],'+':['zoom',1/1.4],'=':['zoom',1/1.4],'-':['zoom',1.4],Home:['reset',0],End:['latest',0]};if(k[e.key]){e.preventDefault();send(+s.dataset.g9svg,...k[e.key])}});
+function flush(){frame=0;const d=drag;if(!d||d.pinch)return;const p=[...d.points.values()][0];if(!p)return;const dx=p.x-d.last.x,dy=p.y-d.last.y;if(Math.abs(dx)+Math.abs(dy)<2)return;d.last={...p};if(d.mode==='price')send(d.panel,'pricezoom',Math.exp(dy/d.box.height*3));else if(d.mode==='time')send(d.panel,'zoom',Math.exp(-dx/d.box.width*3),.5);else send(d.panel,'move',{time:dx/d.box.width,price:dy/d.box.height})}
+doc.addEventListener('pointerdown',e=>{const s=chart(e);if(!s||e.button>0)return;const panel=+s.dataset.g9svg,b=s.getBoundingClientRect();if(!b.width||!b.height)return;if(!drag||drag.panel!==panel)drag={panel,box:b,points:new Map(),start:new Map(),last:{x:e.clientX,y:e.clientY},mode:e.clientX>b.right-b.width*.1?'price':e.clientY>b.bottom-b.height*.09?'time':'plot'};drag.points.set(e.pointerId,{x:e.clientX,y:e.clientY});drag.start.set(e.pointerId,{x:e.clientX,y:e.clientY});if(drag.points.size===2)drag.pinch=true});
+doc.addEventListener('pointermove',e=>{if(!drag?.points.has(e.pointerId))return;e.preventDefault();drag.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(!frame)frame=root.requestAnimationFrame(flush)},{passive:false});
+function finish(e,cancel){if(!drag?.points.has(e.pointerId))return;const d=drag;if(!cancel){d.points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(d.pinch&&d.points.size===2){const a=[...d.start.values()],b=[...d.points.values()],dist=p=>Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);if(dist(a)>15&&dist(b)>15)send(d.panel,'zoom',dist(a)/dist(b),((a[0].x+a[1].x)/2-d.box.left)/d.box.width)}else flush()}if(frame)root.cancelAnimationFrame(frame);frame=0;drag=null}
+doc.addEventListener('pointerup',e=>finish(e,false));doc.addEventListener('pointercancel',e=>finish(e,true));doc.addEventListener('dblclick',e=>{const s=chart(e);if(s)send(+s.dataset.g9svg,'reset',0)});
+const style=doc.createElement('style');style.textContent='.g9svg{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}.g9svg:active{cursor:grabbing}.g9axis-help{display:block;font-size:10px;line-height:1.4;color:var(--mut,#94a3b8);padding:4px 0}';doc.head.appendChild(style);
 })(typeof window==='undefined'?globalThis:window);
 
 ;

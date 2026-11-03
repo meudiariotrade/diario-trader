@@ -2068,7 +2068,7 @@ function playerHtml(){
 <div class="aup-cap" id="aupcap"></div>
 <div class="aup-prog" id="aupprog">${a.r.cenas.map((c,k)=>`<i data-aucena="${k}" title="${h(c.titulo||'')}"></i>`).join('')}</div>
 <div class="aup-ctl"><button data-auprev="1" aria-label="Cena anterior">${IC.prev}</button><button class="aup-pp" data-aupp="1" aria-label="Tocar">${IC.play}</button><button data-aunext="1" aria-label="Próxima cena">${IC.next}</button>
-<button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
+<button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
 <select id="aupvoz" aria-label="Voz">${temVoz()?vozOpts():'<option>sem voz</option>'}</select>${temVoz()?'<button data-auvozteste="1" aria-label="Ouvir voz selecionada" style="font-size:12px;width:auto;padding:8px">Ouvir voz</button>':''}</div>
 <div class="aup-idx" id="aupidx" hidden>${a.r.cenas.map((c,k)=>`<button data-aucena="${k}"><span>${k+1}</span>${h(c.titulo||'Cena '+(k+1))}</button>`).join('')}${a.local?'':'<button class="aup-del" data-audel="1"><span>✕</span>Apagar esta aula</button>'}</div>
 </div>`;
@@ -2175,12 +2175,7 @@ function videoTema(c,v,k){
   for(const [re,vv] of temas)if(re.test(txt))return vv;
   return ['AULA','◆','conceito principal','exemplo prático'];
 }
-function videoFrame(c,v,k,inner){
-  const n=Math.max(0,k||0),[tag,ico,lead,sub]=videoTema(c,v,n),titulo=c.titulo||v.t||'Aula';
-  const barras=Array.from({length:16},(_,i)=>`<i style="height:${18+((i*17+n*23)%62)}%"></i>`).join('');
-  const cards=[lead,sub,'ponto-chave '+(n+1)].map((x,i)=>`<span class="auyt-card c${i}">${h(x)}</span>`).join('');
-  return `<div class="auyt auyt-${n%6}" style="--step:${n%8}"><div class="auyt-bg"><span>${ico}</span><span>${ico}</span><span>${ico}</span></div><div class="auyt-head"><b>DIÁRIO DE TRADER · AULA</b><em>${h(tag)}</em></div><div class="auyt-body"><div class="auyt-main">${inner}</div><aside class="auyt-side"><div class="auyt-thumb">${ico}</div><strong>${h(titulo)}</strong><small>Cena ${P.i+1} · tomada ${n+1}</small><div class="auyt-bars">${barras}</div>${cards}</aside></div><div class="auyt-lower"><span>🎬 Modo vídeo</span><span>${h(lead)}</span><span>${String(P.i+1).padStart(2,'0')}/${String(P.a?.r?.cenas?.length||1).padStart(2,'0')}</span></div></div>`;
-}
+function videoFrame(c,v,k,inner){return `<div class="au-lesson-visual">${inner}</div>`;}
 const mostra=(x,k)=>x==null||x.em==null||k>=x.em;
 const VIS={
  titulo(v,k){return`<div class="auv-tit">${v.kicker?`<div class="auv-kick">${h(v.kicker)}</div>`:''}<div class="auv-h">${h(v.t)}</div>${v.sub?`<div class="auv-sub">${h(v.sub)}</div>`:''}${v.chips?`<div class="auv-chips">${v.chips.map(x=>`<span>${h(x)}</span>`).join('')}</div>`:''}</div>`},
@@ -2286,6 +2281,7 @@ document.addEventListener('click',e=>{
   if(b=q('[data-auopen]')){e.preventDefault();abre(b.dataset.auopen);return}
   if(q('[data-aurel]')){AU.lista=null;carregaLista(1);pinta();return}
   if(!P.on)return;
+  if(q('[data-auoptions]')){const el=document.getElementById('aupoptions');el.hidden=!el.hidden;q('[data-auoptions]').setAttribute('aria-expanded',String(!el.hidden));return}
   if(q('[data-auvozteste]')){testaVoz();return}
   if(q('[data-aux]')){fecha();return}
   if(q('[data-aupp]')){P.play?para():tocar();return}
@@ -3108,15 +3104,15 @@ const st=document.createElement('style');st.textContent=`.adr-ab{margin-top:14px
   const top=p.querySelector('.aup-top');
   if(top&&!D.getElementById('auProBar'))top.insertAdjacentHTML('afterend','<div class="au-probar"><b id="auProBar"></b></div>');
   const stage=p.querySelector('.aup-stage');
-  if(stage&&!D.getElementById('auCine'))stage.insertAdjacentHTML('afterbegin','<div class="au-cine" id="auCine"><span>DIÁRIO DE TRADER · AULA PRO</span><em id="auKind">Conceito</em></div>');
-  if(stage&&!D.getElementById('auLower'))stage.insertAdjacentHTML('beforeend','<div class="au-lower" id="auLower"><b>Conceito principal</b><span>Aplicação no mercado</span></div>');
-  if(!D.getElementById('auChapterStrip')){const prog=p.querySelector('#aupprog');prog&&prog.insertAdjacentHTML('afterend','<div class="au-chapters" id="auChapterStrip"></div>')}
-  const ctl=p.querySelector('.aup-ctl');
+
+
+
+  const ctl=p.querySelector('.aup-options');
   if(ctl&&!D.getElementById('auReviewBtn'))ctl.insertAdjacentHTML('beforeend','<button id="auReviewBtn" class="au-probtn" type="button">Revisar aula</button><button id="auQuizBtn" class="au-probtn" type="button">Quiz</button>');
-  if(!D.getElementById('auBlockCard')){const cap=p.querySelector('#aupcap');cap&&cap.insertAdjacentHTML('afterend','<div class="au-block-card" id="auBlockCard" hidden></div>')}
+
   return p;
  }
- function update(){const p=ensure();if(!p)return;const sc=scenes(),i=current(),total=Math.max(sc.length,1),cap=caption(),title=sc[i]?.title||'Cena atual',kind=classify(title+' '+cap);
+ function update(){const p=ensure();if(!p)return;const stamp=(D.getElementById("aupct")?.textContent||"")+"|"+caption();if(p.dataset.chrome317===stamp)return;p.dataset.chrome317=stamp;const sc=scenes(),i=current(),total=Math.max(sc.length,1),cap=caption(),title=sc[i]?.title||'Cena atual',kind=classify(title+' '+cap);
   p.classList.remove('au-kind-chart','au-kind-example','au-kind-alert','au-kind-review','au-kind-quiz','au-kind-concept');p.classList.add(kind[2]);
   const bar=D.getElementById('auProBar');bar&&(bar.style.width=Math.max(3,Math.round((i+1)/total*100))+'%');
   const k=D.getElementById('auKind');k&&(k.textContent=kind[0]);
@@ -3149,3 +3145,14 @@ const st=document.createElement('style');st.textContent=`.adr-ab{margin-top:14px
  // v316: o observador anterior observava suas próprias alterações. A atualização periódica basta.
  D.addEventListener('DOMContentLoaded',()=>{inject();update()});setInterval(update,1200);W.AulasPro315={update,review:()=>openReview('review'),quiz:()=>openReview('quiz')};
 })();
+
+/* v317: conteúdo sem sobreposição, controles secundários recolhidos. */
+(()=>{const st=document.createElement('style');st.textContent=`
+#aup{display:flex;flex-direction:column;overflow-y:auto;background:#0b1220;gap:0;padding-bottom:env(safe-area-inset-bottom,0px)}
+#aup .aup-top{flex:none;padding:10px 12px;gap:10px;min-height:52px}#aup .aup-x,#aup .aup-ix{width:40px;height:40px;flex:none}#aup .aup-tt{min-width:0}#aup .aup-tt b{font-size:14px}#aup .aup-tt span{font-size:11px}
+#aup .aup-stage{flex:1 0 auto;min-height:180px;align-items:flex-start;cursor:pointer;padding:16px;box-sizing:border-box}#aup .aup-stage:before,#aup .aup-stage:after{display:none}#aup .aup-vis{max-height:none;overflow:visible;animation:none}#aup .au-lesson-visual{width:100%;box-sizing:border-box;max-width:900px;margin:auto}#aup .auv-h2{font-size:19px;margin:0 0 18px}#aup .auv-h{font-size:24px}#aup .auv-top li{font-size:16px;line-height:1.5;transform:none;margin-bottom:8px}#aup .auv-top li:not(.on){visibility:hidden}#aup .auv-top li .ic{width:24px;height:24px}#aup .auv-top li small{font-size:13px}
+#aup .aup-cap{flex:none;min-height:0;font-size:14px;line-height:1.5;text-align:left;padding:10px 16px;max-height:6.5em;overflow:auto;color:#cbd5e1}#aup .aup-prog{flex:none;padding:8px 16px}
+#aup .aup-ctl{flex:none;display:flex;flex-wrap:nowrap;gap:12px;justify-content:center;align-items:center;padding:10px 12px 12px}#aup .aup-ctl>button{width:44px;height:44px;min-width:44px;min-height:44px;box-sizing:border-box}#aup .aup-ctl .aup-pp{width:54px;height:54px}#aup .aup-ctl .aup-options-toggle{width:auto;aspect-ratio:auto;border-radius:10px;padding:0 12px;font-size:13px}
+#aup .aup-options[hidden]{display:none!important}#aup .aup-options{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;background:#111d2c;border-top:1px solid #26374c;flex:none;align-items:center}#aup .aup-options button,#aup .aup-options select{width:auto!important;min-height:42px!important;max-width:100%;aspect-ratio:auto;border-radius:10px!important;padding:9px 12px!important;font-size:13px!important;line-height:1.3;background:#18273b;color:#eef4fa;border:1px solid #34485f;box-sizing:border-box}#aup .aup-options #aupvoz{max-width:100%;flex:1;min-width:180px}#aup .aup-idx{z-index:100}#aup .au-chapters,#aup .au-cine,#aup .au-lower,#aup .au-block-card{display:none!important}
+@media(orientation:landscape) and (max-height:520px){#aup .aup-stage{min-height:160px}#aup .aup-cap{max-height:4em}}
+`;document.head.appendChild(st)})();
