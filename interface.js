@@ -1189,6 +1189,52 @@
 })(typeof window==='undefined'?globalThis:window);
 
 ;
+/* módulo: carteira-periodos.js — v365, cálculo local auditável de YTD e TTM. */
+(function(root){
+ 'use strict';
+ const validNumber=x=>typeof x==='number'&&Number.isFinite(x);
+ const close=/^\d{4}-(03-31|06-30|09-30|12-31)$/;
+ const currency=x=>{const str=String(x||'').trim().toUpperCase();return str==='R$'?'BRL':str==='US$'?'USD':/^[A-Z]{3}$/.test(str)?str:null};
+ const quarter=p=>close.test(String(p||''))?Number(String(p).slice(5,7))/3:null;
+ const label=p=>quarter(p)?quarter(p)+'T'+p.slice(2,4):String(p||'sem referência');
+ function previous(p){if(!close.test(p))return null;const y=Number(p.slice(0,4)),q=quarter(p),last=q===1?{y:y-1,q:4}:{y,q:q-1};return last.y+'-'+['03-31','06-30','09-30','12-31'][last.q-1]}
+ function normalize(sources,asOf){
+  const cutoff=/^\d{4}-\d{2}-\d{2}$/.test(String(asOf||''))?String(asOf):'9999-12-31';
+  const validSources=(sources||[]).filter(s=>s&&Array.isArray(s.rows));
+  const primaryCurrency=validSources.map(s=>currency(s.moeda)).find(Boolean)||null;
+  const by=new Map(),rejected=[];
+  for(const source of validSources){
+   const srcCur=currency(source.moeda);
+   for(const item of source.rows){
+    const p=String(item?.periodo||''),cur=currency(item?.moeda)||srcCur||primaryCurrency;
+    if(!close.test(p)||p>cutoff||!validNumber(item?.receita)&&!validNumber(item?.lucro))continue;
+    if(primaryCurrency&&cur&&cur!==primaryCurrency){rejected.push(p);continue}
+    if(!by.has(p))by.set(p,{periodo:p,receita:validNumber(item.receita)?item.receita:null,lucro:validNumber(item.lucro)?item.lucro:null,moeda:cur});
+   }
+  }
+  return {quarters:[...by.values()].sort((a,b)=>b.periodo.localeCompare(a.periodo)).slice(0,12),moeda:primaryCurrency,rejected};
+ }
+ function calculate(sources,asOf){
+  const normalized=normalize(sources,asOf),quarters=normalized.quarters,latest=quarters[0]||null;
+  const empty={value:null,missing:[],reason:'Nenhum trimestre isolado disponível'};
+  if(!latest)return {...normalized,latest:null,ytd:{periodos:[],receita:{...empty},lucro:{...empty}},ttm:{periodos:[],receita:{...empty},lucro:{...empty}}};
+  const known=new Map(quarters.map(q=>[q.periodo,q]));
+  const q=quarter(latest.periodo),year=latest.periodo.slice(0,4);
+  const ytdPeriods=Array.from({length:q},(_,i)=>year+'-'+['03-31','06-30','09-30','12-31'][i]);
+  const ttmPeriods=[latest.periodo];for(let i=1;i<4;i++)ttmPeriods.unshift(previous(ttmPeriods[0]));
+  function metric(periods,key){
+   const missing=periods.filter(p=>!validNumber(known.get(p)?.[key]));
+   const currencyOk=!!normalized.moeda;
+   return {value:missing.length||!currencyOk?null:periods.reduce((sum,p)=>sum+known.get(p)[key],0),missing,
+     reason:missing.length?'Faltam '+missing.map(label).join(', '):!currencyOk?'Moeda contábil não confirmada':null};
+  }
+  const aggregate=periodos=>({periodos,inicio:periodos[0],fim:periodos.at(-1),receita:metric(periodos,'receita'),lucro:metric(periodos,'lucro')});
+  return {...normalized,latest,ytd:aggregate(ytdPeriods),ttm:aggregate(ttmPeriods)};
+ }
+ root.CarteiraPeriodos={calculate,normalize,label,previous,quarter};
+})(typeof window==='undefined'?globalThis:window);
+
+;
 /* módulo: carteira-factsheet.js */
 /* Relatório de gestão inspirado no modelo do usuário. Desenho vetorial, sem candles. */
 (function(root){
@@ -1231,6 +1277,24 @@
    if(a.eligible&&a.valuation){heading('Valuation por premissas pessoais');const v=a.valuation;note('Cenários registrados pelo usuário em '+v.at+'. FCFE anual base por ação: '+num(v.input.cash)+'. Horizonte: '+v.input.years+' anos. Não é previsão ou preço-alvo.');table(['Cenário','Crescimento %','Capital próprio %','Terminal %','Valor/ação'],v.result.rows.map(r=>[r.name,num(r.growth),num(r.rate),num(r.terminal),r.result.available?num(r.result.value):'Inválido']),[24,19,19,19,19]);note(v.result.rows.find(r=>r.result.available)?.result.method||'Verificar premissas.');}
    if(a.notes?.length){heading('Linha do tempo da tese');for(const n of a.notes){text(n.at+' / '+n.kind,{font:'b',size:8});text(n.text);if(n.source)note('Fonte informada: '+n.source);note('Consulta dos indicadores no registro: '+(n.queried||'não carregados'));}}
   }
+  // v365: mesma seleção para capa e páginas de cada ativo; não reaproveita PDF antigo.
+  // Prioridade: snapshot do relatório selecionado, depois relatório individual salvo.
+  function financialPeriods(tk,individual,model){
+   const selected=input.selected||{},sources=[];
+   if(selected.tipo==='ativo'&&String(selected.tk||'').toUpperCase()===String(tk).toUpperCase()){
+    const f=selected.dados?.fundamentos||{};
+    sources.push({rows:f.balancos_trimestrais_disponiveis||[],moeda:f.moeda_contabil||model?.financialCurrency});
+   }
+   const source=Array.isArray(selected.dados?.balancos_trimestrais_da_fonte)
+    ?selected.dados.balancos_trimestrais_da_fonte.find(x=>String(x?.ticker||'').toUpperCase()===String(tk).toUpperCase()):null;
+   if(source)sources.push({rows:source.dados_trimestrais||[],moeda:source.moeda||model?.financialCurrency});
+   const f=individual?.dados?.fundamentos||{};
+   sources.push({rows:f.balancos_trimestrais_disponiveis||[],moeda:f.moeda_contabil||model?.financialCurrency});
+   return root.CarteiraPeriodos.calculate(sources,d.asOf);
+  }
+  const periodValue=v=>v?.value===null||v?.value===undefined?'n/d':compactValue(v.value);
+  const periodNum=v=>v?.value===null||v?.value===undefined?'Não disponível':num(v.value);
+  const quarterName=root.CarteiraPeriodos.label;
   // Capa: mesma linguagem editorial do modelo, com métricas identificadas.
   p.pg=oldPage;p.y=60;p.rect(0,0,p.W,12,{fill:C.dk});p.t('GESTÃO DE CARTEIRA / FACTSHEET',p.M,p.y,{s:8,f:'b',c:C.ac});p.y=112;
   text('Relatório de Gestão\nde Carteira',{size:29,font:'b',gap:16});text((input.demo?'EDIÇÃO DEMONSTRATIVA · DADOS FICTÍCIOS':'Análise de investimentos')+' | '+d.asOf,{size:12,font:'b'});note('Desempenho, composição, proventos, risco e pesquisa fundamentalista por ativo.');
@@ -1241,37 +1305,27 @@
   note(input.demo?'DADOS FICTÍCIOS. Material ilustrativo para validar o formato; não representa uma carteira real.':'Documento privado. Posições atuais na exportação; análises armazenadas podem ter datas diferentes.');
   if(!d.perf.available)note(d.perf.reason);if(d.partial)note('Sem preço ou câmbio válido para: '+d.missing.join(', ')+'. Valores de custo não foram usados como cotação.');
   // Últimos períodos contábeis no começo do PDF: 2025 é histórico anual, não o último trimestre.
-  const financeRecords=(()=>{
-    const selected=input.selected||{},rows=[];
-    if(selected.tipo==='ativo'){
-      const f=selected.dados?.fundamentos||{};
-      rows.push({ticker:selected.tk||'',dados_trimestrais:f.balancos_trimestrais_disponiveis||[],moeda:f.moeda_contabil||null});
-    }else if(Array.isArray(selected.dados?.balancos_trimestrais_da_fonte)){
-      rows.push(...selected.dados.balancos_trimestrais_da_fonte);
-    }
-    for(const a of d.positions){
-      const f=a.report?.dados?.fundamentos||{};
-      if(Array.isArray(f.balancos_trimestrais_disponiveis)&&f.balancos_trimestrais_disponiveis.length)
-        rows.push({ticker:a.position.tk,dados_trimestrais:f.balancos_trimestrais_disponiveis,moeda:f.moeda_contabil||null});
-    }
-    const by=new Map();
-    for(const r of rows){
-      const q=(Array.isArray(r.dados_trimestrais)?r.dados_trimestrais:[])
-       .filter(x=>x&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.periodo||''))&&(Number.isFinite(x.receita)||Number.isFinite(x.lucro)))
-       .sort((a,b)=>b.periodo.localeCompare(a.periodo))[0];
-      const tk=String(r.ticker||'');if(!tk||!q)continue;
-      if(!by.has(tk)||q.periodo>by.get(tk).q.periodo)by.set(tk,{ticker:tk,q,moeda:r.moeda||q.moeda||'não identificada'});
-    }
-    return [...by.values()].sort((a,b)=>a.ticker.localeCompare(b.ticker));
-  })();
+  const financeRecords=d.positions.map(a=>({ticker:a.position.tk,summary:financialPeriods(a.position.tk,a.report,a.fundamental)}))
+    .filter(r=>r.summary.latest).sort((a,b)=>a.ticker.localeCompare(b.ticker));
   const compactValue=v=>typeof v==='number'&&Number.isFinite(v)?(Math.abs(v)>=1e9?(v/1e9).toLocaleString('pt-BR',{maximumFractionDigits:2})+' bi':Math.abs(v)>=1e6?(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:2})+' mi':num(v)):'sem dado';
   page('01  Sumário executivo');
   text('A carteira reúne '+d.positions.length+' ativo(s). '+(d.partial?'A avaliação de mercado é parcial.':'O valor das posições com cotação é '+money(d.total)+'.')+' '+(d.top3!=null?'As três maiores posições representam '+pct(d.top3)+' do valor coberto.':''));
-  heading('BALANÇOS — ÚLTIMO TRIMESTRE DISPONÍVEL');
+  heading('GUIA RÁPIDO — NÃO CONFUNDIR OS PERÍODOS');
+  table(['Indicador','O que representa','Exemplo didático'],[
+   ['Anual fechado','Exercício de 12 meses já encerrado','2025 = jan. a dez./2025'],
+   ['Trimestre isolado','Receita/lucro de apenas 3 meses','3T26 = jul. a set./2026'],
+   ['Acumulado (YTD)','Do início do ano até o último trimestre','9M26 = 1T + 2T + 3T'],
+   ['Últimos 12 meses (TTM)','Quatro trimestres consecutivos','4T25 + 1T26 + 2T26 + 3T26']
+  ],[24,39,37]);
+  note('Atenção: NÃO compare o acumulado de 9 meses com o anual de 12 meses como se fossem a mesma janela. O YTD NÃO é previsão de fechamento; o TTM é histórico móvel, NÃO estimativa para o próximo ano.');
+  heading('BALANÇOS — ÚLTIMO TRIMESTRE IDENTIFICADO');
   if(financeRecords.length){
-    table(['Ativo','Trimestre encerrado','Receita','Lucro','Moeda'],financeRecords.slice(0,16).map(r=>[r.ticker,r.q.periodo,compactValue(r.q.receita),compactValue(r.q.lucro),String(r.moeda)]),[14,24,23,23,16]);
-    note('Fonte: Yahoo Finance (séries trimestrais secundárias). A data mostra o encerramento do trimestre, NÃO atesta a última divulgação oficial. Valide com CVM/RI. Tabela anual até 2025 = exercícios fechados, não é o balanço trimestral mais recente.');
-  }else note('Nenhum dado trimestral identificado no relatório selecionado. 2025 é somente o último ano fechado, NÃO a confirmação do trimestre mais recente. Gere um novo relatório individual e consulte o RI/CVM.');
+    table(['Ativo','Trimestre','Receita isolada','Lucro isolado','Moeda'],financeRecords.slice(0,16).map(r=>[r.ticker,quarterName(r.summary.latest.periodo),compactValue(r.summary.latest.receita),compactValue(r.summary.latest.lucro),String(r.summary.moeda||'n/c')]),[15,19,26,25,15]);
+    heading('ACUMULADO NO ANO (YTD) E ÚLTIMOS 12 MESES (TTM)');
+    table(['Ativo','Receita YTD','Lucro YTD','Receita TTM','Lucro TTM'],financeRecords.slice(0,16).map(r=>[r.ticker,periodValue(r.summary.ytd.receita),periodValue(r.summary.ytd.lucro),periodValue(r.summary.ttm.receita),periodValue(r.summary.ttm.lucro)]),[14,22,21,22,21]);
+    note('YTD: soma dos trimestres isolados do ano até o trimestre mais recente de cada ativo; TTM: soma dos últimos quatro trimestres consecutivos. n/d = valor não calculável sem todos os períodos e moeda confirmada. Detalhes e lacunas nas páginas de cada ativo.');
+    note('Fonte: Yahoo Finance (dados secundários). Encerramento do período NÃO é a data de publicação do balanço. Os dados ainda exigem conferência com CVM/RI.');
+  }else note('Nenhum trimestre isolado identificado no relatório salvo. O último anual fechado NÃO comprova a atualização dos balanços de 2026.');
   if(d.perf.available)table(['Indicador','Carteira','IBOV','CDI'],[['Mês observado',pct(d.perf.monthReturn),pct(d.perf.monthly.at(-1)?.ib),pct(d.perf.monthly.at(-1)?.cdi)],['Histórico completo',pct(d.perf.return),pct(d.perf.ib.at(-1)?.value-100),pct(d.perf.cdi.at(-1)?.value-100)],['Janela',d.perf.from+' a '+d.perf.to,'Mesmas datas','Mesmas datas']],[28,30,21,21]);
   else empty('Retornos e comparações omitidos: faltam séries completas validadas. O saldo menos o custo não substitui rentabilidade.');
   bars(d.perf.monthly||[],'02  Desempenho por mês',{percent:true,benchmark:true});
@@ -1294,46 +1348,46 @@
   for(const [key,value]of Object.entries(consolidated))if(!['resumo_executivo','conclusao','riscos','hipoteses','monitorar','identificacao'].includes(key))analysis(key.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()),value);
   for(const a of d.positions){const position=a.position,report=a.report,meta={...a.meta,fs:{...(a.meta?.fs||{}),...(report?.dados?.fundamentos||{})}},detail=R.detail(position,input.ledger||[],d.asOf);page(position.tk+'  |  Pesquisa do ativo',(position.nome||a.meta?.nome||'')+' · '+(position.cl||'Classe não informada')+' · '+(position.moeda||detail.unit),true);
    table(['Posição','Valor','Fundamento','Indicador'],Array.from({length:Math.max(6,root.TraderReports.fundamentalRows(position,meta).length)},(_,i)=>{const holding=[['Quantidade',num(position.q,4)],['Cotação',position.tem?num(position.pa):'Sem cotação'],['Preço médio',num(position.pm,4)],['Valor BRL',money(a.value)],['Proventos do ciclo',num(detail.income)+' '+detail.unit],['Peso coberto',a.value!=null&&d.total>0?pct(a.value/d.total*100):'Indisponível']][i]||['',''];const f=root.TraderReports.fundamentalRows(position,meta)[i]||['',''];return [...holding,...f]}),[24,23,30,23]);
-   // v364: o consolidado pode ter série trimestral mais nova que o relatório individual salvo.
-   // Ex.: consolidado com 3T26, mas relatório do ativo gerado antes sem os trimestres.
    const f=report?.dados?.fundamentos;
-   const selectedQuarterSource=(Array.isArray(input.selected?.dados?.balancos_trimestrais_da_fonte)
-     ?input.selected.dados.balancos_trimestrais_da_fonte:[])
-     .find(r=>String(r?.ticker||'').toUpperCase()===String(position.tk||'').toUpperCase());
-   const consolidatedQuarters=Array.isArray(selectedQuarterSource?.dados_trimestrais)?selectedQuarterSource.dados_trimestrais:[];
-   const individualQuarters=Array.isArray(f?.balancos_trimestrais_disponiveis)?f.balancos_trimestrais_disponiveis:[];
-   const seenQuarterPeriods=new Set();
-   const quarters=[...consolidatedQuarters,...individualQuarters]
-     .filter(r=>r&&/^\d{4}-\d{2}-\d{2}$/.test(String(r.periodo||''))&&(Number.isFinite(r.receita)||Number.isFinite(r.lucro)))
-     .sort((a,b)=>String(b.periodo).localeCompare(String(a.periodo)))
-     .filter(r=>{if(seenQuarterPeriods.has(r.periodo))return false;seenQuarterPeriods.add(r.periodo);return true})
-     .slice(0,8);
-   const latestQuarterDate=quarters[0]?.periodo||f?.data_ultimo_trimestre_na_fonte||meta.fs.ref||meta.fs.data_referencia||'não confirmada';
+   const periods=financialPeriods(position.tk,report,a.fundamental),quarters=periods.quarters;
+   const latestQuarterDate=periods.latest?.periodo||f?.data_ultimo_trimestre_na_fonte||meta.fs.ref||meta.fs.data_referencia||'não confirmada';
    note('Cotação: '+(position.pxEm||'sem data')+'. Referência contábil da fonte: '+latestQuarterDate+'. Proventos do ciclo desde '+(detail.cycleStart||'não identificado')+'. Preço médio é cadastral; ajustes por renda são gerenciais.');
    if(position.cl==='acao'||position.cl==='bdr'||position.cl==='acao_ext'){
     heading('Resultados trimestrais disponíveis');
     if(quarters.length){
-     const quarterCurrency=selectedQuarterSource?.moeda||f?.moeda_contabil||'moeda contábil não confirmada';
-     const quarterName=p=>{const m=Number(p.slice(5,7));return Math.ceil(m/3)+'T'+p.slice(2,4)};
-     table(['Trimestre','Encerramento','Receita','Lucro líquido','Moeda'],quarters.map(r=>[quarterName(r.periodo),String(r.periodo),num(r.receita),num(r.lucro),String(r.moeda||quarterCurrency)]),[14,20,25,25,16]);
-     note('Último trimestre encontrado para '+position.tk+': '+quarterName(quarters[0].periodo)+'. Fonte: Yahoo Finance (série secundária capturada no relatório). A data é de encerramento, não de divulgação; confira o release na CVM/RI.');
-     // Gráficos trimestrais: dados salvos, priorizados antes dos gráficos anuais históricos.
+     const quarterCurrency=periods.moeda||'moeda contábil não confirmada';
+     table(['Trimestre','Encerramento','Receita isolada','Lucro isolado','Moeda'],quarters.map(r=>[quarterName(r.periodo),String(r.periodo),num(r.receita),num(r.lucro),String(r.moeda||quarterCurrency)]),[15,19,25,26,15]);
+     note('Trimestre isolado = APENAS os três meses indicados. Ex.: 3T26 é julho a setembro, não janeiro a setembro. Série secundária Yahoo Finance; conferir o release do RI/CVM.');
+     heading('TRÊS VISÕES DOS RESULTADOS');
+     table(['Janela','Receita','Lucro líquido','O que significa'],[
+      [quarterName(periods.latest.periodo),num(periods.latest.receita),num(periods.latest.lucro),'Trimestre isolado (3 meses)'],
+      ['Acumulado YTD',periodNum(periods.ytd.receita),periodNum(periods.ytd.lucro),'Jan. a '+quarterName(periods.latest.periodo)],
+      ['TTM · 12 meses',periodNum(periods.ttm.receita),periodNum(periods.ttm.lucro),'Quatro trimestres consecutivos']
+     ],[22,25,25,28]);
+     const explainMissing=(name,record)=>{
+       const parts=['receita','lucro'].filter(key=>record[key].value==null).map(key=>key+': '+(record[key].reason||'não disponível'));
+       if(parts.length)note(name+' não calculado totalmente: '+parts.join(' | ')+'. Não foram estimados períodos ausentes.');
+     };
+     note('YTD = soma dos trimestres isolados desde janeiro até '+quarterName(periods.latest.periodo)+'. TTM = soma de '+periods.ttm.periodos.map(quarterName).join(' + ')+'. Não são a mesma base: não compare diretamente 9 meses de YTD com 12 meses do anual ou TTM.');
+     explainMissing('Acumulado YTD',periods.ytd);
+     explainMissing('TTM',periods.ttm);
+     if(periods.rejected.length)note('Trimestres com moeda incompatível foram excluídos do cálculo: '+periods.rejected.map(quarterName).join(', ')+'.');
      const W={p,heading:(title)=>heading(title),text:(value)=>note(value)};
      const chronological=[...quarters].reverse();
      if(chronological.some(r=>Number.isFinite(r.receita)))
-       root.TraderReports.researchChart(W,chronological.map(r=>({date:quarterName(r.periodo),value:r.receita})),'Receita trimestral · exercícios recentes',quarterCurrency,'bar');
+       root.TraderReports.researchChart(W,chronological.map(r=>({date:quarterName(r.periodo),value:r.receita})),'Receita TRIMESTRAL · somente 3 meses',quarterCurrency,'bar');
      if(chronological.some(r=>Number.isFinite(r.lucro)))
-       root.TraderReports.researchChart(W,chronological.map(r=>({date:quarterName(r.periodo),value:r.lucro})),'Lucro líquido trimestral · exercícios recentes',quarterCurrency,'bar');
+       root.TraderReports.researchChart(W,chronological.map(r=>({date:quarterName(r.periodo),value:r.lucro})),'Lucro líquido TRIMESTRAL · somente 3 meses',quarterCurrency,'bar');
     }
     else note('Série trimestral ainda não identificada neste relatório salvo. Os exercícios anuais NÃO comprovam a atualização dos balanços de 2026. Gere novo relatório depois da atualização do servidor e confira o RI da empresa.');
    }
    const annual=a.fundamental?.annual?.length?a.fundamental.annual.map(r=>({ano:r.date,receita:r.revenue,lucro:r.profit})):Array.isArray(f?.evolucao_receita_lucro)?f.evolucao_receita_lucro:[];
-   if(annual.length){heading('HISTÓRICO ANUAL (não confundir com trimestre recente)');table(['Ano','Receita','Lucro líquido'],annual.map(r=>[String(r.ano),num(r.receita),num(r.lucro)]),[20,40,40]);note('Valores históricos anuais; não substituem o último ITR. Moeda contábil: '+(a.fundamental?.financialCurrency||f?.moeda_contabil||'não confirmada')+'.');}
+   if(annual.length){heading('ANUAL FECHADO · 12 MESES (HISTÓRICO)');table(['Ano','Receita','Lucro líquido'],annual.map(r=>[String(r.ano),num(r.receita),num(r.lucro)]),[20,40,40]);note('Anual = janeiro a dezembro de cada exercício completo. Não é soma dos trimestres do ano atual, nem projeção. NÃO compare com YTD parcial sem ajustar a janela. Moeda contábil: '+(a.fundamental?.financialCurrency||f?.moeda_contabil||'não confirmada')+'.');}
    if(a.fundamental?.annual?.length){
     const series=a.fundamental.annual;
     const W={p,heading:(title)=>heading(title),text:(value)=>note(value)};
-    root.TraderReports.researchChart(W,series.map(r=>({date:r.date,value:r.revenue})),'Receita anual',a.fundamental.financialCurrency||'Moeda contábil não confirmada','bar');
-    root.TraderReports.researchChart(W,series.map(r=>({date:r.date,value:r.profit})),'Lucro líquido anual',a.fundamental.financialCurrency||'Moeda contábil não confirmada','bar');
+    root.TraderReports.researchChart(W,series.map(r=>({date:r.date,value:r.revenue})),'Receita ANUAL · 12 meses fechados',a.fundamental.financialCurrency||'Moeda contábil não confirmada','bar');
+    root.TraderReports.researchChart(W,series.map(r=>({date:r.date,value:r.profit})),'Lucro líquido ANUAL · 12 meses fechados',a.fundamental.financialCurrency||'Moeda contábil não confirmada','bar');
     note('Histórico das fontes de fundamentos do terminal. Consulta: '+(a.fundamental.queried||'não informada')+'. Períodos anuais, sem projeções.');
    }
    advancedResearch(a);
@@ -1348,6 +1402,10 @@
   page('06  Metodologia e cobertura');
   if(root.CarteiraCalculo){const audit=root.CarteiraCalculo.audit(input.ledger||[],d.asOf);heading('Conferência dos lançamentos');text(audit.issues.length?audit.issues.length+' pendência(s) nos registros. Confira os itens abaixo antes de interpretar resultados.':'Nenhuma inconsistência detectada pelas regras aritméticas desta conferência. Não equivale a auditoria fiscal ou conferência com extratos.');if(audit.issues.length)table(['Data','Ativo','Conferir'],audit.issues.map(i=>[i.date,i.ticker,i.message]),[18,18,64]);}
   text('Posições e movimentações vêm do cadastro da carteira. Valores em USD só são consolidados com câmbio válido. Indicadores e narrativas são os disponíveis no cache e nas análises armazenadas. Exportar não gera uma nova análise paga.');
+  heading('Conceitos dos indicadores financeiros');
+  text('ANUAL FECHADO: janeiro a dezembro de um exercício completo. TRIMESTRE ISOLADO: apenas três meses. YTD: soma do 1T ao trimestre mais recente do mesmo ano (por exemplo, 9 meses até o 3T). TTM: soma dos últimos quatro trimestres consecutivos, mesmo que cruzem dois anos.');
+  text('O aplicativo calcula YTD e TTM somente com todas as parcelas trimestrais individuais e a moeda identificada, sem extrapolações. Se faltar 4T anterior, por exemplo, o TTM é omitido. Os números vêm de fonte secundária, sem conferência automática com a publicação da empresa; 31/03, 30/06, 30/09 e 31/12 representam encerramento, não data de divulgação.');
+  text('Receita e lucro são fluxos do período e podem ser somados entre trimestres comparáveis. Estoques de balanço como caixa, dívida ou patrimônio líquido NÃO devem ser somados, por serem saldos de uma data. Empresas com calendário fiscal não coincidente ou fontes com moedas diferentes exigem tratamento específico.');
   text('Retornos, volatilidade, drawdown e tracking error exigem histórico completo validado. As séries de referência são alinhadas à mesma janela. A qualidade depende das movimentações, preços e proventos informados. Dados ausentes não são zero e o custo não é usado como preço histórico.');
   text('A curva de registros diários é mostrada apenas quando aplicável e identificada como patrimônio, nunca como rentabilidade. Ausência de proventos lançados não demonstra ausência de dividendos recebidos. Indicadores de ações não são aplicados automaticamente a outras classes.');
   table(['Ativo','Cotação','Fundamentos','Análise IA'],d.positions.map(a=>[a.position.tk,a.position.tem?'Disponível':'Ausente',a.meta?.fs?'Parcial / verificar data':'Não disponível',a.report?'Registrada':'Não registrada']),[20,23,31,26]);
