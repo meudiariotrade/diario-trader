@@ -846,8 +846,60 @@ html:root body #mdr2 .pro-menu-note{margin:15px 0 4px;padding-top:12px;border-to
 @media(max-width:360px){#app .m355-market-head .m360-area-grid .m360-area{gap:5px;padding:9px 7px}#app .m355-market-head .m360-area-symbol{display:none}html:root body #mdr2 .pro-market-subgroups{margin-left:12px}}
 @media(prefers-reduced-motion:reduce){#app .m355-market-head .m360-area-grid .m360-area,html:root body #mdr2 .pro-market-subgroup>summary:after{transition:none}}
 
+
+/* v361 · acabamento visual transversal, sem alterar regras, dados ou rotas */
+:root{--ui361-r:14px;--ui361-shadow:0 6px 24px rgba(8,22,34,.06)}
+html:root body #app :is(.card,.tile,.hero,.hero2,.prev){border-radius:var(--ui361-r);box-shadow:var(--ui361-shadow);border-color:var(--bd)}
+html:root body #app :is(.card,.tile,.hero,.hero2){overflow-wrap:anywhere}
+html:root body #app .card{margin-block:11px;padding:clamp(13px,2vw,18px)}
+html:root body #app .top{gap:12px;align-items:center;flex-wrap:wrap}
+html:root body #app .top> :is(b,strong){line-height:1.35;letter-spacing:-.012em}
+html:root body #app :is(.g2,.g3,.tiles){column-gap:12px;row-gap:12px}
+html:root body #app .kv{gap:11px}
+html:root body #app .kv>.card{margin:0;min-width:0}
+html:root body #app :is(input,textarea,select){border-radius:11px;line-height:1.4}
+html:root body #app input:not([type=checkbox]):not([type=radio]),html:root body #app select{min-height:44px}
+html:root body #app :is(.btn,.seg button,.chips2 button){border-radius:10px;min-height:44px;line-height:1.25}
+html:root body #app .btn.s{padding:10px 12px}
+html:root body #app :is(.sm,.mut){line-height:1.5}
+html:root body #app details>summary{cursor:pointer;min-height:36px;line-height:1.4;list-style-position:inside}
+html:root body #app .tile:focus-visible,html:root body #app button:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+html:root body #app table{font-variant-numeric:tabular-nums}
+html:root body #app .anxt{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+html:root body .sh{max-width:min(720px,100%);border-radius:0;box-shadow:0 20px 60px #0002}
+html:root body .sh :is(button,select,input){max-width:100%}
+@media(max-width:600px){html:root body #app{padding-inline:12px!important}html:root body #app .card{padding:13px}html:root body #app .g3{grid-template-columns:repeat(2,minmax(0,1fr))}html:root body #app .top{gap:8px}html:root body .sh{padding-inline:14px}}
+@media(max-width:370px){html:root body #app .g3{grid-template-columns:minmax(0,1fr)}html:root body #app .top .btn{max-width:100%}}
+/* Aula compacta: mantém o mesmo #aup e o estado da narração enquanto muda de página. */
+#aup .au361-mini-bar{display:none!important}
+#aup .aup-361-min{min-height:39px!important;min-width:39px!important;max-width:42px!important;background:#173e4d!important;border:1px solid #32738b!important;color:#dff9f8!important;border-radius:10px!important;font-size:19px!important;flex:none!important}
+#aup.au361-floating{position:fixed!important;inset:auto 12px calc(84px + env(safe-area-inset-bottom,0px)) auto!important;width:min(380px,calc(100vw - 24px))!important;height:auto!important;min-height:0!important;max-height:none!important;border:1px solid #4e8b8f!important;border-radius:16px!important;background:#0e2030!important;box-shadow:0 15px 50px #0009!important;z-index:999995!important;padding:0!important;overflow:visible!important;display:block!important}
+#aup.au361-floating :is(.aup-top,.aup-stage,.aup-cap,.aup-prog,.aup-ctl,.aup-options,.aup-idx,.au353-voice-alert,.au-study-panel){display:none!important}
+#aup.au361-floating .au361-mini-bar{display:flex!important;flex-direction:column!important;gap:8px!important;padding:10px!important;min-height:106px!important;box-sizing:border-box!important;color:#e8f6fc!important}
+#aup .au361-grip{cursor:move!important;touch-action:none!important;user-select:none!important;align-self:center!important;font:18px/1 system-ui!important;color:#9fcad2!important;min-height:18px!important}
+#aup .au361-mini-copy{min-width:0!important;text-align:center!important}
+#aup .au361-mini-copy strong{display:block!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font:700 13px/1.4 system-ui!important}
+#aup .au361-mini-copy small{display:block!important;font:12px/1.5 system-ui!important;color:#acc4d1!important}
+#aup .au361-mini-actions{display:flex!important;gap:6px!important;justify-content:center!important}
+#aup .au361-mini-actions button{min-width:44px!important;min-height:38px!important;border:1px solid #517187!important;background:#20384a!important;color:#f1f9fd!important;border-radius:9px!important;font:600 12px/1.2 system-ui!important;padding:7px 10px!important}
+#aup .au361-mini-actions [data-au361toggle]{background:#076850!important;border-color:#31c9a1!important}
+@media(max-width:520px){#aup .aup-361-min{min-width:35px!important;max-width:35px!important;padding:0!important}}
+/* TV compacta: player do YouTube é mantido no mesmo documento. */
+.dt361-tvmini[hidden]{display:none!important}
+.dt361-tvmini{position:fixed;inset:auto 12px calc(84px + env(safe-area-inset-bottom,0px)) auto;z-index:999996;width:min(390px,calc(100vw - 24px));overflow:hidden;border:1px solid #4d8390;border-radius:16px;background:#081725;color:#e7f4fb;box-shadow:0 20px 60px #000b;font:13px/1.4 system-ui,-apple-system,sans-serif}
+.dt361-tvbar{min-height:40px;padding:5px 9px;display:flex;align-items:center;gap:8px;background:#162e40}
+.dt361-tvbar strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;font-size:12px}
+.dt361-tvbar button{background:#203c4f;border:1px solid #557c89;color:#f1f7fa;border-radius:8px;min-height:34px;min-width:38px;cursor:pointer;font:18px/1 system-ui}
+.dt361-grip{touch-action:none;user-select:none;cursor:move;color:#8fbac7;font-size:19px;padding:0 5px}
+.dt361-vid{width:100%;aspect-ratio:16/9;background:#050b15;display:block}
+.dt361-vid iframe{display:block;width:100%;height:100%;border:0}
+.dt361-footer{display:block;color:#acc4d0;font-size:10px;padding:7px 10px;line-height:1.3}
+.dt361-wait{height:100%;min-height:170px;display:flex;align-items:center;justify-content:center;color:#c4d9e7;background:#0b1c2a}
+@media(max-width:480px){.dt361-tvmini{width:min(360px,calc(100vw - 20px));right:10px}.dt361-footer{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.dt361-tvmini,#aup.au361-floating{transition:none!important;animation:none!important}}
+
 </style></head><body><div id="splash"><img class="lg" src="icon-512.png?v=319" alt="Diário Trader" width="128" height="128" style="object-fit:contain;border-radius:24px"><b>Diário de Trader</b><p class="studio-splash-tagline">Clareza para decidir.<br>Disciplina para evoluir.</p><small class="studio-splash-signature">SEU PROCESSO EM PRIMEIRO LUGAR</small></div>
 <div id="app"></div><div id="sh"></div><div id="lb"></div>
 <nav><button data-tab="home"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg></i>Início</button><button data-tab="trades"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M17 4v16"/><rect x="5" y="8" width="4" height="7" rx="1"/><rect x="15" y="6" width="4" height="9" rx="1"/></svg></i>Trades</button><button data-tab="dia"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></i>Dia</button><button data-tab="stats"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg></i>Stats</button><button data-tab="mais"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></i>Mais</button></nav><button id="fab" data-a="fab" aria-label="Novo trade">＋</button><div id="fabm"><button data-a="new" data-tp="D">📸 Day trade</button><button data-a="new" data-tp="S">🌊 Swing</button><button data-a="new" data-tp="O">🎯 Opção</button></div>
 
-<script src="recursos.js"></script><script src="inicio.js"></script><script src="app.js"></script><script src="interface.js?v=360-experiencia"></script></body></html>
+<script src="recursos.js"></script><script src="inicio.js"></script><script src="app.js"></script><script src="interface.js?v=362-balancos"></script></body></html>
