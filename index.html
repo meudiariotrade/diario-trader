@@ -730,6 +730,35 @@ html:root body.studio-design #pdfprev canvas{width:100%;height:auto;display:bloc
  #app .m355-alerts-link>button{grid-column:2;justify-self:start}
 }
 
+
+/* v356 — Brasil e EUA dentro de Sazonalidade e Sentimento, com ranking e calendário */
+#app .us-rank{padding:16px;margin:16px 0;border-radius:14px;border:1px solid var(--bd);background:var(--bg)}
+#app .us-rank-head{display:flex;gap:10px;justify-content:space-between;align-items:start;margin-bottom:12px}
+#app .us-rank-head h3,#app .us-events h3{font-size:17px;letter-spacing:-.015em;margin:0 0 5px;color:var(--tx)}
+#app .us-rank-head p,#app .us-events>p{font-size:12px;color:var(--mut);line-height:1.55;margin:0}
+#app .us-rank-head>span{font-size:10px;color:var(--mut);white-space:nowrap}
+#app .us-rank-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#app .us-rank-item{min-width:0;display:block;text-align:left;padding:11px;border:1px solid var(--bd);border-radius:11px;background:var(--card);color:var(--tx);cursor:pointer;font:inherit}
+#app .us-rank-item.selected{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 7%,var(--card))}
+#app .us-rank-label{display:flex;gap:7px;justify-content:space-between;align-items:center;font-size:12px;line-height:1.4}
+#app .us-rank-label b{min-width:0}#app .us-rank-label strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+#app .us-rank-bar{display:block;height:6px;border-radius:10px;background:var(--bd);margin:9px 0 7px;overflow:hidden}
+#app .us-rank-bar i{display:block;height:100%;background:var(--ac);border-radius:10px}
+#app .us-rank-item small{color:var(--mut);font-size:10px;line-height:1.45;display:block}
+#app .us-extra-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+#app .us-extra-kpis>div{min-width:0;border:1px solid var(--bd);border-radius:10px;padding:12px;background:var(--bg)}
+#app .us-extra-kpis small{display:block;color:var(--mut);font-size:11px;line-height:1.4}
+#app .us-extra-kpis b{display:block;font:700 16px/1.4 system-ui,sans-serif;margin-top:6px;color:var(--tx);overflow-wrap:anywhere}
+#app .us-events{border:1px solid var(--bd);border-radius:16px;padding:18px;background:var(--card)}
+#app .us-events-filter{display:flex;justify-content:flex-end;margin-top:12px}
+#app .us-events-filter label{max-width:260px;width:100%}
+#app .us-event-table td:nth-child(2){font-weight:600}
+#app .us-event-themes{border-left:3px solid var(--ac);padding:12px 15px;background:var(--bg);border-radius:8px;margin:15px 0;font-size:13px;line-height:1.6}
+#app .us-event-themes p{margin:8px 0;color:var(--mut)}
+#app .us-event-sources{display:flex;flex-wrap:wrap;gap:8px}
+#app .us-event-sources a{display:inline-flex;align-items:center;border:1px solid var(--bd);border-radius:9px;padding:10px 12px;font:600 12px/1.4 system-ui,sans-serif}
+@media(max-width:680px){#app .us-rank{padding:12px}#app .us-rank-grid{grid-template-columns:minmax(0,1fr)}#app .us-rank-head{flex-wrap:wrap}#app .us-extra-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#app .us-events{padding:12px}}
+
 </style></head><body><div id="splash"><img class="lg" src="icon-512.png?v=319" alt="Diário Trader" width="128" height="128" style="object-fit:contain;border-radius:24px"><b>Diário de Trader</b><p class="studio-splash-tagline">Clareza para decidir.<br>Disciplina para evoluir.</p><small class="studio-splash-signature">SEU PROCESSO EM PRIMEIRO LUGAR</small></div>
 <div id="app"></div><div id="sh"></div><div id="lb"></div>
 <nav><button data-tab="home"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg></i>Início</button><button data-tab="trades"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M17 4v16"/><rect x="5" y="8" width="4" height="7" rx="1"/><rect x="15" y="6" width="4" height="9" rx="1"/></svg></i>Trades</button><button data-tab="dia"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></i>Dia</button><button data-tab="stats"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg></i>Stats</button><button data-tab="mais"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></i>Mais</button></nav><button id="fab" data-a="fab" aria-label="Novo trade">＋</button><div id="fabm"><button data-a="new" data-tp="D">📸 Day trade</button><button data-a="new" data-tp="S">🌊 Swing</button><button data-a="new" data-tp="O">🎯 Opção</button></div>
