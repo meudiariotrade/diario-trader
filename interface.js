@@ -1933,7 +1933,7 @@ const logado=()=>{try{return !!(typeof SESS!=='undefined'&&SESS&&SESS.uid&&cfg()
 
 function ensureOwner(){
  const next=ownerKey();if(next===aulaOwner)return;aulaOwner=next;
- para();P.on=0;P.a=null;P.dados={};P.aiImgs={};P.aiBusy=0;neuralStop();P.nAudio={};document.getElementById('aup')?.remove();document.getElementById('au338-modal')?.remove();document.getElementById('auModal')?.remove();document.documentElement.classList.remove('au-aberto');
+ para();P.on=0;P.a=null;P.dados={};P.aiImgs={};P.aiBusy=0;neuralStop();piperRelease();P.nAudio={};document.getElementById('aup')?.remove();document.getElementById('au338-modal')?.remove();document.getElementById('auModal')?.remove();document.documentElement.classList.remove('au-aberto');
  clearTimeout(salvaPos.t);AU.lista=null;AU.busy=0;AU.err='';AU.ts=0;
  if(typeof G!=='undefined'){G.aberto=0;G.livros=null;G.sel='';G.caps={};G.manual='';G.numero='';G.busy=0;G.msg='';G.erro='';G.pdfTask?.destroy?.();G.pdfTask=null;G.request?.abort();G.request=null}
 }
@@ -2073,7 +2073,7 @@ async function abre(id){
   document.body.insertAdjacentHTML('beforeend',playerHtml());document.documentElement.classList.add('au-aberto');
   cena(P.i,0);
 }
-function fecha(){neuralStop();document.getElementById('au338-modal')?.remove();P.aiBusy=0;P.aiImgs={};document.getElementById('au336-map')?.remove();tvFecha();para();salvaPos();P.on=0;P.a=null;const e=document.getElementById('aup');e&&e.remove();document.documentElement.classList.remove('au-aberto');soltaTela();const y=scrollY;render();scrollTo(0,y)}
+function fecha(){piperRelease();neuralStop();document.getElementById('au338-modal')?.remove();P.aiBusy=0;P.aiImgs={};document.getElementById('au336-map')?.remove();tvFecha();para();salvaPos();P.on=0;P.a=null;const e=document.getElementById('aup');e&&e.remove();document.documentElement.classList.remove('au-aberto');soltaTela();const y=scrollY;render();scrollTo(0,y)}
 function playerHtml(){
   const a=P.a,vel=lsg(LS_VEL,0.95);
   return `<div class="aup" id="aup" role="dialog" aria-label="Aula ${a.numero}">
@@ -2082,7 +2082,7 @@ function playerHtml(){
 <div class="aup-cap" id="aupcap"></div>
 <div class="aup-prog" id="aupprog">${a.r.cenas.map((c,k)=>`<i data-aucena="${k}" title="${h(c.titulo||'')}"></i>`).join('')}</div>
 <div class="aup-ctl"><button data-auprev="1" aria-label="Cena anterior">${IC.prev}</button><button class="aup-pp" data-aupp="1" aria-label="Tocar">${IC.play}</button><button data-aunext="1" aria-label="Próxima cena">${IC.next}</button>
-<button data-autv="1" class="aup-tv-btn" title="Explorar o exemplo no TradingView" aria-label="Abrir gráfico no TradingView">📈 Gráfico</button><button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden role="dialog" aria-modal="true" aria-label="Opções e narração da aula"><div class="au348-opt-head"><div><strong>🎙️ Narração</strong><small>Escolha como ouvir esta cena</small></div><button type="button" data-au348close="1" aria-label="Fechar opções">✕</button></div><div class="au348-first"><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><button type="button" data-auvisualmap="1" class="au336-map-btn">🗺️ Mapa visual</button><button type="button" data-au337gerar="1" class="au337-gen-btn">🎨 Gerar imagem desta cena</button><button type="button" data-au338diag="1" class="au338-diag-btn">🧪 Testar aulas</button></div><div class="au339-voices"><div class="au348-mode-tabs" role="group" aria-label="Modo de narração"><button type="button" data-au348mode="local" aria-pressed="${lsg(LS_NMODE,"local")==="local"}">📱 Voz do aparelho</button><button type="button" data-au348mode="neural" aria-pressed="${lsg(LS_NMODE,"local")==="neural"}">✨ Voz neural IA</button><button type="button" data-au348mode="off" aria-pressed="${lsg(LS_NMODE,"local")==="off"}">🔇 Sem voz</button></div><select id="au339mode" hidden aria-hidden="true"><option value="local">Local</option><option value="neural" ${lsg(LS_NMODE,"local")==="neural"?"selected":""}>Neural</option><option value="off" ${lsg(LS_NMODE,"local")==="off"?"selected":""}>Sem narração</option></select><label class="au348-neural-label">Voz da IA <select id="au339voice">${[["Kore","Kore · clara"],["Charon","Charon · grave"],["Aoede","Aoede · suave"],["Fenrir","Fenrir · encorpada"]].map(([id,label])=>`<option value="${id}" ${lsg(LS_NVOICE,"Kore")===id?"selected":""}>${label}</option>`).join("")}</select></label><div class="au348-native"><strong>Áudio neural salvo (alternativa para iPhone)</strong><audio id="au348native" controls preload="none" playsinline aria-label="Ouvir áudio neural salvo da cena"></audio><small id="au348native-note">Quando houver áudio salvo, toque diretamente no play acima. A reprodução direta não sincroniza as ilustrações.</small></div><span id="au339status" role="status" aria-live="polite">Áudio de IA é gerado sob demanda, com custo de API e limite diário.</span><div class="au348-actions"><button type="button" data-au339gerar="1">🎙️ Gerar voz neural desta cena</button><button type="button" data-au340resume="1" class="au340-resume">▶ Voltar à aula</button></div></div><span id="au337status" class="au337-status" role="status" aria-live="polite"></span><label class="au336-opt"><input type="checkbox" id="au336-auto" ${lsg("aulas-motor-visual-v336",true)?"checked":""}> Visuais por fala</label><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
+<button data-autv="1" class="aup-tv-btn" title="Explorar o exemplo no TradingView" aria-label="Abrir gráfico no TradingView">📈 Gráfico</button><button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden role="dialog" aria-modal="true" aria-label="Opções e narração da aula"><div class="au348-opt-head"><div><strong>🎙️ Narração</strong><small>Escolha como ouvir esta cena</small></div><button type="button" data-au348close="1" aria-label="Fechar opções">✕</button></div><div class="au348-first"><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><button type="button" data-auvisualmap="1" class="au336-map-btn">🗺️ Mapa visual</button><button type="button" data-au337gerar="1" class="au337-gen-btn">🎨 Gerar imagem desta cena</button><button type="button" data-au338diag="1" class="au338-diag-btn">🧪 Testar aulas</button></div><div class="au339-voices"><div class="au348-mode-tabs" role="group" aria-label="Modo de narração"><button type="button" data-au348mode="local" aria-pressed="${lsg(LS_NMODE,"local")==="local"}">📱 Voz do aparelho</button><button type="button" data-au348mode="piper" aria-pressed="${lsg(LS_NMODE,"local")==="piper"}">🎧 Piper gratuito</button><button type="button" data-au348mode="off" aria-pressed="${lsg(LS_NMODE,"local")==="off"}">🔇 Sem voz</button></div><select id="au339mode" hidden aria-hidden="true"><option value="local">Local</option><option value="piper" ${lsg(LS_NMODE,"local")==="piper"?"selected":""}>Piper</option><option value="off" ${lsg(LS_NMODE,"local")==="off"?"selected":""}>Sem narração</option></select><div class="au349-piper"><strong>🎧 Piper TTS · gratuito e offline</strong><small>Gere a voz no computador, depois importe os arquivos WAV aqui. Sem API paga ou cobrança por cena.</small><div class="au349-piper-actions"><button type="button" data-au349export="1">⬇ Exportar roteiro da aula</button><label class="au349-import-btn" for="au349files">📂 Importar áudios WAV</label><input id="au349files" type="file" accept="audio/wav,.wav" multiple hidden></div><small id="au349status" role="status" aria-live="polite">Nenhum áudio Piper carregado nesta cena.</small><audio id="au349native" controls preload="metadata" playsinline aria-label="Ouvir áudio Piper da cena" hidden></audio></div><span id="au339status" hidden></span><div class="au348-actions"><button type="button" data-au349test="1">▶ Ouvir Piper desta cena</button><button type="button" data-au340resume="1" class="au340-resume">▶ Voltar à aula</button></div></div></div><span id="au337status" class="au337-status" role="status" aria-live="polite"></span><label class="au336-opt"><input type="checkbox" id="au336-auto" ${lsg("aulas-motor-visual-v336",true)?"checked":""}> Visuais por fala</label><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
 <select id="aupvoz" aria-label="Voz">${temVoz()?vozOpts():'<option>sem voz</option>'}</select>${temVoz()?'<button data-auvozteste="1" aria-label="Ouvir voz selecionada" style="font-size:12px;width:auto;padding:8px">Ouvir voz</button>':''}</div>
 <div class="aup-idx" id="aupidx" hidden>${a.r.cenas.map((c,k)=>`<button data-aucena="${k}"><span>${k+1}</span>${h(c.titulo||'Cena '+(k+1))}</button>`).join('')}${a.local?'':'<button class="aup-del" data-audel="1"><span>✕</span>Apagar esta aula</button>'}</div>
 </div>`;
@@ -2100,7 +2100,7 @@ function cena(i,j){
   document.querySelectorAll('#aupprog i').forEach((e,k)=>{e.className=k<P.i?'ok':k===P.i?'at':''});
   P.vis='';desenha(-1);
   if(c.vis&&c.vis.dados&&!P.dados[P.i])buscaDados(P.i);
-  au337Consultar(P.i);neuralConsultar(P.i);au348RefreshVoice();
+  au337Consultar(P.i);if(lsg(LS_NMODE,'local')==='piper')piperLoad(P.i);else neuralConsultar(P.i);au348RefreshVoice();
   salvaPos();
   if(P.play)P.t=setTimeout(fala,350);else legenda(null);
 }
@@ -2133,7 +2133,7 @@ function fala(){
 function tocar(){
   if(!P.a)return;
   if(P.i>=P.a.r.cenas.length-1&&P.j>=((falasCena(P.a.r.cenas[P.i])||[]).length))cena(0,0);
-  const nativeAudio=document.getElementById("au348native");if(nativeAudio)nativeAudio.pause();
+  const nativeAudio=document.getElementById("au348native");if(nativeAudio)nativeAudio.pause();document.getElementById('au349native')?.pause();
   P.play=1;botao();prendeTela();
   // iOS: a primeira fala precisa nascer do toque
   try{if(!neuralMode()&&temVoz()){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}}catch{}
@@ -2296,10 +2296,10 @@ async function au337Gerar(){
 }
 /* v339 — voz neural: áudio armazenado por cena, nunca gerado automaticamente. */
 const neuralVoice=()=>lsg(LS_NVOICE,'Kore');
-const neuralMode=()=>lsg(LS_NMODE,'local')==='neural';
+const neuralMode=()=>['neural','piper'].includes(lsg(LS_NMODE,'local'));
 function neuralStop(){const a=P.nEl;P.nEl=null;if(a){a.onended=null;a.ontimeupdate=null;a.onerror=null;try{a.pause();a.removeAttribute('src');a.load()}catch{}}}
 function neuralStatus(t){const e=document.getElementById('au339status');if(e)e.textContent=String(t)}
-function neuralKey(i){return i+'|'+neuralVoice()}
+function neuralKey(i){return lsg(LS_NMODE,'local')==='piper'?'piper|'+String(P.a?.id||'')+'|'+i:i+'|'+neuralVoice()}
 function au348RefreshVoice(){
  const mode=lsg(LS_NMODE,'local'),native=document.getElementById('au348native'),note=document.getElementById('au348native-note');
  document.querySelectorAll('[data-au348mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.au348mode===mode)));
@@ -2307,6 +2307,10 @@ function au348RefreshVoice(){
  const item=P.nAudio[neuralKey(P.i)];const ok=!!item&&item.expira>Date.now();
  if(native){if(ok){if(native.dataset.audioKey!==neuralKey(P.i)||native.dataset.audioUrl!==item.url){native.pause();native.src=item.url;native.dataset.audioKey=neuralKey(P.i);native.dataset.audioUrl=item.url}}else{native.pause();native.removeAttribute('src');native.removeAttribute('data-audio-key');native.removeAttribute('data-audio-url')}native.hidden=!ok;}
  if(note)note.textContent=ok?'Reprodução direta: toque no ▶ do áudio. A imagem e a legenda não são sincronizadas neste modo.':'Áudio neural desta cena ainda não está disponível. Gere a voz ou use a voz do aparelho.';
+ const pv=document.getElementById('au349native'),ps=document.getElementById('au349status'),isPiper=mode==='piper';
+ if(pv){const pi=P.nAudio[neuralKey(P.i)];if(isPiper&&pi?.url){if(pv.dataset.key!==neuralKey(P.i)){pv.pause();pv.src=pi.url;pv.dataset.key=neuralKey(P.i)}pv.hidden=false}else{pv.pause();pv.removeAttribute('src');pv.dataset.key='';pv.hidden=true}}
+ if(ps)ps.textContent=isPiper?(P.nAudio[neuralKey(P.i)]?.url?'Áudio Piper pronto nesta cena. Toque em Voltar à aula ou use o player abaixo.':'Ainda sem áudio Piper nesta cena. Importe os arquivos WAV gerados no PC.'):'Piper é gratuito; selecione Piper acima para usar.';
+
 }
 async function neuralReq(acao,i){
  const owner=ownerKey(),lesson=P.a,s=cfg();
@@ -2321,7 +2325,7 @@ function neuralSave(i,d){if(d?.existe&&typeof d.url==='string'){
  try{const u=new URL(d.url);if(u.protocol!=='https:'||!u.hostname.endsWith('.supabase.co')||!u.pathname.includes('/storage/v1/object/sign/aulas-audio/'))return}catch{return}
  P.nAudio[neuralKey(i)]={url:d.url,expira:Date.now()+25*60000};if(P.i===i){au348RefreshVoice();neuralStatus("Áudio neural salvo nesta cena. Pode ouvir diretamente ou voltar à aula.")}
 }}
-async function neuralConsultar(i){if(!P.on||!P.a||P.a.local||!logado()||P.nAudio[neuralKey(i)]?.expira>Date.now())return;
+async function neuralConsultar(i){if(lsg(LS_NMODE,'local')==='piper')return;if(!P.on||!P.a||P.a.local||!logado()||P.nAudio[neuralKey(i)]?.expira>Date.now())return;
  try{const d=await neuralReq('consultar',i);neuralSave(i,d)}catch{/* a narração local continua disponível */}}
 async function neuralGerar(){
  if(P.nBusy)return;const i=P.i;
@@ -2340,9 +2344,24 @@ function neuralPlay(i,L){
   if(j!==last){last=j;P.j=j;desenha(L[j].k);legenda(L[j])}};
  audio.ontimeupdate=visual;audio.onloadedmetadata=()=>{if(P.j>0){const total=L.reduce((a,x)=>a+Math.max(1,x.t.length),0),before=L.slice(0,P.j).reduce((a,x)=>a+Math.max(1,x.t.length),0);audio.currentTime=Math.min(audio.duration*.99,audio.duration*before/total)}};
  audio.onended=()=>{if(tk!==P.tok||!P.play)return;neuralStop();P.j=L.length;P.t=setTimeout(fala,250)};
- audio.onerror=()=>{if(tk!==P.tok)return;neuralStatus('Áudio de IA indisponível. Usando a voz do aparelho.');delete P.nAudio[neuralKey(i)];neuralStop();P.t=setTimeout(fala,100)};
+ audio.onerror=()=>{if(tk!==P.tok)return;neuralStatus('Áudio indisponível. Alternando para a voz do aparelho.');delete P.nAudio[neuralKey(i)];neuralStop();lss(LS_NMODE,'local');au348RefreshVoice();P.t=setTimeout(fala,100)};
  audio.play().catch(e=>{if(tk!==P.tok)return;neuralStop();lss(LS_NMODE,'local');au348RefreshVoice();neuralStatus('O Safari não reproduziu a voz neural ('+(e?.name||'erro')+'). Mudei para a voz do aparelho. Também é possível tocar diretamente no áudio salvo, em Opções.');toast?.('Áudio neural bloqueado. Tente voz do aparelho ou áudio salvo nas Opções.');P.t=setTimeout(fala,50)});return true;
 }
+/* v349 — Piper: geração gratuita acontece no computador; este app importa WAVs em IndexedDB.
+   Sem API externa, sem custo por cena e sem envio de arquivos a terceiros. */
+const PIPER_DB='diario-aulas-piper-v349';
+function piperDB(){return new Promise((resolve,reject)=>{if(!window.indexedDB)return reject(Error('Este navegador não oferece armazenamento offline.'));const q=indexedDB.open(PIPER_DB,1);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains('audio'))q.result.createObjectStore('audio')};q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error||Error('Erro ao abrir armazenamento'))})}
+async function piperStore(key,file){const db=await piperDB();return new Promise((ok,no)=>{const tx=db.transaction('audio','readwrite');tx.objectStore('audio').put(file,key);tx.oncomplete=()=>{db.close();ok()};tx.onerror=()=>{db.close();no(tx.error)}})}
+async function piperRead(key){const db=await piperDB();return new Promise((ok,no)=>{const tx=db.transaction('audio','readonly');const rq=tx.objectStore('audio').get(key);rq.onsuccess=()=>{db.close();ok(rq.result)};rq.onerror=()=>{db.close();no(rq.error)}})}
+function piperStatus(msg){const e=document.getElementById('au349status');if(e)e.textContent=msg}
+function piperCacheKey(i){return 'piper|'+String(P.a?.id||'')+'|'+i}
+function piperRelease(){for(const [k,item] of Object.entries(P.nAudio||{})){if(k.startsWith('piper|')&&item.url?.startsWith('blob:')){URL.revokeObjectURL(item.url);delete P.nAudio[k]}}}
+async function piperLoad(i){if(!P.on||!P.a)return;const lesson=P.a.id,key=piperCacheKey(i);try{if(P.nAudio[key]?.url){au348RefreshVoice();return}const blob=await piperRead(String(lesson)+'|'+i);if(!blob||!P.on||P.a?.id!==lesson)return;P.nAudio[key]={url:URL.createObjectURL(blob),expira:Number.MAX_SAFE_INTEGER};if(P.i===i){au348RefreshVoice();piperStatus('Áudio Piper pronto nesta cena. Toque em Voltar à aula.')}}catch(e){piperStatus('Armazenamento offline indisponível: '+String(e.message||e).slice(0,90))}}
+function piperExport(){if(!P.a?.r?.cenas)return;const a=P.a;const cenas=a.r.cenas.map((c,i)=>({cena:i+1,titulo:c.titulo||'Cena '+(i+1),texto:(c.fala||c.falaSem||[]).join(' ').replace(/\{\w+\}/g,'').trim()}));
+ const body=JSON.stringify({formato:'diario-piper-v349',aula_id:String(a.id),titulo:String(a.titulo||''),cenas},null,2);const url=URL.createObjectURL(new Blob([body],{type:'application/json'}));const x=document.createElement('a');x.href=url;x.download='roteiro-piper-aula-'+(a.numero||'')+'.json';document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);piperStatus('Roteiro exportado. Gere os WAVs no computador e importe os arquivos aqui.')}
+async function piperImport(files){if(!P.a||!files?.length)return;para();const id=String(P.a.id);let ok=0,skip=0;const list=[...files];if(list.length>250){piperStatus('Selecione no máximo 250 arquivos por vez.');return}
+ for(const f of list){const m=/^cena[-_ ]?(\d{1,3})\.wav$/i.exec(f.name);if(!m||f.size<44||f.size>30*1024*1024){skip++;continue}const i=+m[1]-1;if(i<0||i>=P.a.r.cenas.length){skip++;continue}try{await piperStore(id+'|'+i,f);const key=piperCacheKey(i);if(P.nAudio[key]?.url?.startsWith('blob:'))URL.revokeObjectURL(P.nAudio[key].url);delete P.nAudio[key];ok++}catch{skip++}}
+ await piperLoad(P.i);piperStatus(ok+' cena(s) importada(s) para esta aula.'+(skip?' '+skip+' ignorada(s).':'')+' Arquivos armazenados neste navegador.');}
 /* v338 — central de homologação sem gerar imagens nem consumir a cota de IA. */
 function au338RenderDiag(d){
  const li=(name,ok,tip)=>`<li class="au338-check"><span aria-hidden="true">${ok?'✅':'⚠️'}</span><span><b>${h(name)}</b><small>${h(tip)}</small></span></li>`;
@@ -2527,8 +2546,10 @@ document.addEventListener('click',e=>{
   if(q('[data-au338graph]')){document.getElementById('au338-modal')?.remove();tvAbrir();return}
   if(q('[data-au338diag]')){au338Diagnostico();return}
   if(q('[data-au348close]')){const op=document.getElementById('aupoptions');if(op)op.hidden=true;document.querySelector('[data-auoptions]')?.setAttribute('aria-expanded','false');return}
-  if(b=q('[data-au348mode]')){const m=b.dataset.au348mode;lss(LS_NMODE,m);au348RefreshVoice();if(P.play){para();}return}
+  if(b=q('[data-au348mode]')){const m=b.dataset.au348mode;lss(LS_NMODE,m);if(P.play)para();if(m==='piper')piperLoad(P.i);au348RefreshVoice();return}
   if(q('[data-au340resume]')){const op=document.getElementById('aupoptions');if(op){op.hidden=true;document.querySelector('[data-auoptions]')?.setAttribute('aria-expanded','false')}const stage=document.querySelector('#aup .aup-stage');if(stage)stage.scrollTop=0;if(!P.play)tocar();return}
+ if(q('[data-au349export]')){piperExport();return}
+ if(q('[data-au349test]')){para();const a=document.getElementById('au349native');if(a&&!a.hidden)a.play().catch(()=>piperStatus('O iPhone bloqueou o play. Toque diretamente no controle do áudio.'));else piperStatus('Importe o WAV desta cena para testar.');return}
  if(q('[data-au339gerar]')){neuralGerar();return}
   if(q('[data-au337gerar]')){au337Gerar();return}
   if(q('[data-auvisualmap]')){para();document.getElementById('aupoptions').hidden=true;au336Mapa();return}
@@ -2546,13 +2567,14 @@ document.addEventListener('click',e=>{
 },true);
 document.addEventListener('change',e=>{
   if(e.target.matches('#au-tv-symbol,#au-tv-interval')){tvCarregar();return}
+  if(e.target.id==='au349files'){piperImport(e.target.files).finally(()=>{e.target.value=''});return}
   if(e.target.id==='au336-auto'){lss('aulas-motor-visual-v336',!!e.target.checked);P.vis='';if(P.on)desenha(P.j?((falasCena(P.a.r.cenas[P.i])||[])[P.j]||{}).k:-1);return}
-  if(e.target.id==='au339mode'){lss(LS_NMODE,e.target.value);au348RefreshVoice();if(P.play)cena(P.i,P.j);return}
+  if(e.target.id==='au339mode'){lss(LS_NMODE,e.target.value);if(e.target.value==='piper')piperLoad(P.i);au348RefreshVoice();if(P.play)cena(P.i,P.j);return}
   if(e.target.id==='au339voice'){lss(LS_NVOICE,e.target.value);neuralStop();au348RefreshVoice();neuralConsultar(P.i);if(P.play)cena(P.i,P.j);return}
   if(e.target.id==='aupvel'){lss(LS_VEL,+e.target.value);if(P.play){const j=P.j;cena(P.i,j)}}
   if(e.target.id==='aupvoz'){lss(LS_VOZ,e.target.value);if(P.play){cena(P.i,P.j)}}
 });
-document.addEventListener('play',e=>{if(e.target?.id==='au348native'&&P.play)para()},true);
+document.addEventListener('play',e=>{if(['au348native','au349native'].includes(e.target?.id)&&P.play)para()},true);
 document.addEventListener('error',e=>{if(e.target?.id==='au348native')neuralStatus('O iPhone não conseguiu reproduzir o arquivo salvo. Selecione Voz do aparelho e use ▶ no player.')},true);
 document.addEventListener('keydown',e=>{if(document.getElementById('au336-map')){if(e.key==='Escape'){e.preventDefault();document.getElementById('au336-map')?.remove()}return}if(document.getElementById('au-tradingview')){if(e.key==='Escape'){e.preventDefault();tvFecha()}return}if(!P.on)return;if(document.getElementById('au-study-panel')){if(e.key==='Escape'){document.getElementById('au-study-panel').remove();document.querySelector('[data-austnotes]')?.focus()}return}if(e.target.closest('input,textarea,select,[contenteditable=true]')||document.getElementById('auModal'))return;if(e.key==='Escape')fecha();else if(e.key===' '){e.preventDefault();P.play?para():tocar()}else if(e.key==='ArrowRight')cena(P.i+1,0);else if(e.key==='ArrowLeft')cena(P.i-1,0)});
 
@@ -4215,4 +4237,14 @@ win.TraderTV343={mount,stop:()=>{stopAudio();stopLive();paint()},state};
 #aup .au337-status{width:100%;font-size:11px}
 #aup .aup-ctl{z-index:3!important}
 @media(max-width:390px){#aup .au348-mode-tabs button{font-size:11px!important}#aup .aup-options:not([hidden]){padding:12px 11px calc(12px + env(safe-area-inset-bottom,0px))!important}}
+
+/* v349 — Piper gratuito */
+#aup .au349-piper{display:grid;gap:10px;width:100%;border:1px solid #35617a;background:#102b3c;border-radius:12px;padding:12px;box-sizing:border-box}
+#aup .au349-piper strong{font-size:14px;color:#edf8ff}#aup .au349-piper small{font-size:12px;color:#b4d0df;line-height:1.5}
+#aup .au349-piper-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#aup .au349-piper-actions button,#aup .au349-import-btn{min-height:48px;border:1px solid #46839a;background:#184459;color:#efffff;border-radius:10px;padding:11px 6px;font-size:12px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;box-sizing:border-box}
+#aup #au349native{width:100%;max-width:100%;height:40px}#aup #au349native[hidden]{display:none!important}
+#aup .au348-native,#aup .au348-neural-label{display:none!important}
+#aup .aup-options:not([hidden]){max-height:78dvh!important}
+@media(max-width:480px){#aup .au349-piper-actions{grid-template-columns:1fr 1fr}}
 `;document.head.appendChild(st)})();
