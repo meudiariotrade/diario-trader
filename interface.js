@@ -1294,16 +1294,41 @@
   for(const [key,value]of Object.entries(consolidated))if(!['resumo_executivo','conclusao','riscos','hipoteses','monitorar','identificacao'].includes(key))analysis(key.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()),value);
   for(const a of d.positions){const position=a.position,report=a.report,meta={...a.meta,fs:{...(a.meta?.fs||{}),...(report?.dados?.fundamentos||{})}},detail=R.detail(position,input.ledger||[],d.asOf);page(position.tk+'  |  Pesquisa do ativo',(position.nome||a.meta?.nome||'')+' · '+(position.cl||'Classe não informada')+' · '+(position.moeda||detail.unit),true);
    table(['Posição','Valor','Fundamento','Indicador'],Array.from({length:Math.max(6,root.TraderReports.fundamentalRows(position,meta).length)},(_,i)=>{const holding=[['Quantidade',num(position.q,4)],['Cotação',position.tem?num(position.pa):'Sem cotação'],['Preço médio',num(position.pm,4)],['Valor BRL',money(a.value)],['Proventos do ciclo',num(detail.income)+' '+detail.unit],['Peso coberto',a.value!=null&&d.total>0?pct(a.value/d.total*100):'Indisponível']][i]||['',''];const f=root.TraderReports.fundamentalRows(position,meta)[i]||['',''];return [...holding,...f]}),[24,23,30,23]);
-   note('Cotação: '+(position.pxEm||'sem data')+'. Referência contábil da fonte: '+(report?.dados?.fundamentos?.data_ultimo_trimestre_na_fonte||meta.fs.ref||meta.fs.data_referencia||'não confirmada')+'. Proventos do ciclo desde '+(detail.cycleStart||'não identificado')+'. Preço médio é cadastral; ajustes por renda são gerenciais.');
+   // v364: o consolidado pode ter série trimestral mais nova que o relatório individual salvo.
+   // Ex.: consolidado com 3T26, mas relatório do ativo gerado antes sem os trimestres.
    const f=report?.dados?.fundamentos;
-   const quarters=Array.isArray(f?.balancos_trimestrais_disponiveis)?f.balancos_trimestrais_disponiveis.filter(r=>r&&/^\d{4}-\d{2}-\d{2}$/.test(String(r.periodo||''))&&(typeof r.receita==='number'||typeof r.lucro==='number')).slice(0,6):[];
+   const selectedQuarterSource=(Array.isArray(input.selected?.dados?.balancos_trimestrais_da_fonte)
+     ?input.selected.dados.balancos_trimestrais_da_fonte:[])
+     .find(r=>String(r?.ticker||'').toUpperCase()===String(position.tk||'').toUpperCase());
+   const consolidatedQuarters=Array.isArray(selectedQuarterSource?.dados_trimestrais)?selectedQuarterSource.dados_trimestrais:[];
+   const individualQuarters=Array.isArray(f?.balancos_trimestrais_disponiveis)?f.balancos_trimestrais_disponiveis:[];
+   const seenQuarterPeriods=new Set();
+   const quarters=[...consolidatedQuarters,...individualQuarters]
+     .filter(r=>r&&/^\d{4}-\d{2}-\d{2}$/.test(String(r.periodo||''))&&(Number.isFinite(r.receita)||Number.isFinite(r.lucro)))
+     .sort((a,b)=>String(b.periodo).localeCompare(String(a.periodo)))
+     .filter(r=>{if(seenQuarterPeriods.has(r.periodo))return false;seenQuarterPeriods.add(r.periodo);return true})
+     .slice(0,8);
+   const latestQuarterDate=quarters[0]?.periodo||f?.data_ultimo_trimestre_na_fonte||meta.fs.ref||meta.fs.data_referencia||'não confirmada';
+   note('Cotação: '+(position.pxEm||'sem data')+'. Referência contábil da fonte: '+latestQuarterDate+'. Proventos do ciclo desde '+(detail.cycleStart||'não identificado')+'. Preço médio é cadastral; ajustes por renda são gerenciais.');
    if(position.cl==='acao'||position.cl==='bdr'||position.cl==='acao_ext'){
     heading('Resultados trimestrais disponíveis');
-    if(quarters.length){table(['Encerramento','Receita','Lucro líquido','Moeda'],quarters.map(r=>[String(r.periodo),num(r.receita),num(r.lucro),String(r.moeda||f?.moeda_contabil||'não identificada')]),[20,30,30,20]);note('Séries trimestrais fornecidas pelo Yahoo Finance (fonte secundária). A data é de encerramento do período, não de publicação. A correspondência com o último release oficial de RI/CVM NÃO foi verificada automaticamente.');}
+    if(quarters.length){
+     const quarterCurrency=selectedQuarterSource?.moeda||f?.moeda_contabil||'moeda contábil não confirmada';
+     const quarterName=p=>{const m=Number(p.slice(5,7));return Math.ceil(m/3)+'T'+p.slice(2,4)};
+     table(['Trimestre','Encerramento','Receita','Lucro líquido','Moeda'],quarters.map(r=>[quarterName(r.periodo),String(r.periodo),num(r.receita),num(r.lucro),String(r.moeda||quarterCurrency)]),[14,20,25,25,16]);
+     note('Último trimestre encontrado para '+position.tk+': '+quarterName(quarters[0].periodo)+'. Fonte: Yahoo Finance (série secundária capturada no relatório). A data é de encerramento, não de divulgação; confira o release na CVM/RI.');
+     // Gráficos trimestrais: dados salvos, priorizados antes dos gráficos anuais históricos.
+     const W={p,heading:(title)=>heading(title),text:(value)=>note(value)};
+     const chronological=[...quarters].reverse();
+     if(chronological.some(r=>Number.isFinite(r.receita)))
+       root.TraderReports.researchChart(W,chronological.map(r=>({date:quarterName(r.periodo),value:r.receita})),'Receita trimestral · exercícios recentes',quarterCurrency,'bar');
+     if(chronological.some(r=>Number.isFinite(r.lucro)))
+       root.TraderReports.researchChart(W,chronological.map(r=>({date:quarterName(r.periodo),value:r.lucro})),'Lucro líquido trimestral · exercícios recentes',quarterCurrency,'bar');
+    }
     else note('Série trimestral ainda não identificada neste relatório salvo. Os exercícios anuais NÃO comprovam a atualização dos balanços de 2026. Gere novo relatório depois da atualização do servidor e confira o RI da empresa.');
    }
    const annual=a.fundamental?.annual?.length?a.fundamental.annual.map(r=>({ano:r.date,receita:r.revenue,lucro:r.profit})):Array.isArray(f?.evolucao_receita_lucro)?f.evolucao_receita_lucro:[];
-   if(annual.length){heading('Demonstrações anuais — exercícios encerrados');table(['Ano','Receita','Lucro líquido'],annual.map(r=>[String(r.ano),num(r.receita),num(r.lucro)]),[20,40,40]);note('Valores históricos anuais; não substituem o último ITR. Moeda contábil: '+(a.fundamental?.financialCurrency||f?.moeda_contabil||'não confirmada')+'.');}
+   if(annual.length){heading('HISTÓRICO ANUAL (não confundir com trimestre recente)');table(['Ano','Receita','Lucro líquido'],annual.map(r=>[String(r.ano),num(r.receita),num(r.lucro)]),[20,40,40]);note('Valores históricos anuais; não substituem o último ITR. Moeda contábil: '+(a.fundamental?.financialCurrency||f?.moeda_contabil||'não confirmada')+'.');}
    if(a.fundamental?.annual?.length){
     const series=a.fundamental.annual;
     const W={p,heading:(title)=>heading(title),text:(value)=>note(value)};
