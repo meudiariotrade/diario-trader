@@ -1914,10 +1914,10 @@
 (function(){
 'use strict';
 if(typeof vEstudos!=='function')return;
-const LS_LISTA='aulas-lista-v1',LS_ROT='aulas-rot-v1:',LS_POS='aulas-pos-v1:',LS_VOZ='aulas-voz',LS_VEL='aulas-vel';
+const LS_LISTA='aulas-lista-v1',LS_ROT='aulas-rot-v1:',LS_POS='aulas-pos-v1:',LS_VOZ='aulas-voz',LS_VEL='aulas-vel',LS_NMODE='aulas-neural-mode',LS_NVOICE='aulas-neural-voice';
 const AU={lista:null,busy:0,err:'',ts:0};
 const IC={"prev": "<svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M6 5h2v14H6zM20 5v14L9 12z\"/></svg>", "next": "<svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M16 5h2v14h-2zM4 5v14l11-7z\"/></svg>", "play": "<svg viewBox=\"0 0 24 24\" width=\"26\" height=\"26\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M7 4v16l13-8z\"/></svg>", "pause": "<svg viewBox=\"0 0 24 24\" width=\"26\" height=\"26\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M6 4h4v16H6zM14 4h4v16h-4z\"/></svg>", "x": "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6L6 18\"/></svg>", "menu": "<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 7h16M4 12h16M4 17h16\"/></svg>"};
-const P={on:0,a:null,i:0,j:0,tok:0,play:0,t:0,wd:0,dados:{},vis:'',wl:null,aiImgs:{},aiBusy:0};
+const P={on:0,a:null,i:0,j:0,tok:0,play:0,t:0,wd:0,dados:{},vis:'',wl:null,aiImgs:{},aiBusy:0,nAudio:{},nEl:null,nBusy:0};
 const h=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ownerKey=()=>window.DIARIO_DEMO?'demo':((typeof SESS!=='undefined'&&SESS&&SESS.uid)||null);
 let aulaOwner=ownerKey();
@@ -1933,7 +1933,7 @@ const logado=()=>{try{return !!(typeof SESS!=='undefined'&&SESS&&SESS.uid&&cfg()
 
 function ensureOwner(){
  const next=ownerKey();if(next===aulaOwner)return;aulaOwner=next;
- para();P.on=0;P.a=null;P.dados={};P.aiImgs={};P.aiBusy=0;document.getElementById('aup')?.remove();document.getElementById('au338-modal')?.remove();document.getElementById('auModal')?.remove();document.documentElement.classList.remove('au-aberto');
+ para();P.on=0;P.a=null;P.dados={};P.aiImgs={};P.aiBusy=0;neuralStop();P.nAudio={};document.getElementById('aup')?.remove();document.getElementById('au338-modal')?.remove();document.getElementById('auModal')?.remove();document.documentElement.classList.remove('au-aberto');
  clearTimeout(salvaPos.t);AU.lista=null;AU.busy=0;AU.err='';AU.ts=0;
  if(typeof G!=='undefined'){G.aberto=0;G.livros=null;G.sel='';G.caps={};G.manual='';G.numero='';G.busy=0;G.msg='';G.erro='';G.pdfTask?.destroy?.();G.pdfTask=null;G.request?.abort();G.request=null}
 }
@@ -2069,11 +2069,11 @@ async function abre(id){
   ensureOwner();const owner=ownerKey();if(P.on)return;let a=(AU.lista||[]).find(x=>x.id===id)||(window.AULAS_LOCAIS||[]).find(x=>x.id===id);
   if(!a)return;
   try{toast&&toast('Abrindo a aula…');const r=await roteiro(a);assertOwner(owner);P.a={...a,r,_owner:owner};}catch(e){toast&&toast('Não abriu: '+(e.message||e));return}
-  P.on=1;P.dados={};P.aiImgs={};P.aiBusy=0;const pos=posDe(a);P.i=pos.fim?0:Math.min(pos.cena||0,P.a.r.cenas.length-1);P.j=0;P.play=0;
+  P.on=1;P.dados={};P.aiImgs={};P.aiBusy=0;P.nAudio={};const pos=posDe(a);P.i=pos.fim?0:Math.min(pos.cena||0,P.a.r.cenas.length-1);P.j=0;P.play=0;
   document.body.insertAdjacentHTML('beforeend',playerHtml());document.documentElement.classList.add('au-aberto');
   cena(P.i,0);
 }
-function fecha(){document.getElementById('au338-modal')?.remove();P.aiBusy=0;P.aiImgs={};document.getElementById('au336-map')?.remove();tvFecha();para();salvaPos();P.on=0;P.a=null;const e=document.getElementById('aup');e&&e.remove();document.documentElement.classList.remove('au-aberto');soltaTela();const y=scrollY;render();scrollTo(0,y)}
+function fecha(){neuralStop();document.getElementById('au338-modal')?.remove();P.aiBusy=0;P.aiImgs={};document.getElementById('au336-map')?.remove();tvFecha();para();salvaPos();P.on=0;P.a=null;const e=document.getElementById('aup');e&&e.remove();document.documentElement.classList.remove('au-aberto');soltaTela();const y=scrollY;render();scrollTo(0,y)}
 function playerHtml(){
   const a=P.a,vel=lsg(LS_VEL,0.95);
   return `<div class="aup" id="aup" role="dialog" aria-label="Aula ${a.numero}">
@@ -2082,7 +2082,7 @@ function playerHtml(){
 <div class="aup-cap" id="aupcap"></div>
 <div class="aup-prog" id="aupprog">${a.r.cenas.map((c,k)=>`<i data-aucena="${k}" title="${h(c.titulo||'')}"></i>`).join('')}</div>
 <div class="aup-ctl"><button data-auprev="1" aria-label="Cena anterior">${IC.prev}</button><button class="aup-pp" data-aupp="1" aria-label="Tocar">${IC.play}</button><button data-aunext="1" aria-label="Próxima cena">${IC.next}</button>
-<button data-autv="1" class="aup-tv-btn" title="Explorar o exemplo no TradingView" aria-label="Abrir gráfico no TradingView">📈 Gráfico</button><button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><button type="button" data-auvisualmap="1" class="au336-map-btn">🗺️ Mapa visual</button><button type="button" data-au337gerar="1" class="au337-gen-btn">🎨 Gerar imagem desta cena</button><button type="button" data-au338diag="1" class="au338-diag-btn">🧪 Testar aulas</button><span id="au337status" class="au337-status" role="status" aria-live="polite"></span><label class="au336-opt"><input type="checkbox" id="au336-auto" ${lsg("aulas-motor-visual-v336",true)?"checked":""}> Visuais por fala</label><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
+<button data-autv="1" class="aup-tv-btn" title="Explorar o exemplo no TradingView" aria-label="Abrir gráfico no TradingView">📈 Gráfico</button><button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><button type="button" data-auvisualmap="1" class="au336-map-btn">🗺️ Mapa visual</button><button type="button" data-au337gerar="1" class="au337-gen-btn">🎨 Gerar imagem desta cena</button><button type="button" data-au338diag="1" class="au338-diag-btn">🧪 Testar aulas</button><div class="au339-voices"><label>Narração <select id="au339mode"><option value="local">Voz do aparelho (grátis)</option><option value="neural" ${lsg(LS_NMODE,"local")==="neural"?"selected":""}>Voz neural de IA (áudio salvo)</option></select></label><label>Voz da IA <select id="au339voice">${[["Kore","Kore · clara"],["Charon","Charon · grave"],["Aoede","Aoede · suave"],["Fenrir","Fenrir · encorpada"]].map(([id,label])=>`<option value="${id}" ${lsg(LS_NVOICE,"Kore")===id?"selected":""}>${label}</option>`).join("")}</select></label><button type="button" data-au339gerar="1">🎙️ Gerar voz neural desta cena</button><span id="au339status" role="status" aria-live="polite">Áudio de IA é gerado sob demanda, com custo de API e limite diário.</span></div><span id="au337status" class="au337-status" role="status" aria-live="polite"></span><label class="au336-opt"><input type="checkbox" id="au336-auto" ${lsg("aulas-motor-visual-v336",true)?"checked":""}> Visuais por fala</label><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
 <select id="aupvoz" aria-label="Voz">${temVoz()?vozOpts():'<option>sem voz</option>'}</select>${temVoz()?'<button data-auvozteste="1" aria-label="Ouvir voz selecionada" style="font-size:12px;width:auto;padding:8px">Ouvir voz</button>':''}</div>
 <div class="aup-idx" id="aupidx" hidden>${a.r.cenas.map((c,k)=>`<button data-aucena="${k}"><span>${k+1}</span>${h(c.titulo||'Cena '+(k+1))}</button>`).join('')}${a.local?'':'<button class="aup-del" data-audel="1"><span>✕</span>Apagar esta aula</button>'}</div>
 </div>`;
@@ -2093,14 +2093,14 @@ try{speechSynthesis.addEventListener('voiceschanged',()=>{const s=document.getEl
 
 function cena(i,j){
   const a=P.a;if(!a)return;
-  P.tok++;clearTimeout(P.t);clearTimeout(P.wd);try{speechSynthesis.cancel()}catch{}
+  P.tok++;clearTimeout(P.t);clearTimeout(P.wd);neuralStop();try{speechSynthesis.cancel()}catch{}
   P.i=Math.max(0,Math.min(i,a.r.cenas.length-1));P.j=j||0;
   const c=a.r.cenas[P.i];
   document.getElementById('aupct').textContent=`${P.i+1}/${a.r.cenas.length} · ${c.titulo||''}`;
   document.querySelectorAll('#aupprog i').forEach((e,k)=>{e.className=k<P.i?'ok':k===P.i?'at':''});
   P.vis='';desenha(-1);
   if(c.vis&&c.vis.dados&&!P.dados[P.i])buscaDados(P.i);
-  au337Consultar(P.i);
+  au337Consultar(P.i);neuralConsultar(P.i);
   salvaPos();
   if(P.play)P.t=setTimeout(fala,350);else legenda(null);
 }
@@ -2115,6 +2115,7 @@ function fala(){
     if(P.i>=P.a.r.cenas.length-1){P.play=0;botao();salvaPos(1);soltaTela();legenda({t:'Fim da aula. ✓'});return}
     P.t=setTimeout(()=>{cena(P.i+1,0)},c.pausa!=null?c.pausa:900);return;
   }
+  if(neuralMode()&&!P.nEl&&neuralPlay(P.i,L))return;
   const f=L[P.j];desenha(f.k);legenda(f);
   const tk=++P.tok,vel=+lsg(LS_VEL,0.95)||0.95;
   const prox=()=>{if(tk!==P.tok)return;clearTimeout(P.wd);P.j++;P.t=setTimeout(fala,f.t.endsWith('?')?900:180)};
@@ -2137,7 +2138,7 @@ function tocar(){
   try{if(temVoz()){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}}catch{}
   clearTimeout(P.t);P.t=setTimeout(fala,120);
 }
-function para(){P.play=0;P.tok++;clearTimeout(P.t);clearTimeout(P.wd);try{speechSynthesis.cancel()}catch{}botao();soltaTela()}
+function para(){P.play=0;P.tok++;clearTimeout(P.t);clearTimeout(P.wd);neuralStop();try{speechSynthesis.cancel()}catch{}botao();soltaTela()}
 function botao(){const b=document.querySelector('.aup-pp');b&&(b.innerHTML=P.play?IC.pause:IC.play,b.setAttribute('aria-label',P.play?'Pausar':'Tocar'))}
 async function prendeTela(){try{if('wakeLock'in navigator&&!P.wl)P.wl=await navigator.wakeLock.request('screen')}catch{}}
 function soltaTela(){try{P.wl&&P.wl.release()}catch{}P.wl=null}
@@ -2288,6 +2289,47 @@ async function au337Gerar(){
  try{const data=await au337Requisicao('gerar',i);au337Salvar(i,data);if(status)status.textContent='Imagem salva! Será reutilizada nas próximas reproduções.';toast?.('Imagem didática gerada e salva.');}
  catch(e){if(status)status.textContent=String(e.message||e).slice(0,160);toast?.('Imagem: '+String(e.message||e).slice(0,100))}
  finally{P.aiBusy=0;if(bot)bot.disabled=false}
+}
+/* v339 — voz neural: áudio armazenado por cena, nunca gerado automaticamente. */
+const neuralVoice=()=>lsg(LS_NVOICE,'Kore');
+const neuralMode=()=>lsg(LS_NMODE,'local')==='neural';
+function neuralStop(){const a=P.nEl;P.nEl=null;if(a){a.onended=null;a.ontimeupdate=null;a.onerror=null;try{a.pause();a.removeAttribute('src');a.load()}catch{}}}
+function neuralStatus(t){const e=document.getElementById('au339status');if(e)e.textContent=String(t)}
+function neuralKey(i){return i+'|'+neuralVoice()}
+async function neuralReq(acao,i){
+ const owner=ownerKey(),lesson=P.a,s=cfg();
+ if(!logado()||!lesson||lesson.local||!SESS?.at||!s?.url||!s?.key)throw Error('Entre na conta e abra uma aula salva no Supabase.');
+ const r=await fetch(s.url+'/functions/v1/aulas-voz',{method:'POST',headers:{'Content-Type':'application/json',apikey:s.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify({acao,aula:lesson.id,cena:i,voz:neuralVoice()}),signal:AbortSignal.timeout(115000)});
+ const d=await r.json().catch(()=>({}));assertOwner(owner);
+ if(!P.on||P.a?.id!==lesson.id)throw Error('A aula foi fechada.');
+ if(!r.ok)throw Error(String(d.error||'Falha ao consultar voz neural.'));
+ return d;
+}
+function neuralSave(i,d){if(d?.existe&&typeof d.url==='string'){
+ try{const u=new URL(d.url);if(u.protocol!=='https:'||!u.hostname.endsWith('.supabase.co')||!u.pathname.includes('/storage/v1/object/sign/aulas-audio/'))return}catch{return}
+ P.nAudio[neuralKey(i)]={url:d.url,expira:Date.now()+25*60000};
+}}
+async function neuralConsultar(i){if(!P.on||!P.a||P.a.local||!logado()||P.nAudio[neuralKey(i)]?.expira>Date.now())return;
+ try{const d=await neuralReq('consultar',i);neuralSave(i,d)}catch{/* a narração local continua disponível */}}
+async function neuralGerar(){
+ if(P.nBusy)return;const i=P.i;
+ if(!P.a||!logado()||P.a.local){neuralStatus('É necessário entrar na conta e abrir uma aula salva.');return}
+ if(!confirm('Gerar a narração desta cena com IA? Pode haver cobrança pelo provedor. O áudio será reutilizado; limite de 8 cenas por dia.'))return;
+ para();P.nBusy=1;const b=document.querySelector('[data-au339gerar]');if(b)b.disabled=true;neuralStatus('Gerando áudio natural…');
+ try{const d=await neuralReq('gerar',i);neuralSave(i,d);lss(LS_NMODE,'neural');const mode=document.getElementById('au339mode');if(mode)mode.value='neural';neuralStatus('Áudio salvo! Toque em ▶ para ouvir a voz neural.');toast?.('Narração neural salva para esta cena.')}
+ catch(e){neuralStatus(String(e.message||e).slice(0,190));toast?.('Voz neural: '+String(e.message||e).slice(0,110))}
+ finally{P.nBusy=0;if(b)b.disabled=false}
+}
+function neuralPlay(i,L){
+ const item=P.nAudio[neuralKey(i)];if(!item||item.expira<Date.now())return false;
+ neuralStop();let audio;try{audio=new Audio(item.url);audio.preload='auto';audio.playbackRate=+lsg(LS_VEL,0.95)||0.95}catch{return false}
+ P.nEl=audio;const tk=++P.tok;let last=-1;
+ const visual=()=>{if(!P.play||tk!==P.tok||P.i!==i||!L.length)return;const total=L.reduce((a,x)=>a+Math.max(1,x.t.length),0);const elapsed=audio.duration>0?audio.currentTime/audio.duration:0;let left=total*elapsed,j=0;for(;j<L.length-1;j++){left-=Math.max(1,L[j].t.length);if(left<0)break}
+  if(j!==last){last=j;P.j=j;desenha(L[j].k);legenda(L[j])}};
+ audio.ontimeupdate=visual;audio.onloadedmetadata=()=>{if(P.j>0){const total=L.reduce((a,x)=>a+Math.max(1,x.t.length),0),before=L.slice(0,P.j).reduce((a,x)=>a+Math.max(1,x.t.length),0);audio.currentTime=Math.min(audio.duration*.99,audio.duration*before/total)}};
+ audio.onended=()=>{if(tk!==P.tok||!P.play)return;P.j=L.length;P.t=setTimeout(fala,250)};
+ audio.onerror=()=>{if(tk!==P.tok)return;neuralStatus('Áudio de IA indisponível. Usando a voz do aparelho.');delete P.nAudio[neuralKey(i)];neuralStop();P.t=setTimeout(fala,100)};
+ audio.play().catch(()=>{if(tk!==P.tok)return;neuralStatus('Toque novamente em ▶ para iniciar o áudio no navegador.');para()});return true;
 }
 /* v338 — central de homologação sem gerar imagens nem consumir a cota de IA. */
 function au338RenderDiag(d){
@@ -2472,6 +2514,7 @@ document.addEventListener('click',e=>{
   if(q('[data-au338refresh]')){au338Diagnostico();return}
   if(q('[data-au338graph]')){document.getElementById('au338-modal')?.remove();tvAbrir();return}
   if(q('[data-au338diag]')){au338Diagnostico();return}
+  if(q('[data-au339gerar]')){neuralGerar();return}
   if(q('[data-au337gerar]')){au337Gerar();return}
   if(q('[data-auvisualmap]')){para();document.getElementById('aupoptions').hidden=true;au336Mapa();return}
   if(q('[data-autv]')){tvAbrir();return}
@@ -2489,6 +2532,8 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   if(e.target.matches('#au-tv-symbol,#au-tv-interval')){tvCarregar();return}
   if(e.target.id==='au336-auto'){lss('aulas-motor-visual-v336',!!e.target.checked);P.vis='';if(P.on)desenha(P.j?((falasCena(P.a.r.cenas[P.i])||[])[P.j]||{}).k:-1);return}
+  if(e.target.id==='au339mode'){lss(LS_NMODE,e.target.value);if(P.play)cena(P.i,P.j);return}
+  if(e.target.id==='au339voice'){lss(LS_NVOICE,e.target.value);neuralStop();neuralConsultar(P.i);if(P.play)cena(P.i,P.j);return}
   if(e.target.id==='aupvel'){lss(LS_VEL,+e.target.value);if(P.play){const j=P.j;cena(P.i,j)}}
   if(e.target.id==='aupvoz'){lss(LS_VOZ,e.target.value);if(P.play){cena(P.i,P.j)}}
 });
@@ -2747,6 +2792,7 @@ css += '\n/* v336 - motor de cenas, biblioteca de gráficos didáticos e mapa vi
 
 css += '\n/* v337 — imagens educacionais geradas e armazenadas de forma privada */\n.au337-figure{width:min(690px,100%);margin:10px auto;border:1px solid #46637b;border-radius:12px;overflow:hidden;background:#09192d}.au337-figure img{width:100%;max-height:230px;object-fit:contain;display:block}.au337-figure figcaption{padding:5px 8px;font-size:9px;color:#facc15;letter-spacing:.04em;text-align:center}.au337-gen-btn{background:#234457;color:#e8f4ff;border:1px solid #417b8e;border-radius:8px;padding:7px 10px;white-space:normal}.au337-gen-btn:disabled{opacity:.5}.au337-status{font-size:11px;color:#bad7e6;flex:1 1 130px}.aup-options{flex-wrap:wrap}@media(max-width:560px){.au337-figure img{max-height:140px}.au337-gen-btn{font-size:11px}}\n';
 css += '\n/* v338: janela de teste para aulas, sem custos de API */\n.au338-diag-btn{background:#233956;color:#d9efff;border:1px solid #476583;border-radius:8px;padding:7px 10px}.au338-modal{position:fixed;inset:0;z-index:2147483646;background:#020e1ccd;display:flex;align-items:center;justify-content:center;padding:16px}.au338-panel{width:min(600px,100%);max-height:86dvh;overflow:auto;padding:18px;background:#102239;color:#eef7ff;border:1px solid #59718b;border-radius:14px;box-shadow:0 18px 70px #0008}.au338-panel header{display:flex;align-items:center;justify-content:space-between;gap:15px}.au338-panel header button{padding:7px 12px;border:1px solid #748ca3;border-radius:8px;background:#23405e;color:#fff}.au338-panel p{font-size:12px;color:#b9cfdf}.au338-panel ul{list-style:none;padding:0;display:grid;gap:5px}.au338-check{display:flex;align-items:start;gap:12px;padding:8px;background:#1b3047;border-radius:9px}.au338-check b{display:block;font-size:13px}.au338-check small{display:block;font-size:11px;color:#b9cfdf}.au338-actions{display:flex;flex-wrap:wrap;gap:8px}.au338-actions button{padding:9px;border:1px solid #517391;background:#244765;color:#fff;border-radius:9px}.au338-small{display:block;margin-top:12px;color:#b5cadb;font-size:11px}\n';
+css += '\n.au339-voices{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border-top:1px solid #486178;padding:8px 0}.au339-voices label{display:flex;align-items:center;gap:5px;font-size:12px}.au339-voices select{max-width:190px}.au339-voices button{border:1px solid #5a94b4;border-radius:7px;background:#1a4c69;color:#fff;padding:8px}.au339-voices #au339status{font-size:11px;color:#b1cfe0;width:100%}\n';
 const st=document.createElement('style');st.id='aulas-css';st.textContent=css;document.head.appendChild(st);
 async function limparConta(owner){
  if(!owner)return;for(const key of Object.keys(localStorage))if(key.startsWith('aulas-v318:'+owner+':')||key==='estudos-v316:'+owner)localStorage.removeItem(key);
