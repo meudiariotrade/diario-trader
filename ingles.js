@@ -1,3 +1,4 @@
+/* módulo: ingles.js */
 /* Inglês do dia a dia e do mercado financeiro: vocabulário original com frases de exemplo (carregado só quando você abre Estudos → Inglês) */
 window.EN_DATA={temas:[
 ['dia','Dia a dia','☀️'],['trab','Trabalho e reuniões','💼'],['merc','Mercado e trading','📈'],['ord','Ordens e execução','🎯'],
@@ -357,3 +358,5 @@ good:'bom',bad:'ruim',new:'novo',old:'velho',big:'grande',small:'pequeno',high:'
 market:'mercado',markets:'mercados',price:'preço',prices:'preços',money:'dinheiro',bank:'banco',banks:'bancos',company:'empresa',country:'país',people:'pessoas',plan:'plano',team:'time',job:'emprego',work:'trabalho',home:'casa',car:'carro',bus:'ônibus',phone:'celular',laptop:'notebook',city:'cidade',game:'jogo',news:'notícias',data:'dados',screen:'tela',account:'conta',signal:'sinal',pattern:'padrão',strategy:'estratégia',mistake:'erro',loss:'perda',profit:'lucro',points:'pontos',contracts:'contratos',shares:'ações',sales:'vendas',oil:'petróleo',gold:'ouro',iron:'ferro',ore:'minério',dollar:'dólar',stop:'parar; stop',watch:'observar',learn:'aprender',study:'estudar',read:'ler',write:'escrever',speak:'falar',listen:'ouvir',understand:'entender',repeat:'repetir',talk:'conversar',meet:'encontrar, conhecer',ready:'pronto',smart:'inteligente',white:'branco',drink:'beber',carries:'carrega',building:'construindo'};
 })();
 
+
+;

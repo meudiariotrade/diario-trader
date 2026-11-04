@@ -408,11 +408,13 @@
   const activeGroup = () => groups.find(group=>group.items.some(([route])=>route===current()))?.id || (['trades','swing','opc','ativos','dash','opgrade','opfluxo','opcart','swbt','dtrpy'].includes(tab)?'operacoes':'');
   const icon = name => window.icoSvg ? window.icoSvg(name) : '';
   const link = ([route,name],cls='') => `<button type="button" class="${cls}" data-navroute="${safe(route)}"${current()===route?' aria-current="page"':''}>${safe(name)}</button>`;
+  // v360: o menu do Mercado reutiliza as quatro áreas já existentes, sem criar rotas.
+  const marketMenu = () => `<div class="pro-market-subgroups" aria-label="Páginas do Mercado">${marketGroups.map(area=>`<details class="pro-market-subgroup" data-market-subgroup="${safe(area.name)}"${area.items.some(([route])=>route===current())?' open':''}><summary><strong>${safe(area.name)}</strong><small>${area.items.length} ${area.items.length===1?'página':'páginas'}</small></summary><div class="pro-market-links">${area.items.map(item=>link(item)).join('')}${area.name==='Cotações'?'<button type="button" data-research-menu>Pesquisa de investimentos</button><button type="button" data-flow-menu>Fluxo de negócios · Profit</button>':''}</div></details>`).join('')}</div>`;
   function menu(panel) {
     panel.innerHTML = `<div class="pro-menu-header"><div><small>DIÁRIO DE TRADER</small><b>Seu espaço de trabalho</b></div><button type="button" data-navclose aria-label="Fechar menu">×</button></div>
       <label class="pro-menu-search">Encontrar função<input type="search" data-navsearch placeholder="Diário, sazonalidade, risco…" autocomplete="off"></label>
-      <div class="pro-menu-groups">${groups.map(group=>`<details class="pro-menu-group" data-navgroup="${group.id}"${activeGroup()===group.id?' open':''}><summary><span class="pro-menu-icon">${icon(group.icon)}</span><span><b>${group.name}</b><small>${group.description}</small></span></summary><div>${group.items.map(item=>link(item)).join('')}${group.id==='mercado'?'<button type="button" data-research-menu>Pesquisa de investimentos</button><button type="button" data-flow-menu>Fluxo de negócios · Profit</button>':''}${group.id==='home'?'<button type="button" data-wf="organize-home">Organizar início</button>':''}${group.id==='conta'?'<button type="button" data-wf="quality">Dados e fontes</button><button type="button" data-wf="reports">Relatórios</button>':''}</div></details>`).join('')}</div>
-      <p class="pro-menu-note">Diário e checklist no centro. Ferramentas agrupadas por tarefa.</p>`;
+      <div class="pro-menu-groups">${groups.map(group=>`<details class="pro-menu-group" data-navgroup="${group.id}"${activeGroup()===group.id?' open':''}><summary><span class="pro-menu-icon">${icon(group.icon)}</span><span><b>${group.name}</b><small>${group.description}</small></span></summary><div>${group.id==='mercado'?marketMenu():group.items.filter(([route])=>route!=='mercado:sazus').map(item=>link(item)).join('')}${group.id==='home'?'<button type="button" data-wf="organize-home">Organizar início</button>':''}${group.id==='conta'?'<button type="button" data-wf="quality">Dados e fontes</button><button type="button" data-wf="reports">Relatórios</button>':''}</div></details>`).join('')}</div>
+      <p class="pro-menu-note">Navegação simplificada · Interface v360</p>`;
     panel.querySelector('[data-navclose]')?.addEventListener('click',event=>{
       event.preventDefault();event.stopPropagation();
       const desktop=document.body.classList.contains('pc');
@@ -426,11 +428,19 @@
       panel.querySelectorAll('[data-navgroup]').forEach(element=>{
         let any=false;
         element.querySelectorAll('[data-navroute],[data-wf],[data-research-menu],[data-flow-menu]').forEach(button=>{
-          const match=button.textContent.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(query);
+          const norm=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+          const groupTitle=element.querySelector(':scope > summary')?.textContent||'';
+          const areaTitle=button.closest('[data-market-subgroup]')?.querySelector('summary')?.textContent||'';
+          const match=!query||norm(button.textContent).includes(query)||norm(groupTitle).includes(query)||norm(areaTitle).includes(query);
           button.hidden=!match;any ||= match;
         });
         element.hidden=!any;
         element.open=query?any:element.dataset.navgroup===activeGroup();
+        element.querySelectorAll('[data-market-subgroup]').forEach(area=>{
+          const matches=[...area.querySelectorAll('[data-navroute],[data-research-menu],[data-flow-menu]')].some(button=>!button.hidden);
+          area.hidden=!!query&&!matches;
+          area.open=query?matches:[...area.querySelectorAll('[data-navroute]')].some(button=>button.dataset.navroute===current());
+        });
       });
     });
   }
@@ -440,7 +450,7 @@
   // As abas internas seguem os mesmos grupos do menu, sem taxonomia paralela.
   grpHeader = function(route) {
     const group=groups.find(g=>g.items.some(([key])=>key===route));
-    return !group||group.items.length<2?'':`<div class="pro-subtabs" role="navigation" aria-label="${safe(group.name)}">${group.items.map(item=>link(item,item[0]===route?'on':'')).join('')}</div>`;
+    return !group||group.items.length<2?'':`<div class="pro-subtabs" role="navigation" aria-label="${safe(group.name)}">${group.items.filter(([target])=>target!=='mercado:sazus').map(item=>link(item,item[0]===route?'on':'')).join('')}</div>`;
   };
   function navigate(route) {
     if(route==='mercado:cot')route='mercado:cq';
@@ -467,7 +477,7 @@
     if(current()==='mercado:al')return `<section class="m355-settings-head" aria-label="Configurações de alertas"><div class="m355-crumb"><button type="button" data-navroute="mais">Configurações</button><span aria-hidden="true">/</span><span>Alertas</span></div><span class="routine-eyebrow">PREFERÊNCIAS · NOTIFICAÇÕES</span><h1>Alertas e notificações</h1><p>Gerencie avisos de preço, eventos e notificações dos seus dispositivos em um único lugar.</p></section>`;
     const selected=current(), group=marketGroups.find(g=>g.items.some(([route])=>route===selected))||marketGroups[0];
     const active=group.items.find(([route])=>route===selected)||group.items[0];
-    return `<section class="workbench-header m355-market-head" aria-label="Navegação de Mercado"><div class="m355-overline">CONTEXTO · BRASIL E MUNDO</div><div class="m355-market-title"><div><h1>Mercado</h1><p>Informação e acompanhamento, sem excesso de menus.</p></div><button type="button" class="m355-ia-button" data-market-chat>Economista IA</button></div><nav class="m355-areas" aria-label="Áreas do mercado">${marketGroups.map(g=>link([g.items[0][0],g.name],g===group?'on':'')).join('')}</nav><div class="m355-page-header"><div><span>Você está em</span><strong>${safe(active[1])}</strong></div><label class="m355-page-picker"><span>Trocar página</span><select data-m355-market-page aria-label="Escolher página de ${safe(group.name)}">${group.items.map(([route,name])=>`<option value="${safe(route)}"${route===selected?' selected':''}>${safe(name)}</option>`).join('')}</select></label></div><nav class="m355-page-links" aria-label="Páginas de ${safe(group.name)}">${group.items.map(item=>link(item,selected===item[0]?'on':'')).join('')}</nav></section>`;
+    return `<section class="workbench-header m355-market-head" aria-label="Navegação de Mercado"><div class="m355-overline">CONTEXTO · BRASIL E MUNDO</div><div class="m355-market-title"><div><h1>Mercado</h1><p>Informação, análise e acompanhamento no mesmo lugar.</p></div><button type="button" class="m355-ia-button" data-market-chat>Economista IA</button></div><nav class="m355-areas m360-area-grid" aria-label="Áreas do mercado">${marketGroups.map((g,i)=>`<button type="button" class="m360-area ${g===group?'on':''}" data-navroute="${safe(g.items[0][0])}" aria-pressed="${g===group}"><span class="m360-area-symbol" aria-hidden="true">${['◉','▤','▥','▦'][i]}</span><span class="m360-area-content"><strong>${safe(g.name)}</strong><small>${safe(['Brasil e mundo','Jornal e agenda','Sazonalidade e gráficos','Ativos e preços'][i])}</small></span></button>`).join('')}</nav><div class="m355-page-header"><div><span>Página atual</span><strong>${safe(active[1])}</strong></div><label class="m355-page-picker"><span>Trocar página</span><select data-m355-market-page aria-label="Escolher página de ${safe(group.name)}">${group.items.map(([route,name])=>`<option value="${safe(route)}"${route===selected?' selected':''}>${safe(name)}</option>`).join('')}</select></label></div><nav class="m355-page-links" aria-label="Páginas de ${safe(group.name)}">${group.items.map(item=>link(item,selected===item[0]?'on':'')).join('')}</nav></section>`;
   };
   // Os alertas continuam com os mesmos handlers de inscrição/teste; retira só a barra antiga de páginas de Mercado.
   const previousAlerts=vAlertas;
@@ -484,7 +494,7 @@
   const previousSettingsAlerts=vMais;
   vMais=function(){const html=previousSettingsAlerts.apply(this,arguments),card=`<section class="m355-alerts-link"><div class="m355-alerts-icon" aria-hidden="true">🔔</div><div><span>CONFIGURAÇÕES</span><h2>Alertas e notificações</h2><p>Preços, eventos, lembretes e avisos no PC e no celular.</p></div><button type="button" data-navroute="mercado:al">Gerenciar</button></section>`,anchor='<p class="mut">Personalize a aparência do seu espaço.</p>';return html.includes(anchor)?html.replace(anchor,anchor+card):card+html};
 
-  const US={section:'br',asset:'spx',view:'mensal',lookback:20,eventType:'midterm',eventCategory:'todos',window:'d1',cycle:2,month:new Date().getMonth()+1,value:null,busy:false,error:'',lastAttempt:0};
+  const US={section:'br',asset:'spx',view:'mensal',lookback:20,eventType:'midterm',eventCategory:'todos',window:'d1',cycle:2,month:new Date().getMonth()+1,value:null,busy:false,error:'',lastAttempt:0,extra:null,extraAsset:'',extraBusy:false,extraError:'',extraLast:0};
   const percent=x=>typeof x==='number'&&Number.isFinite(x)?`${x>0?'+':''}${x.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%`:'—';
   const cell=x=>`<span class="${x>0?'g':x<0?'r':'mut'}">${percent(x)}</span>`;
   const monthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -521,7 +531,7 @@
   // Calendário oficial conhecido na data desta versão (04/11/2026).
   // Eventos posteriores podem ser reagendados; oferecer links oficiais para conferência.
   const US_EVENTS=[
-    ...['2026-11-10','2026-12-10','2027-01-13','2027-02-11','2027-03-10','2027-04-13','2027-05-12','2027-06-10','2027-07-14','2027-08-11','2027-09-14','2027-10-14','2027-11-10','2027-12-10'].map(d=>({d,t:'cpi'})),
+    ...['2026-11-10','2026-12-10'].map(d=>({d,t:'cpi'})),
     ...['2026-11-06','2026-12-04','2027-01-08','2027-02-05','2027-03-05','2027-04-02','2027-05-07','2027-06-04','2027-07-02','2027-08-06','2027-09-03','2027-10-08','2027-11-05','2027-12-03'].map(d=>({d,t:'payroll'})),
     ...['2026-12-09','2027-01-27','2027-03-17','2027-04-28','2027-06-09','2027-07-28','2027-09-15','2027-10-27','2027-12-08'].map(d=>({d,t:'fomc'})),
     ...['2026-11-20','2026-12-18'].map(d=>({d,t:'opex'}))
@@ -530,7 +540,7 @@
     const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
     const rows=US_EVENTS.filter(e=>e.d>=today&&(US.eventCategory==='todos'||e.t===US.eventCategory)).slice(0,16);
     const fmt=d=>d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4);
-    return `<section class="us-events"><h3>Datas macro importantes · EUA</h3><p>Calendário de divulgação e decisões, não uma estatística de impacto. Reações dependem de surpresa, posicionamento e contexto.</p><div class="us-events-filter"><label>Mostrar<select data-useventcategory>${[['todos','Todos os eventos'],['cpi','Inflação CPI'],['payroll','Payroll'],['fomc','FOMC'],['opex','Opções']].map(([v,t])=>`<option value="${v}"${US.eventCategory===v?' selected':''}>${t}</option>`).join('')}</select></label></div>${rows.length?`<div class="pro-table-scroll" tabindex="0"><table class="us-table us-event-table"><thead><tr><th>Data (EUA)</th><th>Evento</th><th>Mercados para observar</th></tr></thead><tbody>${rows.map(r=>`<tr><th>${fmt(r.d)}</th><td>${EVENT_INFO[r.t].name}</td><td>${EVENT_INFO[r.t].focus}</td></tr>`).join('')}</tbody></table></div>`:'<p class="us-caution">Não há datas futuras cadastradas nesta versão. Consulte os calendários oficiais para novas divulgações.</p>'}
+    return `<section class="us-events"><h3>Datas macro importantes · EUA</h3><p>Calendário de divulgação e decisões, não uma estatística de impacto. Reações dependem de surpresa, posicionamento e contexto.</p><div class="v357-alert-link"><span>Alertas de eventos econômicos usam o sistema de notificações já existente.</span><button type="button" class="btn s" data-navroute="mercado:al">Configurar avisos</button></div><div class="us-events-filter"><label>Mostrar<select data-useventcategory>${[['todos','Todos os eventos'],['cpi','Inflação CPI'],['payroll','Payroll'],['fomc','FOMC'],['opex','Opções']].map(([v,t])=>`<option value="${v}"${US.eventCategory===v?' selected':''}>${t}</option>`).join('')}</select></label></div>${rows.length?`<div class="pro-table-scroll" tabindex="0"><table class="us-table us-event-table"><thead><tr><th>Data (EUA)</th><th>Evento</th><th>Mercados para observar</th></tr></thead><tbody>${rows.map(r=>`<tr><th>${fmt(r.d)}</th><td>${EVENT_INFO[r.t].name}</td><td>${EVENT_INFO[r.t].focus}</td></tr>`).join('')}</tbody></table></div>`:'<p class="us-caution">Não há datas futuras cadastradas nesta versão. Consulte os calendários oficiais para novas divulgações.</p>'}
     <div class="us-event-themes"><b>Meses e períodos para monitorar</b><p><strong>Março, junho, setembro e dezembro:</strong> costumam concentrar vencimentos trimestrais de derivativos e reuniões do Fed com projeções; não implica alta ou queda e nem comprova maior oscilação.</p><p><strong>Janeiro, abril, julho e outubro:</strong> acompanhe as temporadas de resultados trimestrais; as datas de cada empresa variam.</p><p><strong>Todo mês:</strong> CPI e emprego nos EUA; horários indicados nas fontes são no fuso Eastern Time.</p></div>
     <p class="us-footnote">Referência estática verificada em 04/11/2026. Datas podem mudar; o aplicativo não as sincroniza automaticamente. A janela de reação a CPI, payroll ou FOMC ainda não foi calculada sobre pregões diários.</p>
     <div class="us-event-sources"><a target="_blank" rel="noopener noreferrer" href="https://www.bls.gov/schedule/news_release/cpi.htm">CPI · BLS</a><a target="_blank" rel="noopener noreferrer" href="https://www.bls.gov/schedule/news_release/empsit.htm">Payroll · BLS</a><a target="_blank" rel="noopener noreferrer" href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm">FOMC · Fed</a><a target="_blank" rel="noopener noreferrer" href="https://www.cboe.com/about/hours/us-options/">Opções · Cboe</a></div></section>`;
@@ -544,8 +554,44 @@
     const point=(p,change)=>p?`${safe(p.d)}<br><b>${number(p.v)}</b><br>${cell(change)}`:'Sem fechamento';
     return `<details class="us-observations"><summary>Fechamentos D-1, D0 e D+1 · ${rows.filter(row=>row.concluida).length} eleições cobertas</summary><p class="sm mut">Preço de fechamento e variação contra o pregão anterior. D0 é a eleição. Quando não houve pregão em D0, o retorno posterior usa o último fechamento anterior; D0 permanece vazio. Dias sem histórico ficam vazios e não entram nas médias. Midterms desde 1950: 19 concluídas até 2022; a amostra varia conforme índice e janela.</p><div class="pro-table-scroll" tabindex="0"><table class="us-table"><thead><tr><th>Ano / tipo</th><th>Eleição</th><th>D-1 · anterior</th><th>D0 · eleição</th><th>D+1 · seguinte</th></tr></thead><tbody>${rows.map(row=>`<tr><th>${row.ano}<br>${safe(row.tipo)}</th><td>${safe(row.data)}${row.concluida?'':'<br>Aguardando / sem histórico'}</td><td>${point(row.anterior,row.variacao_anterior)}</td><td>${point(row.dia,row.variacao_dia)}</td><td>${point(row.seguinte,row.variacao_seguinte)}</td></tr>`).join('')}</tbody></table></div></details>`;
   }
+  // v357: análises complementares usam séries diárias da função separada sazonal-extras.
+  // Nunca combinar dados simulados ou séries de minicontratos não disponíveis.
+  const extraViewNames={semanas:'Semanas e viradas de mês',eventos:'CPI, Payroll e FOMC',cenarios:'VIX, DXY e juros',brasil:'Brasil × Estados Unidos'};
+  const extraLabels={primeiros5:'Primeiros 5 pregões',ultimos5:'Últimos 5 pregões',virada:'Primeiros 3 pregões do mês',opex:'Cinco pregões até o 3º vencimento de sexta',sem1:'Pregões 1–5',sem2:'Pregões 6–10',sem3:'Pregões 11–15',sem4:'Pregões 16–20',vix_baixo:'VIX abaixo de 20',vix_alto:'VIX igual/acima de 20',dxy_sobe:'DXY subia antes do mês',dxy_cai:'DXY caía antes do mês',juros_sobem:'US10Y subia antes do mês',juros_caem:'US10Y caía antes do mês',antes:'D−5 até D−1',dia:'Fechamento D−1 → D0',depois:'Fechamento D0 → D+1',semana:'D0 até D+5',total:'D−1 até D+5'};
+  const extraNum=x=>typeof x==='number'&&Number.isFinite(x)?x.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+  function extraTable(items,sub=''){
+    return `<div class="pro-table-scroll" tabindex="0"><table class="us-table us-v357-table"><thead><tr><th>Janela / condição</th><th>Ocorrências</th><th>Média</th><th>|Mov.| médio</th><th>Positivas</th></tr></thead><tbody>${items.map(([key,v])=>`<tr><th scope="row">${safe(extraLabels[key]||key)}</th><td>${v?.n||0}</td><td>${v?.n?cell(v.media):'—'}</td><td>${v?.n?extraNum(v.absmedia)+'%':'—'}</td><td>${v?.n?extraNum(v.positivas)+'%':'—'}</td></tr>`).join('')||'<tr><td colspan="5">Sem amostras disponíveis.</td></tr>'}</tbody></table></div>${sub?`<p class="us-footnote">${sub}</p>`:''}`;
+  }
+  function bodyExtra(){
+    if(!US.extra||US.extraAsset!==US.asset){return `<div class="card us-empty" role="status"><b>${US.extraBusy?'Consultando fechamentos históricos…':'Análise diária ainda não carregada'}</b><p>${safe(US.extraError||'Esta análise usa o serviço histórico adicional. Não exibe métricas inventadas se a fonte falhar.')}</p><button class="btn s" data-us-extra-refresh ${US.extraBusy?'disabled':''}>${US.extraBusy?'Aguarde…':'Consultar agora'}</button></div>`}
+    const d=US.extra;
+    const missing=d.falhas?.length?`<p class="us-caution">Fontes indisponíveis nesta consulta: ${safe(d.falhas.join(', '))}. As estatísticas correspondentes podem ficar vazias.</p>`:'';
+    let content='';
+    if(US.view==='semanas')content=`<h3>Semanas e viradas de mês</h3><p>Movimento do fechamento anterior ao fechamento ao fim da janela, desde o histórico disponível. Não representa variação máxima intradiária nem certeza de um padrão sazonal.</p>${extraTable(Object.entries(d.semanas||{}),'“Virada” mede o fechamento anterior até o 3º pregão do mês. O vencimento é aproximado pela terceira sexta-feira, sem assumir liquidez idêntica entre produtos.')}<p class="us-caution">Amostras pequenas ou feriados podem afetar as comparações. Compare a média com a mediana no estudo mensal.</p>`;
+    if(US.view==='eventos'){
+      const names={cpi:'Inflação CPI',payroll:'Emprego · Payroll',fomc:'Decisão do Fed · FOMC'};
+      content=`<h3>Comportamento em torno de eventos</h3><p>Estatísticas reais de fechamentos dos índices em janelas próximas às divulgações, sem atribuir causalidade. CPI/Payroll usam as datas oficiais de 2026 e FOMC, decisões de 2024–2026.</p><div class="v357-event-list">${Object.entries(d.eventos||{}).map(([name,e])=>`<details class="v357-event" ${name==='fomc'?'open':''}><summary>${safe(names[name]||name)} <span>${e?.janelas?.dia?.n||0} sessões D0</span></summary>${extraTable(Object.entries(e?.janelas||{}),'D0 é o pregão da divulgação; D−1 é o fechamento anterior. Não há medição de segundos/minutos após a notícia. Não se mede surpresa econômica.')}${(e?.janelas?.dia?.n||0)<10?'<p class="us-caution">Amostra pequena: não extrapole o resultado.</p>':''}</details>`).join('')}</div><p class="us-footnote"><a href="https://www.bls.gov/schedule/news_release/cpi.htm" target="_blank" rel="noopener noreferrer">Datas CPI · BLS</a> · <a href="https://www.bls.gov/cps/publications/release-calendar.htm" target="_blank" rel="noopener noreferrer">Payroll · BLS</a> · <a href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener noreferrer">FOMC · Fed</a></p>`;
+    }
+    if(US.view==='cenarios')content=`<h3>Movimentação condicionada ao cenário</h3><p>O cenário é observado <strong>antes do início do mês</strong>; o retorno medido é do mês seguinte. VIX abaixo/acima de 20, DXY e US10Y pela variação nos 21 pregões anteriores.</p>${extraTable(Object.entries(d.cenarios||{}),'VIX é um índice implícito de volatilidade de opções, não a volatilidade realizada. US10Y sobe/cai em pontos do indicador, não percentual da taxa.')}<p class="us-caution">São associações históricas, não efeitos causais nem estratégias testadas fora da amostra.</p>`;
+    if(US.view==='brasil')content=`<h3>Comparação Brasil × EUA</h3><p>Correlação dos retornos diários, com <strong>252 observações coincidentes mais recentes</strong>. Os mercados fecham em horários diferentes; logo a correlação no mesmo dia pode distorcer a relação real.</p><div class="v357-corr-grid">${[['ibov','Ibovespa · referência para WIN'],['dolar','USD/BRL · referência para WDO']].map(([key,label])=>`<div class="v357-corr"><small>${label}</small><b>${d.brasil?.[key]?.correlacao==null?'Indisponível':extraNum(d.brasil[key].correlacao)}</b><span>Coeficiente r · ${d.brasil?.[key]?.n||0} pares de pregões</span></div>`).join('')}</div><p class="us-footnote">A correlação vai de −1 a +1. O cálculo usa IBOV e USD/BRL como <strong>proxies</strong>: não são as séries de futuros WIN e WDO, nem indicam direção futura ou sinal de entrada.</p>`;
+    return `<section class="v357-extra"><div class="top"><h2>${safe(extraViewNames[US.view]||'Análise americana')}</h2><button type="button" class="btn s" data-us-extra-refresh ${US.extraBusy?'disabled':''}>Atualizar</button></div><p class="mut sm">${safe(US.asset.toUpperCase())} · Histórico ${safe(d.periodo?.de||'—')} a ${safe(d.periodo?.ate||'—')} · Consulta ${safe(new Date(d.gerado).toLocaleString('pt-BR'))}</p>${missing}${content}<details class="us-method"><summary>Fonte, cobertura e limitações</summary><p>${safe(d.metodo||'')}</p><p>Fonte de preços: Yahoo Finance (consulta sem garantia de disponibilidade). Métricas em fechamento diário, não ticks nem horário do anúncio. Fatores macro e feriados podem afetar séries.</p></details></section>`;
+  }
+  async function loadExtra(force=false){
+    if(US.extraBusy||(!force&&US.extra&&US.extraAsset===US.asset))return;
+    if(!force&&Date.now()-US.extraLast<12000)return;
+    US.extraBusy=true;US.extraError='';US.extraLast=Date.now();paintUs();
+    const asset=US.asset;
+    try{
+      const response=await rq('/functions/v1/sazonal-extras',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset}),signal:AbortSignal.timeout(45000)});
+      const data=await response.json();
+      if(!response.ok||data.versao!=='v357')throw new Error(data.error||'A análise diária não respondeu.');
+      if(asset===US.asset){US.extra=data;US.extraAsset=asset;}
+    }catch(error){US.extraError=error.name==='TimeoutError'?'Tempo esgotado ao consultar dados diários.':String(error.message||error)}
+    finally{US.extraBusy=false;if(tab==='mercado'&&MKT.tab==='lab'&&US.section==='us')paintUs()}
+  }
   function bodyUs() {
     if(US.view==='calendar')return eventsCalendar();
+    if(['semanas','eventos','cenarios','brasil'].includes(US.view))return bodyExtra();
     const data=US.value;
     if(!data)return `<div class="card us-empty" role="status"><b>${US.busy?'Buscando séries históricas dos EUA…':'Histórico ainda não carregado'}</b><p>${safe(US.error||'Entre na conta para consultar os índices e calcular os estudos históricos.')}</p><button class="btn s" data-usrefresh${US.busy?' disabled':''}>${US.busy?'Aguarde':'Carregar histórico'}</button></div>`;
     const asset=data.ativos.find(a=>a.k===US.asset);
@@ -574,7 +620,7 @@
       <div class="us-intro"><span class="routine-eyebrow">SAZONALIDADE · ESTADOS UNIDOS</span><h2>Meses, ciclos e datas importantes</h2><p>O ranking mostra os meses com maior movimento histórico de fechamento a fechamento. Eventos macro são apresentados separadamente, sem previsão de direção do mercado.</p></div>
       ${US.view==='midterms'?`<div class="us-election-context"><b>O que são as midterms?</b><p>Eleições legislativas no meio do mandato presidencial. Elas podem mudar o controle do Congresso. A comparação abaixo agrupa os eventos por data, sem atribuir o retorno ao partido vencedor.</p>${US.value?.proxima_midterm?`<span>Próxima data: <b>${safe(US.value.proxima_midterm.split('-').reverse().join('/'))}</b></span>`:'<a href="https://www.usa.gov/midterm-elections" target="_blank" rel="noopener noreferrer">Consultar o calendário oficial</a>'}<p class="sm">Lucros, juros e surpresas de política econômica também afetam os preços. Médias históricas não isolam o efeito de uma eleição.</p></div>`:''}
       ${US.view!=='calendar'?`<label>Índice<select data-usasset>${[['spx','S&P 500'],['ndx','Nasdaq 100'],['dji','Dow Jones'],['rut','Russell 2000']].map(([key,name])=>`<option value="${key}"${US.asset===key?' selected':''}>${name}</option>`).join('')}</select></label>`:''}
-      <div class="pro-subtabs" role="navigation" aria-label="Estudos históricos dos EUA">${[['mensal','Meses e movimento'],['calendar','Datas importantes'],['ciclo','Ciclo presidencial'],['midterms','Eleições']].map(([key,name])=>`<button type="button" data-usview="${key}" class="${US.view===key?'on':''}"${US.view===key?' aria-current="page"':''}>${name}</button>`).join('')}</div>
+      <label class="v357-analysis-select">Tipo de análise<select data-usview-select>${[['mensal','Meses e movimento'],['semanas','Semanas e viradas de mês'],['eventos','CPI, Payroll e FOMC'],['cenarios','VIX, DXY e juros'],['brasil','Brasil × EUA'],['calendar','Calendário econômico'],['ciclo','Ciclo presidencial'],['midterms','Eleições']].map(([key,name])=>`<option value="${key}"${US.view===key?' selected':''}>${name}</option>`).join('')}</select></label>
       <div id="us-study-body" aria-live="polite">${bodyUs()}</div><p class="us-footnote">Estudos históricos de índices dos EUA, conforme disponibilidade da fonte. Retornos em USD, sem custos ou spreads. Médias históricas não são recomendação nem sinal de entrada.</p></section>`;
   }
   async function loadUs(force=false) {
@@ -593,7 +639,8 @@
   vMercado=function(){
     if(MKT.tab==='sazus'){US.section='us';MKT.tab='lab'}
     if(MKT.tab==='lab'&&US.section==='us'){
-      if(US.view!=='calendar')setTimeout(()=>loadUs(),0);
+      if(['semanas','eventos','cenarios','brasil'].includes(US.view))setTimeout(()=>loadExtra(),0);
+      else if(US.view!=='calendar')setTimeout(()=>loadUs(),0);
       return renderUs();
     }
     const html=previousMarket.apply(this,arguments);
@@ -609,12 +656,14 @@
     const view=event.target.closest('[data-usview]');
     if(view&&['mensal','calendar','ciclo','midterms'].includes(view.dataset.usview)){US.view=view.dataset.usview;render();return}
     if(event.target.closest('[data-usrefresh]'))loadUs(true);
+    if(event.target.closest('[data-us-extra-refresh]'))loadExtra(true);
   });
   document.addEventListener('change',event=>{
     const target=event.target;
+    if(target.matches('[data-usview-select]')){US.view=target.value;render();return}
     if(target.matches('[data-uslookback]')){US.lookback=+target.value;paintUs()}
     if(target.matches('[data-useventcategory]')){US.eventCategory=target.value;paintUs()}
-    if(target.matches('[data-usasset]')){US.asset=target.value;paintUs()}
+    if(target.matches('[data-usasset]')){US.asset=target.value;US.extra=null;US.extraAsset='';US.extraLast=0;paintUs();if(['semanas','eventos','cenarios','brasil'].includes(US.view))loadExtra()}
     if(target.matches('[data-uselection]')){US.eventType=target.value;paintUs()}
     if(target.matches('[data-usperiod]')){if(US.view==='mensal')US.month=+target.value;else if(US.view==='ciclo')US.cycle=+target.value;else US.window=target.value;paintUs()}
   });

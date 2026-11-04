@@ -60,7 +60,18 @@ window.SUPA_KEY = "sb_publishable_GNuBD5Oyo2Wk-iE2s4TbUQ_1XiKvzhV";
 /* Fontes locais e incorporadas no PDF; carregadas somente ao exportar. */
 (function(root){
   'use strict';
-  let kit=null,bytes=null;
+  let kit=null,bytes=null,assets=null;
+  function pdfAssets(){
+    if(root.TraderResources)return Promise.resolve();
+    if(!assets)assets=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src='fontes-pdf.js';
+      script.onload=()=>root.TraderResources?resolve():reject(Error('Recursos do PDF não iniciaram'));
+      script.onerror=()=>reject(Error('Recursos do PDF indisponíveis'));
+      document.head.append(script);
+    }).catch(error=>{assets=null;throw error});
+    return assets;
+  }
   function library(){
     if(root.fontkit)return Promise.resolve(root.fontkit);
     if(!kit)kit=new Promise((resolve,reject)=>{
@@ -71,7 +82,8 @@ window.SUPA_KEY = "sb_publishable_GNuBD5Oyo2Wk-iE2s4TbUQ_1XiKvzhV";
     return kit;
   }
   root.DiarioFontes=async function(doc){
-    doc.registerFontkit(await library());
+    const [kitReady] = await Promise.all([library(),pdfAssets()]);
+    doc.registerFontkit(kitReady);
     const names={r:'sans',b:'sans-bold',i:'sans-italic',serif:'serif-bold',serifItalic:'serif-italic'};
     if(!bytes)bytes=Promise.all(Object.entries(names).map(async([key,name])=>{
       const response=await fetch(`pdf-${name}.ttf`,{signal:AbortSignal.timeout(10000)});

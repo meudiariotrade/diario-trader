@@ -759,8 +759,95 @@ html:root body.studio-design #pdfprev canvas{width:100%;height:auto;display:bloc
 #app .us-event-sources a{display:inline-flex;align-items:center;border:1px solid var(--bd);border-radius:9px;padding:10px 12px;font:600 12px/1.4 system-ui,sans-serif}
 @media(max-width:680px){#app .us-rank{padding:12px}#app .us-rank-grid{grid-template-columns:minmax(0,1fr)}#app .us-rank-head{flex-wrap:wrap}#app .us-extra-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#app .us-events{padding:12px}}
 
+
+/* v357: estudos diários dentro de Sazonalidade EUA, sem novos menus principais */
+#app .v357-analysis-select{display:block;max-width:520px;margin:14px 0 20px}
+#app .v357-analysis-select select{width:100%;max-width:100%}
+#app .v357-extra{border:1px solid var(--bd);border-radius:16px;padding:18px;background:var(--card)}
+#app .v357-extra h2{margin:0;font-size:18px}
+#app .v357-extra h3{font-size:17px;margin:20px 0 8px}
+#app .v357-extra p{font-size:13px;line-height:1.6;color:var(--mut)}
+#app .v357-extra table{min-width:560px}
+#app .v357-extra th,#app .v357-extra td{font-variant-numeric:tabular-nums}
+#app .v357-event-list{display:grid;gap:12px;margin:14px 0}
+#app .v357-event{border:1px solid var(--bd);border-radius:12px;padding:12px;background:var(--bg)}
+#app .v357-event summary{cursor:pointer;font-weight:700;display:flex;justify-content:space-between;gap:10px}
+#app .v357-event summary span{font-size:11px;font-weight:500;color:var(--mut)}
+#app .v357-corr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+#app .v357-corr{padding:16px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;display:flex;flex-direction:column;gap:8px}
+#app .v357-corr small,#app .v357-corr span{color:var(--mut);line-height:1.5}
+#app .v357-corr b{font-size:28px;font-variant-numeric:tabular-nums}
+#app .v357-alert-link{margin:16px 0;padding:12px;border:1px solid var(--bd);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#app .v357-alert-link span{font-size:12px;color:var(--mut);line-height:1.5}
+@media(max-width:680px){#app .v357-extra{padding:12px}#app .v357-corr-grid{grid-template-columns:1fr}#app .v357-extra table{min-width:500px}}
+
+/* v359: entrada legada dos Estudos EUA fica somente em Sazonalidade e Sentimento. */
+html body :is(button,a)[data-navroute="mercado:sazus"]{display:none!important}
+/* v360 · Experiência Profissional — somente apresentação e agrupamento de rotas existentes */
+html:root body #mdr2 .pn{width:min(94vw,420px);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;padding:18px 18px max(24px,env(safe-area-inset-bottom));border-radius:18px;background:var(--card);color:var(--tx)}
+html:root body #mdr2 .pro-menu-header{padding:3px 0 15px;border-bottom:1px solid var(--bd);margin:0 0 16px}
+html:root body #mdr2 .pro-menu-header b{font-size:20px;letter-spacing:-.035em}
+html:root body #mdr2 .pro-menu-header small{font-size:10px;letter-spacing:.16em}
+html:root body #mdr2 .pro-menu-search{display:block;margin:0 0 14px;font-weight:600;font-size:11px}
+html:root body #mdr2 .pro-menu-search input{box-sizing:border-box;display:block;width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:12px;min-height:46px;margin-top:6px;padding:12px 14px;font-size:16px}
+html:root body #mdr2 .pro-menu-group>summary{min-height:59px;padding:12px 4px}
+html:root body #mdr2 .pro-menu-group>summary b{font-size:15px}
+html:root body #mdr2 .pro-menu-group>summary small{font-size:12px}
+html:root body #mdr2 .pro-menu-group :is([data-navroute],[data-wf],[data-research-menu],[data-flow-menu]){font-size:13px;line-height:1.35;min-height:42px}
+html:root body #mdr2 .pro-market-subgroups{margin:2px 0 12px 41px;display:grid;gap:7px}
+html:root body #mdr2 .pro-market-subgroup{background:var(--bg);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+html:root body #mdr2 .pro-market-subgroup>summary{display:flex;justify-content:space-between;align-items:center;list-style:none;cursor:pointer;min-height:49px;padding:10px 12px;gap:6px;color:var(--tx)}
+html:root body #mdr2 .pro-market-subgroup>summary::-webkit-details-marker{display:none}
+html:root body #mdr2 .pro-market-subgroup>summary:after{content:'⌄';color:var(--mut);font-size:15px;transition:transform .15s ease}
+html:root body #mdr2 .pro-market-subgroup[open]>summary:after{transform:rotate(180deg)}
+html:root body #mdr2 .pro-market-subgroup>summary strong{font-size:13px;line-height:1.2}
+html:root body #mdr2 .pro-market-subgroup>summary small{color:var(--mut);font-size:10px;white-space:nowrap;margin-left:auto}
+html:root body #mdr2 .pro-market-links{padding:0 7px 8px;border-top:1px solid var(--bd)}
+html:root body #mdr2 .pro-market-subgroup .pro-market-links :is([data-navroute],[data-research-menu],[data-flow-menu]){font-size:12px;text-align:left;padding:9px 10px;margin-top:3px;min-height:40px;border-radius:8px}
+html:root body #mdr2 .pro-market-subgroup .pro-market-links [aria-current=page]{background:color-mix(in srgb,var(--ac) 10%,var(--card));color:var(--ac)}
+html:root body #mdr2 .pro-menu-note{margin:15px 0 4px;padding-top:12px;border-top:1px solid var(--bd)}
+#app .m355-market-head{padding:20px!important;border:1px solid var(--bd);box-shadow:0 5px 18px rgba(0,0,0,.035);border-radius:18px;background:var(--card);margin:6px 0 18px!important}
+#app .m355-market-head .m355-overline{font-size:10px;letter-spacing:.13em}
+#app .m355-market-head .m355-market-title{margin:9px 0 16px;align-items:center}
+#app .m355-market-head .m355-market-title h1{font-size:clamp(24px,3vw,30px);font-weight:750;letter-spacing:-.035em}
+#app .m355-market-head .m355-market-title p{font-size:13px;max-width:55ch;line-height:1.5}
+#app .m355-market-head .m355-ia-button{min-height:42px;border-radius:11px;padding:9px 13px}
+#app .m355-market-head .m360-area-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:0 0 18px}
+#app .m355-market-head .m360-area-grid .m360-area{display:flex;align-items:center;text-align:left;gap:10px;padding:13px 12px;min-height:72px;min-width:0;border:1px solid var(--bd);background:var(--bg);border-radius:13px;color:var(--tx);font:inherit;cursor:pointer;transition:border-color .15s ease,background .15s ease}
+#app .m355-market-head .m360-area-grid .m360-area.on{background:color-mix(in srgb,var(--g) 9%,var(--card));border-color:var(--g)}
+#app .m355-market-head .m360-area-symbol{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;color:var(--g);background:color-mix(in srgb,var(--g) 8%,var(--card));border:1px solid var(--bd);border-radius:10px;font-size:19px;line-height:1}
+#app .m355-market-head .m360-area-content{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+#app .m355-market-head .m360-area-content strong{display:block;font-size:13px;line-height:1.2;font-weight:750;overflow-wrap:anywhere}
+#app .m355-market-head .m360-area-content small{display:block;font-size:10px;line-height:1.35;color:var(--mut);font-weight:500;white-space:normal}
+#app .m355-market-head .m355-page-header{padding-top:14px;gap:10px}
+#app .m355-market-head .m355-page-header strong{font-size:17px}
+#app .m355-market-head .m355-page-links{gap:8px;margin-top:12px}
+#app .m355-market-head .m355-page-links button{min-height:42px;padding:9px 14px;border-radius:10px}
+#app .m355-market-head .m355-page-picker select{font-size:14px;border-radius:11px;min-height:46px;background:var(--bg);color:var(--tx)}
+#app .m355-market-head :is(button,select):focus-visible,html:root body #mdr2 :is(button,summary,input):focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+@media(hover:hover){#app .m355-market-head .m360-area-grid .m360-area:hover{border-color:var(--ac)}html:root body #mdr2 .pro-market-subgroup:hover{border-color:var(--ac)}}
+@media(max-width:880px){#app .m355-market-head .m360-area-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){
+ html:root body #mdr2 .pn{width:min(96vw,420px);padding:14px 14px max(18px,env(safe-area-inset-bottom));border-radius:20px}
+ html:root body #mdr2 .pro-market-subgroups{margin-left:24px}
+ #app .m355-market-head{padding:13px!important;margin:4px 0 14px!important;border-radius:14px}
+ #app .m355-market-head .m355-market-title{flex-wrap:wrap;gap:8px;margin:8px 0 13px}
+ #app .m355-market-head .m355-market-title h1{font-size:24px}
+ #app .m355-market-head .m355-market-title p{font-size:12px}
+ #app .m355-market-head .m360-area-grid{gap:8px;margin-bottom:13px}
+ #app .m355-market-head .m360-area-grid .m360-area{min-height:72px;padding:10px 9px;gap:7px}
+ #app .m355-market-head .m360-area-symbol{width:30px;height:30px;flex-basis:30px;font-size:16px}
+ #app .m355-market-head .m360-area-content strong{font-size:13px}
+ #app .m355-market-head .m360-area-content small{font-size:10px}
+ #app .m355-market-head .m355-page-header{padding-top:12px}
+ #app .m355-market-head .m355-page-header strong{font-size:15px}
+ #app .m355-market-head .m355-page-picker{max-width:58%}
+}
+@media(max-width:360px){#app .m355-market-head .m360-area-grid .m360-area{gap:5px;padding:9px 7px}#app .m355-market-head .m360-area-symbol{display:none}html:root body #mdr2 .pro-market-subgroups{margin-left:12px}}
+@media(prefers-reduced-motion:reduce){#app .m355-market-head .m360-area-grid .m360-area,html:root body #mdr2 .pro-market-subgroup>summary:after{transition:none}}
+
 </style></head><body><div id="splash"><img class="lg" src="icon-512.png?v=319" alt="Diário Trader" width="128" height="128" style="object-fit:contain;border-radius:24px"><b>Diário de Trader</b><p class="studio-splash-tagline">Clareza para decidir.<br>Disciplina para evoluir.</p><small class="studio-splash-signature">SEU PROCESSO EM PRIMEIRO LUGAR</small></div>
 <div id="app"></div><div id="sh"></div><div id="lb"></div>
 <nav><button data-tab="home"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg></i>Início</button><button data-tab="trades"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M17 4v16"/><rect x="5" y="8" width="4" height="7" rx="1"/><rect x="15" y="6" width="4" height="9" rx="1"/></svg></i>Trades</button><button data-tab="dia"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg></i>Dia</button><button data-tab="stats"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg></i>Stats</button><button data-tab="mais"><i><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></i>Mais</button></nav><button id="fab" data-a="fab" aria-label="Novo trade">＋</button><div id="fabm"><button data-a="new" data-tp="D">📸 Day trade</button><button data-a="new" data-tp="S">🌊 Swing</button><button data-a="new" data-tp="O">🎯 Opção</button></div>
 
-<script src="recursos.js"></script><script src="inicio.js"></script><script src="app.js"></script><script src="interface.js"></script></body></html>
+<script src="recursos.js"></script><script src="inicio.js"></script><script src="app.js"></script><script src="interface.js?v=360-experiencia"></script></body></html>

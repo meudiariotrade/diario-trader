@@ -1,14 +1,14 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v356-sazonalidade-usa-integrada-01',CDN='diario-cdn-1';
+const C='diario-v360-experiencia-profissional-01',CDN='diario-cdn-1';
 const CORE=["./","index.html","recursos.js","inicio.js","app.js","interface.js","manifest.webmanifest","icon-192.png","icon-512.png"];
-const EXTRA=[];
+const EXTRA=["pdf-lib.min.js","fontkit.umd.min.js","fontes-pdf.js","arte.js","cnpi.js","estudos.js","ingles.js","card-colecao-sazonal.png","card-halloween-touro.png","card-mercados-brasil-eua.png","card-natal-touro.png"];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
 self.addEventListener('install',event=>{
  event.waitUntil((async()=>{
   const cache=await caches.open(C);
   try{await cache.addAll(CORE.map(url=>new Request(url,{cache:'reload'})));}
   catch(error){await caches.delete(C);throw error;}
-  await Promise.all(EXTRA.map(url=>cache.add(new Request(url,{cache:'reload'})).catch(()=>{})));
+  // Recursos pesados são baixados apenas na primeira utilização.
   await self.skipWaiting();
  })());
 });
@@ -42,8 +42,11 @@ self.addEventListener('fetch',event=>{
  if(bundled){
   event.respondWith((async()=>{
    const cache=await caches.open(C),cached=await cache.match(new URL(path,scope).href,{ignoreSearch:true});
-   // Não grava uma versão parcial nesta publicação se o asset opcional não veio.
-   return cached||fetch(event.request);
+   if(cached)return cached;
+   // Cache incremental apenas para arquivos opcionais pedidos pelo usuário.
+   const response=await fetch(event.request);
+   if(EXTRA.includes(path)&&response.ok)await cache.put(event.request,response.clone());
+   return response;
   })());
  }
 });
