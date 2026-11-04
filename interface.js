@@ -2082,7 +2082,7 @@ function playerHtml(){
 <div class="aup-cap" id="aupcap"></div>
 <div class="aup-prog" id="aupprog">${a.r.cenas.map((c,k)=>`<i data-aucena="${k}" title="${h(c.titulo||'')}"></i>`).join('')}</div>
 <div class="aup-ctl"><button data-auprev="1" aria-label="Cena anterior">${IC.prev}</button><button class="aup-pp" data-aupp="1" aria-label="Tocar">${IC.play}</button><button data-aunext="1" aria-label="Próxima cena">${IC.next}</button>
-<button data-autv="1" class="aup-tv-btn" title="Explorar o exemplo no TradingView" aria-label="Abrir gráfico no TradingView">📈 Gráfico</button><button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><button type="button" data-auvisualmap="1" class="au336-map-btn">🗺️ Mapa visual</button><button type="button" data-au337gerar="1" class="au337-gen-btn">🎨 Gerar imagem desta cena</button><button type="button" data-au338diag="1" class="au338-diag-btn">🧪 Testar aulas</button><div class="au339-voices"><label>Narração <select id="au339mode"><option value="local">Voz do aparelho (grátis)</option><option value="neural" ${lsg(LS_NMODE,"local")==="neural"?"selected":""}>Voz neural de IA (áudio salvo)</option></select></label><label>Voz da IA <select id="au339voice">${[["Kore","Kore · clara"],["Charon","Charon · grave"],["Aoede","Aoede · suave"],["Fenrir","Fenrir · encorpada"]].map(([id,label])=>`<option value="${id}" ${lsg(LS_NVOICE,"Kore")===id?"selected":""}>${label}</option>`).join("")}</select></label><button type="button" data-au339gerar="1">🎙️ Gerar voz neural desta cena</button><span id="au339status" role="status" aria-live="polite">Áudio de IA é gerado sob demanda, com custo de API e limite diário.</span></div><span id="au337status" class="au337-status" role="status" aria-live="polite"></span><label class="au336-opt"><input type="checkbox" id="au336-auto" ${lsg("aulas-motor-visual-v336",true)?"checked":""}> Visuais por fala</label><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
+<button data-autv="1" class="aup-tv-btn" title="Explorar o exemplo no TradingView" aria-label="Abrir gráfico no TradingView">📈 Gráfico</button><button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><button type="button" data-auvisualmap="1" class="au336-map-btn">🗺️ Mapa visual</button><button type="button" data-au337gerar="1" class="au337-gen-btn">🎨 Gerar imagem desta cena</button><button type="button" data-au338diag="1" class="au338-diag-btn">🧪 Testar aulas</button><div class="au339-voices"><label>Narração <select id="au339mode"><option value="local">Voz do aparelho (grátis)</option><option value="neural" ${lsg(LS_NMODE,"local")==="neural"?"selected":""}>Voz neural de IA (áudio salvo)</option></select></label><label>Voz da IA <select id="au339voice">${[["Kore","Kore · clara"],["Charon","Charon · grave"],["Aoede","Aoede · suave"],["Fenrir","Fenrir · encorpada"]].map(([id,label])=>`<option value="${id}" ${lsg(LS_NVOICE,"Kore")===id?"selected":""}>${label}</option>`).join("")}</select></label><button type="button" data-au339gerar="1">🎙️ Gerar voz neural desta cena</button><button type="button" data-au340resume="1" class="au340-resume">▶ Voltar à aula</button><span id="au339status" role="status" aria-live="polite">Áudio de IA é gerado sob demanda, com custo de API e limite diário.</span></div><span id="au337status" class="au337-status" role="status" aria-live="polite"></span><label class="au336-opt"><input type="checkbox" id="au336-auto" ${lsg("aulas-motor-visual-v336",true)?"checked":""}> Visuais por fala</label><select id="aupvel" aria-label="Velocidade">${[0.8,0.9,0.95,1,1.1,1.2,1.35].map(v=>`<option value="${v}"${v==vel?' selected':''}>${String(v).replace('.',',')}×</option>`).join('')}</select>
 <select id="aupvoz" aria-label="Voz">${temVoz()?vozOpts():'<option>sem voz</option>'}</select>${temVoz()?'<button data-auvozteste="1" aria-label="Ouvir voz selecionada" style="font-size:12px;width:auto;padding:8px">Ouvir voz</button>':''}</div>
 <div class="aup-idx" id="aupidx" hidden>${a.r.cenas.map((c,k)=>`<button data-aucena="${k}"><span>${k+1}</span>${h(c.titulo||'Cena '+(k+1))}</button>`).join('')}${a.local?'':'<button class="aup-del" data-audel="1"><span>✕</span>Apagar esta aula</button>'}</div>
 </div>`;
@@ -2136,7 +2136,10 @@ function tocar(){
   P.play=1;botao();prendeTela();
   // iOS: a primeira fala precisa nascer do toque
   try{if(temVoz()){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}}catch{}
-  clearTimeout(P.t);P.t=setTimeout(fala,120);
+  clearTimeout(P.t);
+  // Safari/iOS precisa que audio.play() seja chamado diretamente no toque do usuário.
+  if(neuralMode()&&P.nAudio[neuralKey(P.i)]?.expira>Date.now())fala();
+  else P.t=setTimeout(fala,120);
 }
 function para(){P.play=0;P.tok++;clearTimeout(P.t);clearTimeout(P.wd);neuralStop();try{speechSynthesis.cancel()}catch{}botao();soltaTela()}
 function botao(){const b=document.querySelector('.aup-pp');b&&(b.innerHTML=P.play?IC.pause:IC.play,b.setAttribute('aria-label',P.play?'Pausar':'Tocar'))}
@@ -2316,7 +2319,7 @@ async function neuralGerar(){
  if(!P.a||!logado()||P.a.local){neuralStatus('É necessário entrar na conta e abrir uma aula salva.');return}
  if(!confirm('Gerar a narração desta cena com IA? Pode haver cobrança pelo provedor. O áudio será reutilizado; limite de 8 cenas por dia.'))return;
  para();P.nBusy=1;const b=document.querySelector('[data-au339gerar]');if(b)b.disabled=true;neuralStatus('Gerando áudio natural…');
- try{const d=await neuralReq('gerar',i);neuralSave(i,d);lss(LS_NMODE,'neural');const mode=document.getElementById('au339mode');if(mode)mode.value='neural';neuralStatus('Áudio salvo! Toque em ▶ para ouvir a voz neural.');toast?.('Narração neural salva para esta cena.')}
+ try{const d=await neuralReq('gerar',i);neuralSave(i,d);lss(LS_NMODE,'neural');const mode=document.getElementById('au339mode');if(mode)mode.value='neural';neuralStatus('Áudio salvo! Toque em ▶ Voltar à aula para reproduzir.');toast?.('Voz neural pronta! Use Voltar à aula.');}
  catch(e){neuralStatus(String(e.message||e).slice(0,190));toast?.('Voz neural: '+String(e.message||e).slice(0,110))}
  finally{P.nBusy=0;if(b)b.disabled=false}
 }
@@ -2327,9 +2330,9 @@ function neuralPlay(i,L){
  const visual=()=>{if(!P.play||tk!==P.tok||P.i!==i||!L.length)return;const total=L.reduce((a,x)=>a+Math.max(1,x.t.length),0);const elapsed=audio.duration>0?audio.currentTime/audio.duration:0;let left=total*elapsed,j=0;for(;j<L.length-1;j++){left-=Math.max(1,L[j].t.length);if(left<0)break}
   if(j!==last){last=j;P.j=j;desenha(L[j].k);legenda(L[j])}};
  audio.ontimeupdate=visual;audio.onloadedmetadata=()=>{if(P.j>0){const total=L.reduce((a,x)=>a+Math.max(1,x.t.length),0),before=L.slice(0,P.j).reduce((a,x)=>a+Math.max(1,x.t.length),0);audio.currentTime=Math.min(audio.duration*.99,audio.duration*before/total)}};
- audio.onended=()=>{if(tk!==P.tok||!P.play)return;P.j=L.length;P.t=setTimeout(fala,250)};
+ audio.onended=()=>{if(tk!==P.tok||!P.play)return;neuralStop();P.j=L.length;P.t=setTimeout(fala,250)};
  audio.onerror=()=>{if(tk!==P.tok)return;neuralStatus('Áudio de IA indisponível. Usando a voz do aparelho.');delete P.nAudio[neuralKey(i)];neuralStop();P.t=setTimeout(fala,100)};
- audio.play().catch(()=>{if(tk!==P.tok)return;neuralStatus('Toque novamente em ▶ para iniciar o áudio no navegador.');para()});return true;
+ audio.play().catch(()=>{if(tk!==P.tok)return;neuralStatus('O iPhone bloqueou o áudio neural; toque em ▶ para tentar novamente ou use a voz do aparelho.');neuralStop();P.play=0;botao();soltaTela()});return true;
 }
 /* v338 — central de homologação sem gerar imagens nem consumir a cota de IA. */
 function au338RenderDiag(d){
@@ -2514,7 +2517,8 @@ document.addEventListener('click',e=>{
   if(q('[data-au338refresh]')){au338Diagnostico();return}
   if(q('[data-au338graph]')){document.getElementById('au338-modal')?.remove();tvAbrir();return}
   if(q('[data-au338diag]')){au338Diagnostico();return}
-  if(q('[data-au339gerar]')){neuralGerar();return}
+  if(q('[data-au340resume]')){const op=document.getElementById('aupoptions');if(op){op.hidden=true;document.querySelector('[data-auoptions]')?.setAttribute('aria-expanded','false')}const stage=document.querySelector('#aup .aup-stage');if(stage)stage.scrollTop=0;if(!P.play)tocar();return}
+ if(q('[data-au339gerar]')){neuralGerar();return}
   if(q('[data-au337gerar]')){au337Gerar();return}
   if(q('[data-auvisualmap]')){para();document.getElementById('aupoptions').hidden=true;au336Mapa();return}
   if(q('[data-autv]')){tvAbrir();return}
@@ -3416,6 +3420,33 @@ const st=document.createElement('style');st.textContent=`.adr-ab{margin-top:14px
 @media(orientation:landscape) and (max-height:520px){#aup .aup-stage{min-height:160px}#aup .aup-cap{max-height:4em}}
 `;document.head.appendChild(st)})();
 
+/* v340: correção mobile — título, imagem e controles no mesmo quadro, sem espaço elástico. */
+(()=>{const css=document.createElement('style');css.id='au340-mobile-fix';css.textContent=`
+#aup{height:100dvh;max-height:100dvh;overflow:hidden!important;display:flex;flex-direction:column;box-sizing:border-box}
+#aup .aup-top{flex:0 0 auto}
+#aup .aup-stage{flex:1 1 auto!important;min-height:0!important;overflow:auto!important;overscroll-behavior:contain;display:block!important;padding:12px 12px 6px!important}
+#aup .aup-vis{max-height:none!important;overflow:visible!important;width:100%;margin:0 auto}
+#aup .au-lesson-visual{display:flex;flex-direction:column;gap:10px;width:100%;margin:0 auto!important;min-height:0!important}
+#aup .auv-tit{padding:2px 2px 5px;text-align:left;min-height:0!important;margin:0!important}
+#aup .auv-tit .auv-h{font-size:clamp(19px,4.9vw,29px);line-height:1.18}
+#aup .auyt{min-height:0!important}
+#aup .au336-example{margin:2px auto 0!important;max-width:100%;padding:10px}
+#aup .au336-example svg{height:auto;max-height:145px;max-width:100%;margin:8px 0}
+#aup .au336-head{gap:6px;align-items:flex-start}
+#aup .au336-head small{text-align:right;max-width:53%}
+#aup .au337-figure{margin:4px auto!important}
+#aup .aup-cap{flex:0 0 auto;max-height:65px;overflow-y:auto;font-size:13px!important;padding:5px 13px!important}
+#aup .aup-prog{flex:0 0 auto;padding:6px 13px!important}
+#aup .aup-ctl{flex:0 0 auto;position:relative;z-index:2;background:#0b1220;padding:7px 8px calc(8px + env(safe-area-inset-bottom,0px))!important;gap:7px!important;flex-wrap:nowrap!important}
+#aup .aup-ctl>button{width:39px!important;min-width:39px!important;height:39px!important;min-height:39px!important}
+#aup .aup-ctl .aup-pp{width:52px!important;min-width:52px!important;height:52px!important}
+#aup .aup-ctl .aup-tv-btn,#aup .aup-ctl .aup-options-toggle{width:auto!important;min-width:0!important;padding:0 8px!important;font-size:11px!important;aspect-ratio:auto!important}
+#aup .aup-options:not([hidden]){flex:0 1 auto;max-height:42dvh;overflow-y:auto;overscroll-behavior:contain}
+#aup .au340-resume{background:#047857!important;color:white!important;border-color:#34d399!important;font-weight:700!important}
+@media(max-width:420px){#aup .aup-stage{padding:9px 9px 3px!important}#aup .au336-example svg{max-height:118px}#aup .aup-top{padding:7px 9px}#aup .aup-ctl{gap:5px!important}#aup .aup-ctl>button{width:35px!important;min-width:35px!important;height:35px!important;min-height:35px!important}#aup .aup-ctl .aup-pp{width:48px!important;min-width:48px!important;height:48px!important}}
+@media(orientation:landscape) and (max-height:520px){#aup .aup-stage{min-height:0!important}#aup .aup-cap{max-height:44px}#aup .au336-example svg{max-height:100px}}
+`;document.head.appendChild(css)})();
+
 /* v320: janela independente do Terminal; nenhuma execução de ordens. */
 (function(){
 'use strict';
@@ -3992,3 +4023,89 @@ function close(){const d=doc.getElementById('radar332-dialog');if(d?.close)d.clo
 function mount(){const bar=doc.querySelector('.trbar');if(bar&&!bar.querySelector('[data-radar332]')){const b=doc.createElement('button');b.className='trbtn';b.dataset.radar332='1';b.type='button';b.textContent='Radar Proativo';b.addEventListener('click',open);bar.appendChild(b)}if(doc.getElementById('radar332-dialog'))return;const d=doc.createElement('dialog');d.id='radar332-dialog';d.className='radar332-dialog';d.innerHTML='<header><strong>RADAR PROATIVO · FONTES EXISTENTES</strong><button type="button" data-r332="close" aria-label="Fechar">×</button></header><section id="radar332-body"></section>';d.addEventListener('click',ev=>{const cmd=ev.target.closest('[data-r332]')?.dataset.r332;if(cmd==='close')close();if(cmd==='reload')refresh(true);if(cmd==='giro')giro();if(cmd==='avisos'){state.displayNotifications=!state.displayNotifications;if(state.displayNotifications&&'Notification'in win&&Notification.permission==='default')Notification.requestPermission().catch(()=>{});render()}if(cmd==='toggle'){state.enabled=!state.enabled;try{localStorage.setItem(k(),String(state.enabled))}catch{}render()}});doc.body.append(d);const toast=doc.createElement('div');toast.id='radar332-toast';toast.hidden=true;toast.setAttribute('role','status');doc.body.append(toast);const style=doc.createElement('style');style.textContent='.radar332-dialog{max-width:650px;width:calc(100vw - 26px);max-height:84dvh;overflow:auto;background:#101a25;color:#eaf2f7;border:1px solid #45576b;border-radius:13px;padding:0;font:13px/1.45 system-ui}.radar332-dialog::backdrop{background:#000a}.radar332-dialog header{position:sticky;top:0;background:#1c2b39;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:1}.radar332-dialog button{cursor:pointer}.radar332-dialog header button{border:0;background:transparent;color:#eee;font-size:22px}.radar332-dialog section{padding:12px 16px}.radar332-actions{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}.radar332-actions button{background:#24394b;color:#fff;border:1px solid #536879;border-radius:6px;padding:7px 10px}.radar332-dialog h3{font-size:12px;letter-spacing:.07em;color:#ffbf69;border-bottom:1px solid #344654;padding-bottom:6px;margin:18px 0 6px}.radar332-item{display:block;color:inherit;text-decoration:none;padding:9px 0;border-bottom:1px solid #273544}.radar332-item small{display:block;color:#abb9c7;margin-top:2px}.radar332-warn{color:#ffc789}.radar332-small,.radar332-disclaimer{font-size:11px;color:#a7b7c6}#radar332-toast{position:fixed;bottom:22px;right:20px;z-index:99999;color:#fff;background:#314657;border:1px solid #edb967;border-radius:8px;padding:12px;max-width:310px}#radar332-toast[hidden]{display:none}@media(max-width:640px){.radar332-dialog{width:calc(100vw - 12px)}.radar332-dialog section{padding:10px}}';doc.head.append(style);render()}
 win.TraderRadar332={open,refresh,normalizeNews,normalizeEvents,score,state,giro};if(win.TraderUI?.onRender)win.TraderUI.onRender('radar332',mount);let lastUid=userId();setInterval(()=>{const next=userId();if(next!==lastUid){lastUid=next;state.news=[];state.events=[];state.updated=0;state.giro=null;state.lastSignature='';render()}},15000);const observer=new MutationObserver(()=>{if(doc.querySelector('.trbar')&&!doc.querySelector('[data-radar332]'))mount()});observer.observe(doc.getElementById('app')||doc.body,{childList:true,subtree:false});setInterval(()=>{if(state.enabled&&doc.querySelector('.trbar')&&session()?.at&&Date.now()-state.updated>5*60000)refresh()},60000);mount();
 })(window,document);
+
+
+/* v341 — Menu compacto e prioridade às abas de layout no Terminal mobile.
+   Não duplica nem remove comandos: cada item executa o botão original. */
+(()=>{
+ 'use strict';
+ const doc=document;
+ const mobile=()=>window.matchMedia('(max-width: 800px)').matches;
+ const available=()=>doc.body.classList.contains('trmon')&&!window.TRPOP;
+ let menu=null,open=false,focused=null;
+ const css=doc.createElement('style');
+ css.id='tr341-css';
+ css.textContent=`
+ @media(min-width:801px){body.trmon .trbar>[data-tr341-menu]{display:none!important}}
+ @media(max-width:800px){
+   body.trmon:not(.tr341-exempt) .trbar{display:flex!important;align-items:center!important;gap:6px!important;padding:8px!important;flex-wrap:wrap!important}
+   body.trmon .trbar>.trlogo,body.trmon .trbar>.trmenub{display:none!important}
+   body.trmon .trbar>.tr341-secondary{display:none!important}
+   body.trmon .trquick-strip{display:none!important}
+   body.trmon .trbar>.trcmdw{order:0!important;flex:1 1 100%!important;width:100%!important;min-width:0!important;margin:0!important}
+   body.trmon .trbar>.trlay{order:1!important;flex:1 1 130px!important;min-width:100px!important;width:auto!important;margin:0!important}
+   body.trmon .trbar>[data-tr="addp"]{order:2!important;flex:0 0 auto!important;white-space:nowrap}
+   body.trmon .trbar>[data-tr341-menu]{order:3!important;flex:0 0 auto!important;white-space:nowrap;background:#223547!important;border:1px solid #5d7890!important;color:#eafaff!important;border-radius:9px!important;font-weight:700!important;min-height:42px!important;padding:8px 12px!important}
+   body.trmon .trtabs{display:flex!important;gap:5px!important;flex-wrap:nowrap!important;overflow-x:auto!important;padding:10px 6px!important;scrollbar-width:thin;scroll-snap-type:x proximity;background:#0e1723!important;border-bottom:1px solid #304457}
+   body.trmon .trtabs>button{flex:0 0 auto!important;min-height:44px!important;scroll-snap-align:start;font-weight:700!important}
+   body.trmon #trtape{padding:4px 6px!important;min-height:0!important;font-size:11px!important}
+ }
+ .tr341-dialog{box-sizing:border-box;width:min(520px,calc(100vw - 16px));max-height:84dvh;overflow:auto;border:1px solid #52728b;border-radius:14px;background:#101c2a;color:#f3f8fc;padding:0;box-shadow:0 18px 50px #0009;font:14px/1.5 system-ui,sans-serif}
+ .tr341-dialog::backdrop{background:#020911c9}
+ .tr341-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 16px;background:#192b3b;border-bottom:1px solid #30495c}
+ .tr341-head strong{font-size:16px}.tr341-head button{border:1px solid #648299;border-radius:8px;background:#223649;color:#f3f8fc;min-width:40px;min-height:40px;font-size:22px}
+ .tr341-content{padding:12px 16px 24px}
+ .tr341-group{margin:0 0 18px}.tr341-group h3{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:#9dc6de;margin:0 0 8px}
+ .tr341-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .tr341-items button{width:100%;padding:11px 9px;border:1px solid #3d5669;border-radius:10px;background:#1c2e41;color:#f1f7fa;font:600 13px/1.3 system-ui;min-height:46px;overflow-wrap:anywhere;text-align:left}
+ .tr341-items button:active{background:#2c4a61}.tr341-empty{color:#a8b7c5;padding:12px}
+ @media(max-width:360px){.tr341-items{grid-template-columns:1fr}}
+ `;
+ doc.head.appendChild(css);
+ const category=(button)=>{
+  const v=(button.textContent+' '+(button.title||'')+' '+Object.keys(button.dataset).join(' ')).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  if(/pesquis|fluxo|comandos|grafico|fundament|ficha|favorit|voltar/.test(v))return 'Pesquisa e comandos';
+  if(/espac|work|organizar|painel|planejar|sessao|renomear|duplicar/.test(v))return 'Organização';
+  if(/intelig|radar|notici|jornal|agenda|automac|dados|qualidade|context|fontes|monitor/.test(v))return 'Inteligência';
+  return 'Outras funções';
+ };
+ function items(){
+  const bar=doc.querySelector('.trbar');if(!bar)return [];
+  const originals=[...bar.children].filter(el=>el.tagName==='BUTTON'&&!el.hasAttribute('data-tr341-menu')&&el.dataset.tr!=='addp');
+  const shortcuts=[...doc.querySelectorAll('.trquick-strip button')];
+  const all=[...originals,...shortcuts];const names=new Set();
+  return all.filter(el=>{const text=(el.textContent||el.getAttribute('aria-label')||el.title||'').trim();if(!text)return false;const id=text+'|'+(el.dataset.tr||'')+'|'+(el.dataset.quickOpen||'');if(names.has(id))return false;names.add(id);return true});
+ }
+ function build(){
+  if(!menu){menu=doc.createElement('dialog');menu.className='tr341-dialog';menu.setAttribute('aria-label','Menu do Terminal');menu.innerHTML='<div class="tr341-head"><strong>☰ Menu do Terminal</strong><button type="button" data-tr341-close aria-label="Fechar menu">×</button></div><div class="tr341-content"></div>';doc.body.appendChild(menu);
+   menu.addEventListener('click',event=>{if(event.target===menu)menu.close();if(event.target.closest('[data-tr341-close]'))menu.close();const b=event.target.closest('[data-tr341-action]');if(b){const original=items()[Number(b.dataset.tr341Action)];if(!original){menu.close();return}menu.close();original.click()}});
+   menu.addEventListener('close',()=>{open=false;if(focused?.isConnected)focused.focus()});
+  }
+  const content=menu.querySelector('.tr341-content');content.replaceChildren();const all=items();
+  for(const group of ['Pesquisa e comandos','Organização','Inteligência','Outras funções']){
+   const selected=all.map((el,i)=>({el,i})).filter(x=>category(x.el)===group);if(!selected.length)continue;
+   const sec=doc.createElement('section');sec.className='tr341-group';const h=doc.createElement('h3');h.textContent=group;sec.append(h);const grid=doc.createElement('div');grid.className='tr341-items';
+   for(const {el,i} of selected){const b=doc.createElement('button');b.type='button';b.dataset.tr341Action=String(i);b.textContent=(el.textContent||el.getAttribute('aria-label')||el.title||'Função').trim().replace(/\s+/g,' ');grid.appendChild(b)}
+   sec.append(grid);content.append(sec);
+  }
+  if(!all.length){const empty=doc.createElement('p');empty.className='tr341-empty';empty.textContent='As funções aparecerão quando o Terminal terminar de carregar.';content.append(empty)}
+ }
+ function toggle(){build();focused=doc.activeElement;try{menu.showModal();open=true}catch{menu.setAttribute('open','');open=true}}
+ function mount(){
+  if(!available()){if(open&&menu){menu.close()}return}
+  const bar=doc.querySelector('.trbar');if(!bar)return;
+  for(const child of [...bar.children])if(child.tagName==='BUTTON'&&child.dataset.tr!=='addp'&&!child.hasAttribute('data-tr341-menu'))child.classList.add('tr341-secondary');
+  if(!bar.querySelector('[data-tr341-menu]')){const b=doc.createElement('button');b.type='button';b.className='trbtn';b.dataset.tr341Menu='';b.textContent='☰ Menu';b.title='Abrir funções do Terminal';b.setAttribute('aria-label','Abrir menu de funções do Terminal');b.addEventListener('click',toggle);bar.appendChild(b)}
+  // As abas de layout antecedem as cotações e os atalhos no celular.
+  if(mobile()){const tabs=doc.querySelector('.trm>.trtabs'),tape=doc.querySelector('.trm>#trtape');if(tabs&&tape&&tabs.nextElementSibling!==tape)tape.before(tabs)}
+ }
+ let pending=false;
+ const schedule=()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;mount()})};
+ const observer=new MutationObserver(changes=>{
+  if(changes.some(c=>[...c.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('.trm,.trbar,.trtabs,.trquick-strip')||n.querySelector?.('.trbar')))))schedule();
+ });
+ observer.observe(doc.getElementById('app')||doc.body,{childList:true,subtree:true});
+ window.addEventListener('resize',schedule,{passive:true});
+ doc.addEventListener('click',event=>{if(event.target.closest?.('[data-trmob]'))schedule()});
+ schedule();
+})();
