@@ -1240,8 +1240,38 @@
   else lineChart([{name:'Valor dos ativos · BRL',color:'#087c55',points:d.wealth}],'Evolução patrimonial',d.wealthRecorded?'Registros diários disponíveis, somente BRL. Mudanças na composição afetam a curva. Não mede rentabilidade.':'Valor dos ativos, sem caixa. Aportes, vendas e câmbio afetam o saldo; não mede rentabilidade.');
   note(input.demo?'DADOS FICTÍCIOS. Material ilustrativo para validar o formato; não representa uma carteira real.':'Documento privado. Posições atuais na exportação; análises armazenadas podem ter datas diferentes.');
   if(!d.perf.available)note(d.perf.reason);if(d.partial)note('Sem preço ou câmbio válido para: '+d.missing.join(', ')+'. Valores de custo não foram usados como cotação.');
+  // Últimos períodos contábeis no começo do PDF: 2025 é histórico anual, não o último trimestre.
+  const financeRecords=(()=>{
+    const selected=input.selected||{},rows=[];
+    if(selected.tipo==='ativo'){
+      const f=selected.dados?.fundamentos||{};
+      rows.push({ticker:selected.tk||'',dados_trimestrais:f.balancos_trimestrais_disponiveis||[],moeda:f.moeda_contabil||null});
+    }else if(Array.isArray(selected.dados?.balancos_trimestrais_da_fonte)){
+      rows.push(...selected.dados.balancos_trimestrais_da_fonte);
+    }
+    for(const a of d.positions){
+      const f=a.report?.dados?.fundamentos||{};
+      if(Array.isArray(f.balancos_trimestrais_disponiveis)&&f.balancos_trimestrais_disponiveis.length)
+        rows.push({ticker:a.position.tk,dados_trimestrais:f.balancos_trimestrais_disponiveis,moeda:f.moeda_contabil||null});
+    }
+    const by=new Map();
+    for(const r of rows){
+      const q=(Array.isArray(r.dados_trimestrais)?r.dados_trimestrais:[])
+       .filter(x=>x&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.periodo||''))&&(Number.isFinite(x.receita)||Number.isFinite(x.lucro)))
+       .sort((a,b)=>b.periodo.localeCompare(a.periodo))[0];
+      const tk=String(r.ticker||'');if(!tk||!q)continue;
+      if(!by.has(tk)||q.periodo>by.get(tk).q.periodo)by.set(tk,{ticker:tk,q,moeda:r.moeda||q.moeda||'não identificada'});
+    }
+    return [...by.values()].sort((a,b)=>a.ticker.localeCompare(b.ticker));
+  })();
+  const compactValue=v=>typeof v==='number'&&Number.isFinite(v)?(Math.abs(v)>=1e9?(v/1e9).toLocaleString('pt-BR',{maximumFractionDigits:2})+' bi':Math.abs(v)>=1e6?(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:2})+' mi':num(v)):'sem dado';
   page('01  Sumário executivo');
   text('A carteira reúne '+d.positions.length+' ativo(s). '+(d.partial?'A avaliação de mercado é parcial.':'O valor das posições com cotação é '+money(d.total)+'.')+' '+(d.top3!=null?'As três maiores posições representam '+pct(d.top3)+' do valor coberto.':''));
+  heading('BALANÇOS — ÚLTIMO TRIMESTRE DISPONÍVEL');
+  if(financeRecords.length){
+    table(['Ativo','Trimestre encerrado','Receita','Lucro','Moeda'],financeRecords.slice(0,16).map(r=>[r.ticker,r.q.periodo,compactValue(r.q.receita),compactValue(r.q.lucro),String(r.moeda)]),[14,24,23,23,16]);
+    note('Fonte: Yahoo Finance (séries trimestrais secundárias). A data mostra o encerramento do trimestre, NÃO atesta a última divulgação oficial. Valide com CVM/RI. Tabela anual até 2025 = exercícios fechados, não é o balanço trimestral mais recente.');
+  }else note('Nenhum dado trimestral identificado no relatório selecionado. 2025 é somente o último ano fechado, NÃO a confirmação do trimestre mais recente. Gere um novo relatório individual e consulte o RI/CVM.');
   if(d.perf.available)table(['Indicador','Carteira','IBOV','CDI'],[['Mês observado',pct(d.perf.monthReturn),pct(d.perf.monthly.at(-1)?.ib),pct(d.perf.monthly.at(-1)?.cdi)],['Histórico completo',pct(d.perf.return),pct(d.perf.ib.at(-1)?.value-100),pct(d.perf.cdi.at(-1)?.value-100)],['Janela',d.perf.from+' a '+d.perf.to,'Mesmas datas','Mesmas datas']],[28,30,21,21]);
   else empty('Retornos e comparações omitidos: faltam séries completas validadas. O saldo menos o custo não substitui rentabilidade.');
   bars(d.perf.monthly||[],'02  Desempenho por mês',{percent:true,benchmark:true});

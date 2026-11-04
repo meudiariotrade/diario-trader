@@ -1,5 +1,5 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v362-balancos-trimestrais-01',CDN='diario-cdn-1';
+const C='diario-v363-trimestres-destaque-01',CDN='diario-cdn-1';
 const CORE=["./","index.html","recursos.js","inicio.js","app.js","interface.js","manifest.webmanifest","icon-192.png","icon-512.png"];
 const EXTRA=["pdf-lib.min.js","fontkit.umd.min.js","fontes-pdf.js","arte.js","cnpi.js","estudos.js","ingles.js","card-colecao-sazonal.png","card-halloween-touro.png","card-mercados-brasil-eua.png","card-natal-touro.png"];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
