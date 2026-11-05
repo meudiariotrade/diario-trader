@@ -1576,7 +1576,7 @@
     // Capa editorial nas revistas e jornais: fotografia ilustrativa, nunca cotação ou notícia.
     try{
       if(/revista|jornal|giro/i.test(String(title))&&typeof fetch==='function'){
-        const response=await fetch('editorial-mercado-v378.jpg?v=378');
+        const response=await fetch('editorial-mercado-v379.jpg?v=379');
         if(response.ok){const jpg=await p.doc.embedJpg(await response.arrayBuffer());
           p.pg.drawImage(jpg,{x:p.W*.46,y:p.H-128,width:p.W*.54,height:128,opacity:.62});}
       }
@@ -3383,7 +3383,7 @@ function drawImage(ctx,width,y){
  ['Ativo / ADR','Fech. B3','Variação est.','Preço teórico'].forEach((t,i)=>{ctx.textAlign=i?'right':'left';ctx.fillText(t,cols[i],top+28)});
  L.forEach((l,k)=>{const yy=top+66+k*58;
   if(k){ctx.strokeStyle='#24313e';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(56,yy-34);ctx.lineTo(width-56,yy-34);ctx.stroke()}
-  ctx.textAlign='left';ctx.font='700 26px system-ui';ctx.fillStyle='#e2e8f0';ctx.fillText(l.loc==='IBOV'?'Ibovespa':l.loc,60,yy);ctx.font='18px system-ui';ctx.fillStyle='#a8b5c5';ctx.fillText(l.adr+' '+pc(l.adrp),60,yy+20);
+  ctx.textAlign='left';ctx.font='700 26px system-ui';ctx.fillStyle='#e2e8f0';if(window.TraderAssetIdentity?.draw(ctx,l.loc,60,yy-26,25)){ctx.fillText(l.loc==='IBOV'?'Ibovespa':l.loc,96,yy)}else ctx.fillText(l.loc==='IBOV'?'Ibovespa':l.loc,60,yy);ctx.font='18px system-ui';ctx.fillStyle='#a8b5c5';ctx.fillText(l.adr+' '+pc(l.adrp),60,yy+20);
   ctx.textAlign='right';ctx.font='24px system-ui';ctx.fillStyle='#e2e8f0';ctx.fillText(l.base?nf(l.base,l.loc==='IBOV'?0:2):'—',cols[1],yy);
   ctx.font='700 26px system-ui';ctx.fillStyle=l.teo?(l.varp>0.05?'#22c55e':l.varp<-0.05?'#f87171':'#a8b5c5'):'#a8b5c5';ctx.fillText(l.teo?pc(l.varp):'—',cols[2],yy);
   ctx.fillStyle='#e2e8f0';ctx.fillText(l.teo?nf(l.teo,l.loc==='IBOV'?0:2):'—',cols[3],yy);
