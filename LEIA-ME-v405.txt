@@ -1,0 +1,9 @@
+Diário de Trader v405 | Panorama profissional · Aplicar sobre a versão v404
+
+Arquivos na raiz do repositório: index.html, sw.js, panorama-v405.css, panorama-v405.js.
+
+Mudanças restritas a Mercado > Panorama. Blocos: Radar global, EWZ e ADRs, futuros e câmbio, commodities, juros e DI. A tela consulta o objeto de resposta do serviço macro existente e exibe origem e horário quando fornecidos. Sem dados reais, exibe travessões, nunca cotações fictícias.
+
+As telas analíticas antigas continuam funcionais dentro da seção recolhível "Explorar análises detalhadas, mapa de calor, setores e curva DI". Botões de atualização, ADR e curva DI reusam as ações existentes; nenhuma mudança na base de dados nem em ordens de corretora.
+
+Teste com cotações reais no ambiente conectado; confirme atrasos/horários e respostas de API no iPhone Safari e PC. Atualize arquivos, faça commit e deploy, feche o PWA e reabra.
