@@ -1,0 +1,41 @@
+DIÁRIO DE TRADER — v392 — MIGRAÇÃO DA INTERFACE FIGMA
+Data: 05/11/2026
+
+ATUALIZAÇÃO VISUAL
+- Menu superior como navegação principal; removida barra inferior duplicada (nav e #bnav).
+- Cabeçalho, ticker, painéis e campos de entrada com a identidade verde-escura.
+- Eliminação do acordeão "Ferramentas completas da versão anterior".
+- Formulários, listas, gráficos, menus e ferramentas originais apresentados como áreas integradas à nova interface; os controles e seus listeners foram preservados.
+- Permanecem as rotas e subrotas reais: Início, Meu dia, Regras, Operações, Trades, Estatísticas/Diário, Estudos, Mercado, Terminal, Carteiras, Painel, Mesa, Revisão e demais módulos.
+- Botão "Registrar trade" usa o cadastramento original, sem criar ordens; Profit Pro continua responsável pela execução.
+
+CORREÇÃO DA META
+- A antiga camada mostrava S.prop.meta (meta geral de lucro da mesa proprietária) como se fosse automaticamente a meta do dia. S.goals.meta também poderia ser usado como fallback.
+- v392 NÃO presume meta diária a partir dessa configuração: somente exibe S.days[DATA].metaDia quando configurada.
+- Para EUA (sessão US), usa a configuração do registro separado S.days[DATA].us.metaDia; para Brasil, usa S.days[DATA].metaDia.
+- Campo editável "Minha meta para este dia (R$)" salva pelo mesmo mecanismo do Diário existente.
+- O limite da sessão usa o maxP registrado naquele dia, ou, se ausente, o perdaDia geral do Painel, indicando a origem.
+- Não foram alterados valores existentes no servidor, operações, cotações ou relatórios.
+
+CHECKLIST
+- Botões Pré, Durante e Pós agora filtram regras de verdade, em vez de apenas trocar a cor.
+- Regras com categoria Plano de trade ou Rotina começam em Pré-mercado; Gestão de risco e Psicologia em Durante; o usuário pode reclassificar individualmente inclusive para Pós.
+- A fase escolhida é persistida na regra do mercado BR ou US, respeitando os conjuntos separados.
+- Marcações continuam salvas no Diário, por data e sessão.
+
+TESTES EFETUADOS
+- Execução no Chromium usando DOM real e módulos reais, com integrações externas bloqueadas para evitar alteração da conta do usuário.
+- 13 rotas renderizadas (incluindo terminal, carteira, estudos, operações e diário); nenhum erro de página detectado.
+- Cadastro de meta diária BR, cadastro separado US, edição de fase da regra e menu superior testados.
+- Barra inferior oculta verificada.
+- Não foi feito teste com dados privados reais do Supabase, Profit Pro ou cotações ao vivo. Testar com dados existentes após atualização de produção.
+
+INSTALAÇÃO
+1. Faça backup da versão publicada (e dos dados do aplicativo antes da atualização).
+2. Envie os 4 arquivos alterados: index.html, sw.js, design-v392.js, design-v392.css. Substitua index.html e sw.js e inclua os dois novos arquivos na raiz.
+3. Publique tudo no mesmo deploy; a atualização do Service Worker depende de todos os arquivos estarem disponíveis.
+4. Reabra o PWA; se ainda enxergar a interface antiga, feche e reabra o app após a publicação do Service Worker.
+5. Teste Meu dia (BR e EUA), ações de edição e todos os recursos usados regularmente.
+
+OBSERVAÇÃO
+Esta entrega migra a apresentação e integra todas as telas existentes à identidade v392, mas NÃO é uma recriação pixel a pixel de cada gráfico de Figma. Componentes avançados preservam a implementação original com novo acabamento. Nenhuma alteração no banco foi necessária.
