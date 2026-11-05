@@ -1,0 +1,25 @@
+DIÁRIO DE TRADER — v381 | LOGOTIPOS REAIS DOS ATIVOS
+
+Esta versão é acumulativa em relação à v380. Não altera cotações, análises, ações, cartões de operação, regras de mercado nem Supabase.
+
+Mudança:
+* Ações e ETFs da B3 previamente mapeados tentam carregar o logotipo real do emissor do domínio icons.brapi.dev.
+* ADRs de empresas brasileiras usam a marca da empresa-mãe (ex.: PBR -> Petrobras, ITUB -> Itaú), mantendo a identificação ADR na UI.
+* Índices, futuros, moedas, commodities e criptomoedas continuam com os símbolos locais para evitar associação enganosa.
+* Se a imagem não existir, a rede falhar ou o provedor bloquear o carregamento, o avatar original aparece automaticamente.
+* O conteúdo de preços e os dados da carteira não são enviados ao provedor: só ocorre requisição de imagem para um ticker da lista local.
+* Os PDFs em canvas continuam usando o símbolo local até que o carregamento com CORS e a licença de redistribuição de imagens sejam validados. Na interface HTML, o logotipo verdadeiro pode aparecer.
+
+Fontes e uso:
+- https://brapi.dev/docs/acoes (campo logourl)
+- https://brapi.dev/faq/a-api-fornece-acesso-as-logos-das-empresas-listadas-na-b3
+- https://brapi.dev/legal/terms-of-use
+Os logotipos são marcas de terceiros. Uso sujeito aos termos do provedor e direitos dos titulares.
+
+Instalação:
+1. Faça backup da versão atual.
+2. Envie o conteúdo integral do ZIP para a raiz do seu repositório em branch de homologação.
+3. Teste PETR4, VALE3, ITUB4, MGLU3 e WEGZY no Panorama e em cotações, tanto em Wi-Fi quanto offline.
+4. Em caso de problema de licença ou acesso, a v380 permanece disponível para retorno.
+
+Observação: a URL do CDN está documentada pela brapi; este ambiente de testes não conseguiu solicitar essas imagens diretamente. É obrigatória uma checagem no navegador após publicar.

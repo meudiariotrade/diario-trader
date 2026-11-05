@@ -1,0 +1,227 @@
+{
+  "versao": "v381",
+  "base": "v380",
+  "nota": "Logotipos reais da B3 via brapi.dev com fallback local; imagens remotas não foram carregadas nos testes offline.",
+  "arquivos": {
+    ".github/workflows/validar-v379.yml": {
+      "bytes": 1655,
+      "sha256": "bb239a63e6563d965a462237473ed1de280cbd6c6b54ed08e42217b5109a32db"
+    },
+    "CHECKLIST-TESTES-v379.md": {
+      "bytes": 1684,
+      "sha256": "4f0cdab1fb006a9db37732d94a1c3ef41c0b89f55d0be4c189b41dd998c876b1"
+    },
+    "CHECKLIST-TESTES-v380.md": {
+      "bytes": 1232,
+      "sha256": "4c86161c7736713b76f1792003c468ae5cdd44b4787a93da84d71808db5c2f02"
+    },
+    "CHECKLIST-TESTES-v381.md": {
+      "bytes": 782,
+      "sha256": "8838f78dec97c8c3c09f0b625938b54444d98c0f1d9b92dac7f191baa30e7478"
+    },
+    "LEIA-ME-v379.txt": {
+      "bytes": 2104,
+      "sha256": "5a5cca0c29a131c18be84470325c21898ea3ff872f3ce1127704c4012843c69b"
+    },
+    "LEIA-ME-v380.txt": {
+      "bytes": 2370,
+      "sha256": "6aaa170cc907d555aa0e9d28060e51a738d16b6eae968a29ba0a847b429a86e3"
+    },
+    "LEIA-ME-v381.txt": {
+      "bytes": 1884,
+      "sha256": "90a4e30a2ad728fc88f7f125db4b1cee07e6d2f122826227e743d2594cefabb2"
+    },
+    "PLANO-FINAL-v379.md": {
+      "bytes": 2000,
+      "sha256": "f5247edc6df84d87504c74674e04a5785064f499c5c5d4c662ba2edb17e3437d"
+    },
+    "PREVIA-EDITORIAL-DIARIO-TRADER-v376.pdf": {
+      "bytes": 241087,
+      "sha256": "df36cd9de771bc28d9513dfba674f1e29e8918a23efbded331082ff745c2a27b"
+    },
+    "RELATORIO-FINAL-v380.md": {
+      "bytes": 1008,
+      "sha256": "ca18b91c048bd1a983c499540c6cb9638193d63f599f22067ce21f6199a19467"
+    },
+    "RELATORIO-PENDENCIAS-v379.md": {
+      "bytes": 1353,
+      "sha256": "401971c7b01a8c3ef443850b286ba1c99176e0e02fd0aa7ae1ec2025e4fef652"
+    },
+    "amostras/exemplo-balancos-v379.json": {
+      "bytes": 779,
+      "sha256": "50d96f53b5992496d44fc3b7b9c7c883a6d5385849e52b38da7c8d5613de21bb"
+    },
+    "app.js": {
+      "bytes": 2636801,
+      "sha256": "6c22bd73738498e50fe8f54acd740f4ca868fd55d70356317ce5a9805cffcb0c"
+    },
+    "arte.js": {
+      "bytes": 162263,
+      "sha256": "f059a9abdf4d9d43be052d86400b879bf6db92ad55bbc00d3c283dc7ca620341"
+    },
+    "calendario-mercado-v379.js": {
+      "bytes": 4333,
+      "sha256": "09a875c05a65966453c333fb3d1c8ea885f1f4e2c0494f1a172884a435a1e367"
+    },
+    "card-colecao-sazonal.jpg": {
+      "bytes": 207131,
+      "sha256": "a000871c346f50657c029a15126139070d5745be52175d32dc8b5095e3d422f4"
+    },
+    "card-halloween-touro.jpg": {
+      "bytes": 186999,
+      "sha256": "ed9e393d1efde96160a28f7d026e7746c632b792d05e4e7c54bb190302858974"
+    },
+    "card-mercados-brasil-eua.jpg": {
+      "bytes": 192014,
+      "sha256": "f9a2ce0336861729726f5138ec6c8e1d11b1788e095e54f9cf4db9790d649e34"
+    },
+    "card-natal-touro.jpg": {
+      "bytes": 208052,
+      "sha256": "10b7928e9e28ebc20f6097c7616ca360f275e81cb67751a0d4b88b7f3e74b723"
+    },
+    "cnpi.js": {
+      "bytes": 67366,
+      "sha256": "cacd78b2844471eac261223f9358b2d9ac372ca4dd1507dd306d09bca84b17fe"
+    },
+    "diagnostico-v381.js": {
+      "bytes": 4072,
+      "sha256": "7fd4475dc29fbe490a71f4ea780eb0504e5d1ae7b538ab8fb46b0c0435c856fc"
+    },
+    "editorial-financeiro-v379.css": {
+      "bytes": 2634,
+      "sha256": "44ced047baf5d7fe86ae8000dbd4e5440b490bbd013fa56698064f391bbf495e"
+    },
+    "editorial-financeiro-v379.js": {
+      "bytes": 3518,
+      "sha256": "d3df7315be28ab9630610379d92ce135b40579c66521daade52ca2c6e491b724"
+    },
+    "editorial-mercado-v379.jpg": {
+      "bytes": 134387,
+      "sha256": "ffc29a18f7fc2b34b132f26215f1dbbce1bf177406e1989f0f488419b0348a75"
+    },
+    "estudos.js": {
+      "bytes": 555436,
+      "sha256": "dc7a64aebff2f821044ae56bf6ddc720e39d8a375210717fdf9084c25e55a043"
+    },
+    "fontes-pdf.js": {
+      "bytes": 3935116,
+      "sha256": "9e2a3e2d023aed77ef85e17dba7a2bd15ea05912dfc5d9ffd48c83d77ba781f5"
+    },
+    "fontkit.umd.min.js": {
+      "bytes": 758477,
+      "sha256": "51ddff8d0232ff17eb24a7a16668936a570a940b961b69c3d3a0b7012289ea00"
+    },
+    "icon-192.png": {
+      "bytes": 36787,
+      "sha256": "4c430f0c7f81e9522e4dfa22c27994cc764d31bcd0277effe847333f32918e2c"
+    },
+    "icon-512.png": {
+      "bytes": 70682,
+      "sha256": "4bb68ea4d80e8641c6c6cdb0480c8164972f1e747f8ad6b7b4ed00180139c767"
+    },
+    "identidade-ativos-v381.css": {
+      "bytes": 4414,
+      "sha256": "3bb35840840e88b42a22aaa0bd6154798590c96c3b9ea6a07650254c28397b0b"
+    },
+    "identidade-ativos-v381.js": {
+      "bytes": 17199,
+      "sha256": "da1ebeb725e9c5d689fe71e9f8ec72d997c82d75a397b36c9b46386392357e42"
+    },
+    "index.html": {
+      "bytes": 117509,
+      "sha256": "575082590f4d3396304f94f1d397abdad1d278dea866dd0cc93bd61f74c409f0"
+    },
+    "ingles.js": {
+      "bytes": 46127,
+      "sha256": "b60fac8760c001c9ee4eff321b2da1c9a13f67a0eb7ff6d71e30c239560194cb"
+    },
+    "inicio.js": {
+      "bytes": 450307,
+      "sha256": "728e1239faf232ddfbc7cbc5aa40fb2a93788d756f7ecf9d086ac4557844be37"
+    },
+    "interface.js": {
+      "bytes": 657172,
+      "sha256": "447ab86a128a0cde4b30bdfff63fc2d7d3fb80b6f4a0bc381b8203dd2e550915"
+    },
+    "manifest.webmanifest": {
+      "bytes": 496,
+      "sha256": "c1dbf4f4451f86bf943d3ea7c902f9b64ac175d7e33cd962f7496250bd39aa2f"
+    },
+    "pdf-lib.min.js": {
+      "bytes": 525132,
+      "sha256": "6c5bb2a946b71e521a1dd98e68322b8aaaca65cc7bfccac931f6e62601457648"
+    },
+    "recursos.js": {
+      "bytes": 355,
+      "sha256": "d473948a867fc24418b3118c16b2fbf8e20f0278fd4a1a2225e143b3427d3f3e"
+    },
+    "scripts/PLANO-SEGURANCA.md": {
+      "bytes": 1783,
+      "sha256": "9041c6c8f1f8564e9c5c3a51a88f45bd7c28a503e7a4b1f0ad1e5ee35f210023"
+    },
+    "scripts/auditar-assets-v369.cjs": {
+      "bytes": 1817,
+      "sha256": "5c8013637379b0efdc13081df8395e7d8ab085a98e9891caadb14334d5387001"
+    },
+    "scripts/auditar-limpeza-v379.cjs": {
+      "bytes": 2976,
+      "sha256": "8212ea2df16e6b95b64e98342a864abd7fe6428e9e678c8ce746f585d4d5ec76"
+    },
+    "scripts/auditar-publicacao-v379.cjs": {
+      "bytes": 1155,
+      "sha256": "deb18d1c446ed25c5d47217fa3342d4a1805c60d5a478518f2a59e655d785dce"
+    },
+    "scripts/conferir-integridade-v380.cjs": {
+      "bytes": 904,
+      "sha256": "58c8ad896b00fc87e360a466dad6951712e51468e17d1addebbde43aebd3cc7d"
+    },
+    "scripts/conferir-integridade-v381.cjs": {
+      "bytes": 904,
+      "sha256": "4ea4f02b249dc31832f9b12a01b2b6362d109a3c9032614e54d468ab2afa36f2"
+    },
+    "scripts/preflight-v380.cjs": {
+      "bytes": 2658,
+      "sha256": "8707ae4a83ebbe1e2bbb62bbf8a3730cd8b43894aee6744deb29d6cf0c46dc6d"
+    },
+    "scripts/preflight-v381.cjs": {
+      "bytes": 2658,
+      "sha256": "26b7906b8b067d0dc4a6ec624cf436ee17b1d8372cd9526a4f745ee118fe9e8f"
+    },
+    "scripts/validar-balancos-v379.cjs": {
+      "bytes": 2122,
+      "sha256": "0b6493e0858d8657b0d9e0e8c304e3d9b23b20d8de72447dc5022bf2b8fb2c3a"
+    },
+    "sw.js": {
+      "bytes": 4464,
+      "sha256": "b37e32abc63853eec705eb31e668b2404e7cccea1d4d57655abcfa01a442a871"
+    },
+    "tests-finalizacao-v380.cjs": {
+      "bytes": 2630,
+      "sha256": "84c8f3818e541785c64978116f912c1dc2ecd1c0a9ebdcb704fd7501cf6cd0d5"
+    },
+    "tests-homologacao-v380.cjs": {
+      "bytes": 3166,
+      "sha256": "ca276188b961a93d2b0a7eaf3735bb08e299025863943a7c9bb2f6dc651897f0"
+    },
+    "tests-identidade-v381.cjs": {
+      "bytes": 9135,
+      "sha256": "5800a6aca9f4e9b833388150470830a29b71dbcf84ae3dca19607dabbbb68310"
+    },
+    "tests-mercado-v380.cjs": {
+      "bytes": 8794,
+      "sha256": "10e0f0812ce40697202adc75e6444937e2274c652582262b30ff1071d3033b63"
+    },
+    "tests-seguranca-v380.cjs": {
+      "bytes": 1721,
+      "sha256": "f4a19fd03568dc992009aef1de8a29bbbab1eb954041817ab601d0d5c1889e28"
+    },
+    "tests-v379.cjs": {
+      "bytes": 172,
+      "sha256": "b3d6dc07a25d8843fc1a08b58b56d3c833d75c23be358067cdbe17779d9bb395"
+    },
+    "tests-v381.cjs": {
+      "bytes": 36811,
+      "sha256": "5b6b4fa0719b32377330eb6da70c3e2cb1db3f63f8c46fcad90256086c5eab19"
+    }
+  }
+}

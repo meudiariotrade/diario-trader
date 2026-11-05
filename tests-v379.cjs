@@ -1,4 +1,4 @@
-/* Compatibilidade: o conjunto v379 foi incorporado aos testes da v380.
- * A publicação atual deve executar tests-v380.cjs. */
+/* Compatibilidade: o conjunto v379 foi incorporado aos testes da v381.
+ * A publicação atual deve executar tests-v381.cjs. */
 'use strict';
-require('./tests-v380.cjs');
+require('./tests-v381.cjs');
