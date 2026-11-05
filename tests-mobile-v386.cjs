@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const d=__dirname,r=f=>fs.readFileSync(path.join(d,f),'utf8');let n=0;
+function test(name,fn){fn();console.log('OK',name);n++}
+test('Dock do Terminal é escuro, fixado ao viewport e com altura controlada',()=>{const c=r('terminal-mobile-v385.css');for(const x of ['body.trmon #bnav','position:fixed!important','inset:auto 0 0!important','background:#102231!important','safe-area-inset-bottom','padding-bottom:calc(105px'])assert(c.includes(x),x)});
+test('Dock não cobre teclado e busca IA quando o campo ganha foco',()=>{const j=r('terminal-mobile-v385.js');assert(j.includes('visualViewport'));assert(j.includes('dt384-keyboard-open'));assert(j.includes('focusin'));assert(j.includes('focusout'));assert(r('terminal-mobile-v385.css').includes('.dt384-keyboard-open #bnav'))});
+test('Nenhum script em linha e todas as folhas instaladas no HTML',()=>{const h=r('index.html');for(const f of ['terminal-mobile-v385.js','terminal-mobile-v385.css','identidade-ativos-v386.js'])assert(h.includes(f+'?v=386'),f);assert(!/<script(?![^>]*src)[^>]*>\s*[^<\s]/i.test(h))});
+test('Sete novos tickers americanos com marcas locais, sem trocar cotações',()=>{const s=r('identidade-ativos-v386.js'),fs2=require('node:fs');const expected={UBER:'uber',ABNB:'airbnb',PYPL:'paypal',SPOT:'spotify',MA:'mastercard',QCOM:'qualcomm',SHOP:'shopify'};for(const [ticker,slug] of Object.entries(expected)){assert(s.includes(ticker+":'"+slug+"'"));const png=fs2.readFileSync(path.join(d,'logos','us',slug+'.png'));assert.equal(png.slice(0,8).toString('hex'),'89504e470d0a1a0a');assert(png.length>150)} });
+test('Cache offline e versão do aplicativo são consistentes',()=>{const sw=r('sw.js'),app=r('app.js');assert(sw.includes('diario-v386-'));assert(app.includes('const APP_VER="v386"'));for(const p of ['terminal-mobile-v385.css','terminal-mobile-v385.js','logos/us/uber.png','logos/us/shopify.png'])assert(sw.includes('"'+p+'"'),p)});
+console.log(`\n${n}/${n} testes mobile v386 aprovados.`);

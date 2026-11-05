@@ -1,0 +1,66 @@
+/* v386 — símbolos locais, originais e leves. Não altera dados ou cores de preços. */
+.ta-avatar{--ta-size:36px;--ta-accent:#28709b;box-sizing:border-box;display:inline-grid!important;place-items:center;flex:0 0 var(--ta-size);width:var(--ta-size);height:var(--ta-size);min-width:var(--ta-size);border-radius:50%;vertical-align:middle;overflow:hidden;background:linear-gradient(150deg,color-mix(in srgb,var(--ta-accent) 78%,white),var(--ta-accent) 63%,color-mix(in srgb,var(--ta-accent) 64%,black));border:1px solid color-mix(in srgb,var(--ta-accent) 52%,white);box-shadow:inset 0 1px 1px #ffffff35,0 1px 4px #0002;color:#fff!important;-webkit-text-fill-color:#fff!important;line-height:1!important;letter-spacing:-.025em;text-align:center;user-select:none;pointer-events:none}
+.ta-mark{display:block;font:800 16px/1 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+.ta-avatar:has(.ta-mark) .ta-mark{font-size:clamp(9px,calc(var(--ta-size) * .43),17px)!important}
+.ta-avatar[data-group="etf"] .ta-mark,.ta-avatar[data-group="futuro"] .ta-mark{font-size:10px!important;letter-spacing:-.05em!important}
+.ta-avatar.ta-small{--ta-size:27px}.ta-avatar.ta-small .ta-mark{font-size:11px!important}
+.ta-avatar.ta-small[data-group="etf"] .ta-mark,.ta-avatar.ta-small[data-group="futuro"] .ta-mark{font-size:9px!important}
+.ta-brand{display:flex!important;gap:10px;align-items:center!important;min-width:0}.ta-copy{display:block;min-width:0;flex:1}.ta-copy>b,.ta-copy>small{display:block}
+html:root body #app .adr-quote .ta-copy>b{font-size:17px}.adr-quote .ta-brand .ta-avatar{--ta-size:38px}
+html:root body #app .cqr>.ta-avatar.cqi{--ta-size:34px;width:34px;height:34px;min-width:34px;padding:0;margin:0}
+html:root body #app .cqr>.ta-avatar.cqi .ta-mark{font-size:12px!important}
+html:root body #app .cqmap .cqt>.ta-avatar{margin:0 auto 4px}
+.ta-open-row td:first-child>.ta-avatar{margin-right:6px;vertical-align:middle}
+.ta-title{display:inline-flex;align-items:center;gap:8px;min-width:0}.ta-title .ta-avatar{margin-right:1px}
+.ta-cell>.ta-avatar{margin-right:7px}.ta-quote-title{display:flex;align-items:center;gap:8px;min-width:0}
+.card.row[data-a="edit"] .th .ta-avatar{--ta-size:38px}
+@media(max-width:600px){.adr-quote .ta-brand .ta-avatar{--ta-size:32px}html:root body #app .cqr>.ta-avatar.cqi{--ta-size:30px;width:30px;height:30px;min-width:30px}.ta-title{gap:5px}.ta-quote-title{gap:5px}}
+@media(prefers-reduced-motion:reduce){.ta-avatar{animation:none!important;transition:none!important}}
+
+.ta-report-title,.ta-editorial-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ta-report-title .ta-avatar,.ta-editorial-title .ta-avatar{flex-shrink:0}.jrart .ta-editorial-title{align-items:baseline}.pfrh .ta-report-title{margin-top:0}.pft .ta-cell{white-space:nowrap}@media print{.ta-avatar{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+
+/* Acentos por emissor e classe: símbolos estilizados, não marcas oficiais. */
+.ta-avatar[data-ticker^="PETR"],.ta-avatar[data-ticker="PBR"]{background:linear-gradient(157deg,#ebc245 0 32%,#f9fbef 33% 39%,#138950 40% 100%);border-color:#84b887}
+.ta-avatar[data-ticker^="ITSA"]{background:linear-gradient(150deg,#0e76ac,#073c83)}
+.ta-avatar[data-ticker^="ITUB"]{background:linear-gradient(150deg,#f9a642,#e96514)}
+.ta-avatar[data-ticker^="BBAS"],.ta-avatar[data-ticker="BDORY"]{background:linear-gradient(143deg,#ffca44 0 13%,#1769bc 15% 100%)}
+.ta-avatar[data-ticker^="MGLU"]{background:linear-gradient(135deg,#19aaf5,#0062d9)}
+.ta-avatar[data-ticker^="VALE"]{background:linear-gradient(145deg,#17afab,#087a82)}
+.ta-avatar[data-ticker^="WEG"]{background:linear-gradient(135deg,#0988bb,#064e94)}
+.ta-avatar[data-ticker^="BTC"]{background:linear-gradient(135deg,#ffb54b,#dc7611)}
+.ta-avatar[data-ticker^="ETH"]{background:linear-gradient(145deg,#8d8ae5,#5149ae)}
+
+/* v386 — logo corporativa real (se o provedor responder) e fallback imediatamente legível. */
+.ta-avatar{position:relative}.ta-avatar .ta-logo{position:absolute;inset:2px;width:calc(100% - 4px);height:calc(100% - 4px);border-radius:50%;object-fit:contain;display:block;box-sizing:border-box;background:#ffffff;padding:2px;opacity:0}
+.ta-avatar.ta-has-logo .ta-logo{opacity:1}.ta-avatar.ta-has-logo .ta-mark{visibility:hidden}
+@media print{.ta-avatar:not(.ta-has-logo) .ta-mark{visibility:visible}}
+
+/* v386: somente imagens de marcas embarcadas (mesma origem) podem aparecer em PDFs renderizados com canvas. */
+#pdfbody .ta-avatar:not([data-logo-local="1"]) .ta-logo,
+#jeroot .ta-avatar:not([data-logo-local="1"]) .ta-logo{display:none!important}
+#pdfbody .ta-avatar:not([data-logo-local="1"]) .ta-mark,
+#jeroot .ta-avatar:not([data-logo-local="1"]) .ta-mark{visibility:visible!important}
+.ta-avatar[data-logo-local="1"] .ta-logo{image-rendering:auto}
+
+/* v386 — mercado de câmbio: duas bandeiras circulares reais, sem depender de imagens de terceiros. */
+.ta-avatar.ta-pair{isolation:isolate;position:relative;overflow:visible!important;border:0!important;background:transparent!important;box-shadow:none!important;display:inline-block!important;vertical-align:middle}
+.ta-avatar.ta-pair .ta-mark{display:none!important}
+.ta-fx-half{position:absolute;top:17%;left:0;width:68%;height:68%;box-sizing:border-box;display:grid;place-items:center;border-radius:50%;overflow:hidden;background:#164568;border:1.2px solid #e9f1f6;box-shadow:0 1px 3px #0007}
+.ta-fx-half.ta-fx-quote{left:32%;z-index:2}.ta-fx-half.ta-fx-base{z-index:1}
+.ta-fx-code{font:800 8px/1 ui-sans-serif,system-ui,sans-serif!important;letter-spacing:-.06em;color:white!important;-webkit-text-fill-color:white!important}
+.ta-fx-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}
+.ta-fx-half.ta-has-flag .ta-fx-img{opacity:1}
+.ta-avatar.ta-small .ta-fx-code{font-size:6px!important}
+#pdfbody .ta-avatar.ta-pair .ta-fx-img,#jeroot .ta-avatar.ta-pair .ta-fx-img{display:block!important}
+@media print{.ta-avatar.ta-pair,.ta-fx-half{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+
+/* v386: a lista de Mercado recebe a identidade real em sua propria renderizacao. */
+#app .cqr>.ta-avatar.cqi { box-shadow:none; overflow:visible; align-self:center; }
+#app .cqr>.ta-avatar.cqi:not(.ta-pair) { overflow:hidden; }
+#app .cqr>.ta-avatar.cqi.ta-pair { border-radius:0; }
+#app .cqr>.ta-avatar.cqi .ta-logo { max-width:none; }
+@media(max-width:650px) {
+  #app .cqr .cqn { min-width:0; overflow:hidden; }
+  #app .cqr .cqn small { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  #app .cqr .cqn b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+}

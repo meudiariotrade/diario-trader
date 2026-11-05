@@ -1,0 +1,13 @@
+DIARIO DE TRADER v386 - CORRECAO DIRETA DO MERCADO
+
+Esta versao substitui a v385. Corrige precisamente as listas de Mercado > Acoes EUA e Mercado > Moedas:
+- As linhas de cotacao agora constroem o avatar diretamente no renderizador e nao dependem do observador de DOM.
+- Tickers de provedores como NASDAQ:AAPL, NASDAQ:MSFT e FX_IDC:USDBRL viram logos reais ou as duas bandeiras.
+- Re-renderizacao e atualizacao automatica reaplicam a identidade.
+- Carteira, Diario, PDF e fontes de cotacao nao mudaram.
+- Se a identidade falhar, o rotulo padrao continua visivel.
+- CSS no iPhone evita quebrar o ticker de origem em varias linhas.
+
+IMPORTANTE: os links e screenshots antigos podem estar sendo servidos do cache de um PWA.
+Publique TODOS os arquivos do ZIP de uma vez; confirme que index.html e sw.js sao v386 e limpe/reabra o PWA caso persista a versao anterior.
+A integracao GitHub nesta conversa tem bloqueio de escrita, portanto este ZIP nao altera o seu repositorio.

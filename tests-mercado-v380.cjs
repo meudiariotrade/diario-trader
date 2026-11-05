@@ -57,7 +57,7 @@ run('No feriado com cotações vencidas a interface oculta a projeção',()=>{co
 run('Regras B3 e NYSE não têm dependência de fetch e URL externa obrigatória',()=>{const js=fs.readFileSync(path.join(root,'calendario-mercado-v379.js'),'utf8');assert(!/\bfetch\s*\(/.test(js));assert(/2026-11-20/.test(js))});
 run('Estilo editorial é decorativo e não reescreve indicadores financeiros',()=>{const js=fs.readFileSync(path.join(root,'editorial-financeiro-v379.js'),'utf8');assert(js.includes('ARTE EDITORIAL'));assert(!js.includes('enviarOrdem'));assert(!js.includes('fetch('))});
 run('Arte editorial e CSS entregues como arquivos válidos',()=>{const image=fs.readFileSync(path.join(root,'editorial-mercado-v379.jpg'));assert.equal(image[0],0xff);assert.equal(image[1],0xd8);assert(fs.statSync(path.join(root,'editorial-financeiro-v379.css')).size>1000)});
-run('Scripts carregados na ordem exigida antes da interface',()=>{const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert(html.indexOf('calendario-mercado-v379.js?v=385')<html.indexOf('interface.js?v=385'));assert(html.includes('editorial-financeiro-v379.css?v=385'))});
+run('Scripts carregados na ordem exigida antes da interface',()=>{const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert(html.indexOf('calendario-mercado-v379.js?v=386')<html.indexOf('interface.js?v=386'));assert(html.includes('editorial-financeiro-v379.css?v=386'))});
 run('Revista e jornal PDF incluem arte editorial opcional sem depender dela para funcionar',()=>{
  const code=fs.readFileSync(path.join(root,'interface.js'),'utf8');
  assert(code.includes("p.doc.embedJpg(await response.arrayBuffer())"));
@@ -84,9 +84,9 @@ run('Imagem editorial preserva todos os pixels de conteúdo no novo canvas',()=>
 });
 run('HTML publica os scripts na ordem correta, inclusive os estilos do Giro e Revista',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
- assert(html.includes('editorial-financeiro-v379.css?v=385'));
- assert(html.indexOf('calendario-mercado-v379.js?v=385')<html.indexOf('interface.js?v=385'));
- assert(html.indexOf('interface.js?v=385')<html.indexOf('editorial-financeiro-v379.js?v=385'));
+ assert(html.includes('editorial-financeiro-v379.css?v=386'));
+ assert(html.indexOf('calendario-mercado-v379.js?v=386')<html.indexOf('interface.js?v=386'));
+ assert(html.indexOf('interface.js?v=386')<html.indexOf('editorial-financeiro-v379.js?v=386'));
  assert(!html.includes('diagnostico-v375.js?v=375'));
 });
 console.log(`\n${passed}/${total} testes adicionais v383 aprovados.`);
