@@ -2362,6 +2362,7 @@ async function carregaLista(forca){
     const l=await r.json();assertOwner(owner);AU.lista=(Array.isArray(l)?l:[]).concat(window.AULAS_LOCAIS||[]);lss(LS_LISTA,l);AU.ts=Date.now();
   }catch(e){if(owner!==ownerKey())return;AU.lista=lsg(LS_LISTA,[]);AU.err=/aulas|schema cache|404/.test(String(e.message||e))?'tabela':String(e.message||e)}
   AU.busy=0;pinta();
+  document.dispatchEvent(new CustomEvent('diario:aulas-carregadas'));
 }
 async function roteiro(a){
   const owner=ownerKey();
@@ -3328,7 +3329,7 @@ async function limparConta(owner){
 const previousRender=render;render=function(){ensureOwner();return previousRender.apply(this,arguments)};
 // Unowned legacy metadata is not reused. PDFs remain preserved in their old database, never opened by this version.
 try{for(const key of Object.keys(localStorage))if(/^aulas-(lista-v1$|rot-v1:|pos-v1:|job-v1$)/.test(key))localStorage.removeItem(key)}catch{}
-window.AULAS={abre,carregaLista,VIS,calcAjuste,_dbg:{cena,P,falasCena},ensureOwner,limparConta};
+window.AULAS={abre,carregaLista,VIS,calcAjuste,_dbg:{cena,P,falasCena},ensureOwner,limparConta, getLista:()=>Array.isArray(AU.lista)?AU.lista.slice():[], progresso:a=>posDe(a)};
 })();
 
 ;
