@@ -1,6 +1,6 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v399-estudos-figma-01',CDN='diario-cdn-v399',CDN_LIMIT=40;
-const CORE=["index.html","recursos.js","inicio.js","app.js","interface.js","icon-pack-v390.js","identidade-ativos-v390.js","mercado-visual-v388.js","mercado-visual-v388.css","identidade-ativos-v386.css","terminal-mobile-v385.css","terminal-mobile-v385.js","calendario-mercado-v379.js","editorial-financeiro-v379.js","diagnostico-v386.js","editorial-financeiro-v379.css","design-v399.css","design-v399.js","manifest.webmanifest","icon-192.png","icon-512.png"];
+const C='diario-v400-estudos-pc-fullscreen-01',CDN='diario-cdn-v400',CDN_LIMIT=40;
+const CORE=["index.html","recursos.js","inicio.js","app.js","interface.js","icon-pack-v390.js","identidade-ativos-v390.js","mercado-visual-v388.js","mercado-visual-v388.css","identidade-ativos-v386.css","terminal-mobile-v385.css","terminal-mobile-v385.js","calendario-mercado-v379.js","editorial-financeiro-v379.js","diagnostico-v386.js","editorial-financeiro-v379.css","design-v400.css","design-v399.js","manifest.webmanifest","icon-192.png","icon-512.png"];
 const EXTRA=["pdf-lib.min.js","fontkit.umd.min.js","fontes-pdf.js","arte.js","cnpi.js","estudos.js","ingles.js","card-colecao-sazonal.jpg","card-halloween-touro.jpg","card-mercados-brasil-eua.jpg","card-natal-touro.jpg","editorial-mercado-v379.jpg"];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
 self.addEventListener('install',event=>{
