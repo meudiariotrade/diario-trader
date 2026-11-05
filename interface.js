@@ -1189,44 +1189,126 @@
 })(typeof window==='undefined'?globalThis:window);
 
 ;
-/* módulo: carteira-periodos.js — v365, cálculo local auditável de YTD e TTM. */
+/* módulo: carteira-periodos.js — v375: trilha contábil, conciliação anual e data de divulgação. */
 (function(root){
  'use strict';
- const validNumber=x=>typeof x==='number'&&Number.isFinite(x);
+ const number=x=>typeof x==='number'&&Number.isFinite(x);
  const close=/^\d{4}-(03-31|06-30|09-30|12-31)$/;
- const currency=x=>{const str=String(x||'').trim().toUpperCase();return str==='R$'?'BRL':str==='US$'?'USD':/^[A-Z]{3}$/.test(str)?str:null};
+ const currency=x=>{const s=String(x||'').trim().toUpperCase();return s==='R$'?'BRL':s==='US$'?'USD':/^[A-Z]{3}$/.test(s)?s:null};
  const quarter=p=>close.test(String(p||''))?Number(String(p).slice(5,7))/3:null;
  const label=p=>quarter(p)?quarter(p)+'T'+p.slice(2,4):String(p||'sem referência');
+ const yearDate=x=>{const s=String(x||'');return /^\d{4}$/.test(s)?s+'-12-31':/^\d{4}-12-31$/.test(s)?s:null};
+ const date=x=>{if(x==null||x==='')return null;const raw=String(x).trim();if(!/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2}))?$/.test(raw))return null;const s=raw.slice(0,10),d=new Date(s+'T00:00:00Z');return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===s?s:null};
+ const disclosureValue=x=>x?.data_divulgacao??x?.divulgado_em??x?.publicado_em??x?.published_at??x?.data_publicacao;
+ const disclosure=x=>date(disclosureValue(x));
+ // Quando uma fonte declara uma data inválida, não tratá-la como data desconhecida.
+ // Datas ausentes continuam permitidas, mas claramente marcadas como não verificadas.
+ const invalidDisclosure=x=>{const raw=disclosureValue(x);return raw!=null&&String(raw).trim()!==''&&!date(raw)};
+ const accumulated=x=>[x?.tipo_periodo,x?.base_periodo,x?.escopo].some(v=>/^(ytd|ttm|anual|annual|acumulado|12m|9m|6m|3m-acum|ano|acumulado no ano|last 12 months)$/i.test(String(v||'').trim()));
  function previous(p){if(!close.test(p))return null;const y=Number(p.slice(0,4)),q=quarter(p),last=q===1?{y:y-1,q:4}:{y,q:q-1};return last.y+'-'+['03-31','06-30','09-30','12-31'][last.q-1]}
- function normalize(sources,asOf){
-  const cutoff=/^\d{4}-\d{2}-\d{2}$/.test(String(asOf||''))?String(asOf):'9999-12-31';
-  const validSources=(sources||[]).filter(s=>s&&Array.isArray(s.rows));
-  const primaryCurrency=validSources.map(s=>currency(s.moeda)).find(Boolean)||null;
-  const by=new Map(),rejected=[];
-  for(const source of validSources){
-   const srcCur=currency(source.moeda);
+ const same=(a,b)=>Math.abs(a-b)<=Math.max(0.01,Math.abs(a)*1e-6,Math.abs(b)*1e-6);
+ function normalize(sources,asOf,annualRows=[]){
+  const validReference=date(asOf);const cutoff=validReference||'0000-01-01';
+  const validSources=(Array.isArray(sources)?sources:[]).filter(s=>s&&Array.isArray(s.rows));
+  const usable=(s,r)=>r&&close.test(String(r.periodo||''))&&r.periodo<=cutoff&&!invalidDisclosure(r)&&!invalidDisclosure(s)&&(!disclosure(r)||disclosure(r)<=cutoff)&&(!disclosure(s)||disclosure(s)<=cutoff)&&!accumulated(r)&&(number(r.receita)||number(r.lucro));
+  // Prioriza a moeda do trimestre mais recente, não a ordem em que as fontes chegaram.
+  // Uma captura histórica em outra moeda não pode descartar o último balanço disponível.
+  const primaryCurrency=validSources.flatMap(s=>s.rows.filter(r=>usable(s,r))
+    .map(r=>({periodo:r.periodo,moeda:currency(r.moeda)||currency(s.moeda)})))
+    .filter(r=>r.moeda).sort((a,b)=>b.periodo.localeCompare(a.periodo))[0]?.moeda||null;
+  const by=new Map(),rejected=[],conflicts=[],blocked=new Set(),derived=[],annualConflicts=[],reconciliations=[];
+  for(const [index,source] of validSources.entries()){
+   const srcCur=currency(source.moeda),origin=String(source.origem||'Fonte '+(index+1)).slice(0,100);
    for(const item of source.rows){
-    const p=String(item?.periodo||''),cur=currency(item?.moeda)||srcCur||primaryCurrency;
-    if(!close.test(p)||p>cutoff||!validNumber(item?.receita)&&!validNumber(item?.lucro))continue;
-    if(primaryCurrency&&cur&&cur!==primaryCurrency){rejected.push(p);continue}
-    if(!by.has(p))by.set(p,{periodo:p,receita:validNumber(item.receita)?item.receita:null,lucro:validNumber(item.lucro)?item.lucro:null,moeda:cur});
+    const p=String(item?.periodo||'');
+    if(!close.test(p)||p>cutoff||!number(item?.receita)&&!number(item?.lucro))continue;
+    if(accumulated(item)){rejected.push({periodo:p,origem:origin,motivo:'valor acumulado ou anual não é trimestre isolado'});continue}
+    if(invalidDisclosure(item)||invalidDisclosure(source)){rejected.push({periodo:p,origem:origin,motivo:'data de divulgação inválida na fonte; conferência necessária'});continue}
+    if(disclosure(item)>cutoff||disclosure(source)>cutoff){rejected.push({periodo:p,origem:origin,motivo:'divulgação posterior à referência'});continue}
+    const cur=currency(item.moeda)||srcCur;
+    if(!cur||primaryCurrency&&cur!==primaryCurrency){rejected.push({periodo:p,origem:origin,motivo:!cur?'moeda não identificada':'moeda incompatível'});continue}
+    if(!by.has(p))by.set(p,{periodo:p,receita:null,lucro:null,moeda:cur,origens:{},confirmacoes:{receita:[],lucro:[]},divulgadoEm:null,derivados:[]});
+    const rec=by.get(p);
+    if(rec.moeda!==cur){rejected.push({periodo:p,origem:origin,motivo:'moeda incompatível'});continue}
+    const pub=disclosure(item)||disclosure(source);
+    if(pub&&(!rec.divulgadoEm||rec.divulgadoEm<pub))rec.divulgadoEm=pub;
+    for(const key of ['receita','lucro']){
+     if(!number(item[key])||blocked.has(p+':'+key))continue;
+     if(rec[key]===null){rec[key]=item[key];rec.origens[key]=origin;rec.confirmacoes[key].push(origin)}
+     else if(!same(rec[key],item[key])){
+      conflicts.push({periodo:p,campo:key,origens:[rec.origens[key],origin]});
+      rec[key]=null;rec.origens[key]=null;rec.confirmacoes[key]=[];blocked.add(p+':'+key);
+     }else if(!rec.confirmacoes[key].includes(origin))rec.confirmacoes[key].push(origin);
+    }
    }
   }
-  return {quarters:[...by.values()].sort((a,b)=>b.periodo.localeCompare(a.periodo)).slice(0,12),moeda:primaryCurrency,rejected};
+  // Conciliação ANTES de calcular 4T; dois anuais conflitantes impedem derivação.
+  const annualBy=new Map(),blockedAnnual=new Set();
+  for(const [index,a] of (Array.isArray(annualRows)?annualRows:[]).entries()){
+   if(!a||!primaryCurrency)continue;
+   const period=yearDate(a.periodo||a.ano||a.date),cur=currency(a.moeda);
+   if(!period||period>cutoff||cur!==primaryCurrency||invalidDisclosure(a)||disclosure(a)>cutoff)continue;
+   if(!annualBy.has(period))annualBy.set(period,{periodo:period,moeda:cur,receita:null,lucro:null,origens:{}});
+   const rec=annualBy.get(period),origin=String(a.origem||'Anual fonte '+(index+1)).slice(0,100);
+   for(const key of ['receita','lucro']){
+    const val=key==='receita'?(a.receita??a.revenue):(a.lucro??a.profit);
+    if(!number(val)||blockedAnnual.has(period+':'+key))continue;
+    if(rec[key]===null){rec[key]=val;rec.origens[key]=origin}
+    else if(!same(rec[key],val)){
+     annualConflicts.push({periodo:period,campo:key,origens:[rec.origens[key],origin]});
+     rec[key]=null;rec.origens[key]=null;blockedAnnual.add(period+':'+key);
+    }
+   }
+  }
+  for(const annual of annualBy.values()){
+   const period=annual.periodo,yr=period.slice(0,4),q1=by.get(yr+'-03-31'),q2=by.get(yr+'-06-30'),q3=by.get(yr+'-09-30');
+   if(!q1||!q2||!q3)continue;
+   const rec=by.get(period)||{periodo:period,receita:null,lucro:null,moeda:annual.moeda,origens:{},confirmacoes:{receita:[],lucro:[]},divulgadoEm:null,derivados:[]};
+   let changed=false;
+   for(const key of ['receita','lucro']){
+    if(!number(annual[key])||blockedAnnual.has(period+':'+key)||blocked.has(period+':'+key))continue;
+    if(![q1,q2,q3].every(q=>number(q[key])&&!blocked.has(q.periodo+':'+key)))continue;
+    const calc=annual[key]-(q1[key]+q2[key]+q3[key]);
+    if(!number(calc))continue;
+    if(number(rec[key])){
+     const total=rec[key]+q1[key]+q2[key]+q3[key];
+     if(!same(total,annual[key])){
+      reconciliations.push({periodo:period,campo:key,anual:annual[key],somaTrimestres:total});
+      // Nunca usar 4T incompatível com anual oficial ou rastreável em somas YTD/TTM.
+      // O trimestre original segue na fonte histórica, mas o valor normalizado é bloqueado.
+      rec[key]=null;rec.origens[key]=null;rec.confirmacoes[key]=[];
+      blocked.add(period+':'+key);
+     }
+     continue;
+    }
+    rec[key]=calc;rec.origens[key]='4T calculado: '+String(annual.origens[key]||'fonte secundária').slice(0,80);
+    rec.derivados.push(key);derived.push({periodo:period,campo:key});changed=true;
+   }
+   if(changed)by.set(period,rec);
+  }
+  const quarters=[...by.values()].sort((a,b)=>b.periodo.localeCompare(a.periodo)).slice(0,12);
+  const publicacoesNaoInformadas=quarters.filter(q=>!q.divulgadoEm).length;
+  return {quarters,moeda:primaryCurrency,rejected,conflicts,derived,annualConflicts,reconciliations,publicacoesNaoInformadas,referenciaInvalida:!validReference};
  }
- function calculate(sources,asOf){
-  const normalized=normalize(sources,asOf),quarters=normalized.quarters,latest=quarters[0]||null;
-  const empty={value:null,missing:[],reason:'Nenhum trimestre isolado disponível'};
+ function calculate(sources,asOf,annualRows=[]){
+  const normalized=normalize(sources,asOf,annualRows),quarters=normalized.quarters,latest=quarters[0]||null;
+  const empty={value:null,missing:[],reason:normalized.referenciaInvalida?'Data de referência inválida: não foi possível selecionar balanços com segurança.':'Nenhum trimestre isolado disponível',derivados:[]};
   if(!latest)return {...normalized,latest:null,ytd:{periodos:[],receita:{...empty},lucro:{...empty}},ttm:{periodos:[],receita:{...empty},lucro:{...empty}}};
   const known=new Map(quarters.map(q=>[q.periodo,q]));
   const q=quarter(latest.periodo),year=latest.periodo.slice(0,4);
   const ytdPeriods=Array.from({length:q},(_,i)=>year+'-'+['03-31','06-30','09-30','12-31'][i]);
   const ttmPeriods=[latest.periodo];for(let i=1;i<4;i++)ttmPeriods.unshift(previous(ttmPeriods[0]));
   function metric(periods,key){
-   const missing=periods.filter(p=>!validNumber(known.get(p)?.[key]));
-   const currencyOk=!!normalized.moeda;
-   return {value:missing.length||!currencyOk?null:periods.reduce((sum,p)=>sum+known.get(p)[key],0),missing,
-     reason:missing.length?'Faltam '+missing.map(label).join(', '):!currencyOk?'Moeda contábil não confirmada':null};
+   const missing=periods.filter(p=>!number(known.get(p)?.[key]));
+   const conflicting=normalized.conflicts.filter(c=>c.campo===key&&periods.includes(c.periodo)).map(c=>c.periodo);
+   const annualConflicting=normalized.annualConflicts.filter(c=>c.campo===key&&periods.includes(c.periodo)).map(c=>c.periodo);
+   const reconciliationConflicting=normalized.reconciliations.filter(c=>c.campo===key&&periods.includes(c.periodo)).map(c=>c.periodo);
+   const deriv=periods.filter(p=>known.get(p)?.derivados.includes(key));
+   return {value:missing.length||!normalized.moeda?null:periods.reduce((sum,p)=>sum+known.get(p)[key],0),missing,derivados:deriv,
+     reason:conflicting.length?'Divergência entre fontes em '+conflicting.map(label).join(', ')+'. Conferir CVM/RI':
+     reconciliationConflicting.length?'Divergência entre anual e trimestres em '+reconciliationConflicting.map(label).join(', ')+'. Valores não somados. Conferir CVM/RI':
+     annualConflicting.length&&missing.length?'Divergência nos anuais de '+annualConflicting.map(label).join(', ')+'. Conferir CVM/RI':
+     missing.length?'Faltam '+missing.map(label).join(', '):!normalized.moeda?'Moeda contábil não confirmada':null};
   }
   const aggregate=periodos=>({periodos,inicio:periodos[0],fim:periodos.at(-1),receita:metric(periodos,'receita'),lucro:metric(periodos,'lucro')});
   return {...normalized,latest,ytd:aggregate(ytdPeriods),ttm:aggregate(ttmPeriods)};
@@ -1281,16 +1363,24 @@
   // Prioridade: snapshot do relatório selecionado, depois relatório individual salvo.
   function financialPeriods(tk,individual,model){
    const selected=input.selected||{},sources=[];
-   if(selected.tipo==='ativo'&&String(selected.tk||'').toUpperCase()===String(tk).toUpperCase()){
-    const f=selected.dados?.fundamentos||{};
-    sources.push({rows:f.balancos_trimestrais_disponiveis||[],moeda:f.moeda_contabil||model?.financialCurrency});
-   }
-   const source=Array.isArray(selected.dados?.balancos_trimestrais_da_fonte)
-    ?selected.dados.balancos_trimestrais_da_fonte.find(x=>String(x?.ticker||'').toUpperCase()===String(tk).toUpperCase()):null;
-   if(source)sources.push({rows:source.dados_trimestrais||[],moeda:source.moeda||model?.financialCurrency});
+   const selectedFund=selected.tipo==='ativo'&&String(selected.tk||'').toUpperCase()===String(tk).toUpperCase()?selected.dados?.fundamentos||{}:{};
+   if(Array.isArray(selectedFund.balancos_trimestrais_disponiveis))sources.push({rows:selectedFund.balancos_trimestrais_disponiveis,
+    moeda:selectedFund.moeda_contabil||model?.financialCurrency,origem:'Relatório selecionado (Yahoo Finance)'});
+   const matchingSources=Array.isArray(selected.dados?.balancos_trimestrais_da_fonte)
+    ?selected.dados.balancos_trimestrais_da_fonte.filter(x=>String(x?.ticker||'').toUpperCase()===String(tk).toUpperCase()):[];
+   for(const source of matchingSources)sources.push({rows:source.dados_trimestrais||[],moeda:source.moeda||model?.financialCurrency,
+    origem:'Consolidado salvo ('+String(source.fonte||'Yahoo Finance')+')'});
    const f=individual?.dados?.fundamentos||{};
-   sources.push({rows:f.balancos_trimestrais_disponiveis||[],moeda:f.moeda_contabil||model?.financialCurrency});
-   return root.CarteiraPeriodos.calculate(sources,d.asOf);
+   if(Array.isArray(f.balancos_trimestrais_disponiveis))sources.push({rows:f.balancos_trimestrais_disponiveis,
+    moeda:f.moeda_contabil||model?.financialCurrency,origem:'Relatório individual salvo (Yahoo Finance)'});
+   // Dado anual de fonte secundária permite 4T por diferença com rastreabilidade.
+   // Só preenche métricas não disponíveis quando os três trimestres anteriores são íntegros.
+   const historical=Array.isArray(model?.annual)&&model.annual.length?model.annual:
+     Array.isArray(f.evolucao_receita_lucro)&&f.evolucao_receita_lucro.length?f.evolucao_receita_lucro:
+     Array.isArray(selectedFund.evolucao_receita_lucro)?selectedFund.evolucao_receita_lucro:[];
+   const annual=historical.map(r=>({...r,moeda:r.moeda||f.moeda_contabil||selectedFund.moeda_contabil||model?.financialCurrency||matchingSources[0]?.moeda,
+    origem:'Histórico anual secundário Yahoo Finance'}));
+   return root.CarteiraPeriodos.calculate(sources,d.asOf,annual);
   }
   const periodValue=v=>v?.value===null||v?.value===undefined?'n/d':compactValue(v.value);
   const periodNum=v=>v?.value===null||v?.value===undefined?'Não disponível':num(v.value);
@@ -1305,8 +1395,9 @@
   note(input.demo?'DADOS FICTÍCIOS. Material ilustrativo para validar o formato; não representa uma carteira real.':'Documento privado. Posições atuais na exportação; análises armazenadas podem ter datas diferentes.');
   if(!d.perf.available)note(d.perf.reason);if(d.partial)note('Sem preço ou câmbio válido para: '+d.missing.join(', ')+'. Valores de custo não foram usados como cotação.');
   // Últimos períodos contábeis no começo do PDF: 2025 é histórico anual, não o último trimestre.
-  const financeRecords=d.positions.map(a=>({ticker:a.position.tk,summary:financialPeriods(a.position.tk,a.report,a.fundamental)}))
-    .filter(r=>r.summary.latest).sort((a,b)=>a.ticker.localeCompare(b.ticker));
+  const financeCoverage=d.positions.map(a=>({ticker:a.position.tk,classe:a.position.cl||'',summary:financialPeriods(a.position.tk,a.report,a.fundamental)}))
+    .sort((a,b)=>a.ticker.localeCompare(b.ticker));
+  const financeRecords=financeCoverage.filter(r=>r.summary.latest);
   const compactValue=v=>typeof v==='number'&&Number.isFinite(v)?(Math.abs(v)>=1e9?(v/1e9).toLocaleString('pt-BR',{maximumFractionDigits:2})+' bi':Math.abs(v)>=1e6?(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:2})+' mi':num(v)):'sem dado';
   page('01  Sumário executivo');
   text('A carteira reúne '+d.positions.length+' ativo(s). '+(d.partial?'A avaliação de mercado é parcial.':'O valor das posições com cotação é '+money(d.total)+'.')+' '+(d.top3!=null?'As três maiores posições representam '+pct(d.top3)+' do valor coberto.':''));
@@ -1323,8 +1414,11 @@
     table(['Ativo','Trimestre','Receita isolada','Lucro isolado','Moeda'],financeRecords.slice(0,16).map(r=>[r.ticker,quarterName(r.summary.latest.periodo),compactValue(r.summary.latest.receita),compactValue(r.summary.latest.lucro),String(r.summary.moeda||'n/c')]),[15,19,26,25,15]);
     heading('ACUMULADO NO ANO (YTD) E ÚLTIMOS 12 MESES (TTM)');
     table(['Ativo','Receita YTD','Lucro YTD','Receita TTM','Lucro TTM'],financeRecords.slice(0,16).map(r=>[r.ticker,periodValue(r.summary.ytd.receita),periodValue(r.summary.ytd.lucro),periodValue(r.summary.ttm.receita),periodValue(r.summary.ttm.lucro)]),[14,22,21,22,21]);
-    note('YTD: soma dos trimestres isolados do ano até o trimestre mais recente de cada ativo; TTM: soma dos últimos quatro trimestres consecutivos. n/d = valor não calculável sem todos os períodos e moeda confirmada. Detalhes e lacunas nas páginas de cada ativo.');
-    note('Fonte: Yahoo Finance (dados secundários). Encerramento do período NÃO é a data de publicação do balanço. Os dados ainda exigem conferência com CVM/RI.');
+    note('Cobertura contábil armazenada: '+financeRecords.length+' de '+d.positions.length+' ativos da carteira têm ao menos um trimestre. Alguns ativos não possuem divulgação trimestral aplicável.');
+    note('YTD = trimestres isolados desde janeiro; TTM = quatro trimestres consecutivos. n/d = período ausente, moeda não confirmada ou valores divergentes. Dados não são interpolados.');
+    note('Fonte: Yahoo Finance (secundária). Encerramento NÃO é divulgação. 4T calculado, quando houver, significa ANUAL menos 9M na mesma moeda; nunca é tratado como publicação oficial. Confira CVM/RI.');
+    const nDisclosureUnknown=financeRecords.filter(r=>r.summary.publicacoesNaoInformadas>0).length;
+    if(nDisclosureUnknown)note('Datas de divulgação não informadas pela fonte secundária em '+nDisclosureUnknown+' ativo(s); nenhum desses encerramentos comprova publicação oficial. Valores posteriores à referência são descartados quando uma data de divulgação é fornecida.');
   }else note('Nenhum trimestre isolado identificado no relatório salvo. O último anual fechado NÃO comprova a atualização dos balanços de 2026.');
   if(d.perf.available)table(['Indicador','Carteira','IBOV','CDI'],[['Mês observado',pct(d.perf.monthReturn),pct(d.perf.monthly.at(-1)?.ib),pct(d.perf.monthly.at(-1)?.cdi)],['Histórico completo',pct(d.perf.return),pct(d.perf.ib.at(-1)?.value-100),pct(d.perf.cdi.at(-1)?.value-100)],['Janela',d.perf.from+' a '+d.perf.to,'Mesmas datas','Mesmas datas']],[28,30,21,21]);
   else empty('Retornos e comparações omitidos: faltam séries completas validadas. O saldo menos o custo não substitui rentabilidade.');
@@ -1346,6 +1440,24 @@
   analysis('Riscos apresentados pela IA',input.selected?.conteudo?.riscos);analysis('Cenários condicionais e acompanhamento',{hipoteses:input.selected?.conteudo?.hipoteses,monitorar:input.selected?.conteudo?.monitorar});
   const consolidated=input.selected?.tipo==='ativo'?{}:input.selected?.conteudo||{};
   for(const [key,value]of Object.entries(consolidated))if(!['resumo_executivo','conclusao','riscos','hipoteses','monitorar','identificacao'].includes(key))analysis(key.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()),value);
+  // v369: auditoria de cobertura antes das fichas individuais. Um encerramento
+  // contábil NÃO é uma data de divulgação; ausência de dados NÃO implica atraso da companhia.
+  const endedQuarter=(()=>{const year=Number(d.asOf.slice(0,4)),month=Number(d.asOf.slice(5,7)),q=Math.floor((month-1)/3);return q?year+'-'+['03-31','06-30','09-30','12-31'][q-1]:(year-1)+'-12-31'})();
+  const financeStats={total:financeCoverage.length,withQuarter:financeRecords.length,
+    current:financeRecords.filter(r=>r.summary.latest.periodo>=endedQuarter).length,
+    unverified:financeRecords.filter(r=>r.summary.publicacoesNaoInformadas>0).length};
+  page('06  Auditoria e cobertura dos balanços','Mapa de cobertura na fonte secundária · '+d.asOf);
+  heading('MAPA DE COBERTURA DO TRIMESTRE ENCERRADO');
+  note('Último trimestre calendário encerrado até a referência: '+quarterName(endedQuarter)+'. A empresa pode ainda não ter divulgado o resultado. O aplicativo não infere publicação a partir da data de encerramento.');
+  if(financeCoverage.length){
+    table(['Ativo','Último trimestre salvo','Moeda','Divulgação','Situação'],financeCoverage.map(r=>{
+      const a=r.summary,ultimo=a.latest;
+      return [r.ticker,ultimo?quarterName(ultimo.periodo):'sem trimestre',a.moeda||'n/c',ultimo?(ultimo.divulgadoEm||'não informada'):'não informada',
+        !ultimo?'sem dados na fonte':ultimo.periodo>=endedQuarter?'trimestre registrado':'aguardando coleta / publicação'];
+    }),[16,25,12,23,24]);
+    note('Cobertura: '+financeStats.withQuarter+'/'+financeStats.total+' ativos com algum trimestre; '+financeStats.current+' com '+quarterName(endedQuarter)+' ou posterior; '+financeStats.unverified+' com datas de divulgação ausentes em parte do histórico.');
+    note('Situação “aguardando coleta / publicação” NÃO afirma que a empresa esteja atrasada: pode ser ausência da captura Yahoo Finance, empresa sem divulgação aplicável ou demonstração ainda não apresentada. Verifique RI/CVM.');
+  }else empty('Nenhuma posição disponível para auditar nesta exportação.');
   for(const a of d.positions){const position=a.position,report=a.report,meta={...a.meta,fs:{...(a.meta?.fs||{}),...(report?.dados?.fundamentos||{})}},detail=R.detail(position,input.ledger||[],d.asOf);page(position.tk+'  |  Pesquisa do ativo',(position.nome||a.meta?.nome||'')+' · '+(position.cl||'Classe não informada')+' · '+(position.moeda||detail.unit),true);
    table(['Posição','Valor','Fundamento','Indicador'],Array.from({length:Math.max(6,root.TraderReports.fundamentalRows(position,meta).length)},(_,i)=>{const holding=[['Quantidade',num(position.q,4)],['Cotação',position.tem?num(position.pa):'Sem cotação'],['Preço médio',num(position.pm,4)],['Valor BRL',money(a.value)],['Proventos do ciclo',num(detail.income)+' '+detail.unit],['Peso coberto',a.value!=null&&d.total>0?pct(a.value/d.total*100):'Indisponível']][i]||['',''];const f=root.TraderReports.fundamentalRows(position,meta)[i]||['',''];return [...holding,...f]}),[24,23,30,23]);
    const f=report?.dados?.fundamentos;
@@ -1357,7 +1469,16 @@
     if(quarters.length){
      const quarterCurrency=periods.moeda||'moeda contábil não confirmada';
      table(['Trimestre','Encerramento','Receita isolada','Lucro isolado','Moeda'],quarters.map(r=>[quarterName(r.periodo),String(r.periodo),num(r.receita),num(r.lucro),String(r.moeda||quarterCurrency)]),[15,19,25,26,15]);
-     note('Trimestre isolado = APENAS os três meses indicados. Ex.: 3T26 é julho a setembro, não janeiro a setembro. Série secundária Yahoo Finance; conferir o release do RI/CVM.');
+     note('Trimestre isolado = APENAS três meses. 3T26 é julho a setembro, não janeiro a setembro. Fonte identificada no campo de rastreabilidade; data do encerramento NÃO indica publicação oficial. Verifique no RI/CVM.');
+     const latestAudit=periods.latest;
+     note('RASTREABILIDADE DO ÚLTIMO TRIMESTRE — Receita: '+String(latestAudit.origens.receita||'n/d')+'; lucro: '+String(latestAudit.origens.lucro||'n/d')+'; divulgação: '+(latestAudit.divulgadoEm||'não informada')+'. Duas capturas da mesma fonte não significam auditoria independente.');
+     if(periods.derived.length)note('ATENÇÃO — 4T calculado por diferença, não divulgado isoladamente: '+periods.derived.map(r=>quarterName(r.periodo)+' ('+r.campo+')').join(', ')+'. Fórmula: anual menos (1T + 2T + 3T), na mesma moeda. Conferir nas demonstrações oficiais.');
+     if(periods.conflicts.length)note('DIVERGÊNCIA ENTRE FONTES — números conflitantes foram omitidos: '+periods.conflicts.map(r=>quarterName(r.periodo)+' ('+r.campo+')').join(', ')+'. Conferir CVM/RI; não usar estes valores em YTD/TTM.');
+     if(periods.annualConflicts.length)note('DIVERGÊNCIA EM DADOS ANUAIS — não foi calculado 4T para os indicadores conflitantes: '+periods.annualConflicts.map(r=>quarterName(r.periodo)+' ('+r.campo+')').join(', ')+'.');
+     if(periods.reconciliations.length)note('DIVERGÊNCIA ENTRE ANUAL E QUATRO TRIMESTRES — conferir consolidação, unidades e demonstrações CVM/RI: '+periods.reconciliations.map(r=>quarterName(r.periodo)+' ('+r.campo+')').join(', ')+'. O valor original foi preservado na fonte histórica, mas o campo divergente NÃO entra no YTD/TTM até conferência.');
+     if(periods.publicacoesNaoInformadas)note('DATAS DE DIVULGAÇÃO — '+periods.publicacoesNaoInformadas+' de '+quarters.length+' trimestres não possuem data de publicação verificável nesta fonte; o encerramento do período não comprova divulgação.');
+     const asOfQuarter=(()=>{const yr=Number(d.asOf.slice(0,4)),mo=Number(d.asOf.slice(5,7)),q=Math.floor((mo-1)/3);return q?yr+'-'+['03-31','06-30','09-30','12-31'][q-1]:(yr-1)+'-12-31'})();
+     if(periods.latest.periodo<asOfQuarter)note('LACUNA DE COBERTURA — o último trimestre registrado ('+quarterName(periods.latest.periodo)+') é anterior ao trimestre calendário encerrado ('+quarterName(asOfQuarter)+'). O balanço pode ainda não ter sido divulgado ou a fonte secundária pode não estar atualizada.');
      heading('TRÊS VISÕES DOS RESULTADOS');
      table(['Janela','Receita','Lucro líquido','O que significa'],[
       [quarterName(periods.latest.periodo),num(periods.latest.receita),num(periods.latest.lucro),'Trimestre isolado (3 meses)'],
@@ -1371,7 +1492,7 @@
      note('YTD = soma dos trimestres isolados desde janeiro até '+quarterName(periods.latest.periodo)+'. TTM = soma de '+periods.ttm.periodos.map(quarterName).join(' + ')+'. Não são a mesma base: não compare diretamente 9 meses de YTD com 12 meses do anual ou TTM.');
      explainMissing('Acumulado YTD',periods.ytd);
      explainMissing('TTM',periods.ttm);
-     if(periods.rejected.length)note('Trimestres com moeda incompatível foram excluídos do cálculo: '+periods.rejected.map(quarterName).join(', ')+'.');
+     if(periods.rejected.length)note('REGISTROS NÃO UTILIZADOS — motivo por período: '+periods.rejected.map(r=>quarterName(r.periodo)+' ('+r.motivo+')').join(', ')+'. Data explícita inválida é bloqueada, não interpretada como divulgação conhecida; não foram presumidas moedas nem datas de publicação.');
      const W={p,heading:(title)=>heading(title),text:(value)=>note(value)};
      const chronological=[...quarters].reverse();
      if(chronological.some(r=>Number.isFinite(r.receita)))
@@ -1382,7 +1503,7 @@
     else note('Série trimestral ainda não identificada neste relatório salvo. Os exercícios anuais NÃO comprovam a atualização dos balanços de 2026. Gere novo relatório depois da atualização do servidor e confira o RI da empresa.');
    }
    const annual=a.fundamental?.annual?.length?a.fundamental.annual.map(r=>({ano:r.date,receita:r.revenue,lucro:r.profit})):Array.isArray(f?.evolucao_receita_lucro)?f.evolucao_receita_lucro:[];
-   if(annual.length){heading('ANUAL FECHADO · 12 MESES (HISTÓRICO)');table(['Ano','Receita','Lucro líquido'],annual.map(r=>[String(r.ano),num(r.receita),num(r.lucro)]),[20,40,40]);note('Anual = janeiro a dezembro de cada exercício completo. Não é soma dos trimestres do ano atual, nem projeção. NÃO compare com YTD parcial sem ajustar a janela. Moeda contábil: '+(a.fundamental?.financialCurrency||f?.moeda_contabil||'não confirmada')+'.');}
+   if(annual.length){heading('ANUAL FECHADO · 12 MESES (HISTÓRICO)');table(['Ano','Receita','Lucro líquido'],annual.map(r=>[String(r.ano),num(r.receita),num(r.lucro)]),[20,40,40]);note('Anual = exercício completo da companhia, geralmente janeiro a dezembro quando o ano fiscal coincide com o calendário. Não é YTD parcial nem projeção. Verifique a data de encerramento fiscal no RI/CVM. Moeda contábil: '+(a.fundamental?.financialCurrency||f?.moeda_contabil||'não confirmada')+'.');}
    if(a.fundamental?.annual?.length){
     const series=a.fundamental.annual;
     const W={p,heading:(title)=>heading(title),text:(value)=>note(value)};
@@ -1451,7 +1572,16 @@
       }
       else write.text(value);
     };
-    p.rect(0,0,p.W,128,{fill:p.C.dk});p.t('DIÁRIO DE TRADER · PESQUISA',p.M,25,{s:9,f:'b',c:p.C.li});
+    p.rect(0,0,p.W,128,{fill:p.C.dk});
+    // Capa editorial nas revistas e jornais: fotografia ilustrativa, nunca cotação ou notícia.
+    try{
+      if(/revista|jornal|giro/i.test(String(title))&&typeof fetch==='function'){
+        const response=await fetch('editorial-mercado-v378.jpg?v=378');
+        if(response.ok){const jpg=await p.doc.embedJpg(await response.arrayBuffer());
+          p.pg.drawImage(jpg,{x:p.W*.46,y:p.H-128,width:p.W*.54,height:128,opacity:.62});}
+      }
+    }catch(_){/* sem internet, o cabeçalho sólido original permanece legível */}
+    p.t('DIÁRIO DE TRADER · PESQUISA',p.M,25,{s:9,f:'b',c:p.C.li});
     const titleLines=p.wrap(title,p.CW,27,p.F.serif?'serif':'b');titleLines.slice(0,2).forEach((line,i)=>p.t(line,p.M,48+i*30,{s:27,f:p.F.serif?'serif':'b',c:p.C.wh}));
     p.y=146;write.text(subtitle,{size:10,color:p.C.mut});write.text('Gerado em '+new Date().toLocaleString('pt-BR')+' · referência: '+(reference||'não informada'),{size:8,color:p.C.mut});
     write.finish=async()=>{
@@ -3179,8 +3309,18 @@ const nf=(v,d=2)=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:d,maxi
 const pc=v=>(v>0?'+':'')+nf(v,2)+'%',cor=v=>v>0.05?'g':v<-0.05?'r':'mut';
 const diaBR=t=>new Date((t-3*3600)*1000).toISOString().slice(0,10);
 const hojeBR=()=>new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
+// Não confundir 'pregão ainda não abriu' com 'feriado sem pregão'.
+const situacao=()=>window.TraderCalendario?window.TraderCalendario.visibility(new Date(),AD.data,row=>window.TraderAdr.view(row)):{show:false,reason:'calendario_indisponivel'};
+function valorRecente(row,now=new Date()){
+ const v=window.TraderAdr.view(row,now),q=v?.regular,at=window.TraderCalendario?.millis(q?.at);
+ if(!q||!Number.isFinite(q.px)||q.px<=0||!Number.isFinite(q.chp)||!Number.isFinite(at))return false;
+ if(at>now.getTime()+60000||now.getTime()-at>30*60000)return false;
+ return window.TraderCalendario.datePart(new Date(at),'America/New_York').date===window.TraderCalendario.datePart(now,'America/New_York').date;
+}
 async function velas(ativo){const r=await rq('/functions/v1/candles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ativo,intervalo:'1d'}),signal:AbortSignal.timeout(20000)});const j=await r.json();return(j.candles||[]).filter(x=>x&&isFinite(x[4]))}
 async function load(){
+  const gate=situacao();
+  if(!gate.show){const was=!!S.dados;S.dados=null;S.err='';S.ts=0;if(was&&typeof adrPaint==='function')adrPaint();return}
   if(Date.now()-S.ts<300000&&S.adrTs===AD.data?.ts)return;
   if(window.DIARIO_DEMO||typeof SESS==='undefined'||!SESS?.at)return;
   const itens=(AD.data&&AD.data.itens)||[];if(!itens.length)return;
@@ -3189,12 +3329,16 @@ async function load(){
     const [ibov,dol]=await Promise.all([velas('IBOV'),velas('USDBRL')]);
     if(ibov.length<2||dol.length<2)throw new Error('Sem histórico do Ibovespa ou do dólar.');
     const ultB3=diaBR(ibov[ibov.length-1][0]);
-    // dólar: variação do dia em relação ao fechamento do dia do último pregão da B3
+    const diasBase=(Date.parse(hojeBR()+'T12:00:00Z')-Date.parse(ultB3+'T12:00:00Z'))/86400000;
+    if(!Number.isFinite(diasBase)||diasBase<1||diasBase>7)
+      throw new Error('Último fechamento da B3 sem referência recente e verificável.');
+    // dólar: não transformar ausência de cotação nova em variação fictícia de 0%.
     const dBase=[...dol].reverse().find(x=>diaBR(x[0])<=ultB3),dHoje=dol[dol.length-1];
+    if(diaBR(dHoje[0])!==hojeBR())throw new Error('Dólar sem candle de referência no feriado. Projeção indisponível.');
     if(!dBase||!(dBase[4]>0)||!(dHoje[4]>0))throw new Error('Sem câmbio válido na data-base da B3.');
     const usd=diaBR(dHoje[0])>ultB3?(dHoje[4]/dBase[4]-1)*100:0;
     const linhas=[];
-    const groups=itens.filter(row=>MAPA[String(row.s).toUpperCase()]);
+    const groups=itens.filter(row=>MAPA[String(row.s).toUpperCase()]&&valorRecente(row));
     for(let i=0;i<groups.length;i+=3)await Promise.all(groups.slice(i,i+3).map(async row=>{
       const loc=MAPA[String(row.s).toUpperCase()];if(!loc)return;
       const v=window.TraderAdr.view(row),adr=v.regular&&v.regular.chp;if(typeof adr!=='number'||!Number.isFinite(adr))return;
@@ -3205,30 +3349,35 @@ async function load(){
       linhas.push({adr:row.s,loc,adrp:adr,varp,base,teo:base?base*(1+varp/100):null});
     }));
     linhas.sort((a,b)=>itens.findIndex(x=>x.s===a.adr)-itens.findIndex(x=>x.s===b.adr));
-    S.dados={ultB3,usd,dolar:dHoje[4],linhas,b3Fechada:ultB3<hojeBR()&&new Date().getUTCDay()%6!==0};S.ts=Date.now();S.dataTs=S.ts;S.adrTs=adrTs;
-  }catch(e){S.err=String(e.message||e);S.ts=Date.now()}
+    // Revalidar após as consultas: a sessão pode ter terminado durante o processamento.
+    if(!situacao().show||ultB3>=hojeBR()||new Set(linhas.filter(x=>x.teo>0&&x.adr!=='EWZ').map(x=>x.loc)).size<2)
+      throw new Error('Sem feriado confirmado, base B3 anterior ou duas ADRs elegíveis.');
+    S.dados={ultB3,usd,dolar:dHoje[4],linhas,b3Fechada:true,feriadoB3:true};S.ts=Date.now();S.dataTs=S.ts;S.adrTs=adrTs;
+  }catch(e){S.dados=null;S.err=String(e.message||e);S.ts=Date.now()}
   S.busy=0;if(typeof adrPaint==='function')adrPaint();
 }
 function carrega(){if(S.job)return S.job;S.job=load().finally(()=>{S.job=null});return S.job}
 function abHtml(){
+  if(!situacao().show)return ''; // em dias comuns, não criar nem o cabeçalho da projeção
   setTimeout(carrega,0);
   const d=S.dados;
   if(!d)return`<div class="adr-ab card-sub"><b>Abertura teórica na B3</b><p class="sm mut">${S.busy?'Calculando…':S.err?h(S.err):'Calcula quando as ADRs carregarem (precisa estar logado).'}</p></div>`;
   const [,m,dd]=d.ultB3.split('-');
   const tab=d.linhas.map(l=>`<tr><td><b>${h(l.loc==='IBOV'?'Ibovespa':l.loc)}</b><small>${h(l.adr)} ${pc(l.adrp)}</small></td><td>${l.base?nf(l.base,l.loc==='IBOV'?0:2):'—'}</td><td class="${cor(l.varp)}"><b>${l.teo?pc(l.varp):'—'}</b></td><td>${l.teo?nf(l.teo,l.loc==='IBOV'?0:2):'—'}</td></tr>`).join('');
-  return`<div class="adr-ab"><div class="adr-ab-top"><b>Abertura teórica na B3</b>${'<span class="adr-ab-tag">Estimativa · base '+dd+'/'+m+'</span>'}</div>
-<p class="sm mut">Referência indicativa para o próximo pregão, sem prever o leilão de abertura: variação da ADR × variação do dólar (${pc(d.usd)}, R$ ${nf(d.dolar,4)}) sobre o fechamento da B3 em ${dd}/${m}.</p>
+  return`<div class="adr-ab"><div class="adr-ab-top"><b>Abertura teórica na B3</b>${'<span class="adr-ab-tag">FERIADO B3 · estimativa · base '+dd+'/'+m+'</span>'}</div>
+<p class="sm mut">Estimativa exclusiva de feriado da B3 com NYSE em pregão regular, sem prever o leilão de abertura: variação da ADR × variação do dólar (${pc(d.usd)}, R$ ${nf(d.dolar,4)}) sobre o fechamento da B3 em ${dd}/${m}.</p>
 <div class="adr-ab-tab"><table><thead><tr><th>Ativo</th><th>Fech. B3</th><th>Var. esperada</th><th>Abertura teórica</th></tr></thead><tbody>${tab||'<tr><td colspan="4" class="mut">Nenhuma ADR da lista tem ação correspondente mapeada.</td></tr>'}</tbody></table></div>
 <p class="sm mut">Conta: (1 + var. ADR) × (1 + var. dólar) − 1. Usa o pregão regular de Nova York; pós-mercado, notícias e o leilão de abertura podem mudar o preço. Ibovespa estimado pelo EWZ. Não é cotação.</p></div>`;
 }
 
 // Integra a estimativa no mesmo fluxo de desenho, imediatamente depois das ADRs.
-function imageHeight(){return S.dados?.linhas.length?156+S.dados.linhas.slice(0,12).length*58:0}
+function imageHeight(){return situacao().show&&S.dados?.linhas.length?156+S.dados.linhas.slice(0,12).length*58:0}
 function drawImage(ctx,width,y){
+ if(!situacao().show)return 0;
  const d=S.dados,L=d?.linhas.slice(0,12)||[];if(!L.length)return 0;
  const M=36,H=imageHeight(),top=y+48,boxH=40+L.length*58;
  ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.fillStyle='#e2e8f0';ctx.font='700 30px system-ui';ctx.fillText('Abertura teórica na B3',48,y+30);
- ctx.textAlign='right';ctx.fillStyle='#a8b5c5';ctx.font='22px system-ui';ctx.fillText('Estimativa · base '+d.ultB3.slice(8)+'/'+d.ultB3.slice(5,7),width-48,y+30);
+ ctx.textAlign='right';ctx.fillStyle='#a8b5c5';ctx.font='22px system-ui';ctx.fillText('FERIADO B3 · estimativa · base '+d.ultB3.slice(8)+'/'+d.ultB3.slice(5,7),width-48,y+30);
  ctx.fillStyle='#0d1b28';ctx.strokeStyle='#24313e';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(M,top,width-2*M,boxH,18);ctx.fill();ctx.stroke();
  const cols=[60,560,760,width-60];ctx.font='20px system-ui';ctx.fillStyle='#a8b5c5';
  ['Ativo / ADR','Fech. B3','Variação est.','Preço teórico'].forEach((t,i)=>{ctx.textAlign=i?'right':'left';ctx.fillText(t,cols[i],top+28)});
@@ -3243,7 +3392,7 @@ function drawImage(ctx,width,y){
  ctx.fillText((S.err?'Falha na atualização · cópia anterior. ':'Consulta: ')+new Date(S.dataTs).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+' · pós-mercado não incluído.',48,top+boxH+56,width-96);
  return H;
 }
-window.TraderPreOpen={height:imageHeight,draw:drawImage,prepare:carrega};
+window.TraderPreOpen={height:imageHeight,draw:drawImage,prepare:carrega,visibility:situacao};
 if(typeof imgDados==='function'){const original=imgDados;imgDados=async function(){await original.apply(this,arguments);S.ts=0;await carrega()}}
 setTimeout(carrega,6000);setInterval(()=>{if(!document.hidden)carrega()},300000);
 const o=adrHtml;adrHtml=function(){return o.apply(this,arguments)+abHtml()};
@@ -4711,3 +4860,85 @@ win.TraderTV343={mount,stop:()=>{stopAudio();stopLive();paint()},state};
  document.addEventListener('pointerup',e=>{if(session?.id===e.pointerId)session=null},true);
  document.addEventListener('pointercancel',e=>{if(session?.id===e.pointerId)session=null},true);
 })();
+/* v369 — Rotinas sugeridas por fase, sem consultar bolsa e sem executar ordens.
+   Ativação automática é opcional, por usuário, e preserva os layouts personalizados. */
+(function(win,doc){
+ 'use strict';
+ const base='diario-terminal-fase-auto-v369:';
+ const names={pre:'Pré-mercado',live:'Pregão BR',post:'Pós-mercado'};
+ const owner=()=>win.DIARIO_DEMO?'demo':(typeof SESS!=='undefined'?SESS?.uid||null:null);
+ function phaseAtBR(instant){
+   if(!(instant instanceof Date)||!Number.isFinite(instant.getTime()))return null;
+   const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',hourCycle:'h23',weekday:'short',hour:'2-digit',minute:'2-digit'}).formatToParts(instant).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+   if(parts.weekday==='Sat'||parts.weekday==='Sun')return 'post';
+   const minute=Number(parts.hour)*60+Number(parts.minute);
+   return minute<9*60?'pre':minute<18*60?'live':'post';
+ }
+ const current=()=>phaseAtBR(new Date());
+ const key=()=>owner()?base+owner():null;
+ function automatic(){try{const k=key();return !!k&&localStorage.getItem(k)==='1';}catch{return false}}
+ function setAutomatic(flag){const k=key();if(!k)throw Error('Entre na sua conta.');try{localStorage.setItem(k,flag?'1':'0')}catch{throw Error('Não foi possível salvar a preferência neste navegador.')}}
+ let lastPhase=null;
+ const state=()=>{try{return win.TRM?.TS?.()||null}catch{return null}};
+ function suggest(kind){if(!kind||!win.TerminalOrganizador322?.apply)throw Error('O organizador ainda não está disponível.');win.TerminalOrganizador322.apply(kind);}
+ function labels(){const phase=current(),mode=automatic(),bar=doc.querySelector('.trbar');if(!bar||win.TRPOP)return;
+   let recommendation=bar.querySelector('[data-t369-suggest]'),toggle=bar.querySelector('[data-t369-auto]');
+   if(!recommendation){
+     recommendation=doc.createElement('button');recommendation.type='button';recommendation.className='trbtn';recommendation.dataset.t369Suggest='1';
+     recommendation.addEventListener('click',()=>{try{suggest(current())}catch(e){if(typeof win.toast==='function')win.toast(e.message)}});bar.appendChild(recommendation);
+   }
+   if(!toggle){
+     toggle=doc.createElement('button');toggle.type='button';toggle.className='trbtn';toggle.dataset.t369Auto='1';
+     toggle.addEventListener('click',()=>{try{const enabled=!automatic();setAutomatic(enabled);if(enabled){const ws=state()?.ws||'';if(ws.startsWith('ws321_auto_')){lastPhase=current();suggest(lastPhase)}else{lastPhase=null;if(typeof win.toast==='function')win.toast('Modo automático habilitado, mas pausado neste Workspace personalizado. Selecione uma rotina para começar.')}}labels()}catch(e){if(typeof win.toast==='function')win.toast(e.message)}});bar.appendChild(toggle);
+   }
+   const t=phase?names[phase]:'indisponível';recommendation.textContent='Rotina: '+t;recommendation.title='Sugestão por horário de Brasília, não confirmação de abertura da bolsa. Clique para abrir o layout sem executar ordens.';
+   const ws=state()?.ws||'';
+   const paused=mode&&!ws.startsWith('ws321_auto_');
+   toggle.textContent=mode?(paused?'Auto: pausado':'Auto: ligado'):'Auto: desligado';
+   toggle.title='Alternância opcional de layouts por horário, limitada a Workspaces automáticos. Layout personalizado não é alterado automaticamente.';
+   toggle.setAttribute('aria-pressed',mode?'true':'false');
+ }
+ function tick(){const p=current(),s=state();if(!p||!s)return;
+   if(automatic()&&lastPhase!==p&&s.ws.startsWith('ws321_auto_')&&s.ws!=='ws321_auto_'+p){
+      lastPhase=p;try{suggest(p)}catch(_){/* manter layout atual */}
+   }else lastPhase=p;
+   labels();
+ }
+ win.TerminalFases369={phaseAtBR,current,automatic,setAutomatic,tick,mount:labels};
+ if(win.TraderUI?.onRender)win.TraderUI.onRender('terminal-fases-v369',()=>{labels()});
+ if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',()=>{labels();tick()},{once:true});else{labels();tick()}
+ setInterval(()=>{if(!doc.hidden)tick()},60*1000);
+})(window,document);
+
+
+/* v375 — qualidade observável das cotações já presentes; nenhuma ordem ou fonte fictícia. */
+(function(win,doc){'use strict';
+ function inspect(q){
+  const rows=Array.isArray(q?.rows)?q.rows:[],good=rows.filter(r=>r?.px!=null&&r.px!==''&&Number.isFinite(Number(r.px))&&Number(r.px)>0);
+  const delayed=rows.filter(r=>r?.atraso===true).length,missing=rows.length-good.length;
+  const ts=q?.timestamp&&Number.isFinite(new Date(q.timestamp).getTime())?new Date(q.timestamp).toISOString():null;
+  const rawStatus=typeof q?.status==='string'?q.status.slice(0,90):'sem conexão de leitura';
+  return {status:rawStatus,registros:rows.length,precosValidos:good.length,precosAusentes:missing,atrasadosDeclarados:delayed,
+   atrasoNaoInformado:rows.filter(r=>r?.atraso!==true&&r?.atraso!==false).length,observadoEm:ts,
+   alerta:!rows.length?'Nenhuma cotação disponível no cache.':missing||delayed||/antiga|falha|aguardando|indisponível/i.test(rawStatus)?'Confira fontes, timestamps e situação do mercado.':'Valores consultivos; não equivalem a feed tick-by-tick.'};
+ }
+ function open(){
+  const old=doc.querySelector('#tr-qualidade-v374');if(old){old.showModal?.();return}
+  const dialog=doc.createElement('dialog');dialog.id='tr-qualidade-v374';
+  Object.assign(dialog.style,{width:'min(490px,94vw)',maxHeight:'75dvh',background:'#101b28',color:'#edf5ff',border:'1px solid #6c8098',borderRadius:'12px',padding:'16px',font:'13px/1.5 system-ui'});
+  const h=doc.createElement('h2');h.textContent='Qualidade dos dados · Terminal';dialog.append(h);
+  const p=doc.createElement('pre');p.style.whiteSpace='pre-wrap';p.style.overflowWrap='anywhere';dialog.append(p);
+  const desc=doc.createElement('p');desc.textContent='Consulta ao último cache do Terminal. Horário do registro não confirma se o mercado está aberto. Sem execução de ordens.';dialog.append(desc);
+  function update(){const state=inspect(win.TraderConsulta325?.getQuotes?.());p.textContent=JSON.stringify(state,null,2)}
+  const refresh=doc.createElement('button');refresh.type='button';refresh.textContent='Atualizar diagnóstico';refresh.addEventListener('click',update);dialog.append(refresh);
+  const close=doc.createElement('button');close.type='button';close.textContent='Fechar';close.style.marginLeft='10px';close.addEventListener('click',()=>dialog.close());dialog.append(close);
+  doc.body.append(dialog);update();dialog.showModal?.();
+ }
+ function mount(){const bar=doc.querySelector('.trbar');if(!bar||bar.querySelector('[data-tr-qualidade-v374]'))return;
+  const b=doc.createElement('button');b.type='button';b.className='trbtn';b.dataset.trQualidadeV374='1';b.textContent='Qualidade dos dados';
+  b.title='Diagnóstico das cotações existentes; não transmite dados e não executa ordens.';b.addEventListener('click',open);bar.appendChild(b);
+ }
+ win.TerminalQualidade374={inspect,mount};
+ if(win.TraderUI?.onRender)win.TraderUI.onRender('terminal-qualidade-v374',mount);
+ if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+})(window,document);

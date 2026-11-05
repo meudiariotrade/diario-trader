@@ -1,12 +1,12 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v366-leve-01',CDN='diario-cdn-1';
-const CORE=["./","index.html","recursos.js","inicio.js","app.js","interface.js","manifest.webmanifest","icon-192.png","icon-512.png"];
-const EXTRA=["pdf-lib.min.js","fontkit.umd.min.js","fontes-pdf.js","arte.js","cnpi.js","estudos.js","ingles.js","card-colecao-sazonal.jpg","card-halloween-touro.jpg","card-mercados-brasil-eua.jpg","card-natal-touro.jpg"];
+const C='diario-v378-homologacao-01',CDN='diario-cdn-v378',CDN_LIMIT=40;
+const CORE=["index.html","recursos.js","inicio.js","app.js","interface.js","calendario-mercado-v378.js","editorial-financeiro-v378.js","diagnostico-v378.js","editorial-financeiro-v378.css","manifest.webmanifest","icon-192.png","icon-512.png"];
+const EXTRA=["pdf-lib.min.js","fontkit.umd.min.js","fontes-pdf.js","arte.js","cnpi.js","estudos.js","ingles.js","card-colecao-sazonal.jpg","card-halloween-touro.jpg","card-mercados-brasil-eua.jpg","card-natal-touro.jpg","editorial-mercado-v378.jpg"];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
 self.addEventListener('install',event=>{
  event.waitUntil((async()=>{
   const cache=await caches.open(C);
-  try{await cache.addAll(CORE.map(url=>new Request(url,{cache:'reload'})));}
+  try{await cache.addAll(CORE.map(url=>new Request(url,{cache:'no-cache'})));}
   catch(error){await caches.delete(C);throw error;}
   // Recursos pesados são baixados apenas na primeira utilização.
   await self.skipWaiting();
@@ -14,9 +14,13 @@ self.addEventListener('install',event=>{
 });
 self.addEventListener('activate',event=>{
  event.waitUntil((async()=>{
-  for(const name of await caches.keys())if(name.startsWith('diario-v')&&name!==C)await caches.delete(name);
+  const antigas=(await caches.keys()).filter(name=>name.startsWith('diario-v')&&name!==C);
+  for(const name of antigas)await caches.delete(name);
+  // Atualizações do aplicativo não preservam indefinidamente cópias do CDN de versões antigas.
+  for(const name of await caches.keys()){if(name.startsWith('diario-cdn-')&&name!==CDN)await caches.delete(name);}
   await self.clients.claim();
-  for(const client of await self.clients.matchAll({type:'window',includeUncontrolled:true}))client.postMessage({novaVersao:1,versao:C});
+  // Não solicitar atualização da página na primeira instalação.
+  if(antigas.length)for(const client of await self.clients.matchAll({type:'window',includeUncontrolled:true}))client.postMessage({novaVersao:1,versao:C});
  })());
 });
 self.addEventListener('fetch',event=>{
@@ -28,7 +32,14 @@ self.addEventListener('fetch',event=>{
    const cache=await caches.open(CDN),cached=await cache.match(event.request);
    if(cached)return cached;
    const response=await fetch(event.request);
-   if(response.ok)await cache.put(event.request,response.clone());
+   // Evita cache infinito de arquivos de terceiros e respeita no-store.
+   if(response.ok&&response.type!=='opaque'&&!event.request.headers.has('authorization')&&!/no-store|private/i.test(response.headers.get('cache-control')||'')){
+     try{
+       await cache.put(event.request,response.clone());
+       const keys=await cache.keys();
+       for(const old of keys.slice(0,Math.max(0,keys.length-CDN_LIMIT)))await cache.delete(old);
+     }catch(_){/* falha por quota nunca bloqueia o recurso online */}
+   }
    return response;
   })());return;
  }
