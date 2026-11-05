@@ -50,14 +50,14 @@ function context(time,cot){
  assert(a>0&&b>a);vm.runInNewContext(s.slice(a,b),globals,{filename:'adr-abertura.js'});
  return globals;
 }
-run('Interface v381 não imprime Abertura teórica em 03/11',()=>{const ctx=context(examples.ordinary,data(examples.ordinary));assert(!ctx.adrHtml().includes('Abertura teórica'));assert.equal(ctx.window.TraderPreOpen.height(),0)});
+run('Interface v382 não imprime Abertura teórica em 03/11',()=>{const ctx=context(examples.ordinary,data(examples.ordinary));assert(!ctx.adrHtml().includes('Abertura teórica'));assert.equal(ctx.window.TraderPreOpen.height(),0)});
 run('Imagem do Panorama não reserva espaço para bloco teórico em dia normal',()=>{const ctx=context(examples.ordinary,data(examples.ordinary));assert.equal(ctx.window.TraderPreOpen.height(),0);assert.equal(ctx.window.TraderPreOpen.draw({fillText(){}},1080,100),0)});
 run('Somente no feriado válido aparece cabeçalho de cálculo enquanto carrega',()=>{const ctx=context(examples.b3Only,data(examples.b3Only));assert(ctx.adrHtml().includes('Abertura teórica'));assert.equal(ctx.window.TraderPreOpen.visibility().show,true)});
 run('No feriado com cotações vencidas a interface oculta a projeção',()=>{const ctx=context(examples.b3Only,data(examples.b3Only,40*60000));assert(!ctx.adrHtml().includes('Abertura teórica'))});
 run('Regras B3 e NYSE não têm dependência de fetch e URL externa obrigatória',()=>{const js=fs.readFileSync(path.join(root,'calendario-mercado-v379.js'),'utf8');assert(!/\bfetch\s*\(/.test(js));assert(/2026-11-20/.test(js))});
 run('Estilo editorial é decorativo e não reescreve indicadores financeiros',()=>{const js=fs.readFileSync(path.join(root,'editorial-financeiro-v379.js'),'utf8');assert(js.includes('ARTE EDITORIAL'));assert(!js.includes('enviarOrdem'));assert(!js.includes('fetch('))});
 run('Arte editorial e CSS entregues como arquivos válidos',()=>{const image=fs.readFileSync(path.join(root,'editorial-mercado-v379.jpg'));assert.equal(image[0],0xff);assert.equal(image[1],0xd8);assert(fs.statSync(path.join(root,'editorial-financeiro-v379.css')).size>1000)});
-run('Scripts carregados na ordem exigida antes da interface',()=>{const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert(html.indexOf('calendario-mercado-v379.js?v=381')<html.indexOf('interface.js?v=381'));assert(html.includes('editorial-financeiro-v379.css?v=381'))});
+run('Scripts carregados na ordem exigida antes da interface',()=>{const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert(html.indexOf('calendario-mercado-v379.js?v=382')<html.indexOf('interface.js?v=382'));assert(html.includes('editorial-financeiro-v379.css?v=382'))});
 run('Revista e jornal PDF incluem arte editorial opcional sem depender dela para funcionar',()=>{
  const code=fs.readFileSync(path.join(root,'interface.js'),'utf8');
  assert(code.includes("p.doc.embedJpg(await response.arrayBuffer())"));
@@ -84,9 +84,9 @@ run('Imagem editorial preserva todos os pixels de conteúdo no novo canvas',()=>
 });
 run('HTML publica os scripts na ordem correta, inclusive os estilos do Giro e Revista',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
- assert(html.includes('editorial-financeiro-v379.css?v=381'));
- assert(html.indexOf('calendario-mercado-v379.js?v=381')<html.indexOf('interface.js?v=381'));
- assert(html.indexOf('interface.js?v=381')<html.indexOf('editorial-financeiro-v379.js?v=381'));
+ assert(html.includes('editorial-financeiro-v379.css?v=382'));
+ assert(html.indexOf('calendario-mercado-v379.js?v=382')<html.indexOf('interface.js?v=382'));
+ assert(html.indexOf('interface.js?v=382')<html.indexOf('editorial-financeiro-v379.js?v=382'));
  assert(!html.includes('diagnostico-v375.js?v=375'));
 });
-console.log(`\n${passed}/${total} testes adicionais v381 aprovados.`);
+console.log(`\n${passed}/${total} testes adicionais v382 aprovados.`);

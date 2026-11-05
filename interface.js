@@ -1325,6 +1325,17 @@
  async function pdf(input){
   const M=root.CarteiraFactsheetModel,R=root.CarteiraResearch,d=M.build(input),lib=await rpLib(),p=await rpNovo(lib,{titulo:'Relatório de Gestão de Carteira',cabecalho:'Gestão de carteira',data:d.asOf,tipo:'Factsheet patrimonial e análise fundamentalista',demo:!!input.demo});
   for(const [key,value]of Object.entries(root.TraderExportBrand?.PDF||{}))p.C[key]=p.hex(value);
+  // Logotipos reais de emissores americanos no PDF da Carteira. Mesma origem,
+  // sem token e com degradação segura quando faltar imagem ou símbolo.
+  const pdfIssuerMarks=new Map();
+  for(const item of d.positions||[]){
+   const ticker=String(item.position?.tk||'').toUpperCase();
+   const logo=root.TraderAssetIdentity?.logoInfo(ticker);
+   if(!logo?.local||pdfIssuerMarks.has(ticker))continue;
+   try{const response=await fetch(logo.url,{cache:'force-cache'});
+    if(response.ok)pdfIssuerMarks.set(ticker,await p.doc.embedPng(await response.arrayBuffer()));
+   }catch(_){/* uma marca indisponível não bloqueia a exportação */}
+  }
   const C=p.C,oldPage=p.pg;let section='Gestão de carteira';
   p.add=()=>{p.pg=p.doc.addPage([p.W,p.H]);p.n++;p.y=66;p.rect(0,0,p.W,7,{fill:C.dk});p.t('DIÁRIO DE TRADER / GESTÃO DE CARTEIRA',p.M,26,{s:7,f:'b',c:C.ac});p.t(d.asOf,p.W-p.M,26,{s:7,c:C.mut,al:'r'});p.ln(p.M,44,p.W-p.M,44,{c:C.bd,w:.6})};
   const text=(v,{size=9,color=C.tx,font='r',gap=6}={})=>{for(const line of p.wrap(String(v??''),p.CW,size,font)){p.need(size*1.45+2);p.t(line,p.M,p.y,{s:size,f:font,c:color});p.y+=size*1.45}p.y+=gap};
@@ -1459,6 +1470,8 @@
     note('Situação “aguardando coleta / publicação” NÃO afirma que a empresa esteja atrasada: pode ser ausência da captura Yahoo Finance, empresa sem divulgação aplicável ou demonstração ainda não apresentada. Verifique RI/CVM.');
   }else empty('Nenhuma posição disponível para auditar nesta exportação.');
   for(const a of d.positions){const position=a.position,report=a.report,meta={...a.meta,fs:{...(a.meta?.fs||{}),...(report?.dados?.fundamentos||{})}},detail=R.detail(position,input.ledger||[],d.asOf);page(position.tk+'  |  Pesquisa do ativo',(position.nome||a.meta?.nome||'')+' · '+(position.cl||'Classe não informada')+' · '+(position.moeda||detail.unit),true);
+    const issuerMark=pdfIssuerMarks.get(String(position.tk||'').toUpperCase());
+    if(issuerMark)p.pg.drawImage(issuerMark,{x:p.W-p.M-28,y:p.H-130,width:25,height:25});
    table(['Posição','Valor','Fundamento','Indicador'],Array.from({length:Math.max(6,root.TraderReports.fundamentalRows(position,meta).length)},(_,i)=>{const holding=[['Quantidade',num(position.q,4)],['Cotação',position.tem?num(position.pa):'Sem cotação'],['Preço médio',num(position.pm,4)],['Valor BRL',money(a.value)],['Proventos do ciclo',num(detail.income)+' '+detail.unit],['Peso coberto',a.value!=null&&d.total>0?pct(a.value/d.total*100):'Indisponível']][i]||['',''];const f=root.TraderReports.fundamentalRows(position,meta)[i]||['',''];return [...holding,...f]}),[24,23,30,23]);
    const f=report?.dados?.fundamentos;
    const periods=financialPeriods(position.tk,report,a.fundamental),quarters=periods.quarters;
