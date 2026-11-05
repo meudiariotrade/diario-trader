@@ -89,6 +89,6 @@ ok('HTML carrega folha de estilo e módulo visual uma única vez',()=>{
  assert.equal(html.split('mercado-visual-v388.css?v=388').length,2);
 });
 ok('Service Worker permite instalação atômica da v388',()=>{
- assert(sw.includes('diario-v388-mercado-visual-01'));assert(sw.includes('"mercado-visual-v388.js"'));assert(sw.includes('"mercado-visual-v388.css"'));
+ assert(sw.includes('diario-v389-icones-integrados-01'));assert(sw.includes('"mercado-visual-v388.js"'));assert(sw.includes('"mercado-visual-v388.css"'));
 });
 console.log('Mercado v388:',count,'verificações aprovadas');
