@@ -1,0 +1,20 @@
+DIÁRIO DE TRADER — v394 | CORREÇÃO DE NAVEGAÇÃO DESKTOP E CELULAR
+
+Base: v393.
+Correções:
+- Novo menu independente com navegação para Início, Meu Dia, Operações, Mercado, Terminal, Diário, Carteira, Estudos, Checklist e Configurações.
+- Pesquisa de páginas/funções no menu; atalho Ctrl+K no PC; atalho para busca de ativos no Mercado.
+- O menu não depende mais dos botões antigos escondidos fora da tela.
+- Cabeçalho permanece visível mesmo após rolagem; PC ganha atalhos horizontais diretos.
+- Ajustes de foco, fechamento por Esc e toque fora do menu.
+- Mantidas as integrações existentes, os dados e as funções de cada tela.
+
+COMO INSTALAR:
+Atualize index.html e sw.js; adicione design-v394.css e design-v394.js na raiz.
+Arquivos design-v393.css e design-v393.js deixam de ser referenciados (podem ser apagados depois).
+Não substitua arquivos de banco ou dados do usuário.
+Após publicar, feche e reabra o PWA ou atualize o navegador para ativar o novo cache.
+
+PENDÊNCIAS:
+- Layout e gráficos ainda não reproduzem pixel a pixel todas as referências do Figma.
+- Verifique a navegação no PC real, o menu no iPhone e a pesquisa de ativos.
