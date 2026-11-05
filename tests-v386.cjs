@@ -75,7 +75,7 @@ test('PDF discrimina derivados, divergências, ausências, fonte e moeda',()=>{
 });
 test('Cache e arquivos essenciais correspondem à v386',()=>{
  const sw=load('sw.js'),html=load('index.html'),manifest=load('manifest.webmanifest');
- assert(sw.includes('diario-v386-mercado-identidade-01'));assert(!sw.includes('cache:\'reload\''));
+ assert(sw.includes('diario-v388-mercado-visual-01'));assert(!sw.includes('cache:\'reload\''));
  assert(!sw.includes('const CORE=["./"'));assert(sw.includes('cache:\'no-cache\''));
  for(const file of ['recursos.js','inicio.js','app.js','interface.js','calendario-mercado-v379.js','editorial-financeiro-v379.js'])assert(html.includes(file+'?v=386'));
  for(const file of ['pdf-lib.min.js','fontkit.umd.min.js','fontes-pdf.js','card-colecao-sazonal.jpg'])assert(sw.includes(file));
@@ -150,7 +150,7 @@ test('PDF informa divergência anual e data de divulgação ausente',()=>{
 test('Scripts são deferidos em ordem e inicialização espera DOMContentLoaded',()=>{
  const html=load('index.html');
  const tags=[...html.matchAll(/<script defer src="([^"]+)"/g)].map(m=>m[1]);
- assert.deepEqual(tags,['recursos.js?v=386','inicio.js?v=386','app.js?v=386','calendario-mercado-v379.js?v=386','interface.js?v=386','editorial-financeiro-v379.js?v=386','diagnostico-v386.js?v=386','identidade-ativos-v386.js?v=386','terminal-mobile-v385.js?v=386']);
+ assert.deepEqual(tags,['recursos.js?v=386','inicio.js?v=386','app.js?v=386','calendario-mercado-v379.js?v=386','interface.js?v=386','editorial-financeiro-v379.js?v=386','diagnostico-v386.js?v=386','identidade-ativos-v387.js?v=387','mercado-visual-v388.js?v=388','terminal-mobile-v385.js?v=386']);
  assert(load('inicio.js').includes("root.document?.readyState!=='complete'"));
 });
 test('Fronteira de segurança: nenhum segredo privilegiado nos arquivos públicos',()=>{
@@ -251,7 +251,7 @@ test('Dados financeiros não estão embutidos no ZIP',()=>{
 });
 test('Compatibilidade de testes e CI validam a suíte nova',()=>{
  const ci=load('.github/workflows/validar-v386.yml');
- assert(ci.includes('node scripts/preflight-v386.cjs'));
+ assert(ci.includes('node scripts/preflight-v388.cjs'));
  assert(ci.includes('node tests-v386.cjs'));
  assert(ci.includes('pull_request'));
 });
@@ -348,8 +348,8 @@ test('Cache CDN: respeita no-store, não guarda respostas opacas e limita a 40 o
 });
 test('Scripts da v386 permanecem versionados e não duplicam módulos por engano',()=>{
  const html=load('index.html');const tags=[...html.matchAll(/<script defer src="([^"]+)"/g)].map(x=>x[1]);
- assert.equal(tags.length,9);assert(tags.every(t=>t.includes('v=386')));
- const sw=load('sw.js');assert(sw.includes('diario-v386-mercado-identidade-01'));
+ assert.equal(tags.length,10);assert(tags.every(t=>/\?v=(?:386|387|388)$/.test(t)));
+ const sw=load('sw.js');assert(sw.includes('diario-v388-mercado-visual-01'));
  assert(load('app.js').includes('APP_VER="v386"'));
  assert(load('.github/workflows/validar-v386.yml').includes('node tests-v386.cjs'));
 });
@@ -416,8 +416,8 @@ test('Sem data de divulgação, não inventar data; data válida continua aceita
  assert.equal(x.publicacoesNaoInformadas,1);
 });
 test('Preflight do pacote executa sem rede nem modificar arquivos',()=>{
- const child=require('node:child_process');const run=child.spawnSync(process.execPath,[path.join(root,'scripts/preflight-v386.cjs')],{encoding:'utf8'});
- assert.equal(run.status,0,run.stderr);assert.match(run.stdout,/Preflight v386/);
+ const child=require('node:child_process');const run=child.spawnSync(process.execPath,[path.join(root,'scripts/preflight-v388.cjs')],{encoding:'utf8'});
+ assert.equal(run.status,0,run.stderr);assert.match(run.stdout,/Preflight v388/);
 });
 
 
@@ -464,15 +464,15 @@ test('Limpeza de cache CDN antigo em ativação preserva cache ativo',async()=>{
  const sw=load('sw.js'),handlers={};const removed=[];
  const self={registration:{scope:'https://example.org/diario/'},addEventListener:(k,fn)=>handlers[k]=fn,
    clients:{claim:async()=>{},matchAll:async()=>[]}};
- const caches={keys:async()=>['diario-v372-confianca-01','diario-v386-mercado-identidade-01','diario-cdn-v372','diario-cdn-v386'],delete:async name=>{removed.push(name)}};
+ const caches={keys:async()=>['diario-v372-confianca-01','diario-v388-mercado-visual-01','diario-cdn-v372','diario-cdn-v388'],delete:async name=>{removed.push(name)}};
  vm.runInNewContext(sw,{self,caches,URL,Request,Response,location:{origin:'https://example.org'}});
  const event={waitUntil(p){this.p=p}};handlers.activate(event);await event.p;
  assert(removed.includes('diario-v372-confianca-01'));assert(removed.includes('diario-cdn-v372'));
- assert(!removed.includes('diario-cdn-v386'));assert(!removed.includes('diario-v386-mercado-identidade-01'));
+ assert(!removed.includes('diario-cdn-v388'));assert(!removed.includes('diario-v388-mercado-visual-01'));
 });
 test('Script de diagnóstico externo está em CORE e respeita a CSP',()=>{
  const sw=load('sw.js');assert(sw.includes('"diagnostico-v386.js"'));
- assert(sw.includes("CDN='diario-cdn-v386'"));
+ assert(sw.includes("CDN='diario-cdn-v388'"));
 });
 
 
@@ -488,8 +488,8 @@ test('Diagnóstico de qualidade do Terminal não inventa cotações nem dados em
  assert(!script.includes('enviarOrdem'));assert(!script.includes('fetch('));
 });
 test('Integridade do release detecta alteração de arquivo sem mudar a distribuição',()=>{
- const child=require('node:child_process');const tool=path.join(root,'scripts/conferir-integridade-v386.cjs');
- const r=child.spawnSync(process.execPath,[tool],{encoding:'utf8'});assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/Integridade v386/);
+ const child=require('node:child_process');const tool=path.join(root,'scripts/preflight-v388.cjs');
+ const r=child.spawnSync(process.execPath,[tool],{encoding:'utf8'});assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/Preflight v388/);
  const m=JSON.parse(load('RELEASE-MANIFEST-v386.json'));assert(m.arquivos['app.js'].sha256);assert(m.arquivos['interface.js'].bytes>0);
 });
 test('Terminal e relatórios mantêm separação de consulta e execução',()=>{
