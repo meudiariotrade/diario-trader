@@ -75,7 +75,7 @@ test('PDF discrimina derivados, divergências, ausências, fonte e moeda',()=>{
 });
 test('Cache e arquivos essenciais correspondem à v386',()=>{
  const sw=load('sw.js'),html=load('index.html'),manifest=load('manifest.webmanifest');
- assert(sw.includes('diario-v389-icones-integrados-01'));assert(!sw.includes('cache:\'reload\''));
+ assert(sw.includes('diario-v390-mercado-icones-01'));assert(!sw.includes('cache:\'reload\''));
  assert(!sw.includes('const CORE=["./"'));assert(sw.includes('cache:\'no-cache\''));
  for(const file of ['recursos.js','inicio.js','app.js','interface.js','calendario-mercado-v379.js','editorial-financeiro-v379.js'])assert(html.includes(file+'?v=386'));
  for(const file of ['pdf-lib.min.js','fontkit.umd.min.js','fontes-pdf.js','card-colecao-sazonal.jpg'])assert(sw.includes(file));
@@ -150,7 +150,7 @@ test('PDF informa divergência anual e data de divulgação ausente',()=>{
 test('Scripts são deferidos em ordem e inicialização espera DOMContentLoaded',()=>{
  const html=load('index.html');
  const tags=[...html.matchAll(/<script defer src="([^"]+)"/g)].map(m=>m[1]);
- assert.deepEqual(tags,['recursos.js?v=386','inicio.js?v=386','app.js?v=386','calendario-mercado-v379.js?v=386','interface.js?v=386','editorial-financeiro-v379.js?v=386','diagnostico-v386.js?v=386','icon-pack-v389.js?v=389','identidade-ativos-v389.js?v=389','mercado-visual-v388.js?v=388','terminal-mobile-v385.js?v=386']);
+ assert.deepEqual(tags,['recursos.js?v=386','inicio.js?v=386','app.js?v=386','calendario-mercado-v379.js?v=386','interface.js?v=386','editorial-financeiro-v379.js?v=386','diagnostico-v386.js?v=386','icon-pack-v390.js?v=390','identidade-ativos-v390.js?v=390','mercado-visual-v388.js?v=388','terminal-mobile-v385.js?v=386']);
  assert(load('inicio.js').includes("root.document?.readyState!=='complete'"));
 });
 test('Fronteira de segurança: nenhum segredo privilegiado nos arquivos públicos',()=>{
@@ -348,8 +348,8 @@ test('Cache CDN: respeita no-store, não guarda respostas opacas e limita a 40 o
 });
 test('Scripts da v386 permanecem versionados e não duplicam módulos por engano',()=>{
  const html=load('index.html');const tags=[...html.matchAll(/<script defer src="([^"]+)"/g)].map(x=>x[1]);
- assert.equal(tags.length,11);assert(tags.every(t=>/\?v=(?:386|387|388|389)$/.test(t)));
- const sw=load('sw.js');assert(sw.includes('diario-v389-icones-integrados-01'));
+ assert.equal(tags.length,11);assert(tags.every(t=>/\?v=(?:386|387|388|389|390)$/.test(t)));
+ const sw=load('sw.js');assert(sw.includes('diario-v390-mercado-icones-01'));
  assert(load('app.js').includes('APP_VER="v386"'));
  assert(load('.github/workflows/validar-v386.yml').includes('node tests-v386.cjs'));
 });
@@ -464,15 +464,15 @@ test('Limpeza de cache CDN antigo em ativação preserva cache ativo',async()=>{
  const sw=load('sw.js'),handlers={};const removed=[];
  const self={registration:{scope:'https://example.org/diario/'},addEventListener:(k,fn)=>handlers[k]=fn,
    clients:{claim:async()=>{},matchAll:async()=>[]}};
- const caches={keys:async()=>['diario-v372-confianca-01','diario-v389-icones-integrados-01','diario-cdn-v372','diario-cdn-v389'],delete:async name=>{removed.push(name)}};
+ const caches={keys:async()=>['diario-v372-confianca-01','diario-v390-mercado-icones-01','diario-cdn-v372','diario-cdn-v390'],delete:async name=>{removed.push(name)}};
  vm.runInNewContext(sw,{self,caches,URL,Request,Response,location:{origin:'https://example.org'}});
  const event={waitUntil(p){this.p=p}};handlers.activate(event);await event.p;
  assert(removed.includes('diario-v372-confianca-01'));assert(removed.includes('diario-cdn-v372'));
- assert(!removed.includes('diario-cdn-v389'));assert(!removed.includes('diario-v389-icones-integrados-01'));
+ assert(!removed.includes('diario-cdn-v390'));assert(!removed.includes('diario-v390-mercado-icones-01'));
 });
 test('Script de diagnóstico externo está em CORE e respeita a CSP',()=>{
  const sw=load('sw.js');assert(sw.includes('"diagnostico-v386.js"'));
- assert(sw.includes("CDN='diario-cdn-v389'"));
+ assert(sw.includes("CDN='diario-cdn-v390'"));
 });
 
 
