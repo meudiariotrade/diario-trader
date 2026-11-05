@@ -1,0 +1,23 @@
+DIÁRIO DE TRADER v402 — ESTUDOS | CORREÇÕES DE USABILIDADE
+
+Base necessária: v401. NÃO utilizar sobre a v399 ou v400 diretamente.
+
+Aplique na raiz do repositório GitHub:
+- index.html (substituir)
+- sw.js (substituir)
+- app.js (substituir: correção da interação do jogo de Inglês, preservando seus dados)
+- design-v402.js (novo)
+- design-v402.css (novo)
+
+Remova os arquivos design-v401.js e design-v401.css depois da publicação confirmada; a v402 não os carrega.
+
+Correções:
+1. Abas Livros/Resumos e Vídeos/Playlists consolidadas sem destinos repetidos.
+2. Calendário dos sete dias no Inglês com fundo verde escuro e textos contrastantes.
+3. Jogo de pares com instrução visível, seleção verde, feedback de acerto/erro e contador; toque uma palavra e depois sua tradução. Não é preciso arrastar.
+4. Aplicativo continua usando a rotina nativa para registrar XP, vidas, acertos e persistência, sem banco de dados novo.
+5. O menu Mais e todas as demais ferramentas de Estudos permanecem acessíveis.
+
+Não houve alteração do schema Supabase, dados já salvos, tokens ou parâmetros de credenciais.
+Se o PWA mostrar o visual antigo, feche-o completamente e reabra após publicação.
+Antes da produção, testar no iPhone real com as contas do usuário.
