@@ -1,0 +1,383 @@
+{
+  "versao": "v384",
+  "base": "v383",
+  "status": "homologacao-local",
+  "arquivos": {
+    ".github/workflows/validar-v379.yml": {
+      "bytes": 1981,
+      "sha256": "99d08258f04a111ab2db440ce78bcfb976f93750e5968be03d01d9ac81e47d02"
+    },
+    "AMOSTRA-LOGOTIPOS-v382.pdf": {
+      "bytes": 58279,
+      "sha256": "00b8173dad36f0d0d3e5096a4d72476b06c51487e8ab2dad06ddac9586f25094"
+    },
+    "AMOSTRA-LOGOTIPOS-v384.pdf": {
+      "bytes": 79360,
+      "sha256": "b51edc884e1f5a391995c10faad0e9c13062366d1cab74be8c9d9996ce5ee231"
+    },
+    "CHECKLIST-TESTES-v379.md": {
+      "bytes": 1684,
+      "sha256": "4f0cdab1fb006a9db37732d94a1c3ef41c0b89f55d0be4c189b41dd998c876b1"
+    },
+    "CHECKLIST-TESTES-v380.md": {
+      "bytes": 1232,
+      "sha256": "4c86161c7736713b76f1792003c468ae5cdd44b4787a93da84d71808db5c2f02"
+    },
+    "CHECKLIST-TESTES-v381.md": {
+      "bytes": 782,
+      "sha256": "8838f78dec97c8c3c09f0b625938b54444d98c0f1d9b92dac7f191baa30e7478"
+    },
+    "CHECKLIST-TESTES-v384.md": {
+      "bytes": 941,
+      "sha256": "d2199359996105dac7c6e339598fcef8295ce22a84c457d9b31822c40bf0aeaf"
+    },
+    "LEIA-ME-v379.txt": {
+      "bytes": 2104,
+      "sha256": "5a5cca0c29a131c18be84470325c21898ea3ff872f3ce1127704c4012843c69b"
+    },
+    "LEIA-ME-v380.txt": {
+      "bytes": 2370,
+      "sha256": "6aaa170cc907d555aa0e9d28060e51a738d16b6eae968a29ba0a847b429a86e3"
+    },
+    "LEIA-ME-v381.txt": {
+      "bytes": 1884,
+      "sha256": "90a4e30a2ad728fc88f7f125db4b1cee07e6d2f122826227e743d2594cefabb2"
+    },
+    "LEIA-ME-v383.txt": {
+      "bytes": 1260,
+      "sha256": "46fa2b59b5aaefe25955453f7da510f7ad966b317b99f8a5a38971e7570df1a2"
+    },
+    "LEIA-ME-v384.txt": {
+      "bytes": 670,
+      "sha256": "af1224c7eb17785ce2d8dcfb52bd13aaf84d948997b25fb212a296626930f3f8"
+    },
+    "LOGOTIPOS-LICENCAS-v382.md": {
+      "bytes": 1933,
+      "sha256": "f3fef0529c12e4b936c802d17165011fb1d913c9d50dc64b6d604ac753f8c0ee"
+    },
+    "PLANO-FINAL-v379.md": {
+      "bytes": 2000,
+      "sha256": "f5247edc6df84d87504c74674e04a5785064f499c5c5d4c662ba2edb17e3437d"
+    },
+    "PREVIA-EDITORIAL-DIARIO-TRADER-v376.pdf": {
+      "bytes": 241087,
+      "sha256": "df36cd9de771bc28d9513dfba674f1e29e8918a23efbded331082ff745c2a27b"
+    },
+    "RELATORIO-FINAL-v380.md": {
+      "bytes": 1008,
+      "sha256": "ca18b91c048bd1a983c499540c6cb9638193d63f599f22067ce21f6199a19467"
+    },
+    "RELATORIO-PENDENCIAS-v379.md": {
+      "bytes": 1353,
+      "sha256": "401971c7b01a8c3ef443850b286ba1c99176e0e02fd0aa7ae1ec2025e4fef652"
+    },
+    "RELEASE-MANIFEST-v380.json": {
+      "bytes": 7630,
+      "sha256": "a5d564358843a2b76e0096e58b032cea4a6923e60898fc24c49fd5d97fd4e577"
+    },
+    "RELEASE-MANIFEST-v381.json": {
+      "bytes": 8056,
+      "sha256": "32f381f965d4e56399874f8cd5ee7f17a7eafe941b463b33262b252c3cc6302d"
+    },
+    "RELEASE-MANIFEST-v382.json": {
+      "bytes": 10480,
+      "sha256": "d86debfac8ec2ab1dcd1bcce4942cf5588744803e64f9db73fd8ce6f88afec42"
+    },
+    "RELEASE-MANIFEST-v383.json": {
+      "bytes": 10887,
+      "sha256": "1d537cf798dee0e6503eb0a30346c2b2d914c9f2f684042756a102b2fd556556"
+    },
+    "RESULTADOS-TESTES-v382.txt": {
+      "bytes": 724,
+      "sha256": "3e9250b16b6a270d27559a37676668b0baa793d5d4ee08056ad10014c6dbaa43"
+    },
+    "RESULTADOS-TESTES-v383.txt": {
+      "bytes": 495,
+      "sha256": "3b242351b1c6546c6e2c9f7cbf629a8b88b999e318af05b695f9ee42a4579892"
+    },
+    "amostras/exemplo-balancos-v379.json": {
+      "bytes": 779,
+      "sha256": "50d96f53b5992496d44fc3b7b9c7c883a6d5385849e52b38da7c8d5613de21bb"
+    },
+    "app.js": {
+      "bytes": 2637623,
+      "sha256": "927f04748598c4c03415c68c8d53816f63514b5b6a24818f10a7063da2292992"
+    },
+    "arte.js": {
+      "bytes": 162263,
+      "sha256": "f059a9abdf4d9d43be052d86400b879bf6db92ad55bbc00d3c283dc7ca620341"
+    },
+    "calendario-mercado-v379.js": {
+      "bytes": 4333,
+      "sha256": "09a875c05a65966453c333fb3d1c8ea885f1f4e2c0494f1a172884a435a1e367"
+    },
+    "card-colecao-sazonal.jpg": {
+      "bytes": 207131,
+      "sha256": "a000871c346f50657c029a15126139070d5745be52175d32dc8b5095e3d422f4"
+    },
+    "card-halloween-touro.jpg": {
+      "bytes": 186999,
+      "sha256": "ed9e393d1efde96160a28f7d026e7746c632b792d05e4e7c54bb190302858974"
+    },
+    "card-mercados-brasil-eua.jpg": {
+      "bytes": 192014,
+      "sha256": "f9a2ce0336861729726f5138ec6c8e1d11b1788e095e54f9cf4db9790d649e34"
+    },
+    "card-natal-touro.jpg": {
+      "bytes": 208052,
+      "sha256": "10b7928e9e28ebc20f6097c7616ca360f275e81cb67751a0d4b88b7f3e74b723"
+    },
+    "cnpi.js": {
+      "bytes": 67366,
+      "sha256": "cacd78b2844471eac261223f9358b2d9ac372ca4dd1507dd306d09bca84b17fe"
+    },
+    "diagnostico-v384.js": {
+      "bytes": 4072,
+      "sha256": "ff2b78d17b592b6ff644156febc9d791e54dd1ada1174a13a3d2a990fd75b8d9"
+    },
+    "editorial-financeiro-v379.css": {
+      "bytes": 2634,
+      "sha256": "44ced047baf5d7fe86ae8000dbd4e5440b490bbd013fa56698064f391bbf495e"
+    },
+    "editorial-financeiro-v379.js": {
+      "bytes": 3518,
+      "sha256": "d3df7315be28ab9630610379d92ce135b40579c66521daade52ca2c6e491b724"
+    },
+    "editorial-mercado-v379.jpg": {
+      "bytes": 134387,
+      "sha256": "ffc29a18f7fc2b34b132f26215f1dbbce1bf177406e1989f0f488419b0348a75"
+    },
+    "estudos.js": {
+      "bytes": 555436,
+      "sha256": "dc7a64aebff2f821044ae56bf6ddc720e39d8a375210717fdf9084c25e55a043"
+    },
+    "fontes-pdf.js": {
+      "bytes": 3935116,
+      "sha256": "9e2a3e2d023aed77ef85e17dba7a2bd15ea05912dfc5d9ffd48c83d77ba781f5"
+    },
+    "fontkit.umd.min.js": {
+      "bytes": 758477,
+      "sha256": "51ddff8d0232ff17eb24a7a16668936a570a940b961b69c3d3a0b7012289ea00"
+    },
+    "icon-192.png": {
+      "bytes": 36787,
+      "sha256": "4c430f0c7f81e9522e4dfa22c27994cc764d31bcd0277effe847333f32918e2c"
+    },
+    "icon-512.png": {
+      "bytes": 70682,
+      "sha256": "4bb68ea4d80e8641c6c6cdb0480c8164972f1e747f8ad6b7b4ed00180139c767"
+    },
+    "identidade-ativos-v384.css": {
+      "bytes": 4868,
+      "sha256": "feb60e74ccd908b9a5cc47c2df979ebbe7badca4bcc086617709df88c5509033"
+    },
+    "identidade-ativos-v384.js": {
+      "bytes": 21565,
+      "sha256": "efdfc6b372b3d6d391ebbbdaf9f8035228dc13e0ee5a49d8d99b46c2c86ec4f9"
+    },
+    "index.html": {
+      "bytes": 117629,
+      "sha256": "049403ed1cf9b37c096eabb21eef9925996f95189716885bd7444d52d01107fc"
+    },
+    "ingles.js": {
+      "bytes": 46127,
+      "sha256": "b60fac8760c001c9ee4eff321b2da1c9a13f67a0eb7ff6d71e30c239560194cb"
+    },
+    "inicio.js": {
+      "bytes": 450307,
+      "sha256": "728e1239faf232ddfbc7cbc5aa40fb2a93788d756f7ecf9d086ac4557844be37"
+    },
+    "interface.js": {
+      "bytes": 657986,
+      "sha256": "5b642c582c47dfb5aa5a60ae3341d406469073124d59e19b14f7d1e2af0b4398"
+    },
+    "logos/us/airbnb.png": {
+      "bytes": 4876,
+      "sha256": "cb5ea74932b3b12d7234d0270446198421e70f30cad8eee15453890d274df598"
+    },
+    "logos/us/amazon.png": {
+      "bytes": 3485,
+      "sha256": "ab735aa9cfdeea09e64310be878b60b7bac52c789cb94c5f6ad2ad5c9a0f69e7"
+    },
+    "logos/us/amd.png": {
+      "bytes": 1995,
+      "sha256": "c540ba0dac8a533c3e0ff61d0b3783e2c47441286bfc609a03185c8abc7d33df"
+    },
+    "logos/us/apple.png": {
+      "bytes": 2589,
+      "sha256": "7ae068a545d2f261898bed977c2bc433208602af5331800175b9021fa2d2d43e"
+    },
+    "logos/us/google.png": {
+      "bytes": 3207,
+      "sha256": "fad656a7a95104830b8bdf0d2ebab20db23817cfb74e8824ffc4c6546c50cc90"
+    },
+    "logos/us/intel.png": {
+      "bytes": 1920,
+      "sha256": "9d086e71eebaf63ed258d82449782684d320155b2ed6292b83229817361134b4"
+    },
+    "logos/us/mastercard.png": {
+      "bytes": 3071,
+      "sha256": "ab6d0bdebbdda34c8c49cffc7988f1b71657ca964079fd7e77f707d96ef808c3"
+    },
+    "logos/us/meta.png": {
+      "bytes": 3650,
+      "sha256": "0fc6c5f189feeceb2a67183b0b4b13a2e7f333a8bc98ff3756166a947e8770bc"
+    },
+    "logos/us/microsoft.png": {
+      "bytes": 444,
+      "sha256": "8656ad8ff85eff38a60f6230835da1c2df1b578fdf3c901acf672370a9c01ca8"
+    },
+    "logos/us/netflix.png": {
+      "bytes": 2271,
+      "sha256": "9c50f01ce45739836f841067f94be0057a1e8c51ab630c629dccfe40b8bda416"
+    },
+    "logos/us/nvidia.png": {
+      "bytes": 3684,
+      "sha256": "8c137f1bfb7371507b03c33ec649a47ea221f900a2ecbc1a13d3abe74d1d89a6"
+    },
+    "logos/us/paypal.png": {
+      "bytes": 2911,
+      "sha256": "f2d32cbaddcce9350967f8f8d290cb0ec0f325cbaf0c9a9442040466ac1726e9"
+    },
+    "logos/us/qualcomm.png": {
+      "bytes": 3500,
+      "sha256": "fcb527d075553bb3e9ea8f3413a53a18938d7123a83551472522d6df0fce86ee"
+    },
+    "logos/us/shopify.png": {
+      "bytes": 4479,
+      "sha256": "9b88f3f1e7d41fe455f2a5fc933bffe58242c732b78a5d7f0c86cb27bb01801e"
+    },
+    "logos/us/spotify.png": {
+      "bytes": 3942,
+      "sha256": "ecdf8e71d33e3e9923036906730196d34f98d6da4f3d3aa9f366c0b8c6b08758"
+    },
+    "logos/us/tesla.png": {
+      "bytes": 3131,
+      "sha256": "61467df866d5ca654947072f5e32cbb3a92492e66828409476b7290e9f1839ee"
+    },
+    "logos/us/uber.png": {
+      "bytes": 2289,
+      "sha256": "055a820cf0d5afd6f0d3a9cfc6c656535dc15ee65d0aec65d69e2c968f592141"
+    },
+    "logos/us/visa.png": {
+      "bytes": 2926,
+      "sha256": "89fd98cbaa03986c01a9f836919b2001f27378b8a804c0d70456c07eff1bb88c"
+    },
+    "manifest.webmanifest": {
+      "bytes": 496,
+      "sha256": "f5504507669a852ef3f726e9c5daf0842d10831c8b8a58fc70e865ff2c9fe4a7"
+    },
+    "pdf-lib.min.js": {
+      "bytes": 525132,
+      "sha256": "6c5bb2a946b71e521a1dd98e68322b8aaaca65cc7bfccac931f6e62601457648"
+    },
+    "recursos.js": {
+      "bytes": 355,
+      "sha256": "d473948a867fc24418b3118c16b2fbf8e20f0278fd4a1a2225e143b3427d3f3e"
+    },
+    "scripts/PLANO-SEGURANCA.md": {
+      "bytes": 1783,
+      "sha256": "9041c6c8f1f8564e9c5c3a51a88f45bd7c28a503e7a4b1f0ad1e5ee35f210023"
+    },
+    "scripts/auditar-assets-v369.cjs": {
+      "bytes": 1817,
+      "sha256": "5c8013637379b0efdc13081df8395e7d8ab085a98e9891caadb14334d5387001"
+    },
+    "scripts/auditar-limpeza-v379.cjs": {
+      "bytes": 2976,
+      "sha256": "8212ea2df16e6b95b64e98342a864abd7fe6428e9e678c8ce746f585d4d5ec76"
+    },
+    "scripts/auditar-publicacao-v379.cjs": {
+      "bytes": 1155,
+      "sha256": "deb18d1c446ed25c5d47217fa3342d4a1805c60d5a478518f2a59e655d785dce"
+    },
+    "scripts/conferir-integridade-v380.cjs": {
+      "bytes": 904,
+      "sha256": "58c8ad896b00fc87e360a466dad6951712e51468e17d1addebbde43aebd3cc7d"
+    },
+    "scripts/conferir-integridade-v383.cjs": {
+      "bytes": 904,
+      "sha256": "5844aea7c5120ec192752ca1277555e316bf079a9cb81dce3a540981a2b3c4f7"
+    },
+    "scripts/conferir-integridade-v384.cjs": {
+      "bytes": 904,
+      "sha256": "cbc48c3630d3287faeb098dcbeec75473e029066c8a834756e15e12ff4a0b144"
+    },
+    "scripts/preflight-v380.cjs": {
+      "bytes": 2658,
+      "sha256": "8707ae4a83ebbe1e2bbb62bbf8a3730cd8b43894aee6744deb29d6cf0c46dc6d"
+    },
+    "scripts/preflight-v384.cjs": {
+      "bytes": 2684,
+      "sha256": "15dd1cee4e91028fa18dc8f384c2659a8dc7b94c0bc0efc6f295408098ec792c"
+    },
+    "scripts/testar-logotipos-stall-v383.cjs": {
+      "bytes": 1391,
+      "sha256": "09a50f842580fb90e8c9baecb03e8eba9b5fdb3346c7b0a4706fec9695c2b909"
+    },
+    "scripts/testar-logotipos-stall-v384.cjs": {
+      "bytes": 1391,
+      "sha256": "c86f4c16bb35f545ccbf3985407384c3e6c2d2f067cd7e8467af40b117312fb8"
+    },
+    "scripts/testar-pdf-logos-v383.cjs": {
+      "bytes": 1060,
+      "sha256": "0761f0afe282dd163fcd5129ab17eeb44e7d5be898dfc69cc0d5a12e976a17fb"
+    },
+    "scripts/testar-pdf-logos-v384.cjs": {
+      "bytes": 1233,
+      "sha256": "c4c7e759e9382d97c758707e43101474cdba2a22636dec5bceea653b7ba58eb2"
+    },
+    "scripts/validar-balancos-v379.cjs": {
+      "bytes": 2122,
+      "sha256": "0b6493e0858d8657b0d9e0e8c304e3d9b23b20d8de72447dc5022bf2b8fb2c3a"
+    },
+    "supabase/functions/parceiro-leitura/index.ts": {
+      "bytes": 3577,
+      "sha256": "72a057d83b68727ab0c84964c107859cf507820dd7655d77a6d0894ca41c41c1"
+    },
+    "sw.js": {
+      "bytes": 4913,
+      "sha256": "6196cd1d13f3d08be9de1bd55f88323a3c22443ff4696e3436bf872738359f40"
+    },
+    "terminal-mobile-v384.css": {
+      "bytes": 1750,
+      "sha256": "5dcdd5ced9c21bb495e1c126ce5ac92d3635b79f7339e1510bac7c910622e59f"
+    },
+    "terminal-mobile-v384.js": {
+      "bytes": 769,
+      "sha256": "67a25e28d97669ce8db3dd1a9fdb200522eb66c1dfa0c492f0573ecc052a27e4"
+    },
+    "tests-finalizacao-v380.cjs": {
+      "bytes": 2630,
+      "sha256": "84c8f3818e541785c64978116f912c1dc2ecd1c0a9ebdcb704fd7501cf6cd0d5"
+    },
+    "tests-homologacao-v380.cjs": {
+      "bytes": 3166,
+      "sha256": "379c76a9a068c0617b1ffece88ee718773a723fa8724c075a121a8ac14a402fb"
+    },
+    "tests-identidade-v384.cjs": {
+      "bytes": 11069,
+      "sha256": "af543b8fa3e8c1ba4f32f984895176047126b4ac0e3b96101dbff88ec488c8a8"
+    },
+    "tests-mercado-v380.cjs": {
+      "bytes": 8794,
+      "sha256": "26cffa52373649ef1787eb427766fb3692b0ba7ca7c6dff647b52a0d67dcf199"
+    },
+    "tests-mobile-v384.cjs": {
+      "bytes": 2078,
+      "sha256": "5a29561df553ba480d04cbf783989d93e277a209bc44e390e740985ea3bbb7f2"
+    },
+    "tests-seguranca-v380.cjs": {
+      "bytes": 1721,
+      "sha256": "44b4f405dc392572977044197909d4367983905f4a3644e3f31c88645d7740b6"
+    },
+    "tests-v379.cjs": {
+      "bytes": 172,
+      "sha256": "1a0d2ca4d9700f997d3d7e22bf38da5b2a2bffad3c6e609269d46c9640756689"
+    },
+    "tests-v384.cjs": {
+      "bytes": 36843,
+      "sha256": "3fef8237105cc99338e87a776795badabcadf47d92505398def178e2d4b4acc7"
+    }
+  }
+}

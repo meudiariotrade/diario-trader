@@ -1,0 +1,26 @@
+DIÁRIO DE TRADER v385 — BANDEIRAS DOS PARES DE MOEDAS
+
+Versão completa e acumulativa sobre v384. Não contém ordens de trading.
+
+O QUE ENTROU
+• Pares forex de moedas fiduciárias com duas bandeiras circulares sobrepostas,
+  reconhecidos automaticamente por código ISO (AUDCAD, USDCAD, USDJPY, EURUSD e outros).
+• Base à esquerda, cotação à direita, do mesmo modo que listas de mercado usam pares.
+• 64 moedas reconhecidas, 63 PNGs de bandeiras; nenhuma API ou chave de acesso nova.
+• Fallback com códigos das moedas caso o PNG falhe no iPhone.
+• Símbolos habilitados em cotações, Carteira, Radar e exportações com canvas.
+• PDF profissional da Carteira pode incorporar ambas as bandeiras do par em análise.
+• PWA guarda bandeiras frequentes offline e as demais após o primeiro uso.
+• Proteções anteriores de relatórios, Terminal, calendários e identidade de ações preservadas.
+
+INSTALAÇÃO
+1. Faça backup, publique o ZIP completo em ambiente de testes.
+2. Não misture arquivos antigos com novos: publique inclusive index.html e sw.js.
+3. Teste os pares do print do TradingView: USDCAD, AUDCAD, AUDUSD.
+4. Confira um PDF; veja BANDEIRAS-CAMBIO-v385.md e CHECKLIST-TESTES-v385.md.
+
+NOTA
+As marcas e bandeiras não alteram preço, variação nem dados do mercado.
+Imagens de bandeiras geradas do Noto Color Emoji, não extraídas do TradingView.
+A v385 foi validada localmente; publicação e teste no Safari do seu aparelho
+não foram executados pelo assistente.

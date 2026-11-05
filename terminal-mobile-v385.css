@@ -1,0 +1,33 @@
+/* v385 — Mobile Terminal: dark, compact bottom navigation and safe-area protection.
+ * The actual #bnav originates in inicio.js, not the unused legacy <nav>. */
+@media screen and (max-width: 979px) {
+ html.pro:root body.trmon #bnav, html:root body.studio-design.trmon #bnav {
+  position:fixed!important; inset:auto 0 0!important;
+  width:100%!important; box-sizing:border-box!important;
+  height:calc(72px + env(safe-area-inset-bottom,0px))!important;
+  min-height:0!important; max-height:calc(92px + env(safe-area-inset-bottom,0px))!important;
+  padding:5px 8px calc(5px + env(safe-area-inset-bottom,0px))!important;
+  background:#102231!important; border-top:1px solid #274158!important;
+  box-shadow:0 -8px 22px #0008!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  color:#d3e0eb!important; z-index:80!important;
+ }
+ html.pro:root body.trmon #bnav button,html:root body.studio-design.trmon #bnav button{
+  color:#b9cad7!important; min-height:42px!important;
+  background:transparent!important;
+ }
+ html.pro:root body.trmon #bnav button.on,html:root body.studio-design.trmon #bnav button.on{
+  color:#31d39e!important;
+ }
+ html.pro:root body.trmon #bnav .mais span.bx,
+ html:root body.studio-design.trmon #bnav .mais span.bx{
+  outline:3px solid #102231!important;
+ }
+ html.pro:root body.trmon #app,html:root body.studio-design.trmon #app {
+  padding-bottom:calc(105px + env(safe-area-inset-bottom,0px))!important;
+ }
+ html.pro:root body.trmon.dt384-keyboard-open #bnav,
+ html:root body.trmon.dt384-keyboard-open #bnav {display:none!important}
+ html.pro:root body.trmon.dt384-keyboard-open #app{padding-bottom:24px!important}
+}
+@media screen and (min-width: 980px){body.trmon #bnav{display:none!important}}

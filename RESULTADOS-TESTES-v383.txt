@@ -1,0 +1,12 @@
+Validação local v383 (2026-11-05)
+80/80 testes principais
+28/28 testes de identidade
+28/28 testes de calendário e Panorama
+5/5 segurança
+10/10 homologação local
+5/5 migração (com cenários simulados)
+1 teste de rede parada com pré-carga e exportação
+1 teste de PDF com 11 marcas PNG incorporadas
+TOTAL: 158 verificações locais, incluindo dois testes adicionais por script.
+SINTAXE: scripts JS/CJS aprovados.
+LIMITE: navegador real e endpoints Supabase não validados em produção.

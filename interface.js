@@ -1327,9 +1327,29 @@
   for(const [key,value]of Object.entries(root.TraderExportBrand?.PDF||{}))p.C[key]=p.hex(value);
   // Logotipos reais de emissores americanos no PDF da Carteira. Mesma origem,
   // sem token e com degradação segura quando faltar imagem ou símbolo.
-  const pdfIssuerMarks=new Map();
+  const pdfIssuerMarks=new Map(),pdfCurrencyFlags=new Map();
+  // Pares FX usam duas bandeiras do pacote local; não precisam de logotipo corporativo.
+  const cachedCurrencyFlag=new Map();
+  async function embedCurrencyFlag(country){
+   if(cachedCurrencyFlag.has(country))return cachedCurrencyFlag.get(country);
+   const controller=typeof AbortController==='function'?new AbortController():null;
+   const timer=controller?setTimeout(()=>controller.abort(),1800):null;
+   try{
+    const response=await fetch('logos/fx/'+country.toLowerCase()+'.png',{
+      cache:'force-cache',...(controller?{signal:controller.signal}:{})});
+    if(!response.ok)return null;
+    const embedded=await p.doc.embedPng(await response.arrayBuffer());
+    cachedCurrencyFlag.set(country,embedded);return embedded;
+   }catch(_){return null;}finally{if(timer!==null)clearTimeout(timer)}
+  }
   for(const item of d.positions||[]){
    const ticker=String(item.position?.tk||'').toUpperCase();
+   const pair=root.TraderAssetIdentity?.currencyPair(ticker);
+   if(pair&&!pdfCurrencyFlags.has(ticker)){
+    const baseFlag=await embedCurrencyFlag(pair.baseCountry);
+    const quoteFlag=await embedCurrencyFlag(pair.quoteCountry);
+    if(baseFlag&&quoteFlag)pdfCurrencyFlags.set(ticker,[baseFlag,quoteFlag]);
+   }
    const logo=root.TraderAssetIdentity?.logoInfo(ticker);
    if(!logo?.local||pdfIssuerMarks.has(ticker))continue;
    try{const response=await fetch(logo.url,{cache:'force-cache'});
@@ -1471,7 +1491,11 @@
   }else empty('Nenhuma posição disponível para auditar nesta exportação.');
   for(const a of d.positions){const position=a.position,report=a.report,meta={...a.meta,fs:{...(a.meta?.fs||{}),...(report?.dados?.fundamentos||{})}},detail=R.detail(position,input.ledger||[],d.asOf);page(position.tk+'  |  Pesquisa do ativo',(position.nome||a.meta?.nome||'')+' · '+(position.cl||'Classe não informada')+' · '+(position.moeda||detail.unit),true);
     const issuerMark=pdfIssuerMarks.get(String(position.tk||'').toUpperCase());
-    if(issuerMark)p.pg.drawImage(issuerMark,{x:p.W-p.M-28,y:p.H-130,width:25,height:25});
+    const pairFlags=pdfCurrencyFlags.get(String(position.tk||'').toUpperCase());
+    if(pairFlags){
+      p.pg.drawImage(pairFlags[0],{x:p.W-p.M-41,y:p.H-130,width:25,height:25});
+      p.pg.drawImage(pairFlags[1],{x:p.W-p.M-25,y:p.H-130,width:25,height:25});
+    }else if(issuerMark)p.pg.drawImage(issuerMark,{x:p.W-p.M-28,y:p.H-130,width:25,height:25});
    table(['Posição','Valor','Fundamento','Indicador'],Array.from({length:Math.max(6,root.TraderReports.fundamentalRows(position,meta).length)},(_,i)=>{const holding=[['Quantidade',num(position.q,4)],['Cotação',position.tem?num(position.pa):'Sem cotação'],['Preço médio',num(position.pm,4)],['Valor BRL',money(a.value)],['Proventos do ciclo',num(detail.income)+' '+detail.unit],['Peso coberto',a.value!=null&&d.total>0?pct(a.value/d.total*100):'Indisponível']][i]||['',''];const f=root.TraderReports.fundamentalRows(position,meta)[i]||['',''];return [...holding,...f]}),[24,23,30,23]);
    const f=report?.dados?.fundamentos;
    const periods=financialPeriods(position.tk,report,a.fundamental),quarters=periods.quarters;
