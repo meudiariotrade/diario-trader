@@ -109,7 +109,7 @@
   define('SNAP', 'acao','S','#eaca22','Snap','US');
   define('EBAY', 'acao','E','#1365b2','eBay','US');
   define('ETSY', 'acao','ET','#ef7636','Etsy','US');
-  const labels = {'NASDAQ FUTURO':'NQ1!','S&P 500 FUTURO':'SPX','DÓLAR (USD/BRL)':'USDBRL','DOLAR (USD/BRL)':'USDBRL','NIKKEI (JAPÃO)':'NIKKEI','DAX (ALEMANHA)':'DAX','IBOVESPA':'IBOV','BITCOIN':'BTC','BITCOIN (USD)':'BTC','BITCOIN (BRL)':'BTCBRL','ETHEREUM':'ETH','PETRÓLEO BRENT':'BRENT','MINÉRIO SGX':'MINERIO','MINÉRIO DALIAN':'MINERIO','MINI ÍNDICE':'WIN','MINI DÓLAR':'WDO','OURO':'OURO'};
+  const labels = {'NASDAQ FUTURO':'NQ1!','S&P 500 FUTURO':'SPX','DÓLAR (USD/BRL)':'USDBRL','DOLAR (USD/BRL)':'USDBRL','NIKKEI (JAPÃO)':'NIKKEI','DAX (ALEMANHA)':'DAX','IBOVESPA':'IBOV','BITCOIN':'BTC','BITCOIN (USD)':'BTC','BITCOIN (BRL)':'BTCBRL','ETHEREUM':'ETH','PETRÓLEO BRENT':'BRENT','MINÉRIO SGX':'MINERIO','MINÉRIO DALIAN':'MINERIO','MINI ÍNDICE':'WIN','MINI DÓLAR':'WDO','OURO':'OURO','S&P FUT.':'SPX','NASDAQ FUT.':'NQ1!','DÓLAR':'USDBRL','DOLAR':'USDBRL','NIKKEI':'NIKKEI','DAX':'DAX'};
   const generic=Object.freeze({
     indice:{mark:'▥',color:'#1d66ab',name:'Índice'},acao:{mark:'A',color:'#2961ac',name:'Ação'},
     adr:{mark:'AD',color:'#6846b0',name:'ADR'},etf:{mark:'ETF',color:'#5b4caa',name:'ETF'},

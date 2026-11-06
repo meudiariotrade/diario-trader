@@ -1,0 +1,17 @@
+Diário de Trader v429 — Capas do Jornal e Panorama
+(Pacote acumulado: já inclui a v428. Se a v427 ainda não foi publicada, publique-a antes.)
+
+COMO PUBLICAR
+Copie todos os arquivos deste pacote para a raiz do repositório (substituindo) e publique.
+Depois feche e abra o app uma vez no celular.
+
+CAPAS DO JORNAL DO PREGÃO
+Botão "🎲 Capa do dia" ao lado da imagem do Jornal. Sorteia um de 5 modelos (formato de post, 1080 × 1350):
+  VERSUS (dois mercados lado a lado) · Manchete do dia · O número do dia (maior variação)
+  3 coisas que mexem com o mercado · Touro × Urso (quem sobe e quem cai)
+"Outra capa" sorteia outro modelo; "Compartilhar / salvar" manda para o WhatsApp ou salva a imagem.
+Usa só a edição do dia e as cotações do app. Não desenha rostos de pessoas reais.
+
+PANORAMA DO MERCADO (imagem)
+- Saiu o segundo cabeçalho "Panorama do mercado" que aparecia em cima do original.
+- Nomes que encostavam nos preços ficaram curtos (S&P fut., Nasdaq fut., Dólar, Nikkei, DAX), com os ícones.

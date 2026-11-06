@@ -1,0 +1,10 @@
+/* Diário de Trader v429 — janela das capas do Jornal */
+#v429-capa{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(14px + env(safe-area-inset-bottom,0px));background:rgba(3,10,18,.95)}
+#v429-capa[hidden]{display:none}
+#v429-capa .v429-bar{display:flex;gap:8px;margin-bottom:10px}
+#v429-capa .v429-bar button{min-height:48px;padding:0 14px;border:1px solid #2a3b52;border-radius:12px;background:#0d1a2b;color:#eef4fb;font:650 15px system-ui,sans-serif;cursor:pointer}
+#v429-capa .v429-bar .v429-pri{flex:1;border-color:#0f7a55;background:#0f7a55;color:#fff;font-weight:750}
+#v429-capa .v429-img{flex:1;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start}
+#v429-capa .v429-img img{max-width:100%;height:auto;border-radius:12px;box-shadow:0 12px 40px #000a}
+#v429-capa .v429-nota{margin:10px 4px 0;color:#9fb0c4;font:500 13px/1.4 system-ui,sans-serif;text-align:center}
+body.v429-open{overflow:hidden}

@@ -54,7 +54,8 @@
    const [result]=await Promise.all([old.apply(this,args),ensure()]);return result;
   };
  }
- wrap('imgDesenha','Panorama do mercado','Brasil + EUA  ·  preços e sessões identificados');
+ // v429: o Panorama já tem cabeçalho próprio com arte; o segundo cabeçalho repetia o título
+ // wrap('imgDesenha','Panorama do mercado','Brasil + EUA  ·  preços e sessões identificados');
  wrap('grDesenha','Giro do mercado','Resumo jornalístico  ·  números, contexto e fontes');
  wrap('jrImagem','Jornal do Pregão','Edição do dia  ·  informação verificada e contextualizada');
  window.TraderEditorialV376=Object.freeze({ensure,isReady:()=>state==='loaded'});
