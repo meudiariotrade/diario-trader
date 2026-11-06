@@ -1,0 +1,24 @@
+ATUALIZAÇÃO v414 — RECUPERAÇÃO DE ACESSOS E DA IA FLUTUANTE
+
+Base: v413. Faça backup do repositório antes de substituir arquivos.
+
+Arquivos para adicionar ou substituir na raiz do site:
+- index.html (atualizado: carrega o corretivo)
+- sw.js (atualizado: cache v414)
+- recuperacao-v414.js (novo)
+- recuperacao-v414.css (novo)
+
+Recupera atalhos para Conta, Status do sistema, Importação, Painel de risco,
+Mesa proprietária, Calculadora de contratos, Plano de transição e Termos.
+Corrige empilhamento do cabeçalho e da Economista IA. Preserva rotas e dados.
+
+Validação: scripts reais executados localmente em Chromium nas resoluções
+390×844 e 1440×900, com 8 rotas testadas e IA abrindo/fechando.
+Ainda é necessário validar o Safari no iPhone, login e sincronização no app
+hospedado (testes locais não confirmam esses serviços).
+
+Se o sw.js publicado tiver alterações próprias, revise diferenças antes
+de substituir. Após publicar, feche e reabra o PWA; se necessário, atualize
+uma vez no navegador para que o novo cache seja instalado.
+
+Leia AUDITORIA-RECUPERACAO-v414.md para detalhes e limitações.

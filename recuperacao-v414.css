@@ -1,0 +1,99 @@
+/* v414 — recuperação de janelas e navegação; nenhum componente de mercado é redesenhado. */
+html body.dt393-active #dt393-global-head{
+  top:var(--dt394-tape-height,47px)!important;z-index:90!important;
+  background:#03241a!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  isolation:isolate!important;
+}
+/* Modais nativos precisam aparecer acima do cabeçalho fixo. */
+html body #onb.ov,
+html body #sh .ov,
+html body .wf-dialog[open],
+html body .pfmd:not([hidden]){z-index:10030!important}
+html body #onb.ov{background:rgba(0,0,0,.88)!important;overflow-y:auto!important;padding:16px 10px!important;box-sizing:border-box!important}
+html body #onb .sh{width:min(680px,calc(100vw - 20px))!important;max-height:calc(100dvh - 32px)!important;overflow-y:auto!important;box-sizing:border-box!important;margin:auto!important}
+/* IA: o bloco pai antigo tinha z-index inferior ao menu, ocultando o botão fechar. */
+html body.dt414-chat-open #economista-flutuante{position:relative!important;z-index:10050!important}
+html body #wf-chat-panel[hidden]{display:none!important}
+html body.dt414-chat-open #wf-chat-panel{
+  position:fixed!important;z-index:10051!important;
+  top:max(70px,calc(env(safe-area-inset-top,0px) + 62px))!important;
+  bottom:max(10px,env(safe-area-inset-bottom,0px))!important;
+  right:12px!important;left:auto!important;
+  width:min(430px,calc(100vw - 24px))!important;
+  height:auto!important;max-height:none!important;
+  display:flex!important;flex-direction:column!important;overflow:hidden!important;
+  border:1px solid #1c9875!important;border-radius:16px!important;
+  background:#06251d!important;box-shadow:0 18px 70px #000b!important;
+}
+html body.dt414-chat-open #wf-chat-panel>header{
+  position:relative!important;z-index:2!important;flex:0 0 auto!important;
+  min-height:53px!important;background:#06382a!important;
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  padding:9px 12px!important;border-bottom:1px solid #22775b!important;
+}
+html body.dt414-chat-open #wf-chat-panel>header [data-chat-close]{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  flex:0 0 46px!important;width:46px!important;height:43px!important;
+  min-height:43px!important;border:1px solid #2bb38a!important;
+  border-radius:10px!important;background:#094534!important;color:white!important;
+  font-size:29px!important;font-weight:700!important;cursor:pointer!important;
+}
+html body.dt414-chat-open #wf-chat-panel .wf-chat-history{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important}
+html body.dt414-chat-open #wf-chat-panel form{flex:0 1 auto!important;max-height:54%!important;min-height:0!important;overflow:auto!important}
+html body.dt414-chat-open #wf-chat-panel textarea{background:#041b15!important;color:#fff!important;border:1px solid #2c8066!important}
+html body.dt414-chat-open #wf-chat-panel :is(button,input,textarea):focus-visible{outline:2px solid #04db9e!important;outline-offset:2px!important}
+@media (max-width:700px){
+ html body.dt414-chat-open #wf-chat-panel{
+   left:8px!important;right:8px!important;width:auto!important;
+   top:max(62px,calc(env(safe-area-inset-top,0px) + 50px))!important;
+   bottom:max(8px,env(safe-area-inset-bottom,0px))!important;
+ }
+ html body.dt414-chat-open #wf-chat-panel form{max-height:49%!important}
+}
+/* Configurações existentes: os mesmos botões originais, realocados para o início. */
+html body.dt393-active #app .dt393-native #dt414-settings{
+ display:block!important;padding:18px 16px!important;margin:0 0 15px!important;
+ border:1px solid #238165!important;border-radius:14px!important;
+ background:linear-gradient(140deg,#074130,#031e18)!important;
+}
+html body.dt393-active #app #dt414-settings h1{margin:0!important;font-size:22px!important;color:#f3fff8!important}
+html body.dt393-active #app #dt414-settings p{margin:7px 0 15px!important;font-size:13px!important;line-height:1.55!important;color:#a9c6b9!important}
+html body.dt393-active #app .dt414-essentials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+html body.dt393-active #app .dt414-essentials>.it,
+html body.dt393-active #app .dt414-essentials>button{
+ display:flex!important;align-items:center!important;gap:10px!important;
+ width:100%!important;min-width:0!important;min-height:76px!important;padding:14px!important;
+ background:#063127!important;color:#f3fff8!important;
+ border:1px solid #268464!important;border-radius:12px!important;text-align:left!important;
+}
+html body.dt393-active #app .dt414-essentials>button :is(b,small){display:block!important}
+html body.dt393-active #app .dt414-essentials>button small{color:#b1d3c3!important;font-size:11px!important}
+html body.dt393-active #app .dt414-essentials>button .ic{color:#04e7a9!important}
+html body.dt393-active #app #dt414-back{display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important;margin:0 0 14px!important}
+html body.dt393-active #app #dt414-back button{
+ background:#063d2e!important;border:1px solid #299070!important;border-radius:9px!important;
+ color:#eafff4!important;padding:10px 13px!important;min-height:42px!important;font-size:13px!important;
+}
+html body.dt393-active #app #dt414-back span{font-weight:700!important;color:#a6cab8!important}
+#dt414-drawer-access{display:grid;gap:6px;padding-top:12px;border-top:1px solid #27644e}
+#dt414-drawer-access h3{font-size:11px;margin:0 0 4px;color:#94bea9;letter-spacing:.08em;text-transform:uppercase}
+#dt414-drawer-access button{background:#062d23;color:#f5fff9;border:1px solid #286c52;border-radius:9px;text-align:left;padding:10px 12px;min-height:41px;font-weight:600;cursor:pointer}
+@media(max-width:460px){html body.dt393-active #app .dt414-essentials{grid-template-columns:1fr}}
+
+html body #onb .dt414-existing-account{display:block!important;width:100%!important;min-height:44px!important;margin-top:8px!important;background:#052e24!important;border:1px solid #289070!important;border-radius:9px!important;color:#d9f9e9!important;cursor:pointer!important}
+html body.dt393-active #app #dt414-back,
+html body.dt393-active #app #dt414-settings{scroll-margin-top:calc(var(--dt394-tape-height,47px) + 110px)!important}
+/* A fita móvel mantém sua posição. As páginas internas começam abaixo do cabeçalho sticky, inclusive na primeira abertura. */
+html body.dt393-active #app #dt414-back,
+html body.dt393-active #app #dt414-settings{
+  margin-top:calc(var(--dt394-tape-height,47px) + 14px)!important;
+  scroll-margin-top:calc(var(--dt394-tape-height,47px) + 110px)!important;
+}
+
+/* Recuperação dos acessos nativos que permaneceram fora do menu moderno. */
+html body.dt393-active #app #dt414-extra{margin-top:12px!important;border-top:1px solid #28654d!important;padding-top:9px!important}
+html body.dt393-active #app #dt414-extra>summary{color:#cbeadd!important;font-weight:650!important;font-size:13px!important;cursor:pointer!important;padding:10px 2px!important;list-style-position:inside!important}
+html body.dt393-active #app #dt414-extra .dt414-extra-grid{padding-top:9px!important}
+html body.dt393-active #app #dt414-extra .dt414-essential{min-height:54px!important;font-size:13px!important}
