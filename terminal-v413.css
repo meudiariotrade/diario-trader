@@ -9,6 +9,26 @@ body.trmon.tf413-home .trm{display:block!important;height:auto!important;min-hei
 body.trmon.tf413-home #app{max-width:none!important;min-width:0!important;width:100%!important;box-sizing:border-box!important}
 body.trmon.tf413-home #app .tf413-dashboard{font:14px/1.44 system-ui,-apple-system,'Segoe UI',sans-serif;color:#f1f9f6;box-sizing:border-box;width:min(100% - 26px,1680px)!important;max-width:1680px!important;margin:0 auto 22px;padding:0!important;overflow:visible}
 .tf413-dashboard *, .tf413-dashboard *::before,.tf413-dashboard *::after{box-sizing:border-box!important}
+/* v415: visão principal e ferramentas tradicionais compartilham o mesmo cabeçalho do Terminal. */
+body.trmon.tf413-advanced .trm{width:100%!important;max-width:none!important;margin:0!important;min-width:0!important}
+body.trmon.tf413-advanced .tf413-dashboard{width:min(calc(100% - 26px),1680px)!important;max-width:1680px!important;margin:0 auto!important}
+body.trmon.tf413-advanced .tf413-layout,body.trmon.tf413-advanced .tf413-bottom{display:none!important}
+body.trmon.tf413-advanced .trm>.trbar,body.trmon.tf413-advanced .trm>.trtape,body.trmon.tf413-advanced .trm>.trtabs,body.trmon.tf413-advanced .trm>.trgrid,body.trmon.tf413-advanced .trm>.trrod{display:flex}
+body.trmon.tf413-advanced .trm>.trgrid{display:grid}
+.tf415-nav{display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:thin;padding:7px 4px 12px;position:relative;max-width:100%;white-space:nowrap}
+.tf415-navitem{flex:0 0 auto;border:1px solid #28624f!important;background:#03241d!important;color:#d8eee5!important;border-radius:8px!important;padding:9px 13px!important;min-height:38px!important;font-size:12px!important;line-height:1.2!important;font-weight:650!important;cursor:pointer}
+.tf415-navitem.on,.tf415-navitem[aria-current='page']{background:#05d7a2!important;border-color:#05d7a2!important;color:#052b23!important}
+.tf415-navitem:focus-visible{outline:2px solid #f5c45d!important;outline-offset:2px}
+.tf413-top{position:relative;z-index:1}
+.tf413-dashboard{scroll-margin-top:120px}
+.tf413-dashboard,.tf413-dashboard button,.tf413-dashboard select,.tf413-dashboard input{font-family:system-ui,-apple-system,'Segoe UI',sans-serif!important}
+body.trmon.tf413-advanced .g9bar{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;gap:4px;scrollbar-width:thin;max-width:100%}
+body.trmon.tf413-advanced .g9bar .g9b{flex:0 0 auto!important}
+body.trmon.tf413-advanced .g9bar [data-g9^='style|']{background:#07251e!important;border:1px solid #326d58!important;color:#deefe9!important}
+body.trmon.tf413-advanced .g9bar [data-g9^='style|'].on{background:#06d8a5!important;border-color:#06d8a5!important;color:#062c23!important}
+body.trmon.tf413-advanced .trm>.trgrid{max-width:100%;min-width:0}
+
+
 .tf413-dashboard button,.tf413-dashboard input,.tf413-dashboard select{font:inherit}
 .tf413-top{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 3px 11px;min-height:52px}
 .tf413-top>div:first-child{display:flex;gap:12px;align-items:center;min-width:0;flex-wrap:wrap}
