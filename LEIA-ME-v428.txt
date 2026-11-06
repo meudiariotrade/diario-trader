@@ -1,0 +1,33 @@
+Diário de Trader v428 — Terminal, Mercado e Estudos no padrão da referência
+
+COMO PUBLICAR
+Copie os arquivos para a raiz do repositório (substituindo) e publique. Depois feche e abra o app no celular.
+Novos: bloomberg-v428.js, bloomberg-v428.css. Alterados: index.html, sw.js, terminal-gp-v421.js, tema-claro-v427.css.
+(Se a v427 ainda não foi publicada, publique o pacote da v427 antes deste.)
+
+TERMINAL
+- Cada sub-aba virou uma página como a Visão geral: título com ▾ (gráficos prontos), ampliar e mais;
+  faixa de Período com as datas; gráfico profissional (eixo duplo, base 100, razão, médias, eventos, tabela).
+  Gráficos → preço com eventos · Radar Global → Ibovespa × S&P 500 + quadro do radar
+  Fluxo → EWZ × Ibovespa · Notícias → Ibovespa × dólar no dia + notícias
+  Juros → dólar × Selic + curva DI · Agenda → Ibovespa × IPCA + agenda
+- Cada sub-aba guarda o próprio gráfico (trocar um não muda os outros).
+- Visão geral: Radar, Notícias, Agenda e Juros em grade 2 × 2 também no celular.
+- A faixa de atalhos de Mercado repetida no rodapé do Terminal saiu das páginas (continua no painel avançado).
+- Os painéis por comando (MON, WEI, GP…) continuam: botão "Abrir painel avançado" em cada página
+  e "Painéis e Workspaces".
+
+MERCADO → COTAÇÕES
+- "Desempenho" de cada categoria usa o mesmo gráfico profissional (Ações EUA: S&P 500 × Nasdaq,
+  Ações BR: Ibovespa × EWZ, ADRs, Moedas, Commodities, Cripto e Juros com pares próprios).
+- Cabeçalho repetido e a faixa de cotações duplicada do Panorama saíram; nota da fonte em 2 linhas (toque abre).
+
+ESTUDOS
+- Todas as categorias numa faixa só (Livros, Inglês, CNPI-T, Vídeos, Meu estudo, Prompts, Modo foco,
+  Treino, Faculdade, Juros, Planos); Biblioteca em 4 cartões lado a lado.
+
+A faixa móvel de cotações do topo não foi alterada.
+
+SERVIDOR (já aplicado no Supabase)
+- Radar de oportunidades corrigido (versão 17): voltou a varrer a B3.
+- Imagens das videoaulas: permissão da tabela corrigida.

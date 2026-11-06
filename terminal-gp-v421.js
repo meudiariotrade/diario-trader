@@ -245,15 +245,25 @@ async function load(force){
   paint();await Promise.allSettled(jobs);paint();
 }
 function mount(){
-  if(g(()=>tab,'')!=='term')return;
-  const dash=doc.getElementById('tf413');if(!dash)return;
-  const main=dash.querySelector('.tf413-main');if(!main)return;
-  if(doc.getElementById('v421-gp'))return;
+  // v428: outra camada pode indicar onde o gráfico fica (ex.: Mercado → Cotações); sem isso, Terminal como antes
+  const host=g(()=>root.V428_gpHost&&root.V428_gpHost(),null);
+  let ref=null,dash=null;
+  if(host&&host.ref){ref=host.ref}
+  else{
+    if(g(()=>tab,'')!=='term')return;
+    dash=doc.getElementById('tf413');if(!dash)return;
+    ref=dash.querySelector('.tf413-main');if(!ref)return;
+  }
+  const ex=doc.getElementById('v421-gp');
+  if(ex){if(ex.nextElementSibling!==ref&&ref.parentNode)ref.before(ex);return}
   const wrap=doc.createElement('div');wrap.innerHTML=shell();
-  main.before(wrap.firstElementChild);
-  dash.classList.add('v421-has-gp');
+  ref.before(wrap.firstElementChild);
+  if(dash)dash.classList.add('v421-has-gp');
+  try{root.V428_gpMounted&&root.V428_gpMounted()}catch(e){}
   load(false);
 }
+// v428: leitura e troca do que o gráfico mostra (cada sub-aba guarda o seu)
+root.DIARIO_V421={get:()=>JSON.parse(JSON.stringify(st)),set:o=>{Object.assign(st,o||{});save();try{syncControls()}catch(e){};load(false)},syms:SYMS,econ:ECON,presets:PRESETS};
 
 /* ---------- interação ---------- */
 doc.addEventListener('click',e=>{
@@ -314,7 +324,7 @@ function hook(){
 }
 hook();
 // o painel do Terminal é montado de forma assíncrona; confere só enquanto a aba Terminal estiver aberta
-setInterval(()=>{if(doc.hidden)return;if(g(()=>tab,'')==='term'){if(!root.render0?.__v421)hook();mount()}},1200);
+setInterval(()=>{if(doc.hidden)return;if(g(()=>tab,'')==='term'||g(()=>root.V428_gpHost&&root.V428_gpHost(),null)){if(!root.render0?.__v421)hook();mount()}},1200);
 // atualiza o preço do cabeçalho e o gráfico sem redesenhar a página
 setInterval(()=>{if(!doc.hidden&&g(()=>tab,'')==='term'&&doc.getElementById('v421-gp'))load(false)},60000);
 root.DIARIO_GP421={paint,load,state:()=>st};

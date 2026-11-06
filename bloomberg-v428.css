@@ -1,0 +1,96 @@
+/* Diário de Trader v428 — Terminal e Mercado no padrão Bloomberg (complementa terminal-gp-v421) */
+
+/* ---------- título do gráfico: nome ▾ · mnemônico · ampliar · mais ---------- */
+#v421-gp .t428-title{display:flex;align-items:center;gap:6px;margin:0 0 8px;padding:0 0 8px;border-bottom:1px solid #12392f}
+#v421-gp .t428-name{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;min-height:44px;padding:0;border:0;background:none;color:#eefaf5;font:750 19px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;text-align:left;cursor:pointer}
+#v421-gp .t428-name svg{flex:none;color:#f0b548}
+#v421-gp .t428-name b{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:750}
+#v421-gp .t428-name span{flex:none;color:#9fc2b5;font-size:14px}
+#v421-gp .t428-mn{flex:none;padding:3px 7px;border:1px solid #6b5520;border-radius:6px;color:#f0b548;font:700 11px ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}
+#v421-gp .t428-ic{flex:none;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:10px;background:none;color:#dfeee8;cursor:pointer}
+#v421-gp .t428-ic:focus-visible,#v421-gp .t428-name:focus-visible{outline:2px solid #12e0a6;outline-offset:2px}
+@media (max-width:420px){#v421-gp .t428-mn{display:none}}
+
+/* ---------- período (datas do recorte, como na referência) ---------- */
+#v421-gp .t428-range{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0 0 8px;color:#f0b548;font:650 13px system-ui,sans-serif}
+#v421-gp .t428-range i{padding:5px 10px;border-radius:7px;background:#f0b548;color:#1d1503;font-style:normal;font-weight:750;font-variant-numeric:tabular-nums}
+#v421-gp .t428-range em{color:#9fc2b5;font-style:normal}
+
+/* ---------- Terminal: páginas por sub-aba ---------- */
+/* atalhos de Mercado repetidos no rodapé do Terminal: ficam só no painel avançado */
+html body[data-t428] #app .trm>.trmerc{display:none!important}
+/* Visão geral: Radar, Notícias, Agenda e Juros em grade 2 × 2 também no celular */
+@media (max-width:760px){
+  html body #tf413.t428-p-HOME .tf413-side{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  html body #tf413.t428-p-HOME .tf413-side>*{min-width:0;margin:0!important;padding:10px 8px!important}
+  html body #tf413.t428-p-HOME .tf413-side :is(h2,h3,header strong){font-size:15px!important}
+  html body #tf413.t428-p-HOME .tf413-side :is(table,.tf413-tbl){font-size:11.5px!important}
+  html body #tf413.t428-p-HOME .tf413-side :is(td,th){padding:5px 3px!important;white-space:normal}
+  html body #tf413.t428-p-HOME .tf413-side p{font-size:12px!important}
+}
+/* demais sub-abas: gráfico no topo e o quadro da sub-aba em largura total */
+html body #tf413:is(.t428-p-GP,.t428-p-GLOBAL,.t428-p-MON,.t428-p-NEWSBR,.t428-p-DIFUT,.t428-p-ECO) .tf413-side{grid-template-columns:minmax(0,1fr)!important}
+html body #tf413.t428-p-GP .tf413-side{display:none!important}
+html body #tf413:is(.t428-p-GLOBAL,.t428-p-MON) .tf413-side>:not(:nth-child(1)){display:none!important}
+html body #tf413.t428-p-NEWSBR .tf413-side>:not(:nth-child(2)){display:none!important}
+html body #tf413.t428-p-ECO .tf413-side>:not(:nth-child(3)){display:none!important}
+html body #tf413.t428-p-DIFUT .tf413-side>:not(:nth-child(4)){display:none!important}
+html body #tf413:not(.t428-p-HOME) .tf413-side :is(table,.tf413-tbl){font-size:14px!important}
+html body #tf413:not(.t428-p-HOME) .tf413-side :is(td,th){padding:9px 6px!important}
+
+/* acesso ao painel avançado (comandos) de cada sub-aba */
+#tf413 .t428-adv{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 0;padding:12px 14px;border:1px solid #176a54;border-radius:14px;background:linear-gradient(160deg,#06302a,#031b17);color:#eefaf5}
+#tf413 .t428-adv b{display:block;font-size:15px}
+#tf413 .t428-adv small{display:block;margin-top:2px;color:#9fc2b5;font-size:12.5px;line-height:1.35}
+#tf413 .t428-adv button{flex:none;min-height:44px;padding:0 14px;border:1px solid #a77d2c;border-radius:12px;background:#2a2610aa;color:#f0b548;font:650 14px system-ui,sans-serif;cursor:pointer}
+
+/* ---------- Mercado → Cotações: o gráfico profissional no lugar do comparativo antigo ---------- */
+html body.v428-cot #cotbox #v421-gp+.m409-chart-card{display:none!important}
+html body.v428-cot #cotbox #v421-gp{margin:10px 0 12px}
+/* cabeçalho repetido ("Mercado / Brasil + EUA · Acompanhe seus ativos"): fica só a linha de ações */
+html body.v428-cot #cotbox .m408-context{min-height:0!important;padding:0!important;margin:0 0 6px!important;border:0!important;background:none!important;box-shadow:none!important}
+html body.v428-cot #cotbox .m408-context .m408-context-copy{display:none!important}
+html body.v428-cot #cotbox .m408-context .m408-context-actions{width:100%;justify-content:flex-end}
+/* nota de fonte longa: duas linhas (toque para ler inteira) */
+html body.v428-cot #cotbox .m403-source-note{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px!important;cursor:pointer}
+html body.v428-cot #cotbox .m403-source-note.v428-open{display:block!important;-webkit-line-clamp:unset}
+/* faixa de cotações duplicada do Panorama (o topo já mostra as cotações móveis) */
+html body.v428-cot #app .m405-hero{display:none!important}
+html body:not([data-t428]) #tf413 .t428-adv{display:none!important}
+
+/* ajustes de prioridade (o Terminal no celular força uma coluna e fonte mono) */
+@media (max-width:760px){
+  html body.trmon #app #tf413.t428-p-HOME .tf413-layout .tf413-side{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side>*{min-width:0!important;width:auto!important;margin:0!important}
+  #tf413 .t428-adv{flex-direction:column;align-items:stretch}
+  #tf413 .t428-adv button{width:100%}
+}
+html body.trmon #app #v421-gp :is(.t428-title,.t428-range) :not(.t428-mn){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif!important}
+html body.trmon #app #v421-gp .t428-name{font-size:19px!important;letter-spacing:0!important}
+html body.trmon #app #tf413 .t428-adv,html body.trmon #app #tf413 .t428-adv *{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif!important}
+@media (max-width:760px){
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side>*,html body.trmon #app #tf413.t428-p-HOME .tf413-side>* *{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif!important;letter-spacing:0!important}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side>*{padding:8px 7px!important;border-radius:12px!important}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side :is(h2,h3,header strong,header b){font-size:14px!important;line-height:1.2!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side header{gap:4px!important;min-height:0!important;padding:0 0 6px!important}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side header :is(button,a){width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;padding:0!important}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side header svg{width:16px!important;height:16px!important}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side table{width:100%!important;table-layout:fixed!important;font-size:11.5px!important}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side :is(td,th){padding:5px 2px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side :is(td,th):first-child{width:46%!important}
+  html body.trmon #app #tf413.t428-p-HOME .tf413-side :is(p,.tf413-empty,small){font-size:11.5px!important;line-height:1.35!important}
+}
+
+/* ---------- Estudos ---------- */
+html body.v428-chips #app .dt401-category-shell{display:block!important;overflow:visible!important}
+html body.v428-chips #app .dt401-more{display:none!important}
+html body.v428-chips #app .dt397-category{display:flex!important;flex-wrap:nowrap!important;gap:8px!important;overflow-x:auto!important;scrollbar-width:none;padding-bottom:2px;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+html body.v428-chips #app .dt397-category::-webkit-scrollbar{display:none}
+html body.v428-chips #app .dt397-category .dt397-chip{flex:none!important;white-space:nowrap!important}
+/* Biblioteca em 4 cartões lado a lado também no celular */
+@media (max-width:640px){
+  html body #app .dt397-library-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
+  html body #app .dt397-library-grid>*{min-width:0!important;padding:9px 7px 26px!important}
+  html body #app .dt397-library-grid :is(b,strong,h3){font-size:13px!important;line-height:1.2!important;overflow-wrap:anywhere}
+  html body #app .dt397-library-grid :is(small,p,span:not(:first-child)){font-size:11px!important;line-height:1.3!important}
+}
