@@ -127,7 +127,7 @@ const TOOLS={
   ['modal','Modalidades',n=>/^Hoje por modalidade/i.test(txt(n))],
   ['cal','Calendário',n=>/^Calendário/i.test(txt(n))||/^\+ Day trade/i.test(txt(n))],
   ['monitor','Monitor',n=>n.matches('#market-watch-shortcut,.trhome')],
-  ['ingles','Inglês do dia',n=>/^Inglês do dia/i.test(txt(n))],
+  ['ingles','Inglês do dia',n=>n.matches('[data-hb="en"]')||/^Inglês do dia/i.test(txt(n))],
   ['pat','Patrimônio',n=>n.id==='hg-pat'],
   ['mais','Mais',()=>true]]},
  dia:{title:'Diário completo do dia',always:n=>n.matches('.dlin,#svs'),hide:n=>n.matches('.platform-area')||(n.tagName==='H1'),groups:[
@@ -161,6 +161,7 @@ function organizeTools(route,native){
       const key=['pre','dur','pos'].includes(k)?'fases':k;
       n.setAttribute('data-v4g',key);used[key]=1;break}}
   });
+  if(route==='home'){homeTools(native,ws);return}
   const groups=cfg.groups.filter(([k])=>used[['pre','dur','pos'].includes(k)?'fases':k]);
   if(!groups.length)return;
   let act=actTools[route];
@@ -184,6 +185,38 @@ function setTool(route,k,native,user){
   }
   if(user){actTools[route]=k;saveAct()}
 }
+
+/* ---------- v427: ferramentas do Início viram páginas do menu ---------- */
+// Rotina foi para Meu dia (Etapas do dia); Modalidades e Monitor repetiam Operações e Mercado.
+const HOME_VIEWS={hoje:['Posso operar?','shield'],escala:['Escala de turno','cal'],cal:['Calendário','cal'],ingles:['Inglês do dia','grad'],pat:['Patrimônio','wallet']};
+let homeView=null;
+// blocos do "Mais" que repetem o Início novo (data, atalhos, marca e o resumo antigo)
+const HOME_DUP=n=>n.matches('#studio-intro,.studio-intro,#studio-shortcuts,.studio-shortcuts,.brand116')||/^RESUMO DO DIA/i.test(txt(n));
+function homeTools(native,ws){
+  ws.querySelector('.v4-tools-head')?.remove();
+  const v=homeView&&HOME_VIEWS[homeView]?homeView:null;
+  doc.body.classList.toggle('v4-homeview',!!v);
+  native.setAttribute('data-v4act',v||'mais');
+  let rest=0;
+  [...native.children].forEach(n=>{const gk=n.getAttribute('data-v4g');if(!gk||gk==='*')return;
+    let off=v?gk!==v:gk!=='mais';
+    if(!v&&gk==='mais'&&HOME_DUP(n))off=true;
+    if(!off&&!v)rest++;
+    n.classList.toggle('v4-off',off)});
+  const head=doc.createElement('div');
+  if(v){native.querySelectorAll(`[data-v4g="${v}"] details`).forEach(d=>{if(!d.dataset.v427){d.open=true;d.dataset.v427='1'}});
+    head.className='v4-tools-head v4-viewhead';head.innerHTML=`<button type="button" class="v4-back" data-v4homeback="1">${ic('left',18)}<span>Início</span></button><h2>${ic(HOME_VIEWS[v][1],20)}<span>${HOME_VIEWS[v][0]}</span></h2>`;ws.prepend(head)}
+  else if(rest){head.className='v4-tools-head v4-morehead';head.innerHTML=`<h2>${ic('list',20)}<span>Últimos registros</span></h2>`;ws.prepend(head)}
+}
+function openHome(k){homeView=HOME_VIEWS[k]?k:null;try{tab='home';render();scrollTo(0,0)}catch(e){}}
+window.addEventListener('click',e=>{
+  const h=e.target.closest?.('[data-v4home]');
+  if(h){e.preventDefault();e.stopImmediatePropagation();
+    try{doc.querySelector('#dt394-drawer [data-dt394-close]')?.click()}catch(x){}
+    openHome(h.dataset.v4home);return}
+  if(e.target.closest?.('[data-v4homeback]')){e.preventDefault();e.stopImmediatePropagation();openHome(null);return}
+  if(e.target.closest?.('[data-dt393-route="home"]'))homeView=null;
+},true);
 
 /* ---------- Sub-abas: barra nova que aciona os botões originais ---------- */
 const FAMILY=['home','dia','regras','ops','trades','swing','opc','ativos','fx','stats','rev','dash','opgrade','opfluxo','opcart','swbt','dtrpy'];
@@ -305,7 +338,12 @@ function dia(){
   const fs=g(()=>{const el=doc.querySelectorAll('#dfases [data-dfase]');return [...el].map(b=>[b.dataset.dfase,(b.textContent||'').replace(/\s+/g,' ').trim()])},[]);
   const steps=[['pre','Antes do pregão','Rotina, estado, limites e plano'],['dur','Durante o pregão','Trades, emoções e notas rápidas'],['pos','Depois do pregão','Fechamento guiado e debriefing']];
   const curF=g(()=>DFASE&&DFASE.d===d?DFASE.f:'pre','pre');
-  const tasks=card('list','Etapas do dia','',`<div class="v4-steps">${steps.map(([k,a,b],i)=>`<button type="button" data-v4tool="${k}" data-v4route="dia" data-v4scroll="1" class="${curF===k?'on':''}"><i>${i+1}</i><span><b>${a}</b><small>${b}</small></span>${ic('right',16)}</button>`).join('')}</div>`);
+  // v427: a "Rotina" (Preparar · Registrar · Revisar) do Início veio para cá, junto das etapas, sem repetir
+  const planoOk=!!(String(dd.plano||'').trim()||pl2.vies||(pl2.mods||[]).length||pl2.max);
+  const revOk=!!(String(dd.resumo||'').trim()||dd.bem||dd.prevn);
+  const st=[planoOk?'Plano registrado':'Plano ainda não registrado',all.length?`${all.length} trade(s) registrado(s)`:'Nenhum trade registrado',revOk?'Revisão feita':'Revisão pendente'];
+  const okN=[planoOk,all.length>0,revOk].filter(Boolean).length;
+  const tasks=card('list','Etapas do dia',`<span class="v4-muted">${okN} de 3 com registro</span>`,`<div class="v4-rbar" role="progressbar" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${okN}" aria-label="Etapas com registro"><b style="width:${Math.round(okN/3*100)}%"></b></div><div class="v4-steps">${steps.map(([k,a,b],i)=>{const ok=[planoOk,all.length>0,revOk][i];return `<button type="button" data-v4tool="${k}" data-v4route="dia" data-v4scroll="1" class="${curF===k?'on':''} ${ok?'ok':''}"><i>${ok?ic('check',16):i+1}</i><span><b>${a}</b><small>${b}</small><em>${st[i]}</em></span>${ic('right',16)}</button>`}).join('')}</div>`);
   const obs=card('pencil','Observações rápidas','',`<textarea class="v4-notes" data-d="plano" maxlength="2000" placeholder="Cenário, níveis, o que vou operar…" aria-label="Plano e observações do dia">${esc_(dd.plano||'')}</textarea><small class="v4-count">${String(dd.plano||'').length}/2000 · salvo no Plano do dia</small>`);
   return `<div class="v4-page v4-day">${plan}${check}<div class="v4-two">${capBox}${scen}</div><div class="v4-two">${tasks}${obs}</div></div>`;
 }
@@ -433,16 +471,19 @@ function ticker(){
 /* ---------- Menu lateral organizado ---------- */
 const MENU=[
  ['Principal',[['r','home','Início','home'],['r','dia','Meu dia','cal'],['r','ops','Operações','trade'],['r','stats','Diário','book'],['r','mercado','Mercado','bars'],['r','estudos','Estudos','grad']]],
- ['Rotina e disciplina',[['r','regras','Checklist e regras','checksq'],['r','rev','Revisão da semana','list'],['q','1','Registro rápido de trade','bolt']]],
- ['Modalidades',[['r','trades','Day trade','trade'],['r','swing','Swing trade','up'],['r','opc','Opções','target'],['r','ativos','EUA e Forex','bars'],['r','dtrpy','Treino com replay','timer'],['r','swbt','Backtest e scanner','crosshair']]],
- ['Mercado ao vivo',[['r','term','Terminal','monitor'],['r','live','Monitor ao vivo e trades de olho','bars'],['r','graf','Gráficos TradingView','up'],['r','juros','Juros e DI','coins']]],
- ['Patrimônio e risco',[['r','carteiras','Carteira','wallet'],['g','painel','Capital, risco e backup','shield'],['g','mesa','Mesa proprietária','trophy'],['g','contratos','Calculadora de contratos','list'],['g','imposto','Imposto de renda','doc'],['g','carreira','Plano de transição','arrow']]],
+ ['Rotina e disciplina',[['h','hoje','Posso operar?','shield'],['r','regras','Checklist e regras','checksq'],['h','escala','Escala de turno','cal'],['h','cal','Calendário','cal'],['r','rev','Revisão da semana','list'],['q','1','Registro rápido de trade','bolt']]],
+ ['Mercado ao vivo',[['r','term','Terminal','monitor'],['r','graf','Gráficos TradingView','up'],['r','juros','Juros e DI','coins']]],
+ ['Patrimônio e risco',[['r','carteiras','Carteira','wallet'],['h','pat','Patrimônio','up'],['g','painel','Capital, risco e backup','shield'],['g','contratos','Calculadora de contratos','list'],['g','imposto','Imposto de renda','doc']]],
+ ['Estudos e evolução',[['h','ingles','Inglês do dia','grad'],['g','carreira','Plano de transição','arrow']]],
  ['Conta e sistema',[['g','conta','Conta e sincronização','folder'],['g','import','Importar do Profit','layers'],['g','status','Status do sistema','alert'],['g','mais','Configurações','sliders'],['g','termos','Termos de uso','doc']]]
 ];
+const MENU_OUT=['trades','swing','opc','ativos','fx','dtrpy','swbt','live','mesa'];
 function organizeDrawer(){
   const list=doc.querySelector('#dt394-drawer .dt394-nav-list');if(!list||list.dataset.v420)return;
+  list.querySelectorAll(MENU_OUT.map(id=>`[data-dt393-route="${id}"],[data-dt414-go="${id}"]`).join(',')).forEach(b=>{b.dataset.v420used='1'});
   const filt=b=>(b?.dataset?.dt394Filter)||'';
   const find=(kind,id)=>{
+    if(kind==='h')return null;
     const sel=kind==='q'?'[data-qkn]':kind==='g'?`[data-dt414-go="${id}"],[data-dt393-route="${id}"]`:`[data-dt393-route="${id}"],[data-dt414-go="${id}"]`;
     return [...list.querySelectorAll(sel)].find(b=>!b.dataset.v420used);
   };
@@ -453,7 +494,7 @@ function organizeDrawer(){
     items.forEach(([kind,id,label,icon])=>{
       const old=find(kind,id);
       const b=doc.createElement('button');b.type='button';
-      if(kind==='q')b.dataset.qkn='1';else if(kind==='g')b.dataset.dt414Go=id;else b.dataset.dt393Route=id;
+      if(kind==='q')b.dataset.qkn='1';else if(kind==='g')b.dataset.dt414Go=id;else if(kind==='h'){b.dataset.dt393Route='home';b.dataset.v4home=id}else b.dataset.dt393Route=id;
       b.dataset.dt394Filter=(label+' '+filt(old)).toLowerCase();
       if(old){old.dataset.v420used='1';if(old.classList.contains('active'))b.classList.add('active')}
       b.innerHTML=`${ic(icon,20)}<span>${label}</span>${ic('right',17)}`;
@@ -471,7 +512,7 @@ function organizeDrawer(){
 }
 function syncDrawer(){
   const s=SECTION[cur()]||cur();
-  doc.querySelectorAll('#dt394-drawer .v420-menu-sec button').forEach(b=>{const r=b.dataset.dt393Route||b.dataset.dt414Go;const on=r===cur()||(r===s&&!doc.querySelector(`#dt394-drawer [data-dt393-route="${cur()}"],#dt394-drawer [data-dt414-go="${cur()}"]`));b.classList.toggle('active',!!on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  doc.querySelectorAll('#dt394-drawer .v420-menu-sec button').forEach(b=>{const r=b.dataset.dt393Route||b.dataset.dt414Go;const hv=b.dataset.v4home;const on=hv?(cur()==='home'&&homeView===hv):(r==='home'&&homeView)?false:r===cur()||(r===s&&!doc.querySelector(`#dt394-drawer [data-dt393-route="${cur()}"],#dt394-drawer [data-dt414-go="${cur()}"]`));b.classList.toggle('active',!!on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
 }
 doc.addEventListener('input',e=>{
   if(e.target.id!=='dt394-nav-search')return;
@@ -483,6 +524,8 @@ const PAGES={home,dia,ops,stats:diario};
 function mount(){
   const r=cur();const app=doc.getElementById('app');if(!app)return;
   doc.body.classList.toggle('v4-on',true);
+  if(r!=='home'&&homeView){homeView=null}
+  doc.body.classList.toggle('v4-homeview',r==='home'&&!!homeView);
   doc.body.dataset.v4route=r;
   bottomNav();ticker();try{organizeDrawer();syncDrawer()}catch(e){}
   const native=app.querySelector('#dt393-workspace .dt393-native');
@@ -513,6 +556,7 @@ doc.addEventListener('click',e=>{
   const p=e.target.closest('[data-v4p]');
   if(p){const nav=p.closest('#v4-subnav');const b=nav?.__p?.[+p.dataset.v4p];if(b){e.preventDefault();b.click()}return}
   const t=e.target.closest('[data-v4tool]');
+  if(t&&t.dataset.v4route==='home'){e.preventDefault();openHome(t.dataset.v4tool);return}
   if(t){e.preventDefault();setTool(t.dataset.v4route,t.dataset.v4tool,null,true);if(t.dataset.v4scroll)doc.querySelector('.v4-tools-head')?.scrollIntoView({behavior:'smooth',block:'start'});return}
   const ph=e.target.closest('[data-v4phase]');
   if(ph){e.preventDefault();const k=ph.dataset.v4phase;

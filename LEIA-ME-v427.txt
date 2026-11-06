@@ -1,0 +1,32 @@
+Diário de Trader v427 — fechamento das melhorias
+
+COMO PUBLICAR
+Copie os arquivos deste pacote para a raiz do repositório (substituindo os antigos) e publique.
+Arquivos novos: acabamento-v427.js, acabamento-v427.css, tema-claro-v427.css, tema-cedo-v427.js.
+Arquivos alterados: index.html, sw.js, redesign-v420.js.
+No celular, feche e abra o app uma vez para pegar a versão nova (cache "diario-v427-fechamento").
+
+O QUE MUDOU
+1. Telas brancas ao revisar trade (e na escala emocional): com o celular no modo claro, parte da paleta
+   antiga (campos, botões, passos do formulário) ficava clara com texto branco. Agora toda a paleta fica
+   verde-escura, a não ser que você escolha "Claro" em Configurações.
+2. Revisão de trade: a barra do topo não cobre mais o ✕ e as setas ‹ ›.
+3. Checklist 0/78: as regras repetidas (criadas quando um aparelho novo semeava as regras-padrão) são
+   unidas automaticamente; as marcações do dia são mantidas e as cópias não voltam pela sincronização.
+4. Início sem "Ferramentas do Início". Cada ferramenta virou página do menu:
+   Rotina e disciplina → Posso operar?, Escala de turno, Calendário
+   Patrimônio e risco → Patrimônio
+   Estudos e evolução → Inglês do dia, Plano de transição
+   Rotina foi para Meu dia (Etapas do dia agora mostram "Plano registrado", "N trades", "Revisão feita").
+   Modalidades e Monitor saíram (repetiam Operações e Mercado). Os "Últimos trades" continuam no Início.
+5. Operações: a barra de modalidades não aparece mais duas vezes.
+6. Menu lateral: saiu o grupo "Modalidades" (está tudo em Operações), "Monitor ao vivo" (está em Mercado)
+   e "Mesa proprietária" (os dados continuam salvos, só sumiu da navegação).
+7. Ao vivo (dentro de Mercado): sem o bloco "Mercado / Trocar página" repetido no topo.
+8. Atalhos do Início (Mercado, Terminal, Diário…): 3 por linha no celular, texto dentro do cartão.
+9. Botão 👁 (esconder valores) foi para o topo; o botão IA ficou menor e some ao rolar para baixo.
+10. Tema claro de verdade: escolha "Claro" em Configurações. O Terminal continua escuro de propósito.
+11. Aviso de trava pelo push: a trava é enviada ao servidor de notificações logo depois de salvar um trade.
+
+ARQUIVOS ANTIGOS
+A lista do que pode ser apagado do repositório está em LIMPEZA-v427.txt.
