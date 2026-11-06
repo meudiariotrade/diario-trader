@@ -416,6 +416,8 @@ function bottomNav(){
   n.innerHTML=NAV.map(([r,l,i])=>`<button type="button" data-dt393-route="${r}" class="${s===r?'on':''}" ${s===r?'aria-current="page"':''}>${ic(i,24)}<span>${l}</span></button>`).join('');
 }
 function ticker(){
+  // v426: a faixa móvel do TradingView volta a ser a única faixa de cotações (a fixa foi retirada)
+  doc.body.classList.remove('v4-own-ticker');doc.querySelectorAll('.v4-ticker').forEach(e=>e.remove());return;
   const head=doc.getElementById('dt393-global-head');if(!head)return;
   head.querySelector('.v4-ticker')?.remove();
   const syms=['IBOV','S&P 500','NASDAQ','DXY','USD/BRL','PETR4'];
