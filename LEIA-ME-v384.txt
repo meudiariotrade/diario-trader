@@ -1,6 +1,0 @@
-DIÁRIO DE TRADER v384 | BARRA MOBILE E MAIS LOGOTIPOS AMERICANOS
-Base acumulativa da v383; nenhuma mudança de dados ou de cálculo financeiro.
-Correção proposta para a barra inferior branca no Terminal em iPhone: estilo escuro, área segura, rolagem e ocultação enquanto o teclado virtual estiver aberto.
-Marcas locais adicionais: Uber, Airbnb, PayPal, Spotify, Mastercard, Qualcomm e Shopify. Total 18 arquivos PNG americanos offline (GOOG/GOOGL compartilham a marca Google).
-Arquivo para publicar em branch de homologação. A integração GitHub não altera sua main automaticamente.
-Teste no iPhone e PDFs reais requerido; testes locais não simulam o Safari.

@@ -1,7 +1,0 @@
-Diário de Trader v400 — Layout desktop de Estudos em largura total.
-
-Instalação: aplicar SOBRE v399, substituindo index.html e sw.js e adicionando design-v400.css. design-v399.js continua necessário e não foi alterado. Se tiver outra versão ou alterações próprias, revise os arquivos antes de substituir.
-
-Mudanças: Estudos ocupa toda a largura do PC; painel central em colunas; cabeçalho e navegação desktop ocupam toda a largura. Celular preserva visual v399; nenhuma alteração em banco de dados nem funções das aulas.
-
-Não publicar automaticamente. Após deploy, recarregar o PWA/limpar cache se a versão antiga persistir.
