@@ -18,7 +18,9 @@ html body #aup .aup-vis .auv-fl:not(#v433a){font-size:clamp(16px,4.8cqmin,36px)!
 html body #aup .aup-vis .auv-qq:not(#v433a){font-size:clamp(22px,6.6cqmin,52px)!important}
 html body #aup .aup-vis .auv-qa:not(#v433a){font-size:clamp(16px,4.6cqmin,34px)!important}
 /* gráficos (payoff, candles, fluxo, ajuste): usam a altura disponível */
-html body #aup .aup-vis svg:not(#v433a){width:100%!important;height:auto!important;max-height:calc(100cqh - 3.2em)!important}
+html body #aup .aup-vis :is(div,figure,aside,section)>svg:not([viewBox="0 0 24 24"]):not(#v433a){width:100%!important;height:auto!important;max-height:calc(100cqh - 3.2em)!important}
+/* ícones dentro de textos (📚, ✓…) continuam do tamanho da letra */
+html body #aup .aup-vis :is(span,b,i,em,small,strong,li,button,h1,h2,h3,label,p)>svg:not(#v433a),html body #aup .aup-vis svg[viewBox="0 0 24 24"]:not(#v433a){width:1.15em!important;height:1.15em!important;max-height:none!important;display:inline-block;vertical-align:-.18em}
 html body #aup .aup-vis img:not(#v433a){max-height:calc(100cqh - 3.2em);width:auto;max-width:100%;object-fit:contain}
 
 /* ---------- legenda maior, palavra por palavra ---------- */
@@ -37,7 +39,7 @@ html body #aup:is(.v433-f169,.v433-f916) .aup-stage:not(#v433a){padding:6px!impo
 html body #aup:is(.v433-f169,.v433-f916) .aup-vis:not(#v433a){max-width:none;border:1px solid #1e3a5f;border-radius:14px;background:radial-gradient(120% 90% at 50% 0%,#12233d 0%,#0b1220 70%);padding:4cqmin;box-sizing:border-box;container-type:size}
 html body #aup.v433-f169 .aup-vis:not(#v433a){aspect-ratio:16/9;width:min(100cqw,100cqh*16/9)!important;height:auto!important;max-height:100cqh}
 html body #aup.v433-f916 .aup-vis:not(#v433a){aspect-ratio:9/16;height:min(100cqh,100cqw*16/9)!important;width:auto!important;max-width:100cqw}
-html body #aup:is(.v433-f169,.v433-f916) .aup-vis svg:not(#v433a){max-height:calc(100cqh - 3.2em)!important}
+html body #aup:is(.v433-f169,.v433-f916) .aup-vis :is(div,figure,aside,section)>svg:not([viewBox="0 0 24 24"]):not(#v433a){max-height:calc(100cqh - 3.2em)!important}
 
 /* ---------- celular deitado: o visual ocupa a tela inteira, barra e controles flutuam por cima ---------- */
 @media (orientation:landscape) and (max-height:540px){
