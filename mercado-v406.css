@@ -1,0 +1,32 @@
+/* Mercado v406: apenas consolidacao das paginas, sem sobrepor outros modulos. */
+#app .dt395-native-mercado.m406-unified{gap:12px;grid-template-columns:minmax(0,1fr)}
+#app .dt395-native-mercado.m406-unified .m405-dashboard{display:flex;flex-direction:column;gap:9px}
+#app .dt395-native-mercado .m406-radar-details{border:1px solid #327963;border-radius:11px;background:#03251b;min-width:0;overflow:hidden}
+#app .dt395-native-mercado .m406-radar-summary{list-style:none;display:flex;align-items:center;min-height:46px;cursor:pointer;padding:12px 16px;gap:6px;color:#effff5!important;font-size:13px;font-weight:800;line-height:1.4}
+#app .dt395-native-mercado .m406-radar-summary::-webkit-details-marker{display:none}
+#app .dt395-native-mercado .m406-radar-summary::after{content:'⌄';margin-left:auto;font-size:17px;color:#1af0af}
+#app .dt395-native-mercado .m406-radar-details[open] .m406-radar-summary::after{content:'⌃'}
+#app .dt395-native-mercado .m406-radar-details .m405-section-nav{padding:4px 12px 10px}
+#app .dt395-native-mercado .m406-radar-details .m405-grid{padding:0 10px 12px}
+#app .dt395-native-mercado .m406-radar-details .m405-footer-note{margin:0 10px 12px}
+#app .dt395-native-mercado #m406-quotes{min-width:0;width:100%;scroll-margin-top:140px}
+#app .dt395-native-mercado.m406-unified .m405-hero-title p{max-width:78ch}
+#app .dt395-native-mercado .m406-section-switch{grid-column:1/-1;min-width:0;display:block;margin:4px 0 2px}
+#app .dt395-native-mercado .m406-switch-tabs{display:flex;gap:7px;border-radius:11px;border:1px solid #2c7158;padding:6px;background:#031d16;max-width:100%;overflow-x:auto}
+#app .dt395-native-mercado .m406-switch-button{flex:1 0 auto;min-height:43px;min-width:120px;cursor:pointer;background:#063223!important;color:#eafaf0!important;border:1px solid #2d785c!important;border-radius:9px!important;font-size:13px!important;font-weight:800!important;white-space:nowrap;padding:8px 14px!important}
+#app .dt395-native-mercado .m406-switch-button.on{background:#05dca4!important;color:#04271d!important;border-color:#0af6ba!important}
+#app .dt395-native-mercado .m406-switch-button:focus-visible,#app .dt395-native-mercado .m406-radar-summary:focus-visible{outline:3px solid #e9bd63!important;outline-offset:2px}
+#app .dt395-native-mercado .m406-content-host{grid-column:1/-1;display:block;min-width:0;border:1px solid #267b58;border-radius:12px;background:linear-gradient(135deg,#04281e,#041d18);padding:clamp(10px,2vw,20px)}
+#app .dt395-native-mercado .m406-content-host[hidden],#app .dt395-native-mercado >[data-m406-main][hidden]{display:none!important}
+#app .dt395-native-mercado .m406-content-host .card{margin:0!important;background:#05271e!important;border:1px solid #286f57!important;color:#e9f6f1!important;min-width:0}
+#app .dt395-native-mercado .m406-content-host #balbox{color:#ebfff5!important}
+#app .dt395-native-mercado .m406-content-host #balbox :is(a,span){overflow-wrap:anywhere}
+#app .dt395-native-mercado .m406-content-host #balbox a{color:#eafff5!important}
+#app .dt395-native-mercado .m406-content-host #balbox .mut{color:#aec9bc!important}
+#app .dt395-native-mercado .m406-content-host :is(button,.btn){background:#083b2c!important;color:#e8fff4!important;border:1px solid #378b69!important;border-radius:8px!important}
+#app .dt395-native-mercado .m406-content-host .seg{display:flex;gap:4px;max-width:100%;overflow-x:auto;flex-wrap:nowrap}
+#app .dt395-native-mercado .m406-content-host .seg button{white-space:nowrap;flex:0 0 auto;min-width:55px}
+#app .dt395-native-mercado .m406-content-host .seg button.on{background:#08d9a4!important;color:#02281d!important}
+#app .dt395-native-mercado.m406-content-page .m404-overview{margin-bottom:3px}
+#app .dt395-native-mercado .m404-panel-nav[hidden]{display:none!important}
+@media(max-width:520px){#app .dt395-native-mercado .m406-switch-tabs{gap:5px}#app .dt395-native-mercado .m406-switch-button{font-size:11px!important;min-width:0;padding:9px 7px!important}#app .dt395-native-mercado .m406-radar-summary{font-size:12px!important;padding:11px}#app .dt395-native-mercado .m406-content-host{padding:9px}}

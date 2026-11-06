@@ -45,16 +45,16 @@ function listTo(container,items){for(const item of items)container.append(itemRe
 function headers(data,items){const sources=data?.mercados?.fontes;
  const total=sources&&Number.isFinite(+sources.tv)&&Number.isFinite(+sources.yahoo)?`${sources.tv} TradingView · ${sources.yahoo} Yahoo`:'Origem: função macro';
  const stamp=data?.mercados?.em||data?.em;return `${dateFmt(stamp)} · ${total}`;}
-function build(root){const d=source(),a=marketItems(d),dashboard=el('section','m405-dashboard');dashboard.id='m405-panorama';dashboard.setAttribute('aria-label','Painel profissional de Panorama do Mercado');
+function build(root,mode){const unified=mode==='cq';const d=source(),a=marketItems(d),dashboard=el('section','m405-dashboard');dashboard.id='m405-panorama';dashboard.setAttribute('aria-label','Painel profissional de Panorama do Mercado');
  const hero=el('header','m405-hero');const top=el('div','m405-hero-top');const left=el('div','m405-hero-title');
- left.append(el('small','m405-eyebrow','MERCADO  /  BRASIL + EUA'));left.append(el('h2','', 'Panorama global'));left.append(el('p','', 'Um painel de consulta para acompanhar o que move a B3 e os Estados Unidos.'));
+ left.append(el('small','m405-eyebrow','MERCADO  /  BRASIL + EUA'));left.append(el('h2','', unified?'Cotações e panorama':'Panorama global'));left.append(el('p','', 'Um painel de consulta para acompanhar o que move a B3 e os Estados Unidos.'));
  const refresh=button('↻  Atualizar','refresh');refresh.classList.add('m405-refresh');top.append(left,refresh);hero.append(top);
  const statusbar=el('div','m405-data-status');const led=el('i',d?'has-data':'no-data');led.setAttribute('aria-hidden','true');statusbar.append(led,el('span','',d?headers(d,a):'Sem dados da fonte macro · nenhuma cotação simulada'));
  hero.append(statusbar);
  if(d?.mercados?.fontes?.suspeitos?.length)hero.append(el('small','m405-invalid','A fonte sinalizou cotações inconsistentes. Elas aparecem indisponíveis.'));
  const quick=el('div','m405-quick-ticks');[['ibov','IBOV'],['sp','S&P 500'],['nasdaq','Nasdaq'],['usd','USD/BRL']].forEach(([k,name])=>{const item=get(a,k);const box=el('div','m405-quick-item');box.append(el('small','',name));box.append(el('strong','',status(item).className==='ready'?fmt(finite(item.px),finite(item.px)>=1000?0:2):'—'));const change=item?.juro?finite(item.d1bp):finite(item?.d1);box.append(el('span','m405-tick-change '+(change===null?'neutral':change>0?'up':change<0?'down':'neutral'),status(item).className==='ready'?pct(change,!!item.juro):'Sem cotação'));quick.append(box)});hero.append(quick);
  const nav=el('nav','m405-section-nav');nav.setAttribute('aria-label','Ir para seção do panorama');[['m405-global','Radar Global'],['m405-adrs','EWZ e ADRs'],['m405-futures','Futuros'],['m405-commodities','Commodities'],['m405-rates','Juros']].forEach(([id,name])=>{const bt=button(name,'jump');bt.dataset.m405Target=id;nav.append(bt)});
- dashboard.append(hero,nav);
+ dashboard.append(hero);if(!unified)dashboard.append(nav);
  const grid=el('div','m405-grid');
  const global=panel('m405-global','Radar global','Principais bolsas, dólar e apetite ao risco','m405-global');
  listTo(global.n,[{item:get(a,'ibov'),name:'Ibovespa',descriptor:'Brasil · B3'}, {item:get(a,'sp'),name:'S&P 500',descriptor:'Estados Unidos'}, {item:get(a,'nasdaq'),name:'Nasdaq',descriptor:'Tecnologia EUA'}, {item:get(a,'dxy'),name:'DXY',descriptor:'Índice do dólar'}]);
@@ -75,6 +75,18 @@ function build(root){const d=source(),a=marketItems(d),dashboard=el('section','m
  rates.h.append(button('Abrir curva DI ↗','rates'));
  grid.append(global.n,adr.n,futures.n,commodities.n,rates.n);
  const info=el('aside','m405-footer-note');info.append(el('strong','', 'Dados e fontes'));info.append(el('p','', 'As cotações dependem dos serviços configurados. Os horários e a origem exibidos são os informados pela fonte; não há garantia de tempo real.'));
+ if(unified){
+  const exp=el('details','m406-radar-details');exp.id='m406-radar-details';
+  exp.open=!!state.radar;
+  exp.append(el('summary','m406-radar-summary','▤  Abrir radar completo · EWZ, ADRs, futuros, commodities e juros'));
+  exp.append(nav,grid,info);
+  exp.addEventListener('toggle',()=>{state.radar=exp.open});
+  dashboard.append(exp);
+  const quote=Array.from(root.children).find(node=>node.classList?.contains('market-monitor'));
+  if(quote){quote.id='m406-quotes';quote.setAttribute('aria-label','Cotações, gráficos e lista de ativos')}
+  const toolbar=root.querySelector(':scope > .m403-section-header');toolbar?toolbar.after(dashboard):root.prepend(dashboard);
+  root.classList.add('m405-panorama','m406-unified');root.dataset.m405Version='405-cq';return;
+ }
  const deep=el('details','m405-deep');deep.open=state.deep;deep.id='m405-details';const sum=el('summary','', 'Explorar análises detalhadas, mapa de calor, setores e curva DI');deep.append(sum);
  // Guarda os componentes reais dentro do mesmo Panorama, sem repetir blocos acima.
  for(const node of [...root.children]){
@@ -89,8 +101,8 @@ function build(root){const d=source(),a=marketItems(d),dashboard=el('section','m
  deep.addEventListener('toggle',()=>{state.deep=deep.open});
 }
 function mount(){const root=doc.querySelector(rootSel);let sub='';try{sub=typeof MKT==='object'?MKT.tab:''}catch{};
- if(!root||sub!=='mu'||root.dataset.m405Version==='405')return;
- build(root);
+ if(!root||!['mu','cq'].includes(sub)||root.dataset.m405Version===(sub==='cq'?'405-cq':'405'))return;
+ build(root,sub);
 }
 let scheduled=false;function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;try{mount()}catch(e){console.error('Panorama v405: ',e)}},95)}
 if(window.TraderUI?.onRender)window.TraderUI.onRender('panorama-v405',schedule);
@@ -100,11 +112,11 @@ doc.addEventListener('click',ev=>{const target=ev.target.closest('[data-m405-act
  ev.preventDefault();const action=target.dataset.m405Action;
  if(action==='jump'){doc.getElementById(target.dataset.m405Target)?.scrollIntoView({behavior:'smooth',block:'start'});return}
  if(action==='refresh'){
-  const native=doc.querySelector(`${rootSel} [data-mdo="rf"]`);if(native){native.click()}else {try{if(typeof mdoCarrega==='function')mdoCarrega(true)}catch{}}return;
+  const native=doc.querySelector(`${rootSel} [data-mdo="rf"]`);if(native){native.click()}else {try{if(typeof mdoCarrega==='function'){const task=mdoCarrega(true);Promise.resolve(task).finally(schedule)}}catch(e){console.warn('Panorama atualizar',e)}}return;
  }
- if(action==='adrs'){const native=doc.querySelector(`${rootSel} [data-market-adrs]`);if(native){native.click()}else doc.querySelector('[data-navroute="mercado:cq"]')?.click();return}
+ if(action==='adrs'){const native=doc.querySelector(`${rootSel} [data-market-adrs]`);if(native){native.click()}else doc.querySelector('#m406-quotes')?.scrollIntoView({behavior:'smooth',block:'start'});return}
  if(action==='rates'||action==='sectors'){
-  const details=root.querySelector('.m405-deep');if(details)details.open=true;
+  const details=root.querySelector('.m405-deep,.m406-radar-details');if(details)details.open=true;
   const next=action==='rates'?doc.querySelector('#mujr'):doc.querySelector('[data-m404-section="Desempenho setorial"]');if(next)setTimeout(()=>next.scrollIntoView({behavior:'smooth',block:'start'}),100);
  }
  });

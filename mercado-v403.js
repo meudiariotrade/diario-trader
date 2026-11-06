@@ -4,8 +4,8 @@
  */
 (()=>{'use strict';
 const doc=document, selector='#app .dt395-native-mercado';
-const labels={cq:'Cotações',mu:'Panorama',nt:'Notícias',ag:'Agenda',lab:'Análises',jr:'Jornal',pn:'Painel',giro:'Giro'};
-const routes=[['cq','Cotações'],['mu','Panorama'],['nt','Notícias'],['ag','Agenda'],['lab','Análises'],['jr','Jornal']];
+const labels={cq:'Cotações e Panorama',mu:'Cotações e Panorama',nt:'Notícias e balanços',ag:'Agenda',lab:'Análises',jr:'Jornal e Giro',pn:'Painel',giro:'Jornal e Giro'};
+const routes=[['cq','Cotações e Panorama'],['nt','Notícias'],['ag','Agenda'],['lab','Análises'],['jr','Jornal']];
 const view={p:'1A',first:'SPX',second:'NDX',full:false};
 const svgIcon=(name)=>({chart:'<path d="M3 19V5m0 14h18M6 15l5-6 4 3 5-7"/>',search:'<circle cx="10.7" cy="10.7" r="7"/><path d="m16 16 5 5"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',list:'<path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1"/>',expand:'<path d="M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6"/>',right:'<path d="m9 5 7 7-7 7"/>',sliders:'<path d="M3 7h18M3 17h18"/><circle cx="8" cy="7" r="2"/><circle cx="16" cy="17" r="2"/>',refresh:'<path d="M20 6v5h-5M4 18v-5h5"/><path d="M5.5 9A7 7 0 0 1 18 6l2 5M18.5 15A7 7 0 0 1 6 18l-2-5"/>'})[name]||'';
 const ico=(name,size=17)=>`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${svgIcon(name)}</svg>`;

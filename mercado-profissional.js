@@ -6,20 +6,20 @@
     {id:'home',name:'Início',icon:'home',description:'Resumo e rotina de hoje',items:[['home','Visão do dia']]},
     {id:'diario',name:'Diário',icon:'book',description:'Preparação, registro e revisão',items:[['dia:ed','Meu dia e checklist'],['dia:hist','Histórico do diário'],['regras','Minhas regras']]},
     {id:'operacoes',name:'Operações',icon:'chart',description:'Modalidades e desempenho',items:[['ops','Todas as modalidades'],['stats','Estatísticas'],['rev','Revisão da semana']]},
-    {id:'mercado',name:'Mercado',icon:'news',description:'Contexto, monitor e sazonalidade',items:[['mercado:mu','Panorama global'],['mercado:jr','Jornal do Pregão'],['mercado:ag','Agenda econômica'],['mercado:nt','Notícias'],['juros','Juros e DI'],['mercado:lab','Sazonalidade e sentimento'],['graf','Gráficos'],['mercado:cq','Cotações e ADRs'],['live','Ponte do Profit e radar'],['mercado:al','Alertas'],['term','Terminal']]},
+    {id:'mercado',name:'Mercado',icon:'news',description:'Contexto, monitor e sazonalidade',items:[['mercado:cq','Cotações e Panorama'],['mercado:jr','Jornal e Giro'],['mercado:ag','Agenda econômica'],['mercado:nt','Notícias e balanços'],['juros','Juros e DI'],['mercado:lab','Sazonalidade e sentimento'],['graf','Gráficos'],['live','Ponte do Profit e radar'],['mercado:al','Alertas'],['term','Terminal']]},
     {id:'patrimonio',name:'Patrimônio',icon:'wallet',description:'Carteiras, análise e impostos',items:[['carteiras','Carteiras Brasil e EUA'],['analise','Análise IA'],['imposto','Imposto de renda']]},
     {id:'gestao',name:'Gestão',icon:'shield',description:'Risco, capital e processo',items:[['mesa','Mesa proprietária'],['painel','Metas, posição e backup'],['contratos','Dimensionamento de contratos'],['carreira','Plano de transição']]},
     {id:'estudos',name:'Estudos',icon:'book',description:'Biblioteca, cursos e simulados',items:[['estudos','Central de estudos']]},
     {id:'conta',name:'Configurações',icon:'gear',description:'Conta, dados e preferências',items:[['conta','Conta e sincronização'],['import','Importar operações'],['mais','Aparência'],['status','Status das fontes']]},
   ];
   const marketGroups = [
-    {name:'Panorama',items:[['mercado:mu','Mundo'],['juros','Juros e DI'],['mercado:giro','Giro'],['mercado:pn','Painel']]},
-    {name:'Informação',items:[['mercado:jr','Jornal do Pregão'],['mercado:nt','Notícias'],['mercado:ag','Agenda econômica']]},
+    {name:'Mercado',items:[['mercado:cq','Cotações e Panorama'],['juros','Juros e DI'],['mercado:pn','Painel']]},
+    {name:'Informação',items:[['mercado:jr','Jornal e Giro'],['mercado:nt','Notícias e balanços'],['mercado:ag','Agenda econômica']]},
     {name:'Estudos',items:[['mercado:lab','Sazonalidade e sentimento'],['graf','Gráficos']]},
-    {name:'Monitor',items:[['mercado:cq','Cotações e ADRs'],['live','Profit e radar'],['mercado:al','Alertas'],['term','Terminal']]},
+    {name:'Monitor',items:[['live','Profit e radar'],['mercado:al','Alertas'],['term','Terminal']]},
   ];
   const safe = value => esc(String(value ?? ''));
-  const current = () => tab === 'mercado' ? `mercado:${['saz','se','sazus'].includes(MKT.tab)?'lab':MKT.tab==='cot'?'cq':MKT.tab}` : tab==='dia'?`dia:${DV==='hist'?'hist':'ed'}`:tab;
+  const current = () => tab === 'mercado' ? `mercado:${['saz','se','sazus'].includes(MKT.tab)?'lab':['cot','mu'].includes(MKT.tab)?'cq':MKT.tab==='giro'?'jr':MKT.tab}` : tab==='dia'?`dia:${DV==='hist'?'hist':'ed'}`:tab;
   const activeGroup = () => groups.find(group=>group.items.some(([route])=>route===current()))?.id || (['trades','swing','opc','ativos','dash','opgrade','opfluxo','opcart','swbt','dtrpy'].includes(tab)?'operacoes':'');
   const icon = name => window.icoSvg ? window.icoSvg(name) : '';
   const link = ([route,name],cls='') => `<button type="button" class="${cls}" data-navroute="${safe(route)}"${current()===route?' aria-current="page"':''}>${safe(name)}</button>`;
@@ -58,7 +58,8 @@
     return !group||group.items.length<2?'':`<div class="pro-subtabs" role="navigation" aria-label="${safe(group.name)}">${group.items.map(item=>link(item,item[0]===route?'on':'')).join('')}</div>`;
   };
   function navigate(route) {
-    if(route==='mercado:cot')route='mercado:cq';
+    if(['mercado:cot','mercado:mu'].includes(route))route='mercado:cq';
+    if(route==='mercado:giro'){route='mercado:jr';try{sessionStorage.setItem('diario-mercado-jornal-secao','giro')}catch{}}
     const [screen,sub]=route.split(':');
     if(screen==='dia'){DV=sub||'ed';tab='dia'}
     else if(screen==='mercado'){tab='mercado';MKT.tab=sub||'mu';try{ls.set('diario-mkt-tab',MKT.tab)}catch{}}
