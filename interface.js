@@ -453,6 +453,9 @@
     return !group||group.items.length<2?'':`<div class="pro-subtabs" role="navigation" aria-label="${safe(group.name)}">${group.items.filter(([target])=>target!=='mercado:sazus').map(item=>link(item,item[0]===route?'on':'')).join('')}</div>`;
   };
   function navigate(route) {
+    const marketToMarket = tab==='mercado' && route.startsWith('mercado:');
+    const oldTabs = marketToMarket ? document.querySelector('#app .m403-primary-tabs') : null;
+    const oldTop = oldTabs?.getBoundingClientRect().top;
     if(route==='mercado:cot')route='mercado:cq';
     // v356: a antiga rota EUA ainda abre o estudo, mas sem criar uma página separada.
     if(route==='mercado:sazus'){US.section='us';route='mercado:lab'}
@@ -464,7 +467,15 @@
     document.getElementById('mdr2')?.remove();
     document.getElementById('mdr')?.remove();
     document.body.style.overflow='';
-    render();window.scrollTo(0,0);
+    render();
+    if(marketToMarket && Number.isFinite(oldTop)) {
+      queueMicrotask(() => {
+        const tabs=document.querySelector('#app .m403-primary-tabs');
+        if(!tabs)return;
+        const target=Math.max(0,window.scrollY+tabs.getBoundingClientRect().top-oldTop);
+        window.scrollTo({top:target,behavior:'instant'});
+      });
+    } else window.scrollTo({top:0,behavior:'instant'});
   }
   document.addEventListener('click',event=>{
     const button=event.target.closest('[data-navroute]');

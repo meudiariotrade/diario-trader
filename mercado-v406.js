@@ -7,7 +7,7 @@ const root=()=>doc.querySelector('#app .dt395-native-mercado');
 const sub=()=>{try{return typeof tab!=='undefined'&&tab==='mercado'&&typeof MKT!=='undefined'?MKT.tab:''}catch{return ''}};
 const can=(name)=>{try{return typeof eval(name)==='function'}catch{return false}};
 const make=(tag,cl,txt)=>{const e=doc.createElement(tag);if(cl)e.className=cl;if(txt)e.textContent=txt;return e};
-function focusCurrent(el){el?.scrollIntoView({behavior:'auto',block:'nearest'});}
+function focusCurrent(el){try{el?.focus({preventScroll:true})}catch{}}
 function section(name,view,options){const shell=make('section','m406-section-switch');shell.dataset.m406Switch=name;
  const tabs=make('div','m406-switch-tabs');tabs.setAttribute('role','group');tabs.setAttribute('aria-label',name==='nt'?'Seção de Notícias':'Seção do Jornal');
  for(const [id,label] of options){const button=make('button','m406-switch-button',label);button.type='button';button.dataset.m406Select=id;
@@ -45,7 +45,7 @@ function mount(){const r=root(),id=sub();if(!r||!['nt','jr'].includes(id))return
  showMode(r,id);
 }
 let queued=false;function schedule(){if(queued)return;queued=true;setTimeout(()=>{queued=false;try{mount()}catch(err){console.warn('Mercado v406',err)}},60)}
-if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v406',schedule);
+if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v406',()=>queueMicrotask(()=>{try{mount()}catch(err){console.warn('Mercado: navegação',err)}}));
 function init(){const app=doc.getElementById('app');if(app){new MutationObserver(mutations=>{
  if(!['nt','jr'].includes(sub()))return;
  if(mutations.some(m=>[...m.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('.dt395-native-mercado')||n.querySelector?.('.dt395-native-mercado')))))schedule();

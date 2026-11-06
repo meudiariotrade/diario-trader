@@ -58,6 +58,10 @@
     return !group||group.items.length<2?'':`<div class="pro-subtabs" role="navigation" aria-label="${safe(group.name)}">${group.items.map(item=>link(item,item[0]===route?'on':'')).join('')}</div>`;
   };
   function navigate(route) {
+    const marketToMarket = tab==='mercado' && route.startsWith('mercado:');
+    const oldTabs = marketToMarket ? document.querySelector('#app .m403-primary-tabs') : null;
+    const oldTop = oldTabs?.getBoundingClientRect().top;
+    const oldScroll = window.scrollY;
     if(['mercado:cot','mercado:mu'].includes(route))route='mercado:cq';
     if(route==='mercado:giro'){route='mercado:jr';try{sessionStorage.setItem('diario-mercado-jornal-secao','giro')}catch{}}
     const [screen,sub]=route.split(':');
@@ -67,7 +71,18 @@
     document.getElementById('mdr2')?.remove();
     document.getElementById('mdr')?.remove();
     document.body.style.overflow='';
-    render();window.scrollTo(0,0);
+    render();
+    if(marketToMarket && Number.isFinite(oldTop)) {
+      // The progressive Mercado sections are assembled in microtasks before
+      // painting; run this after them to keep the tab bar at the same pixel.
+      queueMicrotask(() => {
+        const currentTabs=document.querySelector('#app .m403-primary-tabs');
+        if(!currentTabs)return;
+        const newTop=currentTabs.getBoundingClientRect().top;
+        const desired=Math.max(0,window.scrollY+newTop-oldTop);
+        window.scrollTo({top:desired,behavior:'instant'});
+      });
+    } else window.scrollTo({top:0,behavior:'instant'});
   }
   document.addEventListener('click',event=>{
     const button=event.target.closest('[data-navroute]');
