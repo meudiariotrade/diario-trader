@@ -1,0 +1,31 @@
+DIÁRIO DE TRADER v425 — APP MAIS LEVE
+
+BASE: instalar sobre a v424.
+Nada muda no Supabase, nos dados ou nos cálculos.
+
+ARQUIVOS (raiz do repositório)
+  index.html, sw.js (cache diario-v425-leve)   substituir
+  estilo-unico-v424.css                        substituir
+  icon-pack-v425.js                            novo (o icon-pack-v390.js deixa de ser carregado)
+Não apague nenhum outro arquivo.
+
+O QUE MUDOU
+1. Logotipos (ações dos EUA, bandeiras de moedas, cripto e commodities): os 119
+   desenhos passaram de PNG para WebP, mantendo 96 px (nítido na tela 3× do iPhone).
+   Pacote de ícones: 550 KB → 251 KB (comprimido: 414 KB → 159 KB).
+2. Saíram 35 regras de estilo cujas classes não existem mais em nenhum código do app.
+
+MEDIDO
+- Download ao abrir (comprimido, como o GitHub Pages entrega): 1.927 KB → 1.677 KB (−13%).
+- Visual: igual (diferença máxima de 1,4% numa tela, causada por um aviso temporário).
+- Rotas, controles, Mercado sem tremor, gráfico, indicadores, sino e menu: sem mudança,
+  sem erros (Chromium, celular e PC).
+- Logotipos conferidos lado a lado em 3×; exportações em imagem/PDF continuam funcionando
+  (o desenho passa pelo canvas, que aceita WebP no Safari a partir do iOS 14).
+
+O QUE NÃO FOI REMOVIDO E POR QUÊ
+Das 6.108 regras de estilo, só 35 eram comprovadamente mortas. O restante ainda tem
+código que pode usá-lo (telas, janelas e estados que existem no app). Remover sem
+essa prova poderia apagar o visual de alguma função — por isso ficou.
+
+VOLTAR ATRÁS: reenvie o index.html e o sw.js do pacote v424.
