@@ -1,0 +1,19 @@
+DIÁRIO DE TRADER — v408 — PÁGINA PRINCIPAL DO MERCADO
+
+Base: instalação incremental sobre a v407.
+
+Arquivos para copiar à raiz do repositório:
+- index.html (substituir)
+- sw.js (substituir, novo cache)
+- mercado-v408.js (NOVO)
+- mercado-v408.css (NOVO)
+
+Melhorias:
+- Reorganizado Mercado: categorias, busca, filtros, gráfico e lista de ativos antes do Panorama detalhado.
+- Painéis de cotação e histórico usam a estrutura e os dados originais, sem valores fictícios.
+- Painéis de gráfico e ativos lado a lado no desktop; sequência vertical responsiva no iPhone.
+- Ordenar (Ordem, Altas, Quedas) e alternar Lista/Mapa usam os eventos nativos do app.
+- Radar Global permanece acessível no fim da mesma página, com botão de acesso rápido.
+- Preservadas todas as subpáginas, favoritos e fontes de dados.
+
+ATENÇÃO: esta atualização ainda não foi publicada no GitHub ou validada com dados reais do usuário.
