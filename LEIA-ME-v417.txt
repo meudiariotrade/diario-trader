@@ -1,0 +1,30 @@
+DIÁRIO DE TRADER v417 — PREVENÇÃO DE NAVEGAÇÃO ACIDENTAL POR DESLIZAMENTO
+
+BASE: aplicação completa v416 (não instalar pacote incremental sobre outra base anterior).
+
+PROBLEMA IDENTIFICADO: o app.js da v416 instalava listeners de touchstart, touchmove e touchend no document inteiro. Um arrasto lateral de mais de 80 px, em menos de 600 ms, podia executar render() e scrollTo(0,0), mudando o módulo mesmo quando o usuário só examinava um gráfico, tabela ou painel da sazonalidade.
+
+CORREÇÃO:
+- Removida a troca GLOBAL por gesto horizontal em TODAS as abas do aplicativo, não apenas no Mercado. O usuário navega por clique/toque nos botões, menus e atalhos intencionais.
+- Preservado o gesto de pull-to-refresh, quando começa do topo e a área não é interativa.
+- Preservados os gestos particulares dos gráficos do Terminal (tempo, preço, pinça) e as categorias com rolagem horizontal.
+- Ajustado overscroll horizontal para impedir encadeamento do movimento lateral para a página principal.
+- Reiniciado o cache do PWA (service worker v417); app.js atualizado por URL ?v=417.
+- Não houve alteração de Supabase, Profit, dados, cotações, Diário, operações ou configuração.
+
+ARQUIVOS:
+app.js — retira apenas o comando global de navegação por swipe.
+index.html — inclui CSS de proteção e solicita app.js v417.
+sw.js — cache completo atualizado para v417.
+navegacao-v417.css — contém overscroll horizontal (NOVO).
+
+TESTAR NO IPHONE:
+1) Mercado > Análises > Sazonalidade. Arraste o gráfico na horizontal e deslize dentro de tabelas. NÃO deve mudar para outra aba, reiniciar ou subir ao topo.
+2) Em Mercado > Cotações, deslize as categorias horizontalmente. Deve navegar pelos filtros sem trocar de módulo.
+3) Terminal > Gráficos: arraste o preço e o tempo. Esses gestos DEVEM continuar funcionando.
+4) Mude de módulo usando o menu superior/botões. Deve continuar funcionando.
+5) Confirme que o pull-to-refresh continua no topo em áreas não interativas.
+
+VALIDAÇÃO LOCAL: teste automatizado com eventos de toque no Chromium e verificação estrutural de que nenhuma troca de módulo pode ser acionada pelo handler global de touchend. Teste Safari real continua necessário após publicar.
+
+INSTALAÇÃO: Extraia os quatro arquivos para a raiz do seu repositório, substituindo os três arquivos existentes e acrescentando navegacao-v417.css. Publique e reabra o PWA. Não apague outros scripts.
