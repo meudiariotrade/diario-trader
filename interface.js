@@ -866,7 +866,7 @@
   const moneyBy=values=>Object.entries(values||{}).map(([unit,value])=>`${safe(unit)} ${Number(value).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`).join(' · ')||'—';
   function comparisonHtml(groups){
     const names={followed:'Seguiu o plano',broken:'Quebrou regras',unknown:'Sem avaliação'};
-    return `<div class="wf-table"><table><thead><tr><th>Grupo declarado</th><th>Trades</th><th>Resultado por moeda</th><th>Média em R</th><th>Positivos</th></tr></thead><tbody>${Object.entries(groups).map(([key,g])=>`<tr><th>${names[key]}</th><td>${g.n}</td><td>${moneyBy(g.currencies)}</td><td>${g.meanR==null?'—':g.meanR.toFixed(2)} <small>(${g.rCount} com risco)</small></td><td>${g.winRate==null?'—':g.winRate.toFixed(1)+'%'}</td></tr>`).join('')}</tbody></table></div><p class="wf-note">Classificação informada por você. Não mistura moedas e não prova causalidade. Amostras pequenas e operações diferentes limitam a comparação.</p>`;
+    return `<div class="wf-table"><table><thead><tr><th>Grupo declarado</th><th>Trades</th><th>Resultado por moeda</th><th>Média × risco</th><th>Positivos</th></tr></thead><tbody>${Object.entries(groups).map(([key,g])=>`<tr><th>${names[key]}</th><td>${g.n}</td><td>${moneyBy(g.currencies)}</td><td>${g.meanR==null?'—':g.meanR.toFixed(2)} <small>(${g.rCount} com risco)</small></td><td>${g.winRate==null?'—':g.winRate.toFixed(1)+'%'}</td></tr>`).join('')}</tbody></table></div><p class="wf-note">Classificação informada por você. Não mistura moedas e não prova causalidade. Amostras pequenas e operações diferentes limitam a comparação.</p>`;
   }
   function weeklyHtml(){
     const data=M.weekly(S.trades,days(),week,calc,moedaT),saved=(config().weekly||{})[data.from];
