@@ -1,0 +1,59 @@
+/* Diário de Trader v432 — Terminal: menus internos e painéis no padrão Bloomberg */
+
+/* ---------- Menu do Terminal ---------- */
+.tr341-dialog .v432-grp h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif!important;letter-spacing:.06em!important;color:#f0b548!important}
+.tr341-dialog .tr341-items button{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif!important;letter-spacing:0!important}
+.tr341-dialog .tr341-items button:focus-visible,.tr341-dialog .tr341-head button:focus-visible{outline:2px solid #12e0a6;outline-offset:2px}
+
+/* ---------- botão "Indicadores" (só no celular) ---------- */
+.g9bar .v432-ind{display:none}
+.trerr .v432-conta{display:block;margin:10px 0 0;min-height:42px;padding:0 16px;border:1px solid #0f7a55;border-radius:10px;background:#0f7a55;color:#fff;font:650 14px system-ui,-apple-system,sans-serif!important;letter-spacing:0!important;cursor:pointer}
+
+@media (max-width:760px){
+  /* cabeçalho do painel: número, abas do painel e ações; a descrição longa sai */
+  html body.trmon #app #trgrid .trph:not(#v432a){gap:6px!important;flex-wrap:nowrap!important;overflow:hidden}
+  html body.trmon #app #trgrid .trph .trpd:not(#v432a){display:none!important}
+  html body.trmon #app #trgrid .trph .trabas,html body.trmon #app #trgrid .trph .trpc{flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
+  html body.trmon #app #trgrid .trph .trx{flex:none;min-width:40px!important;min-height:40px!important;padding:0 8px!important}
+  html body.trmon #app #trgrid .trph .trmx:not(#v432a){font-size:0!important;width:40px!important}
+  html body.trmon #app #trgrid .trph .trmx:not(#v432a)::before{content:"⤢";font-size:18px}
+
+  /* textos do painel em fonte normal, números alinhados (fica monoespaçado só o que é ticker) */
+  html body.trmon #app #trgrid .trpb:not(#v432a),html body.trmon #app #trgrid .trpb :not(svg):not(svg *):not(.tk):not(#v432a){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif!important;letter-spacing:0!important;font-variant-numeric:tabular-nums}
+  html body.trmon #app #trgrid .trph .trpc,html body.trmon #app #trgrid .trph .trab button{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif!important;letter-spacing:0!important}
+
+  /* gráfico do painel: cabeçalho como no gráfico principal */
+  html body.trmon #app #trgrid .trah:not(#v432a){display:flex!important;align-items:baseline;flex-wrap:wrap;gap:4px 10px!important;margin:2px 0 8px!important}
+  html body.trmon #app #trgrid .trah .tk{font:800 16px ui-monospace,SFMono-Regular,Menlo,monospace!important;color:#eefaf5}
+  html body.trmon #app #trgrid .trah .num.big{font-size:28px!important;font-weight:800!important;line-height:1.1!important}
+
+  /* barra do gráfico: tempo gráfico e estilo à vista; indicadores, zoom e escala em "Indicadores ▾" */
+  html body.trmon #app #trgrid .g9bar:not(#v432a){display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;scrollbar-width:none;padding-bottom:2px}
+  html body.trmon #app #trgrid .g9bar::-webkit-scrollbar{display:none}
+  html body.trmon #app #trgrid .g9bar:not(.v432-aberto)>:is(button,input,.g9sep):not(.v432-pri):not(.v432-ind):not(#v432a){display:none!important}
+  html body.trmon #app #trgrid .g9bar.v432-aberto:not(#v432a){flex-wrap:wrap!important;overflow:visible!important}
+  html body.trmon #app #trgrid .g9bar .v432-ind:not(#v432a){display:inline-flex!important;align-items:center;flex:none;margin-left:auto;padding:0 12px!important;border-color:#a77d2c!important;color:#f0b548!important;white-space:nowrap}
+  html body.trmon #app #trgrid .g9bar>button{min-height:38px!important;flex:none}
+  /* dica "Arraste o gráfico · pinça para zoom": sai (Ajustar e Preço automático ficam em Indicadores) */
+  html body.trmon #app #trgrid .g418-toolbar:not(#v432a){display:none!important}
+  /* legenda numa linha só, rolando */
+  html body.trmon #app #trgrid .g9leg:not(#v432a){display:flex!important;flex-wrap:nowrap!important;gap:10px!important;overflow-x:auto;white-space:nowrap;scrollbar-width:none;font-size:12.5px!important;margin:4px 0!important}
+  html body.trmon #app #trgrid .g9leg::-webkit-scrollbar{display:none}
+  /* níveis (suporte, resistência, Fibo): lista de 1 coluna */
+  html body.trmon #app #trgrid .g9rod:not(#v432a){display:flex!important;flex-wrap:wrap;gap:6px 12px!important;font-size:13.5px!important}
+  html body.trmon #app #trgrid .g9rod .g9niv:not(#v432a){display:grid!important;grid-template-columns:minmax(0,1fr) auto auto 40px;align-items:center;gap:8px;width:100%!important;max-width:none!important;margin:0!important;padding:6px 2px!important;border:0!important;border-bottom:1px solid #17352d!important;border-radius:0!important;background:none!important}
+  html body.trmon #app #trgrid .g9rod .g9niv .g9al{width:40px!important;height:40px!important}
+
+  /* listas TECH / TOP: linhas mais limpas */
+  html body.trmon #app #trgrid .trpb :is(.trrow,.tech-row,[class*=tw-row]):not(#v432a){padding:8px 4px!important}
+}
+html[data-v427-tema=claro] .tr341-dialog .v432-grp h3{color:#9a6408!important}
+@media (max-width:760px){
+  html body.trmon #app #trgrid .g9leg>*:not(#v432a){flex:none!important;white-space:nowrap!important;width:auto!important}
+  html body.trmon #app #trgrid .g9bar>button:not(#v432a){padding:0 9px!important;min-width:0!important}
+  html body.trmon #app #trgrid .g9bar .v432-ind:not(#v432a){position:sticky;right:0;background:#1d1708!important;box-shadow:-10px 0 10px #0b1210}
+}
+@media (max-width:760px){
+  html body.trmon #app #trgrid .g9leg:not(#v432a):not(#v432b){display:block!important;white-space:nowrap!important;overflow-x:auto!important}
+  html body.trmon #app #trgrid .g9leg>*:not(#v432a):not(#v432b){display:inline!important;margin-right:8px}
+}
