@@ -1,0 +1,32 @@
+DIÁRIO DE TRADER v422 — INDICADORES DO BANCO CENTRAL NO GRÁFICO DO TERMINAL
+
+BASE: instalar sobre a v421 (o pacote traz também os arquivos da v419–v421).
+
+PASSO 1 — FUNÇÃO "series" NO SUPABASE: JÁ PUBLICADA (06/11/2026, versão 1)
+Conferido no ar: responde às 8 séries e recusa chamadas sem login.
+O arquivo fica em supabase/functions/series/index.ts só como cópia/backup.
+É uma função NOVA e separada: não mexe na macro, candles, cotações nem nos seus dados.
+
+PASSO 2 — ARQUIVOS DO APP (raiz do repositório)
+  index.html, sw.js (cache diario-v422-indicadores)   substituir
+  terminal-gp-v421.js, terminal-gp-v421.css           substituir
+  demais arquivos do pacote                           substituir/manter
+Não apague nenhum outro arquivo.
+
+O QUE MUDOU
+- "+ Adicionar dado" ganhou o grupo "Indicadores (Banco Central)":
+  Selic meta, CDI, IPCA 12 meses, IPCA mensal, IGP-M mensal, IBC-Br (prévia do PIB),
+  Desemprego (PNAD) e Dólar PTAX.
+- O indicador entra no eixo da esquerda (L1), em degraus: cada valor vale até a
+  próxima divulgação, como no Bloomberg.
+- Gráficos prontos novos: Ibovespa × Selic, Ibovespa × IPCA 12 meses,
+  Ibovespa × IBC-Br, Dólar × Selic.
+- Com indicador, só o Eixo duplo fica ativo (Base 100 e Razão não fazem sentido).
+- Os indicadores ficam guardados no aparelho por 6 horas.
+- Se a função ainda não estiver publicada, o gráfico avisa no rodapé.
+
+CÓDIGOS CONFERIDOS NO BANCO CENTRAL (06/11/2026, pelo servidor do seu Supabase)
+432 Selic · 4389 CDI · 433 IPCA mensal · 13522 IPCA 12m · 189 IGP-M · 24364 IBC-Br
+24369 Desemprego · 1 PTAX — todos responderam com dados.
+
+PMI: não há fonte gratuita confiável; o IBC-Br cumpre o papel de termômetro da atividade.
