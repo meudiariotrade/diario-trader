@@ -1,0 +1,17 @@
+/* v416: controles persistentes e gestos do gráfico nativo; não afeta Mercado e Estudos. */
+body.trmon .g9svg{touch-action:none!important;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;cursor:grab;will-change:transform;transform-origin:center center}
+body.trmon .g9svg:active{cursor:grabbing}
+body.trmon .g416-controls{display:flex;flex-direction:column;gap:7px;padding:9px 10px;margin:7px 0 10px;border:1px solid #235748;border-radius:10px;background:#051b17;color:#dbf4ea;font:12px/1.4 system-ui,-apple-system,sans-serif;min-width:0}
+body.trmon .g416-controls .g416-help{color:#a4c6b9;font-size:11px;line-height:1.55}
+body.trmon .g416-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center;min-width:0}
+body.trmon .g416-group{display:flex;gap:3px;align-items:center;padding:3px;border:1px solid #2c6855;background:#03150f;border-radius:7px;max-width:100%}
+body.trmon .g416-group strong{color:#c5e9da;font-size:11px;padding:0 5px;white-space:nowrap}
+body.trmon .g416-controls button{font:600 12px/1.2 system-ui,-apple-system,sans-serif;min-width:36px;min-height:38px;padding:7px 10px;border:1px solid #315e50!important;border-radius:6px;background:#09271f!important;color:#edf9f4!important;cursor:pointer;white-space:nowrap;touch-action:manipulation}
+body.trmon .g416-controls button:active{background:#07d2a1!important;color:#03251e!important}
+body.trmon .g416-controls button:focus-visible,body.trmon .g416-controls input:focus-visible{outline:2px solid #f2bc57;outline-offset:2px}
+body.trmon .g416-controls .g416-auto{background:#06765a!important;border-color:#06bb90!important;color:#fff!important}
+body.trmon .g416-space{display:flex;gap:8px;align-items:center;margin-left:auto;min-width:165px;flex:1 1 160px;max-width:270px}
+body.trmon .g416-space span{white-space:nowrap;font-size:11px;color:#b6cfc3}
+body.trmon .g416-space input{accent-color:#05dcab;min-width:70px;width:100%;height:24px;cursor:pointer}
+body.trmon .g416-status{font-size:11px;color:#7de8c6;min-height:16px;display:inline-block}
+@media(max-width:620px){body.trmon .g416-controls{padding:8px 7px;gap:5px}body.trmon .g416-row{gap:5px}body.trmon .g416-group{max-width:100%;flex:1 1 auto}body.trmon .g416-controls button{min-height:42px;padding:8px 8px}body.trmon .g416-space{margin-left:0;max-width:none;flex-basis:100%}body.trmon .g416-help{font-size:11px}}
