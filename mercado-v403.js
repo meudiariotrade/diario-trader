@@ -75,7 +75,16 @@ function chartHtml(){
  return `<section class="m403-chart-card" aria-label="Gráfico comparativo do Mercado">${controls}<div class="m403-chart-canvas">${graphic}</div><footer>Fonte: histórico diário disponível no Terminal. Comparação somente nas datas comuns, sem projeções.</footer></section>`;
 }
 function createChart(cot){
- let chart=cot.querySelector(':scope > .m403-chart-card');if(!chart){chart=doc.createElement('div');const before=cot.querySelector('.cql, .cqmap, #adr, .vazio119');if(before)before.before(chart);else cot.append(chart);chart.className='m403-chart-slot';}
+ // O renderer v409 é a única fonte de marcação do gráfico. Não mostrar o antigo
+ // e substituí-lo depois: essa sequência provocava três alturas diferentes
+ // durante cada troca de aba, visível como "tremida" em monitores reais.
+ let chart=cot.querySelector(':scope > .m403-chart-slot');
+ if(!chart){chart=doc.createElement('div');const before=cot.querySelector('.cql, .cqmap, #adr, .vazio119');if(before)before.before(chart);else cot.append(chart);chart.className='m403-chart-slot';}
+ const consolidated=!!doc.querySelector('script[src*="mercado-v409.js"]');
+ if(consolidated){
+  if(!chart.querySelector(':scope > .m403-chart-card'))chart.innerHTML='<section class="m403-chart-card m409-chart-card" aria-label="Gráfico comparativo do Mercado"></section>';
+  return;
+ }
  chart.innerHTML=chartHtml();
 }
 function renderQuotes(native){

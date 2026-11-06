@@ -1,0 +1,43 @@
+DIÁRIO DE TRADER — V410 — CORREÇÃO DO PULO/TREMIDA DO GRÁFICO NO MERCADO
+Base obrigatória: V409 (a atualização anterior deve estar instalada).
+
+Instalar os arquivos da pasta raiz do ZIP na RAIZ do repositório (substituindo quando solicitado):
+  index.html
+  sw.js
+  mercado-v403.js
+  mercado-v409.js
+  mercado-v410.css (novo)
+  mercado-v410.js  (novo)
+
+CAUSA IDENTIFICADA NO CÓDIGO E NO VÍDEO:
+- V403 montava um gráfico provisório.
+- V408 reposicionava os componentes.
+- V409 substituía o gráfico após requestAnimationFrame.
+- V409 ainda fazia scrollBy duas animações de frame depois da troca de página.
+Esses passos geravam saltos de altura e posição visíveis no monitor.
+
+CORREÇÕES:
+- O primeiro gráfico agora é apenas um slot fixo para o gráfico definitivo da V409.
+- A composição do gráfico acontece antes do paint, depois do posicionamento V408.
+- Removida a correção de scroll em dois requestAnimationFrame.
+- Ajuste único de scroll em microtarefas, somente quando a navegação do Mercado muda.
+- Alturas mínimas e estilos limitados ao Mercado, preservando outras abas.
+- Nenhuma mudança de fontes de dados, Supabase, credenciais ou registros.
+
+VERIFICAÇÕES REALIZADAS:
+- Passaram oito verificações estáticas: arquivos vinculados, sintaxe JS,
+  cache, histórico existente, slot novo e ausência do scroll atrasado.
+- Teste visual em Chromium ficou indisponível por bloqueio de navegação
+  local no ambiente de teste. VALIDAR no Safari/iPhone e PC reais.
+
+INSTALAÇÃO:
+1. Copie TODOS os 6 arquivos de código listados, preservando seus nomes.
+2. Publique no GitHub; aguarde a atualização do site.
+3. Feche completamente o PWA no celular e abra novamente.
+4. Em Mercado, alternar Cotações, Notícias, Agenda, Análises e Jornal
+   repetidamente e conferir se gráfico/rolagem não saltam.
+5. Se persistir, registre outro vídeo com o título da aba visível e
+   informe o dispositivo/navegador.
+
+ATENÇÃO: o ZIP não publica automaticamente o GitHub, e o comportamento
+em produção depende do cache novo do PWA ativar corretamente.
