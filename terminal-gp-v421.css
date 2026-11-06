@@ -46,6 +46,7 @@
 .gp-menuwrap{position:relative;flex:none}
 .gp-menu{position:fixed;z-index:220;margin:0;min-width:220px;padding:6px;border:1px solid #2a3a48;border-radius:8px;background:#0b121a;box-shadow:0 12px 30px #000a}
 .gp-menu[hidden]{display:none}
+.gp-menuhead{margin:4px 8px 6px;font:600 12px system-ui;color:var(--gp-or)}
 .gp-menu button{display:block;width:100%;min-height:40px;padding:0 10px;border:0;border-radius:6px;background:none;color:var(--gp-tx);font:600 14px system-ui;text-align:left;cursor:pointer}
 .gp-menu button:hover,.gp-menu button:focus-visible{background:#15202c}
 

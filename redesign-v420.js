@@ -237,15 +237,22 @@ function home(){
   const tiles=[['bars','Mercado','Ações, índices, moedas e mais','mercado'],['monitor','Terminal','Gráficos, comparativos e indicadores','term'],['book','Diário','Trades, performance e aprendizado','stats'],['grad','Estudos','Aulas, trilhas e materiais','estudos'],['checksq','Checklist','Setup, plano e disciplina','regras']];
   const tileRow=`<div class="v4-tiles">${tiles.map(([i,n,d,r])=>`<button type="button" class="v4-tile" data-dt393-route="${r}">${ic(i,26)}<b>${n}</b><small>${d}</small>${ic('arrow',18)}</button>`).join('')}</div>`;
   // Panorama: agenda, notícias e alertas reais carregados pelo app
-  const ev=g(()=>{const a=AG.v[0];if(!a||!Array.isArray(a.eventos))return [];const d=t;return a.eventos.filter(e=>String(e.em).slice(0,10)===d||g(()=>agDia(e.em)===agDia(new Date().toISOString()),false)).sort((x,y)=>String(x.em).localeCompare(String(y.em))).slice(0,4)},[]);
+  // agenda: eventos de hoje; se não houver (fim de semana), os próximos de alto impacto
+  const evAll=g(()=>{const a=AG.v[0];return a&&Array.isArray(a.eventos)?a.eventos.slice().sort((x,y)=>String(x.em).localeCompare(String(y.em))):[]},[]);
+  let ev=evAll.filter(e=>String(e.em).slice(0,10)===t||g(()=>agDia(e.em)===agDia(new Date().toISOString()),false)).slice(0,4);
+  let evNext=false;if(!ev.length){ev=evAll.filter(e=>Date.parse(e.em)>Date.now()&&(e.imp===1||e.imp==null)).slice(0,4);evNext=ev.length>0}
   const hm=s=>{const d=new Date(s);return isNaN(d)?'':d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})};
-  const agenda=ev.length?ev.map(e=>`<li><time>${hm(e.em)}</time><span>${esc_(e.t||e.n||'Evento')}${e.p?` <small>(${esc_(e.p)})</small>`:''}</span><b>${esc_(e.a??e.at??e.c??'')}</b></li>`).join(''):`<li class="v4-none">Sem eventos carregados.</li>`;
-  const nw=g(()=>(MKT.items||[]).slice(0,3),[]);
-  const news=nw.length?nw.map(n=>`<li><time>${hm(n.d)}</time><span>${esc_(n.t||n.titulo||'')}</span></li>`).join(''):`<li class="v4-none">Abra Notícias para carregar as manchetes.</li>`;
+  const dm=s=>{const d=new Date(s);return isNaN(d)?'':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'America/Sao_Paulo'})};
+  const agenda=ev.length?ev.map(e=>`<li><time>${evNext?dm(e.em)+' ':''}${hm(e.em)}</time><span>${esc_(e.t||e.n||'Evento')}${e.p?` <small>(${esc_(e.p)})</small>`:''}</span><b>${esc_(e.a??e.at??e.c??'')}</b></li>`).join(''):`<li class="v4-none">Sem eventos carregados.</li>`;
+  // notícias: as mais recentes carregadas; sem consulta nova, mostra a última salva no aparelho
+  let nw=g(()=>(MKT.items||[]).slice(0,3),[]),nwSaved=null;
+  if(nw.length){try{localStorage.setItem('diario-v423-news',JSON.stringify({ts:g(()=>MKT.ts,Date.now())||Date.now(),items:nw}))}catch(e){}}
+  else{try{const c=JSON.parse(localStorage.getItem('diario-v423-news')||'null');if(c&&Array.isArray(c.items)){nw=c.items;nwSaved=c.ts}}catch(e){}}
+  const news=nw.length?nw.map(n=>`<li><time>${hm(n.d)}</time><span>${esc_(n.t||n.titulo||'')}</span></li>`).join('')+(nwSaved?`<li class="v4-none">Última consulta: ${new Date(nwSaved).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</li>`:''):`<li class="v4-none">Abra Notícias para carregar as manchetes.</li>`;
   const moves=['IBOV','USD/BRL','S&P 500','DXY','PETR4'].map(s=>[s,quote(s)]).filter(([,q])=>q&&q.d1!=null&&Math.abs(q.d1)>=1).slice(0,3);
   const alerts=moves.length?moves.map(([s,q])=>`<li><i class="${q.d1>0?'dot-g':'dot-r'}"></i><span><b>${esc_(s)}</b> ${q.d1>0?'sobe':'cai'} ${pct(q.d1)} hoje</span></li>`).join(''):`<li class="v4-none">Sem movimentos fortes nas cotações recebidas.</li>`;
   const pano=card('bars','Panorama do dia',link('Ver mais','data-dt393-route="mercado"'),`<div class="v4-pano">
-    <div><h3>${ic('cal',18)} Agenda (hoje)</h3><ul class="v4-list">${agenda}</ul>${link('Ver agenda','data-v4mkt="ag"')}</div>
+    <div><h3>${ic('cal',18)} ${evNext?'Agenda (próximos)':'Agenda (hoje)'}</h3><ul class="v4-list">${agenda}</ul>${link('Ver agenda','data-v4mkt="ag"')}</div>
     <div><h3>${ic('news',18)} Notícias-chave</h3><ul class="v4-list">${news}</ul>${link('Ver notícias','data-v4mkt="nt"')}</div>
     <div><h3 class="v4-gold">${ic('alert',18)} Alertas macro</h3><ul class="v4-list v4-alerts">${alerts}</ul>${link('Abrir radar','data-dt393-route="term"')}</div></div>`);
   const ia=card('spark','Central de Inteligência <span class="v4-iachip">IA</span>',link('Ver análises','data-v4ia="1"'),`<p class="v4-sub">Sugestões com base no mercado, no seu plano e no seu histórico. Sem ordens automáticas.</p><div class="v4-ia"><div class="v4-iaart" aria-hidden="true"><span>${ic('bars',30)}<b>IA</b></span></div><div class="v4-ialist">

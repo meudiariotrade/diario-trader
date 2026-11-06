@@ -10,6 +10,11 @@ const KEY='diario-v421-gp';
 const SYMS={IBOV:'Ibovespa',SPX:'S&P 500',NDX:'Nasdaq 100',DXY:'Índice do dólar (DXY)',USDBRL:'Dólar (USD/BRL)',VIX:'VIX',BRENT:'Petróleo Brent',WTI:'Petróleo WTI',OURO:'Ouro',COBRE:'Cobre',PRATA:'Prata',EWZ:'EWZ (ETF Brasil)',PETR4:'Petrobras PN',VALE3:'Vale ON',ITUB4:'Itaú PN',BBAS3:'Banco do Brasil',WEGE3:'WEG',BOVA11:'BOVA11',BTCUSD:'Bitcoin'};
 const ECON={'BC:SELIC':['selic','Selic meta (% a.a.)'],'BC:CDI':['cdi','CDI (% a.a.)'],'BC:IPCA12':['ipca12','IPCA 12 meses (%)'],'BC:IPCA':['ipca','IPCA mensal (%)'],'BC:IGPM':['igpm','IGP-M mensal (%)'],'BC:IBCBR':['ibcbr','IBC-Br (prévia do PIB)'],'BC:DESEMP':['desemprego','Desemprego PNAD (%)'],'BC:PTAX':['ptax','Dólar PTAX (R$)']};
 const isEcon=s=>!!ECON[s];
+const REL={IBOV:['SPX','EWZ','USDBRL','BOVA11','BC:SELIC','BC:IBCBR'],PETR4:['BRENT','WTI','PETR3','PRIO3','EWZ','IBOV'],PETR3:['PETR4','BRENT','IBOV'],VALE3:['COBRE','CSNA3','GGBR4','IBOV','EWZ'],
+ ITUB4:['BBDC4','BBAS3','SANB11','IBOV','BC:SELIC'],BBAS3:['ITUB4','BBDC4','IBOV','BC:SELIC'],WEGE3:['IBOV','USDBRL','SPX'],BOVA11:['IBOV','EWZ'],
+ USDBRL:['DXY','BC:PTAX','BC:SELIC','IBOV','EWZ'],SPX:['NDX','VIX','DXY','IBOV'],NDX:['SPX','VIX','DXY'],DXY:['USDBRL','OURO','SPX'],VIX:['SPX','NDX'],
+ OURO:['DXY','PRATA','USDBRL'],PRATA:['OURO','COBRE'],COBRE:['VALE3','OURO'],BRENT:['WTI','PETR4','USDBRL'],WTI:['BRENT','PETR4'],EWZ:['IBOV','USDBRL','SPX'],BTCUSD:['NDX','OURO','DXY']};
+const related=s=>(REL[s]||['IBOV','SPX','USDBRL','DXY']).filter(x=>x!==s);
 const PRESETS=[
  ['IBOV','SPX','Ibovespa × S&P 500'],['IBOV','USDBRL','Ibovespa × Dólar'],['EWZ','IBOV','EWZ × Ibovespa'],
  ['PETR4','BRENT','Petrobras × Brent'],['VALE3','COBRE','Vale × Cobre (metais)'],['NDX','VIX','Nasdaq × VIX'],
@@ -203,6 +208,7 @@ function shell(){
   </div>
   <div class="gp-bar3">
     <label class="gp-sel gp-b"><span>+ Adicionar dado</span><select data-gp-b>${opt(st.b,true)}</select></label>
+    <div class="gp-menuwrap"><button type="button" class="gp-btn" data-gp="rel" aria-expanded="false">Relacionados ▾</button><div class="gp-menu" data-gp-relmenu hidden></div></div>
     <label class="gp-free"><input type="text" data-gp-free placeholder="outro ticker (ex.: ITUB4, AAPL, GC=F)" autocapitalize="characters" spellcheck="false" aria-label="Adicionar outro ticker"><button type="button" data-gp="free">OK</button></label>
     <button type="button" class="gp-btn gp-icon" data-gp="reload" aria-label="Atualizar histórico">↻</button>
     <button type="button" class="gp-btn gp-icon" data-gp="full" aria-label="Tela cheia">⤢</button>
@@ -252,14 +258,16 @@ function mount(){
 /* ---------- interação ---------- */
 doc.addEventListener('click',e=>{
   const el=e.target.closest('#v421-gp');if(!el)return;
-  const t=e.target.closest('[data-gp],[data-gp-per],[data-gp-mode],[data-gp-ma],[data-gp-preset]');if(!t)return;
+  const t=e.target.closest('[data-gp],[data-gp-per],[data-gp-mode],[data-gp-ma],[data-gp-preset],[data-gp-rel]');if(!t)return;
   e.preventDefault();
+  if(t.dataset.gpRel){st.b=t.dataset.gpRel;if(st.mode==='single')st.mode='dual';save();const m=el.querySelector('[data-gp-relmenu]');m.hidden=true;el.querySelector('[data-gp="rel"]').setAttribute('aria-expanded','false');load(false);return}
   if(t.dataset.gpPer){st.per=t.dataset.gpPer;save();load(false);return}
   if(t.dataset.gpMode){st.mode=t.dataset.gpMode;save();paint();return}
   if(t.dataset.gpMa){const n=+t.dataset.gpMa;st.ma=st.ma.includes(n)?st.ma.filter(x=>x!==n):[...st.ma,n];save();paint();return}
   if(t.dataset.gpPreset!=null){const p=PRESETS[+t.dataset.gpPreset];st.a=p[0];st.b=p[1];if(st.mode==='single')st.mode='dual';save();el.querySelector('[data-gp-menu]').hidden=true;el.querySelector('[data-gp="presets"]').setAttribute('aria-expanded','false');load(false);return}
   const a=t.dataset.gp;
   if(a==='presets'){const m=el.querySelector('[data-gp-menu]');m.hidden=!m.hidden;t.setAttribute('aria-expanded',String(!m.hidden));if(!m.hidden){const r=t.getBoundingClientRect();const w=Math.min(260,innerWidth-16);m.style.width=w+'px';m.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';const below=r.bottom+4;const h=m.offsetHeight;m.style.top=(below+h>innerHeight-8?Math.max(8,r.top-h-4):below)+'px'}return}
+  if(a==='rel'){const m=el.querySelector('[data-gp-relmenu]');m.innerHTML=`<p class="gp-menuhead">Comparar ${esc(st.a)} com</p>`+related(st.a).map(x=>`<button type="button" data-gp-rel="${esc(x)}">${esc(isEcon(x)?ECON[x][1]:x+' · '+name(x))}</button>`).join('');m.hidden=!m.hidden;t.setAttribute('aria-expanded',String(!m.hidden));if(!m.hidden){const r=t.getBoundingClientRect();const w=Math.min(280,innerWidth-16);m.style.width=w+'px';m.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';const h=m.offsetHeight;m.style.top=(r.bottom+4+h>innerHeight-8?Math.max(8,r.top-h-4):r.bottom+4)+'px'}return}
   if(a==='ev'){st.ev=!st.ev;save();paint();return}
   if(a==='table'){st.table=!st.table;save();paint();return}
   if(a==='reload'){load(true);return}
@@ -273,12 +281,12 @@ doc.addEventListener('change',e=>{
   if(e.target.matches('[data-gp-b]')){st.b=e.target.value||'';save();load(false)}
   if(e.target.matches('[data-gp-freq]')){st.freq=e.target.value;save();paint()}
 });
-addEventListener('scroll',()=>{const m=doc.querySelector('#v421-gp [data-gp-menu]');if(m&&!m.hidden){m.hidden=true;doc.querySelector('#v421-gp [data-gp="presets"]')?.setAttribute('aria-expanded','false')}},{passive:true});
+addEventListener('scroll',()=>{const rm=doc.querySelector('#v421-gp [data-gp-relmenu]');if(rm&&!rm.hidden)rm.hidden=true;const m=doc.querySelector('#v421-gp [data-gp-menu]');if(m&&!m.hidden){m.hidden=true;doc.querySelector('#v421-gp [data-gp="presets"]')?.setAttribute('aria-expanded','false')}},{passive:true});
 doc.addEventListener('keydown',e=>{
   if(e.key==='Escape'){const el=doc.querySelector('#v421-gp.gp-full');if(el){el.classList.remove('gp-full');doc.body.classList.remove('gp-noscroll');paint()}}
   if(e.key==='Enter'&&e.target.matches?.('#v421-gp [data-gp-free]')){e.preventDefault();e.target.parentElement.querySelector('[data-gp="free"]').click()}
 });
-doc.addEventListener('click',e=>{if(!e.target.closest('.gp-menuwrap')){const m=doc.querySelector('#v421-gp [data-gp-menu]');if(m&&!m.hidden){m.hidden=true;doc.querySelector('#v421-gp [data-gp="presets"]')?.setAttribute('aria-expanded','false')}}});
+doc.addEventListener('click',e=>{if(!e.target.closest('.gp-menuwrap')){const r=doc.querySelector('#v421-gp [data-gp-relmenu]');if(r&&!r.hidden){r.hidden=true;doc.querySelector('#v421-gp [data-gp="rel"]')?.setAttribute('aria-expanded','false')}const m=doc.querySelector('#v421-gp [data-gp-menu]');if(m&&!m.hidden){m.hidden=true;doc.querySelector('#v421-gp [data-gp="presets"]')?.setAttribute('aria-expanded','false')}}});
 // acompanhamento (Track) por toque ou mouse
 function track(ev){
   const svgEl=ev.target.closest?.('#v421-gp .gp-svg');if(!svgEl||!lastGeom)return;
