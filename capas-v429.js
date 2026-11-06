@@ -44,10 +44,11 @@ function fundo(c,seed){
   // vinheta
   const vg=c.createRadialGradient(W/2,H*.45,200,W/2,H*.45,900);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.55)');c.fillStyle=vg;c.fillRect(0,0,W,H);
 }
+let RODAPE='Jornal do Pregão';
 function marca(c){
   c.save();c.fillStyle=GOLD;c.fillRect(W/2-330,H-70,200,2);c.fillRect(W/2+130,H-70,200,2);
   c.fillStyle=WHITE;c.font=`800 30px ${SANS}`;c.textAlign='center';c.fillText('DIÁRIO DE TRADER',W/2,H-60);
-  c.fillStyle=MUTED;c.font=`500 18px ${SANS}`;c.fillText('Jornal do Pregão · '+dataTxt()+' · não é recomendação de investimento',W/2,H-28);
+  c.fillStyle=MUTED;c.font=`500 18px ${SANS}`;c.fillText(RODAPE+' · '+dataTxt()+' · não é recomendação de investimento',W/2,H-28);
   c.restore();
 }
 /* quebra em linhas e reduz a fonte até caber em maxW × maxLinhas */
@@ -154,11 +155,38 @@ function mTouro(c,cot,ed){
   const y=titulo(c,pergunta[0],1040,WHITE,110,1);titulo(c,pergunta[1],y,GOLD,120,1);
   marca(c);return true;
 }
+/* MEU FECHAMENTO: resultado do dia em vezes o risco, sem valores em dinheiro (bom para postar) */
+function diaStats(){
+  return g(()=>{
+    const hoje=root.loc?root.loc().slice(0,10):new Date().toISOString().slice(0,10);
+    const ts=(root.S&&root.S.trades||S.trades||[]).map(t=>({...t,c:calc(t)})).filter(t=>t.c&&t.c.pl!=null&&String(t.dtx||t.dt||'').slice(0,10)===hoje);
+    if(!ts.length)return null;
+    const comR=ts.filter(t=>Number.isFinite(t.c.r)),somaR=comR.reduce((a,t)=>a+t.c.r,0);
+    const gan=ts.filter(t=>t.c.pl>0).length,ok=ts.filter(t=>t.rules!=='n'&&!(t.err&&t.err!=='Nenhum')).length;
+    const pl=ts.reduce((a,t)=>a+t.c.pl,0);
+    return {n:ts.length,gan,acerto:gan/ts.length,regras:ok/ts.length,somaR:comR.length?somaR:null,pos:pl>=0};
+  },null);
+}
+function mDia(c){
+  const d=diaStats();if(!d)return false;
+  fundo(c);const cor=d.pos?GREEN:RED;
+  c.save();c.textAlign='center';c.fillStyle=GOLD;c.font=`900 92px ${COND}`;c.fillText('MEU FECHAMENTO',W/2,190);c.restore();
+  const big=d.somaR!=null?(d.somaR>0?'+':'')+nf(d.somaR,1)+'×':(d.pos?'DIA POSITIVO':'DIA NEGATIVO');
+  c.save();c.textAlign='center';c.fillStyle=cor;c.shadowColor=cor;c.shadowBlur=40;const r=caber(c,big,W-140,280,1,'900',COND);c.font=`900 ${r.s}px ${COND}`;c.fillText(r.linhas[0],W/2,500);c.restore();
+  if(d.somaR!=null){c.save();c.textAlign='center';c.fillStyle='#d9e3f0';c.font=`700 40px ${SANS}`;c.fillText('VEZES O RISCO QUE EU CORRI',W/2,575);c.restore()}
+  const box=(x,lab,val)=>{c.save();c.textAlign='center';c.fillStyle=WHITE;c.font=`900 92px ${COND}`;c.fillText(val,x,760);c.fillStyle=MUTED;c.font=`700 30px ${SANS}`;c.fillText(lab,x,810);c.restore()};
+  box(W/6,'TRADES',String(d.n));box(W/2,'ACERTO',nf(d.acerto*100,0)+'%');box(W*5/6,'NAS REGRAS',nf(d.regras*100,0)+'%');
+  c.fillStyle='rgba(233,194,79,.35)';c.fillRect(80,880,W-160,2);
+  const frase=d.regras>=1?(d.pos?['PLANO SEGUIDO,','RESULTADO VEIO.']:['PERDI NO PLANO.','AMANHÃ TEM MAIS.']):(d.pos?['GANHEI, MAS','FUGI DAS REGRAS.']:['DIA DE','APRENDER.']);
+  const y=titulo(c,frase[0],1030,WHITE,110,1);titulo(c,frase[1],y,GOLD,110,1);
+  const rod=RODAPE;RODAPE='Meu diário de trade';marca(c);RODAPE=rod;return true;
+}
 const MODELOS=[['versus',mVersus],['pergunta',mPergunta],['numero',mNumero],['pontos',mPontos],['touro',mTouro]];
 let ultimo='';
 function gerar(so){
   const cv=doc.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');if(!c)return null;
   const cot=cotacoes(),ed=edicao();
+  if(so==='dia'){try{if(mDia(c))return cv}catch(e){console.warn('capa dia',e)}return null}
   const ordem=so?MODELOS.filter(([k])=>k===so):MODELOS.filter(([k])=>k!==ultimo).sort(()=>Math.random()-.5);
   for(const [k,f] of ordem){c.clearRect(0,0,W,H);try{if(f(c,cot,ed)){ultimo=k;return cv}}catch(e){console.warn('capa',k,e)}}
   return null;
@@ -172,18 +200,19 @@ async function compartilhar(cv){
   const a=doc.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome;doc.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);g(()=>toast('Imagem salva.'));
 }
 let atual=null;
-function abrir(){
-  atual=gerar();
-  if(!atual){g(()=>toast('Abra o Jornal do Pregão e aguarde as cotações para gerar a capa.'),null);return}
+function abrir(pronto,modelo){
+  atual=pronto instanceof HTMLCanvasElement?pronto:gerar(modelo);
+  if(!atual){g(()=>toast(modelo==='dia'?'Registre ao menos um trade encerrado hoje para montar a capa do seu fechamento.':'Abra o Jornal do Pregão e aguarde as cotações para gerar a capa.'),null);return}
   let ov=doc.getElementById('v429-capa');
   if(!ov){ov=doc.createElement('div');ov.id='v429-capa';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-label','Capa do Jornal do Pregão');doc.body.appendChild(ov)}
-  ov.innerHTML=`<div class="v429-bar"><button type="button" data-v429="x">← Voltar</button><button type="button" data-v429="nova">🎲 Outra capa</button><button type="button" data-v429="s" class="v429-pri">Compartilhar / salvar</button></div><div class="v429-img"><img alt="Capa gerada para o Jornal do Pregão" src="${atual.toDataURL('image/png')}"></div><p class="v429-nota">Capa montada com a edição de hoje e as cotações do app. Toque em “Outra capa” para sortear outro modelo.</p>`;
+  ov.innerHTML=`<div class="v429-bar"><button type="button" data-v429="x">← Voltar</button><button type="button" data-v429="nova">🎲 Outra capa</button><button type="button" data-v429="dia">Meu fechamento</button><button type="button" data-v429="s" class="v429-pri">Compartilhar / salvar</button></div><div class="v429-img"><img alt="Capa gerada para o Jornal do Pregão" src="${atual.toDataURL('image/png')}"></div><p class="v429-nota">Capa montada com a edição de hoje e as cotações do app. Toque em “Outra capa” para sortear outro modelo.</p>`;
   ov.hidden=false;doc.body.classList.add('v429-open');ov.querySelector('[data-v429="nova"]').focus({preventScroll:true});
 }
 function fechar(){const ov=doc.getElementById('v429-capa');if(ov)ov.hidden=true;doc.body.classList.remove('v429-open')}
 doc.addEventListener('click',e=>{
   const b=e.target.closest?.('[data-v429]');
-  if(b){e.preventDefault();const a=b.dataset.v429;if(a==='x')fechar();else if(a==='nova')abrir();else if(a==='s'&&atual)compartilhar(atual);return}
+  if(b){e.preventDefault();const a=b.dataset.v429;if(a==='x')fechar();else if(a==='nova')abrir();else if(a==='dia')abrir(null,'dia');else if(a==='s'&&atual)compartilhar(atual);return}
+  const th=e.target.closest?.('[data-v430-thumb]');if(th){e.preventDefault();abrir(CAPA_HOJE.cv||null);return}
   if(e.target.closest?.('[data-v429-capa]')){e.preventDefault();abrir()}
 });
 doc.addEventListener('keydown',e=>{if(e.key==='Escape'&&doc.body.classList.contains('v429-open'))fechar()});
@@ -196,11 +225,23 @@ function botao(){
     }
   });
 }
+/* v430: capa de hoje pronta no topo do Jornal (gerada uma vez por edição) */
+const CAPA_HOJE={k:'',cv:null,url:''};
+function miniatura(){
+  const b=doc.querySelector('[data-jrimg]');if(!b||!b.parentElement)return;
+  const ed=edicao();if(!ed||!ed.manchete)return;
+  const k=(ed.dia||'')+'|'+(ed.edicao||'')+'|'+String(ed.manchete.titulo||'').slice(0,40);
+  if(CAPA_HOJE.k!==k){const cv=gerar();if(!cv)return;CAPA_HOJE.k=k;CAPA_HOJE.cv=cv;try{CAPA_HOJE.url=cv.toDataURL('image/jpeg',.72)}catch(e){CAPA_HOJE.url=''}}
+  if(!CAPA_HOJE.url)return;
+  const box=b.parentElement;let th=box.parentElement&&box.parentElement.querySelector(':scope>[data-v430-thumb]');
+  if(!th){th=doc.createElement('button');th.type='button';th.className='v430-thumb';th.setAttribute('data-v430-thumb','1');box.after(th)}
+  if(th.dataset.k!==k){th.dataset.k=k;th.innerHTML=`<img alt="" src="${CAPA_HOJE.url}"><span><b>Capa de hoje pronta</b><small>Toque para ver, sortear outra ou compartilhar.</small></span>`}
+}
 function hook(){
   if(typeof root.render0!=='function'||root.render0.__v429)return false;
-  const prev=root.render0;const f=function(){const o=prev.apply(this,arguments);try{botao()}catch(e){}return o};f.__v429=1;root.render0=f;return true;
+  const prev=root.render0;const f=function(){const o=prev.apply(this,arguments);try{botao();miniatura()}catch(e){}return o};f.__v429=1;root.render0=f;return true;
 }
 hook();let k=0;const iv=setInterval(()=>{k++;hook();try{botao()}catch(e){}if(k>15)clearInterval(iv)},800);
-setInterval(()=>{if(!doc.hidden)try{botao()}catch(e){}},3000);
-root.DIARIO_V429={gerar,abrir};
+setInterval(()=>{if(!doc.hidden)try{botao();miniatura()}catch(e){}},3000);
+root.DIARIO_V429={gerar,abrir,diaStats};
 })(window);

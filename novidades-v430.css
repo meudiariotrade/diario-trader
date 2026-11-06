@@ -1,0 +1,30 @@
+/* Diário de Trader v430 — aviso de dia de turno e quadro Van Tharp da semana */
+.v430-ov{position:fixed;inset:0;z-index:120;display:flex;align-items:flex-end;justify-content:center;padding:16px;background:rgba(0,8,6,.72)}
+.v430-ov[hidden]{display:none}
+.v430-sh{width:min(100%,460px);margin-bottom:calc(8px + env(safe-area-inset-bottom));padding:20px 18px 16px;border:1px solid #6b5520;border-radius:18px;background:#061d18;color:#eefaf5;box-shadow:0 18px 50px #000a}
+.v430-sh h2{margin:0 0 8px;color:#f0b548;font-size:20px}
+.v430-sh p{margin:0 0 10px;font-size:15.5px;line-height:1.45}
+.v430-mut{color:#9fc2b5!important;font-size:13.5px!important}
+.v430-acts{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.v430-acts button{min-height:48px;border:1px solid #2c5a4d;border-radius:12px;background:#0a2b24;color:#dfeee8;font:650 15px system-ui,-apple-system,sans-serif;cursor:pointer}
+.v430-acts .v430-pri{border-color:#0f7a55;background:#0f7a55;color:#fff}
+.v430-acts button:focus-visible{outline:2px solid #12e0a6;outline-offset:2px}
+
+.v430-vt{margin:12px 0}
+.v430-vt-h b{display:block;font-size:16px}
+.v430-vt-h small{display:block;margin-top:2px;color:var(--mut,#9fc2b5);font-size:12.5px;line-height:1.35}
+.v430-vt-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.v430-vt-c{min-width:0;padding:9px 8px;border:1px solid var(--bd,#1d4a3e);border-radius:12px;background:var(--tile,rgba(255,255,255,.03))}
+.v430-vt-c small{display:block;color:var(--mut,#9fc2b5);font-size:11.5px;line-height:1.2}
+.v430-vt-c b{display:block;margin-top:3px;font-size:18px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.v430-vt-c em{display:block;margin-top:2px;color:var(--mut,#9fc2b5);font-size:11px;font-style:normal;line-height:1.25}
+.v430-pos{color:var(--win-tx,#19c37d)}
+.v430-neg{color:var(--loss-tx,#ef4b4b)}
+.v430-vt .v430-mut{margin:8px 0 0;font-size:12.5px}
+.v430-dica{margin:10px 0 0;padding:10px 12px;border-left:3px solid #f0b548;border-radius:8px;background:rgba(240,181,72,.08);font-size:14px;line-height:1.45}
+@media (max-width:360px){.v430-vt-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
+html[data-v427-tema=claro] .v430-sh{background:#fff;color:#0c2a22;border-color:#d9b15a}
+html[data-v427-tema=claro] .v430-sh h2{color:#9a6408}
+html[data-v427-tema=claro] .v430-mut{color:#4f6b62!important}
+html[data-v427-tema=claro] .v430-acts button{background:#f3f7f5;color:#0c2a22;border-color:#cfe0d9}
+html[data-v427-tema=claro] .v430-acts .v430-pri{background:#047a5b;color:#fff;border-color:#047a5b}
