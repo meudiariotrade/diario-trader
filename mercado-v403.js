@@ -115,7 +115,7 @@ function decorate(){
 }
 let pending=false;
 function schedule(){if(pending)return;pending=true;setTimeout(()=>{pending=false;decorate()},0)}
-if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v403',()=>queueMicrotask(()=>{try{decorate()}catch(err){console.warn('Mercado: cabeçalho',err)}}));
+if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v403',()=>{try{decorate()}catch(err){console.warn('Mercado: cabeçalho',err)}});
 // Ao entrar pelo atalho geral Mercado, abrir a página principal de cotações.
 // As subpáginas explícitas e a última categoria de ativo continuam independentes.
 doc.addEventListener('click',event=>{if(event.target.closest?.('[data-dt393-route="mercado"]')){if(typeof MKT==='object')MKT.tab='cq';}},true);

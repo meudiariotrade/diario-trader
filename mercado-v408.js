@@ -50,7 +50,7 @@ function mount(){
 }
 let scheduled=false;
 function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;try{mount()}catch(err){console.warn('Mercado v408: composição',err)}},55)}
-if(window.TraderUI?.onRender){window.TraderUI.onRender('mercado-v408',()=>queueMicrotask(()=>{try{mount()}catch(err){console.warn('Mercado v408: render',err)}}))}
+if(window.TraderUI?.onRender){window.TraderUI.onRender('mercado-v408',()=>{try{mount()}catch(err){console.warn('Mercado v408: render',err)}})}
 function init(){const app=doc.querySelector('#app');if(!app)return;new MutationObserver(records=>{
  if(!active())return;
  if(records.some(m=>[...m.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('#cqbox,#cotbox,.market-monitor,.m405-dashboard,.cql,.cqmap,.cqr,.m403-chart-slot')||n.querySelector?.('#cqbox,#cotbox,.market-monitor,.m405-dashboard')))))schedule();

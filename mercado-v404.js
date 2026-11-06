@@ -65,7 +65,7 @@ async function fetchHistory(button){
  }finally{loading=false;const live=market()?.querySelector('[data-m404-history]');if(live){live.disabled=false;live.textContent='↻  Tentar novamente'}setTimeout(addHistoryButton,50)}
 }
 let queued=false;function schedule(){if(queued)return;queued=true;setTimeout(()=>{queued=false;sync();addHistoryButton()},60)}
-if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v404',()=>queueMicrotask(()=>{try{sync();addHistoryButton()}catch(err){console.warn('Mercado: painéis',err)}}));
+if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v404',()=>{try{sync();addHistoryButton()}catch(err){console.warn('Mercado: painéis',err)}});
 const start=()=>{const app=doc.getElementById('app');if(app){const observer=new MutationObserver(mutations=>{if(state()!=='cq'&&!modes[state()])return;const changed=mutations.some(m=>[...m.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('.dt395-native-mercado,.m403-emptychart')||n.querySelector?.('.dt395-native-mercado,.m403-emptychart'))));if(changed)schedule()});observer.observe(app,{childList:true,subtree:true});}schedule()};
 if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',start,{once:true});else start();
 doc.addEventListener('click',event=>{const jump=event.target.closest('[data-m404-jump]');if(jump){event.preventDefault();const target=doc.getElementById(jump.dataset.m404Jump);target?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});return}const history=event.target.closest('[data-m404-history]');if(history){event.preventDefault();fetchHistory(history)}},false);

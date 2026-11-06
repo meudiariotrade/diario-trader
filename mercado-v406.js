@@ -45,7 +45,7 @@ function mount(){const r=root(),id=sub();if(!r||!['nt','jr'].includes(id))return
  showMode(r,id);
 }
 let queued=false;function schedule(){if(queued)return;queued=true;setTimeout(()=>{queued=false;try{mount()}catch(err){console.warn('Mercado v406',err)}},60)}
-if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v406',()=>queueMicrotask(()=>{try{mount()}catch(err){console.warn('Mercado: navegação',err)}}));
+if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v406',()=>{try{mount()}catch(err){console.warn('Mercado: navegação',err)}});
 function init(){const app=doc.getElementById('app');if(app){new MutationObserver(mutations=>{
  if(!['nt','jr'].includes(sub()))return;
  if(mutations.some(m=>[...m.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('.dt395-native-mercado')||n.querySelector?.('.dt395-native-mercado')))))schedule();

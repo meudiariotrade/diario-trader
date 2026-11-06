@@ -1,0 +1,12 @@
+/* v412 — Mercado e lições sem salto causado por remontagem/ancoragem. */
+#app .dt395-native-mercado,
+#app .dt395-native-mercado .m403-primary-tabs,
+#app .dt395-native-mercado .m408-workspace,
+#app .dt395-native-mercado .m409-chart-card,
+#app .dt397-native-mount,
+#app .dt397-native-mount .dt395-native-estudos {overflow-anchor:none !important;}
+#app .dt395-native-mercado *,
+#app .dt395-native-mercado *::before,
+#app .dt395-native-mercado *::after {scroll-behavior:auto !important;}
+#app .dt397-native-mount .enl,
+#app .dt397-native-mount .entop {scroll-margin-top:140px;}

@@ -1,37 +1,33 @@
-/* Mercado v410 — navegação estável sem reposicionamento em frames atrasados.
-   Funciona apenas na aba Mercado. Não altera cotações, dados ou execução de ordens. */
+/* v412 — Uma única transação de layout no Mercado, sem saltos pós-paint. */
 (()=>{'use strict';
-const d=document;
-let pending=null;
-const active=()=>{try{return typeof tab!=='undefined'&&tab==='mercado'}catch{return false}};
-const nav=()=>d.querySelector('#app .dt395-native-mercado .m403-primary-tabs');
-function capture(e){
- const btn=e.target.closest?.('#app .dt395-native-mercado .m403-primary-tabs [data-navroute^="mercado:"]');
- if(!btn||!active())return;
- const bar=btn.closest('.m403-primary-tabs');
- if(!bar)return;
- pending={at:performance.now(),top:bar.getBoundingClientRect().top,scrollY:window.scrollY,previousHeight:d.getElementById('app')?.offsetHeight||0};
-}
-function finish(){
- const old=pending;
- if(!old)return;
- pending=null;
- const next=nav();
- if(!next)return;
- const shift=next.getBoundingClientRect().top-old.top;
- if(Math.abs(shift)>1&&Math.abs(shift)<window.innerHeight*1.5){
-  // Uma ÚNICA correção ainda na fila de microtarefas, antes do paint.
-  // A versão anterior corrigia duas animações de frame depois, gerando tremida.
-  const target=Math.max(0,window.scrollY+shift);
-  window.scrollTo({top:target,behavior:'instant'});
+ const d=document;
+ const market=()=>{try{return tab==='mercado'}catch{return false}};
+ const bar=()=>d.querySelector('#app .dt395-native-mercado .m403-primary-tabs');
+ let last=null;
+ if(window.TraderUI?.onRender){
+  window.TraderUI.onRender('mercado-v410',{
+   before(){
+    if(!market())return null;
+    const app=d.getElementById('app'),nav=bar();
+    if(!app||!nav)return null;
+    const rect=nav.getBoundingClientRect();
+    const snap={y:window.scrollY,navTop:rect.top,app,previousMin:app.style.minHeight};
+    // A nova subpágina pode ser mais curta; preserve o espaço anterior enquanto
+    // os componentes são recriados, evitando que o Safari compacte o scroll.
+    app.style.minHeight=Math.max(app.offsetHeight,window.innerHeight)+'px';
+    return snap;
+   },
+   after(snap){
+    if(!snap)return;
+    const next=bar();
+    if(next){
+     const delta=next.getBoundingClientRect().top-snap.navTop;
+     const target=Math.max(0,snap.y+delta);
+     if(Math.abs(window.scrollY-target)>1)window.scrollTo({top:target,behavior:'instant'});
+    }
+    snap.app.style.minHeight=snap.previousMin;
+   }
+  });
  }
-}
-d.addEventListener('click',capture,true);
-if(window.TraderUI?.onRender){window.TraderUI.onRender('mercado-v410',{after(){
- if(!pending)return;
- // Os renderizadores de Mercado v403/v408/v409 enfileiram suas microtarefas
- // antes desta. Não executar requestAnimationFrame ou setTimeout no layout.
- queueMicrotask(()=>queueMicrotask(finish));
-}})}
-window.MercadoNavegacao410={get pending(){return !!pending},version:'v410'};
+ window.MercadoNavegacao410={version:'v412',get pending(){return false}};
 })();

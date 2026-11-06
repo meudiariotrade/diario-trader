@@ -105,7 +105,7 @@ function mount(){const root=doc.querySelector(rootSel);let sub='';try{sub=typeof
  build(root,sub);
 }
 let scheduled=false;function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;try{mount()}catch(e){console.error('Panorama v405: ',e)}},95)}
-if(window.TraderUI?.onRender)window.TraderUI.onRender('panorama-v405',()=>queueMicrotask(()=>{try{mount()}catch(err){console.warn('Mercado: panorama',err)}}));
+if(window.TraderUI?.onRender)window.TraderUI.onRender('panorama-v405',()=>{try{mount()}catch(err){console.warn('Mercado: panorama',err)}});
 function init(){const app=doc.getElementById('app');if(app){const observer=new MutationObserver(mutations=>{const changed=mutations.some(m=>[...m.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('.dt395-native-mercado,.m404-overview')||n.querySelector?.('.dt395-native-mercado,.m404-overview'))));if(changed)schedule()});observer.observe(app,{childList:true,subtree:true})}schedule()}
 if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',init,{once:true});else init();
 doc.addEventListener('click',ev=>{const target=ev.target.closest('[data-m405-action]');if(!target)return;const root=target.closest('.m405-dashboard');if(!root)return;

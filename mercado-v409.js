@@ -45,16 +45,11 @@ function render(){const c=card();if(!c||!within())return;const obs=observed(),ra
  c.classList.toggle('m409-expanded',S.full);return obs;}
 function schedule(){
  if(!within())return;
- // O v403 cria apenas o slot e o v408 posiciona-o antes desta microtarefa.
- // Executa a montagem ANTES do próximo paint (não depois de 1–2 frames).
- queueMicrotask(()=>{
-  if(!within())return;
-  const c=card();
-  if(c&&!c.querySelector('.m409-controls')){
-   render();
-   if(!S.last){S.last=Date.now();setTimeout(()=>{if(within()&&observed().rows.length<2&&!S.loading)fetchHistory(false)},180)}
-  }
- });
+ const c=card();
+ if(c&&!c.querySelector('.m409-controls')){
+  render();
+  if(!S.last){S.last=Date.now();setTimeout(()=>{if(within()&&observed().rows.length<2&&!S.loading)fetchHistory(false)},180)}
+ }
 }
 const requested=new Map();
 async function fetchHistory(force=false){if(S.loading)return;const api=window.TRM?.tec;if(!api?.pegaVelas){S.message='O Terminal ainda não disponibilizou a consulta de candles nesta sessão.';render();return;}
@@ -63,7 +58,7 @@ async function fetchHistory(force=false){if(S.loading)return;const api=window.TR
 
 function init(){const app=d.getElementById('app');if(!app)return;
  const observer=new MutationObserver(muts=>{if(!within())return;if(muts.some(m=>[...m.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('.m403-chart-card,.m408-workspace,.m408-chart-column')||n.querySelector?.('.m403-chart-card'))))){schedule();}});observer.observe(app,{subtree:true,childList:true});schedule();}
-if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v409',()=>queueMicrotask(()=>{try{schedule()}catch(e){console.warn('Mercado v409',e)}}));
+if(window.TraderUI?.onRender)window.TraderUI.onRender('mercado-v409',()=>{try{schedule()}catch(e){console.warn('Mercado v409',e)}});
 if(d.readyState==='loading')d.addEventListener('DOMContentLoaded',init,{once:true});else init();
 // O ajuste do scroll entre páginas é controlado por uma única camada (v410).
 // Removido o antigo scrollBy em dois requestAnimationFrame: ele provocava
