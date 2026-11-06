@@ -1,0 +1,19 @@
+DIÁRIO DE TRADER — v411 | CONTRASTE DE COTAÇÕES, JUROS E JORNAL
+
+BASE: instalar sobre a v410. O ZIP de atualização contém APENAS os arquivos modificados e o novo CSS.
+
+ALTERAÇÕES
+- Estilo dos cartões do Painel de Mercado/Jornal (.jrinds .jrind): fundos verde-escuros, títulos e números legíveis.
+- Estilo dos vencimentos de DI (.cqdi > div): fundos verde-escuros, rótulos e taxas claras; variações positivas (verde) e negativas (vermelho).
+- No celular, curva DI usa duas colunas em vez de quatro colunas apertadas.
+- Nova folha de estilo adicionada ao final de index.html e incluída no precache do service worker (v411).
+
+NÃO ALTERADO: app.js, regras financeiras, preços, Supabase, autenticação, fluxo de atualização, Jornal, Profit, TradingView, outras abas.
+
+INSTALAÇÃO GITHUB
+1. Extraia o ZIP e envie index.html, sw.js e mercado-v411.css para a raiz do repositório.
+2. Confirme que o GitHub Pages fez o deploy da versão publicada.
+3. Feche/reabra o app instalado no iPhone; se continuar com a versão antiga, atualize a página e espere o novo cache ser ativado.
+4. Confira Mercado -> Jornal -> Painel de mercado e Mercado -> Cotações/Panorama -> Juros/DI.
+
+VERIFICAÇÃO: regras de CSS analisadas estaticamente; não foi possível executar Chromium neste ambiente (navegação local bloqueada). Validar o resultado visual no Safari e no PC após o deploy.

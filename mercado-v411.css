@@ -1,0 +1,50 @@
+/* v411 — Contraste do Mercado/Jornal/Juros.
+   Corrige variáveis de tema claro herdadas por .jrind e .cqdi.
+   Não altera cotações, números, sinal (+/-), fonte nem refresh. */
+html:root body.studio-design #app .jrinds .jrind,
+html:root body.studio-design #app .cqdi > div {
+  background: #073026 !important;
+  background-color: #073026 !important;
+  border: 1px solid #277457 !important;
+  color: #f0fff7 !important;
+  -webkit-text-fill-color: #f0fff7 !important;
+  box-shadow: none !important;
+  border-radius: 10px !important;
+  min-width: 0;
+}
+/* Rótulos, valores e variações têm cores independentes do tema do aparelho. */
+html:root body.studio-design #app .jrinds .jrind small,
+html:root body.studio-design #app .cqdi > div small:not(.g):not(.r) {
+  color: #b4d3c3 !important;
+  -webkit-text-fill-color: #b4d3c3 !important;
+  opacity: 1 !important;
+  overflow-wrap: anywhere;
+}
+html:root body.studio-design #app .jrinds .jrind b,
+html:root body.studio-design #app .cqdi > div b {
+  color: #f0fff7 !important;
+  -webkit-text-fill-color: #f0fff7 !important;
+  opacity: 1 !important;
+  font-variant-numeric: tabular-nums;
+}
+html:root body.studio-design #app .jrinds .jrind :is(i.g,small.g),
+html:root body.studio-design #app .cqdi > div small.g {
+  color: #18e1a3 !important;
+  -webkit-text-fill-color: #18e1a3 !important;
+}
+html:root body.studio-design #app .jrinds .jrind :is(i.r,small.r),
+html:root body.studio-design #app .cqdi > div small.r {
+  color: #ff7180 !important;
+  -webkit-text-fill-color: #ff7180 !important;
+}
+/* Corrige as quatro colunas apertadas com texto cortado no iPhone. */
+@media (max-width: 620px) {
+  html:root body.studio-design #app .cqdi {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    gap: 8px !important;
+  }
+  html:root body.studio-design #app .cqdi > div {
+    padding: 10px 12px !important;
+    min-height: 70px;
+  }
+}
