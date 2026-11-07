@@ -1,0 +1,24 @@
+Diário de Trader v506 — Excel do checklist legível (inclui tudo da v501 a v505)
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v506.js
+  camadas-v506.js
+  estilo-v506.css
+
+Nada do seu diário é apagado.
+
+O que muda:
+- Exportar para Excel: a aba "Checklist" agora diz o que cada número significa, com cor
+  (verde = bom, amarelo = atenção, vermelho = ruim, cinza = não preenchido):
+  "4 · Bem", "2 de 3 · faltou: meta", "62 de 70 · estável", "4 (máx. 3)", "+1,08×", "+R$ 272,00",
+  nota de Disciplina do dia (Ótima / Boa / Regular / Fraca) e a coluna "O que faltou".
+- Aba "Resumo": médias do período e o resultado médio por dia quando você estava bem x mal,
+  com plano x sem plano, escala estável x instável, checklist concluído x não, acima do máximo de trades.
+- Aba "Como ler": a legenda de cada coluna.
+- Aba "Checklist (números)": a tabela antiga, igual, para fórmulas.
+- Sem a palavra "mesa": o botão virou "Checklist profissional para WIN/WDO" e o aviso de trava
+  não fala mais de mesa proprietária.
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
