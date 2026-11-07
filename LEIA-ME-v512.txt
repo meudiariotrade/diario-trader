@@ -1,6 +1,6 @@
 Diário de Trader v512
 Suba: index.html, sw.js, nucleo-v512.js, camadas-v512.js, estilo-v512.css, estudos.js
-- Menu só com as 8 abas principais (as páginas internas aparecem na busca do menu).
-- Mercado não abre mais em Alertas. Alertas: Configurações → Gerenciar ou o sino.
-- Long & Short: botão na barra de abas do Mercado.
-- Curso Alta Renda: Estudos → Meu estudo → Biblioteca → botão "Gerar videoaulas do curso (4 aulas)".
+- Menu só com as abas principais; Mercado não abre mais em Alertas.
+- Long & Short completo: explicação do zero, qualidade do par, meia-vida, teste de reversão, histórico das distorções, gráfico do desvio e montagem com quantidades.
+- Curso Alta Renda com botão de videoaulas.
+- Placar Brasil × EUA e backups semanais.
