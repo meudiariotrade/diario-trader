@@ -1,0 +1,21 @@
+Diário de Trader v504 — correções de detalhes (inclui tudo da v501, v502 e v503)
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v504.js
+  camadas-v504.js
+  estilo-v504.css
+
+Se ainda não subiu a v501, v502 ou v503, não precisa: a v504 já tem tudo.
+Arquivos antigos nucleo/camadas/estilo-v501, -v502 e -v503 podem ficar ou ser apagados.
+Nada do seu diário é apagado.
+
+O que muda:
+- Carteira (e qualquer tela com abas no meio da página): ao tocar numa aba, a tela não volta
+  mais para o topo. A fileira de abas fica onde estava e o conteúdo novo aparece logo abaixo.
+- "Posso operar?" (e "Patrimônio"): o conteúdo aparece direto na página, sem a caixa "Hoje" de
+  abrir/fechar que não respondia ao toque e podia aparecer vazia no iPhone.
+- Continua valendo: troca de aba sem tremida (v503), design pelo DESIGN.md (v502) e vídeo no iPhone (v501).
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
