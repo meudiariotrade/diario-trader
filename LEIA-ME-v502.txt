@@ -1,0 +1,22 @@
+Diário de Trader v502 — ajuste de design pelo DESIGN.md
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v502.js
+  camadas-v502.js
+  estilo-v502.css
+
+Os arquivos da v501 (nucleo-v501.js, camadas-v501.js, estilo-v501.css) podem ficar lá ou ser apagados: o app novo não usa mais.
+Nada do seu diário é apagado. A correção do vídeo no iPhone da v501 continua valendo.
+
+O que muda:
+- Uma paleta só: 1 verde de destaque e 1 dourado (antes eram 7 verdes e 5 dourados diferentes).
+- Videoaula: fundo azul-marinho trocado pelo verde-escuro do app; barrinhas mostram só a cena atual acesa.
+- Terminal: botão do período ativo em verde (era azul) e área do gráfico em verde-escuro (era azul-marinho).
+- Estudos: "Ver tudo" e "Abrir videoaulas" em verde; dourado fica só para dados.
+- Nenhum texto menor que 12 px.
+- Contorno verde em botão selecionado.
+Cores dos gráficos e das cotações não mudaram.
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
