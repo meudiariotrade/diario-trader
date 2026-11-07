@@ -1,0 +1,26 @@
+Diário de Trader v508 — checklist e diário mais rígidos, mesa escondida (inclui tudo da v501 a v507)
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v508.js
+  camadas-v508.js
+  estilo-v508.css
+
+Nada do seu diário é apagado.
+
+O que muda:
+- Meu dia > Checklist operacional: cartão "O que falta hoje", separado em Antes de operar,
+  Durante e Depois do pregão, com botões que levam direto para resolver:
+  Abrir checklist de hoje · Marcar as regras · Corrigir os trades · Fazer o diário pós-operação.
+  Agora conta também: trades sem foto, trades sem stop, trades sem dizer se seguiu as regras
+  e passar do máximo de trades.
+- Sequência de dias completos (disciplina do dia de 80% ou mais) e o seu recorde.
+- Dia anterior sem fechamento: aviso vermelho no topo do Início e do Meu dia, e dentro do
+  checklist da manhã, com "Fechar agora" (o checklist da manhã espera 15 minutos enquanto você fecha).
+- "Abrir checklist de hoje" funciona a qualquer hora (com botão Fechar).
+- Excel: a coluna "O que faltou" e a nota de Disciplina passam a contar fotos, stop e "seguiu as regras".
+- Mesa proprietária escondida: some de Configurações, Painel, Plano de transição, Imposto,
+  cadastro inicial e do aviso de trava. Os dados e o código continuam guardados.
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
