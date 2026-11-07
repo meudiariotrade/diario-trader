@@ -1,0 +1,32 @@
+Diário de Trader v511 — aulas com as figuras do livro e exemplos reais com marcações (inclui tudo da v501 a v510)
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v511.js
+  camadas-v511.js
+  estilo-v511.css
+
+Já feito no Supabase (não precisa fazer nada):
+  - pasta privada "aulas-figuras" (cada conta só vê as próprias figuras);
+  - função "aulas" atualizada (v511). A cópia do código está em supabase/functions/aulas/index.ts.
+
+Nada do seu diário nem das aulas antigas é apagado. A ponte de vídeo continua igual:
+não precisa reinstalar nem mudar nada no computador.
+
+O que muda:
+- Nova aula (mesmo fluxo de hoje: PDF → capítulos → Gerar aula): ao ler os capítulos, o app
+  procura as figuras do livro (gráficos, tabelas, diagramas), recorta cada uma e guarda na sua
+  pasta privada. A IA recebe a lista e coloca cada figura na cena em que a narração fala dela.
+- Gráficos desenhados em vetor (sem foto dentro do PDF): o app recorta a região junto da
+  legenda "Figura / Gráfico / Tabela". Se não achar desenho de verdade ali, não recorta nada.
+- Exemplos reais: a IA pode usar até 2 gráficos de candles reais por capítulo, com ações da B3,
+  Ibovespa, WIN, WDO e índice do dólar (DXY). Máxima, mínima e média móvel aparecem marcadas no
+  gráfico, calculadas pelos dados reais (a IA nunca escreve preço). Suas operações nunca entram.
+- Ponte de vídeo: espera a figura carregar antes de fotografar a cena, como já fazia com os
+  gráficos reais. O vídeo automático sai com as figuras.
+- Se uma figura não carregar, a cena mostra o título no lugar (sem caixa de erro no vídeo).
+
+Vale só para aulas geradas a partir desta versão. Aulas antigas continuam como estão.
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
