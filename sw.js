@@ -1,5 +1,5 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v500-limpa',CDN='diario-cdn-v500',CDN_LIMIT=40;
+const C='diario-v501-limpa',CDN='diario-cdn-v501',CDN_LIMIT=40;
 const CORE=["index.html","tema-claro-v427.css","tema-cedo-v427.js","manifest.webmanifest","icon-192.png","icon-512.png","nucleo-v500.js","camadas-v500.js","estilo-v500.css"];
 const EXTRA=["pdf-lib.min.js","fontkit.umd.min.js","fontes-pdf.js","arte.js","cnpi.js","estudos.js","ingles.js","card-colecao-sazonal.jpg","card-halloween-touro.jpg","card-mercados-brasil-eua.jpg","card-natal-touro.jpg","editorial-mercado-v379.jpg"];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
