@@ -1,0 +1,21 @@
+Diário de Trader v503 — troca de aba sem tremida (inclui todo o design da v502)
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v503.js
+  camadas-v503.js
+  estilo-v503.css
+
+Se ainda não subiu a v501 ou a v502, não precisa: a v503 já tem tudo delas
+(vídeo no iPhone + design pelo DESIGN.md).
+Arquivos antigos nucleo/camadas/estilo-v501 e -v502 podem ficar ou ser apagados: o app novo não usa.
+Nada do seu diário é apagado.
+
+O que muda:
+- Ao trocar de aba interna (Mercado, Meu dia, Operações, Estudos, Estatísticas, Revisão, Terminal)
+  ou pelo menu de baixo, a tela não dá mais aqueles pulos. A tela atual fica parada até a nova
+  estar pronta e a troca acontece de uma vez só (no máximo meio segundo).
+- Nenhum conteúdo foi mudado ou removido.
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
