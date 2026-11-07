@@ -1,0 +1,5 @@
+Diário de Trader v513 (substitui a v512)
+Suba: index.html, sw.js, nucleo-v513.js, camadas-v513.js, estilo-v513.css, estudos.js
+Pode apagar do GitHub: nucleo-v512.js, camadas-v512.js, estilo-v512.css
+- Sub-abas do Mercado não voltam mais para o começo.
+- Long & Short é uma sub-aba do Mercado (sem janela por cima).
