@@ -1,0 +1,10 @@
+Diário de Trader v512 (inclui tudo até a v511)
+
+Suba no GitHub: index.html, sw.js, nucleo-v512.js, camadas-v512.js, estilo-v512.css
+
+- Menu objetivo: 8 linhas (Início, Meu dia, Operações, Diário, Mercado, Estudos, Carteira, Configurações)
+  com atalhos embaixo de cada uma. Nenhuma função removida.
+- Alertas agora ficam em Configurações (título, menu e barra de baixo).
+- Diário: Placar Brasil × EUA (mês, 90 dias, tudo).
+- Mercado: Long & Short de ações (razão, média, desvios, correlação, sinal; pares salvos com aviso diário).
+- Configurações: backups semanais na conta (4 últimos, baixar, fazer agora) — precisa da pasta "backups" no Supabase.
