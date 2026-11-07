@@ -1,6 +1,6 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
-const C='diario-v509-design',CDN='diario-cdn-v509',CDN_LIMIT=40;
-const CORE=["index.html","tema-claro-v427.css","tema-cedo-v427.js","manifest.webmanifest","icon-192.png","icon-512.png","nucleo-v509.js","camadas-v509.js","estilo-v509.css"];
+const C='diario-v510-design',CDN='diario-cdn-v510',CDN_LIMIT=40;
+const CORE=["index.html","tema-claro-v427.css","tema-cedo-v427.js","manifest.webmanifest","icon-192.png","icon-512.png","nucleo-v510.js","camadas-v510.js","estilo-v510.css"];
 const EXTRA=["pdf-lib.min.js","fontkit.umd.min.js","fontes-pdf.js","arte.js","cnpi.js","estudos.js","ingles.js","card-colecao-sazonal.jpg","card-halloween-touro.jpg","card-mercados-brasil-eua.jpg","card-natal-touro.jpg","editorial-mercado-v379.jpg"];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
 self.addEventListener('install',event=>{

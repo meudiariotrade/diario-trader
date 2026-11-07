@@ -1,0 +1,21 @@
+Diário de Trader v510 — dia que já passou: só a foto é cobrada (inclui tudo da v501 a v509)
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v510.js
+  camadas-v510.js
+  estilo-v510.css
+
+Nada do seu diário é apagado.
+
+O que muda:
+- Dia que já passou ("Fechamento de dd/mm"): só cobra as FOTOS que faltam, com o botão
+  "Adicionar as fotos". O resto (como estava, plano, escala, regras, "seguiu as regras",
+  diário pós-operação) aparece como "Não feito no dia" e continua pesando na disciplina,
+  porque preencher de memória depois não seria fiel.
+- O checklist de um dia que já passou fica travado: só dá para marcar no próprio dia.
+- O aviso vermelho do dia anterior agora aparece só quando falta foto.
+- O dia de hoje continua cobrando tudo, como antes.
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
