@@ -1,0 +1,20 @@
+DIÁRIO DE TRADER — v500 (limpeza)
+
+O QUE MUDOU
+- O app passou a carregar 4 arquivos em vez de 47:
+    tema-cedo-v427.js (tema, antes da tela aparecer)
+    nucleo-v500.js    (recursos, início, gráficos e app.js — a base)
+    camadas-v500.js   (todas as camadas, da v379 até a v435, na mesma ordem de antes)
+    estilo-v500.css   (todos os estilos, na mesma ordem de antes)
+- Nenhuma função foi removida: os pacotes são os mesmos arquivos, juntados e compactados.
+  Cada camada roda isolada: se uma der erro, as outras continuam funcionando.
+- O celular guarda só 9 arquivos (antes eram 75, incluindo 23 estilos antigos que
+  já estavam dentro do estilo-unico-v424.css desde a v424 e nunca eram lidos).
+
+O QUE ENVIAR NO GITHUB (de uma vez só)
+  index.html, sw.js, nucleo-v500.js, camadas-v500.js, estilo-v500.css
+Não apague nada no GitHub: os arquivos antigos continuam lá como "fonte" (é a partir
+deles que as próximas versões são montadas), mas o app não baixa mais nenhum deles.
+
+PARA VOLTAR À VERSÃO ANTERIOR (se precisar)
+  Envie de novo o index.html e o sw.js da v435.
