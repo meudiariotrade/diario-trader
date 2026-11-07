@@ -1,9 +1,6 @@
-Diário de Trader v512 (inclui tudo até a v511)
-
-Suba no GitHub: index.html, sw.js, nucleo-v512.js, camadas-v512.js, estilo-v512.css, estudos.js
-
-- Menu objetivo com atalhos; Alertas em Configurações.
-- Diário: Placar Brasil × EUA.  Mercado: Long & Short.
-- Configurações: backups semanais na conta (pasta "backups" já criada no Supabase).
-- Estudos: curso "Formação Alta Renda e Investimentos" (11 módulos, resumo, pegadinhas e flashcards
-  com revisão espaçada). Atalho no menu: Estudos → Alta Renda e Investimentos.
+Diário de Trader v512
+Suba: index.html, sw.js, nucleo-v512.js, camadas-v512.js, estilo-v512.css, estudos.js
+- Menu só com as 8 abas principais (as páginas internas aparecem na busca do menu).
+- Mercado não abre mais em Alertas. Alertas: Configurações → Gerenciar ou o sino.
+- Long & Short: botão na barra de abas do Mercado.
+- Curso Alta Renda: Estudos → Meu estudo → Biblioteca → botão "Gerar videoaulas do curso (4 aulas)".
