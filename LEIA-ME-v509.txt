@@ -1,0 +1,24 @@
+Diário de Trader v509 — correção do "O que falta" (inclui tudo da v501 a v508)
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v509.js
+  camadas-v509.js
+  estilo-v509.css
+
+Nada do seu diário é apagado.
+
+O que corrige:
+- O cartão "O que falta" se atualiza na hora em que você marca uma caixa do checklist.
+- A contagem de regras é a mesma do Checklist operacional (33 de 33 = nada faltando).
+- Dia que já passou: vira "Fechamento de dd/mm". O que só dava para fazer naquele dia
+  (como estava, plano, escala emocional, checklist da manhã) aparece como "Não feito no dia":
+  continua pesando na disciplina, mas não fica cobrando, porque não dá para corrigir depois.
+- Novo botão "Concluir o diário de dd/mm" para dias que já passaram (antes só dava para
+  concluir o diário de hoje). Ele só libera quando os trades daquele dia estão com foto,
+  stop e "seguiu as regras" respondido. No dia de hoje, libera depois das 17h.
+- "Corrigir os trades" abre a lista de Operações. "← Voltar para hoje" quando você está
+  olhando outro dia.
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
