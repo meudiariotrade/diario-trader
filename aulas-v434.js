@@ -56,11 +56,34 @@ async function abrir(id,fs,f){
   ov.hidden=false;ov.dataset.id=id;ov.dataset.fs=fs.join(',');ov.dataset.f=f;
   try{
     const u=await urlDe(id,f);ov.dataset.u=u;
-    ov.querySelector('.v434-play').innerHTML=`<video src="${esc(u)}" controls playsinline preload="metadata"></video>`;
+    const box=ov.querySelector('.v434-play');
+    box.innerHTML=`<video src="${esc(u)}" controls playsinline preload="metadata"></video>`;
+    const v=box.querySelector('video');
+    // alguns iPhones não tocam direto do link: baixa o vídeo inteiro e toca do aparelho
+    v.addEventListener('error',()=>{if(ov.dataset.id===id&&ov.dataset.f===f)baixaETocar(ov,u,box)},{once:true});
     const dl=ov.querySelector('[data-v434dl]');dl.href=u+'&download='+encodeURIComponent(titulo(id).replace(/[\\/:*?"<>|]+/g,'')+' ('+f+').mp4');
   }catch(e){ov.querySelector('.v434-play').innerHTML=`<div class="v434-load">Não abriu: ${esc(e.message||e)}</div>`}
 }
-function fechar(){const ov=doc.getElementById('v434-ov');if(!ov)return;const v=ov.querySelector('video');if(v)v.pause();ov.hidden=true;ov.innerHTML=''}
+const BLOB={};
+async function baixaBlob(u,prog){
+  if(BLOB[u])return BLOB[u];
+  const r=await fetch(u);if(!r.ok)throw new Error('o servidor respondeu '+r.status);
+  const tot=+r.headers.get('content-length')||0,rd=r.body&&r.body.getReader?r.body.getReader():null;
+  let bl;
+  if(rd){const partes=[];let n=0;for(;;){const {done,value}=await rd.read();if(done)break;partes.push(value);n+=value.length;if(prog&&tot)prog(n/tot)}bl=new Blob(partes,{type:'video/mp4'})}
+  else bl=new Blob([await r.arrayBuffer()],{type:'video/mp4'});
+  BLOB[u]=bl;return bl;
+}
+async function baixaETocar(ov,u,box){
+  box.innerHTML='<div class="v434-load">Preparando o vídeo no aparelho… <b>0%</b></div>';
+  try{
+    const bl=await baixaBlob(u,fr=>{const b=box.querySelector('b');if(b)b.textContent=Math.round(fr*100)+'%'});
+    if(ov.hidden||ov.dataset.u!==u)return;
+    const url=URL.createObjectURL(bl);ov.dataset.blob=url;
+    box.innerHTML=`<video src="${url}" controls playsinline autoplay></video>`;
+  }catch(e){box.innerHTML=`<div class="v434-load">Não consegui abrir o vídeo: ${esc(e.message||e)}. Use “Baixar”.</div>`}
+}
+function fechar(){const ov=doc.getElementById('v434-ov');if(!ov)return;const v=ov.querySelector('video');if(v)v.pause();if(ov.dataset.blob){try{URL.revokeObjectURL(ov.dataset.blob)}catch(e){}delete ov.dataset.blob}ov.hidden=true;ov.innerHTML=''}
 doc.addEventListener('click',async e=>{
   const b=e.target.closest&&e.target.closest('.v434-vid');
   if(b){e.preventDefault();e.stopPropagation();abrir(b.dataset.id,b.dataset.fs.split(','));return}
@@ -70,7 +93,7 @@ doc.addEventListener('click',async e=>{
   if(e.target.closest('[data-v434share]')){e.preventDefault();const u=ov.dataset.u;if(!u)return;
     try{
       // tenta mandar o arquivo (WhatsApp/Instagram aceitam vídeo); se o aparelho não deixar, manda o link
-      const r=await fetch(u);const bl=await r.blob();const arq=new File([bl],titulo(ov.dataset.id).replace(/[\\/:*?"<>|]+/g,'')+'.mp4',{type:'video/mp4'});
+      const bl=await baixaBlob(u);const arq=new File([bl],titulo(ov.dataset.id).replace(/[\\/:*?"<>|]+/g,'')+'.mp4',{type:'video/mp4'});
       if(navigator.canShare&&navigator.canShare({files:[arq]})){await navigator.share({files:[arq],title:titulo(ov.dataset.id)});return}
       if(navigator.share){await navigator.share({url:u,title:titulo(ov.dataset.id)});return}
     }catch(x){if(x&&x.name==='AbortError')return}
@@ -79,7 +102,22 @@ doc.addEventListener('click',async e=>{
 },true);
 doc.addEventListener('keydown',e=>{if(e.key==='Escape')fechar()});
 function hook(){if(typeof root.render0!=='function'||root.render0.__v434)return;const p=root.render0;const f=function(){const o=p.apply(this,arguments);try{botoes()}catch(e){}return o};f.__v434=1;root.render0=f}
+/* espaço do aparelho: as cópias dos roteiros das aulas (que o app baixa de novo da conta quando precisa)
+   saem primeiro quando o armazenamento do navegador enche, para não travar o salvamento do diário */
+function liberaEspaco(forca){
+  try{
+    let tot=0;const rot=[];
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i),v=localStorage.getItem(k)||'';tot+=k.length+v.length;if(k.indexOf('aulas-rot-v1:')>=0)rot.push([k,v.length])}
+    let livre=true;try{localStorage.setItem('__v435_teste','x'.repeat(65536));localStorage.removeItem('__v435_teste')}catch(e){livre=false}
+    if(!forca&&livre&&tot<3.6e6)return 0;
+    rot.sort((x,y)=>y[1]-x[1]);let n=0;
+    for(const [k] of rot){localStorage.removeItem(k);n++;if(n>=rot.length||(!forca&&n>=Math.ceil(rot.length/2)))break}
+    return n;
+  }catch(e){return 0}
+}
+try{liberaEspaco(false)}catch(e){}
+root.addEventListener&&root.addEventListener('error',e=>{if(/quota/i.test(String(e&&e.message||'')))liberaEspaco(true)});
 let k=0;const iv=setInterval(()=>{k++;hook();try{botoes()}catch(e){}if(k>20)clearInterval(iv)},800);
 setInterval(()=>{if(!doc.hidden)try{botoes()}catch(e){}},4000);
-root.DIARIO_V434={lista,abrir};
+root.DIARIO_V434={lista,abrir,liberaEspaco};
 })(window);
