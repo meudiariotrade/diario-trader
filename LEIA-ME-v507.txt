@@ -1,0 +1,26 @@
+Diário de Trader v507 — planilha com Operações repaginada e as fotos dos trades (inclui tudo da v501 a v506)
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v507.js
+  camadas-v507.js
+  estilo-v507.css
+
+Nada do seu diário é apagado.
+
+O que muda na exportação para Excel (mesmo botão de sempre):
+- O arquivo agora sai em .xlsx (diario-trades.xlsx). O formato antigo (.xls) não aceitava fotos.
+- Aba "Operações": data, dia da semana e hora separados; Compra/Venda; valores arredondados;
+  pontos, risco e resultado em R$ e em vezes o risco com cor; "Seguiu as regras" Sim/Não;
+  erro em amarelo; um tom de fundo por dia; filtro e cabeçalho fixo;
+  linha Total (trades, % de acerto, R$ e × risco) que soma só o que estiver filtrado;
+  coluna Fotos com link que leva direto às fotos daquele trade.
+- Aba "Fotos": cada trade com foto tem um cabeçalho (dia, hora, ativo, lado, contratos,
+  setup, resultado, se seguiu as regras, erro e nota) e as fotos de Plano, Entrada e Saída lado a lado.
+  Se uma foto não estiver no aparelho, o app busca na sua conta; se não achar, avisa.
+- Checklist, Resumo e Como ler continuam (v506). As tabelas antigas, só com números,
+  ficam em "Checklist (dados)" e "Operações (dados)".
+- Se der algum erro ao montar o .xlsx, o app salva o arquivo antigo (.xls), como antes.
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
