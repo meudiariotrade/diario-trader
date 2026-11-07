@@ -1,0 +1,23 @@
+Diário de Trader v505 — checklist de mesa (inclui tudo da v501 a v504)
+
+Suba estes 5 arquivos no GitHub (substituindo os que tiverem o mesmo nome):
+  index.html
+  sw.js
+  nucleo-v505.js
+  camadas-v505.js
+  estilo-v505.css
+
+Nada do seu diário é apagado. Suas regras atuais continuam.
+
+O que muda no Checklist operacional (Meu dia):
+- Botão "Checklist de mesa para WIN/WDO": adiciona os itens que faltam (pré, durante e pós).
+  Só entra o que você ainda não tem; depois dá para editar ou apagar em Regras.
+- O app confere sozinho o que já sabe e mostra embaixo do item:
+  sono marcado, turno do dia, limite de perda e máximo de trades, plano escrito,
+  vencimento do WIN e do WDO (avisa a rolagem), valor do ponto, stops seguidos e operações importadas.
+- Atalhos no item: Abrir agenda, Ver cotações, Abrir Terminal, Posso operar?
+- Ao tocar em Pré / Durante / Pós, a fase não volta mais sozinha para a do horário.
+- Cada fase mostra a janela de horário (antes das 9h · 9h às 18h30 · depois das 18h30).
+- Em Regras, o texto de cada regra aparece inteiro (antes era cortado).
+
+Depois de subir: abra o app, espere 1 minuto e feche/abra de novo para pegar a versão nova.
