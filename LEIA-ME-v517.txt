@@ -1,0 +1,4 @@
+Diario de Trader v517 (ja inclui a v516)
+- Planilha da aba Operacoes (com fotos) por e-mail toda semana: sai sexta depois das 18h ou no fim de semana quando abrir o app. Botao "Enviar agora" em Configuracoes.
+- Videoaulas escritas no servidor com o app fechado.
+- Prints do Profit colados nas operacoes (ponte v308).
