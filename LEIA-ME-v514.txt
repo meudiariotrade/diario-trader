@@ -1,0 +1,8 @@
+Diário de Trader v514 (inclui tudo até a v513)
+Suba: index.html, sw.js, nucleo-v514.js, camadas-v514.js, estilo-v514.css, estudos.js
+Pode apagar do GitHub os arquivos -v513.
+- Diário: este mês × seu melhor mês, com o que mudou.
+- Estudos: meta semanal de estudo.
+- Início: resumo do pregão depois das 18h.
+- Trava: sem trade novo enquanto o último dia de pregão tiver trade sem foto.
+- Videoaulas do curso Alta Renda continuam sozinhas ao abrir o app.
