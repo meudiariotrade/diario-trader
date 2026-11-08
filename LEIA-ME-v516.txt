@@ -1,0 +1,4 @@
+Diario de Trader v516
+- Videoaulas: o servidor escreve as aulas com o app fechado e avisa quando ficam prontas.
+- Prints do Profit colados sozinhos nas operacoes (precisa da ponte v307).
+Suba estes arquivos por cima da versao anterior (pode mandar so este pacote).
