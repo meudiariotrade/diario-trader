@@ -14,7 +14,7 @@ const LS={get:(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==
 
 const PAGES={
  HOME:  {t:'Comparativo de Ativos',m:'GP',  def:null},
- GP:    {t:'Gráfico de Preço',     m:'GP',  def:null}, // retoma o gráfico existente na primeira abertura
+ GP:    {t:'Gráfico de Preço',     m:'GP',  def:{a:'IBOV',b:'',mode:'dual',per:'1A',ev:true,table:false}},
  GLOBAL:{t:'Radar Global',         m:'WEI', def:{a:'IBOV',b:'SPX',mode:'base',per:'6M',table:false}},
  MON:   {t:'Fluxo e Monitor',      m:'MON', def:{a:'EWZ',b:'IBOV',mode:'base',per:'1M',table:false}},
  NEWSBR:{t:'Notícias do Dia',      m:'TOP', def:{a:'IBOV',b:'USDBRL',mode:'dual',per:'1D',table:false}},

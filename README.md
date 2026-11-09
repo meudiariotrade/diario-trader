@@ -1,3 +1,11 @@
+## Correção do Terminal v536
+
+Retira a apresentação de resumo e o agrupamento de menu introduzidos na v534. Restaura a apresentação anterior do Terminal e seus controles, com menu compacto em uma faixa. Os modos de páginas e de painéis clássicos passam a ser exclusivos: não exibem os dois conteúdos juntos. Não altera os espaços personalizados ou os dados salvos.
+
+Movimentos fortes, Insiders e Fluxo por ação aparecem e consultam seus dados somente em Mercado → Cotações e Panorama. Movimentos fortes é recolhível, fechado inicialmente, preservando todos os registros e detalhes.
+
+Verificação: alternância entre modos em 320, 390, 1440 e 1920 px, igualdade dos espaços salvos, retirada dos cartões nas demais páginas e teste isolado de consulta/montagem dos três módulos.
+
 ## Mercado v535
 
 Retira o segundo menu “Explorar Radar Global completo”. As referências exclusivas do panorama ficam na categoria correspondente de Cotações: índices, moedas, ADRs, futuros, commodities e juros. Cotações válidas da lista nativa têm prioridade, sem repetir o mesmo ativo; a referência do panorama é preservada como complemento quando faltar na lista. Nasdaq Composite e Nasdaq 100 não são confundidos.

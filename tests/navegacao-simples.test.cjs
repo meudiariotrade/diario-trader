@@ -18,23 +18,23 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  await p.evaluate(()=>render());
  await expect(app.locator('.simple-explore')).toHaveAttribute('open');
  // Novo começo do Terminal preserva as preferências reais do GP.
- await p.evaluate(()=>localStorage.setItem('diario-v421-gp',JSON.stringify({a:'EWZ',b:'SPX',per:'6M',freq:'D',mode:'dual',ma:[],ev:true,table:false})));
+ await p.evaluate(()=>{const state={a:'EWZ',b:'SPX',per:'6M',freq:'D',mode:'dual',ma:[],ev:true,table:false};localStorage.setItem('diario-v421-gp',JSON.stringify(state));localStorage.setItem('diario-v428-ctx',JSON.stringify({'T:GP':state}));});
  await p.reload();await p.locator('#splash').waitFor({state:'hidden'});
  await app.getByRole('button',{name:'Abrir Terminal',exact:true}).click();
- await expect(app.locator('#tf413')).toHaveClass(/simple-terminal-home/);
- await expect(app.locator('#v421-gp')).toBeHidden();
- await expect(app.getByText('Seu resumo do mercado',{exact:true})).toBeVisible();
+ await expect(p.locator('body')).toHaveClass(/tf413-home/);
+ await expect(app.locator('#v421-gp')).toBeVisible();
+ await expect(app.locator('.simple-terminal-intro')).toHaveCount(0);
  await app.getByRole('button',{name:'Gráficos',exact:true}).click();
  await expect(app.locator('#v421-gp')).toBeVisible();
  assert.equal(await p.evaluate(()=>window.DIARIO_GP421.state().a),'EWZ');
  assert.equal(await p.evaluate(()=>window.DIARIO_GP421.state().per),'6M');
- await app.getByRole('button',{name:'Resumo',exact:true}).click();
- await expect(app.locator('#v421-gp')).toBeHidden();
+ await app.getByRole('button',{name:'Visão geral',exact:true}).click();
+ await expect(app.locator('#v421-gp')).toBeVisible();
  await app.getByRole('button',{name:'Gráficos',exact:true}).click();
  assert.equal(await p.evaluate(()=>window.DIARIO_GP421.state().a),'EWZ');
  assert.equal(await p.evaluate(()=>window.DIARIO_GP421.state().per),'6M');
- await app.getByRole('button',{name:'Resumo',exact:true}).click();
- await app.locator('.simple-terminal-more>summary').click();
+ await app.getByRole('button',{name:'Visão geral',exact:true}).click();
+ await expect(app.locator('.simple-terminal-more')).toHaveCount(0);
  await app.getByRole('button',{name:'Notícias',exact:true}).click();
  await expect(app.locator('#tf413')).toHaveClass(/t428-p-NEWSBR/);
  // Mercado começa nas cotações; Agenda continua sendo uma ação direta.
