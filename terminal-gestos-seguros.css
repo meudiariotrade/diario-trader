@@ -79,3 +79,68 @@ body.trmon .g418-toolbar .g522-hint{
   body.trmon .g418-toolbar .g522-tool summary{min-width:80px;padding:5px 6px}
   body.trmon .g418-toolbar .g522-menu{width:min(330px,calc(100vw - 20px));padding:10px}
 }
+
+
+/* v526 — ajuste DIRETO no gráfico principal exibido em Terminal > Gráficos.
+   Visível antes do gráfico, inclusive quando "Menos ferramentas" está ativo. */
+#v421-gp .gp-navigation{
+  display:flex!important;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  padding:8px 10px;
+  background:#051d17;
+  border-top:1px solid #24483b;
+  border-bottom:1px solid #24483b;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  position:relative;
+  z-index:1;
+}
+#v421-gp .gp-navigation button{
+  display:inline-flex!important;
+  justify-content:center;
+  align-items:center;
+  flex:0 0 auto;
+  min-height:36px;
+  min-width:38px;
+  border:1px solid #2d6f59!important;
+  background:#0c3025!important;
+  color:#d8f4e7!important;
+  border-radius:8px;
+  padding:6px 10px;
+  font:600 12px/1.2 system-ui,-apple-system,sans-serif;
+  white-space:nowrap;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+#v421-gp .gp-navigation button[aria-pressed="true"]{
+  background:#0cb68d!important;
+  border-color:#05dab1!important;
+  color:#05271d!important;
+}
+#v421-gp .gp-navigation button:focus-visible{
+  outline:2px solid #ffe5a0;
+  outline-offset:2px;
+}
+#v421-gp .gp-svg{
+  touch-action:none!important;
+  overscroll-behavior:contain;
+  user-select:none;
+  -webkit-user-select:none;
+  cursor:grab;
+}
+#v421-gp .gp-svg:active{cursor:grabbing}
+@media(max-width:690px){
+  #v421-gp .gp-navigation{
+    gap:5px;
+    padding:7px 8px;
+  }
+  #v421-gp .gp-navigation button{
+    min-height:38px;
+    font-size:12px;
+    padding:6px 9px;
+  }
+}

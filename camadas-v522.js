@@ -594,38 +594,492 @@ try{(function(){"use strict";const v=document;window.DIARIO_V420=1;const It={hom
     <div><small>Nº de trades</small><strong>${l}</strong><em>${s?"(planejado: até "+s+")":""}</em></div></div>`,h=C("book","Resumo do dia",`<div class="v4-datechip"><button type="button" data-a="dprev" aria-label="Dia anterior">${p("left",16)}</button><label>${p("cal",16)}<input type="date" data-v4date value="${t}" aria-label="Data"><span>${wt(t)}</span></label><button type="button" data-a="dnext" aria-label="Próximo dia">${p("right",16)}</button></div>`,i),M=["1M","3M","6M","YTD","1A","Máx"],y=C("up","Performance",`<button type="button" class="v4-icon" data-dt393-route="dash" aria-label="Análise completa">${p("expand",18)}</button>`,`<div class="v4-chartbar"><div class="v4-seg">${M.map(m=>`<button type="button" data-v4per="${m}" class="${m===mt?"on":""}">${m}</button>`).join("")}</div><button type="button" class="v4-chip ${kt?"on":""}" data-v4table="1">Tabela</button></div>${pe()}<p class="v4-foot">Curva do seu diário. A comparação com o IBOV só aparece quando houver série histórica verificada.</p>`,"v4-perf"),P=Et(),A=ut(t).chk||{},$=["pre","during","post"].map(m=>{const F=P.filter(K=>at(K)===m),X=F.filter(K=>A[K.id]).length,rt=F.length&&X===F.length;return`<span class="v4-chip ${rt?"on":""}">${p(rt?"check":"target",14)} ${{pre:"Pré-mercado",during:"Durante",post:"Pós-mercado"}[m]} <small>${X}/${F.length}</small></span>`}).join(""),I=ut(t),Z=C("list","Checklist e cenário",`<button type="button" class="v4-icon" data-dt393-route="dia" aria-label="Abrir Meu dia">${p("right",18)}</button>`,`<div class="v4-split"><div class="v4-chips">${$}</div><div><h3>${p("doc",16)} Plano do dia (resumo)</h3><p class="v4-text">${I.plano?b(String(I.plano).slice(0,280)):"Plano não preenchido para esta data."}</p></div></div>`),H=C("trade","Operações do dia","",e.length?`<div class="v4-oplist">${e.map(m=>`<details><summary class="${R(m)>=0?"b-buy":"b-sell"}"><b>${b(m.ativo||"—")}</b><span>${b(m.setup||"—")}</span><em class="${L(R(m))}">${j(R(m))}</em><em class="${L(T(m))}">${T(m)!=null?(T(m)>0?"+":"")+_(T(m))+"×":"—"}</em>${p("down",16)}</summary><div class="v4-opdet"><span>Lado <b>${m.side==="C"?"Compra":"Venda"}</b></span><span>Entrada <b>${q(m.entry)}</b></span><span>Saída <b>${q(m.exit)}</b></span><span>Stop <b>${q(m.stop)}</b></span><span>Alvo <b>${q(m.target)}</b></span><span>Qtd. <b>${b(m.qty??"—")}</b></span>${m.err&&m.err!=="Nenhum"?`<span class="v-neg">Erro <b>${b(m.err)}</b></span>`:""}<button type="button" data-a="edit" data-id="${b(m.id)}">Abrir trade</button></div></details>`).join("")}</div>`:gt("Ainda não há trades encerrados neste dia.")),z=[I.resumo,I.bem,I.prevn].filter(Boolean),B=jt(),Y={};ct().forEach(m=>{nt(m)>=B&&m.err&&m.err!=="Nenhum"&&(Y[m.err]=(Y[m.err]||0)+1)});const U=Object.entries(Y).sort((m,F)=>F[1]-m[1]).map(([m,F])=>`<li>${b(m)} <small>(${F}x na semana)</small></li>`);I.cond&&U.push(`<li>${b(String(I.cond).slice(0,160))}</li>`);const ot=C("pencil","Anotações e lições","",z.length?`<ul class="v4-bul">${z.map(m=>`<li>${b(String(m).slice(0,200))}</li>`).join("")}</ul>`:gt("Escreva o debriefing do dia para ver suas lições aqui.")),x=C("crosshair","Pontos de atenção","",U.length?`<ul class="v4-bar">${U.join("")}</ul>`:gt("Nenhum erro marcado nesta semana."));return`<div class="v4-page v4-journal">${h}${y}${Z}${H}<div class="v4-two">${ot}${x}</div><button type="button" class="v4-cta" data-v4deb="1">${p("book",22)} Registrar revisão</button></div>`}const me=[["home","Início","home"],["dia","Meu dia","cal"],["ops","Operações","trade"],["mercado","Mercado","bars"],["estudos","Estudos","grad"]],Vt={home:"home",dia:"dia",regras:"dia",ops:"ops",trades:"ops",swing:"ops",opc:"ops",ativos:"ops",fx:"ops",opgrade:"ops",opfluxo:"ops",opcart:"ops",swbt:"ops",dtrpy:"ops",mercado:"mercado",juros:"mercado",live:"mercado",graf:"mercado",estudos:"estudos",livro:"estudos"};function ve(){let t=v.getElementById("v4-bnav");t||(t=v.createElement("nav"),t.id="v4-bnav",t.setAttribute("aria-label","Navegação principal"),v.body.appendChild(t));const e=Vt[et()]||"";t.innerHTML=me.map(([a,r,n])=>`<button type="button" data-dt393-route="${a}" class="${e===a?"on":""}" ${e===a?'aria-current="page"':""}>${p(n,24)}<span>${r}</span></button>`).join("")}function Ht(){v.body.classList.remove("v4-own-ticker"),v.querySelectorAll(".v4-ticker").forEach(l=>l.remove())}const he=[["Principal",[["r","home","Início","home"],["r","dia","Meu dia","cal"],["r","ops","Operações","trade"],["r","stats","Diário","book"],["r","mercado","Mercado","bars"],["r","estudos","Estudos","grad"]]],["Rotina e disciplina",[["h","hoje","Posso operar?","shield"],["r","regras","Checklist e regras","checksq"],["h","escala","Escala de turno","cal"],["h","cal","Calendário","cal"],["r","rev","Revisão da semana","list"],["q","1","Registro rápido de trade","bolt"]]],["Mercado ao vivo",[["r","term","Terminal","monitor"],["r","graf","Gráficos TradingView","up"],["r","juros","Juros e DI","coins"]]],["Patrimônio e risco",[["r","carteiras","Carteira","wallet"],["h","pat","Patrimônio","up"],["g","painel","Capital, risco e backup","shield"],["g","contratos","Calculadora de contratos","list"],["g","imposto","Imposto de renda","doc"]]],["Estudos e evolução",[["h","ingles","Inglês do dia","grad"],["g","carreira","Plano de transição","arrow"]]],["Conta e sistema",[["g","conta","Conta e sincronização","folder"],["g","import","Importar do Profit","layers"],["g","status","Status do sistema","alert"],["g","mais","Configurações","sliders"],["g","termos","Termos de uso","doc"]]]],ge=["trades","swing","opc","ativos","fx","dtrpy","swbt","live","mesa"],zt=[[["r","home","Início","home"],[["h","hoje","Posso operar?"],["h","escala","Escala de turno"],["h","cal","Calendário"],["h","pat","Patrimônio"],["h","ingles","Inglês do dia"]]],[["r","dia","Meu dia","cal"],[["r","regras","Checklist e regras"],["q","1","Registro rápido"]]],[["r","ops","Operações","trade"],[]],[["r","stats","Diário","book"],[["r","rev","Revisão da semana"],["g","carreira","Plano de transição"]]],[["r","mercado","Mercado","bars"],[["r","term","Terminal"],["r","graf","Gráficos"],["r","juros","Juros e DI"],["x","ls","Long & Short"]]],[["r","estudos","Estudos","grad"],[["x","ar","Alta Renda e Investimentos"]]],[["r","carteiras","Carteira","wallet"],[["g","painel","Capital, risco e backup"],["g","contratos","Contratos"],["g","imposto","Imposto de renda"]]],[["g","mais","Configurações","sliders"],[["r","mercado:al","Alertas"],["g","conta","Conta"],["g","import","Importar do Profit"],["g","status","Status"],["g","termos","Termos"]]]];function Lt(){const t=v.querySelector("#dt394-drawer .dt394-nav-list");if(!t||t.dataset.v420)return;t.querySelectorAll(ge.map(s=>`[data-dt393-route="${s}"],[data-dt414-go="${s}"]`).join(",")).forEach(s=>{s.dataset.v420used="1"});const e=s=>s?.dataset?.dt394Filter||"",a=(s,o)=>{if(s==="h")return null;const u=s==="q"?"[data-qkn]":s==="g"?`[data-dt414-go="${o}"],[data-dt393-route="${o}"]`:`[data-dt393-route="${o}"],[data-dt414-go="${o}"]`;return[...t.querySelectorAll(u)].find(i=>!i.dataset.v420used)},r=v.createDocumentFragment(),n=([s,o,u,i],h)=>{const M=s==="x"?null:a(s,o),y=v.createElement("button");return y.type="button",s==="x"?y.dataset.v512=o:s==="q"?y.dataset.qkn="1":s==="g"?y.dataset.dt414Go=o:s==="h"?(y.dataset.dt393Route="home",y.dataset.v4home=o):y.dataset.dt393Route=o,y.dataset.dt394Filter=(u+" "+e(M)).toLowerCase(),M&&(M.dataset.v420used="1",M.classList.contains("active")&&y.classList.add("active")),y.className=h,y.innerHTML=i?`${p(i,20)}<span>${u}</span>${p("right",17)}`:`<span>${u}</span>`,y};zt?zt.forEach(([s,o])=>{const u=v.createElement("div");if(u.className="v420-menu-sec v512-grp",u.appendChild(n(s,"v512-main")),o.length){const i=v.createElement("div");i.className="v512-chips",o.forEach(h=>i.appendChild(n(h,"v512-chip"))),u.appendChild(i)}r.appendChild(u)}):he.forEach(([s,o])=>{const u=v.createElement("div");u.className="v420-menu-sec",u.innerHTML=`<h3>${s}</h3>`,o.forEach(([i,h,M,y])=>{const P=a(i,h),A=v.createElement("button");A.type="button",i==="q"?A.dataset.qkn="1":i==="g"?A.dataset.dt414Go=h:i==="h"?(A.dataset.dt393Route="home",A.dataset.v4home=h):A.dataset.dt393Route=h,A.dataset.dt394Filter=(M+" "+e(P)).toLowerCase(),P&&(P.dataset.v420used="1",P.classList.contains("active")&&A.classList.add("active")),A.innerHTML=`${p(y,20)}<span>${M}</span>${p("right",17)}`,u.appendChild(A)}),r.appendChild(u)});const l=[...t.querySelectorAll("button")].filter(s=>!s.dataset.v420used&&!s.closest(".v420-menu-sec"));if(l.length){const s=v.createElement("div");s.className="v420-menu-sec",s.innerHTML="<h3>Outros</h3>",l.forEach(o=>s.appendChild(o)),r.appendChild(s)}["dt414-drawer-access","v419-drawer"].forEach(s=>{const o=v.getElementById(s);o&&(o.innerHTML="",o.hidden=!0,r.appendChild(o))}),t.innerHTML="",t.appendChild(r),t.dataset.v420="1",Rt()}try{const t=v.createElement("style");t.textContent="#dt394-drawer .v512-grp{margin:0 0 8px!important;padding:0!important}#dt394-drawer .v512-grp h3{display:none}#dt394-drawer .v512-chips{display:none;flex-wrap:wrap;gap:6px;margin:6px 0 2px 4px}#dt394-drawer.v512-busca .v512-chips{display:flex}#dt394-drawer .v512-chips button.v512-chip{width:auto!important;min-height:34px!important;padding:6px 12px!important;border-radius:999px!important;font-size:13px!important;display:inline-flex!important;align-items:center;gap:0!important;margin:0!important}#dt394-drawer .v512-chip svg{display:none}#dt394-drawer .v512-chip.active,#dt394-drawer .v512-chip[aria-current]{outline:1px solid #12e0a6}",v.head.appendChild(t)}catch{}function Rt(){const t=Vt[et()]||et();v.querySelectorAll("#dt394-drawer .v420-menu-sec button").forEach(e=>{const a=e.dataset.dt393Route||e.dataset.dt414Go,r=e.dataset.v4home,n=r?et()==="home"&&J===r:a==="home"&&J?!1:a===et()||a===t&&!v.querySelector(`#dt394-drawer [data-dt393-route="${et()}"],#dt394-drawer [data-dt414-go="${et()}"]`);e.classList.toggle("active",!!n),n?e.setAttribute("aria-current","page"):e.removeAttribute("aria-current")})}v.addEventListener("input",t=>{t.target.id==="dt394-nav-search"&&(v.getElementById("dt394-drawer")?.classList.toggle("v512-busca",!!t.target.value.trim()),setTimeout(()=>{v.querySelectorAll("#dt394-drawer .v420-menu-sec").forEach(e=>{const a=[...e.querySelectorAll("button")].some(r=>!r.hidden&&getComputedStyle(r).display!=="none");e.classList.toggle("v420-empty",!a)})},0))});const be={home:le,dia:ie,ops:de,stats:ue};function xt(){const t=et(),e=v.getElementById("app");if(!e)return;v.body.classList.toggle("v4-on",!0),t!=="home"&&J&&(J=null),v.body.classList.toggle("v4-homeview",t==="home"&&!!J),v.body.dataset.v4route=t,ve(),Ht();try{Lt(),Rt()}catch{}const a=e.querySelector("#dt393-workspace .dt393-native");oe.includes(t)?re(a):v.getElementById("v4-subnav")?.remove();const r=be[t];if(!r||t==="dia"&&f(()=>DV==="hist",!1))return;let n;try{n=r()}catch(o){console.warn("v420 "+t,o);return}e.querySelectorAll(".v4-panel").forEach((o,u)=>{u>0&&o.remove()});let l=e.querySelector(".v4-panel");const s=e.querySelector(".dt393-page");if(!l&&s&&s.parentElement!==e&&(l=s.parentElement),!l||l===e){l=v.createElement("div");const o=e.querySelector("#dt393-workspace");o?o.before(l):e.appendChild(l)}s&&!l.contains(s)&&s.remove(),l.className="v4-panel",l.innerHTML=n,v.getElementById("v419-mais")?.remove(),e.querySelector("#dt393-workspace")?.classList.remove("v419-recolhido"),ee(t,a)}function Ut(){if(typeof window.render0!="function"||window.render0.__v420)return!1;const t=window.render0,e=function(){const a=t.apply(this,arguments);try{xt()}catch(r){console.warn("v420",r)}return a};return e.__v420=1,window.render0=e,!0}v.addEventListener("click",t=>{const e=t.target.closest("[data-v4p]");if(e){const h=e.closest("#v4-subnav")?.__p?.[+e.dataset.v4p];h&&(t.preventDefault(),h.click());return}const a=t.target.closest("[data-v4tool]");if(a&&a.dataset.v4route==="home"){t.preventDefault(),Pt(a.dataset.v4tool);return}if(a){t.preventDefault(),Ot(a.dataset.v4route,a.dataset.v4tool,null,!0),a.dataset.v4scroll&&v.querySelector(".v4-tools-head")?.scrollIntoView({behavior:"smooth",block:"start"});return}const r=t.target.closest("[data-v4phase]");if(r){t.preventDefault();const i=r.dataset.v4phase;try{if(i==="pos"&&typeof GOR<"u"&&GOR.deb){GOR.deb(),scrollTo(0,0);return}}catch{}try{D=V(),DFASE={d:V(),f:i==="pre"?"pre":"dur"},Mt.dia=i==="pre"?"pre":"dur",tab="dia",render(),scrollTo(0,0)}catch{}return}const n=t.target.closest("[data-v4mkt]");if(n){t.preventDefault();const i=n.dataset.v4mkt;try{window.DIARIO_NAV?.navigate?window.DIARIO_NAV.navigate("mercado:"+i):(MKT.tab=i,tab="mercado",render()),scrollTo(0,0)}catch{}return}if(t.target.closest("[data-v4ia]")){t.preventDefault(),v.querySelector(".wf-chat-launcher")?.click();return}if(t.target.closest("[data-v4custom]")){t.preventDefault();const i=[...v.querySelectorAll("#app .studio-intro button, #app .studio-tool")].find(h=>/Personalizar/i.test(h.textContent));i&&i.click();return}if(t.target.closest("[data-v4deb]")){t.preventDefault();try{GOR.deb(),scrollTo(0,0)}catch{try{tab="dia",render()}catch{}}return}const l=t.target.closest("[data-v4opsview]");if(l){t.preventDefault(),At=l.dataset.v4opsview,render();return}const s=t.target.closest("[data-v4sort]");if(s){t.preventDefault();const i=s.dataset.v4sort;bt=bt.k===i?{k:i,d:-bt.d}:{k:i,d:1},render();return}const o=t.target.closest("[data-v4per]");if(o){t.preventDefault(),mt=o.dataset.v4per,render();return}if(t.target.closest("[data-v4table]")){t.preventDefault(),kt=!kt,render();return}const u=t.target.closest(".v4-cphase [data-phase]");u&&(qt=u.dataset.phase)},!0),v.addEventListener("change",t=>{const e=t.target.closest("[data-v4date]");if(e&&e.value)try{D=e.value,render()}catch{}}),v.addEventListener("input",t=>{const e=t.target.closest(".v4-notes");if(e){const a=e.parentElement.querySelector(".v4-count");a&&(a.textContent=e.value.length+"/2000 · salvo no Plano do dia")}});function _t(){Ut();try{xt()}catch{}}v.readyState==="loading"?v.addEventListener("DOMContentLoaded",_t,{once:!0}):_t();let Xt=0;const $e=setInterval(()=>{if(Xt++,Ut())try{xt()}catch{}try{Lt()}catch{}Xt>10&&clearInterval($e)},700);v.addEventListener("click",t=>{t.target.closest('[data-dt393-action="menu"]')&&setTimeout(()=>{try{Lt(),Rt()}catch{}},0)}),setInterval(()=>{if(!v.hidden)try{Ht()}catch{}},15e3)})();
 
 }catch(e){console.error("[v522] falha em redesign-v420.js",e)}
-try{(function(x){"use strict";const g=x.document;if(!g)return;const $t="diario-v421-gp",_={IBOV:"Ibovespa",SPX:"S&P 500",NDX:"Nasdaq 100",DXY:"Índice do dólar (DXY)",USDBRL:"Dólar (USD/BRL)",VIX:"VIX",BRENT:"Petróleo Brent",WTI:"Petróleo WTI",OURO:"Ouro",COBRE:"Cobre",PRATA:"Prata",EWZ:"EWZ (ETF Brasil)",PETR4:"Petrobras PN",VALE3:"Vale ON",ITUB4:"Itaú PN",BBAS3:"Banco do Brasil",WEGE3:"WEG",BOVA11:"BOVA11",BTCUSD:"Bitcoin"},M={"BC:SELIC":["selic","Selic meta (% a.a.)"],"BC:CDI":["cdi","CDI (% a.a.)"],"BC:IPCA12":["ipca12","IPCA 12 meses (%)"],"BC:IPCA":["ipca","IPCA mensal (%)"],"BC:IGPM":["igpm","IGP-M mensal (%)"],"BC:IBCBR":["ibcbr","IBC-Br (prévia do PIB)"],"BC:DESEMP":["desemprego","Desemprego PNAD (%)"],"BC:PTAX":["ptax","Dólar PTAX (R$)"]},B=t=>!!M[t],Vt={IBOV:["SPX","EWZ","USDBRL","BOVA11","BC:SELIC","BC:IBCBR"],PETR4:["BRENT","WTI","PETR3","PRIO3","EWZ","IBOV"],PETR3:["PETR4","BRENT","IBOV"],VALE3:["COBRE","CSNA3","GGBR4","IBOV","EWZ"],ITUB4:["BBDC4","BBAS3","SANB11","IBOV","BC:SELIC"],BBAS3:["ITUB4","BBDC4","IBOV","BC:SELIC"],WEGE3:["IBOV","USDBRL","SPX"],BOVA11:["IBOV","EWZ"],USDBRL:["DXY","BC:PTAX","BC:SELIC","IBOV","EWZ"],SPX:["NDX","VIX","DXY","IBOV"],NDX:["SPX","VIX","DXY"],DXY:["USDBRL","OURO","SPX"],VIX:["SPX","NDX"],OURO:["DXY","PRATA","USDBRL"],PRATA:["OURO","COBRE"],COBRE:["VALE3","OURO"],BRENT:["WTI","PETR4","USDBRL"],WTI:["BRENT","PETR4"],EWZ:["IBOV","USDBRL","SPX"],BTCUSD:["NDX","OURO","DXY"]},qt=t=>(Vt[t]||["IBOV","SPX","USDBRL","DXY"]).filter(e=>e!==t),rt=[["IBOV","SPX","Ibovespa × S&P 500"],["IBOV","USDBRL","Ibovespa × Dólar"],["EWZ","IBOV","EWZ × Ibovespa"],["PETR4","BRENT","Petrobras × Brent"],["VALE3","COBRE","Vale × Cobre (metais)"],["NDX","VIX","Nasdaq × VIX"],["USDBRL","DXY","Dólar × DXY"],["OURO","DXY","Ouro × DXY"],["IBOV","BC:SELIC","Ibovespa × Selic"],["IBOV","BC:IPCA12","Ibovespa × IPCA 12 meses"],["IBOV","BC:IBCBR","Ibovespa × IBC-Br"],["USDBRL","BC:SELIC","Dólar × Selic"]],lt=[["1D","5m",1],["3D","15m",3],["1M","60m",31],["6M","1d",183],["YTD","1d",-1],["1A","1d",366],["2A","1d",731],["Máx","1d",99999]],vt={a:"IBOV",b:"SPX",per:"1A",freq:"D",mode:"dual",ma:[],ev:!0,table:!1};let s=(()=>{try{return Object.assign({},vt,JSON.parse(localStorage.getItem($t)||"{}"))}catch{return{...vt}}})();const O=()=>{try{localStorage.setItem($t,JSON.stringify(s))}catch{}},u=t=>String(t??"").replace(/[&<>"']/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[e]),F=t=>typeof t=="number"&&Number.isFinite(t),St=t=>{const e=Math.abs(t);return e>=1e4?0:e<10?4:2},A=(t,e)=>F(t)?t.toLocaleString("pt-BR",{minimumFractionDigits:e??St(t),maximumFractionDigits:e??St(t)}):"—",it=t=>F(t)?(t>0?"+":"")+A(t,2)+"%":"—",H=t=>_[t]||(M[t]?M[t][1]:t),J=()=>x.TRM?.tec,yt=()=>lt.find(t=>t[0]===s.per)||lt[5],V=()=>yt()[1],q=(t,e)=>{try{const n=t();return n===void 0?e:n}catch{return e}},j=new Map,G=new Map;try{const t=JSON.parse(localStorage.getItem("diario-v422-econ")||"{}");Object.entries(t).forEach(([e,n])=>{n&&Array.isArray(n.pontos)&&j.set(e,n)})}catch{}function Xt(){try{const t={};j.forEach((e,n)=>t[n]=e),localStorage.setItem("diario-v422-econ",JSON.stringify(t))}catch{}}async function Ft(t,e){const n=M[t][0],r=t,a=j.get(r);if(!(!e&&a&&Date.now()-(a.ts||0)<6*36e5)&&!(!e&&Date.now()-(z.get(r)||0)<9e4)){z.set(r,Date.now());try{if(typeof rq!="function")throw Error("Conexão do app indisponível.");const i=await(await rq("/functions/v1/series",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({serie:n,desde:new Date().getFullYear()-6})})).json();if(!Array.isArray(i.pontos))throw Error(i.error||"Resposta inesperada.");j.set(r,{...i,ts:Date.now()}),G.delete(r),Xt()}catch(o){G.set(r,o&&o.status===404?'A função "series" ainda não foi publicada no Supabase.':o&&o.status===401?"Entre na sua conta para carregar os indicadores.":String(o&&o.message||o))}}}function T(t,e){return B(t)?(j.get(t)?.pontos||[]).map(a=>[a[0],a[1],a[1],a[1],a[1],0]):(q(()=>J().velas(t,e)?.L,[])||[]).filter(r=>Array.isArray(r)&&F(r[0])&&F(r[4])&&r[4]>0).sort((r,a)=>r[0]-a[0])}function xt(t,e){if(B(t)){const n=j.get(t);return n?n.fonte+" · "+n.unidade:""}return q(()=>J().velas(t,e)?.nota||"","")}function Ut(t,e){return B(t)?G.get(t)||"":q(()=>J().erroVelas?.(t,e)||"","")}const z=new Map;async function K(t,e,n){if(B(t))return Ft(t,n);const r=t+"|"+e;if(!(!n&&Date.now()-(z.get(r)||0)<9e4)){z.set(r,Date.now());try{await J()?.pegaVelas?.(t,e)}catch{}}}function Q(t){const e=yt();if(!t.length)return t;const n=Date.now()/1e3;let r=-1/0;if(e[2]===-1)r=new Date(new Date().getFullYear(),0,1).getTime()/1e3;else if(e[2]<99999){if(e[1]!=="1d"){const o=[...new Set(t.map(i=>new Date(i[0]*1e3).toISOString().slice(0,10)))].slice(-e[2])[0];return t.filter(i=>new Date(i[0]*1e3).toISOString().slice(0,10)>=o)}r=n-e[2]*86400}return t.filter(a=>a[0]>=r)}function tt(t){if(s.freq==="D"||V()!=="1d")return t;const e=new Map;for(const n of t){const r=new Date(n[0]*1e3);let a;if(s.freq==="M")a=r.getUTCFullYear()+"-"+r.getUTCMonth();else{const i=new Date(Date.UTC(r.getUTCFullYear(),r.getUTCMonth(),r.getUTCDate()));i.setUTCDate(i.getUTCDate()-(i.getUTCDay()+6)%7),a=i.toISOString().slice(0,10)}const o=e.get(a);o?(o[0]=n[0],o[2]=Math.max(o[2],n[2]),o[3]=Math.min(o[3],n[3]),o[4]=n[4],o[5]+=n[5]||0):e.set(a,[n[0],n[1],n[2],n[3],n[4],n[5]||0])}return[...e.values()]}const kt=(t,e)=>t.map((n,r)=>r<e-1?null:t.slice(r-e+1,r+1).reduce((a,o)=>a+o,0)/e);function Bt(t,e){if(B(s.b)){let a=0,o=null;const i=[];for(const c of t){for(;a<e.length&&e[a][0]<=c[0]+86400;)o=e[a],a++;i.push([c,o])}return i}const n=a=>V()==="1d"?new Date(a*1e3).toISOString().slice(0,10):Math.round(a/300),r=new Map(e.map(a=>[n(a[0]),a]));return t.map(a=>[a,r.get(n(a[0]))||null])}function Nt(t){const e=T(t,"1d"),n=T(t,"5m");if(!e.length&&!n.length)return`<div class="gp-hdr"><b class="gp-tk">${u(t)}</b><span class="gp-muted">${u(H(t))} · sem dados ainda</span></div>`;const r=n.length?n[n.length-1]:e[e.length-1],a=e[e.length-1],o=e.length>1?e[e.length-2][4]:null,i=new Date(r[0]*1e3).toISOString().slice(0,10),c=n.filter(C=>new Date(C[0]*1e3).toISOString().slice(0,10)===i),$=c.length?c[0][1]:a[1],E=c.length?Math.max(...c.map(C=>C[2])):a[2],v=c.length?Math.min(...c.map(C=>C[3])):a[3],R=r[4],y=new Date(a[0]*1e3).toISOString().slice(0,10)===i?o:a[4],D=F(y)?R-y:null,h=F(y)?(R/y-1)*100:null,b=new Date(r[0]*1e3).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"}),f=D>0,U=D<0,k=e.slice(-30).map(C=>C[4]);let I="";if(k.length>2){const C=Math.min(...k),ct=Math.max(...k),N=ct-C||1;I=`<svg class="gp-spark" viewBox="0 0 60 18" aria-hidden="true"><polyline points="${k.map((Z,nt)=>`${(nt/(k.length-1)*60).toFixed(1)},${(17-(Z-C)/N*16).toFixed(1)}`).join(" ")}"/></svg>`}return`<div class="gp-hdr" aria-label="Resumo de ${u(H(t))}">
-   <div class="gp-l1"><b class="gp-tk">${u(t)}</b><span class="gp-arrow ${f?"up":U?"dn":""}">${f?"↑":U?"↓":"·"}</span><b class="gp-px ${f?"up":U?"dn":""}">${A(R)}</b><span class="gp-ch ${f?"up":U?"dn":""}">${F(D)?(D>0?"+":"")+A(D):"—"} <small>${it(h)}</small></span>${I}</div>
-   <div class="gp-l2"><em><span class="gp-at">At</span> ${b}</em><em><span>O</span>${A($)}</em><em><span>H</span>${A(E)}</em><em><span>L</span>${A(v)}</em><em><span>Prev</span>${A(y)}</em></div></div>`}function Wt(t,e,n){const r=[];if(!s.ev)return r;try{(AG.v[0]?.eventos||[]).filter(o=>o.imp===1).forEach(o=>{const i=Date.parse(o.em)/1e3;i>=t&&i<=e&&r.push({t:i,k:"ev",l:String(o.t||"Evento")+(o.p?" ("+o.p+")":"")})})}catch{}try{const a=c=>String(c||"").toUpperCase().replace(/[FGHJKMNQUVXZ]\d{2}$/,""),i={IBOV:["WIN","IND","IBOV","BOVA11"],USDBRL:["WDO","DOL","USDBRL"]}[n]||[n];(S.trades||[]).forEach(c=>{const $=a(c.ativo);if(!i.some(v=>$===v||$.startsWith(v)))return;const E=Date.parse(String(c.dt||"").slice(0,16)+":00-03:00")/1e3;E>=t&&E<=e&&r.push({t:E,k:c.side==="C"?"buy":"sell",l:(c.side==="C"?"Compra ":"Venda ")+(c.ativo||"")+(c.setup?" · "+c.setup:"")})})}catch{}return r.sort((a,o)=>a.t-o.t).slice(-40)}let et=null;function Yt(){const t=V(),e=tt(Q(T(s.a,t))),n=s.b?B(s.b)?T(s.b,t):tt(Q(T(s.b,t))):[],r=720,a=360,o=56,i=62,c=14,$=40,E=r-o-i,v=a-c-$;if(e.length<2){const l=Ut(s.a,t),p=/conta|login|401/i.test(l)||q(()=>!SESS,!1);return{html:`<div class="gp-empty"><b>Sem histórico de ${u(H(s.a))} para ${u(s.per)}.</b><span>${u(l||"O app ainda não recebeu os candles deste ativo.")}</span>${p?'<button type="button" data-dt414-go="conta">Entrar na conta</button>':'<button type="button" data-gp="reload">Carregar histórico</button>'}</div>`,ok:!1}}let R=e.map(l=>l[4]),y=null,D=null;n.length>=2&&(D=Bt(e,n),y=D.map(([,l])=>l?l[4]:null));let h=s.mode;y||(h="single"),B(s.b)&&h!=="single"&&(h="dual"),y&&y.every(l=>l==null)&&(y=null,h="single");let b=R,f=y,U=s.a,k=B(s.b)?M[s.b][1].replace(/\s*\(.*\)$/,""):s.b;if(h==="base"){const l=R[0],p=y.find(d=>d!=null);b=R.map(d=>d/l*100),f=y.map(d=>d==null?null:d/p*100)}if(h==="ratio"){const l=D.map(([d,m])=>m?d[4]/m[4]:null),p=l.find(d=>d!=null);b=l.map(d=>d==null?null:d/p*100),f=null,U=s.a+" / "+s.b}const I=e.map(l=>l[0]),C=I[0],ct=I[I.length-1],N=l=>o+l/(I.length-1)*E,Z=l=>{const p=l.filter(F);let d=Math.min(...p),m=Math.max(...p);const L=(m-d)*.08||Math.abs(m)*.01||1;return[d-L,m+L]},nt=h==="base"?Z([...b,...f||[]]):null,[dt,Ot]=nt||Z(b),[pt,Rt]=f?nt||Z(f):[0,1],X=l=>c+(1-(l-dt)/(Ot-dt))*v,st=l=>c+(1-(l-pt)/(Rt-pt))*v,gt=(l,p)=>{let d="",m=!1;return l.forEach((L,ot)=>{if(L==null){m=!1;return}d+=(m?"L":"M")+N(ot).toFixed(1)+","+p(L).toFixed(1),m=!0}),d},Ct=gt(b,X),_t=Ct+`L${N(b.length-1).toFixed(1)},${(c+v).toFixed(1)}L${N(0).toFixed(1)},${(c+v).toFixed(1)}Z`,Lt=f?gt(f,h==="base"?X:st):"",Mt=(l,p,d=6)=>Array.from({length:d},(m,L)=>l+(p-l)*L/(d-1)),Y=l=>h==="base"||h==="ratio"?A(l,1):A(l,Math.abs(l)>=1e3?0:Math.abs(l)<10?2:1);let ut="",ht="";Mt(dt,Ot).forEach(l=>{const p=X(l).toFixed(1);ut+=`<path class="gp-g" d="M${o} ${p}H${r-i}"/>`,ht+=`<text class="gp-ax" x="${r-i+8}" y="${+p+4}">${Y(l)}</text><path class="gp-tick" d="M${r-i} ${p}h5"/>`}),f&&h==="dual"&&Mt(pt,Rt).forEach(l=>{const p=st(l).toFixed(1);ht+=`<text class="gp-ax gp-axl" x="${o-8}" y="${+p+4}" text-anchor="end">${Y(l)}</text><path class="gp-tick" d="M${o-5} ${p}h5"/>`});let wt="";const ft=6;for(let l=0;l<ft;l++){const p=Math.round(l*(I.length-1)/(ft-1)),d=new Date(I[p]*1e3),m=N(p).toFixed(1),L=t==="1d"?d.toLocaleDateString("pt-BR",{month:"short",timeZone:"America/Sao_Paulo"}).replace(".",""):d.toLocaleString("pt-BR",{day:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"}),ot=t==="1d"&&(l===0||new Date(I[Math.round((l-1)*(I.length-1)/(ft-1))]*1e3).getFullYear()!==d.getFullYear())?d.getFullYear():"";ut+=`<path class="gp-g" d="M${m} ${c}V${c+v}"/>`,wt+=`<text class="gp-ax" x="${m}" y="${a-$+16}" text-anchor="middle">${L}</text>${ot?`<text class="gp-ax gp-yr" x="${m}" y="${a-$+31}" text-anchor="middle">${ot}</text>`:""}`}let Tt="";const Gt={20:"#f0b548",50:"#c56cf0",200:"#ff6b6b"};h!=="ratio"&&s.ma.forEach(l=>{const p=kt(R,l).map(d=>d==null?null:h==="base"?d/R[0]*100:d);p.filter(d=>d!=null).length>1&&(Tt+=`<path class="gp-ma" stroke="${Gt[l]}" d="${gt(p,X)}"/>`)});const Zt=Wt(C,ct,s.a);let bt="";Zt.forEach((l,p)=>{let d=0;for(;d<I.length-1&&I[d+1]<=l.t;)d++;const m=N(d).toFixed(1);if(l.k==="ev")bt+=`<g class="gp-ev" data-gp-ev="${p}"><path d="M${m} ${c}V${c+v}"/><rect x="${+m-6}" y="${c+v-12}" width="12" height="12" rx="2"/><text x="${m}" y="${c+v-3}" text-anchor="middle">E</text><title>${u(l.l)}</title></g>`;else{const L=X(b[d]??b[b.length-1]);bt+=`<g class="gp-trade ${l.k}"><path d="${l.k==="buy"?`M${m} ${(L+6).toFixed(1)}l-6 10h12z`:`M${m} ${(L-6).toFixed(1)}l-6 -10h12z`}"/><title>${u(l.l)}</title></g>`}});const mt=b[b.length-1],W=f?[...f].reverse().find(l=>l!=null):null,Jt=`<g class="gp-tag gp-tag-a"><rect x="${r-i+2}" y="${(X(mt)-9).toFixed(1)}" width="${i-4}" height="18" rx="2"/><text x="${r-i/2}" y="${(X(mt)+4).toFixed(1)}" text-anchor="middle">${Y(mt)}</text></g>`,zt=W!=null?h==="dual"?`<g class="gp-tag gp-tag-b"><rect x="2" y="${(st(W)-9).toFixed(1)}" width="${o-4}" height="18" rx="2"/><text x="${o/2}" y="${(st(W)+4).toFixed(1)}" text-anchor="middle">${Y(W)}</text></g>`:`<g class="gp-tag gp-tag-b"><rect x="${r-i+2}" y="${(X(W)-9).toFixed(1)}" width="${i-4}" height="18" rx="2"/><text x="${r-i/2}" y="${(X(W)+4).toFixed(1)}" text-anchor="middle">${Y(W)}</text></g>`:"",Pt=[[U,h==="dual"?"R1":"",b[b.length-1],"#fff"]].concat(f?[[k,h==="dual"?"L1":"",W,"#2f6bff"]]:[]),Kt=`<g class="gp-legend"><rect x="${o+8}" y="${c+6}" width="210" height="${18+Pt.length*16}" rx="3"/><text class="gp-lt" x="${o+113}" y="${c+19}" text-anchor="middle">${h==="base"?"Base 100":h==="ratio"?"Razão (base 100)":"Último preço"}</text>${Pt.map((l,p)=>`<rect x="${o+16}" y="${c+26+p*16}" width="9" height="9" fill="${l[3]}"/><text class="gp-lv" x="${o+30}" y="${c+34+p*16}">${u(l[0])}${l[1]?" ("+l[1]+")":""}</text><text class="gp-lv" x="${o+210}" y="${c+34+p*16}" text-anchor="end">${Y(l[2])}</text>`).join("")}</g>`;return et={xs:I,A:e,B:D,sa:b,sb:f,X:N,L:o,R:i,W:r,T:c,chh:v,mode:h,fmtAx:Y},{html:`<svg class="gp-svg" viewBox="0 0 ${r} ${a}" preserveAspectRatio="none" role="img" aria-label="Gráfico de ${u(U)}${f?" e "+u(k):""}, período ${u(s.per)}">
-    <rect class="gp-bg" x="${o}" y="${c}" width="${E}" height="${v}"/>${ut}
-    <path class="gp-area" d="${_t}"/>${Lt?`<path class="gp-lb" d="${Lt}"/>`:""}<path class="gp-la" d="${Ct}"/>${Tt}${bt}
-    <path class="gp-frame" d="M${o} ${c}V${c+v}H${r-i}V${c}"/>${ht}${wt}${Jt}${zt}${Kt}
-    <g class="gp-cross" hidden><path class="gp-cv" d=""/><rect class="gp-cbox" rx="3"/><text class="gp-ct"></text></g></svg>`,ok:!0}}function Ht(){const t=V(),e=tt(Q(T(s.a,t))),n=s.b?B(s.b)?T(s.b,t):tt(Q(T(s.b,t))):[];if(!e.length)return'<div class="gp-empty"><b>Sem dados para a tabela.</b></div>';const r=(n.length?Bt(e,n):e.map(o=>[o,null])).slice(-60).reverse(),a=o=>new Date(o*1e3).toLocaleString("pt-BR",t==="1d"?{day:"2-digit",month:"2-digit",year:"2-digit"}:{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});return`<div class="gp-tablewrap"><table class="gp-table"><thead><tr><th>Data</th><th>${u(s.a)}</th><th>Var.</th>${n.length?`<th>${u(B(s.b)?M[s.b][1]:s.b)}</th><th>Var.</th>`:""}</tr></thead><tbody>${r.map(([o,i],c)=>{const $=r[c+1]?.[0]?.[4],E=r[c+1]?.[1]?.[4];return`<tr><td>${a(o[0])}</td><td>${A(o[4])}</td><td class="${o[4]>=$?"up":"dn"}">${$?it((o[4]/$-1)*100):""}</td>${n.length?`<td>${i?A(i[4]):"—"}</td><td class="${i&&E?i[4]>=E?"up":"dn":""}">${i&&E?it((i[4]/E-1)*100):""}</td>`:""}</tr>`}).join("")}</tbody></table></div>`}const at=(t,e)=>(e?`<option value=""${t?"":" selected"}>— nenhum —</option>`:"")+'<optgroup label="Ativos">'+Object.keys(_).map(n=>`<option value="${n}"${n===t?" selected":""}>${u(n)} · ${u(_[n])}</option>`).join("")+"</optgroup>"+(e?'<optgroup label="Indicadores (Banco Central)">'+Object.keys(M).map(n=>`<option value="${n}"${n===t?" selected":""}>${u(M[n][1])}</option>`).join("")+"</optgroup>":"")+(t&&!_[t]&&!M[t]?`<option value="${u(t)}" selected>${u(t)}</option>`:"");function jt(){return`<section id="v421-gp" class="gp" aria-label="Gráfico do Terminal">
+try{
+/* Diário de Trader v421 — gráfico do Terminal no estilo Bloomberg (GP / COMP).
+ * Cabeçalho do ativo (último, variação, abertura, máxima, mínima, anterior), barra de ferramentas,
+ * eixo duplo (L1/R1) ou base 100, razão A/B, médias móveis, eventos-chave (agenda + seus trades),
+ * gráficos prontos, tabela e acompanhamento por toque.
+ * Dados: somente candles reais do Terminal (TRM.tec.velas / pegaVelas → função "candles", Yahoo). */
+(function(root){
+'use strict';
+const doc=root.document;if(!doc)return;
+const KEY='diario-v421-gp';
+const SYMS={IBOV:'Ibovespa',SPX:'S&P 500',NDX:'Nasdaq 100',DXY:'Índice do dólar (DXY)',USDBRL:'Dólar (USD/BRL)',VIX:'VIX',BRENT:'Petróleo Brent',WTI:'Petróleo WTI',OURO:'Ouro',COBRE:'Cobre',PRATA:'Prata',EWZ:'EWZ (ETF Brasil)',PETR4:'Petrobras PN',VALE3:'Vale ON',ITUB4:'Itaú PN',BBAS3:'Banco do Brasil',WEGE3:'WEG',BOVA11:'BOVA11',BTCUSD:'Bitcoin'};
+const ECON={'BC:SELIC':['selic','Selic meta (% a.a.)'],'BC:CDI':['cdi','CDI (% a.a.)'],'BC:IPCA12':['ipca12','IPCA 12 meses (%)'],'BC:IPCA':['ipca','IPCA mensal (%)'],'BC:IGPM':['igpm','IGP-M mensal (%)'],'BC:IBCBR':['ibcbr','IBC-Br (prévia do PIB)'],'BC:DESEMP':['desemprego','Desemprego PNAD (%)'],'BC:PTAX':['ptax','Dólar PTAX (R$)']};
+const isEcon=s=>!!ECON[s];
+const REL={IBOV:['SPX','EWZ','USDBRL','BOVA11','BC:SELIC','BC:IBCBR'],PETR4:['BRENT','WTI','PETR3','PRIO3','EWZ','IBOV'],PETR3:['PETR4','BRENT','IBOV'],VALE3:['COBRE','CSNA3','GGBR4','IBOV','EWZ'],
+ ITUB4:['BBDC4','BBAS3','SANB11','IBOV','BC:SELIC'],BBAS3:['ITUB4','BBDC4','IBOV','BC:SELIC'],WEGE3:['IBOV','USDBRL','SPX'],BOVA11:['IBOV','EWZ'],
+ USDBRL:['DXY','BC:PTAX','BC:SELIC','IBOV','EWZ'],SPX:['NDX','VIX','DXY','IBOV'],NDX:['SPX','VIX','DXY'],DXY:['USDBRL','OURO','SPX'],VIX:['SPX','NDX'],
+ OURO:['DXY','PRATA','USDBRL'],PRATA:['OURO','COBRE'],COBRE:['VALE3','OURO'],BRENT:['WTI','PETR4','USDBRL'],WTI:['BRENT','PETR4'],EWZ:['IBOV','USDBRL','SPX'],BTCUSD:['NDX','OURO','DXY']};
+const related=s=>(REL[s]||['IBOV','SPX','USDBRL','DXY']).filter(x=>x!==s);
+const PRESETS=[
+ ['IBOV','SPX','Ibovespa × S&P 500'],['IBOV','USDBRL','Ibovespa × Dólar'],['EWZ','IBOV','EWZ × Ibovespa'],
+ ['PETR4','BRENT','Petrobras × Brent'],['VALE3','COBRE','Vale × Cobre (metais)'],['NDX','VIX','Nasdaq × VIX'],
+ ['USDBRL','DXY','Dólar × DXY'],['OURO','DXY','Ouro × DXY'],
+ ['IBOV','BC:SELIC','Ibovespa × Selic'],['IBOV','BC:IPCA12','Ibovespa × IPCA 12 meses'],['IBOV','BC:IBCBR','Ibovespa × IBC-Br'],['USDBRL','BC:SELIC','Dólar × Selic']];
+const PER=[['1D','5m',1],['3D','15m',3],['1M','60m',31],['6M','1d',183],['YTD','1d',-1],['1A','1d',366],['2A','1d',731],['Máx','1d',99999]];
+const def={a:'IBOV',b:'SPX',per:'1A',freq:'D',mode:'dual',ma:[],ev:true,table:false};
+let st=(()=>{try{return Object.assign({},def,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){return {...def}}})();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fin=n=>typeof n==='number'&&Number.isFinite(n);
+const dec=v=>{const a=Math.abs(v);return a>=10000?0:a<10?4:2};
+const nf=(v,d)=>fin(v)?v.toLocaleString('pt-BR',{minimumFractionDigits:d??dec(v),maximumFractionDigits:d??dec(v)}):'—';
+const pc=v=>fin(v)?(v>0?'+':'')+nf(v,2)+'%':'—';
+const name=s=>SYMS[s]||(ECON[s]?ECON[s][1]:s);
+const tec=()=>root.TRM?.tec;
+const perDef=()=>PER.find(p=>p[0]===st.per)||PER[5];
+const ivOf=()=>perDef()[1];
+const g=(f,d)=>{try{const v=f();return v===undefined?d:v}catch(e){return d}};
+
+/* ---------- dados ---------- */
+const econ=new Map(),econErr=new Map();
+try{const c=JSON.parse(localStorage.getItem('diario-v422-econ')||'{}');Object.entries(c).forEach(([k,v])=>{if(v&&Array.isArray(v.pontos))econ.set(k,v)})}catch(e){}
+function econSave(){try{const o={};econ.forEach((v,k)=>o[k]=v);localStorage.setItem('diario-v422-econ',JSON.stringify(o))}catch(e){}}
+async function fetchEcon(sym,force){
+  const id=ECON[sym][0],k=sym;const have=econ.get(k);
+  if(!force&&have&&Date.now()-(have.ts||0)<6*36e5)return;
+  if(!force&&Date.now()-(asked.get(k)||0)<90000)return;asked.set(k,Date.now());
+  try{
+    if(typeof rq!=='function')throw Error('Conexão do app indisponível.');
+    const r=await rq('/functions/v1/series',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serie:id,desde:new Date().getFullYear()-6})});
+    const j=await r.json();if(!Array.isArray(j.pontos))throw Error(j.error||'Resposta inesperada.');
+    econ.set(k,{...j,ts:Date.now()});econErr.delete(k);econSave();
+  }catch(e){econErr.set(k,e&&e.status===404?'A função "series" ainda não foi publicada no Supabase.':(e&&e.status===401?'Entre na sua conta para carregar os indicadores.':String(e&&e.message||e)))}
+}
+function bars(sym,iv){
+  if(isEcon(sym)){const v=econ.get(sym);return (v?.pontos||[]).map(p=>[p[0],p[1],p[1],p[1],p[1],0])}
+  const L=g(()=>tec().velas(sym,iv)?.L,[])||[];
+  return L.filter(x=>Array.isArray(x)&&fin(x[0])&&fin(x[4])&&x[4]>0).sort((a,b)=>a[0]-b[0]);
+}
+function meta(sym,iv){if(isEcon(sym)){const v=econ.get(sym);return v?v.fonte+' · '+v.unidade:''}return g(()=>tec().velas(sym,iv)?.nota||'','')}
+function errOf(sym,iv){if(isEcon(sym))return econErr.get(sym)||'';return g(()=>tec().erroVelas?.(sym,iv)||'','')}
+const asked=new Map();
+async function fetchSym(sym,iv,force){
+  if(isEcon(sym))return fetchEcon(sym,force);
+  const k=sym+'|'+iv;if(!force&&Date.now()-(asked.get(k)||0)<90000)return;asked.set(k,Date.now());
+  try{await tec()?.pegaVelas?.(sym,iv)}catch(e){}
+}
+function cut(list){
+  const p=perDef();if(!list.length)return list;
+  const now=Date.now()/1000;let from=-Infinity;
+  if(p[2]===-1)from=new Date(new Date().getFullYear(),0,1).getTime()/1000;
+  else if(p[2]<99999){
+    // intradiário: últimos N pregões presentes na série
+    if(p[1]!=='1d'){const days=[...new Set(list.map(x=>new Date(x[0]*1000).toISOString().slice(0,10)))].slice(-p[2]);const first=days[0];return list.filter(x=>new Date(x[0]*1000).toISOString().slice(0,10)>=first)}
+    from=now-p[2]*86400;
+  }
+  return list.filter(x=>x[0]>=from);
+}
+function resample(list){
+  if(st.freq==='D'||ivOf()!=='1d')return list;
+  const m=new Map();
+  for(const r of list){const d=new Date(r[0]*1000);let k;
+    if(st.freq==='M')k=d.getUTCFullYear()+'-'+d.getUTCMonth();
+    else{const t=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));t.setUTCDate(t.getUTCDate()-((t.getUTCDay()+6)%7));k=t.toISOString().slice(0,10)}
+    const c=m.get(k);if(!c)m.set(k,[r[0],r[1],r[2],r[3],r[4],r[5]||0]);else{c[0]=r[0];c[2]=Math.max(c[2],r[2]);c[3]=Math.min(c[3],r[3]);c[4]=r[4];c[5]+=r[5]||0}}
+  return [...m.values()];
+}
+const sma=(vals,n)=>vals.map((_,i)=>i<n-1?null:vals.slice(i-n+1,i+1).reduce((s,v)=>s+v,0)/n);
+function align(A,B){
+  if(isEcon(st.b)){let j=0,last=null;const out=[];for(const r of A){while(j<B.length&&B[j][0]<=r[0]+86400){last=B[j];j++}out.push([r,last])}return out}
+  // junta pela data (diário) ou pelo horário mais próximo (intradiário)
+  const key=t=>ivOf()==='1d'?new Date(t*1000).toISOString().slice(0,10):Math.round(t/300);
+  const mb=new Map(B.map(r=>[key(r[0]),r]));
+  return A.map(r=>[r,mb.get(key(r[0]))||null]);
+}
+
+/* ---------- cabeçalho do ativo ---------- */
+function header(sym){
+  const d=bars(sym,'1d');const intr=bars(sym,'5m');
+  if(!d.length&&!intr.length)return `<div class="gp-hdr"><b class="gp-tk">${esc(sym)}</b><span class="gp-muted">${esc(name(sym))} · sem dados ainda</span></div>`;
+  const last=intr.length?intr[intr.length-1]:d[d.length-1];
+  const today=d[d.length-1],prev=d.length>1?d[d.length-2][4]:null;
+  // candle diário do dia pode estar incompleto: usa intradiário quando houver
+  const dayKey=new Date((last[0])*1000).toISOString().slice(0,10);
+  const dayBars=intr.filter(x=>new Date(x[0]*1000).toISOString().slice(0,10)===dayKey);
+  const o=dayBars.length?dayBars[0][1]:today[1],h=dayBars.length?Math.max(...dayBars.map(x=>x[2])):today[2],l=dayBars.length?Math.min(...dayBars.map(x=>x[3])):today[3];
+  const px=last[4];const pv=(new Date(today[0]*1000).toISOString().slice(0,10)===dayKey)?prev:today[4];
+  const ch=fin(pv)?px-pv:null,chp=fin(pv)?(px/pv-1)*100:null;
+  const at=new Date(last[0]*1000).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
+  const up=ch>0,dn=ch<0;
+  const spark=d.slice(-30).map(x=>x[4]);let sp='';
+  if(spark.length>2){const mn=Math.min(...spark),mx=Math.max(...spark),r=mx-mn||1;sp=`<svg class="gp-spark" viewBox="0 0 60 18" aria-hidden="true"><polyline points="${spark.map((v,i)=>`${(i/(spark.length-1)*60).toFixed(1)},${(17-(v-mn)/r*16).toFixed(1)}`).join(' ')}"/></svg>`}
+  return `<div class="gp-hdr" aria-label="Resumo de ${esc(name(sym))}">
+   <div class="gp-l1"><b class="gp-tk">${esc(sym)}</b><span class="gp-arrow ${up?'up':dn?'dn':''}">${up?'↑':dn?'↓':'·'}</span><b class="gp-px ${up?'up':dn?'dn':''}">${nf(px)}</b><span class="gp-ch ${up?'up':dn?'dn':''}">${fin(ch)?(ch>0?'+':'')+nf(ch):'—'} <small>${pc(chp)}</small></span>${sp}</div>
+   <div class="gp-l2"><em><span class="gp-at">At</span> ${at}</em><em><span>O</span>${nf(o)}</em><em><span>H</span>${nf(h)}</em><em><span>L</span>${nf(l)}</em><em><span>Prev</span>${nf(pv)}</em></div></div>`;
+}
+
+/* ---------- gráfico ---------- */
+function events(t0,t1,sym){
+  const out=[];if(!st.ev)return out;
+  try{const a=AG.v[0];(a?.eventos||[]).filter(e=>e.imp===1).forEach(e=>{const t=Date.parse(e.em)/1000;if(t>=t0&&t<=t1)out.push({t,k:'ev',l:String(e.t||'Evento')+(e.p?' ('+e.p+')':'')})})}catch(e){}
+  try{const base=s=>String(s||'').toUpperCase().replace(/[FGHJKMNQUVXZ]\d{2}$/,'');const map={IBOV:['WIN','IND','IBOV','BOVA11'],USDBRL:['WDO','DOL','USDBRL']};const ok=map[sym]||[sym];
+    (S.trades||[]).forEach(x=>{const b=base(x.ativo);if(!ok.some(o=>b===o||b.startsWith(o)))return;const t=Date.parse(String(x.dt||'').slice(0,16)+':00-03:00')/1000;if(t>=t0&&t<=t1)out.push({t,k:x.side==='C'?'buy':'sell',l:(x.side==='C'?'Compra ':'Venda ')+(x.ativo||'')+(x.setup?' · '+x.setup:'')})})}catch(e){}
+  return out.sort((a,b)=>a.t-b.t).slice(-40);
+}
+let lastGeom=null;
+
+/* v526 — Janela do GP: mantém os candles originais, exibe tempo deslocável e
+   eixo de preço ajustável sem alterar os dados carregados. */
+const gpView={key:'',count:0,offset:0,max:0,priceZoom:1,priceShift:0,fraction:0};
+const clip=(v,lo,hi)=>Math.max(lo,Math.min(hi,Number(v)||0));
+function navInit(all){
+  if(all.length<2)return all;
+  const key=[st.a,st.per,st.freq,st.mode,ivOf()].join('|');
+  if(gpView.key!==key){
+    gpView.key=key;
+    gpView.count=Math.max(2,resample(cut(bars(st.a,ivOf()))).length);
+    gpView.offset=0;gpView.priceZoom=1;gpView.priceShift=0;gpView.fraction=0;
+  }
+  gpView.max=all.length;
+  gpView.count=Math.max(2,Math.min(gpView.count||all.length,all.length));
+  gpView.offset=clip(gpView.offset,0,Math.max(0,all.length-gpView.count));
+  return all.slice(all.length-gpView.count-gpView.offset,all.length-gpView.offset);
+}
+function navPriceBounds(bounds){
+  const low=bounds[0],high=bounds[1],span=Math.max(1e-10,high-low);
+  const mid=(low+high)/2+gpView.priceShift*span;
+  const radius=span*gpView.priceZoom/2;
+  return [mid-radius,mid+radius];
+}
+function navPan(dx,dy,width,height,mode){
+  if((mode==='hand'||mode==='time')&&gpView.max>gpView.count){
+    gpView.fraction+=dx/Math.max(20,width)*gpView.count;
+    const step=Math.trunc(gpView.fraction);
+    gpView.fraction-=step;
+    const next=clip(gpView.offset+step,0,gpView.max-gpView.count);
+    if(next!==gpView.offset+step)gpView.fraction=0;
+    gpView.offset=next;
+  }
+  if(mode==='hand'||mode==='price')
+    gpView.priceShift=clip(gpView.priceShift+dy/Math.max(20,height)*gpView.priceZoom,-10,10);
+}
+function navZoom(factor,anchor){
+  if(gpView.max<2)return;
+  const prev=gpView.count;
+  const next=clip(Math.round(prev*factor),Math.min(12,gpView.max),gpView.max);
+  const a=anchor==null?.5:clip(anchor,0,1);
+  gpView.offset=clip(Math.round(gpView.offset+(prev-next)*(1-a)),0,gpView.max-next);
+  gpView.count=next;gpView.fraction=0;
+}
+function navReset(){
+  gpView.key='';gpView.offset=0;gpView.count=0;gpView.max=0;
+  gpView.priceZoom=1;gpView.priceShift=0;gpView.fraction=0;
+}
+function svg(){
+  const iv=ivOf();
+  const A=navInit(resample(bars(st.a,iv))),B=st.b?(isEcon(st.b)?bars(st.b,iv):resample(bars(st.b,iv))):[];
+  const W=720,H=360,L=56,R=62,T=14,Bm=40;const cw=W-L-R,chh=H-T-Bm;
+  if(A.length<2){
+    const e=errOf(st.a,iv);const login=/conta|login|401/i.test(e)||g(()=>!SESS,false);
+    return {html:`<div class="gp-empty"><b>Sem histórico de ${esc(name(st.a))} para ${esc(st.per)}.</b><span>${esc(e||'O app ainda não recebeu os candles deste ativo.')}</span>${login?'<button type="button" data-dt414-go="conta">Entrar na conta</button>':'<button type="button" data-gp="reload">Carregar histórico</button>'}</div>`,ok:false};
+  }
+  let pa=A.map(r=>r[4]),pb=null,pairs=null;
+  if(B.length>=2){pairs=align(A,B);pb=pairs.map(([,b])=>b?b[4]:null)}
+  let mode=st.mode;if(!pb)mode='single';if(isEcon(st.b)&&mode!=='single')mode='dual';
+  if(pb&&pb.every(v=>v==null)){pb=null;mode='single'}
+  // séries no espaço de desenho
+  let sa=pa,sb=pb,labelA=st.a,labelB=isEcon(st.b)?ECON[st.b][1].replace(/\s*\(.*\)$/,''):st.b;
+  if(mode==='base'){const a0=pa[0];const fb=pb.find(v=>v!=null);sa=pa.map(v=>v/a0*100);sb=pb.map(v=>v==null?null:v/fb*100)}
+  if(mode==='ratio'){const r=pairs.map(([a,b])=>b?a[4]/b[4]:null);const f0=r.find(v=>v!=null);sa=r.map(v=>v==null?null:v/f0*100);sb=null;labelA=st.a+' / '+st.b}
+  const xs=A.map(r=>r[0]);const t0=xs[0],t1=xs[xs.length-1];
+  const X=i=>L+(i/(xs.length-1))*cw;
+  const rng=v=>{const f=v.filter(fin);let lo=Math.min(...f),hi=Math.max(...f);const m=(hi-lo)*.08||Math.abs(hi)*.01||1;return [lo-m,hi+m]};
+  const both=mode==='base'?rng([...sa,...(sb||[])]):null;
+  const [ra0,ra1]=navPriceBounds(both||rng(sa));const [rb0,rb1]=sb?(both?[ra0,ra1]:rng(sb)):[0,1];
+  const YA=v=>T+(1-(v-ra0)/(ra1-ra0))*chh, YB=v=>T+(1-(v-rb0)/(rb1-rb0))*chh;
+  const path=(s,Y)=>{let d='',pen=false;s.forEach((v,i)=>{if(v==null){pen=false;return}d+=(pen?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1);pen=true});return d};
+  const dA=path(sa,YA);const area=dA+`L${X(sa.length-1).toFixed(1)},${(T+chh).toFixed(1)}L${X(0).toFixed(1)},${(T+chh).toFixed(1)}Z`;
+  const dB=sb?path(sb,mode==='base'?YA:YB):'';
+  // eixos (principal à direita = R1, como no Bloomberg)
+  const ticks=(a0,a1,n=6)=>Array.from({length:n},(_,i)=>a0+(a1-a0)*i/(n-1));
+  const fmtAx=v=>mode==='base'||mode==='ratio'?nf(v,1):nf(v,Math.abs(v)>=1000?0:Math.abs(v)<10?2:1);
+  let grid='',ax='';
+  ticks(ra0,ra1).forEach(v=>{const y=YA(v).toFixed(1);grid+=`<path class="gp-g" d="M${L} ${y}H${W-R}"/>`;ax+=`<text class="gp-ax" x="${W-R+8}" y="${(+y+4)}">${fmtAx(v)}</text><path class="gp-tick" d="M${W-R} ${y}h5"/>`});
+  if(sb&&mode==='dual')ticks(rb0,rb1).forEach(v=>{const y=YB(v).toFixed(1);ax+=`<text class="gp-ax gp-axl" x="${L-8}" y="${(+y+4)}" text-anchor="end">${fmtAx(v)}</text><path class="gp-tick" d="M${L-5} ${y}h5"/>`});
+  // eixo do tempo
+  let xl='';const nX=6;
+  for(let i=0;i<nX;i++){const idx=Math.round(i*(xs.length-1)/(nX-1));const d=new Date(xs[idx]*1000);const x=X(idx).toFixed(1);
+    const lab=iv==='1d'?d.toLocaleDateString('pt-BR',{month:'short',timeZone:'America/Sao_Paulo'}).replace('.',''):d.toLocaleString('pt-BR',{day:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
+    const yr=iv==='1d'&&(i===0||new Date(xs[Math.round((i-1)*(xs.length-1)/(nX-1))]*1000).getFullYear()!==d.getFullYear())?d.getFullYear():'';
+    grid+=`<path class="gp-g" d="M${x} ${T}V${T+chh}"/>`;xl+=`<text class="gp-ax" x="${x}" y="${H-Bm+16}" text-anchor="middle">${lab}</text>${yr?`<text class="gp-ax gp-yr" x="${x}" y="${H-Bm+31}" text-anchor="middle">${yr}</text>`:''}`}
+  // médias móveis da série principal (em preço; não em razão)
+  let mas='';const colors={20:'#f0b548',50:'#c56cf0',200:'#ff6b6b'};
+  if(mode!=='ratio')st.ma.forEach(n=>{const m=sma(pa,n).map(v=>v==null?null:(mode==='base'?v/pa[0]*100:v));if(m.filter(v=>v!=null).length>1)mas+=`<path class="gp-ma" stroke="${colors[n]}" d="${path(m,YA)}"/>`});
+  // eventos-chave
+  const evs=events(t0,t1,st.a);let evg='';
+  evs.forEach((e,i)=>{let j=0;while(j<xs.length-1&&xs[j+1]<=e.t)j++;const x=X(j).toFixed(1);
+    if(e.k==='ev')evg+=`<g class="gp-ev" data-gp-ev="${i}"><path d="M${x} ${T}V${T+chh}"/><rect x="${+x-6}" y="${T+chh-12}" width="12" height="12" rx="2"/><text x="${x}" y="${T+chh-3}" text-anchor="middle">E</text><title>${esc(e.l)}</title></g>`;
+    else{const y=YA(sa[j]??sa[sa.length-1]);evg+=`<g class="gp-trade ${e.k}"><path d="${e.k==='buy'?`M${x} ${(y+6).toFixed(1)}l-6 10h12z`:`M${x} ${(y-6).toFixed(1)}l-6 -10h12z`}"/><title>${esc(e.l)}</title></g>`}});
+  // etiquetas do último valor nos eixos
+  const lastA=sa[sa.length-1],lastB=sb?[...sb].reverse().find(v=>v!=null):null;
+  const tagR=`<g class="gp-tag gp-tag-a"><rect x="${W-R+2}" y="${(YA(lastA)-9).toFixed(1)}" width="${R-4}" height="18" rx="2"/><text x="${W-R/2}" y="${(YA(lastA)+4).toFixed(1)}" text-anchor="middle">${fmtAx(lastA)}</text></g>`;
+  const tagL=lastB!=null?(mode==='dual'?`<g class="gp-tag gp-tag-b"><rect x="2" y="${(YB(lastB)-9).toFixed(1)}" width="${L-4}" height="18" rx="2"/><text x="${L/2}" y="${(YB(lastB)+4).toFixed(1)}" text-anchor="middle">${fmtAx(lastB)}</text></g>`:`<g class="gp-tag gp-tag-b"><rect x="${W-R+2}" y="${(YA(lastB)-9).toFixed(1)}" width="${R-4}" height="18" rx="2"/><text x="${W-R/2}" y="${(YA(lastB)+4).toFixed(1)}" text-anchor="middle">${fmtAx(lastB)}</text></g>`):'';
+  const legendRows=[[labelA,mode==='dual'?'R1':'',sa[sa.length-1],'#fff']].concat(sb?[[labelB,mode==='dual'?'L1':'',lastB,'#2f6bff']]:[]);
+  const legend=`<g class="gp-legend"><rect x="${L+8}" y="${T+6}" width="210" height="${18+legendRows.length*16}" rx="3"/><text class="gp-lt" x="${L+113}" y="${T+19}" text-anchor="middle">${mode==='base'?'Base 100':mode==='ratio'?'Razão (base 100)':'Último preço'}</text>${legendRows.map((r,i)=>`<rect x="${L+16}" y="${T+26+i*16}" width="9" height="9" fill="${r[3]}"/><text class="gp-lv" x="${L+30}" y="${T+34+i*16}">${esc(r[0])}${r[1]?' ('+r[1]+')':''}</text><text class="gp-lv" x="${L+210}" y="${T+34+i*16}" text-anchor="end">${fmtAx(r[2])}</text>`).join('')}</g>`;
+  lastGeom={xs,A,B:pairs,sa,sb,X,L,R,W,T,chh,mode,fmtAx};
+  return {html:`<svg class="gp-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Gráfico de ${esc(labelA)}${sb?' e '+esc(labelB):''}, período ${esc(st.per)}">
+    <defs><clipPath id="gp421-plot-clip"><rect x="${L}" y="${T}" width="${cw}" height="${chh}"/></clipPath></defs>
+    <rect class="gp-bg" x="${L}" y="${T}" width="${cw}" height="${chh}"/>${grid}
+    <g class="gp-view-series" clip-path="url(#gp421-plot-clip)"><path class="gp-area" d="${area}"/>${dB?`<path class="gp-lb" d="${dB}"/>`:''}<path class="gp-la" d="${dA}"/>${mas}${evg}</g>
+    <path class="gp-frame" d="M${L} ${T}V${T+chh}H${W-R}V${T}"/>${ax}${xl}${tagR}${tagL}${legend}
+    <g class="gp-cross" hidden><path class="gp-cv" d=""/><rect class="gp-cbox" rx="3"/><text class="gp-ct"></text></g></svg>`,ok:true};
+}
+function table(){
+  const iv=ivOf();const A=resample(cut(bars(st.a,iv))),B=st.b?(isEcon(st.b)?bars(st.b,iv):resample(cut(bars(st.b,iv)))):[];
+  if(!A.length)return '<div class="gp-empty"><b>Sem dados para a tabela.</b></div>';
+  const rows=(B.length?align(A,B):A.map(a=>[a,null])).slice(-60).reverse();
+  const fd=t=>new Date(t*1000).toLocaleString('pt-BR',iv==='1d'?{day:'2-digit',month:'2-digit',year:'2-digit'}:{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  return `<div class="gp-tablewrap"><table class="gp-table"><thead><tr><th>Data</th><th>${esc(st.a)}</th><th>Var.</th>${B.length?`<th>${esc(isEcon(st.b)?ECON[st.b][1]:st.b)}</th><th>Var.</th>`:''}</tr></thead><tbody>${rows.map(([a,b],i)=>{const pa=rows[i+1]?.[0]?.[4],pb=rows[i+1]?.[1]?.[4];return `<tr><td>${fd(a[0])}</td><td>${nf(a[4])}</td><td class="${a[4]>=pa?'up':'dn'}">${pa?pc((a[4]/pa-1)*100):''}</td>${B.length?`<td>${b?nf(b[4]):'—'}</td><td class="${b&&pb?(b[4]>=pb?'up':'dn'):''}">${b&&pb?pc((b[4]/pb-1)*100):''}</td>`:''}</tr>`}).join('')}</tbody></table></div>`;
+}
+
+/* ---------- componente ---------- */
+const opt=(sel,allowNone)=>(allowNone?`<option value=""${!sel?' selected':''}>— nenhum —</option>`:'')+`<optgroup label="Ativos">`+Object.keys(SYMS).map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(k)} · ${esc(SYMS[k])}</option>`).join('')+`</optgroup>`+(allowNone?`<optgroup label="Indicadores (Banco Central)">`+Object.keys(ECON).map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(ECON[k][1])}</option>`).join('')+`</optgroup>`:'')+(sel&&!SYMS[sel]&&!ECON[sel]?`<option value="${esc(sel)}" selected>${esc(sel)}</option>`:'');
+function shell(){
+  return `<section id="v421-gp" class="gp" aria-label="Gráfico do Terminal">
   <div class="gp-head" data-gp-head></div>
   <div class="gp-bar1">
     <span class="gp-type">Gráfico de linha</span>
-    <label class="gp-sel gp-a"><span class="sr">Ativo principal</span><select data-gp-a>${at(s.a)}</select></label>
-    <div class="gp-menuwrap"><button type="button" class="gp-btn" data-gp="presets" aria-expanded="false">Gráficos prontos ▾</button><div class="gp-menu" data-gp-menu hidden>${rt.map(([t,e,n],r)=>`<button type="button" data-gp-preset="${r}">${u(n)}</button>`).join("")}</div></div>
+    <label class="gp-sel gp-a"><span class="sr">Ativo principal</span><select data-gp-a>${opt(st.a)}</select></label>
+    <div class="gp-menuwrap"><button type="button" class="gp-btn" data-gp="presets" aria-expanded="false">Gráficos prontos ▾</button><div class="gp-menu" data-gp-menu hidden>${PRESETS.map(([a,b,l],i)=>`<button type="button" data-gp-preset="${i}">${esc(l)}</button>`).join('')}</div></div>
     <div class="gp-seg" role="group" aria-label="Escala"><button type="button" data-gp-mode="dual">Eixo duplo</button><button type="button" data-gp-mode="base">Base 100</button><button type="button" data-gp-mode="ratio">Razão A/B</button></div>
   </div>
   <div class="gp-bar2">
-    <div class="gp-per" role="group" aria-label="Período">${lt.map(([t])=>`<button type="button" data-gp-per="${t}">${t}</button>`).join("")}</div>
+    <div class="gp-per" role="group" aria-label="Período">${PER.map(([p])=>`<button type="button" data-gp-per="${p}">${p}</button>`).join('')}</div>
     <select class="gp-freq" data-gp-freq aria-label="Frequência"><option value="D">Diário</option><option value="S">Semanal</option><option value="M">Mensal</option></select>
-    <div class="gp-ma-group" role="group" aria-label="Médias móveis"><span>Médias</span>${[20,50,200].map(t=>`<button type="button" data-gp-ma="${t}">${t}</button>`).join("")}</div>
+    <div class="gp-ma-group" role="group" aria-label="Médias móveis"><span>Médias</span>${[20,50,200].map(n=>`<button type="button" data-gp-ma="${n}">${n}</button>`).join('')}</div>
     <button type="button" class="gp-chk" data-gp="ev"><i></i>Eventos-chave</button>
     <button type="button" class="gp-btn" data-gp="table">Tabela</button>
   </div>
   <div class="gp-bar3">
-    <label class="gp-sel gp-b"><span>+ Adicionar dado</span><select data-gp-b>${at(s.b,!0)}</select></label>
+    <label class="gp-sel gp-b"><span>+ Adicionar dado</span><select data-gp-b>${opt(st.b,true)}</select></label>
     <div class="gp-menuwrap"><button type="button" class="gp-btn" data-gp="rel" aria-expanded="false">Relacionados ▾</button><div class="gp-menu" data-gp-relmenu hidden></div></div>
     <label class="gp-free"><input type="text" data-gp-free placeholder="outro ticker (ex.: ITUB4, AAPL, GC=F)" autocapitalize="characters" spellcheck="false" aria-label="Adicionar outro ticker"><button type="button" data-gp="free">OK</button></label>
     <button type="button" class="gp-btn gp-icon" data-gp="reload" aria-label="Atualizar histórico">↻</button>
     <button type="button" class="gp-btn gp-icon" data-gp="full" aria-label="Tela cheia">⤢</button>
     <button type="button" class="gp-btn gp-icon" data-gp="help" aria-label="Ajuda do Terminal">?</button>
   </div>
+  <div class="gp-navigation" role="toolbar" aria-label="Mover e ajustar o gráfico">
+    <button type="button" data-gp-nav="hand" title="Deslocar preço e tempo juntos" aria-pressed="true">✋ Mover</button>
+    <button type="button" data-gp-nav="price" title="Arrastar apenas a escala de preço" aria-pressed="false">↕ Preço</button>
+    <button type="button" data-gp-nav="time" title="Arrastar apenas as datas" aria-pressed="false">↔ Tempo</button>
+    <button type="button" data-gp-nav="zin" title="Ampliar o período visível" aria-label="Mais zoom">＋</button>
+    <button type="button" data-gp-nav="zout" title="Afastar o gráfico" aria-label="Menos zoom">－</button>
+    <button type="button" data-gp-nav="reset" title="Restaurar preço e tempo" aria-label="Restaurar gráfico">⟲</button>
+  </div>
   <div class="gp-plot" data-gp-plot></div>
   <footer class="gp-foot" data-gp-foot></footer>
-  </section>`}function Et(t){t.querySelectorAll("[data-gp-per]").forEach(a=>a.classList.toggle("on",a.dataset.gpPer===s.per)),t.querySelectorAll("[data-gp-mode]").forEach(a=>{const o=B(s.b)?"dual":s.mode;a.classList.toggle("on",a.dataset.gpMode===o),a.disabled=!s.b||B(s.b)&&a.dataset.gpMode!=="dual"}),t.querySelectorAll("[data-gp-ma]").forEach(a=>a.classList.toggle("on",s.ma.includes(+a.dataset.gpMa))),t.querySelector('[data-gp="ev"]')?.classList.toggle("on",s.ev),t.querySelector('[data-gp="table"]')?.classList.toggle("on",s.table);const e=t.querySelector("[data-gp-freq]");e&&(e.value=s.freq,e.disabled=V()!=="1d");const n=t.querySelector("[data-gp-a]");n&&n.value!==s.a&&(n.innerHTML=at(s.a));const r=t.querySelector("[data-gp-b]");r&&r.value!==(s.b||"")&&(r.innerHTML=at(s.b,!0))}function P(){const t=g.getElementById("v421-gp");if(!t)return;Et(t),t.querySelector("[data-gp-head]").innerHTML=Nt(s.a);const e=t.querySelector("[data-gp-plot]");if(s.table)e.innerHTML=Ht(),et=null;else{const i=Yt();e.innerHTML=i.html}const n=V(),r=T(s.a,n).length,a=s.b?T(s.b,n).length:0,o=[xt(s.a,n),s.b?xt(s.b,n):""].filter(Boolean);t.querySelector("[data-gp-foot]").innerHTML=`<span>${u(H(s.a))}${s.b?" × "+u(H(s.b)):""} · ${n==="1d"?"diário":n} · ${r}${s.b?"/"+a:""} pontos · Yahoo Finance (com atraso)${B(s.b)?" · indicador: Banco Central (SGS), vale até a próxima divulgação":""}</span>${o.length?`<span class="gp-note">${u([...new Set(o)].join(" · "))}</span>`:""}${s.b&&B(s.b)&&G.get(s.b)?`<span class="gp-err">${u(G.get(s.b))}</span>`:""}${V()==="1d"&&["Máx","2A"].includes(s.per)?'<span class="gp-note">A fonte gratuita entrega até 2 anos de histórico diário.</span>':""}`}async function w(t){const e=V(),n=[K(s.a,e,t)];s.b&&n.push(K(s.b,e,t)),n.push(K(s.a,"1d",t)),e!=="5m"&&n.push(K(s.a,"5m",t)),P(),await Promise.allSettled(n),P()}function Dt(){const t=q(()=>x.V428_gpHost&&x.V428_gpHost(),null);let e=null,n=null;if(t&&t.ref)e=t.ref;else if(q(()=>tab,"")!=="term"||(n=g.getElementById("tf413"),!n)||(e=n.querySelector(".tf413-main"),!e))return;const r=g.getElementById("v421-gp");if(r){r.nextElementSibling!==e&&e.parentNode&&e.before(r);return}const a=g.createElement("div");a.innerHTML=jt(),e.before(a.firstElementChild),n&&n.classList.add("v421-has-gp");try{x.V428_gpMounted&&x.V428_gpMounted()}catch{}w(!1)}x.DIARIO_V421={get:()=>JSON.parse(JSON.stringify(s)),set:t=>{Object.assign(s,t||{}),O();try{Et()}catch{}w(!1)},syms:_,econ:M,presets:rt},g.addEventListener("click",t=>{const e=t.target.closest("#v421-gp");if(!e)return;const n=t.target.closest("[data-gp],[data-gp-per],[data-gp-mode],[data-gp-ma],[data-gp-preset],[data-gp-rel]");if(!n)return;if(t.preventDefault(),n.dataset.gpRel){s.b=n.dataset.gpRel,s.mode==="single"&&(s.mode="dual"),O();const a=e.querySelector("[data-gp-relmenu]");a.hidden=!0,e.querySelector('[data-gp="rel"]').setAttribute("aria-expanded","false"),w(!1);return}if(n.dataset.gpPer){s.per=n.dataset.gpPer,O(),w(!1);return}if(n.dataset.gpMode){s.mode=n.dataset.gpMode,O(),P();return}if(n.dataset.gpMa){const a=+n.dataset.gpMa;s.ma=s.ma.includes(a)?s.ma.filter(o=>o!==a):[...s.ma,a],O(),P();return}if(n.dataset.gpPreset!=null){const a=rt[+n.dataset.gpPreset];s.a=a[0],s.b=a[1],s.mode==="single"&&(s.mode="dual"),O(),e.querySelector("[data-gp-menu]").hidden=!0,e.querySelector('[data-gp="presets"]').setAttribute("aria-expanded","false"),w(!1);return}const r=n.dataset.gp;if(r==="presets"){const a=e.querySelector("[data-gp-menu]");if(a.hidden=!a.hidden,n.setAttribute("aria-expanded",String(!a.hidden)),!a.hidden){const o=n.getBoundingClientRect(),i=Math.min(260,innerWidth-16);a.style.width=i+"px",a.style.left=Math.max(8,Math.min(o.left,innerWidth-i-8))+"px";const c=o.bottom+4,$=a.offsetHeight;a.style.top=(c+$>innerHeight-8?Math.max(8,o.top-$-4):c)+"px"}return}if(r==="rel"){const a=e.querySelector("[data-gp-relmenu]");if(a.innerHTML=`<p class="gp-menuhead">Comparar ${u(s.a)} com</p>`+qt(s.a).map(o=>`<button type="button" data-gp-rel="${u(o)}">${u(B(o)?M[o][1]:o+" · "+H(o))}</button>`).join(""),a.hidden=!a.hidden,n.setAttribute("aria-expanded",String(!a.hidden)),!a.hidden){const o=n.getBoundingClientRect(),i=Math.min(280,innerWidth-16);a.style.width=i+"px",a.style.left=Math.max(8,Math.min(o.left,innerWidth-i-8))+"px";const c=a.offsetHeight;a.style.top=(o.bottom+4+c>innerHeight-8?Math.max(8,o.top-c-4):o.bottom+4)+"px"}return}if(r==="ev"){s.ev=!s.ev,O(),P();return}if(r==="table"){s.table=!s.table,O(),P();return}if(r==="reload"){w(!0);return}if(r==="help"){const a=g.querySelector('#tf413 .tf413-main [data-tf413-cmd="HELP"]');if(a)a.click();else{const o=g.getElementById("trcmd");o&&(o.value="HELP",o.closest(".trcmdw")?.querySelector('[data-tr="go"]')?.click())}return}if(r==="full"){e.classList.toggle("gp-full"),g.body.classList.toggle("gp-noscroll",e.classList.contains("gp-full")),P();return}if(r==="free"){const a=e.querySelector("[data-gp-free]"),o=String(a.value||"").trim().toUpperCase().replace(/[^A-Z0-9=.^:!-]/g,"").slice(0,16);o&&(s.b=o,O(),a.value="",w(!1));return}}),g.addEventListener("change",t=>{t.target.closest("#v421-gp")&&(t.target.matches("[data-gp-a]")&&(s.a=t.target.value,O(),w(!1)),t.target.matches("[data-gp-b]")&&(s.b=t.target.value||"",O(),w(!1)),t.target.matches("[data-gp-freq]")&&(s.freq=t.target.value,O(),P()))}),addEventListener("scroll",()=>{const t=g.querySelector("#v421-gp [data-gp-relmenu]");t&&!t.hidden&&(t.hidden=!0);const e=g.querySelector("#v421-gp [data-gp-menu]");e&&!e.hidden&&(e.hidden=!0,g.querySelector('#v421-gp [data-gp="presets"]')?.setAttribute("aria-expanded","false"))},{passive:!0}),g.addEventListener("keydown",t=>{if(t.key==="Escape"){const e=g.querySelector("#v421-gp.gp-full");e&&(e.classList.remove("gp-full"),g.body.classList.remove("gp-noscroll"),P())}t.key==="Enter"&&t.target.matches?.("#v421-gp [data-gp-free]")&&(t.preventDefault(),t.target.parentElement.querySelector('[data-gp="free"]').click())}),g.addEventListener("click",t=>{if(!t.target.closest(".gp-menuwrap")){const e=g.querySelector("#v421-gp [data-gp-relmenu]");e&&!e.hidden&&(e.hidden=!0,g.querySelector('#v421-gp [data-gp="rel"]')?.setAttribute("aria-expanded","false"));const n=g.querySelector("#v421-gp [data-gp-menu]");n&&!n.hidden&&(n.hidden=!0,g.querySelector('#v421-gp [data-gp="presets"]')?.setAttribute("aria-expanded","false"))}});function It(t){const e=t.target.closest?.("#v421-gp .gp-svg");if(!e||!et)return;const n=t.touches?t.touches[0]:t,r=e.getBoundingClientRect(),a=et,o=(n.clientX-r.left)/r.width*a.W;let i=Math.round((o-a.L)/(a.W-a.L-a.R)*(a.xs.length-1));i=Math.max(0,Math.min(a.xs.length-1,i));const c=a.X(i),$=e.querySelector(".gp-cross");$.hidden=!1,$.querySelector(".gp-cv").setAttribute("d",`M${c.toFixed(1)} ${a.T}V${a.T+a.chh}`);const E=new Date(a.xs[i]*1e3).toLocaleString("pt-BR",V()==="1d"?{day:"2-digit",month:"2-digit",year:"numeric"}:{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}),v=a.A[i][4],R=a.B?.[i]?.[1]?.[4],y=`${E} · ${s.a} ${A(v)}${R!=null?" · "+s.b+" "+A(R):""}`,D=$.querySelector(".gp-ct");D.textContent=y;const h=Math.min(a.W-20,y.length*6.6+16);let b=c+10;b+h>a.W-a.R&&(b=c-10-h),D.setAttribute("x",(b+8).toFixed(1)),D.setAttribute("y",(a.T+a.chh-12).toFixed(1));const f=$.querySelector(".gp-cbox");f.setAttribute("x",b.toFixed(1)),f.setAttribute("y",(a.T+a.chh-28).toFixed(1)),f.setAttribute("width",h.toFixed(1)),f.setAttribute("height","22")}g.addEventListener("pointermove",It,{passive:!0}),g.addEventListener("touchmove",t=>{t.target.closest?.("#v421-gp .gp-svg")&&It(t)},{passive:!0}),g.addEventListener("pointerleave",t=>{const e=g.querySelector("#v421-gp .gp-cross");e&&t.target===g.documentElement&&(e.hidden=!0)},!0);function At(){if(typeof x.render0!="function"||x.render0.__v421)return!1;const t=x.render0,e=function(){const n=t.apply(this,arguments);try{Dt()}catch(r){console.warn("v421",r)}return n};return e.__v421=1,x.render0=e,!0}At(),setInterval(()=>{g.hidden||(q(()=>tab,"")==="term"||q(()=>x.V428_gpHost&&x.V428_gpHost(),null))&&(x.render0?.__v421||At(),Dt())},1200),setInterval(()=>{!g.hidden&&q(()=>tab,"")==="term"&&g.getElementById("v421-gp")&&w(!1)},6e4),x.DIARIO_GP421={paint:P,load:w,state:()=>s}})(window);
+  </section>`;
+}
+function syncControls(el){
+  el.querySelectorAll('[data-gp-nav="hand"],[data-gp-nav="price"],[data-gp-nav="time"]').forEach(b=>
+    b.setAttribute('aria-pressed',String((st.navMode||'hand')===b.dataset.gpNav)));
+  el.querySelectorAll('[data-gp-per]').forEach(b=>b.classList.toggle('on',b.dataset.gpPer===st.per));
+  el.querySelectorAll('[data-gp-mode]').forEach(b=>{const m=isEcon(st.b)?'dual':st.mode;b.classList.toggle('on',b.dataset.gpMode===m);b.disabled=!st.b||(isEcon(st.b)&&b.dataset.gpMode!=='dual')});
+  el.querySelectorAll('[data-gp-ma]').forEach(b=>b.classList.toggle('on',st.ma.includes(+b.dataset.gpMa)));
+  el.querySelector('[data-gp="ev"]')?.classList.toggle('on',st.ev);
+  el.querySelector('[data-gp="table"]')?.classList.toggle('on',st.table);
+  const f=el.querySelector('[data-gp-freq]');if(f){f.value=st.freq;f.disabled=ivOf()!=='1d'}
+  const a=el.querySelector('[data-gp-a]');if(a&&a.value!==st.a)a.innerHTML=opt(st.a);
+  const b=el.querySelector('[data-gp-b]');if(b&&b.value!==(st.b||''))b.innerHTML=opt(st.b,true);
+}
+function paint(){
+  const el=doc.getElementById('v421-gp');if(!el)return;
+  syncControls(el);
+  el.querySelector('[data-gp-head]').innerHTML=header(st.a);
+  const plot=el.querySelector('[data-gp-plot]');
+  if(st.table){plot.innerHTML=table();lastGeom=null}else{const r=svg();plot.innerHTML=r.html}
+  const iv=ivOf(),na=bars(st.a,iv).length,nb=st.b?bars(st.b,iv).length:0;
+  const notes=[meta(st.a,iv),st.b?meta(st.b,iv):''].filter(Boolean);
+  el.querySelector('[data-gp-foot]').innerHTML=`<span>${esc(name(st.a))}${st.b?' × '+esc(name(st.b)):''} · ${iv==='1d'?'diário':iv} · ${na}${st.b?'/'+nb:''} pontos · Yahoo Finance (com atraso)${isEcon(st.b)?' · indicador: Banco Central (SGS), vale até a próxima divulgação':''}</span>${notes.length?`<span class="gp-note">${esc([...new Set(notes)].join(' · '))}</span>`:''}${st.b&&isEcon(st.b)&&econErr.get(st.b)?`<span class="gp-err">${esc(econErr.get(st.b))}</span>`:''}${ivOf()==='1d'&&['Máx','2A'].includes(st.per)?'<span class="gp-note">A fonte gratuita entrega até 2 anos de histórico diário.</span>':''}`;
+}
+async function load(force){
+  const iv=ivOf();const jobs=[fetchSym(st.a,iv,force)];if(st.b)jobs.push(fetchSym(st.b,iv,force));
+  // cabeçalho usa diário + 5 min
+  jobs.push(fetchSym(st.a,'1d',force));if(iv!=='5m')jobs.push(fetchSym(st.a,'5m',force));
+  paint();await Promise.allSettled(jobs);paint();
+}
+function mount(){
+  // v428: outra camada pode indicar onde o gráfico fica (ex.: Mercado → Cotações); sem isso, Terminal como antes
+  const host=g(()=>root.V428_gpHost&&root.V428_gpHost(),null);
+  let ref=null,dash=null;
+  if(host&&host.ref){ref=host.ref}
+  else{
+    if(g(()=>tab,'')!=='term')return;
+    dash=doc.getElementById('tf413');if(!dash)return;
+    ref=dash.querySelector('.tf413-main');if(!ref)return;
+  }
+  const ex=doc.getElementById('v421-gp');
+  if(ex){if(ex.nextElementSibling!==ref&&ref.parentNode)ref.before(ex);return}
+  const wrap=doc.createElement('div');wrap.innerHTML=shell();
+  ref.before(wrap.firstElementChild);
+  if(dash)dash.classList.add('v421-has-gp');
+  try{root.V428_gpMounted&&root.V428_gpMounted()}catch(e){}
+  load(false);
+}
+// v428: leitura e troca do que o gráfico mostra (cada sub-aba guarda o seu)
+root.DIARIO_V421={get:()=>JSON.parse(JSON.stringify(st)),set:o=>{Object.assign(st,o||{});save();try{syncControls()}catch(e){};load(false)},syms:SYMS,econ:ECON,presets:PRESETS};
+
+/* ---------- interação ---------- */
+doc.addEventListener('click',e=>{
+  const el=e.target.closest('#v421-gp');if(!el)return;
+  const t=e.target.closest('[data-gp],[data-gp-per],[data-gp-mode],[data-gp-ma],[data-gp-preset],[data-gp-rel],[data-gp-nav]');if(!t)return;
+  e.preventDefault();
+  if(t.dataset.gpNav){
+    const mode=t.dataset.gpNav;
+    if(['hand','price','time'].includes(mode)){st.navMode=mode;save();syncControls(el);return}
+    if(mode==='zin')navZoom(.75,.5);
+    if(mode==='zout')navZoom(1.33,.5);
+    if(mode==='reset')navReset();
+    paint();return;
+  }
+  if(t.dataset.gpRel){st.b=t.dataset.gpRel;if(st.mode==='single')st.mode='dual';save();const m=el.querySelector('[data-gp-relmenu]');m.hidden=true;el.querySelector('[data-gp="rel"]').setAttribute('aria-expanded','false');load(false);return}
+  if(t.dataset.gpPer){st.per=t.dataset.gpPer;save();load(false);return}
+  if(t.dataset.gpMode){st.mode=t.dataset.gpMode;save();paint();return}
+  if(t.dataset.gpMa){const n=+t.dataset.gpMa;st.ma=st.ma.includes(n)?st.ma.filter(x=>x!==n):[...st.ma,n];save();paint();return}
+  if(t.dataset.gpPreset!=null){const p=PRESETS[+t.dataset.gpPreset];st.a=p[0];st.b=p[1];if(st.mode==='single')st.mode='dual';save();el.querySelector('[data-gp-menu]').hidden=true;el.querySelector('[data-gp="presets"]').setAttribute('aria-expanded','false');load(false);return}
+  const a=t.dataset.gp;
+  if(a==='presets'){const m=el.querySelector('[data-gp-menu]');m.hidden=!m.hidden;t.setAttribute('aria-expanded',String(!m.hidden));if(!m.hidden){const r=t.getBoundingClientRect();const w=Math.min(260,innerWidth-16);m.style.width=w+'px';m.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';const below=r.bottom+4;const h=m.offsetHeight;m.style.top=(below+h>innerHeight-8?Math.max(8,r.top-h-4):below)+'px'}return}
+  if(a==='rel'){const m=el.querySelector('[data-gp-relmenu]');m.innerHTML=`<p class="gp-menuhead">Comparar ${esc(st.a)} com</p>`+related(st.a).map(x=>`<button type="button" data-gp-rel="${esc(x)}">${esc(isEcon(x)?ECON[x][1]:x+' · '+name(x))}</button>`).join('');m.hidden=!m.hidden;t.setAttribute('aria-expanded',String(!m.hidden));if(!m.hidden){const r=t.getBoundingClientRect();const w=Math.min(280,innerWidth-16);m.style.width=w+'px';m.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';const h=m.offsetHeight;m.style.top=(r.bottom+4+h>innerHeight-8?Math.max(8,r.top-h-4):r.bottom+4)+'px'}return}
+  if(a==='ev'){st.ev=!st.ev;save();paint();return}
+  if(a==='table'){st.table=!st.table;save();paint();return}
+  if(a==='reload'){load(true);return}
+  if(a==='help'){const h=doc.querySelector('#tf413 .tf413-main [data-tf413-cmd="HELP"]');if(h)h.click();else{const i=doc.getElementById('trcmd');if(i){i.value='HELP';i.closest('.trcmdw')?.querySelector('[data-tr="go"]')?.click()}}return}
+  if(a==='full'){el.classList.toggle('gp-full');doc.body.classList.toggle('gp-noscroll',el.classList.contains('gp-full'));paint();return}
+  if(a==='free'){const i=el.querySelector('[data-gp-free]');const v=String(i.value||'').trim().toUpperCase().replace(/[^A-Z0-9=.^:!-]/g,'').slice(0,16);if(v){st.b=v;save();i.value='';load(false)}return}
+});
+doc.addEventListener('change',e=>{
+  const el=e.target.closest('#v421-gp');if(!el)return;
+  if(e.target.matches('[data-gp-a]')){st.a=e.target.value;save();load(false)}
+  if(e.target.matches('[data-gp-b]')){st.b=e.target.value||'';save();load(false)}
+  if(e.target.matches('[data-gp-freq]')){st.freq=e.target.value;save();paint()}
+});
+addEventListener('scroll',()=>{const rm=doc.querySelector('#v421-gp [data-gp-relmenu]');if(rm&&!rm.hidden)rm.hidden=true;const m=doc.querySelector('#v421-gp [data-gp-menu]');if(m&&!m.hidden){m.hidden=true;doc.querySelector('#v421-gp [data-gp="presets"]')?.setAttribute('aria-expanded','false')}},{passive:true});
+doc.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){const el=doc.querySelector('#v421-gp.gp-full');if(el){el.classList.remove('gp-full');doc.body.classList.remove('gp-noscroll');paint()}}
+  if(e.key==='Enter'&&e.target.matches?.('#v421-gp [data-gp-free]')){e.preventDefault();e.target.parentElement.querySelector('[data-gp="free"]').click()}
+});
+doc.addEventListener('click',e=>{if(!e.target.closest('.gp-menuwrap')){const r=doc.querySelector('#v421-gp [data-gp-relmenu]');if(r&&!r.hidden){r.hidden=true;doc.querySelector('#v421-gp [data-gp="rel"]')?.setAttribute('aria-expanded','false')}const m=doc.querySelector('#v421-gp [data-gp-menu]');if(m&&!m.hidden){m.hidden=true;doc.querySelector('#v421-gp [data-gp="presets"]')?.setAttribute('aria-expanded','false')}}});
+
+/* v526 — Mouse e toque no GP principal. Prévia acompanha a mão;
+   apenas ao soltar são recalculados os pontos e os dois eixos. */
+let gpDrag=null;
+const pointOf=e=>({x:e.clientX,y:e.clientY});
+const gapOf=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function gpPointerDown(e){
+  const svgEl=e.target.closest?.('#v421-gp .gp-svg');
+  if(!svgEl||e.button>0||st.table)return;
+  const rect=svgEl.getBoundingClientRect();
+  if(rect.width<20||rect.height<20)return;
+  if(!gpDrag||gpDrag.svg!==svgEl)
+    gpDrag={svg:svgEl,rect,points:new Map(),starts:new Map(),pinch:false,startPinch:null,finalPinch:null};
+  gpDrag.points.set(e.pointerId,pointOf(e));
+  gpDrag.starts.set(e.pointerId,pointOf(e));
+  if(gpDrag.points.size===2){
+    gpDrag.pinch=true;
+    gpDrag.startPinch=[...gpDrag.points.values()].map(p=>({...p}));
+    gpDrag.finalPinch=gpDrag.startPinch;
+    gpDrag.svg.querySelector('.gp-view-series')?.removeAttribute('transform');
+  }
+  try{svgEl.setPointerCapture?.(e.pointerId)}catch(_){}
+  if(e.cancelable)e.preventDefault();
+  e.stopPropagation();
+}
+function gpPointerMove(e){
+  const d=gpDrag;
+  if(!d||!d.points.has(e.pointerId))return;
+  d.points.set(e.pointerId,pointOf(e));
+  if(e.cancelable)e.preventDefault();
+  e.stopImmediatePropagation();
+  if(d.pinch){
+    if(d.points.size===2)d.finalPinch=[...d.points.values()].map(p=>({...p}));
+    return;
+  }
+  const p=[...d.points.values()][0],start=[...d.starts.values()][0];
+  const dx=p.x-start.x,dy=p.y-start.y;
+  const mode=st.navMode||'hand';
+  const x=mode==='price'?0:clip(dx/d.rect.width*720,-720,720);
+  const y=mode==='time'?0:clip(dy/d.rect.height*360,-360,360);
+  const series=d.svg.querySelector('.gp-view-series');
+  if(series)series.setAttribute('transform','translate('+x.toFixed(2)+','+y.toFixed(2)+')');
+}
+function gpPointerFinish(e,cancelled){
+  const d=gpDrag;
+  if(!d||!d.points.has(e.pointerId))return;
+  d.points.set(e.pointerId,pointOf(e));
+  if(e.cancelable)e.preventDefault();
+  e.stopImmediatePropagation();
+  if(d.pinch&&d.points.size===2)d.finalPinch=[...d.points.values()].map(p=>({...p}));
+  d.points.delete(e.pointerId);
+  if(d.points.size)return;
+  gpDrag=null;
+  d.svg.querySelector('.gp-view-series')?.removeAttribute('transform');
+  if(cancelled)return;
+  if(d.pinch&&d.startPinch&&d.finalPinch){
+    const initial=gapOf(...d.startPinch),final=gapOf(...d.finalPinch);
+    if(initial>18&&final>18&&Math.abs(initial-final)>7){
+      const anchor=clip(((d.startPinch[0].x+d.startPinch[1].x)/2-d.rect.left)/d.rect.width,0,1);
+      navZoom(clip(initial/final,.4,2.5),anchor);
+      paint();
+    }
+    return;
+  }
+  const start=[...d.starts.values()][0],dx=e.clientX-start.x,dy=e.clientY-start.y;
+  if(Math.hypot(dx,dy)<6)return;
+  navPan(dx,dy,d.rect.width,d.rect.height,st.navMode||'hand');
+  paint();
+}
+doc.addEventListener('pointerdown',gpPointerDown,true);
+doc.addEventListener('pointermove',gpPointerMove,{capture:true,passive:false});
+doc.addEventListener('pointerup',e=>gpPointerFinish(e,false),true);
+doc.addEventListener('pointercancel',e=>gpPointerFinish(e,true),true);
+root.addEventListener('blur',()=>{
+  gpDrag?.svg?.querySelector('.gp-view-series')?.removeAttribute('transform');
+  gpDrag=null;
+});
+doc.addEventListener('wheel',e=>{
+  const svgEl=e.target.closest?.('#v421-gp .gp-svg');
+  if(!(e.ctrlKey||e.metaKey)||!svgEl)return;
+  const rect=svgEl.getBoundingClientRect();
+  if(e.cancelable)e.preventDefault();
+  e.stopImmediatePropagation();
+  navZoom(e.deltaY<0?.85:1.18,clip((e.clientX-rect.left)/Math.max(20,rect.width),0,1));
+  paint();
+},{capture:true,passive:false});
+
+// acompanhamento (Track) por toque ou mouse
+function track(ev){
+  const svgEl=ev.target.closest?.('#v421-gp .gp-svg');if(!svgEl||!lastGeom)return;
+  const pt=(ev.touches?ev.touches[0]:ev);const r=svgEl.getBoundingClientRect();
+  const G=lastGeom;const vx=(pt.clientX-r.left)/r.width*G.W;
+  let i=Math.round((vx-G.L)/(G.W-G.L-G.R)*(G.xs.length-1));i=Math.max(0,Math.min(G.xs.length-1,i));
+  const x=G.X(i);const c=svgEl.querySelector('.gp-cross');c.hidden=false;
+  c.querySelector('.gp-cv').setAttribute('d',`M${x.toFixed(1)} ${G.T}V${G.T+G.chh}`);
+  const d=new Date(G.xs[i]*1000).toLocaleString('pt-BR',ivOf()==='1d'?{day:'2-digit',month:'2-digit',year:'numeric'}:{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const va=G.A[i][4],vb=G.B?.[i]?.[1]?.[4];
+  const txt=`${d} · ${st.a} ${nf(va)}${vb!=null?' · '+st.b+' '+nf(vb):''}`;
+  const tEl=c.querySelector('.gp-ct');tEl.textContent=txt;
+  const w=Math.min(G.W-20,txt.length*6.6+16);let bx=x+10;if(bx+w>G.W-G.R)bx=x-10-w;
+  tEl.setAttribute('x',(bx+8).toFixed(1));tEl.setAttribute('y',(G.T+G.chh-12).toFixed(1));
+  const box=c.querySelector('.gp-cbox');box.setAttribute('x',bx.toFixed(1));box.setAttribute('y',(G.T+G.chh-28).toFixed(1));box.setAttribute('width',w.toFixed(1));box.setAttribute('height','22');
+}
+doc.addEventListener('pointermove',track,{passive:true});
+doc.addEventListener('touchmove',e=>{if(e.target.closest?.('#v421-gp .gp-svg'))track(e)},{passive:true});
+doc.addEventListener('pointerleave',e=>{const c=doc.querySelector('#v421-gp .gp-cross');if(c&&e.target===doc.documentElement)c.hidden=true},true);
+
+/* ---------- montagem ---------- */
+function hook(){
+  if(typeof root.render0!=='function'||root.render0.__v421)return false;
+  const prev=root.render0;const f=function(){const o=prev.apply(this,arguments);try{mount()}catch(e){console.warn('v421',e)}return o};f.__v421=1;root.render0=f;return true;
+}
+hook();
+// o painel do Terminal é montado de forma assíncrona; confere só enquanto a aba Terminal estiver aberta
+setInterval(()=>{if(doc.hidden)return;if(g(()=>tab,'')==='term'||g(()=>root.V428_gpHost&&root.V428_gpHost(),null)){if(!root.render0?.__v421)hook();mount()}},1200);
+// atualiza o preço do cabeçalho e o gráfico sem redesenhar a página
+setInterval(()=>{if(!doc.hidden&&g(()=>tab,'')==='term'&&doc.getElementById('v421-gp'))load(false)},60000);
+root.DIARIO_GP421={paint,load,state:()=>st,view:()=>({...gpView}),reset:navReset};
+})(window);
 
 }catch(e){console.error("[v522] falha em terminal-gp-v421.js",e)}
 try{(function(l){"use strict";const i=l.document;if(!i)return;const p=(t,a)=>{try{const e=t();return e===void 0?a:e}catch{return a}},m=t=>String(t??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[a]),s=t=>Number.isFinite(+t)?new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0}).format(+t):"—",c=t=>+String(t||"").replace(/\./g,"").replace(",",".")||0;function u(){if(typeof l.onbHtml!="function"||l.onbHtml.__v423)return;const t=l.onbHtml,a=function(){let e=t.apply(this,arguments);return e=e.replace('data-onb="cap" placeholder="10000"','data-onb="cap" placeholder="ex.: 10.000"').replace('data-onb="pd" placeholder="200"','data-onb="pd" placeholder="automático"').replace(/(<label>Máximo de trades no dia<input[^>]*><\/label><\/div>)/,'$1<p class="v423-onbhint" id="v423-onbhint" aria-live="polite"></p>'),e};a.__v423=1,l.onbHtml=a}function I(){const t=i.getElementById("onb");if(!t)return;const a=t.querySelector('input[data-onb="cap"]'),e=t.querySelector('input[data-onb="pd"]'),o=t.querySelector('input[data-onb="nt"]');if(a&&a.placeholder==="10000"&&(a.placeholder="ex.: 10.000"),e&&e.placeholder==="200"&&(e.placeholder="automático"),o&&!i.getElementById("v423-onbhint")){const n=i.createElement("p");n.className="v423-onbhint",n.id="v423-onbhint",n.setAttribute("aria-live","polite"),(o.closest(".g2")||o.parentElement).after(n)}}function f(){I();const t=i.getElementById("onb"),a=i.getElementById("v423-onbhint");if(!t||!a)return;const e=L=>t.querySelector(`input[data-onb="${L}"]`)?.value,o=c(e("cap"))||1e4,n=Math.min(c(e("pct"))||1,10),r=Math.round(c(e("nt"))||3),A=c(e("pd")),E=o*n/100*r;a.innerHTML=A>0?`O dia trava ao perder <b>${s(A)}</b>. Risco por trade: <b>${s(o*n/100)}</b>.`:`Sem perda máxima preenchida, o app usa <b>${s(E)}</b> por dia (${s(o*n/100)} de risco × ${r} trades)${c(e("cap"))?"":", com capital de exemplo de R$ 10.000"}.`}i.addEventListener("input",t=>{t.target.closest?.("#onb [data-onb]")&&f()});function b(){const t=[],a=p(()=>loc().slice(0,10),new Date().toISOString().slice(0,10));try{const e=pHoje(),o=pCore(e.hj,e.P);o.mot.length?t.push({k:"r",ic:"⛔",t:"Pare por hoje",d:o.mot.join(" · "),go:"dia"}):o.perda>=o.lim*.8&&t.push({k:"a",ic:"⚠️",t:"Perto do limite de perda",d:`Perda ${s(o.perda)} de ${s(o.lim)}`,go:"dia"})}catch{}try{if(turnoNv(a)!=="g"){const e=turnoTxt(a);e&&t.push({k:"a",ic:"🏭",t:"Escala de turno hoje",d:e,go:"home"})}}catch{}try{const e=S.rules||[],o=(S.days[a]||{}).chk||{},n=e.filter(r=>o[r.id]).length;e.length&&n<e.length&&t.push({k:"i",ic:"☑️",t:"Checklist do dia",d:`${n} de ${e.length} regras marcadas`,go:"dia"})}catch{}try{const e=S.ax?.alpx||[],o=e.filter(r=>r.fired&&String(new Date(r.fired).toISOString()).slice(0,10)===a),n=e.filter(r=>!r.fired);o.forEach(r=>t.push({k:"g",ic:"🔔",t:`Alerta disparou: ${r.c}`,d:`${r.op===">"?"acima de":"abaixo de"} ${r.v}`,mkt:"cq"})),n.length&&t.push({k:"i",ic:"🔔",t:"Alertas de preço ativos",d:`${n.length} esperando`,mkt:"cq"})}catch{}try{const e=Date.now();(AG.v[0]?.eventos||[]).filter(n=>n.imp===1&&Date.parse(n.em)>e-30*6e4&&String(n.em).slice(0,10)===a).sort((n,r)=>Date.parse(n.em)-Date.parse(r.em)).slice(0,4).forEach(n=>t.push({k:"i",ic:"📅",t:new Date(n.em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"})+" · "+(n.t||"Evento"),d:(n.p?n.p+" · ":"")+"alto impacto",mkt:"ag"}))}catch{}try{const e=+new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Sao_Paulo",hour:"2-digit",hour12:!1}).format(new Date),o=S.days[a]||{},n=(S.trades||[]).some(r=>String(r.dt||"").slice(0,10)===a);e>=18&&n&&!o.resumo&&t.push({k:"i",ic:"📝",t:"Debriefing pendente",d:"Você operou hoje e ainda não fechou o dia",deb:1})}catch{}return t}function h(){const t=b();let a=i.getElementById("v423-bell");a||(a=i.createElement("div"),a.id="v423-bell",a.className="v423-bell",a.setAttribute("role","dialog"),a.setAttribute("aria-modal","true"),a.setAttribute("aria-label","Avisos"),i.body.appendChild(a)),a.innerHTML=`<button type="button" class="v423-bell-bg" data-v423-close aria-label="Fechar avisos"></button><section class="v423-bell-panel"><header><h2>Avisos de hoje</h2><button type="button" data-v423-close aria-label="Fechar">✕</button></header>
