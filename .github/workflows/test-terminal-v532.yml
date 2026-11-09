@@ -7,6 +7,10 @@ on:
       - 'camadas-v522.js'
       - 'terminal-gestos-seguros.css'
       - 'terminal-gestos-seguros.js'
+      - 'terminal-fonte-v533.js'
+      - 'test-terminal-fonte.cjs'
+      - 'terminal-fonte-v533.js'
+      - 'test-terminal-fonte.cjs'
       - 'test-gp-real.cjs'
       - 'test-terminal-gestos.cjs'
       - 'index.html'
@@ -19,6 +23,8 @@ on:
       - 'camadas-v522.js'
       - 'terminal-gestos-seguros.css'
       - 'terminal-gestos-seguros.js'
+      - 'terminal-fonte-v533.js'
+      - 'test-terminal-fonte.cjs'
       - 'test-gp-real.cjs'
       - 'test-terminal-gestos.cjs'
       - 'index.html'
@@ -41,4 +47,6 @@ jobs:
       - run: node --check camadas-v522.js
       - run: node --check test-gp-real.cjs
       - run: node test-gp-real.cjs
+      - run: node --check terminal-fonte-v533.js
+      - run: node test-terminal-fonte.cjs
       - run: node test-terminal-gestos.cjs
