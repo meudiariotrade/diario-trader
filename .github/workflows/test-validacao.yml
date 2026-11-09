@@ -1,0 +1,36 @@
+name: Validar Central do Terminal
+on:
+  push:
+    branches: [main, feature/validacao-swipe-historico-v524]
+    paths:
+      - 'validacao-terminal.js'
+      - 'index.html'
+      - 'sw.js'
+      - 'validacao-terminal.css'
+      - 'test-validacao-terminal.cjs'
+      - '.github/workflows/test-validacao.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'validacao-terminal.js'
+      - 'index.html'
+      - 'sw.js'
+      - 'validacao-terminal.css'
+      - 'test-validacao-terminal.cjs'
+      - '.github/workflows/test-validacao.yml'
+permissions:
+  contents: read
+jobs:
+  teste-dom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --check validacao-terminal.js
+      - run: node --check test-validacao-terminal.cjs
+      - run: node test-validacao-terminal.cjs

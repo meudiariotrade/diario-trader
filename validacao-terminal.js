@@ -3,7 +3,7 @@
  */
 (function (w, d) {
 'use strict';
-if (!d || !w.localStorage) return;
+if (!d) return;
 const KEY = 'dt-validacao-terminal-2026-v1';
 const E = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const now = () => new Date().toISOString();
@@ -13,7 +13,7 @@ const actualVersion = () => (d.querySelector('script[src*="camadas-v"]')?.getAtt
 const create = (id,cat,title,area,priority,steps,notes='') => ({
   id,cat,title,area,priority,status:'Pendente',steps,notes,expected:'',observed:'',version:actualVersion(),
   platform:/iPhone|iPad|iPod/i.test(navigator.userAgent)?'iPhone':'PC',testResult:'Inconclusivo',protectionFixed:false,asset:'',symbol:'',source:'',
-  errorAt:'',message:'',recovery:'',images:[],createdAt:now(),updatedAt:now()
+  errorAt:'',message:'',recovery:'',images:[],gestureOrigin:id==='n3'?'Mercado / Sazonalidade':'',gestureDestination:id==='n3'?'Configurações':'',incidents:[],createdAt:now(),updatedAt:now()
 });
 const defaults = () => ({
  version:actualVersion(),history:[],cases:[
@@ -32,7 +32,7 @@ const defaults = () => ({
  ]});
 let db;
 try{db=JSON.parse(w.localStorage.getItem(KEY)||'null');if(!db||!Array.isArray(db.cases)||!Array.isArray(db.history))db=defaults();}catch(_){db=defaults();}
-db.cases=db.cases.filter(x=>x&&typeof x.id==='string').slice(0,250);
+db.cases=db.cases.filter(x=>x&&typeof x.id==='string').slice(0,250).map(x=>({...x,gestureOrigin:x.gestureOrigin??(x.id==='n3'?'Mercado / Sazonalidade':''),gestureDestination:x.gestureDestination??(x.id==='n3'?'Configurações':''),incidents:Array.isArray(x.incidents)?x.incidents:[]}));
 // Incluir novos roteiros sem apagar resultados já registrados.
 for(const base of defaults().cases)if(!db.cases.some(c=>c.id===base.id)&&db.cases.length<250)db.cases.push(base);
 db.history=db.history.filter(x=>x&&typeof x.id==='string').slice(-600);
@@ -79,7 +79,7 @@ function cases(cat=''){
  const list=db.cases.filter(x=>(!cat||x.cat===cat)&&(!filterStatus||x.status===filterStatus)&&(!filterPriority||x.priority===filterPriority)&&(!search||[x.title,x.area,x.symbol,x.asset,x.message,x.notes].join(' ').toLowerCase().includes(search.toLowerCase())))
  .sort((a,b)=>prio(a)-prio(b)||b.updatedAt.localeCompare(a.updatedAt));
  if(!list.length)return '<div class="dtval-empty">Nenhum registro encontrado com os filtros atuais.</div>';
- return '<div class="dtval-list">'+list.map(x=>'<div class="dtval-case"><div class="dtval-rail '+(x.priority==='Alta'||x.priority==='Crítica'?'alta':x.priority==='Baixa'?'baixa':'')+'"></div><div class="dtval-casebody"><b>'+E(x.title)+'</b><p>'+E(x.area)+'</p><div class="dtval-tags">'+fmtStatus(x.status)+'<span class="dtval-tag">'+E(x.priority)+'</span><span class="dtval-tag">'+E(cats[x.cat]||x.cat)+'</span>'+(x.cat==='navegacao'&&x.protectionFixed?'<span class="dtval-tag ok">Proteção corrigida</span>':'')+'</div><small>Última alteração: '+niceTime(x.updatedAt)+'</small></div><button class="dv-btn" type="button" data-dva="edit" data-id="'+E(x.id)+'">Abrir</button></div>').join('')+'</div>';
+ return '<div class="dtval-list">'+list.map(x=>'<div class="dtval-case"><div class="dtval-rail '+(x.priority==='Alta'||x.priority==='Crítica'?'alta':x.priority==='Baixa'?'baixa':'')+'"></div><div class="dtval-casebody"><b>'+E(x.title)+'</b><p>'+E(x.area)+'</p><div class="dtval-tags">'+fmtStatus(x.status)+'<span class="dtval-tag">'+E(x.priority)+'</span><span class="dtval-tag">'+E(cats[x.cat]||x.cat)+'</span>'+(x.cat==='navegacao'&&(x.incidents||[]).length?'<span class="dtval-tag bad">'+x.incidents.length+' swipe(s) acidental(is)</span>':'')+(x.cat==='navegacao'&&x.protectionFixed?'<span class="dtval-tag ok">Proteção corrigida</span>':'')+'</div><small>Última alteração: '+niceTime(x.updatedAt)+'</small></div><button class="dv-btn" type="button" data-dva="edit" data-id="'+E(x.id)+'">Abrir</button></div>').join('')+'</div>';
 }
 function overview(){
  const count=s=>db.cases.filter(x=>x.status===s).length;
@@ -95,7 +95,7 @@ function categoryPage(cat){
 }
 function field(label,key,x,opts={}){
  const v=x[key]??'',wide=opts.wide?' wide':'';
- if(opts.kind==='select')return '<label class="'+wide+'">'+E(label)+'<select name="'+key+'">'+opts.list.map(s=>'<option value="'+E(s)+'" '+(v===s?'selected':'')+'>'+E(s)+'</option>').join('')+'</select></label>';
+ if(opts.kind==='select')return '<label class="'+wide+'">'+E(label)+'<select name="'+key+'">'+opts.list.map(s=>'<option value="'+E(s)+'" '+(v===s?'selected':'')+'>'+E(key==='cat'?(cats[s]||s):s)+'</option>').join('')+'</select></label>';
  if(opts.kind==='textarea')return '<label class="'+wide+'">'+E(label)+'<textarea name="'+key+'" rows="'+(opts.rows||3)+'">'+E(v)+'</textarea></label>';
  return '<label class="'+wide+'">'+E(label)+'<input name="'+key+'" type="'+(opts.kind||'text')+'" value="'+E(v)+'" maxlength="'+(opts.max||300)+'"></label>';
 }
@@ -114,6 +114,7 @@ function detail(id){
  field('Passos para reproduzir','steps',x,{kind:'textarea',wide:true,rows:4})+
  field('Comportamento esperado','expected',x,{kind:'textarea',wide:true,rows:2})+
  field('Comportamento observado','observed',x,{kind:'textarea',wide:true,rows:2})+
+ (x.cat==='navegacao'?'<div class="wide"><h3>Registro de navegação acidental</h3><p class="dtval-muted">Informe a origem e o destino. O dispositivo e a versão são registrados automaticamente.</p></div>'+field('Tela onde o arrasto começou','gestureOrigin',x)+field('Aba aberta por engano','gestureDestination',x):'')+
  field('Observações e hipótese de correção','notes',x,{kind:'textarea',wide:true,rows:3})+
  (x.cat==='dados'?'<div class="wide"><h3>Diagnóstico de dados e fonte</h3></div>'+
  field('Ativo afetado','asset',x)+field('Símbolo consultado','symbol',x)+field('Fonte consultada','source',x)+
@@ -121,8 +122,9 @@ function detail(id){
  field('Mensagem do erro','message',x,{kind:'textarea',wide:true})+
  field('Tentativa de recuperação','recovery',x,{kind:'textarea',wide:true}):'')+
  (x.cat==='navegacao'?'<label class="wide" style="display:flex;gap:9px;align-items:center;font-size:13px"><input type="checkbox" name="protectionFixed" '+(x.protectionFixed?'checked':'')+'> Proteção contra swipe acidental corrigida (confirmada por teste)</label>':'')+
- '</div><div class="dtval-actions"><button type="button" class="dv-btn dv-primary" data-dva="save">Salvar alterações</button><button type="button" class="dv-btn" data-dva="reproduce">Registrar reprodução</button><button type="button" class="dv-btn" data-dva="corrected">Marcar corrigido</button><button type="button" class="dv-btn" data-dva="validated">Marcar validado</button><button type="button" class="dv-btn" data-dva="resume">Testar no Terminal</button></div></form>'+
+ '</div><div class="dtval-actions"><button type="button" class="dv-btn dv-primary" data-dva="save">Salvar alterações</button><button type="button" class="dv-btn" data-dva="reproduce">Registrar reprodução</button>'+(x.cat==='navegacao'?'<button type="button" class="dv-btn dv-danger" data-dva="incident">Registrar swipe acidental</button>':'')+'<button type="button" class="dv-btn" data-dva="corrected">Marcar corrigido</button><button type="button" class="dv-btn" data-dva="validated">Marcar validado</button><button type="button" class="dv-btn" data-dva="resume">Testar no Terminal</button></div></form>'+
  '<div class="dtval-panel"><h3>Imagens de evidência ('+x.images.length+'/4)</h3><label class="dtval-upload">📎 Anexar imagem (até 4, comprimidas)<input id="dtval-image-file" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><div class="dtval-images">'+x.images.map((im,i)=>'<div class="dtval-image"><img loading="lazy" alt="Evidência '+(i+1)+'" src="'+E(im.data)+'"><button type="button" class="dv-btn" data-dva="delimage" data-i="'+i+'">Remover</button></div>').join('')+'</div><p class="dtval-muted">As imagens são guardadas neste aparelho. Evite capturas com senhas, saldos, ordens ou dados pessoais.</p></div>'+
+ (x.cat==='navegacao'?'<div class="dtval-panel"><h3>Ocorrências de troca acidental ('+(x.incidents||[]).length+')</h3>'+((x.incidents||[]).length?'<div class="dtval-history">'+x.incidents.slice(-30).reverse().map(i=>'<div class="dtval-event"><b>'+E(i.from)+' → '+E(i.to)+'</b><small>'+niceTime(i.at)+' · v'+E(i.version)+' · '+E(i.platform)+'</small></div>').join('')+'</div>':'<p class="dtval-muted">Nenhuma troca involuntária registrada.</p>')+'</div>':'')+
  '<div class="dtval-panel"><h3>Histórico deste problema</h3>'+ (logs.length?'<div class="dtval-history">'+logs.map(h=>'<div class="dtval-event"><b>'+E(h.action)+'</b> · '+E(h.detail||'')+'<small>'+niceTime(h.at)+' · v'+E(h.version)+' · '+E(h.platform)+'</small></div>').join('')+'</div>':'<p class="dtval-muted">Nenhuma alteração registrada ainda.</p>')+'</div>';
 }
 function timeline(){
@@ -130,9 +132,9 @@ function timeline(){
  const latest=db.history.slice(-60).reverse();
  const versionRows=versions.map(v=>{
   const ev=db.history.filter(h=>h.version===v);
-  return {v,events:ev.length,fails:ev.filter(x=>x.action==='Teste reproduzido'&&x.result==='Falhou').length,passes:ev.filter(x=>x.action==='Teste reproduzido'&&x.result==='Passou').length,validated:ev.filter(x=>x.action==='Validado').length};
+  return {v,events:ev.length,fails:ev.filter(x=>x.action==='Teste reproduzido'&&x.result==='Falhou').length,passes:ev.filter(x=>x.action==='Teste reproduzido'&&x.result==='Passou').length,validated:ev.filter(x=>x.action==='Validado').length,incidents:db.cases.reduce((sum,c)=>sum+(c.incidents||[]).filter(i=>i.version===v).length,0)};
  });
- return '<div class="dtval-panel"><h3>Comparação de versões</h3><p class="dtval-muted">A comparação usa os testes efetivamente registrados em cada versão, não presume que uma atualização corrigiu o problema.</p><div class="dtval-table-scroll"><table class="dtval-table"><thead><tr><th>Versão</th><th>Registros</th><th>Falhas</th><th>Passou</th><th>Validações</th></tr></thead><tbody>'+versionRows.map(x=>'<tr><td>v'+E(x.v)+'</td><td>'+x.events+'</td><td>'+x.fails+'</td><td>'+x.passes+'</td><td>'+x.validated+'</td></tr>').join('')+'</tbody></table></div></div>'+
+ return '<div class="dtval-panel"><h3>Comparação de versões</h3><p class="dtval-muted">A comparação usa os testes efetivamente registrados em cada versão, não presume que uma atualização corrigiu o problema.</p><div class="dtval-table-scroll"><table class="dtval-table"><thead><tr><th>Versão</th><th>Registros</th><th>Falhas</th><th>Passou</th><th>Validações</th><th>Swipes acidentais</th></tr></thead><tbody>'+versionRows.map(x=>'<tr><td>v'+E(x.v)+'</td><td>'+x.events+'</td><td>'+x.fails+'</td><td>'+x.passes+'</td><td>'+x.validated+'</td><td>'+x.incidents+'</td></tr>').join('')+'</tbody></table></div></div>'+
  '<div class="dtval-panel"><h3>Histórico de alterações</h3>'+(latest.length?'<div class="dtval-history">'+latest.map(h=>'<div class="dtval-event"><b>'+E(h.action)+'</b> — '+E(h.title)+'<small>'+niceTime(h.at)+' · v'+E(h.version)+' · '+E(h.platform)+' · '+E(h.detail)+'</small></div>').join('')+'</div>':'<div class="dtval-empty">O histórico aparece assim que um teste ou alteração for registrado.</div>')+'</div>'+
  '<div class="dtval-panel"><h3>Backup e transferência</h3><div class="dtval-actions"><button class="dv-btn" type="button" data-dva="export">Exportar JSON</button><label class="dtval-upload">Importar backup JSON<input id="dtval-import" type="file" accept=".json,application/json"></label></div><p class="dtval-muted">Importar substitui os registros deste aparelho. O backup é necessário para acompanhar o mesmo histórico no PC e no iPhone sem sincronização em nuvem.</p></div>';
 }
@@ -147,7 +149,7 @@ function paint(){
 function formValues(x){
  const f=overlay.querySelector('#dtval-form');if(!f)return;
  const data=new FormData(f);
- const props=['title','area','cat','priority','status','platform','testResult','steps','expected','observed','notes','asset','symbol','source','errorAt','message','recovery'];
+ const props=['title','area','cat','priority','status','platform','testResult','steps','expected','observed','notes','asset','symbol','source','errorAt','message','recovery','gestureOrigin','gestureDestination'];
  for(const key of props)if(data.has(key))x[key]=String(data.get(key)||'').slice(0,key==='steps'||key==='notes'||key==='message'?5000:1500);
  if(x.cat==='navegacao')x.protectionFixed=data.has('protectionFixed');
 }
@@ -159,7 +161,12 @@ function persistForm(action,detailText,result){
  }
  const prevStatus=x.status,prevProtect=x.protectionFixed,before={...x};
  formValues(x);
- const fields=['title','area','cat','priority','status','platform','testResult','steps','expected','observed','notes','asset','symbol','source','errorAt','message','recovery','protectionFixed'];
+ if(x.cat==='navegacao'&&x.protectionFixed&&x.testResult!=='Passou'){
+  x.protectionFixed=prevProtect;
+  notice='A proteção contra swipe só pode ser confirmada após um teste com resultado "Passou".';
+  paint();return;
+ }
+ const fields=['title','area','cat','priority','status','platform','testResult','steps','expected','observed','notes','asset','symbol','source','errorAt','message','recovery','gestureOrigin','gestureDestination','protectionFixed'];
  const changed=fields.filter(k=>String(before[k]??'')!==String(x[k]??''));
  if(changed.length)detailText+=(detailText?' · ':'')+'Campos alterados: '+changed.join(', ');
  if(action==='Teste reproduzido'){if(x.testResult==='Falhou')x.status='Em análise';}
@@ -169,6 +176,18 @@ function persistForm(action,detailText,result){
  if(x.protectionFixed!==prevProtect)extra+=(extra?' · ':'')+'Proteção '+(x.protectionFixed?'marcada corrigida':'reaberta');
  if(prevStatus!==x.status)extra+=(extra?' · ':'')+prevStatus+' → '+x.status;
  history(x,action,extra,result||x.testResult);
+ save();paint();
+}
+function addIncident(){
+ const x=findCase(selected);if(!x||x.cat!=='navegacao')return;
+ formValues(x);
+ const from=String(x.gestureOrigin||'').trim(),to=String(x.gestureDestination||'').trim();
+ if(!from||!to){notice='Preencha a tela em que o arrasto começou e a aba aberta por engano.';paint();return;}
+ if(!Array.isArray(x.incidents))x.incidents=[];
+ x.incidents.push({at:now(),from,to,platform:x.platform,version:db.version});
+ x.incidents=x.incidents.slice(-250);
+ x.protectionFixed=false;x.testResult='Falhou';x.status='Em análise';
+ history(x,'Swipe acidental',from+' → '+to,'Falhou');
  save();paint();
 }
 function addNew(){
@@ -206,7 +225,7 @@ async function importJson(file){
  const parsed=JSON.parse(await file.text()),v=parsed?.data;
  if(parsed.format!=='diario-terminal-validacao-v1'||!Array.isArray(v?.cases)||!Array.isArray(v?.history))throw Error('Formato incompatível');
  if(!w.confirm('Substituir os registros deste navegador pelo conteúdo do backup?'))return;
- db={version:String(v.version||actualVersion()).slice(0,30),cases:v.cases.filter(x=>x&&typeof x.id==='string').slice(0,250).map(x=>({...create(x.id,'graficos','','','Média',''),...x,images:(Array.isArray(x.images)?x.images:[]).filter(y=>y&&/^data:image\/(?:jpeg|png|webp);base64,/.test(y.data||'')&&(y.data||'').length<1800000).slice(0,4)})),history:v.history.filter(x=>x&&typeof x.id==='string').slice(-600)};
+ db={version:String(v.version||actualVersion()).slice(0,30),cases:v.cases.filter(x=>x&&typeof x.id==='string').slice(0,250).map(x=>({...create(x.id,'graficos','','','Média',''),...x,images:(Array.isArray(x.images)?x.images:[]).filter(y=>y&&/^data:image\/(?:jpeg|png|webp);base64,/.test(y.data||'')&&(y.data||'').length<1800000).slice(0,4),incidents:(Array.isArray(x.incidents)?x.incidents:[]).filter(i=>i&&typeof i.from==='string'&&typeof i.to==='string').slice(-250)})),history:v.history.filter(x=>x&&typeof x.id==='string').slice(-600)};
  save();selected='';notice='Backup importado. Confira a versão e os registros.';paint();
  }catch(e){notice='Falha ao importar: '+String(e.message||e);paint();}
 }
@@ -235,6 +254,7 @@ function handleClick(e){
  if(a==='new'){addNew();return;}
  if(a==='export'){exportJson();return;}
  if(a==='capture'){capture();return;}
+ if(a==='incident'){addIncident();return;}
  if(a==='swipe'){addAccidentalSwipe();return;}
  if(a==='save')persistForm('Atualização do registro','Campos e observações salvos');
  if(a==='reproduce')persistForm('Teste reproduzido','Resultado informado no formulário');
