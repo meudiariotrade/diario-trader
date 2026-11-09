@@ -143,4 +143,4 @@ async function run(){
  console.log('✅ GP principal real: controles visíveis, dados históricos, preço, tempo, zoom, reset, toque e integração do bundle v522.');
  w.close();
 }
-run().catch(err=>{console.error(err);process.exitCode=1;});
+run().catch(err=>{console.error(err);process.exit(1);});
