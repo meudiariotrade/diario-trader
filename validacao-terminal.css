@@ -72,3 +72,5 @@
 .dtval-root .dtval-hidden{display:none!important}
 @media(max-width:680px){.dtval-header{padding:12px;gap:8px}.dtval-brand h2{font-size:16px}.dtval-desc{font-size:11px}.dtval-main{padding:12px 11px 34px}.dtval-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dtval-kpi{padding:10px}.dtval-kpi b{font-size:23px}.dtval-panel{padding:11px}.dtval-case{gap:9px}.dtval-case .dv-btn{padding:6px 8px;margin-right:8px}.dtval-formgrid{grid-template-columns:1fr}.dtval-toolbar{align-items:stretch}.dtval-toolbar .dv-filter{max-width:none;flex:1}.dtval-open{font-size:12px;margin:8px 0}.dtval-root .dv-btn{min-height:38px}}
 @media(prefers-reduced-motion:reduce){.dtval-root *{scroll-behavior:auto!important;animation:none!important}}
+/* Corrigir o alinhamento de checkboxes dentro do formulário responsivo. */
+.dtval-root label input[type="checkbox"]{width:18px!important;height:18px!important;min-height:18px!important;flex:0 0 18px;display:inline-block!important;vertical-align:middle;margin:0!important;padding:0!important;accent-color:#26bb98}

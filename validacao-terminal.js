@@ -12,7 +12,7 @@ const niceTime = t => { try{return new Intl.DateTimeFormat('pt-BR',{dateStyle:'s
 const actualVersion = () => (d.querySelector('script[src*="camadas-v"]')?.getAttribute('src')||'').match(/camadas-v(\d+)/)?.[1]||'522';
 const create = (id,cat,title,area,priority,steps,notes='') => ({
   id,cat,title,area,priority,status:'Pendente',steps,notes,expected:'',observed:'',version:actualVersion(),
-  platform:'iPhone',testResult:'Inconclusivo',protectionFixed:false,asset:'',symbol:'',source:'',
+  platform:/iPhone|iPad|iPod/i.test(navigator.userAgent)?'iPhone':'PC',testResult:'Inconclusivo',protectionFixed:false,asset:'',symbol:'',source:'',
   errorAt:'',message:'',recovery:'',images:[],createdAt:now(),updatedAt:now()
 });
 const defaults = () => ({
@@ -21,22 +21,27 @@ const defaults = () => ({
  create('g2','graficos','Zoom do gráfico: roda, gesto e pinça','Terminal / Gráficos','Alta','1. Use a roda do mouse ou gesto de pinça.\n2. Amplie e reduza.\n3. Confira se preço e tempo permanecem legíveis.'),
  create('g3','graficos','Escala linear / logarítmica','Terminal / Gráficos','Média','1. Alterne a escala linear/log.\n2. Confira rótulos e distâncias.\n3. Retorne à escala inicial.'),
  create('g4','graficos','Retornar ao ponto atual / restaurar visão','Terminal / Gráficos','Alta','1. Desloque preço e tempo para fora do ponto atual.\n2. Acione a restauração.\n3. Confira se volta ao dado mais recente sem saltos.'),
+ create('g5','graficos','Ajuste fino do eixo vertical de preços','Terminal / Gráficos','Alta','1. Abra o gráfico de linha.\n2. Arraste o eixo de preço para cima e para baixo.\n3. Verifique se não retorna sozinho à escala automática.'),
+ create('g6','graficos','Arraste do tempo e margem direita','Terminal / Gráficos','Alta','1. Arraste as datas à esquerda e direita.\n2. Deixe um espaço à direita do último ponto.\n3. Confirme que não mudou de aba.'),
  create('n1','navegacao','Arrasto do gráfico não troca de aba','Terminal / Navegação','Crítica','1. Faça arrastos curtos e longos dentro do gráfico.\n2. Repita perto da borda.\n3. Confira se permanece na mesma aba.'),
  create('n2','navegacao','Rolagem de tabelas não troca de aba','Mercado / Tabelas','Alta','1. Role horizontalmente uma tabela larga.\n2. Tente com gesto rápido.\n3. Confira se a tela não muda para Configurações.'),
  create('n3','navegacao','Sazonalidade não abre Configurações por engano','Mercado / Sazonalidade','Crítica','1. Abra Sazonalidade e Sentimento.\n2. Desloque o conteúdo na horizontal.\n3. Confira se não aparece Configurações.'),
  create('n4','navegacao','Navegação intencional entre abas','Terminal / Navegação','Média','1. Use o seletor de abas intencionalmente.\n2. Verifique se a navegação continua funcionando.\n3. Compare com gestos internos que devem ser protegidos.'),
+ create('d2','dados','Recuperação de dados e fontes sem cotação simulada','Terminal / Dados','Alta','1. Investigue uma falha de fonte.\n2. Confirme se foi tentada a recuperação ou fonte alternativa.\n3. Sem informação verificável, exija estado indisponível, não preço fictício.'),
  create('d1','dados','VIX — investigar erro yahoo404','Mercado / VIX','Crítica','1. Abra o VIX no aplicativo.\n2. Atualize a consulta.\n3. Registre o símbolo efetivamente enviado, a fonte e a mensagem retornada.\n4. Confira a tentativa de recuperação.','Erro relatado anteriormente, ainda não validado nesta central.')
  ]});
 let db;
 try{db=JSON.parse(w.localStorage.getItem(KEY)||'null');if(!db||!Array.isArray(db.cases)||!Array.isArray(db.history))db=defaults();}catch(_){db=defaults();}
 db.cases=db.cases.filter(x=>x&&typeof x.id==='string').slice(0,250);
+// Incluir novos roteiros sem apagar resultados já registrados.
+for(const base of defaults().cases)if(!db.cases.some(c=>c.id===base.id)&&db.cases.length<250)db.cases.push(base);
 db.history=db.history.filter(x=>x&&typeof x.id==='string').slice(-600);
 db.version=String(db.version||actualVersion()).slice(0,30);
 let tab='visao',selected='',search='',filterCat='',filterStatus='',filterPriority='',sort='prioridade',notice='';
 const cats={graficos:'Gráficos',navegacao:'Navegação',dados:'Dados e fontes'};
 const statuses=['Pendente','Em análise','Corrigido','Validado'];
 const priorities=['Crítica','Alta','Média','Baixa'];
-let overlay,contents,oldOverflow='',painting=false;
+let overlay,contents,oldOverflow='',painting=false,swipeStart=null,lastInnerSwipe=null;
 const findCase=id=>db.cases.find(x=>x.id===id);
 const platformName=()=> /iPhone|iPad|iPod/i.test(navigator.userAgent)?'iPhone':'PC';
 function save(){try{w.localStorage.setItem(KEY,JSON.stringify(db));return true;}catch(e){notice='Armazenamento cheio: exporte um backup e reduza as imagens. Mudança não persistida.';return false;}}
@@ -82,7 +87,7 @@ function overview(){
  return '<div class="dtval-kpis">'+[
  ['Casos cadastrados',db.cases.length],['Prioritários abertos',pending],['Corrigidos, a testar',count('Corrigido')],['Validados',count('Validado')]
  ].map(([n,v])=>'<div class="dtval-kpi"><small>'+n+'</small><b>'+v+'</b></div>').join('')+'</div>'+
- '<div class="dtval-panel"><div class="dtval-toolbar"><label style="margin:0;max-width:150px">Versão em teste<input id="dtval-version" value="'+E(db.version)+'" maxlength="30" placeholder="Ex.: 522"></label><button class="dv-btn" type="button" data-dva="capture">Capturar yahoo404 visível</button><button class="dv-btn" type="button" data-dva="resume">Voltar ao Terminal</button></div><p class="dtval-muted">Os roteiros são pontos de verificação, não resultados aprovados. A captura examina apenas a mensagem exibida na tela — não monitora requisições nem confirma a fonte automaticamente.</p></div>'+
+ '<div class="dtval-panel"><div class="dtval-toolbar"><label style="margin:0;max-width:150px">Versão em teste<input id="dtval-version" value="'+E(db.version)+'" maxlength="30" placeholder="Ex.: 522"></label><button class="dv-btn" type="button" data-dva="capture">Capturar yahoo404 visível</button><button class="dv-btn" type="button" data-dva="resume">Voltar ao Terminal</button><button class="dv-btn" type="button" data-dva="swipe">Registrar troca de aba indevida</button></div><p class="dtval-muted">Os roteiros são pontos de verificação, não resultados aprovados. A captura examina apenas a mensagem exibida na tela — não monitora requisições nem confirma a fonte automaticamente.</p></div>'+
  '<h3 style="margin:18px 0 9px;font-size:15px">Pendências e reproduções</h3>'+toolbar()+cases();
 }
 function categoryPage(cat){
@@ -148,8 +153,15 @@ function formValues(x){
 }
 function persistForm(action,detailText,result){
  const x=findCase(selected);if(!x)return;
- const prevStatus=x.status,prevProtect=x.protectionFixed;
+ const f=overlay.querySelector('#dtval-form'),values=f?new FormData(f):null;
+ if((action==='Validado'||values?.get('status')==='Validado')&&values?.get('testResult')!=='Passou'){
+  notice='Antes de validar, selecione “Passou” no resultado da reprodução.';paint();return;
+ }
+ const prevStatus=x.status,prevProtect=x.protectionFixed,before={...x};
  formValues(x);
+ const fields=['title','area','cat','priority','status','platform','testResult','steps','expected','observed','notes','asset','symbol','source','errorAt','message','recovery','protectionFixed'];
+ const changed=fields.filter(k=>String(before[k]??'')!==String(x[k]??''));
+ if(changed.length)detailText+=(detailText?' · ':'')+'Campos alterados: '+changed.join(', ');
  if(action==='Teste reproduzido'){if(x.testResult==='Falhou')x.status='Em análise';}
  if(action==='Corrigido')x.status='Corrigido';
  if(action==='Validado')x.status='Validado';
@@ -168,6 +180,15 @@ function exportJson(){
  const bytes=JSON.stringify({format:'diario-terminal-validacao-v1',exportedAt:now(),data:db},null,2);
  const a=d.createElement('a'),u=URL.createObjectURL(new Blob([bytes],{type:'application/json;charset=utf-8'}));
  a.href=u;a.download='diario-terminal-validacao-'+new Date().toISOString().slice(0,10)+'.json';d.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);
+}
+function addAccidentalSwipe(){
+ const id='n'+Date.now().toString(36);
+ const x=create(id,'navegacao','Troca acidental de aba ao arrastar conteúdo','Terminal / Navegação','Crítica',
+ '1. Abra um gráfico, tabela ou Sazonalidade.\n2. Arraste horizontalmente dentro do conteúdo.\n3. Observe a aba aberta por engano.');
+ x.platform=platformName();x.expected='Movimento dentro do conteúdo, sem mudar de aba.';
+ x.observed=lastInnerSwipe?'Gesto recente em '+lastInnerSwipe.area+': '+lastInnerSwipe.dx+'px na horizontal às '+niceTime(lastInnerSwipe.at)+'. Confirmar aba de destino.':'Relato manual: detalhar o gesto, a aba inicial e a de destino.';
+ db.cases.unshift(x);history(x,'Troca acidental relatada','Registro criado pelo usuário; gesto não é prova automática de erro');
+ save();selected=x.id;tab='navegacao';paint();
 }
 function capture(){
  const host=d.querySelector('#trgrid')||d.querySelector('#app');
@@ -214,6 +235,7 @@ function handleClick(e){
  if(a==='new'){addNew();return;}
  if(a==='export'){exportJson();return;}
  if(a==='capture'){capture();return;}
+ if(a==='swipe'){addAccidentalSwipe();return;}
  if(a==='save')persistForm('Atualização do registro','Campos e observações salvos');
  if(a==='reproduce')persistForm('Teste reproduzido','Resultado informado no formulário');
  if(a==='corrected')persistForm('Corrigido','Pendente de validação no dispositivo real');
@@ -243,6 +265,17 @@ let frame=false;
 function schedule(){if(frame)return;frame=true;w.requestAnimationFrame(()=>{frame=false;attachEntry();});}
 function init(){
  attachEntry();
+ // Registra apenas gestos recentes para preencher o relato; jamais bloqueia arrastos reais.
+ d.addEventListener('touchstart',e=>{
+  const a=e.target.closest?.('svg[data-g9svg],.g9bar,.anxt,.us-rank,.us-event-table,.v357-extra,.dtval-table-scroll');
+  swipeStart=a&&e.touches?.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY,area:a.matches('svg,.g9bar')?'gráfico':a.closest('.us-rank,.v357-extra')?'sazonalidade':'tabela'}:null;
+ },{capture:true,passive:true});
+ d.addEventListener('touchend',e=>{
+  if(!swipeStart||!e.changedTouches?.length)return;
+  const dx=Math.round(e.changedTouches[0].clientX-swipeStart.x),dy=Math.round(e.changedTouches[0].clientY-swipeStart.y);
+  if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.25)lastInnerSwipe={area:swipeStart.area,dx,at:now()};
+  swipeStart=null;
+ },{capture:true,passive:true});
  const host=d.querySelector('#app')||d.body;
  new MutationObserver(schedule).observe(host,{childList:true,subtree:true});
  w.addEventListener('storage',e=>{if(e.key===KEY){try{const updated=JSON.parse(e.newValue||'null');if(updated&&Array.isArray(updated.cases)&&Array.isArray(updated.history)){db=updated;paint();}}catch(_){}}});
