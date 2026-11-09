@@ -1,0 +1,4 @@
+Diario de Trader v519 (inclui v516 a v518)
+- Fluxo estrangeiro automatico (sem subir arquivo) + aviso acima de R$ 1 bi.
+- Insiders (CVM 44): cartao no Mercado + aviso das acoes que voce opera.
+- Jornal inteiro em audio (botao Ouvir o jornal inteiro).
