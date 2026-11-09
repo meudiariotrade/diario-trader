@@ -144,3 +144,32 @@ body.trmon .g418-toolbar .g522-hint{
     padding:6px 9px;
   }
 }
+
+/* Refinamento pós-v531: status de fonte fora do gráfico e layout compacto no iPhone. */
+#v421-gp .gp-source-warning{
+  padding:8px 12px;
+  background:#3a200b;
+  border-left:3px solid #f2a33a;
+  color:#f7d6a6;
+  font:500 12px/1.45 system-ui,-apple-system,sans-serif;
+  overflow-wrap:anywhere;
+}
+#v421-gp .gp-source-warning[hidden]{display:none!important}
+@media(max-width:690px){
+  #v421-gp .gp-bar1,#v421-gp .gp-bar2,#v421-gp .gp-bar3{
+    gap:5px;
+    padding:5px 7px;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  #v421-gp .gp-navigation{scroll-padding:8px;}
+  #v421-gp .gp-navigation button{
+    min-height:36px;
+    padding:6px 8px;
+    font-size:11px;
+    border-radius:7px;
+  }
+  #v421-gp .gp-hdr{padding:7px 9px 6px}
+  #v421-gp .gp-navigation{padding:6px 8px;gap:5px}
+  #v421-gp .gp-plot{min-width:0;overflow:hidden}
+}

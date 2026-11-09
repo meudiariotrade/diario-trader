@@ -763,14 +763,40 @@ let lastGeom=null;
 /* v526 — Janela do GP: mantém os candles originais, exibe tempo deslocável e
    eixo de preço ajustável sem alterar os dados carregados. */
 const gpView={key:'',count:0,offset:0,max:0,priceZoom:1,priceShift:0,fraction:0};
+const VIEWS_KEY='diario-gp-enquadramentos-v531';
+let savedViews={};
+try { const v=JSON.parse(localStorage.getItem(VIEWS_KEY)||'{}'); if(v&&typeof v==='object'&&!Array.isArray(v)) savedViews=v; } catch(_){}
+const gpKey=()=>[st.a,st.b||'',st.per,st.freq,st.mode,ivOf()].join('|');
+function viewWrite(){
+  try {
+    const entries=Object.entries(savedViews).sort((a,b)=>(b[1]?.savedAt||0)-(a[1]?.savedAt||0)).slice(0,25);
+    savedViews=Object.fromEntries(entries);
+    localStorage.setItem(VIEWS_KEY,JSON.stringify(savedViews));
+  } catch(_){}
+}
+function viewStore(){
+  if(!gpView.key)return;
+  savedViews[gpView.key]={count:gpView.count,offset:gpView.offset,priceZoom:gpView.priceZoom,priceShift:gpView.priceShift,savedAt:Date.now()};
+  viewWrite();
+}
+function viewRestore(key){
+  const v=savedViews[key];if(!v||typeof v!=='object')return false;
+  gpView.count=Number(v.count)||gpView.count;
+  gpView.offset=Number(v.offset)||0;
+  gpView.priceZoom=clip(v.priceZoom,.2,6);
+  gpView.priceShift=clip(v.priceShift,-10,10);
+  gpView.fraction=0;
+  return true;
+}
 const clip=(v,lo,hi)=>Math.max(lo,Math.min(hi,Number(v)||0));
 function navInit(all){
   if(all.length<2)return all;
-  const key=[st.a,st.per,st.freq,st.mode,ivOf()].join('|');
+  const key=gpKey();
   if(gpView.key!==key){
     gpView.key=key;
     gpView.count=Math.max(2,resample(cut(bars(st.a,ivOf()))).length);
     gpView.offset=0;gpView.priceZoom=1;gpView.priceShift=0;gpView.fraction=0;
+    viewRestore(key);
   }
   gpView.max=all.length;
   gpView.count=Math.max(2,Math.min(gpView.count||all.length,all.length));
@@ -794,6 +820,7 @@ function navPan(dx,dy,width,height,mode){
   }
   if(mode==='hand'||mode==='price')
     gpView.priceShift=clip(gpView.priceShift+dy/Math.max(20,height)*gpView.priceZoom,-10,10);
+  viewStore();
 }
 function navZoom(factor,anchor){
   if(gpView.max<2)return;
@@ -802,8 +829,10 @@ function navZoom(factor,anchor){
   const a=anchor==null?.5:clip(anchor,0,1);
   gpView.offset=clip(Math.round(gpView.offset+(prev-next)*(1-a)),0,gpView.max-next);
   gpView.count=next;gpView.fraction=0;
+  viewStore();
 }
 function navReset(){
+  delete savedViews[gpKey()];viewWrite();
   gpView.key='';gpView.offset=0;gpView.count=0;gpView.max=0;
   gpView.priceZoom=1;gpView.priceShift=0;gpView.fraction=0;
 }
@@ -909,6 +938,7 @@ function shell(){
     <button type="button" data-gp-nav="reset" title="Restaurar preço e tempo" aria-label="Restaurar gráfico">⟲</button>
   </div>
   <div class="gp-plot" data-gp-plot></div>
+  <div class="gp-source-warning" data-gp-source-status role="status" aria-live="polite" hidden></div>
   <footer class="gp-foot" data-gp-foot></footer>
   </section>`;
 }
@@ -932,6 +962,13 @@ function paint(){
   if(st.table){plot.innerHTML=table();lastGeom=null}else{const r=svg();plot.innerHTML=r.html}
   const iv=ivOf(),na=bars(st.a,iv).length,nb=st.b?bars(st.b,iv).length:0;
   const notes=[meta(st.a,iv),st.b?meta(st.b,iv):''].filter(Boolean);
+  const error=errOf(st.a,iv),secondaryError=st.b?errOf(st.b,iv):'';
+  const sourceWarning=[error?st.a+': '+error:'',secondaryError?st.b+': '+secondaryError:''].filter(Boolean).join(' · ').slice(0,250);
+  const gpNotice=el.querySelector('[data-gp-source-status]');
+  if(gpNotice){
+    gpNotice.hidden=!sourceWarning;
+    gpNotice.textContent=sourceWarning?'Fonte indisponível ou com falha — '+sourceWarning+' · Atualize o histórico para tentar novamente.':'';
+  }
   el.querySelector('[data-gp-foot]').innerHTML=`<span>${esc(name(st.a))}${st.b?' × '+esc(name(st.b)):''} · ${iv==='1d'?'diário':iv} · ${na}${st.b?'/'+nb:''} pontos · Yahoo Finance (com atraso)${isEcon(st.b)?' · indicador: Banco Central (SGS), vale até a próxima divulgação':''}</span>${notes.length?`<span class="gp-note">${esc([...new Set(notes)].join(' · '))}</span>`:''}${st.b&&isEcon(st.b)&&econErr.get(st.b)?`<span class="gp-err">${esc(econErr.get(st.b))}</span>`:''}${ivOf()==='1d'&&['Máx','2A'].includes(st.per)?'<span class="gp-note">A fonte gratuita entrega até 2 anos de histórico diário.</span>':''}`;
 }
 async function load(force){
@@ -1120,6 +1157,7 @@ setInterval(()=>{if(doc.hidden)return;if(g(()=>tab,'')==='term'||g(()=>root.V428
 setInterval(()=>{if(!doc.hidden&&g(()=>tab,'')==='term'&&doc.getElementById('v421-gp'))load(false)},60000);
 root.DIARIO_GP421={paint,load,state:()=>st,view:()=>({...gpView}),reset:navReset};
 })(window);
+
 
 }catch(e){console.error("[v522] falha em terminal-gp-v421.js",e)}
 try{(function(l){"use strict";const i=l.document;if(!i)return;const p=(t,a)=>{try{const e=t();return e===void 0?a:e}catch{return a}},m=t=>String(t??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[a]),s=t=>Number.isFinite(+t)?new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0}).format(+t):"—",c=t=>+String(t||"").replace(/\./g,"").replace(",",".")||0;function u(){if(typeof l.onbHtml!="function"||l.onbHtml.__v423)return;const t=l.onbHtml,a=function(){let e=t.apply(this,arguments);return e=e.replace('data-onb="cap" placeholder="10000"','data-onb="cap" placeholder="ex.: 10.000"').replace('data-onb="pd" placeholder="200"','data-onb="pd" placeholder="automático"').replace(/(<label>Máximo de trades no dia<input[^>]*><\/label><\/div>)/,'$1<p class="v423-onbhint" id="v423-onbhint" aria-live="polite"></p>'),e};a.__v423=1,l.onbHtml=a}function I(){const t=i.getElementById("onb");if(!t)return;const a=t.querySelector('input[data-onb="cap"]'),e=t.querySelector('input[data-onb="pd"]'),o=t.querySelector('input[data-onb="nt"]');if(a&&a.placeholder==="10000"&&(a.placeholder="ex.: 10.000"),e&&e.placeholder==="200"&&(e.placeholder="automático"),o&&!i.getElementById("v423-onbhint")){const n=i.createElement("p");n.className="v423-onbhint",n.id="v423-onbhint",n.setAttribute("aria-live","polite"),(o.closest(".g2")||o.parentElement).after(n)}}function f(){I();const t=i.getElementById("onb"),a=i.getElementById("v423-onbhint");if(!t||!a)return;const e=L=>t.querySelector(`input[data-onb="${L}"]`)?.value,o=c(e("cap"))||1e4,n=Math.min(c(e("pct"))||1,10),r=Math.round(c(e("nt"))||3),A=c(e("pd")),E=o*n/100*r;a.innerHTML=A>0?`O dia trava ao perder <b>${s(A)}</b>. Risco por trade: <b>${s(o*n/100)}</b>.`:`Sem perda máxima preenchida, o app usa <b>${s(E)}</b> por dia (${s(o*n/100)} de risco × ${r} trades)${c(e("cap"))?"":", com capital de exemplo de R$ 10.000"}.`}i.addEventListener("input",t=>{t.target.closest?.("#onb [data-onb]")&&f()});function b(){const t=[],a=p(()=>loc().slice(0,10),new Date().toISOString().slice(0,10));try{const e=pHoje(),o=pCore(e.hj,e.P);o.mot.length?t.push({k:"r",ic:"⛔",t:"Pare por hoje",d:o.mot.join(" · "),go:"dia"}):o.perda>=o.lim*.8&&t.push({k:"a",ic:"⚠️",t:"Perto do limite de perda",d:`Perda ${s(o.perda)} de ${s(o.lim)}`,go:"dia"})}catch{}try{if(turnoNv(a)!=="g"){const e=turnoTxt(a);e&&t.push({k:"a",ic:"🏭",t:"Escala de turno hoje",d:e,go:"home"})}}catch{}try{const e=S.rules||[],o=(S.days[a]||{}).chk||{},n=e.filter(r=>o[r.id]).length;e.length&&n<e.length&&t.push({k:"i",ic:"☑️",t:"Checklist do dia",d:`${n} de ${e.length} regras marcadas`,go:"dia"})}catch{}try{const e=S.ax?.alpx||[],o=e.filter(r=>r.fired&&String(new Date(r.fired).toISOString()).slice(0,10)===a),n=e.filter(r=>!r.fired);o.forEach(r=>t.push({k:"g",ic:"🔔",t:`Alerta disparou: ${r.c}`,d:`${r.op===">"?"acima de":"abaixo de"} ${r.v}`,mkt:"cq"})),n.length&&t.push({k:"i",ic:"🔔",t:"Alertas de preço ativos",d:`${n.length} esperando`,mkt:"cq"})}catch{}try{const e=Date.now();(AG.v[0]?.eventos||[]).filter(n=>n.imp===1&&Date.parse(n.em)>e-30*6e4&&String(n.em).slice(0,10)===a).sort((n,r)=>Date.parse(n.em)-Date.parse(r.em)).slice(0,4).forEach(n=>t.push({k:"i",ic:"📅",t:new Date(n.em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"})+" · "+(n.t||"Evento"),d:(n.p?n.p+" · ":"")+"alto impacto",mkt:"ag"}))}catch{}try{const e=+new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Sao_Paulo",hour:"2-digit",hour12:!1}).format(new Date),o=S.days[a]||{},n=(S.trades||[]).some(r=>String(r.dt||"").slice(0,10)===a);e>=18&&n&&!o.resumo&&t.push({k:"i",ic:"📝",t:"Debriefing pendente",d:"Você operou hoje e ainda não fechou o dia",deb:1})}catch{}return t}function h(){const t=b();let a=i.getElementById("v423-bell");a||(a=i.createElement("div"),a.id="v423-bell",a.className="v423-bell",a.setAttribute("role","dialog"),a.setAttribute("aria-modal","true"),a.setAttribute("aria-label","Avisos"),i.body.appendChild(a)),a.innerHTML=`<button type="button" class="v423-bell-bg" data-v423-close aria-label="Fechar avisos"></button><section class="v423-bell-panel"><header><h2>Avisos de hoje</h2><button type="button" data-v423-close aria-label="Fechar">✕</button></header>
