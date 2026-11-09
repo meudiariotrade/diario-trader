@@ -17,11 +17,11 @@ function sortControls(box){
  if(bar)bar.classList.add('m408-legacy-toolbar');
 }
 function mount(){
- const r=root(),box=valid(),dashboard=r?.querySelector(':scope > .m405-dashboard'),market=r?.querySelector(':scope > .market-monitor');
+ const r=root(),box=valid(),dashboard=r?.querySelector('.m405-dashboard'),market=r?.querySelector(':scope > .market-monitor');
  if(!r||!box||!dashboard||!market)return;
  r.classList.add('m408-market-home');
  // Deixar as cotações e o gráfico antes do Radar Global completo.
- if(dashboard.previousElementSibling!==market)market.after(dashboard);
+ if(!dashboard.dataset.categoryReferences&&dashboard.previousElementSibling!==market)market.after(dashboard);
  const warning=r.querySelector(':scope > .warn');if(warning&&warning.previousElementSibling!==dashboard)dashboard.after(warning);
  // A barra inferior do Panorama continua preservada; aparece só após a lista de ativos.
  let head=box.querySelector(':scope > .m408-context');if(!head){head=make('div','m408-context');head.innerHTML='<div class="m408-context-copy"><span class="m408-eyebrow">MERCADO / BRASIL + EUA</span><strong>Acompanhe seus ativos</strong></div><div class="m408-context-actions"><button type="button" data-m408-refresh aria-label="Atualizar as cotações">↻ Atualizar</button><button type="button" data-m408-radar aria-label="Abrir Radar Global">Radar Global <span aria-hidden="true">↗</span></button></div>';}

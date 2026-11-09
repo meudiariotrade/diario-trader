@@ -49,3 +49,9 @@ html body.trmon #app #tf413 .tf415-nav{display:flex!important;flex-wrap:wrap!imp
 }
 html body.trmon #app #tf413 .simple-terminal-intro *{font-family:system-ui,-apple-system,sans-serif!important;letter-spacing:normal!important}
 #app .simple-calendar[open] #mkcal{min-height:320px!important}
+
+/* v535: referências exclusivas seguem a categoria de cima; não há segundo menu. */
+html body #app .simple-category-references[hidden],html body #app .simple-category-references [hidden]{display:none!important}
+html body #app .simple-category-references .m405-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px}
+#app .simple-category-references{margin-top:12px;min-width:0}
+#app .simple-market-sources .m405-footer-note{margin-top:10px}

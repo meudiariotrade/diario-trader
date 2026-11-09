@@ -26,7 +26,7 @@ const lookups={
 function get(items,key){const [codes,pat]=lookups[key];return byCodes(items,codes,pat)}
 function status(item){if(!item||item.suspeito||finite(item.px)===null||finite(item.px)<=0)return {text:item?.suspeito?'Valor inconsistente':'Sem cotação',className:'missing'};return {text:'Com dado',className:'ready'}}
 function itemRender(info={}){const {item,name,descriptor=''}=info;
- const n=el('div','m405-quote');const st=status(item);if(st.className==='missing')n.classList.add('is-missing');
+ const n=el('div','m405-quote');n.dataset.panoramaSymbol=String(item?.s||'');const st=status(item);if(st.className==='missing')n.classList.add('is-missing');
  const left=el('div','m405-quote-left');const title=el('strong','m405-quote-name',name||item?.n||'Ativo');const desc=el('small','m405-quote-desc',descriptor||(item?item.s:'Fonte não disponível'));left.append(title,desc);
  const right=el('div','m405-quote-right');const val=finite(item?.px);const ok=st.className==='ready';const v=el('strong','m405-quote-value',ok?fmt(val,val>=1000?0:val>=10?2:4)+(item.juro?'%':''):'—');
  const ch=item?.juro?finite(item?.d1bp):finite(item?.d1);
