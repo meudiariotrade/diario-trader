@@ -1,0 +1,4 @@
+Diario de Trader v518 (ja inclui v516 e v517)
+- Movimentos fortes: aviso com o motivo (petroleo, minerio, dolar, indices, PETR4, VALE3, bitcoin) e cartao no Mercado.
+- Divergencia: petroleo x PETR4, minerio x VALE3, S&P x Ibovespa.
+- Limite de cada ativo em Configuracoes > Alertas.
