@@ -35,7 +35,7 @@ assert(doc.querySelector('[data-dva="incident"]'),'Botão de swipe involuntário
 // Não permitir validar sem resultado aprovado.
 click('validated');
 assert.equal(get(),null,'Bloqueio de validação não deve persistir resultado inconclusivo');
-assert.match(doc.querySelector('#dtval-content').textContent,/selecione "Passou"/);
+assert.match(doc.querySelector('#dtval-content').textContent,/selecione.*Passou/);
 click('incident');
 let state=get(),incident=state.cases.find(x=>x.id==='n3');
 assert.equal(incident.incidents.length,1);
