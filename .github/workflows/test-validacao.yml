@@ -5,6 +5,9 @@ on:
     paths:
       - 'validacao-terminal.js'
       - 'terminal-gestos-seguros.js'
+      - 'terminal-gp-v421.js'
+      - 'camadas-v522.js'
+      - 'test-gp-real.cjs'
       - 'terminal-gestos-seguros.css'
       - 'test-terminal-gestos.cjs'
       - 'index.html'
@@ -17,6 +20,9 @@ on:
     paths:
       - 'validacao-terminal.js'
       - 'terminal-gestos-seguros.js'
+      - 'terminal-gp-v421.js'
+      - 'camadas-v522.js'
+      - 'test-gp-real.cjs'
       - 'terminal-gestos-seguros.css'
       - 'test-terminal-gestos.cjs'
       - 'index.html'
@@ -43,3 +49,7 @@ jobs:
       - run: node --check terminal-gestos-seguros.js
       - run: node --check test-terminal-gestos.cjs
       - run: node test-terminal-gestos.cjs
+      - run: node --check terminal-gp-v421.js
+      - run: node --check camadas-v522.js
+      - run: node --check test-gp-real.cjs
+      - run: node test-gp-real.cjs
