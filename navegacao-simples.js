@@ -61,6 +61,46 @@
   }
   for(const b of app.querySelectorAll('.dtval-open'))wrap(b,'Ajuda e diagnóstico');
  }
+ // Consolida as referências do antigo radar nas categorias já existentes.
+ const symbol=value=>{const s=String(value||'').toUpperCase().split(':').pop();return ({'^BVSP':'IBOV',IBOVESPA:'IBOV','^GSPC':'SPX',SP500:'SPX','^IXIC':'IXIC',NASDAQ:'IXIC','^NDX':'NDX',NASDAQ100:'NDX','DX-Y.NYB':'DXY','BRL=X':'USDBRL','USD/BRL':'USDBRL','USDBRL=X':'USDBRL','ES=F':'ESF','ES1!':'ESF','NQ=F':'NQF','NQ1!':'NQF','YM=F':'YMF','YM1!':'YMF'})[s]||s};
+ const priced=item=>item&&!item.suspeito&&item.px!==null&&item.px!==''&&Number.isFinite(Number(item.px))&&Number(item.px)>0;
+ const radarSources=new WeakMap();
+ function integrateRadar(m){
+  const dashboard=m.querySelector('#m405-panorama'),box=m.querySelector('#cqbox,#cotbox');if(!dashboard||!box)return;
+  const grid=dashboard.querySelector('.m405-grid');if(!grid)return;
+  if(!dashboard.dataset.categoryReferences){
+   dashboard.dataset.categoryReferences='1';dashboard.classList.add('simple-category-references');dashboard.setAttribute('aria-label','Referências adicionais da categoria');
+   const sources=disclosure('Fontes e atualização do panorama','simple-market-sources');
+   for(const n of dashboard.querySelectorAll('.m405-data-status,.m405-invalid,.m405-footer-note'))sources.append(n);
+   const refresh=dashboard.querySelector('[data-m405-action="refresh"]');if(refresh){refresh.hidden=true;dashboard.append(refresh)}
+   dashboard.append(grid);dashboard.querySelector('.m406-radar-details')?.remove();dashboard.querySelector('.m405-hero')?.remove();
+   radarSources.set(dashboard,sources);
+   for(const panel of grid.children){
+    for(const row of panel.querySelectorAll('.m405-quote')){
+     const name=row.querySelector('.m405-quote-name')?.textContent||'';
+     row.dataset.referenceCategory=panel.id==='m405-global'?(/DXY/.test(name)?'fx':'idx'):panel.id==='m405-futures'?(/USD\/BRL/.test(name)?'fx':'fut'):({'m405-adrs':'adr','m405-commodities':'cmd','m405-rates':'jur'})[panel.id]||'';
+    }
+    panel.querySelector('[data-m405-action="adrs"]')?.remove(); // a lista de ADRs já é o conteúdo principal da categoria
+   }
+  }
+  // cqPinta substitui o conteúdo de cqbox; conserva as referências no contêiner estável da categoria.
+  const market=box.closest('.market-monitor')||box.parentElement;if(dashboard.parentElement!==market)market.append(dashboard);
+  const sources=radarSources.get(dashboard);if(sources&&!box.contains(sources)){const header=box.querySelector('.m408-context');if(header)header.after(sources);else box.prepend(sources)}
+  let category='',native=[];try{category=CQ.aba;native=CQ.d[category]?.itens||[]}catch{}
+  const present=new Set(native.filter(priced).map(i=>symbol(i.s)));
+  if(category==='adr')try{for(const item of AD.data?.itens||[]){if(item.s!=='EWZ'&&!AD.list.includes(item.s))continue;const q=root.TraderAdr?.view(item);if(priced(q?.active)||priced(q?.regular))present.add(symbol(item.s))}}catch{}
+  let visible=0;
+  for(const panel of grid.children){
+   let count=0;for(const row of panel.querySelectorAll('.m405-quote')){const show=row.dataset.referenceCategory===category&&!row.classList.contains('is-missing')&&!present.has(symbol(row.dataset.panoramaSymbol));if(row.hidden===show)row.hidden=!show;if(show)count++}
+   const rates=panel.querySelector('[data-m405-action="rates"]');const show=count>0||!!rates&&category==='jur';if(panel.hidden===show)panel.hidden=!show;
+   if(show)visible++;
+   if(panel.id==='m405-global'){text(panel.querySelector('h3'),category==='fx'?'Referências de câmbio':'Referências de índices');text(panel.querySelector('.m405-card-titles>small'),'Dados complementares quando não estão na lista principal')}
+   for(const note of panel.querySelectorAll('.m405-empty-note'))note.hidden=true;
+   if(rates)text(rates,'Ver curva DI no Terminal');
+  }
+  if(dashboard.hidden===(visible>0))dashboard.hidden=visible===0;
+  for(const b of m.querySelectorAll('[data-m408-radar]'))b.remove();
+ }
  function market(app){
   const m=app.querySelector('.dt395-native-mercado');if(!m)return;
   for(const d of m.querySelectorAll('.simple-market-about'))if(!d.querySelector('.m404-overview'))d.remove();
@@ -70,6 +110,7 @@
    if(d&&foot?.classList.contains('mut'))d.append(foot);
   }
   for(const n of m.querySelectorAll('.m403-chart-slot'))wrap(n,'Comparar históricos e indicadores','simple-comparison');
+  integrateRadar(m);
  }
  function chat(){
   const p=doc.getElementById('wf-chat-panel');if(!p||p.querySelector('.simple-questions'))return;
@@ -92,5 +133,9 @@
  doc.addEventListener('toggle',e=>{const d=e.target;if(!d.isConnected||d.closest?.('.v503-fantasma'))return;if(d.dataset?.simpleKey)expanded.set(d.dataset.simpleKey,d.open);if(d.matches?.('.simple-comparison[open]'))root.DIARIO_GP421?.paint?.()},true);
  // Memoriza no clique antes que uma atualização do app substitua a tela.
  root.addEventListener('click',e=>{const summary=e.target.closest?.('.simple-details>summary');if(summary){const d=summary.parentElement;expanded.set(d.dataset.simpleKey,!d.open)}},true);
+ root.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-m408-refresh]'))active()?.querySelector('.simple-category-references [data-m405-action="refresh"]')?.click();
+  const rates=e.target.closest?.('.simple-category-references [data-m405-action="rates"]');if(rates){e.preventDefault();e.stopImmediatePropagation();try{tab='term';render();requestAnimationFrame(()=>requestAnimationFrame(()=>active()?.querySelector('[data-tf415-nav="DIFUT"]')?.click()))}catch{}}
+ },true);
  root.DiarioNavegacaoSimples={mount};queue();
 })(window,document);

@@ -1,3 +1,9 @@
+## Mercado v535
+
+Retira o segundo menu “Explorar Radar Global completo”. As referências exclusivas do panorama ficam na categoria correspondente de Cotações: índices, moedas, ADRs, futuros, commodities e juros. Cotações válidas da lista nativa têm prioridade, sem repetir o mesmo ativo; a referência do panorama é preservada como complemento quando faltar na lista. Nasdaq Composite e Nasdaq 100 não são confundidos.
+
+Fontes e horários permanecem nos dados. A informação geral da fonte está em “Fontes e atualização do panorama”, junto dos controles superiores; Atualizar também conserva a atualização do panorama. O acesso à curva DI permanece em Juros. Nenhuma fonte, histórico ou configuração é apagado.
+
 ## Navegação v534
 
 Organiza os controles existentes em seis caminhos: primeiro acesso com explorar/configurar; Início com três ações principais; Terminal com resumo antes do gráfico; contexto do dia unificado na Central e perguntas sugeridas sem envio automático; Agenda com explicação recolhida; Panorama com comparativo sob demanda. Todos os recursos avançados permanecem acessíveis. Não altera dados, regras de fotos ou integrações de execução.
