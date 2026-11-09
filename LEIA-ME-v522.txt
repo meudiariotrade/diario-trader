@@ -1,0 +1,2 @@
+Diario de Trader v522 (inclui v516 a v521)
+- Fluxo por acao com WIN e WDO (em contratos) + alerta de fluxo forte das estrangeiras.
