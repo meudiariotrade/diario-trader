@@ -13,7 +13,7 @@ npm run verify
 npm run build
 ```
 
-`verify` verifica os recursos do HTML e do service worker, a sintaxe dos scripts, o fluxo de exclusão com serviços simulados e a navegação no Chromium. O teste de interface confirma que uma foto antiga pendente continua impedindo o registro de um trade novo. Nenhum teste apaga dados reais ou exige credenciais.
+`verify` verifica os recursos do HTML e do service worker, a sintaxe dos scripts, o fluxo de exclusão com serviços simulados e a navegação no Chromium. Inclui também os três testes existentes do Terminal, anteriormente executados por um workflow separado; agora todos passam pela mesma validação antes do deploy. O teste de interface confirma que uma foto antiga pendente continua impedindo o registro de um trade novo. Nenhum teste apaga dados reais ou exige credenciais.
 
 `build` prepara `_site/` com os arquivos estáticos existentes. Não recria os bundles históricos: os scripts originais de geração não estavam neste repositório. Fontes do backend, SQL, testes, dependências e documentos de manutenção não entram na publicação. O workflow verifica PRs e só publica a branch `main` depois das verificações.
 

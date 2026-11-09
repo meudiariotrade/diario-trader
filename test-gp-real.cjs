@@ -10,7 +10,7 @@ async function run(){
  const index=fs.readFileSync('index.html','utf8');
  assert(index.includes('camadas-v522.js?v=526'),'Página força a versão publicada dos controles');
  assert(index.includes('terminal-gestos-seguros.css?v=526'),'Folha de estilo atualizada');
- assert(fs.readFileSync('sw.js','utf8').includes('diario-v526-gp-principal'),'Cache PWA revisado');
+ assert(fs.readFileSync('sw.js','utf8').includes('diario-v527-revisao'),'Cache PWA revisado');
  const err=[];
  const vc=new VirtualConsole();vc.on('jsdomError',e=>err.push(e.message));
  vc.on('error',e=>err.push(String(e)));
