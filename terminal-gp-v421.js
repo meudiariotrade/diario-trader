@@ -128,6 +128,7 @@ let lastGeom=null;
 const gpView={key:'',count:0,offset:0,max:0,priceZoom:1,priceShift:0,fraction:0};
 const clip=(v,lo,hi)=>Math.max(lo,Math.min(hi,Number(v)||0));
 function navInit(all){
+  if(all.length<2)return all;
   const key=[st.a,st.per,st.freq,st.mode,ivOf()].join('|');
   if(gpView.key!==key){
     gpView.key=key;
@@ -363,6 +364,93 @@ doc.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&e.target.matches?.('#v421-gp [data-gp-free]')){e.preventDefault();e.target.parentElement.querySelector('[data-gp="free"]').click()}
 });
 doc.addEventListener('click',e=>{if(!e.target.closest('.gp-menuwrap')){const r=doc.querySelector('#v421-gp [data-gp-relmenu]');if(r&&!r.hidden){r.hidden=true;doc.querySelector('#v421-gp [data-gp="rel"]')?.setAttribute('aria-expanded','false')}const m=doc.querySelector('#v421-gp [data-gp-menu]');if(m&&!m.hidden){m.hidden=true;doc.querySelector('#v421-gp [data-gp="presets"]')?.setAttribute('aria-expanded','false')}}});
+
+/* v526 — Mouse e toque no GP principal. Prévia acompanha a mão;
+   apenas ao soltar são recalculados os pontos e os dois eixos. */
+let gpDrag=null;
+const pointOf=e=>({x:e.clientX,y:e.clientY});
+const gapOf=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function gpPointerDown(e){
+  const svgEl=e.target.closest?.('#v421-gp .gp-svg');
+  if(!svgEl||e.button>0||st.table)return;
+  const rect=svgEl.getBoundingClientRect();
+  if(rect.width<20||rect.height<20)return;
+  if(!gpDrag||gpDrag.svg!==svgEl)
+    gpDrag={svg:svgEl,rect,points:new Map(),starts:new Map(),pinch:false,startPinch:null,finalPinch:null};
+  gpDrag.points.set(e.pointerId,pointOf(e));
+  gpDrag.starts.set(e.pointerId,pointOf(e));
+  if(gpDrag.points.size===2){
+    gpDrag.pinch=true;
+    gpDrag.startPinch=[...gpDrag.points.values()].map(p=>({...p}));
+    gpDrag.finalPinch=gpDrag.startPinch;
+    gpDrag.svg.querySelector('.gp-view-series')?.removeAttribute('transform');
+  }
+  try{svgEl.setPointerCapture?.(e.pointerId)}catch(_){}
+  if(e.cancelable)e.preventDefault();
+  e.stopPropagation();
+}
+function gpPointerMove(e){
+  const d=gpDrag;
+  if(!d||!d.points.has(e.pointerId))return;
+  d.points.set(e.pointerId,pointOf(e));
+  if(e.cancelable)e.preventDefault();
+  e.stopImmediatePropagation();
+  if(d.pinch){
+    if(d.points.size===2)d.finalPinch=[...d.points.values()].map(p=>({...p}));
+    return;
+  }
+  const p=[...d.points.values()][0],start=[...d.starts.values()][0];
+  const dx=p.x-start.x,dy=p.y-start.y;
+  const mode=st.navMode||'hand';
+  const x=mode==='price'?0:clip(dx/d.rect.width*720,-720,720);
+  const y=mode==='time'?0:clip(dy/d.rect.height*360,-360,360);
+  const series=d.svg.querySelector('.gp-view-series');
+  if(series)series.setAttribute('transform','translate('+x.toFixed(2)+','+y.toFixed(2)+')');
+}
+function gpPointerFinish(e,cancelled){
+  const d=gpDrag;
+  if(!d||!d.points.has(e.pointerId))return;
+  d.points.set(e.pointerId,pointOf(e));
+  if(e.cancelable)e.preventDefault();
+  e.stopImmediatePropagation();
+  if(d.pinch&&d.points.size===2)d.finalPinch=[...d.points.values()].map(p=>({...p}));
+  d.points.delete(e.pointerId);
+  if(d.points.size)return;
+  gpDrag=null;
+  d.svg.querySelector('.gp-view-series')?.removeAttribute('transform');
+  if(cancelled)return;
+  if(d.pinch&&d.startPinch&&d.finalPinch){
+    const initial=gapOf(...d.startPinch),final=gapOf(...d.finalPinch);
+    if(initial>18&&final>18&&Math.abs(initial-final)>7){
+      const anchor=clip(((d.startPinch[0].x+d.startPinch[1].x)/2-d.rect.left)/d.rect.width,0,1);
+      navZoom(clip(initial/final,.4,2.5),anchor);
+      paint();
+    }
+    return;
+  }
+  const start=[...d.starts.values()][0],dx=e.clientX-start.x,dy=e.clientY-start.y;
+  if(Math.hypot(dx,dy)<6)return;
+  navPan(dx,dy,d.rect.width,d.rect.height,st.navMode||'hand');
+  paint();
+}
+doc.addEventListener('pointerdown',gpPointerDown,true);
+doc.addEventListener('pointermove',gpPointerMove,{capture:true,passive:false});
+doc.addEventListener('pointerup',e=>gpPointerFinish(e,false),true);
+doc.addEventListener('pointercancel',e=>gpPointerFinish(e,true),true);
+root.addEventListener('blur',()=>{
+  gpDrag?.svg?.querySelector('.gp-view-series')?.removeAttribute('transform');
+  gpDrag=null;
+});
+doc.addEventListener('wheel',e=>{
+  const svgEl=e.target.closest?.('#v421-gp .gp-svg');
+  if(!(e.ctrlKey||e.metaKey)||!svgEl)return;
+  const rect=svgEl.getBoundingClientRect();
+  if(e.cancelable)e.preventDefault();
+  e.stopImmediatePropagation();
+  navZoom(e.deltaY<0?.85:1.18,clip((e.clientX-rect.left)/Math.max(20,rect.width),0,1));
+  paint();
+},{capture:true,passive:false});
+
 // acompanhamento (Track) por toque ou mouse
 function track(ev){
   const svgEl=ev.target.closest?.('#v421-gp .gp-svg');if(!svgEl||!lastGeom)return;
