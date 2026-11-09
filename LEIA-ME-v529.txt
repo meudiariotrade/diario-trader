@@ -1,0 +1,3 @@
+Diario de Trader v529 — por cima do GitHub (inclui a v528).
+Arquivos: index.html, sw.js, estudos-rolagem-v528.js, acoes-fortes-v529.js.
+- Alertas: acoes da B3 com puxada forte (liga/desliga e limite).
