@@ -122,9 +122,56 @@ function events(t0,t1,sym){
   return out.sort((a,b)=>a.t-b.t).slice(-40);
 }
 let lastGeom=null;
+
+/* v526 — Janela do GP: mantém os candles originais, exibe tempo deslocável e
+   eixo de preço ajustável sem alterar os dados carregados. */
+const gpView={key:'',count:0,offset:0,max:0,priceZoom:1,priceShift:0,fraction:0};
+const clip=(v,lo,hi)=>Math.max(lo,Math.min(hi,Number(v)||0));
+function navInit(all){
+  const key=[st.a,st.per,st.freq,st.mode,ivOf()].join('|');
+  if(gpView.key!==key){
+    gpView.key=key;
+    gpView.count=Math.max(2,resample(cut(bars(st.a,ivOf()))).length);
+    gpView.offset=0;gpView.priceZoom=1;gpView.priceShift=0;gpView.fraction=0;
+  }
+  gpView.max=all.length;
+  gpView.count=Math.max(2,Math.min(gpView.count||all.length,all.length));
+  gpView.offset=clip(gpView.offset,0,Math.max(0,all.length-gpView.count));
+  return all.slice(all.length-gpView.count-gpView.offset,all.length-gpView.offset);
+}
+function navPriceBounds(bounds){
+  const low=bounds[0],high=bounds[1],span=Math.max(1e-10,high-low);
+  const mid=(low+high)/2+gpView.priceShift*span;
+  const radius=span*gpView.priceZoom/2;
+  return [mid-radius,mid+radius];
+}
+function navPan(dx,dy,width,height,mode){
+  if((mode==='hand'||mode==='time')&&gpView.max>gpView.count){
+    gpView.fraction+=dx/Math.max(20,width)*gpView.count;
+    const step=Math.trunc(gpView.fraction);
+    gpView.fraction-=step;
+    const next=clip(gpView.offset+step,0,gpView.max-gpView.count);
+    if(next!==gpView.offset+step)gpView.fraction=0;
+    gpView.offset=next;
+  }
+  if(mode==='hand'||mode==='price')
+    gpView.priceShift=clip(gpView.priceShift+dy/Math.max(20,height)*gpView.priceZoom,-10,10);
+}
+function navZoom(factor,anchor){
+  if(gpView.max<2)return;
+  const prev=gpView.count;
+  const next=clip(Math.round(prev*factor),Math.min(12,gpView.max),gpView.max);
+  const a=anchor==null?.5:clip(anchor,0,1);
+  gpView.offset=clip(Math.round(gpView.offset+(prev-next)*(1-a)),0,gpView.max-next);
+  gpView.count=next;gpView.fraction=0;
+}
+function navReset(){
+  gpView.key='';gpView.offset=0;gpView.count=0;gpView.max=0;
+  gpView.priceZoom=1;gpView.priceShift=0;gpView.fraction=0;
+}
 function svg(){
   const iv=ivOf();
-  const A=resample(cut(bars(st.a,iv))),B=st.b?(isEcon(st.b)?bars(st.b,iv):resample(cut(bars(st.b,iv)))):[];
+  const A=navInit(resample(bars(st.a,iv))),B=st.b?(isEcon(st.b)?bars(st.b,iv):resample(bars(st.b,iv))):[];
   const W=720,H=360,L=56,R=62,T=14,Bm=40;const cw=W-L-R,chh=H-T-Bm;
   if(A.length<2){
     const e=errOf(st.a,iv);const login=/conta|login|401/i.test(e)||g(()=>!SESS,false);
@@ -142,7 +189,7 @@ function svg(){
   const X=i=>L+(i/(xs.length-1))*cw;
   const rng=v=>{const f=v.filter(fin);let lo=Math.min(...f),hi=Math.max(...f);const m=(hi-lo)*.08||Math.abs(hi)*.01||1;return [lo-m,hi+m]};
   const both=mode==='base'?rng([...sa,...(sb||[])]):null;
-  const [ra0,ra1]=both||rng(sa);const [rb0,rb1]=sb?(both||rng(sb)):[0,1];
+  const [ra0,ra1]=navPriceBounds(both||rng(sa));const [rb0,rb1]=sb?(both?[ra0,ra1]:rng(sb)):[0,1];
   const YA=v=>T+(1-(v-ra0)/(ra1-ra0))*chh, YB=v=>T+(1-(v-rb0)/(rb1-rb0))*chh;
   const path=(s,Y)=>{let d='',pen=false;s.forEach((v,i)=>{if(v==null){pen=false;return}d+=(pen?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1);pen=true});return d};
   const dA=path(sa,YA);const area=dA+`L${X(sa.length-1).toFixed(1)},${(T+chh).toFixed(1)}L${X(0).toFixed(1)},${(T+chh).toFixed(1)}Z`;
@@ -175,8 +222,9 @@ function svg(){
   const legend=`<g class="gp-legend"><rect x="${L+8}" y="${T+6}" width="210" height="${18+legendRows.length*16}" rx="3"/><text class="gp-lt" x="${L+113}" y="${T+19}" text-anchor="middle">${mode==='base'?'Base 100':mode==='ratio'?'Razão (base 100)':'Último preço'}</text>${legendRows.map((r,i)=>`<rect x="${L+16}" y="${T+26+i*16}" width="9" height="9" fill="${r[3]}"/><text class="gp-lv" x="${L+30}" y="${T+34+i*16}">${esc(r[0])}${r[1]?' ('+r[1]+')':''}</text><text class="gp-lv" x="${L+210}" y="${T+34+i*16}" text-anchor="end">${fmtAx(r[2])}</text>`).join('')}</g>`;
   lastGeom={xs,A,B:pairs,sa,sb,X,L,R,W,T,chh,mode,fmtAx};
   return {html:`<svg class="gp-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Gráfico de ${esc(labelA)}${sb?' e '+esc(labelB):''}, período ${esc(st.per)}">
+    <defs><clipPath id="gp421-plot-clip"><rect x="${L}" y="${T}" width="${cw}" height="${chh}"/></clipPath></defs>
     <rect class="gp-bg" x="${L}" y="${T}" width="${cw}" height="${chh}"/>${grid}
-    <path class="gp-area" d="${area}"/>${dB?`<path class="gp-lb" d="${dB}"/>`:''}<path class="gp-la" d="${dA}"/>${mas}${evg}
+    <g class="gp-view-series" clip-path="url(#gp421-plot-clip)"><path class="gp-area" d="${area}"/>${dB?`<path class="gp-lb" d="${dB}"/>`:''}<path class="gp-la" d="${dA}"/>${mas}${evg}</g>
     <path class="gp-frame" d="M${L} ${T}V${T+chh}H${W-R}V${T}"/>${ax}${xl}${tagR}${tagL}${legend}
     <g class="gp-cross" hidden><path class="gp-cv" d=""/><rect class="gp-cbox" rx="3"/><text class="gp-ct"></text></g></svg>`,ok:true};
 }
@@ -214,11 +262,21 @@ function shell(){
     <button type="button" class="gp-btn gp-icon" data-gp="full" aria-label="Tela cheia">⤢</button>
     <button type="button" class="gp-btn gp-icon" data-gp="help" aria-label="Ajuda do Terminal">?</button>
   </div>
+  <div class="gp-navigation" role="toolbar" aria-label="Mover e ajustar o gráfico">
+    <button type="button" data-gp-nav="hand" title="Deslocar preço e tempo juntos" aria-pressed="true">✋ Mover</button>
+    <button type="button" data-gp-nav="price" title="Arrastar apenas a escala de preço" aria-pressed="false">↕ Preço</button>
+    <button type="button" data-gp-nav="time" title="Arrastar apenas as datas" aria-pressed="false">↔ Tempo</button>
+    <button type="button" data-gp-nav="zin" title="Ampliar o período visível" aria-label="Mais zoom">＋</button>
+    <button type="button" data-gp-nav="zout" title="Afastar o gráfico" aria-label="Menos zoom">－</button>
+    <button type="button" data-gp-nav="reset" title="Restaurar preço e tempo" aria-label="Restaurar gráfico">⟲</button>
+  </div>
   <div class="gp-plot" data-gp-plot></div>
   <footer class="gp-foot" data-gp-foot></footer>
   </section>`;
 }
 function syncControls(el){
+  el.querySelectorAll('[data-gp-nav="hand"],[data-gp-nav="price"],[data-gp-nav="time"]').forEach(b=>
+    b.setAttribute('aria-pressed',String((st.navMode||'hand')===b.dataset.gpNav)));
   el.querySelectorAll('[data-gp-per]').forEach(b=>b.classList.toggle('on',b.dataset.gpPer===st.per));
   el.querySelectorAll('[data-gp-mode]').forEach(b=>{const m=isEcon(st.b)?'dual':st.mode;b.classList.toggle('on',b.dataset.gpMode===m);b.disabled=!st.b||(isEcon(st.b)&&b.dataset.gpMode!=='dual')});
   el.querySelectorAll('[data-gp-ma]').forEach(b=>b.classList.toggle('on',st.ma.includes(+b.dataset.gpMa)));
@@ -268,8 +326,16 @@ root.DIARIO_V421={get:()=>JSON.parse(JSON.stringify(st)),set:o=>{Object.assign(s
 /* ---------- interação ---------- */
 doc.addEventListener('click',e=>{
   const el=e.target.closest('#v421-gp');if(!el)return;
-  const t=e.target.closest('[data-gp],[data-gp-per],[data-gp-mode],[data-gp-ma],[data-gp-preset],[data-gp-rel]');if(!t)return;
+  const t=e.target.closest('[data-gp],[data-gp-per],[data-gp-mode],[data-gp-ma],[data-gp-preset],[data-gp-rel],[data-gp-nav]');if(!t)return;
   e.preventDefault();
+  if(t.dataset.gpNav){
+    const mode=t.dataset.gpNav;
+    if(['hand','price','time'].includes(mode)){st.navMode=mode;save();syncControls(el);return}
+    if(mode==='zin')navZoom(.75,.5);
+    if(mode==='zout')navZoom(1.33,.5);
+    if(mode==='reset')navReset();
+    paint();return;
+  }
   if(t.dataset.gpRel){st.b=t.dataset.gpRel;if(st.mode==='single')st.mode='dual';save();const m=el.querySelector('[data-gp-relmenu]');m.hidden=true;el.querySelector('[data-gp="rel"]').setAttribute('aria-expanded','false');load(false);return}
   if(t.dataset.gpPer){st.per=t.dataset.gpPer;save();load(false);return}
   if(t.dataset.gpMode){st.mode=t.dataset.gpMode;save();paint();return}
@@ -327,5 +393,5 @@ hook();
 setInterval(()=>{if(doc.hidden)return;if(g(()=>tab,'')==='term'||g(()=>root.V428_gpHost&&root.V428_gpHost(),null)){if(!root.render0?.__v421)hook();mount()}},1200);
 // atualiza o preço do cabeçalho e o gráfico sem redesenhar a página
 setInterval(()=>{if(!doc.hidden&&g(()=>tab,'')==='term'&&doc.getElementById('v421-gp'))load(false)},60000);
-root.DIARIO_GP421={paint,load,state:()=>st};
+root.DIARIO_GP421={paint,load,state:()=>st,view:()=>({...gpView}),reset:navReset};
 })(window);
