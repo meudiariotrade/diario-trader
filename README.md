@@ -1,3 +1,51 @@
+# Diário de Trader
+
+Aplicação estática com persistência local e integração com o projeto Supabase configurado em `inicio.js`. Os bundles em uso são indicados pelo `index.html`; as versões antigas na raiz são mantidas por compatibilidade.
+
+## Verificar e preparar a publicação
+
+Requer Node.js 24.
+
+```sh
+npm ci --ignore-scripts
+npx playwright install --with-deps chromium
+npm run verify
+npm run build
+```
+
+`verify` verifica os recursos do HTML e do service worker, a sintaxe dos scripts, o fluxo de exclusão com serviços simulados e a navegação no Chromium. O teste de interface confirma que uma foto antiga pendente continua impedindo o registro de um trade novo. Nenhum teste apaga dados reais ou exige credenciais.
+
+`build` prepara `_site/` com os arquivos estáticos existentes. Não recria os bundles históricos: os scripts originais de geração não estavam neste repositório. Fontes do backend, SQL, testes, dependências e documentos de manutenção não entram na publicação. O workflow verifica PRs e só publica a branch `main` depois das verificações.
+
+Para usar um Chromium já instalado, defina `CHROMIUM_PATH` com seu caminho. Sem essa variável, o teste usa `/usr/bin/chromium`, se disponível, ou o navegador instalado pelo Playwright.
+
+## Exclusão de conta
+
+A implementação revisada está em `supabase/functions/conta/index.ts`, com a limpeza de Storage em `storage.ts`. Os dois arquivos precisam ser publicados juntos, substituindo a função `conta` existente. A função publicada ainda exige autenticação própria, senha e a palavra `EXCLUIR`; a configuração anterior de JWT no gateway é preservada.
+
+- A lista de buckets é definida somente em `storage.ts`.
+- A limpeza percorre subpastas e pagina antes de remover arquivos, para não pular itens.
+- Falhas, limite de execução e arquivos restantes interrompem o fluxo antes de remover o login. Uma nova tentativa retoma a limpeza dos arquivos restantes.
+- A exclusão do usuário remove as tabelas com `ON DELETE CASCADE`. Só as três tabelas legadas sem cascata ficam na lista de limpeza manual: `aulas_audio_jobs`, `aulas_imagens_jobs` e `aulas_teste`.
+- O fluxo não é uma transação única entre Storage e Auth. Falhas podem deixar uma exclusão parcial; a conta não é informada como excluída antes da confirmação do Auth. O teste completo com uma conta descartável ainda deve ser feito em ambiente de teste.
+
+Os testes cobrem 2.103 objetos, paginação, subpastas, isolamento entre usuários, falha ao listar/remover, retomada, limites e rejeição de chamadas sem autenticação ou com senha incorreta. O módulo não contém chaves reais.
+
+## Revisão de 09/11/2026
+
+- As mudanças partem de `f5697d73795fdd3037bcc1765d633fc3c5fe0c7d`, preservando as correções recentes do Terminal.
+- Não foi criado outro listener de fotos, outro renderizador de cabeçalho ou outra rotina de exclusão para coexistir com a anterior. Os estilos ativos foram editados no lugar.
+- A regra de fotos obrigatórias permanece intacta. A demonstração apenas deixa de exibir o ticker vazio; o ticker do aplicativo normal continua disponível.
+- O SQL em `supabase/sql/aulas-fila-user-id.sql` evita criar índice equivalente duplicado. Aplicado no Supabase com a migração `index_aulas_fila_user_id`; índice verificado após a aplicação. O aviso de chave estrangeira sem índice deixou de aparecer.
+- A substituição da função de exclusão em produção foi bloqueada pela revisão automática por exigir autorização explícita. A correção está preparada para revisão e ainda não está ativa no Supabase.
+- A proteção contra senhas vazadas permanece desativada. Os recursos disponíveis nesta conexão não permitem alterar a configuração de Auth. Deve ser habilitada no painel, conforme o plano: https://supabase.com/dashboard/project/wbpsmszecpzioaijfnsl/auth/providers . Orientação: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection .
+
+Próximas verificações recomendadas: sincronização entre dois aparelhos, retomada após perda de rede, restauração de backup e importação do Profit. Esses fluxos não foram certificados pelos testes acima.
+
+---
+
+## Histórico anterior (preservado)
+
 # Diário de Trader — v311: artes sem subpastas
 
 Correção da mensagem Arte indisponível e da atualização do cache quando a pasta cards-art não foi enviada ao site. Agora as artes estão em cards-assets.js, na pasta principal. Leia LEIA-ME-V311.md.
