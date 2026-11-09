@@ -14,7 +14,8 @@ test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e
   await expect(app.locator('.tf413-layout')).toBeHidden();
   const menu=await app.locator('.tf415-nav').evaluate(n=>({tops:[...n.querySelectorAll('button')].map(b=>b.getBoundingClientRect().top),gap:parseFloat(getComputedStyle(n).gap),height:n.getBoundingClientRect().height}));
   assert.ok(Math.max(...menu.tops)-Math.min(...menu.tops)<2);assert.ok(menu.gap<=4);assert.ok(menu.height<64);
-  assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await p.locator('.v503-fantasma').waitFor({state:'detached'});
+  await expect.poll(()=>p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await app.locator('[data-tf415-nav="GLOBAL"]').click();
   await expect(app.locator('#trgrid')).toBeHidden();await expect(app.locator('#v421-gp')).toBeVisible();
  }

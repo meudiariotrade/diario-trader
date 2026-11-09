@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const crypto = require('node:crypto');
 const { JSDOM } = require('jsdom');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, '_site');
@@ -17,12 +18,13 @@ function localFile(value) {
   return relative;
 }
 function validate() {
+  const required = new Set();
   const html = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'));
   const scripts = [...html.window.document.querySelectorAll('script[src]')].map(e => e.getAttribute('src'));
   if (new Set(scripts.map(src => src.split(/[?#]/)[0])).size !== scripts.length) throw new Error('Script duplicado no index.html.');
   const references = [...html.window.document.querySelectorAll('script[src],link[href],img[src]')]
     .map(e => e.getAttribute('src') || e.getAttribute('href'));
-  references.forEach(localFile);
+  references.forEach(ref => { const file = localFile(ref); if (file) required.add(file); });
   html.window.close();
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
   for (const key of ['CORE', 'EXTRA']) {
@@ -30,16 +32,20 @@ function validate() {
     if (!match) throw new Error('Lista de cache não encontrada: ' + key);
     const entries = JSON.parse(match[1]);
     if (new Set(entries).size !== entries.length) throw new Error('Recurso duplicado no cache: ' + key);
-    entries.forEach(localFile);
+    entries.forEach(ref => { const file = localFile(ref); if (file) required.add(file); });
     if (key === 'CORE') for (const src of scripts.map(s => s.split('?')[0])) {
       if (!entries.includes(src)) throw new Error('Script de entrada fora do cache essencial: ' + src);
     }
   }
-  const files = fs.readdirSync(root).filter(f => asset.test(f));
+  // Histórico permanece no repositório. Publica bundles antigos apenas se forem referenciados.
+  const files = publicationFiles(fs.readdirSync(root).filter(f => asset.test(f)), required);
   for (const file of files.filter(f => f.endsWith('.js'))) {
     new vm.Script(fs.readFileSync(path.join(root, file), 'utf8'), { filename: file });
   }
   return files;
+}
+function publicationFiles(files, required) {
+  return files.filter(file => !/^(?:nucleo|camadas|estilo)-v\d+\.(?:js|css)$/.test(file) || required.has(file));
 }
 function build() {
   const files = validate();
@@ -50,9 +56,12 @@ function build() {
     fs.copyFileSync(path.join(root, file), path.join(output, file));
   }
   fs.writeFileSync(path.join(output, '.nojekyll'), '');
+  const critical = ['index.html', 'sw.js', 'nucleo-v522.js', 'camadas-v522.js', 'navegacao-simples.js', 'navegacao-simples.css'];
+  const hashes = Object.fromEntries(critical.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(output, file))).digest('hex')]));
+  fs.writeFileSync(path.join(output, 'publicacao.json'), JSON.stringify({ commit: process.env.GITHUB_SHA || null, files: hashes }));
   console.log(`Publicação preparada: ${files.length} arquivos estáticos em _site/.`);
 }
-module.exports = { validate, build, localFile };
+module.exports = { validate, build, localFile, publicationFiles };
 if (require.main === module) {
   if (process.argv.includes('--check')) console.log(`Recursos e sintaxe válidos: ${validate().length} arquivos estáticos.`);
   else build();

@@ -39,6 +39,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Confirmar arquivos no site público
+        run: node scripts/verify-published.cjs
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
