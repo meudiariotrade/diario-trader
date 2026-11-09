@@ -8,9 +8,11 @@ async function run(){
  const bundle=fs.readFileSync('camadas-v522.js','utf8');
  assert(bundle.includes(source),'Bundle efetivamente inclui o mesmo gráfico GP da origem');
  const index=fs.readFileSync('index.html','utf8');
- assert(index.includes('camadas-v522.js?v=526'),'Página força a versão publicada dos controles');
+ assert(/camadas-v522\.js\?v=\d+/.test(index),'Página versiona o bundle dos controles');
  assert(index.includes('terminal-gestos-seguros.css?v=526'),'Folha de estilo atualizada');
- assert(/const C='diario-v5\d\d-[a-z-]+'/.test(fs.readFileSync('sw.js','utf8')),'Cache PWA revisado');
+ const worker=fs.readFileSync('sw.js','utf8');
+ assert(/const C=['"]diario-v\d+[^'"]*['"]/.test(worker),'Cache PWA possui versão própria');
+ for(const name of ['camadas-v522.js','terminal-gestos-seguros.js','terminal-gestos-seguros.css']) assert(worker.includes('"'+name+'"'),'Cache inclui '+name);
  const err=[];
  const vc=new VirtualConsole();vc.on('jsdomError',e=>err.push(e.message));
  vc.on('error',e=>err.push(String(e)));

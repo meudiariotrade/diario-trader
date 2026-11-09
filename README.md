@@ -1,3 +1,20 @@
+# Estudos — atualização v530
+
+- Uma meta semanal por usuário, compartilhada por Hoje, Foco e os painéis. O valor já salvo em `S.ax.focoMeta` é preservado. A antiga preferência global do aparelho só é aproveitada quando o usuário escolhe “Usar esta meta”; não é copiada automaticamente para outras contas.
+- Registros podem ser vinculados a sessões de Foco já contabilizadas. As notas e revisões são salvas, e os minutos permanecem no mesmo registro de tempo. Sessões independentes continuam somando normalmente. O histórico antigo não é deduplicado nem apagado automaticamente.
+- Datas futuras ou impossíveis não são aceitas como estudo realizado. Registros futuros antigos permanecem armazenados, mas ficam fora dos totais atuais, da sequência e das conquistas de tempo/questões.
+- A navegação principal usa Hoje, Biblioteca, Praticar e Progresso; as ferramentas complementares permanecem em Mais. Os módulos internos usam cabeçalho compacto. Durante questões, a edição da meta fica oculta.
+- A biblioteca mostra a lista e a busca antes do cadastro recolhido. PDF, resumo com IA, tipos e prompts existentes são preservados. A busca atua na lista atual, sem criar outra biblioteca.
+- As próximas ações usam revisões vencidas, ciclo e dificuldades já registrados. O destaque usa o nome e a aula realmente disponíveis; não atribui o progresso de outra trilha a um título fixo.
+- As instruções de PDFs e voz ficam recolhidas em Vídeos; o estado sem login possui um botão direto para a conta. Os filtros mobile mantêm palavras inteiras.
+- O teste de cache verifica sua versão e seus recursos, sem exigir um nome histórico específico. Os ajustes de rolagem e de alertas da v529 são preservados.
+
+Validação: `npm run verify` passou com 21 verificações, incluindo navegação em Chromium, 320/390/1440 px, persistência da meta, vínculo sem duplicação de tempo, PDF do formulário, fotos obrigatórias, Terminal e os testes anteriores de exclusão de conta. `npm run build` prepara os arquivos para publicação. Os testes usam dados fictícios e não chamam geração de IA nem alteram contas reais.
+
+Limites: sincronização entre aparelhos autenticados e reprodução de aulas privadas continuam exigindo validação com conta de teste. Esta entrega não altera políticas ou funções do Supabase.
+
+---
+
 # Diário de Trader
 
 Aplicação estática com persistência local e integração com o projeto Supabase configurado em `inicio.js`. Os bundles em uso são indicados pelo `index.html`; as versões antigas na raiz são mantidas por compatibilidade.

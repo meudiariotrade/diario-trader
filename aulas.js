@@ -52,8 +52,8 @@ const posDe=a=>{const l=lsg(LS_POS+a.id,null),s=a.progresso||{};return(l&&(!s.em
 function listaHtml(){
   if(AU.lista==null){carregaLista();if(AU.lista==null)return'<div class="card"><div class="sm mut">Carregando aulas…</div></div>'}
   let o='';
-  if(AU.err==='login')o+='<div class="card warn"><b>Entre na sua conta</b><div class="sm">As aulas ficam guardadas no Supabase. Entre em Mais → Conta para ver a lista.</div></div>';
-  else if(AU.err==='tabela')o+='<div class="card warn"><b>Falta a tabela "aulas" no Supabase</b><div class="sm">Rode o SQL de aulas (supabase-aulas.sql).</div></div>';
+  if(AU.err==='login')o+='<div class="card warn"><b>Entre na sua conta</b><div class="sm">Entre na sua conta para carregar suas aulas e continuar o estudo.</div><button type="button" class="btn" data-dt393-route="conta">Entrar na minha conta</button></div>';
+  else if(AU.err==='tabela')o+='<div class="card warn"><b>Videoaulas temporariamente indisponíveis</b><div class="sm">A biblioteca de aulas precisa de manutenção. Tente novamente mais tarde.</div></div>';
   else if(AU.err)o+=`<div class="card warn"><b>Não consegui carregar as aulas</b><div class="sm">${h(AU.err)}</div><button class="btn s" data-aurel="1">Tentar de novo</button></div>`;
   const g={};for(const a of AU.lista)(g[a.livro]=g[a.livro]||[]).push(a);
   o+=novaHtml();
@@ -67,7 +67,7 @@ function listaHtml(){
     }
     o+='</div>';
   }
-  o+='<div class="sm mut" style="margin:6px 2px 14px">A narração usa a voz do aparelho. No iPhone, baixe uma voz “Aprimorada” ou “Premium” em português (Ajustes → Acessibilidade → Conteúdo Falado → Vozes) para soar mais natural.</div>';
+  o+='<details class="sm mut est-audio-help" style="margin:6px 2px 14px"><summary>Ajustes da voz de narração</summary><p>A narração usa a voz do aparelho. No iPhone, baixe uma voz “Aprimorada” ou “Premium” em português (Ajustes → Acessibilidade → Conteúdo Falado → Vozes) para soar mais natural.</p></details>';
   return o;
 }
 function pinta(){if(typeof tab!=='undefined'&&tab==='estudos'&&ESV==='aul'&&!P.on){const y=scrollY;render();scrollTo(0,y)}}
