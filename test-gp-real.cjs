@@ -9,7 +9,7 @@ async function run(){
  assert(bundle.includes(source),'Bundle efetivamente inclui o mesmo gráfico GP da origem');
  const index=fs.readFileSync('index.html','utf8');
  assert(/camadas-v522\.js\?v=\d+/.test(index),'Página versiona o bundle dos controles');
- assert(index.includes('terminal-gestos-seguros.css?v=526'),'Folha de estilo atualizada');
+ assert(index.includes('terminal-gestos-seguros.css?v=532'),'Folha de estilo atualizada');
  const worker=fs.readFileSync('sw.js','utf8');
  assert(/const C=['"]diario-v\d+[^'"]*['"]/.test(worker),'Cache PWA possui versão própria');
  for(const name of ['camadas-v522.js','terminal-gestos-seguros.js','terminal-gestos-seguros.css']) assert(worker.includes('"'+name+'"'),'Cache inclui '+name);
@@ -93,6 +93,52 @@ async function run(){
  w.DIARIO_GP421.paint();
  assert(root.querySelector('[data-gp-nav="hand"]'),'Controles persistem após atualizar dados');
  assert.equal(root.querySelectorAll('.gp-navigation').length,1,'Controles não duplicam');
+ // A janela do gráfico deve sobreviver a recarregamento do navegador.
+ click('zin');
+ click('price');
+ pointer('pointerdown',110,80,5);
+ pointer('pointermove',110,155,5);
+ pointer('pointerup',110,155,5);
+ click('time');
+ pointer('pointerdown',70,120,6);
+ pointer('pointermove',240,120,6);
+ pointer('pointerup',240,120,6);
+ const saved=w.DIARIO_GP421.view();
+ assert(saved.offset>0&&saved.priceShift>0&&saved.count<firstCount,'Enquadramento editado');
+ const storageKey='diario-gp-enquadramentos-v531';
+ const savedJson=w.localStorage.getItem(storageKey);
+ assert(savedJson&&savedJson.includes('IBOV'),'Ajustes guardados por ativo');
+ const dom2=new JSDOM('<!doctype html><html lang="pt-BR"><body class="trmon"><main id="app"><div id="tf413"><div class="tf413-main">Grade anterior</div></div></main></body></html>', {
+   url:'https://example.test/diario-trader/',pretendToBeVisual:true,runScripts:'outside-only',virtualConsole:vc
+ });
+ const w2=dom2.window,d2=w2.document;
+ w2.localStorage.setItem(storageKey,savedJson);
+ w2.localStorage.setItem('diario-v421-gp',w.localStorage.getItem('diario-v421-gp')||'{}');
+ w2.tab='term';w2.render0=()=>{};
+ let vixCalls=0;
+ w2.TRM={tec:{velas:(sym,iv)=>({L:rows[sym]||[],nota:sym==='VIX'?'Fonte Yahoo com atraso':'fonte de teste'}),
+   pegaVelas:async(sym)=>{if(sym==='VIX')vixCalls++;return null},
+   erroVelas:(sym)=>sym==='VIX'?'Yahoo 404':''}};
+ w2.eval(source);w2.render0();
+ const restored=w2.DIARIO_GP421.view();
+ assert.equal(restored.offset,saved.offset,'Data anterior é restaurada após reabrir');
+ assert.equal(restored.count,saved.count,'Zoom é restaurado');
+ assert.equal(restored.priceShift,saved.priceShift,'Escala vertical é restaurada');
+ // O erro do VIX deve aparecer sem preço inventado e com opção de recarga.
+ w2.DIARIO_V421.set({a:'VIX',b:''});
+ const warn=d2.querySelector('[data-gp-source-status]');
+ assert(warn&&!warn.hidden,'Falha da fonte exposta ao usuário');
+ assert.match(warn.textContent,/VIX.*Yahoo 404/,'O diagnóstico preserva o código original');
+ assert.equal(d2.querySelector('#v421-gp .gp-svg'),null,'Sem candles o gráfico não desenha preços fictícios');
+ const reload=d2.querySelector('[data-gp="reload"]');assert(reload,'Botão atualizar ainda disponível');
+ reload.click();
+ assert(vixCalls>0,'Atualizar histórico tenta novamente consultar o VIX');
+ // Reset apaga somente o enquadramento do contexto atual.
+ w2.DIARIO_V421.set({a:'IBOV',b:'SPX'});
+ assert.equal(w2.DIARIO_GP421.view().offset,saved.offset,'Voltar ao ativo recupera sua janela');
+ d2.querySelector('[data-gp-nav="reset"]').click();
+ assert.equal(w2.DIARIO_GP421.view().offset,0,'Reset não mantém o deslocamento');
+ w2.close();
  assert.equal(err.length,0,'Sem erros inesperados de DOM: '+err.join('; '));
  console.log('✅ GP principal real: controles visíveis, dados históricos, preço, tempo, zoom, reset, toque e integração do bundle v522.');
  w.close();
