@@ -300,8 +300,8 @@ function shell(){
     <button type="button" data-gp-nav="zout" title="Afastar o gráfico" aria-label="Menos zoom">－</button>
     <button type="button" data-gp-nav="reset" title="Restaurar preço e tempo" aria-label="Restaurar gráfico">⟲</button>
   </div>
-  <div class="gp-source-warning" data-gp-source-status role="status" aria-live="polite" hidden></div>
   <div class="gp-plot" data-gp-plot></div>
+  <div class="gp-source-warning" data-gp-source-status role="status" aria-live="polite" hidden></div>
   <footer class="gp-foot" data-gp-foot></footer>
   </section>`;
 }
