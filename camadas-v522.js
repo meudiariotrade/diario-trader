@@ -763,14 +763,40 @@ let lastGeom=null;
 /* v526 — Janela do GP: mantém os candles originais, exibe tempo deslocável e
    eixo de preço ajustável sem alterar os dados carregados. */
 const gpView={key:'',count:0,offset:0,max:0,priceZoom:1,priceShift:0,fraction:0};
+const VIEWS_KEY='diario-gp-enquadramentos-v531';
+let savedViews={};
+try { const v=JSON.parse(localStorage.getItem(VIEWS_KEY)||'{}'); if(v&&typeof v==='object'&&!Array.isArray(v)) savedViews=v; } catch(_){}
+const gpKey=()=>[st.a,st.b||'',st.per,st.freq,st.mode,ivOf()].join('|');
+function viewWrite(){
+  try {
+    const entries=Object.entries(savedViews).sort((a,b)=>(b[1]?.savedAt||0)-(a[1]?.savedAt||0)).slice(0,25);
+    savedViews=Object.fromEntries(entries);
+    localStorage.setItem(VIEWS_KEY,JSON.stringify(savedViews));
+  } catch(_){}
+}
+function viewStore(){
+  if(!gpView.key)return;
+  savedViews[gpView.key]={count:gpView.count,offset:gpView.offset,priceZoom:gpView.priceZoom,priceShift:gpView.priceShift,savedAt:Date.now()};
+  viewWrite();
+}
+function viewRestore(key){
+  const v=savedViews[key];if(!v||typeof v!=='object')return false;
+  gpView.count=Number(v.count)||gpView.count;
+  gpView.offset=Number(v.offset)||0;
+  gpView.priceZoom=clip(v.priceZoom,.2,6);
+  gpView.priceShift=clip(v.priceShift,-10,10);
+  gpView.fraction=0;
+  return true;
+}
 const clip=(v,lo,hi)=>Math.max(lo,Math.min(hi,Number(v)||0));
 function navInit(all){
   if(all.length<2)return all;
-  const key=[st.a,st.per,st.freq,st.mode,ivOf()].join('|');
+  const key=gpKey();
   if(gpView.key!==key){
     gpView.key=key;
     gpView.count=Math.max(2,resample(cut(bars(st.a,ivOf()))).length);
     gpView.offset=0;gpView.priceZoom=1;gpView.priceShift=0;gpView.fraction=0;
+    viewRestore(key);
   }
   gpView.max=all.length;
   gpView.count=Math.max(2,Math.min(gpView.count||all.length,all.length));
@@ -794,6 +820,7 @@ function navPan(dx,dy,width,height,mode){
   }
   if(mode==='hand'||mode==='price')
     gpView.priceShift=clip(gpView.priceShift+dy/Math.max(20,height)*gpView.priceZoom,-10,10);
+  viewStore();
 }
 function navZoom(factor,anchor){
   if(gpView.max<2)return;
@@ -802,8 +829,10 @@ function navZoom(factor,anchor){
   const a=anchor==null?.5:clip(anchor,0,1);
   gpView.offset=clip(Math.round(gpView.offset+(prev-next)*(1-a)),0,gpView.max-next);
   gpView.count=next;gpView.fraction=0;
+  viewStore();
 }
 function navReset(){
+  delete savedViews[gpKey()];viewWrite();
   gpView.key='';gpView.offset=0;gpView.count=0;gpView.max=0;
   gpView.priceZoom=1;gpView.priceShift=0;gpView.fraction=0;
 }
@@ -908,6 +937,7 @@ function shell(){
     <button type="button" data-gp-nav="zout" title="Afastar o gráfico" aria-label="Menos zoom">－</button>
     <button type="button" data-gp-nav="reset" title="Restaurar preço e tempo" aria-label="Restaurar gráfico">⟲</button>
   </div>
+  <div class="gp-source-warning" data-gp-source-status role="status" aria-live="polite" hidden></div>
   <div class="gp-plot" data-gp-plot></div>
   <footer class="gp-foot" data-gp-foot></footer>
   </section>`;
@@ -932,6 +962,13 @@ function paint(){
   if(st.table){plot.innerHTML=table();lastGeom=null}else{const r=svg();plot.innerHTML=r.html}
   const iv=ivOf(),na=bars(st.a,iv).length,nb=st.b?bars(st.b,iv).length:0;
   const notes=[meta(st.a,iv),st.b?meta(st.b,iv):''].filter(Boolean);
+  const error=errOf(st.a,iv),secondaryError=st.b?errOf(st.b,iv):'';
+  const sourceWarning=[error?st.a+': '+error:'',secondaryError?st.b+': '+secondaryError:''].filter(Boolean).join(' · ').slice(0,250);
+  const gpNotice=el.querySelector('[data-gp-source-status]');
+  if(gpNotice){
+    gpNotice.hidden=!sourceWarning;
+    gpNotice.textContent=sourceWarning?'Fonte indisponível ou com falha — '+sourceWarning+' · Atualize o histórico para tentar novamente.':'';
+  }
   el.querySelector('[data-gp-foot]').innerHTML=`<span>${esc(name(st.a))}${st.b?' × '+esc(name(st.b)):''} · ${iv==='1d'?'diário':iv} · ${na}${st.b?'/'+nb:''} pontos · Yahoo Finance (com atraso)${isEcon(st.b)?' · indicador: Banco Central (SGS), vale até a próxima divulgação':''}</span>${notes.length?`<span class="gp-note">${esc([...new Set(notes)].join(' · '))}</span>`:''}${st.b&&isEcon(st.b)&&econErr.get(st.b)?`<span class="gp-err">${esc(econErr.get(st.b))}</span>`:''}${ivOf()==='1d'&&['Máx','2A'].includes(st.per)?'<span class="gp-note">A fonte gratuita entrega até 2 anos de histórico diário.</span>':''}`;
 }
 async function load(force){
