@@ -1,0 +1,44 @@
+name: Testar Terminal e Gráfico v532
+on:
+  push:
+    branches: [main, feature/terminal-v522-pos-v531-refinamento]
+    paths:
+      - 'terminal-gp-v421.js'
+      - 'camadas-v522.js'
+      - 'terminal-gestos-seguros.css'
+      - 'terminal-gestos-seguros.js'
+      - 'test-gp-real.cjs'
+      - 'test-terminal-gestos.cjs'
+      - 'index.html'
+      - 'sw.js'
+      - '.github/workflows/test-terminal-v532.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terminal-gp-v421.js'
+      - 'camadas-v522.js'
+      - 'terminal-gestos-seguros.css'
+      - 'terminal-gestos-seguros.js'
+      - 'test-gp-real.cjs'
+      - 'test-terminal-gestos.cjs'
+      - 'index.html'
+      - 'sw.js'
+      - '.github/workflows/test-terminal-v532.yml'
+permissions:
+  contents: read
+jobs:
+  terminal-dom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --check terminal-gp-v421.js
+      - run: node --check camadas-v522.js
+      - run: node --check test-gp-real.cjs
+      - run: node test-gp-real.cjs
+      - run: node test-terminal-gestos.cjs
