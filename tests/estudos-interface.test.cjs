@@ -39,8 +39,7 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   assert.ok((await app.locator('#v514-meta').innerText()).includes('180 min sugeridos'), 'A meta global antiga não é atribuída automaticamente à conta.');
   await app.locator('#v514-meta-in').fill('300');
   await app.locator('[data-v514="meta"]').click();
-  await page.waitForTimeout(400);
-  assert.ok((await app.locator('#v514-meta summary').innerText()).includes('15 / 300'));
+  await expect(app.locator('#v514-meta summary')).toContainText('15 / 300');
   assert.equal(await app.locator('[data-est-meta-legado]').count(), 0);
   assert.ok((await app.innerText()).includes('meta 5h'));
 
@@ -53,7 +52,7 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   await app.locator('#estnota').fill('Nota da sessão vinculada');
   await app.locator('[data-estsalva]').click();
   await app.getByText('Nota da sessão vinculada', { exact: false }).first().waitFor();
-  assert.ok((await app.locator('#v514-meta summary').innerText()).includes('15 / 300'), 'Vínculo não soma o mesmo tempo novamente.');
+  await expect(app.locator('#v514-meta summary'), 'Vínculo não soma o mesmo tempo novamente.').toContainText('15 / 300');
 
   await app.locator('.dt397-category [data-dt397-view="liv"]').click();
   assert.equal(await app.locator('.est-book-add').getAttribute('open'), null);
@@ -95,6 +94,6 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   await page.getByRole('button', { name: 'Estudos', exact: true }).last().click();
   await app.locator('.dt397-category [data-dt397-view="est"]').click();
   await app.locator('#v514-meta summary').waitFor();
-  assert.ok((await app.locator('#v514-meta summary').innerText()).includes('15 / 300'), 'Meta e tempo vinculado devem persistir ao reabrir.');
+  await expect(app.locator('#v514-meta summary'), 'Meta e tempo vinculado devem persistir ao reabrir.').toContainText('15 / 300');
   assert.deepEqual(errors, []);
 }));

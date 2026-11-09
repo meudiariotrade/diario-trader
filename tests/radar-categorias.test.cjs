@@ -13,7 +13,7 @@ test('radar sem menu duplicado: referências exclusivas nas categorias, fontes e
   await app.locator('.cqtabs [data-cqa="'+category+'"]').click();
   const rows=app.locator('.simple-category-references .m405-quote:visible');
   await expect(rows).toHaveCount(codes.length);
-  assert.deepEqual((await rows.evaluateAll(ns=>ns.map(n=>n.dataset.panoramaSymbol))).sort(),codes.slice().sort());
+  await expect.poll(()=>rows.evaluateAll(ns=>ns.map(n=>n.dataset.panoramaSymbol).sort())).toEqual(codes.slice().sort());
   for(const label of await rows.locator('.m405-quote-source').allTextContents()){assert.match(label,/Fonte da fixture/);assert.match(label,/09\/11\/2026/)}
   await expect(app.locator('.simple-market-sources')).toHaveCount(1);
  }
