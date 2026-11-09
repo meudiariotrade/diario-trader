@@ -15,19 +15,7 @@
 #app .simple-context h3{display:flex;align-items:center;gap:6px;font-size:14px;margin:0 0 10px}
 #app .simple-context .v4-list{min-height:0!important}
 #app .simple-context button{min-height:44px}
-#app .simple-terminal-intro,#app .simple-details>summary{font-family:system-ui,-apple-system,sans-serif!important}
-#app .simple-terminal-intro{display:none;padding:12px 14px}
-#app .simple-terminal-intro h2{font-size:20px;margin:4px 0 8px}
-#app .simple-terminal-intro p{font-size:14px;line-height:1.5;color:var(--mut,#acc6bb);margin:0}
-html body.trmon #app #tf413.simple-terminal-home .simple-terminal-intro{display:block!important}
-html body.trmon #app #tf413.simple-terminal-home .tf413-layout{display:block!important}
-html body.trmon #app #tf413.simple-terminal-home .tf413-layout>#v421-gp,
-html body.trmon #app #tf413.simple-terminal-home .tf413-layout>.tf413-main{display:none!important}
-html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
-html body.trmon #app #tf413 .tf415-nav{display:flex!important;flex-wrap:wrap!important;overflow:visible!important;gap:6px!important}
-#app .simple-terminal-more{margin:0;position:relative;padding:6px 10px}
-#app .simple-tool-grid{display:grid;gap:8px}
-#app .simple-terminal-more[open]{flex-basis:100%}
+#app .simple-details>summary{font-family:system-ui,-apple-system,sans-serif!important}
 #app .simple-market-about .m404-overview{margin:0;border:0}
 #app .simple-comparison{margin:14px 0}
 #app .simple-comparison>.m409-chart-card{margin:0!important}
@@ -37,17 +25,12 @@ html body.trmon #app #tf413 .tf415-nav{display:flex!important;flex-wrap:wrap!imp
 .simple-questions>b{font-size:13px;color:var(--mut,#a9c5ba)}
 .simple-questions button{font-size:13px;min-height:40px}
 @media(max-width:600px){
- html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side{grid-template-columns:minmax(0,1fr)!important}
- html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side>*{padding:12px!important}
- html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side :is(table,.tf413-tbl){font-size:13px!important}
- html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side :is(td,th){padding:8px 4px!important}
  #app .simple-actions>button{font-size:13px}
  html body #app .v4-iacard .simple-context{display:grid!important;grid-template-columns:minmax(0,1fr)!important;overflow:visible!important}
  html body #app .v4-iacard .simple-context>div{width:auto!important;min-width:0!important}
 
  .wf-chat-panel .simple-questions button{padding:6px 9px}
 }
-html body.trmon #app #tf413 .simple-terminal-intro *{font-family:system-ui,-apple-system,sans-serif!important;letter-spacing:normal!important}
 #app .simple-calendar[open] #mkcal{min-height:320px!important}
 
 /* v535: referências exclusivas seguem a categoria de cima; não há segundo menu. */
@@ -55,3 +38,12 @@ html body #app .simple-category-references[hidden],html body #app .simple-catego
 html body #app .simple-category-references .m405-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px}
 #app .simple-category-references{margin-top:12px;min-width:0}
 #app .simple-market-sources .m405-footer-note{margin-top:10px}
+
+/* v536: menu anterior compacto; os modos não compartilham a área de conteúdo. */
+html body.trmon #app #tf413 .tf415-nav{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:4px!important;padding:4px 0 8px!important;margin:0!important;min-height:0!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:thin}
+html body.trmon #app #tf413 .tf415-navitem{flex:0 0 auto!important;min-height:40px!important;padding:7px 11px!important;margin:0!important;font:650 12px/1.25 system-ui,-apple-system,sans-serif!important;white-space:nowrap!important}
+html body.trmon.tf413-home #app .trm>:is(.trbar,.trtabs,#trgrid,.trtape,.trrod,.trquick-strip,.trmerc),
+html body.trmon #app .trm>[hidden],html body.trmon #app #tf413>[hidden]{display:none!important}
+html body.trmon.tf413-advanced #app #tf413>:is(.tf413-layout,.tf413-bottom){display:none!important}
+#v518-mov>summary{display:list-item!important;list-style:disclosure-closed inside!important;cursor:pointer;min-height:32px;margin:0!important;line-height:1.5}
+#v518-mov[open]>summary{list-style-type:disclosure-open!important;margin-bottom:8px!important}
