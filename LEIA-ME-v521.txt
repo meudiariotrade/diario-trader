@@ -1,0 +1,2 @@
+Diario de Trader v521 (inclui v516 a v520)
+- Insiders: mostra o ultimo mes com dados (nao fica vazio).
