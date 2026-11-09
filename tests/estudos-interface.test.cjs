@@ -1,5 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { expect } = require('playwright/test');
 const { withApp } = require('./helpers/app.cjs');
 
 test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e controles mobile', { timeout: 90_000 }, async () => withApp(async (browser, base) => {
@@ -29,7 +30,9 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   await page.locator('#splash').waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: 'Estudos', exact: true }).last().click();
   assert.equal(await page.locator('.dt397-category [data-dt397-view]').count(), 4);
-  assert.equal(await page.locator('.dt397-library-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length), 2);
+  await page.locator('.v503-fantasma').waitFor({ state: 'detached' });
+  await expect(page.locator('.dt397-library-grid')).toBeVisible();
+  await expect.poll(() => page.locator('.dt397-library-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(2);
   await page.locator('.dt397-category [data-dt397-view="est"]').click();
   await page.locator('[data-est-meta-legado="420"]').waitFor();
   assert.ok((await page.locator('#v514-meta').innerText()).includes('180 min sugeridos'), 'A meta global antiga não é atribuída automaticamente à conta.');
