@@ -37,7 +37,7 @@ Os testes cobrem 2.103 objetos, paginação, subpastas, isolamento entre usuári
 - Não foi criado outro listener de fotos, outro renderizador de cabeçalho ou outra rotina de exclusão para coexistir com a anterior. Os estilos ativos foram editados no lugar.
 - A regra de fotos obrigatórias permanece intacta. A demonstração apenas deixa de exibir o ticker vazio; o ticker do aplicativo normal continua disponível.
 - O SQL em `supabase/sql/aulas-fila-user-id.sql` evita criar índice equivalente duplicado. Aplicado no Supabase com a migração `index_aulas_fila_user_id`; índice verificado após a aplicação. O aviso de chave estrangeira sem índice deixou de aparecer.
-- A substituição da função de exclusão em produção foi bloqueada pela revisão automática por exigir autorização explícita. A correção está preparada para revisão e ainda não está ativa no Supabase.
+- Após autorização explícita do proprietário, a função de exclusão foi publicada no Supabase como versão 6 (09/11/2026). Os dois arquivos publicados foram comparados com o código do PR; consultas de versão, rejeição sem login, rejeição de método e preflight foram verificadas sem apagar contas reais.
 - A proteção contra senhas vazadas permanece desativada. Os recursos disponíveis nesta conexão não permitem alterar a configuração de Auth. Deve ser habilitada no painel, conforme o plano: https://supabase.com/dashboard/project/wbpsmszecpzioaijfnsl/auth/providers . Orientação: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection .
 
 Próximas verificações recomendadas: sincronização entre dois aparelhos, retomada após perda de rede, restauração de backup e importação do Profit. Esses fluxos não foram certificados pelos testes acima.
