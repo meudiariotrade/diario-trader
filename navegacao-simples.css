@@ -1,0 +1,51 @@
+/* v534 — clareza de navegação sem substituir rotas, dados ou layouts salvos. */
+.simple-details{border:1px solid var(--bd,#245344);border-radius:12px;padding:10px 12px;margin:10px 0;background:var(--card,#06251e);min-width:0}
+.simple-details>summary{cursor:pointer;min-height:28px;line-height:1.5;font-weight:650;font-size:14px;color:var(--tx,#e8f6f0)}
+.simple-details[open]>summary{margin-bottom:12px}
+.simple-hint{font-size:14px;line-height:1.6;color:var(--mut,#a9c5ba)}
+#onb .simple-risk{margin:16px 0}
+#onb .simple-risk>summary{min-height:44px;display:list-item;align-content:center}
+#app .simple-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px}
+#app .simple-actions>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:76px;min-width:0;padding:10px 5px;border:1px solid var(--bd,#23614c);border-radius:12px;background:var(--card,#092e25);color:var(--tx,#e8f6f0);font:650 14px/1.35 system-ui;white-space:normal}
+#app .simple-day-review,.simple-questions button{min-height:44px;padding:8px 12px;border:1px solid var(--bd,#2a6d54);border-radius:8px;background:var(--card,#092e25);color:var(--tx,#e8f6f0);font:600 14px/1.4 system-ui;cursor:pointer;text-align:left}
+#app .simple-day-review{margin:0 12px 12px}
+#onb .sh{min-height:0!important;height:auto!important;max-height:90dvh!important;overflow:auto!important}
+#app .simple-context{margin:10px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px}
+#app .simple-context>div{min-width:0;padding:12px;border:1px solid var(--bd,#245344);border-radius:10px}
+#app .simple-context h3{display:flex;align-items:center;gap:6px;font-size:14px;margin:0 0 10px}
+#app .simple-context .v4-list{min-height:0!important}
+#app .simple-context button{min-height:44px}
+#app .simple-terminal-intro,#app .simple-details>summary{font-family:system-ui,-apple-system,sans-serif!important}
+#app .simple-terminal-intro{display:none;padding:12px 14px}
+#app .simple-terminal-intro h2{font-size:20px;margin:4px 0 8px}
+#app .simple-terminal-intro p{font-size:14px;line-height:1.5;color:var(--mut,#acc6bb);margin:0}
+html body.trmon #app #tf413.simple-terminal-home .simple-terminal-intro{display:block!important}
+html body.trmon #app #tf413.simple-terminal-home .tf413-layout{display:block!important}
+html body.trmon #app #tf413.simple-terminal-home .tf413-layout>#v421-gp,
+html body.trmon #app #tf413.simple-terminal-home .tf413-layout>.tf413-main{display:none!important}
+html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+html body.trmon #app #tf413 .tf415-nav{display:flex!important;flex-wrap:wrap!important;overflow:visible!important;gap:6px!important}
+#app .simple-terminal-more{margin:0;position:relative;padding:6px 10px}
+#app .simple-tool-grid{display:grid;gap:8px}
+#app .simple-terminal-more[open]{flex-basis:100%}
+#app .simple-market-about .m404-overview{margin:0;border:0}
+#app .simple-comparison{margin:14px 0}
+#app .simple-comparison>.m409-chart-card{margin:0!important}
+#app #mkcal{min-height:0!important}
+#app #mkcal iframe{height:min(650px,75dvh)!important;min-height:320px!important}
+.simple-questions{display:grid;gap:6px;padding:10px 14px}
+.simple-questions>b{font-size:13px;color:var(--mut,#a9c5ba)}
+.simple-questions button{font-size:13px;min-height:40px}
+@media(max-width:600px){
+ html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side{grid-template-columns:minmax(0,1fr)!important}
+ html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side>*{padding:12px!important}
+ html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side :is(table,.tf413-tbl){font-size:13px!important}
+ html body.trmon #app #tf413.simple-terminal-home.t428-p-HOME .tf413-layout .tf413-side :is(td,th){padding:8px 4px!important}
+ #app .simple-actions>button{font-size:13px}
+ html body #app .v4-iacard .simple-context{display:grid!important;grid-template-columns:minmax(0,1fr)!important;overflow:visible!important}
+ html body #app .v4-iacard .simple-context>div{width:auto!important;min-width:0!important}
+
+ .wf-chat-panel .simple-questions button{padding:6px 9px}
+}
+html body.trmon #app #tf413 .simple-terminal-intro *{font-family:system-ui,-apple-system,sans-serif!important;letter-spacing:normal!important}
+#app .simple-calendar[open] #mkcal{min-height:320px!important}

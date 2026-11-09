@@ -1,0 +1,96 @@
+/* v534 — apresenta primeiro as tarefas essenciais, reutilizando os controles existentes. */
+(function(root,doc){
+ 'use strict';
+ if(root.DiarioNavegacaoSimples)return;
+ const expanded=new Map();
+ const sectionKey=label=>{try{return [root.DIARIO_DEMO?'demo':typeof SESS!=='undefined'&&SESS?.uid||'local',typeof tab!=='undefined'?tab:'',typeof tab!=='undefined'&&tab==='mercado'&&typeof MKT!=='undefined'?MKT.tab:'',label].join('|')}catch{return label}};
+ const active=()=>doc.querySelector('#app:not(.v503-fantasma)');
+ const el=(tag,text,cls)=>{const n=doc.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n};
+ const text=(n,value)=>{if(n&&n.textContent!==value)n.textContent=value};
+ function disclosure(label,cls=''){const d=el('details',null,'simple-details '+cls);d.append(el('summary',label));d.dataset.simpleKey=sectionKey(label);d.open=expanded.get(d.dataset.simpleKey)===true;return d}
+ function wrap(node,label,cls=''){if(!node||node.parentElement?.classList.contains('simple-details'))return null;const d=disclosure(label,cls);node.before(d);d.append(node);return d}
+ function welcome(){
+  const box=doc.querySelector('#onb .sh');if(!box||box.dataset.simpleWelcome)return;
+  const skip=box.querySelector('[data-onbx="pular"]');if(!skip)return;
+  box.dataset.simpleWelcome='1';
+  const title=box.querySelector('h2'),intro=title?.nextElementSibling;
+  text(intro,'Comece pelo mercado, registre suas operações e acompanhe seus estudos. Você pode configurar seu risco agora ou explorar primeiro.');
+  const details=disclosure('Configurar meu risco e rotina','simple-risk');
+  const keep=new Set([title,intro,skip,...[...box.children].filter(n=>/Já tenho conta/.test(n.textContent))]);
+  for(const n of [...box.children])if(!keep.has(n))details.append(n);
+  skip.before(details);skip.textContent='Explorar aplicativo';skip.classList.remove('s');
+  const hint=el('p','1. Acompanhe o mercado.  2. Registre e revise.  3. Estude.','simple-hint');intro?.after(hint);
+ }
+ function home(app){
+  const h=app.querySelector('.v4-home');if(!h||h.dataset.simpleHome)return;
+  const shortcuts=h.querySelector('.v4-short'),summary=h.querySelector('.v4-summary');if(!shortcuts||!summary)return;
+  h.dataset.simpleHome='1';
+  const card=shortcuts.closest('section'),heading=card.querySelector('h2 span');text(heading,'Comece por aqui');
+  const actions=el('div',null,'simple-actions');
+  for(const selector of ['[data-dt393-route="term"]','[data-dt393-action="newtrade"]','[data-dt393-route="stats"]']){
+   const b=shortcuts.querySelector(selector);if(b){if(b.dataset.dt393Route==='stats')text(b.querySelector('span'),'Revisar meu dia');actions.append(b)}
+  }
+  shortcuts.before(actions);wrap(shortcuts,'Outros atalhos');summary.after(card);
+  const tiles=h.querySelector('.v4-tiles');wrap(tiles,'Explorar todas as áreas','simple-explore');
+  const ia=h.querySelector('.v4-iacard');if(ia){
+   text(ia.querySelector('[data-v4ia]'),'Perguntar à IA');
+   text(ia.querySelector('.v4-sub'),'Encontre o que acompanhar. Abra a conversa quando quiser aprofundar.');
+   const links=ia.querySelector('.v4-ia');if(links)wrap(links,'Análises e ferramentas');
+   const panorama=h.querySelector('.v4-pano');
+   if(panorama){const previous=panorama.closest('section');panorama.classList.remove('v4-pano');panorama.classList.add('simple-context');ia.querySelector('.v4-sub')?.after(panorama);if(previous&&previous!==ia)previous.remove()}
+   const next=el('button','Ver meu plano','simple-day-review');next.type='button';next.dataset.dt393Route='dia';ia.append(next);
+  }
+ }
+ let terminalActive=false;
+ function terminal(app){
+  const t=app.querySelector('#tf413');if(!t){terminalActive=false;return}
+  if(!terminalActive){terminalActive=true;if(!t.classList.contains('t428-p-HOME'))t.querySelector('[data-tf415-nav="HOME"]')?.click()}
+  const nav=t.querySelector('.tf415-nav');
+  if(nav&&!nav.dataset.simpleNav){
+   nav.dataset.simpleNav='1';const more=disclosure('Mais ferramentas','simple-terminal-more');const grid=el('div',null,'simple-tool-grid');
+   for(const b of [...nav.querySelectorAll('[data-tf415-nav]')]){
+    if(b.dataset.tf415Nav==='HOME')text(b,'Resumo');
+    if(!['HOME','GP','GLOBAL','ECO'].includes(b.dataset.tf415Nav))grid.append(b);
+   }
+   more.append(grid);nav.append(more);
+  }
+  const isHome=t.classList.contains('t428-p-HOME');t.classList.toggle('simple-terminal-home',isHome);
+  if(!t.querySelector('.simple-terminal-intro')){
+   const n=el('div',null,'simple-terminal-intro');n.append(el('h2','Seu resumo do mercado'),el('p','Confira radar, notícias, agenda e juros. Abra Gráficos para retomar sua análise.'));
+   t.querySelector('.tf413-layout')?.before(n);
+  }
+  for(const b of app.querySelectorAll('.dtval-open'))wrap(b,'Ajuda e diagnóstico');
+ }
+ function market(app){
+  const m=app.querySelector('.dt395-native-mercado');if(!m)return;
+  for(const d of m.querySelectorAll('.simple-market-about'))if(!d.querySelector('.m404-overview'))d.remove();
+  for(const n of m.querySelectorAll('.m404-overview'))wrap(n,'Sobre esta tela','simple-market-about');
+  const calendar=m.querySelector('#mkcal');if(calendar?.querySelector('.tradingview-widget-container')){
+   const foot=calendar.nextElementSibling,d=wrap(calendar,'Ver calendário econômico','simple-calendar');
+   if(d&&foot?.classList.contains('mut'))d.append(foot);
+  }
+  for(const n of m.querySelectorAll('.m403-chart-slot'))wrap(n,'Comparar históricos e indicadores','simple-comparison');
+ }
+ function chat(){
+  const p=doc.getElementById('wf-chat-panel');if(!p||p.querySelector('.simple-questions'))return;
+  const area=p.querySelector('textarea');if(!area)return;
+  const box=el('div',null,'simple-questions');box.append(el('b','Você pode começar por aqui'));
+  for(const q of ['Como interpretar a agenda econômica de hoje?','Como juros e dólar influenciam o mercado?','Como organizar minha revisão do pregão?']){
+   const b=el('button',q);b.type='button';b.addEventListener('click',()=>{area.value=q;area.dispatchEvent(new Event('input',{bubbles:true}));area.focus()});box.append(b);
+  }
+  p.querySelector('.wf-chat-history')?.after(box);
+ }
+ let queued=false;
+ function mount(){queued=false;welcome();const app=active();if(app){home(app);terminal(app);market(app)}chat()}
+ function queue(){if(!queued){queued=true;requestAnimationFrame(mount)}}
+ root.addEventListener('click',e=>{
+  if(e.target.closest?.('[data-dt393-route="mercado"],[data-navroute="mercado"]')){try{if(typeof MKT!=='undefined')MKT.tab='cq'}catch{}}
+ },true);
+ new MutationObserver(queue).observe(doc.body,{childList:true,subtree:true});
+ if(root.TraderUI?.onRender)root.TraderUI.onRender('navegacao-simples',queue);
+ doc.addEventListener('click',e=>{if(e.target.closest('[data-tf415-nav]'))queue()});
+ doc.addEventListener('toggle',e=>{const d=e.target;if(!d.isConnected||d.closest?.('.v503-fantasma'))return;if(d.dataset?.simpleKey)expanded.set(d.dataset.simpleKey,d.open);if(d.matches?.('.simple-comparison[open]'))root.DIARIO_GP421?.paint?.()},true);
+ // Memoriza no clique antes que uma atualização do app substitua a tela.
+ root.addEventListener('click',e=>{const summary=e.target.closest?.('.simple-details>summary');if(summary){const d=summary.parentElement;expanded.set(d.dataset.simpleKey,!d.open)}},true);
+ root.DiarioNavegacaoSimples={mount};queue();
+})(window,document);

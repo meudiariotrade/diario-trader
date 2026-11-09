@@ -1,3 +1,11 @@
+## Navegação v534
+
+Organiza os controles existentes em seis caminhos: primeiro acesso com explorar/configurar; Início com três ações principais; Terminal com resumo antes do gráfico; contexto do dia unificado na Central e perguntas sugeridas sem envio automático; Agenda com explicação recolhida; Panorama com comparativo sob demanda. Todos os recursos avançados permanecem acessíveis. Não altera dados, regras de fotos ou integrações de execução.
+
+O primeiro acesso a Gráficos retoma o ativo e o período existentes, em vez de aplicar novamente um modelo fixo. Os espaços personalizados e enquadramentos continuam usando a persistência atual. O Terminal abre pelo resumo ao entrar; trocar de painel dentro dele permanece uma escolha explícita.
+
+Teste de navegação real cobre as rotas, as fotos, os parâmetros de risco, o gráfico salvo, controles avançados, entrada na Agenda e preenchimento da IA sem consulta. Não representa validação de cotações autenticadas ou Safari em aparelho físico.
+
 # Estudos — atualização v530
 
 - Uma meta semanal por usuário, compartilhada por Hoje, Foco e os painéis. O valor já salvo em `S.ax.focoMeta` é preservado. A antiga preferência global do aparelho só é aproveitada quando o usuário escolhe “Usar esta meta”; não é copiada automaticamente para outras contas.
