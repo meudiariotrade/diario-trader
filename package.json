@@ -5,14 +5,15 @@
   "scripts": {
     "build": "node scripts/build.cjs",
     "build:check": "node scripts/build.cjs --check",
-    "check": "node scripts/manutencao.cjs && node scripts/verificar-release.cjs --check",
-    "test": "node scripts/testar.cjs && node tests/interface-dom.cjs",
-    "verify": "npm run build:check && npm run check && npm test"
+    "check": "npm run build:check",
+    "test": "node --test tests/*.test.cjs test-*.cjs",
+    "verify": "npm run check && npm test"
   },
   "devDependencies": {
     "acorn": "8.15.0",
     "fake-indexeddb": "6.0.0",
     "jsdom": "26.1.0",
+    "playwright": "1.56.1",
     "prettier": "3.6.2",
     "terser": "5.44.0"
   }
