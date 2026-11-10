@@ -1,0 +1,56 @@
+/* v543 — Terminal no estilo Bloomberg (celular e computador) */
+.bbg-keys{display:flex;align-items:center;gap:4px;padding:6px 8px;background:#000;border-bottom:1px solid #2a2a2a;overflow-x:auto;max-width:100%;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.bbg-keys::-webkit-scrollbar{display:none}
+.bbg-k{flex:0 0 auto;min-height:36px;padding:0 12px;border-radius:3px;border:1px solid #3a3a3a;background:#1a1a1a;color:#e8e8e8;font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;cursor:pointer;white-space:nowrap}
+.bbg-amarela{background:#f2b705;border-color:#f2b705;color:#000}
+.bbg-amarela[aria-pressed="true"]{background:#fff;border-color:#fff}
+.bbg-menu-k{background:#b3261e;border-color:#b3261e;color:#fff}
+.bbg-cheia{margin-left:auto;background:transparent;color:#9aa;border-style:dashed}
+.bbg-cmdw{display:none;flex:1 1 220px;min-width:180px;gap:4px;margin:0 4px}
+body.tf413-home #tf413:not(.t428-p-HOME) .bbg-cmdw{display:flex}
+.bbg-cmd{flex:1;min-width:0;min-height:36px;padding:0 10px;background:#0b0b0b;border:1px solid #f2b705;border-radius:3px;color:#ffb000;font:600 14px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-transform:uppercase}
+.bbg-cmd::placeholder{color:#7a6a3a;text-transform:none}
+.bbg-go,.bbg .trgo,.bbg .ti539-search button[type=submit]{background:#1f9d3a!important;border-color:#1f9d3a!important;color:#fff!important;font-weight:800;letter-spacing:.06em}
+.bbg-go{min-height:36px;padding:0 14px;border-radius:3px;border:1px solid;cursor:pointer;font:800 13px/1 ui-monospace,Menlo,Consolas,monospace}
+
+.bbg-menu{background:#000;border:1px solid #f2b705;border-left-width:4px;margin:6px 8px 10px;color:#ffb000;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bbg-menu header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 12px;border-bottom:1px solid #2a2a2a}
+.bbg-menu header small{color:#8a8a8a;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
+.bbg-menu h3{margin:2px 0 0;color:#fff;font:800 20px/1.1 ui-monospace,Menlo,Consolas,monospace}
+.bbg-cot{display:block;margin-top:4px;color:#e8e8e8;font-size:14px}
+.bbg-cot .up{color:#22c55e;font-style:normal}.bbg-cot .dn{color:#ff5a52;font-style:normal}.bbg-cot small{color:#8a8a8a}
+.bbg-x{flex:0 0 auto;min-height:36px;padding:0 12px;border-radius:3px;border:1px solid #b3261e;background:#b3261e;color:#fff;font:700 12px/1 ui-monospace,Menlo,Consolas,monospace;cursor:pointer}
+.bbg-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));column-gap:24px}
+.bbg-item{display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:8px;min-height:44px;padding:4px 12px;background:transparent;border:0;border-bottom:1px solid #1c1c1c;color:#ffb000;font:inherit;font-size:14px;text-align:left;cursor:pointer;min-width:0}
+.bbg-item:hover,.bbg-item:focus-visible{background:#1a1400;outline:0}
+.bbg-n{color:#fff;font-weight:700}
+.bbg-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bbg-c{color:#6fb7ff;font-size:12px}
+.bbg-menu footer{padding:8px 12px;color:#8a8a8a;font-size:12px;border-top:1px solid #2a2a2a}
+.bbg-vazio{padding:12px;color:#8a8a8a}
+
+.bbg-status{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:6px 10px;background:#000;border-top:1px solid #f2b705;color:#b8b8b8;font:600 11.5px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;max-width:100%}
+.bbg-status .bbg-hora{color:#ffb000}
+.bbg-status .on{color:#22c55e}.bbg-status .off{color:#ff5a52}
+.bbg-status .bbg-fontes{flex:1 1 200px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bbg-status .bbg-dica{color:#6a6a6a}
+@media(min-width:900px){.bbg-status{position:sticky;bottom:0;z-index:4}}
+@media(max-width:760px){.bbg-k{min-height:40px}.bbg-status .bbg-dica{display:none}.bbg-item{min-height:48px}.bbg-lista{grid-template-columns:1fr}}
+
+/* painéis: exportar e atualizar só aparecem no painel em foco (menos botões na tela) */
+@media(hover:hover){.bbg .trp:not(.foco):not(:hover) .trph [data-tr="csv"],.bbg .trp:not(.foco):not(:hover) .trph [data-tr="att"]{display:none}}
+@media(hover:none){.bbg .trp:not(.foco) .trph [data-tr="csv"],.bbg .trp:not(.foco) .trph [data-tr="att"]{display:none}}
+
+/* tela cheia: some o cabeçalho e o menu do app; a faixa de cotações continua */
+body.bbg-full #dt393-global-head,body.bbg-full #v4-bnav,body.bbg-full #bnav,body.bbg-full #fab,body.bbg-full #pcmenub,body.bbg-full #btop{display:none!important}
+body.bbg-full #app{padding-top:0!important;margin-top:0!important}
+
+/* força o visual do terminal sobre o estilo geral de botões do app */
+html body #app #bbg-keys .bbg-k{background:#1a1a1a!important;border:1px solid #3a3a3a!important;color:#e8e8e8!important;border-radius:3px!important;box-shadow:none!important}
+html body #app #bbg-keys .bbg-k.bbg-amarela{background:#f2b705!important;border-color:#f2b705!important;color:#000!important}
+html body #app #bbg-keys .bbg-k.bbg-amarela[aria-pressed="true"]{background:#fff!important;border-color:#fff!important}
+html body #app #bbg-keys .bbg-k.bbg-menu-k,html body #app #bbg-menu .bbg-x{background:#b3261e!important;border-color:#b3261e!important;color:#fff!important;border-radius:3px!important;box-shadow:none!important}
+html body #app #bbg-keys .bbg-k.bbg-cheia{background:transparent!important;color:#9aa!important;border:1px dashed #3a3a3a!important}
+html body #app #bbg-menu .bbg-item{background:transparent!important;border:0!important;border-bottom:1px solid #1c1c1c!important;border-radius:0!important;color:#ffb000!important;box-shadow:none!important}
+html body #app #bbg-menu .bbg-item:hover,html body #app #bbg-menu .bbg-item:focus-visible{background:#1a1400!important}
+html body #app #bbg-keys .bbg-go{border-radius:3px!important;box-shadow:none!important}

@@ -1,0 +1,8 @@
+Diario de Trader v543 — feito em cima do GitHub (v542).
+
+Arquivos na raiz: index.html, sw.js, terminal-bbg.js, terminal-bbg.css, modo-simples.js, modo-simples.css
+Pasta tests: modo-simples.test.cjs, terminal-bbg.test.cjs (testes automaticos; opcionais)
+
+- Modo simples (padrao so para conta nova): Inicio com proximo passo, Meu dia em 3 passos, menu do PC com 5 areas + Mais, Configuracoes em grupos. Troca em Configuracoes > Modo do aplicativo.
+- Alertas: escolha rapida Essencial / Day trade / Tudo.
+- Terminal estilo Bloomberg: teclas amarelas de mercado, menu do ativo (digite PETR4 e GO), numero + GO, tecla MENU, barra de status, tela cheia, funcoes HP e FXC.

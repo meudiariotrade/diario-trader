@@ -1,0 +1,47 @@
+/* v543 — Modo simples (celular e computador) */
+.ms-modo{margin:0 0 16px}
+.ms-seg{display:flex;gap:8px;margin-top:10px}
+.ms-seg button{flex:1;min-height:44px;border-radius:12px;border:1px solid rgba(18,224,166,.28);background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer}
+.ms-seg button.on{background:#12e0a6;color:#02130f;border-color:#12e0a6}
+.ms-presets{display:grid;gap:6px;margin:0 0 14px;padding:12px 14px;border:1px solid rgba(18,224,166,.22);border-radius:14px;background:rgba(18,224,166,.05)}
+.ms-presets-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.ms-presets-b button{flex:1 1 96px;min-height:44px;border-radius:12px;border:1px solid rgba(18,224,166,.35);background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer}
+.ms-presets-b button:active{background:rgba(18,224,166,.18)}
+
+/* menu do computador */
+html body.modo-simples:not(.ms-nav-aberto) #dt393-global-head nav.dt394-quicknav button[data-ms-extra]:not(.active){display:none!important}
+nav.dt394-quicknav .ms-mais{font:inherit;font-weight:600;color:inherit;background:transparent;border:1px dashed rgba(255,255,255,.22);border-radius:10px;padding:6px 14px;min-height:38px;cursor:pointer;white-space:nowrap}
+
+/* Meu dia em 3 passos */
+.ms-passos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 14px;position:sticky;top:var(--ms-topo,0px);z-index:5}
+.ms-passo{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:8px;align-items:center;text-align:left;min-height:56px;padding:8px 10px;border-radius:14px;border:1px solid rgba(18,224,166,.22);background:#04201b;color:inherit;font:inherit;cursor:pointer;min-width:0}
+.ms-passo b{grid-row:1/3;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);font-size:14px}
+.ms-passo span{font-weight:700;font-size:15px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-passo small{font-size:11.5px;opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-passo.on{background:#0c6f58;border-color:#12e0a6}
+.ms-passo.on b{background:#12e0a6;color:#02130f}
+@media(max-width:420px){.ms-passo small{display:none}.ms-passo{min-height:48px}}
+html body.modo-simples #app[data-ms-passo-atual="1"] [data-ms-passo]:not([data-ms-passo="1"]),
+html body.modo-simples #app[data-ms-passo-atual="1"] #dt393-workspace[data-ms-passo]:not([data-ms-passo="1"]){display:none!important}
+html body.modo-simples #app[data-ms-passo-atual="2"] [data-ms-passo]:not([data-ms-passo="2"]),
+html body.modo-simples #app[data-ms-passo-atual="2"] #dt393-workspace[data-ms-passo]:not([data-ms-passo="2"]){display:none!important}
+html body.modo-simples #app[data-ms-passo-atual="3"] [data-ms-passo]:not([data-ms-passo="3"]),
+html body.modo-simples #app[data-ms-passo-atual="3"] #dt393-workspace[data-ms-passo]:not([data-ms-passo="3"]){display:none!important}
+
+/* Início */
+.ms-proximo{border:1px solid #12e0a6!important;display:grid;gap:6px}
+.ms-proximo small{letter-spacing:.12em;font-size:11px;color:#12e0a6;font-weight:700}
+.ms-proximo h2{margin:0;font-size:22px}
+.ms-proximo p{margin:0;opacity:.8;font-size:14px;line-height:1.4}
+.ms-acao{margin-top:8px;min-height:50px;border-radius:14px;border:0;background:#12e0a6;color:#02130f;font:inherit;font-weight:700;font-size:16px;cursor:pointer;width:100%;max-width:420px}
+.ms-tudo{margin:14px auto 0;display:block;min-height:44px;padding:0 18px;border-radius:12px;border:1px dashed rgba(255,255,255,.25);background:transparent;color:inherit;font:inherit;cursor:pointer}
+html body.modo-simples #app[data-ms-inicio-tudo="false"] [data-ms-extra-inicio],
+html body.modo-simples #app[data-ms-inicio-tudo="false"] #dt393-workspace[data-ms-extra-inicio]{display:none!important}
+
+/* Configurações em grupos */
+body.modo-simples h2[data-ms-grupo]{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px;padding:10px 14px;margin:8px 0;border:1px solid rgba(18,224,166,.2);border-radius:14px;font-size:16px}
+body.modo-simples h2[data-ms-grupo]::after{content:"▾";opacity:.7}
+body.modo-simples h2[data-ms-grupo][aria-expanded="true"]::after{content:"▴"}
+body.modo-simples [data-ms-fechado="1"]{display:none!important}
+html body #app .ms-proximo h2{font-size:22px!important;letter-spacing:0!important;text-transform:none!important;color:#fff!important;margin:0!important;font-weight:800!important}
+html body #app .ms-modo h2{font-size:18px!important;letter-spacing:0!important;text-transform:none!important;color:#fff!important;margin:0 0 4px!important}
