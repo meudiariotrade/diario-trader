@@ -56,7 +56,7 @@ function build() {
     fs.copyFileSync(path.join(root, file), path.join(output, file));
   }
   fs.writeFileSync(path.join(output, '.nojekyll'), '');
-  const critical = ['index.html', 'sw.js', 'nucleo-v522.js', 'camadas-v522.js', 'navegacao-simples.js', 'navegacao-simples.css','terminal-inicio.js','terminal-inicio.css','terminal-comandos.js'];
+  const critical = ['index.html', 'sw.js', 'nucleo-v522.js', 'camadas-v522.js', 'navegacao-simples.js', 'navegacao-simples.css','terminal-inicio.js','terminal-inicio.css','terminal-comandos.js','projeto-2027.js'];
   const hashes = Object.fromEntries(critical.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(output, file))).digest('hex')]));
   fs.writeFileSync(path.join(output, 'publicacao.json'), JSON.stringify({ commit: process.env.GITHUB_SHA || null, files: hashes }));
   console.log(`Publicação preparada: ${files.length} arquivos estáticos em _site/.`);

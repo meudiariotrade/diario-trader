@@ -42,3 +42,10 @@ Compatibilidade adicional: preferências do comparativo antigo (T:HOME) são cop
 Removidos do diretório e das buscas os adaptadores para outras telas e as funções de pesquisa em sobreposições. FLUXO não é reutilizado: o código colidia entre Fluxo EWZ e Times & Trades da ponte. Nenhum fluxo financeiro foi inventado nem substituído por outro. Comandos nativos como ECO, NEWSBR, DIFUT e HIST continuam nos painéis. O filtro também cobre aliases, favoritos e histórico; execução direta e os adaptadores legados de navegação são protegidos. Configuração de espaços e painéis permanece própria do Terminal; a navegação principal do aplicativo e as telas originais fora dele continuam funcionando.
 
 Teste de navegador cobre os comandos retirados por digitação, APIs, aliases e busca, confirma que o ticker EWZ abre no painel, preserva os workspaces e verifica a tela original de fluxo fora do Terminal. A suíte completa passou com 32 testes.
+
+## v542 — Projeto Os 10% / 2027 na operação
+
+- O documento do usuário foi integrado aos botões existentes de Setup / estratégia: Índice (12 itens) e Dólar (11 itens), incluindo as cinco regras comuns. Sem navegação ou seletor duplicado.
+- Campo opcional para registrar o padrão clássico / gatilho. Checklist e texto do plano ficam associados à operação salva; o setup continua disponível para filtros e estatísticas existentes.
+- Não preenche preços nem altera a trava do Profit. Planos e setups personalizados permanecem disponíveis; troca de plano zera marcações, edição não altera o registro salvo antes de Salvar e a etapa de fotos obrigatórias permanece.
+- Teste de navegador: fotos, dois planos, troca de setup, salvamento e recarga real do IndexedDB, preservação de regras personalizadas e formulário em 320/390/1440 px.
