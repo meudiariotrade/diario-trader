@@ -1,4 +1,4 @@
-# QA visual — Terminal v539
+# QA visual — Terminal v540
 
 final result: passed
 
@@ -34,3 +34,5 @@ As capturas foram inspecionadas no navegador; build e verificação HTTP não fo
 ## Ajustes futuros de baixa prioridade
 
 A busca pode receber novos sinônimos conforme os termos usados pelo usuário. Nenhum P0/P1/P2 permanece aberto no escopo descrito.
+
+Compatibilidade adicional: preferências do comparativo antigo (T:HOME) são copiadas para Gráficos (T:GP) antes da inicialização do controlador somente quando esse contexto ainda não existe. O contexto antigo e qualquer configuração própria de Gráficos permanecem preservados. Teste de navegador cobre os dois cenários; suíte final com 31 testes aprovada.

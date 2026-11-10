@@ -2,6 +2,9 @@
 (function(root,doc){
  'use strict';
  if(root.DiarioTerminalInicio)return;
+ // Executado antes do contexto de gráficos: transfere o comparativo antigo apenas quando Gráficos ainda não tem preferências.
+ try{const key='diario-v428-ctx',saved=JSON.parse(localStorage.getItem(key)||'null'),old=saved?.['T:HOME'];if(saved&&old&&typeof old==='object'&&!Array.isArray(old)&&!Object.hasOwn(saved,'T:GP')){saved['T:GP']={...old};localStorage.setItem(key,JSON.stringify(saved))}}catch{}
+
  const groups=['Mercados','Gráficos e análise','Notícias e economia','Painéis e espaços','Dados e inteligência','Rotina e ajuda'];
  const primary=[['GLOBAL','MON','FX','ADR','CMDTY'],['@graph','COMP','TECH','PESQ','SAZ'],['TOP','ECO','DIFUT','ECST','JORNAL'],['@panels','MESA','@manage','@organize','@add'],['DQ','STAT','IA','EVT','AUD'],['GUIA','@plan','ALRT','AUTO','@focus']];
  const names={GLOBAL:'Radar global',MON:'Monitor de ativos',FX:'Moedas e dólar',ADR:'ADRs brasileiras',CMDTY:'Commodities',COMP:'Comparar ativos',TECH:'Análise técnica',PESQ:'Pesquisar empresas',SAZ:'Sazonalidade',TOP:'Notícias do mercado',ECO:'Agenda econômica',DIFUT:'Curva DI e juros',ECST:'Indicadores econômicos',JORNAL:'Jornal do pregão',DQ:'Central de dados',STAT:'Status das fontes',IA:'Central de inteligência',EVT:'Eventos relevantes',AUD:'Origem e auditoria dos dados',MESA:'Trocar de espaço',GUIA:'Como usar o Terminal',ALRT:'Alertas de preço',AUTO:'Automações'};
