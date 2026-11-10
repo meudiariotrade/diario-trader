@@ -1,7 +1,7 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const {createHash}=require('node:crypto');
 const {verifyPublished}=require('../scripts/verify-published.cjs');
-const commit='a'.repeat(40),files=Object.fromEntries(['index.html','sw.js','nucleo-v522.js','camadas-v522.js','navegacao-simples.js','navegacao-simples.css'].map(f=>[f,Buffer.from('conteúdo de '+f)]));
+const commit='a'.repeat(40),files=Object.fromEntries(['index.html','sw.js','nucleo-v522.js','camadas-v522.js','navegacao-simples.js','navegacao-simples.css','terminal-inicio.js','terminal-inicio.css'].map(f=>[f,Buffer.from('conteúdo de '+f)]));
 const manifest=()=>({commit,files:Object.fromEntries(Object.entries(files).map(([f,b])=>[f,createHash('sha256').update(b).digest('hex')]))});
 const request=(change={})=>async url=>{const file=new URL(url).pathname.split('/').pop();const data=file==='publicacao.json'?Buffer.from(JSON.stringify({...manifest(),...change.manifest})):change.bad===file?Buffer.from('antigo'):files[file];return{ok:!!data,status:data?200:404,arrayBuffer:async()=>data}};
-test('entrega exige o commit correto e os hashes dos seis arquivos públicos',async()=>{assert.equal(await verifyPublished('https://example.test/app/',commit,request()),commit)});
+test('entrega exige o commit correto e os hashes dos arquivos públicos',async()=>{assert.equal(await verifyPublished('https://example.test/app/',commit,request()),commit)});
 test('site antigo ou publicação misturada não pode ser declarada concluída',async()=>{await assert.rejects(verifyPublished('https://example.test/app/',commit,request({manifest:{commit:'b'.repeat(40)}})),/outro commit/);await assert.rejects(verifyPublished('https://example.test/app/',commit,request({bad:'index.html'})),/divergente/)});
