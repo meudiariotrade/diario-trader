@@ -27,3 +27,14 @@ test('Início do Terminal: busca por assunto e comando, ações nativas, três m
  await app.locator('[data-ti539-item="@plan"]').click();assert.equal(await p.evaluate(()=>window.__nativePlan),1);
  assert.deepEqual(errors,[]);
 }));
+
+test('Comparativo anterior migra para Gráficos apenas se não houver preferências próprias',{timeout:120000},async()=>withApp(async(browser,base)=>{
+ const old={a:'EWZ',b:'SPX',mode:'base',per:'6M',freq:'D',ma:[20],ev:true,table:false},own={a:'VALE3',b:'',mode:'dual',per:'1M',freq:'D',ma:[],ev:false,table:false};
+ for(const existing of [null,own]){
+  const p=await browser.newPage({viewport:{width:390,height:900}});await p.addInitScript(({old,existing})=>localStorage.setItem('diario-v428-ctx',JSON.stringify({'T:HOME':old,...(existing?{'T:GP':existing}:{})})),{old,existing});
+  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.getByRole('button',{name:'Abrir Terminal',exact:true}).click();const app=p.locator('#app:not(.v503-fantasma)');await expect(app.locator('#terminal-inicio')).toBeVisible();
+  await app.locator('.tf415-nav [data-tf415-nav="GP"]').click();await expect(app.locator('#v421-gp')).toBeVisible();const expected=existing||old;
+  await expect.poll(()=>p.evaluate(()=>{const s=DIARIO_GP421.state();return{a:s.a,b:s.b,per:s.per,ma:s.ma}})).toEqual({a:expected.a,b:expected.b,per:expected.per,ma:expected.ma});
+  const stored=await p.evaluate(()=>JSON.parse(localStorage.getItem('diario-v428-ctx')));assert.deepEqual(stored['T:HOME'],old);await p.close();
+ }
+}));
