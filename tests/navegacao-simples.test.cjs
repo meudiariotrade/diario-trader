@@ -35,7 +35,7 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  assert.equal(await p.evaluate(()=>window.DIARIO_GP421.state().per),'6M');
  await app.getByRole('button',{name:'Visão geral',exact:true}).click();
  await expect(app.locator('.simple-terminal-more')).toHaveCount(0);
- await app.getByRole('button',{name:'Notícias',exact:true}).click();
+ await p.evaluate(()=>document.querySelector('#app:not(.v503-fantasma) [data-tf415-nav="NEWSBR"]').click());
  await expect(app.locator('#tf413')).toHaveClass(/t428-p-NEWSBR/);
  // Mercado começa nas cotações; Agenda continua sendo uma ação direta.
  await p.getByRole('button',{name:'Mercado',exact:true}).last().click();

@@ -3,6 +3,8 @@ test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e
  const p=await browser.newPage({viewport:{width:1440,height:1000}}),app=p.locator('#app:not(.v503-fantasma)');const errors=[];p.on('pageerror',e=>errors.push(e.message));
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.getByRole('button',{name:'Abrir Terminal',exact:true}).click();
  await expect(app.locator('#v421-gp')).toBeVisible();await expect(app.locator('.simple-terminal-intro,.simple-terminal-more')).toHaveCount(0);
+ await expect(app.locator('.tf415-nav button:visible')).toHaveText(['Visão geral','Gráficos','Painéis e Workspaces']);
+ for(const cmd of ['GLOBAL','MON','NEWSBR','DIFUT','ECO'])await expect(app.locator('.tf415-nav [data-tf415-nav="'+cmd+'"]')).toBeHidden();
  const layouts=await p.evaluate(()=>JSON.stringify(TRM.TS().wss));
  for(const width of [1440,1920,390,320]){
   await p.setViewportSize({width,height:1000});
@@ -12,10 +14,9 @@ test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e
   await app.locator('.tf415-nav [data-tf415-nav="WORKSPACES"]').click();
   await expect(app.locator('#trgrid')).toBeVisible();await expect(app.locator('.trm>.trbar')).toBeVisible();
   await expect(app.locator('.tf413-layout')).toBeHidden();
-  const menu=await app.locator('.tf415-nav').evaluate(n=>({tops:[...n.querySelectorAll('button')].map(b=>b.getBoundingClientRect().top),gap:parseFloat(getComputedStyle(n).gap),height:n.getBoundingClientRect().height}));
+  const menu=await app.locator('.tf415-nav').evaluate(n=>({tops:[...n.querySelectorAll('button')].filter(b=>b.getBoundingClientRect().height>0).map(b=>b.getBoundingClientRect().top),gap:parseFloat(getComputedStyle(n).gap),height:n.getBoundingClientRect().height}));
   assert.ok(Math.max(...menu.tops)-Math.min(...menu.tops)<2);assert.ok(menu.gap<=4);assert.ok(menu.height<64);
-  const bounds=await app.locator('.trm').evaluate(n=>({x:n.getBoundingClientRect().left,right:n.getBoundingClientRect().right,width:innerWidth}));
-  assert.ok(bounds.x<=5&&bounds.right>=bounds.width-5,'Terminal deve usar toda a largura, inclusive no PC');
+  await expect.poll(()=>app.locator('.trm').evaluate(n=>{const r=n.getBoundingClientRect();return r.left<=5&&r.right>=innerWidth-5}),{message:'Terminal deve usar toda a largura, inclusive após redimensionar'}).toBe(true);
   const bar=await app.locator('.trm>.trbar').evaluate(n=>({height:n.getBoundingClientRect().height,width:n.getBoundingClientRect().width,scroll:n.scrollWidth}));
   assert.ok(bar.height<=56,'Barra de comandos deve ficar em uma linha: '+width+' '+JSON.stringify(bar));assert.ok(bar.scroll<=bar.width+1);
   await app.locator('[data-tr341-menu]').click();
@@ -30,7 +31,7 @@ test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e
   await p.locator('#v430-atalhos').getByRole('button',{name:'Fechar',exact:true}).click();
   await p.locator('.v503-fantasma').waitFor({state:'detached'});
   await expect.poll(()=>p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await app.locator('[data-tf415-nav="GLOBAL"]').click();
+  await p.evaluate(()=>document.querySelector('#app:not(.v503-fantasma) [data-tf415-nav="GLOBAL"]').click());
   await expect(app.locator('#trgrid')).toBeHidden();await expect(app.locator('#v421-gp')).toBeVisible();
  }
  assert.equal(await p.evaluate(()=>JSON.stringify(TRM.TS().wss)),layouts);

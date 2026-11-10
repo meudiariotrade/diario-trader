@@ -76,3 +76,6 @@ html body.trmon #app .simple-details:not([open])>summary{font-size:12px!importan
  html body.trmon #app .trbar>[data-tr341-menu]{font-size:12px!important;min-height:36px!important;padding:4px 8px!important}
 }
 @media(min-width:761px){html:root body.trmon #app:not(.v503-fantasma){padding-bottom:12px!important}}
+
+/* v538: a navegação superior mostra somente os modos do Terminal. */
+html body.trmon #app #tf413 .tf415-nav>[data-tf415-nav]:not([data-tf415-nav='HOME']):not([data-tf415-nav='GP']):not([data-tf415-nav='WORKSPACES']){display:none!important}
