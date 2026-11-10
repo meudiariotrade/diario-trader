@@ -2,14 +2,14 @@ const{test}=require('node:test');const assert=require('node:assert/strict');cons
 test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e no celular',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const p=await browser.newPage({viewport:{width:1440,height:1000}}),app=p.locator('#app:not(.v503-fantasma)');const errors=[];p.on('pageerror',e=>errors.push(e.message));
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.getByRole('button',{name:'Abrir Terminal',exact:true}).click();
- await expect(app.locator('#v421-gp')).toBeVisible();await expect(app.locator('.simple-terminal-intro,.simple-terminal-more')).toHaveCount(0);
- await expect(app.locator('.tf415-nav button:visible')).toHaveText(['Visão geral','Gráficos','Painéis e Workspaces']);
+ await expect(app.locator('#terminal-inicio')).toBeVisible();await expect(app.locator('.simple-terminal-intro,.simple-terminal-more')).toHaveCount(0);
+ await expect(app.locator('.tf415-nav button:visible')).toHaveText(['Início','Gráficos','Painéis']);
  for(const cmd of ['GLOBAL','MON','NEWSBR','DIFUT','ECO'])await expect(app.locator('.tf415-nav [data-tf415-nav="'+cmd+'"]')).toBeHidden();
  const layouts=await p.evaluate(()=>JSON.stringify(TRM.TS().wss));
  for(const width of [1440,1920,390,320]){
   await p.setViewportSize({width,height:1000});
   await app.locator('[data-tf415-nav="HOME"]').click();
-  await expect(app.locator('#v421-gp')).toBeVisible();
+  await expect(app.locator('#terminal-inicio')).toBeVisible();await expect(app.locator('#v421-gp')).toBeHidden();
   await expect(app.locator('#trgrid')).toBeHidden();await expect(app.locator('.trm>.trbar')).toBeHidden();
   await app.locator('.tf415-nav [data-tf415-nav="WORKSPACES"]').click();
   await expect(app.locator('#trgrid')).toBeVisible();await expect(app.locator('.trm>.trbar')).toBeVisible();
@@ -20,15 +20,13 @@ test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e
   const bar=await app.locator('.trm>.trbar').evaluate(n=>({height:n.getBoundingClientRect().height,width:n.getBoundingClientRect().width,scroll:n.scrollWidth}));
   assert.ok(bar.height<=56,'Barra de comandos deve ficar em uma linha: '+width+' '+JSON.stringify(bar));assert.ok(bar.scroll<=bar.width+1);
   await app.locator('[data-tr341-menu]').click();
-  const full=p.getByRole('dialog',{name:'Menu do Terminal',exact:true});await expect(full).toBeVisible();
-  await expect(full.getByRole('button',{name:'Qualidade dos dados',exact:true})).toBeVisible();
-  await expect(full.getByRole('button',{name:/Organizar|Layouts por horário/}).first()).toBeVisible();
-  await full.getByRole('button',{name:'Fechar menu',exact:true}).click();
-  await expect(full).toBeHidden();
-  await app.locator('.v430-mais').click();
-  await expect(p.getByRole('dialog',{name:'Atalhos do Terminal',exact:true})).toBeVisible();
-  await expect(p.locator('#v430-atalhos').getByRole('button',{name:'Agenda',exact:true})).toBeVisible();
-  await p.locator('#v430-atalhos').getByRole('button',{name:'Fechar',exact:true}).click();
+  await expect(app.locator('#terminal-inicio')).toBeVisible();
+  await app.locator('#ti539-search').fill('qualidade');
+  await expect(app.locator('[data-ti539-item="@quality"]')).toBeVisible();
+  await app.locator('#ti539-search').fill('');
+  await app.locator('.tf415-nav [data-tf415-nav="WORKSPACES"]').click();
+  await expect(app.locator('#trgrid')).toBeVisible();
+  await expect(app.locator('.v430-mais')).toBeHidden();
   await p.locator('.v503-fantasma').waitFor({state:'detached'});
   await expect.poll(()=>p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await p.evaluate(()=>document.querySelector('#app:not(.v503-fantasma) [data-tf415-nav="GLOBAL"]').click());
