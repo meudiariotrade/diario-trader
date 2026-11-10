@@ -12,21 +12,13 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   await page.goto(base + '/?demo=1');
   await page.locator('#splash').waitFor({ state: 'hidden' });
   // Fixture apenas na base demonstrativa, com uma sessão que já contabilizou 15 minutos.
-  await page.evaluate(() => new Promise((resolve, reject) => {
-    const request = indexedDB.open('diario-trader-demo-v286');
-    request.onerror = reject;
-    request.onsuccess = () => {
-      const db = request.result, tx = db.transaction('kv', 'readwrite'), store = tx.objectStore('kv');
-      const query = store.get('s');
-      query.onsuccess = () => {
-        const state = query.result;
-        const date = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
-        state.ax = { ...state.ax, foco: [{ d: date, mat: 'ing', min: 15 }] };
-        store.put(state, 's');
-      };
-      tx.oncomplete = () => { db.close(); resolve(); }; tx.onabort = reject;
-    };
-  }));
+  // Usa o salvamento real: uma gravação pendente não pode sobrescrever a fixture antes do reload.
+  await page.evaluate(() => {
+    const date = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+    S.ax = { ...S.ax, foco: [{ d: date, mat: 'ing', min: 15 }] };
+    save();
+  });
+  await expect.poll(() => page.evaluate(() => LOCAL_SAVE.pending)).toBe(false);
   await page.evaluate(() => localStorage.setItem('v514-meta-est', '420'));
   await page.reload();
   await page.locator('#splash').waitFor({ state: 'hidden' });
