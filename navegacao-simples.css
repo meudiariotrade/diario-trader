@@ -47,3 +47,32 @@ html body.trmon #app .trm>[hidden],html body.trmon #app #tf413>[hidden]{display:
 html body.trmon.tf413-advanced #app #tf413>:is(.tf413-layout,.tf413-bottom){display:none!important}
 #v518-mov>summary{display:list-item!important;list-style:disclosure-closed inside!important;cursor:pointer;min-height:32px;margin:0!important;line-height:1.5}
 #v518-mov[open]>summary{list-style-type:disclosure-open!important;margin-bottom:8px!important}
+
+/* v537: toda a largura útil e um único menu de funções, também no computador. */
+html:root body.trmon #app:not(.v503-fantasma){width:100%!important;max-width:none!important;min-width:0!important;padding:4px 4px calc(72px + env(safe-area-inset-bottom,0px))!important;margin:0!important;box-sizing:border-box!important}
+html body.trmon #app .trm{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;min-width:0!important}
+html body.trmon #app #tf413.tf413-dashboard{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+html body.trmon #app #tf413 .tf415-nav{gap:0!important;padding:0!important;border-bottom:1px solid #285345;background:#07110e;min-height:40px!important}
+html body.trmon #app #tf413 .tf415-navitem{border:0!important;border-right:1px solid #254237!important;border-bottom:2px solid transparent!important;border-radius:0!important;background:transparent!important;color:#d9e7df!important;min-height:40px!important;padding:7px 12px!important}
+html body.trmon #app #tf413 .tf415-navitem.on,html body.trmon #app #tf413 .tf415-navitem[aria-current='page']{border-bottom-color:#f0b548!important;background:#17241d!important;color:#ffcf72!important}
+html body.trmon #app .trm>.trbar{display:flex;flex-wrap:nowrap!important;align-items:center!important;gap:4px!important;min-height:44px!important;padding:4px!important;border-radius:0!important;box-sizing:border-box!important;margin:0!important;overflow:visible!important}
+html body.trmon #app .trbar>.tr341-secondary,html body.trmon #app .trm>.trquick-strip,html body.trmon #app .trm>.trmerc{display:none!important}
+html body.trmon #app .trbar>:is(.radar-picker-trigger,.v430-mais,[data-tr341-menu]){display:inline-flex!important;align-items:center;justify-content:center;flex:none!important}
+html body.trmon #app .trbar>.trcmdw{display:flex!important;order:0!important;flex:1 1 200px!important;min-width:0!important;width:auto!important;margin:0!important}
+html body.trmon #app .trbar #trcmd{display:block!important;min-width:0!important;width:100%!important;font-size:13px!important;min-height:34px!important}
+html body.trmon #app .trbar>:is(.trlogo,.radar-picker-trigger,[data-tr='addp'],.v430-mais,[data-tr341-menu]){order:1!important;flex:none!important;white-space:nowrap!important}
+html body.trmon #app .trbar>.trlogo{order:-1!important}
+html body.trmon #app .trbar>.trlay{display:none!important}
+html body.trmon #app .trbar>:is(button,.trcmdw button){min-height:34px!important;padding:4px 9px!important;margin:0!important;border-radius:3px!important;font:600 12px/1.2 system-ui!important}
+html body.trmon #app .trm>.trtabs{padding:3px 4px!important;margin:0!important;gap:4px!important;min-height:0!important;flex-wrap:nowrap!important;overflow-x:auto!important}
+html body.trmon #app .trtabs>button{min-height:32px!important;padding:4px 9px!important;border-radius:3px!important}
+html body.trmon #app .trm>#trgrid{padding:4px 0!important;gap:6px!important}
+html body.trmon #app .simple-details:not([open]){margin:2px 0 4px!important;padding:4px 8px!important;border-radius:4px!important}
+html body.trmon #app .simple-details:not([open])>summary{font-size:12px!important;min-height:24px!important}
+@media(max-width:760px){
+ html body.trmon #app .trbar>:is(.trlogo,.radar-picker-trigger){display:none!important}
+ html body.trmon #app #tf413 .tf415-navitem{padding:7px 10px!important}
+ html body.trmon #app .trbar>.trcmdw{flex:1 1 0!important}
+ html body.trmon #app .trbar>[data-tr341-menu]{font-size:12px!important;min-height:36px!important;padding:4px 8px!important}
+}
+@media(min-width:761px){html:root body.trmon #app:not(.v503-fantasma){padding-bottom:12px!important}}
