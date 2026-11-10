@@ -58,7 +58,7 @@
       if (/^[A-Z0-9_]{1,20}$/.test(cmd) && typeof description === 'string' && !map.has(cmd))
         map.set(cmd, {cmd, name: description.slice(0, 150), category: 'Comandos'});
     }
-    for(const [cmd,name] of window.TraderTerminalActions?.commands||[])map.set(cmd,{cmd,name,category:'Fluxos integrados'});
+    for(const [cmd,name] of window.TraderTerminalActions?.commands||[])map.set(cmd,{cmd,name,category:'Painéis do Terminal'});
     const tk = ticker();
     if (tk) for (const [suffix, label] of [['G', 'Gráfico'], ['DES', 'Visão da empresa'], ['FA', 'Fundamentos']]) {
       const cmd = tk + ' ' + suffix; map.set(cmd, {cmd, name: label + ' · ' + tk, category: 'Ativo do painel'});
@@ -67,7 +67,7 @@
     const fav = favorites(), recent = (api()?.TR.hist || []).map(command).filter(Boolean).slice(0, 20);
     for (const cmd of [...fav, ...recent]) if (!map.has(cmd)) map.set(cmd, {cmd, name: cmd, category: 'Seus comandos'});
     const q = normalize(query).trim();
-    const items = [...map.values()].filter(item => (!q || normalize(item.cmd + ' ' + item.name + ' ' + item.category).includes(q)) && (filter !== 'favorites' || fav.includes(item.cmd)) && (filter !== 'recent' || recent.includes(item.cmd)));
+    const items = [...map.values()].filter(item => (!window.TerminalCommandPolicy || window.TerminalCommandPolicy.allows(item.cmd)) && (!q || normalize(item.cmd + ' ' + item.name + ' ' + item.category).includes(q)) && (filter !== 'favorites' || fav.includes(item.cmd)) && (filter !== 'recent' || recent.includes(item.cmd)));
     const rank = item => q && normalize(item.cmd).startsWith(q) ? -100 : fav.includes(item.cmd) ? -50 : recent.includes(item.cmd) ? -20 + recent.indexOf(item.cmd) : 0;
     return items.sort((a,b) => rank(a) - rank(b) || a.cmd.localeCompare(b.cmd)).slice(0, 60);
   }

@@ -36,3 +36,9 @@ As capturas foram inspecionadas no navegador; build e verificação HTTP não fo
 A busca pode receber novos sinônimos conforme os termos usados pelo usuário. Nenhum P0/P1/P2 permanece aberto no escopo descrito.
 
 Compatibilidade adicional: preferências do comparativo antigo (T:HOME) são copiadas para Gráficos (T:GP) antes da inicialização do controlador somente quando esse contexto ainda não existe. O contexto antigo e qualquer configuração própria de Gráficos permanecem preservados. Teste de navegador cobre os dois cenários; suíte final com 31 testes aprovada.
+
+## v541 — comandos limitados ao Terminal
+
+Removidos do diretório e das buscas os adaptadores para outras telas e as funções de pesquisa em sobreposições. FLUXO não é reutilizado: o código colidia entre Fluxo EWZ e Times & Trades da ponte. Nenhum fluxo financeiro foi inventado nem substituído por outro. Comandos nativos como ECO, NEWSBR, DIFUT e HIST continuam nos painéis. O filtro também cobre aliases, favoritos e histórico; execução direta e os adaptadores legados de navegação são protegidos. Configuração de espaços e painéis permanece própria do Terminal; a navegação principal do aplicativo e as telas originais fora dele continuam funcionando.
+
+Teste de navegador cobre os comandos retirados por digitação, APIs, aliases e busca, confirma que o ticker EWZ abre no painel, preserva os workspaces e verifica a tela original de fluxo fora do Terminal. A suíte completa passou com 32 testes.

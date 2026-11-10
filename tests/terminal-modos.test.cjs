@@ -21,8 +21,8 @@ test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e
   assert.ok(bar.height<=56,'Barra de comandos deve ficar em uma linha: '+width+' '+JSON.stringify(bar));assert.ok(bar.scroll<=bar.width+1);
   await app.locator('[data-tr341-menu]').click();
   await expect(app.locator('#terminal-inicio')).toBeVisible();
-  await app.locator('#ti539-search').fill('qualidade');
-  await expect(app.locator('[data-ti539-item="@quality"]')).toBeVisible();
+  await app.locator('#ti539-search').fill('dados');
+  await expect(app.locator('[data-ti539-item="DQ"]')).toBeVisible();
   await app.locator('#ti539-search').fill('');
   await app.locator('.tf415-nav [data-tf415-nav="WORKSPACES"]').click();
   await expect(app.locator('#trgrid')).toBeVisible();
