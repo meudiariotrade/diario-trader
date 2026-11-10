@@ -4,7 +4,8 @@ const { expect } = require('playwright/test');
 const { withApp } = require('./helpers/app.cjs');
 
 test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e controles mobile', { timeout: 90_000 }, async () => withApp(async (browser, base) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  // A fixture usa a data de Brasília; o navegador deve usar o mesmo fuso, inclusive após 00h UTC.
+  const page = await browser.newPage({ timezoneId: 'America/Sao_Paulo', viewport: { width: 390, height: 844 } });
   const app = page.locator('#app:not(.v503-fantasma)');
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
