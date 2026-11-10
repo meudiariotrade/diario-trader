@@ -6,19 +6,14 @@
  try{const key='diario-v428-ctx',saved=JSON.parse(localStorage.getItem(key)||'null'),old=saved?.['T:HOME'];if(saved&&old&&typeof old==='object'&&!Array.isArray(old)&&!Object.hasOwn(saved,'T:GP')){saved['T:GP']={...old};localStorage.setItem(key,JSON.stringify(saved))}}catch{}
 
  const groups=['Mercados','Gráficos e análise','Notícias e economia','Painéis e espaços','Dados e inteligência','Rotina e ajuda'];
- const primary=[['GLOBAL','MON','FX','ADR','CMDTY'],['@graph','COMP','TECH','PESQ','SAZ'],['TOP','ECO','DIFUT','ECST','JORNAL'],['@panels','MESA','@manage','@organize','@add'],['DQ','STAT','IA','EVT','AUD'],['GUIA','@plan','ALRT','AUTO','@focus']];
- const names={GLOBAL:'Radar global',MON:'Monitor de ativos',FX:'Moedas e dólar',ADR:'ADRs brasileiras',CMDTY:'Commodities',COMP:'Comparar ativos',TECH:'Análise técnica',PESQ:'Pesquisar empresas',SAZ:'Sazonalidade',TOP:'Notícias do mercado',ECO:'Agenda econômica',DIFUT:'Curva DI e juros',ECST:'Indicadores econômicos',JORNAL:'Jornal do pregão',DQ:'Central de dados',STAT:'Status das fontes',IA:'Central de inteligência',EVT:'Eventos relevantes',AUD:'Origem e auditoria dos dados',MESA:'Trocar de espaço',GUIA:'Como usar o Terminal',ALRT:'Alertas de preço',AUTO:'Automações'};
+ const primary=[['GLOBAL','MON','FX','ADR','CMDTY'],['@graph','COMP','TECH','PESQ','HIST'],['TOP','ECO','DIFUT','ECST','NEWSBR'],['@panels','MESA','@manage','@organize','@add'],['DQ','STAT','IA','EVT','AUD'],['HELP','@plan','ALRT','AUTO','@focus']];
+ const names={GLOBAL:'Radar global',MON:'Monitor de ativos',FX:'Moedas e dólar',ADR:'ADRs brasileiras',CMDTY:'Commodities',COMP:'Comparar ativos',TECH:'Análise técnica',PESQ:'Pesquisar empresas',HIST:'Histórico e sazonalidade',TOP:'Notícias do mercado',ECO:'Agenda econômica',DIFUT:'Curva DI e juros',ECST:'Indicadores econômicos',NEWSBR:'Notícias do Brasil',DQ:'Central de dados',STAT:'Status das fontes',IA:'Central de inteligência',EVT:'Eventos relevantes',AUD:'Origem e auditoria dos dados',MESA:'Trocar de espaço',HELP:'Como usar o Terminal',ALRT:'Alertas de preço',AUTO:'Automações'};
  const aliases={WCRS:'FX',GLCO:'CMDTY',YAS:'TD'};
  const actions=[
   ['@favorite','Favoritar painel atual','.trquick-strip .trquick-chip[aria-pressed]',3],
-  ['@validation','Ajuda e diagnóstico','.dtval-open',5],
   ['@manage','Gerenciar espaços','[data-ws321-open]',3],['@organize','Organizar painéis','[data-tr="org"]',3],['@add','Adicionar painel','[data-tr="addp"]',3],
   ['@rename','Renomear ou excluir espaço','[data-tr="wsmenu"]',3],['@layout','Layouts por horário','[data-auto322-open]',3],['@auto','Troca automática de layout','[data-t369-auto]',3],
-  ['@plan','Planejar sessão','[data-pre328]',5],['@focus','Modo foco','[data-tr327-focus]',3],['@observe','Observador de mercado','[data-obs328]',5],
-  ['@radar','Configurar lista do radar','[data-radar-picker]',0],['@proactive','Radar proativo','[data-radar332]',4],['@quality','Conferir qualidade dos dados','[data-tr-qualidade-v374]',4],
-  ['@research','Pesquisa integrada de ativos','[data-research-open]',1],['@flow','Fluxo do dia','[data-flow-open]',0],['@query','Consulta de mercado','[data-consulta325]',4],
-  ['@intelligence','Ferramentas de inteligência','[data-ti330]',4],['@automation','Configurar automações','[data-v329-open]',5],['@routine','Rotina do pregão','[data-t369-suggest]',5],
-  ['@window','Abrir em nova janela','[data-terminal-window]',3],['@install','Instalar no computador','.trinst',5],['@app','Menu do aplicativo','[data-tr="menu"]',5],['@exit','Sair do Terminal','[data-tr="sair"]',5],['@commands','Busca avançada de comandos','[data-tc326-menu]',5],['@status','Diagnóstico das conexões','[data-tc326-status]',4]
+  ['@plan','Planejar sessão','[data-pre328]',5],['@focus','Modo foco','[data-tr327-focus]',3],['@radar','Configurar lista do radar','[data-radar-picker]',0],['@commands','Buscar comandos','[data-quick-open]',5]
  ];
  const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  const app=()=>doc.querySelector('#app:not(.v503-fantasma)');
@@ -38,11 +33,11 @@
  function catalog(){
   const entries=[{id:'@graph',label:'Gráfico de preço',group:1,hint:'Abrir o gráfico salvo',code:'GP',mode:'GP'},{id:'@panels',label:'Retomar meus painéis',group:3,hint:'Seus espaços de trabalho',mode:'WORKSPACES'}];
   for(const [code,description]of Object.entries(root.TRM?.FN||{})){
-   if(typeof description!=='string'||aliases[code])continue;
+   if(typeof description!=='string'||aliases[code]||root.TerminalCommandPolicy&&!root.TerminalCommandPolicy.allows(code))continue;
    entries.push({id:code,code,label:names[code]||description.split(' · ')[0].replace(/ \(tela cheia\)/g,''),hint:description,group:category(code,description)});
   }
-  for(const [code,label]of root.TraderTerminalActions?.commands||[]){if(!entries.some(e=>e.id===code))entries.push({id:code,code,label:names[code]||label,hint:label,group:category(code,label)})}
-  for(const [id,label,selector,group]of actions){const button=source(selector);if(button)entries.push({id,label:id==='@auto'?(/desligad/i.test(button.textContent)?'Ativar troca automática de layout':'Desativar troca automática de layout'):label,selector,group,hint:label})}
+  for(const [code,label]of root.TraderTerminalActions?.commands||[]){if((!root.TerminalCommandPolicy||root.TerminalCommandPolicy.allows(code))&&!entries.some(e=>e.id===code))entries.push({id:code,code,label:names[code]||label,hint:label,group:category(code,label)})}
+  for(const [id,label,selector,group]of actions){const button=source(selector);if(button&&(!root.TerminalCommandPolicy||root.TerminalCommandPolicy.allowsAction(id)))entries.push({id,label:id==='@auto'?(/desligad/i.test(button.textContent)?'Ativar troca automática de layout':'Desativar troca automática de layout'):label,selector,group,hint:label})}
   try{const api=root.TRM,layout=api?.layAtual?.(),current=layout?.p?.[api.TR.foco]||layout?.p?.[0],ticker=api?.parse?.(current)?.tk;if(ticker)for(const [suffix,label]of [['G','Gráfico'],['FA','Fundamentos'],['DES','Ficha']])entries.push({id:'@ativo-'+suffix,code:ticker+' '+suffix,label:label+' de '+ticker,hint:label+' do ativo em foco',group:1})}catch{};
   return entries;
  }
