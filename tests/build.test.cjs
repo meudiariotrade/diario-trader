@@ -5,7 +5,7 @@ const { validate, localFile, publicationFiles } = require('../scripts/build.cjs'
 test('a publicação encontra os recursos do HTML e do service worker e valida JavaScript', () => {
   const assets = validate();
   assert.ok(assets.includes('index.html'));
-  assert.ok(assets.includes('camadas-v522.js'));
+  assert.ok(assets.includes('camadas-v560.js'));
   assert.ok(!assets.some(file => /\.(ts|sql|map)$/.test(file)));
 });
 test('publicação exclui cópias históricas sem descartar recursos ativos ou arquivos referenciados', () => {

@@ -4,8 +4,8 @@ on:
     branches: [main, feature/terminal-v522-pos-v531-refinamento]
     paths:
       - 'terminal-gp-v421.js'
-      - 'camadas-v522.js'
-      - 'terminal-gestos-seguros.css'
+      - 'camadas-v560.js'
+      - 'estilo-v560.css'
       - 'terminal-gestos-seguros.js'
       - 'terminal-fonte-v533.js'
       - 'test-terminal-fonte.cjs'
@@ -20,8 +20,8 @@ on:
     branches: [main]
     paths:
       - 'terminal-gp-v421.js'
-      - 'camadas-v522.js'
-      - 'terminal-gestos-seguros.css'
+      - 'camadas-v560.js'
+      - 'estilo-v560.css'
       - 'terminal-gestos-seguros.js'
       - 'terminal-fonte-v533.js'
       - 'test-terminal-fonte.cjs'
@@ -44,7 +44,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: node --check terminal-gp-v421.js
-      - run: node --check camadas-v522.js
+      - run: node --check camadas-v560.js
       - run: node --check test-gp-real.cjs
       - run: node test-gp-real.cjs
       - run: node --check terminal-fonte-v533.js

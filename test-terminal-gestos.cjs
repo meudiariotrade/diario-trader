@@ -7,7 +7,7 @@ async function run(){
  const logs=[],vc=new VirtualConsole();
  vc.on('jsdomError',e=>logs.push(e.message));
  vc.on('error',e=>logs.push(String(e)));
- const markup='<!doctype html><html lang="pt-BR"><head><script src="camadas-v522.js?v=522"></script></head>'+
+ const markup='<!doctype html><html lang="pt-BR"><head><script src="camadas-v560.js?v=522"></script></head>'+
  '<body class="trmon"><main id="app"><div id="trgrid"><div data-trp="0" class="trp"><div class="trpb">'+
  '<div class="g9bar"></div><div class="g418-toolbar" data-g418-panel="0">'+
  '<span class="g418-guide">✋ Arraste</span><button data-g418-action="reset">Reset</button><span class="g418-sr"></span></div>'+

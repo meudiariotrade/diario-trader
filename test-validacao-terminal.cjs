@@ -10,7 +10,7 @@ const vc=new VirtualConsole();
 const errors=[];
 vc.on('jsdomError',e=>errors.push(e.message));
 vc.on('error',e=>errors.push(String(e)));
-const dom=new JSDOM('<!doctype html><html lang="pt-BR"><head><script src="camadas-v522.js?v=522"></script></head><body><main id="app"><section><div id="trgrid">Gráficos de teste</div></section></main></body></html>',{url:'https://example.test/diario-trader/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
+const dom=new JSDOM('<!doctype html><html lang="pt-BR"><head><script src="camadas-v560.js?v=522"></script></head><body><main id="app"><section><div id="trgrid">Gráficos de teste</div></section></main></body></html>',{url:'https://example.test/diario-trader/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
 const {window:w}=dom;
 const doc=w.document,KEY='dt-validacao-terminal-2026-v1';
 w.eval(script);
@@ -92,7 +92,7 @@ assert.equal(doc.querySelector('.dtval-root').hidden,false);
 assert.equal(get().cases.find(x=>x.id==='n3').incidents.length,1);
 assert.equal(errors.length,0,'Sem exceções de console no DOM de teste: '+errors.join('; '));
 // Compatibilidade com registros anteriores: acrescentar campos sem apagar observações.
-const oldDom=new JSDOM('<!doctype html><html lang="pt-BR"><head><script src="camadas-v522.js?v=522"></script></head><body><main id="app"><div id="trgrid"></div></main></body></html>',{url:'https://example.test/diario-trader/',runScripts:'outside-only',pretendToBeVisual:true});
+const oldDom=new JSDOM('<!doctype html><html lang="pt-BR"><head><script src="camadas-v560.js?v=522"></script></head><body><main id="app"><div id="trgrid"></div></main></body></html>',{url:'https://example.test/diario-trader/',runScripts:'outside-only',pretendToBeVisual:true});
 const oldWin=oldDom.window;
 oldWin.localStorage.setItem(KEY,JSON.stringify({version:'522',history:[],cases:[{id:'n3',cat:'navegacao',title:'Sazonalidade',area:'Mercado / Sazonalidade',priority:'Crítica',status:'Pendente',steps:'Teste',notes:'Meu histórico anterior',images:[],testResult:'Inconclusivo',platform:'iPhone',createdAt:'2026-11-01T00:00:00.000Z',updatedAt:'2026-11-01T00:00:00.000Z'}]}));
 oldWin.eval(script);

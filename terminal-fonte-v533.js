@@ -4,13 +4,13 @@
 if(!root||!doc||root.DIARIO_FONTE_GP533)return;
 const style=doc.createElement('style');
 style.textContent=[
-'#v421-gp .gp533-status{display:flex;flex-wrap:wrap;align-items:center;gap:7px 12px;padding:8px 11px;background:#071b17;border-top:1px solid #204d3d;color:#c4dfd3;font:500 11px/1.4 system-ui,-apple-system,sans-serif}',
-'#v421-gp .gp533-status[data-health="error"]{background:#302012;color:#ffcf9a}',
+'#v421-gp .gp533-status{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 12px;background:#0e0f10;border-top:1px solid #2f3136;color:#d6d3cd;font:500 11px/1.4 system-ui,-apple-system,sans-serif}',
+'#v421-gp .gp533-status[data-health="error"]{background:#302612;color:#dfc79a}',
 '#v421-gp .gp533-status[data-health="empty"]{color:#c7d0ce}',
-'#v421-gp .gp533-status[data-health="stale"]{color:#f6d398}',
-'#v421-gp .gp533-status button{margin-left:auto;min-height:34px;padding:5px 10px;border-radius:7px;border:1px solid #39745d;background:#123c2d;color:#e3ffed;font:600 11px system-ui;touch-action:manipulation}',
+'#v421-gp .gp533-status[data-health="stale"]{color:#dfc79a}',
+'#v421-gp .gp533-status button{margin-left:auto;min-height:40px;padding:4px 8px;border-radius:6px;border:1px solid #4a4e55;background:#212226;color:#efeeeb;font:600 11px system-ui;touch-action:manipulation}',
 '#v421-gp .gp533-status button:disabled{opacity:.5;cursor:wait}',
-'@media(max-width:690px){#v421-gp .gp533-status{padding:7px 9px;gap:5px 9px}#v421-gp .gp533-status button{margin-left:0}}'
+'@media(max-width:690px){#v421-gp .gp533-status{padding:8px 8px;gap:4px 8px}#v421-gp .gp533-status button{margin-left:0}}'
 ].join('\n');
 (doc.head||doc.documentElement).appendChild(style);
 const safe=(fn,fallback)=>{try{return fn()}catch(_){return fallback}};

@@ -5,14 +5,14 @@ const assert=require('node:assert/strict');
 const {JSDOM,VirtualConsole}=require('jsdom');
 async function run(){
  const source=fs.readFileSync('terminal-gp-v421.js','utf8');
- const bundle=fs.readFileSync('camadas-v522.js','utf8');
+ const bundle=fs.readFileSync('camadas-v560.js','utf8');
  assert(bundle.includes(source),'Bundle efetivamente inclui o mesmo gráfico GP da origem');
  const index=fs.readFileSync('index.html','utf8');
- assert(/camadas-v522\.js\?v=\d+/.test(index),'Página versiona o bundle dos controles');
- assert(index.includes('terminal-gestos-seguros.css?v=532'),'Folha de estilo atualizada');
+ assert(/camadas-v560\.js\?v=\d+/.test(index),'Página versiona o bundle dos controles');
+ assert(index.includes('estilo-v560.css?v=560'),'Folha de estilo atualizada');
  const worker=fs.readFileSync('sw.js','utf8');
  assert(/const C=['"]diario-v\d+[^'"]*['"]/.test(worker),'Cache PWA possui versão própria');
- for(const name of ['camadas-v522.js','terminal-gestos-seguros.js','terminal-gestos-seguros.css']) assert(worker.includes('"'+name+'"'),'Cache inclui '+name);
+ for(const name of ['camadas-v560.js','terminal-gestos-seguros.js','estilo-v560.css']) assert(worker.includes('"'+name+'"'),'Cache inclui '+name);
  const err=[];
  const vc=new VirtualConsole();vc.on('jsdomError',e=>err.push(e.message));
  vc.on('error',e=>err.push(String(e)));
