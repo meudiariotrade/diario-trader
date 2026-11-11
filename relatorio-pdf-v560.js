@@ -16,6 +16,7 @@
   const br = s => s.split('-').reverse().join('/');
   const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const MOD = { dt: 'Day trade', sw: 'Swing trade', op: 'Opções', ex: 'EUA e Forex' };
+  const MOD_ABA = { dt: 'Day trade', sw: 'Swing trade', op: 'Opções', fx: 'Forex', us: 'EUA' }; // abas de Operações
   const isoLocal = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
 
   /* ---------- dados ---------- */
@@ -31,12 +32,20 @@
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) continue;
       let mod = '';
       try { mod = typeof modDe === 'function' ? modDe(t) : ''; } catch { mod = ''; }
-      out.push({ dia, ativo: String(t.ativo || '—'), setup: String(t.setup || 'Sem setup'), mod: MOD[mod] || 'Outros', pl: c.pl, risco: c.risk, r: c.r, semStop: !!c.semStop, regras: t.rules });
+      const fino = mod === 'ex' ? ((t.forex || t.tipo === 'F') ? 'fx' : 'us') : mod;
+      out.push({ modCod: fino, dia, ativo: String(t.ativo || '—'), setup: String(t.setup || 'Sem setup'), mod: MOD[mod] || 'Outros', pl: c.pl, risco: c.risk, r: c.r, semStop: !!c.semStop, regras: t.rules });
     }
     return out.sort((a, b) => (a.dia < b.dia ? -1 : a.dia > b.dia ? 1 : 0));
   }
+  const MESES_LONGOS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   function janela(chave, hoje = new Date()) {
     const base = isoLocal(hoje), y = hoje.getFullYear();
+    if (chave === 'mes' || chave === 'mes-ant') {
+      const ref = new Date(y, hoje.getMonth() - (chave === 'mes-ant' ? 1 : 0), 1);
+      const fim = chave === 'mes' ? base : isoLocal(new Date(ref.getFullYear(), ref.getMonth() + 1, 0));
+      const nome = MESES_LONGOS[ref.getMonth()].replace(/^./, c => c.toUpperCase()) + ' de ' + ref.getFullYear();
+      return { de: isoLocal(ref), ate: fim, nome: chave === 'mes' ? nome + ' (até hoje)' : nome, curto: nome, mensal: true };
+    }
     const menos12 = new Date(hoje); menos12.setFullYear(y - 1); menos12.setDate(menos12.getDate() + 1);
     if (chave === 'ytd') return { de: y + '-01-01', ate: base, nome: 'Acumulado no ano', curto: 'Acumulado ' + y };
     if (chave === 'ano') return { de: (y - 1) + '-01-01', ate: (y - 1) + '-12-31', nome: 'Ano fechado ' + (y - 1), curto: 'Ano fechado ' + (y - 1) };
@@ -71,10 +80,12 @@
   }
 
   /* ---------- PDF ---------- */
-  async function gerar(chave = '12m') {
-    const J = janela(chave), todos = fechados();
+  async function gerar(chave = '12m', opts = {}) {
+    const J = janela(chave), filtroMod = opts.mod && MOD_ABA[opts.mod] ? opts.mod : null;
+    const todos = fechados().filter(t => !filtroMod || t.modCod === filtroMod);
+    const escopo = filtroMod ? MOD_ABA[filtroMod] : 'Todas as modalidades';
     const ts = todos.filter(t => t.dia >= J.de && t.dia <= J.ate);
-    if (!ts.length) { const e = new Error('Não há trades encerrados em ' + J.nome.toLowerCase() + '. Escolha outro período.'); e.vazio = true; throw e; }
+    if (!ts.length) { const e = new Error('Não há trades encerrados ' + (filtroMod ? 'de ' + escopo.toLowerCase() + ' ' : '') + 'em ' + J.nome.toLowerCase() + '.'); e.vazio = true; throw e; }
     const S1 = stats(ts);
     const L = await libs();
     const { PDFDocument, rgb } = L.PDFLib;
@@ -82,7 +93,7 @@
     doc.registerFontkit(L.fontkit);
     const F = { r: await doc.embedFont(L.sans, { subset: true }), b: await doc.embedFont(L.bold, { subset: true }), s: await doc.embedFont(L.serif, { subset: true }) };
     const hoje = new Date(), dataBase = br(isoLocal(hoje));
-    doc.setTitle('Diário Trader — Relatório de desempenho — ' + J.nome);
+    doc.setTitle('Diário Trader — Relatório de desempenho — ' + escopo + ' — ' + J.nome);
     doc.setSubject('Período ' + (J.de === '0000-01-01' ? 'completo' : br(J.de)) + ' a ' + br(J.ate) + ' · BRL');
     doc.setCreator('Diário Trader v560'); doc.setProducer('Diário Trader');
     const C = { paper: rgb(.953, .941, .91), ink: rgb(.102, .106, .118), mute: rgb(.435, .408, .345), line: rgb(.831, .804, .741), amb: rgb(.553, .424, .2), up: rgb(.122, .478, .302), dn: rgb(.702, .251, .18), gra: rgb(.09, .094, .106), ouro: rgb(.788, .631, .357) };
@@ -93,7 +104,7 @@
     const txt = (p, s, x, y, o = {}) => { const f = o.f || F.r, z = o.z || 9; let X = x; if (o.dir) X = x - f.widthOfTextAtSize(s, z); p.drawText(String(s), { x: X, y, size: z, font: f, color: o.c || C.ink }); };
     const cab = (p, titulo) => {
       txt(p, 'DIÁRIO TRADER · RELATÓRIO DE DESEMPENHO', M, H - 40, { z: 7, c: C.mute });
-      txt(p, J.nome.toUpperCase(), W - M, H - 40, { z: 7, c: C.mute, dir: 1 });
+      txt(p, (J.nome + ' · ' + escopo).toUpperCase(), W - M, H - 40, { z: 7, c: C.mute, dir: 1 });
       p.drawLine({ start: { x: M, y: H - 46 }, end: { x: W - M, y: H - 46 }, thickness: .6, color: C.line });
       txt(p, titulo, M, H - 84, { f: F.s, z: 18 });
       return H - 112;
@@ -127,7 +138,7 @@
     let p = nova();
     p.drawRectangle({ x: 0, y: H - 190, width: W, height: 190, color: C.gra });
     txt(p, 'D I Á R I O   ·   T R A D E R', M, H - 60, { f: F.s, z: 13, c: C.ouro });
-    txt(p, 'RELATÓRIO DE DESEMPENHO · TODAS AS MODALIDADES', M, H - 76, { z: 7, c: rgb(.56, .54, .5) });
+    txt(p, 'RELATÓRIO DE DESEMPENHO · ' + escopo.toUpperCase(), M, H - 76, { z: 7, c: rgb(.56, .54, .5) });
     curva(p, S1.curva, W * .45, H - 172, W * .45 - 40, 70, C.ouro, rgb(.23, .23, .25));
     let y = H - 238;
     txt(p, J.nome, M, y, { f: F.s, z: 28 }); y -= 18;
@@ -193,7 +204,7 @@
         gr.map(([k, s]) => [k.length > 32 ? k.slice(0, 31) + '…' : k, String(s.n), pc(s.acerto), s.payoff ? fx(s.payoff) : '—', s.mediaR == null ? '—' : vezes(s.mediaR), money(s.soma)]), y,
         gr.map(([, s]) => [null, null, null, null, cor(s.mediaR || 0), cor(s.soma)]));
     };
-    bloco('Por modalidade', 'mod', 6); bloco('Por setup', 'setup', 10); bloco('Por ativo', 'ativo', 10);
+    if (!filtroMod) bloco('Por modalidade', 'mod', 6); bloco('Por setup', 'setup', 10); bloco('Por ativo', 'ativo', 10);
 
     /* Metodologia */
     p = nova(); y = cab(p, 'Metodologia');
@@ -209,11 +220,12 @@
     const total = pages.length;
     pages.forEach((pg, i) => {
       pg.drawLine({ start: { x: M, y: 40 }, end: { x: W - M, y: 40 }, thickness: .6, color: C.line });
-      txt(pg, 'Diário Trader · BRL · data-base ' + dataBase + ' · ' + J.nome, M, 28, { z: 6.6, c: C.mute });
+      txt(pg, 'Diário Trader · ' + escopo + ' · BRL · data-base ' + dataBase + ' · ' + J.nome, M, 28, { z: 6.6, c: C.mute });
       txt(pg, 'Página ' + (i + 1) + ' de ' + total, W - M, 28, { z: 6.6, c: C.mute, dir: 1 });
     });
     const bytes = await doc.save();
-    return { bytes, nome: 'relatorio-desempenho-' + (chave === 'ano' ? (hoje.getFullYear() - 1) : chave) + '-' + isoLocal(hoje) + '.pdf', paginas: total, janela: J, trades: S1.n };
+    const rotulo = (filtroMod ? filtroMod + '-' : '') + (J.mensal ? J.de.slice(0, 7) : chave === 'ano' ? String(hoje.getFullYear() - 1) : chave);
+    return { bytes, nome: 'relatorio-desempenho-' + rotulo + '-' + isoLocal(hoje) + '.pdf', paginas: total, janela: J, trades: S1.n };
   }
 
   /* ---------- painel dentro da janela de exportação ---------- */
@@ -257,6 +269,24 @@
     const cancelar = box.querySelector('[data-csvm="x"]');
     (cancelar ? cancelar.before(sec) : box.append(sec));
   }
+  /* Botões "PDF deste mês" / "PDF do mês passado" das abas de Operações: mesmo relatório editorial,
+     filtrado pela modalidade da aba. Interceptados antes do gerador antigo (captura de tela). */
+  d.addEventListener('click', async e => {
+    const b = e.target.closest('[data-modpdf]'); if (!b) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (b.dataset.rel560Ocupado) return; b.dataset.rel560Ocupado = '1';
+    let mod = null; try { mod = (typeof STMOD !== 'undefined' && STMOD) || (typeof modAtual === 'function' ? modAtual() : null); } catch { mod = null; }
+    const aviso = (m, ms) => { try { toast(m, ms); } catch { } };
+    const original = b.innerHTML; b.setAttribute('aria-busy', 'true'); b.textContent = 'Montando o PDF…';
+    try {
+      const r = await gerar(b.dataset.modpdf === 'ant' ? 'mes-ant' : 'mes', { mod });
+      await saveFile(r.nome, r.bytes, 'application/pdf');
+      aviso('PDF pronto · ' + r.paginas + ' páginas · ' + r.janela.curto, 3500);
+    } catch (er) {
+      aviso(er.vazio ? er.message : 'Não foi possível gerar o PDF. Tente de novo.', 4000);
+    } finally { b.innerHTML = original; b.removeAttribute('aria-busy'); delete b.dataset.rel560Ocupado; }
+  }, true);
+
   new MutationObserver(() => { const c = d.querySelector('#csvch .csvc'); if (c) painel(c); }).observe(d.documentElement, { childList: true, subtree: true });
   /* A janela de exportação fecha em qualquer clique em [data-csvm]; os botões do relatório não fecham. */
   w.DiarioRelatorioPDF = { gerar, stats, janela, fechados };

@@ -50,7 +50,7 @@ function hslToRgb(h, s, l) {
   const f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
   return [f(h + 1 / 3), f(h), f(h - 1 / 3)].map(v => Math.round(v * 255));
 }
-const POS = /(pos|up\b|-up|gain|ganho|lucro|alta|\bwin|profit|success|sucesso|verde|\.g\b|\bg\b|buy|compra|positivo|ok\b|bull|lucr)/i;
+const POS = /(pos-por-contraste|pos|up\b|-up|gain|ganho|lucro|alta|\bwin|profit|success|sucesso|verde|\.g\b|\bg\b|buy|compra|positivo|ok\b|bull|lucr)/i;
 const NEG = /(neg|down|dn\b|loss|perda|baixa|preju|erro|error|danger|venda|sell|bear|\.r\b|negativo|alerta)/i;
 /** Mapeia uma cor RGB(A) para a paleta Terminal Grafite, considerando o contexto (seletor/propriedade). */
 function mapRgb([r, g, b, a], ctx = '') {
@@ -168,41 +168,50 @@ function transformBody(body, sel) {
     const k = d.indexOf(':'); if (k < 0) return d;
     const prop = d.slice(0, k), val = d.slice(k + 1);
     if (/^\s*--/.test(prop)) return prop + ':' + mapColorsIn(val, sel + ' ' + prop);
-    return prop + ':' + normDecl(prop, mapColorsIn(val, sel + ' ' + prop), sel);
+    let v = mapColorsIn(val, sel + ' ' + prop);
+    // Bordas douradas viram linhas neutras de 1 px (âmbar só em estado ativo, seleção e foco).
+    if (/^\s*border(-(top|right|bottom|left))?(-color)?\s*$/i.test(prop) && !/\.on\b|active|current|pressed|selected|checked|:focus|:hover|\.ab\b|-on\b|\.sel\b/i.test(sel.replace(/:not\((?:[^()]|\([^()]*\))*\)/g, ''))) {
+      v = v.replace(/#([0-9a-f]{6})([0-9a-f]{2})?\b/gi, (m, h) => { const [r, g, b2] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); const [hh, ss] = rgbToHsl(r, g, b2); return hh >= 30 && hh < 50 && ss > .3 ? 'rgba(255,255,255,.14)' : m; });
+    }
+    return prop + ':' + normDecl(prop, v, sel);
   }).join(';');
 }
 
-/* Folhas de estilo embutidas no JavaScript (injetadas em <style> em tempo de execução) recebem a mesma
-   normalização das folhas .css: localiza literais de texto que são CSS completo e os reescreve. */
-function transformCssLiterals(js) {
+/* JavaScript: uma única passada, com as posições calculadas sobre o texto original (nada é convertido duas vezes).
+   1) literais que são CSS completo (folhas injetadas em <style>) → transformCss;
+   2) demais cores em texto (estilos inline, desenhos em canvas, SVG): hex de 6/8 dígitos e rgb()/rgba()
+      em qualquer literal; hex de 3/4 dígitos só dentro de declarações CSS (evita confundir com seletores #id).
+   Verde ao lado de um vermelho (padrão alta ? verde : vermelho) é tratado como variação positiva. */
+function transformJs(js) {
   const acorn = require('acorn');
   const edits = [];
   const ast = acorn.parse(js, { ecmaVersion: 'latest', allowHashBang: true });
   const isCss = raw => raw.length > 40 && !raw.includes('${') && (raw.match(/\{/g) || []).length === (raw.match(/\}/g) || []).length
     && /[\w\]\)*>-]\s*\{[^{}]*?[a-z-]+\s*:\s*[^{};]+;?[^{}]*\}/i.test(raw) && !/\bfunction\b|=>|\breturn\b/.test(raw);
+  const literais = [];
   (function walk(n) {
     if (!n || typeof n.type !== 'string') return;
-    if (n.type === 'Literal' && typeof n.value === 'string') {
-      const raw = js.slice(n.start + 1, n.end - 1); if (isCss(raw)) edits.push([n.start + 1, n.end - 1, raw]);
-    } else if (n.type === 'TemplateLiteral' && n.expressions.length === 0) {
-      const raw = js.slice(n.start + 1, n.end - 1); if (isCss(raw)) edits.push([n.start + 1, n.end - 1, raw]);
-    }
+    if (n.type === 'Literal' && typeof n.value === 'string') literais.push([n.start + 1, n.end - 1]);
+    else if (n.type === 'TemplateElement') literais.push([n.start, n.end]);
     for (const k in n) { const v = n[k]; if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v.type === 'string') walk(v); }
   })(ast);
+  const RED = /#(?:e[0-9a-f]|f[0-9a-f]|d[0-9a-f]|b[0-9a-f])[0-6][0-9a-f][0-6][0-9a-f]\b|rgba?\(\s*2[0-5]\d\s*,\s*[0-9]{1,2}\s*,/i;
+  for (const [a, b] of literais) {
+    const raw = js.slice(a, b);
+    if (isCss(raw)) { const t = transformCss(raw); if (t !== raw) edits.push([a, b, t]); continue; }
+    if (!/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(raw)) continue;
+    const ctxOf = off => { const ini = Math.max(0, a + off - 140), viz = js.slice(Math.max(0, a + off - 90), a + off + 90); return js.slice(ini, a + off + 40) + (RED.test(viz) ? ' pos-por-contraste ' : ''); };
+    let out = raw.replace(/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6})\b/g, (m, off) => toHex(mapRgb(hexToRgb(m), ctxOf(off))))
+      .replace(/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*([\d.]+%?)\s*)?\)/g, (m, r, g, bb, al, off) => {
+        const A = al == null ? 1 : al.endsWith('%') ? parseFloat(al) / 100 : +al; const [R, G, B] = mapRgb([+r, +g, +bb, A], ctxOf(off));
+        return A < 1 ? `rgba(${R},${G},${B},${+A.toFixed(3)})` : `rgb(${R},${G},${B})`; })
+      .replace(/((?:background(?:-color)?|color|fill|stroke|stop-color|border(?:-[a-z]+)*|outline(?:-color)?|accent-color)\s*[:=]\s*\\?["']?)(#[0-9a-fA-F]{3,4})\b/g, (m, pre, hx, off) => pre + toHex(mapRgb(hexToRgb(hx), ctxOf(off))));
+    if (out !== raw) edits.push([a, b, out]);
+  }
   edits.sort((x, y) => y[0] - x[0]);
-  for (const [i, j, raw] of edits) js = js.slice(0, i) + transformCss(raw) + js.slice(j);
-  return js;
-}
-
-/* Em JavaScript só tocamos cores dentro de declarações CSS (estilos inline e folhas injetadas). */
-function transformJs(js) {
-  js = transformCssLiterals(js);
-  const DECL = /((?:background(?:-color)?|color|fill|stroke|stop-color|border(?:-[a-z]+)*|outline(?:-color)?|box-shadow|text-shadow|accent-color|caret-color)\s*[:=]\s*["'`]?)([^;"'`}{<>]{1,160})/g;
-  return js.replace(DECL, (m, pre, val, off, all) => {
-    if (!/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(val)) return m;
-    const ctx = all.slice(Math.max(0, off - 140), off + 40);
-    return pre + mapColorsIn(val, ctx);
-  }).replace(/((?:fill|stroke|stop-color|color)=\\?["'])(#[0-9a-fA-F]{3,8})\b/g, (m, pre, hx, off, all) => pre + mapColorsIn(hx, all.slice(Math.max(0, off - 140), off)));
+  for (const [a, b, t] of edits) js = js.slice(0, a) + t + js.slice(b);
+  // Chaves de destaque de paletas (ac/accent/brand) são sempre âmbar, mesmo ao lado de verde/vermelho.
+  return js.replace(/([{,]\s*(?:ac|accent|brand)\s*:\s*["'])#([0-9a-f]{6})(["'])/gi, (m, pre, h, q) => { const [hh, ss] = rgbToHsl(...[0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16))); return hh >= 66 && hh < 205 && ss > .3 ? pre + '#c9a15b' + q : m; });
 }
 
 /* ---------------- montagem ---------------- */

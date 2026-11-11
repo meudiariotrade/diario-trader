@@ -1,0 +1,16 @@
+Diário Trader v561 — capas, Jornal, Panorama e ícone
+
+- PDF mensal das abas de Operações ("PDF deste mês" / "PDF do mês passado"): agora é o relatório
+  editorial vetorial (texto selecionável), filtrado pela modalidade da aba (Day trade, Swing, Opções,
+  Forex, EUA). A exportação em planilha continua igual.
+- Ícone do app: o diário 3D em couro grafite com hot stamping âmbar (icon-192/512 e apple-touch-icon).
+  No iPhone o ícone só troca ao remover o atalho da tela inicial e adicionar de novo.
+- Capas do Jornal (capas-v561.js): composições próprias por notícia do dia. O tema da manchete escolhe o
+  objeto 3D (petróleo, juros, dólar, minério/aço, balanços, cripto, EUA, bolsa) — mesma câmera e luz.
+  "Outra capa" percorre manchete → número do dia → três pontos → próximas matérias → Brasil × mundo.
+  Formatos 4:5, 1:1 e 9:16 recompostos. "Meu fechamento" com opção de ocultar valores em R$.
+- Jornal do Pregão (jornal-v561.js + seção 13 do design system): expediente editorial, faixa de cotações
+  tabular, arte 3D por matéria no lugar da ilustração genérica, tipografia serifada no texto.
+- Panorama do mercado: imagem em grafite (cores do canvas convertidas), cabeçalho com cena 3D própria
+  (B3, NYSE, commodities) no lugar do touro; verde/vermelho só nas variações.
+- Bordas douradas antigas viraram linhas neutras de 1 px (âmbar só em estado ativo/foco).
