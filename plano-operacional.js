@@ -35,6 +35,7 @@
     if (!has()) return 0;
     S.ax ??= {};
     if ((S.ax.planoOp || 0) >= VER) return 0;
+    if (!S.ax.planoOpAceito) return 0; // v554: plano modelo só entra se o usuário escolher.
     const del = S.del || {}, now = Date.now(); let n = 0;
     for (const [id, phase, cat, t] of RULES) {
       if (del[id] || S.rules.some(r => r.id === id)) continue;
@@ -58,12 +59,15 @@
   function regrasHtml() {
     return `<section class="card po-regras" aria-label="Parâmetros de operação"><h3>Parâmetros de operação</h3><p class="sm mut">Referência rápida. Valores ajustáveis conforme a volatilidade.</p><div class="po-tab" role="table"><div class="po-row po-head" role="row"><span role="columnheader"></span><span role="columnheader">Índice</span><span role="columnheader">Dólar</span></div>${TABELA.map(([k, a, b]) => `<div class="po-row" role="row"><b role="rowheader">${esc(k)}</b><span role="cell">${esc(a)}</span><span role="cell">${esc(b)}</span></div>`).join('')}</div><h4>Proibições</h4><ul class="po-lista"><li>Operar em horário de notícia.</li><li>Entrar no 1º minuto da abertura do à vista e do americano.</li><li>Entrar perto da VWAP, da média de 200 ou do Ajuste.</li><li>Antes das 10h, entrar fora de padrão clássico.</li><li>Stop exatamente no tick da barra.</li></ul><h4>Tempos gráficos</h4><ul class="po-lista"><li><b>1 min</b> ajuste fino da entrada.</li><li><b>2 min</b> confirmação de tendência ou reversão.</li><li><b>5 min</b> visão geral do movimento.</li></ul></section>`;
   }
+  function ofertaHtml() {
+    return `<section class="card po-oferta" aria-label="Plano modelo"><h3>Plano modelo para Índice e Dólar</h3><p class="sm mut">Adiciona ${RULES.length} itens ao checklist (antes, durante e depois do pregão), os setups de Índice e Dólar e um quadro de parâmetros. Você pode editar ou excluir depois.</p><button type="button" class="btn" data-po-aceitar>Adicionar plano modelo</button></section>`;
+  }
   function installRegras() {
     if (typeof vRegras !== 'function' || vRegras.__po) return;
     const original = vRegras;
     vRegras = function () {
       const html = original.apply(this, arguments);
-      try { return html.replace(/(<h1>Minhas regras<\/h1>)/, '$1' + regrasHtml()); } catch { return html; }
+      try { const ok = (S.ax || {}).planoOp; return html.replace(/(<h1>Minhas regras<\/h1>)/, '$1' + (ok ? regrasHtml() : ofertaHtml())); } catch { return html; }
     };
     vRegras.__po = 1;
   }
@@ -107,6 +111,7 @@
   doc.addEventListener('click', event => {
     const btn = event.target.closest('#v512-ar .v512-go');
     if (btn && root.DIARIO_V512?.arGerar) { event.preventDefault(); event.stopImmediatePropagation(); gerarAulas(btn); return; }
+    if (event.target.closest('[data-po-aceitar]')) { try { (S.ax ??= {}).planoOpAceito = 1; seed(); root.Projeto2027?.ensure(); save(); render(); } catch {} return; }
     if (event.target.closest('[data-po-login]')) { try { tab = 'conta'; render(); scrollTo(0, 0); } catch {} }
   }, true);
 

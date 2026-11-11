@@ -59,8 +59,13 @@
         delete setups[old];
       }
     }
-    for (const [name, items] of Object.entries(definitions)) {
-      if (!Object.hasOwn(setups, name)) setups[name] = items.slice();
+    // v554: setups de Índice e Dólar só para quem usa o plano modelo (ou já tinha esses setups).
+    const usa = (S.ax || {}).planoOp || Object.keys(definitions).some(n => Object.hasOwn(setups, n));
+    if (usa) {
+      for (const [name, items] of Object.entries(definitions)) {
+        if (!Object.hasOwn(setups, name)) setups[name] = items.slice();
+      }
+      for (const name of Object.values(names)) if (typeof SETUPS_PADRAO !== 'undefined' && !SETUPS_PADRAO.includes(name)) SETUPS_PADRAO.push(name);
     }
     for (const trade of S.trades || []) {
       if (legacy[trade.setup]) trade.setup = legacy[trade.setup];
@@ -80,7 +85,6 @@
   }
   function install() {
     ensure();
-    for (const name of Object.values(names)) if (!SETUPS_PADRAO.includes(name)) SETUPS_PADRAO.push(name);
     const original = sheet;
     sheet = function () {
       ensure();
