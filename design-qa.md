@@ -49,3 +49,10 @@ Teste de navegador cobre os comandos retirados por digitação, APIs, aliases e 
 - Campo opcional para registrar o padrão clássico / gatilho. Checklist e texto do plano ficam associados à operação salva; o setup continua disponível para filtros e estatísticas existentes.
 - Não preenche preços nem altera a trava do Profit. Planos e setups personalizados permanecem disponíveis; troca de plano zera marcações, edição não altera o registro salvo antes de Salvar e a etapa de fotos obrigatórias permanece.
 - Teste de navegador: fotos, dois planos, troca de setup, salvamento e recarga real do IndexedDB, preservação de regras personalizadas e formulário em 320/390/1440 px.
+
+## v544 — recuperação e sincronização de Videoaulas
+
+- Falha de rede/sessão na consulta dos vídeos agora respeita a pausa de dois minutos já usada pelo catálogo. Antes, o catch não atualizava o horário e a callback disparava imediatamente outra consulta, congelando a aba.
+- Lista de aulas atualizada a cada 30 segundos quando visível e ao voltar ao aplicativo, com atualização manual e identificação de sessão expirada. Roteiros em cache passam a considerar a última atualização, além da criação.
+- Geração antiga mostra a data da última atualização e permite consultar o roteiro parcial quando houver partes salvas. Não altera o estado do servidor para declarar uma geração incompleta como pronta, não apaga aulas e não inicia geração de IA/áudio.
+- O miniplayer continua disponível durante a atualização. Teste com falha de vídeo confirma pausa nas requisições, atualização de gerando para pronta, descarte do roteiro parcial antigo, pedido de login e isolamento ao sair da conta; tela em 320/390/1440 px.
