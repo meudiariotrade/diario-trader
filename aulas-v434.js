@@ -19,7 +19,7 @@ async function lista(forca){
     const r=await fetch(s.url+'/storage/v1/object/list/'+BUCKET,{method:'POST',headers:{'Content-Type':'application/json',apikey:s.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify({prefix:SESS.uid+'/',limit:1000,sortBy:{column:'name',order:'asc'}})});
     const j=await r.json().catch(()=>[]);
     C.nomes=new Set((Array.isArray(j)?j:[]).map(x=>x.name));C.ts=Date.now();
-  }catch(e){C.nomes=C.nomes||new Set()}
+  }catch(e){C.nomes=C.nomes||new Set();C.ts=Date.now()}
   finally{C.busy=0}
   return C.nomes;
 }

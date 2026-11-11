@@ -25,7 +25,7 @@ async function carregaLista(forca){
   AU.busy=1;AU.err='';
   try{
     await tok();
-    const r=await rq('/rest/v1/aulas?select=id,livro,numero,titulo,capitulos,progresso,criado_em,status,min:roteiro->min&user_id=eq.'+SESS.uid+'&order=livro.asc,numero.asc');
+    const r=await rq('/rest/v1/aulas?select=id,livro,numero,titulo,capitulos,progresso,criado_em,atualizado_em,erro,status,partes:roteiro->partes,min:roteiro->min&user_id=eq.'+SESS.uid+'&order=livro.asc,numero.asc');
     const l=await r.json();AU.lista=(Array.isArray(l)?l:[]).concat(window.AULAS_LOCAIS||[]);lss(LS_LISTA,l);AU.ts=Date.now();
   }catch(e){AU.lista=lsg(LS_LISTA,[]);AU.err=/aulas|schema cache|404/.test(String(e.message||e))?'tabela':String(e.message||e)}
   AU.busy=0;pinta();
@@ -33,11 +33,11 @@ async function carregaLista(forca){
 async function roteiro(a){
   if(a.roteiro)return a.roteiro;
   const c=lsg(LS_ROT+a.id,null);
-  if(c&&c.em===a.criado_em)return c.r;
+  if(c&&c.em===(a.atualizado_em||a.criado_em))return c.r;
   await tok();
   const r=await rq('/rest/v1/aulas?select=roteiro&id=eq.'+a.id),l=await r.json();
   if(!l[0])throw new Error('Aula não encontrada.');
-  lss(LS_ROT+a.id,{em:a.criado_em,r:l[0].roteiro});
+  lss(LS_ROT+a.id,{em:a.atualizado_em||a.criado_em,r:l[0].roteiro});
   return l[0].roteiro;
 }
 function salvaPos(fim){
@@ -404,6 +404,7 @@ function novaHtml(){
 }
 function gerandoHtml(a){
   const job=lsg(LS_JOB,null),meu=job&&job.id===a.id;
+  const estado=window.DiarioAulasRecuperacao?.gerandoHtml(a,{busy:!!G.busy,meu:!!meu});if(estado)return estado;
   return`<div class="au-item au-ger"><span class="au-n">…</span><span class="au-tx"><b>Aula ${a.numero} · gerando</b><span class="sm mut">${G.busy&&meu?h(G.msg):meu?'Interrompida. Toque em continuar.':'Em geração em outro aparelho ou interrompida.'}</span></span>${!G.busy&&meu?'<button class="btn s" data-aucont="1">Continuar</button>':''}</div>`;
 }
 async function chamaFn(corpo,ms){
@@ -567,5 +568,5 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
 @media (orientation:landscape) and (max-height:520px){.aup-top{padding:4px 10px}.aup-cap{min-height:2.9em;font-size:15px;padding:4px 14px}.aup-ctl{padding:4px 10px 6px}.aup-ctl>button{width:38px;height:38px}.aup-ctl .aup-pp{width:46px;height:46px}.auv-h2{margin-bottom:6px}}
 `;
 const st=document.createElement('style');st.id='aulas-css';st.textContent=css;document.head.appendChild(st);
-window.AULAS={abre,carregaLista,VIS,calcAjuste,_dbg:{cena,P,falasCena}};
+window.AULAS={abre,carregaLista,VIS,calcAjuste,_dbg:{cena,P,falasCena},getStatus:()=>({busy:!!AU.busy,error:AU.err,lastUpdated:AU.ts})};
 })();
