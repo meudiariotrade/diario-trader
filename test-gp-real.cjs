@@ -9,7 +9,7 @@ async function run(){
  assert(bundle.includes(source),'Bundle efetivamente inclui o mesmo gráfico GP da origem');
  const index=fs.readFileSync('index.html','utf8');
  assert(/camadas-v560\.js\?v=\d+/.test(index),'Página versiona o bundle dos controles');
- assert(index.includes('estilo-v560.css?v=561'),'Folha de estilo atualizada');
+ assert(index.includes('estilo-v560.css?v=562'),'Folha de estilo atualizada');
  const worker=fs.readFileSync('sw.js','utf8');
  assert(/const C=['"]diario-v\d+[^'"]*['"]/.test(worker),'Cache PWA possui versão própria');
  for(const name of ['camadas-v560.js','terminal-gestos-seguros.js','estilo-v560.css']) assert(worker.includes('"'+name+'"'),'Cache inclui '+name);

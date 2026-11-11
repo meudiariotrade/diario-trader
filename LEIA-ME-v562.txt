@@ -1,0 +1,14 @@
+Diário Trader v562 — Jornal do Pregão
+
+- Jornal ganha o formato da mesa proprietária, no topo da aba Jornal, em 5 seções:
+  1. Capa: manchete, subtítulo, "Por que importa", cotações e 5 coisas para saber.
+  2. Plano do pregão: viés, níveis R2/R1/Pivô/S1/S2 e gatilhos de alta e de baixa para WIN e WDO.
+  3. Macro Brasil e exterior: Fiscal e Banco Central; EUA e commodities.
+  4. Radar corporativo: 5 maiores altas e baixas do Ibovespa, placar de balanços e um parágrafo por empresa.
+  5. Agenda e coluna da mesa: eventos de alta e média relevância, eventos corporativos, coluna, psicologia do trader e aviso legal.
+- Título por edição: "Antes da Abertura" (manhã e fim de semana) ou "Fechamento do Pregão".
+- Etiquetas de impacto por ativo: [+ WIN], [− WDO], [= DI].
+- Sem dado, aparece "–". Os níveis são calculados pelo servidor com a máxima, a mínima e o fechamento da sessão; a IA só escreve.
+- A edição completa (matérias, quiz, plantão) continua disponível no botão "Edição completa".
+- Servidor: nova função "mesa" no Supabase, que reescreve a edição do Jornal já gerada e guarda o resultado.
+- Exportar em planilha mantido igual.
