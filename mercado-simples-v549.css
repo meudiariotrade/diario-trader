@@ -60,3 +60,6 @@ html:root body.mkt549 #app :is(#cqbox,#cotbox) .m403-source-note{display:none!im
   html:root body.mkt549 #app .dt395-native-mercado nav.m403-primary-tabs{overflow-x:hidden!important}
   html:root body.mkt549 #app .dt395-native-mercado nav.m403-primary-tabs button{flex:1 1 0!important;min-width:0!important;padding:0 4px!important;font-size:13px!important;overflow:hidden!important;text-overflow:ellipsis!important}
 }
+html body #app #cotbox .v552-fonte{font-size:12px!important;line-height:1.4;color:var(--m9-mut,#9fc2b5)!important;margin:4px 0 10px!important}
+html body #app #cotbox .v552-fonte[data-v552="vivo"]::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#2fe39a;margin-right:6px;vertical-align:1px}
+html:root body.mkt549 #app #cotbox > .m552-fonte{font-size:12px!important;line-height:1.4!important;color:var(--m9-mut)!important;margin:8px 0!important}
