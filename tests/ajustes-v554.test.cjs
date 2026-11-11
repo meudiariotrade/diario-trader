@@ -4,6 +4,8 @@ const {expect}=require('playwright/test');
 const {withApp}=require('./helpers/app.cjs');
 test('v554: trava pelo pré-mercado, desfazer regra, GANHO/PERDA e aba Desempenho na planilha',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const p=await browser.newPage({viewport:{width:390,height:900}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ // Horário fixo durante o pregão: o teste não pode depender do relógio de quem roda (as travas de pós-17h mudam a tela).
+ await p.clock.setFixedTime(new Date('2026-11-11T15:00:00Z'));
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
  const app=p.locator('#app:not(.v503-fantasma)');
  // Trava: conta sem trades não exige checklist; com trades, só os itens do pré-mercado contam.

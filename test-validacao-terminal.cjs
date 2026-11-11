@@ -79,7 +79,7 @@ assert.equal(vix.source,'Fonte informada durante teste');
 click('tab','historico');
 assert(doc.querySelector('.dtval-table'), 'Tabela de comparação de versões renderizada');
 assert.match(doc.querySelector('.dtval-table').textContent,/Swipes acidentais/);
-assert.match(doc.querySelector('.dtval-table').textContent,/v522/);
+assert.match(doc.querySelector('.dtval-table').textContent,/v560/);
 // O seletor de versão deve afetar os eventos novos, não apagar os antigos.
 click('tab','visao');
 const vers=doc.querySelector('#dtval-version');
