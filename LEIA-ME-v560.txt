@@ -1,0 +1,24 @@
+Diário Trader v560 — identidade "Terminal Grafite"
+
+O que mudou
+- Uma folha de estilo só: estilo-v560.css substitui as 13 camadas anteriores (2 blocos <style> do
+  index.html + 12 arquivos .css). Gerada por scripts/redesign-v560.cjs a partir da publicação v554.
+- Design system em design-system-v560.css (tokens no início da folha, componentes no fim):
+  · espaçamento em escala de 8 pt com ajuste fino de 4 px (4, 8, 12, 16, 24, 32, 40, 48, 64);
+  · cartão com 24 px de padding, 24 px entre cartões, título a 8 px da descrição;
+  · botões e campos com 40 px de altura; bordas de 1 px (foco de 2 px);
+  · cantos de 4/6/8 px; grafite + âmbar; verde e vermelho só para alta/baixa e lucro/perda;
+  · números com tabular-nums em todo o app.
+- Bundles nucleo-v560.js e camadas-v560.js: mesma lógica da v522, só cores e o CSS que eles injetam
+  foram convertidos para a nova paleta e a escala de 8 pt.
+- Capa 3D do livro (capa-v560.js) na abertura: na primeira vez do dia espera "Abrir o diário"
+  (ou Enter); nas outras abre sozinha. "Pausar movimento" deixa a capa parada.
+- Relatório de desempenho em PDF (relatorio-pdf-v560.js): texto selecionável, páginas numeradas,
+  resumo executivo, ano fechado × acumulado no ano × últimos 12 meses, mês a mês, risco e
+  disciplina, setups/ativos/modalidades e metodologia. Fica na janela de exportação, abaixo das
+  opções de planilha. A exportação em planilha não foi alterada.
+- Removido o rótulo de depuração " · visual v390" que aparecia ao lado do título do Mercado.
+- Limpeza: saíram os bundles e folhas antigos que não eram mais carregados (v500–v522).
+
+Como regenerar a folha depois de mudar design-system-v560.css
+  node scripts/redesign-v560.cjs

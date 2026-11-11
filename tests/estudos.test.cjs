@@ -18,7 +18,7 @@ function functions(file) {
   walk(acorn.parse(source, { ecmaVersion: 'latest' }));
   return result;
 }
-const original = functions('app.js'), bundle = functions('nucleo-v522.js');
+const original = functions('app.js'), bundle = functions('nucleo-v560.js');
 const shared = ['estMeta', 'estDefinirMeta', 'estSalva', 'estRegHtml', 'estSessoesDisponiveis', 'estAtualizaSessoes', 'semEstudo', 'estDesemp', 'estSeq', 'estMapa', 'estCicloCalc', 'estHoje', 'estProximasAcoes', 'estConq'];
 function context() {
   const logs = [], records = [], revisions = [], messages = [], fields = {};
