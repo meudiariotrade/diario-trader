@@ -37,7 +37,7 @@ test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e
  await p.getByRole('button',{name:'Mercado',exact:true}).last().click();
  for(const page of ['nt','ag','lab','jr']){
   await p.evaluate(()=>{for(const id of ['v518-mov','v519-ins','v520-fa']){const n=document.createElement('details');n.id=id;document.querySelector('#app:not(.v503-fantasma) .dt395-native-mercado').append(n)}});
-  await app.locator('.m403-primary-tabs [data-navroute="mercado:'+page+'"]').click();
+  await app.locator('.m403-primary-tabs [data-navroute="mercado:'+page+'"]').evaluate(b=>b.click()); // v549: Análises e Jornal ficam no menu Mais
   await expect(app.locator('#v518-mov,#v519-ins,#v520-fa')).toHaveCount(0);
  }
  assert.deepEqual(errors,[]);

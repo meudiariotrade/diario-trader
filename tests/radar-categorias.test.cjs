@@ -10,7 +10,7 @@ test('radar sem menu duplicado: referências exclusivas nas categorias, fontes e
  await expect(app.locator('[data-m408-radar]')).toHaveCount(0);
  const expected={idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','BRL=X'],adr:['EWZ','PBR','VALE'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','IRON','GOLD'],jur:['SELIC','DI1F27','US10Y']};
  for(const [category,codes]of Object.entries(expected)){
-  await app.locator('.cqtabs [data-cqa="'+category+'"]').click();
+  await app.locator('.cqtabs [data-cqa="'+category+'"]').evaluate(b=>b.click()); // v549: categorias extras ficam em "Outros"
   const rows=app.locator('.simple-category-references .m405-quote:visible');
   await expect(rows).toHaveCount(codes.length);
   await expect.poll(()=>rows.evaluateAll(ns=>ns.map(n=>n.dataset.panoramaSymbol).sort())).toEqual(codes.slice().sort());
@@ -19,12 +19,12 @@ test('radar sem menu duplicado: referências exclusivas nas categorias, fontes e
  }
  // A lista nativa de ADRs também tem prioridade sobre a cópia do panorama.
  await p.evaluate(()=>{AD.list=['EWZ','PBR','VALE'];AD.data={em:new Date().toISOString(),itens:[{s:'EWZ',n:'ETF Brasil',regular:{px:99,chp:1,at:'2026-11-09T14:30:00Z',fonte:'Fonte nativa'}}]}});
- await app.locator('.cqtabs [data-cqa="adr"]').click();
+ await app.locator('.cqtabs [data-cqa="adr"]').evaluate(b=>b.click());
  await expect(app.locator('.simple-category-references .m405-quote:visible')).toHaveCount(2);
  await expect(app.locator('.simple-category-references [data-panorama-symbol="EWZ"]')).toBeHidden();
  // O botão Atualizar de cima conserva também a atualização do panorama.
  await p.evaluate(()=>{window.panoramaRefreshes=0;document.addEventListener('click',e=>{if(e.target.closest('.simple-category-references [data-m405-action="refresh"]'))window.panoramaRefreshes++})});
- await app.locator('[data-m408-refresh]').click();
+ await app.locator('[data-mkt549-refresh]').click(); // v549: atualizar fica dentro da busca
  assert.equal(await p.evaluate(()=>window.panoramaRefreshes),1);
  // Uma cotação válida já exibida em cima não é repetida como referência.
  await p.evaluate(()=>{CQ.d.idx.itens=[{s:'BMFBOVESPA:IBOV',n:'Ibovespa',px:101,d1:1}];CQ.aba='idx';render()});
@@ -33,7 +33,7 @@ test('radar sem menu duplicado: referências exclusivas nas categorias, fontes e
  // Sem dado nativo válido, a referência volta a aparecer; não se inventa valor.
  await p.evaluate(()=>{CQ.d.idx.itens[0].px=null;render()});
  await expect(app.locator('.simple-category-references .m405-quote:visible')).toHaveCount(3);
- await app.locator('.cqtabs [data-cqa="jur"]').click();
+ await app.locator('.cqtabs [data-cqa="jur"]').evaluate(b=>b.click());
  await app.getByRole('button',{name:'Ver curva DI no Terminal',exact:true}).click();
  await expect(app.locator('#tf413')).toHaveClass(/t428-p-DIFUT/);
  assert.deepEqual(errors,[]);
