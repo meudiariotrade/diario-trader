@@ -34,3 +34,9 @@ html:root body #app .market-monitor #cqbox>.cqtabs.seg{flex-wrap:wrap!important;
 html:root body #app .market-monitor #cqbox>.cqtabs.seg>button{min-width:0!important;min-height:40px}
 html body #app #cqbox .m408-controls button{min-height:44px}
 @media (min-width:1024px){html body .dt397-studies{max-width:1080px;margin-inline:auto}}
+/* Início: fases do dia cabem em 320 px */
+@media (max-width:380px){
+  html body #app .v4-phase button{min-width:0;gap:5px;padding:0 4px;font-size:13px;white-space:normal;line-height:1.1}
+  html body #app .v4-phase button i{width:10px;height:10px}
+}
+html body #app .v4-phase>button{min-width:0}
