@@ -5,6 +5,10 @@ const {withApp}=require('./helpers/app.cjs');
 test('Plano operacional: regras por fase, parâmetros em Regras, nomes antigos migrados e conflitos fora da tela',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const p=await browser.newPage({viewport:{width:390,height:900}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
+ // v554: conta nova não recebe o plano sozinha; entra pelo botão em Regras.
+ assert.equal(await p.evaluate(()=>S.rules.some(x=>String(x.id).startsWith('po-'))),false);
+ await p.evaluate(()=>{tab='regras';render()});
+ await p.locator('#app:not(.v503-fantasma) [data-po-aceitar]').click();
  const r=await p.evaluate(()=>{const ids=PlanoOperacional.RULES.map(x=>x[0]);const got=S.rules.filter(x=>ids.includes(x.id));return{n:got.length,total:ids.length,fases:[...new Set(got.map(x=>x.phase))].sort()}});
  assert.equal(r.n,r.total);assert.deepEqual(r.fases,['during','post','pre']);
  // Não duplica e respeita regra apagada.

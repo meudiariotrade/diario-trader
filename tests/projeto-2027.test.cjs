@@ -6,6 +6,7 @@ const image={name:'operacao.png',mimeType:'image/png',buffer:Buffer.from('iVBORw
 test('Projeto 2027: checklist por setup, troca sem herdar marcações e persistência na operação',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const p=await browser.newPage({viewport:{width:390,height:900}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
+ await p.evaluate(()=>{S.ax.planoOp=1;Projeto2027.ensure()}); // v554: setups do plano modelo
  await p.getByRole('button',{name:'Registrar trade',exact:true}).click();
  await expect(p.getByText(/Antes de registrar trade novo, coloque as fotos/)).toBeVisible();
  await expect(p.locator('#sh [data-setup-pick]').filter({hasText:/padrão clássico \+/})).toHaveCount(0);
