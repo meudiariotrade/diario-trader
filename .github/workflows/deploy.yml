@@ -15,16 +15,27 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
+        timeout-minutes: 5
         with:
           node-version: '24'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
+      - name: Preparar navegador dos testes
+        timeout-minutes: 10
+        run: |
+          diario_browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$diario_browser" ]; then
+            "$diario_browser" --version
+            printf 'CHROMIUM_PATH=%s\n' "$diario_browser" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
       - run: npm run verify
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
