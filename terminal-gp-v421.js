@@ -237,7 +237,7 @@ function svg(){
     const yr=iv==='1d'&&(i===0||new Date(xs[Math.round((i-1)*(xs.length-1)/(nX-1))]*1000).getFullYear()!==d.getFullYear())?d.getFullYear():'';
     grid+=`<path class="gp-g" d="M${x} ${T}V${T+chh}"/>`;xl+=`<text class="gp-ax" x="${x}" y="${H-Bm+16}" text-anchor="middle">${lab}</text>${yr?`<text class="gp-ax gp-yr" x="${x}" y="${H-Bm+31}" text-anchor="middle">${yr}</text>`:''}`}
   // médias móveis da série principal (em preço; não em razão)
-  let mas='';const colors={20:'#f0b548',50:'#c56cf0',200:'#ff6b6b'};
+  let mas='';const colors={20:'#cfab69',50:'#b6b1a6',200:'#ed8c7d'};
   if(mode!=='ratio')st.ma.forEach(n=>{const m=sma(pa,n).map(v=>v==null?null:(mode==='base'?v/pa[0]*100:v));if(m.filter(v=>v!=null).length>1)mas+=`<path class="gp-ma" stroke="${colors[n]}" d="${path(m,YA)}"/>`});
   // eventos-chave
   const evs=events(t0,t1,st.a);let evg='';
@@ -248,7 +248,7 @@ function svg(){
   const lastA=sa[sa.length-1],lastB=sb?[...sb].reverse().find(v=>v!=null):null;
   const tagR=`<g class="gp-tag gp-tag-a"><rect x="${W-R+2}" y="${(YA(lastA)-9).toFixed(1)}" width="${R-4}" height="18" rx="2"/><text x="${W-R/2}" y="${(YA(lastA)+4).toFixed(1)}" text-anchor="middle">${fmtAx(lastA)}</text></g>`;
   const tagL=lastB!=null?(mode==='dual'?`<g class="gp-tag gp-tag-b"><rect x="2" y="${(YB(lastB)-9).toFixed(1)}" width="${L-4}" height="18" rx="2"/><text x="${L/2}" y="${(YB(lastB)+4).toFixed(1)}" text-anchor="middle">${fmtAx(lastB)}</text></g>`:`<g class="gp-tag gp-tag-b"><rect x="${W-R+2}" y="${(YA(lastB)-9).toFixed(1)}" width="${R-4}" height="18" rx="2"/><text x="${W-R/2}" y="${(YA(lastB)+4).toFixed(1)}" text-anchor="middle">${fmtAx(lastB)}</text></g>`):'';
-  const legendRows=[[labelA,mode==='dual'?'R1':'',sa[sa.length-1],'#fff']].concat(sb?[[labelB,mode==='dual'?'L1':'',lastB,'#2f6bff']]:[]);
+  const legendRows=[[labelA,mode==='dual'?'R1':'',sa[sa.length-1],'#fff']].concat(sb?[[labelB,mode==='dual'?'L1':'',lastB,'#6d9ac1']]:[]);
   const legend=`<g class="gp-legend"><rect x="${L+8}" y="${T+6}" width="210" height="${18+legendRows.length*16}" rx="3"/><text class="gp-lt" x="${L+113}" y="${T+19}" text-anchor="middle">${mode==='base'?'Base 100':mode==='ratio'?'Razão (base 100)':'Último preço'}</text>${legendRows.map((r,i)=>`<rect x="${L+16}" y="${T+26+i*16}" width="9" height="9" fill="${r[3]}"/><text class="gp-lv" x="${L+30}" y="${T+34+i*16}">${esc(r[0])}${r[1]?' ('+r[1]+')':''}</text><text class="gp-lv" x="${L+210}" y="${T+34+i*16}" text-anchor="end">${fmtAx(r[2])}</text>`).join('')}</g>`;
   lastGeom={xs,A,B:pairs,sa,sb,X,L,R,W,T,chh,mode,fmtAx};
   return {html:`<svg class="gp-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Gráfico de ${esc(labelA)}${sb?' e '+esc(labelB):''}, período ${esc(st.per)}">

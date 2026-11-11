@@ -218,7 +218,7 @@ function transformJs(js) {
 const LEGACY_CSS = ['estilo-v522.css', 'validacao-terminal.css', 'terminal-gestos-seguros.css', 'navegacao-simples.css', 'terminal-inicio.css',
   'terminal-bbg.css', 'modo-simples.css', 'plano-operacional.css', 'estudos-mercado-v546.css', 'mercado-simples-v549.css', 'melhorias-v550.css', 'ajustes-v554.css'];
 
-const SMALL_JS = ['terminal-fonte-v533.js', 'app.js', 'inicio.js']; // auxiliar com cores próprias + fontes do núcleo
+const SMALL_JS = ['terminal-fonte-v533.js', 'app.js', 'inicio.js', 'terminal-gp-v421.js']; // auxiliar com cores próprias + fontes do núcleo
 
 function build() {
   // Fonte: index.html da v554 (blocos <style> embutidos). O bloco "hotfix-versao-v389" era um rótulo de depuração
