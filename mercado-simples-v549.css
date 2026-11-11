@@ -55,3 +55,8 @@ html:root body.mkt549 #app :is(#cqbox,#cotbox) .m408-workspace:has(> .m408-chart
 html:root body.mkt549 #app :is(#cqbox,#cotbox) .m408-empty{border-style:solid!important;border-color:var(--m9-line)!important}
 html:root body.mkt549 #app :is(#cqbox,#cotbox) .m403-source-note{display:none!important}
 @media (min-width:900px){html:root body.mkt549 #app .dt395-native-mercado nav.m403-primary-tabs button{flex:0 0 auto!important;min-width:120px!important}}
+/* v551: abas cabem em qualquer fonte no celular pequeno */
+@media (max-width:420px){
+  html:root body.mkt549 #app .dt395-native-mercado nav.m403-primary-tabs{overflow-x:hidden!important}
+  html:root body.mkt549 #app .dt395-native-mercado nav.m403-primary-tabs button{flex:1 1 0!important;min-width:0!important;padding:0 4px!important;font-size:13px!important;overflow:hidden!important;text-overflow:ellipsis!important}
+}
