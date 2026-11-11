@@ -8,11 +8,11 @@ test('Projeto 2027: checklist por setup, troca sem herdar marcações e persist�
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
  await p.getByRole('button',{name:'Registrar trade',exact:true}).click();
  await expect(p.getByText(/Antes de registrar trade novo, coloque as fotos/)).toBeVisible();
- await expect(p.locator('#sh [data-setup-pick]').filter({hasText:'Projeto Os 10%'})).toHaveCount(0);
+ await expect(p.locator('#sh [data-setup-pick]').filter({hasText:/padrão clássico \+/})).toHaveCount(0);
  // Abre a ficha nativa de um registro de demonstração, sem alterar a conta real.
  await p.evaluate(()=>{const b=document.createElement('button');b.dataset.a='edit';b.dataset.id='demo-trade-1';document.body.append(b);b.click();b.remove()});
  const names=await p.evaluate(()=>Projeto2027.names);
- await expect(p.locator('#sh [data-setup-pick]').filter({hasText:'Projeto Os 10%'})).toHaveCount(2);
+ await expect(p.locator('#sh [data-setup-pick]').filter({hasText:/padrão clássico \+/})).toHaveCount(2);
  await p.getByRole('button',{name:names.indice,exact:true}).click();
  await expect(p.locator('#sh [data-ck]')).toHaveCount(12);
  await expect(p.locator('#sh')).toContainText('AXIA3');await expect(p.locator('#sh')).toContainText('3 a 5 ticks');
