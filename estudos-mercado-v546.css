@@ -1,0 +1,36 @@
+/* v546 — Estudos e Mercado: estrutura limpa, igual no celular e no PC */
+html:root body #app .dt397-studies .dt397-hero,
+html:root body #app .dt397-studies .dt397-status{display:none!important}
+html:root body #app .dt397-studies.dt-est-interno .dt397-dashboard,html:root body #app .dt397-studies.dt-est-interno>.dt397-dashboard{display:none!important}
+html body .dt395-native-estudos .trv-top,
+html body .dt395-native-mercado .trv-top,
+html body .dt395-native-estudos .hlpf{display:none!important}
+html body .dt397-studies [hidden]{display:none!important}
+html body .dt397-studies{gap:12px}
+html body .dt397-studies .dt397-panel{border-radius:14px;padding:16px}
+html body .dt397-studies .dt397-panel-head a,
+html body .dt397-studies .dt397-panel-head button{min-height:44px;display:inline-flex;align-items:center;padding:0 6px}
+html body .dt397-studies .dt397-chip,
+html body .dt397-studies .dt401-more-toggle{min-height:48px}
+html body .dt397-studies .dt397-native-mount > header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+html body .dt397-studies .dt397-native-mount > header h2{font-size:20px;font-weight:700;letter-spacing:0;margin:0}
+html body .dt395-native-estudos .seg{flex-wrap:wrap;overflow:visible}
+html body #app .dt395-native-estudos .au-intro,html body #app .au-intro.sm{box-shadow:none!important;padding:0!important;border:0!important;background:none!important;margin:4px 0 12px!important}
+html body #app #aulas-sync p.sm.mut:not([data-aulas-status]){display:none}
+html body #app .au-dashboard p,html body #app .au-dashboard .sm.mut{display:none}
+.e546-x{padding:0;border:0;background:none;margin:4px 0 12px}
+html body .dt395-native-estudos .au-dashboard{padding:12px 16px}
+html body .e546-gerenciar{margin-top:16px;padding:12px 16px}
+html body .e546-gerenciar>summary{font-weight:600;cursor:pointer;min-height:32px;display:flex;align-items:center}
+html body .e546-gerenciar .e546-corpo>*{margin-top:12px}
+/* Mercado */
+html body #app .dt395-native-mercado .m408-context-copy{display:none!important}
+@media (max-width:760px){
+  html:root body #app .dt395-native-mercado .m403-section-header{flex-wrap:wrap!important}
+  html:root body #app .dt395-native-mercado nav.m403-primary-tabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible!important;flex:1 1 100%;gap:6px}
+  html:root body #app .dt395-native-mercado nav.m403-primary-tabs button{min-width:0;min-height:44px;white-space:normal;line-height:1.15;padding:6px 4px;font-size:13px}
+}
+html:root body #app .market-monitor #cqbox>.cqtabs.seg{flex-wrap:wrap!important;overflow:visible!important;min-height:0}
+html:root body #app .market-monitor #cqbox>.cqtabs.seg>button{min-width:0!important;min-height:40px}
+html body #app #cqbox .m408-controls button{min-height:44px}
+@media (min-width:1024px){html body .dt397-studies{max-width:1080px;margin-inline:auto}}
