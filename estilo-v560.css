@@ -2159,10 +2159,10 @@ html body #app#app :is(#panobox,#jrbox,#grbox,#flwbox,#rkbox,#cotbox,#cqbox,.dt3
 html body #app#app :is(#panobox,#jrbox,#grbox,#flwbox,#rkbox,#cotbox,#cqbox,.dt395-native-mercado)>*{min-width:0!important;max-width:100%!important}
 html body #app#app :is(.card,section,article,header,.jrcab,.jrsec,.m562,.dt393-card,.v4-card,[class*="-panel"]){max-width:100%;min-width:0;box-sizing:border-box}
 html body #app#app :is(p,h1,h2,h3,h4,li,td,.jrdata,.jrnome,.m562-sub,.m562-manchete){overflow-wrap:break-word}
-/* Faixas de abas e filtros: quebram linha em vez de sair da tela. */
-html body #app#app :is(.seg,.studio-tabs,.pro-tabs,.pro-subtabs,.finchips,.cqtabs,.e2tabs,.dt397-category,.pftabs,.rs-tabs,.sw9tabs,.m406-switch-tabs,[role=tablist]):not(.m403-primary-tabs){display:flex!important;flex-wrap:wrap!important;gap:8px!important;overflow:visible!important;max-width:100%!important;width:auto!important}
-html body #app#app :is(.seg,.studio-tabs,.pro-tabs,.pro-subtabs,.finchips,.cqtabs,.e2tabs,.dt397-category,.pftabs,.rs-tabs,.sw9tabs,.m406-switch-tabs,[role=tablist]):not(.m403-primary-tabs)>:is(button,a){flex:0 1 auto!important;min-width:0!important;max-width:100%!important;white-space:normal!important;min-height:40px}
-html body #app#app .v4-tabs{flex-wrap:wrap!important;overflow:visible!important;gap:8px!important}
+/* Faixas de abas e filtros: deslizam para o lado dentro da própria faixa (como antes), sem empurrar a tela. */
+html body #app#app :is(.seg,.studio-tabs,.pro-tabs,.pro-subtabs,.finchips,.cqtabs,.e2tabs,.pftabs,.rs-tabs,.sw9tabs,.m406-switch-tabs,.v4-tabs):not(.m403-primary-tabs){flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;max-width:100%!important;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+html body #app#app :is(.seg,.studio-tabs,.pro-tabs,.pro-subtabs,.finchips,.cqtabs,.e2tabs,.pftabs,.rs-tabs,.sw9tabs,.m406-switch-tabs,.v4-tabs):not(.m403-primary-tabs)::-webkit-scrollbar{display:none}
+html body #app#app :is(.seg,.studio-tabs,.pro-tabs,.pro-subtabs,.finchips,.cqtabs,.e2tabs,.pftabs,.rs-tabs,.sw9tabs,.m406-switch-tabs,.v4-tabs):not(.m403-primary-tabs)>:is(button,a){flex:0 0 auto!important;white-space:nowrap!important}
 /* Fases Pré / Durante / Pós: uma coluna por fase que cabe; se não couber, empilha. */
 html body #app#app .dt393-phase{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,128px),1fr))!important;gap:8px!important}
 html body #app#app .dt393-phase>button{min-width:0!important;white-space:normal!important}

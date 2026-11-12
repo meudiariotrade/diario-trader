@@ -1,0 +1,3 @@
+Diário Trader v571
+
+- Faixas de abas voltam a deslizar para o lado (como antes), dentro da própria faixa.
