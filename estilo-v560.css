@@ -2054,3 +2054,79 @@ html:root:root:root body #app .m562 .m562-card h3{font-family:var(--ds-font)!imp
 #app .v563-etapas li.ok em{color:var(--ds-up)}
 #app .v563-etapas li.agora{border-color:var(--ds-amber)}
 #app .v563-etapas li.agora em{color:var(--ds-amber-hi)}
+
+/* ===== 16. Mercado v565 ===== */
+/* M1 */
+html:root body.mkt565 #app .dt395-native-mercado #m550-destaque{gap:8px!important;margin:0!important;align-items:stretch}
+html:root body.mkt565 #app .dt395-native-mercado #m550-destaque .m550-card{margin:0!important;padding:16px!important;min-height:96px}
+html:root body.mkt565 #app .dt395-native-mercado #m550-destaque .m550-px{font:500 22px/1.2 var(--ds-mono)!important;font-variant-numeric:tabular-nums}
+html:root body.mkt565 #app .dt395-native-mercado #m550-destaque .m550-vazio{font:400 13px/1.4 var(--ds-font)!important;color:var(--ds-tx-3)!important}
+/* M2 */
+html:root body.mkt565 #app .dt395-native-mercado{gap:24px!important;padding-bottom:96px!important}
+html:root body.mkt565 #app .dt395-native-mercado :is(.card,.sw9,.simple-details,.m406-section-switch,.m403-primary-tabs,#mkt549-mais,#mkt549-radar,.m403-session-caption){margin-top:0!important;margin-bottom:0!important}
+html:root body.mkt565 #app .dt395-native-mercado .m403-section-header{gap:8px!important}
+html:root body.mkt565 #app .dt395-native-mercado :is(#cotbox,#cqbox){display:grid!important;gap:16px!important}
+html:root body.mkt565 #app .dt395-native-mercado :is(#cotbox,#cqbox)>*{margin-top:0!important;margin-bottom:0!important}
+html:root body.mkt565 #app .dt395-native-mercado :is(#panobox,#jrbox,#grbox,#flwbox,#rkbox){display:grid;gap:24px}
+/* M3 */
+html:root body.mkt565 #app .dt395-native-mercado :is(.cqtabs>button,.m406-switch-button,.card button.btn[data-v],.sw9tabs>button,.dt393-native .seg>button){height:40px!important;border-radius:var(--ds-radius)!important;border:1px solid var(--ds-line-2)!important;background:var(--ds-s1)!important;color:var(--ds-tx-2)!important;font:500 13px/1 var(--ds-font)!important;box-shadow:none!important}
+html:root body.mkt565 #app .dt395-native-mercado :is(.cqtabs>button.on,.m406-switch-button.on,.card button.btn[data-v]:not(.s),.sw9tabs>button.on){border-color:var(--ds-amber)!important;background:var(--ds-amber-bg)!important;color:var(--ds-tx)!important}
+html:root body.mkt565 #app .dt395-native-mercado .m406-switch-tabs{padding:0!important;border:0!important;background:none!important;gap:8px!important}
+html:root body.mkt565 #app .dt395-native-mercado[data-m403-sub="jr"] [data-m550-jornal]{display:none!important}
+html:root body.mkt565 #app .dt395-native-mercado .card>div[style*="flex-wrap"]{gap:8px!important;margin:8px 0 16px!important}
+/* M4 */
+html:root body.mkt565 #app .dt395-native-mercado .warn{background:var(--ds-s2)!important;border:1px solid var(--ds-line)!important;border-radius:var(--ds-radius)!important;color:var(--ds-tx-2)!important;padding:12px 16px!important;font-size:13px!important}
+html:root body.mkt565 #app .dt395-native-mercado .sm.am{color:var(--ds-tx-2)!important}
+html:root body.mkt565 #app .dt395-native-mercado .m408-empty{background:var(--ds-s1)!important;border:1px solid var(--ds-line)!important;border-radius:var(--ds-radius-lg)!important;padding:24px!important;gap:8px!important}
+html:root body.mkt565 #app .dt395-native-mercado .mkt565-dup{display:none!important}
+/* M5 */
+html:root body.mkt565 #app .dt395-native-mercado #mkt565-ctx{display:flex;align-items:center;gap:8px;min-height:40px}
+html:root body.mkt565 #app .dt395-native-mercado #mkt565-ctx:empty{display:none}
+html:root body.mkt565 #app .dt395-native-mercado #mkt565-ctx h2{margin:0;font:600 16px/1.3 var(--ds-font);color:var(--ds-tx)}
+html:root body.mkt565 #app .dt395-native-mercado #mkt565-ctx button{height:40px;padding:0 8px;border:0;background:none;color:var(--ds-amber-hi);font:500 13px var(--ds-font)}
+html:root body.mkt565 #app .dt395-native-mercado .mkt565-ex{margin-left:auto;font:500 11px/1 var(--ds-mono);letter-spacing:.06em;color:var(--ds-amber);border:1px dashed var(--ds-amber);border-radius:var(--ds-radius-sm);padding:4px 8px}
+html:root body.mkt565 #app .dt395-native-mercado .m403-session-caption{display:none!important}
+/* M6 */
+html:root body.mkt565 #app .dt395-native-mercado details.simple-market-about{padding:0!important;border:0!important;background:none!important;order:99}
+html:root body.mkt565 #app .dt395-native-mercado details.simple-market-about>summary{min-height:40px!important;font:500 13px/1 var(--ds-font)!important;color:var(--ds-tx-2)!important}
+html:root body.mkt565 #app .dt395-native-mercado details.simple-market-about[open]{padding:16px!important;border:1px solid var(--ds-line)!important;border-radius:var(--ds-radius-lg)!important}
+html:root body.mkt565 #app .dt395-native-mercado #m404-panel-m404-revista{order:98}
+/* M7 */
+html:root body.mkt565 #app .dt395-native-mercado #mkt549-mais{gap:0!important;padding:8px 16px!important;background:var(--ds-s1)!important;border:1px solid var(--ds-line)!important}
+html:root body.mkt565 #app .dt395-native-mercado #mkt549-mais button{min-height:56px!important;padding:8px 24px 8px 0!important;border-radius:0!important;background:none!important;border-bottom:1px solid var(--ds-line)!important;position:relative}
+html:root body.mkt565 #app .dt395-native-mercado #mkt549-mais button:last-of-type{border-bottom:0!important}
+html:root body.mkt565 #app .dt395-native-mercado #mkt549-mais button::after{content:"›";position:absolute;right:4px;top:50%;transform:translateY(-50%);color:var(--ds-tx-2)}
+/* M8 */
+html:root body.mkt565 #app .dt395-native-mercado .sw9{background:var(--ds-s1)!important;background-image:none!important;border:1px solid var(--ds-line)!important;padding:24px 16px!important}
+html:root body.mkt565 #app .dt395-native-mercado .sw9brand{background:none!important;-webkit-text-fill-color:currentColor!important;color:var(--ds-tx)!important;font:600 16px/1.3 var(--ds-font)!important}
+html:root body.mkt565 #app .dt395-native-mercado :is(.sw9sub,.sw9ft,.sw9ft span,.sw9k span,.sw9k small){color:var(--ds-tx-2)!important}
+html:root body.mkt565 #app .dt395-native-mercado .sw9k{border:0!important;border-left:1px solid var(--ds-line)!important;border-radius:0!important;background:none!important;padding:4px 12px!important}
+html:root body.mkt565 #app .dt395-native-mercado .sw9k b{font:500 18px/1.3 var(--ds-mono)!important;font-variant-numeric:tabular-nums}
+html:root body.mkt565 #app .dt395-native-mercado .sw9sec{border:0!important;border-top:1px solid var(--ds-line)!important;border-radius:0!important;background:none!important;padding:16px 0!important}
+html:root body.mkt565 #app .dt395-native-mercado .sw9ft{border:0!important;border-top:1px solid var(--ds-line)!important;border-radius:0!important;padding:16px 0 0!important}
+/* M9 */
+html:root body.mkt565 #app .dt395-native-mercado .card input:not([type=checkbox]):not([type=radio]){height:40px!important;padding:0 12px!important;border:1px solid var(--ds-line-input)!important;font:400 14px var(--ds-mono)!important}
+html:root body.mkt565 #app .dt395-native-mercado input[data-pano="fech"]{width:88px!important}
+html:root body.mkt565 #app .dt395-native-mercado input[data-pano="h"]{width:168px!important}
+html:root body.mkt565 #app .dt395-native-mercado .card>.top{display:flex!important;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+html:root body.mkt565 #app .dt395-native-mercado #oacard button.btn{height:40px!important}
+/* M10 */
+html:root body.mkt565 #app .dt395-native-mercado :is(button,a,summary,input,select,[role=button],[tabindex]):focus-visible{outline:var(--ds-focus) solid var(--ds-amber-hi)!important;outline-offset:2px!important}
+html:root body.mkt565 #app .dt395-native-mercado .m404-panel-link{min-height:40px!important}
+html:root body.mkt565 #app .dt395-native-mercado nav.m403-primary-tabs>button{font-weight:600!important}
+html:root body.mkt565 #app .dt395-native-mercado :is(td,th,.m408-row,.m550-var,.m562-esc b){font-variant-numeric:tabular-nums}
+html:root body.mkt565 #app .dt395-native-mercado .m562-tw{mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent)}
+html:root body.mkt565 #app .dt395-native-mercado .m562-tw:hover,html:root body.mkt565 #app .dt395-native-mercado .m562-tw:focus-within{mask-image:none}
+/* M11 */
+@media (min-width:1024px){
+html:root body.mkt565 #app .dt395-native-mercado:is([data-m403-sub="nt"],[data-m403-sub="ag"],[data-m403-sub="jr"])>:is(.card,.simple-details,.m406-section-switch,#mkt565-ctx){max-width:880px}
+html:root body.mkt565 #app .dt395-native-mercado[data-m403-sub="pn"] #panobox{grid-template-columns:1fr 1fr;align-items:start}
+}
+
+/* Tema claro: superfícies e seleção do Mercado pelos tokens (sem fundos escuros fixos). */
+html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mercado :is(.m550-card,.cq388-searchbar){background:var(--ds-s1)!important;color:var(--ds-tx)!important;border:1px solid var(--ds-line)!important}
+html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mercado .m550-card :is(b,strong,.m550-px){color:var(--ds-tx)!important}
+html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mercado .cq388-searchbar input{color:var(--ds-tx)!important;background:transparent!important}
+html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mercado .cqtabs>button.on{background:var(--ds-amber-bg)!important;color:var(--ds-tx)!important;border-color:var(--ds-amber)!important}
+html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mercado nav.m403-primary-tabs>button:is(.on,[aria-current]){color:var(--ds-tx)!important;background:var(--ds-s1)!important;box-shadow:inset 0 -2px 0 var(--ds-amber)!important}
+html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mercado nav.m403-primary-tabs>button{color:var(--ds-tx-2)!important}

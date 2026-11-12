@@ -1,0 +1,8 @@
+Diário Trader v565 — aba Mercado
+
+- Visual "Terminal Grafite" na aba Mercado: espaçamento em múltiplos de 8, seleção de filtros com borda âmbar (sem preenchimento), avisos neutros.
+- Cotações: cartões WIN e WDO alinhados, com números tabulares.
+- Cada tela dentro de "Mais" mostra o título e o botão "‹ Mais" para voltar. Panorama ganhou item no menu Mais.
+- Modo demonstrativo marcado uma vez com o selo "EXEMPLO · dados fictícios".
+- "Sobre esta tela" passou para o fim da tela; Análises sem gradiente e sem borda dupla; foco visível e alvos de 40 px.
+- Em telas largas, Notícias, Agenda e Jornal têm largura de leitura limitada.
