@@ -25843,6 +25843,7 @@ function render0() {
       imposto: vImposto,
       carteiras: vCarteiras,
       analise: vAnalise,
+      analises: () => window.DiarioAnalises?.view() || "<p>Carregando Análises…</p>",
       import: vImport,
       mesa: () => vMesa(),
       carreira: () => vCarreira(),
@@ -51328,7 +51329,7 @@ function irPrevia() {
     const i = calc(n);
     if (i.pl == null) return;
     const l = String(n.dtx || n.dt).slice(0, 7);
-    if (e.has(l)) return;
+    if (window.irCobertura?.(l).conferida) return;
     const d = irClasse(n),
       c = t[l] ?? (t[l] = { c: {}, n: 0, irrf: 0 }),
       p = (r = c.c)[d] ?? (r[d] = { bruto: 0, vendas: 0 });
@@ -51393,7 +51394,7 @@ function irPendentes() {
     a = [];
   try {
     irCalc().out.forEach((o) => {
-      o.darf > 0 &&
+      o.darf > 0 && window.irCobertura?.(o.m).conferida &&
         a.push({ m: o.m, v: o.darf, venc: irVencISO(o.m), prev: 0 });
     });
   } catch {}
@@ -51417,19 +51418,19 @@ function irPreviaHtml() {
         year: "numeric",
       }),
     s = t.length
-      ? `<h2>DARF a pagar</h2>${t
+      ? `<h2>Estimativas e apuração do período</h2>${t
           .map((r) => {
             const i = Math.round(
               (new Date(r.venc + "T12:00") - new Date(a + "T12:00")) / 864e5,
             );
-            return `<div class="card"><div class="top"><b>${o(r.m)}</b><b class="r">${money(r.v)}</b></div><div class="sm">${r.venc < a ? `<b class="r">Vencido em ${fmtD(r.venc)}</b>: pague com multa e juros (Sicalc, na Receita).` : `Vence em <b>${fmtD(r.venc)}</b>${i === 0 ? " (hoje)" : i === 1 ? " (amanhã)" : ` (em ${i} dias)`}`} · código 6015${r.prev ? ' · <span class="am">estimativa pelo diário</span>' : ""}</div><button class="btn s" data-irpago="${r.m}" style="margin-top:6px">Marcar como pago</button></div>`;
+            return `<div class="card"><div class="top"><b>${o(r.m)}</b><b class="r">${money(r.v)}</b></div><div class="sm">${r.venc < a ? `<b class="r">Vencido em ${fmtD(r.venc)}</b>: pague com multa e juros (Sicalc, na Receita).` : `Vence em <b>${fmtD(r.venc)}</b>${i === 0 ? " (hoje)" : i === 1 ? " (amanhã)" : ` (em ${i} dias)`}`} · código 6015${r.prev ? ' · <span class="am">'+esc(window.irCobertura?.(r.m).estado||'estimativa pelo diário')+'</span>' : ' · apuração conferida pelo usuário'}</div><button class="btn s" data-irpago="${r.m}" ${r.prev ? "disabled" : ""} style="margin-top:6px">Marcar como pago</button></div>`;
           })
           .join(
             "",
           )}<div class="sm mut">Você recebe uma notificação no dia útil anterior e no dia do vencimento.</div>`
       : "",
     n = e.length
-      ? `<h2>Prévia pelo diário</h2><div class="sm mut" style="margin-bottom:6px">Meses sem nota lançada, calculados pelos trades do diário (resultado sem custos, IRRF estimado). Lance ou importe as notas para o valor exato.</div>${e.map((r) => `<div class="card"><div class="top"><b>${o(r.m)}</b><b class="${r.darf > 0 ? "r" : "g"}">DARF ≈ ${money(r.darf)}</b></div>${r.rows.map((i) => `<div class="sm" style="margin-top:4px"><b>${i.nm}</b>: <span class="${cls(i.liq)}">${money(i.liq)}</span>${i.isento ? ` · <b class="g">isento (vendas ≈ ${money(i.vendas)})</b>` : i.liq < 0 ? " · prejuízo a compensar" : ` · imposto ${money(i.tx)}`}</div>`).join("")}<div class="sm mut" style="margin-top:4px">${r.n} trade(s) · IRRF estimado ${money(r.irrf)}${r.darf > 0 ? " · vence em " + fmtD(irVencISO(r.m)) : ""}</div></div>`).join("")}`
+      ? `<h2>Prévia pelo diário</h2><div class="sm mut" style="margin-bottom:6px">Meses ainda não conferidos, calculados pelos trades do diário (resultado sem custos, IRRF estimado). Notas parciais não excluem o restante do mês. Confira a cobertura antes de usar a apuração das notas.</div>${e.map((r) => `<div class="card"><div class="top"><b>${o(r.m)}</b><b class="${r.darf > 0 ? "r" : "g"}">DARF ≈ ${money(r.darf)}</b></div>${r.rows.map((i) => `<div class="sm" style="margin-top:4px"><b>${i.nm}</b>: <span class="${cls(i.liq)}">${money(i.liq)}</span>${i.isento ? ` · <b class="g">isento (vendas ≈ ${money(i.vendas)})</b>` : i.liq < 0 ? " · prejuízo a compensar" : ` · imposto ${money(i.tx)}`}</div>`).join("")}<div class="sm mut" style="margin-top:4px">${r.n} trade(s) · IRRF estimado ${money(r.irrf)}${r.darf > 0 ? " · vence em " + fmtD(irVencISO(r.m)) : ""}</div></div>`).join("")}`
       : "";
   return s + n;
 }
@@ -64894,26 +64895,26 @@ function numFix(e) {
 const ERL = { k: "diario-erros", err: "", srv: null };
 function erLista() {
   try {
-    return JSON.parse(APP_STORAGE.getItem(ERL.k) || "[]");
+    return JSON.parse(APP_STORAGE.getItem(ERL.k + ":" + (syncOwner() || "local")) || "[]");
   } catch {
     return [];
   }
 }
 function erSalva(e) {
   try {
-    APP_STORAGE.setItem(ERL.k, JSON.stringify(e.slice(-60)));
+    APP_STORAGE.setItem(ERL.k + ":" + (syncOwner() || "local"), JSON.stringify(e.slice(-60)));
   } catch {}
 }
 function erGrava(e, t) {
   try {
-    const a = String(e || "")
+    const a = String(window.DiarioDiagnostico?.redact(e) || e || "")
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 300);
     if (
       !a ||
       (!/^Face ID/.test(a) &&
-        /ResizeObserver|^Script error\.?$|Load failed|NetworkError|Failed to fetch|AbortError|The user aborted|NotAllowedError|cancel/i.test(
+        /ResizeObserver|^Script error\.?$|AbortError|The user aborted|NotAllowedError|cancel/i.test(
           a,
         ))
     )
@@ -64928,7 +64929,7 @@ function erGrava(e, t) {
           k: n,
           ts: Date.now(),
           msg: a,
-          pilha: String(t || "").slice(0, 900),
+          pilha: String(window.DiarioDiagnostico?.redact(t) || t || "").slice(0, 900),
           tela: s,
           ver: typeof APP_VER < "u" ? APP_VER : "",
           n: 1,
@@ -79014,8 +79015,6 @@ function ajusta160() {
   };
 }
 function gateEstado() {
-  if (navigator.webdriver && !APP_STORAGE.getItem("diario-gate-teste"))
-    return null;
   const e = new Date(),
     t = e.getDay(),
     a = e.getHours();
@@ -79065,7 +79064,7 @@ function gateManhaHtml(e) {
       `<label class="gchk"><input type="checkbox" ${d}="${c}"${(d === "data-gcl" ? a[c] : t[c]) ? " checked" : ""}><span>${esc(p)}</span></label>`,
     l = regrasUnicas();
   return `<div class="gc"><div class="sm mut">☀️ Antes de operar</div><h2>Checklist de hoje</h2>
-<p class="sm">Só o obrigatório trava o app. O resto é opcional.</p>
+<p class="sm">O preparo obrigatório é exigido ao iniciar um registro operacional. Consultas continuam disponíveis. Regras pessoais e mentalidade são opcionais.</p>
 <div class="gsec"><b>1. Como estou agora? <span class="sm mut">(obrigatório)</span></b><div class="gest-l">${r}</div></div>
 <div class="gsec"><b>2. Plano de hoje <span class="sm mut">(obrigatório)</span></b>
 ${i("data-gcl", "p_limite", "Defini o limite de perda do dia, em vezes o risco")}
@@ -80345,8 +80344,6 @@ ${a ? `<div class="epres ${a.cls}">Termômetro: <b>${a.n} de 70</b> · ${a.txt}$
   gateEstado = function () {
     const t = e.apply(this, arguments);
     if (t) return t.tipo === "manha" ? { ...t, pronto: !1 } : t;
-    if (navigator.webdriver && !APP_STORAGE.getItem("diario-gate-teste"))
-      return null;
     const a = new Date(),
       o = a.getDay(),
       s = a.getHours();
@@ -80406,7 +80403,7 @@ document.addEventListener("click", (e) => {
       (r.u = Date.now()),
       save(),
       gateAtualiza(),
-      toast("Checklist concluído. Bom pregão."));
+      toast("Preparo obrigatório concluído. Bom pregão."));
   }
 });
 {
@@ -101519,11 +101516,12 @@ Validação do app: atenção a ` +
       return `<section class="pfrs" style="border-left:4px solid #2e8a5c;background:var(--card,transparent);padding:14px;margin:12px 0"><h4 style="margin:0 0 8px">Últimos resultados trimestrais disponíveis</h4>${F && L ? `<div class="pftw"><table class="pft"><thead><tr><th>Ativo</th><th>Último trimestre</th><th>Receita</th><th>Lucro</th></tr></thead><tbody>${F}</tbody></table></div>` : "<p>Sem resultados trimestrais nesta versão do relatório. A tabela anual até 2025 não comprova atualização contábil até 2026.</p>"}<p class="pfnota">Fonte: Yahoo Finance, séries trimestrais secundárias salvas no relatório. Data = encerramento do trimestre, não divulgação. Não é validação automática do último documento oficial na CVM/RI. O histórico anual de 2025 permanece abaixo apenas como comparação.</p></section>`;
     }
     function be(V, ae) {
+      V = window.DiarioRelatorios?.capture("carteira", V).conteudo || V;
       const ee = V.conteudo || {},
         le = V.validacao || {},
         Y = V.tipo === "ativo",
         q = ee.identificacao || {};
-      let L = `<div class="pfrh"><div><h3>${Y ? `Relatório individual · ${esc(V.tk)}` : "Relatório consolidado da carteira"}</h3><p class="pfsm pfmut">Referência ${ue(V.ref)} · gerado ${ve(V.gerado)} · dados até ${esc(V.dados_em || "—")}</p></div>${Ke(le)}</div>`;
+      let L = `<div class="pfrh"><div><h3>${Y ? `Relatório individual · ${esc(V.tk)}` : "Relatório consolidado da carteira"}</h3><p class="pfsm pfmut">Referência ${ue(V.ref)} · gerado ${ve(V.gerado)} · dados até ${esc(V.dados_em || "—")} · edição ${esc(V.exec_id || V.id || "sem identificador")}</p></div>${Ke(le)}</div>`;
       return (
         (L += me(V)),
         Y &&

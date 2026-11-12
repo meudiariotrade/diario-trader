@@ -1,0 +1,26 @@
+{
+  "versao": 581,
+  "referencias": [
+    {
+      "finalidade": "Interface existente",
+      "fonte": "src/index.html + release.config.json",
+      "base_aprovada": "v580 / dee95aea976a42d7afa93661bd58b073583c90bc",
+      "status": "Preservada com nova aba no mesmo padrão"
+    },
+    {
+      "finalidade": "Relatórios de carteira",
+      "fonte": "src/domains/core/17-fontes-e-balancos.js e 18-carteira-e-exportacoes.js",
+      "status": "Modelos existentes preservados; conferência autenticada pendente"
+    },
+    {
+      "finalidade": "Jornal e imagens",
+      "fonte": "jornal-v561.js / mesa-v562.js",
+      "status": "Referências existentes; mesma edição deve ser comparada na homologação"
+    },
+    {
+      "finalidade": "Figma atual",
+      "fonte": null,
+      "status": "Não fornecido; não declarar fidelidade visual verificada"
+    }
+  ]
+}

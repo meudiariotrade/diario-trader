@@ -242,6 +242,19 @@
       "files": [
         "index.ts"
       ]
+    },
+    {
+      "name": "pesquisa",
+      "verify_jwt": false,
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts",
+        "contrato.ts",
+        "tecnico.ts",
+        "motor.ts",
+        "atualidade.ts",
+        "financeiro.ts"
+      ]
     }
   ]
 }

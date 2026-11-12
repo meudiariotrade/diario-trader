@@ -4,6 +4,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { JSDOM } = require('jsdom');
+const acorn = require('acorn');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, '_site');
 const asset = /\.(html|js|css|png|jpe?g|webp|gif|svg|ico|ttf|otf|woff2?|wasm|webmanifest|mp3|mp4|wav|pdf)$/i;
@@ -43,11 +44,33 @@ function validate() {
     }
   }
   // Histórico permanece no repositório. Publica bundles antigos apenas se forem referenciados.
-  const files = publicationFiles(fs.readdirSync(root).filter(f => asset.test(f)), required).concat(assetFiles());
+  const files = reachableFiles(required).files;
   for (const file of files.filter(f => f.endsWith('.js'))) {
     new vm.Script(fs.readFileSync(path.join(root, file), 'utf8'), { filename: file });
   }
   return files;
+}
+function reachableFiles(required=new Set()) {
+  const manifest=JSON.parse(fs.readFileSync(path.join(root,'publication.manifest.json'),'utf8'));
+  const release=JSON.parse(fs.readFileSync(path.join(root,'release.config.json'),'utf8'));
+  const reasons=new Map(),files=new Set(),candidates=fs.readdirSync(root).filter(f=>asset.test(f));
+  function add(file,reason){localFile(file);if(!files.has(file)){files.add(file);reasons.set(file,reason)}}
+  for(const file of manifest.entries)add(file,'Entrada oficial');
+  for(const file of required)add(file,'HTML ou cache offline');
+  for(const [file,reason]of Object.entries(manifest.dynamic))add(file,reason);
+  for(const file of [...release.coreExtra,...release.lazy])add(file,'Recurso dinâmico declarado na versão');
+  for(const [directory,reason]of Object.entries(manifest.directories))for(const file of assetFiles(directory))add(file,reason);
+  const inspected=new Set();
+  while([...files].some(file=>!inspected.has(file))){
+    for(const file of [...files]){
+      if(inspected.has(file))continue;inspected.add(file);if(!/\.(?:js|css|html|webmanifest)$/.test(file))continue;
+      const text=fs.readFileSync(path.join(root,file),'utf8'),strings=[];
+      function walk(node){if(!node||typeof node!=='object')return;if(node.type==='Literal'&&typeof node.value==='string')strings.push(node.value);if(node.type==='TemplateElement')strings.push(node.value.cooked||'');for(const [key,value]of Object.entries(node)){if(key==='value'&&node.type==='Literal')continue;if(Array.isArray(value))value.forEach(walk);else if(value&&typeof value==='object')walk(value)}}
+      if(file.endsWith('.js'))walk(acorn.parse(text,{ecmaVersion:'latest'}));else strings.push(text);
+      for(const candidate of candidates){if(files.has(candidate))continue;const escaped=candidate.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const embedded=new RegExp('(?:url\\(\\s*[\\\'"]?|(?:src|href)=[\\\'"])'+escaped+'(?:[?\\\'"#)]|$)');if(strings.some(value=>value.split(/[?#]/)[0].replace(/^\.\//,'')===candidate||embedded.test(value)))add(candidate,'Referenciado por '+file)}
+    }
+  }
+  return {files:[...files],reasons:Object.fromEntries(reasons)};
 }
 function publicationFiles(files, required) {
   return files.filter(file => !/^(?:nucleo|camadas|estilo)-v\d+\.(?:js|css)$/.test(file) || required.has(file));
@@ -65,9 +88,10 @@ function build() {
   const hashes = Object.fromEntries(critical.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(output, file))).digest('hex')]));
   const release = JSON.parse(fs.readFileSync(path.join(root,'release.config.json'),'utf8'));
   fs.writeFileSync(path.join(output, 'publicacao.json'), JSON.stringify({ version:release.version, base:release.base, commit: process.env.GITHUB_SHA || null, files: hashes }));
+  fs.writeFileSync(path.join(output,'recursos.json'),JSON.stringify(reachableFiles().reasons,null,2));
   console.log(`Publicação preparada: ${files.length} arquivos estáticos em _site/.`);
 }
-module.exports = { validate, build, localFile, publicationFiles };
+module.exports = { validate, build, localFile, publicationFiles, reachableFiles };
 if (require.main === module) {
   if (process.argv.includes('--check')) console.log(`Recursos e sintaxe válidos: ${validate().length} arquivos estáticos.`);
   else build();

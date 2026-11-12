@@ -1,0 +1,279 @@
+{
+  "versao": 1,
+  "base": "dee95aea976a42d7afa93661bd58b073583c90bc",
+  "contratos": [
+    {
+      "entidade": "public.resumos",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.diario_backup",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.carteira_relatorios",
+      "papel": "Snapshot de relatório com fontes e validação",
+      "escritor": "Função analise",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar histórico; sem remoção nova nesta versão"
+    },
+    {
+      "entidade": "public.ewz_serie",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.ewz_boletas",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.operacoes_profit",
+      "papel": "Origem importada; conferência e edição no domínio Operações",
+      "escritor": "Ponte/importação Profit",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar com o diário"
+    },
+    {
+      "entidade": "public.ewz_estado",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.ewz_iv",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.ewz_oi",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.radar_cfg",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.radar_sinais",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.radar_cache",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.carteira_cfg",
+      "papel": "Configuração derivada da Carteira; não substitui lançamentos",
+      "escritor": "Aplicativo",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Última configuração por proprietário"
+    },
+    {
+      "entidade": "public.parceiro",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "app_private.aulas_consumo",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.diario",
+      "papel": "Registro principal de diário, operações manuais, estudos e carteira",
+      "escritor": "Aplicativo, via revisão atômica",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar enquanto a conta existir; backups separados"
+    },
+    {
+      "entidade": "public.fluxo_negocios",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.push_subs",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.cotacoes",
+      "papel": "Snapshot de mercado; origem e horário pertencem ao dado",
+      "escritor": "Ponte Profit e coletores autorizados",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Seguir atualização do coletor, sem preços sintéticos"
+    },
+    {
+      "entidade": "public.aulas",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.analise_cache",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.erros_app",
+      "papel": "Diagnóstico redigido e sem segredos",
+      "escritor": "Aplicativo autenticado",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Política existente de limpeza; incidentes locais limitados a 100"
+    },
+    {
+      "entidade": "public.automacao_log",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.opcoes_grade",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.panorama_fotos",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.aulas_teste_txt",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.mercado_cache",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.analise_uso",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "app_private.mercado_requests",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.aulas_teste",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.aulas_audio_jobs",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.aulas_imagens_jobs",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.aulas_fila",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.profit_prints",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.movimentos",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.insiders",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.fluxo_acoes",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Aplicativo e servidor, conforme políticas da baseline",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.push_log",
+      "papel": "Fila, cache ou registro especializado; RLS/grants da baseline são o contrato de acesso",
+      "escritor": "Servidor",
+      "leitura": "Somente servidor",
+      "retencao": "Preservar regras atuais; não apagar mídia ou registros sem verificar órfãos"
+    },
+    {
+      "entidade": "public.analises_trabalhos",
+      "papel": "Trabalho privado, checkpoints e resultado educacional",
+      "escritor": "Função pesquisa",
+      "leitura": "Proprietário autenticado conforme RLS",
+      "retencao": "Preservar histórico; sem remoção automática nova"
+    }
+  ]
+}

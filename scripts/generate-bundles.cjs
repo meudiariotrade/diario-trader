@@ -6,6 +6,11 @@ const root = path.resolve(__dirname,'..');
 const config = JSON.parse(fs.readFileSync(path.join(root,'release.config.json'),'utf8'));
 async function generate(check = false) {
   const outputs = {};
+  for(const [output,inputs] of Object.entries(config.sources||{})) {
+    const source=inputs.map(input=>fs.readFileSync(path.join(root,input),'utf8')).join('');
+    if(check&&fs.readFileSync(path.join(root,output),'utf8')!==source)throw new Error('Agregado desatualizado: '+output);
+    if(!check)fs.writeFileSync(path.join(root,output),source);
+  }
   for (const [output,input] of Object.entries(config.bundles)) {
     const source = fs.readFileSync(path.join(root,input),'utf8');
     const digest = crypto.createHash('sha256').update(source).digest('hex');

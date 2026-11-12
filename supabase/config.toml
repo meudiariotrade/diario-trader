@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.mesa]
 verify_jwt = false
+
+[functions.pesquisa]
+verify_jwt = false

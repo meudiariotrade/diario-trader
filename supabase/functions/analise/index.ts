@@ -4564,8 +4564,10 @@ Deno.serve(async (req) => {
   const out0 = mkOut(cors);
   // registro de erros: toda resposta com erro (menos login, limite e pedido inválido) fica guardada para o Status do app
   let modoAtual = '', cronAtual = false;
+  const requestId=crypto.randomUUID(),requestStarted=Date.now();
   const out = (o: any, st = 200) => {
     try { if (o && typeof o === 'object' && o.erro && modoAtual && !/Entre na sua conta|Limite diário|liberadas só para o dono|inválid|Método não permitido/i.test(String(o.erro))) { const p = erroLog(modoAtual + (o.parte ? ':' + o.parte : ''), String(o.erro), cronAtual); const er = (globalThis as any).EdgeRuntime; if (er?.waitUntil) er.waitUntil(p); } } catch { /* nada */ }
+    if(o&&typeof o==='object'){o={...o,request_id:requestId};console.log(JSON.stringify({request_id:requestId,modo:modoAtual,status:st,concluido:!o.erro,duracao_ms:Date.now()-requestStarted}));}
     return out0(o, st);
   };
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -4702,7 +4704,11 @@ Deno.serve(async (req) => {
         // servidor de avisos e app antigo: escreve aqui as partes que faltam; o que ficar pronto fica guardado e a próxima chamada continua
         if (!doCron) { const lim = await limite('jornal'); if (lim) return lim; }
         const P = await jrPrep(E, sp, !!b.force, b.bal), ateP = Date.now() + 105_000;
-        const res = await Promise.allSettled((JR_TODAS as JrId[]).map(async (id) => { if (!b.force) { const c = await cacheGet(jrParteK(E, id)); if (id === 'D' ? !!c?.dados?.r : jrParteServe(id, jrDesembrulha(c?.dados?.r))) return; } await jrParteGera(E, P, id, ateP); }));
+        const res: PromiseSettledResult<void>[] = [];
+        // Duas partes por vez, com checkpoints existentes. Não iniciar trabalho sem prazo para salvá-lo.
+        for (let partIndex=0;partIndex<JR_TODAS.length&&Date.now()<ateP-12000;partIndex+=2) {
+          res.push(...await Promise.allSettled((JR_TODAS as JrId[]).slice(partIndex,partIndex+2).map(async (id) => { if (!b.force) { const c = await cacheGet(jrParteK(E, id)); if (id === 'D' ? !!c?.dados?.r : jrParteServe(id, jrDesembrulha(c?.dados?.r))) return; } await jrParteGera(E, P, id, ateP); })));
+        }
         try { return out(await jrJuntaSalva(E, P)); }
         catch (e) {
           const mot = jrMotivo(res.map((x) => x.status === 'rejected' ? String((x as PromiseRejectedResult).reason?.message || '') : '').filter(Boolean)[0] || (e as Error).message);

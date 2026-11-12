@@ -37,6 +37,13 @@ jobs:
             npx playwright install --with-deps chromium
           fi
       - run: npm run verify
+      - name: Capturas de validação de Análises
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analises-v581-validacao
+          path: test-results/analises-v581-*.png
+          if-no-files-found: ignore
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'

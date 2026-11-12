@@ -60,7 +60,7 @@ export function validaRelatorio(rel: unknown, dados: unknown, lacunas: string[])
         !(t.percentual && perto(base, t.valor / 100, t.tolerancia / 100)));
       if (ruins.length) problemas.push(`${caminho}: número sem origem nos dados (${ruins.slice(0, 3).map(t => t.valor).join('; ')}) em "${String(fato).slice(0, 120)}"`);
     }
-    for (const [k, v] of Object.entries(o)) if (v && typeof v === 'object' && !Array.isArray(v)) varre(v, caminho ? caminho + '.' + k : k);
+    for (const [k, v] of Object.entries(o)) if (v && typeof v === 'object' && k !== 'fatos') { if(Array.isArray(v))v.forEach((item,index)=>{if(item&&typeof item==='object')varre(item,(caminho ? caminho + '.' : '')+k+'['+index+']')});else varre(v, caminho ? caminho + '.' + k : k); }
   };
   varre(rel, '');
   return { estado: problemas.length ? 'revisar' : lacunas.length ? 'com_limitacoes' : 'validado', problemas: problemas.slice(0, 10), lacunas: lacunas.slice(0, 10), conferidos: base.length, versao: 'v563' };

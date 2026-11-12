@@ -1154,14 +1154,21 @@ try {
           },
           {
             id: "diario",
-            name: "Diário",
+            name: "Meu dia",
             icon: "book",
             description: "Preparação, registro e revisão",
             items: [
               ["dia:ed", "Meu dia e checklist"],
-              ["dia:hist", "Histórico do diário"],
+              ["ops:historico", "Histórico de operações"],
               ["regras", "Minhas regras"],
             ],
+          },
+          {
+            id: "analises",
+            name: "Análises",
+            icon: "chart",
+            description: "Pesquisa técnica e fundamentalista com fontes",
+            items: [["analises", "Análise técnica e fundamentalista"]],
           },
           {
             id: "operacoes",
@@ -1170,7 +1177,7 @@ try {
             description: "Modalidades e desempenho",
             items: [
               ["ops", "Todas as modalidades"],
-              ["stats", "Estatísticas"],
+              ["ops:desempenho", "Desempenho"],
               ["rev", "Revisão da semana"],
             ],
           },
@@ -23040,6 +23047,7 @@ try {
           "briefcase",
           "investimentos patrimônio proventos relatório",
         ],
+        ["analises", "Análises", "chart", "técnica fundamentalista balanço valuation pesquisa CNPI"],
         ["estudos", "Estudos", "graduation", "livros inglês cnpi vídeos aulas"],
         ["regras", "Checklist", "check", "regras disciplina risco"],
         [
