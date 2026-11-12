@@ -20,7 +20,7 @@
  let scrollScheduled=false;w.addEventListener('scroll',()=>{if(scrollScheduled)return;scrollScheduled=true;requestAnimationFrame(()=>{scrollScheduled=false;C.set('scroll:'+current(),Math.max(0,scrollY))})},{passive:true});
  d.addEventListener('visibilitychange',()=>{if(d.hidden)saveContext()});
  const original=w.DIARIO_NAV?.navigate;if(original)w.DIARIO_NAV.navigate=function(route){const canonical=M.route(route);if(canonical!==route||route==='analises'||route==='dia:hist')return navigate(route==='dia:hist'?'ops:historico':canonical);return original.apply(this,arguments)};
- if(typeof jrVer==='function'){const originalEdition=jrVer;jrVer=function(){const value=originalEdition.apply(this,arguments);return value?w.DiarioRelatorios.capture('jornal',value).conteudo:value}}
+ try{if(typeof jrVer==='function'){const originalEdition=jrVer;jrVer=function(){const value=originalEdition.apply(this,arguments);return value?w.DiarioRelatorios.capture('jornal',value).conteudo:value}}}catch(e){}
  d.addEventListener('keydown',e=>{const b=e.target.closest?.('[role=tablist] [role=tab]');if(!b||!['ArrowRight','ArrowLeft','Home','End'].includes(e.key))return;const tabs=[...b.closest('[role=tablist]').querySelectorAll('[role=tab]:not([hidden])')];if(!tabs.length)return;const i=tabs.indexOf(b),next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;e.preventDefault();tabs[next].focus();tabs[next].click()});
  rendered();gateAtualiza();
 })(window,document);
