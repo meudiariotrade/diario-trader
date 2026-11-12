@@ -8,7 +8,7 @@
  const el=(tag,cls,txt)=>{const n=doc.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=txt;return n};
  const SVG={home:'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',dia:'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',ops:'M4 8h13l-3-3M20 16H7l3 3',mercado:'M5 20V10M12 20V4M19 20v-7',estudos:'M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5',analises:'M4 19V5M4 19h16M7 14l4-4 4 2 5-7',term:'M3 5h18v12H3zM8 21h8M12 17v4',carteiras:'M3 7h18v12H3zM16 13h2M3 7l3-3h12l3 3',imposto:'M6 3h9l4 4v14H6zM9 12h6M9 16h6',mais:'M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4'};
  const ico=k=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVG[k]}"/></svg>`;
- const GRUPOS=[['Principal',[['home','Início'],['dia','Meu dia'],['ops','Operações'],['mercado','Mercado'],['analises','Análises'],['estudos','Estudos']]],['Ferramentas',[['term','Terminal'],['carteiras','Carteira'],['imposto','Imposto de renda']]],['Conta',[['mais','Configurações']]]];
+ const GRUPOS=[['Principal',[['home','Início'],['dia','Meu dia'],['ops','Operações'],['mercado','Mercado'],['analises','Análises'],['estudos','Estudos']]],['Ferramentas',[['term','Terminal']]],['Mais',[['carteiras','Carteira'],['imposto','Imposto de renda'],['mais','Configurações']]]];
 
  /* ---------- estilos ---------- */
  const css=`

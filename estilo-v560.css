@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 a068b8cb6deccce43303b294ddb5f6feb5c7914404317295c5c36197dbf1cd24 */
+/* Gerado de src/app-theme.css · SHA256 c0cdcbd860f00ad6e38a30cb1e7ec3979ef1e5f7333415cfeb79e2c8813ed037 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -966,7 +966,7 @@ html:root:not([data-v427-tema=claro]){--d-bg:#070708;--d-surface:#0d0d0e;--d-rai
 /* Estudos: os módulos existentes compartilham meta, navegação e lista de livros. */
 #app .dt-est-interno>.dt397-hero{display:none}
 #app .dt401-category-shell{display:flex;align-items:start;gap:8px;position:relative}
-#app .dt397-category{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex:1;overflow:visible;min-width:0;gap:8px;mask-image:none;-webkit-mask-image:none}
+#app .dt397-category{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));flex:1;overflow:visible;min-width:0;gap:8px;mask-image:none;-webkit-mask-image:none}
 #app .dt397-category .dt397-chip{min-width:0;justify-content:center;white-space:nowrap}
 #app .dt401-more{display:block;position:relative;flex:none}
 #app .dt401-more-toggle{min-height:44px;white-space:nowrap}
@@ -996,19 +996,20 @@ html:root:not([data-v427-tema=claro]){--d-bg:#070708;--d-surface:#0d0d0e;--d-rai
 }
 #app .dt397-studies .estchips>[data-estv="hoje"],#app .dt397-studies .estchips>[data-estv="bib"],#app .dt397-studies .estchips>[data-estv="sim"],#app .dt397-studies .estchips>[data-estv="desemp"]{display:none}
 #app .dt397-studies .estchips{gap:8px}
+#app .dt397-filtros .dt397-chip{min-height:40px;padding:0 16px;white-space:nowrap}
 #app .dt397-studies .estchips>button{min-height:40px;white-space:nowrap;word-break:normal;overflow-wrap:normal}
 
-/* Menu de Estudos: cinco controles alinhados, sem espaço vazio antes de Mais. */
+/* Menu de Estudos: seis controles alinhados, sem espaço vazio antes de Mais. */
 @media(max-width:980px){
- html body.dt393-active #app .dt401-category-shell{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;align-items:stretch!important}
- html body.dt393-active #app .dt401-category-shell nav.dt397-category{grid-column:span 4;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important}
+ html body.dt393-active #app .dt401-category-shell{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:6px!important;align-items:stretch!important}
+ html body.dt393-active #app .dt401-category-shell nav.dt397-category{grid-column:span 5;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important;overflow:visible!important}
  html body.dt393-active #app .dt401-category-shell nav.dt397-category button.dt397-chip,
- html body.dt393-active #app .dt401-more-toggle{width:100%!important;min-width:0!important;min-height:50px!important;height:50px!important;padding:4px 4px!important;display:flex!important;flex-direction:column!important;gap:4px!important;font-size:11px!important;line-height:1.2!important;white-space:nowrap!important}
+ html body.dt393-active #app .dt401-more-toggle{width:100%!important;min-width:0!important;min-height:50px!important;height:50px!important;padding:4px 1px!important;display:flex!important;flex-direction:column!important;gap:4px!important;font-size:11px!important;line-height:1.2!important;white-space:nowrap!important}
  html body.dt393-active #app .dt401-more-toggle svg:last-child{display:none!important}
 }
 @media(max-width:359px){
  html body.dt393-active #app .dt401-category-shell{gap:4px!important;grid-template-columns:minmax(0,1fr) 44px!important}
- html body.dt393-active #app .dt401-category-shell nav.dt397-category{gap:4px!important;grid-column:auto;grid-template-columns:.8fr 1.1fr .95fr 1.15fr!important}
+ html body.dt393-active #app .dt401-category-shell nav.dt397-category{gap:4px!important;grid-column:auto;grid-template-columns:.8fr .85fr 1.1fr .95fr 1.15fr!important}
  html body.dt393-active #app .dt401-category-shell nav.dt397-category button.dt397-chip,
  html body.dt393-active #app .dt401-more-toggle{font-size:10px!important}
 }
