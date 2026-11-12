@@ -23,7 +23,7 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   await page.reload();
   await page.locator('#splash').waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: 'Estudos', exact: true }).last().click();
-  assert.equal(await app.locator('.dt397-category [data-dt397-view]').count(), 4);
+  assert.equal(await app.locator('.dt397-category [data-dt397-view]').count(), 5);
   await page.locator('.v503-fantasma').waitFor({ state: 'detached' });
   await expect(app.locator('.dt397-library-grid')).toBeVisible();
   await expect.poll(() => app.locator('.dt397-library-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(2);
@@ -65,8 +65,7 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   await app.locator('#dt401-more-list [data-dt397-view="foco"]').click();
   assert.ok((await app.innerText()).includes('de 300 min'));
   assert.equal(await app.locator('.dt397-hero').isVisible(), false);
-  await app.locator('[data-dt401-more-toggle]').click();
-  await app.locator('#dt401-more-list [data-dt397-view="aul"]').click();
+  await app.locator('.dt397-category [data-dt397-view="aul"]').click();
   await page.getByRole('button', { name: 'Entrar na minha conta', exact: true }).waitFor();
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
