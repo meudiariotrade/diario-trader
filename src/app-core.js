@@ -27630,7 +27630,13 @@ function anxDel(e, t) {
             m.mode =
               Math.abs(m.dx) > Math.abs(m.dy) * 1.4
                 ? "h"
-                : m.dy > 0 && m.top && m.ok && scrollY <= 0
+                : m.dy > 0 &&
+                    m.top &&
+                    m.ok &&
+                    scrollY <= 0 &&
+                    !["mercado", "term"].includes(
+                      document.getElementById("app")?.dataset.tela,
+                    )
                   ? "p"
                   : "v";
           }
