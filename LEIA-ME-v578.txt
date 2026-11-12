@@ -1,0 +1,3 @@
+Diário Trader v578
+
+- Economista IA: conversa ocupa a tela, sugestões viram botões pequenos numa linha e somem depois da 1ª pergunta; campo de pergunta fixo embaixo.

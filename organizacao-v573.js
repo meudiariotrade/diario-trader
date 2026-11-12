@@ -81,6 +81,24 @@ html body #app[data-tela=carteiras] .dt395-native-carteiras>.pro-subtabs{display
 .org-pfextra button{height:32px!important;min-height:32px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid #2a2b2f!important;background:none!important;color:#cfcdc8!important;font-size:13px!important;width:auto!important;flex:none!important}
 .org-pfextra button.on{border-color:#d4a85a!important;color:#d4a85a!important}
 html body #app[data-tela=carteiras] .pftabs{flex-wrap:wrap!important;overflow:visible!important}
+
+/* v578 — Economista IA: conversa ocupa a tela, sugestões compactas e somem depois da 1ª pergunta */
+html body #wf-chat-panel.wf-chat-panel{display:flex!important;flex-direction:column!important}
+html body #wf-chat-panel .wf-chat-history{flex:1 1 auto!important;min-height:120px!important;overflow-y:auto!important}
+html body #wf-chat-panel .simple-questions{display:flex!important;gap:8px!important;overflow-x:auto!important;flex-wrap:nowrap!important;padding:8px 16px!important;margin:0!important;flex:none!important}
+html body #wf-chat-panel .simple-questions>b{display:none!important}
+html body #wf-chat-panel .simple-questions button{flex:none!important;white-space:nowrap!important;width:auto!important;min-height:32px!important;height:32px!important;padding:0 12px!important;border-radius:999px!important;font-size:13px!important;margin:0!important}
+html body #wf-chat-panel:has(.wf-chat-history>:not(.wf-chat-empty)) .simple-questions{display:none!important}
+html body #wf-chat-panel:has(.wf-chat-history>:not(.wf-chat-empty)) .wf-chat-empty{display:none!important}
+html body #wf-chat-panel form{flex:none!important}
+html body #wf-chat-panel .wf-chat-input-label{font-size:0!important}
+html body #wf-chat-panel .wf-chat-input-label textarea{font-size:16px!important;min-height:56px!important;height:56px!important;margin-top:4px!important}
+html body #wf-chat-panel .wf-chat-context-label{font-size:12px!important}
+html body #wf-chat-panel form>small{display:none!important}
+@media (max-width:760px){
+ html body #wf-chat-panel.wf-chat-panel{position:fixed!important;left:8px!important;right:8px!important;top:calc(env(safe-area-inset-top,0px) + 8px)!important;bottom:calc(env(safe-area-inset-bottom,0px) + 8px)!important;max-height:none!important;height:auto!important;width:auto!important;z-index:1000!important}
+}
+html body #economista-flutuante:has(#wf-chat-panel:not([hidden])) .wf-chat-launcher{display:none!important}
 /* v574: Importar sem as abas de Configurações */
 html body #app[data-tela=import] .pro-subtabs{display:none!important}
 html body #app[data-tela=import] #dt414-back{margin-top:8px!important}
