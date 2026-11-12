@@ -1,0 +1,4 @@
+Diário Trader v579
+
+- Mercado: aba Análises abre direto (sem o menu intermediário); Movimentos fortes só em Cotações.
+- Operações › Por modalidade: abas Modalidades | Visão geral | Importar cabem sem cortar.

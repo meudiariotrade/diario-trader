@@ -63,7 +63,7 @@ html body #app[data-tela=stats] #v4-subnav .v4-primary{display:flex!important;fl
 html body #app[data-tela=stats] #v4-subnav .v4-primary button{flex:none!important;width:auto!important;height:32px!important;min-height:32px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid #2a2b2f!important;background:none!important;color:#cfcdc8!important;font-size:13px!important;box-shadow:none!important}
 html body #app[data-tela=stats] #v4-subnav .v4-primary button.on{border-color:#d4a85a!important;color:#d4a85a!important}
 html body #app[data-tela=stats] #v4-subnav .v4-primary [data-v4p="5"]{order:-1}
-html body #app[data-tela=ops] .v4-tools-head .v4-tabs,html body #app[data-tela=stats] #v4-subnav .v4-secondary{flex-wrap:wrap!important;overflow:visible!important}
+html body #app[data-tela=stats] #v4-subnav .v4-secondary{flex-wrap:wrap!important;overflow:visible!important}
 html body #app[data-tela=ops] .v4-tools-head .v4-tabs button{flex:1 1 auto!important;width:auto!important}
 
 /* v575 — fase 4: espaçamento (8pt: 24 no PC, 16 no celular) */
@@ -100,6 +100,12 @@ html body #wf-chat-panel form>small{display:none!important}
  html body #wf-chat-panel.wf-chat-panel:not([hidden]){position:fixed!important;left:8px!important;right:8px!important;top:calc(env(safe-area-inset-top,0px) + 8px)!important;bottom:calc(env(safe-area-inset-bottom,0px) + 8px)!important;max-height:none!important;height:auto!important;width:auto!important;z-index:1000!important}
 }
 html body #economista-flutuante:has(#wf-chat-panel:not([hidden])) .wf-chat-launcher{display:none!important}
+
+/* v579 — Mercado: Análises abre direto; Movimentos fortes só em Cotações; abas de Por modalidade sem cortar */
+html body #app[data-tela=mercado] :has(>[data-mkt549-ir]){display:none!important}
+html body #app[data-tela=mercado]:not(:has([data-navroute="mercado:cq"].on)) #v518-mov,html body #app[data-tela=mercado]:has([data-mkt549="mais"].mkt549-on) #v518-mov{display:none!important}
+html body #app[data-tela=ops] .v4-tools-head .v4-tabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important}
+html body #app[data-tela=ops] .v4-tools-head .v4-tabs button{width:auto!important;min-width:0!important;padding:0 8px!important;font-size:13px!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}
 /* v574: Importar sem as abas de Configurações */
 html body #app[data-tela=import] .pro-subtabs{display:none!important}
 html body #app[data-tela=import] #dt414-back{margin-top:8px!important}
@@ -176,6 +182,7 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
   const ops=a.querySelector('.v4-page.v4-ops');if(!ops)return;
   const reg=[...ops.querySelectorAll(':scope>.v4-two>section')].find(s=>s.querySelector('[data-dt393-action="newtrade"]'));
   if(reg&&reg.parentElement!==ops){ops.prepend(reg);const h=reg.querySelector('h2 span');if(h)h.textContent='Registrar'}
+  const imp=a.querySelector('.v4-tools-head [data-v563-import]');if(imp&&imp.textContent.trim()!=='Importar')imp.textContent='Importar';
   const ws=a.querySelector('.v4-tools-head h2 span');if(ws&&ws.textContent!=='Por modalidade')ws.textContent='Por modalidade';
  }
  function desempenho(a){
@@ -192,7 +199,7 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
   for(const k of ['aba|ia','aba|hist']){const b=tabs.querySelector(`[data-pf="${k}"]`);if(b)extra.append(b)}
   for(const [k,v] of Object.entries(NOMES)){const b=a.querySelector(`[data-pf="${k}"]`);const sp=b?.querySelector('span')||b;if(sp&&sp.textContent!==v)sp.textContent=v}
  }
- function mercado(a){const b=a.querySelector('[data-mkt549="mais"]');if(b&&b.textContent.trim()==='Mais'){for(const n of b.childNodes)if(n.nodeType===3&&n.textContent.trim()==='Mais')n.textContent=n.textContent.replace('Mais','Análises');if(b.textContent.trim()==='Mais')b.textContent='Análises'}}
+ function mercado(a){const volta=[...a.querySelectorAll('button')].find(b=>/^‹\s*Mais$/.test(b.textContent.trim()));if(volta&&volta.parentElement&&!volta.parentElement.matches('#app,.m403-primary-tabs'))volta.parentElement.style.display='none';const b=a.querySelector('[data-mkt549="mais"]');if(b&&b.textContent.trim()==='Mais'){for(const n of b.childNodes)if(n.nodeType===3&&n.textContent.trim()==='Mais')n.textContent=n.textContent.replace('Mais','Análises');if(b.textContent.trim()==='Mais')b.textContent='Análises'}}
  /* ---------- ciclo ---------- */
  let agendado=false;
  function aplica(){
@@ -207,6 +214,7 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
  const agenda=()=>{if(!agendado){agendado=true;requestAnimationFrame(aplica)}};
  new MutationObserver(agenda).observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-tela','data-ms-passo-atual','class']});
  root.addEventListener('resize',agenda);
+ root.addEventListener('click',e=>{const m=e.target.closest?.('#app [data-mkt549="mais"]');if(!m)return;const lab=$('#app:not(.v503-fantasma) [data-mkt549-ir="lab"]');if(!lab)return;e.preventDefault();e.stopImmediatePropagation();lab.click()},true);
  root.addEventListener('scroll',()=>doc.body.classList.toggle('org-rolou',root.scrollY>600),{passive:true});
  doc.readyState==='loading'?doc.addEventListener('DOMContentLoaded',agenda):agenda();
 })(window,document);

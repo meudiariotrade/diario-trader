@@ -16,9 +16,8 @@ test('v549: Mercado com 3 abas + Mais, categorias enxutas e ordenação única',
  await app.locator('[data-mkt549-ordem]').click();
  await expect(app.locator('[data-mkt549-ordem]')).toContainText('Maiores altas');
  await expect.poll(()=>p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ // v579: a aba Análises abre direto (o menu Mais só tinha Análises).
  await app.locator('[data-mkt549="mais"]').click();
- await expect(app.locator('#mkt549-mais')).toBeVisible();
- await app.locator('[data-mkt549-ir="lab"]').click();
  await expect.poll(()=>p.evaluate(()=>MKT.tab)).toBe('lab');
  await expect(app.locator('[data-mkt549="mais"]')).toHaveClass(/mkt549-on/);
  for(const width of [390,1440]){await p.setViewportSize({width,height:900});await expect.poll(()=>p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)}
