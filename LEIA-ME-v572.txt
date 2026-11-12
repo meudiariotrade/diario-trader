@@ -1,0 +1,6 @@
+Diário Trader v572
+
+- Jornal abre com a aba Notícias marcada.
+- Notícias: Jornal do dia ao lado de Balanços da B3.
+- Agenda e Notícias sem atalhos para outras abas.
+- Linha do dia da agenda: horários (9h, 12h, 15h, 18h) sem quebrar.

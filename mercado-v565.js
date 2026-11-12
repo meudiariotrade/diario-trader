@@ -6,7 +6,7 @@
   'use strict';
   var doc = document;
   doc.body.classList.add('mkt565');
-  var TITULOS = { jr: 'Jornal', lab: 'Análises', pn: 'Panorama', fl: 'Fluxo de opções', opc: 'Opções', rk: 'Altas e baixas' };
+  var TITULOS = { lab: 'Análises', pn: 'Panorama', fl: 'Fluxo de opções', opc: 'Opções', rk: 'Altas e baixas' };
   var demo = /[?&]demo=1\b/.test(location.search);
   var agendado = 0;
 
@@ -56,6 +56,11 @@
     var m = app.querySelector('.dt395-native-mercado');
     if (!m) return;
     faixa(m); menu(m); pressed(m); dup(m); travessao(m);
+    // v572: Jornal pertence a Notícias (aba marcada é Notícias, não Mais).
+    var jr = m.getAttribute('data-m403-sub') === 'jr';
+    var nt = m.querySelector('nav.m403-primary-tabs [data-navroute="mercado:nt"]'), mais = m.querySelector('nav.m403-primary-tabs [data-mkt549="mais"]');
+    if (nt) { nt.classList.toggle('on', jr || nt.classList.contains('on')); if (jr) nt.setAttribute('aria-current', 'page'); }
+    if (mais && jr) { mais.classList.remove('on'); mais.removeAttribute('aria-current'); }
   }
   function agenda() { if (agendado) return; var em = false; try { em = tab === 'mercado'; } catch (e) { /* sem app */ } if (em) agendado = requestAnimationFrame(run); }
 
