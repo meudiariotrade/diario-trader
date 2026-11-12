@@ -37119,7 +37119,16 @@ html[data-v508-semmesa] [data-dt414-go="mesa"]{display:none!important}
       }
       return { atual: s, recorde: o };
     }
+    let qMemo = { k: "", t: 0, v: null };
     function q() {
+      // v566: o resumo "dia anterior sem foto" percorre todos os dias; guarda por 5 s para não pesar em cada troca de aba.
+      const qk = h() + ":" + d(() => S.trades.length, 0);
+      if (qMemo.k === qk && Date.now() - qMemo.t < 5000) return qMemo.v;
+      const qv = q0();
+      qMemo = { k: qk, t: Date.now(), v: qv };
+      return qv;
+    }
+    function q0() {
       const t = I();
       if (!t) return null;
       const a = h(),
@@ -37381,7 +37390,11 @@ html[data-v508-semmesa] [data-dt414-go="mesa"]{display:none!important}
         )
           continue;
         const m = f.getBoundingClientRect();
-        m.height > 40 && m.top < s - 1 && ((s = m.top), (r = f));
+        if (m.height > 40) {
+          // v566: o primeiro cartão visível na ordem do documento basta (evita medir a tela inteira a cada troca de aba).
+          r = f;
+          break;
+        }
       }
       if (!r) return;
       const n = `<p><b>${p(b(e.d))} tem trade sem foto:</b> ${p(e.f.map((f) => f.txt).join(" · "))}. Adicione antes de operar de novo.</p><button type="button" data-v508ontem="${e.d}">Ver ${p(e.d.split("-").reverse().slice(0, 2).join("/"))}</button>`;
@@ -37539,7 +37552,8 @@ html[data-v508-semmesa] [data-dt414-go="mesa"]{display:none!important}
         } catch {}
       },
       O = () => {
-        (clearTimeout(N), k(), (N = setTimeout(k, 90)));
+        // v566: fora do caminho da troca de aba; roda logo depois da pintura.
+        (clearTimeout(N), (N = setTimeout(k, 40)));
       };
     function X() {
       if (typeof l.render0 != "function" || l.render0.__v508) return;

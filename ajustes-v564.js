@@ -79,8 +79,10 @@
     return s;
   }
   function pintaResultado() {
+    var t0 = aba(); if (t0 !== 'home' && t0 !== 'dia') return;
     var ab = g(function () { return hojeAberto(); }, null);
-    var rotulos = doc.querySelectorAll('#app :is(small,span)');
+    var rotulos = doc.querySelectorAll('#app:not(.v503-fantasma) :is(.v4-kpis,.v4-rows) > div > :is(small,span)');
+    var fech = null;
     for (var i = 0; i < rotulos.length; i++) {
       var r = rotulos[i], txt = r.textContent.trim();
       if (txt !== 'Resultado do dia' && txt !== 'P&L do dia') continue;
@@ -89,7 +91,8 @@
       var nota = box.querySelector(':scope > .v563-vivo');
       if (!ab || !ab.n) { if (nota) nota.remove(); if (val.dataset.v563) { delete val.dataset.v563; val.style.color = ''; } continue; }
       if (!/\d/.test(val.textContent) && !val.dataset.v563) continue; // valores escondidos (olho)
-      var tot = fechadoHoje() + ab.pl, novo = brl(tot);
+      if (fech == null) fech = fechadoHoje();
+      var tot = fech + ab.pl, novo = brl(tot);
       if (val.textContent !== novo) val.textContent = novo;
       val.dataset.v563 = '1';
       val.style.color = tot > 0 ? 'var(--ds-up)' : tot < 0 ? 'var(--ds-down)' : '';
@@ -192,9 +195,10 @@
     var app = doc.querySelector('#app:not(.v503-fantasma)');
     menuFechado(); menuLimpo();
     if (!app) return;
+    var t = aba();
     redireciona(); operacoes(app); importar(app); configuracoes(app); carteira(app); transicao(app); pintaResultado();
   }
-  function fila() { if (!q) { q = 1; requestAnimationFrame(monta); } }
+  function fila() { if (!q) { q = 1; setTimeout(monta, 150); } }
   new MutationObserver(fila).observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
   fila();
   root.DiarioAjustes564 = { poll: poll, abreCapital: abreCapital };

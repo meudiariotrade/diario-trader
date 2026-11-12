@@ -1,0 +1,4 @@
+Diário Trader v566 — velocidade e tema claro
+
+- Troca de abas mais rápida: verificações que rodavam a cada troca (aviso de foto do dia anterior, resultado ao vivo, Mercado e Jornal) saíram do caminho da troca ou só rodam na tela certa. Início ~40% mais rápido nos testes.
+- Tema claro: folha do tema refeita a partir da original, com âmbar no lugar do verde; linhas visíveis em cartões, chips e botões (Estudos, Meu dia, Operações, Diário, Carteira); botão da IA em âmbar.

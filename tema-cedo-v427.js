@@ -2,6 +2,6 @@
 (function(){try{
   if(JSON.parse(localStorage.getItem('diario-theme'))!=='light')return;
   var d=document.documentElement;d.setAttribute('data-v427-tema','claro');
-  var l=document.createElement('link');l.rel='stylesheet';l.id='v427-claro-css';l.href='tema-claro-v427.css?v=427';
+  var l=document.createElement('link');l.rel='stylesheet';l.id='v427-claro-css';l.href='tema-claro-v427.css?v=566';
   (document.head||d).appendChild(l);
 }catch(e){}})();

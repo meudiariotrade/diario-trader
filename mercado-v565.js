@@ -64,7 +64,7 @@
     if (!m) return;
     faixa(m); menu(m); pressed(m); dup(m); travessao(m);
   }
-  function agenda() { if (!agendado) agendado = requestAnimationFrame(run); }
+  function agenda() { if (agendado) return; var em = false; try { em = tab === 'mercado'; } catch (e) { /* sem app */ } if (em) agendado = requestAnimationFrame(run); }
 
   doc.addEventListener('click', function (ev) {
     var t = ev.target && ev.target.closest ? ev.target : null; if (!t) return;

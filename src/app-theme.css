@@ -2129,3 +2129,9 @@ html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mer
 html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mercado .cqtabs>button.on{background:var(--ds-amber-bg)!important;color:var(--ds-tx)!important;border-color:var(--ds-amber)!important}
 html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mercado nav.m403-primary-tabs>button:is(.on,[aria-current]){color:var(--ds-tx)!important;background:var(--ds-s1)!important;box-shadow:inset 0 -2px 0 var(--ds-amber)!important}
 html:root:root:root[data-v427-tema=claro] body.mkt565 #app#app .dt395-native-mercado nav.m403-primary-tabs>button{color:var(--ds-tx-2)!important}
+
+/* ===== 17. Tema claro v566: linhas visíveis em todos os cartões e controles ===== */
+html:root:root:root[data-v427-tema=claro] body #app#app :is(.card,section.card,.hero,[class*="-card"]:not([class*="chip"]):not(button):not(.pnl-t),.modc,.pfbt,.dt397-lesson,.dt399-book-row,.v4-card,.trl,.simple-details,.dt393-card,.dt393-workspace,details.card,.warn,.studio-shortcut,.routine-card){border:1px solid var(--ds-line-2)!important}
+html:root:root:root[data-v427-tema=claro] body #app#app :is(.studio-tabs,.pro-tabs,.pro-subtabs,.seg,.cqtabs,.e2tabs,.dt397-tabs)>button:not(.on):not([aria-current]):not([aria-selected=true]){border:1px solid var(--ds-line-2)!important}
+html:root:root:root[data-v427-tema=claro] body #app#app :is(hr,.dt393-cardhead,.v4-rows>div,.v4-kpis>div){border-color:var(--ds-line)!important}
+html:root:root:root[data-v427-tema=claro] body .wf-chat-launcher{background:linear-gradient(#8d6c33,#6e5326)!important;background-image:linear-gradient(#8d6c33,#6e5326)!important;color:#fff!important}

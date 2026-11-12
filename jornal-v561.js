@@ -26,6 +26,6 @@
     }
   }
   let t = 0;
-  new MutationObserver(() => { if (t) return; t = setTimeout(() => { t = 0; aplica(); }, 120); }).observe(d.documentElement, { childList: true, subtree: true });
+  new MutationObserver(() => { if (t || !d.getElementById('jrbox')) return; t = setTimeout(() => { t = 0; aplica(); }, 120); }).observe(d.documentElement, { childList: true, subtree: true });
   w.DiarioJornal561 = { aplica };
 })(window, document);
