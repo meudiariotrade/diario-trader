@@ -1,5 +1,5 @@
 {
-  "version": 580,
+  "version": 581,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -26,16 +26,56 @@
   "debug": [
     "app.js.map"
   ],
-  "base": "b68544f47dee819021ee518ab89878458825eb4e",
+  "base": "dee95aea976a42d7afa93661bd58b073583c90bc",
   "bundles": {
     "nucleo-v560.js": "src/app-core.js",
     "camadas-v560.js": "src/app-layers.js",
     "estilo-v560.css": "src/app-theme.css",
     "pdf-documentos.js": "src/pdf-documentos.js",
-    "sw.js": "src/service-worker.js"
+    "sw.js": "src/service-worker.js",
+    "organizacao-v573.js": "src/navigation/organizacao-v573.js",
+    "navegacao-simples.js": "src/navigation/navegacao-simples.js",
+    "modo-simples.js": "src/navigation/modo-simples.js",
+    "dominios.js": "src/contracts/dominios.js",
+    "runtime-dominios.js": "src/navigation/runtime-dominios.js",
+    "organizacao.js": "src/navigation/organizacao.js",
+    "analises-modelo.js": "src/analysis/analises-modelo.js",
+    "analises.js": "src/analysis/analises.js",
+    "relatorios-dados.js": "src/contracts/relatorios-dados.js",
+    "fiscal-conferencia.js": "src/navigation/fiscal-conferencia.js",
+    "terminal-fonte-v533.js": "src/navigation/terminal-fonte.js"
   },
   "templates": {
     "index.html": "src/index.html",
     "manifest.webmanifest": "src/manifest.webmanifest"
-  }
+  },
+  "sources": {
+    "src/app-core.js": [
+      "src/domains/core/01-runtime-estilos.js",
+      "src/domains/core/02-estado-e-persistencia.js",
+      "src/domains/core/03-render-e-operacoes.js",
+      "src/domains/core/04-analises-e-estudos.js",
+      "src/domains/core/05-mercado-e-noticias.js",
+      "src/domains/core/06-risco-e-tecnico.js",
+      "src/domains/core/07-conta-e-integracoes.js",
+      "src/domains/core/08-terminal-e-sazonalidade.js",
+      "src/domains/core/09-operacoes-e-estudos.js",
+      "src/domains/core/10-fiscal-e-simulacoes.js",
+      "src/domains/core/11-desempenho-e-carteira.js",
+      "src/domains/core/12-carteira-e-inteligencia.js",
+      "src/domains/core/13-diagnostico-e-relatorios.js",
+      "src/domains/core/14-estudos-e-geracao.js",
+      "src/domains/core/15-jornal-e-agenda.js",
+      "src/domains/core/16-rotina-e-disciplina.js",
+      "src/domains/core/17-fontes-e-balancos.js",
+      "src/domains/core/18-carteira-e-exportacoes.js"
+    ],
+    "src/app-layers.js": [
+      "src/domains/layers/01-navegacao-e-fluxos.js",
+      "src/domains/layers/02-carteira-e-terminal.js",
+      "src/domains/layers/03-apresentacao.js",
+      "src/domains/layers/04-design-e-navegacao.js"
+    ]
+  },
+  "publicationManifest": "publication.manifest.json"
 }

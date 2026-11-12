@@ -1,0 +1,6 @@
+V581 recuperada do chat Criar IA de análise.
+Código preparado; publicação no GitHub não concluída.
+Verificação atual: bundles, sintaxe e referências aprovados; testes de navegador bloqueados pelo Chromium no ambiente.
+Pesquisa real pendente de teste devido à cota do Gemini.
+Consulte docs/validacao-v581.md e docs/envio-v581.md antes da instalação.
+O pacote de atualização é relativo à base v580.

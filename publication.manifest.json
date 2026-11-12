@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "entries": ["index.html", "sw.js", "manifest.webmanifest"],
+  "dynamic": {
+    "config.js": "Configuração pública carregada na inicialização",
+    "pdf-documentos.js": "Geração de documentos carregada sob demanda",
+    "pdf-sans.ttf": "Fonte dos relatórios",
+    "pdf-sans-bold.ttf": "Fonte dos relatórios",
+    "pdf-sans-italic.ttf": "Fonte dos relatórios",
+    "pdf-serif-bold.ttf": "Fonte dos relatórios",
+    "pdf-serif-italic.ttf": "Fonte dos relatórios",
+    "pdf-lib.min.js": "Motor de exportação PDF",
+    "fontkit.umd.min.js": "Registro de fontes PDF",
+    "arte.js": "Editor de imagens sob demanda",
+    "cnpi.js": "Estudo CNPI sob demanda",
+    "estudos.js": "Biblioteca de estudos sob demanda",
+    "ingles.js": "Estudo de inglês sob demanda"
+  },
+  "directories": {"assets": "Identidades de ativos e recursos visuais referenciados dinamicamente"}
+}
