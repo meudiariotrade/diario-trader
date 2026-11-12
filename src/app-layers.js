@@ -28755,7 +28755,7 @@ try {
         }[u],
         y = `<div class="v4-kpis">
     <div><small>Capital</small><strong>${s != null ? G(s) : '<button type="button" class="v4-inline" data-dt414-go="painel">Configurar</button>'}</strong></div>
-    <div><small>P&amp;L do dia</small><strong class="${L(a)}">${j(a)}</strong><em class="${L(a)}">${E(a) != null ? "(" + Q(E(a)) + ")" : e.length + " encerrado(s)"}</em></div>
+    <div><small>P&amp;L do dia</small><strong class="${L((window.vivoDia?vivoDia(a):a))}" data-v568-base="${a}">${j((window.vivoDia?vivoDia(a):a))}</strong>${window.vivoNota?vivoNota():""}<em class="${L(a)}">${E(a) != null ? "(" + Q(E(a)) + ")" : e.length + " encerrado(s)"}</em></div>
     <div><small>P&amp;L da semana</small><strong class="${L(l)}">${j(l)}</strong><em class="${L(l)}">${E(l) != null ? "(" + Q(E(l)) + ")" : n.length + " trade(s)"}</em></div>
     <div><small>Risco disponível</small><strong>${h != null ? G(h) : "—"}</strong><em>${h != null && E(h) != null ? "(" + _(E(h)) + "% do capital)" : "limite de perda do dia"}</em></div></div>`,
         P = o
@@ -28978,7 +28978,7 @@ try {
     <div>${p("wallet", 18)}<span>Capital operacional</span><b>${n != null ? G(n) : "—"}</b></div>
     <div>${p("target", 18)}<span>Limite de perda (dia)</span><b class="v-neg">${s ? "-" + G(s) : x ? "-" + G(x.lim) : "—"}</b></div>
     <div>${p("trophy", 18)}<span>Meta de ganho (dia)</span><b class="v-pos">${l ? j(l) : "—"}</b></div>
-    <div>${p("timer", 18)}<span>Resultado do dia</span><b class="${L(r)}">${j(r)}</b></div></div>`,
+    <div>${p("timer", 18)}<span>Resultado do dia</span><b class="${L((window.vivoDia?vivoDia(r):r))}" data-v568-base="${r}">${j((window.vivoDia?vivoDia(r):r))}</b>${window.vivoNota?vivoNota():""}</div></div>`,
         ),
         F = [
           ["IBOV", "IBOV"],

@@ -2146,3 +2146,9 @@ html:root:root:root[data-v427-tema=claro] body #app#app .dt395-native-mercado :i
 html:root:root:root[data-v427-tema=claro] body #app#app .dt395-native-mercado :is(.btn,button){-webkit-text-fill-color:currentColor}
 html:root:root:root body #economista-flutuante#economista-flutuante .wf-chat-launcher{background:linear-gradient(#c9a15b,#8d6c33)!important;color:#17130b!important}
 html:root:root:root[data-v427-tema=claro] body #economista-flutuante#economista-flutuante .wf-chat-launcher{background:linear-gradient(#8d6c33,#6e5326)!important;color:#fff!important}
+
+/* ===== 19. Tema claro v568: blocos escuros herdados viram superfícies claras ===== */
+html:root:root:root[data-v427-tema=claro] body :is(#app#app,#dt394-drawer#dt394-drawer,#wf-chat-panel#wf-chat-panel,#v4-bnav#v4-bnav) .cl568.cl568{background:var(--ds-s1)!important;background-image:none!important;color:var(--ds-tx)!important;border-color:var(--ds-line-2)!important;box-shadow:none!important}
+html:root:root:root[data-v427-tema=claro] body :is(#app#app,#dt394-drawer#dt394-drawer,#wf-chat-panel#wf-chat-panel,#v4-bnav#v4-bnav) .cl568-on.cl568-on{background:var(--ds-amber-bg)!important;background-image:none!important;color:var(--ds-tx)!important;border:1px solid var(--ds-amber)!important;box-shadow:none!important}
+html[data-v427-tema=claro] body :is(.cl568,.cl568-on) :is(svg,.ico){color:inherit}
+html:root:root:root[data-v427-tema=claro] body :is(#app#app,#dt394-drawer#dt394-drawer,#wf-chat-panel#wf-chat-panel,#v4-bnav#v4-bnav) .cl568-tx.cl568-tx{color:var(--ds-tx)!important;-webkit-text-fill-color:var(--ds-tx)!important}

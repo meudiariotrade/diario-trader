@@ -78,28 +78,28 @@
     }, 0);
     return s;
   }
+  function abertoVivo() { var ab = g(function () { return hojeAberto(); }, null); return ab && ab.n ? ab : null; }
+  function notaTxt(ab) { return 'ao vivo · ' + brl(ab.pl) + ' em ' + ab.n + ' posição' + (ab.n === 1 ? '' : 'ões') + ' aberta' + (ab.n === 1 ? '' : 's'); }
+  // Usados pelos cartões de resultado (Início e Meu dia) já na montagem: o valor sai certo, sem piscar.
+  root.vivoDia = function (x) { var ab = abertoVivo(); return ab ? (+x || 0) + ab.pl : x; };
+  root.vivoNota = function () { var ab = abertoVivo(); return ab ? '<em class="v563-vivo">' + notaTxt(ab) + '</em>' : ''; };
+  // Entre uma montagem e outra, a cotação muda: atualiza só o número e a nota.
   function pintaResultado() {
     var t0 = aba(); if (t0 !== 'home' && t0 !== 'dia') return;
-    var ab = g(function () { return hojeAberto(); }, null);
-    var rotulos = doc.querySelectorAll('#app:not(.v503-fantasma) :is(.v4-kpis,.v4-rows) > div > :is(small,span)');
-    var fech = null;
-    for (var i = 0; i < rotulos.length; i++) {
-      var r = rotulos[i], txt = r.textContent.trim();
-      if (txt !== 'Resultado do dia' && txt !== 'P&L do dia') continue;
-      var box = r.parentElement, val = box && box.querySelector(':scope > :is(strong,b)');
-      if (!val) continue;
-      var nota = box.querySelector(':scope > .v563-vivo');
-      if (!ab || !ab.n) { if (nota) nota.remove(); if (val.dataset.v563) { delete val.dataset.v563; val.style.color = ''; } continue; }
-      if (!/\d/.test(val.textContent) && !val.dataset.v563) continue; // valores escondidos (olho)
-      if (fech == null) fech = fechadoHoje();
-      var tot = fech + ab.pl, novo = brl(tot);
-      if (val.textContent !== novo) val.textContent = novo;
-      val.dataset.v563 = '1';
-      val.style.color = tot > 0 ? 'var(--ds-up)' : tot < 0 ? 'var(--ds-down)' : '';
-      if (!nota) { nota = doc.createElement('em'); nota.className = 'v563-vivo'; box.appendChild(nota); }
-      var t2 = 'ao vivo · ' + brl(ab.pl) + ' em ' + ab.n + ' posição' + (ab.n === 1 ? '' : 'ões') + ' aberta' + (ab.n === 1 ? '' : 's');
-      if (nota.textContent !== t2) nota.textContent = t2;
-    }
+    var ab = abertoVivo();
+    doc.querySelectorAll('#app:not(.v503-fantasma) [data-v568-base]').forEach(function (val) {
+      if (!/\d/.test(val.textContent)) return; // valores escondidos (olho)
+      var base = +val.getAttribute('data-v568-base') || 0, tot = ab ? base + ab.pl : base;
+      if (val.dataset.v568Tot === String(tot)) return;
+      if (val.dataset.v568Tot !== undefined || ab) {
+        val.textContent = brl(tot);
+        val.style.color = tot > 0 ? 'var(--ds-up)' : tot < 0 ? 'var(--ds-down)' : '';
+      }
+      val.dataset.v568Tot = String(tot);
+      var box = val.parentElement, nota = box.querySelector('.v563-vivo');
+      if (ab) { if (!nota) { nota = doc.createElement('em'); nota.className = 'v563-vivo'; val.after(nota); } var t2 = notaTxt(ab); if (nota.textContent !== t2) nota.textContent = t2; }
+      else if (nota) nota.remove();
+    });
   }
   function aplica() {
     try { if (typeof lvcPaint === 'function') lvcPaint(); } catch (e) { /* sem painel */ }
@@ -201,5 +201,13 @@
   function fila() { if (!q) { q = 1; setTimeout(monta, 150); } }
   new MutationObserver(fila).observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
   fila();
+  // v568: aplica logo depois de cada render (antes da pintura) para o resultado ao vivo não piscar.
+  function gancho() {
+    if (typeof root.render0 !== 'function' || root.render0.__v568) return;
+    var prev = root.render0;
+    var f = function () { var r = prev.apply(this, arguments); try { pintaResultado(); } catch (e) { /* sem tela */ } return r; };
+    f.__v568 = 1; root.render0 = f;
+  }
+  gancho(); setInterval(gancho, 2000);
   root.DiarioAjustes564 = { poll: poll, abreCapital: abreCapital };
 })(window, document);

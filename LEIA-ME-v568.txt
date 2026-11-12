@@ -1,0 +1,4 @@
+Diário Trader v568 — tema claro inteiro e resultado ao vivo sem piscar
+
+- Tema claro: varredura em todas as telas (exceto o Terminal, que é escuro por desenho). Blocos pretos herdados do tema escuro viram superfícies claras; seleção em âmbar claro; textos claros ficam escuros. Conferido em Início, Meu dia, Operações, Day trade, Swing, Opções, Diário, Carteira, Imposto de renda, Estudos, Configurações, Plano de transição, Checklist, Ao vivo e todas as abas do Mercado.
+- "Resultado do dia" já sai calculado com as posições abertas na montagem da tela (Início e Meu dia): parou de alternar entre R$ 0,00 e o valor ao vivo.
