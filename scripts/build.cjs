@@ -1,4 +1,4 @@
-// A publicação atual já contém bundles gerados. Empacota-os sem tentar regenerar fontes históricos.
+// Empacota exclusivamente os bundles conferidos contra as fontes da versão atual.
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -7,6 +7,11 @@ const { JSDOM } = require('jsdom');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, '_site');
 const asset = /\.(html|js|css|png|jpe?g|webp|gif|svg|ico|ttf|otf|woff2?|wasm|webmanifest|mp3|mp4|wav|pdf)$/i;
+function assetFiles(directory = 'assets') {
+  const absolute = path.join(root,directory);
+  if (!fs.existsSync(absolute)) return [];
+  return fs.readdirSync(absolute,{withFileTypes:true}).flatMap(e => e.isDirectory() ? assetFiles(directory+'/'+e.name) : e.isFile() && asset.test(e.name) ? [directory+'/'+e.name] : []);
+}
 
 function localFile(value) {
   if (/^(?:https?:|data:|blob:|#)/i.test(value)) return null;
@@ -38,7 +43,7 @@ function validate() {
     }
   }
   // Histórico permanece no repositório. Publica bundles antigos apenas se forem referenciados.
-  const files = publicationFiles(fs.readdirSync(root).filter(f => asset.test(f)), required);
+  const files = publicationFiles(fs.readdirSync(root).filter(f => asset.test(f)), required).concat(assetFiles());
   for (const file of files.filter(f => f.endsWith('.js'))) {
     new vm.Script(fs.readFileSync(path.join(root, file), 'utf8'), { filename: file });
   }
@@ -51,14 +56,15 @@ function build() {
   const files = validate();
   fs.rmSync(output, { recursive: true, force: true });
   fs.mkdirSync(output);
-  for (const file of files) fs.copyFileSync(path.join(root, file), path.join(output, file));
+  for (const file of files) { fs.mkdirSync(path.dirname(path.join(output,file)),{recursive:true}); fs.copyFileSync(path.join(root, file), path.join(output, file)); }
   for (const file of fs.readdirSync(root).filter(f => /^LICENSE.*\.txt$/.test(f) || f === 'CNAME')) {
     fs.copyFileSync(path.join(root, file), path.join(output, file));
   }
   fs.writeFileSync(path.join(output, '.nojekyll'), '');
-  const critical = ['index.html', 'sw.js', 'nucleo-v560.js', 'camadas-v560.js', 'estilo-v560.css', 'capa-v560.js', 'navegacao-simples.js','terminal-inicio.js','terminal-comandos.js','projeto-2027.js','aulas-recuperacao.js'];
+  const critical = ['index.html', 'sw.js', 'nucleo-v560.js', 'camadas-v560.js', 'estilo-v560.css', 'capa-v560.js', 'navegacao-simples.js','terminal-inicio.js','terminal-comandos.js','projeto-2027.js','aulas-recuperacao.js','version.js','sync-recovery.js','chunks.js','pdf-documentos.js'];
   const hashes = Object.fromEntries(critical.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(output, file))).digest('hex')]));
-  fs.writeFileSync(path.join(output, 'publicacao.json'), JSON.stringify({ commit: process.env.GITHUB_SHA || null, files: hashes }));
+  const release = JSON.parse(fs.readFileSync(path.join(root,'release.config.json'),'utf8'));
+  fs.writeFileSync(path.join(output, 'publicacao.json'), JSON.stringify({ version:release.version, base:release.base, commit: process.env.GITHUB_SHA || null, files: hashes }));
   console.log(`Publicação preparada: ${files.length} arquivos estáticos em _site/.`);
 }
 module.exports = { validate, build, localFile, publicationFiles };

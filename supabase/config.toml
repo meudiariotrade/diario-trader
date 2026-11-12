@@ -1,0 +1,73 @@
+project_id = "diario-trader"
+
+[functions.screener]
+verify_jwt = false
+
+[functions.precos]
+verify_jwt = false
+
+[functions.analise]
+verify_jwt = false
+
+[functions.noticias]
+verify_jwt = false
+
+[functions.notificar]
+verify_jwt = false
+
+[functions.adrs]
+verify_jwt = false
+
+[functions.juros]
+verify_jwt = false
+
+[functions.resumo]
+verify_jwt = false
+
+[functions.candles]
+verify_jwt = false
+
+[functions.radar]
+verify_jwt = false
+
+[functions.sentimento]
+verify_jwt = false
+
+[functions.macro]
+verify_jwt = false
+
+[functions.conta]
+verify_jwt = false
+
+[functions.ewz]
+verify_jwt = false
+
+[functions.terminal]
+verify_jwt = false
+
+[functions.aulas]
+verify_jwt = false
+
+[functions.aulas-visuais]
+verify_jwt = false
+
+[functions.aulas-voz]
+verify_jwt = false
+
+[functions.sazonal-extras]
+verify_jwt = true
+
+[functions.series]
+verify_jwt = false
+
+[functions.email-semana]
+verify_jwt = false
+
+[functions.movimentos]
+verify_jwt = false
+
+[functions.insiders]
+verify_jwt = false
+
+[functions.mesa]
+verify_jwt = false

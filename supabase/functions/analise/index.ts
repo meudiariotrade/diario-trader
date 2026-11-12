@@ -1,3 +1,5 @@
+import { numerosFato, validaRelatorio } from './validacao.ts';
+export { numerosFato, validaRelatorio };
 
 /** Calendário B3: fins de semana, feriados fixos, móveis e encerramentos de fim de ano. */
 export function b3SemPregao(dia: string): boolean {
@@ -3279,41 +3281,6 @@ export function normalizaCons(j: any) {
   return o;
 }
 
-// ---------- validação: todo número citado como FATO precisa existir nos dados ----------
-/** números de um texto em pt-BR ("1.234,56", "12,5%", "-3,2") ou en ("0.85") */
-export function numerosFato(s: string): number[] {
-  const out: number[] = [];
-  for (const m of String(s || '').matchAll(/-?\d{1,3}(?:\.\d{3})+(?:,\d+)?(?!\d)|-?\d+\.\d+|-?\d+(?:,\d+)?/g)) {
-    let t = m[0];
-    if (/\.\d{3}/.test(t) && (t.includes(',') || /^-?\d{1,3}(\.\d{3})+$/.test(t))) t = t.replace(/\./g, '');
-    out.push(parseFloat(t.replace(',', '.')));
-  }
-  return out.filter((x) => isFinite(x));
-}
-function c_numerosDados(d: unknown, acc: number[] = []): number[] {
-  if (typeof d === 'number' && isFinite(d)) acc.push(d);
-  else if (typeof d === 'string') numerosFato(d).forEach((x) => acc.push(x));
-  else if (Array.isArray(d)) d.forEach((x) => c_numerosDados(x, acc));
-  else if (d && typeof d === 'object') Object.values(d).forEach((x) => c_numerosDados(x, acc));
-  return acc;
-}
-const c_confere = (x: number, base: number[]) => {
-  const ax = Math.abs(x);
-  if (Number.isInteger(x) && ((ax >= 1990 && ax <= 2100) || ax <= 12)) return true; // anos, meses, contagens pequenas
-  return base.some((b) => { const ab = Math.abs(b); return Math.abs(ax - ab) <= Math.max(0.051, ab * 0.006) || Math.abs(ax - ab * 100) <= Math.max(0.051, ab * 0.6) || Math.abs(ax * 1000 - ab) <= ab * 0.006 || Math.abs(ax * 1e6 - ab) <= ab * 0.006 || Math.abs(ax * 1e9 - ab) <= ab * 0.006; });
-};
-export function validaRelatorio(rel: any, dados: unknown, lacunas: string[]) {
-  const base = c_numerosDados(dados), problemas: string[] = [];
-  const varre = (o: any, cam: string) => {
-    if (!o || typeof o !== 'object') return;
-    if (Array.isArray(o.fatos)) o.fatos.forEach((f: string) => { const ruins = numerosFato(f).filter((x) => !c_confere(x, base)); if (ruins.length) problemas.push(`${cam}: número sem origem nos dados (${ruins.slice(0, 3).map((x) => String(x).replace('.', ',')).join('; ')}) em "${f.slice(0, 120)}"`); });
-    Object.entries(o).forEach(([k, v]) => { if (v && typeof v === 'object' && !Array.isArray(v)) varre(v, cam ? cam + '.' + k : k); });
-  };
-  varre(rel, '');
-  const estado = problemas.length ? 'revisar' : lacunas.length ? 'com_limitacoes' : 'validado';
-  return { estado, problemas: problemas.slice(0, 10), lacunas: lacunas.slice(0, 10), conferidos: base.length };
-}
-
 // ===== segurança =====
 // seguranca.ts — login obrigatório, limite de uso por pessoa e comparação de segredo em tempo constante.
 // Copiado em cada função (cada função do Supabase é publicada sozinha). Testes em seguranca.test.ts.
@@ -3366,7 +3333,7 @@ export function pushOk(u: unknown): boolean {
 }
 
 /** Versão das funções: o app compara com a dele na tela "Status do sistema". */
-export const VERSAO_FN = 'v300';
+export const VERSAO_FN = 'v563';
 /** ALLOWED_ORIGINS aceita o endereço escrito com caminho ou barra no final ("https://x.github.io/diario-trader/" vira "https://x.github.io"). */
 export const origemLimpa = (x: string) => { const s = String(x || '').trim(); if (!s) return ''; try { return new URL(s).origin; } catch { return s.replace(/\/+$/, ''); } };
 /** GET ?versao=1: responde só o nome e a versão da função (nenhum dado de ninguém), para o diagnóstico do app. */
@@ -5100,16 +5067,37 @@ Deno.serve(async (req) => {
       const ref = hoje(), prazo = Math.min(ate, Date.now() + Math.max(30_000, Math.min(+b.ms || 100_000, 140_000)));
       const e0 = C?.estado && C.estado.ref === ref ? C.estado : { ref, feitos: [], reap: [], falhas: [], cons: null, ini: gerado };
       const pend = () => itens.filter((x: any) => x.q > 0 && familia(x.cl) !== 'rf' && ![...e0.feitos, ...e0.reap, ...e0.falhas.map((f: any) => f.tk)].includes(x.tk));
+      let processados = 0;
       for (const it of pend()) {
+        if ((e0.tentativas?.[it.tk] || 0) >= 3) {
+          e0.falhas.push({tk:it.tk,erro:'Três tentativas interrompidas; consulte o diagnóstico.'});
+          delete e0.executando; await cartEstado(dono,e0); continue;
+        }
+        if ((e0.retentativas?.[it.tk]?.apos || 0) > Date.now()) continue;
+        if (processados >= 1) break;
+        processados++;
         if (prazo - Date.now() < 35_000) break;
         if (doCron && e0.feitos.length >= CART_MAX_DIA) { e0.reap.push(it.tk); continue; }
-        try { const r = await relAtivo(dono, it, { ate: prazo, origem: doCron ? 'agendado' : 'app', mac, lim }); (r.reaproveitado ? e0.reap : e0.feitos).push(it.tk); }
-        catch (e) { e0.falhas.push({ tk: it.tk, erro: (e as Error).message.slice(0, 140) }); if (/Limite diário/.test((e as Error).message)) break; }
-        await cartEstado(dono, e0);
+        e0.executando = it.tk;
+        e0.tentativas ||= {}; e0.tentativas[it.tk] = (e0.tentativas[it.tk] || 0) + 1;
+        await cartEstado(dono,e0);
+        try {
+          const r = await relAtivo(dono, it, { ate: prazo, origem: doCron ? 'agendado' : 'app', mac, lim });
+          (r.reaproveitado ? e0.reap : e0.feitos).push(it.tk);
+          if (e0.retentativas) delete e0.retentativas[it.tk];
+        } catch (e) {
+          const erro = String((e as Error).message || e).slice(0,140);
+          if (e0.tentativas[it.tk] < 3 && /503|502|429|timeout|timed out|demanda|indispon|fetch|network/i.test(erro)) {
+            e0.retentativas ||= {}; e0.retentativas[it.tk] = {erro,apos:Date.now()+60000};
+          } else e0.falhas.push({tk:it.tk,erro});
+        }
+        delete e0.executando; await cartEstado(dono, e0);
       }
-      if (!pend().length && !e0.cons && prazo - Date.now() >= 30_000 && itens.some((x: any) => x.q > 0)) {
+      if (!processados && !pend().length && !e0.cons && (e0.cons_tentativas || 0) < 3 && (e0.cons_proxima || 0) <= Date.now() && prazo - Date.now() >= 30_000 && itens.some((x: any) => x.q > 0)) {
+        e0.cons_tentativas = (e0.cons_tentativas || 0) + 1;
+        delete e0.erro_cons; await cartEstado(dono,e0);
         try { const row = await relConsolidado(dono, itens, cfg.metricas || null, { ate: prazo, origem: doCron ? 'agendado' : 'app', mac, lim, reaproveitados: e0.reap }); e0.cons = row.id; e0.fim = new Date().toISOString(); }
-        catch (e) { e0.erro_cons = (e as Error).message.slice(0, 160); }
+        catch (e) { e0.erro_cons = (e as Error).message.slice(0, 160); e0.cons_proxima = Date.now()+60000; }
         await cartEstado(dono, e0);
       }
       return out({ ...e0, pendentes: pend().map((x: any) => x.tk), gerado });
@@ -5216,6 +5204,3 @@ Deno.serve(async (req) => {
     return out({ erro: (e as Error).message }, 500);
   }
 });
-
-
-

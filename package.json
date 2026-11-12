@@ -1,13 +1,14 @@
 {
   "name": "diario-trader",
-  "version": "311.0.0",
+  "version": "563.0.0",
   "private": true,
   "scripts": {
-    "build": "node scripts/build.cjs",
-    "build:check": "node scripts/build.cjs --check",
-    "check": "npm run build:check",
+    "build": "npm run bundle && node scripts/build.cjs",
+    "build:check": "node scripts/generate-bundles.cjs --check && node scripts/build.cjs --check",
+    "check": "npm run build:check && node scripts/check-backend.cjs",
     "test": "node --test tests/*.test.cjs test-*.cjs",
-    "verify": "npm run check && npm test"
+    "verify": "npm run check && npm test",
+    "bundle": "node scripts/generate-bundles.cjs"
   },
   "devDependencies": {
     "acorn": "8.15.0",

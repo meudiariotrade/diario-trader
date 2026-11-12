@@ -1,0 +1,247 @@
+{
+  "base": "b68544f47dee819021ee518ab89878458825eb4e",
+  "functions": [
+    {
+      "name": "screener",
+      "version": 26,
+      "verify_jwt": false,
+      "sha256": "23cb12397100d9f85ef147d9499c133505b13ab723a963d85c0395ae484ea538",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "precos",
+      "version": 25,
+      "verify_jwt": false,
+      "sha256": "1e93bd59852adcc6fe847359d90b62b652146a6620e641cad50ae97983fd5f5c",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "analise",
+      "version": 92,
+      "verify_jwt": false,
+      "sha256": "c70d5268c3944f9357fe8b84b4b750d67e02bbe1d7eeacd383243c1f9dec4ee0",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "noticias",
+      "version": 16,
+      "verify_jwt": false,
+      "sha256": "4c4e081301e5c934b3b4c79e15714ad939c8e7da7bf4abf6b41c9c4dd981231d",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "notificar",
+      "version": 58,
+      "verify_jwt": false,
+      "sha256": "98897fe57e006e82a4fddf6bae5c234d0d42f1ce7bb357e262b1fdba12cb43f7",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "adrs",
+      "version": 16,
+      "verify_jwt": false,
+      "sha256": "7ce6d6027c38da2796ad08ce4316b76f521fa696ab7a545800f33df4f622ddd4",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "juros",
+      "version": 20,
+      "verify_jwt": false,
+      "sha256": "f4e0c2ed530824e6a114f4e744bad731e660fefdd48cf09e3d2385adc738c666",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "resumo",
+      "version": 16,
+      "verify_jwt": false,
+      "sha256": "05df18085a7bfed0ba6993e3e11010f3b649df9e2f5b4d0e14e3adca934fc194",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "candles",
+      "version": 17,
+      "verify_jwt": false,
+      "sha256": "ef7b4070258a34f225782f4a701f2bf4bb2c6da0522cf18943ede26ea8f61618",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "radar",
+      "version": 18,
+      "verify_jwt": false,
+      "sha256": "a6579fe67be4aeb30b4e7b86fdc1603416c0e9405c0b5b36b4a5a481d7272cdb",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "sentimento",
+      "version": 11,
+      "verify_jwt": false,
+      "sha256": "cd178a415b90b24089f7e75c91d04613900a079e2bb46a4d763a914099a2192f",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "macro",
+      "version": 44,
+      "verify_jwt": false,
+      "sha256": "87b73658b5e877ea96d21c3e985bacb812874ce0b078502889754703687917da",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts",
+        "sazonal-us.ts"
+      ]
+    },
+    {
+      "name": "conta",
+      "version": 6,
+      "verify_jwt": false,
+      "sha256": "b80a4725bd45384d4a8c6c6e0ef65d7bca1f01b78c3a3d42f1ed120ff681d100",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts",
+        "storage.ts"
+      ]
+    },
+    {
+      "name": "ewz",
+      "version": 3,
+      "verify_jwt": false,
+      "sha256": "cdd506028f4c82cb84cb363bc60919446b268132734f86a5cec3689444281fde",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "terminal",
+      "version": 17,
+      "verify_jwt": false,
+      "sha256": "3fc4bd7e3703db522c1cfc9ee15f868bf782c6ac07f228453bfa1f1ac8437683",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "aulas",
+      "version": 14,
+      "verify_jwt": false,
+      "sha256": "abeef2673ef53a96af28e1bdec4d43425f35230d35b17916c3a389cf1001cf68",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "aulas-visuais",
+      "version": 4,
+      "verify_jwt": false,
+      "sha256": "7397e19aa17580c73762d03a86f673aca48f351e13eee36a27f9b1cc9b7214a0",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "aulas-voz",
+      "version": 2,
+      "verify_jwt": false,
+      "sha256": "057752f628ebefffe1e3816e4f514817a9205048115e66baca8df0a25b876995",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "sazonal-extras",
+      "version": 2,
+      "verify_jwt": true,
+      "sha256": "07a0a2400b2bd3b0f5c0b7b60ab0ae118b1516d2c5e85bffbfa686f185cd4840",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "series",
+      "version": 2,
+      "verify_jwt": false,
+      "sha256": "84b260d8b8f3b809847f31d5f38eefe9706a1c721473ae231edd40fc72bdccd0",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "email-semana",
+      "version": 4,
+      "verify_jwt": false,
+      "sha256": "ad9e8aca6e40f46b03e70e36a484e7af84c4e4e7e2345c58ff050b87cdf90fa3",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "movimentos",
+      "version": 9,
+      "verify_jwt": false,
+      "sha256": "5a4170ad21191eb1af8048ca3f81a8d4d734e9994373ed4d8a13cf89091a4636",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "insiders",
+      "version": 2,
+      "verify_jwt": false,
+      "sha256": "854dcb9cc06c06c871373038f29814269b666ccc27bea6b51270c6fd9834ae75",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    },
+    {
+      "name": "mesa",
+      "version": 2,
+      "verify_jwt": false,
+      "sha256": "e14b6b56ffc0aedce76dd2bd110e778ee93972e90be9bf22794d7559c5842a1c",
+      "entrypoint": "index.ts",
+      "files": [
+        "index.ts"
+      ]
+    }
+  ]
+}

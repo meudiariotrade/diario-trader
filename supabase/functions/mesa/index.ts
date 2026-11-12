@@ -5,6 +5,7 @@
 // Números (cotações, pivôs, maiores altas e baixas) são calculados aqui; a IA só escreve o texto.
 // Sem dado confiável → "–". Nunca inventar.
 
+import { edicaoSalva } from './fallback.ts';
 const SB = Deno.env.get('SUPABASE_URL') || '';
 const SB_SVC = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const SB_ANON = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -16,7 +17,7 @@ const modeloAtual = (nome: string) => {
 };
 const MODELO = modeloAtual(Deno.env.get('GEMINI_MODEL_MESA') || Deno.env.get('GEMINI_MODEL_JORNAL') || Deno.env.get('GEMINI_MODEL') || 'gemini-3.6-flash');
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
-const VERSAO = 'mesa-v562';
+const VERSAO = 'mesa-v563';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -214,11 +215,13 @@ Deno.serve(async (req) => {
   let b: any = {};
   try { b = await req.json(); } catch { /* vazio */ }
   const ate = Date.now() + 140_000;
+  let ultimaSalva: any = null;
   try {
     const ed = await edicao(typeof b.chave === 'string' ? b.chave : undefined);
     if (!ed) return out({ erro: 'O Jornal de hoje ainda não foi gerado.' }, 404);
     const chave = 'mesa:' + ed.chave;
     const c = await cacheGet(chave);
+    ultimaSalva = edicaoSalva(c?.dados);
     const recente = c?.criado && Date.now() - Date.parse(c.criado) < 10 * 60_000;
     if (c?.dados?.capa && c.dados.versao === VERSAO && (!b.force || recente)) return out({ ...c.dados, cache: true });
 
@@ -263,6 +266,13 @@ Escreva o Jornal do Pregão no JSON pedido. Use os níveis calculados nos gatilh
     return out(dados);
   } catch (e) {
     console.error('mesa', e);
+    if (!ultimaSalva) {
+      try {
+        const resposta = await fetch(`${SB}/rest/v1/analise_cache?select=dados&chave=like.mesa%3Ajornal%3A*&order=criado.desc&limit=1`, {headers:svc(),signal:AbortSignal.timeout(4000)});
+        if (resposta.ok) ultimaSalva = edicaoSalva((await resposta.json())?.[0]?.dados);
+      } catch { /* mantém o erro original se não há edição guardada */ }
+    }
+    if (ultimaSalva) return out(ultimaSalva);
     return out({ erro: 'Não foi possível montar o Jornal do Pregão agora. ' + String((e as Error)?.message || '').slice(0, 160) }, 502);
   }
 });

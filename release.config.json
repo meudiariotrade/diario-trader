@@ -1,5 +1,5 @@
 {
-  "version": 311,
+  "version": 563,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -25,5 +25,17 @@
   ],
   "debug": [
     "app.js.map"
-  ]
+  ],
+  "base": "b68544f47dee819021ee518ab89878458825eb4e",
+  "bundles": {
+    "nucleo-v560.js": "src/app-core.js",
+    "camadas-v560.js": "src/app-layers.js",
+    "estilo-v560.css": "src/app-theme.css",
+    "pdf-documentos.js": "src/pdf-documentos.js",
+    "sw.js": "src/service-worker.js"
+  },
+  "templates": {
+    "index.html": "src/index.html",
+    "manifest.webmanifest": "src/manifest.webmanifest"
+  }
 }

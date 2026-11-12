@@ -53,6 +53,7 @@
       }
       if (!r.ok || !j.capa) throw new Error(j.erro || ('Erro ' + r.status));
       M.v = j;
+      M.err = j.desatualizado ? j.avisoAtualizacao || 'Exibindo a edição salva enquanto a atualização está indisponível.' : '';
       try { localStorage.setItem(LS, JSON.stringify(j)); } catch (x) { /* cheio */ }
     } catch (x) {
       M.err = x && x.name === 'AbortError' ? 'Demorou demais. Tente de novo.' : String((x && x.message) || x);

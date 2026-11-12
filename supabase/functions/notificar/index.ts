@@ -1,3 +1,4 @@
+import { entregar, retentar } from './entrega.ts';
 /** Calendário B3: fins de semana, feriados fixos, móveis e encerramentos de fim de ano. */
 export function b3SemPregao(dia: string): boolean {
  if(!/^\d{4}-\d{2}-\d{2}$/.test(dia))return true;
@@ -917,7 +918,7 @@ export function pushOk(u: unknown): boolean {
 }
 
 /** Versão das funções: o app compara com a dele na tela "Status do sistema". */
-export const VERSAO_FN = 'v299';
+export const VERSAO_FN = 'v563';
 /** ALLOWED_ORIGINS aceita o endereço escrito com caminho ou barra no final ("https://x.github.io/diario-trader/" vira "https://x.github.io"). */
 export const origemLimpa = (x: string) => { const s = String(x || '').trim(); if (!s) return ''; try { return new URL(s).origin; } catch { return s.replace(/\/+$/, ''); } };
 /** GET ?versao=1: responde só o nome e a versão da função (nenhum dado de ninguém), para o diagnóstico do app. */
@@ -1134,21 +1135,7 @@ async function eventos(): Promise<Ev[]> {
 }
 
 // ---------- envio ----------
-async function envia(row: { id: string; sub: any }, payload: Record<string, unknown>, chave?: string) {
-  if (chave) {
-    const { error } = await (await db()).from('push_log').insert({ chave });
-    if (error) return false; // já enviado (chave duplicada)
-  }
-  try {
-    await (await push()).sendNotification(row.sub, JSON.stringify(payload), { TTL: 900, urgency: 'high' });
-    return true;
-  } catch (e) {
-    const sc = (e as { statusCode?: number }).statusCode;
-    if (sc === 404 || sc === 410) await (await db()).from('push_subs').delete().eq('id', row.id);
-    else console.error('push falhou', sc, (e as Error).message);
-    return false;
-  }
-}
+async function envia(row: {id:string;sub:any},payload:Record<string,unknown>,chave?:string){return entregar(await db(),async(sub,p)=>{await(await push()).sendNotification(sub,JSON.stringify(p),{TTL:900,urgency:'high'})},row,payload,chave)}
 
 /** Preço com atraso do Yahoo (ações da B3 com .SA), guardado por 2 minutos. */
 const cPx = new Map<string, { ts: number; v: number | null }>();
@@ -1211,6 +1198,7 @@ async function fotoPanorama(slot: string): Promise<number | null> {
   return data?.id ?? null;
 }
 async function tick() {
+  const reenviados=await retentar(await db(),async(sub,p)=>{await(await push()).sendNotification(sub,JSON.stringify(p),{TTL:900,urgency:'high'})});
   const now = new Date();
   const P = Object.fromEntries(
     new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
@@ -1224,7 +1212,7 @@ async function tick() {
   if (!subs || !subs.length) return { enviados: 0 };
   let evs: Ev[] = [];
   try { evs = await eventos(); } catch (_) { /* segue só com os checklists */ }
-  let n = 0;
+  let n = reenviados;
   const abre = aberturas(dia);
   // cotações da ponte do Profit (só se alguém tiver trade aberto com stop/alvo)
   let cot: Record<string, number> | null = null;
@@ -1396,14 +1384,14 @@ async function tick() {
   if (util && !b3SemPregao(dia) && !CART_RODANDO) {
     let cfgs: any[] = [];
     try { const { data } = await (await db()).from('carteira_cfg').select('user_id,cfg,estado'); cfgs = (data || []).filter((r: any) => r.cfg && r.cfg.on === true); } catch { /* sem a tabela */ }
-    const vez = cfgs.find((r: any) => { const ini = fechB3(dia) + Math.max(10, Math.min(120, +r.cfg.off || 20)); const e = r.estado && r.estado.ref === dia ? r.estado : null; return agora >= ini && agora < ini + 150 && !(e && (e.cons || e.erro_cons)); });
+    const vez = cfgs.find((r: any) => { const ini = fechB3(dia) + Math.max(10, Math.min(120, +r.cfg.off || 20)); const e = r.estado && r.estado.ref === dia ? r.estado : null; return agora >= ini && agora < ini + 150 && !(e && (e.cons || (e.erro_cons && (e.cons_tentativas || 0) >= 3))); });
     if (vez) {
       CART_RODANDO = true; const t0 = Date.now();
       try {
         const r = await chamaAnalise({ modo: 'carteira_auto', uid: vez.user_id, ms: 95_000 });
         const e = r.j || {};
         await logAuto('carteira', r.ok && !e.erro, r.ok ? `${dia}: ${e.feitos?.length || 0} relatório(s) novo(s), ${e.reap?.length || 0} sem mudança, ${e.pendentes?.length || 0} pendente(s)${e.cons ? ', consolidado pronto' : ''}${e.erro_cons ? ', consolidado falhou: ' + e.erro_cons : ''}` : `${dia}: ${e.erro || 'erro ' + r.status}`, Date.now() - t0);
-        if ((e.cons || e.erro_cons) && !CART_AVISO.has(vez.user_id + dia)) {
+        if ((e.cons || (e.erro_cons && (e.cons_tentativas || 0) >= 3)) && !CART_AVISO.has(vez.user_id + dia)) {
           CART_AVISO.add(vez.user_id + dia);
           for (const x of (subs as any[]).filter((y: any) => y.user_id === vez.user_id)) if (await envia(x, e.cons ? { title: '📊 Relatório da carteira pronto', body: `${e.feitos?.length || 0} ativo(s) com relatório novo, ${e.reap?.length || 0} sem mudança relevante. Toque para ler.`, tag: 'cart', data: { go: 'carteiras', r: String(e.cons) } } : { title: '⚠️ Relatório da carteira não saiu', body: String(e.erro_cons).slice(0, 140), tag: 'cart', data: { go: 'carteiras' } }, `${x.id}|cart|${dia}`)) n++;
         }

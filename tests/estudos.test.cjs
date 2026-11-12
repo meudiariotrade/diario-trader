@@ -18,7 +18,7 @@ function functions(file) {
   walk(acorn.parse(source, { ecmaVersion: 'latest' }));
   return result;
 }
-const original = functions('app.js'), bundle = functions('nucleo-v560.js');
+const original = functions('src/app-core.js'), bundle = functions('nucleo-v560.js');
 const shared = ['estMeta', 'estDefinirMeta', 'estSalva', 'estRegHtml', 'estSessoesDisponiveis', 'estAtualizaSessoes', 'semEstudo', 'estDesemp', 'estSeq', 'estMapa', 'estCicloCalc', 'estHoje', 'estProximasAcoes', 'estConq'];
 function context() {
   const logs = [], records = [], revisions = [], messages = [], fields = {};
@@ -40,7 +40,8 @@ function context() {
 }
 
 test('o runtime e o fonte usam exatamente as mesmas regras de Estudos', () => {
-  for (const name of shared) assert.equal(bundle[name], original[name], name);
+  const {normalized}=require('./helpers/source.cjs');
+  for (const name of shared) assert.deepEqual(normalized(bundle[name]), normalized(original[name]), name);
 });
 test('vincular uma sessão mantém 15 minutos, salva notas e agenda revisões sem duplicar tempo', () => {
   const { ctx, logs, fields, records, revisions } = context();

@@ -192,4 +192,3 @@ Deno.serve(async (req) => {
     return out(v);
   } catch (e) { return out({ error: (e as Error).message }, 500); }
 });
-

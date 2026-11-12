@@ -12,6 +12,7 @@ async function verifyPublished(base, commit, request = fetch) {
   const manifest = JSON.parse((await read('publicacao.json')).toString('utf8'));
   if (manifest.commit !== commit) throw new Error('O site ainda entrega outro commit.');
   const mandatory = ['index.html', 'sw.js', 'nucleo-v560.js', 'camadas-v560.js', 'estilo-v560.css', 'capa-v560.js', 'navegacao-simples.js','terminal-inicio.js','terminal-comandos.js','projeto-2027.js','aulas-recuperacao.js'];
+  if (manifest.version >= 563) mandatory.push('version.js','sync-recovery.js','chunks.js','pdf-documentos.js');
   for (const file of mandatory) {
     const expected = manifest.files?.[file];
     if (!/^[a-f0-9]{64}$/.test(expected || '')) throw new Error('Hash ausente: ' + file);
