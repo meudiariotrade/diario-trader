@@ -1,0 +1,3 @@
+Diário Trader v580
+
+- Mercado: puxar a tela para baixo no topo não recarrega mais a página (a tela parava de pular, piscar o menu e voltar de aba).
