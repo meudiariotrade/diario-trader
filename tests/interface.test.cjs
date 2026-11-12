@@ -9,10 +9,10 @@ test('interface real: fotos obrigatórias, navegação e cabeçalho em telas peq
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base + '/?demo=1');
     await page.locator('#splash').waitFor({ state: 'hidden' });
-    await page.getByRole('button', { name: 'Registrar trade', exact: true }).waitFor();
+    await page.locator('#fabm [data-a="new"][data-tp="D"]').waitFor({ state: 'attached' });
     assert.ok(await page.locator('#wf-demo-banner').isVisible());
     assert.equal(await page.locator('#tape').isVisible(), false);
-    await page.getByRole('button', { name: 'Registrar trade', exact: true }).click();
+    await page.evaluate(() => document.querySelector('#fabm [data-a="new"][data-tp="D"]').click()); // v563: sem atalho no Início
     await page.getByText(/Antes de registrar trade novo, coloque as fotos/).waitFor();
     assert.equal(await page.locator('#sh input[name="entry"]').count(), 0);
     const title = await page.locator('.dt393-title').evaluate(el => ({ text: el.textContent, width: el.clientWidth, full: el.scrollWidth }));

@@ -1,7 +1,7 @@
 const{test}=require('node:test');const assert=require('node:assert/strict');const{expect}=require('playwright/test');const{withApp}=require('./helpers/app.cjs');
 test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e no celular',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const p=await browser.newPage({viewport:{width:1440,height:1000}}),app=p.locator('#app:not(.v503-fantasma)');const errors=[];p.on('pageerror',e=>errors.push(e.message));
- await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.getByRole('button',{name:'Abrir Terminal',exact:true}).click();
+ await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="term"]').first().click());
  await expect(app.locator('#terminal-inicio')).toBeVisible();await expect(app.locator('.simple-terminal-intro,.simple-terminal-more')).toHaveCount(0);
  await expect(app.locator('.tf415-nav button:visible')).toHaveText(['Início','Gráficos','Painéis']);
  for(const cmd of ['GLOBAL','MON','NEWSBR','DIFUT','ECO'])await expect(app.locator('.tf415-nav [data-tf415-nav="'+cmd+'"]')).toBeHidden();

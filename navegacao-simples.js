@@ -25,20 +25,15 @@
   const h=app.querySelector('.v4-home');if(!h||h.dataset.simpleHome)return;
   const shortcuts=h.querySelector('.v4-short'),summary=h.querySelector('.v4-summary');if(!shortcuts||!summary)return;
   h.dataset.simpleHome='1';
-  const card=shortcuts.closest('section'),heading=card.querySelector('h2 span');text(heading,'Comece por aqui');
-  const actions=el('div',null,'simple-actions');
-  for(const selector of ['[data-dt393-route="term"]','[data-dt393-action="newtrade"]','[data-dt393-route="stats"]']){
-   const b=shortcuts.querySelector(selector);if(b){if(b.dataset.dt393Route==='stats')text(b.querySelector('span'),'Revisar meu dia');actions.append(b)}
-  }
-  shortcuts.before(actions);wrap(shortcuts,'Outros atalhos');summary.after(card);
+  // v563: sem "Comece por aqui" e atalhos no Início; o Terminal fica no menu.
+  shortcuts.closest('section')?.remove();
   const tiles=h.querySelector('.v4-tiles');wrap(tiles,'Explorar todas as áreas','simple-explore');
   const ia=h.querySelector('.v4-iacard');if(ia){
    text(ia.querySelector('[data-v4ia]'),'Perguntar à IA');
    text(ia.querySelector('.v4-sub'),'Encontre o que acompanhar. Abra a conversa quando quiser aprofundar.');
-   const links=ia.querySelector('.v4-ia');if(links)wrap(links,'Análises e ferramentas');
+   ia.querySelector('.v4-ia')?.remove();
    const panorama=h.querySelector('.v4-pano');
    if(panorama){const previous=panorama.closest('section');panorama.classList.remove('v4-pano');panorama.classList.add('simple-context');ia.querySelector('.v4-sub')?.after(panorama);if(previous&&previous!==ia)previous.remove()}
-   const next=el('button','Ver meu plano','simple-day-review');next.type='button';next.dataset.dt393Route='dia';ia.append(next);
   }
  }
  // v536: apresentação anterior do Terminal; somente menu e exclusividade dos modos.

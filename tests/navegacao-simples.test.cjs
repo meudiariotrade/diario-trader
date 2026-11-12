@@ -7,11 +7,9 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  const p=await browser.newPage({viewport:{width:390,height:844}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
  const app=p.locator('#app:not(.v503-fantasma)');
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
- await expect(app.locator('.simple-actions>button')).toHaveCount(3);
- await expect(app.getByRole('button',{name:'Registrar trade',exact:true})).toBeVisible();
- await app.getByRole('button',{name:'Registrar trade',exact:true}).click();
- await p.getByText(/Antes de registrar trade novo, coloque as fotos/).waitFor();
- await p.getByRole('button',{name:'Início',exact:true}).last().click();
+ // v563: Início sem "Comece por aqui" e sem atalhos; o Terminal fica no menu.
+ await expect(app.locator('.simple-actions')).toHaveCount(0);
+ await expect(app.locator('.simple-day-review')).toHaveCount(0);
  await expect(app.locator('.simple-explore')).not.toHaveAttribute('open');
  await app.locator('.simple-explore>summary').click();
  await expect(app.locator('.simple-explore [data-dt393-route="estudos"],.simple-explore [data-dt393-route="est"]')).toBeVisible();
@@ -20,7 +18,7 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  // Novo começo do Terminal preserva as preferências reais do GP.
  await p.evaluate(()=>{const state={a:'EWZ',b:'SPX',per:'6M',freq:'D',mode:'dual',ma:[],ev:true,table:false};localStorage.setItem('diario-v421-gp',JSON.stringify(state));localStorage.setItem('diario-v428-ctx',JSON.stringify({'T:GP':state}));});
  await p.reload();await p.locator('#splash').waitFor({state:'hidden'});
- await app.getByRole('button',{name:'Abrir Terminal',exact:true}).click();
+ await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="term"]').first().click());
  await expect(p.locator('body')).toHaveClass(/tf413-home/);
  await expect(app.locator('#terminal-inicio')).toBeVisible();
  await expect(app.locator('.simple-terminal-intro')).toHaveCount(0);

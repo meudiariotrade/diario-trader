@@ -141,15 +141,14 @@
 
   function html() {
     var v = M.v || (demo ? DEMO : null);
-    var bar = '<div class="m562-bar"><b>Jornal do Pregão</b><span class="m562-acoes">' +
-      (demo && !M.v ? '<span class="m562-demo">Exemplo fictício</span>' : '') +
-      (sessao() ? '<button type="button" class="btn s" data-m562="rf">' + (M.busy ? 'Montando…' : 'Atualizar') + '</button>' : '') +
-      '<button type="button" class="btn s" data-m562="ab" aria-expanded="' + (M.aberta ? 'true' : 'false') + '">' + (M.aberta ? 'Ocultar edição completa' : 'Edição completa') + '</button></span></div>';
+    var bar = '<div class="m562-bar">' +
+      (demo && !M.v ? '<span class="m562-demo">Exemplo fictício</span>' : '<span></span>') +
+      '<button type="button" class="btn s" data-m562="ab" aria-expanded="' + (M.aberta ? 'true' : 'false') + '">' + (M.aberta ? 'Ocultar edição completa' : 'Edição completa') + '</button></div>';
     if (!v) {
       var msg = M.busy ? 'Montando o Jornal do Pregão a partir da edição de hoje…' : M.err ? e(M.err) : sessao() ? 'O Jornal do Pregão aparece aqui assim que a edição do dia estiver pronta.' : 'Entre na sua conta para ver o Jornal do Pregão.';
       return bar + '<p class="m562-estado" role="status">' + msg + '</p>';
     }
-    var ed = edAtual(), velha = ed && v.dia && ed.dia && (ed.dia !== v.dia || (ed.edicao && v.edicao && ed.edicao !== v.edicao));
+    var ed = edAtual(), velha = !!M.v && ed && v.dia && ed.dia && (ed.dia !== v.dia || (ed.edicao && v.edicao && ed.edicao !== v.edicao));
     return bar + (M.err ? '<p class="m562-estado erro" role="alert">' + e(M.err) + '</p>' : '') +
       (velha && !M.busy ? '<p class="m562-estado">Há uma edição mais nova do Jornal. <button type="button" class="lnk" data-m562="rf">Montar agora</button></p>' : '') +
       capa(v) + plano(v) + macro(v) + radar(v) + agenda(v);
@@ -160,7 +159,9 @@
     var box = document.getElementById('jrbox'); if (!box) return;
     pintando = true;
     var el = box.querySelector(':scope > .m562');
-    if (!el) { el = document.createElement('div'); el.className = 'm562'; box.insertBefore(el, box.firstChild); }
+    if (!el) { el = document.createElement('div'); el.className = 'm562'; }
+    var cab = box.querySelector(':scope > .jrcab');
+    if (cab) { if (cab.nextElementSibling !== el) cab.after(el); } else if (box.firstElementChild !== el) box.insertBefore(el, box.firstChild);
     el.innerHTML = html();
     box.classList.toggle('m562-so', !!(M.v || demo) && !M.aberta);
     pintando = false;

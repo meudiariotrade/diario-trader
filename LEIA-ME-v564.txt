@@ -1,0 +1,12 @@
+Diário Trader v564 — ajustes
+
+- Jornal: um cabeçalho só (com PDF, Imagem, Capa do dia e Ouvir); o Jornal do Pregão vem logo abaixo.
+- Jornal do Pregão montado automaticamente pelo servidor a cada nova edição (agendado a cada 10 min).
+- Menu: Terminal e Imposto de renda com itens próprios. A busca do menu volta ao normal ao reabrir.
+- Início sem "Comece por aqui", atalhos, "Análises e ferramentas" e "Ver meu plano".
+- Importar do Profit agora fica em Operações (saiu de Configurações).
+- "Ajustar" e "Configurar" capital levam ao capital por modalidade em Operações (Day trade, Swing e Opções).
+- Removidas as telas "Metas, posição e backup" e "Dimensionamento de contratos".
+- Plano de transição sem Gastos, Reserva e Casamento, com etapas até sair da CLT.
+- Ao vivo pelo Profit: resultado do dia soma as posições abertas (atualiza a cada 10 s); a faixa de cotações usa a ponte para ações brasileiras e Ibovespa, com TradingView quando a ponte está desligada.
+- Tema claro: as linhas dos cartões voltam a aparecer (bordas usam os tokens de linha do tema).

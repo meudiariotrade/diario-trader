@@ -1,7 +1,7 @@
 const{test}=require('node:test');const assert=require('node:assert/strict');const{expect}=require('playwright/test');const{withApp}=require('./helpers/app.cjs');
 test('Terminal não oferece nem executa atalhos para telas externas, inclusive Fluxo EWZ e aliases',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const p=await browser.newPage({viewport:{width:390,height:1000}}),app=p.locator('#app:not(.v503-fantasma)'),errors=[];p.on('pageerror',e=>errors.push(e.message));
- await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.getByRole('button',{name:'Abrir Terminal',exact:true}).click();await expect(app.locator('#terminal-inicio')).toBeVisible();
+ await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="term"]').first().click());await expect(app.locator('#terminal-inicio')).toBeVisible();
  const snapshots=await p.evaluate(()=>({layouts:JSON.stringify(TRM.TS().wss),favorite:TRM.TS().favoritos}));
  const removed=await p.evaluate(()=>TerminalCommandPolicy.blocked);
  const catalog=await p.evaluate(()=>DiarioTerminalInicio.catalog().map(i=>i.id));for(const code of removed)assert.ok(!catalog.includes(code),code+' ausente do diretório');

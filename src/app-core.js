@@ -3953,7 +3953,7 @@ textarea {
   border-color: var(--r);
 }
 .trv-b.am {
-  border-color: rgba(255,255,255,.14);
+  border-color: var(--ds-line-2);
 }
 .trv-b ul {
   margin: 8px 0 8px 16px;
@@ -4010,11 +4010,11 @@ textarea {
 }
 .mt-nota.nB {
   color: #cba763;
-  border-color: rgba(255,255,255,.14);
+  border-color: var(--ds-line-2);
 }
 .mt-nota.nC {
   color: #c2933d;
-  border-color: rgba(255,255,255,.14);
+  border-color: var(--ds-line-2);
 }
 .mt-nota.nD,
 .mt-nota.nE {
@@ -4067,7 +4067,7 @@ textarea {
   border-left-color: var(--r);
 }
 .mt-ach.g2 {
-  border-left-color: rgba(255,255,255,.14);
+  border-left-color: var(--ds-line-2);
 }
 .mt-reg {
   margin-top: 8px;
@@ -5079,7 +5079,7 @@ html body #mbtn {
 .eco-ctr {
   margin-top: 8px;
   padding: 8px 8px;
-  border-left: 1px solid rgba(255,255,255,.14);
+  border-left: 1px solid var(--ds-line-2);
   background: color-mix(in srgb, #c2933d 10%, transparent);
   border-radius: 6px;
 }
@@ -7183,7 +7183,7 @@ html.aurora h2 {
   z-index: 60;
   background: var(--card);
   color: var(--tx);
-  border: 1px solid var(--am, rgba(255,255,255,.14));
+  border: 1px solid var(--am, var(--ds-line-2));
   border-radius: 999px;
   padding: 8px 16px;
   font: 600 13px var(--fs, inherit);
@@ -10027,7 +10027,7 @@ body.pc .jrman .jrtit {
   --card2: #dcc69d;
   background: #dfc79a !important;
   color: #3b311e;
-  border-color: rgba(255,255,255,.14);
+  border-color: var(--ds-line-2);
 }
 .jrcard.jrsep h2,
 .jrcard.jrsep h3,
@@ -10038,7 +10038,7 @@ body.pc .jrman .jrtit {
 .jrcard.jrsep .btn {
   background: #dcc69d;
   color: #3b311e;
-  border-color: rgba(255,255,255,.14);
+  border-color: var(--ds-line-2);
 }
 .jrleit {
   display: inline-flex;
@@ -10779,7 +10779,7 @@ html body .kv > .card > b,
   margin: 0 0 12px;
   padding: 12px 16px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid var(--ds-line-2);
   background: rgba(194,148,62,0.12);
 }
 #profitalert .pfa-t {
@@ -11269,7 +11269,7 @@ html body #app .jrcard .jrinds.jrmk {
   background: color-mix(in srgb, var(--r) 10%, var(--card2));
 }
 .jrhoje-c.eq {
-  border-left-color: rgba(255,255,255,.14);
+  border-left-color: var(--ds-line-2);
   background: color-mix(in srgb, #a98136 10%, var(--card2));
 }
 .jrkp3,
@@ -11371,7 +11371,7 @@ html body #app .jrcard .jrinds.jrmk {
   border-left-color: var(--r);
 }
 .jrpre.eq {
-  border-left-color: rgba(255,255,255,.14);
+  border-left-color: var(--ds-line-2);
 }
 .jrpre ul {
   margin: 8px 0 0;
@@ -14558,7 +14558,7 @@ body.trmon #tape {
 }
 .trmx {
   color: #c2933d !important;
-  border-color: rgba(255,255,255,.14) !important;
+  border-color: var(--ds-line-2) !important;
 }
 .trgrid:not(.pc) .trp.maxi {
   position: fixed !important;
@@ -15258,7 +15258,7 @@ body.trmon #app .trm input.g9cmp {
   background: #0f0f0f;
 }
 .g9t.perto {
-  border-left: 1px solid rgba(255,255,255,.14);
+  border-left: 1px solid var(--ds-line-2);
   padding-left: 4px;
 }
 .g9t1 {
@@ -15846,7 +15846,7 @@ body.trmon #app .trm .g9fh input {
   color: #cfcfcf;
 }
 .trsa {
-  border-left: 1px solid rgba(255,255,255,.14) !important;
+  border-left: 1px solid var(--ds-line-2) !important;
 }
 .trsa em {
   color: #777777;
@@ -15855,7 +15855,7 @@ body.trmon #app .trm .g9fh input {
 }
 `,
           "legacy-115": `.trinst {
-  border-color: rgba(255,255,255,.14) !important;
+  border-color: var(--ds-line-2) !important;
   color: #c2933d !important;
 }
 `,
@@ -16525,7 +16525,7 @@ html body .sw9 .sw9full .seg button.on {
   place-items: center;
   background: linear-gradient(160deg, #c89e5133, #c89e5108);
   color: var(--pa);
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid var(--ds-line-2);
 }
 .pfacts {
   display: flex;
@@ -16556,7 +16556,7 @@ html body .sw9 .sw9full .seg button.on {
   cursor: default;
 }
 .pfam {
-  border-color: rgba(255,255,255,.14);
+  border-color: var(--ds-line-2);
   color: var(--pa);
   background: #c89e5112;
 }
@@ -16916,7 +16916,7 @@ html body .sw9 .sw9full .seg button.on {
   color: var(--pm);
 }
 .pfia {
-  border-color: rgba(255,255,255,.14);
+  border-color: var(--ds-line-2);
 }
 .pfiah {
   display: flex;
@@ -17113,7 +17113,7 @@ html body .sw9 .sw9full .seg button.on {
 }
 .pfmsg {
   background: #c89e5112;
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid var(--ds-line-2);
   color: #dfc79a;
   border-radius: 8px;
   padding: 8px 12px;
@@ -17133,7 +17133,7 @@ html body .sw9 .sw9full .seg button.on {
 .pfspin {
   width: 12px;
   height: 12px;
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid var(--ds-line-2);
   border-top-color: var(--pa);
   border-radius: 50%;
   display: inline-block;
@@ -17319,7 +17319,7 @@ html body .sw9 .sw9full .seg button.on {
   color: #86abcb;
 }
 .pfsb.pfI {
-  border-color: rgba(255,255,255,.14);
+  border-color: var(--ds-line-2);
 }
 .pfsb.pfI h5,
 .pfI {
@@ -17384,7 +17384,7 @@ html body .sw9 .sw9full .seg button.on {
   color: #dddad5;
 }
 .pfvazia {
-  border-color: rgba(255,255,255,.14);
+  border-color: var(--ds-line-2);
 }
 @media (max-width: 1100px) {
   .pfsc4 {
@@ -18609,7 +18609,7 @@ html body #app .jrcard .jrsec > h3 {
   color: #ffffff !important;
   padding: 8px 12px !important;
   border-radius: 6px !important;
-  border-left: 4px solid rgba(255,255,255,.14) !important;
+  border-left: 4px solid var(--ds-line-2) !important;
   letter-spacing: 0.12em !important;
 }
 html body #app .jrcard .jrsec > h3::after {
@@ -18622,7 +18622,7 @@ html body #app .jrcard .jrpq {
   background: #1f2023;
   color: #efeeeb;
   border: 0;
-  border-left: 4px solid rgba(255,255,255,.14);
+  border-left: 4px solid var(--ds-line-2);
   border-radius: 8px;
   padding: 8px 12px;
 }
@@ -19056,7 +19056,7 @@ html body .jep h3 {
 .jepq {
   font-style: italic;
   color: #1f2023;
-  border-left: 1px solid rgba(255,255,255,.14);
+  border-left: 1px solid var(--ds-line-2);
   padding: 4px 8px;
   margin: 8px 0;
   font-size: 13px;
