@@ -23448,21 +23448,17 @@ try {
     }
     const yt = [
         ["est", "Hoje", "clock"],
+        ["aul", "Aulas", "play"],
         ["liv", "Biblioteca", "book"],
         ["sim", "Praticar", "target"],
         ["desemp", "Progresso", "chart"],
       ],
       kt = [
-        ["aul", "Vídeos", "play"],
-        ["ing", "Inglês", "globe"],
-        ["cnpi", "CNPI-T", "graduation"],
         ["foco", "Modo foco", "eye"],
         ["ciclo", "Ciclo", "calendar"],
         ["reg", "Registrar estudo", "edit"],
         ["pr", "Prompts", "spark"],
         ["treino", "Treino", "target"],
-        ["fac", "Faculdade", "graduation"],
-        ["juros", "Juros", "chart"],
         ["pl", "Planos", "calendar"],
       ];
     function wt() {
@@ -23478,12 +23474,13 @@ try {
                 "conq",
                 "foco",
                 "pl",
-                "fac",
               ].includes(w)
             ? "est"
-            : ["liv", "aul", "ing", "cnpi"].includes(w)
-              ? "liv"
-              : "";
+            : w === "aul"
+              ? "aul"
+              : ["liv", "ing", "cnpi", "fac"].includes(w)
+                ? "liv"
+                : "";
       return yt
         .map(
           ([id, label, icon]) =>
@@ -23668,7 +23665,7 @@ try {
         <section class="dt397-status"><div>${a("chart", 25)}<div><strong>Seu espaço de aprendizagem</strong><small>Vídeos, resumos, simulados e trilhas de estudos.</small></div></div></section>
 
       </div>
-      <section class="dt397-native-mount" ${w ? "" : "hidden"} aria-label="Ferramentas de estudo"><header><button type="button" data-dt397-view="home">${a("right", 17)} Voltar para Estudos</button><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header></section>
+      <section class="dt397-native-mount" ${w ? "" : "hidden"} aria-label="Ferramentas de estudo"><header><button type="button" data-dt397-view="home">${a("right", 17)} Voltar para Estudos</button><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "ing", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["ing", "Inglês"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}</section>
     </div>`;
     }
     function Ct() {
@@ -23760,6 +23757,8 @@ try {
             ) {
               const n = l.querySelector(".dt397-native-mount");
               (n.appendChild(o), (i = !0), (n.hidden = !w));
+              const filtros = n.querySelector(".dt397-filtros");
+              filtros && o.prepend(filtros);
             }
           }
           (tab === "dia" && Tt(o),
@@ -28794,7 +28793,7 @@ try {
             "Gráficos, comparativos e indicadores",
             "term",
           ],
-          ["book", "Diário", "Trades, performance e aprendizado", "stats"],
+          ["book", "Operações", "Trades, histórico e desempenho", "ops"],
           ["grad", "Estudos", "Aulas, trilhas e materiais", "estudos"],
           ["checksq", "Checklist", "Setup, plano e disciplina", "regras"],
         ]

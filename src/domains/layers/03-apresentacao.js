@@ -656,7 +656,7 @@ try {
             "Gráficos, comparativos e indicadores",
             "term",
           ],
-          ["book", "Diário", "Trades, performance e aprendizado", "stats"],
+          ["book", "Operações", "Trades, histórico e desempenho", "ops"],
           ["grad", "Estudos", "Aulas, trilhas e materiais", "estudos"],
           ["checksq", "Checklist", "Setup, plano e disciplina", "regras"],
         ]
