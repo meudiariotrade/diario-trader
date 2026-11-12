@@ -1,0 +1,3 @@
+Diário Trader v577
+
+- Corrige a publicação (v573–v576 não chegaram ao site): botão de menu volta no PC, Terminal sem barra lateral e em tela cheia, Estudos sem o ajuste de margem que quebrava os filtros.

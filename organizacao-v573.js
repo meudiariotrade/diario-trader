@@ -25,13 +25,13 @@ html body .dt394-nav-list.org-buscando .org-grp{display:none}
 /* PC: barra lateral fixa */
 #org-side{display:none}
 @media (min-width:1100px){
- html body nav#org-side{display:flex!important;flex-direction:column;position:fixed;left:0;top:var(--org-top,0px);bottom:0;width:232px;padding:16px;gap:4px;overflow-y:auto;background:#0f1012;border-right:1px solid #2a2b2f;z-index:40;box-sizing:border-box}
+ html body.org-side-on nav#org-side{display:flex!important;flex-direction:column;position:fixed;left:0;top:var(--org-top,0px);bottom:0;width:232px;padding:16px;gap:4px;overflow-y:auto;background:#0f1012;border-right:1px solid #2a2b2f;z-index:40;box-sizing:border-box}
  #org-side .org-brand{font-weight:780;font-size:16px;color:#fff;padding:4px 8px 8px}
  html body nav#org-side button{display:flex!important;align-items:center;gap:12px;height:40px!important;min-height:40px!important;margin:0!important;flex:none!important;padding:0 12px;border:0;border-radius:8px;background:none;color:#cfcdc8;font:inherit;font-size:14px;text-align:left;cursor:pointer;width:100%}
  #org-side button:hover{background:#1b1c20}
  #org-side button.on{background:#24211a;color:#d4a85a;font-weight:650}
  html body.org-side-on{padding-left:232px!important}
- html body.org-side-on #dt393-global-head nav.dt394-quicknav.dt394-quicknav,html body.org-side-on #dt393-global-head .dt393-topbar .dt393-menubtn,html body.org-side-on .ms-mais{display:none!important}
+ html body.org-side-on #dt393-global-head nav.dt394-quicknav.dt394-quicknav,html body.org-side-on .ms-mais{display:none!important}
  html body.org-side-on #dt393-global-head .dt393-brand{display:none!important}
  html body.org-side-on #dt393-global-head .dt393-topbar .dt393-title.dt393-title{border-left:0!important;padding-left:0!important;font-size:24px!important;color:#e8e6e1!important;max-width:none!important}
  html body.org-side-on #fabm,html body.org-side-on #fab{display:none!important}
@@ -67,14 +67,12 @@ html body #app[data-tela=ops] .v4-tools-head .v4-tabs,html body #app[data-tela=s
 html body #app[data-tela=ops] .v4-tools-head .v4-tabs button{flex:1 1 auto!important;width:auto!important}
 
 /* v575 — fase 4: espaçamento (8pt: 24 no PC, 16 no celular) */
-html body #app[data-tela=mercado] .m550-card,html body #app[data-tela=estudos] .dt397-panel{padding:24px!important}
-html body #app[data-tela=estudos] .dt397-dashboard>.dt397-panel{margin-bottom:24px!important}
+html body #app[data-tela=mercado] .m550-card{padding:24px!important}
 html body #app .v4-head h2{font-size:20px!important}
 html body #app .v4-sub{font-size:14px!important}
 @media (max-width:760px){
- html body #app#app:not(.v503-fantasma){padding-left:16px!important;padding-right:16px!important;padding-bottom:96px!important}
- html body #app .v4-card,html body #app[data-tela=mercado] .m550-card,html body #app[data-tela=estudos] .dt397-panel,html body #app .v4-tools-ws{padding:16px!important}
- html body #app[data-tela=estudos] .dt397-dashboard>.dt397-panel{margin-bottom:16px!important}
+ html body #app#app:not(.v503-fantasma):not([data-tela=estudos]):not([data-tela=term]){padding-left:16px!important;padding-right:16px!important;padding-bottom:96px!important}
+ html body #app .v4-card,html body #app[data-tela=mercado] .m550-card,html body #app .v4-tools-ws{padding:16px!important}
 }
 html body:not(.org-rolou) #btop{display:none!important}
 /* v575 — fase 5: Carteira com 4 abas; Análise IA e Histórico como botões */
@@ -111,7 +109,7 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
    for(const [nome,itens] of GRUPOS){side.append(el('div','org-grp',nome));for(const [r,t] of itens){const b=el('button');b.type='button';b.dataset.orgRota=r;if(r==='mais')b.dataset.dt414Go='mais';else b.dataset.dt393Route=r;b.innerHTML=ico(r)+'<span></span>';b.lastChild.textContent=t;side.append(b)}}
    doc.body.append(side);
   }
-  doc.body.classList.toggle('org-side-on',root.innerWidth>=1100);
+  doc.body.classList.toggle('org-side-on',root.innerWidth>=1100&&app()?.dataset.tela!=='term');
   const tape=$('#tape');const topo=tape&&getComputedStyle(tape).display!=='none'?Math.max(0,tape.getBoundingClientRect().bottom):0;
   side.style.setProperty('--org-top',topo+'px');
   const a=app(),tela=a?.dataset.tela||'';
