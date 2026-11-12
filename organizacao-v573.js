@@ -1,4 +1,4 @@
-/* v573/v574 — organização das abas (fases 1, 2 e 3 da vistoria + Histórico, modalidades em chips, Importar).
+/* v573–v575 — organização das abas (fases 1, 2 e 3 da vistoria + Histórico, modalidades em chips, Importar).
    Só reorganiza e esconde: nenhum dado, aba ou conteúdo é apagado. */
 (function(root,doc){
  'use strict';
@@ -65,6 +65,24 @@ html body #app[data-tela=stats] #v4-subnav .v4-primary button.on{border-color:#d
 html body #app[data-tela=stats] #v4-subnav .v4-primary [data-v4p="5"]{order:-1}
 html body #app[data-tela=ops] .v4-tools-head .v4-tabs,html body #app[data-tela=stats] #v4-subnav .v4-secondary{flex-wrap:wrap!important;overflow:visible!important}
 html body #app[data-tela=ops] .v4-tools-head .v4-tabs button{flex:1 1 auto!important;width:auto!important}
+
+/* v575 — fase 4: espaçamento (8pt: 24 no PC, 16 no celular) */
+html body #app[data-tela=mercado] .m550-card,html body #app[data-tela=estudos] .dt397-panel{padding:24px!important}
+html body #app[data-tela=estudos] .dt397-dashboard>.dt397-panel{margin-bottom:24px!important}
+html body #app .v4-head h2{font-size:20px!important}
+html body #app .v4-sub{font-size:14px!important}
+@media (max-width:760px){
+ html body #app#app:not(.v503-fantasma){padding-left:16px!important;padding-right:16px!important;padding-bottom:96px!important}
+ html body #app .v4-card,html body #app[data-tela=mercado] .m550-card,html body #app[data-tela=estudos] .dt397-panel,html body #app .v4-tools-ws{padding:16px!important}
+ html body #app[data-tela=estudos] .dt397-dashboard>.dt397-panel{margin-bottom:16px!important}
+}
+html body:not(.org-rolou) #btop{display:none!important}
+/* v575 — fase 5: Carteira com 4 abas; Análise IA e Histórico como botões */
+html body #app[data-tela=carteiras] .dt395-native-carteiras>.pro-subtabs{display:none!important}
+.org-pfextra{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}
+.org-pfextra button{height:32px!important;min-height:32px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid #2a2b2f!important;background:none!important;color:#cfcdc8!important;font-size:13px!important;width:auto!important;flex:none!important}
+.org-pfextra button.on{border-color:#d4a85a!important;color:#d4a85a!important}
+html body #app[data-tela=carteiras] .pftabs{flex-wrap:wrap!important;overflow:visible!important}
 /* v574: Importar sem as abas de Configurações */
 html body #app[data-tela=import] .pro-subtabs{display:none!important}
 html body #app[data-tela=import] #dt414-back{margin-top:8px!important}
@@ -150,6 +168,14 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
   const t=$('.dt393-title');if(t&&t.textContent!=='Desempenho')t.textContent='Desempenho';
  }
 
+ function carteira(a){
+  const tabs=a.querySelector('.pftabs');if(!tabs)return;
+  let extra=tabs.nextElementSibling;if(!extra?.classList.contains('org-pfextra')){extra=el('div','org-pfextra');tabs.after(extra)}
+  const NOMES={'aba|ativos':'Ativos','aba|ia':'✦ Análise IA','aba|hist':'Histórico'};
+  for(const k of ['aba|ia','aba|hist']){const b=tabs.querySelector(`[data-pf="${k}"]`);if(b)extra.append(b)}
+  for(const [k,v] of Object.entries(NOMES)){const b=a.querySelector(`[data-pf="${k}"]`);const sp=b?.querySelector('span')||b;if(sp&&sp.textContent!==v)sp.textContent=v}
+ }
+ function mercado(a){const b=a.querySelector('[data-mkt549="mais"]');if(b&&b.textContent.trim()==='Mais'){for(const n of b.childNodes)if(n.nodeType===3&&n.textContent.trim()==='Mais')n.textContent=n.textContent.replace('Mais','Análises');if(b.textContent.trim()==='Mais')b.textContent='Análises'}}
  /* ---------- ciclo ---------- */
  let agendado=false;
  function aplica(){
@@ -157,12 +183,13 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
   try{
    const a=app();
    doc.body.classList.toggle('org-fora-inicio',!!a&&a.dataset.tela!=='home'&&!a.classList.contains('home-view'));
-   if(a){const t=a.dataset.tela;if(t!=='dia')a.classList.remove('org-hist');if(t==='dia'){historico(a);meuDia(a)}else if(t==='ops')operacoes(a);else if(t==='stats')desempenho(a)}
+   if(a){const t=a.dataset.tela;if(t!=='dia')a.classList.remove('org-hist');if(t==='dia'){historico(a);meuDia(a)}else if(t==='ops')operacoes(a);else if(t==='stats')desempenho(a);else if(t==='carteiras')carteira(a);else if(t==='mercado')mercado(a)}
    menu();lateral();
   }catch(e){console.warn('[org v573]',e)}
  }
  const agenda=()=>{if(!agendado){agendado=true;requestAnimationFrame(aplica)}};
  new MutationObserver(agenda).observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-tela','data-ms-passo-atual','class']});
  root.addEventListener('resize',agenda);
+ root.addEventListener('scroll',()=>doc.body.classList.toggle('org-rolou',root.scrollY>600),{passive:true});
  doc.readyState==='loading'?doc.addEventListener('DOMContentLoaded',agenda):agenda();
 })(window,document);

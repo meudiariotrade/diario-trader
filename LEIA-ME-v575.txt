@@ -1,0 +1,7 @@
+Diário Trader v575 — fases 4, 5 e 6 da vistoria
+
+- Espaçamento: cards com 24px no PC e 16px no celular (Mercado e Estudos padronizados), margem lateral 16px no celular, espaço no fim da página para o botão IA não cobrir conteúdo, títulos de card 20px e textos de apoio 14px.
+- Botão ↑ só aparece depois de rolar a página.
+- Carteira: 4 abas (Visão Geral, Ativos, Desempenho, Radar); Análise IA e Histórico viram botões logo abaixo; sai a faixa duplicada "Carteiras Brasil e EUA | Análise IA".
+- Mercado: aba "Mais" passa a se chamar "Análises" (era o único item dela).
+- Limpeza: 23 CSS antigos que o app não carregava foram para arquivo/css-antigo/ e os LEIA-ME antigos para docs/versoes/ (nada apagado).
