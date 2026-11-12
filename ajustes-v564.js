@@ -131,7 +131,7 @@
     var t = aba();
     app.querySelectorAll('[data-navroute="imposto"]').forEach(function (b) {
       var faixa = b.parentElement;
-      if (t === 'imposto') { if (faixa && faixa.style.display !== 'none') faixa.style.display = 'none'; } else b.remove();
+      if (t === 'imposto') { if (faixa && faixa.style.getPropertyValue('display') !== 'none') faixa.style.setProperty('display', 'none', 'important'); } else b.remove();
     });
     if (t === 'imposto') {
       var back = app.querySelector('#dt414-back'); if (back) back.remove();

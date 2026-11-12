@@ -1,0 +1,8 @@
+Diário Trader v569 — nada para fora da tela
+
+- Faixas de abas e filtros (Imposto de renda, Diário, Configurações, Mercado, Estudos) quebram linha em vez de sair da tela.
+- Fases Pré / Durante / Pós no Meu dia em colunas que cabem; empilham em telas estreitas.
+- Jornal: cabeçalho, painel de mercado e seções contidos na largura do cartão (o painel de números passa a ter colunas de no mínimo 140 px).
+- Grades de números e cartões com largura máxima da tela; tabelas largas rolam dentro do próprio cartão.
+- PC: conteúdo limitado a 1.200 px e centralizado; Imposto de renda sem a faixa da Carteira.
+- Conferido em 340, 390 e 1.280 px em todas as telas principais e abas do Mercado.

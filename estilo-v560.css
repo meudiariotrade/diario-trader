@@ -2153,3 +2153,28 @@ html:root:root:root[data-v427-tema=claro] body :is(#app#app,#dt394-drawer#dt394-
 html:root:root:root[data-v427-tema=claro] body :is(#app#app,#dt394-drawer#dt394-drawer,#wf-chat-panel#wf-chat-panel,#v4-bnav#v4-bnav) .cl568-on.cl568-on{background:var(--ds-amber-bg)!important;background-image:none!important;color:var(--ds-tx)!important;border:1px solid var(--ds-amber)!important;box-shadow:none!important}
 html[data-v427-tema=claro] body :is(.cl568,.cl568-on) :is(svg,.ico){color:inherit}
 html:root:root:root[data-v427-tema=claro] body :is(#app#app,#dt394-drawer#dt394-drawer,#wf-chat-panel#wf-chat-panel,#v4-bnav#v4-bnav) .cl568-tx.cl568-tx{color:var(--ds-tx)!important;-webkit-text-fill-color:var(--ds-tx)!important}
+
+/* ===== 20. v569 — nada para fora da tela (celular e PC). Escala 8 pt: 8 px dentro do grupo, 24 px entre cartões. ===== */
+html body #app#app :is(#panobox,#jrbox,#grbox,#flwbox,#rkbox,#cotbox,#cqbox,.dt395-native-mercado){grid-template-columns:minmax(0,1fr)!important;min-width:0!important;max-width:100%!important}
+html body #app#app :is(#panobox,#jrbox,#grbox,#flwbox,#rkbox,#cotbox,#cqbox,.dt395-native-mercado)>*{min-width:0!important;max-width:100%!important}
+html body #app#app :is(.card,section,article,header,.jrcab,.jrsec,.m562,.dt393-card,.v4-card,[class*="-panel"]){max-width:100%;min-width:0;box-sizing:border-box}
+html body #app#app :is(p,h1,h2,h3,h4,li,td,.jrdata,.jrnome,.m562-sub,.m562-manchete){overflow-wrap:break-word}
+/* Faixas de abas e filtros: quebram linha em vez de sair da tela. */
+html body #app#app :is(.seg,.studio-tabs,.pro-tabs,.pro-subtabs,.finchips,.cqtabs,.e2tabs,.dt397-category,.pftabs,.rs-tabs,.sw9tabs,.m406-switch-tabs,[role=tablist]):not(.m403-primary-tabs){display:flex!important;flex-wrap:wrap!important;gap:8px!important;overflow:visible!important;max-width:100%!important;width:auto!important}
+html body #app#app :is(.seg,.studio-tabs,.pro-tabs,.pro-subtabs,.finchips,.cqtabs,.e2tabs,.dt397-category,.pftabs,.rs-tabs,.sw9tabs,.m406-switch-tabs,[role=tablist]):not(.m403-primary-tabs)>:is(button,a){flex:0 1 auto!important;min-width:0!important;max-width:100%!important;white-space:normal!important;min-height:40px}
+html body #app#app .v4-tabs{flex-wrap:wrap!important;overflow:visible!important;gap:8px!important}
+/* Fases Pré / Durante / Pós: uma coluna por fase que cabe; se não couber, empilha. */
+html body #app#app .dt393-phase{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,128px),1fr))!important;gap:8px!important}
+html body #app#app .dt393-phase>button{min-width:0!important;white-space:normal!important}
+/* Grades de números: colunas de no mínimo 140 px. */
+html body #app#app :is(.jrinds,.m405-grid,.g2,.g3,.g4){grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr))!important;gap:8px!important;min-width:0}
+html body #app#app :is(.jrinds,.m405-grid,.g2,.g3,.g4)>*{min-width:0!important}
+/* Cabeçalho do Jornal: botões quebram linha. */
+html body #app#app .jrcab :is(div,nav):has(>button){flex-wrap:wrap!important;gap:8px!important}
+html body #app#app .jrcab .jrdata{white-space:normal!important}
+/* Tabelas largas rolam dentro do próprio cartão. */
+html body #app#app :is(.card,section)>table{display:block;max-width:100%;overflow-x:auto}
+/* PC: largura de leitura e cartões em grade previsível. */
+@media (min-width:1024px){
+  html body #app#app{max-width:1200px;margin-left:auto;margin-right:auto}
+}
