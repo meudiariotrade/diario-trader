@@ -2177,3 +2177,26 @@ html body #app#app :is(.card,section)>table{display:block;max-width:100%;overflo
 @media (min-width:1024px){
   html body #app#app{max-width:1200px;margin-left:auto;margin-right:auto}
 }
+
+/* ===== 21. v570 ===== */
+/* Menu Mais do Mercado: só Análises e Movimentos, insiders e fluxo. */
+html body #app#app #mkt549-mais :is([data-mkt549-ir]:not([data-mkt549-ir="lab"]):not([data-mkt549-ir="radar"]),[data-mkt565-ir]){display:none!important}
+/* Resultado do dia no Meu dia: nota "ao vivo" na linha de baixo, alinhada ao valor. */
+html body #app#app .v4-rows>div>.v563-vivo{grid-column:1/-1;justify-self:end;text-align:right;margin-top:4px}
+html body #app#app .v4-rows>div:is(:has(>span:only-of-type)){cursor:default}
+html body #app#app .v4-rows>div:has(>span){cursor:pointer}
+/* Carteira: Imposto de renda tem item próprio no menu (sem piscar na troca). */
+body:not([data-v4route="imposto"]) #app [data-navroute="imposto"]{display:none!important}
+body[data-v4route="imposto"] #app :is(.pro-subtabs,.studio-tabs,.pro-tabs):has([data-navroute="imposto"]){display:none!important}
+/* Tema claro: fundo do papel também fora do app (sem faixa preta ao rolar até o fim). */
+html:root[data-v427-tema=claro],html:root[data-v427-tema=claro] body{background:var(--ds-bg)!important}
+/* Editor de limite e meta. */
+#v570-metas{position:fixed;inset:0;z-index:2147482000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+#v570-metas .v570-sh{width:100%;max-width:480px;background:var(--ds-s1);color:var(--ds-tx);border:1px solid var(--ds-line-2);border-radius:8px;padding:24px;display:grid;gap:16px}
+#v570-metas h2{margin:0;font-size:18px}
+#v570-metas .v570-sub{margin:-8px 0 0;font-size:13px;color:var(--ds-tx-2);line-height:1.45}
+#v570-metas label{display:grid;gap:8px;font-size:14px;color:var(--ds-tx-2)}
+#v570-metas input{height:40px;padding:0 12px;border-radius:6px;border:1px solid var(--ds-line-input);background:var(--ds-bg);color:var(--ds-tx);font:500 16px var(--ds-mono)}
+#v570-metas .v570-acoes{display:flex;justify-content:flex-end;gap:8px}
+#v570-metas .btn{height:40px;padding:0 16px}
+@media (min-width:700px){#v570-metas{align-items:center}}

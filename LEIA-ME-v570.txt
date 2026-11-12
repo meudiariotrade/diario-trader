@@ -1,0 +1,7 @@
+Diário Trader v570
+
+- Mercado › Mais: só Análises e Movimentos, insiders e fluxo (o resto já existe nas outras abas).
+- Capital e metas: toque em "Limite de perda (dia)" ou "Meta de ganho (dia)" para editar. Valem para todos os dias; o Plano do dia pode trocar o valor só daquele dia.
+- Resultado do dia no Meu dia: nota "ao vivo" na linha de baixo, sem desalinhar.
+- Tema claro: telas corrigidas antes de aparecer (sem piscar preto); fundo claro também ao rolar até o fim.
+- Carteira: o botão de Imposto de renda não pisca mais na troca de tela.

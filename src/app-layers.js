@@ -22984,7 +22984,12 @@ try {
         return W() ? t.us || {} : t;
       },
       V = () => F(R()),
-      Z = () => (Number(y().metaDia) > 0 ? Number(y().metaDia) : null),
+      Z = () =>
+        Number(y().metaDia) > 0
+          ? Number(y().metaDia)
+          : Number(S?.prop?.metaDia) > 0
+            ? Number(S.prop.metaDia)
+            : null,
       tt = () =>
         Number(y().maxP) > 0
           ? Number(y().maxP)
@@ -28294,7 +28299,9 @@ try {
             : "during",
       Yt = () => {
         const t = +ut().metaDia;
-        return t > 0 ? t : null;
+        if (t > 0) return t;
+        const e = f(() => +S.prop.metaDia, 0);
+        return e > 0 ? e : null;
       },
       St = () => {
         const t = +ut().maxP;

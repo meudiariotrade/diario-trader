@@ -28,14 +28,7 @@
     if (el.getAttribute('data-k') !== chave) { el.innerHTML = html; el.setAttribute('data-k', chave); }
   }
 
-  function menu(m) {
-    var painel = m.querySelector('#mkt549-mais'); if (!painel) return;
-    if (painel.querySelector('[data-mkt565-ir="pn"]')) return;
-    var b = doc.createElement('button');
-    b.type = 'button'; b.setAttribute('role', 'menuitem'); b.setAttribute('data-mkt565-ir', 'pn');
-    b.innerHTML = '<b>Panorama do mercado</b><small>ADRs, commodities, bolsas e cripto em uma imagem</small>';
-    painel.insertBefore(b, painel.firstChild);
-  }
+  function menu(m) { /* v570: menu Mais só com Análises e Movimentos, insiders e fluxo (CSS). */ }
 
   function pressed(m) {
     m.querySelectorAll('button.btn[data-v]').forEach(function (b) { setAttr(b, 'aria-pressed', String(!b.classList.contains('s'))); });

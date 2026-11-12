@@ -40,12 +40,11 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  await expect(app.locator('.dt395-native-mercado')).toHaveAttribute('data-m403-sub','cq');
  await expect(app.locator('.simple-comparison')).toHaveCount(1);
  await expect(app.locator('.simple-comparison .m409-chart-card')).toBeHidden();
- // v549: comparação fica no menu Mais e abre já expandida.
- await expect(app.locator('.simple-comparison')).toBeHidden();
+ // v570: o menu Mais fica só com Análises e Movimentos; a comparação sai do menu.
  await app.locator('[data-mkt549="mais"]').click();
- await app.locator('[data-mkt549-ir="comparar"]').click();
- await expect(app.locator('.simple-comparison')).toBeVisible();
- await expect(app.locator('.m409-chart-card')).toBeVisible();
+ await expect(app.locator('[data-mkt549-ir="comparar"]')).toBeHidden();
+ await expect(app.locator('[data-mkt549-ir="lab"]')).toBeVisible();
+ await app.locator('[data-mkt549="mais"]').click();
  await app.getByRole('button',{name:'Agenda',exact:true}).click();
  await expect(app.locator('.simple-market-about>summary')).toBeVisible();
  await expect(app.locator('.m404-overview')).toBeHidden();

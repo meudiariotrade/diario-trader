@@ -201,6 +201,38 @@
   function fila() { if (!q) { q = 1; setTimeout(monta, 150); } }
   new MutationObserver(fila).observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
   fila();
+  // v570: limite de perda e meta de ganho do dia editáveis direto em "Capital e metas" (valores padrão de todo dia).
+  function editorMetas() {
+    var velho = doc.getElementById('v570-metas'); if (velho) velho.remove();
+    var p = g(function () { return S.prop || {}; }, {});
+    var d = doc.createElement('div'); d.id = 'v570-metas'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 'v570-t');
+    d.innerHTML = '<div class="v570-sh"><h2 id="v570-t">Limite e meta do dia</h2><p class="v570-sub">Valem para todos os dias. Se você definir outro valor no Plano do dia, o do dia vale só para ele.</p>' +
+      '<label>Limite de perda por dia (R$)<input id="v570-perda" type="number" inputmode="decimal" step="any" min="0" placeholder="ex.: 600" value="' + (p.perdaDia > 0 ? p.perdaDia : '') + '"></label>' +
+      '<label>Meta de ganho por dia (R$)<input id="v570-meta" type="number" inputmode="decimal" step="any" min="0" placeholder="ex.: 300" value="' + (p.metaDia > 0 ? p.metaDia : '') + '"></label>' +
+      '<div class="v570-acoes"><button type="button" class="btn s" data-v570="x">Cancelar</button><button type="button" class="btn" data-v570="ok">Salvar</button></div></div>';
+    doc.body.appendChild(d);
+    setTimeout(function () { var i = doc.getElementById('v570-perda'); if (i) i.focus(); }, 30);
+  }
+  doc.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target : null; if (!t) return;
+    var b = t.closest('[data-v570]');
+    if (b) {
+      e.preventDefault();
+      if (b.getAttribute('data-v570') === 'ok') {
+        var num = function (id) { var v = parseFloat(String((doc.getElementById(id) || {}).value || '').replace(',', '.')); return isFinite(v) && v > 0 ? v : 0; };
+        g(function () { S.prop = S.prop || {}; S.prop.perdaDia = num('v570-perda'); S.prop.metaDia = num('v570-meta'); save(); });
+        try { toast('Limite e meta salvos'); } catch (x) { /* sem toast */ }
+        try { render(); } catch (x) { /* sem app */ }
+      }
+      var dl = doc.getElementById('v570-metas'); if (dl) dl.remove();
+      return;
+    }
+    if (t.id === 'v570-metas') { t.remove(); return; }
+    var row = t.closest('#app .v4-rows > div');
+    if (row && /Limite de perda \(dia\)|Meta de ganho \(dia\)/.test(row.textContent)) { e.preventDefault(); editorMetas(); }
+  }, true);
+  doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') { var dl = doc.getElementById('v570-metas'); if (dl) dl.remove(); } });
+
   // v568: aplica logo depois de cada render (antes da pintura) para o resultado ao vivo não piscar.
   function gancho() {
     if (typeof root.render0 !== 'function' || root.render0.__v568) return;

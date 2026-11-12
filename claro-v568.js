@@ -60,7 +60,15 @@
     f.__cl568 = 1; root.render0 = f;
   }
   gancho(); setInterval(gancho, 2000);
-  new MutationObserver(agenda).observe(doc.body, { childList: true, subtree: true });
+  // v570: o que entra na tela é corrigido antes da pintura (sem piscar preto).
+  new MutationObserver(function (lista) {
+    if (!claro()) return;
+    for (var i = 0; i < lista.length; i++) for (var n = lista[i].addedNodes, k = 0; k < n.length; k++) {
+      var e = n[k]; if (e.nodeType !== 1) continue;
+      if (e.closest && e.closest('#app,#dt394-drawer,#wf-chat-panel,#v4-bnav,#v570-metas')) { try { passa(e.parentElement || e); } catch (x) { /* segue */ } }
+    }
+    agenda();
+  }).observe(doc.body, { childList: true, subtree: true });
   new MutationObserver(function () { visto = new WeakMap(); vtx = new WeakSet(); agenda(); }).observe(doc.documentElement, { attributes: true, attributeFilter: ['data-v427-tema'] });
   agenda();
   root.DiarioClaro568 = { roda: roda };
