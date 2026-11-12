@@ -1,4 +1,4 @@
-/* v573 — organização das abas (fases 1, 2 e 3 da vistoria).
+/* v573/v574 — organização das abas (fases 1, 2 e 3 da vistoria + Histórico, modalidades em chips, Importar).
    Só reorganiza e esconde: nenhum dado, aba ou conteúdo é apagado. */
 (function(root,doc){
  'use strict';
@@ -53,6 +53,23 @@ html body #app[data-tela=dia] #v4-subnav .v4-secondary button{font-size:13px!imp
 html body #app[data-tela=ops] .v4-two:not(:has(>:nth-child(2))){grid-template-columns:1fr!important}
 html body #app[data-tela=stats] .v4-journal>section:has(.dt393-phase){display:none!important}
 html body #app[data-tela=stats] #v4-subnav .v4-back{display:none!important}
+/* v574: Histórico dentro de Operações */
+html body #app[data-tela=dia]:not(.org-hist) #v4-subnav .v4-secondary [data-v4p="3"]{display:none!important}
+html body #app.org-hist #v4-subnav .v4-secondary,html body #app.org-hist #ms-passos{display:none!important}
+.org-opsnav{grid-template-columns:repeat(3,1fr)!important}
+@media (min-width:761px){.org-opsnav{max-width:600px!important}}
+/* v574: modalidades em chips, sem cortar */
+html body #app[data-tela=stats] #v4-subnav .v4-primary{display:flex!important;flex-wrap:wrap!important;overflow:visible!important;gap:6px!important;padding:0!important;border:0!important;background:none!important;width:auto!important;margin:0 0 8px!important}
+html body #app[data-tela=stats] #v4-subnav .v4-primary button{flex:none!important;width:auto!important;height:32px!important;min-height:32px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid #2a2b2f!important;background:none!important;color:#cfcdc8!important;font-size:13px!important;box-shadow:none!important}
+html body #app[data-tela=stats] #v4-subnav .v4-primary button.on{border-color:#d4a85a!important;color:#d4a85a!important}
+html body #app[data-tela=stats] #v4-subnav .v4-primary [data-v4p="5"]{order:-1}
+html body #app[data-tela=ops] .v4-tools-head .v4-tabs,html body #app[data-tela=stats] #v4-subnav .v4-secondary{flex-wrap:wrap!important;overflow:visible!important}
+html body #app[data-tela=ops] .v4-tools-head .v4-tabs button{flex:1 1 auto!important;width:auto!important}
+/* v574: Importar sem as abas de Configurações */
+html body #app[data-tela=import] .pro-subtabs{display:none!important}
+html body #app[data-tela=import] #dt414-back{margin-top:8px!important}
+html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!important;line-height:1.3!important;margin:24px 0 8px!important}
+
 `;
  const st=el('style');st.id='org-v573-css';st.textContent=css;doc.head.append(st);
 
@@ -80,7 +97,7 @@ html body #app[data-tela=stats] #v4-subnav .v4-back{display:none!important}
   const tape=$('#tape');const topo=tape&&getComputedStyle(tape).display!=='none'?Math.max(0,tape.getBoundingClientRect().bottom):0;
   side.style.setProperty('--org-top',topo+'px');
   const a=app(),tela=a?.dataset.tela||'';
-  const rota=tela==='stats'||tela==='import'?'ops':tela;
+  const rota=tela==='stats'||tela==='import'||(tela==='dia'&&modo==='hist')?'ops':tela;
   for(const b of $$('button',side))b.classList.toggle('on',b.dataset.orgRota===rota);
  }
 
@@ -95,11 +112,29 @@ html body #app[data-tela=stats] #v4-subnav .v4-back{display:none!important}
  }
 
  /* ---------- Operações: Hoje | Desempenho ---------- */
+ let modo='dia';
+ const solta=e=>{if(!e.isTrusted)return;const t=e.target.closest?.('[data-dt393-route],[data-dt414-go],[data-org-hist]');if(t&&!t.dataset.orgHist)modo='dia'};
+ for(const ev of ['pointerdown','click'])root.addEventListener(ev,solta,true);
+ function irHistorico(){modo='hist';const b=$('#v4-bnav [data-dt393-route="dia"]')||$('[data-dt393-route="dia"]');b?.click();agenda()}
  function navOps(a,ativa){
-  if(a.querySelector(':scope>.org-opsnav'))return;
-  const n=el('div','org-opsnav');n.setAttribute('role','tablist');
-  for(const [r,t] of [['ops','Hoje'],['stats','Desempenho']]){const b=el('button',r===ativa?'on':'',t);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',String(r===ativa));if(r!==ativa)b.dataset.dt393Route=r;n.append(b)}
+  const velho=a.querySelector(':scope>.org-opsnav');if(velho&&velho.dataset.ativa===ativa)return;velho?.remove();
+  const n=el('div','org-opsnav');n.setAttribute('role','tablist');n.dataset.ativa=ativa;
+  for(const [r,t] of [['ops','Hoje'],['hist','Histórico'],['stats','Desempenho']]){const b=el('button',r===ativa?'on':'',t);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',String(r===ativa));
+   if(r!==ativa){if(r==='hist'){b.dataset.orgHist='1';b.addEventListener('click',irHistorico)}else b.dataset.dt393Route=r}n.append(b)}
   a.prepend(n);
+ }
+ function historico(a){
+  const hist=a.querySelector('#v4-subnav .v4-secondary [data-v4p="3"]'),dia=a.querySelector('#v4-subnav .v4-secondary [data-v4p="2"]');
+  if(modo==='hist'){
+   a.classList.add('org-hist');navOps(a,'hist');
+   if(hist&&!hist.classList.contains('on'))hist.click();
+   const t=$('.dt393-title');if(t&&t.textContent!=='Operações')t.textContent='Operações';
+   const h=[...a.querySelectorAll('h1,h2,h3')].find(x=>[...x.childNodes].some(n=>n.nodeType===3&&n.textContent.trim()==='Meu dia'));if(h)for(const n of h.childNodes)if(n.nodeType===3&&n.textContent.trim()==='Meu dia')n.textContent=n.textContent.replace('Meu dia','Histórico');
+   for(const b of $$('#v4-bnav [data-dt393-route]'))b.classList.toggle('on',b.dataset.dt393Route==='ops');
+  }else{
+   a.classList.remove('org-hist');a.querySelector(':scope>.org-opsnav')?.remove();
+   if(hist?.classList.contains('on')&&dia)dia.click();
+  }
  }
  function operacoes(a){
   navOps(a,'ops');
@@ -110,6 +145,8 @@ html body #app[data-tela=stats] #v4-subnav .v4-back{display:none!important}
  }
  function desempenho(a){
   navOps(a,'stats');
+  const NOMES={1:'Day',2:'Swing',4:'EUA/FX',5:'Todas'};
+  for(const [k,v] of Object.entries(NOMES)){const b=a.querySelector(`#v4-subnav .v4-primary [data-v4p="${k}"]`);if(b&&b.textContent!==v)b.textContent=v}
   const t=$('.dt393-title');if(t&&t.textContent!=='Desempenho')t.textContent='Desempenho';
  }
 
@@ -120,7 +157,7 @@ html body #app[data-tela=stats] #v4-subnav .v4-back{display:none!important}
   try{
    const a=app();
    doc.body.classList.toggle('org-fora-inicio',!!a&&a.dataset.tela!=='home'&&!a.classList.contains('home-view'));
-   if(a){const t=a.dataset.tela;if(t==='dia')meuDia(a);else if(t==='ops')operacoes(a);else if(t==='stats')desempenho(a)}
+   if(a){const t=a.dataset.tela;if(t!=='dia')a.classList.remove('org-hist');if(t==='dia'){historico(a);meuDia(a)}else if(t==='ops')operacoes(a);else if(t==='stats')desempenho(a)}
    menu();lateral();
   }catch(e){console.warn('[org v573]',e)}
  }

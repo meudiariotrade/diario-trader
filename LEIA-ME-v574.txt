@@ -1,0 +1,7 @@
+Diário Trader v574 — organização das abas (complemento)
+
+- Operações: abas Hoje | Histórico | Desempenho. O Histórico saiu de Meu dia e abre dentro de Operações.
+- Desempenho: modalidades em chips que não cortam (Todas, Day, Swing, Opções, EUA/FX).
+- Abas de "Por modalidade" quebram linha em vez de cortar.
+- Importar do Profit: sem as abas de Configurações (Alertas/Conta) no topo e sem o espaço vazio.
+- Nada apagado: só reorganizado (organizacao-v573.js).
