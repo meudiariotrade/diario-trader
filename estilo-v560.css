@@ -2136,3 +2136,14 @@ html:root:root:root[data-v427-tema=claro] body #app#app :is(.card,section.card,.
 html:root:root:root[data-v427-tema=claro] body #app#app :is(.studio-tabs,.pro-tabs,.pro-subtabs,.seg,.cqtabs,.e2tabs,.dt397-tabs)>button:not(.on):not([aria-current]):not([aria-selected=true]){border:1px solid var(--ds-line-2)!important}
 html:root:root:root[data-v427-tema=claro] body #app#app :is(hr,.dt393-cardhead,.v4-rows>div,.v4-kpis>div){border-color:var(--ds-line)!important}
 html:root:root:root[data-v427-tema=claro] body .wf-chat-launcher{background:linear-gradient(#8d6c33,#6e5326)!important;background-image:linear-gradient(#8d6c33,#6e5326)!important;color:#fff!important}
+
+/* ===== 18. Tema claro v567: Mercado sem painéis escuros ===== */
+html:root:root:root[data-v427-tema=claro] body #app#app .dt395-native-mercado :is(.card,.m404-panel,.jrcard,.pano9c,.pro-region,.sw9){background:var(--ds-s1)!important;background-image:none!important;color:var(--ds-tx)!important;border:1px solid var(--ds-line-2)!important}
+html:root:root:root[data-v427-tema=claro] body #app#app .dt395-native-mercado :is(.card,.m404-panel) :is(h2,h3,b,strong,p,span,small,label,div){color:inherit}
+html:root:root:root[data-v427-tema=claro] body #app#app .dt395-native-mercado :is(.mut,.sm.mut,small,.m404-eyebrow){color:var(--ds-tx-2)!important}
+html:root:root:root[data-v427-tema=claro] body #app#app .dt395-native-mercado button:is(.btn,.btn.s,.m404-panel-link){background:var(--ds-s1)!important;color:var(--ds-tx)!important;border:1px solid var(--ds-line-2)!important;box-shadow:none!important}
+html:root:root:root[data-v427-tema=claro] body #app#app .dt395-native-mercado .card button.btn[data-v]:not(.s),
+html:root:root:root[data-v427-tema=claro] body #app#app .dt395-native-mercado :is(.cqtabs>button.on,.m406-switch-button.on,button[aria-pressed=true]){background:var(--ds-amber-bg)!important;color:var(--ds-tx)!important;border-color:var(--ds-amber)!important}
+html:root:root:root[data-v427-tema=claro] body #app#app .dt395-native-mercado :is(.btn,button){-webkit-text-fill-color:currentColor}
+html:root:root:root body #economista-flutuante#economista-flutuante .wf-chat-launcher{background:linear-gradient(#c9a15b,#8d6c33)!important;color:#17130b!important}
+html:root:root:root[data-v427-tema=claro] body #economista-flutuante#economista-flutuante .wf-chat-launcher{background:linear-gradient(#8d6c33,#6e5326)!important;color:#fff!important}

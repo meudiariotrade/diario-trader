@@ -1,0 +1,6 @@
+Diário Trader v567 — abas respondendo ao toque e tema claro no Mercado
+
+- Desligada a transição "fantasma": a cada toque ela copiava a tela inteira e escondia o app durante a troca; era o que fazia o toque se perder e as abas demorarem.
+- Medição da barra de abas do Início/Meu dia passou para depois da pintura (Meu dia ~40% mais rápido nos testes).
+- Tema claro no Mercado: painéis de Notícias, Agenda, Jornal e Panorama claros, chips com seleção em âmbar e texto legível.
+- Botão da IA em âmbar nos dois temas.

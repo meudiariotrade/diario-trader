@@ -28689,10 +28689,13 @@ try {
         (r.innerHTML = l),
         (r.__p = n),
         v.getElementById("app").prepend(r),
-        r.querySelectorAll(".v4-tabs").forEach((o) => {
-          const u = o.querySelector(".on");
-          u && (o.scrollLeft = Math.max(0, u.offsetLeft - 24));
-        }));
+        // v567: medir depois da pintura (antes forçava o layout da tela inteira no meio da troca de aba).
+        requestAnimationFrame(() =>
+          r.querySelectorAll(".v4-tabs").forEach((o) => {
+            const u = o.querySelector(".on");
+            u && (o.scrollLeft = Math.max(0, u.offsetLeft - 24));
+          }),
+        ));
     }
     function ne() {
       try {
@@ -39924,7 +39927,9 @@ try {
   (function (i) {
     "use strict";
     const a = i.document;
-    if (!a || !i.MutationObserver) return;
+    // v567: transição "fantasma" desligada. Ela clonava a tela inteira a cada toque e escondia o app
+    // durante a troca de aba, o que deixava as abas lentas e fazia toques se perderem.
+    if (!a || !i.MutationObserver || !i.DIARIO_V503_LIGADO) return;
     const h = 90,
       A = 480,
       g = 320,
