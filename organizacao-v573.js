@@ -1,0 +1,131 @@
+/* v573 — organização das abas (fases 1, 2 e 3 da vistoria).
+   Só reorganiza e esconde: nenhum dado, aba ou conteúdo é apagado. */
+(function(root,doc){
+ 'use strict';
+ if(root.DiarioOrganizacao573)return;root.DiarioOrganizacao573=true;
+ const $=(s,c=doc)=>c.querySelector(s),$$=(s,c=doc)=>[...c.querySelectorAll(s)];
+ const app=()=>$('#app:not(.v503-fantasma)');
+ const el=(tag,cls,txt)=>{const n=doc.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=txt;return n};
+ const SVG={home:'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',dia:'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',ops:'M4 8h13l-3-3M20 16H7l3 3',mercado:'M5 20V10M12 20V4M19 20v-7',estudos:'M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5',term:'M3 5h18v12H3zM8 21h8M12 17v4',carteiras:'M3 7h18v12H3zM16 13h2M3 7l3-3h12l3 3',imposto:'M6 3h9l4 4v14H6zM9 12h6M9 16h6',mais:'M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4'};
+ const ico=k=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SVG[k]}"/></svg>`;
+ const GRUPOS=[['Principal',[['home','Início'],['dia','Meu dia'],['ops','Operações'],['mercado','Mercado'],['estudos','Estudos']]],['Ferramentas',[['term','Terminal'],['carteiras','Carteira'],['imposto','Imposto de renda']]],['Conta',[['mais','Configurações']]]];
+
+ /* ---------- estilos ---------- */
+ const css=`
+html body .org-grp{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8b8a86;margin:16px 8px 4px}
+html body .org-grp:first-child{margin-top:4px}
+html body .org-oculto,html body #dt394-market-search{display:none!important}
+html body .dt394-nav-list.org-buscando .org-grp{display:none}
+/* cabeçalho do celular em 1 linha */
+@media (max-width:760px){
+ html body .dt393-topbar{flex-wrap:nowrap!important;min-height:56px!important;row-gap:0!important}
+ html body.org-fora-inicio #dt393-global-head .dt393-brand{display:none!important}
+ html body.org-fora-inicio #dt393-global-head .dt393-topbar .dt393-title.dt393-title{order:0!important;flex:1 1 auto!important;flex-basis:auto!important;font-size:20px!important;font-weight:700!important;color:#e8e6e1!important;padding-left:8px!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}
+}
+/* PC: barra lateral fixa */
+#org-side{display:none}
+@media (min-width:1100px){
+ html body nav#org-side{display:flex!important;flex-direction:column;position:fixed;left:0;top:var(--org-top,0px);bottom:0;width:232px;padding:16px;gap:4px;overflow-y:auto;background:#0f1012;border-right:1px solid #2a2b2f;z-index:40;box-sizing:border-box}
+ #org-side .org-brand{font-weight:780;font-size:16px;color:#fff;padding:4px 8px 8px}
+ html body nav#org-side button{display:flex!important;align-items:center;gap:12px;height:40px!important;min-height:40px!important;margin:0!important;flex:none!important;padding:0 12px;border:0;border-radius:8px;background:none;color:#cfcdc8;font:inherit;font-size:14px;text-align:left;cursor:pointer;width:100%}
+ #org-side button:hover{background:#1b1c20}
+ #org-side button.on{background:#24211a;color:#d4a85a;font-weight:650}
+ html body.org-side-on{padding-left:232px!important}
+ html body.org-side-on #dt393-global-head nav.dt394-quicknav.dt394-quicknav,html body.org-side-on #dt393-global-head .dt393-topbar .dt393-menubtn,html body.org-side-on .ms-mais{display:none!important}
+ html body.org-side-on #dt393-global-head .dt393-brand{display:none!important}
+ html body.org-side-on #dt393-global-head .dt393-topbar .dt393-title.dt393-title{border-left:0!important;padding-left:0!important;font-size:24px!important;color:#e8e6e1!important;max-width:none!important}
+ html body.org-side-on #fabm,html body.org-side-on #fab{display:none!important}
+}
+/* Meu dia (modo simples): 1 nível — Antes / Durante / Depois */
+html body.modo-simples #app[data-tela=dia] .dt393-phase-inner{display:none!important}
+html body.modo-simples #app[data-ms-passo-atual] .v4-day>section.v4-card[data-ms-passo="1"]:has(.dt393-checklist){display:block!important}
+html body.modo-simples #app[data-tela=dia] #v508-falta .v508-grupo{display:none!important}
+html body #app[data-tela=dia] #v4-subnav .v4-primary{padding:0!important;border:0!important;background:none!important;gap:8px!important;margin-bottom:8px!important}
+html body #app[data-tela=dia] #v4-subnav .v4-primary button{height:32px!important;min-height:32px!important;padding:0 16px!important;border-radius:999px!important;border:1px solid #2a2b2f!important;background:none!important;color:#cfcdc8!important;font-size:13px!important}
+html body #app[data-tela=dia] #v4-subnav .v4-primary button.on{border-color:#d4a85a!important;color:#d4a85a!important}
+html body #app[data-tela=dia] #v4-subnav .v4-secondary button{font-size:13px!important;padding:4px 8px!important;min-height:32px!important}
+@media (max-width:420px){html body .ms-passo{grid-template-rows:auto!important}html body .ms-passo b{grid-row:auto!important}}
+/* Operações: Hoje / Desempenho */
+.org-opsnav{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 16px}
+.org-opsnav button{height:40px;border-radius:8px;border:1px solid #2a2b2f;background:#0f1011;color:#cfcdc8;font:inherit;font-weight:650;cursor:pointer}
+.org-opsnav button.on{background:#d4a85a;border-color:#d4a85a;color:#111}
+@media (min-width:761px){.org-opsnav{max-width:480px}}
+html body #app[data-tela=ops] .v4-two:not(:has(>:nth-child(2))){grid-template-columns:1fr!important}
+html body #app[data-tela=stats] .v4-journal>section:has(.dt393-phase){display:none!important}
+html body #app[data-tela=stats] #v4-subnav .v4-back{display:none!important}
+`;
+ const st=el('style');st.id='org-v573-css';st.textContent=css;doc.head.append(st);
+
+ /* ---------- menu ☰ em 3 grupos ---------- */
+ function menu(){
+  const lista=$('#dt394-drawer .dt394-nav-list');if(!lista||lista.dataset.org573)return;
+  const sec=r=>{const b=$(r==='mais'?'[data-dt414-go="mais"]':`[data-dt393-route="${r}"]`,lista);return b?.closest('.v420-menu-sec')||b};
+  if(!sec('home')||!sec('mais'))return;
+  lista.dataset.org573='1';
+  for(const [nome,itens] of GRUPOS){lista.append(el('div','org-grp',nome));for(const [r] of itens){const s=sec(r);if(s)lista.append(s)}}
+  const diario=sec('stats');if(diario){diario.classList.add('org-oculto');lista.append(diario)}
+  const busca=$('#dt394-nav-search');busca?.addEventListener('input',()=>lista.classList.toggle('org-buscando',!!busca.value.trim()));
+ }
+
+ /* ---------- barra lateral no PC ---------- */
+ let side=null;
+ function lateral(){
+  if(!side){
+   side=el('nav');side.id='org-side';side.setAttribute('aria-label','Navegação');
+   side.append(el('div','org-brand','Diário de Trader'));
+   for(const [nome,itens] of GRUPOS){side.append(el('div','org-grp',nome));for(const [r,t] of itens){const b=el('button');b.type='button';b.dataset.orgRota=r;if(r==='mais')b.dataset.dt414Go='mais';else b.dataset.dt393Route=r;b.innerHTML=ico(r)+'<span></span>';b.lastChild.textContent=t;side.append(b)}}
+   doc.body.append(side);
+  }
+  doc.body.classList.toggle('org-side-on',root.innerWidth>=1100);
+  const tape=$('#tape');const topo=tape&&getComputedStyle(tape).display!=='none'?Math.max(0,tape.getBoundingClientRect().bottom):0;
+  side.style.setProperty('--org-top',topo+'px');
+  const a=app(),tela=a?.dataset.tela||'';
+  const rota=tela==='stats'||tela==='import'?'ops':tela;
+  for(const b of $$('button',side))b.classList.toggle('on',b.dataset.orgRota===rota);
+ }
+
+ /* ---------- Meu dia: Antes/Durante/Depois comandam o checklist ---------- */
+ const FASE={1:'pre',2:'during',3:'post'};
+ function meuDia(a){
+  if(!doc.body.classList.contains('modo-simples')||!a.querySelector('.v4-day'))return;
+  const f=FASE[a.dataset.msPassoAtual];if(!f)return;
+  const b=a.querySelector(`.dt393-phase-inner [data-dt393-action="checkphase"][data-phase="${f}"]`);
+  if(b&&!b.classList.contains('active')&&a.dataset.org573Fase!==f){a.dataset.org573Fase=f;b.click()}
+  else if(b?.classList.contains('active'))a.dataset.org573Fase=f;
+ }
+
+ /* ---------- Operações: Hoje | Desempenho ---------- */
+ function navOps(a,ativa){
+  if(a.querySelector(':scope>.org-opsnav'))return;
+  const n=el('div','org-opsnav');n.setAttribute('role','tablist');
+  for(const [r,t] of [['ops','Hoje'],['stats','Desempenho']]){const b=el('button',r===ativa?'on':'',t);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',String(r===ativa));if(r!==ativa)b.dataset.dt393Route=r;n.append(b)}
+  a.prepend(n);
+ }
+ function operacoes(a){
+  navOps(a,'ops');
+  const ops=a.querySelector('.v4-page.v4-ops');if(!ops)return;
+  const reg=[...ops.querySelectorAll(':scope>.v4-two>section')].find(s=>s.querySelector('[data-dt393-action="newtrade"]'));
+  if(reg&&reg.parentElement!==ops){ops.prepend(reg);const h=reg.querySelector('h2 span');if(h)h.textContent='Registrar'}
+  const ws=a.querySelector('.v4-tools-head h2 span');if(ws&&ws.textContent!=='Por modalidade')ws.textContent='Por modalidade';
+ }
+ function desempenho(a){
+  navOps(a,'stats');
+  const t=$('.dt393-title');if(t&&t.textContent!=='Desempenho')t.textContent='Desempenho';
+ }
+
+ /* ---------- ciclo ---------- */
+ let agendado=false;
+ function aplica(){
+  agendado=false;
+  try{
+   const a=app();
+   doc.body.classList.toggle('org-fora-inicio',!!a&&a.dataset.tela!=='home'&&!a.classList.contains('home-view'));
+   if(a){const t=a.dataset.tela;if(t==='dia')meuDia(a);else if(t==='ops')operacoes(a);else if(t==='stats')desempenho(a)}
+   menu();lateral();
+  }catch(e){console.warn('[org v573]',e)}
+ }
+ const agenda=()=>{if(!agendado){agendado=true;requestAnimationFrame(aplica)}};
+ new MutationObserver(agenda).observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-tela','data-ms-passo-atual','class']});
+ root.addEventListener('resize',agenda);
+ doc.readyState==='loading'?doc.addEventListener('DOMContentLoaded',agenda):agenda();
+})(window,document);

@@ -1,0 +1,8 @@
+Diário Trader v573 — organização das abas (fases 1, 2 e 3 da vistoria)
+
+- Menu ☰ em 3 grupos (Principal, Ferramentas, Conta); "Diário" e atalho de busca de ativos saem do menu.
+- PC: barra lateral fixa no lugar da fileira de abas e do "Mais".
+- Celular: cabeçalho em 1 linha com o nome da tela.
+- Meu dia: Antes/Durante/Depois comandam o checklist (Pré/Durante/Pós sai da tela); checklist aparece nas 3 etapas; Brasil/EUA em chips.
+- Operações: abas Hoje | Desempenho; "Registrar" no topo; "Diário" passa a se chamar Desempenho.
+- Nada foi apagado: só reorganizado (arquivo novo organizacao-v573.js). Modo Completo continua igual.
