@@ -37,7 +37,7 @@
         <button type="button" class="pri" data-capa-abrir>Abrir o diário</button>
         <button type="button" data-capa-mov aria-pressed="false">Pausar movimento</button>
       </div>
-      <div class="cp-meta"><span>${dataBR}</span><span>v560</span></div>
+      <div class="cp-meta"><span>${dataBR}</span><span data-capa-versao>v—</span></div>
     </div>
     <div class="cp-cena" aria-hidden="true">
       <div class="cp-livro">
@@ -94,6 +94,11 @@
     }
   }
   abrirBtn.addEventListener('click', abrir);
+  // v576: mostra a versão real instalada e garante a saída da capa mesmo se o toque falhar.
+  const versao = () => { const v = w.DIARIO_RELEASE && w.DIARIO_RELEASE.label; const s = el.querySelector('[data-capa-versao]'); if (s && v) s.textContent = v; };
+  versao(); d.addEventListener('DOMContentLoaded', versao, { once: true }); w.addEventListener('load', versao, { once: true });
+  abrirBtn.addEventListener('touchend', e => { if (aberta) { e.preventDefault(); abrir(); } }, { passive: false });
+  abrirBtn.addEventListener('click', () => setTimeout(() => { if (el.isConnected) { el.remove(); w.dispatchEvent(new CustomEvent('diario:capa-aberta')); } }, 2500));
   mov.addEventListener('click', () => { parado = !parado; set(KEY_PARADO, parado ? '1' : '0'); aplicaMov(); if (parado) { livro.style.removeProperty('--rx'); livro.style.removeProperty('--ry'); } });
   const cena = el.querySelector('.cp-cena');
   const fino = w.matchMedia && w.matchMedia('(pointer:fine)').matches;

@@ -1,0 +1,4 @@
+Diário Trader v576
+
+- Capa mostra a versão real instalada (antes ficava fixo "v560").
+- Botão "Abrir o diário" responde ao toque no iPhone e a capa sempre sai.
