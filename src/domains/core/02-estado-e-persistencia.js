@@ -2848,7 +2848,7 @@ function vLivro() {
   const e = (S.books || []).find((n) => n.id === BID);
   if (!e) return vEstudos();
   const t = (e.notes || []).slice().sort((n, r) => (r.u || 0) - (n.u || 0)),
-    a = `<div class="top"><button class="btn s" data-a="gotab" data-id="estudos">‹ Livros</button>${e.pat ? "" : '<button class="btn s d" data-a="delbook" data-id="' + e.id + '">Excluir livro</button>'}</div><h1>${esc(e.t)}</h1><div class="mut sm">${esc(e.a)}</div><label>Situação<select data-bs="${e.id}">${opt(STS, e.st || "lendo")}</select></label>`,
+    a = `<div class="top"><button class="btn s" data-a="gotab" data-id="estudos">‹ Livros</button>${e.pat ? "" : '<button class="btn s d" data-a="delbook" data-id="' + e.id + '">Excluir livro</button>'}</div><h1>${esc(tituloLivro(e.t))}</h1><div class="mut sm">${esc(e.a)}</div><label>Situação<select data-bs="${e.id}">${opt(STS, e.st || "lendo")}</select></label>`,
     o = e.pat
       ? `<div class="seg"><button class="${BV === "pad" ? "on" : ""}" data-a="bv" data-id="pad">🕯️ Padrões</button><button class="${BV === "not" ? "on" : ""}" data-a="bv" data-id="not">📝 Anotações</button></div>`
       : "",

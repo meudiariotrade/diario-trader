@@ -2300,3 +2300,15 @@ html body #v512-ls .v592-pop .x{position:absolute;top:4px;right:4px;width:40px;h
 /* v592 — Início: pregão encerrado e fechamento pendente → "Começar" em âmbar institucional */
 html body #app#app #fchb .btn.fch-ambar{background:#D4A017!important;border-color:#D4A017!important;color:#0A0C10!important;font-weight:700;min-height:40px;border-radius:4px}
 html body #app#app #fchb .btn.fch-ambar:active{background:#B88A12!important}
+/* v593 — Estudos: categorias sem encostar o texto na borda (Biblioteca, Progresso) */
+html body #app#app .dt401-category-shell{gap:4px!important;grid-template-columns:repeat(5,minmax(0,1fr)) 44px!important}
+html body #app#app .dt401-category-shell .dt401-more,html body #app#app .dt401-category-shell .dt401-more>*{min-width:0!important;padding-left:0!important;padding-right:0!important}
+html body #app#app .dt401-category-shell nav.dt397-category{gap:4px!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}
+html body #app#app nav.dt397-category .dt397-chip{padding-left:2px!important;padding-right:2px!important;letter-spacing:-.03em!important;font-weight:600!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+/* v593 — Operações do dia (Desempenho): setup inteiro, sem reticências */
+html body #app#app .v4-oplist summary>span{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;display:block!important;-webkit-line-clamp:unset!important;line-height:1.25;font-size:12px;min-width:0}
+html body #app#app .v4-oplist summary>em{white-space:nowrap!important;font-variant-numeric:tabular-nums;text-align:right}
+/* v593 — Meu dia: aviso de dia de turno */
+html body #app#app .v4-turno{margin:0 0 8px;padding:10px 12px;background:#11141B;border-left:3px solid #EF4444;border-radius:4px;color:#E8E6E1;font-size:14px}
+html body #app#app .v4-turno b{color:#EF4444}
+html body #app#app .v4-turno span{font-variant-numeric:tabular-nums}
