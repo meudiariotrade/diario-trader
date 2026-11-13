@@ -5253,6 +5253,19 @@ const IRC = {
   O: ["Swing ETF/BDR/futuros/opções", 0.15, 0],
   F: ["Swing FII", 0.2, 0],
 };
+/* v599 — Prejuízos se compensam só dentro do mesmo grupo: Day trade (20%), Comum/Swing (15%: ações, opções,
+   ETFs, futuros) e FIIs (20%). Swing ações e "Swing ETF/BDR/futuros/opções" formam um único saldo. */
+const IR_POOL = { D: "D", A: "C", O: "C", F: "F" },
+  IR_POOL_NOME = { D: ["Day Trade", 0.2], C: ["Swing Trade / Comum", 0.15], F: ["FIIs", 0.2] };
+/* Custos de compra que já entraram no preço médio da Carteira (rateio da nota): não são abatidos de novo no mês. */
+function irCustoNoPm() {
+  const m = {},
+    cat = { acao: "A", etf: "O", fii: "F" };
+  (((S.cart || {}).lanc) || []).forEach((l) => {
+    l && l.src && l.tp === "C" && +l.cs > 0 && (m[l.src + "|" + (cat[l.cl] || "A")] = (m[l.src + "|" + (cat[l.cl] || "A")] || 0) + +l.cs);
+  });
+  return m;
+}
 function irVenc(e) {
   const [t, a] = e.split("-").map(Number),
     o = new Date(t, a + 1, 0);
@@ -5265,15 +5278,17 @@ function irCalc() {
       .sort((p, u) => p.d.localeCompare(u.d)),
     t = {},
     a = (p) => +p || 0,
-    o = { corr: 0, emol: 0, iss: 0, out: 0, bruto: 0 };
+    o = { corr: 0, emol: 0, iss: 0, out: 0, bruto: 0 },
+    noPm = irCustoNoPm();
   e.forEach((p) => {
     var u, m;
     const f = p.d.slice(0, 7),
       x = t[f] ?? (t[f] = { c: {}, cost: 0, bruto: 0, irrf: 0 }),
       v = (u = x.c)[(m = p.m)] ?? (u[m] = { bruto: 0, cost: 0, vendas: 0 }),
-      g = a(p.corr) + a(p.emol) + a(p.iss) + a(p.out);
+      g = a(p.corr) + a(p.emol) + a(p.iss) + a(p.out),
+      gPm = p.src && p.m !== "D" ? Math.min(g, noPm[p.src + "|" + p.m] || 0) : 0;
     ((v.bruto += a(p.bruto)),
-      (v.cost += g),
+      (v.cost += g - gPm),
       (v.vendas += a(p.vendas)),
       (x.cost += g),
       (x.bruto += a(p.bruto)),
@@ -5281,7 +5296,7 @@ function irCalc() {
       ["corr", "emol", "iss", "out"].forEach((h) => (o[h] += a(p[h]))),
       (o.bruto += a(p.bruto)));
   });
-  const s = { D: 0, A: 0, O: 0, F: 0 },
+  const s = { D: 0, C: 0, F: 0 },
     n = [];
   let r = 0,
     i = 0;
@@ -5289,13 +5304,15 @@ function irCalc() {
     .sort()
     .forEach((p) => {
       const u = t[p],
-        m = [];
+        m = [],
+        mov = { D: { entrou: 0, comp: 0 }, C: { entrou: 0, comp: 0 }, F: { entrou: 0, comp: 0 } };
       let f = 0;
       for (const b of Object.keys(IRC)) {
         const y = u.c[b];
         if (!y) continue;
         const j = y.bruto - y.cost,
-          [k, A, C] = IRC[b];
+          [k, A, C] = IRC[b],
+          q = IR_POOL[b];
         let I = 0,
           J = 0,
           se = 0,
@@ -5303,8 +5320,8 @@ function irCalc() {
         (b === "A" && y.vendas <= C && j >= 0
           ? (Ie = !0)
           : j < 0
-            ? (s[b] += -j)
-            : ((I = Math.min(s[b], j)), (s[b] -= I), (J = j - I), (se = J * A)),
+            ? ((s[q] += -j), (mov[q].entrou += -j))
+            : ((I = Math.min(s[q], j)), (s[q] -= I), (mov[q].comp += I), (J = j - I), (se = J * A)),
           (f += se),
           m.push({
             k: b,
@@ -5334,6 +5351,7 @@ function irCalc() {
           carry: i,
           pool: r,
           prej: { ...s },
+          mov,
         }));
     });
   const l = sum(n.map((p) => p.cost)),
@@ -5346,6 +5364,43 @@ function irCalc() {
     ano: sum(n.filter((p) => p.m.startsWith(d)).map((p) => p.cost)),
     mes: sum(n.filter((p) => p.m === c).map((p) => p.cost)),
   };
+}
+/* v599 — linhas explícitas de prejuízo do mês e como entraram/saíram do saldo a compensar. */
+function irMovHtml(n) {
+  const mv = n.mov || {},
+    pj = n.prej || {},
+    l = [];
+  ["D", "C", "F"].forEach((q) => {
+    const m = mv[q] || {},
+      nm = IR_POOL_NOME[q][0];
+    m.entrou > 0 && l.push(`<div class="ir599-mov neg"><span>Prejuízo ${nm}</span><b>−${money(m.entrou)}</b><small>entrou no saldo a compensar ${nm} → saldo ${money(pj[q] || 0)}</small></div>`);
+    m.comp > 0 && l.push(`<div class="ir599-mov comp"><span>Compensado ${nm}</span><b>${money(m.comp)}</b><small>abatido do saldo ${nm} → restam ${money(pj[q] || 0)}</small></div>`);
+  });
+  return l.length ? `<div class="ir599-movs">${l.join("")}</div>` : "";
+}
+function irSaldos() {
+  const out = irCalc().out;
+  if (out.length) return { prej: out[out.length - 1].prej || {}, base: "notas de corretagem", ate: out[out.length - 1].m };
+  try {
+    const pv = irPrevia();
+    if (pv.length) return { prej: pv[pv.length - 1].prej || {}, base: "estimativa pelo diário", ate: pv[pv.length - 1].m };
+  } catch {}
+  return { prej: { D: 0, C: 0, F: 0 }, base: "", ate: "" };
+}
+function irPainelHtml() {
+  const sd = irSaldos(),
+    cx = [
+      ["D", "Compensa só em lucros futuros de Day Trade"],
+      ["C", "Compensa só em lucros futuros de Swing: ações (vendas > R$ 20 mil), opções, ETFs e futuros"],
+      ["F", "Compensa só em lucros futuros de Fundos Imobiliários"],
+    ];
+  return `<section class="ir599-painel" aria-label="Prejuízos a compensar"><div class="ir599-ph"><h2>Prejuízos a compensar</h2><small>${sd.base ? "Saldo até " + new Date(sd.ate + "-15T12:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }) + " · " + sd.base : "Sem apuração ainda"}</small></div><div class="ir599-cx">${cx
+    .map(([q, d]) => {
+      const v = +(sd.prej || {})[q] || 0,
+        [nm, al] = IR_POOL_NOME[q];
+      return `<div class="ir599-box${v > 0 ? " tem" : ""}"><span>${nm} <em>${Math.round(al * 100)}%</em></span><b>${v > 0 ? "−" + money(v) : money(0)}</b><small>${v > 0 ? "Crédito: até " + money(v * al) + " de imposto a menos" : "Sem prejuízo acumulado"}</small><i>${d}</i></div>`;
+    })
+    .join("")}</div><p class="ir599-nota">Os três saldos nunca se misturam: prejuízo de Day Trade não abate lucro de Swing e vice-versa.</p></section><!--ir-painel-fim-->`;
 }
 function vImpostoAp() {
   const e = irCalc(),
@@ -5376,16 +5431,7 @@ function vImpostoAp() {
           .reverse()
           .map(
             (n) =>
-              `<div class="card"><div class="top"><b>${new Date(n.m + "-15").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</b><b class="${n.darf > 0 ? "r" : "g"}">DARF ${money(n.darf)}</b></div>${n.rows.map((r) => `<div class="sm" style="margin-top:6px"><b>${r.nm}</b>: líquido <b class="${r.liq >= 0 ? "g" : "r"}">${money(r.liq)}</b>${r.isento ? ' · <b class="g">isento (vendas ${money(r.vendas)} ≤ R$ 20 mil)</b>' : r.liq < 0 ? " · prejuízo a compensar" : ` · compensado ${money(r.comp)} · base ${money(r.base)} · imposto ${money(r.tx)}`}</div>`).join("")}<div class="sm mut" style="margin-top:6px">Custos do mês ${money(n.cost)} · IRRF ${money(n.irrf)}${n.darf > 0 ? " · vence em " + irVenc(n.m) + " (sem feriados)" : ""}${n.carry > 0 ? " · abaixo de R$ 10: soma ao mês seguinte" : ""}</div>${
-                Object.values(n.prej).some((r) => r > 0)
-                  ? `<div class="sm mut">Prejuízo acumulado: ${Object.entries(
-                      n.prej,
-                    )
-                      .filter(([r, i]) => i > 0)
-                      .map(([r, i]) => IRC[r][0] + " " + money(i))
-                      .join(" · ")}</div>`
-                  : ""
-              }</div>`,
+              `<div class="card"><div class="top"><b>${new Date(n.m + "-15").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</b><b class="${n.darf > 0 ? "r" : "g"}">DARF ${money(n.darf)}</b></div>${n.rows.map((r) => `<div class="sm" style="margin-top:6px"><b>${r.nm}</b>: líquido <b class="${r.liq >= 0 ? "g" : "r"}">${money(r.liq)}</b>${r.isento ? ' · <b class="g">isento (vendas ${money(r.vendas)} ≤ R$ 20 mil)</b>' : r.liq < 0 ? " · prejuízo a compensar" : ` · compensado ${money(r.comp)} · base ${money(r.base)} · imposto ${money(r.tx)}`}</div>`).join("")}<div class="sm mut" style="margin-top:6px">Custos do mês ${money(n.cost)} · IRRF ${money(n.irrf)}${n.darf > 0 ? " · vence em " + irVenc(n.m) + " (sem feriados)" : ""}${n.carry > 0 ? " · abaixo de R$ 10: soma ao mês seguinte" : ""}</div>${irMovHtml(n)}</div>`,
           )
           .join("")
       : '<p class="mut">Nenhuma nota lançada.</p>'
@@ -5920,10 +5966,11 @@ function ntDel(e) {
     } else t.id === "ntcart" && (NT.cart = t.checked ? 1 : 0);
   }));
 const irSeg = (e) =>
-    `<div class="seg">${[
-      ["ap", "🧾 Apuração"],
-      ["im", "📥 Importar"],
-      ["cu", "💸 Custos"],
+    `<div class="seg ir599-seg">${[
+      ["ap", "Apuração"],
+      ["im", "Importar"],
+      ["cu", "Custos"],
+      ["es", "Espelho IRPF"],
     ]
       .map(
         ([t, a]) =>
@@ -6035,12 +6082,82 @@ ${m ? `<p class="sm mut">Custo médio por operação importada: ${money(sum(a.ma
   }
 <p class="sm mut" style="margin-top:10px">IRRF retido (não é custo, abate o imposto): ${money(p)}</p>`;
 }
+/* v599 — Espelho IRPF: posição em custódia em 31/12 (custo médio), rendimentos isentos e tabela mensal. */
+const BTG_CNPJ = "43.815.158/0001-22";
+function irEspelho(ano) {
+  const fim = ano + "-12-31",
+    lanc = (((S.cart || {}).lanc) || []).filter((l) => l && l.mk === "BR" && l.d <= fim),
+    pos = {};
+  lanc
+    .slice()
+    .sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0))
+    .forEach((l) => {
+      if (l.tp === "P") return;
+      const p = pos[l.tk] ?? (pos[l.tk] = { q: 0, custo: 0, cl: l.cl });
+      const q = +l.q || 0;
+      if (l.tp === "C") ((p.q += q), (p.custo += q * (+l.p || 0) + (+l.cs || 0)));
+      else {
+        const pm = p.q > 0 ? p.custo / p.q : 0,
+          d = Math.min(q, p.q);
+        ((p.custo -= pm * d), (p.q -= d));
+      }
+    });
+  const custodia = Object.entries(pos)
+      .filter(([, p]) => p.q > 1e-9)
+      .map(([tk, p]) => ({ tk, cl: p.cl, q: p.q, pm: p.custo / p.q, custo: p.custo }))
+      .sort((a, b) => a.tk.localeCompare(b.tk)),
+    proventos = (((S.cart || {}).lanc) || []).filter((l) => l && l.mk === "BR" && l.tp === "P" && String(l.d).startsWith(String(ano))),
+    meses = irCalc().out.filter((n) => n.m.startsWith(String(ano))),
+    isentoAcoes = sum(meses.flatMap((n) => n.rows.filter((r) => r.isento).map((r) => r.liq)));
+  return { custodia, proventos, meses, isentoAcoes };
+}
+function vImpEspelho() {
+  const anos = [...new Set([...(((S.cart || {}).lanc) || []).map((l) => String(l.d || "").slice(0, 4)), ...(((S.ir || {}).notas) || []).map((n) => String(n.d || "").slice(0, 4))])].filter((a) => /^\d{4}$/.test(a)).sort().reverse(),
+    atual = new Date().getFullYear(),
+    ano = +(VW.IRano || anos.find((a) => +a < atual) || anos[0] || atual - 1),
+    e = irEspelho(ano),
+    tipo = { acao: "Ações (31)", fii: "Fundos imobiliários (73)", etf: "ETF (74)" },
+    num = (v, d = 2) => (+v).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }),
+    prov = {};
+  e.proventos.forEach((l) => {
+    const k = l.cl === "fii" ? "Rendimentos de FII (99)" : "Dividendos (09)";
+    prov[k] = (prov[k] || 0) + (+l.v || +l.p * (+l.q || 1) || 0);
+  });
+  const rendIsentos = [...Object.entries(prov), ...(e.isentoAcoes > 0 ? [["Lucro em ações no swing com vendas até R$ 20 mil/mês (20)", e.isentoAcoes]] : [])];
+  return `<div class="ir599-es"><div class="ir599-esh"><h2>Espelho IRPF ${ano + 1} · ano-base ${ano}</h2><label class="sm">Ano-base<select data-ir599-ano>${(anos.length ? anos : [String(ano)]).map((a) => `<option value="${a}"${+a === ano ? " selected" : ""}>${a}</option>`).join("")}</select></label></div>
+<h3>Bens e Direitos · posição em 31/12/${ano}</h3>${
+    e.custodia.length
+      ? `<div class="ir599-tabw"><table class="ir599-tab"><thead><tr><th>Ativo</th><th>Qtd.</th><th>PM</th><th>Total 31/12</th></tr></thead><tbody>${e.custodia
+          .map((c) => `<tr><td><b>${esc(c.tk)}</b><small>${tipo[c.cl] || "Ações (31)"}</small></td><td>${num(c.q, 0)}</td><td>${money(c.pm)}</td><td>${money(c.custo)}</td></tr>`)
+          .join("")}</tbody></table></div><p class="ir599-disc">Discriminação sugerida: “${num(e.custodia[0].q, 0)} ${esc(e.custodia[0].tk)}, custo médio ${money(e.custodia[0].pm)}, custodiadas na BTG Pactual CTVM S.A., CNPJ ${BTG_CNPJ}”. Valores pelo custo de aquisição (com taxas), nunca pelo valor de mercado.</p>`
+      : '<p class="mut sm">Sem posição em custódia no fim do ano (lançamentos da aba Carteiras / notas importadas).</p>'
+  }
+<h3>Rendimentos Isentos e Não Tributáveis</h3>${
+    rendIsentos.length
+      ? `<div class="ir599-tabw"><table class="ir599-tab"><tbody>${rendIsentos.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${money(v)}</td></tr>`).join("")}</tbody></table></div><p class="ir599-disc">Fonte pagadora dos proventos: a empresa ou o fundo (CNPJ de cada um). Corretora: BTG Pactual, CNPJ ${BTG_CNPJ}.</p>`
+      : '<p class="mut sm">Nenhum rendimento isento lançado no ano.</p>'
+  }
+<h3>Renda Variável · operações comuns e day trade (mês a mês)</h3>${
+    e.meses.length
+      ? `<div class="ir599-tabw"><table class="ir599-tab ir599-mes"><thead><tr><th>Mês</th><th>Comum</th><th>Day trade</th><th>FII</th><th>Prej. comum</th><th>Prej. DT</th><th>IRRF</th><th>Imposto</th></tr></thead><tbody>${e.meses
+          .map((n) => {
+            const g = (ks) => sum(n.rows.filter((r) => ks.includes(r.k)).map((r) => r.liq));
+            return `<tr><td>${n.m.slice(5)}/${n.m.slice(0, 4)}</td><td class="${cls(g(["A", "O"]))}">${money(g(["A", "O"]))}</td><td class="${cls(g(["D"]))}">${money(g(["D"]))}</td><td class="${cls(g(["F"]))}">${money(g(["F"]))}</td><td>${money((n.prej || {}).C || 0)}</td><td>${money((n.prej || {}).D || 0)}</td><td>${money(n.irrf)}</td><td>${money(n.darf)}</td></tr>`;
+          })
+          .join("")}</tbody></table></div><p class="ir599-disc">Lance na ficha “Renda Variável → Operações Comuns/Day-Trade” de cada mês: resultado líquido, prejuízo a compensar, IRRF (dedo-duro) e imposto pago. FIIs vão na ficha própria de Fundos Imobiliários.</p>`
+      : '<p class="mut sm">Sem notas importadas no ano-base.</p>'
+  }
+<p class="sm mut">Espelho orientativo para conferência. Confirme com o informe da corretora e com um contador.</p></div>`;
+}
+document.addEventListener("change", (ev) => {
+  const sl = ev.target.closest?.("[data-ir599-ano]");
+  sl && ((VW.IRano = sl.value), render());
+});
 function vImposto() {
   const e = VW.IR || "ap";
   return (
-    "<h1>Imposto de renda</h1>" +
     irSeg(e) +
-    (e === "im" ? vImpNotas() : e === "cu" ? vImpCustos() : vImpostoAp())
+    (e === "im" ? vImpNotas() : e === "cu" ? vImpCustos() : e === "es" ? vImpEspelho() : irPainelHtml() + vImpostoAp())
   );
 }
 const CCL = {

@@ -326,7 +326,8 @@ function irPrevia() {
         ? (c.irrf += i.pl * 0.01)
         : d !== "D" && m && u && (c.irrf += m * u * (numN(n.pv) || 1) * 5e-5));
   });
-  const a = { D: 0, A: 0, O: 0, F: 0 },
+  /* v599: mesmo agrupamento de prejuízos da apuração (Day trade, Comum/Swing, FIIs). */
+  const a = { D: 0, C: 0, F: 0 },
     o = [];
   let s = 0;
   return (
@@ -334,7 +335,8 @@ function irPrevia() {
       .sort()
       .forEach((n) => {
         const r = t[n],
-          i = [];
+          i = [],
+          mov = { D: { entrou: 0, comp: 0 }, C: { entrou: 0, comp: 0 }, F: { entrou: 0, comp: 0 } };
         let l = 0;
         for (const u of Object.keys(IRC)) {
           const m = r.c[u];
@@ -344,12 +346,14 @@ function irPrevia() {
             h = 0,
             b = 0,
             y = !1;
+          const q = IR_POOL[u];
           (u === "A" && m.vendas <= v && m.bruto >= 0
             ? (y = !0)
             : m.bruto < 0
-              ? (a[u] += -m.bruto)
-              : ((g = Math.min(a[u], m.bruto)),
-                (a[u] -= g),
+              ? ((a[q] += -m.bruto), (mov[q].entrou += -m.bruto))
+              : ((g = Math.min(a[q], m.bruto)),
+                (a[q] -= g),
+                (mov[q].comp += g),
                 (h = m.bruto - g),
                 (b = h * x)),
             (l += b),
@@ -368,7 +372,7 @@ function irPrevia() {
           c = l - d + s;
         let p = 0;
         (c >= 10 ? ((p = c), (s = 0)) : (s = c),
-          o.push({ m: n, rows: i, imp: l, irrf: d, darf: p, n: r.n, prev: 1 }));
+          o.push({ m: n, rows: i, imp: l, irrf: d, darf: p, n: r.n, prev: 1, prej: { ...a }, mov }));
       }),
     o
   );
@@ -415,7 +419,7 @@ function irPreviaHtml() {
           )}<div class="sm mut">Você recebe uma notificação no dia útil anterior e no dia do vencimento.</div>`
       : "",
     n = e.length
-      ? `<h2>Prévia pelo diário</h2><div class="sm mut" style="margin-bottom:6px">Meses ainda não conferidos, calculados pelos trades do diário (resultado sem custos, IRRF estimado). Notas parciais não excluem o restante do mês. Confira a cobertura antes de usar a apuração das notas.</div>${e.map((r) => `<div class="card"><div class="top"><b>${o(r.m)}</b><b class="${r.darf > 0 ? "r" : "g"}">DARF ≈ ${money(r.darf)}</b></div>${r.rows.map((i) => `<div class="sm" style="margin-top:4px"><b>${i.nm}</b>: <span class="${cls(i.liq)}">${money(i.liq)}</span>${i.isento ? ` · <b class="g">isento (vendas ≈ ${money(i.vendas)})</b>` : i.liq < 0 ? " · prejuízo a compensar" : ` · imposto ${money(i.tx)}`}</div>`).join("")}<div class="sm mut" style="margin-top:4px">${r.n} trade(s) · IRRF estimado ${money(r.irrf)}${r.darf > 0 ? " · vence em " + fmtD(irVencISO(r.m)) : ""}</div></div>`).join("")}`
+      ? `<h2>Prévia pelo diário</h2><div class="sm mut" style="margin-bottom:6px">Meses ainda não conferidos, calculados pelos trades do diário (resultado sem custos, IRRF estimado). Notas parciais não excluem o restante do mês. Confira a cobertura antes de usar a apuração das notas.</div>${e.map((r) => `<div class="card"><div class="top"><b>${o(r.m)}</b><b class="${r.darf > 0 ? "r" : "g"}">DARF ≈ ${money(r.darf)}</b></div>${r.rows.map((i) => `<div class="sm" style="margin-top:4px"><b>${i.nm}</b>: <span class="${cls(i.liq)}">${money(i.liq)}</span>${i.isento ? ` · <b class="g">isento (vendas ≈ ${money(i.vendas)})</b>` : i.liq < 0 ? " · prejuízo a compensar" : ` · imposto ${money(i.tx)}`}</div>`).join("")}<div class="sm mut" style="margin-top:4px">${r.n} trade(s) · IRRF estimado ${money(r.irrf)}${r.darf > 0 ? " · vence em " + fmtD(irVencISO(r.m)) : ""}</div>${typeof irMovHtml == "function" ? irMovHtml(r) : ""}</div>`).join("")}`
       : "";
   return s + n;
 }
