@@ -1,6 +1,0 @@
-/* v417 — toque sem navegação acidental. A mudança de módulo é só via botões. */
-html, body, #app { overscroll-behavior-x: none; }
-/* Limita o efeito elástico dos scrollers horizontais sem remover scroll por gesto. */
-.m403-primary-tabs, .cqtabs, .trtabs, .trabas,
-.m409-controls, .m409-periods, .dt395-market-tabs,
-[role="tablist"] { overscroll-behavior-x: contain; }

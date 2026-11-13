@@ -1,1 +1,0 @@
-CSS antigos (v379–v423) que o app não carrega mais. Guardados aqui só como histórico; o app usa estilo-v560.css e tema-claro-v427.css.
