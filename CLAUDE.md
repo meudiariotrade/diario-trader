@@ -39,3 +39,7 @@ Este aplicativo é uma ferramenta profissional de mesa proprietária e gestão d
 - **Segurança (RLS):** Garanta que qualquer nova tabela criada tenha Row Level Security (RLS) ativado e políticas vinculadas ao `auth.uid()`.
 - **Preservação de Lógica:** Ao refatorar componentes de UI, preserve integralmente hooks, estados, integrações com o Profit, comandos do Terminal e consultas existentes.
 - **Commits:** Faça commits atômicos, claros e descritivos em português, listando os arquivos modificados.
+
+## 6. Regra de Tela Única (Zero Sobreposição)
+- Nunca mantenha múltiplas abas montadas no DOM simultaneamente usando CSS. Use sempre desmontagem completa (unmount) na troca de rota/aba e mantenha o Ticker, Header e BottomNav exclusivamente no layout raiz.
+- Antes de alterar telas, me mostre quais arquivos duplicados/zumbis você encontrou e onde estava o erro de sobreposição de telas, e já aplique o commit da limpeza.
