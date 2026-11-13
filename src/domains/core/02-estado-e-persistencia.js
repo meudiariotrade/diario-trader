@@ -1247,22 +1247,22 @@ function vDia() {
 <div class="card" style="margin-top:12px"><b>Resumo automático</b><div class="mut">${t.length} trade(s) · <span class="${cls(s)}">${mnyMix(somaMoedas(a))}</span>${pctConta(s) ? ' · <span class="' + cls(s) + '">' + pctConta(s) + "</span>" : ""} · ${n} erro(s)</div></div>
 <h2>☀️ Antes do mercado</h2>
 <label>Como estou hoje?</label><div class="chips2">${EMO.map((i, l) => `<button class="${e.energia == l + 1 ? "on" : ""}" data-dseg="energia" data-v="${l + 1}">${i}</button>`).join("")}</div><div class="g2" style="grid-template-columns:1fr"><label>Tipo de mercado hoje<select data-d="mkt"><option value="">–</option>${opt(MK, e.mkt)}</select></label></div>
-${r("plano", "Plano do dia", "Cenário, níveis, o que vou operar…")}
-${r("pre", "Ensaio mental: o que pode dar errado hoje e como vou reagir?")}
+${r("plano", "Plano do dia", "Cenário, níveis, ativos")}
+${r("pre", "Riscos do dia e reação", "O que pode dar errado e como vou reagir")}
 <h2>✅ Checklist de regras <span class="mut sm" id="cnt"></span></h2>
 <div class="card">${S.rules.length ? S.rules.map((i) => `<label class="ck"><input type="checkbox" data-chk="${i.id}"${e.chk && e.chk[i.id] ? " checked" : ""}><span>${esc(i.t)}</span></label>`).join("") : '<span class="mut">Cadastre suas regras na aba Regras.</span>'}</div>
 <h2>🌙 Depois do mercado (debriefing)</h2>
-${r("resumo", "Como foi meu dia?")}
-<label>Cometi algum erro hoje? (erro = não seguir minhas regras)<select data-d="erros"><option value="">–</option>${opt(
+${r("resumo", "Resumo do dia")}
+<label>Quebra de regra ou erro operacional<select data-d="erros"><option value="">–</option>${opt(
         [
-          ["n", "Não — bom trabalho, segui as regras"],
+          ["n", "Não, segui as regras"],
           ["s", "Sim"],
         ],
         e.erros,
       )}</select></label>
-${r("cond", "Em que condições errei? Quando podem se repetir?")}
-${r("prevn", "O que vou fazer para não repetir? (ensaiar mentalmente)")}
-${r("bem", "O que fiz bem hoje?")}
+${r("cond", "Contexto do erro", "Em que condições aconteceu e quando pode se repetir")}
+${r("prevn", "Ação corretiva", "O que vou fazer para não repetir")}
+${r("bem", "Acertos do dia")}
 <div class="g2"><label>Nota do dia: <b id="nv">${e.nota === void 0 || e.nota === "" ? "–" : esc(e.nota)}</b><input type="range" min="0" max="10" step="1" data-d="nota" value="${esc(e.nota || 0)}"></label></div>
 ${r("aprend", "Aprendizado principal")}${iaBlock(e.ia, a.length ? { r: o, pl: s } : null, "d")}<button class="btn" style="width:100%;margin-top:14px" data-a="dsave">💾 Salvar dia</button><div class="mut sm" style="margin-top:6px">Também é salvo automaticamente a cada alteração.</div>`;
 }
@@ -2825,11 +2825,22 @@ function seedBooks() {
       }),
       persist()));
 }
+/* Title Case só na exibição: conectivos curtos ficam minúsculos (exceto a 1ª palavra); siglas mantidas. */
+function tituloLivro(t) {
+  const menores = new Set(["a","à","o","e","é","de","da","do","das","dos","em","no","na","nos","nas","um","uma","por","para","com","and","of","the","in","on","to","for","or"]);
+  return String(t || "").trim().split(/\s+/).map((w, i) => {
+    if (!w) return w;
+    if (/[A-Z]{2,}/.test(w) || /\d/.test(w)) return w;
+    const l = w.toLocaleLowerCase("pt-BR");
+    if (i > 0 && menores.has(l)) return l;
+    return l.charAt(0).toLocaleUpperCase("pt-BR") + l.slice(1);
+  }).join(" ");
+}
 function vEstudos() {
   seedBooks();
   const books = S.books || [];
   return `<h1>Estudos</h1><label class="est-book-search">Buscar nos meus livros<input type="search" data-est-book-search placeholder="Título ou autor" aria-label="Buscar nos meus livros"></label>
- <div class="est-book-list">${books.map((book) => `<div class="card row" data-est-book-row data-a="openbook" data-id="${esc(book.id)}"><div class="th">${book.pat ? "🕯️" : "📘"}</div><div class="fl"><b>${esc(book.t)}</b><div class="mut sm">${esc(book.a)} · ${(STS.find((status) => status[0] === book.st) || STS[0])[1]} · ${(book.notes || []).length} anotação(ões)${book.pat ? " · " + PATS.length + " padrões" : ""}</div></div></div>`).join("")}</div>
+ <div class="est-book-list">${books.map((book) => `<div class="card row" data-est-book-row data-a="openbook" data-id="${esc(book.id)}"><div class="th">${book.pat ? "🕯️" : "📘"}</div><div class="fl"><b>${esc(tituloLivro(book.t))}</b><div class="mut sm">${esc(book.a)} · ${(STS.find((status) => status[0] === book.st) || STS[0])[1]} · ${(book.notes || []).length} anotação(ões)${book.pat ? " · " + PATS.length + " padrões" : ""}</div></div></div>`).join("")}</div>
  <p class="mut sm est-book-empty" hidden>Nenhum livro corresponde à busca.</p>
  <details class="card est-book-add"><summary>Adicionar livro</summary><div class="g2"><label>Livro<input id="bt" placeholder="Título"></label><label>Autor<input id="ba" placeholder="Autor"></label></div><button class="btn" style="margin-top:10px" data-a="addbook">+ Adicionar livro</button></details>`;
 }

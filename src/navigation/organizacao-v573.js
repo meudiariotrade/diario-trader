@@ -185,7 +185,7 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
   const ops=a.querySelector('.v4-page.v4-ops');if(!ops)return;
   const reg=[...ops.querySelectorAll(':scope>.v4-two>section')].find(s=>s.querySelector('[data-dt393-action="newtrade"]'));
   if(reg&&reg.parentElement!==ops){ops.prepend(reg);const h=reg.querySelector('h2 span');if(h)h.textContent='Registrar'}
-  const imp=a.querySelector('.v4-tools-head [data-v563-import]');if(imp&&imp.textContent.trim()!=='Importar')imp.textContent='Importar';
+  const imp=a.querySelector('[data-v563-import]');if(imp&&imp.textContent.trim()!=='Importar'){imp.textContent='Importar';imp.setAttribute('aria-label','Importar do Profit')}
   const ws=a.querySelector('.v4-tools-head h2 span');if(ws&&ws.textContent!=='Por modalidade')ws.textContent='Por modalidade';
  }
  function desempenho(a){

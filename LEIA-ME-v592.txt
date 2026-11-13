@@ -1,0 +1,11 @@
+DIÁRIO DE TRADER — v592 (polimento visual e planilha)
+
+Tela única (CLAUDE.md, seção 6): nenhum arquivo duplicado/zumbi encontrado. A sobreposição era o botão flutuante "↑" (#btop), fixo no canto inferior esquerdo, cobrindo listas.
+- Sem botão flutuante: tocar no cabeçalho superior rola a página suavemente para o topo.
+- Estudos: capas tipográficas com 3 linhas no máximo, fonte maior e sem quebrar palavra no meio; títulos de livros exibidos em Title Case.
+- Operações: botão "Importar" inteiro (sem reticências).
+- Mercado: sub-abas em linha única ("Long & Short" alinhada às demais).
+- Long & Short: a explicação "O que é Long & Short" saiu da tela e abre pelo "?" ao lado de "Analisar um par".
+- Meu dia: rótulos mais diretos (ex.: "Quebra de regra ou erro operacional").
+- Início: no card "Fechar o dia", o botão "Começar" fica em âmbar (#D4A017) após 17:00 com fechamento pendente.
+- Planilha: colunas "Hora entrada" e "Hora saída" na aba Operações; na aba Desempenho, tabela por dia da semana (trades, acerto, ganhos, perdas, resultado) e resumo: dia em que mais/menos opero e dia em que mais ganho/perco.

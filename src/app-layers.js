@@ -23576,10 +23576,10 @@ try {
       let h = 0;
       for (const ch of String(titulo || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
       const [cor, faixa] = paleta[h % paleta.length];
-      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b>${c(titulo || "Livro")}</b><small>${c(autor || "Livro")}</small></span>`;
+      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b>${c(tituloLivro(titulo) || "Livro")}</b><small>${c(autor || "Livro")}</small></span>`;
     }
     function xt(t, e) {
-      return `<button type="button" class="dt397-lesson dt399-book-row" data-a="openbook" data-id="${c(t.id)}" aria-label="Abrir livro ${c(t.t || "Sem título")}"><span class="dt397-lesson-art dt397-lesson-art--capa">${capaLivro(t.t, t.a)}</span><span class="dt397-lesson-copy"><small class="dt397-type">LEITURA</small><strong>${c(t.t || "Livro sem título")}</strong><small>${c(t.a || "Autor não informado")}</small><span class="dt397-reading-status">${a("book", 13)} ${Array.isArray(t.notes) ? t.notes.length : 0} anotação(ões)</span></span>${a("right", 17)}</button>`;
+      return `<button type="button" class="dt397-lesson dt399-book-row" data-a="openbook" data-id="${c(t.id)}" aria-label="Abrir livro ${c(t.t || "Sem título")}"><span class="dt397-lesson-art dt397-lesson-art--capa">${capaLivro(t.t, t.a)}</span><span class="dt397-lesson-copy"><small class="dt397-type">LEITURA</small><strong>${c(tituloLivro(t.t) || "Livro sem título")}</strong><small>${c(t.a || "Autor não informado")}</small><span class="dt397-reading-status">${a("book", 13)} ${Array.isArray(t.notes) ? t.notes.length : 0} anotação(ões)</span></span>${a("right", 17)}</button>`;
     }
     r.addEventListener(
       "keydown",
@@ -36860,7 +36860,8 @@ try {
         a = [
           "Data",
           "Dia",
-          "Hora",
+          "Hora entrada",
+          "Hora saída",
           "Ativo",
           "Tipo",
           "Lado",
@@ -36882,8 +36883,8 @@ try {
           "Fotos",
         ],
         p = [
-          84, 40, 48, 78, 82, 62, 220, 90, 44, 74, 74, 74, 74, 62, 82, 100, 100,
-          90, 170, 110, 240, 96,
+          84, 40, 56, 56, 78, 82, 62, 220, 90, 44, 74, 74, 74, 74, 62, 82, 100,
+          100, 90, 170, 110, 240, 96,
         ],
         c = [a.map((s) => ({ v: s, s: "h" }))],
         r = [];
@@ -36911,6 +36912,7 @@ try {
           u(yt($.y, $.m, $.d), { fmt: D.data }),
           u($.sem),
           u($.hora),
+          u(s.dtx && O != null ? At(s.dtx).hora : ""),
           u(s.ativo || "", { s: "n" }),
           u(ut[s.tipo || "D"] || s.tipo || ""),
           u(
@@ -36967,23 +36969,24 @@ try {
           { v: "Total", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
-          { f: `SUBTOTAL(3,${s("D")})&" trades"`, s: "tot" },
+          { v: "", s: "tot" },
+          { f: `SUBTOTAL(3,${s("E")})&" trades"`, s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           {
-            f: `IFERROR(TEXT(COUNTIFS(${s("P")},">0")/COUNT(${s("P")}),"0%")&" de acerto","")`,
+            f: `IFERROR(TEXT(COUNTIFS(${s("Q")},">0")/COUNT(${s("Q")}),"0%")&" de acerto","")`,
             s: "tot",
           },
           { v: "", s: "tot" },
-          { f: `SUBTOTAL(9,${s("I")})`, s: "tot", fmt: D.int },
+          { f: `SUBTOTAL(9,${s("J")})`, s: "tot", fmt: D.int },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
-          { f: `SUBTOTAL(9,${s("O")})`, s: "tot", fmt: '"R$" #,##0.00' },
-          { f: `SUBTOTAL(9,${s("P")})`, s: "tot", fmt: D.money },
-          { f: `SUBTOTAL(9,${s("Q")})`, s: "tot", fmt: D.vez },
+          { f: `SUBTOTAL(9,${s("P")})`, s: "tot", fmt: '"R$" #,##0.00' },
+          { f: `SUBTOTAL(9,${s("Q")})`, s: "tot", fmt: D.money },
+          { f: `SUBTOTAL(9,${s("R")})`, s: "tot", fmt: D.vez },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
@@ -37037,7 +37040,7 @@ try {
         ]),
           (y[x] = 24),
           X.push(`A${x + 1}:C${x + 1}`),
-          (c[s.row][21].link = `'Fotos'!A${x + 1}`),
+          (c[s.row][22].link = `'Fotos'!A${x + 1}`),
           x++);
         const O = [
           `Setup: ${f.setup || "—"}`,
@@ -38329,12 +38332,13 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
   <tr><td>Quantidade ajustada pelo beta</td><td>${p} ações</td><td>${z} ações</td></tr></table>
   <div class="mut">Capital de ${W(r)}: metade em cada ponta. "Ajustada pelo beta" equilibra o quanto cada ação costuma oscilar (beta ${v(e.beta, 2)}). Ações abaixo de 100 unidades vão para o mercado fracionário (código com F).</div>`;
     }
-    const ze = `<details class="v512-aula" open><summary>O que é Long &amp; Short (explicado do zero)</summary>
+    /* v592: explicação inicial sai da tela e vai para um popover acionado pelo "?" ao lado de "Analisar um par". */
+    const zeIntro = `<h3>O que é Long &amp; Short</h3>
 <p><b>Ideia em uma frase:</b> você compra uma ação e vende outra ao mesmo tempo, apostando que a diferença entre as duas vai voltar ao normal. Você não aposta se a Bolsa vai subir ou cair, e sim na <b>relação entre duas ações parecidas</b>.</p>
 <p><b>Exemplo do dia a dia:</b> Itaú e Bradesco são bancos parecidos e costumam subir e cair juntos. Se um dia o Itaú sobe muito mais que o Bradesco sem motivo novo, o Itaú ficou "caro" em relação ao Bradesco. O operador vende Itaú e compra Bradesco. Quando a relação volta ao normal, ele desfaz as duas pontas e fica com a diferença.</p>
 <p><b>Por que isso protege?</b> Se a Bolsa inteira cair 5%, a ação que você vendeu cai e você ganha nela; a que você comprou cai e você perde nela. Uma compensa a outra. O resultado depende só de quem andou melhor: por isso se chama operação de <b>valor relativo</b> ou <b>neutra ao mercado</b>.</p>
-<p><b>Comprado (long)</b> = você compra a ação e ganha se ela subir. <b>Vendido (short)</b> = você vende uma ação que não tem (pegando emprestada pelo aluguel da B3) e ganha se ela cair.</p></details>
-<details class="v512-aula"><summary>Como ler os números desta tela</summary>
+<p><b>Comprado (long)</b> = você compra a ação e ganha se ela subir. <b>Vendido (short)</b> = você vende uma ação que não tem (pegando emprestada pelo aluguel da B3) e ganha se ela cair.</p>`;
+    const ze = `<details class="v512-aula"><summary>Como ler os números desta tela</summary>
 <ul><li><b>Razão</b>: preço de A dividido pelo preço de B. É o "termômetro" do par. Se a razão sobe, A está ficando mais caro que B.</li>
 <li><b>Média</b>: o nível normal da razão no período escolhido.</li>
 <li><b>Desvio (z-score)</b>: quantos "desvios padrão" a razão está longe da média. 0 = normal; +2 = A caro; −2 = A barato. Cerca de 95% do tempo a razão fica entre −2 e +2: passar disso é uma distorção.</li>
@@ -38356,7 +38360,8 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
         a = u.res,
         t = a && Ae(a);
       return `<div class="top"><h2>Long &amp; Short</h2><button class="x" type="button" data-v512ls="fecha" aria-label="Fechar">×</button></div>
-  <h3 style="margin:16px 0 8px">Long &amp; Short · Analisar um par</h3>
+  <h3 class="v592-ls-tit" style="margin:16px 0 8px">Analisar um par <button type="button" class="v592-ajuda" data-v512ls="ajuda" aria-label="O que é Long &amp; Short" aria-expanded="${u.ajuda ? "true" : "false"}"><span aria-hidden="true">?</span></button></h3>
+  ${u.ajuda ? `<div class="v592-pop-fundo" data-v512ls="ajuda"></div><div class="v592-pop" role="dialog" aria-modal="true" aria-label="O que é Long &amp; Short"><button type="button" class="x" data-v512ls="ajuda" aria-label="Fechar">×</button>${zeIntro}</div>` : ""}
   <div class="f"><input id="v512-a" value="${g(u.a)}" placeholder="Ativo A" autocomplete="off"><input id="v512-b" value="${g(u.b)}" placeholder="Ativo B" autocomplete="off"></div>
   <div class="f"><select id="v512-j">${[
     [126, "6 meses"],
@@ -38534,6 +38539,7 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
         if (o) {
           const r = o.dataset.v512ls;
           if (r === "fecha") { MKT.tab = "cq"; render(); }
+          else if (r === "ajuda") { u.ajuda = !u.ajuda; j(); }
           else if (r === "calc") ue();
           else if (r === "salva") {
             const s = x("v512-pares", []),

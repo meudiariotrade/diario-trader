@@ -26,7 +26,7 @@ test('v554: trava pelo pré-mercado, desfazer regra, GANHO/PERDA e aba Desempenh
  // Planilha: aba Desempenho.
  const d=await p.evaluate(()=>{const s=DIARIO_V554_DESEMP(S.trades);return s&&{nome:s.nome,linhas:s.rows.filter(Boolean).map(r=>r[0].v)}});
  assert.equal(d.nome,'Desempenho');
- for(const k of ['Taxa de acerto','Payoff (ganho médio ÷ perda média)','Expectativa por trade (× risco)','Maior rebaixamento (R$)','Por setup','Por dia da semana']) assert.ok(d.linhas.includes(k),k);
+ for(const k of ['Taxa de acerto','Payoff (ganho médio ÷ perda média)','Expectativa por trade (× risco)','Maior rebaixamento (R$)','Por setup','Por dia da semana','Dia em que mais opero','Dia em que menos opero','Dia em que mais ganho','Dia em que mais perco']) assert.ok(d.linhas.includes(k),k);
  const ok=await p.evaluate(async()=>{const s=DIARIO_V554_DESEMP(S.trades);const out=await DIARIO_V507.livro([s]);return !!out&&(out.length||out.size)>1000});
  assert.equal(ok,true);
  assert.deepEqual(errors,[]);

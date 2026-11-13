@@ -2241,7 +2241,7 @@ html body .wf-chat-panel{border-radius:4px!important;border:1px solid #1E232E!im
 /* Estudos: capas tipográficas (cor sólida + faixa lateral) no lugar da imagem de candles */
 html body #app .m584-capa{position:relative;display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:100%;min-height:72px;padding:8px 8px 8px 14px;box-sizing:border-box;background:var(--capa,#1B2230);border-radius:2px;overflow:hidden;color:#E8E6E1;text-align:left}
 html body #app .m584-capa::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--faixa,#C9A15A)}
-html body #app .m584-capa b{display:block;font-size:10px;font-weight:750;line-height:1.2;letter-spacing:0;overflow-wrap:normal;word-break:normal;hyphens:auto;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+html body #app .m584-capa b{font-size:11px;font-weight:750;line-height:1.18;letter-spacing:-.01em;overflow-wrap:normal;word-break:keep-all;hyphens:none;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;max-width:100%}
 html body #app .m584-capa small{display:block;margin-top:4px;font-size:9px;color:#ffffffa0;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Últimos trades: código e descrição das opções inteiros (sem reticências) */
 html body #app .trl .trow{display:grid!important;grid-template-columns:36px minmax(0,1fr) auto!important;column-gap:12px!important;row-gap:4px!important;align-items:start!important}
@@ -2283,3 +2283,20 @@ html body #app .v4-risk589>i>em{display:block;height:100%;background:#10B981;bor
 html body #app .v4-risk589.medio>i>em{background:#D4A017}
 html body #app .v4-risk589.alto>i>em{background:#EF4444}
 html body #app .v4-risk589.alto>b{color:#EF4444}
+
+/* v592 — textos sem corte: botão Importar inteiro; cabeçalho rola ao topo (sub-abas do Mercado em mercado.css) */
+html body #app#app [data-v563-import]{white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;flex:0 0 auto!important;min-width:max-content!important}
+html body #dt393-global-head{cursor:default}
+/* v592 — Long & Short: explicação em popover pelo "?" */
+html body #v512-ls .v592-ls-tit{display:flex;align-items:center;gap:8px}
+html body #v512-ls .v592-ajuda{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;margin:-10px 0;padding:0;background:transparent;border:0;color:#8A93A6;font:600 13px/1 inherit;cursor:pointer}
+html body #v512-ls .v592-ajuda span{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1px solid #2A3040;border-radius:50%;font-size:11px}
+html body #v512-ls .v592-ajuda:focus-visible{outline:2px solid #D4A017;outline-offset:-6px}
+html body #v512-ls .v592-pop-fundo{position:fixed;inset:0;z-index:2147483000;background:rgba(10,12,16,.72)}
+html body #v512-ls .v592-pop{position:fixed;z-index:2147483001;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 72px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 160px);overflow:auto;background:#11141B;border:1px solid #1E232E;border-radius:6px;padding:14px 16px;color:#E8E6E1;font-size:14px;line-height:1.5}
+html body #v512-ls .v592-pop h3{margin:0 40px 8px 0;font-size:15px}
+html body #v512-ls .v592-pop p{margin:0 0 10px}
+html body #v512-ls .v592-pop .x{position:absolute;top:4px;right:4px;width:40px;height:40px;background:transparent;border:0;color:#8A93A6;font-size:20px}
+/* v592 — Início: pregão encerrado e fechamento pendente → "Começar" em âmbar institucional */
+html body #app#app #fchb .btn.fch-ambar{background:#D4A017!important;border-color:#D4A017!important;color:#0A0C10!important;font-weight:700;min-height:40px;border-radius:4px}
+html body #app#app #fchb .btn.fch-ambar:active{background:#B88A12!important}
