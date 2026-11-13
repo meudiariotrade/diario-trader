@@ -10862,7 +10862,8 @@ ${W.text}
         (t &&
           ((t.innerHTML = e.play ? N.pause : N.play),
           t.setAttribute("aria-label", e.play ? "Pausar" : "Tocar")),
-          ee());
+          ee(),
+          ms598());
       }
       async function Xe() {
         try {
@@ -10877,9 +10878,37 @@ ${W.text}
         } catch {}
         e.wl = null;
       }
+      /* v598: com a voz neural (arquivo de áudio) a aula continua com a tela bloqueada; a voz do aparelho
+         (speechSynthesis) o iOS interrompe, então nesse caso a aula pausa como antes. */
       document.addEventListener("visibilitychange", () => {
-        document.hidden && e.play && $e();
+        document.hidden && e.play && !(e.nEl && !e.nEl.paused) && $e();
       });
+      function ms598() {
+        try {
+          if (!("mediaSession" in navigator) || !e.a) return;
+          const ms = navigator.mediaSession,
+            titulo = "Aula " + e.a.numero + " · " + (e.a.titulo || "");
+          (ms.metadata?.title !== titulo &&
+            (ms.metadata = new MediaMetadata({
+              title: titulo,
+              artist: e.a.livro || "Diário de Trader",
+              album: "Estudos",
+            })),
+            (ms.playbackState = e.play ? "playing" : "paused"));
+          const c = (sel) => () => document.querySelector(sel)?.click(),
+            h = (acao, fn) => {
+              try {
+                ms.setActionHandler(acao, fn);
+              } catch {}
+            };
+          (h("play", () => e.play || c("#aup [data-aupp]")()),
+            h("pause", () => e.play && c("#aup [data-aupp]")()),
+            h("nexttrack", c("#aup [data-aunext]")),
+            h("previoustrack", c("#aup [data-auprev]")),
+            h("seekbackward", c("#aup [data-auprev]")),
+            h("seekforward", c("#aup [data-aunext]")));
+        } catch {}
+      }
       async function Qt(t) {
         const p = e.a.r.cenas[t],
           x = p.vis,

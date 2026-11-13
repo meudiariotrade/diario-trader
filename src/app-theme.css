@@ -2357,3 +2357,7 @@ html body #v434-ov .v597-notas{background:#11141B;border:1px solid #1E232E;borde
 html body #v434-ov .v597-notas summary{min-height:32px;display:flex;align-items:center;color:#E8E6E1;font-weight:650;cursor:pointer}
 html body #v434-ov .v597-notas textarea{width:100%;box-sizing:border-box;margin-top:6px;min-height:96px;padding:8px;background:#0A0C10;border:1px solid #1E232E;border-radius:4px;color:#E8E6E1;font-size:16px;line-height:1.4;resize:vertical}
 html body #v434-ov .v597-notas small{display:block;margin-top:4px;color:#8A93A6;font-size:12px;min-height:14px}
+/* v598 — Player: pular 15s e modo só áudio (tela bloqueada) */
+html body #v434-ov .v597-bar .v598-pula{min-width:44px;padding:0 4px;color:#8A93A6;font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
+html body #v434-ov .v598-audio{min-height:40px;background:#11141B;border:1px solid #1E232E;border-radius:6px;color:#E8E6E1;font-size:13px}
+html body #v434-ov .v598-audio.on{border-color:#D4A017;color:#D4A017}
