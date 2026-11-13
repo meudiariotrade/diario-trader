@@ -5264,6 +5264,10 @@ function irCustoNoPm() {
   (((S.cart || {}).lanc) || []).forEach((l) => {
     l && l.src && l.tp === "C" && +l.cs > 0 && (m[l.src + "|" + (cat[l.cl] || "A")] = (m[l.src + "|" + (cat[l.cl] || "A")] || 0) + +l.cs);
   });
+  /* v604: taxas de abertura de opções já entram no custo médio / prêmio líquido da posição */
+  (((S.ir || {}).opc) || []).forEach((l) => {
+    l && l.src && +l.cpm > 0 && (m[l.src + "|O"] = (m[l.src + "|O"] || 0) + +l.cpm);
+  });
   return m;
 }
 function irVenc(e) {
@@ -5461,11 +5465,11 @@ const NT = { notes: [], msg: "", busy: 0, cart: 1 },
     /^(TAEE|KLBN|SANB|BPAC|ALUP|SAPR|ENGI|SULA|BRBI|IGTI|TIET|AESB|RNEW|BIDI|BPAN|GETT)/,
   ntOpt = (e) =>
     /OP[C\xc7][A\xc3]O/i.test(e.mkt || "") ||
-    /^[A-Z]{4}[A-X]\d{2,3}[A-Z]?$/.test(e.tk || ""),
+    /^[A-Z]{4}[A-X]\d{2,3}(W\d)?[A-Z]?$/.test(e.tk || ""),
   ntCat = (e) =>
     e.dt
       ? "D"
-      : ntOpt(e)
+      : e.fut || ntOpt(e)
         ? "O"
         : /11$/.test(e.tk)
           ? NTETF.test(e.tk)
@@ -5572,13 +5576,18 @@ const NT = { notes: [], msg: "", busy: 0, cart: 1 },
         };
         let r = 0;
         (o.L.forEach((l) => {
+          const fu = ntFut(l.full);
+          if (fu) {
+            (o.ops.push(fu), r++);
+            return;
+          }
           const d = l.full.match(
             /^\d+-[A-Z\xc0-\xda]+(?:\s[A-Z\xc0-\xda]+)?\s+([CV])\s+(.+?)\s+(\d[\d.]*)\s+([\d.]+,\d+)\s+([\d.]+,\d{2})\s+([DC])$/,
           );
           if (d) {
             const f = d[2].trim().split(/\s+/),
               x = f.findIndex((v) =>
-                /^[A-Z]{4}(\d{1,2}|[A-X]\d{2,3})[A-Z]?$/.test(v),
+                /^[A-Z]{4}(\d{1,2}|[A-X]\d{2,3}(W\d)?)[A-Z]?$/.test(v),
               );
             if (x >= 0) {
               let v = f[x];
@@ -5623,7 +5632,13 @@ const NT = { notes: [], msg: "", busy: 0, cart: 1 },
           if (!p) return;
           const u = ntNum(p[1]),
             m = ntNorm(c.slice(0, p.index));
-          /^valor liquido das operacoes/.test(m)
+          /^taxa registro bm/.test(m)
+            ? (n.reg += u)
+            : /^taxas? bm&?f/.test(m)
+              ? (n.emol += u)
+              : /^i\.?r\.?r\.?f\.? day ?trade/.test(m) && !/proj/.test(m)
+                ? (n.irrf += u)
+                : /^valor liquido das operacoes/.test(m)
             ? (n.vliq = u)
             : /^taxa de liquidacao/.test(m)
               ? (n.liq += u)
@@ -5669,6 +5684,7 @@ const NT = { notes: [], msg: "", busy: 0, cart: 1 },
           out: i(n.out),
           irrf: i(n.irrf),
         }),
+          ntDtOpcoes(o),
           o.ops.forEach((l) => (l.cat = ntCat(l))),
           (o.key = o.corretora + "|" + o.nr + "|" + o.d));
       }),
@@ -5823,10 +5839,15 @@ function ntImport() {
               (A =
                 "Day trade com quantidades de compra e venda diferentes: confira o resultado."));
         } else
-          h.some(ntOpt)
-            ? (A =
-                "Opções: resultado bruto não calculado. Exclua e lance na mão, ou confira no fechamento da operação.")
-            : h.forEach((C) => {
+          h.forEach((C) => {
+                if (C.fut) {
+                  A = "Futuros fora do day trade: o resultado sai pelos ajustes diários; confira e lance na mão.";
+                  return;
+                }
+                if (ntOpt(C)) {
+                  k += optLanca(C, i.d, o((p * C.val) / d), l);
+                  return;
+                }
                 if (C.cv === "V") {
                   const I = ntPm(C.tk, i.d);
                   I > 0
@@ -5912,6 +5933,7 @@ function ntDel(e) {
   const t = S.ir || {};
   ((t.imp = (t.imp || []).filter((a) => a.id !== e)),
     (t.notas = (t.notas || []).filter((a) => a.src !== e)),
+    (t.opc = (t.opc || []).filter((a) => a.src !== e)),
     S.cart && (S.cart.lanc = (S.cart.lanc || []).filter((a) => a.src !== e)),
     save(),
     render());
@@ -5995,7 +6017,7 @@ function vImpNotas() {
         )
         .join("")}</select>`,
     o = e.filter((s) => !s.dup && s.d).length;
-  return `<div class="card"><b>📄 Importar nota de corretagem</b><div class="sm mut" style="margin-top:4px">Escolha o PDF da nota (pode ser mais de uma). O app lê as operações e as taxas, separa por tipo, calcula o resultado e lança na apuração, nos custos e na Carteira. Lê notas da Bovespa (ações, FIIs, ETFs). O PDF é lido no seu aparelho e nome e CPF da nota não são guardados. Precisa de internet para abrir o leitor de PDF.</div><label class="btn" style="margin-top:8px;display:block;text-align:center">${NT.busy ? "Lendo…" : "Escolher PDF(s)"}<input id="ntf" type="file" accept="application/pdf,.pdf" multiple hidden></label>${NT.msg ? `<div class="sm ${e.length || NT.busy || /importada/.test(NT.msg) ? "mut" : "r"}" style="margin-top:6px">${esc(NT.msg)}</div>` : ""}</div>
+  return `<div class="card"><b>📄 Importar nota de corretagem</b><div class="sm mut" style="margin-top:4px">Escolha o PDF da nota (pode ser mais de uma). O app lê as operações e as taxas, separa por tipo, calcula o resultado e lança na apuração, nos custos e na Carteira. Lê notas da Bovespa (ações, FIIs, ETFs, opções) e da BM&F (WIN, WDO, IND, DOL). O PDF é lido no seu aparelho e nome e CPF da nota não são guardados. Precisa de internet para abrir o leitor de PDF.</div><label class="btn" style="margin-top:8px;display:block;text-align:center">${NT.busy ? "Lendo…" : "Escolher PDF(s)"}<input id="ntf" type="file" accept="application/pdf,.pdf" multiple hidden></label>${NT.msg ? `<div class="sm ${e.length || NT.busy || /importada/.test(NT.msg) ? "mut" : "r"}" style="margin-top:6px">${esc(NT.msg)}</div>` : ""}</div>
 ${
   e.length
     ? `<h2>Conferir antes de importar</h2>${e
@@ -6105,18 +6127,19 @@ function irEspelho(ano) {
   const custodia = Object.entries(pos)
       .filter(([, p]) => p.q > 1e-9)
       .map(([tk, p]) => ({ tk, cl: p.cl, q: p.q, pm: p.custo / p.q, custo: p.custo }))
-      .sort((a, b) => a.tk.localeCompare(b.tk)),
+      .sort((a, b) => a.tk.localeCompare(b.tk))
+      .concat(optPosicoes(fim).filter((o) => o.q > 0).map((o) => ({ tk: o.tk, cl: "opcao", q: o.q, pm: o.avg, custo: o.tot }))),
     proventos = (((S.cart || {}).lanc) || []).filter((l) => l && l.mk === "BR" && l.tp === "P" && String(l.d).startsWith(String(ano))),
     meses = irCalc().out.filter((n) => n.m.startsWith(String(ano))),
     isentoAcoes = sum(meses.flatMap((n) => n.rows.filter((r) => r.isento).map((r) => r.liq)));
-  return { custodia, proventos, meses, isentoAcoes };
+  return { custodia, proventos, meses, isentoAcoes, lancadas: optPosicoes(fim).filter((o) => o.q < 0) };
 }
 function vImpEspelho() {
   const anos = [...new Set([...(((S.cart || {}).lanc) || []).map((l) => String(l.d || "").slice(0, 4)), ...(((S.ir || {}).notas) || []).map((n) => String(n.d || "").slice(0, 4))])].filter((a) => /^\d{4}$/.test(a)).sort().reverse(),
     atual = new Date().getFullYear(),
     ano = +(VW.IRano || anos.find((a) => +a < atual) || anos[0] || atual - 1),
     e = irEspelho(ano),
-    tipo = { acao: "Ações (31)", fii: "Fundos imobiliários (73)", etf: "ETF (74)" },
+    tipo = { acao: "Ações (31)", fii: "Fundos imobiliários (73)", etf: "ETF (74)", opcao: "Opção comprada (99)" },
     num = (v, d = 2) => (+v).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }),
     prov = {};
   e.proventos.forEach((l) => {
@@ -6129,7 +6152,7 @@ function vImpEspelho() {
     e.custodia.length
       ? `<div class="ir599-tabw"><table class="ir599-tab"><thead><tr><th>Ativo</th><th>Qtd.</th><th>PM</th><th>Total 31/12</th></tr></thead><tbody>${e.custodia
           .map((c) => `<tr><td><b>${esc(c.tk)}</b><small>${tipo[c.cl] || "Ações (31)"}</small></td><td>${num(c.q, 0)}</td><td>${money(c.pm)}</td><td>${money(c.custo)}</td></tr>`)
-          .join("")}</tbody></table></div><p class="ir599-disc">Discriminação sugerida: “${num(e.custodia[0].q, 0)} ${esc(e.custodia[0].tk)}, custo médio ${money(e.custodia[0].pm)}, custodiadas na BTG Pactual CTVM S.A., CNPJ ${BTG_CNPJ}”. Valores pelo custo de aquisição (com taxas), nunca pelo valor de mercado.</p>`
+          .join("")}</tbody></table></div><p class="ir599-disc">Discriminação sugerida: “${num(e.custodia[0].q, 0)} ${esc(e.custodia[0].tk)}, custo médio ${money(e.custodia[0].pm)}, custodiadas na BTG Pactual CTVM S.A., CNPJ ${BTG_CNPJ}”. Valores pelo custo de aquisição (com taxas), nunca pelo valor de mercado.${e.lancadas.length ? ` Opções lançadas (vendidas) em aberto não entram em Bens e Direitos: ${e.lancadas.map((o) => esc(o.tk) + " (" + num(-o.q, 0) + ")").join(", ")}.` : ""}</p>`
       : '<p class="mut sm">Sem posição em custódia no fim do ano (lançamentos da aba Carteiras / notas importadas).</p>'
   }
 <h3>Rendimentos Isentos e Não Tributáveis</h3>${
@@ -6157,7 +6180,7 @@ function vImposto() {
   const e = VW.IR || "ap";
   return (
     irSeg(e) +
-    (e === "im" ? vImpNotas() : e === "cu" ? vImpCustos() : e === "es" ? vImpEspelho() : irPainelHtml() + vImpostoAp())
+    (e === "im" ? vImpNotas() : e === "cu" ? optAbertasHtml() + vImpCustos() : e === "es" ? vImpEspelho() : irPainelHtml() + optAbertasHtml() + vImpostoAp())
   );
 }
 const CCL = {
@@ -6451,3 +6474,157 @@ document.addEventListener("click", async (ev) => {
     return r;
   };
 }
+/* v604 — Opções (calls e puts) na apuração.
+   • Day trade (20%): compra e venda da mesma série no mesmo pregão (marca "D" da nota ou, sem ela, casamento das quantidades).
+   • Swing / Comum (15%): encerramento em outro dia, exercício ou vencimento; nunca entra na isenção de R$ 20 mil (só ações à vista).
+   • Livro de posições S.ir.opc: custo médio (comprado, com taxas) e prêmio líquido (lançado, já sem taxas). */
+function ntFut(t) {
+  const m = String(t || "").match(/^([CV])\s+(WIN|WDO|IND|DOL)\s*([FGHJKMNQUVXZ]\d{2})\b(?:\s+\d{2}\/\d{2}\/\d{4})?\s+(\d[\d.]*)\s+([\d.]+,\d{2,4})\s+(DAY ?TRADE|NORMAL)\b/i);
+  if (!m) return null;
+  const at = m[2].toUpperCase(),
+    mult = { WIN: 0.2, WDO: 10, IND: 1, DOL: 50 }[at],
+    qty = ntNum(m[4]),
+    px = ntNum(m[5]);
+  return { cv: m[1].toUpperCase(), mkt: "FUTURO", tk: at + m[3].toUpperCase(), qty, px, val: Math.round(qty * px * mult * 100) / 100, dc: "", dt: /DAY/i.test(m[6]), fut: !0 };
+}
+function ntDtOpcoes(o) {
+  const g = {},
+    r2 = (v) => Math.round(v * 100) / 100;
+  o.ops.forEach((x) => {
+    ntOpt(x) && (g[x.tk] ?? (g[x.tk] = [])).push(x);
+  });
+  Object.values(g).forEach((L) => {
+    if (L.some((x) => x.dt)) return;
+    const lados = [L.filter((x) => x.cv === "C"), L.filter((x) => x.cv === "V")];
+    if (!lados[0].length || !lados[1].length) return;
+    const dq = Math.min(sum(lados[0].map((x) => x.qty)), sum(lados[1].map((x) => x.qty)));
+    lados.forEach((lado) => {
+      let resto = dq;
+      for (const x of lado) {
+        if (resto <= 0) break;
+        if (x.qty <= resto) ((x.dt = !0), (resto -= x.qty));
+        else {
+          const un = x.val / x.qty;
+          (o.ops.push({ ...x, qty: x.qty - resto, val: r2(un * (x.qty - resto)), dt: !1 }), (x.val = r2(un * resto)), (x.qty = resto), (x.dt = !0), (resto = 0));
+        }
+      }
+    });
+  });
+}
+function optSerie(tk) {
+  const c = String(tk || "").toUpperCase().charCodeAt(4) - 65;
+  return c >= 0 && c < 24 ? { call: c < 12, mes: c % 12 } : null;
+}
+function optVenc(tk, ref) {
+  const s = optSerie(tk);
+  if (!s) return ref;
+  const r = new Date((ref || ymd(new Date())) + "T12:00");
+  for (let ano = r.getFullYear(); ano <= r.getFullYear() + 1; ano++) {
+    const d = new Date(ano, s.mes, 1, 12);
+    for (; d.getDay() !== 5; ) d.setDate(d.getDate() + 1);
+    d.setDate(d.getDate() + 14);
+    if (d >= new Date(r.getFullYear(), r.getMonth(), r.getDate() - 1)) return ymd(d);
+  }
+  return ref;
+}
+function optPos(tk, ate) {
+  let q = 0,
+    tot = 0;
+  (((S.ir || {}).opc) || [])
+    .map((e, i) => [e, i])
+    .filter(([e]) => e && e.tk === tk && (!ate || e.d <= ate))
+    .sort((a, b) => (a[0].d < b[0].d ? -1 : a[0].d > b[0].d ? 1 : a[1] - b[1]))
+    .forEach(([e]) => {
+      const sg = e.tp === "C" ? 1 : -1,
+        n = +e.q || 0,
+        px = +e.p || 0,
+        cpm = +e.cpm || 0;
+      let resto = n;
+      if (q && Math.sign(q) !== sg) {
+        const c = Math.min(n, Math.abs(q));
+        ((tot -= (tot / Math.abs(q)) * c), (q += sg * c), (resto = n - c), Math.abs(q) < 1e-9 && ((q = 0), (tot = 0)));
+      }
+      resto > 0 && ((tot += resto * px + (sg > 0 ? cpm : -cpm)), (q += sg * resto));
+    });
+  return { tk, q, tot, avg: q ? tot / Math.abs(q) : 0 };
+}
+function optPosicoes(ate) {
+  return [...new Set((((S.ir || {}).opc) || []).map((e) => e.tk))]
+    .map((tk) => optPos(tk, ate))
+    .filter((p) => Math.abs(p.q) > 1e-9)
+    .sort((a, b) => a.tk.localeCompare(b.tk));
+}
+function optLanca(C, d, cs, src) {
+  const ir = S.ir ?? (S.ir = { notas: [] }),
+    L = ir.opc ?? (ir.opc = []),
+    ps = optPos(C.tk, d),
+    sg = C.cv === "C" ? 1 : -1,
+    fecha = ps.q && Math.sign(ps.q) !== sg ? Math.min(C.qty, Math.abs(ps.q)) : 0,
+    abre = C.qty - fecha;
+  L.push({ id: uid(), tk: C.tk, tp: C.cv, d, q: C.qty, p: C.px, cpm: C.qty ? Math.round(((cs * abre) / C.qty) * 100) / 100 : 0, src });
+  return fecha ? (sg > 0 ? (ps.avg - C.px) * fecha : (C.px - ps.avg) * fecha) : 0;
+}
+/* Vencimento ("virou pó") ou exercício de uma posição em aberto. */
+function optEncerra(tk, modo, d, obj) {
+  const ps = optPos(tk, d),
+    se = optSerie(tk);
+  if (!ps.q || !se) return "Sem posição em aberto nessa série.";
+  const ir = S.ir ?? (S.ir = { notas: [] }),
+    id = uid(),
+    longa = ps.q > 0,
+    prem = Math.round(ps.tot * 100) / 100,
+    nota = { id, d, corr: 0, emol: 0, iss: 0, out: 0, irrf: 0, vendas: 0, av: "", tk, orig: modo };
+  ((ir.opc ?? (ir.opc = [])).push({ id: uid(), tk, tp: longa ? "V" : "C", d, q: Math.abs(ps.q), p: 0, cpm: 0, src: "opc:" + id, enc: modo }), ir.notas ?? (ir.notas = []));
+  if (modo === "po") ir.notas.push({ ...nota, m: "O", bruto: longa ? -prem : prem });
+  else {
+    const compraObj = (se.call && longa) || (!se.call && !longa);
+    if (compraObj) {
+      const c = S.cart ?? (S.cart = { lanc: [], px: {}, snap: {} });
+      (c.lanc ?? (c.lanc = [])).push({ id: uid(), mk: "BR", tp: "C", cl: "acao", tk: obj, d, q: 0, p: 0, cs: longa ? prem : -prem, src: "opc:" + id, aj: 1 });
+      ir.notas.push({ ...nota, m: "A", bruto: 0, av: `Exercício de ${tk}: prêmio ${money(prem)} ${longa ? "somado ao" : "abatido do"} custo de ${obj}.` });
+    } else ir.notas.push({ ...nota, m: "A", bruto: longa ? -prem : prem, av: `Exercício de ${tk}: prêmio ${longa ? "pago reduz" : "recebido soma ao"} resultado da venda de ${obj}.` });
+  }
+  return "";
+}
+function optAbertasHtml() {
+  const L = optPosicoes(ymd(new Date()));
+  if (!L.length) return "";
+  const num0 = (v) => (+v).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+  return `<section class="opc604"><h3>Opções em aberto</h3>${L.map((p) => {
+    const se = optSerie(p.tk) || {},
+      ab = VW.opc604 === p.tk,
+      venc = optVenc(p.tk, ymd(new Date()));
+    return `<div class="opc604-it"><div class="opc604-l"><span><b>${esc(p.tk)}</b><span class="opc604-b ${se.call ? "c" : "p"}">${se.call ? "CALL" : "PUT"}</span></span><span class="opc604-n">${p.q > 0 ? "Comprada" : "Lançada"} ${num0(Math.abs(p.q))}</span></div><div class="opc604-l sm mut"><span>${p.q > 0 ? "Custo médio" : "Prêmio líquido"} <b class="opc604-n">${money(p.avg)}</b></span><span>Total <b class="opc604-n">${money(p.tot)}</b> · vence <b class="opc604-n">${fmtD(venc)}</b></span></div>${
+      ab
+        ? `<div class="opc604-f"><label>Data<input type="date" id="opc604-d" value="${venc}"></label><label>Ativo-objeto (exercício)<input id="opc604-o" value="${esc(String(p.tk).slice(0, 4))}" autocapitalize="characters"></label></div><div class="opc604-bt"><button class="btn" data-opc604="po" data-tk="${esc(p.tk)}">Virou pó</button><button class="btn" data-opc604="ex" data-tk="${esc(p.tk)}">Exercício</button><button class="btn s" data-opc604="x">Cancelar</button></div><div class="sm mut">Virou pó: ${p.q > 0 ? "o custo total pago (com taxas) vira prejuízo" : "o prêmio líquido recebido vira lucro"} no Swing / Comum (15%), na data acima.</div>`
+        : `<button class="btn s opc604-ab" data-opc604="abre" data-tk="${esc(p.tk)}">Registrar vencimento (virou pó) / exercício</button>`
+    }</div>`;
+  }).join("")}<p class="sm mut">Opções no swing pagam 15% desde o primeiro centavo (sem a isenção de R$ 20 mil). Compra e venda da mesma série no mesmo dia é day trade (20%).</p></section>`;
+}
+document.addEventListener("click", (ev) => {
+  const b = ev.target.closest && ev.target.closest("[data-opc604]");
+  if (!b) return;
+  const a = b.dataset.opc604;
+  if (a === "abre") return ((VW.opc604 = b.dataset.tk), render());
+  if (a === "x") return ((VW.opc604 = ""), render());
+  const d = (document.getElementById("opc604-d") || {}).value || ymd(new Date()),
+    obj = String((document.getElementById("opc604-o") || {}).value || "").toUpperCase().trim();
+  if (a === "ex" && !/^[A-Z]{4}\d{1,2}$/.test(obj)) return alert("Informe o ativo-objeto do exercício (ex.: PETR4).");
+  const ps = optPos(b.dataset.tk, d);
+  if (!confirm(`${a === "po" ? "Registrar que " + b.dataset.tk + " virou pó" : "Registrar o exercício de " + b.dataset.tk + " em " + obj} em ${fmtD(d)}?\n${a === "po" ? (ps.q > 0 ? "Prejuízo Swing de " : "Lucro Swing (15%) de ") + money(ps.tot) : "Prêmio de " + money(ps.tot) + " vai para o " + (optSerie(b.dataset.tk)?.call === ps.q > 0 ? "custo" : "resultado") + " de " + obj}`)) return;
+  const err = optEncerra(b.dataset.tk, a, d, obj);
+  if (err) return alert(err);
+  ((VW.opc604 = ""), save(), render());
+});
+/* Excluir um lançamento de vencimento/exercício desfaz o encerramento da posição. */
+document.addEventListener(
+  "click",
+  (ev) => {
+    const b = ev.target.closest && ev.target.closest('[data-a="irDel"]');
+    if (!b || !S.ir) return;
+    const n = (S.ir.notas || []).find((x) => x.id === b.dataset.id);
+    if (!n || !n.orig) return;
+    ((S.ir.opc = (S.ir.opc || []).filter((x) => x.src !== "opc:" + n.id)), S.cart && (S.cart.lanc = (S.cart.lanc || []).filter((x) => x.src !== "opc:" + n.id)));
+  },
+  !0,
+);

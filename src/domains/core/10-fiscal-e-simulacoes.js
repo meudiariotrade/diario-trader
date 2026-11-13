@@ -295,7 +295,7 @@ function irClasse(e) {
     ? "D"
     : (e.tipo || "D") === "O" ||
         /^(WIN|WDO|IND|DOL|BGI|CCM|ICF|SJC|DI1|WSP|BIT)/.test(t) ||
-        /^[A-Z]{4}[A-X]\d{2,3}[A-Z]?$/.test(t)
+        /^[A-Z]{4}[A-X]\d{2,3}(W\d)?[A-Z]?$/.test(t)
       ? "O"
       : /11$/.test(t)
         ? IR_ETF.has(t)

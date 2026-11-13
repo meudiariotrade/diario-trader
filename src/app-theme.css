@@ -2458,3 +2458,20 @@ html body #app .v600-wr td small{font-size:10px}
 .nti602{border-left:2px solid #D4A017}
 .nti602 .sm{font-variant-numeric:tabular-nums}
 .nti602 [data-nti602]{min-height:40px}
+/* v604: opções em aberto (Imposto de renda > Apuração / Custos) */
+.opc604{margin:16px 0}
+.opc604 h3{margin:0 0 8px}
+.opc604-b{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.opc604-b.c{background:rgba(16,185,129,.14);color:#10B981}
+.opc604-b.p{background:rgba(239,68,68,.14);color:#EF4444}
+.opc604-it{background:#11141B;border-top:1px solid #1E232E;padding:10px 12px}
+.opc604-it:first-of-type{border-top:0;border-radius:4px 4px 0 0}
+.opc604-l{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.opc604-n{font-variant-numeric:tabular-nums;text-align:right}
+.opc604-ab{width:100%;margin-top:6px}
+.opc604-bt{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.opc604-bt .btn{flex:1 1 auto}
+.opc604-f{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 0}
+.opc604-f label{display:flex;flex-direction:column;font-size:11px;color:#8A8F9C;gap:4px}
+.opc604-f input{min-height:40px;font-size:16px;font-variant-numeric:tabular-nums;width:100%;box-sizing:border-box}
+.opc604-f .btn,.opc604 [data-opc604]{min-height:40px}
