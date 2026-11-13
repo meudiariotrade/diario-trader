@@ -33,7 +33,8 @@
       let mod = '';
       try { mod = typeof modDe === 'function' ? modDe(t) : ''; } catch { mod = ''; }
       const fino = mod === 'ex' ? ((t.forex || t.tipo === 'F') ? 'fx' : 'us') : mod;
-      out.push({ modCod: fino, dia, ativo: String(t.ativo || '—'), setup: String(t.setup || 'Sem setup'), mod: MOD[mod] || 'Outros', pl: c.pl, risco: c.risk, r: c.r, semStop: !!c.semStop, regras: t.rules });
+      const hm = /T(\d{2}):(\d{2})/.exec(String(t.dt || '')); /* v600: hora da entrada, para a tabela por faixa de horário */
+      out.push({ hora: hm ? +hm[1] * 60 + +hm[2] : null, modCod: fino, dia, ativo: String(t.ativo || '—'), setup: String(t.setup || 'Sem setup'), mod: MOD[mod] || 'Outros', pl: c.pl, risco: c.risk, r: c.r, semStop: !!c.semStop, regras: t.rules });
     }
     return out.sort((a, b) => (a.dia < b.dia ? -1 : a.dia > b.dia ? 1 : 0));
   }
@@ -69,6 +70,57 @@
       seguiu: comRegra.length ? comRegra.filter(t => t.regras === 's').length / comRegra.length * 100 : null };
   }
 
+  /* ---------- v600: disciplina do Meu dia (S.days + tabela estado_diario) ---------- */
+  const FAIXAS = [['09:00–10:30', 540, 630], ['10:30–12:00', 630, 720], ['12:00–15:00', 720, 900], ['15:00–18:00', 900, 1080]];
+  let estadoExtra = {};
+  async function carregaEstado(de, ate) {
+    try {
+      if (typeof rq !== 'function' || typeof SESS === 'undefined' || !SESS || !SESS.uid) return;
+      const q = '/rest/v1/estado_diario?select=dia,emotional_state,pre_concluido_em&dia=gte.' + (de === '0000-01-01' ? '2000-01-01' : de) + '&dia=lte.' + ate;
+      const r = await Promise.race([rq(q).then(x => x.json()), new Promise((_, er) => setTimeout(() => er(new Error('tempo')), 4000))]);
+      const m = {}; (Array.isArray(r) ? r : []).forEach(x => { m[x.dia] = { emo: x.emotional_state || '', pre: x.pre_concluido_em || '' }; });
+      estadoExtra = m;
+    } catch { /* sem conexão: usa só o que está no aparelho */ }
+  }
+  const hmSP = iso => { try { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso)); const g = k => (p.find(x => x.type === k) || {}).value; return { dia: g('year') + '-' + g('month') + '-' + g('day'), min: +g('hour') * 60 + +g('minute') }; } catch { return null; } };
+  function disciplina(ts) {
+    let D = {}; try { D = (typeof S !== 'undefined' && S.days) || {}; } catch { D = {}; }
+    const plDia = {}; ts.forEach(t => { plDia[t.dia] = (plDia[t.dia] || 0) + t.pl; });
+    const pregoes = Object.keys(plDia);
+    const out = { pregoes: pregoes.length, chkOk: 0, bom: { v: 0, n: 0 }, ruim: { v: 0, n: 0 } };
+    for (const dia of pregoes) {
+      const x = D[dia] || {}, e = estadoExtra[dia] || {};
+      const pre = x.preOkEm || e.pre; if (pre) { const h = hmSP(pre); if (h && h.dia === dia && h.min <= 540) out.chkOk++; }
+      const em = x.emocao || e.emo;
+      if (em === 'calmo' || em === 'focado') { out.bom.v += plDia[dia]; out.bom.n++; } else if (em === 'ansioso' || em === 'cansado') { out.ruim.v += plDia[dia]; out.ruim.n++; }
+    }
+    return out;
+  }
+  function porFaixa(ts) { return FAIXAS.map(([nome, a, b]) => [nome, stats(ts.filter(t => t.hora != null && t.hora >= a && t.hora < b))]); }
+  /* Maior desvio do período → 1 aula ou livro da aba Estudos (títulos, livro-base e capítulos). */
+  const sem = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  function desvio(ts, S1, Dd) {
+    const semSetup = ts.filter(t => /^sem setup$/i.test(t.setup)), custoSemSetup = semSetup.reduce((s, t) => s + Math.min(0, t.pl), 0);
+    const c = [];
+    if (S1.alemStop) c.push({ peso: -S1.custoAlem + 1e6, tema: 'gestão de risco e disciplina com o stop', motivo: `${S1.alemStop} perdas além do stop planejado`, chaves: ['risco', 'gestao', 'gerenciamento', 'stop', 'disciplina', 'money management', 'position', 'super trader', 'tharp'] });
+    if (semSetup.length) c.push({ peso: -custoSemSetup + (custoSemSetup < 0 ? 5e5 : 1e3), tema: 'setups e plano de trade', motivo: `${semSetup.length} trades sem setup`, chaves: ['setup', 'plano', 'entrada', 'price action', 'disciplina', 'estrategia'] });
+    if (Dd.ruim.n && Dd.ruim.v < 0) c.push({ peso: -Dd.ruim.v + 4e5, tema: 'controle emocional', motivo: `dias Ansioso/Cansado com ${money(Dd.ruim.v)}`, chaves: ['psicologia', 'emocional', 'emocao', 'mental', 'disciplina', 'mindset', 'zona'] });
+    if (S1.semStop) c.push({ peso: 3e5 + S1.semStop, tema: 'gestão de risco (stop em todo trade)', motivo: `${S1.semStop} trades sem stop registrado`, chaves: ['risco', 'stop', 'gestao', 'gerenciamento', 'money management'] });
+    if (S1.seguiu != null && S1.seguiu < 80) c.push({ peso: 2e5 + (100 - S1.seguiu), tema: 'disciplina e regras', motivo: `regras seguidas em ${pc(S1.seguiu)} dos trades`, chaves: ['disciplina', 'regras', 'plano', 'rotina', 'psicologia'] });
+    if (Dd.pregoes && Dd.chkOk / Dd.pregoes < .6) c.push({ peso: 1e5, tema: 'rotina de pré-mercado', motivo: `checklist pré-09:00 em ${Dd.chkOk} de ${Dd.pregoes} pregões`, chaves: ['rotina', 'plano', 'preparacao', 'disciplina', 'checklist'] });
+    if (!c.length) return null;
+    c.sort((a, b) => b.peso - a.peso); return c[0];
+  }
+  function recomendacao(dv) {
+    if (!dv) return null;
+    const itens = [];
+    try { (w.AULAS && typeof w.AULAS.getLista === 'function' ? w.AULAS.getLista() : []).forEach(a => { if (a && a.status !== 'gerando') itens.push({ nome: 'a Aula ' + (a.numero || '') + ' · ' + (a.titulo || ''), txt: [a.titulo, a.livro, a.capitulos].join(' ') }); }); } catch { }
+    try { (typeof S !== 'undefined' && Array.isArray(S.books) ? S.books : []).forEach(b => { let t = b.t; try { t = typeof tituloLivro === 'function' ? tituloLivro(b.t) || b.t : b.t; } catch { } itens.push({ nome: 'o livro “' + t + '”' + (b.a ? ' (' + b.a + ')' : ''), txt: [b.t, b.a].join(' ') }); }); } catch { }
+    let melhor = null, nota = 0;
+    for (const it of itens) { const t = sem(it.txt); const n = dv.chaves.reduce((s, k, i) => s + (t.includes(k) ? (dv.chaves.length - i) : 0), 0); if (n > nota) { nota = n; melhor = it; } }
+    return { ...dv, item: melhor ? melhor.nome.replace(/\s+/g, ' ').trim() : null };
+  }
+
   /* ---------- carregamento das bibliotecas já publicadas no app ---------- */
   const script = src => new Promise((ok, err) => { const s = d.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => err(new Error('Não consegui carregar ' + src + '.')); d.head.append(s); });
   async function libs() {
@@ -87,6 +139,8 @@
     const ts = todos.filter(t => t.dia >= J.de && t.dia <= J.ate);
     if (!ts.length) { const e = new Error('Não há trades encerrados ' + (filtroMod ? 'de ' + escopo.toLowerCase() + ' ' : '') + 'em ' + J.nome.toLowerCase() + '.'); e.vazio = true; throw e; }
     const S1 = stats(ts);
+    await carregaEstado(J.de, J.ate);
+    const Dd = disciplina(ts), Rec = recomendacao(desvio(ts, S1, Dd));
     const L = await libs();
     const { PDFDocument, rgb } = L.PDFLib;
     const doc = await PDFDocument.create();
@@ -155,6 +209,7 @@
     y = para(p, `O maior rebaixamento da curva foi de ${money(S1.dd)}, com até ${S1.maxSeq} perdas seguidas.`, y);
     y = para(p, S1.alemStop ? `${S1.alemStop} perdas passaram do stop planejado e custaram ${money(S1.custoAlem)} além do risco — é o ponto de maior ganho de disciplina.` : 'Nenhuma perda passou do stop planejado no período.', y);
     if (S1.semStop) y = para(p, `${S1.semStop} trades foram registrados sem stop; neles a medida “vezes o risco” não existe e aparece como —.`, y);
+    if (Rec) y = para(p, `Recomendação de estudo: maior desvio — ${Rec.motivo}. ` + (Rec.item ? `Revise na aba Estudos ${Rec.item}, foco em ${Rec.tema}.` : `Revise na aba Estudos o material de ${Rec.tema}.`), y, { f: F.b });
     y -= 8; y = rot(p, 'Janelas de tempo', y);
     const linhasJ = [], coresJ = [];
     for (const k of ['ano', 'ytd', '12m']) {
@@ -190,7 +245,9 @@
       ['Perdas além do stop planejado', S1.alemStop + ' · ' + money(S1.custoAlem)], ['Trades sem stop registrado', String(S1.semStop)],
       ['Trades com “vezes o risco” calculável', S1.nR + ' de ' + S1.n],
       ['Seguiu as regras (onde foi marcado)', S1.seguiu == null ? '—' : pc(S1.seguiu)],
-    ], y, [[null, C.dn], [null, null], [null, C.up], [null, C.dn], [null, S1.alemStop ? C.dn : null], [null, null], [null, null], [null, null]]);
+      ['Checklist Pré-09:00 concluído', Dd.chkOk + ' de ' + Dd.pregoes + ' pregões'],
+      ['Estado emocional: Calmo/Focado vs. Ansioso/Cansado', (Dd.bom.n ? money(Dd.bom.v) : '—') + ' vs. ' + (Dd.ruim.n ? money(Dd.ruim.v) : '—')],
+    ], y, [[null, C.dn], [null, null], [null, C.up], [null, C.dn], [null, S1.alemStop ? C.dn : null], [null, null], [null, null], [null, null], [null, Dd.pregoes && Dd.chkOk < Dd.pregoes ? C.amb : C.up], [null, Dd.ruim.n && Dd.ruim.v < (Dd.bom.n ? Dd.bom.v : 0) ? C.dn : null]]);
     y = rot(p, 'Benchmark', y);
     y = para(p, 'O aplicativo não guarda a série histórica de um índice de referência no aparelho, então este relatório não compara o resultado com o Ibovespa. A comparação aparece como “—” em vez de um número inventado.', y);
 
@@ -205,6 +262,14 @@
         gr.map(([, s]) => [null, null, null, null, cor(s.mediaR || 0), cor(s.soma)]));
     };
     if (!filtroMod) bloco('Por modalidade', 'mod', 6); bloco('Por setup', 'setup', 10); bloco('Por ativo', 'ativo', 10);
+    { /* v600: faixa de horário da entrada (só trades com hora registrada) */
+      const fx4 = porFaixa(ts);
+      if (y < 150) { p = nova(); y = cab(p, 'Fundamentos da operação (continuação)'); }
+      y = rot(p, 'Por faixa de horário', y);
+      y = tabela(p, [['Faixa de horário', 170, 'l'], ['Trades', 50, 'r'], ['Acerto', 55, 'r'], ['Payoff', 55, 'r'], ['Média', 70, 'r'], ['Resultado', 95, 'r']],
+        fx4.map(([k, s]) => s.n ? [k, String(s.n), pc(s.acerto), s.payoff ? fx(s.payoff) : '—', s.mediaR == null ? '—' : vezes(s.mediaR), money(s.soma)] : [k, '—', '—', '—', '—', '—']), y,
+        fx4.map(([, s]) => s.n ? [null, null, null, null, cor(s.mediaR || 0), cor(s.soma)] : [null, C.mute, C.mute, C.mute, C.mute, C.mute]));
+    }
 
     /* Metodologia */
     p = nova(); y = cab(p, 'Metodologia');
@@ -225,7 +290,27 @@
     });
     const bytes = await doc.save();
     const rotulo = (filtroMod ? filtroMod + '-' : '') + (J.mensal ? J.de.slice(0, 7) : chave === 'ano' ? String(hoje.getFullYear() - 1) : chave);
-    return { bytes, nome: 'relatorio-desempenho-' + rotulo + '-' + isoLocal(hoje) + '.pdf', paginas: total, janela: J, trades: S1.n };
+    return { resumo: resumoDe(ts, S1, Dd, Rec), bytes, nome: 'relatorio-desempenho-' + rotulo + '-' + isoLocal(hoje) + '.pdf', paginas: total, janela: J, trades: S1.n };
+  }
+
+  /* ---------- v600: resumo semanal salvo em weekly_reports (aba Operações > Desempenho) ---------- */
+  const r2 = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+  function resumoDe(ts, S1, Dd, Rec) {
+    return { trades: S1.n, ganhos: S1.ganhos, perdas: S1.perdas, acerto: r2(S1.acerto), payoff: r2(S1.payoff), resultado: r2(S1.soma), media_vezes_risco: r2(S1.mediaR),
+      maior_queda: r2(S1.dd), perdas_alem_stop: S1.alemStop, custo_alem_stop: r2(S1.custoAlem), sem_stop: S1.semStop, regras_seguidas: r2(S1.seguiu),
+      pregoes: Dd.pregoes, checklist_pre_ok: Dd.chkOk, resultado_calmo_focado: Dd.bom.n ? r2(Dd.bom.v) : null, resultado_ansioso_cansado: Dd.ruim.n ? r2(Dd.ruim.v) : null,
+      faixas: porFaixa(ts).map(([k, s]) => ({ faixa: k, trades: s.n || 0, acerto: s.n ? r2(s.acerto) : null, payoff: s.n ? r2(s.payoff) : null, media_vezes_risco: s.n ? r2(s.mediaR) : null, resultado: s.n ? r2(s.soma) : 0 })),
+      recomendacao: Rec ? (Rec.item ? Rec.item + ' — ' + Rec.tema : Rec.tema) + ' (' + Rec.motivo + ')' : null };
+  }
+  async function salvarSemana(de, ate, origem = 'app') {
+    if (typeof rq !== 'function' || typeof SESS === 'undefined' || !SESS || !SESS.uid) return 'sem conta';
+    try { if (w.DIARIO_DEMO) return 'demo'; } catch { }
+    const ts = fechados().filter(t => t.dia >= de && t.dia <= ate);
+    if (!ts.length) return 'sem trades';
+    await carregaEstado(de, ate);
+    const S1 = stats(ts), Dd = disciplina(ts), corpo = { user_id: SESS.uid, semana_ini: de, semana_fim: ate, origem, gerado_em: new Date().toISOString(), ...resumoDe(ts, S1, Dd, recomendacao(desvio(ts, S1, Dd))) };
+    await rq('/rest/v1/weekly_reports?on_conflict=user_id,semana_fim', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(corpo) });
+    return 'salvo';
   }
 
   /* ---------- painel dentro da janela de exportação ---------- */
@@ -289,5 +374,5 @@
 
   new MutationObserver(() => { const c = d.querySelector('#csvch .csvc'); if (c) painel(c); }).observe(d.documentElement, { childList: true, subtree: true });
   /* A janela de exportação fecha em qualquer clique em [data-csvm]; os botões do relatório não fecham. */
-  w.DiarioRelatorioPDF = { gerar, stats, janela, fechados };
+  w.DiarioRelatorioPDF = { gerar, stats, janela, fechados, salvarSemana, disciplina, porFaixa };
 })(window, document);

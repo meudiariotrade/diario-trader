@@ -60207,6 +60207,56 @@ function diarioPacote() {
     trades: t,
   };
 }
+/* v600: histórico dos relatórios semanais (tabela weekly_reports) na aba Operações > Desempenho > Geral. */
+const WR600 = { lista: null, em: 0, busy: !1 };
+function wr600Busca() {
+  if (WR600.busy || Date.now() - WR600.em < 3e5) return;
+  try {
+    if (!SESS || !SESS.uid || window.DIARIO_DEMO) return;
+  } catch {
+    return;
+  }
+  WR600.busy = !0;
+  rq("/rest/v1/weekly_reports?select=semana_ini,semana_fim,trades,acerto,payoff,resultado,pregoes,checklist_pre_ok,recomendacao&order=semana_fim.desc&limit=8")
+    .then((r) => r.json())
+    .then((l) => {
+      WR600.lista = Array.isArray(l) ? l : [];
+      WR600.em = Date.now();
+      try {
+        tab === "stats" && ST.aba === "geral" && render();
+      } catch {}
+    })
+    .catch(() => {
+      WR600.em = Date.now();
+    })
+    .finally(() => {
+      WR600.busy = !1;
+    });
+}
+function wr600Html() {
+  wr600Busca();
+  const l = WR600.lista;
+  if (!l || !l.length) return "";
+  const d = (x) => String(x || "").slice(8, 10) + "/" + String(x || "").slice(5, 7),
+    v = (x) => (x == null ? "–" : money(+x)),
+    ult = l[0];
+  return `<h2>Relatórios semanais</h2><div class="v600-wr"><table><thead><tr><th>Semana</th><th>Trades</th><th>Acerto</th><th>Payoff</th><th>Resultado</th></tr></thead><tbody>${l
+    .map(
+      (r) =>
+        `<tr><td>${String(r.semana_ini).slice(5, 7) === String(r.semana_fim).slice(5, 7) ? String(r.semana_ini).slice(8, 10) : d(r.semana_ini)}–${d(r.semana_fim)}${r.pregoes ? `<small>pré-09h ${r.checklist_pre_ok || 0}/${r.pregoes}</small>` : ""}</td><td>${r.trades ?? "–"}</td><td>${r.acerto == null ? "–" : Math.round(+r.acerto) + "%"}</td><td>${r.payoff == null ? "–" : f2(+r.payoff)}</td><td class="${cls(+r.resultado || 0)}">${v(r.resultado)}</td></tr>`,
+    )
+    .join("")}</tbody></table>${ult.recomendacao ? `<p class="v600-wr-rec"><b>Estudo sugerido (${d(ult.semana_fim)}):</b> ${esc(ult.recomendacao)}</p>` : ""}</div>`;
+}
+{
+  const e = vStats;
+  vStats = function () {
+    let t = e.apply(this, arguments);
+    try {
+      ST.aba === "geral" && (t += wr600Html());
+    } catch {}
+    return t;
+  };
+}
 async function iaPerdas() {
   const e = diarioPacote(),
     t = e.trades.filter((s) => s.v < 0);
