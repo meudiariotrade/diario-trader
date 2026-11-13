@@ -1,0 +1,7 @@
+DIÁRIO DE TRADER — v598 (inteligência conectada)
+
+1. Player: -15s/+15s, "Ouvir com a tela bloqueada" e Media Session (tela de bloqueio).
+2. Calculadora de posição pelo risco do dia (card de Risco em Operações e comando CALC no Terminal).
+3. Impacto Emocional no Resultado (Operações > Desempenho) e trava preventiva para Ansioso/Cansado.
+4. Recomendado pelo seu Pregão (Estudos > Hoje): erro do fechamento → aula/cena ou livro.
+5. Início: detalhe da origem do Capital (Day + Swing + Opções).
