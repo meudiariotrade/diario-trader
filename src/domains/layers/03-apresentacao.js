@@ -790,6 +790,84 @@ try {
     ${$}${Z}${K}${$t}${d}</div>`;
     }
     let qt = null;
+    /* v589: estado emocional de 1 toque, fase do checklist pelo horário e contagem até a abertura (Supabase: estado_diario). */
+    const EMO589 = [
+        ["calmo", "Calmo"],
+        ["focado", "Focado"],
+        ["ansioso", "Ansioso"],
+        ["cansado", "Cansado"],
+        ["euforico", "Eufórico"],
+      ],
+      hora589 = () =>
+        f(() => {
+          const g = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date()),
+            N = (O) => +(g.find((vt) => vt.type === O) || {}).value || 0;
+          return N("hour") * 60 + N("minute");
+        }, 12 * 60),
+      fase589 = () => {
+        const g = hora589();
+        return g < 540 ? "pre" : g < 1020 ? "during" : "post";
+      },
+      dia589 = (g) => f(() => S.days[g] || (S.days[g] = { chk: {} }), {}),
+      enviado589 = new Map();
+    let fila589 = null;
+    function sinc589(g, N = {}) {
+      const O = f(() => SESS, null);
+      if (!O || !O.uid || f(() => window.DIARIO_DEMO, !1)) return;
+      const tt = dia589(g),
+        vt = {
+          user_id: O.uid,
+          dia: g,
+          emotional_state: tt.emocao || null,
+          emocao_em: tt.emocaoEm || null,
+          pre_concluido_em: tt.preOkEm || null,
+          meta_diaria: N.meta > 0 ? +(+N.meta).toFixed(2) : null,
+          stop_diario: N.stop > 0 ? +(+N.stop).toFixed(2) : null,
+        },
+        K = JSON.stringify(vt);
+      if (enviado589.get(g) === K) return;
+      (clearTimeout(fila589),
+        (fila589 = setTimeout(() => {
+          f(() =>
+            rq("/rest/v1/estado_diario?on_conflict=user_id,dia", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+              body: K,
+            })
+              .then(() => enviado589.set(g, K))
+              .catch(() => {}),
+          );
+        }, 900)));
+    }
+    function cont589(g) {
+      const N = Math.max(0, Math.round((g - Date.now()) / 1e3)),
+        O = (tt) => String(tt).padStart(2, "0");
+      return O(Math.floor(N / 3600)) + ":" + O(Math.floor((N % 3600) / 60)) + ":" + O(N % 60);
+    }
+    (f(() =>
+      document.addEventListener("click", (g) => {
+        const N = g.target.closest?.("[data-v589-emo]");
+        if (!N || N.closest(".v503-fantasma")) return;
+        const O = N.dataset.v589Dia,
+          tt = dia589(O),
+          vt = N.dataset.v589Emo;
+        (tt.emocao === vt
+          ? ((tt.emocao = ""), (tt.emocaoEm = null))
+          : ((tt.emocao = vt), (tt.emocaoEm = new Date().toISOString())),
+          (tt.u = Date.now()),
+          f(() => save()),
+          sinc589(O, { meta: f(() => Yt(), null), stop: f(() => St(), null) }),
+          f(() => render()));
+      }),
+    ),
+      f(() =>
+        setInterval(() => {
+          for (const g of document.querySelectorAll("#app:not(.v503-fantasma) [data-v589-abertura]")) {
+            const N = +g.dataset.v589Abertura;
+            N - Date.now() <= 0 ? f(() => render()) : (g.querySelector("b").textContent = cont589(N));
+          }
+        }, 1e3),
+      ));
     function ie() {
       const t = ft(),
         e = ut(t),
@@ -825,7 +903,7 @@ try {
         $ = P.filter((g) => A[g.id]).length,
         I = P.length ? Math.round(($ / P.length) * 100) : 0,
         Z = Ft(),
-        H = qt || (Z === "pre" ? "pre" : Z === "pregao" ? "during" : "post"),
+        H = qt || fase589(),
         z = { pre: "Pré-mercado", during: "Durante", post: "Pós-mercado" },
         B = ["pre", "during", "post"]
           .map((g) => {
@@ -835,6 +913,18 @@ try {
             return `<button type="button" data-dt393-action="checkphase" data-phase="${g}" class="${g === H ? "active" : ""} ${tt ? "full" : ""}" aria-pressed="${g === H}">${p(tt ? "check" : g === "during" ? "arrow" : "target", 16)} ${z[g]} <small>(${O}/${N.length})</small></button>`;
           })
           .join(""),
+        nH = P.filter((g) => at(g) === H),
+        fH = nH.filter((g) => A[g.id]).length,
+        pH = nH.length ? Math.round((fH / nH.length) * 100) : 0,
+        preL = P.filter((g) => at(g) === "pre"),
+        preOk = preL.length > 0 && preL.every((g) => A[g.id]),
+        hoje589 = t === V(),
+        dRaiz = f(() => S.days[t] || {}, {}),
+        abre589 = f(() => {
+          const g = new Date(t + "T09:00:00-03:00").getTime();
+          return hoje589 && !preOk && !/s[áa]b|dom/i.test(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "short" }).format(new Date())) && g > Date.now() ? g : 0;
+        }, 0),
+        emo589 = `<section class="v4-emo" aria-label="Estado emocional agora"><div class="v4-emo-head"><b>Como você está agora?</b>${abre589 ? `<span class="v4-countdown" data-v589-abertura="${abre589}" role="timer" aria-label="Tempo até a abertura do pregão">Abertura em <b>${cont589(abre589)}</b></span>` : ""}</div><div class="v4-emo-row" role="radiogroup" aria-label="Estado emocional">${EMO589.map(([g, N]) => `<button type="button" role="radio" aria-checked="${dRaiz.emocao === g}" class="${dRaiz.emocao === g ? "on" : ""}" data-v589-emo="${g}" data-v589-dia="${t}">${N}</button>`).join("")}</div></section>`,
         Y = P.map(
           (g) =>
             `<div class="dt393-checkitem v4-check" data-rule-phase="${at(g)}" ${at(g) !== H ? "hidden" : ""}><label><input type="checkbox" data-chk="${b(g.id)}" ${A[g.id] ? "checked" : ""}/><span>${b(g.t)}</span></label><select data-dt393-rule-phase="${b(g.id)}" aria-label="Fase da regra"><option value="pre" ${at(g) === "pre" ? "selected" : ""}>Pré</option><option value="during" ${at(g) === "during" ? "selected" : ""}>Durante</option><option value="post" ${at(g) === "post" ? "selected" : ""}>Pós</option></select></div>`,
@@ -842,7 +932,7 @@ try {
         U = C(
           "list",
           "Checklist operacional",
-          `<button type="button" class="v4-progress" data-dt393-route="regras" aria-label="Editar regras"><span>${$} de ${P.length} concluídos (${I}%)</span><i><b style="width:${I}%"></b></i>${p("right", 16)}</button>`,
+          `<button type="button" class="v4-progress" data-dt393-route="regras" aria-label="Editar regras"><span><b>${z[H]}</b> · ${fH} de ${nH.length}</span><i><b style="width:${pH}%"></b></i>${p("right", 16)}</button>`,
           `<div class="dt393-phase dt393-phase-inner v4-cphase">${B}</div><div class="dt393-checklist v4-checklist">${Y || '<p class="v4-empty">Cadastre suas regras no Checklist.</p>'}<div class="dt393-phase-empty v4-empty" ${P.some((g) => at(g) === H) ? "hidden" : ""}>Nenhuma regra nesta fase.</div></div>`,
         ),
         ot = f(() => pHoje(), null),
@@ -920,7 +1010,15 @@ try {
           "",
           `<textarea class="v4-notes" data-d="plano" maxlength="2000" placeholder="Cenário, níveis, o que vou operar…" aria-label="Plano e observações do dia">${b(e.plano || "")}</textarea><small class="v4-count">${String(e.plano || "").length}/2000 · salvo no Plano do dia</small>`,
         );
-      return `<div class="v4-page v4-day">${y}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
+      (hoje589 &&
+        preOk &&
+        !dRaiz.preOkEm &&
+        queueMicrotask(() => {
+          const g = dia589(t);
+          g.preOkEm || ((g.preOkEm = new Date().toISOString()), (g.u = Date.now()), f(() => save()));
+        }),
+        queueMicrotask(() => sinc589(t, { meta: l, stop: s })));
+      return `<div class="v4-page v4-day">${emo589}${y}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
     }
     let At = "risk",
       bt = { k: "dt", d: 1 };

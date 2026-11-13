@@ -1,0 +1,9 @@
+DIÁRIO DE TRADER — v589
+
+Meu dia ligado ao Supabase (tabela estado_diario, com RLS por auth.uid()):
+- Seletor emocional de 1 toque no topo (Calmo, Focado, Ansioso, Cansado, Eufórico), salvo na conta.
+- Checklist operacional abre só o bloco do horário: Pré-mercado antes das 9h, Durante das 9h às 17h, Pós-mercado depois das 17h. O destaque mostra o progresso do bloco atual, não o total.
+- Antes das 9h, com o pré-mercado incompleto, aparece a contagem até a abertura.
+- Horário de conclusão do pré-mercado e meta/stop do dia também vão para estado_diario.
+- "Escala emocional" saiu da lista do que falta; no lugar entra o registro do estado emocional.
+Migration: supabase/migrations/20261113093000_estado_diario_v589.sql (aditiva).

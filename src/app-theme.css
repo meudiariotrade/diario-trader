@@ -2261,3 +2261,14 @@ html body #app .dt397-panel :is(.dt397-lesson,.dt397-library-grid>button,.dt397-
 html body #app .dt397-library-grid{gap:0!important}
 html body #app .dt397-library-grid>button{border-right:1px solid #1E232E!important}
 html body #app .dt397-lesson-art--capa{background:none!important;border:0!important;padding:0!important}
+/* v589: Meu dia — estado emocional de 1 toque e contagem até a abertura */
+html body #app .v4-emo{background:#11141B;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E;padding:12px 16px;margin:0 0 16px}
+html body #app .v4-emo-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+html body #app .v4-emo-head>b{font-size:14px;font-weight:700;color:#E8E6E1;text-align:left}
+html body #app .v4-countdown{font-size:12px;color:#8A93A6;white-space:nowrap}
+html body #app .v4-countdown b{color:#D4A017;font-variant-numeric:tabular-nums;font-weight:700;margin-left:4px}
+html body #app .v4-emo-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+html body #app .v4-emo-row button{min-height:44px;padding:0 2px;border:1px solid #1E232E;border-radius:4px;background:#0A0C10;color:#C9CDD6;font-size:12px;font-weight:650;white-space:nowrap;cursor:pointer}
+html body #app .v4-emo-row button:hover{background:#181C26}
+html body #app .v4-emo-row button.on{background:#181C26;border-color:#D4A017;color:#D4A017}
+html body #app .v4-progress span b{color:#E8E6E1;font-weight:700}

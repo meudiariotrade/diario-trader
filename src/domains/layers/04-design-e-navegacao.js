@@ -67,6 +67,7 @@ try {
         semRegra: X,
         semStop: J,
         estado: +s.estado || 0,
+        emo: p(() => (S.days[e] || {}).emocao, "") || "",
         plano: W.filter(([r]) => a[r]).length,
         planoFalta: W.filter(([r]) => !a[r]).map((r) => r[1]),
         regrasOk: v,
@@ -118,6 +119,7 @@ try {
       !e.regrasOk &&
       !e.ment &&
       !e.ep &&
+      !e.emo &&
       !e.posop &&
       !e.ckok &&
       !e.trades;
@@ -134,7 +136,7 @@ try {
               ? "plano: " + e.planoFalta.join(", ")
               : "fazer o plano",
           }),
-        e.ep || s.push({ k: "escala", fase: "pre", txt: "escala emocional" }),
+        e.emo || s.push({ k: "emocao", fase: "pre", txt: "registrar o estado emocional (1 toque no topo do Meu dia)" }),
         e.ckok ||
           s.push({
             k: "ckok",
