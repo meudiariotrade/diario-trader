@@ -142,9 +142,30 @@
     };
     grupo('Por setup', x => x.t.setup);
     grupo('Por ativo', x => String(x.t.ativo || '').toUpperCase());
-    grupo('Por dia da semana', x => DIAS[new Date(String(x.t.dt).slice(0, 10) + 'T12:00').getDay()]);
+    /* v592 — dias da semana: onde opero mais/menos e onde ganho/perco mais. */
+    {
+      const dw = x => new Date(String(x.t.dt).slice(0, 10) + 'T12:00').getDay();
+      const ds = [1, 2, 3, 4, 5].concat([6, 0].filter(d => lin.some(x => dw(x) === d)));
+      const tab = ds.map(d => { const l = lin.filter(x => dw(x) === d); const g = l.filter(x => x.c.pl > 0), p = l.filter(x => x.c.pl < 0); return { d, n: l.length, w: g.length, gan: soma(g.map(x => x.c.pl)), per: soma(p.map(x => x.c.pl)), pl: soma(l.map(x => x.c.pl)) }; });
+      add([{ v: 'Por dia da semana', s: 'h' }, { v: 'Trades', s: 'h' }, { v: 'Acerto', s: 'h' }, { v: 'Ganhos', s: 'h' }, { v: 'Perdas', s: 'h' }, { v: 'Resultado', s: 'h' }]);
+      const cor = v => v > 0 ? 'ok' : v < 0 ? 'ruim' : 'n';
+      tab.forEach(o => add([{ v: DIAS[o.d] }, { v: o.n, fmt: F.int }, o.n ? { v: o.w / o.n, fmt: F.pct } : { v: '—', s: 'vz' }, { v: o.gan, fmt: F.money, s: cor(o.gan) }, { v: o.per, fmt: F.money, s: cor(o.per) }, { v: o.pl, fmt: F.money, s: cor(o.pl) }]));
+      add(null);
+      const com = tab.filter(o => o.n);
+      const nomes = l => l.map(o => DIAS[o.d]).join(', ');
+      const ext = (l, f, maior) => { if (!l.length) return []; const alvo = maior ? Math.max(...l.map(f)) : Math.min(...l.map(f)); return l.filter(o => f(o) === alvo); };
+      const mais = ext(tab, o => o.n, true), menos = ext(tab, o => o.n, false);
+      const ganha = ext(com.filter(o => o.pl > 0), o => o.pl, true), perde = ext(com.filter(o => o.pl < 0), o => o.pl, false);
+      add([{ v: 'Resumo por dia da semana', s: 'h' }, { v: '', s: 'h' }, { v: '', s: 'h' }]);
+      const linha = (k, l, txt, s) => add([{ v: k }, l.length ? { v: nomes(l), s: s || 'n' } : { v: '—', s: 'vz' }, l.length ? { v: txt(l[0]), s: s || 'n' } : { v: '', s: 'vz' }]);
+      linha('Dia em que mais opero', mais, o => o.n + (o.n === 1 ? ' trade' : ' trades'));
+      linha('Dia em que menos opero', menos, o => o.n + (o.n === 1 ? ' trade' : ' trades'));
+      linha('Dia em que mais ganho', ganha, o => o.pl.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 'ok');
+      linha('Dia em que mais perco', perde, o => o.pl.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 'ruim');
+      add(null);
+    }
     grupo('Por horário', x => { const h = String(x.t.dt).slice(11, 13); return h ? h + 'h' : ''; });
-    return { nome: 'Desempenho', rows, larg: [300, 90, 90, 130, 120], semGrade: 1, alturas: H };
+    return { nome: 'Desempenho', rows, larg: [300, 90, 90, 130, 130, 130], semGrade: 1, alturas: H };
   }
   root.DIARIO_V554_DESEMP = desempenho;
   root.Ajustes554 = Object.freeze({ desempenho });
