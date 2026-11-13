@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 cc8f527ca0a1b861b525b88e019f919786442baff581bb6d664c5b9f50ae1be9 */
+/* Gerado de src/app-theme.css · SHA256 7428044657a2be9755e920dd16195df987fc02d41ec0897529c7b76e556cf357 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2358,3 +2358,48 @@ html body #v434-ov .v597-notas{background:#11141B;border:1px solid #1E232E;borde
 html body #v434-ov .v597-notas summary{min-height:32px;display:flex;align-items:center;color:#E8E6E1;font-weight:650;cursor:pointer}
 html body #v434-ov .v597-notas textarea{width:100%;box-sizing:border-box;margin-top:6px;min-height:96px;padding:8px;background:#0A0C10;border:1px solid #1E232E;border-radius:4px;color:#E8E6E1;font-size:16px;line-height:1.4;resize:vertical}
 html body #v434-ov .v597-notas small{display:block;margin-top:4px;color:#8A93A6;font-size:12px;min-height:14px}
+/* v598 — Player: pular 15s e modo só áudio (tela bloqueada) */
+html body #v434-ov .v597-bar .v598-pula{min-width:44px;padding:0 4px;color:#8A93A6;font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
+html body #v434-ov .v598-audio{min-height:40px;background:#11141B;border:1px solid #1E232E;border-radius:6px;color:#E8E6E1;font-size:13px}
+html body #v434-ov .v598-audio.on{border-color:#D4A017;color:#D4A017}
+/* v598 — Calculadora de posição */
+html body #app#app .v598-calc-btn{display:block;margin-top:8px;min-height:32px;padding:0 10px;background:transparent;border:1px solid #1E232E;border-radius:4px;color:#D4A017;font-size:12px;font-weight:650}
+.v598-calc-dlg{width:min(420px,calc(100vw - 24px));padding:0;background:#11141B;border:1px solid #1E232E;border-radius:6px;color:#E8E6E1}
+.v598-calc-dlg::backdrop{background:rgba(10,12,16,.72)}
+.v598-calc-box{padding:12px 14px 14px}
+.v598-calc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.v598-calc-top button{min-width:40px;min-height:40px;background:transparent;border:0;color:#8A93A6;font-size:18px}
+.v598-calc{display:grid;gap:10px}
+.v598-calc label{display:grid;gap:4px;color:#8A93A6;font-size:12px}
+.v598-calc input,.v598-calc select{min-height:44px;padding:0 10px;background:#0A0C10;border:1px solid #1E232E;border-radius:4px;color:#E8E6E1;font-size:16px;font-variant-numeric:tabular-nums;text-align:right}
+.v598-calc select{text-align:left}
+.v598-calc-par{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.v598-calc-res{display:block;padding:10px 12px;background:#0A0C10;border-left:3px solid #D4A017;border-radius:4px;color:#E8E6E1;font-size:14px;font-variant-numeric:tabular-nums}
+.v598-calc-res b{font-size:24px;color:#D4A017;margin-right:4px}
+.v598-calc-res span{display:block;margin-top:4px;color:#8A93A6;font-size:12px}
+.v598-calc-nota{color:#8A93A6;font-size:11px}
+/* v598 — Impacto emocional e trava preventiva */
+html body #app#app .v598-emocard-head{display:grid;gap:2px;margin-bottom:8px}
+html body #app#app .v598-emocard-head h3{margin:0;font-size:15px}
+html body #app#app .v598-emocard-head small{color:#8A93A6;font-size:12px}
+html body #app#app .v598-emotab{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+html body #app#app .v598-emotab th,html body #app#app .v598-emotab td{padding:8px 4px;border-bottom:1px solid #1E232E;text-align:right;white-space:nowrap}
+html body #app#app .v598-emotab th:first-child,html body #app#app .v598-emotab thead th:first-child{text-align:left}
+html body #app#app .v598-emotab thead th{color:#8A93A6;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+html body #app#app .v598-trava{margin:8px 0 0;padding:8px 10px;background:#11141B;border-left:3px solid #D4A017;border-radius:4px;font-size:13px;color:#E8E6E1}
+html body #app#app .v598-trava b{color:#D4A017}
+html body #app#app .v598-trava button{margin-left:6px;min-height:32px;padding:0 10px;background:transparent;border:1px solid #D4A017;border-radius:4px;color:#D4A017;font-size:12px;font-weight:650}
+html body #app#app .v598-trava span{color:#8A93A6}
+/* v598 — Estudos > Hoje: Recomendado pelo seu Pregão */
+html body #app#app .v598-rec{display:grid;gap:6px;padding:12px;background:#11141B;border:1px solid #1E232E;border-left:3px solid #D4A017;border-radius:6px}
+html body #app#app .v598-rec-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+html body #app#app .v598-rec-top span{color:#D4A017;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+html body #app#app .v598-rec-top em{color:#8A93A6;font-style:normal;font-size:12px;font-variant-numeric:tabular-nums}
+html body #app#app .v598-rec-erro{margin:0;color:#8A93A6;font-size:13px;line-height:1.4}
+html body #app#app .v598-rec-alvo{display:grid;gap:2px}
+html body #app#app .v598-rec-alvo b{color:#E8E6E1;font-size:15px;line-height:1.3}
+html body #app#app .v598-rec-alvo small{color:#C9CDD6;font-size:12.5px}
+html body #app#app .v598-rec-alvo .v598-rec-por{color:#8A93A6;font-size:11.5px}
+html body #app#app .v598-rec-go{justify-self:start;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;background:#D4A017;border:0;border-radius:4px;color:#0A0C10;font-weight:700;font-size:13px}
+/* v598 — Início: origem do capital (soma do capital atual de Day trade, Swing e Opções) */
+html body #app#app .v598-capdet{display:block;color:#8A93A6;font-size:11.5px;font-style:normal;font-variant-numeric:tabular-nums;line-height:1.35}
