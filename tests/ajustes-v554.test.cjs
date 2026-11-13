@@ -7,6 +7,8 @@ test('v554: trava pelo pré-mercado, desfazer regra, GANHO/PERDA e aba Desempenh
  // Horário fixo durante o pregão: o teste não pode depender do relógio de quem roda (as travas de pós-17h mudam a tela).
  await p.clock.setFixedTime(new Date('2026-11-11T15:00:00Z'));
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
+ // Os trades de demonstração chegam depois do splash: sem eles a trava trata a conta como nova (teste instável).
+ await p.waitForFunction(()=>Array.isArray(S.trades)&&S.trades.length>0);
  const app=p.locator('#app:not(.v503-fantasma)');
  // Trava: conta sem trades não exige checklist; com trades, só os itens do pré-mercado contam.
  const trava=await p.evaluate(()=>{const cfg=(S.ax.trava??={});cfg.on=1;cfg.chk=1;const guard=S.trades;S.trades=[];const a=travaEstado().resolver.some(x=>x.id==='chk');S.trades=guard;
