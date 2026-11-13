@@ -1,0 +1,6 @@
+DIÁRIO DE TRADER — v604 (Opções no Imposto de renda)
+
+- Opções no swing: 15% desde o primeiro centavo, sem a isenção de R$ 20 mil; mesma série comprada e vendida no mesmo dia = day trade (20%).
+- Nota do BTG: opções de compra e venda (inclusive semanais) e futuros WIN/WDO/IND/DOL da BM&F, com taxas e IRRF rateados.
+- Apuração e Custos: "Opções em aberto" com Registrar vencimento (virou pó) / exercício.
+- Espelho IRPF: opções compradas em aberto em 31/12 pelo custo médio.
