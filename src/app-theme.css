@@ -2206,7 +2206,7 @@ html:root[data-v427-tema=claro],html:root[data-v427-tema=claro] body{background:
 /* Notícias: "Jornal do dia" ao lado de Balanços da B3, na mesma linha. */
 html body #app#app .dt395-native-mercado .m406-section-switch{display:flex!important;flex-wrap:nowrap!important;align-items:center;gap:8px!important;overflow-x:auto;scrollbar-width:none}
 html body #app#app .dt395-native-mercado .m406-section-switch>*{flex:0 0 auto!important;margin:0!important}
-html body #app#app .dt395-native-mercado .m406-section-switch [data-m550-jornal]{display:inline-flex!important;white-space:nowrap}
+html body #app#app .dt395-native-mercado .m406-section-switch[data-m406-switch="nt"] [data-m550-jornal]{display:inline-flex!important;white-space:nowrap}
 /* Agenda e Notícias: sem atalhos para outras abas dentro do cartão. */
 html body #app#app .dt395-native-mercado .mk-seg{display:none!important}
 /* Linha do dia da agenda: horários sem quebrar. */

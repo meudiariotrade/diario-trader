@@ -1,0 +1,16 @@
+DIÁRIO DE TRADER — v588
+
+Correção pontual sobre o pacote completo v587, seguindo CLAUDE.md.
+
+- Removido o atalho duplicado "Jornal do dia" de dentro do próprio Jornal.
+- Mantidas as seções "Jornal do Pregão" e "Giro do mercado".
+- "Jornal do dia" continua disponível como atalho em Notícias.
+- Corrigida a regra CSS que forçava o atalho a reaparecer no Jornal.
+- Atualizados versão, bundles e cache para v588.
+
+Publicação: mantenha a estrutura do projeto ao substituir os arquivos.
+O workflow existente gera a pasta _site com npm ci e npm run build.
+
+Validação: testes de DOM de navegação, regressão de Alertas, conteúdo do Jornal,
+handler de fallback, build, recursos e verificação de backend.
+Teste visual em navegador não executado: Chromium bloqueado pelo ambiente.

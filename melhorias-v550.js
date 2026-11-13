@@ -38,9 +38,13 @@
 
   /* ---------------- Mercado: Jornal do dia dentro de Notícias ---------------- */
   function jornal(m) {
-    const sw = $('.m406-section-switch', m); if (!sw || $('[data-m550-jornal]', sw)) return;
+    // O atalho pertence a Notícias; dentro do Jornal ele duplicava a subaba ativa.
+    if (g(() => MKT.tab, '') !== 'nt') {
+      $$('[data-m550-jornal]', m).forEach(b => b.remove());
+      return;
+    }
+    const sw = $('.m406-section-switch[data-m406-switch="nt"]', m); if (!sw || $('[data-m550-jornal]', sw)) return;
     const b = doc.createElement('button'); b.type = 'button'; b.className = 'm406-switch-button'; b.dataset.m550Jornal = '1'; b.textContent = 'Jornal do dia';
-    if (g(() => MKT.tab, '') === 'jr') { b.classList.add('on'); b.setAttribute('aria-pressed', 'true'); }
     sw.append(b);
   }
 
