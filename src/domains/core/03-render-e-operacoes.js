@@ -136,7 +136,7 @@ function render() {
   if (r.dataset.tab) {
     ((tab = r.dataset.tab === "trades" ? LT : r.dataset.tab),
       ["trades", "swing", "opc"].includes(tab) && (LT = tab),
-      render(),
+      irPara(tab),
       scrollTo(0, 0));
     return;
   }
@@ -252,7 +252,7 @@ function render() {
   else if (i === "gotab")
     ((tab = r.dataset.id),
       ["trades", "swing", "opc"].includes(tab) && (LT = tab),
-      render(),
+      irPara(tab),
       scrollTo(0, 0));
   else if (i === "fab") {
     const d = $("#fabm");

@@ -3532,7 +3532,7 @@ function cqItens(category) {
 document.addEventListener('click', event => {
   if (event.target.closest('[data-market-longshort]')) { document.querySelector('#app #v512-lsbtn')?.click(); return; }
   if (!event.target.closest('[data-market-di]')) return;
-  tab = 'term'; render();
+   irPara('term');
   requestAnimationFrame(()=>document.querySelector('#app:not(.v503-fantasma) [data-tf415-nav="DIFUT"]')?.click());
 });
 document.addEventListener('input', event => {
@@ -3603,7 +3603,7 @@ document.addEventListener('change', event => {
   }, 15e3));
 try {
   GOR.cq = () => {
-    ((tab = "mercado"), (MKT.tab = "cq"), render());
+    ((MKT.tab = "cq"), irPara("mercado"));
   };
 } catch {}
 const AGH_K = "diario-ag-hist";
@@ -4095,8 +4095,7 @@ function enInicia(e, t) {
   }
   ((EN.run = a),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     enAutoFala());
 }

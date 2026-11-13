@@ -155,7 +155,7 @@ function enView() {
   }));
 try {
   GOR.ingles = () => {
-    ((tab = "estudos"), (ESV = "ing"), render());
+    ((ESV = "ing"), irPara("estudos"));
   };
 } catch {}
 ((HB_NOMES.en = "Inglês do dia"),
@@ -1023,8 +1023,7 @@ function cardsLicao(e) {
       }
       ((EN.run = numLicao()),
         (ESV = "ing"),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0),
         numAuto());
       return;
@@ -1041,8 +1040,7 @@ function cardsLicao(e) {
       }
       ((EN.run = n),
         (ESV = "ing"),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0),
         setTimeout(() => enFala(n.C[0].en), 250));
       return;
@@ -1055,8 +1053,7 @@ function cardsLicao(e) {
       ((EN.chat = { cena: a || "", hist: [], busy: 0, err: "" }),
         (EN.run = null),
         (ESV = "ing"),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0),
         chatEnvia(""));
       return;
@@ -1073,8 +1070,7 @@ function cardsLicao(e) {
     ) {
       ((EN.dica = a),
         (ESV = "ing"),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0));
       return;
     }
@@ -2069,7 +2065,7 @@ function mdFiltra(e, t) {
         (e.stopPropagation(), usSolta());
         const o = a.dataset.mdv;
         (o === "regras" ? (tab = "regras") : ((tab = "dia"), (DV = o)),
-          render(),
+          irPara(tab),
           scrollTo(0, 0));
       }
     },
@@ -2286,8 +2282,7 @@ document.addEventListener(
           mdmSet(s ? "us" : "br"),
           (D = n),
           (DV = "ed"),
-          (tab = "dia"),
-          render(),
+          irPara("dia"),
           scrollTo(0, 0));
         return;
       }
@@ -2540,8 +2535,7 @@ async function enNoticia() {
   }),
     (EN.run = null),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     chatEnvia(""));
 }
@@ -2663,9 +2657,8 @@ function facAviso() {
 }
 document.addEventListener("click", (e) => {
   e.target.closest("[data-facver]") &&
-    ((tab = "estudos"),
-    (ESV = "foco"),
-    render(),
+    ((ESV = "foco"),
+    irPara("estudos"),
     setTimeout(
       () =>
         document.getElementById("faccard")?.scrollIntoView({ block: "start" }),
@@ -2753,9 +2746,8 @@ document.addEventListener("click", (e) => {
   }
   if (a === "en") {
     ((ESV = "ing"),
-      (tab = "estudos"),
       (EN.run = null),
-      render(),
+      irPara("estudos"),
       setTimeout(() => {
         const o = document.querySelector(".enhero [data-enl]");
         o && o.click();
@@ -2767,9 +2759,8 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (a === "cnpi") {
-    ((tab = "estudos"),
-      (ESV = "cnpi"),
-      render(),
+    ((ESV = "cnpi"),
+      irPara("estudos"),
       setTimeout(() => {
         try {
           cnInicia(cnDevidas().length ? "rev" : "rap", "ct");
@@ -2777,7 +2768,7 @@ document.addEventListener("click", (e) => {
       }, 200));
     return;
   }
-  a === "foco" && ((tab = "estudos"), (ESV = "foco"), render(), scrollTo(0, 0));
+  a === "foco" && ((ESV = "foco"), irPara("estudos"), scrollTo(0, 0));
 });
 const INI_OP = [
   ["home", "Início"],
@@ -2807,7 +2798,7 @@ function iniAplica() {
           (tab = "dia"),
           (D = loc().slice(0, 10)),
           (DV = "ed")),
-    render());
+    irPara(tab));
 }
 (setTimeout(iniAplica, 1200),
   (GOR.fechar = () => {
@@ -2819,7 +2810,7 @@ function iniAplica() {
       (tab = "dia"),
       (D = loc().slice(0, 10)),
       (DV = "ed"),
-      render());
+      irPara(tab));
   }),
   (GOR.diabr = () => {
     ((GO.r = null),
@@ -2827,7 +2818,7 @@ function iniAplica() {
       (tab = "dia"),
       (D = loc().slice(0, 10)),
       (DV = "ed"),
-      render());
+      irPara(tab));
   }),
   (GOR.ing = () => {
     ((GO.r = null), (ESV = "ing"), irPara("estudos"));
@@ -3288,7 +3279,7 @@ var estSeg;
   };
 }
 GOR.grafico = () => {
-  ((GO.r = null), (tab = "estudos"), (ESV = "gt"), render());
+  ((GO.r = null), (ESV = "gt"), irPara("estudos"));
 };
 const ELEI = [
     ["2026-10-04", "2026-10-25"],
@@ -3348,8 +3339,8 @@ document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-fds]");
   t &&
     (t.dataset.fds === "gt"
-      ? ((tab = "estudos"), (ESV = "gt"), render(), scrollTo(0, 0))
-      : ((tab = "estudos"), (ESV = "ing"), render(), scrollTo(0, 0)));
+      ? ((ESV = "gt"), irPara("estudos"), scrollTo(0, 0))
+      : ((ESV = "ing"), irPara("estudos"), scrollTo(0, 0)));
 });
 let RVM = null;
 const rvmAnt = () => {
@@ -3632,8 +3623,7 @@ function ditInicia() {
     (EN.run = null),
     (EN.chat = null),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     setTimeout(() => enFala(o[0].ex), 300));
 }
@@ -3740,8 +3730,7 @@ document.addEventListener(
       (EN.run = null),
       (EN.dit = null),
       (ESV = "ing"),
-      (tab = "estudos"),
-      render(),
+      irPara("estudos"),
       scrollTo(0, 0),
       chatEnvia(""));
   },

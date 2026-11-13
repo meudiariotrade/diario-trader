@@ -1493,7 +1493,7 @@ function mdmAplica() {
         try {
           ls.set("diario-opm", OPMK);
         } catch {}
-        render();
+        irPara(tab);
       }
       scrollTo(0, 0);
     }
@@ -1598,8 +1598,7 @@ document.addEventListener("click", (e) => {
     ((D = a.dataset.mdmdia),
     (DV = "ed"),
     mdmSet("us"),
-    (tab = "dia"),
-    render(),
+    irPara("dia"),
     scrollTo(0, 0));
 });
 var OPMK = (() => {
@@ -2143,7 +2142,7 @@ try {
       (DV = "ed"),
       mdmSet("br"),
       (DFASE = { d: D, f: "pos" }),
-      render());
+      irPara(tab));
   }),
   (GOR.debus = () => {
     ((GO.r = null),
@@ -2152,12 +2151,11 @@ try {
       (DV = "ed"),
       mdmSet("us"),
       (DFASE = { d: D, f: "pos" }),
-      render());
+      irPara(tab));
   }),
   (GOR.pend = () => {
     ((GO.r = null),
-      (tab = "home"),
-      render(),
+      irPara("home"),
       setTimeout(() => {
         try {
           pdAbre();
@@ -3365,7 +3363,7 @@ function mmRodape(e) {
         (MM.nova = !1),
         save(),
         t.dataset.mmir && (tab = "mesa"),
-        render(),
+        irPara(tab),
         scrollTo(0, 0));
       return;
     }
@@ -4402,8 +4400,7 @@ function pgFecha() {
   }),
   (GOR.qk = () => {
     ((GO.r = null),
-      (tab = "home"),
-      render(),
+      irPara("home"),
       setTimeout(() => {
         try {
           qkAbre();

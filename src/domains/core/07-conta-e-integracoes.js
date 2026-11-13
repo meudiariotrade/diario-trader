@@ -593,9 +593,8 @@ const CX = {
       if (!n.ok || !r.ok) throw new Error(r.error || "Erro " + n.status);
       (await limpaAparelho(),
         document.getElementById("delc")?.remove(),
-        (tab = "conta"),
         (SY.msg = "Sua conta e os seus dados foram excluídos."),
-        render(),
+        irPara("conta"),
         setTimeout(() => {
           try {
             location.reload();
@@ -661,8 +660,7 @@ function onbSalva(e) {
     (o.onb = Date.now()),
     save(),
     document.getElementById("onb")?.remove(),
-    (tab = n ? "mesa" : "home"),
-    render(),
+    irPara(n ? "mesa" : "home"),
     scrollTo(0, 0),
     s &&
       window.toast &&

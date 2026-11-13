@@ -1133,7 +1133,7 @@ try {
               ? (tab = "regras")
               : ((tab = "dia"),
                 (DFASE = { d: D, f: N === "checklist" ? "pos" : N })),
-            render(),
+            irPara(tab),
             N === "checklist")
           ) {
             const e = s()?.querySelector("input[data-chk]");
@@ -1421,7 +1421,7 @@ try {
         (document.getElementById("mdr2")?.remove(),
           document.getElementById("mdr")?.remove(),
           (document.body.style.overflow = ""),
-          render(),
+          irPara(tab),
           C && Number.isFinite(X)
             ? queueMicrotask(() => {
                 const U = document.querySelector("#app .m403-primary-tabs");
@@ -3043,7 +3043,7 @@ Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na im
                 typeof mdmSet == "function" && mdmSet(k.dataset.market || "br"),
                 (tab = "dia"),
                 l("#wf-dialog")?.close(),
-                render());
+                irPara(tab));
               return;
             }
             if (L === "edit") {
@@ -3069,7 +3069,7 @@ Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na im
                     typeof mdmSet == "function" &&
                     mdmSet(k.dataset.market === "US" ? "us" : "br")),
                 l("#wf-dialog")?.close(),
-                render());
+                irPara(tab));
               return;
             }
             if (L === "restore") {
@@ -3199,7 +3199,7 @@ Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na im
               return;
             }
             L === "status" &&
-              ((tab = "status"), l("#wf-dialog")?.close(), render());
+              ((tab = "status"), l("#wf-dialog")?.close(), irPara(tab));
           },
           !0,
         ));

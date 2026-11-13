@@ -6,8 +6,7 @@ function duoInicia(e, t) {
   if (duoVidasOn() && duoVidas().n <= 0) {
     ((EN.semVida = 1),
       (ESV = "ing"),
-      (tab = "estudos"),
-      render(),
+      irPara("estudos"),
       scrollTo(0, 0));
     return;
   }
@@ -19,8 +18,7 @@ function duoInicia(e, t) {
   ((EN.run = a),
     (EN.semVida = 0),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     enAutoFala());
 }
@@ -246,8 +244,7 @@ function duoPratica() {
   }),
     (EN.duoRev = 1),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     enAutoFala());
 }
@@ -1134,7 +1131,7 @@ function estHtml() {
       APP_STORAGE.setItem("diario-est-v", EST.v);
     } catch {}
     (ESV !== "est" && ((ESV = "est"), (tab = "estudos")),
-      render(),
+      irPara(tab),
       scrollTo(0, 0));
     return;
   }
@@ -4078,7 +4075,7 @@ document.addEventListener(
         (o.bib = null),
         a === "hull" && (o.bib = "hull"),
         a === "estr" && (o.estr = "lista"),
-        render(),
+        irPara(tab),
         scrollTo(0, 0));
     } catch {}
   },
@@ -6789,8 +6786,7 @@ Dados do terminal agora:
         }
         if (_ === "sair") {
           (document.body.classList.remove("trmon"),
-            (tab = "home"),
-            render(),
+            irPara("home"),
             scrollTo(0, 0));
           return;
         }
@@ -9905,7 +9901,7 @@ Dados do terminal agora:
           try {
             MKT.tab = "jr";
           } catch {}
-          (render(), scrollTo(0, 0));
+          (irPara(tab), scrollTo(0, 0));
           return;
         }
         if (O === "mmodo") {
@@ -10099,7 +10095,7 @@ Dados do terminal agora:
       try {
         ((tab = x[0]), x[1] && (MKT.tab = x[1]));
       } catch {}
-      return ((t.voltar = 1), render(), scrollTo(0, 0), !0);
+      return ((t.voltar = 1), irPara(tab), scrollTo(0, 0), !0);
     };
     window.trTela = (f) => !!d[f] && c(f);
     const p = () => {
@@ -10144,8 +10140,7 @@ Dados do terminal agora:
             f.target.closest('#bnav [data-k="mercado"],[data-m2="mercado"]') &&
             (f.preventDefault(),
             f.stopPropagation(),
-            (tab = "term"),
-            render(),
+            irPara("term"),
             scrollTo(0, 0));
         },
         !0,
@@ -15315,8 +15310,7 @@ Validação do app: atenção a ` +
         (Q.preventDefault(),
           Q.stopPropagation(),
           re.dataset.cen && (t.cn.k = re.dataset.cen),
-          (tab = "term"),
-          render());
+          irPara("term"));
         let ie = re.dataset.sw;
         if (ie === "PESQ") {
           const R = ke(Le().a, 3).map((me) => me[0]),
@@ -15361,7 +15355,7 @@ Validação do app: atenção a ` +
       (o.SAZSENT = {
         body: () => '<div class="trnote">Abrindo o painel…</div>',
         load: () => {
-          ((tab = "mercado"), (MKT.tab = "lab"), render(), scrollTo(0, 0));
+          ((MKT.tab = "lab"), irPara("mercado"), scrollTo(0, 0));
         },
       }));
     {
@@ -19421,8 +19415,7 @@ Validação do app: atenção a ` +
         }
         if (le === "term") {
           ((e.sel = null),
-            (tab = "term"),
-            render(),
+            irPara("term"),
             setTimeout(() => {
               try {
                 TRM.roda(Y + " G");
@@ -19431,7 +19424,7 @@ Validação do app: atenção a ` +
           return;
         }
         if (le === "go") {
-          ((tab = Y), render());
+          (irPara(Y));
           return;
         }
         if (le === "ferr") {
@@ -19439,7 +19432,7 @@ Validação do app: atenção a ` +
           try {
             ((ANX.m = Y), (ANX.tkA = ""));
           } catch {}
-          (render(), scrollTo(0, 0));
+          (irPara(tab), scrollTo(0, 0));
           return;
         }
         if (le === "alpx") {

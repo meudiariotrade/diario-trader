@@ -2704,7 +2704,7 @@ var segM, segD;
     ((tab = p),
       ["trades", "swing", "opc"].includes(p) && (LT = p),
       l(),
-      render(),
+      irPara(tab),
       scrollTo(0, 0));
   }
   (document.addEventListener(

@@ -2659,9 +2659,8 @@ const GO = { r: null, book: null };
     if ((a(), GO.book && (S.books || []).some((o) => o.id === GO.book))) {
       ((BID = GO.book),
         (BV = "not"),
-        (tab = "livro"),
         (GO.book = null),
-        render());
+        irPara("livro"));
       return;
     }
     if (GO.r && tab === "dia") {

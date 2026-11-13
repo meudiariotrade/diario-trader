@@ -519,8 +519,7 @@ document.addEventListener(
       (e.stopPropagation(),
       (TSV = !1),
       typeof STMOD < "u" && (STMOD = null),
-      (tab = "stats"),
-      render(),
+      irPara("stats"),
       scrollTo(0, 0),
       setTimeout(() => {
         const t = [...document.querySelectorAll("#app button")].find(
@@ -720,7 +719,7 @@ estSeg = function (e) {
   }
 }),
   (GOR.treino = () => {
-    ((GO.r = null), (tab = "estudos"), (ESV = "treino"), render());
+    ((GO.r = null), (ESV = "treino"), irPara("estudos"));
   }));
 const HG_AB = (() => {
   try {
@@ -1247,9 +1246,8 @@ try {
 }
 ((GOR.jurosmu = () => {
   ((GO.r = null),
-    (tab = "mercado"),
     (MKT.tab = "mu"),
-    render(),
+    irPara("mercado"),
     setTimeout(
       () => document.getElementById("mujr")?.scrollIntoView({ block: "start" }),
       150,
@@ -2774,14 +2772,14 @@ try {
       MKT.tab === "jedu" &&
         ((MKT.tab = "mu"),
         setTimeout(() => {
-          ((tab = "estudos"), (ESV = "juros"), render(), scrollTo(0, 0));
+          ((ESV = "juros"), irPara("estudos"), scrollTo(0, 0));
         }, 0)),
       e.apply(this, arguments)
     );
   };
 }
 GOR.jedu = () => {
-  ((GO.r = null), (tab = "estudos"), (ESV = "juros"), render());
+  ((GO.r = null), (ESV = "juros"), irPara("estudos"));
 };
 {
   const e = vJuros;
@@ -4837,7 +4835,7 @@ function facPinta() {
   };
 }
 GOR.faculdade = () => {
-  ((GO.r = null), (tab = "estudos"), (ESV = "fac"), render());
+  ((GO.r = null), (ESV = "fac"), irPara("estudos"));
 };
 {
   const e = facHtml;
@@ -5022,9 +5020,8 @@ document.addEventListener(
       const o = a.dataset.facfoco;
       (facMats(),
         focoInicia(25, "fac:" + o),
-        (tab = "estudos"),
         (ESV = "foco"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0));
       return;
     }
