@@ -1442,7 +1442,8 @@ try {
           const y = j(),
             C = l.find((X) => X.items.some(([_]) => _ === y)) || l[0],
             V = C.items.find(([X]) => X === y) || C.items[0];
-          return `<section class="workbench-header m355-market-head" aria-label="Navegação de Mercado"><div class="m355-overline">CONTEXTO · BRASIL E MUNDO</div><div class="m355-market-title"><div><h1>Mercado</h1><p>Informação, análise e acompanhamento no mesmo lugar.</p></div><button type="button" class="m355-ia-button" data-market-chat>Economista IA</button></div><nav class="m355-areas m360-area-grid" aria-label="Áreas do mercado">${l.map((X, _) => `<button type="button" class="m360-area ${X === C ? "on" : ""}" data-navroute="${r(X.items[0][0])}" aria-pressed="${X === C}"><span class="m360-area-symbol" aria-hidden="true">${["◉", "▤", "▥", "▦"][_]}</span><span class="m360-area-content"><strong>${r(X.name)}</strong><small>${r(["Brasil e mundo", "Jornal e agenda", "Sazonalidade e gráficos", "Ativos e preços"][_])}</small></span></button>`).join("")}</nav><div class="m355-page-header"><div><span>Página atual</span><strong>${r(V[1])}</strong></div><label class="m355-page-picker"><span>Trocar página</span><select data-m355-market-page aria-label="Escolher página de ${r(C.name)}">${C.items.map(([X, _]) => `<option value="${r(X)}"${X === y ? " selected" : ""}>${r(_)}</option>`).join("")}</select></label></div><nav class="m355-page-links" aria-label="Páginas de ${r(C.name)}">${C.items.map((X) => o(X, y === X[0] ? "on" : "")).join("")}</nav></section>`;
+          /* Tela única: o cabeçalho antigo do Mercado não é mais desenhado; a navegação fica nas abas do Mercado. */
+          return (void C, void V, "");
         }));
       const B = vAlertas;
       ((vAlertas = function () {

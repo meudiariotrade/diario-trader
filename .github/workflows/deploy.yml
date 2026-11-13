@@ -36,6 +36,14 @@ jobs:
           else
             npx playwright install --with-deps chromium
           fi
+      - name: Conferir versão (impede publicar pacote antigo)
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          fi
+          node scripts/check-versao.cjs
       - run: npm run verify
       - name: Capturas de validação de Análises
         if: always()

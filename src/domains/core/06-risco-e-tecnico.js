@@ -2802,7 +2802,8 @@ function diaOrganiza() {
   (Ye ? Ye.after(Se) : e.append(Se),
     Se.after(j, k, A),
     [j, k, A].forEach((Xe) => {
-      Xe.style.display = Xe.dataset.fase === DFASE.f ? "" : "none";
+      /* Tela única: só a fase escolhida fica montada; as outras saem do DOM. */
+      Xe.dataset.fase === DFASE.f || Xe.remove();
     }),
     s.remove(),
     r.remove(),
@@ -2814,13 +2815,7 @@ function diaOrganiza() {
 (document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-dfase]");
   if (!t) return;
-  ((DFASE = { d: D, f: t.dataset.dfase }),
-    document
-      .querySelectorAll("#dfases button")
-      .forEach((o) => o.classList.toggle("on", o === t)),
-    document.querySelectorAll("#app .dfase").forEach((o) => {
-      o.style.display = o.dataset.fase === DFASE.f ? "" : "none";
-    }));
+  ((DFASE = { d: D, f: t.dataset.dfase }), render());
   const a = document.getElementById("dfases");
   a &&
     a.getBoundingClientRect().top < 0 &&

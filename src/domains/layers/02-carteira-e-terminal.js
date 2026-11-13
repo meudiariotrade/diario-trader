@@ -2606,9 +2606,13 @@ try {
               ((l.innerHTML = d[tab]()), t.appendChild(l), tab === "estudos")
             ) {
               const n = l.querySelector(".dt397-native-mount");
-              (n.appendChild(o), (i = !0), (n.hidden = !w));
-              const filtros = n.querySelector(".dt397-filtros");
-              filtros && o.prepend(filtros);
+              /* Tela única: sem subpágina aberta, o conteúdo nativo é desmontado (não fica escondido no DOM). */
+              if (w) {
+                (n.appendChild(o), (n.hidden = !1));
+                const filtros = n.querySelector(".dt397-filtros");
+                filtros && o.prepend(filtros);
+              } else (o.remove(), n.remove());
+              i = !0;
             }
           }
           (tab === "dia" && Tt(o),
@@ -2700,9 +2704,11 @@ try {
           if (o) {
             (t.preventDefault(), t.stopImmediatePropagation(), O(!1));
             const n = o.dataset.dt393Route;
-            (n.includes(":") || n === "mercado") && window.DIARIO_NAV?.navigate
-              ? window.DIARIO_NAV.navigate(n === "mercado" ? "mercado:cq" : n)
-              : ((tab = n), render(), window.scrollTo?.(0, 0));
+            window.DiarioRotas?.navigate
+              ? window.DiarioRotas.navigate(n === "mercado" ? "mercado:cq" : n)
+              : window.DIARIO_NAV?.navigate
+                ? window.DIARIO_NAV.navigate(n === "mercado" ? "mercado:cq" : n)
+                : ((tab = n), render(), window.scrollTo?.(0, 0));
             return;
           }
           const i = t.target.closest("[data-dt393-market]");
@@ -2712,7 +2718,9 @@ try {
               i.dataset.dt393Market === "cot" ? "cq" : i.dataset.dt393Market;
             window.DIARIO_NAV?.navigate
               ? window.DIARIO_NAV.navigate("mercado:" + n)
-              : ((MKT.tab = n), (tab = "mercado"), render());
+              : window.DiarioRotas?.navigate
+                ? window.DiarioRotas.navigate("mercado:" + n)
+                : ((MKT.tab = n), (tab = "mercado"), render());
             return;
           }
           const d = t.target.closest("[data-dt393-action]");
@@ -5702,7 +5710,14 @@ try {
       }
       (document.body.classList.toggle("tf413-home", !h),
         document.body.classList.toggle("tf413-advanced", h));
-      const n = t.querySelector("#" + $);
+      /* Tela única: cada modo mantém montado só o que mostra. */
+      let n = t.querySelector("#" + $);
+      if (!h) {
+        n && !n.querySelector(":scope > .tf413-layout") && (n.remove(), (n = null));
+        e?.node && !e.node.querySelector(":scope > .tf413-layout") && (e = null);
+        t.querySelectorAll(":scope > :is(.trbar,.trtabs,#trgrid,.trtape,.trrod,.trquick-strip,.trmerc)").forEach((o) => o.remove());
+      }
+      const novo = !n && !e?.node;
       (n
         ? n.querySelectorAll("[data-tf415-nav]").forEach((o) => {
             const a = h
@@ -5721,6 +5736,12 @@ try {
               })(),
           ),
         t.querySelector(".tf413-back")?.remove(),
+        h &&
+          t
+            .querySelector("#" + $)
+            ?.querySelectorAll(":scope > .tf413-layout, :scope > .tf413-bottom")
+            .forEach((o) => o.remove()),
+        !h && novo && (Bt(), I()),
         h || (clearTimeout(ct), (ct = setTimeout(() => L(!1), 350))));
     }
     function Bt() {
@@ -5775,11 +5796,13 @@ try {
       }
     }
     function C(e) {
+      const antes = h;
       h = e === "advanced";
       try {
         localStorage.setItem(At, h ? "advanced" : "overview");
       } catch {}
-      W();
+      /* Trocar de modo remonta a tela: o modo anterior sai do DOM. */
+      antes !== h && typeof render == "function" && typeof tab < "u" && tab === "term" ? render() : W();
     }
     function at(e) {
       C("advanced");
@@ -6048,9 +6071,11 @@ try {
           return;
         }
         try {
-          ((tab = t),
-            render(),
-            window.scrollTo({ left: 0, top: 0, behavior: "instant" }));
+          window.DiarioRotas?.navigate
+            ? window.DiarioRotas.navigate(t)
+            : ((tab = t),
+              render(),
+              window.scrollTo({ left: 0, top: 0, behavior: "instant" }));
         } catch (o) {
           console.warn("v414: rota não disponível", t, o);
         }

@@ -1,0 +1,9 @@
+DIÁRIO DE TRADER — v591 (faxina de telas)
+
+Tela única (CLAUDE.md, seção 6):
+- Mercado: o cabeçalho antigo ("Contexto · Brasil e mundo") não é mais desenhado e escondido.
+- Terminal: na Visão geral, a barra, a grade e o rodapé antigos saem do DOM; em Painéis, o layout da Visão geral sai do DOM. Trocar de modo remonta a tela.
+- Meu dia: só a fase escolhida (Antes, Durante ou Depois) fica montada.
+- Estudos: sem subpágina aberta, o conteúdo interno é desmontado.
+Rota única: menu, barra inferior, atalhos de Configurações e abas do Mercado passam pela mesma função navigate() (organizacao.js).
+Proteção: o deploy recusa versão menor que a publicada e alterações no app sem aumento de versão (scripts/check-versao.cjs).
