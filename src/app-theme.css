@@ -2312,3 +2312,12 @@ html body #app#app .v4-oplist summary>em{white-space:nowrap!important;font-varia
 html body #app#app .v4-turno{margin:0 0 8px;padding:10px 12px;background:#11141B;border-left:3px solid #EF4444;border-radius:4px;color:#E8E6E1;font-size:14px}
 html body #app#app .v4-turno b{color:#EF4444}
 html body #app#app .v4-turno span{font-variant-numeric:tabular-nums}
+/* v595 — Estudos: mini-capas mais altas e título 11px com entrelinha curta (títulos longos inteiros, sem cortar a base) */
+html body #app#app .dt397-lesson-art.dt397-lesson-art--capa{height:auto!important;min-height:96px!important;align-self:stretch}
+html body #app#app .m584-capa{min-height:96px!important;padding:8px 6px 7px 12px!important}
+html body #app#app .m584-capa b{font-size:11px!important;line-height:1.2!important;padding-bottom:1px;-webkit-line-clamp:4;line-clamp:4}
+/* v595 — Operações: barra de risco consumido (4px) sob o limite */
+html body #app#app .v595-riscobar{display:block;height:4px;margin-top:6px;background:#1E232E;border-radius:2px;overflow:hidden}
+html body #app#app .v595-riscobar em{display:block;height:100%;background:#10B981;border-radius:2px}
+html body #app#app .v595-riscobar.medio em{background:#D4A017}
+html body #app#app .v595-riscobar.alto em{background:#EF4444}
