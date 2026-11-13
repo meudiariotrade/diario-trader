@@ -1,5 +1,5 @@
 // ROTINA-CRON (v602) — rotinas agendadas pelo pg_cron (seg–sex, horário de Brasília). Só aceita chamadas com x-cron-secret.
-//  acao 'matinal'    (06:50): atualiza a agenda econômica e o fechamento dos mercados globais numa "foto" em panorama_fotos
+//  acao 'matinal'    (06:50, 11:50 e 18:20 — v603): atualiza a agenda econômica e o fechamento dos mercados globais numa "foto" em panorama_fotos
 //                             (mesmo formato da foto do panorama do app), usada pela imagem /daily-panorama às 07:00.
 //  acao 'fechamento' (17:45): quem tem trades no dia sem o "Fechar o dia" recebe Web Push; sem aparelho inscrito, e-mail.
 const ENV = (k: string) => Deno.env.get(k) || '';
@@ -20,11 +20,11 @@ export async function matinal(slot: string) {
   if (ja?.[0]) return { id: ja[0].id, ja: true };
   const chama = async (fn: string, body: unknown) => { try { const r = await fetch(`${SB}/functions/v1/${fn}`, { method: 'POST', signal: AbortSignal.timeout(40_000), headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON, ...(ANON ? { apikey: ANON, Authorization: 'Bearer ' + ANON } : {}) }, body: JSON.stringify(body) }); return r.ok ? await r.json() : null; } catch { return null; } };
   const [mdo, ag, fe, bal, ad] = await Promise.all([chama('macro', {}), chama('macro', { modo: 'agenda', semana: 0 }), chama('macro', { modo: 'fluxo' }), chama('macro', { modo: 'balancos' }), chama('adrs', { symbols: ADR_PAD })]);
-  if (!mdo && !ad) { await log('rotina 06:50', false, `${slot}: macro e adrs não responderam`, Date.now() - t0); return { erro: 'fontes fora do ar' }; }
+  if (!mdo && !ad) { await log('rotina ' + slot.slice(11), false, `${slot}: macro e adrs não responderam`, Date.now() - t0); return { erro: 'fontes fora do ar' }; }
   const dados = { mdo, ag, fe, bal, ad: ad ? { ts: Date.now(), itens: ad.itens || [], fonte: ad.fonte || '', atraso: !!ad.atraso } : null };
   const r = await db('panorama_fotos', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ slot, dados }) });
   const tres = ((ag?.eventos || []) as any[]).filter((e) => +e.imp >= 1 && new Date(new Date(e.em).getTime() - 3 * 3600_000).toISOString().slice(0, 10) === slot.slice(0, 10)).length;
-  await log('rotina 06:50', true, `${slot}: mercados ${mdo ? 'ok' : 'falhou'}, agenda ${ag ? tres + ' evento(s) 3★ hoje' : 'falhou'}, ADRs ${ad ? 'ok' : 'falhou'}`, Date.now() - t0);
+  await log('rotina ' + slot.slice(11), true, `${slot}: mercados ${mdo ? 'ok' : 'falhou'}, agenda ${ag ? tres + ' evento(s) 3★ hoje' : 'falhou'}, ADRs ${ad ? 'ok' : 'falhou'}`, Date.now() - t0);
   return { id: r?.[0]?.id ?? null, eventos3: tres };
 }
 
