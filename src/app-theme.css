@@ -2361,3 +2361,19 @@ html body #v434-ov .v597-notas small{display:block;margin-top:4px;color:#8A93A6;
 html body #v434-ov .v597-bar .v598-pula{min-width:44px;padding:0 4px;color:#8A93A6;font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
 html body #v434-ov .v598-audio{min-height:40px;background:#11141B;border:1px solid #1E232E;border-radius:6px;color:#E8E6E1;font-size:13px}
 html body #v434-ov .v598-audio.on{border-color:#D4A017;color:#D4A017}
+/* v598 — Calculadora de posição */
+html body #app#app .v598-calc-btn{display:block;margin-top:8px;min-height:32px;padding:0 10px;background:transparent;border:1px solid #1E232E;border-radius:4px;color:#D4A017;font-size:12px;font-weight:650}
+.v598-calc-dlg{width:min(420px,calc(100vw - 24px));padding:0;background:#11141B;border:1px solid #1E232E;border-radius:6px;color:#E8E6E1}
+.v598-calc-dlg::backdrop{background:rgba(10,12,16,.72)}
+.v598-calc-box{padding:12px 14px 14px}
+.v598-calc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.v598-calc-top button{min-width:40px;min-height:40px;background:transparent;border:0;color:#8A93A6;font-size:18px}
+.v598-calc{display:grid;gap:10px}
+.v598-calc label{display:grid;gap:4px;color:#8A93A6;font-size:12px}
+.v598-calc input,.v598-calc select{min-height:44px;padding:0 10px;background:#0A0C10;border:1px solid #1E232E;border-radius:4px;color:#E8E6E1;font-size:16px;font-variant-numeric:tabular-nums;text-align:right}
+.v598-calc select{text-align:left}
+.v598-calc-par{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.v598-calc-res{display:block;padding:10px 12px;background:#0A0C10;border-left:3px solid #D4A017;border-radius:4px;color:#E8E6E1;font-size:14px;font-variant-numeric:tabular-nums}
+.v598-calc-res b{font-size:24px;color:#D4A017;margin-right:4px}
+.v598-calc-res span{display:block;margin-top:4px;color:#8A93A6;font-size:12px}
+.v598-calc-nota{color:#8A93A6;font-size:11px}
