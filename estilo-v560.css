@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 fb835fa517cdce270fb16dcd4c7e5ecbf82282491e33b03d876f32d97410df9f */
+/* Gerado de src/app-theme.css · SHA256 633f6e5b960273b1bab2c19a2daf6dfd7ca71cc4935fff12f85d28031c19f62c */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2455,3 +2455,7 @@ html body #app .v600-wr table{min-width:0!important;width:100%}
 html body #app .v600-wr :is(th,td){padding:7px 3px!important;font-size:12px!important;line-height:1.35!important;letter-spacing:0}
 html body #app .v600-wr th{font-size:10px!important;letter-spacing:0!important}
 html body #app .v600-wr td small{font-size:10px}
+/* v602: notas recebidas por e-mail (Imposto de renda > Importar) */
+.nti602{border-left:2px solid #D4A017}
+.nti602 .sm{font-variant-numeric:tabular-nums}
+.nti602 [data-nti602]{min-height:40px}
