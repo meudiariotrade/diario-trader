@@ -1,5 +1,7 @@
-// DAILY-PANORAMA (v602) — imagem PNG do Panorama de Mercado para o Atalho do iPhone (07:00, seg–sex).
+// DAILY-PANORAMA (v603) — imagem PNG do Panorama de Mercado para o Atalho do iPhone (07:00, 12:00 e 18:30, seg–sex).
 // GET /daily-panorama?token=...  → image/png (1080 px de largura, visual escuro/âmbar do app).
+// v603: 3 disparos por dia (07:00, 12:00 e 18:30). Título pelo horário de Brasília — até 10:30 "Antes da Abertura",
+// 10:31–16:30 "Giro do Meio-Dia", depois "Fechamento do Mercado" — ou pelo parâmetro opcional &turno=manha|almoco|fechamento.
 // Dados: a foto mais recente de hoje em panorama_fotos (gerada às 06:50 pela rotina-cron); sem foto de hoje, gera na hora.
 // Opcional: &formato=svg devolve o SVG (para conferir o layout).
 import { initWasm, Resvg } from 'npm:@resvg/resvg-wasm@2.6.2';
@@ -24,6 +26,14 @@ const prepara = () => {
   fontes ??= Promise.all(['pdf-sans.ttf', 'pdf-sans-bold.ttf', 'pdf-serif-bold.ttf'].map(async (n) => { const r = await fetch(PAGES + n); if (!r.ok) throw new Error('fonte ' + n); return new Uint8Array(await r.arrayBuffer()); })).catch((e) => { fontes = null; throw e; });
   return Promise.all([wasm, fontes]);
 };
+const TITULOS: Record<string, string> = { manha: 'Antes da Abertura', almoco: 'Giro do Meio-Dia', fechamento: 'Fechamento do Mercado' };
+function tituloTurno(req: Request) {
+  const tu = (new URL(req.url).searchParams.get('turno') || '').toLowerCase();
+  if (TITULOS[tu]) return TITULOS[tu];
+  const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':').map(Number);
+  const min = h * 60 + m;
+  return min <= 630 ? TITULOS.manha : min <= 990 ? TITULOS.almoco : TITULOS.fechamento;
+}
 const hojeSP = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 async function foto(hoje: string) {
   const ini = new Date(hoje + 'T00:00:00-03:00').toISOString();
@@ -43,7 +53,7 @@ Deno.serve(async (req) => {
     if (!(await dono(req))) return txt('Token inválido.', 401);
     const hoje = hojeSP(), f = await foto(hoje);
     if (!f) return txt('Panorama ainda não disponível.', 503);
-    const svg = panoramaSvg(f.dados, new Date(f.gerado), hoje);
+    const svg = panoramaSvg(f.dados, new Date(f.gerado), hoje, tituloTurno(req));
     if (new URL(req.url).searchParams.get('formato') === 'svg') return new Response(svg, { headers: { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'no-store' } });
     const [, fb] = await prepara();
     const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1080 }, font: { fontBuffers: fb, defaultFontFamily: 'DejaVu Sans', loadSystemFonts: false } }).render().asPng();

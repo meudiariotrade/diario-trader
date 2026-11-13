@@ -26,7 +26,7 @@ function painel(x: number, y: number, w: number, titulo: string, linhas: Linha[]
   return { s, h };
 }
 const CURTO: Record<string, string> = { 'Euro Stoxx 50': 'Euro Stoxx 50', 'EWZ (Brasil em NY)': 'EWZ', 'Minério Dalian (China)': 'Minério Dalian', 'Petróleo Brent': 'Brent', 'Petróleo WTI': 'WTI', 'Treasury 10 anos': 'Treasury 10a', 'Treasury 5 anos': 'Treasury 5a' };
-export function panoramaSvg(dados: any, quando: Date, hoje: string): string {
+export function panoramaSvg(dados: any, quando: Date, hoje: string, titulo = 'Antes da Abertura'): string {
   const grupos: any[] = dados?.mdo?.mercados?.grupos || [];
   const item = (g: string, n: string) => (grupos.find((x) => x.g === g)?.itens || []).find((i: any) => i.n === n);
   const L = (g: string, nomes: string[]): Linha[] => nomes.map((n) => item(g, n)).filter(Boolean).map((i: any) => i.juro
@@ -50,7 +50,7 @@ export function panoramaSvg(dados: any, quando: Date, hoje: string): string {
   let s = '', y = 0;
   s += `<rect x="0" y="0" width="${W}" height="4" fill="${C.am}"/>`;
   s += t(M, 66, 'DIÁRIO DE TRADER · PANORAMA DO MERCADO', { z: 18, c: C.am, b: true, ls: 3 });
-  s += t(M, 132, 'Antes da Abertura', { z: 54, b: true, f: 'DejaVu Serif' });
+  s += t(M, 132, titulo, { z: 54, b: true, f: 'DejaVu Serif' });
   s += t(M, 176, dataTxt.replace(/^./, (c) => c.toUpperCase()) + ' · ' + horaTxt + ' Brasília', { z: 22, c: C.mu });
   if (vies) {
     const lab = 'VIÉS ' + vies.toUpperCase(), bw = 40 + lab.length * 15;
