@@ -133,7 +133,7 @@
 
   /* ---------- PDF ---------- */
   async function gerar(chave = '12m', opts = {}) {
-    const J = janela(chave), filtroMod = opts.mod && MOD_ABA[opts.mod] ? opts.mod : null;
+    const J = opts.de && opts.ate ? { de: opts.de, ate: opts.ate, nome: 'Semana de ' + br(opts.de).slice(0, 5) + ' a ' + br(opts.ate), curto: 'Semana ' + br(opts.ate).slice(0, 5), semanal: true } : janela(chave), filtroMod = opts.mod && MOD_ABA[opts.mod] ? opts.mod : null;
     const todos = fechados().filter(t => !filtroMod || t.modCod === filtroMod);
     const escopo = filtroMod ? MOD_ABA[filtroMod] : 'Todas as modalidades';
     const ts = todos.filter(t => t.dia >= J.de && t.dia <= J.ate);
@@ -289,7 +289,7 @@
       txt(pg, 'Página ' + (i + 1) + ' de ' + total, W - M, 28, { z: 6.6, c: C.mute, dir: 1 });
     });
     const bytes = await doc.save();
-    const rotulo = (filtroMod ? filtroMod + '-' : '') + (J.mensal ? J.de.slice(0, 7) : chave === 'ano' ? String(hoje.getFullYear() - 1) : chave);
+    const rotulo = (filtroMod ? filtroMod + '-' : '') + (J.semanal ? 'semana-' + J.ate : J.mensal ? J.de.slice(0, 7) : chave === 'ano' ? String(hoje.getFullYear() - 1) : chave);
     return { resumo: resumoDe(ts, S1, Dd, Rec), bytes, nome: 'relatorio-desempenho-' + rotulo + '-' + isoLocal(hoje) + '.pdf', paginas: total, janela: J, trades: S1.n };
   }
 
