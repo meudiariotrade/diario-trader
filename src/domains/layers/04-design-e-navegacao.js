@@ -2203,7 +2203,6 @@ try {
       },
       te = n.createElement("style");
     ((te.textContent = `
-body.v512-alertas .dt395-native-mercado .m403-section-header{display:none!important}
 .v512-card{background:var(--surface,#0d0d0e);border:1px solid rgba(181,139,61,0.18);border-radius:8px;padding:24px;margin:0 0 16px}
 .v512-card h3{margin:0 0 4px;font-size:16px}.v512-card .mut{color:#8d929c;font-size:12.5px}
 .v512-pl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
@@ -2245,54 +2244,8 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
                 t.classList.remove("active"));
           }));
     }
-    let G = !1;
-    m.addEventListener(
-      "click",
-      (e) => {
-        e.target.closest(
-          '[data-dt393-route="mercado:al"],[data-dt392-route="mercado:al"],[data-navroute="mercado:al"],[data-mk="tab"][data-v="al"]',
-        )
-          ? (G = !0)
-          : e.target.closest(
-              "[data-dt393-route],[data-navroute],[data-dt414-go],[data-dt392-route]",
-            ) && (G = !1);
-      },
-      !0,
-    );
-    function $e() {
-      try {
-        if ($() === "mercado" && MKT.tab === "al" && !G)
-          return (
-            (MKT.tab = x("v512-mkt-ant", "ag")),
-            MKT.tab === "al" && (MKT.tab = "ag"),
-            ls.set("diario-mkt-tab", MKT.tab),
-            render(),
-            !0
-          );
-      } catch {}
-      return !1;
-    }
-    setInterval(() => {
-      try {
-        MKT.tab && MKT.tab !== "al" && w("v512-mkt-ant", MKT.tab);
-      } catch {}
-    }, 1500);
-    function ke() {
-      if (
-        $() !== "mercado" ||
-        n.body.classList.contains("v512-alertas") ||
-        n.getElementById("v512-lsbtn")
-      )
-        return;
-      const e = n.querySelector("#app .m403-primary-tabs");
-      if (!e || e.querySelector('[data-navroute="mercado:ls"]')) return;
-      const a = n.createElement("button");
-      ((a.type = "button"),
-        (a.id = "v512-lsbtn"),
-        (a.dataset.v512 = "ls"),
-        (a.textContent = "Long & Short"),
-        e.appendChild(a));
-    }
+    // Alertas pertence a Configurações. Não inferir o destino pelo último clique:
+    // restauração, atalhos e chamadas diretas também são navegações legítimas.
     let I = 0;
     (n.addEventListener(
       "scroll",
@@ -2787,18 +2740,6 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
         return;
       }
       if (!a) return;
-      const o = n.getElementById("v512-lsbtn");
-      o &&
-        o
-          .closest("nav")
-          ?.querySelectorAll("button")
-          .forEach((i) => {
-            const r = i === o;
-            (i.classList.toggle("on", r),
-              r
-                ? i.setAttribute("aria-current", "page")
-                : i.removeAttribute("aria-current"));
-          });
       try {
         R();
       } catch {}
@@ -3247,13 +3188,7 @@ ${(e.c || []).map((a) => "- " + a[0] + " Resposta: " + a[1]).join(`
       (clearTimeout(xe),
         (xe = setTimeout(() => {
           try {
-            if ($e()) return;
-          } catch {}
-          try {
             oe();
-          } catch {}
-          try {
-            ke();
           } catch {}
           try {
             J();

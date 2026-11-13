@@ -24,6 +24,9 @@ function localFile(value) {
   return relative;
 }
 function validate() {
+  for (const legacy of ['app.js', 'inicio.js', 'interface.js']) {
+    if (fs.existsSync(path.join(root, legacy))) throw new Error('Entrada obsoleta restaurada: ' + legacy + '. Edite as fontes em src/.');
+  }
   const required = new Set();
   const html = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'));
   const scripts = [...html.window.document.querySelectorAll('script[src]')].map(e => e.getAttribute('src'));

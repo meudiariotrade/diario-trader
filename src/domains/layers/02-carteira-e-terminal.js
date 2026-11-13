@@ -3191,6 +3191,14 @@ try {
       if (typeof tab > "u" || tab !== "mercado") return;
       const e = d.querySelector(Q);
       if (!e) return;
+      // Alertas reutiliza o serviço MKT, mas sua página é de Configurações.
+      // Não montar abas de Mercado para depois escondê-las com CSS concorrente.
+      if (q() === "al") {
+        e.querySelector(":scope > .m403-section-header")?.remove();
+        e.dataset.m403Sub = "al";
+        delete e.dataset.m403Done;
+        return;
+      }
       const t = e.querySelector("#cotbox,#cqbox");
       ((r) =>
         r.dataset.m403Done === q() && (!t || t.dataset.m403Ready === "true"))(

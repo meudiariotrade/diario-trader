@@ -39,7 +39,7 @@ Limites: sincronização entre aparelhos autenticados e reprodução de aulas pr
 
 # Diário de Trader
 
-Aplicação estática com persistência local e integração com o projeto Supabase configurado em `inicio.js`. Os bundles em uso são indicados pelo `index.html`; as versões antigas na raiz são mantidas por compatibilidade.
+Aplicação estática com persistência local e integração com o projeto Supabase configurado em `config.js`. As fontes oficiais ficam em `src/domains/` e `src/navigation/`; `release.config.json` define sua montagem. Edite as fontes e execute `npm run build`: os agregados, bundles, HTML e cache são gerados juntos. As cópias antigas `app.js`, `inicio.js` e `interface.js` foram removidas; o histórico continua no Git.
 
 ## Verificar e preparar a publicação
 
