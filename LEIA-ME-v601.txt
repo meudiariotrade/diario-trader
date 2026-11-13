@@ -1,0 +1,4 @@
+DIÁRIO DE TRADER — v601
+
+- E-mail de sexta 18h: além da planilha, leva o Relatório de desempenho da semana em PDF.
+- Reserva de domingo 21h (servidor) continua mandando só a planilha/CSV.

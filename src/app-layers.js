@@ -40103,6 +40103,22 @@ try {
           body: a,
         });
       if (!c.ok) throw new Error("Planilha não enviada (" + c.status + ").");
+      /* v601: o Relatório de desempenho da semana (PDF) vai anexo junto com a planilha. */
+      let pdf601 = "";
+      try {
+        const R = await n.DiarioRelatorioPDF?.gerar?.("semana", { de: e.de, ate: e.ate });
+        if (R && R.bytes) {
+          const caminho = SESS.uid + "/semana-" + e.ate + ".pdf",
+            up = await fetch(s.url + "/storage/v1/object/planilhas/" + caminho, {
+              method: "POST",
+              headers: { apikey: s.key, Authorization: "Bearer " + SESS.at, "Content-Type": "application/pdf", "x-upsert": "true" },
+              body: new Blob([R.bytes], { type: "application/pdf" }),
+            });
+          up.ok && (pdf601 = caminho);
+        }
+      } catch (x) {
+        console.warn("pdf da semana", x);
+      }
       const i = await fetch(s.url + "/functions/v1/email-semana", {
           method: "POST",
           headers: {
@@ -40114,6 +40130,7 @@ try {
             acao: "agora",
             ate: e.ate,
             xlsx: l,
+            pdf: pdf601,
             forca: !!t,
           }),
         }),
@@ -40150,7 +40167,7 @@ try {
       ((e.className = "v512-card"),
         (e.id = "v517-em"),
         (e.innerHTML =
-          '<h3>Planilha da semana por e-mail</h3><div class="mut">Toda sexta depois das 18h (ou no fim de semana, quando abrir o app) a planilha de operações da semana, com as fotos, vai para o seu e-mail.</div><div class="v512-seg"><button type="button" data-v517em>Enviar agora</button></div>'),
+          '<h3>Planilha e relatório da semana por e-mail</h3><div class="mut">Toda sexta depois das 18h (ou no fim de semana, quando abrir o app) a planilha de operações da semana, com as fotos, e o Relatório de desempenho em PDF vão para o seu e-mail.</div><div class="v512-seg"><button type="button" data-v517em>Enviar agora</button></div>'),
         t.after(e));
     }
     (setInterval(w, 1500),

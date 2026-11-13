@@ -1,5 +1,5 @@
 // Função EMAIL-SEMANA — resumo da semana + a planilha da aba Operações (xlsx montado pelo app; CSV se o app não abriu) por e-mail (Resend).
-// v600: também grava o resumo em weekly_reports. Secret: RESEND_API_KEY. Opcional: EMAIL_DE (padrão onboarding@resend.dev). Idempotente (push_log). pg_cron domingo 21h como reserva.
+// v600: também grava o resumo em weekly_reports. v601: anexa o Relatório de desempenho (PDF) enviado pelo app. Secret: RESEND_API_KEY. Opcional: EMAIL_DE (padrão onboarding@resend.dev). Idempotente (push_log). pg_cron domingo 21h como reserva.
 const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), KEY = ENV('RESEND_API_KEY');
 const svc = { apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json' };
@@ -35,7 +35,7 @@ async function salvaResumo(uid: string, dados: any, T: any[], de: string, ate: s
     pregoes: Object.keys(plDia).length, checklist_pre_ok: chk, resultado_calmo_focado: bom.n ? r2(bom.v) : null, resultado_ansioso_cansado: ruim.n ? r2(ruim.v) : null, faixas };
   await db('weekly_reports?on_conflict=user_id,semana_fim', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(corpo) });
 }
-async function enviaUm(uid: string, dados: any, forca: boolean, ateX = '', xlsx = '') {
+async function enviaUm(uid: string, dados: any, forca: boolean, ateX = '', xlsx = '', pdf = '') {
   let [de, ate] = semana();
   if (/^\d{4}-\d{2}-\d{2}$/.test(ateX)) { ate = ateX; const i = new Date(ate + 'T12:00:00Z'); i.setUTCDate(i.getUTCDate() - 6); de = i.toISOString().slice(0, 10); }
   const chave = `email-semana:${uid}:${ate}`;
@@ -60,7 +60,13 @@ async function enviaUm(uid: string, dados: any, forca: boolean, ateX = '', xlsx 
     const f = await fetch(SB + '/storage/v1/object/authenticated/planilhas/' + xlsx, { headers: { apikey: SRK, Authorization: 'Bearer ' + SRK } });
     if (f.ok) { const u8 = new Uint8Array(await f.arrayBuffer()); let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode(...u8.subarray(i, i + 0x8000)); anexo = { filename: `diario-trades-${de}-a-${ate}.xlsx`, content: btoa(bin) }; }
   }
-  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: ENV('EMAIL_DE') || 'Diário de Trader <onboarding@resend.dev>', to: [para], subject: `Semana ${de.slice(8)}/${de.slice(5, 7)}–${ate.slice(8)}/${ate.slice(5, 7)}: ${brl(tot)}`, html, attachments: [anexo] }) });
+  const anexos: any[] = [anexo];
+  if (pdf && pdf.startsWith(uid + '/') && pdf.endsWith('.pdf')) { // v601: Relatório de desempenho da semana, gerado pelo app
+    const f = await fetch(SB + '/storage/v1/object/authenticated/planilhas/' + pdf, { headers: { apikey: SRK, Authorization: 'Bearer ' + SRK } });
+    if (f.ok) { const u8 = new Uint8Array(await f.arrayBuffer()); let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode(...u8.subarray(i, i + 0x8000)); anexos.push({ filename: `relatorio-desempenho-${de}-a-${ate}.pdf`, content: btoa(bin) }); }
+  }
+  const html2 = anexos.length > 1 ? html.replace('A planilha da semana vai anexa (abre no Excel).', 'A planilha da semana (abre no Excel) e o Relatório de desempenho em PDF vão anexos.') : html;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: ENV('EMAIL_DE') || 'Diário de Trader <onboarding@resend.dev>', to: [para], subject: `Semana ${de.slice(8)}/${de.slice(5, 7)}–${ate.slice(8)}/${ate.slice(5, 7)}: ${brl(tot)}`, html: html2, attachments: anexos }) });
   if (!r.ok) return 'resend ' + r.status + ' ' + (await r.text()).slice(0, 200);
   await db('push_log', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ chave, em: new Date().toISOString() }) }).catch(() => {});
   return 'enviado para ' + para.replace(/(.).+@/, '$1***@');
@@ -76,7 +82,7 @@ Deno.serve(async (req) => {
   if (b.acao === 'agora') {
     const u = await (await fetch(SB + '/auth/v1/user', { headers: { apikey: ENV('SUPABASE_ANON_KEY'), Authorization: 'Bearer ' + tk } })).json().catch(() => null);
     if (!u?.id) return new Response(JSON.stringify({ error: 'Entre na sua conta.' }), { status: 401, headers: cors });
-    const d = await db(`diario?select=data&user_id=eq.${u.id}`); out.r = await enviaUm(u.id, d?.[0]?.data, b.forca !== false, String(b.ate || ''), String(b.xlsx || ''));
+    const d = await db(`diario?select=data&user_id=eq.${u.id}`); out.r = await enviaUm(u.id, d?.[0]?.data, b.forca !== false, String(b.ate || ''), String(b.xlsx || ''), String(b.pdf || ''));
     return new Response(JSON.stringify(out), { headers: cors });
   }
   if (typeof b.teste === 'string' && /^[0-9a-f]{6}$/.test(b.teste)) { // envio de teste: 1 por dia, só para o dono da conta
