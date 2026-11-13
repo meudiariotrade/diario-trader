@@ -25779,7 +25779,7 @@ function vImpEspelho() {
           .join("")}</tbody></table></div><p class="ir599-disc">Discriminação sugerida: “${num(e.custodia[0].q, 0)} ${esc(e.custodia[0].tk)}, custo médio ${money(e.custodia[0].pm)}, custodiadas na BTG Pactual CTVM S.A., CNPJ ${BTG_CNPJ}”. Valores pelo custo de aquisição (com taxas), nunca pelo valor de mercado.${e.lancadas.length ? ` Opções lançadas (vendidas) em aberto não entram em Bens e Direitos: ${e.lancadas.map((o) => esc(o.tk) + " (" + num(-o.q, 0) + ")").join(", ")}.` : ""}</p>`
       : '<p class="mut sm">Sem posição em custódia no fim do ano (lançamentos da aba Carteiras / notas importadas).</p>'
   }
-<h3>Rendimentos Isentos e Não Tributáveis</h3>${
+${irExteriorHtml(ano, num)}<h3>Rendimentos Isentos e Não Tributáveis</h3>${
     rendIsentos.length
       ? `<div class="ir599-tabw"><table class="ir599-tab"><tbody>${rendIsentos.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${money(v)}</td></tr>`).join("")}</tbody></table></div><p class="ir599-disc">Fonte pagadora dos proventos: a empresa ou o fundo (CNPJ de cada um). Corretora: BTG Pactual, CNPJ ${BTG_CNPJ}.</p>`
       : '<p class="mut sm">Nenhum rendimento isento lançado no ano.</p>'
@@ -26252,6 +26252,67 @@ document.addEventListener(
   },
   !0,
 );
+
+/* v605 — Ativos no exterior (ex.: IAU) no Espelho IRPF, ligados à custódia da Carteira (S.cart.lanc, mercado US).
+   Custo de aquisição em US$ e em R$ (câmbio informado em cada compra). Lei 14.754/2023: ganho na venda de aplicações
+   financeiras no exterior é apurado no ano e tributado a 15% na declaração anual, sem isenção de R$ 20 mil. */
+function irExterior(ano) {
+  const fim = ano + "-12-31",
+    ini = ano + "-01-01",
+    nf = (v) => {
+      const n = parseFloat(String(v ?? "").replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
+      return isFinite(n) ? n : 0;
+    },
+    fxHoje = +(S.cart || {}).fx || 0,
+    pos = {},
+    vendas = [];
+  (((S.cart || {}).lanc) || [])
+    .filter((l) => l && l.mk === "US" && (l.tp === "C" || l.tp === "V") && l.d <= fim)
+    .slice()
+    .sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0))
+    .forEach((l) => {
+      const p = pos[l.tk] ?? (pos[l.tk] = { q: 0, usd: 0, brl: 0, cl: l.cl, semFx: 0 }),
+        q = nf(l.q),
+        px = nf(l.p),
+        cs = nf(l.cs),
+        fx = nf(l.fx) || fxHoje;
+      nf(l.fx) || (p.semFx = 1);
+      if (l.tp === "C") ((p.q += q), (p.usd += q * px + cs), (p.brl += (q * px + cs) * fx));
+      else {
+        const d = Math.min(q, p.q);
+        if (d <= 0) return;
+        const cu = (p.usd / p.q) * d,
+          cb = (p.brl / p.q) * d,
+          venda = d * px - cs;
+        ((p.q -= d), (p.usd -= cu), (p.brl -= cb));
+        l.d >= ini && vendas.push({ tk: l.tk, d: l.d, q: d, usd: venda, brl: venda * fx, custo: cb, ganho: venda * fx - cb });
+      }
+    });
+  const custodia = Object.entries(pos)
+      .filter(([, p]) => p.q > 1e-9)
+      .map(([tk, p]) => ({ tk, cl: p.cl, q: p.q, pmUsd: p.usd / p.q, usd: p.usd, brl: p.brl, semFx: p.semFx }))
+      .sort((a, b) => a.tk.localeCompare(b.tk)),
+    ganho = sum(vendas.map((v) => v.ganho));
+  return { custodia, vendas, ganho, base: Math.max(0, ganho), imposto: Math.round(Math.max(0, ganho) * 15) / 100 };
+}
+function irExteriorHtml(ano, num) {
+  const e = irExterior(ano),
+    usd = (v) => "US$ " + (+v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    q = (v) => (+v).toLocaleString("pt-BR", { maximumFractionDigits: 8 });
+  let h = `<h3>Bens e Direitos · exterior · posição em 31/12/${ano}</h3>`;
+  h += e.custodia.length
+    ? `<div class="ir599-tabw"><table class="ir599-tab"><thead><tr><th>Ativo</th><th>Qtd.</th><th>Custo</th></tr></thead><tbody>${e.custodia
+        .map((c) => `<tr><td><b>${esc(c.tk)}</b><small>ETF no exterior · EUA (249)</small></td><td>${q(c.q)}</td><td>${money(c.brl)}<small>${usd(c.usd)}</small></td></tr>`)
+        .join("")}</tbody></table></div><p class="ir599-disc">Discriminação sugerida: “${q(e.custodia[0].q)} cotas do ETF ${esc(e.custodia[0].tk)}, custo de aquisição ${usd(e.custodia[0].usd)} (${money(e.custodia[0].brl)} pelo câmbio de cada compra), custodiadas em corretora nos EUA”. Grupo 07 (Fundos), localização EUA (249); confira o código do ETF no programa da Receita. Valores pelo custo, nunca pelo valor de mercado.${e.custodia.some((c) => c.semFx) ? " Há compra sem câmbio informado: usado o câmbio de hoje; corrija na Carteira." : ""}</p>`
+    : '<p class="mut sm">Sem ativos no exterior em custódia no fim do ano.</p>';
+  h += `<h3>Aplicações no exterior · Lei 14.754/2023 (apuração anual)</h3>`;
+  h += e.vendas.length
+    ? `<div class="ir599-tabw"><table class="ir599-tab"><thead><tr><th>Venda</th><th>Valor R$</th><th>Custo R$</th><th>Resultado</th></tr></thead><tbody>${e.vendas
+        .map((v) => `<tr><td><b>${esc(v.tk)}</b><small>${v.d.split("-").reverse().join("/")} · ${q(v.q)}</small></td><td>${money(v.brl)}</td><td>${money(v.custo)}</td><td class="${v.ganho >= 0 ? "g" : "r"}">${money(v.ganho)}</td></tr>`)
+        .join("")}</tbody></table></div><p class="ir599-disc">Resultado do ano ${money(e.ganho)} · base ${money(e.base)} · imposto estimado <b>${money(e.imposto)}</b> (15%, pago na declaração anual; sem DARF mensal e sem a isenção de R$ 20 mil). Prejuízo do ano compensa ganho de outras aplicações no exterior.</p>`
+    : `<p class="mut sm">Nenhuma venda de ativo no exterior em ${ano}. Se vender, o ganho entra aqui: 15% na declaração anual, sem a isenção de R$ 20 mil.</p>`;
+  return h;
+}
 function render0() {
   (fixS(), window.DiarioDados?.observe(diarioDaysCanonical()));
   const e = $("#app");
@@ -101020,6 +101081,7 @@ Validação do app: atenção a ` +
         R = loc().slice(0, 10),
         z = [],
         oe = ($e, fe, Fe, w, H, N) =>
+          z.some((x) => x.id === fe + "|" + $e + "|" + Fe) ||
           z.push({
             id: fe + "|" + $e + "|" + Fe,
             tk: $e,
@@ -101226,17 +101288,11 @@ Validação do app: atenção a ` +
                     .toUpperCase()
                     .includes(Fe.tk.replace(/\d+$/, "").slice(0, 4)),
               )
-              .slice(0, 2)
-              .forEach((H) =>
-                oe(
-                  Fe.tk,
-                  "news",
-                  (H.t || "").slice(0, 40),
-                  H.f || "notícias",
-                  `${Fe.tk}: ${H.t}`,
-                  fe.test(H.t) ? "alta" : "baixa",
-                ),
-              );
+              .slice(0, 4)
+              .forEach((H) => {
+                const tt = pfNoticiaPT(Fe.tk, H.t || "", H.f || "notícias");
+                oe(Fe.tk, "news", R + "|" + tt.chave, H.f || "notícias", tt.motivo, fe.test(H.t) || tt.alta ? "alta" : "baixa");
+              });
           } catch {}
       }
       const X = We(),
@@ -101385,6 +101441,7 @@ Validação do app: atenção a ` +
         att: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
         rel: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
         x: '<path d="M18 6L6 18M6 6l12 12"/>',
+        lixo: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/>',
         mais: '<path d="M12 5v14M5 12h14"/>',
       },
       Be = [
@@ -101835,7 +101892,7 @@ Validação do app: atenção a ` +
       const ae = e.amb;
       let ee = `<div class="pfbar2"><div class="pfchs">${Ve("pos", ae, "Posições (" + V.pos.length + ")", "amb")}${Ve("wl", ae, "Watchlist (" + m().filter((le) => !le.virou).length + ")", "amb")}${Ve("mov", ae, "Movimentações (" + c().length + ")", "amb")}</div><div class="pfrow"><button class="pfbt pfam" data-pf="form|C">${he(we.mais, 15)} Movimentação</button><button class="pfbt" data-pf="form|W">${he(we.mais, 15)} Watchlist</button></div></div>`;
       if (ae === "pos")
-        ((ee += `<section class="pfc"><div class="pftw"><table class="pft"><thead><tr><th>Ativo</th><th>Classe</th><th class="n">Qtd</th><th class="n">Preço médio</th><th class="n">Custo</th><th class="n">Preço atual</th><th class="n">Valor (R$)</th><th class="n">Resultado</th><th class="n">Rent.</th><th class="n">Proventos</th><th class="n">Peso</th><th class="n">Dia</th><th>1ª compra</th></tr></thead><tbody>${V.pos.map((le) => `<tr data-pf="sel|${le.k}" tabindex="0"><td><b>${esc(le.tk)}</b><em>${esc(le.nome || le.setor)}</em></td><td><span class="pfcl" style="--c:${s[le.cl]}">${esc(o[le.cl] || le.cl)}</span></td><td class="n">${Me(le.q)}</td><td class="n">${se(le, le.pm)}</td><td class="n">${I(le.custo)}</td><td class="n">${le.tem ? se(le, le.pa) : '<span class="pfmut" title="sem cotação: usando o preço médio">—</span>'}</td><td class="n">${I(le.v)}</td><td class="n ${Pe(le.lu)}">${I(le.lu)}</td><td class="n ${Pe(le.pc)}">${Ie(le.pc)}</td><td class="n">${le.provR ? I(le.provR) : "—"}</td><td class="n">${y(le.peso)}%</td><td class="n ${Pe(le.d1)}">${Ie(le.d1)}</td><td>${ue(le.first)}</td></tr>`).join("") || '<tr><td colspan="13" class="pfmut">Nenhuma posição.</td></tr>'}</tbody></table></div></section>`),
+        ((ee += `<section class="pfc"><div class="pftw"><table class="pft"><thead><tr><th>Ativo</th><th>Classe</th><th class="n">Qtd</th><th class="n">Preço médio</th><th class="n">Custo</th><th class="n">Preço atual</th><th class="n">Valor (R$)</th><th class="n">Resultado</th><th class="n">Rent.</th><th class="n">Proventos</th><th class="n">Peso</th><th class="n">Dia</th><th>1ª compra</th></tr></thead><tbody>${V.pos.map((le) => `<tr data-pf="sel|${le.k}" tabindex="0"><td><b>${esc(le.tk)}</b><em>${esc(le.nome || le.setor)}</em></td><td><span class="pfcl" style="--c:${s[le.cl]}">${esc(o[le.cl] || le.cl)}</span></td><td class="n">${Me(le.q)}</td><td class="n">${se(le, le.pm)}</td><td class="n">${I(le.custo)}${le.mk === "US" ? `<em>${J(le.c)}</em>` : ""}</td><td class="n">${le.tem ? se(le, le.pa) : '<span class="pfmut" title="sem cotação: usando o preço médio">—</span>'}</td><td class="n">${I(le.v)}${le.mk === "US" ? `<em>${J(le.q * le.pa)}</em>` : ""}</td><td class="n ${Pe(le.lu)}">${I(le.lu)}</td><td class="n ${Pe(le.pc)}">${Ie(le.pc)}</td><td class="n">${le.provR ? I(le.provR) : "—"}</td><td class="n">${y(le.peso)}%</td><td class="n ${Pe(le.d1)}">${Ie(le.d1)}</td><td>${ue(le.first)}</td></tr>`).join("") || '<tr><td colspan="13" class="pfmut">Nenhuma posição.</td></tr>'}</tbody></table></div></section>`),
           V.fech.length &&
             (ee += Se(
               "Posições encerradas",
@@ -101881,7 +101938,7 @@ Validação do app: atenção a ` +
       },
       We = { desd: "Desdobramento", grup: "Grupamento", bonif: "Bonificação" };
     function Re(V, ae) {
-      return `<section class="pfc"><div class="pftw"><table class="pft"><thead><tr><th>Data</th><th>Tipo</th><th>Ativo</th><th class="n">Qtd</th><th class="n">Preço / valor</th><th class="n">Custos</th><th>Detalhe</th>${ae ? "<th></th>" : ""}</tr></thead><tbody>${V.map((ee) => `<tr><td>${ue(ee.d)}</td><td><span class="pfmv ${ee.tp}">${Ue[ee.tp] || ee.tp}</span></td><td>${esc(ee.tk || "—")}</td><td class="n">${k(ee.q) ? Me(k(ee.q)) : "—"}</td><td class="n">${ee.tp === "E" ? (ee.ev === "bonif" ? y(k(ee.f)) + "%" : "fator " + j(k(ee.f))) : ee.mk === "US" ? J(k(ee.p)) : I(k(ee.p))}</td><td class="n">${k(ee.cs) ? I(k(ee.cs)) : "—"}</td><td class="pfsm">${(ee.tp === "E" && We[ee.ev]) || ""}${ee.sub ? esc(ee.sub) : ""}${ee.nota ? " " + esc(ee.nota) : ""}${ee.src ? " · importado das notas" : ""}</td>${ae ? `<td><button class="pfbt pfmini" data-pf="del|${ee.id}" aria-label="excluir">${he(we.x, 12)}</button></td>` : ""}</tr>`).join("") || '<tr><td colspan="8" class="pfmut">Nenhuma movimentação.</td></tr>'}</tbody></table></div></section>`;
+      return `<section class="pfc"><div class="pftw"><table class="pft"><thead><tr><th>Data</th><th>Tipo</th><th>Ativo</th><th class="n">Qtd</th><th class="n">Preço / valor</th><th class="n">Custos</th><th>Detalhe</th>${ae ? "<th></th>" : ""}</tr></thead><tbody>${V.map((ee) => `<tr><td>${ue(ee.d)}</td><td><span class="pfmv ${ee.tp}">${Ue[ee.tp] || ee.tp}</span></td><td>${esc(ee.tk || "—")}</td><td class="n">${k(ee.q) ? Me(k(ee.q)) : "—"}</td><td class="n">${ee.tp === "E" ? (ee.ev === "bonif" ? y(k(ee.f)) + "%" : "fator " + j(k(ee.f))) : ee.mk === "US" ? J(k(ee.p)) : I(k(ee.p))}</td><td class="n">${k(ee.cs) ? I(k(ee.cs)) : "—"}</td><td class="pfsm">${(ee.tp === "E" && We[ee.ev]) || ""}${ee.sub ? esc(ee.sub) : ""}${ee.nota ? " " + esc(ee.nota) : ""}${ee.src ? " · importado das notas" : ""}</td>${ae ? `<td><button class="pfbt pfmini pflixo" data-pf="del|${ee.id}" aria-label="Excluir movimentação" title="Excluir movimentação">${he(we.lixo, 14)}</button></td>` : ""}</tr>`).join("") || '<tr><td colspan="8" class="pfmut">Nenhuma movimentação.</td></tr>'}</tbody></table></div></section>`;
     }
     function K() {
       let V = !1;
@@ -102497,7 +102554,7 @@ Validação do app: atenção a ` +
         Ae = e.modo === "det";
       let ge = `<div class="pfmd" role="dialog" aria-modal="true" data-pfbk="selx"><div class="pfmb">${fe("selx", ee.tk)}
   <div class="pfdh"><div><h2>${esc(ee.tk)} <span class="pfcl" style="--c:${s[ee.cl]}">${esc(o[ee.cl] || ee.cl)}</span></h2><p class="pfsm pfmut">${esc(L.nome || "")} · ${esc(l(ee))} · ${esc(d(ee))} · ${u(ee) ? "US$" : "R$"}</p></div><div class="pfdp"><b>${Y ? (u(ee) ? J(Y.p) : I(Y.p)) : "—"}</b><span class="${Pe(Y && Y.d1)}">${Ie(Y && Y.d1)}</span><em class="pfsm pfmut">${Y ? (Y.src || "") + (Y.atraso ? " · 15 min" : "") + " · " + ve(Y.em || Y.d) : "sem cotação"}</em></div></div>
-  <div class="pfchs">${Ve("res", e.modo, "Resumo", "modo")}${Ve("det", e.modo, "Detalhado", "modo")}<span class="pfsep2"></span><button class="pfbt pfmini" data-pf="gera|${ae}|${ee.q ? 1 : 0}"${e.busy ? " disabled" : ""}>${e.busy === "rel:" + ee.tk ? "Gerando…" : ne.length ? "Atualizar relatório IA" : "Gerar relatório IA"}</button><button class="pfbt pfmini" data-pf="term|${esc(ee.tk)}">Abrir no terminal</button>${ee.q ? "" : `<button class="pfbt pfmini" data-pf="virar|${esc(ee.tk)}">Registrar compra</button>`}${!ee.q && !m().some((je) => je.tk === ee.tk && !je.virou) ? `<button class="pfbt pfmini" data-pf="wladd|${esc(ee.tk)}">Watchlist</button>` : ""}</div>
+  <div class="pfchs">${Ve("res", e.modo, "Resumo", "modo")}${Ve("det", e.modo, "Detalhado", "modo")}<span class="pfsep2"></span><button class="pfbt pfmini" data-pf="gera|${ae}|${ee.q ? 1 : 0}"${e.busy ? " disabled" : ""}>${e.busy === "rel:" + ee.tk ? "Gerando…" : ne.length ? "Atualizar relatório IA" : "Gerar relatório IA"}</button><button class="pfbt pfmini" data-pf="term|${esc(ee.tk)}">Abrir no terminal</button>${ee.q ? "" : `<button class="pfbt pfmini" data-pf="virar|${esc(ee.tk)}">Registrar compra</button>`}${!ee.q && !m().some((je) => je.tk === ee.tk && !je.virou) ? `<button class="pfbt pfmini" data-pf="wladd|${esc(ee.tk)}">Watchlist</button>` : ""}${Ee.length ? `<button class="pfbt pfmini pflixo" data-pf="delativo|${esc(ae)}" title="Excluir ativo e movimentações">${he(we.lixo, 14)} Excluir ativo</button>` : ""}</div>
   <div class="pfsc pfsc4">${Xe.map(([je, Ze, He]) => {
     const ce = q[je],
       E = He[ce.est] || ["—", "m"];
@@ -102945,8 +103002,30 @@ Validação do app: atenção a ` +
           W();
           return;
         }
+        if (le === "delativo") {
+          const [mk, tk] = String(Y).split(":"),
+            F = (S.cart.lanc || []).filter((O) => O.tk === tk && (O.mk || "BR") === mk);
+          if (!F.length || !confirm(`Excluir ${tk} e ${F.length} movimentação(ões)? O patrimônio e o preço médio são recalculados na hora.`)) return;
+          const O = Date.now();
+          ((S.cart.lanc = (S.cart.lanc || []).filter((ne) => !F.includes(ne))),
+            F.forEach((ne) => ((S.del ?? (S.del = {}))[ne.id] = O)),
+            S.cart.meta && delete S.cart.meta[tk],
+            S.cart.px && delete S.cart.px[mk + ":" + tk],
+            S.cart.alog && (S.cart.alog = S.cart.alog.filter((ne) => ne.tk !== tk)),
+            (e.rel = (e.rel || []).filter((ne) => ne.tk !== tk)),
+            (e.sel = null),
+            (e.perfCache = null),
+            save(),
+            render(),
+            toast(tk + " excluído da carteira."));
+          try {
+            !window.DIARIO_DEMO && SESS && SESS.uid && rq("/rest/v1/carteira_relatorios?tk=eq." + encodeURIComponent(tk) + "&tipo=eq.ativo", { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {});
+          } catch {}
+          return;
+        }
         if (le === "del") {
-          if (!confirm("Excluir esta movimentação?")) return;
+          const F = (S.cart.lanc || []).find((O) => O.id === Y);
+          if (!confirm(F ? `Excluir ${({ C: "compra", V: "venda", P: "provento", E: "evento" })[F.tp] || "movimentação"} de ${F.tk} em ${String(F.d || "").split("-").reverse().join("/")}?` : "Excluir esta movimentação?")) return;
           ((S.cart.lanc = (S.cart.lanc || []).filter((F) => F.id !== Y)),
             ((S.del ?? (S.del = {}))[Y] = Date.now()),
             (e.perfCache = null),
@@ -103323,6 +103402,78 @@ Validação do app: atenção a ` +
         TraderStyles.mount(a));
     }
   })());
+
+/* v605: títulos de notícias da carteira sempre em português (traduz/sintetiza títulos em inglês pelo assunto)
+   e uma chave por assunto e dia, para não repetir o mesmo alerta. */
+function pfNoticiaPT(tk, t, fonte) {
+  const s = String(t || "").replace(/\s+/g, " ").trim(),
+    n = s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(),
+    ing = /\b(the|and|with|for|its|how|does|why|what|stock|stocks|shares|price|prices|gold|etf|fund|week|says|after|amid|record|rises?|falls?|could|will)\b/i.test(s),
+    pt = /[ãõçáéíóúâêô]/i.test(s) || (/\b(de|do|da|dos|das|para|com|após|sobre|ações|bolsa|lucro|alta|queda|veja)\b/i.test(s) && !ing),
+    T = [
+      [/dividend|distribution|payout|provent|jcp/, "proventos e dividendos", 1],
+      [/earnings|results?\b|revenue|profit|quarter|\bq[1-4]\b|resultado|lucro|balanco|receita/, "resultados trimestrais", 1],
+      [/downgrade|upgrade|price target|rating|analyst|rebaix|recomend|preco-alvo/, "recomendação de analistas", 1],
+      [/buyback|repurchase|recompra/, "recompra de ações", 1],
+      [/merger|acquisition|acquire|fusao|aquisicao/, "fusão ou aquisição", 1],
+      [/lawsuit|investigation|\bsec\b|\bcvm\b|investiga/, "investigação ou processo", 1],
+      [/gold|ouro|bullion|precious metal/, "preço do ouro", 0],
+      [/inflows?|outflows?|\bflows?\b|assets under|\baum\b|fluxo/, "fluxo de recursos do ETF", 0],
+      [/\bfed\b|rate cuts?|rate hikes?|interest rates?|juros|treasur|yields?/, "juros e Federal Reserve", 0],
+      [/dollar|currency|cambio|dolar/, "dólar e câmbio", 0],
+      [/expense ratio|\bfees?\b|taxa de administracao/, "custos do ETF", 0],
+      [/record high|all-time high|rall|surg|jump|soar|dispara|maxima/, "forte alta", 0],
+      [/\bfall|drop|slump|plung|tumbl|despenca|tomba|queda/, "forte queda", 0],
+    ],
+    m = T.find(([re]) => re.test(n)),
+    tema = m ? m[1] : "notícia sobre o ativo";
+  if (pt) return { chave: m ? tema : n.slice(0, 40), motivo: `${tk}: ${s}`, alta: m ? m[2] : 0 };
+  return { chave: tema, motivo: `${tk}: ${tema.charAt(0).toUpperCase() + tema.slice(1)} — destaque de ${fonte}`, alta: m ? m[2] : 0 };
+}
+/* v605: limpeza única dos ativos de demonstração (por id exato do lançamento; não afeta outros ativos nem outras contas).
+   O servidor já foi limpo com cópia de segurança (tabela limpeza_backup); aqui o aparelho acompanha e não recria nada. */
+function pfLimpa605() {
+  try {
+    const c = S && S.cart;
+    if (!c || c.lp605 === 2) return;
+    const ids = ["l8fw78um", "o4he4t5y", "7jyd8fbm", "ltkz1r2h", "p7ezz8ek", "xkgrjmd3", "50aefyfp"],
+      tks = ["WEGE3", "BBAS3", "MXRF11", "VALE3", "PETR4", "IVV"],
+      tinha = (c.lanc || []).some((l) => ids.includes(l.id)) || c.lp605 === 1,
+      agora = Date.now();
+    if (tinha) {
+      ((c.lanc = (c.lanc || []).filter((l) => !ids.includes(l.id))), ids.forEach((i) => ((S.del ?? (S.del = {}))[i] = (S.del || {})[i] || agora)));
+      const resta = new Set((c.lanc || []).map((l) => l.tk));
+      tks.filter((t) => !resta.has(t)).forEach((t) => {
+        (c.meta && delete c.meta[t], c.px && (delete c.px["BR:" + t], delete c.px["US:" + t]));
+        c.alog && (c.alog = c.alog.filter((a) => a.tk !== t));
+      });
+      (c.lanc || []).some((l) => (l.mk || "BR") === "BR") || Object.values(c.snap || {}).forEach((v) => v && delete v.BR);
+    }
+    (c.alog || []).forEach((a) => {
+      if (a && a.tipo === "news" && a.motivo && !a.pt605) {
+        const tit = String(a.motivo).replace(new RegExp("^" + a.tk + ":\\s*"), ""),
+          r = pfNoticiaPT(a.tk, tit, a.fonte || "notícias");
+        ((a.motivo = r.motivo), (a.tema = r.chave), (a.pt605 = 1));
+      }
+    });
+    if (c.alog) {
+      const vistos = new Set();
+      c.alog = c.alog.filter((a) => {
+        if (!a || a.tipo !== "news") return !0;
+        const k = a.tk + "|" + String(a.em || "").slice(0, 10) + "|" + (a.tema || a.motivo);
+        return vistos.has(k) ? !1 : (vistos.add(k), !0);
+      });
+    }
+    c.lp605 = 2;
+    typeof save == "function" && save();
+  } catch {}
+}
+(function reg605(n) {
+  try {
+    if (window.TraderUI && window.TraderUI.onRender) return window.TraderUI.onRender("limpa605", () => S && S.cart && S.cart.lp605 !== 2 && !window.DIARIO_DEMO && (pfLimpa605(), render()));
+  } catch {}
+  n < 60 && setTimeout(() => reg605(n + 1), 250);
+})(0);
 const RP_COR = {
     tx: "#17191b",
     mut: "#6b7280",

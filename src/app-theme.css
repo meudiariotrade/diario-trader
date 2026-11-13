@@ -2475,3 +2475,9 @@ html body #app .v600-wr td small{font-size:10px}
 .opc604-f label{display:flex;flex-direction:column;font-size:11px;color:#8A8F9C;gap:4px}
 .opc604-f input{min-height:40px;font-size:16px;font-variant-numeric:tabular-nums;width:100%;box-sizing:border-box}
 .opc604-f .btn,.opc604 [data-opc604]{min-height:40px}
+/* v605: Carteira — lixeira discreta, badge de classe sem corte e valores em US$ */
+.pflixo{color:#8A8F9C;min-height:40px;min-width:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.pflixo:hover,.pflixo:focus-visible{color:#EF4444;border-color:#EF4444}
+.pft td .pfcl{display:inline-block;max-width:110px;white-space:normal;line-height:1.25;text-align:center;vertical-align:middle;overflow-wrap:anywhere}
+.pft th:nth-child(2){min-width:110px}
+.pft td.n em{display:block;font-style:normal;font-size:11px;color:#8A8F9C;font-variant-numeric:tabular-nums}
