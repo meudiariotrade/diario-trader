@@ -15,6 +15,7 @@
 html body .org-grp{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8b8a86;margin:16px 8px 4px}
 html body .org-grp:first-child{margin-top:4px}
 html body .org-oculto,html body #dt394-market-search{display:none!important}
+html body #app #mkt565-ctx[data-k^="Análises"]{display:none!important}
 html body .dt394-nav-list.org-buscando .org-grp{display:none}
 /* cabeçalho do celular em 1 linha */
 @media (max-width:760px){
@@ -200,7 +201,8 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
   for(const k of ['aba|ia','aba|hist']){const b=tabs.querySelector(`[data-pf="${k}"]`);if(b)extra.append(b)}
   for(const [k,v] of Object.entries(NOMES)){const b=a.querySelector(`[data-pf="${k}"]`);const sp=b?.querySelector('span')||b;if(sp&&sp.textContent!==v)sp.textContent=v}
  }
- function mercado(a){const volta=[...a.querySelectorAll('button')].find(b=>/^‹\s*Mais$/.test(b.textContent.trim()));if(volta&&volta.parentElement&&!volta.parentElement.matches('#app,.m403-primary-tabs'))volta.parentElement.style.display='none';const b=a.querySelector('[data-mkt549="mais"]');if(b&&b.textContent.trim()==='Mais'){for(const n of b.childNodes)if(n.nodeType===3&&n.textContent.trim()==='Mais')n.textContent=n.textContent.replace('Mais','Análises');if(b.textContent.trim()==='Mais')b.textContent='Análises'}}
+ function mercado(a){requestAnimationFrame(()=>requestAnimationFrame(()=>{const atual=app();if(atual&&atual.dataset.tela==='mercado')mercadoAgora(atual)}));mercadoAgora(a)}
+ function mercadoAgora(a){const volta=[...a.querySelectorAll('button')].find(b=>/^‹\s*Mais$/.test(b.textContent.trim()));if(volta&&volta.parentElement&&!volta.parentElement.matches('#app,.m403-primary-tabs'))volta.parentElement.style.display='none';const b=a.querySelector('[data-mkt549="mais"]');if(b&&b.textContent.trim()==='Mais'){for(const n of b.childNodes)if(n.nodeType===3&&n.textContent.trim()==='Mais')n.textContent=n.textContent.replace('Mais','Análises');if(b.textContent.trim()==='Mais')b.textContent='Análises'}}
  /* ---------- ciclo ---------- */
  let agendado=false;
  function aplica(){
