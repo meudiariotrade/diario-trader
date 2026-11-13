@@ -3709,6 +3709,17 @@ function semPadroes() {
       "Como você estava",
     ),
     i(
+      n("emocao", (l) => l.emocao || null),
+      {
+        calmo: "você estava calmo",
+        focado: "você estava focado",
+        ansioso: "você estava ansioso",
+        cansado: "você estava cansado",
+        euforico: "você estava eufórico",
+      },
+      "Estado emocional",
+    ),
+    i(
       n("ck", (l) => (l.ckok ? "s" : Object.keys(l).length ? "n" : null)),
       { s: "concluiu o checklist", n: "não concluiu o checklist" },
       "Checklist",

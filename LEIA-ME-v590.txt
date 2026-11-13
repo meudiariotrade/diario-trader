@@ -1,0 +1,9 @@
+DIÁRIO DE TRADER — v590
+
+Meu dia:
+- Seletor emocional acima dos avisos do topo.
+- Abaixo do seletor: resultado médio dos dias anteriores com o mesmo estado emocional.
+- Contagem até a abertura respeita feriados da B3.
+- "Capital e metas": linha "Risco usado" com barra (verde até 50%, âmbar de 51% a 80%, vermelho acima de 80%), somando a perda do dia e o risco dos trades abertos.
+Estatísticas: padrão "Estado emocional" compara o resultado médio por estado.
+Pendências do dia: o item passou a se chamar "estado emocional".

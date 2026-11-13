@@ -2272,3 +2272,14 @@ html body #app .v4-emo-row button{min-height:44px;padding:0 2px;border:1px solid
 html body #app .v4-emo-row button:hover{background:#181C26}
 html body #app .v4-emo-row button.on{background:#181C26;border-color:#D4A017;color:#D4A017}
 html body #app .v4-progress span b{color:#E8E6E1;font-weight:700}
+/* v590: histórico do estado emocional e barra de risco consumido */
+html body #app .v4-emo-hist{margin:8px 0 0;font-size:12px;color:#8A93A6;font-variant-numeric:tabular-nums}
+html body #app .v4-emo-hist b.v-pos{color:#10B981}
+html body #app .v4-emo-hist b.v-neg{color:#EF4444}
+html body #app .v4-risk589{display:grid!important;grid-template-columns:auto 1fr auto;align-items:center;column-gap:8px;row-gap:6px}
+html body #app .v4-risk589>b{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+html body #app .v4-risk589>i{grid-column:1/-1;display:block;height:6px;background:#1E232E;border-radius:2px;overflow:hidden}
+html body #app .v4-risk589>i>em{display:block;height:100%;background:#10B981;border-radius:2px;transition:width .3s}
+html body #app .v4-risk589.medio>i>em{background:#D4A017}
+html body #app .v4-risk589.alto>i>em{background:#EF4444}
+html body #app .v4-risk589.alto>b{color:#EF4444}

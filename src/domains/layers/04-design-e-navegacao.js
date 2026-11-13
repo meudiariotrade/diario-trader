@@ -136,7 +136,7 @@ try {
               ? "plano: " + e.planoFalta.join(", ")
               : "fazer o plano",
           }),
-        e.emo || s.push({ k: "emocao", fase: "pre", txt: "registrar o estado emocional (1 toque no topo do Meu dia)" }),
+        e.emo || s.push({ k: "emocao", fase: "pre", txt: "estado emocional" }),
         e.ckok ||
           s.push({
             k: "ckok",
