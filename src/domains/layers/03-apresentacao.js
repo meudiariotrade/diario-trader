@@ -6509,50 +6509,124 @@ try {
         notas = f(() => au.notas(t), ""),
         v = vel597();
       return `<div class="v597-bar" data-v597-bar>
+    <button type="button" class="v598-pula" data-v598-pula="-15" aria-label="Voltar 15 segundos">-15s</button>
     <button type="button" class="v597-pp" data-v597-pp aria-label="Reproduzir">▶</button>
+    <button type="button" class="v598-pula" data-v598-pula="15" aria-label="Avançar 15 segundos">+15s</button>
     <input type="range" class="v597-seek" data-v597-seek min="0" max="1000" value="0" step="1" aria-label="Posição do vídeo">
     <span class="v597-tempo" data-v597-tempo>0:00 / 0:00</span>
     <button type="button" class="v597-fs" data-v597-fs aria-label="Tela cheia">⛶</button></div>
   <div class="v597-estudo">
     <div class="v597-vel" role="group" aria-label="Velocidade">${VEL597.map((x) => `<button type="button" data-v597-vel="${x}" class="${x === v ? "on" : ""}" aria-pressed="${x === v}">${String(x).replace(".", ",")}x</button>`).join("")}</div>
+    <button type="button" class="v598-audio" data-v598-audio aria-pressed="false">🎧 Ouvir com a tela bloqueada</button>
     <button type="button" class="v597-feita${feita ? " on" : ""}" data-v597-feita aria-pressed="${feita}">${feita ? "Aula concluída ✓" : "Marcar aula como concluída ✓"}</button>
     <details class="v597-notas"${notas ? " open" : ""}><summary>Anotações desta aula</summary><textarea data-v597-notas rows="4" maxlength="8000" placeholder="Insights, dúvidas e o que aplicar no pregão">${p(notas)}</textarea><small data-v597-salvo aria-live="polite"></small></details>
   </div>`;
     }
-    function liga597(ov, vid) {
-      if (!ov || !vid) return;
+    /* v598 — mídia ativa da sala de aula: o vídeo ou, no modo "tela bloqueada", um <audio> com a mesma faixa
+       (o iOS mantém áudio tocando com a tela bloqueada; vídeo, não). Media Session mostra título e controles. */
+    const midia597 = (ov) => (ov && ov.__aud) || ov?.querySelector("video");
+    function pinta597(ov) {
+      const m = midia597(ov);
+      if (!ov || !m) return;
       const pp = ov.querySelector("[data-v597-pp]"),
         sk = ov.querySelector("[data-v597-seek]"),
         tm = ov.querySelector("[data-v597-tempo]"),
-        pinta = () => {
-          const dur = vid.duration || 0;
-          (tm && (tm.textContent = mmss597(vid.currentTime) + " / " + mmss597(dur)),
-            sk && !sk.dataset.arrasta && (sk.value = dur ? Math.round((vid.currentTime / dur) * 1e3) : 0),
-            pp && ((pp.textContent = vid.paused ? "▶" : "❚❚"), pp.setAttribute("aria-label", vid.paused ? "Reproduzir" : "Pausar")));
+        dur = m.duration || 0;
+      (tm && (tm.textContent = mmss597(m.currentTime) + " / " + mmss597(dur)),
+        sk && !sk.dataset.arrasta && (sk.value = dur ? Math.round((m.currentTime / dur) * 1e3) : 0),
+        pp && ((pp.textContent = m.paused ? "▶" : "❚❚"), pp.setAttribute("aria-label", m.paused ? "Reproduzir" : "Pausar")));
+      sessao598(ov, m);
+    }
+    function pula598(ov, seg) {
+      const m = midia597(ov);
+      if (!m) return;
+      const dur = m.duration || 0;
+      m.currentTime = Math.max(0, Math.min(dur ? dur - 0.25 : m.currentTime + seg, m.currentTime + seg));
+      pinta597(ov);
+    }
+    function sessao598(ov, m) {
+      try {
+        if (!("mediaSession" in navigator) || !m) return;
+        const ms = navigator.mediaSession,
+          titulo = ov.querySelector(".v434-top b")?.textContent || "Aula";
+        (ms.metadata?.title !== titulo &&
+          (ms.metadata = new MediaMetadata({ title: titulo, artist: "Diário de Trader", album: "Estudos" })),
+          (ms.playbackState = m.paused ? "paused" : "playing"));
+        if (ov.__ms598 === m) return;
+        ov.__ms598 = m;
+        const h = (acao, fn) => {
+          try {
+            ms.setActionHandler(acao, fn);
+          } catch {}
         };
-      vid.playbackRate = vel597();
-      ["timeupdate", "loadedmetadata", "play", "pause", "ended"].forEach((ev) => vid.addEventListener(ev, pinta));
-      vid.addEventListener("loadedmetadata", () => (vid.playbackRate = vel597()));
-      vid.addEventListener("click", () => (vid.paused ? vid.play() : vid.pause()));
+        (h("play", () => midia597(ov)?.play()),
+          h("pause", () => midia597(ov)?.pause()),
+          h("seekbackward", (d) => pula598(ov, -(d?.seekOffset || 15))),
+          h("seekforward", (d) => pula598(ov, d?.seekOffset || 15)),
+          h("seekto", (d) => {
+            const x = midia597(ov);
+            x && d && typeof d.seekTime == "number" && ((x.currentTime = d.seekTime), pinta597(ov));
+          }));
+        try {
+          m.duration && ms.setPositionState?.({ duration: m.duration, playbackRate: m.playbackRate || 1, position: Math.min(m.currentTime, m.duration) });
+        } catch {}
+      } catch {}
+    }
+    function prende598(ov, m) {
+      ["timeupdate", "loadedmetadata", "play", "pause", "ended", "ratechange"].forEach((ev) => m.addEventListener(ev, () => pinta597(ov)));
+      m.addEventListener("loadedmetadata", () => (m.playbackRate = vel597()));
+      m.playbackRate = vel597();
+    }
+    function liga597(ov, vid) {
+      if (!ov || !vid) return;
+      (ov.__aud && (ov.__aud.pause(), (ov.__aud = null)), (ov.__ms598 = null));
+      const sk = ov.querySelector("[data-v597-seek]");
+      (prende598(ov, vid), vid.addEventListener("click", () => (vid.paused ? vid.play() : vid.pause())));
       sk &&
         (sk.addEventListener("input", () => {
           sk.dataset.arrasta = "1";
-          const dur = vid.duration || 0;
-          (dur && (vid.currentTime = (sk.value / 1e3) * dur), tm && (tm.textContent = mmss597(vid.currentTime) + " / " + mmss597(dur)));
+          const m = midia597(ov),
+            dur = m?.duration || 0;
+          dur && (m.currentTime = (sk.value / 1e3) * dur);
+          const tm = ov.querySelector("[data-v597-tempo]");
+          tm && m && (tm.textContent = mmss597(m.currentTime) + " / " + mmss597(dur));
         }),
         sk.addEventListener("change", () => delete sk.dataset.arrasta));
-      pinta();
+      pinta597(ov);
+    }
+    /* Alterna vídeo ↔ só áudio (mesma faixa e posição), por toque do usuário — exigência do iOS. */
+    function audio598(ov, btn) {
+      const vid = ov.querySelector("video");
+      if (!vid) return;
+      if (ov.__aud) {
+        const a = ov.__aud,
+          t = a.currentTime,
+          tocando = !a.paused;
+        (a.pause(), a.removeAttribute("src"), a.load(), (ov.__aud = null), (vid.currentTime = t), tocando && vid.play().catch(() => {}));
+        (btn.classList.remove("on"), btn.setAttribute("aria-pressed", "false"), (btn.textContent = "🎧 Ouvir com a tela bloqueada"));
+        return pinta597(ov);
+      }
+      const a = new Audio(vid.currentSrc || vid.src);
+      ((a.preload = "auto"), (a.currentTime = vid.currentTime), prende598(ov, a), vid.pause(), (ov.__aud = a));
+      a.play().catch(() => {});
+      (btn.classList.add("on"), btn.setAttribute("aria-pressed", "true"), (btn.textContent = "📺 Voltar ao vídeo"));
+      pinta597(ov);
     }
     d.addEventListener("click", (ev) => {
       const ov = d.getElementById("v434-ov");
       if (!ov || ov.hidden || !ev.target.closest) return;
-      const vid = ov.querySelector("video"),
+      const vid = midia597(ov),
         id = ov.dataset.id;
       if (ev.target.closest("[data-v597-pp]")) return vid && (vid.paused ? vid.play() : vid.pause());
+      const pj = ev.target.closest("[data-v598-pula]");
+      if (pj) return pula598(ov, +pj.dataset.v598Pula);
+      const au = ev.target.closest("[data-v598-audio]");
+      if (au) return audio598(ov, au);
       if (ev.target.closest("[data-v597-fs]")) {
-        if (!vid) return;
+        const v = ov.querySelector("video");
+        if (!v) return;
         try {
-          vid.webkitEnterFullscreen ? vid.webkitEnterFullscreen() : vid.requestFullscreen?.();
+          v.webkitEnterFullscreen ? v.webkitEnterFullscreen() : v.requestFullscreen?.();
         } catch {}
         return;
       }
@@ -6673,6 +6747,9 @@ try {
       const t = d.getElementById("v434-ov");
       if (!t) return;
       const a = t.querySelector("video");
+      /* v598: encerra também o modo só áudio e os controles da tela de bloqueio. */
+      (t.__aud && (t.__aud.pause(), (t.__aud = null)), (t.__ms598 = null));
+      f(() => (navigator.mediaSession.playbackState = "none"));
       if ((a && a.pause(), t.dataset.blob)) {
         try {
           URL.revokeObjectURL(t.dataset.blob);
