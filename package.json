@@ -1,6 +1,6 @@
 {
   "name": "diario-trader",
-  "version": "593.0.0",
+  "version": "594.0.0",
   "private": true,
   "scripts": {
     "build": "npm run bundle && node scripts/build.cjs",
