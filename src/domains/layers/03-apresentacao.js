@@ -860,6 +860,21 @@ try {
           f(() => render()));
       }),
     ),
+      f(() => {
+        const g = () => {
+          const N = document.querySelector("#app:not(.v503-fantasma)"),
+            O = N && (N.querySelector(".v4-day > .v4-emo") || N.querySelector(":scope > .v4-emo"));
+          if (!O) return;
+          N.querySelectorAll(":scope > .v4-emo").forEach((vt) => vt !== O && vt.remove());
+          const tt = N.querySelector(":scope > .v4-subnav");
+          tt ? tt.nextElementSibling !== O && tt.after(O) : N.firstElementChild !== O && N.prepend(O);
+        };
+        (document.addEventListener("diario:render", () => requestAnimationFrame(() => requestAnimationFrame(g))),
+          new MutationObserver(() => {
+            const N = document.querySelector("#app:not(.v503-fantasma)");
+            N && N.querySelector(".v4-emo") && requestAnimationFrame(g);
+          }).observe(document.getElementById("app") || document.body, { childList: !0 }));
+      }),
       f(() =>
         setInterval(() => {
           for (const g of document.querySelectorAll("#app:not(.v503-fantasma) [data-v589-abertura]")) {
@@ -922,9 +937,18 @@ try {
         dRaiz = f(() => S.days[t] || {}, {}),
         abre589 = f(() => {
           const g = new Date(t + "T09:00:00-03:00").getTime();
-          return hoje589 && !preOk && !/s[áa]b|dom/i.test(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "short" }).format(new Date())) && g > Date.now() ? g : 0;
+          return hoje589 && !preOk && f(() => pregaoB3(t), !/s[áa]b|dom/i.test(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "short" }).format(new Date()))) && g > Date.now() ? g : 0;
         }, 0),
-        emo589 = `<section class="v4-emo" aria-label="Estado emocional agora"><div class="v4-emo-head"><b>Como você está agora?</b>${abre589 ? `<span class="v4-countdown" data-v589-abertura="${abre589}" role="timer" aria-label="Tempo até a abertura do pregão">Abertura em <b>${cont589(abre589)}</b></span>` : ""}</div><div class="v4-emo-row" role="radiogroup" aria-label="Estado emocional">${EMO589.map(([g, N]) => `<button type="button" role="radio" aria-checked="${dRaiz.emocao === g}" class="${dRaiz.emocao === g ? "on" : ""}" data-v589-emo="${g}" data-v589-dia="${t}">${N}</button>`).join("")}</div></section>`,
+        hist589 = f(() => {
+          if (!dRaiz.emocao) return "";
+          const g = Object.keys(S.days || {}).filter((N) => N !== t && (S.days[N] || {}).emocao === dRaiz.emocao),
+            N = g.map((O) => pt(O)).filter((O) => O.length).map((O) => lt(O, R));
+          if (N.length < 2) return `<p class="v4-emo-hist">Ainda há poucos dias registrados como ${b((EMO589.find(([O]) => O === dRaiz.emocao) || [])[1] || "")} para comparar.</p>`;
+          const O = N.reduce((tt, vt) => tt + vt, 0) / N.length,
+            tt = N.filter((vt) => vt > 0).length;
+          return `<p class="v4-emo-hist">Dias ${b((EMO589.find(([vt]) => vt === dRaiz.emocao) || [])[1] || "")}: resultado médio <b class="${L(O)}">${j(O)}</b> · ${tt} de ${N.length} dias positivos</p>`;
+        }, ""),
+        emo589 = `<section class="v4-emo" aria-label="Estado emocional agora"><div class="v4-emo-head"><b>Como você está agora?</b>${abre589 ? `<span class="v4-countdown" data-v589-abertura="${abre589}" role="timer" aria-label="Tempo até a abertura do pregão">Abertura em <b>${cont589(abre589)}</b></span>` : ""}</div><div class="v4-emo-row" role="radiogroup" aria-label="Estado emocional">${EMO589.map(([g, N]) => `<button type="button" role="radio" aria-checked="${dRaiz.emocao === g}" class="${dRaiz.emocao === g ? "on" : ""}" data-v589-emo="${g}" data-v589-dia="${t}">${N}</button>`).join("")}</div>${hist589}</section>`,
         Y = P.map(
           (g) =>
             `<div class="dt393-checkitem v4-check" data-rule-phase="${at(g)}" ${at(g) !== H ? "hidden" : ""}><label><input type="checkbox" data-chk="${b(g.id)}" ${A[g.id] ? "checked" : ""}/><span>${b(g.t)}</span></label><select data-dt393-rule-phase="${b(g.id)}" aria-label="Fase da regra"><option value="pre" ${at(g) === "pre" ? "selected" : ""}>Pré</option><option value="during" ${at(g) === "during" ? "selected" : ""}>Durante</option><option value="post" ${at(g) === "post" ? "selected" : ""}>Pós</option></select></div>`,
@@ -937,6 +961,14 @@ try {
         ),
         ot = f(() => pHoje(), null),
         x = f(() => pCore(ot.hj, ot.P), null),
+        risco589 = f(() => {
+          const g = s || (x ? x.lim : 0);
+          if (!(g > 0)) return "";
+          const N = Math.max(0, -(window.vivoDia ? vivoDia(r) : r) || 0) + (hoje589 ? lt(Jt(), Nt) : 0),
+            O = Math.round((N / g) * 100),
+            tt = O > 80 ? "alto" : O > 50 ? "medio" : "ok";
+          return `<div class="v4-risk589 ${tt}">${p("shield", 18)}<span>Risco usado</span><b>${O}% · ${G(N)}</b><i role="progressbar" aria-label="Risco consumido do limite do dia" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(O, 100)}"><em style="width:${Math.min(O, 100)}%"></em></i></div>`;
+        }, ""),
         m = C(
           "coins",
           "Capital e metas",
@@ -944,7 +976,7 @@ try {
           `<div class="v4-rows">
     <div>${p("wallet", 18)}<span>Capital operacional</span><b>${n != null ? G(n) : "—"}</b></div>
     <div>${p("target", 18)}<span>Limite de perda (dia)</span><b class="v-neg">${s ? "-" + G(s) : x ? "-" + G(x.lim) : "—"}</b></div>
-    <div>${p("trophy", 18)}<span>Meta de ganho (dia)</span><b class="v-pos">${l ? j(l) : "—"}</b></div>
+    <div>${p("trophy", 18)}<span>Meta de ganho (dia)</span><b class="v-pos">${l ? j(l) : "—"}</b></div>${risco589}
     <div>${p("timer", 18)}<span>Resultado do dia</span><b class="${L((window.vivoDia?vivoDia(r):r))}" data-v568-base="${r}">${j((window.vivoDia?vivoDia(r):r))}</b>${window.vivoNota?vivoNota():""}</div></div>`,
         ),
         F = [
