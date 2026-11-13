@@ -2377,3 +2377,15 @@ html body #app#app .v598-calc-btn{display:block;margin-top:8px;min-height:32px;p
 .v598-calc-res b{font-size:24px;color:#D4A017;margin-right:4px}
 .v598-calc-res span{display:block;margin-top:4px;color:#8A93A6;font-size:12px}
 .v598-calc-nota{color:#8A93A6;font-size:11px}
+/* v598 — Impacto emocional e trava preventiva */
+html body #app#app .v598-emocard-head{display:grid;gap:2px;margin-bottom:8px}
+html body #app#app .v598-emocard-head h3{margin:0;font-size:15px}
+html body #app#app .v598-emocard-head small{color:#8A93A6;font-size:12px}
+html body #app#app .v598-emotab{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+html body #app#app .v598-emotab th,html body #app#app .v598-emotab td{padding:8px 4px;border-bottom:1px solid #1E232E;text-align:right;white-space:nowrap}
+html body #app#app .v598-emotab th:first-child,html body #app#app .v598-emotab thead th:first-child{text-align:left}
+html body #app#app .v598-emotab thead th{color:#8A93A6;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+html body #app#app .v598-trava{margin:8px 0 0;padding:8px 10px;background:#11141B;border-left:3px solid #D4A017;border-radius:4px;font-size:13px;color:#E8E6E1}
+html body #app#app .v598-trava b{color:#D4A017}
+html body #app#app .v598-trava button{margin-left:6px;min-height:32px;padding:0 10px;background:transparent;border:1px solid #D4A017;border-radius:4px;color:#D4A017;font-size:12px;font-weight:650}
+html body #app#app .v598-trava span{color:#8A93A6}

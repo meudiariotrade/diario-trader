@@ -641,6 +641,59 @@ try {
       };
     }
     window.DiarioRisco = { hoje: riscoHoje598 };
+    /* v598 — Impacto emocional no resultado: estado registrado antes das 09:00 (Meu dia) × P&L dos trades do dia. */
+    const EMO598 = [["calmo", "Calmo"], ["focado", "Focado"], ["ansioso", "Ansioso"], ["cansado", "Cansado"], ["euforico", "Eufórico"]];
+    function impactoEmocional598() {
+      const grupos = {};
+      Object.entries(f(() => S.days || {}, {})).forEach(([dia, D]) => {
+        const emo = D && D.emocao,
+          em = D && D.emocaoEm ? new Date(D.emocaoEm) : null;
+        if (!emo || !em || isNaN(em) || em.getHours() >= 9) return;
+        const tr = pt(dia);
+        if (!tr.length) return;
+        const g = (grupos[emo] = grupos[emo] || { dias: 0, trades: 0, ganhos: 0, pl: 0 });
+        (g.dias++, (g.trades += tr.length), (g.ganhos += tr.filter((x) => R(x) > 0).length), (g.pl += lt(tr, R)));
+      });
+      const linhas = EMO598.filter(([k]) => grupos[k]).map(([k, nome]) => {
+        const g = grupos[k],
+          ac = g.trades ? Math.round((g.ganhos / g.trades) * 100) : 0,
+          med = g.pl / g.dias;
+        return `<tr><th scope="row">${nome}</th><td>${g.dias}</td><td>${ac}%</td><td class="${L(med)}">${j(med)}</td><td class="${L(g.pl)}">${j(g.pl)}</td></tr>`;
+      });
+      return `<section class="v4-card v598-emocard" aria-label="Impacto emocional no resultado"><div class="v598-emocard-head"><h3>Impacto Emocional no Resultado</h3><small>Estado marcado antes das 09:00 × resultado líquido do dia</small></div>${
+        linhas.length
+          ? `<table class="v598-emotab"><thead><tr><th scope="col">Estado</th><th scope="col">Dias</th><th scope="col">Acerto</th><th scope="col">Média/dia</th><th scope="col">Total</th></tr></thead><tbody>${linhas.join("")}</tbody></table>`
+          : '<p class="v4-empty">Marque como você está no Meu dia antes das 09:00 nos dias em que operar. O cruzamento aparece a partir do primeiro dia com trades.</p>'
+      }</section>`;
+    }
+    function poe598() {
+      if (f(() => tab, "") !== "stats") return;
+      const app = document.getElementById("app"),
+        perf = app && app.querySelector(".v4-card.v4-perf");
+      if (!perf || app.querySelector(".v598-emocard")) return;
+      perf.insertAdjacentHTML("afterend", impactoEmocional598());
+    }
+    {
+      const reg598 = () => !!(window.TraderUI?.onRender && (window.TraderUI.onRender("v598-emocional", poe598), 1));
+      if (!reg598()) {
+        let n = 0;
+        const tm = setInterval(() => (reg598() || ++n > 40) && clearInterval(tm), 250);
+      }
+    }
+    window.DiarioEmocional = { impacto: impactoEmocional598 };
+    document.addEventListener("click", (ev) => {
+      const bt = ev.target.closest?.("[data-v598-reduz]");
+      if (!bt) return;
+      f(() => {
+        const dia = bt.dataset.v598Reduz,
+          lim = St();
+        if (!lim) return;
+        const base = (S.days[dia] = S.days[dia] || {}),
+          D = Tt() ? (base.us = base.us || {}) : base;
+        ((D.maxP = Math.round((lim / 2) * 100) / 100), (D.maxP598 = lim), (D.u = Date.now()), save?.(), render());
+        typeof toast == "function" && toast("Risco máximo de hoje reduzido para " + G(D.maxP));
+      });
+    });
     function le() {
       const t = V(),
         e = pt(t),
@@ -977,7 +1030,17 @@ try {
             tt = N.filter((vt) => vt > 0).length;
           return `<p class="v4-emo-hist">Dias ${b((EMO589.find(([vt]) => vt === dRaiz.emocao) || [])[1] || "")}: resultado médio <b class="${L(O)}">${j(O)}</b> · ${tt} de ${N.length} dias positivos</p>`;
         }, ""),
-        emo589 = `<section class="v4-emo" aria-label="Estado emocional agora"><div class="v4-emo-head"><b>Como você está agora?</b>${abre589 ? `<span class="v4-countdown" data-v589-abertura="${abre589}" role="timer" aria-label="Tempo até a abertura do pregão">Abertura em <b>${cont589(abre589)}</b></span>` : ""}</div><div class="v4-emo-row" role="radiogroup" aria-label="Estado emocional">${EMO589.map(([g, N]) => `<button type="button" role="radio" aria-checked="${dRaiz.emocao === g}" class="${dRaiz.emocao === g ? "on" : ""}" data-v589-emo="${g}" data-v589-dia="${t}">${N}</button>`).join("")}</div>${hist589}</section>`,
+        /* v598 — trava preventiva: ansioso ou cansado no pré-mercado → sugere reduzir o risco máximo do dia em 50%. */
+        trava598 = f(() => {
+          if (!["ansioso", "cansado"].includes(dRaiz.emocao) || !hoje589) return "";
+          const reduzido = +(Tt() ? (dRaiz.us || {}).maxP598 : dRaiz.maxP598) || 0,
+            lim = reduzido || St(),
+            nomeE = (EMO589.find(([g]) => g === dRaiz.emocao) || [])[1] || dRaiz.emocao;
+          return reduzido
+            ? `<div class="v598-trava" role="note"><b>${b(nomeE)}:</b> risco máximo de hoje reduzido de ${G(reduzido)} para ${G(St())}.</div>`
+            : `<div class="v598-trava" role="note"><b>${b(nomeE)}:</b> considere reduzir o risco máximo de hoje em 50%${lim ? ` (de ${G(lim)} para ${G(lim / 2)})` : ""}.${lim ? ` <button type="button" data-v598-reduz="${t}">Reduzir hoje</button>` : ""}</div>`;
+        }, ""),
+        emo589 = `<section class="v4-emo" aria-label="Estado emocional agora"><div class="v4-emo-head"><b>Como você está agora?</b>${abre589 ? `<span class="v4-countdown" data-v589-abertura="${abre589}" role="timer" aria-label="Tempo até a abertura do pregão">Abertura em <b>${cont589(abre589)}</b></span>` : ""}</div><div class="v4-emo-row" role="radiogroup" aria-label="Estado emocional">${EMO589.map(([g, N]) => `<button type="button" role="radio" aria-checked="${dRaiz.emocao === g}" class="${dRaiz.emocao === g ? "on" : ""}" data-v589-emo="${g}" data-v589-dia="${t}">${N}</button>`).join("")}</div>${trava598}${hist589}</section>`,
         Y = P.map(
           (g) =>
             `<div class="dt393-checkitem v4-check" data-rule-phase="${at(g)}" ${at(g) !== H ? "hidden" : ""}><label><input type="checkbox" data-chk="${b(g.id)}" ${A[g.id] ? "checked" : ""}/><span>${b(g.t)}</span></label><select data-dt393-rule-phase="${b(g.id)}" aria-label="Fase da regra"><option value="pre" ${at(g) === "pre" ? "selected" : ""}>Pré</option><option value="during" ${at(g) === "during" ? "selected" : ""}>Durante</option><option value="post" ${at(g) === "post" ? "selected" : ""}>Pós</option></select></div>`,
@@ -1751,7 +1814,8 @@ try {
         (l.innerHTML = n),
         v.getElementById("v419-mais")?.remove(),
         e.querySelector("#dt393-workspace")?.classList.remove("v419-recolhido"),
-        ee(t, a));
+        ee(t, a),
+        f(poe598));
     }
     function Ut() {
       if (typeof window.render0 != "function" || window.render0.__v420)
