@@ -1,0 +1,5 @@
+DIÁRIO DE TRADER — v602 (rotina automática)
+
+- Imposto de renda > Importar: notas recebidas por e-mail/Atalho aparecem para ler com o mesmo leitor do BTG e importar sem duplicar.
+- Supabase: 06:50 atualiza agenda e mercados; 07:00 imagem do Panorama; 08:40 alerta do checklist; 17:45 lembrete do Fechar o dia.
+- Ponte do Profit: stop e horários completados no banco.
