@@ -82,10 +82,11 @@
     const page = $('.dt397-studies', a);
     let card = $('#m550-continuar', a);
     const ult = ax().estUltimo;
-    if (!page || page.classList.contains('dt-est-interno') || !ult?.titulo) { card?.remove(); return; }
-    const dash = $('.dt397-dashboard', page); if (!dash) return;
+    /* v596: o card entra em Hoje > Continuar último estudo. */
+    const alvo = page && $('.v596-continuar .dt397-panel-head', page);
+    if (!alvo || !ult?.titulo) { card?.remove(); return; }
     if (!card) { card = doc.createElement('section'); card.id = 'm550-continuar'; card.setAttribute('aria-label', 'Continuar estudo'); }
-    if (card.nextElementSibling !== dash) dash.before(card);
+    if (card.previousElementSibling !== alvo) alvo.after(card);
     const html = `<div><small>${ult.tipo === 'aula' ? 'Última aula' : 'Último livro'}</small><b>${esc(ult.titulo)}</b></div><button type="button" data-m550-continuar>Continuar</button>`;
     if (card.dataset.h !== html) { card.innerHTML = html; card.dataset.h = html; }
   }

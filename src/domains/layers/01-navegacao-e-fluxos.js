@@ -10285,7 +10285,7 @@ ${W.text}
             (t +=
               '<div class="card"><b>Nenhuma aula ainda</b><div class="sm mut">Toque em “Nova aula”, envie o PDF do livro e escolha os capítulos.</div></div>'));
         for (const [A, W] of Object.entries(x)) {
-          t += `<div class="card au-livro"><div class="au-lt">${i(A)}</div>`;
+          t += `<div class="card au-livro"><div class="au-lt">${i(typeof tituloLivro == "function" ? tituloLivro(A) : A)}</div>`;
           for (const Z of W) {
             if (Z.status === "gerando") {
               t += Oa(Z);
@@ -10294,7 +10294,9 @@ ${W.text}
             const ne = f(Z),
               re = ne.fim,
               ie = k(Z);
-            t += `<div class="au-study-row"><button class="au-item" data-auopen="${i(Z.id)}"><span class="au-n">${re ? "✓" : Z.numero}</span><span class="au-tx"><b>Aula ${Z.numero} · ${i(Z.titulo)}</b><span class="sm mut">${i(Z.capitulos ? "Capítulos " + Z.capitulos : "")}${Z.roteiro_min || Z.min ? " · ~" + (Z.roteiro_min || Z.min) + " min" : ""}${re ? " · concluída" : ie ? " · parou em " + ie + "%" : ""}</span>${ie && !re ? `<span class="au-pb"><i style="width:${ie}%"></i></span>` : ""}</span><span class="au-play">▶</span></button><button class="au-fav" type="button" data-austfav="${i(Z.id)}" aria-label="Favoritar ${i(Z.titulo)}" aria-pressed="${!!J().fav?.[Z.id]}">${J().fav?.[Z.id] ? "★" : "☆"}</button></div>`;
+            /* v596: card vertical — número + título na largura toda; Vídeo (MP4, quando houver), duração e favorito na linha de baixo. */
+            const min596 = Z.roteiro_min || Z.min;
+            t += `<div class="au-study-row v596-aula"><button class="au-item" data-auopen="${i(Z.id)}"><span class="au-n">${re ? "✓" : Z.numero}</span><span class="au-tx"><b>Aula ${Z.numero} · ${i(Z.titulo)}</b><span class="sm mut">${i(Z.capitulos ? "Capítulos " + Z.capitulos : "")}${re ? (Z.capitulos ? " · " : "") + "concluída" : ie ? (Z.capitulos ? " · " : "") + "parou em " + ie + "%" : ""}</span>${ie && !re ? `<span class="au-pb"><i style="width:${ie}%"></i></span>` : ""}</span></button><div class="v596-aula-acoes">${min596 ? `<span class="v596-min">~${i(min596)} min</span>` : ""}<button class="au-fav" type="button" data-austfav="${i(Z.id)}" aria-label="Favoritar ${i(Z.titulo)}" aria-pressed="${!!J().fav?.[Z.id]}">${J().fav?.[Z.id] ? "★" : "☆"}</button></div></div>`;
           }
           t += "</div>";
         }
