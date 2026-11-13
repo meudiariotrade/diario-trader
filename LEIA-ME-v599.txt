@@ -1,0 +1,10 @@
+DIÁRIO DE TRADER — v599 (Imposto de renda: contador)
+
+- Painel "Prejuízos a compensar": Day Trade (20%), Swing/Comum (15%) e FIIs (20%), saldos que nunca se misturam.
+- Swing ações e Swing ETF/BDR/futuros/opções passam a compensar prejuízos entre si (mesmo grupo "comum").
+- Cards mensais mostram "Prejuízo …: −R$ X → entrou no saldo" e "Compensado … → restam".
+- Custos de compra que já entraram no preço médio não são abatidos de novo no mês (evita prejuízo falso em nota só de compra).
+- Gráfico "Para onde foi o dinheiro": imposto limitado ao ganho bruto; escala com negativos; rótulos sem sobrepor.
+- Sub-abas sem cortar (Apuração, Importar, Custos, Espelho IRPF); sem o título duplicado.
+- Espelho IRPF: Bens e Direitos em 31/12 (custo médio, CNPJ BTG), Rendimentos Isentos e tabela mensal de Renda Variável.
+- Parser da nota BTG (SINACOR) intacto. Sem mudança de schema (dados do IR no diario, com RLS).

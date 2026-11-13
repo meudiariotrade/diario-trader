@@ -1258,30 +1258,41 @@ function custosHtml() {
       }
     })(),
     l = o + s + i,
-    d = l - s - n - r,
+    /* v599: o imposto estimado nunca passa do ganho bruto (meses de lucro num ano de prejuízo). */
+    r599 = Math.min(r, Math.max(0, l)),
+    d = l - s - n - r599,
     c = dshLarg(1),
     p = 170,
     u = [
       ["Ganho bruto", l, a.g],
       ["Corretagem e taxas da bolsa", -s, a.r],
       ["Taxas das mesas", -n, a.r],
-      ["Imposto (estimado)", -r, a.r],
+      ["Imposto (estimado)", -r599, a.r],
       ["Ficou com você", d, d >= 0 ? a.ac : a.r],
     ].filter((g, h) => h === 0 || h === 4 || g[1]),
     m = Math.max(1, ...u.map((g) => Math.abs(g[1]))),
     f = (c - 20) / u.length;
+  /* v599: escala com valores negativos dentro da área do gráfico; rótulo de valor das barras vermelhas
+     fica abaixo da barra e o nome da coluna sempre embaixo, sem sobrepor. */
   let x = 0;
-  const v = u
-    .map((g, h) => {
+  const pares = u.map((g, h) => {
       const b = h === u.length - 1;
       let y, j;
-      (h === 0 || b ? ((y = 0), (j = g[1])) : ((y = x), (j = x + g[1])),
-        b || (x = h === 0 ? g[1] : x + g[1]));
-      const k = (J) => 20 + (1 - (J + m * 0.05) / (m * 1.1)) * (p - 50),
+      (h === 0 || b ? ((y = 0), (j = g[1])) : ((y = x), (j = x + g[1])), b || (x = h === 0 ? g[1] : x + g[1]));
+      return [y, j];
+    }),
+    hi = Math.max(0, ...pares.flat()),
+    lo = Math.min(0, ...pares.flat()),
+    k = (J) => 22 + ((hi - J) / (hi - lo || 1)) * (p - 66);
+  const v = u
+    .map((g, h) => {
+      const [y, j] = pares[h],
         A = Math.min(k(y), k(j)),
         C = Math.max(2, Math.abs(k(y) - k(j))),
-        I = 10 + h * f + f * 0.15;
-      return `<rect x="${I.toFixed(1)}" y="${A.toFixed(1)}" width="${(f * 0.7).toFixed(1)}" height="${C.toFixed(1)}" rx="4" fill="${g[2]}"/><text x="${(I + f * 0.35).toFixed(1)}" y="${(A - 5).toFixed(1)}" font-size="11" text-anchor="middle" font-weight="700" fill="${g[2]}">${dshK(g[1])}</text><text x="${(I + f * 0.35).toFixed(1)}" y="${p - 8}" font-size="10" text-anchor="middle" fill="${a.mut}">${esc(g[0].split(" ")[0])}</text>`;
+        I = 10 + h * f + f * 0.15,
+        neg = g[1] < 0,
+        ty = neg ? A + C + 13 : A - 5;
+      return `<rect x="${I.toFixed(1)}" y="${A.toFixed(1)}" width="${(f * 0.7).toFixed(1)}" height="${C.toFixed(1)}" rx="4" fill="${g[2]}"/><text x="${(I + f * 0.35).toFixed(1)}" y="${ty.toFixed(1)}" font-size="11" text-anchor="middle" font-weight="700" fill="${g[2]}" style="font-variant-numeric:tabular-nums">${dshK(g[1])}</text><text x="${(I + f * 0.35).toFixed(1)}" y="${p - 6}" font-size="10" text-anchor="middle" fill="${a.mut}">${esc(g[0].split(" ")[0])}</text>`;
     })
     .join("");
   return `<h2>Para onde foi o dinheiro em ${e}</h2><div class="card"><svg viewBox="0 0 ${c} ${p}" class="dshsv" role="img">${v}</svg>${dshTab(
@@ -1291,7 +1302,7 @@ function custosHtml() {
         `<tr><td>${g[0]}</td><td class="${cls(g[1])}">${money(g[1])}</td><td>${l > 0 ? pct0(Math.abs(g[1]) / l) : "–"}</td></tr>`,
     ),
   )}
-<div class="sm" style="margin-top:6px">${l > 0 ? `De cada R$ 100 que o mercado te deu, <b>R$ ${dshN(((s + n + r) / l) * 100, 0)}</b> ficaram com corretora, bolsa, mesas e governo.` : "Ano ainda sem ganho bruto."} Taxas das mesas: preencha em Mesa → Esta mesa.</div></div>`;
+<div class="sm" style="margin-top:6px">${l > 0 ? `De cada R$ 100 que o mercado te deu, <b>R$ ${dshN(((s + n + r599) / l) * 100, 0)}</b> ficaram com corretora, bolsa, mesas e governo.` : "Ano ainda sem ganho bruto."} Taxas das mesas: preencha em Mesa → Esta mesa.</div></div>`;
 }
 function contadorHtml() {
   const e = [
@@ -1375,7 +1386,9 @@ document.addEventListener("click", (e) => {
   vImposto = function () {
     const t = e.apply(this, arguments);
     try {
-      return t + custosHtml() + contadorHtml();
+      /* v599: gráfico de custos em Apuração e Custos; pacote do contador em Apuração e Espelho IRPF. */
+      const aba = (typeof VW < "u" && VW.IR) || "ap";
+      return t + (aba === "ap" || aba === "cu" ? custosHtml() : "") + (aba === "ap" || aba === "es" ? contadorHtml() : "");
     } catch (a) {
       return (console.error(a), t);
     }
