@@ -6359,3 +6359,95 @@ function fixS() {
         (S[t] = {});
     }));
 }
+/* v602: notas de corretagem recebidas por e-mail / Atalho do iPhone (função inbound-btg-note → tabela notas_inbox +
+   bucket privado "notas"). O app lê cada PDF com o MESMO leitor do botão Importar (ntRead + ntParse, sem mudanças),
+   mostra para conferir e só lança quando você toca em Importar. Depois marca a nota como importada (ou duplicada). */
+const NTI = { lista: null, em: 0, busy: 0 };
+function ntiBusca(forca) {
+  if (NTI.busy || (!forca && Date.now() - NTI.em < 6e4)) return;
+  try {
+    if (!SESS || !SESS.uid || window.DIARIO_DEMO) return;
+  } catch {
+    return;
+  }
+  NTI.busy = 1;
+  rq("/rest/v1/notas_inbox?select=id,arquivo,numero_nota,data_pregao,recebido_em,erro&status=eq.pendente&order=recebido_em.asc&limit=20")
+    .then((r) => r.json())
+    .then((l) => {
+      const antes = (NTI.lista || []).length;
+      NTI.lista = Array.isArray(l) ? l : [];
+      NTI.em = Date.now();
+      try {
+        tab === "imposto" && VW.IR === "im" && antes !== NTI.lista.length && render();
+      } catch {}
+    })
+    .catch(() => {
+      NTI.em = Date.now();
+    })
+    .finally(() => {
+      NTI.busy = 0;
+    });
+}
+function ntiMarca(id, corpo) {
+  return rq("/rest/v1/notas_inbox?id=eq." + id, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify(corpo),
+  });
+}
+{
+  const e = vImpNotas;
+  vImpNotas = function () {
+    const t = e.apply(this, arguments);
+    try {
+      ntiBusca();
+      const l = NTI.lista || [];
+      if (!l.length) return t;
+      const fd = (d) => (d ? String(d).split("-").reverse().join("/") : "data no PDF");
+      return `<div class="card nti602"><div class="top"><b>📬 Notas recebidas por e-mail (${l.length})</b><button class="btn" data-nti602="ler"${NT.busy ? " disabled" : ""}>Ler notas</button></div><div class="sm mut" style="margin-top:4px">${l
+        .map((x) => `Nota ${esc(x.numero_nota || "–")} · ${esc(fd(x.data_pregao))}${x.erro ? " · " + esc(x.erro) : ""}`)
+        .join("<br>")}</div><div class="sm mut" style="margin-top:6px">Lidas com o mesmo leitor do botão Importar. Nada é lançado antes de você conferir e tocar em Importar.</div></div>${t}`;
+    } catch {
+      return t;
+    }
+  };
+}
+document.addEventListener("click", async (ev) => {
+  const b = ev.target.closest && ev.target.closest('[data-nti602="ler"]');
+  if (!b || NT.busy) return;
+  const l = (NTI.lista || []).slice();
+  if (!l.length) return;
+  ((NT.busy = 1), (NT.msg = "Lendo " + l.length + " nota(s) recebida(s)…"), (NT.notes = []), render());
+  const a = [],
+    o = [],
+    s = (S.ir || {}).imp || [];
+  for (const x of l)
+    try {
+      const r0 = await rq("/storage/v1/object/notas/" + x.arquivo.split("/").map(encodeURIComponent).join("/"));
+      const f = new File([await r0.blob()], x.arquivo.split("/").pop() || "nota.pdf", { type: "application/pdf" });
+      const r = ntParse(await ntRead(f));
+      r.length || o.push("Nota " + (x.numero_nota || x.arquivo) + ": não achei operações da Bovespa.");
+      r.forEach((n) => (n.inbox602 = x.id));
+      a.push(...r);
+    } catch (r) {
+      o.push("Nota " + (x.numero_nota || x.arquivo) + ": " + (r.message || "não consegui ler."));
+    }
+  a.forEach((n) => (n.dup = s.some((r) => r.key === n.key)));
+  for (const n of a.filter((n) => n.dup)) ntiMarca(n.inbox602, { status: "duplicada", numero_nota: n.nr || null, data_pregao: n.d || null }).catch(() => ntiMarca(n.inbox602, { status: "duplicada" }).catch(() => {}));
+  ((NT.notes = a), (NT.msg = o.join(" · ")), (NT.busy = 0), (VW.IR = "im"), (NTI.em = 0), render());
+});
+{
+  const e = ntImport;
+  ntImport = function () {
+    const vao = (NT.notes || []).filter((n) => n.inbox602 && !n.dup && n.d);
+    const r = e.apply(this, arguments);
+    for (const n of vao) {
+      const corpo = { status: "importada", numero_nota: n.nr || null, data_pregao: n.d, importado_em: new Date().toISOString() };
+      ntiMarca(n.inbox602, corpo)
+        .catch(() => ntiMarca(n.inbox602, { status: "duplicada", importado_em: corpo.importado_em }))
+        .catch(() => {})
+        .finally(() => ((NTI.em = 0), ntiBusca(1)));
+    }
+    return r;
+  };
+}
