@@ -55,7 +55,7 @@
     var app = doc.querySelector('#app:not(.v503-fantasma)'); if (!app) return;
     var m = app.querySelector('.dt395-native-mercado');
     if (!m) return;
-    faixa(m); menu(m); pressed(m); dup(m); travessao(m);
+    if (!["cq","lab"].includes(sub())) faixa(m); menu(m); pressed(m); dup(m); travessao(m);
     // v572: Jornal pertence a Notícias (aba marcada é Notícias, não Mais).
     var jr = m.getAttribute('data-m403-sub') === 'jr';
     var nt = m.querySelector('nav.m403-primary-tabs [data-navroute="mercado:nt"]'), mais = m.querySelector('nav.m403-primary-tabs [data-mkt549="mais"]');

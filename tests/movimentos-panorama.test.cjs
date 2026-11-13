@@ -1,6 +1,6 @@
 const{test}=require('node:test');const assert=require('node:assert/strict');const{JSDOM}=require('jsdom');const fs=require('node:fs');
-test('Movimentos, Insiders e Fluxo só consultam e montam no Panorama; movimentos recolhíveis preservam itens',async()=>{
- const dom=new JSDOM('<main id="app"><nav class="m403-primary-tabs"></nav></main>',{url:'https://example.test/',runScripts:'outside-only'}),w=dom.window,d=w.document;
+test('Movimentos, Insiders e Fluxo só consultam e montam em Cotações; movimentos recolhíveis preservam itens',async()=>{
+ const dom=new JSDOM('<main id="app"><nav class="m403-primary-tabs"></nav><div id="cotbox"></div></main>',{url:'https://example.test/',runScripts:'outside-only'}),w=dom.window,d=w.document;
  w.setInterval=()=>0;w.setTimeout=()=>0;w.tab='mercado';w.MKT={tab:'ag'};w.SESS={uid:'fixture',at:'fixture'};w.tok=async()=>{};w.cfg=()=>({url:'https://example.test',key:'fixture'});w.S={trades:[],ativos:[]};let requests=0;
  w.fetch=async url=>{requests++;return{ok:true,json:async()=>String(url).includes('/movimentos?')?Array.from({length:10},(_,i)=>({ativo:'Teste '+i,variacao:5,criado:new Date().toISOString(),motivo:'Motivo '+i,manchetes:[]})):[]}};
  const {layer}=require('./helpers/source.cjs');

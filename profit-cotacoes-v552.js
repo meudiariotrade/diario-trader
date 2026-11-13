@@ -8,20 +8,35 @@
   const original = cqPonte;
   cqPonte = async function () {
     try {
-      if (typeof SESS === 'undefined' || !SESS || Date.now() - (CQ.pfTs || 0) < 15e3) return;
+      if (typeof SESS === 'undefined' || !SESS?.uid) { CQ.pf={}; CQ.saved={}; CQ.owner=null; return; }
+      if (CQ.owner !== SESS.uid) { CQ.pf={}; CQ.saved={}; CQ.pfTs=0; CQ.owner=SESS.uid; }
+      if (Date.now() - (CQ.pfTs || 0) < 15e3) return;
+      const owner = SESS.uid;
       CQ.pfTs = Date.now();
       const linhas = await (await rq('/rest/v1/cotacoes?select=ticker,ult,var,updated_at&user_id=eq.' + SESS.uid)).json();
-      const t = {}, vig = { WIN: codFut('WIN'), WDO: codFut('WDO'), IND: codFut('IND'), DOL: codFut('DOL') };
+      if (SESS?.uid !== owner || !Array.isArray(linhas)) return;
+      const t = {}, saved = {}, vig = { WIN: codFut('WIN'), WDO: codFut('WDO'), IND: codFut('IND'), DOL: codFut('DOL') };
       (linhas || []).forEach(o => {
         const s = String(o.ticker || '').toUpperCase();
-        if (!(+o.ult > 0) || Date.now() - Date.parse(o.updated_at) > 3 * 6e4) return;
-        const n = { px: +o.ult, d1: o.var != null && isFinite(+o.var) ? +o.var : null, tk: s };
-        t[s] = n;
+        if (!(+o.ult > 0) || !Number.isFinite(Date.parse(o.updated_at)) || Date.parse(o.updated_at) > Date.now()+60000) return;
+        const n = { px: +o.ult, d1: o.var != null && isFinite(+o.var) ? +o.var : null, tk: s, em: o.updated_at };
+        const older = saved[s];
+        if (!older || Date.parse(n.em) > Date.parse(older.em)) saved[s] = n;
+        const stale = Date.now() - Date.parse(n.em) > 3 * 6e4;
+        if (!stale) t[s] = n;
         const r = FUT.exec(s);
         // Contrato vigente tem prioridade; depois o contínuo (WINFUT); depois qualquer outro.
-        if (r) { const k = '@' + r[1], atual = t[k]; if (!atual || s === vig[r[1]] || (/FUT$/.test(s) && atual.tk !== vig[r[1]])) t[k] = n; }
+        if (r) {
+          const k = '@' + r[1];
+          // Never use an expired contract as the generic current future.
+          if (s !== vig[r[1]] && !/FUT$/.test(s)) return;
+          for (const target of stale ? [saved] : [saved,t]) {
+            const current = target[k];
+            if (!current || (s === vig[r[1]] && current.tk !== vig[r[1]]) || (s === current.tk && Date.parse(n.em)>Date.parse(current.em))) target[k] = n;
+          }
+        }
       });
-      CQ.pf = t;
+      CQ.pf = t; CQ.saved = saved;
     } catch { return original.apply(this, arguments); }
   };
   // Mantém os preços atualizados enquanto a aba Cotações está aberta (sem atrapalhar a digitação na busca).
@@ -36,7 +51,7 @@
   }, 15e3);
   // Linha de fonte curta no lugar do parágrafo longo.
   function fonte() {
-    const box = doc.querySelector('#app:not(.v503-fantasma) #cotbox'); if (!box) return;
+    const box = doc.querySelector('#app:not(.v503-fantasma) #cotbox'); if (!box || box.classList.contains('market-quotes')) return;
     const p = [...box.querySelectorAll(':scope > div.sm.mut')].find(d => /^Fonte:/.test(d.textContent.trim()));
     if (!p) return;
     const vivo = Object.keys(g(() => CQ.pf, {}) || {}).length > 0;

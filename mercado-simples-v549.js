@@ -49,7 +49,7 @@
   }
 
   function radar(m) {
-    const itens = $$('#v518-mov, #v519-ins, #v520-fa', m);
+    const itens = $$('#v519-ins, #v520-fa', m);
     let box = $('#mkt549-radar', m);
     if (!itens.length) { if (box) box.hidden = true; return; }
     if (!box) {
@@ -58,12 +58,12 @@
     }
     const ref = $('#mkt549-mais', m) || $('nav.m403-primary-tabs', m);
     if (ref && box.previousElementSibling !== ref) ref.after(box);
-    for (const id of ['v518-mov', 'v519-ins', 'v520-fa']) { const el = itens.find(x => x.id === id); if (el && el.parentElement !== box) box.append(el); }
+    for (const id of ['v519-ins', 'v520-fa']) { const el = itens.find(x => x.id === id); if (el && el.parentElement !== box) box.append(el); }
     box.hidden = st.mostrar !== 'radar';
   }
 
   function cotacoes(m) {
-    const box = $('#cqbox, #cotbox', m); if (!box) return;
+    const box = $('#cqbox, #cotbox', m); if (!box || box.classList.contains('market-quotes')) return;
     // Categorias: 4 principais + Outros.
     const seg = $('.cqtabs', box);
     if (seg) {
@@ -107,7 +107,7 @@
 
   function run() {
     const m = mk(); if (!m) return;
-    try { abas(m); radar(m); cotacoes(m); } catch (e) { console.warn('v549 mercado', e); }
+    try { radar(m); cotacoes(m); } catch (e) { console.warn('v549 mercado', e); }
   }
   let q = false;
   const agenda = () => { if (!q) { q = true; requestAnimationFrame(() => { q = false; run(); }); } };

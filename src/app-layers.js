@@ -2190,9 +2190,7 @@ try {
         e = () =>
           `<div class="seg cqtabs" role="navigation" aria-label="Classes de ativos">${CQ_ABAS.map(([P, m]) => `<button type="button" data-cqa="${P}" class="${CQ.aba === P ? "on" : ""}"${CQ.aba === P ? ' aria-current="page"' : ""}>${P === "adr" ? "EWZ e ADRs" : s(m)}</button>`).join("")}</div>`;
       cotHtml = function () {
-        return CQ.aba === "adr"
-          ? `<div id="cqbox">${e()}<section id="adr" class="card">${adrHtml()}</section></div>`
-          : N.apply(this, arguments);
+        return N.apply(this, arguments);
       };
       const i = cqCarrega;
       ((cqCarrega = function (P, m) {
@@ -22768,7 +22766,7 @@ try {
       n && (n.hidden = !o);
     }
     function E(e) {
-      if (!e) return;
+      if (!e || e.classList.contains("market-quotes")) return;
       const t = e.querySelector(":scope > .cqtabs");
       if (!t) return;
       const u = t.querySelector("button.on");
@@ -24075,11 +24073,11 @@ try {
         giro: "Jornal e Giro",
       },
       R = [
-        ["cq", "Cotações e Panorama"],
+        ["cq", "Cotações"],
         ["nt", "Notícias"],
         ["ag", "Agenda"],
         ["lab", "Análises"],
-        ["jr", "Jornal"],
+        ["ls", "Long & Short"],
       ],
       l = { p: "1A", first: "SPX", second: "NDX", full: !1 },
       X = (e) =>
@@ -24124,7 +24122,7 @@ try {
         (t.className = "m403-section-header"),
         e.prepend(t));
       const a = q();
-      ((t.innerHTML = `<nav class="m403-primary-tabs" aria-label="Páginas do Mercado">${R.map(([r, c]) => `<button type="button" data-navroute="mercado:${r}" ${a === r ? 'class="on" aria-current="page"' : ""}>${u(c)}</button>`).join("")}</nav><div class="m403-session-caption"><span>INTELIGÊNCIA DE MERCADO</span><strong>${u(H[a] || "Mercado")}</strong><small>Brasil e Estados Unidos · somente consulta</small></div>`),
+      ((t.innerHTML = `<nav class="m403-primary-tabs" aria-label="Páginas do Mercado">${R.map(([r, c]) => `<button type="button" data-navroute="mercado:${r}" ${(a === r || r === 'nt' && a === 'jr' || r === 'lab' && a === 'sazus') ? 'class="on" aria-current="page"' : ""}>${u(c)}</button>`).join("")}</nav><div class="m403-session-caption"><span>INTELIGÊNCIA DE MERCADO</span><strong>${u(H[a] || "Mercado")}</strong><small>Brasil e Estados Unidos · somente consulta</small></div>`),
         (e.dataset.m403Sub = a));
     }
     function G(e) {
@@ -24352,7 +24350,7 @@ try {
       const t = e.querySelector(".market-monitor");
       if (!t) return;
       const a = t.querySelector("#cotbox,#cqbox");
-      if (!a) return;
+      if (!a || a.classList.contains("market-quotes")) return;
       if (
         (t.classList.add("m403-quotes"),
         G(a),
@@ -24641,6 +24639,7 @@ try {
         a = b[t];
       if (
         !e ||
+        t === "lab" ||
         !a ||
         (e.dataset.m404Sub === t && e.querySelector(".m404-overview"))
       )
@@ -25044,6 +25043,7 @@ try {
       return `${W(a)} · ${r}`;
     }
     function ae(e, t) {
+      if (e.querySelector(".market-quotes")) return;
       const n = t === "cq",
         r = K(),
         a = _(r),
@@ -25768,7 +25768,7 @@ try {
         e = k(),
         a = t?.querySelector(".m405-dashboard"),
         o = t?.querySelector(":scope > .market-monitor");
-      if (!t || !e || !a || !o) return;
+      if (!t || !e || e.classList.contains("market-quotes") || !a || !o) return;
       (t.classList.add("m408-market-home"),
         !a.dataset.categoryReferences &&
           a.previousElementSibling !== o &&
@@ -27902,6 +27902,7 @@ try {
         window.cqPinta.__v419
       )
         return !1;
+      const nativePaint = window.cqPinta;
       const t = window.cotHtml;
       ((window.cotHtml = function () {
         const n = t.apply(this, arguments);
@@ -27912,6 +27913,7 @@ try {
         if (v() !== "mercado" || G() !== "cq") return;
         const n = i.getElementById("cotbox") || i.getElementById("cqbox");
         if (!n) return;
+        if (n.classList.contains("market-quotes")) return nativePaint();
         const o = M,
           r = R(),
           a = window.cotHtml(),
@@ -37811,7 +37813,7 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
       )
         return;
       const e = n.querySelector("#app .m403-primary-tabs");
-      if (!e) return;
+      if (!e || e.querySelector('[data-navroute="mercado:ls"]')) return;
       const a = n.createElement("button");
       ((a.type = "button"),
         (a.id = "v512-lsbtn"),
@@ -38244,8 +38246,7 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
         a = u.res,
         t = a && Ae(a);
       return `<div class="top"><h2>Long &amp; Short</h2><button class="x" type="button" data-v512ls="fecha" aria-label="Fechar">×</button></div>
-  ${ze}
-  <h3 style="margin:16px 0 8px">Analisar um par</h3>
+  <h3 style="margin:16px 0 8px">Long &amp; Short · Analisar um par</h3>
   <div class="f"><input id="v512-a" value="${g(u.a)}" placeholder="Ativo A" autocomplete="off"><input id="v512-b" value="${g(u.b)}" placeholder="Ativo B" autocomplete="off"></div>
   <div class="f"><select id="v512-j">${[
     [126, "6 meses"],
@@ -38260,7 +38261,7 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
       "",
     )}</select><input id="v512-cap" inputmode="numeric" value="${g(u.cap)}" placeholder="Capital (R$)" style="text-transform:none"></div>
   <button class="go" type="button" data-v512ls="calc">${u.busy ? "Calculando…" : "Analisar par"}</button>
-  <div class="mut" style="margin:10px 0 4px">Pares que costumam andar juntos (toque para analisar):</div>
+  <details class="v512-aula"><summary>Pares sugeridos e salvos</summary>
   ${[...new Set(ne.map((o) => o[2]))]
     .map(
       (o) =>
@@ -38274,6 +38275,7 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
     )
     .join("")}
   ${e.length ? `<div class="mut" style="margin:6px 0 4px">Seus pares salvos:</div><div class="chips">${e.map((o) => `<button type="button" data-v512par="${g(o)}">+ ${g(o.replace("|", " × "))}</button>`).join("")}</div>` : ""}
+  </details>
   ${u.err ? `<div class="v512-card v512-neg">${g(u.err)}</div>` : ""}
   ${
     a
@@ -38288,7 +38290,8 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
   <div class="chips"><button type="button" data-v512ls="salva">+ Salvar par (aviso diário quando distorcer)</button></div>`
       : ""
   }
-  <div class="mut">Estudo com dados diários do Yahoo Finance, com atraso. Não é recomendação de investimento.</div>`;
+  <div class="mut">Estudo com dados diários do Yahoo Finance, com atraso. Não é recomendação de investimento.</div>
+  ${ze}`;
     }
     function j() {
       const e = n.getElementById("v512-ls");
@@ -38303,7 +38306,7 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
     let F = !1;
     function J() {
       const e =
-        F && $() === "mercado" && !n.body.classList.contains("v512-alertas");
+        $() === "mercado" && f(() => MKT.tab, "") === "ls" && !n.body.classList.contains("v512-alertas");
       n.body.classList.toggle("v512-lsv", e);
       const a = n.querySelector("#app .dt395-native-mercado");
       let t = n.getElementById("v512-ls");
@@ -38340,15 +38343,11 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
       }
     }
     function pe() {
-      try {
-        typeof closeDrawer == "function" && closeDrawer(!1);
-      } catch {}
-      ((F = !0),
-        $() !== "mercado"
-          ? (n.querySelector('#v4-bnav [data-dt393-route="mercado"]')?.click(),
-            setTimeout(J, 500))
-          : J());
+      if (m.DiarioRotas) m.DiarioRotas.navigate('mercado:ls');
+      else { tab = 'mercado'; MKT.tab = 'ls'; render(); }
+      J();
     }
+    n.addEventListener('diario:render', J);
     m.addEventListener(
       "click",
       (e) => {
@@ -38436,7 +38435,7 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
         const o = e.target.closest("[data-v512ls]");
         if (o) {
           const r = o.dataset.v512ls;
-          if (r === "fecha") n.getElementById("v512-ls")?.remove();
+          if (r === "fecha") { MKT.tab = "cq"; render(); }
           else if (r === "calc") ue();
           else if (r === "salva") {
             const s = x("v512-pares", []),
@@ -39580,14 +39579,15 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
       return a.ok ? ((l = { t: Date.now(), L: await a.json() }), l.L) : null;
     }
     const b = () => new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10);
-    async function u() {
+    async function u(force = false) {
+      if (force) { l.t = 0; r.getElementById("v518-mov")?.remove(); }
       if (
         c(() => tab, "") !== "mercado" ||
         c(() => MKT.tab, "") !== "cq" ||
         r.getElementById("v518-mov")
       )
         return;
-      const t = r.querySelector("#app .m403-primary-tabs");
+      const t = r.querySelector("#app:not(.v503-fantasma) #cotbox");
       if (!t) return;
       const e = r.createElement("details");
       ((e.id = "v518-mov"),
@@ -39598,7 +39598,7 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
       const a = await v().catch(() => null);
       if (!e.isConnected) return;
       if (!a) {
-        e.remove();
+        e.innerHTML = '<summary class="v518-h">Movimentos fortes</summary><p class="mut">' + (c(() => SESS && SESS.uid, null) ? 'Não foi possível consultar os movimentos agora.' : 'Entre na sua conta para consultar os movimentos.') + '</p><button type="button" data-v518-refresh>Atualizar movimentos</button>';
         return;
       }
       const o = a.filter(
@@ -39637,6 +39637,8 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
         ".v518-mov{background:#0d0d0e;border:1px solid rgba(181,139,61,0.18);border-radius:8px;padding:12px 16px;margin:8px 0}.v518-h{font-weight:700;font-size:15px;margin-bottom:8px}.v518-h .mut{font-weight:400;font-size:13px;margin-left:8px}.v518-it{border-top:1px solid rgba(255,255,255,0.06);padding:8px 0}.v518-it summary{display:flex;gap:8px;align-items:center;cursor:pointer;min-height:30px;list-style:none}.v518-it summary .mut{margin-left:auto;font-size:12px}.v518-it p{margin:8px 0;font-size:14px;line-height:1.45;color:#dedcd7}.v518-it a{display:block;font-size:13px;color:#d4b57d;margin:4px 0;text-decoration:none}.v518-up{color:#3db579;font-weight:700}.v518-dn{color:#ed8c7d;font-weight:700}.v518-lim{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:4px 0 8px}.v518-lim label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;background:rgba(255,255,255,0.03);border-radius:8px;padding:4px 8px}.v518-lim input{width:56px;text-align:right;min-height:32px}"),
         r.head.appendChild(t));
     } catch {}
+    r.addEventListener('click', e => { if (e.target.closest('[data-v518-refresh]')) u(true).catch(() => {}); });
+    r.addEventListener('diario:render', () => { u().catch(() => {}); });
     d.DIARIO_V518 = { busca: v, cartao: u };
   })(typeof window < "u" ? window : globalThis);
 } catch (e) {

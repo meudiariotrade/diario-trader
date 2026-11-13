@@ -16,9 +16,9 @@ test('v552: com a ponte ao vivo, WINFUT/WDOFUT e ações da B3 vêm do Profit',{
  });
  const pf=await p.evaluate(()=>({win:CQ.pf['@WIN']?.px,wdo:CQ.pf['@WDO']?.px,petr:CQ.pf.PETR4?.px,velho:!!CQ.pf.VELHO3}));
  assert.deepEqual(pf,{win:173565,wdo:5590,petr:44.95,velho:false});
- await expect(app.locator('#m550-destaque')).toContainText('173.565');
- await expect(app.locator('#m550-destaque')).toContainText('ao vivo');
+ await expect(app.locator('#cotbox .cql')).toContainText('173.565');
+ await expect(app.locator('#cotbox .cql')).toContainText('ao vivo');
  await expect(app.locator('#cotbox')).toContainText('Profit ao vivo');
- await expect(app.locator('#cotbox .m552-fonte')).toContainText('ao vivo pelo Profit');
+ await expect(app.locator('#m550-destaque')).toHaveCount(0);
  assert.deepEqual(errors,[]);
 }));

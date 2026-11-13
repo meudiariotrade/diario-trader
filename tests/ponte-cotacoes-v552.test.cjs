@@ -16,9 +16,9 @@ test('v552: WINFUT/WDOFUT da ponte valem para WIN e WDO nas Cotações e no dest
  });
  assert.equal(await p.evaluate(()=>CQ.pf['@WIN']?.px),173495);
  assert.equal(await p.evaluate(()=>CQ.pf['@WDO']?.px),5598);
- await expect(app.locator('#m550-destaque')).toContainText('173.495');
- await expect(app.locator('#m550-destaque')).toContainText('ao vivo');
+ await expect(app.locator('#cotbox .cql')).toContainText('173.495');
+ await expect(app.locator('#cotbox .cql')).toContainText('ao vivo');
  await expect(app.locator('#cotbox .cql')).toContainText('Profit ao vivo');
- await expect(app.locator('#cotbox .v552-fonte')).toContainText('ao vivo pelo Profit');
+ await expect(app.locator('#m550-destaque')).toHaveCount(0);
  assert.deepEqual(errors,[]);
 }));

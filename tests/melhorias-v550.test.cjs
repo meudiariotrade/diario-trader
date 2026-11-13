@@ -9,9 +9,9 @@ test('v550: destaque WIN/WDO, análises recolhidas, guia de 3 passos, continuar 
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
  const app=p.locator('#app:not(.v503-fantasma)');
  await p.evaluate(()=>{CQ.d.fut={em:new Date().toISOString(),itens:[{s:'BMFBOVESPA:WIN1!',c:'WIN1!',n:'Mini Índice',px:128450,d1:0.62,dp:0},{s:'BMFBOVESPA:WDO1!',c:'WDO1!',n:'Mini Dólar',px:5412.5,d1:-0.18,dp:1}]};tab='mercado';MKT.tab='cq';CQ.aba='fut';render()});
- await expect(app.locator('#m550-destaque .m550-card')).toHaveCount(2);
- await expect(app.locator('#m550-destaque')).toContainText('128.450');
- await expect(app.locator('#m550-destaque .m550-card.cai')).toContainText('WDO');
+ await expect(app.locator('#cotbox .cqr')).toHaveCount(2);
+ await expect(app.locator('#cotbox .cql')).toContainText('128.450');
+ await expect(app.locator('#cotbox .cqr').filter({hasText:'WDO'})).toContainText('WDO');
  await p.evaluate(()=>{MKT.tab='lab';render()});
  await expect(app.locator('.m550-sanf').first()).toHaveClass(/m550-aberto/);
  const fechados=await app.locator('.m550-sanf:not(.m550-aberto)').count();assert.ok(fechados>=3);

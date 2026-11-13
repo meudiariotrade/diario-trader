@@ -1581,7 +1581,7 @@ try {
       n && (n.hidden = !o);
     }
     function E(e) {
-      if (!e) return;
+      if (!e || e.classList.contains("market-quotes")) return;
       const t = e.querySelector(":scope > .cqtabs");
       if (!t) return;
       const u = t.querySelector("button.on");
@@ -2888,11 +2888,11 @@ try {
         giro: "Jornal e Giro",
       },
       R = [
-        ["cq", "Cotações e Panorama"],
+        ["cq", "Cotações"],
         ["nt", "Notícias"],
         ["ag", "Agenda"],
         ["lab", "Análises"],
-        ["jr", "Jornal"],
+        ["ls", "Long & Short"],
       ],
       l = { p: "1A", first: "SPX", second: "NDX", full: !1 },
       X = (e) =>
@@ -2937,7 +2937,7 @@ try {
         (t.className = "m403-section-header"),
         e.prepend(t));
       const a = q();
-      ((t.innerHTML = `<nav class="m403-primary-tabs" aria-label="Páginas do Mercado">${R.map(([r, c]) => `<button type="button" data-navroute="mercado:${r}" ${a === r ? 'class="on" aria-current="page"' : ""}>${u(c)}</button>`).join("")}</nav><div class="m403-session-caption"><span>INTELIGÊNCIA DE MERCADO</span><strong>${u(H[a] || "Mercado")}</strong><small>Brasil e Estados Unidos · somente consulta</small></div>`),
+      ((t.innerHTML = `<nav class="m403-primary-tabs" aria-label="Páginas do Mercado">${R.map(([r, c]) => `<button type="button" data-navroute="mercado:${r}" ${(a === r || r === 'nt' && a === 'jr' || r === 'lab' && a === 'sazus') ? 'class="on" aria-current="page"' : ""}>${u(c)}</button>`).join("")}</nav><div class="m403-session-caption"><span>INTELIGÊNCIA DE MERCADO</span><strong>${u(H[a] || "Mercado")}</strong><small>Brasil e Estados Unidos · somente consulta</small></div>`),
         (e.dataset.m403Sub = a));
     }
     function G(e) {
@@ -3165,7 +3165,7 @@ try {
       const t = e.querySelector(".market-monitor");
       if (!t) return;
       const a = t.querySelector("#cotbox,#cqbox");
-      if (!a) return;
+      if (!a || a.classList.contains("market-quotes")) return;
       if (
         (t.classList.add("m403-quotes"),
         G(a),
@@ -3454,6 +3454,7 @@ try {
         a = b[t];
       if (
         !e ||
+        t === "lab" ||
         !a ||
         (e.dataset.m404Sub === t && e.querySelector(".m404-overview"))
       )
@@ -3857,6 +3858,7 @@ try {
       return `${W(a)} · ${r}`;
     }
     function ae(e, t) {
+      if (e.querySelector(".market-quotes")) return;
       const n = t === "cq",
         r = K(),
         a = _(r),
@@ -4581,7 +4583,7 @@ try {
         e = k(),
         a = t?.querySelector(".m405-dashboard"),
         o = t?.querySelector(":scope > .market-monitor");
-      if (!t || !e || !a || !o) return;
+      if (!t || !e || e.classList.contains("market-quotes") || !a || !o) return;
       (t.classList.add("m408-market-home"),
         !a.dataset.categoryReferences &&
           a.previousElementSibling !== o &&
@@ -6715,6 +6717,7 @@ try {
         window.cqPinta.__v419
       )
         return !1;
+      const nativePaint = window.cqPinta;
       const t = window.cotHtml;
       ((window.cotHtml = function () {
         const n = t.apply(this, arguments);
@@ -6725,6 +6728,7 @@ try {
         if (v() !== "mercado" || G() !== "cq") return;
         const n = i.getElementById("cotbox") || i.getElementById("cqbox");
         if (!n) return;
+        if (n.classList.contains("market-quotes")) return nativePaint();
         const o = M,
           r = R(),
           a = window.cotHtml(),

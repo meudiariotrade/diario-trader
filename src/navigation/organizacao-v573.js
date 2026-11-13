@@ -201,8 +201,6 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
   for(const k of ['aba|ia','aba|hist']){const b=tabs.querySelector(`[data-pf="${k}"]`);if(b)extra.append(b)}
   for(const [k,v] of Object.entries(NOMES)){const b=a.querySelector(`[data-pf="${k}"]`);const sp=b?.querySelector('span')||b;if(sp&&sp.textContent!==v)sp.textContent=v}
  }
- function mercado(a){requestAnimationFrame(()=>requestAnimationFrame(()=>{const atual=app();if(atual&&atual.dataset.tela==='mercado')mercadoAgora(atual)}));mercadoAgora(a)}
- function mercadoAgora(a){const volta=[...a.querySelectorAll('button')].find(b=>/^‹\s*Mais$/.test(b.textContent.trim()));if(volta&&volta.parentElement&&!volta.parentElement.matches('#app,.m403-primary-tabs'))volta.parentElement.style.display='none';const b=a.querySelector('[data-mkt549="mais"]');if(b&&b.textContent.trim()==='Mais'){for(const n of b.childNodes)if(n.nodeType===3&&n.textContent.trim()==='Mais')n.textContent=n.textContent.replace('Mais','Análises');if(b.textContent.trim()==='Mais')b.textContent='Análises'}}
  /* ---------- ciclo ---------- */
  let agendado=false;
  function aplica(){
@@ -210,7 +208,7 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
   try{
    const a=app();
    doc.body.classList.toggle('org-fora-inicio',!!a&&a.dataset.tela!=='home'&&!a.classList.contains('home-view'));
-   if(a){const t=a.dataset.tela;if(t!=='dia')a.classList.remove('org-hist');if(t==='dia'){historico(a);meuDia(a)}else if(t==='ops')operacoes(a);else if(t==='stats')desempenho(a);else if(t==='carteiras')carteira(a);else if(t==='mercado')mercado(a)}
+   if(a){const t=a.dataset.tela;if(t!=='dia')a.classList.remove('org-hist');if(t==='dia'){historico(a);meuDia(a)}else if(t==='ops')operacoes(a);else if(t==='stats')desempenho(a);else if(t==='carteiras')carteira(a);}
    menu();lateral();
   }catch(e){console.warn('[org v573]',e)}
  }

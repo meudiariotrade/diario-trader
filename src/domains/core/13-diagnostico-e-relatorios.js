@@ -2892,6 +2892,10 @@ const CQ_ABAS = [
     ord: "lista",
     pf: {},
     pfTs: 0,
+    saved: {},
+    errors: {},
+    loading: {},
+    search: "",
   };
 try {
   const e = HUB_M.findIndex((a) => a[0] === "mercado:mu");
@@ -2903,7 +2907,7 @@ try {
 async function cqCarrega(e, t) {
   if (
     ((e = e || CQ.aba),
-    CQ.busy === e || (!t && CQ.d[e] && Date.now() - (CQ.ts[e] || 0) < 25e3))
+    CQ.loading[e] || (!t && CQ.d[e] && Date.now() - (CQ.ts[e] || 0) < 25e3))
   )
     return;
   const a = cfg();
@@ -2912,7 +2916,7 @@ async function cqCarrega(e, t) {
       cqPinta());
     return;
   }
-  ((CQ.busy = e), cqPinta());
+  ((CQ.busy = e), (CQ.loading[e] = true), (CQ.errors[e] = ""), cqPinta());
   try {
     const o = { "Content-Type": "application/json", apikey: a.key };
     try {
@@ -2925,6 +2929,7 @@ async function cqCarrega(e, t) {
         method: "POST",
         headers: o,
         body: JSON.stringify({ modo: "cotacoes", aba: e }),
+        signal: AbortSignal.timeout(25000),
       }),
       n = await s.json().catch(() => ({}));
     if (!s.ok) throw new Error(n.error || "Erro " + s.status);
@@ -2932,11 +2937,11 @@ async function cqCarrega(e, t) {
       throw new Error(
         'Para ver as cotações, publique a função "macro" nova (v194) no Supabase.',
       );
-    ((CQ.d[e] = n), (CQ.ts[e] = Date.now()), (CQ.err = ""));
+    ((CQ.d[e] = n), (CQ.ts[e] = Date.now()), (CQ.err = ""), (CQ.errors[e] = ""));
   } catch (o) {
-    ((CQ.err = String(o.message || o)), (CQ.ts[e] = Date.now()));
+    ((CQ.err = String(o.message || o)), (CQ.errors[e] = CQ.err), (CQ.ts[e] = Date.now()));
   }
-  ((CQ.busy = ""), e === "fut" && (await cqPonte()), cqPinta());
+  ((CQ.loading[e] = false), CQ.busy === e && (CQ.busy = ""), e === "fut" && (await cqPonte()), cqPinta());
 }
 var cqPonte, cqPinta;
 const CQ_COR = {
@@ -2986,6 +2991,7 @@ var cotHtml;
   const t = e.target.closest("[data-cqa]");
   if (t) {
     CQ.aba = t.dataset.cqa;
+    CQ.search = "";
     try {
       ls.set("diario-cq-aba", CQ.aba);
     } catch {}
@@ -2999,7 +3005,7 @@ var cotHtml;
     ((CQ.ord = a.dataset.cqo), cqPinta());
     return;
   }
-  e.target.closest("[data-cqr]") && cqCarrega(CQ.aba, !0);
+  if (e.target.closest("[data-cqr]")) { cqCarrega(CQ.aba, !0); try { Promise.resolve(mdoCarrega(true)).then(cqPinta).catch(()=>{}); } catch {} }
 }),
   setInterval(() => {
     !document.hidden &&
@@ -3244,14 +3250,22 @@ cqPonte = async function () {
       (CQ.pf = t));
   } catch {}
 };
+function cqSessaoAberta() {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {timeZone:'America/Sao_Paulo', weekday:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+  const minutes = +parts.hour * 60 + +parts.minute;
+  return !['Sat','Sun'].includes(parts.weekday) && minutes >= 540 && minutes < 1110;
+}
 const cqPf = (e, t) => {
-    const a = String(e.c || "").toUpperCase();
-    return t === "fut" ||
-      (/^(WIN|WDO|IND|DOL)$/.test(a.slice(0, 3)) && /1!$/.test(e.s || ""))
-      ? CQ.pf["@" + a.slice(0, 3)] || null
-      : ((t === "br" || t === "idx" || (e.s || "").startsWith("BMFBOVESPA:")) &&
-          CQ.pf[a]) ||
-          null;
+    if (CQ.owner && (typeof SESS === 'undefined' || CQ.owner !== SESS?.uid)) return null;
+    const code = String(e.c || '').toUpperCase();
+    const future = /^(WIN|WDO|IND|DOL)/.exec(code);
+    const key = future && (t === 'fut' || /1!$/.test(e.s || '')) ? '@'+future[1] : code;
+    if (!future && !['br','idx'].includes(t) && !(e.s || '').startsWith('BMFBOVESPA:')) return null;
+    const live = CQ.pf[key];
+    if (live && Number.isFinite(live.px) && (!live.em || Date.now()-Date.parse(live.em)<180000)) return {...live, live:true};
+    const saved = CQ.saved[key];
+    if (!cqSessaoAberta() && saved?.px > 0) return {...saved, fechado:true, live:false};
+    return null;
   },
   cqPx = (e, t) => {
     const a = cqPf(e, t);
@@ -3406,7 +3420,7 @@ cqLinha = function (e, t) {
   t = e._aba || t;
   const a = cqPf(e, t),
     o = a ? a.px : e.px,
-    s = a && a.d1 != null ? a.d1 : e.d1,
+    s = a ? a.d1 : e.d1,
     n = CQ_COR[t] || "var(--ac)",
     r = String(e.c || "")
       .replace(/[^A-Z0-9/]/gi, "")
@@ -3420,8 +3434,8 @@ cqLinha = function (e, t) {
       } catch {}
       return null;
     })();
-  return `<div class="cqr"${d ? ' data-ta-done="1"' : ""}>${d || `<span class="cqi" style="color:${n};background:color-mix(in srgb,${n} 16%,transparent)">${esc(r)}</span>`}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? ' · <span class="g">Profit ao vivo</span>' : ""}</small>${a ? "" : cotacaoReferencia(e)}</div>
-<div class="cqp"><b>${o == null ? '<span class="mut">sem cotação</span>' : (e.un && e.un !== "%" ? "<small>" + esc(e.un) + "</small> " : "") + cqNum(o, e.dp) + (e.un === "%" ? "%" : "")}</b>${e.dabs != null && !a ? `<small class="${cls(e.dabs)}">${e.dabs > 0 ? "+" : ""}${cqNum(e.dabs, e.dp)}</small>` : ""}</div>
+  return `<div class="cqr" data-market-symbol="${esc(e.s || e.c)}"${d ? ' data-ta-done="1"' : ""}>${d || `<span class="cqi" style="color:${n};background:color-mix(in srgb,${n} 16%,transparent)">${esc(r)}</span>`}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? (a.fechado ? ' · <span class="market-closed">FECHADO</span>' : ' · <span class="g">Profit ao vivo</span>') : ""}</small>${a ? `<small class="market-quote-time">Profit · ${esc(a.em ? new Date(a.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) + " BRT" : "horário não informado")}</small>` : cotacaoReferencia(e)}</div>
+<div class="cqp"><b>${o == null ? '<span class="mut">—</span>' : (e.un && e.un !== "%" ? "<small>" + esc(e.un) + "</small> " : "") + cqNum(o, e.dp) + (e.un === "%" ? "%" : "")}</b>${e.dabs != null && !a ? `<small class="${cls(e.dabs)}">${e.dabs > 0 ? "+" : ""}${cqNum(e.dabs, e.dp)}</small>` : ""}</div>
 <span class="cqv ${s == null ? "" : s > 0 ? "up" : s < 0 ? "dn" : ""}">${s == null ? "–" : (s > 0 ? "+" : "") + cqNum(s, 2) + "%"}</span><span class="cqac"><button class="cqb${i ? " on" : ""}" data-cqfav="${esc(e.s)}" data-ab="${esc(t)}" aria-label="Favorito">${i ? "★" : "☆"}</button><button class="cqb${l ? " on" : ""}" data-cqal="${esc(e.s)}" aria-label="Alerta de preço">🔔</button></span></div>`;
 };
 function cqMapa(e, t) {
@@ -3430,62 +3444,108 @@ function cqMapa(e, t) {
       const o = a._aba || t,
         s = cqPf(a, o),
         n = s ? s.px : a.px,
-        r = s && s.d1 != null ? s.d1 : a.d1,
+        r = s ? s.d1 : a.d1,
         i = r == null ? 0 : Math.min(1, Math.abs(r) / 3);
       return `<div class="cqt" style="background:${r == null ? "var(--card2)" : `color-mix(in srgb,${r >= 0 ? "var(--g)" : "var(--r)"} ${Math.round(18 + i * 62)}%,var(--card))`}" title="${esc(a.n || "")}"><b>${esc(a.c || "")}</b><span>${r == null ? "–" : (r > 0 ? "+" : "") + cqNum(r, 2) + "%"}</span><small>${n == null ? "" : cqNum(n, a.dp)}</small></div>`;
     })
     .join("")}</div>`;
 }
+// Complementos do panorama entram na própria categoria, com fonte e sem
+// duplicar ativos válidos da lista principal. Nunca misturar setores EUA em BR.
+function cqItens(category) {
+  const native = (CQ.d[category]?.itens || []).slice();
+  const aliases = {'^BVSP':'IBOV','^GSPC':'SPX','^IXIC':'NASDAQ','BRL=X':'USDBRL'};
+  const key = symbol => { const code = String(symbol || '').split(':').pop().toUpperCase(); return aliases[code] || code; };
+  const symbols = {adr: (typeof AD !== 'undefined' ? AD.list : []),idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','DX-Y.NYB','BRL=X'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','IRON','GOLD','BZ=F','CL=F','GC=F','FE=F'],jur:['SELIC','DI1F27','US10Y','^TNX']};
+  const present = new Set(native.filter(item=>cqPx(item,item._aba || category)>0).map(item=>key(item.s)));
+  if (category === 'adr') {
+    for (const item of AD.data?.itens || []) {
+      if ((item.regular?.px ?? item.px)>0) present.add(key(item.s));
+    }
+  }
+  let groups = []; try { groups = MDO.v?.mercados?.grupos || []; } catch {}
+  for (const item of groups.flatMap(group=>group.itens || [])) {
+    if (!(item.px>0) || item.suspeito || !(symbols[category] || []).includes(item.s) || present.has(key(item.s))) continue;
+    const existing = native.findIndex(row=>key(row.s)===key(item.s));
+    const resolved = {...item,c:item.c || key(item.s),dp:item.dp ?? 2,simboloFonte:item.simboloFonte || item.s,horarioPreco:item.horarioPreco || item.em};
+    if (existing>=0) native[existing]=resolved; else native.push(resolved);
+    present.add(key(item.s));
+  }
+  return native;
+}
+// Cotações são montadas completas antes de entrarem no DOM. Nenhum decorador
+// posterior cria busca, ordenação ou move a lista para outra coluna.
 ((cotHtml = function () {
-  const e = CQ.aba,
-    t = CQ.d[e];
-  let a = t ? t.itens.slice() : [];
-  const o = (i) => {
-    const l = cqPf(i, i._aba || e);
-    return l && l.d1 != null ? l.d1 : i.d1;
-  };
-  CQ.ord === "alta"
-    ? a.sort((i, l) => (o(l) ?? -1e9) - (o(i) ?? -1e9))
-    : CQ.ord === "baixa" && a.sort((i, l) => (o(i) ?? 1e9) - (o(l) ?? 1e9));
-  const s = a.filter((i) => o(i) > 0).length,
-    n = a.filter((i) => o(i) < 0).length,
-    r = a.filter((i) => cqPf(i, i._aba || e)).length;
-  return `<div id="cotbox"><div class="seg cqtabs">${CQ_ABAS.map(([i, l]) => `<button class="${e === i ? "on" : ""}" data-cqa="${i}">${l}</button>`).join("")}</div>
-${cqAlertasHtml()}
-<div class="cqbar"><span class="sm mut">${t && a.length ? `<span class="g">▲ ${s}</span> · <span class="r">▼ ${n}</span> · às ${hm(Date.parse(t.em))}${r ? ` · <span class="g">${r} ao vivo pelo Profit</span>` : ""}` : ""}</span><span class="seg cqord">${[
-    ["lista", "Ordem"],
-    ["alta", "Altas"],
-    ["baixa", "Quedas"],
-  ]
-    .map(
-      ([i, l]) =>
-        `<button class="${CQ.ord === i ? "on" : ""}" data-cqo="${i}">${l}</button>`,
-    )
-    .join("")}</span><span class="seg cqord">${[
-    ["lista", "Lista"],
-    ["mapa", "Mapa"],
-  ]
-    .map(
-      ([i, l]) =>
-        `<button class="${CQ.vis === i ? "on" : ""}" data-cqv="${i}" aria-label="${i === "mapa" ? "Mapa de calor" : "Lista"}">${l}</button>`,
-    )
-    .join(
-      "",
-    )}</span><button class="btn s" data-cqr="1">${CQ.busy ? "…" : "↻"}</button></div>
-${CQ.err ? `<div class="warn sm">${esc(CQ.err)}</div>` : ""}
-${e === "fav" && !cqFavs().length ? '<div class="card sm mut vazio119">Toque na ☆ de qualquer cotação para ela aparecer aqui.</div>' : t ? (CQ.vis === "mapa" ? cqMapa(a, e) : `<div class="card cql">${a.map((i) => cqLinha(i, e)).join("")}</div>`) : CQ.busy ? '<div class="card"><p class="mut">Carregando…</p></div>' : ""}
-${e === "jur" ? cqJurosExtra() : ""}
-<div class="sm mut" style="margin-top:8px">Fonte: ponte do Profit (ao vivo) para as ações da B3, o IBOV e os contratos atuais (${["WIN", "WDO"].map(codFut).join(", ")}), quando a ponte está ligada; o resto vem do TradingView (B3 com ~15 min de atraso; moedas e cripto quase ao vivo). ☆ favorito · 🔔 alerta de preço.</div></div>`;
+  const category = CQ.aba, data = CQ.d[category];
+  const items = cqItens(category);
+  const change = item => { const quote = cqPf(item,item._aba || category); return quote ? quote.d1 : item.d1; };
+  if (CQ.ord === 'alta') items.sort((a,b)=>(change(b) ?? -Infinity)-(change(a) ?? -Infinity));
+  if (CQ.ord === 'baixa') items.sort((a,b)=>(change(a) ?? Infinity)-(change(b) ?? Infinity));
+  const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const query = normalize(CQ.search).trim();
+  const visible = items.filter(item=>normalize(item.c+' '+item.n).includes(query));
+  const busy = category === 'adr' ? !!AD.busy : !!CQ.loading[category] || CQ.busy === category;
+  const error = CQ.errors[category] || (!data && !busy ? CQ.err : '');
+  let content;
+  if (category === 'adr') content = `<section id="adr" class="market-adrs">${adrHtml()}</section>${visible.length ? `<div class="cql">${visible.map(item=>cqLinha(item,category)).join('')}</div>` : ''}`;
+  else if (visible.length) content = CQ.vis === 'mapa' ? cqMapa(visible,category) : `<div class="cql">${visible.map(item=>cqLinha(item,category)).join('')}</div>`;
+  else {
+    const text = query && items.length ? 'Nenhum ativo corresponde à busca.' : category === 'fav' && !cqFavs().length ? 'Marque a estrela de um ativo para acompanhar aqui.' : busy ? 'Consultando cotações…' : error ? 'Não foi possível atualizar esta categoria.' : data ? 'A fonte não retornou ativos nesta categoria.' : 'Aguardando consulta da fonte.';
+    content = `<div class="market-state" role="status">${esc(text)}</div>`;
+  }
+  return `<div id="cotbox" class="market-quotes" data-category="${esc(category)}">
+    <div class="market-categories" role="group" aria-label="Categorias de ativos">${CQ_ABAS.map(([key,label])=>`<button type="button" data-cqa="${key}" class="${category===key?'on':''}" aria-pressed="${category===key}">${esc(label.replace('★ ',''))}</button>`).join('')}</div>
+    <div class="market-tools"><label class="market-search"><span class="market-sr">Buscar ativo</span><input type="search" data-market-search placeholder="Buscar ativo" value="${esc(CQ.search || '')}" autocomplete="off"></label><button type="button" data-cqr="1" aria-label="Atualizar preços" ${busy?'disabled':''}>↻</button><label class="market-order"><span class="market-sr">Ordenar ativos</span><select data-market-order>${[['lista','Ordem padrão'],['alta','Maiores altas'],['baixa','Maiores quedas']].map(([key,label])=>`<option value="${key}" ${CQ.ord===key?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-cqv="${CQ.vis==='mapa'?'lista':'mapa'}" aria-label="${CQ.vis==='mapa'?'Ver lista':'Ver mapa de calor'}">${CQ.vis==='mapa'?'Lista':'Mapa'}</button></div>
+    <div class="market-summary" role="status">${busy ? 'Atualizando…' : visible.length+' ativos'}${data?.em ? ' · Consulta '+esc(new Date(data.em).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}))+' BRT' : ''}</div>
+    ${error ? `<p class="market-error" role="status">${esc(error)}${items.length?' Mantendo a consulta anterior.':''}</p>` : ''}
+    <div class="market-results" aria-busy="${busy}">${content}</div>
+    <details class="market-sources"><summary>Fontes e ferramentas</summary><p>Profit para ativos da B3 quando a ponte está conectada. Após o pregão, o último registro salvo aparece como FECHADO, com contrato e horário. As demais fontes e seus atrasos aparecem em cada ativo.</p><button type="button" data-navroute="term">Abrir gráficos e comparação no Terminal</button><button type="button" data-market-longshort>Long &amp; Short</button>${cqAlertasHtml()}${category==='jur'?'<button type="button" data-market-di>Ver curva DI no Terminal</button>'+cqJurosExtra():''}</details>
+  </div>`;
 }),
   (cqPinta = function () {
-    if (tab !== "mercado" || MKT.tab !== "cq") return;
-    const e = document.getElementById("cotbox");
-    if (e) e.outerHTML = cotHtml();
-    else {
-      const t = scrollY;
-      (render(), scrollTo(0, t));
+    if (tab !== 'mercado' || MKT.tab !== 'cq') return;
+    const node = document.getElementById('cotbox');
+    if (!node) return;
+    const openSources = node.querySelector('.market-sources')?.open;
+    const openQuotes = new Set([...node.querySelectorAll('.cqr:has(.quote-reference[open])')].map(row=>row.dataset.marketSymbol));
+    const focus = document.activeElement;
+    const searching = focus?.matches('[data-market-search]');
+    const start = searching ? focus.selectionStart : null;
+    const end = searching ? focus.selectionEnd : null;
+    const scroller = node.querySelector('.market-categories');
+    const left = scroller?.scrollLeft || 0;
+    node.outerHTML = cotHtml();
+    const fresh = document.getElementById('cotbox');
+    const sources = fresh?.querySelector('.market-sources');
+    if (sources) sources.open = !!openSources;
+    for (const row of fresh?.querySelectorAll('.cqr') || []) {
+      if (openQuotes.has(row.dataset.marketSymbol)) { const detail = row.querySelector('.quote-reference'); if (detail) detail.open = true; }
+    }
+    const categories = fresh?.querySelector('.market-categories');
+    if (categories) categories.scrollLeft = left;
+    if (searching) {
+      const input = fresh?.querySelector('[data-market-search]');
+      input?.focus({preventScroll:true});
+      try { input?.setSelectionRange(start,end); } catch {}
     }
   }));
+document.addEventListener('click', event => {
+  if (event.target.closest('[data-market-longshort]')) { document.querySelector('#app #v512-lsbtn')?.click(); return; }
+  if (!event.target.closest('[data-market-di]')) return;
+  tab = 'term'; render();
+  requestAnimationFrame(()=>document.querySelector('#app:not(.v503-fantasma) [data-tf415-nav="DIFUT"]')?.click());
+});
+document.addEventListener('input', event => {
+  if (!event.target.matches('[data-market-search]')) return;
+  CQ.search = event.target.value;
+  cqPinta();
+});
+document.addEventListener('change', event => {
+  if (!event.target.matches('[data-market-order]')) return;
+  CQ.ord = event.target.value;
+  cqPinta();
+});
+
 {
   const e = vMercado;
   vMercado = function () {
