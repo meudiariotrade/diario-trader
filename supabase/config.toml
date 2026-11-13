@@ -74,3 +74,15 @@ verify_jwt = false
 
 [functions.pesquisa]
 verify_jwt = false
+
+[functions.rotina-cron]
+verify_jwt = false
+
+[functions.daily-panorama]
+verify_jwt = false
+
+[functions.check-morning-status]
+verify_jwt = false
+
+[functions.inbound-btg-note]
+verify_jwt = false
