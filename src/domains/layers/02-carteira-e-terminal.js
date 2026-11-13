@@ -2720,7 +2720,7 @@ try {
               ? window.DIARIO_NAV.navigate("mercado:" + n)
               : window.DiarioRotas?.navigate
                 ? window.DiarioRotas.navigate("mercado:" + n)
-                : ((MKT.tab = n), (tab = "mercado"), render());
+                : (irPara("mercado:" + n));
             return;
           }
           const d = t.target.closest("[data-dt393-action]");
@@ -5715,8 +5715,8 @@ try {
       if (!h) {
         n && !n.querySelector(":scope > .tf413-layout") && (n.remove(), (n = null));
         e?.node && !e.node.querySelector(":scope > .tf413-layout") && (e = null);
-        /* A .trbar fica: os atalhos nativos do Início do Terminal (planejar, foco, radar, painéis) acionam os botões dela. */
-        t.querySelectorAll(":scope > :is(.trtabs,#trgrid,.trtape,.trrod,.trquick-strip,.trmerc)").forEach((o) => o.remove());
+        /* v594: a barra antiga também sai; as ações do Início usam o registro TerminalAcoes. */
+        t.querySelectorAll(":scope > :is(.trbar,.trtabs,#trgrid,.trtape,.trrod,.trquick-strip,.trmerc)").forEach((o) => o.remove());
       }
       const novo = !n && !e?.node;
       (n
@@ -6942,7 +6942,7 @@ try {
             }
           } catch {}
           try {
-            ((tab = "dia"), render(), scrollTo(0, 0));
+            (irPara("dia"), scrollTo(0, 0));
           } catch {}
         }
       },

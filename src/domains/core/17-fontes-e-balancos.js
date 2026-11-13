@@ -6631,7 +6631,7 @@ Dados do terminal agora:
           (P.hidden = !B.length || !E.target.value.trim()));
       }
     }),
-    document.addEventListener("change", (E) => {
+    document.addEventListener("change", (trMudaRef = (E) => {
       const P = E.target;
       if (!(!P || !P.closest || tab !== "term")) {
         if (P.matches("[data-trlay]")) {
@@ -6689,8 +6689,8 @@ Dados do terminal agora:
           return;
         }
       }
-    }),
-    document.addEventListener("click", (E) => {
+    })),
+    document.addEventListener("click", (trCliqueRef = (E) => {
       var P;
       if (tab !== "term") return;
       const B = (_) => E.target.closest && E.target.closest(_);
@@ -7045,7 +7045,27 @@ Dados do terminal agora:
         document
           .querySelectorAll(".trp")
           .forEach((_, ye) => _.classList.toggle("foco", ye === e.foco)));
-    }));
+    })));
+  /* v594: ações do Terminal sem depender da barra antiga (.trbar) montada.
+     O Início do Terminal chama estas funções direto; na tela de Painéis os botões continuam chamando o mesmo código. */
+  var trMudaRef, trCliqueRef;
+  {
+    const falso = (el) => ({ target: el, preventDefault() {}, stopPropagation() {}, button: 0 }),
+      trAcao = (tr) => {
+        const b = document.createElement("button");
+        ((b.dataset.tr = tr), trCliqueRef && trCliqueRef(falso(b)));
+      },
+      A = window.TerminalAcoes;
+    A &&
+      (A.registrar("@add", () => trAcao("addp")),
+      A.registrar("@organize", () => trAcao("org")),
+      A.registrar("@rename", () => trAcao("wsmenu")),
+      A.registrar("espaco", (v) => {
+        const s = document.createElement("select"),
+          o = document.createElement("option");
+        ((o.value = v), s.append(o), (s.value = v), s.setAttribute("data-trlay", ""), trMudaRef && trMudaRef(falso(s)));
+      }));
+  }
   let ce = null;
   (document.addEventListener("pointerdown", (E) => {
     if (tab !== "term" || !l() || E.button > 0) return;
@@ -7252,7 +7272,7 @@ Dados do terminal agora:
     (E) => {
       E.target.closest &&
         E.target.closest("[data-trabre]") &&
-        ((tab = "term"), render(), scrollTo(0, 0));
+        (irPara("term"), scrollTo(0, 0));
     },
     !0,
   );
@@ -10207,7 +10227,7 @@ Dados do terminal agora:
         c(v.f);
         return;
       }
-      ((tab = "term"), render(), setTimeout(() => e.roda(x), 50));
+      (irPara("term"), setTimeout(() => e.roda(x), 50));
     });
     {
       const f = TraderStyles.slot("legacy-113");
@@ -11998,7 +12018,7 @@ Dados do terminal agora:
           save = function () {};
         } catch {}
         setTimeout(() => {
-          ((tab = "term"), render());
+          (irPara("term"));
         }, 400);
       }
     } catch {}
@@ -15318,7 +15338,7 @@ Validação do app: atenção a ` +
               try {
                 ls.set("diario-mkt-tab", "lab");
               } catch {}
-              ((tab = "mercado"), render(), scrollTo(0, 0));
+              (irPara("mercado"), scrollTo(0, 0));
             }, 0);
         },
         !0,
