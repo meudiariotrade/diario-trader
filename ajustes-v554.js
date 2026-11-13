@@ -165,6 +165,20 @@
       add(null);
     }
     grupo('Por horário', x => { const h = String(x.t.dt).slice(11, 13); return h ? h + 'h' : ''; });
+    /* v593 — tempo posicionado e estado emocional do dia (seletor do Meu dia). */
+    const FAIXAS = ['Até 5 min', '5 a 15 min', '15 a 30 min', '30 a 60 min', 'Mais de 1 hora'];
+    const faixa = x => { const a = Date.parse(x.t.dt), b = Date.parse(x.t.dtx); if (!isFinite(a) || !isFinite(b) || b < a) return ''; const m = (b - a) / 6e4; return m <= 5 ? FAIXAS[0] : m <= 15 ? FAIXAS[1] : m <= 30 ? FAIXAS[2] : m <= 60 ? FAIXAS[3] : FAIXAS[4]; };
+    const fixo = (titulo, chave, ordem) => {
+      const m = new Map();
+      for (const x of lin) { const k = chave(x); if (!k) continue; const o = m.get(k) || { n: 0, w: 0, pl: 0, r: [] }; o.n++; if (x.c.pl > 0) o.w++; o.pl += x.c.pl; if (typeof x.c.r === 'number' && isFinite(x.c.r)) o.r.push(x.c.r); m.set(k, o); }
+      if (!m.size) return;
+      add([{ v: titulo, s: 'h' }, { v: 'Trades', s: 'h' }, { v: 'Acerto', s: 'h' }, { v: 'Resultado', s: 'h' }, { v: 'Média × risco', s: 'h' }]);
+      ordem.filter(k => m.has(k)).forEach(k => { const o = m.get(k); add([{ v: k }, { v: o.n, fmt: F.int }, { v: o.w / o.n, fmt: F.pct }, { v: o.pl, fmt: F.money, s: o.pl > 0 ? 'ok' : o.pl < 0 ? 'ruim' : 'n' }, o.r.length ? { v: media(o.r), fmt: F.vez, s: media(o.r) > 0 ? 'ok' : media(o.r) < 0 ? 'ruim' : 'n' } : { v: '—', s: 'vz' }]); });
+      add(null);
+    };
+    fixo('Por tempo posicionado', faixa, FAIXAS);
+    const EMOS = [['calmo', 'Calmo'], ['focado', 'Focado'], ['ansioso', 'Ansioso'], ['cansado', 'Cansado'], ['euforico', 'Eufórico']];
+    fixo('Por estado emocional do dia', x => { const e = g(() => S.days[String(x.t.dt).slice(0, 10)].emocao, ''); return (EMOS.find(([k]) => k === e) || [])[1] || ''; }, EMOS.map(e => e[1]));
     return { nome: 'Desempenho', rows, larg: [300, 90, 90, 130, 130, 130], semGrade: 1, alturas: H };
   }
   root.DIARIO_V554_DESEMP = desempenho;
