@@ -627,6 +627,20 @@ try {
         return null;
       }
     }
+    /* v598: risco disponível do dia (mesma conta do Início) para a calculadora de posição e outras telas. */
+    function riscoHoje598() {
+      const t = V(),
+        a = lt(pt(t), R),
+        o = ne(),
+        i = St() ?? o?.lim ?? null;
+      return {
+        disponivel: o ? o.rest : i != null ? Math.max(0, i - Math.max(0, -a)) : null,
+        limite: i,
+        resultadoDia: a,
+        capital: yt(),
+      };
+    }
+    window.DiarioRisco = { hoje: riscoHoje598 };
     function le() {
       const t = V(),
         e = pt(t),
@@ -1110,7 +1124,7 @@ try {
         P = `<div class="v4-stats">
     ${y("folder", "Operações abertas", String(e.length), `(${l} compradas / ${s} vendidas)`)}
     ${y("bars", "Resultado do dia", j(r), E(r) != null ? Q(E(r)) : a.length + " encerrada(s)", L(r))}
-    ${y("shield", "Risco consumido", u != null ? _(u) + "%" : G(o), h != null ? `(limite: ${_(h)}%)` : "pelos stops abertos", "", barra595)}
+    ${y("shield", "Risco consumido", u != null ? _(u) + "%" : G(o), h != null ? `(limite: ${_(h)}%)` : "pelos stops abertos", "", barra595 + '<button type="button" class="v598-calc-btn" data-v598-calc aria-label="Calcular tamanho da posição">Calcular posição</button>')}
     ${y("crosshair", "Setups ativos", String(M.length), M.length ? "(" + b(M.slice(0, 3).join(", ")) + ")" : "nenhum hoje")}</div>`,
         A = e
           .map((d) => {
@@ -7692,4 +7706,124 @@ html body #app .card.g2:has(> textarea.v505-rt):not(#v505a):not(#v505b){grid-tem
   })(window);
 } catch (e) {
   console.error("[v522] falha em checklist-v505.js", e);
+}
+
+/* v598 — Calculadora de tamanho de posição integrada ao risco do dia (Operações e comando CALC no Terminal). */
+try {
+  (function (w) {
+    "use strict";
+    const d = w.document;
+    if (!d) return;
+    const ATIVOS = {
+        WIN: { nome: "WIN (mini índice)", porPonto: 0.2, unid: "contrato", unids: "contratos", tick: 5 },
+        WDO: { nome: "WDO (mini dólar)", porPonto: 10, unid: "contrato", unids: "contratos", tick: 0.5 },
+        ACAO: { nome: "Ações", porPonto: 1, unid: "ação", unids: "ações", lote: 100 },
+        OPC: { nome: "Opções", porPonto: 1, unid: "opção", unids: "opções", lote: 100 },
+      },
+      brl = (v) => (Number.isFinite(+v) ? (+v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"),
+      num = (v) => {
+        let t = String(v ?? "").trim().replace(/\s|R\$/g, "");
+        /* "1.234,56" e "5,35" → vírgula decimal; "5.35" → ponto decimal; "130.250" → milhar. */
+        t = t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : /^\d+\.\d{1,2}$/.test(t) ? t : t.replace(/\./g, "");
+        const n = parseFloat(t);
+        return Number.isFinite(n) ? n : NaN;
+      },
+      esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]),
+      risco = () => {
+        try {
+          return w.DiarioRisco?.hoje?.() || {};
+        } catch {
+          return {};
+        }
+      },
+      lotesCapital = () => {
+        try {
+          return typeof capCalc == "function" ? capCalc("D")?.lotes ?? null : null;
+        } catch {
+          return null;
+        }
+      };
+    function html(origem) {
+      const r = risco(),
+        disp = Number.isFinite(r.disponivel) ? r.disponivel : "";
+      return `<form class="v598-calc" data-calc598 data-origem="${esc(origem)}" onsubmit="return false" aria-label="Calculadora de posição">
+  <label>Ativo<select data-c598="ativo">${Object.entries(ATIVOS).map(([k, a]) => `<option value="${k}">${a.nome}</option>`).join("")}</select></label>
+  <label>Risco disponível hoje (R$)<input data-c598="risco" inputmode="decimal" value="${disp === "" ? "" : String(Math.round(disp * 100) / 100).replace(".", ",")}" placeholder="Defina o limite do dia"></label>
+  <div class="v598-calc-par"><label>Entrada<input data-c598="ent" inputmode="decimal" placeholder="0,00" autocomplete="off"></label><label>Stop<input data-c598="stop" inputmode="decimal" placeholder="0,00" autocomplete="off"></label></div>
+  <output class="v598-calc-res" data-c598="res" aria-live="polite">${disp === "" ? "Sem limite de perda do dia configurado: digite o risco em R$." : "Digite entrada e stop."}</output>
+  <small class="v598-calc-nota">Limite de perda: ${Number.isFinite(r.limite) ? brl(r.limite) : "não definido"}${Number.isFinite(r.resultadoDia) && r.resultadoDia < 0 ? " · perdas de hoje " + brl(r.resultadoDia) : ""}. Sem corretagem e emolumentos.</small>
+</form>`;
+    }
+    function calcula(f) {
+      const g = (k) => f.querySelector(`[data-c598="${k}"]`),
+        a = ATIVOS[g("ativo").value] || ATIVOS.WIN,
+        rs = num(g("risco").value),
+        ent = num(g("ent").value),
+        st = num(g("stop").value),
+        out = g("res");
+      if (!(rs > 0)) return void (out.textContent = "Informe o risco disponível em R$.");
+      if (!(ent > 0) || !(st > 0)) return void (out.textContent = "Digite entrada e stop.");
+      const dist = Math.abs(ent - st);
+      if (!(dist > 0)) return void (out.textContent = "Entrada e stop não podem ser iguais.");
+      const porUnid = dist * a.porPonto;
+      let qtd = Math.floor(rs / porUnid + 1e-9),
+        extra = "";
+      if (a.lote) {
+        const lotes = Math.floor(qtd / a.lote);
+        extra = ` · ${lotes} lote(s) de ${a.lote}${qtd % a.lote ? " + " + (qtd % a.lote) + " no fracionário" : ""}`;
+      } else {
+        const cap = lotesCapital();
+        cap != null && cap < qtd && ((extra = ` · limitado pelo capital (${cap})`), (qtd = cap));
+      }
+      const perda = qtd * porUnid,
+        pts = a.lote ? "R$ " + dist.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " por " + a.unid : dist.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " pontos";
+      out.innerHTML = qtd > 0
+        ? `<b>${qtd.toLocaleString("pt-BR")}</b> ${qtd === 1 ? a.unid : a.unids}${extra}<span>Stop de ${pts} · perda no stop ${brl(perda)} (${Math.round((perda / rs) * 100)}% do risco)</span>`
+        : `<b>0</b> ${a.unids}<span>Este stop (${pts}) custa ${brl(porUnid)} por ${a.unid}: acima do risco disponível. Aproxime o stop ou não opere.</span>`;
+    }
+    d.addEventListener("input", (e) => {
+      const f = e.target.closest?.("[data-calc598]");
+      f && calcula(f);
+    });
+    d.addEventListener("change", (e) => {
+      const f = e.target.closest?.("[data-calc598]");
+      f && calcula(f);
+    });
+    function abrir() {
+      let dlg = d.getElementById("v598-calc-dlg");
+      dlg ||
+        ((dlg = d.createElement("dialog")),
+        (dlg.id = "v598-calc-dlg"),
+        (dlg.className = "v598-calc-dlg"),
+        dlg.setAttribute("aria-label", "Calculadora de posição"),
+        d.body.appendChild(dlg),
+        dlg.addEventListener("click", (e) => {
+          (e.target === dlg || e.target.closest("[data-v598-fecha]")) && dlg.close();
+        }));
+      dlg.innerHTML = `<div class="v598-calc-box"><div class="v598-calc-top"><b>Calculadora de posição</b><button type="button" data-v598-fecha aria-label="Fechar">✕</button></div>${html("operacoes")}</div>`;
+      dlg.open || (dlg.showModal ? dlg.showModal() : dlg.setAttribute("open", ""));
+      setTimeout(() => dlg.querySelector('[data-c598="ent"]')?.focus(), 50);
+    }
+    d.addEventListener("click", (e) => {
+      e.target.closest?.("[data-v598-calc]") && (e.preventDefault(), abrir());
+    });
+    w.CalcPosicao = { abrir, html };
+    /* Terminal: comando CALC abre a calculadora dentro do painel. */
+    const regTerminal = () => {
+      const T = w.TRM;
+      if (!T || !T.EXT || T.EXT.CALC) return !!T?.EXT?.CALC;
+      ((T.FN.CALC = "Calculadora de posição pelo risco do dia"),
+        (T.EXT.CALC = {
+          livre: !0,
+          body: () => `<div class="trsec">Calculadora de posição · risco do dia</div>${html("terminal")}`,
+        }));
+      return !0;
+    };
+    if (!regTerminal()) {
+      let n = 0;
+      const t = setInterval(() => (regTerminal() || ++n > 40) && clearInterval(t), 500);
+    }
+  })(window);
+} catch (e) {
+  console.error("[v598] calculadora de posição", e);
 }
