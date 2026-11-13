@@ -1246,10 +1246,18 @@ function anxDel(e, t) {
         );
       },
       s = o("div", "ptr", "<span>↓</span>"),
-      n = o("button", "btop", "↑"),
+      /* Sem botão flutuante (CLAUDE.md): o "voltar ao topo" é tocar no cabeçalho. O botão fica fora da página. */
+      n = document.createElement("button"),
       r = o("div", "tst");
     (n.setAttribute("aria-label", "Voltar ao topo"),
-      r.setAttribute("role", "status"));
+      r.setAttribute("role", "status"),
+      document.addEventListener("click", (b) => {
+        const y = b.target.closest?.("#dt393-global-head");
+        !y ||
+          b.target.closest("button,a,input,select,textarea,label,[role=button],[data-dt393-route],[data-dt393-action]") ||
+          scrollY <= 0 ||
+          scrollTo({ top: 0, behavior: e ? "auto" : "smooth" });
+      }));
     let i;
     window.toast = function (b, y) {
       ((r.textContent = b),
