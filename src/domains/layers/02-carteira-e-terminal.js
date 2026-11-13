@@ -2414,6 +2414,131 @@ try {
       const empty = r.querySelector(".est-book-empty");
       if (empty) empty.hidden = visible > 0;
     });
+    /* v598 — "Recomendado pelo seu Pregão": cruza o erro registrado no fechamento do dia (Meu dia) com títulos,
+       roteiros e anotações das aulas e com os livros e anotações da Biblioteca. Busca semântica local por
+       conceitos de trading em português e inglês (sem gastar cota de IA e funciona offline). */
+    const tenta598 = (fn, d) => {
+      try {
+        const v = fn();
+        return v === void 0 ? d : v;
+      } catch {
+        return d;
+      }
+    };
+    const CONCEITOS598 = {
+      rompimento: "rompimento romper rompeu rompe breakout break fakeout falso rompimento armadilha trap",
+      pullback: "pullback correcao recuo reteste retest retracao",
+      stop: "stop stopei estopado estop stoploss loss perda prejuizo",
+      alvo: "alvo target parcial saida saindo exit realizar realizei lucro profit",
+      entrada: "entrada entrar entrei entry antecipada antecipei antecipar cedo precoce early gatilho trigger sinal setup",
+      tendencia: "tendencia trend topo fundo topos fundos trending",
+      lateral: "lateral lateralidade range consolidacao congestao chop caixote",
+      pressao: "pressao pressure compressao squeeze block bloco barra",
+      risco: "risco risk gerenciamento posicao position sizing tamanho alavancagem mao contratos lote",
+      emocional: "revanche vinganca revenge tilt emocional emocao ansiedade ansioso medo fear ganancia greed fomo impulsivo impulso euforia euforico nervoso psicologia psychology",
+      disciplina: "disciplina discipline paciencia patience regra regras rules plano plan rotina checklist",
+      overtrading: "overtrading excesso demais operacoes operei muitas",
+      volume: "volume fluxo agressao book tape players",
+      nivel: "suporte resistencia support resistance nivel level regiao zona zone",
+      candle: "candle candlestick pavio sombra doji engolfo martelo hammer",
+      media: "media medias ema mme sma moving average",
+      priceaction: "price action acao do preco leitura",
+    };
+    const sem598 = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(),
+      PARA598 = new Set("a o e de da do das dos em no na nos nas um uma para por com que nao sim foi fui eu me meu minha the of and to in on for with is was i my it at as".split(" ")),
+      MAPA598 = (() => {
+        const m = new Map();
+        Object.entries(CONCEITOS598).forEach(([k, v]) => v.split(" ").forEach((w) => m.set(w, k)));
+        return m;
+      })();
+    function sinais598(texto) {
+      const pal = sem598(texto).split(/[^a-z0-9]+/).filter((x) => x.length > 2 && !PARA598.has(x)),
+        conc = new Set(),
+        radic = new Set();
+      pal.forEach((x) => {
+        MAPA598.has(x) && conc.add(MAPA598.get(x));
+        const r = x.slice(0, 5);
+        (radic.add(r), [...MAPA598.keys()].some((k) => k.length > 4 && k.slice(0, 5) === r && conc.add(MAPA598.get(k))));
+      });
+      return { conc, radic };
+    }
+    function erroPregao598() {
+      const dias = Object.keys(tenta598(() => S.days || {}, {})).sort().reverse().slice(0, 21);
+      for (const dia of dias) {
+        const D = S.days[dia] || {},
+          trades = tenta598(() => (S.trades || []).filter((x) => String(x.dtx || x.dt || "").slice(0, 10) === dia), []),
+          errosTrade = trades.map((x) => x.err).filter((x) => x && !/^nenhum/i.test(x)),
+          texto = [D.cond, D.prevn, ...errosTrade].filter(Boolean).join(". ");
+        if ((D.erros === "s" || errosTrade.length) && texto.trim()) return { dia, texto };
+      }
+      return null;
+    }
+    function recomenda598() {
+      try {
+        const err = erroPregao598();
+        if (!err) return "";
+        const q = sinais598(err.texto);
+        if (!q.conc.size && !q.radic.size) return "";
+        const cand = [],
+          pontua = (txt, peso) => {
+            const d = sinais598(txt);
+            let sc = 0;
+            const em = [];
+            (q.conc.forEach((k) => d.conc.has(k) && ((sc += 3 * peso), em.push(k))), q.radic.forEach((r) => d.radic.has(r) && (sc += 0.5 * peso)));
+            return { sc, em };
+          },
+          add = (item, txt, peso) => {
+            const r = pontua(txt, peso);
+            r.sc > 0 && cand.push({ ...item, sc: r.sc, em: r.em });
+          };
+        tenta598(() => window.AULAS.getLista(), []).forEach((au) => {
+          if (au.status === "gerando") return;
+          const base = { tipo: "aula", id: au.id, nome: `Aula ${au.numero} · ${au.titulo || ""}`, livro: au.livro || "" };
+          add(base, `${au.titulo} ${au.livro} ${au.capitulos || ""}`, 2);
+          const notas = tenta598(() => window.AULAS.notas(au.id), "");
+          notas && add({ ...base, motivo: "nas suas anotações" }, notas, 1.5);
+          const rot = tenta598(() => window.AULAS.roteiro(au.id), null);
+          (rot?.cenas || []).forEach((cn, i) => add({ ...base, cena: i, cenaNome: cn.titulo || "Cena " + (i + 1) }, `${cn.titulo || ""} ${(cn.fala || []).join(" ")}`, 1));
+        });
+        (Array.isArray(S?.books) ? S.books : []).forEach((bk) => {
+          const base = { tipo: "livro", id: bk.id, nome: tituloLivro(bk.t) || "Livro" };
+          add(base, `${bk.t} ${bk.a || ""}`, 2);
+          (bk.notes || []).forEach((n) => {
+            const txt = typeof n == "string" ? n : [n.t, n.txt, n.text, n.cap, n.q].filter(Boolean).join(" ");
+            txt && add({ ...base, nota: txt.slice(0, 90) }, txt, 1.5);
+          });
+        });
+        if (!cand.length) return "";
+        cand.sort((x, y) => y.sc - x.sc);
+        let b0 = cand[0];
+        if (b0.sc < 3) return "";
+        /* Aula escolhida pelo título: aponta também a cena do roteiro que mais combina com o erro. */
+        if (b0.tipo === "aula" && !Number.isInteger(b0.cena)) {
+          const cn = cand.find((x) => x.tipo === "aula" && x.id === b0.id && Number.isInteger(x.cena) && x.sc >= 3);
+          cn && (b0 = { ...cn, em: [...b0.em, ...cn.em] });
+        }
+        const dia = err.dia.split("-").reverse().slice(0, 2).join("/"),
+          trecho = err.texto.length > 120 ? err.texto.slice(0, 118) + "…" : err.texto,
+          comum = [...new Set(b0.em)].slice(0, 3).join(", "),
+          alvo =
+            b0.tipo === "aula"
+              ? `<b>${c(b0.nome)}</b>${b0.cenaNome ? `<small>Revise a cena ${b0.cena + 1}: ${c(b0.cenaNome)}</small>` : b0.motivo ? `<small>Relacionada ${c(b0.motivo)}</small>` : ""}`
+              : `<b>${c(b0.nome)}</b>${b0.nota ? `<small>Sua anotação: “${c(b0.nota)}”</small>` : ""}`,
+          botao =
+            b0.tipo === "aula"
+              ? `<button type="button" class="v598-rec-go" data-v598-rec-aula="${c(b0.id)}"${Number.isInteger(b0.cena) ? ` data-v598-rec-cena="${b0.cena}"` : ""}>Revisar agora ${a("right", 14)}</button>`
+              : `<button type="button" class="v598-rec-go" data-a="openbook" data-id="${c(b0.id)}">Abrir livro ${a("right", 14)}</button>`;
+        return `<section class="v598-rec" aria-label="Recomendado pelo seu Pregão"><div class="v598-rec-top"><span>Recomendado pelo seu Pregão</span><em>${c(dia)}</em></div><p class="v598-rec-erro">Erro registrado: “${c(trecho)}”</p><div class="v598-rec-alvo">${alvo}${comum ? `<small class="v598-rec-por">Em comum: ${c(comum)}</small>` : ""}</div>${botao}</section>`;
+      } catch {
+        return "";
+      }
+    }
+    document.addEventListener("click", (ev) => {
+      const bt = ev.target.closest?.("[data-v598-rec-aula]");
+      if (!bt) return;
+      const cena = bt.dataset.v598RecCena;
+      tenta598(() => window.AULAS.abre(bt.dataset.v598RecAula, cena == null ? void 0 : +cena));
+    });
     function It() {
       w = vistaEstudos();
       const t = Array.isArray(S?.books) ? S.books : [],
@@ -2468,7 +2593,7 @@ try {
       /* Hoje (v596): meta semanal (núcleo), modo foco, continuar último estudo e sugestões. */
       const hoje596 =
         w === "est"
-          ? `<section class="v596-hoje" aria-label="Atalhos de hoje">
+          ? `<section class="v596-hoje" aria-label="Atalhos de hoje">${recomenda598()}
         <button type="button" class="v596-foco" data-dt397-view="foco">${a("eye", 18)}<span><b>Modo foco</b><small>Cronômetro com matéria e registro automático</small></span>${a("right", 15)}</button>
         <section class="dt397-panel v596-continuar">
           <div class="dt397-panel-head"><h2>${a("clock", 20)} Continuar último estudo</h2><button type="button" data-dt397-view="${p ? "aul" : "liv"}">Ver tudo ${a("right", 15)}</button></div>

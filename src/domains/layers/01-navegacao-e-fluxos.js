@@ -10451,7 +10451,7 @@ ${W.text}
           W
         );
       }
-      async function oe(t) {
+      async function oe(t, cena598) {
         g();
         const p = B();
         if (e.on) {
@@ -10479,7 +10479,10 @@ ${W.text}
           (e.aiBusy = 0),
           (e.nAudio = {}));
         const A = f(x);
-        ((e.i = A.fim ? 0 : Math.min(A.cena || 0, e.a.r.cenas.length - 1)),
+        /* v598: a recomendação do pregão pode abrir a aula direto na cena indicada. */
+        ((e.i = Number.isInteger(cena598)
+          ? Math.max(0, Math.min(cena598, e.a.r.cenas.length - 1))
+          : A.fim ? 0 : Math.min(A.cena || 0, e.a.r.cenas.length - 1)),
           (e.j = 0),
           (e.play = 0),
           E(G, "local") === "piper" && P(G, "local"),
@@ -13878,6 +13881,8 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
         marcarConcluida: (id, sim = !0) => salva597(id, { fim: sim ? 1 : 0 }),
         notas: (id) => f((F.lista || []).find((a) => a.id === id) || { id }).notas || "",
         salvarNotas: (id, txt) => salva597(id, { notas: String(txt || "").slice(0, 8e3) }),
+        /* v598: roteiro já baixado neste aparelho (para a recomendação por erro do pregão). */
+        roteiro: (id) => (E(l + id, null) || {}).r || null,
       };
     })(),
     (function () {
