@@ -10037,12 +10037,15 @@ Energia;30">${j(
       function n(t) {
         const p = e.a;
         if (!p || p._owner !== B()) return;
-        const x = {
-          cena: e.i,
-          total: p.r.cenas.length,
-          fim: t ? 1 : (E(r + p.id, {}) || {}).fim || 0,
-          em: new Date().toISOString(),
-        };
+        const ant597 = (E(r + p.id, null) || p.progresso || {}),
+          x = {
+            cena: e.i,
+            total: p.r.cenas.length,
+            fim: t ? 1 : ant597.fim || 0,
+            em: new Date().toISOString(),
+          };
+        /* v597: anotações da aula ficam junto do progresso (coluna jsonb aulas.progresso, com RLS). */
+        ant597.notas && (x.notas = ant597.notas);
         (P(r + p.id, x),
           !p.local &&
             H() &&
@@ -10057,6 +10060,20 @@ Energia;30">${j(
                 body: JSON.stringify({ progresso: x, atualizado_em: x.em }),
               }).catch(() => {});
             }, 1500))));
+      }
+      /* v597: grava progresso de uma aula (concluída/anotações) no aparelho e no Supabase (aulas.progresso). */
+      function salva597(id, patch) {
+        const aula = (F.lista || []).find((a) => a.id === id) || { id, progresso: {} },
+          x = { ...(f(aula) || {}), ...patch, em: new Date().toISOString() };
+        (P(r + id, x), (aula.progresso = x));
+        !aula.local &&
+          H() &&
+          rq("/rest/v1/aulas?id=eq." + id, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+            body: JSON.stringify({ progresso: x }),
+          }).catch(() => {});
+        return x;
       }
       const f = (t) => {
           const p = E(r + t.id, null),
@@ -10286,6 +10303,14 @@ ${W.text}
               '<div class="card"><b>Nenhuma aula ainda</b><div class="sm mut">Toque em “Nova aula”, envie o PDF do livro e escolha os capítulos.</div></div>'));
         for (const [A, W] of Object.entries(x)) {
           t += `<div class="card au-livro"><div class="au-lt">${i(typeof tituloLivro == "function" ? tituloLivro(A) : A)}</div>`;
+          {
+            /* v597: progresso do curso — X de Y aulas concluídas. */
+            const prontas = W.filter((Z) => Z.status !== "gerando"),
+              feitas = prontas.filter((Z) => f(Z).fim).length,
+              pct = prontas.length ? Math.round((feitas / prontas.length) * 100) : 0;
+            prontas.length &&
+              (t += `<div class="v597-curso"><div class="v597-curso-txt"><span>${feitas} de ${prontas.length} aulas concluídas</span><b>${pct}%</b></div><i class="v597-curso-bar" role="progressbar" aria-label="Aulas concluídas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><em style="width:${pct}%"></em></i></div>`);
+          }
           for (const Z of W) {
             if (Z.status === "gerando") {
               t += Oa(Z);
@@ -13725,7 +13750,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
 .auv-h{font-size:clamp(26px,7.5vw,46px);font-weight:900;line-height:1.08;letter-spacing:-.02em}.auv-sub{font-size:clamp(14px,3.8vw,19px);color:#9ca0a9;margin-top:12px;line-height:1.4}
 .auv-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}.auv-chips span{border:1px solid #373a3f;background:#1c1d20;color:#d4b57d;border-radius:999px;padding:4px 12px;font-size:13px}
 .auv-top ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.auv-top li{display:flex;gap:12px;align-items:flex-start;opacity:.16;transition:opacity .45s,transform .45s;transform:translateX(-4px);font-size:clamp(15px,4vw,20px);line-height:1.35}
+.auv-top li{display:flex;gap:12px;align-items:flex-start;opacity:.16;transition:opacity .45s,transform .45s;transform:translateX(-4px);font-size:clamp(17px,4.6vw,22px);line-height:1.35}
 .auv-top li.on{opacity:1;transform:none}.auv-top li small{display:block;color:#9ca0a9;font-size:.78em;font-weight:400;margin-top:4px}
 .auv-top .ic{flex:none;width:30px;height:30px;border-radius:6px;background:#1c1d20;display:grid;place-items:center;font-size:16px}.auv-top .ic.dot:after{content:"";width:8px;height:8px;border-radius:50%;background:#ac8439}
 .auv-tab table,.auv-ajt{width:100%;border-collapse:collapse;font-size:clamp(12px,3.4vw,16px)}
@@ -13819,6 +13844,11 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
         getLista: () => (Array.isArray(F.lista) ? F.lista.slice() : []),
         getStatus: () => ({ busy: !!F.busy, error: F.err, lastUpdated: F.ts }),
         progresso: (t) => f(t),
+        /* v597: sala de aula — concluir e anotar (mesma coluna de progresso, sem mudar a engine). */
+        concluida: (id) => !!f((F.lista || []).find((a) => a.id === id) || { id }).fim,
+        marcarConcluida: (id, sim = !0) => salva597(id, { fim: sim ? 1 : 0 }),
+        notas: (id) => f((F.lista || []).find((a) => a.id === id) || { id }).notas || "",
+        salvarNotas: (id, txt) => salva597(id, { notas: String(txt || "").slice(0, 8e3) }),
       };
     })(),
     (function () {
@@ -16122,7 +16152,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
       ((s.textContent = `
 #aup{display:flex;flex-direction:column;overflow-y:auto;background:#070708;gap:0;padding-bottom:env(safe-area-inset-bottom,0px)}
 #aup .aup-top{flex:none;padding:8px 12px;gap:8px;min-height:52px}#aup .aup-x,#aup .aup-ix{width:40px;height:40px;flex:none}#aup .aup-tt{min-width:0}#aup .aup-tt b{font-size:14px}#aup .aup-tt span{font-size:11px}
-#aup .aup-stage{flex:1 0 auto;min-height:180px;align-items:flex-start;cursor:pointer;padding:16px;box-sizing:border-box}#aup .aup-stage:before,#aup .aup-stage:after{display:none}#aup .aup-vis{max-height:none;overflow:visible;animation:none}#aup .au-lesson-visual{width:100%;box-sizing:border-box;max-width:900px;margin:auto}#aup .auv-h2{font-size:20px;margin:0 0 16px}#aup .auv-h{font-size:24px}#aup .auv-top li{font-size:16px;line-height:1.5;transform:none;margin-bottom:8px}#aup .auv-top li:not(.on){visibility:hidden}#aup .auv-top li .ic{width:24px;height:24px}#aup .auv-top li small{font-size:13px}
+#aup .aup-stage{flex:1 0 auto;min-height:180px;align-items:flex-start;cursor:pointer;padding:16px;box-sizing:border-box}#aup .aup-stage:before,#aup .aup-stage:after{display:none}#aup .aup-vis{max-height:none;overflow:visible;animation:none}#aup .au-lesson-visual{width:100%;box-sizing:border-box;max-width:900px;margin:auto}#aup .auv-h2{font-size:20px;margin:0 0 16px}#aup .auv-h{font-size:24px}#aup .auv-top li{font-size:18px;line-height:1.45;transform:none;margin-bottom:8px}#aup .auv-top li:not(.on){visibility:hidden}#aup .auv-top li .ic{width:24px;height:24px}#aup .auv-top li small{font-size:14.5px}
 #aup .aup-cap{flex:none;min-height:0;font-size:14px;line-height:1.5;text-align:left;padding:8px 16px;max-height:6.5em;overflow:auto;color:#e9e7e4}#aup .aup-prog{flex:none;padding:8px 16px}
 #aup .aup-ctl{flex:none;display:flex;flex-wrap:nowrap;gap:12px;justify-content:center;align-items:center;padding:8px 12px 12px}#aup .aup-ctl>button{width:44px;height:40px;min-width:44px;min-height:40px;box-sizing:border-box}#aup .aup-ctl .aup-pp{width:54px;height:54px}#aup .aup-ctl .aup-options-toggle{width:auto;aspect-ratio:auto;border-radius:8px;padding:0 12px;font-size:13px}
 #aup .aup-options[hidden]{display:none!important}#aup .aup-options{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;background:#1a1b1d;border-top:1px solid #303237;flex:none;align-items:center}#aup .aup-options button,#aup .aup-options select{width:auto!important;min-height:40px!important;max-width:100%;aspect-ratio:auto;border-radius:8px!important;padding:8px 12px!important;font-size:13px!important;line-height:1.3;background:#232428;color:#f5f4f3;border:1px solid #3e4147;box-sizing:border-box}#aup .aup-options #aupvoz{max-width:100%;flex:1;min-width:180px}#aup .aup-idx{z-index:100}#aup .au-chapters,#aup .au-cine,#aup .au-lower,#aup .au-block-card{display:none!important}

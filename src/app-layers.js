@@ -10037,12 +10037,15 @@ Energia;30">${j(
       function n(t) {
         const p = e.a;
         if (!p || p._owner !== B()) return;
-        const x = {
-          cena: e.i,
-          total: p.r.cenas.length,
-          fim: t ? 1 : (E(r + p.id, {}) || {}).fim || 0,
-          em: new Date().toISOString(),
-        };
+        const ant597 = (E(r + p.id, null) || p.progresso || {}),
+          x = {
+            cena: e.i,
+            total: p.r.cenas.length,
+            fim: t ? 1 : ant597.fim || 0,
+            em: new Date().toISOString(),
+          };
+        /* v597: anotações da aula ficam junto do progresso (coluna jsonb aulas.progresso, com RLS). */
+        ant597.notas && (x.notas = ant597.notas);
         (P(r + p.id, x),
           !p.local &&
             H() &&
@@ -10057,6 +10060,20 @@ Energia;30">${j(
                 body: JSON.stringify({ progresso: x, atualizado_em: x.em }),
               }).catch(() => {});
             }, 1500))));
+      }
+      /* v597: grava progresso de uma aula (concluída/anotações) no aparelho e no Supabase (aulas.progresso). */
+      function salva597(id, patch) {
+        const aula = (F.lista || []).find((a) => a.id === id) || { id, progresso: {} },
+          x = { ...(f(aula) || {}), ...patch, em: new Date().toISOString() };
+        (P(r + id, x), (aula.progresso = x));
+        !aula.local &&
+          H() &&
+          rq("/rest/v1/aulas?id=eq." + id, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+            body: JSON.stringify({ progresso: x }),
+          }).catch(() => {});
+        return x;
       }
       const f = (t) => {
           const p = E(r + t.id, null),
@@ -10286,6 +10303,14 @@ ${W.text}
               '<div class="card"><b>Nenhuma aula ainda</b><div class="sm mut">Toque em “Nova aula”, envie o PDF do livro e escolha os capítulos.</div></div>'));
         for (const [A, W] of Object.entries(x)) {
           t += `<div class="card au-livro"><div class="au-lt">${i(typeof tituloLivro == "function" ? tituloLivro(A) : A)}</div>`;
+          {
+            /* v597: progresso do curso — X de Y aulas concluídas. */
+            const prontas = W.filter((Z) => Z.status !== "gerando"),
+              feitas = prontas.filter((Z) => f(Z).fim).length,
+              pct = prontas.length ? Math.round((feitas / prontas.length) * 100) : 0;
+            prontas.length &&
+              (t += `<div class="v597-curso"><div class="v597-curso-txt"><span>${feitas} de ${prontas.length} aulas concluídas</span><b>${pct}%</b></div><i class="v597-curso-bar" role="progressbar" aria-label="Aulas concluídas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><em style="width:${pct}%"></em></i></div>`);
+          }
           for (const Z of W) {
             if (Z.status === "gerando") {
               t += Oa(Z);
@@ -13725,7 +13750,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
 .auv-h{font-size:clamp(26px,7.5vw,46px);font-weight:900;line-height:1.08;letter-spacing:-.02em}.auv-sub{font-size:clamp(14px,3.8vw,19px);color:#9ca0a9;margin-top:12px;line-height:1.4}
 .auv-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}.auv-chips span{border:1px solid #373a3f;background:#1c1d20;color:#d4b57d;border-radius:999px;padding:4px 12px;font-size:13px}
 .auv-top ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.auv-top li{display:flex;gap:12px;align-items:flex-start;opacity:.16;transition:opacity .45s,transform .45s;transform:translateX(-4px);font-size:clamp(15px,4vw,20px);line-height:1.35}
+.auv-top li{display:flex;gap:12px;align-items:flex-start;opacity:.16;transition:opacity .45s,transform .45s;transform:translateX(-4px);font-size:clamp(17px,4.6vw,22px);line-height:1.35}
 .auv-top li.on{opacity:1;transform:none}.auv-top li small{display:block;color:#9ca0a9;font-size:.78em;font-weight:400;margin-top:4px}
 .auv-top .ic{flex:none;width:30px;height:30px;border-radius:6px;background:#1c1d20;display:grid;place-items:center;font-size:16px}.auv-top .ic.dot:after{content:"";width:8px;height:8px;border-radius:50%;background:#ac8439}
 .auv-tab table,.auv-ajt{width:100%;border-collapse:collapse;font-size:clamp(12px,3.4vw,16px)}
@@ -13819,6 +13844,11 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
         getLista: () => (Array.isArray(F.lista) ? F.lista.slice() : []),
         getStatus: () => ({ busy: !!F.busy, error: F.err, lastUpdated: F.ts }),
         progresso: (t) => f(t),
+        /* v597: sala de aula — concluir e anotar (mesma coluna de progresso, sem mudar a engine). */
+        concluida: (id) => !!f((F.lista || []).find((a) => a.id === id) || { id }).fim,
+        marcarConcluida: (id, sim = !0) => salva597(id, { fim: sim ? 1 : 0 }),
+        notas: (id) => f((F.lista || []).find((a) => a.id === id) || { id }).notas || "",
+        salvarNotas: (id, txt) => salva597(id, { notas: String(txt || "").slice(0, 8e3) }),
       };
     })(),
     (function () {
@@ -16122,7 +16152,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
       ((s.textContent = `
 #aup{display:flex;flex-direction:column;overflow-y:auto;background:#070708;gap:0;padding-bottom:env(safe-area-inset-bottom,0px)}
 #aup .aup-top{flex:none;padding:8px 12px;gap:8px;min-height:52px}#aup .aup-x,#aup .aup-ix{width:40px;height:40px;flex:none}#aup .aup-tt{min-width:0}#aup .aup-tt b{font-size:14px}#aup .aup-tt span{font-size:11px}
-#aup .aup-stage{flex:1 0 auto;min-height:180px;align-items:flex-start;cursor:pointer;padding:16px;box-sizing:border-box}#aup .aup-stage:before,#aup .aup-stage:after{display:none}#aup .aup-vis{max-height:none;overflow:visible;animation:none}#aup .au-lesson-visual{width:100%;box-sizing:border-box;max-width:900px;margin:auto}#aup .auv-h2{font-size:20px;margin:0 0 16px}#aup .auv-h{font-size:24px}#aup .auv-top li{font-size:16px;line-height:1.5;transform:none;margin-bottom:8px}#aup .auv-top li:not(.on){visibility:hidden}#aup .auv-top li .ic{width:24px;height:24px}#aup .auv-top li small{font-size:13px}
+#aup .aup-stage{flex:1 0 auto;min-height:180px;align-items:flex-start;cursor:pointer;padding:16px;box-sizing:border-box}#aup .aup-stage:before,#aup .aup-stage:after{display:none}#aup .aup-vis{max-height:none;overflow:visible;animation:none}#aup .au-lesson-visual{width:100%;box-sizing:border-box;max-width:900px;margin:auto}#aup .auv-h2{font-size:20px;margin:0 0 16px}#aup .auv-h{font-size:24px}#aup .auv-top li{font-size:18px;line-height:1.45;transform:none;margin-bottom:8px}#aup .auv-top li:not(.on){visibility:hidden}#aup .auv-top li .ic{width:24px;height:24px}#aup .auv-top li small{font-size:14.5px}
 #aup .aup-cap{flex:none;min-height:0;font-size:14px;line-height:1.5;text-align:left;padding:8px 16px;max-height:6.5em;overflow:auto;color:#e9e7e4}#aup .aup-prog{flex:none;padding:8px 16px}
 #aup .aup-ctl{flex:none;display:flex;flex-wrap:nowrap;gap:12px;justify-content:center;align-items:center;padding:8px 12px 12px}#aup .aup-ctl>button{width:44px;height:40px;min-width:44px;min-height:40px;box-sizing:border-box}#aup .aup-ctl .aup-pp{width:54px;height:54px}#aup .aup-ctl .aup-options-toggle{width:auto;aspect-ratio:auto;border-radius:8px;padding:0 12px;font-size:13px}
 #aup .aup-options[hidden]{display:none!important}#aup .aup-options{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;background:#1a1b1d;border-top:1px solid #303237;flex:none;align-items:center}#aup .aup-options button,#aup .aup-options select{width:auto!important;min-height:40px!important;max-width:100%;aspect-ratio:auto;border-radius:8px!important;padding:8px 12px!important;font-size:13px!important;line-height:1.3;background:#232428;color:#f5f4f3;border:1px solid #3e4147;box-sizing:border-box}#aup .aup-options #aupvoz{max-width:100%;flex:1;min-width:180px}#aup .aup-idx{z-index:100}#aup .au-chapters,#aup .au-cine,#aup .au-lower,#aup .au-block-card{display:none!important}
@@ -23522,13 +23552,14 @@ try {
       GRUPOS596 = {
         est: ["est", "foco", "reg", "ciclo", "edital", "conq"],
         aul: ["aul", "playlists"],
-        liv: ["liv", "ing", "cnpi", "fac", "pl", "pr", "resumos"],
-        desemp: ["desemp", "sim", "treino"],
+        liv: ["liv", "cnpi", "fac", "pl", "pr", "resumos"],
+        desemp: ["desemp", "sim", "treino", "ing"],
       },
       SUB596 = {
         est: [["est", "Hoje"], ["foco", "Modo foco"], ["reg", "Registrar estudo"], ["ciclo", "Ciclo"]],
         liv: [["liv", "Livros"], ["pl", "Planos de leitura"], ["pr", "Prompts"]],
-        desemp: [["desemp", "Progresso"], ["sim", "Simulado CNPI-T"], ["treino", "Treino"]],
+        /* v597: Inglês (trilha estilo Duolingo) separado do treino técnico de mercado. */
+        desemp: [["desemp", "Progresso"], ["sim", "Simulado CNPI-T"], ["treino", "Treino de mercado"], ["ing", "Inglês"]],
       };
     function grupo596(v) {
       return Object.keys(GRUPOS596).find((g) => GRUPOS596[g].includes(v)) || "est";
@@ -23702,12 +23733,12 @@ try {
         </section>` : ""}
       </section>`
           : "";
-      return `<div class="dt393-page dt397-studies dt399-studies dt-est-interno" aria-label="Central de Estudos">
+      return `<div class="dt393-page dt397-studies dt399-studies dt-est-interno" data-vista="${c(w)}" aria-label="Central de Estudos">
       <div class="dt401-category-shell v596-shell">
         <nav class="dt397-category" aria-label="Seções de Estudos">${wt()}</nav>
       </div>
       ${sub596()}
-      <section class="dt397-native-mount" aria-label="Ferramentas de estudo"><header><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "ing", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["ing", "Inglês"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}${hoje596}</section>
+      <section class="dt397-native-mount" aria-label="Ferramentas de estudo"><header><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}${hoje596}</section>
     </div>`;
     }
     function Ct() {
@@ -23803,6 +23834,13 @@ try {
                 (n.appendChild(o), (n.hidden = !1));
                 const filtros = n.querySelector(".dt397-filtros");
                 filtros && o.prepend(filtros);
+                /* v597: cada sub-aba mostra só o próprio conteúdo (sem repetir atalhos de outras abas). */
+                w === "sim" && o.querySelectorAll(".estchips").forEach((x) => x.remove());
+                w === "ing" && o.querySelectorAll(".e2atalho").forEach((x) => x.remove());
+                requestAnimationFrame(() => {
+                  const on = l.querySelector(".v596-sub .on");
+                  on && on.parentElement.scrollWidth > on.parentElement.clientWidth && (on.parentElement.scrollLeft = Math.max(0, on.offsetLeft - 12));
+                });
               } else (o.remove(), n.remove());
               i = !0;
             }
@@ -34648,10 +34686,10 @@ try {
                 : e.after(n)),
               (n.dataset.id = r),
               (n.dataset.fs = o.join(",")));
-            const i = "🎬 Vídeo";
+            const i = "▶ Iniciar aula";
             n.textContent !== i &&
               ((n.textContent = i),
-              n.setAttribute("aria-label", "Assistir o vídeo MP4 desta aula"));
+              n.setAttribute("aria-label", "Iniciar o vídeo desta aula"));
           }));
       }
     }
@@ -34661,6 +34699,106 @@ try {
         f(() => l.AULAS.getLista().find((e) => e.id === t), null);
       return a ? `Aula ${a.numero} · ${a.titulo}` : "Aula em vídeo";
     }
+    /* v597 — Sala de aula: controles próprios abaixo do vídeo (a barra de tempo nunca cobre a legenda gravada
+       no vídeo), velocidade, concluir aula e anotações (salvas em aulas.progresso no Supabase). */
+    const VEL597 = [1, 1.25, 1.5, 2],
+      mmss597 = (x) => {
+        x = Math.max(0, Math.floor(+x || 0));
+        const hh = Math.floor(x / 3600),
+          mm = Math.floor((x % 3600) / 60),
+          ss = String(x % 60).padStart(2, "0");
+        return hh ? hh + ":" + String(mm).padStart(2, "0") + ":" + ss : mm + ":" + ss;
+      },
+      vel597 = () => {
+        const v = +f(() => localStorage.getItem("v597-vel"), 1);
+        return VEL597.includes(v) ? v : 1;
+      };
+    function estudo597(t) {
+      const au = l.AULAS || {},
+        feita = f(() => au.concluida(t), !1),
+        notas = f(() => au.notas(t), ""),
+        v = vel597();
+      return `<div class="v597-bar" data-v597-bar>
+    <button type="button" class="v597-pp" data-v597-pp aria-label="Reproduzir">▶</button>
+    <input type="range" class="v597-seek" data-v597-seek min="0" max="1000" value="0" step="1" aria-label="Posição do vídeo">
+    <span class="v597-tempo" data-v597-tempo>0:00 / 0:00</span>
+    <button type="button" class="v597-fs" data-v597-fs aria-label="Tela cheia">⛶</button></div>
+  <div class="v597-estudo">
+    <div class="v597-vel" role="group" aria-label="Velocidade">${VEL597.map((x) => `<button type="button" data-v597-vel="${x}" class="${x === v ? "on" : ""}" aria-pressed="${x === v}">${String(x).replace(".", ",")}x</button>`).join("")}</div>
+    <button type="button" class="v597-feita${feita ? " on" : ""}" data-v597-feita aria-pressed="${feita}">${feita ? "Aula concluída ✓" : "Marcar aula como concluída ✓"}</button>
+    <details class="v597-notas"${notas ? " open" : ""}><summary>Anotações desta aula</summary><textarea data-v597-notas rows="4" maxlength="8000" placeholder="Insights, dúvidas e o que aplicar no pregão">${p(notas)}</textarea><small data-v597-salvo aria-live="polite"></small></details>
+  </div>`;
+    }
+    function liga597(ov, vid) {
+      if (!ov || !vid) return;
+      const pp = ov.querySelector("[data-v597-pp]"),
+        sk = ov.querySelector("[data-v597-seek]"),
+        tm = ov.querySelector("[data-v597-tempo]"),
+        pinta = () => {
+          const dur = vid.duration || 0;
+          (tm && (tm.textContent = mmss597(vid.currentTime) + " / " + mmss597(dur)),
+            sk && !sk.dataset.arrasta && (sk.value = dur ? Math.round((vid.currentTime / dur) * 1e3) : 0),
+            pp && ((pp.textContent = vid.paused ? "▶" : "❚❚"), pp.setAttribute("aria-label", vid.paused ? "Reproduzir" : "Pausar")));
+        };
+      vid.playbackRate = vel597();
+      ["timeupdate", "loadedmetadata", "play", "pause", "ended"].forEach((ev) => vid.addEventListener(ev, pinta));
+      vid.addEventListener("loadedmetadata", () => (vid.playbackRate = vel597()));
+      vid.addEventListener("click", () => (vid.paused ? vid.play() : vid.pause()));
+      sk &&
+        (sk.addEventListener("input", () => {
+          sk.dataset.arrasta = "1";
+          const dur = vid.duration || 0;
+          (dur && (vid.currentTime = (sk.value / 1e3) * dur), tm && (tm.textContent = mmss597(vid.currentTime) + " / " + mmss597(dur)));
+        }),
+        sk.addEventListener("change", () => delete sk.dataset.arrasta));
+      pinta();
+    }
+    d.addEventListener("click", (ev) => {
+      const ov = d.getElementById("v434-ov");
+      if (!ov || ov.hidden || !ev.target.closest) return;
+      const vid = ov.querySelector("video"),
+        id = ov.dataset.id;
+      if (ev.target.closest("[data-v597-pp]")) return vid && (vid.paused ? vid.play() : vid.pause());
+      if (ev.target.closest("[data-v597-fs]")) {
+        if (!vid) return;
+        try {
+          vid.webkitEnterFullscreen ? vid.webkitEnterFullscreen() : vid.requestFullscreen?.();
+        } catch {}
+        return;
+      }
+      const vb = ev.target.closest("[data-v597-vel]");
+      if (vb) {
+        const v = +vb.dataset.v597Vel;
+        (f(() => localStorage.setItem("v597-vel", String(v))), vid && (vid.playbackRate = v));
+        ov.querySelectorAll("[data-v597-vel]").forEach((b) => {
+          const on = b === vb;
+          (b.classList.toggle("on", on), b.setAttribute("aria-pressed", String(on)));
+        });
+        return;
+      }
+      const fb = ev.target.closest("[data-v597-feita]");
+      if (fb && id) {
+        const sim = fb.getAttribute("aria-pressed") !== "true";
+        f(() => l.AULAS.marcarConcluida(id, sim));
+        (fb.classList.toggle("on", sim),
+          fb.setAttribute("aria-pressed", String(sim)),
+          (fb.textContent = sim ? "Aula concluída ✓" : "Marcar aula como concluída ✓"));
+        f(() => typeof tab < "u" && tab === "estudos" && render());
+      }
+    });
+    let notas597 = 0;
+    d.addEventListener("input", (ev) => {
+      const ta = ev.target.closest?.("#v434-ov [data-v597-notas]");
+      if (!ta) return;
+      const ov = d.getElementById("v434-ov"),
+        id = ov?.dataset.id,
+        aviso = ov?.querySelector("[data-v597-salvo]");
+      (clearTimeout(notas597),
+        aviso && (aviso.textContent = "Salvando…"),
+        (notas597 = setTimeout(() => {
+          (f(() => l.AULAS.salvarNotas(id, ta.value)), aviso && (aviso.textContent = "Salvo"));
+        }, 800)));
+    });
     async function h(t, a, e) {
       e = e || a[0];
       let r = d.getElementById("v434-ov");
@@ -34673,6 +34811,7 @@ try {
         (r.innerHTML = `<div class="v434-box"><div class="v434-top"><b>${p(v(t))}</b><button type="button" class="v434-x" data-v434x aria-label="Fechar">✕</button></div>
   ${a.length > 1 ? `<div class="v434-fmts">${a.map((o) => `<button type="button" data-v434f="${o}" class="${o === e ? "on" : ""}">${A[o]}</button>`).join("")}</div>` : ""}
   <div class="v434-play"><div class="v434-load">Carregando o vídeo…</div></div>
+  ${estudo597(t)}
   <div class="v434-acts"><button type="button" class="v434-pri" data-v434share>Compartilhar</button><a class="v434-dl" data-v434dl href="#" download>Baixar</a></div></div>`),
         (r.hidden = !1),
         (r.dataset.id = t),
@@ -34682,7 +34821,8 @@ try {
         const o = await T(t, e);
         r.dataset.u = o;
         const n = r.querySelector(".v434-play");
-        ((n.innerHTML = `<video src="${p(o)}" controls playsinline preload="metadata"></video>`),
+        ((n.innerHTML = `<video src="${p(o)}" playsinline preload="metadata"></video>`),
+          liga597(r, n.querySelector("video")),
           n.querySelector("video").addEventListener(
             "error",
             () => {
@@ -34733,7 +34873,8 @@ try {
         if (t.hidden || t.dataset.u !== a) return;
         const o = URL.createObjectURL(r);
         ((t.dataset.blob = o),
-          (e.innerHTML = `<video src="${o}" controls playsinline autoplay></video>`));
+          (e.innerHTML = `<video src="${o}" playsinline autoplay></video>`),
+          liga597(t, e.querySelector("video")));
       } catch (r) {
         e.innerHTML = `<div class="v434-load">Não consegui abrir o vídeo: ${p(r.message || r)}. Use “Baixar”.</div>`;
       }
@@ -39156,6 +39297,12 @@ try {
     }
     function I() {
       if (b() !== "estudos" || typeof estMeta !== "function") return;
+      /* v597: a meta semanal aparece só em Hoje e em Progresso. */
+      const vista597 = u.querySelector(".dt397-studies")?.dataset.vista;
+      if (vista597 && !["est", "desemp"].includes(vista597)) {
+        u.getElementById("v514-meta")?.remove();
+        return;
+      }
       const meta = estMeta(),
         total = semEstudo().tot,
         percent = Math.min(100, (total / meta.min) * 100);

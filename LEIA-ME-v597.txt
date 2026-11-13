@@ -1,0 +1,8 @@
+DIÁRIO DE TRADER — v597 (Estudos: sala de aula)
+
+- Simulado CNPI-T sem meta semanal e sem Registrar/Edital/Conquistas (ficam em Hoje e Progresso).
+- Treino & Progresso: sub-aba Inglês (trilha estilo Duolingo) separada do Treino de mercado.
+- Aulas: botão "Iniciar aula" e barra "X de Y aulas concluídas" por trilha.
+- Player: controles próprios abaixo do vídeo (a barra de tempo não cobre a legenda), velocidade 1x/1,25x/1,5x/2x,
+  "Marcar aula como concluída" e "Anotações desta aula" — salvos em aulas.progresso (jsonb, com RLS); sem mudança de schema.
+- Slides narrados: tópicos com fonte maior no celular.
