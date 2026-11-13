@@ -155,10 +155,11 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
 
  /* ---------- Operações: Hoje | Desempenho ---------- */
  let modo=root.DiarioContexto?.get('ops.modo','dia')||'dia';
- root.DiarioOrganizacao={get modo(){return modo},historico:irHistorico,reset(){modo='dia';root.DiarioContexto?.set('ops.modo',modo)}};
+ let interno=false;
+ root.DiarioOrganizacao={get modo(){return modo},get interno(){return interno},historico:irHistorico,reset(){modo='dia';root.DiarioContexto?.set('ops.modo',modo)}};
  const solta=e=>{if(!e.isTrusted)return;const t=e.target.closest?.('[data-dt393-route],[data-dt414-go],[data-org-hist]');if(t&&!t.dataset.orgHist){modo='dia';root.DiarioContexto?.set('ops.modo',modo)}};
  for(const ev of ['pointerdown','click'])root.addEventListener(ev,solta,true);
- function irHistorico(){modo='hist';root.DiarioContexto?.set('ops.modo',modo);const b=$('#v4-bnav [data-dt393-route="dia"]')||$('[data-dt393-route="dia"]');b?.click();agenda()}
+ function irHistorico(){modo='hist';root.DiarioContexto?.set('ops.modo',modo);const b=$('#v4-bnav [data-dt393-route="dia"]')||$('[data-dt393-route="dia"]');interno=true;try{b?.click()}finally{interno=false}agenda()}
  function navOps(a,ativa){
   const velho=a.querySelector(':scope>.org-opsnav');if(velho&&velho.dataset.ativa===ativa)return;velho?.remove();
   const n=el('div','org-opsnav');n.setAttribute('role','tablist');n.dataset.ativa=ativa;
