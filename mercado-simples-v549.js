@@ -63,7 +63,7 @@
   }
 
   function cotacoes(m) {
-    const box = $('#cqbox, #cotbox', m); if (!box) return;
+    const box = $('#cqbox, #cotbox', m); if (!box || box.classList.contains('market-quotes')) return;
     // Categorias: 4 principais + Outros.
     const seg = $('.cqtabs', box);
     if (seg) {
@@ -107,7 +107,7 @@
 
   function run() {
     const m = mk(); if (!m) return;
-    try { abas(m); radar(m); cotacoes(m); } catch (e) { console.warn('v549 mercado', e); }
+    try { radar(m); cotacoes(m); } catch (e) { console.warn('v549 mercado', e); }
   }
   let q = false;
   const agenda = () => { if (!q) { q = true; requestAnimationFrame(() => { q = false; run(); }); } };

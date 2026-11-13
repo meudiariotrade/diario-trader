@@ -2190,9 +2190,7 @@ try {
         e = () =>
           `<div class="seg cqtabs" role="navigation" aria-label="Classes de ativos">${CQ_ABAS.map(([P, m]) => `<button type="button" data-cqa="${P}" class="${CQ.aba === P ? "on" : ""}"${CQ.aba === P ? ' aria-current="page"' : ""}>${P === "adr" ? "EWZ e ADRs" : s(m)}</button>`).join("")}</div>`;
       cotHtml = function () {
-        return CQ.aba === "adr"
-          ? `<div id="cqbox">${e()}<section id="adr" class="card">${adrHtml()}</section></div>`
-          : N.apply(this, arguments);
+        return N.apply(this, arguments);
       };
       const i = cqCarrega;
       ((cqCarrega = function (P, m) {

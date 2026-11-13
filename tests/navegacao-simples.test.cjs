@@ -38,11 +38,11 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  // Mercado começa nas cotações; Agenda continua sendo uma ação direta.
  await p.getByRole('button',{name:'Mercado',exact:true}).last().click();
  await expect(app.locator('.dt395-native-mercado')).toHaveAttribute('data-m403-sub','cq');
- await expect(app.locator('.simple-comparison')).toHaveCount(1);
- await expect(app.locator('.simple-comparison .m409-chart-card')).toBeHidden();
+ await expect(app.locator('.market-sources')).toHaveCount(1);
+ await expect(app.locator('.m408-workspace')).toHaveCount(0);
  // v570: o menu Mais fica só com Análises e Movimentos; a comparação sai do menu.
  // v579: a aba Análises abre direto; a comparação continua fora do menu.
- await app.locator('[data-mkt549="mais"]').click();
+ await app.locator('nav.m403-primary-tabs [data-navroute="mercado:lab"]').click();
  await expect(app.locator('[data-mkt549-ir="comparar"]')).toBeHidden();
  await expect.poll(()=>p.evaluate(()=>MKT.tab)).toBe('lab');
  await app.getByRole('button',{name:'Agenda',exact:true}).click();
