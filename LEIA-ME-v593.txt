@@ -1,0 +1,9 @@
+DIÁRIO DE TRADER — v593 (faxina, planilha e rotina)
+
+Tela única (CLAUDE.md, seção 6):
+- Início, Meu dia e Operações: blocos e grupos fora da aba ativa saem do DOM (antes ficavam escondidos com .v4-off). Trocar de aba remonta a tela.
+- Mantidos com motivo: a barra antiga do Terminal (.trbar), da qual dependem planejar, foco, radar, comandos (Ctrl+Espaço) e observações; e as trocas internas de aba, porque a rota única reinicia modos e subabas.
+Textos sem corte: categorias de Estudos com folga, título do livro aberto em Title Case, setup inteiro nas operações do dia (Desempenho).
+Planilha: coluna Duração na aba Operações; na aba Desempenho, resultado por tempo posicionado e por estado emocional do dia.
+Rotina: aviso de dia de turno no topo do Meu dia; resumo automático da semana no Início na sexta após 17:00.
+Testes: teste da trava (v554) espera os trades de demonstração.

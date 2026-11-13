@@ -28609,6 +28609,9 @@ try {
         se(e, r);
         return;
       }
+      /* Grupos já desmontados nesta mesma tela continuam com aba (a troca remonta a tela). */
+      ((e.dataset.v4grupos || "").split(",").filter(Boolean).forEach((g) => (l[g] = 1)),
+        (e.dataset.v4grupos = Object.keys(l).join(",")));
       const s = a.groups.filter(
         ([i]) => l[["pre", "dur", "pos"].includes(i) ? "fases" : i],
       );
@@ -28631,11 +28634,23 @@ try {
       if (((a = a || v.querySelector("#dt393-workspace .dt393-native")), !a))
         return;
       const n = ["pre", "dur", "pos"].includes(e) ? "fases" : e;
+      /* Tela única (CLAUDE.md): grupos fora da aba ativa saem do DOM; trocar de aba remonta a tela. */
+      if (r && Mt[t] !== e) {
+        ((Mt[t] = e), te());
+        if (["pre", "dur", "pos"].includes(e))
+          try {
+            DFASE = { d: ft(), f: e };
+          } catch {}
+        try {
+          render();
+          return;
+        } catch {}
+      }
       if (
         (a.setAttribute("data-v4act", n),
         [...a.children].forEach((l) => {
           const s = l.getAttribute("data-v4g");
-          !s || s === "*" || l.classList.toggle("v4-off", s !== n);
+          !s || s === "*" || s === n || l.remove();
         }),
         v
           .querySelectorAll(`[data-v4tool][data-v4route="${t}"]`)
@@ -28675,7 +28690,7 @@ try {
         let o = a ? s !== a : s !== "mais";
         (!a && s === "mais" && ae(l) && (o = !0),
           !o && !a && r++,
-          l.classList.toggle("v4-off", o));
+          o && l.remove());
       });
       const n = v.createElement("div");
       a
@@ -29251,7 +29266,14 @@ try {
           g.preOkEm || ((g.preOkEm = new Date().toISOString()), (g.u = Date.now()), f(() => save()));
         }),
         queueMicrotask(() => sinc589(t, { meta: l, stop: s })));
-      return `<div class="v4-page v4-day">${emo589}${y}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
+      /* v593: dia de turno (escala cadastrada) aparece no topo do Meu dia. */
+      const turno593 = f(() => {
+        const c = tcod(t);
+        return c && c !== "F" && turnoNv(t) === "r"
+          ? `<p class="v4-turno" role="status"><b>Dia de turno</b> <span>${b(TH[c] || "")}</span> · plano: não operar</p>`
+          : "";
+      }, "");
+      return `<div class="v4-page v4-day">${turno593}${emo589}${y}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
     }
     let At = "risk",
       bt = { k: "dt", d: 1 };
@@ -36852,6 +36874,14 @@ try {
         hora: t.slice(11, 16),
       };
     };
+    /* Duração do trade (entrada → saída) em texto curto: "12 min" ou "1h05". */
+    function duracaoTxt(t) {
+      const a = Date.parse(t && t.dt),
+        b = Date.parse(t && t.dtx);
+      if (!isFinite(a) || !isFinite(b) || b < a) return "";
+      const m = Math.round((b - a) / 6e4);
+      return m < 60 ? m + " min" : Math.floor(m / 60) + "h" + String(m % 60).padStart(2, "0");
+    }
     async function lt(e, t) {
       const n = e.find((s) => /ss:Name="Opera/.test(s)),
         i = e.some((s) => /ss:Name="Checklist"/.test(s)),
@@ -36862,6 +36892,7 @@ try {
           "Dia",
           "Hora entrada",
           "Hora saída",
+          "Duração",
           "Ativo",
           "Tipo",
           "Lado",
@@ -36883,7 +36914,7 @@ try {
           "Fotos",
         ],
         p = [
-          84, 40, 56, 56, 78, 82, 62, 220, 90, 44, 74, 74, 74, 74, 62, 82, 100,
+          84, 40, 56, 56, 62, 78, 82, 62, 220, 90, 44, 74, 74, 74, 74, 62, 82, 100,
           100, 90, 170, 110, 240, 96,
         ],
         c = [a.map((s) => ({ v: s, s: "h" }))],
@@ -36913,6 +36944,7 @@ try {
           u($.sem),
           u($.hora),
           u(s.dtx && O != null ? At(s.dtx).hora : ""),
+          u(duracaoTxt(s)),
           u(s.ativo || "", { s: "n" }),
           u(ut[s.tipo || "D"] || s.tipo || ""),
           u(
@@ -36970,23 +37002,24 @@ try {
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
-          { f: `SUBTOTAL(3,${s("E")})&" trades"`, s: "tot" },
+          { v: "", s: "tot" },
+          { f: `SUBTOTAL(3,${s("F")})&" trades"`, s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           {
-            f: `IFERROR(TEXT(COUNTIFS(${s("Q")},">0")/COUNT(${s("Q")}),"0%")&" de acerto","")`,
+            f: `IFERROR(TEXT(COUNTIFS(${s("R")},">0")/COUNT(${s("R")}),"0%")&" de acerto","")`,
             s: "tot",
           },
           { v: "", s: "tot" },
-          { f: `SUBTOTAL(9,${s("J")})`, s: "tot", fmt: D.int },
+          { f: `SUBTOTAL(9,${s("K")})`, s: "tot", fmt: D.int },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
-          { f: `SUBTOTAL(9,${s("P")})`, s: "tot", fmt: '"R$" #,##0.00' },
-          { f: `SUBTOTAL(9,${s("Q")})`, s: "tot", fmt: D.money },
-          { f: `SUBTOTAL(9,${s("R")})`, s: "tot", fmt: D.vez },
+          { f: `SUBTOTAL(9,${s("Q")})`, s: "tot", fmt: '"R$" #,##0.00' },
+          { f: `SUBTOTAL(9,${s("R")})`, s: "tot", fmt: D.money },
+          { f: `SUBTOTAL(9,${s("S")})`, s: "tot", fmt: D.vez },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
@@ -37040,7 +37073,7 @@ try {
         ]),
           (y[x] = 24),
           X.push(`A${x + 1}:C${x + 1}`),
-          (c[s.row][22].link = `'Fotos'!A${x + 1}`),
+          (c[s.row][23].link = `'Fotos'!A${x + 1}`),
           x++);
         const O = [
           `Setup: ${f.setup || "—"}`,
