@@ -115,7 +115,7 @@
     if (!ferr || ferr.parentElement.querySelector('[data-v563-import]')) return;
     var b = doc.createElement('button');
     b.type = 'button'; b.className = ferr.className; b.dataset.dt393Route = 'import'; b.dataset.v563Import = '1';
-    b.innerHTML = (g(function () { return root.icoSvg('layers'); }, '') || '') + 'Importar do Profit';
+    b.textContent = 'Importar'; b.setAttribute('aria-label', 'Importar do Profit');
     ferr.after(b);
   }
   function importar(app) {

@@ -2391,10 +2391,10 @@ try {
       let h = 0;
       for (const ch of String(titulo || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
       const [cor, faixa] = paleta[h % paleta.length];
-      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b>${c(titulo || "Livro")}</b><small>${c(autor || "Livro")}</small></span>`;
+      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b>${c(tituloLivro(titulo) || "Livro")}</b><small>${c(autor || "Livro")}</small></span>`;
     }
     function xt(t, e) {
-      return `<button type="button" class="dt397-lesson dt399-book-row" data-a="openbook" data-id="${c(t.id)}" aria-label="Abrir livro ${c(t.t || "Sem título")}"><span class="dt397-lesson-art dt397-lesson-art--capa">${capaLivro(t.t, t.a)}</span><span class="dt397-lesson-copy"><small class="dt397-type">LEITURA</small><strong>${c(t.t || "Livro sem título")}</strong><small>${c(t.a || "Autor não informado")}</small><span class="dt397-reading-status">${a("book", 13)} ${Array.isArray(t.notes) ? t.notes.length : 0} anotação(ões)</span></span>${a("right", 17)}</button>`;
+      return `<button type="button" class="dt397-lesson dt399-book-row" data-a="openbook" data-id="${c(t.id)}" aria-label="Abrir livro ${c(t.t || "Sem título")}"><span class="dt397-lesson-art dt397-lesson-art--capa">${capaLivro(t.t, t.a)}</span><span class="dt397-lesson-copy"><small class="dt397-type">LEITURA</small><strong>${c(tituloLivro(t.t) || "Livro sem título")}</strong><small>${c(t.a || "Autor não informado")}</small><span class="dt397-reading-status">${a("book", 13)} ${Array.isArray(t.notes) ? t.notes.length : 0} anotação(ões)</span></span>${a("right", 17)}</button>`;
     }
     r.addEventListener(
       "keydown",

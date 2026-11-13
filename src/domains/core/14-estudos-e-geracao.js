@@ -2334,7 +2334,7 @@ const fcDiaLe = (e, t) => {
         const a = fchPend();
         if (a) {
           const o = t.querySelector('section[data-hb="hero"]'),
-            s = `<div class="card fchcv" id="fchb"><div class="top"><b>🧾 Fechar o dia${a === "us" ? " (EUA)" : ""}</b><button class="btn" data-fchgo="${a}">Começar</button></div><div class="sm mut">4 passos, 2 minutos: trades, regras, nota de disciplina e uma frase.</div></div>`;
+            s = `<div class="card fchcv" id="fchb"><div class="top"><b>🧾 Fechar o dia${a === "us" ? " (EUA)" : ""}</b><button class="btn${new Date().getHours() >= 17 ? " fch-ambar" : ""}" data-fchgo="${a}">Começar</button></div><div class="sm mut">4 passos, 2 minutos: trades, regras, nota de disciplina e uma frase.</div></div>`;
           o
             ? o.insertAdjacentHTML("afterend", s)
             : t.insertAdjacentHTML("afterbegin", s);
