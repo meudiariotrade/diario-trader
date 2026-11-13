@@ -1,0 +1,6 @@
+DIÁRIO DE TRADER — v596 (Estudos)
+
+- 4 sub-abas: Hoje, Aulas, Biblioteca, Treino & Progresso; sem "+ Mais".
+- Hoje: meta semanal, Modo foco, Continuar último estudo, sugestões.
+- Aulas em card vertical (título inteiro; Vídeo, duração e favorito embaixo).
+- Capas 72px/10px; Title Case em livros e trilhas; heatmap com borda sutil e dia atual alinhado.

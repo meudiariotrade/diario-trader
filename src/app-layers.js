@@ -10285,7 +10285,7 @@ ${W.text}
             (t +=
               '<div class="card"><b>Nenhuma aula ainda</b><div class="sm mut">Toque em “Nova aula”, envie o PDF do livro e escolha os capítulos.</div></div>'));
         for (const [A, W] of Object.entries(x)) {
-          t += `<div class="card au-livro"><div class="au-lt">${i(A)}</div>`;
+          t += `<div class="card au-livro"><div class="au-lt">${i(typeof tituloLivro == "function" ? tituloLivro(A) : A)}</div>`;
           for (const Z of W) {
             if (Z.status === "gerando") {
               t += Oa(Z);
@@ -10294,7 +10294,9 @@ ${W.text}
             const ne = f(Z),
               re = ne.fim,
               ie = k(Z);
-            t += `<div class="au-study-row"><button class="au-item" data-auopen="${i(Z.id)}"><span class="au-n">${re ? "✓" : Z.numero}</span><span class="au-tx"><b>Aula ${Z.numero} · ${i(Z.titulo)}</b><span class="sm mut">${i(Z.capitulos ? "Capítulos " + Z.capitulos : "")}${Z.roteiro_min || Z.min ? " · ~" + (Z.roteiro_min || Z.min) + " min" : ""}${re ? " · concluída" : ie ? " · parou em " + ie + "%" : ""}</span>${ie && !re ? `<span class="au-pb"><i style="width:${ie}%"></i></span>` : ""}</span><span class="au-play">▶</span></button><button class="au-fav" type="button" data-austfav="${i(Z.id)}" aria-label="Favoritar ${i(Z.titulo)}" aria-pressed="${!!J().fav?.[Z.id]}">${J().fav?.[Z.id] ? "★" : "☆"}</button></div>`;
+            /* v596: card vertical — número + título na largura toda; Vídeo (MP4, quando houver), duração e favorito na linha de baixo. */
+            const min596 = Z.roteiro_min || Z.min;
+            t += `<div class="au-study-row v596-aula"><button class="au-item" data-auopen="${i(Z.id)}"><span class="au-n">${re ? "✓" : Z.numero}</span><span class="au-tx"><b>Aula ${Z.numero} · ${i(Z.titulo)}</b><span class="sm mut">${i(Z.capitulos ? "Capítulos " + Z.capitulos : "")}${re ? (Z.capitulos ? " · " : "") + "concluída" : ie ? (Z.capitulos ? " · " : "") + "parou em " + ie + "%" : ""}</span>${ie && !re ? `<span class="au-pb"><i style="width:${ie}%"></i></span>` : ""}</span></button><div class="v596-aula-acoes">${min596 ? `<span class="v596-min">~${i(min596)} min</span>` : ""}<button class="au-fav" type="button" data-austfav="${i(Z.id)}" aria-label="Favoritar ${i(Z.titulo)}" aria-pressed="${!!J().fav?.[Z.id]}">${J().fav?.[Z.id] ? "★" : "☆"}</button></div></div>`;
           }
           t += "</div>";
         }
@@ -23509,47 +23511,53 @@ try {
               "",
             )}<path d="M7 129Q30 119 49 111T93 107T130 92T170 77T211 70T247 41T293 35" fill="none" stroke="#cfaa65" stroke-width="2.2"/><path d="M6 133Q55 125 90 119T173 91T240 82T297 54" stroke="#ac8439" fill="none" stroke-width="1.8" opacity=".85"/></svg>`;
     }
+    /* v596 — Estudos em 4 sub-abas (sem menu "+ Mais"): cada ferramenta pertence a uma aba e aparece
+       na linha de atalhos da própria aba. A vista vem do estado do núcleo (ESV/EST.v): uma fonte só. */
     const yt = [
         ["est", "Hoje", "clock"],
         ["aul", "Aulas", "play"],
         ["liv", "Biblioteca", "book"],
-        ["sim", "Praticar", "target"],
-        ["desemp", "Progresso", "chart"],
+        ["desemp", "Treino & Progresso", "chart"],
       ],
-      kt = [
-        ["foco", "Modo foco", "eye"],
-        ["ciclo", "Ciclo", "calendar"],
-        ["reg", "Registrar estudo", "edit"],
-        ["pr", "Prompts", "spark"],
-        ["treino", "Treino", "target"],
-        ["pl", "Planos", "calendar"],
-      ];
+      GRUPOS596 = {
+        est: ["est", "foco", "reg", "ciclo", "edital", "conq"],
+        aul: ["aul", "playlists"],
+        liv: ["liv", "ing", "cnpi", "fac", "pl", "pr", "resumos"],
+        desemp: ["desemp", "sim", "treino"],
+      },
+      SUB596 = {
+        est: [["est", "Hoje"], ["foco", "Modo foco"], ["reg", "Registrar estudo"], ["ciclo", "Ciclo"]],
+        liv: [["liv", "Livros"], ["pl", "Planos de leitura"], ["pr", "Prompts"]],
+        desemp: [["desemp", "Progresso"], ["sim", "Simulado CNPI-T"], ["treino", "Treino"]],
+      };
+    function grupo596(v) {
+      return Object.keys(GRUPOS596).find((g) => GRUPOS596[g].includes(v)) || "est";
+    }
+    function vistaEstudos() {
+      try {
+        if (ESV === "est") {
+          const v = (typeof EST < "u" && EST.v) || "hoje";
+          return v === "hoje" ? "est" : v === "bib" ? "liv" : v;
+        }
+        return ESV || "est";
+      } catch {
+        return w || "est";
+      }
+    }
     function wt() {
-      const grupo = ["desemp"].includes(w)
-        ? "desemp"
-        : ["sim", "treino"].includes(w)
-          ? "sim"
-          : [
-                "est",
-                "ciclo",
-                "reg",
-                "edital",
-                "conq",
-                "foco",
-                "pl",
-              ].includes(w)
-            ? "est"
-            : w === "aul"
-              ? "aul"
-              : ["liv", "ing", "cnpi", "fac"].includes(w)
-                ? "liv"
-                : "";
+      const grupo = grupo596(w);
       return yt
         .map(
           ([id, label, icon]) =>
             `<button type="button" class="dt397-chip ${grupo === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${grupo === id}">${a(icon, 18)}<span>${c(label)}</span></button>`,
         )
         .join("");
+    }
+    function sub596() {
+      const lista = SUB596[grupo596(w)];
+      return lista
+        ? `<div class="v596-sub" role="navigation" aria-label="Atalhos da aba">${lista.map(([id, label]) => `<button type="button" class="${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}">${c(label)}</button>`).join("")}</div>`
+        : "";
     }
     function St() {
       try {
@@ -23604,35 +23612,18 @@ try {
         ),
         s = T(t),
         o = At(t);
-      return `<button type="button" class="dt397-lesson dt399-video-row" data-auopen="${c(t.id)}" aria-label="Abrir ${e}"><span class="dt397-lesson-art dt399-lesson-visual">${Dt(o)}<span class="dt399-play-mini">▶ ${t.min ? c(t.min) + "min" : "Aula"}</span></span><span class="dt397-lesson-copy"><small class="dt397-type">${o === "cert" ? "CNPI-T" : o === "english" ? "INGLÊS" : "ANÁLISE TÉCNICA"}</small><strong>${e}</strong><small>${c(t.livro || "Videoaula")} ${t.capitulos ? "· " + c(t.capitulos) : ""}</small>${Mt(s)}</span><span class="dt399-row-aside">${s === null ? a("right", 16) : s + "%"}</span></button>`;
+      return `<button type="button" class="dt397-lesson dt399-video-row" data-auopen="${c(t.id)}" aria-label="Abrir ${e}"><span class="dt397-lesson-art dt399-lesson-visual">${Dt(o)}<span class="dt399-play-mini">▶ ${t.min ? c(t.min) + "min" : "Aula"}</span></span><span class="dt397-lesson-copy"><small class="dt397-type">${o === "cert" ? "CNPI-T" : o === "english" ? "INGLÊS" : "ANÁLISE TÉCNICA"}</small><strong>${e}</strong><small>${c(tituloLivro(t.livro) || "Videoaula")} ${t.capitulos ? "· " + c(t.capitulos) : ""}</small>${Mt(s)}</span><span class="dt399-row-aside">${s === null ? a("right", 16) : s + "%"}</span></button>`;
     }
     function capaLivro(titulo, autor) {
       const paleta = [["#1B2230", "#C9A15A"], ["#1E2A24", "#4CC388"], ["#2A1D1F", "#E0735F"], ["#1C2433", "#6FA8DC"], ["#262033", "#A88BE0"], ["#2B2618", "#D9B44A"]];
       let h = 0;
       for (const ch of String(titulo || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
       const [cor, faixa] = paleta[h % paleta.length];
-      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b data-v502fs="11">${c(tituloLivro(titulo) || "Livro")}</b><small data-v502fs="9">${c(autor || "Livro")}</small></span>`;
+      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b data-v502fs="10">${c(tituloLivro(titulo) || "Livro")}</b><small data-v502fs="9">${c(autor || "Livro")}</small></span>`;
     }
     function xt(t, e) {
       return `<button type="button" class="dt397-lesson dt399-book-row" data-a="openbook" data-id="${c(t.id)}" aria-label="Abrir livro ${c(t.t || "Sem título")}"><span class="dt397-lesson-art dt397-lesson-art--capa">${capaLivro(t.t, t.a)}</span><span class="dt397-lesson-copy"><small class="dt397-type">LEITURA</small><strong>${c(tituloLivro(t.t) || "Livro sem título")}</strong><small>${c(t.a || "Autor não informado")}</small><span class="dt397-reading-status">${a("book", 13)} ${Array.isArray(t.notes) ? t.notes.length : 0} anotação(ões)</span></span>${a("right", 17)}</button>`;
     }
-    r.addEventListener(
-      "keydown",
-      (event) => {
-        if (event.key !== "Escape") return;
-        const menu = r.getElementById("dt401-more-list"),
-          button = r.querySelector("[data-dt401-more-toggle]");
-        if (menu && !menu.hidden) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          menu.hidden = true;
-          button?.setAttribute("aria-expanded", "false");
-          button?.classList.remove("on");
-          button?.focus();
-        }
-      },
-      true,
-    );
     r.addEventListener("input", (event) => {
       if (!event.target.matches("[data-est-book-search]")) return;
       const term = EstudosModelo.normalizar(event.target.value);
@@ -23646,6 +23637,7 @@ try {
       if (empty) empty.hidden = visible > 0;
     });
     function It() {
+      w = vistaEstudos();
       const t = Array.isArray(S?.books) ? S.books : [],
         e = St(),
         s = e.filter((h) =>
@@ -23677,9 +23669,9 @@ try {
           }),
         p = n.length > 0,
         u = p
-          ? n.slice(0, 3).map(Et).join("")
+          ? n.slice(0, 2).map(Et).join("")
           : t.length
-            ? t.slice(0, 3).map(xt).join("")
+            ? t.slice(0, 2).map(xt).join("")
             : `<div class="dt397-empty"><strong>Suas aulas e leituras aparecerão aqui</strong><span>Entre em Vídeos ou Livros para começar uma trilha de aprendizado.</span><button type="button" data-dt397-view="aul">Explorar videoaulas ${a("right", 15)}</button></div>`,
         g = o.length ? `${i} de ${o.length} aulas` : "— aulas",
         $ = l === null ? "—" : l + "%",
@@ -23690,52 +23682,32 @@ try {
         o.find((h) => T(h) !== 100) ||
         o[0];
       const titulo = destaque
-        ? destaque.livro || destaque.titulo || "Minha trilha de estudos"
+        ? tituloLivro(destaque.livro || destaque.titulo) || "Minha trilha de estudos"
         : "Seu próximo estudo";
       const acaoDestaque = destaque
         ? 'data-auopen="' + c(destaque.id) + '"'
         : 'data-dt397-view="liv"';
-      return `<div class="dt393-page dt397-studies dt399-studies${w ? " dt-est-interno" : ""}" aria-label="Central de Estudos">
-      <section class="dt397-hero">
-        <div class="dt397-eyebrow">${a("graduation", 18)} <strong>Trilha em destaque</strong></div>
-        <div class="dt397-feature">
-          <button type="button" class="dt397-feature-art" ${acaoDestaque} aria-label="${c(destaque ? "Abrir " + destaque.titulo : "Explorar biblioteca")}">${Dt(At(destaque || {}))}<span class="dt397-play">${a("play", 24)}</span><small>${o[0]?.min ? c(o[0].min) + "min" : "VIDEOAULAS"}</small></button>
-          <div class="dt397-feature-content"><h1>${c(titulo)}</h1><p>${destaque ? "Acompanhe sua trilha e continue de onde parou." : "Escolha uma leitura, pratique e acompanhe suas revisões."}</p>
-            <div class="dt399-hero-summary"><span>Progresso: <b>${$}</b></span><span>${g}</span></div>${m}
-            <button type="button" class="dt399-hero-cta" ${acaoDestaque}>${destaque ? (T(destaque) === 100 ? "Rever aula" : T(destaque) > 0 ? "Retomar aula" : "Começar aula") : "Abrir biblioteca"} ${a("right", 14)}</button>
-          </div>
-        </div>
-      </section>
-      <div class="dt401-category-shell">
-        <nav class="dt397-category" aria-label="Seções principais de Estudos">${wt()}</nav>
-        <div class="dt401-more">
-          <button type="button" class="dt401-more-toggle" data-dt401-more-toggle aria-controls="dt401-more-list" aria-expanded="false" aria-label="Abrir mais ferramentas de Estudos">${a("plus", 17)} <span>Mais</span> ${a("right", 13)}</button>
-          <div id="dt401-more-list" class="dt401-more-list" aria-label="Outras ferramentas de Estudos" hidden>
-            <div class="dt401-more-title">Outras ferramentas</div>
-            ${kt.map(([h, k, A]) => `<button type="button" data-dt397-view="${h}">${a(A, 17)}<span>${k}</span>${a("right", 14)}</button>`).join("")}
-          </div>
-        </div>
-      </div>
-      <div class="dt397-dashboard" ${w ? "hidden" : ""}>
-        <section class="dt397-panel dt397-continue">
-          <div class="dt397-panel-head"><h2>${a("clock", 20)} ${p ? "Continuar estudando" : "Seus livros"}</h2><button type="button" data-dt397-view="${p ? "aul" : "liv"}">Ver tudo ${a("right", 15)}</button></div>
+      /* Hoje (v596): meta semanal (núcleo), modo foco, continuar último estudo e sugestões. */
+      const hoje596 =
+        w === "est"
+          ? `<section class="v596-hoje" aria-label="Atalhos de hoje">
+        <button type="button" class="v596-foco" data-dt397-view="foco">${a("eye", 18)}<span><b>Modo foco</b><small>Cronômetro com matéria e registro automático</small></span>${a("right", 15)}</button>
+        <section class="dt397-panel v596-continuar">
+          <div class="dt397-panel-head"><h2>${a("clock", 20)} Continuar último estudo</h2><button type="button" data-dt397-view="${p ? "aul" : "liv"}">Ver tudo ${a("right", 15)}</button></div>
+          ${destaque ? `<button type="button" class="v596-destaque" ${acaoDestaque}><span><b>${c(titulo)}</b><small>Progresso ${$} · ${g}</small></span><span class="v596-cta">${T(destaque) === 100 ? "Rever" : T(destaque) > 0 ? "Retomar" : "Começar"} ${a("right", 14)}</span></button>${m}` : ""}
           <div class="dt397-lesson-list">${u}</div>
         </section>
-        <section class="dt397-panel dt397-library"><div class="dt397-panel-head"><h2>${a("book", 20)} Biblioteca</h2><button type="button" data-dt397-view="liv">Ver tudo ${a("right", 15)}</button></div>
-          <div class="dt397-library-grid">
-            <button type="button" data-dt397-view="aul">${a("play", 24)}<strong>Vídeo aula</strong><small>Aulas e trilhas de aprendizado</small>${a("right", 15)}</button>
-            <button type="button" data-dt397-view="liv">${a("book", 24)}<strong>Resumo de livro</strong><small>Seus livros, anotações e resumos</small>${a("right", 15)}</button>
-            <button type="button" data-dt397-view="pl">${a("check", 24)}<strong>Checklist de leitura</strong><small>Organize suas metas de leitura</small>${a("right", 15)}</button>
-            <button type="button" data-dt397-view="sim">${a("newspaper", 24)}<strong>Simulado</strong><small>Questões de CNPI-T e mercado</small>${a("right", 15)}</button>
-          </div>
-        </section>
-        <section class="dt397-panel dt397-suggestions"><div class="dt397-panel-head"><div><h2>${a("spark", 21)} Sugestões de estudos</h2><p>Próximas ações a partir das suas revisões, do ciclo e do desempenho.</p></div></div>
+        ${proximas.length ? `<section class="dt397-panel dt397-suggestions"><div class="dt397-panel-head"><div><h2>${a("spark", 21)} Sugestões de estudos</h2><p>Próximas ações a partir das suas revisões, do ciclo e do desempenho.</p></div></div>
           <div class="dt397-suggestion-list">${proximas.map((item) => `<button type="button" data-dt397-view="${c(item.view)}" ${item.mat ? 'data-dt397-materia="' + c(item.mat) + '"' : ""}>${a("right", 17)}<span><b>${c(item.label)}</b><small>${c(item.motivo)}</small></span></button>`).join("")}</div>
-        </section>
-        <section class="dt397-status"><div>${a("chart", 25)}<div><strong>Seu espaço de aprendizagem</strong><small>Vídeos, resumos, simulados e trilhas de estudos.</small></div></div></section>
-
+        </section>` : ""}
+      </section>`
+          : "";
+      return `<div class="dt393-page dt397-studies dt399-studies dt-est-interno" aria-label="Central de Estudos">
+      <div class="dt401-category-shell v596-shell">
+        <nav class="dt397-category" aria-label="Seções de Estudos">${wt()}</nav>
       </div>
-      <section class="dt397-native-mount" ${w ? "" : "hidden"} aria-label="Ferramentas de estudo"><header><button type="button" data-dt397-view="home">${a("right", 17)} Voltar para Estudos</button><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "ing", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["ing", "Inglês"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}</section>
+      ${sub596()}
+      <section class="dt397-native-mount" aria-label="Ferramentas de estudo"><header><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "ing", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["ing", "Inglês"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}${hoje596}</section>
     </div>`;
     }
     function Ct() {
@@ -23851,34 +23823,14 @@ try {
     if (
       (r.addEventListener("diario:aulas-carregadas", () => {
         tab === "estudos" &&
-          !w &&
+          w === "est" &&
           setTimeout(() => {
-            tab === "estudos" && !w && render();
+            tab === "estudos" && w === "est" && render();
           }, 0);
       }),
       r.addEventListener(
         "click",
         function (t) {
-          const e = t.target.closest?.("[data-dt401-more-toggle]");
-          if (e) {
-            (t.preventDefault(), t.stopImmediatePropagation());
-            const n = r.getElementById("dt401-more-list");
-            if (!n) return;
-            const p = n.hidden;
-            ((n.hidden = !p),
-              e.setAttribute("aria-expanded", String(p)),
-              e.classList.toggle("on", p));
-            return;
-          }
-          if (!t.target.closest?.(".dt401-more")) {
-            const n = r.getElementById("dt401-more-list"),
-              p = r.querySelector("[data-dt401-more-toggle]");
-            n &&
-              !n.hidden &&
-              ((n.hidden = !0),
-              p?.setAttribute("aria-expanded", "false"),
-              p?.classList.remove("on"));
-          }
           const estudoSub = t.target.closest?.(".estchips [data-estv]");
           if (estudoSub) {
             w = ["reg", "ciclo", "edital", "conq", "desemp"].includes(
@@ -23901,9 +23853,9 @@ try {
                   : n === "playlists"
                     ? "aul"
                     : n;
-            if (["est", "desemp", "ciclo", "reg"].includes(n)) {
+            if (["est", "desemp", "ciclo", "reg", "home"].includes(n)) {
               ESV = "est";
-              EST.v = n === "est" ? "hoje" : n;
+              EST.v = n === "est" || n === "home" ? "hoje" : n;
             } else if (n === "sim" || n === "resumos") ESV = "liv";
             else if (n === "playlists") ESV = "aul";
             else if (n !== "home") ESV = n;
@@ -23997,21 +23949,6 @@ try {
             p && (p.hidden = n > 0);
             return;
           }
-        },
-        !0,
-      ),
-      r.addEventListener(
-        "keydown",
-        function (t) {
-          if (t.key !== "Escape") return;
-          const e = r.getElementById("dt401-more-list");
-          if (!e || e.hidden) return;
-          e.hidden = !0;
-          const s = r.querySelector("[data-dt401-more-toggle]");
-          (s?.setAttribute("aria-expanded", "false"),
-            s?.classList.remove("on"),
-            s?.focus({ preventScroll: !0 }),
-            t.preventDefault());
         },
         !0,
       ),
@@ -34705,7 +34642,10 @@ try {
               ((n = d.createElement("button")),
               (n.type = "button"),
               (n.className = "v434-vid"),
-              e.after(n)),
+              /* v596: no card vertical o botão Vídeo vai para a linha de ações (com duração e favorito). */
+              a.querySelector(".v596-aula-acoes")
+                ? a.querySelector(".v596-aula-acoes").prepend(n)
+                : e.after(n)),
               (n.dataset.id = r),
               (n.dataset.fs = o.join(",")));
             const i = "🎬 Vídeo";

@@ -29622,7 +29622,8 @@ function rsNote(e) {
         rsLoad(!0);
     }));
 })();
-var ESV = "liv",
+/* v596: Estudos abre em Hoje (meta semanal, modo foco, continuar e sugestões). */
+var ESV = "est",
   RSNEXT = null;
 const RS_PAGS = [50, 100, 150, 200],
   RS_PPAG = 400;
