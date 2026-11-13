@@ -10451,7 +10451,7 @@ ${W.text}
           W
         );
       }
-      async function oe(t) {
+      async function oe(t, cena598) {
         g();
         const p = B();
         if (e.on) {
@@ -10479,7 +10479,10 @@ ${W.text}
           (e.aiBusy = 0),
           (e.nAudio = {}));
         const A = f(x);
-        ((e.i = A.fim ? 0 : Math.min(A.cena || 0, e.a.r.cenas.length - 1)),
+        /* v598: a recomendação do pregão pode abrir a aula direto na cena indicada. */
+        ((e.i = Number.isInteger(cena598)
+          ? Math.max(0, Math.min(cena598, e.a.r.cenas.length - 1))
+          : A.fim ? 0 : Math.min(A.cena || 0, e.a.r.cenas.length - 1)),
           (e.j = 0),
           (e.play = 0),
           E(G, "local") === "piper" && P(G, "local"),
@@ -10862,7 +10865,8 @@ ${W.text}
         (t &&
           ((t.innerHTML = e.play ? N.pause : N.play),
           t.setAttribute("aria-label", e.play ? "Pausar" : "Tocar")),
-          ee());
+          ee(),
+          ms598());
       }
       async function Xe() {
         try {
@@ -10877,9 +10881,37 @@ ${W.text}
         } catch {}
         e.wl = null;
       }
+      /* v598: com a voz neural (arquivo de áudio) a aula continua com a tela bloqueada; a voz do aparelho
+         (speechSynthesis) o iOS interrompe, então nesse caso a aula pausa como antes. */
       document.addEventListener("visibilitychange", () => {
-        document.hidden && e.play && $e();
+        document.hidden && e.play && !(e.nEl && !e.nEl.paused) && $e();
       });
+      function ms598() {
+        try {
+          if (!("mediaSession" in navigator) || !e.a) return;
+          const ms = navigator.mediaSession,
+            titulo = "Aula " + e.a.numero + " · " + (e.a.titulo || "");
+          (ms.metadata?.title !== titulo &&
+            (ms.metadata = new MediaMetadata({
+              title: titulo,
+              artist: e.a.livro || "Diário de Trader",
+              album: "Estudos",
+            })),
+            (ms.playbackState = e.play ? "playing" : "paused"));
+          const c = (sel) => () => document.querySelector(sel)?.click(),
+            h = (acao, fn) => {
+              try {
+                ms.setActionHandler(acao, fn);
+              } catch {}
+            };
+          (h("play", () => e.play || c("#aup [data-aupp]")()),
+            h("pause", () => e.play && c("#aup [data-aupp]")()),
+            h("nexttrack", c("#aup [data-aunext]")),
+            h("previoustrack", c("#aup [data-auprev]")),
+            h("seekbackward", c("#aup [data-auprev]")),
+            h("seekforward", c("#aup [data-aunext]")));
+        } catch {}
+      }
       async function Qt(t) {
         const p = e.a.r.cenas[t],
           x = p.vis,
@@ -13849,6 +13881,8 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
         marcarConcluida: (id, sim = !0) => salva597(id, { fim: sim ? 1 : 0 }),
         notas: (id) => f((F.lista || []).find((a) => a.id === id) || { id }).notas || "",
         salvarNotas: (id, txt) => salva597(id, { notas: String(txt || "").slice(0, 8e3) }),
+        /* v598: roteiro já baixado neste aparelho (para a recomendação por erro do pregão). */
+        roteiro: (id) => (E(l + id, null) || {}).r || null,
       };
     })(),
     (function () {
@@ -23667,6 +23701,131 @@ try {
       const empty = r.querySelector(".est-book-empty");
       if (empty) empty.hidden = visible > 0;
     });
+    /* v598 — "Recomendado pelo seu Pregão": cruza o erro registrado no fechamento do dia (Meu dia) com títulos,
+       roteiros e anotações das aulas e com os livros e anotações da Biblioteca. Busca semântica local por
+       conceitos de trading em português e inglês (sem gastar cota de IA e funciona offline). */
+    const tenta598 = (fn, d) => {
+      try {
+        const v = fn();
+        return v === void 0 ? d : v;
+      } catch {
+        return d;
+      }
+    };
+    const CONCEITOS598 = {
+      rompimento: "rompimento romper rompeu rompe breakout break fakeout falso rompimento armadilha trap",
+      pullback: "pullback correcao recuo reteste retest retracao",
+      stop: "stop stopei estopado estop stoploss loss perda prejuizo",
+      alvo: "alvo target parcial saida saindo exit realizar realizei lucro profit",
+      entrada: "entrada entrar entrei entry antecipada antecipei antecipar cedo precoce early gatilho trigger sinal setup",
+      tendencia: "tendencia trend topo fundo topos fundos trending",
+      lateral: "lateral lateralidade range consolidacao congestao chop caixote",
+      pressao: "pressao pressure compressao squeeze block bloco barra",
+      risco: "risco risk gerenciamento posicao position sizing tamanho alavancagem mao contratos lote",
+      emocional: "revanche vinganca revenge tilt emocional emocao ansiedade ansioso medo fear ganancia greed fomo impulsivo impulso euforia euforico nervoso psicologia psychology",
+      disciplina: "disciplina discipline paciencia patience regra regras rules plano plan rotina checklist",
+      overtrading: "overtrading excesso demais operacoes operei muitas",
+      volume: "volume fluxo agressao book tape players",
+      nivel: "suporte resistencia support resistance nivel level regiao zona zone",
+      candle: "candle candlestick pavio sombra doji engolfo martelo hammer",
+      media: "media medias ema mme sma moving average",
+      priceaction: "price action acao do preco leitura",
+    };
+    const sem598 = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(),
+      PARA598 = new Set("a o e de da do das dos em no na nos nas um uma para por com que nao sim foi fui eu me meu minha the of and to in on for with is was i my it at as".split(" ")),
+      MAPA598 = (() => {
+        const m = new Map();
+        Object.entries(CONCEITOS598).forEach(([k, v]) => v.split(" ").forEach((w) => m.set(w, k)));
+        return m;
+      })();
+    function sinais598(texto) {
+      const pal = sem598(texto).split(/[^a-z0-9]+/).filter((x) => x.length > 2 && !PARA598.has(x)),
+        conc = new Set(),
+        radic = new Set();
+      pal.forEach((x) => {
+        MAPA598.has(x) && conc.add(MAPA598.get(x));
+        const r = x.slice(0, 5);
+        (radic.add(r), [...MAPA598.keys()].some((k) => k.length > 4 && k.slice(0, 5) === r && conc.add(MAPA598.get(k))));
+      });
+      return { conc, radic };
+    }
+    function erroPregao598() {
+      const dias = Object.keys(tenta598(() => S.days || {}, {})).sort().reverse().slice(0, 21);
+      for (const dia of dias) {
+        const D = S.days[dia] || {},
+          trades = tenta598(() => (S.trades || []).filter((x) => String(x.dtx || x.dt || "").slice(0, 10) === dia), []),
+          errosTrade = trades.map((x) => x.err).filter((x) => x && !/^nenhum/i.test(x)),
+          texto = [D.cond, D.prevn, ...errosTrade].filter(Boolean).join(". ");
+        if ((D.erros === "s" || errosTrade.length) && texto.trim()) return { dia, texto };
+      }
+      return null;
+    }
+    function recomenda598() {
+      try {
+        const err = erroPregao598();
+        if (!err) return "";
+        const q = sinais598(err.texto);
+        if (!q.conc.size && !q.radic.size) return "";
+        const cand = [],
+          pontua = (txt, peso) => {
+            const d = sinais598(txt);
+            let sc = 0;
+            const em = [];
+            (q.conc.forEach((k) => d.conc.has(k) && ((sc += 3 * peso), em.push(k))), q.radic.forEach((r) => d.radic.has(r) && (sc += 0.5 * peso)));
+            return { sc, em };
+          },
+          add = (item, txt, peso) => {
+            const r = pontua(txt, peso);
+            r.sc > 0 && cand.push({ ...item, sc: r.sc, em: r.em });
+          };
+        tenta598(() => window.AULAS.getLista(), []).forEach((au) => {
+          if (au.status === "gerando") return;
+          const base = { tipo: "aula", id: au.id, nome: `Aula ${au.numero} · ${au.titulo || ""}`, livro: au.livro || "" };
+          add(base, `${au.titulo} ${au.livro} ${au.capitulos || ""}`, 2);
+          const notas = tenta598(() => window.AULAS.notas(au.id), "");
+          notas && add({ ...base, motivo: "nas suas anotações" }, notas, 1.5);
+          const rot = tenta598(() => window.AULAS.roteiro(au.id), null);
+          (rot?.cenas || []).forEach((cn, i) => add({ ...base, cena: i, cenaNome: cn.titulo || "Cena " + (i + 1) }, `${cn.titulo || ""} ${(cn.fala || []).join(" ")}`, 1));
+        });
+        (Array.isArray(S?.books) ? S.books : []).forEach((bk) => {
+          const base = { tipo: "livro", id: bk.id, nome: tituloLivro(bk.t) || "Livro" };
+          add(base, `${bk.t} ${bk.a || ""}`, 2);
+          (bk.notes || []).forEach((n) => {
+            const txt = typeof n == "string" ? n : [n.t, n.txt, n.text, n.cap, n.q].filter(Boolean).join(" ");
+            txt && add({ ...base, nota: txt.slice(0, 90) }, txt, 1.5);
+          });
+        });
+        if (!cand.length) return "";
+        cand.sort((x, y) => y.sc - x.sc);
+        let b0 = cand[0];
+        if (b0.sc < 3) return "";
+        /* Aula escolhida pelo título: aponta também a cena do roteiro que mais combina com o erro. */
+        if (b0.tipo === "aula" && !Number.isInteger(b0.cena)) {
+          const cn = cand.find((x) => x.tipo === "aula" && x.id === b0.id && Number.isInteger(x.cena) && x.sc >= 3);
+          cn && (b0 = { ...cn, em: [...b0.em, ...cn.em] });
+        }
+        const dia = err.dia.split("-").reverse().slice(0, 2).join("/"),
+          trecho = err.texto.length > 120 ? err.texto.slice(0, 118) + "…" : err.texto,
+          comum = [...new Set(b0.em)].slice(0, 3).join(", "),
+          alvo =
+            b0.tipo === "aula"
+              ? `<b>${c(b0.nome)}</b>${b0.cenaNome ? `<small>Revise a cena ${b0.cena + 1}: ${c(b0.cenaNome)}</small>` : b0.motivo ? `<small>Relacionada ${c(b0.motivo)}</small>` : ""}`
+              : `<b>${c(b0.nome)}</b>${b0.nota ? `<small>Sua anotação: “${c(b0.nota)}”</small>` : ""}`,
+          botao =
+            b0.tipo === "aula"
+              ? `<button type="button" class="v598-rec-go" data-v598-rec-aula="${c(b0.id)}"${Number.isInteger(b0.cena) ? ` data-v598-rec-cena="${b0.cena}"` : ""}>Revisar agora ${a("right", 14)}</button>`
+              : `<button type="button" class="v598-rec-go" data-a="openbook" data-id="${c(b0.id)}">Abrir livro ${a("right", 14)}</button>`;
+        return `<section class="v598-rec" aria-label="Recomendado pelo seu Pregão"><div class="v598-rec-top"><span>Recomendado pelo seu Pregão</span><em>${c(dia)}</em></div><p class="v598-rec-erro">Erro registrado: “${c(trecho)}”</p><div class="v598-rec-alvo">${alvo}${comum ? `<small class="v598-rec-por">Em comum: ${c(comum)}</small>` : ""}</div>${botao}</section>`;
+      } catch {
+        return "";
+      }
+    }
+    document.addEventListener("click", (ev) => {
+      const bt = ev.target.closest?.("[data-v598-rec-aula]");
+      if (!bt) return;
+      const cena = bt.dataset.v598RecCena;
+      tenta598(() => window.AULAS.abre(bt.dataset.v598RecAula, cena == null ? void 0 : +cena));
+    });
     function It() {
       w = vistaEstudos();
       const t = Array.isArray(S?.books) ? S.books : [],
@@ -23721,7 +23880,7 @@ try {
       /* Hoje (v596): meta semanal (núcleo), modo foco, continuar último estudo e sugestões. */
       const hoje596 =
         w === "est"
-          ? `<section class="v596-hoje" aria-label="Atalhos de hoje">
+          ? `<section class="v596-hoje" aria-label="Atalhos de hoje">${recomenda598()}
         <button type="button" class="v596-foco" data-dt397-view="foco">${a("eye", 18)}<span><b>Modo foco</b><small>Cronômetro com matéria e registro automático</small></span>${a("right", 15)}</button>
         <section class="dt397-panel v596-continuar">
           <div class="dt397-panel-head"><h2>${a("clock", 20)} Continuar último estudo</h2><button type="button" data-dt397-view="${p ? "aul" : "liv"}">Ver tudo ${a("right", 15)}</button></div>
@@ -28837,6 +28996,73 @@ try {
         return null;
       }
     }
+    /* v598: risco disponível do dia (mesma conta do Início) para a calculadora de posição e outras telas. */
+    function riscoHoje598() {
+      const t = V(),
+        a = lt(pt(t), R),
+        o = ne(),
+        i = St() ?? o?.lim ?? null;
+      return {
+        disponivel: o ? o.rest : i != null ? Math.max(0, i - Math.max(0, -a)) : null,
+        limite: i,
+        resultadoDia: a,
+        capital: yt(),
+      };
+    }
+    window.DiarioRisco = { hoje: riscoHoje598 };
+    /* v598 — Impacto emocional no resultado: estado registrado antes das 09:00 (Meu dia) × P&L dos trades do dia. */
+    const EMO598 = [["calmo", "Calmo"], ["focado", "Focado"], ["ansioso", "Ansioso"], ["cansado", "Cansado"], ["euforico", "Eufórico"]];
+    function impactoEmocional598() {
+      const grupos = {};
+      Object.entries(f(() => S.days || {}, {})).forEach(([dia, D]) => {
+        const emo = D && D.emocao,
+          em = D && D.emocaoEm ? new Date(D.emocaoEm) : null;
+        if (!emo || !em || isNaN(em) || em.getHours() >= 9) return;
+        const tr = pt(dia);
+        if (!tr.length) return;
+        const g = (grupos[emo] = grupos[emo] || { dias: 0, trades: 0, ganhos: 0, pl: 0 });
+        (g.dias++, (g.trades += tr.length), (g.ganhos += tr.filter((x) => R(x) > 0).length), (g.pl += lt(tr, R)));
+      });
+      const linhas = EMO598.filter(([k]) => grupos[k]).map(([k, nome]) => {
+        const g = grupos[k],
+          ac = g.trades ? Math.round((g.ganhos / g.trades) * 100) : 0,
+          med = g.pl / g.dias;
+        return `<tr><th scope="row">${nome}</th><td>${g.dias}</td><td>${ac}%</td><td class="${L(med)}">${j(med)}</td><td class="${L(g.pl)}">${j(g.pl)}</td></tr>`;
+      });
+      return `<section class="v4-card v598-emocard" aria-label="Impacto emocional no resultado"><div class="v598-emocard-head"><h3>Impacto Emocional no Resultado</h3><small>Estado marcado antes das 09:00 × resultado líquido do dia</small></div>${
+        linhas.length
+          ? `<table class="v598-emotab"><thead><tr><th scope="col">Estado</th><th scope="col">Dias</th><th scope="col">Acerto</th><th scope="col">Média/dia</th><th scope="col">Total</th></tr></thead><tbody>${linhas.join("")}</tbody></table>`
+          : '<p class="v4-empty">Marque como você está no Meu dia antes das 09:00 nos dias em que operar. O cruzamento aparece a partir do primeiro dia com trades.</p>'
+      }</section>`;
+    }
+    function poe598() {
+      if (f(() => tab, "") !== "stats") return;
+      const app = document.getElementById("app"),
+        perf = app && app.querySelector(".v4-card.v4-perf");
+      if (!perf || app.querySelector(".v598-emocard")) return;
+      perf.insertAdjacentHTML("afterend", impactoEmocional598());
+    }
+    {
+      const reg598 = () => !!(window.TraderUI?.onRender && (window.TraderUI.onRender("v598-emocional", poe598), 1));
+      if (!reg598()) {
+        let n = 0;
+        const tm = setInterval(() => (reg598() || ++n > 40) && clearInterval(tm), 250);
+      }
+    }
+    window.DiarioEmocional = { impacto: impactoEmocional598 };
+    document.addEventListener("click", (ev) => {
+      const bt = ev.target.closest?.("[data-v598-reduz]");
+      if (!bt) return;
+      f(() => {
+        const dia = bt.dataset.v598Reduz,
+          lim = St();
+        if (!lim) return;
+        const base = (S.days[dia] = S.days[dia] || {}),
+          D = Tt() ? (base.us = base.us || {}) : base;
+        ((D.maxP = Math.round((lim / 2) * 100) / 100), (D.maxP598 = lim), (D.u = Date.now()), save?.(), render());
+        typeof toast == "function" && toast("Risco máximo de hoje reduzido para " + G(D.maxP));
+      });
+    });
     function le() {
       const t = V(),
         e = pt(t),
@@ -28856,7 +29082,7 @@ try {
           fechado: "Mercado fechado",
         }[u],
         y = `<div class="v4-kpis">
-    <div><small>Capital</small><strong>${s != null ? G(s) : '<button type="button" class="v4-inline" data-dt414-go="painel">Configurar</button>'}</strong></div>
+    <div><small>Capital</small><strong>${s != null ? G(s) : '<button type="button" class="v4-inline" data-dt414-go="painel">Configurar</button>'}</strong>${s != null ? `<em class="v598-capdet">${f(() => [["D", "Day"], ["S", "Swing"], ["O", "Opções"]].map(([k, n]) => [n, capCalc(k)]).filter(([, c]) => c).map(([n, c]) => n + " " + G(c.at)).join(" · "), "")}</em>` : ""}</div>
     <div><small>P&amp;L do dia</small><strong class="${L((window.vivoDia?vivoDia(a):a))}" data-v568-base="${a}">${j((window.vivoDia?vivoDia(a):a))}</strong>${window.vivoNota?vivoNota():""}<em class="${L(a)}">${E(a) != null ? "(" + Q(E(a)) + ")" : e.length + " encerrado(s)"}</em></div>
     <div><small>P&amp;L da semana</small><strong class="${L(l)}">${j(l)}</strong><em class="${L(l)}">${E(l) != null ? "(" + Q(E(l)) + ")" : n.length + " trade(s)"}</em></div>
     <div><small>Risco disponível</small><strong>${h != null ? G(h) : "—"}</strong><em>${h != null && E(h) != null ? "(" + _(E(h)) + "% do capital)" : "limite de perda do dia"}</em></div></div>`,
@@ -29173,7 +29399,17 @@ try {
             tt = N.filter((vt) => vt > 0).length;
           return `<p class="v4-emo-hist">Dias ${b((EMO589.find(([vt]) => vt === dRaiz.emocao) || [])[1] || "")}: resultado médio <b class="${L(O)}">${j(O)}</b> · ${tt} de ${N.length} dias positivos</p>`;
         }, ""),
-        emo589 = `<section class="v4-emo" aria-label="Estado emocional agora"><div class="v4-emo-head"><b>Como você está agora?</b>${abre589 ? `<span class="v4-countdown" data-v589-abertura="${abre589}" role="timer" aria-label="Tempo até a abertura do pregão">Abertura em <b>${cont589(abre589)}</b></span>` : ""}</div><div class="v4-emo-row" role="radiogroup" aria-label="Estado emocional">${EMO589.map(([g, N]) => `<button type="button" role="radio" aria-checked="${dRaiz.emocao === g}" class="${dRaiz.emocao === g ? "on" : ""}" data-v589-emo="${g}" data-v589-dia="${t}">${N}</button>`).join("")}</div>${hist589}</section>`,
+        /* v598 — trava preventiva: ansioso ou cansado no pré-mercado → sugere reduzir o risco máximo do dia em 50%. */
+        trava598 = f(() => {
+          if (!["ansioso", "cansado"].includes(dRaiz.emocao) || !hoje589) return "";
+          const reduzido = +(Tt() ? (dRaiz.us || {}).maxP598 : dRaiz.maxP598) || 0,
+            lim = reduzido || St(),
+            nomeE = (EMO589.find(([g]) => g === dRaiz.emocao) || [])[1] || dRaiz.emocao;
+          return reduzido
+            ? `<div class="v598-trava" role="note"><b>${b(nomeE)}:</b> risco máximo de hoje reduzido de ${G(reduzido)} para ${G(St())}.</div>`
+            : `<div class="v598-trava" role="note"><b>${b(nomeE)}:</b> considere reduzir o risco máximo de hoje em 50%${lim ? ` (de ${G(lim)} para ${G(lim / 2)})` : ""}.${lim ? ` <button type="button" data-v598-reduz="${t}">Reduzir hoje</button>` : ""}</div>`;
+        }, ""),
+        emo589 = `<section class="v4-emo" aria-label="Estado emocional agora"><div class="v4-emo-head"><b>Como você está agora?</b>${abre589 ? `<span class="v4-countdown" data-v589-abertura="${abre589}" role="timer" aria-label="Tempo até a abertura do pregão">Abertura em <b>${cont589(abre589)}</b></span>` : ""}</div><div class="v4-emo-row" role="radiogroup" aria-label="Estado emocional">${EMO589.map(([g, N]) => `<button type="button" role="radio" aria-checked="${dRaiz.emocao === g}" class="${dRaiz.emocao === g ? "on" : ""}" data-v589-emo="${g}" data-v589-dia="${t}">${N}</button>`).join("")}</div>${trava598}${hist589}</section>`,
         Y = P.map(
           (g) =>
             `<div class="dt393-checkitem v4-check" data-rule-phase="${at(g)}" ${at(g) !== H ? "hidden" : ""}><label><input type="checkbox" data-chk="${b(g.id)}" ${A[g.id] ? "checked" : ""}/><span>${b(g.t)}</span></label><select data-dt393-rule-phase="${b(g.id)}" aria-label="Fase da regra"><option value="pre" ${at(g) === "pre" ? "selected" : ""}>Pré</option><option value="during" ${at(g) === "during" ? "selected" : ""}>Durante</option><option value="post" ${at(g) === "post" ? "selected" : ""}>Pós</option></select></div>`,
@@ -29320,7 +29556,7 @@ try {
         P = `<div class="v4-stats">
     ${y("folder", "Operações abertas", String(e.length), `(${l} compradas / ${s} vendidas)`)}
     ${y("bars", "Resultado do dia", j(r), E(r) != null ? Q(E(r)) : a.length + " encerrada(s)", L(r))}
-    ${y("shield", "Risco consumido", u != null ? _(u) + "%" : G(o), h != null ? `(limite: ${_(h)}%)` : "pelos stops abertos", "", barra595)}
+    ${y("shield", "Risco consumido", u != null ? _(u) + "%" : G(o), h != null ? `(limite: ${_(h)}%)` : "pelos stops abertos", "", barra595 + '<button type="button" class="v598-calc-btn" data-v598-calc aria-label="Calcular tamanho da posição">Calcular posição</button>')}
     ${y("crosshair", "Setups ativos", String(M.length), M.length ? "(" + b(M.slice(0, 3).join(", ")) + ")" : "nenhum hoje")}</div>`,
         A = e
           .map((d) => {
@@ -29947,7 +30183,8 @@ try {
         (l.innerHTML = n),
         v.getElementById("v419-mais")?.remove(),
         e.querySelector("#dt393-workspace")?.classList.remove("v419-recolhido"),
-        ee(t, a));
+        ee(t, a),
+        f(poe598));
     }
     function Ut() {
       if (typeof window.render0 != "function" || window.render0.__v420)
@@ -34719,50 +34956,124 @@ try {
         notas = f(() => au.notas(t), ""),
         v = vel597();
       return `<div class="v597-bar" data-v597-bar>
+    <button type="button" class="v598-pula" data-v598-pula="-15" aria-label="Voltar 15 segundos">-15s</button>
     <button type="button" class="v597-pp" data-v597-pp aria-label="Reproduzir">▶</button>
+    <button type="button" class="v598-pula" data-v598-pula="15" aria-label="Avançar 15 segundos">+15s</button>
     <input type="range" class="v597-seek" data-v597-seek min="0" max="1000" value="0" step="1" aria-label="Posição do vídeo">
     <span class="v597-tempo" data-v597-tempo>0:00 / 0:00</span>
     <button type="button" class="v597-fs" data-v597-fs aria-label="Tela cheia">⛶</button></div>
   <div class="v597-estudo">
     <div class="v597-vel" role="group" aria-label="Velocidade">${VEL597.map((x) => `<button type="button" data-v597-vel="${x}" class="${x === v ? "on" : ""}" aria-pressed="${x === v}">${String(x).replace(".", ",")}x</button>`).join("")}</div>
+    <button type="button" class="v598-audio" data-v598-audio aria-pressed="false">🎧 Ouvir com a tela bloqueada</button>
     <button type="button" class="v597-feita${feita ? " on" : ""}" data-v597-feita aria-pressed="${feita}">${feita ? "Aula concluída ✓" : "Marcar aula como concluída ✓"}</button>
     <details class="v597-notas"${notas ? " open" : ""}><summary>Anotações desta aula</summary><textarea data-v597-notas rows="4" maxlength="8000" placeholder="Insights, dúvidas e o que aplicar no pregão">${p(notas)}</textarea><small data-v597-salvo aria-live="polite"></small></details>
   </div>`;
     }
-    function liga597(ov, vid) {
-      if (!ov || !vid) return;
+    /* v598 — mídia ativa da sala de aula: o vídeo ou, no modo "tela bloqueada", um <audio> com a mesma faixa
+       (o iOS mantém áudio tocando com a tela bloqueada; vídeo, não). Media Session mostra título e controles. */
+    const midia597 = (ov) => (ov && ov.__aud) || ov?.querySelector("video");
+    function pinta597(ov) {
+      const m = midia597(ov);
+      if (!ov || !m) return;
       const pp = ov.querySelector("[data-v597-pp]"),
         sk = ov.querySelector("[data-v597-seek]"),
         tm = ov.querySelector("[data-v597-tempo]"),
-        pinta = () => {
-          const dur = vid.duration || 0;
-          (tm && (tm.textContent = mmss597(vid.currentTime) + " / " + mmss597(dur)),
-            sk && !sk.dataset.arrasta && (sk.value = dur ? Math.round((vid.currentTime / dur) * 1e3) : 0),
-            pp && ((pp.textContent = vid.paused ? "▶" : "❚❚"), pp.setAttribute("aria-label", vid.paused ? "Reproduzir" : "Pausar")));
+        dur = m.duration || 0;
+      (tm && (tm.textContent = mmss597(m.currentTime) + " / " + mmss597(dur)),
+        sk && !sk.dataset.arrasta && (sk.value = dur ? Math.round((m.currentTime / dur) * 1e3) : 0),
+        pp && ((pp.textContent = m.paused ? "▶" : "❚❚"), pp.setAttribute("aria-label", m.paused ? "Reproduzir" : "Pausar")));
+      sessao598(ov, m);
+    }
+    function pula598(ov, seg) {
+      const m = midia597(ov);
+      if (!m) return;
+      const dur = m.duration || 0;
+      m.currentTime = Math.max(0, Math.min(dur ? dur - 0.25 : m.currentTime + seg, m.currentTime + seg));
+      pinta597(ov);
+    }
+    function sessao598(ov, m) {
+      try {
+        if (!("mediaSession" in navigator) || !m) return;
+        const ms = navigator.mediaSession,
+          titulo = ov.querySelector(".v434-top b")?.textContent || "Aula";
+        (ms.metadata?.title !== titulo &&
+          (ms.metadata = new MediaMetadata({ title: titulo, artist: "Diário de Trader", album: "Estudos" })),
+          (ms.playbackState = m.paused ? "paused" : "playing"));
+        if (ov.__ms598 === m) return;
+        ov.__ms598 = m;
+        const h = (acao, fn) => {
+          try {
+            ms.setActionHandler(acao, fn);
+          } catch {}
         };
-      vid.playbackRate = vel597();
-      ["timeupdate", "loadedmetadata", "play", "pause", "ended"].forEach((ev) => vid.addEventListener(ev, pinta));
-      vid.addEventListener("loadedmetadata", () => (vid.playbackRate = vel597()));
-      vid.addEventListener("click", () => (vid.paused ? vid.play() : vid.pause()));
+        (h("play", () => midia597(ov)?.play()),
+          h("pause", () => midia597(ov)?.pause()),
+          h("seekbackward", (d) => pula598(ov, -(d?.seekOffset || 15))),
+          h("seekforward", (d) => pula598(ov, d?.seekOffset || 15)),
+          h("seekto", (d) => {
+            const x = midia597(ov);
+            x && d && typeof d.seekTime == "number" && ((x.currentTime = d.seekTime), pinta597(ov));
+          }));
+        try {
+          m.duration && ms.setPositionState?.({ duration: m.duration, playbackRate: m.playbackRate || 1, position: Math.min(m.currentTime, m.duration) });
+        } catch {}
+      } catch {}
+    }
+    function prende598(ov, m) {
+      ["timeupdate", "loadedmetadata", "play", "pause", "ended", "ratechange"].forEach((ev) => m.addEventListener(ev, () => pinta597(ov)));
+      m.addEventListener("loadedmetadata", () => (m.playbackRate = vel597()));
+      m.playbackRate = vel597();
+    }
+    function liga597(ov, vid) {
+      if (!ov || !vid) return;
+      (ov.__aud && (ov.__aud.pause(), (ov.__aud = null)), (ov.__ms598 = null));
+      const sk = ov.querySelector("[data-v597-seek]");
+      (prende598(ov, vid), vid.addEventListener("click", () => (vid.paused ? vid.play() : vid.pause())));
       sk &&
         (sk.addEventListener("input", () => {
           sk.dataset.arrasta = "1";
-          const dur = vid.duration || 0;
-          (dur && (vid.currentTime = (sk.value / 1e3) * dur), tm && (tm.textContent = mmss597(vid.currentTime) + " / " + mmss597(dur)));
+          const m = midia597(ov),
+            dur = m?.duration || 0;
+          dur && (m.currentTime = (sk.value / 1e3) * dur);
+          const tm = ov.querySelector("[data-v597-tempo]");
+          tm && m && (tm.textContent = mmss597(m.currentTime) + " / " + mmss597(dur));
         }),
         sk.addEventListener("change", () => delete sk.dataset.arrasta));
-      pinta();
+      pinta597(ov);
+    }
+    /* Alterna vídeo ↔ só áudio (mesma faixa e posição), por toque do usuário — exigência do iOS. */
+    function audio598(ov, btn) {
+      const vid = ov.querySelector("video");
+      if (!vid) return;
+      if (ov.__aud) {
+        const a = ov.__aud,
+          t = a.currentTime,
+          tocando = !a.paused;
+        (a.pause(), a.removeAttribute("src"), a.load(), (ov.__aud = null), (vid.currentTime = t), tocando && vid.play().catch(() => {}));
+        (btn.classList.remove("on"), btn.setAttribute("aria-pressed", "false"), (btn.textContent = "🎧 Ouvir com a tela bloqueada"));
+        return pinta597(ov);
+      }
+      const a = new Audio(vid.currentSrc || vid.src);
+      ((a.preload = "auto"), (a.currentTime = vid.currentTime), prende598(ov, a), vid.pause(), (ov.__aud = a));
+      a.play().catch(() => {});
+      (btn.classList.add("on"), btn.setAttribute("aria-pressed", "true"), (btn.textContent = "📺 Voltar ao vídeo"));
+      pinta597(ov);
     }
     d.addEventListener("click", (ev) => {
       const ov = d.getElementById("v434-ov");
       if (!ov || ov.hidden || !ev.target.closest) return;
-      const vid = ov.querySelector("video"),
+      const vid = midia597(ov),
         id = ov.dataset.id;
       if (ev.target.closest("[data-v597-pp]")) return vid && (vid.paused ? vid.play() : vid.pause());
+      const pj = ev.target.closest("[data-v598-pula]");
+      if (pj) return pula598(ov, +pj.dataset.v598Pula);
+      const au = ev.target.closest("[data-v598-audio]");
+      if (au) return audio598(ov, au);
       if (ev.target.closest("[data-v597-fs]")) {
-        if (!vid) return;
+        const v = ov.querySelector("video");
+        if (!v) return;
         try {
-          vid.webkitEnterFullscreen ? vid.webkitEnterFullscreen() : vid.requestFullscreen?.();
+          v.webkitEnterFullscreen ? v.webkitEnterFullscreen() : v.requestFullscreen?.();
         } catch {}
         return;
       }
@@ -34883,6 +35194,9 @@ try {
       const t = d.getElementById("v434-ov");
       if (!t) return;
       const a = t.querySelector("video");
+      /* v598: encerra também o modo só áudio e os controles da tela de bloqueio. */
+      (t.__aud && (t.__aud.pause(), (t.__aud = null)), (t.__ms598 = null));
+      f(() => (navigator.mediaSession.playbackState = "none"));
       if ((a && a.pause(), t.dataset.blob)) {
         try {
           URL.revokeObjectURL(t.dataset.blob);
@@ -35825,6 +36139,126 @@ html body #app .card.g2:has(> textarea.v505-rt):not(#v505a):not(#v505b){grid-tem
   })(window);
 } catch (e) {
   console.error("[v522] falha em checklist-v505.js", e);
+}
+
+/* v598 — Calculadora de tamanho de posição integrada ao risco do dia (Operações e comando CALC no Terminal). */
+try {
+  (function (w) {
+    "use strict";
+    const d = w.document;
+    if (!d) return;
+    const ATIVOS = {
+        WIN: { nome: "WIN (mini índice)", porPonto: 0.2, unid: "contrato", unids: "contratos", tick: 5 },
+        WDO: { nome: "WDO (mini dólar)", porPonto: 10, unid: "contrato", unids: "contratos", tick: 0.5 },
+        ACAO: { nome: "Ações", porPonto: 1, unid: "ação", unids: "ações", lote: 100 },
+        OPC: { nome: "Opções", porPonto: 1, unid: "opção", unids: "opções", lote: 100 },
+      },
+      brl = (v) => (Number.isFinite(+v) ? (+v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"),
+      num = (v) => {
+        let t = String(v ?? "").trim().replace(/\s|R\$/g, "");
+        /* "1.234,56" e "5,35" → vírgula decimal; "5.35" → ponto decimal; "130.250" → milhar. */
+        t = t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : /^\d+\.\d{1,2}$/.test(t) ? t : t.replace(/\./g, "");
+        const n = parseFloat(t);
+        return Number.isFinite(n) ? n : NaN;
+      },
+      esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]),
+      risco = () => {
+        try {
+          return w.DiarioRisco?.hoje?.() || {};
+        } catch {
+          return {};
+        }
+      },
+      lotesCapital = () => {
+        try {
+          return typeof capCalc == "function" ? capCalc("D")?.lotes ?? null : null;
+        } catch {
+          return null;
+        }
+      };
+    function html(origem) {
+      const r = risco(),
+        disp = Number.isFinite(r.disponivel) ? r.disponivel : "";
+      return `<form class="v598-calc" data-calc598 data-origem="${esc(origem)}" onsubmit="return false" aria-label="Calculadora de posição">
+  <label>Ativo<select data-c598="ativo">${Object.entries(ATIVOS).map(([k, a]) => `<option value="${k}">${a.nome}</option>`).join("")}</select></label>
+  <label>Risco disponível hoje (R$)<input data-c598="risco" inputmode="decimal" value="${disp === "" ? "" : String(Math.round(disp * 100) / 100).replace(".", ",")}" placeholder="Defina o limite do dia"></label>
+  <div class="v598-calc-par"><label>Entrada<input data-c598="ent" inputmode="decimal" placeholder="0,00" autocomplete="off"></label><label>Stop<input data-c598="stop" inputmode="decimal" placeholder="0,00" autocomplete="off"></label></div>
+  <output class="v598-calc-res" data-c598="res" aria-live="polite">${disp === "" ? "Sem limite de perda do dia configurado: digite o risco em R$." : "Digite entrada e stop."}</output>
+  <small class="v598-calc-nota">Limite de perda: ${Number.isFinite(r.limite) ? brl(r.limite) : "não definido"}${Number.isFinite(r.resultadoDia) && r.resultadoDia < 0 ? " · perdas de hoje " + brl(r.resultadoDia) : ""}. Sem corretagem e emolumentos.</small>
+</form>`;
+    }
+    function calcula(f) {
+      const g = (k) => f.querySelector(`[data-c598="${k}"]`),
+        a = ATIVOS[g("ativo").value] || ATIVOS.WIN,
+        rs = num(g("risco").value),
+        ent = num(g("ent").value),
+        st = num(g("stop").value),
+        out = g("res");
+      if (!(rs > 0)) return void (out.textContent = "Informe o risco disponível em R$.");
+      if (!(ent > 0) || !(st > 0)) return void (out.textContent = "Digite entrada e stop.");
+      const dist = Math.abs(ent - st);
+      if (!(dist > 0)) return void (out.textContent = "Entrada e stop não podem ser iguais.");
+      const porUnid = dist * a.porPonto;
+      let qtd = Math.floor(rs / porUnid + 1e-9),
+        extra = "";
+      if (a.lote) {
+        const lotes = Math.floor(qtd / a.lote);
+        extra = ` · ${lotes} lote(s) de ${a.lote}${qtd % a.lote ? " + " + (qtd % a.lote) + " no fracionário" : ""}`;
+      } else {
+        const cap = lotesCapital();
+        cap != null && cap < qtd && ((extra = ` · limitado pelo capital (${cap})`), (qtd = cap));
+      }
+      const perda = qtd * porUnid,
+        pts = a.lote ? "R$ " + dist.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " por " + a.unid : dist.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " pontos";
+      out.innerHTML = qtd > 0
+        ? `<b>${qtd.toLocaleString("pt-BR")}</b> ${qtd === 1 ? a.unid : a.unids}${extra}<span>Stop de ${pts} · perda no stop ${brl(perda)} (${Math.round((perda / rs) * 100)}% do risco)</span>`
+        : `<b>0</b> ${a.unids}<span>Este stop (${pts}) custa ${brl(porUnid)} por ${a.unid}: acima do risco disponível. Aproxime o stop ou não opere.</span>`;
+    }
+    d.addEventListener("input", (e) => {
+      const f = e.target.closest?.("[data-calc598]");
+      f && calcula(f);
+    });
+    d.addEventListener("change", (e) => {
+      const f = e.target.closest?.("[data-calc598]");
+      f && calcula(f);
+    });
+    function abrir() {
+      let dlg = d.getElementById("v598-calc-dlg");
+      dlg ||
+        ((dlg = d.createElement("dialog")),
+        (dlg.id = "v598-calc-dlg"),
+        (dlg.className = "v598-calc-dlg"),
+        dlg.setAttribute("aria-label", "Calculadora de posição"),
+        d.body.appendChild(dlg),
+        dlg.addEventListener("click", (e) => {
+          (e.target === dlg || e.target.closest("[data-v598-fecha]")) && dlg.close();
+        }));
+      dlg.innerHTML = `<div class="v598-calc-box"><div class="v598-calc-top"><b>Calculadora de posição</b><button type="button" data-v598-fecha aria-label="Fechar">✕</button></div>${html("operacoes")}</div>`;
+      dlg.open || (dlg.showModal ? dlg.showModal() : dlg.setAttribute("open", ""));
+      setTimeout(() => dlg.querySelector('[data-c598="ent"]')?.focus(), 50);
+    }
+    d.addEventListener("click", (e) => {
+      e.target.closest?.("[data-v598-calc]") && (e.preventDefault(), abrir());
+    });
+    w.CalcPosicao = { abrir, html };
+    /* Terminal: comando CALC abre a calculadora dentro do painel. */
+    const regTerminal = () => {
+      const T = w.TRM;
+      if (!T || !T.EXT || T.EXT.CALC) return !!T?.EXT?.CALC;
+      ((T.FN.CALC = "Calculadora de posição pelo risco do dia"),
+        (T.EXT.CALC = {
+          livre: !0,
+          body: () => `<div class="trsec">Calculadora de posição · risco do dia</div>${html("terminal")}`,
+        }));
+      return !0;
+    };
+    if (!regTerminal()) {
+      let n = 0;
+      const t = setInterval(() => (regTerminal() || ++n > 40) && clearInterval(t), 500);
+    }
+  })(window);
+} catch (e) {
+  console.error("[v598] calculadora de posição", e);
 }
 try {
   (function (f) {
