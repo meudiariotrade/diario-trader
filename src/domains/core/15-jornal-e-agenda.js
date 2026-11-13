@@ -700,7 +700,7 @@ estSeg = function (e) {
     return;
   }
   if (a === "rpy") {
-    ((tab = "dtrpy"), render(), scrollTo(0, 0));
+    (irPara("dtrpy"), scrollTo(0, 0));
     return;
   }
   if (a === "cnpi") {
@@ -3900,7 +3900,7 @@ function verVelhas() {
 }
 document.addEventListener("click", (e) => {
   e.target.closest("[data-gotostatus]") &&
-    ((tab = "status"), render(), scrollTo(0, 0));
+    (irPara("status"), scrollTo(0, 0));
 });
 const USO_LS = "diario-uso",
   OC_LS = "diario-oculto",

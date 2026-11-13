@@ -1991,7 +1991,7 @@ html[data-v508-semmesa] [data-dt414-go="mesa"]{display:none!important}
         else if (e === "fechar") w(a.dataset.d || h());
         else if (e === "trades")
           try {
-            ((tab = "ops"), render(), scrollTo(0, 0));
+            (irPara("ops"), scrollTo(0, 0));
           } catch {}
         else if (e === "hojeVolta")
           try {
@@ -2029,7 +2029,7 @@ html[data-v508-semmesa] [data-dt414-go="mesa"]{display:none!important}
       const t = d(() => tab, "");
       if (t === "mesa" || t === "prop") {
         try {
-          ((tab = "home"), render(), scrollTo(0, 0));
+          (irPara("home"), scrollTo(0, 0));
         } catch {}
         return;
       }

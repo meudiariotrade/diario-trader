@@ -76,7 +76,7 @@ document.addEventListener("click", (e) => {
     return;
   }
   const a = e.target.closest("[data-hmd]");
-  a && ((D = a.dataset.hmd), (tab = "dia"), render(), scrollTo(0, 0));
+  a && ((D = a.dataset.hmd), irPara("dia"), scrollTo(0, 0));
 });
 {
   const e = render0;
@@ -3178,7 +3178,7 @@ if (OPS_D === "dash") {
   });
 }
 GOR.dash = () => {
-  ((GO.r = null), (tab = "stats"), render());
+  ((GO.r = null), irPara("stats"));
 };
 const MM = { nova: !1, prev: null, dup: null };
 function mmLista() {
@@ -4398,7 +4398,7 @@ function pgFecha() {
     });
   }, 1e3),
   (GOR.pregao = () => {
-    ((GO.r = null), (tab = "home"), render(), setTimeout(pgAbre, 200));
+    ((GO.r = null), irPara("home"), setTimeout(pgAbre, 200));
   }),
   (GOR.qk = () => {
     ((GO.r = null),

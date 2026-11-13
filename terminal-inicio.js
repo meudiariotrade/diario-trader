@@ -37,7 +37,8 @@
    entries.push({id:code,code,label:names[code]||description.split(' · ')[0].replace(/ \(tela cheia\)/g,''),hint:description,group:category(code,description)});
   }
   for(const [code,label]of root.TraderTerminalActions?.commands||[]){if((!root.TerminalCommandPolicy||root.TerminalCommandPolicy.allows(code))&&!entries.some(e=>e.id===code))entries.push({id:code,code,label:names[code]||label,hint:label,group:category(code,label)})}
-  for(const [id,label,selector,group]of actions){const button=source(selector);if(button&&(!root.TerminalCommandPolicy||root.TerminalCommandPolicy.allowsAction(id)))entries.push({id,label:id==='@auto'?(/desligad/i.test(button.textContent)?'Ativar troca automática de layout':'Desativar troca automática de layout'):label,selector,group,hint:label})}
+  /* v594: ações vêm do registro TerminalAcoes (não dependem da barra antiga montada). */
+  const A=root.TerminalAcoes;for(const [id,label,selector,group]of actions){const button=A?.disponivel(id)?null:source(selector);if((A?.disponivel(id)||button)&&(!root.TerminalCommandPolicy||root.TerminalCommandPolicy.allowsAction(id))){const dyn=A?.rotulo(id);entries.push({id,label:id==='@auto'?(dyn||(/desligad/i.test(button?.textContent||'')?'Ativar troca automática de layout':'Desativar troca automática de layout')):(id==='@focus'&&dyn)||label,selector,group,hint:label})}}
   try{const api=root.TRM,layout=api?.layAtual?.(),current=layout?.p?.[api.TR.foco]||layout?.p?.[0],ticker=api?.parse?.(current)?.tk;if(ticker)for(const [suffix,label]of [['G','Gráfico'],['FA','Fundamentos'],['DES','Ficha']])entries.push({id:'@ativo-'+suffix,code:ticker+' '+suffix,label:label+' de '+ticker,hint:label+' do ativo em foco',group:1})}catch{};
   return entries;
  }
@@ -46,6 +47,7 @@
  function panels(){root.TraderTerminalV413?.view('advanced')}
  function execute(item){
   if(item.mode){nav(item.mode);return}
+  const A=root.TerminalAcoes;if(item.selector&&A?.disponivel(item.id)){if(item.group===3)panels();A.executar(item.id);return}
   panels();
   if(item.selector){const button=source(item.selector);if(button){button.click();return}}
   if(item.code)root.DiarioTerminalTools?.run(item.code);

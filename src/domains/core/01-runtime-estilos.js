@@ -1,4 +1,37 @@
 /* Diário de Trader v560 — núcleo (paleta Terminal Grafite). Gerado a partir de: recursos.js, inicio.js, terminal-chart-mode-v415.js, app.js */
+/* v594 — registro de ações do Terminal: cada recurso registra sua função; o Início do Terminal e a barra de Painéis
+   executam a mesma função, sem precisar da barra antiga montada (CLAUDE.md, tela única). */
+window.TerminalAcoes =
+  window.TerminalAcoes ||
+  (() => {
+    const m = new Map();
+    return Object.freeze({
+      registrar(id, fn, pode, rotulo) {
+        m.set(id, { fn, pode, rotulo });
+      },
+      disponivel(id) {
+        const a = m.get(id);
+        try {
+          return !!a && (!a.pode || !!a.pode());
+        } catch {
+          return !1;
+        }
+      },
+      rotulo(id) {
+        const a = m.get(id);
+        try {
+          return (a && a.rotulo && a.rotulo()) || "";
+        } catch {
+          return "";
+        }
+      },
+      executar(id, ...x) {
+        const a = m.get(id);
+        if (!a) return !1;
+        return (a.fn(...x), !0);
+      },
+    });
+  })();
 try {
   window.TraderCardArt = Object.freeze({
     "cards-art/colecao-sazonal.png": "card-colecao-sazonal.jpg",

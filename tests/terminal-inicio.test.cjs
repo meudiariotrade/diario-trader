@@ -23,8 +23,9 @@ test('Início do Terminal: busca por assunto e comando, ações nativas, três m
  await app.locator('#ti539-search').fill('ECO');await app.locator('.ti539-search').evaluate(n=>n.requestSubmit());await expect.poll(()=>p.evaluate(()=>window.__executed.at(-1))).toBe('ECO');await expect(app.locator('#trgrid')).toBeVisible();
  await app.locator('[data-tr341-menu]').click();await app.locator('#ti539-search').fill('PETR4 G');await app.locator('.ti539-search').evaluate(n=>n.requestSubmit());await expect.poll(()=>p.evaluate(()=>window.__executed.at(-1))).toBe('PETR4 G');
  await app.locator('[data-tr341-menu]').click();await app.locator('#ti539-search').fill('planejar');await expect(app.locator('[data-ti539-item="@plan"]')).toBeVisible();
- await p.evaluate(()=>{window.__nativePlan=0;document.addEventListener('click',e=>{if(e.target.closest?.('#app:not(.v503-fantasma) [data-pre328]'))window.__nativePlan++},true)});
- await app.locator('[data-ti539-item="@plan"]').click();assert.equal(await p.evaluate(()=>window.__nativePlan),1);
+ // v594: o Início não mantém a barra antiga montada; a ação vem do registro TerminalAcoes.
+ assert.equal(await app.locator('.trm > .trbar').count(),0,'Início do Terminal sem a barra antiga escondida');
+ await app.locator('[data-ti539-item="@plan"]').click();await expect(p.locator('dialog.pre328-modal[open]')).toBeVisible();
  assert.deepEqual(errors,[]);
 }));
 

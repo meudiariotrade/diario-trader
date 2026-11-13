@@ -507,7 +507,7 @@ try {
     function Pt(t) {
       J = Dt[t] ? t : null;
       try {
-        ((tab = "home"), render(), scrollTo(0, 0));
+        (irPara("home"), scrollTo(0, 0));
       } catch {}
     }
     window.addEventListener(
@@ -1795,7 +1795,7 @@ try {
           try {
             (window.DIARIO_NAV?.navigate
               ? window.DIARIO_NAV.navigate("mercado:" + i)
-              : ((MKT.tab = i), (tab = "mercado"), render()),
+              : (irPara("mercado:" + i)),
               scrollTo(0, 0));
           } catch {}
           return;
@@ -1820,7 +1820,7 @@ try {
             (GOR.deb(), scrollTo(0, 0));
           } catch {
             try {
-              ((tab = "dia"), render());
+              (irPara("dia"));
             } catch {}
           }
           return;
@@ -3628,7 +3628,7 @@ try {
           try {
             (l.DIARIO_NAV?.navigate
               ? l.DIARIO_NAV.navigate("mercado:" + n.dataset.v423Mkt)
-              : ((MKT.tab = n.dataset.v423Mkt), (tab = "mercado"), render()),
+              : (irPara("mercado:" + n.dataset.v423Mkt)),
               scrollTo(0, 0));
           } catch {}
           return;
@@ -7238,7 +7238,7 @@ try {
     function te(e) {
       try {
         if (e === "term") {
-          ((tab = "term"), render(), scrollTo(0, 0));
+          (irPara("term"), scrollTo(0, 0));
           return;
         }
         if (e === "hoje") {
@@ -7248,7 +7248,7 @@ try {
             return;
           }
         }
-        ((tab = "mercado"), render(), scrollTo(0, 0));
+        (irPara("mercado"), scrollTo(0, 0));
         const o = e === "agenda" ? "Agenda" : "Cotações e Panorama";
         setTimeout(() => {
           const t = [

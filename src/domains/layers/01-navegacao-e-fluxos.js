@@ -893,11 +893,13 @@ try {
         }
       }
       function h() {
-        if (!B() || !document.querySelector(".trbar")) {
+        if (!B()) {
           n();
           return;
         }
+        /* Sem a barra antiga (Início do Terminal) a busca continua disponível por Ctrl + Espaço e pelo Início. */
         const J = document.querySelector(".trbar");
+        if (!J) return;
         if (!J.querySelector("[data-quick-open]")) {
           const w = q("Comandos", f);
           ((w.dataset.quickOpen = ""),
@@ -1000,6 +1002,7 @@ try {
           subtree: !0,
         }),
         (window.DiarioTerminalTools = { show: f, catalog: g, run: m }),
+        window.TerminalAcoes?.registrar("@commands", f, B),
         Q());
     })(),
     (() => {
@@ -8991,7 +8994,7 @@ Sem saldos ou posições anexados. Indicadores ausentes não são zero; não inf
         };
         se[ae] &&
           (F.close(),
-          tab !== "term" && ((tab = "term"), render()),
+          tab !== "term" && (irPara("term")),
           l().roda(se[ae]));
       }
       function ue(oe) {
@@ -14400,10 +14403,11 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
       function q(a) {
         const n = document.querySelector("[data-trlay]");
         (c(),
-          n &&
-            ((n.value = a),
-            n.dispatchEvent(new Event("change", { bubbles: !0 })),
-            u()));
+          n
+            ? ((n.value = a),
+              n.dispatchEvent(new Event("change", { bubbles: !0 })),
+              u())
+            : window.TerminalAcoes?.executar("espaco", a) && u());
       }
       function H() {
         ((i = document.querySelector("[data-radar-picker]")),
@@ -14484,7 +14488,10 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
           return (tab === "term" && P(), a.apply(this, arguments));
         };
       }
-      (window.TraderUI?.onRender &&
+      (window.TerminalAcoes?.registrar("@radar", H, () =>
+        document.body.classList.contains("trmon"),
+      ),
+      window.TraderUI?.onRender &&
         window.TraderUI.onRender("terminal-radar", g),
         document.addEventListener("click", (a) => {
           a.target.closest?.("[data-trmob],[data-trp]") &&
@@ -16468,6 +16475,17 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
           }),
           g.appendChild(R));
       }
+      window.TerminalAcoes?.registrar(
+        "@manage",
+        () => {
+          try {
+            c();
+          } catch (a) {
+            j(a.message);
+          }
+        },
+        () => s.body.classList.contains("trmon") && !window.TRPOP,
+      );
       (s.addEventListener("click", (g) => {
         const R = g.target.closest("[data-ws321]");
         if (R)
@@ -16699,6 +16717,11 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
           g.addEventListener("click", () => i(m)),
           H.appendChild(g));
       }
+      window.TerminalAcoes?.registrar(
+        "@layout",
+        () => i(m),
+        () => s.body.classList.contains("trmon") && !window.TRPOP,
+      );
       s.addEventListener("click", (H) => {
         const g = H.target.closest("[data-auto322]");
         if (!g) return;
@@ -17659,8 +17682,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
       "use strict";
       const s = document,
         l = () => window.matchMedia("(min-width: 900px)").matches,
-        r = () =>
-          s.body.classList.contains("trmon") && !!s.querySelector(".trbar"),
+        r = () => s.body.classList.contains("trmon"),
         j = () =>
           window.DIARIO_DEMO
             ? "demo"
@@ -17731,6 +17753,12 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
             M.closest('[contenteditable="true"],dialog'))) ||
           (l() && r() && (z.preventDefault(), e("focus")));
       }),
+        window.TerminalAcoes?.registrar(
+          "@focus",
+          () => e("focus"),
+          () => l() && r() && !!j() && !window.TRPOP,
+          () => (s.body.classList.contains("tr327-focus") ? "Sair do modo foco" : "Modo foco"),
+        ),
         window.TraderUI?.onRender &&
           window.TraderUI.onRender("desktop-visual-v327", i),
         window.addEventListener("resize", N),
@@ -18195,6 +18223,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
 @media(max-width:767px){.pre328-modal{max-height:78dvh}.pre328-body{padding:8px}.pre328-panes{grid-template-columns:1fr}.pre328-tabs{gap:4px}.pre328-tab{padding:8px;font-size:11px}.pre328-actions{display:grid;grid-template-columns:1fr}}
 `),
         s.head.append(g),
+        window.TerminalAcoes?.registrar("@plan", q, () => !window.TRPOP && !!O()),
         window.TraderUI?.onRender && window.TraderUI.onRender("pre328-plan", H),
         new MutationObserver(() => {
           s.querySelector(".trbar") && !s.querySelector("[data-pre328]") && H();
@@ -20974,6 +21003,29 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
           throw Error("O organizador ainda não está disponível.");
         s.TerminalOrganizador322.apply(E);
       }
+      function alterna369() {
+        try {
+          const R = !N();
+          (e(R),
+            R &&
+              ((B()?.ws || "").startsWith("ws321_auto_")
+                ? ((i = o()), Y(i))
+                : ((i = null),
+                  typeof s.toast == "function" &&
+                    s.toast(
+                      "Modo automático habilitado, mas pausado neste Workspace personalizado. Selecione uma rotina para começar.",
+                    ))),
+            z());
+        } catch (R) {
+          typeof s.toast == "function" && s.toast(R.message);
+        }
+      }
+      s.TerminalAcoes?.registrar(
+        "@auto",
+        alterna369,
+        () => l.body.classList.contains("trmon") && !s.TRPOP,
+        () => (N() ? "Desativar troca automática de layout" : "Ativar troca automática de layout"),
+      );
       function z() {
         const E = o(),
           u = N(),
@@ -20999,23 +21051,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
             (c.type = "button"),
             (c.className = "trbtn"),
             (c.dataset.t369Auto = "1"),
-            c.addEventListener("click", () => {
-              try {
-                const R = !N();
-                (e(R),
-                  R &&
-                    ((B()?.ws || "").startsWith("ws321_auto_")
-                      ? ((i = o()), Y(i))
-                      : ((i = null),
-                        typeof s.toast == "function" &&
-                          s.toast(
-                            "Modo automático habilitado, mas pausado neste Workspace personalizado. Selecione uma rotina para começar.",
-                          ))),
-                  z());
-              } catch (R) {
-                typeof s.toast == "function" && s.toast(R.message);
-              }
-            }),
+            c.addEventListener("click", alterna369),
             P.appendChild(c)));
         const q = E ? j[E] : "indisponível";
         ((m.textContent = "Rotina: " + q),

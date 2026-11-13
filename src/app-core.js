@@ -1,4 +1,37 @@
 /* Diário de Trader v560 — núcleo (paleta Terminal Grafite). Gerado a partir de: recursos.js, inicio.js, terminal-chart-mode-v415.js, app.js */
+/* v594 — registro de ações do Terminal: cada recurso registra sua função; o Início do Terminal e a barra de Painéis
+   executam a mesma função, sem precisar da barra antiga montada (CLAUDE.md, tela única). */
+window.TerminalAcoes =
+  window.TerminalAcoes ||
+  (() => {
+    const m = new Map();
+    return Object.freeze({
+      registrar(id, fn, pode, rotulo) {
+        m.set(id, { fn, pode, rotulo });
+      },
+      disponivel(id) {
+        const a = m.get(id);
+        try {
+          return !!a && (!a.pode || !!a.pode());
+        } catch {
+          return !1;
+        }
+      },
+      rotulo(id) {
+        const a = m.get(id);
+        try {
+          return (a && a.rotulo && a.rotulo()) || "";
+        } catch {
+          return "";
+        }
+      },
+      executar(id, ...x) {
+        const a = m.get(id);
+        if (!a) return !1;
+        return (a.fn(...x), !0);
+      },
+    });
+  })();
 try {
   window.TraderCardArt = Object.freeze({
     "cards-art/colecao-sazonal.png": "card-colecao-sazonal.jpg",
@@ -22417,6 +22450,16 @@ function seedBooks() {
       persist()));
 }
 /* Title Case só na exibição: conectivos curtos ficam minúsculos (exceto a 1ª palavra); siglas mantidas. */
+/* Rota única (CLAUDE.md): trocas internas de tela passam por DiarioRotas.navigate mantendo o estado da tela de destino
+   (subaba, livro, período). Sem o roteador carregado, faz a troca direta. */
+function irPara(destino) {
+  const r = window.DiarioRotas;
+  if (r && typeof r.navigate === "function") return r.navigate(destino, { manter: true });
+  const [m, sub] = String(destino).split(":");
+  tab = m;
+  m === "mercado" && sub && (MKT.tab = sub);
+  render();
+}
 function tituloLivro(t) {
   const menores = new Set(["a","à","o","e","é","de","da","do","das","dos","em","no","na","nos","nas","um","uma","por","para","com","and","of","the","in","on","to","for","or"]);
   return String(t || "").trim().split(/\s+/).map((w, i) => {
@@ -26075,7 +26118,7 @@ function render() {
       save(),
       render());
   else if (i === "cm") ((CMX += +r.dataset.id), render());
-  else if (i === "gopainel") ((tab = "painel"), render(), scrollTo(0, 0));
+  else if (i === "gopainel") (irPara("painel"), scrollTo(0, 0));
   else if (i === "gotab")
     ((tab = r.dataset.id),
       ["trades", "swing", "opc"].includes(tab) && (LT = tab),
@@ -26193,7 +26236,7 @@ function render() {
       render());
   } else
     i === "cday"
-      ? ((D = r.dataset.id), (tab = "dia"), render(), scrollTo(0, 0))
+      ? ((D = r.dataset.id), irPara("dia"), scrollTo(0, 0))
       : i === "bk"
         ? (await backup(), ($("#bm").textContent = "Backup gerado."))
         : i === "csv" && csv();
@@ -33924,7 +33967,7 @@ ${m(4, "Concluir")}
         return;
       }
       const d = o.target.closest("[data-semgo]");
-      d && ((RP = d.dataset.semgo), (tab = "rev"), render(), scrollTo(0, 0));
+      d && ((RP = d.dataset.semgo), irPara("rev"), scrollTo(0, 0));
     }),
     document.addEventListener("change", (o) => {
       const s = o.target.closest("[data-semon]"),
@@ -39956,7 +39999,7 @@ if (
       MKT.tab === "cot" &&
         ((MKT.tab = "mu"),
         setTimeout(() => {
-          ((tab = "juros"), render());
+          (irPara("juros"));
         }, 0)),
       e()
     );
@@ -46078,7 +46121,7 @@ async function relIA(e) {
   (GOR.relsem = GOR.rev =
     () => {
       if (tab === "rev") return;
-      ((RP = "w0"), (tab = "rev"), render());
+      ((RP = "w0"), irPara("rev"));
       const e = document.getElementById(
         GO.r === "relsem" ? "relsem" : "semrev",
       );
@@ -50029,7 +50072,7 @@ async function mesPdf() {
 }),
   (GOR.relmes = () => {
     if (tab === "rev" && RP === "m1") return;
-    ((RP = "m1"), (tab = "rev"), render());
+    ((RP = "m1"), irPara("rev"));
     const e = document.getElementById("relmes");
     e && setTimeout(() => e.scrollIntoView({ behavior: "smooth" }), 200);
   }));
@@ -55179,7 +55222,7 @@ document.addEventListener("click", (e) => {
     return;
   }
   const a = e.target.closest("[data-hmd]");
-  a && ((D = a.dataset.hmd), (tab = "dia"), render(), scrollTo(0, 0));
+  a && ((D = a.dataset.hmd), irPara("dia"), scrollTo(0, 0));
 });
 {
   const e = render0;
@@ -58281,7 +58324,7 @@ if (OPS_D === "dash") {
   });
 }
 GOR.dash = () => {
-  ((GO.r = null), (tab = "stats"), render());
+  ((GO.r = null), irPara("stats"));
 };
 const MM = { nova: !1, prev: null, dup: null };
 function mmLista() {
@@ -59501,7 +59544,7 @@ function pgFecha() {
     });
   }, 1e3),
   (GOR.pregao = () => {
-    ((GO.r = null), (tab = "home"), render(), setTimeout(pgAbre, 200));
+    ((GO.r = null), irPara("home"), setTimeout(pgAbre, 200));
   }),
   (GOR.qk = () => {
     ((GO.r = null),
@@ -62738,7 +62781,7 @@ function modHeader() {
         return;
       }
       if (e.target.closest("[data-modhub]")) {
-        ((tab = "ops"), render(), scrollTo(0, 0));
+        (irPara("ops"), scrollTo(0, 0));
         return;
       }
       const o = e.target.closest("[data-modcard]");
@@ -62797,10 +62840,10 @@ function vOpGrade() {
   } catch {}
 }, 6e4),
   (GOR.opc = () => {
-    ((GO.r = null), (GXV.vw = "grade"), (tab = "opgrade"), render());
+    ((GO.r = null), (GXV.vw = "grade"), irPara("opgrade"));
   }),
   (GOR.renda = () => {
-    ((GO.r = null), (GXV.vw = "renda"), (tab = "opgrade"), render());
+    ((GO.r = null), (GXV.vw = "renda"), irPara("opgrade"));
   }));
 try {
   const e = HUB_M.findIndex((t) => t[0] === "mercado:opc");
@@ -63256,7 +63299,7 @@ MOD_SUB.op.splice(2, 0, ["fl", "Fluxo EWZ"]);
       try {
         ls.set("diario-mod", "op");
       } catch {}
-      ((tab = "opfluxo"), render(), scrollTo(0, 0));
+      (irPara("opfluxo"), scrollTo(0, 0));
       return;
     }
     return e.apply(this, arguments);
@@ -63284,7 +63327,7 @@ function vOpFluxo() {
   } catch {}
 }, 6e4),
   (GOR.ewz = () => {
-    ((GO.r = null), (tab = "opfluxo"), render());
+    ((GO.r = null), irPara("opfluxo"));
   }));
 try {
   const e = HUB_M.findIndex((t) => t[0] === "mercado:fl");
@@ -67549,10 +67592,10 @@ document.addEventListener("keydown", (e) => {
   else if (/^[1-4]$/.test(o))
     (modVai(["dt", "sw", "op", "ex"][+o - 1], "ops"), scrollTo(0, 0));
   else if (o === "5") (modVai("", "geral"), scrollTo(0, 0));
-  else if (o === "h" || o === "H") ((tab = "home"), render(), scrollTo(0, 0));
-  else if (o === "d" || o === "D") ((tab = "dia"), render(), scrollTo(0, 0));
+  else if (o === "h" || o === "H") (irPara("home"), scrollTo(0, 0));
+  else if (o === "d" || o === "D") (irPara("dia"), scrollTo(0, 0));
   else if (o === "m" || o === "M")
-    ((tab = "mercado"), render(), scrollTo(0, 0));
+    (irPara("mercado"), scrollTo(0, 0));
   else if (o === "p" || o === "P") ckpAbre();
   else if (o === "t" || o === "T") {
     const n = document.getElementById("app");
@@ -71937,7 +71980,7 @@ function iniAplica() {
       render());
   }),
   (GOR.ing = () => {
-    ((GO.r = null), (ESV = "ing"), (tab = "estudos"), render());
+    ((GO.r = null), (ESV = "ing"), irPara("estudos"));
   }));
 {
   const e = siriHtml;
@@ -72018,7 +72061,7 @@ window.addEventListener(
     try {
       ls.set("diario-mkt-tab", MKT.tab);
     } catch {}
-    ((tab = "mercado"), render(), scrollTo(0, 0));
+    (irPara("mercado"), scrollTo(0, 0));
   },
   !0,
 );
@@ -73803,7 +73846,7 @@ estSeg = function (e) {
     return;
   }
   if (a === "rpy") {
-    ((tab = "dtrpy"), render(), scrollTo(0, 0));
+    (irPara("dtrpy"), scrollTo(0, 0));
     return;
   }
   if (a === "cnpi") {
@@ -77003,7 +77046,7 @@ function verVelhas() {
 }
 document.addEventListener("click", (e) => {
   e.target.closest("[data-gotostatus]") &&
-    ((tab = "status"), render(), scrollTo(0, 0));
+    (irPara("status"), scrollTo(0, 0));
 });
 const USO_LS = "diario-uso",
   OC_LS = "diario-oculto",
@@ -89745,7 +89788,7 @@ Dados do terminal agora:
           (P.hidden = !B.length || !E.target.value.trim()));
       }
     }),
-    document.addEventListener("change", (E) => {
+    document.addEventListener("change", (trMudaRef = (E) => {
       const P = E.target;
       if (!(!P || !P.closest || tab !== "term")) {
         if (P.matches("[data-trlay]")) {
@@ -89803,8 +89846,8 @@ Dados do terminal agora:
           return;
         }
       }
-    }),
-    document.addEventListener("click", (E) => {
+    })),
+    document.addEventListener("click", (trCliqueRef = (E) => {
       var P;
       if (tab !== "term") return;
       const B = (_) => E.target.closest && E.target.closest(_);
@@ -90159,7 +90202,27 @@ Dados do terminal agora:
         document
           .querySelectorAll(".trp")
           .forEach((_, ye) => _.classList.toggle("foco", ye === e.foco)));
-    }));
+    })));
+  /* v594: ações do Terminal sem depender da barra antiga (.trbar) montada.
+     O Início do Terminal chama estas funções direto; na tela de Painéis os botões continuam chamando o mesmo código. */
+  var trMudaRef, trCliqueRef;
+  {
+    const falso = (el) => ({ target: el, preventDefault() {}, stopPropagation() {}, button: 0 }),
+      trAcao = (tr) => {
+        const b = document.createElement("button");
+        ((b.dataset.tr = tr), trCliqueRef && trCliqueRef(falso(b)));
+      },
+      A = window.TerminalAcoes;
+    A &&
+      (A.registrar("@add", () => trAcao("addp")),
+      A.registrar("@organize", () => trAcao("org")),
+      A.registrar("@rename", () => trAcao("wsmenu")),
+      A.registrar("espaco", (v) => {
+        const s = document.createElement("select"),
+          o = document.createElement("option");
+        ((o.value = v), s.append(o), (s.value = v), s.setAttribute("data-trlay", ""), trMudaRef && trMudaRef(falso(s)));
+      }));
+  }
   let ce = null;
   (document.addEventListener("pointerdown", (E) => {
     if (tab !== "term" || !l() || E.button > 0) return;
@@ -90366,7 +90429,7 @@ Dados do terminal agora:
     (E) => {
       E.target.closest &&
         E.target.closest("[data-trabre]") &&
-        ((tab = "term"), render(), scrollTo(0, 0));
+        (irPara("term"), scrollTo(0, 0));
     },
     !0,
   );
@@ -93321,7 +93384,7 @@ Dados do terminal agora:
         c(v.f);
         return;
       }
-      ((tab = "term"), render(), setTimeout(() => e.roda(x), 50));
+      (irPara("term"), setTimeout(() => e.roda(x), 50));
     });
     {
       const f = TraderStyles.slot("legacy-113");
@@ -95112,7 +95175,7 @@ Dados do terminal agora:
           save = function () {};
         } catch {}
         setTimeout(() => {
-          ((tab = "term"), render());
+          (irPara("term"));
         }, 400);
       }
     } catch {}
@@ -98432,7 +98495,7 @@ Validação do app: atenção a ` +
               try {
                 ls.set("diario-mkt-tab", "lab");
               } catch {}
-              ((tab = "mercado"), render(), scrollTo(0, 0));
+              (irPara("mercado"), scrollTo(0, 0));
             }, 0);
         },
         !0,

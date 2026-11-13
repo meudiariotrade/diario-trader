@@ -2826,6 +2826,16 @@ function seedBooks() {
       persist()));
 }
 /* Title Case só na exibição: conectivos curtos ficam minúsculos (exceto a 1ª palavra); siglas mantidas. */
+/* Rota única (CLAUDE.md): trocas internas de tela passam por DiarioRotas.navigate mantendo o estado da tela de destino
+   (subaba, livro, período). Sem o roteador carregado, faz a troca direta. */
+function irPara(destino) {
+  const r = window.DiarioRotas;
+  if (r && typeof r.navigate === "function") return r.navigate(destino, { manter: true });
+  const [m, sub] = String(destino).split(":");
+  tab = m;
+  m === "mercado" && sub && (MKT.tab = sub);
+  render();
+}
 function tituloLivro(t) {
   const menores = new Set(["a","à","o","e","é","de","da","do","das","dos","em","no","na","nos","nas","um","uma","por","para","com","and","of","the","in","on","to","for","or"]);
   return String(t || "").trim().split(/\s+/).map((w, i) => {

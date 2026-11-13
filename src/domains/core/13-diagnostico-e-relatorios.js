@@ -2658,10 +2658,10 @@ document.addEventListener("keydown", (e) => {
   else if (/^[1-4]$/.test(o))
     (modVai(["dt", "sw", "op", "ex"][+o - 1], "ops"), scrollTo(0, 0));
   else if (o === "5") (modVai("", "geral"), scrollTo(0, 0));
-  else if (o === "h" || o === "H") ((tab = "home"), render(), scrollTo(0, 0));
-  else if (o === "d" || o === "D") ((tab = "dia"), render(), scrollTo(0, 0));
+  else if (o === "h" || o === "H") (irPara("home"), scrollTo(0, 0));
+  else if (o === "d" || o === "D") (irPara("dia"), scrollTo(0, 0));
   else if (o === "m" || o === "M")
-    ((tab = "mercado"), render(), scrollTo(0, 0));
+    (irPara("mercado"), scrollTo(0, 0));
   else if (o === "p" || o === "P") ckpAbre();
   else if (o === "t" || o === "T") {
     const n = document.getElementById("app");
