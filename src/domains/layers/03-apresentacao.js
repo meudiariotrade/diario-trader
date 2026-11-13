@@ -6476,10 +6476,10 @@ try {
                 : e.after(n)),
               (n.dataset.id = r),
               (n.dataset.fs = o.join(",")));
-            const i = "🎬 Vídeo";
+            const i = "▶ Iniciar aula";
             n.textContent !== i &&
               ((n.textContent = i),
-              n.setAttribute("aria-label", "Assistir o vídeo MP4 desta aula"));
+              n.setAttribute("aria-label", "Iniciar o vídeo desta aula"));
           }));
       }
     }
@@ -6489,6 +6489,106 @@ try {
         f(() => l.AULAS.getLista().find((e) => e.id === t), null);
       return a ? `Aula ${a.numero} · ${a.titulo}` : "Aula em vídeo";
     }
+    /* v597 — Sala de aula: controles próprios abaixo do vídeo (a barra de tempo nunca cobre a legenda gravada
+       no vídeo), velocidade, concluir aula e anotações (salvas em aulas.progresso no Supabase). */
+    const VEL597 = [1, 1.25, 1.5, 2],
+      mmss597 = (x) => {
+        x = Math.max(0, Math.floor(+x || 0));
+        const hh = Math.floor(x / 3600),
+          mm = Math.floor((x % 3600) / 60),
+          ss = String(x % 60).padStart(2, "0");
+        return hh ? hh + ":" + String(mm).padStart(2, "0") + ":" + ss : mm + ":" + ss;
+      },
+      vel597 = () => {
+        const v = +f(() => localStorage.getItem("v597-vel"), 1);
+        return VEL597.includes(v) ? v : 1;
+      };
+    function estudo597(t) {
+      const au = l.AULAS || {},
+        feita = f(() => au.concluida(t), !1),
+        notas = f(() => au.notas(t), ""),
+        v = vel597();
+      return `<div class="v597-bar" data-v597-bar>
+    <button type="button" class="v597-pp" data-v597-pp aria-label="Reproduzir">▶</button>
+    <input type="range" class="v597-seek" data-v597-seek min="0" max="1000" value="0" step="1" aria-label="Posição do vídeo">
+    <span class="v597-tempo" data-v597-tempo>0:00 / 0:00</span>
+    <button type="button" class="v597-fs" data-v597-fs aria-label="Tela cheia">⛶</button></div>
+  <div class="v597-estudo">
+    <div class="v597-vel" role="group" aria-label="Velocidade">${VEL597.map((x) => `<button type="button" data-v597-vel="${x}" class="${x === v ? "on" : ""}" aria-pressed="${x === v}">${String(x).replace(".", ",")}x</button>`).join("")}</div>
+    <button type="button" class="v597-feita${feita ? " on" : ""}" data-v597-feita aria-pressed="${feita}">${feita ? "Aula concluída ✓" : "Marcar aula como concluída ✓"}</button>
+    <details class="v597-notas"${notas ? " open" : ""}><summary>Anotações desta aula</summary><textarea data-v597-notas rows="4" maxlength="8000" placeholder="Insights, dúvidas e o que aplicar no pregão">${p(notas)}</textarea><small data-v597-salvo aria-live="polite"></small></details>
+  </div>`;
+    }
+    function liga597(ov, vid) {
+      if (!ov || !vid) return;
+      const pp = ov.querySelector("[data-v597-pp]"),
+        sk = ov.querySelector("[data-v597-seek]"),
+        tm = ov.querySelector("[data-v597-tempo]"),
+        pinta = () => {
+          const dur = vid.duration || 0;
+          (tm && (tm.textContent = mmss597(vid.currentTime) + " / " + mmss597(dur)),
+            sk && !sk.dataset.arrasta && (sk.value = dur ? Math.round((vid.currentTime / dur) * 1e3) : 0),
+            pp && ((pp.textContent = vid.paused ? "▶" : "❚❚"), pp.setAttribute("aria-label", vid.paused ? "Reproduzir" : "Pausar")));
+        };
+      vid.playbackRate = vel597();
+      ["timeupdate", "loadedmetadata", "play", "pause", "ended"].forEach((ev) => vid.addEventListener(ev, pinta));
+      vid.addEventListener("loadedmetadata", () => (vid.playbackRate = vel597()));
+      vid.addEventListener("click", () => (vid.paused ? vid.play() : vid.pause()));
+      sk &&
+        (sk.addEventListener("input", () => {
+          sk.dataset.arrasta = "1";
+          const dur = vid.duration || 0;
+          (dur && (vid.currentTime = (sk.value / 1e3) * dur), tm && (tm.textContent = mmss597(vid.currentTime) + " / " + mmss597(dur)));
+        }),
+        sk.addEventListener("change", () => delete sk.dataset.arrasta));
+      pinta();
+    }
+    d.addEventListener("click", (ev) => {
+      const ov = d.getElementById("v434-ov");
+      if (!ov || ov.hidden || !ev.target.closest) return;
+      const vid = ov.querySelector("video"),
+        id = ov.dataset.id;
+      if (ev.target.closest("[data-v597-pp]")) return vid && (vid.paused ? vid.play() : vid.pause());
+      if (ev.target.closest("[data-v597-fs]")) {
+        if (!vid) return;
+        try {
+          vid.webkitEnterFullscreen ? vid.webkitEnterFullscreen() : vid.requestFullscreen?.();
+        } catch {}
+        return;
+      }
+      const vb = ev.target.closest("[data-v597-vel]");
+      if (vb) {
+        const v = +vb.dataset.v597Vel;
+        (f(() => localStorage.setItem("v597-vel", String(v))), vid && (vid.playbackRate = v));
+        ov.querySelectorAll("[data-v597-vel]").forEach((b) => {
+          const on = b === vb;
+          (b.classList.toggle("on", on), b.setAttribute("aria-pressed", String(on)));
+        });
+        return;
+      }
+      const fb = ev.target.closest("[data-v597-feita]");
+      if (fb && id) {
+        const sim = fb.getAttribute("aria-pressed") !== "true";
+        f(() => l.AULAS.marcarConcluida(id, sim));
+        (fb.classList.toggle("on", sim),
+          fb.setAttribute("aria-pressed", String(sim)),
+          (fb.textContent = sim ? "Aula concluída ✓" : "Marcar aula como concluída ✓"));
+        f(() => typeof tab < "u" && tab === "estudos" && render());
+      }
+    });
+    let notas597 = 0;
+    d.addEventListener("input", (ev) => {
+      const ta = ev.target.closest?.("#v434-ov [data-v597-notas]");
+      if (!ta) return;
+      const ov = d.getElementById("v434-ov"),
+        id = ov?.dataset.id,
+        aviso = ov?.querySelector("[data-v597-salvo]");
+      (clearTimeout(notas597),
+        aviso && (aviso.textContent = "Salvando…"),
+        (notas597 = setTimeout(() => {
+          (f(() => l.AULAS.salvarNotas(id, ta.value)), aviso && (aviso.textContent = "Salvo"));
+        }, 800)));
+    });
     async function h(t, a, e) {
       e = e || a[0];
       let r = d.getElementById("v434-ov");
@@ -6501,6 +6601,7 @@ try {
         (r.innerHTML = `<div class="v434-box"><div class="v434-top"><b>${p(v(t))}</b><button type="button" class="v434-x" data-v434x aria-label="Fechar">✕</button></div>
   ${a.length > 1 ? `<div class="v434-fmts">${a.map((o) => `<button type="button" data-v434f="${o}" class="${o === e ? "on" : ""}">${A[o]}</button>`).join("")}</div>` : ""}
   <div class="v434-play"><div class="v434-load">Carregando o vídeo…</div></div>
+  ${estudo597(t)}
   <div class="v434-acts"><button type="button" class="v434-pri" data-v434share>Compartilhar</button><a class="v434-dl" data-v434dl href="#" download>Baixar</a></div></div>`),
         (r.hidden = !1),
         (r.dataset.id = t),
@@ -6510,7 +6611,8 @@ try {
         const o = await T(t, e);
         r.dataset.u = o;
         const n = r.querySelector(".v434-play");
-        ((n.innerHTML = `<video src="${p(o)}" controls playsinline preload="metadata"></video>`),
+        ((n.innerHTML = `<video src="${p(o)}" playsinline preload="metadata"></video>`),
+          liga597(r, n.querySelector("video")),
           n.querySelector("video").addEventListener(
             "error",
             () => {
@@ -6561,7 +6663,8 @@ try {
         if (t.hidden || t.dataset.u !== a) return;
         const o = URL.createObjectURL(r);
         ((t.dataset.blob = o),
-          (e.innerHTML = `<video src="${o}" controls playsinline autoplay></video>`));
+          (e.innerHTML = `<video src="${o}" playsinline autoplay></video>`),
+          liga597(t, e.querySelector("video")));
       } catch (r) {
         e.innerHTML = `<div class="v434-load">Não consegui abrir o vídeo: ${p(r.message || r)}. Use “Baixar”.</div>`;
       }

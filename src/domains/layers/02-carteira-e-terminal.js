@@ -2299,13 +2299,14 @@ try {
       GRUPOS596 = {
         est: ["est", "foco", "reg", "ciclo", "edital", "conq"],
         aul: ["aul", "playlists"],
-        liv: ["liv", "ing", "cnpi", "fac", "pl", "pr", "resumos"],
-        desemp: ["desemp", "sim", "treino"],
+        liv: ["liv", "cnpi", "fac", "pl", "pr", "resumos"],
+        desemp: ["desemp", "sim", "treino", "ing"],
       },
       SUB596 = {
         est: [["est", "Hoje"], ["foco", "Modo foco"], ["reg", "Registrar estudo"], ["ciclo", "Ciclo"]],
         liv: [["liv", "Livros"], ["pl", "Planos de leitura"], ["pr", "Prompts"]],
-        desemp: [["desemp", "Progresso"], ["sim", "Simulado CNPI-T"], ["treino", "Treino"]],
+        /* v597: Inglês (trilha estilo Duolingo) separado do treino técnico de mercado. */
+        desemp: [["desemp", "Progresso"], ["sim", "Simulado CNPI-T"], ["treino", "Treino de mercado"], ["ing", "Inglês"]],
       };
     function grupo596(v) {
       return Object.keys(GRUPOS596).find((g) => GRUPOS596[g].includes(v)) || "est";
@@ -2479,12 +2480,12 @@ try {
         </section>` : ""}
       </section>`
           : "";
-      return `<div class="dt393-page dt397-studies dt399-studies dt-est-interno" aria-label="Central de Estudos">
+      return `<div class="dt393-page dt397-studies dt399-studies dt-est-interno" data-vista="${c(w)}" aria-label="Central de Estudos">
       <div class="dt401-category-shell v596-shell">
         <nav class="dt397-category" aria-label="Seções de Estudos">${wt()}</nav>
       </div>
       ${sub596()}
-      <section class="dt397-native-mount" aria-label="Ferramentas de estudo"><header><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "ing", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["ing", "Inglês"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}${hoje596}</section>
+      <section class="dt397-native-mount" aria-label="Ferramentas de estudo"><header><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}${hoje596}</section>
     </div>`;
     }
     function Ct() {
@@ -2580,6 +2581,13 @@ try {
                 (n.appendChild(o), (n.hidden = !1));
                 const filtros = n.querySelector(".dt397-filtros");
                 filtros && o.prepend(filtros);
+                /* v597: cada sub-aba mostra só o próprio conteúdo (sem repetir atalhos de outras abas). */
+                w === "sim" && o.querySelectorAll(".estchips").forEach((x) => x.remove());
+                w === "ing" && o.querySelectorAll(".e2atalho").forEach((x) => x.remove());
+                requestAnimationFrame(() => {
+                  const on = l.querySelector(".v596-sub .on");
+                  on && on.parentElement.scrollWidth > on.parentElement.clientWidth && (on.parentElement.scrollLeft = Math.max(0, on.offsetLeft - 12));
+                });
               } else (o.remove(), n.remove());
               i = !0;
             }

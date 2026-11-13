@@ -3469,6 +3469,12 @@ try {
     }
     function I() {
       if (b() !== "estudos" || typeof estMeta !== "function") return;
+      /* v597: a meta semanal aparece só em Hoje e em Progresso. */
+      const vista597 = u.querySelector(".dt397-studies")?.dataset.vista;
+      if (vista597 && !["est", "desemp"].includes(vista597)) {
+        u.getElementById("v514-meta")?.remove();
+        return;
+      }
       const meta = estMeta(),
         total = semEstudo().tot,
         percent = Math.min(100, (total / meta.min) * 100);
