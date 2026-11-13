@@ -1411,7 +1411,7 @@ try {
         const [_, K] = y.split(":");
         if (_ === "dia") ((DV = K || "ed"), (tab = "dia"));
         else if (_ === "mercado") {
-          ((tab = "mercado"), (MKT.tab = K || "mu"));
+          ((tab = "mercado"), (MKT.tab = K || "cq"));
           try {
             ls.set("diario-mkt-tab", MKT.tab);
           } catch {}

@@ -1411,7 +1411,7 @@ try {
         const [_, K] = y.split(":");
         if (_ === "dia") ((DV = K || "ed"), (tab = "dia"));
         else if (_ === "mercado") {
-          ((tab = "mercado"), (MKT.tab = K || "mu"));
+          ((tab = "mercado"), (MKT.tab = K || "cq"));
           try {
             ls.set("diario-mkt-tab", MKT.tab);
           } catch {}
@@ -23885,8 +23885,8 @@ try {
           if (o) {
             (t.preventDefault(), t.stopImmediatePropagation(), O(!1));
             const n = o.dataset.dt393Route;
-            n.includes(":") && window.DIARIO_NAV?.navigate
-              ? window.DIARIO_NAV.navigate(n)
+            (n.includes(":") || n === "mercado") && window.DIARIO_NAV?.navigate
+              ? window.DIARIO_NAV.navigate(n === "mercado" ? "mercado:cq" : n)
               : ((tab = n), render(), window.scrollTo?.(0, 0));
             return;
           }
@@ -24406,23 +24406,14 @@ try {
           ((L = !1), k());
         }, 0));
     }
-    (window.TraderUI?.onRender &&
+    window.TraderUI?.onRender &&
       window.TraderUI.onRender("mercado-v403", () => {
         try {
           k();
         } catch (e) {
           console.warn("Mercado: cabeçalho", e);
         }
-      }),
-      d.addEventListener(
-        "click",
-        (e) => {
-          e.target.closest?.('[data-dt393-route="mercado"]') &&
-            typeof MKT == "object" &&
-            (MKT.tab = "cq");
-        },
-        !0,
-      ));
+      });
     const K = new MutationObserver((e) => {
         typeof tab > "u" ||
           tab !== "mercado" ||
