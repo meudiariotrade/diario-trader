@@ -1,0 +1,9 @@
+DIÁRIO DE TRADER — v595 (rota única completa e ajustes visuais)
+
+Rota única: 116 trocas internas de tela agora passam por irPara() → navigate(destino, { manter: true }),
+somadas às 36 da v594. Ficam diretas só as atribuições de inicialização e os redirecionamentos feitos durante o render.
+Visual:
+- Estudos: mini-capas mais altas; títulos longos inteiros (11px, entrelinha curta).
+- Início: aviso de preparo some quando o pré-mercado está concluído (continua em Meu dia).
+- Operações: barra de risco consumido (4px) sob o limite — verde/âmbar/vermelho.
+- Mercado > Cotações: folga à direita na barra de categorias.
