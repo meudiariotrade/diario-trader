@@ -1,0 +1,9 @@
+DIÁRIO DE TRADER — v594 (Terminal e rota única)
+
+Tela única (CLAUDE.md, seção 6):
+- Terminal: a barra antiga (.trbar) sai do DOM no Início. Planejar sessão, modo foco, radar, comandos (Ctrl+Espaço),
+  espaços, organizar/adicionar painéis, renomear, layouts por horário e troca automática agora são executados
+  por um registro único (TerminalAcoes), usado tanto pelo Início quanto pela barra de Painéis.
+Rota única:
+- navigate(destino, { manter: true }) para trocas internas, preservando subaba e estado; irPara() substitui 36 trocas diretas.
+- Toda troca de rota fecha o menu lateral.
