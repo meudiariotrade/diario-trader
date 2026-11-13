@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 c0cdcbd860f00ad6e38a30cb1e7ec3979ef1e5f7333415cfeb79e2c8813ed037 */
+/* Gerado de src/app-theme.css · SHA256 eab7fb7af9b4f49c360a0959080017e2c13d85026af724d9a41cab256c4f21e0 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2212,3 +2212,53 @@ html body #app#app .dt395-native-mercado .m406-section-switch [data-m550-jornal]
 html body #app#app .dt395-native-mercado .mk-seg{display:none!important}
 /* Linha do dia da agenda: horários sem quebrar. */
 html body #app#app .agr-ln .hh span{white-space:nowrap!important;transform:translateX(-50%);display:inline-block}
+
+/* ── v584: terminal institucional — superfícies planas, divisórias de 1px e números tabulares ── */
+:root,:root[data-theme=dark],:root[data-theme=light],html:root[data-theme=dark]{--bg:#0A0C10!important;--card:#11141B!important;--card2:#11141B!important;--surface-raised:#151922!important;--bd:#1E232E!important;--bd2:#1E232E!important;--dt393-black:#0A0C10;--radius-card:4px!important;--r-1:4px;--r-2:4px;--r-3:4px;--r-4:4px;--studio-shadow:none!important;--t-line:#1E232E}
+html body,html body.dt393-active,html body #app{background:#0A0C10!important}
+html body #dt393-global-head,html body .dt393-topbar,html body #v4-bnav,html body #tape{background:#0A0C10!important;border-color:#1E232E!important;box-shadow:none!important}
+html body #app :is(.card,section[class*="card"],div[class*="-card"],[class*="-panel"],.dt397-panel,.v4-tile,.v4-kpis>div,.h2k,.hero2,.m550-card,.sw9grid>div){background:#11141B!important;border:1px solid #1E232E!important;border-radius:4px!important;box-shadow:none!important;background-image:none!important}
+/* cartão dentro de cartão vira linha: sem fundo próprio, só a divisória fina */
+html body #app :is(.card,section[class*="card"],div[class*="-card"],[class*="-panel"],.dt397-panel) :is(.card,section[class*="card"],div[class*="-card"],[class*="-panel"]):not(.m550-card){background:transparent!important;border:0!important;border-top:1px solid #1E232E!important;border-radius:0!important;box-shadow:none!important}
+html body #app :is(button,input,select,textarea,.btn,.dt397-chip,[class*="chip"],.v4-tile,.v4-gate,summary){border-radius:4px!important;box-shadow:none!important}
+html body #app :is(hr,.sep,.divider){border:0!important;border-top:1px solid #1E232E!important;background:none!important}
+html body #app :is(table,th,td){border-color:#1E232E!important}
+/* números financeiros, porcentagens e horários alinhados */
+html body :is(#app,#tape,#dt393-global-head,#org-side,.wf-chat-panel) :is(strong,b,small,em,td,th,time,output,.m550-px,.m550-var,[class*="px"],[class*="val"],[class*="pct"],[class*="hora"],[class*="num"],[class*="kpi"],[class*="price"],[class*="pnl"],[class*="res"]),html body #tape *,html body #app [data-v568-base]{font-variant-numeric:tabular-nums!important;font-feature-settings:"tnum" 1!important}
+html body #app{font-variant-numeric:tabular-nums}
+/* WIN/WDO: último fechamento salvo */
+html body #app .m584-badge{display:inline-block;margin-left:8px;padding:1px 6px;border:1px solid #2A3140;border-radius:2px;color:#8A93A6;font-size:10px;font-weight:700;letter-spacing:.08em;line-height:16px;vertical-align:middle;background:#0A0C10}
+/* Assistente: só o ícone do cabeçalho; nada flutuando sobre o conteúdo */
+html body #economista-flutuante .wf-chat-launcher{display:none!important}
+html body .dt393-topactions [data-ia-topo][aria-expanded="true"]{color:var(--dt393-gold,#cfab69)!important}
+html body .wf-chat-panel{border-radius:4px!important;border:1px solid #1E232E!important;background:#11141B!important;box-shadow:0 12px 40px #000a!important}
+/* Cabeçalho do Início igual ao das outras abas: título à esquerda, sem a marca encavalando nos ícones */
+@media (max-width:760px){
+ html body #dt393-global-head .dt393-brand{display:none!important}
+ html body #dt393-global-head .dt393-topbar{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important}
+ html body #dt393-global-head .dt393-topbar .dt393-title.dt393-title{order:0!important;flex:1 1 auto!important;min-width:0!important;text-align:left!important;justify-content:flex-start!important;margin:0!important;padding-left:8px!important;font-size:20px!important;font-weight:700!important;color:#e8e6e1!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;position:static!important;transform:none!important}
+ html body #dt393-global-head .dt393-topactions{order:1!important;flex:0 0 auto!important;display:flex!important;gap:2px!important;margin-left:auto!important}
+}
+/* Estudos: capas tipográficas (cor sólida + faixa lateral) no lugar da imagem de candles */
+html body #app .m584-capa{position:relative;display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:100%;min-height:72px;padding:8px 8px 8px 14px;box-sizing:border-box;background:var(--capa,#1B2230);border-radius:2px;overflow:hidden;color:#E8E6E1;text-align:left}
+html body #app .m584-capa::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--faixa,#C9A15A)}
+html body #app .m584-capa b{display:block;font-size:10px;font-weight:750;line-height:1.2;letter-spacing:0;overflow-wrap:normal;word-break:normal;hyphens:auto;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+html body #app .m584-capa small{display:block;margin-top:4px;font-size:9px;color:#ffffffa0;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Últimos trades: código e descrição das opções inteiros (sem reticências) */
+html body #app .trl .trow{display:grid!important;grid-template-columns:36px minmax(0,1fr) auto!important;column-gap:12px!important;row-gap:4px!important;align-items:start!important}
+html body #app .trl .trow>.tic16{grid-column:1;grid-row:1/3}
+html body #app .trl .trow>.tnm16{grid-column:2;grid-row:1/3}
+html body #app .trl .trow>.tvl16{grid-column:3;grid-row:1;text-align:right}
+html body #app .trl .trow>.bdg{grid-column:3;grid-row:2;justify-self:end}
+html body #app .trl .tnm16{flex:1 1 auto!important;min-width:0!important}
+html body #app .trl .tnm16>b,html body #app .trl .tnm16>small{overflow:visible!important;text-overflow:clip!important;word-break:normal!important;-webkit-line-clamp:unset!important;display:block!important;max-width:none!important}
+html body #app .trl .tnm16>b{white-space:normal!important;overflow-wrap:normal!important;word-break:keep-all!important}
+html body #app .trl .tnm16>small{white-space:normal!important;overflow-wrap:break-word!important}
+html body #app .card.trl,html body #app .trl{background:transparent!important;border:0!important;border-radius:0!important;padding:0!important}
+html body #app .trl .trow{border-top:1px solid #1E232E!important;border-radius:0!important}
+html body #app .trl .tvl16{flex:0 0 auto!important}
+/* itens dentro de painéis: linhas planas em vez de caixinhas */
+html body #app .dt397-panel :is(.dt397-lesson,.dt397-library-grid>button,.dt397-suggestion-list>button),html body #app :is(.card,[class*="-panel"]) :is(.v4-ci-item,[class*="intel"] [class*="item"],[class*="-box"]){background:transparent!important;border:0!important;border-top:1px solid #1E232E!important;border-radius:0!important;box-shadow:none!important}
+html body #app .dt397-library-grid{gap:0!important}
+html body #app .dt397-library-grid>button{border-right:1px solid #1E232E!important}
+html body #app .dt397-lesson-art--capa{background:none!important;border:0!important;padding:0!important}

@@ -2386,8 +2386,15 @@ try {
         o = At(t);
       return `<button type="button" class="dt397-lesson dt399-video-row" data-auopen="${c(t.id)}" aria-label="Abrir ${e}"><span class="dt397-lesson-art dt399-lesson-visual">${Dt(o)}<span class="dt399-play-mini">▶ ${t.min ? c(t.min) + "min" : "Aula"}</span></span><span class="dt397-lesson-copy"><small class="dt397-type">${o === "cert" ? "CNPI-T" : o === "english" ? "INGLÊS" : "ANÁLISE TÉCNICA"}</small><strong>${e}</strong><small>${c(t.livro || "Videoaula")} ${t.capitulos ? "· " + c(t.capitulos) : ""}</small>${Mt(s)}</span><span class="dt399-row-aside">${s === null ? a("right", 16) : s + "%"}</span></button>`;
     }
+    function capaLivro(titulo, autor) {
+      const paleta = [["#1B2230", "#C9A15A"], ["#1E2A24", "#4CC388"], ["#2A1D1F", "#E0735F"], ["#1C2433", "#6FA8DC"], ["#262033", "#A88BE0"], ["#2B2618", "#D9B44A"]];
+      let h = 0;
+      for (const ch of String(titulo || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      const [cor, faixa] = paleta[h % paleta.length];
+      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b>${c(titulo || "Livro")}</b><small>${c(autor || "Livro")}</small></span>`;
+    }
     function xt(t, e) {
-      return `<button type="button" class="dt397-lesson dt399-book-row" data-a="openbook" data-id="${c(t.id)}" aria-label="Abrir livro ${c(t.t || "Sem título")}"><span class="dt397-lesson-art">${U()}<span class="dt397-art-meta">LIVRO</span></span><span class="dt397-lesson-copy"><small class="dt397-type">LEITURA</small><strong>${c(t.t || "Livro sem título")}</strong><small>${c(t.a || "Autor não informado")}</small><span class="dt397-reading-status">${a("book", 13)} ${Array.isArray(t.notes) ? t.notes.length : 0} anotação(ões)</span></span>${a("right", 17)}</button>`;
+      return `<button type="button" class="dt397-lesson dt399-book-row" data-a="openbook" data-id="${c(t.id)}" aria-label="Abrir livro ${c(t.t || "Sem título")}"><span class="dt397-lesson-art dt397-lesson-art--capa">${capaLivro(t.t, t.a)}</span><span class="dt397-lesson-copy"><small class="dt397-type">LEITURA</small><strong>${c(t.t || "Livro sem título")}</strong><small>${c(t.a || "Autor não informado")}</small><span class="dt397-reading-status">${a("book", 13)} ${Array.isArray(t.notes) ? t.notes.length : 0} anotação(ões)</span></span>${a("right", 17)}</button>`;
     }
     r.addEventListener(
       "keydown",
