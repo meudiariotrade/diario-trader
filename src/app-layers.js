@@ -26900,7 +26900,8 @@ try {
       if (!h) {
         n && !n.querySelector(":scope > .tf413-layout") && (n.remove(), (n = null));
         e?.node && !e.node.querySelector(":scope > .tf413-layout") && (e = null);
-        t.querySelectorAll(":scope > :is(.trbar,.trtabs,#trgrid,.trtape,.trrod,.trquick-strip,.trmerc)").forEach((o) => o.remove());
+        /* A .trbar fica: os atalhos nativos do Início do Terminal (planejar, foco, radar, painéis) acionam os botões dela. */
+        t.querySelectorAll(":scope > :is(.trtabs,#trgrid,.trtape,.trrod,.trquick-strip,.trmerc)").forEach((o) => o.remove());
       }
       const novo = !n && !e?.node;
       (n
