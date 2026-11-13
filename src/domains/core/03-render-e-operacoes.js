@@ -248,7 +248,7 @@ function render() {
       save(),
       render());
   else if (i === "cm") ((CMX += +r.dataset.id), render());
-  else if (i === "gopainel") ((tab = "painel"), render(), scrollTo(0, 0));
+  else if (i === "gopainel") (irPara("painel"), scrollTo(0, 0));
   else if (i === "gotab")
     ((tab = r.dataset.id),
       ["trades", "swing", "opc"].includes(tab) && (LT = tab),
@@ -366,7 +366,7 @@ function render() {
       render());
   } else
     i === "cday"
-      ? ((D = r.dataset.id), (tab = "dia"), render(), scrollTo(0, 0))
+      ? ((D = r.dataset.id), irPara("dia"), scrollTo(0, 0))
       : i === "bk"
         ? (await backup(), ($("#bm").textContent = "Backup gerado."))
         : i === "csv" && csv();

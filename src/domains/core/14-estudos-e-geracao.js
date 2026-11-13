@@ -2830,7 +2830,7 @@ function iniAplica() {
       render());
   }),
   (GOR.ing = () => {
-    ((GO.r = null), (ESV = "ing"), (tab = "estudos"), render());
+    ((GO.r = null), (ESV = "ing"), irPara("estudos"));
   }));
 {
   const e = siriHtml;
@@ -2911,7 +2911,7 @@ window.addEventListener(
     try {
       ls.set("diario-mkt-tab", MKT.tab);
     } catch {}
-    ((tab = "mercado"), render(), scrollTo(0, 0));
+    (irPara("mercado"), scrollTo(0, 0));
   },
   !0,
 );

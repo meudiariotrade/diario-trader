@@ -2683,7 +2683,7 @@ function modHeader() {
         return;
       }
       if (e.target.closest("[data-modhub]")) {
-        ((tab = "ops"), render(), scrollTo(0, 0));
+        (irPara("ops"), scrollTo(0, 0));
         return;
       }
       const o = e.target.closest("[data-modcard]");
@@ -2742,10 +2742,10 @@ function vOpGrade() {
   } catch {}
 }, 6e4),
   (GOR.opc = () => {
-    ((GO.r = null), (GXV.vw = "grade"), (tab = "opgrade"), render());
+    ((GO.r = null), (GXV.vw = "grade"), irPara("opgrade"));
   }),
   (GOR.renda = () => {
-    ((GO.r = null), (GXV.vw = "renda"), (tab = "opgrade"), render());
+    ((GO.r = null), (GXV.vw = "renda"), irPara("opgrade"));
   }));
 try {
   const e = HUB_M.findIndex((t) => t[0] === "mercado:opc");
@@ -3201,7 +3201,7 @@ MOD_SUB.op.splice(2, 0, ["fl", "Fluxo EWZ"]);
       try {
         ls.set("diario-mod", "op");
       } catch {}
-      ((tab = "opfluxo"), render(), scrollTo(0, 0));
+      (irPara("opfluxo"), scrollTo(0, 0));
       return;
     }
     return e.apply(this, arguments);
@@ -3229,7 +3229,7 @@ function vOpFluxo() {
   } catch {}
 }, 6e4),
   (GOR.ewz = () => {
-    ((GO.r = null), (tab = "opfluxo"), render());
+    ((GO.r = null), irPara("opfluxo"));
   }));
 try {
   const e = HUB_M.findIndex((t) => t[0] === "mercado:fl");

@@ -1251,7 +1251,7 @@ if (
       MKT.tab === "cot" &&
         ((MKT.tab = "mu"),
         setTimeout(() => {
-          ((tab = "juros"), render());
+          (irPara("juros"));
         }, 0)),
       e()
     );

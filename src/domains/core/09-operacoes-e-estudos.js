@@ -27,7 +27,7 @@
   (GOR.relsem = GOR.rev =
     () => {
       if (tab === "rev") return;
-      ((RP = "w0"), (tab = "rev"), render());
+      ((RP = "w0"), irPara("rev"));
       const e = document.getElementById(
         GO.r === "relsem" ? "relsem" : "semrev",
       );
@@ -3978,7 +3978,7 @@ async function mesPdf() {
 }),
   (GOR.relmes = () => {
     if (tab === "rev" && RP === "m1") return;
-    ((RP = "m1"), (tab = "rev"), render());
+    ((RP = "m1"), irPara("rev"));
     const e = document.getElementById("relmes");
     e && setTimeout(() => e.scrollIntoView({ behavior: "smooth" }), 200);
   }));

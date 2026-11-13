@@ -898,7 +898,7 @@ ${m(4, "Concluir")}
         return;
       }
       const d = o.target.closest("[data-semgo]");
-      d && ((RP = d.dataset.semgo), (tab = "rev"), render(), scrollTo(0, 0));
+      d && ((RP = d.dataset.semgo), irPara("rev"), scrollTo(0, 0));
     }),
     document.addEventListener("change", (o) => {
       const s = o.target.closest("[data-semon]"),
