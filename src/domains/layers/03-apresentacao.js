@@ -6470,7 +6470,10 @@ try {
               ((n = d.createElement("button")),
               (n.type = "button"),
               (n.className = "v434-vid"),
-              e.after(n)),
+              /* v596: no card vertical o botão Vídeo vai para a linha de ações (com duração e favorito). */
+              a.querySelector(".v596-aula-acoes")
+                ? a.querySelector(".v596-aula-acoes").prepend(n)
+                : e.after(n)),
               (n.dataset.id = r),
               (n.dataset.fs = o.join(",")));
             const i = "🎬 Vídeo";

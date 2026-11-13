@@ -23,10 +23,11 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   await page.reload();
   await page.locator('#splash').waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: 'Estudos', exact: true }).last().click();
-  assert.equal(await app.locator('.dt397-category [data-dt397-view]').count(), 5);
+  // v596: 4 sub-abas (Hoje, Aulas, Biblioteca, Treino & Progresso), sem menu "+ Mais"; abre em Hoje.
+  assert.equal(await app.locator('.dt397-category [data-dt397-view]').count(), 4);
   await page.locator('.v503-fantasma').waitFor({ state: 'detached' });
-  await expect(app.locator('.dt397-library-grid')).toBeVisible();
-  await expect.poll(() => app.locator('.dt397-library-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(2);
+  assert.equal(await app.locator('[data-dt401-more-toggle]').count(), 0);
+  await expect(app.locator('.v596-hoje .v596-foco')).toBeVisible();
   await app.locator('.dt397-category [data-dt397-view="est"]').click();
   await app.locator('[data-est-meta-legado="420"]').waitFor();
   assert.ok((await app.locator('#v514-meta').innerText()).includes('180 min sugeridos'), 'A meta global antiga não é atribuída automaticamente à conta.');
@@ -58,11 +59,8 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   assert.ok(await app.locator('#bt').isVisible());
   assert.ok(await app.locator('.est-book-add input[type="file"]').count());
 
-  await app.locator('[data-dt401-more-toggle]').click();
-  await page.keyboard.press('Escape');
-  assert.equal(await app.locator('[data-dt401-more-toggle]').getAttribute('aria-expanded'), 'false');
-  await app.locator('[data-dt401-more-toggle]').click();
-  await app.locator('#dt401-more-list [data-dt397-view="foco"]').click();
+  await app.locator('.dt397-category [data-dt397-view="est"]').click();
+  await app.locator('.v596-sub [data-dt397-view="foco"]').click();
   assert.ok((await app.innerText()).includes('de 300 min'));
   assert.equal(await app.locator('.dt397-hero').isVisible(), false);
   await app.locator('.dt397-category [data-dt397-view="aul"]').click();
@@ -74,7 +72,8 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
     assert.ok(layout.scroll <= layout.width, 'Transbordamento em ' + width);
     for (const item of layout.filters) { assert.ok(item.content <= item.width + 1); assert.equal(item.wrap, 'nowrap'); }
   }
-  await app.locator('.dt397-category [data-dt397-view="sim"]').click();
+  await app.locator('.dt397-category [data-dt397-view="desemp"]').click();
+  await app.locator('.v596-sub [data-dt397-view="sim"]').click();
   await app.locator('[data-e2tema]').click();
   await app.locator('[data-e2op]').first().waitFor();
   await page.locator('.v503-fantasma').waitFor({ state: 'detached' });
