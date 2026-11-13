@@ -1773,7 +1773,7 @@ html[data-v508-semmesa] [data-dt414-go="mesa"]{display:none!important}
         try {
           DFASE = { d: t, f: "pos" };
         } catch {}
-        (render(), scrollTo(0, 0));
+        (irPara(tab), scrollTo(0, 0));
       } catch {}
     }
     const G = () => {
@@ -2775,7 +2775,7 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
     }
     function pe() {
       if (m.DiarioRotas) m.DiarioRotas.navigate('mercado:ls');
-      else { tab = 'mercado'; MKT.tab = 'ls'; render(); }
+      else {  MKT.tab = 'ls'; irPara('mercado'); }
       J();
     }
     n.addEventListener('diario:render', J);

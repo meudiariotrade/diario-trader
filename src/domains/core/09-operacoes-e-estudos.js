@@ -229,8 +229,7 @@ const FER2 = [
       const t = document.getElementById("mdr2");
       (t && t.remove(),
         (document.body.style.overflow = ""),
-        (tab = "mais"),
-        render(),
+        irPara("mais"),
         scrollTo(0, 0));
     },
     !0,
@@ -4410,7 +4409,7 @@ document.addEventListener("click", (e) => {
   };
 }
 GOR.replay = () => {
-  ((tab = "estudos"), (ESV = "rpy"), render());
+  ((ESV = "rpy"), irPara("estudos"));
 };
 function mapRs() {
   return S.trades
@@ -4725,13 +4724,12 @@ async function rptAbre(e) {
   const r = String(t.dt).slice(0, 10),
     i = String(t.dtx || t.dt).slice(0, 10),
     l = r === i;
-  ((tab = "estudos"),
-    (ESV = "rpy"),
+  ((ESV = "rpy"),
     (RPY.busy = 1),
     (RPY.err = ""),
     (RPY.trade = null),
     (RPY.dados = null),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0));
   try {
     const d = await fetch(a.url + "/functions/v1/candles", {

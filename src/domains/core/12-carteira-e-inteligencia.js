@@ -2651,7 +2651,7 @@ function modVai(e, t) {
     try {
       LT = tab;
     } catch {}
-  (render(), scrollTo(0, 0));
+  (irPara(tab), scrollTo(0, 0));
 }
 function modHeader() {
   const e = modAtual(),
@@ -2762,8 +2762,7 @@ document.addEventListener(
     e.target.closest('#bnav [data-k="trades"]') &&
       (e.stopImmediatePropagation(),
       e.preventDefault(),
-      (tab = "ops"),
-      render(),
+      irPara("ops"),
       scrollTo(0, 0));
   },
   !0,
@@ -3170,8 +3169,7 @@ try {
         const a = document.getElementById("mdr2");
         (a && a.remove(),
           (document.body.style.overflow = ""),
-          (tab = "ops"),
-          render(),
+          irPara("ops"),
           scrollTo(0, 0));
       }
     },
@@ -3592,7 +3590,7 @@ const MOD_TAB = {
       try {
         LT = tab;
       } catch {}
-    (render(), scrollTo(0, 0));
+    (irPara(tab), scrollTo(0, 0));
   }));
 {
   const e = modExtra;
@@ -4356,7 +4354,8 @@ function buscaRes(e) {
       const a = document.getElementById("mdr2");
       (a && a.remove(), (document.body.style.overflow = ""));
       const o = BUSCA[+t.dataset.bsi][2];
-      (o(), /modVai/.test(String(o)) || render(), scrollTo(0, 0));
+      /* Rota única: os atalhos da busca definem a tela e a troca passa por irPara (mantém subabas). */
+      (o(), /modVai/.test(String(o)) || irPara(tab), scrollTo(0, 0));
     },
     !0,
   ));

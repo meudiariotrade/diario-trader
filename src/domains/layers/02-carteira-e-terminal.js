@@ -2028,9 +2028,8 @@ try {
             (O(!1),
               window.DIARIO_NAV?.navigate
                 ? window.DIARIO_NAV.navigate("mercado:cq")
-                : ((tab = "mercado"),
-                  typeof MKT < "u" && (MKT.tab = "cq"),
-                  render()),
+                : (typeof MKT < "u" && (MKT.tab = "cq"),
+                  irPara("mercado")),
               window.scrollTo({ top: 0, behavior: "auto" }),
               setTimeout(() => {
                 const s =
@@ -2391,7 +2390,7 @@ try {
       let h = 0;
       for (const ch of String(titulo || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
       const [cor, faixa] = paleta[h % paleta.length];
-      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b>${c(tituloLivro(titulo) || "Livro")}</b><small>${c(autor || "Livro")}</small></span>`;
+      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b data-v502fs="11">${c(tituloLivro(titulo) || "Livro")}</b><small data-v502fs="9">${c(autor || "Livro")}</small></span>`;
     }
     function xt(t, e) {
       return `<button type="button" class="dt397-lesson dt399-book-row" data-a="openbook" data-id="${c(t.id)}" aria-label="Abrir livro ${c(t.t || "Sem título")}"><span class="dt397-lesson-art dt397-lesson-art--capa">${capaLivro(t.t, t.a)}</span><span class="dt397-lesson-copy"><small class="dt397-type">LEITURA</small><strong>${c(tituloLivro(t.t) || "Livro sem título")}</strong><small>${c(t.a || "Autor não informado")}</small><span class="dt397-reading-status">${a("book", 13)} ${Array.isArray(t.notes) ? t.notes.length : 0} anotação(ões)</span></span>${a("right", 17)}</button>`;
@@ -2691,8 +2690,8 @@ try {
               FOCO.mat = s.dataset.dt397Materia;
               focoSalva();
             }
-            tab = "estudos";
-            render();
+            
+            irPara("estudos");
             if (n === "sim")
               r.querySelector(
                 '#app .dt397-native-mount [data-e2at="sim"]',
@@ -2708,7 +2707,7 @@ try {
               ? window.DiarioRotas.navigate(n === "mercado" ? "mercado:cq" : n)
               : window.DIARIO_NAV?.navigate
                 ? window.DIARIO_NAV.navigate(n === "mercado" ? "mercado:cq" : n)
-                : ((tab = n), render(), window.scrollTo?.(0, 0));
+                : (irPara(n), window.scrollTo?.(0, 0));
             return;
           }
           const i = t.target.closest("[data-dt393-market]");
@@ -4503,7 +4502,7 @@ try {
         ((GOR.bal = () => {
           state.news = "balancos";
           try {
-            ((tab = "mercado"), (MKT.tab = "nt"), render());
+            ((MKT.tab = "nt"), irPara("mercado"));
           } catch {}
         }),
         (GOR.giro = () => {
@@ -4512,7 +4511,7 @@ try {
             sessionStorage.setItem("diario-mercado-jornal-secao", "giro");
           } catch {}
           try {
-            ((tab = "mercado"), (MKT.tab = "jr"), render());
+            ((MKT.tab = "jr"), irPara("mercado"));
           } catch {}
         }));
     } catch (e) {
@@ -6074,8 +6073,7 @@ try {
         try {
           window.DiarioRotas?.navigate
             ? window.DiarioRotas.navigate(t)
-            : ((tab = t),
-              render(),
+            : (irPara(t),
               window.scrollTo({ left: 0, top: 0, behavior: "instant" }));
         } catch (o) {
           console.warn("v414: rota não disponível", t, o);

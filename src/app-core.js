@@ -24236,8 +24236,7 @@ function vAtivos() {
     if (a === "openbook")
       ((BID = o),
         (BV = (S.books.find((n) => n.id === o) || {}).pat ? "pad" : "not"),
-        (tab = "livro"),
-        render(),
+        irPara("livro"),
         scrollTo(0, 0));
     else if (a === "addbook") {
       const n = $("#bt").value.trim();
@@ -24257,8 +24256,7 @@ function vAtivos() {
       ((S.books = S.books.filter((n) => n.id !== o)),
         ((S.del ?? (S.del = {}))[o] = Date.now()),
         save(),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0));
     } else if (a === "bv") ((BV = o), render());
     else if (a === "pf") ((PF = o), render());
@@ -26006,7 +26004,7 @@ function render() {
   if (r.dataset.tab) {
     ((tab = r.dataset.tab === "trades" ? LT : r.dataset.tab),
       ["trades", "swing", "opc"].includes(tab) && (LT = tab),
-      render(),
+      irPara(tab),
       scrollTo(0, 0));
     return;
   }
@@ -26122,7 +26120,7 @@ function render() {
   else if (i === "gotab")
     ((tab = r.dataset.id),
       ["trades", "swing", "opc"].includes(tab) && (LT = tab),
-      render(),
+      irPara(tab),
       scrollTo(0, 0));
   else if (i === "fab") {
     const d = $("#fabm");
@@ -29006,9 +29004,8 @@ const GO = { r: null, book: null };
     if ((a(), GO.book && (S.books || []).some((o) => o.id === GO.book))) {
       ((BID = GO.book),
         (BV = "not"),
-        (tab = "livro"),
         (GO.book = null),
-        render());
+        irPara("livro"));
       return;
     }
     if (GO.r && tab === "dia") {
@@ -32780,7 +32777,7 @@ var segM, segD;
     ((tab = p),
       ["trades", "swing", "opc"].includes(p) && (LT = p),
       l(),
-      render(),
+      irPara(tab),
       scrollTo(0, 0));
   }
   (document.addEventListener(
@@ -37116,7 +37113,7 @@ function trvTick() {
         (tab = "dia"),
         (D = loc().slice(0, 10)),
         (DV = "ed"),
-        render());
+        irPara(tab));
       return;
     }
     if (a === "ok") {
@@ -37717,7 +37714,7 @@ document.addEventListener("click", (e) => {
     (tab = "dia"),
     (D = loc().slice(0, 10)),
     (DV = "ed"),
-    render());
+    irPara(tab));
 });
 function diaRuim(e) {
   try {
@@ -39341,9 +39338,8 @@ const CX = {
       if (!n.ok || !r.ok) throw new Error(r.error || "Erro " + n.status);
       (await limpaAparelho(),
         document.getElementById("delc")?.remove(),
-        (tab = "conta"),
         (SY.msg = "Sua conta e os seus dados foram excluídos."),
-        render(),
+        irPara("conta"),
         setTimeout(() => {
           try {
             location.reload();
@@ -39409,8 +39405,7 @@ function onbSalva(e) {
     (o.onb = Date.now()),
     save(),
     document.getElementById("onb")?.remove(),
-    (tab = n ? "mesa" : "home"),
-    render(),
+    irPara(n ? "mesa" : "home"),
     scrollTo(0, 0),
     s &&
       window.toast &&
@@ -42807,7 +42802,7 @@ document.addEventListener("click", async (e) => {
     try {
       ls.set("diario-tab", "analise");
     } catch {}
-    (render(), scrollTo(0, 0), setTimeout(() => anxRun("tec"), 50));
+    (irPara(tab), scrollTo(0, 0), setTimeout(() => anxRun("tec"), 50));
   }
 });
 function pnlAuto() {
@@ -46323,8 +46318,7 @@ const FER2 = [
       const t = document.getElementById("mdr2");
       (t && t.remove(),
         (document.body.style.overflow = ""),
-        (tab = "mais"),
-        render(),
+        irPara("mais"),
         scrollTo(0, 0));
     },
     !0,
@@ -50504,7 +50498,7 @@ document.addEventListener("click", (e) => {
   };
 }
 GOR.replay = () => {
-  ((tab = "estudos"), (ESV = "rpy"), render());
+  ((ESV = "rpy"), irPara("estudos"));
 };
 function mapRs() {
   return S.trades
@@ -50819,13 +50813,12 @@ async function rptAbre(e) {
   const r = String(t.dt).slice(0, 10),
     i = String(t.dtx || t.dt).slice(0, 10),
     l = r === i;
-  ((tab = "estudos"),
-    (ESV = "rpy"),
+  ((ESV = "rpy"),
     (RPY.busy = 1),
     (RPY.err = ""),
     (RPY.trade = null),
     (RPY.dados = null),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0));
   try {
     const d = await fetch(a.url + "/functions/v1/candles", {
@@ -51571,7 +51564,7 @@ try {
   };
 }
 GOR.ir = () => {
-  ((GO.r = null), (tab = "imposto"), (VW.IR = "ap"), render(), scrollTo(0, 0));
+  ((GO.r = null), (VW.IR = "ap"), irPara("imposto"), scrollTo(0, 0));
 };
 var BT = { busy: 0, err: "", res: null, dados: null, k: "" };
 const BT_SET = {
@@ -51925,7 +51918,7 @@ ${e.tf !== "1d" ? `<label class="sm" style="display:flex;gap:6px;align-items:cen
   };
 }
 GOR.backtest = () => {
-  ((GO.r = null), (tab = "estudos"), (ESV = "bt"), render());
+  ((GO.r = null), (ESV = "bt"), irPara("estudos"));
 };
 function frStatus(e) {
   const t = loc().slice(0, 10),
@@ -52523,9 +52516,8 @@ document.addEventListener("change", (e) => {
 }
 GOR.scanner = () => {
   ((GO.r = null),
-    (tab = "estudos"),
     (ESV = "bt"),
-    render(),
+    irPara("estudos"),
     setTimeout(() => {
       const e = document.getElementById("scanner");
       e && e.scrollIntoView({ behavior: "smooth" });
@@ -53251,7 +53243,7 @@ function plSync() {
     }, 0);
 }),
   (GOR.estudo = () => {
-    ((GO.r = null), (tab = "estudos"), (ESV = "pl"), render());
+    ((GO.r = null), (ESV = "pl"), irPara("estudos"));
   }));
 const STK_META = {
   regras: "Zero trades fora do plano",
@@ -56639,7 +56631,7 @@ function mdmAplica() {
         try {
           ls.set("diario-opm", OPMK);
         } catch {}
-        render();
+        irPara(tab);
       }
       scrollTo(0, 0);
     }
@@ -56744,8 +56736,7 @@ document.addEventListener("click", (e) => {
     ((D = a.dataset.mdmdia),
     (DV = "ed"),
     mdmSet("us"),
-    (tab = "dia"),
-    render(),
+    irPara("dia"),
     scrollTo(0, 0));
 });
 var OPMK = (() => {
@@ -57289,7 +57280,7 @@ try {
       (DV = "ed"),
       mdmSet("br"),
       (DFASE = { d: D, f: "pos" }),
-      render());
+      irPara(tab));
   }),
   (GOR.debus = () => {
     ((GO.r = null),
@@ -57298,12 +57289,11 @@ try {
       (DV = "ed"),
       mdmSet("us"),
       (DFASE = { d: D, f: "pos" }),
-      render());
+      irPara(tab));
   }),
   (GOR.pend = () => {
     ((GO.r = null),
-      (tab = "home"),
-      render(),
+      irPara("home"),
       setTimeout(() => {
         try {
           pdAbre();
@@ -58511,7 +58501,7 @@ function mmRodape(e) {
         (MM.nova = !1),
         save(),
         t.dataset.mmir && (tab = "mesa"),
-        render(),
+        irPara(tab),
         scrollTo(0, 0));
       return;
     }
@@ -59548,8 +59538,7 @@ function pgFecha() {
   }),
   (GOR.qk = () => {
     ((GO.r = null),
-      (tab = "home"),
-      render(),
+      irPara("home"),
       setTimeout(() => {
         try {
           qkAbre();
@@ -62749,7 +62738,7 @@ function modVai(e, t) {
     try {
       LT = tab;
     } catch {}
-  (render(), scrollTo(0, 0));
+  (irPara(tab), scrollTo(0, 0));
 }
 function modHeader() {
   const e = modAtual(),
@@ -62860,8 +62849,7 @@ document.addEventListener(
     e.target.closest('#bnav [data-k="trades"]') &&
       (e.stopImmediatePropagation(),
       e.preventDefault(),
-      (tab = "ops"),
-      render(),
+      irPara("ops"),
       scrollTo(0, 0));
   },
   !0,
@@ -63268,8 +63256,7 @@ try {
         const a = document.getElementById("mdr2");
         (a && a.remove(),
           (document.body.style.overflow = ""),
-          (tab = "ops"),
-          render(),
+          irPara("ops"),
           scrollTo(0, 0));
       }
     },
@@ -63690,7 +63677,7 @@ const MOD_TAB = {
       try {
         LT = tab;
       } catch {}
-    (render(), scrollTo(0, 0));
+    (irPara(tab), scrollTo(0, 0));
   }));
 {
   const e = modExtra;
@@ -64454,7 +64441,8 @@ function buscaRes(e) {
       const a = document.getElementById("mdr2");
       (a && a.remove(), (document.body.style.overflow = ""));
       const o = BUSCA[+t.dataset.bsi][2];
-      (o(), /modVai/.test(String(o)) || render(), scrollTo(0, 0));
+      /* Rota única: os atalhos da busca definem a tela e a troca passa por irPara (mantém subabas). */
+      (o(), /modVai/.test(String(o)) || irPara(tab), scrollTo(0, 0));
     },
     !0,
   ));
@@ -68466,7 +68454,7 @@ function cqItens(category) {
 document.addEventListener('click', event => {
   if (event.target.closest('[data-market-longshort]')) { document.querySelector('#app #v512-lsbtn')?.click(); return; }
   if (!event.target.closest('[data-market-di]')) return;
-  tab = 'term'; render();
+   irPara('term');
   requestAnimationFrame(()=>document.querySelector('#app:not(.v503-fantasma) [data-tf415-nav="DIFUT"]')?.click());
 });
 document.addEventListener('input', event => {
@@ -68537,7 +68525,7 @@ document.addEventListener('change', event => {
   }, 15e3));
 try {
   GOR.cq = () => {
-    ((tab = "mercado"), (MKT.tab = "cq"), render());
+    ((MKT.tab = "cq"), irPara("mercado"));
   };
 } catch {}
 const AGH_K = "diario-ag-hist";
@@ -69029,8 +69017,7 @@ function enInicia(e, t) {
   }
   ((EN.run = a),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     enAutoFala());
 }
@@ -69305,7 +69292,7 @@ function enView() {
   }));
 try {
   GOR.ingles = () => {
-    ((tab = "estudos"), (ESV = "ing"), render());
+    ((ESV = "ing"), irPara("estudos"));
   };
 } catch {}
 ((HB_NOMES.en = "Inglês do dia"),
@@ -70173,8 +70160,7 @@ function cardsLicao(e) {
       }
       ((EN.run = numLicao()),
         (ESV = "ing"),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0),
         numAuto());
       return;
@@ -70191,8 +70177,7 @@ function cardsLicao(e) {
       }
       ((EN.run = n),
         (ESV = "ing"),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0),
         setTimeout(() => enFala(n.C[0].en), 250));
       return;
@@ -70205,8 +70190,7 @@ function cardsLicao(e) {
       ((EN.chat = { cena: a || "", hist: [], busy: 0, err: "" }),
         (EN.run = null),
         (ESV = "ing"),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0),
         chatEnvia(""));
       return;
@@ -70223,8 +70207,7 @@ function cardsLicao(e) {
     ) {
       ((EN.dica = a),
         (ESV = "ing"),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0));
       return;
     }
@@ -71219,7 +71202,7 @@ function mdFiltra(e, t) {
         (e.stopPropagation(), usSolta());
         const o = a.dataset.mdv;
         (o === "regras" ? (tab = "regras") : ((tab = "dia"), (DV = o)),
-          render(),
+          irPara(tab),
           scrollTo(0, 0));
       }
     },
@@ -71436,8 +71419,7 @@ document.addEventListener(
           mdmSet(s ? "us" : "br"),
           (D = n),
           (DV = "ed"),
-          (tab = "dia"),
-          render(),
+          irPara("dia"),
           scrollTo(0, 0));
         return;
       }
@@ -71690,8 +71672,7 @@ async function enNoticia() {
   }),
     (EN.run = null),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     chatEnvia(""));
 }
@@ -71813,9 +71794,8 @@ function facAviso() {
 }
 document.addEventListener("click", (e) => {
   e.target.closest("[data-facver]") &&
-    ((tab = "estudos"),
-    (ESV = "foco"),
-    render(),
+    ((ESV = "foco"),
+    irPara("estudos"),
     setTimeout(
       () =>
         document.getElementById("faccard")?.scrollIntoView({ block: "start" }),
@@ -71903,9 +71883,8 @@ document.addEventListener("click", (e) => {
   }
   if (a === "en") {
     ((ESV = "ing"),
-      (tab = "estudos"),
       (EN.run = null),
-      render(),
+      irPara("estudos"),
       setTimeout(() => {
         const o = document.querySelector(".enhero [data-enl]");
         o && o.click();
@@ -71917,9 +71896,8 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (a === "cnpi") {
-    ((tab = "estudos"),
-      (ESV = "cnpi"),
-      render(),
+    ((ESV = "cnpi"),
+      irPara("estudos"),
       setTimeout(() => {
         try {
           cnInicia(cnDevidas().length ? "rev" : "rap", "ct");
@@ -71927,7 +71905,7 @@ document.addEventListener("click", (e) => {
       }, 200));
     return;
   }
-  a === "foco" && ((tab = "estudos"), (ESV = "foco"), render(), scrollTo(0, 0));
+  a === "foco" && ((ESV = "foco"), irPara("estudos"), scrollTo(0, 0));
 });
 const INI_OP = [
   ["home", "Início"],
@@ -71957,7 +71935,7 @@ function iniAplica() {
           (tab = "dia"),
           (D = loc().slice(0, 10)),
           (DV = "ed")),
-    render());
+    irPara(tab));
 }
 (setTimeout(iniAplica, 1200),
   (GOR.fechar = () => {
@@ -71969,7 +71947,7 @@ function iniAplica() {
       (tab = "dia"),
       (D = loc().slice(0, 10)),
       (DV = "ed"),
-      render());
+      irPara(tab));
   }),
   (GOR.diabr = () => {
     ((GO.r = null),
@@ -71977,7 +71955,7 @@ function iniAplica() {
       (tab = "dia"),
       (D = loc().slice(0, 10)),
       (DV = "ed"),
-      render());
+      irPara(tab));
   }),
   (GOR.ing = () => {
     ((GO.r = null), (ESV = "ing"), irPara("estudos"));
@@ -72438,7 +72416,7 @@ var estSeg;
   };
 }
 GOR.grafico = () => {
-  ((GO.r = null), (tab = "estudos"), (ESV = "gt"), render());
+  ((GO.r = null), (ESV = "gt"), irPara("estudos"));
 };
 const ELEI = [
     ["2026-10-04", "2026-10-25"],
@@ -72498,8 +72476,8 @@ document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-fds]");
   t &&
     (t.dataset.fds === "gt"
-      ? ((tab = "estudos"), (ESV = "gt"), render(), scrollTo(0, 0))
-      : ((tab = "estudos"), (ESV = "ing"), render(), scrollTo(0, 0)));
+      ? ((ESV = "gt"), irPara("estudos"), scrollTo(0, 0))
+      : ((ESV = "ing"), irPara("estudos"), scrollTo(0, 0)));
 });
 let RVM = null;
 const rvmAnt = () => {
@@ -72782,8 +72760,7 @@ function ditInicia() {
     (EN.run = null),
     (EN.chat = null),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     setTimeout(() => enFala(o[0].ex), 300));
 }
@@ -72890,8 +72867,7 @@ document.addEventListener(
       (EN.run = null),
       (EN.dit = null),
       (ESV = "ing"),
-      (tab = "estudos"),
-      render(),
+      irPara("estudos"),
       scrollTo(0, 0),
       chatEnvia(""));
   },
@@ -73665,8 +73641,7 @@ document.addEventListener(
       (e.stopPropagation(),
       (TSV = !1),
       typeof STMOD < "u" && (STMOD = null),
-      (tab = "stats"),
-      render(),
+      irPara("stats"),
       scrollTo(0, 0),
       setTimeout(() => {
         const t = [...document.querySelectorAll("#app button")].find(
@@ -73866,7 +73841,7 @@ estSeg = function (e) {
   }
 }),
   (GOR.treino = () => {
-    ((GO.r = null), (tab = "estudos"), (ESV = "treino"), render());
+    ((GO.r = null), (ESV = "treino"), irPara("estudos"));
   }));
 const HG_AB = (() => {
   try {
@@ -74393,9 +74368,8 @@ try {
 }
 ((GOR.jurosmu = () => {
   ((GO.r = null),
-    (tab = "mercado"),
     (MKT.tab = "mu"),
-    render(),
+    irPara("mercado"),
     setTimeout(
       () => document.getElementById("mujr")?.scrollIntoView({ block: "start" }),
       150,
@@ -75920,14 +75894,14 @@ try {
       MKT.tab === "jedu" &&
         ((MKT.tab = "mu"),
         setTimeout(() => {
-          ((tab = "estudos"), (ESV = "juros"), render(), scrollTo(0, 0));
+          ((ESV = "juros"), irPara("estudos"), scrollTo(0, 0));
         }, 0)),
       e.apply(this, arguments)
     );
   };
 }
 GOR.jedu = () => {
-  ((GO.r = null), (tab = "estudos"), (ESV = "juros"), render());
+  ((GO.r = null), (ESV = "juros"), irPara("estudos"));
 };
 {
   const e = vJuros;
@@ -77983,7 +77957,7 @@ function facPinta() {
   };
 }
 GOR.faculdade = () => {
-  ((GO.r = null), (tab = "estudos"), (ESV = "fac"), render());
+  ((GO.r = null), (ESV = "fac"), irPara("estudos"));
 };
 {
   const e = facHtml;
@@ -78168,9 +78142,8 @@ document.addEventListener(
       const o = a.dataset.facfoco;
       (facMats(),
         focoInicia(25, "fac:" + o),
-        (tab = "estudos"),
         (ESV = "foco"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0));
       return;
     }
@@ -83163,8 +83136,7 @@ function duoInicia(e, t) {
   if (duoVidasOn() && duoVidas().n <= 0) {
     ((EN.semVida = 1),
       (ESV = "ing"),
-      (tab = "estudos"),
-      render(),
+      irPara("estudos"),
       scrollTo(0, 0));
     return;
   }
@@ -83176,8 +83148,7 @@ function duoInicia(e, t) {
   ((EN.run = a),
     (EN.semVida = 0),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     enAutoFala());
 }
@@ -83403,8 +83374,7 @@ function duoPratica() {
   }),
     (EN.duoRev = 1),
     (ESV = "ing"),
-    (tab = "estudos"),
-    render(),
+    irPara("estudos"),
     scrollTo(0, 0),
     enAutoFala());
 }
@@ -84291,7 +84261,7 @@ function estHtml() {
       APP_STORAGE.setItem("diario-est-v", EST.v);
     } catch {}
     (ESV !== "est" && ((ESV = "est"), (tab = "estudos")),
-      render(),
+      irPara(tab),
       scrollTo(0, 0));
     return;
   }
@@ -87235,7 +87205,7 @@ document.addEventListener(
         (o.bib = null),
         a === "hull" && (o.bib = "hull"),
         a === "estr" && (o.estr = "lista"),
-        render(),
+        irPara(tab),
         scrollTo(0, 0));
     } catch {}
   },
@@ -89946,8 +89916,7 @@ Dados do terminal agora:
         }
         if (_ === "sair") {
           (document.body.classList.remove("trmon"),
-            (tab = "home"),
-            render(),
+            irPara("home"),
             scrollTo(0, 0));
           return;
         }
@@ -93062,7 +93031,7 @@ Dados do terminal agora:
           try {
             MKT.tab = "jr";
           } catch {}
-          (render(), scrollTo(0, 0));
+          (irPara(tab), scrollTo(0, 0));
           return;
         }
         if (O === "mmodo") {
@@ -93256,7 +93225,7 @@ Dados do terminal agora:
       try {
         ((tab = x[0]), x[1] && (MKT.tab = x[1]));
       } catch {}
-      return ((t.voltar = 1), render(), scrollTo(0, 0), !0);
+      return ((t.voltar = 1), irPara(tab), scrollTo(0, 0), !0);
     };
     window.trTela = (f) => !!d[f] && c(f);
     const p = () => {
@@ -93301,8 +93270,7 @@ Dados do terminal agora:
             f.target.closest('#bnav [data-k="mercado"],[data-m2="mercado"]') &&
             (f.preventDefault(),
             f.stopPropagation(),
-            (tab = "term"),
-            render(),
+            irPara("term"),
             scrollTo(0, 0));
         },
         !0,
@@ -98472,8 +98440,7 @@ Validação do app: atenção a ` +
         (Q.preventDefault(),
           Q.stopPropagation(),
           re.dataset.cen && (t.cn.k = re.dataset.cen),
-          (tab = "term"),
-          render());
+          irPara("term"));
         let ie = re.dataset.sw;
         if (ie === "PESQ") {
           const R = ke(Le().a, 3).map((me) => me[0]),
@@ -98518,7 +98485,7 @@ Validação do app: atenção a ` +
       (o.SAZSENT = {
         body: () => '<div class="trnote">Abrindo o painel…</div>',
         load: () => {
-          ((tab = "mercado"), (MKT.tab = "lab"), render(), scrollTo(0, 0));
+          ((MKT.tab = "lab"), irPara("mercado"), scrollTo(0, 0));
         },
       }));
     {
@@ -102578,8 +102545,7 @@ Validação do app: atenção a ` +
         }
         if (le === "term") {
           ((e.sel = null),
-            (tab = "term"),
-            render(),
+            irPara("term"),
             setTimeout(() => {
               try {
                 TRM.roda(Y + " G");
@@ -102588,7 +102554,7 @@ Validação do app: atenção a ` +
           return;
         }
         if (le === "go") {
-          ((tab = Y), render());
+          (irPara(Y));
           return;
         }
         if (le === "ferr") {
@@ -102596,7 +102562,7 @@ Validação do app: atenção a ` +
           try {
             ((ANX.m = Y), (ANX.tkA = ""));
           } catch {}
-          (render(), scrollTo(0, 0));
+          (irPara(tab), scrollTo(0, 0));
           return;
         }
         if (le === "alpx") {

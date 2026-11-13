@@ -4047,7 +4047,7 @@ function trvTick() {
         (tab = "dia"),
         (D = loc().slice(0, 10)),
         (DV = "ed"),
-        render());
+        irPara(tab));
       return;
     }
     if (a === "ok") {
@@ -4648,7 +4648,7 @@ document.addEventListener("click", (e) => {
     (tab = "dia"),
     (D = loc().slice(0, 10)),
     (DV = "ed"),
-    render());
+    irPara(tab));
 });
 function diaRuim(e) {
   try {

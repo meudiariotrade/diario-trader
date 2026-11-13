@@ -1133,7 +1133,7 @@ try {
               ? (tab = "regras")
               : ((tab = "dia"),
                 (DFASE = { d: D, f: N === "checklist" ? "pos" : N })),
-            render(),
+            irPara(tab),
             N === "checklist")
           ) {
             const e = s()?.querySelector("input[data-chk]");
@@ -1421,7 +1421,7 @@ try {
         (document.getElementById("mdr2")?.remove(),
           document.getElementById("mdr")?.remove(),
           (document.body.style.overflow = ""),
-          render(),
+          irPara(tab),
           C && Number.isFinite(X)
             ? queueMicrotask(() => {
                 const U = document.querySelector("#app .m403-primary-tabs");
@@ -3043,7 +3043,7 @@ Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na im
                 typeof mdmSet == "function" && mdmSet(k.dataset.market || "br"),
                 (tab = "dia"),
                 l("#wf-dialog")?.close(),
-                render());
+                irPara(tab));
               return;
             }
             if (L === "edit") {
@@ -3069,7 +3069,7 @@ Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na im
                     typeof mdmSet == "function" &&
                     mdmSet(k.dataset.market === "US" ? "us" : "br")),
                 l("#wf-dialog")?.close(),
-                render());
+                irPara(tab));
               return;
             }
             if (L === "restore") {
@@ -3199,7 +3199,7 @@ Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na im
               return;
             }
             L === "status" &&
-              ((tab = "status"), l("#wf-dialog")?.close(), render());
+              ((tab = "status"), l("#wf-dialog")?.close(), irPara(tab));
           },
           !0,
         ));
@@ -23249,9 +23249,8 @@ try {
             (O(!1),
               window.DIARIO_NAV?.navigate
                 ? window.DIARIO_NAV.navigate("mercado:cq")
-                : ((tab = "mercado"),
-                  typeof MKT < "u" && (MKT.tab = "cq"),
-                  render()),
+                : (typeof MKT < "u" && (MKT.tab = "cq"),
+                  irPara("mercado")),
               window.scrollTo({ top: 0, behavior: "auto" }),
               setTimeout(() => {
                 const s =
@@ -23612,7 +23611,7 @@ try {
       let h = 0;
       for (const ch of String(titulo || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
       const [cor, faixa] = paleta[h % paleta.length];
-      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b>${c(tituloLivro(titulo) || "Livro")}</b><small>${c(autor || "Livro")}</small></span>`;
+      return `<span class="m584-capa" style="--capa:${cor};--faixa:${faixa}" aria-hidden="true"><b data-v502fs="11">${c(tituloLivro(titulo) || "Livro")}</b><small data-v502fs="9">${c(autor || "Livro")}</small></span>`;
     }
     function xt(t, e) {
       return `<button type="button" class="dt397-lesson dt399-book-row" data-a="openbook" data-id="${c(t.id)}" aria-label="Abrir livro ${c(t.t || "Sem título")}"><span class="dt397-lesson-art dt397-lesson-art--capa">${capaLivro(t.t, t.a)}</span><span class="dt397-lesson-copy"><small class="dt397-type">LEITURA</small><strong>${c(tituloLivro(t.t) || "Livro sem título")}</strong><small>${c(t.a || "Autor não informado")}</small><span class="dt397-reading-status">${a("book", 13)} ${Array.isArray(t.notes) ? t.notes.length : 0} anotação(ões)</span></span>${a("right", 17)}</button>`;
@@ -23912,8 +23911,8 @@ try {
               FOCO.mat = s.dataset.dt397Materia;
               focoSalva();
             }
-            tab = "estudos";
-            render();
+            
+            irPara("estudos");
             if (n === "sim")
               r.querySelector(
                 '#app .dt397-native-mount [data-e2at="sim"]',
@@ -23929,7 +23928,7 @@ try {
               ? window.DiarioRotas.navigate(n === "mercado" ? "mercado:cq" : n)
               : window.DIARIO_NAV?.navigate
                 ? window.DIARIO_NAV.navigate(n === "mercado" ? "mercado:cq" : n)
-                : ((tab = n), render(), window.scrollTo?.(0, 0));
+                : (irPara(n), window.scrollTo?.(0, 0));
             return;
           }
           const i = t.target.closest("[data-dt393-market]");
@@ -25724,7 +25723,7 @@ try {
         ((GOR.bal = () => {
           state.news = "balancos";
           try {
-            ((tab = "mercado"), (MKT.tab = "nt"), render());
+            ((MKT.tab = "nt"), irPara("mercado"));
           } catch {}
         }),
         (GOR.giro = () => {
@@ -25733,7 +25732,7 @@ try {
             sessionStorage.setItem("diario-mercado-jornal-secao", "giro");
           } catch {}
           try {
-            ((tab = "mercado"), (MKT.tab = "jr"), render());
+            ((MKT.tab = "jr"), irPara("mercado"));
           } catch {}
         }));
     } catch (e) {
@@ -27295,8 +27294,7 @@ try {
         try {
           window.DiarioRotas?.navigate
             ? window.DiarioRotas.navigate(t)
-            : ((tab = t),
-              render(),
+            : (irPara(t),
               window.scrollTo({ left: 0, top: 0, behavior: "instant" }));
         } catch (o) {
           console.warn("v414: rota não disponível", t, o);
@@ -29333,12 +29331,21 @@ try {
               .filter(Boolean),
           ),
         ],
-        y = (d, c, w, k, it = "") =>
-          `<div class="v4-stat">${p(d, 24)}<span>${c}</span><strong class="${it}">${w}</strong><small>${k}</small></div>`,
+        y = (d, c, w, k, it = "", extra = "") =>
+          `<div class="v4-stat">${p(d, 24)}<span>${c}</span><strong class="${it}">${w}</strong><small>${k}</small>${extra}</div>`,
+        /* v595: barra fina do risco consumido em relação ao limite (CLAUDE.md: verde ≤ 50%, âmbar 51–80%, vermelho > 80%). */
+        barra595 =
+          u != null && h != null && h > 0
+            ? (() => {
+                const pct = Math.max(0, Math.min(100, (u / h) * 100)),
+                  cls = pct > 80 ? "alto" : pct > 50 ? "medio" : "ok";
+                return `<i class="v595-riscobar ${cls}" role="progressbar" aria-label="Risco consumido do limite" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><em style="width:${pct.toFixed(1)}%"></em></i>`;
+              })()
+            : "",
         P = `<div class="v4-stats">
     ${y("folder", "Operações abertas", String(e.length), `(${l} compradas / ${s} vendidas)`)}
     ${y("bars", "Resultado do dia", j(r), E(r) != null ? Q(E(r)) : a.length + " encerrada(s)", L(r))}
-    ${y("shield", "Risco consumido", u != null ? _(u) + "%" : G(o), h != null ? `(limite: ${_(h)}%)` : "pelos stops abertos")}
+    ${y("shield", "Risco consumido", u != null ? _(u) + "%" : G(o), h != null ? `(limite: ${_(h)}%)` : "pelos stops abertos", "", barra595)}
     ${y("crosshair", "Setups ativos", String(M.length), M.length ? "(" + b(M.slice(0, 3).join(", ")) + ")" : "nenhum hoje")}</div>`,
         A = e
           .map((d) => {
@@ -30019,8 +30026,7 @@ try {
             ((D = V()),
               (DFASE = { d: V(), f: i === "pre" ? "pre" : "dur" }),
               (Mt.dia = i === "pre" ? "pre" : "dur"),
-              (tab = "dia"),
-              render(),
+              irPara("dia"),
               scrollTo(0, 0));
           } catch {}
           return;
@@ -31855,7 +31861,7 @@ try {
         if (o) {
           (t.preventDefault(), t.stopImmediatePropagation(), d());
           try {
-            ((tab = o.dataset.v423Go), render(), scrollTo(0, 0));
+            (irPara(o.dataset.v423Go), scrollTo(0, 0));
           } catch {}
           return;
         }
@@ -33999,7 +34005,7 @@ try {
             r(),
             e.dataset.v431 === "teste" &&
               (l(() => {
-                ((tab = "conta"), render0());
+                irPara("conta");
               }),
               setTimeout(() => {
                 const a = o.getElementById("dgcard");
@@ -34274,7 +34280,7 @@ try {
           (t.preventDefault(),
           t.stopPropagation(),
           y(() => {
-            ((tab = "conta"), render0(), scrollTo(0, 0));
+            (irPara("conta"), scrollTo(0, 0));
           }));
       },
       !0,
@@ -37514,7 +37520,7 @@ html[data-v508-semmesa] [data-dt414-go="mesa"]{display:none!important}
         try {
           DFASE = { d: t, f: "pos" };
         } catch {}
-        (render(), scrollTo(0, 0));
+        (irPara(tab), scrollTo(0, 0));
       } catch {}
     }
     const G = () => {
@@ -38516,7 +38522,7 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
     }
     function pe() {
       if (m.DiarioRotas) m.DiarioRotas.navigate('mercado:ls');
-      else { tab = 'mercado'; MKT.tab = 'ls'; render(); }
+      else {  MKT.tab = 'ls'; irPara('mercado'); }
       J();
     }
     n.addEventListener('diario:render', J);

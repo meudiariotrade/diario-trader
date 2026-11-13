@@ -475,7 +475,7 @@ try {
   };
 }
 GOR.ir = () => {
-  ((GO.r = null), (tab = "imposto"), (VW.IR = "ap"), render(), scrollTo(0, 0));
+  ((GO.r = null), (VW.IR = "ap"), irPara("imposto"), scrollTo(0, 0));
 };
 var BT = { busy: 0, err: "", res: null, dados: null, k: "" };
 const BT_SET = {
@@ -829,7 +829,7 @@ ${e.tf !== "1d" ? `<label class="sm" style="display:flex;gap:6px;align-items:cen
   };
 }
 GOR.backtest = () => {
-  ((GO.r = null), (tab = "estudos"), (ESV = "bt"), render());
+  ((GO.r = null), (ESV = "bt"), irPara("estudos"));
 };
 function frStatus(e) {
   const t = loc().slice(0, 10),
@@ -1427,9 +1427,8 @@ document.addEventListener("change", (e) => {
 }
 GOR.scanner = () => {
   ((GO.r = null),
-    (tab = "estudos"),
     (ESV = "bt"),
-    render(),
+    irPara("estudos"),
     setTimeout(() => {
       const e = document.getElementById("scanner");
       e && e.scrollIntoView({ behavior: "smooth" });
@@ -2155,7 +2154,7 @@ function plSync() {
     }, 0);
 }),
   (GOR.estudo = () => {
-    ((GO.r = null), (tab = "estudos"), (ESV = "pl"), render());
+    ((GO.r = null), (ESV = "pl"), irPara("estudos"));
   }));
 const STK_META = {
   regras: "Zero trades fora do plano",

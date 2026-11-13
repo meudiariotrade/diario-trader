@@ -4612,8 +4612,7 @@ function vAtivos() {
     if (a === "openbook")
       ((BID = o),
         (BV = (S.books.find((n) => n.id === o) || {}).pat ? "pad" : "not"),
-        (tab = "livro"),
-        render(),
+        irPara("livro"),
         scrollTo(0, 0));
     else if (a === "addbook") {
       const n = $("#bt").value.trim();
@@ -4633,8 +4632,7 @@ function vAtivos() {
       ((S.books = S.books.filter((n) => n.id !== o)),
         ((S.del ?? (S.del = {}))[o] = Date.now()),
         save(),
-        (tab = "estudos"),
-        render(),
+        irPara("estudos"),
         scrollTo(0, 0));
     } else if (a === "bv") ((BV = o), render());
     else if (a === "pf") ((PF = o), render());

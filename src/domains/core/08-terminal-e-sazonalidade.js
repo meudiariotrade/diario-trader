@@ -726,7 +726,7 @@ document.addEventListener("click", async (e) => {
     try {
       ls.set("diario-tab", "analise");
     } catch {}
-    (render(), scrollTo(0, 0), setTimeout(() => anxRun("tec"), 50));
+    (irPara(tab), scrollTo(0, 0), setTimeout(() => anxRun("tec"), 50));
   }
 });
 function pnlAuto() {

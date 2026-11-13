@@ -87,3 +87,6 @@ html:root body #app#app .dt395-native-mercado :is(#v518-mov summary,#v518-mov bu
 html:root body #app#app .dt395-native-mercado #v512-ls :is(input,select){font-size:16px!important;background:var(--market-active)!important;color:var(--market-text)!important}
 html:root body #app#app .dt395-native-mercado #v512-ls .v512-tab td:last-child{text-align:right}
 html:root body #app#app .dt395-native-mercado #v518-mov .v518-it{border:0!important;border-top:1px solid var(--market-line)!important;background:none!important}
+/* v595: folga à direita na barra de categorias de Cotações (o último item não parece cortado na borda) */
+html:root body #app#app .market-quotes .market-categories{padding-right:16px!important;scroll-padding-inline-end:16px}
+html:root body #app#app .market-quotes .market-categories::after{content:"";flex:0 0 12px;width:12px}

@@ -1096,12 +1096,21 @@ try {
               .filter(Boolean),
           ),
         ],
-        y = (d, c, w, k, it = "") =>
-          `<div class="v4-stat">${p(d, 24)}<span>${c}</span><strong class="${it}">${w}</strong><small>${k}</small></div>`,
+        y = (d, c, w, k, it = "", extra = "") =>
+          `<div class="v4-stat">${p(d, 24)}<span>${c}</span><strong class="${it}">${w}</strong><small>${k}</small>${extra}</div>`,
+        /* v595: barra fina do risco consumido em relação ao limite (CLAUDE.md: verde ≤ 50%, âmbar 51–80%, vermelho > 80%). */
+        barra595 =
+          u != null && h != null && h > 0
+            ? (() => {
+                const pct = Math.max(0, Math.min(100, (u / h) * 100)),
+                  cls = pct > 80 ? "alto" : pct > 50 ? "medio" : "ok";
+                return `<i class="v595-riscobar ${cls}" role="progressbar" aria-label="Risco consumido do limite" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><em style="width:${pct.toFixed(1)}%"></em></i>`;
+              })()
+            : "",
         P = `<div class="v4-stats">
     ${y("folder", "Operações abertas", String(e.length), `(${l} compradas / ${s} vendidas)`)}
     ${y("bars", "Resultado do dia", j(r), E(r) != null ? Q(E(r)) : a.length + " encerrada(s)", L(r))}
-    ${y("shield", "Risco consumido", u != null ? _(u) + "%" : G(o), h != null ? `(limite: ${_(h)}%)` : "pelos stops abertos")}
+    ${y("shield", "Risco consumido", u != null ? _(u) + "%" : G(o), h != null ? `(limite: ${_(h)}%)` : "pelos stops abertos", "", barra595)}
     ${y("crosshair", "Setups ativos", String(M.length), M.length ? "(" + b(M.slice(0, 3).join(", ")) + ")" : "nenhum hoje")}</div>`,
         A = e
           .map((d) => {
@@ -1782,8 +1791,7 @@ try {
             ((D = V()),
               (DFASE = { d: V(), f: i === "pre" ? "pre" : "dur" }),
               (Mt.dia = i === "pre" ? "pre" : "dur"),
-              (tab = "dia"),
-              render(),
+              irPara("dia"),
               scrollTo(0, 0));
           } catch {}
           return;
@@ -3618,7 +3626,7 @@ try {
         if (o) {
           (t.preventDefault(), t.stopImmediatePropagation(), d());
           try {
-            ((tab = o.dataset.v423Go), render(), scrollTo(0, 0));
+            (irPara(o.dataset.v423Go), scrollTo(0, 0));
           } catch {}
           return;
         }
@@ -5762,7 +5770,7 @@ try {
             r(),
             e.dataset.v431 === "teste" &&
               (l(() => {
-                ((tab = "conta"), render0());
+                irPara("conta");
               }),
               setTimeout(() => {
                 const a = o.getElementById("dgcard");
@@ -6037,7 +6045,7 @@ try {
           (t.preventDefault(),
           t.stopPropagation(),
           y(() => {
-            ((tab = "conta"), render0(), scrollTo(0, 0));
+            (irPara("conta"), scrollTo(0, 0));
           }));
       },
       !0,
