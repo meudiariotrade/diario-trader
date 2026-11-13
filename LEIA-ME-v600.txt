@@ -1,0 +1,7 @@
+DIÁRIO DE TRADER — v600 (Relatório de desempenho em PDF)
+
+- Risco e disciplina: Checklist Pré-09:00 concluído (X de Y pregões) e resultado Calmo/Focado vs. Ansioso/Cansado.
+- Fundamentos da operação: tabela Por faixa de horário (09:00–10:30, 10:30–12:00, 12:00–15:00, 15:00–18:00).
+- Resumo executivo: recomendação de 1 aula ou livro da aba Estudos pelo maior desvio do período.
+- Envio de sexta 18h: resumo salvo em weekly_reports e listado em Operações > Desempenho > Geral (Relatórios semanais).
+- Layout, cores e fontes do PDF sem mudança.

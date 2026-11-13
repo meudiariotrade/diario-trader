@@ -40082,6 +40082,12 @@ try {
         return "";
       const { blob: a, n: r } = await p(e.de, e.ate);
       if (!r && !t) return "";
+      /* v600: guarda o resumo da semana (mesmo cálculo do relatório PDF) em weekly_reports. */
+      try {
+        await n.DiarioRelatorioPDF?.salvarSemana?.(e.de, e.ate);
+      } catch (x) {
+        console.warn("weekly_reports", x);
+      }
       await tok();
       const s = cfg(),
         l = SESS.uid + "/semana-" + e.ate + ".xlsx",
