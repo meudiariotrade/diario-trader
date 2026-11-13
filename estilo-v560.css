@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 d1f95d38344c439cdb1dfb1fe7661ae5b7e518e32baf611c36208d3fa6cb5268 */
+/* Gerado de src/app-theme.css · SHA256 ba39a5d70f495932165f244707b00fed97ad2c4de7244d6bc23ab2d0bb01957f */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2273,3 +2273,14 @@ html body #app .v4-emo-row button{min-height:44px;padding:0 2px;border:1px solid
 html body #app .v4-emo-row button:hover{background:#181C26}
 html body #app .v4-emo-row button.on{background:#181C26;border-color:#D4A017;color:#D4A017}
 html body #app .v4-progress span b{color:#E8E6E1;font-weight:700}
+/* v590: histórico do estado emocional e barra de risco consumido */
+html body #app .v4-emo-hist{margin:8px 0 0;font-size:12px;color:#8A93A6;font-variant-numeric:tabular-nums}
+html body #app .v4-emo-hist b.v-pos{color:#10B981}
+html body #app .v4-emo-hist b.v-neg{color:#EF4444}
+html body #app .v4-risk589{display:grid!important;grid-template-columns:auto 1fr auto;align-items:center;column-gap:8px;row-gap:6px}
+html body #app .v4-risk589>b{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+html body #app .v4-risk589>i{grid-column:1/-1;display:block;height:6px;background:#1E232E;border-radius:2px;overflow:hidden}
+html body #app .v4-risk589>i>em{display:block;height:100%;background:#10B981;border-radius:2px;transition:width .3s}
+html body #app .v4-risk589.medio>i>em{background:#D4A017}
+html body #app .v4-risk589.alto>i>em{background:#EF4444}
+html body #app .v4-risk589.alto>b{color:#EF4444}
