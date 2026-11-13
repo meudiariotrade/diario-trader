@@ -113,9 +113,6 @@
  let queued=false;
  function mount(){queued=false;welcome();const app=active();if(app){home(app);terminal(app);market(app);marketSignals(app)}chat()}
  function queue(){if(!queued){queued=true;requestAnimationFrame(mount)}}
- root.addEventListener('click',e=>{
-  if(e.target.closest?.('[data-dt393-route="mercado"],[data-navroute="mercado"]')){try{if(typeof MKT!=='undefined')MKT.tab='cq'}catch{}}
- },true);
  doc.addEventListener("diario:render",queue);
  new MutationObserver(queue).observe(doc.body,{attributes:true,attributeFilter:['class']});
  if(root.TraderUI?.onRender)root.TraderUI.onRender('navegacao-simples',queue);

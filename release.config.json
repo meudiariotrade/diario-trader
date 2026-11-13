@@ -1,5 +1,5 @@
 {
-  "version": 586,
+  "version": 587,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -23,9 +23,7 @@
     "LICENSE-fontes.txt",
     "LICENSE-fontkit.txt"
   ],
-  "debug": [
-    "app.js.map"
-  ],
+  "debug": [],
   "base": "dee95aea976a42d7afa93661bd58b073583c90bc",
   "bundles": {
     "nucleo-v560.js": "src/app-core.js",
