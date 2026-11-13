@@ -3284,7 +3284,8 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           window.TraderUI.refreshScroll(),
           M
             ? (i(), O.querySelector("textarea").focus({ preventScroll: !0 }))
-            : j.focus({ preventScroll: !0 }));
+            : (document.querySelector("#dt393-global-head [data-ia-topo]") || j).focus({ preventScroll: !0 }),
+          document.querySelectorAll("[data-ia-topo]").forEach((b) => b.setAttribute("aria-expanded", String(M))));
       }
       function Y() {
         if (r) return;
@@ -3381,6 +3382,35 @@ Contexto autorizado:
           }));
       }
       Y();
+      /* v584: o assistente abre por um ícone discreto no cabeçalho, ao lado da lupa e do sino (sem botão flutuante). */
+      const iaIcone =
+        '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-4 4v-4H4z"/><path d="M9 10.5h.01M12 10.5h.01M15 10.5h.01"/></svg>';
+      function iaNoTopo() {
+        for (const bar of document.querySelectorAll(".dt393-topactions")) {
+          if (bar.closest(".v503-fantasma") || bar.querySelector("[data-ia-topo]")) continue;
+          const b = document.createElement("button");
+          b.type = "button";
+          b.dataset.iaTopo = "1";
+          b.title = "Assistente IA";
+          b.setAttribute("aria-label", "Abrir assistente IA");
+          b.setAttribute("aria-controls", "wf-chat-panel");
+          b.setAttribute("aria-expanded", String(!!l));
+          b.innerHTML = iaIcone;
+          b.addEventListener("click", () => B(!l));
+          const lupa = bar.querySelector('[data-dt393-action="search"]');
+          lupa ? bar.insertBefore(b, lupa) : bar.append(b);
+        }
+        for (const b of document.querySelectorAll("[data-ia-topo]")) b.setAttribute("aria-expanded", String(!!l));
+      }
+      let iaPendente = !1;
+      new MutationObserver(() => {
+        iaPendente ||
+          ((iaPendente = !0),
+          requestAnimationFrame(() => {
+            ((iaPendente = !1), iaNoTopo());
+          }));
+      }).observe(document.body, { childList: !0, subtree: !0 });
+      iaNoTopo();
       const z = ecoPaint;
       ((ecoPaint = function () {
         (z.apply(this, arguments), i());

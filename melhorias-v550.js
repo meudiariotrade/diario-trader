@@ -20,7 +20,43 @@
     const pf = g(() => CQ.pf['@' + cod], null);
     const px = pf?.px ?? it?.px ?? null;
     const d1 = pf?.d1 ?? it?.d1 ?? null;
-    return { px, d1, dp: it?.dp ?? (cod === 'WIN' ? 0 : 1), tk: pf?.tk || it?.c || cod, vivo: !!pf };
+    const base = { dp: it?.dp ?? (cod === 'WIN' ? 0 : 1), tk: pf?.tk || it?.c || cod, vivo: !!pf };
+    if (!pf && (!pregaoAberto() || px == null)) {
+      buscaFechamento();
+      const f = fechamento[cod];
+      if (f && f.px > 0) return { ...base, px: f.px, d1: f.d1, fechado: true, em: f.em };
+    }
+    return { ...base, px, d1 };
+  }
+  /* v584: sem cotação ao vivo (pregão fechado), mostra o último fechamento salvo no banco (tabela cotacoes). */
+  const FECH_K = 'm584-fechamento';
+  let fechamento = g(() => JSON.parse(localStorage.getItem(FECH_K) || '{}'), {}) || {};
+  let fechTs = 0;
+  function pregaoAberto() {
+    const p = g(() => Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value])), null);
+    if (!p || p.weekday === 'Sat' || p.weekday === 'Sun') return false;
+    const min = Number(p.hour) * 60 + Number(p.minute);
+    return min >= 9 * 60 && min < 18 * 60 + 30;
+  }
+  async function buscaFechamento() {
+    if (Date.now() - fechTs < 5 * 60e3) return;
+    const sess = g(() => SESS, null); if (!sess || !sess.uid) return;
+    fechTs = Date.now();
+    try {
+      const rows = await (await rq('/rest/v1/cotacoes?select=ticker,ult,var,updated_at&order=updated_at.desc&user_id=eq.' + sess.uid)).json();
+      const novo = {};
+      for (const o of Array.isArray(rows) ? rows : []) {
+        const m = /^(WIN|WDO)/.exec(String(o.ticker || '').toUpperCase());
+        if (!m || novo[m[1]] || !(+o.ult > 0)) continue;
+        novo[m[1]] = { px: +o.ult, d1: o.var != null && isFinite(+o.var) ? +o.var : null, em: o.updated_at };
+      }
+      if (Object.keys(novo).length) {
+        fechamento = { ...fechamento, ...novo };
+        try { localStorage.setItem(FECH_K, JSON.stringify(fechamento)); } catch {}
+        const m = $('#app:not(.v503-fantasma) .dt395-native-mercado') || app();
+        if (m && g(() => MKT.tab, '') === 'cq') destaque(m);
+      }
+    } catch {}
   }
   function destaque(m) {
     const box = $('#cotbox, #cqbox', m); if (!box) return;
@@ -31,7 +67,7 @@
       const d = dadoFut(cod);
       const cls = d.d1 == null ? '' : d.d1 > 0 ? 'sobe' : d.d1 < 0 ? 'cai' : '';
       const varTxt = d.d1 == null ? '' : (d.d1 > 0 ? '▲ +' : d.d1 < 0 ? '▼ −' : '') + num(Math.abs(d.d1), 2) + '%';
-      return `<div class="m550-card ${cls}"><div class="m550-top"><b>${esc(cod)}</b><small>${esc(NOMES[cod])}${d.vivo ? ' · ao vivo' : ''}</small></div><div class="m550-px">${d.px == null ? '<span class="m550-vazio">Sem preço ainda</span>' : esc(num(d.px, d.dp))}</div><div class="m550-var">${esc(varTxt)}</div></div>`;
+      return `<div class="m550-card ${cls}"><div class="m550-top"><b>${esc(cod)}</b><small>${esc(NOMES[cod])}${d.vivo ? ' · ao vivo' : ''}</small></div><div class="m550-px">${d.px == null ? '<span class="m550-vazio">Sem preço ainda</span>' : esc(num(d.px, d.dp))}</div><div class="m550-var">${esc(varTxt)}${d.fechado ? '<span class="m584-badge" title="Último fechamento salvo">FECHADO</span>' : ''}</div></div>`;
     }).join('');
     if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
   }
