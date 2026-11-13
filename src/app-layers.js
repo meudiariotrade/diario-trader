@@ -6970,6 +6970,13 @@ de Carteira`,
             ["Proventos de todo o histórico", r(E.allIncome, E.unit)],
             ["Saldo atual da posição", r(E.value, E.unit)],
             ["Custo da posição atual", r(E.cost, E.unit)],
+            /* v605: ativo dolarizado também em reais (custo pelo câmbio de cada compra; saldo pelo câmbio de hoje) */
+            ...(z.moeda === "USD"
+              ? [
+                  ["Custo de aquisição em R$ · câmbio de cada compra", z.cR != null ? r(z.cR, "BRL") : null],
+                  ["Saldo atual em R$ · câmbio " + (M.snapshot.fx ? (+M.snapshot.fx).toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : "indisponível"), E.value != null && M.snapshot.fx ? r(E.value * M.snapshot.fx, "BRL") : null],
+                ]
+              : []),
             [
               "Peso na carteira",
               u

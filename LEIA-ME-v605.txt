@@ -1,0 +1,7 @@
+DIÁRIO DE TRADER — v605 (Carteira)
+
+- Lixeira com confirmação nas movimentações e "Excluir ativo" no detalhe; patrimônio e preço médio recalculados na hora.
+- Ativos de demonstração removidos (cópia de segurança no Supabase); IAU mantido.
+- IAU em R$ e US$ no detalhe e na tabela de posições.
+- Espelho IRPF: ativos no exterior em Bens e Direitos e apuração anual da Lei 14.754 (15%, sem isenção de R$ 20 mil).
+- Badge da classe sem corte; alertas de notícias sempre em português e sem repetir o assunto no mesmo dia.

@@ -6155,7 +6155,7 @@ function vImpEspelho() {
           .join("")}</tbody></table></div><p class="ir599-disc">Discriminação sugerida: “${num(e.custodia[0].q, 0)} ${esc(e.custodia[0].tk)}, custo médio ${money(e.custodia[0].pm)}, custodiadas na BTG Pactual CTVM S.A., CNPJ ${BTG_CNPJ}”. Valores pelo custo de aquisição (com taxas), nunca pelo valor de mercado.${e.lancadas.length ? ` Opções lançadas (vendidas) em aberto não entram em Bens e Direitos: ${e.lancadas.map((o) => esc(o.tk) + " (" + num(-o.q, 0) + ")").join(", ")}.` : ""}</p>`
       : '<p class="mut sm">Sem posição em custódia no fim do ano (lançamentos da aba Carteiras / notas importadas).</p>'
   }
-<h3>Rendimentos Isentos e Não Tributáveis</h3>${
+${irExteriorHtml(ano, num)}<h3>Rendimentos Isentos e Não Tributáveis</h3>${
     rendIsentos.length
       ? `<div class="ir599-tabw"><table class="ir599-tab"><tbody>${rendIsentos.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${money(v)}</td></tr>`).join("")}</tbody></table></div><p class="ir599-disc">Fonte pagadora dos proventos: a empresa ou o fundo (CNPJ de cada um). Corretora: BTG Pactual, CNPJ ${BTG_CNPJ}.</p>`
       : '<p class="mut sm">Nenhum rendimento isento lançado no ano.</p>'
@@ -6628,3 +6628,64 @@ document.addEventListener(
   },
   !0,
 );
+
+/* v605 — Ativos no exterior (ex.: IAU) no Espelho IRPF, ligados à custódia da Carteira (S.cart.lanc, mercado US).
+   Custo de aquisição em US$ e em R$ (câmbio informado em cada compra). Lei 14.754/2023: ganho na venda de aplicações
+   financeiras no exterior é apurado no ano e tributado a 15% na declaração anual, sem isenção de R$ 20 mil. */
+function irExterior(ano) {
+  const fim = ano + "-12-31",
+    ini = ano + "-01-01",
+    nf = (v) => {
+      const n = parseFloat(String(v ?? "").replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
+      return isFinite(n) ? n : 0;
+    },
+    fxHoje = +(S.cart || {}).fx || 0,
+    pos = {},
+    vendas = [];
+  (((S.cart || {}).lanc) || [])
+    .filter((l) => l && l.mk === "US" && (l.tp === "C" || l.tp === "V") && l.d <= fim)
+    .slice()
+    .sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0))
+    .forEach((l) => {
+      const p = pos[l.tk] ?? (pos[l.tk] = { q: 0, usd: 0, brl: 0, cl: l.cl, semFx: 0 }),
+        q = nf(l.q),
+        px = nf(l.p),
+        cs = nf(l.cs),
+        fx = nf(l.fx) || fxHoje;
+      nf(l.fx) || (p.semFx = 1);
+      if (l.tp === "C") ((p.q += q), (p.usd += q * px + cs), (p.brl += (q * px + cs) * fx));
+      else {
+        const d = Math.min(q, p.q);
+        if (d <= 0) return;
+        const cu = (p.usd / p.q) * d,
+          cb = (p.brl / p.q) * d,
+          venda = d * px - cs;
+        ((p.q -= d), (p.usd -= cu), (p.brl -= cb));
+        l.d >= ini && vendas.push({ tk: l.tk, d: l.d, q: d, usd: venda, brl: venda * fx, custo: cb, ganho: venda * fx - cb });
+      }
+    });
+  const custodia = Object.entries(pos)
+      .filter(([, p]) => p.q > 1e-9)
+      .map(([tk, p]) => ({ tk, cl: p.cl, q: p.q, pmUsd: p.usd / p.q, usd: p.usd, brl: p.brl, semFx: p.semFx }))
+      .sort((a, b) => a.tk.localeCompare(b.tk)),
+    ganho = sum(vendas.map((v) => v.ganho));
+  return { custodia, vendas, ganho, base: Math.max(0, ganho), imposto: Math.round(Math.max(0, ganho) * 15) / 100 };
+}
+function irExteriorHtml(ano, num) {
+  const e = irExterior(ano),
+    usd = (v) => "US$ " + (+v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    q = (v) => (+v).toLocaleString("pt-BR", { maximumFractionDigits: 8 });
+  let h = `<h3>Bens e Direitos · exterior · posição em 31/12/${ano}</h3>`;
+  h += e.custodia.length
+    ? `<div class="ir599-tabw"><table class="ir599-tab"><thead><tr><th>Ativo</th><th>Qtd.</th><th>Custo</th></tr></thead><tbody>${e.custodia
+        .map((c) => `<tr><td><b>${esc(c.tk)}</b><small>ETF no exterior · EUA (249)</small></td><td>${q(c.q)}</td><td>${money(c.brl)}<small>${usd(c.usd)}</small></td></tr>`)
+        .join("")}</tbody></table></div><p class="ir599-disc">Discriminação sugerida: “${q(e.custodia[0].q)} cotas do ETF ${esc(e.custodia[0].tk)}, custo de aquisição ${usd(e.custodia[0].usd)} (${money(e.custodia[0].brl)} pelo câmbio de cada compra), custodiadas em corretora nos EUA”. Grupo 07 (Fundos), localização EUA (249); confira o código do ETF no programa da Receita. Valores pelo custo, nunca pelo valor de mercado.${e.custodia.some((c) => c.semFx) ? " Há compra sem câmbio informado: usado o câmbio de hoje; corrija na Carteira." : ""}</p>`
+    : '<p class="mut sm">Sem ativos no exterior em custódia no fim do ano.</p>';
+  h += `<h3>Aplicações no exterior · Lei 14.754/2023 (apuração anual)</h3>`;
+  h += e.vendas.length
+    ? `<div class="ir599-tabw"><table class="ir599-tab"><thead><tr><th>Venda</th><th>Valor R$</th><th>Custo R$</th><th>Resultado</th></tr></thead><tbody>${e.vendas
+        .map((v) => `<tr><td><b>${esc(v.tk)}</b><small>${v.d.split("-").reverse().join("/")} · ${q(v.q)}</small></td><td>${money(v.brl)}</td><td>${money(v.custo)}</td><td class="${v.ganho >= 0 ? "g" : "r"}">${money(v.ganho)}</td></tr>`)
+        .join("")}</tbody></table></div><p class="ir599-disc">Resultado do ano ${money(e.ganho)} · base ${money(e.base)} · imposto estimado <b>${money(e.imposto)}</b> (15%, pago na declaração anual; sem DARF mensal e sem a isenção de R$ 20 mil). Prejuízo do ano compensa ganho de outras aplicações no exterior.</p>`
+    : `<p class="mut sm">Nenhuma venda de ativo no exterior em ${ano}. Se vender, o ganho entra aqui: 15% na declaração anual, sem a isenção de R$ 20 mil.</p>`;
+  return h;
+}
