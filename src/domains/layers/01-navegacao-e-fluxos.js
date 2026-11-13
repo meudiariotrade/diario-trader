@@ -657,9 +657,8 @@ try {
         N,
         e = !1;
       const i = () => window.TRM,
-        B = () =>
-          document.body.classList.contains("trmon") &&
-          !!document.querySelector(".trbar"),
+        /* Ctrl+Espaço funciona em qualquer modo do Terminal; a barra clássica só existe em Painéis. */
+        B = () => document.body.classList.contains("trmon"),
         Y = (J) =>
           String(J || "")
             .normalize("NFD")
@@ -894,7 +893,7 @@ try {
         }
       }
       function h() {
-        if (!B()) {
+        if (!B() || !document.querySelector(".trbar")) {
           n();
           return;
         }
