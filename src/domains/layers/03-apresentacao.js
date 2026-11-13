@@ -408,6 +408,9 @@ try {
         se(e, r);
         return;
       }
+      /* Grupos já desmontados nesta mesma tela continuam com aba (a troca remonta a tela). */
+      ((e.dataset.v4grupos || "").split(",").filter(Boolean).forEach((g) => (l[g] = 1)),
+        (e.dataset.v4grupos = Object.keys(l).join(",")));
       const s = a.groups.filter(
         ([i]) => l[["pre", "dur", "pos"].includes(i) ? "fases" : i],
       );
@@ -430,11 +433,23 @@ try {
       if (((a = a || v.querySelector("#dt393-workspace .dt393-native")), !a))
         return;
       const n = ["pre", "dur", "pos"].includes(e) ? "fases" : e;
+      /* Tela única (CLAUDE.md): grupos fora da aba ativa saem do DOM; trocar de aba remonta a tela. */
+      if (r && Mt[t] !== e) {
+        ((Mt[t] = e), te());
+        if (["pre", "dur", "pos"].includes(e))
+          try {
+            DFASE = { d: ft(), f: e };
+          } catch {}
+        try {
+          render();
+          return;
+        } catch {}
+      }
       if (
         (a.setAttribute("data-v4act", n),
         [...a.children].forEach((l) => {
           const s = l.getAttribute("data-v4g");
-          !s || s === "*" || l.classList.toggle("v4-off", s !== n);
+          !s || s === "*" || s === n || l.remove();
         }),
         v
           .querySelectorAll(`[data-v4tool][data-v4route="${t}"]`)
@@ -474,7 +489,7 @@ try {
         let o = a ? s !== a : s !== "mais";
         (!a && s === "mais" && ae(l) && (o = !0),
           !o && !a && r++,
-          l.classList.toggle("v4-off", o));
+          o && l.remove());
       });
       const n = v.createElement("div");
       a
@@ -1050,7 +1065,14 @@ try {
           g.preOkEm || ((g.preOkEm = new Date().toISOString()), (g.u = Date.now()), f(() => save()));
         }),
         queueMicrotask(() => sinc589(t, { meta: l, stop: s })));
-      return `<div class="v4-page v4-day">${emo589}${y}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
+      /* v593: dia de turno (escala cadastrada) aparece no topo do Meu dia. */
+      const turno593 = f(() => {
+        const c = tcod(t);
+        return c && c !== "F" && turnoNv(t) === "r"
+          ? `<p class="v4-turno" role="status"><b>Dia de turno</b> <span>${b(TH[c] || "")}</span> · plano: não operar</p>`
+          : "";
+      }, "");
+      return `<div class="v4-page v4-day">${turno593}${emo589}${y}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
     }
     let At = "risk",
       bt = { k: "dt", d: 1 };

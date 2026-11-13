@@ -936,6 +936,30 @@ function semAviso() {
   const e = new Date(),
     t = e.getDay(),
     a = t === 0 && e.getHours() >= 12 ? "w0" : t === 1 ? "w1" : null;
+  if (!a && t === 5 && e.getHours() >= 17) {
+    /* v593: sexta após o fechamento — resumo automático da semana. */
+    const [o, s, n] = rng("w0"),
+      R0 = semResumo(o, s),
+      R = R0.b3 && R0.b3.n ? R0.b3 : R0.fx;
+    if (R0.vazio || !R || ((S.rev || {})[n] || {}).feita) return;
+    const app = document.getElementById("app");
+    if (!app) return;
+    const DS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"],
+      dn = (d) => (d ? DS[new Date(d + "T12:00").getDay()] : "—"),
+      cor = (v) => (v > 0 ? "var(--g)" : v < 0 ? "var(--r)" : "inherit"),
+      brl = (v) => (+v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      linhas = [
+        `Resultado <b style="color:${cor(R.tot)};font-variant-numeric:tabular-nums">${brl(R.tot)}</b> · ${R.n} trade(s)${R.acerto == null ? "" : " · " + Math.round(R.acerto * 100) + "% de acerto"}`,
+        R.melhor && R.dias[R.melhor] > 0 ? `Melhor dia: <b>${dn(R.melhor)}</b> (${brl(R.dias[R.melhor])})` : "",
+        R.pior && R.dias[R.pior] < 0 ? `Pior dia: <b>${dn(R.pior)}</b> (${brl(R.dias[R.pior])})` : "",
+        R.erro ? `Erro que mais pesou: <b>${esc(R.erro[0])}</b> (${R.erro[1].n}x · ${brl(R.erro[1].v)})` : "",
+      ].filter(Boolean);
+    app.insertAdjacentHTML(
+      "afterbegin",
+      `<div class="card" id="semav"><div class="top"><b>Resumo da semana</b><button class="btn s" data-semgo="w0">Revisar</button></div><div class="sm" style="line-height:1.6">${linhas.join("<br>")}</div></div>`,
+    );
+    return;
+  }
   if (!a) return;
   const [o, s, n] = rng(a);
   if (((S.rev || {})[n] || {}).feita || semResumo(o, s).vazio) return;

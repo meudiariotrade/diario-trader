@@ -1169,6 +1169,14 @@ try {
         hora: t.slice(11, 16),
       };
     };
+    /* Duração do trade (entrada → saída) em texto curto: "12 min" ou "1h05". */
+    function duracaoTxt(t) {
+      const a = Date.parse(t && t.dt),
+        b = Date.parse(t && t.dtx);
+      if (!isFinite(a) || !isFinite(b) || b < a) return "";
+      const m = Math.round((b - a) / 6e4);
+      return m < 60 ? m + " min" : Math.floor(m / 60) + "h" + String(m % 60).padStart(2, "0");
+    }
     async function lt(e, t) {
       const n = e.find((s) => /ss:Name="Opera/.test(s)),
         i = e.some((s) => /ss:Name="Checklist"/.test(s)),
@@ -1179,6 +1187,7 @@ try {
           "Dia",
           "Hora entrada",
           "Hora saída",
+          "Duração",
           "Ativo",
           "Tipo",
           "Lado",
@@ -1200,7 +1209,7 @@ try {
           "Fotos",
         ],
         p = [
-          84, 40, 56, 56, 78, 82, 62, 220, 90, 44, 74, 74, 74, 74, 62, 82, 100,
+          84, 40, 56, 56, 62, 78, 82, 62, 220, 90, 44, 74, 74, 74, 74, 62, 82, 100,
           100, 90, 170, 110, 240, 96,
         ],
         c = [a.map((s) => ({ v: s, s: "h" }))],
@@ -1230,6 +1239,7 @@ try {
           u($.sem),
           u($.hora),
           u(s.dtx && O != null ? At(s.dtx).hora : ""),
+          u(duracaoTxt(s)),
           u(s.ativo || "", { s: "n" }),
           u(ut[s.tipo || "D"] || s.tipo || ""),
           u(
@@ -1287,23 +1297,24 @@ try {
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
-          { f: `SUBTOTAL(3,${s("E")})&" trades"`, s: "tot" },
+          { v: "", s: "tot" },
+          { f: `SUBTOTAL(3,${s("F")})&" trades"`, s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           {
-            f: `IFERROR(TEXT(COUNTIFS(${s("Q")},">0")/COUNT(${s("Q")}),"0%")&" de acerto","")`,
+            f: `IFERROR(TEXT(COUNTIFS(${s("R")},">0")/COUNT(${s("R")}),"0%")&" de acerto","")`,
             s: "tot",
           },
           { v: "", s: "tot" },
-          { f: `SUBTOTAL(9,${s("J")})`, s: "tot", fmt: D.int },
+          { f: `SUBTOTAL(9,${s("K")})`, s: "tot", fmt: D.int },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
-          { f: `SUBTOTAL(9,${s("P")})`, s: "tot", fmt: '"R$" #,##0.00' },
-          { f: `SUBTOTAL(9,${s("Q")})`, s: "tot", fmt: D.money },
-          { f: `SUBTOTAL(9,${s("R")})`, s: "tot", fmt: D.vez },
+          { f: `SUBTOTAL(9,${s("Q")})`, s: "tot", fmt: '"R$" #,##0.00' },
+          { f: `SUBTOTAL(9,${s("R")})`, s: "tot", fmt: D.money },
+          { f: `SUBTOTAL(9,${s("S")})`, s: "tot", fmt: D.vez },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
           { v: "", s: "tot" },
@@ -1357,7 +1368,7 @@ try {
         ]),
           (y[x] = 24),
           X.push(`A${x + 1}:C${x + 1}`),
-          (c[s.row][22].link = `'Fotos'!A${x + 1}`),
+          (c[s.row][23].link = `'Fotos'!A${x + 1}`),
           x++);
         const O = [
           `Setup: ${f.setup || "—"}`,
