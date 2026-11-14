@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 d17c3b1a497c16a7b1192ee313fa5c08b02ffba99a2b86fe5fb0daf7d9bbccf9 */
+/* Gerado de src/app-theme.css · SHA256 b5fed00d9131db3b08ca15dc856cae469a3122e9604fc3034848b1cd106a3cac */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2621,3 +2621,6 @@ html:root body .dl-logo.dl-vazio{background:#161B26!important;border:1px solid r
 /* Logos oficiais do TradingView já trazem fundo próprio: sem fundo branco nem recuo */
 html:root body .ta-avatar[data-logo-provider="tradingview"] .ta-logo{padding:0!important;object-fit:cover!important}
 html:root body .ta-avatar[data-logo-provider="tradingview"].ta-has-logo{background:transparent!important}
+/* v616 — Notícias > Jornal do dia: mesma barra de Notícias no topo; Jornal do Pregão | Giro como segundo nível */
+html:root body #app .m550-ntnav{margin-bottom:8px}
+html:root body #app .m406-section-switch.m550-subnivel .m406-switch-button{min-height:40px;font-size:14px}
