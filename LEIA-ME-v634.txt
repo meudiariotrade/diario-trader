@@ -1,0 +1,4 @@
+v634 — Replay de mercado
+- Chart trading: Shift + mouse mostra a guia verde "Ordem Compra @ preço" e o clique posiciona; Alt faz o mesmo para venda (vermelha). Botões + Ordem C / + Ordem V para toque. Ordens arrastáveis, × cancela; executam no preço da ordem quando a máxima/mínima do candle toca, com o Stop/Alvo padrão da boleta.
+- Velocidades: Real (duração do tempo gráfico: 60 s no 1m), 0.5x (4 s), 1x (2 s), 2x (1 s) e 5x (0,4 s) por candle.
+- Contador regressivo do candle (MM:SS) no cabeçalho, sincronizado com a velocidade.
