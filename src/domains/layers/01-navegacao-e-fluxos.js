@@ -3536,6 +3536,94 @@ Contexto autorizado:
             ? 100
             : 100 - 100 / (1 + P / m);
       }
+      /* v618: motor técnico da Revista da Semana — tudo calculado no código antes da IA.
+         Pring (multi-timeframe/momentum), Flávio Lemos (polaridade, Fibonacci), Brooks/Volman (price action)
+         e Elder (distância da média / zona de valor). */
+      const pct = (a, b) => (r(a) && r(b) && b !== 0 ? (a / b - 1) * 100 : null);
+      function tec(m, c, x) {
+        const n = m.length,
+          px = m[n - 1][4],
+          J = Math.min(40, n),
+          L = m.slice(-J);
+        let iH = 0, iL = 0;
+        L.forEach((b, k) => { b[2] >= L[iH][2] && (iH = k); b[3] <= L[iL][3] && (iL = k); });
+        const H = L[iH][2], Lo = L[iL][3], amp = H - Lo,
+          alta = iH > iL,
+          niv = [0.382, 0.5, 0.618].map((f) => ({ f, v: alta ? H - amp * f : Lo + amp * f })),
+          perna = {
+            direcao: alta ? "alta" : "baixa",
+            de: alta ? Lo : H, ate: alta ? H : Lo,
+            inicio: j(L[alta ? iL : iH][0]), fim: j(L[alta ? iH : iL][0]),
+            sessoes: Math.abs(iH - iL), janela: J,
+          },
+          ret = amp > 0 ? (alta ? (H - px) / amp : (px - Lo) / amp) * 100 : null;
+        // price action dos últimos 5 candles
+        const U = m.slice(-6), pa = [];
+        let inside = 0;
+        for (let k = 1; k < U.length; k++) {
+          const b = U[k], a = U[k - 1], corpo = Math.abs(b[4] - b[1]), rg = b[2] - b[3] || 1e-9,
+            sup = b[2] - Math.max(b[1], b[4]), inf = Math.min(b[1], b[4]) - b[3], dia = j(b[0]);
+          b[2] <= a[2] && b[3] >= a[3] && (inside++, pa.push({ tipo: "inside bar", dia, nota: "compressão de volatilidade dentro da barra anterior" }));
+          sup >= 2 * corpo && sup / rg >= 0.5 && pa.push({ tipo: "pavio superior longo", dia, nota: "rejeição vendedora na máxima (possível armadilha de compra)" });
+          inf >= 2 * corpo && inf / rg >= 0.5 && pa.push({ tipo: "pavio inferior longo", dia, nota: "rejeição compradora na mínima (possível armadilha de venda)" });
+        }
+        const V = U.slice(1), up = (i) => V.slice(1).every((b, k) => b[i] > V[k][i]), dn = (i) => V.slice(1).every((b, k) => b[i] < V[k][i]),
+          hh = V.slice(1).filter((b, k) => b[2] > V[k][2]).length, hl = V.slice(1).filter((b, k) => b[3] > V[k][3]).length,
+          seq = up(2) && up(3) ? "topos e fundos ascendentes nos 5 candles"
+            : dn(2) && dn(3) ? "topos e fundos descendentes nos 5 candles"
+            : hh >= 3 && hl >= 3 ? "maioria de topos e fundos ascendentes"
+            : hh <= 1 && hl <= 1 ? "maioria de topos e fundos descendentes" : "sequência mista (sem direção clara nos 5 candles)";
+        // polaridade: nível rompido antes dos últimos 5 candles (antiga resistência/suporte)
+        const A = m.slice(-45, -5), resA = A.length ? Math.max(...A.map((b) => b[2])) : null, supA = A.length ? Math.min(...A.map((b) => b[3])) : null;
+        let pol = null;
+        r(resA) && px > resA && Math.abs(pct(px, resA)) <= 3
+          ? (pol = { tipo: "resistência rompida", nivel: resA, dist: pct(px, resA), nota: "antiga resistência pode atuar como suporte (polaridade)" })
+          : r(supA) && px < supA && Math.abs(pct(px, supA)) <= 3
+            ? (pol = { tipo: "suporte rompido", nivel: supA, dist: pct(px, supA), nota: "antigo suporte pode atuar como resistência (polaridade)" })
+            : r(resA) && px <= resA && Math.abs(pct(px, resA)) <= 1.5
+              ? (pol = { tipo: "resistência próxima", nivel: resA, dist: pct(px, resA), nota: "teste da máxima anterior ainda não rompida" })
+              : r(supA) && px >= supA && Math.abs(pct(px, supA)) <= 1.5 &&
+                (pol = { tipo: "suporte próximo", nivel: supA, dist: pct(px, supA), nota: "teste da mínima anterior ainda não perdida" });
+        // momentum (RSI 14) e perda de força
+        const rsi5 = n > 20 ? B(m.slice(0, -5)) : null, px5 = n > 6 ? m[n - 6][4] : null;
+        let mom = x.rsi == null ? "não avaliado" : x.rsi >= 70 ? "sobrecompra" : x.rsi <= 30 ? "sobrevenda" : "neutro";
+        r(rsi5) && r(px5) && r(x.rsi) && (px > px5 && x.rsi < rsi5 - 2 ? (mom += " · perda de momentum (preço sobe com RSI caindo)") : px < px5 && x.rsi > rsi5 + 2 && (mom += " · perda de força vendedora (preço cai com RSI subindo)"));
+        // confluências: Fibonacci × médias × polaridade (até 1% de distância)
+        const refs = [["MM20", x.ma20], ["MM50", x.ma50], ["MM200", x.ma200], ["MM10s", x.w10], ["MM40s", x.w40], ...(pol ? [[pol.tipo, pol.nivel]] : [])].filter((q) => r(q[1])),
+          conf = niv.map((q) => ({ nivel: (q.f * 100).toFixed(1).replace(".", ",") + "%", valor: q.v, com: refs.filter((z) => Math.abs(pct(z[1], q.v)) <= 1).map((z) => z[0]) })).filter((q) => q.com.length);
+        return {
+          perna, fibo: niv, retracao: ret,
+          elastico20: pct(px, x.ma20), elastico10s: pct(px, x.w10), dist50: pct(px, x.ma50), dist200: pct(px, x.ma200),
+          zonaValor: r(x.ma20) && r(x.w10) ? (Math.abs(pct(px, x.ma20)) <= 1.5 ? "na zona de valor diária (até 1,5% da MM20)" : Math.abs(pct(px, x.ma20)) >= 5 ? "esticado longe da MM20 (5% ou mais)" : "fora da zona de valor, sem esticamento extremo") : "não avaliada",
+          pa, inside, seq, pol, rsi5, mom, conf,
+        };
+      }
+      const fmt = (v, d = 2) => (r(v) ? v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }) : "n/d"),
+        sg = (v) => (r(v) ? (v > 0 ? "+" : "") + fmt(v) + "%" : "n/d");
+      /** Texto dos 4 blocos gerado pelo código (usado quando a IA não responde e como base de fatos). */
+      function blocos(h) {
+        const t = h.tech;
+        if (!t) return null;
+        const mtf =
+          "Semanal " + h.weeklyTrend + " (MM10s " + fmt(h.w10) + " · MM40s " + fmt(h.w40) + "); diário " + h.dailyTrend +
+          " (MM20 " + fmt(h.ma20) + " · MM50 " + fmt(h.ma50) + " · MM200 " + fmt(h.ma200) + "). O fechamento de " + fmt(h.close) +
+          " está " + sg(t.elastico20) + " da MM20 e " + sg(t.elastico10s) + " da MM10s: " + t.zonaValor + "." +
+          (h.weeklyTrend !== h.dailyTrend ? " Os dois tempos gráficos divergem; o semanal define o pano de fundo e o diário o momento." : " Os dois tempos gráficos estão alinhados.");
+        const pa =
+          (t.pa.length ? "Últimos 5 candles: " + t.pa.map((q) => q.tipo + " em " + q.dia.slice(8, 10) + "/" + q.dia.slice(5, 7)).join(", ") + ". " : "Sem inside bar nem pavio de rejeição relevante nos últimos 5 candles. ") +
+          "Estrutura: " + t.seq + ". RSI 14 em " + fmt(h.rsi, 1) + " (" + t.mom + ").";
+        const fib =
+          "Perna dominante de " + t.perna.direcao + " entre " + fmt(t.perna.de) + " (" + t.perna.inicio.slice(8, 10) + "/" + t.perna.inicio.slice(5, 7) + ") e " + fmt(t.perna.ate) +
+          " (" + t.perna.fim.slice(8, 10) + "/" + t.perna.fim.slice(5, 7) + "). Retrações: 38,2% em " + fmt(t.fibo[0].v) + ", 50% em " + fmt(t.fibo[1].v) + " e 61,8% em " + fmt(t.fibo[2].v) +
+          (r(t.retracao) ? "; o preço devolveu " + fmt(t.retracao, 1) + "% da perna." : ".") +
+          (t.pol ? " Polaridade: " + t.pol.tipo + " em " + fmt(t.pol.nivel) + " (" + sg(t.pol.dist) + "), " + t.pol.nota + "." : "") +
+          (t.conf.length ? " Confluência: " + t.conf.map((q) => q.nivel + " (" + fmt(q.valor) + ") com " + q.com.join(" e ")).join("; ") + "." : " Sem confluência de até 1% entre Fibonacci, médias e polaridade.");
+        const alvoPb = t.conf[0] ? t.conf[0].valor : t.fibo[1].v;
+        const cen =
+          "Continuidade: fechamento acima de " + fmt(h.resistance) + " (máxima de 20 sessões). Pullback: reação na região de " + fmt(alvoPb) +
+          " (Fibonacci" + (t.conf[0] ? " com confluência" : " 50%") + "). Invalidação objetiva: fechamento " + (t.perna.direcao === "alta" ? "abaixo de " + fmt(t.fibo[2].v) + " (61,8%) e da mínima de 20 sessões " + fmt(h.support) : "acima de " + fmt(t.fibo[2].v) + " (61,8%) e da máxima de 20 sessões " + fmt(h.resistance)) + ".";
+        return { mtf, pa, fibo: fib, cenarios: cen, fonte: "código" };
+      }
       function Y(u, P) {
         const m = F(u.bars, P),
           c = N(m),
@@ -3582,6 +3670,7 @@ Contexto autorizado:
           resistance: v,
           dailyTrend: i(q[4], a, n),
           weeklyTrend: i(q[4], h, Q),
+          tech: (() => { try { return tec(m, c, { ma20: a, ma50: n, ma200: f, w10: h, w40: Q, rsi: B(m) }); } catch { return null; } })(),
           weeklyReturn:
             c.length > 1 ? (c.at(-1)[4] / c.at(-2)[4] - 1) * 100 : null,
           scenarios: [
@@ -3681,7 +3770,64 @@ Contexto autorizado:
           return !c || P.has(c) ? !1 : (P.add(c), !0);
         });
       }
+      /* v618: agenda da próxima semana — vencimentos B3 (calculados), Copom/FOMC (calendários oficiais) e
+         indicadores de alto impacto (BR/EUA) da agenda econômica do app. */
+      const COPOM = ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-08-05", "2026-09-16", "2026-11-04", "2026-12-09"],
+        FOMC = ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09",
+          "2027-01-27", "2027-03-17", "2027-04-28", "2027-06-09", "2027-07-28", "2027-09-15", "2027-10-27", "2027-12-08"];
+      function semPregao(d) {
+        const x = new Date(d + "T12:00:00Z"), y = x.getUTCFullYear(), w = x.getUTCDay();
+        if (w === 0 || w === 6) return !0;
+        if (["01-01", "04-21", "05-01", "09-07", "10-12", "11-02", "11-15", "11-20", "12-24", "12-25", "12-31"].includes(d.slice(5))) return !0;
+        const a = y % 19, b = Math.floor(y / 100), c = y % 100, dd = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+          h = (19 * a + b - dd - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, L = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * L) / 451),
+          mes = Math.floor((h + L - 7 * m + 114) / 31), dia = ((h + L - 7 * m + 114) % 31) + 1, pas = Date.UTC(y, mes - 1, dia, 12);
+        return [-48, -47, -2, 60].some((o) => new Date(pas + o * 864e5).toISOString().slice(0, 10) === d);
+      }
+      function agenda(g) {
+        const de = g?.window?.from, ate = g?.window?.to;
+        if (!de || !ate) return [];
+        const L = [], DS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
+          rot = (d) => DS[new Date(d + "T12:00:00Z").getUTCDay()] + " " + d.slice(8, 10) + "/" + d.slice(5, 7),
+          add = (d, t, tipo, h = "") => d >= de && d <= ate && L.push({ d, h, dia: rot(d) + (h ? " " + h : ""), t: t + (semPregao(d) && tipo === "Vencimento" ? " (dia sem pregão: confirmar data na B3)" : ""), tipo });
+        for (const ym of new Set([de.slice(0, 7), ate.slice(0, 7)])) {
+          const [y, mo] = ym.split("-").map(Number), d1 = (dia) => new Date(Date.UTC(y, mo - 1, dia, 12)).toISOString().slice(0, 10);
+          // opções sobre ações: 3ª sexta-feira do mês
+          let sx = 0;
+          for (let dia = 1; dia <= 31 && sx < 3; dia++) { const d = d1(dia); if (d.slice(0, 7) !== ym) break; new Date(d + "T12:00:00Z").getUTCDay() === 5 && ++sx === 3 && add(d, "Vencimento de opções sobre ações (3ª sexta-feira)", "Vencimento"); }
+          // índice futuro (WIN/IND) e opções de Ibovespa: quarta-feira mais próxima do dia 15, meses pares
+          if (mo % 2 === 0) {
+            let best = null;
+            for (let dia = 9; dia <= 21; dia++) { const d = d1(dia); new Date(d + "T12:00:00Z").getUTCDay() === 3 && (!best || Math.abs(dia - 15) < Math.abs(+best.slice(8) - 15)) && (best = d); }
+            best && add(best, "Vencimento do índice futuro (WIN/IND) e opções de Ibovespa", "Vencimento");
+          }
+          // dólar futuro (WDO/DOL): 1º dia útil do mês
+          for (let dia = 1; dia <= 7; dia++) { const d = d1(dia); if (!semPregao(d)) { add(d, "Vencimento do dólar futuro (WDO/DOL), 1º dia útil", "Vencimento"); break; } }
+        }
+        COPOM.forEach((d) => add(d, "Decisão do Copom (Selic), após o fechamento", "Banco central", "18:30"));
+        FOMC.forEach((d) => add(d, "Decisão do FOMC (juros nos EUA)", "Banco central", "15:00"));
+        let ev = Array.isArray(g.agenda) ? g.agenda : null;
+        if (!ev) try { ev = [...(AG?.v?.[0]?.eventos || []), ...(AG?.v?.[1]?.eventos || [])]; } catch { ev = []; }
+        const vist = new Set();
+        for (const e of ev || []) {
+          if (!e || e.imp !== 1 || !["BR", "US"].includes(e.p) || /copom|fomc|taxa de juros|interest rate decision/i.test(e.t || "")) continue;
+          const d = new Date(e.em).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }), h = new Date(e.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }),
+            k = d + e.p + e.t;
+          if (vist.has(k)) continue;
+          (vist.add(k), add(d, (e.p === "BR" ? "Brasil: " : "EUA: ") + e.t, "Alto impacto", h));
+        }
+        return L.sort((a, b) => (a.d + a.h).localeCompare(b.d + b.h));
+      }
+      /** Edições guardadas antes da v618: recalcula o mapa técnico a partir dos candles já salvos. */
+      function enriquece(p) {
+        for (const h of p?.studies || [])
+          if (h.available && !h.tech && Array.isArray(h.bars) && h.bars.length >= 30)
+            try { h.tech = tec(h.bars, h.weeks || N(h.bars), { ma20: h.ma20, ma50: h.ma50, ma200: h.ma200, w10: h.w10, w40: h.w40, rsi: h.rsi }); } catch {}
+        return p;
+      }
       s.RevistaModel = {
+        agenda,
+        enrich: enriquece,
         VERSION: l,
         date: j,
         spDate: G,
@@ -3696,6 +3842,8 @@ Contexto autorizado:
         build: M,
         dedupe: E,
         add: O,
+        tech: tec,
+        blocks: blocos,
       };
     })(typeof window > "u" ? globalThis : window),
     (function (s) {
@@ -6526,6 +6674,36 @@ de Carteira`,
             g.window.cutoff,
           ),
           f = n.p;
+        // v618: logos oficiais (círculo) da capa, dos títulos e do quadro final
+        const LGK = (t) => ({ USDBRL: "USD/BRL", IBOV: "IBOV" })[t] || t,
+          LGM = {};
+        try {
+          if (window.DiarioLogos && !g.demo)
+            await Promise.race([
+              Promise.all(
+                [...g.studies, ...g.futures].map(async (h) => {
+                  const pg = await window.DiarioLogos.png(LGK(h.ticker), 96);
+                  if (pg) try { LGM[h.ticker] = { img: await f.doc.embedPng(pg.bytes), r: pg.w / pg.h }; } catch {}
+                }),
+              ),
+              new Promise((z) => setTimeout(z, 10e3)),
+            ]);
+        } catch {}
+        const lgCel = (t) => ({ t, f: "b", lg: LGM[t] }),
+          hLogo = (tk, titulo, sub) => {
+            const L = LGM[tk];
+            if (!L) return n.heading(titulo, sub);
+            const I = f.F.serif ? "serif" : "b",
+              k = f.wrap(String(titulo), f.CW - 26, 14, I);
+            (f.need(k.length * 20 + 65), (f.y += 6));
+            try { f.pg.drawImage(L.img, { x: f.M, y: f.H - f.y - 17, width: 17 * L.r, height: 17 }); } catch {}
+            for (const z of k) (f.t(z, f.M + 24, f.y, { s: 14, f: I, c: f.C.dk }), (f.y += 20));
+            sub && n.text(sub, { size: 8.5, color: f.C.mut });
+          },
+          bloco = (tit, txt) => {
+            txt && (f.need(70), n.text(tit, { font: "b", size: 9.6 }), n.text(txt));
+          },
+          pc = (v) => (typeof v == "number" && isFinite(v) ? (v > 0 ? "+" : "") + l(v) + "%" : "Não disponível");
         (n.text(
           g.demo
             ? "DEMONSTRAÇÃO. Todas as séries e cotações deste exemplo são fictícias."
@@ -6545,7 +6723,7 @@ de Carteira`,
               ["Semanal", 25],
             ],
             g.studies.map((h) => [
-              h.ticker,
+              lgCel(h.ticker),
               h.asOf || "Sem histórico",
               h.dailyTrend || "Não avaliada",
               h.weeklyTrend || "Não avaliada",
@@ -6561,7 +6739,8 @@ de Carteira`,
         for (const h of g.studies) {
           if (
             ((h.available || f.y > f.BOT - 160) && f.add(),
-            n.heading(
+            hLogo(
+              h.ticker,
               h.ticker + " · " + h.name,
               h.available
                 ? "Última sessão " + h.asOf + " · histórico desde " + h.from
@@ -6600,6 +6779,40 @@ de Carteira`,
                 ["Máxima das 20 sessões anteriores", l(h.resistance)],
               ],
             ),
+            (() => {
+              const t = h.tech;
+              if (!t) return;
+              (f.need(200),
+                n.table(
+                  [
+                    ["Mapa técnico (calculado pelo código)", 55],
+                    ["Valor", 45],
+                  ],
+                  [
+                    ["Perna dominante (" + t.perna.janela + " sessões)", t.perna.direcao + ": " + l(t.perna.de) + " → " + l(t.perna.ate) + " (" + t.perna.inicio.slice(8, 10) + "/" + t.perna.inicio.slice(5, 7) + " a " + t.perna.fim.slice(8, 10) + "/" + t.perna.fim.slice(5, 7) + ")"],
+                    ["Fibonacci 38,2%", l(t.fibo[0].v)],
+                    ["Fibonacci 50,0%", l(t.fibo[1].v)],
+                    ["Fibonacci 61,8%", l(t.fibo[2].v)],
+                    ["Retração atual da perna", t.retracao == null ? "Não disponível" : l(t.retracao, 1) + "%"],
+                    ["Elástico até a MM20 (diário)", pc(t.elastico20)],
+                    ["Elástico até a MM10s (semanal)", pc(t.elastico10s)],
+                    ["Zona de valor", t.zonaValor],
+                    ["Últimos 5 candles", t.pa.length ? t.pa.map((q) => q.tipo + " " + q.dia.slice(8, 10) + "/" + q.dia.slice(5, 7)).join(" · ") : "Sem inside bar ou pavio de rejeição"],
+                    ["Sequência de topos e fundos", t.seq],
+                    ["Polaridade", t.pol ? t.pol.tipo + " em " + l(t.pol.nivel) + " (" + pc(t.pol.dist) + ")" : "Sem nível rompido próximo"],
+                    ["Momentum (RSI 14)", t.mom],
+                    ["Confluências (até 1%)", t.conf.length ? t.conf.map((q) => q.nivel + " " + l(q.valor) + " + " + q.com.join(", ")).join(" · ") : "Nenhuma"],
+                  ],
+                ));
+              const B4 = (g.ia && g.ia.ativos && g.ia.ativos[h.ticker]) || window.RevistaModel?.blocks?.(h);
+              if (!B4) return;
+              (f.need(260),
+                n.heading("Leitura técnica da semana", g.ia?.ativos?.[h.ticker]?.fonte === "ia" ? "Texto redigido pela IA a partir dos números calculados pelo código; números conferidos." : "Texto montado pelo código a partir dos números calculados."),
+                bloco("1. Visão multi-timeframe e médias (Pring / Elder)", B4.mtf),
+                bloco("2. Price action e momentum (Brooks / Volman)", B4.pa),
+                bloco("3. Fibonacci, polaridade e confluências (Flávio Lemos)", B4.fibo),
+                bloco("4. Cenários condicionais e invalidação", B4.cenarios));
+            })(),
             f.need(250),
             n.heading("Cenários para a semana"));
           for (const Q of h.scenarios)
@@ -6629,7 +6842,8 @@ de Carteira`,
         for (const h of g.futures) {
           if (
             ((h.available || f.y > f.BOT - 180) && f.add(),
-            n.heading(
+            hLogo(
+              h.ticker,
               h.ticker + " · " + h.name,
               "Contrato futuro · snapshot e cenários de cobertura limitada",
             ),
@@ -6683,12 +6897,27 @@ de Carteira`,
             g.studies
               .filter((h) => h.available)
               .map((h) => [
-                h.ticker,
+                lgCel(h.ticker),
                 l(h.resistance),
                 l(h.support),
                 "Retorno à faixa em fechamento",
               ]),
           ),
+          (() => {
+            const A = window.RevistaModel?.agenda?.(g) || [];
+            (f.need(120),
+              n.heading("Agenda da próxima semana", g.window.from.slice(8, 10) + "/" + g.window.from.slice(5, 7) + " a " + g.window.to.slice(8, 10) + "/" + g.window.to.slice(5, 7) + " · vencimentos, bancos centrais e indicadores de alto impacto"),
+              A.length
+                ? n.table(
+                    [
+                      ["Dia", 18],
+                      ["Evento", 60],
+                      ["Tipo", 22],
+                    ],
+                    A.slice(0, 12).map((x) => [x.dia, x.t, x.tipo]),
+                  )
+                : n.text("Sem vencimentos ou eventos de alto impacto encontrados para a semana. Confira a aba Agenda."));
+          })(),
           n.heading("Roteiro para o diário"),
           n.text(`1. Conferir agenda, feriados e vencimentos.
 2. Atualizar preços e verificar a confirmação do cenário.
@@ -7648,6 +7877,15 @@ de Carteira`,
                         assets: I,
                         snapshot: v,
                       });
+                      // v618: agenda econômica da semana da edição (alto impacto BR/EUA)
+                      try {
+                        const a0 = cfg(), sem = s.spDate() >= k.window.from ? 0 : 1;
+                        if (a0) {
+                          const ra = await fetch(a0.url + "/functions/v1/macro", { method: "POST", headers: { "Content-Type": "application/json", apikey: a0.key }, body: JSON.stringify({ modo: "agenda", semana: sem }), signal: AbortSignal.timeout(15e3) }),
+                            ja = await ra.json().catch(() => ({}));
+                          Array.isArray(ja.eventos) && (k.agenda = ja.eventos.filter((e) => e && e.imp === 1 && ["BR", "US"].includes(e.p)).map((e) => ({ em: e.em, p: e.p, t: e.t, imp: 1 })));
+                        }
+                      } catch {}
                       return (z(k), k);
                     } catch (Q) {
                       return ((o = Q.message || String(Q)), null);
@@ -7660,6 +7898,23 @@ de Carteira`,
                     "Entre na conta para consultar o histórico e fechar a revista."),
                   q(),
                   null);
+      }
+      /* v618: a IA redige os 4 blocos a partir dos números calculados; sem IA, o PDF usa o texto do código. */
+      async function rvIa(n) {
+        if (!n || n.ia?.ativos || window.DIARIO_DEMO || !SESS?.at) return n;
+        s.enrich(n);
+        const ativos = (n.studies || []).filter((h) => h.available && h.tech).map((h) => ({
+          ticker: h.ticker, nome: h.name,
+          fatos: { fechamento: h.close, mm20: h.ma20, mm50: h.ma50, mm200: h.ma200, mm10s: h.w10, mm40s: h.w40, rsi14: h.rsi, suporte20: h.support, resistencia20: h.resistance, estrutura_diaria: h.dailyTrend, estrutura_semanal: h.weeklyTrend, variacao_semana: h.weeklyReturn, tecnico: h.tech },
+          base: s.blocks(h),
+        })).filter((a) => a.base);
+        if (!ativos.length) return n;
+        try {
+          const r = await rq("/functions/v1/revista-ia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ corte: n.window.cutoff, ativos }), signal: AbortSignal.timeout(120e3) }),
+            j = await r.json().catch(() => ({}));
+          j?.ativos && ((n.ia = { ativos: j.ativos, modelo: j.modelo, gerado: j.gerado }), z(n));
+        } catch {}
+        return n;
       }
       function E(n) {
         return `<div class="rv-scenarios">${n.scenarios.map((f) => `<article><b>${r(f.name)}</b><p>${r(f.condition)}</p><strong>${f.trigger != null ? j(f.trigger) : j(f.low) + " a " + j(f.high)}</strong><small>Reavaliar: ${r(f.invalidation)}</small></article>`).join("")}</div>`;
@@ -7718,11 +7973,11 @@ de Carteira`,
               !(await M(!0)))
           )
             return toast(o || "Não foi possível gerar a revista.");
-          const n = B();
+          const n = s.enrich(B());
           return rpAbrir(
             "Revista da Semana",
             "revista-semana-" + n.window.from + ".pdf",
-            () => TraderReports.technicalMagazinePdf(n),
+            () => rvIa(n).then((x) => TraderReports.technicalMagazinePdf(x || n)),
           );
         }
         return R.apply(this, arguments);

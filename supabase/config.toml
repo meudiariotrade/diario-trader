@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.logos]
 verify_jwt = false
+
+[functions.revista-ia]
+verify_jwt = false
