@@ -4039,7 +4039,8 @@ async function rpyCarrega() {
     const a = await fetch(e.url + "/functions/v1/candles", {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: e.key },
-        body: JSON.stringify({ ativo: t, intervalo: RPY.tf }),
+        // v631: janela máxima do Yahoo (1m = 7 dias, 5m = 60 dias) + dias acumulados no Supabase
+        body: JSON.stringify({ ativo: t, intervalo: RPY.tf, modo: "replay", pregao: typeof rpyEhB3 === "function" && rpyEhB3(t) ? "b3" : "" }),
       }),
       o = await a.json();
     if (!a.ok) throw new Error(o.error || "Erro " + a.status);
@@ -4323,7 +4324,8 @@ function rpyHtml() {
     o = `<div class="card"><b>▶️ Treino com replay</b><div class="sm" style="color:var(--mut);margin:4px 0 8px">Um pregão passado aparece candle a candle, sem você ver o que vem depois. Decida a entrada, o stop e o alvo como se fosse ao vivo. O resultado sai em pontos e em vezes o risco.</div>
 <div class="g2"><label>Ativo<input id="rpytk" list="rpyl" value="${esc(RPY.tk || a[0] || "WIN")}" autocapitalize="characters"><datalist id="rpyl">${a.map((r) => `<option value="${esc(r)}">`).join("")}</datalist></label><label>Tempo gráfico<select id="rpytf">${opt(
       [
-        ["5m", "5 minutos (últimos 5 dias)"],
+        ["1m", "1 minuto (últimos 7 dias)"],
+        ["5m", "5 minutos (últimos 60 dias)"],
         ["15m", "15 minutos (último mês)"],
         ["60m", "60 minutos (3 meses)"],
       ],

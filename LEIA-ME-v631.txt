@@ -1,0 +1,6 @@
+v631 — Replay de mercado
+- Etiqueta da posição muda de cor pelo resultado aberto: verde (#16A34A) no lucro, vermelho (#DC2626) no prejuízo, na compra e na venda.
+- Arrastar a partir da linha da posição cria/ajusta o Stop (lado da perda) e o Alvo (lado do ganho); depois cada linha continua arrastável (mouse e toque).
+- Tempo gráfico: 1 minuto (últimos 7 dias) e 5 minutos (últimos 60 dias), as janelas máximas do Yahoo. Seletor para escolher qualquer pregão carregado (ou sortear).
+- Cache no Supabase: cada pregão completo fica salvo na tabela replay_candles (RLS: leitura só logado; escrita só pela função candles), e os dias guardados são somados aos novos, acumulando histórico.
+- Histórico de treinos (sessões): coluna R$ preenchida (sessões antigas recalculadas pelas operações salvas).
