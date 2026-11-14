@@ -1,0 +1,8 @@
+v630 — Replay de mercado estilo ProfitChart
+- Contratos: botões 1, 2, 5, 10 e campo livre (padrão 1). Comprar/Vender com posição aberta: mesma direção soma e recalcula o preço médio; direção oposta faz saída parcial, zera ou inverte.
+- Resultado em pontos e em R$ (B3: WIN R$ 0,20 e WDO R$ 10,00 por ponto por contrato; IND R$ 1, DOL R$ 50; ações R$ 1 por ação). Resumo do dia e histórico de sessões também em R$.
+- Gráfico com ~10 candles livres à direita e arraste horizontal para os dois lados (mouse e toque), pinça para zoom no celular.
+- Sem a caixa flutuante sobre os candles.
+- Etiqueta de posição sobre a linha de entrada (ex.: 3C · +1,5 pts (+R$ 45,00)) verde na compra e vermelha na venda, com × para zerar; preço destacado no eixo.
+- Linhas de Stop (vermelha) e Alvo (verde) arrastáveis no gráfico (mouse e toque), mostrando o risco/retorno em R$ enquanto arrasta.
+- Preços do WDO com casas decimais (5.632,5).
