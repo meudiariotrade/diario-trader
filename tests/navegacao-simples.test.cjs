@@ -46,13 +46,12 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  await expect(app.locator('[data-mkt549-ir="comparar"]')).toBeHidden();
  await expect.poll(()=>p.evaluate(()=>MKT.tab)).toBe('lab');
  await app.getByRole('button',{name:'Agenda',exact:true}).click();
- await expect(app.locator('.simple-market-about>summary')).toBeVisible();
+ // v618: sem "Sobre esta tela"
+ await expect(app.locator('.simple-market-about')).toHaveCount(0);
  await expect(app.locator('.m404-overview')).toBeHidden();
  await expect(app.locator('#mkcal')).toBeHidden();
  await app.locator('.simple-calendar>summary').click();
  await expect(app.locator('#mkcal')).toBeVisible();
- await app.locator('.simple-market-about>summary').click();
- await expect(app.locator('.m404-overview')).toBeVisible();
  await p.getByRole('button',{name:'Início',exact:true}).last().click();
  await expect(app.locator('.simple-context')).toHaveCount(1);
  await app.locator('.simple-context [data-v4mkt="ag"]').click();

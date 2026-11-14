@@ -92,8 +92,9 @@
  }
  function market(app){
   const m=app.querySelector('.dt395-native-mercado');if(!m)return;
-  for(const d of m.querySelectorAll('.simple-market-about'))if(!d.querySelector('.m404-overview'))d.remove();
-  for(const n of m.querySelectorAll('.m404-overview'))wrap(n,'Sobre esta tela','simple-market-about');
+  // v618: sem o "Sobre esta tela" (abria e fechava ao trocar de aba); a descrição fica oculta
+  for(const d of m.querySelectorAll('.simple-market-about')){const o=d.querySelector('.m404-overview');if(o)d.before(o);d.remove()}
+  for(const n of m.querySelectorAll('.m404-overview'))n.hidden=true;
   const calendar=m.querySelector('#mkcal');if(calendar?.querySelector('.tradingview-widget-container')){
    const foot=calendar.nextElementSibling,d=wrap(calendar,'Ver calendário econômico','simple-calendar');
    if(d&&foot?.classList.contains('mut'))d.append(foot);
