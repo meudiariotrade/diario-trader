@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 73e11e4eb2e83b3f2e0486279dfcaf610d77c6483a96ee41b6453121f9e27dc8 */
+/* Gerado de src/app-theme.css · SHA256 22840a302eccea1dc07b8b96b7aba5408a1f79ab8aa6234e779fc2bb12dc7707 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2626,3 +2626,5 @@ html:root body .ta-avatar[data-logo-provider="tradingview"].ta-has-logo{backgrou
 html:root body #app .m406-section-switch .m406-switch-tabs:has([data-m550-nt],[data-m550-jornal]){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;flex-wrap:nowrap!important;width:100%!important;max-width:none!important;box-sizing:border-box}
 html:root body #app .m406-section-switch .m406-switch-tabs:has([data-m550-nt],[data-m550-jornal])>.m406-switch-button{width:100%!important;min-width:0!important;min-height:44px!important;margin:0!important;white-space:nowrap!important;justify-content:center;text-align:center}
 @media(min-width:768px){html:root body #app .m406-section-switch .m406-switch-tabs:has([data-m550-nt],[data-m550-jornal]){grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+/* v618: sem o bloco "Sobre esta tela" no Mercado */
+html:root body #app .dt395-native-mercado :is(.simple-market-about,.m404-overview){display:none!important}
