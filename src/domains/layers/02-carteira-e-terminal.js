@@ -1213,7 +1213,10 @@ try {
             (s.src = c.url),
             t.append(s),
             (t.dataset.logoProvider = c.provider));
-        }
+        } else
+          try {
+            i.DiarioLogos?.avatar(t, a.ticker);
+          } catch {}
       }
       return t;
     }
@@ -1448,7 +1451,12 @@ try {
           return (r.restore(), !0);
         }
       }
-      const l = V(c.ticker);
+      const l = V(c.ticker),
+        dl = !l && !c.pair && typeof r.drawImage == "function" && i.DiarioLogos?.imagem(c.ticker);
+      if (dl) {
+        (r.save(), r.beginPath(), r.arc(u, S, s, 0, Math.PI * 2), r.clip());
+        return (r.drawImage(dl, a, t, n, n), r.restore(), r.restore(), !0);
+      }
       if (l && typeof r.drawImage == "function") {
         ((r.fillStyle = "#fff"),
           r.beginPath(),
@@ -7079,4 +7087,220 @@ try {
   })();
 } catch (e) {
   console.error("[v522] falha em ajustes-v419.js", e);
+}
+// v608 — DiarioLogos: logotipos oficiais em alta definição para qualquer ativo (app, Panorama e Jornal do Pregão).
+// B3 → icons.brapi.dev (fallback para o ticker base); ADRs, EUA, índices, cripto, futuros e commodities → CDN do TradingView;
+// pares de moedas → duas bandeiras. Resolução dinâmica pela função "logos", com cache em memória e no aparelho (sem flicker).
+try {
+  (function (w) {
+    "use strict";
+    if (w.DiarioLogos) return;
+    const TV = (id) => "https://s3-symbol-logo.tradingview.com/" + id + ".svg";
+    const BRAPI = (t) => "https://icons.brapi.dev/icons/" + t + ".svg";
+    const MOEDA = { USD: "US", BRL: "BR", EUR: "EU", GBP: "GB", JPY: "JP", CHF: "CH", CAD: "CA", AUD: "AU", NZD: "NZ", CNY: "CN", CNH: "CN", HKD: "HK", MXN: "MX", CLP: "CL", COP: "CO", ARS: "AR", PEN: "PE", ZAR: "ZA", TRY: "TR", INR: "IN", KRW: "KR", SGD: "SG", NOK: "NO", SEK: "SE", DKK: "DK", PLN: "PL", RUB: "RU", ILS: "IL" };
+    // Dicionário fixo (resolve na hora, sem consulta): índices, futuros, commodities, cripto, juros e ADRs/ETFs do app.
+    const FIXO = {
+      IBOV: "indices/bovespa-index", IBOVESPA: "indices/bovespa-index", "^BVSP": "indices/bovespa-index", IFIX: "b3-on-nm", SMLL: "b3-on-nm", IBXX: "b3-on-nm", IDIV: "b3-on-nm",
+      WIN: "country/BR", IND: "country/BR", WDO: "country/US", DOL: "country/US",
+      SPX: "indices/s-and-p-500", "S&P 500": "indices/s-and-p-500", SP500: "indices/s-and-p-500", "^GSPC": "indices/s-and-p-500", ES: "indices/s-and-p-500",
+      NDX: "indices/nasdaq-100", NQ: "indices/nasdaq-100", "^IXIC": "indices/nasdaq-composite", DJI: "indices/dow-30", YM: "indices/dow-30", RUT: "indices/russell-2000", RTY: "indices/russell-2000",
+      VIX: "indices/volatility-s-and-p-500", DXY: "indices/u-s-dollar-index", "DX-Y.NYB": "indices/u-s-dollar-index",
+      DAX: "indices/dax", UKX: "indices/uk-100", SX5E: "indices/euro-stoxx-50", N225: "indices/nikkei-225", HSI: "indices/hang-seng",
+      US10Y: "country/US", US02Y: "country/US", US2A: "country/US", US10A: "country/US", US30A: "country/US", DE10A: "country/DE", JP10A: "country/JP", BR2A: "country/BR", BR5A: "country/BR", BR10A: "country/BR", SELIC: "country/BR",
+      BRENT: "crude-oil", WTI: "crude-oil", NG: "natural-gas", MINERIO: "metal/iron", "MINÉRIO": "metal/iron", FEF: "metal/iron", DCE: "metal/iron", IRON: "metal/iron",
+      OURO: "metal/gold", GOLD: "metal/gold", "XAU/USD": "metal/gold", PRATA: "metal/silver", SILVER: "metal/silver", COBRE: "metal/copper",
+      BTC: "crypto/XTVCBTC", "BTC/BRL": "crypto/XTVCBTC", BTCUSD: "crypto/XTVCBTC", ETH: "crypto/XTVCETH", ETHUSD: "crypto/XTVCETH", SOL: "crypto/XTVCSOL", XRP: "crypto/XTVCXRP", BNB: "crypto/XTVCBNB", DOGE: "crypto/XTVCDOGE", ADA: "crypto/XTVCADA", USDT: "crypto/XTVCUSDT", "USDT/BRL": "crypto/XTVCUSDT",
+      EWZ: "ishares", IAU: "ishares", IVV: "ishares", IVE: "ishares", IVW: "ishares", IJH: "ishares", IJJ: "ishares", IJK: "ishares", IJR: "ishares", IJS: "ishares", IJT: "ishares",
+      WEGZY: "weg", BBSEY: "banco-do-brasil", BDORY: "banco-do-brasil", PBR: "brasileiro-petrobras", "PBR.A": "brasileiro-petrobras", VALE: "vale", ITUB: "itau-unibanco", BBD: "bradesco",
+      ABEV: "ambev", ERJ: "embraer", SBS: "sabesp", GGB: "gerdau", SUZ: "suzano", CIG: "cemig", NU: "nu-holdings", XP: "xp", PAGS: "pagseguro-digital",
+    };
+    const norm = (t) => String(t || "").trim().toUpperCase().replace(/^(?:BMFBOVESPA|NASDAQ|NYSE|AMEX|OTC|TVC|SP|FX_IDC|FX|BITSTAMP|BINANCE|COINBASE|ICEEUR|SGX|CME_MINI|CBOT_MINI):/, "").replace(/1!$/, "").replace(/\.SA$/, "");
+    const par = (t) => {
+      const m = /^([A-Z]{3})\/?([A-Z]{3})$/.exec(norm(t));
+      return m && MOEDA[m[1]] && MOEDA[m[2]] ? [MOEDA[m[1]], MOEDA[m[2]]] : null;
+    };
+    const ehB3 = (t) => /^[A-Z]{4}\d{1,2}F?$/.test(t);
+    const mem = new Map(); // ticker → {urls,fonte} | null
+    let salvo = {};
+    try { salvo = JSON.parse(localStorage.getItem("diario-logos-v608") || "{}") || {}; } catch {}
+    const SEMANA = 7 * 864e5;
+    Object.entries(salvo).forEach(([k, v]) => { v && Date.now() - (v.ts || 0) < SEMANA && mem.set(k, v.v); });
+    const grava = () => { try { const o = {}; mem.forEach((v, k) => { o[k] = { ts: Date.now(), v }; }); localStorage.setItem("diario-logos-v608", JSON.stringify(o)); } catch {} };
+    /** Resolução síncrona (dicionário, pares, B3). undefined = precisa consultar a função. */
+    function local(t) {
+      const k = norm(t);
+      if (!k) return null;
+      if (mem.has(k)) return mem.get(k);
+      const p = par(k);
+      if (p) return { urls: [TV("country/" + p[0]), TV("country/" + p[1])], fonte: "bandeira", par: !0 };
+      if (/^PAIS:[A-Z]{2}$/.test(k)) return { urls: [TV("country/" + k.slice(5))], fonte: "bandeira" };
+      if (/^DI1[FGHJKMNQUVXZ]\d{2,4}$/.test(k)) return { urls: [TV("country/BR")], fonte: "bandeira" };
+      if (FIXO[k]) return { urls: [TV(FIXO[k])], fonte: "tradingview" };
+      if (ehB3(k)) return { urls: [BRAPI(k.replace(/F$/, ""))], fonte: "brapi", talvez: !0 };
+      return undefined;
+    }
+    let fila = new Set(), tm = 0, emCurso = null;
+    function consulta() {
+      tm = 0;
+      const lote = [...fila].slice(0, 120);
+      fila = new Set([...fila].slice(120));
+      if (!lote.length) return;
+      let c = null;
+      try { c = typeof cfg == "function" ? cfg() : null; } catch {}
+      if (!c || w.DIARIO_DEMO) { lote.forEach((k) => mem.set(k, null)); return; }
+      const h = { "Content-Type": "application/json", apikey: c.key };
+      try { typeof SESS < "u" && SESS && SESS.at && (h.Authorization = "Bearer " + SESS.at); } catch {}
+      emCurso = fetch(c.url + "/functions/v1/logos", { method: "POST", headers: h, body: JSON.stringify({ tickers: lote }), signal: AbortSignal.timeout(2e4) })
+        .then((r) => r.json())
+        .then((j) => {
+          const it = (j && j.itens) || {};
+          lote.forEach((k) => mem.set(k, it[k] || null));
+          grava();
+          w.dispatchEvent(new CustomEvent("diario-logos", { detail: lote }));
+        })
+        .catch(() => {})
+        .finally(() => { emCurso = null; fila.size && (tm = setTimeout(consulta, 60)); });
+    }
+    function pede(k) {
+      if (mem.has(k) || fila.has(k)) return;
+      fila.add(k);
+      tm || (tm = setTimeout(consulta, 60));
+    }
+    /** Logo resolvido agora (ou null) e agenda a consulta quando ainda não se sabe. */
+    function urls(t) {
+      const k = norm(t), v = local(k);
+      if (v === undefined) { pede(k); return null; }
+      return v;
+    }
+    /** Fallback quando o brapi não tem o ticker: tenta o ticker base, depois o TradingView. */
+    function falhou(t, url) {
+      const k = norm(t);
+      if (!ehB3(k)) return null;
+      const base = k.replace(/\d+F?$/, ""), lista = [base + "3", base + "4", base + "11"].filter((x) => x !== k).map(BRAPI);
+      const i = lista.indexOf(url);
+      if (i < lista.length - 1) return lista[i + 1];
+      mem.delete(k); pede(k); return null;
+    }
+    async function resolve(lista) {
+      const ks = [...new Set((lista || []).map(norm).filter(Boolean))];
+      ks.forEach((k) => local(k) === undefined && pede(k));
+      tm && (clearTimeout(tm), consulta());
+      for (let i = 0; i < 40 && (emCurso || fila.size); i++) await (emCurso || new Promise((r) => setTimeout(r, 80)));
+      const o = {};
+      ks.forEach((k) => { o[k] = mem.has(k) ? mem.get(k) : local(k) || null; });
+      return o;
+    }
+    /** HTML do logo (círculo) — bandeiras sobrepostas nos pares. */
+    function html(t, tam = 20) {
+      const v = urls(t), e = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      const k = norm(t), ini = e(k.replace(/[^A-Z0-9]/g, "").slice(0, 2));
+      if (!v) return `<span class="dl-logo dl-vazio" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true">${ini}</span>`;
+      if (v.par) return `<span class="dl-logo dl-par" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true"><img src="${e(v.urls[0])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"><img src="${e(v.urls[1])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>`;
+      return `<span class="dl-logo" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true"><img src="${e(v.urls[0])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.DiarioLogos&&DiarioLogos._erro(this)"></span>`;
+    }
+    function _erro(img) {
+      const sp = img.closest(".dl-logo"), k = sp && sp.dataset.dl, prox = k && falhou(k, img.src);
+      if (prox) img.src = prox;
+      else if (sp) (img.remove(), sp.classList.add("dl-vazio"), (sp.textContent = (k || "").replace(/[^A-Z0-9]/g, "").slice(0, 2)));
+    }
+    // Atualiza na tela os logos que chegaram depois (sem refazer a página).
+    w.addEventListener("diario-logos", (ev) => {
+      const ks = new Set(ev.detail || []);
+      document.querySelectorAll(".dl-logo.dl-vazio[data-dl]").forEach((sp) => {
+        if (!ks.has(sp.dataset.dl)) return;
+        const novo = html(sp.dataset.dl, parseFloat(sp.style.getPropertyValue("--dl")) || 20);
+        novo.includes("<img") && (sp.outerHTML = novo);
+      });
+      document.querySelectorAll(".ta-avatar[data-dl-pendente]").forEach((t) => {
+        const k = t.dataset.dlPendente, v = ks.has(k) && mem.get(k);
+        if (!v) return;
+        delete t.dataset.dlPendente;
+        anexa(t, v);
+      });
+    });
+    function anexa(t, v) {
+      if (!v || !v.urls || !v.urls.length || t.querySelector(".ta-logo")) return;
+      if (v.par) return;
+      const s = document.createElement("img");
+      ((s.className = "ta-logo"), (s.alt = ""), (s.decoding = "async"), (s.referrerPolicy = "no-referrer"),
+        (s.onload = () => { s.naturalWidth > 0 && t.classList.add("ta-has-logo"); }),
+        (s.onerror = () => { const prox = falhou(t.dataset.ticker || "", s.src); prox ? (s.src = prox) : (s.remove(), t.classList.remove("ta-has-logo")); }),
+        (s.src = v.urls[0]), t.append(s), (t.dataset.logoProvider = v.fonte));
+    }
+    /** Para o TraderAssetIdentity: completa avatares sem logo (ativos novos pesquisados no futuro). */
+    function avatar(t, ticker) {
+      if (!t || t.querySelector(".ta-logo") || t.classList.contains("ta-pair")) return;
+      const v = urls(ticker);
+      v ? anexa(t, v) : (t.dataset.dlPendente = norm(ticker));
+    }
+    // PNG (para o PDF): desenha o SVG oficial num canvas, recortado em círculo; nos pares, duas bandeiras sobrepostas.
+    const pngCache = new Map();
+    async function svgImg(url) {
+      const r = await fetch(url, { mode: "cors", cache: "force-cache" });
+      if (!r.ok) throw new Error("logo " + r.status);
+      let txt = await r.text();
+      if (!/<svg[\s>]/i.test(txt)) throw new Error("não é SVG");
+      txt = txt.replace(/<script[\s\S]*?<\/script>/gi, "");
+      if (!/\swidth=/.test(txt.slice(0, txt.indexOf(">")))) txt = txt.replace(/<svg/i, '<svg width="56" height="56"');
+      const u = URL.createObjectURL(new Blob([txt], { type: "image/svg+xml" }));
+      try {
+        return await new Promise((ok, ko) => { const im = new Image(); im.onload = () => ok(im); im.onerror = ko; im.src = u; });
+      } finally { setTimeout(() => URL.revokeObjectURL(u), 2e3); }
+    }
+    async function png(t, px = 96) {
+      const k = norm(t) + "@" + px;
+      if (pngCache.has(k)) return pngCache.get(k);
+      const job = (async () => {
+        let v = local(norm(t));
+        if (v === undefined || (v && v.talvez)) v = (await resolve([t]))[norm(t)] || v;
+        if (!v || !v.urls) return null;
+        let imgs = [];
+        for (const u of v.urls) {
+          try { imgs.push(await svgImg(u)); } catch {
+            const alt = falhou(t, u);
+            if (alt) try { imgs.push(await svgImg(alt)); } catch {}
+          }
+        }
+        if (!imgs.length) return null;
+        const c = document.createElement("canvas"), g = c.getContext("2d");
+        const W = v.par ? Math.round(px * 1.55) : px;
+        ((c.width = W), (c.height = px));
+        const circ = (im, x) => {
+          g.save(); g.beginPath(); g.arc(x + px / 2, px / 2, px / 2, 0, Math.PI * 2); g.closePath(); g.clip();
+          g.drawImage(im, x, 0, px, px); g.restore();
+          if (v.par) { g.beginPath(); g.arc(x + px / 2, px / 2, px / 2 - 1, 0, Math.PI * 2); g.lineWidth = Math.max(2, px / 24); g.strokeStyle = "#ffffff"; g.stroke(); }
+        };
+        imgs.length > 1 ? (circ(imgs[1], W - px), circ(imgs[0], 0)) : circ(imgs[0], 0);
+        const b = await new Promise((r) => c.toBlob(r, "image/png"));
+        return b ? { bytes: new Uint8Array(await b.arrayBuffer()), w: W, h: px, par: !!v.par } : null;
+      })().catch(() => null);
+      pngCache.set(k, job);
+      return job;
+    }
+    // Imagens decodificadas para desenho síncrono em canvas (imagem do Panorama do Mercado no app).
+    const imgSync = new Map(), pend = new Set();
+    function imagem(t) {
+      const k = norm(t);
+      if (imgSync.has(k)) return imgSync.get(k);
+      pend.add(k);
+      return null;
+    }
+    async function carregaPendentes() {
+      const ks = [...pend].filter((k) => !imgSync.has(k));
+      pend.clear();
+      if (!ks.length) return 0;
+      const r = await resolve(ks);
+      await Promise.all(ks.map(async (k) => {
+        const v = r[k] || local(k);
+        if (!v || !v.urls || v.par) return imgSync.set(k, null);
+        let im = null;
+        try { im = await svgImg(v.urls[0]); } catch { const alt = falhou(k, v.urls[0]); if (alt) try { im = await svgImg(alt); } catch {} }
+        imgSync.set(k, im);
+      }));
+      return ks.length;
+    }
+    w.DiarioLogos = Object.freeze({ urls, html, resolve, png, avatar, norm, _erro, imagem, carregaPendentes, bandeira: (pais) => TV("country/" + String(pais || "").toUpperCase()) });
+  })(window);
+} catch (e) {
+  console.error("[v608] DiarioLogos", e);
 }

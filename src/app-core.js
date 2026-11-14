@@ -41907,16 +41907,13 @@ try {
   const e = ls.get("diario-agenda");
   e && e.v && (AG.v = e.v);
 } catch {}
-const AG_FL = {
-    BR: "🇧🇷",
-    US: "🇺🇸",
-    CN: "🇨🇳",
-    EU: "🇪🇺",
-    DE: "🇩🇪",
-    GB: "🇬🇧",
-    JP: "🇯🇵",
-    CA: "🇨🇦",
-  },
+// v608: bandeiras SVG nítidas e circulares (CDN de bandeiras do TradingView) no lugar dos emojis.
+const AG_FL = Object.fromEntries(
+    ["BR", "US", "CN", "EU", "DE", "GB", "JP", "CA"].map((p) => [
+      p,
+      `<img class="ag-flag" src="https://s3-symbol-logo.tradingview.com/country/${p}.svg" alt="${p}" width="16" height="16" loading="lazy" decoding="async" referrerpolicy="no-referrer">`,
+    ]),
+  ),
   AG_NM = {
     BR: "Brasil",
     US: "EUA",
@@ -44136,6 +44133,10 @@ async function imgGera() {
     ((IMG.busy = 1), window.toast && toast("Montando a imagem…", 1500));
     try {
       await imgDados();
+      try {
+        // v608: logos oficiais (brapi / TradingView) — 1ª passada lista os ativos, depois carrega e desenha.
+        window.DiarioLogos && (imgDesenha(), await Promise.race([window.DiarioLogos.carregaPendentes(), new Promise((r) => setTimeout(r, 8e3))]));
+      } catch {}
       const e = imgDesenha(),
         t = await new Promise((o) => e.toBlob(o, "image/jpeg", 0.92)),
         a =
@@ -69765,7 +69766,7 @@ function m606MapaHtml() {
   return `<div class="m606-mapa" role="list" aria-label="Termômetros do pregão">${v.mapa
     .map((it) => {
       const lv = m606Vivo(it), px = lv ? lv.px : it.px, d1 = lv ? lv.d1 : it.d1, ab = m606Aberto({ ...it, live: lv && lv.live });
-      return `<div class="m606-t" role="listitem"><div class="m606-th"><b>${esc(it.k)}</b><i class="m606-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}" title="${ab ? "Aberto agora" : "Fechado agora"}"></i></div><span class="m606-px">${px == null ? "–" : cqNum(px, it.dp) + (it.un === "%" ? "%" : "")}</span><span class="m606-v ${m606Cls(d1)}">${m606Sinal(d1)}</span><small>${esc(it.n)}${lv && lv.live ? " · Profit" : ""}</small></div>`;
+      return `<div class="m606-t" role="listitem"><div class="m606-th"><b>${window.DiarioLogos ? DiarioLogos.html(it.k, 18) : ""}${esc(it.k)}</b><i class="m606-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}" title="${ab ? "Aberto agora" : "Fechado agora"}"></i></div><span class="m606-px">${px == null ? "–" : cqNum(px, it.dp) + (it.un === "%" ? "%" : "")}</span><span class="m606-v ${m606Cls(d1)}">${m606Sinal(d1)}</span><small>${esc(it.n)}${lv && lv.live ? " · Profit" : ""}</small></div>`;
     })
     .join("")}</div><p class="m606-src">● aberto agora · ● fechado (último preço) · TradingView, B3 com ~15 min de atraso; WIN, WDO e DIs pelo Profit quando a ponte está ligada · ${esc(m606Consulta())}</p>`;
 }
@@ -69795,7 +69796,7 @@ function m606DiHtml() {
   const corpo = M606.di === "curva"
     ? m606DiCurva(di)
     : `<div class="m606-tab"><div class="m606-row m606-cab"><span>Vértice</span><span>Taxa</span><span>Dia</span></div>${di
-        .map((x) => `<div class="m606-row"><span><b>${esc(x.k)}</b> <small>${mes(x.venc)}${x.live ? " · Profit" : ""}</small></span><span class="n">${x.taxa == null ? "–" : cqNum(x.taxa, 3) + "%"}</span><span class="n ${m606Cls(x.bps)}">${x.bps == null ? "–" : (x.bps > 0 ? "+" : x.bps < 0 ? "−" : "") + cqNum(Math.abs(Math.round(x.bps)), 0)}</span></div>`)
+        .map((x) => `<div class="m606-row"><span><b>${window.DiarioLogos ? DiarioLogos.html(x.k, 16) : ""}${esc(x.k)}</b> <small>${mes(x.venc)}${x.live ? " · Profit" : ""}</small></span><span class="n">${x.taxa == null ? "–" : cqNum(x.taxa, 3) + "%"}</span><span class="n ${m606Cls(x.bps)}">${x.bps == null ? "–" : (x.bps > 0 ? "+" : x.bps < 0 ? "−" : "") + cqNum(Math.abs(Math.round(x.bps)), 0)}</span></div>`)
         .join("")}<p class="m606-src">Variação do dia em pontos-base (bps): 1 bps = 0,01 ponto percentual.</p></div>`;
   return `<section class="m606-card" aria-label="DIs Brasil"><div class="m606-hd"><h3>DIs Brasil</h3><div class="m606-seg" role="group" aria-label="Visão dos DIs">${[["cot", "Cotações"], ["curva", "Curva"]].map(([k, t]) => `<button type="button" data-m606di="${k}" class="${M606.di === k ? "on" : ""}" aria-pressed="${M606.di === k}">${t}</button>`).join("")}</div></div>
 <div class="m606-kpis"><div><small>Inclinação 2a–5a</small><b class="n">${inc ? m606Sinal(inc.hoje, 1, " bps") : "–"}</b></div><div><small>Variação do dia</small><b class="n ${inc ? m606Cls(inc.varBps) : ""}">${inc && inc.varBps != null ? m606Sinal(inc.varBps, 1, " bps") : "–"}</b></div></div>
@@ -69808,10 +69809,13 @@ function m606FedHtml() {
   const fx = (a) => cqNum(a, 2), [p0, p1] = f.faixa;
   const rot = (mov) => {
     const a = p0 + mov / 100, b = p1 + mov / 100, faixa = `${fx(a)}–${fx(b)}%`;
-    return mov === 0 ? `Manter ${faixa}` : `${mov < 0 ? "Corte" : "Alta"} de ${Math.abs(mov)} bps · ${faixa}`;
+    return mov === 0 ? `Manter ${faixa}` : `${mov < 0 ? "Cortar −" : "Subir +"}${Math.abs(mov)} bps · ${faixa}`;
   };
   const dia = f.reuniao.split("-").reverse().slice(0, 2).join("/");
-  return `<section class="m606-card" aria-label="Fed Watch"><div class="m606-hd"><h3>Fed Watch</h3><small class="n">FOMC ${dia}</small></div>${f.cenarios
+  const lista = [-25, 0, 25].map((mov) => ({ mov, p: (f.cenarios.find((c) => c.mov === mov) || {}).p || 0 }))
+    .concat(f.cenarios.filter((c) => ![-25, 0, 25].includes(c.mov)))
+    .sort((a, b) => a.mov - b.mov);
+  return `<section class="m606-card" aria-label="Fed Watch"><div class="m606-hd"><h3>Fed Watch</h3><small class="n">FOMC ${dia}</small></div>${lista
     .map((c) => `<div class="m606-fw"><span>${rot(c.mov)}</span><b class="n">${cqNum(c.p, 1)}%</b><i style="--p:${Math.max(2, Math.min(100, c.p))}%" class="${c.mov < 0 ? "dn" : c.mov > 0 ? "up" : ""}"></i></div>`)
     .join("")}<p class="m606-src">Faixa atual estimada pela taxa efetiva implícita (${cqNum(f.efetiva, 2)}%). Futuros de Fed Funds (CBOT ZQ) via TradingView, método CME FedWatch · ${esc(m606Consulta())}</p></section>`;
 }
@@ -69827,7 +69831,7 @@ function m606EmHtml() {
   const txt = dif == null ? "" : dif > 0.15 ? "Real mais fraco que a cesta emergente hoje: pressão local no câmbio." : dif < -0.15 ? "Real mais forte que a cesta emergente hoje." : "Real em linha com os emergentes hoje.";
   return `<section class="m606-card" aria-label="Cesta emergente"><div class="m606-hd"><h3>Cesta emergente × USD/BRL</h3><small>variação do dia</small></div>
 <div class="m606-kpis k3"><div><small>Média EM (${e.n})</small><b class="n ${m606Cls(e.media)}">${m606Sinal(e.media)}</b></div><div><small>USD/BRL</small><b class="n ${m606Cls(brl)}">${m606Sinal(brl)}</b></div><div><small>Diferença</small><b class="n">${dif == null ? "–" : m606Sinal(dif, 2, " pp")}</b></div></div>
-<p class="m606-note">${txt}</p><div class="m606-em">${e.itens.map((x) => `<span><b>${esc(x.k)}</b><em class="n ${m606Cls(x.d1)}">${m606Sinal(x.d1)}</em></span>`).join("")}</div><p class="m606-src">Média simples de USD/MXN, USD/CLP, USD/COP, USD/ZAR e USD/CNY. Alta = dólar mais forte. TradingView · ${esc(m606Consulta())}</p></section>`;
+<p class="m606-note">${txt}</p><div class="m606-em">${e.itens.map((x) => `<span><b>${window.DiarioLogos ? DiarioLogos.html(x.k, 16) : ""}${esc(x.k)}</b><em class="n ${m606Cls(x.d1)}">${m606Sinal(x.d1)}</em></span>`).join("")}</div><p class="m606-src">Média simples de USD/MXN, USD/CLP, USD/COP, USD/ZAR e USD/CNY. Alta = dólar mais forte. TradingView · ${esc(m606Consulta())}</p></section>`;
 }
 function m606BarHtml() {
   const b = M606.v && M606.v.barometro;
@@ -69843,7 +69847,7 @@ function m606BarHtml() {
   ].filter(Boolean);
   return `<section class="m606-card m606-bar" aria-label="US Market Barometer"><div class="m606-hd"><h3>US Market Barometer</h3><div class="m606-seg" role="group" aria-label="Período">${[["d1", "Dia"], ["m1", "1 mês"]].map(([x, t]) => `<button type="button" data-m606bar="${x}" class="${k === x ? "on" : ""}" aria-pressed="${k === x}">${t}</button>`).join("")}</div></div>
 <div class="m606-mx" role="table" aria-label="Matriz tamanho por estilo"><div role="row" class="m606-mxr"><span role="columnheader"></span>${b.colunas.map((x) => `<span role="columnheader" class="m606-mxh">${esc(x)}</span>`).join("")}</div>${b.linhas
-    .map((ln, i) => `<div role="row" class="m606-mxr"><span role="rowheader" class="m606-mxh">${esc(ln)}</span>${[0, 1, 2].map((j) => { const x = c[i][j], v = x[k]; return `<span role="cell" class="m606-mxc" style="background:${cor(v)}"><small>${esc(x.tk)}</small><b class="n">${m606Sinal(v)}</b></span>`; }).join("")}</div>`)
+    .map((ln, i) => `<div role="row" class="m606-mxr"><span role="rowheader" class="m606-mxh">${esc(ln)}</span>${[0, 1, 2].map((j) => { const x = c[i][j], v = x[k]; return `<span role="cell" class="m606-mxc" style="background:${cor(v)}"><small>${window.DiarioLogos ? DiarioLogos.html(x.tk, 14) : ""}${esc(x.tk)}</small><b class="n">${m606Sinal(v)}</b></span>`; }).join("")}</div>`)
     .join("")}</div>${leit.map((x) => `<p class="m606-note">${x}</p>`).join("")}<p class="m606-src">ETFs iShares: S&amp;P 500 (IVE/IVV/IVW), S&amp;P 400 (IJJ/IJH/IJK) e S&amp;P 600 (IJS/IJR/IJT). Verde = alta, vermelho = queda; cor mais forte = movimento maior. TradingView, ~15 min de atraso · ${esc(m606Consulta())}</p></section>`;
 }
 document.addEventListener("click", (e) => {
