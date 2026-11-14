@@ -1,0 +1,5 @@
+v621
+- Análises: Etapa 1 com dados reais diretos (Yahoo/brapi), sem depender da busca do Gemini; B3 e EUA (ações e ETFs).
+- Motor técnico da Revista, Graham/Bazin/DCF em moeda nativa, ETFs com câmbio e nota tributária.
+- IA em cascata com nova tentativa e erro real; sem IA, relatório com os números do código.
+- Histórico com logos, lixeira e "Limpar falhas".
