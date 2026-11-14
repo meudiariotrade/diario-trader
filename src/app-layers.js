@@ -2303,8 +2303,10 @@ Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na im
         }));
       const z = imgDesenha;
       imgDesenha = function () {
-        const P = z.apply(this, arguments),
-          m = document.createElement("canvas");
+        const P = z.apply(this, arguments);
+        // v615: sem o rodapé técnico ("Consulta do panorama…") fora do card na imagem exportada.
+        if (P) return P;
+        const m = document.createElement("canvas");
         ((m.width = P.width), (m.height = P.height + 160));
         const c = m.getContext("2d");
         (c.drawImage(P, 0, 0),
@@ -21923,6 +21925,8 @@ try {
         "BITCOIN (BRL)": "BTCBRL",
         ETHEREUM: "ETH",
         "PETRÓLEO BRENT": "BRENT",
+        "PETRÓLEO WTI": "WTI",
+        "MINÉRIO DE FERRO": "MINERIO",
         "MINÉRIO SGX": "MINERIO",
         "MINÉRIO DALIAN": "MINERIO",
         "MINI ÍNDICE": "WIN",
@@ -28421,7 +28425,7 @@ try {
       SOJA: "commodity/soybean", ZS: "commodity/soybean", "CAFÉ": "commodity/coffee", CAFE: "commodity/coffee", KC: "commodity/coffee", TRIGO: "commodity/wheat", ZW: "commodity/wheat",
       "AÇÚCAR": "commodity/sugar", ACUCAR: "commodity/sugar", SB: "commodity/sugar", MILHO: "commodity/corn", ZC: "commodity/corn", CCM: "commodity/corn",
       "ALGODÃO": "commodity/cotton", ALGODAO: "commodity/cotton", CT: "commodity/cotton", BOI: "cattle", LE: "cattle", BGI: "cattle", I: "metal/iron",
-      WEGZY: "weg", BBSEY: "banco-do-brasil", BDORY: "banco-do-brasil", PBR: "brasileiro-petrobras", "PBR.A": "brasileiro-petrobras", VALE: "vale", ITUB: "itau-unibanco", BBD: "bradesco",
+      SID: "companhia-siderurgica-nacional", BSBR: "santander", SHCOMP: "indices/sse-composite", WEGZY: "weg", BBSEY: "banco-do-brasil", BDORY: "banco-do-brasil", PBR: "brasileiro-petrobras", "PBR.A": "brasileiro-petrobras", VALE: "vale", ITUB: "itau-unibanco", BBD: "bradesco",
       NATU3: "natura-and-co", ABEV: "ambev", ERJ: "embraer", SBS: "sabesp", GGB: "gerdau", SUZ: "suzano", CIG: "cemig", NU: "nu-holdings", XP: "xp", PAGS: "pagseguro-digital",
     };
     const norm = (t) => String(t || "").trim().toUpperCase().replace(/^(?:BMFBOVESPA|NASDAQ|NYSE|AMEX|OTC|TVC|SP|FX_IDC|FX|BITSTAMP|BINANCE|COINBASE|ICEEUR|SGX|CME_MINI|CBOT_MINI):/, "").replace(/1!$/, "").replace(/\.SA$/, "");
@@ -28554,10 +28558,14 @@ try {
       if (!/<svg[\s>]/i.test(txt)) throw new Error("não é SVG");
       txt = txt.replace(/<script[\s\S]*?<\/script>/gi, "");
       if (!/\swidth=/.test(txt.slice(0, txt.indexOf(">")))) txt = txt.replace(/<svg/i, '<svg width="56" height="56"');
-      const u = URL.createObjectURL(new Blob([txt], { type: "image/svg+xml" }));
-      try {
-        return await new Promise((ok, ko) => { const im = new Image(); im.onload = () => ok(im); im.onerror = ko; im.src = u; });
-      } finally { setTimeout(() => URL.revokeObjectURL(u), 2e3); }
+      // v615: data URL base64 (não usa blob:, não "suja" o canvas e funciona igual no Safari/iPhone).
+      const b = new TextEncoder().encode(txt);
+      let bin = "";
+      for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+      const u = "data:image/svg+xml;base64," + btoa(bin);
+      const im = await new Promise((ok, ko) => { const x = new Image(); x.onload = () => ok(x); x.onerror = ko; x.src = u; });
+      try { im.decode && (await im.decode()); } catch {}
+      return im;
     }
     async function png(t, px = 96) {
       const k = norm(t) + "@" + px;
@@ -28625,6 +28633,15 @@ try {
     }
     /** Logo oficial conhecido sem consulta (dicionário, bandeiras, juros); null para B3/desconhecidos. */
     const fixo = (t) => { const v = local(norm(t)); return v && !v.talvez && !v.par ? v : null; };
+    // v615: aquece os logos do Panorama em segundo plano para a imagem sair com os logos oficiais já na 1ª vez.
+    setTimeout(() => {
+      try {
+        const lista = ["EWZ", "IBOV", "SPX", "NDX", "N225", "DAX", "DXY", "OURO", "BTC", "ETH", "BRENT", "WTI", "MINERIO", "DCE", "US10Y"]
+          .concat((typeof AD < "u" && Array.isArray(AD.list) && AD.list) || ["WEGZY", "BBSEY", "BDORY", "SUZ", "SID", "GGB", "ITUB", "PBR", "VALE", "ABEV", "BBD"]);
+        lista.forEach((k) => imagem(k));
+        carregaPendentes();
+      } catch {}
+    }, 4e3);
     w.DiarioLogos = Object.freeze({ urls, html, resolve, png, avatar, norm, _erro, imagem, carregaPendentes, fixo, bandeira: (pais) => TV("country/" + String(pais || "").toUpperCase()) });
   })(window);
 } catch (e) {
