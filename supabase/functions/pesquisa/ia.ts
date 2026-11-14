@@ -1,70 +1,12 @@
-// v621: cascata de IA da aba Análises — os mesmos modelos e chaves da Revista e do Jornal (GEMINI_MODEL_GIRO / GEMINI_MODEL),
-// sem busca na web (que estourava a cota). Cada modelo tem 1 nova tentativa curta em 429; depois OpenRouter.
-// Se nada responder, o erro traz a mensagem técnica real de cada provedor.
+// v622: IA da aba Análises pelo Roteador Multi-IA compartilhado (supabase/functions/_shared/ai-router.ts):
+// rodízio e failover entre Gemini, Groq, Cerebras, OpenRouter, Mistral, Hugging Face, DeepSeek e Pollinations.
+import { gerarTexto } from '../_shared/ai-router.ts';
 type Env = (key: string) => string | undefined;
 
-const limpa = (t: string) => String(t || '').replace(/\s+/g, ' ').replace(/(?:sk-|AIza)[\w-]+/g, '[removido]').slice(0, 220);
-const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
-let ULTIMO_OK = '';
-
-async function modelosGemini(env: Env, key: string, fetcher: typeof fetch) {
-  const fixos = [env('GEMINI_MODEL_PESQUISA'), env('GEMINI_MODEL_GIRO'), env('GEMINI_MODEL'), ...String(env('GEMINI_MODEL_RESERVA') || '').split(',')].map((x) => String(x || '').trim()).filter((x) => /^[a-zA-Z0-9.\-_]+$/.test(x));
-  let lista: string[] = [];
-  try {
-    const r = await fetcher('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key }, signal: AbortSignal.timeout(5000) });
-    if (r.ok) lista = ((await r.json()).models || []).filter((x: any) => (x.supportedGenerationMethods || []).includes('generateContent')).map((x: any) => String(x.name || '').replace(/^models\//, '')).filter((x: string) => /^gemini-[\d.]+-(flash|flash-lite|pro)$/.test(x));
-    else await r.body?.cancel();
-  } catch { /* lista é opcional */ }
-  lista.sort((a, b) => parseFloat(b.slice(7)) - parseFloat(a.slice(7)) || Number(a.includes('lite')) - Number(b.includes('lite')));
-  // o último modelo que respondeu vai primeiro; depois os estáveis da Revista/Jornal e a lista da conta
-  return [...new Set([...(ULTIMO_OK ? [ULTIMO_OK] : []), ...fixos, 'gemini-3.6-flash', 'gemini-3.5-flash-lite', ...lista])].slice(0, 6);
-}
-
+/** v622: Roteador Multi-IA compartilhado (supabase/functions/_shared/ai-router.ts). */
 export async function gerarIA(system: string, prompt: string, env: Env, opt: { json?: boolean; ate?: number; fetcher?: typeof fetch } = {}) {
-  const fetcher = opt.fetcher || fetch, ate = opt.ate || Date.now() + 50_000, erros: string[] = [];
-  const key = env('GEMINI_API_KEY');
-  if (key) {
-    const modelos = await modelosGemini(env, key, fetcher);
-    for (const [mi, modelo] of modelos.entries()) {
-      let pensar: any = /gemini-3/i.test(modelo) ? { thinkingConfig: { thinkingLevel: 'low' } } : {};
-      for (let tentativa = 0; tentativa < 2; tentativa++) {
-        const resta = ate - Date.now();
-        if (resta < 7000) break;
-        try {
-          const r = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, signal: AbortSignal.timeout(Math.min(resta - 2000, mi === 0 && tentativa === 0 ? 32_000 : 20_000)),
-            body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 8192, ...pensar, ...(opt.json ? { responseMimeType: 'application/json' } : {}) } }),
-          });
-          if (r.ok) {
-            const j = await r.json(), c = j.candidates?.[0], texto = (c?.content?.parts || []).filter((p: any) => !p.thought).map((p: any) => p.text || '').join('');
-            if (texto && c?.finishReason !== 'MAX_TOKENS') { ULTIMO_OK = modelo; return { texto, modelo }; }
-            erros.push(`${modelo}: resposta ${c?.finishReason || 'vazia'}`);
-            break;
-          }
-          let msg = '';
-          try { const j = await r.json(); msg = j?.error?.message || ''; } catch { /* corpo não JSON */ }
-          if (r.status === 400 && pensar.thinkingConfig && /thinking/i.test(msg) && tentativa === 0) { pensar = {}; continue; } // modelo sem ajuste de raciocínio
-          erros.push(`${modelo}: HTTP ${r.status}${msg ? ' — ' + limpa(msg) : ''}`);
-          if (r.status === 429 && tentativa === 0) { await espera(1500); continue; } // 429: uma nova tentativa curta antes do próximo modelo
-          break; // cota diária/faturamento, modelo inexistente ou erro: próximo modelo
-        } catch (e) { erros.push(`${modelo}: ${/timeout|abort/i.test(String(e)) ? 'tempo esgotado' : limpa((e as Error).message)}`); break; }
-      }
-    }
-  } else erros.push('GEMINI_API_KEY não configurada');
-  const orKey = env('OPENROUTER_API_KEY');
-  if (orKey && ate - Date.now() > 8000) {
-    const m = String(env('OPENROUTER_MODELS') || 'openrouter/auto').split(',')[0].trim();
-    try {
-      const r = await fetcher('https://openrouter.ai/api/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + orKey }, signal: AbortSignal.timeout(Math.min(ate - Date.now() - 1000, 30_000)),
-        body: JSON.stringify({ model: m, temperature: 0.4, ...(opt.json ? { response_format: { type: 'json_object' } } : {}), messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }] }) });
-      if (r.ok) { const j = await r.json(), texto = String(j?.choices?.[0]?.message?.content || ''); if (texto) return { texto, modelo: 'openrouter:' + m }; erros.push('OpenRouter: resposta vazia'); }
-      else { let msg = ''; try { msg = (await r.json())?.error?.message || ''; } catch { /* sem corpo */ } erros.push(`OpenRouter: HTTP ${r.status}${msg ? ' — ' + limpa(msg) : ''}`); }
-    } catch (e) { erros.push('OpenRouter: ' + limpa((e as Error).message)); }
-  }
-  // agrupa mensagens iguais: "gemini-a, gemini-b: HTTP 429 — ..." (mostra a mensagem real uma vez só)
-  const grupos = new Map<string, string[]>();
-  for (const e of erros) { const i = e.indexOf(': '), m = i > 0 ? e.slice(0, i) : '', msg = i > 0 ? e.slice(i + 2) : e; grupos.set(msg, [...new Set([...(grupos.get(msg) || []), m])]); }
-  throw Object.assign(new Error('Nenhum modelo de IA respondeu. ' + [...grupos].map(([msg, ms]) => (ms.filter(Boolean).join(', ') || 'IA') + ': ' + msg).join(' | ')), { erros });
+  const r = await gerarTexto(system, prompt, { json: opt.json, ate: opt.ate || Date.now() + 50_000, env, fetcher: opt.fetcher, porTentativaMs: 30_000 });
+  return { texto: r.texto, modelo: r.rotulo };
 }
 
 export const jsonDe = (t: string) => { const x = String(t).replace(/```json|```/g, ''); return JSON.parse(x.slice(x.indexOf('{'), x.lastIndexOf('}') + 1)); };

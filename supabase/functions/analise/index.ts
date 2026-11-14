@@ -1,4 +1,5 @@
 import { numerosFato, validaRelatorio } from './validacao.ts';
+import { gerarTexto, status as iaStatus } from '../_shared/ai-router.ts';
 export { numerosFato, validaRelatorio };
 
 /** Calendário B3: fins de semana, feriados fixos, móveis e encerramentos de fim de ano. */
@@ -3746,6 +3747,7 @@ async function jrParteGera(E: { dia: string; ed: Edicao }, P: any, id: JrId, ate
     r = jrDesembrulha(await gemini(SYS_JORNAL + SEM_BUSCA_JR, [{ text: txt }], { ...op, search: false }), ler);
     if (!jrParteServe(id, r)) throw new Error(`A IA respondeu fora do formato na parte ${id} (campos: ${Object.keys(r || {}).join(', ') || 'nenhum'})`);
   }
+  if (r && typeof r === 'object' && IA_ULTIMA.rotulo) r.__ia = IA_ULTIMA.rotulo;
   await cachePut(jrParteK(E, id), { r, ts: Date.now() });
   return r;
 }
@@ -3818,7 +3820,8 @@ async function jrJuntaSalva(E: { dia: string; ed: Edicao }, P: any, doApp: Recor
   if (balM.length) { const nomes = [...balM.map((m: any) => m.tk.slice(0, 4)), ...(Array.isArray(P.bal_saiu) ? P.bal_saiu : []).map((x: any) => String(x.nome || '').split(/\s+/)[0]).filter((w: string) => w.length >= 4)].map((w: string) => w.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()); const sem = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); corpo.materias = [...balM, ...(corpo.materias || []).filter((m: any) => !(m.editoria === 'Empresas' && nomes.some((w: string) => new RegExp('\\b' + w).test(sem(m.titulo + ' ' + m.linha_fina)))))].slice(0, 9); }
   corpo.bal_cobertos = Array.isArray(D?.cobertos) ? D.cobertos : balM.map((m: any) => m.tk);
   if (Array.isArray(P.bal_ag)) corpo.agenda = [...(corpo.agenda || []).filter((x: any) => !/balan[cç]|resultad|\b[1-4]T\d{2}\b|\bITR\b|\bDFP\b/i.test(`${x.evento} ${x.por_que || ''}`)), ...P.bal_ag].slice(0, 9);
-  const g = { edicao: E.ed, nome: ED_NOME[E.ed], dia: E.dia, gerado: new Date().toISOString(), ...corpo, cotacoes: P.q || [], manchetes_externas: P.mans || [], ...(ps.some((x) => !x) ? { parcial: true } : {}) };
+  const iaUsadas = [...new Set(ps.filter(Boolean).map((x: any) => x.__ia).filter(Boolean))].join(' · ');
+  const g = { edicao: E.ed, nome: ED_NOME[E.ed], dia: E.dia, gerado: new Date().toISOString(), ...(iaUsadas ? { ia: iaUsadas } : {}), ...corpo, cotacoes: P.q || [], manchetes_externas: P.mans || [], ...(ps.some((x) => !x) ? { parcial: true } : {}) };
   await cachePut(`jornal:${E.dia}:${E.ed}`, g);
   await cachePut('jornal:ultimo', g);
   return g;
@@ -3863,19 +3866,27 @@ export function ordenaModelos(nomes: string[]): string[] {
 // Nas outras, o Gemini vai primeiro e o OpenRouter entra se o Gemini falhar (cota, sobrecarga, modelo fora do ar).
 const SEM_BUSCA = '\n\nATENÇÃO: agora você NÃO tem acesso à internet. Não cite notícias, pesquisas ou resultados de hoje que não estejam nos dados recebidos; quando faltar o motivo do movimento, diga que o texto foi feito só com os dados do sistema.';
 export const IA_CONTA = { gemini: 0, openrouter: 0, falhasGemini: 0 };
+/** v622: IA do Jornal/Giro/coach. Texto puro sem busca → Roteador Multi-IA (Gemini, Groq, Cerebras, OpenRouter,
+ *  Mistral, Hugging Face, DeepSeek, Pollinations). Com busca na web ou imagens → Gemini; se falhar, o roteador
+ *  responde sem busca. IA_ULTIMA guarda quem respondeu (vai para o rodapé da edição). */
+export const IA_ULTIMA = { rotulo: '' };
 async function gemini(system: string, parts: any[], opt: { json?: boolean; search?: boolean; model?: string; ate?: number; temp?: number; prefer?: 'or' | 'gemini' } = {}) {
-  const soTexto = parts.every((p) => p && typeof p.text === 'string'), podeOr = !!OR_KEY && soTexto && !orEsgotado();
-  const viaOr = async (semBusca: boolean) => { const r = await orChat(system + (semBusca ? SEM_BUSCA : ''), parts.map((p) => p.text).join('\n\n'), { json: opt.json, temp: opt.temp, ate: opt.ate }); IA_CONTA.openrouter++; return r; };
-  if (podeOr && (opt.prefer === 'or' || !GEMINI_KEY)) {
-    try { return await viaOr(false); } catch (e) { if (!GEMINI_KEY) throw e; console.log('OpenRouter falhou, indo para o Gemini:', (e as Error).message); }
-  }
-  try { const r = await geminiG(system, parts, opt); IA_CONTA.gemini++; return r; }
+  const soTexto = parts.every((p) => p && typeof p.text === 'string');
+  const viaRoteador = async (semBusca: boolean) => {
+    const r = await gerarTexto(system + (semBusca ? SEM_BUSCA : ''), parts.map((p) => p.text).join('\n\n'), { json: opt.json, temp: opt.temp, ate: opt.ate });
+    IA_ULTIMA.rotulo = r.rotulo; IA_CONTA.openrouter++;
+    const t = r.texto.replace(/```json|```/g, '');
+    try { return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch { /* segue */ }
+    const z = jsonTolerante(r.texto); return z && typeof z === 'object' ? z : { texto_bruto: r.texto };
+  };
+  if (soTexto && !opt.search) return await viaRoteador(false);
+  try { const r = await geminiG(system, parts, opt); IA_CONTA.gemini++; IA_ULTIMA.rotulo = 'Google Gemini' + (opt.search ? ' (com busca)' : ''); return r; }
   catch (e) {
     IA_CONTA.falhasGemini++;
     const msg = (e as Error)?.message || '';
-    if (!podeOr || opt.prefer === 'or' || (opt.ate && opt.ate - Date.now() < 15_000)) throw e;
-    console.log('Gemini falhou, indo para o OpenRouter:', msg.slice(0, 200));
-    try { return await viaOr(!!opt.search); } catch (e2) { throw new Error(msg + ' · Reserva (OpenRouter): ' + (e2 as Error).message); }
+    if (!soTexto || (opt.ate && opt.ate - Date.now() < 12_000)) throw e;
+    console.log('Gemini falhou, indo para o Roteador Multi-IA:', msg.slice(0, 200));
+    try { return await viaRoteador(!!opt.search); } catch (e2) { throw new Error(msg + ' · Roteador: ' + (e2 as Error).message); }
   }
 }
 async function geminiG(system: string, parts: any[], opt: { json?: boolean; search?: boolean; model?: string; ate?: number; temp?: number } = {}) {
@@ -4641,7 +4652,7 @@ Deno.serve(async (req) => {
       try { const r: any = await geminiG('Responda só com o JSON {"ok":true}.', [{ text: 'teste' }], { json: true, model: mGiro, ate: Date.now() + 40_000 }); ping = r?.ok ? 'respondeu' : 'respondeu (formato diferente)'; }
       catch (e) { ping = 'erro: ' + String((e as Error).message).slice(0, 160); }
       const msG = Date.now() - t0, orInfo = await orP;
-      return out({ chave: !!GEMINI_KEY, principal: MODELO, analise_tecnica: MODELO_TEC, giro: mGiro, reservas: res, teste: ping, ms: msG, openrouter: orInfo, uso_instancia: IA_CONTA });
+      return out({ roteador: iaStatus(), chave: !!GEMINI_KEY, principal: MODELO, analise_tecnica: MODELO_TEC, giro: mGiro, reservas: res, teste: ping, ms: msG, openrouter: orInfo, uso_instancia: IA_CONTA });
     }
     // ----- Jornal: "Para você" (a edição ligada aos ativos do trader; vai primeiro na IA gratuita, sem busca) -----
     if (b.modo === 'jornal_voce') {

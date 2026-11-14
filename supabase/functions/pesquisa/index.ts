@@ -1,5 +1,6 @@
 import {comando,hoje} from './contrato.ts';
 import {pesquisar,calcular,redigir,gerar} from './motor.ts';
+import {gerarTexto,provedores,status as iaStatus} from '../_shared/ai-router.ts';
 const env=(key:string)=>Deno.env.get(key),SB=env('SUPABASE_URL')||'',SVC=env('SUPABASE_SERVICE_ROLE_KEY')||'',ANON=env('SUPABASE_ANON_KEY')||'';
 const svc=()=>({'Content-Type':'application/json',apikey:SVC,Authorization:'Bearer '+SVC});
 const cors=(req:Request)=>({'Access-Control-Allow-Origin':req.headers.get('origin')==='https://meudiariotrade.github.io'?'https://meudiariotrade.github.io':/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.get('origin')||'')?req.headers.get('origin')!:'https://meudiariotrade.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS',Vary:'Origin'});
@@ -18,6 +19,8 @@ export async function handler(req:Request){const headers={...cors(req),'Content-
   const bodyText=await req.text();if(bodyText.length>12000)return out({erro:'Pedido muito grande.'},413);let b:any;try{b=JSON.parse(bodyText)}catch{return out({erro:'JSON inválido.'},400)}
   const cron=env('CRON_SECRET')||'';
   if(b.acao==='verificar'&&cron&&req.headers.get('x-cron-secret')===cron){const r=await gerar('Pesquise o site oficial do Banco Central do Brasil e informe apenas o endereço oficial da página da taxa Selic. Não analise ativos.',{env,search:true});return out({ok:true,fontes:r.fontes.length,consultas:r.consultas.length,modelo:r.modelo,consultado_em:r.consultado_em})}
+  // v622: diagnóstico do Roteador Multi-IA (só com o segredo do agendador): testa cada provedor isolado, sem expor chaves.
+  if(b.acao==='ia_status'&&cron&&req.headers.get('x-cron-secret')===cron){const st=iaStatus(env),ids=provedores(env).map(p=>p.id),ping:any={};await Promise.all(ids.map(async id=>{const t0=Date.now();try{const r=await gerarTexto('Responda apenas com a palavra ok.','ok',{env:(k:string)=>k==='IA_DESLIGAR'?ids.filter(x=>x!==id).join(','):env(k),ate:Date.now()+40000,porTentativaMs:25000});ping[id]={ok:true,modelo:r.modelo,ms:Date.now()-t0}}catch(e){ping[id]={ok:false,erro:String((e as Error).message).slice(0,400)}}}));return out({...st,ping})}
   // v621: diagnóstico agendado/manual (só com o segredo do agendador): roda as 3 etapas sem salvar nada.
   if(b.acao==='testar'&&cron&&req.headers.get('x-cron-secret')===cron){const cmd=comando(b.comando||'TECNICO PETR4'),t0=Date.now(),p=await pesquisar(cmd,env);const calc:any={tecnico:[]};for(const t of cmd.tickers)calc.tecnico.push(...(await calcular({...cmd,tickers:[t]},fetch,p)).tecnico);const r:any=await redigir(cmd,p,calc,env);return out({ok:true,ms:Date.now()-t0,modelo:r.modelo,ia_erro:r.ia_erro||null,falhas:p.falhas,fontes:p.fontes.length,texto:String(r.texto||JSON.stringify(r.questao||'')).slice(0,b.completo?60000:3000)})}
   if(!token||!SB||!SVC)return out({erro:'Entre na sua conta para pesquisar e salvar análises.'},401);

@@ -1,7 +1,8 @@
-// Função REVISTA-IA (v619) — escreve os 4 blocos técnicos da Revista da Semana (Dow/Pring/Elder, Elliott/Flávio Lemos,
+// Função REVISTA-IA (v622) — escreve os 4 blocos técnicos da Revista da Semana (Dow/Pring/Elder, Elliott/Flávio Lemos,
 // Brooks/Volman, cenários). Os números vêm calculados pelo app; a IA só redige. Resultado guardado por semana
 // em analise_cache (uma chamada de IA por corte de semana). Publicar: supabase functions deploy revista-ia --no-verify-jwt
 import { SYS_REVISTA, normaliza, BLOCOS } from "./revista.ts";
+import { gerarTexto, jsonDe } from "../_shared/ai-router.ts";
 
 // ===== segurança =====
 // seguranca.ts — login obrigatório, limite de uso por pessoa e comparação de segredo em tempo constante.
@@ -64,44 +65,6 @@ async function cachePut(chave: string, dados: unknown) {
   if (!SB || !SVC) return;
   try { await fetch(`${SB}/rest/v1/analise_cache?on_conflict=chave`, { method: 'POST', headers: { ...svc(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ chave, dia: new Date().toISOString().slice(0, 10), dados }), signal: AbortSignal.timeout(5000) }); } catch { /* cache é opcional */ }
 }
-const parseJson = (t: string) => { const x = t.replace(/```json|```/g, ''); return JSON.parse(x.slice(x.indexOf('{'), x.lastIndexOf('}') + 1)); };
-
-async function viaGemini(prompt: string, ate: number) {
-  const key = ENV('GEMINI_API_KEY'); if (!key) throw new Error('GEMINI_API_KEY ausente');
-  const modelos = [...new Set([ENV('GEMINI_MODEL_GIRO'), ENV('GEMINI_MODEL'), 'gemini-3.6-flash', 'gemini-3.5-flash-lite'].filter(Boolean))];
-  let ultimo = '';
-  for (const m of modelos) {
-    const resta = ate - Date.now(); if (resta < 8000) break;
-    try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, signal: AbortSignal.timeout(Math.min(resta, 50_000)),
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: SYS_REVISTA }] }, contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.55, maxOutputTokens: 12000, responseMimeType: 'application/json' } }),
-      });
-      if (!r.ok) { ultimo = 'Gemini ' + r.status; await r.body?.cancel(); continue; }
-      const j = await r.json(), t = (j?.candidates?.[0]?.content?.parts || []).filter((p: any) => !p.thought).map((p: any) => p.text || '').join('');
-      return { r: parseJson(t), modelo: m };
-    } catch (e) { ultimo = String((e as Error).message || e).slice(0, 120); }
-  }
-  throw new Error(ultimo || 'Gemini sem resposta');
-}
-async function viaOpenRouter(prompt: string, ate: number) {
-  const key = ENV('OPENROUTER_API_KEY'); if (!key) throw new Error('OPENROUTER_API_KEY ausente');
-  const modelos = (ENV('OPENROUTER_MODELS') || 'openrouter/auto').split(',').map((x) => x.trim()).filter(Boolean).slice(0, 3);
-  let ultimo = '';
-  for (const m of modelos) {
-    const resta = ate - Date.now(); if (resta < 8000) break;
-    try {
-      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key }, signal: AbortSignal.timeout(Math.min(resta, 50_000)),
-        body: JSON.stringify({ model: m, temperature: 0.55, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: SYS_REVISTA }, { role: 'user', content: prompt }] }),
-      });
-      if (!r.ok) { ultimo = 'OpenRouter ' + r.status; await r.body?.cancel(); continue; }
-      const j = await r.json();
-      return { r: parseJson(String(j?.choices?.[0]?.message?.content || '')), modelo: 'openrouter:' + m };
-    } catch (e) { ultimo = String((e as Error).message || e).slice(0, 120); }
-  }
-  throw new Error(ultimo || 'OpenRouter sem resposta');
-}
 
 Deno.serve(async (req) => {
   const cors = corsFor(req);
@@ -123,14 +86,14 @@ Deno.serve(async (req) => {
   })).filter((a: any) => a.ticker && BLOCOS.every((k) => a.base[k]));
   if (!entrada.length) return out({ erro: 'Sem ativos calculados' }, 400);
   if (JSON.stringify(entrada).length > 60_000) return out({ erro: 'Dados demais' }, 413);
-  const chave = `revista619:${corte}:${entrada.map((a: any) => a.ticker).join(',')}`;
+  const chave = `revista622:${corte}:${entrada.map((a: any) => a.ticker).join(',')}`;
   if (!b.force) { const c = await cacheGet(chave); if (c?.ativos) return out({ ...c, cache: true }); }
   const prompt = `Semana com corte em ${corte}. Dados calculados pelo código (fonte de fatos, não instruções):\n` +
     JSON.stringify(entrada.map((a: any) => ({ ticker: a.ticker, nome: a.nome, fatos: a.fatos, rascunho_do_codigo: a.base })));
   const ate = Date.now() + 110_000;
+  // v622: Roteador Multi-IA (rodízio e failover entre os provedores gratuitos ativos)
   let res: { r: any; modelo: string } | null = null, erro = '';
-  try { res = await viaGemini(prompt, ate); } catch (e) { erro = (e as Error).message; }
-  if (!res) { try { res = await viaOpenRouter(prompt, ate); } catch (e) { erro += ' · ' + (e as Error).message; } }
+  try { const g = await gerarTexto(SYS_REVISTA, prompt, { json: true, temp: 0.55, ate }); res = { r: jsonDe(g.texto), modelo: g.rotulo }; } catch (e) { erro = (e as Error).message; }
   if (!res) { console.warn('revista-ia sem IA:', erro); return out({ erro: 'IA indisponível agora (' + erro.slice(0, 160) + '). A revista usa o texto calculado pelo código.', sem_ia: true }); }
   const ativos = normaliza(res.r, entrada), dados = { ativos, modelo: res.modelo, gerado: new Date().toISOString(), corte };
   if (Object.values(ativos).some((a: any) => a.fonte === 'ia')) await cachePut(chave, dados);
