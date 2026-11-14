@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 22840a302eccea1dc07b8b96b7aba5408a1f79ab8aa6234e779fc2bb12dc7707 */
+/* Gerado de src/app-theme.css · SHA256 cc3aae026c199663cd490c0dbadc46586f7d76fd5bec3f40829b6a837ecb4ec3 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2628,3 +2628,13 @@ html:root body #app .m406-section-switch .m406-switch-tabs:has([data-m550-nt],[d
 @media(min-width:768px){html:root body #app .m406-section-switch .m406-switch-tabs:has([data-m550-nt],[data-m550-jornal]){grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 /* v618: sem o bloco "Sobre esta tela" no Mercado */
 html:root body #app .dt395-native-mercado :is(.simple-market-about,.m404-overview){display:none!important}
+/* v621: Análises — histórico com logos, lixeira discreta e título do relatório com logos */
+html:root body #app .an-history-tools{display:flex;gap:8px;align-items:center}
+html:root body #app .an-history-row{display:flex;align-items:stretch;gap:4px;min-width:0}
+html:root body #app .an-history-row>.an-history-item{flex:1;min-width:0}
+html:root body #app .an-history-item b{display:flex;align-items:center;gap:6px;min-width:0}
+html:root body #app .an-history-item b>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html:root body #app .an-history-del{flex:0 0 40px;min-height:40px;display:grid;place-items:center;background:transparent;border:1px solid #1E232E;border-radius:6px;color:#8A90A0;cursor:pointer}
+html:root body #app .an-history-del:hover{color:#EF4444;border-color:#EF4444;background:#181C26}
+html:root body #app .an-title-logos{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+html:root body #app .an-title-logos .dl-logo+.dl-logo{margin-left:-6px}

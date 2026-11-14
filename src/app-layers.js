@@ -7937,7 +7937,7 @@ de Carteira`,
                       });
                       // v618: agenda econômica da semana da edição (alto impacto BR/EUA)
                       try {
-                        const a0 = cfg(), sem = s.spDate() >= k.window.from ? 0 : 1;
+                        const a0 = cfg(), sem = 0; // v621: a semana da função macro vai de domingo a sábado — "0" já cobre a semana da edição
                         if (a0) {
                           const ra = await fetch(a0.url + "/functions/v1/macro", { method: "POST", headers: { "Content-Type": "application/json", apikey: a0.key }, body: JSON.stringify({ modo: "agenda", semana: sem }), signal: AbortSignal.timeout(15e3) }),
                             ja = await ra.json().catch(() => ({}));
