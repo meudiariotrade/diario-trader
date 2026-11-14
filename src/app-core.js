@@ -104644,7 +104644,9 @@ function pfLimpa605() {
    Para ativos da B3, só o pregão regular (09:00–18:00 BRT). Fim do dia salva o resumo.
    Indicadores de sempre: MME 9, MM 20, VWAP e Volume (mesmo rpyCalc / rpyInd).
    ===================================================================================== */
-const RPY7_VEL = { 1: 1500, 2: 800, 5: 300, 10: 150 };
+// v634: Real = duração do tempo gráfico (60 s no 1m); 0.5x 4 s, 1x 2 s, 2x 1 s, 5x 0,4 s por candle
+const RPY7_VEL = { real: 0, "0.5": 4000, 1: 2000, 2: 1000, 5: 400 };
+const rpyDelay = () => (rpyVel() === "real" ? Math.max(1, rpyTfMin(RPY.tf) || 1) * 6e4 : RPY7_VEL[rpyVel()]);
 const rpyMinBRT = (t) => {
   const d = new Date((t - 3 * 3600) * 1e3);
   return d.getUTCHours() * 60 + d.getUTCMinutes();
@@ -104664,8 +104666,8 @@ function rpyFiltraB3(tk, o) {
 }
 const rpyTema = () => ((S.ax || {}).rpyTema === "escuro" ? "escuro" : "claro");
 const rpyVel = () => {
-  const v = +((S.ax || {}).rpyVel || 1);
-  return RPY7_VEL[v] ? v : 1;
+  const v = String((S.ax || {}).rpyVel ?? "1");
+  return v in RPY7_VEL ? v : "1";
 };
 const rpyX = (v) => (v == null || !isFinite(v) ? "–" : (v >= 0 ? "+" : "") + v.toFixed(2).replace(".", ",") + "× risco");
 const rpyPts = (v) => (v >= 0 ? "+" : "") + rpyFmt(v) + " pts";
@@ -104758,7 +104760,7 @@ function rpyJogoHtml() {
   const ptsDia = ops.reduce((s, o) => s + (o.pts || 0), 0),
     rsDia = ops.reduce((s, o) => s + (o.rs || 0), 0);
   return `<div class="card rpy7" id="rpy7">
-<div class="rpy7-top"><b>${tk}</b>${rpyTfHtml()}<b><span id="rpy-dia">${RPY.cego && !fim ? "dia surpresa" : fmtD(RPY.dia)}</span></b><span class="rpy7-meta"><span id="rpy-hora">${rpyHora(c[0])}</span> · <span id="rpy-prog">${RPY.i - RPY.ini + 1}/${l - RPY.ini + 1}</span>${RPY.dados.filtroB3 ? ' · <span title="Só o pregão regular da B3 (09:00–18:00)">B3 09–18h</span>' : ""}</span>${rpyDiaSel()}<button type="button" class="rpy7-tema" data-rpy7="tema" aria-label="Alternar fundo ${tema === "claro" ? "escuro" : "claro"}" title="Fundo ${tema === "claro" ? "escuro" : "claro"}">${tema === "claro" ? "☾" : "☀"}</button></div>
+<div class="rpy7-top"><b>${tk}</b>${rpyTfHtml()}<b><span id="rpy-dia">${RPY.cego && !fim ? "dia surpresa" : fmtD(RPY.dia)}</span></b><span class="rpy7-meta"><span id="rpy-hora">${rpyHora(c[0])}</span> · <span id="rpy-cd" class="rpy7-cd" title="Tempo para o candle atual fechar">${typeof rpyCdTexto === "function" ? rpyCdTexto() : ""}</span> · <span id="rpy-prog">${RPY.i - RPY.ini + 1}/${l - RPY.ini + 1}</span>${RPY.dados.filtroB3 ? ' · <span title="Só o pregão regular da B3 (09:00–18:00)">B3 09–18h</span>' : ""}</span>${rpyDiaSel()}<button type="button" class="rpy7-tema" data-rpy7="tema" aria-label="Alternar fundo ${tema === "claro" ? "escuro" : "claro"}" title="Fundo ${tema === "claro" ? "escuro" : "claro"}">${tema === "claro" ? "☾" : "☀"}</button></div>
 <div class="rpy7-area">${rpyFerrHtml()}<div class="rpy7-chart rpy7-${tema}" id="rpy-wrap"><canvas id="rpy-cv" role="img" aria-label="Gráfico do replay de ${tk}"></canvas><div class="rpy7-zoom" role="group" aria-label="Zoom do gráfico"><button type="button" data-rpy7="zm" aria-label="Diminuir zoom">−</button><button type="button" data-rpy7="zp" aria-label="Aumentar zoom">+</button><button type="button" data-rpy7="zr" aria-label="Voltar ao último candle">⟲</button></div></div></div>
 <div class="rpy7-ind">${[["m9", "MME 9"], ["m20", "MM 20"], ["m200", "MM 200"], ["vw", "VWAP"], ["vol", "Volume"]].map(([k, n]) => `<button type="button" class="chip${ind[k] ? " on" : ""}" data-rpyi="${k}" aria-pressed="${!!ind[k]}">${n}</button>`).join("")}<span class="rpy7-ult" id="rpy-ult">Último <b>${rpyFmt(c[4])}</b> · máx ${rpyFmt(c[2])} · mín ${rpyFmt(c[3])}${RPY.dados.proxy ? ` <span class="mut">(ref. ${esc(RPY.dados.simbolo)})</span>` : ""}</span></div>
 ${RPY.msg ? `<div class="rpy7-msg">${esc(RPY.msg)}</div>` : ""}
@@ -104767,11 +104769,13 @@ ${
     ? `<div class="rpy7-fim"><b>Fim do pregão de ${fmtD(RPY.dia)}${RPY.cego ? " (data revelada)" : ""}</b><div class="rpy7-kpis"><div><small>Trades</small><b>${st.n}</b></div><div><small>Acerto</small><b>${st.ac != null ? Math.round(st.ac * 100) + "%" : "–"}</b></div><div><small>Resultado</small><b class="${ptsDia >= 0 ? "g" : "r"}">${st.n ? rpyPts(ptsDia) : "–"}</b></div><div><small>Em R$</small><b class="${rsDia >= 0 ? "g" : "r"}">${st.n ? rpyRs(rsDia) : "–"}</b></div><div><small>Vezes o risco</small><b class="${st.rt >= 0 ? "g" : "r"}">${st.n ? rpyX(st.rt) : "–"}</b></div></div><small class="mut">Resumo salvo no seu histórico de treinos.</small><button type="button" class="btn" data-rpy="novo">🎲 Outro dia</button></div>`
     : `<div class="rpy7-bar">
 <button type="button" class="rpy7-play${RPY.play ? " on" : ""}" data-rpy7="play" aria-pressed="${!!RPY.play}">${RPY.play ? "⏸ Pausar" : "▶ Play"}</button>
-<div class="rpy7-vel" role="group" aria-label="Velocidade">${[1, 2, 5, 10].map((v) => `<button type="button" data-rpy7v="${v}" class="${vel === v ? "on" : ""}" aria-pressed="${vel === v}">${v}x</button>`).join("")}</div>
+<div class="rpy7-vel" role="group" aria-label="Velocidade">${["real", "0.5", "1", "2", "5"].map((v) => `<button type="button" data-rpy7v="${v}" class="${vel === v ? "on" : ""}" aria-pressed="${vel === v}"${v === "real" ? ' title="Tempo original do pregão (60 s por candle no 1m)"' : ""}>${v === "real" ? "Real" : v + "x"}</button>`).join("")}</div>
 <button type="button" class="rpy7-b" data-rpy="p1" title="Avançar 1 candle">+1</button>
 <button type="button" class="rpy7-buy" data-rpy="C" id="rpy-bC">Comprar <span>${rpyFmt(c[4])}</span></button>
 <button type="button" class="rpy7-sell" data-rpy="V" id="rpy-bV">Vender <span>${rpyFmt(c[4])}</span></button>
 <button type="button" class="rpy7-b" data-rpy="sair"${d ? "" : " disabled"}>Zerar</button>
+<button type="button" class="rpy7-b rpy7-ord${RPY.ordModo === "C" ? " on" : ""}" data-rpy7o="C" title="Toque no gráfico para posicionar uma ordem de compra (no PC: Shift + clique)">+ Ordem C</button>
+<button type="button" class="rpy7-b rpy7-ord${RPY.ordModo === "V" ? " on" : ""}" data-rpy7o="V" title="Toque no gráfico para posicionar uma ordem de venda (no PC: Alt + clique)">+ Ordem V</button>
 <button type="button" class="rpy7-b rpy7-fimb" data-rpy="pf" title="Ir ao fim do pregão">⏭ Fim do dia</button></div>
 ${
   d
@@ -105187,7 +105191,7 @@ function rpyPlay(on) {
   clearInterval(RPY.tm);
   RPY.tm = 0;
   RPY.play = !!on && !!RPY.dados && !RPY.trade && RPY.i < rpyFimDia();
-  RPY.play && (RPY.tm = setInterval(rpyTick, RPY7_VEL[rpyVel()]));
+  RPY.play && ((RPY.tickAt = Date.now()), (RPY.tm = setInterval(rpyTick, rpyDelay())));
 }
 function rpyTick() {
   if (!RPY.dados || RPY.trade || typeof tab > "u" || tab !== "estudos" || ESV !== "rpy" || document.hidden) return void rpyPlay(!1);
@@ -105210,7 +105214,7 @@ document.addEventListener(
     }
     e.preventDefault();
     if (t.dataset.rpy7v) {
-      ((S.ax ?? (S.ax = {})).rpyVel = +t.dataset.rpy7v);
+      ((S.ax ?? (S.ax = {})).rpyVel = String(t.dataset.rpy7v));
       try {
         save();
       } catch {}
@@ -105990,6 +105994,201 @@ function rpyEstDesenha(g, K, fonte, eixoW) {
   }
   g.restore();
 }
+
+/* =====================================================================================
+   v634 — Chart trading (ordens pendentes), velocidade Real e contador do candle.
+   Shift + mouse: guia verde "Ordem Compra @ preço" (clique posiciona). Alt + mouse: guia
+   vermelha de venda. Botões + Ordem C / + Ordem V fazem o mesmo com 1 toque. Ordens podem ser
+   arrastadas e canceladas no ×; executam quando a máxima/mínima do candle toca o preço.
+   ===================================================================================== */
+const rpyArred = (v) => {
+  const t = rpyTickPx();
+  return +(Math.round(v / t) * t).toFixed(6);
+};
+{
+  const antes = rpyComeca;
+  rpyComeca = function () {
+    RPY.ords = [];
+    RPY.ordModo = null;
+    return antes.apply(this, arguments);
+  };
+}
+/** Executa as ordens pendentes tocadas pelo candle atual (preço da ordem; Stop/Alvo padrão da boleta). */
+function rpyOrdExec() {
+  const L = RPY.ords || [];
+  if (!L.length || !RPY.dados) return;
+  const C = RPY.dados.candles,
+    c = C[RPY.i];
+  for (const o of L.slice()) {
+    if (!(c[3] <= o.px && o.px <= c[2])) continue;
+    RPY.ords.splice(RPY.ords.indexOf(o), 1);
+    const c4 = c[4];
+    c[4] = o.px; // a execução sai no preço da ordem
+    try {
+      rpyEntra(o.lado);
+    } finally {
+      c[4] = c4;
+    }
+    RPY.msg = `Ordem de ${o.lado === "C" ? "compra" : "venda"} executada @ ${rpyFmt(o.px)} (${rpyHora(c[0])})`;
+  }
+}
+{
+  const antes = rpyAvanca;
+  rpyAvanca = function (n, sil) {
+    if (!RPY.dados || !(RPY.ords || []).length) return antes.apply(this, arguments);
+    for (let k = 0; k < n && RPY.i < rpyFimDia(); k++) {
+      antes.call(this, 1, !0);
+      rpyOrdExec();
+    }
+    RPY.i >= rpyFimDia() && (RPY.ords = []);
+    sil || render();
+  };
+}
+{
+  const antes = rpyTick;
+  rpyTick = function () {
+    RPY.tickAt = Date.now();
+    return antes.apply(this, arguments);
+  };
+}
+// Modificador do mouse: Shift = compra, Alt = venda
+document.addEventListener(
+  "pointermove",
+  (e) => {
+    if (!e.target || e.target.id !== "rpy-cv" || e.pointerType !== "mouse") return;
+    RPY.mod = e.shiftKey ? "C" : e.altKey ? "V" : null;
+  },
+  !0,
+);
+const rpyNoReplay = () => typeof tab < "u" && tab === "estudos" && ESV === "rpy" && document.getElementById("rpy-cv");
+["keydown", "keyup"].forEach((tp) =>
+  document.addEventListener(tp, (e) => {
+    if ((e.key !== "Shift" && e.key !== "Alt") || !rpyNoReplay() || !RPY.cross) return;
+    e.key === "Alt" && e.preventDefault(); // evita o menu do navegador no Windows
+    RPY.mod = e.shiftKey ? "C" : e.altKey ? "V" : null;
+    rpyPede();
+  }),
+);
+document.addEventListener(
+  "click",
+  (e) => {
+    const t = e.target.closest && e.target.closest("[data-rpy7o]");
+    if (!t) return;
+    e.preventDefault();
+    RPY.ordModo = RPY.ordModo === t.dataset.rpy7o ? null : t.dataset.rpy7o;
+    render();
+  },
+  !0,
+);
+{
+  const antes = rpyEstDown;
+  rpyEstDown = function (p, tipo) {
+    const G = RPY._geo;
+    if (!G || !RPY.dados || p.x > G.pw || p.y > G.ch) return antes.apply(this, arguments);
+    for (const b of RPY._ordX || [])
+      if (p.x >= b.x - 4 && p.x <= b.x + b.w + 4 && p.y >= b.y - 4 && p.y <= b.y + b.h + 4) {
+        RPY.ords.splice(RPY.ords.indexOf(b.o), 1);
+        RPY.msg = "Ordem cancelada.";
+        render();
+        return { t: "nada" };
+      }
+    const lado = RPY.ordModo || RPY.mod;
+    if (lado && RPY.i < rpyFimDia()) {
+      const px = rpyArred(G.pDe(p.y));
+      (RPY.ords ?? (RPY.ords = [])).push({ lado, px, id: Date.now() });
+      RPY.ordModo = null;
+      RPY.msg = `Ordem de ${lado === "C" ? "compra" : "venda"} @ ${rpyFmt(px)} posicionada (arraste para ajustar, × cancela).`;
+      render();
+      return { t: "nada" };
+    }
+    const tol = tipo === "mouse" ? 7 : 16,
+      o = (RPY.ords || []).find((x) => Math.abs(G.yDe(x.px) - p.y) <= tol);
+    if (o) return { t: "alca", ord: o, s: { p: [] }, i: 0 };
+    return antes.apply(this, arguments);
+  };
+}
+{
+  const antes = rpyEstMove;
+  rpyEstMove = function (m, p) {
+    if (!m.ord) return antes.apply(this, arguments);
+    const G = RPY._geo;
+    m.ord.px = rpyArred(G.pDe(Math.max(2, Math.min(G.ch - 2, p.y))));
+    RPY.cross = null;
+    rpyPede();
+  };
+}
+{
+  const antes = rpyEstDesenha;
+  rpyEstDesenha = function (g, K, fonte, eixoW) {
+    antes.apply(this, arguments);
+    const G = RPY._geo;
+    RPY._ordX = [];
+    g.save();
+    g.font = '600 11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+    g.textBaseline = "middle";
+    const linha = (px, lado, txt, cancel, o) => {
+      const y = Math.round(G.yDe(px)) + 0.5;
+      if (y < 0 || y > G.ch) return;
+      const cor = lado === "C" ? "#16A34A" : "#DC2626";
+      g.setLineDash([6, 4]);
+      g.strokeStyle = cor;
+      g.lineWidth = 1.3;
+      g.beginPath();
+      g.moveTo(0, y);
+      g.lineTo(G.pw, y);
+      g.stroke();
+      g.setLineDash([]);
+      const tw = g.measureText(txt).width + 14 + (cancel ? 20 : 0),
+        bx = 8,
+        by = y - 10;
+      g.fillStyle = cor;
+      g.fillRect(bx, by, tw, 20);
+      g.fillStyle = "#FFFFFF";
+      g.textAlign = "left";
+      g.fillText(txt, bx + 7, y);
+      if (cancel) {
+        g.textAlign = "center";
+        g.fillText("×", bx + tw - 10, y);
+        RPY._ordX.push({ o, x: bx + tw - 20, y: by, w: 20, h: 20 });
+      }
+      g.fillStyle = cor;
+      g.fillRect(G.pw, y - 9, eixoW, 18);
+      g.fillStyle = "#FFFFFF";
+      g.textAlign = "left";
+      g.fillText(rpyFmt(px), G.pw + 4, y);
+    };
+    (RPY.ords || []).forEach((o) => linha(o.px, o.lado, `${rpyQtd()}${o.lado} · ${o.lado === "C" ? "Compra" : "Venda"} @ ${rpyFmt(o.px)}`, !0, o));
+    const modo = RPY.ordModo || RPY.mod;
+    if (modo && RPY.cross && RPY.cross.y <= G.ch) {
+      const px = rpyArred(G.pDe(RPY.cross.y));
+      linha(px, modo, `Ordem ${modo === "C" ? "Compra" : "Venda"} @ ${rpyFmt(px)}`, !1);
+    }
+    g.restore();
+  };
+}
+/* ---------- contador regressivo do candle (MM:SS) ---------- */
+function rpyCdTexto() {
+  if (!RPY.dados || !RPY.dados.candles[RPY.i]) return "";
+  const c = RPY.dados.candles[RPY.i],
+    bs = (rpyTfMin(RPY.tf) || 1) * 60,
+    vs = Math.max(bs, (rpyTfMin(RPY.tfv) || rpyTfMin(RPY.tf) || 1) * 60),
+    fimB = Math.floor((c[0] - 3 * 3600) / vs) * vs + vs + 3 * 3600,
+    resto = Math.max(0, fimB - (c[0] + bs));
+  let s;
+  if (RPY.play) {
+    const d = rpyDelay(),
+      dec = Date.now() - (RPY.tickAt || Date.now());
+    s = Math.ceil(((resto / bs) * d + Math.max(0, d - dec)) / 1e3);
+  } else s = resto + bs;
+  s = Math.max(0, s);
+  return "⏱ " + String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+setInterval(() => {
+  const el = document.getElementById("rpy-cd");
+  if (!el || document.hidden) return;
+  const t = rpyCdTexto();
+  el.textContent !== t && (el.textContent = t);
+}, 250);
 const RP_COR = {
     tx: "#17191b",
     mut: "#6b7280",
