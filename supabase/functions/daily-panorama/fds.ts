@@ -83,12 +83,21 @@ export async function manchetes(): Promise<string[]> {
   return Promise.all(out.map(async (x) => {
     if (!x.startsWith('\u0000')) return x;
     const [t, f] = x.slice(1).split('\u0001');
+    let pt = '';
     try {
-      const r = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q=' + encodeURIComponent(t), { signal: AbortSignal.timeout(5000) });
+      const r = await fetch('https://api.mymemory.translated.net/get?langpair=en|pt-BR&q=' + encodeURIComponent(t), { signal: AbortSignal.timeout(6000) });
       const j = r.ok ? await r.json() : null;
-      const pt = Array.isArray(j?.[0]) ? j[0].map((p: any) => p?.[0] || '').join('').trim() : '';
-      return `${pt || t} (${f})`;
-    } catch { return `${t} (${f})`; }
+      pt = String(j?.responseData?.translatedText || '').trim();
+      /MYMEMORY|QUOTA|INVALID/i.test(pt) && (pt = '');
+    } catch { /* tenta o Google */ }
+    if (!pt) {
+      try {
+        const r = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q=' + encodeURIComponent(t), { signal: AbortSignal.timeout(5000) });
+        const j = r.ok ? await r.json() : null;
+        pt = Array.isArray(j?.[0]) ? j[0].map((p: any) => p?.[0] || '').join('').trim() : '';
+      } catch { /* fica a original */ }
+    }
+    return `${pt || t} (${f === 'Google News' ? 'Google News, traduzido' : f})`;
   }));
 }
 export function termometro(L: Cripto[]) {
