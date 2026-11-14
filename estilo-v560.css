@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 562982ad138334e05230eb975fd6d96e4235bdb916bde948132cad5ada06abe7 */
+/* Gerado de src/app-theme.css · SHA256 cf376e669ed4593ca5ec5943474fa056ef5dab1ffaa3bdaaece5ee262e3aa188 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2856,3 +2856,9 @@ html body #app#app .rpy7-grp{width:100%}
 html body #app#app .rpy7-pre{flex:1 1 auto;justify-content:flex-end}
 html body #app#app .rpy7-pre button{flex:1 1 0;min-width:0!important}
 }
+/* v630 — Replay: gestos no gráfico (touch-action none), contratos e resumo da posição */
+html body #app#app .rpy7-chart{touch-action:none}
+html body #app#app .rpy7-qtd input{width:64px!important}
+html body #app#app .rpy7-posinfo{font-size:12px;color:#C9CDD6;font-variant-numeric:tabular-nums;line-height:1.5}
+html body #app#app .rpy7-posinfo .g{color:#16A34A}html body #app#app .rpy7-posinfo .r{color:#EF4444}
+@media (max-width:1023.98px){html body #app#app .rpy7-qtd label{min-width:64px}html body #app#app .rpy7-posinfo{width:100%}}
