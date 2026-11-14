@@ -1,0 +1,4 @@
+v627
+- Desktop: tabelas da Sazonalidade (IBOV, dólar e setores; Ano a ano; Eleições; Mês a mês; Copom) com cabeçalho alinhado à direita sobre cada coluna de números (table-fixed, thead/tbody); só Ativo/Ano à esquerda.
+- Desktop: gráficos de Opções (Fluxo EWZ, sorriso da Grade ao vivo e GEX/DEX) com altura máxima de 340 px, para a tabela de baixo aparecer sem rolar.
+- Celular sem mudanças.
