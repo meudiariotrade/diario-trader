@@ -76,10 +76,20 @@ export async function manchetes(): Promise<string[]> {
     const k = chave(it.t);
     if (vistos.some((v) => { const o = v.split('|'); return k.filter((w) => o.includes(w)).length >= 3; })) continue;
     vistos.push(k.join('|'));
-    out.push(`${it.t} (${it.f})`);
+    out.push(it.f === 'Google News' ? '\u0000' + it.t + '\u0001' + it.f : `${it.t} (${it.f})`);
     if (out.length >= 5) break;
   }
-  return out;
+  // v641: manchete em inglês é traduzida para o português (sem chave; se falhar, fica a original)
+  return Promise.all(out.map(async (x) => {
+    if (!x.startsWith('\u0000')) return x;
+    const [t, f] = x.slice(1).split('\u0001');
+    try {
+      const r = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q=' + encodeURIComponent(t), { signal: AbortSignal.timeout(5000) });
+      const j = r.ok ? await r.json() : null;
+      const pt = Array.isArray(j?.[0]) ? j[0].map((p: any) => p?.[0] || '').join('').trim() : '';
+      return `${pt || t} (${f})`;
+    } catch { return `${t} (${f})`; }
+  }));
 }
 export function termometro(L: Cripto[]) {
   if (!L.length) return { vies: 'Sem dados', cor: '#8A90A0', txt: 'Sem cotações da Binance agora.' };
@@ -112,11 +122,11 @@ export function fdsSvg(L: Cripto[], news: string[], logos: Record<string, string
 <text x="${cx + 18}" y="${cy + 112}" font-size="14" fill="#8A90A0">Máx ${usd(x.hi)} · Mín ${usd(x.lo)}</text>`;
   }).join('');
   const yT = y0 + Math.ceil(L.length / 3) * (ch + 16) + 12;
-  const quebra = (t: string, n: number) => { const ws = t.split(' '), ls: string[] = []; let l = ''; for (const w of ws) { if ((l + ' ' + w).trim().length > n) { ls.push(l.trim()); l = w; } else l += ' ' + w; } l.trim() && ls.push(l.trim()); return ls.slice(0, 2); };
+  const quebra = (t: string, n: number) => { const ws = t.split(' '), ls: string[] = []; let l = ''; for (const w of ws) { if ((l + ' ' + w).trim().length > n) { ls.push(l.trim()); l = w; } else l += ' ' + w; } l.trim() && ls.push(l.trim()); return ls.slice(0, 3); };
   const termTxt = quebra(termo.txt, 80);
   const yN = yT + 150;
   let yy = yN + 64;
-  const itens = (news.length ? news : ['Sem manchetes do fim de semana agora.']).map((t) => { const ls = quebra(t, 78); const s = ls.map((l, j) => `<text x="${P + 34}" y="${yy + j * 30}" font-size="21" fill="#E6E8EE">${esc(l)}</text>`).join('') + `<circle cx="${P + 14}" cy="${yy - 7}" r="5" fill="#D4A017"/>`; yy += ls.length * 30 + 18; return s; }).join('');
+  const itens = (news.length ? news : ['Sem manchetes do fim de semana agora.']).map((t) => { const ls = quebra(t, 74); const s = ls.map((l, j) => `<text x="${P + 34}" y="${yy + j * 30}" font-size="21" fill="#E6E8EE">${esc(l)}</text>`).join('') + `<circle cx="${P + 14}" cy="${yy - 7}" r="5" fill="#D4A017"/>`; yy += ls.length * 30 + 18; return s; }).join('');
   const H = yy + 70;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="DejaVu Sans">
 <rect width="${W}" height="${H}" fill="#0A0C10"/><rect x="0" y="0" width="${W}" height="6" fill="#D4A017"/>
@@ -131,6 +141,6 @@ ${cards}
 ${termTxt.map((l, j) => `<text x="${P + 26}" y="${yT + 76 + j * 28}" font-size="19" fill="#E6E8EE">${esc(l)}</text>`).join('')}
 <text x="${P}" y="${yN + 20}" font-size="20" font-weight="700" fill="#C9CDD6">Principais notícias do fim de semana</text>
 ${itens}
-<text x="${P}" y="${H - 28}" font-size="15" fill="#5B6170">Diário de Trader · Binance (24h); notícias: Money Times, InfoMoney, g1, CNN Brasil e Google Notícias. Leitura de risco é indicativa, não é recomendação.</text>
+<text x="${P}" y="${H - 28}" font-size="15" fill="#5B6170">Diário de Trader · Binance 24h · Notícias: Money Times, InfoMoney, g1, CNN e Google · Não é recomendação.</text>
 </svg>`;
 }
