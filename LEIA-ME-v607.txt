@@ -1,0 +1,7 @@
+DIÁRIO DE TRADER — v607 (Desktop)
+
+- Menu lateral retrátil no PC: botão « / » ao lado de "Diário de Trader"; recolhido fica com 64px, só ícones com dica ao passar o mouse. A escolha fica salva.
+- Início no PC: cards em 2 colunas (md) e 3 colunas (lg), sem colunas estreitas quebrando palavras letra por letra (Atenção, Metas, Posições, Hoje por modalidade).
+- Início e Meu dia usam a largura do monitor (até 1280px, centralizado); o Diário completo deixou de ficar preso em 840px.
+- Celular (iPhone) sem mudanças.
+- CLAUDE.md: regra de responsividade desktop e sidebar retrátil.
