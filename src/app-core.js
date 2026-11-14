@@ -106284,9 +106284,11 @@ ${tab("Setup", grupo((o) => o.setup || "Sem setup"))}<div style="height:10px"></
 {
   const antes = imgGera;
   imgGera = async function () {
-    const w = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", weekday: "short" }).format(new Date());
+    // v640: sábado 00:00 até domingo 19:59 (Brasília); domingo 20:00 volta o Panorama normal
+    const pp = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", weekday: "short", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date()).map((x) => [x.type, x.value]));
+    const fds = pp.weekday === "Sat" || (pp.weekday === "Sun" && +pp.hour < 20);
     const a = typeof cfg === "function" ? cfg() : null;
-    if (!(w === "Sat" || w === "Sun") || !a || typeof SESS > "u" || !SESS || !SESS.at || IMG.busy) return antes.apply(this, arguments);
+    if (!fds || !a || typeof SESS > "u" || !SESS || !SESS.at || IMG.busy) return antes.apply(this, arguments);
     IMG.busy = 1;
     window.toast && toast("Montando o Panorama de fim de semana…", 1500);
     try {
