@@ -22746,7 +22746,7 @@ try {
         }
       }
       const l = V(c.ticker),
-        dl = !l && !c.pair && typeof r.drawImage == "function" && i.DiarioLogos?.imagem(c.ticker);
+        dl = !c.pair && typeof r.drawImage == "function" && i.DiarioLogos?.imagem(c.ticker);
       if (dl) {
         (r.save(), r.beginPath(), r.arc(u, S, s, 0, Math.PI * 2), r.clip());
         return (r.drawImage(dl, a, t, n, n), r.restore(), r.restore(), !0);
@@ -28399,7 +28399,7 @@ try {
       SPX: "indices/s-and-p-500", "S&P 500": "indices/s-and-p-500", SP500: "indices/s-and-p-500", "^GSPC": "indices/s-and-p-500", ES: "indices/s-and-p-500",
       NDX: "indices/nasdaq-100", NQ: "indices/nasdaq-100", "^IXIC": "indices/nasdaq-composite", DJI: "indices/dow-30", YM: "indices/dow-30", RUT: "indices/russell-2000", RTY: "indices/russell-2000",
       VIX: "indices/volatility-s-and-p-500", DXY: "indices/u-s-dollar-index", "DX-Y.NYB": "indices/u-s-dollar-index",
-      DAX: "indices/dax", UKX: "indices/uk-100", SX5E: "indices/euro-stoxx-50", N225: "indices/nikkei-225", HSI: "indices/hang-seng",
+      DAX: "indices/dax", NIKKEI: "indices/nikkei-225", NI225: "indices/nikkei-225", "HANG SENG": "indices/hang-seng", STOXX: "indices/euro-stoxx-50", "EURO STOXX 50": "indices/euro-stoxx-50", UKX: "indices/uk-100", SX5E: "indices/euro-stoxx-50", N225: "indices/nikkei-225", HSI: "indices/hang-seng",
       US10Y: "country/US", US02Y: "country/US", US2A: "country/US", US10A: "country/US", US30A: "country/US", DE10A: "country/DE", JP10A: "country/JP", BR2A: "country/BR", BR5A: "country/BR", BR10A: "country/BR", SELIC: "country/BR",
       BRENT: "crude-oil", WTI: "crude-oil", NG: "natural-gas", MINERIO: "metal/iron", "MINÉRIO": "metal/iron", FEF: "metal/iron", DCE: "metal/iron", IRON: "metal/iron",
       OURO: "metal/gold", GOLD: "metal/gold", "XAU/USD": "metal/gold", PRATA: "metal/silver", SILVER: "metal/silver", COBRE: "metal/copper",
@@ -28591,14 +28591,18 @@ try {
       const ks = [...pend].filter((k) => !imgSync.has(k));
       pend.clear();
       if (!ks.length) return 0;
-      const r = await resolve(ks);
-      await Promise.all(ks.map(async (k) => {
-        const v = r[k] || local(k);
-        if (!v || !v.urls || v.par) return imgSync.set(k, null);
+      const baixa = async (k, v) => {
+        if (!v || !v.urls || v.par) return;
         let im = null;
         try { im = await svgImg(v.urls[0]); } catch { const alt = falhou(k, v.urls[0]); if (alt) try { im = await svgImg(alt); } catch {} }
-        imgSync.set(k, im);
-      }));
+        im && imgSync.set(k, im);
+      };
+      // Conhecidos (dicionário, B3, pares) baixam na hora; os demais esperam a função "logos".
+      const conhecidos = ks.filter((k) => local(k) !== undefined), outros = ks.filter((k) => local(k) === undefined);
+      await Promise.all([
+        ...conhecidos.map((k) => baixa(k, local(k))),
+        outros.length ? resolve(outros).then((r) => Promise.all(outros.map((k) => baixa(k, r[k])))) : null,
+      ]);
       return ks.length;
     }
     w.DiarioLogos = Object.freeze({ urls, html, resolve, png, avatar, norm, _erro, imagem, carregaPendentes, bandeira: (pais) => TV("country/" + String(pais || "").toUpperCase()) });

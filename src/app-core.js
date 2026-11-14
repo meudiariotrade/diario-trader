@@ -44135,7 +44135,10 @@ async function imgGera() {
       await imgDados();
       try {
         // v608: logos oficiais (brapi / TradingView) — 1ª passada lista os ativos, depois carrega e desenha.
-        window.DiarioLogos && (imgDesenha(), await Promise.race([window.DiarioLogos.carregaPendentes(), new Promise((r) => setTimeout(r, 8e3))]));
+        if (window.DiarioLogos) {
+          try { imgDesenha(); } catch {}
+          await Promise.race([window.DiarioLogos.carregaPendentes(), new Promise((r) => setTimeout(r, 12e3))]);
+        }
       } catch {}
       const e = imgDesenha(),
         t = await new Promise((o) => e.toBlob(o, "image/jpeg", 0.92)),
@@ -96981,8 +96984,12 @@ Validação do app: atenção a ` +
     window.trAbrePano = async function (k) {
       try {
         toast("Abrindo o panorama guardado…", 1500);
-        const A = await v(k),
-          C = g(A),
+        const A = await v(k);
+        try {
+          // v613: logos oficiais também no panorama guardado (1ª passada lista os ativos).
+          if (window.DiarioLogos) { try { g(A); } catch {} await Promise.race([window.DiarioLogos.carregaPendentes(), new Promise((r) => setTimeout(r, 12e3))]); }
+        } catch {}
+        const C = g(A),
           I = await new Promise((se) => C.toBlob(se, "image/jpeg", 0.92)),
           J = u(A.gerado);
         ((IMG.blob = I),
