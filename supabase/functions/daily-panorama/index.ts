@@ -5,7 +5,8 @@
 // Dados: a foto mais recente de hoje em panorama_fotos (gerada às 06:50 pela rotina-cron); sem foto de hoje, gera na hora.
 // Opcional: &formato=svg devolve o SVG (para conferir o layout).
 import { initWasm, Resvg } from 'npm:@resvg/resvg-wasm@2.6.2';
-import { panoramaSvg } from './svg.ts';
+import { panoramaSvg, CHAVE, type Logos } from './svg.ts';
+import { resolveLogos, svgDe } from './resolve.ts';
 const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), CRON = ENV('CRON_SECRET');
 const PAGES = ENV('APP_URL') || 'https://meudiariotrade.github.io/diario-trader/';
@@ -46,6 +47,21 @@ async function foto(hoje: string) {
   }
   return f;
 }
+// v608: logos oficiais (brapi / TradingView) e bandeiras embutidos como data URI (resvg não busca na rede).
+const b64 = (t: string) => { const u = new TextEncoder().encode(t); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+async function logosDe(dados: any): Promise<Logos> {
+  const paises = ((dados?.ag?.eventos || []) as any[]).map((e) => 'PAIS:' + String(e.p || '').slice(0, 2).toUpperCase()).filter((x) => /^PAIS:[A-Z]{2}$/.test(x));
+  const adrs = ((dados?.ad?.itens || []) as any[]).map((a) => String(a.s || '')).filter(Boolean);
+  const chaves = [...new Set([...Object.values(CHAVE), ...adrs, ...paises])];
+  const r = await Promise.race([resolveLogos(chaves), new Promise<Record<string, null>>((ok) => setTimeout(() => ok({}), 8000))]);
+  const out: Logos = {};
+  await Promise.all(Object.entries(r).map(async ([k, v]) => {
+    if (!v || !v.urls?.length) return;
+    const svgs = (await Promise.all(v.urls.map((u) => svgDe(u)))).filter(Boolean) as string[];
+    if (svgs.length === v.urls.length) out[k] = svgs.map((x) => 'data:image/svg+xml;base64,' + b64(x));
+  }));
+  return out;
+}
 Deno.serve(async (req) => {
   const txt = (s: string, st: number) => new Response(s, { status: st, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   if (req.method !== 'GET') return txt('Use GET.', 405);
@@ -53,7 +69,7 @@ Deno.serve(async (req) => {
     if (!(await dono(req))) return txt('Token inválido.', 401);
     const hoje = hojeSP(), f = await foto(hoje);
     if (!f) return txt('Panorama ainda não disponível.', 503);
-    const svg = panoramaSvg(f.dados, new Date(f.gerado), hoje, tituloTurno(req));
+    const svg = panoramaSvg(f.dados, new Date(f.gerado), hoje, tituloTurno(req), await logosDe(f.dados).catch(() => ({})));
     if (new URL(req.url).searchParams.get('formato') === 'svg') return new Response(svg, { headers: { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'no-store' } });
     const [, fb] = await prepara();
     const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1080 }, font: { fontBuffers: fb, defaultFontFamily: 'DejaVu Sans', loadSystemFonts: false } }).render().asPng();

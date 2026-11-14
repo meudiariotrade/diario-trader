@@ -9,7 +9,21 @@ const pct = (v: unknown) => { const n = Number(v); if (v == null || !isFinite(n)
 const corta = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s);
 const t = (x: number, y: number, s: string, o: { z?: number; c?: string; b?: boolean; a?: 'start' | 'end' | 'middle'; ls?: number; f?: string } = {}) =>
   `<text x="${x}" y="${y}" font-family="${o.f || 'DejaVu Sans'}" font-size="${o.z || 22}" font-weight="${o.b ? 700 : 400}" fill="${o.c || C.tx}"${o.a ? ` text-anchor="${o.a}"` : ''}${o.ls ? ` letter-spacing="${o.ls}"` : ''}>${esc(s)}</text>`;
-type Linha = { n: string; v: string; p: { t: string; c: string } };
+type Linha = { n: string; v: string; p: { t: string; c: string }; k?: string };
+// v608: logos oficiais (data URIs SVG) ao lado de cada ativo; pares de moedas com duas bandeiras sobrepostas.
+export type Logos = Record<string, string[]>;
+let LOGOS: Logos = {};
+let nClip = 0;
+function logo(k: string | undefined, x: number, y: number, d = 28): string {
+  const u = k ? LOGOS[k] : null;
+  if (!u || !u.length) return '';
+  const um = (href: string, cx: number) => { const id = 'lg' + (nClip++); return `<clipPath id="${id}"><circle cx="${cx + d / 2}" cy="${y + d / 2}" r="${d / 2}"/></clipPath><image href="${href}" x="${cx}" y="${y}" width="${d}" height="${d}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>`; };
+  return u.length > 1 ? um(u[1], x + d * 0.55) + `<circle cx="${x + d / 2}" cy="${y + d / 2}" r="${d / 2 + 1.5}" fill="${C.pn}"/>` + um(u[0], x) : um(u[0], x);
+}
+/** Chaves de logo usadas no Panorama (para a função resolver antes de desenhar). */
+export const CHAVE: Record<string, string> = { 'Ibovespa': 'IBOV', 'S&P 500': 'SPX', 'Nasdaq': 'NDX', 'Dow Jones': 'DJI', 'DAX': 'DAX', 'Euro Stoxx 50': 'SX5E', 'Nikkei': 'N225', 'Hang Seng': 'HSI',
+  'S&P futuro': 'SPX', 'Nasdaq futuro': 'NDX', 'USD/BRL': 'USD/BRL', 'DXY': 'DXY', 'EUR/USD': 'EUR/USD', 'Treasury 10 anos': 'US10Y', 'EWZ (Brasil em NY)': 'EWZ',
+  'Petróleo Brent': 'BRENT', 'Petróleo WTI': 'WTI', 'Minério de ferro': 'MINERIO', 'Minério Dalian (China)': 'DCE', 'Ouro': 'OURO', 'Cobre': 'COBRE' };
 function painel(x: number, y: number, w: number, titulo: string, linhas: Linha[], vazio = 'Sem dados nesta foto.') {
   const h = 64 + Math.max(1, linhas.length) * RH + 12;
   let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${C.pn}"/>`;
@@ -18,28 +32,31 @@ function painel(x: number, y: number, w: number, titulo: string, linhas: Linha[]
   if (!linhas.length) s += t(x + 24, y + 54 + 28, vazio, { z: 20, c: C.mu });
   linhas.forEach((l, i) => {
     const yy = y + 54 + 28 + i * RH;
-    s += t(x + 24, yy, corta(l.n, 17), { z: 22 });
+    const lg = logo(l.k, x + 24, yy - 21, 28);
+    const off = !lg ? 0 : (LOGOS[l.k!] || []).length > 1 ? 52 : 38;
+    s += lg + t(x + 24 + off, yy, corta(l.n, lg ? 15 : 17), { z: 22 });
     s += t(x + w - 24 - 150, yy, l.v, { z: 22, a: 'end' });
     s += t(x + w - 24, yy, l.p.t, { z: 20, c: l.p.c, b: true, a: 'end' });
     if (i < linhas.length - 1) s += `<rect x="${x + 24}" y="${yy + 13}" width="${w - 48}" height="1" fill="${C.ln}"/>`;
   });
   return { s, h };
 }
-const CURTO: Record<string, string> = { 'Euro Stoxx 50': 'Euro Stoxx 50', 'EWZ (Brasil em NY)': 'EWZ', 'Minério Dalian (China)': 'Minério Dalian', 'Petróleo Brent': 'Brent', 'Petróleo WTI': 'WTI', 'Treasury 10 anos': 'Treasury 10a', 'Treasury 5 anos': 'Treasury 5a' };
-export function panoramaSvg(dados: any, quando: Date, hoje: string, titulo = 'Antes da Abertura'): string {
+const CURTO: Record<string, string> = { 'Euro Stoxx 50': 'Euro Stoxx 50', 'EWZ (Brasil em NY)': 'EWZ', 'Minério Dalian (China)': 'Minério Dalian', 'Petróleo Brent': 'Brent', 'Petróleo WTI': 'WTI', 'Treasury 10 anos': 'Treasury 10a', 'Treasury 5 anos': 'Treasury 5a', 'Minério de ferro': 'Minério' };
+export function panoramaSvg(dados: any, quando: Date, hoje: string, titulo = 'Antes da Abertura', logos: Logos = {}): string {
+  LOGOS = logos; nClip = 0;
   const grupos: any[] = dados?.mdo?.mercados?.grupos || [];
   const item = (g: string, n: string) => (grupos.find((x) => x.g === g)?.itens || []).find((i: any) => i.n === n);
   const L = (g: string, nomes: string[]): Linha[] => nomes.map((n) => item(g, n)).filter(Boolean).map((i: any) => i.juro
-    ? { n: CURTO[i.n] || i.n, v: nf(+i.px, 2) + '%', p: i.d1bp == null ? { t: '—', c: C.mu } : { t: (i.d1bp > 0 ? '▲ +' : i.d1bp < 0 ? '▼ −' : '■ ') + nf(Math.abs(i.d1bp), 1) + ' bp', c: i.d1bp > 0 ? C.r : i.d1bp < 0 ? C.g : C.mu } }
-    : { n: CURTO[i.n] || i.n, v: px(i.px), p: pct(i.d1) });
+    ? { n: CURTO[i.n] || i.n, k: CHAVE[i.n], v: nf(+i.px, 2) + '%', p: i.d1bp == null ? { t: '—', c: C.mu } : { t: (i.d1bp > 0 ? '▲ +' : i.d1bp < 0 ? '▼ −' : '■ ') + nf(Math.abs(i.d1bp), 1) + ' bp', c: i.d1bp > 0 ? C.r : i.d1bp < 0 ? C.g : C.mu } }
+    : { n: CURTO[i.n] || i.n, k: CHAVE[i.n], v: px(i.px), p: pct(i.d1) });
   const bolsas = L('Bolsas', ['Ibovespa', 'S&P 500', 'Nasdaq', 'Dow Jones', 'DAX', 'Euro Stoxx 50', 'Nikkei', 'Hang Seng']);
   const fut = [...L('Futuros e ADR', ['S&P futuro', 'Nasdaq futuro']), ...L('Moedas', ['USD/BRL', 'DXY', 'EUR/USD']), ...L('Juros dos EUA', ['Treasury 10 anos'])];
   const ewz = item('Futuros e ADR', 'EWZ (Brasil em NY)');
-  if (ewz) fut.splice(2, 0, { n: ewz.ext ? 'EWZ (pré)' : 'EWZ', v: px(ewz.ext?.px ?? ewz.px), p: pct(ewz.ext?.pct ?? ewz.d1) });
+  if (ewz) fut.splice(2, 0, { n: ewz.ext ? 'EWZ (pré)' : 'EWZ', k: 'EWZ', v: px(ewz.ext?.px ?? ewz.px), p: pct(ewz.ext?.pct ?? ewz.d1) });
   const comm = L('Commodities', ['Petróleo Brent', 'Petróleo WTI', 'Minério de ferro', 'Minério Dalian (China)', 'Ouro', 'Cobre']);
   const ADR = ['PBR', 'VALE', 'ITUB', 'BBD', 'ABEV', 'GGB'];
   const adrs: Linha[] = ((dados?.ad?.itens || []) as any[]).filter((a) => ADR.includes(a.s)).sort((a, b) => ADR.indexOf(a.s) - ADR.indexOf(b.s))
-    .map((a) => { const pr = a.state === 'pre' && a.pre ? a.pre : null; return { n: a.s + (pr ? ' (pré)' : ''), v: 'US$ ' + nf(+(pr?.px ?? a.px), 2), p: pct(pr?.chp ?? a.chp) }; });
+    .map((a) => { const pr = a.state === 'pre' && a.pre ? a.pre : null; return { n: a.s + (pr ? ' (pré)' : ''), k: a.s, v: 'US$ ' + nf(+(pr?.px ?? a.px), 2), p: pct(pr?.chp ?? a.chp) }; });
   const evs = ((dados?.ag?.eventos || []) as any[]).filter((e) => +e.imp >= 1 && !e.rotina).filter((e) => {
     const d = new Date(new Date(e.em).getTime() - 3 * 3600_000).toISOString().slice(0, 10); return d === hoje;
   }).sort((a, b) => (a.em < b.em ? -1 : 1)).slice(0, 7);
@@ -74,7 +91,8 @@ export function panoramaSvg(dados: any, quando: Date, hoje: string, titulo = 'An
     const yy = y + 82 + i * RH, hr = new Date(e.em).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
     const ref = e.atual ? 'atual ' + e.atual : e.proj ? 'proj. ' + e.proj : e.ant ? 'ant. ' + e.ant : '';
     s += t(M + 24, yy, hr, { z: 22, b: true });
-    s += `<rect x="${M + 112}" y="${yy - 22}" width="46" height="28" rx="4" fill="${C.ln}"/>` + t(M + 135, yy - 2, String(e.p || '').slice(0, 2), { z: 16, b: true, a: 'middle', c: C.am });
+    const pais = String(e.p || '').slice(0, 2).toUpperCase(), fl = logo('PAIS:' + pais, M + 121, yy - 22, 28);
+    s += fl || (`<rect x="${M + 112}" y="${yy - 22}" width="46" height="28" rx="4" fill="${C.ln}"/>` + t(M + 135, yy - 2, pais, { z: 16, b: true, a: 'middle', c: C.am }));
     s += t(M + 176, yy, corta(String(e.t || ''), 40), { z: 22 });
     if (ref) s += t(W - M - 24, yy, ref, { z: 20, c: C.mu, a: 'end' });
     if (i < evs.length - 1) s += `<rect x="${M + 24}" y="${yy + 13}" width="${W - 2 * M - 48}" height="1" fill="${C.ln}"/>`;
