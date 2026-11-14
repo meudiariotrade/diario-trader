@@ -1,0 +1,8 @@
+DIÁRIO DE TRADER — v608 (Logos oficiais + macro no Jornal)
+
+- Logos reais em alta definição em todo o app (componente universal DiarioLogos + TraderAssetIdentity): B3/FIIs/ETFs/BDRs pelo icons.brapi.dev (com fallback para o ticker base), ADRs, EUA, índices, cripto, futuros e commodities pelo CDN de logos do TradingView. Ativos novos são resolvidos automaticamente pela função "logos" e ficam em cache (memória + aparelho).
+- Pares de moedas com duas bandeiras circulares sobrepostas; Agenda econômica com bandeiras SVG no lugar dos emojis.
+- Panorama do Mercado (PNG do Atalho e imagem do app): logo ao lado de cada ativo e bandeira do país na agenda.
+- Jornal do Pregão (PDF): logos em Maiores altas e baixas, Destaques do trimestre, Placar das análises e Eventos corporativos; bandeiras na Agenda econômica; card Fed Watch (Manter / Cortar −25 / Subir +25) em Mercado internacional.
+- Fed Watch do app sempre com as 3 opções; logos nos 12 termômetros do Mapa, nos DIs, na cesta emergente e no barômetro 3x3 (recursos da v606).
+- Nova função Supabase "logos" (só leitura, sem tabelas novas).
