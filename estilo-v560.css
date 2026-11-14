@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 6418edecee8980afa1c6c6f8fc64f070156b328500ae56183240a4f94a79bef8 */
+/* Gerado de src/app-theme.css · SHA256 e5cf3a2974a14d384406ea2f671f1231c78ff29778d0d445f30b653463a59ddb */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2536,3 +2536,24 @@ html body #app .v600-wr td small{font-size:10px}
 .m606-mxc b{font-size:14px;color:#fff}
 .m606-bar{margin-top:10px}
 @media (min-width:720px){.m606-mapa{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* v607 — Desktop: Início e Meu dia usam a largura do monitor, sem colunas estreitas que quebram palavras (celular inalterado) */
+@media (min-width:768px){
+ html:root body #app:is(.home-view,.journal-view) .dt395-native-home{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:20px!important}
+ html:root body #app.home-view .dt395-native-home>.pccols{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:20px!important;align-items:start}
+ html:root body #app.home-view .dt395-native-home>.pccols>.pcc{display:contents!important}
+ html:root body #app.home-view .pccols>.pcc>*{min-width:0;margin-top:0}
+ html:root body #app.home-view :is(.pccols,.pcc,.pcblk,.card,.kv,.v4-kpis,.simple-context)>*{min-width:0}
+ html:root body #app.home-view .pccols .kv{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))!important}
+ html:root body #app.home-view .pccols :is(.kv,.card,.pcblk) :is(b,strong,small,span,.sm,.mut){word-break:normal!important;overflow-wrap:break-word;hyphens:none}
+ html:root body #app.home-view .pccols :is(.tk,.tick,.ticker,[class*="ticker"],.badge,.tag,.chip,.pill){white-space:nowrap!important;word-break:normal!important}
+ html:root body #app.home-view .pccols .modhjg{grid-template-columns:repeat(auto-fit,minmax(112px,1fr))!important}
+ html:root body #app.home-view .pccols .modhj :is(b,strong){white-space:nowrap!important}
+ html:root body #app.journal-view .dfase{max-width:none!important}
+}
+@media (min-width:1280px){
+ html:root body #app.home-view .dt395-native-home>.pccols{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media (min-width:1100px){
+ html:root body #app#app:is(.home-view,.journal-view){width:100%;max-width:1280px!important;margin-left:auto!important;margin-right:auto!important;padding-left:24px!important;padding-right:24px!important;box-sizing:border-box}
+}
