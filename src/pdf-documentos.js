@@ -1878,16 +1878,15 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
       ke.length &&
         Ye(
           [
-            { l: "Quando", w: 15 },
-            { l: "País", w: 13 },
-            { l: "Evento", w: 40 },
+            { l: "Quando", w: 18 },
+            { l: "Evento", w: 50 },
             { l: "Impacto", w: 11 },
             { l: "Consenso", w: 11 },
             { l: "Anterior", w: 11 },
           ],
           ke.map((Re) => [
-            { t: Re.quando, f: "b" },
-            { t: Re.pais || "–", lg: jvPaisISO(Re.pais) ? "PAIS:" + jvPaisISO(Re.pais) : "" },
+            // v619: bandeira circular do país ao lado do horário (sem o nome por extenso); sem bandeira carregada, volta a sigla.
+            (() => { const iso = jvPaisISO(Re.pais), tem = iso && LGM[LGN("PAIS:" + iso)]; return { t: Re.quando + (tem ? "" : Re.pais ? " · " + (iso || Re.pais) : ""), f: "b", lg: tem ? "PAIS:" + iso : "" }; })(),
             Re.evento +
               (Re.por_que
                 ? `

@@ -2311,10 +2311,22 @@ function imgBalListas() {
                 c: we ? m : "#ffffff",
                 al: "center",
               }));
-            const Be = AG_NM[ue.p] || ue.p;
-            (Pe(Be, d + 126, he + 35, { s: 22, b: 1, c: "#282a2e" }),
-              (se.font = g(22, 1)));
-            const Ge = se.measureText(Be).width;
+            // v619: bandeira circular oficial no lugar do nome do país (sem bandeira carregada: círculo com a sigla).
+            const Fl = window.DiarioLogos?.imagem?.("PAIS:" + String(ue.p || "").toUpperCase()),
+              FR = 15,
+              FX = d + 126,
+              FY = he + 27;
+            se.save();
+            se.beginPath();
+            se.arc(FX + FR, FY, FR, 0, Math.PI * 2);
+            se.closePath();
+            if (Fl) (se.clip(), se.drawImage(Fl, FX, FY - FR, 2 * FR, 2 * FR));
+            else
+              ((se.fillStyle = "#22252c"), se.fill(), (se.lineWidth = 2), (se.strokeStyle = "#D4A017"), se.stroke(), (se.font = g(13, 1)), (se.fillStyle = "#ffffff"), (se.textAlign = "center"),
+                se.fillText(String(ue.p || "").slice(0, 2).toUpperCase(), FX + FR, FY + 5));
+            se.restore();
+            se.font = g(22, 1);
+            const Ge = 2 * FR;
             let Ce = ue.t;
             se.font = g(23, 0);
             const Qe = [

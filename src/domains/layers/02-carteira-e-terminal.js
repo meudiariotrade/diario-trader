@@ -7346,7 +7346,7 @@ try {
     // v615: aquece os logos do Panorama em segundo plano para a imagem sair com os logos oficiais já na 1ª vez.
     setTimeout(() => {
       try {
-        const lista = ["EWZ", "IBOV", "SPX", "NDX", "N225", "DAX", "DXY", "OURO", "BTC", "ETH", "BRENT", "WTI", "MINERIO", "DCE", "US10Y"]
+        const lista = ["EWZ", "IBOV", "SPX", "NDX", "N225", "DAX", "DXY", "OURO", "BTC", "ETH", "BRENT", "WTI", "MINERIO", "DCE", "US10Y", "PAIS:BR", "PAIS:US", "PAIS:EU", "PAIS:CN", "PAIS:GB", "PAIS:JP", "PAIS:DE"]
           .concat((typeof AD < "u" && Array.isArray(AD.list) && AD.list) || ["WEGZY", "BBSEY", "BDORY", "SUZ", "SID", "GGB", "ITUB", "PBR", "VALE", "ABEV", "BBD"]);
         lista.forEach((k) => imagem(k));
         carregaPendentes();
