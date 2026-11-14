@@ -4449,7 +4449,7 @@ setInterval(() => {
    Stream combinado @miniTicker dos pares USDT do app. Preço = c; variação 24h = (c − o) / o.
    Reconecta sozinho (1 s, 2 s, 4 s… até 30 s) e desliga com a aba em segundo plano.
    ===================================================================================== */
-const BNC_PARES = { BTC: "btcusdt", ETH: "ethusdt", SOL: "solusdt", XRP: "xrpusdt", BNB: "bnbusdt", DOGE: "dogeusdt", ADA: "adausdt", AVAX: "avaxusdt", LINK: "linkusdt", "BTC/BRL": "btcbrl", "USDT/BRL": "usdtbrl" };
+const BNC_PARES = { BTC: "btcusdt", ETH: "ethusdt", SOL: "solusdt", XRP: "xrpusdt", BNB: "bnbusdt", DOGE: "dogeusdt", ADA: "adausdt", AVAX: "avaxusdt", LINK: "linkusdt", SUI: "suiusdt", TON: "tonusdt", DOT: "dotusdt", SHIB: "shibusdt", LTC: "ltcusdt", UNI: "uniusdt", NEAR: "nearusdt", APT: "aptusdt", ARB: "arbusdt", OP: "opusdt", RENDER: "renderusdt", "BTC/BRL": "btcbrl", "USDT/BRL": "usdtbrl" };
 const BNC_SYM = Object.fromEntries(Object.entries(BNC_PARES).map(([k, v]) => [v.toUpperCase(), k]));
 const BNC_TAPE = { "BTC-USD": "BTC", "ETH-USD": "ETH", "SOL-USD": "SOL", "XRP-USD": "XRP" };
 const BNC = { q: {}, ws: null, tent: 0, timer: null, porMim: !1, ultimo: 0, mudou: new Set(), pinta: null, subs: new Set() };
@@ -4664,7 +4664,7 @@ function m623Html() {
   return `<div class="m623-term${M624.mon ? " m624-on" : ""}" role="region" aria-label="Terminal de mercado">${monBar}
 <div class="m623-col">${m623Bloco("Índices Europa e Ásia", g("idx"))}${m606DiHtml()}${m623Noticias()}</div>
 <div class="m623-col">${m623Bloco("Moedas", g("fx"), fhSelo())}${m623Bloco("Emergentes", g("em"), fhSelo())}${bar}</div>
-<div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", g("fut"), fhSelo())}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", g("cri"), bncSelo())}</div>
+<div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", g("fut"), fhSelo())}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", typeof bncTop20 === "function" ? bncTop20(g("cri")) : g("cri"), bncSelo())}</div>
 </div><p class="m623-src">TradingView (screener público; B3 com ~15 min de atraso) · WIN e WDO pelo Profit quando a ponte está ligada · EUA, ADRs e moedas pela Finnhub ao vivo (TradingView fora do pregão) · Cripto pela Binance em tempo real · clique num ativo para abrir o gráfico · <i class="m623-dot on"></i> aberto · <i class="m623-dot"></i> fechado${M606.v && M606.v.em ? ' · ' + esc(m606Consulta()) : ''}</p>`;
 }
 document.addEventListener(
@@ -5203,4 +5203,37 @@ function cqMorph() {
   } catch {
     cqPinta();
   }
+}
+
+/* v638 — 20 criptos ao vivo (Binance) na categoria Cripto e no Terminal; nomes para a lista. */
+const BNC_NOMES = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", XRP: "XRP", BNB: "BNB", DOGE: "Dogecoin", ADA: "Cardano", AVAX: "Avalanche", LINK: "Chainlink", SUI: "Sui", TON: "Toncoin", DOT: "Polkadot", SHIB: "Shiba Inu", LTC: "Litecoin", UNI: "Uniswap", NEAR: "NEAR", APT: "Aptos", ARB: "Arbitrum", OP: "Optimism", RENDER: "Render" };
+const BNC_TOP = Object.keys(BNC_NOMES);
+const bncDp = (px) => (px >= 1e3 ? 2 : px >= 1 ? 3 : px >= 0.01 ? 5 : 8);
+/** Completa a lista com os 20 pares (os que vieram do servidor ficam; os que faltam entram com o preço da Binance). */
+function bncTop20(base) {
+  const L = (base || []).slice(),
+    tem = new Set(L.map((x) => String(x.k || x.c || "").toUpperCase()));
+  BNC_TOP.forEach((k) => {
+    if (tem.has(k)) return;
+    const q = bncQ(k);
+    L.push({ g: "cri", k, n: BNC_NOMES[k], s: "BINANCE:" + k + "USDT", px: q ? q.px : null, d1: q ? q.d1 : null, dp: q ? bncDp(q.px) : 2, ss: "24h", em: q ? new Date(q.em).toISOString() : null });
+  });
+  return L;
+}
+{
+  const antes = cotHtml;
+  cotHtml = function () {
+    try {
+      if (CQ.aba === "cri" && CQ.d) {
+        const d = CQ.d.cri || (CQ.d.cri = { itens: [] }),
+          L = d.itens || (d.itens = []),
+          tem = new Set(L.map((x) => String(x.c || "").toUpperCase()));
+        BNC_TOP.forEach((k) => {
+          const q = bncQ(k);
+          !tem.has(k) && q && L.push({ c: k, n: BNC_NOMES[k], s: "BINANCE:" + k + "USDT", px: q.px, d1: q.d1, dp: bncDp(q.px), _aba: "cri" });
+        });
+      }
+    } catch {}
+    return antes.apply(this, arguments);
+  };
 }

@@ -1,0 +1,3 @@
+v638
+- Cripto: 20 pares USDT ao vivo pela Binance (BTC, ETH, SOL, XRP, BNB, DOGE, ADA, AVAX, LINK, SUI, TON, DOT, SHIB, LTC, UNI, NEAR, APT, ARB, OP, RENDER) na categoria Cripto e no Terminal do PC, com logos.
+- Panorama: sábado e domingo o botão Panorama (e o Atalho do iPhone) gera "Panorama Fim de Semana · Cripto & Macro": 12 criptos 24h com logos, termômetro de abertura e manchetes do fim de semana. Seg–sex sem mudanças.

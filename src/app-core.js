@@ -70001,7 +70001,7 @@ setInterval(() => {
    Stream combinado @miniTicker dos pares USDT do app. Preço = c; variação 24h = (c − o) / o.
    Reconecta sozinho (1 s, 2 s, 4 s… até 30 s) e desliga com a aba em segundo plano.
    ===================================================================================== */
-const BNC_PARES = { BTC: "btcusdt", ETH: "ethusdt", SOL: "solusdt", XRP: "xrpusdt", BNB: "bnbusdt", DOGE: "dogeusdt", ADA: "adausdt", AVAX: "avaxusdt", LINK: "linkusdt", "BTC/BRL": "btcbrl", "USDT/BRL": "usdtbrl" };
+const BNC_PARES = { BTC: "btcusdt", ETH: "ethusdt", SOL: "solusdt", XRP: "xrpusdt", BNB: "bnbusdt", DOGE: "dogeusdt", ADA: "adausdt", AVAX: "avaxusdt", LINK: "linkusdt", SUI: "suiusdt", TON: "tonusdt", DOT: "dotusdt", SHIB: "shibusdt", LTC: "ltcusdt", UNI: "uniusdt", NEAR: "nearusdt", APT: "aptusdt", ARB: "arbusdt", OP: "opusdt", RENDER: "renderusdt", "BTC/BRL": "btcbrl", "USDT/BRL": "usdtbrl" };
 const BNC_SYM = Object.fromEntries(Object.entries(BNC_PARES).map(([k, v]) => [v.toUpperCase(), k]));
 const BNC_TAPE = { "BTC-USD": "BTC", "ETH-USD": "ETH", "SOL-USD": "SOL", "XRP-USD": "XRP" };
 const BNC = { q: {}, ws: null, tent: 0, timer: null, porMim: !1, ultimo: 0, mudou: new Set(), pinta: null, subs: new Set() };
@@ -70216,7 +70216,7 @@ function m623Html() {
   return `<div class="m623-term${M624.mon ? " m624-on" : ""}" role="region" aria-label="Terminal de mercado">${monBar}
 <div class="m623-col">${m623Bloco("Índices Europa e Ásia", g("idx"))}${m606DiHtml()}${m623Noticias()}</div>
 <div class="m623-col">${m623Bloco("Moedas", g("fx"), fhSelo())}${m623Bloco("Emergentes", g("em"), fhSelo())}${bar}</div>
-<div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", g("fut"), fhSelo())}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", g("cri"), bncSelo())}</div>
+<div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", g("fut"), fhSelo())}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", typeof bncTop20 === "function" ? bncTop20(g("cri")) : g("cri"), bncSelo())}</div>
 </div><p class="m623-src">TradingView (screener público; B3 com ~15 min de atraso) · WIN e WDO pelo Profit quando a ponte está ligada · EUA, ADRs e moedas pela Finnhub ao vivo (TradingView fora do pregão) · Cripto pela Binance em tempo real · clique num ativo para abrir o gráfico · <i class="m623-dot on"></i> aberto · <i class="m623-dot"></i> fechado${M606.v && M606.v.em ? ' · ' + esc(m606Consulta()) : ''}</p>`;
 }
 document.addEventListener(
@@ -70755,6 +70755,39 @@ function cqMorph() {
   } catch {
     cqPinta();
   }
+}
+
+/* v638 — 20 criptos ao vivo (Binance) na categoria Cripto e no Terminal; nomes para a lista. */
+const BNC_NOMES = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", XRP: "XRP", BNB: "BNB", DOGE: "Dogecoin", ADA: "Cardano", AVAX: "Avalanche", LINK: "Chainlink", SUI: "Sui", TON: "Toncoin", DOT: "Polkadot", SHIB: "Shiba Inu", LTC: "Litecoin", UNI: "Uniswap", NEAR: "NEAR", APT: "Aptos", ARB: "Arbitrum", OP: "Optimism", RENDER: "Render" };
+const BNC_TOP = Object.keys(BNC_NOMES);
+const bncDp = (px) => (px >= 1e3 ? 2 : px >= 1 ? 3 : px >= 0.01 ? 5 : 8);
+/** Completa a lista com os 20 pares (os que vieram do servidor ficam; os que faltam entram com o preço da Binance). */
+function bncTop20(base) {
+  const L = (base || []).slice(),
+    tem = new Set(L.map((x) => String(x.k || x.c || "").toUpperCase()));
+  BNC_TOP.forEach((k) => {
+    if (tem.has(k)) return;
+    const q = bncQ(k);
+    L.push({ g: "cri", k, n: BNC_NOMES[k], s: "BINANCE:" + k + "USDT", px: q ? q.px : null, d1: q ? q.d1 : null, dp: q ? bncDp(q.px) : 2, ss: "24h", em: q ? new Date(q.em).toISOString() : null });
+  });
+  return L;
+}
+{
+  const antes = cotHtml;
+  cotHtml = function () {
+    try {
+      if (CQ.aba === "cri" && CQ.d) {
+        const d = CQ.d.cri || (CQ.d.cri = { itens: [] }),
+          L = d.itens || (d.itens = []),
+          tem = new Set(L.map((x) => String(x.c || "").toUpperCase()));
+        BNC_TOP.forEach((k) => {
+          const q = bncQ(k);
+          !tem.has(k) && q && L.push({ c: k, n: BNC_NOMES[k], s: "BINANCE:" + k + "USDT", px: q.px, d1: q.d1, dp: bncDp(q.px), _aba: "cri" });
+        });
+      }
+    } catch {}
+    return antes.apply(this, arguments);
+  };
 }
 const EN_TIT = {
   mc_en: "O que significa?",
@@ -106244,6 +106277,33 @@ function rpyDiarioHtml() {
   const melhor = grupo((o) => o.setup || "Sem setup").find(([k, g]) => k !== "Sem setup" && g.n >= 5 && g.r > 0);
   return `<div class="card rpy7-hist"><b>Diário do treino</b><small class="mut" style="display:block;margin:2px 0 8px">Escolha o setup na boleta antes de entrar; o motivo da saída (stop, alvo, zerado) é registrado sozinho.${melhor ? ` Seu melhor setup até aqui: <b>${esc(melhor[0])}</b>.` : ""}</small>
 ${tab("Setup", grupo((o) => o.setup || "Sem setup"))}<div style="height:10px"></div>${tab("Horário da entrada", grupo((o) => (o.he ? o.he.slice(0, 2) + "h" : "–")).sort((a, b) => (a[0] > b[0] ? 1 : -1)))}<div style="height:10px"></div>${tab("Saída", grupo((o) => o.mot || "–"))}</div>`;
+}
+
+/* v638 — Panorama no fim de semana: sábado e domingo o botão Panorama gera "Fim de Semana · Cripto & Macro"
+   (mesma Edge Function daily-panorama, com o login do usuário). Seg–sex: imagem de sempre, intacta. */
+{
+  const antes = imgGera;
+  imgGera = async function () {
+    const w = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", weekday: "short" }).format(new Date());
+    const a = typeof cfg === "function" ? cfg() : null;
+    if (!(w === "Sat" || w === "Sun") || !a || typeof SESS > "u" || !SESS || !SESS.at || IMG.busy) return antes.apply(this, arguments);
+    IMG.busy = 1;
+    window.toast && toast("Montando o Panorama de fim de semana…", 1500);
+    try {
+      const r = await fetch(a.url + "/functions/v1/daily-panorama?modo=fds", { headers: { apikey: a.key, Authorization: "Bearer " + SESS.at }, signal: AbortSignal.timeout(45e3) });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const blob = await r.blob();
+      IMG.blob = blob;
+      IMG.nome = "panorama-fim-de-semana-" + loc().slice(0, 10) + ".png";
+      IMG.legenda = null;
+      IMG.titulo = null;
+      IMG.busy = 0;
+      return void imgMostra(URL.createObjectURL(blob));
+    } catch {
+      IMG.busy = 0;
+      return antes.apply(this, arguments); // sem rede/servidor: a imagem de sempre
+    }
+  };
 }
 const RP_COR = {
     tx: "#17191b",
