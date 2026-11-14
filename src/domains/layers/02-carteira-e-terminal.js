@@ -7112,7 +7112,7 @@ try {
       BTC: "crypto/XTVCBTC", "BTC/BRL": "crypto/XTVCBTC", BTCUSD: "crypto/XTVCBTC", ETH: "crypto/XTVCETH", ETHUSD: "crypto/XTVCETH", SOL: "crypto/XTVCSOL", XRP: "crypto/XTVCXRP", BNB: "crypto/XTVCBNB", DOGE: "crypto/XTVCDOGE", ADA: "crypto/XTVCADA", USDT: "crypto/XTVCUSDT", "USDT/BRL": "crypto/XTVCUSDT",
       EWZ: "ishares", IAU: "ishares", IVV: "ishares", IVE: "ishares", IVW: "ishares", IJH: "ishares", IJJ: "ishares", IJK: "ishares", IJR: "ishares", IJS: "ishares", IJT: "ishares",
       WEGZY: "weg", BBSEY: "banco-do-brasil", BDORY: "banco-do-brasil", PBR: "brasileiro-petrobras", "PBR.A": "brasileiro-petrobras", VALE: "vale", ITUB: "itau-unibanco", BBD: "bradesco",
-      ABEV: "ambev", ERJ: "embraer", SBS: "sabesp", GGB: "gerdau", SUZ: "suzano", CIG: "cemig", NU: "nu-holdings", XP: "xp", PAGS: "pagseguro-digital",
+      NATU3: "natura-and-co", ABEV: "ambev", ERJ: "embraer", SBS: "sabesp", GGB: "gerdau", SUZ: "suzano", CIG: "cemig", NU: "nu-holdings", XP: "xp", PAGS: "pagseguro-digital",
     };
     const norm = (t) => String(t || "").trim().toUpperCase().replace(/^(?:BMFBOVESPA|NASDAQ|NYSE|AMEX|OTC|TVC|SP|FX_IDC|FX|BITSTAMP|BINANCE|COINBASE|ICEEUR|SGX|CME_MINI|CBOT_MINI):/, "").replace(/1!$/, "").replace(/\.SA$/, "");
     const par = (t) => {
@@ -7260,6 +7260,14 @@ try {
             const alt = falhou(t, u);
             if (alt) try { imgs.push(await svgImg(alt)); } catch {}
           }
+        }
+        if (!imgs.length && v.fonte === "brapi") {
+          // brapi sem o ticker: consulta a função (TradingView) e tenta de novo.
+          const k0 = norm(t);
+          mem.delete(k0); pede(k0); tm && (clearTimeout(tm), consulta());
+          for (let i = 0; i < 40 && (emCurso || fila.size); i++) await (emCurso || new Promise((r) => setTimeout(r, 80)));
+          const v2 = mem.get(k0);
+          if (v2 && v2.urls) { v = v2; for (const u of v2.urls) { try { imgs.push(await svgImg(u)); } catch {} } }
         }
         if (!imgs.length) return null;
         const c = document.createElement("canvas"), g = c.getContext("2d");
