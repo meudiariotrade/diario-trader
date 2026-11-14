@@ -105541,7 +105541,7 @@ const rpyRaiz = (tk) => {
 function rpyTfHtml() {
   const b = rpyTfMin(RPY.tf),
     v = rpyTfMin(RPY.tfv) || b;
-  return `<span class="rpy7-tfs" role="group" aria-label="Tempo gráfico">${RPY_TFS.map((m) => `<button type="button" data-rpy7tf="${m}" class="${m === v ? "on" : ""}" aria-pressed="${m === v}"${m < b || m % b ? ` disabled title="Carregue em ${m}m ou menor para usar"` : ""}>${m}m</button>`).join("")}</span>`;
+  return `<span class="rpy7-tfs" role="group" aria-label="Tempo gráfico">${RPY_TFS.map((m) => `<button type="button" data-rpy7tf="${m}" class="${m === v ? "on" : ""}" aria-pressed="${m === v}"${m < b || m % b ? ` title="Carrega candles de 1 minuto (Profit ou Yahoo, últimos 7 dias)"` : ""}>${m}m</button>`).join("")}</span>`;
 }
 document.addEventListener(
   "click",
@@ -105549,6 +105549,18 @@ document.addEventListener(
     const t = e.target.closest && e.target.closest("[data-rpy7tf]");
     if (!t || t.disabled) return;
     e.preventDefault();
+    const m = +t.dataset.rpy7tf,
+      b = rpyTfMin(RPY.tf);
+    // v633: 1m/2m sempre clicáveis — sem base de 1m, carrega 1 minuto (Profit, senão Yahoo 7 dias) e sorteia um pregão
+    if (b && (m < b || m % b)) {
+      rpyPlay(!1);
+      RPY.tf = "1m";
+      RPY.tfv = m + "m";
+      RPY.vn = 0;
+      RPY.voff = 0;
+      RPY._agg = null;
+      return void rpyCarrega();
+    }
     RPY.tfv = t.dataset.rpy7tf + "m";
     RPY.vn = 0;
     RPY.voff = 0;
@@ -105767,6 +105779,8 @@ document.addEventListener(
     if (k === "limpa") {
       rpyEstL().splice(0);
       RPY.estSel = null;
+      RPY.estNovo = null;
+      RPY.ferr = "cur";
       rpyEstSalva();
       return void render();
     }
@@ -105796,6 +105810,8 @@ function rpyEstDown(p, tipo) {
     return { t: "nada" };
   }
   const tol = tipo === "mouse" ? 9 : 18;
+  const xb = RPY._estX;
+  if (xb && RPY.estSel && p.x >= xb.x - 4 && p.x <= xb.x + xb.w + 4 && p.y >= xb.y - 4 && p.y <= xb.y + xb.h + 4) return rpyEstApaga(RPY.estSel), { t: "nada" };
   for (const s of rpyEstL()) {
     for (let i = 0; i < s.p.length; i++) {
       const x = s.k === "h" ? G.pw - 14 : rpyGx(s.p[i][0]),
@@ -105804,8 +105820,62 @@ function rpyEstDown(p, tipo) {
     }
     if (s.k === "h" && Math.abs(G.yDe(s.p[0][1]) - p.y) <= tol / 2) return (RPY.estSel = s), rpyPede(), { t: "alca", s, i: 0 };
   }
+  const s = rpyEstHit(p, tol);
+  if (s) return (RPY.estSel = s), render(), { t: "nada" };
+  RPY.estSel && ((RPY.estSel = null), render());
   return null;
 }
+/** Estudo sob o ponto (linhas da tendência e níveis de Fibonacci), para selecionar ou apagar. */
+function rpyEstHit(p, tol) {
+  const G = RPY._geo;
+  if (!G) return null;
+  const seg = (x1, y1, x2, y2) => {
+    const dx = x2 - x1,
+      dy = y2 - y1,
+      L = dx * dx + dy * dy || 1,
+      u = Math.max(0, Math.min(1, ((p.x - x1) * dx + (p.y - y1) * dy) / L));
+    return Math.hypot(p.x - (x1 + u * dx), p.y - (y1 + u * dy));
+  };
+  for (const s of rpyEstL().slice().reverse()) {
+    const P = s.p.map(([t, pr]) => [s.k === "h" ? G.pw - 14 : rpyGx(t), G.yDe(pr)]);
+    if (s.k === "h" && Math.abs(P[0][1] - p.y) <= tol) return s;
+    if (s.k === "t" && P.length === 2 && seg(P[0][0], P[0][1], P[1][0], P[1][1]) <= tol) return s;
+    if (s.k === "fr" && P.length === 2) {
+      const [a, b] = [s.p[0][1], s.p[1][1]];
+      if (p.x >= Math.min(P[0][0], P[1][0]) - tol && RPY_FIB_RET.some((r) => Math.abs(G.yDe(b - (b - a) * r) - p.y) <= tol / 1.5)) return s;
+    }
+    if (s.k === "fp" && P.length === 3) {
+      const [a, b, c] = [s.p[0][1], s.p[1][1], s.p[2][1]];
+      if (p.x >= P[2][0] - tol && RPY_FIB_PROJ.some((r) => Math.abs(G.yDe(c + (b - a) * r) - p.y) <= tol / 1.5)) return s;
+      if (seg(P[0][0], P[0][1], P[1][0], P[1][1]) <= tol || seg(P[1][0], P[1][1], P[2][0], P[2][1]) <= tol) return s;
+    }
+  }
+  return null;
+}
+function rpyEstApaga(s) {
+  const L = rpyEstL(),
+    i = L.indexOf(s);
+  i >= 0 && L.splice(i, 1);
+  RPY.estSel === s && (RPY.estSel = null);
+  rpyEstSalva();
+  render();
+}
+// Delete/Backspace apaga o estudo selecionado; botão direito sobre um estudo apaga direto.
+document.addEventListener("keydown", (e) => {
+  if ((e.key !== "Delete" && e.key !== "Backspace") || !RPY.estSel || typeof tab > "u" || tab !== "estudos" || ESV !== "rpy") return;
+  const t = e.target;
+  if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  e.preventDefault();
+  rpyEstApaga(RPY.estSel);
+});
+document.addEventListener("contextmenu", (e) => {
+  if (!e.target || e.target.id !== "rpy-cv") return;
+  const r = e.target.getBoundingClientRect(),
+    s = rpyEstHit({ x: e.clientX - r.left, y: e.clientY - r.top }, 10);
+  if (!s) return;
+  e.preventDefault();
+  rpyEstApaga(s);
+});
 function rpyEstMove(m, p) {
   const G = RPY._geo;
   if (!G) return;
@@ -105895,6 +105965,27 @@ function rpyEstDesenha(g, K, fonte, eixoW) {
         });
       }
       P.forEach((q) => alca(q[0], q[1], sel));
+    }
+  }
+  // v633: mini-botão × ao lado do estudo selecionado (útil no celular)
+  RPY._estX = null;
+  const S0 = RPY.estSel;
+  if (S0 && S0.p.length) {
+    const q = S0.p[S0.p.length - 1],
+      x0 = S0.k === "h" ? G.pw - 14 : rpyGx(q[0]),
+      y0 = G.yDe(q[1]);
+    if (x0 != null && y0 > 0 && y0 < G.ch) {
+      const bx = Math.min(G.pw - 24, x0 + 10),
+        by = Math.max(2, y0 - 26);
+      g.fillStyle = "#DC2626";
+      g.beginPath();
+      g.roundRect ? g.roundRect(bx, by, 20, 20, 4) : g.rect(bx, by, 20, 20);
+      g.fill();
+      g.fillStyle = "#FFFFFF";
+      g.textAlign = "center";
+      g.font = "700 13px system-ui,sans-serif";
+      g.fillText("×", bx + 10, by + 10.5);
+      RPY._estX = { x: bx, y: by, w: 20, h: 20 };
     }
   }
   g.restore();
