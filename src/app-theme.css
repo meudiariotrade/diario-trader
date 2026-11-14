@@ -2554,7 +2554,9 @@ html body #app .v600-wr td small{font-size:10px}
  html:root body #app.home-view .dt395-native-home>.pccols{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 }
 @media (min-width:1100px){
- html:root body #app#app:is(.home-view,.journal-view){width:100%;max-width:1280px!important;margin-left:auto!important;margin-right:auto!important;padding-left:24px!important;padding-right:24px!important;box-sizing:border-box}
+ /* v609: Início e Meu dia preenchem a área útil inteira, igual às outras abas (sem trava de largura) */
+ html:root body #app#app:is(.home-view,.journal-view){width:100%;max-width:none!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box}
+ html:root body #app#app:is(.home-view,.journal-view) :is(.v4-panel,.v4-page,.v4-page>section.v4-card,.v4-day>section.v4-card,.v4-day>.v4-two,.dt393-workspace,.dt395-native-home,.dt395-native-dia){width:100%!important;max-width:none!important;margin-left:0;margin-right:0;box-sizing:border-box}
 }
 
 /* v608 — logos oficiais (DiarioLogos) e bandeiras circulares */
