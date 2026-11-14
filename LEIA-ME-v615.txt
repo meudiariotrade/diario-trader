@@ -1,0 +1,6 @@
+DIÁRIO DE TRADER — v615 (Panorama)
+
+- Imagem do Panorama: logos oficiais (brapi/TradingView --big) carregados como data URL base64 e desenhados em círculo; funciona igual no iPhone e não bloqueia o canvas.
+- Logos do Panorama pré-carregados em segundo plano ao abrir o app (a imagem já sai com eles na 1ª vez).
+- SID (CSN), Santander, Xangai e Petróleo WTI mapeados.
+- Removido o rodapé técnico ("Consulta do panorama…") de fora do card.
