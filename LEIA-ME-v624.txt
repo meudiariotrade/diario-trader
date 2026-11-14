@@ -1,0 +1,10 @@
+v624
+- Desktop (≥ 1024 px): Cotações abre direto no Terminal de 3 colunas, sem a barra de categorias nem o seletor Terminal | Lista. As categorias voltam ao digitar na busca. Celular sem mudanças.
+- Botão Panorama na barra do Terminal (mesma imagem e modal da aba ADRs).
+- Finnhub ao vivo para EUA, ADRs e moedas (EWZ, SPY, QQQ, DIA, IAU, IVV, AAPL, MSFT, NVDA, AMZN, META, TSLA, GOOGL, PBR, VALE, ITUB, BBD, ABEV, ETFs do barômetro e fatores; USD/BRL, EUR/USD, USD/JPY, GBP/USD, USD/MXN, USD/ZAR, USD/CNY).
+  Cascata: WebSocket → (limite de conexão) REST /quote a cada 20 s → TradingView. Se o Terminal já tiver o socket da Finnhub aberto, o app usa o mesmo. Fora do pregão vale o TradingView.
+  Chave: secret FINNHUB_API_KEY (ambiente da função ou Vault), entregue pela função finnhub-token só para quem está logado; sem ela, usa a chave já salva no Terminal.
+- Selo "Finnhub · Tempo real" (ou "TradingView" no fallback) e flash a cada tick: fita superior (USD/BRL e EWZ), Terminal e listas do celular.
+- Clique em qualquer ativo do Terminal abre a gaveta de 600 px com o gráfico interativo do TradingView (tema escuro).
+- Ctrl + K (Cmd + K no Mac) ou botão no topo: ir para abas, abrir gráfico de um ativo ou rodar comando da aba Análises (ex.: ANALISE PETR4). Na aba Terminal o Ctrl + K continua no comando dele.
+- Modo Monitor: só a grade em tela cheia; Esc ou "Sair do Modo Monitor" volta.

@@ -5119,6 +5119,7 @@ const IC = (e) =>
     ["ETH-USD", "ETH"],
     ["SOL-USD", "SOL"],
     ["XRP-USD", "XRP"],
+    ["EWZ", "EWZ"],
     ["CL=F", "WTI"],
     ["GC=F", "OURO"],
     ...[

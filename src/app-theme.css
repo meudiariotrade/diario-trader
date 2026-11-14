@@ -2688,3 +2688,51 @@ html:root body #app .m623-src{margin:10px 0 0;font-size:11px;color:#5B6170}
 }
 @media (max-width:1023.98px){html:root body #app .m623-term,html:root body #app .m623-src{display:none}}
 @media (min-width:1024px){html:root body #app .m623-src .m623-dot{display:inline-block;vertical-align:middle;margin:0 2px}}
+/* v624 — Desktop: categorias só ao buscar, Panorama/Modo Monitor na barra, gaveta de gráfico, Ctrl+K */
+html:root body #app .m624-b,html:root body .m624-kbtn{display:none}
+@media (min-width:1024px){
+html:root body #app#app #cotbox.m624-t.market-quotes .market-categories{display:none!important}
+html:root body #app .market-tools .m624-b{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;background:#11141B;border:1px solid #1E232E;border-radius:6px;color:#E6E8EE;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+html:root body #app .market-tools .m624-b:hover{background:#181C26;border-color:#D4A017;color:#D4A017}
+html:root body .dt393-topactions .m624-kbtn{display:inline-flex!important;flex-direction:row!important;width:auto!important;white-space:nowrap;align-items:center;gap:2px;min-height:32px;padding:0 10px;margin-right:4px;background:#11141B;border:1px solid #1E232E;border-radius:6px;color:#8A90A0;font:600 12px ui-monospace,SFMono-Regular,Menlo,monospace;cursor:pointer}
+html:root body .dt393-topactions .m624-kbtn:hover{color:#D4A017;border-color:#D4A017}
+html:root body #app .m623-term [data-tv]{cursor:pointer}
+html:root body #app .m623-term .m623-r:focus-visible,html:root body #app .m623-fat span:focus-visible{outline:2px solid #D4A017;outline-offset:-2px}
+html:root body #app .m623-term .m606-row:not(.m606-cab),html:root body #app .m623-term .m606-mxc{cursor:pointer}
+html:root body #app .m623-term .m606-row:not(.m606-cab):hover{background:#181C26}
+html:root body #app .m623-sec header .bnc-selo{margin-left:auto}
+/* Modo Monitor: só a grade, ocupando a janela inteira */
+html:root body.m624-mon{overflow:hidden}
+html:root body #app .m623-term.m624-on{position:fixed;inset:0;z-index:9000;background:#0A0C10;padding:56px 12px 12px;overflow:auto;align-content:start}
+html:root body #app .m624-monbar{position:fixed;top:0;left:0;right:0;z-index:9001;display:flex;align-items:center;gap:14px;height:44px;padding:0 12px;background:#11141B;border-bottom:1px solid #1E232E}
+html:root body #app .m624-monbar>b{color:#D4A017;font-size:13px;white-space:nowrap}
+html:root body #app .m624-monbar .m624-hora{margin-left:auto;color:#8A90A0;font-size:12px;font-variant-numeric:tabular-nums}
+html:root body #app .m624-monbar button{min-height:32px;padding:0 12px;background:#181C26;border:1px solid #1E232E;border-radius:6px;color:#E6E8EE;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+html:root body #app .m624-monbar button:hover{border-color:#EF4444;color:#EF4444}
+html:root body #app .m624-monbar kbd{font:11px ui-monospace,monospace;color:#8A90A0;margin-left:4px}
+/* Gaveta lateral com o gráfico TradingView */
+html:root body #m624-drawer{position:fixed;inset:0;z-index:9500}
+html:root body #m624-drawer .m624-bk{position:absolute;inset:0;background:rgba(10,12,16,.55)}
+html:root body #m624-drawer .m624-sheet{position:absolute;top:0;right:0;bottom:0;width:600px;max-width:100vw;display:flex;flex-direction:column;background:#0A0C10;border-left:1px solid #1E232E}
+html:root body #m624-drawer header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid #1E232E;background:#11141B}
+html:root body #m624-drawer header div{display:flex;flex-direction:column;min-width:0}
+html:root body #m624-drawer header b{color:#E6E8EE;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:root body #m624-drawer header small{color:#8A90A0;font-size:11px}
+html:root body #m624-drawer header button{width:40px;height:40px;flex:0 0 40px;background:transparent;border:1px solid #1E232E;border-radius:6px;color:#E6E8EE;cursor:pointer}
+html:root body #m624-drawer header button:hover{border-color:#D4A017;color:#D4A017}
+html:root body #m624-drawer .m624-chart{flex:1 1 auto;min-height:0}
+/* Busca rápida (Ctrl/Cmd + K) */
+html:root body #m624-pal{position:fixed;inset:0;z-index:9600}
+html:root body #m624-pal .m624-pbk{position:absolute;inset:0;background:rgba(10,12,16,.6)}
+html:root body #m624-pal .m624-pbox{position:relative;width:min(640px,calc(100vw - 32px));margin:12vh auto 0;background:#11141B;border:1px solid #1E232E;border-radius:6px;overflow:hidden}
+html:root body #m624-pal input{width:100%;box-sizing:border-box;height:52px;padding:0 16px;background:#0A0C10;border:0;border-bottom:1px solid #1E232E;color:#E6E8EE;font-size:16px;outline:none}
+html:root body #m624-pal .m624-pl{max-height:52vh;overflow:auto;padding:4px}
+html:root body #m624-pal .m624-pl button{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:0 10px;background:transparent;border:0;border-radius:4px;color:#C9CDD6;text-align:left;cursor:pointer}
+html:root body #m624-pal .m624-pl button.on,html:root body #m624-pal .m624-pl button:hover{background:#181C26;color:#E6E8EE}
+html:root body #m624-pal .m624-pt{flex:0 0 64px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#D4A017}
+html:root body #m624-pal .m624-pl b{white-space:nowrap}
+html:root body #m624-pal .m624-pl small{margin-left:auto;color:#8A90A0;font-size:11px;white-space:nowrap}
+html:root body #m624-pal .m624-pv{padding:14px;color:#8A90A0;font-size:13px;margin:0}
+html:root body #m624-pal .m624-pdica{margin:0;padding:8px 12px;border-top:1px solid #1E232E;color:#5B6170;font-size:11px}
+html:root body #m624-pal kbd{font:11px ui-monospace,monospace;padding:1px 5px;border:1px solid #1E232E;border-radius:4px;color:#8A90A0}
+@media (min-width:1024px){html:root body #app#app .market-quotes .market-tools{grid-template-columns:minmax(0,1fr) 44px minmax(130px,auto);grid-auto-flow:column;grid-auto-columns:auto}}
