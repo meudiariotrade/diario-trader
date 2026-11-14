@@ -1,0 +1,4 @@
+DIÁRIO DE TRADER — v613 (Panorama)
+
+- Imagem do Panorama do mercado (app) com os logos oficiais do brapi/TradingView em todas as linhas: EWZ, ADRs, índices, futuros, commodities e cripto (antes ficavam os círculos com letras).
+- Carregamento dos logos mais rápido: os conhecidos baixam na hora e os novos são resolvidos em paralelo; também vale para o panorama guardado.
