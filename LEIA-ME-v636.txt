@@ -1,0 +1,3 @@
+v636 — Replay: Diário do treino
+- Setup escolhido na boleta e salvo em cada trade; motivo da saída registrado sozinho.
+- Relatório por setup, por horário da entrada e por tipo de saída: trades, acerto, pts, R$ e média em vezes o risco.

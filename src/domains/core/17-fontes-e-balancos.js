@@ -20029,7 +20029,7 @@ ${
 ${
   d
     ? `<div class="rpy7-risco">${rpyQtdHtml()}<span class="rpy7-posinfo" id="rpy-posinfo">${rpyPosInfo()}</span><button type="button" data-rpy="be">Stop no 0 a 0</button></div>`
-    : `<div class="rpy7-risco">${rpyQtdHtml()}<span class="rpy7-grp"><label for="rpystd">Stop</label><input id="rpystd" inputmode="decimal" placeholder="auto" value="${RPY.stD ?? ""}" aria-label="Stop em pontos"><span class="rpy7-pre" aria-label="Stop rápido em pontos">${preset("s")}</span></span><span class="rpy7-grp"><label for="rpyald">Alvo</label><input id="rpyald" inputmode="decimal" placeholder="pts" value="${RPY.alD ?? ""}" aria-label="Alvo em pontos"><span class="rpy7-pre" aria-label="Alvo rápido em pontos">${preset("a")}</span></span><small class="mut">em pontos</small></div>`
+    : `<div class="rpy7-risco">${rpyQtdHtml()}${typeof rpySetupHtml === "function" ? rpySetupHtml() : ""}<span class="rpy7-grp"><label for="rpystd">Stop</label><input id="rpystd" inputmode="decimal" placeholder="auto" value="${RPY.stD ?? ""}" aria-label="Stop em pontos"><span class="rpy7-pre" aria-label="Stop rápido em pontos">${preset("s")}</span></span><span class="rpy7-grp"><label for="rpyald">Alvo</label><input id="rpyald" inputmode="decimal" placeholder="pts" value="${RPY.alD ?? ""}" aria-label="Alvo em pontos"><span class="rpy7-pre" aria-label="Alvo rápido em pontos">${preset("a")}</span></span><small class="mut">em pontos</small></div>`
 }`
 }</div>`;
 }
@@ -20064,7 +20064,7 @@ function rpySessoesHtml() {
     const k = base.indexOf('<div class="card"><b>Seu histórico de replay</b>');
     const setup = k >= 0 ? base.slice(0, k) : base,
       hist = k >= 0 ? base.slice(k) : "";
-    return rpyJogoHtml() + setup + rpyCsvHtml() + rpySessoesHtml() + hist;
+    return rpyJogoHtml() + setup + rpyCsvHtml() + rpySessoesHtml() + (typeof rpyDiarioHtml === "function" ? rpyDiarioHtml() : "") + hist;
   };
 }
 
@@ -21438,3 +21438,59 @@ setInterval(() => {
   const t = rpyCdTexto();
   el.textContent !== t && (el.textContent = t);
 }, 250);
+
+/* =====================================================================================
+   v636 — Diário do treino: setup de cada trade e relatório por setup e por horário.
+   ===================================================================================== */
+function rpySetups() {
+  const v = new Set(["Pullback na MME 9", "Rompimento", "Reversão", "VWAP", "Topo/fundo", "Outro"]);
+  try {
+    (S.trades || []).forEach((t) => t.setup && v.add(String(t.setup)));
+  } catch {}
+  return [...v].slice(0, 20);
+}
+function rpySetupHtml() {
+  const at = RPY.setup || "";
+  return `<span class="rpy7-grp"><label for="rpyset">Setup</label><select id="rpyset" aria-label="Setup do trade"><option value="">—</option>${rpySetups().map((x) => `<option${x === at ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></span>`;
+}
+document.addEventListener("change", (e) => {
+  e.target && e.target.id === "rpyset" && (RPY.setup = e.target.value);
+});
+{
+  const antes = rpyFecha;
+  rpyFecha = function () {
+    const n0 = (RPY.ops || []).length,
+      r = antes.apply(this, arguments),
+      op = (RPY.ops || [])[n0];
+    if (op) {
+      op.setup = RPY.setup || "";
+      try {
+        save();
+      } catch {}
+    }
+    return r;
+  };
+}
+function rpyDiarioHtml() {
+  const L = (S.replay || []).filter((o) => o.ts);
+  if (L.length < 1) return "";
+  const mult = (a) => (/^WIN/.test(a) ? 0.2 : /^WDO/.test(a) ? 10 : /^IND/.test(a) ? 1 : /^DOL/.test(a) ? 50 : 1),
+    rs = (o) => (o.rs != null ? o.rs : (o.pts || 0) * mult(o.a) * (o.q || 1));
+  const grupo = (f) => {
+    const M = new Map();
+    L.forEach((o) => {
+      const k = f(o);
+      const g = M.get(k) || { n: 0, g: 0, pts: 0, rs: 0, r: 0 };
+      ((g.n += 1), (g.g += o.pts > 0 ? 1 : 0), (g.pts += o.pts || 0), (g.rs += rs(o)), (g.r += o.r || 0));
+      M.set(k, g);
+    });
+    return [...M].sort((a, b) => b[1].rs - a[1].rs);
+  };
+  const tab = (tit, linhas) =>
+    `<div style="overflow-x:auto"><table class="rpy7-tb"><thead><tr><th>${tit}</th><th>Trades</th><th>Acerto</th><th>Pts</th><th>R$</th><th>Média × risco</th></tr></thead><tbody>${linhas
+      .map(([k, g]) => `<tr><td>${esc(k)}</td><td>${g.n}</td><td>${Math.round((g.g / g.n) * 100)}%</td><td class="${g.pts >= 0 ? "g" : "r"}">${rpyPts(g.pts)}</td><td class="${g.rs >= 0 ? "g" : "r"}">${rpyRs(g.rs)}</td><td class="${g.r >= 0 ? "g" : "r"}">${(g.r / g.n).toFixed(2).replace(".", ",")}×</td></tr>`)
+      .join("")}</tbody></table></div>`;
+  const melhor = grupo((o) => o.setup || "Sem setup").find(([k, g]) => k !== "Sem setup" && g.n >= 5 && g.r > 0);
+  return `<div class="card rpy7-hist"><b>Diário do treino</b><small class="mut" style="display:block;margin:2px 0 8px">Escolha o setup na boleta antes de entrar; o motivo da saída (stop, alvo, zerado) é registrado sozinho.${melhor ? ` Seu melhor setup até aqui: <b>${esc(melhor[0])}</b>.` : ""}</small>
+${tab("Setup", grupo((o) => o.setup || "Sem setup"))}<div style="height:10px"></div>${tab("Horário da entrada", grupo((o) => (o.he ? o.he.slice(0, 2) + "h" : "–")).sort((a, b) => (a[0] > b[0] ? 1 : -1)))}<div style="height:10px"></div>${tab("Saída", grupo((o) => o.mot || "–"))}</div>`;
+}
