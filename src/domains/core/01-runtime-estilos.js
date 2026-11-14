@@ -1345,13 +1345,16 @@ try {
                     p && typeof p == "object" && !Array.isArray(p)
                       ? p
                       : { t: p },
-                  g = x(d.t, k[s] - 2 * j, d.s || y, d.f || "r").map((h) => ({
+                  // v618: logo circular opcional na célula ({ t, lg: { img, r } }), sem mudar o resto da tabela
+                  lgw = d.lg && d.lg.img ? (d.s || y) * 1.3 * (d.lg.r || 1) + 4 : 0,
+                  g = x(d.t, k[s] - 2 * j - lgw, d.s || y, d.f || "r").map((h) => ({
                     text: h,
                     s: d.s || y,
                     f: d.f || "r",
                     c: d.c || H.tx,
                   }));
                 return (
+                  (d.lgw = lgw),
                   d.sub &&
                     g.push(
                       ...x(d.sub, k[s] - 2 * j, y - 1.2, "r").map((h) => ({
@@ -1380,6 +1383,11 @@ try {
               i % 2 && u.rect(v, u.y, u.CW, s, { fill: H.cz });
               let p = v;
               (l.forEach((d, g) => {
+                if (d.lgw && b === 0)
+                  try {
+                    const hh = (d.s || y) * 1.3;
+                    u.pg.drawImage(d.lg.img, { x: p + j, y: u.H - (u.y + j - 1) - hh, width: hh * (d.lg.r || 1), height: hh });
+                  } catch {}
                 (d.fill &&
                   u.rect(p + 1, u.y + 1, k[g] - 2, s - 2, { fill: d.fill }),
                   d.lines
@@ -1387,7 +1395,7 @@ try {
                     .forEach((h, q) =>
                       u.t(
                         h.text,
-                        V[g].al === "r" ? p + k[g] - j : p + j,
+                        V[g].al === "r" ? p + k[g] - j : p + j + (d.lgw || 0),
                         u.y + j + q * o,
                         {
                           ...h,
