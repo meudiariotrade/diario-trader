@@ -1,0 +1,4 @@
+v620
+- Logos do TradingView (IBOV, WIN, WDO, USDBRL, bandeiras) voltam a sair no PDF e no PNG.
+- Revista: 4 blocos na mesma página, WIN/WDO no quadro final, bandeiras na agenda.
+- Revista e Jornal: vencimentos do calendário da aba Opções.
