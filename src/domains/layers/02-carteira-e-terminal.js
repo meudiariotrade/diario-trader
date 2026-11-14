@@ -4578,7 +4578,13 @@ try {
     try {
       typeof GOR < "u" &&
         GOR &&
-        ((GOR.bal = () => {
+        ((GOR.noticias = () => {
+          state.news = "noticias";
+          try {
+            ((MKT.tab = "nt"), irPara("mercado"));
+          } catch {}
+        }),
+        (GOR.bal = () => {
           state.news = "balancos";
           try {
             ((MKT.tab = "nt"), irPara("mercado"));

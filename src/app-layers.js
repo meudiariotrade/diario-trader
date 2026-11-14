@@ -15337,6 +15337,21 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
         const $ = s.DIARIO_DEMO
           ? "DIÁRIO DE TRADER / DADOS FICTÍCIOS"
           : "DIÁRIO DE TRADER";
+        if (n === "giro") {
+          // v616: o topo editorial já traz "DIÁRIO DE TRADER / Giro do mercado"; aqui fica só a referência, sem faixa vazia.
+          (e(h, (k ? "Referência: " : "Captura: ") + d, 48, 44, 23, r.mut, 400, "left", Q - 96), h.restore());
+          const corte = Math.max(0, v - 30 - 64);
+          if (corte < 20) return ((h.fillStyle = r.line), h.fillRect(48, v - 1, Q - 96, 1), a);
+          const N2 = document.createElement("canvas");
+          ((N2.width = Q), (N2.height = a.height - corte));
+          const c2 = N2.getContext("2d");
+          (c2.drawImage(a, 0, 0, Q, 64, 0, 0, Q, 64),
+            c2.drawImage(a, 0, 64 + corte, Q, a.height - 64 - corte, 0, 64, Q, a.height - 64 - corte),
+            (c2.fillStyle = r.line),
+            c2.fillRect(48, 64 + 29, Q - 96, 1));
+          a.__folga && (N2.__folga = a.__folga);
+          return N2;
+        }
         return (
           e(h, $, 48, 45, 22, r.ac, 700),
           e(h, I, 48, 104, 42, r.tx, 700, "left", Q - 96),
@@ -25874,7 +25889,13 @@ try {
     try {
       typeof GOR < "u" &&
         GOR &&
-        ((GOR.bal = () => {
+        ((GOR.noticias = () => {
+          state.news = "noticias";
+          try {
+            ((MKT.tab = "nt"), irPara("mercado"));
+          } catch {}
+        }),
+        (GOR.bal = () => {
           state.news = "balancos";
           try {
             ((MKT.tab = "nt"), irPara("mercado"));
