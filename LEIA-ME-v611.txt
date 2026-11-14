@@ -1,0 +1,5 @@
+DIÁRIO DE TRADER — v611 (Início desktop)
+
+- Blocos do Início no desktop em colunas balanceadas (2 no notebook, 3 no monitor grande): sem vãos vazios ao lado de Últimos trades e das posições abertas.
+- Card de posição aberta: resultado e linha de vencimento em linhas próprias, sem sobreposição.
+- Largura total, logos circulares e layout do celular sem mudanças.
