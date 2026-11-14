@@ -7267,7 +7267,11 @@ try {
       let txt = await r.text();
       if (!/<svg[\s>]/i.test(txt)) throw new Error("não é SVG");
       txt = txt.replace(/<script[\s\S]*?<\/script>/gi, "");
-      if (!/\swidth=/.test(txt.slice(0, txt.indexOf(">")))) txt = txt.replace(/<svg/i, '<svg width="56" height="56"');
+      // v620: os SVGs do TradingView começam com "<!-- by TradingView -->"; a checagem olha a própria tag <svg>
+      // (antes lia o comentário e duplicava width/height, o que invalidava o SVG e o logo não era desenhado).
+      txt = txt.replace(/<!--[\s\S]*?-->/g, "").trim();
+      const abre = (txt.match(/<svg\b[^>]*>/i) || [""])[0];
+      if (!/\swidth=/.test(abre)) txt = txt.replace(/<svg\b/i, '<svg width="56" height="56"');
       // v615: data URL base64 (não usa blob:, não "suja" o canvas e funciona igual no Safari/iPhone).
       const b = new TextEncoder().encode(txt);
       let bin = "";
