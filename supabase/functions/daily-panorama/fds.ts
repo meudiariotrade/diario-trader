@@ -3,9 +3,10 @@
 // manchetes do fim de semana (Google Notícias). Mesmo visual escuro/âmbar do Panorama.
 import { svgDe } from './resolve.ts';
 export const FDS_CRIPTO = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'DOGE', 'ADA', 'AVAX', 'LINK', 'SUI', 'TON', 'DOT'];
+// v640: sábado 00:00 até domingo 19:59 (Brasília). Domingo 20:00 os futuros dos EUA reabrem → Panorama normal.
 export const ehFimDeSemana = (d = new Date()) => {
-  const w = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).format(d);
-  return w === 'Sat' || w === 'Sun';
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short', hour: '2-digit', hourCycle: 'h23' }).formatToParts(d).map((x) => [x.type, x.value]));
+  return p.weekday === 'Sat' || (p.weekday === 'Sun' && +p.hour < 20);
 };
 type Cripto = { k: string; px: number; d1: number; hi: number; lo: number };
 const esc = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -45,10 +46,11 @@ const PESO: [RegExp, number][] = [
   [/\b(fed|juros|inflação|inflation|tarifa|tariff|petr[oó]leo|oil|opep|opec|d[oó]lar|bolsa|wall street|mercados?)\b/i, 3],
   [/\b(aeroporto|airport|voos|flights|shutdown|paralisa|greve|fechad)/i, 3], [/\b(bitcoin|cripto|crypto|ethereum|binance)/i, 2],
   [/\b(lula|haddad|banco central|copom|selic|ibovespa)\b/i, 2],
-  [/^(como|por que|veja|confira|saiba|entenda|quiz|horóscopo)\b|novela|bbb|futebol|receita|celebridade/i, -6],
+  // v640: fora opinião, colunas, estudos e conteúdo atemporal
+  [/^(estudo|pesquisa|como|por que|porque|guia|veja|confira|saiba|entenda|o que|quem|quanto|qual|dicas?|quiz|hor[oó]scopo|opini[aã]o|an[aá]lise|artigo|coluna|podcast|v[ií]deo|ao vivo|newsletter)\b|\?$|\b(opini[aã]o|coluna|editorial|podcast|webinar|curso|e-?book|ranking|melhores|novela|bbb|futebol|receita|celebridade|hor[oó]scopo)\b/i, -10],
 ];
 export async function manchetes(): Promise<string[]> {
-  const limite = Date.now() - 48 * 3600e3, itens: { t: string; f: string; s: number; d: number }[] = [];
+  const limite = Date.now() - 24 * 3600e3, /* v640: só as últimas 24 horas */ itens: { t: string; f: string; s: number; d: number }[] = [];
   await Promise.all(FEEDS.map(async ([fonte, url]) => {
     try {
       const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/rss+xml, application/xml, text/xml' }, signal: AbortSignal.timeout(7000) });
@@ -70,7 +72,7 @@ export async function manchetes(): Promise<string[]> {
   const out: string[] = [], vistos: string[] = [];
   const chave = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '').split(' ').filter((w) => w.length > 4);
   for (const it of itens) {
-    if (it.s < 2) break;
+    if (it.s < 3) break; // só manchete factual com tema de mercado/geopolítica
     const k = chave(it.t);
     if (vistos.some((v) => { const o = v.split('|'); return k.filter((w) => o.includes(w)).length >= 3; })) continue;
     vistos.push(k.join('|'));
