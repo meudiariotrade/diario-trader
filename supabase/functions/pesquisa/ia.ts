@@ -1,11 +1,11 @@
 // v622: IA da aba Análises pelo Roteador Multi-IA compartilhado (supabase/functions/_shared/ai-router.ts):
 // rodízio e failover entre Gemini, Groq, Cerebras, OpenRouter, Mistral, Hugging Face, DeepSeek e Pollinations.
-import { gerarTexto } from '../_shared/ai-router.ts';
+import { gerarTexto, envComVault } from '../_shared/ai-router.ts';
 type Env = (key: string) => string | undefined;
 
 /** v622: Roteador Multi-IA compartilhado (supabase/functions/_shared/ai-router.ts). */
 export async function gerarIA(system: string, prompt: string, env: Env, opt: { json?: boolean; ate?: number; fetcher?: typeof fetch } = {}) {
-  const r = await gerarTexto(system, prompt, { json: opt.json, ate: opt.ate || Date.now() + 50_000, env, fetcher: opt.fetcher, porTentativaMs: 30_000 });
+  const r = await gerarTexto(system, prompt, { json: opt.json, ate: opt.ate || Date.now() + 50_000, env: await envComVault(env, opt.fetcher || fetch), fetcher: opt.fetcher, porTentativaMs: 30_000 });
   return { texto: r.texto, modelo: r.rotulo };
 }
 
