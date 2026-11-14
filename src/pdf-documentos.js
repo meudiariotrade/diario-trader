@@ -15,6 +15,38 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
   ((n.s = n.serif || (await s.embedFont(t.StandardFonts.TimesRomanBold))),
     (n.si =
       n.serifItalic || (await s.embedFont(t.StandardFonts.TimesRomanItalic))));
+  // v608: logos oficiais (brapi / TradingView) e bandeiras, rasterizados em PNG e embutidos uma vez por ativo.
+  const LGM = {},
+    LGN = (k) => (window.DiarioLogos ? window.DiarioLogos.norm(k) : String(k || "").toUpperCase()),
+    jvPaisISO = (x) => {
+      const t = String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      return /eua|estados unidos|\bus\b|usa/.test(t) ? "US" : /brasil|\bbr\b/.test(t) ? "BR" : /china/.test(t) ? "CN" : /zona do euro|europa|\beu\b|euro/.test(t) ? "EU" : /alemanha/.test(t) ? "DE" : /reino unido|inglaterra/.test(t) ? "GB" : /japao/.test(t) ? "JP" : /canada/.test(t) ? "CA" : /mexico/.test(t) ? "MX" : /franca/.test(t) ? "FR" : /italia/.test(t) ? "IT" : /australia/.test(t) ? "AU" : /india/.test(t) ? "IN" : /chile/.test(t) ? "CL" : /argentina/.test(t) ? "AR" : /coreia/.test(t) ? "KR" : /suica/.test(t) ? "CH" : /^[a-z]{2}$/.test(t) ? t.toUpperCase() : "";
+    },
+    jvTkTexto = (x) => (String(x || "").match(/\b[A-Z]{4}\d{1,2}\b/) || [])[0] || "";
+  try {
+    if (window.DiarioLogos && !window.DIARIO_DEMO) {
+      try { typeof m606Carrega == "function" && (await Promise.race([m606Carrega(), new Promise((r) => setTimeout(r, 6e3))])); } catch {}
+      const ks = new Set();
+      try { const v = typeof RK < "u" && RK.v; v && [...(v.altas || []), ...(v.baixas || [])].forEach((x) => x && x.tk && ks.add(x.tk)); } catch {}
+      try { (e.materias || []).forEach((x) => { const tk = typeof jeTk == "function" ? jeTk(x) : ""; tk && /^[A-Z]{4}\d{1,2}$/.test(tk) && ks.add(tk); }); } catch {}
+      try { (typeof jvpLinhas == "function" ? jvpLinhas() : []).forEach((x) => x.tk && ks.add(x.tk)); } catch {}
+      (e.agenda || []).forEach((a) => { const tk = jvTkTexto(a.evento); tk && ks.add(tk); const pi = jvPaisISO(a.pais); pi && ks.add("PAIS:" + pi); });
+      await Promise.race([
+        Promise.all([...ks].map(async (k) => {
+          const pg = await window.DiarioLogos.png(k, 96);
+          if (pg) try { LGM[LGN(k)] = { img: await s.embedPng(pg.bytes), r: pg.w / pg.h }; } catch {}
+        })),
+        new Promise((r) => setTimeout(r, 12e3)),
+      ]);
+    }
+  } catch {}
+  /** Desenha o logo (círculo; pares com 2 bandeiras) com topo em yTop e altura hgt; devolve a largura usada (0 se não houver). */
+  const LGD = (k, x, yTop, hgt) => {
+    const L = k && LGM[LGN(k)];
+    if (!L) return 0;
+    try { o.pg.drawImage(L.img, { x, y: i - yTop - hgt, width: hgt * L.r, height: hgt }); } catch { return 0; }
+    return hgt * L.r;
+  };
   const d = {
       nv: l("#1f2023"),
       nv2: l("#313338"),
@@ -541,10 +573,11 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
         };
       (We(),
         Le.forEach((Re, K) => {
-          const pe = Re.map((ie, R) =>
+          const lgw = Re.map((ie) => (ie && typeof ie == "object" && ie.lg && LGM[LGN(ie.lg)] ? 9 * LGM[LGN(ie.lg)].r + 3 : 0)),
+            pe = Re.map((ie, R) =>
               b(
                 typeof ie == "object" ? ie.t : ie,
-                Ue[R] - 10,
+                Ue[R] - 10 - lgw[R],
                 8,
                 (typeof ie == "object" && ie.f) || "r",
               ),
@@ -555,8 +588,9 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
           let re = c;
           (pe.forEach((ie, R) => {
             const z = typeof Re[R] == "object" ? Re[R] : {};
+            lgw[R] && LGD(z.lg, re + 5, o.y + 4.5, 9);
             (ie.forEach((oe, me) =>
-              h(oe, re + 5, o.y + 5 + me * 11, {
+              h(oe, re + 5 + lgw[R], o.y + 5 + me * 11, {
                 s: 8,
                 f: z.f || "r",
                 c: z.c || d.tx,
@@ -750,11 +784,12 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
               h(ie, oe + 10, pe + 9, { s: 7.4, f: "b", c: R }),
               re.forEach((me, be) => {
                 const X = pe + 28 + be * 16;
-                (h(me.tk, oe + 10, X, { s: 8.8, f: "b", c: d.tx }),
-                  h(String(me.nome || ""), oe + 62, X + 0.5, {
+                const lw = LGD(me.tk, oe + 10, X - 0.5, 11) ? 14 : 0;
+                (h(me.tk, oe + 10 + lw, X, { s: 8.8, f: "b", c: d.tx }),
+                  h(String(me.nome || ""), oe + 62 + lw, X + 0.5, {
                     s: 7.6,
                     c: d.mu,
-                    w: Q - 130,
+                    w: Q - 130 - lw,
                   }),
                   h(
                     (
@@ -1158,13 +1193,14 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
       (ue(c, ze, p, ke), Me("Destaques do trimestre", c + 10, ze + 10));
       let Ue = ze + 34;
       (Le.forEach((We) => {
-        (o.rr(c + 10, Ue, 56, 16, { fill: d.nv, r: 3 }),
-          h(We.tk, c + 38, Ue + 4.5, {
+        const lw = LGD(We.tk, c + 10, Ue, 16) ? 20 : 0;
+        (o.rr(c + 10 + lw, Ue, 56 - lw, 16, { fill: d.nv, r: 3 }),
+          h(We.tk, c + 38 + lw / 2, Ue + 4.5, {
             s: 7.4,
             f: "b",
             c: d.wh,
             al: "c",
-            w: 52,
+            w: 52 - lw,
           }));
         let Re = Ue;
         (We.tl.forEach((K) => {
@@ -1417,7 +1453,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
               { l: "Variação", w: 28 },
             ],
             Le.map((ze) => [
-              { t: ze.tk, f: "b" },
+              { t: ze.tk, f: "b", lg: ze.tk },
               ze.dia.slice(8, 10) + "/" + ze.dia.slice(5, 7),
               ze.dir > 0 ? "alta" : ze.dir < 0 ? "queda" : "neutra",
               jvF2(ze.px),
@@ -1630,6 +1666,31 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
         sub: "O que movimenta o mundo",
       }),
       Ve(dt.slice(0, 8), !0),
+      (() => {
+        // v608: Termômetro Fed Watch (futuros de Fed Funds, método CME FedWatch) na seção Mercado internacional.
+        let fw = null;
+        try { fw = typeof M606 < "u" && M606.v && M606.v.fed; } catch {}
+        if (!fw || !fw.cenarios || !fw.cenarios.length) return;
+        const [p0, p1] = fw.faixa, nf2 = (x) => x.toFixed(2).replace(".", ","),
+          base = [-25, 0, 25].map((mv) => ({ mov: mv, p: (fw.cenarios.find((x) => x.mov === mv) || {}).p || 0 })),
+          extra = fw.cenarios.filter((x) => ![-25, 0, 25].includes(x.mov)),
+          L = [...base, ...extra].sort((a, b) => a.mov - b.mov),
+          rot = (mv) => (mv === 0 ? "Manter" : (mv < 0 ? "Cortar " : "Subir +") + mv + " bps") + " · " + nf2(p0 + mv / 100) + "–" + nf2(p1 + mv / 100) + "%",
+          H = 40 + L.length * 18 + 18;
+        J(H + 6);
+        const y0 = o.y;
+        (ue(c, y0, p, H), Me("Fed Watch · FOMC " + fw.reuniao.split("-").reverse().slice(0, 2).join("/"), c + 10, y0 + 10));
+        L.forEach((x, ix) => {
+          const yy = y0 + 34 + ix * 18, bw = (p - 260) * Math.min(1, x.p / 100),
+            cor = x.mov < 0 ? d.ln : x.mov > 0 ? d.dn : d.gr;
+          (h(rot(x.mov), c + 12, yy, { s: 8.4, f: x.p >= 50 ? "b" : "r", c: d.tx }),
+            o.rect(c + 200, yy + 1, p - 260, 7, { fill: d.cz }),
+            bw > 0.5 && o.rect(c + 200, yy + 1, bw, 7, { fill: cor }),
+            h((x.p || 0).toFixed(1).replace(".", ",") + "%", r - c - 12, yy, { s: 8.4, f: "b", c: d.tx, al: "r" }));
+        });
+        h("Probabilidades implícitas nos futuros de Fed Funds (CBOT ZQ), método CME FedWatch. Faixa atual estimada pela taxa efetiva implícita.", c + 12, y0 + H - 14, { s: 6.6, c: d.mu, w: p - 24 });
+        o.y = y0 + H + f;
+      })(),
       at.mundo.forEach((Le) => de(Le)),
       qe.length)
     ) {
@@ -1813,7 +1874,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
           ],
           ke.map((Re) => [
             { t: Re.quando, f: "b" },
-            Re.pais || "–",
+            { t: Re.pais || "–", lg: jvPaisISO(Re.pais) ? "PAIS:" + jvPaisISO(Re.pais) : "" },
             Re.evento +
               (Re.por_que
                 ? `
@@ -1856,8 +1917,8 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
       const pe = o.y;
       (ue(c, pe, p, K), Me("Eventos corporativos", c + 10, pe + 10));
       let Q = pe + 34;
-      (Re.forEach((re) => {
-        (o.circ(c + 16, Q + 3.5, 2, { fill: d.gr }),
+      (Re.forEach((re, ix) => {
+        (LGD(jvTkTexto(Le[ix] && Le[ix].evento), c + 10, Q - 0.5, 10) || o.circ(c + 16, Q + 3.5, 2, { fill: d.gr }),
           re.forEach((ie) => {
             (h(ie, c + 24, Q, { s: 8.6, c: d.tx }), (Q += 11.5));
           }),
