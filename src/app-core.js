@@ -46121,6 +46121,51 @@ const usoTxt = () =>
     );
   };
 }
+/** v616: antes de exportar o Giro, aguarda logos (base64), a foto editorial do topo e as fontes. */
+async function grPrepara(a) {
+  const espera = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(r, ms))]);
+  try {
+    if (window.DiarioLogos) {
+      Object.values(GR_LOGO).forEach((k) => k && window.DiarioLogos.imagem(k));
+      await espera(window.DiarioLogos.carregaPendentes(), 1e4);
+    }
+  } catch {}
+  try { window.TraderEditorialV376 && (await espera(window.TraderEditorialV376.ensure(), 8e3)); } catch {}
+  try { document.fonts && (await espera(document.fonts.ready, 4e3)); } catch {}
+}
+// v616 — Giro do mercado: logos oficiais (data URL base64 via DiarioLogos) nos cards e destaque de tickers/variações no texto.
+const GR_LOGO = { ibov: "IBOV", dolar: "PAIS:US", dxy: "PAIS:US", di29: "DI1F29", spx: "SPX", ndq: "NDX", ewz: "EWZ", brent: "BRENT", ouro: "OURO", btc: "BTC", sgx: null };
+function grLogo(c, k, x, y, d) {
+  const chave = GR_LOGO[k], im = chave && window.DiarioLogos ? window.DiarioLogos.imagem(chave) : null;
+  c.save();
+  c.beginPath();
+  c.arc(x + d / 2, y + d / 2, d / 2, 0, Math.PI * 2);
+  c.closePath();
+  if (im) (c.clip(), c.drawImage(im, x, y, d, d));
+  else {
+    // círculo escuro institucional (borda âmbar) para ativos sem logo oficial
+    ((c.fillStyle = "#161B26"), c.fill(), (c.lineWidth = 1.5), (c.strokeStyle = "rgba(245,158,11,0.45)"), c.stroke());
+    ((c.fillStyle = "#FBBF24"), (c.font = "700 " + Math.round(d * 0.36) + "px Inter, system-ui, sans-serif"), (c.textAlign = "center"), (c.textBaseline = "middle"));
+    c.fillText(k === "sgx" ? "Fe" : String(k || "").slice(0, 2).toUpperCase(), x + d / 2, y + d / 2 + 1);
+  }
+  c.restore();
+}
+const GR_DESTAQUE = /([A-Z]{4}\d{1,2}\b|\b(?:IBOV|WIN|WDO|DXY|EWZ|S&P 500|Nasdaq|Ibovespa|Dow Jones|VIX|DI\d?\b)|[+\-−]?\d+(?:[.,]\d+)?\s?%|R\$\s?[\d.]+(?:,\d+)?|US\$\s?[\d.]+(?:,\d+)?)/g;
+function grLinhaRica(c, fonte, txt, x, y, tam) {
+  let px = x;
+  c.save();
+  c.textAlign = "left";
+  for (const parte of String(txt).split(GR_DESTAQUE)) {
+    if (!parte) continue;
+    const forte = GR_DESTAQUE.test(parte);
+    GR_DESTAQUE.lastIndex = 0;
+    c.font = fonte(tam, forte);
+    c.fillStyle = forte ? "#ffffff" : "#26282b";
+    c.fillText(parte, px, y);
+    px += c.measureText(parte).width;
+  }
+  c.restore();
+}
 function grDesenha(e) {
   const t = document.createElement("canvas").getContext("2d"),
     a = (g, h) =>
@@ -46234,7 +46279,7 @@ function grDesenha(e) {
     }),
     (v += 10),
     n.forEach((g) => {
-      (g && p(g, 56, v, { s: 27, c: "#26282b" }), (v += g ? 40 : 20));
+      (g && grLinhaRica(c, a, g, 56, v, 27), (v += g ? 40 : 20));
     }),
     r.length)
   ) {
@@ -46271,7 +46316,8 @@ function grDesenha(e) {
         C = v + k * 64;
       u(A, C, g, 54, 14, "#ffffff", "#efeeeb");
       const I = b.k.startsWith("di");
-      (p(b.n.replace(/ \(.*\)$/, ""), A + 18, C + 36, { s: 22, b: 1 }),
+      (grLogo(c, b.k, A + 14, C + 12, 30),
+        p(b.n.replace(/ \(.*\)$/, ""), A + 54, C + 36, { s: 22, b: 1 }),
         p(
           I
             ? (b.d1 >= 0 ? "+" : "") +
@@ -46333,6 +46379,7 @@ document.addEventListener("click", async (e) => {
     a = GR.v[loc().slice(0, 10) + t];
   if (a)
     try {
+      await grPrepara(a);
       const o = grDesenha(a),
         s = await new Promise((n) => o.toBlob(n, "image/jpeg", 0.92));
       ((IMG.blob = s),
