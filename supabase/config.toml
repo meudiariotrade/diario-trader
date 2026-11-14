@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.inbound-btg-note]
 verify_jwt = false
+
+[functions.mesa-macro]
+verify_jwt = false
