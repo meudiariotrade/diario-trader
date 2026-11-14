@@ -40923,3 +40923,30 @@ try {
 } catch (e) {
   console.error("[v522] falha em estabiliza-v503.js", e);
 }
+// v606 — US Market Barometer (3x3) no topo de Mercado > Análises > EUA. Instalado por último para ficar por fora dos outros invólucros da aba.
+try {
+  (() => {
+    const MARCA = 'data-usarea="us">EUA · Sazonalidade</button></div>';
+    let feito = !1;
+    const instala = () => {
+      if (feito || typeof vMercado != "function" || typeof m606BarHtml != "function") return;
+      feito = !0;
+      const base = vMercado;
+      vMercado = function () {
+        const h = base.apply(this, arguments);
+        try {
+          if (typeof h == "string" && MKT.tab === "lab" && h.includes('class="on" aria-pressed="true" data-usarea="us"') && h.includes(MARCA)) {
+            setTimeout(() => m606Carrega(), 0);
+            return h.replace(MARCA, MARCA + m606BarHtml());
+          }
+        } catch (e) {
+          console.warn("v606 barômetro", e);
+        }
+        return h;
+      };
+    };
+    document.readyState === "complete" ? setTimeout(instala, 0) : addEventListener("load", () => setTimeout(instala, 0));
+  })();
+} catch (e) {
+  console.error("[v606] barômetro EUA", e);
+}
