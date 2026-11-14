@@ -68977,6 +68977,8 @@ function cqAlertasHtml() {
         .join("")}</details>`
     : "";
 }
+// v626: o rótulo "Profit ao vivo" é só da ponte do Profit; Binance e Finnhub mostram a própria fonte.
+const cqFonteVivo = (a) => (a && a.bnc ? "Binance · Tempo real" : a && a.fh ? "Finnhub · Tempo real" : "Profit ao vivo");
 cqLinha = function (e, t) {
   t = e._aba || t;
   const a = cqPf(e, t),
@@ -68995,7 +68997,7 @@ cqLinha = function (e, t) {
       } catch {}
       return null;
     })();
-  return `<div class="cqr" data-market-symbol="${esc(e.s || e.c)}"${a && a.bnc ? ` data-bnc="${esc(String(e.c || "").toUpperCase())}"` : a && a.fh ? ` data-fh="${esc(fhSym(e.c))}"` : ""}${d ? ' data-ta-done="1"' : ""}>${d || `<span class="cqi" style="color:${n};background:color-mix(in srgb,${n} 16%,transparent)">${esc(r)}</span>`}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? (a.fechado ? ' · <span class="market-closed">FECHADO</span>' : ' · <span class="g">Profit ao vivo</span>') : ""}</small>${a ? `<small class="market-quote-time">Profit · ${esc(a.em ? new Date(a.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) + " BRT" : "horário não informado")}</small>` : cotacaoReferencia(e)}</div>
+  return `<div class="cqr" data-market-symbol="${esc(e.s || e.c)}"${a && a.bnc ? ` data-bnc="${esc(String(e.c || "").toUpperCase())}"` : a && a.fh ? ` data-fh="${esc(fhSym(e.c))}"` : ""}${d ? ' data-ta-done="1"' : ""}>${d || `<span class="cqi" style="color:${n};background:color-mix(in srgb,${n} 16%,transparent)">${esc(r)}</span>`}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? (a.fechado ? ' · <span class="market-closed">FECHADO</span>' : ` · <span class="g">${cqFonteVivo(a)}</span>`) : ""}</small>${a ? `<small class="market-quote-time">${a.fechado ? "Profit" : cqFonteVivo(a)} · ${esc(a.em ? new Date(a.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) + " BRT" : "horário não informado")}</small>` : cotacaoReferencia(e)}</div>
 <div class="cqp"><b>${o == null ? '<span class="mut">—</span>' : (e.un && e.un !== "%" ? "<small>" + esc(e.un) + "</small> " : "") + cqNum(o, e.dp) + (e.un === "%" ? "%" : "")}</b>${e.dabs != null && !a ? `<small class="${cls(e.dabs)}">${e.dabs > 0 ? "+" : ""}${cqNum(e.dabs, e.dp)}</small>` : ""}</div>
 <span class="cqv ${s == null ? "" : s > 0 ? "up" : s < 0 ? "dn" : ""}">${s == null ? "–" : (s > 0 ? "+" : "") + cqNum(s, 2) + "%"}</span><span class="cqac"><button class="cqb${i ? " on" : ""}" data-cqfav="${esc(e.s)}" data-ab="${esc(t)}" aria-label="Favorito">${i ? "★" : "☆"}</button><button class="cqb${l ? " on" : ""}" data-cqal="${esc(e.s)}" aria-label="Alerta de preço">🔔</button></span></div>`;
 };
@@ -69048,10 +69050,13 @@ function cqItens(category) {
   const busy = category === 'adr' ? !!AD.busy : !!CQ.loading[category] || CQ.busy === category;
   const error = CQ.errors[category] || (!data && !busy ? CQ.err : '');
   let content;
-  const mapa606 = CQ.vis === 'mapa';
+  // v626: no celular o Mapa mostra o heatmap da sub-aba; o panorama geral (12 termômetros) fica em Favoritos e no desktop.
+  const mapaSub = CQ.vis === 'mapa' && category !== 'fav' && !(typeof m623Desk === 'function' && m623Desk());
+  const mapa606 = CQ.vis === 'mapa' && !mapaSub;
   if (mapa606 || ['jur','fx'].includes(category)) setTimeout(()=>{ try { m606Carrega(); } catch {} },0);
   if (mapa606) content = m606MapaHtml();
   else if (category === 'adr') content = `<section id="adr" class="market-adrs">${adrHtml()}</section>${visible.length ? `<div class="cql">${visible.map(item=>cqLinha(item,category)).join('')}</div>` : ''}`;
+  else if (mapaSub && category === 'adr') content = (()=>{ const ads = (AD.data?.itens || []).filter(item=>(item.regular?.px ?? item.px)>0).map(item=>{ const v = window.TraderAdr?.view?.(item), c = v && (v.active || v.regular); return {c:item.s, n:item.n || item.nome || '', s:item.s, px:c ? c.px : (item.regular?.px ?? item.px), d1:c ? c.chp : item.chp ?? item.d1, dp:2, _aba:'adr'}; }); const all = [...ads, ...visible.filter(x=>!ads.some(a=>a.c===x.c))]; return all.length ? cqMapa(all,category) : `<div class="market-state" role="status">${busy ? 'Consultando cotações…' : 'Sem ADRs com preço agora.'}</div>`; })();
   else if (visible.length) content = CQ.vis === 'mapa' ? cqMapa(visible,category) : `<div class="cql">${visible.map(item=>cqLinha(item,category)).join('')}</div>`;
   else {
     const text = query && items.length ? 'Nenhum ativo corresponde à busca.' : category === 'fav' && !cqFavs().length ? 'Marque a estrela de um ativo para acompanhar aqui.' : busy ? 'Consultando cotações…' : error ? 'Não foi possível atualizar esta categoria.' : data ? 'A fonte não retornou ativos nesta categoria.' : 'Aguardando consulta da fonte.';
@@ -69834,7 +69839,7 @@ async function m606Carrega(forca) {
 function m606Repinta() {
   try {
     if (typeof tab > "u" || tab !== "mercado") return;
-    MKT.tab === "cq" ? cqPinta() : MKT.tab === "lab" && render();
+    MKT.tab === "cq" ? (typeof cqMorph === "function" ? cqMorph() : cqPinta()) : MKT.tab === "lab" && render(); // v626: no lugar, sem recriar logos
   } catch {}
 }
 function m606Hora(d) {
@@ -69887,7 +69892,7 @@ function m606MapaHtml() {
   return `<div class="m606-mapa" role="list" aria-label="Termômetros do pregão">${v.mapa
     .map((it) => {
       const lv = m606Vivo(it), px = lv ? lv.px : it.px, d1 = lv ? lv.d1 : it.d1, ab = m606Aberto({ ...it, live: lv && lv.live });
-      return `<div class="m606-t" role="listitem"><div class="m606-th"><b>${window.DiarioLogos ? DiarioLogos.html(it.k, 18) : ""}${esc(it.k)}</b><i class="m606-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}" title="${ab ? "Aberto agora" : "Fechado agora"}"></i></div><span class="m606-px">${px == null ? "–" : cqNum(px, it.dp) + (it.un === "%" ? "%" : "")}</span><span class="m606-v ${m606Cls(d1)}">${m606Sinal(d1)}</span><small>${esc(it.n)}${lv && lv.live ? " · Profit" : ""}</small></div>`;
+      return `<div class="m606-t" role="listitem"><div class="m606-th"><b>${window.DiarioLogos ? DiarioLogos.html(it.k, 18) : ""}${esc(it.k)}</b><i class="m606-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}" title="${ab ? "Aberto agora" : "Fechado agora"}"></i></div><span class="m606-px">${px == null ? "–" : cqNum(px, it.dp) + (it.un === "%" ? "%" : "")}</span><span class="m606-v ${m606Cls(d1)}">${m606Sinal(d1)}</span><small>${esc(it.n)}${lv && lv.live ? " · " + (lv.bnc ? "Binance" : lv.fh ? "Finnhub" : "Profit") : ""}</small></div>`;
     })
     .join("")}</div><p class="m606-src">● aberto agora · ● fechado (último preço) · TradingView, B3 com ~15 min de atraso; WIN, WDO e DIs pelo Profit quando a ponte está ligada · ${esc(m606Consulta())}</p>`;
 }
@@ -70077,7 +70082,7 @@ function bncPinta() {
     if (foco && foco.matches && foco.matches("select")) return;
     const v = CQ.vis === "mapa" || ["cri", "fav"].includes(CQ.aba) || m623Ativo();
     if (!v) return;
-    cqPinta();
+    cqMorph();
     const box = document.getElementById("cotbox");
     box &&
       box.querySelectorAll("[data-bnc]").forEach((el) => {
@@ -70469,7 +70474,7 @@ function fhPinta() {
     const foco = document.activeElement;
     if (foco && foco.matches && foco.matches("select")) return;
     if (!(CQ.vis === "mapa" || ["us", "adr", "fx", "fav"].includes(CQ.aba) || m623Ativo())) return;
-    cqPinta();
+    cqMorph();
     document.querySelectorAll("#cotbox [data-fh]").forEach((el) => {
       const s = el.dataset.fh;
       mud.has(s) && bncPisca(el, mud.get(s));
@@ -70669,6 +70674,81 @@ setInterval(() => {
 setInterval(() => {
   M624.mon && (!m623Desk() || typeof tab > "u" || tab !== "mercado" || MKT.tab !== "cq" || !m623Ativo()) && m624Monitor(!1);
 }, 1e3);
+
+/* =====================================================================================
+   v626 — Ticks sem pulo: em vez de refazer #cotbox inteiro a cada preço, atualiza só o que
+   mudou (linhas casadas pelo ativo). Logos (AssetLogo: .cqi / .ta-avatar / .dl-logo) nunca são
+   recriados enquanto o ticker e o tamanho forem os mesmos — o equivalente ao React.memo.
+   ===================================================================================== */
+const CQM_LOGO = ".cqi,.ta-avatar,.dl-logo";
+const cqmChave = (el) => (el && el.nodeType === 1 ? el.getAttribute("data-market-symbol") || el.getAttribute("data-tv") : null);
+const cqmLogoId = (el) => (el.getAttribute("data-dl") || el.getAttribute("data-ticker") || "") + "|" + (el.getAttribute("style") || "").replace(/color[^;]*;?|background[^;]*;?/g, "");
+function cqmMorph(a, b) {
+  if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName) return void a.replaceWith(b);
+  if (a.nodeType === 3 || a.nodeType === 8) return void (a.nodeValue !== b.nodeValue && (a.nodeValue = b.nodeValue));
+  if (a.nodeType !== 1) return;
+  if (a.matches(CQM_LOGO)) {
+    // Mesmo ticker e tamanho: mantém o logo já carregado (sem recarregar nem piscar).
+    if (cqmLogoId(a) === cqmLogoId(b) && a.className.split(" ")[0] === b.className.split(" ")[0]) return;
+    return void a.replaceWith(b);
+  }
+  const foco = a === document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
+  const det = a.tagName === "DETAILS";
+  for (const at of [...a.attributes]) !b.hasAttribute(at.name) && !(det && at.name === "open") && a.removeAttribute(at.name);
+  for (const at of [...b.attributes]) {
+    if (det && at.name === "open") continue;
+    if (foco && at.name === "value") continue;
+    let v = at.value;
+    if (at.name === "class") {
+      const fica = [...a.classList].filter((c) => c === "bnc-up" || c === "bnc-dn");
+      fica.length && (v += " " + fica.join(" "));
+    }
+    a.getAttribute(at.name) !== v && a.setAttribute(at.name, v);
+  }
+  if (foco) return;
+  cqmFilhos(a, b);
+  if (a.tagName === "SELECT" && a.value !== b.value) a.value = b.value;
+}
+function cqmFilhos(a, b) {
+  const nb = [...b.childNodes], els = nb.filter((n) => n.nodeType === 1);
+  if (els.length > 1 && els.every(cqmChave)) {
+    const velhos = new Map();
+    [...a.children].forEach((c) => {
+      const k = cqmChave(c);
+      k && !velhos.has(k) && velhos.set(k, c);
+    });
+    const ordem = els.map((n) => {
+      const o = velhos.get(cqmChave(n));
+      if (!o) return n;
+      velhos.delete(cqmChave(n));
+      cqmMorph(o, n);
+      return o;
+    });
+    const atual = [...a.childNodes];
+    if (atual.length !== ordem.length || atual.some((x, i) => x !== ordem[i])) a.replaceChildren(...ordem);
+    return;
+  }
+  const na = [...a.childNodes];
+  const n = Math.min(na.length, nb.length);
+  for (let i = 0; i < n; i++) cqmMorph(na[i], nb[i]);
+  for (let i = n; i < na.length; i++) na[i].remove();
+  for (let i = n; i < nb.length; i++) a.appendChild(nb[i]);
+}
+/** Atualiza #cotbox no lugar; se algo der errado, volta ao repinte completo. */
+function cqMorph() {
+  if (typeof tab > "u" || tab !== "mercado" || MKT.tab !== "cq") return;
+  const node = document.getElementById("cotbox");
+  if (!node) return;
+  try {
+    const t = document.createElement("template");
+    t.innerHTML = cotHtml().trim();
+    const fresh = t.content.firstElementChild;
+    if (!fresh || fresh.id !== "cotbox") return void cqPinta();
+    cqmMorph(node, fresh);
+  } catch {
+    cqPinta();
+  }
+}
 const EN_TIT = {
   mc_en: "O que significa?",
   mc_pt: "Como se diz em inglês?",

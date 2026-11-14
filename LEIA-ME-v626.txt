@@ -1,0 +1,5 @@
+v626
+- Rótulos por fonte: "Binance · Tempo real" na Cripto (lista, favoritos e Mapa), "Finnhub · Tempo real" nos ativos da Finnhub; "Profit ao vivo" só para a ponte do Profit; sem fonte ao vivo, TradingView.
+- Ticks sem pulo: a lista e o Terminal são atualizados no lugar; os logos não são recriados a cada preço. Logo travado em 36 px no celular e 16 px no Terminal do PC; preço e variação com fonte monoespaçada e largura fixa (115 px no celular, 78 px no PC); nome do ativo truncado.
+- Celular: o Mapa mostra o heatmap da sub-aba escolhida (Ações BR, EUA, ADRs, Moedas, Commodities, Cripto, Juros…); em Favoritos continua o panorama geral. PC sem mudanças.
+- Correção: estilos da busca rápida (Ctrl + K) e da gaveta de gráfico ficavam só no desktop por uma chave CSS sem fechar.

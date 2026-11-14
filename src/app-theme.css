@@ -2701,6 +2701,7 @@ html:root body #app .m623-term .m623-r:focus-visible,html:root body #app .m623-f
 html:root body #app .m623-term .m606-row:not(.m606-cab),html:root body #app .m623-term .m606-mxc{cursor:pointer}
 html:root body #app .m623-term .m606-row:not(.m606-cab):hover{background:#181C26}
 html:root body #app .m623-sec header .bnc-selo{margin-left:auto}
+}
 /* Modo Monitor: só a grade, ocupando a janela inteira */
 html:root body.m624-mon{overflow:hidden}
 html:root body #app .m623-term.m624-on{position:fixed;inset:0;z-index:9000;background:#0A0C10;padding:56px 12px 12px;overflow:auto;align-content:start}
@@ -2736,3 +2737,24 @@ html:root body #m624-pal .m624-pv{padding:14px;color:#8A90A0;font-size:13px;marg
 html:root body #m624-pal .m624-pdica{margin:0;padding:8px 12px;border-top:1px solid #1E232E;color:#5B6170;font-size:11px}
 html:root body #m624-pal kbd{font:11px ui-monospace,monospace;padding:1px 5px;border:1px solid #1E232E;border-radius:4px;color:#8A90A0}
 @media (min-width:1024px){html:root body #app#app .market-quotes .market-tools{grid-template-columns:minmax(0,1fr) 44px minmax(130px,auto);grid-auto-flow:column;grid-auto-columns:auto}}
+/* v626 — Zero layout shift nos ticks: logo com tamanho travado e números de largura fixa */
+@media (max-width:1023.98px){
+html:root body #app#app #cotbox.market-quotes .cqr{grid-template-columns:36px minmax(0,1fr) minmax(115px,auto) 40px!important}
+html:root body #app#app #cotbox.market-quotes .cqr>.cqi,html:root body #app#app #cotbox.market-quotes .cqr>.ta-avatar.cqi{--ta-size:36px;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;max-width:36px!important;max-height:36px!important;flex-shrink:0!important;box-sizing:border-box}
+html:root body #app#app #cotbox.market-quotes .cqr>.cqp,html:root body #app#app #cotbox.market-quotes .cqr>.cqv{min-width:115px!important;text-align:right!important;justify-self:end}
+}
+html:root body #app#app #cotbox.market-quotes .cqr>.cqp>b,html:root body #app#app #cotbox.market-quotes .cqr>.cqv{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-variant-numeric:tabular-nums!important;white-space:nowrap}
+html:root body #app#app #cotbox.market-quotes .cqr>.cqn{min-width:0;overflow:hidden}
+html:root body #app#app #cotbox.market-quotes .cqr>.cqn>b,html:root body #app#app #cotbox.market-quotes .cqr>.cqn>small{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap!important}
+html:root body #app#app #cotbox.market-quotes .cqmap .cqt :is(span,small){font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+@media (min-width:1024px){
+html:root body #app .m623-n .dl-logo,html:root body #app .m623-n img{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;flex:0 0 16px!important}
+html:root body #app .m623-px,html:root body #app .m623-d{min-width:78px!important;text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+html:root body #app .m623-n small{text-overflow:ellipsis}
+html:root body #app .m623-n b{flex-shrink:0}
+}
+html:root body #app#app #cotbox.market-quotes .cqmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;padding:6px!important}
+html:root body #app#app #cotbox.market-quotes .cqmap .cqt{display:flex;flex-direction:column;justify-content:center;gap:2px;min-height:72px;min-width:0;padding:8px;border:1px solid #1E232E;border-radius:6px;color:#E6E8EE;overflow:hidden}
+html:root body #app#app #cotbox.market-quotes .cqmap .cqt b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:root body #app#app #cotbox.market-quotes .cqmap .cqt span{font-size:15px;font-weight:700}
+html:root body #app#app #cotbox.market-quotes .cqmap .cqt small{font-size:11px;color:#C9CDD6}
