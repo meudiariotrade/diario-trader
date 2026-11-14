@@ -1,0 +1,5 @@
+DIÁRIO DE TRADER — v610 (Logos)
+
+- Logos dos ativos no estilo TradingView/Profit: círculo puro, sem moldura, borda, sombra ou fundo branco em volta; a cor própria de cada logo preenche o círculo inteiro.
+- Pares de moedas com as duas bandeiras em círculos puros sobrepostos.
+- Mapeamento brapi/TradingView inalterado.
