@@ -2620,3 +2620,6 @@ html:root body .dl-logo.dl-vazio{background:#161B26!important;border:1px solid r
 /* Logos oficiais do TradingView já trazem fundo próprio: sem fundo branco nem recuo */
 html:root body .ta-avatar[data-logo-provider="tradingview"] .ta-logo{padding:0!important;object-fit:cover!important}
 html:root body .ta-avatar[data-logo-provider="tradingview"].ta-has-logo{background:transparent!important}
+/* v616 — Notícias > Jornal do dia: mesma barra de Notícias no topo; Jornal do Pregão | Giro como segundo nível */
+html:root body #app .m550-ntnav{margin-bottom:8px}
+html:root body #app .m406-section-switch.m550-subnivel .m406-switch-button{min-height:40px;font-size:14px}

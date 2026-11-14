@@ -39,6 +39,22 @@
   /* ---------------- Mercado: Jornal do dia dentro de Notícias ---------------- */
   function jornal(m) {
     // O atalho pertence a Notícias; dentro do Jornal ele duplicava a subaba ativa.
+    if (g(() => MKT.tab, '') === 'jr') {
+      // v616: dentro do Jornal, mantém a mesma barra de Notícias (Notícias | Balanços da B3 | Jornal do dia)
+      // para não parecer outra tela; Jornal do Pregão | Giro do mercado ficam logo abaixo, como segundo nível.
+      $$('.m406-section-switch[data-m406-switch="nt"] [data-m550-jornal]', m).forEach(b => b.remove());
+      const jr = $('.m406-section-switch[data-m406-switch="jr"]', m);
+      if (jr && !$('[data-m550-ntnav]', m)) {
+        const nav = doc.createElement('section'); nav.className = 'm406-section-switch m550-ntnav'; nav.dataset.m550Ntnav = '1';
+        nav.innerHTML = '<div class="m406-switch-tabs" role="group" aria-label="Seção de Notícias">' +
+          '<button type="button" class="m406-switch-button" data-m550-nt="noticias" aria-pressed="false">Notícias</button>' +
+          '<button type="button" class="m406-switch-button" data-m550-nt="balancos" aria-pressed="false">Balanços da B3</button>' +
+          '<button type="button" class="m406-switch-button on" aria-pressed="true" aria-current="page">Jornal do dia</button></div>';
+        jr.before(nav); jr.classList.add('m550-subnivel');
+      }
+      return;
+    }
+    $$('[data-m550-ntnav]', m).forEach(b => b.remove());
     if (g(() => MKT.tab, '') !== 'nt') {
       $$('[data-m550-jornal]', m).forEach(b => b.remove());
       return;
@@ -150,6 +166,8 @@
     const t = e.target;
     let el;
     if ((el = t.closest('.m550-sanf > .sw9t'))) { alternaBloco(el); return; }
+    const ntv = t.closest('[data-m550-nt]');
+    if (ntv) { e.preventDefault(); e.stopPropagation(); try { ntv.dataset.m550Nt === 'balancos' ? GOR.bal() : GOR.noticias ? GOR.noticias() : ((MKT.tab = 'nt'), render()); scrollTo(0, 0); } catch {} return; }
     if (t.closest('[data-m550-jornal]')) { e.preventDefault(); e.stopPropagation(); try { MKT.tab = 'jr'; render(); scrollTo(0, 0); } catch {} return; }
     if ((el = t.closest('[data-m550-passo]'))) { e.preventDefault(); irPasso(el.dataset.m550Passo); agenda(); return; }
     if (t.closest('[data-m550-pular]')) { const st = ax().guia550 ||= {}; st.fim = Date.now(); salvar(); agenda(); return; }
