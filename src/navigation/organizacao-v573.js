@@ -36,6 +36,19 @@ html body .dt394-nav-list.org-buscando .org-grp{display:none}
  html body.org-side-on #dt393-global-head .dt393-brand{display:none!important}
  html body.org-side-on #dt393-global-head .dt393-topbar .dt393-title.dt393-title{border-left:0!important;padding-left:0!important;font-size:24px!important;color:#e8e6e1!important;max-width:none!important}
  html body.org-side-on #fabm,html body.org-side-on #fab{display:none!important}
+ /* v607 — barra lateral retrátil */
+ #org-side .org-brand{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+ #org-side .org-brand>span{white-space:nowrap;overflow:hidden;min-width:0}
+ html body nav#org-side button.org-colapsa{width:32px!important;height:32px!important;min-height:32px!important;flex:none!important;justify-content:center;padding:0!important;border-radius:4px;color:#8b8a86;font-size:16px;line-height:1}
+ html body nav#org-side button.org-colapsa:hover{color:#D4A017;background:#181C26}
+ html body nav#org-side{transition:width .18s ease}
+ html body.org-side-on.org-side-mini nav#org-side{width:64px;padding:16px 8px;overflow-x:hidden}
+ html body.org-side-on.org-side-mini{padding-left:64px!important}
+ html body.org-side-mini #org-side .org-brand{justify-content:center;padding:4px 0 8px}
+ html body.org-side-mini #org-side .org-brand>span{display:none}
+ html body.org-side-mini #org-side .org-grp{font-size:0;height:1px;margin:10px 8px;background:#1E232E;overflow:hidden}
+ html body.org-side-mini nav#org-side button:not(.org-colapsa){justify-content:center;padding:0!important;gap:0}
+ html body.org-side-mini nav#org-side button:not(.org-colapsa)>span{display:none}
 }
 /* Meu dia (modo simples): 1 nível — Antes / Durante / Depois */
 html body.modo-simples #app[data-tela=dia] .dt393-phase-inner{display:none!important}
@@ -131,8 +144,14 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
  function lateral(){
   if(!side){
    side=el('nav');side.id='org-side';side.setAttribute('aria-label','Navegação');
-   side.append(el('div','org-brand','Diário de Trader'));
-   for(const [nome,itens] of GRUPOS){side.append(el('div','org-grp',nome));for(const [r,t] of itens){const b=el('button');b.type='button';b.dataset.orgRota=r;if(r==='mais')b.dataset.dt414Go='mais';else b.dataset.dt393Route=r;b.innerHTML=ico(r)+'<span></span>';b.lastChild.textContent=t;side.append(b)}}
+   const marca=el('div','org-brand');marca.append(el('span','','Diário de Trader'));
+   const tg=el('button','org-colapsa');tg.type='button';marca.append(tg);
+   const mini=()=>doc.body.classList.contains('org-side-mini');
+   const rotulo=()=>{tg.textContent=mini()?'»':'«';tg.setAttribute('aria-label',mini()?'Expandir menu lateral':'Recolher menu lateral');tg.title=tg.getAttribute('aria-label');tg.setAttribute('aria-expanded',String(!mini()))};
+   tg.addEventListener('click',()=>{const m=!mini();doc.body.classList.toggle('org-side-mini',m);try{root.localStorage.setItem('diario-org-side-mini',m?'1':'0')}catch{}rotulo();try{root.dispatchEvent(new Event('resize'))}catch{}});
+   try{doc.body.classList.toggle('org-side-mini',root.localStorage.getItem('diario-org-side-mini')==='1')}catch{}
+   rotulo();side.append(marca);
+   for(const [nome,itens] of GRUPOS){side.append(el('div','org-grp',nome));for(const [r,t] of itens){const b=el('button');b.type='button';b.dataset.orgRota=r;if(r==='mais')b.dataset.dt414Go='mais';else b.dataset.dt393Route=r;b.innerHTML=ico(r)+'<span></span>';b.lastChild.textContent=t;b.title=t;b.setAttribute('aria-label',t);side.append(b)}}
    doc.body.append(side);
   }
   doc.body.classList.toggle('org-side-on',root.innerWidth>=1100&&app()?.dataset.tela!=='term');
