@@ -8,8 +8,9 @@ export function comando(input: unknown) {
  let tickers:string[]=[];
  if(['ANALISE','RESULTADO','COMPARE','TECNICO','CARTEIRA'].includes(modo)){
   tickers=[...new Set(rest.join(' ').replace(/\bX\b/g,' ').split(/[,;\s]+/).filter(Boolean))];
-  if(tickers.some(t=>!/^[A-Z]{4}\d{1,2}$/.test(t)))throw Error('Ticker da B3 inválido.');
-  const min=modo==='COMPARE'?2:1,max=modo==='COMPARE'?2:modo==='CARTEIRA'?12:1;
+  // v621: B3 (PETR4, BBAS3, MXRF11, ROXO34) ou exterior/EUA (AAPL, NVDA, IAU, IVV, SPY, EWZ, BRK.B)
+  if(tickers.some(t=>!/^[A-Z]{4}\d{1,2}$/.test(t)&&!/^[A-Z]{1,5}(?:[.-][A-Z])?$/.test(t)))throw Error('Ticker inválido: use B3 (PETR4) ou EUA (AAPL).');
+  const min=modo==='COMPARE'?2:1,max=modo==='COMPARE'?4:modo==='CARTEIRA'?12:1;
   if(tickers.length<min||tickers.length>max)throw Error('Quantidade de ativos inválida.');
  }
  if(modo==='EXPLIQUE'&&!rest.length)throw Error('Informe um conceito.');

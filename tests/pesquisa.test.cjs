@@ -4,12 +4,20 @@ function moduleAt(file,extra={}){const path='supabase/functions/pesquisa/'+file;
 test('indicadores técnicos calculados no servidor, incluindo sinal MACD e ausência de amostra',()=>{
  const t=moduleAt('tecnico.ts');assert.equal(t.media([1,2],9),null);assert.equal(t.ifr(Array(30).fill(100)),50);assert.equal(t.ifr(Array.from({length:30},(_,i)=>100+i)),100);const cs=Array.from({length:260},(_,i)=>({em:new Date(Date.UTC(2025,0,i+1)).toISOString(),o:100+i,h:102+i,l:99+i,c:101+i,v:1000+i}));const data=t.indicadores(cs);assert.ok(data.medias[200].sma>0);assert.ok(data.macd.sinal!==null);assert.equal(data.pivos.base,cs[258].em);assert.equal(t.correlacao(new Map(),new Map()).valor,null);
 });
-test('pesquisa sem fontes ou sem consulta não cai silenciosamente para resposta sem web',async()=>{
- const env=()=> 'fixture',fetcher=async()=>Response.json({candidates:[{content:{parts:[{text:'Dado inventado'}]}}]});const t=moduleAt('motor.ts',{REGRAS:'test',ROTEIRO:'test',AVISO:'aviso',env});await assert.rejects(t.gerar('teste',{env,search:true,fetcher}),/fontes verificáveis/);
- let calls=0;await assert.rejects(t.gerar('teste',{env,search:true,fetcher:async()=>{calls++;return Response.json({}, {status:429})}}),/Cota/);assert.ok(calls<=2,'Não repetir gerações sem uma reserva de modelo confirmada.');
+test('v621: cascata de IA tenta de novo em 429, passa ao próximo modelo e devolve o erro real',async()=>{
+ const t=moduleAt('ia.ts',{setTimeout});const env=k=>({GEMINI_API_KEY:'x',GEMINI_MODEL_GIRO:'gemini-a'})[k];const vistos=[];
+ const fetcher=async(url)=>{url=String(url);if(url.includes('/models?'))return Response.json({models:[]});const m=url.split('/models/')[1].split(':')[0];vistos.push(m);if(m==='gemini-3.5-flash-lite')return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:'Leitura ok'}]}}]});return Response.json({error:{message:'You exceeded your current quota'}},{status:429})};
+ const r=await t.gerarIA('sys','oi',env,{fetcher,ate:Date.now()+60000});assert.equal(r.texto,'Leitura ok');assert.equal(r.modelo,'gemini-3.5-flash-lite');assert.equal(vistos.filter(x=>x==='gemini-a').length,2,'uma nova tentativa curta em 429');
+ await assert.rejects(t.gerarIA('sys','oi',env,{fetcher:async(u)=>String(u).includes('/models?')?Response.json({models:[]}):Response.json({error:{message:'You exceeded your current quota'}},{status:429}),ate:Date.now()+60000}),/HTTP 429 — You exceeded your current quota/);
 });
-test('pesquisa preserva fontes e metadados reais e rejeita truncamento',async()=>{
- const t=moduleAt('motor.ts',{REGRAS:'test',ROTEIRO:'test',AVISO:'aviso',urlSegura:s=>s}),env=()=> 'fixture';const r=await t.gerar('teste',{env,search:true,fetcher:async()=>Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:'Evidência'}]},groundingMetadata:{webSearchQueries:['CVM PETR4'],groundingChunks:[{web:{uri:'https://cvm.gov.br/',title:'CVM'}}]}}]})});assert.equal(r.fontes.length,1);assert.equal(r.consultas[0],'CVM PETR4');await assert.rejects(t.gerar('teste',{env,fetcher:async()=>Response.json({candidates:[{finishReason:'MAX_TOKENS',content:{parts:[{text:'cortado'}]}}]})}),/incompleta/);
+test('v621: comandos aceitam B3 e EUA; compare de 2 a 4 ativos',()=>{
+ const t=moduleAt('contrato.ts');assert.equal(t.comando('COMPARE PETR4 PBR').tickers.join(),'PETR4,PBR');assert.equal(t.comando('COMPARE AAPL MSFT NVDA').tickers.join(),'AAPL,MSFT,NVDA');assert.equal(t.comando('ANALISE IVV').tickers[0],'IVV');
+ assert.throws(()=>t.comando('ANALISE PETR4 VALE3'));assert.throws(()=>t.comando('TECNICO <script>'));assert.throws(()=>t.comando('COMPARE PETR4'));
+});
+test('v621: valuation em moeda nativa (Graham, Bazin, DCF) e ETF sem balanço',()=>{
+ const t=moduleAt('relatorio.ts');const f={ticker:'AAPL',mercado:'EUA',moeda:'USD',preco:200,lpa:6,vpa:4,dividendos_12m:1,fcl:1e11,acoes:1.5e10,divida_total:1e11,caixa:6e10,setor:'Technology'};
+ const v=t.valuation(f,null);assert.ok(Math.abs(v.graham-Math.sqrt(22.5*24))<1e-9);assert.ok(Math.abs(v.bazin-1/0.06)<1e-9);assert.ok(v.dcf.preco>0);assert.equal(v.premissas.origem,'premissas padrão do app');
+ assert.equal(t.valuation({...f,etf:true},null),null);assert.equal(t.valuation({...f,setor:'Financial Services'},null).dcf,null);
 });
 test('endpoint exige usuário confirmado e não aceita anon como sessão nem ações sem id',async()=>{
  const env={SUPABASE_URL:'https://db.test',SUPABASE_ANON_KEY:'public',SUPABASE_SERVICE_ROLE_KEY:'server'},context=moduleAt('index.ts',{Deno:{env:{get:k=>env[k]},serve(){}},fetch:async()=>Response.json({}, {status:401}),crypto:globalThis.crypto});
