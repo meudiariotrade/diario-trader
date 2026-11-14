@@ -21494,3 +21494,30 @@ function rpyDiarioHtml() {
   return `<div class="card rpy7-hist"><b>Diário do treino</b><small class="mut" style="display:block;margin:2px 0 8px">Escolha o setup na boleta antes de entrar; o motivo da saída (stop, alvo, zerado) é registrado sozinho.${melhor ? ` Seu melhor setup até aqui: <b>${esc(melhor[0])}</b>.` : ""}</small>
 ${tab("Setup", grupo((o) => o.setup || "Sem setup"))}<div style="height:10px"></div>${tab("Horário da entrada", grupo((o) => (o.he ? o.he.slice(0, 2) + "h" : "–")).sort((a, b) => (a[0] > b[0] ? 1 : -1)))}<div style="height:10px"></div>${tab("Saída", grupo((o) => o.mot || "–"))}</div>`;
 }
+
+/* v638 — Panorama no fim de semana: sábado e domingo o botão Panorama gera "Fim de Semana · Cripto & Macro"
+   (mesma Edge Function daily-panorama, com o login do usuário). Seg–sex: imagem de sempre, intacta. */
+{
+  const antes = imgGera;
+  imgGera = async function () {
+    const w = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", weekday: "short" }).format(new Date());
+    const a = typeof cfg === "function" ? cfg() : null;
+    if (!(w === "Sat" || w === "Sun") || !a || typeof SESS > "u" || !SESS || !SESS.at || IMG.busy) return antes.apply(this, arguments);
+    IMG.busy = 1;
+    window.toast && toast("Montando o Panorama de fim de semana…", 1500);
+    try {
+      const r = await fetch(a.url + "/functions/v1/daily-panorama?modo=fds", { headers: { apikey: a.key, Authorization: "Bearer " + SESS.at }, signal: AbortSignal.timeout(45e3) });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const blob = await r.blob();
+      IMG.blob = blob;
+      IMG.nome = "panorama-fim-de-semana-" + loc().slice(0, 10) + ".png";
+      IMG.legenda = null;
+      IMG.titulo = null;
+      IMG.busy = 0;
+      return void imgMostra(URL.createObjectURL(blob));
+    } catch {
+      IMG.busy = 0;
+      return antes.apply(this, arguments); // sem rede/servidor: a imagem de sempre
+    }
+  };
+}
