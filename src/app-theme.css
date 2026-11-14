@@ -2606,3 +2606,6 @@ html:root body .dl-logo.dl-par>img{box-shadow:none!important}
  html:root body #app .trl .trow>.tvl16{display:flex!important;flex-direction:column;align-items:flex-end;gap:2px;white-space:nowrap}
  html:root body #app .trl .trow>.tvl16>*{position:static!important;display:block}
 }
+
+/* v612 — botão Voltar do preview do Panorama: escuro translúcido, texto visível */
+#imgov .imgov-voltar:hover{background:rgba(255,255,255,.1)!important}
