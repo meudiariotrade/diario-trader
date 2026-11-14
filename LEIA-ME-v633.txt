@@ -1,0 +1,3 @@
+v633 — Replay de mercado
+- 1m e 2m sempre clicáveis: sem base de 1 minuto, carrega 1m (Profit, senão Yahoo 7 dias) e sorteia um pregão recente.
+- Estudos: clique seleciona (linha, tendência, Fibonacci); Delete/Backspace apaga; botão direito sobre o estudo apaga; mini × vermelho ao lado do selecionado; Limpar estudos funciona em 1 clique, mesmo no meio de um desenho.
