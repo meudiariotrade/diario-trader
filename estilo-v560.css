@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 d510a2bc8e5ae3f71be123b4801a5c05a2109e0a8378723578fbb6dd4af2fbc1 */
+/* Gerado de src/app-theme.css · SHA256 13683bcee25cf05ed5181c43132adc7bf6a75e5c9beed5f9e98575b250ae2d20 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2759,3 +2759,10 @@ html:root body #app#app #cotbox.market-quotes .cqmap .cqt{display:flex;flex-dire
 html:root body #app#app #cotbox.market-quotes .cqmap .cqt b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html:root body #app#app #cotbox.market-quotes .cqmap .cqt span{font-size:15px;font-weight:700}
 html:root body #app#app #cotbox.market-quotes .cqmap .cqt small{font-size:11px;color:#C9CDD6}
+/* v627 — Desktop: Sazonalidade com colunas alinhadas e gráficos de Opções com altura limitada */
+@media (min-width:1024px){
+html:root body #app table.sz-t{display:table!important;width:100%!important;table-layout:fixed!important;border-collapse:collapse}
+html:root body #app table.sz-t :is(th,td){text-align:right!important;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:root body #app table.sz-t :is(th,td):first-child{text-align:left!important}
+html:root body #app #flwbox .card>svg,html:root body #app svg[aria-label="Sorriso de volatilidade"],html:root body #app svg[aria-label^="Perfil GEX"],html:root body #app svg[aria-label^="Perfil DEX"]{max-height:340px!important;display:block;margin-inline:auto}
+}
