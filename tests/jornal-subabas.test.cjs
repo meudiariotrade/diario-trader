@@ -22,8 +22,11 @@ test('Jornal sem duplicação após cliques, atualizações e retorno de Notíci
    w.document.querySelector('[data-m550-jornal]').click();await tick();
    assert.equal(w.MKT.tab,'jr');
    assert.equal(w.document.querySelectorAll('[data-m550-jornal]').length,0);
-   assert.deepEqual([...w.document.querySelectorAll('.m406-section-switch button')].map(b=>b.textContent),['Jornal do Pregão','Giro do mercado']);
-   assert.equal(w.document.querySelectorAll('.m406-section-switch button[aria-pressed="true"]').length,1);
+   assert.deepEqual([...w.document.querySelectorAll('.m406-section-switch[data-m406-switch="jr"] button')].map(b=>b.textContent),['Jornal do Pregão','Giro do mercado']);
+   assert.equal(w.document.querySelectorAll('.m406-section-switch[data-m406-switch="jr"] button[aria-pressed="true"]').length,1);
+   // v616: a barra de Notícias continua no topo, com "Jornal do dia" ativo (sem parecer outra tela)
+   assert.deepEqual([...w.document.querySelectorAll('[data-m550-ntnav] button')].map(b=>b.textContent),['Notícias','Balanços da B3','Jornal do dia']);
+   assert.equal(w.document.querySelectorAll('[data-m550-ntnav]').length,1);
    w.document.querySelector('[data-m406-select="giro"]').click();
    assert.equal(w.document.querySelector('.m406-content-host').hidden,false);
    assert.equal(w.document.querySelector('.m406-content-host').textContent,'Edição do giro');
