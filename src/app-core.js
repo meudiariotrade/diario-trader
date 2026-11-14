@@ -50684,7 +50684,8 @@ async function rpyCarrega() {
     const a = await fetch(e.url + "/functions/v1/candles", {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: e.key },
-        body: JSON.stringify({ ativo: t, intervalo: RPY.tf }),
+        // v631: janela máxima do Yahoo (1m = 7 dias, 5m = 60 dias) + dias acumulados no Supabase
+        body: JSON.stringify({ ativo: t, intervalo: RPY.tf, modo: "replay", pregao: typeof rpyEhB3 === "function" && rpyEhB3(t) ? "b3" : "" }),
       }),
       o = await a.json();
     if (!a.ok) throw new Error(o.error || "Erro " + a.status);
@@ -50968,7 +50969,8 @@ function rpyHtml() {
     o = `<div class="card"><b>▶️ Treino com replay</b><div class="sm" style="color:var(--mut);margin:4px 0 8px">Um pregão passado aparece candle a candle, sem você ver o que vem depois. Decida a entrada, o stop e o alvo como se fosse ao vivo. O resultado sai em pontos e em vezes o risco.</div>
 <div class="g2"><label>Ativo<input id="rpytk" list="rpyl" value="${esc(RPY.tk || a[0] || "WIN")}" autocapitalize="characters"><datalist id="rpyl">${a.map((r) => `<option value="${esc(r)}">`).join("")}</datalist></label><label>Tempo gráfico<select id="rpytf">${opt(
       [
-        ["5m", "5 minutos (últimos 5 dias)"],
+        ["1m", "1 minuto (últimos 7 dias)"],
+        ["5m", "5 minutos (últimos 60 dias)"],
         ["15m", "15 minutos (último mês)"],
         ["60m", "60 minutos (3 meses)"],
       ],
@@ -104716,6 +104718,26 @@ function rpySalvaSessao() {
     return antes.apply(this, arguments);
   };
 }
+/** v631: escolher qualquer pregão da janela carregada (ou sortear). */
+function rpyDiasOk() {
+  const hoje = rpyDia(Date.now() / 1e3);
+  return rpyDias().slice(1).filter((d) => d !== hoje);
+}
+function rpyDiaSel() {
+  const L = rpyDiasOk();
+  if (L.length < 2) return "";
+  const fim = RPY.i >= rpyFimDia();
+  return `<select id="rpydia" class="rpy7-dia" aria-label="Escolher o pregão"><option value="">🎲 Sortear pregão</option>${L.slice().reverse().map((d) => `<option value="${d}"${!RPY.cego || fim ? (d === RPY.dia ? " selected" : "") : ""}>${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}</option>`).join("")}</select>`;
+}
+document.addEventListener("change", (e) => {
+  if (!e.target || e.target.id !== "rpydia" || !RPY.dados) return;
+  const L = rpyDiasOk(),
+    d = e.target.value || L.filter((x) => x !== RPY.dia)[Math.floor(Math.random() * Math.max(1, L.length - 1))];
+  if (!d) return;
+  e.target.value && (RPY.cego = 0);
+  rpyComeca(d);
+  render();
+});
 function rpyJogoHtml() {
   const r = RPY.dados.candles,
     c = r[RPY.i],
@@ -104736,7 +104758,7 @@ function rpyJogoHtml() {
   const ptsDia = ops.reduce((s, o) => s + (o.pts || 0), 0),
     rsDia = ops.reduce((s, o) => s + (o.rs || 0), 0);
   return `<div class="card rpy7" id="rpy7">
-<div class="rpy7-top"><b>${tk} · <span id="rpy-dia">${RPY.cego && !fim ? "dia surpresa" : fmtD(RPY.dia)}</span></b><span class="rpy7-meta"><span id="rpy-hora">${rpyHora(c[0])}</span> · <span id="rpy-prog">${RPY.i - RPY.ini + 1}/${l - RPY.ini + 1}</span>${RPY.dados.filtroB3 ? ' · <span title="Só o pregão regular da B3 (09:00–18:00)">B3 09–18h</span>' : ""}</span><button type="button" class="rpy7-tema" data-rpy7="tema" aria-label="Alternar fundo ${tema === "claro" ? "escuro" : "claro"}" title="Fundo ${tema === "claro" ? "escuro" : "claro"}">${tema === "claro" ? "☾" : "☀"}</button></div>
+<div class="rpy7-top"><b>${tk} · <span id="rpy-dia">${RPY.cego && !fim ? "dia surpresa" : fmtD(RPY.dia)}</span></b><span class="rpy7-meta"><span id="rpy-hora">${rpyHora(c[0])}</span> · <span id="rpy-prog">${RPY.i - RPY.ini + 1}/${l - RPY.ini + 1}</span>${RPY.dados.filtroB3 ? ' · <span title="Só o pregão regular da B3 (09:00–18:00)">B3 09–18h</span>' : ""}</span>${rpyDiaSel()}<button type="button" class="rpy7-tema" data-rpy7="tema" aria-label="Alternar fundo ${tema === "claro" ? "escuro" : "claro"}" title="Fundo ${tema === "claro" ? "escuro" : "claro"}">${tema === "claro" ? "☾" : "☀"}</button></div>
 <div class="rpy7-chart rpy7-${tema}" id="rpy-wrap"><canvas id="rpy-cv" role="img" aria-label="Gráfico do replay de ${tk}"></canvas><div class="rpy7-zoom" role="group" aria-label="Zoom do gráfico"><button type="button" data-rpy7="zm" aria-label="Diminuir zoom">−</button><button type="button" data-rpy7="zp" aria-label="Aumentar zoom">+</button><button type="button" data-rpy7="zr" aria-label="Voltar ao último candle">⟲</button></div></div>
 <div class="rpy7-ind">${[["m9", "MME 9"], ["m20", "MM 20"], ["vw", "VWAP"], ["vol", "Volume"]].map(([k, n]) => `<button type="button" class="chip${ind[k] ? " on" : ""}" data-rpyi="${k}" aria-pressed="${!!ind[k]}">${n}</button>`).join("")}<span class="rpy7-ult" id="rpy-ult">Último <b>${rpyFmt(c[4])}</b> · máx ${rpyFmt(c[2])} · mín ${rpyFmt(c[3])}${RPY.dados.proxy ? ` <span class="mut">(ref. ${esc(RPY.dados.simbolo)})</span>` : ""}</span></div>
 ${RPY.msg ? `<div class="rpy7-msg">${esc(RPY.msg)}</div>` : ""}
@@ -104758,10 +104780,18 @@ ${
 }`
 }</div>`;
 }
+/** R$ da sessão: o salvo ou, nas sessões antigas, a soma das operações daquele pregão (multiplicador B3 pelo ativo). */
+function rpySessRs(x) {
+  if (x.rs != null && isFinite(x.rs)) return x.rs;
+  const mult = (a) => (/^WIN/.test(a) ? 0.2 : /^WDO/.test(a) ? 10 : /^IND/.test(a) ? 1 : /^DOL/.test(a) ? 50 : 1);
+  const ops = (S.replay || []).filter((o) => o.d === x.d && o.a === x.a && o.tf === x.tf && o.ts <= (x.ts || Infinity) && o.ts >= (x.ts || 0) - 864e5);
+  x.rs = +ops.reduce((s, o) => s + (o.rs != null ? o.rs : (o.pts || 0) * mult(o.a) * (o.q || 1)), 0).toFixed(2);
+  return x.rs;
+}
 function rpySessoesHtml() {
   const L = (S.replaySess || []).slice(-10).reverse();
   if (!L.length) return "";
-  return `<div class="card rpy7-hist"><b>Histórico de treinos (sessões)</b><div style="overflow-x:auto"><table class="rpy7-tb"><thead><tr><th>Pregão</th><th>Ativo</th><th>Trades</th><th>Acerto</th><th>Pts</th><th>R$</th><th>× risco</th></tr></thead><tbody>${L.map((x) => `<tr><td>${x.d.slice(8, 10)}/${x.d.slice(5, 7)}/${x.d.slice(0, 4)}</td><td>${esc(x.a)} ${esc(x.tf)}</td><td>${x.n}</td><td>${x.ac != null ? Math.round(x.ac * 100) + "%" : "–"}</td><td class="${x.pts >= 0 ? "g" : "r"}">${x.n ? rpyPts(x.pts) : "–"}</td><td class="${(x.rs || 0) >= 0 ? "g" : "r"}">${x.n && x.rs != null ? rpyRs(x.rs) : "–"}</td><td class="${x.r >= 0 ? "g" : "r"}">${x.n ? (x.r >= 0 ? "+" : "") + String(x.r.toFixed(2)).replace(".", ",") + "×" : "–"}</td></tr>`).join("")}</tbody></table></div></div>`;
+  return `<div class="card rpy7-hist"><b>Histórico de treinos (sessões)</b><div style="overflow-x:auto"><table class="rpy7-tb"><thead><tr><th>Pregão</th><th>Ativo</th><th>Trades</th><th>Acerto</th><th>Pts</th><th>R$</th><th>× risco</th></tr></thead><tbody>${L.map((x) => `<tr><td>${x.d.slice(8, 10)}/${x.d.slice(5, 7)}/${x.d.slice(0, 4)}</td><td>${esc(x.a)} ${esc(x.tf)}</td><td>${x.n}</td><td>${x.ac != null ? Math.round(x.ac * 100) + "%" : "–"}</td><td class="${x.pts >= 0 ? "g" : "r"}">${x.n ? rpyPts(x.pts) : "–"}</td><td class="${rpySessRs(x) >= 0 ? "g" : "r"}">${x.n ? rpyRs(rpySessRs(x)) : "–"}</td><td class="${x.r >= 0 ? "g" : "r"}">${x.n ? (x.r >= 0 ? "+" : "") + String(x.r.toFixed(2)).replace(".", ",") + "×" : "–"}</td></tr>`).join("")}</tbody></table></div></div>`;
 }
 {
   const antes = rpyHtml;
@@ -105099,7 +105129,7 @@ function rpyDesenha() {
         livre = RO * bw - 6, // cabe no espaço livre à direita? senão vai para a esquerda (não cobre os últimos candles)
         bx = bwid <= livre ? pw - bwid - 4 : 8,
         by = Math.round(y - bh / 2);
-      g.fillStyle = d.lado === "C" ? K.up : K.dn;
+      g.fillStyle = pts >= 0 ? "#16A34A" : "#DC2626"; // v631: verde no lucro, vermelho no prejuízo
       g.beginPath();
       g.roundRect ? g.roundRect(bx, by, bwid, bh, 4) : g.rect(bx, by, bwid, bh);
       g.fill();
@@ -105278,6 +105308,8 @@ document.addEventListener("input", (e) => {
     }
     const k = linhaPerto(p, e.pointerType === "mouse" ? 7 : 16);
     if (k) return void (modo = { t: "linha", k });
+    // v631: arrastar a partir da linha da posição cria/ajusta o Stop (lado da perda) ou o Alvo (lado do ganho)
+    if (RPY.pos && RPY._geo && p.x <= RPY._geo.pw && Math.abs(RPY._geo.yDe(RPY.pos.e) - p.y) <= (e.pointerType === "mouse" ? 7 : 16)) return void (modo = { t: "entrada", y0: p.y });
     modo = { t: e.pointerType === "mouse" ? "pan" : "toque", x: p.x, off: RPY.voff || 0, mexeu: 0 };
     e.pointerType !== "mouse" && ((RPY.cross = p), rpyPede());
   });
@@ -105293,6 +105325,13 @@ document.addEventListener("input", (e) => {
       return void rpyPede();
     }
     if (modo && modo.t === "linha") return void moveLinha(modo.k, p);
+    if (modo && modo.t === "entrada" && RPY.pos && RPY._geo) {
+      if (Math.abs(p.y - modo.y0) < 4) return;
+      const px = RPY._geo.pDe(p.y),
+        perda = RPY.pos.lado === "C" ? px < RPY.pos.e : px > RPY.pos.e;
+      modo = { t: "linha", k: perda ? "st" : "al" };
+      return void moveLinha(modo.k, p);
+    }
     if (modo && (modo.t === "pan" || modo.t === "toque") && RPY._geo) {
       const dx = p.x - modo.x;
       if (Math.abs(dx) > 5 || modo.mexeu) {
@@ -105305,7 +105344,7 @@ document.addEventListener("input", (e) => {
       return;
     }
     if (e.pointerType === "mouse") {
-      cv.style.cursor = noX(p) ? "pointer" : linhaPerto(p, 7) ? "ns-resize" : "crosshair";
+      cv.style.cursor = noX(p) ? "pointer" : linhaPerto(p, 7) || (RPY.pos && RPY._geo && Math.abs(RPY._geo.yDe(RPY.pos.e) - p.y) <= 7) ? "ns-resize" : "crosshair";
       RPY.cross = p;
       rpyPede();
     }
