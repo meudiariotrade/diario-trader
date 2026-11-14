@@ -31,6 +31,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
       try { (e.materias || []).forEach((x) => { const tk = typeof jeTk == "function" ? jeTk(x) : ""; tk && /^[A-Z]{4}\d{1,2}$/.test(tk) && ks.add(tk); }); } catch {}
       try { (typeof jvpLinhas == "function" ? jvpLinhas() : []).forEach((x) => x.tk && ks.add(x.tk)); } catch {}
       (e.agenda || []).forEach((a) => { const tk = jvTkTexto(a.evento); tk && ks.add(tk); const pi = jvPaisISO(a.pais); pi && ks.add("PAIS:" + pi); });
+      ks.add("PAIS:BR");
       (e.cotacoes || []).forEach((q) => { const k = jvLogoCot(q); k && ks.add(k); });
       try { ((typeof JRN < "u" && JRN.varr && JRN.varr.ranking) || []).forEach((x) => x && x.tk && ks.add(x.tk)); } catch {}
       await Promise.race([
@@ -1865,7 +1866,23 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
   {
     const qe = e.agenda || [],
       Le = qe.filter((Re) => /balan/i.test(Re.evento || "")),
-      ke = qe.filter((Re) => !Le.includes(Re)),
+      ke = [
+        ...qe.filter((Re) => !Le.includes(Re)),
+        // v620: vencimentos B3 dos próximos 7 dias, do mesmo calendário da aba Operações > Opções
+        ...(() => {
+          try {
+            const d0 = e.dia || loc().slice(0, 10),
+              d1 = new Date(Date.parse(d0 + "T12:00:00Z") + 7 * 864e5).toISOString().slice(0, 10),
+              DS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+            return (window.VencB3?.entre(d0, d1) || []).map((v) => ({
+              quando: (v.d === d0 ? "Hoje" : DS[new Date(v.d + "T12:00:00Z").getUTCDay()] + " " + v.d.slice(8, 10) + "/" + v.d.slice(5, 7)),
+              pais: "Brasil",
+              evento: v.t,
+              impacto: "alto",
+            }));
+          } catch { return []; }
+        })(),
+      ],
       ze = jrImpAgg(e),
       Ue = jrResumo(e),
       We = GATE_DICAS[new Date().getDate() % GATE_DICAS.length][0];
