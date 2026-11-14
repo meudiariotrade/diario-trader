@@ -7,14 +7,26 @@
 import { initWasm, Resvg } from 'npm:@resvg/resvg-wasm@2.6.2';
 import { panoramaSvg, CHAVE, type Logos } from './svg.ts';
 import { resolveLogos, svgDe } from './resolve.ts';
+import { ehFimDeSemana, criptos, manchetes, logosCripto, fdsSvg } from './fds.ts';
 const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), CRON = ENV('CRON_SECRET');
 const PAGES = ENV('APP_URL') || 'https://meudiariotrade.github.io/diario-trader/';
 const svc = { apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json' };
 async function db(p: string, init: RequestInit = {}) { const r = await fetch(SB + '/rest/v1/' + p, { ...init, headers: { ...svc, ...((init.headers as any) || {}) } }); if (!r.ok) throw new Error('db ' + r.status); const t = await r.text(); return t ? JSON.parse(t) : null; }
 async function sha(s: string) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map((b) => b.toString(16).padStart(2, '0')).join(''); }
+// v638: o app também pode pedir a imagem com o login do usuário (botão Panorama no fim de semana)
+async function donoJwt(req: Request): Promise<string | null> {
+  const tk = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!tk || tk.split('.').length !== 3 || tk === ENV('SUPABASE_ANON_KEY')) return null;
+  try {
+    const r = await fetch(SB + '/auth/v1/user', { headers: { apikey: ENV('SUPABASE_ANON_KEY') || SRK, Authorization: 'Bearer ' + tk }, signal: AbortSignal.timeout(6000) });
+    const j = r.ok ? await r.json() : null;
+    return j?.id || null;
+  } catch { return null; }
+}
 async function dono(req: Request): Promise<string | null> {
   const tk = new URL(req.url).searchParams.get('token') || '';
+  if (!tk) return donoJwt(req);
   if (!/^[0-9a-f]{48}$/.test(tk)) return null;
   const r = await db(`atalhos_tokens?select=user_id&token_hash=eq.${await sha(tk)}`);
   const uid = r?.[0]?.user_id || null;
@@ -64,9 +76,21 @@ async function logosDe(dados: any): Promise<Logos> {
 }
 Deno.serve(async (req) => {
   const txt = (s: string, st: number) => new Response(s, { status: st, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'GET') return txt('Use GET.', 405);
   try {
     if (!(await dono(req))) return txt('Token inválido.', 401);
+    // v638: sábado e domingo (ou &modo=fds) → Panorama Fim de Semana · Cripto & Macro; seg–sex intacto
+    const modo = new URL(req.url).searchParams.get('modo') || '';
+    if (modo === 'fds' || (modo !== 'semana' && ehFimDeSemana())) {
+      const [L, news] = await Promise.all([criptos(), manchetes()]);
+      const svgF = fdsSvg(L, news, await logosCripto(L).catch(() => ({})), new Date());
+      if (new URL(req.url).searchParams.get('formato') === 'svg') return new Response(svgF, { headers: { ...cors, 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'no-store' } });
+      const [, fb0] = await prepara();
+      const png0 = new Resvg(svgF, { fitTo: { mode: 'width', value: 1080 }, font: { fontBuffers: fb0, defaultFontFamily: 'DejaVu Sans', loadSystemFonts: false } }).render().asPng();
+      return new Response(png0, { headers: { ...cors, 'Content-Type': 'image/png', 'Content-Disposition': `inline; filename="panorama-fds-${hojeSP()}.png"`, 'Cache-Control': 'no-store' } });
+    }
     const hoje = hojeSP(), f = await foto(hoje);
     if (!f) return txt('Panorama ainda não disponível.', 503);
     const svg = panoramaSvg(f.dados, new Date(f.gerado), hoje, tituloTurno(req), await logosDe(f.dados).catch(() => ({})));
