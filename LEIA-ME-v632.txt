@@ -1,0 +1,6 @@
+v632 — Replay de mercado
+- Histórico 1m do Profit: tabela profit_candles (por usuário, RLS) e botão Importar CSV do Profit; quando houver candles do Profit para o ativo, eles viram a base do replay; senão Yahoo.
+- Volume em ~18% da altura; sem volume (BRL=X) usa a amplitude do candle.
+- Tempo gráfico no topo: 1m 2m 5m 15m 60m, agregando só até o candle atual (o candle maior fica em formação).
+- MM 200 com aquecimento nos dias anteriores carregados.
+- Barra de estudos: cursor, linha horizontal, tendência, Fibonacci retração e projeção; apagar selecionado e limpar.

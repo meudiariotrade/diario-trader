@@ -2865,3 +2865,18 @@ html body #app#app .rpy7-posinfo .g{color:#16A34A}html body #app#app .rpy7-posin
 html body #app#app .rpy7-dia{min-height:40px;max-width:150px;padding:0 8px;font-size:16px;border-radius:6px;border:1px solid #1E232E;background:#11141B;color:#E6E8EE;font-variant-numeric:tabular-nums}
 @media (min-width:1024px){html body #app#app .rpy7-dia{font-size:13px}}
 @media (max-width:1023.98px){html body #app#app .rpy7-top{flex-wrap:wrap}html body #app#app .rpy7-meta{margin-left:0}}
+/* v632 — Replay: tempo gráfico no topo, barra de estudos e importação do Profit */
+html body #app#app .rpy7-tfs{display:inline-flex;border:1px solid #1E232E;border-radius:6px;overflow:hidden}
+html body #app#app .rpy7-tfs button{min-width:38px;min-height:36px;padding:0 6px!important;border:0!important;border-radius:0!important;background:#11141B!important;color:#C9CDD6!important;font-size:12px!important;font-variant-numeric:tabular-nums}
+html body #app#app .rpy7-tfs button+button{border-left:1px solid #1E232E!important}
+html body #app#app .rpy7-tfs button.on{background:#181C26!important;color:#D4A017!important}
+html body #app#app .rpy7-tfs button:disabled{opacity:.35}
+html body #app#app .rpy7-area{display:flex;gap:6px;align-items:stretch}
+html body #app#app .rpy7-area .rpy7-chart{flex:1 1 auto;min-width:0}
+html body #app#app .rpy7-ferr{display:flex;flex-direction:column;gap:4px}
+html body #app#app .rpy7-ferr button{width:40px;min-height:40px;padding:0!important;border-radius:4px!important;border:1px solid #1E232E!important;background:#11141B!important;color:#C9CDD6!important;font-size:13px!important;font-weight:700}
+html body #app#app .rpy7-ferr button.on{border-color:#D4A017!important;color:#D4A017!important}
+html body #app#app .rpy7-ferr button:disabled{opacity:.35}
+html body #app#app .rpy7-csv{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}
+html body #app#app .rpy7-csv label{min-height:40px;display:inline-flex;align-items:center;cursor:pointer;margin:0}
+@media (max-width:1023.98px){html body #app#app .rpy7-area{flex-direction:column}html body #app#app .rpy7-ferr{flex-direction:row;overflow-x:auto}html body #app#app .rpy7-ferr button{flex:0 0 44px}}

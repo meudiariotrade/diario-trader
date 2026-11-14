@@ -4173,7 +4173,7 @@ function rpyEntra(e) {
 }
 function rpyInd() {
   return Object.assign(
-    { m9: 1, m20: 1, vw: 1, vol: 1 },
+    { m9: 1, m20: 1, m200: 1, vw: 1, vol: 1 },
     (S.ax || {}).rpyInd || {},
   );
 }

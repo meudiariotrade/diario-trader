@@ -50818,7 +50818,7 @@ function rpyEntra(e) {
 }
 function rpyInd() {
   return Object.assign(
-    { m9: 1, m20: 1, vw: 1, vol: 1 },
+    { m9: 1, m20: 1, m200: 1, vw: 1, vol: 1 },
     (S.ax || {}).rpyInd || {},
   );
 }
@@ -104758,9 +104758,9 @@ function rpyJogoHtml() {
   const ptsDia = ops.reduce((s, o) => s + (o.pts || 0), 0),
     rsDia = ops.reduce((s, o) => s + (o.rs || 0), 0);
   return `<div class="card rpy7" id="rpy7">
-<div class="rpy7-top"><b>${tk} · <span id="rpy-dia">${RPY.cego && !fim ? "dia surpresa" : fmtD(RPY.dia)}</span></b><span class="rpy7-meta"><span id="rpy-hora">${rpyHora(c[0])}</span> · <span id="rpy-prog">${RPY.i - RPY.ini + 1}/${l - RPY.ini + 1}</span>${RPY.dados.filtroB3 ? ' · <span title="Só o pregão regular da B3 (09:00–18:00)">B3 09–18h</span>' : ""}</span>${rpyDiaSel()}<button type="button" class="rpy7-tema" data-rpy7="tema" aria-label="Alternar fundo ${tema === "claro" ? "escuro" : "claro"}" title="Fundo ${tema === "claro" ? "escuro" : "claro"}">${tema === "claro" ? "☾" : "☀"}</button></div>
-<div class="rpy7-chart rpy7-${tema}" id="rpy-wrap"><canvas id="rpy-cv" role="img" aria-label="Gráfico do replay de ${tk}"></canvas><div class="rpy7-zoom" role="group" aria-label="Zoom do gráfico"><button type="button" data-rpy7="zm" aria-label="Diminuir zoom">−</button><button type="button" data-rpy7="zp" aria-label="Aumentar zoom">+</button><button type="button" data-rpy7="zr" aria-label="Voltar ao último candle">⟲</button></div></div>
-<div class="rpy7-ind">${[["m9", "MME 9"], ["m20", "MM 20"], ["vw", "VWAP"], ["vol", "Volume"]].map(([k, n]) => `<button type="button" class="chip${ind[k] ? " on" : ""}" data-rpyi="${k}" aria-pressed="${!!ind[k]}">${n}</button>`).join("")}<span class="rpy7-ult" id="rpy-ult">Último <b>${rpyFmt(c[4])}</b> · máx ${rpyFmt(c[2])} · mín ${rpyFmt(c[3])}${RPY.dados.proxy ? ` <span class="mut">(ref. ${esc(RPY.dados.simbolo)})</span>` : ""}</span></div>
+<div class="rpy7-top"><b>${tk}</b>${rpyTfHtml()}<b><span id="rpy-dia">${RPY.cego && !fim ? "dia surpresa" : fmtD(RPY.dia)}</span></b><span class="rpy7-meta"><span id="rpy-hora">${rpyHora(c[0])}</span> · <span id="rpy-prog">${RPY.i - RPY.ini + 1}/${l - RPY.ini + 1}</span>${RPY.dados.filtroB3 ? ' · <span title="Só o pregão regular da B3 (09:00–18:00)">B3 09–18h</span>' : ""}</span>${rpyDiaSel()}<button type="button" class="rpy7-tema" data-rpy7="tema" aria-label="Alternar fundo ${tema === "claro" ? "escuro" : "claro"}" title="Fundo ${tema === "claro" ? "escuro" : "claro"}">${tema === "claro" ? "☾" : "☀"}</button></div>
+<div class="rpy7-area">${rpyFerrHtml()}<div class="rpy7-chart rpy7-${tema}" id="rpy-wrap"><canvas id="rpy-cv" role="img" aria-label="Gráfico do replay de ${tk}"></canvas><div class="rpy7-zoom" role="group" aria-label="Zoom do gráfico"><button type="button" data-rpy7="zm" aria-label="Diminuir zoom">−</button><button type="button" data-rpy7="zp" aria-label="Aumentar zoom">+</button><button type="button" data-rpy7="zr" aria-label="Voltar ao último candle">⟲</button></div></div></div>
+<div class="rpy7-ind">${[["m9", "MME 9"], ["m20", "MM 20"], ["m200", "MM 200"], ["vw", "VWAP"], ["vol", "Volume"]].map(([k, n]) => `<button type="button" class="chip${ind[k] ? " on" : ""}" data-rpyi="${k}" aria-pressed="${!!ind[k]}">${n}</button>`).join("")}<span class="rpy7-ult" id="rpy-ult">Último <b>${rpyFmt(c[4])}</b> · máx ${rpyFmt(c[2])} · mín ${rpyFmt(c[3])}${RPY.dados.proxy ? ` <span class="mut">(ref. ${esc(RPY.dados.simbolo)})</span>` : ""}</span></div>
 ${RPY.msg ? `<div class="rpy7-msg">${esc(RPY.msg)}</div>` : ""}
 ${
   fim
@@ -104798,7 +104798,7 @@ function rpySessoesHtml() {
   rpyHtml = function () {
     if (RPY.trade || !RPY.dados || !RPY.dia) {
       const base = antes.apply(this, arguments);
-      return RPY.trade ? base : base.replace('<div class="card"><b>Seu histórico de replay</b>', rpySessoesHtml() + '<div class="card"><b>Seu histórico de replay</b>') + (base.includes("Seu histórico de replay") ? "" : rpySessoesHtml());
+      return RPY.trade ? base : rpyCsvHtml() + base.replace('<div class="card"><b>Seu histórico de replay</b>', rpySessoesHtml() + '<div class="card"><b>Seu histórico de replay</b>') + (base.includes("Seu histórico de replay") ? "" : rpySessoesHtml());
     }
     const dia = RPY.dia;
     let base = "";
@@ -104811,7 +104811,7 @@ function rpySessoesHtml() {
     const k = base.indexOf('<div class="card"><b>Seu histórico de replay</b>');
     const setup = k >= 0 ? base.slice(0, k) : base,
       hist = k >= 0 ? base.slice(k) : "";
-    return rpyJogoHtml() + setup + rpySessoesHtml() + hist;
+    return rpyJogoHtml() + setup + rpyCsvHtml() + rpySessoesHtml() + hist;
   };
 }
 
@@ -104849,7 +104849,7 @@ function rpyDesenha() {
     tempoH = 20,
     pw = W - eixoW,
     ph = H - tempoH,
-    volH = ind.vol ? Math.round(ph * 0.16) : 0,
+    volH = ind.vol ? Math.round(ph * 0.18) : 0,
     ch = ph - volH;
   const nPad = W < 600 ? 50 : 90,
     n = Math.max(15, Math.min(400, RPY.vn || nPad));
@@ -104927,12 +104927,15 @@ function rpyDesenha() {
   }
   // volume
   if (volH) {
-    const vmax = Math.max(1, ...vis.map((k) => k[5] || 0));
+    // v632: volume real (Profit); sem volume (ex.: BRL=X) usa a amplitude do candle como atividade
+    const semVol = vis.every((k) => !(k[5] > 0)),
+      vv = (k) => (semVol ? k[2] - k[3] : k[5] || 0),
+      vmax = Math.max(1e-9, ...vis.map(vv));
     g.globalAlpha = K.vol;
     vis.forEach((k, j) => {
-      if (!k[5]) return;
+      if (!(vv(k) > 0)) return;
       const i = iniI + j,
-        h = (k[5] / vmax) * (volH - 4);
+        h = (vv(k) / vmax) * (volH - 4);
       g.fillStyle = k[4] >= k[1] ? K.up : K.dn;
       g.fillRect(xDe(i) - Math.max(1, bw * 0.35), ph - h, Math.max(1, bw * 0.7), h);
     });
@@ -104981,6 +104984,7 @@ function rpyDesenha() {
   ind.m9 && linha(calc.e9, "#D4A017");
   ind.m20 && linha(calc.m20, "#3B82F6");
   ind.vw && linha(calc.vw, "#8B5CF6");
+  ind.m200 && calc.m200 && linha(calc.m200, rpyTema() === "claro" ? "#111827" : "#E6E8EE");
   g.restore();
   // setas de entrada/saída dos trades deste pregão
   const seta = (i, preco, cima, cor) => {
@@ -105158,7 +105162,8 @@ function rpyDesenha() {
     rot(d.st, K.dn, "Stop");
     d.al != null && rot(d.al, K.up, "Alvo");
   }
-  RPY._geo = { pw, ph, ch, bw, n, fimI, yDe, pDe };
+  RPY._geo = { pw, ph, ch, bw, n, fimI, fimD, iniI, xDe, yDe, pDe, C };
+  typeof rpyEstDesenha === "function" && rpyEstDesenha(g, K, fonte, eixoW);
 }
 let rpyRaf = 0;
 const rpyPede = () => rpyRaf || (rpyRaf = requestAnimationFrame(() => ((rpyRaf = 0), rpyDesenha())));
@@ -105300,6 +105305,9 @@ document.addEventListener("input", (e) => {
       modo = { t: "pinca", d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, n0: RPY.vn || (innerWidth < 600 ? 50 : 90) };
       return;
     }
+    // v632: ferramentas de desenho (criar estudo ou mover alça) têm prioridade
+    const em = typeof rpyEstDown === "function" ? rpyEstDown(p, e.pointerType) : null;
+    if (em) return void (modo = em);
     if (noX(p)) {
       e.preventDefault();
       modo = null;
@@ -105325,6 +105333,7 @@ document.addEventListener("input", (e) => {
       return void rpyPede();
     }
     if (modo && modo.t === "linha") return void moveLinha(modo.k, p);
+    if (modo && modo.t === "alca") return void rpyEstMove(modo, p);
     if (modo && modo.t === "entrada" && RPY.pos && RPY._geo) {
       if (Math.abs(p.y - modo.y0) < 4) return;
       const px = RPY._geo.pDe(p.y),
@@ -105355,6 +105364,7 @@ document.addEventListener("input", (e) => {
     const m = modo;
     if (ptrs.size === 0) modo = null;
     else if (m && m.t === "pinca") modo = null;
+    m && m.t === "alca" && rpyEstSalva();
     if (m && m.t === "linha") {
       try {
         save();
@@ -105515,6 +105525,379 @@ document.addEventListener("input", (e) => {
       console.error("replay: falha ao desenhar", e);
     }
   };
+}
+
+/* =====================================================================================
+   v632 — Replay: histórico 1m do Profit (tabela profit_candles; ponte/CSV), tempo gráfico no
+   topo (1m 2m 5m 15m 60m) agregado SÓ até o candle atual, MM 200 e ferramentas de desenho.
+   ===================================================================================== */
+const RPY_TFS = [1, 2, 5, 15, 60];
+const rpyTfMin = (tf) => parseInt(String(tf || "").replace(/\D/g, ""), 10) || 0;
+const rpyRaiz = (tk) => {
+  const t = String(tk || "").toUpperCase().trim();
+  const m = /^(WIN|WDO|IND|DOL|WSP|BIT)/.exec(t);
+  return m ? m[1] : t;
+};
+function rpyTfHtml() {
+  const b = rpyTfMin(RPY.tf),
+    v = rpyTfMin(RPY.tfv) || b;
+  return `<span class="rpy7-tfs" role="group" aria-label="Tempo gráfico">${RPY_TFS.map((m) => `<button type="button" data-rpy7tf="${m}" class="${m === v ? "on" : ""}" aria-pressed="${m === v}"${m < b || m % b ? ` disabled title="Carregue em ${m}m ou menor para usar"` : ""}>${m}m</button>`).join("")}</span>`;
+}
+document.addEventListener(
+  "click",
+  (e) => {
+    const t = e.target.closest && e.target.closest("[data-rpy7tf]");
+    if (!t || t.disabled) return;
+    e.preventDefault();
+    RPY.tfv = t.dataset.rpy7tf + "m";
+    RPY.vn = 0;
+    RPY.voff = 0;
+    RPY._agg = null;
+    render();
+  },
+  !0,
+);
+/** Agrega os candles base até RPY.i (o candle do tempo maior fica "em formação", sem o futuro). */
+function rpyAgg(tf) {
+  const D = RPY.dados,
+    k = D.candles.length + "|" + tf + "|" + RPY.i;
+  if (RPY._agg && RPY._agg.k === k && RPY._agg.D === D) return RPY._agg;
+  const A = [],
+    m = new Array(RPY.i + 1),
+    seg = tf * 60;
+  let ult = null;
+  for (let i = 0; i <= RPY.i; i++) {
+    const c = D.candles[i],
+      bk = Math.floor((c[0] - 3 * 3600) / seg);
+    if (bk !== ult) {
+      A.push([c[0], c[1], c[2], c[3], c[4], c[5] || 0]);
+      ult = bk;
+    } else {
+      const a = A[A.length - 1];
+      ((a[2] = Math.max(a[2], c[2])), (a[3] = Math.min(a[3], c[3])), (a[4] = c[4]), (a[5] += c[5] || 0));
+    }
+    m[i] = A.length - 1;
+  }
+  return (RPY._agg = { k, D, A, m, fake: { ...D, candles: A } });
+}
+{
+  const antes = rpyDesenha;
+  rpyDesenha = function () {
+    const tv = rpyTfMin(RPY.tfv),
+      tb = rpyTfMin(RPY.tf);
+    if (!RPY.dados || !tv || tv <= tb || tv % tb) return antes.apply(this, arguments);
+    const g = rpyAgg(tv / tb > 0 ? tv : tb),
+      s0 = { dados: RPY.dados, i: RPY.i, ini: RPY.ini, pos: RPY.pos, ops: RPY.ops };
+    try {
+      RPY.dados = g.fake;
+      RPY.i = g.A.length - 1;
+      RPY.ini = g.m[s0.ini] ?? 0;
+      RPY.pos = s0.pos && { ...s0.pos, i0: g.m[s0.pos.i0] };
+      RPY.ops = (s0.ops || []).map((o) => ({ ...o, ie: g.m[o.ie], ix: g.m[o.ix] }));
+      antes.apply(this, arguments);
+    } finally {
+      ((RPY.dados = s0.dados), (RPY.i = s0.i), (RPY.ini = s0.ini), (RPY.ops = s0.ops));
+      // a posição pode ter mudado no arraste das linhas: devolve stop/alvo editados
+      s0.pos && RPY.pos && ((s0.pos.st = RPY.pos.st), (s0.pos.al = RPY.pos.al));
+      RPY.pos = s0.pos;
+    }
+  };
+}
+{
+  const antes = rpyComeca;
+  rpyComeca = function () {
+    RPY._agg = null;
+    return antes.apply(this, arguments);
+  };
+}
+// MM 200 com aquecimento nos dias anteriores carregados (mesma série das outras médias)
+{
+  const antes = rpyCalc;
+  rpyCalc = function () {
+    const c = antes.apply(this, arguments);
+    if (c && !c.m200) {
+      const t = RPY.dados.candles,
+        o = [];
+      let s = 0;
+      for (let p = 0; p < t.length; p++) ((s += t[p][4]), p >= 200 && (s -= t[p - 200][4]), o.push(p >= 199 ? s / 200 : null));
+      c.m200 = o;
+    }
+    return c;
+  };
+}
+
+/* ---------- Profit: histórico 1m (tabela profit_candles) e importação de CSV ---------- */
+function rpySb() {
+  const a = typeof cfg === "function" ? cfg() : null;
+  if (!a || typeof SESS > "u" || !SESS || !SESS.at) return null;
+  return { url: a.url, h: { apikey: a.key, Authorization: "Bearer " + SESS.at, "Content-Type": "application/json" } };
+}
+async function rpyProfitLe(tk) {
+  const sb = rpySb();
+  if (!sb) return [];
+  const desde = Math.floor(Date.now() / 1e3) - 120 * 86400,
+    out = [];
+  for (let off = 0; off < 120000; off += 1000) {
+    const r = await fetch(`${sb.url}/rest/v1/profit_candles?ativo=eq.${encodeURIComponent(rpyRaiz(tk))}&t=gte.${desde}&select=t,o,h,l,c,v&order=t.asc&limit=1000&offset=${off}`, { headers: sb.h, signal: AbortSignal.timeout(15e3) });
+    if (!r.ok) break;
+    const L = await r.json();
+    L.forEach((x) => out.push([+x.t, +x.o, +x.h, +x.l, +x.c, +x.v || 0]));
+    if (L.length < 1000) break;
+  }
+  return out;
+}
+// Antes do Yahoo: se houver candles 1m do Profit para o ativo, eles viram a base do replay.
+{
+  const antes = rpyCarrega;
+  rpyCarrega = async function () {
+    const tk = String(RPY.tk || "").toUpperCase().trim();
+    if (tk && rpySb()) {
+      ((RPY.busy = 1), (RPY.err = ""), render());
+      try {
+        const c = await rpyProfitLe(tk);
+        if (c.length >= 300) {
+          RPY.dados = rpyFiltraB3(tk, { candles: c, simbolo: "Profit " + rpyRaiz(tk), fonte: "Profit", intervalo: "1m" });
+          RPY.tf = "1m";
+          const d = rpyDias().slice(1, -1);
+          if (d.length) {
+            rpyComeca(d[Math.floor(Math.random() * d.length)]);
+            RPY.busy = 0;
+            return void render();
+          }
+        }
+      } catch {}
+      RPY.busy = 0;
+    }
+    return antes.apply(this, arguments);
+  };
+}
+function rpyCsvHtml() {
+  return `<div class="rpy7-csv"><label class="btn s"><input type="file" id="rpycsv" accept=".csv,.txt,text/csv" hidden>Importar CSV do Profit</label><small class="mut">${RPY.csvMsg ? esc(RPY.csvMsg) : "Histórico exportado do ProfitChart (1 minuto). Fica salvo só na sua conta e vira a base do replay."}</small></div>`;
+}
+/** Lê o CSV do ProfitChart: Ativo;Data;Hora;Abertura;Máxima;Mínima;Fechamento;Volume(;Quantidade) — com ou sem cabeçalho. */
+function rpyCsvLe(txt) {
+  const num = (x) => +String(x).trim().replace(/\./g, "").replace(",", ".");
+  const out = [];
+  for (const ln of String(txt).split(/\r?\n/)) {
+    const f = ln.split(";").map((x) => x.trim());
+    if (f.length < 7) continue;
+    const di = f.findIndex((x) => /^\d{2}\/\d{2}\/\d{4}$/.test(x));
+    if (di < 0) continue;
+    const [d, mo, y] = f[di].split("/").map(Number),
+      hm = (f[di + 1] || "").match(/^(\d{1,2}):(\d{2})/);
+    if (!hm) continue;
+    const t = Date.UTC(y, mo - 1, d, +hm[1] + 3, +hm[2]) / 1e3,
+      [o, h, l, c] = [2, 3, 4, 5].map((k) => num(f[di + k])),
+      v = num(f[di + 6] || 0);
+    if ([o, h, l, c].every((x) => isFinite(x) && x > 0)) out.push({ ativo: rpyRaiz(f[0] || RPY.tk), t, o, h, l, c, v: isFinite(v) ? v : 0 });
+  }
+  return out;
+}
+document.addEventListener("change", async (e) => {
+  if (!e.target || e.target.id !== "rpycsv" || !e.target.files || !e.target.files[0]) return;
+  const sb = rpySb();
+  if (!sb) return void toast("Entre na sua conta para importar.");
+  const L = rpyCsvLe(await e.target.files[0].text());
+  if (!L.length) return void toast("Não reconheci o CSV. Exporte do ProfitChart em 1 minuto (separado por ponto e vírgula).");
+  let ok = 0;
+  RPY.csvMsg = `Enviando ${L.length} candles…`;
+  render();
+  for (let i = 0; i < L.length; i += 1000) {
+    const lote = L.slice(i, i + 1000).map((x) => ({ ...x, uid: SESS.uid }));
+    try {
+      const r = await fetch(`${sb.url}/rest/v1/profit_candles?on_conflict=uid,ativo,t`, { method: "POST", headers: { ...sb.h, Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(lote) });
+      r.ok && (ok += lote.length);
+    } catch {}
+  }
+  RPY.csvMsg = `${ok} de ${L.length} candles de ${[...new Set(L.map((x) => x.ativo))].join(", ")} importados.`;
+  render();
+});
+
+/* ---------- Ferramentas de desenho (cursor, horizontal, tendência, Fib retração e projeção) ---------- */
+const RPY_FIB_RET = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1],
+  RPY_FIB_PROJ = [0.618, 1, 1.272, 1.618],
+  RPY_NPTS = { h: 1, t: 2, fr: 2, fp: 3 };
+function rpyFerrHtml() {
+  const f = RPY.ferr || "cur";
+  const B = [["cur", "↖", "Cursor"], ["h", "―", "Linha horizontal (suporte/resistência)"], ["t", "╱", "Linha de tendência (LTA/LTB)"], ["fr", "Fib", "Retração de Fibonacci"], ["fp", "Proj", "Projeção de Fibonacci (3 pontos)"]];
+  return `<div class="rpy7-ferr" role="toolbar" aria-label="Estudos gráficos">${B.map(([k, i, n]) => `<button type="button" data-rpy7f="${k}" class="${f === k ? "on" : ""}" title="${n}" aria-label="${n}" aria-pressed="${f === k}">${i}</button>`).join("")}<button type="button" data-rpy7f="del" title="Apagar o estudo selecionado" aria-label="Apagar o estudo selecionado"${RPY.estSel ? "" : " disabled"}>⌫</button><button type="button" data-rpy7f="limpa" title="Limpar estudos" aria-label="Limpar estudos">✕</button></div>`;
+}
+const rpyEstL = () => {
+  const ax = S.ax ?? (S.ax = {}),
+    M = ax.rpyEst ?? (ax.rpyEst = {});
+  return M[rpyRaiz(RPY.tk)] ?? (M[rpyRaiz(RPY.tk)] = []);
+};
+const rpyEstSalva = () => {
+  try {
+    save();
+  } catch {}
+};
+function rpyGx(t) {
+  const G = RPY._geo;
+  if (!G) return null;
+  const C = G.C;
+  let lo = 0,
+    hi = C.length - 1;
+  while (lo < hi) {
+    const md = (lo + hi + 1) >> 1;
+    C[md][0] <= t ? (lo = md) : (hi = md - 1);
+  }
+  return G.xDe(lo);
+}
+function rpyGt(x) {
+  const G = RPY._geo,
+    j = Math.round((x - G.bw / 2) / G.bw) + (G.fimI - G.n + 1);
+  return G.C[Math.max(0, Math.min(G.fimD, j))][0];
+}
+document.addEventListener(
+  "click",
+  (e) => {
+    const t = e.target.closest && e.target.closest("[data-rpy7f]");
+    if (!t) return;
+    e.preventDefault();
+    const k = t.dataset.rpy7f;
+    if (k === "del") {
+      const L = rpyEstL(),
+        i = L.indexOf(RPY.estSel);
+      i >= 0 && L.splice(i, 1);
+      RPY.estSel = null;
+      rpyEstSalva();
+      return void render();
+    }
+    if (k === "limpa") {
+      rpyEstL().splice(0);
+      RPY.estSel = null;
+      rpyEstSalva();
+      return void render();
+    }
+    RPY.ferr = k;
+    RPY.estNovo = null;
+    document.querySelectorAll("[data-rpy7f]").forEach((b) => b.dataset.rpy7f.length <= 4 && b.dataset.rpy7f !== "del" && b.classList.toggle("on", b === t));
+  },
+  !0,
+);
+/** Cria estudo (ferramenta ativa) ou pega uma alça (cursor). Devolve o modo de arraste, ou null. */
+function rpyEstDown(p, tipo) {
+  const G = RPY._geo;
+  if (!G || p.x > G.pw || p.y > G.ch) return null;
+  const f = RPY.ferr || "cur";
+  if (f !== "cur") {
+    const pt = [rpyGt(p.x), +G.pDe(p.y).toFixed(6)];
+    RPY.estNovo = RPY.estNovo && RPY.estNovo.k === f ? RPY.estNovo : { k: f, p: [] };
+    RPY.estNovo.p.push(pt);
+    if (RPY.estNovo.p.length >= RPY_NPTS[f]) {
+      rpyEstL().push(RPY.estNovo);
+      RPY.estSel = RPY.estNovo;
+      RPY.estNovo = null;
+      RPY.ferr = "cur";
+      rpyEstSalva();
+      render();
+    } else rpyPede();
+    return { t: "nada" };
+  }
+  const tol = tipo === "mouse" ? 9 : 18;
+  for (const s of rpyEstL()) {
+    for (let i = 0; i < s.p.length; i++) {
+      const x = s.k === "h" ? G.pw - 14 : rpyGx(s.p[i][0]),
+        y = G.yDe(s.p[i][1]);
+      if (x != null && Math.hypot(x - p.x, y - p.y) <= tol) return (RPY.estSel = s), rpyPede(), { t: "alca", s, i };
+    }
+    if (s.k === "h" && Math.abs(G.yDe(s.p[0][1]) - p.y) <= tol / 2) return (RPY.estSel = s), rpyPede(), { t: "alca", s, i: 0 };
+  }
+  return null;
+}
+function rpyEstMove(m, p) {
+  const G = RPY._geo;
+  if (!G) return;
+  m.s.p[m.i] = [m.s.k === "h" ? m.s.p[m.i][0] : rpyGt(Math.min(p.x, G.pw)), +G.pDe(Math.max(2, Math.min(G.ch - 2, p.y))).toFixed(6)];
+  RPY.cross = null;
+  rpyPede();
+}
+function rpyEstDesenha(g, K, fonte, eixoW) {
+  const G = RPY._geo,
+    L = rpyEstL().slice();
+  RPY.estNovo && L.push(RPY.estNovo);
+  const cor = rpyTema() === "claro" ? "#1D4ED8" : "#60A5FA",
+    fib = rpyTema() === "claro" ? "#B45309" : "#D4A017";
+  g.save();
+  g.beginPath();
+  g.rect(0, 0, G.pw + eixoW, G.ch);
+  g.clip();
+  g.font = fonte;
+  g.textBaseline = "middle";
+  const alca = (x, y, sel) => {
+    g.fillStyle = sel ? cor : rpyTema() === "claro" ? "#FFFFFF" : "#0A0C10";
+    g.strokeStyle = cor;
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.arc(x, y, 4.5, 0, 6.283);
+    g.fill();
+    g.stroke();
+  };
+  const hl = (y, x0, c, txt, eixo) => {
+    g.strokeStyle = c;
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(x0, y);
+    g.lineTo(G.pw, y);
+    g.stroke();
+    if (txt) {
+      g.fillStyle = c;
+      g.textAlign = "left";
+      g.fillText(txt, Math.max(4, x0 + 4), y - 7);
+    }
+    if (eixo != null) {
+      g.fillStyle = c;
+      g.fillRect(G.pw, y - 9, eixoW, 18);
+      g.fillStyle = "#FFFFFF";
+      g.fillText(rpyFmt(eixo), G.pw + 4, y);
+    }
+  };
+  for (const s of L) {
+    const sel = s === RPY.estSel,
+      P = s.p.map(([t, pr]) => [s.k === "h" ? G.pw - 14 : rpyGx(t), G.yDe(pr), pr]);
+    if (s.k === "h" && P[0]) {
+      hl(P[0][1], 0, cor, "", P[0][2]);
+      alca(P[0][0], P[0][1], sel);
+    } else if (s.k === "t") {
+      if (P.length === 2) {
+        g.strokeStyle = cor;
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.moveTo(P[0][0], P[0][1]);
+        g.lineTo(P[1][0], P[1][1]);
+        g.stroke();
+      }
+      P.forEach((q) => alca(q[0], q[1], sel));
+    } else if (s.k === "fr") {
+      if (P.length === 2) {
+        const [a, b] = [s.p[0][1], s.p[1][1]];
+        RPY_FIB_RET.forEach((r) => {
+          const pr = b - (b - a) * r;
+          hl(G.yDe(pr), Math.min(P[0][0], P[1][0]), fib, `${(r * 100).toFixed(1).replace(".", ",")}%  ${rpyFmt(+pr.toFixed(4))}`);
+        });
+      }
+      P.forEach((q) => alca(q[0], q[1], sel));
+    } else if (s.k === "fp") {
+      if (P.length === 3) {
+        const [a, b, c] = [s.p[0][1], s.p[1][1], s.p[2][1]];
+        g.strokeStyle = fib;
+        g.setLineDash([3, 3]);
+        g.beginPath();
+        g.moveTo(P[0][0], P[0][1]);
+        g.lineTo(P[1][0], P[1][1]);
+        g.lineTo(P[2][0], P[2][1]);
+        g.stroke();
+        g.setLineDash([]);
+        RPY_FIB_PROJ.forEach((r) => {
+          const pr = c + (b - a) * r;
+          hl(G.yDe(pr), P[2][0], fib, `${(r * 100).toFixed(1).replace(".", ",")}%  ${rpyFmt(+pr.toFixed(4))}`);
+        });
+      }
+      P.forEach((q) => alca(q[0], q[1], sel));
+    }
+  }
+  g.restore();
 }
 const RP_COR = {
     tx: "#17191b",
