@@ -1614,7 +1614,10 @@ async function imgGera() {
       await imgDados();
       try {
         // v608: logos oficiais (brapi / TradingView) — 1ª passada lista os ativos, depois carrega e desenha.
-        window.DiarioLogos && (imgDesenha(), await Promise.race([window.DiarioLogos.carregaPendentes(), new Promise((r) => setTimeout(r, 8e3))]));
+        if (window.DiarioLogos) {
+          try { imgDesenha(); } catch {}
+          await Promise.race([window.DiarioLogos.carregaPendentes(), new Promise((r) => setTimeout(r, 12e3))]);
+        }
       } catch {}
       const e = imgDesenha(),
         t = await new Promise((o) => e.toBlob(o, "image/jpeg", 0.92)),
