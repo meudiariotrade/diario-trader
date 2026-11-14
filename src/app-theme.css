@@ -2584,3 +2584,25 @@ html:root body .ta-avatar.ta-pair,html:root body #app .cqr>.ta-avatar.cqi.ta-pai
 html:root body .ta-fx-half{border:0!important;box-shadow:none!important;border-radius:50%!important;overflow:hidden!important;background:#181C26!important}
 html:root body .ta-fx-img{object-fit:cover!important;border-radius:50%}
 html:root body .dl-logo.dl-par>img{box-shadow:none!important}
+
+/* v611 — Início desktop: blocos em colunas balanceadas (sem vãos vazios ao lado de Últimos trades / Diário e processo) */
+@media (min-width:768px){
+ html:root body #app.home-view .dt395-native-home>.pccols{display:block!important;column-count:2;column-gap:20px;column-fill:balance}
+ html:root body #app.home-view .dt395-native-home>.pccols>.pcc>*{display:block;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;width:100%;margin:0 0 20px!important;box-sizing:border-box}
+ html:root body #app.home-view .dt395-native-home>.pccols>.pcc>details{display:block}
+}
+@media (min-width:1280px){
+ html:root body #app.home-view .dt395-native-home>.pccols{column-count:3}
+}
+/* v611 — card de posição aberta: resultado e "aberta há · vence em" em linhas próprias, sem sobreposição */
+@media (min-width:768px){
+ html:root body #app .tcard .tc-h{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;column-gap:12px;align-items:start}
+ html:root body #app .tcard .tc-h>.fl{min-width:0}
+ html:root body #app .tcard .tc-h>.fl>*{position:static!important}
+ html:root body #app .tcard .tc-h>.rt{display:flex!important;flex-direction:column;align-items:flex-end;gap:6px;white-space:nowrap;position:static!important;min-width:0}
+ html:root body #app .tcard .tc-h>.rt>*{position:static!important;margin:0!important}
+ html:root body #app .tcard .tc-h>.rt .tc-pl{line-height:1.2}
+ html:root body #app .tcard .opln{display:block;margin-top:8px;line-height:1.45}
+ html:root body #app .trl .trow>.tvl16{display:flex!important;flex-direction:column;align-items:flex-end;gap:2px;white-space:nowrap}
+ html:root body #app .trl .trow>.tvl16>*{position:static!important;display:block}
+}
