@@ -3851,35 +3851,14 @@ Contexto autorizado:
       const COPOM = ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-08-05", "2026-09-16", "2026-11-04", "2026-12-09"],
         FOMC = ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09",
           "2027-01-27", "2027-03-17", "2027-04-28", "2027-06-09", "2027-07-28", "2027-09-15", "2027-10-27", "2027-12-08"];
-      function semPregao(d) {
-        const x = new Date(d + "T12:00:00Z"), y = x.getUTCFullYear(), w = x.getUTCDay();
-        if (w === 0 || w === 6) return !0;
-        if (["01-01", "04-21", "05-01", "09-07", "10-12", "11-02", "11-15", "11-20", "12-24", "12-25", "12-31"].includes(d.slice(5))) return !0;
-        const a = y % 19, b = Math.floor(y / 100), c = y % 100, dd = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
-          h = (19 * a + b - dd - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, L = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * L) / 451),
-          mes = Math.floor((h + L - 7 * m + 114) / 31), dia = ((h + L - 7 * m + 114) % 31) + 1, pas = Date.UTC(y, mes - 1, dia, 12);
-        return [-48, -47, -2, 60].some((o) => new Date(pas + o * 864e5).toISOString().slice(0, 10) === d);
-      }
       function agenda(g) {
         const de = g?.window?.from, ate = g?.window?.to;
         if (!de || !ate) return [];
         const L = [], DS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
           rot = (d) => DS[new Date(d + "T12:00:00Z").getUTCDay()] + " " + d.slice(8, 10) + "/" + d.slice(5, 7),
-          add = (d, t, tipo, h = "", p = "BR") => d >= de && d <= ate && L.push({ d, h, p, dia: rot(d) + (h ? " " + h : ""), t: t + (semPregao(d) && tipo === "Vencimento" ? " (dia sem pregão: confirmar data na B3)" : ""), tipo });
-        for (const ym of new Set([de.slice(0, 7), ate.slice(0, 7)])) {
-          const [y, mo] = ym.split("-").map(Number), d1 = (dia) => new Date(Date.UTC(y, mo - 1, dia, 12)).toISOString().slice(0, 10);
-          // opções sobre ações: 3ª sexta-feira do mês
-          let sx = 0;
-          for (let dia = 1; dia <= 31 && sx < 3; dia++) { const d = d1(dia); if (d.slice(0, 7) !== ym) break; new Date(d + "T12:00:00Z").getUTCDay() === 5 && ++sx === 3 && add(d, "Vencimento de opções sobre ações (3ª sexta-feira)", "Vencimento"); }
-          // índice futuro (WIN/IND) e opções de Ibovespa: quarta-feira mais próxima do dia 15, meses pares
-          if (mo % 2 === 0) {
-            let best = null;
-            for (let dia = 9; dia <= 21; dia++) { const d = d1(dia); new Date(d + "T12:00:00Z").getUTCDay() === 3 && (!best || Math.abs(dia - 15) < Math.abs(+best.slice(8) - 15)) && (best = d); }
-            best && add(best, "Vencimento do índice futuro (WIN/IND) e opções de Ibovespa", "Vencimento");
-          }
-          // dólar futuro (WDO/DOL): 1º dia útil do mês
-          for (let dia = 1; dia <= 7; dia++) { const d = d1(dia); if (!semPregao(d)) { add(d, "Vencimento do dólar futuro (WDO/DOL), 1º dia útil", "Vencimento"); break; } }
-        }
+          add = (d, t, tipo, h = "", p = "BR") => d >= de && d <= ate && L.push({ d, h, p, dia: rot(d) + (h ? " " + h : ""), t, tipo });
+        // v620: vencimentos do mesmo calendário da aba Operações > Opções (datas oficiais B3, com feriados)
+        try { (window.VencB3?.entre(de, ate) || []).forEach((v) => add(v.d, v.t, "Vencimento")); } catch {}
         COPOM.forEach((d) => add(d, "Decisão do Copom (Selic), após o fechamento", "Banco central", "18:30"));
         FOMC.forEach((d) => add(d, "Decisão do FOMC (juros nos EUA)", "Banco central", "15:00", "US"));
         let ev = Array.isArray(g.agenda) ? g.agenda : null;
@@ -6187,12 +6166,12 @@ de Carteira`,
               (f.t(L, f.M, f.y, { s: 14, f: I, c: f.C.dk }), (f.y += 20));
             v && h.text(v, { size: 8.5, color: f.C.mut });
           }),
-          (h.table = (J, v) => {
+          (h.table = (J, v, o = {}) => {
             v.length &&
               f.tab(
                 J.map(([I, k, L]) => ({ l: I, w: k, al: L })),
                 v,
-                { s: 8.3 },
+                { s: 8.3, ...o },
               );
           }),
           (h.section = (J, v, I = 0) => {
@@ -6751,7 +6730,7 @@ de Carteira`,
           ),
           f = n.p;
         // v618: logos oficiais (círculo) da capa, dos títulos e do quadro final
-        const LGK = (t) => ({ USDBRL: "USD/BRL", IBOV: "IBOV" })[t] || t,
+        const LGK = (t) => ({ USDBRL: "USD/BRL", WDO: "USD/BRL", IBOV: "IBOV" })[t] || t,
           LGM = {};
         try {
           if (window.DiarioLogos && !g.demo)
@@ -6770,14 +6749,11 @@ de Carteira`,
             const L = LGM[tk];
             if (!L) return n.heading(titulo, sub);
             const I = f.F.serif ? "serif" : "b",
-              k = f.wrap(String(titulo), f.CW - 26, 14, I);
+              k = f.wrap(String(titulo), f.CW - 17 * L.r - 9, 14, I);
             (f.need(k.length * 20 + 65), (f.y += 6));
             try { f.pg.drawImage(L.img, { x: f.M, y: f.H - f.y - 17, width: 17 * L.r, height: 17 }); } catch {}
-            for (const z of k) (f.t(z, f.M + 24, f.y, { s: 14, f: I, c: f.C.dk }), (f.y += 20));
+            for (const z of k) (f.t(z, f.M + 17 * L.r + 7, f.y, { s: 14, f: I, c: f.C.dk }), (f.y += 20));
             sub && n.text(sub, { size: 8.5, color: f.C.mut });
-          },
-          bloco = (tit, txt) => {
-            txt && (f.need(60), n.text(tit, { font: "b", size: 9.2 }), n.text(txt, { size: 8.7 }));
           },
           pc = (v) => (typeof v == "number" && isFinite(v) ? (v > 0 ? "+" : "") + l(v) + "%" : "Não disponível");
         (n.text(
@@ -6887,16 +6863,29 @@ de Carteira`,
                     ["Momentum (RSI 14)", l(h.rsi, 1) + " · " + t.mom],
                     ["Confluências (até 1%)", t.conf.length ? t.conf.map((q) => q.nivel + " " + l(q.valor) + " + " + q.com.join(", ")).join(" · ") : "Nenhuma"],
                   ],
+                  { pad: 3 },
                 ));
               const IA = g.ia?.versao === 619 && g.ia.ativos?.[h.ticker],
                 B4 = IA && IA.dow ? IA : window.RevistaModel?.blocks?.(h);
               if (!B4) return;
-              (f.need(150),
-                n.heading("Leitura técnica da semana"),
-                bloco("1. Teoria de Dow e alinhamento multi-timeframe (Dow / Pring / Elder)", B4.dow),
-                bloco("2. Ondas de Elliott e Fibonacci (Elliott / Flávio Lemos)", B4.elliott),
-                bloco("3. Price action e momentum (Brooks / Volman)", B4.pa),
-                bloco("4. Cenários condicionais e invalidação", B4.cenarios));
+              // v620: os 4 blocos ficam juntos na mesma página — mede a altura e ajusta a fonte (8,7 a 7,8) antes de desenhar.
+              const BL = [
+                  ["1. Teoria de Dow e alinhamento multi-timeframe (Dow / Pring / Elder)", B4.dow],
+                  ["2. Ondas de Elliott e Fibonacci (Elliott / Flávio Lemos)", B4.elliott],
+                  ["3. Price action e momentum (Brooks / Volman)", B4.pa],
+                  ["4. Cenários condicionais e invalidação", B4.cenarios],
+                ].filter((x) => x[1]),
+                HF = f.F.serif ? "serif" : "b",
+                mede = (sz) => 28 + BL.reduce((a, [, x]) => a + 12.5 + f.wrap(String(x), f.CW, sz, "r").length * sz * 1.36 + 4, 0);
+              let sz = 8.7;
+              for (; sz > 7.8 && f.y + mede(sz) > f.BOT; ) sz -= 0.15;
+              f.y + mede(sz) > f.BOT && f.add();
+              ((f.y += 6), f.t("Leitura técnica da semana", f.M, f.y, { s: 14, f: HF, c: f.C.dk }), (f.y += 22));
+              for (const [tit, x] of BL) {
+                (f.t(tit, f.M, f.y, { s: 9, f: "b", c: f.C.tx }), (f.y += 12.5));
+                for (const ln of f.wrap(String(x), f.CW, sz, "r")) (f.t(ln, f.M, f.y, { s: sz, f: "r", c: f.C.tx }), (f.y += sz * 1.36));
+                f.y += 4;
+              }
             })());
           // v619: nota de fonte só quando cabe na página (sem abrir página quase vazia); o método fica em "Fontes e método".
           f.y + 14 < f.BOT &&
@@ -6967,7 +6956,13 @@ de Carteira`,
                   rb ? { t: l(rb[1]), sub: rb[0] } : l(h.support),
                   pv ? { t: l(pv.v), sub: pv.tipo } : "Retorno à faixa em fechamento",
                 ];
-              }),
+              })
+              // v620: contratos futuros com snapshot entram no quadro (referências do próprio contrato)
+              .concat(
+                g.futures
+                  .filter((h) => h.available)
+                  .map((h) => [lgCel(h.ticker), { t: l(h.high), sub: "máxima do snapshot" }, { t: l(h.low), sub: "mínima do snapshot" }, { t: "Volta para dentro da faixa", sub: "contrato " + (h.symbol || h.ticker) }]),
+              ),
           ),
           (() => {
             const A = window.RevistaModel?.agenda?.(g) || [];
@@ -6981,7 +6976,7 @@ de Carteira`,
                       ["Tipo", 22],
                     ],
                     // v619: bandeira circular do país ao lado do evento (sem o nome por extenso)
-                    A.slice(0, 12).map((x) => [x.dia, LGM["PAIS:" + x.p] ? { t: x.t, lg: LGM["PAIS:" + x.p] } : (x.p === "US" ? "EUA · " : "Brasil · ") + x.t, x.tipo]),
+                    A.slice(0, 12).map((x) => [x.dia, LGM["PAIS:" + x.p] ? { t: x.t, lg: LGM["PAIS:" + x.p] } : "(" + x.p + ") " + x.t, x.tipo]),
                   )
                 : n.text("Sem vencimentos ou eventos de alto impacto encontrados para a semana. Confira a aba Agenda."));
           })(),
