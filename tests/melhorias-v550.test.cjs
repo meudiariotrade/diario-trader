@@ -18,7 +18,7 @@ test('v550: destaque WIN/WDO, análises recolhidas, guia de 3 passos, continuar 
  await app.locator('.m550-sanf:not(.m550-aberto) > .sw9t').first().click();
  assert.equal(await app.locator('.m550-sanf:not(.m550-aberto)').count(),fechados-1);
  await p.evaluate(()=>{MKT.tab='nt';render()});
- await app.locator('[data-m550-jornal]').click();
+ await app.locator('[data-m550-jornal="jornal"]').click();
  await expect.poll(()=>p.evaluate(()=>MKT.tab)).toBe('jr');
  await p.evaluate(()=>{S.trades=[];S.ax.guia550={};tab='home';render()});
  await expect(app.locator('#m550-guia li')).toHaveCount(3);
