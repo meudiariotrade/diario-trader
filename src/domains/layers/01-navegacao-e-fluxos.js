@@ -2303,8 +2303,10 @@ Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na im
         }));
       const z = imgDesenha;
       imgDesenha = function () {
-        const P = z.apply(this, arguments),
-          m = document.createElement("canvas");
+        const P = z.apply(this, arguments);
+        // v615: sem o rodapé técnico ("Consulta do panorama…") fora do card na imagem exportada.
+        if (P) return P;
+        const m = document.createElement("canvas");
         ((m.width = P.width), (m.height = P.height + 160));
         const c = m.getContext("2d");
         (c.drawImage(P, 0, 0),
