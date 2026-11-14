@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 2df06c5a0bd10539f952b94d0728c817db26bc1f6780224a04b7dcee6a1ba643 */
+/* Gerado de src/app-theme.css · SHA256 6100fd345bdd053e163ab5e04ba03db21dba7bd8b45545ca940f0bece1989a7f */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2889,3 +2889,9 @@ html body #app#app .rpy7-bar .rpy7-ord[data-rpy7o="V"]{color:#EF4444!important}
 html body #app#app .rpy7-bar .rpy7-ord.on{background:#181C26!important;border-color:currentColor!important}
 @media (min-width:1024px){html body #app#app .rpy7-bar{grid-template-columns:auto auto 52px minmax(0,1fr) minmax(0,1fr) auto auto auto auto}}
 html body #app#app #rpyset{min-height:40px;max-width:170px;font-size:16px}@media (min-width:1024px){html body #app#app #rpyset{font-size:13px}}
+/* v637 — tabelas do Replay no celular: sem sobreposição, rolam para o lado */
+@media (max-width:1023.98px){
+html body #app#app .rpy7-tb{table-layout:auto!important;min-width:560px}
+html body #app#app .rpy7-tb :is(th,td){padding:8px 10px!important;letter-spacing:0!important;font-size:12px!important;white-space:nowrap!important;overflow:visible!important}
+html body #app#app .rpy7-hist>div{overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
