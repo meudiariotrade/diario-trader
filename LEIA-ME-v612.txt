@@ -1,0 +1,5 @@
+DIÁRIO DE TRADER — v612 (Acabamento)
+
+- Preview do Panorama do mercado: botão "← Voltar" escuro translúcido com texto visível.
+- Jornal do Pregão: mini-logos nos cards de cotação da capa (Ibovespa, WIN, Dólar, WDO, DIs, EWZ, Minério...), logo da Natura (NATU3) nas maiores baixas e logos na tabela Oportunidades fundamentalistas.
+- Logos: quando o brapi não tem o ticker, o PDF busca o logo oficial no TradingView automaticamente.
