@@ -1007,7 +1007,7 @@ ${
     : ""
 }
 ${(e.fontes || []).length ? `<div class="sm mut jrfont">Fontes: ${e.fontes.map((s) => (s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.titulo || "link")}</a>` : esc(s.titulo))).join(" · ")}</div>` : ""}
-<div class="sm mut" style="margin-top:8px">Edição escrita pela IA com pesquisa na internet e os números do app. Confira os fatos antes de repassar. Não é recomendação de investimento.</div>`;
+<div class="sm mut" style="margin-top:8px">Edição escrita pela IA${e.ia ? " (" + esc(e.ia) + ")" : ""} com pesquisa na internet e os números do app. Confira os fatos antes de repassar. Não é recomendação de investimento.</div>`;
 }
 function vJornal() {
   if (!JRN.v && !JRN.busy && !JRN.err) setTimeout(() => jrCarrega(!1), 0);
