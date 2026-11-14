@@ -1,0 +1,3 @@
+v622
+- Roteador Multi-IA gratuito compartilhado (Análises, Revista, Jornal): Gemini, OpenRouter (modelos :free atuais), Pollinations sem chave; Groq, Cerebras, Mistral, Hugging Face e DeepSeek prontos para quando houver chave.
+- Rodapé com o provedor/modelo que escreveu (ou o erro real).
