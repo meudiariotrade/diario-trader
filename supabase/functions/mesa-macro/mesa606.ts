@@ -38,6 +38,59 @@ export const BAR606 = [
   ['IJJ', 'IJH', 'IJK'],
   ['IJS', 'IJR', 'IJT'],
 ];
+// v623: Modo Terminal do desktop (3 colunas). g = grupo; s = códigos em ordem de preferência;
+// tz/ab/fe = fuso e janela do pregão (minutos locais) para a bolinha aberto/fechado.
+export const TERM623 = [
+  { g: 'idx', k: 'DAX', n: 'Alemanha', s: ['XETR:DAX'], dp: 0, tz: 'Europe/Berlin', ab: 540, fe: 1050 },
+  { g: 'idx', k: 'IBEX 35', n: 'Espanha', s: ['BME:IBC', 'TVC:IBEX35'], dp: 0, tz: 'Europe/Madrid', ab: 540, fe: 1050 },
+  { g: 'idx', k: 'CAC 40', n: 'França', s: ['EURONEXT:PX1', 'TVC:CAC40'], dp: 0, tz: 'Europe/Paris', ab: 540, fe: 1050 },
+  { g: 'idx', k: 'FTSE 100', n: 'Reino Unido', s: ['TVC:UKX'], dp: 0, tz: 'Europe/London', ab: 480, fe: 990 },
+  { g: 'idx', k: 'Nikkei 225', n: 'Japão', s: ['TVC:NI225'], dp: 0, tz: 'Asia/Tokyo', ab: 540, fe: 930 },
+  { g: 'idx', k: 'Hang Seng', n: 'Hong Kong', s: ['TVC:HSI'], dp: 0, tz: 'Asia/Hong_Kong', ab: 570, fe: 960 },
+  { g: 'idx', k: 'Shanghai', n: 'China', s: ['SSE:000001'], dp: 0, tz: 'Asia/Shanghai', ab: 570, fe: 900 },
+  { g: 'idx', k: 'KOSPI', n: 'Coreia do Sul', s: ['KRX:KOSPI', 'TVC:KOSPI'], dp: 0, tz: 'Asia/Seoul', ab: 540, fe: 930 },
+  { g: 'fx', k: 'DXY', n: 'Índice do dólar', s: ['TVC:DXY'], dp: 2, ss: 'fx24' },
+  { g: 'fx', k: 'EUR/USD', n: 'Euro', s: ['FX:EURUSD'], dp: 4, ss: 'fx24' },
+  { g: 'fx', k: 'USD/JPY', n: 'Iene', s: ['FX:USDJPY'], dp: 2, ss: 'fx24' },
+  { g: 'fx', k: 'GBP/USD', n: 'Libra', s: ['FX:GBPUSD'], dp: 4, ss: 'fx24' },
+  { g: 'em', k: 'USD/BRL', n: 'Brasil', s: ['FX_IDC:USDBRL'], dp: 4, ss: 'fx24' },
+  { g: 'em', k: 'USD/MXN', n: 'México', s: ['FX_IDC:USDMXN', 'FX:USDMXN'], dp: 4, ss: 'fx24' },
+  { g: 'em', k: 'USD/CLP', n: 'Chile', s: ['FX:USDCLP', 'PEPPERSTONE:USDCLP', 'FX_IDC:USDCLP'], dp: 1, ss: 'fx24' },
+  { g: 'em', k: 'USD/COP', n: 'Colômbia', s: ['FX_IDC:USDCOP', 'FX:USDCOP'], dp: 0, ss: 'fx24' },
+  { g: 'em', k: 'USD/ZAR', n: 'África do Sul', s: ['FX_IDC:USDZAR', 'FX:USDZAR'], dp: 4, ss: 'fx24' },
+  { g: 'em', k: 'USD/CNY', n: 'China', s: ['FX_IDC:USDCNY', 'FX:USDCNY'], dp: 4, ss: 'fx24' },
+  { g: 'em', k: 'USD/ARS', n: 'Argentina', s: ['FX_IDC:USDARS', 'FX:USDARS'], dp: 2, ss: 'fx24' },
+  { g: 'em', k: 'USD/TRY', n: 'Turquia', s: ['FX_IDC:USDTRY', 'FX:USDTRY'], dp: 4, ss: 'fx24' },
+  { g: 'fat', k: 'HQ', n: 'Qualidade (QUAL)', s: ['BATS:QUAL', 'AMEX:QUAL', 'NASDAQ:QUAL'], dp: 2, ss: 'nyse' },
+  { g: 'fat', k: 'LV', n: 'Baixa volatilidade (USMV)', s: ['BATS:USMV', 'AMEX:USMV', 'NASDAQ:USMV'], dp: 2, ss: 'nyse' },
+  { g: 'fat', k: 'MO', n: 'Momento (MTUM)', s: ['BATS:MTUM', 'AMEX:MTUM', 'NASDAQ:MTUM'], dp: 2, ss: 'nyse' },
+  { g: 'fat', k: 'YD', n: 'Dividendos (DVY)', s: ['NASDAQ:DVY', 'AMEX:DVY', 'BATS:DVY'], dp: 2, ss: 'nyse' },
+  { g: 'fat', k: 'YV', n: 'Valor (VLUE)', s: ['BATS:VLUE', 'AMEX:VLUE', 'NASDAQ:VLUE'], dp: 2, ss: 'nyse' },
+  { g: 'cmd', k: 'OURO', n: 'Ouro', s: ['TVC:GOLD'], dp: 2, un: 'US$/oz', ss: 'cme' },
+  { g: 'cmd', k: 'PRATA', n: 'Prata', s: ['TVC:SILVER'], dp: 3, un: 'US$/oz', ss: 'cme' },
+  { g: 'cmd', k: 'COBRE', n: 'Cobre', s: ['COMEX:HG1!'], dp: 4, un: 'US$/lb', ss: 'cme' },
+  { g: 'cmd', k: 'BRENT', n: 'Petróleo Brent', s: ['ICEEUR:BRN1!'], dp: 2, un: 'US$', ss: 'ice' },
+  { g: 'cmd', k: 'WTI', n: 'Petróleo WTI', s: ['NYMEX:CL1!'], dp: 2, un: 'US$', ss: 'cme' },
+  { g: 'cmd', k: 'NG', n: 'Gás natural', s: ['NYMEX:NG1!'], dp: 3, un: 'US$', ss: 'cme' },
+  { g: 'cmd', k: 'MINERIO', n: 'Minério de ferro', s: ['SGX:FEF1!'], dp: 2, un: 'US$/t', ss: 'sgx' },
+  { g: 'fut', k: 'WIN', n: 'Mini índice', s: ['BMFBOVESPA:WIN1!'], dp: 0, ss: 'b3' },
+  { g: 'fut', k: 'WDO', n: 'Mini dólar', s: ['BMFBOVESPA:WDO1!'], dp: 1, ss: 'b3' },
+  { g: 'fut', k: 'IBOV', n: 'Ibovespa', s: ['BMFBOVESPA:IBOV'], dp: 0, ss: 'b3' },
+  { g: 'fut', k: 'EWZ', n: 'Brasil em NY', s: ['AMEX:EWZ'], dp: 2, ss: 'nyse' },
+  { g: 'fut', k: 'ES', n: 'S&P 500 fut', s: ['CME_MINI:ES1!'], dp: 2, ss: 'cme' },
+  { g: 'fut', k: 'NQ', n: 'Nasdaq fut', s: ['CME_MINI:NQ1!'], dp: 2, ss: 'cme' },
+  { g: 'fut', k: 'YM', n: 'Dow Jones fut', s: ['CBOT_MINI:YM1!'], dp: 0, ss: 'cme' },
+  { g: 'fut', k: 'RTY', n: 'Russell 2000 fut', s: ['CME_MINI:RTY1!'], dp: 2, ss: 'cme' },
+  { g: 'tsy', k: 'US2Y', n: 'Treasury 2 anos', s: ['TVC:US02Y'], dp: 3, un: '%', ss: 'fx24' },
+  { g: 'tsy', k: 'US10Y', n: 'Treasury 10 anos', s: ['TVC:US10Y'], dp: 3, un: '%', ss: 'fx24' },
+  { g: 'tsy', k: 'US30Y', n: 'Treasury 30 anos', s: ['TVC:US30Y'], dp: 3, un: '%', ss: 'fx24' },
+  { g: 'tsy', k: 'DE10Y', n: 'Alemanha 10 anos', s: ['TVC:DE10Y'], dp: 3, un: '%', ss: 'fx24' },
+  { g: 'tsy', k: 'JP10Y', n: 'Japão 10 anos', s: ['TVC:JP10Y'], dp: 3, un: '%', ss: 'fx24' },
+  { g: 'cri', k: 'BTC', n: 'Bitcoin', s: ['BITSTAMP:BTCUSD'], dp: 2, ss: '24h' },
+  { g: 'cri', k: 'ETH', n: 'Ethereum', s: ['BITSTAMP:ETHUSD'], dp: 2, ss: '24h' },
+  { g: 'cri', k: 'SOL', n: 'Solana', s: ['COINBASE:SOLUSD'], dp: 2, ss: '24h' },
+  { g: 'cri', k: 'XRP', n: 'XRP', s: ['BITSTAMP:XRPUSD'], dp: 4, ss: '24h' },
+];
 // Reuniões do FOMC (2º dia, data da decisão). Fonte: federalreserve.gov (2027 é o calendário provisório oficial).
 export const FOMC606 = ['2026-01-28', '2026-03-18', '2026-04-29', '2026-06-17', '2026-07-29', '2026-09-16', '2026-10-28', '2026-12-09',
   '2027-01-27', '2027-03-17', '2027-04-28', '2027-06-09', '2027-07-28', '2027-09-15', '2027-10-27', '2027-12-08'];
@@ -122,7 +175,7 @@ export async function mesa606(scan: Scan, UA: string) {
   const hoje = new Date(), a = hoje.getUTCFullYear(), m0 = hoje.getUTCMonth();
   const zqs: string[] = []; for (let i = -1; i <= 4; i++) { const d = new Date(Date.UTC(a, m0 + i, 1)); zqs.push(zq(d.getUTCFullYear(), d.getUTCMonth())); }
   const etfs = BAR606.flat().flatMap((t) => ['AMEX:' + t, 'NASDAQ:' + t]);
-  const todos = [...new Set([...MAPA606.map((x) => x.s), ...DI606.map((x) => x.s), ...EM606.flatMap((x) => x.s), ...etfs, ...zqs])];
+  const todos = [...new Set([...MAPA606.map((x) => x.s), ...DI606.map((x) => x.s), ...EM606.flatMap((x) => x.s), ...etfs, ...zqs, ...TERM623.flatMap((x) => x.s)])];
   const [tv, est] = await Promise.all([
     scan('global', todos),
     cacheEst && Date.now() - cacheEst.ts < 30 * 60_000 ? Promise.resolve(cacheEst.v) : estatIbov(UA).then((v) => { if (v.corr60 != null) cacheEst = { ts: Date.now(), v }; return v; }).catch(() => null),
@@ -151,6 +204,8 @@ export async function mesa606(scan: Scan, UA: string) {
     emergentes: { itens: emer, media: media == null ? null : +media.toFixed(3), n: val.length, brl: brl ? { px: brl.px, d1: brl.d1, m1: brl.m1 } : null },
     barometro: { linhas: ['Large', 'Mid', 'Small'], colunas: ['Value', 'Core', 'Growth'], celulas: bar, fonte: 'ETFs iShares S&P 500/400/600 via TradingView' },
     ibov: est,
+    // v623: dados do Modo Terminal (desktop), mesma consulta
+    terminal: TERM623.map((x) => { const c = x.s.find((y) => q(y)) || x.s[0], t = q(c); return { g: x.g, k: x.k, n: x.n, s: c, dp: x.dp, un: (x as any).un || null, ss: (x as any).ss || null, tz: (x as any).tz || null, ab: (x as any).ab ?? null, fe: (x as any).fe ?? null, px: t?.px ?? null, d1: t?.d1 ?? null, dabs: t?.dabs ?? null, em: t?.horarioPreco || null }; }),
   };
   if (mapa.some((x) => x.px != null)) cache = { ts: Date.now(), v };
   else if (cache) return cache.v;
