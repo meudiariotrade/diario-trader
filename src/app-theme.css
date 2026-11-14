@@ -2571,3 +2571,16 @@ html body #app .v600-wr td small{font-size:10px}
 .m606-th b{display:inline-flex;align-items:center;min-width:0}
 .m606-em b,.m606-row b{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .m606-mxc small{display:inline-flex;align-items:center;gap:4px}
+
+/* v610 — AssetLogo no estilo TradingView/Profit: círculo puro sangrado, sem moldura, borda, sombra ou fundo quadrado */
+html:root body .ta-avatar{border:0!important;box-shadow:none!important;padding:0!important;border-radius:50%!important;overflow:hidden;background:var(--ta-accent)!important}
+html:root body .ta-avatar.ta-has-logo:not(.ta-pair){background:transparent!important}
+html:root body .ta-avatar .ta-logo{inset:0!important;width:100%!important;height:100%!important;max-width:none!important;padding:0!important;margin:0!important;border:0!important;border-radius:50%!important;background:transparent!important;object-fit:cover!important}
+/* Ícones do pacote local (glifos sem fundo próprio): círculo branco cheio, glifo centralizado, sem anel */
+html:root body .ta-avatar[data-logo-local="1"]:not(.ta-pair).ta-has-logo{background:#ffffff!important}
+html:root body .ta-avatar[data-logo-local="1"]:not(.ta-pair) .ta-logo{object-fit:contain!important;padding:16%!important;box-sizing:border-box}
+/* Pares de moedas: duas bandeiras em círculos puros sobrepostos */
+html:root body .ta-avatar.ta-pair,html:root body #app .cqr>.ta-avatar.cqi.ta-pair{background:transparent!important;border-radius:0!important;overflow:visible!important}
+html:root body .ta-fx-half{border:0!important;box-shadow:none!important;border-radius:50%!important;overflow:hidden!important;background:#181C26!important}
+html:root body .ta-fx-img{object-fit:cover!important;border-radius:50%}
+html:root body .dl-logo.dl-par>img{box-shadow:none!important}
