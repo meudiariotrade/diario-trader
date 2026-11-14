@@ -46,5 +46,5 @@ Este aplicativo é uma ferramenta profissional de mesa proprietária e gestão d
 
 ## 7. Responsividade Desktop (md: / lg:)
 - **Proibido colunas estreitas que quebrem palavras verticalmente:** nenhum grid ou flex pode encolher um card a ponto de quebrar texto letra por letra. No desktop use `grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5` (sub-cards `grid-cols-1 sm:grid-cols-2`), `min-w-0` nos filhos de grid/flex e `break-normal` / `whitespace-nowrap` em rótulos curtos, tickers e valores. Nunca aninhe grids de colunas fixas dentro de colunas já estreitas.
-- **Largura do monitor:** Início e Meu dia usam `w-full max-w-7xl mx-auto px-6` no desktop; não trave os containers principais em `max-w-md` / `max-w-lg`.
+- **Largura do monitor:** Início e Meu dia usam `w-full max-w-none` no desktop, o mesmo padrão das outras abas (preenchem a área útil inteira); não trave os containers principais em `max-w-*`.
 - **Sidebar retrátil obrigatória no Desktop:** o menu lateral precisa ter botão de recolher/expandir (« / ») ao lado de "Diário de Trader"; recolhido vira barra de 64px só com ícones centralizados e tooltip, com a preferência salva no localStorage. O layout mobile (iPhone) não pode mudar ao ajustar o desktop.
