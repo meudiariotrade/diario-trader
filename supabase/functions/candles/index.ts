@@ -60,6 +60,21 @@ export const GRAFICO: Record<string, { intervalo: string; range: string }> = {
   '5m': { intervalo: '5m', range: '5d' }, '15m': { intervalo: '15m', range: '1mo' }, '60m': { intervalo: '60m', range: '3mo' }, '1d': { intervalo: '1d', range: '2y' },
 };
 
+/** v631 — Replay de mercado: janelas máximas do Yahoo por intervalo (1m = 7 dias, 5m = 60 dias). */
+export const REPLAY: Record<string, { intervalo: string; range: string }> = {
+  '1m': { intervalo: '1m', range: '7d' }, '5m': { intervalo: '5m', range: '60d' }, '15m': { intervalo: '15m', range: '1mo' }, '60m': { intervalo: '60m', range: '3mo' },
+};
+export const diaBRT = (t: number) => new Date((t - 3 * 3600) * 1000).toISOString().slice(0, 10);
+export const minBRT = (t: number) => { const d = new Date((t - 3 * 3600) * 1000); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+/** Junta candles do cache com os novos (o mais novo vence no mesmo horário), em ordem e com teto. */
+export function juntaCandles(a: number[][], b: number[][], max = 30000): number[][] {
+  const m = new Map<number, number[]>();
+  for (const k of a) m.set(k[0], k);
+  for (const k of b) m.set(k[0], k);
+  const out = [...m.values()].sort((x, y) => x[0] - y[0]);
+  return out.length > max ? out.slice(out.length - max) : out;
+}
+
 // ===== segurança =====
 // seguranca.ts — login obrigatório, limite de uso por pessoa e comparação de segredo em tempo constante.
 // Copiado em cada função (cada função do Supabase é publicada sozinha). Testes em seguranca.test.ts.
@@ -135,6 +150,28 @@ const corsFor = (req: Request) => {
   return h;
 };
 const cache = new Map<string, { ts: number; v: unknown }>();
+const SB_URL = Deno.env.get('SUPABASE_URL') || '', SB_SVC = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const sbH = () => ({ apikey: SB_SVC, Authorization: 'Bearer ' + SB_SVC, 'Content-Type': 'application/json' });
+/** Dias já guardados no Supabase (tabela replay_candles) para acumular histórico além da janela do Yahoo. */
+async function replayCacheLe(sim: string, iv: string): Promise<number[][]> {
+  if (!SB_URL || !SB_SVC) return [];
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/replay_candles?simbolo=eq.${encodeURIComponent(sim)}&intervalo=eq.${encodeURIComponent(iv)}&select=candles&order=dia.desc&limit=180`, { headers: sbH(), signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return [];
+    const rows = await r.json();
+    return (rows || []).flatMap((x: any) => (Array.isArray(x.candles) ? x.candles : []));
+  } catch { return []; }
+}
+async function replayCacheGrava(sim: string, iv: string, candles: number[][]) {
+  if (!SB_URL || !SB_SVC || !candles.length) return;
+  const hoje = diaBRT(Date.now() / 1000), dias = new Map<string, number[][]>();
+  for (const k of candles) { const d = diaBRT(k[0]); if (d === hoje) continue; (dias.get(d) || dias.set(d, []).get(d)!).push(k); }
+  const rows = [...dias].map(([dia, c]) => ({ simbolo: sim, intervalo: iv, dia, candles: c, atualizado: new Date().toISOString() }));
+  if (!rows.length) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/replay_candles?on_conflict=simbolo,intervalo,dia`, { method: 'POST', headers: { ...sbH(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows), signal: AbortSignal.timeout(8000) });
+  } catch { /* o cache é opcional */ }
+}
 
 /** Tenta a origem secundária do Yahoo quando a primeira falha. */
 async function yahooCandles(url: string, init: RequestInit): Promise<Response> {
@@ -163,6 +200,28 @@ Deno.serve(async (req) => {
   let b: any; try { b = await req.json(); } catch { return out({ error: 'JSON inválido' }, 400); }
   const m = mapa(String(b.ativo || '').slice(0, 20), String(b.sub || '').slice(0, 12));
   if (!m) return out({ error: 'Não sei qual gráfico usar para esse ativo.' }, 400);
+  // v631 — Replay de mercado: janela máxima do Yahoo + dias acumulados no Supabase
+  if (b.modo === 'replay') {
+    const rp = REPLAY[String(b.intervalo || '')];
+    if (!rp) return out({ error: 'Intervalo inválido para o replay.' }, 400);
+    const b3 = b.pregao === 'b3';
+    const chave = `r|${m.y}|${rp.intervalo}|${b3 ? 'b3' : ''}`, c0 = cache.get(chave);
+    if (c0 && Date.now() - c0.ts < 5 * 60_000) return out(c0.v);
+    const filtra = (c: number[][]) => (b3 ? c.filter((k) => { const mm = minBRT(k[0]); return mm >= 540 && mm < 1080; }) : c);
+    let novos: number[][] = [], erro = '';
+    try {
+      const r = await yahooCandles(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(m.y)}?range=${rp.range}&interval=${rp.intervalo}&includePrePost=false`, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(15_000) });
+      if (r.ok) novos = filtra(leYahoo(await r.json(), m.mult, 1e6));
+      else erro = 'Yahoo ' + r.status;
+    } catch (e) { erro = (e as Error).message; }
+    const guardados = filtra(await replayCacheLe(m.y, rp.intervalo));
+    novos.length && (await replayCacheGrava(m.y, rp.intervalo, novos));
+    const candles = juntaCandles(guardados, novos);
+    if (!candles.length) return out({ error: erro || 'Sem candles para esse ativo.' }, erro ? 502 : 404);
+    const v = { simbolo: m.y, intervalo: rp.intervalo, proxy: m.proxy, nota: m.nota, fonte: 'Yahoo Finance', consultadoEm: new Date().toISOString(), dias: new Set(candles.map((k) => diaBRT(k[0]))).size, cacheDias: new Set(guardados.map((k) => diaBRT(k[0]))).size, candles };
+    cache.set(chave, { ts: Date.now(), v });
+    return out(v);
+  }
   // gráfico das cotações ao vivo: histórico por intervalo (o candle atual vem do Profit, no app)
   const g = GRAFICO[String(b.intervalo || '')];
   if (g) {
