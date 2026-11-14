@@ -4739,7 +4739,11 @@ async function fhChave() {
         tok = r.ok ? String((await r.json()).token || "") : "";
       }
     } catch {}
-    ((FH.tok = tok), (FH.tokEm = Date.now()));
+    ((FH.tok = tok), (FH.tokEm = tok ? Date.now() : Date.now() - 57e4), (window.fhTokServidor = tok)); // sem login ainda: tenta de novo em 30 s
+    // v625: o Terminal também passa a usar a chave do servidor (não depende mais do campo colado).
+    try {
+      tok && window.TR && !window.TR.fh && (window.TR.fhWanted || []).length && window.TRM && window.TRM.trFinnhub(window.TR.fhWanted);
+    } catch {}
   }
   if (FH.tok) return FH.tok;
   try {
@@ -4803,7 +4807,7 @@ function fhLiga() {
   fhChave().then(
     (k) => {
       FH.liga = 0;
-      if (!k) return void (FH.modo = "tv");
+      if (!k) return void ((FH.modo = "tv"), clearTimeout(FH.timer), (FH.timer = setTimeout(fhLiga, 3e4)));
       FH.k = k;
       const tr = window.TR && window.TR.fh;
       if (tr && tr.readyState === 1 && window.TR.fhKey === k) return (fhFecha(), fhCompart(tr));
