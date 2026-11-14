@@ -6984,7 +6984,7 @@ de Carteira`,
           n.text("1. Conferir agenda e vencimentos · 2. Atualizar preços e confirmar o cenário · 3. Registrar cenário, alternativo e invalidação · 4. Dimensionar o risco · 5. Revisar a execução ao encerrar."),
           n.heading("Fontes e método"),
           n.text(
-            "Candles das fontes integradas ao app até o corte da edição. Médias, RSI 14 (Wilder), topos e fundos por fractal (Dow), Fibonacci e extensões (Elliott / Flávio Lemos) e padrões de candles são calculados pelo código; a IA só redige a leitura e os números são conferidos. Futuros: snapshot do terminal, sem histórico inventado. Revista original, sem reproduzir outras publicações.",
+            (g.ia?.modelo ? "Leitura técnica redigida por " + g.ia.modelo + " (Roteador Multi-IA). " : "Leitura técnica montada pelo app (nenhuma IA respondeu" + (g.iaErro ? ": " + g.iaErro : "") + "). ") + "Candles das fontes integradas ao app até o corte da edição. Médias, RSI 14 (Wilder), topos e fundos por fractal (Dow), Fibonacci e extensões (Elliott / Flávio Lemos) e padrões de candles são calculados pelo código; a IA só redige a leitura e os números são conferidos. Futuros: snapshot do terminal, sem histórico inventado. Revista original, sem reproduzir outras publicações.",
           ),
           n.finish()
         );
@@ -7971,6 +7971,7 @@ de Carteira`,
           const r = await rq("/functions/v1/revista-ia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ corte: n.window.cutoff, ativos }), signal: AbortSignal.timeout(120e3) }),
             j = await r.json().catch(() => ({}));
           j?.ativos && ((n.ia = { versao: 619, ativos: j.ativos, modelo: j.modelo, gerado: j.gerado }), z(n));
+          j?.erro && !j?.ativos && (n.iaErro = String(j.erro).slice(0, 200));
         } catch {}
         return n;
       }
