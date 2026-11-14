@@ -1,0 +1,9 @@
+DIÁRIO DE TRADER — v606 (Mercado: mesa macro)
+
+- Cotações > Mapa: tela única com 12 termômetros (WIN, WDO, EWZ, S&P 500, DXY, USD/BRL, DI1F27, DI1F31, US10Y, Brent, Minério, BTC) em 2 colunas, com preço, variação e bolinha verde/cinza de mercado aberto/fechado. WIN, WDO e DIs pelo Profit quando a ponte está ligada.
+- Cotações > Juros: card "DIs Brasil" (DI1F27, F28, F29, F31, F33) com inclinação 2a–5a e variação do dia em bps, seletor Cotações | Curva (hoje × D-1) e card Fed Watch (futuros de Fed Funds, método CME FedWatch).
+- Cotações > Moedas: média da cesta emergente (MXN, CLP, COP, ZAR, CNY) comparada ao USD/BRL.
+- Análises > EUA: US Market Barometer 3x3 (Large/Mid/Small × Value/Core/Growth) com os ETFs iShares, visão Dia | 1 mês.
+- Análises > Brasil: Regime agora, Correlação Ibov × Dólar (60d) e Volatilidade Ibov (20d) preenchidos mesmo sem o histórico do Terminal.
+- ADRs: contador de ativos corrigido. Ações BR e demais listas: mostra o último cache salvo na hora enquanto atualiza.
+- Nova função Supabase "mesa-macro" (só leitura de TradingView e Yahoo; nada é gravado, sem tabelas novas).
