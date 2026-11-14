@@ -4121,7 +4121,7 @@ function rpyFecha(e, t) {
 }
 const rpyFmt = (e) =>
   (+e).toLocaleString("pt-BR", {
-    maximumFractionDigits: Math.abs(e) >= 1e3 ? 0 : 2,
+    maximumFractionDigits: Math.abs(e) >= 1e4 ? 0 : 2, // v630: WDO (5.632,5) mantém as casas
   });
 function rpyEntra(e) {
   const t = RPY.dados.candles,
