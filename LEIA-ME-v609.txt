@@ -1,0 +1,4 @@
+DIÁRIO DE TRADER — v609 (Desktop)
+
+- Início e Meu dia no desktop sem trava de largura: o conteúdo preenche toda a área útil (com a sidebar aberta ou recolhida), igual às outras abas. Resumo do dia, Central de Inteligência, Plano do dia e Checklist operacional esticam de ponta a ponta.
+- Celular e sidebar retrátil sem mudanças.
