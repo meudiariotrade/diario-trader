@@ -1,0 +1,3 @@
+v617
+- Notícias: barra única Notícias | Balanços da B3 | Jornal do Pregão | Giro do mercado (sem "Jornal do dia" duplicado).
+- Destaque correto ao abrir o Giro do mercado.
