@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 5f9578af2d1b70cc6297c6fffa1eba947a006f083f58794bdfa066cbb6f4de0d */
+/* Gerado de src/app-theme.css · SHA256 562982ad138334e05230eb975fd6d96e4235bdb916bde948132cad5ada06abe7 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2770,3 +2770,89 @@ html:root body #app #flwbox .card>svg,html:root body #app svg[aria-label="Sorris
 html body #app#app .v596-shell nav.dt397-category:has(>[data-dt397-view="rpy"]){grid-template-columns:.8fr .8fr 1fr 1.45fr .85fr!important}
 @media (max-width:650px){html body #app#app .v596-shell nav.dt397-category:has(>[data-dt397-view="rpy"]){grid-template-columns:.74fr .78fr 1fr 1.62fr .86fr!important}}
 html body #app#app .dt397-studies.dt-est-interno{align-content:start}
+/* v629 — Replay de mercado: gráfico grande (claro editorial / escuro), player e barra de comando */
+html body #app#app .rpy7{padding:12px!important}
+html body #app#app .rpy7-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;min-width:0}
+html body #app#app .rpy7-top>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+html body #app#app .rpy7-meta{margin-left:auto;color:#8A90A0;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+html body #app#app .rpy7-tema{flex:0 0 40px;width:40px;height:40px;border-radius:6px;border:1px solid #1E232E;background:#11141B;color:#D4A017;font-size:17px;cursor:pointer}
+html body #app#app .rpy7-chart{position:relative;width:100%;height:360px;border-radius:6px;overflow:hidden;border:1px solid #1E232E;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+html body #app#app .rpy7-chart.rpy7-claro{background:#FAFAFA;border-color:#E5E7EB}
+html body #app#app .rpy7-chart.rpy7-escuro{background:#0A0C10}
+html body #app#app .rpy7-chart canvas{display:block;width:100%;height:100%;cursor:crosshair}
+@media (min-width:1024px){html body #app#app .rpy7-chart{height:520px}}
+html body #app#app .rpy7-placar{position:absolute;top:40px;right:78px;max-width:calc(100% - 96px);padding:6px 10px;border-radius:6px;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+html body #app#app .rpy7-claro .rpy7-placar{background:rgba(255,255,255,.92);color:#111827;border:1px solid #E5E7EB}
+html body #app#app .rpy7-escuro .rpy7-placar{background:rgba(17,20,27,.92);color:#E6E8EE;border:1px solid #1E232E}
+html body #app#app .rpy7-claro .rpy7-placar .g{color:#16A34A}html body #app#app .rpy7-claro .rpy7-placar .r{color:#DC2626}
+html body #app#app .rpy7-zoom{position:absolute;left:8px;bottom:28px;display:flex;gap:4px}
+html body #app#app .rpy7-zoom button{width:32px;height:32px;border-radius:4px;font-size:16px;line-height:1;cursor:pointer}
+html body #app#app .rpy7-claro .rpy7-zoom button{background:#FFFFFF;border:1px solid #E5E7EB;color:#374151}
+html body #app#app .rpy7-escuro .rpy7-zoom button{background:#11141B;border:1px solid #1E232E;color:#E6E8EE}
+html body #app#app .rpy7-ind{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 0}
+html body #app#app .rpy7-ind .chip{min-height:32px;font-size:12px}
+html body #app#app .rpy7-ind .chip.on{border-color:#D4A017;color:#D4A017}
+html body #app#app .rpy7-ult{margin-left:auto;font-size:12px;color:#8A90A0;font-variant-numeric:tabular-nums}
+html body #app#app .rpy7-msg{margin:8px 0 0;font-weight:700;font-size:13px}
+html body #app#app .rpy7-bar{display:grid;grid-template-columns:auto auto 52px minmax(0,1fr) minmax(0,1fr) auto auto;gap:6px;align-items:stretch;margin-top:10px}
+html body #app#app .rpy7-bar button{min-height:44px;border-radius:6px;border:1px solid #1E232E;background:#11141B;color:#E6E8EE;font-weight:700;font-size:14px;padding:0 12px;white-space:nowrap;cursor:pointer;font-variant-numeric:tabular-nums}
+html body #app#app .rpy7-bar button:disabled{opacity:.4;cursor:default}
+html body #app#app .rpy7-bar .rpy7-play{min-width:112px;background:#D4A017;border-color:#D4A017;color:#0A0C10}
+html body #app#app .rpy7-bar .rpy7-play.on{background:#181C26;color:#D4A017}
+html body #app#app .rpy7-vel{display:flex;border:1px solid #1E232E;border-radius:6px;overflow:hidden}
+html body #app#app .rpy7-vel button{border:0!important;border-radius:0!important;min-width:40px;padding:0 8px!important;font-size:13px!important;background:#11141B}
+html body #app#app .rpy7-vel button+button{border-left:1px solid #1E232E!important}
+html body #app#app .rpy7-vel button.on{background:#181C26;color:#D4A017}
+html body #app#app .rpy7-bar .rpy7-buy{background:#16A34A;border-color:#16A34A;color:#FFFFFF}
+html body #app#app .rpy7-bar .rpy7-sell{background:#DC2626;border-color:#DC2626;color:#FFFFFF}
+html body #app#app .rpy7-bar .rpy7-buy span,html body #app#app .rpy7-bar .rpy7-sell span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600;opacity:.9}
+html body #app#app .rpy7-risco{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px;font-size:13px;color:#8A90A0}
+html body #app#app .rpy7-risco label{display:flex;align-items:center;gap:6px;margin:0;font-size:13px;color:#8A90A0;white-space:nowrap}
+html body #app#app .rpy7-risco input{width:84px;min-height:40px;padding:0 8px;font-size:16px;text-align:right;font-variant-numeric:tabular-nums}
+html body #app#app .rpy7-pre{display:flex;gap:4px}
+html body #app#app .rpy7-pre button,html body #app#app .rpy7-risco>button{min-height:36px;min-width:44px;padding:0 8px;border-radius:4px;border:1px solid #1E232E;background:#11141B;color:#C9CDD6;font-size:12px;font-variant-numeric:tabular-nums;cursor:pointer}
+html body #app#app .rpy7-pre button.on{border-color:#D4A017;color:#D4A017}
+html body #app#app .rpy7-fim{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding:12px;border:1px solid #1E232E;border-radius:6px;background:#11141B}
+html body #app#app .rpy7-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+html body #app#app .rpy7-kpis div{display:flex;flex-direction:column;gap:2px;min-width:0}
+html body #app#app .rpy7-kpis small{color:#8A90A0;font-size:11px}
+html body #app#app .rpy7-kpis b{font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+html body #app#app .rpy7-tb{width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed}
+html body #app#app .rpy7-tb :is(th,td){padding:6px 4px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid #1E232E;white-space:nowrap}
+html body #app#app .rpy7-tb :is(th,td):first-child,html body #app#app .rpy7-tb :is(th,td):nth-child(2){text-align:left}
+@media (max-width:1023.98px){
+html body #app#app .rpy7-bar{grid-template-columns:minmax(0,1.2fr) minmax(0,1.6fr) 52px;grid-auto-rows:44px}
+html body #app#app .rpy7-bar .rpy7-vel button{flex:1 1 0;min-width:0}
+html body #app#app .rpy7-bar .rpy7-buy,html body #app#app .rpy7-bar .rpy7-sell{grid-column:span 1}
+html body #app#app .rpy7-bar .rpy7-buy{grid-column:1/2}
+html body #app#app .rpy7-bar .rpy7-sell{grid-column:2/3}
+html body #app#app .rpy7-bar [data-rpy="sair"]{grid-column:3/4;padding:0 4px}
+html body #app#app .rpy7-bar .rpy7-fimb{grid-column:1/-1;min-height:36px!important;font-size:12px!important;font-weight:600!important;background:transparent!important;color:#8A90A0!important}
+html body #app#app .rpy7-ult{margin-left:0;width:100%}
+html body #app#app .rpy7-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+html body #app#app .rpy7-placar{top:36px;right:64px;max-width:calc(100% - 72px);font-size:11px}
+}
+
+/* v629 ajustes: sem card dentro de card, cores fortes dos botões e linha de risco compacta */
+html body #app#app .card.rpy7{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+html body #app#app .rpy7-bar .rpy7-buy{background:#16A34A!important;border-color:#16A34A!important;color:#FFFFFF!important}
+html body #app#app .rpy7-bar .rpy7-sell{background:#DC2626!important;border-color:#DC2626!important;color:#FFFFFF!important}
+html body #app#app .rpy7-bar .rpy7-play{background:#D4A017!important;border-color:#D4A017!important;color:#0A0C10!important}
+html body #app#app .rpy7-bar .rpy7-play.on{background:#181C26!important;color:#D4A017!important}
+html body #app#app .rpy7-ind .chip{background:transparent!important;color:#8A90A0!important;border:1px solid #1E232E!important;border-radius:4px!important;padding:0 10px!important}
+html body #app#app .rpy7-ind .chip.on{color:#D4A017!important;border-color:#D4A017!important}
+html body #app#app .rpy7-zoom button{padding:0!important;min-height:32px!important;display:grid;place-items:center}
+html body #app#app .rpy7-claro .rpy7-zoom button{background:#FFFFFF!important;border:1px solid #E5E7EB!important;color:#374151!important}
+html body #app#app .rpy7-escuro .rpy7-zoom button{background:#11141B!important;border:1px solid #1E232E!important;color:#E6E8EE!important}
+html body #app#app .rpy7-grp{display:flex;align-items:center;gap:6px}
+html body #app#app .rpy7-grp label{font-size:13px;color:#8A90A0;min-width:32px}
+html body #app#app .rpy7-risco input{width:72px!important;min-height:40px!important}
+html body #app#app .rpy7-pre button{min-width:40px!important;min-height:40px!important;padding:0 6px!important}
+@media (max-width:1023.98px){
+html body #app#app .rpy7-bar .rpy7-buy,html body #app#app .rpy7-bar .rpy7-sell{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:0 4px!important}
+html body #app#app .rpy7-bar .rpy7-buy span,html body #app#app .rpy7-bar .rpy7-sell span{font-size:11px}
+html body #app#app .rpy7-bar{grid-auto-rows:minmax(44px,auto)}
+html body #app#app .rpy7-grp{width:100%}
+html body #app#app .rpy7-pre{flex:1 1 auto;justify-content:flex-end}
+html body #app#app .rpy7-pre button{flex:1 1 0;min-width:0!important}
+}
