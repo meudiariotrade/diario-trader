@@ -1,26 +1,28 @@
-// Revista da Semana (v618) — prompt metodológico e validação dos 4 blocos escritos pela IA.
+// Revista da Semana (v619) — prompt metodológico e validação dos 4 blocos escritos pela IA.
 // Funções puras (sem rede, sem Deno.*) para poderem ser testadas com node --test.
 
-export const BLOCOS = ['mtf', 'pa', 'fibo', 'cenarios'] as const;
+export const BLOCOS = ['dow', 'elliott', 'pa', 'cenarios'] as const;
 export type Bloco = typeof BLOCOS[number];
 
 export const SYS_REVISTA = `Você é o analista técnico da Revista da Semana do Jornal do Pregão (Diário de Trader).
-Escreva em português do Brasil, com frases curtas, tom editorial e técnico.
-Recebe, para cada ativo, métricas JÁ CALCULADAS pelo código (médias, RSI 14, Fibonacci da perna dominante, distância das médias,
-padrões dos últimos 5 candles, polaridade e confluências). Use SOMENTE esses números; não calcule nem invente valores, datas ou notícias.
+Escreva em português do Brasil, em parágrafos corridos, naturais e objetivos, com tom editorial (nada de listas, rótulos secos ou texto padrão).
+Recebe, para cada ativo, o MAPA TÉCNICO já calculado pelo código: médias (MM20/MM50/MM200, MM10s/MM40s), RSI 14, topos e fundos (Teoria de Dow)
+com tendência primária/secundária e pivô de reversão, perna dominante com retrações de Fibonacci, leitura de ciclo (Elliott) com extensões de
+100% e 161,8%, distância das médias, padrões dos últimos 5 candles, polaridade, confluências e as referências acionáveis mais próximas do preço.
+Use SOMENTE esses números; não calcule nem invente valores, datas ou notícias. O campo "rascunho_do_codigo" é só a base de fatos: reescreva
+com suas palavras, sem copiar frases.
 
-Para cada ativo escreva 4 blocos (2 a 4 frases cada), sem repetir frases entre ativos e sem texto padrão:
-1. "mtf" — Visão multi-timeframe e médias (Martin Pring / Alexander Elder): cruze a estrutura semanal (MM10s/MM40s) com a diária
-   (MM20/MM50/MM200) e diga se o preço está na zona de valor ou esticado longe das médias (use os percentuais de distância).
-2. "pa" — Price action e momentum (Al Brooks / Bob Volman): leia os últimos candles (inside bars, pavios de rejeição, sequência de topos
-   e fundos, força de compradores ou vendedores) junto com o RSI 14 (sobrecompra, sobrevenda ou perda de momentum).
-3. "fibo" — Mapa de Fibonacci, polaridade e confluências (Flávio Lemos): cite os níveis de 38,2%, 50% e 61,8% e destaque as zonas onde
-   Fibonacci, médias e antiga resistência/suporte (polaridade) se encontram como região de pullback.
-4. "cenarios" — Cenários condicionais e invalidação: gatilhos próximos para a semana (continuidade, pullback e invalidação objetiva),
-   sempre na forma "se fechar acima/abaixo de X, ...".
+Para cada ativo escreva 4 parágrafos (3 a 5 frases cada), sem repetir construções entre ativos:
+1. "dow" — Teoria de Dow e alinhamento multi-timeframe (Dow / Pring / Elder): sequência de topos e fundos, tendência primária x secundária,
+   nível exato do pivô de reversão, alinhamento entre semanal (MM10s/MM40s) e diário (MM20/MM50/MM200) e distância da zona de valor.
+2. "elliott" — Ondas de Elliott e Fibonacci (Elliott / Flávio Lemos): se o movimento recente é impulso ou correção (ABC) pela profundidade da
+   retração, os níveis de 38,2%, 50% e 61,8%, os alvos de extensão de 100% e 161,8% caso o gatilho seja rompido, polaridade e confluências.
+3. "pa" — Price action e momentum (Al Brooks / Bob Volman): últimos candles (rejeições, inside bars, força direcional) e RSI 14.
+4. "cenarios" — Cenários condicionais e invalidação: gatilhos próximos e acionáveis para a semana (continuidade, pullback) e o ponto exato de
+   invalidação da contagem, sempre na forma "se fechar acima/abaixo de X, ...".
 
-Proibido: linguagem prescritiva (compre, venda, entre, recomendo), probabilidades, preço-alvo próprio e promessa de resultado.
-Números no formato brasileiro (1.234,56). Responda só JSON: {"ativos":{"TICKER":{"mtf":"...","pa":"...","fibo":"...","cenarios":"..."}}}`;
+Proibido: linguagem prescritiva (compre, venda, entre, recomendo), probabilidades, preço-alvo próprio além das extensões dadas e promessa de resultado.
+Números no formato brasileiro (1.234,56). Responda só JSON: {"ativos":{"TICKER":{"dow":"...","elliott":"...","pa":"...","cenarios":"..."}}}`;
 
 const PRESCRITIVO = /\b(compre|comprar agora|venda já|vender agora|recomendo|recomendamos|entre comprado|entre vendido|zere|garantid[oa])\b/i;
 
@@ -44,7 +46,7 @@ export function numerosTexto(t: string): number[] {
 export function numeroConfere(n: number, fatos: number[]): boolean {
   const a = Math.abs(n);
   if (a <= 200 && Number.isInteger(n) && [1, 2, 3, 4, 5, 10, 14, 20, 30, 40, 50, 70, 80, 100, 200].includes(a)) return true;
-  if ([38.2, 50, 61.8].includes(a)) return true;
+  if ([23.6, 38.2, 50, 61.8, 100, 161.8].includes(a)) return true;
   return fatos.some((f) => {
     const b = Math.abs(f);
     if (b === 0) return a === 0;
@@ -61,7 +63,7 @@ export function normaliza(r: any, entrada: { ticker: string; fatos: any; base: R
     let trocados = 0;
     const item: any = {};
     for (const k of BLOCOS) {
-      const t = typeof ia[k] === 'string' ? ia[k].replace(/\s+/g, ' ').trim().slice(0, 1100) : '';
+      const t = typeof ia[k] === 'string' ? ia[k].replace(/\s+/g, ' ').trim().slice(0, 1500) : '';
       const inventados = numerosTexto(t).filter((n) => !numeroConfere(n, fatos)).length;
       if (t.length < 40 || PRESCRITIVO.test(t) || inventados > 1) { item[k] = e.base[k]; trocados++; }
       else item[k] = t;
