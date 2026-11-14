@@ -1,0 +1,3 @@
+v618
+- Revista da Semana: mapa técnico (Fibonacci, elástico, price action, polaridade), 4 blocos de leitura técnica, logos e agenda da próxima semana.
+- Mercado: sem o bloco "Sobre esta tela".
