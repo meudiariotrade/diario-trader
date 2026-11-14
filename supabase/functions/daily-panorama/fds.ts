@@ -84,7 +84,7 @@ export function fdsSvg(L: Cripto[], news: string[], logos: Record<string, string
 <text x="${P}" y="84" font-size="40" font-weight="700" fill="#E6E8EE">Panorama Fim de Semana</text>
 <text x="${P}" y="128" font-size="28" font-weight="700" fill="#D4A017">Cripto &amp; Macro</text>
 <text x="${P}" y="168" font-size="18" fill="#8A90A0">${esc(dataTxt)} (Brasília)</text>
-<circle cx="${W - P - 210}" cy="${121}" r="7" fill="#10B981"/><text x="${W - P}" y="128" font-size="19" font-weight="700" fill="#10B981" text-anchor="end">Binance 24/7 · Tempo real</text>
+<circle cx="${W - P - 292}" cy="121" r="7" fill="#10B981"/><text x="${W - P}" y="128" font-size="19" font-weight="700" fill="#10B981" text-anchor="end">Binance 24/7 · Tempo real</text>
 <text x="${P}" y="214" font-size="20" font-weight="700" fill="#C9CDD6">Cripto · 24 horas</text>
 ${cards}
 <rect x="${P}" y="${yT}" width="${W - 2 * P}" height="126" rx="6" fill="#11141B" stroke="#1E232E"/><rect x="${P}" y="${yT}" width="6" height="126" fill="${termo.cor}"/>
