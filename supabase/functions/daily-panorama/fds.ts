@@ -27,20 +27,57 @@ export async function criptos(): Promise<Cripto[]> {
   }
   return [];
 }
+// v639: várias fontes (as do app + grandes portais) e prioridade para o que mexe na abertura de segunda:
+// geopolítica, EUA/Trump, Fed, China, petróleo, juros, cripto. Só do fim de semana (últimas 48 h).
+const FEEDS: [string, string][] = [
+  ['Money Times', 'https://www.moneytimes.com.br/mercados/feed/'],
+  ['Money Times', 'https://www.moneytimes.com.br/feed/'],
+  ['InfoMoney', 'https://www.infomoney.com.br/feed/'],
+  ['g1 Mundo', 'https://g1.globo.com/rss/g1/mundo/'],
+  ['g1 Economia', 'https://g1.globo.com/rss/g1/economia/'],
+  ['CNN Brasil', 'https://www.cnnbrasil.com.br/feed/'],
+  ['Google Notícias', 'https://news.google.com/rss/search?q=' + encodeURIComponent('(Trump OR EUA OR Fed OR China OR guerra OR ataque OR petróleo OR tarifas OR bitcoin OR aeroportos) when:2d') + '&hl=pt-BR&gl=BR&ceid=BR:pt-419'],
+  ['Google News', 'https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en'],
+];
+const PESO: [RegExp, number][] = [
+  [/\b(trump|casa branca|white house|biden|eua|estados unidos|u\.s\.|us )\b/i, 3], [/\b(ataque|atentado|attack|guerra|war|míssil|missile|militar|military|explos)/i, 4],
+  [/\b(israel|ir[aã]|iran|r[uú]ssia|russia|ucr[aâ]nia|ukraine|china|taiwan|coreia|venezuela|oriente m[eé]dio)/i, 3],
+  [/\b(fed|juros|inflação|inflation|tarifa|tariff|petr[oó]leo|oil|opep|opec|d[oó]lar|bolsa|wall street|mercados?)\b/i, 3],
+  [/\b(aeroporto|airport|voos|flights|shutdown|paralisa|greve|fechad)/i, 3], [/\b(bitcoin|cripto|crypto|ethereum|binance)/i, 2],
+  [/\b(lula|haddad|banco central|copom|selic|ibovespa)\b/i, 2],
+  [/^(como|por que|veja|confira|saiba|entenda|quiz|horóscopo)\b|novela|bbb|futebol|receita|celebridade/i, -6],
+];
 export async function manchetes(): Promise<string[]> {
-  const q = encodeURIComponent('(mercado financeiro OR economia OR bitcoin OR cripto OR Fed OR China OR petróleo OR geopolítica) when:2d');
-  try {
-    const r = await fetch(`https://news.google.com/rss/search?q=${q}&hl=pt-BR&gl=BR&ceid=BR:pt-419`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return [];
-    const xml = await r.text(), out: string[] = [], vistos = new Set<string>();
-    for (const m of xml.matchAll(/<item>[\s\S]*?<title>([\s\S]*?)<\/title>/g)) {
-      const t = m[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+-\s+[^-]{2,40}$/, '').trim();
-      const k = t.toLowerCase().slice(0, 40);
-      if (t.length > 20 && !vistos.has(k)) { vistos.add(k); out.push(t); }
-      if (out.length >= 5) break;
-    }
-    return out;
-  } catch { return []; }
+  const limite = Date.now() - 48 * 3600e3, itens: { t: string; f: string; s: number; d: number }[] = [];
+  await Promise.all(FEEDS.map(async ([fonte, url]) => {
+    try {
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/rss+xml, application/xml, text/xml' }, signal: AbortSignal.timeout(7000) });
+      if (!r.ok) return;
+      const xml = await r.text();
+      for (const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+        const tt = /<title>([\s\S]*?)<\/title>/.exec(m[1]), pd = /<pubDate>([\s\S]*?)<\/pubDate>/.exec(m[1]);
+        if (!tt) continue;
+        const d = pd ? Date.parse(pd[1].trim()) : Date.now();
+        if (!(d >= limite)) continue;
+        const t = tt[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/<[^>]+>/g, '').replace(/\s+-\s+[^-]{2,40}$/, '').trim();
+        if (t.length < 25) continue;
+        const s = PESO.reduce((a, [re, w]) => a + (re.test(t) ? w : 0), 0);
+        itens.push({ t, f: fonte, s, d });
+      }
+    } catch { /* fonte fora do ar: segue com as outras */ }
+  }));
+  itens.sort((a, b) => b.s - a.s || b.d - a.d);
+  const out: string[] = [], vistos: string[] = [];
+  const chave = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '').split(' ').filter((w) => w.length > 4);
+  for (const it of itens) {
+    if (it.s < 2) break;
+    const k = chave(it.t);
+    if (vistos.some((v) => { const o = v.split('|'); return k.filter((w) => o.includes(w)).length >= 3; })) continue;
+    vistos.push(k.join('|'));
+    out.push(`${it.t} (${it.f})`);
+    if (out.length >= 5) break;
+  }
+  return out;
 }
 export function termometro(L: Cripto[]) {
   if (!L.length) return { vies: 'Sem dados', cor: '#8A90A0', txt: 'Sem cotações da Binance agora.' };
@@ -92,6 +129,6 @@ ${cards}
 ${termTxt.map((l, j) => `<text x="${P + 26}" y="${yT + 76 + j * 28}" font-size="19" fill="#E6E8EE">${esc(l)}</text>`).join('')}
 <text x="${P}" y="${yN + 20}" font-size="20" font-weight="700" fill="#C9CDD6">Principais notícias do fim de semana</text>
 ${itens}
-<text x="${P}" y="${H - 28}" font-size="15" fill="#5B6170">Diário de Trader · Binance (24h) e Google Notícias. Leitura de risco é indicativa, não é recomendação.</text>
+<text x="${P}" y="${H - 28}" font-size="15" fill="#5B6170">Diário de Trader · Binance (24h); notícias: Money Times, InfoMoney, g1, CNN Brasil e Google Notícias. Leitura de risco é indicativa, não é recomendação.</text>
 </svg>`;
 }
