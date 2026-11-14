@@ -1,0 +1,1 @@
+v637 — Replay: tabelas do histórico e do diário no celular sem sobreposição (rolam para o lado).
