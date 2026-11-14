@@ -2621,5 +2621,7 @@ html:root body .dl-logo.dl-vazio{background:#161B26!important;border:1px solid r
 html:root body .ta-avatar[data-logo-provider="tradingview"] .ta-logo{padding:0!important;object-fit:cover!important}
 html:root body .ta-avatar[data-logo-provider="tradingview"].ta-has-logo{background:transparent!important}
 /* v616 — Notícias > Jornal do dia: mesma barra de Notícias no topo; Jornal do Pregão | Giro como segundo nível */
-html:root body #app .m550-ntnav{margin-bottom:8px}
-html:root body #app .m406-section-switch.m550-subnivel .m406-switch-button{min-height:40px;font-size:14px}
+/* v617: Notícias | Balanços da B3 | Jornal do Pregão | Giro do mercado numa barra só (2x2 no celular, 4 no PC) */
+html:root body #app .m406-section-switch .m406-switch-tabs:has([data-m550-nt],[data-m550-jornal]){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;flex-wrap:nowrap!important;width:100%!important;max-width:none!important;box-sizing:border-box}
+html:root body #app .m406-section-switch .m406-switch-tabs:has([data-m550-nt],[data-m550-jornal])>.m406-switch-button{width:100%!important;min-width:0!important;min-height:44px!important;margin:0!important;white-space:nowrap!important;justify-content:center;text-align:center}
+@media(min-width:768px){html:root body #app .m406-section-switch .m406-switch-tabs:has([data-m550-nt],[data-m550-jornal]){grid-template-columns:repeat(4,minmax(0,1fr))!important}}

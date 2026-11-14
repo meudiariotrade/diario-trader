@@ -16,26 +16,28 @@ test('Jornal sem duplicação após cliques, atualizações e retorno de Notíci
   };
   w.eval(layer('mercado-v406.js'));
   w.eval(fs.readFileSync('melhorias-v550.js','utf8'));
+  const rot=()=>[...w.document.querySelectorAll('.m406-section-switch button')].map(b=>b.textContent);
+  const ativo=()=>[...w.document.querySelectorAll('.m406-section-switch button[aria-pressed="true"]')].map(b=>b.textContent);
   for(let i=0;i<3;i++){
    w.MKT.tab='nt';w.render();await tick();
-   assert.equal(w.document.querySelectorAll('[data-m550-jornal]').length,1);
-   w.document.querySelector('[data-m550-jornal]').click();await tick();
+   // v617: uma barra só, sem "Jornal do dia" duplicando o Jornal do Pregão
+   assert.equal(w.document.querySelectorAll('.m406-section-switch').length,1);
+   assert.deepEqual(rot(),['Notícias','Balanços da B3','Jornal do Pregão','Giro do mercado']);
+   w.document.querySelector('[data-m550-jornal="giro"]').click();await tick();
    assert.equal(w.MKT.tab,'jr');
-   assert.equal(w.document.querySelectorAll('[data-m550-jornal]').length,0);
-   assert.deepEqual([...w.document.querySelectorAll('.m406-section-switch[data-m406-switch="jr"] button')].map(b=>b.textContent),['Jornal do Pregão','Giro do mercado']);
-   assert.equal(w.document.querySelectorAll('.m406-section-switch[data-m406-switch="jr"] button[aria-pressed="true"]').length,1);
-   // v616: a barra de Notícias continua no topo, com "Jornal do dia" ativo (sem parecer outra tela)
-   assert.deepEqual([...w.document.querySelectorAll('[data-m550-ntnav] button')].map(b=>b.textContent),['Notícias','Balanços da B3','Jornal do dia']);
-   assert.equal(w.document.querySelectorAll('[data-m550-ntnav]').length,1);
-   w.document.querySelector('[data-m406-select="giro"]').click();
-   assert.equal(w.document.querySelector('.m406-content-host').hidden,false);
+   assert.equal(w.document.querySelectorAll('.m406-section-switch').length,1);
+   assert.deepEqual(rot(),['Notícias','Balanços da B3','Jornal do Pregão','Giro do mercado']);
+   assert.deepEqual(ativo(),['Giro do mercado']);
    assert.equal(w.document.querySelector('.m406-content-host').textContent,'Edição do giro');
-   w.render();await tick();
-   assert.equal(w.document.querySelector('[data-m406-select="giro"]').getAttribute('aria-pressed'),'true');
-   assert.equal(w.document.querySelectorAll('[data-m550-jornal]').length,0);
    w.document.querySelector('[data-m406-select="jornal"]').click();
+   assert.deepEqual(ativo(),['Jornal do Pregão']);
    assert.equal(w.document.querySelector('.m406-content-host').hidden,true);
    assert.equal(w.document.getElementById('edicao').hidden,false);
+   w.document.querySelector('[data-m406-select="giro"]').click();
+   assert.deepEqual(ativo(),['Giro do mercado']);
+   w.render();await tick();
+   assert.deepEqual(ativo(),['Giro do mercado']);
+   w.document.querySelector('[data-m406-select="jornal"]').click();
   }
  }finally{dom.window.close()}
 });

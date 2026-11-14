@@ -38,30 +38,21 @@
 
   /* ---------------- Mercado: Jornal do dia dentro de Notícias ---------------- */
   function jornal(m) {
-    // O atalho pertence a Notícias; dentro do Jornal ele duplicava a subaba ativa.
-    if (g(() => MKT.tab, '') === 'jr') {
-      // v616: dentro do Jornal, mantém a mesma barra de Notícias (Notícias | Balanços da B3 | Jornal do dia)
-      // para não parecer outra tela; Jornal do Pregão | Giro do mercado ficam logo abaixo, como segundo nível.
-      $$('.m406-section-switch[data-m406-switch="nt"] [data-m550-jornal]', m).forEach(b => b.remove());
-      const jr = $('.m406-section-switch[data-m406-switch="jr"]', m);
-      if (jr && !$('[data-m550-ntnav]', m)) {
-        const nav = doc.createElement('section'); nav.className = 'm406-section-switch m550-ntnav'; nav.dataset.m550Ntnav = '1';
-        nav.innerHTML = '<div class="m406-switch-tabs" role="group" aria-label="Seção de Notícias">' +
-          '<button type="button" class="m406-switch-button" data-m550-nt="noticias" aria-pressed="false">Notícias</button>' +
-          '<button type="button" class="m406-switch-button" data-m550-nt="balancos" aria-pressed="false">Balanços da B3</button>' +
-          '<button type="button" class="m406-switch-button on" aria-pressed="true" aria-current="page">Jornal do dia</button></div>';
-        jr.before(nav); jr.classList.add('m550-subnivel');
-      }
-      return;
-    }
+    // v617: uma barra só — Notícias | Balanços da B3 | Jornal do Pregão | Giro do mercado.
+    // "Jornal do dia" era o mesmo que "Jornal do Pregão"; o segundo nível confundia o destaque ativo.
     $$('[data-m550-ntnav]', m).forEach(b => b.remove());
-    if (g(() => MKT.tab, '') !== 'nt') {
+    const aba = g(() => MKT.tab, '');
+    const btn = (attr, val, txt) => { const b = doc.createElement('button'); b.type = 'button'; b.className = 'm406-switch-button'; b.dataset[attr] = val; b.setAttribute('aria-pressed', 'false'); b.textContent = txt; return b; };
+    if (aba === 'jr') {
       $$('[data-m550-jornal]', m).forEach(b => b.remove());
+      const tabs = $('.m406-section-switch[data-m406-switch="jr"] .m406-switch-tabs', m);
+      if (tabs && !$('[data-m550-nt]', tabs)) { tabs.setAttribute('aria-label', 'Seção de Notícias'); tabs.prepend(btn('m550Nt', 'noticias', 'Notícias'), btn('m550Nt', 'balancos', 'Balanços da B3')); }
       return;
     }
+    if (aba !== 'nt') { $$('[data-m550-jornal]', m).forEach(b => b.remove()); return; }
     const sw = $('.m406-section-switch[data-m406-switch="nt"]', m); if (!sw || $('[data-m550-jornal]', sw)) return;
-    const b = doc.createElement('button'); b.type = 'button'; b.className = 'm406-switch-button'; b.dataset.m550Jornal = '1'; b.textContent = 'Jornal do dia';
-    sw.append(b);
+    const tabs = $('.m406-switch-tabs', sw) || sw;
+    tabs.append(btn('m550Jornal', 'jornal', 'Jornal do Pregão'), btn('m550Jornal', 'giro', 'Giro do mercado'));
   }
 
   /* ---------------- Início: primeiro acesso em 3 passos ---------------- */
@@ -168,7 +159,7 @@
     if ((el = t.closest('.m550-sanf > .sw9t'))) { alternaBloco(el); return; }
     const ntv = t.closest('[data-m550-nt]');
     if (ntv) { e.preventDefault(); e.stopPropagation(); try { ntv.dataset.m550Nt === 'balancos' ? GOR.bal() : GOR.noticias ? GOR.noticias() : ((MKT.tab = 'nt'), render()); scrollTo(0, 0); } catch {} return; }
-    if (t.closest('[data-m550-jornal]')) { e.preventDefault(); e.stopPropagation(); try { MKT.tab = 'jr'; render(); scrollTo(0, 0); } catch {} return; }
+    if ((el = t.closest('[data-m550-jornal]'))) { e.preventDefault(); e.stopPropagation(); try { sessionStorage.setItem('diario-mercado-jornal-secao', el.dataset.m550Jornal === 'giro' ? 'giro' : 'jornal'); } catch {} try { MKT.tab = 'jr'; render(); scrollTo(0, 0); } catch {} return; }
     if ((el = t.closest('[data-m550-passo]'))) { e.preventDefault(); irPasso(el.dataset.m550Passo); agenda(); return; }
     if (t.closest('[data-m550-pular]')) { const st = ax().guia550 ||= {}; st.fim = Date.now(); salvar(); agenda(); return; }
     if (t.closest('[data-m550-continuar]')) { e.preventDefault(); abrirUltimo(); return; }
