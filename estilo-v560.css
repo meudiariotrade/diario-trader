@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 69d6d81a37934c5cf1f0d70559016ec5f0268aae3aebb3a3aac51e347a2de386 */
+/* Gerado de src/app-theme.css · SHA256 d17c3b1a497c16a7b1192ee313fa5c08b02ffba99a2b86fe5fb0daf7d9bbccf9 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2610,3 +2610,14 @@ html:root body .dl-logo.dl-par>img{box-shadow:none!important}
 
 /* v612 — botão Voltar do preview do Panorama: escuro translúcido, texto visível */
 #imgov .imgov-voltar:hover{background:rgba(255,255,255,.1)!important}
+
+/* v614 — nenhum quadrado no app: todo logo e todo fallback são círculos perfeitos */
+html:root body #app .ta-avatar,html:root body #app .ta-avatar.cqi,html:root body #app .cqr>.cqi,html:root body #app .market-monitor .cqi,html:root body .ta-avatar{border-radius:50%!important;overflow:hidden}
+html:root body #app .ta-avatar.ta-pair,html:root body #app .cqr>.ta-avatar.cqi.ta-pair{border-radius:0!important;overflow:visible!important}
+/* Fallback (sem logo): círculo escuro com borda âmbar e iniciais em âmbar */
+html:root body #app .ta-avatar:not(.ta-has-logo):not(.ta-pair),html:root body .ta-avatar:not(.ta-has-logo):not(.ta-pair),html:root body #app .cqr>span.cqi:not(.ta-avatar){background:#161B26!important;border:1px solid rgba(245,158,11,.3)!important;box-shadow:none!important;border-radius:50%!important;display:inline-flex!important;align-items:center;justify-content:center}
+html:root body .ta-avatar:not(.ta-has-logo):not(.ta-pair) .ta-mark,html:root body #app .cqr>span.cqi:not(.ta-avatar){color:#FBBF24!important;-webkit-text-fill-color:#FBBF24!important;font-size:12px!important;font-weight:700!important;letter-spacing:0!important}
+html:root body .dl-logo.dl-vazio{background:#161B26!important;border:1px solid rgba(245,158,11,.3)!important;color:#FBBF24!important;border-radius:50%!important}
+/* Logos oficiais do TradingView já trazem fundo próprio: sem fundo branco nem recuo */
+html:root body .ta-avatar[data-logo-provider="tradingview"] .ta-logo{padding:0!important;object-fit:cover!important}
+html:root body .ta-avatar[data-logo-provider="tradingview"].ta-has-logo{background:transparent!important}
