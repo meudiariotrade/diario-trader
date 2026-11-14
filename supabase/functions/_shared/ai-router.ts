@@ -2,7 +2,7 @@
 // e Jornal do Pregão (analise). Divide o peso entre os provedores ativos, troca de provedor em 429 e devolve
 // qual provedor/modelo respondeu — ou a mensagem técnica real de cada falha.
 //
-// Provedores (ativados automaticamente quando o Secret existe no Supabase):
+// Provedores (ativados automaticamente quando a chave existe nos Secrets ou no Vault do Supabase):
 //   GEMINI_API_KEY ou GOOGLE_API_KEY → Google Gemini   (gemini-2.5-flash → gemini-2.5-flash-lite, + modelos da conta)
 //   GROQ_API_KEY                     → Groq            (llama-3.3-70b-versatile)
 //   OPENROUTER_API_KEY               → OpenRouter      (meta-llama/llama-3.3-70b-instruct:free, deepseek/deepseek-r1:free;
@@ -16,6 +16,21 @@
 
 type Env = (key: string) => string | undefined;
 const ENV0: Env = (k) => ((globalThis as any).Deno?.env?.get(k) as string | undefined) || undefined;
+
+// v622: chaves também podem ficar no Vault do Supabase (função public.ia_chaves, só service_role).
+// O Secret da Edge Function tem prioridade; o Vault completa o que faltar. Cache de 10 min por instância.
+let VAULT: { t: number; v: Record<string, string> } | null = null;
+export async function envComVault(base: Env = ENV0, fetcher: typeof fetch = fetch): Promise<Env> {
+  const url = base('SUPABASE_URL'), svc = base('SUPABASE_SERVICE_ROLE_KEY');
+  if (url && svc && (!VAULT || Date.now() - VAULT.t > 600_000)) {
+    try {
+      const r = await fetcher(url + '/rest/v1/rpc/ia_chaves', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: svc, Authorization: 'Bearer ' + svc }, body: '{}', signal: AbortSignal.timeout(5000) });
+      VAULT = { t: Date.now(), v: r.ok ? ((await r.json()) || {}) : VAULT?.v || {} };
+    } catch { VAULT = { t: Date.now() - 540_000, v: VAULT?.v || {} }; }
+  }
+  const v = VAULT?.v || {};
+  return (k: string) => base(k) || (typeof v[k] === 'string' && v[k] ? v[k] : undefined);
+}
 
 export type Provedor = { id: string; nome: string; modelos: string[]; tipo: 'gemini' | 'openai'; url?: string; chave?: string; extra?: Record<string, string> };
 
@@ -100,7 +115,7 @@ export type Resposta = { texto: string; provedor: string; modelo: string; rotulo
  * Em 429: 1 nova tentativa rápida no mesmo modelo, depois pausa o provedor e passa ao próximo.
  */
 export async function gerarTexto(system: string, prompt: string, opt: { json?: boolean; temp?: number; ate?: number; env?: Env; fetcher?: typeof fetch; preferir?: string[]; porTentativaMs?: number } = {}): Promise<Resposta> {
-  const env = opt.env || ENV0, fetcher = opt.fetcher || fetch, ate = opt.ate || Date.now() + 55_000, temp = opt.temp ?? 0.4, erros: string[] = [];
+  const fetcher = opt.fetcher || fetch, env = opt.env ? opt.env : await envComVault(ENV0, fetcher), ate = opt.ate || Date.now() + 55_000, temp = opt.temp ?? 0.4, erros: string[] = [];
   for (const p of ordem(provedores(env), env, opt.preferir || [])) {
     let modelos = p.id === 'openrouter' ? await openRouterGratis(p.modelos, fetcher) : p.modelos;
     const bom = OK_MODELO.get(p.id);
