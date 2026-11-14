@@ -1,0 +1,3 @@
+v625
+- Chave da Finnhub guardada no servidor (Vault): o Mercado e o Terminal usam essa chave sozinhos, sem precisar colar no campo do Terminal.
+- Se a conta ainda não carregou, o app tenta buscar a chave de novo em 30 s.

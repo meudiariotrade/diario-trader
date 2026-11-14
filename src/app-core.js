@@ -70284,7 +70284,11 @@ async function fhChave() {
         tok = r.ok ? String((await r.json()).token || "") : "";
       }
     } catch {}
-    ((FH.tok = tok), (FH.tokEm = Date.now()));
+    ((FH.tok = tok), (FH.tokEm = tok ? Date.now() : Date.now() - 57e4), (window.fhTokServidor = tok)); // sem login ainda: tenta de novo em 30 s
+    // v625: o Terminal também passa a usar a chave do servidor (não depende mais do campo colado).
+    try {
+      tok && window.TR && !window.TR.fh && (window.TR.fhWanted || []).length && window.TRM && window.TRM.trFinnhub(window.TR.fhWanted);
+    } catch {}
   }
   if (FH.tok) return FH.tok;
   try {
@@ -70348,7 +70352,7 @@ function fhLiga() {
   fhChave().then(
     (k) => {
       FH.liga = 0;
-      if (!k) return void (FH.modo = "tv");
+      if (!k) return void ((FH.modo = "tv"), clearTimeout(FH.timer), (FH.timer = setTimeout(fhLiga, 3e4)));
       FH.k = k;
       const tr = window.TR && window.TR.fh;
       if (tr && tr.readyState === 1 && window.TR.fhKey === k) return (fhFecha(), fhCompart(tr));
@@ -89467,7 +89471,7 @@ function net188() {
         ),
       ),
     ].slice(0, 40);
-    const P = r().fh,
+    const P = r().fh || window.fhTokServidor || "", // v625: sem chave colada, usa a do servidor (Vault)
       B = E.slice().sort().join(",");
     if (((e.fhWanted = E), !P || !B)) {
       (clearTimeout(e.fhRetry), (e.fhRetry = null));
@@ -89808,7 +89812,7 @@ function net188() {
       Oe = e.fh && e.fh.readyState === 1;
     return (
       te +
-      `<button class="trlk" data-trcmd="STAT">fontes</button> · ${_ ? '<i class="tg">●</i> Profit ao vivo (' + _ + ")" : "<i>●</i> Profit desligado"} · ${ye ? '<i class="tg">●</i> Binance' : "<i>●</i> Binance"} · ${Oe ? '<i class="tg">●</i> Finnhub' : r().fh ? "<i>●</i> Finnhub" : "Finnhub sem chave"}`
+      `<button class="trlk" data-trcmd="STAT">fontes</button> · ${_ ? '<i class="tg">●</i> Profit ao vivo (' + _ + ")" : "<i>●</i> Profit desligado"} · ${ye ? '<i class="tg">●</i> Binance' : "<i>●</i> Binance"} · ${Oe ? '<i class="tg">●</i> Finnhub' : r().fh || window.fhTokServidor ? "<i>●</i> Finnhub" : "Finnhub sem chave"}`
     );
   }
   function Ye(E) {
@@ -90102,7 +90106,7 @@ function net188() {
           ),
       );
     return `<div class="trnote">Digite o comando e Enter (ou GO). Clique num painel para ele receber o próximo comando. No celular, as abas de cima trocam de painel.</div>${dt(["Comando", "O que faz"], E)}
-  <div class="trnote">Ações dos EUA ao vivo: cole a sua chave gratuita do Finnhub <input id="trfh" class="trin" value="${d(r().fh || "")}" placeholder="chave do finnhub.io" style="width:180px"> <button class="trbtn" data-tr="fh">Salvar</button></div>`;
+  <div class="trnote">Ações dos EUA ao vivo: cole a sua chave gratuita do Finnhub <input id="trfh" class="trin" value="${d(r().fh || "")}" placeholder="${window.fhTokServidor ? "chave já salva no servidor" : "chave do finnhub.io"}" style="width:180px"> <button class="trbtn" data-tr="fh">Salvar</button></div>`;
   }
   function ft(E, P) {
     const B = (E.pedido || String(E.s || "").split(":")[1] || "").replace(
