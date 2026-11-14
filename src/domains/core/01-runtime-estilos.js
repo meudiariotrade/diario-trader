@@ -1293,7 +1293,7 @@ try {
         if (!V.length) return;
         const y = Math.max(8.5, W.s || 8.8),
           P = y * 1.35,
-          j = 5,
+          j = typeof W.pad == "number" ? W.pad : 5,
           H = u.C,
           v = u.M,
           z = V.reduce((a, i) => a + i.w, 0),
