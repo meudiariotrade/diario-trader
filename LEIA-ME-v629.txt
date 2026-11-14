@@ -1,0 +1,8 @@
+v629 — Replay de mercado (Estudos)
+- Gráfico grande em canvas: 360 px no celular e 520 px no PC, largura total; tema claro editorial (#FAFAFA, grade #E5E7EB, candles #16A34A/#DC2626) com botão ☀/☾ para o escuro.
+- Eixo de preço à direita, crosshair ao passar o mouse ou tocar, zoom (roda do mouse e botões − / +), arraste no PC e ⟲ para voltar ao último candle. (lightweight-charts não foi usado: o app não tem a biblioteca e a instalação não está disponível; o canvas próprio faz o mesmo papel.)
+- Player ▶ Play / ⏸ Pausar com 1x (1,5 s), 2x (0,8 s), 5x (0,3 s) e 10x (0,15 s); +1 continua para avançar candle a candle. Durante o play só o gráfico é redesenhado.
+- Barra de comando logo abaixo do gráfico: Play, velocidade, +1, Comprar, Vender, Zerar e Fim do dia; Stop e Alvo em pontos numa linha compacta, com botões rápidos (WIN 100/150/200/300, WDO 5/10/15/20; ações em % do preço).
+- No gráfico: linhas tracejadas de entrada (azul no claro / âmbar no escuro), stop (vermelho) e alvo (verde) com etiqueta no eixo; setas nos candles de entrada e X na saída; placar ao vivo em pts e em vezes o risco.
+- Ativos da B3 (WIN, WDO, ações): só o pregão regular 09:00–18:00 BRT; MME 9, MM 20 e VWAP recalculadas sobre essa série.
+- Fim do dia: revela a data (dia surpresa) e salva o resumo (trades, acerto, pts e vezes o risco) no Histórico de treinos.
