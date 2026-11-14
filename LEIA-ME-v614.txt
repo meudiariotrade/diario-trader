@@ -1,0 +1,5 @@
+DIÁRIO DE TRADER — v614 (Logos)
+
+- Nenhum quadrado no app: logos e fallback sempre em círculo perfeito; sem logo, círculo escuro com borda âmbar e iniciais em âmbar.
+- Ações EUA, Cripto e Commodities com os logos oficiais do TradingView (versão --big, alta definição) no lugar dos ícones antigos.
+- Juros: bandeira circular do país em cada título (BR, US, DE, JP, GB) e nos DIs.
