@@ -15219,9 +15219,12 @@ Validação do app: atenção a ` +
                   ? ""
                   : (N <= 75, "tg"),
         be = z ? Ke(["IBOV", "USDBRL"], 60) : null,
-        X = be ? be.m[0][1] : null,
+        m6 = (() => { try { return m606Carrega(), (M606.v && M606.v.ibov) || null; } catch { return null; } })(),
+        X = be && be.m[0][1] != null ? be.m[0][1] : m6 && m6.corr60 != null ? m6.corr60 : null,
         xe = z && se("IBOV"),
-        $e = xe ? Pe([...xe.values()].slice(-20)).sd * Math.sqrt(252) : null,
+        $e0 = xe ? Pe([...xe.values()].slice(-20)).sd * Math.sqrt(252) : null,
+        $e = $e0 != null && isFinite($e0) ? $e0 : m6 && m6.vol20 != null ? m6.vol20 : null,
+        rg6 = oe ? null : (() => { try { const mp = M606.v && M606.v.mapa; if (!mp) return null; const g = (k) => { const x = mp.find((y) => y.k === k); return x && x.d1 != null ? x.d1 : null; }, pts = [[g("S&P 500"), 1, 0.3], [g("EWZ"), 1, 0.5], [g("DXY"), -1, 0.25], [g("USD/BRL"), -1, 0.4], [g("BTC"), 1, 1.5]].filter((x) => x[0] != null); const sc = pts.reduce((a, [v, sg, lim]) => a + (Math.abs(v) >= lim ? Math.sign(v) * sg : 0), 0); return { regime: sc >= 2 ? "risk-on" : sc <= -2 ? "risk-off" : "neutro", n: pts.length }; } catch { return null; } })(),
         fe = z
           ? Ke(
               ["IBOV", "USDBRL", "SPX", "BRENT", "US10Y", "OURO"].filter(
@@ -15242,7 +15245,7 @@ Validação do app: atenção a ` +
     ]
       .map(([N, W]) => `<button data-sw="${N}">${W}</button>`)
       .join("")}</div></div>
-  <div class="sw9ks">${ze("SENTIMENTO B3", Fe == null ? "—" : Math.round(Fe), l(re.rotulo || ""), me(Fe), Ue((re.hist || []).map((N) => N.v)))}${ze("MEDO & GANÂNCIA EUA", ie.valor == null ? "—" : Math.round(ie.valor), l(ie.rotulo || ""), me(ie.valor))}${ze("CRIPTO", R.valor == null ? "—" : Math.round(R.valor), l(R.rotulo || ""), me(R.valor))}${ze("REGIME AGORA", oe ? oe.regime : "—", oe ? oe.rel.length + " relações" : "", oe && oe.regime === "risk-off" ? "tr" : oe && oe.regime === "risk-on" ? "tg" : "am")}${ze("CORRELAÇÃO IBOV × DÓLAR", X == null ? "—" : d(X, 2), "60 dias", X != null && X < -0.4 ? "am" : "")}${ze("VOLATILIDADE IBOV", $e == null ? "—" : d($e, 1) + "%", "20 dias, anualizada")}</div>
+  <div class="sw9ks">${ze("SENTIMENTO B3", Fe == null ? "—" : Math.round(Fe), l(re.rotulo || ""), me(Fe), Ue((re.hist || []).map((N) => N.v)))}${ze("MEDO & GANÂNCIA EUA", ie.valor == null ? "—" : Math.round(ie.valor), l(ie.rotulo || ""), me(ie.valor))}${ze("CRIPTO", R.valor == null ? "—" : Math.round(R.valor), l(R.rotulo || ""), me(R.valor))}${(() => { const rg = oe ? oe.regime : rg6 ? rg6.regime : null; return ze("REGIME AGORA", rg || "—", oe ? oe.rel.length + " relações" : rg6 ? "S&P, EWZ, DXY, dólar e BTC hoje" : "", rg === "risk-off" ? "tr" : rg === "risk-on" ? "tg" : "am"); })()}${ze("CORRELAÇÃO IBOV × DÓLAR", X == null ? "—" : d(X, 2), "60 dias", X != null && X < -0.4 ? "am" : "")}${ze("VOLATILIDADE IBOV", $e == null ? "—" : d($e, 1) + "%", "20 dias, anualizada")}</div>
   <div class="sw9grid">
    <div class="sw9c sw9big"><div class="sw9t">IBOVESPA NO ANO × SAZONALIDADE <span>retorno acumulado</span></div>${Re(760, 260)}</div>
    <div class="sw9c"><div class="sw9t">RELAÇÕES AGORA <span>regras + histórico</span></div>${

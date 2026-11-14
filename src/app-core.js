@@ -68334,6 +68334,18 @@ const CQ_ABAS = [
     loading: {},
     search: "",
   };
+const M606 = { v: null, ts: 0, busy: false, err: "", salvoEm: 0, di: "cot", bar: "d1" };
+try {
+  const c = ls.get("diario-m606");
+  c && c.v && c.v.versao === "v606" && ((M606.v = c.v), (M606.salvoEm = c.ts || 0));
+} catch {}
+// Cache salvo das listas de cotações: aparece na hora enquanto a consulta nova roda.
+try {
+  const c = ls.get("diario-cq-cache606") || {};
+  Object.entries(c).forEach(([k, x]) => {
+    x && x.d && Array.isArray(x.d.itens) && !CQ.d[k] && ((CQ.d[k] = x.d), (CQ.ts[k] = 0), ((CQ.cache606 ??= {})[k] = x.ts || 0));
+  });
+} catch {}
 try {
   const e = HUB_M.findIndex((a) => a[0] === "mercado:mu");
   HUB_M.some((a) => a[0] === "mercado:cq") ||
@@ -68924,16 +68936,25 @@ function cqItens(category) {
   const busy = category === 'adr' ? !!AD.busy : !!CQ.loading[category] || CQ.busy === category;
   const error = CQ.errors[category] || (!data && !busy ? CQ.err : '');
   let content;
-  if (category === 'adr') content = `<section id="adr" class="market-adrs">${adrHtml()}</section>${visible.length ? `<div class="cql">${visible.map(item=>cqLinha(item,category)).join('')}</div>` : ''}`;
+  const mapa606 = CQ.vis === 'mapa';
+  if (mapa606 || ['jur','fx'].includes(category)) setTimeout(()=>{ try { m606Carrega(); } catch {} },0);
+  if (mapa606) content = m606MapaHtml();
+  else if (category === 'adr') content = `<section id="adr" class="market-adrs">${adrHtml()}</section>${visible.length ? `<div class="cql">${visible.map(item=>cqLinha(item,category)).join('')}</div>` : ''}`;
   else if (visible.length) content = CQ.vis === 'mapa' ? cqMapa(visible,category) : `<div class="cql">${visible.map(item=>cqLinha(item,category)).join('')}</div>`;
   else {
     const text = query && items.length ? 'Nenhum ativo corresponde à busca.' : category === 'fav' && !cqFavs().length ? 'Marque a estrela de um ativo para acompanhar aqui.' : busy ? 'Consultando cotações…' : error ? 'Não foi possível atualizar esta categoria.' : data ? 'A fonte não retornou ativos nesta categoria.' : 'Aguardando consulta da fonte.';
     content = `<div class="market-state" role="status">${esc(text)}</div>`;
   }
+  if (!mapa606 && category === 'jur') content = m606DiHtml() + m606FedHtml() + content;
+  if (!mapa606 && category === 'fx') content = m606EmHtml() + content;
+  const adrN = category === 'adr' ? (AD.data?.itens || []).filter(item=>(item.regular?.px ?? item.px)>0).length : 0;
+  const total = visible.length + adrN;
+  const cache606 = CQ.cache606?.[category];
+  const summary606 = mapa606 ? `12 termômetros${M606.busy ? ' · atualizando…' : ''}` : busy ? (total ? `${total} ativos · atualizando${cache606 ? ' (mostrando o salvo às '+new Date(cache606).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})+')' : ''}…` : 'Atualizando…') : total+' ativos';
   return `<div id="cotbox" class="market-quotes" data-category="${esc(category)}">
     <div class="market-categories" role="group" aria-label="Categorias de ativos">${CQ_ABAS.map(([key,label])=>`<button type="button" data-cqa="${key}" class="${category===key?'on':''}" aria-pressed="${category===key}">${esc(label.replace('★ ',''))}</button>`).join('')}</div>
     <div class="market-tools"><label class="market-search"><span class="market-sr">Buscar ativo</span><input type="search" data-market-search placeholder="Buscar ativo" value="${esc(CQ.search || '')}" autocomplete="off"></label><button type="button" data-cqr="1" aria-label="Atualizar preços" ${busy?'disabled':''}>↻</button><label class="market-order"><span class="market-sr">Ordenar ativos</span><select data-market-order>${[['lista','Ordem padrão'],['alta','Maiores altas'],['baixa','Maiores quedas']].map(([key,label])=>`<option value="${key}" ${CQ.ord===key?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-cqv="${CQ.vis==='mapa'?'lista':'mapa'}" aria-label="${CQ.vis==='mapa'?'Ver lista':'Ver mapa de calor'}">${CQ.vis==='mapa'?'Lista':'Mapa'}</button></div>
-    <div class="market-summary" role="status">${busy ? 'Atualizando…' : visible.length+' ativos'}${data?.em ? ' · Consulta '+esc(new Date(data.em).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}))+' BRT' : ''}</div>
+    <div class="market-summary" role="status">${summary606}${!mapa606 && data?.em ? ' · Consulta '+esc(new Date(data.em).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}))+' BRT' : ''}</div>
     ${error ? `<p class="market-error" role="status">${esc(error)}${items.length?' Mantendo a consulta anterior.':''}</p>` : ''}
     <div class="market-results" aria-busy="${busy}">${content}</div>
     <details class="market-sources"><summary>Fontes e ferramentas</summary><p>Profit para ativos da B3 quando a ponte está conectada. Após o pregão, o último registro salvo aparece como FECHADO, com contrato e horário. As demais fontes e seus atrasos aparecem em cada ativo.</p><button type="button" data-navroute="term">Abrir gráficos e comparação no Terminal</button><button type="button" data-market-longshort>Long &amp; Short</button>${cqAlertasHtml()}${category==='jur'?'<button type="button" data-market-di>Ver curva DI no Terminal</button>'+cqJurosExtra():''}</details>
@@ -69650,6 +69671,193 @@ ${i ? `<div class="card endia"><div class="top"><b class="sm">Palavra do dia</b>
     .join("")}</select></label>
 <div class="sm mut" style="margin-top:8px">Cada lição tem cerca de 10 perguntas (3 a 5 min). As palavras voltam em 1, 2, 4, 8, 16 e 32 dias conforme você acerta; quando erra, voltam no mesmo dia. 10 XP por acerto e bônus no fim.</div></div>`;
 }
+// ===== v606 — Mesa macro da aba Mercado (Mapa 12 termômetros, DIs + inclinação, Fed Watch, cesta emergente, barômetro EUA) =====
+function cqCacheSalva606(aba) {
+  try {
+    const d = CQ.d[aba];
+    if (!d || !Array.isArray(d.itens) || !d.itens.some((i) => i.px != null) || aba === "fav") return;
+    const c = ls.get("diario-cq-cache606") || {};
+    c[aba] = { ts: Date.now(), d };
+    ls.set("diario-cq-cache606", c);
+    CQ.cache606 && delete CQ.cache606[aba];
+  } catch {}
+}
+{
+  const e = cqCarrega;
+  cqCarrega = async function (t) {
+    const r = await e.apply(this, arguments);
+    const aba = t || CQ.aba;
+    CQ.errors[aba] || cqCacheSalva606(aba);
+    return r;
+  };
+}
+async function m606Carrega(forca) {
+  if (M606.busy || (!forca && M606.v && Date.now() - M606.ts < 25e3)) return;
+  if (window.DIARIO_DEMO) return;
+  const a = cfg();
+  if (!a) return;
+  M606.busy = !0;
+  let mudou = !1;
+  try {
+    const o = { "Content-Type": "application/json", apikey: a.key };
+    try {
+      typeof SESS < "u" && SESS && SESS.at && (o.Authorization = "Bearer " + SESS.at);
+    } catch {}
+    const s = await fetch(a.url + "/functions/v1/mesa-macro", { method: "POST", headers: o, body: "{}", signal: AbortSignal.timeout(25e3) }),
+      n = await s.json().catch(() => ({}));
+    if (!s.ok || n.versao !== "v606") throw new Error(n.error || "Erro " + s.status);
+    ((M606.v = n), (M606.ts = Date.now()), (M606.err = ""), (M606.salvoEm = 0), (mudou = !0));
+    ls.set("diario-m606", { ts: Date.now(), v: n });
+  } catch (o) {
+    const e = String(o.message || o);
+    ((mudou = !M606.v && M606.err !== e), (M606.err = e), (M606.ts = Date.now()));
+  }
+  M606.busy = !1;
+  mudou && m606Repinta();
+}
+function m606Repinta() {
+  try {
+    if (typeof tab > "u" || tab !== "mercado") return;
+    MKT.tab === "cq" ? cqPinta() : MKT.tab === "lab" && render();
+  } catch {}
+}
+function m606Hora(d) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", { timeZone: d, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date())
+      .map((x) => [x.type, x.value]),
+  );
+  return { w: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(p.weekday), m: +p.hour * 60 + +p.minute };
+}
+// Mercado aberto agora? Grade de horários de cada bolsa (feriados não entram: o horário do último preço confirma).
+function m606Aberto(it) {
+  const ut = (w) => w >= 1 && w <= 5;
+  let ab = !1;
+  if (it.ss === "24h") ab = !0;
+  else if (it.ss === "b3") { const t = m606Hora("America/Sao_Paulo"); ab = ut(t.w) && t.m >= 540 && t.m < 1110; }
+  else if (it.ss === "di" || it.ss === "brl") { const t = m606Hora("America/Sao_Paulo"); ab = ut(t.w) && t.m >= 540 && t.m < 1080; }
+  else if (it.ss === "nyse") { const t = m606Hora("America/New_York"); ab = ut(t.w) && t.m >= 570 && t.m < 960; }
+  else if (it.ss === "fx24") { const t = m606Hora("America/New_York"); ab = t.w === 6 ? !1 : t.w === 0 ? t.m >= 1080 : t.w === 5 ? t.m < 1020 : !(t.m >= 1020 && t.m < 1080); }
+  else if (it.ss === "ice") { const t = m606Hora("Europe/London"); ab = ut(t.w) && t.m >= 60 && t.m < 1380; }
+  else if (it.ss === "sgx") { const t = m606Hora("Asia/Singapore"); ab = (ut(t.w) && ((t.m >= 430 && t.m < 1200) || t.m >= 1245)) || (t.w >= 2 && t.w <= 6 && t.m < 315); }
+  if (ab && it.ss !== "24h" && it.em && Date.now() - Date.parse(it.em) > 3 * 36e5 && !it.live) ab = !1;
+  return ab;
+}
+const m606Sinal = (v, dp = 2, suf = "%") => (v == null || !isFinite(v) ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + cqNum(Math.abs(v), dp) + suf);
+const m606Cls = (v) => (v == null ? "" : v > 0 ? "up" : v < 0 ? "dn" : "");
+const m606Consulta = () => {
+  const v = M606.v;
+  if (!v) return "";
+  const h = new Date(v.em).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+  return M606.salvoEm && !M606.ts ? `salvo às ${h} · atualizando` : `consulta ${h} BRT`;
+};
+// Profit ao vivo (WIN, WDO e DIs) por cima do TradingView, igual à lista de cotações.
+function m606Vivo(it) {
+  try {
+    const q = cqPf({ c: it.k, s: it.s }, /^(WIN|WDO)$/.test(it.k) ? "fut" : "jur");
+    if (q && q.px > 0) return { px: q.px, d1: q.d1 != null ? q.d1 : it.d1, live: !!q.live, fechado: !!q.fechado };
+  } catch {}
+  return null;
+}
+function m606MapaHtml() {
+  const v = M606.v;
+  if (!v) return `<div class="market-state" role="status">${window.DIARIO_DEMO ? "Termômetros desativados no modo demonstrativo." : M606.err ? "Não foi possível consultar os termômetros agora." : "Consultando os 12 termômetros…"}</div>`;
+  return `<div class="m606-mapa" role="list" aria-label="Termômetros do pregão">${v.mapa
+    .map((it) => {
+      const lv = m606Vivo(it), px = lv ? lv.px : it.px, d1 = lv ? lv.d1 : it.d1, ab = m606Aberto({ ...it, live: lv && lv.live });
+      return `<div class="m606-t" role="listitem"><div class="m606-th"><b>${esc(it.k)}</b><i class="m606-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}" title="${ab ? "Aberto agora" : "Fechado agora"}"></i></div><span class="m606-px">${px == null ? "–" : cqNum(px, it.dp) + (it.un === "%" ? "%" : "")}</span><span class="m606-v ${m606Cls(d1)}">${m606Sinal(d1)}</span><small>${esc(it.n)}${lv && lv.live ? " · Profit" : ""}</small></div>`;
+    })
+    .join("")}</div><p class="m606-src">● aberto agora · ● fechado (último preço) · TradingView, B3 com ~15 min de atraso; WIN, WDO e DIs pelo Profit quando a ponte está ligada · ${esc(m606Consulta())}</p>`;
+}
+function m606DiCurva(di) {
+  const W = 340, H = 168, L = 10, R = 44, T = 12, B = 26;
+  const pts = di.filter((x) => x.taxa != null);
+  if (pts.length < 2) return "";
+  const all = pts.flatMap((x) => [x.taxa, x.ant]).filter((x) => x != null),
+    lo = Math.min(...all) - 0.08, hi = Math.max(...all) + 0.08,
+    x0 = Math.min(...pts.map((p) => p.anos)), x1 = Math.max(...pts.map((p) => p.anos)),
+    X = (a) => L + ((a - x0) / (x1 - x0 || 1)) * (W - L - R),
+    Y = (t) => T + ((hi - t) / (hi - lo || 1)) * (H - T - B),
+    linha = (k) => pts.filter((p) => p[k] != null).map((p, i) => (i ? "L" : "M") + X(p.anos).toFixed(1) + "," + Y(p[k]).toFixed(1)).join("");
+  const ticks = [lo + 0.08, (lo + hi) / 2, hi - 0.08];
+  return `<svg class="m606-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva de DI hoje comparada ao fechamento anterior">${ticks
+    .map((t) => `<line x1="${L}" x2="${W - R}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" stroke="#1E232E"/><text x="${W - R + 6}" y="${(Y(t) + 4).toFixed(1)}" fill="#8b919c" font-size="10">${cqNum(t, 2)}</text>`)
+    .join("")}${pts.map((p) => `<text x="${X(p.anos).toFixed(1)}" y="${H - 8}" fill="#8b919c" font-size="10" text-anchor="middle">${esc(p.k.replace("DI1", ""))}</text>`).join("")}<path d="${linha("ant")}" fill="none" stroke="#8b919c" stroke-width="1.5" stroke-dasharray="4 3"/><path d="${linha("taxa")}" fill="none" stroke="#D4A017" stroke-width="2"/>${pts.map((p) => `<circle cx="${X(p.anos).toFixed(1)}" cy="${Y(p.taxa).toFixed(1)}" r="2.6" fill="#D4A017"/>`).join("")}</svg><div class="m606-leg"><span><i style="background:#D4A017"></i>Hoje</span><span><i class="tr"></i>Fechamento anterior (D-1)</span></div>`;
+}
+function m606DiHtml() {
+  const v = M606.v;
+  if (!v || !v.di) return "";
+  const di = v.di.map((x) => {
+    const lv = m606Vivo({ k: x.k, s: "BMFBOVESPA:" + x.k.replace(/(\d\d)$/, "20$1") });
+    return lv && lv.live && x.ant != null ? { ...x, taxa: lv.px, bps: Math.round((lv.px - x.ant) * 1000) / 10, live: !0 } : x;
+  });
+  const inc = v.inclinacao, mes = (d) => ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][+d.slice(5, 7) - 1] + "/" + d.slice(2, 4);
+  const corpo = M606.di === "curva"
+    ? m606DiCurva(di)
+    : `<div class="m606-tab"><div class="m606-row m606-cab"><span>Vértice</span><span>Taxa</span><span>Dia</span></div>${di
+        .map((x) => `<div class="m606-row"><span><b>${esc(x.k)}</b> <small>${mes(x.venc)}${x.live ? " · Profit" : ""}</small></span><span class="n">${x.taxa == null ? "–" : cqNum(x.taxa, 3) + "%"}</span><span class="n ${m606Cls(x.bps)}">${x.bps == null ? "–" : (x.bps > 0 ? "+" : x.bps < 0 ? "−" : "") + cqNum(Math.abs(Math.round(x.bps)), 0)}</span></div>`)
+        .join("")}<p class="m606-src">Variação do dia em pontos-base (bps): 1 bps = 0,01 ponto percentual.</p></div>`;
+  return `<section class="m606-card" aria-label="DIs Brasil"><div class="m606-hd"><h3>DIs Brasil</h3><div class="m606-seg" role="group" aria-label="Visão dos DIs">${[["cot", "Cotações"], ["curva", "Curva"]].map(([k, t]) => `<button type="button" data-m606di="${k}" class="${M606.di === k ? "on" : ""}" aria-pressed="${M606.di === k}">${t}</button>`).join("")}</div></div>
+<div class="m606-kpis"><div><small>Inclinação 2a–5a</small><b class="n">${inc ? m606Sinal(inc.hoje, 1, " bps") : "–"}</b></div><div><small>Variação do dia</small><b class="n ${inc ? m606Cls(inc.varBps) : ""}">${inc && inc.varBps != null ? m606Sinal(inc.varBps, 1, " bps") : "–"}</b></div></div>
+${inc ? `<p class="m606-note">${inc.hoje >= 0 ? "Curva positivamente inclinada" : "Curva invertida"} entre 2 e 5 anos (${cqNum(inc.r2, 2)}% × ${cqNum(inc.r5, 2)}%, prazos interpolados); ${inc.varBps == null ? "" : inc.varBps < 0 ? "fechou (achatou) " + cqNum(Math.abs(inc.varBps), 1) + " bps no dia." : inc.varBps > 0 ? "abriu (inclinou) " + cqNum(inc.varBps, 1) + " bps no dia." : "sem mudança no dia."}</p>` : ""}
+${corpo}<p class="m606-src">TradingView (B3, ~15 min de atraso) · ${esc(m606Consulta())}</p></section>`;
+}
+function m606FedHtml() {
+  const f = M606.v && M606.v.fed;
+  if (!f) return "";
+  const fx = (a) => cqNum(a, 2), [p0, p1] = f.faixa;
+  const rot = (mov) => {
+    const a = p0 + mov / 100, b = p1 + mov / 100, faixa = `${fx(a)}–${fx(b)}%`;
+    return mov === 0 ? `Manter ${faixa}` : `${mov < 0 ? "Corte" : "Alta"} de ${Math.abs(mov)} bps · ${faixa}`;
+  };
+  const dia = f.reuniao.split("-").reverse().slice(0, 2).join("/");
+  return `<section class="m606-card" aria-label="Fed Watch"><div class="m606-hd"><h3>Fed Watch</h3><small class="n">FOMC ${dia}</small></div>${f.cenarios
+    .map((c) => `<div class="m606-fw"><span>${rot(c.mov)}</span><b class="n">${cqNum(c.p, 1)}%</b><i style="--p:${Math.max(2, Math.min(100, c.p))}%" class="${c.mov < 0 ? "dn" : c.mov > 0 ? "up" : ""}"></i></div>`)
+    .join("")}<p class="m606-src">Faixa atual estimada pela taxa efetiva implícita (${cqNum(f.efetiva, 2)}%). Futuros de Fed Funds (CBOT ZQ) via TradingView, método CME FedWatch · ${esc(m606Consulta())}</p></section>`;
+}
+function m606EmHtml() {
+  const e = M606.v && M606.v.emergentes;
+  if (!e || e.media == null) return "";
+  let brl = e.brl && e.brl.d1;
+  try {
+    const it = (CQ.d.fx?.itens || []).find((x) => x.s === "FX_IDC:USDBRL");
+    it && it.d1 != null && (brl = it.d1);
+  } catch {}
+  const dif = brl == null ? null : brl - e.media;
+  const txt = dif == null ? "" : dif > 0.15 ? "Real mais fraco que a cesta emergente hoje: pressão local no câmbio." : dif < -0.15 ? "Real mais forte que a cesta emergente hoje." : "Real em linha com os emergentes hoje.";
+  return `<section class="m606-card" aria-label="Cesta emergente"><div class="m606-hd"><h3>Cesta emergente × USD/BRL</h3><small>variação do dia</small></div>
+<div class="m606-kpis k3"><div><small>Média EM (${e.n})</small><b class="n ${m606Cls(e.media)}">${m606Sinal(e.media)}</b></div><div><small>USD/BRL</small><b class="n ${m606Cls(brl)}">${m606Sinal(brl)}</b></div><div><small>Diferença</small><b class="n">${dif == null ? "–" : m606Sinal(dif, 2, " pp")}</b></div></div>
+<p class="m606-note">${txt}</p><div class="m606-em">${e.itens.map((x) => `<span><b>${esc(x.k)}</b><em class="n ${m606Cls(x.d1)}">${m606Sinal(x.d1)}</em></span>`).join("")}</div><p class="m606-src">Média simples de USD/MXN, USD/CLP, USD/COP, USD/ZAR e USD/CNY. Alta = dólar mais forte. TradingView · ${esc(m606Consulta())}</p></section>`;
+}
+function m606BarHtml() {
+  const b = M606.v && M606.v.barometro;
+  if (!b) return `<section class="m606-card m606-bar"><div class="m606-hd"><h3>US Market Barometer</h3></div><div class="market-state" role="status">${window.DIARIO_DEMO ? "Barômetro desativado no modo demonstrativo." : M606.err ? "Não foi possível consultar os ETFs agora." : "Consultando os ETFs de referência…"}</div></section>`;
+  const k = M606.bar === "m1" ? "m1" : "d1", c = b.celulas, val = (i, j) => c[i] && c[i][j] && c[i][j][k];
+  const esc5 = k === "m1" ? 6 : 1.5;
+  const cor = (v) => (v == null ? "#11141B" : `color-mix(in srgb,${v >= 0 ? "#10B981" : "#EF4444"} ${Math.round(14 + Math.min(1, Math.abs(v) / esc5) * 56)}%,#11141B)`);
+  const gv = val(0, 2) != null && val(0, 0) != null ? val(0, 2) - val(0, 0) : null,
+    sl = val(2, 1) != null && val(0, 1) != null ? val(2, 1) - val(0, 1) : null;
+  const leit = [
+    gv == null ? "" : `Large Growth − Value: <b class="n ${m606Cls(gv)}">${m606Sinal(gv, 2, " pp")}</b> → ${Math.abs(gv) < 0.25 ? "sem rotação clara entre estilos" : gv > 0 ? "capital indo para Growth (tecnologia)" : "capital indo para Value (setores defensivos/cíclicos)"}`,
+    sl == null ? "" : `Small − Large (Core): <b class="n ${m606Cls(sl)}">${m606Sinal(sl, 2, " pp")}</b> → ${Math.abs(sl) < 0.25 ? "tamanho neutro" : sl > 0 ? "apetite por small caps" : "preferência por large caps"}`,
+  ].filter(Boolean);
+  return `<section class="m606-card m606-bar" aria-label="US Market Barometer"><div class="m606-hd"><h3>US Market Barometer</h3><div class="m606-seg" role="group" aria-label="Período">${[["d1", "Dia"], ["m1", "1 mês"]].map(([x, t]) => `<button type="button" data-m606bar="${x}" class="${k === x ? "on" : ""}" aria-pressed="${k === x}">${t}</button>`).join("")}</div></div>
+<div class="m606-mx" role="table" aria-label="Matriz tamanho por estilo"><div role="row" class="m606-mxr"><span role="columnheader"></span>${b.colunas.map((x) => `<span role="columnheader" class="m606-mxh">${esc(x)}</span>`).join("")}</div>${b.linhas
+    .map((ln, i) => `<div role="row" class="m606-mxr"><span role="rowheader" class="m606-mxh">${esc(ln)}</span>${[0, 1, 2].map((j) => { const x = c[i][j], v = x[k]; return `<span role="cell" class="m606-mxc" style="background:${cor(v)}"><small>${esc(x.tk)}</small><b class="n">${m606Sinal(v)}</b></span>`; }).join("")}</div>`)
+    .join("")}</div>${leit.map((x) => `<p class="m606-note">${x}</p>`).join("")}<p class="m606-src">ETFs iShares: S&amp;P 500 (IVE/IVV/IVW), S&amp;P 400 (IJJ/IJH/IJK) e S&amp;P 600 (IJS/IJR/IJT). Verde = alta, vermelho = queda; cor mais forte = movimento maior. TradingView, ~15 min de atraso · ${esc(m606Consulta())}</p></section>`;
+}
+document.addEventListener("click", (e) => {
+  const a = e.target.closest && e.target.closest("[data-m606di]");
+  if (a) { ((M606.di = a.dataset.m606di), m606Repinta()); return; }
+  const b = e.target.closest && e.target.closest("[data-m606bar]");
+  if (b) { ((M606.bar = b.dataset.m606bar), m606Repinta()); return; }
+  e.target.closest && e.target.closest("[data-cqr]") && (CQ.vis === "mapa" || ["jur", "fx"].includes(CQ.aba)) && m606Carrega(!0);
+});
+setInterval(() => {
+  try {
+    !document.hidden && tab === "mercado" && ((MKT.tab === "cq" && (CQ.vis === "mapa" || ["jur", "fx"].includes(CQ.aba))) || MKT.tab === "lab") && m606Carrega();
+  } catch {}
+}, 3e4);
 const EN_TIT = {
   mc_en: "O que significa?",
   mc_pt: "Como se diz em inglês?",
@@ -98864,9 +99072,12 @@ Validação do app: atenção a ` +
                   ? ""
                   : (N <= 75, "tg"),
         be = z ? Ke(["IBOV", "USDBRL"], 60) : null,
-        X = be ? be.m[0][1] : null,
+        m6 = (() => { try { return m606Carrega(), (M606.v && M606.v.ibov) || null; } catch { return null; } })(),
+        X = be && be.m[0][1] != null ? be.m[0][1] : m6 && m6.corr60 != null ? m6.corr60 : null,
         xe = z && se("IBOV"),
-        $e = xe ? Pe([...xe.values()].slice(-20)).sd * Math.sqrt(252) : null,
+        $e0 = xe ? Pe([...xe.values()].slice(-20)).sd * Math.sqrt(252) : null,
+        $e = $e0 != null && isFinite($e0) ? $e0 : m6 && m6.vol20 != null ? m6.vol20 : null,
+        rg6 = oe ? null : (() => { try { const mp = M606.v && M606.v.mapa; if (!mp) return null; const g = (k) => { const x = mp.find((y) => y.k === k); return x && x.d1 != null ? x.d1 : null; }, pts = [[g("S&P 500"), 1, 0.3], [g("EWZ"), 1, 0.5], [g("DXY"), -1, 0.25], [g("USD/BRL"), -1, 0.4], [g("BTC"), 1, 1.5]].filter((x) => x[0] != null); const sc = pts.reduce((a, [v, sg, lim]) => a + (Math.abs(v) >= lim ? Math.sign(v) * sg : 0), 0); return { regime: sc >= 2 ? "risk-on" : sc <= -2 ? "risk-off" : "neutro", n: pts.length }; } catch { return null; } })(),
         fe = z
           ? Ke(
               ["IBOV", "USDBRL", "SPX", "BRENT", "US10Y", "OURO"].filter(
@@ -98887,7 +99098,7 @@ Validação do app: atenção a ` +
     ]
       .map(([N, W]) => `<button data-sw="${N}">${W}</button>`)
       .join("")}</div></div>
-  <div class="sw9ks">${ze("SENTIMENTO B3", Fe == null ? "—" : Math.round(Fe), l(re.rotulo || ""), me(Fe), Ue((re.hist || []).map((N) => N.v)))}${ze("MEDO & GANÂNCIA EUA", ie.valor == null ? "—" : Math.round(ie.valor), l(ie.rotulo || ""), me(ie.valor))}${ze("CRIPTO", R.valor == null ? "—" : Math.round(R.valor), l(R.rotulo || ""), me(R.valor))}${ze("REGIME AGORA", oe ? oe.regime : "—", oe ? oe.rel.length + " relações" : "", oe && oe.regime === "risk-off" ? "tr" : oe && oe.regime === "risk-on" ? "tg" : "am")}${ze("CORRELAÇÃO IBOV × DÓLAR", X == null ? "—" : d(X, 2), "60 dias", X != null && X < -0.4 ? "am" : "")}${ze("VOLATILIDADE IBOV", $e == null ? "—" : d($e, 1) + "%", "20 dias, anualizada")}</div>
+  <div class="sw9ks">${ze("SENTIMENTO B3", Fe == null ? "—" : Math.round(Fe), l(re.rotulo || ""), me(Fe), Ue((re.hist || []).map((N) => N.v)))}${ze("MEDO & GANÂNCIA EUA", ie.valor == null ? "—" : Math.round(ie.valor), l(ie.rotulo || ""), me(ie.valor))}${ze("CRIPTO", R.valor == null ? "—" : Math.round(R.valor), l(R.rotulo || ""), me(R.valor))}${(() => { const rg = oe ? oe.regime : rg6 ? rg6.regime : null; return ze("REGIME AGORA", rg || "—", oe ? oe.rel.length + " relações" : rg6 ? "S&P, EWZ, DXY, dólar e BTC hoje" : "", rg === "risk-off" ? "tr" : rg === "risk-on" ? "tg" : "am"); })()}${ze("CORRELAÇÃO IBOV × DÓLAR", X == null ? "—" : d(X, 2), "60 dias", X != null && X < -0.4 ? "am" : "")}${ze("VOLATILIDADE IBOV", $e == null ? "—" : d($e, 1) + "%", "20 dias, anualizada")}</div>
   <div class="sw9grid">
    <div class="sw9c sw9big"><div class="sw9t">IBOVESPA NO ANO × SAZONALIDADE <span>retorno acumulado</span></div>${Re(760, 260)}</div>
    <div class="sw9c"><div class="sw9t">RELAÇÕES AGORA <span>regras + histórico</span></div>${

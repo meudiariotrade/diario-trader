@@ -2481,3 +2481,57 @@ html body #app .v600-wr td small{font-size:10px}
 .pft td .pfcl{display:inline-block;max-width:110px;white-space:normal;line-height:1.25;text-align:center;vertical-align:middle;overflow-wrap:anywhere}
 .pft th:nth-child(2){min-width:110px}
 .pft td.n em{display:block;font-style:normal;font-size:11px;color:#8A8F9C;font-variant-numeric:tabular-nums}
+
+/* v606 — Mesa macro (Mapa 12 termômetros, DIs, Fed Watch, cesta emergente, barômetro EUA) */
+.m606-mapa{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.m606-t{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:2px 8px;padding:10px;background:#11141B;border:1px solid #1E232E;border-radius:4px;min-width:0}
+.m606-th{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.m606-th b{font-size:13px;font-weight:600;color:#e6e8ec;white-space:nowrap}
+.m606-dot{width:8px;height:8px;border-radius:50%;background:#5b616d;flex:none}
+.m606-dot.on{background:#10B981}
+.m606-px{font-size:16px;font-weight:600;color:#f1f2f4;font-variant-numeric:tabular-nums;white-space:nowrap}
+.m606-v{font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:#9aa0aa}
+.m606-v.up,.m606-card .up{color:#10B981}.m606-v.dn,.m606-card .dn{color:#EF4444}
+.m606-t small{grid-column:1/-1;font-size:11px;color:#8b919c;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.m606-src{margin:8px 0 0;font-size:11px;line-height:1.4;color:#8b919c}
+.m606-card{background:#11141B;border:1px solid #1E232E;border-radius:4px;padding:12px;margin:0 0 10px}
+.m606-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.m606-hd h3{margin:0;font-size:14px;font-weight:600;color:#e6e8ec;text-align:left}
+.m606-hd small{font-size:11px;color:#8b919c}
+.m606-seg{display:flex;border:1px solid #1E232E;border-radius:4px;overflow:hidden}
+.m606-seg button{min-height:40px;padding:0 12px;background:transparent;border:0;color:#9aa0aa;font-size:13px}
+.m606-seg button.on{background:#181C26;color:#D4A017;font-weight:600}
+.m606-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid #1E232E;border-bottom:1px solid #1E232E}
+.m606-kpis.k3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.m606-kpis>div{padding:8px 0;display:flex;flex-direction:column;gap:2px}
+.m606-kpis>div+div{border-left:1px solid #1E232E;padding-left:10px}
+.m606-kpis small{font-size:11px;color:#8b919c}
+.m606-kpis b{font-size:16px;color:#f1f2f4}
+.m606-card .n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.m606-note{margin:8px 0 0;font-size:12px;line-height:1.45;color:#c4c8cf}
+.m606-tab{margin-top:6px}
+.m606-row{display:grid;grid-template-columns:1fr auto 48px;gap:10px;align-items:center;min-height:36px;border-bottom:1px solid #1E232E;font-size:13px}
+.m606-row .n{text-align:right}
+.m606-row small{color:#8b919c;font-size:11px}
+.m606-cab{min-height:28px;font-size:11px;color:#8b919c}
+.m606-cab span:not(:first-child){text-align:right}
+.m606-svg{display:block;width:100%;height:auto;margin-top:8px;font-variant-numeric:tabular-nums}
+.m606-leg{display:flex;gap:14px;font-size:11px;color:#9aa0aa;margin-top:4px}
+.m606-leg i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:5px}
+.m606-leg i.tr{background:repeating-linear-gradient(90deg,#8b919c 0 4px,transparent 4px 7px)}
+.m606-fw{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:6px 0;border-bottom:1px solid #1E232E;font-size:13px}
+.m606-fw b{text-align:right;color:#f1f2f4}
+.m606-fw i{grid-column:1/-1;height:6px;border-radius:2px;background:linear-gradient(90deg,#D4A017 var(--p),#181C26 var(--p))}
+.m606-fw i.dn{background:linear-gradient(90deg,#10B981 var(--p),#181C26 var(--p))}
+.m606-fw i.up{background:linear-gradient(90deg,#EF4444 var(--p),#181C26 var(--p))}
+.m606-em{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;margin-top:6px}
+.m606-em span{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #1E232E;font-size:13px}
+.m606-em em{font-style:normal;text-align:right}
+.m606-mx{display:grid;gap:4px}
+.m606-mxr{display:grid;grid-template-columns:52px repeat(3,minmax(0,1fr));gap:4px}
+.m606-mxh{font-size:11px;color:#8b919c;align-self:center;text-align:left}
+.m606-mxc{display:flex;flex-direction:column;gap:2px;align-items:flex-end;padding:8px;border-radius:4px;min-height:52px;justify-content:center}
+.m606-mxc small{font-size:11px;color:#e6e8ec;opacity:.85}
+.m606-mxc b{font-size:14px;color:#fff}
+.m606-bar{margin-top:10px}
+@media (min-width:720px){.m606-mapa{grid-template-columns:repeat(4,minmax(0,1fr))}}
