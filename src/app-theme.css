@@ -2887,3 +2887,4 @@ html body #app#app .rpy7-bar .rpy7-ord[data-rpy7o="C"]{color:#16A34A!important}
 html body #app#app .rpy7-bar .rpy7-ord[data-rpy7o="V"]{color:#EF4444!important}
 html body #app#app .rpy7-bar .rpy7-ord.on{background:#181C26!important;border-color:currentColor!important}
 @media (min-width:1024px){html body #app#app .rpy7-bar{grid-template-columns:auto auto 52px minmax(0,1fr) minmax(0,1fr) auto auto auto auto}}
+html body #app#app #rpyset{min-height:40px;max-width:170px;font-size:16px}@media (min-width:1024px){html body #app#app #rpyset{font-size:13px}}
