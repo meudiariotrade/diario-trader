@@ -1,0 +1,4 @@
+DIÁRIO DE TRADER — v616 (Giro do mercado + Notícias)
+
+- Imagem do Giro do mercado: sem o título repetido abaixo do topo (fica só "Referência"), logos oficiais em círculo nos 8 cards (Minério com círculo escuro institucional), foto editorial do topo e fontes carregadas antes de exportar, e tickers/variações em destaque no texto.
+- Notícias > Jornal do dia: a barra Notícias | Balanços da B3 | Jornal do dia continua no topo (não parece outra tela); Jornal do Pregão | Giro do mercado ficam logo abaixo.
