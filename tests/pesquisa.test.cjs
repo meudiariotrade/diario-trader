@@ -4,11 +4,16 @@ function moduleAt(file,extra={}){const path='supabase/functions/pesquisa/'+file;
 test('indicadores técnicos calculados no servidor, incluindo sinal MACD e ausência de amostra',()=>{
  const t=moduleAt('tecnico.ts');assert.equal(t.media([1,2],9),null);assert.equal(t.ifr(Array(30).fill(100)),50);assert.equal(t.ifr(Array.from({length:30},(_,i)=>100+i)),100);const cs=Array.from({length:260},(_,i)=>({em:new Date(Date.UTC(2025,0,i+1)).toISOString(),o:100+i,h:102+i,l:99+i,c:101+i,v:1000+i}));const data=t.indicadores(cs);assert.ok(data.medias[200].sma>0);assert.ok(data.macd.sinal!==null);assert.equal(data.pivos.base,cs[258].em);assert.equal(t.correlacao(new Map(),new Map()).valor,null);
 });
-test('v621: cascata de IA tenta de novo em 429, passa ao próximo modelo e devolve o erro real',async()=>{
- const t=moduleAt('ia.ts',{setTimeout});const env=k=>({GEMINI_API_KEY:'x',GEMINI_MODEL_GIRO:'gemini-a'})[k];const vistos=[];
- const fetcher=async(url)=>{url=String(url);if(url.includes('/models?'))return Response.json({models:[]});const m=url.split('/models/')[1].split(':')[0];vistos.push(m);if(m==='gemini-3.5-flash-lite')return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:'Leitura ok'}]}}]});return Response.json({error:{message:'You exceeded your current quota'}},{status:429})};
- const r=await t.gerarIA('sys','oi',env,{fetcher,ate:Date.now()+60000});assert.equal(r.texto,'Leitura ok');assert.equal(r.modelo,'gemini-3.5-flash-lite');assert.equal(vistos.filter(x=>x==='gemini-a').length,2,'uma nova tentativa curta em 429');
- await assert.rejects(t.gerarIA('sys','oi',env,{fetcher:async(u)=>String(u).includes('/models?')?Response.json({models:[]}):Response.json({error:{message:'You exceeded your current quota'}},{status:429}),ate:Date.now()+60000}),/HTTP 429 — You exceeded your current quota/);
+test('v622: roteador multi-IA — retry em 429, troca de modelo/provedor, Pollinations sem chave e erro real',async()=>{
+ const fs2=require('node:fs');const src=fs2.readFileSync('supabase/functions/_shared/ai-router.ts','utf8').replace(/^import .*;\s*$/gm,'').replace(/export /g,'');
+ const ctx={console,URL,Date,JSON,Math,Map,Set,Array,Number,String,Object,Error,AbortSignal,Response,setTimeout,fetch:null};vm.createContext(ctx);vm.runInContext(stripTypeScriptTypes(src,{mode:'transform'}),ctx);
+ const env=k=>({GEMINI_API_KEY:'x',GROQ_API_KEY:'g'})[k];const vistos=[];
+ assert.equal(ctx.provedores(env).map(p=>p.id).join(),'gemini,groq,pollinations');
+ const fetcher=async(url,init)=>{url=String(url);vistos.push(url.includes('groq')?'groq':url.includes('pollinations')?'pol':url.split('/models/')[1].split(':')[0]);if(url.includes('pollinations'))return Response.json({model:'gpt-oss-20b',choices:[{message:{content:'Texto do Pollinations'}}]});return Response.json({error:{message:'You exceeded your current quota'}},{status:429})};
+ const r=await ctx.gerarTexto('sys','oi',{env,fetcher,ate:Date.now()+90000});assert.equal(r.texto,'Texto do Pollinations');assert.equal(r.provedor,'Pollinations');
+ assert.equal(vistos.filter(x=>x==='groq').length,2,'1 retry rápido em 429 e depois pula o provedor');assert.ok(vistos.includes('gemini-2.5-flash')&&vistos.includes('gemini-2.5-flash-lite'),'Gemini troca de modelo em 429');
+ await assert.rejects(ctx.gerarTexto('sys','oi',{env:k=>({IA_DESLIGAR:'pollinations'})[k],fetcher,ate:Date.now()+30000}),/nenhum provedor ativo/);
+ assert.equal(ctx.status(env).faltando.map(x=>x.secret).includes('CEREBRAS_API_KEY'),true);
 });
 test('v621: comandos aceitam B3 e EUA; compare de 2 a 4 ativos',()=>{
  const t=moduleAt('contrato.ts');assert.equal(t.comando('COMPARE PETR4 PBR').tickers.join(),'PETR4,PBR');assert.equal(t.comando('COMPARE AAPL MSFT NVDA').tickers.join(),'AAPL,MSFT,NVDA');assert.equal(t.comando('ANALISE IVV').tickers[0],'IVV');
