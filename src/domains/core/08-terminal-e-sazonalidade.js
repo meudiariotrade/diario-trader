@@ -2887,6 +2887,40 @@ const VENC = {
 function vcProx(e, t) {
   return VENC[e].find((a) => a >= t) || null;
 }
+/* v620: calendário único de vencimentos B3 (o mesmo da aba Operações > Opções), usado também pela
+   Revista da Semana e pelo Jornal do Pregão. Ações e Ibovespa: datas oficiais de VENC (já com feriados);
+   índice futuro (WIN/IND): vencimento do Ibovespa nos meses pares; dólar (WDO/DOL): 1º dia útil do mês. */
+function vcSemPregao(d) {
+  const x = new Date(d + "T12:00:00Z"), y = x.getUTCFullYear(), w = x.getUTCDay();
+  if (w === 0 || w === 6) return !0;
+  if (["01-01", "04-21", "05-01", "09-07", "10-12", "11-02", "11-15", "11-20", "12-24", "12-25", "12-31"].includes(d.slice(5))) return !0;
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, dd = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+    h = (19 * a + b - dd - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, L = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * L) / 451),
+    mes = Math.floor((h + L - 7 * m + 114) / 31), dia = ((h + L - 7 * m + 114) % 31) + 1, pas = Date.UTC(y, mes - 1, dia, 12);
+  return [-48, -47, -2, 60].some((o) => new Date(pas + o * 864e5).toISOString().slice(0, 10) === d);
+}
+function vcDolar(ym) {
+  for (let dia = 1; dia <= 10; dia++) {
+    const d = ym + "-" + String(dia).padStart(2, "0");
+    if (!vcSemPregao(d)) return d;
+  }
+  return null;
+}
+/** Vencimentos B3 entre duas datas (YYYY-MM-DD, inclusive). */
+function vcEntre(de, ate) {
+  const L = [];
+  VENC.acoes.forEach((d) => d >= de && d <= ate && L.push({ d, t: "Vencimento de opções sobre ações", tipo: "Vencimento", p: "BR" }));
+  VENC.ibov.forEach((d) => {
+    if (d < de || d > ate) return;
+    const par = +d.slice(5, 7) % 2 === 0;
+    L.push({ d, t: par ? "Vencimento do índice futuro (WIN/IND) e de opções de Ibovespa" : "Vencimento de opções de Ibovespa", tipo: "Vencimento", p: "BR" });
+  });
+  const meses = new Set();
+  for (let t = Date.parse(de + "T12:00:00Z"); t <= Date.parse(ate + "T12:00:00Z"); t += 864e5) meses.add(new Date(t).toISOString().slice(0, 7));
+  meses.forEach((ym) => { const d = vcDolar(ym); d && d >= de && d <= ate && L.push({ d, t: "Vencimento do dólar futuro (WDO/DOL)", tipo: "Vencimento", p: "BR" }); });
+  return L.sort((a, b) => a.d.localeCompare(b.d));
+}
+window.VencB3 = Object.freeze({ entre: vcEntre, semPregao: vcSemPregao, dolar: vcDolar, proximo: (tipo, dia) => vcProx(tipo, dia) });
 function vencHtml() {
   const e = loc().slice(0, 10),
     t = (o, s) => {
