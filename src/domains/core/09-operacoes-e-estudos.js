@@ -4045,7 +4045,7 @@ async function rpyCarrega() {
     if (!a.ok) throw new Error(o.error || "Erro " + a.status);
     if (!(o.candles || []).length)
       throw new Error("Sem candles para esse ativo.");
-    RPY.dados = o;
+    RPY.dados = typeof rpyFiltraB3 === "function" ? rpyFiltraB3(t, o) : o; // v629: só o pregão regular da B3
     const s = rpyDias().slice(1, -1);
     if (!s.length) throw new Error("Histórico curto demais para o replay.");
     rpyComeca(s[Math.floor(Math.random() * s.length)]);
@@ -4069,7 +4069,7 @@ function rpyFimDia() {
   for (; t + 1 < e.length && rpyDia(e[t + 1][0]) === RPY.dia; ) t++;
   return t;
 }
-function rpyAvanca(e) {
+function rpyAvanca(e, sil) {
   if (!RPY.dados) return;
   const t = RPY.dados.candles,
     a = rpyFimDia();
@@ -4086,7 +4086,7 @@ function rpyAvanca(e) {
       break;
     }
   }
-  (RPY.i >= a && RPY.pos && rpyFecha(t[a][4], "fim do dia"), render());
+  (RPY.i >= a && RPY.pos && rpyFecha(t[a][4], "fim do dia"), sil || render()); // sil: o player atualiza só o gráfico
 }
 function rpyFecha(e, t) {
   const a = RPY.pos;
@@ -4108,6 +4108,8 @@ function rpyFecha(e, t) {
       mot: t,
       he: a.h,
       hs: rpyHora(RPY.dados.candles[RPY.i][0]),
+      ie: a.i0,
+      ix: RPY.i,
       ts: Date.now(),
     };
   (rpyS().push(r),
@@ -4129,8 +4131,11 @@ function rpyEntra(e) {
       const c = document.getElementById(d);
       return c && c.value !== "" ? +String(c.value).replace(",", ".") : null;
     };
-  let n = s("rpyst"),
-    r = s("rpyal");
+  // v629: Stop e Alvo também em distância (pts) pela linha compacta abaixo do gráfico
+  const sd = s("rpystd"),
+    ad = s("rpyald");
+  let n = s("rpyst") ?? (sd > 0 ? (e === "C" ? o - sd : o + sd) : null),
+    r = s("rpyal") ?? (ad > 0 ? (e === "C" ? o + ad : o - ad) : null);
   const i = t.slice(Math.max(RPY.ini - 30, 0), RPY.i + 1),
     l =
       i.slice(-14).reduce((d, c) => d + (c[2] - c[3]), 0) /
