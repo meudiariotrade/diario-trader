@@ -1195,7 +1195,8 @@ try {
         return ((t.dataset.logoLocal = "1"), t);
       }
       if (e.real !== !1) {
-        const c = H(a.ticker, e.group);
+        const fx = i.DiarioLogos?.fixo?.(a.ticker),
+          c = fx ? { url: fx.urls[0], provider: "tradingview", local: !1 } : H(a.ticker, e.group);
         if (c) {
           const s = d.createElement("img");
           ((s.className = "ta-logo"),
@@ -7095,7 +7096,7 @@ try {
   (function (w) {
     "use strict";
     if (w.DiarioLogos) return;
-    const TV = (id) => "https://s3-symbol-logo.tradingview.com/" + id + ".svg";
+    const TV = (id) => "https://s3-symbol-logo.tradingview.com/" + id + "--big.svg";
     const BRAPI = (t) => "https://icons.brapi.dev/icons/" + t + ".svg";
     const MOEDA = { USD: "US", BRL: "BR", EUR: "EU", GBP: "GB", JPY: "JP", CHF: "CH", CAD: "CA", AUD: "AU", NZD: "NZ", CNY: "CN", CNH: "CN", HKD: "HK", MXN: "MX", CLP: "CL", COP: "CO", ARS: "AR", PEN: "PE", ZAR: "ZA", TRY: "TR", INR: "IN", KRW: "KR", SGD: "SG", NOK: "NO", SEK: "SE", DKK: "DK", PLN: "PL", RUB: "RU", ILS: "IL" };
     // Dicionário fixo (resolve na hora, sem consulta): índices, futuros, commodities, cripto, juros e ADRs/ETFs do app.
@@ -7111,6 +7112,21 @@ try {
       OURO: "metal/gold", GOLD: "metal/gold", "XAU/USD": "metal/gold", PRATA: "metal/silver", SILVER: "metal/silver", COBRE: "metal/copper",
       BTC: "crypto/XTVCBTC", "BTC/BRL": "crypto/XTVCBTC", BTCUSD: "crypto/XTVCBTC", ETH: "crypto/XTVCETH", ETHUSD: "crypto/XTVCETH", SOL: "crypto/XTVCSOL", XRP: "crypto/XTVCXRP", BNB: "crypto/XTVCBNB", DOGE: "crypto/XTVCDOGE", ADA: "crypto/XTVCADA", USDT: "crypto/XTVCUSDT", "USDT/BRL": "crypto/XTVCUSDT",
       EWZ: "ishares", IAU: "ishares", IVV: "ishares", IVE: "ishares", IVW: "ishares", IJH: "ishares", IJJ: "ishares", IJK: "ishares", IJR: "ishares", IJS: "ishares", IJT: "ishares",
+      // v614: Ações EUA, cripto e commodities com os logos oficiais do TradingView (logoid conferido no screener).
+      AAPL: "apple", MSFT: "microsoft", NVDA: "nvidia", AMZN: "amazon", GOOGL: "alphabet", GOOG: "alphabet", META: "meta-platforms", TSLA: "tesla",
+      "BRK.B": "berkshire-hathaway", "BRK-B": "berkshire-hathaway", BRKB: "berkshire-hathaway", JPM: "jpmorgan-chase", V: "visa", MA: "mastercard", UNH: "unitedhealth",
+      JNJ: "johnson-and-johnson", PG: "procter-and-gamble", XOM: "exxon", CVX: "chevron", HD: "home-depot", COST: "costco-wholesale", NFLX: "netflix",
+      AMD: "advanced-micro-devices", INTC: "intel", AVGO: "broadcom", CRM: "salesforce", ORCL: "oracle", DIS: "walt-disney", KO: "coca-cola", PEP: "pepsico",
+      NKE: "nike", BA: "boeing", GS: "golden-sachs-etf-trust-goldman", MS: "morgan-stanley", BAC: "bank-of-america", C: "citigroup", PLTR: "palantir",
+      COIN: "coinbase", UBER: "uber", SNOW: "snowflake", QCOM: "qualcomm", MU: "micron-technology", ARM: "arm", TSM: "taiwan-semiconductor", ASML: "asml",
+      BABA: "alibaba", PDD: "pinduoduo", JD: "jd-com", MELI: "mercadolibre", STNE: "stoneco", SHOP: "shopify", ABNB: "airbnb", PYPL: "paypal",
+      SPOT: "spotify-technology", LLY: "eli-lilly", SPY: "spdr-sandp500-etf-tr", DIA: "spdr-sandp500-etf-tr", GLD: "spdr-sandp500-etf-tr", QQQ: "invesco",
+      IWM: "ishares", TLT: "ishares", SLV: "ishares",
+      AVAX: "crypto/XTVCAVAX", LINK: "crypto/XTVCLINK", DOT: "crypto/XTVCDOT", MATIC: "crypto/XTVCPOLYG", POL: "crypto/XTVCPOLYG", TON: "crypto/XTVCTON", LTC: "crypto/XTVCLTC", UNI: "crypto/XTVCUNI",
+      BRN: "crude-oil", CL: "crude-oil", NG1: "natural-gas", XAU: "metal/gold", GC: "metal/gold", XAG: "metal/silver", SI: "metal/silver", COPPER: "metal/copper", HG: "metal/copper",
+      SOJA: "commodity/soybean", ZS: "commodity/soybean", "CAFÉ": "commodity/coffee", CAFE: "commodity/coffee", KC: "commodity/coffee", TRIGO: "commodity/wheat", ZW: "commodity/wheat",
+      "AÇÚCAR": "commodity/sugar", ACUCAR: "commodity/sugar", SB: "commodity/sugar", MILHO: "commodity/corn", ZC: "commodity/corn", CCM: "commodity/corn",
+      "ALGODÃO": "commodity/cotton", ALGODAO: "commodity/cotton", CT: "commodity/cotton", BOI: "cattle", LE: "cattle", BGI: "cattle", I: "metal/iron",
       WEGZY: "weg", BBSEY: "banco-do-brasil", BDORY: "banco-do-brasil", PBR: "brasileiro-petrobras", "PBR.A": "brasileiro-petrobras", VALE: "vale", ITUB: "itau-unibanco", BBD: "bradesco",
       NATU3: "natura-and-co", ABEV: "ambev", ERJ: "embraer", SBS: "sabesp", GGB: "gerdau", SUZ: "suzano", CIG: "cemig", NU: "nu-holdings", XP: "xp", PAGS: "pagseguro-digital",
     };
@@ -7135,7 +7151,9 @@ try {
       if (p) return { urls: [TV("country/" + p[0]), TV("country/" + p[1])], fonte: "bandeira", par: !0 };
       if (/^PAIS:[A-Z]{2}$/.test(k)) return { urls: [TV("country/" + k.slice(5))], fonte: "bandeira" };
       if (/^DI1[FGHJKMNQUVXZ]\d{2,4}$/.test(k)) return { urls: [TV("country/BR")], fonte: "bandeira" };
+      { const j = /^(BR|US|DE|JP|GB|UK|FR|IT|CN|CA|AU|MX)\d{1,2}[AY]$/.exec(k); if (j) return { urls: [TV("country/" + (j[1] === "UK" ? "GB" : j[1]))], fonte: "bandeira" }; }
       if (FIXO[k]) return { urls: [TV(FIXO[k])], fonte: "tradingview" };
+      { const cr = /^(BTC|ETH|SOL|XRP|BNB|DOGE|ADA|AVAX|LINK|DOT|MATIC|POL|TON|LTC|UNI|USDT)\/?(USDT|USD|BRL)$/.exec(k); if (cr && FIXO[cr[1]]) return { urls: [TV(FIXO[cr[1]])], fonte: "tradingview" }; }
       if (ehB3(k)) return { urls: [BRAPI(k.replace(/F$/, ""))], fonte: "brapi", talvez: !0 };
       return undefined;
     }
@@ -7311,7 +7329,9 @@ try {
       ]);
       return ks.length;
     }
-    w.DiarioLogos = Object.freeze({ urls, html, resolve, png, avatar, norm, _erro, imagem, carregaPendentes, bandeira: (pais) => TV("country/" + String(pais || "").toUpperCase()) });
+    /** Logo oficial conhecido sem consulta (dicionário, bandeiras, juros); null para B3/desconhecidos. */
+    const fixo = (t) => { const v = local(norm(t)); return v && !v.talvez && !v.par ? v : null; };
+    w.DiarioLogos = Object.freeze({ urls, html, resolve, png, avatar, norm, _erro, imagem, carregaPendentes, fixo, bandeira: (pais) => TV("country/" + String(pais || "").toUpperCase()) });
   })(window);
 } catch (e) {
   console.error("[v608] DiarioLogos", e);
