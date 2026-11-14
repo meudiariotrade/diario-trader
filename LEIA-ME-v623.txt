@@ -1,0 +1,6 @@
+v623
+- Cripto ao vivo pela Binance (WebSocket público @miniTicker, sem chave): BTC, ETH, SOL, XRP, BNB, DOGE, ADA, AVAX e LINK em USDT. Preço = último; variação 24 h = (último − abertura) / abertura.
+- Alimenta a fita superior (BTC, ETH, SOL, XRP), a categoria Cripto, os Favoritos, o Mapa e o Terminal do desktop; pisca verde/vermelho a cada mudança e mostra o selo "Binance · Tempo real".
+- Reconecta sozinho (até 30 s) e desliga com o app em segundo plano; antes do primeiro tick vale o TradingView/Supabase.
+- Desktop (≥ 1024 px): Cotações abre no Terminal de 3 colunas (Índices Europa/Ásia, DIs e notícias · Moedas, Emergentes e Barômetro com fatores · Commodities, Futuros, Treasuries e Cripto). Botão Terminal | Lista; buscar ou escolher categoria mostra a lista.
+- Celular: sem mudanças.

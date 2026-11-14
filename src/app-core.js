@@ -24749,6 +24749,8 @@ const IC = (e) =>
     ["^DJI", "DOW"],
     ["BTC-USD", "BTC"],
     ["ETH-USD", "ETH"],
+    ["SOL-USD", "SOL"],
+    ["XRP-USD", "XRP"],
     ["CL=F", "WTI"],
     ["GC=F", "OURO"],
     ...[
@@ -68810,6 +68812,8 @@ function cqSessaoAberta() {
   return !['Sat','Sun'].includes(parts.weekday) && minutes >= 540 && minutes < 1110;
 }
 const cqPf = (e, t) => {
+    // v623: cripto ao vivo pela Binance (lista, favoritos e mapa); TradingView continua como reserva
+    if ((t === 'cri' || e._aba === 'cri') && typeof bncQ === 'function') { const b = bncQ(e.c); if (b) return { px: b.px, d1: b.d1, live: true, bnc: true, em: new Date(b.em).toISOString() }; }
     if (CQ.owner && (typeof SESS === 'undefined' || CQ.owner !== SESS?.uid)) return null;
     const code = String(e.c || '').toUpperCase();
     const future = /^(WIN|WDO|IND|DOL)/.exec(code);
@@ -68988,7 +68992,7 @@ cqLinha = function (e, t) {
       } catch {}
       return null;
     })();
-  return `<div class="cqr" data-market-symbol="${esc(e.s || e.c)}"${d ? ' data-ta-done="1"' : ""}>${d || `<span class="cqi" style="color:${n};background:color-mix(in srgb,${n} 16%,transparent)">${esc(r)}</span>`}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? (a.fechado ? ' · <span class="market-closed">FECHADO</span>' : ' · <span class="g">Profit ao vivo</span>') : ""}</small>${a ? `<small class="market-quote-time">Profit · ${esc(a.em ? new Date(a.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) + " BRT" : "horário não informado")}</small>` : cotacaoReferencia(e)}</div>
+  return `<div class="cqr" data-market-symbol="${esc(e.s || e.c)}"${a && a.bnc ? ` data-bnc="${esc(String(e.c || "").toUpperCase())}"` : ""}${d ? ' data-ta-done="1"' : ""}>${d || `<span class="cqi" style="color:${n};background:color-mix(in srgb,${n} 16%,transparent)">${esc(r)}</span>`}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? (a.fechado ? ' · <span class="market-closed">FECHADO</span>' : ' · <span class="g">Profit ao vivo</span>') : ""}</small>${a ? `<small class="market-quote-time">Profit · ${esc(a.em ? new Date(a.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) + " BRT" : "horário não informado")}</small>` : cotacaoReferencia(e)}</div>
 <div class="cqp"><b>${o == null ? '<span class="mut">—</span>' : (e.un && e.un !== "%" ? "<small>" + esc(e.un) + "</small> " : "") + cqNum(o, e.dp) + (e.un === "%" ? "%" : "")}</b>${e.dabs != null && !a ? `<small class="${cls(e.dabs)}">${e.dabs > 0 ? "+" : ""}${cqNum(e.dabs, e.dp)}</small>` : ""}</div>
 <span class="cqv ${s == null ? "" : s > 0 ? "up" : s < 0 ? "dn" : ""}">${s == null ? "–" : (s > 0 ? "+" : "") + cqNum(s, 2) + "%"}</span><span class="cqac"><button class="cqb${i ? " on" : ""}" data-cqfav="${esc(e.s)}" data-ab="${esc(t)}" aria-label="Favorito">${i ? "★" : "☆"}</button><button class="cqb${l ? " on" : ""}" data-cqal="${esc(e.s)}" aria-label="Alerta de preço">🔔</button></span></div>`;
 };
@@ -69052,6 +69056,8 @@ function cqItens(category) {
   }
   if (!mapa606 && category === 'jur') content = m606DiHtml() + m606FedHtml() + content;
   if (!mapa606 && category === 'fx') content = m606EmHtml() + content;
+  const term623 = typeof m623Ativo === 'function' && m623Ativo();
+  if (!mapa606 && ['cri','fav'].includes(category) && typeof bncSelo === 'function') content = `<div class="bnc-bar">${bncSelo()}</div>` + content;
   const adrN = category === 'adr' ? (AD.data?.itens || []).filter(item=>(item.regular?.px ?? item.px)>0).length : 0;
   const total = visible.length + adrN;
   const cache606 = CQ.cache606?.[category];
@@ -69059,9 +69065,10 @@ function cqItens(category) {
   return `<div id="cotbox" class="market-quotes" data-category="${esc(category)}">
     <div class="market-categories" role="group" aria-label="Categorias de ativos">${CQ_ABAS.map(([key,label])=>`<button type="button" data-cqa="${key}" class="${category===key?'on':''}" aria-pressed="${category===key}">${esc(label.replace('★ ',''))}</button>`).join('')}</div>
     <div class="market-tools"><label class="market-search"><span class="market-sr">Buscar ativo</span><input type="search" data-market-search placeholder="Buscar ativo" value="${esc(CQ.search || '')}" autocomplete="off"></label><button type="button" data-cqr="1" aria-label="Atualizar preços" ${busy?'disabled':''}>↻</button><label class="market-order"><span class="market-sr">Ordenar ativos</span><select data-market-order>${[['lista','Ordem padrão'],['alta','Maiores altas'],['baixa','Maiores quedas']].map(([key,label])=>`<option value="${key}" ${CQ.ord===key?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-cqv="${CQ.vis==='mapa'?'lista':'mapa'}" aria-label="${CQ.vis==='mapa'?'Ver lista':'Ver mapa de calor'}">${CQ.vis==='mapa'?'Lista':'Mapa'}</button></div>
-    <div class="market-summary" role="status">${summary606}${!mapa606 && data?.em ? ' · Consulta '+esc(new Date(data.em).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}))+' BRT' : ''}</div>
+    ${typeof m623Desk === 'function' && m623Desk() ? `<div class="m623-sw" role="group" aria-label="Visão no computador"><button type="button" data-m623-modo="terminal" class="${term623?'on':''}" aria-pressed="${term623}">Terminal</button><button type="button" data-m623-modo="lista" class="${term623?'':'on'}" aria-pressed="${!term623}">Lista</button></div>` : ''}
+    ${term623 ? m623Html() : `<div class="market-summary" role="status">${summary606}${!mapa606 && data?.em ? ' · Consulta '+esc(new Date(data.em).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}))+' BRT' : ''}</div>
     ${error ? `<p class="market-error" role="status">${esc(error)}${items.length?' Mantendo a consulta anterior.':''}</p>` : ''}
-    <div class="market-results" aria-busy="${busy}">${content}</div>
+    <div class="market-results" aria-busy="${busy}">${content}</div>`}
     <details class="market-sources"><summary>Fontes e ferramentas</summary><p>Profit para ativos da B3 quando a ponte está conectada. Após o pregão, o último registro salvo aparece como FECHADO, com contrato e horário. As demais fontes e seus atrasos aparecem em cada ativo.</p><button type="button" data-navroute="term">Abrir gráficos e comparação no Terminal</button><button type="button" data-market-longshort>Long &amp; Short</button>${cqAlertasHtml()}${category==='jur'?'<button type="button" data-market-di>Ver curva DI no Terminal</button>'+cqJurosExtra():''}</details>
   </div>`;
 }),
@@ -69859,6 +69866,10 @@ const m606Consulta = () => {
 // Profit ao vivo (WIN, WDO e DIs) por cima do TradingView, igual à lista de cotações.
 function m606Vivo(it) {
   try {
+    const b = typeof bncQ === "function" && it.ss === "24h" ? bncQ(it.k) : null;
+    if (b) return { px: b.px, d1: b.d1, live: !0, fechado: !1, bnc: !0 };
+  } catch {}
+  try {
     const q = cqPf({ c: it.k, s: it.s }, /^(WIN|WDO)$/.test(it.k) ? "fut" : "jur");
     if (q && q.px > 0) return { px: q.px, d1: q.d1 != null ? q.d1 : it.d1, live: !!q.live, fechado: !!q.fechado };
   } catch {}
@@ -69964,6 +69975,245 @@ document.addEventListener("click", (e) => {
 setInterval(() => {
   try {
     !document.hidden && tab === "mercado" && ((MKT.tab === "cq" && (CQ.vis === "mapa" || ["jur", "fx"].includes(CQ.aba))) || MKT.tab === "lab") && m606Carrega();
+  } catch {}
+}, 3e4);
+
+/* =====================================================================================
+   v623 — Parte 1: Binance ao vivo (WebSocket público, sem chave) — useBinanceTicker
+   Stream combinado @miniTicker dos pares USDT do app. Preço = c; variação 24h = (c − o) / o.
+   Reconecta sozinho (1 s, 2 s, 4 s… até 30 s) e desliga com a aba em segundo plano.
+   ===================================================================================== */
+const BNC_PARES = { BTC: "btcusdt", ETH: "ethusdt", SOL: "solusdt", XRP: "xrpusdt", BNB: "bnbusdt", DOGE: "dogeusdt", ADA: "adausdt", AVAX: "avaxusdt", LINK: "linkusdt", "BTC/BRL": "btcbrl", "USDT/BRL": "usdtbrl" };
+const BNC_SYM = Object.fromEntries(Object.entries(BNC_PARES).map(([k, v]) => [v.toUpperCase(), k]));
+const BNC_TAPE = { "BTC-USD": "BTC", "ETH-USD": "ETH", "SOL-USD": "SOL", "XRP-USD": "XRP" };
+const BNC = { q: {}, ws: null, tent: 0, timer: null, porMim: !1, ultimo: 0, mudou: new Set(), pinta: null, subs: new Set() };
+function bncLiga() {
+  if (window.DIARIO_DEMO || document.hidden || (BNC.ws && BNC.ws.readyState < 2) || typeof WebSocket > "u") return;
+  clearTimeout(BNC.timer);
+  let ws;
+  try {
+    ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=" + Object.values(BNC_PARES).map((p) => p + "@miniTicker").join("/"));
+  } catch {
+    return bncAgenda();
+  }
+  ((BNC.ws = ws), (BNC.porMim = !1));
+  ws.onopen = () => (BNC.tent = 0);
+  ws.onmessage = (ev) => {
+    let d;
+    try {
+      d = JSON.parse(ev.data).data;
+    } catch {
+      return;
+    }
+    const k = d && BNC_SYM[d.s];
+    if (!k) return;
+    const c = +d.c, o = +d.o;
+    if (!(c > 0 && o > 0)) return;
+    const ant = BNC.q[k];
+    BNC.q[k] = { px: c, d1: ((c - o) / o) * 100, em: Date.now(), dir: ant ? Math.sign(c - ant.px) : 0 };
+    BNC.ultimo = Date.now();
+    (ant ? ant.px !== c : !0) && BNC.mudou.add(k);
+    BNC.pinta || (BNC.pinta = setTimeout(bncPinta, 1200));
+  };
+  ws.onclose = () => {
+    ((BNC.ws = null), BNC.porMim || bncAgenda());
+  };
+  ws.onerror = () => {
+    try {
+      ws.close();
+    } catch {}
+  };
+}
+function bncAgenda() {
+  if (document.hidden) return;
+  clearTimeout(BNC.timer);
+  BNC.timer = setTimeout(bncLiga, Math.min(3e4, 1e3 * 2 ** BNC.tent++));
+}
+function bncDesliga() {
+  ((BNC.porMim = !0), clearTimeout(BNC.timer));
+  try {
+    BNC.ws && BNC.ws.close();
+  } catch {}
+  BNC.ws = null;
+}
+const bncQ = (k) => {
+  const q = BNC.q[String(k || "").toUpperCase()];
+  return q && Date.now() - q.em < 9e4 ? q : null;
+};
+const bncAoVivo = () => Date.now() - BNC.ultimo < 15e3;
+window.useBinanceTicker = Object.freeze({
+  get: (k) => bncQ(k),
+  aoVivo: bncAoVivo,
+  pares: BNC_PARES,
+  assinar: (fn) => (BNC.subs.add(fn), () => BNC.subs.delete(fn)),
+});
+document.addEventListener("visibilitychange", () => (document.hidden ? bncDesliga() : bncLiga()));
+setTimeout(bncLiga, 2500);
+/** Repinta em lote (no máximo a cada ~1,2 s): fita, lista Cripto, Mapa e Terminal; pisca o que mudou. */
+function bncPinta() {
+  BNC.pinta = null;
+  const mud = new Map([...BNC.mudou].map((k) => [k, BNC.q[k] && BNC.q[k].dir]));
+  BNC.mudou.clear();
+  if (!mud.size) return;
+  BNC.subs.forEach((fn) => {
+    try {
+      fn(BNC.q);
+    } catch {}
+  });
+  try {
+    window.tapeRedraw && window.tapeRedraw();
+    for (const [s, k] of Object.entries(BNC_TAPE))
+      mud.has(k) && document.querySelectorAll(`#tape .ti[data-s="${s}"]`).forEach((el) => bncPisca(el, mud.get(k)));
+  } catch {}
+  try {
+    if (typeof tab > "u" || tab !== "mercado" || MKT.tab !== "cq" || document.hidden) return;
+    const foco = document.activeElement;
+    if (foco && foco.matches && foco.matches("select")) return;
+    const v = CQ.vis === "mapa" || ["cri", "fav"].includes(CQ.aba) || m623Ativo();
+    if (!v) return;
+    cqPinta();
+    const box = document.getElementById("cotbox");
+    box &&
+      box.querySelectorAll("[data-bnc]").forEach((el) => {
+        const k = el.dataset.bnc;
+        mud.has(k) && bncPisca(el, mud.get(k));
+      });
+  } catch {}
+}
+function bncPisca(el, dir) {
+  el.classList.remove("bnc-up", "bnc-dn");
+  void el.offsetWidth;
+  el.classList.add(dir < 0 ? "bnc-dn" : "bnc-up");
+}
+// Fita superior: BTC/ETH/SOL/XRP pela Binance (o Profit continua nos tickers da B3).
+{
+  const antes = window.tapeVivo;
+  window.tapeVivo = (s) => {
+    const k = BNC_TAPE[s];
+    if (k) {
+      const q = bncQ(k);
+      return q ? { px: q.px, chg: q.d1 } : null;
+    }
+    return antes ? antes(s) : null;
+  };
+}
+const bncSelo = () =>
+  `<span class="bnc-selo${bncAoVivo() ? " on" : ""}" title="Preço e variação de 24 h pelo WebSocket público da Binance (pares USDT)"><i aria-hidden="true"></i>Binance · ${bncAoVivo() ? "Tempo real" : "conectando…"}</span>`;
+
+/* =====================================================================================
+   v623 — Parte 2: Modo Terminal de 3 colunas, só no desktop (≥ 1024 px).
+   No celular nada muda: o terminal nem é montado. Categorias e busca continuam no topo;
+   buscar ou escolher uma categoria mostra a lista; o botão "Terminal" volta.
+   ===================================================================================== */
+const M623 = {
+  modo: (() => {
+    try {
+      return ls.get("diario-m623-modo") || "terminal";
+    } catch {
+      return "terminal";
+    }
+  })(),
+};
+const m623Mq = window.matchMedia ? window.matchMedia("(min-width:1024px)") : null;
+const m623Desk = () => !!(m623Mq && m623Mq.matches);
+function m623Ativo() {
+  return m623Desk() && M623.modo === "terminal" && !String(CQ.search || "").trim() && CQ.vis !== "mapa";
+}
+try {
+  m623Mq &&
+    m623Mq.addEventListener("change", () => {
+      try {
+        typeof tab < "u" && tab === "mercado" && MKT.tab === "cq" && cqPinta();
+      } catch {}
+    });
+} catch {}
+const M623_LOGO = { "FTSE 100": "UKX", "Nikkei 225": "N225", "Hang Seng": "HSI", Shanghai: "SHCOMP", "IBEX 35": "PAIS:ES", "CAC 40": "PAIS:FR", KOSPI: "PAIS:KR", DAX: "PAIS:DE", US2Y: "PAIS:US", US10Y: "PAIS:US", US30Y: "PAIS:US", DE10Y: "PAIS:DE", JP10Y: "PAIS:JP", MINERIO: "MINÉRIO DE FERRO", NG: "GÁS NATURAL", HQ: "QUAL", LV: "USMV", MO: "MTUM", YD: "DVY", YV: "VLUE" };
+function m623Aberto(it) {
+  if (it.tz) {
+    const t = m606Hora(it.tz);
+    return t.w >= 1 && t.w <= 5 && t.m >= it.ab && t.m < it.fe && !(it.em && Date.now() - Date.parse(it.em) > 3 * 36e5);
+  }
+  return m606Aberto({ ...it, ss: it.ss === "cme" ? "fx24" : it.ss });
+}
+const m623Hms = (iso) => (iso ? new Date(iso).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "–");
+function m623Linha(it) {
+  let px = it.px, d1 = it.d1, em = it.em, vivo = "", ab;
+  if (it.g === "cri") {
+    const q = bncQ(it.k);
+    q && ((px = q.px), (d1 = q.d1), (em = new Date(q.em).toISOString()), (vivo = "bnc"));
+  } else if (it.g === "fut" && /^(WIN|WDO)$/.test(it.k)) {
+    const q = m606Vivo({ k: it.k, s: it.s });
+    q && ((px = q.px), (d1 = q.d1), q.live && ((vivo = "profit"), (em = new Date().toISOString())));
+  }
+  ab = vivo ? !0 : m623Aberto({ ...it, em });
+  const juro = it.un === "%",
+    varTxt = juro && it.dabs != null && !vivo ? m606Sinal(it.dabs * 100, 1, " bps") : m606Sinal(d1),
+    varCls = m606Cls(juro && it.dabs != null && !vivo ? it.dabs : d1),
+    chave = M623_LOGO[it.k] || it.k,
+    logo = window.DiarioLogos ? DiarioLogos.html(chave, 16) : "";
+  return `<div class="m623-r"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : ""} role="row"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${vivo === "profit" ? "Profit" : m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
+}
+function m623Bloco(tit, itens, extra = "") {
+  return `<section class="m623-sec"><header><h3>${tit}</h3>${extra}</header><div class="m623-tb" role="table">${itens.length ? itens.map(m623Linha).join("") : '<div class="market-state" role="status">Consultando…</div>'}</div></section>`;
+}
+function m623Noticias() {
+  try {
+    !MKT.items && !MKT.busy && typeof SESS < "u" && SESS && setTimeout(() => mkLoad().then(() => m623Ativo() && cqPinta()), 0);
+  } catch {}
+  const L = (MKT.items || []).slice(0, 8);
+  return `<section class="m623-sec"><header><h3>Notícias</h3><button type="button" class="m623-lk" data-m623-nt>Ver todas</button></header><div class="m623-news">${
+    L.length
+      ? L.map((n) => `<a href="${esc(urlSegura(n.l))}" target="_blank" rel="noopener noreferrer"><time>${n.d ? new Date(n.d).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }) : ""}</time><span>${esc(n.t || "")}</span></a>`).join("")
+      : `<div class="market-state" role="status">${MKT.err ? esc(MKT.err) : "Carregando manchetes…"}</div>`
+  }</div></section>`;
+}
+function m623Fatores() {
+  const F = ((M606.v && M606.v.terminal) || []).filter((x) => x.g === "fat");
+  if (!F.length) return "";
+  return `<div class="m623-fat" role="list" aria-label="Fatores">${F.map((x) => `<span role="listitem" style="background:${x.d1 == null ? "#11141B" : `color-mix(in srgb,${x.d1 >= 0 ? "#10B981" : "#EF4444"} ${Math.round(14 + Math.min(1, Math.abs(x.d1) / 1.5) * 56)}%,#11141B)`}" title="${esc(x.n)}"><b>${esc(x.k)}</b><em class="n">${m606Sinal(x.d1)}</em></span>`).join("")}</div><p class="m606-src">Fatores iShares: HQ qualidade (QUAL), LV baixa volatilidade (USMV), MO momento (MTUM), YD dividendos (DVY), YV valor (VLUE).</p>`;
+}
+function m623Html() {
+  try {
+    m606Carrega();
+  } catch {}
+  const T = (M606.v && M606.v.terminal) || [],
+    g = (x) => T.filter((i) => i.g === x);
+  const bar = m606BarHtml().replace("</section>", m623Fatores() + "</section>");
+  return `<div class="m623-term" role="region" aria-label="Terminal de mercado">
+<div class="m623-col">${m623Bloco("Índices Europa e Ásia", g("idx"))}${m606DiHtml()}${m623Noticias()}</div>
+<div class="m623-col">${m623Bloco("Moedas", g("fx"))}${m623Bloco("Emergentes", g("em"))}${bar}</div>
+<div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", g("fut"))}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", g("cri"), bncSelo())}</div>
+</div><p class="m623-src">TradingView (screener público; B3 com ~15 min de atraso) · WIN e WDO pelo Profit quando a ponte está ligada · Cripto pela Binance em tempo real · <i class="m623-dot on"></i> aberto · <i class="m623-dot"></i> fechado${M606.v && M606.v.em ? ' · ' + esc(m606Consulta()) : ''}</p>`;
+}
+document.addEventListener(
+  "click",
+  (e) => {
+    const t = e.target.closest && e.target.closest("[data-cqa],[data-m623-modo],[data-m623-nt]");
+    if (!t) return;
+    if (t.matches("[data-m623-nt]")) {
+      e.preventDefault();
+      try {
+        ((MKT.tab = "nt"), render());
+      } catch {}
+      return;
+    }
+    if (t.matches("[data-m623-modo]")) {
+      e.preventDefault();
+      M623.modo = t.dataset.m623Modo === "lista" ? "lista" : "terminal";
+      try {
+        ls.set("diario-m623-modo", M623.modo);
+      } catch {}
+      cqPinta();
+      return;
+    }
+    // Escolher uma categoria no desktop mostra a lista dela (o botão "Terminal" volta).
+    m623Desk() && M623.modo === "terminal" && ((M623.modo = "lista"), (() => { try { ls.set("diario-m623-modo", "lista"); } catch {} })());
+  },
+  !0,
+);
+setInterval(() => {
+  try {
+    !document.hidden && typeof tab < "u" && tab === "mercado" && MKT.tab === "cq" && m623Ativo() && m606Carrega();
   } catch {}
 }, 3e4);
 const EN_TIT = {
