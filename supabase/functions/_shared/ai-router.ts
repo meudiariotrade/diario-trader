@@ -5,7 +5,8 @@
 // Provedores (ativados automaticamente quando o Secret existe no Supabase):
 //   GEMINI_API_KEY ou GOOGLE_API_KEY → Google Gemini   (gemini-2.5-flash → gemini-2.5-flash-lite, + modelos da conta)
 //   GROQ_API_KEY                     → Groq            (llama-3.3-70b-versatile)
-//   OPENROUTER_API_KEY               → OpenRouter      (meta-llama/llama-3.3-70b-instruct:free, deepseek/deepseek-r1:free)
+//   OPENROUTER_API_KEY               → OpenRouter      (meta-llama/llama-3.3-70b-instruct:free, deepseek/deepseek-r1:free;
+//                                      quando saem do ar, usa os modelos ":free" atuais descobertos na API)
 //   CEREBRAS_API_KEY                 → Cerebras        (llama-3.3-70b)
 //   MISTRAL_API_KEY                  → Mistral         (mistral-small-latest)
 //   HF_TOKEN                         → Hugging Face    (meta-llama/Llama-3.3-70B-Instruct)
@@ -26,7 +27,7 @@ const lista = (v: string | undefined) => String(v || '').split(',').map((x) => x
 export function provedores(env: Env = ENV0): Provedor[] {
   const P: Provedor[] = [];
   const gk = env('GEMINI_API_KEY') || env('GOOGLE_API_KEY');
-  if (gk) P.push({ id: 'gemini', nome: 'Google Gemini', tipo: 'gemini', chave: gk, modelos: [...new Set(['gemini-2.5-flash', 'gemini-2.5-flash-lite', ...lista(env('GEMINI_MODEL_GIRO')), ...lista(env('GEMINI_MODEL')), 'gemini-3.6-flash', 'gemini-3.5-flash-lite'])].slice(0, 6) });
+  if (gk) P.push({ id: 'gemini', nome: 'Google Gemini', tipo: 'gemini', chave: gk, modelos: [...new Set(['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', ...lista(env('GEMINI_MODEL_GIRO')), ...lista(env('GEMINI_MODEL'))])].slice(0, 6) });
   const ok = (id: string, nome: string, key: string | undefined, url: string, modelos: string[], extra?: Record<string, string>) => key && P.push({ id, nome, tipo: 'openai', url, chave: key, modelos, extra });
   ok('groq', 'Groq', env('GROQ_API_KEY'), 'https://api.groq.com/openai/v1/chat/completions', lista(env('GROQ_MODELS')).length ? lista(env('GROQ_MODELS')) : ['llama-3.3-70b-versatile']);
   ok('cerebras', 'Cerebras', env('CEREBRAS_API_KEY'), 'https://api.cerebras.ai/v1/chat/completions', lista(env('CEREBRAS_MODELS')).length ? lista(env('CEREBRAS_MODELS')) : ['llama-3.3-70b']);
@@ -41,6 +42,21 @@ export function provedores(env: Env = ENV0): Provedor[] {
 
 // Estado por instância: rodízio e pausa de provedores que devolveram 429/5xx.
 let RODIZIO = 0;
+const OK_MODELO = new Map<string, string>(); // provedor → último modelo que respondeu
+let OR_GRATIS: { t: number; ids: string[] } | null = null;
+/** OpenRouter: os modelos ":free" mudam com frequência — descobre os disponíveis (cache de 1 h) e prioriza famílias boas em português. */
+async function openRouterGratis(base: string[], fetcher: typeof fetch) {
+  if (!OR_GRATIS || Date.now() - OR_GRATIS.t > 3600_000) {
+    try {
+      const r = await fetcher('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(6000) });
+      const ids = r.ok ? ((await r.json())?.data || []).filter((m: any) => /:free$/.test(m.id) && (m.context_length || 0) >= 32000).map((m: any) => String(m.id)) : [];
+      OR_GRATIS = { t: Date.now(), ids };
+    } catch { OR_GRATIS = { t: Date.now() - 3000_000, ids: [] }; }
+  }
+  const ids = OR_GRATIS.ids, pref = [/llama-3\.3-70b/, /deepseek/, /gemma-4-31b/, /nemotron-3-ultra/, /qwen/, /gemma/, /nemotron/, /mistral/];
+  const escolhidos = pref.flatMap((re) => ids.filter((id) => re.test(id))).filter((x, i, a) => a.indexOf(x) === i);
+  return [...base.filter((m) => !ids.length || ids.includes(m)), ...escolhidos].filter((x, i, a) => a.indexOf(x) === i).slice(0, 3);
+}
 const PAUSA = new Map<string, { ate: number; motivo: string }>();
 export function pausa(id: string, ms: number, motivo: string) { PAUSA.set(id, { ate: Date.now() + ms, motivo }); }
 
@@ -86,7 +102,10 @@ export type Resposta = { texto: string; provedor: string; modelo: string; rotulo
 export async function gerarTexto(system: string, prompt: string, opt: { json?: boolean; temp?: number; ate?: number; env?: Env; fetcher?: typeof fetch; preferir?: string[]; porTentativaMs?: number } = {}): Promise<Resposta> {
   const env = opt.env || ENV0, fetcher = opt.fetcher || fetch, ate = opt.ate || Date.now() + 55_000, temp = opt.temp ?? 0.4, erros: string[] = [];
   for (const p of ordem(provedores(env), env, opt.preferir || [])) {
-    for (const modelo of p.modelos) {
+    let modelos = p.id === 'openrouter' ? await openRouterGratis(p.modelos, fetcher) : p.modelos;
+    const bom = OK_MODELO.get(p.id);
+    if (bom && modelos.includes(bom)) modelos = [bom, ...modelos.filter((m) => m !== bom)];
+    for (const modelo of modelos) {
       let proximo = false;
       for (let tentativa = 0; tentativa < 2 && !proximo; tentativa++) {
         const resta = ate - Date.now();
@@ -94,7 +113,7 @@ export async function gerarTexto(system: string, prompt: string, opt: { json?: b
         try {
           const ms = Math.min(resta - 1500, opt.porTentativaMs || 30_000);
           const r: any = p.tipo === 'gemini' ? await chamaGemini(p, modelo, system, prompt, !!opt.json, temp, ms, fetcher) : await chamaOpenAI(p, modelo, system, prompt, !!opt.json, temp, ms, fetcher);
-          if (r.texto) { PAUSA.delete(p.id); const m = r.real || modelo; return { texto: r.texto, provedor: p.nome, modelo: m, rotulo: `${p.nome} · ${m}`, tentativas: erros }; }
+          if (r.texto) { PAUSA.delete(p.id); OK_MODELO.set(p.id, modelo); const m = r.real || modelo; return { texto: r.texto, provedor: p.nome, modelo: m, rotulo: `${p.nome} · ${m}`, tentativas: erros }; }
           erros.push(`${p.nome} ${modelo}: ${r.status ? 'HTTP ' + r.status : ''}${r.erro ? (r.status ? ' — ' : '') + limpa(r.erro) : ''}`);
           if (r.status === 429 && tentativa === 0) { await espera(1200); continue; } // retry rápido
           if (r.status === 429 && p.tipo === 'gemini') break; // Gemini: cota por modelo — tenta o próximo modelo
