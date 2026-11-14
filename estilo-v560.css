@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 cc3aae026c199663cd490c0dbadc46586f7d76fd5bec3f40829b6a837ecb4ec3 */
+/* Gerado de src/app-theme.css · SHA256 814cf0facd2e1e61fc051f3af20a4e1bd15fb60638e29003d4bb4633188a0310 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2638,3 +2638,54 @@ html:root body #app .an-history-del{flex:0 0 40px;min-height:40px;display:grid;p
 html:root body #app .an-history-del:hover{color:#EF4444;border-color:#EF4444;background:#181C26}
 html:root body #app .an-title-logos{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 html:root body #app .an-title-logos .dl-logo+.dl-logo{margin-left:-6px}
+/* v623 — Binance ao vivo + Terminal de 3 colunas no desktop */
+html:root body #app .bnc-bar{display:flex;justify-content:flex-end;padding:4px 0 8px}
+html:root body .bnc-selo{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#8A90A0;white-space:nowrap}
+html:root body .bnc-selo i{width:7px;height:7px;border-radius:50%;background:#5B6170;flex:0 0 7px}
+html:root body .bnc-selo.on{color:#10B981}
+html:root body .bnc-selo.on i{background:#10B981;animation:bncPulso 1.6s ease-in-out infinite}
+@keyframes bncPulso{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes bncUp{0%{background:rgba(16,185,129,.22)}100%{background:transparent}}
+@keyframes bncDn{0%{background:rgba(239,68,68,.22)}100%{background:transparent}}
+html:root body .bnc-up{animation:bncUp .9s ease-out}
+html:root body .bnc-dn{animation:bncDn .9s ease-out}
+@media (prefers-reduced-motion:reduce){html:root body .bnc-up,html:root body .bnc-dn,html:root body .bnc-selo.on i{animation:none}}
+html:root body #app .m623-sw{display:none}
+@media (min-width:1024px){
+html:root body #app .m623-sw{display:inline-flex;gap:0;margin:0 0 10px;border:1px solid #1E232E;border-radius:6px;overflow:hidden}
+html:root body #app .m623-sw button{min-height:40px;padding:0 16px;background:#11141B;border:0;color:#8A90A0;font-weight:600;font-size:13px;cursor:pointer}
+html:root body #app .m623-sw button+button{border-left:1px solid #1E232E}
+html:root body #app .m623-sw button.on{background:#181C26;color:#D4A017}
+html:root body #app .m623-term{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;width:100%;font-size:12px;font-variant-numeric:tabular-nums}
+html:root body #app .m623-col{grid-column:span 4/span 4;min-width:0;display:flex;flex-direction:column;gap:12px}
+html:root body #app .m623-col>.m623-sec,html:root body #app .m623-col>section{background:#11141B;border:1px solid #1E232E;border-radius:6px;padding:10px 12px;min-width:0;margin:0}
+html:root body #app .m623-sec header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+html:root body #app .m623-sec h3{margin:0;font-size:12px;font-weight:700;color:#E6E8EE;text-align:left;white-space:nowrap}
+html:root body #app .m623-r{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:30px;padding:2px 4px;border-top:1px solid #1E232E;border-radius:4px}
+html:root body #app .m623-tb>.m623-r:first-child{border-top:0}
+html:root body #app .m623-r:hover{background:#181C26}
+html:root body #app .m623-n{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto}
+html:root body #app .m623-n .dl-logo,html:root body #app .m623-n img{flex:0 0 16px;width:16px;height:16px;border-radius:50%}
+html:root body #app .m623-n b{white-space:nowrap;color:#E6E8EE;font-weight:600}
+html:root body #app .m623-n small{color:#8A90A0;white-space:nowrap;overflow:hidden;text-overflow:clip;min-width:0;font-size:11px}
+html:root body #app .m623-v{display:flex;align-items:center;gap:8px;flex:0 0 auto;justify-content:flex-end}
+html:root body #app .m623-px{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;color:#E6E8EE;font-weight:600;min-width:72px;text-align:right;white-space:nowrap}
+html:root body #app .m623-d{min-width:58px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:#8A90A0}
+html:root body #app .m623-d.up{color:#10B981}
+html:root body #app .m623-d.dn{color:#EF4444}
+html:root body #app .m623-v time{color:#5B6170;font-size:11px;min-width:52px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+html:root body #app .m623-dot{width:6px;height:6px;border-radius:50%;background:#5B6170;flex:0 0 6px}
+html:root body #app .m623-dot.on{background:#10B981}
+html:root body #app .m623-fat{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-top:8px}
+html:root body #app .m623-fat span{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40px;border-radius:4px;border:1px solid #1E232E}
+html:root body #app .m623-fat b{font-size:11px;color:#E6E8EE}
+html:root body #app .m623-fat em{font-style:normal;font-size:11px;font-variant-numeric:tabular-nums;color:#E6E8EE}
+html:root body #app .m623-lk{min-height:32px;background:transparent;border:0;color:#D4A017;font-size:11px;font-weight:600;cursor:pointer}
+html:root body #app .m623-news a{display:flex;gap:8px;padding:6px 2px;border-top:1px solid #1E232E;color:#C9CDD6;text-decoration:none;line-height:1.35}
+html:root body #app .m623-news a:first-child{border-top:0}
+html:root body #app .m623-news a:hover{color:#E6E8EE;background:#181C26}
+html:root body #app .m623-news time{flex:0 0 38px;color:#5B6170;font-variant-numeric:tabular-nums}
+html:root body #app .m623-src{margin:10px 0 0;font-size:11px;color:#5B6170}
+}
+@media (max-width:1023.98px){html:root body #app .m623-term,html:root body #app .m623-src{display:none}}
+@media (min-width:1024px){html:root body #app .m623-src .m623-dot{display:inline-block;vertical-align:middle;margin:0 2px}}
