@@ -31,6 +31,8 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
       try { (e.materias || []).forEach((x) => { const tk = typeof jeTk == "function" ? jeTk(x) : ""; tk && /^[A-Z]{4}\d{1,2}$/.test(tk) && ks.add(tk); }); } catch {}
       try { (typeof jvpLinhas == "function" ? jvpLinhas() : []).forEach((x) => x.tk && ks.add(x.tk)); } catch {}
       (e.agenda || []).forEach((a) => { const tk = jvTkTexto(a.evento); tk && ks.add(tk); const pi = jvPaisISO(a.pais); pi && ks.add("PAIS:" + pi); });
+      (e.cotacoes || []).forEach((q) => { const k = jvLogoCot(q); k && ks.add(k); });
+      try { ((typeof JRN < "u" && JRN.varr && JRN.varr.ranking) || []).forEach((x) => x && x.tk && ks.add(x.tk)); } catch {}
       await Promise.race([
         Promise.all([...ks].map(async (k) => {
           const pg = await window.DiarioLogos.png(k, 96);
@@ -40,6 +42,14 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
       ]);
     }
   } catch {}
+  /** Cartões de cotação (capa e mercado internacional) → chave do logo. */
+  function jvLogoCot(q) {
+    const t = (String(q.k || "") + " " + String(q.n || "")).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(),
+      di = t.match(/di\D{0,6}(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\D{0,2}(\d{2})/);
+    if (di) return "DI1F" + di[2];
+    if (/\bdi1|\bdi\b/.test(t)) return "DI1F27";
+    return /ibov/.test(t) ? "IBOV" : /\bwin\b|mini ?indice/.test(t) ? "WIN" : /\bwdo\b|dolar futuro|mini ?dolar/.test(t) ? "WDO" : /\bdxy\b/.test(t) ? "DXY" : /dolar|usd.?brl/.test(t) ? "USD/BRL" : /\bewz\b/.test(t) ? "EWZ" : /minerio|iron/.test(t) ? "MINERIO" : /brent/.test(t) ? "BRENT" : /wti/.test(t) ? "WTI" : /ouro|gold/.test(t) ? "OURO" : /s&p|spx|s.p 500/.test(t) ? "SPX" : /nasdaq/.test(t) ? "NDX" : /dow/.test(t) ? "DJI" : /stoxx/.test(t) ? "SX5E" : /nikkei/.test(t) ? "N225" : /\bvix\b/.test(t) ? "VIX" : /treasur|us10y/.test(t) ? "US10Y" : /bitcoin|\bbtc\b/.test(t) ? "BTC" : /euro/.test(t) ? "EUR/USD" : /ifix/.test(t) ? "IFIX" : "";
+  }
   /** Desenha o logo (círculo; pares com 2 bandeiras) com topo em yTop e altura hgt; devolve a largura usada (0 se não houver). */
   const LGD = (k, x, yTop, hgt) => {
     const L = k && LGM[LGN(k)];
@@ -491,12 +501,15 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
         stroke: We ? null : d.bd,
         r: 5,
       }),
-        h(String(qe.n || qe.k || "").toUpperCase(), Le + 8, ke + 7, {
-          s: 6.4,
-          f: "b",
-          c: We ? d.li : d.mu,
-          w: ze - 14,
-        }),
+        (() => {
+          const lw = LGD(jvLogoCot(qe), Le + 8, ke + 5.5, 9) ? 12 : 0;
+          h(String(qe.n || qe.k || "").toUpperCase(), Le + 8 + lw, ke + 7, {
+            s: 6.4,
+            f: "b",
+            c: We ? d.li : d.mu,
+            w: ze - 14 - lw,
+          });
+        })(),
         h(jeNumTxt(qe.px), Le + 8, ke + 18, {
           s: 14,
           f: "b",
@@ -1318,7 +1331,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
               { l: "Potencial", w: 22 },
             ],
             Le.ranking.map((ze) => [
-              { t: ze.tk, f: "b" },
+              { t: ze.tk, f: "b", lg: ze.tk },
               ke(ze.preco),
               ke(ze.graham),
               ke(ze.bazin),
