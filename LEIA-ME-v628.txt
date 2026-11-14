@@ -1,0 +1,4 @@
+v628
+- Replay de mercado (pregão passado candle a candle) virou sub-aba de Estudos: Hoje · Aulas · Biblioteca · Treino & Progresso · Replay, no celular e no desktop.
+- Saiu do módulo Day Trade (Operações). Links antigos (comando REPLAY do Terminal, Jornal, busca rápida, replay de um trade) abrem a sub-aba em Estudos.
+- Mesmo código de antes (rpyHtml); os treinos continuam só no histórico do replay, sem entrar nas operações reais.

@@ -23,8 +23,9 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   await page.reload();
   await page.locator('#splash').waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: 'Estudos', exact: true }).last().click();
-  // v596: 4 sub-abas (Hoje, Aulas, Biblioteca, Treino & Progresso), sem menu "+ Mais"; abre em Hoje.
-  assert.equal(await app.locator('.dt397-category [data-dt397-view]').count(), 4);
+  // v596/v628: 5 sub-abas (Hoje, Aulas, Biblioteca, Treino & Progresso, Replay), sem menu "+ Mais"; abre em Hoje.
+  assert.equal(await app.locator('.dt397-category [data-dt397-view]').count(), 5);
+  assert.equal(await app.locator('.dt397-category [data-dt397-view="rpy"]').count(), 1);
   await page.locator('.v503-fantasma').waitFor({ state: 'detached' });
   assert.equal(await app.locator('[data-dt401-more-toggle]').count(), 0);
   await expect(app.locator('.v596-hoje .v596-foco')).toBeVisible();
