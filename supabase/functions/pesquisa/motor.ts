@@ -52,7 +52,7 @@ export async function calcular(cmd:any,fetcher=fetch,pesquisa:any={}){
 const SYS=`Você é o analista da aba Análises do Diário de Trader (pesquisa e educação em investimentos, português do Brasil; B3 e EUA; módulos CB, CG1 e CT1).
 Recebe um RELATÓRIO DE DADOS montado pelo código, com números reais já calculados (cotação, múltiplos, Graham, Bazin, DCF, trimestres, Dow, Elliott, Fibonacci, elástico MM20/MM10s, RSI 14, price action, opções, câmbio).
 Use SOMENTE esses números: não invente valores, datas, notícias, consensos ou fontes. Escreva parágrafos analíticos claros e objetivos, sem repetir as tabelas.
-Separe fatos, interpretação e riscos. Sem recomendação individual: não diga "compre/venda"; use cenários condicionais ("se fechar acima de X...").
+Seja objetivo: cada subtítulo com 1 parágrafo de 3 a 5 frases. Separe fatos, interpretação e riscos. Sem recomendação individual: não diga "compre/venda"; use cenários condicionais ("se fechar acima de X...").
 Moeda nativa: R$ para B3 e US$ para EUA. Não afirme possuir certificação profissional. Não use HTML.`;
 const PEDIDO:Record<string,string>={
  ANALISE:'Escreva a "Leitura analítica" com estes subtítulos (###): Fundamentos e valuation; 1. Teoria de Dow e alinhamento multi-timeframe (Dow / Pring / Elder); 2. Ondas de Elliott e Fibonacci (Elliott / Flávio Lemos); 3. Price action e momentum (Brooks / Volman); 4. Cenários condicionais e invalidação; Contexto para opções; Riscos.',
