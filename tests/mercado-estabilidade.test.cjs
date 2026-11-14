@@ -19,6 +19,8 @@ test('Mercado: lista pronta, busca preservada, quatro abas e layouts de 320 a 14
  for(const width of [320,390,768,1440]){
   await p.setViewportSize({width,height:900});
   await expect.poll(()=>p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  if(width>=1024){await expect(app.locator('.m623-term')).toBeVisible();await expect(app.locator('.m623-term .m623-col')).toHaveCount(3);await app.locator('[data-m623-modo="lista"]').click();}
+  else await expect(app.locator('.m623-term,.m623-sw')).toHaveCount(0);
   assert.ok(await app.locator('.cqr').first().evaluate(el=>el.getBoundingClientRect().top<500));
   assert.ok(await p.locator('[data-market-search]').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=16));
   assert.ok(await p.locator('[data-cqr]').evaluate(el=>el.getBoundingClientRect().height>=40));

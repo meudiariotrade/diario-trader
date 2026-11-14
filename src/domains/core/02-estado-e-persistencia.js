@@ -5117,6 +5117,8 @@ const IC = (e) =>
     ["^DJI", "DOW"],
     ["BTC-USD", "BTC"],
     ["ETH-USD", "ETH"],
+    ["SOL-USD", "SOL"],
+    ["XRP-USD", "XRP"],
     ["CL=F", "WTI"],
     ["GC=F", "OURO"],
     ...[
