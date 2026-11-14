@@ -2758,3 +2758,10 @@ html:root body #app#app #cotbox.market-quotes .cqmap .cqt{display:flex;flex-dire
 html:root body #app#app #cotbox.market-quotes .cqmap .cqt b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html:root body #app#app #cotbox.market-quotes .cqmap .cqt span{font-size:15px;font-weight:700}
 html:root body #app#app #cotbox.market-quotes .cqmap .cqt small{font-size:11px;color:#C9CDD6}
+/* v627 — Desktop: Sazonalidade com colunas alinhadas e gráficos de Opções com altura limitada */
+@media (min-width:1024px){
+html:root body #app table.sz-t{display:table!important;width:100%!important;table-layout:fixed!important;border-collapse:collapse}
+html:root body #app table.sz-t :is(th,td){text-align:right!important;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:root body #app table.sz-t :is(th,td):first-child{text-align:left!important}
+html:root body #app #flwbox .card>svg,html:root body #app svg[aria-label="Sorriso de volatilidade"],html:root body #app svg[aria-label^="Perfil GEX"],html:root body #app svg[aria-label^="Perfil DEX"]{max-height:340px!important;display:block;margin-inline:auto}
+}

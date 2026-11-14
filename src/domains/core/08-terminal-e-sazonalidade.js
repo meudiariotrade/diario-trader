@@ -2656,13 +2656,13 @@ function szKpi(e, t) {
   return `<div class="sz-kg">${a("Retorno médio", szP(e.media), t)}${a("Mediana", szP(e.mediana), e.qtd + " vezes")}${a("Positivas", `<b>${e.pos}%</b>`, "")}${a("Melhor", szP(e.melhor), "")}${a("Pior", szP(e.pior), "")}</div>`;
 }
 function szTabAtivos(e) {
-  return `<table class="sz-t"><tr><th>Ativo</th><th>Média</th><th>Mediana</th><th>Positivas</th></tr>${e.ativos
+  return `<table class="sz-t"><thead><tr><th>Ativo</th><th>Média</th><th>Mediana</th><th>Positivas</th></tr></thead><tbody>${e.ativos
     .filter((t) => t.qtd)
     .map(
       (t) =>
         `<tr${t.k === "ibov" ? ' class="sz-ib"' : ""}><td>${esc(t.n)}</td><td>${szP(t.media)}</td><td>${szP(t.mediana)}</td><td>${t.pos}% <span class="mut">(${t.qtd})</span></td></tr>`,
     )
-    .join("")}</table>`;
+    .join("")}</tbody></table>`;
 }
 function szFim(e) {
   const t = e.fim_ano,
@@ -2670,13 +2670,13 @@ function szFim(e) {
     o = a.ativos.find((s) => s.k === "ibov");
   return `<div style="margin:6px 0">${t.janelas.map((s) => szChip("jf", s.k, s.n, s.k === a.k)).join("")}</div><div class="sm mut">${esc(a.ex)}</div>${szKpi(o, "Ibovespa")}
   <div class="sz-h">IBOV, dólar e setores</div>${szTabAtivos(a)}
-  <div class="sz-h">Ano a ano</div><table class="sz-t"><tr><th>Ano</th><th>IBOV</th><th>Dólar</th><th>Bancos</th><th>Commod.</th></tr>${t.anos
+  <div class="sz-h">Ano a ano</div><table class="sz-t"><thead><tr><th>Ano</th><th>IBOV</th><th>Dólar</th><th>Bancos</th><th>Commod.</th></tr></thead><tbody>${t.anos
     .filter((s) => s[a.k])
     .map(
       (s) =>
         `<tr><td>${s.ano}</td><td>${szP(s[a.k].ibov)}</td><td>${szP(s[a.k].dolar)}</td><td>${szP(s[a.k].bancos)}</td><td>${szP(s[a.k].commod)}</td></tr>`,
     )
-    .join("")}</table>`;
+    .join("")}</tbody></table>`;
 }
 function szEle(e) {
   const t = e.eleicoes,
@@ -2689,14 +2689,14 @@ function szEle(e) {
         : "";
   return `<div class="seg" style="margin:6px 0">${[1, 2].map((r) => `<button class="${SZ.tu === r ? "on" : ""}" data-sztu="${r}">${r}º turno</button>`).join("")}</div>
   <div style="margin:4px 0">${a.resumo.map((r) => szChip("je", r.k, r.n, r.k === o.k)).join("")}</div><div class="sm mut">${esc(o.ex)}</div>${szKpi(s, "Ibovespa · " + (SZ.tu === 1 ? "1º" : "2º") + " turno")}
-  <div class="sz-h">Eleição a eleição</div><table class="sz-t"><tr><th>Eleição</th><th>IBOV</th><th>Dólar</th><th>Bancos</th><th>Elétricas</th></tr>${a.linhas
+  <div class="sz-h">Eleição a eleição</div><table class="sz-t"><thead><tr><th>Eleição</th><th>IBOV</th><th>Dólar</th><th>Bancos</th><th>Elétricas</th></tr></thead><tbody>${a.linhas
     .slice()
     .reverse()
     .map(
       (r) =>
         `<tr${r.futuro ? ' class="sz-fut"' : ""}><td><b>${r.ano}</b><div class="sm mut">${r.data.slice(8, 10)}/${r.data.slice(5, 7)}</div></td>${r[o.k] ? `<td>${szP(r[o.k].ibov)}${o.k === "trade" ? "<div>" + n(r) + "</div>" : ""}</td><td>${szP(r[o.k].dolar)}</td><td>${szP(r[o.k].bancos)}</td><td>${szP(r[o.k].eletricas)}</td>` : `<td colspan="4" class="sm mut">${r.futuro ? "ainda vai acontecer" : "sem dados"}</td>`}</tr>`,
     )
-    .join("")}</table>
+    .join("")}</tbody></table>
   <div class="sz-h">IBOV, dólar e setores (média das eleições)</div>${szTabAtivos(o)}<div class="sm mut" style="margin-top:6px">${esc(t.obs)}</div>`;
 }
 function szMes(e) {
@@ -2712,7 +2712,7 @@ function szMes(e) {
           : `rgba(220,38,38,${Math.min(0.85, 0.15 + Math.abs(r) / 12)})`;
   return `<div style="margin:6px 0">${t.ativos.map((r) => szChip("am", r.k, r.n, r.k === a.k)).join("")}</div>
   <div class="sm mut">${esc(a.n)}: retorno de cada mês (fechamento do mês anterior → fechamento do mês), de ${t.de.slice(0, 4)} a ${t.ate.slice(0, 4)}.</div>
-  <table class="sz-t"><tr><th>Mês</th><th>Média</th><th>Mediana</th><th>Positivos</th></tr>${a.mes.map((r) => `<tr${r.m === o.m ? ' class="sz-ib"' : ""}><td><b>${SZ_MES[r.m - 1]}</b>${r.m === o.m ? ' <span class="ag-tag">agora</span>' : ""}</td><td>${szP(r.media)}</td><td>${szP(r.mediana)}</td><td>${r.pos == null ? "—" : r.pos + "%"} <span class="mut">(${r.qtd})</span></td></tr>`).join("")}</table>
+  <table class="sz-t"><thead><tr><th>Mês</th><th>Média</th><th>Mediana</th><th>Positivos</th></tr></thead><tbody>${a.mes.map((r) => `<tr${r.m === o.m ? ' class="sz-ib"' : ""}><td><b>${SZ_MES[r.m - 1]}</b>${r.m === o.m ? ' <span class="ag-tag">agora</span>' : ""}</td><td>${szP(r.media)}</td><td>${szP(r.mediana)}</td><td>${r.pos == null ? "—" : r.pos + "%"} <span class="mut">(${r.qtd})</span></td></tr>`).join("")}</tbody></table>
   ${s ? `<div class="sm" style="margin-top:6px">${SZ_MES[o.m - 1]} até agora: ${szP(s.v)}</div>` : ""}
   ${
     t.matriz && t.matriz.length
@@ -2736,7 +2736,7 @@ function szCop(e) {
   return `<div class="seg" style="margin:6px 0"><button class="${SZ.tc === "corte" ? "on" : ""}" data-sztc="corte">Cortes (${t.n_corte})</button><button class="${SZ.tc === "alta" ? "on" : ""}" data-sztc="alta">Altas (${t.n_alta})</button></div>
   <div style="margin:4px 0">${a.map((n) => szChip("jc", n.k, n.n, n.k === o.k)).join("")}</div><div class="sm mut">${esc(o.ex)}</div>${szKpi(s, "Ibovespa")}
   <div class="sz-h">IBOV, dólar e setores</div>${szTabAtivos(o)}
-  <div class="sz-h">Últimas decisões</div><table class="sz-t"><tr><th>Data</th><th>Selic</th><th>IBOV dia seg.</th><th>Dólar</th></tr>${t.linhas
+  <div class="sz-h">Últimas decisões</div><table class="sz-t"><thead><tr><th>Data</th><th>Selic</th><th>IBOV dia seg.</th><th>Dólar</th></tr></thead><tbody>${t.linhas
     .slice(0, 20)
     .map(
       (n) =>
@@ -2744,7 +2744,7 @@ function szCop(e) {
     )
     .join(
       "",
-    )}</table><div class="sm mut" style="margin-top:6px">${esc(t.obs)}</div>`;
+    )}</tbody></table><div class="sm mut" style="margin-top:6px">${esc(t.obs)}</div>`;
 }
 function szCorpo() {
   const e = SZ.v;
