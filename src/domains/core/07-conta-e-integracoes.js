@@ -2714,16 +2714,13 @@ try {
   const e = ls.get("diario-agenda");
   e && e.v && (AG.v = e.v);
 } catch {}
-const AG_FL = {
-    BR: "🇧🇷",
-    US: "🇺🇸",
-    CN: "🇨🇳",
-    EU: "🇪🇺",
-    DE: "🇩🇪",
-    GB: "🇬🇧",
-    JP: "🇯🇵",
-    CA: "🇨🇦",
-  },
+// v608: bandeiras SVG nítidas e circulares (CDN de bandeiras do TradingView) no lugar dos emojis.
+const AG_FL = Object.fromEntries(
+    ["BR", "US", "CN", "EU", "DE", "GB", "JP", "CA"].map((p) => [
+      p,
+      `<img class="ag-flag" src="https://s3-symbol-logo.tradingview.com/country/${p}.svg" alt="${p}" width="16" height="16" loading="lazy" decoding="async" referrerpolicy="no-referrer">`,
+    ]),
+  ),
   AG_NM = {
     BR: "Brasil",
     US: "EUA",

@@ -2556,3 +2556,16 @@ html body #app .v600-wr td small{font-size:10px}
 @media (min-width:1100px){
  html:root body #app#app:is(.home-view,.journal-view){width:100%;max-width:1280px!important;margin-left:auto!important;margin-right:auto!important;padding-left:24px!important;padding-right:24px!important;box-sizing:border-box}
 }
+
+/* v608 — logos oficiais (DiarioLogos) e bandeiras circulares */
+.dl-logo{--dl:20px;position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:var(--dl);height:var(--dl);border-radius:50%;overflow:hidden;background:#181C26;color:#9aa0aa;font-size:calc(var(--dl) * .4);font-weight:700;line-height:1;vertical-align:middle;font-variant-numeric:tabular-nums}
+.dl-logo>img{width:100%;height:100%;object-fit:cover;display:block}
+.dl-logo.dl-par{width:calc(var(--dl) * 1.5);border-radius:0;overflow:visible;background:none}
+.dl-logo.dl-par>img{position:absolute;top:0;width:var(--dl);height:var(--dl);border-radius:50%;object-fit:cover;box-shadow:0 0 0 1.5px #11141B}
+.dl-logo.dl-par>img:first-child{left:0;z-index:1}
+.dl-logo.dl-par>img:last-child{right:0}
+.ag-flag{display:inline-block;width:16px;height:16px;border-radius:50%;object-fit:cover;vertical-align:-3px}
+.m606-th .dl-logo{margin-right:6px}
+.m606-th b{display:inline-flex;align-items:center;min-width:0}
+.m606-em b,.m606-row b{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.m606-mxc small{display:inline-flex;align-items:center;gap:4px}
