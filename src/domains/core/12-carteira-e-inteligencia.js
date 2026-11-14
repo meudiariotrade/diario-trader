@@ -3465,7 +3465,6 @@ try {
     dt: [
       ["ops", "Operações"],
       ["an", "Análise"],
-      ["rpy", "Replay"],
       ["num", "Números"],
     ],
     sw: [
@@ -3627,7 +3626,8 @@ function vSwBt() {
   return btHtml();
 }
 ((GOR.replay = () => {
-  ((GO.r = null), modVai("dt", "rpy"));
+  // v628: o Replay mora em Estudos (treino; não mistura com as operações reais)
+  ((GO.r = null), (ESV = "rpy"), irPara("estudos"));
 }),
   (GOR.backtest = () => {
     ((GO.r = null), modVai("sw", "bt"));
@@ -3644,10 +3644,10 @@ function vSwBt() {
   const e = vEstudos;
   vEstudos = function () {
     return (
-      (ESV === "rpy" || ESV === "bt") && (ESV = "liv"),
+      ESV === "bt" && (ESV = "liv"),
       e
         .apply(this, arguments)
-        .replace(/<button[^>]*data-id="rpy"[^>]*>[^<]*<\/button>/g, "")
+        .replace(/<button[^>]*data-id="rpy"[^>]*>[^<]*<\/button>/g, "") // o botão do Replay é posto no fim (v628)
         .replace(/<button[^>]*data-id="bt"[^>]*>[^<]*<\/button>/g, "")
     );
   };
@@ -4101,7 +4101,7 @@ const BUSCA = [
       },
     ],
     ["Day trade", "mini índice win wdo b3", () => modVai("dt", "ops")],
-    ["Replay (treino)", "replay treino candles", () => modVai("dt", "rpy")],
+    ["Replay (treino)", "replay treino candles estudos", () => GOR.replay()],
     ["Swing trade", "swing posições", () => modVai("sw", "ops")],
     [
       "Backtest e scanner",
@@ -4379,9 +4379,9 @@ function buscaRes(e) {
 {
   const e = render0;
   render0 = function () {
-    (tab === "estudos" &&
-      (ESV === "rpy" || ESV === "bt") &&
-      ((tab = ESV === "rpy" ? "dtrpy" : "swbt"), (ESV = "liv")),
+    // v628: o Replay saiu do Day Trade e virou sub-aba de Estudos; links antigos (dtrpy) vêm para cá.
+    (tab === "dtrpy" && ((tab = "estudos"), (ESV = "rpy")),
+      tab === "estudos" && ESV === "bt" && ((tab = "swbt"), (ESV = "liv")),
       e.apply(this, arguments));
   };
 }

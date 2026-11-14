@@ -19836,3 +19836,51 @@ function pfLimpa605() {
   } catch {}
   n < 60 && setTimeout(() => reg605(n + 1), 250);
 })(0);
+
+/* =====================================================================================
+   v628 — Replay de mercado como sub-aba de Estudos (celular e desktop).
+   Usa o mesmo rpyHtml() de sempre (nada duplicado). Os treinos ficam só em S.replay,
+   separados das operações reais da aba Operações.
+   ===================================================================================== */
+{
+  const antes = vEstudos;
+  vEstudos = function () {
+    if (typeof ESV > "u" || ESV !== "rpy") return antes.apply(this, arguments);
+    let base = "";
+    ESV = "liv";
+    try {
+      base = antes.apply(this, arguments);
+    } catch {
+    } finally {
+      ESV = "rpy";
+    }
+    const seg = (base.match(/<div class="seg"[^>]*>(?:(?!<\/div>)[\s\S])*data-ep="esv"[\s\S]*?<\/div>/) || [""])[0];
+    return `<h1>Estudos</h1>${seg}${rpyHtml()}`;
+  };
+}
+{
+  const antes = render0;
+  render0 = function () {
+    antes.apply(this, arguments);
+    try {
+      if (tab !== "estudos") return;
+      const seg = [...document.querySelectorAll("#app .seg")].find((o) => o.querySelector('[data-ep="esv"][data-id="liv"]'));
+      if (!seg) return;
+      let b = seg.querySelector('[data-id="rpy"]');
+      if (!b) {
+        b = document.createElement("button");
+        b.type = "button";
+        b.dataset.ep = "esv";
+        b.dataset.id = "rpy";
+        b.textContent = "▶️ Replay";
+        b.title = "Replay de mercado: um pregão passado candle a candle (treino, fora das suas operações)";
+        const ref = seg.querySelector('[data-id="juros"]');
+        ref ? seg.insertBefore(b, ref) : seg.appendChild(b);
+      }
+      if (ESV === "rpy") {
+        seg.querySelectorAll("button").forEach((o) => o.classList.toggle("on", o === b));
+        b.setAttribute("aria-current", "page");
+      }
+    } catch {}
+  };
+}

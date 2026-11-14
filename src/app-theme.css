@@ -2765,3 +2765,7 @@ html:root body #app table.sz-t :is(th,td){text-align:right!important;font-varian
 html:root body #app table.sz-t :is(th,td):first-child{text-align:left!important}
 html:root body #app #flwbox .card>svg,html:root body #app svg[aria-label="Sorriso de volatilidade"],html:root body #app svg[aria-label^="Perfil GEX"],html:root body #app svg[aria-label^="Perfil DEX"]{max-height:340px!important;display:block;margin-inline:auto}
 }
+/* v628 — Estudos com 5 sub-abas (Replay ao lado de Treino & Progresso) numa linha só */
+html body #app#app .v596-shell nav.dt397-category:has(>[data-dt397-view="rpy"]){grid-template-columns:.8fr .8fr 1fr 1.45fr .85fr!important}
+@media (max-width:650px){html body #app#app .v596-shell nav.dt397-category:has(>[data-dt397-view="rpy"]){grid-template-columns:.74fr .78fr 1fr 1.62fr .86fr!important}}
+html body #app#app .dt397-studies.dt-est-interno{align-content:start}
