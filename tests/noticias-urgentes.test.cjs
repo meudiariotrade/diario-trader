@@ -74,6 +74,6 @@ test('hash no push_log impede segunda notificação e respeita o link', async ()
   assert.equal(a.enviados, 1); assert.equal(b.enviados, 0);
   assert.equal(envios.length, 1);
   assert.match(envios[0].chave, /^sub1\|urg\|[a-f0-9]{32}$/);
-  assert.equal(envios[0].payload.title, 'Fed mantém taxas de juros');
+  assert.equal(envios[0].payload.title, 'Fed mantém juros');
   assert.equal(envios[0].payload.data.url, 'https://www.reuters.com/world/fed/');
 });
