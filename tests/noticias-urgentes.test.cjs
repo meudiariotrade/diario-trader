@@ -22,6 +22,7 @@ test('limpa sufixos de portais, detecta termos urgentes e não aceita falsos pos
   assert.equal(mancheteUrgente('Dicas para estudar melhor'), false);
   assert.equal(mancheteUrgente('Não vale a pena esperar'), false);
   assert.equal(mesmaNoticia(assinaturaNoticia('Fed mantém juros em 4%'), assinaturaNoticia('Fed mantém juros em 4% (Reuters)')), true);
+  assert.equal(mesmaNoticia(assinaturaNoticia('Fed mantém juros'), assinaturaNoticia('Fed mantém juros inalterados')), true);
 });
 
 test('RSS respeita publicação e URL HTTPS e aceita XML com CDATA', async () => {
@@ -76,4 +77,20 @@ test('hash no push_log impede segunda notificação e respeita o link', async ()
   assert.match(envios[0].chave, /^sub1\|urg\|[a-f0-9]{32}$/);
   assert.equal(envios[0].payload.title, 'Fed mantém juros');
   assert.equal(envios[0].payload.data.url, 'https://www.reuters.com/world/fed/');
+});
+
+test('evita dois pushes quando fontes em português e inglês noticiam o mesmo evento', async () => {
+  const { dispararNoticias } = await modulo;
+  const agora = new Date('2026-11-16T15:10:00Z');
+  const xml = '<rss><channel><item><title>Fed mantém juros</title><link>https://www.infomoney.com.br/fed/</link><pubDate>Mon, 16 Nov 2026 15:09:00 GMT</pubDate></item></channel></rss>';
+  const enviados = [];
+  const fetcher = async (url) => {
+    if (url.includes('finnhub.io')) return { ok: true, json: async () => [{ headline: 'Fed holds interest rates', url: 'https://www.cnbc.com/fed.html', datetime: Date.parse('2026-11-16T15:09:00Z') / 1000 }] };
+    if (url.includes('translate.googleapis.com')) return { ok: true, json: async () => [[['Fed mantém juros']]] };
+    return { ok: true, text: async () => xml };
+  };
+  const cliente = { from: () => ({ select: () => ({ like: () => ({ gte: () => ({ order: () => ({ limit: async () => ({ data: [], error: null }) }) }) }) }) }) };
+  const r = await dispararNoticias({ cliente, subs: [{ id: 'sub1' }], enviar: async (_, payload) => { enviados.push(payload); return true; }, token: 'ficticia', agora, fetcher });
+  assert.equal(r.enviados, 1);
+  assert.equal(enviados[0].title, 'Fed mantém juros');
 });
