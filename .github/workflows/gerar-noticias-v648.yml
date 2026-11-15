@@ -1,0 +1,67 @@
+name: Gerar bundles temporários de notícias v648
+on:
+  push:
+    branches: ['fix/noticias-traducao-v648']
+permissions:
+  contents: write
+jobs:
+  build:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run bundle
+      - name: Testar tradução direta e fallback dos dois endpoints
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+          const src=fs.readFileSync('src/domains/core/04-analises-e-estudos.js','utf8');
+          const h=fs.readFileSync('index.html','utf8');
+          assert.match(h,/connect-src[^;]*https:\/\/translate\.googleapis\.com https:\/\/clients5\.google\.com/);
+          const a=src.indexOf('async function mkTraduzTexto(texto) {'),b=src.indexOf('async function mkTraduzLote(itens) {',a);
+          assert.ok(a>0&&b>a);
+          const ctx={Promise,Map,AbortSignal,encodeURIComponent,URL,fetch:async url=>({ok:true,json:async()=>url.includes('clients5')?['Mercados em alta']:[[['Mercados em alta','Markets rise']]]})};
+          vm.runInNewContext(src.slice(a,b),ctx);
+          (async()=>{
+            assert.equal(await ctx.mkTraduzTexto('Markets rise'),'Mercados em alta');
+            ctx.fetch=async url=>url.includes('translate.googleapis.com')?{ok:false,status:503}:{ok:true,json:async()=>['Mercados em alta']};
+            assert.equal(await ctx.mkTraduzTexto('Markets rise'),'Mercados em alta');
+            ctx.mkTraduzTexto=async t=>t.includes('\n')?'Texto sem marcadores':'PT: '+t;
+            assert.deepEqual(Array.from(await ctx.mkTraduzGrupo(['Markets rise','Oil prices fall'])),['PT: Markets rise','PT: Oil prices fall']);
+            console.log('Tradução direta, CORS, fallback e separação de manchetes: OK');
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
+      - name: Verificar provedores em rede (diagnóstico não bloqueante)
+        run: |
+          node <<'NODE'
+          (async()=>{
+            const urls=[
+              "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q=Markets%20rise",
+              "https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=en&tl=pt&q=Markets%20rise"
+            ];
+            for(const url of urls){try{
+              const r=await fetch(url,{headers:{Origin:"https://meudiariotrade.github.io"},signal:AbortSignal.timeout(6000)});
+              console.log(new URL(url).hostname, r.status, "CORS",r.headers.get("access-control-allow-origin"),JSON.stringify((await r.text()).slice(0,100)));
+            }catch(e){console.log(new URL(url).hostname,String(e.message||e));}}
+          })();
+          NODE
+      - run: npm run verify
+      - run: npm run build
+      - name: Salvar versão e bundles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git status --short
+          if ! git diff --cached --quiet; then
+            git commit -m "Notícias: gerar bundles da tradução direta v648 [skip ci]"
+            git push origin HEAD:fix/noticias-traducao-v648
+          fi

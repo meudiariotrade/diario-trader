@@ -1803,20 +1803,26 @@ async function mkEdgeNoticias(acao) {
    Sem dependencias, credenciais, Edge Functions ou alteracoes de CSP. */
 const MK_TRADUCOES = new Map();
 /* Tradução por título: evita perder o lote quando o provedor remove quebras de linha. */
+/* Google/Chrome permitem CORS para a origem do aplicativo; proxies são só contingência. */
 async function mkTraduzTexto(texto) {
   const alvo="https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q="+encodeURIComponent(texto);
-  const endpoints=[
-    "https://api.allorigins.win/raw?url="+encodeURIComponent(alvo),
-    "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(alvo)
-  ];
-  return Promise.any(endpoints.map(async endpoint=>{
+  const chrome="https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=en&tl=pt&q="+encodeURIComponent(texto);
+  const consultar=async endpoint=>{
     const resposta=await fetch(endpoint,{signal:AbortSignal.timeout(7000),cache:"no-store"});
     if(!resposta.ok)throw new Error("Tradução HTTP "+resposta.status);
     const corpo=await resposta.json();
-    const traducao=Array.isArray(corpo?.[0])?corpo[0].map(parte=>String(parte?.[0]||"")).join("").trim():"";
+    const traducao=Array.isArray(corpo?.[0])?corpo[0].map(parte=>String(parte?.[0]||"")).join("").trim()
+      :typeof corpo?.[0]==="string"?corpo[0].trim():"";
     if(!traducao || traducao.length<3 || traducao===texto.trim())throw new Error("Tradução incompleta");
     return traducao;
-  }));
+  };
+  try { return await Promise.any([alvo,chrome].map(consultar)); }
+  catch (_) {
+    return Promise.any([
+      "https://api.allorigins.win/raw?url="+encodeURIComponent(alvo),
+      "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(alvo)
+    ].map(consultar));
+  }
 }
 async function mkTraduzGrupo(titulos) {
   const numerados=titulos.map((titulo,i)=>"[["+(i+1)+"]] "+titulo).join("\n");
