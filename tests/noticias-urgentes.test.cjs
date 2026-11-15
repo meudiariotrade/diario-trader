@@ -133,7 +133,8 @@ test('X @FirstSquawk e @DeItaone usam feeds FxTwitter em paralelo com URLs reais
   const agora = new Date('2026-11-16T15:10:00Z');
   const xml = (perfil) => '<rss><channel><item><title>Fed announces new FOMC decision in ' + perfil + '</title><link>https://x.com/' + perfil + '/status/2122088503773442208</link><pubDate>Mon, 16 Nov 2026 15:09:00 GMT</pubDate></item></channel></rss>';
   const chamadas = [];
-  const fetcher = async (url) => {
+  const fetcher = async (url, init) => {
+    if (String(url).startsWith('https://fxtwitter.com/')) assert.equal(init.headers['User-Agent'], undefined);
     chamadas.push(String(url));
     if (String(url).startsWith('https://fxtwitter.com/')) {
       const perfil = String(url).includes('FirstSquawk') ? 'FirstSquawk' : 'DeItaone';
