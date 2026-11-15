@@ -1,4 +1,5 @@
 import { entregar, retentar } from './entrega.ts';
+import { dispararNoticias, coletarNoticias } from './noticias-urgentes.ts';
 /** Calendário B3: fins de semana, feriados fixos, móveis e encerramentos de fim de ano. */
 export function b3SemPregao(dia: string): boolean {
  if(!/^\d{4}-\d{2}-\d{2}$/.test(dia))return true;
@@ -918,7 +919,7 @@ export function pushOk(u: unknown): boolean {
 }
 
 /** Versão das funções: o app compara com a dele na tela "Status do sistema". */
-export const VERSAO_FN = 'v563';
+export const VERSAO_FN = 'v649';
 /** ALLOWED_ORIGINS aceita o endereço escrito com caminho ou barra no final ("https://x.github.io/diario-trader/" vira "https://x.github.io"). */
 export const origemLimpa = (x: string) => { const s = String(x || '').trim(); if (!s) return ''; try { return new URL(s).origin; } catch { return s.replace(/\/+$/, ''); } };
 /** GET ?versao=1: responde só o nome e a versão da função (nenhum dado de ninguém), para o diagnóstico do app. */
@@ -1601,6 +1602,29 @@ Deno.serve(async (req) => {
         if (!segredoIgual(req.headers.get('x-cron-secret'), CRON)) return out({ error: 'Não autorizado' }, 401);
         await push();
         return out(await tick());
+      }
+      case 'noticias_urgentes':
+      case 'noticias_diagnostico': {
+        // Somente o pg_cron, com segredo no Vault; nunca aceitar token do navegador.
+        if (!segredoIgual(req.headers.get('x-cron-secret'), CRON)) return out({ error: 'Não autorizado' }, 401);
+        const sb = await db();
+        const { data: chaveVault, error: eChave } = await sb.rpc('finnhub_chave');
+        // Chave opcional: os RSS continuam mesmo se a Finnhub estiver indisponível.
+        const token = typeof chaveVault === 'string' ? chaveVault : (Deno.env.get('FINNHUB_API_KEY') || '');
+        if (eChave && !token) console.warn('noticias: Finnhub sem chave no servidor');
+        if (b.acao === 'noticias_diagnostico') {
+          const d = await coletarNoticias(token);
+          return out({ fontesOk: d.fontesOk, fontesFalhas: d.fontesFalhas, examinadas: d.examinadas, urgentes: d.noticias.length });
+        }
+        const { data: inscricoes, error: eSubs } = await sb.from('push_subs').select('id,sub,prefs,user_id');
+        if (eSubs) return out({ error: 'Não consegui consultar as inscrições.' }, 503);
+        const habilitados = (inscricoes || []).filter((s: any) => s.user_id && limpaPrefs(s.prefs).on.kw);
+        const resultado = await dispararNoticias({ cliente: sb, subs: habilitados, enviar: envia, token });
+        if (resultado.consultou) await logAuto('noticias urgentes', !resultado.falhasEnvio && !!resultado.fontesOk,
+          'fontes ' + (resultado.fontesOk || 0) + ' · urgentes ' + (resultado.urgentes || 0) +
+          ' · push ' + resultado.enviados + ' · falhas ' + (resultado.falhasEnvio || 0) +
+          (resultado.fontesFalhas?.length ? ' · indisponíveis: ' + resultado.fontesFalhas.join(', ').slice(0, 180) : ''));
+        return out(resultado);
       }
       case 'chave':
         await push(); // valida as chaves antes de entregar ao app
