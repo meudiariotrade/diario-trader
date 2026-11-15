@@ -1760,10 +1760,13 @@ async function mkFinnhubNoticias(category) {
   if(!r.ok)throw new Error("Finnhub "+category+" "+r.status);
   const data=await r.json();
   if(!Array.isArray(data))throw new Error("Finnhub: resposta inválida");
-  return data.slice(0,35).map(x=>mkNoticia({
-    t:x.headline, l:x.url, d:new Date(Number(x.datetime)*1000).toISOString(),
-    a:"Finnhub · "+String(x.source||category),c:[category==="crypto"?"cripto":"dolar"]
-  })).filter(Boolean);
+  return data.slice(0,35).map(x=>{
+    const instante=Number(x.datetime)*1000;
+    return Number.isFinite(instante) ? mkNoticia({
+      t:x.headline, l:x.url, d:new Date(instante).toISOString(),
+      a:"Finnhub · "+String(x.source||category),c:[category==="crypto"?"cripto":"dolar"]
+    }) : null;
+  }).filter(Boolean);
 }
 async function mkEdgeNoticias(acao) {
   const cfgAtual=cfg();
