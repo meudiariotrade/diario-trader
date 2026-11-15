@@ -1,0 +1,57 @@
+name: Gerar bundles temporários de notícias v647
+on:
+  push:
+    branches: ['fix/noticias-traducao-v647']
+permissions:
+  contents: write
+jobs:
+  build:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Gerar bundles sincronizados
+        run: npm run bundle
+      - name: Testar tradução individual com resposta simulada
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+          const source=fs.readFileSync('src/domains/core/04-analises-e-estudos.js','utf8');
+          const a=source.indexOf('async function mkTraduzTexto(texto) {'),b=source.indexOf('async function mkTraduzLote(itens) {',a);
+          assert.ok(a>0&&b>a);
+          const section=source.slice(a,b);
+          const ctx={Promise,Map,AbortSignal,encodeURIComponent,URL,fetch:async()=>({ok:true,json:async()=>[[['Mercados sobem','Markets rise']]]})};
+          vm.runInNewContext(section,ctx);
+          (async()=>{
+            assert.equal(await ctx.mkTraduzTexto('Markets rise'),'Mercados sobem');
+            ctx.mkTraduzTexto=async texto=>texto.includes('\n')?'Texto sem marcadores':'PT: '+texto;
+            const ind=await ctx.mkTraduzGrupo(['Markets rise','Oil prices fall']);
+            assert.deepEqual(Array.from(ind),['PT: Markets rise','PT: Oil prices fall']);
+            ctx.mkTraduzTexto=async texto=>texto.includes('\n')?'[[1]] Bolsas sobem [[2]] Petróleo cai':'PT: '+texto;
+            const lote=await ctx.mkTraduzGrupo(['Markets rise','Oil prices fall']);
+            assert.deepEqual(Array.from(lote),['Bolsas sobem','Petróleo cai']);
+            console.log('Tradução unitária e fallback por manchete OK');
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
+      - name: Conferir fontes, dependências e testes
+        run: npm run verify
+      - name: Conferir build
+        run: npm run build
+      - name: Persistir bundles da branch de preparação
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git status --short
+          if ! git diff --cached --quiet; then
+            git commit -m "Notícias: bundles e cache da v647 [skip ci]"
+            git push origin HEAD:fix/noticias-traducao-v647
+          fi
