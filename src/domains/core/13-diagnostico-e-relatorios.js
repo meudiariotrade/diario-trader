@@ -4628,7 +4628,7 @@ function m623Bloco(tit, itens, extra = "") {
 }
 function m623Noticias() {
   try {
-    !MKT.items && !MKT.busy && typeof SESS < "u" && SESS && setTimeout(() => mkLoad().then(() => m623Ativo() && cqPinta()), 0);
+    !MKT.items && !MKT.busy && Date.now()-MKT.ts>=18e4 && typeof SESS < "u" && SESS && setTimeout(() => mkLoad(false), 0);
   } catch {}
   const L = (MKT.items || []).slice(0, 8);
   return `<section class="m623-sec"><header><h3>Notícias</h3><button type="button" class="m623-lk" data-m623-nt>Ver todas</button></header><div class="m623-news">${
@@ -4637,6 +4637,15 @@ function m623Noticias() {
       : `<div class="market-state" role="status">${MKT.err ? esc(MKT.err) : "Carregando manchetes…"}</div>`
   }</div></section>`;
 }
+// Mini-feed do Terminal: somente as linhas de notícias são atualizadas.
+document.addEventListener("diario:noticias", () => {
+  const container=document.querySelector(".m623-news");
+  if(!container || !m623Ativo())return;
+  const modelo=document.createElement("template");
+  modelo.innerHTML=m623Noticias();
+  const linhas=modelo.content.querySelector(".m623-news");
+  if(linhas)container.replaceChildren(...linhas.childNodes);
+});
 function m623Fatores() {
   const F = ((M606.v && M606.v.terminal) || []).filter((x) => x.g === "fat");
   if (!F.length) return "";
