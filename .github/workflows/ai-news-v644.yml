@@ -1,0 +1,49 @@
+name: Gerar bundles Notícias v644 (temporário)
+on:
+  push:
+    branches: [ai-news-v644]
+    paths:
+      - '.github/workflows/ai-news-v644.yml'
+permissions:
+  contents: write
+jobs:
+  bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Validar script e regras de demonstração
+        run: |
+          node --check src/domains/core/04-analises-e-estudos.js
+          node - <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const src=fs.readFileSync('src/domains/core/04-analises-e-estudos.js','utf8');
+          assert(src.includes('window.DIARIO_DEMO || !cfg() || !SESS?.at'));
+          assert(src.includes('Promise.allSettled(tarefas)'));
+          assert(src.includes('["x", "X / Breaking"]'));
+          assert(src.includes('["cripto", "Cripto"]'));
+          console.log('Notícias: gate demo, fontes paralelas e filtros preservados');
+          NODE
+      - name: Preparar versão v644
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p='release.config.json',cfg=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(cfg.version!==643)throw Error('Versão inesperada '+cfg.version);
+          cfg.version=644;fs.writeFileSync(p,JSON.stringify(cfg,null,2)+'\n');
+          NODE
+      - run: npm run bundle
+      - run: npm run build:check
+      - name: Commit dos arquivos gerados
+        run: |
+          git config user.name "Diário Trader Bundle Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git diff --cached --quiet && exit 1
+          git commit -m "v644: sincronizar bundles com proteção de demonstração do feed"
+          git push origin HEAD:ai-news-v644
