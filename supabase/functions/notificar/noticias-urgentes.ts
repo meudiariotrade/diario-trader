@@ -58,9 +58,10 @@ export function mesmaNoticia(a: string, b: string): boolean {
   if (!a || !b) return false;
   if (a === b) return true;
   const A = new Set(a.split('|')), B = new Set(b.split('|'));
-  if (Math.min(A.size, B.size) < 4) return false;
+  if (Math.min(A.size, B.size) < 3) return false;
   const inter = [...A].filter((x) => B.has(x)).length;
-  return inter / (A.size + B.size - inter) >= 0.78;
+  const jaccard = inter / (A.size + B.size - inter);
+  return jaccard >= 0.78 || (inter / Math.min(A.size, B.size) >= 0.90 && jaccard >= 0.60);
 }
 export function janelaNoticias(agora = new Date()) {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
@@ -178,6 +179,13 @@ export async function dispararNoticias(op: {
   const dados = await coletarNoticias(op.token, agora, op.fetcher || fetch);
   // Traduz uma vez por notícia (sem alterar a assinatura usada para deduplicar).
   const titulos = await Promise.all(dados.noticias.map((n) => tituloEmPortugues(n, op.fetcher || fetch)));
+  const assinaturasPT = titulos.map(assinaturaNoticia);
+  // Agrupa a mesma notícia também quando uma fonte a publicou em inglês e outra em português.
+  const indices: number[] = [];
+  for (let i = 0; i < dados.noticias.length; i++) {
+    if (!indices.some((j) => mesmaNoticia(assinaturasPT[i], assinaturasPT[j]) ||
+      mesmaNoticia(dados.noticias[i].assinatura, dados.noticias[j].assinatura))) indices.push(i);
+  }
   let enviados = 0, falhasEnvio = 0;
   const resultados = await Promise.allSettled(op.subs.map(async (sub) => {
     // Falha fechada: se o histórico não puder ser lido, não envia (evita spam).
@@ -186,21 +194,24 @@ export async function dispararNoticias(op: {
       .gte('em', new Date(agora.getTime() - 48 * 3600_000).toISOString())
       .order('em', { ascending: false }).limit(250);
     if (error) throw Error('Histórico de notícias indisponível');
-    const assinaturas = (anteriores || []).map((x: any) => String(x.payload?.data?.assinatura || assinaturaNoticia(String(x.payload?.data?.titulo_original || x.payload?.title || '')))).filter(Boolean);
+    const assinaturas = (anteriores || []).flatMap((x: any) => [
+      String(x.payload?.data?.assinatura || assinaturaNoticia(String(x.payload?.title || ''))),
+      String(x.payload?.data?.assinatura_original || assinaturaNoticia(String(x.payload?.data?.titulo_original || ''))),
+    ]).filter(Boolean);
     let n = 0, erros = 0;
-    for (let i = 0; i < dados.noticias.length; i++) {
-      const item = dados.noticias[i];
-      if (assinaturas.some((a: string) => mesmaNoticia(a, item.assinatura))) continue;
-      const id = await hash(item.assinatura + '|' + new Date(item.publicado).toISOString().slice(0, 10));
+    for (const i of indices) {
+      const item = dados.noticias[i], assinatura = assinaturasPT[i];
+      if (assinaturas.some((a: string) => mesmaNoticia(a, assinatura) || mesmaNoticia(a, item.assinatura))) continue;
+      const id = await hash(assinatura + '|' + new Date(item.publicado).toISOString().slice(0, 10));
       const payload = {
         title: titulos[i].slice(0, 120),
         body: ('Urgente · ' + item.fonte + ' · ' + item.link).slice(0, 500),
         tag: 'urg-' + id,
-        data: { go: 'mercado', r: 'noticias', url: item.link, noticia_id: id, assinatura: item.assinatura, titulo_original: item.titulo },
+        data: { go: 'mercado', r: 'noticias', url: item.link, noticia_id: id, assinatura, assinatura_original: item.assinatura, titulo_original: item.titulo },
       };
       try { if (await op.enviar(sub, payload, sub.id + '|urg|' + id)) n++; }
       catch { erros++; }
-      assinaturas.push(item.assinatura);
+      assinaturas.push(assinatura, item.assinatura);
     }
     return { n, erros };
   }));
@@ -211,6 +222,6 @@ export async function dispararNoticias(op: {
   return {
     consultou: true, intervalo: janela.intervalo, fontesOk: dados.fontesOk,
     fontesFalhas: dados.fontesFalhas, examinadas: dados.examinadas,
-    urgentes: dados.noticias.length, enviados, falhasEnvio,
+    urgentes: indices.length, enviados, falhasEnvio,
   };
 }
