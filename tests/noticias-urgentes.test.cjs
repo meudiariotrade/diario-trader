@@ -127,3 +127,24 @@ test('marca hash persistente uma vez por conta e entrega a todos os aparelhos se
   assert.equal(envios,2);
   assert.equal(marcados.size,1);
 });
+
+test('X @FirstSquawk e @DeItaone usam feeds FxTwitter em paralelo com URLs reais', async () => {
+  const { coletarNoticias } = await modulo;
+  const agora = new Date('2026-11-16T15:10:00Z');
+  const xml = (perfil) => '<rss><channel><item><title>Fed announces new FOMC decision in ' + perfil + '</title><link>https://x.com/' + perfil + '/status/2122088503773442208</link><pubDate>Mon, 16 Nov 2026 15:09:00 GMT</pubDate></item></channel></rss>';
+  const chamadas = [];
+  const fetcher = async (url) => {
+    chamadas.push(String(url));
+    if (String(url).startsWith('https://fxtwitter.com/')) {
+      const perfil = String(url).includes('FirstSquawk') ? 'FirstSquawk' : 'DeItaone';
+      return { ok: true, text: async () => xml(perfil) };
+    }
+    throw Error('Fonte indisponível no teste');
+  };
+  const r = await coletarNoticias('', agora, fetcher);
+  assert.ok(chamadas.includes('https://fxtwitter.com/FirstSquawk/feed.xml'));
+  assert.ok(chamadas.includes('https://fxtwitter.com/DeItaone/feed.xml'));
+  assert.equal(r.fontesOk, 2);
+  assert.equal(r.noticias.length, 2);
+  assert.ok(r.noticias.every(x => x.fonte.startsWith('X @') && x.link.startsWith('https://x.com/')));
+});

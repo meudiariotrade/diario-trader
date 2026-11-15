@@ -1,0 +1,30 @@
+name: Preparar feeds X v651
+on:
+  push:
+    branches: ['fix/rss-x-fxtwitter-v651']
+permissions:
+  contents: write
+jobs:
+  build:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: true}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24', cache: npm}
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --test tests/noticias-urgentes.test.cjs
+      - run: npm run bundle
+      - run: npm run verify
+      - run: npm run build
+      - name: Persistir bundles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          if ! git diff --cached --quiet; then
+            git commit -m "Build: sincronizar bundles v651 [skip ci]"
+            git push origin HEAD:fix/rss-x-fxtwitter-v651
+          fi

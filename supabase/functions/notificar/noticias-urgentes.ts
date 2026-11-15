@@ -120,6 +120,8 @@ async function fonteRSS(fonte: Fonte, fetcher: Fetcher) {
 }
 async function fonteX(perfil: string, fetcher: Fetcher) {
   const urls = [
+    // Feed público validado no servidor em 15/11/2026 (HTTP 200, RSS real, links x.com/status).
+    'https://fxtwitter.com/' + perfil + '/feed.xml',
     'https://rsshub.app/twitter/user/' + perfil,
     'https://nitter.mie.foundation/' + perfil + '/rss',
     'https://nitter.mizuki.st/' + perfil + '/rss',
