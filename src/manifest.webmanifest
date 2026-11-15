@@ -34,5 +34,23 @@
     "productivity",
     "education"
   ],
-  "orientation": "any"
+  "orientation": "any",
+  "shortcuts": [
+    {
+      "name": "Meu Dia & Checklist",
+      "url": "./?go=dia"
+    },
+    {
+      "name": "Mercado & Cotações",
+      "url": "./?go=mercado"
+    },
+    {
+      "name": "Replay de Mercado",
+      "url": "./?go=estudos&r=replay"
+    },
+    {
+      "name": "Plano de Transição",
+      "url": "./?go=carreira"
+    }
+  ]
 }
