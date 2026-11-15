@@ -1,0 +1,30 @@
+name: Diagnóstico temporário de tradução pública
+on:
+  push:
+    branches: ['fix/noticias-traducao-v647']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir provedor e proxies
+        run: |
+          node <<'NODE'
+          (async()=>{
+            const alvo="https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q="+encodeURIComponent("Markets rise after Fed decision");
+            const endpoints=[["Google",alvo],["AllOrigins","https://api.allorigins.win/raw?url="+encodeURIComponent(alvo)],["CodeTabs","https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(alvo)]];
+            const r=await Promise.all(endpoints.map(async([nome,url])=>{
+              try{
+                const response=await fetch(url,{signal:AbortSignal.timeout(9500)});
+                const corpo=await response.text();let traducao="";
+                try{const j=JSON.parse(corpo);traducao=Array.isArray(j?.[0])?j[0].map(p=>p?.[0]||"").join(""):"";}
+                catch{}
+                return{name:nome,status:response.status,traducao,body:traducao?"":corpo.slice(0,100)};
+              }catch(e){return{name:nome,error:String(e.message||e)}}
+            }));
+            for(const x of r)console.log(JSON.stringify(x));
+          })();
+          NODE
