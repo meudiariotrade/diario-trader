@@ -12,7 +12,7 @@
    const vendas=Math.max(0,Number(apuracao?.rows?.find(x=>x.k==='A')?.vendas||0));
    const restante=Math.max(0,20000-vendas),acima=vendas>20000;
    const percentual=Math.min(100,vendas/20000*100);
-   const cor=acima?'#EF4444':vendas>=16000?'#D4A017':'#10B981';
+   const cor=acima?'#EF4444':vendas>16000?'#D4A017':'#10B981';
    const opcoes=meses.map(m=>{const nome=new Date(m+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'});return '<option value="'+m+'"'+(m===mesIsencao?' selected':'')+'>'+esc(nome)+'</option>'}).join('');
    return '<section aria-label="Isenção Swing Trade Ações" style="background:#11141B;border:1px solid #1E232E;border-radius:4px;padding:12px;margin:0 0 12px;min-width:0">'
      +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><b style="font-size:13px">Isenção Swing Trade Ações (Teto R$ 20.000/mês)</b>'
