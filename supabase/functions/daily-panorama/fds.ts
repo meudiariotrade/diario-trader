@@ -69,20 +69,47 @@ export async function manchetes(): Promise<string[]> {
     } catch { /* fonte fora do ar: segue com as outras */ }
   }));
   itens.sort((a, b) => b.s - a.s || b.d - a.d);
-  const out: string[] = [], vistos: string[] = [];
-  const chave = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '').split(' ').filter((w) => w.length > 4);
+  // Normalização editorial e assuntos distintos, antes de limitar a cinco manchetes.
+  const limparCredito = (t: string) => t.replace(/\s*\([^)]+\)\s*$/, '').trim();
+  const ignorar = new Set('a o as os um uma uns umas de da do das dos em na no nas nos por para com sem sobre entre ao aos pela pelo pelas pelos que se e ou mas como após apos desde até ate é sao foi ser esta estão esse essa isso seu sua seus suas the a an of in on at for from to by with and or after amid over is are was were will has have had new says say said this that as its their it into during about'.split(' '));
+  const equivalentes: Record<string, string> = {
+    attacks: 'ataque', attack: 'ataque', attacked: 'ataque', attacking: 'ataque',
+    ataques: 'ataque', ataca: 'ataque', atacam: 'ataque', atacou: 'ataque',
+    missiles: 'missil', missile: 'missil', misseis: 'missil',
+    war: 'guerra', wars: 'guerra',
+    iran: 'ira', iranian: 'ira', iranianos: 'ira',
+    america: 'eua', us: 'eua', usa: 'eua', american: 'eua', americans: 'eua', americano: 'eua', americana: 'eua', americanos: 'eua', americanas: 'eua',
+    israeli: 'israel', israelis: 'israel',
+    russian: 'russia', russos: 'russia',
+    ukraine: 'ucrania', ukrainian: 'ucrania',
+    chinese: 'china',
+    tariff: 'tarifa', tariffs: 'tarifa', tarifas: 'tarifa',
+    oil: 'petroleo', crude: 'petroleo',
+    inflation: 'inflacao', interest: 'juros', rates: 'juros', rate: 'juros',
+    markets: 'mercado', market: 'mercado', mercados: 'mercado',
+    crypto: 'cripto', cryptocurrencies: 'cripto',
+    middle: 'oriente', east: 'medio', tensions: 'tensao', tension: 'tensao',
+  };
+  const eventos = new Set('ataque missil guerra tarifa petroleo inflacao juros greve explosao queda alta acordo eleicao sancoes sancao prisao morte crise acidente incendio embargo invasao'.split(' '));
+  const chave = (t: string) => [...new Set(limparCredito(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').split(/\s+/)
+    .map((w) => equivalentes[w] || w).filter((w) => w.length > 2 && !ignorar.has(w)))];
+  const mesmoEvento = (a: string[], b: string[]) => {
+    const comuns = a.filter((w) => b.includes(w));
+    return comuns.length >= 3 || (comuns.length >= 2 && comuns.some((w) => eventos.has(w)) && comuns.length / Math.min(a.length, b.length) >= 0.3);
+  };
+  const out: string[] = [], vistos: string[][] = [];
   for (const it of itens) {
-    if (it.s < 3) break; // só manchete factual com tema de mercado/geopolítica
-    const k = chave(it.t);
-    if (vistos.some((v) => { const o = v.split('|'); return k.filter((w) => o.includes(w)).length >= 3; })) continue;
-    vistos.push(k.join('|'));
-    out.push(it.f === 'Google News' ? '\u0000' + it.t + '\u0001' + it.f : `${it.t} (${it.f})`);
+    if (it.s < 3) break; // mantém os critérios de relevância factual existentes
+    const t = limparCredito(it.t), k = chave(t);
+    if (!k.length || vistos.some((v) => mesmoEvento(k, v))) continue;
+    vistos.push(k);
+    out.push(it.f === 'Google News' ? '\u0000' + t : t);
     if (out.length >= 5) break;
   }
   // v641: manchete em inglês é traduzida para o português (sem chave; se falhar, fica a original)
   return Promise.all(out.map(async (x) => {
-    if (!x.startsWith('\u0000')) return x;
-    const [t, f] = x.slice(1).split('\u0001');
+    if (!x.startsWith('\u0000')) return limparCredito(x);
+    const t = x.slice(1);
     let pt = '';
     try {
       const r = await fetch('https://api.mymemory.translated.net/get?langpair=en|pt-BR&q=' + encodeURIComponent(t), { signal: AbortSignal.timeout(6000) });
@@ -97,7 +124,7 @@ export async function manchetes(): Promise<string[]> {
         pt = Array.isArray(j?.[0]) ? j[0].map((p: any) => p?.[0] || '').join('').trim() : '';
       } catch { /* fica a original */ }
     }
-    return `${pt || t} (${f === 'Google News' ? 'Google News, traduzido' : f})`;
+    return limparCredito(pt || t);
   }));
 }
 export function termometro(L: Cripto[]) {
@@ -150,6 +177,6 @@ ${cards}
 ${termTxt.map((l, j) => `<text x="${P + 26}" y="${yT + 76 + j * 28}" font-size="19" fill="#E6E8EE">${esc(l)}</text>`).join('')}
 <text x="${P}" y="${yN + 20}" font-size="20" font-weight="700" fill="#C9CDD6">Principais notícias do fim de semana</text>
 ${itens}
-<text x="${P}" y="${H - 28}" font-size="15" fill="#5B6170">Diário de Trader · Binance 24h · Notícias: Money Times, InfoMoney, g1, CNN e Google · Não é recomendação.</text>
+<text x="${P}" y="${H - 28}" font-size="15" fill="#5B6170">Diário de Trader · Binance 24h · Não é recomendação.</text>
 </svg>`;
 }
