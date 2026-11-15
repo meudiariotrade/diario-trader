@@ -1538,6 +1538,8 @@ const MKT = {
     ["ibovespa", "Ibovespa"],
     ["dolar", "Dólar"],
     ["juros", "Juros"],
+    ["x", "X / Breaking"],
+    ["cripto", "Cripto"],
   ],
   mkBtn = (e, t, a, o) =>
     `<button class="btn${o ? "" : " s"}" data-mk="${e}" data-v="${esc(t)}">${esc(a)}</button>`,
@@ -1584,7 +1586,7 @@ function vMercado() {
       ? vAlertas(t)
       : e === "ag"
         ? `<div class="card"><div class="top"><b>Agenda econômica</b></div>${t}<div class="sm mut">País</div>${mkRow(MK_CT.map(([a, o]) => mkBtn("ct", a, o, MKT.ct === a)).join(""))}<div class="sm mut">Importância</div>${mkRow(MK_IM.map(([a, o]) => mkBtn("im", a, o, MKT.im === a)).join(""))}<div id="mkcal" style="min-height:560px"></div><div class="sm mut" style="margin-top:6px">Horários no fuso do seu aparelho. Dados do TradingView.</div></div>`
-        : `<div class="card"><div class="top"><b>Notícias do dia</b><button class="btn s" data-mk="rf" aria-label="Atualizar notícias">↻ Atualizar</button></div>${t}${mkRow(MK_NF.map(([a, o]) => mkBtn("nf", a, o, MKT.nf === a)).join(""))}<div id="mknews"></div><div class="sm mut" style="margin-top:8px">Fonte: Money Times. Toque na manchete para ler a matéria no site.</div></div>`;
+        : `<div class="card"><div class="top"><b>Notícias do dia</b><button class="btn s" data-mk="rf" aria-label="Atualizar notícias">↻ Atualizar</button></div>${t}${mkRow(MK_NF.map(([a, o]) => mkBtn("nf", a, o, MKT.nf === a)).join(""))}<div id="mknews"></div><div class="sm mut" style="margin-top:8px">Fontes: Finnhub, X/Twitter, InfoMoney, Money Times e Reuters. Toque na manchete para ler.</div></div>`;
 }
 function mkCal() {
   const e = document.getElementById("mkcal");
@@ -1618,39 +1620,28 @@ function mkPaint() {
     e.innerHTML = `<div class="warn">${esc(MKT.err || "Sem notícias por enquanto.")}</div>`;
     return;
   }
-  const t = mkDia(new Date().toISOString());
   let a = MKT.items.slice();
   if (MKT.nf !== "all") {
     const n = MKT.nf;
     a = a.filter((r) =>
       (r.c || []).some((i) => {
         const l = mkNorm(i);
-        return n === "juros"
-          ? l.includes("juros") || l.includes("selic")
+        return n === "juros" ? l.includes("juros") || l.includes("selic")
+          : n === "x" ? l === "x" || l.includes("breaking")
+          : n === "cripto" ? l.includes("cripto")
           : l.includes(n);
       }),
     );
   }
-  const o = a.filter((n) => mkDia(n.d) === t);
-  let s = "";
-  if (
-    (o.length >= 5
-      ? (a = o)
-      : ((a = a.slice(0, 15)),
-        (s =
-          '<div class="sm mut" style="margin-bottom:6px">Poucas notícias hoje, mostrando as mais recentes.</div>')),
-    (a = a.slice(0, 25)),
-    !a.length)
-  ) {
-    e.innerHTML =
-      '<div class="mut sm" style="padding:12px 0">Nenhuma notícia neste filtro.</div>';
+  a = a.slice(0, 50);
+  if (!a.length) {
+    e.innerHTML = '<div class="mut sm" style="padding:12px 0">Nenhuma notícia neste filtro.</div>';
     return;
   }
   e.innerHTML =
     (MKT.err
       ? `<div class="warn" style="margin-bottom:8px">${esc(MKT.err)} Mostrando a última cópia.</div>`
       : "") +
-    s +
     a
       .map((n) => {
         const r = (n.c || []).some((i) => mkNorm(i) === "urgente");
@@ -1658,64 +1649,166 @@ function mkPaint() {
       })
       .join("");
 }
-async function mkLoad(e) {
-  if (MKT.busy || (!e && MKT.items && Date.now() - MKT.ts < 3e5)) return;
-  const t = cfg();
-  if (!t) {
-    ((MKT.err = "Configure o Supabase na aba Conta para carregar as notícias."),
-      mkPaint());
-    return;
-  }
-  if (!SESS) {
-    ((MKT.err = "Entre na sua conta para consultar as notícias."), mkPaint());
-    return;
-  }
-  try {
-    await tok();
-  } catch (a) {
-    ((MKT.err = a.message || "Sessão expirada"), mkPaint());
-    return;
-  }
-  ((MKT.busy = 1), (MKT.err = ""), mkPaint());
-  try {
-    let a;
-    try {
-      a = await fetch(t.url + "/functions/v1/noticias", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: t.key,
-          Authorization: "Bearer " + SESS.at,
-        },
-        body: "{}",
-      });
-    } catch {
-      throw new Error(
-        'Sem conexão com a função "noticias". Confira se ela foi publicada e se há internet.',
-      );
-    }
-    if (!a.ok) {
-      let s = "";
-      try {
-        s = (await a.json()).error || "";
-      } catch {}
-      throw new Error(
-        a.status === 401
-          ? "A função exige login: publique com --no-verify-jwt."
-          : a.status === 404
-            ? 'Função "noticias" não encontrada: publique-a no Supabase.'
-            : s || "Erro " + a.status,
-      );
-    }
-    const o = await a.json();
-    if (!Array.isArray(o.itens))
-      throw new Error("Resposta inesperada da função.");
-    ((MKT.items = o.itens), (MKT.ts = Date.now()));
-  } catch (a) {
-    MKT.err = a.message || String(a);
-  }
-  ((MKT.busy = 0), tab === "mercado" && MKT.tab === "nt" && mkPaint());
+
+/* Notícias do dia: coleta isolada para Mercado e mini-feeds do Terminal.
+   URLs RSS públicas são lidas por proxy CORS sem credenciais. A função
+   terminal existente é contingência para os portais; nenhuma Edge é modificada. */
+const MK_FONTES_RSS = [
+  ["InfoMoney", "https://www.infomoney.com.br/ultimas-noticias/rss/"],
+  ["Investing.com Brasil", "https://br.investing.com/rss/news.rss"],
+  ["Bloomberg Línea", "https://www.bloomberglinea.com.br/arc/outboundfeeds/rss/?outputType=xml"],
+  ["CNBC", "https://www.cnbc.com/id/10000664/device/rss/rss.html"],
+  ["Money Times", "https://www.moneytimes.com.br/mercados/feed/"],
+  // A Reuters não oferece RSS público estável: consulta Google Notícias restrita ao domínio.
+  ["Reuters", "https://news.google.com/rss/search?q=site%3Areuters.com%20markets%20OR%20economy&hl=pt-BR&gl=BR&ceid=BR:pt-419"],
+];
+const MK_CONTAS_X = ["FirstSquawk", "DeItaone", "LiveSquawk", "WatcherGuru", "zerohedge"];
+const MK_STOPWORDS = new Set("a o as os um uma uns umas de da do das dos na no nas nos em por para com e ou que ao aos sua seu suas seus the a an and or to from in on for of with by at this that is are market markets news said says after before sobre entre como mais less than amid amid".split(" "));
+function mkLimpaTitulo(t) {
+  return String(t || "").replace(/\s*\([^)]+\)\s*$/, "").replace(/\s+/g, " ").trim();
 }
+function mkTokens(t) {
+  return [...new Set(mkNorm(mkLimpaTitulo(t))
+    .replace(/[^\p{L}\p{N}]+/gu, " ").split(/\s+/).filter(w => w.length >= 3 && !MK_STOPWORDS.has(w))
+    .map(w => ({ rates:"juros",rate:"juros",interest:"juros",bitcoin:"btc",ethereum:"eth",dollar:"dolar",usd:"dolar",stocks:"acoes",shares:"acoes",tariffs:"tarifas",tariff:"tarifas" })[w] || w))];
+}
+function mkDedup(itens) {
+  const seenUrls = new Set(), accepted = [], tokenSets = [];
+  const sorted = itens.filter(n => n && n.t && n.l && Number.isFinite(Date.parse(n.d)))
+    .sort((a,b) => Date.parse(b.d) - Date.parse(a.d) || a.t.localeCompare(b.t));
+  for (const n of sorted) {
+    const key = String(n.l).split(/[?#]/)[0].replace(/\/$/, "").toLowerCase();
+    if (seenUrls.has(key)) continue;
+    const words = mkTokens(n.t), distinct = new Set(words);
+    const duplicate = tokenSets.some(other => {
+      if (!words.length || !other.size) return false;
+      const overlap = words.filter(w => other.has(w)).length;
+      return (words.length <= 2 || other.size <= 2)
+        ? overlap === words.length && overlap === other.size
+        : overlap >= 3 && overlap / Math.min(words.length, other.size) >= .6;
+    });
+    if (duplicate) continue;
+    seenUrls.add(key); tokenSets.push(distinct); accepted.push(n);
+    if (accepted.length === 50) break;
+  }
+  return accepted;
+}
+function mkNoticia(dado) {
+  const t = mkLimpaTitulo(dado.t), ms = Date.parse(dado.d || "");
+  if (!t || t.length < 12 || !Number.isFinite(ms) || ms > Date.now()+300000 || ms < Date.now()-14*86400000) return null;
+  let url;
+  try { url = new URL(String(dado.l)); if (!["https:","http:"].includes(url.protocol)) return null; } catch { return null; }
+  const assunto = mkNorm(t), cats = new Set((Array.isArray(dado.c) ? dado.c : []).map(x => mkNorm(x)));
+  if (/cripto|crypto|bitcoin|\bbtc\b|ethereum|\beth\b|blockchain|stablecoin/.test(assunto)) cats.add("cripto");
+  if (/dolar|dollar|\busd\b|\bbrl\b|cambio|forex|moeda/.test(assunto)) cats.add("dolar");
+  if (/ibovespa|\bibov\b|\bb3\b|bolsa brasileira|petrobras|vale\b/.test(assunto)) cats.add("ibovespa");
+  if (/juros|selic|copom|\bfed\b|fomc|treasury|interest|rates|yield/.test(assunto)) cats.add("juros");
+  if (/urgent|urgente|breaking|alerta|alert\b|squawk/.test(assunto)) cats.add("urgente");
+  if (String(dado.a || "").startsWith("X · @")) cats.add("x");
+  return { t, l:url.href, d:new Date(ms).toISOString(), a:String(dado.a || "Fonte não indicada"), c:[...cats] };
+}
+function mkRssXml(xml, fonte, perfil) {
+  const doc = new DOMParser().parseFromString(xml, "text/xml");
+  if (doc.querySelector("parsererror")) throw new Error("XML inválido: "+fonte);
+  const posts = [...doc.querySelectorAll("item, entry")].slice(0,35);
+  return posts.map(p => {
+    const value = (tag) => p.querySelector(tag)?.textContent?.trim() || "";
+    const title = value("title"), link = p.querySelector("link");
+    let url = link?.getAttribute("href") || link?.textContent?.trim() || "";
+    const stamp = value("pubDate") || value("published") || value("updated") || value("dc\\:date");
+    if (perfil) {
+      const status = url.match(/\/status\/(\d+)/);
+      url = status ? "https://x.com/"+perfil+"/status/"+status[1] : "https://x.com/"+perfil;
+    }
+    const cats = [...p.querySelectorAll("category")].map(n => n.textContent || "").slice(0,10);
+    return mkNoticia({ t:title, l:url, d:stamp, a:perfil?"X · @"+perfil:fonte,
+      c:perfil?["x","breaking",...cats]:cats });
+  }).filter(Boolean).filter(n => !perfil || Date.now()-Date.parse(n.d)<3*86400000);
+}
+async function mkRssProxy(url, fonte, perfil, alternativa) {
+  const endpoint = alternativa
+    ? "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(url)
+    : "https://api.allorigins.win/raw?url="+encodeURIComponent(url);
+  const resp = await fetch(endpoint,{signal:AbortSignal.timeout(6500),cache:"no-store"});
+  if(!resp.ok) throw new Error(fonte+": HTTP "+resp.status);
+  const text = await resp.text();
+  if(text.length>750000) throw new Error(fonte+": XML excessivo");
+  const out = mkRssXml(text,fonte,perfil);
+  if(!out.length) throw new Error(fonte+": RSS vazio/indisponível");
+  return out;
+}
+async function mkRss(url, fonte, perfil) {
+  try {return await mkRssProxy(url,fonte,perfil,false);}
+  catch {return mkRssProxy(url,fonte,perfil,true);}
+}
+async function mkRssX(perfil) {
+  const feeds=[
+    "https://rsshub.app/twitter/user/"+perfil,
+    "https://nitter.mie.foundation/"+perfil+"/rss",
+    "https://nitter.mizuki.st/"+perfil+"/rss",
+  ];
+  try {return await Promise.any(feeds.map(u=>mkRssProxy(u,"X · @"+perfil,perfil,false)));}
+  catch {return Promise.any(feeds.map(u=>mkRssProxy(u,"X · @"+perfil,perfil,true)));}
+}
+async function mkFinnhubNoticias(category) {
+  const key = String((typeof fhChave==="function" ? await fhChave().catch(()=>"") : "")
+    || window.fhTokServidor || (typeof FH!=="undefined" ? FH.k : "")
+    || window.VITE_FINNHUB_API_KEY || "").trim();
+  if(!key) return [];
+  const r=await fetch("https://finnhub.io/api/v1/news?category="+category+"&token="+encodeURIComponent(key),
+    {signal:AbortSignal.timeout(8500),cache:"no-store"});
+  if(!r.ok)throw new Error("Finnhub "+category+" "+r.status);
+  const data=await r.json();
+  if(!Array.isArray(data))throw new Error("Finnhub: resposta inválida");
+  return data.slice(0,35).map(x=>mkNoticia({
+    t:x.headline, l:x.url, d:new Date(Number(x.datetime)*1000).toISOString(),
+    a:"Finnhub · "+String(x.source||category),c:[category==="crypto"?"cripto":"dolar"]
+  })).filter(Boolean);
+}
+async function mkEdgeNoticias(acao) {
+  const cfgAtual=cfg();
+  if(!cfgAtual || !SESS?.at)throw new Error("Sessão indisponível");
+  await tok();
+  const resposta=await fetch(cfgAtual.url+"/functions/v1/"+(acao==="terminal"?"terminal":"noticias"),{
+    method:"POST",headers:{"Content-Type":"application/json",apikey:cfgAtual.key,Authorization:"Bearer "+SESS.at},
+    body:acao==="terminal"?JSON.stringify({acao:"noticias"}):"{}",signal:AbortSignal.timeout(16000),
+  });
+  if(!resposta.ok)throw new Error("Fonte "+acao+" "+resposta.status);
+  const obj=await resposta.json();
+  if(!Array.isArray(obj.itens))throw new Error("Resposta inválida "+acao);
+  return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.a||"Money Times",c:n.tags||n.c||[]})).filter(Boolean);
+}
+
+async function mkLoad(force) {
+  if (MKT.busy || (!force && MKT.items && Date.now()-MKT.ts<18e4)) return;
+  MKT.busy=1;MKT.err="";mkPaint();
+  try {
+    const tarefas=[
+      mkEdgeNoticias("noticias"),mkEdgeNoticias("terminal"),
+      mkFinnhubNoticias("forex"),mkFinnhubNoticias("crypto"),
+      ...MK_FONTES_RSS.map(([nome,url])=>mkRss(url,nome)),
+      ...MK_CONTAS_X.map(perfil=>mkRssX(perfil)),
+    ];
+    const respostas=await Promise.allSettled(tarefas);
+    const resultados=respostas.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
+    const reunidas=mkDedup(resultados);
+    if(reunidas.length)MKT.items=reunidas;
+    else MKT.err="Não consegui consultar as fontes agora.";
+    MKT.ts=Date.now();
+  } catch(e) {
+    MKT.err=String(e?.message||e);
+    MKT.ts=Date.now();
+  } finally {
+    MKT.busy=0;
+    if(tab==="mercado"&&MKT.tab==="nt")mkPaint();
+    document.dispatchEvent(new CustomEvent("diario:noticias"));
+  }
+}
+// Atualização compartilhada quando o Terminal (inclusive seu mini-feed) está aberto.
+setInterval(() => {
+  if (document.hidden || MKT.busy) return;
+  if (tab==="term" || (tab==="mercado"&&MKT.tab==="cq"&&typeof m623Ativo==="function"&&m623Ativo())) mkLoad(false);
+},18e4);
 function mkAfter() {
   if ((MKT.tm && (clearInterval(MKT.tm), (MKT.tm = null)), MKT.tab === "cot")) {
     cotAfter();
@@ -1735,7 +1828,7 @@ function mkAfter() {
       tab === "mercado" && MKT.tab === "nt" && !document.hidden
         ? mkLoad(!0)
         : tab !== "mercado" && (clearInterval(MKT.tm), (MKT.tm = null));
-    }, 3e5)));
+    }, 18e4)));
 }
 (function () {
   const e = render0;
