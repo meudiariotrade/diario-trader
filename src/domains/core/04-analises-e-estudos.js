@@ -1784,6 +1784,14 @@ async function mkEdgeNoticias(acao) {
 
 async function mkLoad(force) {
   if (MKT.busy || (!force && MKT.items && Date.now()-MKT.ts<18e4)) return;
+  // Respeita o bloqueio original de notícias sem sessão; modo demo não consulta proxies externos.
+  if (window.DIARIO_DEMO || !cfg() || !SESS?.at) {
+    if (!MKT.items) {
+      MKT.err = window.DIARIO_DEMO ? "Notícias indisponíveis na demonstração." : "Entre na sua conta para consultar notícias.";
+      mkPaint();
+    }
+    return;
+  }
   MKT.busy=1;MKT.err="";mkPaint();
   try {
     const tarefas=[
