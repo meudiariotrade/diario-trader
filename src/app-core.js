@@ -28605,26 +28605,36 @@ async function mkEdgeNoticias(acao) {
 /* Traducao gratuita em lotes, pelo proxy CORS ja autorizado no aplicativo.
    Sem dependencias, credenciais, Edge Functions ou alteracoes de CSP. */
 const MK_TRADUCOES = new Map();
-async function mkTraduzGrupo(titulos) {
-  const alvo="https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q="+encodeURIComponent(titulos.join("\n"));
+/* Tradução por título: evita perder o lote quando o provedor remove quebras de linha. */
+async function mkTraduzTexto(texto) {
+  const alvo="https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q="+encodeURIComponent(texto);
   const endpoints=[
     "https://api.allorigins.win/raw?url="+encodeURIComponent(alvo),
     "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(alvo)
   ];
-  let ultimaFalha;
-  for(const endpoint of endpoints) {
-    try {
-      const resposta=await fetch(endpoint,{signal:AbortSignal.timeout(6000),cache:"no-store"});
-      if(!resposta.ok)throw new Error("Tradução HTTP "+resposta.status);
-      const corpo=await resposta.json();
-      const traducao=Array.isArray(corpo?.[0]) ? corpo[0].map(parte=>String(parte?.[0]||"")).join("") : "";
-      const linhas=traducao.split(/\r?\n/).map(s=>s.trim());
-      if(linhas.length!==titulos.length || linhas.some((t,i)=>!t || t.length<3 || t===titulos[i] && /[a-z]{4}/i.test(t)))
-        throw new Error("Tradução incompleta");
-      return linhas;
-    } catch(erro) { ultimaFalha=erro; }
-  }
-  throw ultimaFalha || new Error("Tradução indisponível");
+  return Promise.any(endpoints.map(async endpoint=>{
+    const resposta=await fetch(endpoint,{signal:AbortSignal.timeout(7000),cache:"no-store"});
+    if(!resposta.ok)throw new Error("Tradução HTTP "+resposta.status);
+    const corpo=await resposta.json();
+    const traducao=Array.isArray(corpo?.[0])?corpo[0].map(parte=>String(parte?.[0]||"")).join("").trim():"";
+    if(!traducao || traducao.length<3 || traducao===texto.trim())throw new Error("Tradução incompleta");
+    return traducao;
+  }));
+}
+async function mkTraduzGrupo(titulos) {
+  const numerados=titulos.map((titulo,i)=>"[["+(i+1)+"]] "+titulo).join("\n");
+  try {
+    const traducao=await mkTraduzTexto(numerados);
+    const trechos=[...traducao.matchAll(/\[\[\s*(\d+)\s*\]\]\s*([\s\S]*?)(?=\s*\[\[\s*\d+\s*\]\]|$)/g)];
+    const porNumero=new Map(trechos.map(m=>[Number(m[1]),m[2].trim()]));
+    if(porNumero.size===titulos.length &&
+       titulos.every((titulo,i)=>porNumero.get(i+1)?.length>=3 && porNumero.get(i+1)!==titulo))
+      return titulos.map((_,i)=>porNumero.get(i+1));
+  } catch (_) { /* Formato ou proxy instável: traduzir individualmente. */ }
+  return Promise.all(titulos.map(async titulo=>{
+    try { return await mkTraduzTexto(titulo); }
+    catch (_) { return titulo; }
+  }));
 }
 async function mkTraduzLote(itens) {
   const pendentes=[];
