@@ -28467,6 +28467,23 @@ const MK_FONTES_RSS = [
 ];
 const MK_CONTAS_X = ["FirstSquawk", "DeItaone", "LiveSquawk", "WatcherGuru", "zerohedge"];
 const MK_STOPWORDS = new Set("a o as os um uma uns umas de da do das dos na no nas nos em por para com e ou que ao aos sua seu suas seus the a an and or to from in on for of with by at this that is are market markets news said says after before sobre entre como mais less than amid amid".split(" "));
+/* Curadoria estritamente da lista de noticias: sem alterar cards nem filtros existentes. */
+const MK_TEMA_MERCADO = /\b(?:econom\w*|mercad\w*|market\w*|finance\w*|financ\w*|inflac\w*|inflation|cpi|pce|payroll|empreg\w*|unemployment|jobs|gdp|pib|growth|crescimento|recession|recessao|banco\w*|bank\w*|central|federal|fed|fomc|copom|selic|ecb|bce|boj|boe|interest|juros|rates?|yield\w*|bond\w*|treasur\w*|titulos|debt|divida|fiscal|deficit|budget|orcamento|trade|comercio|tarif\w*|tariff\w*|sanction\w*|sanc\w*|export\w*|import\w*|currency|currencies|forex|cambio|dolar|dollar|euro|yen|yuan|real|brl|usd|dxy|fx|stocks?|shares?|equities|acoes|acao|bolsa|exchang\w*|indice\w*|index|indexes|indices|ibov\w*|ibovespa|b3|nasdaq|dow|s&p|sp500|futures?|futur\w*|opcoes|options?|ipo|earnings?|balanco\w*|results?|resultado\w*|lucro\w*|profit\w*|receita\w*|revenue|dividend\w*|empresa\w*|company|companies|corporat\w*|merger\w*|acquisit\w*|acquisic\w*|fusao|fusoes|oil|petroleo|brent|wti|opec|gas|natural|gold|ouro|silver|prata|copper|cobre|iron|minerio|commodit\w*|soy|soja|corn|milho|wheat|trigo|bitcoin|btc|ethereum|eth|cripto\w*|crypto\w*|stablecoin\w*|blockchain|token\w*|etf|sec|cv[mn]|stockholder\w*|shareholder\w*|invest\w*|trader\w*|wall\s+street|petrobras|vale|nvidia|apple|tesla|microsoft|amazon|alphabet|google|meta|netflix|openai|ai\s+chip\w*|semiconductor\w*|chipmaker\w*|tesouro|capital|fund\w*|credit\w*|credito|liquidez|liquidity|volatil\w*|vix)\b/i;
+const MK_PESSOAL = /\b(?:moneyist|dear\s+penny|husband|wife|wedding|horoscope|retire\s+at|boyfriend|girlfriend|my\s+(?:spouse|parents|mother|father|son|daughter|partner|husband|wife)|should\s+i\s+(?:marry|divorce|retire|tell)|how\s+much\s+should\s+i\s+save|relationship\s+advice|zodiac|astrology|personal\s+advice)\b/i;
+const MK_SAUDE_GERAL = /\b(?:mpox|monkeypox|measles|sarampo|horoscopo|saude\s+mental|mental\s+health|weight\s+loss|perda\s+de\s+peso|symptoms?|sintomas?)\b/i;
+function mkNoticiaDeMercado(titulo) {
+  const texto = mkNorm(String(titulo || ""));
+  if (MK_PESSOAL.test(texto)) return false;
+  const relevante = MK_TEMA_MERCADO.test(texto) || /\$[A-Z]{2,6}\b|\b[A-Z]{4}\d{1,2}\b/.test(String(titulo || ""));
+  if (MK_SAUDE_GERAL.test(texto) && !relevante) return false;
+  return relevante;
+}
+function mkTituloIngles(n) {
+  const titulo=String(n.t || "");
+  if (/[áàâãéêíóôõúç]/i.test(titulo) || /\b(?:de|da|do|das|dos|para|com|que|apos|sobre|mais|alta|queda|acoes|juros|dolar|mercado|bolsa|governo|empresas|bancos)\b/i.test(titulo)) return false;
+  return /(?:finnhub|marketwatch|reuters|cnbc|^X\s*·\s*@)/i.test(String(n.a || ""))
+    || /\b(?:the|with|after|before|amid|from|will|says?|stocks?|shares?|rates?|rallies|slips|surges|falls|rises|earnings?|cuts?|warns?|holds?|hits?|boosts?|trades?|climbs?|drops?|fears?|ahead)\b/i.test(titulo);
+}
 function mkLimpaTitulo(t) {
   return String(t || "").replace(/\s*\([^)]+\)\s*$/, "").replace(/\s+/g, " ").trim();
 }
@@ -28498,7 +28515,7 @@ function mkDedup(itens) {
 }
 function mkNoticia(dado) {
   const t = mkLimpaTitulo(dado.t), ms = Date.parse(dado.d || "");
-  if (!t || t.length < 12 || !Number.isFinite(ms) || ms > Date.now()+300000 || ms < Date.now()-14*86400000) return null;
+  if (!mkNoticiaDeMercado(t) || !t || t.length < 12 || !Number.isFinite(ms) || ms > Date.now()+300000 || ms < Date.now()-14*86400000) return null;
   let url;
   try { url = new URL(String(dado.l)); if (!["https:","http:"].includes(url.protocol)) return null; } catch { return null; }
   const assunto = mkNorm(t), cats = new Set((Array.isArray(dado.c) ? dado.c : []).map(x => mkNorm(x)));
@@ -28585,6 +28602,50 @@ async function mkEdgeNoticias(acao) {
   return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.a||"Money Times",c:n.tags||n.c||[]})).filter(Boolean);
 }
 
+/* Traducao gratuita em lotes, pelo proxy CORS ja autorizado no aplicativo.
+   Sem dependencias, credenciais, Edge Functions ou alteracoes de CSP. */
+const MK_TRADUCOES = new Map();
+async function mkTraduzGrupo(titulos) {
+  const alvo="https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q="+encodeURIComponent(titulos.join("\n"));
+  const endpoints=[
+    "https://api.allorigins.win/raw?url="+encodeURIComponent(alvo),
+    "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(alvo)
+  ];
+  let ultimaFalha;
+  for(const endpoint of endpoints) {
+    try {
+      const resposta=await fetch(endpoint,{signal:AbortSignal.timeout(6000),cache:"no-store"});
+      if(!resposta.ok)throw new Error("Tradução HTTP "+resposta.status);
+      const corpo=await resposta.json();
+      const traducao=Array.isArray(corpo?.[0]) ? corpo[0].map(parte=>String(parte?.[0]||"")).join("") : "";
+      const linhas=traducao.split(/\r?\n/).map(s=>s.trim());
+      if(linhas.length!==titulos.length || linhas.some((t,i)=>!t || t.length<3 || t===titulos[i] && /[a-z]{4}/i.test(t)))
+        throw new Error("Tradução incompleta");
+      return linhas;
+    } catch(erro) { ultimaFalha=erro; }
+  }
+  throw ultimaFalha || new Error("Tradução indisponível");
+}
+async function mkTraduzLote(itens) {
+  const pendentes=[];
+  for(const noticia of itens)if(mkTituloIngles(noticia)){
+    if(!MK_TRADUCOES.has(noticia.t))pendentes.push(noticia.t);
+  }
+  const unicos=[...new Set(pendentes)],grupos=[];
+  for(let i=0;i<unicos.length;i+=6)grupos.push(unicos.slice(i,i+6));
+  const retornos=await Promise.allSettled(grupos.map(grupo=>mkTraduzGrupo(grupo)));
+  retornos.forEach((r,i)=>{
+    if(r.status!=="fulfilled")return;
+    grupos[i].forEach((titulo,j)=>{
+      MK_TRADUCOES.set(titulo,r.value[j]);
+      if(MK_TRADUCOES.size>300)MK_TRADUCOES.delete(MK_TRADUCOES.keys().next().value);
+    });
+  });
+  return itens.map(n=>mkTituloIngles(n)&&MK_TRADUCOES.has(n.t)
+    ? {...n,t:MK_TRADUCOES.get(n.t)}
+    : n);
+}
+
 async function mkLoad(force) {
   if (MKT.busy || (!force && MKT.items && Date.now()-MKT.ts<18e4)) return;
   // Respeita o bloqueio original de notícias sem sessão; modo demo não consulta proxies externos.
@@ -28606,7 +28667,7 @@ async function mkLoad(force) {
     const respostas=await Promise.allSettled(tarefas);
     const resultados=respostas.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
     const reunidas=mkDedup(resultados);
-    if(reunidas.length)MKT.items=reunidas;
+    if(reunidas.length)MKT.items=await mkTraduzLote(reunidas);
     else MKT.err="Não consegui consultar as fontes agora.";
     MKT.ts=Date.now();
   } catch(e) {
