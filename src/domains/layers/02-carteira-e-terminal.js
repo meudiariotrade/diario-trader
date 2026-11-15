@@ -5565,10 +5565,13 @@ try {
       );
     }
     function ft() {
+      if (typeof MKT !== "undefined" && !MKT.items && !MKT.busy)
+        Promise.resolve().then(() => mkLoad(false));
       const e = M("noticias", it),
         t = M("noticias", lt),
         n = M("noticias", {});
       let o = [
+        ...((typeof MKT !== "undefined" && MKT.items) || []).map(i => ({...i, f:i.a})),
         ...(e.v?.itens || []),
         ...(t.v?.itens || []),
         ...(n.v?.itens || []),
@@ -5576,7 +5579,7 @@ try {
       const a = new Set();
       o = o
         .filter((i) => {
-          const u = String(i.l || i.t || "").slice(0, 100);
+          const u = String(i.l || i.t || "").split(/[?#]/)[0].slice(0, 100);
           return !i.t || a.has(u) ? !1 : (a.add(u), !0);
         })
         .sort((i, u) => new Date(u.d || 0) - new Date(i.d || 0))
@@ -5589,12 +5592,21 @@ try {
                 const c = new URL(i.l || i.u || i.url || "");
                 ["https:", "http:"].includes(c.protocol) && (u = c.href);
               } catch {}
-              return `<article class="tf413-news-row"><time>${l(K(i.d))}</time><span>${u ? `<a href="${l(u)}" target="_blank" rel="noopener noreferrer">${l(i.t)}</a>` : l(i.t)}<small>${l(i.f || "Fonte não indicada")}</small></span></article>`;
+              return `<article class="tf413-news-row"><time>${l(typeof mkAgo === "function" ? mkAgo(i.d) : K(i.d))}</time><span>${u ? `<a href="${l(u)}" target="_blank" rel="noopener noreferrer">${l(i.t)}</a>` : l(i.t)}<small>${l(i.f || "Fonte não indicada")}</small></span></article>`;
             })
             .join("")
         : '<div class="tf413-empty">Notícias aguardando a fonte conectada.</div>';
       return H("Notícias do dia", xt, s, "NEWSBR", "tf413-news");
     }
+    // Atualiza somente o conteúdo da mini-grade, sem desmontar o Terminal Desktop.
+    document.addEventListener("diario:noticias", () => {
+      const atual=document.querySelector(".tf413-news .tf413-content");
+      if(!atual || typeof tab==="undefined" || tab!=="term")return;
+      const molde=document.createElement("template");
+      molde.innerHTML=ft();
+      const novo=molde.content.querySelector(".tf413-news .tf413-content");
+      if(novo)atual.replaceChildren(...novo.childNodes);
+    });
     function ut() {
       let t = M("agenda", {}).v?.itens || [];
       const n = Date.now();
