@@ -103,7 +103,8 @@ export function lerRSS(xml: string, fonte: string): NoticiaUrgente[] {
 async function baixarRSS(fonte: string, url: string, fetcher: Fetcher): Promise<NoticiaUrgente[]> {
   const r = await fetcher(url, { signal: AbortSignal.timeout(6500), headers: {
     Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml',
-    'User-Agent': 'DiarioTraderNewsMonitor/1.0',
+    // FxTwitter fornece RSS válido, mas pode rejeitar User-Agent de robô (404).
+    ...(url.startsWith('https://fxtwitter.com/') ? {} : { 'User-Agent': 'DiarioTraderNewsMonitor/1.0' }),
   } });
   if (!r.ok) throw Error('RSS ' + r.status);
   const xml = await r.text();
