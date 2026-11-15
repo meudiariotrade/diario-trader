@@ -1,4 +1,5 @@
-import { numerosFato, validaRelatorio } from './validacao.ts';
+import { numerosFato, validaRelatorio, textoTecnicoConfere } from './validacao.ts';
+import { fatosTecnicos, revisaTecnica, VERSAO_CONSISTENCIA, INSTRUCAO_CONSISTENCIA } from '../_shared/consistencia-tecnica.ts';
 import { gerarTexto, status as iaStatus } from '../_shared/ai-router.ts';
 export { numerosFato, validaRelatorio };
 
@@ -5453,7 +5454,7 @@ Deno.serve(async (req) => {
     const contextoCache = JSON.stringify({ modo:b.modo, ativo:itens[0]?.tk, mercado:itens[0]?.mk, modelo:modeloUsado, plano:meuOk, fibo:fiboLido, prints });
     const digestCache = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(contextoCache));
     const hashCache = Array.from(new Uint8Array(digestCache), x=>x.toString(16).padStart(2,'0')).join('');
-    const chaveRel = uid && b.avulso && itens.length === 1 ? `rel318:${uid}:${hoje()}:${hashCache}` : '';
+    const chaveRel = uid && b.avulso && itens.length === 1 ? `rel318:${tec ? VERSAO_CONSISTENCIA + ":" : ""}${uid}:${hoje()}:${hashCache}` : '';
     if (chaveRel && !b.force) {
       const c = await cacheGet(chaveRel);
       const idadeMin = c && c.dados && c.dados.gerado ? (Date.now() - Date.parse(c.dados.gerado)) / 6e4 : 1e9;
@@ -5510,9 +5511,21 @@ Deno.serve(async (req) => {
       (meuOk ? '\n' + (tec ? PEDE_PLANO_TEC : PEDE_PLANO_FUN)(meuOk, fiboLido, prints.length) : '') + '\nDados:\n';
 
     const lotes = { n: 1 };
-    const rel = await relatorioEmLotes(tec, dados, cab, modeloUsado, erros, lotes, ate, extrasImg);
+    // Reserva parte do prazo existente para revisão/correção; nenhum outro modo é afetado.
+    const dadosIA = tec ? dados.map(a => ({ ...a, fatos_relacionais: fatosTecnicos(a) })) : dados;
+    const rel = await relatorioEmLotes(tec, dadosIA, cab + (tec ? INSTRUCAO_CONSISTENCIA + '\n' : ''), modeloUsado, erros, lotes, tec ? ate - 35_000 : ate, extrasImg);
     const relat: any = (rel as any).relatorio || rel;
-    if (tec) aplicaCalculos(relat, ativos);
+    if (tec) {
+      const esperados = new Set(dados.map(a => a.ticker));
+      if (!Array.isArray(relat.ativos) || !relat.ativos.length || relat.ativos.some((a: any) => !a || !esperados.has(a.ticker)) || new Set(relat.ativos.map((a: any) => a.ticker)).size !== relat.ativos.length)
+        throw new Error('A IA retornou análise técnica fora do formato. Atualize a análise para tentar novamente.');
+      const dadosRevisao = dados.map(a => ({ ...a, ...(meuOk && itens.length === 1 ? { plano_do_trader: meuOk, fibonacci_do_trader: fiboLido } : {}) }));
+      const revisao = await revisaTecnica(relat, dadosRevisao, { ate: ate - 1500,
+        chamar: async (sys, pacote, prazo) => gemini(sys, [{ text: pacote }], { json: true, search: false, model: modeloUsado, temp: 0.1, ate: prazo }),
+        validar: (campo, texto) => textoTecnicoConfere(texto, campo.ticker ? dadosRevisao.filter(a => a.ticker === campo.ticker) : dadosRevisao) });
+      console.info('consistencia-tecnica', JSON.stringify({ versao: VERSAO_CONSISTENCIA, revisado: revisao.revisado, problemas: revisao.problemas, reservas: revisao.reservas }));
+      aplicaCalculos(relat, ativos);
+    }
     // o estudo estatístico aparece dentro de "Indicadores" (no app e no PDF), sem mudar as telas
     if (tec && Array.isArray(relat.ativos)) for (const it of relat.ativos) {
       const e = typeof it.estatistica === 'string' ? it.estatistica.trim() : '';

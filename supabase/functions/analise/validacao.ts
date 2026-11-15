@@ -65,3 +65,12 @@ export function validaRelatorio(rel: unknown, dados: unknown, lacunas: string[])
   varre(rel, '');
   return { estado: problemas.length ? 'revisar' : lacunas.length ? 'com_limitacoes' : 'validado', problemas: problemas.slice(0, 10), lacunas: lacunas.slice(0, 10), conferidos: base.length, versao: 'v563' };
 }
+
+/** Reutiliza tokenizer/índice numérico para a prosa técnica; datas e períodos não são preços. */
+export function textoTecnicoConfere(texto: string, dados: unknown): boolean {
+  const estruturais = [0, 1, 2, 3, 4, 5, 6, 9, 10, 12, 14, 20, 23.6, 25, 30, 38.2, 40, 50, 60, 61.8, 70, 78.6, 80, 90, 100, 127.2, 161.8, 200, 252];
+  const base = [...new Set([...numerosDados(dados), ...estruturais])].sort((a,b) => a-b);
+  // Padrão pt-BR do relatório: ponto de milhar antes de três dígitos, inclusive sem R$.
+  const preparado = texto.replace(/\b\d{1,3}(?:\.\d{3})+(?:,\d+)?\b/g, s => s.replace(/\./g, ''));
+  return tokens(preparado).every(t => perto(base, t.valor, t.tolerancia) || t.percentual && perto(base, t.valor / 100, t.tolerancia / 100));
+}

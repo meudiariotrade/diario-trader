@@ -379,9 +379,9 @@ export function normaliza(r: any, entrada: { ticker: string; fatos: any; base: R
     let trocados = 0;
     const item: any = {};
     for (const k of BLOCOS) {
-      const t = typeof ia[k] === 'string' ? ia[k].replace(/\s+/g, ' ').trim().slice(0, 1500) : '';
+      const t = typeof ia[k] === 'string' ? ia[k].replace(/\s+/g, ' ').trim() : '';
       const inventados = numerosTexto(t).filter((n) => !numeroConfere(n, fatos)).length;
-      if (t.length < 40 || PRESCRITIVO.test(t) || inventados > 1) { item[k] = e.base[k]; trocados++; }
+      if (t.length < 40 || t.length > 1500 || PRESCRITIVO.test(t) || inventados > 1) { item[k] = e.base[k]; trocados++; }
       else item[k] = t;
     }
     out[e.ticker] = { ...item, fonte: trocados === BLOCOS.length ? 'código' : 'ia', trocados };
