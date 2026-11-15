@@ -28457,13 +28457,13 @@ function mkPaint() {
    URLs RSS públicas são lidas por proxy CORS sem credenciais. A função
    terminal existente é contingência para os portais; nenhuma Edge é modificada. */
 const MK_FONTES_RSS = [
-  ["InfoMoney", "https://www.infomoney.com.br/ultimas-noticias/rss/"],
+  ["InfoMoney", "https://www.infomoney.com.br/feed/"],
   ["Investing.com Brasil", "https://br.investing.com/rss/news.rss"],
-  ["Bloomberg Línea", "https://www.bloomberglinea.com.br/arc/outboundfeeds/rss/?outputType=xml"],
-  ["CNBC", "https://www.cnbc.com/id/10000664/device/rss/rss.html"],
+  ["Bloomberg Línea", "https://www.bloomberglinea.com.br/arc/outboundfeeds/rss.xml"],
+  ["CNBC", "https://www.cnbc.com/id/100003114/device/rss/rss.html"],
   ["Money Times", "https://www.moneytimes.com.br/mercados/feed/"],
   // A Reuters não oferece RSS público estável: consulta Google Notícias restrita ao domínio.
-  ["Reuters", "https://news.google.com/rss/search?q=site%3Areuters.com%20markets%20OR%20economy&hl=pt-BR&gl=BR&ceid=BR:pt-419"],
+  ["Reuters", "https://news.google.com/rss/search?q=when%3A24h%20site%3Areuters.com&hl=en-US&gl=US&ceid=US:en"],
 ];
 const MK_CONTAS_X = ["FirstSquawk", "DeItaone", "LiveSquawk", "WatcherGuru", "zerohedge"];
 const MK_STOPWORDS = new Set("a o as os um uma uns umas de da do das dos na no nas nos em por para com e ou que ao aos sua seu suas seus the a an and or to from in on for of with by at this that is are market markets news said says after before sobre entre como mais less than amid amid".split(" "));
@@ -28541,8 +28541,8 @@ async function mkRssProxy(url, fonte, perfil, alternativa) {
   return out;
 }
 async function mkRss(url, fonte, perfil) {
-  try {return await mkRssProxy(url,fonte,perfil,false);}
-  catch {return mkRssProxy(url,fonte,perfil,true);}
+  // Proxies públicos independentes, em paralelo: não esperar um timeout para iniciar o fallback.
+  return Promise.any([mkRssProxy(url,fonte,perfil,false),mkRssProxy(url,fonte,perfil,true)]);
 }
 async function mkRssX(perfil) {
   const feeds=[
