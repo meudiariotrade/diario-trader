@@ -15,8 +15,63 @@
   if(tab==='home'){const pre=(S.rules||[]).filter(r=>!r.phase||r.phase==='pre');if(state.preparo.completo||(pre.length&&pre.every(r=>day.chk?.[r.id]))){banner?.remove();return}}if(!banner){banner=d.createElement('section');banner.id='rotina-estado';banner.className='card';banner.setAttribute('aria-label','Estado do dia');a.prepend(banner)}const html=`<div class="sm"><b>${E(state.preparo.rotulo)}</b> · ${E(state.regras.rotulo)} · ${E(state.revisao.rotulo)}</div><div class="sm mut">Mercado, Análises, Terminal e Estudos estão disponíveis para consulta.</div><button type="button" class="btn s" data-rotina-preparo>Revisar preparo obrigatório</button>`;if(banner.innerHTML!==html)banner.innerHTML=html;for(const node of a.querySelectorAll('.v508-grupo,.checklist-progress,.simple-day-summary'))for(const text of [...node.childNodes])if(text.nodeType===3&&/Checklist\s+\d/.test(text.textContent))text.textContent=text.textContent.replace(/Checklist(?=\s+\d)/,'Regras opcionais')}
  function statusPanel(){if(tab!=='status'&&tab!=='mais')return;const a=d.querySelector('#app:not(.v503-fantasma)');if(!a||a.querySelector('#diagnostico-contexto'))return;const box=d.createElement('details');box.id='diagnostico-contexto';box.className='card';box.innerHTML=`<summary>Diagnóstico de fontes e processamento</summary><p class="sm mut">Incidentes deste aparelho e desta conta. Cancelamentos esperados não são registrados. A recuperação atualiza o incidente.</p>${w.DiarioDiagnostico.list().slice(0,30).map(x=>`<div class="card sm"><b>${E(x.estado)} · ${E(x.ativo||x.endpoint||x.tela)}</b><p>${E(x.mensagem)}</p><small>${new Date(x.ultimo).toLocaleString('pt-BR')} · v${E(x.versao)} · ${x.vezes} ocorrência(s) · tentativa ${x.tentativa}</small></div>`).join('')||'<p>Sem incidentes registrados neste aparelho.</p>'}<p class="sm">Recursos de tela ativos: ${w.DiarioCiclos.stats.escopos.reduce((sum,s)=>sum+s.recursos,0)}</p>`;a.append(box)}
  function disclosures(){const a=d.querySelector('#app:not(.v503-fantasma)');if(!a)return;for(const item of a.querySelectorAll('details[id]')){const value=C.get('details:'+current()+':'+item.id);if(value!==null)item.open=value}}
+ // Mini-calculadora exclusivamente visual da rota Operações. Nenhum dado é gravado.
+ const posicaoTrade={ativo:'WDO',risco:'',stop:'',aberto:false};
+ const posicaoValorPonto={WDO:1000n,WIN:20n,ACOES:100n}; // centavos por ponto/R$ de variação
+ function posicaoDecimal(valor){
+  const texto=String(valor||'').trim().replace(',','.');
+  if(!/^(?:\d+(?:\.\d{0,6})?|\.\d{1,6})$/.test(texto))return null;
+  const [inteiro,fracao='']=texto.split('.');
+  return BigInt(inteiro||'0')*1000000n+BigInt((fracao+'000000').slice(0,6));
+ }
+ function posicaoAtualiza(painel){
+  const risco=posicaoDecimal(posicaoTrade.risco),stop=posicaoDecimal(posicaoTrade.stop);
+  const centavos=posicaoValorPonto[posicaoTrade.ativo];
+  // Razão inteira exata: (R$ risco / R$ stop por unidade), sempre arredondada para baixo.
+  const quantidade=risco!==null&&stop!==null&&risco>0n&&stop>0n?(risco*100n)/(stop*centavos):null;
+  painel.querySelector('[data-posicao-resultado]').textContent=quantidade===null?'—':quantidade.toLocaleString('pt-BR');
+  painel.querySelector('[data-posicao-unidade]').textContent=posicaoTrade.ativo==='ACOES'?'ações':'contratos';
+  painel.querySelector('[data-posicao-stop-label]').textContent=posicaoTrade.ativo==='ACOES'?'Stop por ação (R$)':'Tamanho do Stop (pontos)';
+  painel.querySelector('[data-posicao-valor-ponto]').textContent=posicaoTrade.ativo==='WDO'?'R$ 10,00/ponto':posicaoTrade.ativo==='WIN'?'R$ 0,20/ponto':'R$ 1,00 por R$ 1,00 de variação';
+ }
+ function posicaoMini(){
+  if(tab!=='ops')return;
+  const raiz=d.querySelector('#app:not(.v503-fantasma)');
+  if(!raiz||raiz.querySelector('[data-posicao-painel]'))return;
+  const painel=d.createElement('details');
+  painel.dataset.posicaoPainel='';
+  painel.open=posicaoTrade.aberto;
+  painel.style.cssText='background:#11141B;border:1px solid #1E232E;border-radius:4px;padding:0 12px;margin:0 0 12px;min-width:0';
+  const campo='width:100%;box-sizing:border-box;min-height:44px;font-size:16px;font-variant-numeric:tabular-nums;background:#181C26;color:#E6E8EE;border:1px solid #1E232E;border-radius:4px;padding:8px 10px;margin-top:5px';
+  painel.innerHTML='<summary style="cursor:pointer;min-height:44px;box-sizing:border-box;padding:12px 0;color:#D4A017;font-weight:600">Calculadora de Tamanho de Posição <span class="sm mut" style="font-weight:400">· risco por trade</span></summary>'
+   +'<div style="border-top:1px solid #1E232E;padding:10px 0">'
+   +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">'
+   +'<label style="display:block;min-width:0;color:#C9CDD6;font-size:12px">Ativo<select data-posicao-campo="ativo" style="'+campo+'"><option value="WDO">WDO · Mini dólar</option><option value="WIN">WIN · Mini índice</option><option value="ACOES">Ações</option></select></label>'
+   +'<label style="display:block;min-width:0;color:#C9CDD6;font-size:12px">Risco Máximo por Trade (R$)<input data-posicao-campo="risco" type="number" min="0" step="any" inputmode="decimal" placeholder="Ex.: 200,00" style="'+campo+'"></label>'
+   +'<label style="display:block;min-width:0;color:#C9CDD6;font-size:12px"><span data-posicao-stop-label>Tamanho do Stop (pontos)</span><input data-posicao-campo="stop" type="number" min="0" step="any" inputmode="decimal" placeholder="Ex.: 10" style="'+campo+'"></label></div>'
+   +'<div style="display:flex;align-items:baseline;flex-wrap:wrap;justify-content:space-between;gap:6px;border-top:1px solid #1E232E;margin-top:10px;padding-top:9px">'
+   +'<span style="font-size:12px;color:#C9CDD6">Quantidade máxima <span class="mut">· <span data-posicao-valor-ponto>R$ 10,00/ponto</span></span></span>'
+   +'<strong style="font-size:23px;font-variant-numeric:tabular-nums;color:#10B981"><output data-posicao-resultado aria-live="polite">—</output> <small data-posicao-unidade style="font-size:12px;color:#C9CDD6">contratos</small></strong></div>'
+   +'<p class="sm mut" style="margin:6px 0 0;font-size:11px">Cálculo pelo stop informado; não inclui custos, derrapagem nem limites de margem.</p></div>';
+  for(const chave of ['ativo','risco','stop'])painel.querySelector('[data-posicao-campo="'+chave+'"]').value=posicaoTrade[chave];
+  raiz.prepend(painel);
+  posicaoAtualiza(painel);
+ }
+ function posicaoCampoAlterado(evento){
+  const campo=evento.target.closest?.('[data-posicao-campo]');
+  const painel=campo?.closest('[data-posicao-painel]');
+  if(!painel)return;
+  const chave=campo.dataset.posicaoCampo;
+  if(!['ativo','risco','stop'].includes(chave))return;
+  if(chave==='ativo'&&!Object.hasOwn(posicaoValorPonto,campo.value))return;
+  posicaoTrade[chave]=campo.value;
+  posicaoAtualiza(painel);
+ }
+ d.addEventListener('input',posicaoCampoAlterado);
+ d.addEventListener('change',posicaoCampoAlterado);
+ d.addEventListener('toggle',evento=>{if(evento.target.matches?.('[data-posicao-painel]'))posicaoTrade.aberto=evento.target.open},true);
  function rendered(){pendingRender=false;const uid=C.owner();if(uid!==currentOwner){currentOwner=uid;restored=false;lastRoute='';PER='all';LT='trades';DV='ed';MKT.tab='cq';d.dispatchEvent(new CustomEvent('diario:contexto'));w.DiarioAnalises?.syncAccount()}if(!restored&&typeof db!=='undefined'&&db){restored=true;const f=C.get('filtros',{});if(f.periodo)PER=f.periodo;if(f.modalidade)LT=f.modalidade;if(f.mercado)MKT.tab=f.mercado;if(f.dia)DV=f.dia;const r=C.get('rota',current());if(r!==current()&&!new URLSearchParams(location.search).has('terminal')){navigate(r);return}}
-  const route=current();w.DiarioCiclos.enter(route);if(lastRoute!==route){lastRoute=route;fechaGaveta();requestAnimationFrame(()=>scrollTo(0,C.get('scroll:'+route,0)))}if(restored)saveContext();dayLabels();statusPanel();disclosures();if(tab==='analises'){const a=d.querySelector('#app:not(.v503-fantasma)');if(a){a.dataset.tela='analises';a.style.animation='none';if(!a.querySelector('#an-root'))a.innerHTML=w.DiarioAnalises.view();const title=d.querySelector('.dt393-title');if(title)title.textContent='Análises';w.DiarioAnalises.enter()}}d.dispatchEvent(new CustomEvent('diario:render',{detail:{route}}))}
+  const route=current();w.DiarioCiclos.enter(route);if(lastRoute!==route){lastRoute=route;fechaGaveta();requestAnimationFrame(()=>scrollTo(0,C.get('scroll:'+route,0)))}if(restored)saveContext();dayLabels();statusPanel();posicaoMini();disclosures();if(tab==='analises'){const a=d.querySelector('#app:not(.v503-fantasma)');if(a){a.dataset.tela='analises';a.style.animation='none';if(!a.querySelector('#an-root'))a.innerHTML=w.DiarioAnalises.view();const title=d.querySelector('.dt393-title');if(title)title.textContent='Análises';w.DiarioAnalises.enter()}}d.dispatchEvent(new CustomEvent('diario:render',{detail:{route}}))}
  const previous=render;render=function(){const result=previous.apply(this,arguments);if(!pendingRender){pendingRender=true;queueMicrotask(rendered)}return result};
  const rawGate=gateEstado;gateEstado=function(){return allowGate?rawGate.apply(this,arguments):null};
  w.DiarioRotina={get estado(){return M.dayState(S.days?.[loc().slice(0,10)]||{},S.rules||[])},get exigeRegistro(){return allowGate}};
