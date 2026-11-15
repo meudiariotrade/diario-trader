@@ -1,4 +1,4 @@
-name: Diagnóstico temporário de tradução pública
+name: Diagnóstico temporário de tradução pública (CORS)
 on:
   push:
     branches: ['fix/noticias-traducao-v647']
@@ -10,21 +10,23 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Conferir provedor e proxies
+      - name: Conferir CORS e provedores gratuitos
         run: |
           node <<'NODE'
           (async()=>{
-            const alvo="https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q="+encodeURIComponent("Markets rise after Fed decision");
-            const endpoints=[["Google",alvo],["AllOrigins","https://api.allorigins.win/raw?url="+encodeURIComponent(alvo)],["CodeTabs","https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(alvo)]];
-            const r=await Promise.all(endpoints.map(async([nome,url])=>{
+            const q=encodeURIComponent("Markets rise after Fed decision");
+            const endpoints=[
+              ["Google","https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q="+q],
+              ["Clients5","https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=en&tl=pt&q="+q],
+              ["MyMemory","https://api.mymemory.translated.net/get?q="+q+"&langpair=en%7Cpt-BR"]
+            ];
+            const out=await Promise.all(endpoints.map(async([name,url])=>{
               try{
-                const response=await fetch(url,{signal:AbortSignal.timeout(9500)});
-                const corpo=await response.text();let traducao="";
-                try{const j=JSON.parse(corpo);traducao=Array.isArray(j?.[0])?j[0].map(p=>p?.[0]||"").join(""):"";}
-                catch{}
-                return{name:nome,status:response.status,traducao,body:traducao?"":corpo.slice(0,100)};
-              }catch(e){return{name:nome,error:String(e.message||e)}}
+                const r=await fetch(url,{headers:{Origin:"https://meudiariotrade.github.io"},signal:AbortSignal.timeout(7500)});
+                const body=await r.text();
+                return{name,status:r.status,cors:r.headers.get("access-control-allow-origin"),type:r.headers.get("content-type"),sample:body.slice(0,230)};
+              }catch(e){return{name,error:String(e.message||e)}}
             }));
-            for(const x of r)console.log(JSON.stringify(x));
+            out.forEach(x=>console.log(JSON.stringify(x)));
           })();
           NODE
