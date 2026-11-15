@@ -94,3 +94,36 @@ test('evita dois pushes quando fontes em português e inglês noticiam o mesmo e
   assert.equal(r.enviados, 1);
   assert.equal(enviados[0].title, 'Fed mantém juros');
 });
+
+test('filtro rejeita conselho pessoal mesmo com palavra Fed', async () => {
+  const { mancheteUrgente } = await modulo;
+  assert.equal(mancheteUrgente('Moneyist: My wife wants Fed shares for our wedding'), false);
+  assert.equal(mancheteUrgente('Bitcoin price jumps after Fed decision'), true);
+});
+
+test('marca hash persistente uma vez por conta e entrega a todos os aparelhos sem reenvio', async () => {
+  const { dispararNoticias } = await modulo;
+  const agora = new Date('2026-11-16T15:10:00Z');
+  const xml = '<rss><item><title>Fed mantém juros após reunião</title><link>https://www.reuters.com/world/fed/</link><pubDate>Mon, 16 Nov 2026 15:09:00 GMT</pubDate></item></rss>';
+  const marcados = new Set();
+  const cliente = { from: (tab) => {
+    if (tab==='push_log') return {select:()=>({like:()=>({gte:()=>({order:()=>({limit:async()=>({data:[],error:null})})})})})};
+    if (tab==='noticias_urgentes_notificadas') return {upsert:(row)=>({select:async()=>{
+      const id=row.user_id+'|'+row.noticia_hash;
+      if (marcados.has(id))return {data:[],error:null};
+      marcados.add(id);return {data:[{noticia_hash:row.noticia_hash}],error:null};
+    }})};
+    throw Error('Tabela inesperada: '+tab);
+  } };
+  let envios=0;
+  const op={
+    cliente,subs:[{id:'telefone',user_id:'00000000-0000-4000-8000-000000000001'},{id:'desktop',user_id:'00000000-0000-4000-8000-000000000001'}],
+    enviar:async()=>{envios++;return true},token:'',agora,
+    fetcher:async()=>({ok:true,text:async()=>xml})
+  };
+  const a=await dispararNoticias(op),b=await dispararNoticias(op);
+  assert.equal(a.enviados,2);
+  assert.equal(b.enviados,0);
+  assert.equal(envios,2);
+  assert.equal(marcados.size,1);
+});

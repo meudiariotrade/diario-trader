@@ -34,8 +34,10 @@ export function tituloLimpo(t: unknown): string {
   return s.slice(0, 240);
 }
 const normal = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const PESSOAL = /\b(?:moneyist|dear penny|husband|wife|wedding|horoscope|boyfriend|girlfriend|divorce|marriage|zodiac|astrology|mpox|monkeypox|measles|celebrity|fashion|relationship|retire at|should i marry|should i divorce|should i retire|personal advice|my spouse|my wife|my husband)\b/i;
 export function mancheteUrgente(titulo: string): boolean {
   const n = normal(titulo);
+  if (PESSOAL.test(n)) return false;
   if (/\b(?:copom|selic|fed|powell|fomc|payroll|cpi|ipca|tarifas?|tariffs?|petroleo|oil|crude|opep|opec|guerra|war|petrobras|petr[34]|bitcoin|btc)\b/.test(n)) return true;
   return /\b(?:Vale|VALE3|mineradora\s+vale)\b/.test(titulo);
 }
@@ -158,6 +160,10 @@ async function hash(s: string): Promise<string> {
   const v = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
   return [...v].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
+async function hashCompleto(s: string): Promise<string> {
+  const v = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
+  return [...v].map(x => x.toString(16).padStart(2, '0')).join('');
+}
 async function tituloEmPortugues(n: NoticiaUrgente, fetcher: Fetcher): Promise<string> {
   if (!/(?:Finnhub|X @|CNBC|Reuters)/.test(n.fonte)) return n.titulo;
   try {
@@ -186,6 +192,9 @@ export async function dispararNoticias(op: {
     if (!indices.some((j) => mesmaNoticia(assinaturasPT[i], assinaturasPT[j]) ||
       mesmaNoticia(dados.noticias[i].assinatura, dados.noticias[j].assinatura))) indices.push(i);
   }
+  // Reserva permanente por conta, compartilhada entre os aparelhos no mesmo ciclo.
+  // A unicidade no Postgres impede dois cron jobs concorrentes de reenviar o mesmo evento.
+  const reservas = new Map<string, Promise<boolean>>();
   let enviados = 0, falhasEnvio = 0;
   const resultados = await Promise.allSettled(op.subs.map(async (sub) => {
     // Falha fechada: se o histórico não puder ser lido, não envia (evita spam).
@@ -202,7 +211,25 @@ export async function dispararNoticias(op: {
     for (const i of indices) {
       const item = dados.noticias[i], assinatura = assinaturasPT[i];
       if (assinaturas.some((a: string) => mesmaNoticia(a, assinatura) || mesmaNoticia(a, item.assinatura))) continue;
-      const id = await hash(assinatura + '|' + new Date(item.publicado).toISOString().slice(0, 10));
+      const identificador = assinatura + '|' + new Date(item.publicado).toISOString().slice(0, 10);
+      const id = await hash(identificador);
+      if (sub.user_id) {
+        const hashLongo = await hashCompleto(identificador);
+        const chave = String(sub.user_id) + '|' + hashLongo;
+        if (!reservas.has(chave)) reservas.set(chave, (async () => {
+          const { data, error: eReserva } = await op.cliente.from('noticias_urgentes_notificadas')
+            .upsert({
+              user_id: sub.user_id, noticia_hash: hashLongo,
+              titulo: titulos[i].slice(0, 220), url: item.link,
+              fonte: item.fonte, publicada_em: new Date(item.publicado).toISOString(),
+            }, { onConflict: 'user_id,noticia_hash', ignoreDuplicates: true })
+            .select('noticia_hash');
+          if (eReserva) throw Error('Falha ao reservar notícia permanente');
+          return !!data?.length;
+        })());
+        // Se o banco não puder confirmar a reserva, falha fechada em vez de gerar spam.
+        if (!(await reservas.get(chave)!)) continue;
+      }
       const payload = {
         title: titulos[i].slice(0, 120),
         body: ('Urgente · ' + item.fonte + ' · ' + item.link).slice(0, 500),
