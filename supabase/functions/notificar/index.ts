@@ -1,4 +1,5 @@
 import { entregar, retentar } from './entrega.ts';
+import { monitorarNoticias } from './noticias-urgentes.ts';
 /** Calendário B3: fins de semana, feriados fixos, móveis e encerramentos de fim de ano. */
 export function b3SemPregao(dia: string): boolean {
  if(!/^\d{4}-\d{2}-\d{2}$/.test(dia))return true;
@@ -1597,6 +1598,21 @@ Deno.serve(async (req) => {
   try { b = await req.json(); } catch { return out({ error: 'JSON inválido' }, 400); }
   try {
     switch (b.acao) {
+      case 'noticias-tick': {
+        if (!segredoIgual(req.headers.get('x-cron-secret'), CRON)) return out({ error: 'Não autorizado' }, 401);
+        const inicio=Date.now();
+        const resultado=await monitorarNoticias({
+          db:await db(),
+          enviar:(aparelho,payload,chave)=>envia(aparelho,payload,chave)
+        });
+        if (resultado.executado && (resultado.enviados || resultado.falhas || resultado.erros))
+          await logAuto('noticias-urgentes', !resultado.falhas, JSON.stringify(resultado).slice(0,350), Date.now()-inicio);
+        return out(resultado);
+      }
+      case 'noticias-diagnostico': {
+        if (!segredoIgual(req.headers.get('x-cron-secret'), CRON)) return out({ error: 'Não autorizado' }, 401);
+        return out(await monitorarNoticias({db:await db(),enviar:async()=>false,simular:true}));
+      }
       case 'tick': {
         if (!segredoIgual(req.headers.get('x-cron-secret'), CRON)) return out({ error: 'Não autorizado' }, 401);
         await push();
