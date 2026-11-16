@@ -72,7 +72,7 @@ async function speak(){
  }
  loading=false;playing=false;status=endpoint?'Ponte de voz indisponível. Confira a conexão local do PC e tente novamente.':'Configure ou ligue a ponte de voz do PC para ouvir a aula. A voz do navegador não será usada.';paint();
 }
-function aulasTabs(){return `<nav class="tp-aulas-nav" role="tablist" aria-label="Tipos de aulas"><button type="button" role="tab" data-tp-aula-sub="tradicionais" aria-selected="${aulaSubaba==='tradicionais'}" class="${aulaSubaba==='tradicionais'?'on':''}">Aulas Tradicionais</button><button type="button" role="tab" data-tp-aula-sub="mentor" aria-selected="${aulaSubaba==='mentor'}" class="${aulaSubaba==='mentor'?'on':''}">Mentor 3D</button></nav>`;}
+function aulasTabs(){return `<div class="tp-aulas-nav" role="tablist" aria-label="Tipos de aulas"><button type="button" role="tab" data-tp-aula-sub="tradicionais" aria-selected="${aulaSubaba==='tradicionais'}" class="${aulaSubaba==='tradicionais'?'on':''}">Aulas Tradicionais</button><button type="button" role="tab" data-tp-aula-sub="mentor" aria-selected="${aulaSubaba==='mentor'}" class="${aulaSubaba==='mentor'?'on':''}">Mentor 3D</button></div>`;}
 const previous=typeof vEstudos==='function'?vEstudos:null;
 if(previous)vEstudos=function(){
  const html=previous.apply(this,arguments);

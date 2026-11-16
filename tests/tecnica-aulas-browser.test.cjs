@@ -76,11 +76,14 @@ test('Mentor gera aula de PDF e preserva dicionário e diagramas SVG',{timeout:9
 }));
 test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de player',{timeout:90000},async()=>withApp(async(browser,base)=>{
  const page=await browser.newPage({viewport:{width:390,height:900}});
+ await page.addInitScript(()=>{window.testNativeFetch=window.fetch.bind(window)});
  await page.route('**/storage/v1/object/sign/**',route=>route.request().method()==='POST'?route.fulfill({json:{signedURL:'/object/sign/aulas-videos/test-video/'+ID+'-16x9.mp4?token=test'}}):route.fulfill({path:path.join(__dirname,'../public/avatar-talking.mp4'),contentType:'video/mp4'}));
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  await page.evaluate(data=>{
   tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000};
   window.SUPA_URL=location.origin;window.SUPA_KEY='public';
+  const demoFetch=window.fetch;
+  window.fetch=(url,options)=>String(url).startsWith(location.origin+'/storage/v1/object/sign/')?window.testNativeFetch(url,options):demoFetch(url,options);
   render();
   document.querySelector('[data-tp-aula-sub="mentor"]').click();
   TecnicaPratica.pdf.insert(data);TecnicaPratica.view.refresh();
