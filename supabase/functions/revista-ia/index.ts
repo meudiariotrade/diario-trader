@@ -3,6 +3,7 @@
 // em analise_cache (geração com revisão limitada por corte de semana). Publicar: supabase functions deploy revista-ia --no-verify-jwt
 import { SYS_REVISTA, normaliza, BLOCOS } from "./revista.ts";
 import { fatosTecnicos, revisaTecnica, VERSAO_CONSISTENCIA, INSTRUCAO_CONSISTENCIA } from "../_shared/consistencia-tecnica.ts";
+import { cobreMapa } from "../_shared/narrativa-tecnica.ts";
 import { textoTecnicoConfere } from "../analise/validacao.ts";
 import { gerarTexto, jsonDe } from "../_shared/ai-router.ts";
 
@@ -100,9 +101,11 @@ Deno.serve(async (req) => {
   if (!res) console.warn('revista-ia sem IA:', erro);
   // A reserva do código passa pelas mesmas verificações: não liberar rascunho contraditório.
   const ativos = normaliza(res?.r || {}, entrada), documento = { ativos };
-  const validacao = await revisaTecnica(documento, entrada, { revista: true, ate: ate - 1500,
+  let validacao: Awaited<ReturnType<typeof revisaTecnica>>;
+  try { validacao = await revisaTecnica(documento, entrada, { revista: true, ate: ate - 1500,
     chamar: async (sys, pacote, prazo) => jsonDe((await gerarTexto(sys, pacote, { json: true, temp: 0.1, ate: prazo })).texto),
-    validar: (campo, texto) => texto.length <= 1500 && textoTecnicoConfere(texto, entrada.find((a: any) => a.ticker === campo.ticker)?.fatos) });
+    validar: (campo, texto) => { const e = entrada.find((a: any) => a.ticker === campo.ticker); return texto.length <= 1500 && textoTecnicoConfere(texto, e?.fatos) && cobreMapa(e, campo.caminho, texto); } });
+  } catch { return out({ erro: 'Não foi possível validar a narrativa técnica. Atualize os estudos para tentar novamente.' }, 502); }
   console.info('consistencia-tecnica', JSON.stringify({ versao: VERSAO_CONSISTENCIA, revisado: validacao.revisado, problemas: validacao.problemas, reservas: validacao.reservas }));
   // Metadados existentes continuam descrevendo a origem; não sinalizam revisão inexistente.
   for (const e of entrada) {

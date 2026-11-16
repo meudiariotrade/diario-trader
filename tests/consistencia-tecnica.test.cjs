@@ -1,6 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const C=require('../supabase/functions/_shared/consistencia-tecnica.ts');
 const {textoTecnicoConfere}=require('../supabase/functions/analise/validacao.ts');
+const {cobreMapa}=require('../supabase/functions/_shared/narrativa-tecnica.ts');
 const {normaliza}=require('../supabase/functions/revista-ia/revista.ts');
 const entrada=(ticker='ITUB4',fatos={})=>({ticker,fatos:{fechamento:42.27,mm20:42.91,mm50:43.82,mm200:42.91,mm10s:44.04,mm40s:42.79,rsi14:47.4,...fatos}});
 const campo=(texto,ticker='ITUB4',caminho='ativos.ITUB4.dow')=>({texto,ticker,caminho});
@@ -106,7 +107,7 @@ function handlerRevista(gerar, cache=[]){
  let handler;const requisicoes=[];
  const src=stripTypeScriptTypes(fs.readFileSync(require('node:path').join(__dirname,'../supabase/functions/revista-ia/index.ts'),'utf8'),{mode:'transform'})
   .replace(/^import .*;\s*$/gm,'').replace(/^export\s+(?=(?:async\s+)?(?:const|function|let))/gm,'');
- const contexto={...C,SYS_REVISTA:'GERACAO_INICIAL',normaliza,BLOCOS:['dow','elliott','pa','cenarios'],textoTecnicoConfere,
+ const contexto={...C,SYS_REVISTA:'GERACAO_INICIAL',normaliza,cobreMapa,BLOCOS:['dow','elliott','pa','cenarios'],textoTecnicoConfere,
   gerarTexto:gerar,jsonDe:JSON.parse,Request,Response,Headers,AbortSignal,URL,TextEncoder,crypto:require('node:crypto').webcrypto,
   console:{warn(){},info(){}},Deno:{env:{get:k=>({SUPABASE_URL:'https://projeto.test',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'svc'})[k]},serve:fn=>{handler=fn}},
   fetch:async(url,opt={})=>{requisicoes.push({url,opt});if(url.endsWith('/auth/v1/user'))return Response.json({id:opt.headers.Authorization.includes('outro')?'usuario-b':'usuario-a'});
@@ -118,14 +119,14 @@ const reqRevista=(body,token='aaa.bbb.ccc')=>new Request('https://projeto.test/f
 test('Edge revista: autenticação, JSON público, cache versionado/isolado e fatos internos',async()=>{
  let n=0;const h=handlerRevista(async(sys,pacote)=>{
   n++;
-  if(sys.startsWith('GERACAO_INICIAL')){assert.ok(pacote.includes('fatos_relacionais'));return {texto:JSON.stringify({ativos:relatorio('No semanal, o fechamento está abaixo de ambas as médias e ainda requer confirmação estrutural.').ativos}),rotulo:'modelo simulado'};}
+  if(sys.startsWith('GERACAO_INICIAL')){assert.ok(pacote.includes('fatos_relacionais'));const a=relatorio('No semanal, o fechamento 42,27 está abaixo da MM10s em 44,04 e da MM40s em 42,79; ainda requer confirmação estrutural.').ativos; a.ITUB4.pa='O RSI14 em 47,40 está abaixo da linha central; candles e estrutura requerem confirmação adicional.'; return {texto:JSON.stringify({ativos:a}),rotulo:'modelo simulado'};}
   assert.equal(sys,C.SYS_REVISAO);return {texto:JSON.stringify({problemas:[]})};
  });
  let r=await h.handler(reqRevista(dadosRevista(),''));assert.equal(r.status,401);assert.equal(n,0);
  r=await h.handler(reqRevista(dadosRevista()));assert.equal(r.status,200);const j=await r.json();assert.equal(n,2);
  assert.deepEqual(Object.keys(j).sort(),['ativos','corte','gerado','modelo']);assert.deepEqual(Object.keys(j.ativos.ITUB4).sort(),['cenarios','dow','elliott','fonte','pa','trocados']);
  assert.ok(!JSON.stringify(j).includes('fatos_relacionais'));assert.ok(!JSON.stringify(j).includes('versao'));
- const chaves=h.requisicoes.filter(x=>x.url.includes('chave=eq.')).map(x=>decodeURIComponent(x.url));assert.match(chaves[0],/tecnica-v652-1:usuario-a/);
+ const chaves=h.requisicoes.filter(x=>x.url.includes('chave=eq.')).map(x=>decodeURIComponent(x.url));assert.ok(chaves[0].includes(C.VERSAO_CONSISTENCIA+':usuario-a'));
  await h.handler(reqRevista(dadosRevista(),'outro.bbb.ccc'));
  const nova=h.requisicoes.filter(x=>x.url.includes('chave=eq.')).map(x=>decodeURIComponent(x.url)).at(-1);assert.match(nova,/usuario-b/);
  const alterados=dadosRevista();alterados.ativos[0].fatos.fechamento=43;await h.handler(reqRevista(alterados));
