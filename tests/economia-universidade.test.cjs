@@ -36,11 +36,6 @@ test('Fichar texto local, gerar cards, revisar e preservar histórico JSON em na
  await p.locator('[data-eco-btn="uniLocal"]').click();
  await expect(p.locator('.uni-ficha')).toContainText('Resumo de aula Keynes');
  await p.locator('[data-eco-btn="uniDeck"]').click();
- console.log('UNI_DECK_DEBUG',JSON.stringify(await p.evaluate(()=>{
-   let view;try{view=EconomiaLab.views.flash().slice(0,160);}catch(e){view='ERROR '+e.stack;}
-   return {tool:EconomiaLab.state.tool,uniStatus:EconomiaLab.state.uniStatus,cardN:EconomiaLab.uni.data.cards.length,
-     flashDisc:EconomiaLab.state.uniFlashDisc,html:document.querySelector('.eco-nav')?.innerHTML.slice(-230),view};
- })));
  await expect(p.locator('[data-eco-tool="flash"]')).toHaveClass(/on/);
  await expect(p.locator('.uni-flash')).toBeVisible();
  await p.locator('[data-eco-btn="uniFlip"]').click();
