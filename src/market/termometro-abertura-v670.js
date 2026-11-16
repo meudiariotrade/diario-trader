@@ -30,6 +30,7 @@
     const em = stamp(registro?.em || registro?.updated_at || registro?.horarioPreco || registro?.ts);
     const ts = stamp(coleta);
     // A fonte precisa ter sido carregada nesta sessão; o valor não pode ser muito antigo.
+    if (em !== null && (tempo < em || tempo - em >= MAX_FONTE)) return false;
     return (ts !== null && ts > 0 && tempo >= ts && tempo - ts < 12 * HORA) ||
       (em !== null && tempo >= em && tempo - em < MAX_FONTE);
   };

@@ -21,7 +21,8 @@ test('Mercado: lista pronta, busca preservada, quatro abas e layouts de 320 a 14
   await expect.poll(()=>p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   if(width>=1024){await expect(app.locator('.m623-term')).toBeVisible();await expect(app.locator('.m623-term .m623-col')).toHaveCount(3);await expect(app.locator('.market-categories')).toBeHidden();await expect(app.locator('.market-tools [data-imgger]')).toBeVisible();await p.locator('[data-market-search]').fill('WIN');await expect(app.locator('.market-categories')).toBeVisible();}
   else await expect(app.locator('.m623-term,.m623-sw,.market-tools [data-imgger],.market-tools [data-m624-mon]')).toHaveCount(0);
-  assert.ok(await app.locator('.cqr').first().evaluate(el=>el.getBoundingClientRect().top<500));
+  // v670: o termômetro agora aparece antes das cotações; a primeira linha deve continuar acima da dobra (900 px).
+  assert.ok(await app.locator('.cqr').first().evaluate(el=>el.getBoundingClientRect().top<innerHeight-80));
   assert.ok(await p.locator('[data-market-search]').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=16));
   assert.ok(await p.locator('[data-cqr]').evaluate(el=>el.getBoundingClientRect().height>=40));
   await p.screenshot({path:'test-results/mercado-v585-'+width+'.png'});

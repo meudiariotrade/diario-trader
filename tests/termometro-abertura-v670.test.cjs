@@ -66,3 +66,24 @@ test("v670: abertura é inserida no topo de Mercado e do Meu dia",()=>{
  assert.equal(w.document.querySelector(".dt393-day").firstElementChild.className,"dt670-opening");
  w.close();
 });
+
+
+test("v670: dados reais da estrutura mesa-macro reconhecem futuro ES, EWZ, WTI e pares EM",()=>{
+ const w=page(),now=Date.now(),stamp=new Date(now-3_600_000).toISOString(),prior=new Date(now-86_400_000).toISOString();
+ w.M606={ts:now,v:{em:stamp,terminal:[
+   {g:"fut",k:"ES",s:"CME_MINI:ES1!",d1:.8,em:stamp},
+   {g:"fut",k:"EWZ",s:"AMEX:EWZ",d1:1.2,em:stamp},
+   {g:"cmd",k:"WTI",s:"NYMEX:CL1!",d1:-.4,em:stamp},
+   {g:"fx",k:"DXY",s:"TVC:DXY",d1:.4,em:stamp},
+   {g:"fut",k:"WIN",s:"BMFBOVESPA:WIN1!",px:130000,d1:0,em:prior},
+   {g:"fut",k:"WDO",s:"BMFBOVESPA:WDO1!",px:5400,d1:0,em:prior}
+ ],emergentes:{itens:[{k:"USD/MXN",d1:.2,em:stamp},{k:"USD/ZAR",d1:.8,em:stamp}]}}};
+ const value=w.TermometroAbertura670.capturar();
+ assert.equal(value.spf,.8);
+ assert.equal(value.ewz,1.2);
+ assert.equal(value.winBase,130000);
+ assert.equal(value.wdoBase,5400);
+ assert.ok(Math.abs(value.winProjetado-131066)<1e-8);
+ assert.ok(Math.abs(value.wdoProjetado-5406.21)<1e-8);
+ w.close();
+});
