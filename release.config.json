@@ -1,5 +1,5 @@
 {
-  "version": 653,
+  "version": 654,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -69,6 +69,7 @@
       "src/domains/core/18-carteira-e-exportacoes.js"
     ],
     "src/app-layers.js": [
+      "src/share/cards-modelo.js",
       "src/domains/layers/01-navegacao-e-fluxos.js",
       "src/domains/layers/02-carteira-e-terminal.js",
       "src/domains/layers/03-apresentacao.js",

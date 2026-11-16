@@ -15723,348 +15723,87 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
       });
     })(window),
     (function (s) {
-      "use strict";
-      const l = s.TraderExportBrand;
-      if (!l) return;
-      const r = l.IMAGE,
-        j = "diario-share-theme-v309",
-        O = [
-          ["auto", "Automático"],
-          ["mercado", "Mercado"],
-          ["natal", "Natal"],
-          ["halloween", "Halloween"],
-          ["carnaval", "Carnaval"],
-          ["futebol", "Futebol"],
-          ["pascoa", "Páscoa"],
-          ["junina", "Festa Junina"],
-          ["verao", "Verão"],
-          ["reveillon", "Réveillon"],
-          ["classico", "Clássico"],
-        ],
-        G = {
-          mercado: "cards-art/mercados-brasil-eua.png",
-          natal: "cards-art/natal-touro.png",
-          halloween: "cards-art/halloween-touro.png",
-        },
-        o = {
-          carnaval: [0, 0],
-          futebol: [1, 0],
-          pascoa: [2, 0],
-          junina: [0, 1],
-          verao: [1, 1],
-          reveillon: [2, 1],
-        };
-      for (const d of Object.keys(o)) G[d] = "cards-art/colecao-sazonal.png";
-      const F = new Map(),
-        N = new Map(),
-        e = new Set();
-      let i = "auto";
-      try {
-        const d = APP_STORAGE.getItem(j);
-        O.some(([$]) => $ === d) && (i = d);
-      } catch {}
-      const B = (d) => typeof d == "number" && Number.isFinite(d),
-        Y = (d, $ = 2) =>
-          B(d)
-            ? d.toLocaleString("pt-BR", {
-                minimumFractionDigits: $,
-                maximumFractionDigits: $,
-              })
-            : "—",
-        z = (d) => (B(d) ? (d > 0 ? "+" : "") + Y(d) + "%" : "—");
-      function M(d) {
-        const $ = d % 19,
-          w = Math.floor(d / 100),
-          b = d % 100,
-          y = Math.floor(w / 4),
-          C = w % 4,
-          V = Math.floor((w + 8) / 25),
-          X = Math.floor((w - V + 1) / 3),
-          _ = (19 * $ + w - y - X + 15) % 30,
-          K = Math.floor(b / 4),
-          U = b % 4,
-          te = (32 + 2 * C + 2 * K - _ - U) % 7,
-          ue = Math.floor(($ + 11 * _ + 22 * te) / 451),
-          ge = _ + te - 7 * ue + 114;
-        return Date.UTC(d, Math.floor(ge / 31) - 1, (ge % 31) + 1);
-      }
-      function E(d = new Date()) {
-        if (!Number.isFinite(d.getTime())) return "mercado";
-        const $ = new Intl.DateTimeFormat("en-US", {
-            timeZone: "America/Sao_Paulo",
-            year: "numeric",
-            month: "numeric",
-            day: "numeric",
-          }).formatToParts(d),
-          w = (X) => Number($.find((_) => _.type === X)?.value),
-          b = w("year"),
-          y = w("month"),
-          C = w("day"),
-          V = Math.round((Date.UTC(b, y - 1, C) - M(b)) / 864e5);
-        return (y === 12 && C >= 26) || (y === 1 && C <= 6)
-          ? "reveillon"
-          : y === 12
-            ? "natal"
-            : y === 10 && C >= 15
-              ? "halloween"
-              : V >= -51 && V <= -46
-                ? "carnaval"
-                : V >= -7 && V <= 0
-                  ? "pascoa"
-                  : y === 6
-                    ? "junina"
-                    : y <= 2 || (y === 3 && C <= 20)
-                      ? "verao"
-                      : "mercado";
-      }
-      const u = () => (i === "auto" ? E() : i),
-        P = (d) =>
-          ({
-            mercado: "Mercado",
-            natal: "Natal",
-            halloween: "Halloween",
-            carnaval: "Carnaval",
-            futebol: "Futebol",
-            pascoa: "Páscoa",
-            junina: "Festa Junina",
-            verao: "Verão",
-            reveillon: "Réveillon",
-            classico: "Clássico",
-          })[d] || "Mercado";
-      function m(d) {
-        if (!O.some(([$]) => $ === d)) return !1;
-        i = d;
-        try {
-          APP_STORAGE.setItem(j, d);
-        } catch {}
-        return !0;
-      }
-      function c(d) {
-        const $ = G[d];
-        if (!$) return Promise.resolve(null);
-        if (F.has($)) return Promise.resolve(F.get($));
-        if (N.has($)) return N.get($);
-        const w = new Promise((b) => {
-          const y = new Image();
-          let C = !1;
-          const V = (_) => {
-              C ||
-                ((C = !0),
-                clearTimeout(X),
-                _ ? (F.set($, y), e.delete($)) : e.add($),
-                b(_ ? y : null));
-            },
-            X = setTimeout(() => V(!1), 1e4);
-          ((y.onload = () => V(y.naturalWidth > 0 && y.naturalHeight > 0)),
-            (y.onerror = () => V(!1)),
-            (y.src = s.TraderCardArt?.[$] || $));
-        }).finally(() => N.delete($));
-        return (N.set($, w), w);
-      }
-      function q(d, $, w, b, y = 26, C = r.tx, V = 500, X = 968, _ = "left") {
-        ((d.font =
-          V +
-          " " +
-          y +
-          'px system-ui,-apple-system,"Segoe UI",Arial,sans-serif'),
-          (d.fillStyle = C),
-          (d.textAlign = _),
-          (d.textBaseline = "alphabetic"));
-        let K = String($ ?? "");
-        if (d.measureText(K).width > X) {
-          const U = Array.from(K);
-          for (; U.length && d.measureText(U.join("") + "…").width > X; )
-            U.pop();
-          K = U.join("") + "…";
-        }
-        d.fillText(K, w, b);
-      }
-      function H(d, $, w, b, y, C, V = 18) {
-        ((d.fillStyle = C),
-          d.beginPath(),
-          d.roundRect($, w, b, y, V),
-          d.fill());
-      }
-      function g(d, $) {
-        ((d.fillStyle = r.bg), d.fillRect(0, 0, 1080, 1350));
-        const w = F.get(G[$]);
-        if (w)
-          if (o[$]) {
-            const [y, C] = o[$],
-              V = w.naturalWidth / 3,
-              X = w.naturalHeight / 2;
-            d.drawImage(
-              w,
-              y * V + 1,
-              C * X + 1,
-              V - 2,
-              X - 2,
-              0,
-              0,
-              1080,
-              1350,
-            );
-          } else
-            $ === "mercado"
-              ? d.drawImage(w, 0, 110, 1080, 720)
-              : d.drawImage(w, 0, 0, 1080, 1350);
-        const b = d.createLinearGradient(0, 0, 800, 0);
-        (b.addColorStop(0, "rgba(15,16,17,0.84)"),
-          b.addColorStop(0.68, "rgba(15,16,17,0.48)"),
-          b.addColorStop(1, "rgba(15,16,17,0)"),
-          (d.fillStyle = b),
-          d.fillRect(0, 0, 1080, 1350),
-          H(d, 0, 990, 1080, 360, "rgba(15,16,17,0.96)", 0));
-      }
-      function R() {
-        const d = document.createElement("canvas");
-        return (
-          (d.width = 1080),
-          (d.height = 1350),
-          { c: d, ctx: d.getContext("2d") }
-        );
-      }
-      function a(d, $) {
-        (q(d, "DIÁRIO DE TRADER", 56, 66, 24, r.ac, 750),
-          H(d, 830, 34, 194, 44, "rgba(15,16,17,0.8)", 22),
-          q(d, P($), 927, 64, 21, r.tx, 650, 174, "center"));
-      }
-      function n(d) {
-        const $ = String(d || "");
-        return /^\d{4}-\d{2}-\d{2}/.test($)
-          ? $.slice(8, 10) +
-              "/" +
-              $.slice(5, 7) +
-              "/" +
-              $.slice(0, 4) +
-              ($.length >= 16 ? " · " + $.slice(11, 16) : "")
-          : $ || "Data não informada";
-      }
-      function f(d, $) {
-        ((d.fillStyle = r.line),
-          d.fillRect(56, 1238, 968, 1),
-          q(d, $, 56, 1280, 20, r.mut, 400),
-          q(
-            d,
-            s.DIARIO_DEMO
-              ? "DEMONSTRAÇÃO / DADOS FICTÍCIOS"
-              : "DIÁRIO DE TRADER · Registro pessoal",
-            56,
-            1320,
-            19,
-            s.DIARIO_DEMO ? r.am : r.ac,
-            650,
-          ));
-      }
-      function h(d, $, w) {
-        (H(d, 48, 838, 984, 146, "rgba(24,25,28,0.95)"),
-          q(d, $[0], 74, 884, 23, r.mut),
-          q(d, $[1], 74, 945, 42, r.tx, 700, 440),
-          (d.fillStyle = r.line),
-          d.fillRect(532, 864, 1, 96),
-          q(d, w[0], 558, 884, 23, r.mut),
-          q(d, w[1], 558, 945, 42, r.tx, 700, 440));
-      }
-      function Q(d, $ = u()) {
-        const w = shrDados(d),
-          b = (typeof SHR < "u" && SHR.modo) || "preco",
-          y = shrPct(d, w, b),
-          C = B(y) ? (y >= 0 ? r.g : r.r) : r.mut,
-          { c: V, ctx: X } = R();
-        (g(X, $),
-          a(X, $),
-          q(
-            X,
-            typeof SHR < "u" && SHR.at === 0
-              ? "Operação registrada"
-              : d.ativo || d.tk || "Ativo não informado",
-            56,
-            221,
-            58,
-            r.tx,
-            750,
-            700,
-          ),
-          q(
-            X,
-            [w.tp, w.lado].filter(Boolean).join(" · "),
-            56,
-            269,
-            27,
-            r.mut,
-            500,
-            620,
-          ),
-          q(
-            X,
-            w.op ? "EM ANDAMENTO · REFERÊNCIA" : "OPERAÇÃO ENCERRADA",
-            56,
-            312,
-            21,
-            r.mut,
-            650,
-            620,
-          ),
-          q(X, z(y), 56, 444, 98, C, 750, 710),
-          q(
-            X,
-            b === "conta"
-              ? "Variação sobre a conta"
-              : "Variação do preço na operação",
-            56,
-            494,
-            24,
-            r.mut,
-            500,
-            550,
-          ),
-          typeof SHR < "u" &&
-            SHR.rs &&
-            B(w.c?.pl) &&
-            (q(X, "Resultado financeiro", 56, 587, 23, r.mut, 500, 500),
-            q(
-              X,
-              typeof mT == "function" ? mT(d, w.c.pl) : Y(w.c.pl),
-              56,
-              649,
-              46,
-              w.c.pl >= 0 ? r.g : r.r,
-              700,
-              500,
-            )));
-        const _ = (K) => {
-          const U = typeof numN == "function" ? numN(K) : Number(K);
-          return K != null && K !== "" && B(U)
-            ? Y(U, Math.abs(U) >= 1e4 ? 0 : 2)
-            : "—";
-        };
-        return (
-          h(
-            X,
-            ["Entrada informada", _(d.entry)],
-            [
-              w.op ? "Referência disponível" : "Saída informada",
-              _(w.op ? w.px : d.exit),
-            ],
-          ),
-          q(X, "SETUP", 56, 1042, 20, r.mut, 650),
-          q(X, d.setup || "Não informado", 56, 1090, 29, r.tx, 600),
-          q(X, n(w.op ? d.dt : d.dtx || d.dt), 56, 1158, 23, r.mut, 500),
-          f(
-            X,
-            w.op
-              ? "Operação aberta: o resultado pode mudar."
-              : "Resultado individual; não representa o desempenho da conta.",
-          ),
-          V
-        );
-      }
-      function J(d, $ = u()) {
+  'use strict';
+  const l=s.TraderExportBrand, M=s.TraderShareCards;
+  if(!l||!M)return;
+  const r=l.IMAGE,KEY='diario-share-theme-v309',files={mercado:'card-mercados-brasil-eua.jpg',natal:'card-natal-touro.jpg',halloween:'card-halloween-touro.jpg',
+    libertadores:'assets/share/finais.webp',blackfriday:'assets/share/black-friday.webp',superquarta:'assets/share/super-quarta.webp',brasil:'assets/share/brasil.webp'},
+    sprites={carnaval:[0,0],futebol:[1,0],champions:[1,0],pascoa:[2,0],junina:[0,1],verao:[1,1],reveillon:[2,1]},images=new Map(),pending=new Map(),failed=new Set();
+  for(const id of Object.keys(sprites))files[id]='card-colecao-sazonal.jpg';
+  let choice='auto',generation=0,current=null;
+  const get=(k,d)=>{try{return APP_STORAGE.getItem(k)??d}catch{return d}},save=(k,v)=>{try{APP_STORAGE.setItem(k,v)}catch{}},finite=v=>typeof v==='number'&&Number.isFinite(v),
+    fmt=(v,d=2)=>finite(v)?v.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}):'—',pct=v=>finite(v)?(v>0?'+':'')+fmt(v)+'%':'—',
+    pts=v=>finite(v)?(v>0?'+':'')+v.toLocaleString('pt-BR',{maximumFractionDigits:2})+' pts':'—',escText=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const stored=get(KEY,'auto');if(M.themes.some(([id])=>id===stored))choice=stored;
+  SHR.ratio=get('diario-share-ratio','4:5')==='9:16'?'9:16':'4:5';SHR.setup=get('diario-share-setup','1')!=='0';SHR.scope='operation';
+  function events(){const a=[];try{if(typeof JRN!=='undefined')for(const v of [JRN.v?.agenda,JRN.v?.eventos,JRN.v?.ed?.agenda])if(Array.isArray(v))a.push(...v)}catch{}return a}
+  function anchor(trade){return M.dateKey(SHR.scope==='operation'?(trade?.dt||trade?.dtx):(trade?.dtx||trade?.dt))||M.dateKey(new Date())}
+  const active=(trade=current)=>M.theme(choice,anchor(trade),events());
+  function setTheme(id){if(!M.themes.some(([v])=>v===id))return false;choice=id;save(KEY,id);return true}
+  function load(id){const path=files[id];if(!path)return Promise.resolve(null);if(images.has(path))return Promise.resolve(images.get(path));if(pending.has(path))return pending.get(path);
+    const p=new Promise(resolve=>{const im=new Image();let done=false;const finish=ok=>{if(done)return;done=true;clearTimeout(timer);if(ok){images.set(path,im);failed.delete(path)}else failed.add(path);resolve(ok?im:null)},timer=setTimeout(()=>finish(false),7000);im.onload=()=>finish(im.naturalWidth>0);im.onerror=()=>finish(false);im.src=path}).finally(()=>pending.delete(path));pending.set(path,p);return p;
+  }
+  function drawText(ctx,text,x,y,size=26,color=r.tx,weight=500,width=968,align='left'){
+    const t=String(text??'');ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline='alphabetic';
+    let f=size;ctx.font=weight+' '+f+'px system-ui,-apple-system,"Segoe UI",Arial,sans-serif';
+    while(ctx.measureText(t).width>width&&f>12){f-=1;ctx.font=weight+' '+f+'px system-ui,-apple-system,"Segoe UI",Arial,sans-serif'}ctx.fillText(t,x,y);
+  }
+  function wrap(ctx,text,x,y,width,size=26,color=r.tx,maxLines=3){
+    ctx.font='500 '+size+'px system-ui,-apple-system,"Segoe UI",Arial,sans-serif';const words=String(text||'').split(/\s+/),lines=[];let line='';
+    for(const word of words){if(line&&ctx.measureText(line+' '+word).width>width){lines.push(line);line=word}else line+=(line?' ':'')+word}if(line)lines.push(line);
+    const visible=lines.slice(0,maxLines);if(lines.length>maxLines)visible[maxLines-1]+='…';visible.forEach((t,i)=>drawText(ctx,t,x,y+i*(size+9),size,color,500,width));
+  }
+  function box(ctx,x,y,w,h,color=r.card){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,6);ctx.fill()}
+  function make(){const c=document.createElement('canvas');c.width=1080;c.height=SHR.ratio==='9:16'?1920:1350;return {c,ctx:c.getContext('2d')}}
+  function art(ctx,theme,H,result){ctx.fillStyle='#0A0C10';ctx.fillRect(0,0,1080,H);const im=images.get(files[theme]);if(im){ctx.save();ctx.filter=result<0?'brightness(.88) saturate(.72)':'brightness(1.03) saturate(1.04)';let sx=0,sy=0,sw=im.naturalWidth,sh=im.naturalHeight;
+      if(sprites[theme]){sw/=3;sh/=2;[sx,sy]=sprites[theme].map((v,i)=>v*(i?sh:sw));sx+=1;sy+=1;sw-=2;sh-=2}
+      if(theme==='mercado')ctx.drawImage(im,0,H*.24,1080,H*.38);else {const scale=Math.max(1080/sw,H/sh),dw=sw*scale,dh=sh*scale;ctx.drawImage(im,sx,sy,sw,sh,1080-dw,(H-dh)/2,dw,dh)}ctx.restore();}
+    const tint=ctx.createRadialGradient(890,H*.4,20,890,H*.4,650);tint.addColorStop(0,result<0?'rgba(212,160,23,.04)':'rgba(16,185,129,.065)');tint.addColorStop(1,'rgba(10,12,16,0)');ctx.fillStyle=tint;ctx.fillRect(0,0,1080,H);
+    const shade=ctx.createLinearGradient(0,0,850,0);shade.addColorStop(0,'rgba(10,12,16,.99)');shade.addColorStop(.58,'rgba(10,12,16,.94)');shade.addColorStop(1,'rgba(10,12,16,0)');ctx.fillStyle=shade;ctx.fillRect(0,0,1080,H);
+    const foot=ctx.createLinearGradient(0,H-590,0,H-300);foot.addColorStop(0,'rgba(10,12,16,0)');foot.addColorStop(1,'rgba(10,12,16,.99)');ctx.fillStyle=foot;ctx.fillRect(0,H-590,1080,590);
+  }
+  function header(ctx,theme,trade){drawText(ctx,'DIÁRIO DE TRADER',56,66,24,r.ac,700,375);const label=M.badge(choice,anchor(trade),events());box(ctx,470,32,554,48,'rgba(17,20,27,.9)');drawText(ctx,label,747,65,21,r.tx,600,522,'center')}
+  function footer(ctx,H,note){ctx.fillStyle=r.line;ctx.fillRect(56,H-112,968,1);drawText(ctx,note,56,H-72,19,r.mut,400,968);drawText(ctx,s.DIARIO_DEMO?'DEMONSTRAÇÃO / DADOS FICTÍCIOS':'DIÁRIO DE TRADER · Registro pessoal',56,H-28,19,s.DIARIO_DEMO?r.am:r.ac,600,968)}
+  const dateLabel=d=>{const k=M.dateKey(d);return k?k.slice(8)+'/'+k.slice(5,7)+'/'+k.slice(0,4):'Data não informada'};
+  function rowsLoaded(){const out=[];for(const t of (S.trades||[])){
+    const w=shrDados(t),entry=numN(t.entry),exit=w.op?w.px:numN(t.exit),percent=shrPct(t,w,'preco'),currency=moedaT(t),qty=numN(t.qty),pv=numN(t.pv)||1;
+    out.push({id:t.id,date:t.dtx||t.dt,ticker:t.ativo||t.tk||'',family:M.future(t.ativo||t.tk),points:M.points(t,entry,exit),open:w.op,pnlBrl:finite(w.c?.pl)?emBRL(w.c.pl,currency):null,percent,
+      notionalBrl:entry>0&&qty>0?emBRL(Math.abs(entry*qty*pv),currency):null});}
+    for(const t of (S.ops||[])){if(t.st!=='closed')continue;const pseudo={side:t.side,entry:t.entry,exit:t.exit},entry=numN(t.entry),exit=numN(t.exit);out.push({id:'fx:'+t.id,date:t.dtx||t.dt,ticker:t.s||'',family:null,points:null,open:false,pnlBrl:t.res!==null&&t.res!==undefined&&t.res!==''&&finite(+t.res)?emBRL(+t.res,'USD'):null,percent:entry>0&&finite(exit)?(exit-entry)/entry*100*(t.side==='V'?-1:1):null,notionalBrl:null})}return out;
+  }
+  function summary(trade){return M.aggregate(rowsLoaded(),anchor(trade),SHR.scope==='week'?'week':'day',+capRef()||null)}
+  function metrics(ctx,H,left,right){const y=H-530;box(ctx,48,y,984,146,'rgba(17,20,27,.96)');drawText(ctx,left[0],74,y+47,23,r.mut,500,440);drawText(ctx,left[1],74,y+109,42,r.tx,700,440);ctx.fillStyle=r.line;ctx.fillRect(532,y+26,1,96);drawText(ctx,right[0],558,y+47,23,r.mut,500,440);drawText(ctx,right[1],558,y+109,42,r.tx,700,440)}
+  function tradeCanvas(trade,theme=active(trade)){
+    if(SHR.scope!=='operation')return summaryCanvas(summary(trade),theme,trade);
+    const w=shrDados(trade),percent=shrPct(trade,w,SHR.modo||'preco'),entry=numN(trade.entry),exit=w.op?w.px:numN(trade.exit),point=M.points(trade,entry,exit),result=w.c?.pl??percent??0,{c,ctx}=make(),H=c.height,color=result<0?r.r:r.g;
+    art(ctx,theme,H,result);header(ctx,theme,trade);drawText(ctx,SHR.at===0?'Operação registrada':trade.ativo||trade.tk||'Ativo não informado',56,221,58,r.tx,700,590);drawText(ctx,[w.tp,w.lado].filter(Boolean).join(' · '),56,269,27,r.mut,500,550);drawText(ctx,w.op?'EM ANDAMENTO · REFERÊNCIA':'OPERAÇÃO ENCERRADA',56,312,21,r.mut,600,560);
+    drawText(ctx,point!==null?pts(point):pct(percent),56,444,98,point!==null?(point<0?r.r:r.g):color,700,560);
+    if(point!==null){drawText(ctx,pct(percent),56,512,46,finite(percent)&&percent<0?r.r:r.g,600,530);drawText(ctx,SHR.modo==='conta'?'Variação sobre a conta':'Variação do preço na operação',56,554,23,r.mut,500,560)}else drawText(ctx,SHR.modo==='conta'?'Variação sobre a conta':'Variação do preço na operação',56,494,24,r.mut,500,560);
+    if(SHR.rs&&finite(w.c?.pl)){drawText(ctx,'Resultado financeiro',56,621,23,r.mut,500,520);drawText(ctx,mT(trade,w.c.pl),56,682,46,color,700,540)}
+    metrics(ctx,H,['Entrada informada',finite(entry)?fmt(entry,Math.abs(entry)>=10000?0:2):'—'],[w.op?'Referência disponível':'Saída informada',finite(exit)?fmt(exit,Math.abs(exit)>=10000?0:2):'—']);
+    if(SHR.setup){drawText(ctx,'SETUP',56,H-325,20,r.mut,600,968);let note=trade.setup||'Não informado';if(SHR.at===0){const id=String(trade.ativo||trade.tk||'');if(id)note=String(note).split(id).join('[ativo]')}wrap(ctx,note,56,H-280,968,27,r.tx,3)}
+    drawText(ctx,dateLabel(trade.dt||trade.dtx),56,H-155,23,r.mut,500,968);footer(ctx,H,w.op?'Operação aberta: o resultado pode mudar.':'Pontos por contrato; resultado individual, não é retorno da conta.');return c;
+  }
+  function summaryCanvas(data,theme=active(),trade=current){const {c,ctx}=make(),H=c.height,result=data.pnl??0,color=result<0?r.r:r.g,p=data.legacy||SHR.modo==='conta'?data.pctConta:data.pctOperacoes,
+    families=Object.entries(data.points||{}),allFutures=data.total>0&&data.trades?.every(t=>t.family)&&families.length===1;
+    art(ctx,theme,H,result);header(ctx,theme,trade);drawText(ctx,data.title||(SHR.scope==='week'?'Resumo da Semana':'Resumo do Dia'),56,221,56,r.tx,700,600);drawText(ctx,data.from===data.to?dateLabel(data.from):dateLabel(data.from)+' a '+dateLabel(data.to),56,270,26,r.mut,500,600);drawText(ctx,'OPERAÇÕES ENCERRADAS',56,312,21,r.mut,600,560);
+    drawText(ctx,allFutures?pts(families[0][1]):pct(p),56,444,94,color,700,560);
+    if(allFutures){drawText(ctx,pct(p),56,510,46,color,600,530);drawText(ctx,'Pontos por contrato, somados por operação',56,554,21,r.mut,500,550)}else {wrap(ctx,SHR.modo==='conta'?'Resultado acumulado sobre a conta':'Variação ponderada pelo nocional das operações',56,493,560,22,r.mut,2);families.slice(0,2).forEach(([id,value],i)=>drawText(ctx,(SHR.at===0?'Grupo '+(i+1):id)+' · '+pts(value),56,592+i*48,32,value<0?r.r:r.g,600,555))}
+    if(SHR.rs&&finite(data.pnl)){drawText(ctx,'Resultado acumulado',56,allFutures?621:712,23,r.mut,500,540);drawText(ctx,mnyC(data.pnl,'BRL'),56,allFutures?682:769,44,color,700,550)}
+    metrics(ctx,H,['Total de Trades',String(data.total)],['Taxa de Acerto',finite(data.winRate)?fmt(data.winRate,1)+'%':'—']);
+    drawText(ctx,SHR.at===0?'ATIVOS OCULTOS':'ATIVOS OPERADOS',56,H-325,20,r.mut,600,968);if(SHR.at!==0)wrap(ctx,data.tickers.length?data.tickers.join(' · '):'Nenhuma operação encerrada no período',56,H-280,968,27,r.tx,2);
+    drawText(ctx,SHR.modo==='conta'?'Capital de referência cadastrado':'Preço ponderado não representa retorno da conta',56,H-155,21,r.mut,500,968);footer(ctx,H,families.length>1?(SHR.at===0?'Grupos separados; pontos por contrato somados por operação.':'WIN e WDO separados; pontos por contrato somados por operação.'):'Somente registros encerrados e carregados; custos entram no financeiro.');return c;
+  }
+  function fileName(){return SHR.scope==='operation'?'operacao'+(SHR.at!==0&&current?.ativo?'-'+String(current.ativo).toLowerCase().replace(/[^a-z0-9_-]/g,''):'')+'.png':'resumo-'+(SHR.scope==='week'?'semana':'dia')+'.png'}
+  function toBlob(c){return new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('Falha ao criar imagem.')),'image/png'))}
+  shrGera=async function(t){const theme=active(t);await load(theme);return toBlob(tradeCanvas(t,theme))};
+      function legacyPeriodCanvas(d, $ = active(null)) {
+        const R=make,g=(ctx,id)=>art(ctx,id,SHR.ratio==='9:16'?1920:1350,d.M?.P||0),a=(ctx,id)=>header(ctx,id,null),q=drawText,B=finite,z=pct,Y=fmt,h=(ctx,left,right)=>metrics(ctx,SHR.ratio==='9:16'?1920:1350,left,right),f=(ctx,note)=>footer(ctx,SHR.ratio==='9:16'?1920:1350,note);
         const { c: w, ctx: b } = R();
         return (
           g(b, $),
           a(b, $),
-          q(b, d.tit || "Meu desempenho", 56, 219, 48, r.tx, 750, 850),
+          q(b, d.tit || "Meu desempenho", 56, 219, 48, r.tx, 700, 850),
           q(b, d.sub || "Período não informado", 56, 270, 27, r.mut, 500, 720),
           q(
             b,
@@ -16073,7 +15812,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
             444,
             98,
             B(d.pct) ? (d.pct >= 0 ? r.g : r.r) : r.mut,
-            750,
+            700,
             710,
           ),
           q(
@@ -16130,7 +15869,59 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
           w
         );
       }
-      function v(d) {
+  if(typeof shrGeraPer==='function')shrGeraPer=async function(d){const theme=active(null);await load(theme);return toBlob(legacyPeriodCanvas(d,theme))};
+  const oldOpen=shrAbre,oldClose=shrFecha;
+  shrFecha=function(){generation++;current=null;if(SHR.url){URL.revokeObjectURL(SHR.url);SHR.url=null}SHR.blob=null;return oldClose.apply(this,arguments)};
+  shrAbre=async function(id){
+    if(String(id).startsWith('per:')){await oldOpen.apply(this,arguments);const sh=document.querySelector('#shrov .sh');if(sh&&!sh.querySelector('.season-picker')){sh.classList.add('share-season-modal');const picker=document.createElement('section');picker.className='season-picker';picker.innerHTML='<b>Estilo do card</b><div class="season-buttons">'+M.themes.map(([v,name])=>'<button type="button" data-shrtheme="'+v+'" aria-pressed="'+(choice===v)+'">'+name+'</button>').join('')+'</div><small>'+escText(M.badge(choice,new Date(),events()))+'</small>';sh.querySelector('img')?.before(picker);picker.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{setTheme(b.dataset.shrtheme);shrAbre(id)}))}return;}
+    const t=shrAcha(id);if(!t)return;if(SHR.id!==id)SHR.scope='operation';SHR.id=id;current=t;
+    const token=++generation;let overlay=document.getElementById('shrov');if(!overlay){overlay=document.createElement('div');overlay.id='shrov';overlay.className='ov';document.body.append(overlay)}
+    document.body.style.overflow='hidden';SHR.blob=null;overlay.innerHTML='<div class="sh share-season-modal"><div class="top"><b>Imagem para compartilhar</b><button class="x" data-shrx="1" aria-label="Fechar">✕</button></div><p role="status">Gerando imagem…</p></div>';
+    try{const blob=await shrGera(t);if(token!==generation||!overlay.isConnected)return;if(SHR.url)URL.revokeObjectURL(SHR.url);SHR.blob=blob;SHR.url=URL.createObjectURL(blob);const theme=active(t);
+      overlay.innerHTML=`<div class="sh share-season-modal"><div class="top"><b>Imagem para compartilhar</b><button class="x" data-shrx="1" aria-label="Fechar">✕</button></div>
+        <div class="seg share-scope" role="group" aria-label="Conteúdo do card">${[['operation','Operação'],['day','Resumo do Dia'],['week','Resumo da Semana']].map(([v,name])=>`<button type="button" data-shrscope="${v}" class="${SHR.scope===v?'on':''}" aria-pressed="${SHR.scope===v}">${name}</button>`).join('')}</div>
+        <section class="season-picker" aria-label="Tema da imagem"><b>Estilo do card</b><div class="season-buttons">${M.themes.map(([v,name])=>`<button type="button" data-shrtheme="${v}" aria-pressed="${choice===v}">${name}</button>`).join('')}</div><small>${escText(M.badge(choice,anchor(t),events()))} · referência ${dateLabel(anchor(t))}${failed.has(files[theme])?' · Arte indisponível; fundo institucional de reserva.':''}</small></section>
+        <div class="seg share-ratio" role="group" aria-label="Proporção da imagem">${[['4:5','Padrão (4:5)'],['9:16','Stories (9:16)']].map(([v,name])=>`<button type="button" data-shrratio="${v}" class="${SHR.ratio===v?'on':''}" aria-pressed="${SHR.ratio===v}">${name}</button>`).join('')}</div>
+        <img class="share-season-preview" src="${SHR.url}" alt="Prévia do card ${SHR.scope==='operation'?'da operação':SHR.scope==='day'?'do dia':'da semana'}">
+        <div class="seg"><button class="${SHR.modo!=='conta'?'on':''}" data-shrm="preco">% da operação</button><button class="${SHR.modo==='conta'?'on':''}" data-shrm="conta">% da conta</button></div>
+        <label class="ck"><input type="checkbox" data-shrrs="1"${SHR.rs?' checked':''}><span>Mostrar o resultado em dinheiro</span></label>
+        <label class="ck"><input type="checkbox" data-shrat="1"${SHR.at!==0?' checked':''}><span>Mostrar os ativos (tickers)</span></label>
+        <label class="ck"><input type="checkbox" data-shrsetup="1"${SHR.setup?' checked':''}${SHR.scope!=='operation'?' disabled':''}><span>Mostrar anotação de setup</span></label>
+        <div class="g2 share-actions"><button class="btn" data-shrgo="share">Compartilhar</button><a class="btn s" href="${SHR.url}" download="${fileName()}">Salvar imagem</a></div>
+        <p class="sm mut share-explanation">${SHR.scope==='operation'?'% da operação: variação do preço a seu favor. Em WIN/WDO, pontos por contrato ficam em destaque; o financeiro considera quantidade e custos.':'Resumos usam operações encerradas na data de fechamento do período selecionado. % da operação é a variação ponderada pelo nocional; % da conta usa o capital cadastrado. Pontos de WIN e WDO ficam separados.'}</p></div>`;
+      overlay.querySelectorAll('[data-shrtheme]').forEach(b=>b.addEventListener('click',()=>{setTheme(b.dataset.shrtheme);shrAbre(id)}));
+      overlay.querySelectorAll('[data-shrscope]').forEach(b=>b.addEventListener('click',()=>{SHR.scope=b.dataset.shrscope;shrAbre(id)}));
+      overlay.querySelectorAll('[data-shrratio]').forEach(b=>b.addEventListener('click',()=>{SHR.ratio=b.dataset.shrratio;save('diario-share-ratio',SHR.ratio);shrAbre(id)}));
+      overlay.querySelector('[data-shrsetup]').addEventListener('change',e=>{SHR.setup=e.target.checked;save('diario-share-setup',SHR.setup?'1':'0');shrAbre(id)});
+    }catch(err){if(token===generation&&overlay.isConnected)overlay.innerHTML='<div class="sh share-season-modal"><div class="top"><b>Imagem para compartilhar</b><button class="x" data-shrx="1">✕</button></div><p class="sm r">Não foi possível gerar a imagem: '+escText(err.message||err)+'</p></div>'}
+  };
+  const style=document.createElement('style');style.textContent='.share-season-modal{max-width:560px!important;margin:auto;font-variant-numeric:tabular-nums}.share-season-modal .seg{display:flex;flex-wrap:wrap;margin:10px 0}.share-season-modal .seg>button{flex:1;min-width:88px;min-height:44px;font-size:12px}.share-season-modal .season-picker{padding:12px 0;margin:10px 0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}.share-season-modal .season-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:160px;overflow:auto;margin:8px 0;overscroll-behavior:contain}.share-season-modal .season-buttons button{min-height:44px;padding:8px 5px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--mut);font:600 11px system-ui}.share-season-modal .season-buttons button[aria-pressed=true]{border-color:var(--ac);color:var(--ac);background:var(--surface-raised)}.share-season-modal .season-picker small{display:block;color:var(--mut);font-size:11px;line-height:1.6}.share-season-preview{display:block;width:100%;height:auto;border-radius:6px;margin:12px 0}.share-season-modal .ck{min-height:44px}.share-season-modal button:focus-visible,.share-season-modal a:focus-visible{outline:2px solid var(--ac);outline-offset:2px}.share-season-modal .share-actions{margin-top:12px}.share-season-modal .share-actions a{text-align:center}.share-explanation{line-height:1.6;margin-top:10px}';document.head.append(style);
+      function panoramaTexto(d, $, w, b, y = 26, C = r.tx, V = 500, X = 968, _ = "left") {
+        ((d.font =
+          V +
+          " " +
+          y +
+          'px system-ui,-apple-system,"Segoe UI",Arial,sans-serif'),
+          (d.fillStyle = C),
+          (d.textAlign = _),
+          (d.textBaseline = "alphabetic"));
+        let K = String($ ?? "");
+        if (d.measureText(K).width > X) {
+          const U = Array.from(K);
+          for (; U.length && d.measureText(U.join("") + "…").width > X; )
+            U.pop();
+          K = U.join("") + "…";
+        }
+        d.fillText(K, w, b);
+      }
+      function panoramaBox(d, $, w, b, y, C, V = 18) {
+        ((d.fillStyle = C),
+          d.beginPath(),
+          d.roundRect($, w, b, y, V),
+          d.fill());
+      }
+      function panoramaPreservado(d) {
+        const F=images,G=files,q=panoramaTexto,H=panoramaBox;
         const $ = d.getContext("2d"),
           w = d.width,
           b = (d.__folga && typeof IMG_FOLGA < "u" ? IMG_FOLGA.top : 0) + 150,
@@ -16187,96 +15978,11 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
           $.fillRect(48, b - 1, w - 96, 1),
           $.restore());
       }
-      async function I(d) {
-        return new Promise(($, w) =>
-          d.toBlob(
-            (b) => (b ? $(b) : w(Error("Falha ao criar a imagem."))),
-            "image/png",
-          ),
-        );
-      }
-      if (
-        (typeof shrGera == "function" &&
-          (shrGera = async function (d) {
-            const $ = u();
-            return (await c($), I(Q(d, $)));
-          }),
-        typeof shrGeraPer == "function" &&
-          (shrGeraPer = async function (d) {
-            const $ = u();
-            return (await c($), I(J(d, $)));
-          }),
-        typeof imgDados == "function")
-      ) {
-        const d = imgDados;
-        imgDados = async function () {
-          await Promise.all([d.apply(this, arguments), c("mercado")]);
-        };
-      }
-      function k() {
-        const d = document.querySelector("#shrov .sh");
-        if (!d || d.querySelector(".season-picker")) return;
-        const $ = document.createElement("section");
-        (($.className = "season-picker"),
-          $.setAttribute("aria-label", "Tema da imagem"));
-        const w = document.createElement("b");
-        ((w.textContent = "Estilo do card"), $.append(w));
-        const b = document.createElement("div");
-        b.className = "season-buttons";
-        for (const [V, X] of O) {
-          const _ = document.createElement("button");
-          ((_.type = "button"),
-            (_.textContent = X),
-            _.setAttribute("aria-pressed", String(V === i)),
-            _.addEventListener("click", async () => {
-              (m(V), typeof SHR < "u" && SHR.id && (await shrAbre(SHR.id)));
-            }),
-            b.append(_));
-        }
-        $.append(b);
-        const y = document.createElement("small");
-        ((y.textContent =
-          (i === "auto"
-            ? "Agora: " +
-              P(u()) +
-              ". O estilo acompanha a época do ano em Brasília. Futebol é uma escolha manual."
-            : "Tema escolhido: " + P(u()) + ".") +
-          (e.has(G[u()])
-            ? " Arte indisponível. A imagem foi montada com fundo simples."
-            : "")),
-          $.append(y));
-        const C = d.querySelector("img");
-        C ? C.before($) : d.append($);
-      }
-      if (typeof shrAbre == "function") {
-        const d = shrAbre;
-        shrAbre = async function ($) {
-          (await d.apply(this, arguments),
-            typeof SHR < "u" && SHR.id === $ && k());
-        };
-      }
-      ((s.TraderExportBrand = Object.freeze({
-        ...l,
-        panoramaHeader: v,
-        tradeCanvas: Q,
-        periodCanvas: J,
-      })),
-        (s.TraderSeasonCards = Object.freeze({
-          automatic: E,
-          theme: u,
-          setTheme: m,
-          load: c,
-          tradeCanvas: Q,
-          periodCanvas: J,
-          mount: k,
-          paths: G,
-        })));
-      const L = document.createElement("style");
-      ((L.textContent =
-        ".season-picker{padding:16px;margin:12px 0;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx)}.season-picker>b{font-size:13px}.season-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin:8px 0;max-height:148px;overflow-y:auto;overscroll-behavior:contain;padding:4px}.season-buttons button{min-height:40px;padding:8px 12px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--mut);font:600 12px system-ui;cursor:pointer}.season-buttons button[aria-pressed=true]{border-color:var(--ac);color:var(--ac);background:var(--surface-raised)}.season-picker small{display:block;font-size:11px;line-height:1.6;color:var(--mut)}"),
-        document.head.appendChild(L),
-        c("mercado"));
-    })(window),
+  if(typeof imgDados==='function'){const anterior=imgDados;imgDados=async function(){await Promise.all([anterior.apply(this,arguments),load('mercado')])}}
+  load('mercado');
+  s.TraderSeasonCards=Object.freeze({automatic:M.automatic,theme:()=>active(),setTheme,load,tradeCanvas,periodCanvas:legacyPeriodCanvas,summary,paths:files,fileName});
+  s.TraderExportBrand=Object.freeze({...l,panoramaHeader:panoramaPreservado,tradeCanvas,periodCanvas:legacyPeriodCanvas});
+})(window),
     (function () {
       "use strict";
       const s = window,

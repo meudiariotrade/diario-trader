@@ -54911,7 +54911,7 @@ const SHR_CAM =
       const a = shrAcha(SHR.id),
         o = new File(
           [SHR.blob],
-          "trade-" + String((a && a.ativo) || "diario").toLowerCase() + ".png",
+          window.TraderSeasonCards?.fileName?.() || "trade-" + String((a && a.ativo) || "diario").toLowerCase() + ".png",
           { type: "image/png" },
         );
       try {
