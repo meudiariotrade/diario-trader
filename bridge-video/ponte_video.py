@@ -111,6 +111,8 @@ def escolhe_aula(sess):
 
 # ---------------------------------------------------------------- voz (edge-tts) com tempo de cada palavra
 async def tts(texto, voz, taxa, destino_mp3):
+    from tecnica_video import normalizar_texto_para_voz
+    texto=normalizar_texto_para_voz(texto)
     import edge_tts
     try: com = edge_tts.Communicate(texto, voz, rate=taxa, boundary="WordBoundary")
     except TypeError: com = edge_tts.Communicate(texto, voz, rate=taxa)
@@ -150,6 +152,9 @@ CSS_GRAVA = """
 """
 
 async def gravar(aula, sess, cfg, voz, taxa_voz, formato, saida, sem_voz=False):
+    if aula.get('roteiro',{}).get('mentor'):
+        import tecnica_video, ponte_video
+        return await tecnica_video.gravar(ponte_video,tecnica_video.manifesto_pdf(aula),cfg,voz,taxa_voz,formato,saida,sem_voz=sem_voz)
     from playwright.async_api import async_playwright
     ff = ffmpeg_bin()
     tmp = Path(tempfile.mkdtemp(prefix="aula_"))

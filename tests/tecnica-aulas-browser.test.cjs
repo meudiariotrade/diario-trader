@@ -30,3 +30,18 @@ test('MP4 chega ao fim sem reiniciar durante atualizações automáticas da tela
  assert.equal(await page.evaluate(()=>{clearInterval(window.testRefresh);return document.querySelector('[data-tp-film-player]')===window.testVideo&&window.testVideo.currentTime>=window.testVideo.duration-.1}),true);
  await page.locator('[data-tp-action="close-film"]').click();await expect(page.locator('[data-tp-film-player]')).toHaveCount(0);
 }));
+
+test('dicionário e aula do Mentor por PDF funcionam no fluxo de Aulas',{timeout:90000},async()=>withApp(async(browser,base)=>{
+ const page=await browser.newPage({viewport:{width:390,height:1000}});
+ await page.addInitScript(()=>{window.testNativeFetch=window.fetch.bind(window)});
+ const id='12345678-1234-4234-8234-123456789abc';const row={id,user_id:'test-video',roteiro:{tipo:'mentor-pdf-v1',mentor:{id,title:'Circuitos na prática',summary:'Aula criada com o PDF selecionado.',stageNames:['Conceito','Exemplo','Erro comum','Revisão'],stages:['Leitura original do conceito.','Aplicação do conceito.','Erro a evitar.','Revisão final.'],visuals:Array.from({length:4},(_,i)=>({title:'Etapa '+(i+1),items:['Conceito no material','Aplicação prática']})),roteiroVoz:{abertura:'Vamos entender o conceito.',etapas:Array(4).fill('Olhe este exemplo e confira a aplicação prática.')},questions:Array.from({length:3},()=>({q:'Qual conceito foi usado?',options:['A','B','C'],answer:0,why:'A primeira opção está no material.'}))}}};
+ let sent;
+ await page.route('**/functions/v1/aulas',route=>{sent=route.request().postDataJSON();return route.fulfill({json:{aula:row}})});
+ await page.route('**/rest/v1/aulas?**',route=>route.fulfill({json:[]}));
+ await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
+ await page.evaluate(()=>{tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000};window.SUPA_URL=location.origin;window.SUPA_KEY='public';const demoFetch=window.fetch;window.fetch=(url,options)=>String(url).startsWith(location.origin+'/functions/')||String(url).startsWith(location.origin+'/rest/')?window.testNativeFetch(url,options):demoFetch(url,options);ntLib=async()=>({getDocument:()=>({promise:Promise.resolve({numPages:2,getPage:async()=>({getTextContent:async()=>({items:[{str:'Um circuito elétrico relaciona tensão corrente e resistência. '.repeat(20)}]}),cleanup(){}}),destroy:async()=>{}}),destroy(){}})});render()});
+ await page.locator('.tp-voice-dict > summary').click();await page.locator('[data-tp-dictionary]').fill('MACD = mac dê\nXYZ = xis especial');await page.locator('[data-tp-dict="save"]').click();await expect(page.locator('[data-tp-dict-status]')).toContainText('salvo');assert.equal(await page.evaluate(()=>DiarioVoz.normalizarTextoParaVoz('XYZ')),'xis especial');
+ await page.locator('.tp-pdf > summary').click();await page.locator('[data-tp-pdf-file]').setInputFiles({name:'apostila.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7\nfixture')});await page.locator('[data-tp-pdf-theme]').fill('Circuitos');await page.locator('[data-tp-pdf-last]').fill('2');await page.locator('[data-tp-pdf-form] button[type="submit"]').click();
+ await expect(page.locator('[data-tp-pdf-status]')).toContainText('Aula salva',{timeout:15000});assert.equal(sent.acao,'mentor_pdf');assert.equal(sent.tema,'Circuitos');assert.equal(sent.paginas,'1–2');
+ await page.locator(`[data-tp-lesson="${id}"]`).click();await expect(page.locator('#tp-title')).toHaveText('Circuitos na prática');await page.locator('[data-tp-action="visual"]').click();await expect(page.locator('.tp-chart svg')).toBeVisible();await expect(page.locator('.tp-script')).toContainText('Leitura original');
+}));

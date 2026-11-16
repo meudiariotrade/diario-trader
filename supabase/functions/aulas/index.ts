@@ -1,3 +1,5 @@
+import { gerarTexto } from '../_shared/ai-router.ts';
+import { validarMentor, SISTEMA_MENTOR } from './mentor-pdf.ts';
 // Função AULAS — gera videoaulas a partir do texto de capítulos de um livro (Gemini).
 // O app extrai o texto do PDF no aparelho e manda um capítulo por chamada:
 //   POST {acao:"iniciar", livro, numero, capitulos:[nomes]}            -> cria a aula (status "gerando")
@@ -10,7 +12,7 @@
 
 const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), ANON = ENV('SUPABASE_ANON_KEY'), GEMINI_KEY = ENV('GEMINI_API_KEY');
-export const VERSAO_FN = 'v516';
+export const VERSAO_FN = 'v667';
 const LIMITE_AULAS_DIA = 6, LIMITE_PARTES_DIA = 80, MAX_TEXTO = 90_000;
 
 // ---------- segurança (mesmo padrão das outras funções) ----------
@@ -390,8 +392,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try { if (new URL(req.url).searchParams.has('versao')) return out({ fn: 'aulas', versao: VERSAO_FN }); } catch { /* */ }
   if (req.method !== 'POST') return out({ error: 'Método não permitido' }, 405);
-  if (!GEMINI_KEY || !SRK) return out({ error: 'Falta configurar a chave do Gemini no Supabase.' }, 500);
+  if (!SRK) return out({ error: 'Serviço de aulas indisponível.' }, 500);
   let b: any; try { b = await req.json(); } catch { return out({ error: 'Pedido inválido.' }, 400); }
+  if(b?.acao!=='mentor_pdf'&&!GEMINI_KEY)return out({error:'Falta configurar a chave do Gemini no Supabase.'},500);
   if (b?.acao === 'processar') { if (!dentroDoLimite('fila:proc', 4)) return out({ ok: true, ocupado: true }); // só avança a fila; não lê nem devolve dados
     const job = processar().catch((e) => console.error('fila', e));
     try { (globalThis as any).EdgeRuntime?.waitUntil(job); } catch { /* */ }
@@ -402,6 +405,23 @@ Deno.serve(async (req) => {
 
   let reservaId: string | null = null;
   try {
+    if (b.acao === 'mentor_pdf') {
+      const id=String(b.requestId||''),texto=String(b.texto||'').replace(/\u0000/g,''),tema=txt(b.tema,180),arquivo=txt(b.arquivo,140),paginas=txt(b.paginas,40);
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)||!tema||!arquivo||!paginas||texto.trim().length<300||texto.length>85000)return out({error:'Informe PDF com texto selecionável, tema e até 85 mil caracteres por aula.'},400);
+      const existing=await db(`aulas?id=eq.${id}&user_id=eq.${uid}&select=id,roteiro`);
+      if(existing?.[0]?.roteiro?.mentor)return out({aula:existing[0]});
+      const reserva=await reservaUso(uid,'iniciar','mentor:'+id);
+      if(!reserva.permitido)return out({error:'Geração já em andamento ou limite diário de aulas atingido.'},429);
+      reservaId=reserva.id;
+      const result=await gerarTexto(SISTEMA_MENTOR,JSON.stringify({tema,arquivo,paginas,conteudoPDF:texto}),{json:true,ate:Date.now()+110000,temp:0.35});
+      const raw=result.texto.replace(/^```(?:json)?\s*|\s*```$/g,'');let parsed;try{parsed=JSON.parse(raw);}catch{throw Error('A IA não devolveu uma aula estruturada. Tente novamente.');}
+      const mentor=validarMentor(parsed,{id,arquivo,paginas});
+      const cenas=mentor.stages.map((t:string,i:number)=>({titulo:mentor.stageNames[i],vis:{tipo:'topicos',t:mentor.stageNames[i],itens:mentor.visuals[i].items.map((t:string)=>({t}))},fala:[mentor.roteiroVoz.etapas[i]],pausa:900}));
+      const roteiro={versao:1,tipo:'mentor-pdf-v1',mentor,livro:'Mentor PDF · '+id,min:mentor.minutes,cenas,partes:[],caps:[tema],modelo:result.rotulo};
+      const linha={id,user_id:uid,livro:'Mentor PDF · '+id,numero:1,titulo:mentor.title,capitulos:paginas,status:'pronta',erro:null,roteiro,progresso:{},criado_em:new Date().toISOString(),atualizado_em:new Date().toISOString()};
+      const saved=await db('aulas?select=id,roteiro',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(linha)});
+      return out({aula:saved?.[0],modelo:result.rotulo});
+    }
     if (b.acao === 'iniciar') {
       const livro = txt(b.livro, 140), numero = Math.round(num(b.numero, 1, 999, 0)!), caps = arr(b.capitulos).map((c) => txt(c, 120)).filter(Boolean).slice(0, 4);
       if (!livro || !numero || !caps.length) return out({ error: 'Informe o livro, o número da aula e os capítulos.' }, 400);

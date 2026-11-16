@@ -11086,7 +11086,7 @@ ${W.text}
           return;
         }
         try {
-          const re = new SpeechSynthesisUtterance(x.t),
+          const re = new SpeechSynthesisUtterance(window.DiarioVoz?.normalizarTextoParaVoz(x.t) || x.t),
             ie = K();
           ((re.lang = "pt-BR"),
             ie && ((re.voice = ie), (re.lang = ie.lang)),

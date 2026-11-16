@@ -68,4 +68,13 @@ class Integration(unittest.TestCase):
                 with patch.object(t,'gravar',side_effect=good):t.processar(p,cfg)
             self.assertEqual(len(uploaded),1)
 
+    def test_glossary_and_pdf_manifest_are_safe_and_use_new_voice(self):
+        self.assertEqual(t.normalizar_texto_para_voz('OCOI e MM200'), 'ombro cabeça ombro invertido e média móvel de duzentos períodos')
+        self.assertEqual(t.normalizar_texto_para_voz('WINNER MM2000'),'WINNER MM2000')
+        a={'id':'aula-pdf','roteiro':{'mentor':{'title':'Circuitos','summary':'Resumo','stages':['Texto']*4,'visuals':[{'title':'Etapa','items':['<script>alert(1)</script>']}]*4,'roteiroVoz':{'abertura':'Abertura prática','etapas':['Roteiro conversado']*4}}}}
+        data=t.manifesto_pdf(a)
+        self.assertEqual(data['stages'][0]['roteiroVoz'],'Roteiro conversado')
+        self.assertNotIn('<script',data['stages'][0]['svg'])
+        self.assertIn('&lt;script&gt;',data['stages'][0]['svg'])
+
 if __name__=='__main__':unittest.main()

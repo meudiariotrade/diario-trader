@@ -1,8 +1,8 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const {JSDOM}=require('jsdom');
-const sources=['conteudo','graficos','aulas','estilos'];
+const sources=['conteudo','voz','roteiros','graficos','pdf','aulas','estilos'];
 function app(){const dom=new JSDOM('<main id="app"></main>',{url:'https://example.test/diario-trader/',runScripts:'dangerously',pretendToBeVisual:true}),w=dom.window;
  w.eval(`var tab='estudos',ESV='aul',SESS={uid:'conta-a'};function vEstudos(){return '<div id="aulas-antigas">Aula antiga preservada</div>'};function render(){document.getElementById('app').innerHTML=vEstudos()}`);
- w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLMediaElement.prototype.load=function(){};w.HTMLMediaElement.prototype.pause=function(){};w.HTMLMediaElement.prototype.play=()=>Promise.resolve();
+ w.TextDecoder=TextDecoder;w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLMediaElement.prototype.load=function(){};w.HTMLMediaElement.prototype.pause=function(){};w.HTMLMediaElement.prototype.play=()=>Promise.resolve();
  w.speechSynthesis={getVoices:()=>[{lang:'pt-BR',name:'Voz BR'}],cancel(){this.cancelled=(this.cancelled||0)+1;},speak(u){this.last=u;u.onstart?.();}};w.SpeechSynthesisUtterance=function(text){this.text=text;};
  for(const s of sources)w.eval(fs.readFileSync(path.join(__dirname,'../src/studies/tecnica-'+s+'.js'),'utf8'));
  w.render();const close=w.close.bind(w);w.close=()=>{w.TecnicaPratica.view.dispose();close();};return dom;
@@ -26,7 +26,7 @@ test('armazenamento bloqueado e progresso corrompido mantêm trilha utilizável'
 test('publicação inclui os dois cenários e o MP4 de gestos do mentor',()=>{const {reachableFiles}=require('../scripts/build.cjs');const files=reachableFiles().files;for(const n of ['avatar-mentor.png','avatar-mentor-chart.png','avatar-talking.mp4'])assert.ok(files.includes('public/'+n));const build=fs.readFileSync(path.join(__dirname,'../scripts/build.cjs'),'utf8');assert.ok(build.includes("file.startsWith('public/')"));});
 test('ponte real: vídeo privado respeita conta, formato, navegação e erro de arquivo ausente',async()=>{
  const d=app(),w=d.window;open(w);w.SESS.at='token-de-teste';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'publica'});let request;
- w.fetch=async(url,options)=>{request={url,options};return {ok:true,json:async()=>({signedURL:'/object/sign/aulas-videos/conta-a/tecnica-v1-martelo-16x9.mp4?token=temporario'})}};
+ w.fetch=async(url,options)=>{if(url.includes('/rest/v1/aulas'))return {ok:true,json:async()=>[]};request={url,options};return {ok:true,json:async()=>({signedURL:'/object/sign/aulas-videos/conta-a/tecnica-v1-martelo-16x9.mp4?token=temporario'})}};
  click(w,'[data-tp-film="16x9"]');await flush();const v=w.document.querySelector('[data-tp-film-player]');assert.ok(v);assert.match(v.src,/\/conta-a\/tecnica-v1-martelo-16x9.mp4/);assert.equal(request.options.headers.Authorization,'Bearer token-de-teste');assert.equal(JSON.parse(request.options.body).expiresIn,3600);assert.equal(w.localStorage.getItem('diario:ponte-video:voz-url'),null);
  w.SESS={uid:'conta-b',at:'b'};w.render();await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),null);
  open(w);w.fetch=async()=>({ok:false,json:async()=>({error:'missing'})});click(w,'[data-tp-film="9x16"]');await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),null);assert.match(w.document.querySelector('.tp-status').textContent,/ainda indisponível/);w.close();
@@ -52,4 +52,27 @@ test('vídeo mantém arquivo e posição ao ocultar a página; fechar encerra o 
  assert.equal(w.document.querySelector('[data-tp-film-player]'),video);assert.equal(video.src,src);assert.equal(video.currentTime,82);
  Object.defineProperty(w.document,'hidden',{value:false,configurable:true});w.document.dispatchEvent(new w.Event('visibilitychange'));await flush();
  click(w,'[data-tp-action="close-film"]');assert.equal(w.document.querySelector('[data-tp-film-player]'),null);w.close();
+});
+
+test('voz: pronúncias padrão, limites de palavras, termos literais e preferências por conta',()=>{
+ const d=app(),w=d.window,V=w.DiarioVoz;for(const [term,expected] of Object.entries(V.defaults))assert.equal(V.normalizarTextoParaVoz(term.toLowerCase()),expected);
+ assert.equal(V.normalizarTextoParaVoz('OCOI/OCO, MM200 e WIN.'),'ombro cabeça ombro invertido/ombro cabeça ombro, média móvel de duzentos períodos e mini índice.');assert.equal(V.normalizarTextoParaVoz('WINNER MM2000 WDOX'),'WINNER MM2000 WDOX');
+ V.save({'MACD':'mac dê','A+B':'a mais bê'});assert.equal(V.normalizarTextoParaVoz('MACD e A+B'),'mac dê e a mais bê');w.SESS={uid:'conta-b'};assert.equal(V.normalizarTextoParaVoz('MACD'),'méqui dê');w.localStorage.setItem('diario:voz:glossario:v1:conta-b','quebrado');assert.equal(V.normalizarTextoParaVoz('ETF'),'ê tê éfe');assert.throws(()=>V.save({'':'vazio'}));w.close();
+});
+test('voz: roteiro prático e normalização chegam ao TTS sem mudar leitura ou diagramas',async()=>{
+ const d=app(),w=d.window;open(w,'sma-ema');click(w,'[data-tp-action="visual"]');const reading=w.document.querySelector('.tp-script p').textContent,svg=w.document.querySelector('.tp-chart').innerHTML;assert.match(reading,/alfa/);
+ w.DIARIO_PONTE_VIDEO={vozUrl:'http://127.0.0.1:9999/tts'};let spoken;w.fetch=async(url,opt)=>{spoken=JSON.parse(opt.body).text;throw Error('offline')};click(w,'[data-tp-action="listen"]');await flush();assert.doesNotMatch(spoken,/alfa|EMA atual|\bMME9\b/);assert.match(spoken,/inclinação/);assert.equal(w.speechSynthesis.last.text,spoken);assert.equal(w.document.querySelector('.tp-script p').textContent,reading);assert.equal(w.document.querySelector('.tp-chart').innerHTML,svg);assert.equal(w.TecnicaPratica.lessons.filter(l=>l.roteiroVoz?.etapas?.length===4).length,18);w.close();
+});
+test('dicionário editável salva e acrescenta pronúncia sem executar HTML',()=>{
+ const d=app(),w=d.window,input=w.document.querySelector('[data-tp-dictionary]');input.value='MACD = mac dê\nXYZ = xis especial';click(w,'[data-tp-dict="save"]');assert.equal(w.DiarioVoz.normalizarTextoParaVoz('XYZ'),'xis especial');assert.match(w.document.querySelector('[data-tp-dict-status]').textContent,/salvo/);click(w,'[data-tp-dict="reset"]');assert.equal(w.DiarioVoz.normalizarTextoParaVoz('MACD'),'méqui dê');w.close();
+});
+function mentorFixture(){return {id:'12345678-1234-4234-8234-123456789abc',user_id:'conta-a',roteiro:{tipo:'mentor-pdf-v1',mentor:{title:'Conceito do PDF',summary:'Aula do material selecionado',stageNames:['Conceito','Aplicação','Erro','Revisão'],stages:['Leitura 1','Leitura 2','Leitura 3','Leitura 4'],visuals:Array.from({length:4},()=>({title:'<img src=x onerror=alert(1)>',items:['<script>alert(1)</script>','Exemplo claro']})),roteiroVoz:{abertura:'Vamos estudar',etapas:['Fala 1','Fala 2','Fala 3','Fala 4']},questions:Array.from({length:3},()=>({q:'Pergunta?',options:['A','B','C'],answer:0,why:'Conferindo o material'}))}}};}
+test('PDF: etapas seguras, persistência via serviço existente e segregação por conta',async()=>{
+ const d=app(),w=d.window;await flush();w.SESS.at='token';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'public'});const row=mentorFixture();w.fetch=async()=>({ok:true,json:async()=>[row]});await w.TecnicaPratica.pdf.load(true);assert.ok(w.TecnicaPratica.lessons.some(l=>l.id===row.id));open(w,row.id);click(w,'[data-tp-action="visual"]');assert.equal(w.document.querySelector('.tp-chart img'),null);assert.equal(w.document.querySelector('.tp-chart script'),null);assert.match(w.document.querySelector('.tp-chart').textContent,/<script>/);w.SESS={uid:'outra-conta'};w.render();await flush();assert.equal(w.TecnicaPratica.lessons.some(l=>l.pdf),false);w.close();
+});
+test('PDF: seleção de arquivo e páginas alimenta geração e só salva uma aula válida',async()=>{
+ const d=app(),w=d.window;await flush();w.SESS.at='token';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'public'});const row=mentorFixture();let body,destroyed=0;
+ const bytes=new TextEncoder().encode('%PDF-1.7 fixture');const file={name:'capitulo.pdf',size:bytes.length,type:'application/pdf',arrayBuffer:async()=>bytes.buffer};const input=w.document.querySelector('[data-tp-pdf-file]');Object.defineProperty(input,'files',{value:[file]});input.dispatchEvent(new w.Event('change',{bubbles:true}));const theme=w.document.querySelector('[data-tp-pdf-theme]');theme.value='Conceito central';theme.dispatchEvent(new w.Event('input',{bubbles:true}));
+ w.ntLib=async()=>({getDocument:()=>({promise:Promise.resolve({numPages:8,getPage:async()=>({getTextContent:async()=>({items:[{str:'Conteúdo didático para teste. '.repeat(30)}]}),cleanup(){}}),destroy:async()=>{destroyed++}}),destroy(){}})});
+ w.fetch=async(url,opt)=>url.includes('/rest/')?{ok:true,json:async()=>[]}:(body=JSON.parse(opt.body),{ok:true,json:async()=>({aula:row})});await w.TecnicaPratica.pdf.generate();assert.ok(body,w.document.querySelector('[data-tp-pdf-status]').textContent);assert.equal(body.acao,'mentor_pdf');assert.equal(body.tema,'Conceito central');assert.match(body.texto,/Página 1/);assert.equal(body.paginas,'1–8');assert.equal(destroyed,1);assert.ok(w.TecnicaPratica.lessons.some(l=>l.id===row.id));assert.match(w.document.querySelector('[data-tp-pdf-status]').textContent,/Aula salva/);w.close();
 });

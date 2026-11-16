@@ -18,3 +18,7 @@ Inclui avatar-talking.mp4 com gestos do mentor enviados pelo usuário. O clipe f
 Validação: testes locais de manifesto, compatibilidade, isolamento de conta e envio/repetição. Geração real com voz Microsoft, navegador/FFmpeg e envio do seu PC ainda precisa ser validada no Windows.
 
 A atualização preserva o cache por voz/velocidade e evita enviar MP4 parcial após falha de geração. Ao instalar este clipe, a ponte regenera os vídeos da trilha com animação automaticamente, preservando as aulas antigas.
+
+ATUALIZAÇÃO v667 — Voz e PDF do Mentor
+Atualize todos os arquivos desta pasta, mantendo config.json. As 18 lições têm roteiros falados próprios, sem leitura de fórmulas. Novas aulas do Mentor criadas por PDF na conta também são convertidas com o avatar.
+Dicionário editável: no app use Dicionário de Voz > Exportar para a ponte e copie dicionario-voz.json para esta pasta. No app as mudanças são usadas na próxima narração; nos MP4 exigem nova geração. Vídeos já enviados não têm o áudio alterado automaticamente pelo site.

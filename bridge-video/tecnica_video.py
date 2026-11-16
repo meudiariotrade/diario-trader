@@ -13,6 +13,37 @@ def carregar(cfg):
         raise ValueError('Manifesto da trilha incompatível')
     return local
 
+def dicionario_voz():
+    try: terms=dict(carregar({}).get('glossario',{}))
+    except Exception: terms={}
+    custom=BASE/'dicionario-voz.json'
+    if custom.exists():
+        data=json.loads(custom.read_text(encoding='utf-8')).get('terms',{})
+        if not isinstance(data,dict) or len(data)>200:raise ValueError('Dicionário de voz inválido')
+        terms.update(data)
+    return {str(k).upper():str(v) for k,v in terms.items() if 0<len(str(k))<=40 and 0<len(str(v))<=180}
+
+def normalizar_texto_para_voz(text):
+    terms=dicionario_voz()
+    if not terms:return str(text)
+    pattern=r'(?<!\w)('+ '|'.join(re.escape(k) for k in sorted(terms,key=len,reverse=True))+r')(?!\w)'
+    return re.sub(pattern,lambda m:terms[m.group().upper()],str(text),flags=re.I)
+
+def manifesto_pdf(aula):
+    lesson=aula['roteiro']['mentor']
+    if len(lesson.get('stages',[]))!=4 or len(lesson.get('visuals',[]))!=4:raise ValueError('Aula do PDF incompleta')
+    stages=[]
+    for i,txt in enumerate(lesson['stages']):
+        v=lesson['visuals'][i];title=str(v.get('title','Etapa'))[:70]
+        svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 370"><rect width="760" height="370" fill="#0A0C10"/><text x="28" y="40" fill="#D4A017" font-size="21">'+html.escape(title)+'</text>'
+        for j,item in enumerate(v.get('items',[])[:4]):
+            import textwrap
+            for k,line in enumerate(textwrap.wrap(str(item)[:105],58)[:2]):
+                svg+='<text x="40" y="'+str(100+j*65+k*22)+'" fill="#E7EBF2" font-size="17">'+html.escape(line)+'</text>'
+        svg+='</svg>'
+        stages.append({'title':title,'text':str(txt),'roteiroVoz':lesson.get('roteiroVoz',{}).get('etapas',lesson['stages'])[i],'svg':svg})
+    return {'id':str(aula['id']),'title':str(lesson['title']),'summary':str(lesson['summary']),'aberturaVoz':lesson.get('roteiroVoz',{}).get('abertura',lesson['summary']),'reference':str(lesson.get('reference','PDF enviado pelo usuário')),'stages':stages}
+
 def assinatura(lesson):
     return hashlib.sha256(json.dumps(lesson, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
 
@@ -47,7 +78,7 @@ async def gravar(p, lesson, cfg, voice, rate, fmt, output, sem_voz=False):
                     animated=await page.locator('#mentor-motion').count() > 0
                     if animated:
                         await page.wait_for_function('document.getElementById("mentor-motion").readyState>=2')
-                    text=lesson['summary'] if stage<0 else lesson['stages'][stage]['text']
+                    text=lesson.get('aberturaVoz',lesson['summary']) if stage<0 else lesson['stages'][stage].get('roteiroVoz',lesson['stages'][stage]['text'])
                     p.diga(f"  {lesson['title']} · etapa {stage+2}/5")
                     # Uma legenda por frase evita um bloco de texto cortado em 9:16.
                     for phrase in re.split(r'(?<=[.!?])\s+',text):
@@ -89,7 +120,7 @@ async def gravar(p, lesson, cfg, voice, rate, fmt, output, sem_voz=False):
             f.write(f"file '{frames[-1][0].as_posix()}'\n")
         output.parent.mkdir(parents=True,exist_ok=True)
         subprocess.run([ff,'-y','-loglevel','error','-f','concat','-safe','0','-i',str(listing),'-i',str(wavfile),'-vf',f'fps=30,scale={width}:{height},format=yuv420p','-c:v','libx264','-preset','veryfast','-crf','24','-c:a','aac','-b:a','96k','-shortest','-movflags','+faststart',str(output)],check=True)
-    return output
+    return sum(d for _,d in frames)
 
 def processar(p,cfg,manual=False):
     data=carregar(cfg);lessons=data['lessons'];auto=cfg.get('auto',{})
@@ -103,7 +134,8 @@ def processar(p,cfg,manual=False):
     for lesson in lessons:
         clip=RESOURCE/'avatar-talking.mp4'
         motion=hashlib.sha256(clip.read_bytes()).hexdigest()[:16] if clip.exists() else 'still'
-        digest=assinatura(lesson)+'-'+motion
+        glossary=hashlib.sha256(json.dumps(dicionario_voz(),sort_keys=True,ensure_ascii=False).encode()).hexdigest()[:10]
+        digest=assinatura(lesson)+'-'+motion+'-'+glossary
         for k in formats:
             fmt=p.FORMATOS[k];key=f"{account}|{lesson['id']}|{digest}|{fmt[0]}|{voice}|{rate}"
             # Sucesso só após upload; falhas de envio são repetidas no próximo ciclo.
