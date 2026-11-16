@@ -36,3 +36,20 @@ test('ponte real: resposta assinada atrasada não reabre vídeo em outra conta',
  click(w,'[data-tp-film="16x9"]');await flush();w.SESS={uid:'conta-b',at:'b'};w.render();resolve({ok:true,json:async()=>({signedURL:'/object/sign/aulas-videos/conta-a/tecnica-v1-martelo-16x9.mp4?token=x'})});await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),null);w.close();
 });
 test('exportação da ponte corresponde aos mesmos gráficos e roteiros usados na aula',()=>{const {manifest}=require('../scripts/export-tecnica.cjs');const m=manifest();assert.equal(m.lessons.length,18);assert.ok(m.lessons.every(l=>l.stages.length===4&&l.stages.every(s=>s.svg.includes('<svg')&&s.text)));const published=JSON.parse(fs.readFileSync(path.join(__dirname,'../public/tecnica-trilha.json'),'utf8'));assert.deepEqual(published,m);});
+
+test('vídeo completo não é recriado por atualizações da tela durante a reprodução',async()=>{
+ const d=app(),w=d.window;open(w);w.SESS.at='a';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'publica'});
+ w.fetch=async()=>({ok:true,json:async()=>({signedURL:'/object/sign/aulas-videos/conta-a/tecnica-v1-martelo-16x9.mp4?token=x'})});
+ click(w,'[data-tp-film="16x9"]');await flush();const video=w.document.querySelector('[data-tp-film-player]');
+ for(const time of [30,65,121]){video.currentTime=time;w.render();await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),video,'a atualização deve preservar o elemento de mídia');assert.equal(video.currentTime,time);}
+ w.ESV='liv';w.render();await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),null);assert.equal(video.getAttribute('src'),null);w.close();
+});
+test('vídeo mantém arquivo e posição ao ocultar a página; fechar encerra o player',async()=>{
+ const d=app(),w=d.window;open(w);w.SESS.at='a';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'publica'});
+ w.fetch=async()=>({ok:true,json:async()=>({signedURL:'/object/sign/aulas-videos/conta-a/tecnica-v1-martelo-16x9.mp4?token=x'})});
+ click(w,'[data-tp-film="16x9"]');await flush();const video=w.document.querySelector('[data-tp-film-player]'),src=video.src;video.currentTime=82;
+ Object.defineProperty(w.document,'hidden',{value:true,configurable:true});w.document.dispatchEvent(new w.Event('visibilitychange'));await flush();
+ assert.equal(w.document.querySelector('[data-tp-film-player]'),video);assert.equal(video.src,src);assert.equal(video.currentTime,82);
+ Object.defineProperty(w.document,'hidden',{value:false,configurable:true});w.document.dispatchEvent(new w.Event('visibilitychange'));await flush();
+ click(w,'[data-tp-action="close-film"]');assert.equal(w.document.querySelector('[data-tp-film-player]'),null);w.close();
+});
