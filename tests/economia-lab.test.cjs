@@ -9,8 +9,8 @@ test('Estudos: mantém conteúdo anterior e abre laboratório com 5 ferramentas'
  await p.route('https://**',r=>r.abort());
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
  await p.evaluate(()=>{tab='estudos';ESV='liv';render()});
- await expect(p.locator('[data-ep="esv"][data-id="eco"]').first()).toBeVisible();
- await p.locator('[data-ep="esv"][data-id="eco"]').first().click();
+ await expect(p.locator('[data-eco-launch]')).toBeVisible();
+ await p.locator('[data-eco-launch]').click();
  await expect(p.locator('.eco-head h2')).toHaveText('Laboratório de Economia');
  await expect(p.locator('.eco-nav [data-eco-tool]')).toHaveCount(5);
  await expect(p.locator('.eco-root')).toContainText('Regra de Taylor');
