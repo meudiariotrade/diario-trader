@@ -1,4 +1,4 @@
-name: Mercado v655 - validar, sincronizar bundles e publicar
+name: Mercado v656 - validar, sincronizar bundles e publicar
 on:
   push:
     branches: [main]
@@ -10,7 +10,7 @@ permissions:
   pages: write
   id-token: write
 concurrency:
-  group: mercado-v655-publicacao
+  group: mercado-v656-publicacao
   cancel-in-progress: false
 jobs:
   build:
@@ -44,7 +44,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -u
           if ! git diff --cached --quiet; then
-            git commit -m "Build: sincronizar bundles v655 [skip ci]"
+            git commit -m "Build: sincronizar bundles v656 [skip ci]"
             git push origin HEAD:main
           fi
       - uses: actions/upload-pages-artifact@v3
