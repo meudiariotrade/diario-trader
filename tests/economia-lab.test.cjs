@@ -3,16 +3,18 @@ const assert=require('node:assert/strict');
 const {expect}=require('playwright/test');
 const {withApp}=require('./helpers/app.cjs');
 
-test('Estudos: mantém conteúdo anterior e abre laboratório com 5 ferramentas',{timeout:90000},async()=>withApp(async(browser,base)=>{
+test('Estudos: mantém conteúdo anterior e abre laboratório com 10 ferramentas sem banner',{timeout:90000},async()=>withApp(async(browser,base)=>{
  const p=await browser.newPage({viewport:{width:390,height:844}});
  const errs=[];p.on('pageerror',e=>errs.push(e.message));
  await p.route('https://**',r=>r.abort());
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
  await p.evaluate(()=>{tab='estudos';ESV='liv';render()});
- await expect(p.locator('[data-eco-launch]')).toBeVisible();
- await p.locator('[data-eco-launch]').click();
+ await expect(p.locator('[data-eco-launch]')).toHaveCount(0);
+ await expect(p.locator('.v596-sub [data-dt397-view="eco"]')).toBeVisible();
+ await p.locator('.v596-sub [data-dt397-view="eco"]').click();
  await expect(p.locator('.eco-head h2')).toHaveText('Laboratório de Economia');
- await expect(p.locator('.eco-nav [data-eco-tool]')).toHaveCount(5);
+ await expect(p.locator('.eco-nav [data-eco-tool]')).toHaveCount(10);
+ await expect(p.locator('.v596-sub [data-dt397-view]')).toHaveCount(4);
  await expect(p.locator('.eco-nav [data-eco-tool="mf"]')).toBeVisible();
  await expect(p.locator('.eco-root')).toContainText('Regra de Taylor');
  await p.locator('.eco-nav [data-eco-tool="mf"]').click();
