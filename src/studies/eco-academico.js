@@ -52,6 +52,12 @@ function download(name,data,type){
  setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 L.events.uniExport=()=>download('laboratorio-economia-historico.json',JSON.stringify(db,null,2),'application/json');
+// Preserva título e texto enquanto o app recebe atualizações e repinta a aba.
+document.addEventListener('input',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='ficha')return;
+ if(e.target.matches('[data-uni-title]'))S.uniTitle=e.target.value.slice(0,160);
+ if(e.target.matches('[data-uni-text]'))S.uniText=e.target.value.slice(0,60000);
+},true);
 document.addEventListener('change',async e=>{
  const target=e.target;if(!target||typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='eco')return;
  if(target.matches('[data-eco-history]')){
