@@ -1,8 +1,7 @@
-/* v691 — Auditoria & Monte Carlo exclusivamente em Operações (sem novas APIs ou dados persistidos). */
+/* v692 — Auditoria & Monte Carlo exclusivamente em Operações (sem novas APIs ou dados persistidos). */
 ;(function(){
 'use strict';
 const w=window,d=document;
-if(typeof vOpsHub!=='function')return;
 const B={expanded:false,period:'all',module:'all',inputs:null,paramsKey:'',result:null};
 const h=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const brl=x=>Number.isFinite(x)?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(x):'—';
@@ -218,13 +217,45 @@ function mainPanel(){
  '<p class="a691-note">Nenhuma operação encerrada com P&amp;L válido neste recorte. Ajuste os filtros ou sincronize seus trades do Profit; nenhum resultado é inventado.</p>')+
  '<p class="a691-foot">Cálculos locais sobre operações já carregadas; não altera trades, integração Profit nem banco. P&amp;L convertido para R$ pela taxa já usada no aplicativo. Apenas resultados encerrados, sem lançamentos financeiros.</p></div>';
 }
-const original=vOpsHub;
-vOpsHub=function(){
- const base=original.apply(this,arguments);
- const audit='<details class="a691-root" id="ops-audit-691"'+(B.expanded?' open':'')+'><summary>Auditoria &amp; Monte Carlo <small>Horários · EV · Risco · Disciplina</small></summary>'+
- (B.expanded?mainPanel():'')+'</details>';
- return base.includes('<h2>Visão geral</h2>')?base.replace('<h2>Visão geral</h2>',audit+'<h2>Visão geral</h2>'):base+audit;
-};
+function auditMarkup(){
+ return '<details class="a691-root" id="ops-audit-691"'+(B.expanded?' open':'')+
+  '><summary>Auditoria &amp; Monte Carlo <small>Horários · EV · Risco · Disciplina</small></summary>'+
+  (B.expanded?mainPanel():'')+'</details>';
+}
+// A rota Operações pode ser reconstruída por uma camada posterior.
+// Encaixa a auditoria no DOM final, sem manter qualquer outra aba montada.
+function mount(){
+ if(typeof tab==='undefined'||tab!=='ops')return;
+ const app=d.getElementById('app');
+ if(!app||app.querySelector('#ops-audit-691'))return;
+ const anchor=app.querySelector('.modg')||app.querySelector('h1');
+ const host=d.createElement('div');
+ host.innerHTML=auditMarkup();
+ const element=host.firstElementChild;
+ if(anchor)anchor.after(element);
+ else app.prepend(element);
+}
+if(typeof vOpsHub==='function'){
+ const original=vOpsHub;
+ vOpsHub=function(){
+  const base=original.apply(this,arguments),audit=auditMarkup();
+  return base.includes('<h2>Visão geral</h2>')?
+   base.replace('<h2>Visão geral</h2>',audit+'<h2>Visão geral</h2>'):base+audit;
+ };
+}
+function watchApp(){
+ const app=d.getElementById('app');
+ if(!app)return;
+ if(!app._opsAuditObserver){
+  const observer=new MutationObserver(mount);
+  observer.observe(app,{childList:true});
+  app._opsAuditObserver=observer;
+ }
+ mount();
+}
+if(w.TraderUI?.onRender)w.TraderUI.onRender('ops-audit-691',mount);
+if(d.readyState==='loading')d.addEventListener('DOMContentLoaded',watchApp,{once:true});
+else watchApp();
 d.addEventListener('toggle',e=>{
  if(e.target?.id!=='ops-audit-691'||typeof tab==='undefined'||tab!=='ops')return;
  const open=e.target.open;
