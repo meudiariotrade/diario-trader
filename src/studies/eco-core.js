@@ -11,40 +11,25 @@ L.kpi=(t,v)=>'<div class="eco-kpi"><small>'+t+'</small><b>'+v+'</b></div>';
 L.note=v=>'<p class="eco-note">'+v+'</p>';
 L.slider=(id,t,min,max,step,u)=>'<label class="eco-slider"><span>'+t+' <output data-eco-out="'+id+'">'+L.f(S[id],1)+u+'</output></span><input data-eco-range="'+id+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+S[id]+'"></label>';
 L.label=(s)=>L.esc(s).slice(0,900);
-const tabList=[['mon','Política monetária'],['mf','IS–LM–BP'],['eco','Econometria'],['quiz','Questões & ANPEC'],['tempo','Brasil pós-Real']];
+const tabList=[['mon','Política monetária'],['mf','IS–LM–BP'],['eco','Econometria'],['quiz','Questões & ANPEC'],['tempo','Brasil pós-Real'],['ficha','Fichamentos'],['micro','Microeconomia'],['flash','Flashcards'],['series','Séries BCB / IBGE'],['revisao','Resumo de prova']];
 function tabeco(){return '<nav class="eco-nav" aria-label="Ferramentas de economia">'+tabList.map(([id,n])=>'<button type="button" data-eco-tool="'+id+'" class="'+(S.tool===id?'on':'')+'">'+n+'</button>').join('')+'</nav>';}
 function corpo(){return typeof L.views[S.tool]==='function'?L.views[S.tool]():'<p>Ferramenta indisponível.</p>';}
 L.paint=()=>{if(typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='eco')return;const e=document.getElementById('eco-body');if(e)e.innerHTML=corpo();};
-function segHTML(html,ativo){
- const s=(String(html||'').match(/<div class="seg"[^>]*>[\s\S]*?<\/div>/g)||[]).find(x=>x.includes('data-ep="esv"'));
- if(!s)return '<div class="seg"><button data-ep="esv" data-id="liv">Livros</button><button data-ep="esv" data-id="eco" class="on">Economia</button></div>';
- return s.replace(ativo?/ class="on"/g:/\bABSOLUTAMENTE_NADA\b/g,'').replace('</div>','<button type="button" data-ep="esv" data-id="eco"'+(ativo?' class="on"':'')+'>Economia</button></div>');
-}
-function viewEco(segment){
-return '<h1>Estudos</h1>'+segment+'<div class="eco-root"><header class="eco-head"><small>CIÊNCIAS ECONÔMICAS · FERRAMENTAS DIDÁTICAS</small><h2>Laboratório de Economia</h2><p>Modelos interativos e dados do próprio aplicativo. Sem ordens ou alterações nas operações.</p></header>'+tabeco()+'<div id="eco-body" class="eco-body">'+corpo()+'</div></div>';
+function viewEco(){
+return '<h1>Estudos</h1><div class="eco-root"><header class="eco-head"><small>CIÊNCIAS ECONÔMICAS · FERRAMENTAS DIDÁTICAS</small><h2>Laboratório de Economia</h2><p>Dez ferramentas acadêmicas, sem alterações nas suas operações ou no banco de dados.</p></header>'+
+'<div class="eco-storage"><span>Histórico guardado somente neste navegador</span><button type="button" data-eco-btn="uniExport">Exportar JSON</button><label>Importar JSON<input type="file" data-eco-history accept="application/json,.json"></label></div>'+
+tabeco()+'<div id="eco-body" class="eco-body">'+corpo()+'</div></div>';
 }
 const original=typeof vEstudos==='function'?vEstudos:null;
 if(!original)return;
+// A barra de Biblioteca já é renderizada na shell principal de Estudos (v596).
+// Não recriar seg/nav legado nem colocar botão ou banner no meio dos livros.
 vEstudos=function(){
- if(typeof ESV==='undefined')return original.apply(this,arguments);
- if(ESV==='eco'){
-  let html;ESV='liv';try{html=original.apply(this,arguments);}finally{ESV='eco';}
-  return viewEco(segHTML(html,true));
- }
- const html=original.apply(this,arguments);
- if(typeof html!=='string'||html.includes('data-id="eco"'))return html;
- const seg=(html.match(/<div class="seg"[^>]*>[\s\S]*?<\/div>/g)||[]).find(x=>x.includes('data-ep="esv"'));
- const view=seg?html.replace(seg,segHTML(seg,false)):html;
- if(ESV==='liv'||ESV==='est')return view.replace('<h1>Estudos</h1>','<h1>Estudos</h1><button type="button" class="eco-launch" data-eco-launch="1">Laboratório de Economia · abrir ferramentas acadêmicas</button>');
- return view;
+ return typeof ESV!=='undefined'&&ESV==='eco'?viewEco():original.apply(this,arguments);
 };
 document.addEventListener('click',async e=>{
- const t=e.target.closest&&e.target.closest('[data-ep="esv"][data-id="eco"],[data-eco-launch],[data-eco-tool],[data-eco-btn]');
+ const t=e.target.closest&&e.target.closest('[data-eco-tool],[data-eco-btn]');
  if(!t)return;
- if(t.matches('[data-ep="esv"][data-id="eco"],[data-eco-launch]')){
-  e.preventDefault();e.stopImmediatePropagation();ESV='eco';tab='estudos';S.tool='mon';render();
-  L.events.macro&&L.events.macro();return;
- }
  if(typeof tab==='undefined'||tab!=='estudos'||ESV!=='eco')return;
  if(t.hasAttribute('data-eco-tool')){
   S.tool=t.dataset.ecoTool;render();
