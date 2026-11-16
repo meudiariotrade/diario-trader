@@ -178,8 +178,10 @@
     try { t = typeof tab !== "undefined" ? tab : null; } catch { t = null; }
     const app = d.getElementById("app");
     if (!app) return null;
-    if (t === "home") return {root:app.querySelector(".dt393-page.dt393-home"),route:t};
-    if (t === "dia") return {root:app.querySelector(".dt393-page.dt393-day"),route:t};
+    // v675: Início/Meu dia usam a página V4; a versão v670 buscava apenas
+    // .dt393-page, substituída pelo renderizador atual (v4-panel).
+    if (t === "home") return {root:app.querySelector(".v4-panel .v4-page.v4-home") || app.querySelector(".dt393-page.dt393-home"),route:t};
+    if (t === "dia") return {root:app.querySelector(".v4-panel .v4-page.v4-day") || app.querySelector(".dt393-page.dt393-day"),route:t};
     if (t === "mercado") {
       try { if (typeof MKT !== "undefined" && MKT?.tab === "al") return null; } catch {}
       return {root:app.querySelector(".dt395-native-mercado") || app.querySelector(".dt393-page.dt393-market"),route:t};
@@ -196,7 +198,7 @@
       card.setAttribute("aria-label","Termômetro de Abertura Teórica WIN e WDO");
     }
     if (dest.route === "home") {
-      const resumo = dest.root.querySelector(":scope > .dt393-summary");
+      const resumo = dest.root.querySelector(":scope > .v4-summary, :scope > .dt393-summary");
       if (resumo) { if (card.previousElementSibling !== resumo) resumo.after(card); }
       else if (dest.root.firstElementChild !== card) dest.root.prepend(card);
     } else if (dest.route === "mercado") {
@@ -209,6 +211,9 @@
   }
   w.TermometroAbertura670 = Object.freeze({calcular,capturar,montar});
   w.TraderUI?.onRender?.("termometro-abertura-teorica-v670",()=>w.setTimeout(montar,0));
+  // A tela V4 troca seu conteúdo depois do render principal. Reposicionar
+  // após o evento de render final preserva o termômetro nas duas rotas.
+  d.addEventListener("diario:render",()=>w.requestAnimationFrame(()=>w.requestAnimationFrame(montar)));
   w.addEventListener("focus",montar);
   w.setInterval(()=>{if(!d.hidden)montar();},5000);
   if (d.readyState === "loading") d.addEventListener("DOMContentLoaded",()=>w.setTimeout(montar,0),{once:true});

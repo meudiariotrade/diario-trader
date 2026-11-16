@@ -87,3 +87,23 @@ test("v670: dados reais da estrutura mesa-macro reconhecem futuro ES, EWZ, WTI e
  assert.ok(Math.abs(value.wdoProjetado-5406.21)<1e-8);
  w.close();
 });
+
+
+test("v675: nas páginas atuais V4, Início e Meu dia recebem o card no contêiner visível sem duplicar",()=>{
+ const w=page(),app=w.document.getElementById("app");
+ app.innerHTML='<section class="v4-panel"><div class="v4-page v4-home"><section class="v4-summary">Resumo</section><section>Outros dados</section></div></section>';
+ w.tab="home";
+ w.TermometroAbertura670.montar();
+ w.TermometroAbertura670.montar();
+ const home=app.querySelector(".v4-home");
+ assert.equal(home.querySelectorAll(":scope > .dt670-opening").length,1);
+ assert.equal(home.querySelector(".v4-summary").nextElementSibling.className,"dt670-opening");
+ // A montagem da tela Meu dia substitui o painel anterior no mesmo espaço.
+ app.innerHTML='<section class="v4-panel"><div class="v4-page v4-day"><section class="v4-emo">Humor</section><section>Plano do dia</section></div></section>';
+ w.tab="dia";
+ w.document.dispatchEvent(new w.CustomEvent("diario:render"));
+ w.TermometroAbertura670.montar();
+ assert.equal(app.querySelectorAll(".v4-day > .dt670-opening").length,1);
+ assert.equal(app.querySelector(".v4-day").firstElementChild.className,"dt670-opening");
+ w.close();
+});
