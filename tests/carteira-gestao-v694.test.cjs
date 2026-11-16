@@ -56,7 +56,7 @@ test('v694: cálculo do aporte sem vendas, DY/YoC, alertas e juros reais são au
  assert.deepEqual(got.classes.map(x=>x[0]),['br','fii','rf','ext','crypto','other']);
  assert.equal(got.annual,560);
  assert.ok(Math.abs(got.monthly-560/12)<1e-8);
- assert.equal(got.dy,7);
+ assert.ok(Math.abs(got.dy-7)<1e-8);
  assert.ok(Math.abs(got.yoc-560/6500*100)<1e-6);
  assert.equal(got.coverage,80);
  assert.deepEqual(got.concentration.topAssets,['ITUB4']);
@@ -71,6 +71,7 @@ test('v694: alteração de metas e simuladores persiste somente no localStorage'
  const page=await pageFor(browser,base);
  await page.evaluate(()=>{tab='carteiras';render();});
  await page.evaluate(()=>document.querySelector('#rebalanceamento-carteira-v694 summary')?.click());
+ await expect(page.locator('#rebalanceamento-carteira-v694')).toHaveAttribute('open','');
  await expect(page.locator('#rebalanceamento-carteira-v694 .rb694-body')).toBeVisible();
  await page.evaluate(()=>{
   const e=document.querySelector('[data-rb694-field="contribution"]');

@@ -255,13 +255,25 @@ function refreshBody(){
  const root=D.getElementById('rebalanceamento-carteira-v694');
  if(root&&root.open){const oldBody=root.querySelector('.rb694-body');if(oldBody)oldBody.outerHTML=body();else root.insertAdjacentHTML('beforeend',body());}
 }
-D.addEventListener('toggle',event=>{
- const el=event.target;
+function reconcile(el){
  if(el?.id!=='rebalanceamento-carteira-v694'||typeof tab==='undefined'||tab!=='carteiras'||!el.isConnected)return;
- if(state.open===el.open)return;
  state.open=el.open;
- if(el.open)el.insertAdjacentHTML('beforeend',body());
- else{const panel=el.querySelector('.rb694-body');panel?.remove();}
+ const panel=el.querySelector('.rb694-body');
+ if(el.open&&!panel)el.insertAdjacentHTML('beforeend',body());
+ if(!el.open&&panel)panel.remove();
+}
+D.addEventListener('toggle',event=>reconcile(event.target),true);
+// Captura a intenção antes de um repaint da tela que possa desmontar o <details>.
+D.addEventListener('click',event=>{
+ const summary=event.target.closest?.('#rebalanceamento-carteira-v694 summary');
+ if(!summary||typeof tab==='undefined'||tab!=='carteiras')return;
+ const root=summary.closest('#rebalanceamento-carteira-v694'),next=!root.open;
+ state.open=next;
+ queueMicrotask(()=>{
+  if(!root.isConnected)return;
+  if(root.open!==next)root.open=next;
+  reconcile(root);
+ });
 },true);
 D.addEventListener('change',event=>{
  const el=event.target,root=el?.closest?.('#rebalanceamento-carteira-v694');
