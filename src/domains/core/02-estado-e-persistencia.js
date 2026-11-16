@@ -2282,11 +2282,37 @@ async function up(e = null, revision = null) {
 async function sync(force) {
   const owner = syncOwner();
   if (!SESS || SY.busy) return;
+  // Cache de revisão apenas na sessão atual, isolado por usuário.
+  // O número de revisão é atualizado pelo RPC de gravação com controle de conflito.
+  if (window.DiarioSyncRevision?.owner !== owner) window.DiarioSyncRevision = { owner, revision: null };
+  const known = window.DiarioSyncRevision;
   SY.busy = 1;
   SY.msg = "Sincronizando…";
   uiSy();
   let failed = false;
   try {
+    // Em consulta automática com dados locais sincronizados, verifica somente a
+    // revisão (poucos bytes), em vez de baixar todo o diário JSON outra vez.
+    // Escritas locais, sincronização manual e primeiro acesso mantêm a leitura integral.
+    if (!force && S.st && S.mt <= S.st && known.revision !== null) {
+      const meta = await (
+        await rq("/rest/v1/diario?select=revision&user_id=eq." + SESS.uid, {
+          signal: AbortSignal.timeout(20000),
+        })
+      ).json();
+      assertSyncOwner(owner);
+      if (Array.isArray(meta) && meta.length === 1 && meta[0].revision != null &&
+          String(meta[0].revision) === String(known.revision)) {
+        const count = await photos();
+        assertSyncOwner(owner);
+        S.lastSyncAt = Date.now();
+        persist();
+        SY_RECOVERY.saved();
+        SY.msg = "Sincronizado às " + hm();
+        if (count && !typing()) render();
+        return;
+      }
+    }
     const rows = await (
       await rq("/rest/v1/diario?select=data,revision&user_id=eq." + SESS.uid, {
         signal: AbortSignal.timeout(20000),
@@ -2314,7 +2340,13 @@ async function sync(force) {
     S.uid = SESS.uid;
     const count = await photos();
     assertSyncOwner(owner);
-    if (upload || !S.st) await up(remote, revision);
+    if (upload || !S.st) {
+      // A gravação avança a revisão no servidor: só confiar em nova leitura.
+      known.revision = null;
+      await up(remote, revision);
+    } else {
+      known.revision = revision;
+    }
     assertSyncOwner(owner);
     S.lastSyncAt = Date.now();
     persist();
