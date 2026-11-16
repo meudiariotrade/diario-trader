@@ -41339,3 +41339,425 @@ try {
 } catch (e) {
   console.error("[v606] barômetro EUA", e);
 }
+/* v657 · Laboratório de Economia, apenas Estudos. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab=window.EconomiaLab||{views:{},events:{},state:{}};
+const S=L.state;Object.assign(S,{tool:'mon',meta:3,infl:4.5,neutro:2.5,hiato:0,fiscal:0,selic:0,externo:0,x:'IBOV',y:'PETR4',periodo:252,disc:'macro',topico:'Regra de Taylor',qidx:0,resp:null,questoes:null,loading:false,erro:'',evento:0,series:{},busca:false,erroSerie:''});
+L.esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','&#39;':'&#39;'}[c]||({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+L.f=(v,n=2)=>Number.isFinite(v)?v.toLocaleString('pt-BR',{minimumFractionDigits:n,maximumFractionDigits:n}):'—';
+L.s=(v,n=2)=>(v>0?'+':'')+L.f(v,n);
+L.card=(t,b)=>'<section class="eco-card"><h3>'+t+'</h3>'+b+'</section>';
+L.kpi=(t,v)=>'<div class="eco-kpi"><small>'+t+'</small><b>'+v+'</b></div>';
+L.note=v=>'<p class="eco-note">'+v+'</p>';
+L.slider=(id,t,min,max,step,u)=>'<label class="eco-slider"><span>'+t+' <output data-eco-out="'+id+'">'+L.f(S[id],1)+u+'</output></span><input data-eco-range="'+id+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+S[id]+'"></label>';
+L.label=(s)=>L.esc(s).slice(0,900);
+const tabList=[['mon','Política monetária'],['mf','IS–LM–BP'],['eco','Econometria'],['quiz','Questões & ANPEC'],['tempo','Brasil pós-Real']];
+function tabeco(){return '<nav class="eco-nav" aria-label="Ferramentas de economia">'+tabList.map(([id,n])=>'<button type="button" data-eco-tool="'+id+'" class="'+(S.tool===id?'on':'')+'">'+n+'</button>').join('')+'</nav>';}
+function corpo(){return typeof L.views[S.tool]==='function'?L.views[S.tool]():'<p>Ferramenta indisponível.</p>';}
+L.paint=()=>{if(typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='eco')return;const e=document.getElementById('eco-body');if(e)e.innerHTML=corpo();};
+function segHTML(html,ativo){
+ const s=(String(html||'').match(/<div class="seg"[^>]*>[\s\S]*?<\/div>/g)||[]).find(x=>x.includes('data-ep="esv"'));
+ if(!s)return '<div class="seg"><button data-ep="esv" data-id="liv">Livros</button><button data-ep="esv" data-id="eco" class="on">Economia</button></div>';
+ return s.replace(ativo?/ class="on"/g:/\bABSOLUTAMENTE_NADA\b/g,'').replace('</div>','<button type="button" data-ep="esv" data-id="eco"'+(ativo?' class="on"':'')+'>Economia</button></div>');
+}
+function viewEco(segment){
+return '<h1>Estudos</h1>'+segment+'<div class="eco-root"><header class="eco-head"><small>CIÊNCIAS ECONÔMICAS · FERRAMENTAS DIDÁTICAS</small><h2>Laboratório de Economia</h2><p>Modelos interativos e dados do próprio aplicativo. Sem ordens ou alterações nas operações.</p></header>'+tabeco()+'<div id="eco-body" class="eco-body">'+corpo()+'</div></div>';
+}
+const original=typeof vEstudos==='function'?vEstudos:null;
+if(!original)return;
+vEstudos=function(){
+ if(typeof ESV==='undefined')return original.apply(this,arguments);
+ if(ESV==='eco'){
+  let html;ESV='liv';try{html=original.apply(this,arguments);}finally{ESV='eco';}
+  return viewEco(segHTML(html,true));
+ }
+ const html=original.apply(this,arguments);
+ if(typeof html!=='string'||html.includes('data-id="eco"'))return html;
+ const seg=(html.match(/<div class="seg"[^>]*>[\s\S]*?<\/div>/g)||[]).find(x=>x.includes('data-ep="esv"'));
+ const view=seg?html.replace(seg,segHTML(seg,false)):html;
+ if(ESV==='liv'||ESV==='est')return view.replace('<h1>Estudos</h1>','<h1>Estudos</h1><button type="button" class="eco-launch" data-eco-launch="1">Laboratório de Economia · abrir ferramentas acadêmicas</button>');
+ return view;
+};
+document.addEventListener('click',async e=>{
+ const t=e.target.closest&&e.target.closest('[data-ep="esv"][data-id="eco"],[data-eco-launch],[data-eco-tool],[data-eco-btn]');
+ if(!t)return;
+ if(t.matches('[data-ep="esv"][data-id="eco"],[data-eco-launch]')){
+  e.preventDefault();e.stopImmediatePropagation();ESV='eco';tab='estudos';S.tool='mon';render();
+  L.events.macro&&L.events.macro();return;
+ }
+ if(typeof tab==='undefined'||tab!=='estudos'||ESV!=='eco')return;
+ if(t.hasAttribute('data-eco-tool')){
+  S.tool=t.dataset.ecoTool;render();
+  const action=L.events.enter&&L.events.enter[S.tool];if(action)action();return;
+ }
+ if(t.hasAttribute('data-eco-btn')){
+  const fn=L.events[t.dataset.ecoBtn];if(typeof fn==='function')await fn(t);return;
+ }
+},true);
+document.addEventListener('input',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco')return;
+ const el=e.target.closest&&e.target.closest('[data-eco-range]');if(!el)return;
+ const id=el.dataset.ecoRange;if(!(id in S))return;
+ S[id]=+el.value;
+ const out=document.querySelector('[data-eco-out="'+id+'"]');
+ if(out)out.textContent=L.f(S[id],1)+(id==='fiscal'?'':id==='hiato'||id==='selic'||id==='externo'?' pp':'%');
+ // Mantém o elemento <input> montado enquanto é arrastado; troca somente os resultados.
+ const raiz=document.getElementById('eco-body');if(!raiz)return;
+ const painel=el.closest('.eco-card'),modelo=document.createElement('template');modelo.innerHTML=corpo();
+ const atuais=[...raiz.children],novos=[...modelo.content.children];
+ atuais.forEach((n,i)=>{if(n!==painel&&novos[i])n.replaceWith(novos[i]);});
+});
+document.addEventListener('change',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco')return;
+ const el=e.target;const chave=el.dataset.ecoSelect;
+ if(chave&&L.events.change)L.events.change(chave,el.value);
+});
+})();
+/* v657 · Política monetária: Regra de Taylor, Fisher e vértices DI já presentes no Mercado. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state,F=L.f,N=L.note,K=L.kpi;
+function referencias(){
+ let di=[],selic=null,ipca=null,data='';
+ try{
+  if(typeof M606!=='undefined'&&M606.v){
+   data=M606.v.em||'';
+   di=(M606.v.di||[]).filter(x=>x&&Number.isFinite(+x.taxa)&&+x.taxa>0).map(x=>({k:x.k||x.cod||'DI1',anos:+x.anos||0,taxa:+x.taxa})).sort((a,b)=>a.anos-b.anos);
+  }
+ }catch(_){}
+ try{
+  if(typeof JR!=='undefined'&&JR.data){
+   if(JR.data.selic&&Number.isFinite(+JR.data.selic.v))selic=+JR.data.selic.v;
+   if(JR.data.ipca12&&Number.isFinite(+JR.data.ipca12.v))ipca=+JR.data.ipca12.v;
+   if(!di.length&&Array.isArray(JR.data.curva))di=JR.data.curva.filter(x=>x&&+x.taxa>0&&x.venc).map(x=>({k:x.cod||'DI',taxa:+x.taxa,anos:(Date.parse(x.venc)-Date.now())/(365.25*864e5)})).filter(x=>x.anos>0).sort((a,b)=>a.anos-b.anos);
+  }
+ }catch(_){}
+ return {di,selic,ipca,data};
+}
+L.taylor=p=>p.neutro+p.infl+.5*(p.infl-p.meta)+.5*p.hiato;
+L.fisher=(i,pi)=>((1+i/100)/(1+pi/100)-1)*100;
+function grafico(di){
+ if(di.length<2)return N('Não há pelo menos dois vértices DI carregados. Atualize a cotação na aba Mercado.');
+ const min=Math.min(...di.map(x=>x.taxa))-.2,max=Math.max(...di.map(x=>x.taxa))+.2;
+ const left=di[0].anos,right=di.at(-1).anos;
+ const pts=di.map(d=>[46+(d.anos-left)/(right-left||1)*570,160-(d.taxa-min)/(max-min||1)*122]);
+ return '<svg class="eco-plot" viewBox="0 0 668 194" role="img" aria-label="Curva DI: vértices observados por prazo">'+
+ '<line x1="46" x2="625" y1="162" y2="162" stroke="#5d6775"/>'+
+ '<polyline points="'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+'" stroke="#D4A017" stroke-width="2.5" fill="none"/>'+
+ pts.map((p,i)=>'<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="4" fill="#D4A017"><title>'+L.esc(di[i].k)+' · '+F(di[i].taxa)+'% a.a.</title></circle>').join('')+
+ '<text x="46" y="186" fill="#a6afbe" font-size="12">Curto</text><text x="568" y="186" fill="#a6afbe" font-size="12">Longo</text></svg>';
+}
+L.views.mon=()=>{
+ const d=referencias(),curta=d.di[0],longa=d.di.at(-1);
+ const slope=curta&&longa?(longa.taxa-curta.taxa)*100:null;
+ const referencia=curta?.taxa??d.selic;
+ const nom=L.taylor(S),real=referencia!=null?L.fisher(referencia,S.infl):null;
+ const leit=slope==null?'sem vértices suficientes':slope>15?'positivamente inclinada':slope< -15?'invertida':'aproximadamente plana';
+ const carimbo=d.data?new Date(d.data).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'horário indisponível';
+ return '<div class="eco-grid-stats">'+K('Taylor · taxa nominal indicada',F(nom)+'%')+K('Juro real ex-ante · Fisher',real==null?'Sem taxa nominal':F(real)+'%')+
+ K('Inclinação longo − curto',slope==null?'Sem curva':L.s(slope,1)+' pb')+
+ K('Taxa nominal de referência',referencia==null?'Não carregada':F(referencia)+'%')+'</div>'+
+ L.card('ETTJ · curva de DI Brasil',grafico(d.di)+N('Leitura: curva <b>'+leit+'</b>. Vértices: '+d.di.length+'. Fonte: Mesa Macro já integrada. Consulta: '+L.esc(carimbo)+'. A inclinação também incorpora prêmios de prazo/risco, não apenas expectativas sobre Selic.'))+
+ L.card('Simular a Regra de Taylor',
+ L.slider('meta','Meta de inflação',2,6,.25,'%')+L.slider('infl','Inflação esperada',0,15,.25,'%')+
+ L.slider('neutro','Juro real neutro',0,8,.25,'%')+L.slider('hiato','Hiato do produto',-8,8,.5,' pp')+
+ N('i* = r* + πᵉ + 0,5(πᵉ − meta) + 0,5 hiato. É uma regra pedagógica com coeficientes fixos, não a função de reação efetiva do Copom.'))+
+ L.card('Referências e conceitos',
+ K('Selic no app',d.selic==null?'Não carregada':F(d.selic)+'%')+
+ K('IPCA 12 meses observado',d.ipca==null?'Não carregado':F(d.ipca)+'%')+
+ N('A inflação esperada é <b>informada no controle</b>. IPCA de 12 meses é passado, não expectativa ex-ante. Para projeção, consulte Focus ou fontes oficiais.')+
+ '<button type="button" data-eco-btn="macro" class="eco-action">Atualizar dados já integrados</button>');
+};
+L.events.macro=async()=>{try{if(typeof m606Carrega==='function')await m606Carrega(true);}catch(_){}L.paint();};
+L.events.enter=L.events.enter||{};L.events.enter.mon=()=>{try{if(typeof m606Carrega==='function')Promise.resolve(m606Carrega(false)).then(L.paint).catch(()=>{});}catch(_){}};
+})();
+/* v657 · Mundell–Fleming: simulação estilizada de equilíbrio IS–LM–BP. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state;
+L.mf=p=>{
+ const dy=4*(p.externo-p.selic),isShift=2*p.externo-p.selic;
+ return {y:100+dy,i:p.externo,fx:isShift-.38*p.fiscal,isShift,lmShift:p.selic,bpShift:p.externo};
+};
+function curva(p){
+ const x=y=>55+(y-88)/24*540, yy=i=>211-(i+4)/8*190;
+ const linha=(fn,cor,traco)=>'<path d="M '+x(88).toFixed(1)+' '+yy(fn(88)).toFixed(1)+' L '+x(112).toFixed(1)+' '+yy(fn(112)).toFixed(1)+'" fill="none" stroke="'+cor+'" stroke-width="2.4"'+(traco?' stroke-dasharray="6 5"':'')+'/>';
+ const is=(y,k)=>-.25*(y-100)+k,lm=(y,k)=>.25*(y-100)+k;
+ return '<svg class="eco-plot" viewBox="0 0 650 264" role="img" aria-label="Diagrama IS-LM-BP: linhas tracejadas no cenário-base">'+
+ '<rect x="55" y="20" width="540" height="191" fill="#151920" stroke="#1E232E"/>'+
+ linha(y=>is(y,0),'#687181',true)+linha(y=>lm(y,0),'#687181',true)+linha(y=>0,'#687181',true)+
+ linha(y=>is(y,p.isShift),'#D4A017',false)+linha(y=>lm(y,p.lmShift),'#10B981',false)+
+ linha(y=>p.bpShift,'#6AA4D2',false)+
+ '<circle cx="'+x(p.y).toFixed(2)+'" cy="'+yy(p.i).toFixed(2)+'" r="5" fill="#f5efde"/>'+
+ '<text x="55" y="245" fill="#a5aebb" font-size="12">Produto (Y) · índice-base 100</text>'+
+ '<text x="13" y="16" fill="#a5aebb" font-size="12">Δi</text>'+
+ '<text x="350" y="16" fill="#D4A017" font-size="13">IS</text>'+
+ '<text x="405" y="16" fill="#10B981" font-size="13">LM</text>'+
+ '<text x="465" y="16" fill="#6AA4D2" font-size="13">BP</text></svg>';
+}
+L.views.mf=()=>{
+ const p=L.mf(S);
+ return '<div class="eco-grid-stats">'+L.kpi('Produto Y · base 100',L.f(p.y,1))+
+ L.kpi('Juro interno · Δ',L.s(p.i,2)+' pp')+
+ L.kpi('USD/BRL · Δ ilustrativo',L.s(p.fx,2)+'%')+'</div>'+
+ L.card('Equilíbrio IS–LM–BP · câmbio flexível',curva(p)+
+ L.note('Cores: IS (âmbar), LM (verde), BP (azul). Tracejado = cenário inicial; ponto branco = novo equilíbrio. Eixos normalizados, não são cotações de mercado.'))+
+ L.card('Choques: ceteris paribus',
+ L.slider('fiscal','G↑ / T↓ (impulso fiscal)',-3,3,.5,'')+
+ L.slider('selic','Selic · choque contracionista (+)',-3,3,.5,' pp')+
+ L.slider('externo','US10Y · choque externo',-2,2,.25,' pp'))+
+ L.card('Interpretação guiada',L.note('<b>1. Política fiscal:</b> expansão desloca IS; sob alta mobilidade e câmbio flutuante a apreciação compensa parte da demanda externa, com efeito líquido pequeno sobre Y.')+
+ L.note('<b>2. Política monetária:</b> aperto desloca LM para cima. A apreciação reduz exportações líquidas; Y tende a cair. Expansão monetária produz o oposto.')+
+ L.note('<b>3. Juros externos:</b> BP sobe; pressiona câmbio e ajusta IS para restaurar equilíbrio externo.')+
+ L.note('Os coeficientes foram escolhidos para <b>visualização pedagógica</b> do Mundell–Fleming com mobilidade de capitais e prêmio de risco constante. Não estimam PIB, curva DI ou preço futuro do dólar.'));
+};
+})();
+/* v657 · Econometria aplicada; usa a Edge Function candles existente, sem dados sintéticos. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state;
+const TICKERS=['IBOV','PETR4','VALE3','USDBRL','IVVB11'];
+S.rf=null;
+function mean(a){return a.reduce((s,v)=>s+v,0)/a.length;}
+function mqo(x,y){
+ if(x.length!==y.length||x.length<3)return null;
+ const ax=mean(x),ay=mean(y);let vx=0,vy=0,co=0;
+ for(let i=0;i<x.length;i++){const dx=x[i]-ax,dy=y[i]-ay;vx+=dx*dx;vy+=dy*dy;co+=dx*dy;}
+ if(vx<=1e-14||vy<=1e-14)return null;
+ const beta=co/vx,alpha=ay-beta*ax,corr=co/Math.sqrt(vx*vy);
+ return {n:x.length,beta,alpha,corr,r2:corr*corr,mx:ax,my:ay};
+}
+function alinhar(A,B){
+ if(!A||!B)return [];
+ const map=new Map(B.map(x=>[x.d,x.p]));
+ return A.filter(x=>map.has(x.d)).map(x=>({d:x.d,a:x.p,b:map.get(x.d)})).sort((x,y)=>x.d.localeCompare(y.d));
+}
+function retornos(v){
+ const ret=[];
+ for(let i=1;i<v.length;i++){
+  if(v[i].a>0&&v[i].b>0&&v[i-1].a>0&&v[i-1].b>0)
+   ret.push({d:v[i].d,a:v[i].a/v[i-1].a-1,b:v[i].b/v[i-1].b-1});
+ }
+ return ret;
+}
+L.mqo=mqo;L.alinhar=alinhar;L.retornos=retornos;
+function economia(){
+ const A=S.series[S.x],B=S.series[S.y],M=S.series.IBOV;
+ if(!A||!B||!M)return null;
+ const p=alinhar(A,B).slice(-(S.periodo+1)),r=retornos(p);
+ const b=mqo(r.map(t=>t.a),r.map(t=>t.b));
+ const pM=alinhar(M,B).slice(-(S.periodo+1)),rM=retornos(pM);
+ const beta=mqo(rM.map(t=>t.a),rM.map(t=>t.b));
+ const level=mqo(p.map(t=>t.a),p.map(t=>t.b));
+ if(!b||!beta||!level||b.n<20||beta.n<20)return null;
+ const rf=Math.log(1+S.rf/100)/252;
+ const alphaJ=beta.my-(rf+beta.beta*(beta.mx-rf));
+ const residual=p.map(x=>x.b-level.alpha-level.beta*x.a);
+ const avg=mean(residual),vol=Math.sqrt(residual.reduce((s,x)=>s+(x-avg)**2,0)/(residual.length-1));
+ return {p,b,beta,level,alphaJ,resid:residual.at(-1),z:vol?(residual.at(-1)-avg)/vol:null};
+}
+function select(t,key){
+ return '<label>'+t+'<select data-eco-select="'+key+'">'+TICKERS.map(s=>'<option value="'+s+'"'+(S[key]===s?' selected':'')+'>'+s+'</option>').join('')+'</select></label>';
+}
+function chart(p){
+ if(p.length<3||!(p[0].a>0&&p[0].b>0))return '';
+ const ax=p.map(x=>100*x.a/p[0].a),bx=p.map(x=>100*x.b/p[0].b);
+ const lo=Math.min(...ax,...bx)-1,hi=Math.max(...ax,...bx)+1;
+ const pl=v=>v.map((x,i)=>(45+565*i/(v.length-1)).toFixed(1)+','+(163-(x-lo)/(hi-lo||1)*134).toFixed(1)).join(' ');
+ return '<svg class="eco-plot" viewBox="0 0 655 192" aria-label="Preços dos dois ativos em índice-base 100" role="img">'+
+ '<polyline fill="none" stroke="#D4A017" stroke-width="2.2" points="'+pl(ax)+'"/>'+
+ '<polyline fill="none" stroke="#10B981" stroke-width="2.2" points="'+pl(bx)+'"/>'+
+ '<text x="45" y="183" fill="#a6afbe" font-size="12">Primeira data comum</text><text x="525" y="183" fill="#a6afbe" font-size="12">Última data</text></svg>';
+}
+L.views.eco=()=>{
+ if(!Number.isFinite(S.rf)){
+  try{if(typeof JR!=='undefined'&&+JR.data?.selic?.v>0)S.rf=+JR.data.selic.v;}catch(_){}
+  if(!Number.isFinite(S.rf))S.rf=10;
+ }
+ const opts=select('Variável X','x')+select('Variável Y','y')+
+ '<label>Amostra<select data-eco-select="periodo">'+[60,126,252].map(n=>'<option value="'+n+'"'+(S.periodo===n?' selected':'')+'>'+n+' pregões</option>').join('')+'</select></label>'+
+ '<button data-eco-btn="series" class="eco-action" type="button"'+(S.busca?' disabled':'')+'>'+(S.busca?'Consultando…':'Atualizar históricos')+'</button>';
+ const d=economia();
+ const status=L.note(S.busca?'Consultando histórico diário dos ativos…':S.erroSerie?L.esc(S.erroSerie):'Fonte: endpoint Candles existente (Yahoo Finance, intervalo diário, até 2 anos).');
+ const juros=L.slider('rf','Taxa livre de risco anual · referência CAPM',0,25,.25,'%');
+ if(!d)return L.card('Séries do aplicativo · MQO, regressão e CAPM','<div class="eco-controls">'+opts+'</div>'+juros+status+
+ L.note('Sem amostra suficiente: são necessários pelo menos 20 retornos coincidentes. Nenhum retorno ou resultado é preenchido artificialmente.'));
+ const {b,beta,level}=d;
+ return L.card('Amostra diária · séries alinhadas','<div class="eco-controls">'+opts+'</div>'+juros+status+
+ L.note('Regressão de retornos simples diários: '+b.n+' observações. CAPM: '+beta.n+' observações com o IBOV. RF anual usada: '+L.f(S.rf,2)+'%.')+
+ chart(d.p)+L.note('<span class="eco-ouro">●</span> '+L.esc(S.x)+' &nbsp; <span class="eco-verde">●</span> '+L.esc(S.y)+' · índice de preços base 100.'))+
+ '<div class="eco-grid-stats">'+L.kpi('MQO · coeficiente angular',L.f(b.beta,4))+L.kpi('MQO · intercepto',L.f(b.alpha*100,4)+' pp')+
+ L.kpi('Correlação de retornos',L.f(b.corr,3))+L.kpi('R² ajustamento',L.f(b.r2*100,1)+'%')+
+ L.kpi('Beta CAPM vs. IBOV',L.f(beta.beta,3))+L.kpi('Alfa Jensen · diário',L.f(d.alphaJ*100,4)+' pp')+
+ L.kpi('Spread residual · níveis',L.f(d.resid,3))+L.kpi('Z-score residual',L.f(d.z,2))+'</div>'+
+ L.card('Resolução didática de MQO e CAPM',
+ L.note('<b>1.</b> Casamento por data das observações de fechamento; retorno rₜ = Pₜ/Pₜ₋₁ − 1.')+
+ L.note('<b>2.</b> MQO: β̂ = Σ(x−x̄)(y−ȳ)/Σ(x−x̄)² = '+L.f(b.beta,4)+'. Intercepto = ȳ − β̂x̄ = '+L.f(b.alpha,6)+'.')+
+ L.note('<b>3.</b> R² = 1 − SQ dos erros / SQ total = '+L.f(b.r2,4)+'. Correlação = '+L.f(b.corr,4)+'. Ajuste não demonstra causalidade.')+
+ L.note('<b>4.</b> Beta CAPM vs. IBOV = '+L.f(beta.beta,4)+'. Alfa Jensen = E[r ativo] − {rf diário + β(E[r mercado] − rf diário)}.')+
+ L.note('<b>5.</b> Regressão de preços em níveis apenas para o spread: P(Y) − intercepto − inclinação·P(X). Spread e z-score não provam cointegração nem autorizam estratégia de pares.'));
+};
+L.events.enter.eco=()=>{if(Object.keys(S.series).length<5)L.events.series();};
+L.events.series=async()=>{
+ if(S.busca)return;S.busca=true;S.erroSerie='';L.paint();
+ try{
+  const c=typeof cfg==='function'?cfg():null;
+  if(!c)throw Error('Configure a conexão do aplicativo para consultar os dados.');
+  if(typeof SESS==='undefined'||!SESS?.at)throw Error('Entre na sua conta para consultar históricos.');
+  const res=await Promise.allSettled(TICKERS.map(async ativo=>{
+   const r=await fetch(c.url+'/functions/v1/candles',{method:'POST',
+    headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},
+    body:JSON.stringify({ativo,intervalo:'1d'}),signal:AbortSignal.timeout(25000)});
+   if(!r.ok)throw Error(ativo+': HTTP '+r.status);
+   const j=await r.json();
+   const a=(j.candles||[]).filter(x=>Array.isArray(x)&&Number.isFinite(+x[0])&&+x[4]>0)
+     .map(x=>({d:new Date(+x[0]*1000).toISOString().slice(0,10),p:+x[4]}));
+   if(a.length<21)throw Error(ativo+': amostra insuficiente.');
+   return [ativo,a];
+  }));
+  const errors=[];for(const r of res)if(r.status==='fulfilled')S.series[r.value[0]]=r.value[1];else errors.push(String(r.reason?.message||r.reason));
+  S.erroSerie=errors.join(' · ');
+ }catch(e){S.erroSerie=String(e.message||e);}
+ finally{S.busca=false;L.paint();}
+};
+const previous=L.events.change;
+L.events.change=(key,value)=>{
+ if(key==='x'||key==='y'){S[key]=value;L.paint();}
+ else if(key==='periodo'){S.periodo=+value;L.paint();}
+ else if(typeof previous==='function')previous(key,value);
+};
+})();
+/* v657 · Banco universitário com fallback local e IA via modo quiz existente. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state;
+const DB={
+ macro:{nome:'Macroeconomia',temas:['Regra de Taylor','Mundell–Fleming','Multiplicador fiscal'],q:[
+ ['Se a inflação esperada sobe, mantendo o restante constante na regra de Taylor, a taxa nominal recomendada:', ['Diminui','Aumenta','Não muda','Torna-se zero'],1,['Identifique a diferença πᵉ − meta.','A regra reage positivamente a inflação esperada e ao desvio da meta.','O juro nominal sugerido aumenta.']],
+ ['No modelo Mundell–Fleming, sob câmbio flexível e mobilidade perfeita, expansão fiscal isolada tende a:', ['Apreciar a moeda','Depreciar a moeda','Zerar os juros externos','Elevar Y sem contrapartida externa'],0,['Maior gasto desloca a IS à direita.','A pressão por entradas de capital aprecia a moeda doméstica.','Exportações líquidas menores atenuam o impulso fiscal no produto.']],
+ ['O que caracteriza uma ETTJ invertida?', ['Juros longos acima dos curtos','Juros curtos acima dos longos','Inflação negativa certa','Dívida pública inexistente'],1,['Compare taxas de prazos diferentes com mesma convenção.','Invertida significa taxa curta superior à longa.','Não equivale a certeza de recessão, pois há prêmios e expectativas.']]
+ ]},
+ micro:{nome:'Microeconomia',temas:['Elasticidade','Monopólio','Excedente e impostos'],q:[
+ ['A demanda é elástica em preço (|ε| > 1). Um aumento de preço tende a:', ['Elevar receita total','Reduzir receita total','Manter receita','Impedir vendas'],1,['A quantidade cai mais que proporcionalmente à alta de preço.','Receita é preço vezes quantidade.','O efeito quantidade domina: receita tende a cair.']],
+ ['No ótimo interior de um monopólio que maximiza lucro, ocorre:', ['RMg = CMg','Preço = CMg sempre','RMg = custo médio','Lucro = receita total'],0,['Defina lucro = receita total − custo total.','Derive em relação à quantidade produzida.','A condição de primeira ordem é RMg = CMg.']],
+ ['Um imposto unitário em mercado competitivo geralmente:', ['Gera cunha entre preços pago e recebido','Aumenta necessariamente quantidade','É sempre suportado pelo produtor','Elimina perda de peso morto'],0,['O imposto distancia o preço do consumidor do preço do produtor.','A quantidade de equilíbrio tende a cair.','A incidência depende das elasticidades de oferta e demanda.']]
+ ]},
+ met:{nome:'Econometria / Estatística',temas:['MQO','CAPM','Teste de hipótese'],q:[
+ ['O coeficiente angular de MQO simples com intercepto é:', ['Cov(X,Y)/Var(X)','Var(Y)/Var(X)','Correlação ao quadrado','Média(Y) − Média(X)'],0,['MQO minimiza a soma de resíduos quadráticos.','A inclinação é Σ(X−X̄)(Y−Ȳ) / Σ(X−X̄)².','Isto é covariância dividida por variância de X.']],
+ ['R² = 0,64 implica:', ['Causalidade comprovada','64% da variação amostral de Y explicada pelo ajuste','64% de acerto futuro','Correlação sempre positiva'],1,['R² = 1 − SQRes/SQTot.','É proporção de variação de Y explicada na amostra.','Não implica causalidade nem previsão fora da amostra.']],
+ ['Para estimar beta de uma ação contra o IBOV, recomenda-se usar:', ['Preços nominais separados','Retornos nas mesmas datas','Número de negócios','Valor médio de dividendos'],1,['Beta mede covariância entre retornos, relativa à variância de mercado.','Alinhe periodicidade e datas das observações.','Preços em nível podem gerar regressões espúrias.']]
+ ]},
+ br:{nome:'Economia Brasileira',temas:['Plano Real','Tripé pós-1999','Novo Arcabouço Fiscal'],q:[
+ ['A URV na preparação do Plano Real foi principalmente:', ['Unidade de conta de transição','Moeda estrangeira','Taxa básica de juros','Imposto inflacionário'],0,['A economia tinha indexação e inflação inercial.','A URV criou referência de preços com transição coordenada.','Posteriormente o real passou a ser meio de pagamento.']],
+ ['Após 1999, o tripé macroeconômico brasileiro é associado a:', ['Câmbio fixo, tabelamento e emissão','Metas de inflação, câmbio flutuante e compromisso fiscal','Subvenção, dolarização e juros congelados','Controle de capitais permanente'],1,['O câmbio passou a flutuar após a crise cambial.','Adotou-se metas de inflação e taxa de juros como instrumento.','A disciplina do resultado primário era o terceiro eixo.']],
+ ['O resultado primário do setor público:', ['Inclui juros nominais','Exclui juros nominais','É igual ao saldo comercial','Mede o crescimento do PIB'],1,['Separe receitas e despesas primárias.','Pagamento de juros não compõe o resultado primário.','O resultado nominal incorpora os juros.']]
+ ]}
+};
+L.quizDB=DB;
+function atual(){
+ const lista=S.questoes||DB[S.disc].q.map(q=>({q:q[0],o:q[1],c:q[2],passos:q[3],r:'Bibliografia de graduação'}));
+ return {lista,q:lista[S.qidx%lista.length]};
+}
+L.views.quiz=()=>{
+ const c=DB[S.disc];if(!c)S.disc='macro';
+ const {lista,q}=atual(),resp=S.resp;
+ const controls='<div class="eco-controls"><label>Disciplina<select data-eco-select="disc">'+Object.entries(DB).map(([k,v])=>'<option value="'+k+'"'+(S.disc===k?' selected':'')+'>'+L.esc(v.nome)+'</option>').join('')+'</select></label>'+
+ '<label>Tópico<select data-eco-select="topico">'+DB[S.disc].temas.map(x=>'<option value="'+L.esc(x)+'"'+(S.topico===x?' selected':'')+'>'+L.esc(x)+'</option>').join('')+'</select></label>'+
+ '<button type="button" class="eco-action" data-eco-btn="gerar"'+(S.loading?' disabled':'')+'>'+(S.loading?'Gerando…':'Gerar 5 questões com IA')+'</button></div>';
+ const origem=S.questoes?'Roteador de IA do aplicativo · questões inéditas; confira a resolução.':'Questões autorais locais de treinamento universitário; não são enunciados oficiais da ANPEC.';
+ const options=q.o.map((op,i)=>'<button type="button" data-eco-btn="responder" data-v="'+i+'" class="eco-option'+(resp!==null&&i===q.c?' certo':resp===i?' errado':'')+'"'+(resp!==null?' disabled':'')+'><b>'+'ABCD'[i]+'.</b> '+L.esc(op)+'</button>').join('');
+ const feedback=resp===null?'':L.card(resp===q.c?'Resposta correta':'Resolução comentada',
+  L.note('<b>Gabarito:</b> '+'ABCD'[q.c]+'. '+L.esc(q.o[q.c]))+
+  (Array.isArray(q.passos)?q.passos.map((x,i)=>L.note('<b>Passo '+(i+1)+'.</b> '+L.esc(x))).join(''):
+   L.note('<b>Passo 1.</b> Identifique o conceito pedido no enunciado.')+
+   L.note('<b>Passo 2.</b> Fundamente: '+L.esc(q.e||'A justificativa não foi retornada pela IA.'))+
+   L.note('<b>Passo 3.</b> Releia a bibliografia: '+L.esc(q.r||'Livro-texto da disciplina.'))) +
+  '<button class="eco-action" data-eco-btn="proxima" type="button">Próxima questão</button>');
+ return L.card('Questões universitárias · estilo ANPEC',controls+
+ L.note(origem+(S.erro?' · IA indisponível, usando fallback: '+L.esc(S.erro):''))+
+ '<div class="eco-question"><small>Questão '+(S.qidx+1)+' de '+lista.length+' · '+L.esc(DB[S.disc].nome)+'</small><h3>'+L.esc(q.q)+'</h3>'+options+'</div>')+feedback;
+};
+L.events.responder=el=>{S.resp=+el.dataset.v;L.paint();};
+L.events.proxima=()=>{S.qidx=(S.qidx+1)%atual().lista.length;S.resp=null;L.paint();};
+L.events.gerar=async()=>{
+ if(S.loading)return;S.loading=true;S.erro='';L.paint();
+ try{
+  if(typeof anxCall!=='function')throw Error('Roteador de IA indisponível.');
+  const result=await anxCall({modo:'quiz',curso:'Ciências Econômicas',materia:DB[S.disc].nome,
+   topico:S.topico||DB[S.disc].temas[0],nivel:'graduação · preparação ANPEC',n:5});
+  const perguntas=(result.questoes||[]).filter(q=>q&&q.q&&Array.isArray(q.o)&&q.o.length===4&&q.o.every(Boolean)&&Number.isInteger(+q.c)&&+q.c>=0&&+q.c<=3)
+    .slice(0,5).map(q=>({q:String(q.q).slice(0,800),o:q.o.map(String),c:+q.c,e:String(q.e||'').slice(0,600),r:String(q.r||'').slice(0,200)}));
+  if(!perguntas.length)throw Error('Nenhuma questão válida foi recebida.');
+  S.questoes=perguntas;S.qidx=0;S.resp=null;
+ }catch(e){S.erro=String(e.message||e).slice(0,160);S.questoes=null;}
+ finally{S.loading=false;L.paint();}
+};
+const oldChange=L.events.change;
+L.events.change=(k,v)=>{
+ if(k==='disc'||k==='topico'){
+  if(k==='disc'){if(!DB[v])return;S.disc=v;S.topico=DB[v].temas[0];}else S.topico=v;
+  S.questoes=null;S.qidx=0;S.resp=null;S.erro='';L.paint();
+ }else if(oldChange)oldChange(k,v);
+};
+})();
+/* v657 · História econômica brasileira pós-Plano Real (seção didática isolada). */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state;
+const PERIODOS=[
+ ['1994','Plano Real','Introdução da URV como unidade de conta e do real como moeda, reduzindo a inflação inercial e reorganizando preços relativos.','Inflação inercial; indexação; URV; estabilização; âncora nominal.'],
+ ['1999','Tripé macroeconômico','Transição para câmbio flutuante, regime de metas para a inflação e esforço de resultado primário do governo.','Câmbio flutuante; política monetária; metas; superávit primário.'],
+ ['2003–2008','Expansão e commodities','Ciclo favorável de demanda externa e preços de commodities, ampliação do crédito e da renda doméstica.','Termos de troca; exportações; consumo; mercado de trabalho.'],
+ ['2008–2009','Crise financeira global','Restrição internacional de crédito, recuo de comércio e respostas contracíclicas fiscais e monetárias.','Contágio; recessão global; multiplicador; liquidez.'],
+ ['2015–2016','Recessão brasileira','Queda acentuada da atividade com desequilíbrios macroeconômicos, choques de expectativas e deterioração fiscal.','Hiato do produto; desemprego; resultado primário; política econômica.'],
+ ['2020–2021','Pandemia','Choque simultâneo de oferta e demanda, transferências emergenciais, juros baixos e recuperação desigual.','Choques; inflação; emprego; transferência de renda; dívida pública.'],
+ ['2023','Novo Arcabouço Fiscal','A Lei Complementar 200/2023 estabeleceu regime fiscal com limites de crescimento de despesa associados à receita, metas de resultado primário e mecanismos de ajuste.','Regras fiscais; resultado primário; sustentabilidade da dívida; limites de despesa.']
+];
+L.views.tempo=()=>{
+ const p=PERIODOS[Math.max(0,Math.min(PERIODOS.length-1,S.evento))];
+ const nav='<div class="eco-timeline" role="list">'+PERIODOS.map((x,i)=>'<button type="button" role="listitem" data-eco-btn="evento" data-v="'+i+'" class="'+(i===S.evento?'on':'')+'"><b>'+L.esc(x[0])+'</b><span>'+L.esc(x[1])+'</span></button>').join('')+'</div>';
+ return L.card('Linha do tempo · ciclos e regimes da economia brasileira',nav)+
+ L.card(L.esc(p[0])+' · '+L.esc(p[1]),L.note(p[2])+L.note('<b>Conceitos-chave de prova:</b> '+L.esc(p[3]))+
+ L.note('Revisão histórica para estudo: ciclos não são explicados por uma única causa. Compare séries do IBGE, BCB e Ipea e bibliografia da faculdade.'));
+};
+L.events.evento=el=>{S.evento=+el.dataset.v;L.paint();};
+})();
+/* v657 · Estilos institucionais exclusivos do Laboratório de Economia em Estudos. */
+;(function(){
+'use strict';
+if(document.getElementById('estudos-eco-style-v657'))return;
+const css=[
+'.eco-launch{display:block;max-width:100%;margin:9px 0 14px;min-height:44px;border:1px solid #5b431c;border-radius:4px;background:#181C26;padding:10px 12px;color:#e6bc60;text-align:left;cursor:pointer;font-size:13px}',
+'.eco-root{--eco-bg:#0A0C10;--eco-panel:#11141B;--eco-hover:#181C26;--eco-line:#1E232E;--eco-gold:#D4A017;color:#dee4ed;margin:10px 0 40px;min-width:0;font-variant-numeric:tabular-nums}',
+'.eco-root *{box-sizing:border-box}.eco-head{display:block;border-bottom:1px solid var(--eco-line);padding:14px 0 18px}',
+'.eco-head small{font-size:10px;color:var(--eco-gold);letter-spacing:1.3px}.eco-head h2{font-size:23px;margin:6px 0;color:#f1f3f6}.eco-head p{font-size:13px;color:#a6b1bd;margin:0}',
+'.eco-root nav.eco-nav{display:flex!important;gap:5px;padding:12px 0;border-bottom:1px solid var(--eco-line);flex-wrap:wrap}',
+'.eco-nav>button{border:1px solid transparent;background:transparent;color:#b5bfcf;border-radius:4px;padding:8px 11px;min-height:44px;font-size:12px;cursor:pointer}',
+'.eco-nav>button.on{border-color:#5b431c;background:var(--eco-hover);color:#e8bc57}.eco-nav>button:hover{background:var(--eco-hover)}',
+'.eco-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;min-width:0}',
+'.eco-card{min-width:0;border-top:1px solid var(--eco-line);background:var(--eco-panel);padding:16px}',
+'.eco-card h3{font-size:14px;line-height:1.5;margin:0 0 10px;text-align:left;color:#f0f3f6;font-weight:680}',
+'.eco-note{margin:10px 0;font-size:12px;line-height:1.6;color:#b3bdcb}.eco-note b{color:#dfe4ec}',
+'.eco-grid-stats{display:grid;grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--eco-line);background:var(--eco-panel)}',
+'.eco-kpi{min-width:0;padding:12px;border-right:1px solid var(--eco-line);border-bottom:1px solid var(--eco-line)}.eco-kpi small{color:#a6b0bf;display:block;font-size:11px}',
+'.eco-kpi b{display:block;color:#f4f6f8;margin-top:6px;font-size:17px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}',
+'.eco-slider{display:block;margin:12px 0 18px}.eco-slider>span{display:flex;justify-content:space-between;gap:12px;font-size:12px}',
+'.eco-slider output{white-space:nowrap;color:var(--eco-gold);font-weight:700;font-variant-numeric:tabular-nums}',
+'.eco-slider input{display:block;width:100%;height:25px;margin-top:9px;accent-color:var(--eco-gold);cursor:pointer}',
+'.eco-plot{display:block;width:100%;max-width:100%;height:auto;max-height:280px;min-width:0}',
+'.eco-controls{display:flex;flex-wrap:wrap;align-items:end;gap:9px}.eco-controls label{flex:1 1 135px;min-width:0;font-size:11px;color:#b6bfcc}',
+'.eco-controls select{display:block;width:100%;height:44px;padding:6px 10px;margin-top:4px;border:1px solid #313947;border-radius:4px;background:var(--eco-hover);color:#ebedf1;font-size:16px}',
+'.eco-action{border:1px solid #76551b;background:#242218;color:#f1c45a;padding:10px 12px;min-height:44px;border-radius:4px;cursor:pointer}',
+'.eco-action:disabled{opacity:.5;cursor:default}.eco-question{margin-top:18px;padding-top:10px;border-top:1px solid var(--eco-line)}',
+'.eco-question small{color:#9daab9;font-size:11px}.eco-question h3{font-size:16px;line-height:1.55}',
+'.eco-option{display:block;width:100%;background:#181C26;border:1px solid #303947;padding:12px 14px;text-align:left;border-radius:4px;color:#e3e8ef;min-height:44px;margin:7px 0;cursor:pointer}',
+'.eco-option.certo{border-color:#10B981;color:#a6efd6}.eco-option.errado{border-color:#EF4444;color:#ffd0d0}',
+'.eco-timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));border-top:1px solid #2b3542}',
+'.eco-timeline>button{display:flex;min-height:88px;gap:7px;flex-direction:column;align-items:start;text-align:left;background:transparent;border:0;border-left:1px solid #303947;color:#c2cbda;padding:12px;cursor:pointer}',
+'.eco-timeline>button.on{background:var(--eco-hover)}.eco-timeline b{color:var(--eco-gold)}.eco-timeline span{font-size:12px}',
+'.eco-ouro{color:#D4A017}.eco-verde{color:#10B981}',
+'@media(max-width:760px){.eco-root nav.eco-nav{position:sticky;top:calc(env(safe-area-inset-top) + 8px);z-index:30;background:#0A0C10;padding:9px 0 13px}.eco-root nav.eco-nav>button{scroll-margin-top:90px;scroll-margin-bottom:130px}.eco-body{grid-template-columns:1fr}.eco-grid-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.eco-nav{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain}.eco-nav>button{flex:0 0 auto;white-space:nowrap}.eco-card{padding:12px}.eco-head h2{font-size:20px}}'
+].join('\n');
+const e=document.createElement('style');e.id='estudos-eco-style-v657';e.textContent=css;document.head.appendChild(e);
+})();
