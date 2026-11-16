@@ -66,7 +66,7 @@ L.views.eco=()=>{
  const d=economia();
  const status=L.note(S.busca?'Consultando histórico diário dos ativos…':S.erroSerie?L.esc(S.erroSerie):'Fonte: endpoint Candles existente (Yahoo Finance, intervalo diário, até 2 anos).');
  const juros=L.slider('rf','Taxa livre de risco anual · referência CAPM',0,25,.25,'%');
- if(!d)return L.card('Séries do aplicativo · regressão e CAPM','<div class="eco-controls">'+opts+'</div>'+juros+status+
+ if(!d)return L.card('Séries do aplicativo · MQO, regressão e CAPM','<div class="eco-controls">'+opts+'</div>'+juros+status+
  L.note('Sem amostra suficiente: são necessários pelo menos 20 retornos coincidentes. Nenhum retorno ou resultado é preenchido artificialmente.'));
  const {b,beta,level}=d;
  return L.card('Amostra diária · séries alinhadas','<div class="eco-controls">'+opts+'</div>'+juros+status+
