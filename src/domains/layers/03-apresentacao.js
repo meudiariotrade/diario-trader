@@ -7807,7 +7807,116 @@ try {
           return null;
         }
       };
+
+    /* v672 — Somente a calculadora de Operações, sem modificar a versão do Terminal. */
+    const preco672 = (v,ativo) => Number.isFinite(v) ? Number(v).toLocaleString("pt-BR",{minimumFractionDigits:ativo==="WIN"?0:2,maximumFractionDigits:6}) : "—";
+    function tamanho672(o) {
+      const tipo=o.ativo in ATIVOS?o.ativo:"WIN", a=ATIVOS[tipo], lado=o.lado==="V"?"V":"C";
+      const r=num(o.risco), e=num(o.entrada), stop=num(o.stop), direto=num(o.stopDireto);
+      if(!(r>0))return {erro:"Informe o risco disponível em R$."};
+      let dist;
+      if(o.modo!=="direto"){
+        if(!(e>0)||!(stop>0))return {erro:"Informe os preços de entrada e do stop."};
+        dist=Math.abs(e-stop);
+        if(!(dist>0))return {erro:"Entrada e stop não podem ser iguais."};
+      }else{
+        if(!(direto>0))return {erro:"Informe a distância do stop em pontos ou R$ por unidade."};
+        dist=o.unidade==="reais"?direto/a.porPonto:direto;
+      }
+      if(!(dist>0)||!Number.isFinite(dist))return {erro:"Distância de stop inválida."};
+      const porUnid=dist*a.porPonto;
+      let qtd=Math.floor(r/porUnid+1e-9),limitado=false;
+      if(!a.lote&&o.capitalMax!=null&&Number.isFinite(o.capitalMax)&&o.capitalMax>=0&&o.capitalMax<qtd){
+        qtd=Math.floor(o.capitalMax);limitado=true;
+      }
+      const sinal=lado==="C"?1:-1;
+      const alvo=k=>e>0&&qtd>0?{preco:e+sinal*k*dist,lucro:qtd*porUnid*k}:null;
+      return {tipo,lado,qtd,dist,porUnid,riscoUsado:qtd*porUnid,limitado,
+        alvo2:alvo(2),alvo3:alvo(3),
+        ladoInvalido:o.modo!=="direto"&&((lado==="C"&&stop>=e)||(lado==="V"&&stop<=e))};
+    }
+    function parcial672(o){
+      const tipo=o.ativo in ATIVOS?o.ativo:"WIN",a=ATIVOS[tipo],lado=o.lado==="V"?"V":"C";
+      const total=num(o.total),q=num(o.parcial),entrada=num(o.entrada),saida=num(o.saida);
+      if(!Number.isInteger(total)||total<=0)return {erro:"Informe uma quantidade total inteira e maior que zero."};
+      if(!(entrada>0)||!(saida>0))return {erro:"Informe os preços de entrada e da parcial."};
+      if(!Number.isInteger(q)||q<=0||q>total)return {erro:"A parcial deve ser inteira, positiva e não superar a quantidade total."};
+      const sinal=lado==="C"?1:-1,restante=total-q;
+      const realizado=(saida-entrada)*q*a.porPonto*sinal;
+      const riscoZero=restante>0?entrada-sinal*realizado/(restante*a.porPonto):null;
+      const tick=a.tick||.01;
+      const executavel=riscoZero===null?null:(sinal===1
+        ?Math.ceil(riscoZero/tick-1e-9)*tick:Math.floor(riscoZero/tick+1e-9)*tick);
+      return {tipo,lado,realizado,restante,medioOriginal:entrada,medioAjustado:riscoZero,
+        riscoZero,executavel,tick};
+    }
+    function html672(){
+      const r=risco(),disp=Number.isFinite(r.disponivel)?r.disponivel:null;
+      const opcoes=Object.entries(ATIVOS).map(([k,a])=>'<option value="'+k+'">'+esc(a.nome)+'</option>').join("");
+      return '<form class="v598-calc v672-calc" data-calc598 data-origem="operacoes" data-c672-modo="preco" onsubmit="return false" aria-label="Calculadora de Tamanho de Posição e Parcial">'+
+        '<details class="v672-details" open><summary>Gerenciamento de risco <small>Recolher / expandir</small></summary><div class="v672-content">'+
+        '<div class="v672-tabs" role="tablist" aria-label="Ferramentas de risco">'+
+        '<button type="button" role="tab" id="v672-tab-tam" data-c672-tab="tamanho" aria-selected="true" aria-controls="v672-pane-tam">Tamanho de Posição</button>'+
+        '<button type="button" role="tab" id="v672-tab-par" data-c672-tab="parcial" aria-selected="false" aria-controls="v672-pane-par">Parcial &amp; Risco Zero</button></div>'+
+        '<section class="v672-pane" data-c672-pane="tamanho" role="tabpanel" id="v672-pane-tam" aria-labelledby="v672-tab-tam">'+
+        '<div class="v672-modos" role="group" aria-label="Modo de informar stop"><button type="button" data-c672-modo="preco" aria-pressed="true">Modo Preço</button><button type="button" data-c672-modo="direto" aria-pressed="false">Modo Direto</button></div>'+
+        '<div class="v672-grid"><label>Ativo<select data-c598="ativo">'+opcoes+'</select></label>'+
+        '<label>Lado<select data-c672="lado"><option value="C">Compra</option><option value="V">Venda</option></select></label></div>'+
+        '<label>Risco disponível hoje (R$)<input data-c598="risco" inputmode="decimal" autocomplete="off" value="'+(disp===null?'':String(Math.round(disp*100)/100).replace(".",","))+'" placeholder="Risco em R$"></label>'+
+        '<div class="v672-grid"><label>Preço de Entrada<input data-c598="ent" inputmode="decimal" autocomplete="off" placeholder="Ex.: 130.250"></label>'+
+        '<label data-c672-field="preco">Preço do Stop<input data-c598="stop" inputmode="decimal" autocomplete="off" placeholder="Ex.: 130.000"></label></div>'+
+        '<div class="v672-grid" data-c672-field="direto" hidden><label>Unidade de Stop<select data-c672="unidade"><option value="pontos">Pontos / diferença de preço</option><option value="reais">R$ por contrato/ação</option></select></label>'+
+        '<label>Distância do Stop<input data-c672="stopDireto" inputmode="decimal" autocomplete="off" placeholder="Ex.: 150"></label></div>'+
+        '<output class="v598-calc-res" data-c598="res" aria-live="polite">Informe os dados para calcular o lote.</output>'+
+        '<small class="v598-calc-nota">Alvos 2:1 e 3:1 usam a distância do stop e o lote permitido. No Modo Direto, a entrada é necessária apenas para calcular os preços dos alvos.</small>'+
+        '<small class="v598-calc-nota">Limite de perda: '+(Number.isFinite(r.limite)?brl(r.limite):"não definido")+'. Sem taxas, corretagem ou emolumentos.</small></section>'+
+        '<section class="v672-pane" data-c672-pane="parcial" role="tabpanel" id="v672-pane-par" aria-labelledby="v672-tab-par" hidden>'+
+        '<div class="v672-grid"><label>Ativo<select data-c672="ativoParcial"><option value="WDO">WDO · mini dólar</option><option value="WIN">WIN · mini índice</option><option value="ACAO">Ações</option></select></label>'+
+        '<label>Lado<select data-c672="ladoParcial"><option value="C">Compra</option><option value="V">Venda</option></select></label>'+
+        '<label>Quantidade total<input data-c672="total" inputmode="numeric" autocomplete="off" placeholder="Ex.: 10"></label>'+
+        '<label>Preço médio de entrada<input data-c672="entradaParcial" inputmode="decimal" autocomplete="off" placeholder="Ex.: 5.500"></label>'+
+        '<label>Quantidade da parcial<input data-c672="quantidadeParcial" inputmode="numeric" autocomplete="off" placeholder="Ex.: 4"></label>'+
+        '<label>Preço da parcial<input data-c672="precoParcial" inputmode="decimal" autocomplete="off" placeholder="Ex.: 5.490"></label></div>'+
+        '<output class="v598-calc-res v672-parcial-res" data-c672="resParcial" aria-live="polite">Preencha os dados para calcular o risco zero.</output>'+
+        '<small class="v598-calc-nota">O preço médio contábil do saldo permanece na entrada. O médio ajustado incorpora o resultado já realizado. Projeção teórica sem taxas nem slippage.</small>'+
+        '</section></div></details></form>';
+    }
+    function calcula672(f){
+      const g=k=>f.querySelector('[data-c598="'+k+'"]'),h=k=>f.querySelector('[data-c672="'+k+'"]');
+      const a=tamanho672({ativo:g("ativo").value,lado:h("lado").value,risco:g("risco").value,modo:f.dataset.c672Modo,
+        entrada:g("ent").value,stop:g("stop").value,stopDireto:h("stopDireto").value,
+        unidade:h("unidade").value,capitalMax:lotesCapital()});
+      const out=g("res");
+      if(a.erro)out.textContent=a.erro;
+      else{
+        const m=ATIVOS[a.tipo],plural=a.qtd===1?m.unid:m.unids;
+        const lotes=m.lote?' · '+Math.floor(a.qtd/m.lote)+' lote(s) de '+m.lote+(a.qtd%m.lote?' + '+a.qtd%m.lote+' no fracionário':''):'';
+        let texto='<b>'+a.qtd.toLocaleString("pt-BR")+'</b> '+plural+lotes+(a.limitado?' · limitado pelo capital':'')+
+          '<span>Distância: '+preco672(a.dist,a.tipo)+' '+(m.lote?'R$ por ação':'pontos')+' · custo por unidade '+brl(a.porUnid)+' · perda no stop '+brl(a.riscoUsado)+'</span>';
+        if(a.qtd>0&&a.alvo2&&a.alvo3){
+          texto+='<div class="v672-alvos"><div><span>Alvo 2:1 · '+(a.lado==="C"?"Compra":"Venda")+'</span><strong>'+preco672(a.alvo2.preco,a.tipo)+'</strong><small>Lucro potencial '+brl(a.alvo2.lucro)+'</small></div>'+
+            '<div><span>Alvo 3:1 · '+(a.lado==="C"?"Compra":"Venda")+'</span><strong>'+preco672(a.alvo3.preco,a.tipo)+'</strong><small>Lucro potencial '+brl(a.alvo3.lucro)+'</small></div></div>';
+          if(a.ladoInvalido)texto+='<span class="v672-alert">Confira o sentido do stop: compra abaixo da entrada, venda acima.</span>';
+        }else if(a.qtd>0)texto+='<span>Informe o preço de entrada para mostrar o preço exato dos alvos 2:1 e 3:1.</span>';
+        if(!a.qtd)texto+='<span>O risco unitário supera o disponível: nenhum lote permitido.</span>';
+        out.innerHTML=texto;
+      }
+      const b=parcial672({ativo:h("ativoParcial").value,lado:h("ladoParcial").value,total:h("total").value,
+        entrada:h("entradaParcial").value,parcial:h("quantidadeParcial").value,saida:h("precoParcial").value});
+      const res=h("resParcial");
+      if(b.erro){res.textContent=b.erro;return;}
+      let html='<div class="v672-line"><span>Lucro / perda realizados na parcial</span><strong class="'+(b.realizado<0?'v672-loss':'v672-gain')+'">'+brl(b.realizado)+'</strong></div>'+
+        '<div class="v672-line"><span>Quantidade restante</span><strong>'+b.restante.toLocaleString("pt-BR")+'</strong></div>';
+      if(b.restante){
+        html+='<div class="v672-line"><span>Preço médio contábil do saldo</span><strong>'+preco672(b.medioOriginal,b.tipo)+'</strong></div>'+
+          '<div class="v672-line"><span>Novo preço médio ajustado</span><strong>'+preco672(b.medioAjustado,b.tipo)+'</strong></div>'+
+          '<div class="v672-line v672-zero"><span>Ponto teórico de Risco Zero</span><strong>'+preco672(b.riscoZero,b.tipo)+'</strong></div>'+
+          '<small>Preço favorável ao zero no tick de '+preco672(b.tick,b.tipo)+': <b>'+preco672(b.executavel,b.tipo)+'</b>.</small>';
+      }else html+='<small>Posição totalmente encerrada: não há saldo nem ponto de risco zero.</small>';
+      res.innerHTML=html;
+    }
     function html(origem) {
+      if (origem === "operacoes") return html672();
       const r = risco(),
         disp = Number.isFinite(r.disponivel) ? r.disponivel : "";
       return `<form class="v598-calc" data-calc598 data-origem="${esc(origem)}" onsubmit="return false" aria-label="Calculadora de posição">
@@ -7819,6 +7928,7 @@ try {
 </form>`;
     }
     function calcula(f) {
+      if (f.dataset.origem === "operacoes") return calcula672(f);
       const g = (k) => f.querySelector(`[data-c598="${k}"]`),
         a = ATIVOS[g("ativo").value] || ATIVOS.WIN,
         rs = num(g("risco").value),
@@ -7871,7 +7981,26 @@ try {
     d.addEventListener("click", (e) => {
       e.target.closest?.("[data-v598-calc]") && (e.preventDefault(), abrir());
     });
-    w.CalcPosicao = { abrir, html };
+
+    d.addEventListener("click",e=>{
+      const b=e.target.closest?.("[data-c672-tab],[data-c672-modo]");
+      if(!b)return;
+      const f=b.closest("[data-calc598]");
+      if(!f||f.dataset.origem!=="operacoes")return;
+      e.preventDefault();
+      const tab=b.getAttribute("data-c672-tab"),modo=b.getAttribute("data-c672-modo");
+      if(tab){
+        f.querySelectorAll("[data-c672-tab]").forEach(x=>x.setAttribute("aria-selected",String(x.dataset.c672Tab===tab)));
+        f.querySelectorAll("[data-c672-pane]").forEach(x=>x.hidden=x.dataset.c672Pane!==tab);
+      }
+      if(modo){
+        f.dataset.c672Modo=modo;
+        f.querySelectorAll("[data-c672-modo]").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.c672Modo===modo)));
+        f.querySelectorAll("[data-c672-field]").forEach(x=>x.hidden=x.dataset.c672Field!==modo);
+      }
+      calcula672(f);
+    });
+    w.CalcPosicao = { abrir, html, tamanho672, parcial672 };
     /* Terminal: comando CALC abre a calculadora dentro do painel. */
     const regTerminal = () => {
       const T = w.TRM;

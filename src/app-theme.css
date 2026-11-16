@@ -2938,3 +2938,35 @@ html:root body #app .market-quotes .dl-logo{flex-shrink:0;min-width:var(--dl,20p
  #app .dt670-instrument+.dt670-instrument{border-left:0;border-top:1px solid #1E232E;padding:10px 0 4px}
  #app .dt670-val>strong{font-size:19px}
 }
+
+
+/* v672 — Apenas dentro do componente de cálculo de posição. */
+.v598-calc-dlg:has(.v672-calc){width:min(500px,calc(100vw - 20px));max-height:min(90dvh,790px);overflow-y:auto}
+.v598-calc .v672-details{min-width:0;border:0;margin:0;padding:0}
+.v598-calc .v672-details>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;font-size:12px;font-weight:700;color:#e8e6e1}
+.v598-calc .v672-details>summary small{font-size:11px;font-weight:400;color:#8a93a6}
+.v598-calc .v672-content{display:grid;gap:10px;min-width:0}
+.v598-calc .v672-tabs,.v598-calc .v672-modos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;min-width:0}
+.v598-calc :is(.v672-tabs,.v672-modos) button{min-width:0;min-height:44px;padding:6px 8px;background:#0A0C10;border:1px solid #1E232E;border-radius:4px;font:600 12px/1.35 system-ui,sans-serif;color:#8A93A6;cursor:pointer;white-space:normal;overflow-wrap:normal}
+.v598-calc :is(.v672-tabs,.v672-modos) button[aria-selected="true"],.v598-calc :is(.v672-tabs,.v672-modos) button[aria-pressed="true"]{color:#D4A017;border-color:#D4A017;background:#181C26}
+.v598-calc :is(.v672-tabs,.v672-modos) button:focus-visible{outline:2px solid #D4A017;outline-offset:2px}
+.v598-calc .v672-pane{display:grid;gap:10px;min-width:0}
+.v598-calc .v672-pane[hidden],.v598-calc [data-c672-field][hidden]{display:none!important}
+.v598-calc .v672-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+.v598-calc .v672-grid>label{min-width:0;overflow-wrap:normal}
+.v598-calc .v672-grid>label>input,.v598-calc .v672-grid>label>select{width:100%;min-width:0;box-sizing:border-box}
+.v598-calc .v672-alvos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:10px;padding-top:9px;border-top:1px solid #1E232E}
+.v598-calc .v672-alvos>div{min-width:0;display:grid;gap:3px;padding-right:8px}
+.v598-calc .v672-alvos>div+div{padding:0 0 0 8px;border-left:1px solid #1E232E}
+.v598-calc .v672-alvos span,.v598-calc .v672-line span{font-size:11px;line-height:1.35;color:#8A93A6}
+.v598-calc .v672-alvos strong{font-size:18px;color:#D4A017;font-variant-numeric:tabular-nums}
+.v598-calc .v672-alvos small{color:#10B981;font-size:11px;font-variant-numeric:tabular-nums}
+.v598-calc .v672-alert{color:#D4A017!important}
+.v598-calc .v672-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #1E232E}
+.v598-calc .v672-line strong{flex-shrink:0;text-align:right;font-size:14px;font-variant-numeric:tabular-nums}
+.v598-calc .v672-line strong.v672-gain{color:#10B981}
+.v598-calc .v672-line strong.v672-loss{color:#EF4444}
+.v598-calc .v672-zero strong{font-size:18px;color:#D4A017}
+.v598-calc .v672-parcial-res>small{display:block;margin-top:8px;color:#8A93A6;font-size:11px}
+.v598-calc .v672-parcial-res>small b{color:#D4A017}
+@media(max-width:380px){.v598-calc .v672-grid{grid-template-columns:minmax(0,1fr)}.v598-calc .v672-alvos{grid-template-columns:minmax(0,1fr)}.v598-calc .v672-alvos>div+div{border-left:0;border-top:1px solid #1E232E;padding:9px 0 0}}
