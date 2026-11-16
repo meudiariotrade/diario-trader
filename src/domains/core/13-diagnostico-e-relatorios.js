@@ -3470,8 +3470,8 @@ function cqMapa(e, t) {
 }
 // Complementos locais da cotação: a API terminal/cot já existente consulta o TradingView.
 const CQ_FUT_EXT = Object.freeze([
-  { c: "Nikkei 225", n: "🇯🇵 Japão · referência do índice (não contrato futuro)", s: "TVC:NI225", alternativas: ["TVC:NI225"], dp: 0, _aba: "fut" },
-  { c: "DAX", n: "🇩🇪 Alemanha · referência do índice (não contrato futuro)", s: "INDEX:DEU40", alternativas: ["INDEX:DEU40", "XETR:DAX"], dp: 0, _aba: "fut" },
+  { c: "Nikkei 225", n: "🇯🇵 Japão · referência do índice (não contrato futuro)", s: "TVC:NI225", alternativas: ["TVC:NI225"], dp: 0, tz: "Asia/Tokyo", ab: 540, fe: 930, _aba: "fut" },
+  { c: "DAX", n: "🇩🇪 Alemanha · referência do índice (não contrato futuro)", s: "INDEX:DEU40", alternativas: ["INDEX:DEU40", "XETR:DAX"], dp: 0, tz: "Europe/Berlin", ab: 540, fe: 1050, _aba: "fut" },
 ]);
 const CQ_EXT = { d: {}, ts: 0, busy: false };
 function cqFavExtras(aba) {
@@ -4705,7 +4705,7 @@ function m623Html() {
   } catch {}
   const T = (M606.v && M606.v.terminal) || [],
     g = (x) => T.filter((i) => i.g === x);
-  if (!CQ.d.fx && !CQ.loading.fx) setTimeout(() => cqCarrega("fx"), 0);
+  if (!window.DIARIO_DEMO && cfg() && !CQ.d.fx && !CQ.loading.fx) setTimeout(() => cqCarrega("fx"), 0);
   if (!CQ_EXT.busy && Date.now() - CQ_EXT.ts >= 3e4) setTimeout(cqExtrasCarrega, 0);
   const emergentes = new Set(g("em").map(x => x.k.toUpperCase()));
   const linhasMobile = cqItens("fx").filter(x => !emergentes.has(String(x.c || "").toUpperCase()));
@@ -4790,6 +4790,7 @@ function fhSym(code, grupo = "") {
   const par = /^([A-Z]{3})\/([A-Z]{3})$/.exec(ticker) || /^([A-Z]{3})_([A-Z]{3})$/.exec(ticker);
   const compacto = /^([A-Z]{3})([A-Z]{3})$/.exec(ticker);
   const p = par || compacto;
+  if ((bolsa || grupo === "us" || grupo === "adr") && /^[A-Z][A-Z0-9.\-]{0,12}$/.test(ticker)) return ticker;
   if (p && (grupo === "fx" || fxFonte || !!par || (FH_MOEDAS.has(p[1]) && FH_MOEDAS.has(p[2]))))
     return "OANDA:" + p[1] + "_" + p[2];
   if ((bolsa || grupo === "us" || grupo === "adr" || FH_ACOES.includes(ticker)) && /^[A-Z][A-Z0-9.\-]{0,12}$/.test(ticker)) return ticker;
