@@ -20,6 +20,11 @@ test('v691: Operações mantém hub e abre Auditoria & Monte Carlo sem telas sob
  await page.evaluate(()=>document.querySelector('#ops-audit-691 summary')?.click());
  await expect(page.locator('#ops-audit-691')).toHaveAttribute('open','');
  await expect(page.locator('#ops-audit-691 .a691-panel')).toBeVisible();
+ // Simula reconstrução interna do painel pelo sistema de apresentação/cotações.
+ // O observador deve remontar a auditoria mantendo-a aberta sem novo trade.
+ await page.evaluate(()=>document.querySelector('#ops-audit-691')?.remove());
+ await expect(page.locator('#ops-audit-691')).toHaveAttribute('open','');
+ await expect(page.locator('#ops-audit-691 .a691-panel')).toBeVisible();
  await expect(page.locator('#ops-audit-691 .a691-head')).toContainText('operações encerradas');
  await page.evaluate(()=>render());
  await expect(page.locator('#ops-audit-691')).toHaveAttribute('open','');

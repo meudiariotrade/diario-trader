@@ -235,20 +235,14 @@ function mount(){
  if(anchor)anchor.after(element);
  else app.prepend(element);
 }
-if(typeof vOpsHub==='function'){
- const original=vOpsHub;
- vOpsHub=function(){
-  const base=original.apply(this,arguments),audit=auditMarkup();
-  return base.includes('<h2>Visão geral</h2>')?
-   base.replace('<h2>Visão geral</h2>',audit+'<h2>Visão geral</h2>'):base+audit;
- };
-}
+// Montagem única no DOM final: não interceptar vOpsHub, que pode ser repintado
+// pelas camadas de apresentação e duplicava o caminho de inserção da auditoria.
 function watchApp(){
  const app=d.getElementById('app');
  if(!app)return;
  if(!app._opsAuditObserver){
   const observer=new MutationObserver(mount);
-  observer.observe(app,{childList:true});
+  observer.observe(app,{childList:true,subtree:true}); // camadas V4 repintam subárvores internas
   app._opsAuditObserver=observer;
  }
  mount();
@@ -258,6 +252,9 @@ if(d.readyState==='loading')d.addEventListener('DOMContentLoaded',watchApp,{once
 else watchApp();
 function reconcileDetails(element){
  if(!element||element.id!=='ops-audit-691'||typeof tab==='undefined'||tab!=='ops')return;
+ // Eventos toggle atrasados de painéis já desmontados não podem sobrescrever
+ // o estado que o usuário escolheu no painel atualmente exibido.
+ if(!element.isConnected||d.getElementById('ops-audit-691')!==element)return;
  B.expanded=element.open;
  const body=element.querySelector('.a691-panel');
  if(element.open&&!body){
