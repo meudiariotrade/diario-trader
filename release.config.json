@@ -1,5 +1,5 @@
 {
-  "version": 690,
+  "version": 691,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -74,6 +74,7 @@
       "src/domains/layers/02-carteira-e-terminal.js",
       "src/domains/layers/03-apresentacao.js",
       "src/domains/layers/04-design-e-navegacao.js",
+      "src/operations/auditoria-monte-carlo-v691.js",
       "src/studies/eco-core.js",
       "src/studies/eco-monetaria.js",
       "src/studies/eco-mf.js",
