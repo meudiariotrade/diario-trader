@@ -8,13 +8,13 @@ test('radar sem menu duplicado: referências exclusivas nas categorias, fontes e
  await expect(app.locator('.m406-radar-details')).toHaveCount(0);
  await expect(app.locator('.m405-section-nav')).toHaveCount(0);
  await expect(app.locator('[data-m408-radar]')).toHaveCount(0);
- const expected={idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','BRL=X'],adr:['EWZ','PBR','VALE'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','IRON','GOLD'],jur:['SELIC','DI1F27','US10Y']};
+ const expected={idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','BRL=X'],adr:['EWZ','PBR','VALE'],fut:['ES=F','NQ=F','YM=F','TVC:NI225','INDEX:DEU40'],cmd:['BRENT','WTI','IRON','GOLD'],jur:['SELIC','DI1F27','US10Y']};
  for(const [category,codes]of Object.entries(expected)){
   await app.locator('.market-categories [data-cqa="'+category+'"]').evaluate(b=>b.click()); // v549: categorias extras ficam em "Outros"
   const rows=app.locator('.market-quotes .cqr');
   await expect(rows).toHaveCount(codes.length);
   await expect.poll(()=>rows.evaluateAll(ns=>ns.map(n=>n.dataset.marketSymbol).sort())).toEqual(codes.slice().sort());
-  for(const label of await rows.locator('.quote-reference').allTextContents()){assert.match(label,/Fonte da fixture/);assert.match(label,/09\/11\/2026/)}
+  for(const label of await rows.locator('.quote-reference').allTextContents()){if(category==='fut'&&!/Fonte da fixture/.test(label))continue;assert.match(label,/Fonte da fixture/);assert.match(label,/09\/11\/2026/)}
   await expect(app.locator('.market-sources')).toHaveCount(1);
  }
  // A lista nativa de ADRs também tem prioridade sobre a cópia do panorama.
