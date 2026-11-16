@@ -23701,13 +23701,13 @@ try {
       GRUPOS596 = {
         est: ["est", "foco", "reg", "ciclo", "edital", "conq"],
         aul: ["aul", "playlists"],
-        liv: ["liv", "cnpi", "fac", "pl", "pr", "resumos"],
+        liv: ["liv", "cnpi", "fac", "pl", "pr", "resumos", "eco"],
         desemp: ["desemp", "sim", "treino", "ing"],
         rpy: ["rpy"],
       },
       SUB596 = {
         est: [["est", "Hoje"], ["foco", "Modo foco"], ["reg", "Registrar estudo"], ["ciclo", "Ciclo"]],
-        liv: [["liv", "Livros"], ["pl", "Planos de leitura"], ["pr", "Prompts"]],
+        liv: [["liv", "Livros"], ["pl", "Planos de leitura"], ["pr", "Prompts"], ["eco", "Laboratório"]],
         /* v597: Inglês (trilha estilo Duolingo) separado do treino técnico de mercado. */
         desemp: [["desemp", "Progresso"], ["sim", "Simulado CNPI-T"], ["treino", "Treino de mercado"], ["ing", "Inglês"]],
       };
@@ -24013,7 +24013,7 @@ try {
         <nav class="dt397-category" aria-label="Seções de Estudos">${wt()}</nav>
       </div>
       ${sub596()}
-      <section class="dt397-native-mount" aria-label="Ferramentas de estudo"><header><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", rpy: "Replay de mercado", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}${hoje596}</section>
+      <section class="dt397-native-mount" aria-label="Ferramentas de estudo"><header><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", rpy: "Replay de mercado", eco: "Laboratório de Economia", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}${hoje596}</section>
     </div>`;
     }
     function Ct() {
@@ -41354,40 +41354,25 @@ L.kpi=(t,v)=>'<div class="eco-kpi"><small>'+t+'</small><b>'+v+'</b></div>';
 L.note=v=>'<p class="eco-note">'+v+'</p>';
 L.slider=(id,t,min,max,step,u)=>'<label class="eco-slider"><span>'+t+' <output data-eco-out="'+id+'">'+L.f(S[id],1)+u+'</output></span><input data-eco-range="'+id+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+S[id]+'"></label>';
 L.label=(s)=>L.esc(s).slice(0,900);
-const tabList=[['mon','Política monetária'],['mf','IS–LM–BP'],['eco','Econometria'],['quiz','Questões & ANPEC'],['tempo','Brasil pós-Real']];
+const tabList=[['mon','Política monetária'],['mf','IS–LM–BP'],['eco','Econometria'],['quiz','Questões & ANPEC'],['tempo','Brasil pós-Real'],['ficha','Fichamentos'],['micro','Microeconomia'],['flash','Flashcards'],['series','Séries BCB / IBGE'],['revisao','Resumo de prova']];
 function tabeco(){return '<nav class="eco-nav" aria-label="Ferramentas de economia">'+tabList.map(([id,n])=>'<button type="button" data-eco-tool="'+id+'" class="'+(S.tool===id?'on':'')+'">'+n+'</button>').join('')+'</nav>';}
 function corpo(){return typeof L.views[S.tool]==='function'?L.views[S.tool]():'<p>Ferramenta indisponível.</p>';}
 L.paint=()=>{if(typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='eco')return;const e=document.getElementById('eco-body');if(e)e.innerHTML=corpo();};
-function segHTML(html,ativo){
- const s=(String(html||'').match(/<div class="seg"[^>]*>[\s\S]*?<\/div>/g)||[]).find(x=>x.includes('data-ep="esv"'));
- if(!s)return '<div class="seg"><button data-ep="esv" data-id="liv">Livros</button><button data-ep="esv" data-id="eco" class="on">Economia</button></div>';
- return s.replace(ativo?/ class="on"/g:/\bABSOLUTAMENTE_NADA\b/g,'').replace('</div>','<button type="button" data-ep="esv" data-id="eco"'+(ativo?' class="on"':'')+'>Economia</button></div>');
-}
-function viewEco(segment){
-return '<h1>Estudos</h1>'+segment+'<div class="eco-root"><header class="eco-head"><small>CIÊNCIAS ECONÔMICAS · FERRAMENTAS DIDÁTICAS</small><h2>Laboratório de Economia</h2><p>Modelos interativos e dados do próprio aplicativo. Sem ordens ou alterações nas operações.</p></header>'+tabeco()+'<div id="eco-body" class="eco-body">'+corpo()+'</div></div>';
+function viewEco(){
+return '<h1>Estudos</h1><div class="eco-root"><header class="eco-head"><small>CIÊNCIAS ECONÔMICAS · FERRAMENTAS DIDÁTICAS</small><h2>Laboratório de Economia</h2><p>Dez ferramentas acadêmicas, sem alterações nas suas operações ou no banco de dados.</p></header>'+
+'<div class="eco-storage"><span>Histórico guardado somente neste navegador</span><button type="button" data-eco-btn="uniExport">Exportar JSON</button><label>Importar JSON<input type="file" data-eco-history accept="application/json,.json"></label></div>'+
+tabeco()+'<div id="eco-body" class="eco-body">'+corpo()+'</div></div>';
 }
 const original=typeof vEstudos==='function'?vEstudos:null;
 if(!original)return;
+// A barra de Biblioteca já é renderizada na shell principal de Estudos (v596).
+// Não recriar seg/nav legado nem colocar botão ou banner no meio dos livros.
 vEstudos=function(){
- if(typeof ESV==='undefined')return original.apply(this,arguments);
- if(ESV==='eco'){
-  let html;ESV='liv';try{html=original.apply(this,arguments);}finally{ESV='eco';}
-  return viewEco(segHTML(html,true));
- }
- const html=original.apply(this,arguments);
- if(typeof html!=='string'||html.includes('data-id="eco"'))return html;
- const seg=(html.match(/<div class="seg"[^>]*>[\s\S]*?<\/div>/g)||[]).find(x=>x.includes('data-ep="esv"'));
- const view=seg?html.replace(seg,segHTML(seg,false)):html;
- if(ESV==='liv'||ESV==='est')return view.replace('<h1>Estudos</h1>','<h1>Estudos</h1><button type="button" class="eco-launch" data-eco-launch="1">Laboratório de Economia · abrir ferramentas acadêmicas</button>');
- return view;
+ return typeof ESV!=='undefined'&&ESV==='eco'?viewEco():original.apply(this,arguments);
 };
 document.addEventListener('click',async e=>{
- const t=e.target.closest&&e.target.closest('[data-ep="esv"][data-id="eco"],[data-eco-launch],[data-eco-tool],[data-eco-btn]');
+ const t=e.target.closest&&e.target.closest('[data-eco-tool],[data-eco-btn]');
  if(!t)return;
- if(t.matches('[data-ep="esv"][data-id="eco"],[data-eco-launch]')){
-  e.preventDefault();e.stopImmediatePropagation();ESV='eco';tab='estudos';S.tool='mon';render();
-  L.events.macro&&L.events.macro();return;
- }
  if(typeof tab==='undefined'||tab!=='estudos'||ESV!=='eco')return;
  if(t.hasAttribute('data-eco-tool')){
   S.tool=t.dataset.ecoTool;render();
@@ -41725,11 +41710,585 @@ L.views.tempo=()=>{
 };
 L.events.evento=el=>{S.evento=+el.dataset.v;L.paint();};
 })();
+/* v661 · Fichamento e flashcards; somente navegador, sem banco novo. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state, esc=L.esc, note=L.note, card=L.card;
+const KEY='diario-laboratorio-universitario-v1',DISC=['Macroeconomia','Microeconomia','Econometria / Estatística','Economia Brasileira','História do Pensamento Econômico'];
+const initial=()=>({schema:1,fichas:[],cards:[],revisoes:[],consultas:[],resumos:[]});
+const seeds=[
+['Macroeconomia','O que desloca a LM no modelo IS–LM?','Mudanças na oferta real de moeda ou na demanda por moeda.'],
+['Macroeconomia','O que a Regra de Taylor relaciona?','Taxa nominal de juros, juro real neutro, inflação, meta e hiato do produto.'],
+['Microeconomia','Quando um consumidor iguala TMS e preços relativos?','Em ótimo interior diferenciável: TMS = Px/Py.'],
+['Microeconomia','Condição de lucro máximo interior','Receita marginal igual a custo marginal, com segunda ordem adequada.'],
+['Econometria / Estatística','Qual o estimador angular no MQO simples?','Covariância amostral X,Y dividida pela variância amostral de X.'],
+['Econometria / Estatística','O que R² NÃO prova?','Causalidade ou previsão fora da amostra.'],
+['Economia Brasileira','Três pilares do tripé macroeconômico pós-1999','Metas de inflação, câmbio flutuante e compromisso fiscal.'],
+['Economia Brasileira','O que a URV buscou fazer?','Criar unidade de conta de transição para reduzir a inflação inercial.'],
+['História do Pensamento Econômico','Ideia central de vantagem comparativa (Ricardo)','Ganhos do comércio decorrem de custos de oportunidade relativos.'],
+['História do Pensamento Econômico','Para Keynes, por que pode haver desemprego involuntário?','Demanda efetiva insuficiente pode manter produção abaixo do pleno emprego.']
+];
+let db=initial(),erro='';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,9);
+const trunc=(v,n=3000)=>String(v??'').trim().slice(0,n);
+function fixCard(c){return {id:trunc(c.id,90)||uid(),disc:DISC.includes(c.disc)?c.disc:DISC[0],front:trunc(c.front,400),back:trunc(c.back,900),source:trunc(c.source,120),reps:Math.min(150,Math.max(0,+c.reps||0)),ease:Math.max(1.3,Math.min(3,+c.ease||2.5)),interval:Math.min(3650,Math.max(0,+c.interval||0)),due:/^\d{4}-\d\d-\d\dT/.test(c.due)?c.due:new Date().toISOString()};}
+function persist(){
+ try{localStorage.setItem(KEY,JSON.stringify(db));erro='';return true;}
+ catch(e){erro='Armazenamento local cheio ou bloqueado; exporte seu JSON antes de fechar.';return false;}
+}
+function sanitize(v){
+ const out=initial();if(!v||typeof v!=='object'||v.schema!==1)throw Error('JSON de histórico incompatível.');
+ for(const f of (Array.isArray(v.fichas)?v.fichas:[]).slice(0,80)){
+  if(!f||typeof f!=='object')continue;
+  out.fichas.push({id:trunc(f.id,90)||uid(),titulo:trunc(f.titulo,180),disc:DISC.includes(f.disc)?f.disc:DISC[0],origem:trunc(f.origem,120),criado:trunc(f.criado,35),
+   excerto:trunc(f.excerto,12000),tese:trunc(f.tese,3000),
+   conceitos:(Array.isArray(f.conceitos)?f.conceitos:[]).slice(0,15).map(x=>({termo:trunc(x?.termo,140),significado:trunc(x?.significado,900)})),
+   equacoes:(Array.isArray(f.equacoes)?f.equacoes:[]).slice(0,12).map(x=>trunc(x,400)),
+   escola:trunc(f.escola,1500),criticas:trunc(f.criticas,1500),
+   questoes:(Array.isArray(f.questoes)?f.questoes:[]).slice(0,3).map(x=>trunc(x,500)),
+   metodo:trunc(f.metodo,80)});
+ }
+ out.cards=(Array.isArray(v.cards)?v.cards:[]).slice(0,500).filter(x=>x&&x.front&&x.back).map(fixCard);
+ out.revisoes=(Array.isArray(v.revisoes)?v.revisoes:[]).slice(-600).map(x=>({card:trunc(x?.card,90),acerto:!!x?.acerto,at:trunc(x?.at,35)}));
+ out.consultas=(Array.isArray(v.consultas)?v.consultas:[]).slice(-20).map(x=>({id:trunc(x?.id,70),serie:trunc(x?.serie,180),fonte:trunc(x?.fonte,60),url:trunc(x?.url,450),unidade:trunc(x?.unidade,45),em:trunc(x?.em,40),pontos:(Array.isArray(x?.pontos)?x.pontos:[]).slice(-500).map(p=>({data:trunc(p.data,16),valor:+p.valor})).filter(p=>Number.isFinite(p.valor))}));
+ out.resumos=(Array.isArray(v.resumos)?v.resumos:[]).slice(-50).map(x=>({id:trunc(x?.id,90),tema:trunc(x?.tema,100),em:trunc(x?.em,40),texto:trunc(x?.texto,9000)}));
+ return out;
+}
+try{const r=localStorage.getItem(KEY);if(r)db=sanitize(JSON.parse(r));}catch(e){erro='Não foi possível ler o histórico local: '+String(e.message||e).slice(0,100);}
+if(!db.cards.length){db.cards=seeds.map(([disc,front,back])=>fixCard({id:uid(),disc,front,back,source:'Banco local',due:new Date().toISOString()}));persist();}
+const U=L.uni={get data(){return db;},save:persist,disc:DISC,uid,sanitize,warning:()=>erro};
+function refresh(){L.paint();}
+function download(name,data,type){
+ const b=new Blob([data],{type}),url=URL.createObjectURL(b),a=document.createElement('a');
+ a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+L.events.uniExport=()=>download('laboratorio-economia-historico.json',JSON.stringify(db,null,2),'application/json');
+// Preserva título e texto enquanto o app recebe atualizações e repinta a aba.
+document.addEventListener('input',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='ficha')return;
+ if(e.target.matches('[data-uni-title]'))S.uniTitle=e.target.value.slice(0,160);
+ if(e.target.matches('[data-uni-text]'))S.uniText=e.target.value.slice(0,60000);
+},true);
+document.addEventListener('change',async e=>{
+ const target=e.target;if(!target||typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='eco')return;
+ if(target.matches('[data-eco-history]')){
+  const f=target.files?.[0];if(!f)return;try{
+   if(f.size>2e6)throw Error('Arquivo muito grande (limite 2 MB).');
+   const incoming=sanitize(JSON.parse(await f.text()));
+   const merge=(a,b,max)=>[...new Map([...a,...b].map(x=>[x.id,x])).values()].slice(-max);
+   db.fichas=merge(db.fichas,incoming.fichas,80);db.cards=merge(db.cards,incoming.cards,500);
+   db.revisoes=[...db.revisoes,...incoming.revisoes].slice(-600);
+   db.consultas=merge(db.consultas,incoming.consultas,20);db.resumos=merge(db.resumos,incoming.resumos,50);
+   persist();S.uniStatus='Histórico importado e mesclado com sucesso.';refresh();
+  }catch(err){S.uniStatus='Erro no JSON: '+String(err.message||err).slice(0,130);refresh();}
+  return;
+ }
+ if(target.matches('[data-uni-pdf]')){const f=target.files?.[0];if(f)await extractPdf(f);return;}
+ if(target.matches('[data-uni-disc]')){S.uniDisc=target.value;refresh();return;}
+ if(target.matches('[data-uni-select-ficha]')){S.uniFid=target.value;refresh();return;}
+ if(target.matches('[data-uni-flashdisc]')){S.uniFlashDisc=target.value;S.uniFlip=false;S.uniCard=null;refresh();}
+},true);
+S.uniDisc=DISC[0];S.uniFlashDisc=DISC[0];S.uniFid='';S.uniText='';S.uniTitle='';S.uniSource='Colar texto';S.uniPdfStatus='';S.uniStatus='';S.uniBusy=false;S.uniFlip=false;S.uniCard=null;
+const PDF_SRC='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', PDF_WORKER='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+async function pdfLib(){
+ if(window.pdfjsLib)return window.pdfjsLib;
+ if(!U.pdfPromise)U.pdfPromise=new Promise((resolve,reject)=>{
+  const s=document.createElement('script');s.src=PDF_SRC;s.async=true;s.crossOrigin='anonymous';
+  s.onload=()=>window.pdfjsLib?resolve(window.pdfjsLib):reject(Error('Leitor de PDF indisponível.'));
+  s.onerror=()=>reject(Error('Não foi possível carregar PDF.js (verifique a conexão).'));
+  document.head.append(s);
+ }).catch(e=>{U.pdfPromise=null;throw e});
+ const lib=await U.pdfPromise;lib.GlobalWorkerOptions.workerSrc=PDF_WORKER;return lib;
+}
+async function extractPdf(f){
+ S.uniPdfStatus='Extraindo texto localmente do PDF…';refresh();
+ try{
+  if(f.size>12e6)throw Error('PDF acima de 12 MB: divida o material para preservar a memória do celular.');
+  if(!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf')throw Error('Selecione um arquivo PDF.');
+  const lib=await pdfLib(),buf=await f.arrayBuffer();
+  const doc=await lib.getDocument({data:new Uint8Array(buf),useSystemFonts:true}).promise;
+  if(doc.numPages>100)throw Error('Limite de 100 páginas; divida o PDF.');
+  const parts=[];
+  for(let i=1;i<=doc.numPages;i++){
+   const page=await doc.getPage(i),ct=await page.getTextContent();
+   parts.push(ct.items.map(x=>x.str||'').join(' '));
+   if(parts.join('').length>65000)break;
+  }
+  const text=parts.join('\n\n').slice(0,60000).trim();
+  if(text.length<100)throw Error('PDF sem texto selecionável. Para documento digitalizado, use uma versão com OCR antes do upload.');
+  S.uniText=text;S.uniTitle=f.name.replace(/\.pdf$/i,'');S.uniSource='PDF · '+f.name;S.uniPdfStatus='Texto extraído de '+parts.length+' página(s). Confira o trecho antes de gerar.';
+ }catch(err){S.uniPdfStatus='PDF: '+String(err.message||err).slice(0,180);}
+ refresh();
+ const ta=document.querySelector('[data-uni-text]');if(ta)ta.value=S.uniText;
+}
+function valorTexto(){const t=document.querySelector('[data-uni-text]');return t?t.value:S.uniText;}
+function frases(t){return String(t).match(/[^.!?\n]{25,}[.!?]?/g)?.slice(0,15)||[];}
+function offline(text,title,disc){
+ const f=frases(text),eq=[...new Set(text.split('\n').map(x=>x.trim()).filter(x=>x.length<190&&/[=≈≤≥∑∂]/.test(x)))].slice(0,8);
+ return {id:uid(),titulo:title||'Fichamento acadêmico',disc,origem:S.uniSource,criado:new Date().toISOString(),excerto:text.slice(0,12000),
+  tese:trunc(f[0]||text.slice(0,300),1000),conceitos:[],equacoes:eq,
+  escola:'Não identificada de maneira verificável no trecho.',criticas:'Não identificadas de maneira verificável no trecho.',
+  questoes:['Qual é a tese central do texto?','Quais são os conceitos e pressupostos usados pelo autor?','Que objeções ou limitações o autor reconhece?'],metodo:'Extração local (sem IA)'};
+}
+async function geraFicha(){
+ if(S.uniBusy)return;
+ const text=valorTexto().trim();S.uniText=text;
+ const title=(document.querySelector('[data-uni-title]')?.value||S.uniTitle||'Texto acadêmico').trim().slice(0,160);
+ const disc=document.querySelector('[data-uni-disc]')?.value||S.uniDisc;
+ if(text.length<200){S.uniStatus='Cole ao menos 200 caracteres ou selecione um PDF com texto.';refresh();return;}
+ S.uniTitle=title;S.uniDisc=disc;S.uniBusy=true;S.uniStatus='Gerando fichamento via roteador de IA…';refresh();
+ let result=offline(text,title,disc);
+ try{
+  if(typeof anxCall!=='function')throw Error('Roteador de IA não carregado.');
+  const prompt='FICHAMENTO ACADÊMICO, exclusivamente com base no EXCERTO fornecido. Não invente bibliografia, escola, críticas ou fórmulas; onde faltar, escreva NÃO IDENTIFICADO. Responda com uma tese central em resumo, conceitos e equações em glossario, escola em visoes, limites em contraponto e TRÊS perguntas de prova em o_que_observar (formato de pergunta). Texto estudado (amostra limitada a 4800 caracteres):\n'+text.slice(0,4800);
+  const out=await anxCall({modo:'economista',texto:prompt.slice(0,5900)});
+  const ai=out.resposta||out;
+  if(!ai||(!ai.resumo&&!ai.explicacao?.length))throw Error('A IA não devolveu conteúdo estruturado.');
+  result.tese=trunc(ai.resumo||ai.explicacao[0],3000);
+  result.conceitos=(Array.isArray(ai.glossario)?ai.glossario:[]).slice(0,12).map(x=>({termo:trunc(x.termo,140),significado:trunc(x.significado,900)}));
+  result.escola=trunc((Array.isArray(ai.visoes)?ai.visoes:[]).map(x=>(x.escola||'')+': '+(x.argumento||'')).join('; '),1500)||result.escola;
+  result.criticas=trunc(ai.contraponto||'',1500)||result.criticas;
+  const qs=(Array.isArray(ai.o_que_observar)?ai.o_que_observar:[]).filter(x=>String(x).includes('?')).slice(0,3);
+  if(qs.length===3)result.questoes=qs.map(x=>trunc(x,500));
+  result.metodo='IA existente · excerto de até 4800 caracteres';
+  S.uniStatus='Fichamento salvo no navegador. Confira a precisão da IA contra o texto original.';
+ }catch(err){S.uniStatus='IA indisponível: ficha de extração local salva sem preencher conceitos ausentes. '+String(err.message||err).slice(0,160);}
+ db.fichas.unshift(result);db.fichas=db.fichas.slice(0,80);S.uniFid=result.id;persist();S.uniBusy=false;refresh();
+}
+L.events.uniFichar=geraFicha;
+L.events.uniLocal=()=>{
+ S.uniText=valorTexto().trim();if(S.uniText.length<100){S.uniStatus='Cole um trecho antes de salvar.';refresh();return;}
+ const disc=document.querySelector('[data-uni-disc]')?.value||S.uniDisc;
+ const title=document.querySelector('[data-uni-title]')?.value||'Texto acadêmico';
+ const f=offline(S.uniText,title,disc);db.fichas.unshift(f);db.fichas=db.fichas.slice(0,80);S.uniFid=f.id;S.uniTitle=title;persist();S.uniStatus='Ficha de extração local salva (não é análise de IA).';refresh();
+};
+L.events.uniAbrir=el=>{S.uniFid=el.dataset.id;refresh();};
+L.events.uniExcluir=el=>{if(!confirm('Excluir apenas esta ficha do histórico local?'))return;db.fichas=db.fichas.filter(x=>x.id!==el.dataset.id);S.uniFid='';persist();refresh();};
+function fichaHTML(f){
+ return '<div class="uni-ficha"><h3>'+esc(f.titulo)+'</h3>'+note('<b>Fonte:</b> '+esc(f.origem)+' · '+esc(f.metodo))+
+ note('<b>Tese central:</b> '+esc(f.tese))+
+ note('<b>Conceitos-chave:</b> '+(f.conceitos.length?f.conceitos.map(x=>'<b>'+esc(x.termo)+'</b>: '+esc(x.significado)).join('; '):'Não identificados no trecho.'))+
+ note('<b>Equações:</b> '+(f.equacoes.length?f.equacoes.map(esc).join(' | '):'Não identificadas.'))+
+ note('<b>Escola econômica:</b> '+esc(f.escola))+note('<b>Críticas / limites:</b> '+esc(f.criticas))+
+ '<h4>3 questões prováveis de prova</h4><ol>'+f.questoes.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'+
+ '<div class="eco-controls"><button type="button" class="eco-action" data-eco-btn="uniDeck" data-id="'+esc(f.id)+'">Gerar Flashcards</button><button type="button" data-eco-btn="uniExcluir" data-id="'+esc(f.id)+'">Excluir ficha</button></div></div>';
+}
+L.views.ficha=()=>{
+ const f=db.fichas.find(x=>x.id===S.uniFid);
+ return card('Fichador de textos e artigos',
+ '<div class="uni-grid"><label>Título / artigo<input data-uni-title maxlength="160" value="'+esc(S.uniTitle)+'" placeholder="Ex.: Cap. 3 — Keynes"></label>'+
+ '<label>Disciplina<select data-uni-disc>'+DISC.map(d=>'<option'+(S.uniDisc===d?' selected':'')+'>'+esc(d)+'</option>').join('')+'</select></label></div>'+
+ '<label>PDF com texto selecionável<input data-uni-pdf type="file" accept="application/pdf,.pdf"></label>'+
+ note('PDF extraído no seu dispositivo com PDF.js. A IA recebe somente o trecho de até 4.800 caracteres que você decidiu analisar. PDFs escaneados exigem OCR prévio.')+
+ (S.uniPdfStatus?note(esc(S.uniPdfStatus)):'')+
+ '<label>Texto / capítulo<textarea data-uni-text rows="9" placeholder="Cole aqui um trecho de artigo, capítulo ou suas notas…">'+esc(S.uniText)+'</textarea></label>'+
+ '<div class="eco-controls"><button type="button" data-eco-btn="uniFichar" class="eco-action"'+(S.uniBusy?' disabled':'')+'>'+(S.uniBusy?'Gerando…':'Gerar fichamento com IA')+'</button>'+
+ '<button type="button" data-eco-btn="uniLocal">Fichar sem IA</button></div>'+
+ (S.uniStatus?note(esc(S.uniStatus)):'')+ (erro?note(esc(erro)):'') )+
+ card('Fichamentos salvos · '+db.fichas.length,
+ (db.fichas.length?'<div class="uni-saved">'+db.fichas.map(x=>'<button type="button" data-eco-btn="uniAbrir" data-id="'+esc(x.id)+'" class="'+(x.id===S.uniFid?'on':'')+'"><b>'+esc(x.titulo)+'</b><small>'+esc(x.disc)+' · '+esc(x.criado.slice(0,10))+'</small></button>').join('')+'</div>':'<p class="eco-note">Ainda não há fichamentos neste navegador.</p>')+
+ (f?fichaHTML(f):''));
+};
+const D0=new Date().toISOString();
+function cardsFromFicha(f){
+ const list=[];
+ for(const x of f.conceitos.slice(0,12))if(x.termo&&x.significado)list.push({front:'Defina '+x.termo,back:x.significado});
+ for(const x of f.equacoes.slice(0,6))list.push({front:'Explique a equação '+x.slice(0,65),back:x});
+ if(f.tese)list.push({front:'Qual é a tese central de '+f.titulo+'?',back:f.tese});
+ if(f.escola&&!f.escola.startsWith('Não identificada'))list.push({front:'Qual escola é associada a '+f.titulo+'?',back:f.escola});
+ for(const q of f.questoes.slice(0,3))list.push({front:q,back:'Responda usando o fichamento: '+f.tese.slice(0,240)});
+ return list.slice(0,24).map(x=>fixCard({id:uid(),disc:f.disc,front:x.front,back:x.back,source:f.titulo,due:D0}));
+}
+L.events.uniDeck=el=>{
+ const f=db.fichas.find(x=>x.id===el.dataset.id);if(!f)return;
+ const add=cardsFromFicha(f);if(!add.length){S.uniStatus='Fichamento sem conteúdo suficiente para cartões.';refresh();return;}
+ db.cards.push(...add);db.cards=db.cards.slice(-500);persist();S.uniFlashDisc=f.disc;S.uniCard=null;S.uniFlip=false;S.tool='flash';
+ document.querySelectorAll('.eco-nav [data-eco-tool]').forEach(btn=>btn.classList.toggle('on',btn.dataset.ecoTool==='flash'));
+ L.paint();
+};
+const due=c=>Date.parse(c.due||'')<=Date.now();
+function getDeck(){
+ const deck=db.cards.filter(x=>x.disc===S.uniFlashDisc).sort((a,b)=>(Date.parse(a.due)-Date.parse(b.due)));
+ return {deck,pendentes:deck.filter(due)};
+}
+L.events.uniFlip=()=>{S.uniFlip=!S.uniFlip;refresh();};
+function review(ok){
+ const c=db.cards.find(x=>x.id===S.uniCard);if(!c)return;
+ if(ok){
+  c.reps+=1;c.interval=c.reps===1?1:c.reps===2?3:Math.min(3650,Math.round(c.interval*c.ease));
+  c.ease=Math.min(3,Math.max(1.3,c.ease+0.06));
+ }else{c.reps=0;c.interval=0;c.ease=Math.max(1.3,c.ease-.2);}
+ c.due=new Date(Date.now()+(ok?c.interval*864e5:60000)).toISOString();
+ db.revisoes.push({card:c.id,acerto:ok,at:new Date().toISOString()});db.revisoes=db.revisoes.slice(-600);
+ persist();S.uniCard=null;S.uniFlip=false;refresh();
+}
+L.events.uniAcerto=()=>review(true);
+L.events.uniErro=()=>review(false);
+L.events.uniNovo=()=>{S.uniCard=null;S.uniFlip=false;refresh();};
+L.views.flash=()=>{
+ const {deck,pendentes}=getDeck();
+ let curr=deck.find(x=>x.id===S.uniCard);
+ if(!curr){curr=pendentes[0];S.uniCard=curr?.id||null;}
+ const resumo=note('Repetição espaçada local: acerto adia a próxima revisão (1, 3, depois intervalos crescentes); erro devolve o cartão à fila. Históricos ficam somente neste navegador.');
+ return card('Flashcards por disciplina',
+ (S.uniStatus?note(esc(S.uniStatus)):'')+'<label>Matéria<select data-uni-flashdisc>'+DISC.map(d=>'<option'+(S.uniFlashDisc===d?' selected':'')+'>'+esc(d)+'</option>').join('')+'</select></label>'+
+ note('<b>'+pendentes.length+'</b> para revisar hoje · '+deck.length+' cartões desta disciplina · '+db.revisoes.length+' respostas registradas.')+resumo+
+ (curr?'<button type="button" data-eco-btn="uniFlip" class="uni-flash" aria-label="Virar flashcard"><small>'+esc(curr.source)+'</small><strong>'+esc(S.uniFlip?curr.back:curr.front)+'</strong><span>'+ (S.uniFlip?'Resposta · toque para ver a pergunta':'Pergunta · toque para revelar a resposta')+'</span></button>'+
+ (S.uniFlip?'<div class="eco-controls"><button type="button" data-eco-btn="uniErro">Errei · revisar</button><button type="button" class="eco-action" data-eco-btn="uniAcerto">Acertei ✓</button></div>':''):
+ '<p class="eco-note">Revisões em dia. Crie cartões a partir de um fichamento ou escolha outra disciplina.</p>'));
+};
+})();
+/* v661 · Microeconomia visual em Estudos. Modelos normalizados, sem dados fictícios de mercado. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state,F=L.f,N=L.note,C=L.card;
+S.micro={tipo:'cons',R:120,px:6,py:4,alpha:.5,elastic:1.5,eta:.8,preco:10,renda:100,a:100,b:2,c:20,d:1,fixo:90,precoMercado:40,estrutura:'mon'};
+const V=()=>S.micro,fmt=(x,n=2)=>F(Number.isFinite(x)?x:null,n);
+const slider=(k,t,min,max,step,suf='')=>'<label class="eco-slider"><span>'+t+' <output data-uni-micro-out="'+k+'">'+fmt(V()[k],step<1?2:1)+suf+'</output></span><input type="range" data-uni-micro-range="'+k+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+V()[k]+'"></label>';
+const point=(x,y)=>x.toFixed(1)+','+y.toFixed(1);
+function graph(title,lines,dots,labels){
+ const w=620,h=270;
+ return '<svg class="eco-plot" viewBox="0 0 660 298" role="img" aria-label="'+L.esc(title)+'">'+
+ '<rect x="45" y="12" width="'+w+'" height="'+h+'" fill="#11141B" stroke="#303746"/>'+
+ [0,.25,.5,.75,1].map(t=>'<path d="M45 '+(12+h*t)+'H665" stroke="#222934" stroke-width="1"/>').join('')+
+ lines.map(x=>'<polyline points="'+x.p.map(a=>point(...a)).join(' ')+'" fill="none" stroke="'+x.c+'" stroke-width="2.5"'+(x.d?' stroke-dasharray="5 4"':'')+'/>').join('')+
+ dots.map(x=>'<circle cx="'+x[0]+'" cy="'+x[1]+'" r="5" fill="#f0e6ca" stroke="#D4A017" stroke-width="1"/>').join('')+
+ '<text x="47" y="293" font-size="12" fill="#aeb8c8">'+L.esc(labels[0])+'</text>'+
+ '<text x="48" y="23" font-size="12" fill="#aeb8c8">'+L.esc(labels[1])+'</text>'+
+ lines.map((x,i)=>'<text x="'+(475+i*55)+'" y="293" fill="'+x.c+'" font-size="12">'+L.esc(x.n||'')+'</text>').join('')+'</svg>';
+}
+const scale=(x,lo,hi)=>45+(x-lo)/(hi-lo||1)*620;
+const scaleY=(y,lo,hi)=>282-(y-lo)/(hi-lo||1)*270;
+function cons(){
+ const {R,px,py,alpha}=V(),maxx=R/px,maxy=R/py,x=alpha*R/px,y=(1-alpha)*R/py;
+ const U=Math.pow(x,alpha)*Math.pow(y,1-alpha),mrs=alpha/(1-alpha)*y/x;
+ const linha=[];for(let i=0;i<=40;i++){const x1=.05*maxx+(i/40)*.95*maxx,y1=Math.min(maxy*1.3,Math.pow(U/Math.pow(x1,alpha),1/(1-alpha)));linha.push([scale(x1,0,maxx),scaleY(y1,0,maxy*1.2)]);}
+ const budget=[[scale(0,0,maxx),scaleY(maxy,0,maxy*1.2)],[scale(maxx,0,maxx),scaleY(0,0,maxy*1.2)]];
+ return '<div class="eco-grid-stats">'+L.kpi('Bem X ótimo',fmt(x,2))+
+ L.kpi('Bem Y ótimo',fmt(y,2))+L.kpi('Utilidade Cobb–Douglas',fmt(U,2))+L.kpi('TMS = Px/Py',fmt(mrs,2))+'</div>'+
+ C('Restrição orçamentária & indiferença',graph('Restrição orçamentária e curva de indiferença',[
+ {n:'Orç.',p:budget,c:'#D4A017'},{n:'U',p:linha,c:'#10B981'}],[[scale(x,0,maxx),scaleY(y,0,maxy*1.2)]],['Quantidade de X','Quantidade de Y'])+
+ N('<b>1.</b> Restrição: Px·x + Py·y = R; interceptos R/Px = '+fmt(maxx)+' e R/Py = '+fmt(maxy)+'.')+
+ N('<b>2.</b> Utilidade: U = x^α·y^(1−α); TMS = MUx/MUy = α·y / [(1−α)·x].')+
+ N('<b>3.</b> Ótimo interior: TMS = Px/Py = '+fmt(px/py)+'. Logo x*=αR/Px e y*=(1−α)R/Py. Sem preferências não convexas, cantos ou racionamento.'));
+}
+function elast(){
+ const {elastic:eps,eta,preco:P,renda:Y}=V();
+ const q=(p,y)=>100*Math.pow(p/10,-eps)*Math.pow(y/100,eta);
+ const Q=q(P,Y),dp=-eps*Q/P,dy=eta*Q/Y;
+ const arr=[],arr2=[];
+ for(let i=0;i<=42;i++){const x=2+i*(20/42);arr.push([scale(x,2,22),scaleY(q(x,Y),0,180)]);arr2.push([scale(x,2,22),scaleY(q(x,100),0,180)]);}
+ return '<div class="eco-grid-stats">'+L.kpi('Quantidade demandada',fmt(Q))+
+ L.kpi('Elasticidade-preço',fmt(-eps))+L.kpi('Elasticidade-renda',fmt(eta))+L.kpi('∂Q / ∂P',fmt(dp))+'</div>'+
+ C('Demanda de elasticidade constante',graph('Curvas de demanda a rendas diferentes',[{n:'Y atual',p:arr,c:'#D4A017'},{n:'Y=100',p:arr2,c:'#10B981',d:true}],[[scale(P,2,22),scaleY(Q,0,180)]],['Preço (P)','Quantidade (Q)'])+
+ N('<b>1.</b> Q(P,Y) = 100·(P/10)^(−ε)·(Y/100)^η = '+fmt(Q)+'.')+
+ N('<b>2.</b> Elasticidade-preço ∂Q/∂P · P/Q = −ε = '+fmt(-eps)+'. Derivada ∂Q/∂P = −ε·Q/P = '+fmt(dp)+'.')+
+ N('<b>3.</b> Elasticidade-renda ∂Q/∂Y · Y/Q = η = '+fmt(eta)+'. Derivada ∂Q/∂Y = η·Q/Y = '+fmt(dy)+'.')+
+ N('<b>Interpretação:</b> |ε| '+(eps>1?'maior que 1: demanda elástica.':eps<1?'menor que 1: demanda inelástica.':'igual a 1: elasticidade unitária.')+' η '+(eta>0?'positiva (bem normal).':eta<0?'negativa (bem inferior).':'nula.') ));
+}
+function firma(){
+ const {estrutura,a,b,c,d,fixo,precoMercado}=V();let q=0,P=0,qj=0,receita=0,custo=0,marginal=0;
+ if(estrutura==='comp'){q=Math.max(0,(precoMercado-c)/d);P=precoMercado;marginal=P;}
+ else if(estrutura==='mon'){q=Math.max(0,(a-c)/(2*b+d));P=Math.max(0,a-b*q);marginal=a-2*b*q;}
+ else {q=Math.max(0,(a-c)/(3*b+d));qj=q;P=Math.max(0,a-b*(q+qj));marginal=a-b*(2*q+qj);}
+ receita=P*q;custo=c*q+.5*d*q*q+fixo;
+ const profit=receita-custo,maxQ=estrutura==='comp'?Math.max(q*1.8,30):Math.max(a/(b||1),1);
+ const xpix=x=>scale(x,0,maxQ),ypix=y=>scaleY(y,0,a*1.15);
+ const curves=[],add=(name,fn,color,dashed=false)=>{const line=[];for(let i=0;i<=70;i++){const x=maxQ*i/70;const y=fn(x);line.push([xpix(x),ypix(y)]);}curves.push({n:name,p:line,c:color,d:dashed});};
+ if(estrutura==='comp')add('P',()=>precoMercado,'#D4A017');
+ else{add('D',x=>a-b*(estrutura==='cour'?x+qj:x),'#D4A017');add('RMg',x=>a-b*(2*x+(estrutura==='cour'?qj:0)),'#6AA4D2');}
+ add('CMg',x=>c+d*x,'#10B981');
+ return '<div class="eco-grid-stats">'+L.kpi('Quantidade por firma',fmt(q))+
+ L.kpi('Preço de equilíbrio',fmt(P))+L.kpi('RMg ou P no ótimo',fmt(marginal))+L.kpi('Lucro por firma',fmt(profit))+'</div>'+
+ C('Firma · comparação de estruturas',graph('Oferta, receita marginal e custo marginal',curves,[[xpix(q),ypix(marginal)]],['Quantidade (q)','Preço / custo'])+
+ N('<b>Demanda inversa de mercado:</b> P(Q) = a − b·Q; custo por firma C(q) = F + c·q + (d/2)·q². Logo CMg = c + d·q.')+
+ (estrutura==='comp'?N('<b>Concorrência perfeita:</b> a firma toma P='+fmt(P)+' como dado. RMg(q)=P. Condição P = CMg = c+dq ⇒ q* = (P−c)/d = '+fmt(q)+'.'):
+ estrutura==='mon'?N('<b>Monopólio:</b> RT(q) = (a−bq)q; ∂RT/∂q = a−2bq. RMg = CMg ⇒ q*=(a−c)/(2b+d) = '+fmt(q)+'. Segunda derivada do lucro = −2b−d < 0.'):
+ N('<b>Cournot simétrico:</b> P=a−b(q₁+q₂). ∂π₁/∂q₁ = a−b(2q₁+q₂)−c−dq₁=0. Na simetria q₁=q₂=q*=(a−c)/(3b+d) = '+fmt(q)+'. Total Q='+fmt(2*q)+'.'))+
+ N('<b>Lucro:</b> Π = RT − [F+cq+(d/2)q²] = '+fmt(profit)+'. Custos fixos não alteram o ótimo interior, mas afetam entrada/saída da firma. Modelo estático didático.'));
+}
+function controls(){
+ const v=V();const top='<div class="eco-controls uni-micro-modes">'+[['cons','Consumidor'],['elas','Elasticidades'],['firma','Firma & mercados']].map(([id,label])=>'<button type="button" data-eco-btn="uniMicroMode" data-id="'+id+'" class="'+(v.tipo===id?'eco-action':'')+'">'+label+'</button>').join('')+'</div>';
+ let c='';
+ if(v.tipo==='cons')c=slider('R','Renda (R)',40,250,5,'')+slider('px','Preço do bem X',1,20,.5,'')+slider('py','Preço do bem Y',1,20,.5,'')+slider('alpha','Participação α do bem X',.1,.9,.05,'');
+ else if(v.tipo==='elas')c=slider('preco','Preço P',2,22,.5,'')+slider('renda','Renda Y',50,180,5,'')+slider('elastic','Elasticidade-preço (módulo)',.2,3,.1,'')+slider('eta','Elasticidade-renda η',-1,2,.1,'');
+ else c='<label>Estrutura de mercado<select data-uni-micro-estrutura>'+[['comp','Concorrência perfeita'],['mon','Monopólio'],['cour','Duopólio de Cournot']].map(([id,txt])=>'<option value="'+id+'"'+(v.estrutura===id?' selected':'')+'>'+txt+'</option>').join('')+'</select></label>'+
+ slider('a','Intercepto demanda a',40,160,5,'')+slider('b','Inclinação demanda b',.5,5,.25,'')+
+ slider('c','Custo marginal inicial c',5,50,5,'')+slider('d','Inclinação do custo marginal d',.5,3,.25,'')+
+ slider('fixo','Custo fixo F',0,250,10,'')+(v.estrutura==='comp'?slider('precoMercado','Preço de mercado dado',10,110,5,''):'');
+ return top+C('Parâmetros de '+({cons:'consumo',elas:'demanda',firma:'produção'}[v.tipo]),c);
+}
+function result(){return V().tipo==='cons'?cons():V().tipo==='elas'?elast():firma();}
+L.views.micro=()=>C('Simulador de Microeconomia','<p class="eco-note">Altere os parâmetros para acompanhar o equilíbrio, os gráficos e a derivação matemática. Valores hipotéticos para fins acadêmicos.</p>')+
+ '<div class="uni-micro-wrap"><div id="uni-micro-controls">'+controls()+'</div><div id="uni-micro-results">'+result()+'</div></div>';
+L.events.uniMicroMode=el=>{V().tipo=el.dataset.id;L.paint();};
+document.addEventListener('change',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='micro')return;
+ if(e.target.matches('[data-uni-micro-estrutura]')){V().estrutura=e.target.value;L.paint();}
+},true);
+document.addEventListener('input',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='micro')return;
+ const t=e.target;if(!t.matches('[data-uni-micro-range]'))return;
+ const key=t.dataset.uniMicroRange;if(!(key in V()))return;
+ V()[key]=+t.value;
+ const out=document.querySelector('[data-uni-micro-out="'+key+'"]');
+ if(out)out.textContent=fmt(V()[key],+t.step<1?2:1);
+ const resultEl=document.getElementById('uni-micro-results');if(resultEl)resultEl.innerHTML=result();
+},true);
+L.microEconomia={consumo:()=>{const v=V();return {x:v.alpha*v.R/v.px,y:(1-v.alpha)*v.R/v.py};},firma:()=>{const v=V();return {mon:(v.a-v.c)/(2*v.b+v.d),cour:(v.a-v.c)/(3*v.b+v.d)};}};
+})();
+/* v661 · Séries oficiais BCB/SGS e IBGE/agregados — requisições diretas no navegador. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state,E=L.esc,N=L.note,C=L.card;
+const PRESETS=[
+ ['sgs:432','Selic meta · % ao ano','BCB','% a.a.'],
+ ['sgs:433','IPCA mensal · variação','BCB','% mensal'],
+ ['sgs:4382','PIB nominal acumulado 12 meses','BCB','R$ milhões'],
+ ['sgs:24369','Taxa de desocupação PNAD contínua','BCB / IBGE','%'],
+ ['sgs:13762','Dívida bruta do governo geral / PIB','BCB','% PIB'],
+ ['sgs:3698','Câmbio comercial USD/BRL médio mensal','BCB','R$/US$'],
+ ['ibge:5932:6561:11255:90707','PIB real · variação interanual','IBGE','%'],
+ ['ibge:7060:63:315:7169','IPCA · variação mensal','IBGE','%'],
+ ['ibge:4099:4099','Desocupação PNAD trimestral','IBGE','%'],
+ ['sgs:custom','SGS · código personalizado','BCB','valor da fonte'],
+ ['ibge:custom','IBGE · agregado personalizado','IBGE','valor da fonte']
+];
+S.uniSerie='sgs:432';S.uniSGS='432';S.uniTabela='5932';S.uniVariavel='6561';S.uniClass='11255';S.uniCategoria='90707';S.uniJanela=36;S.uniSerieBusy=false;S.uniSerieErro='';S.uniSerieAtual=null;
+const cleanCode=v=>/^\d{1,8}$/.test(String(v||''))?String(v):null;
+function buscarUrl(){
+ const preset=PRESETS.find(x=>x[0]===S.uniSerie)||PRESETS[0];
+ let p=preset[0].split(':'),titulo=preset[1],fonte=preset[2],unidade=preset[3],url;
+ if(p[0]==='sgs'){
+  const cod=cleanCode(p[1]==='custom'?S.uniSGS:p[1]);if(!cod)throw Error('Informe um código SGS numérico.');
+  const agora=new Date(),inicio=new Date(agora.getFullYear(),agora.getMonth()-Math.max(1,Math.min(120,S.uniJanela)),1);
+  const fmt=d=>[String(d.getDate()).padStart(2,'0'),String(d.getMonth()+1).padStart(2,'0'),d.getFullYear()].join('/');
+  url='https://api.bcb.gov.br/dados/serie/bcdata.sgs.'+cod+'/dados?formato=json&dataInicial='+encodeURIComponent(fmt(inicio))+'&dataFinal='+encodeURIComponent(fmt(agora));
+  if(p[1]==='custom')titulo='SGS '+cod;
+ }else{
+  const t=cleanCode(p[1]==='custom'?S.uniTabela:p[1]),v=cleanCode(p[1]==='custom'?S.uniVariavel:p[2]);
+  if(!t||!v)throw Error('Informe tabela e variável IBGE numéricas.');
+  const maxPeriod=Math.max(1,Math.min(60,S.uniJanela));
+  url='https://servicodados.ibge.gov.br/api/v3/agregados/'+t+'/periodos/-'+maxPeriod+'/variaveis/'+v+'?localidades=N1%5Ball%5D';
+  const cl=cleanCode(p[1]==='custom'?S.uniClass:p[3]),cat=cleanCode(p[1]==='custom'?S.uniCategoria:p[4]);
+  if(cl&&cat)url+='&classificacao='+cl+'%5B'+cat+'%5D';
+  if(p[1]==='custom')titulo='IBGE '+t+' · variável '+v;
+ }
+ return {url,titulo,fonte,unidade};
+}
+function normalizaSGS(json){
+ if(!Array.isArray(json))throw Error('SGS retornou formato inesperado.');
+ return json.map(x=>({data:String(x?.data||''),valor:Number(String(x?.valor??'').replace(',','.'))}))
+ .filter(x=>/^\d\d\/\d\d\/\d{4}$/.test(x.data)&&Number.isFinite(x.valor))
+ .map(x=>({data:x.data.slice(6)+'-'+x.data.slice(3,5)+'-'+x.data.slice(0,2),valor:x.valor}))
+ .sort((a,b)=>a.data.localeCompare(b.data));
+}
+function normalizaIBGE(json){
+ if(!Array.isArray(json))throw Error('IBGE retornou formato inesperado.');
+ const dados=[];
+ for(const item of json)for(const result of item?.resultados||[])for(const s of result?.series||[]){
+  const br=s?.localidade?.id===1||s?.localidade?.id==='1'||/Brasil/i.test(s?.localidade?.nome||'');
+  if(!br)continue;
+  for(const [period,raw] of Object.entries(s?.serie||{})){
+   const val=Number(String(raw).replace(',','.'));
+   if(!Number.isFinite(val)||!/^20\d{2}(?:0[1-9]|1[0-2])?$/.test(period))continue;
+   dados.push({data:period,valor:val});
+  }
+ }
+ const map=new Map(dados.map(x=>[x.data,x]));return [...map.values()].sort((a,b)=>a.data.localeCompare(b.data));
+}
+L.uniSeries={normalizaSGS,normalizaIBGE,buscarUrl};
+function plot(pts){
+ if(!pts.length)return '';
+ const sample=pts.length>120?pts.filter((x,i)=>i%Math.ceil(pts.length/120)===0||i===pts.length-1):pts;
+ let min=Math.min(...sample.map(x=>x.valor)),max=Math.max(...sample.map(x=>x.valor));
+ if(min===max){min-=1;max+=1;}
+ const points=sample.map((x,i)=>[52+550*i/(sample.length-1||1),173-(x.valor-min)/(max-min)*145]);
+ return '<svg class="eco-plot" viewBox="0 0 650 208" role="img" aria-label="Histórico da série oficial consultada">'+
+ '<path d="M52 173H602" stroke="#606b7a"/>'+
+ '<polyline points="'+points.map(x=>x.map(y=>y.toFixed(2)).join(',')).join(' ')+'" fill="none" stroke="#D4A017" stroke-width="2.5"/>'+
+ points.map((p,i)=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="2" fill="#D4A017"><title>'+E(sample[i].data)+' · '+E(sample[i].valor)+'</title></circle>').join('')+
+ '<text x="53" y="195" font-size="12" fill="#9ba5b3">'+E(pts[0].data)+'</text>'+
+ '<text x="510" y="195" font-size="12" fill="#9ba5b3">'+E(pts.at(-1).data)+'</text>'+
+ '<text x="8" y="25" font-size="11" fill="#a1acbd">'+E(max.toFixed(2))+'</text>'+
+ '<text x="8" y="170" font-size="11" fill="#a1acbd">'+E(min.toFixed(2))+'</text></svg>';
+}
+async function consultar(){
+ if(S.uniSerieBusy)return;S.uniSerieBusy=true;S.uniSerieErro='';L.paint();
+ try{
+  const meta=buscarUrl();const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),25000);let r;
+  try{r=await fetch(meta.url,{headers:{Accept:'application/json'},signal:controller.signal});}
+  finally{clearTimeout(timer);}
+  if(!r.ok)throw Error('Fonte oficial retornou HTTP '+r.status);
+  const body=await r.json();
+  const pts=(meta.fonte.startsWith('BCB')?normalizaSGS(body):normalizaIBGE(body)).slice(-500);
+  if(!pts.length)throw Error('A fonte não retornou valores numéricos para a consulta. Confira código, variável e categoria.');
+  const entry={id:L.uni.uid(),serie:meta.titulo,fonte:meta.fonte,unidade:meta.unidade,url:meta.url,em:new Date().toISOString(),pontos:pts};
+  S.uniSerieAtual=entry;L.uni.data.consultas.unshift(entry);L.uni.data.consultas=L.uni.data.consultas.slice(0,20);L.uni.save();
+ }catch(err){S.uniSerieErro='Não foi possível consultar diretamente a API: '+String(err.message||err).slice(0,180)+'. Verifique a conexão/CORS e abra o link oficial se necessário.';}
+ finally{S.uniSerieBusy=false;L.paint();}
+}
+L.events.uniConsultar=consultar;
+L.events.uniAbrirSerie=el=>{S.uniSerieAtual=L.uni.data.consultas.find(x=>x.id===el.dataset.id)||null;L.paint();};
+L.events.uniCSV=()=>{
+ const a=S.uniSerieAtual;if(!a?.pontos?.length)return;
+ const quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ // CSV pt-BR: separador ; e decimal vírgula, abre no Excel; R: read.csv2; Python: sep=';', decimal=','.
+ const lines=['data;valor;fonte;serie;unidade',...a.pontos.map(x=>[quote(x.data),quote(x.valor.toString().replace('.',',')),quote(a.fonte),quote(a.serie),quote(a.unidade)].join(';'))];
+ const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob);
+ const el=document.createElement('a');el.href=url;el.download='serie-economica-'+a.serie.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').slice(0,55)+'.csv';
+ document.body.appendChild(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(url),2500);
+};
+document.addEventListener('change',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='series')return;
+ const t=e.target;if(!t.matches('[data-uni-serie-input]'))return;
+ const key=t.dataset.uniSerieInput;if(key==='uniSerie')S.uniSerie=t.value;
+ else if(key==='uniJanela')S.uniJanela=+t.value;
+ else if(key in S)S[key]=t.value;
+ L.paint();
+},true);
+L.views.series=()=>{
+ const opt=PRESETS.map(x=>'<option value="'+E(x[0])+'"'+(S.uniSerie===x[0]?' selected':'')+'>'+E(x[1])+' · '+E(x[2])+'</option>').join('');
+ const cur=S.uniSerieAtual,p=cur?.pontos||[],last=p.at(-1);
+ const sgs=S.uniSerie==='sgs:custom',ibge=S.uniSerie==='ibge:custom';
+ const fields=sgs?'<label>Código SGS<input data-uni-serie-input="uniSGS" type="text" inputmode="numeric" pattern="[0-9]*" value="'+E(S.uniSGS)+'"></label>':
+ ibge?'<label>Tabela IBGE<input data-uni-serie-input="uniTabela" inputmode="numeric" value="'+E(S.uniTabela)+'"></label>'+
+ '<label>Variável<input data-uni-serie-input="uniVariavel" inputmode="numeric" value="'+E(S.uniVariavel)+'"></label>'+
+ '<label>Classificação (opcional)<input data-uni-serie-input="uniClass" inputmode="numeric" value="'+E(S.uniClass)+'"></label>'+
+ '<label>Categoria (opcional)<input data-uni-serie-input="uniCategoria" inputmode="numeric" value="'+E(S.uniCategoria)+'"></label>':'';
+ return C('Consultor de séries econômicas oficiais',
+ '<div class="eco-controls"><label>Indicador<select data-uni-serie-input="uniSerie">'+opt+'</select></label>'+
+ '<label>Janela (meses ou últimos períodos)<select data-uni-serie-input="uniJanela">'+[12,24,36,60].map(n=>'<option value="'+n+'"'+(S.uniJanela===n?' selected':'')+'>'+n+'</option>').join('')+'</select></label>'+fields+
+ '<button type="button" class="eco-action" data-eco-btn="uniConsultar"'+(S.uniSerieBusy?' disabled':'')+'>'+(S.uniSerieBusy?'Consultando…':'Buscar série oficial')+'</button></div>'+
+ N('Consulta diretamente no BCB/SGS ou IBGE Agregados v3, sem passar pelo Supabase. Não são criados dados de demonstração. Filtros personalizados aceitam apenas códigos numéricos.')+
+ (S.uniSerieErro?N(E(S.uniSerieErro)):'') )+
+ (cur?C('Série consultada · '+E(cur.serie),
+ '<div class="eco-grid-stats">'+L.kpi('Último valor',L.f(last?.valor)+' '+E(cur.unidade))+
+ L.kpi('Último período',E(last?.data||'—'))+L.kpi('Observações',String(p.length))+
+ L.kpi('Fonte',E(cur.fonte))+'</div>'+plot(p)+
+ N('Data da consulta: '+E(new Date(cur.em).toLocaleString('pt-BR'))+' · Fonte oficial: <a target="_blank" rel="noopener noreferrer" href="'+E(cur.url)+'">abrir API</a>')+
+ '<div class="eco-controls"><button type="button" class="eco-action" data-eco-btn="uniCSV">Baixar CSV limpo</button></div>'+
+ N('CSV UTF-8 com separador ; e decimal ,. No R: read.csv2(); em Python: pandas.read_csv(sep=";", decimal=","). Valores não são dessazonalizados pelo laboratório.')):'')+
+ C('Histórico local de consultas · '+L.uni.data.consultas.length,
+ L.uni.data.consultas.length?'<div class="uni-saved">'+L.uni.data.consultas.map(x=>'<button type="button" data-eco-btn="uniAbrirSerie" data-id="'+E(x.id)+'"><b>'+E(x.serie)+'</b><small>'+E(x.em.slice(0,10))+' · '+x.pontos.length+' pontos</small></button>').join('')+'</div>':N('Nenhuma consulta salva neste navegador.'));
+};
+})();
+/* v661 · Formulário de prova em uma página A4; HTML/print nativo do navegador. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state,E=L.esc,N=L.note,C=L.card;
+const THEMES={
+ solow:{t:'Modelo de Solow',disc:'Macroeconomia',vars:[
+ ['Y, K, L, A','Produto, capital, trabalho e tecnologia.'],['k=K/(AL)','Capital por trabalhador efetivo.'],['s, n, g, δ','Taxa de poupança, crescimento populacional, tecnologia e depreciação.']],
+ eq:['Y=K^α(AL)^(1−α); f(k)=k^α, com 0<α<1.','Variação de k: k̇ = s·f(k) − (n+g+δ)·k.','Estado estacionário: s·f(k*)=(n+g+δ)k*.','Regra de ouro: f′(k_GR)=n+g+δ (consumo por trabalhador efetivo máximo).'],
+ int:'Poupança maior eleva k* e o nível de produto por trabalhador; o crescimento sustentado do produto por trabalhador depende de progresso técnico exógeno no modelo básico.',
+ traps:['Confundir nível de produto com taxa permanente de crescimento.','Regra de ouro maximiza consumo, não produto.','Com n, g ou δ maior, k* cai; a renda por pessoa cresce à taxa g no estado estacionário (com A crescente).']},
+ islm:{t:'IS–LM–BP · Mundell–Fleming',disc:'Macroeconomia',vars:[
+ ['Y, i, e','Produto, juros e câmbio (definir convenção de e).'],['M/P, G, T','Oferta real de moeda, gasto e tributos.'],['i*, ρ','Juro internacional e prêmio de risco.']],
+ eq:['IS: Y=C(Y−T)+I(i)+G+NX(e,Y,Y*).','LM: M/P = L(Y,i).','BP com alta mobilidade: i≈i*+ρ.','Câmbio flexível: o ajuste de e afeta NX e desloca IS.'],
+ int:'Sob câmbio flexível e alta mobilidade, expansão monetária tende a depreciar a moeda e elevar Y; expansão fiscal aprecia a moeda e perde eficácia pelo canal externo.',
+ traps:['Resultado depende do regime cambial e da mobilidade de capitais.','Câmbio nominal, real e cotação USD/BRL não são sinônimos automáticos.','O modelo não garante predição numérica para câmbio ou Selic.']},
+ mqo:{t:'MQO & Teorema de Gauss–Markov',disc:'Econometria / Estatística',vars:[
+ ['Y, X, u','Variável dependente, regressora e termo de erro.'],['β₀, β₁','Intercepto e inclinação populacionais.'],['ŷ, û, R²','Valores ajustados, resíduos e ajuste amostral.']],
+ eq:['Yᵢ=β₀+β₁Xᵢ+uᵢ.','β̂₁=Σ(Xᵢ−X̄)(Yᵢ−Ȳ) / Σ(Xᵢ−X̄)².','β̂₀=Ȳ−β̂₁X̄; R²=1−SQR/SQT.','E[u|X]=0; Var(u|X)=σ² e sem colinearidade perfeita → MQO BLUE sob hipóteses adequadas.'],
+ int:'O estimador minimiza a soma de resíduos quadráticos. Gauss–Markov estabelece menor variância entre estimadores lineares não viesados sob suas hipóteses, não causalidade automática.',
+ traps:['R² elevado não demonstra causalidade.','Normalidade dos erros não é requisito para BLUE.','Heterocedasticidade pode invalidar erros-padrão usuais; endogeneidade compromete não viés.']},
+ jogos:{t:'Teoria dos Jogos · Nash e Cournot',disc:'Microeconomia',vars:[
+ ['Jogadores, estratégias, payoffs','Agentes, ações disponíveis e suas utilidades/lucros.'],['a, b, c','Intercepto, inclinação de demanda P=a−bQ e custo marginal.'],['q₁, q₂','Quantidades das firmas 1 e 2.']],
+ eq:['Nash: cada estratégia é melhor resposta à estratégia dos demais.','Cournot: πᵢ=[a−b(qᵢ+qⱼ)−c]qᵢ.','FOC: a−2bqᵢ−bqⱼ−c=0.','Equilíbrio simétrico com CMg constante: qᵢ=(a−c)/(3b); Q=2(a−c)/(3b).'],
+ int:'No duopólio de Cournot, as firmas escolhem quantidades simultaneamente. Preço e produção ficam entre monopólio e concorrência perfeita no modelo padrão.',
+ traps:['Equilíbrio de Nash não exige estratégia dominante.','Cournot determina quantidades; Bertrand, preços.','O resultado qᵢ=(a−c)/(3b) supõe custos marginais constantes e firmas simétricas.']},
+ elas:{t:'Elasticidades: preço, renda e cruzada',disc:'Microeconomia',vars:[
+ ['Q, P, Y','Quantidade, preço próprio e renda.'],['P_B','Preço de outro bem.'],['εp, εy, εxy','Elasticidade-preço, renda e cruzada.']],
+ eq:['εp=(∂Q/∂P)·(P/Q).','εy=(∂Q/∂Y)·(Y/Q).','εxy=(∂Qₓ/∂Pᵧ)·(Pᵧ/Qₓ).','Receita total RT=P·Q; com |εp|>1, aumento de P reduz RT (ceteris paribus).'],
+ int:'Elasticidade mede variação proporcional de Q ante variação proporcional de um determinante. Demanda elástica responde mais que proporcionalmente ao preço.',
+ traps:['Elasticidade não é inclinação da curva.','Bem inferior: elasticidade-renda negativa; bens de luxo, em geral >1.','Elasticidade cruzada positiva sugere substitutos, negativa sugere complementares (ceteris paribus).']}
+};
+S.uniRevisaoTema='solow';S.uniRevisaoNotas='';S.uniRevisaoAtual=null;S.uniRevisaoAviso='';
+const lay=(theme,notes='')=>{
+ const t=THEMES[theme]||THEMES.solow;
+ return '<article class="uni-a4" id="uni-a4" aria-label="Fórmulas de revisão de prova">'+
+ '<header><small>CIÊNCIAS ECONÔMICAS · RESUMO DE PROVA</small><h2>'+E(t.t)+'</h2><p>'+E(t.disc)+' · '+new Date().toLocaleDateString('pt-BR')+'</p></header>'+
+ '<section><h3>Variáveis e definições</h3><dl>'+t.vars.map(x=>'<div><dt>'+E(x[0])+'</dt><dd>'+E(x[1])+'</dd></div>').join('')+'</dl></section>'+
+ '<section><h3>Equações e condições de equilíbrio</h3><ol>'+t.eq.map(x=>'<li>'+E(x)+'</li>').join('')+'</ol></section>'+
+ '<section><h3>Intuição econômica</h3><p>'+E(t.int)+'</p></section>'+
+ '<section><h3>Pegadinhas de prova</h3><ul>'+t.traps.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul></section>'+
+ (notes.trim()?'<section><h3>Minha observação</h3><p>'+E(notes.slice(0,600))+'</p></section>':'')+
+ '<footer>Fórmulas sob as hipóteses do modelo. Consulte bibliografia e material da disciplina; esta ficha é material de revisão, não substitui a demonstração.</footer></article>';
+};
+L.revisionTemplates=THEMES;
+function salvar(){
+ const text=document.querySelector('[data-uni-rev-notas]')?.value||S.uniRevisaoNotas;
+ S.uniRevisaoNotas=text.slice(0,600);
+ const d={id:L.uni.uid(),tema:S.uniRevisaoTema,em:new Date().toISOString(),texto:S.uniRevisaoNotas};
+ L.uni.data.resumos.unshift(d);L.uni.data.resumos=L.uni.data.resumos.slice(0,50);
+ L.uni.save();S.uniRevisaoAtual=d.id;S.uniRevisaoAviso='Ficha salva no histórico local.';L.paint();
+}
+L.events.uniSalvarResumo=salvar;
+L.events.uniAbrirResumo=el=>{
+ const d=L.uni.data.resumos.find(x=>x.id===el.dataset.id);if(!d)return;
+ S.uniRevisaoTema=d.tema in THEMES?d.tema:'solow';S.uniRevisaoNotas=d.texto||'';S.uniRevisaoAtual=d.id;L.paint();
+};
+L.events.uniImprimir=()=>{
+ const doc=lay(S.uniRevisaoTema,document.querySelector('[data-uni-rev-notas]')?.value||S.uniRevisaoNotas);
+ const win=window.open('','_blank');
+ if(!win){S.uniRevisaoAviso='Permita a janela de impressão no navegador ou use Salvar no histórico.';L.paint();return;}
+ const html='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Revisão — '+E(THEMES[S.uniRevisaoTema].t)+'</title>'+
+ '<style>@page{size:A4;margin:12mm}*{box-sizing:border-box}body{font:11pt/1.4 Arial,sans-serif;color:#161a22;background:white;margin:0}.uni-a4{max-width:185mm;margin:auto}header{border-bottom:2px solid #D4A017;padding-bottom:7mm}header small{letter-spacing:2px;font-size:8pt;color:#736026}header h2{margin:5px 0;font-size:20pt}header p{margin:0;color:#555}section{margin:5mm 0;break-inside:avoid}h3{color:#555;font-size:10pt;letter-spacing:.05em;text-transform:uppercase;margin:0 0 2mm;border-bottom:1px solid #ddd}p,li{margin:0 0 1.8mm}dl{margin:0}dl div{display:grid;grid-template-columns:38% 62%;padding:1.5mm 0;border-bottom:1px solid #eee}dt{font-weight:bold}dd{margin:0}ol,ul{margin:0;padding-left:6mm}footer{margin-top:6mm;padding-top:3mm;border-top:1px solid #ddd;font-size:8pt;color:#555}</style></head><body>'+doc+'<script>window.addEventListener("load",()=>{window.focus();window.print()})<\/script></body></html>';
+ win.document.open();win.document.write(html);win.document.close();
+};
+document.addEventListener('change',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='revisao')return;
+ if(e.target.matches('[data-uni-rev-tema]')){S.uniRevisaoTema=e.target.value;L.paint();}
+},true);
+L.views.revisao=()=>{
+ const selected=THEMES[S.uniRevisaoTema]||THEMES.solow;
+ return C('Formulário de revisão · 1 página A4',
+ '<div class="eco-controls"><label>Tema de prova<select data-uni-rev-tema>'+Object.entries(THEMES).map(([id,t])=>'<option value="'+id+'"'+(S.uniRevisaoTema===id?' selected':'')+'>'+E(t.t)+'</option>').join('')+'</select></label>'+
+ '<button type="button" data-eco-btn="uniSalvarResumo" class="eco-action">Salvar no histórico</button>'+
+ '<button type="button" data-eco-btn="uniImprimir">Imprimir / Salvar PDF</button></div>'+
+ '<label>Minha observação (opcional, até 600 caracteres)<textarea maxlength="600" data-uni-rev-notas rows="3" placeholder="Relembre algo da aula…">'+E(S.uniRevisaoNotas)+'</textarea></label>'+
+ (S.uniRevisaoAviso?N(E(S.uniRevisaoAviso)):'')+
+ N('O botão de impressão abre uma página isolada com estilo A4, sem menus do app. Escolha “Salvar como PDF” na impressão do navegador.'))+
+ C('Prévia do formulário · '+E(selected.t),lay(S.uniRevisaoTema,S.uniRevisaoNotas))+
+ C('Histórico local · '+L.uni.data.resumos.length,
+ L.uni.data.resumos.length?'<div class="uni-saved">'+L.uni.data.resumos.map(x=>'<button data-eco-btn="uniAbrirResumo" data-id="'+E(x.id)+'" type="button"><b>'+E(THEMES[x.tema]?.t||x.tema)+'</b><small>'+E(x.em.slice(0,10))+'</small></button>').join('')+'</div>':N('Nenhuma ficha de revisão salva.'));
+};
+})();
 /* v657 · Estilos institucionais exclusivos do Laboratório de Economia em Estudos. */
 ;(function(){
 'use strict';
 if(document.getElementById('estudos-eco-style-v657'))return;
 const css=[
+
+'.eco-storage{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px;background:#11141B;border-bottom:1px solid #1E232E;padding:7px 10px;font-size:11px;color:#aeb7c6}',
+'.eco-storage button,.eco-storage label{display:inline-flex;align-items:center;justify-content:center;min-height:40px;min-width:96px;border:1px solid #303948;background:#181C26;color:#d8dfe8;padding:8px 10px;border-radius:4px;cursor:pointer}',
+'.eco-storage input[type=file]{position:absolute;width:1px;height:1px;clip-path:inset(50%)}',
+'.eco-root label{display:block;font-size:12px;color:#aeb7c6;margin:7px 0}.eco-root textarea,.eco-root input:not([type=range]):not([type=file]),.eco-root select{font:inherit;color:#e6eaf0;max-width:100%;background:#181C26;border:1px solid #303948;border-radius:4px;min-height:44px;padding:10px}',
+'.eco-root textarea{width:100%;display:block;resize:vertical;min-height:120px;font-size:16px;line-height:1.5;margin-top:6px}',
+'.eco-root label>input:not([type=range]):not([type=file]),.eco-root label>select{display:block;width:100%;margin-top:5px;font-size:16px}',
+'.eco-root .eco-controls>button:not(.eco-action){min-height:44px;border-radius:4px;border:1px solid #303948;background:#181C26;color:#d5ddeb;padding:9px 12px;cursor:pointer}',
+'.eco-root .eco-body>.eco-card:has(.uni-ficha),.eco-root .eco-body>.eco-card:has(.uni-a4){grid-column:1/-1}',
+'.eco-root .eco-body>.eco-card:has(.uni-micro-wrap){grid-column:1/-1}',
+'.eco-root .eco-body>.eco-card:has(.uni-saved){min-width:0}',
+'.uni-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}',
+'.uni-saved{display:grid;gap:0;max-height:275px;overflow-y:auto;border-top:1px solid #303948}',
+'.uni-saved button{display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;min-height:45px;padding:9px;border:0;border-bottom:1px solid #303948;background:transparent;color:#dae2eb;cursor:pointer}',
+'.uni-saved button.on,.uni-saved button:hover{background:#181C26;color:#f2c75b}',
+'.uni-saved small{font-size:11px;color:#9ea9b7}',
+'.uni-ficha{margin:13px 0;padding:14px 0;border-top:1px solid #303948;line-height:1.6}.uni-ficha h3{font-size:16px}.uni-ficha h4{font-size:12px;color:#D4A017;margin:12px 0 4px}.uni-ficha li{font-size:12px;color:#b9c5d2;margin:5px 0}',
+'.uni-flash{display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:15px;min-height:240px;padding:24px 18px;text-align:center;margin:16px 0;width:100%;border:1px solid #4c3a1a;border-radius:4px;background:#171B22;color:#edf0f5;cursor:pointer}',
+'.uni-flash small{font-size:11px;color:#D4A017}.uni-flash strong{font-size:19px;line-height:1.45;font-weight:600;overflow-wrap:anywhere}.uni-flash span{font-size:11px;color:#98a5b6}',
+'.uni-micro-wrap{display:grid;grid-template-columns:minmax(250px,1fr) minmax(0,1.4fr);gap:12px}',
+'.uni-micro-wrap .eco-card{padding:10px 12px}.uni-micro-modes{margin-bottom:8px}.uni-micro-modes button{flex:1 1 auto}',
+'.uni-a4{background:#f7f7f4;color:#23272e;border-radius:3px;max-width:760px;padding:24px;font-size:12px;line-height:1.55;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}',
+'.uni-a4 header{border-bottom:2px solid #D4A017;padding:0 0 10px}.uni-a4 header small{letter-spacing:1px;color:#675526;font-size:9px}.uni-a4 h2{color:#161d27!important;font-size:20px;margin:4px 0}.uni-a4 header p{color:#626976;font-size:11px}',
+'.uni-a4 section{padding:10px 0;border-bottom:1px solid #d9dbdc;break-inside:avoid}.uni-a4 section h3{font-size:12px;color:#414b5c;margin:0 0 6px}.uni-a4 section p{margin:5px 0;color:#252a32}.uni-a4 dl{margin:0}.uni-a4 dl>div{display:grid;grid-template-columns:40% 60%;gap:8px;margin:5px 0}.uni-a4 dt{font-weight:700}.uni-a4 dd{margin:0}.uni-a4 li{margin:4px 0}.uni-a4 footer{color:#656974;font-size:10px;margin-top:12px}',
+'@media(max-width:900px){.uni-micro-wrap{grid-template-columns:1fr}}',
+'@media(max-width:760px){.eco-storage{justify-content:flex-start}.uni-grid{grid-template-columns:1fr}.eco-root .eco-body>.eco-card{grid-column:1/-1}.uni-a4{padding:14px;font-size:11px}.uni-a4 h2{font-size:18px}.uni-flash{min-height:210px}}',
+
 '.eco-launch{display:block;max-width:100%;margin:9px 0 14px;min-height:44px;border:1px solid #5b431c;border-radius:4px;background:#181C26;padding:10px 12px;color:#e6bc60;text-align:left;cursor:pointer;font-size:13px}',
 '.eco-root{--eco-bg:#0A0C10;--eco-panel:#11141B;--eco-hover:#181C26;--eco-line:#1E232E;--eco-gold:#D4A017;color:#dee4ed;margin:10px 0 40px;min-width:0;font-variant-numeric:tabular-nums}',
 '.eco-root *{box-sizing:border-box}.eco-head{display:block;border-bottom:1px solid var(--eco-line);padding:14px 0 18px}',
