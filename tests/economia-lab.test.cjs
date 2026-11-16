@@ -17,6 +17,7 @@ test('Estudos: mantém conteúdo anterior e abre laboratório com 5 ferramentas'
  await expect(p.locator('.eco-root')).toContainText('Regra de Taylor');
  await p.locator('.eco-nav [data-eco-tool="mf"]').click();
  await expect(p.locator('.eco-root')).toContainText('Mundell');
+ await expect(p.locator('.eco-nav [data-eco-tool="tempo"]')).toBeVisible();
  await p.locator('.eco-nav [data-eco-tool="tempo"]').click();
  await expect(p.locator('.eco-timeline>button')).toHaveCount(7);
  await p.locator('[data-eco-btn="evento"][data-v="6"]').click();
