@@ -42322,3 +42322,346 @@ const css=[
 ].join('\n');
 const e=document.createElement('style');e.id='estudos-eco-style-v657';e.textContent=css;document.head.appendChild(e);
 })();
+/* Trilha aditiva de Aulas. Exemplos autorais esquemáticos; nunca cotações ou páginas de livros. */
+;(function(){
+'use strict';
+const modules=[
+ ['medias','Médias Móveis','John Murphy · Flávio Lemos'],
+ ['candles','Candles & Price Action','Al Brooks · Flávio Lemos'],
+ ['padroes','Padrões Gráficos Clássicos','John Murphy · Thomas Bulkowski'],
+ ['confirmacao','Volume, VWAP, RSI e Bollinger','Leitura conjunta de preço e indicadores']
+];
+const lessons=[];
+function add(id,module,title,chart,side,summary,context,trigger,stop,target,questions){
+ const sell=side==='sell';
+ lessons.push({id,module,title,chart,side,summary,minutes:3,entry:100,stop:sell?106:94,target:sell?88:112,
+ stages:[context,trigger,stop,target],questions:questions.map(([q,options,answer,why])=>({q,options,answer,why}))});
+}
+add('sma-ema','medias','SMA e EMA: o peso dos preços','averages','buy',
+ 'Entenda o cálculo e veja por que a MME9 reage antes da MM20.',
+ 'A média simples, SMA, soma os últimos N fechamentos e divide por N. A exponencial, EMA ou MME, dá peso maior aos preços recentes: EMA atual = preço × alfa + EMA anterior × (1 − alfa), com alfa = 2 ÷ (N + 1). Para nove períodos, alfa é 0,20. Uma EMA reage antes, mas também pode oscilar mais em lateralização. O desenho compara médias de um mesmo conjunto de fechamentos.',
+ 'No exemplo de alta, a MME9 se inclina para cima e o preço recupera a região da MM20. O gatilho didático é a superação de 100 depois da confirmação do candle. Cruzamento de médias isolado não basta: observe fundos ascendentes, resistência e liquidez.',
+ 'O fundo da correção está em 94. A perda desse nível invalida a estrutura de compra; a média móvel não deve ser usada para alargar o stop depois da entrada. Entre 100 e 94, o risco ilustrativo é de seis pontos antes de custos e eventual deslizamento.',
+ 'A resistência projetada está em 112: doze pontos acima da entrada, ou duas vezes o risco inicial. Esta relação organiza o plano, mas não estima probabilidade de acerto. O preço pode voltar ao stop antes de alcançar qualquer alvo.',
+ [['O que muda entre SMA e EMA?',['EMA ignora preços antigos','EMA dá mais peso aos preços recentes','SMA usa apenas o último fechamento'],1,'Ambas usam histórico; a EMA altera os pesos e a SMA dá peso igual aos N fechamentos.'],['Qual alfa corresponde à EMA de 9 períodos?',['0,20','0,90','2,00'],0,'O peso do preço mais recente é 2 ÷ (9 + 1) = 0,20, ou vinte por cento.'],['Uma média mais rápida implica o quê?',['Acerto garantido','Fim dos sinais falsos','Maior reação e maior sensibilidade ao ruído'],2,'Rapidez de resposta não elimina lateralizações nem falsos sinais.']]);
+add('alinhamento','medias','MME9, MM20, MM50 e MM200','alignment','buy',
+ 'Leia inclinação, ordem das médias e localização do preço.',
+ 'A MME9 mostra impulso curto; a MM20 suaviza oscilações; a MM50 ajuda a observar a tendência intermediária e a MM200 o contexto mais longo. Declare sempre o método: neste desenho a 9 é exponencial e as demais são simples. O alinhamento de alta costuma colocar a rápida acima das lentas, com inclinação positiva. São filtros atrasados, não suportes infalíveis.',
+ 'Observe a recuperação da região de médias e a superação do topo local em 100. O desenho separa o histórico de uma trajetória futura apenas hipotética. Se as médias estiverem entrelaçadas e quase horizontais, prefira reconhecer uma faixa de negociação em vez de forçar uma leitura de tendência.',
+ 'A invalidação fica no fundo estrutural 94, não no primeiro toque na MME9. Ajuste o tamanho da posição ao risco de seis pontos. O stop deve respeitar a volatilidade e a estrutura escolhidas antes da entrada.',
+ 'O exemplo projeta 112 como resistência de trabalho, equivalente a duas vezes o risco. Antes de usar uma projeção, confira barreiras intermediárias e o período do gráfico. A disposição das médias não promete continuidade.',
+ [['Qual cenário sugere tendência mais organizada?',['Médias cruzando sem inclinação','MME9 acima das lentas, todas ascendentes','Preço alternando lados a cada candle'],1,'Inclinação e ordem coerentes ajudam a filtrar a tendência.'],['O toque na MM200 garante suporte?',['Não','Sim, sempre','Somente em ações'],0,'A MM200 é uma referência, não uma ordem de compra.'],['Onde fica a invalidação deste exemplo?',['No alvo 112','No último preço','No fundo estrutural 94'],2,'A perda do fundo é a invalidação definida para o plano.']]);
+add('periodos','medias','20, 50 e 200 em múltiplos tempos','timeframes','buy',
+ 'Compare diário, semanal e mensal sem confundir barras com dias.',
+ 'No diário, vinte barras representam aproximadamente um mês de pregões, cinquenta cerca de dez semanas e duzentas perto de um ano de negociação. Esses períodos são convenções amplamente acompanhadas, não uma regra universal de instituições. No semanal, vinte barras são vinte semanas; no mensal, vinte meses. Não existe equivalência automática entre MM20 diária e MM20 mensal.',
+ 'Comece pelo contexto do período maior e procure confirmação no período operacional. Neste esquema diário, a entrada é 100 depois da retomada do topo local. Se o semanal estiver em resistência, isso pode limitar o espaço da compra, mesmo com médias diárias ascendentes.',
+ 'Use o fundo 94 do período operacional para definir a invalidação ilustrativa. Um stop do diário não deve virar um stop mensal depois de uma perda. Misturar períodos no meio da operação altera o risco que você aceitou inicialmente.',
+ 'A projeção de 112 pertence ao mesmo exemplo diário. Compare-a com a resistência do semanal antes de avaliar a relação retorno e risco. Na troca de período, recalcule a estrutura inteira: média, gatilho, stop e alvo.',
+ [['MM20 no semanal usa quantas barras?',['20 dias','20 semanas','20 meses'],1,'O número da média conta barras do período selecionado.'],['MM200 diária representa aproximadamente o quê?',['Um dia','Duzentos meses','Perto de um ano de pregões'],2,'A referência aproximada depende do calendário de negociação.'],['Por que olhar o período maior?',['Para localizar tendência e barreiras','Para eliminar o stop','Para garantir o alvo'],0,'O contexto maior ajuda a avaliar espaço e conflito de tendências.']]);
+add('martelo','candles','Martelo em suporte','hammer','buy',
+ 'Pavio inferior longo só ganha sentido com contexto e confirmação.',
+ 'O martelo tem corpo pequeno próximo da parte superior e sombra inferior longa, frequentemente ao menos duas vezes o corpo. Depois de uma queda, em suporte, mostra que preços baixos foram rejeitados naquela barra. A mesma forma no meio de uma faixa não carrega o mesmo contexto. Na leitura de price action, localização e continuidade pesam mais do que decorar o nome.',
+ 'No diagrama, o martelo tem mínima 94 e máxima 99. O gatilho ilustrativo fica em 100, acima da máxima: aguarde reação posterior e confirme a disponibilidade de espaço até a resistência. Não antecipe a compra apenas porque surgiu um pavio.',
+ 'O nível estrutural é a mínima 94. Em operação real, a ordem pode precisar de margem compatível com tick e volatilidade, e a execução pode ocorrer além do stop. O tamanho da posição precisa refletir essa diferença.',
+ 'A resistência didática em 112 oferece doze pontos para seis de risco. Trata-se de uma hipótese de planejamento, não de uma propriedade obrigatória do martelo. Se a resistência estiver perto da entrada, o padrão pode não oferecer espaço útil.',
+ [['Onde um martelo tem contexto de reversão de alta?',['Em qualquer lugar','Após queda, próximo de suporte','Somente no topo'],1,'A posição na estrutura dá sentido ao candle.'],['A sombra inferior longa indica o quê?',['Rejeição dos preços mais baixos naquela barra','Compra institucional comprovada','Alvo garantido'],0,'O candle mostra preços negociados, não identifica sozinho quem comprou.'],['Qual evento é o gatilho desenhado?',['Ver o pavio antes do fechamento','Atingir 112','Superar a máxima, na região de 100'],2,'O exemplo espera confirmação acima da máxima.']]);
+add('estrela','candles','Estrela Cadente em resistência','shooting','sell',
+ 'Observe a rejeição da máxima após uma alta e espere confirmação.',
+ 'A estrela cadente tem sombra superior longa e corpo pequeno perto da mínima. Procure-a após uma alta, próxima de resistência. Ela descreve uma tentativa de avanço que não se sustentou no fechamento. Um único candle não confirma uma tendência de baixa; o contexto e as barras seguintes precisam apoiar a hipótese.',
+ 'A barra do desenho alcança 106 e fecha perto da mínima 101. O gatilho ilustrativo de venda é a perda de 100. A confirmação abaixo do candle reduz a antecipação, mas não elimina falsos rompimentos nem o risco de um retorno rápido.',
+ 'A máxima 106 é o ponto de invalidação técnico. Se o preço a superar, a hipótese de rejeição falhou neste plano. Considere margem operacional e custo de execução; o stop não garante negociação exata nesse valor.',
+ 'A região de 88 representa um suporte projetado, doze pontos abaixo da entrada. Com seis pontos de risco, a relação é duas vezes o risco. A projeção precisa ceder lugar à leitura de suportes reais, se houver barreiras anteriores.',
+ [['Qual é a sombra dominante?',['Inferior','Nenhuma','Superior'],2,'A rejeição característica aparece acima do corpo.'],['Qual é o contexto buscado?',['Alta anterior e resistência','Queda sem referência','Qualquer candle verde'],0,'O padrão precisa ser lido na localização da estrutura.'],['O que invalida a venda desenhada?',['Uma mínima nova','Superar a máxima 106','Queda até 88'],1,'A superação da máxima nega a hipótese de rejeição adotada.']]);
+add('engolfo','candles','Engolfo: corpo e continuidade','engulfing','buy',
+ 'Compare dois corpos e confirme a mudança de pressão em suporte.',
+ 'No engolfo de alta, um corpo comprador cobre o corpo vendedor anterior. A definição clássica compara corpos; não exige que toda a amplitude de sombras seja coberta. Depois de uma correção, junto a suporte, isso sugere mudança de pressão no fechamento. Engolfo de baixa faz a leitura inversa perto de resistência.',
+ 'Neste exemplo, o primeiro corpo vai de 98 a 96 e o seguinte de 95 a 99. A superação de 100 é o gatilho posterior. Observe se a compra ganha continuidade; um engolfo sem espaço até a próxima resistência pode virar apenas mais uma oscilação da faixa.',
+ 'A mínima conjunta está em 94, nível que invalida o plano ilustrado de alta. Não use somente a cor do segundo candle para definir risco. Uma barra muito grande pode tornar a distância até o stop inadequada ao objetivo.',
+ 'O plano usa resistência em 112 e relação de duas vezes o risco. Não há projeção própria obrigatória para engolfo. A distância ao alvo vem da estrutura e deve ser comparada à amplitude do risco, incluindo custos.',
+ [['O que precisa ser engolfado na definição por corpos?',['Todo o histórico','O corpo anterior','A MM200'],1,'As sombras não precisam necessariamente ser totalmente cobertas.'],['O que reforça a leitura?',['Contexto de suporte e continuidade','Cor isolada','Ignorar resistência'],0,'A localização e as barras seguintes ajudam a confirmar a pressão.'],['Um engolfo muito amplo pode causar o quê?',['Risco zero','Lucro certo','Stop distante e relação desfavorável'],2,'O tamanho da barra pode prejudicar o plano de risco.']]);
+add('inside','candles','Inside Bar e rompimento da barra-mãe','inside','buy',
+ 'Identifique contração e diferencie rompimento válido de armadilha.',
+ 'Inside bar é uma barra cuja máxima fica abaixo da máxima anterior e cuja mínima fica acima da mínima anterior. A barra anterior é a barra-mãe. O padrão descreve contração; não determina sozinho a direção. Em tendência pode preceder continuação, e em lateralização pode produzir vários rompimentos falsos.',
+ 'O exemplo usa a quebra da máxima da barra-mãe: região de 100. Esta é uma escolha didática explícita; outros métodos operam a barra interna com regras diferentes. Espere aceitação fora da faixa em vez de concluir que qualquer pequena ultrapassagem confirma tendência.',
+ 'O plano mais amplo usa a mínima da barra-mãe em 94 como invalidação. Uma alternativa mais curta precisaria de outra regra e outro tamanho de posição. Não misture as duas depois da entrada, pois isso aumenta o risco sem planejamento.',
+ 'O alvo estrutural de 112 é uma hipótese de continuidade, não um múltiplo obrigatório da barra interna. Antes de considerar a operação, veja se a próxima resistência deixa espaço para compensar os seis pontos de risco.',
+ [['Qual relação define uma inside bar?',['Corpo maior que o anterior','Máxima e mínima dentro da barra anterior','Volume sempre maior'],1,'A definição usa toda a amplitude da barra.'],['Inside bar determina alta?',['Sim','Só no diário','Não; descreve contração'],2,'A direção depende do rompimento e do contexto.'],['Qual referência de rompimento este plano usa?',['Máxima da barra-mãe','Qualquer média','O alvo'],0,'A regra ilustrada é a quebra da faixa da barra-mãe.']]);
+add('rejeicao','candles','Rejeição: pavio e falha de rompimento','rejection','buy',
+ 'Leia a tentativa de perder suporte e a recuperação da faixa.',
+ 'Um pavio inferior junto ao suporte mostra que o preço caiu e voltou antes de fechar. Para uma leitura de falha de rompimento, observe a tentativa de sair da faixa e o retorno para dentro dela. A forma do candle não revela a identidade dos participantes nem prova absorção institucional.',
+ 'Neste esquema, o preço varre a região de 94 e recupera a faixa; a confirmação de compra é a superação de 100. Compare o fechamento e a continuidade com a hipótese de rejeição. Se o preço permanecer abaixo do suporte, a leitura precisa ser reconsiderada.',
+ 'A mínima da rejeição em 94 delimita a invalidação ilustrativa. O stop deve existir antes da operação. Não aumente a posição para compensar uma rejeição que não se confirmou; um padrão de falha também pode falhar.',
+ 'A resistência oposta em 112 é o alvo de trabalho. Em faixas menores, o alvo pode estar perto demais e tornar a relação pouco atraente. A projeção de duas vezes o risco serve aqui apenas para comparar distância, não para prometer resultado.',
+ [['Um pavio prova ação de uma instituição específica?',['Sim','Não','Somente com RSI'],1,'OHLC não identifica o participante responsável.'],['Qual evidência apoia falha de rompimento?',['Retorno e fechamento dentro da faixa','Somente tocar o suporte','Média sem inclinação'],0,'O retorno nega a aceitação fora da faixa naquele momento.'],['O que fazer se a rejeição falhar?',['Alargar stop sempre','Dobrar posição','Respeitar a invalidação prevista'],2,'O risco definido não depende de o padrão ter um nome conhecido.']]);
+function pattern(id,title,chart,side,context,trigger,stop,target,questions){add(id,'padroes',title,chart,side,'Reconheça a formação, confirme o rompimento e projete sua dimensão.',context,trigger,stop,target,questions);}
+pattern('oco','OCO: ombro, cabeça e ombro','hstop','sell',
+ 'Após alta, o ombro esquerdo, a cabeça mais alta e o ombro direito formam três picos. A linha de pescoço conecta os fundos intermediários. No esquema, a cabeça está em 112 e o pescoço horizontal em 100. Os ombros não precisam ter simetria perfeita; a estrutura fica confirmada somente com a perda do pescoço.',
+ 'O gatilho de venda é a perda confirmada de 100. Alguns planos esperam reteste, que pode não acontecer. Observe aceitação abaixo da linha e resistência no retorno. Não chame de OCO confirmado apenas porque apareceram três picos.',
+ 'O ombro direito termina abaixo de 106; superar 106 invalida o plano de venda escolhido. Usar a cabeça como stop seria outra estratégia, com risco maior e tamanho de posição diferente. A linha de pescoço nem sempre é horizontal em gráficos reais.',
+ 'A altura entre cabeça 112 e pescoço 100 é 12. Na projeção geométrica clássica, subtraia 12 do rompimento 100: alvo 88. A seta mostra essa medida; não é garantia de que o alvo será atingido. Estudos empíricos de Bulkowski tratam resultados probabilísticos e podem usar ajustes próprios.',
+ [['Quando o OCO se confirma neste esquema?',['No primeiro ombro','Na perda do pescoço','Antes da cabeça'],1,'A perda do pescoço é a confirmação adotada.'],['Qual é a altura da formação?',['12 pontos','100 pontos','6 pontos'],0,'A altura entre a cabeça e o pescoço é 112 − 100 = 12 pontos.'],['Qual é a projeção geométrica?',['112','106','88'],2,'Subtraia a altura de doze pontos do rompimento em cem: 100 − 12 = 88.']]);
+pattern('ocoi','OCOI: reversão pela linha de pescoço','hsbottom','buy',
+ 'O OCO invertido aparece como três fundos, com a cabeça mais baixa e os ombros mais altos. No esquema, a cabeça está em 88 e o pescoço em 100. A formação é uma hipótese até que o preço consiga romper a resistência do pescoço.',
+ 'A superação confirmada de 100 é o gatilho de compra. Volume e continuidade podem apoiar a leitura, mas um rompimento aparente também pode falhar. Um reteste do pescoço pode oferecer outra avaliação de risco e não é obrigatório.',
+ 'O fundo do ombro direito fica acima de 94; perder 94 invalida este plano. É diferente de um stop sob a cabeça em 88. Escolha a regra antes da entrada e avalie se a volatilidade permite o stop adotado.',
+ 'A altura é 100 menos 88, igual a 12. Some-a ao rompimento 100 para obter a projeção clássica de 112. A distância é medida verticalmente na mesma escala de preço. Barreiras intermediárias e falhas continuam possíveis.',
+ [['Qual fundo deve ser o mais profundo?',['Ombro direito','Ombro esquerdo','Cabeça'],2,'A cabeça fica abaixo dos ombros no OCOI.'],['Qual é a confirmação adotada?',['Superar o pescoço 100','Tocar a cabeça','Perder 94'],0,'É necessário romper a resistência da formação.'],['Qual conta projeta o alvo?',['100 − 12','100 + (100 − 88)','88 ÷ 100'],1,'A altura é somada ao ponto de rompimento.']]);
+pattern('topoduplo','Topo Duplo: o vale confirma','doubletop','sell',
+ 'Dois picos na região de 112, separados por um vale em 100, sugerem resistência repetida. Não é necessário que as máximas sejam idênticas. Enquanto o vale não for perdido, o desenho pode ser apenas uma consolidação dentro de uma tendência de alta.',
+ 'A perda confirmada do vale 100 é o gatilho didático de venda. Observe se o preço aceita negociar abaixo dessa referência. Vender no segundo topo anteciparia a confirmação e exigiria outro plano.',
+ 'O plano usa uma recuperação acima de 106 como invalidação de trabalho após o rompimento. Esse é um stop de reteste, não o stop conservador acima dos topos em 112. A diferença deve ser explícita porque muda a chance de um stop precoce.',
+ 'A altura entre topos 112 e vale 100 é 12. A projeção clássica fica em 88, abaixo do rompimento. O desenho evidencia tanto a altura original quanto o segmento projetado. O alvo continua sendo uma hipótese.',
+ [['Dois picos bastam para confirmar?',['Não; falta perder o vale','Sim','Somente se forem iguais'],0,'O rompimento do vale confirma a leitura adotada.'],['A altura é medida entre quais níveis?',['Os dois topos','Topo e vale','Stop e alvo'],1,'O vale é a linha de confirmação neste esquema.'],['Um stop em 106 é o mesmo que acima de 112?',['Sim','Nunca há diferença','Não; é um stop de reteste mais curto'],2,'Regras diferentes mudam risco e sensibilidade a oscilações.']]);
+pattern('fundoduplo','Fundo Duplo: supere o topo intermediário','doublebottom','buy',
+ 'Dois fundos na região de 88, separados por um topo em 100, sugerem defesa de suporte. Os fundos podem ter formas e preços ligeiramente diferentes. A compra por reversão só ganha confirmação neste plano ao superar o topo intermediário.',
+ 'O gatilho ilustrativo é a superação confirmada de 100, depois do segundo fundo. Não confunda tocar o segundo fundo com romper a resistência. A confirmação pode ocorrer tarde e deixar pouco espaço até outra barreira.',
+ 'O exemplo usa um stop de reteste em 94, abaixo da região recuperada. Um stop abaixo dos fundos em 88 seria mais amplo e precisaria de outro dimensionamento. Nenhuma das duas regras protege contra execução pior em gaps.',
+ 'A altura é 100 menos 88, igual a 12. Somada a 100, produz alvo geométrico em 112. Confira resistências anteriores à projeção e não transforme a medida em certeza de lucro.',
+ [['O gatilho confirmado fica onde?',['No segundo fundo','Acima do topo intermediário','Na mínima histórica'],1,'O rompimento da resistência confirma este plano.'],['Os fundos precisam ter preço idêntico?',['Sim','Somente no semanal','Não'],2,'A formação admite pequenas diferenças e deve respeitar o contexto.'],['Qual alvo resulta da altura 12 sobre 100?',['112','94','88'],0,'Some doze pontos ao rompimento em cem: 100 + 12 = 112.']]);
+pattern('triangulo','Triângulos: contração e altura da base','triangle','buy',
+ 'Triângulos têm amplitude decrescente delimitada por linhas convergentes. Podem ser simétricos, ascendentes ou descendentes. O esquema simétrico mostra uma base de 88 a 100 e topos e fundos convergindo. A forma não obriga o rompimento a ocorrer para cima.',
+ 'A direção do exemplo é de alta: a entrada de referência em 100 exige rompimento e continuidade além da linha superior. Compare volume e espaço até a resistência. Rompimentos para baixo exigiriam a leitura inversa, não uma compra automática.',
+ 'O fundo recente da contração está perto de 94 e delimita a invalidação ilustrativa. Um stop curto dentro da região de ruído pode ser acionado antes de qualquer continuidade. Adeque a regra à amplitude e à liquidez.',
+ 'A base mais larga mede 12 pontos, de 88 a 100. Na regra geométrica simplificada, projete 12 a partir do rompimento em 100, chegando a 112. Há variações de método; a medida não substitui a confirmação.',
+ [['Um triângulo simétrico obriga alta?',['Não','Sim','Somente com três toques'],0,'A direção precisa ser confirmada pelo rompimento.'],['Qual dimensão é projetada aqui?',['Último candle','Base mais larga','Distância da MM200'],1,'A regra ilustrada usa a amplitude inicial da formação.'],['Qual evidência evita antecipação?',['Apenas linhas desenhadas','Candle antes de fechar','Rompimento e aceitação fora da figura'],2,'O desenho sozinho não confirma a direção.']]);
+pattern('bandeira','Bandeira: mastro e pausa corretiva','flag','buy',
+ 'Uma bandeira de alta combina um avanço rápido, o mastro, e uma correção curta em canal. No exemplo, o impulso vai de 88 a 100, seguido de pausa descendente. Volume menor na pausa pode apoiar a leitura de contração; uma queda longa e profunda pode negar a ideia de simples bandeira.',
+ 'A saída acima do canal com retomada do impulso define o gatilho. A referência de entrada do esquema é 100. Observe a qualidade do fechamento e a continuidade, em vez de comprar qualquer toque na linha superior.',
+ 'O fundo da pausa em 94 é a invalidação ilustrativa. Se a correção romper sua estrutura, o plano de continuação falha. Avalie o risco sem assumir que uma tendência anterior precisa continuar.',
+ 'O mastro mede 12 pontos. A projeção simplificada soma essa distância ao rompimento 100: alvo 112. Em gráficos reais há métodos com pontos de projeção distintos e estatísticas próprias. Aqui o segmento tracejado representa apenas a construção geométrica.',
+ [['Qual elemento distingue a bandeira?',['Dois fundos iguais','Um mastro seguido de pausa curta','Somente um candle'],1,'O impulso anterior é parte central da formação.'],['Qual dimensão o exemplo projeta?',['Altura do mastro','Largura em minutos','Volume total'],0,'A projeção usa a dimensão vertical do impulso.'],['Correção profunda e longa faz o quê?',['Confirma sempre','Elimina o risco','Pode invalidar a leitura de bandeira'],2,'É preciso distinguir pausa curta de mudança de estrutura.']]);
+add('volume','confirmacao','Volume: VSA e RVOL','volume','buy',
+ 'Compare esforço, amplitude e fechamento para avaliar rompimentos.',
+ 'VSA relaciona volume, amplitude da barra e posição do fechamento; uma barra de alto volume e pouca progressão pode sugerir disputa, sem provar quem participou. RVOL compara volume observado com uma referência histórica equivalente. No intradiário, compare o mesmo horário: abertura e almoço têm perfis diferentes. No esquema, volume 180 dividido por média 100 resulta em RVOL de 1,8.',
+ 'A superação de 100 com fechamento forte e RVOL de 1,8 apoia o exemplo de rompimento. Volume isolado não basta: muito esforço sem progresso, com pavio superior e retorno à faixa, pode indicar falha. Compare sempre a resposta do preço com o volume.',
+ 'O fundo 94 delimita a invalidação do plano. Volume alto não autoriza retirar o stop nem identifica sozinho uma instituição. A leitura de esforço e resultado deve acrescentar contexto ao risco já definido.',
+ 'A resistência de 112 permanece a hipótese de alvo. RVOL não fornece distância de alvo por si só. Ele é um filtro de participação, enquanto a projeção usa a estrutura e a distância ao stop.',
+ [['180 ÷ 100 resulta em qual RVOL?',['0,8','1,8','180'],1,'O volume observado é 1,8 vez a referência escolhida.'],['O que a VSA combina?',['Somente quantidade de negócios','Nome da corretora','Volume, amplitude e fechamento'],2,'A relação esforço e resultado depende dos três elementos.'],['Como comparar volume intradiário?',['Com horários equivalentes','Sempre com a média do almoço','Ignorando horário'],0,'A sazonalidade ao longo do dia altera a comparação.']]);
+add('vwap','confirmacao','VWAP: preço ponderado por volume','vwap','buy',
+ 'Use o preço médio negociado como contexto, sem tratá-lo como barreira garantida.',
+ 'A VWAP soma preço vezes volume e divide pelo volume acumulado; uma implementação por barras pode usar preço típico, média de máxima, mínima e fechamento. A VWAP de sessão reinicia no começo da sessão configurada. A ancorada usa um ponto de partida escolhido. Diferem de uma média móvel que usa uma janela de barras.',
+ 'Neste esquema, o preço recupera a VWAP ascendente e supera 100. A leitura busca aceitação acima do preço médio da sessão e continuidade. Em tendência forte o preço pode ficar longe da VWAP; distância não exige retorno imediato.',
+ 'O fundo 94 é a invalidação estrutural. O plano não coloca o stop automaticamente na VWAP, pois cruzamentos em faixa podem ser frequentes. Horário de sessão, tipo de volume e fonte de dados mudam o cálculo.',
+ 'A referência 112 corresponde à próxima resistência do exemplo. A VWAP não promete reversão à média nem fornece esse alvo por conta própria. Compare a estrutura com os custos e o risco de seis pontos.',
+ [['Qual ponderação caracteriza a VWAP?',['Tempo somente','Volume','RSI'],1,'Preços com mais volume têm maior influência no cálculo.'],['Quando a VWAP de sessão reinicia?',['Na abertura da sessão configurada','A cada nove candles','Nunca'],0,'A versão de sessão usa esse ponto de partida.'],['Preço distante da VWAP garante retorno?',['Sim','Somente à tarde','Não'],2,'Tendências podem manter o preço distante por bastante tempo.']]);
+add('rsi','confirmacao','RSI: força e divergência','rsi','sell',
+ 'Compare dois topos do preço com dois topos do oscilador.',
+ 'RSI resume a relação entre ganhos e perdas médios de um período, frequentemente catorze barras, numa escala de zero a cem. Acima de setenta é uma convenção de sobrecompra e abaixo de trinta de sobrevenda; uma tendência pode permanecer nesses extremos. O exemplo mostra preço fazendo um topo mais alto, enquanto o RSI forma topo mais baixo: divergência de baixa.',
+ 'A divergência é um alerta de perda de impulso, não um gatilho automático. O esquema espera a perda do suporte 100 para confirmar a venda. Verifique se os dois topos comparados pertencem aos mesmos instantes do gráfico de preço.',
+ 'A recuperação de 106 invalida este plano de rompimento. Vender apenas porque o RSI passou de setenta pode contrariar uma tendência forte. O stop precisa vir da regra estrutural, não da expectativa de que o oscilador volte a cinquenta.',
+ 'O suporte projetado 88 é uma hipótese de preço. RSI não produz esse alvo em pontos. A divergência pode persistir sem reversão; por isso o alvo é subordinado ao comportamento do preço e ao risco inicial.',
+ [['Qual desenho representa divergência de baixa?',['Preço sobe e RSI faz topo mais baixo','Preço e RSI sobem juntos','Preço sem dois topos'],0,'Comparam-se extremos correspondentes nos dois gráficos.'],['RSI acima de 70 exige venda?',['Sim','Não','Somente em ações'],1,'O extremo pode persistir numa tendência forte.'],['Qual é o gatilho deste exemplo?',['RSI tocar 50','Segundo topo isolado','Perder o suporte 100'],2,'A divergência alerta; a estrutura de preço confirma o plano.']]);
+add('bollinger','confirmacao','Bandas de Bollinger: contração e expansão','bollinger','buy',
+ 'Diferencie volatilidade baixa, expansão e caminhada pela banda.',
+ 'A configuração clássica usa média simples de vinte barras e bandas a dois desvios-padrão acima e abaixo. A largura varia com a dispersão dos preços. Bandas estreitas descrevem baixa volatilidade recente; não determinam a direção do próximo movimento. Em tendência, o preço pode caminhar junto de uma banda por várias barras.',
+ 'O exemplo mostra contração seguida de expansão de alta e rompimento em 100. A confirmação pede preço aceitando acima da faixa e continuidade, preferencialmente com participação. Tocar a banda superior não é, sozinho, sinal de venda.',
+ 'A perda do fundo 94 é a invalidação do plano de expansão. Não substitua a regra por um stop móvel improvisado no meio da operação. A média central pode ser uma referência adicional, mas não elimina a necessidade de uma estrutura de risco.',
+ 'A projeção de 112 vem da resistência e de duas vezes o risco, não da distância matemática entre bandas. A expansão pode falhar e retornar à faixa. Avalie a trajetória de preço sem pressupor que toda contração terá um rompimento duradouro.',
+ [['Bandas estreitas indicam o quê?',['Alta garantida','Baixa garantida','Menor volatilidade recente'],2,'A contração não determina a direção.'],['Qual é a configuração clássica?',['SMA20 e dois desvios-padrão','EMA9 e cem desvios','VWAP sem dispersão'],0,'As configurações podem variar, mas esta é a referência clássica.'],['Tocar a banda superior obriga venda?',['Sim','Não','Somente no diário'],1,'O preço pode caminhar pela banda durante tendência.']]);
+window.TecnicaPratica={modules:modules.map(([id,title,reference])=>({id,title,reference})),lessons};
+})();
+/* Diagramas SVG calculados localmente, independentes dos dados de mercado. */
+;(function(){
+'use strict';
+const T=window.TecnicaPratica;
+T.escape=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const E=T.escape,Y=p=>335-(p-84)*7.5;
+const line=(x1,p1,x2,p2,color,dash='')=>`<line x1="${x1}" y1="${Y(p1)}" x2="${x2}" y2="${Y(p2)}" stroke="${color}" stroke-width="2" ${dash?'stroke-dasharray="'+dash+'"':''}/>`;
+const label=(x,p,s,color='#B7C0CF')=>`<text x="${x}" y="${Y(p)-7}" fill="${color}" font-size="13">${E(s)}</text>`;
+function path(points,color='#B7C0CF',dash=''){return `<polyline points="${points.map(([x,p])=>x+','+Y(p)).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5" ${dash?'stroke-dasharray="'+dash+'"':''}/>`;}
+function candle(x,o,h,l,c,w=18){const col=c>=o?'#10B981':'#EF4444';return line(x,l,x,h,col)+`<rect x="${x-w/2}" y="${Y(Math.max(o,c))}" width="${w}" height="${Math.max(2,Math.abs(Y(o)-Y(c)))}" fill="${col}"/>`;}
+function sma(a,n){return a.map((_,i)=>i<n-1?null:a.slice(i-n+1,i+1).reduce((s,v)=>s+v,0)/n);}
+function ema(a,n){const k=2/(n+1);let v=a[0];return a.map(p=>(v=p*k+v*(1-k)));}
+function moving(kind){
+ const prices=Array.from({length:240},(_,i)=>89+i*.045+Math.sin(i/8)*.6);
+ for(let i=210;i<240;i++)prices[i]=98+(i-210)*.055+Math.sin((i-210)/3)*.75;
+ const draw=a=>a.slice(-40).map((p,i)=>[50+i*13,p]).filter(p=>p[1]!=null);
+ let s=path(draw(prices));
+ const sets=kind==='alignment'?[[9,ema,'#D4A017','MME9'],[20,sma,'#6DA5FF','SMA20'],[50,sma,'#C49AEB','SMA50'],[200,sma,'#9AA4B2','SMA200']]:[[9,ema,'#D4A017','EMA9'],[20,sma,'#6DA5FF','SMA20']];
+ sets.forEach(([n,fn,col,name],i)=>{s+=path(draw(fn(prices,n)),col)+`<text x="${55+i*132}" y="40" fill="${col}" font-size="13">${name}</text>`;});
+ if(kind==='timeframes')s+=label(65,89,'Diário: 20 barras ≈ 1 mês de pregões');
+ return s;
+}
+function candles(kind){
+ let s=''; const up=kind==='shooting';
+ for(let i=0;i<8;i++){const o=up?98+i*.55:104-i*.7,c=o+(i%3===0?.25:up?.45:-.45);s+=candle(65+i*38,o,Math.max(o,c)+.5,Math.min(o,c)-.6,c,13);}
+ if(kind==='hammer')s+=candle(430,97,99,94,98.5,30)+label(377,93,'Pavio inferior');
+ if(kind==='shooting')s+=candle(430,102,106,101,101.4,30)+label(385,107,'Pavio superior');
+ if(kind==='engulfing')s+=candle(390,98,99,95,96,28)+candle(445,95,99.5,94,99,30)+label(340,92,'Segundo corpo engloba o primeiro');
+ if(kind==='inside')s+=candle(390,96,99.7,94,99,35)+candle(445,97,99,95.5,98,20)+label(337,92,'Barra-mãe → barra interna');
+ if(kind==='rejection')s+=line(50,96,560,96,'#6DA5FF','5 4')+candle(430,96.2,99.5,94,99,30)+label(55,96,'Suporte recuperado');
+ s+=candle(520,99,100.5,98.5,100.2,20);return s;
+}
+const shapes={
+ hstop:[[50,100],[115,105],[180,100],[270,112],[360,100],[440,105],[510,100]],
+ hsbottom:[[50,100],[115,95],[180,100],[270,88],[360,100],[440,95],[510,100]],
+ doubletop:[[50,101],[150,112],[280,100],[400,112],[510,100]],
+ doublebottom:[[50,99],[150,88],[280,100],[400,88],[510,100]],
+ triangle:[[50,88],[130,100],[210,91],[290,98],[370,93],[450,96],[510,95],[560,100]],
+ flag:[[50,88],[140,94],[210,100],[280,98],[340,99],[400,94],[470,97],[520,96],[560,100]]
+};
+function pattern(l){
+ let s=path(shapes[l.chart]);
+ if(['hstop','hsbottom','doubletop','doublebottom'].includes(l.chart))s+=line(50,100,575,100,'#6DA5FF','5 4')+label(50,100,/^hs/.test(l.chart)?'Linha de pescoço':'Linha de confirmação');
+ if(l.chart==='triangle')s+=line(50,88,540,95,'#6DA5FF')+line(130,100,540,95,'#6DA5FF');
+ if(l.chart==='flag')s+=line(210,100,520,96,'#6DA5FF')+line(280,98,520,92,'#6DA5FF')+label(55,86,'Mastro');
+ const low=l.side==='sell'?100:88,high=l.side==='sell'?112:100;
+ s+=line(25,low,25,high,'#D4A017')+line(18,low,32,low,'#D4A017')+line(18,high,32,high,'#D4A017')+label(38,(low+high)/2,'12 pts','#D4A017');
+ return s;
+}
+function indicators(l){
+ let points=[[50,96],[100,97],[150,96],[200,98],[250,97],[300,99],[350,97],[400,99],[450,98],[510,100],[560,101]],s='';
+ if(l.chart==='rsi')points=[[50,100],[150,104],[240,101],[350,105],[450,102],[530,100]];
+ s+=path(points);
+ if(l.chart==='vwap')s+=path([[50,96],[120,96.4],[200,97],[300,97.3],[400,97.8],[560,98.4]],'#D4A017')+label(55,95,'VWAP de sessão','#D4A017');
+ if(l.chart==='bollinger'){
+  s+=path(points.map(([x,p],i)=>[x,p+(i>8?2.6:1.1)]),'#6DA5FF')+path(points.map(([x,p],i)=>[x,p-(i>8?2.6:1.1)]),'#6DA5FF')+label(60,91,'Contração → expansão');
+ }
+ if(l.chart==='volume'){
+  const vol=[30,25,40,27,30,45,40,33,42,40,72];
+  vol.forEach((v,i)=>s+=`<rect x="${50+i*48}" y="${425-v}" width="22" height="${v}" fill="${i===10?'#D4A017':'#576274'}"/>`);
+  s+=`<text x="610" y="395" fill="#D4A017" font-size="13">RVOL: 180 / 100 = 1,8</text>`;
+ }
+ if(l.chart==='rsi'){
+  s+=path([[150,104],[350,105]],'#D4A017','4 3');
+  s+=`<polyline points="50,410 150,368 240,405 350,384 450,411 530,420" fill="none" stroke="#C49AEB" stroke-width="2"/><path d="M150 368 L350 384" stroke="#D4A017" stroke-width="2" stroke-dasharray="4 3"/><text x="600" y="385" fill="#C49AEB" font-size="13">RSI: 74 → 62</text><text x="600" y="407" fill="#B7C0CF" font-size="12">Topos nos mesmos instantes</text>`;
+ }
+ return s;
+}
+T.chart=(l,step)=>{
+ let s=`<svg viewBox="0 0 900 450" role="img" aria-label="${E(l.title)}: esquema com entrada ${l.entry}, stop ${l.stop} e alvo ${l.target}. Exemplo hipotético."><title>${E(l.title)} — exemplo hipotético, sem dados de mercado</title><rect width="900" height="450" fill="#0A0C10"/>`;
+ for(const p of [88,94,100,106,112])s+=line(40,p,880,p,'#1E232E')+label(845,p,p.toFixed(2).replace('.',','),'#8491A4');
+ if(['averages','alignment','timeframes'].includes(l.chart))s+=moving(l.chart);
+ else if(shapes[l.chart])s+=pattern(l);
+ else if(['volume','vwap','rsi','bollinger'].includes(l.chart))s+=indicators(l);
+ else s+=candles(l.chart);
+ const entries=[[1,l.entry,'Gatilho','#D4A017'],[2,l.stop,'Stop técnico','#EF4444'],[3,l.target,'Alvo projetado','#10B981']];
+ for(const [n,p,name,col] of entries)if(step>=n)s+=line(45,p,825,p,col,'5 4')+label(640,p,`${name} · ${p.toFixed(2).replace('.',',')}`,col);
+ if(step>=3){s+=path([[570,100],[620,l.side==='sell'?98:102],[660,l.target]],'#10B981','6 5')+line(610,100,610,l.target,'#10B981')+label(625,(100+l.target)/2,'Projeção: 12 pts','#10B981');}
+ s+=`<text x="45" y="443" fill="#8491A4" font-size="12">Histórico esquemático · tracejado após gatilho = hipótese futura</text></svg>`;
+ return s;
+};
+T.math={sma,ema};
+})();
+/* Estudos > Aulas, extensão isolada; sem escrita no servidor ou substituição de aulas. */
+;(function(){
+'use strict';
+const T=window.TecnicaPratica,E=T.escape,names=['Contexto','Gatilho de Entrada','Stop Técnico','Alvo Projetado'];
+let selected=null,step=0,visual=false,playing=false,loading=false,status='',owner='',progress={},storageOK=true,run=0,controller=null,audio=null,objectURL='',utterance=null,bridgeFailed=false,videoFailed=false,film=null;
+const active=()=>typeof tab!=='undefined'&&tab==='estudos'&&typeof ESV!=='undefined'&&ESV==='aul';
+const currentOwner=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'visitante';
+const key=()=>`diario:tecnica-pratica:v1:${owner}`;
+function readOwner(){const next=currentOwner();if(next===owner)return;stop();owner=next;selected=null;visual=false;step=0;progress={};try{const p=JSON.parse(localStorage.getItem(key())||'{}');if(p&&typeof p==='object'&&!Array.isArray(p))progress=p;for(const l of T.lessons){const r=progress[l.id];if(!r||typeof r!=='object')continue;r.answers=Array.isArray(r.answers)?r.answers.map(a=>Number.isInteger(a)&&a>=0&&a<3?a:null):[];r.viewed=Array.isArray(r.viewed)?r.viewed.filter(s=>Number.isInteger(s)&&s>=0&&s<=3):[];}storageOK=true;}catch{storageOK=false;}}
+function save(){try{localStorage.setItem(key(),JSON.stringify(progress));storageOK=true;}catch{storageOK=false;}}
+function record(l){let r=progress[l.id];if(!r||typeof r!=='object'||!Array.isArray(r.answers))r=progress[l.id]={step:0,answers:[],viewed:[]};if(!Array.isArray(r.viewed))r.viewed=[];return r;}
+function passed(l){const r=progress[l.id];return !!r&&l.questions.every((q,i)=>r.answers?.[i]===q.answer)&&[0,1,2,3].every(s=>r.viewed?.includes(s));}
+function asset(name){return 'avatar-'+name;}
+function mentor(){const image=visual?asset('mentor-chart.png'):asset('mentor.png');return `<aside class="tp-mentor ${visual?'tp-pip':''} ${playing?'tp-speaking':''}" aria-label="Avatar Mentor"><img src="${image}" alt="Mentor 3D ${visual?'apontando para um gráfico':'no estúdio de podcast'}" data-tp-image="1"><div class="tp-avatar-fallback" hidden><b>MENTOR</b><span>Acompanhe o gráfico e o roteiro da aula</span></div>${playing&&!videoFailed?`<video data-tp-video="1" src="${asset('talking.mp4')}" autoplay loop muted playsinline preload="none" aria-label="Gestos do mentor"></video>`:''}<small>${playing?'Mentor narrando':loading?'Preparando voz':'Avatar Mentor'}</small></aside>`;}
+function catalog(){const done=T.lessons.filter(passed).length;return `<header class="tp-head"><span>TRILHA ILUSTRADA · MENTOR 3D</span><h2>Análise Técnica na Prática</h2><p>Da leitura do contexto ao plano de entrada, stop e alvo. ${T.lessons.length} lições, quatro módulos e três perguntas por lição.</p><div class="tp-progress"><progress max="${T.lessons.length}" value="${done}" aria-label="Progresso da trilha"></progress><b>${done}/${T.lessons.length} concluídas</b></div></header><div class="tp-modules">${T.modules.map((m,i)=>`<details open><summary>Módulo ${i+1} — ${E(m.title)}</summary><p class="tp-ref">Referências conceituais: ${E(m.reference)}</p>${T.lessons.filter(l=>l.module===m.id).map(l=>`<button type="button" data-tp-lesson="${l.id}" class="tp-lesson-row"><span>${passed(l)?'✓ ':''}${E(l.title)}</span><small>3 min · ${progress[l.id]?.answers?.filter(Number.isInteger).length||0}/3 respostas</small></button>`).join('')}</details>`).join('')}</div><p class="tp-note">Progresso salvo neste navegador, separado por conta. As aulas existentes continuam abaixo.</p><details class="tp-origin"><summary>Sobre os exemplos e as referências</summary><p>Diagramas autorais com preços hipotéticos para ensinar conceitos associados a Flávio Lemos, John Murphy, Al Brooks e Thomas Bulkowski. Não são reproduções de páginas, exemplos históricos verificados nem transcrições dos livros da Biblioteca.</p><p><a href="https://thepatternsite.com/measure.html" target="_blank" rel="noopener noreferrer">Bulkowski: regras de projeção e resultados empíricos</a> · <a href="https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/overview" target="_blank" rel="noopener noreferrer">Guia de indicadores</a></p></details>`;}
+function quiz(l){const r=record(l);return `<section class="tp-check" aria-label="Mini-check de fixação"><h3>Mini-check de fixação</h3><p>Três perguntas. O feedback aparece ao responder; você pode tentar novamente.</p>${l.questions.map((q,i)=>{const a=r.answers[i],answered=Number.isInteger(a)&&a>=0&&a<q.options.length,ok=a===q.answer;return `<fieldset><legend>${i+1}. ${E(q.q)}</legend>${q.options.map((o,j)=>`<label class="${answered&&a===j?(ok?'tp-correct':'tp-wrong'):''}"><input type="radio" name="tp-${l.id}-${i}" data-tp-question="${i}" value="${j}" ${answered&&a===j?'checked':''}>${E(o)}</label>`).join('')}<p class="tp-feedback" data-tp-feedback="${i}" role="status">${answered?(ok?'Correto. ':'Reveja. ')+E(q.why):''}</p></fieldset>`;}).join('')}<p class="tp-result" role="status">${passed(l)?'✓ Lição concluída: quatro etapas vistas e três respostas corretas.':`Etapas vistas: ${[0,1,2,3].filter(s=>r.viewed.includes(s)).length}/4 · Acertos: ${l.questions.filter((q,i)=>r.answers[i]===q.answer).length}/3`}</p></section>`;}
+function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>O PC gera e envia o vídeo completo para sua conta. A ponte trabalha em segundo plano, sem endereço ou porta. Após atualizar a ponte, mantenha-a ligada e consulte o vídeo aqui.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="metadata" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video>`:''}<p>Ouvir Aula usa a voz disponível no aparelho. O vídeo da ponte usa a voz neural configurada no PC.</p></details>`;}
+async function openFilm(format){
+ stop();const token=run,l=T.lessons.find(l=>l.id===selected);if(!l)return;
+ if(typeof SESS==='undefined'||!SESS?.uid){status='Entre na sua conta para assistir ao vídeo da ponte.';paint();return;}
+ status='Consultando vídeo na sua conta…';loading=true;paint();
+ const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),10000);
+ try{
+  await tok();if(token!==run||currentOwner()!==owner)return;
+  const c=cfg(),path=encodeURIComponent(SESS.uid)+'/tecnica-v1-'+l.id+'-'+format+'.mp4';
+  const res=await fetch(c.url+'/storage/v1/object/sign/aulas-videos/'+path,{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify({expiresIn:3600}),signal:ctl.signal});
+  const data=await res.json();if(token!==run||currentOwner()!==owner||!active())return;
+  if(!res.ok||!data.signedURL)throw Error('missing');
+  const url=new URL(c.url+'/storage/v1'+data.signedURL);
+  if(url.origin!==new URL(c.url).origin||!url.pathname.startsWith('/storage/v1/object/sign/aulas-videos/'+path))throw Error('invalid');
+  film=url.href;loading=false;status='Vídeo pronto. Toque em reproduzir nos controles abaixo.';paint();
+ }catch{if(token!==run)return;loading=false;status='Vídeo ainda indisponível neste formato. Confirme que a ponte foi atualizada e aguarde a geração e o envio pelo PC. Você pode ouvir a aula pela voz do aparelho.';paint();}
+ finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
+}
+function lesson(l){const idx=T.lessons.indexOf(l),r=record(l);return `<header class="tp-head"><button type="button" data-tp-action="catalog">← Todas as lições</button><span>ANÁLISE TÉCNICA NA PRÁTICA · ${idx+1}/${T.lessons.length}</span><h2 tabindex="-1" id="tp-title">${E(l.title)}</h2><p>3 min de leitura · ${E(T.modules.find(m=>m.id===l.module).reference)}</p></header><div class="tp-class ${visual?'tp-visual':''}"><div class="tp-main"><p class="tp-summary">${E(l.summary)}</p><div class="tp-controls"><button type="button" data-tp-action="listen" ${loading?'disabled':''}>${loading?'Preparando…':playing?'Reiniciar etapa':visual?'Ouvir etapa':'Ouvir Aula'}</button><button type="button" data-tp-action="pause" ${!playing&&!loading?'disabled':''}>Pausar</button><button type="button" data-tp-action="visual">${visual?'Voltar à abertura':'Explorar o exemplo'}</button></div><p class="tp-status" role="status" aria-live="polite">${E(status)}</p>${visual?`<nav class="tp-stages" aria-label="Etapas da lição">${names.map((n,i)=>`<button type="button" data-tp-step="${i}" aria-current="${step===i?'step':'false'}">${i+1}. ${n}</button>`).join('')}</nav><div class="tp-chart">${T.chart(l,step)}</div><section class="tp-script"><h3>${step+1}. ${names[step]}</h3><p>${E(l.stages[step])}</p></section><div class="tp-controls"><button type="button" data-tp-action="prev" ${step===0?'disabled':''}>← Etapa anterior</button><button type="button" data-tp-action="next" ${step===3?'disabled':''}>Próxima etapa →</button></div>`:`<p class="tp-intro">Ouça a explicação com etapas sincronizadas ou explore o gráfico no seu ritmo. Os níveis de preço são didáticos e não representam uma operação em andamento.</p>`}</div>${mentor()}</div>${visual?quiz(l):''}<div class="tp-footer"><button type="button" data-tp-lesson="${T.lessons[Math.max(0,idx-1)].id}" ${idx===0?'disabled':''}>← Lição anterior</button><button type="button" data-tp-lesson="${T.lessons[Math.min(T.lessons.length-1,idx+1)].id}" ${idx===T.lessons.length-1?'disabled':''}>Próxima lição →</button></div>${bridgeDetails()}<p class="tp-note">Exemplo autoral hipotético, inspirado em conceitos clássicos. Não reproduz uma página do livro. ${!storageOK?'O navegador bloqueou o armazenamento: progresso somente nesta sessão.':''}</p>`;}
+function markup(){readOwner();const l=T.lessons.find(l=>l.id===selected);return `<section id="tp-root" class="tp-root ${visual&&l?'tp-is-visual':''}" aria-label="Trilha Análise Técnica na Prática">${l?lesson(l):catalog()}</section>`;}
+function paint(focus=false){const root=document.getElementById('tp-root');if(!root||!active())return;root.outerHTML=markup();const v=document.querySelector('#tp-root video');if(v)v.play().catch(()=>{videoFailed=true;v.remove();});dock();if(focus)document.getElementById('tp-title')?.focus({preventScroll:true});}
+function dock(){const root=document.getElementById('tp-root'),mentor=root?.querySelector('.tp-pip');if(!root||!mentor)return;const rect=root.getBoundingClientRect();root.style.setProperty('--tp-right',Math.max(16,window.innerWidth-rect.right+16)+'px');mentor.style.visibility=window.innerWidth>=1000&&(rect.bottom<110||rect.top>window.innerHeight-80)?'hidden':'';}
+let dockFrame=0;function scheduleDock(){if(dockFrame)return;dockFrame=requestAnimationFrame(()=>{dockFrame=0;dock();});}
+window.addEventListener('scroll',scheduleDock,{passive:true});window.addEventListener('resize',scheduleDock,{passive:true});
+function releaseAudio(){if(audio){audio.onended=audio.onerror=audio.onplaying=audio.onpause=null;audio.pause();audio.removeAttribute('src');audio.load();audio=null;}if(objectURL){URL.revokeObjectURL(objectURL);objectURL='';}}
+function stop(){const player=document.querySelector('#tp-root [data-tp-film-player]');if(player){player.pause();player.removeAttribute('src');player.load();}film=null;run++;controller?.abort();controller=null;releaseAudio();if(utterance){utterance.onend=utterance.onerror=utterance.onstart=null;window.speechSynthesis?.cancel();utterance=null;}playing=false;loading=false;}
+function mark(){const l=T.lessons.find(l=>l.id===selected);if(!l||!visual)return;const r=record(l);r.step=step;if(!r.viewed.includes(step))r.viewed.push(step);save();}
+function validEndpoint(s){try{const u=new URL(s);if(u.username||u.password||u.hash)return false;return ['http:','https:'].includes(u.protocol);}catch{return false;}}
+function configuredBridge(){let stored='';try{stored=localStorage.getItem('diario:ponte-video:voz-url')||'';}catch{}const candidate=window.DIARIO_PONTE_VIDEO?.vozUrl||stored;return candidate&&validEndpoint(candidate)?candidate:'';}
+function finishScene(token){if(token!==run||!active()||currentOwner()!==owner)return;playing=false;loading=false;utterance=null;releaseAudio();if(step<3){step++;mark();paint();speak();}else{status='Narração concluída. Responda ao mini-check abaixo.';paint();}}
+function browserVoice(text,token){
+ if(token!==run)return;
+ if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){loading=false;playing=false;status='Voz indisponível neste navegador. O roteiro e as etapas continuam disponíveis para leitura.';paint();return;}
+ loading=false;const u=utterance=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=1;
+ const voices=window.speechSynthesis.getVoices();u.voice=voices.find(v=>/^pt[-_]BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang))||null;
+ u.onstart=()=>{if(token!==run)return;playing=true;status=bridgeFailed?'Ponte Vídeo indisponível · narrando com a voz do aparelho.':'Narrando com a voz do aparelho · pt-BR.';paint();};
+ u.onend=()=>finishScene(token);
+ u.onerror=()=>{if(token!==run)return;playing=false;loading=false;utterance=null;status='A narração foi interrompida. Toque em Ouvir etapa para tentar novamente.';paint();};
+ // Guarda referência para Safari; a fala pertence apenas a esta trilha.
+ window.speechSynthesis.speak(u);
+}
+async function speak(){
+ const l=T.lessons.find(l=>l.id===selected);if(!l||!active())return;
+ stop();const token=run;visual=true;loading=true;status='Preparando narração da etapa…';mark();paint();
+ const text=`${l.title}. ${step+1}. ${names[step]}. ${l.stages[step]}`;
+ const endpoint=configuredBridge();
+ if(endpoint&&!bridgeFailed){
+  const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),8000);
+  try{
+   const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:'pt-BR',lesson_id:l.id,stage:step}),signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+   if(!res.ok||!/^audio\//i.test(res.headers.get('content-type')||''))throw Error('Resposta de áudio inválida');
+   const blob=await res.blob();if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
+   if(token!==run)return;
+   objectURL=URL.createObjectURL(blob);audio=new Audio(objectURL);audio.preload='auto';
+   audio.onplaying=()=>{if(token!==run)return;playing=true;loading=false;status='Narrando pela Ponte Vídeo.';paint();};
+   audio.onpause=()=>{if(token!==run||!playing)return;playing=false;status='Áudio pausado. Toque em Ouvir etapa para reiniciá-la.';paint();};
+   audio.onended=()=>finishScene(token);audio.onerror=()=>{if(token!==run)return;releaseAudio();bridgeFailed=true;browserVoice(text,token);};
+   await audio.play();return;
+  }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;}
+  finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
+ }
+ browserVoice(text,token);
+}
+const previous=typeof vEstudos==='function'?vEstudos:null;
+if(previous)vEstudos=function(){const html=previous.apply(this,arguments);return active()?markup()+html:html;};
+document.addEventListener('click',e=>{
+ const b=e.target.closest?.('#tp-root button');if(!b||!active())return;e.preventDefault();e.stopPropagation();readOwner();
+ if(b.dataset.tpFilm){document.dispatchEvent(new Event('au-study-pause'));openFilm(b.dataset.tpFilm);return;}
+ if(b.dataset.tpLesson){stop();selected=b.dataset.tpLesson;step=0;visual=false;status='';bridgeFailed=false;paint(true);document.getElementById('tp-root')?.scrollIntoView({block:'start'});return;}
+ if(b.hasAttribute('data-tp-step')){stop();step=Number(b.dataset.tpStep);status='';mark();paint();return;}
+ switch(b.dataset.tpAction){
+ case 'catalog':stop();selected=null;visual=false;status='';paint();break;
+ case 'listen':document.dispatchEvent(new Event('au-study-pause'));speak();break;
+ case 'pause':stop();status='Pausado. Ouvir etapa reinicia a etapa atual.';paint();break;
+ case 'visual':stop();visual=!visual;status='';mark();paint();break;
+ case 'prev':case 'next':stop();step=Math.max(0,Math.min(3,step+(b.dataset.tpAction==='next'?1:-1)));status='';mark();paint();break;
+
+ }
+},true);
+document.addEventListener('change',e=>{
+ const el=e.target.closest?.('#tp-root [data-tp-question]');if(!el||!active())return;
+ readOwner();const l=T.lessons.find(l=>l.id===selected);if(!l)return;
+ const i=Number(el.dataset.tpQuestion),answer=Number(el.value);if(!l.questions[i]||!Number.isInteger(answer)||answer<0||answer>2)return;
+ record(l).answers[i]=answer;save();
+ const field=el.closest('fieldset'),q=l.questions[i];field.querySelectorAll('label').forEach(label=>label.classList.remove('tp-correct','tp-wrong'));el.closest('label').classList.add(answer===q.answer?'tp-correct':'tp-wrong');field.querySelector('.tp-feedback').textContent=(answer===q.answer?'Correto. ':'Reveja. ')+q.why;
+ const r=record(l);document.querySelector('#tp-root .tp-result').textContent=passed(l)?'✓ Lição concluída: quatro etapas vistas e três respostas corretas.':`Etapas vistas: ${[0,1,2,3].filter(s=>r.viewed.includes(s)).length}/4 · Acertos: ${l.questions.filter((q,i)=>r.answers[i]===q.answer).length}/3`;
+});
+document.addEventListener('error',e=>{
+ const el=e.target;if(!el.closest?.('#tp-root'))return;
+ if(el.matches('[data-tp-image]')){el.hidden=true;const fallback=el.parentElement.querySelector('.tp-avatar-fallback');if(fallback)fallback.hidden=false;}
+ if(el.matches('[data-tp-film-player]')){status='Não foi possível reproduzir o vídeo. Consulte novamente para renovar o acesso.';stop();paint();}
+ if(el.matches('[data-tp-video]')){videoFailed=true;el.remove();}
+},true);
+// A desmontagem da aba e a troca de conta cancelam áudio, fetch e gestos imediatamente.
+const observer=new MutationObserver(()=>{if((playing||loading||film)&&(!active()||!document.getElementById('tp-root')||currentOwner()!==owner)){stop();status='';}if(currentOwner()!==owner&&document.getElementById('tp-root')&&active()){readOwner();paint();}});observer.observe(document.body,{childList:true,subtree:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&(playing||loading||film)){stop();status='Pausado ao sair da tela. Ouvir etapa reinicia a etapa atual.';paint();}});
+window.addEventListener('pagehide',()=>stop());
+// Evita duas narrações simultâneas ao abrir uma aula antiga.
+document.addEventListener('click',e=>{if(e.target.closest?.('[data-auopen]')&&(playing||loading||film)){stop();status='Pausado ao abrir outra aula.';paint();}},true);
+T.view={markup,stop,dispose(){stop();observer.disconnect();cancelAnimationFrame(dockFrame);window.removeEventListener('scroll',scheduleDock);window.removeEventListener('resize',scheduleDock);}};
+})();
+;(function(){
+const s=document.createElement('style');s.textContent=`
+.tp-full-video{display:block;width:100%;max-height:75vh;background:#0A0C10;margin-top:12px}.tp-root{background:#11141B;color:#E7EBF2;border:1px solid #1E232E;border-radius:4px;margin:12px 0 20px;padding:16px;font:14px/1.55 system-ui,sans-serif;font-variant-numeric:tabular-nums;isolation:isolate;min-width:0}.tp-root *{box-sizing:border-box}.tp-root h2{font-size:24px;line-height:1.2;margin:10px 0}.tp-root h3{font-size:17px;margin:12px 0}.tp-root p{margin:8px 0 12px}.tp-root button{background:#181C26;color:#E7EBF2;border:1px solid #384052;border-radius:4px;min-height:44px;padding:9px 12px;font:inherit;cursor:pointer;white-space:normal;text-align:left}.tp-root button:hover{border-color:#D4A017}.tp-root button:disabled{opacity:.45;cursor:default}.tp-root button:focus-visible,.tp-root input:focus-visible,.tp-root summary:focus-visible,.tp-root a:focus-visible{outline:2px solid #D4A017;outline-offset:3px}.tp-head>span{display:block;font-size:11px;color:#D4A017;letter-spacing:.08em;margin-top:10px}.tp-head>p,.tp-ref,.tp-note,.tp-origin,.tp-bridge small{color:#B7C0CF}.tp-progress{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.tp-progress progress{width:min(300px,100%);height:8px;accent-color:#D4A017}.tp-progress b{font-size:12px}.tp-modules{margin-top:14px}.tp-root details{border-top:1px solid #1E232E;padding:10px 0}.tp-root summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;overflow-wrap:normal}.tp-root .tp-ref{font-size:12px;margin:0 0 8px}.tp-root .tp-lesson-row{display:flex;justify-content:space-between;gap:12px;width:100%;border:0;border-top:1px solid #1E232E;border-radius:0;background:transparent}.tp-lesson-row span{min-width:0}.tp-lesson-row small{white-space:nowrap;color:#AEB9CA;font-size:11px;align-self:center}.tp-class{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:20px;padding:12px 0}.tp-main{min-width:0}.tp-summary{font-size:17px}.tp-controls,.tp-footer{display:flex;flex-wrap:wrap;gap:8px}.tp-controls button:first-child{border-color:#D4A017}.tp-status{font-size:12px;color:#D4A017;min-height:20px}.tp-mentor{position:relative;width:100%;align-self:start;border:1px solid #384052;border-radius:4px;overflow:hidden;background:#0A0C10}.tp-mentor img{width:100%;height:290px;object-fit:cover;object-position:center 25%;display:block}.tp-mentor video{position:absolute;inset:0;width:100%;height:calc(100% - 28px);object-fit:cover}.tp-mentor small{display:block;height:28px;padding:4px 8px;color:#D4A017;font-size:11px}.tp-avatar-fallback{height:220px;align-content:center;text-align:center;padding:14px;background:#181C26}.tp-avatar-fallback b,.tp-avatar-fallback span{display:block}.tp-avatar-fallback b{color:#D4A017;font-size:22px}.tp-avatar-fallback span{font-size:12px;color:#B7C0CF}.tp-root [hidden]{display:none!important}.tp-visual{grid-template-columns:minmax(0,1fr) 180px}.tp-visual .tp-mentor{position:sticky;top:90px;align-self:end}.tp-visual .tp-mentor img{height:215px}.tp-speaking{border-color:#D4A017;animation:tp-gold 1.8s ease-in-out infinite}.tp-stages{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0}.tp-stages button{flex:1 1 135px;font-size:12px}.tp-stages [aria-current=step]{background:#302711;color:#FFD977;border-color:#D4A017}.tp-chart{overflow-x:auto;background:#0A0C10;max-width:100%;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E}.tp-chart svg{display:block;width:100%;min-width:620px;height:auto;font-variant-numeric:tabular-nums}.tp-script{padding-top:6px}.tp-script p{line-height:1.75;max-width:900px}.tp-check{border-top:1px solid #1E232E;margin-top:14px;padding-top:12px}.tp-check>p{color:#B7C0CF}.tp-check fieldset{margin:14px 0;padding:12px 0;border:0;border-bottom:1px solid #1E232E;min-width:0}.tp-check legend{font-weight:600;padding:0}.tp-check label{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px;cursor:pointer}.tp-check input{accent-color:#D4A017;min-width:18px;width:18px;height:18px;flex-shrink:0}.tp-check label.tp-correct{background:#103B30;color:#91EACD}.tp-check label.tp-wrong{background:#412126;color:#FFB5B5}.tp-feedback{min-height:22px;font-size:13px;color:#C4CEDC}.tp-result{color:#D4A017}.tp-footer{justify-content:space-between;border-top:1px solid #1E232E;padding-top:14px;margin:14px 0}.tp-bridge label{display:block}.tp-bridge input{display:block;width:100%;max-width:600px;background:#0A0C10;color:#E7EBF2;border:1px solid #384052;min-height:44px;font-size:16px;padding:8px;margin:6px 0}.tp-bridge small{display:block;margin-top:8px}.tp-origin a{color:#FFD977}.tp-note{font-size:12px}.tp-intro{max-width:650px}@keyframes tp-gold{50%{border-color:#FFE1A0}}@media(min-width:1000px){.tp-root.tp-is-visual{padding-right:216px}.tp-is-visual .tp-class{grid-template-columns:minmax(0,1fr)}.tp-root.tp-is-visual .tp-mentor{position:fixed;top:auto;right:var(--tp-right,20px);bottom:calc(86px + env(safe-area-inset-bottom,0px));width:170px;z-index:45}}@media(max-width:700px){.tp-root{padding:12px}.tp-root h2{font-size:21px}.tp-class{grid-template-columns:minmax(0,1fr);gap:12px}.tp-mentor{width:180px;justify-self:end}.tp-mentor img{height:200px}.tp-visual .tp-mentor{position:relative;top:auto;align-self:auto;width:128px;justify-self:end;margin-bottom:env(safe-area-inset-bottom,0px)}.tp-visual .tp-mentor img{height:145px}.tp-visual .tp-mentor small{font-size:10px}.tp-root .tp-lesson-row{flex-wrap:wrap;gap:3px}.tp-lesson-row small{white-space:normal}.tp-head>span{letter-spacing:.03em}.tp-footer button{flex:1 1 130px}.tp-chart{overscroll-behavior-x:contain;touch-action:pan-x pan-y}.tp-controls button{flex:1 1 110px}}@media(prefers-reduced-motion:reduce){.tp-speaking{animation:none}}
+`;document.head.appendChild(s);
+})();

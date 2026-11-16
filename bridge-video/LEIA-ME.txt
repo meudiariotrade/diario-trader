@@ -1,0 +1,43 @@
+PONTE DE VÍDEO — Diário de Trader
+Transforma uma videoaula do app num vídeo MP4 com voz neural e legenda palavra por palavra.
+
+O QUE PRECISA
+- Um computador com Windows e internet (o mesmo da ponte do Profit serve).
+- Python 3.10 ou mais novo (o mesmo da ponte do Profit). Se não tiver: python.org/downloads,
+  marcando "Add python.exe to PATH" na instalação.
+
+INSTALAR (uma vez só)
+1. Descompacte esta pasta onde quiser (ex.: Documentos\ponte-video).
+2. Dê dois cliques em INSTALAR.bat e espere terminar (baixa a voz, o navegador e o FFmpeg).
+
+MODO AUTOMÁTICO (recomendado: configura uma vez só)
+1. Dê dois cliques em "LIGAR AUTOMATICO.bat".
+2. Entre com o e-mail e a senha da conta (só na primeira vez) e escolha a voz, a velocidade
+   e os formatos (ex.: 9:16 e 16:9).
+3. Pronto. Sempre que o computador estiver ligado, a ponte confere a cada 10 minutos se
+   você gerou uma aula nova no app, faz o vídeo e manda para a sua conta. No celular, em
+   Estudos → Aulas, aparece o botão "🎬 Vídeo" na aula: assistir, compartilhar ou baixar.
+4. Para parar: "DESLIGAR AUTOMATICO.bat".
+
+GERAR UM VÍDEO NA HORA (manual)
+1. Dê dois cliques em "GERAR VIDEO.bat".
+2. Na primeira vez: confirme o endereço do app (o mesmo que você abre no celular)
+   e entre com o e-mail e a senha da sua conta do app. A senha não fica salva; fica só a sessão.
+3. Escolha a aula, a voz (Antônio, Francisca ou Thalita), a velocidade e o formato:
+   1 = 16:9 deitado (YouTube, computador) · 2 = 9:16 em pé (Stories, Reels, WhatsApp) · 3 = 1:1 quadrado.
+4. Espere. Leva cerca de 1 minuto para cada 2 minutos de vídeo.
+5. O vídeo fica em Vídeos\Diario de Trader (a pasta abre sozinha no fim) e, se você quiser,
+   vai também para o app (botão "🎬 Vídeo" na aula).
+
+COMO FUNCIONA
+- A voz vem do serviço gratuito de vozes neurais da Microsoft (edge-tts), que também
+  informa o tempo de cada palavra: é isso que faz a legenda andar junto com a fala.
+- O próprio app é aberto num navegador invisível e cada cena é fotografada, palavra por palavra.
+  Os gráficos com dados reais (candles) usam a sua conta, como no celular.
+- O FFmpeg junta as imagens e a voz no MP4.
+
+PROBLEMAS
+- "A voz neural não respondeu": confira a internet e tente de novo.
+- "401" ou "Invalid login": e-mail ou senha errados. Apague o arquivo config.json e rode de novo.
+- Endereço do app errado: apague o config.json (ou rode:  GERAR VIDEO.bat --app https://seu-endereco/ ).
+- Qualquer outro erro: tire um print da janela preta e mande no chat.

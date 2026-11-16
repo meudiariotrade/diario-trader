@@ -1,0 +1,117 @@
+/* Estudos > Aulas, extensão isolada; sem escrita no servidor ou substituição de aulas. */
+;(function(){
+'use strict';
+const T=window.TecnicaPratica,E=T.escape,names=['Contexto','Gatilho de Entrada','Stop Técnico','Alvo Projetado'];
+let selected=null,step=0,visual=false,playing=false,loading=false,status='',owner='',progress={},storageOK=true,run=0,controller=null,audio=null,objectURL='',utterance=null,bridgeFailed=false,videoFailed=false,film=null;
+const active=()=>typeof tab!=='undefined'&&tab==='estudos'&&typeof ESV!=='undefined'&&ESV==='aul';
+const currentOwner=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'visitante';
+const key=()=>`diario:tecnica-pratica:v1:${owner}`;
+function readOwner(){const next=currentOwner();if(next===owner)return;stop();owner=next;selected=null;visual=false;step=0;progress={};try{const p=JSON.parse(localStorage.getItem(key())||'{}');if(p&&typeof p==='object'&&!Array.isArray(p))progress=p;for(const l of T.lessons){const r=progress[l.id];if(!r||typeof r!=='object')continue;r.answers=Array.isArray(r.answers)?r.answers.map(a=>Number.isInteger(a)&&a>=0&&a<3?a:null):[];r.viewed=Array.isArray(r.viewed)?r.viewed.filter(s=>Number.isInteger(s)&&s>=0&&s<=3):[];}storageOK=true;}catch{storageOK=false;}}
+function save(){try{localStorage.setItem(key(),JSON.stringify(progress));storageOK=true;}catch{storageOK=false;}}
+function record(l){let r=progress[l.id];if(!r||typeof r!=='object'||!Array.isArray(r.answers))r=progress[l.id]={step:0,answers:[],viewed:[]};if(!Array.isArray(r.viewed))r.viewed=[];return r;}
+function passed(l){const r=progress[l.id];return !!r&&l.questions.every((q,i)=>r.answers?.[i]===q.answer)&&[0,1,2,3].every(s=>r.viewed?.includes(s));}
+function asset(name){return 'avatar-'+name;}
+function mentor(){const image=visual?asset('mentor-chart.png'):asset('mentor.png');return `<aside class="tp-mentor ${visual?'tp-pip':''} ${playing?'tp-speaking':''}" aria-label="Avatar Mentor"><img src="${image}" alt="Mentor 3D ${visual?'apontando para um gráfico':'no estúdio de podcast'}" data-tp-image="1"><div class="tp-avatar-fallback" hidden><b>MENTOR</b><span>Acompanhe o gráfico e o roteiro da aula</span></div>${playing&&!videoFailed?`<video data-tp-video="1" src="${asset('talking.mp4')}" autoplay loop muted playsinline preload="none" aria-label="Gestos do mentor"></video>`:''}<small>${playing?'Mentor narrando':loading?'Preparando voz':'Avatar Mentor'}</small></aside>`;}
+function catalog(){const done=T.lessons.filter(passed).length;return `<header class="tp-head"><span>TRILHA ILUSTRADA · MENTOR 3D</span><h2>Análise Técnica na Prática</h2><p>Da leitura do contexto ao plano de entrada, stop e alvo. ${T.lessons.length} lições, quatro módulos e três perguntas por lição.</p><div class="tp-progress"><progress max="${T.lessons.length}" value="${done}" aria-label="Progresso da trilha"></progress><b>${done}/${T.lessons.length} concluídas</b></div></header><div class="tp-modules">${T.modules.map((m,i)=>`<details open><summary>Módulo ${i+1} — ${E(m.title)}</summary><p class="tp-ref">Referências conceituais: ${E(m.reference)}</p>${T.lessons.filter(l=>l.module===m.id).map(l=>`<button type="button" data-tp-lesson="${l.id}" class="tp-lesson-row"><span>${passed(l)?'✓ ':''}${E(l.title)}</span><small>3 min · ${progress[l.id]?.answers?.filter(Number.isInteger).length||0}/3 respostas</small></button>`).join('')}</details>`).join('')}</div><p class="tp-note">Progresso salvo neste navegador, separado por conta. As aulas existentes continuam abaixo.</p><details class="tp-origin"><summary>Sobre os exemplos e as referências</summary><p>Diagramas autorais com preços hipotéticos para ensinar conceitos associados a Flávio Lemos, John Murphy, Al Brooks e Thomas Bulkowski. Não são reproduções de páginas, exemplos históricos verificados nem transcrições dos livros da Biblioteca.</p><p><a href="https://thepatternsite.com/measure.html" target="_blank" rel="noopener noreferrer">Bulkowski: regras de projeção e resultados empíricos</a> · <a href="https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/overview" target="_blank" rel="noopener noreferrer">Guia de indicadores</a></p></details>`;}
+function quiz(l){const r=record(l);return `<section class="tp-check" aria-label="Mini-check de fixação"><h3>Mini-check de fixação</h3><p>Três perguntas. O feedback aparece ao responder; você pode tentar novamente.</p>${l.questions.map((q,i)=>{const a=r.answers[i],answered=Number.isInteger(a)&&a>=0&&a<q.options.length,ok=a===q.answer;return `<fieldset><legend>${i+1}. ${E(q.q)}</legend>${q.options.map((o,j)=>`<label class="${answered&&a===j?(ok?'tp-correct':'tp-wrong'):''}"><input type="radio" name="tp-${l.id}-${i}" data-tp-question="${i}" value="${j}" ${answered&&a===j?'checked':''}>${E(o)}</label>`).join('')}<p class="tp-feedback" data-tp-feedback="${i}" role="status">${answered?(ok?'Correto. ':'Reveja. ')+E(q.why):''}</p></fieldset>`;}).join('')}<p class="tp-result" role="status">${passed(l)?'✓ Lição concluída: quatro etapas vistas e três respostas corretas.':`Etapas vistas: ${[0,1,2,3].filter(s=>r.viewed.includes(s)).length}/4 · Acertos: ${l.questions.filter((q,i)=>r.answers[i]===q.answer).length}/3`}</p></section>`;}
+function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>O PC gera e envia o vídeo completo para sua conta. A ponte trabalha em segundo plano, sem endereço ou porta. Após atualizar a ponte, mantenha-a ligada e consulte o vídeo aqui.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="metadata" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video>`:''}<p>Ouvir Aula usa a voz disponível no aparelho. O vídeo da ponte usa a voz neural configurada no PC.</p></details>`;}
+async function openFilm(format){
+ stop();const token=run,l=T.lessons.find(l=>l.id===selected);if(!l)return;
+ if(typeof SESS==='undefined'||!SESS?.uid){status='Entre na sua conta para assistir ao vídeo da ponte.';paint();return;}
+ status='Consultando vídeo na sua conta…';loading=true;paint();
+ const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),10000);
+ try{
+  await tok();if(token!==run||currentOwner()!==owner)return;
+  const c=cfg(),path=encodeURIComponent(SESS.uid)+'/tecnica-v1-'+l.id+'-'+format+'.mp4';
+  const res=await fetch(c.url+'/storage/v1/object/sign/aulas-videos/'+path,{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify({expiresIn:3600}),signal:ctl.signal});
+  const data=await res.json();if(token!==run||currentOwner()!==owner||!active())return;
+  if(!res.ok||!data.signedURL)throw Error('missing');
+  const url=new URL(c.url+'/storage/v1'+data.signedURL);
+  if(url.origin!==new URL(c.url).origin||!url.pathname.startsWith('/storage/v1/object/sign/aulas-videos/'+path))throw Error('invalid');
+  film=url.href;loading=false;status='Vídeo pronto. Toque em reproduzir nos controles abaixo.';paint();
+ }catch{if(token!==run)return;loading=false;status='Vídeo ainda indisponível neste formato. Confirme que a ponte foi atualizada e aguarde a geração e o envio pelo PC. Você pode ouvir a aula pela voz do aparelho.';paint();}
+ finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
+}
+function lesson(l){const idx=T.lessons.indexOf(l),r=record(l);return `<header class="tp-head"><button type="button" data-tp-action="catalog">← Todas as lições</button><span>ANÁLISE TÉCNICA NA PRÁTICA · ${idx+1}/${T.lessons.length}</span><h2 tabindex="-1" id="tp-title">${E(l.title)}</h2><p>3 min de leitura · ${E(T.modules.find(m=>m.id===l.module).reference)}</p></header><div class="tp-class ${visual?'tp-visual':''}"><div class="tp-main"><p class="tp-summary">${E(l.summary)}</p><div class="tp-controls"><button type="button" data-tp-action="listen" ${loading?'disabled':''}>${loading?'Preparando…':playing?'Reiniciar etapa':visual?'Ouvir etapa':'Ouvir Aula'}</button><button type="button" data-tp-action="pause" ${!playing&&!loading?'disabled':''}>Pausar</button><button type="button" data-tp-action="visual">${visual?'Voltar à abertura':'Explorar o exemplo'}</button></div><p class="tp-status" role="status" aria-live="polite">${E(status)}</p>${visual?`<nav class="tp-stages" aria-label="Etapas da lição">${names.map((n,i)=>`<button type="button" data-tp-step="${i}" aria-current="${step===i?'step':'false'}">${i+1}. ${n}</button>`).join('')}</nav><div class="tp-chart">${T.chart(l,step)}</div><section class="tp-script"><h3>${step+1}. ${names[step]}</h3><p>${E(l.stages[step])}</p></section><div class="tp-controls"><button type="button" data-tp-action="prev" ${step===0?'disabled':''}>← Etapa anterior</button><button type="button" data-tp-action="next" ${step===3?'disabled':''}>Próxima etapa →</button></div>`:`<p class="tp-intro">Ouça a explicação com etapas sincronizadas ou explore o gráfico no seu ritmo. Os níveis de preço são didáticos e não representam uma operação em andamento.</p>`}</div>${mentor()}</div>${visual?quiz(l):''}<div class="tp-footer"><button type="button" data-tp-lesson="${T.lessons[Math.max(0,idx-1)].id}" ${idx===0?'disabled':''}>← Lição anterior</button><button type="button" data-tp-lesson="${T.lessons[Math.min(T.lessons.length-1,idx+1)].id}" ${idx===T.lessons.length-1?'disabled':''}>Próxima lição →</button></div>${bridgeDetails()}<p class="tp-note">Exemplo autoral hipotético, inspirado em conceitos clássicos. Não reproduz uma página do livro. ${!storageOK?'O navegador bloqueou o armazenamento: progresso somente nesta sessão.':''}</p>`;}
+function markup(){readOwner();const l=T.lessons.find(l=>l.id===selected);return `<section id="tp-root" class="tp-root ${visual&&l?'tp-is-visual':''}" aria-label="Trilha Análise Técnica na Prática">${l?lesson(l):catalog()}</section>`;}
+function paint(focus=false){const root=document.getElementById('tp-root');if(!root||!active())return;root.outerHTML=markup();const v=document.querySelector('#tp-root video');if(v)v.play().catch(()=>{videoFailed=true;v.remove();});dock();if(focus)document.getElementById('tp-title')?.focus({preventScroll:true});}
+function dock(){const root=document.getElementById('tp-root'),mentor=root?.querySelector('.tp-pip');if(!root||!mentor)return;const rect=root.getBoundingClientRect();root.style.setProperty('--tp-right',Math.max(16,window.innerWidth-rect.right+16)+'px');mentor.style.visibility=window.innerWidth>=1000&&(rect.bottom<110||rect.top>window.innerHeight-80)?'hidden':'';}
+let dockFrame=0;function scheduleDock(){if(dockFrame)return;dockFrame=requestAnimationFrame(()=>{dockFrame=0;dock();});}
+window.addEventListener('scroll',scheduleDock,{passive:true});window.addEventListener('resize',scheduleDock,{passive:true});
+function releaseAudio(){if(audio){audio.onended=audio.onerror=audio.onplaying=audio.onpause=null;audio.pause();audio.removeAttribute('src');audio.load();audio=null;}if(objectURL){URL.revokeObjectURL(objectURL);objectURL='';}}
+function stop(){const player=document.querySelector('#tp-root [data-tp-film-player]');if(player){player.pause();player.removeAttribute('src');player.load();}film=null;run++;controller?.abort();controller=null;releaseAudio();if(utterance){utterance.onend=utterance.onerror=utterance.onstart=null;window.speechSynthesis?.cancel();utterance=null;}playing=false;loading=false;}
+function mark(){const l=T.lessons.find(l=>l.id===selected);if(!l||!visual)return;const r=record(l);r.step=step;if(!r.viewed.includes(step))r.viewed.push(step);save();}
+function validEndpoint(s){try{const u=new URL(s);if(u.username||u.password||u.hash)return false;return ['http:','https:'].includes(u.protocol);}catch{return false;}}
+function configuredBridge(){let stored='';try{stored=localStorage.getItem('diario:ponte-video:voz-url')||'';}catch{}const candidate=window.DIARIO_PONTE_VIDEO?.vozUrl||stored;return candidate&&validEndpoint(candidate)?candidate:'';}
+function finishScene(token){if(token!==run||!active()||currentOwner()!==owner)return;playing=false;loading=false;utterance=null;releaseAudio();if(step<3){step++;mark();paint();speak();}else{status='Narração concluída. Responda ao mini-check abaixo.';paint();}}
+function browserVoice(text,token){
+ if(token!==run)return;
+ if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){loading=false;playing=false;status='Voz indisponível neste navegador. O roteiro e as etapas continuam disponíveis para leitura.';paint();return;}
+ loading=false;const u=utterance=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=1;
+ const voices=window.speechSynthesis.getVoices();u.voice=voices.find(v=>/^pt[-_]BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang))||null;
+ u.onstart=()=>{if(token!==run)return;playing=true;status=bridgeFailed?'Ponte Vídeo indisponível · narrando com a voz do aparelho.':'Narrando com a voz do aparelho · pt-BR.';paint();};
+ u.onend=()=>finishScene(token);
+ u.onerror=()=>{if(token!==run)return;playing=false;loading=false;utterance=null;status='A narração foi interrompida. Toque em Ouvir etapa para tentar novamente.';paint();};
+ // Guarda referência para Safari; a fala pertence apenas a esta trilha.
+ window.speechSynthesis.speak(u);
+}
+async function speak(){
+ const l=T.lessons.find(l=>l.id===selected);if(!l||!active())return;
+ stop();const token=run;visual=true;loading=true;status='Preparando narração da etapa…';mark();paint();
+ const text=`${l.title}. ${step+1}. ${names[step]}. ${l.stages[step]}`;
+ const endpoint=configuredBridge();
+ if(endpoint&&!bridgeFailed){
+  const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),8000);
+  try{
+   const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:'pt-BR',lesson_id:l.id,stage:step}),signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+   if(!res.ok||!/^audio\//i.test(res.headers.get('content-type')||''))throw Error('Resposta de áudio inválida');
+   const blob=await res.blob();if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
+   if(token!==run)return;
+   objectURL=URL.createObjectURL(blob);audio=new Audio(objectURL);audio.preload='auto';
+   audio.onplaying=()=>{if(token!==run)return;playing=true;loading=false;status='Narrando pela Ponte Vídeo.';paint();};
+   audio.onpause=()=>{if(token!==run||!playing)return;playing=false;status='Áudio pausado. Toque em Ouvir etapa para reiniciá-la.';paint();};
+   audio.onended=()=>finishScene(token);audio.onerror=()=>{if(token!==run)return;releaseAudio();bridgeFailed=true;browserVoice(text,token);};
+   await audio.play();return;
+  }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;}
+  finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
+ }
+ browserVoice(text,token);
+}
+const previous=typeof vEstudos==='function'?vEstudos:null;
+if(previous)vEstudos=function(){const html=previous.apply(this,arguments);return active()?markup()+html:html;};
+document.addEventListener('click',e=>{
+ const b=e.target.closest?.('#tp-root button');if(!b||!active())return;e.preventDefault();e.stopPropagation();readOwner();
+ if(b.dataset.tpFilm){document.dispatchEvent(new Event('au-study-pause'));openFilm(b.dataset.tpFilm);return;}
+ if(b.dataset.tpLesson){stop();selected=b.dataset.tpLesson;step=0;visual=false;status='';bridgeFailed=false;paint(true);document.getElementById('tp-root')?.scrollIntoView({block:'start'});return;}
+ if(b.hasAttribute('data-tp-step')){stop();step=Number(b.dataset.tpStep);status='';mark();paint();return;}
+ switch(b.dataset.tpAction){
+ case 'catalog':stop();selected=null;visual=false;status='';paint();break;
+ case 'listen':document.dispatchEvent(new Event('au-study-pause'));speak();break;
+ case 'pause':stop();status='Pausado. Ouvir etapa reinicia a etapa atual.';paint();break;
+ case 'visual':stop();visual=!visual;status='';mark();paint();break;
+ case 'prev':case 'next':stop();step=Math.max(0,Math.min(3,step+(b.dataset.tpAction==='next'?1:-1)));status='';mark();paint();break;
+
+ }
+},true);
+document.addEventListener('change',e=>{
+ const el=e.target.closest?.('#tp-root [data-tp-question]');if(!el||!active())return;
+ readOwner();const l=T.lessons.find(l=>l.id===selected);if(!l)return;
+ const i=Number(el.dataset.tpQuestion),answer=Number(el.value);if(!l.questions[i]||!Number.isInteger(answer)||answer<0||answer>2)return;
+ record(l).answers[i]=answer;save();
+ const field=el.closest('fieldset'),q=l.questions[i];field.querySelectorAll('label').forEach(label=>label.classList.remove('tp-correct','tp-wrong'));el.closest('label').classList.add(answer===q.answer?'tp-correct':'tp-wrong');field.querySelector('.tp-feedback').textContent=(answer===q.answer?'Correto. ':'Reveja. ')+q.why;
+ const r=record(l);document.querySelector('#tp-root .tp-result').textContent=passed(l)?'✓ Lição concluída: quatro etapas vistas e três respostas corretas.':`Etapas vistas: ${[0,1,2,3].filter(s=>r.viewed.includes(s)).length}/4 · Acertos: ${l.questions.filter((q,i)=>r.answers[i]===q.answer).length}/3`;
+});
+document.addEventListener('error',e=>{
+ const el=e.target;if(!el.closest?.('#tp-root'))return;
+ if(el.matches('[data-tp-image]')){el.hidden=true;const fallback=el.parentElement.querySelector('.tp-avatar-fallback');if(fallback)fallback.hidden=false;}
+ if(el.matches('[data-tp-film-player]')){status='Não foi possível reproduzir o vídeo. Consulte novamente para renovar o acesso.';stop();paint();}
+ if(el.matches('[data-tp-video]')){videoFailed=true;el.remove();}
+},true);
+// A desmontagem da aba e a troca de conta cancelam áudio, fetch e gestos imediatamente.
+const observer=new MutationObserver(()=>{if((playing||loading||film)&&(!active()||!document.getElementById('tp-root')||currentOwner()!==owner)){stop();status='';}if(currentOwner()!==owner&&document.getElementById('tp-root')&&active()){readOwner();paint();}});observer.observe(document.body,{childList:true,subtree:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&(playing||loading||film)){stop();status='Pausado ao sair da tela. Ouvir etapa reinicia a etapa atual.';paint();}});
+window.addEventListener('pagehide',()=>stop());
+// Evita duas narrações simultâneas ao abrir uma aula antiga.
+document.addEventListener('click',e=>{if(e.target.closest?.('[data-auopen]')&&(playing||loading||film)){stop();status='Pausado ao abrir outra aula.';paint();}},true);
+T.view={markup,stop,dispose(){stop();observer.disconnect();cancelAnimationFrame(dockFrame);window.removeEventListener('scroll',scheduleDock);window.removeEventListener('resize',scheduleDock);}};
+})();

@@ -11,7 +11,7 @@ const asset = /\.(html|js|css|png|jpe?g|webp|gif|svg|ico|ttf|otf|woff2?|wasm|web
 function assetFiles(directory = 'assets') {
   const absolute = path.join(root,directory);
   if (!fs.existsSync(absolute)) return [];
-  return fs.readdirSync(absolute,{withFileTypes:true}).flatMap(e => e.isDirectory() ? assetFiles(directory+'/'+e.name) : e.isFile() && asset.test(e.name) ? [directory+'/'+e.name] : []);
+  return fs.readdirSync(absolute,{withFileTypes:true}).flatMap(e => e.isDirectory() ? assetFiles(directory+'/'+e.name) : e.isFile() && (asset.test(e.name) || directory === 'public' && e.name.endsWith('.json')) ? [directory+'/'+e.name] : []);
 }
 
 function localFile(value) {
@@ -82,7 +82,12 @@ function build() {
   const files = validate();
   fs.rmSync(output, { recursive: true, force: true });
   fs.mkdirSync(output);
-  for (const file of files) { fs.mkdirSync(path.dirname(path.join(output,file)),{recursive:true}); fs.copyFileSync(path.join(root, file), path.join(output, file)); }
+  for (const file of files) {
+    // Assets públicos de Aulas usam a mesma URL na raiz do Pages, inclusive em subdiretórios.
+    const target = file.startsWith('public/') ? file.slice('public/'.length) : file;
+    fs.mkdirSync(path.dirname(path.join(output,target)),{recursive:true});
+    fs.copyFileSync(path.join(root, file), path.join(output, target));
+  }
   for (const file of fs.readdirSync(root).filter(f => /^LICENSE.*\.txt$/.test(f) || f === 'CNAME')) {
     fs.copyFileSync(path.join(root, file), path.join(output, file));
   }

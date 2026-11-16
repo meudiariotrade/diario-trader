@@ -1,5 +1,5 @@
 {
-  "version": 662,
+  "version": 663,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -84,7 +84,11 @@
       "src/studies/eco-micro.js",
       "src/studies/eco-series.js",
       "src/studies/eco-revisao.js",
-      "src/studies/eco-estilos.js"
+      "src/studies/eco-estilos.js",
+      "src/studies/tecnica-conteudo.js",
+      "src/studies/tecnica-graficos.js",
+      "src/studies/tecnica-aulas.js",
+      "src/studies/tecnica-estilos.js"
     ]
   },
   "publicationManifest": "publication.manifest.json"

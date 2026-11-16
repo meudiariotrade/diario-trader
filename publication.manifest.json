@@ -1,6 +1,10 @@
 {
   "version": 1,
-  "entries": ["index.html", "sw.js", "manifest.webmanifest"],
+  "entries": [
+    "index.html",
+    "sw.js",
+    "manifest.webmanifest"
+  ],
   "dynamic": {
     "config.js": "Configuração pública carregada na inicialização",
     "pdf-documentos.js": "Geração de documentos carregada sob demanda",
@@ -16,5 +20,8 @@
     "estudos.js": "Biblioteca de estudos sob demanda",
     "ingles.js": "Estudo de inglês sob demanda"
   },
-  "directories": {"assets": "Identidades de ativos e recursos visuais referenciados dinamicamente"}
+  "directories": {
+    "assets": "Identidades de ativos e recursos visuais referenciados dinamicamente",
+    "public": "Assets do Avatar Mentor das aulas (publicados na raiz do site)"
+  }
 }
