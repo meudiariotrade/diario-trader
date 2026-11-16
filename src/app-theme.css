@@ -2970,3 +2970,42 @@ html:root body #app .market-quotes .dl-logo{flex-shrink:0;min-width:var(--dl,20p
 .v598-calc .v672-parcial-res>small{display:block;margin-top:8px;color:#8A93A6;font-size:11px}
 .v598-calc .v672-parcial-res>small b{color:#D4A017}
 @media(max-width:380px){.v598-calc .v672-grid{grid-template-columns:minmax(0,1fr)}.v598-calc .v672-alvos{grid-template-columns:minmax(0,1fr)}.v598-calc .v672-alvos>div+div{border-left:0;border-top:1px solid #1E232E;padding:9px 0 0}}
+
+
+/* v678 — Mercado/Cotações: compositing persistente para WebKit iOS, sem alterar o layout.
+   Restringe transformações e transições aos logos e linhas desta aba. */
+html:root body #app #cotbox.market-quotes :is(.cqr>.cqm-logo,.m623-r .dl-logo,.m606-t .dl-logo,.m606-row .dl-logo,.m606-em .dl-logo,.m606-mxc .dl-logo,.dl-logo){
+  transform:translateZ(0);
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+  flex-shrink:0;
+}
+html:root body #app #cotbox.market-quotes :is(.cqm-logo>.ta-logo,.cqm-logo>img,.cqm-logo .ta-logo,.dl-logo>img){
+  transform:translateZ(0);
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+}
+html:root body #app #cotbox.market-quotes :is(.cqr,.m623-r,.m606-t,.m606-row,.adr-quote){
+  transition-property:color,background-color,border-color!important;
+}
+html:root body #app #cotbox.market-quotes :is(.dl-logo,.cqm-logo){position:relative}
+html:root body #app #cotbox.market-quotes img[data-cqm-error="1"]{
+  opacity:0!important;
+  visibility:hidden!important;
+}
+html:root body #app #cotbox.market-quotes .cqm-logo-fallback{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font:700 10px/1 system-ui,-apple-system,sans-serif;
+  color:#D4A017;background:#181C26;border-radius:50%;
+  opacity:0;pointer-events:none;z-index:0;
+}
+html:root body #app #cotbox.market-quotes .dl-logo:not(.cqm-img-failed)>.cqm-logo-fallback,
+html:root body #app #cotbox.market-quotes .cqm-logo:not(.cqm-img-failed)>.cqm-logo-fallback{visibility:hidden}
+html:root body #app #cotbox.market-quotes :is(.dl-logo,.cqm-logo).cqm-img-failed>.cqm-logo-fallback{
+  visibility:visible;opacity:1;
+}
+html:root body #app #cotbox.market-quotes .dl-logo:not(.dl-par)>img{position:relative;z-index:1}
+html:root body #app #cotbox.market-quotes .dl-logo.dl-par>img{z-index:1}
+html:root body #app #cotbox.market-quotes .dl-logo.dl-par>img:first-of-type{z-index:2}
+html:root body #app #cotbox.market-quotes .cqm-logo>.ta-logo{z-index:1}
+html:root body #app #cotbox.market-quotes .dl-logo.dl-par>.cqm-logo-fallback{inset:0 auto 0 0;width:var(--dl);height:var(--dl)}
