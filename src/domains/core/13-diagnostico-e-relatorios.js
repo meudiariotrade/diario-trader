@@ -5366,7 +5366,7 @@ setInterval(() => {
 const CQM_LOGO = ".cqi,.ta-avatar,.dl-logo";
 const cqmChave = el => el?.nodeType===1 ? el.getAttribute("data-market-symbol")||el.getAttribute("data-tv") : null;
 // Comparador: símbolo estável, sem preço/variação/horário.
-const cqmLogoId = el => el.getAttribute("data-cqm-symbol") || el.closest("[data-market-symbol]")?.getAttribute("data-market-symbol") || el.getAttribute("data-dl") || el.getAttribute("data-ticker") || "";
+const cqmLogoId = el => el.getAttribute("data-cqm-symbol") || el.getAttribute("data-dl") || el.getAttribute("data-ticker") || el.closest("[data-market-symbol]")?.getAttribute("data-market-symbol") || "";
 const cqmLogoSize = el => el.style.getPropertyValue("--dl")||(el.classList.contains("ta-small")?"small":"normal");
 function cqmMorph(a,b){
   if(a.nodeType===1&&b.nodeType===1&&a.matches(CQM_LOGO)&&b.matches(CQM_LOGO)){
@@ -5435,6 +5435,59 @@ function cqMorph() {
     cqPinta();
   }
 }
+
+/* v679 — Quando outra rotina remonta a tela Mercado por inteiro, conserva
+ * a IMG já carregada do iOS em vez de disparar nova decodificação/requisição.
+ * O morph de cotações continua sendo a via normal; este é um resgate restrito
+ * a #cotbox, apenas para a MESMA categoria e MESMO símbolo. */
+function cqmResgatarLogos(antigo, novo) {
+  if(!antigo || !novo || antigo.dataset.category!==novo.dataset.category)return;
+  const sel=".cqr[data-market-symbol],.m623-r[data-market-symbol],.m606-row[data-market-symbol]";
+  const antigas=new Map();
+  for(const row of antigo.querySelectorAll(sel)){
+    const k=row.className+"|"+row.getAttribute("data-market-symbol");
+    if(!antigas.has(k))antigas.set(k,row);
+  }
+  const logos=row=>[...row.querySelectorAll(".cqm-logo,.dl-logo")]
+    .filter(el=>!el.parentElement?.closest(".cqm-logo,.dl-logo"));
+  for(const row of novo.querySelectorAll(sel)){
+    const old=antigas.get(row.className+"|"+row.getAttribute("data-market-symbol"));
+    if(!old)continue;
+    const antes=logos(old),depois=logos(row);
+    for(let i=0;i<Math.min(antes.length,depois.length);i++){
+      const a=antes[i],b=depois[i];
+      if(!cqmLogoId(a)||cqmLogoId(a)!==cqmLogoId(b)||cqmLogoSize(a)!==cqmLogoSize(b))continue;
+      const anterior=[...a.querySelectorAll("img")].map(img=>img.getAttribute("src"));
+      const seguinte=[...b.querySelectorAll("img")].map(img=>img.getAttribute("src"));
+      if(!anterior.length && seguinte.length)continue; // Nova imagem resolvida deve aparecer.
+      if(anterior.length&&seguinte.length&&anterior.join("|")!==seguinte.join("|"))continue;
+      b.replaceWith(a); // Transfere o mesmo nó e a textura já decodificada pelo WebKit.
+    }
+  }
+}
+function cqmVigiarRemontagem(){
+  const app=document.getElementById("app");
+  if(!app || app._cqmRemountObserver || typeof MutationObserver==="undefined")return;
+  let anterior=null;
+  const busca=n=>n?.nodeType===1 ? (n.id==="cotbox"?n:n.querySelector?.("#cotbox")):null;
+  const obs=new MutationObserver(registros=>{
+    for(const reg of registros)for(const node of reg.removedNodes){
+      const box=busca(node);
+      if(box)anterior=box;
+    }
+    if(typeof tab==="undefined"||tab!=="mercado"||MKT.tab!=="cq"){anterior=null;return;}
+    const atual=document.getElementById("cotbox");
+    if(anterior && atual && anterior!==atual){
+      cqmResgatarLogos(anterior,atual);
+      anterior=null;
+      cqLogoAcompanha(atual);
+    }
+  });
+  obs.observe(app,{childList:true,subtree:true});
+  app._cqmRemountObserver=obs;
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",cqmVigiarRemontagem,{once:true});
+else cqmVigiarRemontagem();
 
 window.TraderUI?.onRender?.("mercado-logo-v669",()=>{
  if(typeof tab!=="undefined"&&tab==="mercado"&&MKT.tab==="cq")cqLogoAcompanha(document.getElementById("cotbox"));

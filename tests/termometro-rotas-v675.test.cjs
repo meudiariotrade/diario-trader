@@ -23,7 +23,9 @@ test("v675: termômetro visível em Início e Meu dia no renderizador V4 real, i
   await expect(dia.locator(":scope > .dt670-opening")).toBeVisible();
   await expect(dia.locator(":scope > .dt670-opening")).toHaveCount(1);
   await page.evaluate(()=>{tab="mercado";MKT.tab="cq";render();});
-  await expect(page.locator("#app .dt395-native-mercado .dt670-opening")).toBeVisible();
+  await expect(page.locator("#app .dt670-opening")).toHaveCount(0);
+  await page.evaluate(()=>{tab="home";render();});
+  await expect(page.locator("#app .v4-home .dt670-opening")).toHaveCount(1);
   await page.evaluate(()=>{tab="ops";render();});
   await expect(page.locator("#app .dt670-opening")).toHaveCount(0);
   assert.deepEqual(errors,[],"o renderizador V4 não deve disparar erros JavaScript");

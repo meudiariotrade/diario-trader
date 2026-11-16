@@ -1,4 +1,4 @@
-/* v670 — Termômetro de Abertura Teórica (somente apresentação, sem novas requisições).
+/* v679 — Termômetro de Abertura Teórica apenas em Início e Meu dia (sem novas requisições).
  * Os proxies são percentuais do dia, não sinais nem preço oficial de leilão. */
 (function (w, d) {
   "use strict";
@@ -188,11 +188,31 @@
     if (dayV4 && (activeRoute === "dia" || t === "dia")) return {root:dayV4,route:"dia"};
     if (t === "home") return {root:app.querySelector(".dt393-page.dt393-home"),route:t};
     if (t === "dia") return {root:app.querySelector(".dt393-page.dt393-day"),route:t};
-    if (t === "mercado") {
-      try { if (typeof MKT !== "undefined" && MKT?.tab === "al") return null; } catch {}
-      return {root:app.querySelector(".dt395-native-mercado") || app.querySelector(".dt393-page.dt393-market"),route:t};
-    }
     return null;
+  }
+  // v679: preserva os nós do card nos ticks; apenas o texto numérico muda.
+  // Assim o Safari não desmonta a seção nem reinicia seu layout a cada cotação.
+  function mesmaEstrutura(a,b) {
+    if(a.nodeType!==b.nodeType || a.nodeName!==b.nodeName || a.childNodes.length!==b.childNodes.length)return false;
+    for(let i=0;i<a.childNodes.length;i++)if(!mesmaEstrutura(a.childNodes[i],b.childNodes[i]))return false;
+    return true;
+  }
+  function sincronizar(a,b) {
+    if(a.nodeType===3){if(a.nodeValue!==b.nodeValue)a.nodeValue=b.nodeValue;return;}
+    if(a.nodeType!==1)return;
+    for(const attr of [...a.attributes])if(!b.hasAttribute(attr.name))a.removeAttribute(attr.name);
+    for(const attr of [...b.attributes])if(a.getAttribute(attr.name)!==attr.value)a.setAttribute(attr.name,attr.value);
+    for(let i=0;i<a.childNodes.length;i++)sincronizar(a.childNodes[i],b.childNodes[i]);
+  }
+  function atualizarCard(card,conteudo) {
+    if(card.dataset.view===conteudo)return;
+    const tmp=d.createElement("template");
+    tmp.innerHTML=conteudo;
+    const antigos=[...card.childNodes],novos=[...tmp.content.childNodes];
+    if(antigos.length===novos.length && antigos.every((n,i)=>mesmaEstrutura(n,novos[i])))
+      antigos.forEach((n,i)=>sincronizar(n,novos[i]));
+    else card.replaceChildren(tmp.content);
+    card.dataset.view=conteudo;
   }
   function montar() {
     const dest = alvo();
@@ -207,13 +227,9 @@
       const resumo = dest.root.querySelector(":scope > .v4-summary, :scope > .dt393-summary");
       if (resumo) { if (card.previousElementSibling !== resumo) resumo.after(card); }
       else if (dest.root.firstElementChild !== card) dest.root.prepend(card);
-    } else if (dest.route === "mercado") {
-      const header = dest.root.querySelector(":scope > .m403-section-header");
-      if (header) { if (card.previousElementSibling !== header) header.after(card); }
-      else if (dest.root.firstElementChild !== card) dest.root.prepend(card);
     } else if (dest.root.firstElementChild !== card) dest.root.prepend(card);
     const conteudo = html(capturar());
-    if (card.dataset.view !== conteudo) { card.innerHTML=conteudo; card.dataset.view=conteudo; }
+    atualizarCard(card,conteudo);
   }
   w.TermometroAbertura670 = Object.freeze({calcular,capturar,montar});
   w.TraderUI?.onRender?.("termometro-abertura-teorica-v670",()=>w.setTimeout(montar,0));
