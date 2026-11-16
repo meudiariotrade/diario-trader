@@ -4799,10 +4799,10 @@ function fhLista() {
   const encontrados = new Set();
   const add = (code, grupo) => { const s = fhSym(code, grupo); if (s) encontrados.add(s); };
   try { cqFavs().forEach(x => add(x.s, x.aba)); } catch {}
+  for (const it of CQ_FUT_EXT) add(it.c, "fut");
   const grupos = m623Ativo() ? ["fx", CQ.aba, "us", "adr"] : [CQ.aba, "fx", "us", "adr"];
   for (const grupo of [...new Set(grupos)]) for (const it of CQ.d[grupo]?.itens || []) add(it.c || it.s, grupo);
   for (const it of M606.v?.terminal || []) if (["fx","em","fut"].includes(it.g)) add(it.k, it.g === "em" ? "fx" : it.g);
-  for (const it of CQ_FUT_EXT) add(it.c, "fut");
   for (const s of FH_ACOES) add(s, "us");
   FH_TODOS.clear();
   encontrados.forEach(s => FH_TODOS.add(s));
@@ -5038,7 +5038,7 @@ function fhPinta() {
     if (typeof tab > "u" || tab !== "mercado" || MKT.tab !== "cq" || document.hidden) return;
     const foco = document.activeElement;
     if (foco && foco.matches && foco.matches("select")) return;
-    if (!(CQ.vis === "mapa" || ["us", "adr", "fx", "fav"].includes(CQ.aba) || m623Ativo())) return;
+    if (!(CQ.vis === "mapa" || ["us", "adr", "fx", "fut", "fav"].includes(CQ.aba) || m623Ativo())) return;
     cqMorph();
     document.querySelectorAll("#cotbox [data-fh]").forEach((el) => {
       const s = el.dataset.fh;
