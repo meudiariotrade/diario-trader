@@ -1,78 +1,146 @@
-const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const {JSDOM}=require('jsdom');
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const {JSDOM}=require('jsdom');
 const sources=['conteudo','voz','roteiros','graficos','pdf','aulas','estilos'];
-function app(){const dom=new JSDOM('<main id="app"></main>',{url:'https://example.test/diario-trader/',runScripts:'dangerously',pretendToBeVisual:true}),w=dom.window;
- w.eval(`var tab='estudos',ESV='aul',SESS={uid:'conta-a'};function vEstudos(){return '<div id="aulas-antigas">Aula antiga preservada</div>'};function render(){document.getElementById('app').innerHTML=vEstudos()}`);
- w.TextDecoder=TextDecoder;w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLMediaElement.prototype.load=function(){};w.HTMLMediaElement.prototype.pause=function(){};w.HTMLMediaElement.prototype.play=()=>Promise.resolve();
- w.speechSynthesis={getVoices:()=>[{lang:'pt-BR',name:'Voz BR'}],cancel(){this.cancelled=(this.cancelled||0)+1;},speak(u){this.last=u;u.onstart?.();}};w.SpeechSynthesisUtterance=function(text){this.text=text;};
- for(const s of sources)w.eval(fs.readFileSync(path.join(__dirname,'../src/studies/tecnica-'+s+'.js'),'utf8'));
- w.render();const close=w.close.bind(w);w.close=()=>{w.TecnicaPratica.view.dispose();close();};return dom;
+const ID='12345678-1234-4234-8234-123456789abc';
+function fixture(uid='conta-a'){
+ return {id:ID,user_id:uid,roteiro:{tipo:'mentor-pdf-v1',mentor:{
+  title:'Conceito do PDF',summary:'Aula gerada exclusivamente com o PDF enviado.',
+  stageNames:['Contexto','Aplicação','Risco','Revisão'],
+  stages:['MM200 no contexto original.','Aplicação da MM200.','Avaliação de risco.','Revisão do material.'],
+  visuals:Array.from({length:4},(_,i)=>({title:'Etapa '+i,items:['Diagrama do conceito','Leitura guiada']})),
+  roteiroVoz:{abertura:'Vamos estudar o material.',etapas:['A MM200 mostra o contexto.','Aplicação prática da MM200.','Reconheça riscos.','Revise o conteúdo.']},
+  questions:Array.from({length:3},()=>({q:'Qual conceito é correto?',options:['A','B','C'],answer:0,why:'A resposta é A.'}))
+ }}};
 }
-function click(w,sel){const b=w.document.querySelector(sel);assert.ok(b,sel);b.click();}
-function open(w,id='martelo'){click(w,`[data-tp-lesson="${id}"]`);}
-function answer(w,q,a){const el=w.document.querySelector(`[data-tp-question="${q}"][value="${a}"]`);el.checked=true;el.dispatchEvent(new w.Event('change',{bubbles:true}));}
-const flush=()=>new Promise(r=>setTimeout(r,0));
-test('trilha: 18 lições, quatro etapas, 54 questões válidas e planos coerentes',()=>{const d=app(),T=d.window.TecnicaPratica;assert.equal(T.modules.length,4);assert.equal(T.lessons.length,18);assert.equal(new Set(T.lessons.map(l=>l.id)).size,18);for(const l of T.lessons){assert.equal(l.stages.length,4);assert.equal(l.questions.length,3);for(const q of l.questions){assert.equal(q.options.length,3);assert.ok(q.answer>=0&&q.answer<3);assert.ok(q.why.length>20);}assert.equal(Math.abs(l.target-l.entry)/Math.abs(l.stop-l.entry),2);assert.ok(T.chart(l,3).includes('Exemplo hipotético'));}d.window.close();});
-test('médias: cálculos conhecidos e médias longas exigem histórico suficiente',()=>{const d=app(),m=d.window.TecnicaPratica.math;assert.deepEqual(Array.from(m.sma([1,2,3,4],3)),[null,null,2,3]);assert.deepEqual(Array.from(m.ema([10,20,30],3)),[10,15,22.5]);d.window.close();});
-test('adição restrita a Aulas preserva HTML de aulas e não aparece em outras abas',()=>{const d=app(),w=d.window;assert.ok(w.document.querySelector('#tp-root'));assert.equal(w.document.querySelector('#aulas-antigas').textContent,'Aula antiga preservada');for(const page of ['liv','eco','treino','replay']){w.ESV=page;w.render();assert.equal(w.document.querySelector('#tp-root'),null);assert.ok(w.document.querySelector('#aulas-antigas'));}w.ESV='aul';w.tab='mercado';w.render();assert.equal(w.document.querySelector('#tp-root'),null);w.close();});
-test('mentor: abertura, gráfico, vídeo enquanto fala, pausa e fallback de assets',async()=>{const d=app(),w=d.window;open(w);assert.ok(w.document.querySelector('[data-tp-image]').src.endsWith('/avatar-mentor.png'));click(w,'[data-tp-action="listen"]');assert.ok(w.document.querySelector('[data-tp-image]').src.endsWith('/avatar-mentor-chart.png'));assert.ok(w.document.querySelector('video[loop][muted][playsinline]'));assert.equal(w.document.querySelector('[data-tp-video]').muted,true);assert.ok(w.document.querySelector('.tp-speaking'));w.document.querySelector('video').dispatchEvent(new w.Event('error'));assert.equal(w.document.querySelector('video'),null);click(w,'[data-tp-action="pause"]');assert.equal(w.document.querySelector('.tp-speaking'),null);assert.equal(w.document.querySelector('video'),null);const img=w.document.querySelector('[data-tp-image]');img.dispatchEvent(new w.Event('error'));assert.ok(img.hidden);assert.equal(w.document.querySelector('.tp-avatar-fallback').hidden,false);w.close();});
-test('narração sincroniza por fim de áudio, sem temporizador de slides, e pausa cancela',()=>{const d=app(),w=d.window;open(w);click(w,'[data-tp-action="listen"]');assert.ok(w.speechSynthesis.last.text.includes('1. Contexto'));w.speechSynthesis.last.onend();assert.ok(w.speechSynthesis.last.text.includes('2. Gatilho'));assert.equal(w.document.querySelector('[aria-current="step"]').dataset.tpStep,'1');const late=w.speechSynthesis.last.onend;click(w,'[data-tp-action="pause"]');late();assert.equal(w.document.querySelector('[aria-current="step"]').dataset.tpStep,'1');w.close();});
-test('progresso: conclusão exige quatro etapas e três acertos; erro admite nova tentativa',()=>{const d=app(),w=d.window;open(w);click(w,'[data-tp-action="visual"]');answer(w,0,0);assert.match(w.document.querySelector('[data-tp-feedback="0"]').textContent,/Reveja/);const l=w.TecnicaPratica.lessons.find(l=>l.id==='martelo');l.questions.forEach((q,i)=>answer(w,i,q.answer));assert.doesNotMatch(w.document.querySelector('.tp-result').textContent,/Lição concluída/);for(let i=1;i<4;i++)click(w,`[data-tp-step="${i}"]`);assert.match(w.document.querySelector('.tp-result').textContent,/Lição concluída/);const p=JSON.parse(w.localStorage.getItem('diario:tecnica-pratica:v1:conta-a'));assert.equal(p.martelo.viewed.length,4);click(w,'[data-tp-action="catalog"]');assert.match(w.document.querySelector('.tp-progress').textContent,/1\/18/);w.close();});
-test('contas separadas: trocar sessão remove lição e progresso da conta anterior',async()=>{const d=app(),w=d.window;open(w);click(w,'[data-tp-action="visual"]');answer(w,0,1);w.SESS={uid:'conta-b'};w.render();assert.equal(w.document.querySelector('[data-tp-question]'),null);open(w);click(w,'[data-tp-action="visual"]');assert.equal(w.document.querySelector('input:checked'),null);assert.ok(w.localStorage.getItem('diario:tecnica-pratica:v1:conta-a'));w.close();});
-test('sair da aba cancela narração e callbacks antigos não avançam slides',async()=>{const d=app(),w=d.window;open(w);click(w,'[data-tp-action="listen"]');const end=w.speechSynthesis.last.onend;w.ESV='liv';w.render();await flush();assert.ok(w.speechSynthesis.cancelled);end();assert.equal(w.document.querySelector('#tp-root'),null);w.close();});
-test('Ponte Vídeo: falha e resposta inválida usam voz pt-BR sem persistir credenciais',async()=>{const d=app(),w=d.window;open(w);w.localStorage.setItem('diario:ponte-video:voz-url','http://127.0.0.1:9999/tts');let calls=[];w.fetch=async(url,opts)=>{calls.push([url,opts]);throw Error('offline')};click(w,'[data-tp-action="listen"]');await flush();assert.equal(calls.length,1);assert.equal(JSON.parse(calls[0][1].body).lang,'pt-BR');assert.equal(calls[0][1].credentials,'omit');assert.equal(w.speechSynthesis.last.lang,'pt-BR');assert.match(w.document.querySelector('.tp-status').textContent,/Ponte Vídeo indisponível/);w.close();});
-test('Ponte Vídeo: áudio válido avança etapa somente quando termina e revoga URL',async()=>{const d=app(),w=d.window;open(w);w.DIARIO_PONTE_VIDEO={vozUrl:'http://127.0.0.1:9999/tts'};let revoked=0,last;w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>revoked++;w.Audio=function(){last=this;this.play=async()=>{this.onplaying?.()};this.pause=()=>{};this.load=()=>{};this.removeAttribute=()=>{};};w.fetch=async()=>({ok:true,headers:{get:()=> 'audio/wav'},blob:async()=>({size:100})});click(w,'[data-tp-action="listen"]');await flush();assert.equal(w.document.querySelector('[aria-current="step"]').dataset.tpStep,'0');assert.match(w.document.querySelector('.tp-status').textContent,/pela Ponte Vídeo/);last.onended();await flush();assert.equal(w.document.querySelector('[aria-current="step"]').dataset.tpStep,'1');assert.ok(revoked);click(w,'[data-tp-action="pause"]');w.close();});
-test('Ponte Vídeo: mudar de etapa cancela pedido e ignora resposta atrasada',async()=>{const d=app(),w=d.window;open(w);w.DIARIO_PONTE_VIDEO={vozUrl:'http://127.0.0.1:9999/tts'};let resolve,signal;w.fetch=(u,o)=>{signal=o.signal;return new Promise(r=>resolve=r)};click(w,'[data-tp-action="listen"]');click(w,'[data-tp-step="2"]');assert.equal(signal.aborted,true);resolve({ok:true,headers:{get:()=> 'audio/wav'},blob:async()=>({size:100})});await flush();assert.equal(w.document.querySelector('[aria-current="step"]').dataset.tpStep,'2');assert.equal(w.document.querySelector('.tp-speaking'),null);assert.equal(w.speechSynthesis.last,undefined);w.close();});
-test('armazenamento bloqueado e progresso corrompido mantêm trilha utilizável',()=>{const d=app(),w=d.window;w.localStorage.setItem('diario:tecnica-pratica:v1:conta-b','{quebrado');w.SESS={uid:'conta-b'};w.render();open(w);click(w,'[data-tp-action="visual"]');assert.ok(w.document.querySelector('.tp-chart'));w.localStorage.setItem('diario:tecnica-pratica:v1:conta-c','{"martelo":{"answers":null}}');w.SESS={uid:'conta-c'};w.render();open(w);click(w,'[data-tp-action="visual"]');assert.ok(w.document.querySelector('.tp-check'));w.close();});
-test('publicação inclui os dois cenários e o MP4 de gestos do mentor',()=>{const {reachableFiles}=require('../scripts/build.cjs');const files=reachableFiles().files;for(const n of ['avatar-mentor.png','avatar-mentor-chart.png','avatar-talking.mp4'])assert.ok(files.includes('public/'+n));const build=fs.readFileSync(path.join(__dirname,'../scripts/build.cjs'),'utf8');assert.ok(build.includes("file.startsWith('public/')"));});
-test('ponte real: vídeo privado respeita conta, formato, navegação e erro de arquivo ausente',async()=>{
- const d=app(),w=d.window;open(w);w.SESS.at='token-de-teste';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'publica'});let request;
- w.fetch=async(url,options)=>{if(url.includes('/rest/v1/aulas'))return {ok:true,json:async()=>[]};request={url,options};return {ok:true,json:async()=>({signedURL:'/object/sign/aulas-videos/conta-a/tecnica-v1-martelo-16x9.mp4?token=temporario'})}};
- click(w,'[data-tp-film="16x9"]');await flush();const v=w.document.querySelector('[data-tp-film-player]');assert.ok(v);assert.match(v.src,/\/conta-a\/tecnica-v1-martelo-16x9.mp4/);assert.equal(request.options.headers.Authorization,'Bearer token-de-teste');assert.equal(JSON.parse(request.options.body).expiresIn,3600);assert.equal(w.localStorage.getItem('diario:ponte-video:voz-url'),null);
- w.SESS={uid:'conta-b',at:'b'};w.render();await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),null);
- open(w);w.fetch=async()=>({ok:false,json:async()=>({error:'missing'})});click(w,'[data-tp-film="9x16"]');await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),null);assert.match(w.document.querySelector('.tp-status').textContent,/ainda indisponível/);w.close();
+function app(){
+ const dom=new JSDOM('<main id="app"></main>',{url:'https://example.test/diario-trader/',runScripts:'dangerously',pretendToBeVisual:true}),w=dom.window;
+ w.eval("var tab='estudos',ESV='aul',SESS={uid:'conta-a'};function vEstudos(){return '<h1>Estudos</h1><div id=\"aulas-antigas\">Aulas tradicionais preservadas</div>'};function render(){document.getElementById('app').innerHTML=vEstudos()}");
+ w.TextDecoder=TextDecoder;
+ w.HTMLElement.prototype.scrollIntoView=function(){};
+ w.HTMLMediaElement.prototype.load=function(){};
+ w.HTMLMediaElement.prototype.pause=function(){};
+ w.HTMLMediaElement.prototype.play=()=>Promise.resolve();
+ w.speechSynthesis={getVoices:()=>[{lang:'pt-BR'}],cancel(){this.cancelled=true;},speak(u){this.last=u;}};
+ w.SpeechSynthesisUtterance=function(text){this.text=text;};
+ for(const name of sources)w.eval(fs.readFileSync(path.join(__dirname,'../src/studies/tecnica-'+name+'.js'),'utf8'));
+ w.render();
+ const close=w.close.bind(w);
+ w.close=()=>{w.TecnicaPratica.view.dispose();close();};
+ return dom;
+}
+const click=(w,selector)=>{const element=w.document.querySelector(selector);assert.ok(element,'Elemento ausente: '+selector);element.click();};
+const mentor=w=>click(w,'[data-tp-aula-sub="mentor"]');
+const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
+test('sub-abas mantêm as aulas tradicionais intactas e não montam dois painéis',()=>{
+ const d=app(),w=d.window;
+ assert.ok(w.document.querySelector('#aulas-antigas'));
+ assert.equal(w.document.querySelector('#tp-root'),null);
+ assert.equal(w.document.querySelectorAll('.tp-aulas-nav [role=tab]').length,2);
+ mentor(w);
+ assert.ok(w.document.querySelector('#tp-root'));
+ assert.equal(w.document.querySelector('#aulas-antigas'),null);
+ assert.match(w.document.querySelector('.tp-empty').textContent,/PDF/);
+ assert.equal(w.document.querySelectorAll('[data-tp-lesson]').length,0);
+ click(w,'[data-tp-aula-sub="tradicionais"]');
+ assert.ok(w.document.querySelector('#aulas-antigas'));
+ assert.equal(w.document.querySelector('#tp-root'),null);
+ w.ESV='liv';w.render();assert.equal(w.document.querySelector('.tp-aulas-nav'),null);
+ w.close();
 });
-test('ponte real: resposta assinada atrasada não reabre vídeo em outra conta',async()=>{
- const d=app(),w=d.window;open(w);w.SESS.at='a';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'publica'});let resolve;w.fetch=()=>new Promise(r=>resolve=r);
- click(w,'[data-tp-film="16x9"]');await flush();w.SESS={uid:'conta-b',at:'b'};w.render();resolve({ok:true,json:async()=>({signedURL:'/object/sign/aulas-videos/conta-a/tecnica-v1-martelo-16x9.mp4?token=x'})});await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),null);w.close();
+test('18 aulas de demonstração foram removidas; a ponte exporta lista vazia',()=>{
+ const d=app(),w=d.window;
+ assert.equal(w.TecnicaPratica.lessons.length,0);
+ assert.equal(w.TecnicaPratica.modules.length,0);
+ assert.equal(require('../scripts/export-tecnica.cjs').manifest().lessons.length,0);
+ w.close();
 });
-test('exportação da ponte corresponde aos mesmos gráficos e roteiros usados na aula',()=>{const {manifest}=require('../scripts/export-tecnica.cjs');const m=manifest();assert.equal(m.lessons.length,18);assert.ok(m.lessons.every(l=>l.stages.length===4&&l.stages.every(s=>s.svg.includes('<svg')&&s.text)));const published=JSON.parse(fs.readFileSync(path.join(__dirname,'../public/tecnica-trilha.json'),'utf8'));assert.deepEqual(published,m);});
-
-test('vídeo completo não é recriado por atualizações da tela durante a reprodução',async()=>{
- const d=app(),w=d.window;open(w);w.SESS.at='a';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'publica'});
- w.fetch=async()=>({ok:true,json:async()=>({signedURL:'/object/sign/aulas-videos/conta-a/tecnica-v1-martelo-16x9.mp4?token=x'})});
- click(w,'[data-tp-film="16x9"]');await flush();const video=w.document.querySelector('[data-tp-film-player]');
- for(const time of [30,65,121]){video.currentTime=time;w.render();await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),video,'a atualização deve preservar o elemento de mídia');assert.equal(video.currentTime,time);}
- w.ESV='liv';w.render();await flush();assert.equal(w.document.querySelector('[data-tp-film-player]'),null);assert.equal(video.getAttribute('src'),null);w.close();
+test('PDF do usuário cria aula com SVG e quiz, sem renderizar HTML executável',()=>{
+ const d=app(),w=d.window;mentor(w);
+ const row=fixture(),l=w.TecnicaPratica.pdf.insert(row);
+ assert.equal(l.pdf,true);
+ w.TecnicaPratica.view.refresh();
+ assert.equal(w.document.querySelectorAll('[data-tp-lesson]').length,1);
+ click(w,'[data-tp-lesson]');
+ assert.ok(w.document.querySelector('[data-tp-image]').src.endsWith('/avatar-mentor.png'));
+ click(w,'[data-tp-action="visual"]');
+ assert.equal(w.document.querySelectorAll('.tp-chart svg').length,1);
+ assert.match(w.document.querySelector('.tp-script').textContent,/MM200/);
+ assert.equal(w.document.querySelectorAll('.tp-check fieldset').length,3);
+ w.close();
 });
-test('vídeo mantém arquivo e posição ao ocultar a página; fechar encerra o player',async()=>{
- const d=app(),w=d.window;open(w);w.SESS.at='a';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'publica'});
- w.fetch=async()=>({ok:true,json:async()=>({signedURL:'/object/sign/aulas-videos/conta-a/tecnica-v1-martelo-16x9.mp4?token=x'})});
- click(w,'[data-tp-film="16x9"]');await flush();const video=w.document.querySelector('[data-tp-film-player]'),src=video.src;video.currentTime=82;
- Object.defineProperty(w.document,'hidden',{value:true,configurable:true});w.document.dispatchEvent(new w.Event('visibilitychange'));await flush();
- assert.equal(w.document.querySelector('[data-tp-film-player]'),video);assert.equal(video.src,src);assert.equal(video.currentTime,82);
- Object.defineProperty(w.document,'hidden',{value:false,configurable:true});w.document.dispatchEvent(new w.Event('visibilitychange'));await flush();
- click(w,'[data-tp-action="close-film"]');assert.equal(w.document.querySelector('[data-tp-film-player]'),null);w.close();
+test('nenhuma aula do usuário anterior permanece na nova conta',()=>{
+ const d=app(),w=d.window;mentor(w);w.TecnicaPratica.pdf.insert(fixture());w.TecnicaPratica.view.refresh();
+ assert.equal(w.document.querySelectorAll('[data-tp-lesson]').length,1);
+ w.SESS={uid:'outra-conta'};w.render();
+ assert.equal(w.TecnicaPratica.lessons.length,0);
+ assert.ok(w.document.querySelector('.tp-empty'));
+ w.close();
 });
-
-test('voz: pronúncias padrão, limites de palavras, termos literais e preferências por conta',()=>{
- const d=app(),w=d.window,V=w.DiarioVoz;for(const [term,expected] of Object.entries(V.defaults))assert.equal(V.normalizarTextoParaVoz(term.toLowerCase()),expected);
- assert.equal(V.normalizarTextoParaVoz('OCOI/OCO, MM200 e WIN.'),'ombro cabeça ombro invertido/ombro cabeça ombro, média móvel de duzentos períodos e mini índice.');assert.equal(V.normalizarTextoParaVoz('WINNER MM2000 WDOX'),'WINNER MM2000 WDOX');
- V.save({'MACD':'mac dê','A+B':'a mais bê'});assert.equal(V.normalizarTextoParaVoz('MACD e A+B'),'mac dê e a mais bê');w.SESS={uid:'conta-b'};assert.equal(V.normalizarTextoParaVoz('MACD'),'méqui dê');w.localStorage.setItem('diario:voz:glossario:v1:conta-b','quebrado');assert.equal(V.normalizarTextoParaVoz('ETF'),'ê tê éfe');assert.throws(()=>V.save({'':'vazio'}));w.close();
+test('Gerador aceita 150 páginas por trecho e rejeita 151, mantendo extração local',async()=>{
+ const d=app(),w=d.window;mentor(w);w.SESS.at='token';
+ w.tok=async()=>{};
+ w.cfg=()=>({url:'https://example.supabase.co',key:'publica'});
+ w.crypto.randomUUID=()=>ID;
+ const bytes=new TextEncoder().encode('%PDF-1.7 fixture'),fake={name:'material.pdf',size:bytes.length,type:'application/pdf',arrayBuffer:async()=>bytes.buffer};
+ const input=w.document.querySelector('[data-tp-pdf-file]');
+ Object.defineProperty(input,'files',{value:[fake]});input.dispatchEvent(new w.Event('change',{bubbles:true}));
+ const theme=w.document.querySelector('[data-tp-pdf-theme]');theme.value='Leitura técnica';theme.dispatchEvent(new w.Event('input',{bubbles:true}));
+ const last=w.document.querySelector('[data-tp-pdf-last]');last.value='150';last.dispatchEvent(new w.Event('input',{bubbles:true}));
+ const pdf={numPages:150,getPage:async()=>({getTextContent:async()=>({items:[{str:'Trecho explicativo com conteúdo suficiente. '.repeat(9)}]}),cleanup(){}}),destroy:async()=>{}};
+ w.ntLib=async()=>({getDocument:()=>({promise:Promise.resolve(pdf),destroy(){}})});
+ let payload;
+ w.fetch=async(url,opt)=>url.includes('/rest/')?{ok:true,json:async()=>[]}:(payload=JSON.parse(opt.body),{ok:true,json:async()=>({aula:fixture()})});
+ await w.TecnicaPratica.pdf.generate();
+ assert.equal(payload.acao,'mentor_pdf');
+ assert.equal(payload.paginas,'1–150');
+ assert.match(payload.texto,/Página 150/);
+ assert.ok(payload.texto.length<=85000);
+ assert.equal(w.TecnicaPratica.lessons.length,1);
+ const newLast=w.document.querySelector('[data-tp-pdf-last]');newLast.value='151';newLast.dispatchEvent(new w.Event('input',{bubbles:true}));
+ await assert.rejects(()=>w.TecnicaPratica.pdf.generate(),/150 páginas/);
+ w.close();
 });
-test('voz: roteiro prático e normalização chegam ao TTS sem mudar leitura ou diagramas',async()=>{
- const d=app(),w=d.window;open(w,'sma-ema');click(w,'[data-tp-action="visual"]');const reading=w.document.querySelector('.tp-script p').textContent,svg=w.document.querySelector('.tp-chart').innerHTML;assert.match(reading,/alfa/);
- w.DIARIO_PONTE_VIDEO={vozUrl:'http://127.0.0.1:9999/tts'};let spoken;w.fetch=async(url,opt)=>{spoken=JSON.parse(opt.body).text;throw Error('offline')};click(w,'[data-tp-action="listen"]');await flush();assert.doesNotMatch(spoken,/alfa|EMA atual|\bMME9\b/);assert.match(spoken,/inclinação/);assert.equal(w.speechSynthesis.last.text,spoken);assert.equal(w.document.querySelector('.tp-script p').textContent,reading);assert.equal(w.document.querySelector('.tp-chart').innerHTML,svg);assert.equal(w.TecnicaPratica.lessons.filter(l=>l.roteiroVoz?.etapas?.length===4).length,18);w.close();
+test('dicionário normaliza cada etapa só na voz e não substitui a ponte por voz robótica',async()=>{
+ const d=app(),w=d.window;mentor(w);w.TecnicaPratica.pdf.insert(fixture());w.TecnicaPratica.view.refresh();click(w,'[data-tp-lesson]');
+ w.DIARIO_PONTE_VIDEO={vozUrl:'http://127.0.0.1:9999/tts'};
+ let sent;
+ w.fetch=async(_url,opt)=>{sent=JSON.parse(opt.body);throw Error('Ponte desligada');};
+ click(w,'[data-tp-action="listen"]');await flush();
+ assert.equal(sent.lang,'pt-BR');
+ assert.match(sent.text,/média móvel de duzentos períodos/);
+ assert.doesNotMatch(sent.text,/MM200/);
+ assert.match(w.document.querySelector('.tp-script').textContent,/MM200/);
+ assert.equal(w.speechSynthesis.last,undefined);
+ assert.match(w.document.querySelector('.tp-status').textContent,/Ponte de voz indisponível/i);
+ w.close();
 });
-test('dicionário editável salva e acrescenta pronúncia sem executar HTML',()=>{
- const d=app(),w=d.window,input=w.document.querySelector('[data-tp-dictionary]');input.value='MACD = mac dê\nXYZ = xis especial';click(w,'[data-tp-dict="save"]');assert.equal(w.DiarioVoz.normalizarTextoParaVoz('XYZ'),'xis especial');assert.match(w.document.querySelector('[data-tp-dict-status]').textContent,/salvo/);click(w,'[data-tp-dict="reset"]');assert.equal(w.DiarioVoz.normalizarTextoParaVoz('MACD'),'méqui dê');w.close();
+test('voz válida da ponte avança somente após terminar o áudio',async()=>{
+ const d=app(),w=d.window;mentor(w);w.TecnicaPratica.pdf.insert(fixture());w.TecnicaPratica.view.refresh();click(w,'[data-tp-lesson]');
+ w.DIARIO_PONTE_VIDEO={vozUrl:'http://127.0.0.1:9999/tts'};
+ let a,revoked=0;
+ w.URL.createObjectURL=()=> 'blob:voz';
+ w.URL.revokeObjectURL=()=>{revoked++};
+ w.Audio=function(){a=this;this.play=async()=>{this.onplaying?.();};this.pause=()=>{};this.load=()=>{};this.removeAttribute=()=>{};};
+ w.fetch=async()=>({ok:true,headers:{get:()=> 'audio/wav'},blob:async()=>({size:180})});
+ click(w,'[data-tp-action="listen"]');await flush();
+ assert.equal(w.document.querySelector('[aria-current=step]').dataset.tpStep,'0');
+ a.onended();await flush();
+ assert.equal(w.document.querySelector('[aria-current=step]').dataset.tpStep,'1');
+ assert.ok(revoked);
+ assert.equal(w.speechSynthesis.last,undefined);
+ w.close();
 });
-function mentorFixture(){return {id:'12345678-1234-4234-8234-123456789abc',user_id:'conta-a',roteiro:{tipo:'mentor-pdf-v1',mentor:{title:'Conceito do PDF',summary:'Aula do material selecionado',stageNames:['Conceito','Aplicação','Erro','Revisão'],stages:['Leitura 1','Leitura 2','Leitura 3','Leitura 4'],visuals:Array.from({length:4},()=>({title:'<img src=x onerror=alert(1)>',items:['<script>alert(1)</script>','Exemplo claro']})),roteiroVoz:{abertura:'Vamos estudar',etapas:['Fala 1','Fala 2','Fala 3','Fala 4']},questions:Array.from({length:3},()=>({q:'Pergunta?',options:['A','B','C'],answer:0,why:'Conferindo o material'}))}}};}
-test('PDF: etapas seguras, persistência via serviço existente e segregação por conta',async()=>{
- const d=app(),w=d.window;await flush();w.SESS.at='token';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'public'});const row=mentorFixture();w.fetch=async()=>({ok:true,json:async()=>[row]});await w.TecnicaPratica.pdf.load(true);assert.ok(w.TecnicaPratica.lessons.some(l=>l.id===row.id));open(w,row.id);click(w,'[data-tp-action="visual"]');assert.equal(w.document.querySelector('.tp-chart img'),null);assert.equal(w.document.querySelector('.tp-chart script'),null);assert.match(w.document.querySelector('.tp-chart').textContent,/<script>/);w.SESS={uid:'outra-conta'};w.render();await flush();assert.equal(w.TecnicaPratica.lessons.some(l=>l.pdf),false);w.close();
-});
-test('PDF: seleção de arquivo e páginas alimenta geração e só salva uma aula válida',async()=>{
- const d=app(),w=d.window;await flush();w.SESS.at='token';w.tok=async()=>{};w.cfg=()=>({url:'https://example.supabase.co',key:'public'});const row=mentorFixture();let body,destroyed=0;
- const bytes=new TextEncoder().encode('%PDF-1.7 fixture');const file={name:'capitulo.pdf',size:bytes.length,type:'application/pdf',arrayBuffer:async()=>bytes.buffer};const input=w.document.querySelector('[data-tp-pdf-file]');Object.defineProperty(input,'files',{value:[file]});input.dispatchEvent(new w.Event('change',{bubbles:true}));const theme=w.document.querySelector('[data-tp-pdf-theme]');theme.value='Conceito central';theme.dispatchEvent(new w.Event('input',{bubbles:true}));
- w.ntLib=async()=>({getDocument:()=>({promise:Promise.resolve({numPages:8,getPage:async()=>({getTextContent:async()=>({items:[{str:'Conteúdo didático para teste. '.repeat(30)}]}),cleanup(){}}),destroy:async()=>{destroyed++}}),destroy(){}})});
- w.fetch=async(url,opt)=>url.includes('/rest/')?{ok:true,json:async()=>[]}:(body=JSON.parse(opt.body),{ok:true,json:async()=>({aula:row})});await w.TecnicaPratica.pdf.generate();assert.ok(body,w.document.querySelector('[data-tp-pdf-status]').textContent);assert.equal(body.acao,'mentor_pdf');assert.equal(body.tema,'Conceito central');assert.match(body.texto,/Página 1/);assert.equal(body.paginas,'1–8');assert.equal(destroyed,1);assert.ok(w.TecnicaPratica.lessons.some(l=>l.id===row.id));assert.match(w.document.querySelector('[data-tp-pdf-status]').textContent,/Aula salva/);w.close();
+test('glossário por conta permanece editável e os recursos do avatar existem',()=>{
+ const d=app(),w=d.window;mentor(w);
+ assert.equal(w.DiarioVoz.normalizarTextoParaVoz('WIN e RSI'),'mini índice e índice de força relativa');
+ w.DiarioVoz.save({XYZ:'xis especial'});
+ assert.equal(w.DiarioVoz.normalizarTextoParaVoz('XYZ'),'xis especial');
+ w.SESS={uid:'conta-b'};
+ assert.equal(w.DiarioVoz.normalizarTextoParaVoz('XYZ'),'XYZ');
+ for(const name of ['avatar-mentor.png','avatar-mentor-chart.png','avatar-talking.mp4'])
+  assert.ok(fs.existsSync(path.join(__dirname,'../public',name)));
+ w.close();
 });
