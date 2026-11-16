@@ -7,7 +7,7 @@ const css=[
 '.eco-root{--eco-bg:#0A0C10;--eco-panel:#11141B;--eco-hover:#181C26;--eco-line:#1E232E;--eco-gold:#D4A017;color:#dee4ed;margin:10px 0 40px;min-width:0;font-variant-numeric:tabular-nums}',
 '.eco-root *{box-sizing:border-box}.eco-head{display:block;border-bottom:1px solid var(--eco-line);padding:14px 0 18px}',
 '.eco-head small{font-size:10px;color:var(--eco-gold);letter-spacing:1.3px}.eco-head h2{font-size:23px;margin:6px 0;color:#f1f3f6}.eco-head p{font-size:13px;color:#a6b1bd;margin:0}',
-'.eco-nav{display:flex;gap:5px;padding:12px 0;border-bottom:1px solid var(--eco-line);flex-wrap:wrap}',
+'.eco-root nav.eco-nav{display:flex!important;gap:5px;padding:12px 0;border-bottom:1px solid var(--eco-line);flex-wrap:wrap}',
 '.eco-nav>button{border:1px solid transparent;background:transparent;color:#b5bfcf;border-radius:4px;padding:8px 11px;min-height:44px;font-size:12px;cursor:pointer}',
 '.eco-nav>button.on{border-color:#5b431c;background:var(--eco-hover);color:#e8bc57}.eco-nav>button:hover{background:var(--eco-hover)}',
 '.eco-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;min-width:0}',
