@@ -2904,3 +2904,37 @@ html:root body #app .market-quotes .cqr > .cqm-logo{
 html:root body #app .market-quotes .dl-logo{flex-shrink:0;min-width:var(--dl,20px);height:var(--dl,20px)}
 @media(max-width:600px){html:root body #app .market-quotes .cqr > .cqm-logo{--cqm-size:30px}}
 @media(max-width:350px){html:root body #app .market-quotes .cqr > .cqm-logo{--cqm-size:29px}}
+
+
+/* v670 — somente Termômetro de Abertura Teórica (Início, Meu dia e Mercado). */
+#app .dt670-opening{box-sizing:border-box;width:100%;min-width:0;max-width:none;margin:10px 0 14px;padding:12px 14px;background:#11141B;border:1px solid #1E232E;border-left:3px solid #D4A017;border-radius:4px;box-shadow:none;color:#e8ebf1;font:13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+#app .dt670-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;padding:0 0 9px;border-bottom:1px solid #1E232E}
+#app .dt670-head>div{min-width:0}
+#app .dt670-head small{font-size:10px;color:#D4A017;letter-spacing:.08em;font-weight:700}
+#app .dt670-head h2{font:650 15px/1.3 system-ui,sans-serif;margin:3px 0 0;color:#eef1f6;letter-spacing:-.015em;white-space:normal;overflow-wrap:normal}
+#app .dt670-head h2 span{font-weight:450;color:#a0a7b5;white-space:nowrap}
+#app .dt670-selo{flex-shrink:0;color:#a2aabb;font-size:11px;white-space:nowrap}
+#app .dt670-duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;min-width:0}
+#app .dt670-instrument{min-width:0;padding:3px 14px 5px 0}
+#app .dt670-instrument+.dt670-instrument{border-left:1px solid #1E232E;padding:3px 0 5px 14px}
+#app .dt670-val{display:flex;align-items:flex-start;justify-content:space-between;gap:9px;min-width:0}
+#app .dt670-val>span{min-width:0;display:flex;flex-direction:column;gap:3px}
+#app .dt670-val>span>b{font-size:13px;letter-spacing:.08em}
+#app .dt670-val>span>small{font-size:10px;color:#8d95a3;line-height:1.3;white-space:normal;overflow-wrap:normal}
+#app .dt670-val>strong{flex-shrink:0;text-align:right;font-size:20px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+#app .dt670-val>strong.positive{color:#10B981}
+#app .dt670-val>strong.negative{color:#EF4444}
+#app .dt670-val>strong.neutral{color:#e9ecf1}
+#app .dt670-instrument>small{display:block;color:#aeb4bf;margin-top:5px;font-size:11px;line-height:1.45;font-variant-numeric:tabular-nums}
+#app .dt670-instrument>small b{font-weight:700;color:#f1f3f6}
+#app .dt670-instrument>small.dt670-pend{color:#9197a3}
+#app .dt670-instrument>small.dt670-pt{color:#D4A017;font-weight:650;font-size:12px}
+#app .dt670-note{font-size:10px;color:#9096a1;margin:10px 0 0;padding-top:8px;border-top:1px solid #1E232E;line-height:1.45}
+@media(max-width:640px){
+ #app .dt670-opening{padding:11px 12px;margin:8px 0 12px}
+ #app .dt670-selo{display:none}
+ #app .dt670-duo{grid-template-columns:minmax(0,1fr)}
+ #app .dt670-instrument{padding:3px 0 10px}
+ #app .dt670-instrument+.dt670-instrument{border-left:0;border-top:1px solid #1E232E;padding:10px 0 4px}
+ #app .dt670-val>strong{font-size:19px}
+}
