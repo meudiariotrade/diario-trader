@@ -3,7 +3,7 @@
 'use strict';
 const L=window.EconomiaLab,S=L.state,E=L.esc,N=L.note,C=L.card;
 const KEY='diario-laboratorio-abnt-v684';
-const blank={tipo:'livro',autores:'',org:'',titulo:'',ano:'',cidade:'',editora:'',periodico:'',volume:'',numero:'',paginas:'',doi:'',url:'',acesso:new Date().toISOString().slice(0,10),pagina:'',modo:'indireta',tcc:'',curso:'',instituicao:'',capitulo:'Introdução',texto:'',tabela:null,tabelaCSV:'',aviso:''};
+const blank={tipo:'livro',autores:'',org:'',titulo:'',ano:'',cidade:'',editora:'',periodico:'',volume:'',numero:'',paginas:'',doi:'',url:'',acesso:new Date().toISOString().slice(0,10),pagina:'',modo:'indireta',tcc:'',curso:'',instituicao:'',capitulo:'Introdução',texto:'',tabela:null,tabelaCSV:'',abntSource:'',aviso:''};
 let state={...blank};
 try{const old=JSON.parse(localStorage.getItem(KEY)||'null');if(old&&typeof old==='object')state={...blank,...old};}catch{}
 S.abnt=state;
@@ -81,7 +81,7 @@ const options=(key,arr)=>'<label>'+ (key==='tipo'?'Tipo de referência':key==='m
  '<select data-abnt-field="'+key+'">'+arr.map(([v,n])=>'<option value="'+E(v)+'"'+(state[key]===v?' selected':'')+'>'+E(n)+'</option>').join('')+'</select></label>';
 L.views.abnt=()=>{
  const current=L.uni?.data?.consultas||[];
- const sourceOptions=current.map(a=>'<option value="'+E(a.id)+'">'+E(a.serie)+' · '+E(a.fonte)+'</option>').join('');
+ const sourceOptions=current.map(a=>'<option value="'+E(a.id)+'"'+(state.abntSource===a.id?' selected':'')+'>'+E(a.serie)+' · '+E(a.fonte)+'</option>').join('');
  let html='<div class="eco-controls">'+options('tipo',[['livro','Livro'],['artigo','Artigo científico'],['site','Site / BCB / IBGE']])+
  options('modo',[['indireta','Citação indireta'],['direta','Citação direta']])+'</div>';
  html+='<div class="eco-qform">'+f('autores','Autores: sobrenome, prenome; próximo autor')+f('org','Instituição (site, BCB, IBGE)')+
@@ -112,7 +112,8 @@ document.addEventListener('input',e=>{
 },true);
 document.addEventListener('change',e=>{
  if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='abnt')return;
- const el=e.target;if(el?.matches?.('[data-abnt-field]')){state[el.dataset.abntField]=safe(el.value,100000);L.paint();}
+ const el=e.target;if(el?.matches?.('[data-abnt-source]')){state.abntSource=safe(el.value,120);return;}
+ if(el?.matches?.('[data-abnt-field]')){state[el.dataset.abntField]=safe(el.value,100000);L.paint();}
 },true);
 function syncFields(){
  // Valor atual do DOM prevalece no instante de salvar; não depende de blur/change
@@ -127,8 +128,10 @@ function syncFields(){
 }
 L.events.abntSave=()=>{syncFields();remember();state.aviso='Rascunho salvo no navegador deste aparelho.';L.paint();};
 L.events.abntSeries=()=>{
- const id=document.querySelector('#eco-body [data-abnt-source]')?.value;
- const row=L.uni?.data?.consultas?.find(x=>x.id===id);if(!row)return;
+ const id=state.abntSource||document.querySelector('#eco-body [data-abnt-source]')?.value;
+ const row=L.uni?.data?.consultas?.find(x=>x.id===id);
+ if(!row){state.aviso='Selecione uma série oficial consultada antes de importar.';L.paint();return;}
+ state.abntSource=row.id;
  state.tabela={name:'Tabela 1 — '+safe(row.serie,150),source:safe(row.fonte,100)+' · '+safe(row.url,350)+' · consulta '+safe(row.em,20),
  rows:[['Data / período','Valor ('+safe(row.unidade,60)+')'],...(row.pontos||[]).slice(-60).map(x=>[String(x.data),String(x.valor)])]};
  state.aviso='Série oficial importada; confira o período e a fonte.';remember();L.paint();

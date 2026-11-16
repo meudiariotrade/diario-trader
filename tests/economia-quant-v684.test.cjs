@@ -75,6 +75,8 @@ test('v684: ABNT 6023:2025 e importação de tabela BCB/IBGE permanecem locais',
  });
  await p.locator('[data-eco-tool="abnt"]').click();
  await p.locator('[data-abnt-source]').selectOption('ibge-test');
+ await expect(p.locator('[data-abnt-source]')).toHaveValue('ibge-test');
+ assert.equal(await p.evaluate(()=>EconomiaLab.state.abnt.abntSource),'ibge-test');
  await p.locator('[data-eco-btn="abntSeries"]').click();
  await expect(p.locator('.eco-abnt-table')).toHaveCount(1);
  await expect(p.locator('.eco-abnt-table')).toContainText('202602');
