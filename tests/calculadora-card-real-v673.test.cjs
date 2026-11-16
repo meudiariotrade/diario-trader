@@ -67,3 +67,13 @@ test('v673: parcial total não apresenta risco zero falso e quantidade inválida
  assert.match(f.doc.querySelector('[data-posicao-parcial-res]').textContent,/quantidades inteiras/);
  f.dom.window.close();
 });
+
+test('v674: preços com separadores brasileiros não mudam quantidade, alvos ou parcial',()=>{
+ const f=fixture();
+ f.set({ativo:'WIN',risco:'1.000,00',entrada:'130.250',precoStop:'130.150',modo:'preco',lado:'C'});
+ assert.equal(f.doc.querySelector('[data-posicao-resultado]').textContent,'50');
+ assert.match(f.doc.querySelector('[data-posicao-alvos]').textContent,/130\.450/);
+ f.set({ativoParcial:'WDO',ladoParcial:'V',total:'10',medio:'5.500,00',parcial:'4',saida:'5.490,00'});
+ assert.match(f.doc.querySelector('[data-posicao-parcial-res]').textContent,/400,00/);
+ f.dom.window.close();
+});

@@ -19,7 +19,9 @@
  const posicaoTrade={ativo:'WDO',risco:'',stop:'',entrada:'',precoStop:'',modo:'direto',stopUnidade:'pontos',lado:'C',aba:'tamanho',ativoParcial:'WDO',ladoParcial:'C',total:'',medio:'',parcial:'',saida:'',aberto:false};
  const posicaoValorPonto={WDO:1000n,WIN:20n,ACOES:100n}; // centavos por ponto/R$ de variação
  function posicaoDecimal(valor){
-  const texto=String(valor||'').trim().replace(',','.');
+  let texto=String(valor??'').trim().replace(/\s|R\$/g,'');
+  if(texto.includes(','))texto=texto.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(?:\.\d{3})+$/.test(texto))texto=texto.replace(/\./g,'');
   if(!/^(?:\d+(?:\.\d{0,6})?|\.\d{1,6})$/.test(texto))return null;
   const [inteiro,fracao='']=texto.split('.');
   return BigInt(inteiro||'0')*1000000n+BigInt((fracao+'000000').slice(0,6));
