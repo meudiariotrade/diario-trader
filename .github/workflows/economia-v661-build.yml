@@ -1,0 +1,61 @@
+name: Estudos v661 - validar, compilar bundles e publicar
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release.config.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: economia-v661
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Dependências
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Chromium para testes
+        run: |
+          browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$browser" ]; then
+            printf 'CHROMIUM_PATH=%s\n' "$browser" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Gerar bundles
+        run: npm run bundle
+      - name: Validar integridade, backend preservado e testes
+        run: npm run verify
+      - name: Construir site
+        run: npm run build
+      - name: Sincronizar bundles na main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          if ! git diff --cached --quiet; then
+            git commit -m 'Build: sincronizar bundles v661 [skip ci]'
+            git push origin HEAD:main
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    runs-on: ubuntu-24.04
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
