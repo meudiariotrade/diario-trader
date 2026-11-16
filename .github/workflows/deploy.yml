@@ -36,6 +36,10 @@ jobs:
           else
             npx playwright install --with-deps chromium
           fi
+      - name: Conferir sintaxe dos testes antes do build e testes longos
+        run: |
+          find tests -name '*.test.cjs' -print0 | xargs -0 -n1 node --check
+          find . -maxdepth 1 -name 'test-*.cjs' -print0 | xargs -0 -r -n1 node --check
       - name: Conferir versão (impede publicar pacote antigo)
         env:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}

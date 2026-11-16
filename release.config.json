@@ -1,5 +1,5 @@
 {
-  "version": 680,
+  "version": 681,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",

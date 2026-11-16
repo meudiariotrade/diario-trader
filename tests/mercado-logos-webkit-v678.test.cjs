@@ -161,4 +161,26 @@ test("v678: ADRs iPhone preservam a imagem mesmo com re-render do painel informa
  }),true,"A imagem da ADR não pode ser substituída a cada preço");
  await page.close();
 }));
-\n\ntest("v679: remodelagem completa do Mercado reutiliza as logos carregadas no iPhone", {timeout:90000},async()=>withApp(async(browser,base)=>{\n const page=await browser.newPage({viewport:{width:390,height:844}});\n await page.route("https://**",r=>r.abort());\n await page.goto(base+"/?demo=1");\n await page.locator("#splash").waitFor({state:"hidden"});\n await page.evaluate(()=>{\n  tab="mercado";MKT.tab="cq";CQ.aba="fut";CQ.vis="lista";CQ.search="WIN";\n  CQ.d.fut={em:new Date().toISOString(),itens:[{c:"WIN",s:"BMFBOVESPA:WIN1!",n:"Mini índice",px:173570,d1:.15,dp:0}]};CQ.ts.fut=Date.now();render();\n  const logo=document.querySelector('#cotbox .cqr[data-market-symbol="BMFBOVESPA:WIN1!"] .cqm-logo');\n  if(!logo)throw Error("Logo WIN não montada");\n  let img=logo.querySelector("img");\n  if(!img){img=document.createElement("img");img.src="data:image/svg+xml,%3Csvg%20xmlns=%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width=%228%22%20height=%228%22%3E%3C%2Fsvg%3E";logo.append(img);}\n  window.__logoRemount=logo;window.__imgRemount=img;\n  for(let i=0;i<5;i++){CQ.d.fut.itens[0].px=173600+i*10;render();}\n });\n await expect.poll(()=>page.evaluate(()=>{\n  const atual=document.querySelector('#cotbox .cqr[data-market-symbol="BMFBOVESPA:WIN1!"] .cqm-logo');\n  return atual===window.__logoRemount && atual?.contains(window.__imgRemount) && window.__imgRemount.isConnected;\n })).toBe(true);\n await page.close();\n}));\n
+
+
+test("v679: remodelagem completa do Mercado reutiliza as logos carregadas no iPhone", {timeout:90000},async()=>withApp(async(browser,base)=>{
+ const page=await browser.newPage({viewport:{width:390,height:844}});
+ await page.route("https://**",r=>r.abort());
+ await page.goto(base+"/?demo=1");
+ await page.locator("#splash").waitFor({state:"hidden"});
+ await page.evaluate(()=>{
+  tab="mercado";MKT.tab="cq";CQ.aba="fut";CQ.vis="lista";CQ.search="WIN";
+  CQ.d.fut={em:new Date().toISOString(),itens:[{c:"WIN",s:"BMFBOVESPA:WIN1!",n:"Mini índice",px:173570,d1:.15,dp:0}]};CQ.ts.fut=Date.now();render();
+  const logo=document.querySelector('#cotbox .cqr[data-market-symbol="BMFBOVESPA:WIN1!"] .cqm-logo');
+  if(!logo)throw Error("Logo WIN não montada");
+  let img=logo.querySelector("img");
+  if(!img){img=document.createElement("img");img.src="data:image/svg+xml,%3Csvg%20xmlns=%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width=%228%22%20height=%228%22%3E%3C%2Fsvg%3E";logo.append(img);}
+  window.__logoRemount=logo;window.__imgRemount=img;
+  for(let i=0;i<5;i++){CQ.d.fut.itens[0].px=173600+i*10;render();}
+ });
+ await expect.poll(()=>page.evaluate(()=>{
+  const atual=document.querySelector('#cotbox .cqr[data-market-symbol="BMFBOVESPA:WIN1!"] .cqm-logo');
+  return atual===window.__logoRemount && atual?.contains(window.__imgRemount) && window.__imgRemount.isConnected;
+ })).toBe(true);
+ await page.close();
+}));
