@@ -45,7 +45,7 @@ test('dicionário e aula do Mentor por PDF funcionam no fluxo de Aulas',{timeout
   const root=document.querySelector('.tp-voice-dict');
   root.open=true;
   const input=root.querySelector('[data-tp-dictionary]');
-  input.value='MACD = mac dê\\nXYZ = xis especial';
+  input.value=['MACD = mac dê','XYZ = xis especial'].join(String.fromCharCode(10));
   input.dispatchEvent(new Event('input',{bubbles:true}));
   root.querySelector('[data-tp-dict="save"]').click();
  });await expect(page.locator('[data-tp-dict-status]')).toContainText(/salvo/i);assert.equal(await page.evaluate(()=>DiarioVoz.normalizarTextoParaVoz('XYZ')),'xis especial');
