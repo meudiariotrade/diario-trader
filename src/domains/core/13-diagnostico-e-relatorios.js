@@ -3468,6 +3468,51 @@ function cqMapa(e, t) {
     })
     .join("")}</div>`;
 }
+// Complementos locais da cotação: a API terminal/cot já existente consulta o TradingView.
+const CQ_FUT_EXT = Object.freeze([
+  { c: "Nikkei 225", n: "🇯🇵 Japão · referência do índice (não contrato futuro)", s: "TVC:NI225", alternativas: ["TVC:NI225"], dp: 0, _aba: "fut" },
+  { c: "DAX", n: "🇩🇪 Alemanha · referência do índice (não contrato futuro)", s: "INDEX:DEU40", alternativas: ["INDEX:DEU40", "XETR:DAX"], dp: 0, _aba: "fut" },
+]);
+const CQ_EXT = { d: {}, ts: 0, busy: false };
+function cqFavExtras(aba) {
+  const existentes = new Set((CQ.d[aba]?.itens || []).map(x => x.s));
+  return cqFavs().filter(x => x.aba === aba && !existentes.has(x.s) && /^(FX|FX_IDC|OANDA|NYSE|NASDAQ|AMEX|ARCA|NYSEARCA):[A-Z0-9_./-]{3,20}$/i.test(x.s))
+    .map(x => {
+      const codigo = x.s.split(":").pop().toUpperCase().replace("_", "/");
+      const par = /^[A-Z]{6}$/.test(codigo);
+      return { c: par && aba === "fx" ? codigo.slice(0,3) + "/" + codigo.slice(3) : codigo, s: x.s, n: "Watchlist · " + x.s.split(":")[0], dp: aba === "fx" ? 5 : 2, _aba: aba };
+    });
+}
+async function cqExtrasCarrega() {
+  if (CQ_EXT.busy || Date.now() - CQ_EXT.ts < 3e4 || window.DIARIO_DEMO || document.hidden) return;
+  const a = cfg();
+  if (!a || typeof SESS === "undefined" || !SESS?.at) return;
+  const watch = ["fx","us","adr"].flatMap(cqFavExtras);
+  const simbolos = [...new Set([...CQ_FUT_EXT.flatMap(x => x.alternativas), ...watch.map(x => x.s)])].slice(0,100);
+  if (!simbolos.length) return;
+  CQ_EXT.busy = true;
+  CQ_EXT.ts = Date.now();
+  try {
+    const r = await fetch(a.url + "/functions/v1/terminal", {
+      method: "POST", headers: { "Content-Type": "application/json", apikey: a.key, Authorization: "Bearer " + SESS.at },
+      body: JSON.stringify({ acao: "cot", s: simbolos }), signal: AbortSignal.timeout(2e4),
+    });
+    if (!r.ok) throw new Error("TradingView indisponível");
+    const j = await r.json();
+    for (const it of j.itens || []) if (it.px > 0) CQ_EXT.d[it.pedido] = it;
+  } catch {} finally {
+    CQ_EXT.busy = false;
+    try { if (tab === "mercado" && MKT.tab === "cq") cqMorph(); } catch {}
+  }
+}
+function cqLinhasExtras(aba) {
+  const linhas = aba === "fut" ? CQ_FUT_EXT : ["fx","us","adr"].includes(aba) ? cqFavExtras(aba) : [];
+  return linhas.map(it => {
+    const quote = [it.s, ...(it.alternativas || [])].map(s => CQ_EXT.d[s]).find(x => x?.px > 0);
+    return { ...it, s: quote?.s || it.s, simboloFonte: quote?.simboloFonte || it.s,
+      px: quote?.px ?? null, d1: quote?.d1 ?? null, em: quote?.horarioPreco || null, horarioPreco: quote?.horarioPreco || null };
+  });
+}
 // Complementos do panorama entram na própria categoria, com fonte e sem
 // duplicar ativos válidos da lista principal. Nunca misturar setores EUA em BR.
 function cqItens(category) {
@@ -3489,12 +3534,14 @@ function cqItens(category) {
     if (existing>=0) native[existing]=resolved; else native.push(resolved);
     present.add(key(item.s));
   }
+  for (const it of cqLinhasExtras(category)) if (!native.some(x => x.c === it.c || x.s === it.s)) native.push(it);
   return native;
 }
 // Cotações são montadas completas antes de entrarem no DOM. Nenhum decorador
 // posterior cria busca, ordenação ou move a lista para outra coluna.
 ((cotHtml = function () {
   const category = CQ.aba, data = CQ.d[category];
+  if (["fut","fx","us","adr","fav"].includes(category) && !CQ_EXT.busy && Date.now() - CQ_EXT.ts >= 3e4) setTimeout(cqExtrasCarrega, 0);
   const items = cqItens(category);
   const change = item => { const quote = cqPf(item,item._aba || category); return quote ? quote.d1 : item.d1; };
   if (CQ.ord === 'alta') items.sort((a,b)=>(change(b) ?? -Infinity)-(change(a) ?? -Infinity));
@@ -4658,6 +4705,15 @@ function m623Html() {
   } catch {}
   const T = (M606.v && M606.v.terminal) || [],
     g = (x) => T.filter((i) => i.g === x);
+  if (!CQ.d.fx && !CQ.loading.fx) setTimeout(() => cqCarrega("fx"), 0);
+  if (!CQ_EXT.busy && Date.now() - CQ_EXT.ts >= 3e4) setTimeout(cqExtrasCarrega, 0);
+  const emergentes = new Set(g("em").map(x => x.k.toUpperCase()));
+  const linhasMobile = cqItens("fx").filter(x => !emergentes.has(String(x.c || "").toUpperCase()));
+  const moedas = linhasMobile.length ? linhasMobile.map(x => ({
+    ...x, k: x.c, g: "fx", ss: "fx24", s: x.simboloFonte || x.s, em: x.horarioPreco || x.em
+  })) : g("fx");
+  const futuros = [...g("fut"), ...cqItens("fut").filter(x => CQ_FUT_EXT.some(e => e.c === x.c))
+    .map(x => ({ ...x, k: x.c, g: "fut", ss: "fx24", s: x.simboloFonte || x.s, em: x.horarioPreco || x.em }))];
   const T0 = M606.v && M606.v.terminal;
   T0 && (M606.v.terminal = T0.map((x) => ({ ...x }))); // cópia: os fatores recebem o preço da Finnhub sem mexer no dado salvo
   let bar;
@@ -4672,8 +4728,8 @@ function m623Html() {
   const monBar = M624.mon ? `<div class="m624-monbar"><b>Monitor de pregão</b>${bncSelo()}${fhSelo()}<span class="m624-hora">${m623Hms(new Date().toISOString())} BRT</span><button type="button" data-m624-mon>Sair do Modo Monitor <kbd>Esc</kbd></button></div>` : "";
   return `<div class="m623-term${M624.mon ? " m624-on" : ""}" role="region" aria-label="Terminal de mercado">${monBar}
 <div class="m623-col">${m623Bloco("Índices Europa e Ásia", g("idx"))}${m606DiHtml()}${m623Noticias()}</div>
-<div class="m623-col">${m623Bloco("Moedas", g("fx"), fhSelo())}${m623Bloco("Emergentes", g("em"), fhSelo())}${bar}</div>
-<div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", g("fut"), fhSelo())}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", typeof bncTop20 === "function" ? bncTop20(g("cri")) : g("cri"), bncSelo())}</div>
+<div class="m623-col">${m623Bloco("Moedas", moedas, fhSelo(moedas))}${m623Bloco("Emergentes", g("em"), fhSelo(g("em")))}${bar}</div>
+<div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", futuros, fhSelo(futuros))}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", typeof bncTop20 === "function" ? bncTop20(g("cri")) : g("cri"), bncSelo())}</div>
 </div><p class="m623-src">TradingView (screener público; B3 com ~15 min de atraso) · WIN e WDO pelo Profit quando a ponte está ligada · EUA, ADRs e moedas pela Finnhub ao vivo (TradingView fora do pregão) · Cripto pela Binance em tempo real · clique num ativo para abrir o gráfico · <i class="m623-dot on"></i> aberto · <i class="m623-dot"></i> fechado${M606.v && M606.v.em ? ' · ' + esc(m606Consulta()) : ''}</p>`;
 }
 document.addEventListener(
@@ -4949,8 +5005,9 @@ setInterval(() => {
   } catch {}
 }, 5e3);
 const fhVivo = () => (FH.modo === "ws" || FH.modo === "rest") && Date.now() - FH.ultimo < 12e4 && (m606Aberto({ ss: "nyse" }) || m606Aberto({ ss: "fx24" }));
-const fhSelo = () => {
-  const v = fhVivo();
+const fhSelo = (itens = null) => {
+  const vivos = Array.isArray(itens) ? itens.filter(it => fhQ(it.k || it.c, it.g || "fx")).length : 0;
+  const v = Array.isArray(itens) ? vivos > 0 : fhVivo();
   return `<span class="bnc-selo fh-selo${v ? " on" : ""}" title="EUA, ADRs e moedas pela Finnhub; fora do pregão ou sem conexão, TradingView"><i aria-hidden="true"></i>${v ? (FH.modo === "rest" ? "Finnhub · a cada 20 s" : "Finnhub · Tempo real") : "TradingView"}</span>`;
 };
 // Fita superior: USD/BRL e EWZ pela Finnhub (Binance e Profit seguem nos deles).
