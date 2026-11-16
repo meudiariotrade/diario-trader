@@ -1,4 +1,4 @@
-ATUALIZAÇÃO DA PONTE VÍDEO — TRILHA TÉCNICA v663
+ATUALIZAÇÃO DA PONTE VÍDEO — TRILHA TÉCNICA v664
 
 1. Feche a janela antiga da Ponte Vídeo, se estiver rodando.
 2. Copie os arquivos desta pasta para a pasta da ponte que você já usa e substitua os arquivos com o mesmo nome.
@@ -9,10 +9,12 @@ A ponte continua convertendo as aulas antigas e passa a converter também as 18 
 
 Para testar uma lição primeiro, use GERAR AULA DA TRILHA.bat e escolha um número. O vídeo é salvo no PC e enviado à mesma conta do app. Se a sessão expirar, o próprio login existente pedirá autenticação novamente.
 
-Depois de publicar o app v663, abra Estudos > Aulas > Análise Técnica na Prática > escolha a lição > Vídeo com voz neural > Assistir no formato que a ponte gerou.
+Depois de publicar o app v664, abra Estudos > Aulas > Análise Técnica na Prática > escolha a lição > Vídeo com voz neural > Assistir no formato que a ponte gerou.
 
 A ponte NÃO é um servidor: não tem endereço local nem porta. Daqui não é possível confirmar que o processo está ativo no seu PC. O histórico marca concluído somente após o envio de cada formato; uma falha de envio será tentada novamente sem refazer o vídeo já salvo.
 
-Os dois cenários do mentor são imagens. Não há vídeo de gestos ou sincronização labial neste pacote. As legendas acompanham a fala neural; os gráficos são SVG autorais hipotéticos, não páginas reproduzidas de livros.
+Inclui avatar-talking.mp4 com gestos do mentor enviados pelo usuário. O clipe fica em loop, mudo, durante a fala no app e compõe os MP4 gerados pela ponte. Os movimentos não são sincronizados com os fonemas da narração. As legendas acompanham a fala neural; os gráficos são SVG autorais hipotéticos, não páginas reproduzidas de livros.
 
 Validação: testes locais de manifesto, compatibilidade, isolamento de conta e envio/repetição. Geração real com voz Microsoft, navegador/FFmpeg e envio do seu PC ainda precisa ser validada no Windows.
+
+A atualização preserva o cache por voz/velocidade e evita enviar MP4 parcial após falha de geração. Ao instalar este clipe, a ponte regenera os vídeos da trilha com animação automaticamente, preservando as aulas antigas.
