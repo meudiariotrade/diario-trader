@@ -49,7 +49,7 @@ test('Mercado desktop: barômetro sob Notícias, DXY único e horário do tick F
   assert.ok(!result.center.includes('US Market Barometer'));
   await expect(p.locator('.m623-col').nth(1).locator('.m623-r[data-fh="OANDA:USD_BRL"] time')).toHaveText('22:15:07');
   await expect(p.locator('.m623-col').nth(1).locator('.m623-r[data-fh="OANDA:USD_BRL"] .m623-dot.on')).toHaveCount(1);
-  await expect(p.locator('.m623-col').nth(1).locator('.fh-selo')).toContainText('Finnhub · Tempo real');
+  await expect(p.locator('.m623-col').nth(1).locator('.fh-selo.on').first()).toContainText('Finnhub · Tempo real');
   await expect(p.locator('.m623-r[data-fh="OANDA:USD_BRL"]')).not.toContainText('Finnhub · Tempo real');
   await p.clock.setFixedTime(new Date('2026-11-16T01:15:12.000Z'));
   await p.evaluate(()=>fhGuarda('OANDA:USD_BRL',5.2)); // preço igual, horário do tick novo
