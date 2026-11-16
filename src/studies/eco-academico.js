@@ -169,7 +169,7 @@ L.views.ficha=()=>{
  '<button type="button" data-eco-btn="uniLocal">Fichar sem IA</button></div>'+
  (S.uniStatus?note(esc(S.uniStatus)):'')+ (erro?note(esc(erro)):'') )+
  card('Fichamentos salvos · '+db.fichas.length,
- db.fichas.length?'<div class="uni-saved">'+db.fichas.map(x=>'<button type="button" data-eco-btn="uniAbrir" data-id="'+esc(x.id)+'" class="'+(x.id===S.uniFid?'on':'')+'"><b>'+esc(x.titulo)+'</b><small>'+esc(x.disc)+' · '+esc(x.criado.slice(0,10))+'</small></button>').join('')+'</div>':'<p class="eco-note">Ainda não há fichamentos neste navegador.</p>'+
+ (db.fichas.length?'<div class="uni-saved">'+db.fichas.map(x=>'<button type="button" data-eco-btn="uniAbrir" data-id="'+esc(x.id)+'" class="'+(x.id===S.uniFid?'on':'')+'"><b>'+esc(x.titulo)+'</b><small>'+esc(x.disc)+' · '+esc(x.criado.slice(0,10))+'</small></button>').join('')+'</div>':'<p class="eco-note">Ainda não há fichamentos neste navegador.</p>')+
  (f?fichaHTML(f):''));
 };
 const D0=new Date().toISOString();
