@@ -10170,7 +10170,7 @@ Energia;30">${j(
         O = "aulas-vel",
         G = "aulas-neural-mode",
         o = "aulas-neural-voice",
-        F = { lista: null, busy: 0, err: "", ts: 0 },
+        F = { lista: null, busy: 0, err: "", ts: 0, blockedUntil: 0 },
         N = {
           prev: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
           next: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>',
@@ -10287,6 +10287,7 @@ Energia;30">${j(
           (F.busy = 0),
           (F.err = ""),
           (F.ts = 0),
+          (F.blockedUntil = 0),
           typeof de < "u" &&
             ((de.aberto = 0),
             (de.livros = null),
@@ -10305,6 +10306,7 @@ Energia;30">${j(
       async function R(t) {
         g();
         const p = B();
+        if (Date.now() < F.blockedUntil) return;
         if (!F.busy) {
           if (!H()) {
             ((F.lista = (window.AULAS_LOCAIS || []).filter((x) => x.local)),
@@ -10327,13 +10329,15 @@ Energia;30">${j(
                   window.AULAS_LOCAIS || [],
                 )),
                 P(s, A),
-                (F.ts = Date.now()));
+                (F.ts = Date.now()),
+                (F.blockedUntil = 0));
             } catch (x) {
               if (p !== B()) return;
+              const erro = String(x.message || x);
+              const quota = x?.status === 402 || x?.code === "EGRESS_QUOTA" || /exceed_egress_quota|service for this project is restricted/i.test(erro);
               ((F.lista = E(s, [])),
-                (F.err = /aulas|schema cache|404/.test(String(x.message || x))
-                  ? "tabela"
-                  : String(x.message || x)));
+                (F.err = quota ? "cota" : /aulas|schema cache|404/i.test(erro) ? "tabela" : erro),
+                (F.blockedUntil = quota ? Date.now() + 5 * 60000 : 0));
             }
             ((F.busy = 0),
               C(),
@@ -10608,8 +10612,10 @@ ${W.text}
           : F.err === "tabela"
             ? (t +=
                 '<div class="card warn"><b>Videoaulas temporariamente indisponíveis</b><div class="sm">A biblioteca de aulas precisa de manutenção. Tente novamente mais tarde.</div></div>')
-            : F.err &&
-              (t += `<div class="card warn"><b>Não consegui carregar as aulas</b><div class="sm">${i(F.err)}</div><button class="btn s" data-aurel="1">Tentar de novo</button></div>`),
+            : F.err === "cota"
+              ? (t += '<div class="card warn" role="status"><b>Nuvem de aulas temporariamente indisponível</b><p class="sm">O Supabase atingiu o limite de transferência do projeto. As aulas guardadas neste aparelho continuam disponíveis. Não saia da conta nem apague o aplicativo. A lista será conferida automaticamente após o intervalo de proteção.</p></div>')
+              : F.err &&
+                (t += `<div class="card warn"><b>Não consegui carregar as aulas</b><div class="sm">${i(F.err)}</div><button class="btn s" data-aurel="1">Tentar de novo</button></div>`),
           (t += L()));
         const p = F.lista.filter(d),
           x = {};
@@ -14197,7 +14203,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
         ensureOwner: g,
         limparConta: za,
         getLista: () => (Array.isArray(F.lista) ? F.lista.slice() : []),
-        getStatus: () => ({ busy: !!F.busy, error: F.err, lastUpdated: F.ts }),
+        getStatus: () => ({ busy: !!F.busy, error: F.err, lastUpdated: F.ts, blockedUntil: F.blockedUntil }),
         progresso: (t) => f(t),
         /* v597: sala de aula — concluir e anotar (mesma coluna de progresso, sem mudar a engine). */
         concluida: (id) => !!f((F.lista || []).find((a) => a.id === id) || { id }).fim,

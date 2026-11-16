@@ -26,3 +26,35 @@ test('aulas: atualiza roteiro entre aparelhos, diferencia interrupção e respei
  assert.ok(await p.evaluate(()=>videoRequests>=1&&videoRequests<=2),'falha dos vídeos tem pausa, sem ciclo de requisições');
  await p.evaluate(()=>{SESS=null;AULAS.ensureOwner();render()});assert.deepEqual(await p.evaluate(()=>AULAS.getLista()),[]);assert.deepEqual(errors,[]);
 }));
+
+test('aulas: limite de transferência 402 mostra aviso legível e impede novas tentativas durante bloqueio',{timeout:120000},async()=>withApp(async(browser,base)=>{
+ const p=await browser.newPage({viewport:{width:390,height:1000}});
+ await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
+ await p.evaluate(()=>{
+  window.DIARIO_DEMO=false;SESS={uid:'conta-com-cota',at:'token-teste',exp:Date.now()+3600000};
+  tok=async()=>{};window.quotaCalls=0;
+  rq=async(url)=>{
+   if(url.includes('/rest/v1/aulas?')){
+    quotaCalls++;
+    const error=new Error('Service for this project is restricted due to exceed_egress_quota');
+    error.status=402;throw error;
+   }
+   return new Response('[]');
+  };
+  tab='estudos';ESV='aul';render();
+ });
+ await p.evaluate(()=>document.querySelector('[data-dt397-view="aul"]')?.click());
+ await expect(p.getByText('Nuvem de aulas temporariamente indisponível',{exact:true})).toBeVisible();
+ await expect(p.getByText('exceed_egress_quota')).toHaveCount(0);
+ await expect(p.locator('#aulas-sync')).toBeHidden();
+ const check=await p.evaluate(async()=>{
+  const before=quotaCalls;
+  await DiarioAulasRecuperacao.refresh(true);
+  await AULAS.carregaLista(true);
+  return {before,after:quotaCalls,status:AULAS.getStatus()};
+ });
+ assert.equal(check.status.error,'cota');
+ assert.ok(check.status.blockedUntil>Date.now());
+ assert.equal(check.after,check.before,'não reenviar durante pausa da cota');
+ await p.close();
+}));

@@ -4783,14 +4783,15 @@ function filaPinta() {
   try {
     const e = typeof SESS < "u" && !!SESS,
       t = e ? filaPend() : 0,
-      a = !navigator.onLine;
+      a = !navigator.onLine,
+      quota = window.DiarioNuvemQuota?.ate > Date.now();
     let o = document.getElementById("filap");
     if (
       !(
         e &&
         t > 0 &&
-        (a ||
-          (SY && /erro|falh|n\xe3o/i.test(SY.msg || "")) ||
+        (a || quota ||
+          (SY && /erro|falh|n\xe3o|bloquead/i.test(SY.msg || "")) ||
           Date.now() - (+S.lastSyncAt || 0) > 5 * 6e4)
       )
     ) {
@@ -4801,6 +4802,10 @@ function filaPinta() {
       ((o = document.createElement("button")),
       (o.id = "filap"),
       o.addEventListener("click", () => {
+        if (window.DiarioNuvemQuota?.ate > Date.now()) {
+          toast("Supabase atingiu o limite de transferência. Seus dados estão salvos no aparelho. Tente após a liberação.");
+          return;
+        }
         try {
           sync(!0);
         } catch {}
@@ -4811,7 +4816,7 @@ function filaPinta() {
         );
       }),
       document.body.appendChild(o)),
-      (o.innerHTML = `${a ? "📴" : "⏳"} ${t} alteração(ões) esperando para subir${a ? " · sem internet" : " · toque para enviar"}`));
+      (o.innerHTML = `${quota ? "⚠️" : a ? "📴" : "⏳"} ${t} alteração(ões) aguardando sincronização${quota ? " · Supabase temporariamente bloqueado" : a ? " · sem internet" : " · toque para enviar"}`));
   } catch {}
 }
 (setInterval(filaPinta, 5e3),

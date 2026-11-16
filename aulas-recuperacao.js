@@ -21,6 +21,9 @@
   let card=doc.querySelector('#app:not(.v503-fantasma) #aulas-sync');
   if(!card){card=doc.createElement('section');card.id='aulas-sync';card.className='card';card.setAttribute('aria-label','Atualização das aulas');card.innerHTML='<div class="top"><b>Suas aulas</b><button type="button" class="btn s" data-aulas-refresh>Atualizar aulas</button></div><p class="sm mut" data-aulas-status role="status"></p><p class="sm mut">O roteiro pode ficar pronto antes do áudio e do vídeo. A ponte do PC prepara esses arquivos em uma etapa separada.</p><button type="button" class="btn s" data-dt393-route="conta" data-aulas-login>Entrar novamente</button>';host.after(card)}
   const status=root.AULAS?.getStatus?.()||{},login=!uid()||/login|conta|sess[aã]o|401|jwt|token/i.test(status.error||'');
+  // O aviso de cota já é exibido na própria lista; não duplicá-lo nesta segunda camada.
+  card.hidden=status.error==='cota';
+  if(card.hidden)return;
   const text=login?'Entre na sua conta para atualizar as aulas entre aparelhos.':status.busy?'Atualizando a lista do servidor…':status.error?'Não foi possível atualizar. A lista pode estar desatualizada. Tente novamente.':status.lastUpdated?'Lista conferida no servidor às '+stamp(status.lastUpdated)+'.':'Aguardando atualização da lista.';
   const line=card.querySelector('[data-aulas-status]');if(line.textContent!==text)line.textContent=text;
   const sign=card.querySelector('[data-aulas-login]');if(sign.hidden===login)sign.hidden=!login;
@@ -29,7 +32,8 @@
  async function refresh(force=false){
   if(!visible()||!root.AULAS||root.DIARIO_DEMO&&!force)return;
   const current=uid();if(current!==owner){owner=current;attempt=0}
-  if(!current||running||root.AULAS.getStatus?.().busy||!force&&Date.now()-attempt<PERIOD){paint();return}
+  const status=root.AULAS.getStatus?.()||{};
+  if(!current||running||status.busy||(status.blockedUntil&&Date.now()<status.blockedUntil)||!force&&Date.now()-attempt<PERIOD){paint();return}
   attempt=Date.now();running=true;
   try{await root.AULAS.carregaLista(true);if(root.AULAS?._dbg?.P?.on&&doc.querySelector('#aup.au361-floating')&&typeof render==='function')render()}finally{running=false;paint()}
  }

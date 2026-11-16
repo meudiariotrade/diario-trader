@@ -1941,6 +1941,13 @@ async function rq(e, t = {}, a = !0) {
   const o = syncOwner(),
     s = cfg();
   if (!s) throw new Error("Configure o Supabase.");
+  // Limite temporário no app: evita repetir centenas de requisições 402 e preserva a fila local.
+  if (window.DiarioNuvemQuota?.ate > Date.now()) {
+    const erro = new Error("Supabase temporariamente bloqueado por limite de transferência. Seus dados continuam salvos neste aparelho.");
+    erro.status = 402;
+    erro.code = "EGRESS_QUOTA";
+    throw erro;
+  }
   (a && (await tok()), assertSyncOwner(o));
   const n = t.tok || (a && SESS ? SESS.at : /^eyJ/.test(s.key) ? s.key : ""),
     r = {
@@ -1955,9 +1962,17 @@ async function rq(e, t = {}, a = !0) {
       const c = await i.json();
       l = c.msg || c.message || c.error_description || c.error || "";
     } catch {}
-    const d = new Error(l || "Erro " + i.status);
+    const bloqueado = i.status === 402;
+    const d = new Error(bloqueado
+      ? "Supabase temporariamente bloqueado por limite de transferência. Dados locais preservados; tente sincronizar após a liberação do serviço."
+      : l || "Erro " + i.status);
+    if (bloqueado) {
+      window.DiarioNuvemQuota = { ate: Date.now() + 120000, motivo: "limite-de-transferencia" };
+      d.code = "EGRESS_QUOTA";
+    }
     throw ((d.status = i.status), d);
   }
+  if (window.DiarioNuvemQuota) window.DiarioNuvemQuota = null;
   return i;
 }
 function setSess(e, t) {
@@ -2309,9 +2324,11 @@ async function sync(force) {
   } catch (error) {
     failed = true;
     if (syncOwner() === owner) {
-      SY.msg = SY_RECOVERY.failed(error)
-        ? "Salvo neste aparelho · sincronização pendente. Nova tentativa automática."
-        : "Falha ao sincronizar: " + em(error);
+      SY.msg = error?.status === 402
+        ? "Nuvem temporariamente bloqueada pelo limite de transferência. Dados preservados neste aparelho; não apague o app."
+        : SY_RECOVERY.failed(error)
+          ? "Salvo neste aparelho · sincronização pendente. Nova tentativa automática."
+          : "Falha ao sincronizar: " + em(error);
     }
   } finally {
     SY.busy = 0;
