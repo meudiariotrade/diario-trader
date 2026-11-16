@@ -1,5 +1,5 @@
 {
-  "version": 660,
+  "version": 661,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -24,7 +24,7 @@
     "LICENSE-fontkit.txt"
   ],
   "debug": [],
-  "base": "61c238f6260493c45aa52c01f23b28f749ae38bd",
+  "base": "19b61e58ed3d1d3e84e0cc2b5c48d0b5c1050af5",
   "bundles": {
     "nucleo-v560.js": "src/app-core.js",
     "camadas-v560.js": "src/app-layers.js",
@@ -80,6 +80,10 @@
       "src/studies/eco-econometria.js",
       "src/studies/eco-questoes.js",
       "src/studies/eco-historia.js",
+      "src/studies/eco-academico.js",
+      "src/studies/eco-micro.js",
+      "src/studies/eco-series.js",
+      "src/studies/eco-revisao.js",
       "src/studies/eco-estilos.js"
     ]
   },
