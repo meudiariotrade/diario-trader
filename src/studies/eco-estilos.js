@@ -3,6 +3,7 @@
 'use strict';
 if(document.getElementById('estudos-eco-style-v657'))return;
 const css=[
+'.eco-launch{display:block;max-width:100%;margin:9px 0 14px;min-height:44px;border:1px solid #5b431c;border-radius:4px;background:#181C26;padding:10px 12px;color:#e6bc60;text-align:left;cursor:pointer;font-size:13px}',
 '.eco-root{--eco-bg:#0A0C10;--eco-panel:#11141B;--eco-hover:#181C26;--eco-line:#1E232E;--eco-gold:#D4A017;color:#dee4ed;margin:10px 0 40px;min-width:0;font-variant-numeric:tabular-nums}',
 '.eco-root *{box-sizing:border-box}.eco-head{display:block;border-bottom:1px solid var(--eco-line);padding:14px 0 18px}',
 '.eco-head small{font-size:10px;color:var(--eco-gold);letter-spacing:1.3px}.eco-head h2{font-size:23px;margin:6px 0;color:#f1f3f6}.eco-head p{font-size:13px;color:#a6b1bd;margin:0}',
