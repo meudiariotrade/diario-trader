@@ -4668,7 +4668,7 @@ function m623Linha(it) {
     varCls = m606Cls(juro && it.dabs != null && !vivo ? it.dabs : d1),
     chave = M623_LOGO[it.k] || it.k,
     logo = window.DiarioLogos ? DiarioLogos.html(chave, 16) : "";
-  return `<div class="m623-r"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k, it.g))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${vivo === "profit" ? "Profit" : vivo === "fh" ? "Finnhub · Tempo real" : m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
+  return `<div class="m623-r"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k, it.g))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
 }
 function m623Bloco(tit, itens, extra = "") {
   return `<section class="m623-sec"><header><h3>${tit}</h3>${extra}</header><div class="m623-tb" role="table">${itens.length ? itens.map(m623Linha).join("") : '<div class="market-state" role="status">Consultando…</div>'}</div></section>`;
@@ -4709,9 +4709,20 @@ function m623Html() {
   if (!CQ_EXT.busy && Date.now() - CQ_EXT.ts >= 3e4) setTimeout(cqExtrasCarrega, 0);
   const emergentes = new Set(g("em").map(x => x.k.toUpperCase()));
   const linhasMobile = cqItens("fx").filter(x => !emergentes.has(String(x.c || "").toUpperCase()));
-  const moedas = linhasMobile.length ? linhasMobile.map(x => ({
+  const moedasBase = linhasMobile.length ? linhasMobile.map(x => ({
     ...x, k: x.c, g: "fx", ss: "fx24", s: x.simboloFonte || x.s, em: x.horarioPreco || x.em
   })) : g("fx");
+  // A visão mobile pode reunir DXY e DX-Y.NYB de fontes diferentes; desktop exibe uma única linha.
+  const vistosMoedas = new Set();
+  const moedas = moedasBase.filter(x => {
+    const codigo = String(x.c || x.k || "").toUpperCase().trim();
+    const fonte = String(x.s || "").toUpperCase().trim();
+    const chave = codigo === "DXY" || codigo === "DX-Y.NYB" || /^(?:TVC:|INDEX:)?DXY$|^DX-Y\.NYB$/.test(fonte)
+      ? "DXY" : codigo || fonte;
+    if (vistosMoedas.has(chave)) return false;
+    vistosMoedas.add(chave);
+    return true;
+  });
   const futuros = [...g("fut"), ...cqItens("fut").filter(x => CQ_FUT_EXT.some(e => e.c === x.c))
     .map(x => ({ ...x, k: x.c, g: "fut", ss: "fx24", s: x.simboloFonte || x.s, em: x.horarioPreco || x.em }))];
   const T0 = M606.v && M606.v.terminal;
@@ -4727,8 +4738,8 @@ function m623Html() {
   }
   const monBar = M624.mon ? `<div class="m624-monbar"><b>Monitor de pregão</b>${bncSelo()}${fhSelo()}<span class="m624-hora">${m623Hms(new Date().toISOString())} BRT</span><button type="button" data-m624-mon>Sair do Modo Monitor <kbd>Esc</kbd></button></div>` : "";
   return `<div class="m623-term${M624.mon ? " m624-on" : ""}" role="region" aria-label="Terminal de mercado">${monBar}
-<div class="m623-col">${m623Bloco("Índices Europa e Ásia", g("idx"))}${m606DiHtml()}${m623Noticias()}</div>
-<div class="m623-col">${m623Bloco("Moedas", moedas, fhSelo(moedas))}${m623Bloco("Emergentes", g("em"), fhSelo(g("em")))}${bar}</div>
+<div class="m623-col">${m623Bloco("Índices Europa e Ásia", g("idx"))}${m606DiHtml()}${m623Noticias()}${bar}</div>
+<div class="m623-col">${m623Bloco("Moedas", moedas, fhSelo(moedas))}${m623Bloco("Emergentes", g("em"), fhSelo(g("em")))}</div>
 <div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", futuros, fhSelo(futuros))}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", typeof bncTop20 === "function" ? bncTop20(g("cri")) : g("cri"), bncSelo())}</div>
 </div><p class="m623-src">TradingView (screener público; B3 com ~15 min de atraso) · WIN e WDO pelo Profit quando a ponte está ligada · EUA, ADRs e moedas pela Finnhub ao vivo (TradingView fora do pregão) · Cripto pela Binance em tempo real · clique num ativo para abrir o gráfico · <i class="m623-dot on"></i> aberto · <i class="m623-dot"></i> fechado${M606.v && M606.v.em ? ' · ' + esc(m606Consulta()) : ''}</p>`;
 }
@@ -4866,6 +4877,14 @@ function fhGuarda(s, px, pc) {
   FH.q[s] = { s, px, em: Date.now(), dir: ant ? Math.sign(px - ant.px) : 0 };
   pc > 0 && (FH.pc[s] = pc);
   FH.ultimo = Date.now();
+  // Ticks com preço idêntico também atualizam o horário, sem recriar os cards nem piscar.
+  if (ant && ant.px === px && typeof tab !== "undefined" && tab === "mercado") {
+    document.querySelectorAll("#cotbox .m623-r[data-fh]").forEach(el => {
+      if (el.dataset.fh !== s) return;
+      const time = el.querySelector("time");
+      if (time) time.textContent = m623Hms(FH.q[s].em);
+    });
+  }
   (!ant || ant.px !== px) && FH.mudou.add(s);
   FH.pinta || (FH.pinta = setTimeout(fhPinta, 1500));
 }
