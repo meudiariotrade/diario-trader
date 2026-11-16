@@ -96,11 +96,20 @@ test('v691: painel faz simulação local e mantém as tabelas de Operações int
  await page.evaluate(()=>document.querySelector('#ops-audit-691 summary')?.click());
  await expect(page.locator('.a691-section')).toHaveCount(4);
  await expect(page.locator('.a691-table')).toHaveCount(2);
- await page.locator('[data-a691-set="winRate"]').fill('45');
- await page.locator('[data-a691-set="avgWin"]').fill('120');
- await page.locator('[data-a691-set="avgLoss"]').fill('80');
- await page.locator('[data-a691-set="limit"]').fill('450');
- await page.locator('[data-a691-run]').click();
+ // O hub repinta os inputs com dados do Profit. Preencher e acionar no mesmo ciclo
+ // exercita o listener real sem perder a referência do botão entre renders.
+ await page.evaluate(()=>{
+  const root=document.querySelector('#ops-audit-691');
+  if(!root)throw new Error('Auditoria não montada');
+  for(const [name,value] of Object.entries({winRate:'45',avgWin:'120',avgLoss:'80',limit:'450'})){
+   const field=root.querySelector('[data-a691-set="'+name+'"]');
+   if(!field)throw new Error('Campo ausente: '+name);
+   field.value=value;
+  }
+  const run=root.querySelector('[data-a691-run]');
+  if(!run)throw new Error('Botão Monte Carlo ausente');
+  run.click();
+ });
  await expect(page.locator('#a691-monte-results')).toContainText('Mediana');
  await expect(page.locator('#a691-monte-results')).toContainText('500 trajetórias');
  await page.locator('[data-a691-filter="period"]').selectOption('all');
