@@ -92,6 +92,41 @@ async function openRouterGratis(base: string[], fetcher: typeof fetch) {
   const escolhidos = pref.flatMap((re) => ids.filter((id) => re.test(id))).filter((x, i, a) => a.indexOf(x) === i);
   return [...base.filter((m) => !ids.length || ids.includes(m)), ...escolhidos].filter((x, i, a) => a.indexOf(x) === i).slice(0, 3);
 }
+// Reserva estritamente posterior à cascata existente: nunca altera modelos ou ordem dos provedores primários.
+// Slugs sugeridos podem mudar; a lista pública /models confirma quais variantes :free existem de fato.
+const CANDIDATOS_RESERVA = [
+  'deepseek/deepseek-v4.1-flash:free',
+  'deepseek/deepseek-v4.1-flash-1017:free',
+  'z-ai/glm-5.3-flash:free',
+  'x-ai/grok-4.5:free',
+  'x-ai/grok-4.7:free',
+  'xiaomi/mimo-2.6-flash:free',
+];
+let OR_RESERVA: { t: number; ids: string[] } | null = null;
+async function openRouterReserva(fetcher: typeof fetch, forcar = false): Promise<string[]> {
+  if (forcar || !OR_RESERVA || Date.now() - OR_RESERVA.t > 3600_000) {
+    try {
+      const r = await fetcher('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(6000) });
+      if (r.ok) {
+        const data = (await r.json())?.data;
+        const ids = (Array.isArray(data) ? data : [])
+          .filter((m: any) => typeof m?.id === 'string' && /:free$/.test(m.id) &&
+            /deepseek|glm|grok|mimo/i.test(m.id) &&
+            (!Array.isArray(m.architecture?.output_modalities) || m.architecture.output_modalities.includes('text')))
+          .map((m: any) => String(m.id));
+        OR_RESERVA = { t: Date.now(), ids: [...new Set(ids)] };
+      }
+    } catch { /* Lista temporariamente indisponível: usa cache ou slugs gratuitos declarados. */ }
+  }
+  if (!OR_RESERVA) return [...CANDIDATOS_RESERVA];
+  const ids = OR_RESERVA.ids;
+  const familias = [/deepseek/i, /glm/i, /grok/i, /mimo/i];
+  return [...new Set([
+    ...CANDIDATOS_RESERVA.filter((m) => ids.includes(m)),
+    ...familias.flatMap((re) => ids.filter((id) => re.test(id))),
+  ])].slice(0, 12);
+}
+
 const PAUSA = new Map<string, { ate: number; motivo: string }>();
 export function pausa(id: string, ms: number, motivo: string) { PAUSA.set(id, { ate: Date.now() + ms, motivo }); }
 
@@ -136,11 +171,24 @@ export type Resposta = { texto: string; provedor: string; modelo: string; rotulo
  */
 export async function gerarTexto(system: string, prompt: string, opt: { json?: boolean; temp?: number; ate?: number; env?: Env; fetcher?: typeof fetch; preferir?: string[]; porTentativaMs?: number } = {}): Promise<Resposta> {
   const fetcher = opt.fetcher || fetch, env = opt.env ? opt.env : await envComVault(ENV0, fetcher), ate = opt.ate || Date.now() + 55_000, temp = opt.temp ?? 0.4, erros: string[] = [];
-  for (const p of ordem(provedores(env), env, opt.preferir || [])) {
-    let modelos = p.id === 'openrouter' ? await openRouterGratis(p.modelos, fetcher) : await modelosAtuais(p, fetcher);
+  const fila = ordem(provedores(env), env, opt.preferir || []);
+  const desativados = new Set(lista(env('IA_DESLIGAR')).map((x) => x.toLowerCase()));
+  const chaveReserva = env('OPENROUTER_API_KEY');
+  if (chaveReserva && !desativados.has('openrouter') && !desativados.has('openrouter-reserva')) {
+    fila.push({
+      id: 'openrouter-reserva', nome: 'OpenRouter Reserva', tipo: 'openai', chave: chaveReserva,
+      url: 'https://openrouter.ai/api/v1/chat/completions', modelos: [],
+      extra: { 'HTTP-Referer': 'https://meudiariotrade.github.io/diario-trader/', 'X-Title': 'Diario de Trader' },
+    });
+  }
+  for (const p of fila) {
+    let modelos = p.id === 'openrouter-reserva' ? await openRouterReserva(fetcher) :
+      p.id === 'openrouter' ? await openRouterGratis(p.modelos, fetcher) : await modelosAtuais(p, fetcher);
     const bom = OK_MODELO.get(p.id);
     if (bom && modelos.includes(bom)) modelos = [bom, ...modelos.filter((m) => m !== bom)];
-    for (const modelo of modelos) {
+    let reservaAtualizada = false;
+    for (let i = 0; i < modelos.length; i++) {
+      const modelo = modelos[i];
       let proximo = false;
       for (let tentativa = 0; tentativa < 2 && !proximo; tentativa++) {
         const resta = ate - Date.now();
@@ -151,8 +199,15 @@ export async function gerarTexto(system: string, prompt: string, opt: { json?: b
           if (r.texto) { PAUSA.delete(p.id); OK_MODELO.set(p.id, modelo); const m = r.real || modelo; return { texto: r.texto, provedor: p.nome, modelo: m, rotulo: `${p.nome} · ${m}`, tentativas: erros }; }
           erros.push(`${p.nome} ${modelo}: ${r.status ? 'HTTP ' + r.status : ''}${r.erro ? (r.status ? ' — ' : '') + limpa(r.erro) : ''}`);
           if (r.status === 429 && tentativa === 0) { await espera(1200); continue; } // retry rápido
-          if (r.status === 429 && (p.tipo === 'gemini' || p.id === 'openrouter')) break; // cota/fila por modelo — tenta o próximo modelo
-          if (r.status === 404) break; // modelo fora do ar — próximo modelo do mesmo provedor
+          if (r.status === 429 && (p.tipo === 'gemini' || p.id === 'openrouter' || p.id === 'openrouter-reserva')) break; // cota/fila por modelo — tenta o próximo modelo
+          if (r.status === 404) {
+            if (p.id === 'openrouter-reserva' && !reservaAtualizada) {
+              reservaAtualizada = true;
+              const novos = await openRouterReserva(fetcher, true); // revalida os slugs ao detectar 404
+              modelos.push(...novos.filter((m) => !modelos.includes(m)));
+            }
+            break; // modelo fora do ar — próximo modelo do mesmo provedor
+          }
           if (r.status === 429) { pausa(p.id, /quota|billing|daily|per day|exceeded/i.test(r.erro || '') ? 10 * 60_000 : 60_000, 'HTTP 429'); proximo = true; break; }
           if (r.status === 401 || r.status === 403 || r.status === 402) { pausa(p.id, 30 * 60_000, 'HTTP ' + r.status); proximo = true; break; }
           if (r.status >= 500) pausa(p.id, 30_000, 'HTTP ' + r.status);
