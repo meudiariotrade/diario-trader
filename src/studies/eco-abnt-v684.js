@@ -114,7 +114,18 @@ document.addEventListener('change',e=>{
  if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='abnt')return;
  const el=e.target;if(el?.matches?.('[data-abnt-field]')){state[el.dataset.abntField]=safe(el.value,100000);L.paint();}
 },true);
-L.events.abntSave=()=>{remember();state.aviso='Rascunho salvo no navegador deste aparelho.';L.paint();};
+function syncFields(){
+ // Valor atual do DOM prevalece no instante de salvar; não depende de blur/change
+ // nem de atualizações assíncronas do Laboratório que podem remontar formulários.
+ for(const el of document.querySelectorAll('#eco-body [data-abnt-field]')){
+  const key=el.dataset.abntField;
+  if(Object.prototype.hasOwnProperty.call(state,key)){
+   const max=key==='texto'?30000:key==='tabelaCSV'?120000:1000;
+   state[key]=safe(el.value,max);
+  }
+ }
+}
+L.events.abntSave=()=>{syncFields();remember();state.aviso='Rascunho salvo no navegador deste aparelho.';L.paint();};
 L.events.abntSeries=()=>{
  const id=document.querySelector('#eco-body [data-abnt-source]')?.value;
  const row=L.uni?.data?.consultas?.find(x=>x.id===id);if(!row)return;

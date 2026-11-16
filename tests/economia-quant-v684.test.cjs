@@ -80,6 +80,7 @@ test('v684: ABNT 6023:2025 e importação de tabela BCB/IBGE permanecem locais',
  await expect(p.locator('.eco-abnt-table')).toContainText('202602');
  await p.locator('[data-abnt-field="tcc"]').fill('Análise do IPCA');
  await p.locator('[data-eco-btn="abntSave"]').click();
+ await expect(p.locator('.eco-abnt-paper h2')).toHaveText('Análise do IPCA');
  const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('diario-laboratorio-abnt-v684')));
  assert.equal(saved.tcc,'Análise do IPCA');
  assert.equal(saved.tabela.rows.length,3);
