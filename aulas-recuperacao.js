@@ -23,6 +23,8 @@
   const status=root.AULAS?.getStatus?.()||{},login=!uid()||/login|conta|sess[aã]o|401|jwt|token/i.test(status.error||'');
   // O aviso de cota já é exibido na própria lista; não duplicá-lo nesta segunda camada.
   card.hidden=status.error==='cota';
+  // .card define display no tema; estilo inline evita que o cartão duplicado apareça.
+  card.style.display=card.hidden?'none':'';
   if(card.hidden)return;
   const text=login?'Entre na sua conta para atualizar as aulas entre aparelhos.':status.busy?'Atualizando a lista do servidor…':status.error?'Não foi possível atualizar. A lista pode estar desatualizada. Tente novamente.':status.lastUpdated?'Lista conferida no servidor às '+stamp(status.lastUpdated)+'.':'Aguardando atualização da lista.';
   const line=card.querySelector('[data-aulas-status]');if(line.textContent!==text)line.textContent=text;
