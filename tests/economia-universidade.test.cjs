@@ -34,7 +34,6 @@ test('Fichar texto local, gerar cards, revisar e preservar histórico JSON em na
  await p.locator('[data-uni-title]').fill('Resumo de aula Keynes');
  await p.locator('[data-uni-text]').fill('O princípio da demanda efetiva considera que o nível de atividade pode permanecer abaixo do pleno emprego. O consumo aumenta com a renda, mas em proporção menor. O investimento depende de expectativas sobre a rentabilidade marginal do capital e da taxa de juros. A economia pode permanecer com desemprego involuntário. A escola keynesiana discute o papel de políticas fiscais.');
  await p.locator('[data-eco-btn="uniLocal"]').click();
- console.log("UNI_FICHA_DEBUG",JSON.stringify(await p.evaluate(()=>({tab,ESV,tool:EconomiaLab.state.tool,status:EconomiaLab.state.uniStatus,fid:EconomiaLab.state.uniFid,items:EconomiaLab.uni.data.fichas.length,html:document.querySelector("#eco-body")?.innerHTML.slice(-650)}))));
  await expect(p.locator('.uni-ficha')).toContainText('Resumo de aula Keynes');
  await p.locator('[data-eco-btn="uniDeck"]').click();
  await expect(p.locator('[data-eco-tool="flash"]')).toHaveClass(/on/);
@@ -69,9 +68,13 @@ test('Microeconomia: sliders, curvas, condições e respostas numéricas coerent
 test('Séries: normalizar BCB/IBGE e CSV após consulta direta simulada, sem proxy',{timeout:90000},async()=>withApp(async(b,base)=>{
  const p=await open(b,base);await p.locator('[data-dt397-view="eco"]').click();
  await p.locator('[data-eco-tool="series"]').click();
- await p.route('https://api.bcb.gov.br/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify([{data:'14/11/2026',valor:'14.25'},{data:'15/11/2026',valor:'14.50'}])}));
+ await p.evaluate(()=>{
+   const prev=window.fetch;
+   window.fetch=(url,options)=>String(url).startsWith('https://api.bcb.gov.br/')
+      ? Promise.resolve(new Response(JSON.stringify([{data:'14/11/2026',valor:'14.25'},{data:'15/11/2026',valor:'14.50'}]),{status:200,headers:{'Content-Type':'application/json'}}))
+      : prev(url,options);
+ });
  await p.locator('[data-eco-btn="uniConsultar"]').click();
- console.log("UNI_SERIE_DEBUG",JSON.stringify(await p.evaluate(()=>({tab,ESV,tool:EconomiaLab.state.tool,erro:EconomiaLab.state.uniSerieErro,busy:EconomiaLab.state.uniSerieBusy,serie:EconomiaLab.state.uniSerieAtual,html:document.querySelector("#eco-body")?.innerHTML.slice(-650)}))));
  await expect(p.locator('[data-eco-btn="uniCSV"]')).toBeVisible();
  await expect(p.locator('.eco-grid-stats')).toContainText('14,50');
  const result=await p.evaluate(()=>{
