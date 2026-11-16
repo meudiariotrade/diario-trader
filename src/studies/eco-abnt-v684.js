@@ -45,7 +45,7 @@ function formatRef(s){
  return author+'. '+safe(s.titulo,300)+'. '+yr+'.'+(url?' Disponível em: '+url+'. Acesso em: '+accessDate(s.acesso)+'.':' Acesso eletrônico não informado.');
 }
 function citation(s){
- const creator=safe(s.tipo==='site'&&s.org?s.org:s.autores,500),name=citeName(creator);
+ const creator=safe(s.tipo==='site'&&s.org?s.org:s.autores,500),name=s.tipo==='site'&&s.org?safe(s.org,150):citeName(creator);
  if(!name||!/^\d{4}[a-z]?$/.test(String(s.ano)))return 'Informe autoria e ano para gerar a citação.';
  const page=s.modo==='direta'?(s.pagina?', p. '+safe(s.pagina,20):' [informe a página]'):'';
  return '('+name+', '+s.ano+page+')';

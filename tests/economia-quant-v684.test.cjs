@@ -64,9 +64,11 @@ test('v684: ABNT 6023:2025 e importação de tabela BCB/IBGE permanecem locais',
    direct:L.abnt.citation({...book,modo:'direta',pagina:'35'}),
    rows:L.abnt.csvRows('data;valor\n2026-01;1,2\n2026-02;2,4')};
  });
- assert.match(result.ref,/SILVA, José; PEREIRA, Maria/);
+ assert.match(result.ref,/SILVA, José da; PEREIRA, Maria/);
  assert.match(result.cite,/\(Silva; Pereira, 2024\)/);
  assert.match(result.direct,/p\. 35/);
+ const institution=await p.evaluate(()=>EconomiaLab.abnt.citation({tipo:'site',org:'Banco Central do Brasil',ano:'2026',titulo:'Selic'}));
+ assert.equal(institution,'(Banco Central do Brasil, 2026)');
  assert.equal(result.rows.length,3);
  await p.evaluate(()=>{
   EconomiaLab.uni.data.consultas.push({id:'ibge-test',serie:'IPCA histórico',fonte:'IBGE',url:'https://ibge.gov.br/serie',em:'2026-11-15',unidade:'%',pontos:[{data:'202601',valor:.4},{data:'202602',valor:.2}]});

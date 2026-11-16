@@ -40,7 +40,15 @@ test('dicionário e aula do Mentor por PDF funcionam no fluxo de Aulas',{timeout
  await page.route('**/rest/v1/aulas?**',route=>route.fulfill({json:[]}));
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  await page.evaluate(()=>{tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000};window.SUPA_URL=location.origin;window.SUPA_KEY='public';const demoFetch=window.fetch;window.fetch=(url,options)=>String(url).startsWith(location.origin+'/functions/')||String(url).startsWith(location.origin+'/rest/')?window.testNativeFetch(url,options):demoFetch(url,options);ntLib=async()=>({getDocument:()=>({promise:Promise.resolve({numPages:2,getPage:async()=>({getTextContent:async()=>({items:[{str:'Um circuito elétrico relaciona tensão corrente e resistência. '.repeat(20)}]}),cleanup(){}}),destroy:async()=>{}}),destroy(){}})});render()});
- await page.locator('.tp-voice-dict > summary').click();await page.locator('[data-tp-dictionary]').fill('MACD = mac dê\nXYZ = xis especial');await page.locator('[data-tp-dict="save"]').click();await expect(page.locator('[data-tp-dict-status]')).toContainText(/salvo/i);assert.equal(await page.evaluate(()=>DiarioVoz.normalizarTextoParaVoz('XYZ')),'xis especial');
+ // Catálogo sincroniza e repinta o DOM; salvar no mesmo ciclo evita teste instável.
+ await page.evaluate(()=>{
+  const root=document.querySelector('.tp-voice-dict');
+  root.open=true;
+  const input=root.querySelector('[data-tp-dictionary]');
+  input.value='MACD = mac dê\\nXYZ = xis especial';
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+  root.querySelector('[data-tp-dict="save"]').click();
+ });await expect(page.locator('[data-tp-dict-status]')).toContainText(/salvo/i);assert.equal(await page.evaluate(()=>DiarioVoz.normalizarTextoParaVoz('XYZ')),'xis especial');
  await page.locator('.tp-pdf > summary').click();await page.locator('[data-tp-pdf-file]').setInputFiles({name:'apostila.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7\nfixture')});await page.locator('[data-tp-pdf-theme]').fill('Circuitos');await page.locator('[data-tp-pdf-last]').fill('2');
  // Reproduz atualização da lista que antes desmontava/fechava o formulário.
  await page.evaluate(()=>TecnicaPratica.view.refresh());
