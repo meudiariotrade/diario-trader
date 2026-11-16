@@ -19,9 +19,10 @@ test('trilha técnica na aplicação real: navegação, mentor, gráfico, quiz e
 
 test('MP4 chega ao fim sem reiniciar durante atualizações automáticas da tela',{timeout:90000},async()=>withApp(async(browser,base)=>{
  const page=await browser.newPage({viewport:{width:390,height:1000}});
+ await page.addInitScript(()=>{window.testNativeFetch=window.fetch.bind(window)});
  await page.route('**/storage/v1/object/sign/**',route=>route.request().method()==='POST'?route.fulfill({json:{signedURL:'/object/sign/aulas-videos/test-video/tecnica-v1-martelo-16x9.mp4?token=test'}}):route.fulfill({path:path.join(__dirname,'../public/avatar-talking.mp4'),contentType:'video/mp4'}));
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
- await page.evaluate(()=>{tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000};window.SUPA_URL=location.origin;window.SUPA_KEY='public';render()});
+ await page.evaluate(()=>{tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000};window.SUPA_URL=location.origin;window.SUPA_KEY='public';const demoFetch=window.fetch;window.fetch=(url,options)=>String(url).startsWith(location.origin+'/storage/v1/object/sign/')?window.testNativeFetch(url,options):demoFetch(url,options);render()});
  await page.locator('[data-tp-lesson="martelo"]').click();await page.locator('.tp-bridge > summary').click();await page.locator('[data-tp-film="16x9"]').click();
  await expect(page.locator('[data-tp-film-player]')).toHaveCount(1);
  await page.evaluate(async()=>{const v=window.testVideo=document.querySelector('[data-tp-film-player]');v.muted=true;await v.play();window.testRefresh=setInterval(()=>render(),1000)});
