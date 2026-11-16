@@ -15793,7 +15793,9 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
   SHR.ratio=get('diario-share-ratio','4:5')==='9:16'?'9:16':'4:5';SHR.setup=get('diario-share-setup','1')!=='0';SHR.scope='operation';
   function events(){const a=[];try{if(typeof JRN!=='undefined')for(const v of [JRN.v?.agenda,JRN.v?.eventos,JRN.v?.ed?.agenda])if(Array.isArray(v))a.push(...v)}catch{}return a}
   function anchor(trade){return M.dateKey(SHR.scope==='operation'?(trade?.dt||trade?.dtx):(trade?.dtx||trade?.dt))||M.dateKey(new Date())}
-  const active=(trade=current)=>M.theme(choice,anchor(trade),events());
+  // Só o tema Automático usa a data de hoje; o período resumido continua ancorado na operação.
+  const seasonalReference=(trade=current)=>choice==='auto'?new Date():anchor(trade);
+  const active=(trade=current)=>M.theme(choice,seasonalReference(trade),events());
   function setTheme(id){if(!M.themes.some(([v])=>v===id))return false;choice=id;save(KEY,id);return true}
   function load(id){const path=files[id];if(!path)return Promise.resolve(null);if(images.has(path))return Promise.resolve(images.get(path));if(pending.has(path))return pending.get(path);
     const p=new Promise(resolve=>{const im=new Image();let done=false;const finish=ok=>{if(done)return;done=true;clearTimeout(timer);if(ok){images.set(path,im);failed.delete(path)}else failed.add(path);resolve(ok?im:null)},timer=setTimeout(()=>finish(false),7000);im.onload=()=>finish(im.naturalWidth>0);im.onerror=()=>finish(false);im.src=path}).finally(()=>pending.delete(path));pending.set(path,p);return p;
@@ -15817,7 +15819,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
     const shade=ctx.createLinearGradient(0,0,850,0);shade.addColorStop(0,'rgba(10,12,16,.99)');shade.addColorStop(.58,'rgba(10,12,16,.94)');shade.addColorStop(1,'rgba(10,12,16,0)');ctx.fillStyle=shade;ctx.fillRect(0,0,1080,H);
     const foot=ctx.createLinearGradient(0,H-590,0,H-300);foot.addColorStop(0,'rgba(10,12,16,0)');foot.addColorStop(1,'rgba(10,12,16,.99)');ctx.fillStyle=foot;ctx.fillRect(0,H-590,1080,590);
   }
-  function header(ctx,theme,trade){drawText(ctx,'DIÁRIO DE TRADER',56,66,24,r.ac,700,375);const label=M.badge(choice,anchor(trade),events());box(ctx,470,32,554,48,'rgba(17,20,27,.9)');drawText(ctx,label,747,65,21,r.tx,600,522,'center')}
+  function header(ctx,theme,trade){drawText(ctx,'DIÁRIO DE TRADER',56,66,24,r.ac,700,375);const label=M.badge(choice,seasonalReference(trade),events());box(ctx,470,32,554,48,'rgba(17,20,27,.9)');drawText(ctx,label,747,65,21,r.tx,600,522,'center')}
   function footer(ctx,H,note){ctx.fillStyle=r.line;ctx.fillRect(56,H-112,968,1);drawText(ctx,note,56,H-72,19,r.mut,400,968);drawText(ctx,s.DIARIO_DEMO?'DEMONSTRAÇÃO / DADOS FICTÍCIOS':'DIÁRIO DE TRADER · Registro pessoal',56,H-28,19,s.DIARIO_DEMO?r.am:r.ac,600,968)}
   const dateLabel=d=>{const k=M.dateKey(d);return k?k.slice(8)+'/'+k.slice(5,7)+'/'+k.slice(0,4):'Data não informada'};
   function rowsLoaded(){const out=[];for(const t of (S.trades||[])){
@@ -15935,7 +15937,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
     try{const blob=await shrGera(t);if(token!==generation||!overlay.isConnected)return;if(SHR.url)URL.revokeObjectURL(SHR.url);SHR.blob=blob;SHR.url=URL.createObjectURL(blob);const theme=active(t);
       overlay.innerHTML=`<div class="sh share-season-modal"><div class="top"><b>Imagem para compartilhar</b><button class="x" data-shrx="1" aria-label="Fechar">✕</button></div>
         <div class="seg share-scope" role="group" aria-label="Conteúdo do card">${[['operation','Operação'],['day','Resumo do Dia'],['week','Resumo da Semana']].map(([v,name])=>`<button type="button" data-shrscope="${v}" class="${SHR.scope===v?'on':''}" aria-pressed="${SHR.scope===v}">${name}</button>`).join('')}</div>
-        <section class="season-picker" aria-label="Tema da imagem"><b>Estilo do card</b><div class="season-buttons">${M.themes.map(([v,name])=>`<button type="button" data-shrtheme="${v}" aria-pressed="${choice===v}">${name}</button>`).join('')}</div><small>${escText(M.badge(choice,anchor(t),events()))} · referência ${dateLabel(anchor(t))}${failed.has(files[theme])?' · Arte indisponível; fundo institucional de reserva.':''}</small></section>
+        <section class="season-picker" aria-label="Tema da imagem"><b>Estilo do card</b><div class="season-buttons">${M.themes.map(([v,name])=>`<button type="button" data-shrtheme="${v}" aria-pressed="${choice===v}">${name}</button>`).join('')}</div><small>${escText(M.badge(choice,seasonalReference(t),events()))} · referência ${dateLabel(seasonalReference(t))}${failed.has(files[theme])?' · Arte indisponível; fundo institucional de reserva.':''}</small></section>
         <div class="seg share-ratio" role="group" aria-label="Proporção da imagem">${[['4:5','Padrão (4:5)'],['9:16','Stories (9:16)']].map(([v,name])=>`<button type="button" data-shrratio="${v}" class="${SHR.ratio===v?'on':''}" aria-pressed="${SHR.ratio===v}">${name}</button>`).join('')}</div>
         <img class="share-season-preview" src="${SHR.url}" alt="Prévia do card ${SHR.scope==='operation'?'da operação':SHR.scope==='day'?'do dia':'da semana'}">
         <div class="seg"><button class="${SHR.modo!=='conta'?'on':''}" data-shrm="preco">% da operação</button><button class="${SHR.modo==='conta'?'on':''}" data-shrm="conta">% da conta</button></div>
