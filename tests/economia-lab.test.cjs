@@ -12,13 +12,8 @@ test('Estudos: mantém conteúdo anterior e abre laboratório com 5 ferramentas'
  await expect(p.locator('[data-eco-launch]')).toBeVisible();
  await p.locator('[data-eco-launch]').click();
  await expect(p.locator('.eco-head h2')).toHaveText('Laboratório de Economia');
- console.log('ECO_DEBUG',JSON.stringify(await p.evaluate(()=>{
- const e=document.querySelector('.eco-nav [data-eco-tool="mf"]');
- const parents=[];let a=e;while(a&&parents.length<8){const st=getComputedStyle(a);parents.push({tag:a.tagName,cls:a.className,id:a.id,disp:st.display,vis:st.visibility,rect:a.getBoundingClientRect().toJSON()});a=a.parentElement;}
- return {tab:typeof tab==='undefined'?'?':tab,esv:typeof ESV==='undefined'?'?':ESV,parents,body:document.body.className};
- })));
- 
  await expect(p.locator('.eco-nav [data-eco-tool]')).toHaveCount(5);
+ await expect(p.locator('.eco-nav [data-eco-tool="mf"]')).toBeVisible();
  await expect(p.locator('.eco-root')).toContainText('Regra de Taylor');
  await p.locator('.eco-nav [data-eco-tool="mf"]').click();
  await expect(p.locator('.eco-root')).toContainText('Mundell');
