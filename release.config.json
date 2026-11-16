@@ -1,5 +1,5 @@
 {
-  "version": 696,
+  "version": 697,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -98,7 +98,8 @@
       "src/studies/tecnica-aulas.js",
       "src/studies/tecnica-estilos.js",
       "src/market/termometro-abertura-v670.js",
-      "src/portfolio/gestao-rebalanceamento-v694.js"
+      "src/portfolio/gestao-rebalanceamento-v694.js",
+      "src/plano/transicao-longo-prazo-v697.js"
     ]
   },
   "publicationManifest": "publication.manifest.json"
