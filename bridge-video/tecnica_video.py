@@ -13,14 +13,49 @@ def carregar(cfg):
         raise ValueError('Manifesto da trilha incompatível')
     return local
 
+
+# Dicionário em nuvem somente da conta autenticada; sem credenciais extras.
+_GLOSSARIO_CONTA = None
+_GLOSSARIO_NUVEM = {}
+_GLOSSARIO_REVISAO = 0
+
+def sincronizar_glossario(p, sess):
+    global _GLOSSARIO_CONTA, _GLOSSARIO_NUVEM, _GLOSSARIO_REVISAO
+    uid = str(sess['user']['id'])
+    if uid != _GLOSSARIO_CONTA:
+        _GLOSSARIO_CONTA, _GLOSSARIO_NUVEM, _GLOSSARIO_REVISAO = uid, {}, 0
+    try:
+        dados = p.http('GET', p.SUPA_URL + '/rest/v1/aulas_glossario_tts?select=user_id,termos,revisao&user_id=eq.' + uid + '&limit=1', token=sess['access_token'])
+        if not isinstance(dados, list):
+            raise ValueError('Resposta inválida do glossário')
+        row = next((r for r in dados if r.get('user_id') == uid), None)
+        termos = (row or {}).get('termos') or {}
+        if not isinstance(termos, dict) or len(termos) > 200:
+            raise ValueError('Glossário remoto inválido')
+        clean = {}
+        for k, val in termos.items():
+            key, value = str(k).strip().upper(), str(val).strip()
+            if not (0 < len(key) <= 40 and 0 < len(value) <= 180):
+                raise ValueError('Pronúncia inválida')
+            clean[key] = value
+        _GLOSSARIO_NUVEM = clean
+        _GLOSSARIO_REVISAO = int((row or {}).get('revisao') or 0)
+        return True
+    except Exception as exc:
+        p.diga('Dicionário online indisponível: ' + str(exc)[:120] + '. Usando cache da mesma conta.')
+        return False
+
 def dicionario_voz():
     try: terms=dict(carregar({}).get('glossario',{}))
     except Exception: terms={}
-    custom=BASE/'dicionario-voz.json'
-    if custom.exists():
-        data=json.loads(custom.read_text(encoding='utf-8')).get('terms',{})
-        if not isinstance(data,dict) or len(data)>200:raise ValueError('Dicionário de voz inválido')
-        terms.update(data)
+    if _GLOSSARIO_CONTA is not None:
+        terms.update(_GLOSSARIO_NUVEM)
+    else:
+        custom=BASE/'dicionario-voz.json'
+        if custom.exists():
+            data=json.loads(custom.read_text(encoding='utf-8')).get('terms',{})
+            if not isinstance(data,dict) or len(data)>200:raise ValueError('Dicionário de voz inválido')
+            terms.update(data)
     return {str(k).upper():str(v) for k,v in terms.items() if 0<len(str(k))<=40 and 0<len(str(v))<=180}
 
 def normalizar_texto_para_voz(text):
@@ -130,7 +165,9 @@ def processar(p,cfg,manual=False):
         number=int(p.pergunta('Número da aula da trilha','1'))
         if number<1 or number>len(lessons):raise ValueError('Escolha um número da lista')
         lessons=[lessons[number-1]]
-    account=p.entrar(cfg)['user']['id']
+    session=p.entrar(cfg)
+    account=session['user']['id']
+    sincronizar_glossario(p,session)
     for lesson in lessons:
         clip=RESOURCE/'avatar-talking.mp4'
         motion=hashlib.sha256(clip.read_bytes()).hexdigest()[:16] if clip.exists() else 'still'

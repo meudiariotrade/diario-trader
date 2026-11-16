@@ -44,6 +44,7 @@ jobs:
             git fetch --no-tags --depth=1 origin "$BASE_SHA"
           fi
           node scripts/check-versao.cjs
+      - run: npm run build
       - run: npm run verify
       - name: Capturas de validação de Análises
         if: always()
@@ -52,7 +53,6 @@ jobs:
           name: analises-v581-validacao
           path: test-results/analises-v581-*.png
           if-no-files-found: ignore
-      - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:

@@ -263,6 +263,8 @@ def pergunta_voz(cfg):
     return VOZES[k][0], f"{int(vel):+d}%"
 
 def gerar_um(cfg, sess):
+    import tecnica_video, ponte_video
+    tecnica_video.sincronizar_glossario(ponte_video, sess)
     aula = escolhe_aula(sess)
     voz, taxa = pergunta_voz(cfg)
     diga("\nFormato:\n  1. 16:9 deitado (YouTube, TV, computador)\n  2. 9:16 em pé (Stories, Reels, TikTok, WhatsApp)\n  3. 1:1 quadrado (feed)")
@@ -297,6 +299,8 @@ def vigiar(cfg):
     while True:
         try:
             sess = entrar(cfg)
+            import tecnica_video, ponte_video
+            tecnica_video.sincronizar_glossario(ponte_video, sess)
             for aula in aulas_prontas(sess):
                 chave = aula["id"] + "|" + str(aula.get("criado_em") or "")
                 if cfg.setdefault("feitos", {}).get(chave): continue
