@@ -180,8 +180,14 @@
     if (!app) return null;
     // v675: Início/Meu dia usam a página V4; a versão v670 buscava apenas
     // .dt393-page, substituída pelo renderizador atual (v4-panel).
-    if (t === "home") return {root:app.querySelector(".v4-panel .v4-page.v4-home") || app.querySelector(".dt393-page.dt393-home"),route:t};
-    if (t === "dia") return {root:app.querySelector(".v4-panel .v4-page.v4-day") || app.querySelector(".dt393-page.dt393-day"),route:t};
+    const activeRoute = d.body?.dataset?.v4route;
+    const homeV4 = app.querySelector(".v4-panel .v4-page.v4-home");
+    const dayV4 = app.querySelector(".v4-panel .v4-page.v4-day");
+    // V4 mantém a rota atual no body e desmonta os painéis ao navegar.
+    if (homeV4 && (activeRoute === "home" || t === "home")) return {root:homeV4,route:"home"};
+    if (dayV4 && (activeRoute === "dia" || t === "dia")) return {root:dayV4,route:"dia"};
+    if (t === "home") return {root:app.querySelector(".dt393-page.dt393-home"),route:t};
+    if (t === "dia") return {root:app.querySelector(".dt393-page.dt393-day"),route:t};
     if (t === "mercado") {
       try { if (typeof MKT !== "undefined" && MKT?.tab === "al") return null; } catch {}
       return {root:app.querySelector(".dt395-native-mercado") || app.querySelector(".dt393-page.dt393-market"),route:t};
@@ -214,6 +220,25 @@
   // A tela V4 troca seu conteúdo depois do render principal. Reposicionar
   // após o evento de render final preserva o termômetro nas duas rotas.
   d.addEventListener("diario:render",()=>w.requestAnimationFrame(()=>w.requestAnimationFrame(montar)));
+  // Também observa a troca do painel V4. Filtra apenas novos nós de página,
+  // evitando fazer trabalho extra quando preços ou campos recebem atualizações.
+  function observarMontagem() {
+    const app = d.getElementById("app");
+    if (!app || !w.MutationObserver) return;
+    const observador = new w.MutationObserver(registros => {
+      for (const registro of registros) for (const n of registro.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.matches?.(".v4-page.v4-home,.v4-page.v4-day") ||
+            n.querySelector?.(".v4-page.v4-home,.v4-page.v4-day")) {
+          montar();
+          return;
+        }
+      }
+    });
+    observador.observe(app,{childList:true,subtree:true});
+  }
+  if(d.readyState==="loading")d.addEventListener("DOMContentLoaded",observarMontagem,{once:true});
+  else observarMontagem();
   w.addEventListener("focus",montar);
   w.setInterval(()=>{if(!d.hidden)montar();},5000);
   if (d.readyState === "loading") d.addEventListener("DOMContentLoaded",()=>w.setTimeout(montar,0),{once:true});

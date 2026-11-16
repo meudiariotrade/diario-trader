@@ -1816,6 +1816,9 @@ try {
         e.querySelector("#dt393-workspace")?.classList.remove("v419-recolhido"),
         ee(t, a),
         f(poe598));
+      // v676: após substituir o painel V4, insere o termômetro na tela real
+      // de Início/Meu dia, independentemente do ciclo de cotações.
+      if (t === "home" || t === "dia") w.TermometroAbertura670?.montar?.();
     }
     function Ut() {
       if (typeof window.render0 != "function" || window.render0.__v420)

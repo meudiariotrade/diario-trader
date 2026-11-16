@@ -28,3 +28,18 @@ test("v675: termômetro visível em Início e Meu dia no renderizador V4 real, i
   await page.close();
  }
 }));
+
+
+test("v676: termômetro permanece montado após atualizações repetidas de Início/Meu dia", {timeout:90000}, async()=>withApp(async(browser,base)=>{
+ const page=await browser.newPage({viewport:{width:390,height:844}});
+ await page.route("https://**",r=>r.abort());
+ await page.goto(base+"/?demo=1");
+ await page.locator("#splash").waitFor({state:"hidden"});
+ for(const route of ["home","dia","home","dia"]){
+   await page.evaluate(route=>{tab=route;render();render();},route);
+   const container=page.locator(route==="home"?"#app .v4-panel .v4-page.v4-home":"#app .v4-panel .v4-page.v4-day");
+   await expect(container).toBeVisible();
+   await expect(container.locator(":scope > .dt670-opening")).toHaveCount(1,{timeout:10000});
+ }
+ await page.close();
+}));
