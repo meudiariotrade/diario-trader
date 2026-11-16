@@ -7,3 +7,7 @@ Ponte distribui o mesmo clipe, captura sua posição a 12 quadros por segundo e 
 Não há sincronização labial com a narração. O clipe original contém uma marca Vidu, preservada na conversão.
 
 Validação local: 16 testes da trilha, 4 da ponte, build e sintaxe. Navegador local bloqueado por restrição de sockets; geração com voz/upload reais no Windows não validada neste ambiente.
+
+## Correção de publicação v665
+
+O navegador do CI identificou que legacy-004 em src/domains/core/01-runtime-estilos.js oculta todo elemento nav. A barra de etapas agora usa um contêiner com role navigation, isolado dessa regra. Não altera os menus nem as demais abas.
