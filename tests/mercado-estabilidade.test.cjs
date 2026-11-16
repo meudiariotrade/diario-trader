@@ -9,7 +9,7 @@ async function open(browser,base){const p=await browser.newPage({viewport:{width
 test('Mercado: lista pronta, busca preservada, quatro abas e layouts de 320 a 1440px',{timeout:90000},async()=>withApp(async(b,base)=>{
  const p=await open(b,base),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.evaluate(fixture);
  const app=p.locator('#app:not(.v503-fantasma)');
- await expect(app.locator('.market-quotes .cqr')).toHaveCount(2);
+ await expect(app.locator('.market-quotes .cqr')).toHaveCount(4); // WIN, WDO e referências Nikkei/DAX
  await expect(app.locator('nav.m403-primary-tabs button:visible')).toHaveText(['Cotações','Notícias','Agenda','Análises','Long & Short']);
  await expect(app.locator('#m550-destaque,.m408-workspace,.m405-dashboard,.m408-empty,.cq388-searchbar')).toHaveCount(0);
  await p.locator('[data-market-search]').fill('WIN');await expect(app.locator('.cqr')).toHaveCount(1);
