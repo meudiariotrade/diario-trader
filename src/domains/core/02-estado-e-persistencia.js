@@ -771,45 +771,40 @@ function lvCalc(e) {
   };
 }
 async function lvPoll() {
-  if (
-    !(
-      LV.busy ||
-      !SESS ||
-      !window.CLOUD_OK ||
-      document.hidden ||
-      !(LVT.includes(tab) || tab === "live") ||
-      (tab !== "live" && !S.trades.some((e) => isOpen(e) && lvKey(e)))
-    )
-  ) {
-    LV.busy = 1;
-    try {
-      const e = await (
-          await rq("/rest/v1/cotacoes?select=*&user_id=eq." + SESS.uid)
-        ).json(),
-        t = {};
-      (e.forEach(
-        (a) =>
-          (t[String(a.ticker).toUpperCase()] = {
-            ult: +a.ult,
-            hor: a.hor,
-            up: Date.parse(a.updated_at) || 0,
-          }),
-      ),
-        (LV.px = t),
-        (LV.all = e),
-        (LV.ts = Date.now()),
-        (LV.err = ""));
-    } catch (e) {
-      LV.err =
-        e.status === 404
-          ? 'ponte não configurada (tabela "cotacoes" não existe)'
-          : String(e.message || e);
+  if (LV.busy || document.hidden || !(LVT.includes(tab) || tab === "live")) return;
+  LV.busy = 1;
+  try {
+    const rows = new Map();
+    const add = (ticker, price, em, other = {}) => {
+      const tk = String(ticker || "").toUpperCase().replace(/^.*:/, "");
+      const px = Number(price), timestamp = Date.parse(em || "") || 0;
+      if (!tk || !(px > 0) || !timestamp || timestamp > Date.now() + 60000) return;
+      const old = rows.get(tk);
+      if (!old || timestamp > Date.parse(old.updated_at || "")) {
+        rows.set(tk, { ticker: tk, ult: px, updated_at: em, hor: em, ...other });
+      }
+    };
+    if (typeof CQ !== "undefined") {
+      Object.entries(CQ.pf || {}).forEach(([ticker, r]) => add(ticker, r?.px, r?.em, { var: r?.d1 }));
+      Object.values(CQ.d || {}).forEach(group => (group?.itens || []).forEach(r =>
+        add(r?.ticker || r?.c || r?.s, r?.px, r?.horarioPreco || group.em, { var: r?.d1 })));
     }
-    try {
-      await lvDelayed();
-    } catch {}
-    ((LV.busy = 0), lvPaint(), lvcPaint());
-  }
+    const trData = window.TRM?.TR?.dados || {};
+    Object.values(trData).forEach(item => (item?.v?.itens || []).forEach(r =>
+      add(r?.ticker || r?.c || r?.s, r?.px, r?.horarioPreco || item.v.em, { var: r?.d1 })));
+    const next = {};
+    rows.forEach((r, ticker) => {
+      next[ticker] = { ult: r.ult, hor: r.hor, up: Date.parse(r.updated_at) };
+      const root = /^(WIN|WDO|IND|DOL)/.exec(ticker)?.[1];
+      if (root && (!next[root] || next[root].up < next[ticker].up)) next[root] = next[ticker];
+    });
+    LV.all = [...rows.values()];
+    LV.px = next;
+    LV.ts = Date.now();
+    LV.err = rows.size ? "" : "Ponte local desligada; utilizando apenas fontes diretas disponíveis.";
+    await lvDelayed();
+  } catch (e) { LV.err = String(e?.message || e); }
+  finally { LV.busy = 0; lvPaint(); lvcPaint(); }
 }
 async function lvDelayed() {
   const e = cfg(),
@@ -819,7 +814,7 @@ async function lvDelayed() {
     ].filter(
       (o) => !t.test(o) && !(LV.px[o] && Date.now() - LV.px[o].up < 3e4),
     );
-  if (!(!e || !a.length || Date.now() - LV.td < 6e4)) {
+  if (!(!e || !a.length || Date.now() - LV.td < 15 * 6e4)) {
     LV.td = Date.now();
     try {
       await tok();
@@ -962,7 +957,7 @@ function lvPaint() {
       : "–";
   }
 }
-setInterval(lvPoll, 2500);
+setInterval(lvPoll, 15000);
 let LVC = { q: "", f: "all" };
 const lvcHoje = () => {
   const e = new Date();
