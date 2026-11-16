@@ -3271,7 +3271,7 @@ const cqPf = (e, t) => {
     // v623: cripto ao vivo pela Binance (lista, favoritos e mapa); TradingView continua como reserva
     if ((t === 'cri' || e._aba === 'cri') && typeof bncQ === 'function') { const b = bncQ(e.c); if (b) return { px: b.px, d1: b.d1, live: true, bnc: true, em: new Date(b.em).toISOString() }; }
     // v624: EUA, ADRs e moedas pela Finnhub no pregão; fora dele (ou sem conexão) segue o TradingView
-    if (typeof fhAplica === 'function' && (e._aba || t) !== 'br') { const f = fhAplica(e.c, e.px, e.d1); if (f) return f; }
+    if (typeof fhAplica === 'function' && (e._aba || t) !== 'br') { const f = fhAplica(e.c, e.px, e.d1, e._aba || t); if (f) return f; }
     if (CQ.owner && (typeof SESS === 'undefined' || CQ.owner !== SESS?.uid)) return null;
     const code = String(e.c || '').toUpperCase();
     const future = /^(WIN|WDO|IND|DOL)/.exec(code);
@@ -4612,7 +4612,7 @@ function m623Linha(it) {
     const q = m606Vivo({ k: it.k, s: it.s });
     q && ((px = q.px), (d1 = q.d1), q.live && ((vivo = "profit"), (em = new Date().toISOString())));
   } else if (typeof fhAplica === "function") {
-    const f = fhAplica(it.k, it.px, it.d1);
+    const f = fhAplica(it.k, it.px, it.d1, it.g);
     f && ((px = f.px), (d1 = f.d1), (em = f.em), (vivo = "fh"));
   }
   ab = vivo ? !0 : m623Aberto({ ...it, em });
@@ -4621,7 +4621,7 @@ function m623Linha(it) {
     varCls = m606Cls(juro && it.dabs != null && !vivo ? it.dabs : d1),
     chave = M623_LOGO[it.k] || it.k,
     logo = window.DiarioLogos ? DiarioLogos.html(chave, 16) : "";
-  return `<div class="m623-r"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${vivo === "profit" ? "Profit" : m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
+  return `<div class="m623-r"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k, it.g))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${vivo === "profit" ? "Profit" : vivo === "fh" ? "Finnhub · Tempo real" : m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
 }
 function m623Bloco(tit, itens, extra = "") {
   return `<section class="m623-sec"><header><h3>${tit}</h3>${extra}</header><div class="m623-tb" role="table">${itens.length ? itens.map(m623Linha).join("") : '<div class="market-state" role="status">Consultando…</div>'}</div></section>`;
@@ -4715,30 +4715,67 @@ setInterval(() => {
    Fora do pregão de NY (ações/ETFs) os dados continuam sendo os do TradingView.
    ===================================================================================== */
 const FH_ACOES = ["EWZ", "SPY", "QQQ", "DIA", "IAU", "IVV", "AAPL", "MSFT", "NVDA", "AMZN", "META", "TSLA", "GOOGL", "PBR", "VALE", "ITUB", "BBD", "ABEV", "QUAL", "USMV", "MTUM", "DVY", "VLUE", "IVE", "IVW", "IJJ", "IJH", "IJK", "IJS", "IJR", "IJT"];
-const FH_FX = ["USD/BRL", "EUR/USD", "USD/JPY", "GBP/USD", "USD/MXN", "USD/ZAR", "USD/CNY"];
-const FH_SUBS = [...FH_ACOES, ...FH_FX.map((x) => "OANDA:" + x.replace("/", "_"))].slice(0, 40);
+// Descoberta dinâmica de pares e ações: sem lista fixa de símbolos do usuário.
+const FH_INDICES = Object.freeze({ "Nikkei 225": "OANDA:JP225_USD", DAX: "OANDA:DE30_EUR" });
+const FH_SUBS = [];
+const FH_TODOS = new Set();
+const FH_MOEDAS = new Set(typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("currency") : ["USD","EUR","JPY","GBP","AUD","NZD","CAD","CHF","BRL","MXN","CNY","ZAR","NOK","SEK","SGD","CLP","COP","ARS","TRY","XAU"]);
 const FH_TAPE = { "BRL=X": "USD/BRL", EWZ: "EWZ" };
-const FH = { q: {}, pc: {}, ws: null, compart: null, modo: "off", k: "", tok: null, tokEm: 0, tent: 0, falhas: 0, timer: null, rest: null, restI: 0, volta: null, ultimo: 0, recusa: 0, porMim: 0, liga: 0, mudou: new Set(), pinta: null };
-function fhSym(c) {
-  c = String(c || "").toUpperCase().replace(/^(AMEX|NYSE|NASDAQ|CBOE|BATS|ARCA|NYSEARCA|FX|FX_IDC|OANDA):/, "");
-  if (c === "BRL=X") c = "USD/BRL";
-  const f = c.replace(/[^A-Z]/g, "");
-  if (f.length === 6 && !/\d/.test(c)) {
-    const p = f.slice(0, 3) + "/" + f.slice(3);
-    if (FH_FX.includes(p)) return "OANDA:" + p.replace("/", "_");
-  }
-  return FH_ACOES.includes(c) ? c : null;
+const FH = { q: {}, pc: {}, ws: null, compart: null, assinados: new Set(), modo: "off", k: "", tok: null, tokEm: 0, tent: 0, falhas: 0, timer: null, rest: null, restI: 0, volta: null, ultimo: 0, recusa: 0, porMim: 0, liga: 0, mudou: new Set(), pinta: null };
+function fhSym(code, grupo = "") {
+  const raw = String(code || "").trim().toUpperCase();
+  const indice = Object.entries(FH_INDICES).find(([nome]) => nome.toUpperCase() === raw);
+  if (grupo === "fut" && indice) return indice[1];
+  if (raw === "OANDA:JP225_USD" || raw === "OANDA:DE30_EUR") return raw;
+  const fxFonte = /^(FX|FX_IDC|OANDA):/.test(raw);
+  const bolsa = /^(AMEX|NYSE|NASDAQ|CBOE|BATS|ARCA|NYSEARCA):/.test(raw);
+  let ticker = raw.replace(/^(AMEX|NYSE|NASDAQ|CBOE|BATS|ARCA|NYSEARCA|FX|FX_IDC|OANDA):/, "");
+  if (ticker === "BRL=X") ticker = "USDBRL";
+  const par = /^([A-Z]{3})\/([A-Z]{3})$/.exec(ticker) || /^([A-Z]{3})_([A-Z]{3})$/.exec(ticker);
+  const compacto = /^([A-Z]{3})([A-Z]{3})$/.exec(ticker);
+  const p = par || compacto;
+  if (p && (grupo === "fx" || fxFonte || !!par || (FH_MOEDAS.has(p[1]) && FH_MOEDAS.has(p[2]))))
+    return "OANDA:" + p[1] + "_" + p[2];
+  if ((bolsa || grupo === "us" || grupo === "adr" || FH_ACOES.includes(ticker)) && /^[A-Z][A-Z0-9.\-]{0,12}$/.test(ticker)) return ticker;
+  return null;
+}
+function fhLista() {
+  const encontrados = new Set();
+  const add = (code, grupo) => { const s = fhSym(code, grupo); if (s) encontrados.add(s); };
+  try { cqFavs().forEach(x => add(x.s, x.aba)); } catch {}
+  const grupos = m623Ativo() ? ["fx", CQ.aba, "us", "adr"] : [CQ.aba, "fx", "us", "adr"];
+  for (const grupo of [...new Set(grupos)]) for (const it of CQ.d[grupo]?.itens || []) add(it.c || it.s, grupo);
+  for (const it of M606.v?.terminal || []) if (["fx","em","fut"].includes(it.g)) add(it.k, it.g === "em" ? "fx" : it.g);
+  for (const it of CQ_FUT_EXT) add(it.c, "fut");
+  for (const s of FH_ACOES) add(s, "us");
+  FH_TODOS.clear();
+  encontrados.forEach(s => FH_TODOS.add(s));
+  return [...encontrados];
+}
+function fhAssina(ws) {
+  if (!ws || ws.readyState !== 1) return;
+  const anteriores = FH.assinados || new Set();
+  const atuais = new Set(FH_SUBS);
+  for (const s of anteriores) if (!atuais.has(s)) { try { ws.send(JSON.stringify({ type: "unsubscribe", symbol: s })); } catch {} }
+  for (const s of atuais) if (!anteriores.has(s)) { try { ws.send(JSON.stringify({ type: "subscribe", symbol: s })); } catch {} }
+  FH.assinados = atuais;
+}
+function fhSincroniza() {
+  const novos = fhLista().slice(0, 40);
+  if (novos.length === FH_SUBS.length && novos.every((s,i) => s === FH_SUBS[i])) return;
+  FH_SUBS.splice(0, FH_SUBS.length, ...novos);
+  fhAssina(FH.compart?.readyState === 1 ? FH.compart : FH.ws);
 }
 const fhEhFx = (s) => s.startsWith("OANDA:");
 const fhAberto = (s) => (fhEhFx(s) ? m606Aberto({ ss: "fx24" }) : m606Aberto({ ss: "nyse" }));
-function fhQ(code) {
-  const s = fhSym(code), q = s && FH.q[s];
+function fhQ(code, grupo = "") {
+  const s = fhSym(code, grupo), q = s && FH.q[s];
   if (!q || !fhAberto(s)) return null;
   return Date.now() - q.em < (fhEhFx(s) ? 3e5 : 12e5) ? q : null;
 }
 /** Preço Finnhub com a variação do dia: fechamento anterior da própria Finnhub (REST) ou o implícito no TradingView. */
-function fhAplica(code, tvPx, tvD1) {
-  const q = fhQ(code);
+function fhAplica(code, tvPx, tvD1, grupo = "") {
+  const q = fhQ(code, grupo);
   if (!q) return null;
   const pc = FH.pc[q.s] > 0 ? FH.pc[q.s] : tvPx > 0 && tvD1 != null && isFinite(tvD1) ? tvPx / (1 + tvD1 / 100) : null;
   return { px: q.px, d1: pc ? ((q.px - pc) / pc) * 100 : tvD1 != null ? tvD1 : null, em: new Date(q.em).toISOString(), live: !0, fh: !0 };
@@ -4767,7 +4804,7 @@ async function fhChave() {
   }
 }
 function fhGuarda(s, px, pc) {
-  if (!(px > 0) || !FH_SUBS.includes(s)) return;
+  if (!(px > 0) || !FH_TODOS.has(s)) return;
   const ant = FH.q[s];
   FH.q[s] = { s, px, em: Date.now(), dir: ant ? Math.sign(px - ant.px) : 0 };
   pc > 0 && (FH.pc[s] = pc);
@@ -4796,6 +4833,7 @@ function fhFecha() {
     FH.ws && FH.ws.close();
   } catch {}
   FH.ws = null;
+  FH.assinados = new Set();
 }
 function fhAgenda() {
   if (document.hidden) return;
@@ -4811,11 +4849,12 @@ function fhCompart(t) {
   t.addEventListener("close", () => {
     FH.compart === t && ((FH.compart = null), (FH.modo = "off"), fhAgenda());
   });
-  try {
-    FH_SUBS.forEach((s) => t.send(JSON.stringify({ type: "subscribe", symbol: s })));
-  } catch {}
+  FH.assinados = new Set();
+  fhSincroniza();
+  fhAssina(t);
 }
 function fhLiga() {
+  fhSincroniza();
   if (window.DIARIO_DEMO || document.hidden || FH.recusa || FH.liga || typeof WebSocket > "u") return;
   FH.liga = 1;
   fhChave().then(
@@ -4838,7 +4877,8 @@ function fhLiga() {
       ws.onopen = () => {
         FH.modo = "ws";
         FH.tent = 0;
-        FH_SUBS.forEach((s) => ws.send(JSON.stringify({ type: "subscribe", symbol: s })));
+        FH.assinados = new Set();
+        fhAssina(ws);
       };
       ws.onmessage = fhMsg;
       ws.onclose = () => {
@@ -4863,9 +4903,11 @@ function fhRest() {
   FH.modo = "rest";
   if (FH.rest || !FH.k || document.hidden) return;
   const tick = async () => {
-    if (document.hidden || !FH.k || !m606Aberto({ ss: "nyse" })) return;
-    for (let i = 0; i < 12; i++) {
-      const s = FH_ACOES[FH.restI++ % FH_ACOES.length];
+    if (document.hidden || !FH.k || !(m606Aberto({ ss: "nyse" }) || m606Aberto({ ss: "fx24" }))) return;
+    const lista = [...FH_TODOS];
+    if (!lista.length) return;
+    for (let i = 0; i < Math.min(12, lista.length); i++) {
+      const s = lista[FH.restI++ % lista.length];
       try {
         const r = await fetch("https://finnhub.io/api/v1/quote?symbol=" + encodeURIComponent(s) + "&token=" + encodeURIComponent(FH.k), { signal: AbortSignal.timeout(8e3) });
         if (r.status === 429) break;
@@ -4890,13 +4932,15 @@ window.useFinnhubTicker = Object.freeze({
   get: (k) => fhQ(k),
   aplica: fhAplica,
   modo: () => FH.modo,
-  simbolos: FH_SUBS,
+  get simbolos() { return [...FH_TODOS]; },
+  sincronizar: fhSincroniza,
 });
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) return void (fhFecha(), fhRestPara());
   FH.modo === "rest" ? fhRest() : fhLiga();
 });
 setTimeout(fhLiga, 3500);
+setInterval(() => { if (!document.hidden) fhSincroniza(); }, 6e3);
 // Se o Terminal abrir o socket dele, cedemos a conexão e passamos a ouvir o dele.
 setInterval(() => {
   try {
