@@ -108,12 +108,15 @@ L.views.abnt=()=>{
 };
 document.addEventListener('input',e=>{
  if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='abnt')return;
- const el=e.target;if(el?.matches?.('[data-abnt-field]')&&Object.hasOwn(state,el.dataset.abntField))state[el.dataset.abntField]=safe(el.value,el.dataset.abntField==='texto'?30000:el.dataset.abntField==='tabelaCSV'?120000:1000);
+ const el=e.target;if(el?.matches?.('[data-abnt-field]')&&Object.hasOwn(state,el.dataset.abntField)){
+  state[el.dataset.abntField]=safe(el.value,el.dataset.abntField==='texto'?30000:el.dataset.abntField==='tabelaCSV'?120000:1000);
+  remember(); // Rascunho local sempre acompanha o que o usuário digitou.
+ }
 },true);
 document.addEventListener('change',e=>{
  if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='abnt')return;
- const el=e.target;if(el?.matches?.('[data-abnt-source]')){state.abntSource=safe(el.value,120);return;}
- if(el?.matches?.('[data-abnt-field]')){state[el.dataset.abntField]=safe(el.value,100000);L.paint();}
+ const el=e.target;if(el?.matches?.('[data-abnt-source]')){state.abntSource=safe(el.value,120);remember();return;}
+ if(el?.matches?.('[data-abnt-field]')){state[el.dataset.abntField]=safe(el.value,100000);remember();L.paint();}
 },true);
 function syncFields(){
  // Valor atual do DOM prevalece no instante de salvar; não depende de blur/change
