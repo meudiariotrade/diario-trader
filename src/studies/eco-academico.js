@@ -191,7 +191,9 @@ function cardsFromFicha(f){
 L.events.uniDeck=el=>{
  const f=db.fichas.find(x=>x.id===el.dataset.id);if(!f)return;
  const add=cardsFromFicha(f);if(!add.length){S.uniStatus='Fichamento sem conteúdo suficiente para cartões.';refresh();return;}
- db.cards.push(...add);db.cards=db.cards.slice(-500);persist();S.uniFlashDisc=f.disc;S.uniCard=null;S.uniFlip=false;S.tool='flash';render();
+ db.cards.push(...add);db.cards=db.cards.slice(-500);persist();S.uniFlashDisc=f.disc;S.uniCard=null;S.uniFlip=false;S.tool='flash';
+ document.querySelectorAll('.eco-nav [data-eco-tool]').forEach(btn=>btn.classList.toggle('on',btn.dataset.ecoTool==='flash'));
+ L.paint();
 };
 const due=c=>Date.parse(c.due||'')<=Date.now();
 function getDeck(){
@@ -218,7 +220,7 @@ L.views.flash=()=>{
  if(!curr){curr=pendentes[0];S.uniCard=curr?.id||null;}
  const resumo=note('Repetição espaçada local: acerto adia a próxima revisão (1, 3, depois intervalos crescentes); erro devolve o cartão à fila. Históricos ficam somente neste navegador.');
  return card('Flashcards por disciplina',
- '<label>Matéria<select data-uni-flashdisc>'+DISC.map(d=>'<option'+(S.uniFlashDisc===d?' selected':'')+'>'+esc(d)+'</option>').join('')+'</select></label>'+
+ (S.uniStatus?note(esc(S.uniStatus)):'')+'<label>Matéria<select data-uni-flashdisc>'+DISC.map(d=>'<option'+(S.uniFlashDisc===d?' selected':'')+'>'+esc(d)+'</option>').join('')+'</select></label>'+
  note('<b>'+pendentes.length+'</b> para revisar hoje · '+deck.length+' cartões desta disciplina · '+db.revisoes.length+' respostas registradas.')+resumo+
  (curr?'<button type="button" data-eco-btn="uniFlip" class="uni-flash" aria-label="Virar flashcard"><small>'+esc(curr.source)+'</small><strong>'+esc(S.uniFlip?curr.back:curr.front)+'</strong><span>'+ (S.uniFlip?'Resposta · toque para ver a pergunta':'Pergunta · toque para revelar a resposta')+'</span></button>'+
  (S.uniFlip?'<div class="eco-controls"><button type="button" data-eco-btn="uniErro">Errei · revisar</button><button type="button" class="eco-action" data-eco-btn="uniAcerto">Acertei ✓</button></div>':''):
