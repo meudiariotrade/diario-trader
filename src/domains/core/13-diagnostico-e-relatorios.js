@@ -5473,7 +5473,7 @@ function cqmVigiarRemontagem(){
   const obs=new MutationObserver(registros=>{
     for(const reg of registros)for(const node of reg.removedNodes){
       const box=busca(node);
-      if(box)anterior=box;
+      if(box && !anterior)anterior=box; // Preserve a primeira textura mesmo em renders síncronos em sequência.
     }
     if(typeof tab==="undefined"||tab!=="mercado"||MKT.tab!=="cq"){anterior=null;return;}
     const atual=document.getElementById("cotbox");
