@@ -6,6 +6,7 @@ const { withApp } = require("./helpers/app.cjs");
 test("v675: termômetro visível em Início e Meu dia no renderizador V4 real, inclusive após 09:00", {timeout:120000}, async()=>withApp(async(browser,base)=>{
  for(const width of [390,1440]){
   const page=await browser.newPage({viewport:{width,height:900}});
+  const errors=[];page.on("pageerror",error=>errors.push(error.message));
   await page.route("https://**",r=>r.abort());
   await page.goto(base+"/?demo=1");
   await page.locator("#splash").waitFor({state:"hidden"});
@@ -25,6 +26,7 @@ test("v675: termômetro visível em Início e Meu dia no renderizador V4 real, i
   await expect(page.locator("#app .dt395-native-mercado .dt670-opening")).toBeVisible();
   await page.evaluate(()=>{tab="ops";render();});
   await expect(page.locator("#app .dt670-opening")).toHaveCount(0);
+  assert.deepEqual(errors,[],"o renderizador V4 não deve disparar erros JavaScript");
   await page.close();
  }
 }));
