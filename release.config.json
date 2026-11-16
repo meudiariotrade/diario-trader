@@ -1,5 +1,5 @@
 {
-  "version": 683,
+  "version": 684,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -84,7 +84,11 @@
       "src/studies/eco-micro.js",
       "src/studies/eco-series.js",
       "src/studies/eco-revisao.js",
+      "src/studies/eco-quant-data-v684.js",
+      "src/studies/eco-quant-views-v684.js",
+      "src/studies/eco-abnt-v684.js",
       "src/studies/eco-estilos.js",
+      "src/studies/eco-quant-estilos-v684.js",
       "src/studies/tecnica-conteudo.js",
       "src/studies/tecnica-voz.js",
       "src/studies/tecnica-roteiros.js",

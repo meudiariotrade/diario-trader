@@ -10,14 +10,14 @@ async function open(browser,base){
  await p.evaluate(()=>{tab='estudos';ESV='liv';render()});
  return p;
 }
-test('Biblioteca preservada, quarta sub-aba Laboratório com dez ferramentas',{timeout:90000},async()=>withApp(async(b,base)=>{
+test('Biblioteca preservada, quarta sub-aba Laboratório com quatorze ferramentas',{timeout:90000},async()=>withApp(async(b,base)=>{
  const p=await open(b,base),errors=[];p.on('pageerror',e=>errors.push(e.message));
  const sub=p.locator('.v596-sub [data-dt397-view]');
  await expect(sub).toHaveText(['Livros','Planos de leitura','Prompts','Laboratório']);
  await expect(p.locator('[data-eco-launch]')).toHaveCount(0);
  await sub.nth(3).click();
  await expect(p.locator('.eco-head h2')).toHaveText('Laboratório de Economia');
- await expect(p.locator('.eco-nav [data-eco-tool]')).toHaveCount(10);
+ await expect(p.locator('.eco-nav [data-eco-tool]')).toHaveCount(14);
  for(const id of ['ficha','micro','flash','series','revisao']){
    await p.locator('.eco-nav [data-eco-tool="'+id+'"]').click();
    await expect(p.locator('#eco-body')).toBeVisible();

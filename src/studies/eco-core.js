@@ -11,12 +11,12 @@ L.kpi=(t,v)=>'<div class="eco-kpi"><small>'+t+'</small><b>'+v+'</b></div>';
 L.note=v=>'<p class="eco-note">'+v+'</p>';
 L.slider=(id,t,min,max,step,u)=>'<label class="eco-slider"><span>'+t+' <output data-eco-out="'+id+'">'+L.f(S[id],1)+u+'</output></span><input data-eco-range="'+id+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+S[id]+'"></label>';
 L.label=(s)=>L.esc(s).slice(0,900);
-const tabList=[['mon','Política monetária'],['mf','IS–LM–BP'],['eco','Econometria'],['quiz','Questões & ANPEC'],['tempo','Brasil pós-Real'],['ficha','Fichamentos'],['micro','Microeconomia'],['flash','Flashcards'],['series','Séries BCB / IBGE'],['revisao','Resumo de prova']];
+const tabList=[['mon','Política monetária'],['mf','IS–LM–BP'],['eco','Econometria'],['quiz','Questões & ANPEC'],['tempo','Brasil pós-Real'],['ficha','Fichamentos'],['micro','Microeconomia'],['flash','Flashcards'],['series','Séries BCB / IBGE'],['revisao','Resumo de prova'],['port','Markowitz & Sharpe'],['real','Juro real & NTN-B'],['back','Backtester técnico'],['abnt','TCC & ABNT']];
 function tabeco(){return '<nav class="eco-nav" aria-label="Ferramentas de economia">'+tabList.map(([id,n])=>'<button type="button" data-eco-tool="'+id+'" class="'+(S.tool===id?'on':'')+'">'+n+'</button>').join('')+'</nav>';}
 function corpo(){return typeof L.views[S.tool]==='function'?L.views[S.tool]():'<p>Ferramenta indisponível.</p>';}
 L.paint=()=>{if(typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='eco')return;const e=document.getElementById('eco-body');if(e)e.innerHTML=corpo();};
 function viewEco(){
-return '<h1>Estudos</h1><div class="eco-root"><header class="eco-head"><small>CIÊNCIAS ECONÔMICAS · FERRAMENTAS DIDÁTICAS</small><h2>Laboratório de Economia</h2><p>Dez ferramentas acadêmicas, sem alterações nas suas operações ou no banco de dados.</p></header>'+
+return '<h1>Estudos</h1><div class="eco-root"><header class="eco-head"><small>CIÊNCIAS ECONÔMICAS · FERRAMENTAS DIDÁTICAS</small><h2>Laboratório de Economia</h2><p>Quatorze ferramentas acadêmicas, sem alterações nas suas operações ou no banco de dados.</p></header>'+
 '<div class="eco-storage"><span>Histórico guardado somente neste navegador</span><button type="button" data-eco-btn="uniExport">Exportar JSON</button><label>Importar JSON<input type="file" data-eco-history accept="application/json,.json"></label></div>'+
 tabeco()+'<div id="eco-body" class="eco-body">'+corpo()+'</div></div>';
 }
