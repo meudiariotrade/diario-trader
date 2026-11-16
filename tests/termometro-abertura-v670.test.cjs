@@ -4,12 +4,19 @@ const fs=require("node:fs");
 const path=require("node:path");
 const {JSDOM}=require("jsdom");
 const code=fs.readFileSync(path.resolve(__dirname,"../src/market/termometro-abertura-v670.js"),"utf8");
+// JSDOM mantém timers/MutationObserver vivos; liberar a janela mesmo após assert falhar.
+const janelasAbertas=new Set();
+test.afterEach(()=>{
+ for(const janela of janelasAbertas) janela.close();
+ janelasAbertas.clear();
+});
 function page(){
  const dom=new JSDOM('<div id="app"><div class="dt393-page dt393-home"><section class="dt393-summary"></section></div></div>',{url:"https://example.test/",runScripts:"dangerously",pretendToBeVisual:true});
  const w=dom.window;
  w.tab="home";
  w.MKT={tab:"cq"};
  w.eval(code);
+ janelasAbertas.add(w);
  return w;
 }
 test("v670: pesos calculados exatamente sem arredondamento intermediário",()=>{
@@ -56,11 +63,12 @@ test("v670: monta somente uma instância na aba ativa sem modificar as demais te
  assert.equal(w.document.querySelectorAll(".dt670-opening").length,0);
  w.close();
 });
-test("v670: abertura é inserida no topo de Mercado e do Meu dia",()=>{
+test("v682: abertura apenas em Início e Meu dia, nunca em Mercado",()=>{
  const w=page();
  w.tab="mercado";w.document.getElementById("app").innerHTML='<div class="dt395-native-mercado"><div class="m403-section-header">Mercado</div><section>Conteúdo existente</section></div>';
  w.TermometroAbertura670.montar();
- assert.equal(w.document.querySelector(".m403-section-header").nextElementSibling.className,"dt670-opening");
+ assert.equal(w.document.querySelectorAll("#app .dt670-opening").length,0);
+ assert.equal(w.document.querySelector(".m403-section-header").nextElementSibling.textContent,"Conteúdo existente");
  w.tab="dia";w.document.getElementById("app").innerHTML='<div class="dt393-page dt393-day"><section>Plano existente</section></div>';
  w.TermometroAbertura670.montar();
  assert.equal(w.document.querySelector(".dt393-day").firstElementChild.className,"dt670-opening");
