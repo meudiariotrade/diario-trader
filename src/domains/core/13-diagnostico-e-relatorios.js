@@ -3434,6 +3434,44 @@ function cqAlertasHtml() {
 }
 // v626: o rótulo "Profit ao vivo" é só da ponte do Profit; Binance e Finnhub mostram a própria fonte.
 const cqFonteVivo = (a) => (a && a.bnc ? "Binance · Tempo real" : a && a.fh ? "Finnhub · Tempo real" : "Profit ao vivo");
+/* v669 — memo por símbolo e status global de URL; exclusivamente Mercado (DOM nativo). */
+const CQ_LOGO_MEMO = new Map(), CQ_LOGO_URL_STATUS = new Map();
+function cqLogoMemo(symbol,color,mark){
+ const key=String(symbol||"").trim().toUpperCase();
+ if(CQ_LOGO_MEMO.has(key))return CQ_LOGO_MEMO.get(key);
+ let el=null;
+ try{el=window.TraderAssetIdentity?.avatar(symbol);}catch{}
+ let html;
+ if(el){
+  el.classList.add("cqi","cqm-logo");el.dataset.cqmSymbol=key;
+  html=el.outerHTML;
+ }else{
+  html='<span class="cqi cqm-logo" data-cqm-symbol="'+esc(key)+'" style="color:'+color+';background:color-mix(in srgb,'+color+' 16%,transparent)">'+esc(mark)+'</span>';
+ }
+ if(!el?.dataset.dlPendente){
+  if(CQ_LOGO_MEMO.size>=700)CQ_LOGO_MEMO.delete(CQ_LOGO_MEMO.keys().next().value);
+  CQ_LOGO_MEMO.set(key,html);
+ }
+ return html;
+}
+function cqLogoAcompanha(root){
+ if(!root?.classList.contains("market-quotes"))return;
+ for(const img of root.querySelectorAll(".cqm-logo img,.dl-logo img")){
+  if(img.dataset.cqmSeen==="1")continue;
+  const url=img.getAttribute("src");
+  if(!url)continue;
+  img.dataset.cqmSeen="1";
+  if(CQ_LOGO_URL_STATUS.get(url)==="error"){
+   if(img.closest(".dl-logo"))window.DiarioLogos?._erro?.(img);
+   else{const el=img.closest(".ta-avatar");img.remove();el?.classList.remove("ta-has-logo");}
+   continue;
+  }
+  img.addEventListener("load",()=>CQ_LOGO_URL_STATUS.set(url,"loaded"),{once:true});
+  img.addEventListener("error",()=>CQ_LOGO_URL_STATUS.set(url,"error"),{once:true});
+  if(img.complete&&img.naturalWidth>0)CQ_LOGO_URL_STATUS.set(url,"loaded");
+ }
+}
+
 cqLinha = function (e, t) {
   t = e._aba || t;
   const a = cqPf(e, t),
@@ -3445,14 +3483,8 @@ cqLinha = function (e, t) {
       .slice(0, 4),
     i = cqEhFav(e.s),
     l = cqAls().some((c) => c.s === e.s && !c.fired),
-    d = (() => {
-      try {
-        const c = window.TraderAssetIdentity?.avatar(e.s || e.c);
-        if (c) return (c.classList.add("cqi"), c.outerHTML);
-      } catch {}
-      return null;
-    })();
-  return `<div class="cqr" data-market-symbol="${esc(e.s || e.c)}"${a && a.bnc ? ` data-bnc="${esc(String(e.c || "").toUpperCase())}"` : a && a.fh ? ` data-fh="${esc(fhSym(e.c))}"` : ""}${d ? ' data-ta-done="1"' : ""}>${d || `<span class="cqi" style="color:${n};background:color-mix(in srgb,${n} 16%,transparent)">${esc(r)}</span>`}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? (a.fechado ? ' · <span class="market-closed">FECHADO</span>' : ` · <span class="g">${cqFonteVivo(a)}</span>`) : ""}</small>${a ? `<small class="market-quote-time">${a.fechado ? "Profit" : cqFonteVivo(a)} · ${esc(a.em ? new Date(a.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) + " BRT" : "horário não informado")}</small>` : cotacaoReferencia(e)}</div>
+    d = cqLogoMemo(e.s || e.c, n, r);
+  return `<div class="cqr" data-market-symbol="${esc(e.s || e.c)}"${a && a.bnc ? ` data-bnc="${esc(String(e.c || "").toUpperCase())}"` : a && a.fh ? ` data-fh="${esc(fhSym(e.c))}"` : ""}${d ? ' data-ta-done="1"' : ""}>${d}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? (a.fechado ? ' · <span class="market-closed">FECHADO</span>' : ` · <span class="g">${cqFonteVivo(a)}</span>`) : ""}</small>${a ? `<small class="market-quote-time">${a.fechado ? "Profit" : cqFonteVivo(a)} · ${esc(a.em ? new Date(a.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) + " BRT" : "horário não informado")}</small>` : cotacaoReferencia(e)}</div>
 <div class="cqp"><b>${o == null ? '<span class="mut">—</span>' : (e.un && e.un !== "%" ? "<small>" + esc(e.un) + "</small> " : "") + cqNum(o, e.dp) + (e.un === "%" ? "%" : "")}</b>${e.dabs != null && !a ? `<small class="${cls(e.dabs)}">${e.dabs > 0 ? "+" : ""}${cqNum(e.dabs, e.dp)}</small>` : ""}</div>
 <span class="cqv ${s == null ? "" : s > 0 ? "up" : s < 0 ? "dn" : ""}">${s == null ? "–" : (s > 0 ? "+" : "") + cqNum(s, 2) + "%"}</span><span class="cqac"><button class="cqb${i ? " on" : ""}" data-cqfav="${esc(e.s)}" data-ab="${esc(t)}" aria-label="Favorito">${i ? "★" : "☆"}</button><button class="cqb${l ? " on" : ""}" data-cqal="${esc(e.s)}" aria-label="Alerta de preço">🔔</button></span></div>`;
 };
@@ -3595,8 +3627,17 @@ function cqItens(category) {
     const end = searching ? focus.selectionEnd : null;
     const scroller = node.querySelector('.market-categories');
     const left = scroller?.scrollLeft || 0;
-    node.outerHTML = cotHtml();
+    const html = cotHtml();
+    if(node.dataset.category===CQ.aba){
+      try {
+        const t=document.createElement("template");t.innerHTML=html.trim();
+        const next=t.content.firstElementChild;
+        if(next?.id==="cotbox"){cqmMorph(node,next);cqLogoAcompanha(node);return;}
+      }catch{} 
+    }
+    node.outerHTML = html;
     const fresh = document.getElementById('cotbox');
+    cqLogoAcompanha(fresh);
     const sources = fresh?.querySelector('.market-sources');
     if (sources) sources.open = !!openSources;
     for (const row of fresh?.querySelectorAll('.cqr') || []) {
@@ -4394,7 +4435,7 @@ function m606MapaHtml() {
   return `<div class="m606-mapa" role="list" aria-label="Termômetros do pregão">${v.mapa
     .map((it) => {
       const lv = m606Vivo(it), px = lv ? lv.px : it.px, d1 = lv ? lv.d1 : it.d1, ab = m606Aberto({ ...it, live: lv && lv.live });
-      return `<div class="m606-t" role="listitem"><div class="m606-th"><b>${window.DiarioLogos ? DiarioLogos.html(it.k, 18) : ""}${esc(it.k)}</b><i class="m606-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}" title="${ab ? "Aberto agora" : "Fechado agora"}"></i></div><span class="m606-px">${px == null ? "–" : cqNum(px, it.dp) + (it.un === "%" ? "%" : "")}</span><span class="m606-v ${m606Cls(d1)}">${m606Sinal(d1)}</span><small>${esc(it.n)}${lv && lv.live ? " · " + (lv.bnc ? "Binance" : lv.fh ? "Finnhub" : "Profit") : ""}</small></div>`;
+      return `<div class="m606-t" data-market-symbol="${esc(it.k)}" role="listitem"><div class="m606-th"><b>${window.DiarioLogos ? DiarioLogos.html(it.k, 18) : ""}${esc(it.k)}</b><i class="m606-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}" title="${ab ? "Aberto agora" : "Fechado agora"}"></i></div><span class="m606-px">${px == null ? "–" : cqNum(px, it.dp) + (it.un === "%" ? "%" : "")}</span><span class="m606-v ${m606Cls(d1)}">${m606Sinal(d1)}</span><small>${esc(it.n)}${lv && lv.live ? " · " + (lv.bnc ? "Binance" : lv.fh ? "Finnhub" : "Profit") : ""}</small></div>`;
     })
     .join("")}</div><p class="m606-src">● aberto agora · ● fechado (último preço) · TradingView, B3 com ~15 min de atraso; WIN, WDO e DIs pelo Profit quando a ponte está ligada · ${esc(m606Consulta())}</p>`;
 }
@@ -4424,7 +4465,7 @@ function m606DiHtml() {
   const corpo = M606.di === "curva"
     ? m606DiCurva(di)
     : `<div class="m606-tab"><div class="m606-row m606-cab"><span>Vértice</span><span>Taxa</span><span>Dia</span></div>${di
-        .map((x) => `<div class="m606-row"><span><b>${window.DiarioLogos ? DiarioLogos.html(x.k, 16) : ""}${esc(x.k)}</b> <small>${mes(x.venc)}${x.live ? " · Profit" : ""}</small></span><span class="n">${x.taxa == null ? "–" : cqNum(x.taxa, 3) + "%"}</span><span class="n ${m606Cls(x.bps)}">${x.bps == null ? "–" : (x.bps > 0 ? "+" : x.bps < 0 ? "−" : "") + cqNum(Math.abs(Math.round(x.bps)), 0)}</span></div>`)
+        .map((x) => `<div class="m606-row" data-market-symbol="${esc(x.k)}"><span><b>${window.DiarioLogos ? DiarioLogos.html(x.k, 16) : ""}${esc(x.k)}</b> <small>${mes(x.venc)}${x.live ? " · Profit" : ""}</small></span><span class="n">${x.taxa == null ? "–" : cqNum(x.taxa, 3) + "%"}</span><span class="n ${m606Cls(x.bps)}">${x.bps == null ? "–" : (x.bps > 0 ? "+" : x.bps < 0 ? "−" : "") + cqNum(Math.abs(Math.round(x.bps)), 0)}</span></div>`)
         .join("")}<p class="m606-src">Variação do dia em pontos-base (bps): 1 bps = 0,01 ponto percentual.</p></div>`;
   return `<section class="m606-card" aria-label="DIs Brasil"><div class="m606-hd"><h3>DIs Brasil</h3><div class="m606-seg" role="group" aria-label="Visão dos DIs">${[["cot", "Cotações"], ["curva", "Curva"]].map(([k, t]) => `<button type="button" data-m606di="${k}" class="${M606.di === k ? "on" : ""}" aria-pressed="${M606.di === k}">${t}</button>`).join("")}</div></div>
 <div class="m606-kpis"><div><small>Inclinação 2a–5a</small><b class="n">${inc ? m606Sinal(inc.hoje, 1, " bps") : "–"}</b></div><div><small>Variação do dia</small><b class="n ${inc ? m606Cls(inc.varBps) : ""}">${inc && inc.varBps != null ? m606Sinal(inc.varBps, 1, " bps") : "–"}</b></div></div>
@@ -4668,7 +4709,7 @@ function m623Linha(it) {
     varCls = m606Cls(juro && it.dabs != null && !vivo ? it.dabs : d1),
     chave = M623_LOGO[it.k] || it.k,
     logo = window.DiarioLogos ? DiarioLogos.html(chave, 16) : "";
-  return `<div class="m623-r"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k, it.g))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
+  return `<div class="m623-r" data-market-symbol="${esc(it.s || it.k)}"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k, it.g))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
 }
 function m623Bloco(tit, itens, extra = "") {
   return `<section class="m623-sec"><header><h3>${tit}</h3>${extra}</header><div class="m623-tb" role="table">${itens.length ? itens.map(m623Linha).join("") : '<div class="market-state" role="status">Consultando…</div>'}</div></section>`;
@@ -5266,17 +5307,17 @@ setInterval(() => {
    recriados enquanto o ticker e o tamanho forem os mesmos — o equivalente ao React.memo.
    ===================================================================================== */
 const CQM_LOGO = ".cqi,.ta-avatar,.dl-logo";
-const cqmChave = (el) => (el && el.nodeType === 1 ? el.getAttribute("data-market-symbol") || el.getAttribute("data-tv") : null);
-const cqmLogoId = (el) => (el.getAttribute("data-dl") || el.getAttribute("data-ticker") || "") + "|" + (el.getAttribute("style") || "").replace(/color[^;]*;?|background[^;]*;?/g, "");
-function cqmMorph(a, b) {
-  if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName) return void a.replaceWith(b);
-  if (a.nodeType === 3 || a.nodeType === 8) return void (a.nodeValue !== b.nodeValue && (a.nodeValue = b.nodeValue));
-  if (a.nodeType !== 1) return;
-  if (a.matches(CQM_LOGO)) {
-    // Mesmo ticker e tamanho: mantém o logo já carregado (sem recarregar nem piscar).
-    if (cqmLogoId(a) === cqmLogoId(b) && a.className.split(" ")[0] === b.className.split(" ")[0]) return;
-    return void a.replaceWith(b);
+const cqmChave = el => el?.nodeType===1 ? el.getAttribute("data-market-symbol")||el.getAttribute("data-tv") : null;
+// Comparador: símbolo estável, sem preço/variação/horário.
+const cqmLogoId = el => el.getAttribute("data-cqm-symbol") || el.closest("[data-market-symbol]")?.getAttribute("data-market-symbol") || el.getAttribute("data-dl") || el.getAttribute("data-ticker") || "";
+const cqmLogoSize = el => el.style.getPropertyValue("--dl")||(el.classList.contains("ta-small")?"small":"normal");
+function cqmMorph(a,b){
+  if(a.nodeType===1&&b.nodeType===1&&a.matches(CQM_LOGO)&&b.matches(CQM_LOGO)){
+    if(cqmLogoId(a)&&cqmLogoId(a)===cqmLogoId(b)&&cqmLogoSize(a)===cqmLogoSize(b))return;
   }
+  if(a.nodeType!==b.nodeType||a.nodeName!==b.nodeName)return void a.replaceWith(b);
+  if(a.nodeType===3||a.nodeType===8)return void(a.nodeValue!==b.nodeValue&&(a.nodeValue=b.nodeValue));
+  if(a.nodeType!==1)return;
   const foco = a === document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
   const det = a.tagName === "DETAILS";
   for (const at of [...a.attributes]) !b.hasAttribute(at.name) && !(det && at.name === "open") && a.removeAttribute(at.name);
@@ -5309,8 +5350,10 @@ function cqmFilhos(a, b) {
       cqmMorph(o, n);
       return o;
     });
-    const atual = [...a.childNodes];
-    if (atual.length !== ordem.length || atual.some((x, i) => x !== ordem[i])) a.replaceChildren(...ordem);
+    // Mantém os nós associados ao ticker, movendo somente as linhas que mudaram.
+    for(let i=0;i<ordem.length;i++)if(a.children[i]!==ordem[i])a.insertBefore(ordem[i],a.children[i]||null);
+    const manter=new Set(ordem);
+    for(const el of [...a.children])if(!manter.has(el))el.remove();
     return;
   }
   const na = [...a.childNodes];
@@ -5330,11 +5373,15 @@ function cqMorph() {
     const fresh = t.content.firstElementChild;
     if (!fresh || fresh.id !== "cotbox") return void cqPinta();
     cqmMorph(node, fresh);
+    cqLogoAcompanha(node);
   } catch {
     cqPinta();
   }
 }
 
+window.TraderUI?.onRender?.("mercado-logo-v669",()=>{
+ if(typeof tab!=="undefined"&&tab==="mercado"&&MKT.tab==="cq")cqLogoAcompanha(document.getElementById("cotbox"));
+});
 /* v638 — 20 criptos ao vivo (Binance) na categoria Cripto e no Terminal; nomes para a lista. */
 const BNC_NOMES = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", XRP: "XRP", BNB: "BNB", DOGE: "Dogecoin", ADA: "Cardano", AVAX: "Avalanche", LINK: "Chainlink", SUI: "Sui", TON: "Toncoin", DOT: "Polkadot", SHIB: "Shiba Inu", LTC: "Litecoin", UNI: "Uniswap", NEAR: "NEAR", APT: "Aptos", ARB: "Arbitrum", OP: "Optimism", RENDER: "Render" };
 const BNC_TOP = Object.keys(BNC_NOMES);

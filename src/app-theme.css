@@ -2894,3 +2894,13 @@ html body #app#app .rpy7-tb{table-layout:auto!important;min-width:560px}
 html body #app#app .rpy7-tb :is(th,td){padding:8px 10px!important;letter-spacing:0!important;font-size:12px!important;white-space:nowrap!important;overflow:visible!important}
 html body #app#app .rpy7-hist>div{overflow-x:auto;-webkit-overflow-scrolling:touch}
 }
+
+/* v669 — dimensões fixas e flex-shrink:0 somente na aba Mercado. */
+html:root body #app .market-quotes .cqr > .cqm-logo{
+ --cqm-size:34px;--ta-size:var(--cqm-size);box-sizing:border-box;
+ width:var(--cqm-size);height:var(--cqm-size);min-width:var(--cqm-size);
+ flex:0 0 var(--cqm-size);flex-shrink:0;aspect-ratio:1;
+}
+html:root body #app .market-quotes .dl-logo{flex-shrink:0;min-width:var(--dl,20px);height:var(--dl,20px)}
+@media(max-width:600px){html:root body #app .market-quotes .cqr > .cqm-logo{--cqm-size:30px}}
+@media(max-width:350px){html:root body #app .market-quotes .cqr > .cqm-logo{--cqm-size:29px}}
