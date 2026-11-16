@@ -260,7 +260,13 @@ function reconcileDetails(element){
  if(!element||element.id!=='ops-audit-691'||typeof tab==='undefined'||tab!=='ops')return;
  B.expanded=element.open;
  const body=element.querySelector('.a691-panel');
- if(element.open&&!body)element.insertAdjacentHTML('beforeend',mainPanel());
+ if(element.open&&!body){
+  try{element.insertAdjacentHTML('beforeend',mainPanel());}
+  catch(error){
+   console.error('[auditoria-691] falha ao montar painel',error);
+   element.insertAdjacentHTML('beforeend','<div class="a691-panel" role="status"><p class="a691-note">Não foi possível carregar os dados históricos da auditoria agora. A abertura do painel independe de novos trades.</p></div>');
+  }
+ }
  if(!element.open&&body)body.remove();
 }
 d.addEventListener('toggle',e=>reconcileDetails(e.target),true);
@@ -269,13 +275,13 @@ d.addEventListener('toggle',e=>reconcileDetails(e.target),true);
 d.addEventListener('click',e=>{
  const summary=e.target.closest?.('#ops-audit-691 summary');
  if(!summary||typeof tab==='undefined'||tab!=='ops')return;
+ // Controle explícito: evita perder o clique no WebKit quando o hub é remontado.
+ e.preventDefault(); // impede o toggle nativo de desfazer o estado controlado
+ e.stopPropagation(); // impede a navegação global de interpretar a abertura como troca de aba
  const root=summary.closest('#ops-audit-691'),next=!root.open;
  B.expanded=next;
- queueMicrotask(()=>{
-  if(!root.isConnected){mount();return;}
-  if(root.open!==next)root.open=next;
-  reconcileDetails(root);
- });
+ root.open=next;
+ reconcileDetails(root);
 },true);
 d.addEventListener('change',e=>{
  if(typeof tab==='undefined'||tab!=='ops'||!e.target.closest?.('#ops-audit-691'))return;

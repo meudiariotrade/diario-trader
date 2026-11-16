@@ -351,6 +351,7 @@ try {
               (t) => t.matches(".modg") || /^Minhas modalidades/.test(W(t)),
             ],
             ["geral", "Visão geral", () => !0],
+            ["import", "Importar", () => !1],
           ],
         },
         stats: {
@@ -411,6 +412,11 @@ try {
       /* Grupos já desmontados nesta mesma tela continuam com aba (a troca remonta a tela). */
       ((e.dataset.v4grupos || "").split(",").filter(Boolean).forEach((g) => (l[g] = 1)),
         (e.dataset.v4grupos = Object.keys(l).join(",")));
+      // A terceira aba existe desde a primeira pintura, sem injeção após render.
+      if (t === "ops") {
+        l.import = 1;
+        e.dataset.v4grupos = Object.keys(l).join(",");
+      }
       const s = a.groups.filter(
         ([i]) => l[["pre", "dur", "pos"].includes(i) ? "fases" : i],
       );
@@ -1847,6 +1853,11 @@ try {
         const a = t.target.closest("[data-v4tool]");
         if (a && a.dataset.v4route === "home") {
           (t.preventDefault(), Pt(a.dataset.v4tool));
+          return;
+        }
+        if (a && a.dataset.v4route === "ops" && a.dataset.v4tool === "import") {
+          t.preventDefault();
+          irPara("import"); // usa a rota oficial do Profit, sem alterar a integração
           return;
         }
         if (a) {

@@ -111,6 +111,8 @@
   // ---------- telas ----------
   function operacoes(app) {
     if (aba() !== 'ops') return;
+    // O cabeçalho v420 já cria Importar de forma estável; não injetar cópia após render.
+    if (app.querySelector('[data-v4tool="import"][data-v4route="ops"]')) return;
     var ferr = app.querySelector('[data-v4tool="geral"]');
     if (!ferr || ferr.parentElement.querySelector('[data-v563-import]')) return;
     var b = doc.createElement('button');
