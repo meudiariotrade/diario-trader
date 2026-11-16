@@ -55,7 +55,7 @@ test('v673: parcial vendida WDO gera lucro e preço de risco zero no tick',()=>{
  const f=fixture();
  f.set({ativoParcial:'WDO',ladoParcial:'V',total:'10',medio:'5500',parcial:'4',saida:'5490'});
  const out=f.doc.querySelector('[data-posicao-parcial-res]').textContent;
- assert.match(out,/400,00/);assert.match(out,/5\.506,6667/);assert.match(out,/5\.506,50/);
+ assert.match(out,/400,00/);assert.match(out,/5\.506,66666/);assert.match(out,/5\.506,50/);
  f.dom.window.close();
 });
 test('v673: parcial total não apresenta risco zero falso e quantidade inválida é rejeitada',()=>{
