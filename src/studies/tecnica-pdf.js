@@ -1,18 +1,106 @@
 /* PDF do Mentor: mesma conta, tabela aulas existente e roteador do servidor. */
-;(function(){'use strict';const T=window.TecnicaPratica,E=T.escape,baseChart=T.chart;let disposed=false,owner='',file=null,busy=false,message='',theme='',first=1,last=8,requestId='',controller=null,task=null,loadedAt=0,loadingList=false,pdfExpanded=false;
+;(function(){'use strict';const T=window.TecnicaPratica,E=T.escape,baseChart=T.chart;let disposed=false,owner='',file=null,busy=false,message='',theme='',first=1,last=8,requestId='',controller=null,task=null,loadedAt=0,loadingList=false,pdfExpanded=false,storedRows=[],retryAt=0;
 const uid=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'',active=()=>typeof tab!=='undefined'&&tab==='estudos'&&typeof ESV!=='undefined'&&ESV==='aul';
-function reset(){if(owner===uid())return;controller?.abort();task?.destroy();owner=uid();file=null;busy=false;message='';requestId='';loadedAt=0;pdfExpanded=false;T.lessons=T.lessons.filter(l=>!l.pdf);T.modules=T.modules.filter(m=>m.id!=='mentor-pdf');}
+const CACHE_TTL=15*60*1000;
+const cacheKey=(kind,who)=>'diario:mentor-local:v706:'+kind+':'+who;
+async function localRead(kind,who){
+ const key=cacheKey(kind,who);
+ try{if(typeof idb==='function'){const v=await idb('kv','get',key);if(v)return v;}}catch{}
+ try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}
+}
+async function localWrite(kind,who,data){
+ const key=cacheKey(kind,who);
+ try{if(typeof idb==='function'&&await idb('kv','put',data,key)!==undefined)return;}catch{}
+ // iOS pode bloquear localStorage por cota: cache opcional, nunca perder a aula em memória.
+ try{const json=JSON.stringify(data);if(json.length<180000)localStorage.setItem(key,json);}catch{}
+}
+async function guardarAulas(current){
+ const value={time:Date.now(),rows:storedRows.filter(r=>r?.user_id===current).slice(-100)};
+ await localWrite('aulas',current,value);
+}
+function carregarLocalSeguro(rows,current){
+ if(!Array.isArray(rows))return;
+ for(const row of rows.slice(-100))if(row?.user_id===current)try{insert(row);}catch{}
+}
+function reset(){if(owner===uid())return;controller?.abort();task?.destroy();owner=uid();file=null;busy=false;message='';requestId='';loadedAt=0;retryAt=0;storedRows=[];pdfExpanded=false;T.lessons=T.lessons.filter(l=>!l.pdf);T.modules=T.modules.filter(m=>m.id!=='mentor-pdf');}
 function safeLesson(row){const l=row?.roteiro?.mentor;if(!l||!row.id||!Array.isArray(l.stages)||l.stages.length!==4||l.stages.some(t=>typeof t!=='string')||!Array.isArray(l.questions)||l.questions.length!==3||l.questions.some(q=>typeof q.q!=='string'||!Array.isArray(q.options)||q.options.length!==3||!Number.isInteger(q.answer)||q.answer<0||q.answer>2)||!Array.isArray(l.roteiroVoz?.etapas)||l.roteiroVoz.etapas.length!==4||l.roteiroVoz.etapas.some(v=>typeof v!=='string')||!Array.isArray(l.stageNames)||l.stageNames.length!==4||!Array.isArray(l.visuals)||l.visuals.length!==4||l.visuals.some(v=>!Array.isArray(v.items)))throw Error('A aula salva está incompleta.');return {...l,id:String(row.id),videoId:String(row.id),module:'mentor-pdf',pdf:true,title:String(l.title).slice(0,120),summary:String(l.summary).slice(0,500),minutes:Math.max(1,Math.min(60,Number(l.minutes)||3)),stageNames:l.stageNames.map(t=>String(t).slice(0,70))};}
-function insert(row){const l=safeLesson(row);T.lessons=T.lessons.filter(x=>x.id!==l.id);T.lessons.push(l);if(!T.modules.some(m=>m.id==='mentor-pdf'))T.modules.push({id:'mentor-pdf',title:'Minhas aulas do Mentor · PDF',reference:'Material enviado por você'});return l;}
+function insert(row){const ownRow={...row,user_id:row.user_id||uid()};const l=safeLesson(ownRow);T.lessons=T.lessons.filter(x=>x.id!==l.id);T.lessons.push(l);storedRows=storedRows.filter(x=>x.id!==ownRow.id);storedRows.push(ownRow);if(!T.modules.some(m=>m.id==='mentor-pdf'))T.modules.push({id:'mentor-pdf',title:'Minhas aulas do Mentor · PDF',reference:'Material enviado por você'});return l;}
 T.chart=function(l,step){if(!l.pdf)return baseChart(l,step);const v=l.visuals[step]||{},items=(v.items||[]).slice(0,4);return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 370" role="img" aria-label="${E(v.title||l.stageNames?.[step]||'Mapa da etapa')}"><rect width="760" height="370" fill="#0A0C10"/><text x="28" y="40" fill="#D4A017" font-size="21">${E(String(v.title||'Etapa').slice(0,60))}</text>${items.map((t,i)=>{const text=String(t).slice(0,105),words=text.split(' ');let lines=[''];for(const w of words){const k=lines.length-1;if((lines[k]+' '+w).length>58)lines.push(w);else lines[k]+=(lines[k]?' ':'')+w;}return `<line x1="30" y1="${76+i*69}" x2="730" y2="${76+i*69}" stroke="#1E232E"/><text x="32" y="${102+i*69}" fill="#D4A017" font-size="18">${i+1}</text><text x="67" y="${102+i*69}" fill="#E7EBF2" font-size="17">${lines.slice(0,2).map((line,j)=>`<tspan x="67" dy="${j?22:0}">${E(line)}</tspan>`).join('')}</text>`;}).join('')}</svg>`;};
 T.pdfControls=()=>{reset();const atual=document.querySelector('#tp-root .tp-pdf');if(atual)pdfExpanded=atual.open;return `<details class="tp-pdf" ${pdfExpanded||busy||message?'open':''}><summary>Gerar Aula do Mentor via PDF</summary><form data-tp-pdf-form><label>Arquivo PDF<input data-tp-pdf-file type="file" accept=".pdf,application/pdf" ${busy?'disabled':''}></label><button type="button" data-tp-pdf="refresh">Atualizar minhas aulas</button><small>${E(file?.name||'Até 25 MB · até 150 páginas por trecho (limite de 85 mil caracteres extraídos).')}</small><label>Foco ou tema<input data-tp-pdf-theme maxlength="180" value="${E(theme)}" placeholder="Ex.: leitura de suportes ou resposta de circuitos" required ${busy?'disabled':''}></label><div class="tp-controls"><label>Página inicial<input data-tp-pdf-first type="number" min="1" value="${first}" required ${busy?'disabled':''}></label><label>Página final<input data-tp-pdf-last type="number" min="1" value="${last}" required ${busy?'disabled':''}></label></div><p>O texto das páginas selecionadas será enviado à IA configurada no app. O PDF original fica no aparelho. A aula será salva na sua conta.</p><button type="submit" ${busy?'disabled':''}>${busy?'Preparando aula…':'Gerar e salvar aula'}</button>${busy?'<button type="button" data-tp-pdf="cancel">Cancelar espera</button>':''}<p role="status" data-tp-pdf-status>${E(message)}</p></form></details>`;};
 function update(text){message=text;const s=document.querySelector('[data-tp-pdf-status]');if(s)s.textContent=text;}
 function validOwner(current){if(uid()!==current)throw Error('A conta mudou. A geração anterior não será exibida nesta conta.');}
 async function call(body,signal){await tok();const c=cfg(),res=await fetch(c.url+'/functions/v1/aulas',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify(body),signal});let data;try{data=await res.json();}catch{throw Error('O servidor não respondeu corretamente. Tente novamente.');}if(!res.ok)throw Error(data.error||'Não foi possível gerar a aula.');return data;}
-async function generate(){reset();if(busy)return;if(!uid())throw Error('Entre na sua conta para gerar e salvar a aula.');if(!file||!(/\.pdf$/i.test(file.name)||file.type==='application/pdf')||file.size>25*1024*1024)throw Error('Escolha um PDF de até 25 MB.');if(!theme.trim()||!Number.isInteger(first)||!Number.isInteger(last)||first<1||last<first||last-first>=150)throw Error('Informe tema e intervalo de até 150 páginas.');const current=uid(),selectedFile=file;T.view?.stop();busy=true;controller=new AbortController();const signal=controller.signal;requestId=requestId||crypto.randomUUID();T.view?.refresh();try{
- update('Lendo o trecho selecionado do PDF…');const buffer=await selectedFile.arrayBuffer();validOwner(current);if(new TextDecoder().decode(buffer.slice(0,1024)).indexOf('%PDF-')<0)throw Error('O arquivo selecionado não é um PDF válido.');const lib=await ntLib();validOwner(current);task=lib.getDocument({data:new Uint8Array(buffer),isEvalSupported:false,enableScripting:false});const pdf=await task.promise;try{if(last>pdf.numPages)throw Error('A página final ultrapassa as '+pdf.numPages+' páginas do PDF.');let text='';for(let i=first;i<=last;i++){validOwner(current);if(signal.aborted)throw new DOMException('Cancelado','AbortError');update('Lendo página '+i+' de '+last+'…');const page=await pdf.getPage(i),content=await page.getTextContent();text+='\n[Página '+i+']\n'+content.items.map(x=>typeof x.str==='string'?x.str:'').join(' ');page.cleanup?.();if(text.length>85000)throw Error('O trecho tem mais de 85 mil caracteres. Escolha menos páginas.');}if(text.replace(/\s/g,'').length<300)throw Error('Este trecho não tem texto suficiente. PDFs escaneados precisam de OCR antes do envio.');update('Criando roteiro, etapas visuais e revisão com a IA…');const timeout=setTimeout(()=>controller?.abort(),140000);try{const result=await call({acao:'mentor_pdf',requestId,texto:text,tema:theme.trim(),arquivo:selectedFile.name,paginas:first+'–'+last},signal);validOwner(current);insert(result.aula);requestId='';update('Aula salva. Sua aula está disponível na lista acima.');}finally{clearTimeout(timeout);}}finally{await pdf.destroy();task=null;}
- }catch(err){if(uid()===current)update(err.name==='AbortError'?'Espera cancelada. A aula pode terminar no servidor; use Atualizar minhas aulas antes de gerar novamente.':err.message);}finally{if(uid()===current){busy=false;controller=null;T.view?.refresh();}}}
-async function load(force=false){if(disposed)return;reset();if(!uid()||loadingList||!active()||(!force&&Date.now()-loadedAt<60000))return;const current=uid();loadingList=true;loadedAt=Date.now();try{await tok();if(disposed)return;validOwner(current);const c=cfg(),res=await fetch(c.url+'/rest/v1/aulas?select=id,user_id,roteiro&user_id=eq.'+encodeURIComponent(current)+'&status=eq.pronta&roteiro->>tipo=eq.mentor-pdf-v1&order=criado_em.asc&limit=100',{headers:{apikey:c.key,Authorization:'Bearer '+SESS.at}});if(!res.ok)throw Error('Não foi possível atualizar suas aulas de PDF.');const rows=await res.json();if(disposed)return;validOwner(current);if(!Array.isArray(rows))throw Error('Lista de aulas inválida.');for(const row of rows)if(row.user_id===current)try{insert(row);}catch{}if(rows.length&&active()&&!T.view?.isMediaActive())T.view?.refresh();}catch(err){if(!disposed&&force&&uid()===current){update(err.message);T.view?.refresh();}}finally{loadingList=false;}}
+async function generate(){
+ reset();if(busy)return;
+ if(!uid())throw Error('Entre na sua conta para gerar e salvar a aula.');
+ if(!file||!(/\.pdf$/i.test(file.name)||file.type==='application/pdf')||file.size>25*1024*1024)throw Error('Escolha um PDF de até 25 MB.');
+ if(!theme.trim()||!Number.isInteger(first)||!Number.isInteger(last)||first<1||last<first||last-first>=150)throw Error('Informe tema e intervalo de até 150 páginas.');
+ const current=uid(),selectedFile=file,range=first+'–'+last;
+ T.view?.stop();busy=true;controller=new AbortController();const signal=controller.signal;requestId=requestId||crypto.randomUUID();T.view?.refresh();
+ try{
+  const textKey=current+':'+selectedFile.name+':'+selectedFile.size+':'+(selectedFile.lastModified||0)+':'+range;
+  let text='';
+  const saved=await localRead('texto',textKey);
+  if(saved?.text&&typeof saved.text==='string'&&saved.text.length<=85000){
+   text=saved.text;update('Trecho extraído recuperado deste aparelho.');
+  }else{
+   update('Lendo o trecho selecionado do PDF…');
+   const buffer=await selectedFile.arrayBuffer();validOwner(current);
+   if(new TextDecoder().decode(buffer.slice(0,1024)).indexOf('%PDF-')<0)throw Error('O arquivo selecionado não é um PDF válido.');
+   const lib=await ntLib();validOwner(current);
+   task=lib.getDocument({data:new Uint8Array(buffer),isEvalSupported:false,enableScripting:false});
+   const pdf=await task.promise;
+   try{
+    if(last>pdf.numPages)throw Error('A página final ultrapassa as '+pdf.numPages+' páginas do PDF.');
+    for(let i=first;i<=last;i++){
+     validOwner(current);if(signal.aborted)throw new DOMException('Cancelado','AbortError');
+     update('Lendo página '+i+' de '+last+'…');
+     const page=await pdf.getPage(i),content=await page.getTextContent();
+     text+='\n[Página '+i+']\n'+content.items.map(x=>typeof x.str==='string'?x.str:'').join(' ');
+     page.cleanup?.();
+     if(text.length>85000)throw Error('O trecho tem mais de 85 mil caracteres. Escolha menos páginas.');
+    }
+   }finally{await pdf.destroy();task=null;}
+   if(text.replace(/\s/g,'').length<300)throw Error('Este trecho não tem texto suficiente. PDFs escaneados precisam de OCR antes do envio.');
+   await localWrite('texto',textKey,{time:Date.now(),text});
+  }
+  validOwner(current);
+  update('Criando roteiro, etapas visuais e revisão com a IA…');
+  const timeout=setTimeout(()=>controller?.abort(),140000);
+  try{
+   const result=await call({acao:'mentor_pdf',requestId,texto:text,tema:theme.trim(),arquivo:selectedFile.name,paginas:range},signal);
+   validOwner(current);insert(result.aula);await guardarAulas(current);
+   requestId='';update('Aula salva neste aparelho e na sua conta. Sua aula está disponível na lista acima.');
+  }finally{clearTimeout(timeout);}
+ }catch(err){if(uid()===current)update(err.name==='AbortError'?'Espera cancelada. A aula pode terminar no servidor; use Atualizar minhas aulas antes de gerar novamente.':err.message);}
+ finally{if(uid()===current){busy=false;controller=null;T.view?.refresh();}}
+}
+async function load(force=false){
+ if(disposed)return;reset();
+ if(!uid()||loadingList||!active()||(!force&&Date.now()-loadedAt<CACHE_TTL))return;
+ const current=uid();loadingList=true;loadedAt=Date.now();
+ try{
+  const saved=await localRead('aulas',current);
+  if(disposed||uid()!==current)return;
+  carregarLocalSeguro(saved?.rows,current);
+  if(saved?.rows?.length&&active()&&!T.view?.isMediaActive())T.view?.refresh();
+  if(!force&&saved?.time&&Date.now()-saved.time<CACHE_TTL)return;
+  if(Date.now()<retryAt||window.DiarioNuvemQuota?.ate>Date.now()||navigator.onLine===false)return;
+  await tok();validOwner(current);if(disposed)return;
+  const c=cfg(),res=await fetch(c.url+'/rest/v1/aulas?select=id,user_id,roteiro&user_id=eq.'+encodeURIComponent(current)+'&status=eq.pronta&roteiro->>tipo=eq.mentor-pdf-v1&order=criado_em.asc&limit=100',{
+   headers:{apikey:c.key,Authorization:'Bearer '+SESS.at},signal:AbortSignal.timeout(4000)
+  });
+  if(!res.ok){if(res.status===402)retryAt=Date.now()+CACHE_TTL;throw Error('Não foi possível atualizar suas aulas de PDF.');}
+  const rows=await res.json();if(disposed)return;validOwner(current);
+  if(!Array.isArray(rows))throw Error('Lista de aulas inválida.');
+  carregarLocalSeguro(rows,current);
+  await guardarAulas(current);retryAt=0;
+  if(rows.length&&active()&&!T.view?.isMediaActive())T.view?.refresh();
+ }catch(err){
+  retryAt=Math.max(retryAt,Date.now()+5*60000);
+  if(!disposed&&force&&uid()===current){update('A nuvem está indisponível. As aulas salvas neste aparelho continuam acessíveis.');T.view?.refresh();}
+ }finally{loadingList=false;}
+}
 T.pdf={generate,load,insert,safeLesson,dispose(){disposed=true;observer.disconnect();controller?.abort();task?.destroy();}};
 /* Mantém a escolha do usuário quando a trilha atualiza o HTML e recria o form.
    A mudança de conta já limpa pdfExpanded em reset(). */

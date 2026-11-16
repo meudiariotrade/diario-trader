@@ -5,15 +5,32 @@
   if (root.ProfitCotacoes552 || typeof cqPonte !== 'function') return;
   const FUT = /^(WIN|WDO|IND|DOL)(?:FUT|[FGHJKMNQUVXZ]\d\d|\$N?)$/;
   const g = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch { return d; } };
-  const original = cqPonte;
+  // O wrapper nunca volta ao polling antigo do Supabase após falha local.
   cqPonte = async function () {
     try {
       if (typeof SESS === 'undefined' || !SESS?.uid) { CQ.pf={}; CQ.saved={}; CQ.owner=null; return; }
-      if (CQ.owner !== SESS.uid) { CQ.pf={}; CQ.saved={}; CQ.pfTs=0; CQ.owner=SESS.uid; }
-      if (Date.now() - (CQ.pfTs || 0) < 15e3) return;
+      if (CQ.owner !== SESS.uid) { CQ.pf={}; CQ.saved={}; CQ.pfTs=0; CQ.cloudTs=0; CQ.owner=SESS.uid; }
+      const configured = root.DIARIO_PONTE_LOCAL?.cotacoesUrl || '';
+      // Ponte local direta pode atualizar em 15s; Supabase no máximo a cada 15min.
+      if (Date.now() - (CQ.pfTs || 0) < (configured ? 15e3 : 15 * 6e4)) return;
       const owner = SESS.uid;
       CQ.pfTs = Date.now();
-      const linhas = await (await rq('/rest/v1/cotacoes?select=ticker,ult,var,updated_at&user_id=eq.' + SESS.uid)).json();
+      let linhas = null;
+      if (configured) {
+        try {
+          const url = new URL(configured);
+          if (url.protocol === 'http:' && ['localhost','127.0.0.1','[::1]'].includes(url.hostname)) {
+            const response = await fetch(url.href,{signal:AbortSignal.timeout(4000),cache:'no-store',credentials:'omit'});
+            if (response.ok) { const result = await response.json(); linhas = Array.isArray(result) ? result : result.cotacoes; }
+          }
+        } catch { /* servidor local indisponível; último fechamento permanece disponível */ }
+      }
+      // Apenas snapshot de reserva: no máximo uma consulta a cada 15 minutos, nunca por segundo.
+      if (!Array.isArray(linhas)) {
+        if (Date.now() - (CQ.cloudTs || 0) < 15 * 6e4) return;
+        CQ.cloudTs = Date.now();
+        linhas = await (await rq('/rest/v1/cotacoes?select=ticker,ult,var,updated_at&limit=250&user_id=eq.' + SESS.uid,{signal:AbortSignal.timeout(4000)})).json();
+      }
       if (SESS?.uid !== owner || !Array.isArray(linhas)) return;
       const t = {}, saved = {}, vig = { WIN: codFut('WIN'), WDO: codFut('WDO'), IND: codFut('IND'), DOL: codFut('DOL') };
       (linhas || []).forEach(o => {
@@ -37,7 +54,7 @@
         }
       });
       CQ.pf = t; CQ.saved = saved;
-    } catch { return original.apply(this, arguments); }
+    } catch { return; /* falha da ponte não religa consultas rápidas do legado */ }
   };
   // Mantém os preços atualizados enquanto a aba Cotações está aberta (sem atrapalhar a digitação na busca).
   setInterval(async () => {

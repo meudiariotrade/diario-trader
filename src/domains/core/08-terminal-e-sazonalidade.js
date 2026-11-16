@@ -1950,9 +1950,10 @@ setInterval(() => {
   const e = typeof GO < "u" && GO.r;
   if (!(!e || !GOR[e]))
     try {
+      GO.r = null; // consumir o pedido uma única vez; não reexecutar fetch em loop
       GOR[e]();
     } catch {}
-}, 700);
+}, 3000);
 {
   const e = vPainelMk;
   vPainelMk = function () {
@@ -3102,7 +3103,7 @@ const rkAcao = (e) =>
   !/3[1-9]$/.test(e) &&
   !/^(WIN|WDO|IND|DOL|DI1|BGI|CCM|ICF)/.test(e);
 async function rkCarrega(e) {
-  if (RK.busy || (!e && Date.now() - RK.ts < 45e3 && RK.v)) return;
+  if (RK.busy || (!e && Date.now() - RK.ts < 15 * 6e4 && RK.v)) return;
   const t = cfg();
   if (!t) {
     RK.err = "Configure o Supabase na aba Conta.";
@@ -3125,7 +3126,7 @@ async function rkCarrega(e) {
     }),
     SESS
       ? rq(
-          "/rest/v1/cotacoes?select=ticker,ult,fec,var,updated_at&user_id=eq." +
+          "/rest/v1/cotacoes?select=ticker,ult,fec,var,updated_at&limit=250&user_id=eq." +
             SESS.uid,
         ).then((s) => s.json())
       : Promise.resolve([]),
@@ -3239,7 +3240,7 @@ setInterval(() => {
   try {
     tab === "mercado" && MKT.tab === "rk" && !document.hidden && rkCarrega();
   } catch {}
-}, 6e4);
+}, 15 * 6e4);
 function rkDesenha(e) {
   const t = document.createElement("canvas");
   ((t.width = 1080), (t.height = 1580));

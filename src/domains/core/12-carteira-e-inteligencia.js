@@ -875,20 +875,20 @@ function nivGrava(e) {
       const f = Object.keys(a[l]).sort();
       for (; f.length > 40; ) delete a[l][f.shift()];
     }),
-      o && save());
+      o && (
+        // Persistir extremos no próprio aparelho, sem enviar o diário inteiro
+        // para a nuvem a cada novo tick de preço.
+        (S.mt = Date.now()),
+        persist(),
+        (Date.now() - (nivGrava.ultimoEnvio || 0) > 15 * 6e4
+          ? ((nivGrava.ultimoEnvio = Date.now()), syncSoon())
+          : null)
+      ));
   } catch {}
 }
-setInterval(async () => {
-  try {
-    if (document.hidden || !SESS || !window.CLOUD_OK) return;
-    const e = new Date().getHours();
-    if (e < 9 || e > 18) return;
-    const t = await (
-      await rq("/rest/v1/cotacoes?select=*&user_id=eq." + SESS.uid)
-    ).json();
-    nivGrava(t);
-  } catch {}
-}, 5 * 6e4);
+// Removido o segundo polling de cotacoes no Supabase (5 min).
+// Os níveis vêm de LV.all, atualizado pelas conexões diretas do navegador.
+
 {
   const e = lvPoll;
   lvPoll = async function () {
@@ -2046,10 +2046,12 @@ function oaPede() {
   } catch {}
 }
 async function oaBusca() {
+  // A grade de opções faz uma consulta quando abre e apenas snapshots espaçados.
+  if (OA.ts && Date.now() - OA.ts < 15 * 6e4) { oaPinta(); return; }
   if (!(!OA.tk || typeof SESS > "u" || !SESS || !cfg())) {
     try {
       const e = await rq(
-          `/rest/v1/cotacoes?select=*&user_id=eq.${SESS.uid}&ticker=in.(${encodeURIComponent(OA.tk)},${encodeURIComponent(OA.sub)})`,
+          `/rest/v1/cotacoes?select=ticker,ult,fec,var,updated_at,ocp,ovd,qoc,qov,pex,ven,ivp,cab,abe,max,min,neg,hor,dat&limit=4&user_id=eq.${SESS.uid}&ticker=in.(${encodeURIComponent(OA.tk)},${encodeURIComponent(OA.sub)})`,
         ),
         t = await e.json();
       ((OA.row = t.find((a) => a.ticker === OA.tk) || OA.row),
@@ -2370,7 +2372,7 @@ function oaAbre(e) {
         return;
       }
       document.hidden || oaBusca();
-    }, 3e3)));
+    }, 15 * 6e4)));
   const n = (t = S.ax ?? (S.ax = {})).oaHist ?? (t.oaHist = []);
   n.includes(e) || (n.unshift(e), n.splice(8));
 }
@@ -2753,7 +2755,7 @@ function vOpGrade() {
   try {
     tab === "opgrade" && !document.hidden && opgCarrega(!1);
   } catch {}
-}, 6e4),
+}, 15 * 6e4),
   (GOR.opc = () => {
     ((GO.r = null), (GXV.vw = "grade"), irPara("opgrade"));
   }),
@@ -3238,7 +3240,7 @@ function vOpFluxo() {
   try {
     tab === "opfluxo" && !document.hidden && flwCarrega(!1);
   } catch {}
-}, 6e4),
+}, 15 * 6e4),
   (GOR.ewz = () => {
     ((GO.r = null), irPara("opfluxo"));
   }));

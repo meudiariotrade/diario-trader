@@ -1937,10 +1937,40 @@ function assertSyncOwner(e) {
     throw ((t.code = "SESSION_CHANGED"), t);
   }
 }
+// Cache protegido por usuário, limitado e com validade de 15 min somente para
+// leituras de consulta. Transações, autenticação, diário e ordens NÃO são cacheados.
+const LEITURAS_TTL = 15 * 60 * 1000, LEITURAS_CACHE = new Map();
+function leituraCacheKey(path) { return 'diario:leitura:v706:' + syncOwner() + ':' + path; }
+function leituraSnapshot(path) {
+  const key = leituraCacheKey(path);
+  let item = LEITURAS_CACHE.get(key);
+  if (!item) try { item = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+  if (item && typeof item.body === 'string' && item.t > 0) LEITURAS_CACHE.set(key, item);
+  return item || null;
+}
+function leituraGuardar(path, body) {
+  if (typeof body !== 'string' || body.length > 64000) return;
+  const key = leituraCacheKey(path), entry = {t:Date.now(),body};
+  LEITURAS_CACHE.delete(key);
+  LEITURAS_CACHE.set(key,entry);
+  try { localStorage.setItem(key,JSON.stringify(entry)); } catch {}
+  if (LEITURAS_CACHE.size > 30) {
+    const old = LEITURAS_CACHE.keys().next().value;
+    LEITURAS_CACHE.delete(old);
+    try { localStorage.removeItem(old); } catch {}
+  }
+}
 async function rq(e, t = {}, a = !0) {
   const o = syncOwner(),
-    s = cfg();
+    s = cfg(),
+    somenteLeitura = !t.method || String(t.method).toUpperCase() === 'GET',
+    podeCache = somenteLeitura && !t.cacheRefresh &&
+      /^\/rest\/v1\/(cotacoes|mercado_cache|radar_cache|analise_cache|opcoes_grade|fluxo_acoes|ewz_serie|radar_sinais|insiders|carteira_cfg)\?/.test(e),
+    cached = podeCache ? leituraSnapshot(e) : null;
   if (!s) throw new Error("Configure o Supabase.");
+  if (cached && Date.now() - cached.t < LEITURAS_TTL) {
+    return new Response(cached.body, {status:200,headers:{'Content-Type':'application/json','X-Diario-Cache':'local'}});
+  }
   // Limite temporário no app: evita repetir centenas de requisições 402 e preserva a fila local.
   if (window.DiarioNuvemQuota?.ate > Date.now()) {
     const erro = new Error("Supabase temporariamente bloqueado por limite de transferência. Seus dados continuam salvos neste aparelho.");
@@ -1955,7 +1985,20 @@ async function rq(e, t = {}, a = !0) {
       ...(n ? { Authorization: "Bearer " + n } : {}),
       ...(t.headers || {}),
     },
-    i = await fetch(s.url + e, { ...t, headers: r });
+    i = await fetch(s.url + e, {
+      ...t,
+      headers: r,
+      ...(somenteLeitura && !t.signal && typeof AbortSignal?.timeout === 'function'
+        ? {signal:AbortSignal.timeout(4000)} : {}),
+    }).catch(error => {
+      // Na falta de rede, somente leituras históricas recebem cópia local.
+      // Cotações continuam sujeitas à verificação de horário/FECHADO do componente.
+      if (cached && Date.now() - cached.t < 24 * 3600000 && !/^\/rest\/v1\/cotacoes\?/.test(e)) {
+        window.DiarioLeituraOffline = true;
+        return new Response(cached.body,{status:200,headers:{'Content-Type':'application/json','X-Diario-Cache':'stale'}});
+      }
+      throw error;
+    });
   if ((assertSyncOwner(o), !i.ok)) {
     let l = "";
     try {
@@ -1973,6 +2016,9 @@ async function rq(e, t = {}, a = !0) {
     throw ((d.status = i.status), d);
   }
   if (window.DiarioNuvemQuota) window.DiarioNuvemQuota = null;
+  if (podeCache && i.ok) {
+    try { leituraGuardar(e, await i.clone().text()); } catch {}
+  }
   return i;
 }
 function setSess(e, t) {

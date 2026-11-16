@@ -20,7 +20,7 @@ function catalog(){
 }
 
 function quiz(l){const r=record(l);return `<section class="tp-check" aria-label="Mini-check de fixação"><h3>Mini-check de fixação</h3><p>Três perguntas. O feedback aparece ao responder; você pode tentar novamente.</p>${l.questions.map((q,i)=>{const a=r.answers[i],answered=Number.isInteger(a)&&a>=0&&a<q.options.length,ok=a===q.answer;return `<fieldset><legend>${i+1}. ${E(q.q)}</legend>${q.options.map((o,j)=>`<label class="${answered&&a===j?(ok?'tp-correct':'tp-wrong'):''}"><input type="radio" name="tp-${l.id}-${i}" data-tp-question="${i}" value="${j}" ${answered&&a===j?'checked':''}>${E(o)}</label>`).join('')}<p class="tp-feedback" data-tp-feedback="${i}" role="status">${answered?(ok?'Correto. ':'Reveja. ')+E(q.why):''}</p></fieldset>`;}).join('')}<p class="tp-result" role="status">${passed(l)?'✓ Lição concluída: quatro etapas vistas e três respostas corretas.':`Etapas vistas: ${[0,1,2,3].filter(s=>r.viewed.includes(s)).length}/4 · Acertos: ${l.questions.filter((q,i)=>r.answers[i]===q.answer).length}/3`}</p></section>`;}
-function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>O PC gera e envia o vídeo completo para sua conta. A ponte trabalha em segundo plano, sem endereço ou porta. Após atualizar a ponte, mantenha-a ligada e consulte o vídeo aqui.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="auto" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video><button type="button" data-tp-action="close-film">Fechar vídeo</button>`:''}<p>Ouvir Aula utiliza exclusivamente a voz configurada na Ponte Vídeo do PC. Sem substituição pela voz do navegador.</p></details>`;}
+function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>O PC gera e envia o vídeo completo para sua conta. A ponte trabalha em segundo plano, sem endereço ou porta. Após atualizar a ponte, mantenha-a ligada e consulte o vídeo aqui.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="none" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video><button type="button" data-tp-action="close-film">Fechar vídeo</button>`:''}<p>Ouvir Aula utiliza exclusivamente a voz configurada na Ponte Vídeo do PC. Sem substituição pela voz do navegador.</p></details>`;}
 async function openFilm(format){
  stop();const token=run,l=T.lessons.find(l=>l.id===selected);if(!l)return;
  if(typeof SESS==='undefined'||!SESS?.uid){status='Entre na sua conta para assistir ao vídeo da ponte.';paint();return;}
@@ -40,7 +40,15 @@ async function openFilm(format){
 }
 function lesson(l){const idx=T.lessons.indexOf(l),r=record(l);return `<header class="tp-head"><button type="button" data-tp-action="catalog">← Todas as lições</button><span>ANÁLISE TÉCNICA NA PRÁTICA · ${idx+1}/${T.lessons.length}</span><h2 tabindex="-1" id="tp-title">${E(l.title)}</h2><p>${l.minutes||3} min de leitura · ${E(T.modules.find(m=>m.id===l.module).reference)}</p></header><div class="tp-class ${visual?'tp-visual':''}"><div class="tp-main"><p class="tp-summary">${E(l.summary)}</p><div class="tp-controls"><button type="button" data-tp-action="listen" ${loading?'disabled':''}>${loading?'Preparando…':playing?'Reiniciar etapa':visual?'Ouvir etapa':'Ouvir Aula'}</button><button type="button" data-tp-action="pause" ${!playing&&!loading?'disabled':''}>Pausar</button><button type="button" data-tp-action="visual">${visual?'Voltar à abertura':'Explorar o exemplo'}</button></div><p class="tp-status" role="status" aria-live="polite">${E(status)}</p>${visual?`<div class="tp-stages" role="navigation" aria-label="Etapas da lição">${(l.stageNames||names).map((n,i)=>`<button type="button" data-tp-step="${i}" aria-current="${step===i?'step':'false'}">${i+1}. ${E(n)}</button>`).join('')}</div><div class="tp-chart">${T.chart(l,step)}</div><section class="tp-script"><h3>${step+1}. ${E((l.stageNames||names)[step])}</h3><p>${E(l.stages[step])}</p></section><div class="tp-controls"><button type="button" data-tp-action="prev" ${step===0?'disabled':''}>← Etapa anterior</button><button type="button" data-tp-action="next" ${step===3?'disabled':''}>Próxima etapa →</button></div>`:`<p class="tp-intro">Ouça a explicação com etapas sincronizadas ou explore o gráfico no seu ritmo. Os níveis de preço são didáticos e não representam uma operação em andamento.</p>`}</div>${mentor()}</div>${visual?quiz(l):''}<div class="tp-footer"><button type="button" data-tp-lesson="${T.lessons[Math.max(0,idx-1)].id}" ${idx===0?'disabled':''}>← Lição anterior</button><button type="button" data-tp-lesson="${T.lessons[Math.min(T.lessons.length-1,idx+1)].id}" ${idx===T.lessons.length-1?'disabled':''}>Próxima lição →</button></div>${bridgeDetails()}<p class="tp-note">${l.pdf?'Aula gerada a partir do PDF selecionado. Confira o conteúdo com o material original.':'Exemplo autoral hipotético, inspirado em conceitos clássicos. Não reproduz uma página do livro.'} ${!storageOK?'O navegador bloqueou o armazenamento: progresso somente nesta sessão.':''}</p>`;}
 function markup(){readOwner();const pdfControls=T.pdfControls?.()||'',voiceControls=T.voiceControls?.()||'';const l=T.lessons.find(l=>l.id===selected&&l.pdf);return `<section id="tp-root" class="tp-root ${visual&&l?'tp-is-visual':''}" aria-label="Aulas geradas pelo Mentor 3D">${l?lesson(l):catalog()}${voiceControls}${pdfControls}</section>`;}
-function paint(focus=false){const root=document.getElementById('tp-root');if(!root||!active())return;root.outerHTML=markup();const v=document.querySelector('#tp-root [data-tp-video]');if(v){v.muted=true;v.defaultMuted=true;}if(v)v.play().catch(()=>{videoFailed=true;v.remove();});dock();if(focus)document.getElementById('tp-title')?.focus({preventScroll:true});}
+function paint(focus=false){const root=document.getElementById('tp-root');if(!root||!active())return;
+ // Conserva o elemento <video> com seus buffers ao atualizar controles,
+ // evitando repetir os downloads de vários MB a cada repaint.
+ const oldPlayer=root.querySelector('[data-tp-film-player]');
+ const keepPlayer=oldPlayer&&film&&oldPlayer.getAttribute('src')===film;
+ if(keepPlayer)oldPlayer.remove();
+ root.outerHTML=markup();
+ if(keepPlayer)document.querySelector('#tp-root [data-tp-film-player]')?.replaceWith(oldPlayer);
+ const v=document.querySelector('#tp-root [data-tp-video]');if(v){v.muted=true;v.defaultMuted=true;}if(v)v.play().catch(()=>{videoFailed=true;v.remove();});dock();if(focus)document.getElementById('tp-title')?.focus({preventScroll:true});}
 function dock(){const root=document.getElementById('tp-root'),mentor=root?.querySelector('.tp-pip');if(!root||!mentor)return;const rect=root.getBoundingClientRect();root.style.setProperty('--tp-right',Math.max(16,window.innerWidth-rect.right+16)+'px');mentor.style.visibility=window.innerWidth>=1000&&(rect.bottom<110||rect.top>window.innerHeight-80)?'hidden':'';}
 let dockFrame=0;function scheduleDock(){if(dockFrame)return;dockFrame=requestAnimationFrame(()=>{dockFrame=0;dock();});}
 window.addEventListener('scroll',scheduleDock,{passive:true});window.addEventListener('resize',scheduleDock,{passive:true});
@@ -48,29 +56,51 @@ function releaseAudio(){if(audio){audio.onended=audio.onerror=audio.onplaying=au
 function stop(){document.querySelector('#tp-root [data-tp-video]')?.pause();const player=document.querySelector('#tp-root [data-tp-film-player]');if(player){player.pause();player.removeAttribute('src');player.load();}film=null;run++;controller?.abort();controller=null;releaseAudio();if(utterance){utterance.onend=utterance.onerror=utterance.onstart=null;window.speechSynthesis?.cancel();utterance=null;}playing=false;loading=false;}
 function mark(){const l=T.lessons.find(l=>l.id===selected);if(!l||!visual)return;const r=record(l);r.step=step;if(!r.viewed.includes(step))r.viewed.push(step);save();}
 function validEndpoint(s){try{const u=new URL(s);if(u.username||u.password||u.hash)return false;return ['http:','https:'].includes(u.protocol);}catch{return false;}}
+function vozChave(l,etapa,texto){
+ let h=2166136261;
+ for(let i=0;i<texto.length;i++){h^=texto.charCodeAt(i);h=Math.imul(h,16777619);}
+ return 'diario:mentor-voz:v706:'+currentOwner()+':'+l.id+':'+etapa+':'+(h>>>0).toString(16);
+}
+async function vozCacheLer(chave){
+ if(typeof idb!=='function')return null;
+ try{const b=await idb('kv','get',chave);return b instanceof Blob&&b.size>0?b:null;}catch{return null;}
+}
+async function vozCacheSalvar(chave,blob){
+ if(typeof idb!=='function'||blob.size>10*1024*1024)return;
+ try{await idb('kv','put',blob,chave);}catch{}
+}
 function configuredBridge(){let stored='';try{stored=localStorage.getItem('diario:ponte-video:voz-url')||'';}catch{}const candidate=window.DIARIO_PONTE_VIDEO?.vozUrl||stored;return candidate&&validEndpoint(candidate)?candidate:'';}
 function finishScene(token){if(token!==run||!active()||currentOwner()!==owner)return;playing=false;loading=false;utterance=null;releaseAudio();if(step<3){step++;mark();paint();speak();}else{status='Narração concluída. Responda ao mini-check abaixo.';paint();}}
 async function speak(){
  const l=T.lessons.find(l=>l.id===selected);if(!l||!active())return;
  stop();bridgeFailed=false;const token=run;visual=true;loading=true;status='Preparando narração da etapa…';mark();paint();
  const text=T.normalizarTextoParaVoz(`${step+1}. ${(l.stageNames||names)[step]}. ${l.roteiroVoz?.etapas?.[step]||l.stages[step]}`);
- const endpoint=configuredBridge();
- if(endpoint&&!bridgeFailed){
+ const key=vozChave(l,step,text),endpoint=configuredBridge();
+ let blob=await vozCacheLer(key);if(token!==run)return;
+ if(!blob&&endpoint){
   const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),8000);
   try{
    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:'pt-BR',lesson_id:l.id,stage:step}),signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
    if(!res.ok||!/^audio\//i.test(res.headers.get('content-type')||''))throw Error('Resposta de áudio inválida');
-   const blob=await res.blob();if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
+   blob=await res.blob();if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
    if(token!==run)return;
-   objectURL=URL.createObjectURL(blob);audio=new Audio(objectURL);audio.preload='auto';
-   audio.onplaying=()=>{if(token!==run)return;playing=true;loading=false;status='Narrando pela Ponte Vídeo.';paint();};
-   audio.onpause=()=>{if(token!==run||!playing)return;playing=false;status='Áudio pausado. Toque em Ouvir etapa para reiniciá-la.';paint();};
-   audio.onended=()=>finishScene(token);audio.onerror=()=>{if(token!==run)return;releaseAudio();bridgeFailed=true;playing=false;loading=false;status='Áudio da ponte interrompido. Confira a ponte no PC e tente novamente.';paint();};
-   await audio.play();return;
-  }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;}
+   await vozCacheSalvar(key,blob);
+  }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;blob=null;}
   finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
  }
- loading=false;playing=false;status=endpoint?'Ponte de voz indisponível. Confira a conexão local do PC e tente novamente.':'Configure ou ligue a ponte de voz do PC para ouvir a aula. A voz do navegador não será usada.';paint();
+ if(blob&&token===run){
+  try{
+   objectURL=URL.createObjectURL(blob);audio=new Audio(objectURL);audio.preload='auto';
+   audio.onplaying=()=>{if(token!==run)return;playing=true;loading=false;status='Narrando pela Ponte Vídeo'+(endpoint?'':' · áudio salvo neste aparelho')+'.';paint();};
+   audio.onpause=()=>{if(token!==run||!playing)return;playing=false;status='Áudio pausado. Toque em Ouvir etapa para reiniciá-la.';paint();};
+   audio.onended=()=>finishScene(token);
+   audio.onerror=()=>{if(token!==run)return;releaseAudio();bridgeFailed=true;playing=false;loading=false;status='Áudio da ponte interrompido. Confira a ponte no PC e tente novamente.';paint();};
+   await audio.play();return;
+  }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;}
+ }
+ loading=false;playing=false;
+ status=endpoint?'Ponte de voz indisponível. Confira a conexão local do PC e tente novamente.':'Configure ou ligue a ponte de voz do PC para ouvir a aula. Áudios já salvos podem ser reproduzidos offline; não haverá voz robótica.';
+ paint();
 }
 function aulasTabs(){return `<div class="tp-aulas-nav" role="tablist" aria-label="Tipos de aulas"><button type="button" role="tab" data-tp-aula-sub="tradicionais" aria-selected="${aulaSubaba==='tradicionais'}" class="${aulaSubaba==='tradicionais'?'on':''}">Aulas Tradicionais</button><button type="button" role="tab" data-tp-aula-sub="mentor" aria-selected="${aulaSubaba==='mentor'}" class="${aulaSubaba==='mentor'?'on':''}">Mentor 3D</button></div>`;}
 const previous=typeof vEstudos==='function'?vEstudos:null;

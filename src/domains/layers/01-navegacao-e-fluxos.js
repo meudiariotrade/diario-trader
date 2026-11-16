@@ -10113,7 +10113,7 @@ Energia;30">${j(
             navigator.onLine === !1 ||
             !SESS?.at ||
             l ||
-            Date.now() - s < (o ? 2e3 : 6e4))
+            Date.now() - s < 15 * 6e4)
         )
           return;
         s = Date.now();
@@ -10155,8 +10155,9 @@ Energia;30">${j(
         window.addEventListener("online", () => G(!0)),
         window.TraderUI.onRender("cotacoes-conexao", () => G()),
         setInterval(() => {
-          (j(), G());
-        }, 15e3),
+          // WebSockets da Finnhub/Binance são diretos; não consultar mercado_cache a cada 15s.
+          j();
+        }, 6e4),
         (window.QuoteConnection = { refresh: G, sockets: j, seed: O }),
         G(!0));
     })(),
@@ -10313,7 +10314,7 @@ Energia;30">${j(
               (F.err = F.lista.length ? "" : "login"));
             return;
           }
-          if (!(!t && F.lista && Date.now() - F.ts < 6e4)) {
+          if (!(!t && F.lista && Date.now() - F.ts < 15 * 6e4)) {
             ((F.busy = 1), (F.err = ""));
             try {
               await tok();

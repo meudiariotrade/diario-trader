@@ -3684,7 +3684,7 @@ try {
           f ||
           !v(() => SESS && SESS.uid, null) ||
           r.visibilityState !== "visible" ||
-          Date.now() - p < 6e4
+          Date.now() - p < 5 * 6e4
         )
       ) {
         ((f = !0), (p = Date.now()));
@@ -3754,7 +3754,7 @@ try {
         }
       }
     }
-    (setInterval(d, 2e4),
+    (setInterval(d, 5 * 6e4),
       setTimeout(d, 8e3),
       r.addEventListener("visibilitychange", () => {
         r.visibilityState === "visible" && ((p = 0), setTimeout(d, 1500));
@@ -4331,13 +4331,13 @@ try {
       l = (a, e) => (i(a) ? h(e) : y(e));
     let s = { t: 0, L: null };
     async function m() {
-      if (s.L && Date.now() - s.t < 6e4) return s.L;
+      if (s.L && Date.now() - s.t < 15 * 6e4) return s.L;
       await tok();
       const a = cfg(),
         e = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10),
         o = await fetch(
           a.url +
-            "/rest/v1/fluxo_acoes?select=*&user_id=eq." +
+            "/rest/v1/fluxo_acoes?select=ativo,dia,ag_compra,ag_venda,est_compra,est_venda,atualizado&user_id=eq." +
             SESS.uid +
             "&order=dia.desc&limit=60",
           { headers: { apikey: a.key, Authorization: "Bearer " + SESS.at } },
