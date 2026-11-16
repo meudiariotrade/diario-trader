@@ -34,12 +34,14 @@ vEstudos=function(){
  const html=original.apply(this,arguments);
  if(typeof html!=='string'||html.includes('data-id="eco"'))return html;
  const seg=(html.match(/<div class="seg"[^>]*>[\s\S]*?<\/div>/g)||[]).find(x=>x.includes('data-ep="esv"'));
- return seg?html.replace(seg,segHTML(seg,false)):html;
+ const view=seg?html.replace(seg,segHTML(seg,false)):html;
+ if(ESV==='liv'||ESV==='est')return view.replace('<h1>Estudos</h1>','<h1>Estudos</h1><button type="button" class="eco-launch" data-eco-launch="1">Laboratório de Economia · abrir ferramentas acadêmicas</button>');
+ return view;
 };
 document.addEventListener('click',async e=>{
- const t=e.target.closest&&e.target.closest('[data-ep="esv"][data-id="eco"],[data-eco-tool],[data-eco-btn]');
+ const t=e.target.closest&&e.target.closest('[data-ep="esv"][data-id="eco"],[data-eco-launch],[data-eco-tool],[data-eco-btn]');
  if(!t)return;
- if(t.matches('[data-ep="esv"][data-id="eco"]')){
+ if(t.matches('[data-ep="esv"][data-id="eco"],[data-eco-launch]')){
   e.preventDefault();e.stopImmediatePropagation();ESV='eco';tab='estudos';S.tool='mon';render();
   L.events.macro&&L.events.macro();return;
  }
