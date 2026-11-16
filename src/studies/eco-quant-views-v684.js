@@ -87,7 +87,7 @@ L.views.back=()=>{
   html+='<div class="eco-qscroll"><table class="eco-qtable"><caption>Últimas operações simuladas</caption><thead><tr><th>Entrada</th><th>Saída</th><th>Direção</th><th>Resultado</th></tr></thead><tbody>'+
    result.trades.slice(-12).reverse().map(t=>'<tr><td>'+E(t.start)+'</td><td>'+E(t.end)+'</td><td>'+(t.side>0?'Compra':'Venda')+'</td><td>'+pct(t.ret*100)+'</td></tr>').join('')+'</tbody></table></div>';
  }
- html+=N('Sem look-ahead: sinal no fechamento, entrada na abertura seguinte. Usa máximo/mínimo de cada candle para stop e alvo; se ambos ocorrem, considera stop primeiro. Não contempla corretagem, impostos, spread, slippage ou financiamento de short; capital nocional de 10.000 unidades, exposição de 100%.');
+ html+=N('Sem look-ahead: sinal no fechamento, entrada na abertura seguinte. Usa máximo/mínimo de cada candle para stop e alvo; se ambos ocorrem, considera stop primeiro; gaps adversos usam a abertura. Não contempla corretagem, impostos, spread, slippage ou financiamento de short; capital nocional de 10.000 unidades, exposição de 100%.');
  return C('Backtester rápido · regras técnicas',html);
 };
 L.events.quantRefresh=()=>U.load(true);

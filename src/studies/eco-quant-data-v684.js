@@ -139,12 +139,20 @@ function backtest(a,o){
   if(position){
    const p=position,st=p.side>0?x.l<=p.stop:x.h>=p.stop,tg=p.side>0?x.h>=p.target:x.l<=p.target;
    const exit=st?p.stop:tg?p.target:i===a.length-1?x.c:null;
-   if(exit!==null){const ret=p.side*(exit-p.entry)/p.entry;capital=Math.max(0,capital*(1+ret));trades.push({start:p.day,end:x.d,side:p.side,ret,entry:p.entry,exit});position=null;}
+   if(exit!==null){
+    // Em gap desfavorável o stop é executado no preço de abertura, não no nível teórico.
+    const executed=st?(p.side>0?Math.min(x.o,p.stop):Math.max(x.o,p.stop)):
+      tg?(p.side>0?Math.max(x.o,p.target):Math.min(x.o,p.target)):exit;
+    const ret=p.side*(executed-p.entry)/p.entry,before=capital;
+    capital=Math.max(0,capital*(1+ret));
+    trades.push({start:p.day,end:x.d,side:p.side,ret,pnl:capital-before,entry:p.entry,exit:executed});
+    position=null;
+   }
   }
   const marked=position?Math.max(0,capital*(1+position.side*(x.c-position.entry)/position.entry)):capital;
   peak=Math.max(peak,marked);dd=Math.max(dd,peak?(peak-marked)/peak:0);curve.push({d:x.d,v:marked});
  }
- const gain=sum(trades.filter(t=>t.ret>0).map(t=>t.ret)),loss=-sum(trades.filter(t=>t.ret<0).map(t=>t.ret));
+ const gain=sum(trades.filter(t=>t.pnl>0).map(t=>t.pnl)),loss=-sum(trades.filter(t=>t.pnl<0).map(t=>t.pnl));
  return {trades,curve,capital,drawdown:dd*100,win:trades.length?100*trades.filter(t=>t.ret>0).length/trades.length:null,pf:loss>0?gain/loss:gain>0?Infinity:null};
 }
 function tdParse(j){

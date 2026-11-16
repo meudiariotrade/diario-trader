@@ -37,13 +37,13 @@ test('v684: Markowitz, CDI, breakeven e backtest com séries observadas injetada
   const candles=days.map((d,i)=>{const c=100+Math.sin(i/4)*8+i*.035;return {d,o:c-.4,h:c+1.3,l:c-1.5,c};});
   const bt=L.quant.backtest(candles,{regra:'break',stop:1.5,alvo:3,unidade:'%',lado:'ambos'});
   return {n:m?.p.n,weights:m?.chosen.w,variances:m?.p.cov,efficient:m?.efficient.length,
-    markowitzVol:m?.chosen.vol,btTrades:bt?.trades.length,drawdown:bt?.drawdown,
+    markowitzVol:m?.chosen.vol,btTrades:bt?.trades.length,drawdown:bt?.drawdown,pnlValid:bt?.trades.every(t=>Number.isFinite(t.pnl)),
     sample:Q.cdi.length,breakeven:L.quant.inflation(12,6),
     td:L.quant.tdParse({response:{TrsrBdTradgList:[{TrsrBd:{nm:'Tesouro IPCA+ 2035',mtrtyDt:'2035-05-15',anulInvstmtRate:6.4}}]}})};
  });
  assert.equal(x.n,171);assert.ok(Math.abs(x.weights.reduce((a,b)=>a+b,0)-1)<1e-9);
  assert.equal(x.variances.length,6);assert.ok(x.markowitzVol>0);
- assert.ok(x.efficient>=1);assert.ok(x.btTrades>0);assert.ok(x.drawdown>=0);
+ assert.ok(x.efficient>=1);assert.ok(x.btTrades>0);assert.ok(x.drawdown>=0);assert.equal(x.pnlValid,true);
  assert.equal(x.breakeven.approx,6);assert.ok(x.breakeven.exact>5&&x.breakeven.exact<6);
  assert.equal(x.td[0].rate,6.4);
  await p.locator('[data-eco-tool="port"]').click();
@@ -76,6 +76,7 @@ test('v684: ABNT 6023:2025 e importação de tabela BCB/IBGE permanecem locais',
  await p.locator('[data-eco-tool="abnt"]').click();
  await p.locator('[data-abnt-source]').selectOption('ibge-test');
  await p.locator('[data-eco-btn="abntSeries"]').click();
+ await expect(p.locator('.eco-abnt-table')).toHaveCount(1);
  await expect(p.locator('.eco-abnt-table')).toContainText('202602');
  await p.locator('[data-abnt-field="tcc"]').fill('Análise do IPCA');
  await p.locator('[data-eco-btn="abntSave"]').click();

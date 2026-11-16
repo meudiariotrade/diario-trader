@@ -99,7 +99,7 @@ L.views.abnt=()=>{
  '<button type="button" data-eco-btn="abntSeries">Inserir tabela oficial</button></div>'+
  '<label>Ou colar CSV (;)/tabela TSV (TAB)<textarea data-abnt-field="tabelaCSV" rows="3" placeholder="data;valor;fonte;serie;unidade">'+E(state.tabelaCSV)+'</textarea></label>'+
  '<button type="button" data-eco-btn="abntCSV">Montar tabela colada</button>'+
- (state.tabela?tableHTML(state.tabela):N('Nenhuma tabela importada. Os números serão mantidos exatamente como estiverem na fonte, sem interpolação.'))+'</div>';
+ (state.tabela?N('Tabela incorporada à prévia acadêmica abaixo, com fonte e valores originais.'):N('Nenhuma tabela importada. Os números serão mantidos exatamente como estiverem na fonte, sem interpolação.'))+'</div>';
  work+='<div class="eco-controls"><button type="button" class="eco-action" data-eco-btn="abntSave">Salvar rascunho local</button>'+
  '<button type="button" data-eco-btn="abntExport">Exportar HTML para Word</button><button type="button" data-eco-btn="abntPrint">Imprimir A4 / PDF</button></div>'+
  (state.aviso?N(E(state.aviso)):'')+documentHTML(state);
