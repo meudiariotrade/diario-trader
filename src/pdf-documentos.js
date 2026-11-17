@@ -36,7 +36,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(input) {
     }return all;
   }
   function para(text,opt={}){if(!text)return;const size=opt.size||9.3,lh=size*1.38,x=opt.x||M,width=opt.width||CW,ls=lines(text,width,size,opt.font||'r');for(const line of ls){need(lh);draw(line,x,y,size,opt.font||'r',opt.color||colors.ink);y+=lh;}y+=opt.gap??6;}
-  function heading(text,sub=''){const ls=lines(text,CW,17,'b');need(ls.length*22+55);y+=9;for(const line of ls){draw(line,M,y,17,'b');y+=22;}if(sub)para(sub,{size:8.5,color:colors.muted,gap:5});rule();y+=10;}
+  function heading(text,sub=''){const ls=lines(text,CW,17,'b');need(ls.length*22+125);y+=9;for(const line of ls){draw(line,M,y,17,'b');y+=22;}if(sub)para(sub,{size:8.5,color:colors.muted,gap:5});rule();y+=10;}
   function label(text){need(30);draw(text.toUpperCase(),M,y,7.5,'b',colors.gold);y+=16;}
   function link(labelText,url){const u=Q.url(url);if(!u)return;const size=8.1,ls=lines(labelText,CW,size);for(const line of ls){need(13);draw(line,M,y,size,'r',colors.gold);const ann=doc.context.obj({Type:'Annot',Subtype:'Link',Rect:[M,H-y-12,W-M,H-y+1],Border:[0,0,0],A:{Type:'Action',S:'URI',URI:lib.PDFString.of(u)}});pg.node.addAnnot(doc.context.register(ann));y+=13;}}
   function table(headers,rows,widths){
@@ -112,7 +112,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(input) {
   [...e.qualidade.problemas,...e.qualidade.lacunas].forEach(t=>para(t,{size:7.8,color:colors.muted,gap:4}));
   para('Snapshot: '+snap.id+' | '+Q.VERSION+' | Conteúdo informativo. Cenários condicionados não são ordens de negociação.',{size:7.2,color:colors.muted});
   pages.forEach((page,i)=>{pg=page;rule(H-38);draw('DIÁRIO DE TRADER / '+(e.simulado?'DADOS SIMULADOS':'USO PESSOAL'),M,H-28,7,'b',colors.muted);draw('Página '+(i+1)+' de '+pages.length,W-M,H-28,7,'r',colors.muted,'right');});
-  doc.setTitle('Jornal do Pregão - '+date);doc.setAuthor('Diário de Trader');doc.setSubject(snap.id);doc.setCreator('Diário de Trader v714');
+  doc.setTitle('Jornal do Pregão - '+date);doc.setAuthor('Diário de Trader');doc.setSubject(snap.id);doc.setCreator('Diário de Trader v715');
   // Medidas ficam disponíveis para o teste de limites, sem alterar o PDF.
   window.__jornalPdfLayout=ops;
   return {bytes:await doc.save(),paginas:pages.length,snapshot_id:snap.id};
