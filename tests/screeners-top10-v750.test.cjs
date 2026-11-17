@@ -1,0 +1,59 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const ranking=require('../src/analysis/screeners-top10.js');
+const intel=require('../src/analysis/screeners-inteligencia.js');
+const read=path=>fs.readFileSync(path,'utf8');
+const app=read('src/analysis/analises.js'),pdf=read('src/analysis/screeners-relatorio.js'),html=read('src/index.html');
+function br(ticker,index){
+ const row={ticker,empresa:'Companhia '+ticker,roe:20-index/2,roic:17-index/3,pl:7+index/3,
+  ev_ebitda:6+index/4,fcf_yield:7-index/5,dividend_yield:8-index/6,
+  payout_implicito:45,momentum_12_1:22-index,updated_at:'2026-11-17',
+  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17'};
+ const weights=intel.weights.BR;
+ row.score_quant_br=+intel.calculate('BR',row).reduce((sum,n,i)=>sum+n*weights[i].weight/100,0).toFixed(2);
+ return row;
+}
+test('Top 10 BR: elege automaticamente dez empresas distintas com notas reais entre 0 e 10',()=>{
+ const rows=Array.from({length:14},(_,i)=>br('X'+String(i).padStart(3,'0')+'3',i));
+ const ranked=ranking.generate('BR',rows,intel);
+ assert.equal(ranked.entries.length,10);
+ assert.equal(new Set(ranked.entries.map(x=>x.row.ticker.slice(0,4))).size,10);
+ assert.deepEqual(ranked.entries.map(x=>x.rank),[1,2,3,4,5,6,7,8,9,10]);
+ assert.ok(ranked.entries.every(x=>x.note>=0&&x.note<=10));
+ assert.ok(ranked.entries.every(x=>x.diagnosis.validated));
+ assert.ok(ranked.entries.every(x=>x.reason.includes(' / ')===false));
+ assert.ok(ranked.entries.every(x=>x.reason&&x.caution));
+ for(let i=1;i<ranked.entries.length;i++)assert.ok(ranked.entries[i-1].score>=ranked.entries[i].score);
+});
+test('Top 10 exclui nota com fórmula divergente e ação duplicada da mesma companhia',()=>{
+ const rows=Array.from({length:13},(_,i)=>br('L'+String(i).padStart(3,'0')+'3',i));
+ rows[0].score_quant_br=99;
+ const preferred={...rows[1],ticker:'L0014',empresa:rows[1].empresa,score_quant_br:rows[1].score_quant_br};
+ const res=ranking.generate('BR',[...rows,preferred],intel);
+ assert.ok(!res.entries.some(x=>x.row.ticker===rows[0].ticker));
+ assert.ok(res.entries.filter(x=>x.row.ticker.slice(0,4)==='L001').length<=1);
+ assert.equal(res.entries.length,10);
+});
+test('EUA sem scores reais: ranking vazio, nunca inventa as dez melhores',()=>{
+ const sample=[{ticker:'AAPL',company_name:'Empresa de exemplo',roic:22,forward_pe:18,
+  eps_growth_yoy:12,updated_at:'2026-11-17',fundamentais_em:'2026-11-17'}];
+ const out=ranking.generate('US',sample,intel);
+ assert.equal(out.entries.length,0);
+ assert.equal(out.excluded,1);
+});
+test('Top 10 usa página global já carregada e geração de PDF local sem varrer tickers',()=>{
+ assert.match(app,/isGlobalTopQuery\(s\)\)s\.topData=data/);
+ assert.match(app,/loadTopGlobal/);
+ assert.match(app,/p(?:age)?:0|page:0/);
+ assert.match(app,/s\.topData\?\.rows/);
+ assert.match(app,/topTen\(m,s\)/);
+ assert.match(app,/DiarioScreenersRelatorio\.share\(m\.toUpperCase\(\),rows,/);
+ assert.match(pdf,/opts\.automatic/);
+ assert.match(pdf,/num\(\(opts\.automatic\?s\.modelScore:s\.score\)\/10,1\)/);
+ assert.doesNotMatch(pdf,/supabase\.co|SERVICE_ROLE_KEY/);
+ assert.match(html,/screeners-top10\.js/);
+ const sw=read('src/service-worker.js');
+ assert.match(sw,/"screeners-top10\.js"/);
+ assert.ok(JSON.parse(read('release.config.json')).version>=750);
+});
