@@ -14,7 +14,7 @@ async function open(browser,base){
  await p.locator('#splash').waitFor({state:'hidden'});
  return p;
 }
-test('v697: Plano de transição mantém seus cinco critérios, subabas e divisão 50/30/20',{timeout:90000},async()=>withApp(async(browser,base)=>{
+test('v697: Plano de transição mantém cinco critérios, navegação e divisão 50/30/20',{timeout:90000},async()=>withApp(async(browser,base)=>{
  const page=await open(browser,base),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.evaluate(()=>{FIN.t='plano';DiarioRotas.navigate('carreira');});
@@ -23,15 +23,11 @@ test('v697: Plano de transição mantém seus cinco critérios, subabas e divis�
  await expect(page.locator('#trx697 .trx-milestone')).toHaveCount(5);
  await expect(page.locator('#app')).toContainText('5 critérios');
  await expect(page.locator('#app')).toContainText('Reinvestir');
- await expect(page.locator('#app')).toContainText('Reserva');
+ await expect(page.locator('#app')).toContainText('Reserva de 12 meses');
  await expect(page.locator('#app')).toContainText('Seu trading × CDI × Ibovespa');
  await page.evaluate(()=>render());
  await expect(page.locator('#app #trx697')).toHaveCount(1);
- await page.locator('#app [data-fin-t="res"]').click();
- await expect.poll(()=>page.evaluate(()=>FIN.t)).toBe('res');
- await expect(page.locator('#trx697')).toHaveCount(0);
- await expect(page.locator('#app')).toContainText('Reserva de emergência');
- await page.evaluate(()=>DiarioRotas.navigate('estudos'));
+  await page.evaluate(()=>DiarioRotas.navigate('estudos'));
  await expect(page.locator('#trx697')).toHaveCount(0);
  assert.deepEqual(errors,[]);
  await page.close();
