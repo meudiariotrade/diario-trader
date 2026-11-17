@@ -6,7 +6,7 @@
     "build": "node scripts/export-tecnica.cjs && npm run bundle && node scripts/build.cjs",
     "build:check": "node scripts/generate-bundles.cjs --check && node scripts/build.cjs --check",
     "check": "npm run build:check && node scripts/check-backend.cjs",
-    "test": "node --test --test-concurrency=4 tests/*.test.cjs test-*.cjs",
+    "test": "node --test --test-concurrency=1 tests/*.test.cjs test-*.cjs",
     "verify": "npm run check && npm test",
     "bundle": "node scripts/generate-bundles.cjs"
   },

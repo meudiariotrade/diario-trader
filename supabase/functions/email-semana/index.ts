@@ -93,6 +93,38 @@ Deno.serve(async (req) => {
   const job=await autorizaJob(req);
   if (b.acao==='diagnostico') return new Response(JSON.stringify({autorizado:job,resendConfigurado:!!KEY}),
     {status:job?200:401,headers:cors});
+  // Relatório semanal no app sem credencial de e-mail: uma leitura controlada por semana.
+  // A opção de enviar e-mail volta automaticamente se o provedor for configurado.
+  if (b.acao === 'rotina_semanal') {
+    if (!job) return new Response(JSON.stringify({error:'Não autorizado'}),{status:401,headers:cors});
+    const [de,ate]=semana();
+    let relatorios=0,enviados=0,semOperacoes=0,falhas=0;
+    // Limite explícito: evita transferência descontrolada de documentos no Supabase.
+    const contas=await db('diario?select=user_id,data&limit=150').catch(()=>[]);
+    for(const x of contas||[]){
+      if(!x.user_id||typeof x.data!=='object'||!x.data){continue;}
+      try{
+        const trades=(Array.isArray(x.data.trades)?x.data.trades:[]).filter(
+          (t:any)=>t?.dt&&String(t.dt).slice(0,10)>=de&&String(t.dt).slice(0,10)<=ate
+        );
+        if(!trades.length){semOperacoes++;continue;}
+        if(KEY&&x.data.emailSemana!==false){
+          const status=await enviaUm(x.user_id,x.data,false);
+          if(status.startsWith('enviado para '))enviados++;
+          if(status.startsWith('resend '))falhas++;
+          // Mesmo se o e-mail falhar, o histórico é gerado antes da tentativa de envio.
+          relatorios++;
+        }else{
+          await salvaResumo(x.user_id,x.data,trades,de,ate);
+          relatorios++;
+        }
+      }catch(_){falhas++;}
+    }
+    return new Response(JSON.stringify({ok:falhas===0,semanaFim:ate,relatorios,
+      enviados,semOperacoes,falhas,emailConfigurado:!!KEY,semMigrarOperacoes:true}),{
+      status:falhas?207:200,headers:cors
+    });
+  }
   if(!KEY)return new Response(JSON.stringify({error:'Falta RESEND_API_KEY'}),{status:500,headers:cors});
   // pedido do app: só a própria conta
   const tk = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
