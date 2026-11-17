@@ -394,7 +394,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return out({ error: 'Método não permitido' }, 405);
   if (!SRK) return out({ error: 'Serviço de aulas indisponível.' }, 500);
   let b: any; try { b = await req.json(); } catch { return out({ error: 'Pedido inválido.' }, 400); }
-  if(b?.acao!=='mentor_pdf'&&!GEMINI_KEY)return out({error:'Falta configurar a chave do Gemini no Supabase.'},500);
+  if(!['mentor_pdf','mentor_pdf_local'].includes(b?.acao)&&!GEMINI_KEY)return out({error:'Falta configurar a chave do Gemini no Supabase.'},500);
   if (b?.acao === 'processar') { if (!dentroDoLimite('fila:proc', 4)) return out({ ok: true, ocupado: true }); // só avança a fila; não lê nem devolve dados
     const job = processar().catch((e) => console.error('fila', e));
     try { (globalThis as any).EdgeRuntime?.waitUntil(job); } catch { /* */ }
