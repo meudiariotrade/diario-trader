@@ -74,8 +74,12 @@ const FEEDS = [
   'https://www.moneytimes.com.br/mercados/feed/',
   'https://www.moneytimes.com.br/feed/',
 ];
+const FEEDS_PRIORITARIOS = [
+  { fonte: 'InfoMoney', host: 'infomoney.com.br', url: 'https://www.infomoney.com.br/feed/' },
+  { fonte: 'CNBC', host: 'cnbc.com', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' },
+];
 const UA = 'Mozilla/5.0 (compatible; diario-trader/1.0)';
-const TTL = 5 * 60 * 1000;
+const TTL = 90 * 1000;
 
 const ORIGENS = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(origemLimpa).filter(Boolean);
 const corsFor = (req: Request) => {
@@ -121,6 +125,25 @@ function parse(xml: string): Item[] {
   return out;
 }
 
+/** RSS de portais conhecidos: valida origem e data, sem buscar ou copiar corpo da matéria. */
+export function parsePortal(xml: string, fonte: string, host: string, agora = Date.now()): Item[] {
+  const out: Item[] = [];
+  for (const parte of xml.slice(0, 450_000).split(/<item[\s>]/i).slice(1, 45)) {
+    const bloco = parte.split(/<\/item>/i)[0];
+    const t = tag(bloco, 'title').slice(0, 230), l = tag(bloco, 'link');
+    const data = Date.parse(tag(bloco, 'pubDate'));
+    let origemOk = false;
+    try { const u = new URL(l); origemOk = u.protocol === 'https:' &&
+      (u.hostname === host || u.hostname.endsWith('.' + host)); } catch {}
+    if (!origemOk || t.length < 12 || !Number.isFinite(data) || data > agora + 300_000 ||
+      data < agora - 2 * 86400_000) continue;
+    const c = [...bloco.matchAll(/<category[^>]*>([\s\S]*?)<\/category>/gi)]
+      .map((x) => dec(cdata(x[1]))).filter(Boolean).slice(0, 8);
+    out.push({ t, l, d: new Date(data).toISOString(), a: fonte, c });
+  }
+  return out.slice(0, 28);
+}
+
 // Fonte principal do filtro X / Breaking: RSS direto via Edge Function.
 // No iPhone os proxies RSSHub/Nitter frequentemente retornam 404/429.
 const X_PERFIS = ['FirstSquawk', 'DeItaone'] as const;
@@ -155,6 +178,18 @@ async function carrega(): Promise<DadosNoticias> {
         return itens.slice(0, 35);
       },
     })),
+    ...FEEDS_PRIORITARIOS.map((feed) => ({
+      nome: feed.fonte, consultar: async () => {
+        const r = await fetch(feed.url, {
+          headers: { 'User-Agent': UA, Accept: 'application/rss+xml, application/xml, text/xml' },
+          signal: AbortSignal.timeout(7500),
+        });
+        if (!r.ok) throw new Error('RSS ' + r.status);
+        const itens = parsePortal(await r.text(), feed.fonte, feed.host);
+        if (!itens.length) throw new Error('RSS sem notícias recentes');
+        return itens;
+      }
+    })),
     ...X_PERFIS.map((perfil) => ({
       nome: 'X @' + perfil, consultar: async () => {
         // Mesmo RSS do FxEmbed, com um segundo domínio somente quando o principal falhar.
@@ -184,9 +219,9 @@ async function carrega(): Promise<DadosNoticias> {
     if (r.status === 'fulfilled') for (const it of r.value)
       if (linkOk(it.l) && !mapa.has(it.l)) mapa.set(it.l, it);
   }
-  const itens = [...mapa.values()].sort((a,b) => +new Date(b.d) - +new Date(a.d)).slice(0, 75);
+  const itens = [...mapa.values()].sort((a,b) => +new Date(b.d) - +new Date(a.d)).slice(0, 110);
   if (!itens.length) {
-    if (cache) return cache.dados;
+    if (cache && Date.now() - cache.ts < 30 * 60_000) return cache.dados;
     throw new Error('Nenhuma fonte de notícias respondeu com manchetes válidas.');
   }
   const dados = { itens, fontesX: { ok, falhas } };
@@ -197,7 +232,7 @@ async function carrega(): Promise<DadosNoticias> {
 Deno.serve(async (req) => {
   const cors = corsFor(req);
   const out = (o: unknown, s = 200) =>
-    new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=120' } });
+    new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=30' } });
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   { const vr = versaoResp(req, 'noticias', cors); if (vr) return vr; }
   if (req.method !== 'GET' && req.method !== 'POST') return out({ error: 'Método não permitido' }, 405);
@@ -206,7 +241,7 @@ Deno.serve(async (req) => {
   if (!dentroDoLimite(uid, 30)) return out({ error: 'Muitas consultas seguidas. Espere um minuto.' }, 429);
   try {
     const dados = await carrega();
-    return out({ fonte: 'Money Times + X', gerado: new Date().toISOString(), atualizadoEm: new Date(cache?.ts || Date.now()).toISOString(), ...dados });
+    return out({ fonte: 'InfoMoney + Money Times + CNBC + X', gerado: new Date().toISOString(), atualizadoEm: new Date(cache?.ts || Date.now()).toISOString(), ...dados });
   } catch (e) {
     return out({ error: (e as Error).message }, 502);
   }
