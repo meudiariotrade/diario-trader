@@ -9,7 +9,7 @@ test('v711: HTML carrega config do Supabase principal antes do núcleo',()=>{
  assert.match(html,/src="config\.js\?v=__APP_VERSION__"/);
  assert.ok(html.indexOf('src="config.js?v=__APP_VERSION__"')<html.indexOf('src="nucleo-v560.js?v=__APP_VERSION__"'));
  assert.ok(txt('config.js').includes('https://vdzwydizostutukppcsj.supabase.co'));
- assert.equal(JSON.parse(txt('release.config.json')).version,711);
+ assert.ok(JSON.parse(txt('release.config.json')).version >= 711);
 });
 test('v711: service worker mantém config.js na publicação e valida a versão online',()=>{
  const sw=txt('src/service-worker.js');

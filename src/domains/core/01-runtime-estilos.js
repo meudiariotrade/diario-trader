@@ -219,8 +219,7 @@ try {
       }
     });
   })(typeof window > "u" ? globalThis : window),
-    (window.SUPA_URL = "https://wbpsmszecpzioaijfnsl.supabase.co"),
-    (window.SUPA_KEY = "sb_publishable_GNuBD5Oyo2Wk-iE2s4TbUQ_1XiKvzhV"),
+    // Configuração única: config.js, carregado antes deste núcleo.
     (function (w) {
       "use strict";
       let f = null,

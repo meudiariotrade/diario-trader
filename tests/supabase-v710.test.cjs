@@ -11,7 +11,7 @@ test('v710: URL e chave publica no frontend e ponte',()=>{
  assert.ok(bridge.includes('https://'+ref+'.supabase.co'));
  assert.ok(bridge.includes(key));
  assert.ok(txt('supabase/config.toml').includes('project_id = "'+ref+'"'));
- assert.equal(JSON.parse(txt('release.config.json')).version,710);
+ assert.ok(JSON.parse(txt('release.config.json')).version >= 710);
  assert.doesNotMatch(config,/sbp_[a-f0-9]{30,}|SUPABASE_SERVICE_ROLE_KEY/);
 });
 test('v710: tokens de sessao separados por projeto',()=>{
