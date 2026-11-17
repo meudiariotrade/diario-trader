@@ -70,13 +70,15 @@
   const eligible=all.filter(k=>value(row,k)!==null).length;
   const coverage=all.length?Math.round(eligible/all.length*100):0;
   const diff=official!==null&&model!==null?Math.abs(official-model):null;
-  const oldFund=age(row?.fundamentais_em||row?.sec_facts_at||row?.updated_at,now);
-  const oldTech=age(row?.tecnicos_em||row?.updated_at,now);
+  const oldFund=age(row?.sec_facts_at||row?.fundamentais_em,now);
+  const oldTech=age(row?.tecnicos_em,now);
   const concerns=[],supports=[];
   if(official===null)concerns.push('Score indisponível: falta pelo menos um grupo de indicadores.');
   if(diff!==null&&diff>1)concerns.push('Score armazenado diverge da fórmula atual em '+diff.toFixed(1)+' ponto(s): conferir atualização antes de comparar.');
   if(coverage<70)concerns.push('Cobertura dos critérios do score: '+coverage+'%; leitura ainda incompleta.');
+  if(oldFund===null)concerns.push('Data de coleta/competência dos fundamentos não identificada.');
   if(oldFund!==null&&oldFund>180)concerns.push('Fundamentos com referência antiga: '+oldFund+' dias.');
+  if(oldTech===null)concerns.push('Data de coleta dos indicadores técnicos não identificada.');
   if(oldTech!==null&&oldTech>10)concerns.push('Indicadores técnicos com referência antiga: '+oldTech+' dias.');
   if(value(row,'roe')!==null&&(value(row,'roe')<0||value(row,'roe')>80))concerns.push('ROE extremo/negativo: verificar patrimônio e eventos não recorrentes.');
   if(m==='US'&&value(row,'total_shareholder_yield')===null)concerns.push('Total Yield sem evidência suficiente de dividendos e recompras.');
@@ -85,8 +87,8 @@
     if(p.score!==null&&p.score>=67&&p.covered>=1)supports.push(p.name+': '+p.points.toFixed(1)+' de '+p.weight+' pontos.');
     if(p.score!==null&&p.score<=35)concerns.push(p.name+' abaixo do centro da escala interna ('+Math.round(p.score)+'/100).');
   }
-  const verified=official!==null&&model!==null&&diff<=1&&coverage>=70&&(oldFund===null||oldFund<=180)&&(oldTech===null||oldTech<=10);
-  const level=verified?'Conferido':official!==null?'Exige conferência':'Incompleto';
+  const verified=official!==null&&model!==null&&diff<=1&&coverage>=70&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10;
+  const level=verified?'Cálculo confere':official!==null?'Exige conferência':'Incompleto';
   return {ticker:String(row?.ticker||''),company:String(row?.empresa||row?.company_name||row?.ticker||''),market:m,
     score:official,modelScore:model,difference:diff,validated:verified,level,
     coverage,parts,positives:supports.slice(0,3),risks:concerns.slice(0,6),
