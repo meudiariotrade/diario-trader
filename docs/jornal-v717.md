@@ -18,3 +18,7 @@ Pendências externas verificadas em 17/11/2026: logs registram GEMINI_API_KEY au
 ## Ajuste de isolamento v718
 
 O suplemento é anexado somente à leitura/exportação da conta que o capturou. O estado JRN usado para persistência da edição permanece sem o suplemento, inclusive depois de repintar a tela.
+
+## Área de toque v719
+
+O teste completo identificou que o estilo global de botões pequenos sobrepunha a altura da captura. Regra escopada ao Jornal garante os 44 px, sem alterar botões de outras abas.

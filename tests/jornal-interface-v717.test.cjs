@@ -17,7 +17,7 @@ test('Jornal no celular e desktop captura Profit uma vez, separa edição e isol
   }
   assert.equal(await page.evaluate(()=>window.__jornalRequests),0);
   const capture=page.locator('#jrbox [data-jr-profit-capture]');
-  assert.ok((await capture.boundingBox()).height>=44);
+  assert.ok((await capture.boundingBox()).height>=44,JSON.stringify(await capture.evaluate(el=>({height:el.getBoundingClientRect().height,minHeight:getComputedStyle(el).minHeight,classes:el.className}))));
   await capture.click();await page.waitForFunction(()=>window.__jornalRequests===1&&!!window.DiarioJornalEditorial.edition(JRN.v).profit_local);
   const values=await page.evaluate(()=>{const e=window.DiarioJornalEditorial.edition(JRN.v);return {publicPrice:e.snapshot.cotacoes[0].px,profit:e.profit_local.cotacoes[0].px,stored:!!JRN.v.profit_local}});
   assert.deepEqual(values,{publicPrice:170845,profit:170935,stored:false});
