@@ -101,6 +101,7 @@ const CANDIDATOS_RESERVA = [
   'x-ai/grok-4.5:free',
   'x-ai/grok-4.7:free',
   'xiaomi/mimo-2.6-flash:free',
+  'xiaomi/mimo-v2.6-flash:free', // slug alternativo: só entra se a API confirmar a versão gratuita
 ];
 let OR_RESERVA: { t: number; ids: string[] } | null = null;
 async function openRouterReserva(fetcher: typeof fetch, forcar = false): Promise<string[]> {
@@ -110,9 +111,18 @@ async function openRouterReserva(fetcher: typeof fetch, forcar = false): Promise
       if (r.ok) {
         const data = (await r.json())?.data;
         const ids = (Array.isArray(data) ? data : [])
-          .filter((m: any) => typeof m?.id === 'string' && /:free$/.test(m.id) &&
-            /deepseek|glm|grok|mimo/i.test(m.id) &&
-            (!Array.isArray(m.architecture?.output_modalities) || m.architecture.output_modalities.includes('text')))
+          .filter((m: any) => {
+            if (typeof m?.id !== 'string' || !/:free$/.test(m.id) ||
+                !/deepseek|glm|grok|mimo/i.test(m.id)) return false;
+            // Nunca encaminhar reserva a variantes pagas, de áudio, de imagem ou batch.
+            const precoEntrada = Number(m.pricing?.prompt ?? 0);
+            const precoSaida = Number(m.pricing?.completion ?? 0);
+            if (!Number.isFinite(precoEntrada) || !Number.isFinite(precoSaida) ||
+                precoEntrada !== 0 || precoSaida !== 0) return false;
+            if (Array.isArray(m.endpoints) && !m.endpoints.includes('/api/v1/chat/completions')) return false;
+            return !Array.isArray(m.architecture?.output_modalities) ||
+              m.architecture.output_modalities.includes('text');
+          })
           .map((m: any) => String(m.id));
         OR_RESERVA = { t: Date.now(), ids: [...new Set(ids)] };
       }
@@ -198,13 +208,14 @@ export async function gerarTexto(system: string, prompt: string, opt: { json?: b
           const r: any = p.tipo === 'gemini' ? await chamaGemini(p, modelo, system, prompt, !!opt.json, temp, ms, fetcher) : await chamaOpenAI(p, modelo, system, prompt, !!opt.json, temp, ms, fetcher);
           if (r.texto) { PAUSA.delete(p.id); OK_MODELO.set(p.id, modelo); const m = r.real || modelo; return { texto: r.texto, provedor: p.nome, modelo: m, rotulo: `${p.nome} · ${m}`, tentativas: erros }; }
           erros.push(`${p.nome} ${modelo}: ${r.status ? 'HTTP ' + r.status : ''}${r.erro ? (r.status ? ' — ' : '') + limpa(r.erro) : ''}`);
-          if (r.status === 429 && tentativa === 0) { await espera(1200); continue; } // retry rápido
+          if (r.status === 429 && tentativa === 0 && p.id !== 'openrouter-reserva') { await espera(1200); continue; } // reserva :free não consome duas tentativas da mesma cota
           if (r.status === 429 && (p.tipo === 'gemini' || p.id === 'openrouter' || p.id === 'openrouter-reserva')) break; // cota/fila por modelo — tenta o próximo modelo
           if (r.status === 404) {
             if (p.id === 'openrouter-reserva' && !reservaAtualizada) {
               reservaAtualizada = true;
               const novos = await openRouterReserva(fetcher, true); // revalida os slugs ao detectar 404
-              modelos.push(...novos.filter((m) => !modelos.includes(m)));
+              const tentados = new Set(modelos.slice(0, i + 1));
+              modelos = [...modelos.slice(0, i + 1), ...novos.filter((m) => !tentados.has(m))];
             }
             break; // modelo fora do ar — próximo modelo do mesmo provedor
           }
