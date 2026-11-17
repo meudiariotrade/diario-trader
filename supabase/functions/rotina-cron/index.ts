@@ -12,6 +12,17 @@ function agoraSP() {
   return { dia: `${p.year}-${p.month}-${p.day}`, hm: `${p.hour}:${p.minute}`, util: !['Sat', 'Sun'].includes(p.weekday) };
 }
 const iguais = (a: string, b: string) => { if (!a || !b || a.length !== b.length) return false; let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0; };
+// Compatibilidade v732: mesmo segredo dos jobs leves, guardado no Vault.
+// A RPC só permite service_role; o segredo não é exposto a navegador ou logs.
+async function credencialCronValida(req: Request): Promise<boolean> {
+  const recebido = req.headers.get('x-cron-secret') || '';
+  if (!recebido) return false;
+  if (CRON && iguais(recebido, CRON)) return true;
+  try {
+    const esperado = await db('rpc/diario_agendamento_chave', { method: 'POST', body: '{}' });
+    return typeof esperado === 'string' && iguais(recebido, esperado);
+  } catch { return false; }
+}
 const ADR_PAD = ['EWZ', 'WEGZY', 'BBSEY', 'BDORY', 'SUZ', 'SID', 'GGB', 'ITUB', 'PBR', 'VALE', 'ABEV', 'BBD'];
 
 export async function matinal(slot: string) {
@@ -70,7 +81,7 @@ async function fechamento(dia: string) {
 Deno.serve(async (req) => {
   const out = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
   if (req.method !== 'POST') return out({ error: 'Método não permitido' }, 405);
-  if (!iguais(req.headers.get('x-cron-secret') || '', CRON)) return out({ error: 'Não autorizado' }, 401);
+  if (!(await credencialCronValida(req))) return out({ error: 'Não autorizado' }, 401);
   let b: any = {}; try { b = await req.json(); } catch { /* */ }
   const { dia, util } = agoraSP();
   try {
