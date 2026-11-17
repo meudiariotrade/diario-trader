@@ -15,7 +15,7 @@ test('v713: resumos só consultam quando Estudos estiver visível', () => {
 });
 test('v713: Insiders reaparece logo abaixo de Movimentos', () => {
   const s = read('src/domains/layers/04-design-e-navegacao.js');
-  assert.match(s, /t\.after\(e\);/);
+  assert.match(s, /t\.after\(e\)\)/);
   assert.match(s, /t\.dataset\.v518Ready !== "1"/);
   assert.match(s, /DIARIO_V519\?\.insCartao\?\.\(\)/);
   assert.doesNotMatch(s, /\}, 1700\)/);

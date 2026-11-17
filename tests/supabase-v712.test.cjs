@@ -6,5 +6,5 @@ test('v712: núcleo não substitui a URL do Supabase definida em config.js',()=>
  assert.ok(!source.includes('window.SUPA_URL ='));
  assert.ok(!source.includes('window.SUPA_KEY ='));
  assert.doesNotMatch(source,/wbpsmszecpzioaijfnsl/);
- assert.equal(JSON.parse(fs.readFileSync('release.config.json','utf8')).version,712);
+ assert.ok(JSON.parse(fs.readFileSync('release.config.json','utf8')).version>=712,'Versão não pode regredir abaixo de 712');
 });
