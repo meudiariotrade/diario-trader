@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
   if (!dentroDoLimite(uid, 30)) return out({ error: 'Muitas consultas seguidas. Espere um minuto.' }, 429);
   try {
     const dados = await carrega();
-    return out({ fonte: 'Money Times + X', gerado: new Date().toISOString(), ...dados });
+    return out({ fonte: 'Money Times + X', gerado: new Date().toISOString(), atualizadoEm: new Date(cache?.ts || Date.now()).toISOString(), ...dados });
   } catch (e) {
     return out({ error: (e as Error).message }, 502);
   }
