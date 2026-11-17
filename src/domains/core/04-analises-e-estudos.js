@@ -1635,7 +1635,11 @@ function mkPaint() {
   }
   a = a.slice(0, 50);
   if (!a.length) {
-    e.innerHTML = '<div class="mut sm" style="padding:12px 0">Nenhuma notícia neste filtro.</div>';
+    const falhas = MKT.nf === "x" && MKT.fontesX?.falhas?.length;
+    const mensagem = falhas && !MKT.fontesX?.ok?.length
+      ? "Os feeds do X estão temporariamente indisponíveis. Use Atualizar para tentar novamente."
+      : MKT.nf === "x" ? "Nenhuma notícia financeira recente desses perfis do X." : "Nenhuma notícia neste filtro.";
+    e.innerHTML = '<div class="mut sm" style="padding:12px 0">' + esc(mensagem) + '</div>';
     return;
   }
   e.innerHTML =
@@ -1662,7 +1666,6 @@ const MK_FONTES_RSS = [
   // A Reuters não oferece RSS público estável: consulta Google Notícias restrita ao domínio.
   ["Reuters", "https://news.google.com/rss/search?q=when%3A24h%20site%3Areuters.com&hl=en-US&gl=US&ceid=US:en"],
 ];
-const MK_CONTAS_X = ["FirstSquawk", "DeItaone", "LiveSquawk", "WatcherGuru", "zerohedge"];
 const MK_STOPWORDS = new Set("a o as os um uma uns umas de da do das dos na no nas nos em por para com e ou que ao aos sua seu suas seus the a an and or to from in on for of with by at this that is are market markets news said says after before sobre entre como mais less than amid amid".split(" "));
 /* Curadoria estritamente da lista de noticias: sem alterar cards nem filtros existentes. */
 const MK_TEMA_MERCADO = /\b(?:econom\w*|mercad\w*|market\w*|finance\w*|financ\w*|inflac\w*|inflation|cpi|pce|payroll|empreg\w*|unemployment|jobs|gdp|pib|growth|crescimento|recession|recessao|banco\w*|bank\w*|central|federal|fed|fomc|copom|selic|ecb|bce|boj|boe|interest|juros|rates?|yield\w*|bond\w*|treasur\w*|titulos|debt|divida|fiscal|deficit|budget|orcamento|trade|comercio|tarif\w*|tariff\w*|sanction\w*|sanc\w*|export\w*|import\w*|currency|currencies|forex|cambio|dolar|dollar|euro|yen|yuan|real|brl|usd|dxy|fx|stocks?|shares?|equities|acoes|acao|bolsa|exchang\w*|indice\w*|index|indexes|indices|ibov\w*|ibovespa|b3|nasdaq|dow|s&p|sp500|futures?|futur\w*|opcoes|options?|ipo|earnings?|balanco\w*|results?|resultado\w*|lucro\w*|profit\w*|receita\w*|revenue|dividend\w*|empresa\w*|company|companies|corporat\w*|merger\w*|acquisit\w*|acquisic\w*|fusao|fusoes|oil|petroleo|brent|wti|opec|gas|natural|gold|ouro|silver|prata|copper|cobre|iron|minerio|commodit\w*|soy|soja|corn|milho|wheat|trigo|bitcoin|btc|ethereum|eth|cripto\w*|crypto\w*|stablecoin\w*|blockchain|token\w*|etf|sec|cv[mn]|stockholder\w*|shareholder\w*|invest\w*|trader\w*|wall\s+street|petrobras|vale|nvidia|apple|tesla|microsoft|amazon|alphabet|google|meta|netflix|openai|ai\s+chip\w*|semiconductor\w*|chipmaker\w*|tesouro|capital|fund\w*|credit\w*|credito|liquidez|liquidity|volatil\w*|vix)\b/i;
@@ -1706,7 +1709,7 @@ function mkDedup(itens) {
     });
     if (duplicate) continue;
     seenUrls.add(key); tokenSets.push(distinct); accepted.push(n);
-    if (accepted.length === 50) break;
+    if (accepted.length === 100) break;
   }
   return accepted;
 }
@@ -1758,15 +1761,6 @@ async function mkRss(url, fonte, perfil) {
   // Proxies públicos independentes, em paralelo: não esperar um timeout para iniciar o fallback.
   return Promise.any([mkRssProxy(url,fonte,perfil,false),mkRssProxy(url,fonte,perfil,true)]);
 }
-async function mkRssX(perfil) {
-  const feeds=[
-    "https://rsshub.app/twitter/user/"+perfil,
-    "https://nitter.mie.foundation/"+perfil+"/rss",
-    "https://nitter.mizuki.st/"+perfil+"/rss",
-  ];
-  try {return await Promise.any(feeds.map(u=>mkRssProxy(u,"X · @"+perfil,perfil,false)));}
-  catch {return Promise.any(feeds.map(u=>mkRssProxy(u,"X · @"+perfil,perfil,true)));}
-}
 async function mkFinnhubNoticias(category) {
   const key = String((typeof fhChave==="function" ? await fhChave().catch(()=>"") : "")
     || window.fhTokServidor || (typeof FH!=="undefined" ? FH.k : "")
@@ -1796,6 +1790,7 @@ async function mkEdgeNoticias(acao) {
   if(!resposta.ok)throw new Error("Fonte "+acao+" "+resposta.status);
   const obj=await resposta.json();
   if(!Array.isArray(obj.itens))throw new Error("Resposta inválida "+acao);
+  if(acao!=="terminal") MKT.fontesX = obj.fontesX || null;
   return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.a||"Money Times",c:n.tags||n.c||[]})).filter(Boolean);
 }
 
@@ -1872,10 +1867,10 @@ async function mkLoad(force) {
   MKT.busy=1;MKT.err="";mkPaint();
   try {
     const tarefas=[
+      // Os perfis X agora vêm da Edge "noticias": RSS direto + cache, sem proxies 404/429.
       mkEdgeNoticias("noticias"),mkEdgeNoticias("terminal"),
       mkFinnhubNoticias("forex"),mkFinnhubNoticias("crypto"),
       ...MK_FONTES_RSS.map(([nome,url])=>mkRss(url,nome)),
-      ...MK_CONTAS_X.map(perfil=>mkRssX(perfil)),
     ];
     const respostas=await Promise.allSettled(tarefas);
     const resultados=respostas.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
