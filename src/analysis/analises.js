@@ -160,20 +160,78 @@ finally{s.loading=false;if(req===reqId){render();if(s.refreshWhenDone){s.refresh
 function field(el){const m=d.querySelector('[data-an-sub].selected')?.dataset.anSub;if(m==='br'||m==='us')return [m,init(m)];return [null,null]}
 function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;s.page=0;if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
 d.addEventListener('input',ev=>{const b=ev.target;if(!b?.hasAttribute?.('data-scr-search'))return;const [m,s]=field(b);if(!m)return;s.search=b.value;s.page=0;clearTimeout(timer);timer=setTimeout(()=>load(m),420)});
-d.addEventListener('change',ev=>{const b=ev.target,[m,s]=field(b);if(!m)return;
-if(b.dataset.scrFilter)changeFilter(m,s,b.dataset.scrFilter,b.value);
-else if(b.dataset.scrChart){s.chart=b.value;render()}
-else if(b.dataset.scrZoom){s.zoom=b.value;render()}
-else if(b.dataset.scrSelect){const tk=b.dataset.scrSelect;if(b.checked&&!s.selected.includes(tk)){if(s.selected.length>=3){b.checked=false;return;}s.selected.push(tk)}else if(!b.checked)s.selected=s.selected.filter(x=>x!==tk);render()}
+d.addEventListener('change',ev=>{
+ const b=ev.target,[m,s]=field(b);if(!m||!b.closest('#an-root'))return;
+ if(b.dataset.scrFilter){changeFilter(m,s,b.dataset.scrFilter,b.value);return}
+ if(b.hasAttribute('data-scr-chart')){s.chart=b.value;s.focus='';s.zoom=1;s.panX=0;s.panY=0;render();return}
+ if(b.hasAttribute('data-scr-select')){
+  const tk=b.dataset.scrSelect,row=(s.data?.rows||[]).find(r=>r.ticker===tk);
+  if(b.checked&&!s.selected.includes(tk)){
+   if(s.selected.length>=10){b.checked=false;s.pdfError='Limite de 10 ações por dossiê. Remova uma ação antes de adicionar outra.';render();return}
+   if(!row){b.checked=false;return}
+   s.selected.push(tk);s.selectedRows[tk]={...row};
+  }else if(!b.checked){s.selected=s.selected.filter(x=>x!==tk);delete s.selectedRows[tk]}
+  s.pdfError='';render();
+ }
 });
-d.addEventListener('click',ev=>{const b=ev.target.closest('[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point]');if(!b)return;ev.preventDefault();const [m,s]=field(b);if(!m)return;
-if(b.hasAttribute('data-scr-refresh'))return void load(m,true);
-if(b.dataset.scrPage){s.page=Math.max(0,s.page+Number(b.dataset.scrPage));return void load(m);}
-if(b.dataset.scrAnalyze||b.dataset.scrPoint)return void w.DiarioAnalises.command('ANALISE '+(b.dataset.scrAnalyze||b.dataset.scrPoint));
-if(b.hasAttribute('data-scr-bulk')){if(s.selected.length>=2)return void w.DiarioAnalises.command('COMPARE '+s.selected.slice(0,3).join(' '));return;}
-if(b.dataset.scrCompare)return void w.DiarioAnalises.command('COMPARE '+b.dataset.scrCompare.replace(',', ' '));
-if(b.dataset.scrAdd){const ticker=b.dataset.scrAdd;try{if(typeof irPara==='function'){irPara('carteiras');setTimeout(()=>{const input=d.getElementById('c_tk');if(input){input.value=ticker;input.focus()}else w.alert('Para cadastrar '+ticker+', abra o formulário de compra na Carteira.')},100);return;}}catch{}
-try{navigator.clipboard.writeText(ticker)}catch{}w.alert('Ticker '+ticker+' selecionado. Abra a aba Carteira para registrar uma compra; nenhum lançamento foi criado.')}
+d.addEventListener('click',async ev=>{
+ const b=ev.target.closest('[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
+ if(!b||!b.closest('#an-root'))return;
+ ev.preventDefault();const [m,s]=field(b);if(!m)return;
+ if(b.hasAttribute('data-scr-refresh')){void load(m,true);return}
+ if(b.dataset.scrPage){s.page=Math.max(0,s.page+Number(b.dataset.scrPage));void load(m);return}
+ if(b.dataset.scrZoom){const factor=b.dataset.scrZoom==='in'?1.6:1/1.6;s.zoom=Math.min(6,Math.max(1,(Number(s.zoom)||1)*factor));render();return}
+ if(b.dataset.scrPan){s.panX=(Number(s.panX)||0)+(b.dataset.scrPan==='left'?-0.28:0.28);render();return}
+ if(b.dataset.scrReset){s.zoom=1;s.panX=0;s.panY=0;s.focus='';render();return}
+ if(b.dataset.scrPoint){s.focus=b.dataset.scrPoint;render();return}
+ if(b.dataset.scrRemove){const tk=b.dataset.scrRemove;s.selected=s.selected.filter(x=>x!==tk);delete s.selectedRows[tk];s.pdfError='';render();return}
+ if(b.dataset.scrDetail){s.detailTicker=s.detailTicker===b.dataset.scrDetail?'':b.dataset.scrDetail;render();if(s.detailTicker)d.getElementById('scr-detail')?.scrollIntoView({behavior:'smooth',block:'start'});return}
+ if(b.dataset.scrDetailClose){s.detailTicker='';render();return}
+ if(b.hasAttribute('data-scr-pdf')){
+  if(s.pdfBusy||!s.selected.length)return;
+  const rows=s.selected.map(t=>s.selectedRows[t]).filter(Boolean);
+  if(rows.length!==s.selected.length){s.pdfError='Um ou mais ativos não têm snapshot salvo. Selecione-os novamente no ranking.';render();return}
+  s.pdfBusy=true;s.pdfError='';render();
+  try{
+   const res=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows);
+   if(!res.cancelled){s.pdfError='PDF pronto com '+res.pages+' páginas. '+(res.downloaded?'Abra em Arquivos/Downloads para compartilhar.':'Compartilhamento iniciado.')}
+  }catch(e){s.pdfError='Não foi possível gerar o PDF: '+String(e.message||e).slice(0,170)}
+  finally{s.pdfBusy=false;render()}
+  return;
+ }
+ if(b.dataset.scrAnalyze){w.DiarioAnalises.command('ANALISE '+b.dataset.scrAnalyze);return}
+ if(b.hasAttribute('data-scr-bulk')){
+  if(s.selected.length>=2&&s.selected.length<=4)w.DiarioAnalises.command('COMPARE '+s.selected.join(' '));
+  return;
+ }
+ if(b.dataset.scrCompare){w.DiarioAnalises.command('COMPARE '+b.dataset.scrCompare.replace(',',' '));return}
+ if(b.dataset.scrAdd){
+  const ticker=b.dataset.scrAdd;
+  try{if(typeof irPara==='function'){irPara('carteiras');setTimeout(()=>{
+   const input=d.getElementById('c_tk');if(input){input.value=ticker;input.focus()}
+   else w.alert('Para cadastrar '+ticker+', abra o formulário de compra na Carteira.')
+  },100);return}}catch{}
+  try{navigator.clipboard.writeText(ticker)}catch{}
+  w.alert('Ticker '+ticker+' selecionado. Abra a aba Carteira para registrar uma compra; nenhum lançamento foi criado.');
+ }
+});
+let graphDrag=null;
+d.addEventListener('pointerdown',ev=>{
+ if(ev.target.closest('[data-scr-point]'))return;
+ const svg=ev.target.closest('svg.scr-svg');if(!svg||!svg.closest('#an-root'))return;
+ const [m]=field(svg);if(m)graphDrag={m,x:ev.clientX,y:ev.clientY,width:svg.getBoundingClientRect().width};
+});
+d.addEventListener('pointerup',ev=>{
+ if(!graphDrag)return;const drag=graphDrag;graphDrag=null;
+ const [m,s]=field(ev.target);if(m!==drag.m)return;
+ const dx=ev.clientX-drag.x;
+ if(Math.abs(dx)>14){s.panX=(Number(s.panX)||0)-dx/Math.max(150,drag.width);render()}
+});
+d.addEventListener('pointercancel',()=>{graphDrag=null});
+d.addEventListener('keydown',ev=>{
+ if(ev.key!=='Enter'&&ev.key!==' ')return;
+ const dot=ev.target.closest('[data-scr-point]');if(!dot)return;
+ ev.preventDefault();dot.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
 });
 w.DiarioScreeners={view,load,holdings};
 })(window,document);
