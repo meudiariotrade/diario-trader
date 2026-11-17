@@ -8,7 +8,7 @@ test('v552: WINFUT/WDOFUT da ponte valem para WIN e WDO nas Cotações e no dest
  const app=p.locator('#app:not(.v503-fantasma)');
  await p.evaluate(async()=>{
   const agora=new Date().toISOString();
-  SESS={uid:'u-teste',at:'t'};CQ.pfTs=0;
+  SESS={uid:'u-teste',at:'t',exp:Date.now()+3600000,projectUrl:cfg()?.url};CQ.pfTs=0;
   window.rq=async()=>new Response(JSON.stringify([{ticker:'WINFUT',ult:'173495',var:'0.11',updated_at:agora},{ticker:'WDOFUT',ult:'5598',var:'-0.09',updated_at:agora},{ticker:'PETR4',ult:'44.95',var:'-0.53',updated_at:agora}]));
   await cqPonte();
   CQ.d.fut={em:agora,itens:[{s:'BMFBOVESPA:WIN1!',c:'WIN',n:'Mini índice (WIN)',px:173770,d1:0.32,dp:0},{s:'BMFBOVESPA:WDO1!',c:'WDO',n:'Mini dólar (WDO)',px:5590,d1:-0.31,dp:1}]};

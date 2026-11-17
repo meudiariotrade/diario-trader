@@ -44,7 +44,7 @@ test('Mentor gera aula de PDF e preserva dicionário e diagramas SVG',{timeout:9
  await page.route('**/rest/v1/aulas?**',route=>route.fulfill({json:[]}));
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  await page.evaluate(()=>{
-  tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000};
+  tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000,projectUrl:location.origin};
   window.SUPA_URL=location.origin;window.SUPA_KEY='public';
   const demoFetch=window.fetch;
   window.fetch=(url,options)=>(String(url).startsWith(location.origin+'/functions/')||String(url).startsWith(location.origin+'/rest/'))?window.testNativeFetch(url,options):demoFetch(url,options);
@@ -80,7 +80,7 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
  await page.route('**/storage/v1/object/sign/**',route=>route.request().method()==='POST'?route.fulfill({json:{signedURL:'/object/sign/aulas-videos/test-video/'+ID+'-16x9.mp4?token=test'}}):route.fulfill({path:path.join(__dirname,'../public/avatar-talking.mp4'),contentType:'video/mp4'}));
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  await page.evaluate(data=>{
-  tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000};
+  tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000,projectUrl:location.origin};
   window.SUPA_URL=location.origin;window.SUPA_KEY='public';
   const demoFetch=window.fetch;
   window.fetch=(url,options)=>String(url).startsWith(location.origin+'/storage/v1/object/sign/')?window.testNativeFetch(url,options):demoFetch(url,options);

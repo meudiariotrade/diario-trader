@@ -33,7 +33,7 @@ test('v709: credencial de gerenciamento não vai para configuração pública',(
  assert.doesNotMatch(conf,/sbp_[a-f0-9]{30,}/);
  assert.doesNotMatch(bridge,/sbp_[a-f0-9]{30,}/);
  const rel=JSON.parse(rd('release.config.json'));
- assert.equal(rel.version,709);
+ assert.ok(rel.version>=709);
  assert.ok(rel.sources['src/app-layers.js'].includes('src/studies/resumo-local-v709.js'));
 });
 
