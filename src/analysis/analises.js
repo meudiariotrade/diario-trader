@@ -102,7 +102,7 @@ opts(m,s)+
 }
 function render(){try{if(typeof tab==='undefined'||tab!=='analises')return;const root=d.getElementById('an-root');if(!root)return;const active=d.activeElement,searchFocused=!!active?.matches?.('[data-scr-search]'),ss=searchFocused?{pos:active.selectionStart,end:active.selectionEnd}:null;
 root.outerHTML=w.DiarioAnalises.view();if(searchFocused){const target=d.querySelector('[data-scr-search]');if(target){target.focus();if(ss?.pos!=null)try{target.setSelectionRange(ss.pos,ss.end)}catch{}}}}catch(e){console.warn('Screener render',e)}}
-async function load(m,refresh=false){const s=init(m),u=owner();if(s.loading)return;
+async function load(m,refresh=false){const s=init(m),u=owner();if(s.loading){s.refreshWhenDone=true;return;}
 const body={market:m.toUpperCase(),search:s.search,sector:s.sector,custody:s.custody,owned:owned(),liquidity:Number(s.liquidity),cap:s.cap,preset:s.preset,order:s.order,page:s.page};
 const key=u+'|'+JSON.stringify(body),previous=cache.get(key);
 if(!refresh&&previous&&Date.now()-previous.time<5*60000){s.data=previous.data;s.error='';render();return;}
@@ -113,7 +113,7 @@ const data=await r.json().catch(()=>({}));if(!r.ok||!data.ok)throw Error(data.er
 if(u!==owner()||req!==reqId)return;
 s.data=data;cache.set(key,{time:Date.now(),data});if(cache.size>15)cache.delete(cache.keys().next().value);s.error='';
 }catch(e){if(req===reqId)s.error=String(e.message||'Não foi possível carregar.');}
-finally{if(req===reqId){s.loading=false;render()}}
+finally{if(req===reqId){s.loading=false;render();if(s.refreshWhenDone){s.refreshWhenDone=false;void load(m,true)}}}
 }
 function field(el){const m=d.querySelector('[data-an-sub].selected')?.dataset.anSub;if(m==='br'||m==='us')return [m,init(m)];return [null,null]}
 function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;s.page=0;if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
@@ -130,7 +130,7 @@ if(b.dataset.scrPage){s.page=Math.max(0,s.page+Number(b.dataset.scrPage));return
 if(b.dataset.scrAnalyze||b.dataset.scrPoint)return void w.DiarioAnalises.command('ANALISE '+(b.dataset.scrAnalyze||b.dataset.scrPoint));
 if(b.hasAttribute('data-scr-bulk')){if(s.selected.length>=2)return void w.DiarioAnalises.command('COMPARE '+s.selected.slice(0,3).join(' '));return;}
 if(b.dataset.scrCompare)return void w.DiarioAnalises.command('COMPARE '+b.dataset.scrCompare.replace(',', ' '));
-if(b.dataset.scrAdd){const ticker=b.dataset.scrAdd;try{if(typeof irPara==='function'){irPara('carteira');setTimeout(()=>{const input=d.getElementById('c_tk');if(input){input.value=ticker;input.focus()}else w.alert('Para cadastrar '+ticker+', abra o formulário de compra na Carteira.')},100);return;}}catch{}
+if(b.dataset.scrAdd){const ticker=b.dataset.scrAdd;try{if(typeof irPara==='function'){irPara('carteiras');setTimeout(()=>{const input=d.getElementById('c_tk');if(input){input.value=ticker;input.focus()}else w.alert('Para cadastrar '+ticker+', abra o formulário de compra na Carteira.')},100);return;}}catch{}
 try{navigator.clipboard.writeText(ticker)}catch{}w.alert('Ticker '+ticker+' selecionado. Abra a aba Carteira para registrar uma compra; nenhum lançamento foi criado.')}
 });
 w.DiarioScreeners={view,load,holdings};
