@@ -1834,11 +1834,14 @@ Deno.serve(async (req) => {
             .select('consultado_em,estado,fontes_ok,fontes_falhas,enviados,falhas_envio,motivo')
             .eq('id', 1).maybeSingle();
           r.monitorNoticias = monitor || null;
-          const { data: aparelhos } = await client.from('push_subs').select('id').eq('user_id', uid);
+          const { data: aparelhos, error: erroAparelhos } = await client.from('push_subs')
+            .select('id').eq('user_id', uid);
           const ids = (aparelhos || []).map((a: any) => a.id).slice(0, 5);
-          if (ids.length) {
+          const idLocal = pushOk(b.endpoint) ? await sha(b.endpoint) : '';
+          r.aparelhoRegistrado = !!idLocal && !erroAparelhos && ids.includes(idLocal);
+          if (idLocal && ids.includes(idLocal)) {
             const { data: envios } = await client.from('push_log')
-              .select('em,status,sent_at').in('subscription_id', ids)
+              .select('em,status,sent_at').eq('subscription_id', idLocal)
               .order('em', { ascending: false }).limit(1);
             r.ultimoEnvio = envios?.[0] || null;
           }
