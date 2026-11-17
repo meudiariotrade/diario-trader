@@ -237,3 +237,41 @@ html body #app nav.an-subs > button[aria-selected="true"] {
  #app[data-tela="analises"] .scr-panel{padding:11px 12px}
  #app[data-tela="analises"] .scr-svg{margin:6px 0}
 }
+
+
+/* v750: ranking automático de 10 empresas — lista flat, sem novos cards aninhados. */
+#app[data-tela="analises"] .scr-top-ten{padding:14px 16px;margin:14px 0 12px;min-width:0}
+#app[data-tela="analises"] .scr-top-ten-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;min-width:0}
+#app[data-tela="analises"] .scr-top-ten-head h3{font-size:16px;line-height:1.35;margin:3px 0 5px;color:#eaecee;font-weight:700}
+#app[data-tela="analises"] .scr-top-ten-head p:not(.an-kicker){margin:0;font-size:11px;line-height:1.5;color:#aeb5c0}
+#app[data-tela="analises"] .scr-top-ten-head>div:first-child{min-width:0;flex:1}
+#app[data-tela="analises"] .scr-top-ten-buttons{display:flex;gap:7px;flex-shrink:0}
+#app[data-tela="analises"] .scr-top-ten-buttons button,
+#app[data-tela="analises"] .scr-top-ten-row button{
+ min-height:42px;padding:7px 10px;border-radius:4px;border:1px solid #5d5036;
+ background:#181c26;color:#e5c271;font-size:11px;font-weight:650;cursor:pointer;white-space:normal;text-align:center
+}
+#app[data-tela="analises"] .scr-top-ten-buttons button:disabled{opacity:.4;cursor:default}
+#app[data-tela="analises"] .scr-top-ten-list{margin-top:13px;border-top:1px solid #1e232e}
+#app[data-tela="analises"] .scr-top-ten-row{display:grid;grid-template-columns:35px minmax(0,1fr) 60px 75px;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid #1e232e;min-width:0}
+#app[data-tela="analises"] .scr-top-ten-rank{font:700 14px/1.2 system-ui;color:#a1a6b1;font-variant-numeric:tabular-nums}
+#app[data-tela="analises"] .scr-top-ten-company{min-width:0}
+#app[data-tela="analises"] .scr-top-ten-company>b{font-size:13px;color:#f0f1f4;white-space:nowrap}
+#app[data-tela="analises"] .scr-top-ten-company>small{display:inline;margin-left:8px;font-size:11px;color:#abb0bb}
+#app[data-tela="analises"] .scr-top-ten-company p{margin:4px 0;font-size:11px;line-height:1.35;color:#d7d9df;overflow-wrap:break-word}
+#app[data-tela="analises"] .scr-top-ten-caution{display:block;font-size:10px;line-height:1.4;color:#bcb6a6}
+#app[data-tela="analises"] .scr-top-ten-grade{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#app[data-tela="analises"] .scr-top-ten-grade b{font-size:21px;font-weight:750;color:#d4a017}
+#app[data-tela="analises"] .scr-top-ten-grade small{display:block;font-size:9px;color:#969ba5}
+#app[data-tela="analises"] .scr-top-ten-empty{padding:15px 0;margin:12px 0;border-top:1px solid #1e232e;color:#c2c6d0;font-size:12px;line-height:1.6}
+#app[data-tela="analises"] .scr-top-ten>.scr-hint{font-size:10px;line-height:1.55;margin:12px 0 0}
+@media(max-width:660px){
+ #app[data-tela="analises"] .scr-top-ten{padding:13px 12px}
+ #app[data-tela="analises"] .scr-top-ten-head{flex-wrap:wrap}
+ #app[data-tela="analises"] .scr-top-ten-buttons{width:100%}
+ #app[data-tela="analises"] .scr-top-ten-buttons button{flex:1}
+ #app[data-tela="analises"] .scr-top-ten-row{grid-template-columns:24px minmax(0,1fr) 48px;gap:7px}
+ #app[data-tela="analises"] .scr-top-ten-company>small{display:block;margin:1px 0 0}
+ #app[data-tela="analises"] .scr-top-ten-row button{grid-column:2 / 4;min-height:40px}
+ #app[data-tela="analises"] .scr-top-ten-grade b{font-size:20px}
+}
