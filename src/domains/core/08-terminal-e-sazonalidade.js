@@ -1,3 +1,9 @@
+function macroFetchComSessao(url,options) {
+  if (typeof SESS === "undefined" || !SESS?.at)
+    return Promise.reject(new Error("Entre na sua conta para consultar o macro."));
+  return fetch(url,options);
+}
+// Consultas macro privadas nunca precisam produzir HTTP 401 em sessão anônima.
 function vEco(e) {
   return `<div class="card"><div class="top"><b>🎓 Economista IA</b>${ECO.l.length ? '<button class="btn s" data-eco="limpa">Limpar</button>' : ""}</div>${e}
   <div class="sm mut">Economista com formação de mestrado e doutorado, sem viés político. Cole uma notícia (texto ou link) ou pergunte sobre cenários: ele confirma os fatos na internet, explica o mecanismo, mostra o efeito no Ibovespa, dólar e DI e monta cenários com probabilidade.</div>
@@ -233,7 +239,7 @@ async function pnlCarrega(e) {
   }
   ((PNL.busy = 1), (PNL.err = ""), pnlPaint());
   try {
-    const a = await fetch(t.url + "/functions/v1/macro", {
+    const a = await macroFetchComSessao(t.url + "/functions/v1/macro", {
         method: "POST",
         headers: macroAuthHeaders(t),
         body: JSON.stringify({ modo: "painel" }),
@@ -1983,7 +1989,7 @@ async function feCarrega() {
   if (!e) return;
   FE.busy = 1;
   try {
-    const a = await fetch(e.url + "/functions/v1/macro", {
+    const a = await macroFetchComSessao(e.url + "/functions/v1/macro", {
         method: "POST",
         headers: macroAuthHeaders(e),
         body: JSON.stringify({ modo: "fluxo" }),
@@ -2103,7 +2109,7 @@ async function balCarrega() {
   if (!e) return;
   BAL.busy = 1;
   try {
-    const a = await fetch(e.url + "/functions/v1/macro", {
+    const a = await macroFetchComSessao(e.url + "/functions/v1/macro", {
         method: "POST",
         headers: macroAuthHeaders(e),
         body: JSON.stringify({ modo: "balancos" }),
@@ -2602,7 +2608,7 @@ async function szCarrega(e) {
   }
   ((SZ.busy = 1), (SZ.err = ""), szPinta());
   try {
-    const a = await fetch(t.url + "/functions/v1/macro", {
+    const a = await macroFetchComSessao(t.url + "/functions/v1/macro", {
         method: "POST",
         headers: macroAuthHeaders(t),
         body: JSON.stringify({ modo: "sazonal" }),
@@ -3111,7 +3117,7 @@ async function rkCarrega(e) {
   }
   ((RK.busy = 1), (RK.err = ""), rkPinta());
   const [a, o] = await Promise.allSettled([
-    fetch(t.url + "/functions/v1/macro", {
+    macroFetchComSessao(t.url + "/functions/v1/macro", {
       method: "POST",
       headers: macroAuthHeaders(t),
       body: JSON.stringify({ modo: "ranking" }),
@@ -3542,7 +3548,7 @@ async function dgTesta() {
   }
   ((DG.busy = 1), (DG.err = ""), dgPinta());
   const [t, a, o, s] = await Promise.allSettled([
-    fetch(e.url + "/functions/v1/macro", {
+    macroFetchComSessao(e.url + "/functions/v1/macro", {
       method: "POST",
       headers: macroAuthHeaders(e),
       body: JSON.stringify({ modo: "diag" }),
