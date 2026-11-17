@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "diario-trader-noticias",
+  "main": "index.mjs",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "triggers": { "crons": ["*/2 * * * *"] },
+  "vars": { "ALLOWED_ORIGIN": "https://meudiariotrade.github.io" },
+  "kv_namespaces": [{ "binding": "NEWS_CACHE", "id": "PREENCHER_ID_NAMESPACE_KV_ANTES_DO_DEPLOY" }]
+}
