@@ -8,7 +8,7 @@ Deno.serve(async(req:Request)=>{
  if(req.method!=='POST')return out({error:'Metodo nao permitido'},405);
  if(!SB||!SVC)return out({error:'Servico nao configurado'},503);
  try{
-  const token=(req.headers.get('authorization')||'').replace(/^Bearer\\s+/i,'');
+  const token=(req.headers.get('authorization')||'').replace(/^Bearer +/i,'');
   if(!token||token.length>4096)return out({error:'Entre na sua conta'},401);
   const auth=await fetch(SB+'/auth/v1/user',{headers:{apikey:ANON||SVC,Authorization:'Bearer '+token},signal:AbortSignal.timeout(7000)});
   if(!auth.ok)return out({error:'Sessao expirada'},401);
