@@ -99,3 +99,9 @@ verify_jwt = false
 # A função finnhub-token exige JWT validado na plataforma.
 [functions.finnhub-token]
 verify_jwt = true
+
+[functions.screeners-quant]
+verify_jwt = false
+
+[functions.screeners-sync]
+verify_jwt = false
