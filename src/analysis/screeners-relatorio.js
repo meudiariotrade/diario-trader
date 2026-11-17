@@ -4,7 +4,7 @@
 const intelligence=()=>w.DiarioScreenersInteligencia;
 const colors={ink:'#1f2023',gold:'#ac8439',paper:'#fbfaf7',panel:'#efeeeb',muted:'#626770',rule:'#dcdad5',white:'#ffffff',green:'#24734c',red:'#ad4440'};
 const num=(v,d=1)=>v===null||v===undefined||!Number.isFinite(Number(v))?'N/D':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
-const date=t=>{if(!t)return 'não informada';const d=new Date(t);return Number.isFinite(d.valueOf())?d.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}):String(t).slice(0,10)};
+const date=t=>{if(!t)return 'não informada';const value=String(t);if(/^\d{4}-\d{2}-\d{2}$/.test(value))return value.slice(8,10)+'/'+value.slice(5,7)+'/'+value.slice(0,4);const d=new Date(value);return Number.isFinite(d.valueOf())?d.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}):value.slice(0,10)};
 async function libs(){
  const load=file=>w.DiarioChunks?.load?w.DiarioChunks.load(file):new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=file;s.onload=resolve;s.onerror=()=>reject(Error('Biblioteca não disponível: '+file));document.head.appendChild(s)});
  if(!w.PDFLib)await load('pdf-lib.min.js');
@@ -123,7 +123,13 @@ async function build(m,rows,opts={}){
   return doc.embedFont(new Uint8Array(await r.arrayBuffer()),{subset:true});
  }));
  const L=drawing(doc,P,{sans:loaded[0],bold:loaded[1],serif:loaded[2]});
- const studies=rows.map(r=>intelligence().diagnostics(m,r,Date.now(),opts.medians||null));
+ const studies=rows.map(r=>{
+    const study=intelligence().diagnostics(m,r,Date.now(),opts.medians||null);
+    // O retorno ao acionista no modelo US usa Dividend Yield validado, não exige buyback.
+    if(m==='US'&&r.dividend_yield!=null&&Number.isFinite(Number(r.dividend_yield)))
+      study.risks=study.risks.filter(v=>!v.startsWith('Total Yield sem evidência suficiente'));
+    return study;
+  });
  cover(L,m,rows,studies,opts);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length,opts));methodology(L,m,opts);
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:(opts.automatic?'Top10-Quantitativo-':'Dossie-')+m+'-'+new Date().toISOString().slice(0,10)+'-'+rows.length+'-acoes.pdf',pages:doc.getPageCount()};
 }
