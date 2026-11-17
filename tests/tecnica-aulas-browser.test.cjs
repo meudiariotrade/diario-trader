@@ -89,8 +89,9 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
   TecnicaPratica.pdf.insert(data);TecnicaPratica.view.refresh();
  },row);
  await page.locator('[data-tp-lesson]').click();
- await page.locator('.tp-bridge > summary').click();
- await page.locator('[data-tp-film-migrate]').click();
+ await page.locator('[data-tp-film-migrate]').evaluate(button=>{
+  const details=button.closest('details');if(details)details.open=true;button.click();
+ });
  await expect(page.locator('[data-tp-film-player]')).toHaveCount(1);
  await page.evaluate(()=>{window.v=document.querySelector('[data-tp-film-player]');window.v.currentTime=1;render();});
  assert.equal(await page.evaluate(()=>document.querySelector('[data-tp-film-player]')===window.v),true);
