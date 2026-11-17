@@ -74,6 +74,38 @@ self.addEventListener('fetch',event=>{
   })());
  }
 });
+/* Registro local mínimo para confirmar processamento de Push pelo Service Worker.
+   Sem manchetes, tokens nem endpoints; apenas horário e tipo. O banco fica no aparelho. */
+function pushDiagSalvar(tipo,tag){
+ return new Promise(resolve=>{
+  if(!('indexedDB' in self))return resolve(false);
+  try{
+   const r=indexedDB.open('diario-push-diagnostico-v1',1);
+   r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('eventos'))r.result.createObjectStore('eventos')};
+   r.onerror=()=>resolve(false);
+   r.onsuccess=()=>{
+    const db=r.result;
+    try{
+     const tx=db.transaction('eventos','readwrite');
+     tx.objectStore('eventos').put({quando:new Date().toISOString(),tag:String(tag||'').slice(0,70)},tipo);
+     tx.oncomplete=()=>{db.close();resolve(true)};
+     tx.onerror=()=>{db.close();resolve(false)};
+     tx.onabort=()=>{db.close();resolve(false)};
+    }catch(_){db.close();resolve(false)}
+   };
+  }catch(_){resolve(false)}
+ });
+}
 /* Notificações push */
-self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch(_){d={title:'Diário de trader',body:e.data?e.data.text():''}}e.waitUntil(self.registration.showNotification(d.title||'Diário de trader',{body:d.body||'',tag:d.tag||undefined,icon:'icon-192.png',badge:'icon-192.png',data:d.data||{}}))});
-self.addEventListener('notificationclick',e=>{e.notification.close();const g=e.notification.data||{},u=new URL('./?go='+encodeURIComponent(g.go||'mercado')+(g.r?'&r='+encodeURIComponent(g.r):''),self.registration.scope).href;e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(l=>{const c=l.find(x=>x.url.startsWith(self.registration.scope));if(c){c.postMessage({go:g.go||'mercado',r:g.r||''});return c.focus()}return self.clients.openWindow(u)}))});
+self.addEventListener('push',e=>{
+ let d={};
+ try{d=e.data?e.data.json():{}}catch(_){d={title:'Diário de trader',body:e.data?e.data.text():''}}
+ e.waitUntil((async()=>{
+  await self.registration.showNotification(d.title||'Diário de trader',{
+   body:d.body||'',tag:d.tag||undefined,icon:'icon-192.png',badge:'icon-192.png',data:d.data||{}
+  });
+  // showNotification resolvido não garante banner visível; registra só o evento processado.
+  await pushDiagSalvar('ultimo',d.tag||'');
+ })());
+});
+self.addEventListener('notificationclick',e=>{e.waitUntil(pushDiagSalvar('clique',e.notification.tag||''));e.notification.close();const g=e.notification.data||{},u=new URL('./?go='+encodeURIComponent(g.go||'mercado')+(g.r?'&r='+encodeURIComponent(g.r):''),self.registration.scope).href;e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(l=>{const c=l.find(x=>x.url.startsWith(self.registration.scope));if(c){c.postMessage({go:g.go||'mercado',r:g.r||''});return c.focus()}return self.clients.openWindow(u)}))});
