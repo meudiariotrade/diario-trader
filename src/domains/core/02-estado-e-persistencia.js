@@ -2023,10 +2023,17 @@ function setSess(e, t) {
     exp: Date.now() + (e.expires_in || 3600) * 1e3,
     uid: e.user.id,
     email: t || e.user.email,
+    projectUrl: cfg()?.url || '',
   }),
     ls.set("diario-sess", SESS));
 }
 async function tok() {
+  // v710: sessão do projeto anterior nunca pode ser enviada ao backend novo.
+  const principal=cfg()?.url||'';
+  if(SESS && (!SESS.projectUrl || SESS.projectUrl!==principal)){
+    SESS=null;ls.del("diario-sess");
+    throw new Error("Projeto Supabase atualizado: entre novamente no novo projeto para sincronizar com segurança.");
+  }
   if (!SESS) throw new Error("Entre na sua conta.");
   if (SESS.exp - Date.now() > 6e4) return;
   const e = syncOwner(),

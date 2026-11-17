@@ -19,8 +19,8 @@ from urllib import request as urlreq, error as urlerr
 
 PASTA = Path(__file__).resolve().parent
 CONFIG = PASTA / "config.json"
-SUPA_URL = os.environ.get("DIARIO_SUPA_URL", "https://wbpsmszecpzioaijfnsl.supabase.co").rstrip("/")
-SUPA_KEY = os.environ.get("DIARIO_SUPA_PUBLISHABLE_KEY", "sb_publishable_GNuBD5Oyo2Wk-iE2s4TbUQ_1XiKvzhV")  # publica; token de gestão NUNCA entra aqui
+SUPA_URL = os.environ.get("DIARIO_SUPA_URL", "https://vdzwydizostutukppcsj.supabase.co").rstrip("/")
+SUPA_KEY = os.environ.get("DIARIO_SUPA_PUBLISHABLE_KEY", "sb_publishable_LjeuewTU7OjYrNiRzM2nJQ_iAa9UCkC")  # publica; token de gestão NUNCA entra aqui
 APP_URL_PADRAO = "https://meudiariotrade.github.io/diario-trader/"
 VOZES = {"1": ("pt-BR-AntonioNeural", "Antônio (masculina)"), "2": ("pt-BR-FranciscaNeural", "Francisca (feminina)"),
          "3": ("pt-BR-ThalitaMultilingualNeural", "Thalita (feminina, mais natural)")}

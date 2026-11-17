@@ -1,5 +1,3 @@
-// Dados públicos do projeto Supabase (a chave "publishable" foi feita para ficar no app;
-// a proteção dos dados vem das regras de segurança criadas no SQL).
-window.SUPA_URL = "https://wbpsmszecpzioaijfnsl.supabase.co";
-window.SUPA_KEY = "sb_publishable_GNuBD5Oyo2Wk-iE2s4TbUQ_1XiKvzhV";
-
+// Chave publicável do Supabase principal v710; acesso aos dados restrito por RLS.
+window.SUPA_URL = "https://vdzwydizostutukppcsj.supabase.co";
+window.SUPA_KEY = "sb_publishable_LjeuewTU7OjYrNiRzM2nJQ_iAa9UCkC";

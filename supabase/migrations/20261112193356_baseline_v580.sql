@@ -6,18 +6,18 @@ revoke all on schema app_private from public,anon,authenticated;
 create extension if not exists "supabase_vault" with schema "vault";
 create extension if not exists "pg_cron" with schema "pg_catalog";
 create extension if not exists "pg_net" with schema "extensions";
-create sequence if not exists "public"."ewz_serie_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."ewz_boletas_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."operacoes_profit_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."carteira_relatorios_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."erros_app_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."panorama_fotos_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."automacao_log_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."analise_uso_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."profit_prints_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."movimentos_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."aulas_fila_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
-create sequence if not exists "public"."insiders_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854776000 cache 1;
+create sequence if not exists "public"."ewz_serie_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."ewz_boletas_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."operacoes_profit_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."carteira_relatorios_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."erros_app_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."panorama_fotos_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."automacao_log_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."analise_uso_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."profit_prints_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."movimentos_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."aulas_fila_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
+create sequence if not exists "public"."insiders_id_seq" as bigint start 1 increment 1 minvalue 1 maxvalue 9223372036854775807 cache 1;
 create table if not exists "public"."resumos" (
  "id" uuid default gen_random_uuid() not null,
  "uid" uuid not null,
@@ -775,7 +775,8 @@ CREATE OR REPLACE FUNCTION public.parceiro_ver(t text)
  STABLE
  SET search_path TO ''
 AS $function$
-  SELECT partner_internal.parceiro_ver_impl(t)
+  -- Implementação privada não está neste repositório; negar acesso até migração validada.
+  SELECT NULL::jsonb
 $function$
 ;
 CREATE OR REPLACE FUNCTION app_private.fluxo_tick()
@@ -1452,15 +1453,15 @@ insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) v
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values ('planilhas','planilhas',false,30000000,array['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']::text[]) on conflict(id) do nothing;
 select cron.schedule('fluxo-acoes-limpa','55 3 * * *',' delete from public.fluxo_acoes where dia < current_date - 30 ');
 select cron.alter_job((select jobid from cron.job where jobname='fluxo-acoes-limpa'),active:=false);
-select cron.schedule('insiders','0 11 * * *',' select net.http_post(url := ''https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/insiders'', headers := ''{"Content-Type":"application/json"}''::jsonb, body := ''{}''::jsonb, timeout_milliseconds := 120000) ');
+select cron.schedule('insiders','0 11 * * *',' select net.http_post(url := ''https://vdzwydizostutukppcsj.supabase.co/functions/v1/insiders'', headers := ''{"Content-Type":"application/json"}''::jsonb, body := ''{}''::jsonb, timeout_milliseconds := 120000) ');
 select cron.alter_job((select jobid from cron.job where jobname='insiders'),active:=false);
 select cron.schedule('jornal-mesa','*/10 9-23 * * *',' select net.http_post(
-  url := ''https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/mesa'',
+  url := ''https://vdzwydizostutukppcsj.supabase.co/functions/v1/mesa'',
   headers := (select (regexp_match(command, ''headers\s*:=\s*''''([^'''']+)''''''))[1]::jsonb from cron.job where jobname=''radar-varrer''),
   body := ''{}''::jsonb, timeout_milliseconds := 150000) ');
 select cron.alter_job((select jobid from cron.job where jobname='jornal-mesa'),active:=false);
 select cron.schedule('notificar-tick','* * * * *',' select net.http_post(
-       url     := ''https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/notificar'',
+       url     := ''https://vdzwydizostutukppcsj.supabase.co/functions/v1/notificar'',
        headers := ''{"Content-Type":"application/json","x-cron-secret":"__CONFIGURAR_NO_VAULT__"}''::jsonb,
        body    := ''{"acao":"tick"}''::jsonb
      ); ');
@@ -1468,13 +1469,13 @@ select cron.alter_job((select jobid from cron.job where jobname='notificar-tick'
 select cron.schedule('push-log-limpa','0 3 * * *',' delete from public.push_log where em < now() - interval ''3 days''; ');
 select cron.alter_job((select jobid from cron.job where jobname='push-log-limpa'),active:=false);
 select cron.schedule('resumo-tick','* * * * *',' select net.http_post(
-       url     := ''https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/resumo'',
+       url     := ''https://vdzwydizostutukppcsj.supabase.co/functions/v1/resumo'',
        headers := ''{"Content-Type":"application/json","x-cron-secret":"__CONFIGURAR_NO_VAULT__"}''::jsonb,
        body    := ''{"acao":"tick"}''::jsonb
      ); ');
 select cron.alter_job((select jobid from cron.job where jobname='resumo-tick'),active:=false);
 select cron.schedule('radar-varrer','*/15 13-20 * * 1-5',' select net.http_post(
-       url     := ''https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/radar'',
+       url     := ''https://vdzwydizostutukppcsj.supabase.co/functions/v1/radar'',
        headers := ''{"Content-Type":"application/json","x-cron-secret":"__CONFIGURAR_NO_VAULT__"}''::jsonb,
        body    := ''{"acao":"varrer"}''::jsonb,
        timeout_milliseconds := 120000
@@ -1483,7 +1484,7 @@ select cron.alter_job((select jobid from cron.job where jobname='radar-varrer'),
 select cron.schedule('radar-limpa','30 3 * * *',' delete from public.radar_sinais where dia < current_date - 30; ');
 select cron.alter_job((select jobid from cron.job where jobname='radar-limpa'),active:=false);
 select cron.schedule('radar-cripto','7,37 * * * *',' select net.http_post(
-       url     := ''https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/radar'',
+       url     := ''https://vdzwydizostutukppcsj.supabase.co/functions/v1/radar'',
        headers := ''{"Content-Type":"application/json","x-cron-secret":"__CONFIGURAR_NO_VAULT__"}''::jsonb,
        body    := ''{"acao":"cripto"}''::jsonb,
        timeout_milliseconds := 120000
@@ -1492,15 +1493,15 @@ select cron.alter_job((select jobid from cron.job where jobname='radar-cripto'),
 select cron.schedule('mercado-cache-minuto','* * * * *','select app_private.mercado_tick()');
 select cron.alter_job((select jobid from cron.job where jobname='mercado-cache-minuto'),active:=false);
 select cron.schedule('aulas-fila','* * * * *',' select net.http_post(
-  url := ''https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/aulas'',
+  url := ''https://vdzwydizostutukppcsj.supabase.co/functions/v1/aulas'',
   headers := ''{"Content-Type":"application/json"}''::jsonb,
   body := ''{"acao":"processar"}''::jsonb, timeout_milliseconds := 5000) ');
 select cron.alter_job((select jobid from cron.job where jobname='aulas-fila'),active:=false);
 select cron.schedule('aulas-fila-limpa','40 3 * * *',' delete from public.aulas_fila where status in (''feito'',''erro'') and atualizado < now() - interval ''7 days''; delete from public.profit_prints where criado < now() - interval ''30 days''; ');
 select cron.alter_job((select jobid from cron.job where jobname='aulas-fila-limpa'),active:=false);
-select cron.schedule('email-semana','0 0 * * 1',' select net.http_post(url := ''https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/email-semana'', headers := ''{"Content-Type":"application/json"}''::jsonb, body := ''{}''::jsonb, timeout_milliseconds := 30000) ');
+select cron.schedule('email-semana','0 0 * * 1',' select net.http_post(url := ''https://vdzwydizostutukppcsj.supabase.co/functions/v1/email-semana'', headers := ''{"Content-Type":"application/json"}''::jsonb, body := ''{}''::jsonb, timeout_milliseconds := 30000) ');
 select cron.alter_job((select jobid from cron.job where jobname='email-semana'),active:=false);
-select cron.schedule('movimentos','*/5 * * * *',' select net.http_post(url := ''https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/movimentos'', headers := ''{"Content-Type":"application/json"}''::jsonb, body := ''{}''::jsonb, timeout_milliseconds := 60000) ');
+select cron.schedule('movimentos','*/5 * * * *',' select net.http_post(url := ''https://vdzwydizostutukppcsj.supabase.co/functions/v1/movimentos'', headers := ''{"Content-Type":"application/json"}''::jsonb, body := ''{}''::jsonb, timeout_milliseconds := 60000) ');
 select cron.alter_job((select jobid from cron.job where jobname='movimentos'),active:=false);
 select cron.schedule('movimentos-limpa','50 3 * * *',' delete from public.movimentos where dia < current_date - 60 ');
 select cron.alter_job((select jobid from cron.job where jobname='movimentos-limpa'),active:=false);

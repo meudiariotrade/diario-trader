@@ -1,4 +1,4 @@
-project_id = "diario-trader"
+project_id = "vdzwydizostutukppcsj"
 
 [functions.screener]
 verify_jwt = false
@@ -95,3 +95,7 @@ verify_jwt = false
 
 [functions.revista-ia]
 verify_jwt = false
+
+# A função finnhub-token exige JWT validado na plataforma.
+[functions.finnhub-token]
+verify_jwt = true

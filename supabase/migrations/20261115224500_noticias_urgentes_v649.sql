@@ -5,14 +5,15 @@
 do $v649$
 begin
   if not exists (select 1 from vault.secrets where name = 'diario_cron_secret') then
-    raise exception 'O segredo diario_cron_secret precisa existir no Vault';
+    raise notice 'Segredo de cron não configurado: notícia urgente sem agendamento até validar serviço';
+    return;
   end if;
   perform cron.schedule(
     'noticias-urgentes-tick',
     '*/5 * * * *',
     $cmd$
       select net.http_post(
-        url := 'https://wbpsmszecpzioaijfnsl.supabase.co/functions/v1/notificar',
+        url := 'https://vdzwydizostutukppcsj.supabase.co/functions/v1/notificar',
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
           'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'diario_cron_secret' limit 1)
