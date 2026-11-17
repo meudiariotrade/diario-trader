@@ -1,3 +1,11 @@
+## Confiabilidade dos dados v722
+
+A importação automática do Profit só confirma recebimento após o commit no IndexedDB. Falta de espaço, transação abortada e troca de conta mantêm a origem pendente para nova tentativa. Linhas inválidas não são confirmadas. A comparação com operações manuais exige também os preços e o mesmo minuto, reduzindo descartes por proximidade de horário.
+
+A importação CSV do contrato cheio de dólar (DOL) usa o mesmo valor por ponto da ponte. Testes adicionais cobrem repetição, retomada após falha, compra/venda e custos em WIN/WDO/DOL/IND, além de exportação/restauração do diário, carteira e fotos. Layout, PDF e ordem dos provedores de IA preservados.
+
+Limites: os testes de recuperação usam IndexedDB simulado; a validação em iPhone físico e com arquivos reais do Profit continua necessária. Biblioteca de PDFs e mídias de aulas têm armazenamento próprio e não estão incluídas nessa comprovação de backup.
+
 ## Correção do Terminal v536
 
 Retira a apresentação de resumo e o agrupamento de menu introduzidos na v534. Restaura a apresentação anterior do Terminal e seus controles, com menu compacto em uma faixa. Os modos de páginas e de painéis clássicos passam a ser exclusivos: não exibem os dois conteúdos juntos. Não altera os espaços personalizados ou os dados salvos.

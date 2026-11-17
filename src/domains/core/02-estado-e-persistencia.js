@@ -3766,7 +3766,7 @@ function impBuild() {
       n = !t.open && s ? sum(t.cl.map((u) => u[0] * u[1])) / s : null,
       r = impKind(t),
       i = t.a.slice(0, 3),
-      l = i === "WIN" ? 0.2 : i === "WDO" ? 10 : 1;
+      l = i === "WIN" ? 0.2 : i === "WDO" ? 10 : i === "DOL" ? 50 : 1;
     let d = impStop(t, IM.orders),
       c = 0;
     if (d == null) {
@@ -3934,27 +3934,39 @@ const typing = () => {
   );
 };
 function persistNow() {
-  clearTimeout(st);
-  const e = LOCAL_SAVE.revision;
-  LOCAL_SAVE.pending = !0;
-  try {
-    if (!db) throw new Error("Armazenamento do aparelho indisponível.");
-    const t = JSON.parse(JSON.stringify(S)),
-      a = db.transaction("kv", "readwrite");
-    (a.objectStore("kv").put(t, "s"),
-      (a.oncomplete = () => {
-        (e === LOCAL_SAVE.revision &&
-          ((LOCAL_SAVE.committed = e),
-          (LOCAL_SAVE.pending = !1),
-          (LOCAL_SAVE.error = "")),
-          svUi());
-      }),
-      (a.onabort = () => localSaveFailed(a.error, e)),
-      (a.onerror = () => localSaveFailed(a.error, e)));
-  } catch (t) {
-    localSaveFailed(t, e);
-  }
-  svUi();
+  // Chamadores que confirmam recebimento remoto precisam esperar o commit local.
+  // Resolve false em falhas: os outros salvamentos automáticos não precisam capturar rejeições.
+  return new Promise((resolve) => {
+    clearTimeout(st);
+    const e = LOCAL_SAVE.revision;
+    LOCAL_SAVE.pending = !0;
+    try {
+      if (!db) throw new Error("Armazenamento do aparelho indisponível.");
+      const t = JSON.parse(JSON.stringify(S)),
+        a = db.transaction("kv", "readwrite");
+      (a.objectStore("kv").put(t, "s"),
+        (a.oncomplete = () => {
+          (e === LOCAL_SAVE.revision &&
+            ((LOCAL_SAVE.committed = e),
+            (LOCAL_SAVE.pending = !1),
+            (LOCAL_SAVE.error = "")),
+            svUi());
+          resolve(true);
+        }),
+        (a.onabort = () => {
+          localSaveFailed(a.error, e);
+          resolve(false);
+        }),
+        (a.onerror = () => {
+          localSaveFailed(a.error, e);
+          resolve(false);
+        }));
+    } catch (t) {
+      localSaveFailed(t, e);
+      resolve(false);
+    }
+    svUi();
+  });
 }
 function localSaveFailed(e, t) {
   if (t !== LOCAL_SAVE.revision) return;

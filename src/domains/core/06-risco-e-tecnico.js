@@ -1963,23 +1963,57 @@ function pfJaTem(e) {
       String(a.ativo || "").toUpperCase() === e.ativo &&
       a.side === e.side &&
       String(+a.qty) === String(+e.qty) &&
-      Math.abs(Date.parse(a.dt) - t) <= 6e5,
+      Number(a.entry) === Number(e.entry) &&
+      (a.exit === "" || a.exit == null) === (e.exit === "" || e.exit == null) &&
+      (e.exit === "" || e.exit == null || Number(a.exit) === Number(e.exit)) &&
+      Math.abs(Date.parse(a.dt) - t) < 6e4,
   );
 }
 async function profitImporta(e) {
   if (!(!SESS || !cfg() || PFX.busy || (PFX.off && !e))) {
     PFX.busy = 1;
     try {
+      const dono = SESS.uid,
+        estado = S;
+      const mesmaConta = () => SESS?.uid === dono && S === estado;
       const t = await (
           await rq(
             "/rest/v1/operacoes_profit?select=*&importado=eq.false&order=abertura.asc&limit=500",
           )
         ).json(),
-        a = new Set(S.trades.flatMap((r) => [r.ext, r.id]).filter(Boolean)),
+        a = new Set(
+          estado.trades.flatMap((r) => [r.ext, r.id]).filter(Boolean),
+        ),
         o = [],
         s = [];
       let n = 0;
-      ((t || []).forEach((r) => {
+      if (!mesmaConta())
+        throw new Error(
+          "A conta ou o diário mudou durante a leitura do Profit. Tente novamente.",
+        );
+      if (!Array.isArray(t))
+        throw new Error(
+          "Resposta inválida do Profit. Nenhuma operação foi confirmada.",
+        );
+      t.forEach((r) => {
+        // Dados incompletos continuam pendentes para correção na origem.
+        if (
+          !r ||
+          !r.id ||
+          !r.id_externo ||
+          !r.ativo ||
+          !["C", "V"].includes(r.lado) ||
+          r.preco_entrada == null ||
+          !Number.isFinite(+r.preco_entrada) ||
+          +r.preco_entrada <= 0 ||
+          !Number.isFinite(+r.qtd) ||
+          +r.qtd <= 0 ||
+          !Number.isFinite(Date.parse(r.abertura)) ||
+          (r.preco_saida != null &&
+            (!Number.isFinite(+r.preco_saida) || +r.preco_saida < 0)) ||
+          (r.custos != null && !Number.isFinite(+r.custos))
+        )
+          return;
         s.push(r.id);
         const i = "profit:" + r.id_externo;
         if (
@@ -1995,42 +2029,52 @@ async function profitImporta(e) {
           return;
         }
         (a.add(i), a.add(l.id), o.push(l));
-      }),
-        n &&
-          !o.length &&
-          window.toast &&
-          toast(n + " operação(ões) do Profit já estavam no diário.", 3e3),
-        o.length
-          ? (S.trades.push(...o),
-            save(),
-            render(),
-            window.toast &&
-              toast(
-                `${o.length} operação(ões) importada(s) do Profit. Complete stop e setup na ficha.`,
-                5e3,
-              ),
-            setTimeout(() => {
-              try {
-                limiteConfere();
-              } catch {}
-            }, 300))
-          : n &&
-            window.toast &&
-            toast("Nenhuma operação nova do Profit.", 2500),
-        s.length &&
-          (await rq("/rest/v1/operacoes_profit?id=in.(" + s.join(",") + ")", {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Prefer: "return=minimal",
-            },
-            body: JSON.stringify({ importado: !0 }),
-          })),
-        (PFX.n += o.length),
-        (PFX.ult = new Date().toISOString()),
-        ls.set("diario-pf-ult", PFX.ult),
-        (PFX.err = ""),
-        (PFX.off = 0));
+      });
+      if (o.length) {
+        S.trades.push(...o);
+        save();
+        render();
+      }
+      // save() agenda a escrita. Só confirme no servidor depois do commit IndexedDB,
+      // inclusive ao retomar uma importação cuja tentativa anterior falhou ao salvar.
+      if (s.length && !(await persistNow()))
+        throw new Error(
+          "Não foi possível gravar as operações neste aparelho. O Profit continua pendente para tentar novamente.",
+        );
+      if (!mesmaConta())
+        throw new Error(
+          "A conta ou o diário mudou. A importação não foi confirmada no Profit.",
+        );
+      if (s.length)
+        await rq("/rest/v1/operacoes_profit?id=in.(" + s.join(",") + ")", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({ importado: !0 }),
+        });
+      PFX.n += o.length;
+      PFX.ult = new Date().toISOString();
+      ls.set("diario-pf-ult", PFX.ult);
+      PFX.err =
+        t.length > s.length
+          ? `${t.length - s.length} operação(ões) com dados inválidos continuam pendentes no Profit. Revise os dados na origem e tente novamente.`
+          : "";
+      PFX.off = 0;
+      if (n && !o.length && window.toast)
+        toast(n + " operação(ões) do Profit já estavam no diário.", 3e3);
+      if (o.length && window.toast)
+        toast(
+          `${o.length} operação(ões) importada(s) do Profit. Complete stop e setup na ficha.`,
+          5e3,
+        );
+      if (o.length)
+        setTimeout(() => {
+          try {
+            limiteConfere();
+          } catch {}
+        }, 300);
     } catch (t) {
       ((PFX.err =
         t.status === 404 || /operacoes_profit/.test(t.message || "")
