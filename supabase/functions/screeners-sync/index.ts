@@ -52,18 +52,62 @@ function rating(m:string,r:any){
  if(v.some(x=>x===null))return null;
  return +v.reduce((sum:number,x:number|null,i:number)=>sum+Number(x)*weights[i].weight/100,0).toFixed(2);
 }
-async function momentoHistorico(market:string,ticker:string):Promise<number|null>{
- try{
-  const sym=market==='BR'?ticker+'.SA':ticker.replaceAll('.','-');
-  const u='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+'?range=2y&interval=1mo';
-  const r=await fetch(u,{headers:{'User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(6500)});
-  if(!r.ok)return null;
-  const x=await r.json(),values=x?.chart?.result?.[0]?.indicators?.adjclose?.[0]?.adjclose||x?.chart?.result?.[0]?.indicators?.quote?.[0]?.close||[];
-  const closes=values.filter((v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>0);
-  if(closes.length<14)return null;
-  const last=closes.length-2,old=closes[last-11];
-  return old>0?+((closes[last]/old-1)*100).toFixed(4):null;
- }catch{return null;}
+const wait=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
+const round=(n:number|null,p=4)=>n!=null&&Number.isFinite(n)?+n.toFixed(p):null;
+function technicalPrices(data:any,market:string){
+ const meta=data?.chart?.result?.[0];if(!meta)throw Error('Yahoo: serie vazia');
+ const currency=String(meta.meta?.currency||'').toUpperCase();
+ if(currency!==(market==='BR'?'BRL':'USD'))throw Error('Moeda inesperada: '+currency);
+ const q=meta.indicators?.quote?.[0]||{},adjusted=meta.indicators?.adjclose?.[0]?.adjclose||[];
+ const days=(meta.timestamp||[]).map((t:number,i:number)=>({
+   close:numeric(q.close?.[i]),adjusted:numeric(adjusted[i])??numeric(q.close?.[i]),
+   high:numeric(q.high?.[i]),volume:numeric(q.volume?.[i])??0
+ })).filter((x:any)=>x.close!=null&&x.close>0&&x.adjusted!=null&&x.adjusted>0);
+ if(days.length<30)throw Error('Historico insuficiente para calculos diarios');
+ const last=days[days.length-1],last20=days.slice(-20);
+ const liquid=last20.length>=15?last20.reduce((sum:number,x:any)=>sum+(x.volume||0)*x.close,0)/last20.length:null;
+ // Momentum 12-1: fechamento ajustado de 21 sessões atrás / fechamento ajustado de 252 sessões atrás.
+ const momentum=days.length>=252?
+   (days[days.length-22].adjusted/days[days.length-252].adjusted-1)*100:null;
+ const prev200=days.slice(-200),mm200=prev200.length===200?
+   prev200.reduce((a:number,x:any)=>a+x.close,0)/200:null;
+ const high52=days.slice(-252).map((x:any)=>x.high||x.close),highest=Math.max(...high52);
+ const changes=days.slice(-200).map((x:any,i:number,all:any[])=>i?x.close-all[i-1].close:null).filter((x:any)=>x!==null);
+ let ups=0,downs=0,rsi:number|null=null;
+ if(changes.length>=14){
+  ups=changes.slice(0,14).reduce((a:number,n:number)=>a+Math.max(0,n),0)/14;
+  downs=changes.slice(0,14).reduce((a:number,n:number)=>a+Math.max(0,-n),0)/14;
+  for(const x of changes.slice(14)){ups=(ups*13+Math.max(x,0))/14;downs=(downs*13+Math.max(-x,0))/14}
+  rsi=downs===0?(ups===0?50:100):100-100/(1+ups/downs);
+ }
+ return {momentum_12_1:round(momentum),rsi_14:round(rsi,2),dist_mm200_pct:mm200?round((last.close/mm200-1)*100):null,
+ dist_max_52w:highest>0?round((last.close/highest-1)*100):null,
+ ...(market==='BR'?{liquidez_diaria_brl:round(liquid,2),preco_referencia:round(last.close,4)}:
+ {avg_daily_volume_usd:round(liquid,2),preco_referencia_usd:round(last.close,4)}),fonte_precos:'Yahoo Finance Chart · OHLCV 2y/1d'};
+}
+async function priceBatch(market:string,limit=8){
+ const pending=await rpc('quant_v2_precos_pendentes',{p_market:market,p_limit:Math.min(20,Math.max(1,limit))});
+ const updates:any[]=[],errors:string[]=[];let blocked=false;
+ for(const ticker of Array.isArray(pending)?pending:[]){
+  const symbol=market==='BR'?ticker+'.SA':String(ticker).replaceAll('.','-');
+  const url='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(symbol)+'?range=2y&interval=1d';
+  try{
+   const response=await fetch(url,{headers:{'Accept':'application/json','User-Agent':'DiarioTrader-Quant/2.0 (market-research; limited batch)'},signal:AbortSignal.timeout(8000)});
+   if(response.status===429||response.status===403){blocked=true;errors.push('Yahoo HTTP '+response.status+': interrompido sem tentativas em massa');break;}
+   if(!response.ok){errors.push(ticker+': HTTP '+response.status);continue;}
+   const data=await response.json(),calc=technicalPrices(data,market);
+   updates.push({ticker,...calc});
+  }catch(e){errors.push(ticker+': '+String(e).slice(0,80));}
+  await wait(1100); // no máximo 1 requisição/segundo por função; não é garantia de cota Yahoo.
+ }
+ const gravados=updates.length?Number(await rpc('quant_v2_patch_precos',{p_market:market,p_rows:updates}))||0:0;
+ return {selecionados:Array.isArray(pending)?pending.length:0,gravados,bloqueado:blocked,erros:errors.slice(0,8)};
+}
+async function finalized(market:string,job:string,items:number,errors:number){
+ const count=await rpc('quant_v2_recalcular',{p_market:market});
+ const snap=await rpc('quant_v2_snapshot_refresh',{p_market:market});
+ await rpc('quant_v2_sync_log',{p_market:market,p_job:job,p_items:items,p_errors:errors,p_details:'Score v2.0, snapshot e medianas atualizados'});
+ return {recalculados:count,snapshot:snap};
 }
 async function scanner(market:string,tickers:string[],comHistorico=true){
  if(!tickers.length)return {atualizados:0,semDados:0};
@@ -83,8 +127,13 @@ async function scanner(market:string,tickers:string[],comHistorico=true){
  for(let i=0;i<tickers.length;i+=40){
   const part=tickers.slice(i,i+40),prefix=usa? '': 'BMFBOVESPA:';
   const body={symbols:{tickers:usa?part.flatMap(t=>['NASDAQ:'+t,'NYSE:'+t]):part.map(t=>prefix+t),query:{types:[]}},columns};
-  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://www.tradingview.com',Referer:'https://www.tradingview.com/'},body:JSON.stringify(body),signal:AbortSignal.timeout(14000)});
-  if(!r.ok)throw Error('TradingView HTTP '+r.status);
+  let r:Response|null=null;
+  for(let attempt=0;attempt<3;attempt++){
+   r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://www.tradingview.com',Referer:'https://www.tradingview.com/'},body:JSON.stringify(body),signal:AbortSignal.timeout(14000)});
+   if(r.status!==429&&r.status<500)break;
+   if(attempt<2)await wait(1500*(attempt+1));
+  }
+  if(!r?.ok)throw Error('TradingView HTTP '+(r?.status||0));
   const json=await r.json();const rows:any[]=[];
   for(const item of json.data||[]){
    const code=clean(String(item.s||'').split(':').pop()),d=item.d||[],lookup=(col:string)=>numeric(d[columns.indexOf(col)]);
@@ -134,12 +183,7 @@ async function scanner(market:string,tickers:string[],comHistorico=true){
   }
   const unique=[...new Map(rows.map(x=>[x.ticker,x])).values()];
   // Momentum 12-1 por fechamentos mensais completos, como reserva para um subconjunto limitado.
-  if(comHistorico&&false)await Promise.all(unique.filter(x=>x.momentum_12_1==null).slice(0,14).map(async x=>{
-   const m=await momentoHistorico(market,x.ticker);
-   if(m!=null){x.momentum_12_1=m;
-    if(market==='BR')x.score_quant_br=rating('BR',x);
-    else x.score_quant_us=rating('US',x);}
-  }));
+  // Historico de preços é atualizado em um lote independente, jamais 14 chamadas paralelas.
   if(unique.length)updated+=await lotes(market,unique);
  }
  return {atualizados:updated,totalSolicitados:tickers.length};
@@ -149,16 +193,54 @@ Deno.serve(async req=>{
  if(!await autorizado(req))return ok({error:'Nao autorizado'},401);
  try{
   const b=await req.json().catch(()=>({})),mode=b.acao||'catalogo';
-  if(mode==='catalogo'){const resp:any={};for(const [m,fn] of [['US',catalogoUS],['BR',catalogoBR]] as const){try{resp[m]=await fn()}catch(e){resp[m]={erro:String(e).slice(0,180)}}}return ok({acao:mode,...resp});}
-  if(mode==='fundamentos'){const m=b.mercado==='BR'?'BR':b.mercado==='US'?'US':null;if(!m)return ok({erro:'Mercado invalido'},400);
+  if(mode==='diagnostico')return ok({ok:true,modelo:scoreEngine.version,lote_maximo_precos:20,
+   metodos:['catalogo','fundamentos','precos','enriquecer','sec'],sem_polling:true});
+  if(mode==='catalogo'){
+   const resp:any={};
+   for(const [m,fn] of [['US',catalogoUS],['BR',catalogoBR]] as const){
+    try{resp[m]=await fn();resp[m].final=await finalized(m,'catalogo',resp[m].gravados||0,0)}
+    catch(e){resp[m]={erro:String(e).slice(0,160)}}
+   }
+   return ok({acao:mode,...resp});
+  }
+  if(mode==='precos'){
+   const market=b.mercado==='BR'?'BR':b.mercado==='US'?'US':null;
+   if(!market)return ok({error:'Mercado invalido'},400);
+   const data=await priceBatch(market,Math.min(20,Math.max(1,Number(b.limite)||8)));
+   const final=await finalized(market,'precos',data.gravados,data.erros.length);
+   return ok({acao:mode,mercado:market,...data,final});
+  }
+  if(mode==='fundamentos'){
+   const m=b.mercado==='BR'?'BR':b.mercado==='US'?'US':null;if(!m)return ok({erro:'Mercado invalido'},400);
    const max=Math.min(200,Math.max(1,Math.floor(Number(b.limite)||200)));
    const symbols=await rpc('quant_screeners_pendentes',{p_market:m,p_limit:max});
-   return ok({acao:mode,mercado:m,...await scanner(m,symbols||[],false)});
+   const fundamental=await scanner(m,symbols||[],false);
+   const prices=await priceBatch(m,Math.min(12,Math.max(2,Math.ceil(max/20))));
+   const final=await finalized(m,'fundamentos',Number(fundamental.atualizados||0)+prices.gravados,prices.erros.length);
+   return ok({acao:mode,mercado:m,...fundamental,precos:prices,final});
   }
-  if(mode==='enriquecer'){const result:any={};for(const m of ['BR','US']){
-    try{const symbols=await rpc('quant_screeners_pendentes',{p_market:m,p_limit:80});result[m]=await scanner(m,symbols||[])}
-    catch(e){result[m]={erro:String(e).slice(0,170)}}
-  }return ok({acao:mode,...result})}
+  if(mode==='enriquecer'){
+   const result:any={};
+   for(const market of ['BR','US']){
+    try{
+     const symbols=await rpc('quant_screeners_pendentes',{p_market:market,p_limit:80});
+     const fundamental=await scanner(market,symbols||[],false);
+     const prices=await priceBatch(market,market==='BR'?6:8);
+     result[market]={fundamental,precos:prices,
+       final:await finalized(market,'enriquecer',Number(fundamental.atualizados||0)+prices.gravados,prices.erros.length)};
+    }catch(e){result[market]={erro:String(e).slice(0,170)}}
+   }
+   return ok({acao:mode,...result});
+  }
+  if(mode==='sec'){
+   // Reutiliza a função SEC existente; não baixa ZIP nem ignora bloqueios 403/429.
+   const r=await fetch(SB+'/functions/v1/screeners-sec',{
+     method:'POST',headers:{'Content-Type':'application/json','x-cron-secret':req.headers.get('x-cron-secret')||''},
+     body:JSON.stringify({acao:'sec'}),signal:AbortSignal.timeout(60000)});
+   const result=await r.json().catch(()=>({}));
+   await finalized('US','sec',Number(result.concluidos||0),Array.isArray(result.erros)?result.erros.length:0);
+   return ok({acao:mode,origem:'SEC companyfacts',...result},r.status);
+  }
   return ok({error:'Acao desconhecida'},400);
- }catch(e){return ok({error:String(e).slice(0,180)},503)}
+ }catch(e){console.error('screeners-sync v2',String(e).slice(0,150));return ok({error:'Coleta temporariamente indisponivel'},503)}
 });
