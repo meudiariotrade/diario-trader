@@ -54,34 +54,34 @@ function drawing(doc,P,font){
  }
  return {W,H,M,C,CW,page,footer,rectangle,write,wrap,bar,line,get y(){return y},set y(t){y=t}};
 }
-function cover(L,market,rows,studies){
+function cover(L,market,rows,studies,opts={}){
  const scored=studies.filter(x=>x.score!==null).length,verified=studies.filter(x=>x.validated).length;
- L.page(market==='BR'?'Brasil  |  B3':'Estados Unidos  |  NYSE e NASDAQ',rows.length+' empresas selecionadas  •  '+scored+' com score  •  '+verified+' com cálculo conferido',true);
- L.write('RESUMO DA SELEÇÃO',L.M,L.y,{font:'bold',size:10,color:L.C.gold});L.y+=27;
- L.y=L.wrap('Este material mostra os fatores de qualidade, preço, retorno e momentum que contribuíram para as pontuações, além da procedência dos dados e dos pontos que exigem validação. Score alto não indica, por si só, que o preço da ação compense.',L.M,L.y,L.CW,{size:9.8,leading:15})+22;
+ L.page(market==='BR'?'Brasil  |  B3':'Estados Unidos  |  NYSE e NASDAQ', (opts.automatic?'Top '+rows.length+' automático  •  ':'')+rows.length+' empresas  •  '+scored+' com score  •  '+verified+' com cálculo conferido',true);
+ L.write(opts.automatic?'RANKING AUTOMÁTICO — NOTAS DE 0 A 10':'RESUMO DA SELEÇÃO',L.M,L.y,{font:'bold',size:10,color:L.C.gold});L.y+=27;
+ L.y=L.wrap('Este material mostra as empresas com melhor pontuação quantitativa calculável, os fatores que elevaram suas notas e os riscos a conferir. A nota de 0 a 10 vem do score de 0 a 100 dividido por dez. Score alto não garante preço atrativo nem retorno futuro.',L.M,L.y,L.CW,{size:9.8,leading:15})+22;
  L.rectangle(L.M,L.y,L.CW,25,L.C.ink);
- const heads=[['TICKER',L.M+8],['EMPRESA',L.M+90],['SCORE',L.M+325],['COB.',L.M+397],['STATUS',L.M+447]];
+ const heads=[['TICKER',L.M+8],['EMPRESA',L.M+90],['NOTA',L.M+325],['COB.',L.M+397],['STATUS',L.M+447]];
  heads.forEach(([s,x])=>L.write(s,x,L.y+7,{font:'bold',size:7,color:L.C.white}));L.y+=25;
  rows.forEach((r,i)=>{const s=studies[i];L.rectangle(L.M,L.y,L.CW,33,i%2?L.C.paper:L.C.panel);
-  L.write(r.ticker,L.M+8,L.y+10,{font:'bold',size:9});
+  L.write((opts.automatic?String(i+1).padStart(2,'0')+'  ':'')+r.ticker,L.M+8,L.y+10,{font:'bold',size:8.5});
   L.wrap(r.empresa||r.company_name||r.ticker,L.M+90,L.y+10,226,{size:8,maxLines:1});
-  L.write(s.score===null?'N/D':num(s.score,1),L.M+325,L.y+10,{size:8});
+  L.write(s.score===null?'N/D':num((opts.automatic?s.modelScore:s.score)/10,1)+'/10',L.M+325,L.y+10,{size:8});
   L.write(num(s.coverage,0)+'%',L.M+397,L.y+10,{size:8});
   L.write(s.validated?'Fórmula OK':'Revisar',L.M+447,L.y+10,{size:7.5,color:s.validated?L.C.green:L.C.red});
   L.y+=33;
  });
  L.y+=23;L.y=L.wrap('Critério: pontuações verificadas contra os pesos do método. Ausência de indicadores e divergência na fórmula exigem revisão. Leia as análises individuais e as fontes antes de tomar qualquer decisão.',L.M,L.y,L.CW,{size:8,color:L.C.muted,leading:11});L.footer();
 }
-function individual(L,m,row,st,i,total){
+function individual(L,m,row,st,i,total,opts={}){
  const title=String(i+1).padStart(2,'0')+' / '+String(total).padStart(2,'0')+'  '+row.ticker+'  —  '+st.company;
  L.page(title,(row.setor||row.sector||'Setor não informado')+'  |  Snapshot: '+date(row.updated_at));
- L.write('SCORE QUANTITATIVO',L.M,L.y,{font:'bold',size:9,color:L.C.gold});
- L.write(st.score===null?'INCOMPLETO':num(st.score,1)+' / 100',L.M,L.y+21,{font:'serif',size:22});
+ L.write(opts.automatic?'NOTA NO RANKING AUTOMÁTICO':'NOTA QUANTITATIVA',L.M,L.y,{font:'bold',size:9,color:L.C.gold});
+ L.write(st.score===null?'INCOMPLETO':num((opts.automatic?st.modelScore:st.score)/10,1)+' / 10',L.M,L.y+21,{font:'serif',size:22});
  L.write(st.level.toUpperCase(),L.W-L.M,L.y+27,{font:'bold',size:9,right:true,color:st.validated?L.C.green:L.C.red});L.y+=67;
  L.rectangle(L.M,L.y,L.CW,58,L.C.panel);L.y=L.wrap(st.interpretation,L.M+12,L.y+11,L.CW-24,{size:9,leading:13,maxLines:3})+26;
  L.write('POR QUE A EMPRESA RECEBEU ESTA PONTUAÇÃO',L.M,L.y,{font:'bold',size:9.5,color:L.C.gold});L.y+=24;
  st.parts.forEach(g=>{
-  L.bar(g.name+'  ('+g.weight+'% do total)',g.points,g.weight);
+  L.bar(g.name+'  ('+g.weight+'% de peso)',g.points==null?null:g.points/10,g.weight/10);
   const metrics=g.metrics.filter(x=>x.number!=null).map(x=>x.label+': '+num(x.number,1)+(x.unit==='%'?'%':x.unit==='x'?'x':''));
   if(!metrics.length){L.write('Não há dados suficientes para este critério.',L.M+3,L.y,{size:8,color:L.C.red});L.y+=17}
   else L.y=L.wrap(metrics.join('   •   '),L.M+3,L.y,L.CW-6,{size:8,color:L.C.muted,leading:11,maxLines:2})+12;
@@ -107,12 +107,12 @@ function methodology(L,m){
  ]){L.y=L.wrap(p,L.M,L.y,L.CW,{size:9.2,leading:14})+19}
  L.footer();
 }
-async function build(m,rows){
+async function build(m,rows,opts={}){
  if(!['BR','US'].includes(m)||!Array.isArray(rows)||rows.length<1||rows.length>10)throw Error('Selecione de 1 a 10 ações de um mesmo mercado.');
  if(new Set(rows.map(x=>x?.ticker)).size!==rows.length)throw Error('A seleção contém tickers repetidos.');
  if(!intelligence())throw Error('Validador de indicadores indisponível.');
  const P=await libs(),doc=await P.PDFDocument.create();
- doc.setTitle('Dossiê de ações '+m+' - Diário de Trader');doc.setAuthor('Diário de Trader');
+ doc.setTitle((opts.automatic?'Top 10 automático':'Dossiê de ações')+' '+m+' - Diário de Trader');doc.setAuthor('Diário de Trader');
  doc.registerFontkit(w.fontkit);
  const loaded=await Promise.all(['pdf-sans.ttf','pdf-sans-bold.ttf','pdf-serif-bold.ttf'].map(async name=>{
   const r=await fetch(name,{cache:'force-cache'});if(!r.ok)throw Error('Fonte PDF indisponível: '+name);
@@ -120,11 +120,11 @@ async function build(m,rows){
  }));
  const L=drawing(doc,P,{sans:loaded[0],bold:loaded[1],serif:loaded[2]});
  const studies=rows.map(r=>intelligence().diagnostics(m,r));
- cover(L,m,rows,studies);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length));methodology(L,m);
- return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Dossie-'+m+'-'+new Date().toISOString().slice(0,10)+'-'+rows.length+'-acoes.pdf',pages:doc.getPageCount()};
+ cover(L,m,rows,studies,opts);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length,opts));methodology(L,m);
+ return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:(opts.automatic?'Top10-Quantitativo-':'Dossie-')+m+'-'+new Date().toISOString().slice(0,10)+'-'+rows.length+'-acoes.pdf',pages:doc.getPageCount()};
 }
-async function share(m,rows){
- const pdf=await build(m,rows);
+async function share(m,rows,opts={}){
+ const pdf=await build(m,rows,opts);
  if(navigator.canShare&&navigator.share&&typeof File==='function'){
   const file=new File([pdf.blob],pdf.name,{type:'application/pdf'});
   if(navigator.canShare({files:[file]}))try{await navigator.share({title:'Dossiê de ações — Diário de Trader',files:[file]});return {shared:true,pages:pdf.pages}}catch(e){if(e?.name==='AbortError')return {cancelled:true}}
