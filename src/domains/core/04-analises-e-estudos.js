@@ -1539,6 +1539,11 @@ const MKT = {
     ["dolar", "Dólar"],
     ["juros", "Juros"],
     ["x", "X / Breaking"],
+    ["prioritaria", "Alto impacto"],
+    ["petroleo", "Petróleo"],
+    ["minerio", "Minério"],
+    ["acoes", "Ações"],
+    ["politica", "Política econômica"],
     ["cripto", "Cripto"],
   ],
   mkBtn = (e, t, a, o) =>
@@ -1722,12 +1727,26 @@ function mkDedup(itens) {
   }
   return accepted;
 }
+function mkTemaPrioritario(t) {
+  const n = mkNorm(t);
+  const topicos = [];
+  if (/\b(?:petroleo|brent|wti|opep|opec|crude|oil|refinaria|refinery|petrobras|petr[34]|combustiveis|gasolina|diesel)\b/.test(n)) topicos.push("petroleo");
+  if (/\b(?:minerio|iron ore|iron-ore|vale3|mineradora vale|siderurg|steel|mineracao|mining|cm[in]\d)\b/.test(n)) topicos.push("minerio");
+  if (/\b(?:acoes|acao|stocks|shares|equities|bolsa|ibovespa|ibov|b3|nasdaq|dow|s&p|earnings|balanco|resultados|lucro|dividend|ipo|petrobras|vale3)\b/.test(n)) topicos.push("acoes");
+  if (/\b(?:governo|congresso|camara|senado|planalto|presidente|ministerio|eleicoes|election|congress|senate|white house|trump|tarifa|tariffs|sancoes|sanctions|guerra|war|politica fiscal|budget|impostos|tax)\b/.test(n) &&
+      /\b(?:fiscal|orcamento|budget|tarif|tax|impost|comercio|trade|export|import|sanc|guerra|war|econom|mercad|market|petroleo|oil|mineri|iron|bolsa|stocks|acoes|juros|rates|dolar|dollar|energia|energy|empresa|company|banco central|fed)\b/.test(n)) topicos.push("politica");
+  const forte = /\b(?:breaking|urgent|urgente|plantao|alerta|ataque|attack|guerra|war|sancoes|sanctions|embargo|interrompe|shutdown|suspende|suspension|bloqueia|blocks|corta|cuts|aprova|approves|rejeita|rejects|decisao|decisao|decide|decides|anuncia|announces|dispara|surges|tomba|plunges|despenca|collapses|recorde|record|lucro|earnings|dolar|dollar|tarifa|tariffs|greve|strike|opep|opec)\b/.test(n) || /\b\d+(?:[,.]\d+)?\s*%/.test(n);
+  return {topicos,prioritaria:topicos.length>0&&forte};
+}
 function mkNoticia(dado) {
   const t = mkLimpaTitulo(dado.t), ms = Date.parse(dado.d || "");
   if (!mkNoticiaDeMercado(t) || !t || t.length < 12 || !Number.isFinite(ms) || ms > Date.now()+300000 || ms < Date.now()-14*86400000) return null;
   let url;
   try { url = new URL(String(dado.l)); if (!["https:","http:"].includes(url.protocol)) return null; } catch { return null; }
   const assunto = mkNorm(t), cats = new Set((Array.isArray(dado.c) ? dado.c : []).map(x => mkNorm(x)));
+  const foco = mkTemaPrioritario(t);
+  foco.topicos.forEach(x=>cats.add(x));
+  if (foco.prioritaria) cats.add("prioritaria");
   if (/cripto|crypto|bitcoin|\bbtc\b|ethereum|\beth\b|blockchain|stablecoin/.test(assunto)) cats.add("cripto");
   if (/dolar|dollar|\busd\b|\bbrl\b|cambio|forex|moeda/.test(assunto)) cats.add("dolar");
   if (/ibovespa|\bibov\b|\bb3\b|bolsa brasileira|petrobras|vale\b/.test(assunto)) cats.add("ibovespa");
@@ -1867,7 +1886,7 @@ async function mkTraduzLote(itens) {
 }
 
 async function mkLoad(force) {
-  if (MKT.busy || (!force && MKT.items && Date.now()-MKT.ts<18e4)) return;
+  if (MKT.busy || (!force && MKT.items && Date.now()-MKT.ts<12e4)) return;
   // Respeita o bloqueio original de notícias sem sessão; modo demo não consulta proxies externos.
   if (window.DIARIO_DEMO || !cfg() || !SESS?.at) {
     if (!MKT.items) {
@@ -1879,15 +1898,19 @@ async function mkLoad(force) {
   MKT.busy=1;MKT.err="";mkPaint();
   try {
     const tarefas=[
-      // Os perfis X agora vêm da Edge "noticias": RSS direto + cache, sem proxies 404/429.
+      // Notícias do servidor + Finnhub direto do navegador; proxies só como contingência.
       mkEdgeNoticias("noticias"),mkEdgeNoticias("terminal"),
-      mkFinnhubNoticias("forex"),mkFinnhubNoticias("crypto"),
-      ...MK_FONTES_RSS.map(([nome,url])=>mkRss(url,nome)),
+      mkFinnhubNoticias("general"),mkFinnhubNoticias("forex"),mkFinnhubNoticias("crypto")
     ];
     const respostas=await Promise.allSettled(tarefas);
     MKT.totalFontes = respostas.length;
     MKT.fontesOkTotal = respostas.filter(r=>r.status==="fulfilled").length;
-    const resultados=respostas.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
+    let resultados=respostas.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
+    if (resultados.length < 12) {
+      // Contingência controlada: não abrir dois proxies para seis feeds a cada atualização.
+      const reserva=await Promise.allSettled(MK_FONTES_RSS.slice(0,2).map(([nome,url])=>mkRss(url,nome)));
+      resultados=resultados.concat(reserva.filter(r=>r.status==="fulfilled").flatMap(r=>r.value));
+    }
     const reunidas=mkDedup(resultados);
     if(reunidas.length)MKT.items=await mkTraduzLote(reunidas);
     else MKT.err="Não consegui consultar as fontes agora.";
@@ -1905,7 +1928,7 @@ async function mkLoad(force) {
 setInterval(() => {
   if (document.hidden || MKT.busy) return;
   if (tab==="term" || (tab==="mercado"&&MKT.tab==="cq"&&typeof m623Ativo==="function"&&m623Ativo())) mkLoad(false);
-},18e4);
+},12e4);
 function mkAfter() {
   if ((MKT.tm && (clearInterval(MKT.tm), (MKT.tm = null)), MKT.tab === "cot")) {
     cotAfter();
@@ -1925,7 +1948,7 @@ function mkAfter() {
       tab === "mercado" && MKT.tab === "nt" && !document.hidden
         ? mkLoad(!0)
         : tab !== "mercado" && (clearInterval(MKT.tm), (MKT.tm = null));
-    }, 18e4)));
+    }, 12e4)));
 }
 (function () {
   const e = render0;
