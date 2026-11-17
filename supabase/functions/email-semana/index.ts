@@ -1,7 +1,23 @@
 // Função EMAIL-SEMANA — resumo da semana + a planilha da aba Operações (xlsx montado pelo app; CSV se o app não abriu) por e-mail (Resend).
 // v600: também grava o resumo em weekly_reports. v601: anexa o Relatório de desempenho (PDF) enviado pelo app. Secret: RESEND_API_KEY. Opcional: EMAIL_DE (padrão onboarding@resend.dev). Idempotente (push_log). pg_cron domingo 21h como reserva.
 const ENV = (k: string) => Deno.env.get(k) || '';
-const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), KEY = ENV('RESEND_API_KEY');
+const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY');
+let KEY = ENV('RESEND_API_KEY');
+// Prioriza o secret da Edge Function; reserva no Supabase Vault, sem expor ao navegador.
+async function carregarChaveResend(): Promise<string> {
+  if (KEY) return KEY;
+  if (!SB || !SRK) return '';
+  const r = await fetch(SB + '/rest/v1/rpc/diario_resend_chave', {
+    method: 'POST',
+    headers: { apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json' },
+    body: '{}',
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => null);
+  if (!r?.ok) return '';
+  const valor = await r.json().catch(() => null);
+  if (typeof valor === 'string' && valor.startsWith('re_')) KEY = valor;
+  return KEY;
+}
 const svc = { apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json' };
 async function db(p: string, init: RequestInit = {}) { const r = await fetch(SB + '/rest/v1/' + p, { ...init, headers: { ...svc, ...((init.headers as any) || {}) } }); if (!r.ok) throw new Error('db ' + r.status + ' ' + (await r.text()).slice(0, 160)); const t = await r.text(); return t ? JSON.parse(t) : null; }
 // Jobs e testes internos autenticados pela chave já existente no Vault (sem expô-la).
@@ -89,6 +105,7 @@ Deno.serve(async (req) => {
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type', 'Content-Type': 'application/json' };
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   let b: any = {}; try { b = await req.json(); } catch { /* */ }
+  await carregarChaveResend();
   const out: any = {};
   const job=await autorizaJob(req);
   if (b.acao==='diagnostico') return new Response(JSON.stringify({autorizado:job,resendConfigurado:!!KEY}),
