@@ -185,18 +185,146 @@ opts(m,s)+
 }
 function render(){try{if(typeof tab==='undefined'||tab!=='analises')return;const root=d.getElementById('an-root');if(!root)return;const active=d.activeElement,searchFocused=!!active?.matches?.('[data-scr-search]'),ss=searchFocused?{pos:active.selectionStart,end:active.selectionEnd}:null;
 root.outerHTML=w.DiarioAnalises.view();if(searchFocused){const target=d.querySelector('[data-scr-search]');if(target){target.focus();if(ss?.pos!=null)try{target.setSelectionRange(ss.pos,ss.end)}catch{}}}}catch(e){console.warn('Screener render',e)}}
-async function load(m,refresh=false){const s=init(m),u=owner();if(s.loading){s.refreshWhenDone=true;return;}
-const body={market:m.toUpperCase(),search:s.search,sector:s.sector,custody:s.custody,owned:owned(),liquidity:Number(s.liquidity),cap:s.cap,preset:s.preset,order:s.order,page:s.page};
-const key=u+'|'+JSON.stringify(body),previous=cache.get(key);
-if(!refresh&&previous&&Date.now()-previous.time<5*60000){s.data=previous.data;if(isGlobalTopQuery(s))s.topData=previous.data;for(const row of s.data.rows||[]){if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;}s.error='';render();return;}
-if(!SESS||!cfg()||w.DIARIO_DEMO){s.error='Entre na sua conta para consultar os Screeners.';render();return;}
-s.loading=true;s.error='';const req=++reqId;render();
-try{await tok();const c=cfg(),r=await fetch(c.url+'/functions/v1/screeners-quant',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-const data=await r.json().catch(()=>({}));if(!r.ok||!data.ok)throw Error(data.error||'Falha HTTP '+r.status);
-if(u!==owner()||req!==reqId)return;
-s.data=data;if(isGlobalTopQuery(s))s.topData=data;for(const row of data.rows||[]){if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;}cache.set(key,{time:Date.now(),data});if(cache.size>15)cache.delete(cache.keys().next().value);s.error='';
-}catch(e){if(req===reqId)s.error=String(e.message||'Não foi possível carregar.');}
-finally{s.loading=false;if(req===reqId){render();if(s.refreshWhenDone){s.refreshWhenDone=false;void load(m,true)}}}
+
+/* Cache v753: snapshot público por mercado, persistido em IndexedDB (sem dados de custódia).
+ * Filtros são calculados somente quando o universo elegível completo foi obtido. */
+const GLOBAL_TTL=15*60000,snapshotMemory=new Map(),snapshotPending=new Map();
+function openScreenersDB(){
+ if(!('indexedDB' in w))return Promise.resolve(null);
+ return new Promise(resolve=>{
+  try{const req=indexedDB.open('diario-screeners-publicos-v1',1);
+   req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('snapshots'))req.result.createObjectStore('snapshots',{keyPath:'market'})};
+   req.onsuccess=()=>resolve(req.result);req.onerror=()=>resolve(null);req.onblocked=()=>resolve(null);
+  }catch{resolve(null)}
+ });
+}
+async function snapshotDB(m,record){
+ const db=await openScreenersDB();if(!db)return null;
+ return new Promise(resolve=>{
+  try{const tx=db.transaction('snapshots',record?'readwrite':'readonly'),store=tx.objectStore('snapshots');
+   const req=record?store.put(record):store.get(m.toUpperCase());
+   req.onsuccess=()=>resolve(record||req.result||null);req.onerror=()=>resolve(null);
+   tx.oncomplete=()=>db.close();tx.onerror=()=>db.close();
+  }catch{db.close();resolve(null)}
+ });
+}
+async function getGlobalSnapshot(m,refresh=false){
+ const market=m.toUpperCase(),local=snapshotMemory.get(market);
+ if(!refresh&&local&&Date.now()-local.when<GLOBAL_TTL)return local.data;
+ if(snapshotPending.has(market))return snapshotPending.get(market);
+ const task=(async()=>{
+  const stored=local||await snapshotDB(market);
+  if(!refresh&&stored&&Date.now()-stored.when<GLOBAL_TTL){snapshotMemory.set(market,stored);return stored.data}
+  const c=cfg();if(!c)throw Error('Configuração do Screener indisponível');
+  // Worker opcional: habilitar apenas depois de publicado e testado; nunca enviar JWT ou carteira.
+  const edge=String(w.DIARIO_SCREENERS_EDGE_URL||'').trim();
+  const path='?market='+market+'&snapshot=1&universe=1';
+  const url=edge&&/^https:\/\//.test(edge)?edge.replace(/\/$/,'')+path:
+   c.url+'/functions/v1/screeners-quant'+path;
+  const headers={...(edge?{}:{apikey:c.key}),...(stored?.etag?{'If-None-Match':stored.etag}:{})};
+  try{
+   const response=await fetch(url,{method:'GET',headers,signal:AbortSignal.timeout(15000)});
+   if(response.status===304&&stored?.data){
+    const record={...stored,when:Date.now()};snapshotMemory.set(market,record);
+    void snapshotDB(market,record);return record.data;
+   }
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok||!data.ok)throw Error(data.error||'Snapshot HTTP '+response.status);
+   if(data.market&&data.market!==market)throw Error('Mercado incorreto no snapshot');
+   const record={market,when:Date.now(),etag:response.headers.get('ETag')||'',
+    updatedAt:data.last_update||null,data};
+   snapshotMemory.set(market,record);void snapshotDB(market,record);
+   return data;
+  }catch(e){
+   if(stored?.data){snapshotMemory.set(market,stored);return stored.data}
+   throw e;
+  }
+ })().finally(()=>snapshotPending.delete(market));
+ snapshotPending.set(market,task);return task;
+}
+function localScreener(m,s,global){
+ if(!global?.universe_complete||!Array.isArray(global.universe_rows))return null;
+ const usa=m==='us',ownSet=new Set(owned()),v=x=>Number.isFinite(Number(x))?Number(x):null;
+ let rows=global.universe_rows.filter(r=>{
+  const text=String(s.search||'').trim().toUpperCase(),ticker=String(r.ticker||'').toUpperCase();
+  if(text&&!ticker.includes(text)&&!String(r.empresa||r.company_name||'').toUpperCase().includes(text))return false;
+  if(s.sector&&(r.setor||r.sector)!==s.sector)return false;
+  const isOwned=ownSet.has(ticker)||!!(r.bdr_ticker&&ownSet.has(String(r.bdr_ticker).toUpperCase()));
+  if(s.custody==='carteira'&&!isOwned||s.custody==='fora'&&isOwned)return false;
+  if(usa){const cap=v(r.market_cap_usd);if(s.cap==='large'&&!(cap>=1e10))return false;
+   if(s.cap==='mid'&&!(cap>=2e9&&cap<1e10))return false;
+   if(s.cap==='small'&&!(cap<2e9))return false;
+   if(s.preset==='compounders'&&!(v(r.roic)>0&&v(r.eps_growth_yoy)>0))return false;
+   if(s.preset==='garp'&&!(v(r.peg_ratio)>0&&v(r.peg_ratio)<2))return false;
+   if(s.preset==='rule40'&&!(v(r.revenue_growth_yoy)!=null&&v(r.fcf_margin)!=null&&v(r.revenue_growth_yoy)+v(r.fcf_margin)>=40))return false;
+   if(s.preset==='buybacks'&&!(v(r.buyback_yield)>0))return false;
+  }else{
+   if(Number(s.liquidity)>0&&!(v(r.liquidez_diaria_brl)>=Number(s.liquidity)))return false;
+   if(s.preset==='dividendos'&&!(v(r.dividend_yield)>0&&v(r.fcf_yield)>0&&v(r.payout_implicito)>=10&&v(r.payout_implicito)<=90))return false;
+   if(s.preset==='valor'&&!(v(r.roic)>0&&(v(r.pl)>0||v(r.ev_ebitda)>0)))return false;
+   if(s.preset==='bancos'&&!(v(r.roe)>0&&v(r.pvp)!=null&&/banc|financ|segur/i.test(r.setor||'')))return false;
+  }
+  return true;
+ });
+ const score=usa?'score_quant_us':'score_quant_br';
+ const key=s.order==='dy'?'dividend_yield':s.order==='yield'?'total_shareholder_yield':
+  s.order==='momentum'?'momentum_12_1':s.order==='score'?score:s.order;
+ const asc=['pvp','forward_pe'].includes(s.order);
+ rows.sort((a,b)=>{
+  const av=v(a[key]),bv=v(b[key]);
+  if(av!==null&&bv===null)return -1;if(av===null&&bv!==null)return 1;
+  if(av!==null&&bv!==null&&av!==bv)return asc?av-bv:bv-av;
+  return (v(b[score])??-1)-(v(a[score])??-1)||String(a.ticker).localeCompare(String(b.ticker));
+ });
+ const median=k=>{const nums=rows.map(r=>v(r[k])).filter(x=>x!==null).sort((a,b)=>a-b);return nums.length?nums[Math.floor((nums.length-1)/2)]:null};
+ const summary={
+  com_score:rows.filter(r=>v(r[score])!==null).length,
+  com_roic:rows.filter(r=>v(r.roic)!==null).length,
+  com_roe:rows.filter(r=>v(r.roe)!==null).length,
+  com_dividendos:rows.filter(r=>v(r.dividend_yield)!==null).length,
+  com_momentum:rows.filter(r=>v(r.momentum_12_1)!==null).length,
+  cobertura_media_pct:rows.length?rows.reduce((sum,r)=>sum+(v(r.cobertura_pct)||0),0)/rows.length:0
+ };
+ return {...global,total:rows.length,page:s.page,page_size:50,
+  rows:rows.slice(s.page*50,(s.page+1)*50),coverage:summary,
+  medians:{roe:median('roe'),roic:median('roic'),dy:median('dividend_yield'),
+   payout:median('payout_implicito'),momentum:median('momentum_12_1'),
+   forward_pe:median('forward_pe'),total_yield:median('total_shareholder_yield')},
+  sectors:global.sectors||[],scatter:rows.slice(0,180).map(r=>({
+   ticker:r.ticker,roe:r.roe,roic:r.roic,dy:r.dividend_yield,payout:r.payout_implicito,
+   pvp:r.pvp,ev_ebitda:r.ev_ebitda,fcf_yield:r.fcf_yield,
+   momentum:r.momentum_12_1,forward_pe:r.forward_pe,score:r[score],
+   cap:usa?r.market_cap_usd:r.valor_mercado_brl,owned:!!ownRow(r)
+  })),highlights:rows.slice(0,4)};
+}
+async function load(m,refresh=false){
+ const s=init(m),u=owner();if(s.loading){s.refreshWhenDone=true;return}
+ const body={market:m.toUpperCase(),search:s.search,sector:s.sector,custody:s.custody,owned:owned(),
+  liquidity:Number(s.liquidity),cap:s.cap,preset:s.preset,order:s.order,page:s.page};
+ const key=u+'|'+JSON.stringify(body),previous=cache.get(key);
+ if(!refresh&&previous&&Date.now()-previous.time<5*60000){s.data=previous.data;if(isGlobalTopQuery(s))s.topData=previous.data;
+  for(const row of s.data.rows||[])if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;
+  s.error='';render();return}
+ if(!SESS||!cfg()||w.DIARIO_DEMO){s.error='Entre na sua conta para consultar os Screeners.';render();return}
+ s.loading=true;s.error='';const req=++reqId;render();
+ try{
+  const snapshot=await getGlobalSnapshot(m,refresh);
+  const isTop=isGlobalTopQuery(s);
+  let data=isTop?snapshot:localScreener(m,s,snapshot);
+  if(!data){
+   await tok();const c=cfg();
+   const response=await fetch(c.url+'/functions/v1/screeners-quant',{method:'POST',
+    headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},
+    body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
+   data=await response.json().catch(()=>({}));
+   if(!response.ok||!data.ok)throw Error(data.error||'Falha HTTP '+response.status);
+  }
+  if(u!==owner()||req!==reqId)return;
+  s.data=data;if(isTop)s.topData=snapshot;
+  for(const row of data.rows||[])if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;
+  cache.set(key,{time:Date.now(),data});if(cache.size>15)cache.delete(cache.keys().next().value);s.error='';
+ }catch(e){if(req===reqId)s.error=String(e.message||'Não foi possível carregar.')}
+ finally{s.loading=false;if(req===reqId){render();if(s.refreshWhenDone){s.refreshWhenDone=false;void load(m,true)}}}
 }
 /* Consulta sob demanda: retorna no máximo 50 linhas ordenadas do mercado inteiro.
  * Não consulta milhares de tickers, nem gera job, cron ou escrita. */
@@ -204,19 +332,11 @@ const topCache=new Map();
 async function loadTopGlobal(m,refresh=false){
  const stateNow=init(m),uid=owner(),key=uid+'|'+m,stored=topCache.get(key);
  if(stateNow.topBusy)return;
- if(!refresh&&stored&&Date.now()-stored.when<5*60000){
-  stateNow.topData=stored.data;stateNow.topError='';render();return;
- }
+ if(!refresh&&stored&&Date.now()-stored.when<GLOBAL_TTL){stateNow.topData=stored.data;stateNow.topError='';render();return}
  if(!SESS||!cfg()||w.DIARIO_DEMO){stateNow.topError='Faça login para consultar o catálogo.';render();return}
  stateNow.topBusy=true;stateNow.topError='';render();
  try{
-  await tok();const c=cfg();
-  // Snapshot global de mercado: GET sem informacoes de custodia, apto a cache publico por URL.
-  const resp=await fetch(c.url+'/functions/v1/screeners-quant?market='+m.toUpperCase()+'&snapshot=1',{
-   method:'GET',headers:{apikey:c.key},signal:AbortSignal.timeout(15000)
-  });
-  const result=await resp.json().catch(()=>({}));
-  if(!resp.ok||!result.ok)throw Error(result.error||'Consulta do ranking indisponível');
+  const result=await getGlobalSnapshot(m,refresh);
   if(uid!==owner())return;
   stateNow.topData=result;topCache.set(key,{when:Date.now(),data:result});
  }catch(e){stateNow.topError=String(e.message||e).slice(0,180)}
