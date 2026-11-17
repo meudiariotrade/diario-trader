@@ -51,6 +51,14 @@ return '<div class="scr-filters"><label>Buscar ticker ou empresa<input type="sea
 '<label>Capitalização<select data-scr-filter="cap">'+options([['all','All Stocks'],['large','Large Cap'],['mid','Mid Cap'],['small','Small Cap']],s.cap)+'</select></label>')+
 '<label>Estratégia<select data-scr-filter="preset">'+options(presets,s.preset)+'</select></label></div>';
 }
+function coverage(m,s){const c=s.data?.coverage||{},total=Number(s.data?.total||0),scores=Number(c.com_score||0);
+const scorePct=total?((scores/total)*100).toFixed(1).replace('.',','):'0';
+return '<div class="scr-coverage" role="status">'+
+'<span><b>'+fmt(total,0)+'</b> ativos filtrados</span>'+
+'<span><b>'+fmt(Number(c.cobertura_media_pct)||0,1)+'%</b> cobertura média dos indicadores</span>'+
+'<span><b>'+fmt(scores,0)+'</b> scores completos ('+scorePct+'%)</span>'+
+'<span class="scr-coverage-note">Métricas ausentes ficam como “—”. Os scores só aparecem quando todas as famílias necessárias têm dados.</span>'+
+'</div>'}
 function kpis(m,s){const v=s.data?.medians||{};return '<div class="scr-kpis">'+Object.entries(labels[m]).map(([key,label])=>'<div class="scr-kpi"><span>'+E(label)+'</span><b>'+((key==='forward_pe')?fmt(v[key],1):pct(v[key]))+'</b></div>').join('')+'</div>'}
 function stats(m,s){const data=s.data||{},top=data.highlights||[],all=[...(data.scatter||[])].filter(x=>x.score!=null);
 const asym=[...all].filter(x=>x.score!=null).sort((a,b)=>(b.score||0)-(a.score||0))[0];
@@ -79,9 +87,9 @@ return '<section class="scr-panel"><div class="scr-head"><h3>Dispersão quantita
 '<p class="scr-hint">Pontos dourados: sua carteira. Exibe até '+pts.length+' ativos do recorte com dados disponíveis; o conjunto filtrado completo está na tabela paginada.</p></section>';
 }
 function table(m,s){const all=s.data?.rows||[],us=m==='us';
-const cols=us?[['ticker','Ticker'],['company_name','Empresa'],['score_quant_us','Score'],['roic','ROIC'],['forward_pe','Fwd P/E'],['total_shareholder_yield','Total Yield'],['momentum_12_1','Mom. 12-1']]:
-[['ticker','Ticker'],['empresa','Empresa'],['score_quant_br','Score'],['roe','ROE'],['dividend_yield','DY'],['payout_implicito','Payout'],['momentum_12_1','Mom. 12-1']];
-const percentKeys=new Set(['roic','roe','dividend_yield','total_shareholder_yield','payout_implicito','momentum_12_1']);
+const cols=us?[['ticker','Ticker'],['company_name','Empresa'],['score_quant_us','Score'],['cobertura_pct','Cobertura'],['roic','ROIC'],['forward_pe','Fwd P/E'],['total_shareholder_yield','Total Yield'],['momentum_12_1','Mom. 12-1']]:
+[['ticker','Ticker'],['empresa','Empresa'],['score_quant_br','Score'],['cobertura_pct','Cobertura'],['roe','ROE'],['dividend_yield','DY'],['payout_implicito','Payout'],['momentum_12_1','Mom. 12-1']];
+const percentKeys=new Set(['roic','roe','dividend_yield','total_shareholder_yield','payout_implicito','momentum_12_1','cobertura_pct']);
 return '<section class="scr-panel"><div class="scr-head"><h3>Ranking · '+fmt(s.data?.total||0,0)+' ações</h3><div class="scr-actions"><label>Ordenação <select data-scr-filter="order">'+options(us?[['score','Score'],['roic','ROIC'],['forward_pe','Forward P/E'],['yield','Total Yield'],['momentum','Momentum']]:[['score','Score'],['roe','ROE'],['dy','DY'],['pvp','P/VP'],['momentum','Momentum']],s.order)+'</select></label>'+
 '<button class="btn s" data-scr-bulk="1" '+(s.selected.length<2?'disabled':'')+'>Comparar ('+s.selected.length+'/3)</button></div></div>'+
 '<div class="scr-scroll"><table class="scr-table"><thead><tr><th>Sel.</th>'+cols.map(c=>'<th>'+E(c[1])+'</th>').join('')+'<th>Contexto</th><th>Ações</th></tr></thead><tbody>'+
@@ -98,7 +106,7 @@ cols.map(([key])=>'<td>'+((key==='ticker')?'<b>'+tk+'</b>':(key==='company_name'
 function view(m){const s=init(m);return '<header class="an-header"><div><p class="an-kicker">SCREENING QUANTITATIVO · '+(m==='br'?'B3':'NYSE / NASDAQ')+'</p><h1 id="an-title">Screener '+(m==='br'?'Brasil':'EUA')+'</h1><p>Universo dinâmico, indicadores com fontes e datas. Não representa recomendação de compra ou venda.</p></div><span class="an-badge">'+(s.data?.total||0)+' no filtro</span></header>'+
 opts(m,s)+
 '<div class="scr-top"><span role="status">'+(s.loading?'Consultando snapshot compartilhado…':s.error?E(s.error):(s.data?'Snapshot: '+(s.data.last_update?new Date(s.data.last_update).toLocaleString('pt-BR'):'sem atualização'):'Abra para consultar dados'))+'</span><button class="btn s" data-scr-refresh="1" '+(s.loading?'disabled':'')+'>Atualizar</button></div>'+
-(s.data?kpis(m,s)+stats(m,s)+chart(m,s)+table(m,s):'<section class="scr-panel scr-empty">'+(s.loading?'Carregando indicadores…':E(s.error||'Aguardando dados do catálogo.'))+'</section>');
+(s.data?coverage(m,s)+kpis(m,s)+stats(m,s)+chart(m,s)+table(m,s):'<section class="scr-panel scr-empty">'+(s.loading?'Carregando indicadores…':E(s.error||'Aguardando dados do catálogo.'))+'</section>');
 }
 function render(){try{if(typeof tab==='undefined'||tab!=='analises')return;const root=d.getElementById('an-root');if(!root)return;const active=d.activeElement,searchFocused=!!active?.matches?.('[data-scr-search]'),ss=searchFocused?{pos:active.selectionStart,end:active.selectionEnd}:null;
 root.outerHTML=w.DiarioAnalises.view();if(searchFocused){const target=d.querySelector('[data-scr-search]');if(target){target.focus();if(ss?.pos!=null)try{target.setSelectionRange(ss.pos,ss.end)}catch{}}}}catch(e){console.warn('Screener render',e)}}
