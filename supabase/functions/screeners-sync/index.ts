@@ -17,7 +17,7 @@ async function lotes(market:string,rows:any[]){
  let escritos=0;for(let i=0;i<rows.length;i+=200){escritos+=Number(await rpc('quant_screeners_lote',{p_market:market,p_rows:rows.slice(i,i+200)}))||0;}
  return escritos;
 }
-function table(text:string){const lines=text.replace(/\\r/g,'').split('\\n').filter(x=>x.includes('|'));if(lines.length<2)throw Error('Diretorio de ativos vazio');
+function table(text:string){const lines=text.replaceAll(String.fromCharCode(13),'').split(String.fromCharCode(10)).filter(x=>x.includes('|'));if(lines.length<2)throw Error('Diretorio de ativos vazio');
  const header=lines.shift()!.split('|');return lines.filter(x=>!x.startsWith('File Creation Time:')).map(line=>Object.fromEntries(line.split('|').map((value,i)=>[header[i],value||''])));}
 async function catalogoUS(){
  const urls=['https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt','https://www.nasdaqtrader.com/dynamic/symdir/otherlisted.txt'];
@@ -35,7 +35,7 @@ async function catalogoBR(){
   if(!r.ok)throw Error('Catalogo brapi HTTP '+r.status);
   const j=await r.json();const list=Array.isArray(j.stocks)?j.stocks:[];
   if(page===1&&!list.length)throw Error('brapi sem catalogo de acoes');
-  for(const a of list){const t=clean(a.stock||a.ticker||a.symbol);if(!/^[A-Z]{4}\\d{1,2}$/.test(t))continue;
+  for(const a of list){const t=clean(a.stock||a.ticker||a.symbol);if(!/^[A-Z]{4}[0-9]{1,2}$/.test(t))continue;
    all.push({ticker:t,empresa:String(a.name||a.longName||t).slice(0,200),setor:a.sector||null,segmento:a.industry||null,
     valor_mercado_brl:numeric(a.market_cap)||numeric(a.marketCap),preco_referencia:numeric(a.close),
     fonte_principal:'brapi · listagem B3',dados_status:'catalogado'});}
@@ -82,7 +82,7 @@ async function scanner(market:string,tickers:string[]){
    if(usa){
     Object.assign(common,{company_name:String(d[columns.indexOf('description')]||code).slice(0,180),exchange:'NASDAQ',
      sector:typeof d[columns.indexOf('sector')]==='string'?d[columns.indexOf('sector')]:null,
-     market_cap_usd:lookup('market_cap_basic'),forward_pe:lookup('price_earnings_ttm'),preco_referencia_usd:price,
+     market_cap_usd:lookup('market_cap_basic'),forward_pe:null,preco_referencia_usd:price,
      eps_growth_yoy:lookup('earnings_per_share_diluted_yoy_growth_ttm')});
     const covered=['roic','forward_pe','dividend_yield','momentum_12_1','eps_growth_yoy'].filter(k=>common[k]!=null).length;
     common.cobertura_pct=covered/5*100;common.dados_status=covered>=3?'parcial':'incompleto';common.score_quant_us=rating('US',common);
@@ -90,7 +90,7 @@ async function scanner(market:string,tickers:string[]){
     Object.assign(common,{empresa:String(d[columns.indexOf('description')]||code).slice(0,180),
      setor:typeof d[columns.indexOf('sector')]==='string'?d[columns.indexOf('sector')]:null,
      valor_mercado_brl:lookup('market_cap_basic'),preco_referencia:price,pl:lookup('price_earnings_ttm'),
-     pvp:lookup('price_book_fq'),ev_ebitda:lookup('enterprise_value_to_ebitda_ttm'),fcf_yield:lookup('free_cash_flow_yield_ttm'),
+     pvp:lookup('price_book_fq'),ev_ebitda:lookup('enterprise_value_to_ebitda_ttm'),fcf_yield:lookup('free_cash_flow_yield_ttm'),payout_implicito:lookup('price_earnings_ttm')!=null&&lookup('dividends_yield_current')!=null?lookup('price_earnings_ttm')*lookup('dividends_yield_current'):null,
      margem_liquida:lookup('net_margin_ttm'),liquidez_diaria_brl:price!=null&&lookup('average_volume_30d_calc')!=null?price*lookup('average_volume_30d_calc'):null});
     const covered=['roe','roic','pl','pvp','ev_ebitda','fcf_yield','dividend_yield','momentum_12_1'].filter(k=>common[k]!=null).length;
     common.cobertura_pct=covered/8*100;common.dados_status=covered>=5?'parcial':'incompleto';common.score_quant_br=rating('BR',common);
