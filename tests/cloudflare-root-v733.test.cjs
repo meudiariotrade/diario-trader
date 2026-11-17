@@ -6,7 +6,7 @@ const path = require('node:path');
 test('Cloudflare conectado com diretório / encontra Worker de notícias isolado', () => {
   const root = JSON.parse(fs.readFileSync('wrangler.jsonc', 'utf8'));
   const nested = JSON.parse(fs.readFileSync('cloudflare/diario-noticias/wrangler.jsonc', 'utf8'));
-  assert.equal(root.name, 'diario-trader-noticias');
+  assert.equal(root.name, 'diario-trader');
   assert.equal(root.main, 'cloudflare/diario-noticias/index.mjs');
   assert.ok(fs.statSync(path.resolve(root.main)).isFile());
   assert.equal(root.name, nested.name);
