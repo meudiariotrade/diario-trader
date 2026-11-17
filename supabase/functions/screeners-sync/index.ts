@@ -7,7 +7,8 @@ const ok=(x:unknown,status=200)=>new Response(JSON.stringify(x),{status,headers:
 const clean=(s:unknown)=>String(s||'').trim().toUpperCase();
 const numeric=(n:unknown)=>typeof n==='number'&&Number.isFinite(n)?n:null;
 async function fetchText(url:string){const r=await fetch(url,{headers:{'User-Agent':'DiarioTrader-Catalogo/742','Accept':'text/plain,*/*'},signal:AbortSignal.timeout(13000)});if(!r.ok)throw Error('Fonte HTTP '+r.status);const s=await r.text();if(s.length>4_000_000)throw Error('Fonte muito grande');return s}
-async function rpc(name:string,args:unknown){const r=await fetch(SB+'/rest/v1/rpc/'+name,{method:'POST',headers:HEAD,body:JSON.stringify(args),signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error(name+' HTTP '+r.status+': '+(await r.text()).slice(0,100));return r.json()}
+async function rpc(name:string,args:unknown){const r=await fetch(SB+'/rest/v1/rpc/'+name,{method:'POST',headers:HEAD,body:JSON.stringify(args),signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error(name+' HTTP '+r.status+': '+(await r.text()).slice(0,100));
+ const payload=await r.text();return payload?JSON.parse(payload):null}
 async function autorizado(req:Request){
  const token=req.headers.get('x-cron-secret')||'';if(!token||!SB||!SVC)return false;
  const esperado=await rpc('diario_agendamento_chave',{}).catch(()=>null);
