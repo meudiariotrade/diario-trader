@@ -25,7 +25,7 @@ test('Screeners consultam a Carteira sem lançar trades ou alterar S.cart',()=>{
 });
 test('Consulta autenticada e paginação não expõem chave service role',()=>{
   assert.match(query,/auth\/v1\/user/);
-  assert.match(query,/quant_screeners_buscar/);
+  assert.match(query,/quant_v2_consulta_compacta/);
   assert.match(query,/p_page/);
   assert.doesNotMatch(app,/SERVICE_ROLE_KEY|BRAPI_TOKEN/);
 });
