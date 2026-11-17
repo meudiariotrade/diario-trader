@@ -11,7 +11,7 @@ const html=fs.readFileSync('src/index.html','utf8');
 test('Score BR: pesos batem com a fórmula de produção e grupos são explicáveis',()=>{
  const row={ticker:'PETR4',empresa:'Empresa Exemplo',roe:18,roic:14,pl:10,ev_ebitda:7,fcf_yield:6,
   dividend_yield:6,payout_implicito:45,momentum_12_1:12,
-  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17',updated_at:'2026-11-17'};
+  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17',updated_at:'2026-11-17',score_model_version:'v2.0'};
  const scores=intel.calculate('BR',row);
  const groups=intel.weights.BR;
  row.score_quant_br=+scores.reduce((a,v,i)=>a+v*groups[i].weight/100,0).toFixed(2);
@@ -28,10 +28,10 @@ test('Score EUA ausente não vira nota fictícia ou recomendação',()=>{
  const d=intel.diagnostics('US',{ticker:'AAPL',company_name:'Exemplo',roic:22,forward_pe:18,dividend_yield:1,eps_growth_yoy:12},Date.now());
  assert.equal(d.score,null);
  assert.equal(d.validated,false);
- assert.ok(d.missing.includes('Total Yield'));
+ assert.ok(d.missing.includes('Distância MM200'));
  assert.match(d.interpretation,/Não é possível/);
- assert.ok(d.risks.some(r=>/Total Yield/.test(r)));
- assert.deepEqual(intel.weights.US.map(x=>x.weight),[30,25,25,20]);
+ assert.ok(d.risks.some(r=>/Score indisponível|fundamentos/.test(r)));
+ assert.deepEqual(intel.weights.US.map(x=>x.weight),[30,30,25,15]);
 });
 
 test('Gráfico: trocar ROE x Payout para ROE x P/VP altera par e elimina distorção por outlier',()=>{
