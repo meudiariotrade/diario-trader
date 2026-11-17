@@ -18,19 +18,32 @@ const MDO_AB = { k: null },
     ts: 0,
     busy: 0,
     err: "",
+    errTs: 0,
   };
+// Todas as chamadas ao macro exigem login; não deixar reenfileirar 401.
+function macroAuthHeaders(config) {
+  const h = { "Content-Type": "application/json", apikey: config.key };
+  try { if (typeof SESS !== "undefined" && SESS?.at) h.Authorization = "Bearer " + SESS.at; } catch {}
+  return h;
+}
 async function mdoCarrega(e) {
-  if (MDO.busy || (!e && MDO.v && Date.now() - MDO.ts < 5 * 6e4)) return;
+  if (MDO.busy || (!e && ((MDO.v && Date.now() - MDO.ts < 5 * 6e4) || (MDO.errTs && Date.now() - MDO.errTs < 2 * 6e4)))) return;
   const t = cfg();
   if (!t) {
     ((MDO.err = "Configure o Supabase na aba Conta."), mdoPaint());
+    return;
+  }
+  if (typeof SESS === "undefined" || !SESS?.at) {
+    MDO.err = "Entre na sua conta para atualizar o panorama.";
+    MDO.errTs = Date.now();
+    mdoPaint();
     return;
   }
   ((MDO.busy = 1), (MDO.err = ""), mdoPaint());
   try {
     const a = await fetch(t.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: t.key },
+        headers: macroAuthHeaders(t),
         body: "{}",
       }),
       o = await a.json();
@@ -40,12 +53,13 @@ async function mdoCarrega(e) {
           ? 'Função "macro" não encontrada: publique-a no Supabase.'
           : o.error || "Erro " + a.status,
       );
-    ((MDO.v = o), (MDO.ts = Date.now()));
+    ((MDO.v = o), (MDO.ts = Date.now()), (MDO.errTs = 0));
     try {
       ls.set("diario-mdo", o);
     } catch {}
   } catch (a) {
     MDO.err = String(a.message || a);
+    MDO.errTs = Date.now();
   }
   ((MDO.busy = 0), mdoPaint());
 }
@@ -1298,20 +1312,22 @@ setInterval(async () => {
       tab !== "mercado" ||
       MKT.tab !== "mu" ||
       MDO.busy ||
-      (MDO.ts && Date.now() - MDO.ts < 55e3)
+      (typeof SESS === "undefined" || !SESS?.at) ||
+      (MDO.ts && Date.now() - MDO.ts < 55e3) ||
+      (MDO.errTs && Date.now() - MDO.errTs < 2 * 6e4)
     )
       return;
     const e = cfg();
     if (!e) return;
     const t = await fetch(e.url + "/functions/v1/macro", {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: e.key },
+      headers: macroAuthHeaders(e),
       body: "{}",
     });
-    if (!t.ok) return;
+    if (!t.ok) { MDO.errTs = Date.now(); return; }
     const a = await t.json();
     if (!a || !a.mercados) return;
-    ((MDO.v = a), (MDO.ts = Date.now()));
+    ((MDO.v = a), (MDO.ts = Date.now()), (MDO.errTs = 0));
     try {
       ls.set("diario-mdo", a);
     } catch {}
@@ -2765,7 +2781,7 @@ async function agCarrega(e) {
   try {
     const o = await fetch(a.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: a.key },
+        headers: macroAuthHeaders(a),
         body: JSON.stringify({ modo: "agenda", semana: t }),
       }),
       s = await o.json().catch(() => ({}));
@@ -2960,7 +2976,7 @@ async function setCarrega(e) {
     try {
       const a = await fetch(t.url + "/functions/v1/macro", {
           method: "POST",
-          headers: { "Content-Type": "application/json", apikey: t.key },
+          headers: macroAuthHeaders(t),
           body: JSON.stringify({ modo: "setores" }),
         }),
         o = await a.json().catch(() => ({}));
@@ -2974,7 +2990,7 @@ async function setCarrega(e) {
         ls.set("diario-setores", o);
       } catch {}
     } catch (a) {
-      ((SET.err = String(a.message || a)), (SET.ts = Date.now() - 15e4));
+      ((SET.err = String(a.message || a)), (SET.ts = Date.now()));
     }
     ((SET.busy = 0), setPaint());
   }
