@@ -140,7 +140,23 @@
       const m=old[i]; if(m) old[i]={...m,titulo:'Conteúdo retido para revisão de consistência',linha_fina:'A evidência desta matéria requer conferência.',texto:'Consulte o painel de referências e as fontes vinculadas. O texto foi retido porque a evidência ou os números não passaram pela conferência.',numeros:[],impacto:{ativos:[],setores:[],direcao:''},por_que_importa:'',placar:'',consenso:'',fato:'',interpretacao:'',cenario:''};
     }
     e.manchete=old[0]; e.materias=old.slice(1);
-    if(review.problemas.length) { e.analise=null; e.mesa=null; e.em_poucas_linhas=[]; e.conferencia=null; e.cinco_coisas=[]; e.fechamento_texto=''; e.grafico_do_dia=null; }
+    // Uma divergência em UMA matéria não deve destruir TODAS as editorias do jornal.
+    // Filtra cada bloco independente contra o mesmo snapshot; mantém a edição extensa
+    // quando o texto sobrevivente é coerente. O artigo divergente segue retido acima.
+    if (review.problemas.length) {
+      const trechoSeguro = t => {
+        const x=text(t);
+        if (!x) return false;
+        const v=inspect({manchete:{titulo:'Conferência de bloco',texto:x},materias:[]},snap);
+        return !v.artigos_bloqueados.length;
+      };
+      if(e.analise && !trechoSeguro([e.analise.titulo,e.analise.texto].join(' ')))e.analise=null;
+      if(e.mesa && !trechoSeguro(JSON.stringify(e.mesa)))e.mesa=null;
+      e.em_poucas_linhas=(e.em_poucas_linhas||[]).filter(trechoSeguro).slice(0,8);
+      e.cinco_coisas=(e.cinco_coisas||[]).filter(x=>x&&trechoSeguro([x.titulo,x.texto].join(' '))).slice(0,5);
+      if(!trechoSeguro(e.fechamento_texto))e.fechamento_texto='';
+      if(e.grafico_do_dia && !snap.graficos?.win && !snap.graficos?.wdo)e.grafico_do_dia=null;
+    }
     for(const m of [e.manchete,...e.materias].filter(Boolean)) {
       if(!m.consenso_valor || !url(m.consenso_fonte) || !m.periodo) { m.placar=''; m.consenso=''; }
       m.fonte_url=url(m.fonte_url); m.fontes=sources((m.fontes||[]).map(f=>typeof f==='string'?{url:f}:f));
