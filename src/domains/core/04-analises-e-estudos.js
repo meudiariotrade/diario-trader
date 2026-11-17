@@ -2493,6 +2493,33 @@ async function alLocalTest() {
   }
   ((AL.busy = 0), alPaint());
 }
+/* Diagnóstico local do Push processado pelo Service Worker, sem rede ou dados pessoais. */
+function alPushLocalUltimos() {
+  return new Promise(resolve => {
+    if (typeof indexedDB === "undefined") return resolve(null);
+    try {
+      const req = indexedDB.open("diario-push-diagnostico-v1", 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains("eventos"))
+          req.result.createObjectStore("eventos");
+      };
+      req.onerror = () => resolve(null);
+      req.onsuccess = () => {
+        const db = req.result, dados = {};
+        try {
+          const tx = db.transaction("eventos", "readonly");
+          for (const tipo of ["ultimo", "clique"]) {
+            const leitura = tx.objectStore("eventos").get(tipo);
+            leitura.onsuccess = () => { dados[tipo] = leitura.result || null; };
+          }
+          tx.oncomplete = () => { db.close(); resolve(dados); };
+          tx.onerror = () => { db.close(); resolve(null); };
+          tx.onabort = () => { db.close(); resolve(null); };
+        } catch (_) { db.close(); resolve(null); }
+      };
+    } catch (_) { resolve(null); }
+  });
+}
 async function alDiag() {
   ((AL.busy = 1),
     (AL.msg = "Verificando conexão e inscrição deste aparelho…"),
@@ -2520,12 +2547,23 @@ async function alDiag() {
       "Service Worker: " + o,
       "Inscrição push: " + (a ? "presente" : "ausente"),
     ];
+    const historicoLocal = await alPushLocalUltimos();
+    const formatoLocal = (data) => new Date(data).toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit",
+      hour: "2-digit", minute: "2-digit"
+    });
+    if (historicoLocal?.ultimo?.quando)
+      s.push("Push processado no aparelho: " + formatoLocal(historicoLocal.ultimo.quando));
+    else s.push("Push processado no aparelho: ainda não confirmado");
+    if (historicoLocal?.clique?.quando)
+      s.push("Último aviso aberto: " + formatoLocal(historicoLocal.clique.quando));
     if (!SESS?.at) s.push("Conta: é preciso entrar em Mais → Conta");
     else {
-      const n = await alFn("diag");
+      const n = await alFn("diag", { endpoint: a?.endpoint || "" });
       s.push(
         "Servidor push: " + String(n.push || "sem resposta"),
         "Banco: " + String(n.banco || "sem resposta"),
+        "Inscrição deste aparelho no servidor: " + (n.aparelhoRegistrado ? "confirmada" : "não encontrada; toque em Reativar"),
         "Chaves Web Push no servidor: " +
           (n.vapidPublicTamanho > 0 && n.vapidPrivateTamanho > 0 ? "ok" : "ausentes"),
         "Agendamento automático: " + (n.agendamentoVault || n.cronSecret ? "credencial configurada" : "não configurado"),
@@ -2544,10 +2582,9 @@ async function alDiag() {
         const ultimo = n.ultimoEnvio;
         s.push("Último envio ao seu aparelho: " + (ultimo.status || "desconhecido") + " · " +
           new Date(ultimo.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}));
-      } else s.push("Nenhum envio Push registrado para sua conta");
-      s.push(
-
-      );
+      } else s.push("Nenhum envio Push registrado para este aparelho");
+      if (a && n.aparelhoRegistrado && !historicoLocal?.ultimo?.quando)
+        s.push("O provedor pode ter aceitado o aviso sem que o Service Worker o tenha processado: verifique Foco e permissões do iPhone");
     }
     AL.msg = s.join(" · ") + (/Windows/i.test(navigator.userAgent || "")
       ? ". No Windows, confirme Sistema → Notificações e Não incomodar."
