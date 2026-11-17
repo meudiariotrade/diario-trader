@@ -20,6 +20,7 @@ const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 const entry = (id, opts = {}) => ({
   id,
+  context_length: 1048576,
   pricing: { prompt: '0', completion: '0', ...opts.pricing },
   endpoints: opts.endpoints || ['/api/v1/chat/completions'],
   architecture: { output_modalities: ['text'] },
