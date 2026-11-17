@@ -60,3 +60,48 @@
 .scr-coverage b{font-variant-numeric:tabular-nums;color:#d4a017;font-size:13px;font-weight:760;white-space:nowrap}
 .scr-coverage .scr-coverage-note{font-size:10px;flex:1 1 100%;opacity:.85}
 @media(max-width:600px){.scr-coverage{gap:7px 14px}.scr-coverage>span{flex-wrap:wrap}.scr-table{min-width:980px}}
+
+
+/* v744: as sub-abas ficam no lugar do antigo selo B3 & EUA da Pesquisa.
+ * Uma única barra é montada por tela; nunca há duas instâncias escondidas. */
+#app[data-tela="analises"] .an-header > .an-subs,
+#app[data-tela="analises"] .an-screener-switch > .an-subs {
+  display:flex!important;visibility:visible!important;opacity:1!important;
+  align-items:stretch;gap:4px;max-width:100%;width:100%;min-width:0;
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+  margin:0;padding:0;border-bottom:1px solid #1e232e;
+  background:#0a0c10;border-radius:0;
+}
+#app[data-tela="analises"] .an-subs::-webkit-scrollbar { display:none; }
+#app[data-tela="analises"] .an-header > .an-subs { flex:0 1 400px;align-self:flex-end; }
+#app[data-tela="analises"] .an-screener-switch { width:100%;margin:0 0 18px;min-width:0; }
+#app[data-tela="analises"] .an-subs button {
+  flex:1 0 auto;min-width:0;min-height:44px;padding:9px 9px 10px;
+  border:0;border-bottom:2px solid transparent;border-radius:0;
+  white-space:nowrap;background:transparent;color:#b1b3ba;
+  font:650 12px/1.3 system-ui,sans-serif;text-align:center;
+  cursor:pointer;font-variant-numeric:tabular-nums;
+}
+#app[data-tela="analises"] .an-subs button.selected,
+#app[data-tela="analises"] .an-subs button[aria-selected="true"] {
+  color:#d4a017;border-bottom-color:#d4a017;
+}
+#app[data-tela="analises"] .an-subs button:focus-visible {
+  outline:2px solid #d4a017;outline-offset:-3px;
+}
+#app[data-tela="analises"] .an-subs .an-submeta {
+  display:block;margin-top:2px;color:#a79a7e;
+  font-size:9px;font-weight:500;letter-spacing:.01em;white-space:nowrap;
+}
+@media(max-width:900px) {
+  #app[data-tela="analises"] .an-header { display:block; }
+  #app[data-tela="analises"] .an-header > .an-subs {
+    width:100%;max-width:none;flex:none;margin:14px 0 0;
+  }
+}
+@media(max-width:480px) {
+  #app[data-tela="analises"] .an-subs button {
+    padding:10px 7px 11px;min-height:44px;font-size:12px;
+  }
+  #app[data-tela="analises"] .an-subs .an-submeta { display:none; }
+}
