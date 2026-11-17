@@ -26,7 +26,10 @@ test('v709: ponte gera e serve MP4 local, sem upload automático',()=>{
  assert.match(server,/ALLOWED_ORIGIN/);
  const browser=rd('src/studies/tecnica-aulas.js');
  assert.match(browser,/127\.0\.0\.1:8766/);
- assert.match(browser,/EstudosLocal\.put\('mentor-video'/);
+ assert.match(browser,/async function salvarVideoLocal\(chave,blob,meta\)/);
+ assert.match(browser,/store\.put\('mentor-video',chave,blob,meta\)/);
+ assert.match(browser,/salvarVideoLocal\(localKey,data,/);
+ assert.match(browser,/salvarVideoLocal\(localKey,blob,/);
 });
 test('v709: credencial de gerenciamento não vai para configuração pública',()=>{
  const conf=rd('config.js'),bridge=rd('bridge-video/ponte_video.py');
