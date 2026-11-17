@@ -43,7 +43,8 @@
     "fiscal-conferencia.js": "src/navigation/fiscal-conferencia.js",
     "terminal-fonte-v533.js": "src/navigation/terminal-fonte.js",
     "screeners-inteligencia.js": "src/analysis/screeners-inteligencia.js",
-    "screeners-relatorio.js": "src/analysis/screeners-relatorio.js"
+    "screeners-relatorio.js": "src/analysis/screeners-relatorio.js",
+    "screeners-grafico.js": "src/analysis/screeners-grafico.js"
   },
   "templates": {
     "index.html": "src/index.html",
