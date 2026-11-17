@@ -102,10 +102,11 @@ async function priceBatch(market:string,limit=8){
   await wait(1100); // no máximo 1 requisição/segundo por função; não é garantia de cota Yahoo.
  }
  const gravados=updates.length?Number(await rpc('quant_v2_patch_precos',{p_market:market,p_rows:updates}))||0:0;
- return {selecionados:Array.isArray(pending)?pending.length:0,gravados,bloqueado:blocked,erros:errors.slice(0,8)};
+ return {selecionados:Array.isArray(pending)?pending.length:0,gravados,bloqueado:blocked,erros:errors.slice(0,8),tickers:updates.map((x:any)=>x.ticker)};
 }
-async function finalized(market:string,job:string,items:number,errors:number){
- const count=await rpc('quant_v2_recalcular',{p_market:market});
+async function finalized(market:string,job:string,items:number,errors:number,tickers:string[]=[]){
+ const list=[...new Set(tickers.filter(t=>/^[A-Z0-9][A-Z0-9.-]{0,19}$/.test(t)))].slice(0,250);
+ const count=list.length?await rpc('quant_v2_recalcular_lote',{p_market:market,p_tickers:list}):0;
  const snap=await rpc('quant_v2_snapshot_refresh',{p_market:market});
  await rpc('quant_v2_sync_log',{p_market:market,p_job:job,p_items:items,p_errors:errors,p_details:'Score v2.0, snapshot e medianas atualizados'});
  return {recalculados:count,snapshot:snap};
@@ -208,7 +209,7 @@ Deno.serve(async req=>{
    const market=b.mercado==='BR'?'BR':b.mercado==='US'?'US':null;
    if(!market)return ok({error:'Mercado invalido'},400);
    const data=await priceBatch(market,Math.min(20,Math.max(1,Number(b.limite)||8)));
-   const final=await finalized(market,'precos',data.gravados,data.erros.length);
+   const final=await finalized(market,'precos',data.gravados,data.erros.length,data.tickers);
    return ok({acao:mode,mercado:market,...data,final});
   }
   if(mode==='fundamentos'){
@@ -217,7 +218,7 @@ Deno.serve(async req=>{
    const symbols=await rpc('quant_screeners_pendentes',{p_market:m,p_limit:max});
    const fundamental=await scanner(m,symbols||[],false);
    const prices=await priceBatch(m,Math.min(12,Math.max(2,Math.ceil(max/20))));
-   const final=await finalized(m,'fundamentos',Number(fundamental.atualizados||0)+prices.gravados,prices.erros.length);
+   const final=await finalized(m,'fundamentos',Number(fundamental.atualizados||0)+prices.gravados,prices.erros.length,[...(Array.isArray(symbols)?symbols:[]),...prices.tickers]);
    return ok({acao:mode,mercado:m,...fundamental,precos:prices,final});
   }
   if(mode==='enriquecer'){
@@ -228,7 +229,7 @@ Deno.serve(async req=>{
      const fundamental=await scanner(market,symbols||[],false);
      const prices=await priceBatch(market,market==='BR'?6:8);
      result[market]={fundamental,precos:prices,
-       final:await finalized(market,'enriquecer',Number(fundamental.atualizados||0)+prices.gravados,prices.erros.length)};
+       final:await finalized(market,'enriquecer',Number(fundamental.atualizados||0)+prices.gravados,prices.erros.length,[...(Array.isArray(symbols)?symbols:[]),...prices.tickers])};
     }catch(e){result[market]={erro:String(e).slice(0,170)}}
    }
    return ok({acao:mode,...result});
