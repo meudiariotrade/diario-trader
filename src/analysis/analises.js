@@ -63,12 +63,16 @@ function kpis(m,s){const v=s.data?.medians||{};return '<div class="scr-kpis">'+O
 function stats(m,s){
  const arr=s.data?.scatter||[], scored=arr.filter(r=>r.score!=null);
  const byScore=[...scored].sort((a,b)=>b.score-a.score)[0];
- const dy=[...arr].filter(r=>r.dy!=null&&r.dy>0&&
+ const byRoic=[...arr].filter(r=>r.roic!=null&&r.roic>0).sort((a,b)=>b.roic-a.roic)[0];
+ const pageRows=(s.data?.rows||[]).map(r=>({ticker:r.ticker,dy:r.dividend_yield,fcf_margin:r.fcf_margin}));
+ const candidates=[...arr,...pageRows];
+ const dy=[...candidates].filter(r=>r.dy!=null&&r.dy>0&&
    (m==='br'?r.payout!=null&&r.payout>=20&&r.payout<=90&&r.fcf_yield!=null&&r.fcf_yield>0:
      r.fcf_margin!=null&&r.fcf_margin>0)).sort((a,b)=>b.dy-a.dy)[0];
+ const byDy=[...candidates].filter(r=>r.dy!=null&&r.dy>0).sort((a,b)=>b.dy-a.dy)[0];
  const momentum=[...arr].filter(r=>r.momentum!=null).sort((a,b)=>b.momentum-a.momentum)[0];
- const cards=[['Maior score',byScore,'score','Não equivale a preço-alvo ou assimetria.'],
-   ['DY com FCF positivo',dy,'dy','Histórico; não garante pagamento futuro.'],
+ const cards=[[(byScore?'Maior score':'Maior ROIC (parcial)'),byScore||byRoic,byScore?'score':'roic','Não equivale a preço-alvo ou assimetria.'],
+   [(dy?'DY com FCF positivo':'Maior DY (não validado)'),dy||byDy,'dy','Histórico; não garante pagamento futuro.'],
    ['Líder de momentum',momentum,'momentum','Reflete preço passado, não previsão.']];
  return '<section class="scr-highlights">'+cards.map(([label,r,k,note])=>
   '<div class="scr-highlight"><span>'+E(label)+'</span><b>'+(r?E(r.ticker):'Sem dados suficientes')+'</b>'+
