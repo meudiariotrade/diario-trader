@@ -3958,7 +3958,7 @@ async function gemini(system: string, parts: any[], opt: { json?: boolean; searc
   const reservaJornal = soTexto && !!opt.search && system.includes('PROTOCOLO EDITORIAL OBRIGATÓRIO');
   const viaRoteador = async (semBusca: boolean) => {
     const reserva = reservaJornal && semBusca;
-    const r = await gerarTexto(system + (semBusca ? SEM_BUSCA : ''), parts.map((p) => p.text).join('\n\n'), { json: opt.json, temp: opt.temp, ate: opt.ate, ...(reserva ? {preferir:['pollinations']} : {}) });
+    const r = await gerarTexto(system + (semBusca ? SEM_BUSCA : ''), parts.map((p) => p.text).join('\n\n'), { json: opt.json, temp: opt.temp, ate: opt.ate, ...(reserva ? {preferir:['openrouter-reserva'], porTentativaMs: 12000} : {}) });
     IA_ULTIMA.rotulo = r.rotulo; IA_CONTA.openrouter++;
     const t = r.texto.replace(/```json|```/g, '');
     const meta = (v:any) => reserva && v && typeof v==='object' ? {...v,__fontes_busca:[],__reserva:{provedor:r.provedor,modelo:r.modelo,sem_pesquisa_web:true}} : v;
@@ -5020,7 +5020,9 @@ Deno.serve(async (req) => {
   let b: any;
   try { b = await req.json(); } catch { return out({ erro: 'JSON inválido' }, 400); }
   modoAtual = String(b?.modo || '').slice(0, 30); cronAtual = doCron;
-  if (b.modo === 'cron_diagnostico') return out({ cron: doCron, semGeracao: true }, doCron ? 200 : 401);
+  if (b.modo === 'cron_diagnostico') return out(doCron
+    ? {cron:true,semGeracao:true,openrouterConfigurado:!!Deno.env.get('OPENROUTER_API_KEY'),geminiConfigurado:!!Deno.env.get('GEMINI_API_KEY')}
+    : {cron:false,semGeracao:true}, doCron ? 200 : 401);
   const gerado = new Date().toISOString();
   const ate = Date.now() + PRAZO_MS;
   // limite diário por usuário (só conta quando o Gemini vai ser chamado)

@@ -113,7 +113,8 @@ async function openRouterReserva(fetcher: typeof fetch, forcar = false): Promise
         const ids = (Array.isArray(data) ? data : [])
           .filter((m: any) => {
             if (typeof m?.id !== 'string' || !/:free$/.test(m.id) ||
-                !/deepseek|glm|grok|mimo/i.test(m.id)) return false;
+                !/deepseek|glm|grok|mimo|nemotron|gemma/i.test(m.id)) return false;
+            if ((Number(m.context_length)||0) < 32000) return false;
             // Nunca encaminhar reserva a variantes pagas, de áudio, de imagem ou batch.
             const precoEntrada = Number(m.pricing?.prompt ?? 0);
             const precoSaida = Number(m.pricing?.completion ?? 0);
@@ -128,9 +129,13 @@ async function openRouterReserva(fetcher: typeof fetch, forcar = false): Promise
       }
     } catch { /* Lista temporariamente indisponível: usa cache ou slugs gratuitos declarados. */ }
   }
-  if (!OR_RESERVA) return [...CANDIDATOS_RESERVA];
+  // Sem catálogo validado, não presumir que um slug :free ainda é gratuito.
+  if (!OR_RESERVA) return [];
   const ids = OR_RESERVA.ids;
-  const familias = [/deepseek/i, /glm/i, /grok/i, /mimo/i];
+  // Famílias pedidas vêm primeiro. Sem oferta gratuita de Grok/DeepSeek/GLM/MiMo,
+  // prioriza duas alternativas reais do catálogo, sem jamais recorrer a uma variante paga.
+  const familias = [/deepseek/i, /glm/i, /grok/i, /mimo/i,
+    /nemotron-3\.5-lightning/i, /gemma-4-31b/i, /nemotron/i, /gemma/i];
   return [...new Set([
     ...CANDIDATOS_RESERVA.filter((m) => ids.includes(m)),
     ...familias.flatMap((re) => ids.filter((id) => re.test(id))),
@@ -190,6 +195,12 @@ export async function gerarTexto(system: string, prompt: string, opt: { json?: b
       url: 'https://openrouter.ai/api/v1/chat/completions', modelos: [],
       extra: { 'HTTP-Referer': 'https://meudiariotrade.github.io/diario-trader/', 'X-Title': 'Diario de Trader' },
     });
+  }
+  // Preferência ESPECÍFICA do Jornal depois de o Gemini principal falhar.
+  // Todas as outras abas preservam a fila e os modelos anteriores.
+  if (opt.preferir?.includes('openrouter-reserva')) {
+    const i = fila.findIndex((p) => p.id === 'openrouter-reserva');
+    if (i > 0) fila.unshift(fila.splice(i, 1)[0]);
   }
   for (const p of fila) {
     let modelos = p.id === 'openrouter-reserva' ? await openRouterReserva(fetcher) :
