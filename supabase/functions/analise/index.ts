@@ -4999,12 +4999,28 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return out({ erro: 'Método não permitido' }, 405);
   // o giro automático vem da função notificar, com o segredo do agendador (CRON_SECRET), sem usuário
   const CRONS = Deno.env.get('CRON_SECRET') || '', cs = req.headers.get('x-cron-secret') || '';
-  const doCron = !!CRONS && cs.length === CRONS.length && [...cs].reduce((a, c, i) => a | (c.charCodeAt(0) ^ CRONS.charCodeAt(i)), 0) === 0;
+  let doCron = !!CRONS && cs.length === CRONS.length && [...cs].reduce((a, c, i) => a | (c.charCodeAt(0) ^ CRONS.charCodeAt(i)), 0) === 0;
+  // Compatibilidade do agendador leve: aceita exclusivamente a chave v724 do Vault,
+  // lida pela RPC restrita service_role. Não expõe nem registra a credencial.
+  if (!doCron && cs && SB && SB_SVC) try {
+    const check = await fetch(SB + '/rest/v1/rpc/diario_agendamento_chave', {
+      method:'POST',headers:svc(),body:'{}',signal:AbortSignal.timeout(4500)
+    });
+    if (check.ok) {
+      const expected = await check.json();
+      if (typeof expected === 'string' && expected.length === cs.length) {
+        let dif = 0;
+        for (let i = 0; i < cs.length; i++) dif |= expected.charCodeAt(i) ^ cs.charCodeAt(i);
+        doCron = dif === 0;
+      }
+    }
+  } catch { /* chave incorreta: nenhuma ação privilegiada */ }
   const uid = doCron ? null : await usuario(req);
   if (SB && !uid && !doCron) return out({ erro: 'Entre na sua conta de novo (Mais → Conta).' }, 401);
   let b: any;
   try { b = await req.json(); } catch { return out({ erro: 'JSON inválido' }, 400); }
   modoAtual = String(b?.modo || '').slice(0, 30); cronAtual = doCron;
+  if (b.modo === 'cron_diagnostico') return out({ cron: doCron, semGeracao: true }, doCron ? 200 : 401);
   const gerado = new Date().toISOString();
   const ate = Date.now() + PRAZO_MS;
   // limite diário por usuário (só conta quando o Gemini vai ser chamado)
