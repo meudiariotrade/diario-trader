@@ -41,7 +41,9 @@
     "analises.js": "src/analysis/analises.js",
     "relatorios-dados.js": "src/contracts/relatorios-dados.js",
     "fiscal-conferencia.js": "src/navigation/fiscal-conferencia.js",
-    "terminal-fonte-v533.js": "src/navigation/terminal-fonte.js"
+    "terminal-fonte-v533.js": "src/navigation/terminal-fonte.js",
+    "screeners-inteligencia.js": "src/analysis/screeners-inteligencia.js",
+    "screeners-relatorio.js": "src/analysis/screeners-relatorio.js"
   },
   "templates": {
     "index.html": "src/index.html",
