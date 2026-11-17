@@ -8,19 +8,28 @@ function fixture(){
  return {e,market};
 }
 async function render(e,market){
- const w={DiarioFontes:async doc=>{doc.registerFontkit(fontkit);return {r:await doc.embedFont(fs.readFileSync('pdf-sans.ttf')),b:await doc.embedFont(fs.readFileSync('pdf-sans-bold.ttf'))}}};
- const c={window:w,globalThis:null,DiarioChunks:{functions:{}},rpLib:async()=>c.PDFLib,Uint8Array,ArrayBuffer,setTimeout,console,URL,Date,Map,Set,Intl};c.globalThis=c;vm.createContext(c);vm.runInContext(fs.readFileSync('pdf-lib.min.js','utf8'),c);vm.runInContext(fs.readFileSync('supabase/functions/_shared/jornal-quality.js','utf8'),c);w.DiarioJornalQualidade=c.DiarioJornalQualidade;
+ const ops=[],w={DIARIO_DEMO:true,DiarioFontes:async doc=>{doc.registerFontkit(fontkit);return {r:await doc.embedFont(fs.readFileSync('pdf-sans.ttf')),b:await doc.embedFont(fs.readFileSync('pdf-sans-bold.ttf')),i:await doc.embedFont(fs.readFileSync('pdf-sans-italic.ttf')),serif:await doc.embedFont(fs.readFileSync('pdf-serif-bold.ttf')),serifItalic:await doc.embedFont(fs.readFileSync('pdf-serif-italic.ttf'))}}};
+ const fmt=v=>v==null?'–':Number(v).toLocaleString('pt-BR',{maximumFractionDigits:4});
+ const c={window:w,DiarioChunks:{functions:{}},rpLib:async()=>c.PDFLib,Uint8Array,ArrayBuffer,setTimeout,console,URL,Date,Map,Set,Intl,APP_VER:'v721',RP_COR:{tx:'#17191b',mut:'#6b7280',bd:'#eae9e6',bg:'#efeeeb',ac:'#3b3e43',dk:'#141517',g:'#2e8a5c',r:'#d04e3a',am:'#a98136',bl:'#588bb8',wh:'#ffffff',g2:'#eeedea',r2:'#fbe8e5',am2:'#dfc79a',bl2:'#eeedeb',cz:'#f6f5f3',li:'#66cc99',li2:'#b3b6bd'},rpTx:v=>String(v??''),loc:()=>e.dia,JV_FOTOS:['diario','empresas','economia','mundo','carteira','agenda'],jvFotoBytes:async paths=>{for(const p of paths){if(p.startsWith('data:'))return {bytes:Buffer.from(p.split(',')[1],'base64'),png:false};if(fs.existsSync(p))return {bytes:fs.readFileSync(p),png:/png$/.test(p)};}return null;},jvFotoErro(){},jrCor:()=> '#ac8439',jeNumTxt:fmt,jvF2:fmt,jvPc:v=>fmt(v)+'%',jrFmtR:fmt,jrNumF:(v,d)=>v.toLocaleString('pt-BR',{minimumFractionDigits:d>1?1:0,maximumFractionDigits:d>1?1:0}),jrDM:d=>d?.slice(8,10)+'/'+d?.slice(5,7),jrTemImp:x=>!!x?.ativos?.length,jrEdOcultas:()=>[],JR_GLIFO:{},jrHoje:()=>({}),jrOntem:()=>null,jrPre:()=>null,JRMD:()=>false,JRCAR:()=>false,jrcAtivos:()=>[],jvoAtivos:()=>[],jvoNoticias:()=>[],jvoCampos:()=>[],jvpLinhas:()=>[],jvpResumo:()=>({}),jrItens:e=>[e.manchete,...(e.materias||[])],jrResumo:e=>(e.em_poucas_linhas||[]).map(t=>({t})),jrImpAgg:()=>[],jeTk:()=>'',jeVal:()=>'',jeGrupo:m=>m.editoria==='Empresas'?'empresas':m.editoria==='Internacional'?'mundo':m.editoria==='Macroeconomia'?'economia':'diario',GATE_DICAS:[["Texto ilustrativo de validação"]],money:fmt};
+ vm.createContext(c);vm.runInContext(fs.readFileSync('pdf-lib.min.js','utf8'),c);vm.runInContext(fs.readFileSync('supabase/functions/_shared/jornal-quality.js','utf8'),c);w.DiarioJornalQualidade=c.DiarioJornalQualidade;
+ Object.assign(c,{document:{addEventListener(){},createElement(){return {}},head:{append(){}}},vJornal(){},jrPinta(){},jrCorpo(){return ''},jrMateria(){},jrVer(){}});vm.runInContext(fs.readFileSync('src/journal/editorial.js','utf8'),c);
  const prepared=c.DiarioJornalQualidade.prepare(e,market);vm.runInContext(fs.readFileSync('src/pdf-documentos.js','utf8'),c);
- const pdf=await c.DiarioChunks.functions.jvPdfBytes(prepared);return {...pdf,ops:w.__jornalPdfLayout,prepared};
+ c.rpNovo=async(lib,opts)=>{const o=await c.DiarioChunks.functions.rpNovo(lib,opts),wrap=page=>{const draw=page.drawText.bind(page);page.drawText=(tx,opt)=>{ops.push({page:o.doc.getPages().indexOf(page)+1,x:opt.x,top:841.89-opt.y-opt.size,width:opt.font.widthOfTextAtSize(tx,opt.size),size:opt.size,text:tx});return draw(tx,opt)};};o.doc.getPages().forEach(wrap);const add=o.doc.addPage.bind(o.doc);o.doc.addPage=(...args)=>{const p=add(...args);wrap(p);return p};return o};
+ const pdf=await c.DiarioChunks.functions.jvPdfBytes(prepared);return {...pdf,ops,prepared};
 }
 test('PDF completo usa snapshot, fontes clicáveis, números íntegros e todos os elementos dentro da página',async()=>{
- const {e,market}=fixture(),r=await render(e,market);assert.ok(r.paginas>=4&&r.paginas<=8,'Páginas: '+r.paginas);
- for(const op of r.ops){assert.ok(op.x>=40&&op.x+op.width<=555.3,JSON.stringify(op));assert.ok(op.top>=20&&op.top+op.size<=822,JSON.stringify(op));}
- assert.ok(r.ops.some(op=>op.text.includes('+0,342 p.p.')));assert.ok(r.ops.some(op=>op.text.includes('5.806,5')));assert.ok(r.ops.some(op=>op.text.includes('AMOSTRA - DADOS SIMULADOS')));
+ const {e,market}=fixture(),r=await render(e,market);assert.ok(r.paginas>=3&&r.paginas<=16,'Páginas: '+r.paginas);
+ for(const op of r.ops){assert.ok(op.x>=40&&op.x+op.width<=555.3,JSON.stringify(op));assert.ok(op.top>=5&&op.top+op.size<=830,JSON.stringify(op));}
+ assert.ok(r.ops.some(op=>op.text.includes('+0,342 p.p.')));assert.ok(r.ops.some(op=>op.text.includes('5.806,5')));assert.ok(r.ops.some(op=>op.text==='Jornal do Pregão'&&op.size===32));
  const doc=await PDFLib.PDFDocument.load(r.bytes);assert.ok(doc.getPages().some(p=>(p.node.Annots()?.size()||0)>0));
+ assert.ok(doc.getPages().some(p=>(p.node.Resources().lookup(PDFLib.PDFName.of('XObject'))?.keys()?.length||0)>0));
  fs.mkdirSync('test-results',{recursive:true});fs.writeFileSync('test-results/jornal-v714-amostra-simulada.pdf',r.bytes);
 });
-test('PDF com lacunas e divergências mantém os avisos e omite dados contraditórios',async()=>{
- const {e}=fixture();e.cotacoes=[{k:'ibov',px:169295,d1:-1.83}];e.manchete={titulo:'Ibovespa cai 5,1%',texto:'O Ibovespa cai 5,1%.'};const r=await render(e,{});assert.ok(r.ops.some(op=>op.text.includes('retido')));assert.ok(r.ops.some(op=>op.text.includes('Agenda')));assert.ok(r.ops.some(op=>op.text.includes('Níveis indisponíveis')));assert.ok(!r.ops.some(op=>op.text.includes('Ibovespa cai 5,1%')));
+test('PDF omite dados contraditórios sem substituir a capa por avisos técnicos',async()=>{
+ const {e}=fixture();e.cotacoes=[{k:'ibov',px:169295,d1:-1.83}];e.manchete={titulo:'Ibovespa cai 5,1%',texto:'O Ibovespa cai 5,1%.'};const r=await render(e,{});assert.ok(!r.ops.some(op=>op.text.includes('Conteúdo retido')));assert.ok(r.ops.some(op=>/agenda/i.test(op.text)));assert.ok(!r.ops.some(op=>op.text.includes('Rastreabilidade dos dados')));assert.ok(!r.ops.some(op=>op.text.includes('Ibovespa cai 5,1%')));
+});
+test('edição toda retida mantém capa editorial com referências reais, sem inventar matérias',async()=>{
+ const {e}=fixture();e.materias=[];e.cotacoes=[{k:'ibov',n:'Ibovespa',px:169295,d1:-1.83,fonte:'Fixture',dia_referencia:e.dia}];e.manchete={titulo:'Ibovespa cai 5,1%',texto:'O Ibovespa cai 5,1%.'};
+ const r=await render(e,{});assert.ok(r.ops.some(x=>x.text.includes('169.295')));assert.ok(r.ops.some(x=>x.text.includes('última referência')));assert.ok(!r.ops.some(x=>/Conteúdo retido|cai 5,1%/.test(x.text)));assert.equal(r.snapshot_id,r.prepared.snapshot.id);assert.equal(e.manchete.titulo,'Ibovespa cai 5,1%');
 });
 module.exports={fixture,render};

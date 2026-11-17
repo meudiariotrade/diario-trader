@@ -12,8 +12,27 @@
     if(cache.size>8) cache.delete(cache.keys().next().value);
     return withPrivate(Q.clone(e));
   }
-  function publicEdition(value){const e=edition(value);if(e)delete e.profit_local;return e;}
-  w.DiarioJornalEditorial={edition};
+  // Projeção visual: validação não substitui uma capa por mensagens técnicas repetidas.
+  function presentation(value){
+    const e=edition(value);if(!e)return e;
+    const retained=m=>/^Conteúdo retido para revisão/.test(m?.titulo||'');
+    const articles=(e.materias||[]).filter(m=>!retained(m));
+    if(retained(e.manchete)){
+      if(articles.length)e.manchete=articles.shift();
+      else {
+        const quotes=(e.snapshot?.cotacoes||e.cotacoes||[]).filter(q=>Number.isFinite(q.px)),q=quotes.find(q=>q.k==='ibov')||quotes[0];
+        const references=quotes.slice(0,6).map(q=>(q.n||q.k)+': '+Q.price(q)+' '+q.unidade+(Number.isFinite(q.d1)?' ('+Q.change(q)+')':'')+(q.dia_referencia?' · sessão '+q.dia_referencia:'')+'.');
+        e.manchete={editoria:'Mercados',chapeu:'PANORAMA DA EDIÇÃO',titulo:q?(q.n||q.k)+' tem última referência em '+Q.price(q)+'; '+Q.phase(e).next.toLowerCase():'Mercados: '+Q.phase(e).title.toLowerCase(),linha_fina:'Cotações de referência e agenda oficial para acompanhar a sessão, com os horários de cada fonte.',texto:references.join('\n\n')+'\n\nOs valores são os últimos disponíveis na coleta desta edição. Consulte a data de cada referência antes de comparar com o pregão atual. Notícias sem confirmação suficiente permanecem fora desta leitura.',numeros:quotes.slice(0,4).map(q=>({rotulo:q.n||q.k,valor:Q.price(q)+' '+q.unidade})),por_que_importa:'Compare as referências com o contrato e os preços exibidos no Profit antes de tomar uma decisão.',impacto:{ativos:[],setores:[],direcao:''}};
+      }
+    }
+    e.materias=articles;
+    const references=(e.snapshot?.cotacoes||e.cotacoes||[]).filter(q=>Number.isFinite(q.px));
+    if(!e.em_poucas_linhas?.length)e.em_poucas_linhas=references.slice(0,4).map(q=>(q.n||q.k)+': '+Q.price(q)+' '+q.unidade+(Number.isFinite(q.d1)?' ('+Q.change(q)+')':'')+'.');
+    if(!e.cinco_coisas?.length)e.cinco_coisas=references.slice(0,5).map(q=>({titulo:(q.n||q.k)+': '+Q.price(q)+' '+q.unidade,texto:(Number.isFinite(q.d1)?'Variação: '+Q.change(q)+'. ':'')+(q.dia_referencia?'Sessão de referência: '+q.dia_referencia+'. ':'')+'Último disponível na coleta da edição.'}));
+    return e;
+  }
+  function publicEdition(value){const e=presentation(value);if(e)delete e.profit_local;return e;}
+  w.DiarioJornalEditorial={edition,presentation};
   const journalView=vJornal;let legacyRefresh=false;
   vJornal=function(){if(!legacyRefresh && JRN.v?.manchete && !JRN.v.prep_id && !JRN.busy){legacyRefresh=true;JRN.v.antiga=true;setTimeout(()=>jrCarrega(false),0);}return journalView.apply(this,arguments);};
   const original=jrPinta;
@@ -23,10 +42,14 @@
     return original.apply(this,arguments);
   };
   // O painel da edição nunca é substituído por preços ao vivo de outro horário.
-  jrIndsHtml=function(e){return {viv:false,h:(edition(e)?.cotacoes||[]).map(q=>`<span class="jrind"><small>${esc(q.n||q.k)}</small><b>${esc(Q.price(q))}</b><i>${esc(Q.change(q))}</i></span>`).join('')};};
-  jrFechHtml=function(e){e=edition(e);return `<section class="jrsec jrfech"><h3>${esc(Q.phase(e).table)}</h3><p class="sm mut">Referências congeladas na edição. Coleta: ${esc(e.snapshot.coletado_em||'não registrada')}. Horário do negócio pode não estar disponível.</p><div class="jrvtab"><table><thead><tr><th>Ativo / referência</th><th>Último</th><th>Variação</th></tr></thead><tbody>${e.cotacoes.map(q=>`<tr><td>${esc(q.n||q.k)}<br><small>${esc(q.contrato||q.simbolo||q.fonte)} · ${esc(q.unidade)}</small></td><td>${esc(Q.price(q))}</td><td>${esc(Q.change(q))}</td></tr>`).join('')}</tbody></table></div></section>`;};
-  jr5Html=function(e){const p=Q.phase(e);return `<section class="jrsec jr5"><h3>${esc(p.title)}</h3><p class="sm mut">${esc(p.next)}. Use os cenários como contexto; confirme preços e contrato no Profit.</p></section>`;};
-  jeCot=function(q,dark){return `<div class="jecot${dark?' esc':''}"><small>${esc(q.n||q.k)}</small><b>${esc(Q.price(q))}</b><span>${esc(Q.change(q))}</span></div>`;};
+  jrIndsHtml=function(e){return {viv:false,h:(edition(e)?.cotacoes||[]).map(q=>`<span class="jrind"><small>${esc(q.n||q.k)}</small><b>${esc(Q.price(q))}</b><i class="${q.d1>=0?'g':'r'}">${esc(Q.change(q))}</i></span>`).join('')};};
+jrFechHtml=function(e) {
+  const t = (e.cotacoes || []).filter((a) => a && a.px != null);
+  return t.length
+    ? `<section class="jrsec jrfech"><h3>${esc(Q.phase(e).table)}</h3>${e.fechamento_texto ? `<p class="jrtx2">${esc(e.fechamento_texto)}</p>` : ""}<div class="jrvtab"><table><thead><tr><th>Ativo</th><th>Último</th><th>Variação</th></tr></thead><tbody>${t.map((a) => `<tr><td><b>${esc(a.n || a.k)}</b></td><td>${Q.price(a)}</td><td class="${a.d1 > 0 ? "g" : a.d1 < 0 ? "r" : "mut"}"><b>${Q.change(a)}</b></td></tr>`).join("")}</tbody></table></div></section>`
+    : "";
+}
+
   // Candles fornecidos atualmente por candles/WIN e candles/WDO são proxies à vista.
   // Não calcular pivôs do futuro nem descrever esse gráfico como o contrato negociável.
   jrTecDados=function(k){const e=edition(jrVer()),p=e?.snapshot?.niveis?.[k];return p?{...p,k,nome:p.tk,div:k==='wdo'?1000:1,tend:'Lateral',n:0}:null;};
@@ -38,10 +61,29 @@
   };
   jrGraf=async function(){ /* A leitura de uma edição não faz consulta de candles por polling. */ };
   jrGdHtml=function(){return '';};
-  jrIndHtml=function(e){const m=edition(e)?.snapshot?.macro||{},L=m.ind||[];return L.length?`<section class="jrsec jrind2"><h3>Indicadores com referência</h3><div class="jrkp4">${L.map(x=>`<div><small>${esc(x.nome)}</small><b>${esc(Number(x.v).toLocaleString('pt-BR')+' '+x.un)}</b><span>${esc(x.periodo)}</span></div>`).join('')}</div></section>`:'';};
-  jrRkHtml=function(){const e=edition(jrVer()),m=e?.snapshot?.movers;return m?.referencia_em?`<section class="jrsec"><h3>Destaques da sessão</h3><p>${[...(m.altas||[]),...(m.baixas||[])].map(x=>esc(x.tk)+' '+esc(Q.change({d1:x.var}))).join(' · ')}</p></section>`:'';};
-  jrImpHtml=function(){return '';};
-  jrResumoHtml=function(){return '';};
+  jrIndHtml=function(e){const m=edition(e)?.snapshot?.macro||{},L=m.ind||[];return L.length?`<section class="jrsec jrind2"><h3>Indicadores</h3><div class="jrkp4">${L.map(x=>`<div><small>${esc(x.nome)}</small><b>${esc(Number(x.v).toLocaleString('pt-BR')+' '+x.un)}</b><span>${esc(x.periodo)}</span></div>`).join('')}</div></section>`:'';};
+jrRkHtml=function(){
+  const e=edition(jrVer())?.snapshot?.movers;
+  if (!e) return "";
+  const t = (e.altas || [])
+      .filter((s) => s.var > 0)
+      .sort((s, n) => n.var - s.var)
+      .slice(0, 5),
+    a = (e.baixas || [])
+      .filter((s) => s.var < 0)
+      .sort((s, n) => s.var - n.var)
+      .slice(0, 5);
+  if (!t.length && !a.length) return "";
+  const o = (s, n) =>
+    s
+      .map(
+        (r) =>
+          `<div class="jrrk"><b>${esc(r.tk)}</b><span class="sm mut">${esc(r.nome || "")}</span><b class="${n}">${(r.var > 0 ? "+" : "") + Number(r.var).toFixed(2).replace(".", ",")}%</b></div>`,
+      )
+      .join("");
+  return `<section class="jrsec jrrks"><h3>Maiores altas e baixas do Ibovespa</h3><div class="jrrk2"><div><div class="jrrkt g">▲ Altas</div>${o(t, "g")}</div><div><div class="jrrkt r">▼ Baixas</div>${o(a, "r")}</div></div></section>`;
+}
+
   document.addEventListener('click',async ev=>{
     const button=ev.target.closest?.('[data-jr-profit-capture]');if(!button||button.disabled)return;
     const e=edition(jrVer()),owner=typeof SESS!=='undefined'?SESS?.uid:'';if(!e?.snapshot||!owner){button.textContent='Entre na conta para consultar a ponte';return;}
@@ -63,14 +105,8 @@
     if(!e?.qualidade) return html;
     const q=e.qualidade;
     const normalizedHtml=html.replace(/com pesquisa na internet e os números do app/g,e.pesquisa_web===true?'com pesquisa recuperada e dados desta edição':'com os dados recebidos; pesquisa web não confirmada em toda a edição');
-    return privateHtml(e)+`<section class="jrsec jr-quality"><h3>${q.problemas.length?'Conteúdo da edição em revisão':'Referências e limites da edição'}</h3><p class="sm">${esc(Q.phase(e).title)} · ${esc(e.snapshot.id)}</p>${q.problemas.map(x=>`<p class="sm">${esc(x)}</p>`).join('')}<details><summary>Conferir fontes e limitações</summary>${q.lacunas.map(x=>`<p class="sm mut">${esc(x)}</p>`).join('')}</details></section>`+normalizedHtml;
+    return normalizedHtml+`<details class="jr-editorial-details"><summary>Fontes e conferência</summary><p class="sm mut">${esc(Q.phase(e).title)} · ${esc(e.snapshot.id)}</p>${[...q.problemas,...q.lacunas].map(x=>`<p class="sm mut">${esc(x)}</p>`).join('')}${privateHtml(e)}</details>`;
   };
-  const materia=jrMateria;
-  jrMateria=function(m){
-    let html=materia.apply(this,arguments);
-    const link=Q.url(m?.fonte_url),parts=[['Fato recebido',m?.fato],['Interpretação',m?.interpretacao],['Cenário condicionado',m?.cenario]].filter(x=>x[1]);
-    const evidence=`<div class="jr-evidence">${parts.map(([label,tx])=>`<p><b>${label}:</b> ${esc(tx)}</p>`).join('')}<p class="sm mut">${m?.conferencia_fonte?.estado?esc(m.conferencia_fonte.estado==='revisado_ia'?'Fonte recuperada e segunda leitura por IA; não é auditoria independente.':m.conferencia_fonte.motivo)+' ':''}${link?`Fonte vinculada: <a href="${esc(link)}" target="_blank" rel="noopener noreferrer">consultar documento</a>`:'Fonte específica pendente de conferência.'}</p></div>`;
-    return html.replace('</article>',evidence+'</article>');
-  };
-  const style=document.createElement('style');style.id='jornal-editorial-v714';style.textContent=`.jr-quality{border-left:3px solid #D4A017;padding:12px;background:#11141B;color:#e9e9ea}#app #jrbox button[data-jr-profit-capture]{min-height:44px!important;height:auto!important;max-height:none!important}.jr-quality summary{cursor:pointer;min-height:44px}.jrind b,.jrfech td,.jr-evidence{font-variant-numeric:tabular-nums}.jrfech td:nth-child(n+2){text-align:right;white-space:nowrap}.jrfech th{text-align:left}.jr-evidence{padding:10px 0;border-top:1px solid #1E232E}.jr-evidence p{line-height:1.5}.jrind small{white-space:normal!important;overflow:visible!important;text-overflow:clip!important}.jr-evidence a{overflow-wrap:anywhere}`;document.head.append(style);
+
+  const style=document.createElement('style');style.id='jornal-editorial-v714';style.textContent=`#app #jrbox button[data-jr-profit-capture]{min-height:44px!important;height:auto!important;max-height:none!important}.jr-editorial-details{margin-top:8px}.jr-editorial-details>summary{cursor:pointer;min-height:44px;font-size:12px;color:var(--mut)}.jrind b,.jrfech td{font-variant-numeric:tabular-nums}`;document.head.append(style);
 })(window);
