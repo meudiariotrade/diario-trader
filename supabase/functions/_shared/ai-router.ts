@@ -184,9 +184,11 @@ export type Resposta = { texto: string; provedor: string; modelo: string; rotulo
  * Gera texto com failover entre os provedores ativos.
  * Em 429: 1 nova tentativa rápida no mesmo modelo, depois pausa o provedor e passa ao próximo.
  */
-export async function gerarTexto(system: string, prompt: string, opt: { json?: boolean; temp?: number; ate?: number; env?: Env; fetcher?: typeof fetch; preferir?: string[]; porTentativaMs?: number } = {}): Promise<Resposta> {
+export async function gerarTexto(system: string, prompt: string, opt: { json?: boolean; temp?: number; ate?: number; env?: Env; fetcher?: typeof fetch; preferir?: string[]; excluir?: string[]; porTentativaMs?: number } = {}): Promise<Resposta> {
   const fetcher = opt.fetcher || fetch, env = opt.env ? opt.env : await envComVault(ENV0, fetcher), ate = opt.ate || Date.now() + 55_000, temp = opt.temp ?? 0.4, erros: string[] = [];
-  const fila = ordem(provedores(env), env, opt.preferir || []);
+  // No Jornal o Gemini já foi tentado como principal: não repetir o mesmo
+  // provedor no fallback. Outras abas preservam a fila original.
+  const fila = ordem(provedores(env), env, opt.preferir || []).filter(p => !(opt.excluir || []).includes(p.id));
   const desativados = new Set(lista(env('IA_DESLIGAR')).map((x) => x.toLowerCase()));
   const chaveReserva = env('OPENROUTER_API_KEY');
   if (chaveReserva && !desativados.has('openrouter') && !desativados.has('openrouter-reserva')) {

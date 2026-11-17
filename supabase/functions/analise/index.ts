@@ -3948,7 +3948,7 @@ export function ordenaModelos(nomes: string[]): string[] {
 // prefer 'or': tarefas leves (professor de inglês, questões, coach) vão primeiro para o OpenRouter e poupam a cota do Gemini.
 // Nas outras, o Gemini vai primeiro e o OpenRouter entra se o Gemini falhar (cota, sobrecarga, modelo fora do ar).
 const SEM_BUSCA = '\n\nATENÇÃO: agora você NÃO tem acesso à internet. Não cite notícias, pesquisas ou resultados de hoje que não estejam nos dados recebidos; quando faltar o motivo do movimento, diga que o texto foi feito só com os dados do sistema.';
-export const IA_CONTA = { gemini: 0, openrouter: 0, falhasGemini: 0 };
+export const IA_CONTA = { gemini: 0, groq: 0, openrouter: 0, falhasGemini: 0 };
 /** v622: IA do Jornal/Giro/coach. Texto puro sem busca → Roteador Multi-IA (Gemini, Groq, Cerebras, OpenRouter,
  *  Mistral, Hugging Face, DeepSeek, Pollinations). Com busca na web ou imagens → Gemini; se falhar, o roteador
  *  responde sem busca. IA_ULTIMA guarda quem respondeu (vai para o rodapé da edição). */
@@ -3958,8 +3958,10 @@ async function gemini(system: string, parts: any[], opt: { json?: boolean; searc
   const reservaJornal = soTexto && !!opt.search && system.includes('PROTOCOLO EDITORIAL OBRIGATÓRIO');
   const viaRoteador = async (semBusca: boolean) => {
     const reserva = reservaJornal && semBusca;
-    const r = await gerarTexto(system + (semBusca ? SEM_BUSCA : ''), parts.map((p) => p.text).join('\n\n'), { json: opt.json, temp: opt.temp, ate: opt.ate, ...(reserva ? {preferir:['openrouter-reserva'], porTentativaMs: 12000} : {}) });
-    IA_ULTIMA.rotulo = r.rotulo; IA_CONTA.openrouter++;
+    const r = await gerarTexto(system + (semBusca ? SEM_BUSCA : ''), parts.map((p) => p.text).join('\n\n'), { json: opt.json, temp: opt.temp, ate: opt.ate, ...(reserva ? {preferir:['groq'], excluir:['gemini'], porTentativaMs: 12000} : {}) });
+    IA_ULTIMA.rotulo = r.rotulo;
+    if (r.provedor === 'Groq') IA_CONTA.groq++;
+    else if (/OpenRouter/i.test(r.provedor)) IA_CONTA.openrouter++;
     const t = r.texto.replace(/```json|```/g, '');
     const meta = (v:any) => reserva && v && typeof v==='object' ? {...v,__fontes_busca:[],__reserva:{provedor:r.provedor,modelo:r.modelo,sem_pesquisa_web:true}} : v;
     try { return meta(JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1))); } catch { /* segue */ }
@@ -5021,8 +5023,22 @@ Deno.serve(async (req) => {
   try { b = await req.json(); } catch { return out({ erro: 'JSON inválido' }, 400); }
   modoAtual = String(b?.modo || '').slice(0, 30); cronAtual = doCron;
   if (b.modo === 'cron_diagnostico') return out(doCron
-    ? {cron:true,semGeracao:true,openrouterConfigurado:!!Deno.env.get('OPENROUTER_API_KEY'),geminiConfigurado:!!Deno.env.get('GEMINI_API_KEY')}
+    ? {cron:true,semGeracao:true,openrouterConfigurado:!!Deno.env.get('OPENROUTER_API_KEY'),
+       groqConfigurado:!!Deno.env.get('GROQ_API_KEY'),geminiConfigurado:!!Deno.env.get('GEMINI_API_KEY')}
     : {cron:false,semGeracao:true}, doCron ? 200 : 401);
+  // Teste autorizado de um único provedor, sem geração do Jornal e sem
+  // expor token, prompts financeiros ou dados privados nas respostas.
+  if (b.modo === 'groq_diagnostico') {
+    if (!doCron) return out({erro:'Não autorizado'},401);
+    try {
+      const r = await gerarTexto('Retorne apenas OK.', 'OK', {
+        preferir:['groq'], excluir:['gemini','openrouter','openrouter-reserva','cerebras',
+          'mistral','huggingface','deepseek','pollinations'],
+        porTentativaMs:6500, ate:Date.now()+11000
+      });
+      return out({ok:r.provedor==='Groq',provedor:r.provedor,modelo:r.modelo},r.provedor==='Groq'?200:503);
+    } catch {return out({ok:false,motivo:'Groq indisponível ou sem credencial'},503);}
+  }
   const gerado = new Date().toISOString();
   const ate = Date.now() + PRAZO_MS;
   // limite diário por usuário (só conta quando o Gemini vai ser chamado)

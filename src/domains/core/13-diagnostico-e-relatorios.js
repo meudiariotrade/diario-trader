@@ -4423,10 +4423,18 @@ function cqCacheSalva606(aba) {
   };
 }
 async function m606Carrega(forca) {
-  if (M606.busy || (!forca && M606.v && Date.now() - M606.ts < 25e3)) return;
+  // Mesa Macro é leitura de contexto, não cotação tick a tick.
+  // Compartilhar resultado por 5 min e pausar falhas por 3 min reduz Egress.
+  const intervalo = M606.v ? 5 * 60e3 : 3 * 60e3;
+  if (M606.busy || (!forca && (M606.v || M606.err) && Date.now() - M606.ts < intervalo)) return;
   if (window.DIARIO_DEMO) return;
   const a = cfg();
   if (!a) return;
+  if (typeof SESS === "undefined" || !SESS?.at) {
+    M606.err = "Entre na sua conta para atualizar Mesa Macro.";
+    M606.ts = Date.now();
+    return; // sem JWT nunca chamar Edge: HTTP 401 repetido
+  }
   M606.busy = !0;
   let mudou = !1;
   try {
