@@ -5066,7 +5066,7 @@ Deno.serve(async (req) => {
       if (b.modo === 'jornal') {
         if (!b.force) {
           const c = await cacheGet(chave);
-          if (c?.dados?.manchete) {
+          if (c?.dados?.manchete && c.dados.editorial_versao === JORNAL_Q.VERSION) {
             // saiu balanço depois que a edição fechou? o app escreve só a parte dos balanços e junta de novo
             if (b.partes) { try { const nv = await jrBalNovos(E, c.dados, b.bal); if (nv.length) return out({ faltando: true, atualizar: true, partes: c.dados.prep_id ? ['D'] : JR_TODAS, snapshot_id: c.dados.prep_id || (await jrPrep(E, sp, false, b.bal)).prep_id, novos: nv, dia: E.dia, edicao: E.ed, ultima: c.dados }); } catch { /* segue com a edição */ } }
             return out({ ...c.dados, cache: true });
@@ -5095,7 +5095,7 @@ Deno.serve(async (req) => {
         if (!JR_TODAS.includes(id)) return out({ erro: 'Parte inválida' }, 400);
         const P = await jrPrepToken(E, sp, b.snapshot_id, b.bal);
         if (!b.force) {
-          const c = await cacheGet(chave); if (c?.dados?.manchete) return out({ parte: id, ok: true, pronta: true });
+          const c = await cacheGet(chave); if (c?.dados?.manchete && c.dados.editorial_versao === JORNAL_Q.VERSION && (!b.snapshot_id || c.dados.prep_id === P.prep_id)) return out({ parte: id, ok: true, pronta: true });
           const pc = await cacheGet(jrParteK(E, id, P.prep_id)); const pr = id === 'D' ? pc?.dados?.r : jrDesembrulha(pc?.dados?.r); if (id === 'D' ? !!pr : jrParteServe(id, pr)) return out({ parte: id, ok: true, cache: true, r: pr });
         }
         if (id === 'A' && !doCron) { const lim = await limite('jornal'); if (lim) return lim; }
@@ -5103,7 +5103,7 @@ Deno.serve(async (req) => {
         catch (e) { console.error('jornal parte', id, (e as Error).message); if (id === 'D') await cachePut(`jornal:balfalha:${E.dia}:${E.ed}`, { ts: Date.now() }); return out({ parte: id, erro: jrMotivo((e as Error).message) }); }
       }
       // jornal_junta
-      if (!b.partes_prontas || !Object.keys(b.partes_prontas).length) { const c = await cacheGet(chave); if (c?.dados?.manchete) return out({ ...c.dados, cache: true }); }
+      if (!b.partes_prontas || !Object.keys(b.partes_prontas).length) { const c = await cacheGet(chave); if (c?.dados?.manchete && c.dados.editorial_versao === JORNAL_Q.VERSION) return out({ ...c.dados, cache: true }); }
       try { const P = await jrPrepToken(E, sp, b.snapshot_id); return out(await jrJuntaSalva(E, P, b.partes_prontas && typeof b.partes_prontas === 'object' ? b.partes_prontas : {})); }
       catch (e) { const u = await ultima(); return out({ erro: 'A redação não conseguiu fechar a edição. ' + jrMotivo((e as Error).message), ultima: u }); }
     }

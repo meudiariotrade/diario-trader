@@ -11,6 +11,8 @@
     return Q.clone(e);
   }
   w.DiarioJornalEditorial={edition};
+  const journalView=vJornal;let legacyRefresh=false;
+  vJornal=function(){if(!legacyRefresh && JRN.v?.manchete && !JRN.v.prep_id && !JRN.busy){legacyRefresh=true;JRN.v.antiga=true;setTimeout(()=>jrCarrega(false),0);}return journalView.apply(this,arguments);};
   const original=jrPinta;
   jrPinta=function(){
     if(JRN.v?.manchete) JRN.v=edition(JRN.v);
@@ -44,7 +46,8 @@
     const html=renderBody.apply(this,arguments),e=edition(jrVer());
     if(!e?.qualidade) return html;
     const q=e.qualidade;
-    return `<section class="jrsec jr-quality"><h3>${q.problemas.length?'Edição com divergências em revisão':'Referências e limites da edição'}</h3><p class="sm">${esc(Q.phase(e).title)} · ${esc(e.snapshot.id)}</p>${q.problemas.map(x=>`<p class="sm">${esc(x)}</p>`).join('')}<details><summary>Conferir fontes e limitações</summary>${q.lacunas.map(x=>`<p class="sm mut">${esc(x)}</p>`).join('')}</details></section>`+html;
+    const normalizedHtml=html.replace(/com pesquisa na internet e os números do app/g,e.pesquisa_web===true?'com pesquisa recuperada e dados desta edição':'com os dados recebidos; pesquisa web não confirmada em toda a edição');
+    return `<section class="jrsec jr-quality"><h3>${q.problemas.length?'Edição com divergências em revisão':'Referências e limites da edição'}</h3><p class="sm">${esc(Q.phase(e).title)} · ${esc(e.snapshot.id)}</p>${q.problemas.map(x=>`<p class="sm">${esc(x)}</p>`).join('')}<details><summary>Conferir fontes e limitações</summary>${q.lacunas.map(x=>`<p class="sm mut">${esc(x)}</p>`).join('')}</details></section>`+normalizedHtml;
   };
   const materia=jrMateria;
   jrMateria=function(m){
