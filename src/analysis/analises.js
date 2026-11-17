@@ -34,7 +34,7 @@ const fmt=(n,dg=1)=>n==null||!Number.isFinite(Number(n))?'—':Number(n).toLocal
 const pct=(x)=>x==null||!Number.isFinite(Number(x))?'—':fmt(x,1)+'%';
 const mny=(x,usd)=>x==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:usd?'USD':'BRL',maximumFractionDigits:0,notation:'compact'}).format(Number(x));
 const state={br:{},us:{}},cache=new Map();let timer=null,reqId=0;
-function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',page:0,chart:'auto',zoom:1,panX:0,panY:0,focus:'',detailTicker:'',selected:[],selectedRows:{},rows:null,data:null,loading:false,error:'',pdfBusy:false,pdfError:'',requested:''});const uid=owner();if(s.account!==uid){s.account=uid;s.selected=[];s.selectedRows={};s.detailTicker='';s.focus='';s.data=null;}return s}
+function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',page:0,chart:'auto',zoom:1,panX:0,panY:0,focus:'',detailTicker:'',selected:[],selectedRows:{},rows:null,data:null,loading:false,error:'',pdfBusy:false,pdfError:'',topData:null,topBusy:false,topError:'',topPdfBusy:false,topPdfMessage:'',requested:''});const uid=owner();if(s.account!==uid){s.account=uid;s.selected=[];s.selectedRows={};s.detailTicker='';s.focus='';s.data=null;s.topData=null;s.topError='';s.topBusy=false;s.topPdfMessage='';}return s}
 let holdingsCache=[],holdingsAt=0,holdingsOwner='';function holdings(){const uid=typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local';if(holdingsOwner===uid&&Date.now()-holdingsAt<5000)return holdingsCache;try{const snapshot=w.pfCalc();holdingsCache=(snapshot.pos||[]).filter(p=>+p.q>0&&+p.v>0).map(p=>({ticker:String(p.tk||'').toUpperCase().replace(/\.SA$/,''),market:p.mk,pct:Number(p.peso)||0,sector:p.setor||'',value:Number(p.v)||0}));holdingsAt=Date.now();holdingsOwner=uid;return holdingsCache}catch{return []}}
 function owner(){return typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local'}
 function owned(){return [...new Set(holdings().map(p=>p.ticker))].slice(0,80)}
@@ -85,7 +85,7 @@ function chart(m,s){
 }
 function detail(m,s){
  const tk=s.detailTicker;if(!tk)return '';
- const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk];
+ const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk];
  if(!row)return '';
  const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row);
  if(!meta)return '';
@@ -111,6 +111,43 @@ function detail(m,s){
  (owned?' · Carteira: '+pct(owned.pct):'')+'</p>'+
  '<div class="scr-detail-footer"><button type="button" data-scr-analyze="'+E(row.ticker)+'">Abrir pesquisa completa</button>'+
  '<button type="button" data-scr-detail-close="1">Voltar ao ranking</button></div>'+
+ '</section>';
+}
+/* Top 10 geral calculado a partir da primeira página do ranking global de scores.
+ * Não há varredura por ticker; uma consulta de 50 linhas já é usada no Screener. */
+function isGlobalTopQuery(s){
+ return !s.search&&!s.sector&&s.custody==='todos'&&Number(s.liquidity)===0&&
+ s.cap==='all'&&s.preset==='top'&&s.order==='score'&&s.page===0;
+}
+function topTen(m,s){
+ const top=s.topData,alg=w.DiarioScreenersTop10;
+ const ranks=top&&alg?.generate(m,top.rows||[],w.DiarioScreenersInteligencia);
+ const found=Number(top?.coverage?.com_score||0),total=Number(top?.total||0);
+ return '<section class="scr-panel scr-top-ten" id="scr-top-ten">'+
+ '<div class="scr-top-ten-head"><div><p class="an-kicker">RANKING AUTOMÁTICO · '+(m==='br'?'BRASIL':'ESTADOS UNIDOS')+'</p>'+
+ '<h3>10 empresas com as maiores notas verificáveis</h3>'+
+ '<p>Nota de 0 a 10 · qualidade, preço, retorno e momentum. Uma empresa por posição.</p></div>'+
+ '<div class="scr-top-ten-buttons"><button type="button" data-scr-top-refresh="1" '+(s.topBusy?'disabled':'')+'>'+(s.topBusy?'Consultando…':top?'Atualizar Top 10':'Montar Top 10')+'</button>'+
+ '<button type="button" data-scr-top-pdf="1" '+(!ranks?.entries?.length||s.topPdfBusy?'disabled':'')+'>'+(s.topPdfBusy?'Gerando…':'PDF do Top 10')+'</button></div></div>'+
+ (!top?'<p class="scr-top-ten-empty">'+(s.topBusy?'Conferindo as notas do catálogo…':
+ E(s.topError||'O ranking será montado com os dados já carregados ou em uma única consulta, sem monitoramento contínuo.'))+'</p>':
+ !ranks.entries.length?'<p class="scr-top-ten-empty">Ainda não há empresas com os critérios completos para um Top 10 confiável. '+
+ fmt(found,0)+' de '+fmt(total,0)+' ativos possuem score no banco. As ações sem nota ficam fora do PDF até a validação dos fundamentos.</p>':
+ '<div class="scr-top-ten-list">'+ranks.entries.map(item=>{
+  const d=item.diagnosis,row=item.row;
+  const observed=d.parts.filter(x=>x.score!==null).sort((a,b)=>b.points/b.weight-a.points/a.weight);
+  const why=observed.slice(0,2).map(x=>x.name+': '+fmt(x.points/10,1)+'/'+fmt(x.weight/10,1)).join(' · ');
+  return '<article class="scr-top-ten-row"><span class="scr-top-ten-rank">'+String(item.rank).padStart(2,'0')+'</span>'+
+  '<div class="scr-top-ten-company"><b>'+E(row.ticker)+'</b><small>'+E(d.company)+'</small>'+
+  '<p>Por que entrou: '+E(why||'Critérios calculados')+'</p>'+
+  '<span class="scr-top-ten-caution">A conferir: '+E(item.caution)+'</span></div>'+
+  '<div class="scr-top-ten-grade"><b>'+fmt(item.note,1)+'</b><small>/ 10</small></div>'+
+  '<button type="button" data-scr-top-detail="'+E(row.ticker)+'" aria-label="Detalhes da nota de '+E(row.ticker)+'">Detalhes</button></article>';
+ }).join('')+'</div>'+
+ '<p class="scr-hint">'+ranks.entries.length+' empresas elegíveis no Top 10; '+fmt(found,0)+' com score entre '+
+ fmt(total,0)+' ativos catalogados no mercado. '+E(ranks.reason)+
+ ' Mesmo as notas verificáveis não são recomendações de compra.</p>')+
+ (s.topPdfMessage?'<p class="scr-hint" role="status">'+E(s.topPdfMessage)+'</p>':'')+
  '</section>';
 }
 function selections(m,s){
@@ -144,20 +181,20 @@ cols.map(([key])=>'<td>'+((key==='ticker')?'<b>'+tk+'</b>':(key==='company_name'
 function view(m){const s=init(m);return '<header class="an-header"><div><p class="an-kicker">SCREENING QUANTITATIVO · '+(m==='br'?'B3':'NYSE / NASDAQ')+'</p><h1 id="an-title">Screener '+(m==='br'?'Brasil':'EUA')+'</h1><p>Universo dinâmico, indicadores com fontes e datas. Não representa recomendação de compra ou venda.</p></div><span class="an-badge">'+(s.data?.total||0)+' no filtro</span></header>'+
 opts(m,s)+
 '<div class="scr-top"><span role="status">'+(s.loading?'Consultando snapshot compartilhado…':s.error?E(s.error):(s.data?'Snapshot: '+(s.data.last_update?new Date(s.data.last_update).toLocaleString('pt-BR'):'sem atualização'):'Abra para consultar dados'))+'</span><button class="btn s" data-scr-refresh="1" '+(s.loading?'disabled':'')+'>Atualizar</button></div>'+
-(s.data?coverage(m,s)+kpis(m,s)+selections(m,s)+stats(m,s)+chart(m,s)+detail(m,s)+table(m,s):'<section class="scr-panel scr-empty">'+(s.loading?'Carregando indicadores…':E(s.error||'Aguardando dados do catálogo.'))+'</section>');
+(s.data?coverage(m,s)+kpis(m,s)+topTen(m,s)+selections(m,s)+stats(m,s)+chart(m,s)+detail(m,s)+table(m,s):'<section class="scr-panel scr-empty">'+(s.loading?'Carregando indicadores…':E(s.error||'Aguardando dados do catálogo.'))+'</section>');
 }
 function render(){try{if(typeof tab==='undefined'||tab!=='analises')return;const root=d.getElementById('an-root');if(!root)return;const active=d.activeElement,searchFocused=!!active?.matches?.('[data-scr-search]'),ss=searchFocused?{pos:active.selectionStart,end:active.selectionEnd}:null;
 root.outerHTML=w.DiarioAnalises.view();if(searchFocused){const target=d.querySelector('[data-scr-search]');if(target){target.focus();if(ss?.pos!=null)try{target.setSelectionRange(ss.pos,ss.end)}catch{}}}}catch(e){console.warn('Screener render',e)}}
 async function load(m,refresh=false){const s=init(m),u=owner();if(s.loading){s.refreshWhenDone=true;return;}
 const body={market:m.toUpperCase(),search:s.search,sector:s.sector,custody:s.custody,owned:owned(),liquidity:Number(s.liquidity),cap:s.cap,preset:s.preset,order:s.order,page:s.page};
 const key=u+'|'+JSON.stringify(body),previous=cache.get(key);
-if(!refresh&&previous&&Date.now()-previous.time<5*60000){s.data=previous.data;for(const row of s.data.rows||[]){if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;}s.error='';render();return;}
+if(!refresh&&previous&&Date.now()-previous.time<5*60000){s.data=previous.data;if(isGlobalTopQuery(s))s.topData=previous.data;for(const row of s.data.rows||[]){if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;}s.error='';render();return;}
 if(!SESS||!cfg()||w.DIARIO_DEMO){s.error='Entre na sua conta para consultar os Screeners.';render();return;}
 s.loading=true;s.error='';const req=++reqId;render();
 try{await tok();const c=cfg(),r=await fetch(c.url+'/functions/v1/screeners-quant',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
 const data=await r.json().catch(()=>({}));if(!r.ok||!data.ok)throw Error(data.error||'Falha HTTP '+r.status);
 if(u!==owner()||req!==reqId)return;
-s.data=data;for(const row of data.rows||[]){if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;}cache.set(key,{time:Date.now(),data});if(cache.size>15)cache.delete(cache.keys().next().value);s.error='';
+s.data=data;if(isGlobalTopQuery(s))s.topData=data;for(const row of data.rows||[]){if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;}cache.set(key,{time:Date.now(),data});if(cache.size>15)cache.delete(cache.keys().next().value);s.error='';
 }catch(e){if(req===reqId)s.error=String(e.message||'Não foi possível carregar.');}
 finally{s.loading=false;if(req===reqId){render();if(s.refreshWhenDone){s.refreshWhenDone=false;void load(m,true)}}}
 }
