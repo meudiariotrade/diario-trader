@@ -9,7 +9,7 @@ function br(ticker,index){
  const row={ticker,empresa:'Companhia '+ticker,roe:20-index/2,roic:17-index/3,pl:7+index/3,
   ev_ebitda:6+index/4,fcf_yield:7-index/5,dividend_yield:8-index/6,liquidez_diaria_brl:12000000,
   payout_implicito:45,momentum_12_1:22-index,updated_at:'2026-11-17',
-  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17'};
+  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17',score_model_version:'v2.0',ativo_elegivel:true};
  const weights=intel.weights.BR;
  row.score_quant_br=+intel.calculate('BR',row).reduce((sum,n,i)=>sum+n*weights[i].weight/100,0).toFixed(2);
  return row;
