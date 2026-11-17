@@ -22,7 +22,7 @@ const n = (x: any) => { const v = parseFloat(String(x ?? '').replace(',', '.'));
 const brl = (v: number) => (v < 0 ? '-' : '') + 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const esc = (s: any) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 function res(t: any) { const e = n(t.entry), x = n(t.exit), q = n(t.qty) || 1, pv = n(t.pv) || 1, c = n(t.cost) || 0; if (!isFinite(e) || !isFinite(x)) return NaN; return (x - e) * (t.side === 'V' ? -1 : 1) * q * pv - c; }
-function semana() { const agora = new Date(Date.now() - 3 * 3600_000); const d = agora.getUTCDay(); const fim = new Date(agora); fim.setUTCDate(agora.getUTCDate() - ((d + 1) % 7)); const ini = new Date(fim); ini.setUTCDate(fim.getUTCDate() - 6); return [ini.toISOString().slice(0, 10), fim.toISOString().slice(0, 10)]; }
+function semana() { const agora = new Date(Date.now() - 3 * 3600_000); const d = agora.getUTCDay(); const fim = new Date(agora); fim.setUTCDate(agora.getUTCDate() - d); const ini = new Date(fim); ini.setUTCDate(fim.getUTCDate() - 6); return [ini.toISOString().slice(0, 10), fim.toISOString().slice(0, 10)]; }
 const b64 = (s: string) => { const u8 = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(bin); };
 // v600: resumo da semana gravado em weekly_reports (origem 'servidor'; não sobrescreve o que o app já salvou).
 const r2 = (v: number | null) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
