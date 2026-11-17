@@ -74,9 +74,17 @@ async function momentoHistorico(market:string,ticker:string):Promise<number|null
 }
 async function scanner(market:string,tickers:string[]){
  if(!tickers.length)return {atualizados:0,semDados:0};
+ // Campos confirmados no catálogo da API de Screener: valores não informados permanecem nulos.
  const usa=market==='US',columns=usa?
- ['name','description','sector','market_cap_basic','return_on_equity','return_on_invested_capital','price_earnings_ttm','dividends_yield_current','RSI','EMA200','close','Perf.1Y','Perf.1M','average_volume_30d_calc','earnings_per_share_diluted_ttm','earnings_per_share_diluted_yoy_growth_ttm']:
- ['name','description','sector','market_cap_basic','return_on_equity','return_on_invested_capital','price_earnings_ttm','dividends_yield_current','price_book_fq','enterprise_value_to_ebitda_ttm','free_cash_flow_yield_ttm','net_margin_ttm','RSI','EMA200','close','Perf.1Y','Perf.1M','average_volume_30d_calc'];
+ ['name','description','sector','market_cap_basic','return_on_equity','return_on_invested_capital',
+ 'price_earnings_ttm','price_earnings_forward_fy','price_earnings_growth_ttm','enterprise_value_to_free_cash_flow_ttm',
+ 'enterprise_value_fq','free_cash_flow_ttm','total_revenue_ttm','price_sales_current','dividends_yield_current',
+ 'net_debt_to_ebitda_fq','RSI','EMA200','close','Perf.1Y','Perf.1M','average_volume_30d_calc',
+ 'earnings_per_share_diluted_yoy_growth_ttm']:
+ ['name','description','sector','market_cap_basic','return_on_equity','return_on_invested_capital',
+ 'price_earnings_ttm','dividends_yield_current','dividend_payout_ratio_ttm','price_book_fq',
+ 'enterprise_value_ebitda_current','free_cash_flow_ttm','net_margin_ttm','net_debt_to_ebitda_fq',
+ 'RSI','EMA200','close','Perf.1Y','Perf.1M','average_volume_30d_calc'];
  const url='https://scanner.tradingview.com/'+(usa?'america':'brazil')+'/scan';
  let updated=0;
  for(let i=0;i<tickers.length;i+=40){
@@ -93,20 +101,40 @@ async function scanner(market:string,tickers:string[]){
     momentum_12_1:momentum,rsi_14:lookup('RSI'),dist_mm200_pct:price!=null&&ema!=null&&ema>0?+((price/ema-1)*100).toFixed(3):null,
     fonte_principal:'TradingView · screener',tecnicos_em:now,fundamentais_em:now};
    if(usa){
+    const cap=lookup('market_cap_basic'),fcf=lookup('free_cash_flow_ttm'),revenue=lookup('total_revenue_ttm'),ev=lookup('enterprise_value_fq');
+    const margin=revenue!=null&&revenue>0&&fcf!=null?+(fcf/revenue*100).toFixed(4):null;
+    const evFcf=lookup('enterprise_value_to_free_cash_flow_ttm')??(ev!=null&&fcf!=null&&fcf>0?+(ev/fcf).toFixed(4):null);
     Object.assign(common,{company_name:String(d[columns.indexOf('description')]||code).slice(0,180),exchange:'NASDAQ',
      sector:typeof d[columns.indexOf('sector')]==='string'?d[columns.indexOf('sector')]:null,
-     market_cap_usd:lookup('market_cap_basic'),forward_pe:null,preco_referencia_usd:price,
+     market_cap_usd:cap,forward_pe:lookup('price_earnings_forward_fy'),
+     peg_ratio:lookup('price_earnings_growth_ttm'),ev_fcf:evFcf,
+     price_sales:lookup('price_sales_current'),fcf_margin:margin,
+     net_debt_ebitda:lookup('net_debt_to_ebitda_fq'),preco_referencia_usd:price,
      eps_growth_yoy:lookup('earnings_per_share_diluted_yoy_growth_ttm')});
-    const covered=['roic','forward_pe','dividend_yield','momentum_12_1','eps_growth_yoy'].filter(k=>common[k]!=null).length;
-    common.cobertura_pct=covered/5*100;common.dados_status=covered>=3?'parcial':'incompleto';common.score_quant_us=rating('US',common);
+    // Buyback yield nao pode ser confundido com variacao percentual de acoes em circulacao.
+    const checked=['roe','roic','forward_pe','peg_ratio','ev_fcf','price_sales','dividend_yield','fcf_margin',
+      'eps_growth_yoy','momentum_12_1','rsi_14','dist_mm200_pct'];
+    const covered=checked.filter(k=>common[k]!=null).length;
+    common.cobertura_pct=+(covered/checked.length*100).toFixed(1);
+    common.dados_status=covered>=8?'parcial':'incompleto';common.score_quant_us=rating('US',common);
    }else{
+    const cap=lookup('market_cap_basic'),fcf=lookup('free_cash_flow_ttm'),payout=lookup('dividend_payout_ratio_ttm');
     Object.assign(common,{empresa:String(d[columns.indexOf('description')]||code).slice(0,180),
      setor:typeof d[columns.indexOf('sector')]==='string'?d[columns.indexOf('sector')]:null,
-     valor_mercado_brl:lookup('market_cap_basic'),preco_referencia:price,pl:lookup('price_earnings_ttm'),
-     pvp:lookup('price_book_fq'),ev_ebitda:lookup('enterprise_value_to_ebitda_ttm'),fcf_yield:lookup('free_cash_flow_yield_ttm'),payout_implicito:lookup('price_earnings_ttm')!=null&&lookup('dividends_yield_current')!=null?lookup('price_earnings_ttm')*lookup('dividends_yield_current'):null,
-     margem_liquida:lookup('net_margin_ttm'),liquidez_diaria_brl:price!=null&&lookup('average_volume_30d_calc')!=null?price*lookup('average_volume_30d_calc'):null});
-    const covered=['roe','roic','pl','pvp','ev_ebitda','fcf_yield','dividend_yield','momentum_12_1'].filter(k=>common[k]!=null).length;
-    common.cobertura_pct=covered/8*100;common.dados_status=covered>=5?'parcial':'incompleto';common.score_quant_br=rating('BR',common);
+     valor_mercado_brl:cap,preco_referencia:price,pl:lookup('price_earnings_ttm'),
+     pvp:lookup('price_book_fq'),ev_ebitda:lookup('enterprise_value_ebitda_current'),
+     fcf_yield:cap!=null&&cap>0&&fcf!=null?+(fcf/cap*100).toFixed(4):null,
+     payout_implicito:payout??(lookup('price_earnings_ttm')!=null&&lookup('dividends_yield_current')!=null
+      ?lookup('price_earnings_ttm')*lookup('dividends_yield_current'):null),
+     div_liq_ebitda:lookup('net_debt_to_ebitda_fq'),
+     margem_liquida:lookup('net_margin_ttm'),
+     liquidez_diaria_brl:price!=null&&lookup('average_volume_30d_calc')!=null
+      ?price*lookup('average_volume_30d_calc'):null});
+    const checked=['roe','roic','pl','pvp','ev_ebitda','fcf_yield','dividend_yield','payout_implicito',
+     'momentum_12_1','rsi_14','dist_mm200_pct'];
+    const covered=checked.filter(k=>common[k]!=null).length;
+    common.cobertura_pct=+(covered/checked.length*100).toFixed(1);
+    common.dados_status=covered>=8?'parcial':'incompleto';common.score_quant_br=rating('BR',common);
    }
    rows.push(common);
   }
