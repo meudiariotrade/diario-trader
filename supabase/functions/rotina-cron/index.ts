@@ -116,12 +116,14 @@ async function fechamento(dia: string) {
 
 // Jornal clássico, em edições agendadas: usa motor original e cache; nunca cada 10 minutos.
 async function jornalAgendado(dia:string){
-  if(!CRON||!SB||!ANON)return {ok:false,motivo:'Credencial interna indisponível'};
+  if(!SB||!SRK)return {ok:false,motivo:'Serviço não configurado'};
+  const chave=CRON||(await db('rpc/diario_agendamento_chave',{method:'POST',body:'{}'}).catch(()=>'')); 
+  if(typeof chave!=='string'||!chave)return {ok:false,motivo:'Vault indisponível'};
   const inicio=Date.now();
   try{
     const r=await fetch(SB+'/functions/v1/analise',{
       method:'POST',signal:AbortSignal.timeout(116000),
-      headers:{'Content-Type':'application/json','x-cron-secret':CRON,
+      headers:{'Content-Type':'application/json','x-cron-secret':chave,
         apikey:ANON,Authorization:'Bearer '+ANON},
       body:JSON.stringify({modo:'jornal',partes:false,force:false})
     });
@@ -144,7 +146,10 @@ Deno.serve(async (req) => {
   try {
     if (b.acao === 'matinal_leve') { if(!util && !b.forcar)return out({r:'fim de semana'}); return out(await matinalLeve(`${dia} ${b.hm || '06:50'}`)); }
     if (b.acao === 'matinal') return out(await matinal(`${dia} ${b.hm || '06:50'}`));
-    if (b.acao === 'diagnostico_leve')return out({autorizado:true,cronInternoConfigurado:!!CRON,semEnvio:true});
+    if (b.acao === 'diagnostico_leve'){
+      const atual=await db('rpc/diario_agendamento_chave',{method:'POST',body:'{}'}).catch(()=>null);
+      return out({autorizado:true,cronInternoConfigurado:!!CRON,vaultAgendamento:typeof atual==='string'&&atual.length>15,semEnvio:true});
+    }
     if (b.acao === 'jornal_agendado') { if(!util)return out({r:'fim de semana'});return out(await jornalAgendado(dia)); }
     if (b.acao === 'fechamento') { if (!util && !b.forcar) return out({ r: 'fim de semana' }); return out(await fechamento(/^\d{4}-\d{2}-\d{2}$/.test(b.dia || '') ? b.dia : dia)); }
     return out({ error: 'Ação desconhecida' }, 400);
