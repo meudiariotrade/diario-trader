@@ -21,6 +21,12 @@ function catalog(){
 
 function quiz(l){const r=record(l);return `<section class="tp-check" aria-label="Mini-check de fixação"><h3>Mini-check de fixação</h3><p>Três perguntas. O feedback aparece ao responder; você pode tentar novamente.</p>${l.questions.map((q,i)=>{const a=r.answers[i],answered=Number.isInteger(a)&&a>=0&&a<q.options.length,ok=a===q.answer;return `<fieldset><legend>${i+1}. ${E(q.q)}</legend>${q.options.map((o,j)=>`<label class="${answered&&a===j?(ok?'tp-correct':'tp-wrong'):''}"><input type="radio" name="tp-${l.id}-${i}" data-tp-question="${i}" value="${j}" ${answered&&a===j?'checked':''}>${E(o)}</label>`).join('')}<p class="tp-feedback" data-tp-feedback="${i}" role="status">${answered?(ok?'Correto. ':'Reveja. ')+E(q.why):''}</p></fieldset>`;}).join('')}<p class="tp-result" role="status">${passed(l)?'✓ Lição concluída: quatro etapas vistas e três respostas corretas.':`Etapas vistas: ${[0,1,2,3].filter(s=>r.viewed.includes(s)).length}/4 · Acertos: ${l.questions.filter((q,i)=>r.answers[i]===q.answer).length}/3`}</p></section>`;}
 function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>Os vídeos ficam no IndexedDB. No PC, a ponte local entrega o MP4 sem Supabase. No iPhone, importe o arquivo/backup; a ponte do PC não é acessível por 127.0.0.1 do iPhone.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div><div class="tp-controls"><label>Formato<select data-tp-film-format><option value="16x9">16:9</option><option value="9x16">9:16</option><option value="1x1">1:1</option></select></label><label>Importar MP4<input type="file" data-tp-film-file accept=".mp4,video/mp4"></label><button type="button" data-tp-generate>Gerar vídeo na ponte do PC</button><button type="button" data-tp-film-migrate>Migrar vídeo antigo da nuvem</button></div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="none" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video><button type="button" data-tp-action="close-film">Fechar vídeo</button>`:''}<p>Ouvir Aula utiliza exclusivamente a voz configurada na Ponte Vídeo do PC. Sem substituição pela voz do navegador.</p></details>`;}
+async function salvarVideoLocal(chave,blob,meta){
+ const store=window.EstudosLocal;
+ if(typeof store?.put!=='function')return false;
+ try{await store.put('mentor-video',chave,blob,meta);return true;}
+ catch{return false;}
+}
 async function openFilm(format,fromCloud=false){
  stop();const token=run,l=T.lessons.find(l=>l.id===selected);if(!l)return;
  if(typeof SESS==='undefined'||!SESS?.uid){status='Entre na sua conta para assistir ao vídeo da ponte.';paint();return;}
@@ -42,8 +48,9 @@ async function openFilm(format,fromCloud=false){
     const data=await response.blob();
     if(!data.size||data.size>350*1024*1024)throw Error('MP4 inválido ou grande demais.');
     if(token!==run||currentOwner()!==owner||!active())return;
-    await window.EstudosLocal.put('mentor-video',localKey,data,{formato:format,aula:l.id,origem:'ponte-local'});
-    film=URL.createObjectURL(data);loading=false;status='Vídeo recebido diretamente da ponte do PC e salvo neste aparelho.';paint();return;
+    const salvo=await salvarVideoLocal(localKey,data,{formato:format,aula:l.id,origem:'ponte-local'});
+    film=URL.createObjectURL(data);loading=false;
+    status=salvo?'Vídeo recebido diretamente da ponte do PC e salvo neste aparelho.':'Vídeo disponível nesta sessão; armazenamento local indisponível.';paint();return;
    }
   }catch{}
   if(token!==run)return;
@@ -60,8 +67,9 @@ async function openFilm(format,fromCloud=false){
   if(url.origin!==new URL(c.url).origin||!url.pathname.startsWith('/storage/v1/object/sign/aulas-videos/'+path))throw Error('invalid');
   const dataVideo=await fetch(url.href,{signal:ctl.signal});if(!dataVideo.ok)throw Error('Falha na migração do vídeo.');
    const blob=await dataVideo.blob();if(!blob.size||blob.size>350*1024*1024)throw Error('Vídeo inválido ou muito grande.');
-   await window.EstudosLocal.put('mentor-video',localKey,blob,{formato:format,aula:l.id});if(token!==run)return;
-   film=URL.createObjectURL(blob);loading=false;status='Vídeo migrado. Agora ficará no aparelho.';paint();
+   const salvo=await salvarVideoLocal(localKey,blob,{formato:format,aula:l.id});if(token!==run)return;
+   film=URL.createObjectURL(blob);loading=false;
+   status=salvo?'Vídeo migrado. Agora ficará no aparelho.':'Vídeo disponível nesta sessão; armazenamento local indisponível.';paint();
  }catch{if(token!==run)return;loading=false;status='Vídeo ainda indisponível neste formato. Para o iPhone, importe o arquivo MP4 do PC; não é enviado ao Supabase. O áudio somente será reproduzido pela ponte de voz configurada no PC.';paint();}
  finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
 }
