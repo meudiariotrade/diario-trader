@@ -113,7 +113,7 @@ const data=await r.json().catch(()=>({}));if(!r.ok||!data.ok)throw Error(data.er
 if(u!==owner()||req!==reqId)return;
 s.data=data;cache.set(key,{time:Date.now(),data});if(cache.size>15)cache.delete(cache.keys().next().value);s.error='';
 }catch(e){if(req===reqId)s.error=String(e.message||'Não foi possível carregar.');}
-finally{if(req===reqId){s.loading=false;render();if(s.refreshWhenDone){s.refreshWhenDone=false;void load(m,true)}}}
+finally{s.loading=false;if(req===reqId){render();if(s.refreshWhenDone){s.refreshWhenDone=false;void load(m,true)}}}
 }
 function field(el){const m=d.querySelector('[data-an-sub].selected')?.dataset.anSub;if(m==='br'||m==='us')return [m,init(m)];return [null,null]}
 function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;s.page=0;if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
