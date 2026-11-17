@@ -3432,11 +3432,14 @@ const wl = () => (S.wl && S.wl.length ? S.wl : WL0),
 async function scFetch(e, t) {
   const a = cfg();
   if (!a) throw new Error("Configure o Supabase na aba Conta.");
+  // Screener exige sessão: não consumir banda enviando chamadas que retornariam 401.
+  const token = (typeof SESS !== "undefined" && SESS?.at) || "";
+  if (!token) throw new Error("Entre na sua conta para consultar o screener.");
   let o;
   try {
     o = await fetch(a.url + "/functions/v1/screener", {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: a.key },
+      headers: { "Content-Type": "application/json", apikey: a.key, Authorization: "Bearer " + token },
       body: JSON.stringify({ symbols: e, detail: !!t }),
     });
   } catch {
