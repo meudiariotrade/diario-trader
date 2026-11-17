@@ -3948,7 +3948,7 @@ export function ordenaModelos(nomes: string[]): string[] {
 // prefer 'or': tarefas leves (professor de inglês, questões, coach) vão primeiro para o OpenRouter e poupam a cota do Gemini.
 // Nas outras, o Gemini vai primeiro e o OpenRouter entra se o Gemini falhar (cota, sobrecarga, modelo fora do ar).
 const SEM_BUSCA = '\n\nATENÇÃO: agora você NÃO tem acesso à internet. Não cite notícias, pesquisas ou resultados de hoje que não estejam nos dados recebidos; quando faltar o motivo do movimento, diga que o texto foi feito só com os dados do sistema.';
-export const IA_CONTA = { gemini: 0, openrouter: 0, falhasGemini: 0 };
+export const IA_CONTA = { gemini: 0, groq: 0, openrouter: 0, falhasGemini: 0 };
 /** v622: IA do Jornal/Giro/coach. Texto puro sem busca → Roteador Multi-IA (Gemini, Groq, Cerebras, OpenRouter,
  *  Mistral, Hugging Face, DeepSeek, Pollinations). Com busca na web ou imagens → Gemini; se falhar, o roteador
  *  responde sem busca. IA_ULTIMA guarda quem respondeu (vai para o rodapé da edição). */
@@ -3959,7 +3959,9 @@ async function gemini(system: string, parts: any[], opt: { json?: boolean; searc
   const viaRoteador = async (semBusca: boolean) => {
     const reserva = reservaJornal && semBusca;
     const r = await gerarTexto(system + (semBusca ? SEM_BUSCA : ''), parts.map((p) => p.text).join('\n\n'), { json: opt.json, temp: opt.temp, ate: opt.ate, ...(reserva ? {preferir:['groq'], excluir:['gemini'], porTentativaMs: 12000} : {}) });
-    IA_ULTIMA.rotulo = r.rotulo; IA_CONTA.openrouter++;
+    IA_ULTIMA.rotulo = r.rotulo;
+    if (r.provedor === 'Groq') IA_CONTA.groq++;
+    else if (/OpenRouter/i.test(r.provedor)) IA_CONTA.openrouter++;
     const t = r.texto.replace(/```json|```/g, '');
     const meta = (v:any) => reserva && v && typeof v==='object' ? {...v,__fontes_busca:[],__reserva:{provedor:r.provedor,modelo:r.modelo,sem_pesquisa_web:true}} : v;
     try { return meta(JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1))); } catch { /* segue */ }
