@@ -1302,7 +1302,7 @@ function custosHtml() {
         `<tr><td>${g[0]}</td><td class="${cls(g[1])}">${money(g[1])}</td><td>${l > 0 ? pct0(Math.abs(g[1]) / l) : "–"}</td></tr>`,
     ),
   )}
-<div class="sm" style="margin-top:6px">${l > 0 ? `De cada R$ 100 que o mercado te deu, <b>R$ ${dshN(((s + n + r599) / l) * 100, 0)}</b> ficaram com corretora, bolsa, mesas e governo.` : "Ano ainda sem ganho bruto."} Taxas das mesas: preencha em Mesa → Esta mesa.</div></div>`;
+<div class="sm" style="margin-top:6px">${l > 0 ? `De cada R$ 100 que o mercado te deu, <b>R$ ${dshN(((s + n + r599) / l) * 100, 0)}</b> ficaram com corretora, bolsa, mesas e governo.` : "Ano ainda sem ganho bruto."}</div></div>`;
 }
 function contadorHtml() {
   const e = [
@@ -2746,7 +2746,7 @@ function vOpsHub() {
       return `<button class="modc" data-modcard="${n}"><span class="ic">${window.icoSvg ? window.icoSvg(i) : ""}</span><span class="tx"><b>${r}</b><small>${l}</small><span class="sm">${f ? `<span class="chip" style="padding:1px 7px;margin-right:4px">${f} aberta(s)</span>` : ""}${u.length ? `mês <b class="${cls(m)}">${money(m)}</b> · ${u.length} trade(s)` : '<span class="mut">sem trades no mês</span>'}</span></span><span class="hj ${cls(p)}">${p ? money(p) : ""}<i>${p ? "hoje" : ""}</i></span></button>`;
     };
   return `<h1>Operações</h1><div class="sm mut" style="margin:-6px 0 10px">Escolha a modalidade: tudo dela fica lá dentro.</div><div class="modg">${MODS.map(s).join("")}</div>
-<h2>Visão geral</h2><div class="g2"><button class="btn s" data-modgo="">📊 Estatísticas gerais</button><button class="btn s" data-a="gotab" data-id="rev">📅 Revisão da semana</button></div><button class="btn s" data-a="gotab" data-id="mesa" style="width:100%;margin-top:8px">🛡️ Mesa e risco</button>`;
+<h2>Visão geral</h2><div class="g2"><button class="btn s" data-modgo="">📊 Estatísticas gerais</button><button class="btn s" data-a="gotab" data-id="rev">📅 Revisão da semana</button></div>`;
 }
 function vOpGrade() {
   return (setTimeout(() => opgCarrega(!1), 0), opgHtml());
@@ -3133,18 +3133,14 @@ var mrHeader;
   vPainel = function () {
     const t = e.apply(this, arguments);
     return (
-      mrHeader("painel") + t.replace(/<h1>[^<]*<\/h1>/, "<h1>Mesa e risco</h1>")
+      mrHeader("painel") + t.replace(/<h1>[^<]*<\/h1>/, "<h1>Contratos e risco</h1>")
     );
   };
 }
 try {
   FER2.forEach((e) => {
-    const t = e[1].findIndex((o) => o[0] === "painel");
-    t >= 0 && e[1].splice(t, 1);
-    const a = e[1].find((o) => o[0] === "mesa");
-    a &&
-      ((a[2] = "Mesa e risco"),
-      (a[3] = "Mesas, metas, limites, trava e backup"));
+    // Retira a Mesa proprietária, preservando o Painel de metas e risco.
+    e[1] = e[1].filter((item) => item[0] !== "mesa");
   });
 } catch {}
 (new MutationObserver(() => {
@@ -3160,10 +3156,7 @@ try {
       ).join("")),
       t.after(a));
   }
-  (e.querySelectorAll('[data-m2="painel"]').forEach((a) => a.remove()),
-    e
-      .querySelectorAll('[data-m2="mesa"] b')
-      .forEach((a) => (a.textContent = "Mesa e risco")),
+  (e.querySelectorAll('[data-m2="mesa"]').forEach((a) => a.remove()),
     setTimeout(() => {
       e.isConnected && delete e.dataset.m111;
     }, 0));
@@ -3279,7 +3272,6 @@ const GRUPOS = [
     ["analise", "Análises clássicas"],
   ],
   [
-    ["mesa", "Mesas proprietárias"],
     ["painel", "Metas, limites e backup"],
     ["contratos", "Contratos"],
   ],
@@ -3299,7 +3291,7 @@ mrHeader = function (e) {
     const t = e.apply(this, arguments);
     return (
       grpHeader("contratos") +
-      t.replace(/<h1>[^<]*<\/h1>/, "<h1>Mesa e risco</h1>")
+      t.replace(/<h1>[^<]*<\/h1>/, "<h1>Metas e risco</h1>")
     );
   };
 }
@@ -3340,9 +3332,8 @@ mrHeader = function (e) {
   };
 }
 try {
-  const e = ["contratos", "analise", "import", "status", "painel", "estudos"],
+  const e = ["contratos", "analise", "import", "status", "mesa", "estudos"],
     t = {
-      mesa: ["Mesa e risco", "Mesas, metas, limites, contratos e backup"],
       carteiras: [
         "Carteira e análise IA",
         "Posições, desempenho, radar e relatórios da IA",
@@ -3365,13 +3356,12 @@ try {
   const e = document.querySelector("#mdr2 .pn");
   !e ||
     e.dataset.m112 === e.innerHTML.length + "" ||
-    (["contratos", "analise", "import", "status", "painel"].forEach((t) =>
+    (["contratos", "analise", "import", "status", "mesa"].forEach((t) =>
       e.querySelectorAll(`.it[data-m2="${t}"]`).forEach((a) => a.remove()),
     ),
     Object.entries({
       imposto: "Imposto e importação",
       carteiras: "Carteira e análise IA",
-      mesa: "Mesa e risco",
     }).forEach(([t, a]) =>
       e.querySelectorAll(`.it[data-m2="${t}"] b`).forEach((o) => {
         o.textContent !== a && (o.textContent = a);
@@ -4227,13 +4217,6 @@ const BUSCA = [
       "regras playbook cartas",
       () => {
         tab = "regras";
-      },
-    ],
-    [
-      "Mesa e risco",
-      "mesa proprietária metas limites backup prop",
-      () => {
-        tab = "mesa";
       },
     ],
     [

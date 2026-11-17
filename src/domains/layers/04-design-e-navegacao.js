@@ -4054,6 +4054,9 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
       if (!e.isConnected) return;
       if (!a) {
         e.innerHTML = '<summary class="v518-h">Movimentos fortes</summary><p class="mut">' + (c(() => SESS && SESS.uid, null) ? 'Não foi possível consultar os movimentos agora.' : 'Entre na sua conta para consultar os movimentos.') + '</p><button type="button" data-v518-refresh>Atualizar movimentos</button>';
+        e.dataset.v518Ready = "1";
+        p.DIARIO_V519?.insCartao?.();
+        p.DIARIO_V520?.cartao?.();
         return;
       }
       const o = a.filter(
@@ -4082,10 +4085,12 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
               })
               .join("")
           : '<div class="mut" style="padding:6px 0">Nenhum movimento forte. Você é avisado quando algo passar do limite.</div>');
+      e.dataset.v518Ready = "1";
+      p.DIARIO_V519?.insCartao?.();
+      p.DIARIO_V520?.cartao?.();
     }
-    setInterval(() => {
-      u().catch(() => {});
-    }, 1500);
+    setTimeout(() => { u().catch(() => {}); }, 250);
+    setInterval(() => { u().catch(() => {}); }, 3e4);
     try {
       const t = r.createElement("style");
       ((t.textContent =
@@ -4228,7 +4233,7 @@ try {
       )
         return;
       const t = r.getElementById("v518-mov");
-      if (!t || !u(() => SESS && SESS.uid, null)) return;
+      if (!t || t.dataset.v518Ready !== "1" || !u(() => SESS && SESS.uid, null)) return;
       const e = r.createElement("details");
       ((e.id = "v519-ins"),
         (e.className = "v518-mov"),
@@ -4284,10 +4289,10 @@ try {
           (e.querySelector("div").textContent = "Não consegui carregar agora.");
       }
     }
-    (setInterval(() => {
-      v().catch(() => {});
-    }, 1700),
-      (p.DIARIO_V519 = { insCartao: v }));
+    r.addEventListener("diario:render", () => { v().catch(() => {}); });
+    setTimeout(() => { v().catch(() => {}); }, 1000);
+    setInterval(() => { v().catch(() => {}); }, 3e4);
+    p.DIARIO_V519 = { insCartao: v };
   })(typeof window < "u" ? window : globalThis);
 } catch (e) {
   console.error("[v522] falha em extras-v519.js", e);
@@ -4395,9 +4400,9 @@ try {
         r && (r.textContent = "Não consegui carregar agora.");
       }
     }
-    setInterval(() => {
-      p().catch(() => {});
-    }, 1800);
+    n.addEventListener("diario:render", () => { p().catch(() => {}); });
+    setTimeout(() => { p().catch(() => {}); }, 1200);
+    setInterval(() => { p().catch(() => {}); }, 3e4);
     try {
       const a = n.createElement("style");
       ((a.textContent =

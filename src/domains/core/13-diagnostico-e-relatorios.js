@@ -3988,28 +3988,38 @@ function slipHtml(e) {
     }
   };
 }
-const SYQ = { busy: 0 };
-setInterval(async () => {
+// v713: sincronização remota econômica; alterações locais e sincronização manual continuam imediatas.
+const SYQ = { busy: 0, last: 0 };
+async function syConferirEstado() {
+  if (
+    document.hidden ||
+    typeof SESS > "u" ||
+    !SESS?.uid ||
+    !window.CLOUD_OK ||
+    SY.busy ||
+    SYQ.busy ||
+    !navigator.onLine ||
+    Date.now() - SYQ.last < 3 * 60e3
+  ) return;
+  SYQ.busy = 1;
+  SYQ.last = Date.now();
   try {
-    if (
-      document.hidden ||
-      typeof SESS > "u" ||
-      !SESS ||
-      !window.CLOUD_OK ||
-      SY.busy ||
-      SYQ.busy ||
-      !navigator.onLine
-    )
-      return;
-    SYQ.busy = 1;
-    const e = await (
-        await rq("/rest/v1/diario?select=mt:data->mt&user_id=eq." + SESS.uid)
-      ).json(),
-      t = +(e && e[0] && e[0].mt) || 0;
-    t && t !== +(S.st || 0) && t > +(S.mt || 0) && (await sync());
-  } catch {}
-  SYQ.busy = 0;
-}, 15e3);
+    const rows = await (await rq(
+      "/rest/v1/diario?select=mt:data->mt&user_id=eq." + SESS.uid
+    )).json();
+    const remote = +(rows && rows[0] && rows[0].mt) || 0;
+    if (remote && remote !== +(S.st || 0) && remote > +(S.mt || 0)) await sync();
+  } catch {} finally {
+    SYQ.busy = 0;
+  }
+}
+setInterval(syConferirEstado, 10 * 60e3);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) syConferirEstado();
+});
+window.addEventListener("focus", syConferirEstado);
+window.addEventListener("online", syConferirEstado);
+
 {
   const e = render0;
   render0 = function () {

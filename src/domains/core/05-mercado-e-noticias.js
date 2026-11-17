@@ -2632,16 +2632,10 @@ var segM, segD;
         "ferr",
         "grid",
         "Ferramentas",
-        "Mesa, plano de transição, impostos e mais",
+        "Plano de transição, gestão de risco e impostos",
       ],
     ],
     o = [
-      [
-        "mesa",
-        "shield",
-        "Mesa proprietária",
-        "Regras, meta e quanto posso perder hoje",
-      ],
       ["carreira", "star", "Plano de transição", "Quando dá para sair da CLT"],
       ["painel", "target", "Painel", "Metas, tamanho da posição e backup"],
       ["contratos", "calc", "Contratos", "Lotes pelo capital e volatilidade"],

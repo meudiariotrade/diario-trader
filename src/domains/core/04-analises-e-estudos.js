@@ -3181,8 +3181,8 @@ function rsPoll() {
   (e &&
     !RS.poll &&
     (RS.poll = setInterval(() => {
-      document.hidden || rsLoad(!0);
-    }, 6e3)),
+      if (!document.hidden && navigator.onLine && rsTela()) rsLoad(!0);
+    }, 45e3)),
     !e && RS.poll && (clearInterval(RS.poll), (RS.poll = null)),
     e &&
       !RS.clock &&

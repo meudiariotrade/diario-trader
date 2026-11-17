@@ -1226,7 +1226,6 @@ try {
             icon: "shield",
             description: "Risco, capital e processo",
             items: [
-              ["mesa", "Mesa proprietária"],
               ["painel", "Metas, posição e backup"],
               ["contratos", "Dimensionamento de contratos"],
               ["carreira", "Plano de transição"],
@@ -15074,7 +15073,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
         [["carteiras", "analise", "imposto"], "Patrimônio e pesquisa"],
         [["mercado", "juros", "live", "graf"], "Mercado e contexto"],
         [["estudos", "livro", "ingles", "cnpi"], "Estudos e formação"],
-        [["mesa", "painel", "contratos", "carreira"], "Gestão e risco"],
+        [["painel", "contratos", "carreira"], "Gestão e risco"],
         [["mais", "conta", "import", "status"], "Configurações e dados"],
       ];
       function r() {

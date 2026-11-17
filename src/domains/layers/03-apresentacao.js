@@ -1571,7 +1571,6 @@ try {
         "dtrpy",
         "swbt",
         "live",
-        "mesa",
       ],
       zt = [
         [
