@@ -121,26 +121,68 @@ function parse(xml: string): Item[] {
   return out;
 }
 
-let cache: { ts: number; itens: Item[] } | null = null;
-
-async function carrega(): Promise<Item[]> {
-  if (cache && Date.now() - cache.ts < TTL) return cache.itens;
-  const res = await Promise.allSettled(
-    FEEDS.map(async (u) => {
-      const r = await fetch(u, { headers: { 'User-Agent': UA, Accept: 'application/rss+xml, application/xml, text/xml' } });
-      if (!r.ok) throw new Error('feed ' + r.status);
-      return parse(await r.text());
-    }),
-  );
-  const mapa = new Map<string, Item>();
-  for (const r of res) if (r.status === 'fulfilled') for (const it of r.value) if (linkOk(it.l) && !mapa.has(it.l)) mapa.set(it.l, it);
-  const itens = [...mapa.values()].sort((a, b) => +new Date(b.d) - +new Date(a.d)).slice(0, 60);
-  if (!itens.length) {
-    if (cache) return cache.itens; // feed fora do ar: devolve a última cópia
-    throw new Error('Não consegui ler o feed do Money Times agora.');
+// Fonte principal do filtro X / Breaking: RSS direto via Edge Function.
+// No iPhone os proxies RSSHub/Nitter frequentemente retornam 404/429.
+const X_PERFIS = ['FirstSquawk', 'DeItaone'] as const;
+export function parseX(xml: string, perfil: string, agora = Date.now()): Item[] {
+  if (!X_PERFIS.some((p) => p.toLowerCase() === perfil.toLowerCase())) return [];
+  const out: Item[] = [];
+  for (const parte of xml.slice(0, 450_000).split(/<item[\s>]/i).slice(1, 50)) {
+    const bloco = parte.split(/<\/item>/i)[0];
+    const t = tag(bloco, 'title').slice(0, 230);
+    const l = tag(bloco, 'link');
+    const d = Date.parse(tag(bloco, 'pubDate'));
+    const valida = new RegExp('^https://(?:www\\.)?x\\.com/' + perfil + '/status/[0-9]+(?:[/?#].*)?$', 'i').test(l);
+    if (!valida || !linkOk(l) || t.length < 12 || !Number.isFinite(d) ||
+        d > agora + 300_000 || d < agora - 48 * 3600_000) continue;
+    out.push({ t, l, a: 'X · @' + perfil, d: new Date(d).toISOString(), c: ['x', 'breaking'] });
+    if (out.length >= 18) break;
   }
-  cache = { ts: Date.now(), itens };
-  return itens;
+  return out;
+}
+type DadosNoticias = { itens: Item[]; fontesX: { ok: string[]; falhas: string[] } };
+let cache: { ts: number; dados: DadosNoticias } | null = null;
+
+async function carrega(): Promise<DadosNoticias> {
+  if (cache && Date.now() - cache.ts < 3 * 60_000) return cache.dados;
+  const tarefas = [
+    ...FEEDS.map((url) => ({
+      nome: 'Money Times', consultar: async () => {
+        const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/rss+xml, application/xml, text/xml' }, signal: AbortSignal.timeout(8500) });
+        if (!r.ok) throw new Error('feed ' + r.status);
+        const itens = parse(await r.text());
+        if (!itens.length) throw new Error('feed vazio');
+        return itens.slice(0, 35);
+      },
+    })),
+    ...X_PERFIS.map((perfil) => ({
+      nome: 'X @' + perfil, consultar: async () => {
+        const r = await fetch('https://fxtwitter.com/' + perfil + '/feed.xml', {
+          headers: { Accept: 'application/rss+xml, application/xml, text/xml' }, signal: AbortSignal.timeout(8500)
+        });
+        if (!r.ok) throw new Error('feed ' + r.status);
+        const itens = parseX(await r.text(), perfil);
+        if (!itens.length) throw new Error('sem publicações recentes válidas');
+        return itens;
+      },
+    })),
+  ];
+  const respostas = await Promise.allSettled(tarefas.map((t) => t.consultar()));
+  const mapa = new Map<string, Item>(), ok: string[] = [], falhas: string[] = [];
+  for (let i = 0; i < respostas.length; i++) {
+    const r = respostas[i], nome = tarefas[i].nome;
+    if (nome.startsWith('X @')) (r.status === 'fulfilled' ? ok : falhas).push(nome);
+    if (r.status === 'fulfilled') for (const it of r.value)
+      if (linkOk(it.l) && !mapa.has(it.l)) mapa.set(it.l, it);
+  }
+  const itens = [...mapa.values()].sort((a,b) => +new Date(b.d) - +new Date(a.d)).slice(0, 75);
+  if (!itens.length) {
+    if (cache) return cache.dados;
+    throw new Error('Nenhuma fonte de notícias respondeu com manchetes válidas.');
+  }
+  const dados = { itens, fontesX: { ok, falhas } };
+  cache = { ts: Date.now(), dados };
+  return dados;
 }
 
 Deno.serve(async (req) => {
@@ -154,8 +196,8 @@ Deno.serve(async (req) => {
   if (!uid) return out({ error: 'Entre na sua conta no app (Mais → Conta).' }, 401);
   if (!dentroDoLimite(uid, 30)) return out({ error: 'Muitas consultas seguidas. Espere um minuto.' }, 429);
   try {
-    const itens = await carrega();
-    return out({ fonte: 'Money Times', gerado: new Date().toISOString(), itens });
+    const dados = await carrega();
+    return out({ fonte: 'Money Times + X', gerado: new Date().toISOString(), ...dados });
   } catch (e) {
     return out({ error: (e as Error).message }, 502);
   }
