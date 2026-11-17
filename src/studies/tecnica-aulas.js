@@ -2,7 +2,7 @@
 ;(function(){
 'use strict';
 const T=window.TecnicaPratica,E=T.escape,names=['Contexto','Gatilho de Entrada','Stop Técnico','Alvo Projetado'];
-let aulaSubaba='tradicionais',selected=null,step=0,visual=false,playing=false,loading=false,status='',owner='',progress={},storageOK=true,run=0,controller=null,audio=null,objectURL='',utterance=null,bridgeFailed=false,videoFailed=false,film=null;
+let aulaSubaba='tradicionais',selected=null,step=0,visual=false,playing=false,loading=false,status='',owner='',progress={},storageOK=true,run=0,controller=null,audio=null,objectURL='',utterance=null,bridgeFailed=false,videoFailed=false,film=null,videoFormat='16x9';
 const active=()=>typeof tab!=='undefined'&&tab==='estudos'&&typeof ESV!=='undefined'&&ESV==='aul';
 const currentOwner=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'visitante';
 const key=()=>`diario:tecnica-pratica:v1:${owner}`;
@@ -20,11 +20,14 @@ function catalog(){
 }
 
 function quiz(l){const r=record(l);return `<section class="tp-check" aria-label="Mini-check de fixação"><h3>Mini-check de fixação</h3><p>Três perguntas. O feedback aparece ao responder; você pode tentar novamente.</p>${l.questions.map((q,i)=>{const a=r.answers[i],answered=Number.isInteger(a)&&a>=0&&a<q.options.length,ok=a===q.answer;return `<fieldset><legend>${i+1}. ${E(q.q)}</legend>${q.options.map((o,j)=>`<label class="${answered&&a===j?(ok?'tp-correct':'tp-wrong'):''}"><input type="radio" name="tp-${l.id}-${i}" data-tp-question="${i}" value="${j}" ${answered&&a===j?'checked':''}>${E(o)}</label>`).join('')}<p class="tp-feedback" data-tp-feedback="${i}" role="status">${answered?(ok?'Correto. ':'Reveja. ')+E(q.why):''}</p></fieldset>`;}).join('')}<p class="tp-result" role="status">${passed(l)?'✓ Lição concluída: quatro etapas vistas e três respostas corretas.':`Etapas vistas: ${[0,1,2,3].filter(s=>r.viewed.includes(s)).length}/4 · Acertos: ${l.questions.filter((q,i)=>r.answers[i]===q.answer).length}/3`}</p></section>`;}
-function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>O PC gera e envia o vídeo completo para sua conta. A ponte trabalha em segundo plano, sem endereço ou porta. Após atualizar a ponte, mantenha-a ligada e consulte o vídeo aqui.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="none" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video><button type="button" data-tp-action="close-film">Fechar vídeo</button>`:''}<p>Ouvir Aula utiliza exclusivamente a voz configurada na Ponte Vídeo do PC. Sem substituição pela voz do navegador.</p></details>`;}
-async function openFilm(format){
+function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>Os MP4 podem ficar no aparelho. Importe do PC ou migre o vídeo antigo da nuvem uma única vez.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div><div class="tp-controls"><label>Formato<select data-tp-film-format><option value="16x9">16:9</option><option value="9x16">9:16</option><option value="1x1">1:1</option></select></label><label>Importar MP4<input type="file" data-tp-film-file accept=".mp4,video/mp4"></label><button type="button" data-tp-film-migrate>Migrar vídeo antigo da nuvem</button></div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="none" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video><button type="button" data-tp-action="close-film">Fechar vídeo</button>`:''}<p>Ouvir Aula utiliza exclusivamente a voz configurada na Ponte Vídeo do PC. Sem substituição pela voz do navegador.</p></details>`;}
+async function openFilm(format,fromCloud=false){
  stop();const token=run,l=T.lessons.find(l=>l.id===selected);if(!l)return;
  if(typeof SESS==='undefined'||!SESS?.uid){status='Entre na sua conta para assistir ao vídeo da ponte.';paint();return;}
- status='Consultando vídeo na sua conta…';loading=true;paint();
+ videoFormat=format;status='Buscando vídeo neste aparelho…';loading=true;paint();
+ const localKey=(l.videoId||'tecnica-v1-'+l.id)+'-'+format;
+ try{const cached=await window.EstudosLocal?.get('mentor-video',localKey);if(token!==run)return;if(cached?.blob?.size){film=URL.createObjectURL(cached.blob);loading=false;status='Vídeo carregado do aparelho.';paint();return;}}catch{}
+ if(!fromCloud){loading=false;status='Sem vídeo neste aparelho. Importe um MP4 do PC ou migre uma vez da nuvem.';paint();return;}
  const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),10000);
  try{
   await tok();if(token!==run||currentOwner()!==owner)return;
@@ -34,7 +37,10 @@ async function openFilm(format){
   if(!res.ok||!data.signedURL)throw Error('missing');
   const url=new URL(c.url+'/storage/v1'+data.signedURL);
   if(url.origin!==new URL(c.url).origin||!url.pathname.startsWith('/storage/v1/object/sign/aulas-videos/'+path))throw Error('invalid');
-  film=url.href;loading=false;status='Vídeo pronto. Toque em reproduzir nos controles abaixo.';paint();
+  const dataVideo=await fetch(url.href,{signal:ctl.signal});if(!dataVideo.ok)throw Error('Falha na migração do vídeo.');
+   const blob=await dataVideo.blob();if(!blob.size||blob.size>350*1024*1024)throw Error('Vídeo inválido ou muito grande.');
+   await window.EstudosLocal.put('mentor-video',localKey,blob,{formato:format,aula:l.id});if(token!==run)return;
+   film=URL.createObjectURL(blob);loading=false;status='Vídeo migrado. Agora ficará no aparelho.';paint();
  }catch{if(token!==run)return;loading=false;status='Vídeo ainda indisponível neste formato. Confirme que a ponte foi atualizada e aguarde a geração e o envio pelo PC. O áudio somente será reproduzido pela ponte de voz configurada no PC.';paint();}
  finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
 }
@@ -53,7 +59,7 @@ function dock(){const root=document.getElementById('tp-root'),mentor=root?.query
 let dockFrame=0;function scheduleDock(){if(dockFrame)return;dockFrame=requestAnimationFrame(()=>{dockFrame=0;dock();});}
 window.addEventListener('scroll',scheduleDock,{passive:true});window.addEventListener('resize',scheduleDock,{passive:true});
 function releaseAudio(){if(audio){audio.onended=audio.onerror=audio.onplaying=audio.onpause=null;audio.pause();audio.removeAttribute('src');audio.load();audio=null;}if(objectURL){URL.revokeObjectURL(objectURL);objectURL='';}}
-function stop(){document.querySelector('#tp-root [data-tp-video]')?.pause();const player=document.querySelector('#tp-root [data-tp-film-player]');if(player){player.pause();player.removeAttribute('src');player.load();}film=null;run++;controller?.abort();controller=null;releaseAudio();if(utterance){utterance.onend=utterance.onerror=utterance.onstart=null;window.speechSynthesis?.cancel();utterance=null;}playing=false;loading=false;}
+function stop(){document.querySelector('#tp-root [data-tp-video]')?.pause();const player=document.querySelector('#tp-root [data-tp-film-player]');if(player){player.pause();player.removeAttribute('src');player.load();}if(film?.startsWith('blob:'))URL.revokeObjectURL(film);film=null;run++;controller?.abort();controller=null;releaseAudio();if(utterance){utterance.onend=utterance.onerror=utterance.onstart=null;window.speechSynthesis?.cancel();utterance=null;}playing=false;loading=false;}
 function mark(){const l=T.lessons.find(l=>l.id===selected);if(!l||!visual)return;const r=record(l);r.step=step;if(!r.viewed.includes(step))r.viewed.push(step);save();}
 function validEndpoint(s){try{const u=new URL(s);if(u.username||u.password||u.hash)return false;return ['http:','https:'].includes(u.protocol);}catch{return false;}}
 function vozChave(l,etapa,texto){
@@ -122,8 +128,9 @@ document.addEventListener('click',e=>{
  if(typeof render==='function')render();
 },true);
 document.addEventListener('click',e=>{
- const b=e.target.closest?.('#tp-root button');if(!b||!active())return;if(b.dataset.tpDict||b.dataset.tpPdf||b.closest('[data-tp-pdf-form]'))return;e.preventDefault();e.stopPropagation();readOwner();
+ const b=e.target.closest?.('#tp-root button');if(!b||!active())return;if(b.dataset.tpDict||b.dataset.tpPdf||b.dataset.tpBackup||b.closest('[data-tp-pdf-form]'))return;e.preventDefault();e.stopPropagation();readOwner();
  if(b.dataset.tpFilm){document.dispatchEvent(new Event('au-study-pause'));openFilm(b.dataset.tpFilm);return;}
+ if(b.hasAttribute('data-tp-film-migrate')){document.dispatchEvent(new Event('au-study-pause'));openFilm(videoFormat,true);return;}
  if(b.dataset.tpLesson){stop();selected=b.dataset.tpLesson;step=0;visual=false;status='';bridgeFailed=false;paint(true);document.getElementById('tp-root')?.scrollIntoView({block:'start'});return;}
  if(b.hasAttribute('data-tp-step')){stop();step=Number(b.dataset.tpStep);status='';mark();paint();return;}
  switch(b.dataset.tpAction){
@@ -136,6 +143,13 @@ document.addEventListener('click',e=>{
 
  }
 },true);
+document.addEventListener('change',e=>{const el=e.target.closest?.('#tp-root [data-tp-film-format],#tp-root [data-tp-film-file]');if(!el||!active())return;
+ if(el.matches('[data-tp-film-format]')){videoFormat=el.value;return;}
+ const f=el.files?.[0],l=T.lessons.find(l=>l.id===selected);if(!l||!f)return;
+ if(f.size>350*1024*1024||!(/\.mp4$/i.test(f.name)||f.type==='video/mp4')){status='Escolha MP4 até 350 MB.';paint();return;}
+ const format=videoFormat;status='Salvando vídeo no aparelho…';paint();
+ window.EstudosLocal?.put('mentor-video',(l.videoId||'tecnica-v1-'+l.id)+'-'+format,f,{nome:f.name,formato:format,aula:l.id}).then(()=>openFilm(format)).catch(err=>{status=err.message;paint();});
+});
 document.addEventListener('change',e=>{
  const el=e.target.closest?.('#tp-root [data-tp-question]');if(!el||!active())return;
  readOwner();const l=T.lessons.find(l=>l.id===selected);if(!l)return;

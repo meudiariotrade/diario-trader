@@ -12,7 +12,7 @@ import { validarMentor, SISTEMA_MENTOR } from './mentor-pdf.ts';
 
 const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), ANON = ENV('SUPABASE_ANON_KEY'), GEMINI_KEY = ENV('GEMINI_API_KEY');
-export const VERSAO_FN = 'v667';
+export const VERSAO_FN = 'v708';
 const LIMITE_AULAS_DIA = 6, LIMITE_PARTES_DIA = 80, MAX_TEXTO = 90_000;
 
 // ---------- segurança (mesmo padrão das outras funções) ----------
@@ -405,11 +405,11 @@ Deno.serve(async (req) => {
 
   let reservaId: string | null = null;
   try {
-    if (b.acao === 'mentor_pdf') {
+    if (b.acao === 'mentor_pdf' || b.acao === 'mentor_pdf_local') {
+      const localOnly=b.acao==='mentor_pdf_local';
       const id=String(b.requestId||''),texto=String(b.texto||'').replace(/\u0000/g,''),tema=txt(b.tema,180),arquivo=txt(b.arquivo,140),paginas=txt(b.paginas,40);
       if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)||!tema||!arquivo||!paginas||texto.trim().length<300||texto.length>85000)return out({error:'Informe PDF com texto selecionável, tema e até 85 mil caracteres por aula.'},400);
-      const existing=await db(`aulas?id=eq.${id}&user_id=eq.${uid}&select=id,roteiro`);
-      if(existing?.[0]?.roteiro?.mentor)return out({aula:existing[0]});
+      if(!localOnly){const existing=await db(`aulas?id=eq.${id}&user_id=eq.${uid}&select=id,roteiro`);if(existing?.[0]?.roteiro?.mentor)return out({aula:existing[0]});}
       const reserva=await reservaUso(uid,'iniciar','mentor:'+id);
       if(!reserva.permitido)return out({error:'Geração já em andamento ou limite diário de aulas atingido.'},429);
       reservaId=reserva.id;
@@ -419,6 +419,7 @@ Deno.serve(async (req) => {
       const cenas=mentor.stages.map((t:string,i:number)=>({titulo:mentor.stageNames[i],vis:{tipo:'topicos',t:mentor.stageNames[i],itens:mentor.visuals[i].items.map((t:string)=>({t}))},fala:[mentor.roteiroVoz.etapas[i]],pausa:900}));
       const roteiro={versao:1,tipo:'mentor-pdf-v1',mentor,livro:'Mentor PDF · '+id,min:mentor.minutes,cenas,partes:[],caps:[tema],modelo:result.rotulo};
       const linha={id,user_id:uid,livro:'Mentor PDF · '+id,numero:1,titulo:mentor.title,capitulos:paginas,status:'pronta',erro:null,roteiro,progresso:{},criado_em:new Date().toISOString(),atualizado_em:new Date().toISOString()};
+      if(localOnly)return out({aula:linha,modelo:result.rotulo,local:true});
       const saved=await db('aulas?select=id,roteiro',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(linha)});
       return out({aula:saved?.[0],modelo:result.rotulo});
     }

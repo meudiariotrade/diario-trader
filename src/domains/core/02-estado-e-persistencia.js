@@ -2145,8 +2145,9 @@ async function doAuth(e) {
     ((SY.msg = em(o)), render());
   }
 }
+// Biblioteca é local: livros e anotações não entram no JSON do diário enviado ao Supabase.
 const pub = () => {
-  const { uid: e, st: t, up: a, lastSyncAt: o, ...s } = S;
+  const { uid: e, st: t, up: a, lastSyncAt: o, books: livrosLocais, ...s } = S;
   return { ...s, days: diarioDaysCanonical() };
 };
 function syncSoon() {
@@ -2158,7 +2159,9 @@ function uiSy() {
 }
 function adopt(e) {
   const t = { uid: S.uid, up: S.up };
-  ((S = { trades: [], days: {}, rules: [], seed: 1, ...e, ...t, st: e.mt }),
+  // Migração aditiva: preserva livros deste dispositivo e recupera antigos do diário remoto uma vez.
+  const livros = new Map([...(e.books || []), ...(S.books || [])].filter(b => b && b.id).map(b => [b.id, b]));
+  ((S = { trades: [], days: {}, rules: [], seed: 1, ...e, ...t, books: [...livros.values()], st: e.mt }),
     window.DiarioDados?.reset(S.days),
     persist());
 }

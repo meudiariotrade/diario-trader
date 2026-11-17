@@ -40,7 +40,7 @@ test('Mentor gera aula de PDF e preserva dicionário e diagramas SVG',{timeout:9
  const page=await browser.newPage({viewport:{width:390,height:1000}});
  await page.addInitScript(()=>{window.testNativeFetch=window.fetch.bind(window)});
  let sent;
- await page.route('**/functions/v1/aulas',route=>{sent=route.request().postDataJSON();return route.fulfill({json:{aula:row}})});
+ await page.route('**/functions/v1/aulas',route=>{sent=route.request().postDataJSON();return route.fulfill({json:{aula:row,local:true}})});
  await page.route('**/rest/v1/aulas?**',route=>route.fulfill({json:[]}));
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  await page.evaluate(()=>{
@@ -90,7 +90,7 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
  },row);
  await page.locator('[data-tp-lesson]').click();
  await page.locator('.tp-bridge > summary').click();
- await page.locator('[data-tp-film="16x9"]').click();
+ await page.locator('[data-tp-film-migrate]').click();
  await expect(page.locator('[data-tp-film-player]')).toHaveCount(1);
  await page.evaluate(()=>{window.v=document.querySelector('[data-tp-film-player]');window.v.currentTime=1;render();});
  assert.equal(await page.evaluate(()=>document.querySelector('[data-tp-film-player]')===window.v),true);

@@ -8,4 +8,6 @@ test('Mentor PDF autentica, usa roteador existente e grava exclusivamente para o
  const input={acao:'mentor_pdf',requestId:'12345678-1234-4234-8234-123456789abc',user_id:'intruso',tema:'Circuitos',arquivo:'apostila.pdf',paginas:'1–3',texto:'Texto do material universitário. '.repeat(30)};
  const unauthorized=await handler(new Request('https://edge.test',{method:'POST',body:JSON.stringify(input)}));assert.equal(unauthorized.status,401);assert.equal(writes.length,0);
  const result=await handler(new Request('https://edge.test',{method:'POST',headers:{Authorization:'Bearer a.b.c'},body:JSON.stringify(input)}));assert.equal(result.status,200);assert.equal(writes[0].user_id,'owner-real');assert.equal(writes[0].roteiro.tipo,'mentor-pdf-v1');assert.equal(calls[0].tema,'Circuitos');assert.equal(writes[0].roteiro.cenas.length,4);
+ const local=await handler(new Request('https://edge.test',{method:'POST',headers:{Authorization:'Bearer a.b.c'},body:JSON.stringify({...input,acao:'mentor_pdf_local',requestId:'12345678-1234-4234-8234-123456789abd'})}));
+ assert.equal(local.status,200);assert.equal((await local.json()).local,true);assert.equal(writes.length,1,'aula local não deve gravar no banco');
 });
