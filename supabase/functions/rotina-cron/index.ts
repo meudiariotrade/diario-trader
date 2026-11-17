@@ -39,6 +39,41 @@ export async function matinal(slot: string) {
   return { id: r?.[0]?.id ?? null, eventos3: tres };
 }
 
+
+// Panorama leve: lê apenas 1 snapshot público compartilhado e a agenda já cacheada.
+// Não dispara cinco Edge Functions de mercado nem grava dados pessoais.
+export async function matinalLeve(slot: string) {
+  const inicio=Date.now();
+  const ja=await db('panorama_fotos?select=id&slot=eq.'+encodeURIComponent(slot)+'&limit=1');
+  if(ja?.[0])return {id:ja[0].id,ja:true,leve:true};
+  const r=await fetch('https://diario-trader.lucianosilva43567.workers.dev/v1/panorama',{
+    signal:AbortSignal.timeout(8000),headers:{Accept:'application/json'}
+  });
+  if(!r.ok){await log('panorama leve',false,slot+': Cloudflare HTTP '+r.status,Date.now()-inicio);return {erro:'snapshot público indisponível'};}
+  const snap=await r.json(),grupos=snap?.mdo?.mercados?.grupos||[],adrs=snap?.ad?.itens||[];
+  const bolsa=grupos.find((g:any)=>g.g==='Bolsas')?.itens||[];
+  const futuros=grupos.find((g:any)=>g.g==='Futuros e ADR')?.itens||[];
+  const comm=grupos.find((g:any)=>g.g==='Commodities')?.itens||[];
+  if(!Array.isArray(grupos)||!Array.isArray(adrs)||!bolsa.length||!futuros.length||!comm.length||!adrs.length){
+    await log('panorama leve',false,slot+': snapshot incompleto',Date.now()-inicio);
+    return {erro:'snapshot incompleto; preservado último panorama'};
+  }
+  const ts=Date.parse(snap.geradoEm||'');
+  if(!Number.isFinite(ts)||Math.abs(Date.now()-ts)>30*60000)return {erro:'snapshot desatualizado'};
+  const agenda=(await db('push_calendario_eventos?select=titulo,moeda,horario,impacto,previsao,anterior&horario=gte.'+
+    encodeURIComponent(slot.slice(0,10)+'T00:00:00-03:00')+'&limit=80').catch(()=>[]))||[];
+  const eventos=(agenda as any[]).filter(e=>e.horario&&e.titulo).map(e=>({
+    t:String(e.titulo).slice(0,160),p:e.moeda==='BRL'?'BR':e.moeda==='USD'?'US':String(e.moeda||''),
+    em:e.horario,imp:e.impacto==='high'?3:e.impacto==='medium'?2:Number(e.impacto)||0,
+    proj:e.previsao||'',ant:e.anterior||''
+  })).slice(0,40);
+  const dados={mdo:snap.mdo,ad:snap.ad,ag:{eventos},fe:null,bal:null};
+  const row=await db('panorama_fotos',{method:'POST',headers:{Prefer:'return=representation'},
+    body:JSON.stringify({slot,dados})});
+  await log('panorama leve',true,slot+': '+snap.fonte+'; '+eventos.length+' eventos',Date.now()-inicio);
+  return {id:row?.[0]?.id||null,leve:true,eventos:eventos.length};
+}
+
 let wp: any = null;
 async function push() {
   if (wp) return wp;
@@ -85,6 +120,7 @@ Deno.serve(async (req) => {
   let b: any = {}; try { b = await req.json(); } catch { /* */ }
   const { dia, util } = agoraSP();
   try {
+    if (b.acao === 'matinal_leve') { if(!util && !b.forcar)return out({r:'fim de semana'}); return out(await matinalLeve(`${dia} ${b.hm || '06:50'}`)); }
     if (b.acao === 'matinal') return out(await matinal(`${dia} ${b.hm || '06:50'}`));
     if (b.acao === 'fechamento') { if (!util && !b.forcar) return out({ r: 'fim de semana' }); return out(await fechamento(/^\d{4}-\d{2}-\d{2}$/.test(b.dia || '') ? b.dia : dia)); }
     return out({ error: 'Ação desconhecida' }, 400);
