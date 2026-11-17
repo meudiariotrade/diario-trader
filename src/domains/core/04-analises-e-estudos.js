@@ -1639,7 +1639,10 @@ function mkPaint() {
     const mensagem = falhas && !MKT.fontesX?.ok?.length
       ? "Os feeds do X estão temporariamente indisponíveis. Use Atualizar para tentar novamente."
       : MKT.nf === "x" ? "Nenhuma notícia financeira recente desses perfis do X." : "Nenhuma notícia neste filtro.";
-    e.innerHTML = '<div class="mut sm" style="padding:12px 0">' + esc(mensagem) + '</div>';
+    const last = MKT.fontesTs ? new Date(MKT.fontesTs).toLocaleTimeString("pt-BR",{timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit"}) : "";
+    e.innerHTML = '<div class="mut sm" style="padding:12px 0">' + esc(mensagem) + '</div>' +
+      (MKT.nf==="x" && last ? '<div class="sm mut" style="padding:0 12px 8px">RSS verificado às '+esc(last)+
+      ' · Perfis disponíveis: '+esc(String(MKT.fontesX?.ok?.length||0))+'</div>' : '');
     return;
   }
   e.innerHTML =
@@ -1651,7 +1654,13 @@ function mkPaint() {
         const r = (n.c || []).some((i) => mkNorm(i) === "urgente");
         return `<a class="card" href="${esc(urlSegura(n.l))}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:var(--tx);margin:6px 0"><div style="font-weight:600;line-height:1.35">${r ? '<span style="color:var(--r);font-size:12px;margin-right:6px">URGENTE</span>' : ""}${esc(n.t)}</div><div class="sm mut" style="margin-top:4px">${esc(mkAgo(n.d))}${n.a ? " · " + esc(n.a) : ""}</div></a>`;
       })
-      .join("");
+      .join("") +
+    (MKT.nf === "x" && MKT.fontesTs
+      ? '<div class="sm mut" style="padding:8px 0 2px">Atualizado às ' +
+        esc(new Date(MKT.fontesTs).toLocaleTimeString("pt-BR", {timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit"})) +
+        ' · Perfis X disponíveis: ' + esc(String(MKT.fontesX?.ok?.length || 0)) +
+        (MKT.fontesX?.falhas?.length ? ' · Indisponíveis: ' + esc(MKT.fontesX.falhas.join(", ")) : '') + '</div>'
+      : "");
 }
 
 /* Notícias do dia: coleta isolada para Mercado e mini-feeds do Terminal.
@@ -1790,7 +1799,10 @@ async function mkEdgeNoticias(acao) {
   if(!resposta.ok)throw new Error("Fonte "+acao+" "+resposta.status);
   const obj=await resposta.json();
   if(!Array.isArray(obj.itens))throw new Error("Resposta inválida "+acao);
-  if(acao!=="terminal") MKT.fontesX = obj.fontesX || null;
+  if(acao!=="terminal") {
+    MKT.fontesX = obj.fontesX || null;
+    MKT.fontesTs = obj.atualizadoEm || obj.gerado || null;
+  }
   return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.a||"Money Times",c:n.tags||n.c||[]})).filter(Boolean);
 }
 
@@ -1873,6 +1885,8 @@ async function mkLoad(force) {
       ...MK_FONTES_RSS.map(([nome,url])=>mkRss(url,nome)),
     ];
     const respostas=await Promise.allSettled(tarefas);
+    MKT.totalFontes = respostas.length;
+    MKT.fontesOkTotal = respostas.filter(r=>r.status==="fulfilled").length;
     const resultados=respostas.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
     const reunidas=mkDedup(resultados);
     if(reunidas.length)MKT.items=await mkTraduzLote(reunidas);
