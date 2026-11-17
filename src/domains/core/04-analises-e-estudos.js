@@ -1789,6 +1789,26 @@ async function mkRss(url, fonte, perfil) {
   // Proxies públicos independentes, em paralelo: não esperar um timeout para iniciar o fallback.
   return Promise.any([mkRssProxy(url,fonte,perfil,false),mkRssProxy(url,fonte,perfil,true)]);
 }
+/* Cloudflare v735: snapshot público compartilhado, sem Supabase ou segredos no navegador.
+   O feed é opcional: erro HTTP/CORS, cache velho ou payload inválido aciona a reserva. */
+async function mkCloudflareNoticias() {
+  const resposta=await fetch("https://diario-trader.lucianosilva43567.workers.dev/v1/noticias",{
+    signal:AbortSignal.timeout(6500),cache:"default"
+  });
+  if(!resposta.ok)throw new Error("Cloudflare notícias "+resposta.status);
+  const obj=await resposta.json();
+  const atualizado=Date.parse(obj?.atualizadoEm||"");
+  if(!Array.isArray(obj?.itens)||obj?.desatualizado===true||
+     !Number.isFinite(atualizado)||atualizado>Date.now()+300000||
+     Date.now()-atualizado>15*60000||!Array.isArray(obj.fontesOk)||!obj.fontesOk.length)
+    throw new Error("Cloudflare: notícias indisponíveis ou desatualizadas");
+  const itens=obj.itens.slice(0,50).map(n=>mkNoticia({
+    t:n.t,l:n.l,d:n.d,a:n.fonte||"Fonte não indicada",
+    c:n.tema==="politica_economica"?["politica"]:[n.tema]
+  })).filter(Boolean);
+  if(!itens.length)throw new Error("Cloudflare: nenhum título financeiro válido");
+  return itens;
+}
 async function mkFinnhubNoticias(category) {
   const key = String((typeof fhChave==="function" ? await fhChave().catch(()=>"") : "")
     || window.fhTokServidor || (typeof FH!=="undefined" ? FH.k : "")
@@ -1897,20 +1917,38 @@ async function mkLoad(force) {
   }
   MKT.busy=1;MKT.err="";mkPaint();
   try {
+    // Cloudflare agrega RSS públicos; Finnhub complementa diretamente no navegador.
     const tarefas=[
-      // Notícias do servidor + Finnhub direto do navegador; proxies só como contingência.
-      mkEdgeNoticias("noticias"),mkEdgeNoticias("terminal"),
+      mkCloudflareNoticias(),
       mkFinnhubNoticias("general"),mkFinnhubNoticias("forex"),mkFinnhubNoticias("crypto")
     ];
     const respostas=await Promise.allSettled(tarefas);
-    MKT.totalFontes = respostas.length;
-    MKT.fontesOkTotal = respostas.filter(r=>r.status==="fulfilled").length;
+    const cloudOk=respostas[0].status==="fulfilled"&&respostas[0].value.length>0;
+    let totalFontes=respostas.length, fontesOk=respostas.filter(r=>r.status==="fulfilled").length;
     let resultados=respostas.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
-    if (resultados.length < 12) {
-      // Contingência controlada: não abrir dois proxies para seis feeds a cada atualização.
-      const reserva=await Promise.allSettled(MK_FONTES_RSS.slice(0,2).map(([nome,url])=>mkRss(url,nome)));
+    // Apenas se o Cloudflare falhar, houver poucas manchetes ou o usuário abrir X.
+    if(!cloudOk||MKT.nf==="x"||resultados.length<12) {
+      const reserva=await Promise.allSettled([mkEdgeNoticias("noticias")]);
+      totalFontes+=reserva.length;
+      fontesOk+=reserva.filter(r=>r.status==="fulfilled").length;
       resultados=resultados.concat(reserva.filter(r=>r.status==="fulfilled").flatMap(r=>r.value));
     }
+    // A função terminal é a segunda reserva, não uma consulta permanente.
+    if(!cloudOk&&resultados.length<12) {
+      const reserva=await Promise.allSettled([mkEdgeNoticias("terminal")]);
+      totalFontes+=reserva.length;
+      fontesOk+=reserva.filter(r=>r.status==="fulfilled").length;
+      resultados=resultados.concat(reserva.filter(r=>r.status==="fulfilled").flatMap(r=>r.value));
+    }
+    if(resultados.length<12) {
+      // Último recurso: somente dois feeds com proxies, nunca varredura geral.
+      const reserva=await Promise.allSettled(MK_FONTES_RSS.slice(0,2).map(([nome,url])=>mkRss(url,nome)));
+      totalFontes+=reserva.length;
+      fontesOk+=reserva.filter(r=>r.status==="fulfilled").length;
+      resultados=resultados.concat(reserva.filter(r=>r.status==="fulfilled").flatMap(r=>r.value));
+    }
+    MKT.totalFontes=totalFontes;
+    MKT.fontesOkTotal=fontesOk;
     const reunidas=mkDedup(resultados);
     if(reunidas.length)MKT.items=await mkTraduzLote(reunidas);
     else MKT.err="Não consegui consultar as fontes agora.";
@@ -1967,7 +2005,7 @@ function mkAfter() {
           : o === "im"
             ? ((MKT.im = s), ls.set("diario-mkt-im", s), render())
             : o === "nf"
-              ? ((MKT.nf = s), render())
+              ? ((MKT.nf = s), render(), s === "x" && mkLoad(true))
               : o === "rf" && mkLoad(!0);
     }));
 })();
