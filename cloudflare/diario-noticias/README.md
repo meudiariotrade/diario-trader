@@ -22,3 +22,11 @@ Até 720 eventos agendados por dia, com aproximadamente 360 coletas e gravaçõe
 ## Testes e cuidados
 
 Na raiz do repositório: node --test tests/cloudflare-noticias.test.cjs, ou npm test. Este piloto não reativa nenhum dos 20 crons legados. Fontes RSS podem atrasar, ficar indisponíveis ou limitar acesso; a coleta não equivale a dados profissionais de mercado em tempo real.
+
+## Integração Cloudflare com root directory "/"
+
+No Cloudflare, se o GitHub está conectado com **Root directory /**, **Build command npm run build** e **Deploy command npx wrangler deploy**, a configuração espelho na raiz (wrangler.jsonc) aponta diretamente para cloudflare/diario-noticias/index.mjs. Não implanta o aplicativo todo como Worker: a versão do site permanece no GitHub Pages.
+
+O nome do projeto Cloudflare Workers deve ser **diario-trader-noticias**, idêntico a \`name\` no wrangler.jsonc. Se o projeto já criado tiver outro nome, renomeie o projeto no painel (quando suportado) ou altere a configuração do Worker antes de ativar; não publique em um Worker de outra finalidade. Após a primeira implantação, confirme o endereço workers.dev e os caminhos /health e /v1/noticias. O cache KV será criado por auto-provisionamento do Wrangler atual, sujeito à configuração e às permissões da conta.
+
+Se preferir evitar recompilar o site em cada deploy Cloudflare, ajuste no painel: Root directory cloudflare/diario-noticias, Build command em branco, Deploy command npx wrangler deploy. A configuração específica da subpasta permanecerá disponível.
