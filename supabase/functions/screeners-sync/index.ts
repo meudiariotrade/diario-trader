@@ -72,7 +72,7 @@ async function momentoHistorico(market:string,ticker:string):Promise<number|null
   return old>0?+((closes[last]/old-1)*100).toFixed(4):null;
  }catch{return null;}
 }
-async function scanner(market:string,tickers:string[]){
+async function scanner(market:string,tickers:string[],comHistorico=true){
  if(!tickers.length)return {atualizados:0,semDados:0};
  // Campos confirmados no catálogo da API de Screener: valores não informados permanecem nulos.
  const usa=market==='US',columns=usa?
@@ -140,7 +140,7 @@ async function scanner(market:string,tickers:string[]){
   }
   const unique=[...new Map(rows.map(x=>[x.ticker,x])).values()];
   // Momentum 12-1 por fechamentos mensais completos, como reserva para um subconjunto limitado.
-  await Promise.all(unique.filter(x=>x.momentum_12_1==null).slice(0,14).map(async x=>{
+  if(comHistorico)await Promise.all(unique.filter(x=>x.momentum_12_1==null).slice(0,14).map(async x=>{
    const m=await momentoHistorico(market,x.ticker);
    if(m!=null){x.momentum_12_1=m;
     if(market==='BR')x.score_quant_br=rating('BR',x);
@@ -156,6 +156,11 @@ Deno.serve(async req=>{
  try{
   const b=await req.json().catch(()=>({})),mode=b.acao||'catalogo';
   if(mode==='catalogo'){const resp:any={};for(const [m,fn] of [['US',catalogoUS],['BR',catalogoBR]] as const){try{resp[m]=await fn()}catch(e){resp[m]={erro:String(e).slice(0,180)}}}return ok({acao:mode,...resp});}
+  if(mode==='fundamentos'){const m=b.mercado==='BR'?'BR':b.mercado==='US'?'US':null;if(!m)return ok({erro:'Mercado invalido'},400);
+   const max=Math.min(200,Math.max(1,Math.floor(Number(b.limite)||200)));
+   const symbols=await rpc('quant_screeners_pendentes',{p_market:m,p_limit:max});
+   return ok({acao:mode,mercado:m,...await scanner(m,symbols||[],false)});
+  }
   if(mode==='enriquecer'){const result:any={};for(const m of ['BR','US']){
     try{const symbols=await rpc('quant_screeners_pendentes',{p_market:m,p_limit:80});result[m]=await scanner(m,symbols||[])}
     catch(e){result[m]={erro:String(e).slice(0,170)}}
