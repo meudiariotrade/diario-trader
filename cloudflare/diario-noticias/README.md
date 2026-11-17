@@ -9,9 +9,9 @@ Armazena apenas um snapshot compacto por ciclo no KV. Se todas as fontes falhare
 ## Passos para ativar
 
 1. Criar ou conectar a conta Cloudflare Workers no plano Free.
-2. Criar um namespace KV e inserir seu ID real no arquivo wrangler.jsonc, binding NEWS_CACHE. O ID atual é um placeholder e bloqueia um deploy válido.
-3. Verificar ALLOWED_ORIGIN e colocar a origem exata do site do PWA sem caminho. Nenhuma chave ou segredo é gravado no repositório.
-4. Fazer deploy pela interface Cloudflare ou Wrangler autenticado; verificar /health, aguardar uma coleta e consultar /v1/noticias.
+2. A configuração wrangler.jsonc usa a binding NEWS_CACHE sem ID. O Wrangler atual cria automaticamente o namespace KV no primeiro deploy autenticado. Verifique o recurso criado no painel Cloudflare.
+3. Conferir ALLOWED_ORIGIN e definir a origem exata do PWA (sem caminho). Não incluir chaves ou segredos no repositório.
+4. No Cloudflare Workers & Pages, conectar o repositório GitHub na pasta cloudflare/diario-noticias ou executar `npx wrangler deploy --config cloudflare/diario-noticias/wrangler.jsonc` na raiz autenticada. A criação do KV é automática; verificar GET /health, aguardar uma coleta e consultar GET /v1/noticias.
 5. Medir 72h de CPU, KV, latência, erros de fontes e cota de requisições. O limite de CPU da oferta Free é 10 ms por execução.
 6. Só depois integrar a consulta opcional ao app com fallback atual. Não duplicar notificações: o envio de Push continua no Supabase.
 
