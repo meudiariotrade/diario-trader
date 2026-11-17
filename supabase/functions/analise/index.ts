@@ -2462,7 +2462,7 @@ export function cxEleicao(hoje: string): { linhas: string[]; turno: 1 | 2 | null
   if (!e) return { linhas: [], turno: null, fase: '' };
   const t1 = e.t1, t2 = e.t2, L: string[] = [];
   if (hoje <= t1 && cxDias(hoje, t1) <= 75) {
-    L.push(`Ano de eleição presidencial: o 1º turno é no domingo ${cxD(t1)} (faltam ${cxDias(hoje, t1)} dias)${t2 ? `; um eventual 2º tuno em ${cxD(t2)}` : ''}.`);
+    L.push(`Ano de eleição presidencial: o 1º turno é no domingo ${cxD(t1)} (faltam ${cxDias(hoje, t1)} dias)${t2 ? `; um eventual 2º tuo em ${cxD(t2)}` : ''}.`);
     return { linhas: L, turno: 1, fase: 'pre1' };
   }
   if (t2 && hoje > t1 && hoje <= t2) {
@@ -3955,15 +3955,25 @@ export const IA_CONTA = { gemini: 0, openrouter: 0, falhasGemini: 0 };
 export const IA_ULTIMA = { rotulo: '' };
 async function gemini(system: string, parts: any[], opt: { json?: boolean; search?: boolean; model?: string; ate?: number; temp?: number; prefer?: 'or' | 'gemini' } = {}) {
   const soTexto = parts.every((p) => p && typeof p.text === 'string');
+  const reservaJornal = soTexto && !!opt.search && system.includes('PROTOCOLO EDITORIAL OBRIGATÓRIO');
   const viaRoteador = async (semBusca: boolean) => {
-    const r = await gerarTexto(system + (semBusca ? SEM_BUSCA : ''), parts.map((p) => p.text).join('\n\n'), { json: opt.json, temp: opt.temp, ate: opt.ate });
+    const reserva = reservaJornal && semBusca;
+    const r = await gerarTexto(system + (semBusca ? SEM_BUSCA : ''), parts.map((p) => p.text).join('\n\n'), { json: opt.json, temp: opt.temp, ate: opt.ate, ...(reserva ? {preferir:['pollinations']} : {}) });
     IA_ULTIMA.rotulo = r.rotulo; IA_CONTA.openrouter++;
     const t = r.texto.replace(/```json|```/g, '');
-    try { return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch { /* segue */ }
-    const z = jsonTolerante(r.texto); return z && typeof z === 'object' ? z : { texto_bruto: r.texto };
+    const meta = (v:any) => reserva && v && typeof v==='object' ? {...v,__fontes_busca:[],__reserva:{provedor:r.provedor,modelo:r.modelo,sem_pesquisa_web:true}} : v;
+    try { return meta(JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1))); } catch { /* segue */ }
+    const z = jsonTolerante(r.texto); return meta(z && typeof z === 'object' ? z : { texto_bruto: r.texto });
   };
   if (soTexto && !opt.search) return await viaRoteador(false);
-  try { const r = await geminiG(system, parts, opt); IA_CONTA.gemini++; IA_ULTIMA.rotulo = 'Google Gemini' + (opt.search ? ' (com busca)' : ''); return r; }
+  const agora=Date.now(),prazo=opt.ate||agora+PRAZO_MS;
+  // O principal mantém modelos/ordem, com tempo reservado para a outra IA.
+  const principal=reservaJornal?{...opt,ate:Math.min(prazo,agora+40000,Math.max(agora+5000,prazo-25000))}:opt;
+  try {
+    const r = await geminiG(system, parts, principal);
+    if(reservaJornal && r?.__busca_indisponivel)throw new Error('Pesquisa Gemini indisponível nesta chamada; usar reserva com os dados coletados.');
+    IA_CONTA.gemini++; IA_ULTIMA.rotulo = 'Google Gemini' + (opt.search ? ' (com busca)' : ''); return r;
+  }
   catch (e) {
     IA_CONTA.falhasGemini++;
     const msg = (e as Error)?.message || '';
@@ -4027,13 +4037,14 @@ async function geminiG(system: string, parts: any[], opt: { json?: boolean; sear
     if (comBusca) body.tools = [{ google_search: {} }];
     return post(body);
   };
-  let r = await chamar(!!opt.search);
+  let buscaUsada=!!opt.search;
+  let r = await chamar(buscaUsada);
   // sem cota/permissão para busca na web (plano grátis): tenta de novo sem a busca
-  if (!r.ok && opt.search) r = await chamar(false);
+  if (!r.ok && opt.search) { buscaUsada=false; r = await chamar(false); }
   // modelo que não aceita o ajuste de raciocínio: tenta sem ele
   if (!r.ok && r.status === 400 && pensar.thinkingConfig) {
     const t = await r.text();
-    if (/thinking/i.test(t)) { delete (pensar as any).thinkingConfig; r = await chamar(false); }
+    if (/thinking/i.test(t)) { delete (pensar as any).thinkingConfig; buscaUsada=false; r = await chamar(false); }
     else throw new Error('Gemini 400: ' + t.slice(0, 600));
   }
   if (!r.ok) throw new Error('Gemini ' + r.status + ': ' + (await r.text()).slice(0, 600));
@@ -4041,7 +4052,7 @@ async function geminiG(system: string, parts: any[], opt: { json?: boolean; sear
   const txt = textoDe(resposta);
   const editorial = system.includes('PROTOCOLO EDITORIAL OBRIGATÓRIO');
   const refsBusca = editorial ? (resposta?.candidates?.[0]?.groundingMetadata?.groundingChunks || []).map((c: any) => ({ titulo: c.web?.title || '', url: c.web?.uri || '' })).filter((c: any) => JORNAL_Q.url(c.url)) : [];
-  const comReferencias = (value: any) => editorial && value && typeof value === 'object' ? { ...value, __fontes_busca: refsBusca } : value;
+  const comReferencias = (value: any) => editorial && value && typeof value === 'object' ? { ...value, __fontes_busca: refsBusca, __busca_indisponivel:!!opt.search&&!buscaUsada } : value;
   if (!txt) throw new Error('Gemini não devolveu texto.');
   const parse = (x: string) => {
     const t = x.replace(/```json|```/g, '');
