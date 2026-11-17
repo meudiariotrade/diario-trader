@@ -87,7 +87,7 @@ function detail(m,s){
  const tk=s.detailTicker;if(!tk)return '';
  const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk];
  if(!row)return '';
- const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row);
+ const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row,Date.now(),s.topData?.medians||s.data?.medians||null);
  if(!meta)return '';
  const owned=ownRow(row);
  return '<section class="scr-detail" id="scr-detail" aria-live="polite">'+
@@ -121,7 +121,7 @@ function isGlobalTopQuery(s){
 }
 function topTen(m,s){
  const top=s.topData,alg=w.DiarioScreenersTop10;
- const ranks=top&&alg?.generate(m,top.rows||[],w.DiarioScreenersInteligencia);
+ const ranks=top&&alg?.generate(m,top.rows||[],w.DiarioScreenersInteligencia,top.medians);
  const found=Number(top?.coverage?.com_score||0),total=Number(top?.total||0);
  return '<section class="scr-panel scr-top-ten" id="scr-top-ten">'+
  '<div class="scr-top-ten-head"><div><p class="an-kicker">RANKING AUTOMÁTICO · '+(m==='br'?'BRASIL':'ESTADOS UNIDOS')+'</p>'+
@@ -211,10 +211,9 @@ async function loadTopGlobal(m,refresh=false){
  stateNow.topBusy=true;stateNow.topError='';render();
  try{
   await tok();const c=cfg();
-  const body={market:m.toUpperCase(),search:'',sector:'',custody:'todos',owned:[],liquidity:0,cap:'all',preset:'top',order:'score',page:0};
-  const resp=await fetch(c.url+'/functions/v1/screeners-quant',{
-   method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},
-   body:JSON.stringify(body),signal:AbortSignal.timeout(15000)
+  // Snapshot global de mercado: GET sem informacoes de custodia, apto a cache publico por URL.
+  const resp=await fetch(c.url+'/functions/v1/screeners-quant?market='+m.toUpperCase()+'&snapshot=1',{
+   method:'GET',headers:{apikey:c.key},signal:AbortSignal.timeout(15000)
   });
   const result=await resp.json().catch(()=>({}));
   if(!resp.ok||!result.ok)throw Error(result.error||'Consulta do ranking indisponível');
@@ -224,8 +223,8 @@ async function loadTopGlobal(m,refresh=false){
  finally{if(uid===owner()){stateNow.topBusy=false;render()}}
 }
 function field(el){const m=d.querySelector('[data-an-sub].selected')?.dataset.anSub;if(m==='br'||m==='us')return [m,init(m)];return [null,null]}
-function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;s.page=0;if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
-d.addEventListener('input',ev=>{const b=ev.target;if(!b?.hasAttribute?.('data-scr-search'))return;const [m,s]=field(b);if(!m)return;s.search=b.value;s.page=0;clearTimeout(timer);timer=setTimeout(()=>load(m),420)});
+function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
+d.addEventListener('input',ev=>{const b=ev.target;if(!b?.hasAttribute?.('data-scr-search'))return;const [m,s]=field(b);if(!m)return;s.search=b.value;s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';clearTimeout(timer);timer=setTimeout(()=>load(m),420)});
 d.addEventListener('change',ev=>{
  const b=ev.target,[m,s]=field(b);if(!m||!b.closest('#an-root'))return;
  if(b.dataset.scrFilter){changeFilter(m,s,b.dataset.scrFilter,b.value);return}
@@ -250,7 +249,7 @@ d.addEventListener('click',async ev=>{
   d.getElementById('scr-detail')?.scrollIntoView({behavior:'smooth',block:'start'});return;
  }
  if(b.hasAttribute('data-scr-top-pdf')){
-  const ranking=w.DiarioScreenersTop10?.generate(m,s.topData?.rows||[],w.DiarioScreenersInteligencia);
+  const ranking=w.DiarioScreenersTop10?.generate(m,s.topData?.rows||[],w.DiarioScreenersInteligencia,s.topData?.medians);
   if(s.topPdfBusy)return;
   if(!ranking?.entries.length){s.topPdfMessage='Não há empresas elegíveis para um Top 10 fundamentado; dados incompletos não recebem nota.';render();return}
   s.topPdfBusy=true;s.topPdfMessage='';render();
@@ -258,7 +257,7 @@ d.addEventListener('click',async ev=>{
    const rows=ranking.entries.map(x=>x.row);
    const result=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows,{
     automatic:true,universe:s.topData?.total||0,scored:s.topData?.coverage?.com_score||0,
-    method:ranking.reason,snapshot:s.topData?.last_update||null
+    method:ranking.reason,snapshot:s.topData?.last_update||null,medians:s.topData?.medians||null
    });
    if(!result.cancelled)s.topPdfMessage='Relatório automático pronto: '+rows.length+' empresas, '+result.pages+' páginas.';
   }catch(e){s.topPdfMessage='Não foi possível gerar o Top 10: '+String(e.message||e).slice(0,160)}
