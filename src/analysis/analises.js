@@ -244,7 +244,7 @@ async function getGlobalSnapshot(m,refresh=false){
 }
 function localScreener(m,s,global){
  if(!global?.universe_complete||!Array.isArray(global.universe_rows))return null;
- const usa=m==='us',ownSet=new Set(owned()),v=x=>Number.isFinite(Number(x))?Number(x):null;
+ const usa=m==='us',ownSet=new Set(owned()),v=x=>x==null||x===''?null:Number.isFinite(Number(x))?Number(x):null;
  let rows=global.universe_rows.filter(r=>{
   const text=String(s.search||'').trim().toUpperCase(),ticker=String(r.ticker||'').toUpperCase();
   if(text&&!ticker.includes(text)&&!String(r.empresa||r.company_name||'').toUpperCase().includes(text))return false;
