@@ -1611,6 +1611,123 @@ async function tick() {
   return { enviados: n };
 }
 
+// ---------- agendamento leve v724 ----------
+// Cron chama somente rotinas de hora e calendário em cache.
+// Nenhum preço, relatório, livro, feed ou geração de IA participa deste caminho.
+async function agendamentoAutorizado(req: Request): Promise<boolean> {
+  const recebido = req.headers.get('x-cron-secret');
+  if (!recebido) return false;
+  if (segredoIgual(recebido, CRON)) return true; // compatibilidade com deploy anterior
+  try {
+    const { data, error } = await (await db()).rpc('diario_agendamento_chave');
+    return !error && typeof data === 'string' && segredoIgual(recebido, data);
+  } catch { return false; }
+}
+
+async function atualizarCalendarioPush() {
+  const cliente = await db();
+  const { data: subs, error: erroSubs } = await cliente.from('push_subs').select('prefs').limit(20);
+  if (erroSubs) throw new Error('Não foi possível verificar os aparelhos inscritos.');
+  if (!(subs || []).some((s: any) => limpaPrefs(s.prefs).on.ev))
+    return { modo: 'calendario', atualizados: 0, semInscricoes: true };
+  const inicio = Date.now();
+  const eventosAtualizados = (await eventos()).filter((e) =>
+    Date.parse(e.d) >= inicio - 3600000 && Date.parse(e.d) <= inicio + 15 * 86400000).slice(0, 250);
+  const horario = new Date().toISOString();
+  const linhas = eventosAtualizados.map((e) => ({
+    id: e.id, titulo: e.t.slice(0, 180), moeda: e.cur, horario: e.d,
+    impacto: e.imp, previsao: e.f.slice(0, 100), anterior: e.p.slice(0, 100),
+    atualizado_em: horario,
+  }));
+  if (linhas.length) {
+    const { error } = await cliente.from('push_calendario_eventos').upsert(linhas, { onConflict: 'id' });
+    if (error) throw new Error('Não consegui atualizar o calendário de notificações.');
+  }
+  return { modo: 'calendario', atualizados: linhas.length };
+}
+
+async function tickLeve() {
+  const cliente = await db(), now = new Date();
+  const partes = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric',
+      month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit',
+      minute: '2-digit', hourCycle: 'h23' }).formatToParts(now).map((p) => [p.type, p.value])
+  );
+  const dia = partes.year + '-' + partes.month + '-' + partes.day;
+  const minuto = +partes.hour * 60 + +partes.minute;
+  const util = partes.weekday !== 'Sat' && partes.weekday !== 'Sun';
+  const { data: subs, error: erroSubs } = await cliente.from('push_subs').select('id,sub,prefs,user_id').limit(20);
+  if (erroSubs) throw new Error('Falha na leitura das inscrições de notificação.');
+  if (!(subs || []).length) return { modo: 'leve', enviados: 0, inscricoes: 0 };
+  let enviados = 0;
+  if (now.getUTCMinutes() % 5 === 0) {
+    enviados += await retentar(cliente, async (sub: any, payload: any) =>
+      { await (await push()).sendNotification(sub, JSON.stringify(payload), { TTL: 900, urgency: 'high' }); });
+  }
+  let agenda: Ev[] = [];
+  if ((subs || []).some((s: any) => limpaPrefs(s.prefs).on.ev)) {
+    const { data, error } = await cliente.from('push_calendario_eventos')
+      .select('id,titulo,moeda,horario,impacto,previsao,anterior')
+      .gte('horario', now.toISOString())
+      .lte('horario', new Date(now.getTime() + 60 * 60000).toISOString())
+      .gte('atualizado_em', new Date(now.getTime() - 6 * 3600000).toISOString())
+      .order('horario', { ascending: true }).limit(60);
+    if (error) throw new Error('Falha na leitura do calendário em cache.');
+    agenda = (data || []).map((e: any) => ({ id: e.id, t: e.titulo, cur: e.moeda,
+      d: e.horario, imp: e.impacto, f: e.previsao, p: e.anterior }));
+  }
+  const aberturasHoje = aberturas(dia);
+  for (const sub of subs || []) {
+    if (!sub.user_id) continue;
+    const p = limpaPrefs(sub.prefs);
+    const enviar = async (chave: string, title: string, body: string, go: string, r = '') => {
+      if (await envia(sub, { title, body, tag: chave.split('|').slice(-2).join('-'),
+        data: { go, ...(r ? { r } : {}) } }, sub.id + '|' + chave)) enviados++;
+    };
+    if (util && p.on.m && minuto >= toMin(p.m) && minuto - toMin(p.m) < 3) {
+      const a = avisoDia(p, dia, 'm');
+      await enviar('m|' + dia, a.title || '☀️ Hora do checklist da manhã',
+        a.title ? (a.extra ? a.extra + ' ' : '') + 'Use o dia para estudar e revisar trades.'
+          : 'Revise a agenda, defina seu risco do dia e marque a rotina antes de operar.' + (a.extra ? ' ' + a.extra : ''),
+        a.title ? 'home' : 'dia', 'm');
+    }
+    if (util && p.on.n && minuto >= toMin(p.n) && minuto - toMin(p.n) < 3) {
+      const a = avisoDia(p, dia, 'n');
+      await enviar('n|' + dia, '🌐 Checklist da abertura americana',
+        'Faça o checklist antes da sessão noturna. Confirme seu limite de risco.' +
+        (a.extra ? ' ' + a.extra : ''), 'dia', 'n');
+    }
+    if (p.on.ab) for (const a of aberturasHoje) {
+      if (!p.mk.includes(a.mk) || minuto < a.min || minuto - a.min >= 3) continue;
+      await enviar('ab|' + a.mk + '|' + dia, a.titulo, a.corpo, 'mercado');
+    }
+    if (p.on.ev) for (const e of agenda) {
+      if (!p.cur.includes(e.cur) || (p.imp === 'high' && e.imp !== 'high')) continue;
+      const mins = (Date.parse(e.d) - now.getTime()) / 60000;
+      if (!(mins > 0 && mins <= p.lead)) continue;
+      const detalhe = [e.f && 'Previsão ' + e.f, e.p && 'Anterior ' + e.p].filter(Boolean).join(' · ');
+      await enviar('ev|' + e.id + '|' + p.lead,
+        '⏰ Em ' + Math.max(1, Math.round(mins)) + ' min: ' + e.t + ' (' + MOEDAS[e.cur] + ')',
+        (e.imp === 'high' ? 'Alto' : 'Médio') + ' impacto às ' + hmBR(e.d) +
+          (detalhe ? ' · ' + detalhe : ''), 'mercado');
+    }
+    if (p.on.lemb) for (const a of avisosLemb(p.lemb, dia, minuto, partes.weekday))
+      await enviar(a.chave, a.title, a.body, a.go, a.r);
+    if (p.on.ir) for (const a of darfAvisos(p.darf, dia, minuto))
+      await enviar(a.chave, a.title, a.body, 'home', 'ir');
+    if (p.on.trv) for (const a of travaAvisos(p.trava, dia, minuto))
+      await enviar(a.chave, a.title, a.body, 'dia');
+    { const a = avisoEstudo(p.estudo, dia, minuto);
+      if (a) await enviar(a.chave, a.title, a.body, 'estudos', 'estudo'); }
+    if (partes.weekday === 'Sun' && p.on.sem && p.semana && p.semana.id === segunda(dia)) {
+      if (minuto >= toMin(p.sem) && minuto - toMin(p.sem) < 3)
+        await enviar('sem|' + p.semana.id, p.semana.titulo,
+          p.semana.corpo || 'Toque para fazer a revisão da semana.', 'home', 'rev');
+    }
+  }
+  return { modo: 'leve', enviados, inscricoes: subs.length, agenda: agenda.length };
+}
+
 // ---------- servidor ----------
 Deno.serve(async (req) => {
   const cors = corsFor(req);
@@ -1622,8 +1739,19 @@ Deno.serve(async (req) => {
   try { b = await req.json(); } catch { return out({ error: 'JSON inválido' }, 400); }
   try {
     switch (b.acao) {
+      case 'tick_leve': {
+        if (!(await agendamentoAutorizado(req))) return out({ error: 'Não autorizado' }, 401);
+        return out(await tickLeve());
+      }
+      case 'atualizar_calendario': {
+        if (!(await agendamentoAutorizado(req))) return out({ error: 'Não autorizado' }, 401);
+        return out(await atualizarCalendarioPush());
+      }
       case 'tick': {
         if (!segredoIgual(req.headers.get('x-cron-secret'), CRON)) return out({ error: 'Não autorizado' }, 401);
+        // Nunca religar acidentalmente o ciclo com cotações, IA e Jornal.
+        if (Deno.env.get('ALLOW_HEAVY_NOTIFICATION_TICK') !== 'true')
+          return out({ error: 'Ciclo pesado desativado; use tick_leve.' }, 409);
         await push();
         return out(await tick());
       }
