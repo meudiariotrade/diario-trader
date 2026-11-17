@@ -53,3 +53,10 @@
 @media(max-width:800px){.scr-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.scr-kpi:nth-child(2){border-right:0}.scr-kpi:nth-child(-n+2){border-bottom:1px solid #1e232e}.scr-highlights{grid-template-columns:1fr}.scr-highlight{border-right:0;border-bottom:1px solid #1e232e}.scr-svg{min-height:180px}.scr-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.scr-filters{grid-template-columns:1fr}.scr-panel{padding:12px}.scr-kpi{padding:12px}.scr-kpi b{font-size:20px}.an-subs{gap:14px}.an-subs button{font-size:12px}}
 @media print{.an-subs,.scr-filters,.scr-top,.scr-pager,.scr-actions,.scr-buttons{display:none!important}}
+
+/* Cobertura auditável do Screener v743: uma única linha sem cards aninhados. */
+.scr-coverage{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:#11141b;border-top:1px solid #1e232e;border-bottom:1px solid #1e232e;padding:10px 12px;margin:10px 0 12px;font-size:11px;color:#b5bac5}
+.scr-coverage>span{display:inline-flex;align-items:baseline;gap:5px;min-width:0}
+.scr-coverage b{font-variant-numeric:tabular-nums;color:#d4a017;font-size:13px;font-weight:760;white-space:nowrap}
+.scr-coverage .scr-coverage-note{font-size:10px;flex:1 1 100%;opacity:.85}
+@media(max-width:600px){.scr-coverage{gap:7px 14px}.scr-coverage>span{flex-wrap:wrap}.scr-table{min-width:980px}}
