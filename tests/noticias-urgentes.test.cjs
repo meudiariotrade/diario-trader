@@ -49,7 +49,7 @@ test('coleta em paralelo, ignora fontes com falha, notícias antigas e duplicata
   assert.equal(r.noticias.length, 1);
   assert.ok(r.fontesOk >= 6);
   assert.ok(chamadas.some((x) => x.includes('finnhub.io')));
-  assert.ok(chamadas.some((x) => x.includes('rsshub.app')));
+  assert.equal(chamadas.some((x) => x.includes('rsshub.app')), false, 'RSSHub só deve ser usado se FxTwitter falhar');
 });
 
 test('hash no push_log impede segunda notificação e respeita o link', async () => {
@@ -148,4 +148,34 @@ test('X @FirstSquawk e @DeItaone usam feeds FxTwitter em paralelo com URLs reais
   assert.equal(r.fontesOk, 2);
   assert.equal(r.noticias.length, 2);
   assert.ok(r.noticias.every(x => x.fonte.startsWith('X @') && x.link.startsWith('https://x.com/')));
+});
+
+
+test('v727: quando FxTwitter falhar, tenta apenas uma fonte reserva (sem fan-out de 404/429)', async () => {
+  const { coletarNoticias } = await modulo;
+  const agora = new Date('2026-11-16T15:10:00Z');
+  const calls = [];
+  const feed = '<rss><item><title>Fed anuncia nova decisão sobre juros</title><link>https://x.com/FirstSquawk/status/2122088503773442208</link><pubDate>Mon, 16 Nov 2026 15:09:00 GMT</pubDate></item></rss>';
+  const fetcher = async (url) => {
+    calls.push(String(url));
+    if (String(url).startsWith('https://fxtwitter.com/')) throw Error('fonte indisponivel');
+    if (String(url).startsWith('https://rsshub.app/')) return { ok: true, text: async () => feed };
+    throw Error('feed fora');
+  };
+  await coletarNoticias('', agora, fetcher, 'leve');
+  assert.ok(calls.some(url => url.includes('rsshub.app/twitter/user/FirstSquawk')));
+  assert.equal(calls.some(url => url.includes('nitter.mie.foundation')), false);
+  assert.equal(calls.some(url => url.includes('nitter.mizuki.st')), false);
+});
+test('v727: modo leve não consulta todas as fontes do relatório completo', async () => {
+  const { coletarNoticias } = await modulo;
+  const agora = new Date('2026-11-16T15:10:00Z'), calls = [];
+  await coletarNoticias('teste', agora, async (url) => {
+    calls.push(String(url));
+    throw Error('Sem conexão');
+  }, 'leve');
+  assert.equal(calls.some(u => u.includes('bloomberglinea.com.br')), false);
+  assert.equal(calls.some(u => u.includes('news.google.com/rss/search')), false);
+  assert.equal(calls.some(u => u.includes('category=crypto')), false);
+  assert.ok(calls.some(u => u.includes('finnhub.io/api/v1/news?category=general')));
 });
