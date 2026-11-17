@@ -68,7 +68,8 @@ test('Interface: até 10 ações e PDF de snapshot local preservando Pesquisa',(
  assert.match(app,/DiarioScreenersRelatorio\.share/);
  assert.match(app,/Screener Brasil/);
  assert.match(app,/Screener EUA/);
- assert.doesNotMatch(pdf,/supabase\.co|\\/functions\\/v1|SERVICE_ROLE_KEY|fetch\('https:/);
+ assert.doesNotMatch(pdf,new RegExp('supabase\\.co|/functions/v1|SERVICE_ROLE_KEY|fetch\\(.https:'));
+
  assert.match(pdf,/pdf-sans\.ttf/);
  assert.match(pdf,/pdf-lib\.min\.js/);
 });
