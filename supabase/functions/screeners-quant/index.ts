@@ -23,7 +23,8 @@ async function publicSnapshot(req:Request,market:string){
  const raw=await rpc('quant_v2_snapshot_read',{p_market:market});
  if(!raw||typeof raw!=='object')return out({error:'Snapshot ainda nao gerado'},503);
  // Global, sem user_id, carteira ou qualquer dado particular.
- const body=JSON.stringify({ok:true,...raw,snapshot_model:'v2.0'});
+ const {top10:storedRanking,...publicFields}=raw; // Top 10 fica precomputado no banco, não é retransmitido sem necessidade.
+ const body=JSON.stringify({ok:true,...publicFields,snapshot_model:'v2.0'});
  const tag=await etag(body),headers={...CORS,'Cache-Control':'public, max-age=900, s-maxage=1800',
   'ETag':tag,'X-Snapshot-Source':'precomputed','Vary':'Accept-Encoding',
   'Content-Type':'application/json; charset=utf-8'};
