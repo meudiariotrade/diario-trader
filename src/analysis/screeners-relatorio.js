@@ -78,7 +78,7 @@ function individual(L,m,row,st,i,total,opts={}){
  L.write(opts.automatic?'NOTA NO RANKING AUTOMÁTICO':'NOTA QUANTITATIVA',L.M,L.y,{font:'bold',size:9,color:L.C.gold});
  L.write(st.score===null?'INCOMPLETO':num((opts.automatic?st.modelScore:st.score)/10,1)+' / 10',L.M,L.y+21,{font:'serif',size:22});
  L.write(st.level.toUpperCase(),L.W-L.M,L.y+27,{font:'bold',size:9,right:true,color:st.validated?L.C.green:L.C.red});L.y+=67;
- L.rectangle(L.M,L.y,L.CW,58,L.C.panel);L.y=L.wrap(st.interpretation,L.M+12,L.y+11,L.CW-24,{size:9,leading:13,maxLines:3})+26;
+ L.rectangle(L.M,L.y,L.CW,58,L.C.panel);L.y=L.wrap(st.profile||st.interpretation,L.M+12,L.y+11,L.CW-24,{size:9,leading:13,maxLines:3})+26;
  L.write('POR QUE A EMPRESA RECEBEU ESTA PONTUAÇÃO',L.M,L.y,{font:'bold',size:9.5,color:L.C.gold});L.y+=24;
  st.parts.forEach(g=>{
   L.bar(g.name+'  ('+g.weight+'% de peso)',g.points==null?null:g.points/10,g.weight/10);
@@ -91,7 +91,7 @@ function individual(L,m,row,st,i,total,opts={}){
  L.y+=6;L.write('ALERTAS / LACUNAS PARA CONFERIR',L.M,L.y,{font:'bold',size:9,color:L.C.red});L.y+=16;
  for(const v of (st.risks.length?st.risks:['Validar preço, demonstrações, riscos e premissas do setor.']).slice(0,3)){L.y=L.wrap('• '+v,L.M,L.y,L.CW,{size:8.3,leading:12,maxLines:2})+4}
  L.y+=10;L.line(L.M,L.y,L.W-L.M,L.y);L.y+=8;
- L.y=L.wrap('FONTES: '+st.sources.join(', ')+'. Fundamentos: '+date(st.fundamentals_at)+'. Técnico: '+date(st.technical_at)+'. Snapshot: '+date(st.updated_at)+'. Cobertura: '+num(st.coverage,0)+'%.',L.M,L.y,L.CW,{size:7.7,color:L.C.muted,leading:11,maxLines:3});L.footer();
+ L.y=L.wrap('FONTES: '+st.sources.join(', ')+'. Competência do balanço: '+date(st.competence)+'. Coleta: '+date(st.fundamentals_at)+'. Técnico: '+date(st.technical_at)+'. Cobertura: '+num(st.coverage,0)+'%.',L.M,L.y,L.CW,{size:7.7,color:L.C.muted,leading:11,maxLines:3});L.footer();
 }
 function methodology(L,m,opts={}){
  L.page('Como o score é calculado','Metodologia, validação, premissas e limitações');
@@ -123,7 +123,7 @@ async function build(m,rows,opts={}){
   return doc.embedFont(new Uint8Array(await r.arrayBuffer()),{subset:true});
  }));
  const L=drawing(doc,P,{sans:loaded[0],bold:loaded[1],serif:loaded[2]});
- const studies=rows.map(r=>intelligence().diagnostics(m,r));
+ const studies=rows.map(r=>intelligence().diagnostics(m,r,Date.now(),opts.medians||null));
  cover(L,m,rows,studies,opts);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length,opts));methodology(L,m,opts);
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:(opts.automatic?'Top10-Quantitativo-':'Dossie-')+m+'-'+new Date().toISOString().slice(0,10)+'-'+rows.length+'-acoes.pdf',pages:doc.getPageCount()};
 }
