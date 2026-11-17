@@ -15,8 +15,8 @@ MODO AUTOMÁTICO (recomendado: configura uma vez só)
 2. Entre com o e-mail e a senha da conta (só na primeira vez) e escolha a voz, a velocidade
    e os formatos (ex.: 9:16 e 16:9).
 3. Pronto. Sempre que o computador estiver ligado, a ponte confere a cada 10 minutos se
-   você gerou uma aula nova no app, faz o vídeo e manda para a sua conta. No celular, em
-   Estudos → Aulas, aparece o botão "🎬 Vídeo" na aula: assistir, compartilhar ou baixar.
+   você gerou uma aula antiga na nuvem, faz o vídeo e salva no cache local do PC, sem upload.
+   Para aulas novas locais do Mentor, abra a aula no PC e toque "Gerar vídeo na ponte do PC".
 4. Para parar: "DESLIGAR AUTOMATICO.bat".
 
 GERAR UM VÍDEO NA HORA (manual)
@@ -26,8 +26,13 @@ GERAR UM VÍDEO NA HORA (manual)
 3. Escolha a aula, a voz (Antônio, Francisca ou Thalita), a velocidade e o formato:
    1 = 16:9 deitado (YouTube, computador) · 2 = 9:16 em pé (Stories, Reels, WhatsApp) · 3 = 1:1 quadrado.
 4. Espere. Leva cerca de 1 minuto para cada 2 minutos de vídeo.
-5. O vídeo fica em Vídeos\Diario de Trader (a pasta abre sozinha no fim) e, se você quiser,
-   vai também para o app (botão "🎬 Vídeo" na aula).
+5. O vídeo fica em Vídeos\Diario de Trader (a pasta abre sozinha no fim) e o cache da ponte fica no mesmo computador. O app no PC carrega via localhost e salva no IndexedDB.
+
+SERVIDOR LOCAL
+- Rode "INICIAR SERVIDOR LOCAL.bat" no PC (ou use o modo automático, que já inicia o servidor).
+- O navegador do próprio PC acessa http://127.0.0.1:8766; o serviço não abre portas na rede local.
+- No iPhone, 127.0.0.1 é o próprio iPhone: importe MP4 ou backup JSON do PC, sem Supabase Storage.
+- Não há sincronização automática PC → iPhone nesta versão.
 
 COMO FUNCIONA
 - A voz vem do serviço gratuito de vozes neurais da Microsoft (edge-tts), que também

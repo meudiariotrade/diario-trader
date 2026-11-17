@@ -3132,6 +3132,7 @@ const RS_MAX = 50 * 1024 * 1024,
     Date.now() - new Date(e.atualizado || e.criado) >
       (e.erro && /sozinho/.test(e.erro) ? 35 : 6) * 6e4;
 async function rsFn(e, t) {
+  if (t?.id && String(t.id).startsWith('local-') && window.ResumosLocais) return window.ResumosLocais.handleFn(e,t);
   const a = cfg();
   if (!a) throw new Error("Configure o Supabase na aba Conta.");
   if (!SESS || !SESS.at)
@@ -3176,7 +3177,7 @@ function rsRefresh() {
 }
 var rsLoad;
 function rsPoll() {
-  const e = Object.values(RS.jobs).some(rsPend);
+  const e = Object.values(RS.jobs).some(j => rsPend(j) && !j.local);
   (e &&
     !RS.poll &&
     (RS.poll = setInterval(() => {
@@ -3204,47 +3205,9 @@ const rsPdfErro = (e) =>
           : ""
       : "Envie um arquivo PDF."
     : "";
-function rsUpload(e, t, a) {
-  return new Promise((o, s) => {
-    const n = cfg();
-    if (!n) return s(new Error("Configure o Supabase na aba Conta."));
-    tok()
-      .then(() => {
-        const r = SESS.uid + "/" + t.id + "-" + Date.now() + ".pdf",
-          i = new XMLHttpRequest();
-        (i.open("POST", n.url + "/storage/v1/object/livros/" + r),
-          i.setRequestHeader("apikey", n.key),
-          i.setRequestHeader("Authorization", "Bearer " + SESS.at),
-          i.setRequestHeader("Content-Type", "application/pdf"),
-          i.setRequestHeader("x-upsert", "false"),
-          (i.timeout = 10 * 6e4),
-          (i.upload.onprogress = (l) => {
-            l.lengthComputable &&
-              a &&
-              a(Math.round((l.loaded / l.total) * 100));
-          }),
-          (i.onload = () => {
-            if (i.status >= 200 && i.status < 300) return o(r);
-            let l = "";
-            try {
-              l = JSON.parse(i.responseText).message || "";
-            } catch {}
-            s(
-              new Error(
-                i.status === 413
-                  ? "O PDF passa do limite de envio do servidor (50 MB)."
-                  : l || "Não consegui enviar o PDF (erro " + i.status + ").",
-              ),
-            );
-          }),
-          (i.onerror = () =>
-            s(new Error("Falha de rede no envio do PDF. Tente de novo."))),
-          (i.ontimeout = () => s(new Error("O envio do PDF demorou demais."))),
-          i.send(e));
-      })
-      .catch(s);
-  });
-}
+// PDF local é guardado pelo módulo ResumosLocais; upload para Storage removido.
+async function rsUpload(){ throw new Error('O armazenamento de PDFs é exclusivamente local.'); }
+
 function rsUpUi(e, t) {
   (document.querySelectorAll('[data-rs-up="' + e + '"]').forEach((a) => {
     a.textContent = t + "%";
@@ -3575,6 +3538,7 @@ function mdHtml(e) {
 }
 async function rsFull(e, t) {
   const a = RS.jobs[e.id];
+  if(a?.local)return window.ResumosLocais?.carregar(e.id) || null;
   if (!a) return null;
   const o = RS.full[e.id];
   if (o && o.id === a.id && !t && o.at > Date.parse(a.atualizado || 0) - 1)
@@ -3630,7 +3594,8 @@ const rsPartes = (e) =>
             (s = 1),
           (a[n.book_id] = l));
       }
-      (Object.keys(RS.jobs).some((n) => !a[n]) && (s = 1),
+      (Object.keys(RS.jobs).some((n) => !a[n] && !RS.jobs[n]?.local) && (s = 1),
+        Object.entries(RS.jobs).forEach(([id,j]) => {if(j?.local&&j.owner===SESS?.uid)a[id]=j;}),
         (RS.jobs = a),
         ls.set("diario-rs", a),
         (RS.err = ""),
@@ -3662,6 +3627,12 @@ const rsPartes = (e) =>
       (RSNEXT = null),
       (RS.err = ""));
     try {
+      if(a){
+        const problema=rsPdfErro(a);if(problema)throw new Error(problema);
+        if(!window.ResumosLocais)throw new Error('O gerador local de resumos não carregou. Atualize a página.');
+        await window.ResumosLocais.gerar(e,t,a,o);
+        return;
+      }
       if (o.modo === "completo" && !a)
         throw new Error(
           "O resumo completo (50+ páginas) é feito a partir do PDF: anexe o arquivo do livro.",
@@ -3672,19 +3643,7 @@ const rsPartes = (e) =>
           d = await l.pushManager.getSubscription();
         s = d && d.endpoint;
       } catch {}
-      let n;
-      if (a) {
-        const l = rsPdfErro(a);
-        if (l) throw new Error(l);
-        ((RS.up[e.id] = { p: 0 }), rsRefresh());
-        try {
-          n = await rsUpload(a, e, (d) => {
-            ((RS.up[e.id].p = d), rsUpUi(e.id, d));
-          });
-        } finally {
-          delete RS.up[e.id];
-        }
-      }
+      const n = null; // arquivo local nunca entra na fila/Storage
       const r = await rsFn("criar", {
           book_id: e.id,
           titulo: e.t,
@@ -3727,16 +3686,16 @@ function rsForm(e) {
   const t = rspPref("modo", "padrao"),
     a = rspPref("pag", 100),
     o = rspPref("def", "");
-  return `<div class="sm mut" style="margin:6px 0 8px">Escolha o tipo de resumo. Tudo roda em segundo plano: pode sair da tela.</div>
+  return `<div class="sm mut" style="margin:6px 0 8px">Escolha o tipo de resumo. Com PDF, mantenha o aplicativo aberto até finalizar; sem PDF, a fila continua em segundo plano.</div>
 <div class="seg" style="margin-bottom:8px"><button class="${t === "padrao" ? "on" : ""}" data-ep="modo" data-id="padrao">📄 Padrão</button><button class="${t === "completo" ? "on" : ""}" data-ep="modo" data-id="completo">📚 Completo</button></div>
-${t === "completo" ? `<div class="card" style="margin:0 0 8px;background:var(--bg)"><div class="sm"><b>Resumo completo, capítulo a capítulo</b>, com no mínimo:</div><div class="seg" style="margin:6px 0">${RS_PAGS.map((s) => `<button class="${+a === s ? "on" : ""}" data-ep="pag" data-id="${s}">${s} pág.</button>`).join("")}</div><div class="sm mut">Feito a partir do <b>PDF</b> (obrigatório). O Gemini lê o sumário, faz o resumo geral e escreve cada capítulo em profundidade, com páginas citadas, pontos-chave e aplicação no trading. Leva de 15 a 40 min e usa várias chamadas ao Gemini (custa mais que o padrão). Página = A4, fonte 12, ~${RS_PPAG} palavras.</div></div>` : '<div class="sm mut" style="margin-bottom:8px">Resumo estruturado (tese, ideias, conceitos, aplicação no trading, perguntas). 30 s a 2 min. Com PDF usa o texto real do livro; sem PDF usa o que o Gemini conhece do livro.</div>'}
+${t === "completo" ? `<div class="card" style="margin:0 0 8px;background:var(--bg)"><div class="sm"><b>Resumo completo, capítulo a capítulo</b>, com meta de páginas:</div><div class="seg" style="margin:6px 0">${RS_PAGS.map((s) => `<button class="${+a === s ? "on" : ""}" data-ep="pag" data-id="${s}">${s} pág.</button>`).join("")}</div><div class="sm mut">Feito a partir do <b>PDF</b> (obrigatório). O Gemini lê o sumário, faz o resumo geral e escreve cada capítulo em profundidade, com páginas citadas, pontos-chave e aplicação no trading. É gerado em partes locais; mantenha a aba aberta. O total de páginas é uma meta, não uma garantia, e depende do texto disponível. O PDF não é enviado ao Supabase Storage.</div></div>` : '<div class="sm mut" style="margin-bottom:8px">Resumo estruturado (tese, ideias, conceitos, aplicação no trading, perguntas). 30 s a 2 min. Com PDF usa o texto real do livro; sem PDF usa o que o Gemini conhece do livro.</div>'}
 <label>🧩 Prompt (opcional)<select id="rspsel">${rspOpts(o)}</select></label>
 <textarea id="rsptx" rows="3" placeholder="Escreva aqui o que você quer além do padrão (ex.: foque em gestão de risco e traga exemplos com mini índice)" style="width:100%;margin-top:4px">${esc(rspTexto(o))}</textarea>
 <div class="sm mut" style="margin-bottom:6px">Seus prompts ficam em Estudos → 🧩 Meus prompts. As regras de fidelidade ao livro continuam valendo.</div>
 <label>Foco (opcional)<input id="rsfoco" placeholder="ex.: gestão de risco e psicologia"></label>
 <label>📎 PDF do livro ${t === "completo" ? "<b>(obrigatório)</b>" : "(opcional)"}, até 50 MB<input type="file" id="rspdf2" accept="application/pdf,.pdf"></label>
-<div class="sm mut">O arquivo vai para o Gemini (Google) e é apagado do seu armazenamento e do Gemini assim que o resumo fica pronto.</div>
-<button class="btn" style="margin-top:8px;width:100%" data-ep="gen" data-id="${e.id}">✨ Gerar ${t === "completo" ? "resumo completo (mín. " + a + " páginas)" : "resumo"}</button>`;
+<div class="sm mut">O PDF permanece no IndexedDB deste aparelho. Somente trechos de texto são enviados à IA. Faça backup JSON antes de limpar os dados do navegador.</div>
+<button class="btn" style="margin-top:8px;width:100%" data-ep="gen" data-id="${e.id}">✨ Gerar ${t === "completo" ? "resumo completo (meta " + a + " páginas)" : "resumo"}</button>`;
 }
 function rsAndamento(e, t) {
   const a = t.progresso || {},
@@ -3761,7 +3720,7 @@ function rsAndamento(e, t) {
 <div class="sm mut" style="margin-top:6px">${a.palavras ? a.palavras.toLocaleString("pt-BR") + " palavras · " + rsPagTxt(a.paginas) + " de " + o : "Meta: " + o + " páginas"}${l ? " · faltam ~" + l + " min" : ""}</div>
 ${t.erro ? `<div class="sm" style="margin-top:4px;color:#a57d34">Tentando de novo: ${esc(t.erro)}</div>` : ""}
 ${a.prontas ? `<button class="btn s" style="margin-top:8px" data-ep="ler" data-id="${e.id}">📖 Ler o que já está pronto (${a.prontas} parte${a.prontas > 1 ? "s" : ""})</button>` : ""}
-<div class="sm mut" style="margin-top:6px">Pode fechar o app. ${rsPushHint()}</div>`;
+<div class="sm mut" style="margin-top:6px">${t.local ? 'Geração local em andamento: mantenha a aba aberta.':'Pode fechar o app. '+rsPushHint()}</div>`;
 }
 function rsCompletoCard(e, t) {
   const a = t.resultado || {},

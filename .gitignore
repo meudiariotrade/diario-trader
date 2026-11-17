@@ -3,3 +3,8 @@ _site/
 test-results/
 
 supabase/.temp/
+.env
+.env.*
+!.env.example
+bridge-video/config.json
+bridge-video/dicionario-voz.json

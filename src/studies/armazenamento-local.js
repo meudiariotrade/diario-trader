@@ -34,6 +34,7 @@
   return true;
  }
  async function get(tipo,id){return (await transaction('readonly',s=>s.get(token(tipo,id))))||null;}
+ async function remove(tipo,id){await transaction('readwrite',s=>s.delete(token(tipo,id)));return true;}
  async function all(){return (await transaction('readonly',s=>s.getAll())).filter(r=>r.owner===owner());}
  async function legacy(){
   const uid=owner(),out=[];
@@ -101,5 +102,5 @@
   if(typeof idb==='function')for(const item of data.cache){if(!item||typeof item.key!=='string'||!olderKey(item.key))continue;const key=item.key.replace(/^(diario:mentor-(?:local|voz):v\d+:)(.*)$/,(_whole,prefix,rest)=>prefix+(prefix.includes('mentor-voz')?rest.replace(/^[^:]+/,owner()):rest.replace(/^(aulas|texto):[^:]+/,(_v,kind)=>kind+':'+owner())));try{await idb('kv','put',item.b64?decode(item.b64,item.mime):item.value,key);}catch{}}
   return {arquivos:data.arquivos.length,livros:data.livros?.length||0};
  }
- window.EstudosLocal={put,get,all,exportar,importar,owner};
+ window.EstudosLocal={put,get,remove,all,exportar,importar,owner};
 })();

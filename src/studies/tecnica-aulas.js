@@ -20,14 +20,35 @@ function catalog(){
 }
 
 function quiz(l){const r=record(l);return `<section class="tp-check" aria-label="Mini-check de fixação"><h3>Mini-check de fixação</h3><p>Três perguntas. O feedback aparece ao responder; você pode tentar novamente.</p>${l.questions.map((q,i)=>{const a=r.answers[i],answered=Number.isInteger(a)&&a>=0&&a<q.options.length,ok=a===q.answer;return `<fieldset><legend>${i+1}. ${E(q.q)}</legend>${q.options.map((o,j)=>`<label class="${answered&&a===j?(ok?'tp-correct':'tp-wrong'):''}"><input type="radio" name="tp-${l.id}-${i}" data-tp-question="${i}" value="${j}" ${answered&&a===j?'checked':''}>${E(o)}</label>`).join('')}<p class="tp-feedback" data-tp-feedback="${i}" role="status">${answered?(ok?'Correto. ':'Reveja. ')+E(q.why):''}</p></fieldset>`;}).join('')}<p class="tp-result" role="status">${passed(l)?'✓ Lição concluída: quatro etapas vistas e três respostas corretas.':`Etapas vistas: ${[0,1,2,3].filter(s=>r.viewed.includes(s)).length}/4 · Acertos: ${l.questions.filter((q,i)=>r.answers[i]===q.answer).length}/3`}</p></section>`;}
-function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>Os MP4 podem ficar no aparelho. Importe do PC ou migre o vídeo antigo da nuvem uma única vez.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div><div class="tp-controls"><label>Formato<select data-tp-film-format><option value="16x9">16:9</option><option value="9x16">9:16</option><option value="1x1">1:1</option></select></label><label>Importar MP4<input type="file" data-tp-film-file accept=".mp4,video/mp4"></label><button type="button" data-tp-film-migrate>Migrar vídeo antigo da nuvem</button></div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="none" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video><button type="button" data-tp-action="close-film">Fechar vídeo</button>`:''}<p>Ouvir Aula utiliza exclusivamente a voz configurada na Ponte Vídeo do PC. Sem substituição pela voz do navegador.</p></details>`;}
+function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>Os vídeos ficam no IndexedDB. No PC, a ponte local entrega o MP4 sem Supabase. No iPhone, importe o arquivo/backup; a ponte do PC não é acessível por 127.0.0.1 do iPhone.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div><div class="tp-controls"><label>Formato<select data-tp-film-format><option value="16x9">16:9</option><option value="9x16">9:16</option><option value="1x1">1:1</option></select></label><label>Importar MP4<input type="file" data-tp-film-file accept=".mp4,video/mp4"></label><button type="button" data-tp-generate>Gerar vídeo na ponte do PC</button><button type="button" data-tp-film-migrate>Migrar vídeo antigo da nuvem</button></div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="none" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video><button type="button" data-tp-action="close-film">Fechar vídeo</button>`:''}<p>Ouvir Aula utiliza exclusivamente a voz configurada na Ponte Vídeo do PC. Sem substituição pela voz do navegador.</p></details>`;}
 async function openFilm(format,fromCloud=false){
  stop();const token=run,l=T.lessons.find(l=>l.id===selected);if(!l)return;
  if(typeof SESS==='undefined'||!SESS?.uid){status='Entre na sua conta para assistir ao vídeo da ponte.';paint();return;}
  videoFormat=format;status='Buscando vídeo neste aparelho…';loading=true;paint();
  const localKey=(l.videoId||'tecnica-v1-'+l.id)+'-'+format;
  try{const cached=await window.EstudosLocal?.get('mentor-video',localKey);if(token!==run)return;if(cached?.blob?.size){film=URL.createObjectURL(cached.blob);loading=false;status='Vídeo carregado do aparelho.';paint();return;}}catch{}
- if(!fromCloud){loading=false;status='Sem vídeo neste aparelho. Importe um MP4 do PC ou migre uma vez da nuvem.';paint();return;}
+ if(!fromCloud){
+  // No PC o servidor vinculado somente à interface de loopback serve mídia diretamente.
+  // iPhone usa importação MP4/backup: 127.0.0.1 no iPhone NÃO acessa o PC.
+  const source='http://127.0.0.1:8766/video/'+encodeURIComponent(localKey)+'.mp4';
+  try{
+   const ctl=new AbortController(),ttl=setTimeout(()=>ctl.abort(),3500);
+   let response;
+   try{response=await fetch(source,{method:'GET',signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});}
+   finally{clearTimeout(ttl);}
+   if(response?.ok&&/^video\/mp4/i.test(response.headers?.get('content-type')||'')){
+    const bytes=Number(response.headers.get('content-length')||0);
+    if(bytes>350*1024*1024)throw Error('MP4 muito grande para armazenar no aparelho.');
+    const data=await response.blob();
+    if(!data.size||data.size>350*1024*1024)throw Error('MP4 inválido ou grande demais.');
+    if(token!==run||currentOwner()!==owner||!active())return;
+    await window.EstudosLocal.put('mentor-video',localKey,data,{formato:format,aula:l.id,origem:'ponte-local'});
+    film=URL.createObjectURL(data);loading=false;status='Vídeo recebido diretamente da ponte do PC e salvo neste aparelho.';paint();return;
+   }
+  }catch{}
+  if(token!==run)return;
+  loading=false;status='Sem vídeo local. No PC, ligue o servidor da ponte; no iPhone, importe o MP4 ou um backup JSON.';paint();return;
+ }
  const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),10000);
  try{
   await tok();if(token!==run||currentOwner()!==owner)return;
@@ -41,8 +62,21 @@ async function openFilm(format,fromCloud=false){
    const blob=await dataVideo.blob();if(!blob.size||blob.size>350*1024*1024)throw Error('Vídeo inválido ou muito grande.');
    await window.EstudosLocal.put('mentor-video',localKey,blob,{formato:format,aula:l.id});if(token!==run)return;
    film=URL.createObjectURL(blob);loading=false;status='Vídeo migrado. Agora ficará no aparelho.';paint();
- }catch{if(token!==run)return;loading=false;status='Vídeo ainda indisponível neste formato. Confirme que a ponte foi atualizada e aguarde a geração e o envio pelo PC. O áudio somente será reproduzido pela ponte de voz configurada no PC.';paint();}
+ }catch{if(token!==run)return;loading=false;status='Vídeo ainda indisponível neste formato. Para o iPhone, importe o arquivo MP4 do PC; não é enviado ao Supabase. O áudio somente será reproduzido pela ponte de voz configurada no PC.';paint();}
  finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
+}
+async function gerarVideoNaPonte(){
+ const l=T.lessons.find(x=>x.id===selected);if(!l?.pdf){status='Escolha uma aula do Mentor criada a partir de PDF.';paint();return;}
+ const formato=videoFormat,base='http://127.0.0.1:8766';
+ status='Enviando apenas o roteiro à ponte local do PC…';paint();
+ try{
+  const id=String(l.videoId||l.id),aula={id,roteiro:{mentor:l}};
+  const res=await fetch(base+'/aula',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({aula,formato}),credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(6500)});
+  if(!res.ok)throw Error('Ponte local não recebeu a aula.');
+  status='Roteiro entregue ao PC. A ponte está gerando o MP4 localmente; toque em Assistir depois de terminar.';paint();
+ }catch{
+  status='Ponte local não encontrada. No PC, abra INICIAR SERVIDOR LOCAL.bat ou LIGAR AUTOMATICO.bat.';paint();
+ }
 }
 function lesson(l){const idx=T.lessons.indexOf(l),r=record(l);return `<header class="tp-head"><button type="button" data-tp-action="catalog">← Todas as lições</button><span>ANÁLISE TÉCNICA NA PRÁTICA · ${idx+1}/${T.lessons.length}</span><h2 tabindex="-1" id="tp-title">${E(l.title)}</h2><p>${l.minutes||3} min de leitura · ${E(T.modules.find(m=>m.id===l.module).reference)}</p></header><div class="tp-class ${visual?'tp-visual':''}"><div class="tp-main"><p class="tp-summary">${E(l.summary)}</p><div class="tp-controls"><button type="button" data-tp-action="listen" ${loading?'disabled':''}>${loading?'Preparando…':playing?'Reiniciar etapa':visual?'Ouvir etapa':'Ouvir Aula'}</button><button type="button" data-tp-action="pause" ${!playing&&!loading?'disabled':''}>Pausar</button><button type="button" data-tp-action="visual">${visual?'Voltar à abertura':'Explorar o exemplo'}</button></div><p class="tp-status" role="status" aria-live="polite">${E(status)}</p>${visual?`<div class="tp-stages" role="navigation" aria-label="Etapas da lição">${(l.stageNames||names).map((n,i)=>`<button type="button" data-tp-step="${i}" aria-current="${step===i?'step':'false'}">${i+1}. ${E(n)}</button>`).join('')}</div><div class="tp-chart">${T.chart(l,step)}</div><section class="tp-script"><h3>${step+1}. ${E((l.stageNames||names)[step])}</h3><p>${E(l.stages[step])}</p></section><div class="tp-controls"><button type="button" data-tp-action="prev" ${step===0?'disabled':''}>← Etapa anterior</button><button type="button" data-tp-action="next" ${step===3?'disabled':''}>Próxima etapa →</button></div>`:`<p class="tp-intro">Ouça a explicação com etapas sincronizadas ou explore o gráfico no seu ritmo. Os níveis de preço são didáticos e não representam uma operação em andamento.</p>`}</div>${mentor()}</div>${visual?quiz(l):''}<div class="tp-footer"><button type="button" data-tp-lesson="${T.lessons[Math.max(0,idx-1)].id}" ${idx===0?'disabled':''}>← Lição anterior</button><button type="button" data-tp-lesson="${T.lessons[Math.min(T.lessons.length-1,idx+1)].id}" ${idx===T.lessons.length-1?'disabled':''}>Próxima lição →</button></div>${bridgeDetails()}<p class="tp-note">${l.pdf?'Aula gerada a partir do PDF selecionado. Confira o conteúdo com o material original.':'Exemplo autoral hipotético, inspirado em conceitos clássicos. Não reproduz uma página do livro.'} ${!storageOK?'O navegador bloqueou o armazenamento: progresso somente nesta sessão.':''}</p>`;}
 function markup(){readOwner();const pdfControls=T.pdfControls?.()||'',voiceControls=T.voiceControls?.()||'';const l=T.lessons.find(l=>l.id===selected&&l.pdf);return `<section id="tp-root" class="tp-root ${visual&&l?'tp-is-visual':''}" aria-label="Aulas geradas pelo Mentor 3D">${l?lesson(l):catalog()}${voiceControls}${pdfControls}</section>`;}
@@ -129,6 +163,7 @@ document.addEventListener('click',e=>{
 },true);
 document.addEventListener('click',e=>{
  const b=e.target.closest?.('#tp-root button');if(!b||!active())return;if(b.dataset.tpDict||b.dataset.tpPdf||b.dataset.tpBackup||b.closest('[data-tp-pdf-form]'))return;e.preventDefault();e.stopPropagation();readOwner();
+ if(b.hasAttribute('data-tp-generate')){document.dispatchEvent(new Event('au-study-pause'));gerarVideoNaPonte();return;}
  if(b.dataset.tpFilm){document.dispatchEvent(new Event('au-study-pause'));openFilm(b.dataset.tpFilm);return;}
  if(b.hasAttribute('data-tp-film-migrate')){document.dispatchEvent(new Event('au-study-pause'));openFilm(videoFormat,true);return;}
  if(b.dataset.tpLesson){stop();selected=b.dataset.tpLesson;step=0;visual=false;status='';bridgeFailed=false;paint(true);document.getElementById('tp-root')?.scrollIntoView({block:'start'});return;}

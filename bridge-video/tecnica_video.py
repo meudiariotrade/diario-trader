@@ -175,7 +175,7 @@ def processar(p,cfg,manual=False):
         digest=assinatura(lesson)+'-'+motion+'-'+glossary
         for k in formats:
             fmt=p.FORMATOS[k];key=f"{account}|{lesson['id']}|{digest}|{fmt[0]}|{voice}|{rate}"
-            # Sucesso só após upload; falhas de envio são repetidas no próximo ciclo.
+            # Sucesso só após gravar no cache local; sem upload no Storage.
             done=cfg.setdefault('tecnica_feitos',{})
             if done.get(key) and not manual:continue
             p.diga('Trilha técnica: '+lesson['title'])
@@ -193,6 +193,6 @@ def processar(p,cfg,manual=False):
             session=p.entrar(cfg)
             if session['user']['id'] != account:raise RuntimeError('A conta mudou; geração interrompida.')
             if p.envia_video(session,lesson['id'],fmt[0],output):
-                done[key]=time.strftime('%Y-%m-%d %H:%M');p.grava_cfg(cfg);p.diga('Vídeo da trilha enviado ao app.')
+                done[key]=time.strftime('%Y-%m-%d %H:%M');p.grava_cfg(cfg);p.diga('Vídeo da trilha disponível na ponte local do PC.')
             else:
-                p.diga('Vídeo salvo no PC; envio será tentado no próximo ciclo.')
+                p.diga('Vídeo salvo no PC; cópia para cache local será repetida.')

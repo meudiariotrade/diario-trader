@@ -19,8 +19,8 @@ from urllib import request as urlreq, error as urlerr
 
 PASTA = Path(__file__).resolve().parent
 CONFIG = PASTA / "config.json"
-SUPA_URL = "https://wbpsmszecpzioaijfnsl.supabase.co"
-SUPA_KEY = "sb_publishable_GNuBD5Oyo2Wk-iE2s4TbUQ_1XiKvzhV"   # chave pública do app (a mesma do site)
+SUPA_URL = os.environ.get("DIARIO_SUPA_URL", "https://wbpsmszecpzioaijfnsl.supabase.co").rstrip("/")
+SUPA_KEY = os.environ.get("DIARIO_SUPA_PUBLISHABLE_KEY", "sb_publishable_GNuBD5Oyo2Wk-iE2s4TbUQ_1XiKvzhV")  # publica; token de gestão NUNCA entra aqui
 APP_URL_PADRAO = "https://meudiariotrade.github.io/diario-trader/"
 VOZES = {"1": ("pt-BR-AntonioNeural", "Antônio (masculina)"), "2": ("pt-BR-FranciscaNeural", "Francisca (feminina)"),
          "3": ("pt-BR-ThalitaMultilingualNeural", "Thalita (feminina, mais natural)")}
@@ -80,23 +80,20 @@ def roteiro_de(sess, aid):
     return r[0]["roteiro"]
 
 def envia_video(sess, aid, nome_fmt, arquivo):
-    """Manda o MP4 para a sua conta (pasta só sua); o app mostra o botão 🎬 Vídeo na aula."""
-    ff = ffmpeg_bin(); arq = Path(arquivo)
-    if arq.stat().st_size > 48 * 1024 * 1024:   # limite do armazenamento: 50 MB por arquivo
-        menor = arq.with_name(arq.stem + " (app).mp4")
-        subprocess.run([ff, "-y", "-loglevel", "error", "-i", str(arq), "-vf", "scale='min(1280,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "27",
-                        "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", str(menor)], check=True)
-        arq = menor
-        if arq.stat().st_size > 48 * 1024 * 1024:
-            diga("  (vídeo grande demais para enviar ao app; ficou só no computador)"); return False
-    caminho = f"{sess['user']['id']}/{aid}-{nome_fmt}.mp4"
-    req = urlreq.Request(f"{SUPA_URL}/storage/v1/object/aulas-videos/{caminho}", data=arq.read_bytes(), method="POST",
-                         headers={"apikey": SUPA_KEY, "Authorization": "Bearer " + sess["access_token"], "Content-Type": "video/mp4", "x-upsert": "true"})
-    try:
-        with urlreq.urlopen(req, timeout=600) as resp: resp.read()
-        return True
-    except urlerr.HTTPError as e:
-        diga(f"  (não consegui enviar ao app: {e.code} {e.read().decode(errors='ignore')[:160]})"); return False
+    """Compatibilidade da ponte: publica APENAS na pasta local do PC, zero upload Storage."""
+    arq = Path(arquivo)
+    if not arq.is_file() or arq.stat().st_size == 0:
+        diga("  (arquivo de vídeo não encontrado ou vazio)"); return False
+    if not re.fullmatch(r"[a-zA-Z0-9_-]{1,128}", str(aid)) or nome_fmt not in {"16x9","9x16","1x1"}:
+        diga("  (identificador de aula ou formato inválido)"); return False
+    destino = arq.parent / ".diario-videos"
+    destino.mkdir(parents=True,exist_ok=True)
+    target = destino / (str(aid) + "-" + nome_fmt + ".mp4")
+    if arq.resolve() != target.resolve():
+        shutil.copy2(arq,target)
+    diga("Vídeo salvo no cache local da ponte: " + str(target))
+    return True
+
 
 def escolhe_aula(sess):
     L = aulas_prontas(sess)
@@ -274,16 +271,16 @@ def gerar_um(cfg, sess):
     diga(f"\nGerando: {destino.name}\nIsso leva alguns minutos (cerca de 1 minuto para cada 2 de vídeo). Não feche esta janela.\n")
     t0 = time.time(); dur = asyncio.run(gravar(aula, sess, cfg, voz, taxa, fmt, destino))
     diga(f"\nPronto! Vídeo de {int(dur // 60)} min {int(dur % 60)} s em {int(time.time() - t0)} s.\nArquivo: {destino}")
-    if pergunta("Enviar este vídeo para o app (aparece o botão 🎬 Vídeo na aula)? s/n", "s").lower().startswith("s"):
+    if pergunta("Disponibilizar este vídeo no cache local do PC (sem upload)? s/n", "s").lower().startswith("s"):
         sess = entrar(cfg)
-        if envia_video(sess, aula["id"], fmt[0], destino): diga("Enviado. Abra Estudos → Aulas no celular.")
+        if envia_video(sess, aula["id"], fmt[0], destino): diga("Vídeo disponível na ponte local do PC. No iPhone, importe o MP4 ou backup JSON.")
     if os.name == "nt":
         try: os.startfile(destino.parent)
         except Exception: pass
 
 def configura_auto(cfg):
     diga("\nMODO AUTOMÁTICO: com o computador ligado, a ponte confere a cada 10 minutos se há aula nova pronta,\n"
-         "gera o vídeo e manda para o app. Escolha uma vez como os vídeos devem sair:")
+         "gera o vídeo no PC e o guarda no cache local. Escolha uma vez como os vídeos devem sair:")
     voz, taxa = pergunta_voz(cfg)
     diga("\nFormatos (pode escolher mais de um, ex.: 2,1):\n  1. 16:9 deitado\n  2. 9:16 em pé\n  3. 1:1 quadrado")
     ks = [x.strip() for x in pergunta("Formatos", ",".join(cfg.get("auto", {}).get("fmts", ["2"]))).split(",") if x.strip() in FORMATOS] or ["2"]
@@ -293,6 +290,8 @@ def configura_auto(cfg):
     diga("Modo automático configurado.")
 
 def vigiar(cfg):
+    import servidor_local
+    servidor_local.iniciar(pasta_saida(cfg))
     a = cfg.get("auto")
     if not a: sys.exit("Rode LIGAR AUTOMATICO.bat primeiro para escolher voz e formatos.")
     diga(f"Modo automático ligado ({time.strftime('%d/%m %H:%M')}). Pode minimizar esta janela.")
@@ -313,7 +312,7 @@ def vigiar(cfg):
                     asyncio.run(gravar(aula, sess, cfg, a["voz"], a["taxa"], fmt, destino))
                     sess = entrar(cfg)
                     ok = envia_video(sess, aula["id"], fmt[0], destino)
-                    diga(f"[{time.strftime('%H:%M')}] {'Pronto e enviado ao app' if ok else 'Pronto (só no computador)'}: {destino.name}")
+                    diga(f"[{time.strftime('%H:%M')}] {'Pronto no cache local' if ok else 'Falha ao copiar para cache local'}: {destino.name}")
                 cfg["feitos"][chave] = time.strftime("%Y-%m-%d %H:%M"); grava_cfg(cfg)
             import tecnica_video, ponte_video
             tecnica_video.processar(ponte_video, cfg)
@@ -326,6 +325,9 @@ def main():
     diga("=" * 60 + "\n  PONTE DE VÍDEO — Diário de Trader\n" + "=" * 60)
     cfg = le_cfg()
     if "--app" in sys.argv: cfg["app_url"] = sys.argv[sys.argv.index("--app") + 1]; grava_cfg(cfg)
+    if "--servidor" in sys.argv:
+        import servidor_local
+        servidor_local.servir(pasta_saida(cfg)); return
     if "--teste" in sys.argv:   # ensaio local sem conta e sem voz (só para conferir a montagem)
         aula = json.loads(Path(sys.argv[sys.argv.index("--teste") + 1]).read_text(encoding="utf-8"))
         sess = {"access_token": "x", "refresh_token": "x", "user": {"id": "teste", "email": ""}}
