@@ -5,6 +5,22 @@
 const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), ANON = ENV('SUPABASE_ANON_KEY'), CRON = ENV('CRON_SECRET');
 const svc = { apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json' };
+// Chave Resend: secret padrão da Edge Function ou alternativa criptografada no Vault.
+let chaveResendCache = ENV('RESEND_API_KEY');
+async function buscarChaveResend(): Promise<string> {
+  if (chaveResendCache) return chaveResendCache;
+  if (!SB || !SRK) return '';
+  const r = await fetch(SB + '/rest/v1/rpc/diario_resend_chave', {
+    method: 'POST',
+    headers: { apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json' },
+    body: '{}',
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => null);
+  if (!r?.ok) return '';
+  const valor = await r.json().catch(() => null);
+  if (typeof valor === 'string' && valor.startsWith('re_')) chaveResendCache = valor;
+  return chaveResendCache;
+}
 async function db(p: string, init: RequestInit = {}) { const r = await fetch(SB + '/rest/v1/' + p, { ...init, headers: { ...svc, ...((init.headers as any) || {}) } }); if (!r.ok) throw new Error('db ' + r.status + ' ' + (await r.text()).slice(0, 160)); const t = await r.text(); return t ? JSON.parse(t) : null; }
 const log = (tarefa: string, ok: boolean, detalhe: string, ms = 0) => db('automacao_log', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ tarefa, ok, detalhe: detalhe.slice(0, 400), ms: Math.round(ms) }) }).catch(() => {});
 function agoraSP() {
@@ -100,10 +116,11 @@ async function fechamento(dia: string) {
       }
     }
     let via = enviados ? `push (${enviados})` : '';
-    if (!enviados && ENV('RESEND_API_KEY')) {
+    const chaveResendAtiva = enviados ? '' : await buscarChaveResend();
+    if (!enviados && chaveResendAtiva) {
       const u = await (await fetch(SB + '/auth/v1/admin/users/' + p.user_id, { headers: svc })).json().catch(() => null);
       if (u?.email) {
-        const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + ENV('RESEND_API_KEY'), 'Content-Type': 'application/json' }, body: JSON.stringify({ from: ENV('EMAIL_DE') || 'Diário de Trader <onboarding@resend.dev>', to: [u.email], subject: '🧾 Fechar o dia: fechamento pós-operação pendente', html: `<div style="font-family:Arial,sans-serif;max-width:520px;color:#13201c"><h3 style="margin:0 0 8px">Fechar o dia</h3><p>${corpo}</p><p style="color:#667;font-size:12px">Abra o Diário de Trader &rarr; Início &rarr; Fechar o dia.</p></div>` }) });
+        const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + chaveResendAtiva, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: ENV('EMAIL_DE') || 'Diário de Trader <onboarding@resend.dev>', to: [u.email], subject: '🧾 Fechar o dia: fechamento pós-operação pendente', html: `<div style="font-family:Arial,sans-serif;max-width:520px;color:#13201c"><h3 style="margin:0 0 8px">Fechar o dia</h3><p>${corpo}</p><p style="color:#667;font-size:12px">Abra o Diário de Trader &rarr; Início &rarr; Fechar o dia.</p></div>` }) });
         if (r.ok) via = 'e-mail';
       }
     }
