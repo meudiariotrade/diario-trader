@@ -1967,7 +1967,11 @@ async function rq(e, t = {}, a = !0) {
     return new Response(cached.body, {status:200,headers:{'Content-Type':'application/json','X-Diario-Cache':'local'}});
   }
   // Limite temporário no app: evita repetir centenas de requisições 402 e preserva a fila local.
-  if (window.DiarioNuvemQuota?.ate > Date.now()) {
+  const ehAuth = /^\/auth\/v1\//.test(e);
+  const quota = window.DiarioNuvemQuota;
+  // Cota de projeto antigo/expirada nunca bloqueia autenticação no projeto novo.
+  if(quota && (quota.projeto !== s.url || quota.ate <= Date.now())) window.DiarioNuvemQuota=null;
+  if (!ehAuth && window.DiarioNuvemQuota?.projeto === s.url && window.DiarioNuvemQuota.ate > Date.now()) {
     const erro = new Error("Supabase temporariamente bloqueado por limite de transferência. Seus dados continuam salvos neste aparelho.");
     erro.status = 402;
     erro.code = "EGRESS_QUOTA";
@@ -2000,12 +2004,12 @@ async function rq(e, t = {}, a = !0) {
       const c = await i.json();
       l = c.msg || c.message || c.error_description || c.error || "";
     } catch {}
-    const bloqueado = i.status === 402;
+    const bloqueado = i.status === 402 && !ehAuth;
     const d = new Error(bloqueado
       ? "Supabase temporariamente bloqueado por limite de transferência. Dados locais preservados; tente sincronizar após a liberação do serviço."
-      : l || "Erro " + i.status);
+      : l || (ehAuth ? "Erro de autenticação HTTP " + i.status + ". Confira a conta do projeto atual." : "Erro " + i.status));
     if (bloqueado) {
-      window.DiarioNuvemQuota = { ate: Date.now() + 120000, motivo: "limite-de-transferencia" };
+      window.DiarioNuvemQuota = { projeto:s.url, ate: Date.now() + 120000, motivo: "limite-de-transferencia" };
       d.code = "EGRESS_QUOTA";
     }
     throw ((d.status = i.status), d);
