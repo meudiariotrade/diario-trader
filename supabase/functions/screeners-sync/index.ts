@@ -215,7 +215,7 @@ Deno.serve(async req=>{
   if(mode==='fundamentos'){
    const m=b.mercado==='BR'?'BR':b.mercado==='US'?'US':null;if(!m)return ok({erro:'Mercado invalido'},400);
    const max=Math.min(200,Math.max(1,Math.floor(Number(b.limite)||200)));
-   const symbols=await rpc('quant_screeners_pendentes',{p_market:m,p_limit:max});
+   const symbols=await rpc('quant_v2_fundamentos_pendentes',{p_market:m,p_limit:max});
    const fundamental=await scanner(m,symbols||[],false);
    const prices=await priceBatch(m,Math.min(12,Math.max(2,Math.ceil(max/20))));
    const final=await finalized(m,'fundamentos',Number(fundamental.atualizados||0)+prices.gravados,prices.erros.length,[...(Array.isArray(symbols)?symbols:[]),...prices.tickers]);
@@ -225,7 +225,7 @@ Deno.serve(async req=>{
    const result:any={};
    for(const market of ['BR','US']){
     try{
-     const symbols=await rpc('quant_screeners_pendentes',{p_market:market,p_limit:80});
+     const symbols=await rpc('quant_v2_fundamentos_pendentes',{p_market:market,p_limit:80});
      const fundamental=await scanner(market,symbols||[],false);
      const prices=await priceBatch(market,market==='BR'?6:8);
      result[market]={fundamental,precos:prices,
