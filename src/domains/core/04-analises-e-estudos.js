@@ -2401,18 +2401,22 @@ async function alEnable() {
       throw new Error(
         "Permissão negada. Libere as notificações nas configurações do navegador ou do app instalado.",
       );
-    const e = await navigator.serviceWorker.ready,
-      t = (await alFn("chave")).chave;
-    let a = await e.pushManager.getSubscription();
-    (a ||
-      (a = await e.pushManager.subscribe({
-        userVisibleOnly: !0,
-        applicationServerKey: u8(t),
-      })),
-      await alFn("inscrever", { sub: a.toJSON(), prefs: npComTurno() }),
-      (AL.sub = a),
-      (AL.ok = "on"),
-      (AL.msg = "Notificações ativadas neste aparelho."));
+    const registro = await navigator.serviceWorker.ready;
+    const chave = (await alFn("chave")).chave;
+    let assinatura = await registro.pushManager.getSubscription();
+    // Reativação renova o endpoint, inclusive quando a chave VAPID mudou.
+    if (assinatura) {
+      try { await alFn("cancelar", { endpoint: assinatura.endpoint }); } catch {}
+      if (!await assinatura.unsubscribe()) throw new Error("Não foi possível renovar a inscrição. Desative e tente novamente.");
+    }
+    assinatura = await registro.pushManager.subscribe({
+      userVisibleOnly: !0,
+      applicationServerKey: u8(chave),
+    });
+    await alFn("inscrever", { sub: assinatura.toJSON(), prefs: npComTurno() });
+    AL.sub = assinatura;
+    AL.ok = "on";
+    AL.msg = "Inscrição push renovada neste aparelho. Use Enviar teste para confirmar o recebimento.";
   } catch (e) {
     AL.msg = e.message || String(e);
   }
@@ -2438,18 +2442,18 @@ async function alTest() {
   try {
     if (!AL.sub)
       throw Error(
-        "Este PC não está inscrito. Clique em Ativar notificações antes de testar.",
+        "Este aparelho não está inscrito. Ative ou reative as notificações antes de testar.",
       );
     (await alFn("teste", { endpoint: AL.sub.endpoint }),
       (AL.msg =
-        "Servidor aceitou o teste push. Isso ainda não confirma exibição no Windows; se não apareceu, faça o teste local e verifique permissões."));
+        "O servidor aceitou o push. Confirme se o aviso apareceu no aparelho; caso contrário, faça o teste local e verifique as permissões."));
   } catch (e) {
     AL.msg = e.message || String(e);
   }
   ((AL.busy = 0), alPaint());
 }
 async function alLocalTest() {
-  ((AL.busy = 1), (AL.msg = "Testando exibição local do Windows…"), alPaint());
+  ((AL.busy = 1), (AL.msg = "Testando notificação local neste aparelho…"), alPaint());
   try {
     if (!alSup()) throw Error("Este navegador não suporta notificações push.");
     if (Notification.permission !== "granted")
@@ -2468,13 +2472,13 @@ async function alLocalTest() {
           ),
         ),
       ])
-    ).showNotification("🖥️ Teste local · Diário Trader", {
-      body: "Se esta notificação apareceu, o Windows permite exibição local. O push remoto ainda precisa ser testado.",
+    ).showNotification("🔔 Teste local · Diário Trader", {
+      body: "Se esta notificação apareceu, o aparelho permite avisos locais. O push remoto ainda precisa ser testado.",
       tag: "diario-teste-local-346",
       icon: "icon-192.png",
     }),
       (AL.msg =
-        "Teste local solicitado ao Windows. Se não aparecer, verifique Sistema → Notificações, o aplicativo/navegador e Não incomodar. Este teste não valida o servidor."));
+        "Teste local solicitado. Se não aparecer, confira as permissões de notificações do aparelho, o app instalado e Não Perturbe. Este teste não valida o servidor."));
   } catch (e) {
     AL.msg = "Falha no teste local: " + (e.message || String(e));
   }
@@ -2482,7 +2486,7 @@ async function alLocalTest() {
 }
 async function alDiag() {
   ((AL.busy = 1),
-    (AL.msg = "Verificando conexão e inscrição deste PC…"),
+    (AL.msg = "Verificando conexão e inscrição deste aparelho…"),
     alPaint());
   try {
     const e = alSup(),
@@ -2513,13 +2517,14 @@ async function alDiag() {
       s.push(
         "Servidor push: " + String(n.push || "sem resposta"),
         "Banco: " + String(n.banco || "sem resposta"),
-        "Chaves públicas configuradas: " +
-          (n.vapidPublicTamanho > 0 ? "sim" : "não"),
+        "Chaves Web Push no servidor: " +
+          (n.vapidPublicTamanho > 0 && n.vapidPrivateTamanho > 0 ? "ok" : "ausentes"),
+        "Agendamento automático: " + (n.cronSecret ? "credencial configurada" : "não configurado"),
       );
     }
-    AL.msg =
-      s.join(" · ") +
-      ". Se não aparecer no Windows: Configurações → Sistema → Notificações → permitir navegador/aplicativo e desativar Não incomodar.";
+    AL.msg = s.join(" · ") + (/Windows/i.test(navigator.userAgent || "")
+      ? ". No Windows, confirme Sistema → Notificações e Não incomodar."
+      : ". No iPhone, use o app adicionado à Tela de Início, permita notificações e confira o modo Foco.");
   } catch (e) {
     AL.msg = "Diagnóstico: " + (e.message || String(e));
   }
@@ -2603,10 +2608,10 @@ function alHtml() {
             '<div class="warn">As notificações estão bloqueadas para este app. Libere nas configurações do navegador ou do app instalado e volte aqui.</div>')
         : AL.ok === "off"
           ? (t = `<div class="sm" style="margin-bottom:8px">Receba lembretes dos checklists e um aviso antes das notícias importantes, mesmo com o app fechado.</div>${e("on", "🔔 Ativar notificações")}`)
-          : (t = `<div class="sm g" style="margin-bottom:8px">✅ Ativas neste aparelho</div><div style="display:flex;gap:6px;flex-wrap:wrap">${e("test", "Enviar teste", 1)}${e("off", "Desativar", 1)}</div>`);
+          : (t = `<div class="sm g" style="margin-bottom:8px">✅ Inscrição push neste aparelho</div><div style="display:flex;gap:6px;flex-wrap:wrap">${e("test", "Enviar teste", 1)}${e("on", "Reativar", 1)}${e("off", "Desativar", 1)}</div>`);
   const a = (o, s) =>
     `<label class="ck"><input type="checkbox" data-al="on.${o}"${NP.on[o] ? " checked" : ""}><span>${s}</span></label>`;
-  return `${t}<div style="margin:10px 0">${e("diag", "🔎 Diagnosticar notificações do PC", 1)} ${e("local", "🖥️ Testar aviso local do Windows", 1)}</div>${AL.msg ? `<div class="sm" style="margin-top:8px">${esc(AL.msg)}</div>` : ""}
+  return `${t}<div style="margin:10px 0">${e("diag", "🔎 Diagnosticar notificações", 1)} ${e("local", "🔔 Testar aviso local", 1)}</div>${AL.msg ? `<div class="sm" style="margin-top:8px">${esc(AL.msg)}</div>` : ""}
 <h3 style="margin-top:14px">Quando avisar</h3>
 ${a("m", "☀️ Checklist da manhã")}<label>Horário<input type="time" data-al="m" value="${esc(NP.m)}"></label>
 ${a("n", "🌐 Checklist da abertura americana")}<label>Horário<input type="time" data-al="n" value="${esc(NP.n)}"></label>
