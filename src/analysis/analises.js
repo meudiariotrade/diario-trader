@@ -34,7 +34,7 @@ const fmt=(n,dg=1)=>n==null||!Number.isFinite(Number(n))?'—':Number(n).toLocal
 const pct=(x)=>x==null||!Number.isFinite(Number(x))?'—':fmt(x,1)+'%';
 const mny=(x,usd)=>x==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:usd?'USD':'BRL',maximumFractionDigits:0,notation:'compact'}).format(Number(x));
 const state={br:{},us:{}},cache=new Map();let timer=null,reqId=0;
-function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',page:0,chart:'auto',zoom:1,panX:0,panY:0,focus:'',detailTicker:'',selected:[],selectedRows:{},rows:null,data:null,loading:false,error:'',requested:''});return s}
+function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',page:0,chart:'auto',zoom:1,panX:0,panY:0,focus:'',detailTicker:'',selected:[],selectedRows:{},rows:null,data:null,loading:false,error:'',pdfBusy:false,pdfError:'',requested:''});return s}
 let holdingsCache=[],holdingsAt=0,holdingsOwner='';function holdings(){const uid=typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local';if(holdingsOwner===uid&&Date.now()-holdingsAt<5000)return holdingsCache;try{const snapshot=w.pfCalc();holdingsCache=(snapshot.pos||[]).filter(p=>+p.q>0&&+p.v>0).map(p=>({ticker:String(p.tk||'').toUpperCase().replace(/\.SA$/,''),market:p.mk,pct:Number(p.peso)||0,sector:p.setor||'',value:Number(p.v)||0}));holdingsAt=Date.now();holdingsOwner=uid;return holdingsCache}catch{return []}}
 function owner(){return typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local'}
 function owned(){return [...new Set(holdings().map(p=>p.ticker))].slice(0,80)}
@@ -125,14 +125,14 @@ const cols=us?[['ticker','Ticker'],['company_name','Empresa'],['score_quant_us',
 [['ticker','Ticker'],['empresa','Empresa'],['score_quant_br','Score'],['cobertura_pct','Cobertura'],['roe','ROE'],['dividend_yield','DY'],['payout_implicito','Payout'],['momentum_12_1','Mom. 12-1']];
 const percentKeys=new Set(['roic','roe','dividend_yield','total_shareholder_yield','payout_implicito','momentum_12_1','cobertura_pct']);
 return '<section class="scr-panel"><div class="scr-head"><h3>Ranking · '+fmt(s.data?.total||0,0)+' ações</h3><div class="scr-actions"><label>Ordenação <select data-scr-filter="order">'+options(us?[['score','Score'],['roic','ROIC'],['forward_pe','Forward P/E'],['yield','Total Yield'],['momentum','Momentum']]:[['score','Score'],['roe','ROE'],['dy','DY'],['pvp','P/VP'],['momentum','Momentum']],s.order)+'</select></label>'+
-'<button class="btn s" data-scr-bulk="1" '+(s.selected.length<2?'disabled':'')+'>Comparar ('+s.selected.length+'/3)</button></div></div>'+
+'<button class="btn s" data-scr-bulk="1" '+(s.selected.length<2||s.selected.length>4?'disabled':'')+'>Comparar na Pesquisa (até 4)</button></div></div>'+
 '<div class="scr-scroll"><table class="scr-table"><thead><tr><th>Sel.</th>'+cols.map(c=>'<th>'+E(c[1])+'</th>').join('')+'<th>Contexto</th><th>Ações</th></tr></thead><tbody>'+
-all.map(row=>{const own=ownRow(row);const tk=E(row.ticker),score=us?row.score_quant_us:row.score_quant_br;
+all.map(row=>{const own=ownRow(row);const tk=E(row.ticker),score=us?row.score_quant_us:row.score_quant_br;const valid=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row);
 return '<tr><td><input type="checkbox" data-scr-select="'+tk+'" '+(s.selected.includes(row.ticker)?'checked':'')+' aria-label="Selecionar '+tk+'"></td>'+
 cols.map(([key])=>'<td>'+((key==='ticker')?'<b>'+tk+'</b>':(key==='company_name'||key==='empresa')?E(row[key]):(row[key]==null?'—':(percentKeys.has(key)?pct(row[key]):fmt(row[key],1))))+'</td>').join('')+
 '<td><span class="scr-tech">'+(row.rsi_14==null?'Técnico indisponível':Number(row.rsi_14)>=70?'RSI esticado':Number(row.rsi_14)<=30?'RSI pressionado':'RSI neutro')+'</span>'+
-(own?'<span class="scr-owned" title="Peso '+fmt(own.pct)+'%">CARTEIRA · '+pct(own.pct)+'</span>':'')+'</td>'+
-'<td class="scr-buttons"><button data-scr-analyze="'+tk+'">Analisar</button><button data-scr-add="'+tk+'">+ Carteira</button></td></tr>'}).join('')+
+(own?'<span class="scr-owned" title="Peso '+fmt(own.pct)+'%">CARTEIRA · '+pct(own.pct)+'</span>':'')+(valid?'<span class="scr-verified '+(valid.validated?'is-ok':'is-review')+'">'+E(valid.level)+'</span>':'')+'</td>'+
+'<td class="scr-buttons"><button data-scr-detail="'+tk+'">Por quê?</button><button data-scr-analyze="'+tk+'">Analisar</button><button data-scr-add="'+tk+'">+ Carteira</button></td></tr>'}).join('')+
 '</tbody></table></div>'+
 (all.length?'':'<p class="scr-empty">Nenhuma ação neste filtro. Se os dados fundamentais ainda não estiverem preenchidos, escolha Todos os ativos.</p>')+
 '<div class="scr-pager"><button class="btn s" data-scr-page="-1" '+(s.page<=0?'disabled':'')+'>Anterior</button><span>Página '+(s.page+1)+' de '+Math.max(1,Math.ceil((s.data?.total||0)/50))+'</span><button class="btn s" data-scr-page="1" '+((s.page+1)*50>=(s.data?.total||0)?'disabled':'')+'>Próxima</button></div></section>';
@@ -140,20 +140,20 @@ cols.map(([key])=>'<td>'+((key==='ticker')?'<b>'+tk+'</b>':(key==='company_name'
 function view(m){const s=init(m);return '<header class="an-header"><div><p class="an-kicker">SCREENING QUANTITATIVO · '+(m==='br'?'B3':'NYSE / NASDAQ')+'</p><h1 id="an-title">Screener '+(m==='br'?'Brasil':'EUA')+'</h1><p>Universo dinâmico, indicadores com fontes e datas. Não representa recomendação de compra ou venda.</p></div><span class="an-badge">'+(s.data?.total||0)+' no filtro</span></header>'+
 opts(m,s)+
 '<div class="scr-top"><span role="status">'+(s.loading?'Consultando snapshot compartilhado…':s.error?E(s.error):(s.data?'Snapshot: '+(s.data.last_update?new Date(s.data.last_update).toLocaleString('pt-BR'):'sem atualização'):'Abra para consultar dados'))+'</span><button class="btn s" data-scr-refresh="1" '+(s.loading?'disabled':'')+'>Atualizar</button></div>'+
-(s.data?coverage(m,s)+kpis(m,s)+stats(m,s)+chart(m,s)+table(m,s):'<section class="scr-panel scr-empty">'+(s.loading?'Carregando indicadores…':E(s.error||'Aguardando dados do catálogo.'))+'</section>');
+(s.data?coverage(m,s)+kpis(m,s)+selections(m,s)+stats(m,s)+chart(m,s)+detail(m,s)+table(m,s):'<section class="scr-panel scr-empty">'+(s.loading?'Carregando indicadores…':E(s.error||'Aguardando dados do catálogo.'))+'</section>');
 }
 function render(){try{if(typeof tab==='undefined'||tab!=='analises')return;const root=d.getElementById('an-root');if(!root)return;const active=d.activeElement,searchFocused=!!active?.matches?.('[data-scr-search]'),ss=searchFocused?{pos:active.selectionStart,end:active.selectionEnd}:null;
 root.outerHTML=w.DiarioAnalises.view();if(searchFocused){const target=d.querySelector('[data-scr-search]');if(target){target.focus();if(ss?.pos!=null)try{target.setSelectionRange(ss.pos,ss.end)}catch{}}}}catch(e){console.warn('Screener render',e)}}
 async function load(m,refresh=false){const s=init(m),u=owner();if(s.loading){s.refreshWhenDone=true;return;}
 const body={market:m.toUpperCase(),search:s.search,sector:s.sector,custody:s.custody,owned:owned(),liquidity:Number(s.liquidity),cap:s.cap,preset:s.preset,order:s.order,page:s.page};
 const key=u+'|'+JSON.stringify(body),previous=cache.get(key);
-if(!refresh&&previous&&Date.now()-previous.time<5*60000){s.data=previous.data;s.error='';render();return;}
+if(!refresh&&previous&&Date.now()-previous.time<5*60000){s.data=previous.data;for(const row of s.data.rows||[]){if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;}s.error='';render();return;}
 if(!SESS||!cfg()||w.DIARIO_DEMO){s.error='Entre na sua conta para consultar os Screeners.';render();return;}
 s.loading=true;s.error='';const req=++reqId;render();
 try{await tok();const c=cfg(),r=await fetch(c.url+'/functions/v1/screeners-quant',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
 const data=await r.json().catch(()=>({}));if(!r.ok||!data.ok)throw Error(data.error||'Falha HTTP '+r.status);
 if(u!==owner()||req!==reqId)return;
-s.data=data;cache.set(key,{time:Date.now(),data});if(cache.size>15)cache.delete(cache.keys().next().value);s.error='';
+s.data=data;for(const row of data.rows||[]){if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;}cache.set(key,{time:Date.now(),data});if(cache.size>15)cache.delete(cache.keys().next().value);s.error='';
 }catch(e){if(req===reqId)s.error=String(e.message||'Não foi possível carregar.');}
 finally{s.loading=false;if(req===reqId){render();if(s.refreshWhenDone){s.refreshWhenDone=false;void load(m,true)}}}
 }
