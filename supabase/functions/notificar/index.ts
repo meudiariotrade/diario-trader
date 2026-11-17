@@ -1088,7 +1088,7 @@ function limpaPrefs(p: any): Prefs {
     lead: Number.isInteger(+p.lead) && +p.lead >= 1 && +p.lead <= 60 ? +p.lead : 5,
     cur: cur.length ? cur : ['USD'],
     imp: p.imp === 'med' ? 'med' : 'high',
-    on: { m: p.on?.m !== false, n: p.on?.n !== false, ev: p.on?.ev !== false, sem: p.on?.sem !== false, ab: p.on?.ab !== false, tr: p.on?.tr !== false, trv: p.on?.trv !== false, ol: p.on?.ol !== false, br: p.on?.br !== false, bal: p.on?.bal !== false, giro: p.on?.giro !== false, coach: p.on?.coach !== false, rel: p.on?.rel !== false, opc: p.on?.opc !== false, opciv: p.on?.opciv !== false, ir: p.on?.ir !== false, ewz: p.on?.ewz === true , lemb: p.on?.lemb !== false, jr: p.on?.jr !== false, pl: p.on?.pl !== false, kw: p.on?.kw !== false, res: p.on?.res !== false },
+    on: { m: p.on?.m !== false, n: p.on?.n !== false, ev: p.on?.ev !== false, sem: p.on?.sem !== false, ab: p.on?.ab !== false, tr: p.on?.tr !== false, trv: p.on?.trv !== false, ol: p.on?.ol !== false, br: p.on?.br !== false, bal: p.on?.bal !== false, giro: p.on?.giro !== false, coach: p.on?.coach !== false, rel: p.on?.rel !== false, opc: p.on?.opc !== false, opciv: p.on?.opciv !== false, ir: p.on?.ir !== false, ewz: p.on?.ewz === true , lemb: p.on?.lemb !== false, jr: p.on?.jr !== false, pl: p.on?.pl !== false, kw: p.on?.kw !== false, urg: p.on?.urg !== false, res: p.on?.res !== false },
     kw: (Array.isArray(p.kw) ? p.kw : []).map((x: unknown) => String(x || '').trim().slice(0, 30)).filter((x: string) => x.length >= 2).slice(0, 12),
     bal: hhmm(p.bal) ? p.bal : '07:00',
     br: hhmm(p.br) ? p.br : '09:30',
@@ -1757,32 +1757,66 @@ Deno.serve(async (req) => {
       }
       case 'noticias_urgentes':
       case 'noticias_diagnostico': {
-        // Somente o pg_cron, com segredo no Vault; nunca aceitar token do navegador.
-        if (!segredoIgual(req.headers.get('x-cron-secret'), CRON)) return out({ error: 'Não autorizado' }, 401);
+        // Mesmo segredo do cron leve v724, guardado somente no Vault.
+        if (!(await agendamentoAutorizado(req))) return out({ error: 'Não autorizado' }, 401);
+        const inicio = Date.now();
         const sb = await db();
-        const { data: chaveVault, error: eChave } = await sb.rpc('finnhub_chave');
-        // Chave opcional: os RSS continuam mesmo se a Finnhub estiver indisponível.
-        const token = typeof chaveVault === 'string' ? chaveVault : (Deno.env.get('FINNHUB_API_KEY') || '');
-        if (eChave && !token) console.warn('noticias: Finnhub sem chave no servidor');
-        if (b.acao === 'noticias_diagnostico') {
-          const d = await coletarNoticias(token);
-          return out({ fontesOk: d.fontesOk, fontesFalhas: d.fontesFalhas, examinadas: d.examinadas, urgentes: d.noticias.length });
+        const gravar = async (estado: string, dados: Record<string, unknown> = {}) => {
+          const { error } = await sb.from('noticias_monitor_status').upsert({
+            id: 1, consultado_em: new Date().toISOString(), estado,
+            fontes_ok: 0, fontes_falhas: [], examinadas: 0, urgentes: 0,
+            enviados: 0, falhas_envio: 0, motivo: '',
+            duracao_ms: Date.now() - inicio, ...dados,
+          }, { onConflict: 'id' });
+          if (error) console.warn('noticias-monitor: falha ao registrar diagnóstico');
+        };
+        const { data: inscricoes, error: erroInscricoes } = await sb.from('push_subs')
+          .select('id,sub,prefs,user_id').limit(20);
+        if (erroInscricoes) {
+          await gravar('erro', { motivo: 'Falha ao consultar inscrições push' });
+          return out({ error: 'Não foi possível consultar os aparelhos inscritos.' }, 503);
         }
-        const { data: inscricoes, error: eSubs } = await sb.from('push_subs').select('id,sub,prefs,user_id');
-        if (eSubs) return out({ error: 'Não consegui consultar as inscrições.' }, 503);
-        const habilitados = (inscricoes || []).filter((s: any) => s.user_id && limpaPrefs(s.prefs).on.kw);
-        const resultado = await dispararNoticias({ cliente: sb, subs: habilitados, enviar: envia, token });
-        if (resultado.consultou) await logAuto('noticias urgentes', !resultado.falhasEnvio && !!resultado.fontesOk,
-          'fontes ' + (resultado.fontesOk || 0) + ' · urgentes ' + (resultado.urgentes || 0) +
-          ' · push ' + resultado.enviados + ' · falhas ' + (resultado.falhasEnvio || 0) +
-          (resultado.fontesFalhas?.length ? ' · indisponíveis: ' + resultado.fontesFalhas.join(', ').slice(0, 180) : ''));
-        return out(resultado);
+        const habilitados = (inscricoes || [])
+          .filter((sub: any) => sub.user_id && limpaPrefs(sub.prefs).on.urg);
+        if (b.acao === 'noticias_urgentes' && !habilitados.length) {
+          await gravar('sem_inscricoes');
+          return out({ consultou: false, semInscricoes: true, enviados: 0, fontesOk: 0 });
+        }
+        // Só requisitar chave e feeds quando realmente houver quem receba o alerta.
+        const { data: chaveVault, error: eChave } = await sb.rpc('finnhub_chave');
+        const token = typeof chaveVault === 'string' ? chaveVault : (Deno.env.get('FINNHUB_API_KEY') || '');
+        if (eChave && !token) console.warn('noticias-monitor: Finnhub sem chave, usar RSS');
+        if (b.acao === 'noticias_diagnostico') {
+          const d = await coletarNoticias(token, new Date(), fetch, 'leve');
+          return out({ fontesOk: d.fontesOk, fontesFalhas: d.fontesFalhas,
+            examinadas: d.examinadas, urgentes: d.noticias.length, usuariosInscritos: habilitados.length });
+        }
+        try {
+          const resultado = await dispararNoticias({ cliente: sb, subs: habilitados, enviar: envia, token });
+          if (resultado.consultou) {
+            await gravar(!resultado.fontesOk ? 'erro' :
+              resultado.falhasEnvio || resultado.fontesFalhas?.length ? 'parcial' : 'ok', {
+              fontes_ok: resultado.fontesOk || 0,
+              fontes_falhas: (resultado.fontesFalhas || []).slice(0, 12),
+              examinadas: resultado.examinadas || 0,
+              urgentes: resultado.urgentes || 0,
+              enviados: resultado.enviados || 0,
+              falhas_envio: resultado.falhasEnvio || 0,
+              motivo: !resultado.fontesOk ? 'Nenhuma fonte disponível' : '',
+            });
+          }
+          return out(resultado);
+        } catch (e) {
+          await gravar('erro', { motivo: 'Consulta ou entrega de notícias indisponível' });
+          return out({ error: 'Monitor de notícias temporariamente indisponível.' }, 503);
+        }
       }
       case 'chave':
         await push(); // valida as chaves antes de entregar ao app
         return out({ chave: (await configPush()).publicKey });
       case 'diag': {
-        if (!(await usuarioDe(req))) return out({ error: 'Entre na sua conta no app.' }, 401);
+        const uid = await usuarioDe(req);
+        if (!uid) return out({ error: 'Entre na sua conta no app.' }, 401);
         const config = await configPush().catch(() => null);
         const r: Record<string, unknown> = {
           vapidPublicTamanho: config?.publicKey.length || 0,
@@ -1792,6 +1826,23 @@ Deno.serve(async (req) => {
         };
         try { await push(); r.push = 'ok'; } catch (e) { r.push = (e as Error).message; }
         try { const { error } = await (await db()).from('push_subs').select('id', { head: true, count: 'exact' }); r.banco = error ? error.message : 'ok'; } catch (e) { r.banco = (e as Error).message; }
+        try {
+          const client = await db();
+          const { data: credencial } = await client.rpc('diario_agendamento_chave');
+          r.agendamentoVault = typeof credencial === 'string' && credencial.length >= 30;
+          const { data: monitor } = await client.from('noticias_monitor_status')
+            .select('consultado_em,estado,fontes_ok,fontes_falhas,enviados,falhas_envio,motivo')
+            .eq('id', 1).maybeSingle();
+          r.monitorNoticias = monitor || null;
+          const { data: aparelhos } = await client.from('push_subs').select('id').eq('user_id', uid);
+          const ids = (aparelhos || []).map((a: any) => a.id).slice(0, 5);
+          if (ids.length) {
+            const { data: envios } = await client.from('push_log')
+              .select('em,status,sent_at').in('subscription_id', ids)
+              .order('em', { ascending: false }).limit(1);
+            r.ultimoEnvio = envios?.[0] || null;
+          }
+        } catch { r.monitorNoticias = null; }
         return out(r);
       }
       case 'ultimos': {
