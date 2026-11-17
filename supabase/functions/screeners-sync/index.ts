@@ -59,6 +59,19 @@ function rating(m:string,r:any){
  const ret=n(r.total_shareholder_yield,0,12);
  return q===null||v===null||mo===null||ret===null?null:+(.3*q+.25*v+.25*mo+.2*ret).toFixed(2);
 }
+async function momentoHistorico(market:string,ticker:string):Promise<number|null>{
+ try{
+  const sym=market==='BR'?ticker+'.SA':ticker.replaceAll('.','-');
+  const u='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+'?range=2y&interval=1mo';
+  const r=await fetch(u,{headers:{'User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(6500)});
+  if(!r.ok)return null;
+  const x=await r.json(),values=x?.chart?.result?.[0]?.indicators?.adjclose?.[0]?.adjclose||x?.chart?.result?.[0]?.indicators?.quote?.[0]?.close||[];
+  const closes=values.filter((v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>0);
+  if(closes.length<14)return null;
+  const last=closes.length-2,old=closes[last-11];
+  return old>0?+((closes[last]/old-1)*100).toFixed(4):null;
+ }catch{return null;}
+}
 async function scanner(market:string,tickers:string[]){
  if(!tickers.length)return {atualizados:0,semDados:0};
  const usa=market==='US',columns=usa?
@@ -68,7 +81,7 @@ async function scanner(market:string,tickers:string[]){
  let updated=0;
  for(let i=0;i<tickers.length;i+=40){
   const part=tickers.slice(i,i+40),prefix=usa? '': 'BMFBOVESPA:';
-  const body={symbols:{tickers:part.map(t=>prefix+t),query:{types:[]}},columns};
+  const body={symbols:{tickers:usa?part.flatMap(t=>['NASDAQ:'+t,'NYSE:'+t]):part.map(t=>prefix+t),query:{types:[]}},columns};
   const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://www.tradingview.com',Referer:'https://www.tradingview.com/'},body:JSON.stringify(body),signal:AbortSignal.timeout(14000)});
   if(!r.ok)throw Error('TradingView HTTP '+r.status);
   const json=await r.json();const rows:any[]=[];
@@ -97,7 +110,15 @@ async function scanner(market:string,tickers:string[]){
    }
    rows.push(common);
   }
-  if(rows.length)updated+=await lotes(market,rows);
+  const unique=[...new Map(rows.map(x=>[x.ticker,x])).values()];
+  // Momentum 12-1 por fechamentos mensais completos, como reserva para um subconjunto limitado.
+  await Promise.all(unique.filter(x=>x.momentum_12_1==null).slice(0,14).map(async x=>{
+   const m=await momentoHistorico(market,x.ticker);
+   if(m!=null){x.momentum_12_1=m;
+    if(market==='BR')x.score_quant_br=rating('BR',x);
+    else x.score_quant_us=rating('US',x);}
+  }));
+  if(unique.length)updated+=await lotes(market,unique);
  }
  return {atualizados:updated,totalSolicitados:tickers.length};
 }
