@@ -12,8 +12,18 @@
   for(const row of rows){
    if(!row?.ticker)continue;
    const d=intelligence.diagnostics(market,row);
-   // Nota só existe se todas as famílias estiverem presentes e a fórmula coincidir.
-   if(d.modelScore===null||d.score===null||d.difference===null||d.difference>1||
+   // Evita promover microcaps ilíquidas e valores negativos em múltiplos.
+   // Tickers fora desse corte continuam disponíveis no Screener completo.
+   const liquidity=market==='BR'?Number(row.liquidez_diaria_brl):Number(row.avg_daily_volume_usd);
+   const liquid=Number.isFinite(liquidity)&&liquidity>=(market==='BR'?1000000:2000000);
+   const sane=(market==='BR'?
+      (row.pl==null||Number(row.pl)>0)&&(row.ev_ebitda==null||Number(row.ev_ebitda)>0)&&
+      (row.fcf_yield==null||Number(row.fcf_yield)>=0)&&(row.dividend_yield==null||Number(row.dividend_yield)<=20):
+      (row.forward_pe==null||Number(row.forward_pe)>0)&&
+      (row.ev_fcf==null||Number(row.ev_fcf)>0)&&
+      (row.total_shareholder_yield==null||Number(row.total_shareholder_yield)<=20));
+   // Nota só existe se quatro famílias e dados forem conferíveis.
+   if(!liquid||!sane||d.modelScore===null||d.score===null||d.difference===null||d.difference>1||
       d.coverage<70||!d.validated){
     rejected.push({ticker:row.ticker,reason:d.risks[0]||'Cálculo não conferido'});
     continue;
@@ -38,7 +48,7 @@
    entries.push({...x,rank:entries.length+1,reason:strengths.join(' · '),caution});
    if(entries.length===10)break;
   }
-  return {market,entries,reviewed:rows.length,excluded:rejected.length,reason:'Ranking por nota (score reconstituído ÷ 10); cobertura ≥70%, quatro grupos calculáveis, datas presentes e divergência de score ≤1 ponto; apenas um ticker por companhia.'};
+  return {market,entries,reviewed:rows.length,excluded:rejected.length,reason:'Ranking por nota (score reconstituído ÷ 10); cobertura ≥70%, datas presentes e divergência ≤1 ponto. Liquidez diária mínima: BR R$ 1 milhão, EUA US$ 2 milhões; múltiplos positivos, FCF não negativo e DY até 20% na B3. Uma empresa por posição.'};
  }
  return Object.freeze({generate});
 });
