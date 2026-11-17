@@ -109,6 +109,7 @@ async function sec(){
   try{
    const r=await fetch(source,{headers:{'User-Agent':UA,'Accept':'application/json','Accept-Encoding':'identity'},
     signal:AbortSignal.timeout(12500)});
+   if(r.status===403){errors.push('A SEC bloqueou os acessos a partir da Edge Function (HTTP 403). Nao repetir em lote.');break;}
    if(r.status===429){errors.push('Rate limit SEC (429), proxima rodada suspensa');break;}
    if(!r.ok){patches.push({ticker:target.ticker,cik:target.cik,sec_status:'http_'+r.status,sec_source_url:source});continue;}
    const json=await r.json();if(String(json.cik)!==String(Number(target.cik)))throw Error('CIK divergente');
