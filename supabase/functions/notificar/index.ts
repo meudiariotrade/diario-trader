@@ -1914,8 +1914,11 @@ Deno.serve(async (req) => {
         const { data: s, error } = await (await db()).from('push_subs').select('id,sub').eq('id', id).eq('user_id', uid).maybeSingle();
         if (error) return out({ error: 'Não consegui consultar o aparelho.' }, 503);
         if (!s) return out({ error: 'Aparelho não encontrado nesta conta.' }, 404);
-        const ok = await envia(s, { title: '🔔 Teste do diário', body: 'Se você está vendo isto, as notificações estão funcionando.', tag: 'teste', data: { go: 'mercado' } });
-        return ok ? out({ ok: true }) : out({ error: 'O envio falhou. Tente ativar de novo.' }, 502);
+        // Um teste é um envio real: registrar seu status no push_log por aparelho.
+        // Cada clique recebe uma chave nova, sem ignorar testes posteriores por deduplicação.
+        const idTeste = crypto.randomUUID();
+        const ok = await envia(s, { title: '🔔 Teste do diário', body: 'Se você está vendo isto, as notificações estão funcionando.', tag: 'teste-' + idTeste.slice(0, 8), data: { go: 'mercado' } }, id + '|teste|' + idTeste);
+        return ok ? out({ ok: true, aceitoPeloProvedor: true }) : out({ error: 'O provedor recusou este envio. Reative as notificações e confira o diagnóstico.' }, 502);
       }
       default:
         return out({ error: 'Ação desconhecida' }, 400);
