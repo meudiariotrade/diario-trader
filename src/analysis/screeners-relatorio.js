@@ -41,7 +41,7 @@ function drawing(doc,P,font){
   write('ANÁLISES  /  SCREENERS',W-M,19,{size:8,color:C.white,right:true});
   rectangle(M,cover?191:61,42,3,C.gold);
   if(cover){write('Dossiê de ações',M,78,{font:'serif',size:29,color:C.white});wrap(title,M,122,CW,{font:'bold',size:16,color:C.gold});wrap(subtitle,M,158,CW,{size:10,color:C.white});y=243}
-  else{wrap(title,M,85,CW,{font:'serif',size:18});wrap(subtitle,M,116,CW,{size:9,color:C.muted});y=155}
+  else{const endTitle=wrap(title,M,82,CW,{font:'serif',size:16,leading:19,maxLines:2});const endSub=wrap(subtitle,M,Math.max(114,endTitle+7),CW,{size:9,color:C.muted,maxLines:2});y=Math.max(154,endSub+19)}
  }
  function footer(){
   const n=doc.getPageCount();line(M,793,W-M,793);
@@ -56,7 +56,7 @@ function drawing(doc,P,font){
 }
 function cover(L,market,rows,studies){
  const scored=studies.filter(x=>x.score!==null).length,verified=studies.filter(x=>x.validated).length;
- L.page(market==='BR'?'Brasil  |  B3':'Estados Unidos  |  NYSE e NASDAQ',rows.length+' empresas selecionadas  •  '+scored+' com score  •  '+verified+' conferidas',true);
+ L.page(market==='BR'?'Brasil  |  B3':'Estados Unidos  |  NYSE e NASDAQ',rows.length+' empresas selecionadas  •  '+scored+' com score  •  '+verified+' com cálculo conferido',true);
  L.write('RESUMO DA SELEÇÃO',L.M,L.y,{font:'bold',size:10,color:L.C.gold});L.y+=27;
  L.y=L.wrap('Este material mostra os fatores de qualidade, preço, retorno e momentum que contribuíram para as pontuações, além da procedência dos dados e dos pontos que exigem validação. Score alto não indica, por si só, que o preço da ação compense.',L.M,L.y,L.CW,{size:9.8,leading:15})+22;
  L.rectangle(L.M,L.y,L.CW,25,L.C.ink);
@@ -67,7 +67,7 @@ function cover(L,market,rows,studies){
   L.wrap(r.empresa||r.company_name||r.ticker,L.M+90,L.y+10,226,{size:8,maxLines:1});
   L.write(s.score===null?'N/D':num(s.score,1),L.M+325,L.y+10,{size:8});
   L.write(num(s.coverage,0)+'%',L.M+397,L.y+10,{size:8});
-  L.write(s.validated?'Conferido':'Revisar',L.M+447,L.y+10,{size:7.5,color:s.validated?L.C.green:L.C.red});
+  L.write(s.validated?'Fórmula OK':'Revisar',L.M+447,L.y+10,{size:7.5,color:s.validated?L.C.green:L.C.red});
   L.y+=33;
  });
  L.y+=23;L.y=L.wrap('Critério: pontuações verificadas contra os pesos do método. Ausência de indicadores e divergência na fórmula exigem revisão. Leia as análises individuais e as fontes antes de tomar qualquer decisão.',L.M,L.y,L.CW,{size:8,color:L.C.muted,leading:11});L.footer();
@@ -100,7 +100,7 @@ function methodology(L,m){
  L.y+=22;
  for(const p of [
   'Cada métrica disponível é normalizada numa escala interna de 0 a 100. Dentro de cada grupo, o modelo usa a média das métricas presentes. A contribuição do grupo é essa média multiplicada pelo peso da categoria; o score total é a soma das quatro contribuições.',
-  'A coluna “conferido” exige consistência da pontuação salva com a fórmula, cobertura adequada e indicadores não muito antigos. Valores ausentes nunca são substituídos por números inventados; se faltar uma categoria inteira, não se deve interpretar o resultado como score completo.',
+  'A validação de fórmula exige consistência da pontuação salva com o cálculo, cobertura adequada e datas recentes; não substitui uma auditoria independente das fontes. Valores ausentes nunca são substituídos por números inventados; se faltar uma categoria inteira, não se deve interpretar o resultado como score completo.',
   'A comparação entre setores requer cuidado: bancos, seguradoras, empresas cíclicas e negócios sem lucro podem não ser adequadamente representados por todos os múltiplos. As notas são um filtro, não um valuation ou preço-alvo.',
   'Para discutir se compensa comprar, verificar as demonstrações e notas, eventos extraordinários, concorrentes do mesmo setor, governança, dívida, valuation, preço atual, liquidez, cenário e tolerância pessoal ao risco.',
   'Este PDF usa somente o snapshot disponível na aba Análises. Nenhuma consulta de cotações é feita ao exportar. Acompanhe as datas em cada página e confira cada informação diretamente na fonte.'
