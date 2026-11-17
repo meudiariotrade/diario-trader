@@ -157,13 +157,22 @@ async function carrega(): Promise<DadosNoticias> {
     })),
     ...X_PERFIS.map((perfil) => ({
       nome: 'X @' + perfil, consultar: async () => {
-        const r = await fetch('https://fxtwitter.com/' + perfil + '/feed.xml', {
-          headers: { Accept: 'application/rss+xml, application/xml, text/xml' }, signal: AbortSignal.timeout(8500)
-        });
-        if (!r.ok) throw new Error('feed ' + r.status);
-        const itens = parseX(await r.text(), perfil);
-        if (!itens.length) throw new Error('sem publicações recentes válidas');
-        return itens;
+        // Mesmo RSS do FxEmbed, com um segundo domínio somente quando o principal falhar.
+        for (const url of [
+          'https://fxtwitter.com/' + perfil + '/feed.xml?count=35',
+          'https://fixupx.com/' + perfil + '/feed.xml?count=35',
+        ]) {
+          try {
+            const r = await fetch(url, {
+              headers: { Accept: 'application/rss+xml, application/xml, text/xml' },
+              signal: AbortSignal.timeout(7500)
+            });
+            if (!r.ok) continue;
+            const itens = parseX(await r.text(), perfil);
+            if (itens.length) return itens;
+          } catch { /* contingência em série, sem sobrecarregar o provedor */ }
+        }
+        throw new Error('RSS X temporariamente indisponível: @' + perfil);
       },
     })),
   ];
