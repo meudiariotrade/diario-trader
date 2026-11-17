@@ -10,10 +10,10 @@
       {id:'valuation',name:'Valuation',weight:30,fields:['pl','ev_ebitda','fcf_yield']},
       {id:'dividendos',name:'Dividendos',weight:25,fields:['dividend_yield','payout_implicito']},
       {id:'momentum',name:'Momentum',weight:15,fields:['momentum_12_1']}],
-  US:[{id:'qualidade',name:'Crescimento e qualidade',weight:30,fields:['roic','eps_growth_yoy','fcf_margin']},
-      {id:'valuation',name:'Valuation',weight:25,fields:['forward_pe','peg_ratio','ev_fcf']},
-      {id:'momentum',name:'Momentum e fluxo',weight:25,fields:['momentum_12_1','short_interest_pct']},
-      {id:'retorno',name:'Retorno ao acionista',weight:20,fields:['total_shareholder_yield']}]
+  US:[{id:'qualidade',name:'Crescimento e qualidade',weight:30,fields:['roic','roe','fcf_margin','eps_growth_yoy','revenue_growth_yoy']},
+      {id:'valuation',name:'Valuation',weight:30,fields:['forward_pe','peg_ratio','ev_fcf']},
+      {id:'momentum',name:'Momentum e tendência',weight:25,fields:['momentum_12_1','dist_mm200_pct']},
+      {id:'retorno',name:'Retorno ao acionista',weight:15,fields:['dividend_yield','payout_implicito']}]
  };
  const defs={
   roe:['ROE','%', 'Retorno sobre patrimônio; valores negativos exigem contexto'],
@@ -24,6 +24,8 @@
   dividend_yield:['Dividend Yield','%', 'Dividendo histórico; não garante pagamento futuro'],
   payout_implicito:['Payout','%', 'Parcela estimada do lucro distribuída'],
   momentum_12_1:['Momentum 12-1','%', 'Retorno de 12 meses excluindo o mês mais recente'],
+  dist_mm200_pct:['Distância MM200','%','Variação do preço em relação à média móvel de 200 sessões'],
+  revenue_growth_yoy:['Crescimento de receita','%','Variação de receita anual'],
   eps_growth_yoy:['Crescimento EPS','%', 'Variação anual de lucro por ação'],
   fcf_margin:['Margem de FCF','%', 'Fluxo de caixa livre / receita'],
   forward_pe:['Forward P/E','x','P/L projetado; estimativa sujeita a revisão'],
@@ -36,7 +38,10 @@
  };
  const allRequired=m=>[...new Set((weights[m]||weights.BR).flatMap(g=>g.fields))];
  function isVal(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))}
- function value(row,k){return row&&isVal(row[k])?Number(row[k]):null}
+ function value(row,k){if(!row)return null;const v=isVal(row[k])?Number(row[k]):null;
+  if(k==='payout_implicito'&&(v===null||v===0)&&isVal(row.dividend_yield)&&Number(row.dividend_yield)>0&&isVal(row.pl)&&Number(row.pl)>0)
+  return Number(row.dividend_yield)*Number(row.pl);
+  return v}
  function clamp(n){return Math.max(0,Math.min(100,n))}
  function scale(v,lo,hi,inv=false){return v==null?null:(inv?100-clamp((v-lo)/(hi-lo)*100):clamp((v-lo)/(hi-lo)*100))}
  function avg(vs){const a=vs.filter(x=>x!==null);return a.length?a.reduce((a,b)=>a+b,0)/a.length:null}
@@ -49,16 +54,16 @@
    scale(v('momentum_12_1'),-30,50)
   ];
   return [
-   avg([scale(v('roic'),5,22),scale(v('eps_growth_yoy'),-10,35),scale(v('fcf_margin'),0,30)]),
+   avg([scale(v('roic'),5,22),scale(v('roe'),5,25),scale(v('fcf_margin'),0,30),scale(v('eps_growth_yoy'),-10,35),scale(v('revenue_growth_yoy'),-10,35)]),
    avg([scale(v('forward_pe'),8,40,true),scale(v('peg_ratio'),.7,3,true),scale(v('ev_fcf'),5,35,true)]),
-   avg([scale(v('momentum_12_1'),-30,50),scale(v('short_interest_pct'),0,15,true)]),
-   scale(v('total_shareholder_yield'),0,12)
+   avg([scale(v('momentum_12_1'),-30,50),scale(v('dist_mm200_pct'),-35,35)]),
+   avg([scale(v('dividend_yield'),0,12),v('payout_implicito')===null?null:(v('payout_implicito')>=0&&v('payout_implicito')<=80?90:25)])
   ];
  }
  function age(date,now=Date.now()){
   if(!date)return null;const d=Date.parse(date);return Number.isFinite(d)?Math.max(0,Math.floor((now-d)/86400000)):null;
  }
- function diagnostics(market,row,now=Date.now()){
+ function diagnostics(market,row,now=Date.now(),medians=null){
   const m=market==='US'?'US':'BR',groups=weights[m],vs=item(m,row),all=allRequired(m);
   const parts=groups.map((g,i)=>({id:g.id,name:g.name,weight:g.weight,score:vs[i]===null?null:Math.round(vs[i]*10)/10,
     points:vs[i]===null?null:Math.round(vs[i]*g.weight/100*100)/100,
@@ -71,28 +76,48 @@
   const coverage=all.length?Math.round(eligible/all.length*100):0;
   const diff=official!==null&&model!==null?Math.abs(official-model):null;
   const oldFund=age(row?.sec_facts_at||row?.fundamentais_em,now);
+  const version=m==='BR'?'v2.0':'us_v2.0';const expected=String(row?.score_model_version||'legado');
+  const competence=row?.data_competencia_balanco||null;
   const oldTech=age(row?.tecnicos_em,now);
   const concerns=[],supports=[];
   if(official===null)concerns.push('Score indisponível: falta pelo menos um grupo de indicadores.');
-  if(diff!==null&&diff>1)concerns.push('Score armazenado diverge da fórmula atual em '+diff.toFixed(1)+' ponto(s): conferir atualização antes de comparar.');
+  if(expected!==version)concerns.push('Modelo antigo ('+expected+'); aguardando recálculo '+version+'.');
+  if(diff!==null&&diff>0.1)concerns.push('Score salvo diverge da fórmula '+version+' em '+diff.toFixed(2)+' ponto(s); recálculo necessário.');
   if(coverage<70)concerns.push('Cobertura dos critérios do score: '+coverage+'%; leitura ainda incompleta.');
-  if(oldFund===null)concerns.push('Data de coleta/competência dos fundamentos não identificada.');
+  if(oldFund===null)concerns.push('Data de coleta dos fundamentos não identificada.');
+  if(!competence)concerns.push('Competência contábil do balanço não validada na fonte primária.');
   if(oldFund!==null&&oldFund>180)concerns.push('Fundamentos com referência antiga: '+oldFund+' dias.');
   if(oldTech===null)concerns.push('Data de coleta dos indicadores técnicos não identificada.');
   if(oldTech!==null&&oldTech>10)concerns.push('Indicadores técnicos com referência antiga: '+oldTech+' dias.');
   if(value(row,'roe')!==null&&(value(row,'roe')<0||value(row,'roe')>80))concerns.push('ROE extremo/negativo: verificar patrimônio e eventos não recorrentes.');
   if(m==='US'&&value(row,'total_shareholder_yield')===null)concerns.push('Total Yield sem evidência suficiente de dividendos e recompras.');
-  if(m==='BR'&&value(row,'dividend_yield')>2&&value(row,'payout_implicito')===0)concerns.push('DY positivo com payout implícito zero: conferir proventos e balanços.');
+  if(m==='BR'&&value(row,'dividend_yield')>0&&Number(row?.payout_implicito||0)===0&&value(row,'pl')>0)
+   concerns.push('Payout estimado por Dividend Yield × P/L: confirmar proventos e lucro distribuível na DFP/ITR.');
   if(row?.dados_status==='catalogado')concerns.push('Ativo apenas catalogado: não há auditoria completa dos fundamentos.');
   for(const p of parts){
     if(p.score!==null&&p.score>=67&&p.covered>=1)supports.push(p.name+': '+p.points.toFixed(1)+' de '+p.weight+' pontos.');
     if(p.score!==null&&p.score<=35)concerns.push(p.name+' abaixo do centro da escala interna ('+Math.round(p.score)+'/100).');
   }
-  const verified=official!==null&&model!==null&&diff<=1&&coverage>=70&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10;
+  const verified=official!==null&&model!==null&&diff<=0.1&&expected===version&&coverage>=70&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10;
   const level=verified?'Cálculo confere':official!==null?'Exige conferência':'Incompleto';
+  const med=(key)=>medians&&isVal(medians[key])?Number(medians[key]):null;
+  const sector=String(row?.setor||row?.sector||'').toLowerCase();
+  const signal=[];
+  const roe=value(row,'roe'),roic=value(row,'roic'),pl=value(row,'pl'),dy=value(row,'dividend_yield'),momentum=value(row,'momentum_12_1');
+  if(roic!==null&&med('roic')!==null)signal.push('ROIC de '+roic.toFixed(1)+'% ante mediana de '+med('roic').toFixed(1)+'%.');
+  if(roe!==null&&med('roe')!==null)signal.push('ROE de '+roe.toFixed(1)+'% ante mediana de '+med('roe').toFixed(1)+'%.');
+  if(dy!==null&&med('dy')!==null)signal.push('DY histórico de '+dy.toFixed(1)+'% ante mediana de '+med('dy').toFixed(1)+'%.');
+  if(momentum!==null&&momentum<0)concerns.push('Momentum de '+momentum.toFixed(1)+'%: preço abaixo do patamar de 12 meses, excluindo o mês recente.');
+  if(value(row,'div_liq_ebitda')>3)concerns.push('Dívida líquida/EBITDA acima de 3x: avaliar cronograma de amortização e ciclo do setor.');
+  if(value(row,'net_debt_ebitda')>3)concerns.push('Dívida líquida/EBITDA acima de 3x: avaliar caixa e vencimentos.');
+  if(value(row,'payout_implicito')>90)concerns.push('Payout estimado acima de 90%: sustentabilidade dos dividendos depende de geração de caixa.');
+  const profile=roic!==null&&roic>=15&&((pl!==null&&pl<12)||(value(row,'forward_pe')!==null&&value(row,'forward_pe')<15))?'Perfil qualidade + múltiplos reduzidos':
+    roic!==null&&roic>=15?'Perfil rentabilidade de capital':dy!==null&&dy>=5?'Perfil de distribuição de resultados':'Perfil quantitativo misto';
+  const description=profile+(momentum!==null?(momentum>=0?'; tendência de preço positiva.':'; tendência de preço fraca.'):'; tendência ainda sem dados suficientes.');
   return {ticker:String(row?.ticker||''),company:String(row?.empresa||row?.company_name||row?.ticker||''),market:m,
-    score:official,modelScore:model,difference:diff,validated:verified,level,
-    coverage,parts,positives:supports.slice(0,3),risks:concerns.slice(0,6),
+    score:official,modelScore:model,difference:diff,validated:verified,level,modelVersion:expected,expectedVersion:version,
+    competence,profile:description,
+    coverage,parts,positives:[...signal,...supports].slice(0,3),risks:concerns.slice(0,6),
     missing:parts.flatMap(p=>p.missing),updated_at:row?.updated_at||null,
     fundamentals_at:row?.fundamentais_em||row?.sec_facts_at||null,
     technical_at:row?.tecnicos_em||null,
@@ -104,5 +129,5 @@
      'O método atribui pontuação baixa aos indicadores disponíveis; não significa necessariamente que a ação cairá.'};
  }
  function methodology(m){return (weights[m==='US'?'US':'BR']).map(g=>g.name+' '+g.weight+'%').join(' • ')}
- return Object.freeze({diagnostics,methodology,weights,definitions:defs,calculate:item});
+ return Object.freeze({diagnostics,methodology,weights,definitions:defs,calculate:item,version:'v2.0'});
 });
