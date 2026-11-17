@@ -1,6 +1,5 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const path=require('node:path');
 const {expect}=require('playwright/test');
 const {withApp}=require('./helpers/app.cjs');
 const ID='12345678-1234-4234-8234-123456789abc';
@@ -85,7 +84,7 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
      if(e.target?.matches?.('[data-tp-film-player]'))e.stopImmediatePropagation();
    },true);
  });
- await page.route('**/storage/v1/object/sign/**',route=>route.request().method()==='POST'?route.fulfill({json:{signedURL:'/object/sign/aulas-videos/test-video/'+ID+'-16x9.mp4?token=test'}}):route.fulfill({path:path.join(__dirname,'../public/avatar-talking.mp4'),contentType:'video/mp4'}));
+ // A assinatura e o arquivo MP4 serão simulados em memória: sem rede, codec ou Storage real.
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  await page.evaluate(data=>{
   tab='estudos';ESV='aul';
@@ -94,9 +93,20 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
   // senão tok() a invalida antes de obter o vídeo.
   SESS={uid:'test-video',at:'test',exp:Date.now()+3600000,projectUrl:cfg()?.url||location.origin};
   const demoFetch=window.fetch;
-  // Interceptar a URL real de Storage, seja a origem do teste ou a URL Supabase de config.js.
-  window.fetch=(url,options)=>String(url).includes('/storage/v1/object/sign/aulas-videos/')
-    ?window.testNativeFetch(url,options):demoFetch(url,options);
+  // A lógica de assinatura/validação de caminho continua real. Apenas a resposta
+  // do Storage é controlada no navegador; elimina corridas de roteamento externo.
+  window.EstudosLocal={...window.EstudosLocal,get:async()=>null,put:async()=>true};
+  window.fetch=(url,options)=>{
+    const href=String(url);
+    if(href.includes('/storage/v1/object/sign/aulas-videos/')){
+      if(options?.method==='POST')return Promise.resolve(new Response(JSON.stringify({
+        signedURL:'/object/sign/aulas-videos/test-video/'+data.id+'-16x9.mp4?token=test'
+      }),{status:200,headers:{'Content-Type':'application/json'}}));
+      return Promise.resolve(new Response(new Uint8Array([0,0,0,24,102,116,121,112,109,112,52,50,0,0,0,0,109,112,52,50,105,115,111,109]),{
+        status:200,headers:{'Content-Type':'video/mp4'}}));
+    }
+    return demoFetch(url,options);
+  };
   render();
   document.querySelector('[data-tp-aula-sub="mentor"]').click();
   TecnicaPratica.pdf.insert(data);TecnicaPratica.view.refresh();
