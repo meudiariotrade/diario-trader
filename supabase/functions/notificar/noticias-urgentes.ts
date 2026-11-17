@@ -168,14 +168,48 @@ async function fonteFinnhub(categoria: string, chave: string, fetcher: Fetcher):
     return { titulo, link, fonte: 'Finnhub ' + categoria, publicado, assinatura: assinaturaNoticia(titulo) };
   }).filter((x: NoticiaUrgente) => x.titulo.length >= 12 && x.link && Number.isFinite(x.publicado));
 }
+// Coleta RSS compartilhada do Cloudflare. Sem token, sem acesso ao banco.
+// Se cache estiver velho, vazio ou indisponível, a rotina original permanece como reserva.
+export async function buscarCloudflareNoticias(agora = new Date(), fetcher: Fetcher = fetch): Promise<NoticiaUrgente[]> {
+  const r=await fetcher('https://diario-trader.lucianosilva43567.workers.dev/v1/noticias',{
+    signal:AbortSignal.timeout(5500),headers:{Accept:'application/json'}
+  });
+  if(!r.ok)throw Error('Cloudflare '+r.status);
+  const j=await r.json();
+  const ts=Date.parse(j?.atualizadoEm||''),ms=agora.getTime();
+  if(!Array.isArray(j?.itens)||j.desatualizado||!Array.isArray(j.fontesOk)||
+     !j.fontesOk.length||!Number.isFinite(ts)||ts>ms+300000||ms-ts>15*60000)
+    throw Error('Cloudflare sem cache válido');
+  const validos:NoticiaUrgente[]=[];
+  for(const n of j.itens.slice(0,50)){
+    const titulo=tituloLimpo(n.t),link=linkSeguro(n.l),publicado=Date.parse(n.d);
+    if(titulo.length<12||!link||!Number.isFinite(publicado)||publicado>ms+120000||
+       publicado<ms-24*3600000)continue;
+    const assinatura=assinaturaNoticia(titulo);
+    if(assinatura)validos.push({titulo,link,publicado,
+      fonte:String(n.fonte||'Cloudflare').slice(0,60),assinatura});
+  }
+  if(!validos.length)throw Error('Cloudflare sem notícias válidas');
+  return validos;
+}
+
 export async function coletarNoticias(chave: string, agora = new Date(), fetcher: Fetcher = fetch, modo: 'completo' | 'leve' = 'completo') {
   // O cron coleta 3 RSS financeiros + 2 perfis X + Finnhub general; não gera Jornal nem IA.
   // O modo completo continua disponível para diagnóstico pontual, nunca no cron.
+  // No cron leve, um único snapshot Cloudflare substitui três downloads RSS repetidos.
+  // Os perfis X e o Finnhub continuam independentes; o modo completo mantém sua auditoria.
+  let publicas:NoticiaUrgente[]=[];
+  let cloudOK=false;
+  if(modo==='leve')try{
+    publicas=await buscarCloudflareNoticias(agora,fetcher);
+    cloudOK=publicas.length>0;
+  }catch{cloudOK=false;}
   const fontes = modo === 'leve'
-    ? RSS_FINANCEIRO.filter((f) => ['InfoMoney', 'Money Times', 'CNBC'].includes(f.nome))
+    ? (cloudOK?[]:RSS_FINANCEIRO.filter((f) => ['InfoMoney', 'Money Times', 'CNBC'].includes(f.nome)))
     : RSS_FINANCEIRO;
   const categorias = modo === 'leve' ? ['general'] : ['general', 'forex', 'crypto'];
   const tarefas: { nome: string; executar: () => Promise<NoticiaUrgente[]> }[] = [
+    ...(cloudOK?[{nome:'Cloudflare RSS compartilhado',executar:async()=>publicas}]:[]),
     ...fontes.map((f) => ({ nome: f.nome, executar: () => fonteRSS(f, fetcher) })),
     ...X_PERFIS.map((p) => ({ nome: 'X @' + p, executar: () => fonteX(p, fetcher) })),
     ...(chave ? categorias.map((c) => ({ nome: 'Finnhub ' + c, executar: () => fonteFinnhub(c, chave, fetcher) })) : []),

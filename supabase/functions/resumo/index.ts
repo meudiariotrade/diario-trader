@@ -514,6 +514,18 @@ async function rest(caminho: string, init: RequestInit = {}) {
   const t = await r.text();
   return t ? JSON.parse(t) : [];
 }
+// Recuperação leve da fila: apenas o Vault do agendamento pode chamar tick/passo.
+async function autorizaJobLeve(req:Request){
+  const recebido=req.headers.get('x-cron-secret')||'';
+  if(!recebido)return false;
+  if(CRON&&recebido===CRON)return true;
+  try{
+    const esperado=await rest('rpc/diario_agendamento_chave',{method:'POST',body:'{}'});
+    if(typeof esperado!=='string'||esperado.length!==recebido.length)return false;
+    let diff=0;for(let i=0;i<esperado.length;i++)diff|=esperado.charCodeAt(i)^recebido.charCodeAt(i);
+    return diff===0;
+  }catch{return false;}
+}
 const patch = (caminho: string, corpo: unknown) => rest(caminho, { method: 'PATCH', body: JSON.stringify(corpo) });
 const agoraIso = () => new Date().toISOString();
 
@@ -858,7 +870,7 @@ Deno.serve(async (req) => {
   try {
     // ----- agendador: retoma pedidos parados (chamado pelo pg_cron) -----
     if (b.acao === 'tick') {
-      if (!CRON || req.headers.get('x-cron-secret') !== CRON) return out({ erro: 'Não autorizado' }, 401);
+      if (!(await autorizaJobLeve(req))) return out({ erro: 'Não autorizado' }, 401);
       const fila = await rest('resumos?status=in.(na_fila,processando)&select=id,status,criado,atualizado,trava&order=criado.asc&limit=10');
       const alvo = fila.find((j: any) => precisaRetomar(j, Date.now()));
       if (alvo) emFundo(processa(alvo.id));
@@ -869,7 +881,7 @@ Deno.serve(async (req) => {
 
     // ----- próxima etapa do resumo completo (a própria função chama) -----
     if (b.acao === 'passo') {
-      if (!CRON || req.headers.get('x-cron-secret') !== CRON) return out({ erro: 'Não autorizado' }, 401);
+      if (!(await autorizaJobLeve(req))) return out({ erro: 'Não autorizado' }, 401);
       const pid = String(b.id || '');
       if (!/^[0-9a-f-]{36}$/i.test(pid)) return out({ erro: 'Identificador inválido' }, 400);
       emFundo(processa(pid));

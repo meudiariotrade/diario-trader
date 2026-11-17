@@ -4,6 +4,20 @@ const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), KEY = ENV('RESEND_API_KEY');
 const svc = { apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json' };
 async function db(p: string, init: RequestInit = {}) { const r = await fetch(SB + '/rest/v1/' + p, { ...init, headers: { ...svc, ...((init.headers as any) || {}) } }); if (!r.ok) throw new Error('db ' + r.status + ' ' + (await r.text()).slice(0, 160)); const t = await r.text(); return t ? JSON.parse(t) : null; }
+// Jobs e testes internos autenticados pela chave já existente no Vault (sem expô-la).
+async function autorizaJob(req:Request){
+  const recebido=req.headers.get('x-cron-secret')||'';
+  if(!recebido||!SRK)return false;
+  const r=await fetch(SB+'/rest/v1/rpc/diario_agendamento_chave',{
+    method:'POST',headers:{apikey:SRK,Authorization:'Bearer '+SRK,'Content-Type':'application/json'},
+    body:'{}',signal:AbortSignal.timeout(5000)
+  }).catch(()=>null);
+  if(!r?.ok)return false;
+  const token=await r.json().catch(()=>null);
+  if(typeof token!=='string'||token.length!==recebido.length)return false;
+  let diff=0;for(let i=0;i<token.length;i++)diff|=token.charCodeAt(i)^recebido.charCodeAt(i);
+  return diff===0;
+}
 const n = (x: any) => { const v = parseFloat(String(x ?? '').replace(',', '.')); return isFinite(v) ? v : NaN; };
 const brl = (v: number) => (v < 0 ? '-' : '') + 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const esc = (s: any) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
@@ -74,9 +88,12 @@ async function enviaUm(uid: string, dados: any, forca: boolean, ateX = '', xlsx 
 Deno.serve(async (req) => {
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type', 'Content-Type': 'application/json' };
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
-  if (!KEY) return new Response(JSON.stringify({ error: 'Falta RESEND_API_KEY' }), { status: 500, headers: cors });
   let b: any = {}; try { b = await req.json(); } catch { /* */ }
   const out: any = {};
+  const job=await autorizaJob(req);
+  if (b.acao==='diagnostico') return new Response(JSON.stringify({autorizado:job,resendConfigurado:!!KEY}),
+    {status:job?200:401,headers:cors});
+  if(!KEY)return new Response(JSON.stringify({error:'Falta RESEND_API_KEY'}),{status:500,headers:cors});
   // pedido do app: só a própria conta
   const tk = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   if (b.acao === 'agora') {
@@ -85,12 +102,14 @@ Deno.serve(async (req) => {
     const d = await db(`diario?select=data&user_id=eq.${u.id}`); out.r = await enviaUm(u.id, d?.[0]?.data, b.forca !== false, String(b.ate || ''), String(b.xlsx || ''), String(b.pdf || ''));
     return new Response(JSON.stringify(out), { headers: cors });
   }
-  if (typeof b.teste === 'string' && /^[0-9a-f]{6}$/.test(b.teste)) { // envio de teste: 1 por dia, só para o dono da conta
+  if (typeof b.teste === 'string' && /^[0-9a-f]{6}$/.test(b.teste)) {
+    if(!job)return new Response(JSON.stringify({error:'Não autorizado'}),{status:401,headers:cors}); // envio de teste: 1 por dia, só para o dono da conta
     const k = 'email-teste:' + new Date().toISOString().slice(0, 10); const j = await db(`push_log?select=chave&chave=eq.${k}`); if (j?.length) return new Response(JSON.stringify({ r: 'teste já feito hoje' }), { headers: cors });
     const L0 = await db('diario?select=user_id,data'); const x = (L0 || []).find((y: any) => String(y.user_id).startsWith(b.teste)); if (!x) return new Response(JSON.stringify({ r: 'conta não achada' }), { headers: cors });
     out.r = await enviaUm(x.user_id, x.data, true, String(b.ate || '')); await db('push_log', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ chave: k, em: new Date().toISOString() }) }).catch(() => {});
     return new Response(JSON.stringify(out), { headers: cors });
   }
+  if(!job)return new Response(JSON.stringify({error:'Não autorizado'}),{status:401,headers:cors});
   const L = await db(`diario?select=user_id,data&updated_at=gte.${new Date(Date.now() - 14 * 864e5).toISOString()}`).catch(() => db('diario?select=user_id,data'));
   for (const x of L || []) { if (!x.user_id || x.data?.emailSemana === false) continue; try { out[x.user_id.slice(0, 6)] = await enviaUm(x.user_id, x.data, false); } catch (e) { out[x.user_id.slice(0, 6)] = String((e as Error).message).slice(0, 120); } }
   return new Response(JSON.stringify(out), { headers: cors });

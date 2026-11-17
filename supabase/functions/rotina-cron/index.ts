@@ -39,6 +39,41 @@ export async function matinal(slot: string) {
   return { id: r?.[0]?.id ?? null, eventos3: tres };
 }
 
+
+// Panorama leve: lê apenas 1 snapshot público compartilhado e a agenda já cacheada.
+// Não dispara cinco Edge Functions de mercado nem grava dados pessoais.
+export async function matinalLeve(slot: string) {
+  const inicio=Date.now();
+  const ja=await db('panorama_fotos?select=id&slot=eq.'+encodeURIComponent(slot)+'&limit=1');
+  if(ja?.[0])return {id:ja[0].id,ja:true,leve:true};
+  const r=await fetch('https://diario-trader.lucianosilva43567.workers.dev/v1/panorama',{
+    signal:AbortSignal.timeout(8000),headers:{Accept:'application/json'}
+  });
+  if(!r.ok){await log('panorama leve',false,slot+': Cloudflare HTTP '+r.status,Date.now()-inicio);return {erro:'snapshot público indisponível'};}
+  const snap=await r.json(),grupos=snap?.mdo?.mercados?.grupos||[],adrs=snap?.ad?.itens||[];
+  const bolsa=grupos.find((g:any)=>g.g==='Bolsas')?.itens||[];
+  const futuros=grupos.find((g:any)=>g.g==='Futuros e ADR')?.itens||[];
+  const comm=grupos.find((g:any)=>g.g==='Commodities')?.itens||[];
+  if(!Array.isArray(grupos)||!Array.isArray(adrs)||!bolsa.length||!futuros.length||!comm.length||!adrs.length){
+    await log('panorama leve',false,slot+': snapshot incompleto',Date.now()-inicio);
+    return {erro:'snapshot incompleto; preservado último panorama'};
+  }
+  const ts=Date.parse(snap.geradoEm||'');
+  if(!Number.isFinite(ts)||Math.abs(Date.now()-ts)>30*60000)return {erro:'snapshot desatualizado'};
+  const agenda=(await db('push_calendario_eventos?select=titulo,moeda,horario,impacto,previsao,anterior&horario=gte.'+
+    encodeURIComponent(slot.slice(0,10)+'T00:00:00-03:00')+'&limit=80').catch(()=>[]))||[];
+  const eventos=(agenda as any[]).filter(e=>e.horario&&e.titulo).map(e=>({
+    t:String(e.titulo).slice(0,160),p:e.moeda==='BRL'?'BR':e.moeda==='USD'?'US':String(e.moeda||''),
+    em:e.horario,imp:e.impacto==='high'?3:e.impacto==='medium'?2:Number(e.impacto)||0,
+    proj:e.previsao||'',ant:e.anterior||''
+  })).slice(0,40);
+  const dados={mdo:snap.mdo,ad:snap.ad,ag:{eventos},fe:null,bal:null};
+  const row=await db('panorama_fotos',{method:'POST',headers:{Prefer:'return=representation'},
+    body:JSON.stringify({slot,dados})});
+  await log('panorama leve',true,slot+': '+snap.fonte+'; '+eventos.length+' eventos',Date.now()-inicio);
+  return {id:row?.[0]?.id||null,leve:true,eventos:eventos.length};
+}
+
 let wp: any = null;
 async function push() {
   if (wp) return wp;
@@ -78,6 +113,28 @@ async function fechamento(dia: string) {
   await log('lembrete 17:45', true, `${dia}: ${pend.length} conta(s) com fechamento pendente · ${Object.values(out).join(', ') || 'nada a enviar'}`, Date.now() - t0);
   return out;
 }
+
+// Jornal clássico, em edições agendadas: usa motor original e cache; nunca cada 10 minutos.
+async function jornalAgendado(dia:string){
+  if(!CRON||!SB||!ANON)return {ok:false,motivo:'Credencial interna indisponível'};
+  const inicio=Date.now();
+  try{
+    const r=await fetch(SB+'/functions/v1/analise',{
+      method:'POST',signal:AbortSignal.timeout(116000),
+      headers:{'Content-Type':'application/json','x-cron-secret':CRON,
+        apikey:ANON,Authorization:'Bearer '+ANON},
+      body:JSON.stringify({modo:'jornal',partes:false,force:false})
+    });
+    const j=await r.json().catch(()=>({erro:'Resposta inválida'}));
+    const ok=r.ok&&!j.erro&&!j.antiga&&!!j.manchete;
+    await log('jornal programado',ok,dia+': HTTP '+r.status+'; '+(ok?'edição pronta':String(j.erro||j.motivo||'edição pendente').slice(0,120)),Date.now()-inicio);
+    return {ok,http:r.status,cache:!!j.cache,antiga:!!j.antiga};
+  }catch(e){
+    await log('jornal programado',false,dia+': '+String(e).slice(0,100),Date.now()-inicio);
+    return {ok:false,motivo:'Edição anterior preservada'};
+  }
+}
+
 Deno.serve(async (req) => {
   const out = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
   if (req.method !== 'POST') return out({ error: 'Método não permitido' }, 405);
@@ -85,7 +142,10 @@ Deno.serve(async (req) => {
   let b: any = {}; try { b = await req.json(); } catch { /* */ }
   const { dia, util } = agoraSP();
   try {
+    if (b.acao === 'matinal_leve') { if(!util && !b.forcar)return out({r:'fim de semana'}); return out(await matinalLeve(`${dia} ${b.hm || '06:50'}`)); }
     if (b.acao === 'matinal') return out(await matinal(`${dia} ${b.hm || '06:50'}`));
+    if (b.acao === 'diagnostico_leve')return out({autorizado:true,cronInternoConfigurado:!!CRON,semEnvio:true});
+    if (b.acao === 'jornal_agendado') { if(!util)return out({r:'fim de semana'});return out(await jornalAgendado(dia)); }
     if (b.acao === 'fechamento') { if (!util && !b.forcar) return out({ r: 'fim de semana' }); return out(await fechamento(/^\d{4}-\d{2}-\d{2}$/.test(b.dia || '') ? b.dia : dia)); }
     return out({ error: 'Ação desconhecida' }, 400);
   } catch (e) { await log('rotina ' + (b.acao || '?'), false, (e as Error).message); return out({ error: (e as Error).message }, 500); }

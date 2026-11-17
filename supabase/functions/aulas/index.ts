@@ -35,6 +35,19 @@ const corsFor = (req: Request) => {
   const h: Record<string, string> = { 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', Vary: 'Origin' };
   const o = req.headers.get('origin') || ''; if (!ORIGENS.length) h['Access-Control-Allow-Origin'] = '*'; else if (ORIGENS.includes(o)) h['Access-Control-Allow-Origin'] = o; return h;
 };
+async function autorizaFila(req:Request){
+  const recebido=req.headers.get('x-cron-secret')||'';
+  if(!recebido||!SRK)return false;
+  const r=await fetch(SB+'/rest/v1/rpc/diario_agendamento_chave',{
+    method:'POST',headers:{apikey:SRK,Authorization:'Bearer '+SRK,'Content-Type':'application/json'},
+    body:'{}',signal:AbortSignal.timeout(5000)
+  }).catch(()=>null);
+  if(!r?.ok)return false;
+  const token=await r.json().catch(()=>null);
+  if(typeof token!=='string'||token.length!==recebido.length)return false;
+  let diff=0;for(let i=0;i<token.length;i++)diff|=token.charCodeAt(i)^recebido.charCodeAt(i);
+  return diff===0;
+}
 const svc = (x: Record<string, string> = {}) => ({ apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json', ...x });
 async function db(path: string, init: RequestInit = {}) {
   const r = await fetch(SB + '/rest/v1/' + path, { ...init, headers: svc((init.headers as any) || {}), signal: AbortSignal.timeout(10_000) });
@@ -395,7 +408,8 @@ Deno.serve(async (req) => {
   if (!SRK) return out({ error: 'Serviço de aulas indisponível.' }, 500);
   let b: any; try { b = await req.json(); } catch { return out({ error: 'Pedido inválido.' }, 400); }
   if(!['mentor_pdf','mentor_pdf_local'].includes(b?.acao)&&!GEMINI_KEY)return out({error:'Falta configurar a chave do Gemini no Supabase.'},500);
-  if (b?.acao === 'processar') { if (!dentroDoLimite('fila:proc', 4)) return out({ ok: true, ocupado: true }); // só avança a fila; não lê nem devolve dados
+  if (b?.acao === 'processar') { if (!(await autorizaFila(req)))return out({error:'Não autorizado'},401);
+    if (!dentroDoLimite('fila:proc', 4)) return out({ ok: true, ocupado: true }); // só avança a fila; não lê nem devolve dados
     const job = processar().catch((e) => console.error('fila', e));
     try { (globalThis as any).EdgeRuntime?.waitUntil(job); } catch { /* */ }
     return out({ ok: true, rodando: true }); }
@@ -443,6 +457,9 @@ Deno.serve(async (req) => {
       const linha = { user_id: uid, aula_id: id, idx: Math.round(num(b.idx, 0, 23, 0)!), total: Math.round(num(b.total, 1, 24, 1)!), bloco: Math.round(num(b.bloco, 0, 11, 0)!), blocos: Math.round(num(b.blocos, 1, 12, 1)!), capitulo: txt(b.capitulo, 120), texto, figuras: arr(b.figuras).slice(0, 30), status: 'pendente', tentativas: 0, erro: null, atualizado: new Date().toISOString() };
       await db('aulas_fila?on_conflict=aula_id,idx', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(linha) });
       if (linha.idx === 0) await db(`aulas?id=eq.${id}&user_id=eq.${uid}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'gerando', erro: null }) }).catch(() => {});
+      // Processar apenas após o usuário enfileirar; nada de cron a cada minuto.
+      const job=processar().catch(e=>console.warn('fila sob demanda',String(e).slice(0,120)));
+      try{(globalThis as any).EdgeRuntime?.waitUntil(job);}catch{/* execução manual continua disponível */}
       return out({ ok: true, fila: true });
     }
     return out({ error: 'Ação desconhecida.' }, 400);
