@@ -5,10 +5,10 @@ const modulo = import('../supabase/functions/notificar/noticias-urgentes.ts');
 test('janela 5 minutos no pregão e 15 fora do horário/fim de semana (Brasília)', async () => {
   const { janelaNoticias } = await modulo;
   const pregao = janelaNoticias(new Date('2026-11-16T15:10:00Z'));
-  assert.equal(pregao.pregao, true); assert.equal(pregao.intervalo, 5); assert.equal(pregao.consultar, true);
+  assert.equal(pregao.pregao, true); assert.equal(pregao.intervalo, 2); assert.equal(pregao.consultar, true);
   const sabado = janelaNoticias(new Date('2026-11-14T15:10:00Z'));
   assert.equal(sabado.pregao, false); assert.equal(sabado.consultar, false);
-  assert.equal(janelaNoticias(new Date('2026-11-14T15:15:00Z')).consultar, true);
+  assert.equal(janelaNoticias(new Date('2026-11-14T15:20:00Z')).consultar, true);
   assert.equal(janelaNoticias(new Date('2026-11-16T22:05:00Z')).consultar, false);
 });
 
@@ -179,4 +179,16 @@ test('v727: modo leve não consulta todas as fontes do relatório completo', asy
   assert.equal(calls.some(u => u.includes('news.google.com/rss/search')), false);
   assert.equal(calls.some(u => u.includes('category=crypto')), false);
   assert.ok(calls.some(u => u.includes('finnhub.io/api/v1/news?category=general')));
+});
+
+test('v729: identifica petróleo, minério, ações e política com efeito econômico', async () => {
+  const { temaPrioritario, mancheteUrgente } = await modulo;
+  assert.equal(temaPrioritario('OPEC reduces oil output after pipeline outage'), 'petroleo');
+  assert.equal(temaPrioritario('Iron ore price collapses amid Chinese steel demand'), 'minerio');
+  assert.equal(temaPrioritario('Ibovespa and Petrobras earnings impact shares'), 'petroleo');
+  assert.equal(temaPrioritario('Congress approves tariffs on imports and stocks fall'), 'politica');
+  assert.equal(temaPrioritario('Presidente participa de evento cultural'), '');
+  assert.equal(mancheteUrgente('Iron ore price collapses amid Chinese steel demand'), true);
+  assert.equal(mancheteUrgente('Congress approves tariffs on imports and stocks fall'), true);
+  assert.equal(mancheteUrgente('Candidatos se encontraram no jantar'), false);
 });
