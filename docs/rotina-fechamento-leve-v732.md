@@ -1,5 +1,14 @@
 # v732 — retorno controlado do lembrete de fechamento
 
+## Resultado em produção — 17/11/2026
+
+- Edge Function `rotina-cron` publicada como versão **3** no projeto Supabase novo `vdzwydizostutukppcsj`.
+- Validação sem efeitos colaterais: requisição com segredo Vault v724 e ação desconhecida retornou **HTTP 400** (autenticada); sem segredo retornou **HTTP 401** (bloqueada).
+- Job `rotina-fechamento` **ATIVO**, agendado `45 20 * * 1-5` (17:45 de Brasília), credencial v724 no Vault; as rotinas de panorama continuam desligadas.
+- O primeiro disparo real de fechamento ainda depende do horário agendado e de destinatários elegíveis. Não afirmar entrega visual de Push antes de conferi-la.
+- Não foram transferidos nem modificados dados de operações; a função apenas consulta pendências quando for executada.
+
+
 Antes desta versão o job rotina-fechamento estava desligado, e seu comando usava um secret ausente no Vault novo, diario_cron_secret. O teste inofensivo (acao desconhecida) com a chave do job v724 retornou HTTP 401. Por isso NÃO é seguro religar os jobs legados diretamente.
 
 ## Mudança no código
