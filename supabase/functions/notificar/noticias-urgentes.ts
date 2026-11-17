@@ -35,11 +35,27 @@ export function tituloLimpo(t: unknown): string {
 }
 const normal = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const PESSOAL = /\b(?:moneyist|dear penny|husband|wife|wedding|horoscope|boyfriend|girlfriend|divorce|marriage|zodiac|astrology|mpox|monkeypox|measles|celebrity|fashion|relationship|retire at|should i marry|should i divorce|should i retire|personal advice|my spouse|my wife|my husband)\b/i;
+export function temaPrioritario(titulo: string): 'petroleo' | 'minerio' | 'acoes' | 'politica' | '' {
+  const n = normal(titulo);
+  const petroleo = /\b(?:petroleo|brent|wti|oil|crude|opec|opep|petrobras|petr[34]|diesel|refinaria|refinery)\b/.test(n);
+  const minerio = /\b(?:minerio|iron ore|iron-ore|siderurgia|steel|vale3|csn mineracao|mining)\b/.test(n);
+  const acoes = /\b(?:acoes|acao|stocks|shares|equities|ibovespa|ibov|nasdaq|bolsa|earnings|balanco|dividendos|lucro|resultados|petrobras|vale3|b3)\b/.test(n);
+  const politico = /\b(?:governo|congresso|senado|presidente|election|eleicoes|congress|senate|white house|trump|tarifa|tariff|sancoes|sanctions|guerra|war|orcamento|impostos|tax)\b/.test(n);
+  const economico = /\b(?:fiscal|mercado|market|economia|economy|comercio|trade|export|import|tarif|tax|sanc|guerra|war|petroleo|oil|minerio|iron|bolsa|stocks|acoes|juros|rates|dolar|dollar|energia|energy|credito|debt)\b/.test(n);
+  if (petroleo) return 'petroleo';
+  if (minerio) return 'minerio';
+  if (politico && economico) return 'politica';
+  if (acoes) return 'acoes';
+  return '';
+}
 export function mancheteUrgente(titulo: string): boolean {
   const n = normal(titulo);
   if (PESSOAL.test(n)) return false;
   if (/\b(?:copom|selic|fed|powell|fomc|payroll|cpi|ipca|tarifas?|tariffs?|petroleo|oil|crude|opep|opec|guerra|war|petrobras|petr[34]|bitcoin|btc)\b/.test(n)) return true;
-  return /\b(?:Vale|VALE3|mineradora\s+vale)\b/.test(titulo);
+  if (/\b(?:Vale|VALE3|mineradora\s+vale|minerio de ferro|iron ore)\b/i.test(titulo)) return true;
+  const t = temaPrioritario(titulo);
+  return (t === 'politica' || t === 'acoes') &&
+    /\b(?:breaking|urgent|urgente|aprova|aprovou|decide|decidiu|anuncia|anunciou|ataque|attack|votacao|vote|suspende|corta|cuts|sanctions|sancoes|tarifas|tariffs|embargo|dividendo|earnings|balanco|lucro|revenue|receita|prejuizo|losses|regulacao|regulation|intervencao|intervention|crise|crisis)\b/.test(n);
 }
 export function assinaturaNoticia(titulo: string): string {
   const n = normal(tituloLimpo(titulo))
@@ -72,7 +88,7 @@ export function janelaNoticias(agora = new Date()) {
   }).formatToParts(agora).map((x) => [x.type, x.value]));
   // Abrange o pregão brasileiro e a sessão americana regular, sem impedir feriados dos EUA.
   const pregao = !['Sat', 'Sun'].includes(p.weekday) && +p.hour >= 9 && +p.hour < 18;
-  const intervalo = pregao ? 5 : 15;
+  const intervalo = pregao ? 2 : 10;
   return { pregao, intervalo, consultar: +p.minute % intervalo === 0, idadeMaxMs: (intervalo + 7) * 60_000 };
 }
 function linkSeguro(link: unknown): string {
@@ -153,10 +169,10 @@ async function fonteFinnhub(categoria: string, chave: string, fetcher: Fetcher):
   }).filter((x: NoticiaUrgente) => x.titulo.length >= 12 && x.link && Number.isFinite(x.publicado));
 }
 export async function coletarNoticias(chave: string, agora = new Date(), fetcher: Fetcher = fetch, modo: 'completo' | 'leve' = 'completo') {
-  // O cron coleta apenas 2 RSS + 2 perfis X + Finnhub general.
+  // O cron coleta 3 RSS financeiros + 2 perfis X + Finnhub general; não gera Jornal nem IA.
   // O modo completo continua disponível para diagnóstico pontual, nunca no cron.
   const fontes = modo === 'leve'
-    ? RSS_FINANCEIRO.filter((f) => ['InfoMoney', 'Money Times'].includes(f.nome))
+    ? RSS_FINANCEIRO.filter((f) => ['InfoMoney', 'Money Times', 'CNBC'].includes(f.nome))
     : RSS_FINANCEIRO;
   const categorias = modo === 'leve' ? ['general'] : ['general', 'forex', 'crypto'];
   const tarefas: { nome: string; executar: () => Promise<NoticiaUrgente[]> }[] = [
@@ -255,11 +271,14 @@ export async function dispararNoticias(op: {
         // Se o banco não puder confirmar a reserva, falha fechada em vez de gerar spam.
         if (!(await reservas.get(chave)!)) continue;
       }
+      const tema = temaPrioritario(item.titulo);
+      const nomes: Record<string,string> = {petroleo:'PETRÓLEO',minerio:'MINÉRIO',acoes:'AÇÕES',politica:'POLÍTICA / MERCADO'};
+      const prefixo = nomes[tema] ? '[' + nomes[tema] + '] ' : '';
       const payload = {
-        title: titulos[i].slice(0, 120),
+        title: (prefixo + titulos[i]).slice(0, 120),
         body: ('Urgente · ' + item.fonte + ' · ' + item.link).slice(0, 500),
         tag: 'urg-' + id,
-        data: { go: 'mercado', r: 'noticias', url: item.link, noticia_id: id, assinatura, assinatura_original: item.assinatura, titulo_original: item.titulo },
+        data: { go: 'mercado', r: 'noticias', url: item.link, noticia_id: id, tema, assinatura, assinatura_original: item.assinatura, titulo_original: item.titulo },
       };
       try { if (await op.enviar(sub, payload, sub.id + '|urg|' + id)) n++; else erros++; }
       catch { erros++; }
