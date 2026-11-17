@@ -82,6 +82,7 @@
   if(oldTech!==null&&oldTech>10)concerns.push('Indicadores técnicos com referência antiga: '+oldTech+' dias.');
   if(value(row,'roe')!==null&&(value(row,'roe')<0||value(row,'roe')>80))concerns.push('ROE extremo/negativo: verificar patrimônio e eventos não recorrentes.');
   if(m==='US'&&value(row,'total_shareholder_yield')===null)concerns.push('Total Yield sem evidência suficiente de dividendos e recompras.');
+  if(m==='BR'&&value(row,'dividend_yield')>2&&value(row,'payout_implicito')===0)concerns.push('DY positivo com payout implícito zero: conferir proventos e balanços.');
   if(row?.dados_status==='catalogado')concerns.push('Ativo apenas catalogado: não há auditoria completa dos fundamentos.');
   for(const p of parts){
     if(p.score!==null&&p.score>=67&&p.covered>=1)supports.push(p.name+': '+p.points.toFixed(1)+' de '+p.weight+' pontos.');
