@@ -31,11 +31,11 @@
 ;(function(w,d){'use strict';
 const E=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fmt=(n,dg=1)=>n==null||!Number.isFinite(Number(n))?'—':Number(n).toLocaleString('pt-BR',{minimumFractionDigits:dg,maximumFractionDigits:dg});
-const pct=(x)=>fmt(x,1)+'%';
+const pct=(x)=>x==null||!Number.isFinite(Number(x))?'—':fmt(x,1)+'%';
 const mny=(x,usd)=>x==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:usd?'USD':'BRL',maximumFractionDigits:0,notation:'compact'}).format(Number(x));
 const state={br:{},us:{}},cache=new Map();let timer=null,reqId=0;
 function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',page:0,chart:'roe-payout',zoom:'100',selected:[],rows:null,data:null,loading:false,error:'',requested:''});return s}
-function holdings(){try{const snapshot=w.pfCalc();return (snapshot.pos||[]).filter(p=>+p.q>0&&+p.v>0).map(p=>({ticker:String(p.tk||'').toUpperCase().replace(/\.SA$/,''),market:p.mk,pct:Number(p.peso)||0,sector:p.setor||'',value:Number(p.v)||0}))}catch{return []}}
+let holdingsCache=[],holdingsAt=0,holdingsOwner='';function holdings(){const uid=typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local';if(holdingsOwner===uid&&Date.now()-holdingsAt<5000)return holdingsCache;try{const snapshot=w.pfCalc();holdingsCache=(snapshot.pos||[]).filter(p=>+p.q>0&&+p.v>0).map(p=>({ticker:String(p.tk||'').toUpperCase().replace(/\.SA$/,''),market:p.mk,pct:Number(p.peso)||0,sector:p.setor||'',value:Number(p.v)||0}));holdingsAt=Date.now();holdingsOwner=uid;return holdingsCache}catch{return []}}
 function owner(){return typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local'}
 function owned(){return [...new Set(holdings().map(p=>p.ticker))].slice(0,80)}
 function ownRow(row){const k=String(row?.ticker||'').toUpperCase(),b=String(row?.bdr_ticker||'').toUpperCase();return holdings().find(p=>p.ticker===k||(b&&p.ticker===b))||null}
@@ -54,10 +54,10 @@ return '<div class="scr-filters"><label>Buscar ticker ou empresa<input type="sea
 function kpis(m,s){const v=s.data?.medians||{};return '<div class="scr-kpis">'+Object.entries(labels[m]).map(([key,label])=>'<div class="scr-kpi"><span>'+E(label)+'</span><b>'+((key==='forward_pe')?fmt(v[key],1):pct(v[key]))+'</b></div>').join('')+'</div>'}
 function stats(m,s){const data=s.data||{},top=data.highlights||[],all=[...(data.scatter||[])].filter(x=>x.score!=null);
 const asym=[...all].filter(x=>x.score!=null).sort((a,b)=>(b.score||0)-(a.score||0))[0];
-const div=[...all].filter(x=>x.dy!=null&&x.dy>0).sort((a,b)=>(b.dy||0)-(a.dy||0))[0];
+const div=[...all].filter(x=>x.dy!=null&&x.dy>0&&x.payout!=null&&x.payout>=20&&x.payout<=90&&x.fcf_yield!=null&&x.fcf_yield>0).sort((a,b)=>(b.dy||0)-(a.dy||0))[0];
 const momentum=[...all].filter(x=>x.momentum!=null).sort((a,b)=>(b.momentum||0)-(a.momentum||0))[0];
 const cards=[['Maior Assimetria',asym,'score'],['Maior Pagadora Sustentável',div,'dy'],['Líder de Momentum',momentum,'momentum']];
-let alert='';for(const a of all){const p=ownRow(a);if(p)continue;const ownedSame=all.find(x=>ownRow(x)&&x.score!=null&&x.score+15<=a.score&&x.ticker!==a.ticker&&x.nome!==a.nome);if(ownedSame){alert='<p class="scr-alert">Comparação de setor disponível: '+E(a.ticker)+' tem score superior ao de '+E(ownedSame.ticker)+'. <button class="btn s" data-scr-compare="'+E(a.ticker)+','+E(ownedSame.ticker)+'">Comparar dois ativos</button></p>';break;}}
+let alert='';for(const a of all){const p=ownRow(a);if(p)continue;const ownedSame=all.find(x=>x.setor&&a.setor&&x.setor===a.setor&&ownRow(x)&&x.score!=null&&x.score+15<=a.score&&x.ticker!==a.ticker);if(ownedSame){alert='<p class="scr-alert">Comparação de setor disponível: '+E(a.ticker)+' tem score superior ao de '+E(ownedSame.ticker)+'. <button class="btn s" data-scr-compare="'+E(a.ticker)+','+E(ownedSame.ticker)+'">Comparar dois ativos</button></p>';break;}}
 return '<div class="scr-highlights">'+cards.map(([label,x,k])=>'<div class="scr-highlight"><span>'+E(label)+'</span><b>'+(x?E(x.ticker):'Sem dados suficientes')+'</b><small>'+(x?(k==='score'?'Score '+fmt(x.score):pct(x[k])):'Aguardando fundamentos validados')+'</small></div>').join('')+'</div>'+alert;
 }
 const chartOptsBR=[['roe-payout','ROE x Payout Implícito','roe','payout'],['roe-pvp','ROE x P/VP','roe','pvp'],['roic-ev','ROIC x EV/EBITDA','roic','ev_ebitda'],['dy-debt','DY x Dívida Líq./EBITDA','dy','div_liq_ebitda']];
@@ -69,7 +69,7 @@ const axis=k=>{const vals=pts.map(p=>Number(p[k])).sort((a,b)=>a-b);if(!vals.len
 const [x0,x1]=axis(pair[2]),[y0,y1]=axis(pair[3]);const sx=n=>55+(n-x0)/(x1-x0)*600,sy=n=>265-(n-y0)/(y1-y0)*230;
 const mx=pts.length?pts.map(p=>Number(p[pair[2]])).sort((a,b)=>a-b)[Math.floor(pts.length/2)]:0;
 const my=pts.length?pts.map(p=>Number(p[pair[3]])).sort((a,b)=>a-b)[Math.floor(pts.length/2)]:0;
-const points=pts.map(p=>{const x=sx(Number(p[pair[2]])),y=sy(Number(p[pair[3]])),yes=!!ownRow(p);if(!Number.isFinite(x)||!Number.isFinite(y)||x<55||x>655||y<35||y>265)return '';
+const points=pts.map(p=>{const x=sx(Number(p[pair[2]])),y=sy(Number(p[pair[3]])),yes=!!ownRow(p)||p.owned===true;if(!Number.isFinite(x)||!Number.isFinite(y)||x<55||x>655||y<35||y>265)return '';
 return '<circle data-scr-point="'+E(p.ticker)+'" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(yes?6:3.3)+'" fill="'+(yes?'#D4A017':'#4B85A9')+'" fill-opacity="'+(yes?1:.68)+'" stroke="'+(yes?'#ffe9a0':'none')+'" stroke-width="1.5"><title>'+E(p.ticker)+' · '+fmt(p[pair[2]])+' / '+fmt(p[pair[3]])+(yes?' · CARTEIRA':'')+'</title></circle>'}).join('');
 return '<section class="scr-panel"><div class="scr-head"><h3>Dispersão quantitativa</h3><div class="scr-actions"><select data-scr-chart>'+options(choices.map(c=>[c[0],c[1]]),s.chart)+'</select><label>Zoom <select data-scr-zoom>'+options([['100','100%'],['60','60%'],['30','30%']],s.zoom)+'</select></label></div></div>'+
 (pts.length?'<svg class="scr-svg" viewBox="0 0 710 310" role="img" aria-label="'+E(pair[1])+'"><path d="M55 35V265H655" fill="none" stroke="#68707a" stroke-width="1"/>'+
