@@ -26,7 +26,48 @@
       }
     }
     e.materias=articles;
-    const references=(e.snapshot?.cotacoes||e.cotacoes||[]).filter(q=>Number.isFinite(q.px));
+    // Retoma a densidade do Jornal clássico de 16/11 com editorias completas.
+    // Na ausência de reportagem comprovada, o texto de contexto usa EXCLUSIVAMENTE
+    // cotações, data, fonte e variação do snapshot da edição. Não fabrica notícias.
+    const referencias=(e.snapshot?.cotacoes||e.cotacoes||[]).filter(q=>Number.isFinite(q.px));
+    const normal=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const buscar=re=>referencias.filter(q=>re.test(normal((q.k||'')+' '+(q.n||'')))).slice(0,4);
+    const resumoRef=q=>{
+      const sessao=q.dia_referencia?'na sessão '+q.dia_referencia:'na última referência disponível';
+      const mudanca=Number.isFinite(q.d1)?' (variação '+Q.change(q)+')':'';
+      return (q.n||q.k)+': '+Q.price(q)+' '+(q.unidade||'')+mudanca+'; '+sessao+'; fonte: '+(q.fonte||'não identificada')+'.';
+    };
+    const contexto=(editoria,chapeu,titulo,refs,interpretacao)=>{
+      if(!refs.length)return null;
+      const fatos=refs.map(resumoRef).join('\n\n');
+      return {editoria,chapeu,titulo,linha_fina:'Leitura contextual das referências verificáveis, sem substituir a análise de notícias confirmadas.',
+        texto:fatos+'\n\n'+interpretacao+'\n\nOs números são os últimos disponíveis nesta edição, não necessariamente preços ao vivo. Compare horários e contratos antes de operar.',
+        por_que_importa:'Mudanças nessas referências podem alterar o cenário e os riscos monitorados pelo trader; não determinam por si só um movimento futuro.',
+        numeros:refs.slice(0,3).map(q=>({rotulo:q.n||q.k,valor:Q.price(q)+' '+(q.unidade||'')})),
+        impacto:{ativos:[],setores:[],direcao:''},fontes:[],contexto_snapshot:true};
+    };
+    if(e.materias.length<4){
+      const grupos=[
+        contexto('Commodities','ENERGIA E MINERAÇÃO','Petróleo e minério: preços de referência e fatores de atenção',
+          buscar(/brent|wti|petroleo|minerio|iron|iron ore/),
+          'Petróleo e minério são indicadores importantes para acompanhar os setores de energia e mineração. Variações de oferta, demanda, câmbio e custos podem afetar empresas relacionadas, mas o efeito depende do contexto e das informações divulgadas por cada companhia.'),
+        contexto('Empresas','BOLSA E COMPANHIAS','Empresas e ações: sinais disponíveis na sessão',
+          buscar(/ibov|ewz|vale3|petr4|petrobras/),
+          'O índice e os instrumentos ligados ao mercado brasileiro ajudam a dimensionar o cenário para as ações. O desempenho de empresas específicas exige conferir seus balanços e comunicados antes de atribuir causas.'),
+        contexto('Economia brasileira','CÂMBIO E JUROS','Juros e dólar: como ler as referências brasileiras',
+          buscar(/^di\\b|di jan|dolar|wdo|usd\\/brl/),
+          'Taxas futuras de juros e câmbio estão entre os fatores que influenciam o custo do crédito e os preços de ativos. A sensibilidade depende do vencimento, do setor e das condições de liquidez; preços coincidentes não comprovam relação causal.'),
+        contexto('Internacional','MERCADOS GLOBAIS','Bolsas internacionais e dólar: referências externas',
+          buscar(/nasdaq|s&p|sp500|dow|dxy|treasury|us10|vix/),
+          'Os índices americanos e as taxas de juros externas ajudam a contextualizar o pregão local. Sua influência pode variar ao longo da sessão e não permite concluir, isoladamente, se haverá entrada ou saída de capital estrangeiro.')
+      ].filter(Boolean);
+      for(const m of grupos){
+        if(e.materias.length>=4)break;
+        if(e.materias.some(a=>normal(a.editoria)===normal(m.editoria)))continue;
+        e.materias.push(m);
+      }
+    }
+    const references=referencias;
     if(!e.em_poucas_linhas?.length)e.em_poucas_linhas=references.slice(0,4).map(q=>(q.n||q.k)+': '+Q.price(q)+' '+q.unidade+(Number.isFinite(q.d1)?' ('+Q.change(q)+')':'')+'.');
     if(!e.cinco_coisas?.length)e.cinco_coisas=references.slice(0,5).map(q=>({titulo:(q.n||q.k)+': '+Q.price(q)+' '+q.unidade,texto:(Number.isFinite(q.d1)?'Variação: '+Q.change(q)+'. ':'')+(q.dia_referencia?'Sessão de referência: '+q.dia_referencia+'. ':'')+'Último disponível na coleta da edição.'}));
     return e;
