@@ -20,6 +20,8 @@ A meta de Egress inferior a 0,5 GB/mês permanece sem verificação na cobrança
 - email-semana: no máximo um disparo semanal sob configuração confirmada do provedor.
 - rotinas *-limpa: revisar política de retenção, backup e consequências antes de automatizar DELETE; nenhuma limpeza foi habilitada.
 
+Bloqueio confirmado: no Vault do projeto novo foi encontrado diario_agendamento_v724, mas NÃO foi encontrado diario_cron_secret, referenciado por quatro rotinas de panorama/fechamento. Não ativar esses jobs antes de provisionar a credencial e validar também CRON_SECRET da Edge. O conteúdo das credenciais não foi consultado.
+
 Alguns comandos legados ainda contêm o marcador __CONFIGURAR_NO_VAULT__; portanto, ativá-los diretamente pode causar erros 401 e consumo sem resultado.
 
 ## Cloudflare: primeiro piloto seguro
