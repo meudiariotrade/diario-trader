@@ -71,6 +71,52 @@ export async function coletarNoticias(fetcher=fetch,agora=Date.now()){
     itens:[...map.values()].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,50),
     fontesOk,fontesIndisponiveis};
 }
+
+// Radar público compartilhado sem consultar o Supabase e sem dados dos usuários.
+const MARKET_KEY='diario:mercado:v1';
+const MARKET_SYMBOLS=[
+  ['AMEX:EWZ','Futuros e ADR','EWZ (Brasil em NY)'],
+  ['NYSE:PBR','ADR','PBR'],['NYSE:VALE','ADR','VALE'],
+  ['NYSE:ITUB','ADR','ITUB'],['NYSE:BBD','ADR','BBD'],
+  ['NYSE:ABEV','ADR','ABEV'],['NYSE:GGB','ADR','GGB'],
+  ['CME_MINI:ES1!','Futuros e ADR','S&P futuro'],
+  ['CME_MINI:NQ1!','Futuros e ADR','Nasdaq futuro'],
+  ['FX_IDC:USDBRL','Moedas','USD/BRL'],
+  ['TVC:DXY','Moedas','DXY'],['TVC:US10Y','Juros dos EUA','Treasury 10 anos'],
+  ['ICEEUR:BRN1!','Commodities','Petróleo Brent'],
+  ['NYMEX:CL1!','Commodities','Petróleo WTI'],
+  ['SGX:FEF1!','Commodities','Minério de ferro'],
+  ['TVC:GOLD','Commodities','Ouro'],
+  ['SP:SPX','Bolsas','S&P 500'],['NASDAQ:IXIC','Bolsas','Nasdaq']
+];
+export function coletarMercadoAgora(date=new Date()){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',
+    weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date).map(x=>[x.type,x.value]));
+  return !['Sat','Sun'].includes(p.weekday)&&+p.hour>=7&&+p.hour<21&&+p.minute%10===0;
+}
+export async function coletarMercado(fetcher=fetch,agora=Date.now()){
+  const r=await fetcher('https://scanner.tradingview.com/global/scan',{
+    method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
+    body:JSON.stringify({symbols:{tickers:MARKET_SYMBOLS.map(x=>x[0])},columns:['close','change']}),
+    signal:AbortSignal.timeout(7000)
+  });
+  if(!r.ok)throw Error('Mercado HTTP '+r.status);
+  const resposta=await r.json();
+  const nomes=new Map(MARKET_SYMBOLS.map(x=>[x[0],x])),seen=new Set(),grupos=new Map(),adrs=[];
+  for(const item of (Array.isArray(resposta?.data)?resposta.data:[])){
+    const x=nomes.get(item?.s);
+    if(!x||seen.has(item.s))continue;
+    const px=Number(item?.d?.[0]),chp=Number(item?.d?.[1]);
+    if(!Number.isFinite(px)||px<=0||!Number.isFinite(chp)||Math.abs(chp)>60)continue;
+    seen.add(item.s);
+    if(x[1]==='ADR')adrs.push({s:x[2],px,chp,state:'reg'});
+    else { if(!grupos.has(x[1]))grupos.set(x[1],[]);
+      grupos.get(x[1]).push({n:x[2],px,d1:chp}); }
+  }
+  if(seen.size<4)throw Error('Mercado sem dados suficientes');
+  return {atualizadoEm:new Date(agora).toISOString(),fonte:'TradingView (atrasado)',total:seen.size,
+    mercados:{grupos:[...grupos.entries()].map(([g,itens])=>({g,itens}))},adrs};
+}
 function cabecalhos(req,env){
   const o=req.headers.get('origin');
   return {'Content-Type':'application/json; charset=utf-8',
@@ -89,13 +135,30 @@ export default {
       // Falha de todas as fontes não substitui o último snapshot.
       if(data.fontesOk.length)await env.NEWS_CACHE.put(KEY,JSON.stringify(data));
     })());
+    if(coletarMercadoAgora(new Date(event.scheduledTime)))
+      ctx.waitUntil((async()=>{try{
+        const m=await coletarMercado(fetch,event.scheduledTime);
+        await env.NEWS_CACHE.put(MARKET_KEY,JSON.stringify(m));
+      }catch(_){/* conserva último snapshot, sem preço inventado */}})());
   },
   async fetch(request,env){
     const path=new URL(request.url).pathname;
     if(request.method!=='GET')return json({erro:'metodo_nao_permitido'},request,env,405);
     if(path==='/health')return json({ok:Boolean(env.NEWS_CACHE),servico:'diario-noticias',modo:'independente'},request,env,env.NEWS_CACHE?200:503);
-    if(path!=='/v1/noticias')return json({erro:'rota_nao_encontrada'},request,env,404);
+    if(!['/v1/noticias','/v1/mercado','/v1/panorama'].includes(path))
+      return json({erro:'rota_nao_encontrada'},request,env,404);
     if(!env.NEWS_CACHE)return json({erro:'cache_nao_configurado'},request,env,503);
+    if(path==='/v1/mercado'||path==='/v1/panorama'){
+      const salvoMercado=await env.NEWS_CACHE.get(MARKET_KEY);
+      if(!salvoMercado)return json({erro:'aguardando_cotacoes'},request,env,503);
+      const m=JSON.parse(salvoMercado),idade=Date.now()-Date.parse(m.atualizadoEm);
+      if(!Number.isFinite(idade)||idade < -300000||idade > 30*60000)
+        return json({erro:'cotacoes_desatualizadas',atualizadoEm:m.atualizadoEm},request,env,503);
+      return json(path==='/v1/panorama'?
+        {geradoEm:m.atualizadoEm,fonte:m.fonte,mdo:{mercados:m.mercados},
+         ad:{ts:Date.parse(m.atualizadoEm),itens:m.adrs,fonte:m.fonte},ag:{eventos:[]}}:m,
+        request,env);
+    }
     const salvo=await env.NEWS_CACHE.get(KEY);
     if(!salvo)return json({erro:'ainda_sem_coleta',itens:[]},request,env,503);
     const data=JSON.parse(salvo);
