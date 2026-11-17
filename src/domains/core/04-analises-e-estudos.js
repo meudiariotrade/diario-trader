@@ -2295,7 +2295,7 @@ const NP = Object.assign(
   ls.get("diario-np") || {},
 );
 ((NP.on = Object.assign(
-  { m: !0, n: !0, ev: !0, ab: !0, tr: !0, trv: !0 },
+  { m: !0, n: !0, ev: !0, urg: !0, ab: !0, tr: !0, trv: !0 },
   NP.on || {},
 )),
   Array.isArray(NP.mk) || (NP.mk = ["b3", "ny", "tk"]));
@@ -2514,7 +2514,25 @@ async function alDiag() {
         "Banco: " + String(n.banco || "sem resposta"),
         "Chaves Web Push no servidor: " +
           (n.vapidPublicTamanho > 0 && n.vapidPrivateTamanho > 0 ? "ok" : "ausentes"),
-        "Agendamento automático: " + (n.cronSecret ? "credencial configurada" : "não configurado"),
+        "Agendamento automático: " + (n.agendamentoVault || n.cronSecret ? "credencial configurada" : "não configurado"),
+      );
+      if (n.monitorNoticias) {
+        const monitor = n.monitorNoticias;
+        const hora = monitor.consultado_em
+          ? new Date(monitor.consultado_em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})
+          : "sem execução";
+        s.push("Notícias urgentes: " + (monitor.estado || "desconhecido") +
+          " · último ciclo: " + hora + " · fontes ativas: " + (monitor.fontes_ok || 0));
+        if (monitor.fontes_falhas?.length)
+          s.push("Fontes indisponíveis: " + monitor.fontes_falhas.slice(0, 4).join(", "));
+      } else s.push("Monitor de notícias: sem diagnóstico ainda");
+      if (n.ultimoEnvio) {
+        const ultimo = n.ultimoEnvio;
+        s.push("Último envio ao seu aparelho: " + (ultimo.status || "desconhecido") + " · " +
+          new Date(ultimo.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}));
+      } else s.push("Nenhum envio Push registrado para sua conta");
+      s.push(
+
       );
     }
     AL.msg = s.join(" · ") + (/Windows/i.test(navigator.userAgent || "")
@@ -2610,7 +2628,7 @@ function alHtml() {
 <h3 style="margin-top:14px">Quando avisar</h3>
 ${a("m", "☀️ Checklist da manhã")}<label>Horário<input type="time" data-al="m" value="${esc(NP.m)}"></label>
 ${a("n", "🌐 Checklist da abertura americana")}<label>Horário<input type="time" data-al="n" value="${esc(NP.n)}"></label>
-${a("ev", "⏰ Notícias importantes")}
+${a("ev", "⏰ Notícias importantes")}${a("urg", "⚡ Notícias urgentes · Breaking News")}<div class="sm mut" style="margin:2px 0 8px">Avisos do mercado a cada 5 minutos no pregão e 15 minutos fora dele. Limite de 12 notícias por dia e sem repetição.</div>
 <div class="g2"><label>Avisar antes<select data-al="lead">${opt(
     [
       [3, "3 min"],
