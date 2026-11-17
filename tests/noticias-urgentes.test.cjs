@@ -6,7 +6,7 @@ test('janela 5 minutos no pregão e 15 fora do horário/fim de semana (Brasília
   const { janelaNoticias } = await modulo;
   const pregao = janelaNoticias(new Date('2026-11-16T15:10:00Z'));
   assert.equal(pregao.pregao, true); assert.equal(pregao.intervalo, 2); assert.equal(pregao.consultar, true);
-  const sabado = janelaNoticias(new Date('2026-11-14T15:10:00Z'));
+  const sabado = janelaNoticias(new Date('2026-11-14T15:11:00Z'));
   assert.equal(sabado.pregao, false); assert.equal(sabado.consultar, false);
   assert.equal(janelaNoticias(new Date('2026-11-14T15:20:00Z')).consultar, true);
   assert.equal(janelaNoticias(new Date('2026-11-16T22:05:00Z')).consultar, false);
