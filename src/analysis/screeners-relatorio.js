@@ -93,11 +93,15 @@ function individual(L,m,row,st,i,total,opts={}){
  L.y+=10;L.line(L.M,L.y,L.W-L.M,L.y);L.y+=8;
  L.y=L.wrap('FONTES: '+st.sources.join(', ')+'. Fundamentos: '+date(st.fundamentals_at)+'. Técnico: '+date(st.technical_at)+'. Snapshot: '+date(st.updated_at)+'. Cobertura: '+num(st.coverage,0)+'%.',L.M,L.y,L.CW,{size:7.7,color:L.C.muted,leading:11,maxLines:3});L.footer();
 }
-function methodology(L,m){
+function methodology(L,m,opts={}){
  L.page('Como o score é calculado','Metodologia, validação, premissas e limitações');
  L.write('PESOS DO MODELO',L.M,L.y,{font:'bold',size:9,color:L.C.gold});L.y+=23;
  for(const g of intelligence().weights[m])L.bar(g.name,g.weight);
  L.y+=22;
+ if(opts.automatic){
+  L.write('CRITÉRIOS DO TOP 10 AUTOMÁTICO',L.M,L.y,{font:'bold',size:9,color:L.C.gold});L.y+=18;
+  L.y=L.wrap(opts.method||'Notas conferidas. Liquidez, datas e qualidade de indicadores verificadas.',L.M,L.y,L.CW,{size:8.6,leading:12})+15;
+ }
  for(const p of [
   'Cada métrica disponível é normalizada numa escala interna de 0 a 100. Dentro de cada grupo, o modelo usa a média das métricas presentes. A contribuição do grupo é essa média multiplicada pelo peso da categoria; o score total é a soma das quatro contribuições.',
   'A validação de fórmula exige consistência da pontuação salva com o cálculo, cobertura adequada e datas recentes; não substitui uma auditoria independente das fontes. Valores ausentes nunca são substituídos por números inventados; se faltar uma categoria inteira, não se deve interpretar o resultado como score completo.',
@@ -120,7 +124,7 @@ async function build(m,rows,opts={}){
  }));
  const L=drawing(doc,P,{sans:loaded[0],bold:loaded[1],serif:loaded[2]});
  const studies=rows.map(r=>intelligence().diagnostics(m,r));
- cover(L,m,rows,studies,opts);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length,opts));methodology(L,m);
+ cover(L,m,rows,studies,opts);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length,opts));methodology(L,m,opts);
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:(opts.automatic?'Top10-Quantitativo-':'Dossie-')+m+'-'+new Date().toISOString().slice(0,10)+'-'+rows.length+'-acoes.pdf',pages:doc.getPageCount()};
 }
 async function share(m,rows,opts={}){
