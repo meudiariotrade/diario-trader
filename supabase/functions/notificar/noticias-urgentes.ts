@@ -254,7 +254,7 @@ export async function dispararNoticias(op: {
         tag: 'urg-' + id,
         data: { go: 'mercado', r: 'noticias', url: item.link, noticia_id: id, assinatura, assinatura_original: item.assinatura, titulo_original: item.titulo },
       };
-      try { if (await op.enviar(sub, payload, sub.id + '|urg|' + id)) n++; }
+      try { if (await op.enviar(sub, payload, sub.id + '|urg|' + id)) n++; else erros++; }
       catch { erros++; }
       assinaturas.push(assinatura, item.assinatura);
     }
