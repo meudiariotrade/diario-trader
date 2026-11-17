@@ -105,3 +105,15 @@
   }
   #app[data-tela="analises"] .an-subs .an-submeta { display:none; }
 }
+
+/* v745: o rodape fixo do iPhone nunca pode cobrir a sub-aba ao rolar. */
+@media(max-width:760px){
+ #app[data-tela="analises"] #an-root.an-page{
+   padding-bottom:calc(170px + env(safe-area-inset-bottom,0px));
+   scroll-padding-bottom:140px;
+ }
+ #app[data-tela="analises"] .an-subs{
+   scroll-margin-top:90px;
+   scroll-margin-bottom:150px;
+ }
+}
