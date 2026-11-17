@@ -120,14 +120,17 @@ async function fonteRSS(fonte: Fonte, fetcher: Fetcher) {
   throw Error('Feed indisponível: ' + fonte.nome);
 }
 async function fonteX(perfil: string, fetcher: Fetcher) {
+  // Nunca disparar quatro proxies em paralelo: 404/429 recorrentes eram desperdício de banda.
+  // FxTwitter foi verificado com RSS real dos dois perfis em 17/11/2026.
   const urls = [
-    // Feed público validado no servidor em 15/11/2026 (HTTP 200, RSS real, links x.com/status).
     'https://fxtwitter.com/' + perfil + '/feed.xml',
     'https://rsshub.app/twitter/user/' + perfil,
-    'https://nitter.mie.foundation/' + perfil + '/rss',
-    'https://nitter.mizuki.st/' + perfil + '/rss',
   ];
-  return Promise.any(urls.map((url) => baixarRSS('X @' + perfil, url, fetcher)));
+  for (const url of urls) {
+    try { return await baixarRSS('X @' + perfil, url, fetcher); }
+    catch { /* próximo provedor somente se o principal estiver fora */ }
+  }
+  throw Error('Fontes RSS do X indisponíveis: @' + perfil);
 }
 async function fonteFinnhub(categoria: string, chave: string, fetcher: Fetcher): Promise<NoticiaUrgente[]> {
   const r = await fetcher('https://finnhub.io/api/v1/news?category=' + categoria + '&token=' + encodeURIComponent(chave), {
@@ -142,11 +145,17 @@ async function fonteFinnhub(categoria: string, chave: string, fetcher: Fetcher):
     return { titulo, link, fonte: 'Finnhub ' + categoria, publicado, assinatura: assinaturaNoticia(titulo) };
   }).filter((x: NoticiaUrgente) => x.titulo.length >= 12 && x.link && Number.isFinite(x.publicado));
 }
-export async function coletarNoticias(chave: string, agora = new Date(), fetcher: Fetcher = fetch) {
+export async function coletarNoticias(chave: string, agora = new Date(), fetcher: Fetcher = fetch, modo: 'completo' | 'leve' = 'completo') {
+  // O cron coleta apenas 2 RSS + 2 perfis X + Finnhub general.
+  // O modo completo continua disponível para diagnóstico pontual, nunca no cron.
+  const fontes = modo === 'leve'
+    ? RSS_FINANCEIRO.filter((f) => ['InfoMoney', 'Money Times'].includes(f.nome))
+    : RSS_FINANCEIRO;
+  const categorias = modo === 'leve' ? ['general'] : ['general', 'forex', 'crypto'];
   const tarefas: { nome: string; executar: () => Promise<NoticiaUrgente[]> }[] = [
-    ...RSS_FINANCEIRO.map((f) => ({ nome: f.nome, executar: () => fonteRSS(f, fetcher) })),
+    ...fontes.map((f) => ({ nome: f.nome, executar: () => fonteRSS(f, fetcher) })),
     ...X_PERFIS.map((p) => ({ nome: 'X @' + p, executar: () => fonteX(p, fetcher) })),
-    ...(chave ? ['general', 'forex', 'crypto'].map((c) => ({ nome: 'Finnhub ' + c, executar: () => fonteFinnhub(c, chave, fetcher) })) : []),
+    ...(chave ? categorias.map((c) => ({ nome: 'Finnhub ' + c, executar: () => fonteFinnhub(c, chave, fetcher) })) : []),
   ];
   const respostas = await Promise.allSettled(tarefas.map((t) => t.executar()));
   const falhas = respostas.flatMap((r, i) => r.status === 'rejected' ? [tarefas[i].nome] : []);
@@ -185,7 +194,7 @@ export async function dispararNoticias(op: {
   const agora = op.agora || new Date(), janela = janelaNoticias(agora);
   if (!janela.consultar) return { consultou: false, intervalo: janela.intervalo, enviados: 0 };
   if (!op.subs.length) return { consultou: false, intervalo: janela.intervalo, enviados: 0, semInscricoes: true };
-  const dados = await coletarNoticias(op.token, agora, op.fetcher || fetch);
+  const dados = await coletarNoticias(op.token, agora, op.fetcher || fetch, 'leve');
   // Traduz uma vez por notícia (sem alterar a assinatura usada para deduplicar).
   const titulos = await Promise.all(dados.noticias.map((n) => tituloEmPortugues(n, op.fetcher || fetch)));
   const assinaturasPT = titulos.map(assinaturaNoticia);
@@ -206,12 +215,18 @@ export async function dispararNoticias(op: {
       .gte('em', new Date(agora.getTime() - 48 * 3600_000).toISOString())
       .order('em', { ascending: false }).limit(250);
     if (error) throw Error('Histórico de notícias indisponível');
+    const hoje = agora.toISOString().slice(0, 10);
+    const jaEnviados = (anteriores || []).filter((x: any) =>
+      x.status === 'enviado' && String(x.em || '').slice(0, 10) === hoje).length;
+    // Limites de notificação por aparelho: 12 notícias/dia e 3 a cada ciclo, sem spam.
+    if (jaEnviados >= 12) return { n: 0, erros: 0 };
     const assinaturas = (anteriores || []).flatMap((x: any) => [
       String(x.payload?.data?.assinatura || assinaturaNoticia(String(x.payload?.title || ''))),
       String(x.payload?.data?.assinatura_original || assinaturaNoticia(String(x.payload?.data?.titulo_original || ''))),
     ]).filter(Boolean);
     let n = 0, erros = 0;
     for (const i of indices) {
+      if (n >= 3 || jaEnviados + n >= 12) break;
       const item = dados.noticias[i], assinatura = assinaturasPT[i];
       if (assinaturas.some((a: string) => mesmaNoticia(a, assinatura) || mesmaNoticia(a, item.assinatura))) continue;
       const identificador = assinatura + '|' + new Date(item.publicado).toISOString().slice(0, 10);
