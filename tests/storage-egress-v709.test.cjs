@@ -8,7 +8,7 @@ test('v709: arquivo PDF de resumos não passa pelo Supabase Storage',()=>{
  const local=rd('src/studies/resumo-local-v709.js');
  assert.doesNotMatch(core,/\/storage\/v1\/object\/livros\//);
  assert.match(core,/window\.ResumosLocais\.gerar\(e,t,a,o\)/);
- assert.match(core,/Object\.entries\(RS\.jobs\).*j\.local/s);
+ assert.match(core,/Object\.entries\(RS\.jobs\).*j\?\.local/s);
  assert.match(local,/EstudosLocal\.put\('livro-pdf'/);
  assert.match(local,/EstudosLocal\.put\('resumo-local'/);
  assert.match(local,/ntLib\(\)/);
