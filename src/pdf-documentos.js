@@ -59,6 +59,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(input) {
     if((m.numeros||[]).length)table(['Métrica','Valor informado'],m.numeros.map(n=>[n.rotulo,n.valor]),[.57,.43]);
     if(m.por_que_importa){need(38+lines(m.por_que_importa,CW,9).length*12.5);label('Por que importa');para(m.por_que_importa,{size:9,color:colors.muted});}
     if(m.placar)para('Resultado '+m.placar+' | Consenso: '+m.consenso_valor+' | Período: '+m.periodo,{size:8.5});
+    if(m.conferencia_fonte?.estado)para('Conferência da fonte: '+m.conferencia_fonte.estado+' | '+m.conferencia_fonte.motivo,{size:7.6,color:colors.muted});
     const ref=reference(m);para(ref?'Fontes vinculadas: '+ref+(m.periodo?' | Período: '+m.periodo:''):'Fonte específica não vinculada; conteúdo requer conferência.',{size:7.6,color:colors.muted,gap:9});rule();y+=12;
   }
   function chart(k,g){
@@ -98,6 +99,8 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(input) {
   const sections=[['Empresas e resultados',m=>m.editoria==='Empresas'],['Economia e mercados',m=>m.editoria!=='Empresas']];
   for(const [title,match]of sections){const ms=(e.materias||[]).filter(match);if(ms.length){heading(title);for(const m of ms)article(m);}}
   if(e.analise?.texto && !e.qualidade.problemas.length){heading(e.analise.titulo||'Leitura da redação','Interpretação da IA; hipóteses exigem confirmação.');para(e.analise.texto);}
+  if(e.profit_local){const p=e.profit_local;heading('Suplemento privado - Profit',p.nota);para('Coleta: '+p.coletado_em,{size:8});for(const q of p.cotacoes){label(q.contrato);para('Último: '+Q.price(q)+' pontos | Negócio: '+q.referencia_em);if(q.ohlc)table(['Abertura','Máxima','Mínima','Último'],[[q.ohlc.O,q.ohlc.H,q.ohlc.L,q.ohlc.C].map(v=>v.toLocaleString('pt-BR'))],[.25,.25,.25,.25]);}p.lacunas.forEach(t=>para(t,{size:8,color:colors.muted}));}
+  if(!snap.fed){heading('Expectativas de juros nos EUA','Probabilidades não confirmadas nesta edição.');link('Consultar CME FedWatch oficial','https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html');}
   if(snap.fed){const f=snap.fed;heading('Juros nos EUA','Reunião '+f.reuniao+' | '+(f.metodo==='cme'?'CME FedWatch':'Estimativa própria: '+f.metodologia));table(['Cenário','Probabilidade'],f.cenarios.map(c=>[(c.mov>0?'+':'')+c.mov+' pontos-base',c.p.toFixed(1).replace('.',',')+'%']),[.7,.3]);link('Fonte e referência: '+f.referencia_em,f.fonte_url);}
   heading('Agenda e próximos eventos','Horários de Brasília. Eventos sem data e fonte confirmadas não são preenchidos automaticamente.');
   if(!e.agenda.length)para('Agenda confirmada indisponível para esta edição. Consulte o calendário da fonte antes do próximo pregão.');
@@ -112,7 +115,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(input) {
   [...e.qualidade.problemas,...e.qualidade.lacunas].forEach(t=>para(t,{size:7.8,color:colors.muted,gap:4}));
   para('Snapshot: '+snap.id+' | '+Q.VERSION+' | Conteúdo informativo. Cenários condicionados não são ordens de negociação.',{size:7.2,color:colors.muted});
   pages.forEach((page,i)=>{pg=page;rule(H-38);draw('DIÁRIO DE TRADER / '+(e.simulado?'DADOS SIMULADOS':'USO PESSOAL'),M,H-28,7,'b',colors.muted);draw('Página '+(i+1)+' de '+pages.length,W-M,H-28,7,'r',colors.muted,'right');});
-  doc.setTitle('Jornal do Pregão - '+date);doc.setAuthor('Diário de Trader');doc.setSubject(snap.id);doc.setCreator('Diário de Trader v715');
+  doc.setTitle('Jornal do Pregão - '+date);doc.setAuthor('Diário de Trader');doc.setSubject(snap.id);doc.setCreator('Diário de Trader v717');
   // Medidas ficam disponíveis para o teste de limites, sem alterar o PDF.
   window.__jornalPdfLayout=ops;
   return {bytes:await doc.save(),paginas:pages.length,snapshot_id:snap.id};

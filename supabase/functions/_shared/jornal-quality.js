@@ -1,7 +1,7 @@
 /* Contrato editorial compartilhado pelo servidor, tela e PDF. Sem rede ou armazenamento. */
 (function (root) {
   'use strict';
-  const VERSION = 'jornal-v714';
+  const VERSION = 'jornal-v717';
   const clone = x => JSON.parse(JSON.stringify(x ?? null));
   const number = x => typeof x === 'number' && Number.isFinite(x);
   const text = x => String(x ?? '').trim();
@@ -82,7 +82,8 @@
     return (Array.isArray(list)?list:[]).filter(a=>a && text(a.evento) && !/divulga[cç][aã]o de indicadores econ[oô]micos|monitoramento da trajet[oó]ria/i.test(a.evento) && url(a.fonte_url) && /^\d{4}-\d{2}-\d{2}$/.test(a.data || '') && a.pais && Number.isFinite(Date.parse(a.data+'T12:00:00Z')) && new Date(a.data+'T12:00:00Z').toISOString().slice(0,10)===a.data && (!a.horario || /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(a.horario)) && (!edition.dia || a.data>=edition.dia) && (!edition.gerado || !a.horario || a.realizado || Date.parse(a.data+'T'+a.horario+':00-03:00')>=Date.parse(edition.gerado))).map(a=>({...clone(a), fonte_url:url(a.fonte_url), horario:text(a.horario), quando:a.data+(a.horario?' '+a.horario+' Brasília':' · horário não confirmado')}));
   }
   function inspect(e, snap) {
-    const problems=[], gaps=[], texts=[e.manchete,...(e.materias||[])].filter(Boolean);
+    const problems=[], gaps=[...(e.agenda_lacunas||[])], texts=[e.manchete,...(e.materias||[])].filter(Boolean);
+    if(e.verificacao_fontes) gaps.push(e.verificacao_fontes);
     if(e.pesquisa_web_parcial) gaps.push('Pesquisa web disponível apenas em parte da edição; demais textos usam os dados recebidos.');
     else if(e.pesquisa_web===false) gaps.push('Pesquisa web não disponível nesta geração; análise limitada aos dados e resumos recebidos.');
     for(const q of snap.cotacoes) {
@@ -136,10 +137,10 @@
     e.snapshot=snap; e.cotacoes=snap.cotacoes; e.qualidade=review;
     const old=[e.manchete,...(e.materias||[])];
     for(const i of review.artigos_bloqueados) {
-      const m=old[i]; if(m) old[i]={...m,titulo:'Conteúdo retido para revisão de consistência',linha_fina:'Os números desta matéria divergem dos dados da edição.',texto:'Consulte o painel de referências. O texto original foi retido para evitar apresentar valores contraditórios.',numeros:[],impacto:{ativos:[],setores:[],direcao:''},por_que_importa:'',placar:'',consenso:'',fato:'',interpretacao:'',cenario:''};
+      const m=old[i]; if(m) old[i]={...m,titulo:'Conteúdo retido para revisão de consistência',linha_fina:'A evidência desta matéria requer conferência.',texto:'Consulte o painel de referências e as fontes vinculadas. O texto foi retido porque a evidência ou os números não passaram pela conferência.',numeros:[],impacto:{ativos:[],setores:[],direcao:''},por_que_importa:'',placar:'',consenso:'',fato:'',interpretacao:'',cenario:''};
     }
     e.manchete=old[0]; e.materias=old.slice(1);
-    if(review.problemas.length) { e.analise=null; e.mesa=null; e.cinco_coisas=[]; e.fechamento_texto=''; e.grafico_do_dia=null; }
+    if(review.problemas.length) { e.analise=null; e.mesa=null; e.em_poucas_linhas=[]; e.conferencia=null; e.cinco_coisas=[]; e.fechamento_texto=''; e.grafico_do_dia=null; }
     for(const m of [e.manchete,...e.materias].filter(Boolean)) {
       if(!m.consenso_valor || !url(m.consenso_fonte) || !m.periodo) { m.placar=''; m.consenso=''; }
       m.fonte_url=url(m.fonte_url); m.fontes=sources((m.fontes||[]).map(f=>typeof f==='string'?{url:f}:f));
@@ -151,5 +152,23 @@
     e.fontes=sources([...(e.fontes||[]),...[e.manchete,...e.materias].flatMap(m=>m?[{titulo:m.titulo,url:m.fonte_url},...(m.fontes||[])]:[]),...e.agenda.map(a=>({titulo:a.evento,url:a.fonte_url}))]);
     return e;
   }
-  root.DiarioJornalQualidade=Object.freeze({VERSION,freeze,clone,url,phase,quote,price,change,sources,fed,levels,chart,snapshot,inspect,prepare});
+  /** Suplemento privado: não altera a referência pública nem assume contrato pelo mês. */
+  function profit(rows,edition,collected=new Date().toISOString()) {
+    const cotacoes=[],lacunas=[];
+    for(const root of ['WIN','WDO']) {
+      const matches=(Array.isArray(rows)?rows:[]).filter(x=>String(x.ticker||'').startsWith(root));
+      const candidates=matches.filter(x=>new RegExp('^'+root+'[FGHJKMNQUVXZ](?:\\d{2}|\\d{4})$').test(text(x.contrato||x.ticker)));
+      if(candidates.length!==1){lacunas.push(root+': contrato específico ausente ou ambíguo na ponte.');continue;}
+      const r=candidates[0],contract=text(r.contrato||r.ticker),raw=text(r.dat),d=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/),day=d?`${d[3]}-${d[2]}-${d[1]}`:raw;
+      const time=text(r.hor),ref=/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(time)&&/^\d{4}-\d{2}-\d{2}$/.test(day)?day+'T'+time+'-03:00':'';
+      const numeric=x=>x!==null&&x!==undefined&&x!==''&&Number.isFinite(Number(x))?Number(x):null;
+      const px=numeric(r.ult),step=root==='WIN'?5:.5;
+      if(!ref||brDay(ref)!==day||day!==edition.dia||Date.parse(ref)>Date.parse(collected)+60000||!px||Math.abs(px/step-Math.round(px/step))>1e-6){lacunas.push(root+': preço, data ou horário do negócio incompatível com a edição.');continue;}
+      const H=numeric(r.max),L=numeric(r.min),O=numeric(r.abe),ohlc=[H,L,O,px].every(x=>number(x)&&x>0&&Math.abs(x/step-Math.round(x/step))<1e-6)&&H>=Math.max(O,px)&&L<=Math.min(O,px)?{O,H,L,C:px}:null;
+      cotacoes.push({...quote({k:root.toLowerCase(),n:root,px,d1:numeric(r.var),contrato:contract,simbolo:contract,fonte:'Profit / ponte privada',referencia_em:ref,referencia_tipo:'último negócio informado pela ponte; não é ajuste oficial'},collected),ohlc,sessao_completa:!!ohlc&&r.sessao_completa===true});
+      if(!ohlc)lacunas.push(root+': OHLC completo indisponível na ponte.');
+    }
+    return freeze({cotacoes,lacunas,coletado_em:collected,nota:'Suplemento privado capturado sob solicitação; não substitui o snapshot editorial. FEC da ponte não é tratado como ajuste oficial.'});
+  }
+  root.DiarioJornalQualidade=Object.freeze({VERSION,freeze,clone,url,phase,quote,price,change,sources,fed,levels,chart,snapshot,inspect,prepare,profit});
 })(globalThis);
