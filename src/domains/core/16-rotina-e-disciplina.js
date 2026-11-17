@@ -674,10 +674,7 @@ function jrSetAgg(e) {
       .slice(0, 10)
   );
 }
-const jrChip = (e, t, a) => {
-  const [o, s, n] = JR_DIR[t] || JR_DIR[""];
-  return `<span class="jrchip ${s}" title="${esc(n)}">${o} ${esc(e)}${a > 1 ? ` <small>×${a}</small>` : ""}</span>`;
-};
+const jrChip = (e) => `<span class="jrchip">${esc(e)} · efeito condicionado</span>`;
 function jrImpTxt(e) {
   if (!jrTemImp(e)) return "";
   const t = (JR_DIR[e.direcao] || JR_DIR[""])[2];
@@ -736,8 +733,8 @@ function jrTecDados(e) {
 }
 const jrNumF = (e, t) =>
   e.toLocaleString("pt-BR", {
-    minimumFractionDigits: t > 1 ? 4 : 0,
-    maximumFractionDigits: t > 1 ? 4 : 0,
+    minimumFractionDigits: t > 1 ? 1 : 0,
+    maximumFractionDigits: t > 1 ? 1 : 0,
   });
 var jrTecHtml;
 {
@@ -1830,7 +1827,8 @@ async function jvPdfBytes(...args) {
       try {
         errAdd("jornal · PDF editorial (vetor)", a.message || a);
       } catch {}
-      return e.apply(this, arguments);
+      toast("Não foi possível exportar esta edição. " + String(a?.message || a));
+      return;
     }
   };
 }

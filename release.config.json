@@ -1,5 +1,5 @@
 {
-  "version": 713,
+  "version": 714,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -49,6 +49,7 @@
   },
   "sources": {
     "src/app-core.js": [
+      "supabase/functions/_shared/jornal-quality.js",
       "src/domains/core/01-runtime-estilos.js",
       "src/domains/core/02-estado-e-persistencia.js",
       "src/domains/core/03-render-e-operacoes.js",
@@ -66,7 +67,8 @@
       "src/domains/core/15-jornal-e-agenda.js",
       "src/domains/core/16-rotina-e-disciplina.js",
       "src/domains/core/17-fontes-e-balancos.js",
-      "src/domains/core/18-carteira-e-exportacoes.js"
+      "src/domains/core/18-carteira-e-exportacoes.js",
+      "src/journal/editorial.js"
     ],
     "src/app-layers.js": [
       "src/share/cards-modelo.js",

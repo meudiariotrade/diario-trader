@@ -1,0 +1,7 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {normalizaColeta,contratosCandidatos}=require('../supabase/functions/analise/jornal-dados.ts');
+const map=[['win','BMFBOVESPA:WIN1!','WIN'],['wdo','BMFBOVESPA:WDO1!','WDO']];
+const row=(s,px,expiration,time=1794830400)=>({s,d:[px,-1,100,null,null,173000,170000,time,expiration,'delayed_streaming_900']});
+test('contratos concretos são selecionados pela expiração fornecida, sem adivinhar vencimento',()=>{const r=normalizaColeta([row('BMFBOVESPA:WIN1!',170845,null),row('BMFBOVESPA:WINV2026',160000,20261014),row('BMFBOVESPA:WINZ2026',170845,20261216)],map,'2026-11-16','2026-11-17T00:00:00Z');assert.equal(r.q[0].contrato,'WINZ2026');assert.equal(r.sessoes.win.completa,true);assert.equal(r.q[0].referencia_em,'');assert.match(r.q[0].barra_inicio_em,/12:00:00/);assert.ok(contratosCandidatos('2026-12-16').includes('BMFBOVESPA:WDOF2027'));});
+test('WDO fora do tick e série contínua sem contrato não recebem pivô',()=>{const r=normalizaColeta([row('BMFBOVESPA:WDOZ2026',5806.307,20261201)],map,'2026-11-16','2026-11-17T00:00:00Z');assert.equal(r.q[1].px,null);assert.equal(r.q[1].status,'divergente');assert.equal(r.sessoes.wdo,undefined);});
+test('OHLC intradiário permanece incompleto, sem assumir fechamento às 17h',()=>{const r=normalizaColeta([row('BMFBOVESPA:WINZ2026',170845,20261216)],map,'2026-11-16','2026-11-16T20:30:00Z');assert.equal(r.sessoes.win.completa,false);});

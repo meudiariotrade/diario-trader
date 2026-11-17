@@ -1855,24 +1855,8 @@ function jrIndsHtml(e) {
     viv: t,
   };
 }
-setInterval(() => {
-  try {
-    if (
-      document.hidden ||
-      JRN.arq ||
-      tab !== "mercado" ||
-      MKT.tab !== "jr" ||
-      !JRN.v
-    )
-      return;
-    const e = document.getElementById("jrinds");
-    if (!e) return;
-    const t = jrIndsHtml(JRN.v);
-    e.innerHTML = t.h;
-    const a = document.getElementById("jrviv");
-    (a && (a.hidden = !t.viv), jrPlantoes(!1));
-  } catch {}
-}, 2e4);
+// v714: a edição é imutável; não consultar plantões nem repintar cotações por polling.
+
 {
   const e = jrTexto;
   jrTexto = function (t) {
@@ -3424,6 +3408,7 @@ const JR_PNOME = {
               try {
                 const r = await anxCall({
                   modo: "jornal_parte",
+                  snapshot_id: a.snapshot_id,
                   parte: n,
                   force: !!e || !!a.atualizar,
                 });
@@ -3459,6 +3444,7 @@ const JR_PNOME = {
             );
           const s = await anxCall({
             modo: "jornal_junta",
+            snapshot_id: a.snapshot_id,
             partes_prontas: JRN.pr,
           });
           if (s.erro) throw new Error(s.erro);
