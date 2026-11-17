@@ -143,8 +143,8 @@ test('X @FirstSquawk e @DeItaone usam feeds FxTwitter em paralelo com URLs reais
     throw Error('Fonte indisponível no teste');
   };
   const r = await coletarNoticias('', agora, fetcher);
-  assert.ok(chamadas.includes('https://fxtwitter.com/FirstSquawk/feed.xml'));
-  assert.ok(chamadas.includes('https://fxtwitter.com/DeItaone/feed.xml'));
+  assert.ok(chamadas.some((u) => u.startsWith('https://fxtwitter.com/FirstSquawk/feed.xml')));
+  assert.ok(chamadas.some((u) => u.startsWith('https://fxtwitter.com/DeItaone/feed.xml')));
   assert.equal(r.fontesOk, 2);
   assert.equal(r.noticias.length, 2);
   assert.ok(r.noticias.every(x => x.fonte.startsWith('X @') && x.link.startsWith('https://x.com/')));
@@ -159,11 +159,12 @@ test('v727: quando FxTwitter falhar, tenta apenas uma fonte reserva (sem fan-out
   const fetcher = async (url) => {
     calls.push(String(url));
     if (String(url).startsWith('https://fxtwitter.com/')) throw Error('fonte indisponivel');
-    if (String(url).startsWith('https://rsshub.app/')) return { ok: true, text: async () => feed };
+    if (String(url).startsWith('https://fixupx.com/')) return { ok: true, text: async () => feed };
     throw Error('feed fora');
   };
   await coletarNoticias('', agora, fetcher, 'leve');
-  assert.ok(calls.some(url => url.includes('rsshub.app/twitter/user/FirstSquawk')));
+  assert.ok(calls.some(url => url.includes('fixupx.com/FirstSquawk/feed.xml')));
+  assert.equal(calls.some(url => url.includes('rsshub.app')), false);
   assert.equal(calls.some(url => url.includes('nitter.mie.foundation')), false);
   assert.equal(calls.some(url => url.includes('nitter.mizuki.st')), false);
 });
