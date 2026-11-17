@@ -34,7 +34,7 @@ const fmt=(n,dg=1)=>n==null||!Number.isFinite(Number(n))?'—':Number(n).toLocal
 const pct=(x)=>x==null||!Number.isFinite(Number(x))?'—':fmt(x,1)+'%';
 const mny=(x,usd)=>x==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:usd?'USD':'BRL',maximumFractionDigits:0,notation:'compact'}).format(Number(x));
 const state={br:{},us:{}},cache=new Map();let timer=null,reqId=0;
-function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',page:0,chart:'roe-payout',zoom:'100',selected:[],rows:null,data:null,loading:false,error:'',requested:''});return s}
+function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',page:0,chart:'auto',zoom:1,panX:0,panY:0,focus:'',detailTicker:'',selected:[],selectedRows:{},rows:null,data:null,loading:false,error:'',requested:''});return s}
 let holdingsCache=[],holdingsAt=0,holdingsOwner='';function holdings(){const uid=typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local';if(holdingsOwner===uid&&Date.now()-holdingsAt<5000)return holdingsCache;try{const snapshot=w.pfCalc();holdingsCache=(snapshot.pos||[]).filter(p=>+p.q>0&&+p.v>0).map(p=>({ticker:String(p.tk||'').toUpperCase().replace(/\.SA$/,''),market:p.mk,pct:Number(p.peso)||0,sector:p.setor||'',value:Number(p.v)||0}));holdingsAt=Date.now();holdingsOwner=uid;return holdingsCache}catch{return []}}
 function owner(){return typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local'}
 function owned(){return [...new Set(holdings().map(p=>p.ticker))].slice(0,80)}
@@ -60,31 +60,65 @@ return '<div class="scr-coverage" role="status">'+
 '<span class="scr-coverage-note">Métricas ausentes ficam como “—”. Os scores só aparecem quando todas as famílias necessárias têm dados.</span>'+
 '</div>'}
 function kpis(m,s){const v=s.data?.medians||{};return '<div class="scr-kpis">'+Object.entries(labels[m]).map(([key,label])=>'<div class="scr-kpi"><span>'+E(label)+'</span><b>'+((key==='forward_pe')?fmt(v[key],1):pct(v[key]))+'</b></div>').join('')+'</div>'}
-function stats(m,s){const data=s.data||{},top=data.highlights||[],all=[...(data.scatter||[])].filter(x=>x.score!=null);
-const asym=[...all].filter(x=>x.score!=null).sort((a,b)=>(b.score||0)-(a.score||0))[0];
-const div=[...all].filter(x=>x.dy!=null&&x.dy>0&&x.payout!=null&&x.payout>=20&&x.payout<=90&&x.fcf_yield!=null&&x.fcf_yield>0).sort((a,b)=>(b.dy||0)-(a.dy||0))[0];
-const momentum=[...all].filter(x=>x.momentum!=null).sort((a,b)=>(b.momentum||0)-(a.momentum||0))[0];
-const cards=[['Maior Assimetria',asym,'score'],['Maior Pagadora Sustentável',div,'dy'],['Líder de Momentum',momentum,'momentum']];
-let alert='';for(const a of all){const p=ownRow(a);if(p)continue;const ownedSame=all.find(x=>x.setor&&a.setor&&x.setor===a.setor&&ownRow(x)&&x.score!=null&&x.score+15<=a.score&&x.ticker!==a.ticker);if(ownedSame){alert='<p class="scr-alert">Comparação de setor disponível: '+E(a.ticker)+' tem score superior ao de '+E(ownedSame.ticker)+'. <button class="btn s" data-scr-compare="'+E(a.ticker)+','+E(ownedSame.ticker)+'">Comparar dois ativos</button></p>';break;}}
-return '<div class="scr-highlights">'+cards.map(([label,x,k])=>'<div class="scr-highlight"><span>'+E(label)+'</span><b>'+(x?E(x.ticker):'Sem dados suficientes')+'</b><small>'+(x?(k==='score'?'Score '+fmt(x.score):pct(x[k])):'Aguardando fundamentos validados')+'</small></div>').join('')+'</div>'+alert;
+function stats(m,s){
+ const arr=s.data?.scatter||[], scored=arr.filter(r=>r.score!=null);
+ const byScore=[...scored].sort((a,b)=>b.score-a.score)[0];
+ const dy=[...arr].filter(r=>r.dy!=null&&r.dy>0&&
+   (m==='br'?r.payout!=null&&r.payout>=20&&r.payout<=90&&r.fcf_yield!=null&&r.fcf_yield>0:
+     r.fcf_margin!=null&&r.fcf_margin>0)).sort((a,b)=>b.dy-a.dy)[0];
+ const momentum=[...arr].filter(r=>r.momentum!=null).sort((a,b)=>b.momentum-a.momentum)[0];
+ const cards=[['Maior score',byScore,'score','Não equivale a preço-alvo ou assimetria.'],
+   ['DY com FCF positivo',dy,'dy','Histórico; não garante pagamento futuro.'],
+   ['Líder de momentum',momentum,'momentum','Reflete preço passado, não previsão.']];
+ return '<section class="scr-highlights">'+cards.map(([label,r,k,note])=>
+  '<div class="scr-highlight"><span>'+E(label)+'</span><b>'+(r?E(r.ticker):'Sem dados suficientes')+'</b>'+
+  '<small>'+(r?(k==='score'?'Score '+fmt(r.score,1):pct(r[k])):E(note))+'</small></div>').join('')+
+ '</section><p class="scr-hint">Destaques apenas da amostra exibida pelo Screener (até 300 ativos); não é ranking de todo o mercado.</p>';
 }
-const chartOptsBR=[['roe-payout','ROE x Payout Implícito','roe','payout'],['roe-pvp','ROE x P/VP','roe','pvp'],['roic-ev','ROIC x EV/EBITDA','roic','ev_ebitda'],['dy-debt','DY x Dívida Líq./EBITDA','dy','div_liq_ebitda']];
-const chartOptsUS=[['roic-pe','ROIC x Forward P/E','roic','forward_pe'],['roic-momentum','ROIC x Momentum 12-1','roic','momentum'],['yield-buyback','Total Yield x Momentum','yield','momentum'],['rule-momentum','Rule of 40 x Momentum','rule40','momentum']];
-function chart(m,s){const choices=m==='br'?chartOptsBR:chartOptsUS;if(!choices.some(x=>x[0]===s.chart))s.chart=choices[0][0];
-const pair=choices.find(x=>x[0]===s.chart),src=(s.data?.scatter||[]).filter(p=>Number.isFinite(Number(p[pair[2]]))&&p[pair[2]]!=null&&Number.isFinite(Number(p[pair[3]]))&&p[pair[3]]!=null);
-const maxPoints=Math.max(30,Math.round(300*Number(s.zoom)/100)),pts=src.slice(0,maxPoints);
-const axis=k=>{const vals=pts.map(p=>Number(p[k])).sort((a,b)=>a-b);if(!vals.length)return [0,1];let lo=vals[Math.floor(vals.length*.03)],hi=vals[Math.floor((vals.length-1)*.97)];if(lo===hi){lo-=1;hi+=1}return [lo,hi]};
-const [x0,x1]=axis(pair[2]),[y0,y1]=axis(pair[3]);const sx=n=>55+(n-x0)/(x1-x0)*600,sy=n=>265-(n-y0)/(y1-y0)*230;
-const mx=pts.length?pts.map(p=>Number(p[pair[2]])).sort((a,b)=>a-b)[Math.floor(pts.length/2)]:0;
-const my=pts.length?pts.map(p=>Number(p[pair[3]])).sort((a,b)=>a-b)[Math.floor(pts.length/2)]:0;
-const points=pts.map(p=>{const x=sx(Number(p[pair[2]])),y=sy(Number(p[pair[3]])),yes=!!ownRow(p)||p.owned===true;if(!Number.isFinite(x)||!Number.isFinite(y)||x<55||x>655||y<35||y>265)return '';
-return '<circle data-scr-point="'+E(p.ticker)+'" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(yes?6:3.3)+'" fill="'+(yes?'#D4A017':'#4B85A9')+'" fill-opacity="'+(yes?1:.68)+'" stroke="'+(yes?'#ffe9a0':'none')+'" stroke-width="1.5"><title>'+E(p.ticker)+' · '+fmt(p[pair[2]])+' / '+fmt(p[pair[3]])+(yes?' · CARTEIRA':'')+'</title></circle>'}).join('');
-return '<section class="scr-panel"><div class="scr-head"><h3>Dispersão quantitativa</h3><div class="scr-actions"><select data-scr-chart>'+options(choices.map(c=>[c[0],c[1]]),s.chart)+'</select><label>Zoom <select data-scr-zoom>'+options([['100','100%'],['60','60%'],['30','30%']],s.zoom)+'</select></label></div></div>'+
-(pts.length?'<svg class="scr-svg" viewBox="0 0 710 310" role="img" aria-label="'+E(pair[1])+'"><path d="M55 35V265H655" fill="none" stroke="#68707a" stroke-width="1"/>'+
-'<line x1="'+sx(mx).toFixed(1)+'" x2="'+sx(mx).toFixed(1)+'" y1="35" y2="265" stroke="#a6a38d" stroke-dasharray="4 5" opacity=".8"/><line x1="55" x2="655" y1="'+sy(my).toFixed(1)+'" y2="'+sy(my).toFixed(1)+'" stroke="#a6a38d" stroke-dasharray="4 5" opacity=".8"/>'+points+
-'<text x="55" y="294" fill="#abb0bd" font-size="12">'+E(pair[2])+' · '+fmt(x0)+' a '+fmt(x1)+'</text><text x="652" y="23" text-anchor="end" fill="#abb0bd" font-size="12">'+E(pair[3])+' · '+fmt(y0)+' a '+fmt(y1)+'</text></svg>':
-'<p class="scr-empty">Ainda não há indicadores comparáveis suficientes para este gráfico.</p>')+
-'<p class="scr-hint">Pontos dourados: sua carteira. Exibe até '+pts.length+' ativos do recorte com dados disponíveis; o conjunto filtrado completo está na tabela paginada.</p></section>';
+function chart(m,s){
+ const view=w.DiarioScreenersGrafico?.plot(m,s,ownRow);
+ return view||'<section class="scr-panel"><p>Gráfico indisponível. Atualize o aplicativo.</p></section>';
+}
+function detail(m,s){
+ const tk=s.detailTicker;if(!tk)return '';
+ const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk];
+ if(!row)return '';
+ const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row);
+ if(!meta)return '';
+ const owned=ownRow(row);
+ return '<section class="scr-detail" id="scr-detail" aria-live="polite">'+
+ '<div class="scr-head"><div><p class="an-kicker">VALIDAÇÃO DO ATIVO</p><h3>'+E(row.ticker)+' · '+E(meta.company)+'</h3></div>'+
+ '<button type="button" data-scr-detail-close="1" aria-label="Fechar explicação">Fechar</button></div>'+
+ '<div class="scr-score-line"><strong>'+(meta.score==null?'Score indisponível':fmt(meta.score,1)+'/100')+'</strong>'+
+ '<span class="'+(meta.validated?'is-ok':'is-review')+'">'+E(meta.level)+'</span>'+
+ '<span>'+fmt(meta.coverage,0)+'% dos critérios disponíveis</span></div>'+
+ '<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+
+ '<div class="scr-detail-groups">'+meta.parts.map(p=>
+ '<div class="scr-detail-group"><div><b>'+E(p.name)+'</b><span>'+(p.points==null?'Não calculado':fmt(p.points,1)+' / '+p.weight+' pontos')+'</span></div>'+
+ '<div class="scr-meter"><i style="width:'+(p.points==null?0:p.points/p.weight*100)+'%"></i></div>'+
+ '<small>'+E(p.metrics.filter(x=>x.number!=null).map(x=>x.label+': '+fmt(x.number,1)+(x.unit==='%'?'%':x.unit==='x'?'x':'')).join(' · ')||'Sem dados para este critério')+'</small></div>').join('')+'</div>'+
+ '<details class="scr-why" open><summary>Por que este resultado exige atenção?</summary>'+
+ '<div class="scr-detail-columns"><div><b>O que favorece</b>'+
+ (meta.positives.length?'<ul>'+meta.positives.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul>':'<p>Sem evidência suficiente para apontar forças no score.</p>')+
+ '</div><div><b>Limitações e riscos</b>'+
+ '<ul>'+(meta.risks.length?meta.risks:['Confirmar valuation, preço, setor e risco.']).map(x=>'<li>'+E(x)+'</li>').join('')+'</ul></div></div></details>'+
+ '<p class="scr-hint">Fonte: '+E(meta.source)+' · Fundamentos: '+E(meta.fundamentals_at||'sem data')+
+ ' · Técnico: '+E(meta.technical_at||'sem data')+' · Snapshot: '+E(meta.updated_at||'sem data')+
+ (owned?' · Carteira: '+pct(owned.pct):'')+'</p>'+
+ '<div class="scr-detail-footer"><button type="button" data-scr-analyze="'+E(row.ticker)+'">Abrir pesquisa completa</button>'+
+ '<button type="button" data-scr-detail-close="1">Voltar ao ranking</button></div>'+
+ '</section>';
+}
+function selections(m,s){
+ const count=s.selected.length;
+ return '<section class="scr-selections" aria-label="Seleção para relatório">'+
+ '<div class="scr-selections-head"><div><b>Seleção para estudo</b><span>'+count+' / 10 ações · permanece ao mudar páginas e filtros</span></div>'+
+ '<button type="button" data-scr-pdf="1" '+(!count||s.pdfBusy?'disabled':'')+'>'+(s.pdfBusy?'Preparando PDF…':'Gerar PDF / Compartilhar')+'</button></div>'+
+ (count?'<div class="scr-chips">'+s.selected.map(t=>
+  '<button type="button" data-scr-remove="'+E(t)+'" aria-label="Remover '+E(t)+'">'+E(t)+' <span aria-hidden="true">×</span></button>').join('')+'</div>':'')+
+ '<p class="scr-hint">Escolha até 10 ativos. O PDF detalha score, contribuições, qualidade das fontes e o que precisa ser conferido. A comparação aprofundada na Pesquisa continua limitada a 2–4 ativos.</p>'+
+ (s.pdfError?'<p class="scr-alert" role="alert">'+E(s.pdfError)+'</p>':'')+
+ '</section>';
 }
 function table(m,s){const all=s.data?.rows||[],us=m==='us';
 const cols=us?[['ticker','Ticker'],['company_name','Empresa'],['score_quant_us','Score'],['cobertura_pct','Cobertura'],['roic','ROIC'],['forward_pe','Fwd P/E'],['total_shareholder_yield','Total Yield'],['momentum_12_1','Mom. 12-1']]:
