@@ -92,7 +92,7 @@ const MARKET_SYMBOLS=[
 export function coletarMercadoAgora(date=new Date()){
   const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',
     weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date).map(x=>[x.type,x.value]));
-  return !['Sat','Sun'].includes(p.weekday)&&+p.hour>=7&&+p.hour<21&&+p.minute%10===0;
+  return !['Sat','Sun'].includes(p.weekday)&&+p.hour>=6&&+p.hour<21&&+p.minute%10===0;
 }
 export async function coletarMercado(fetcher=fetch,agora=Date.now()){
   const r=await fetcher('https://scanner.tradingview.com/global/scan',{
