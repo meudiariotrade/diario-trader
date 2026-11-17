@@ -129,7 +129,8 @@ async function openRouterReserva(fetcher: typeof fetch, forcar = false): Promise
       }
     } catch { /* Lista temporariamente indisponível: usa cache ou slugs gratuitos declarados. */ }
   }
-  if (!OR_RESERVA) return [...CANDIDATOS_RESERVA];
+  // Sem catálogo validado, não presumir que um slug :free ainda é gratuito.
+  if (!OR_RESERVA) return [];
   const ids = OR_RESERVA.ids;
   // Famílias pedidas vêm primeiro. Sem oferta gratuita de Grok/DeepSeek/GLM/MiMo,
   // prioriza duas alternativas reais do catálogo, sem jamais recorrer a uma variante paga.
