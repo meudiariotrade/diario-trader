@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/wrangler.json",
-  "name": "diario-trader-noticias",
+  "name": "diario-trader",
   "main": "cloudflare/diario-noticias/index.mjs",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
