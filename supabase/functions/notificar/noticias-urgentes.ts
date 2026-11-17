@@ -119,18 +119,25 @@ async function fonteRSS(fonte: Fonte, fetcher: Fetcher) {
   }
   throw Error('Feed indisponível: ' + fonte.nome);
 }
+// O provedor FxEmbed documenta dois domínios RSS. Uma fonte fora do ar não
+// impede as notícias dos portais e o próximo ciclo tenta novamente com intervalo seguro.
+const X_FALHA_ATE = new Map<string, number>();
 async function fonteX(perfil: string, fetcher: Fetcher) {
-  // Nunca disparar quatro proxies em paralelo: 404/429 recorrentes eram desperdício de banda.
-  // FxTwitter foi verificado com RSS real dos dois perfis em 17/11/2026.
+  if (Date.now() < (X_FALHA_ATE.get(perfil) || 0))
+    throw Error('Feed X em recuperação: @' + perfil);
   const urls = [
-    'https://fxtwitter.com/' + perfil + '/feed.xml',
-    'https://rsshub.app/twitter/user/' + perfil,
+    'https://fxtwitter.com/' + perfil + '/feed.xml?count=30',
+    'https://fixupx.com/' + perfil + '/feed.xml?count=30',
   ];
   for (const url of urls) {
-    try { return await baixarRSS('X @' + perfil, url, fetcher); }
-    catch { /* próximo provedor somente se o principal estiver fora */ }
+    try {
+      const itens = await baixarRSS('X @' + perfil, url, fetcher);
+      X_FALHA_ATE.delete(perfil);
+      return itens;
+    } catch { /* tentar apenas o outro domínio, sem fan-out paralelo */ }
   }
-  throw Error('Fontes RSS do X indisponíveis: @' + perfil);
+  X_FALHA_ATE.set(perfil, Date.now() + 5 * 60_000);
+  throw Error('Feed X temporariamente indisponível: @' + perfil);
 }
 async function fonteFinnhub(categoria: string, chave: string, fetcher: Fetcher): Promise<NoticiaUrgente[]> {
   const r = await fetcher('https://finnhub.io/api/v1/news?category=' + categoria + '&token=' + encodeURIComponent(chave), {
