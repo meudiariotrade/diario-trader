@@ -235,7 +235,7 @@ async function pnlCarrega(e) {
   try {
     const a = await fetch(t.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: t.key },
+        headers: macroAuthHeaders(t),
         body: JSON.stringify({ modo: "painel" }),
       }),
       o = await a.json().catch(() => ({}));
@@ -1985,7 +1985,7 @@ async function feCarrega() {
   try {
     const a = await fetch(e.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: e.key },
+        headers: macroAuthHeaders(e),
         body: JSON.stringify({ modo: "fluxo" }),
       }),
       o = await a.json().catch(() => ({}));
@@ -2105,7 +2105,7 @@ async function balCarrega() {
   try {
     const a = await fetch(e.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: e.key },
+        headers: macroAuthHeaders(e),
         body: JSON.stringify({ modo: "balancos" }),
       }),
       o = await a.json().catch(() => ({}));
@@ -2604,7 +2604,7 @@ async function szCarrega(e) {
   try {
     const a = await fetch(t.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: t.key },
+        headers: macroAuthHeaders(t),
         body: JSON.stringify({ modo: "sazonal" }),
       }),
       o = await a.json().catch(() => ({}));
@@ -3113,7 +3113,7 @@ async function rkCarrega(e) {
   const [a, o] = await Promise.allSettled([
     fetch(t.url + "/functions/v1/macro", {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: t.key },
+      headers: macroAuthHeaders(t),
       body: JSON.stringify({ modo: "ranking" }),
     }).then(async (s) => {
       const n = await s.json().catch(() => ({}));
@@ -3544,7 +3544,7 @@ async function dgTesta() {
   const [t, a, o, s] = await Promise.allSettled([
     fetch(e.url + "/functions/v1/macro", {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: e.key },
+      headers: macroAuthHeaders(e),
       body: JSON.stringify({ modo: "diag" }),
     }).then(async (n) => {
       const r = await n.json().catch(() => ({}));

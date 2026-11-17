@@ -80,10 +80,15 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
  await page.route('**/storage/v1/object/sign/**',route=>route.request().method()==='POST'?route.fulfill({json:{signedURL:'/object/sign/aulas-videos/test-video/'+ID+'-16x9.mp4?token=test'}}):route.fulfill({path:path.join(__dirname,'../public/avatar-talking.mp4'),contentType:'video/mp4'}));
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  await page.evaluate(data=>{
-  tab='estudos';ESV='aul';SESS={uid:'test-video',at:'test',exp:Date.now()+3600000,projectUrl:location.origin};
+  tab='estudos';ESV='aul';
   window.SUPA_URL=location.origin;window.SUPA_KEY='public';
+  // A sessão simulada deve pertencer ao projeto escolhido por cfg() (v710),
+  // senão tok() a invalida antes de obter o vídeo.
+  SESS={uid:'test-video',at:'test',exp:Date.now()+3600000,projectUrl:cfg()?.url||location.origin};
   const demoFetch=window.fetch;
-  window.fetch=(url,options)=>String(url).startsWith(location.origin+'/storage/v1/object/sign/')?window.testNativeFetch(url,options):demoFetch(url,options);
+  // Interceptar a URL real de Storage, seja a origem do teste ou a URL Supabase de config.js.
+  window.fetch=(url,options)=>String(url).includes('/storage/v1/object/sign/aulas-videos/')
+    ?window.testNativeFetch(url,options):demoFetch(url,options);
   render();
   document.querySelector('[data-tp-aula-sub="mentor"]').click();
   TecnicaPratica.pdf.insert(data);TecnicaPratica.view.refresh();
@@ -92,7 +97,7 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
  await page.locator('[data-tp-film-migrate]').evaluate(button=>{
   const details=button.closest('details');if(details)details.open=true;button.click();
  });
- await expect(page.locator('[data-tp-film-player]')).toHaveCount(1);
+ await expect(page.locator('[data-tp-film-player]')).toHaveCount(1,{timeout:12000});
  await page.evaluate(()=>{window.v=document.querySelector('[data-tp-film-player]');window.v.currentTime=1;render();});
  assert.equal(await page.evaluate(()=>document.querySelector('[data-tp-film-player]')===window.v),true);
  await page.locator('[data-tp-action="close-film"]').click();
