@@ -55,7 +55,7 @@
           buscar(/ibov|ewz|vale3|petr4|petrobras/),
           'O índice e os instrumentos ligados ao mercado brasileiro ajudam a dimensionar o cenário para as ações. O desempenho de empresas específicas exige conferir seus balanços e comunicados antes de atribuir causas.'),
         contexto('Economia brasileira','CÂMBIO E JUROS','Juros e dólar: como ler as referências brasileiras',
-          buscar(/^di\\b|di jan|dolar|wdo|usd\\/brl/),
+          buscar(/di jan|^di[0-9]|dolar|wdo|usd.?brl/),
           'Taxas futuras de juros e câmbio estão entre os fatores que influenciam o custo do crédito e os preços de ativos. A sensibilidade depende do vencimento, do setor e das condições de liquidez; preços coincidentes não comprovam relação causal.'),
         contexto('Internacional','MERCADOS GLOBAIS','Bolsas internacionais e dólar: referências externas',
           buscar(/nasdaq|s&p|sp500|dow|dxy|treasury|us10|vix/),
