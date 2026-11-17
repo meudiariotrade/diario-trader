@@ -7,7 +7,7 @@ const read=path=>fs.readFileSync(path,'utf8');
 const app=read('src/analysis/analises.js'),pdf=read('src/analysis/screeners-relatorio.js'),html=read('src/index.html');
 function br(ticker,index){
  const row={ticker,empresa:'Companhia '+ticker,roe:20-index/2,roic:17-index/3,pl:7+index/3,
-  ev_ebitda:6+index/4,fcf_yield:7-index/5,dividend_yield:8-index/6,
+  ev_ebitda:6+index/4,fcf_yield:7-index/5,dividend_yield:8-index/6,liquidez_diaria_brl:12000000,
   payout_implicito:45,momentum_12_1:22-index,updated_at:'2026-11-17',
   fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17'};
  const weights=intel.weights.BR;
@@ -34,6 +34,15 @@ test('Top 10 exclui nota com fórmula divergente e ação duplicada da mesma com
  assert.ok(!res.entries.some(x=>x.row.ticker===rows[0].ticker));
  assert.ok(res.entries.filter(x=>x.row.ticker.slice(0,4)==='L001').length<=1);
  assert.equal(res.entries.length,10);
+});
+test('Top 10 rejeita liquidez inferior a R$ 1 milhão e DY extremo sem inventar nota',()=>{
+ const rows=Array.from({length:13},(_,i)=>br('B'+String(i).padStart(3,'0')+'3',i));
+ rows[0].liquidez_diaria_brl=15000;
+ rows[1].dividend_yield=36;
+ const r=ranking.generate('BR',rows,intel);
+ assert.equal(r.entries.length,10);
+ assert.ok(!r.entries.some(x=>x.row.ticker===rows[0].ticker));
+ assert.ok(!r.entries.some(x=>x.row.ticker===rows[1].ticker));
 });
 test('EUA sem scores reais: ranking vazio, nunca inventa as dez melhores',()=>{
  const sample=[{ticker:'AAPL',company_name:'Empresa de exemplo',roic:22,forward_pe:18,
