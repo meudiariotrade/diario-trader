@@ -198,6 +198,31 @@ s.data=data;if(isGlobalTopQuery(s))s.topData=data;for(const row of data.rows||[]
 }catch(e){if(req===reqId)s.error=String(e.message||'Não foi possível carregar.');}
 finally{s.loading=false;if(req===reqId){render();if(s.refreshWhenDone){s.refreshWhenDone=false;void load(m,true)}}}
 }
+/* Consulta sob demanda: retorna no máximo 50 linhas ordenadas do mercado inteiro.
+ * Não consulta milhares de tickers, nem gera job, cron ou escrita. */
+const topCache=new Map();
+async function loadTopGlobal(m,refresh=false){
+ const stateNow=init(m),uid=owner(),key=uid+'|'+m,stored=topCache.get(key);
+ if(stateNow.topBusy)return;
+ if(!refresh&&stored&&Date.now()-stored.when<5*60000){
+  stateNow.topData=stored.data;stateNow.topError='';render();return;
+ }
+ if(!SESS||!cfg()||w.DIARIO_DEMO){stateNow.topError='Faça login para consultar o catálogo.';render();return}
+ stateNow.topBusy=true;stateNow.topError='';render();
+ try{
+  await tok();const c=cfg();
+  const body={market:m.toUpperCase(),search:'',sector:'',custody:'todos',owned:[],liquidity:0,cap:'all',preset:'top',order:'score',page:0};
+  const resp=await fetch(c.url+'/functions/v1/screeners-quant',{
+   method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},
+   body:JSON.stringify(body),signal:AbortSignal.timeout(15000)
+  });
+  const result=await resp.json().catch(()=>({}));
+  if(!resp.ok||!result.ok)throw Error(result.error||'Consulta do ranking indisponível');
+  if(uid!==owner())return;
+  stateNow.topData=result;topCache.set(key,{when:Date.now(),data:result});
+ }catch(e){stateNow.topError=String(e.message||e).slice(0,180)}
+ finally{if(uid===owner()){stateNow.topBusy=false;render()}}
+}
 function field(el){const m=d.querySelector('[data-an-sub].selected')?.dataset.anSub;if(m==='br'||m==='us')return [m,init(m)];return [null,null]}
 function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;s.page=0;if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
 d.addEventListener('input',ev=>{const b=ev.target;if(!b?.hasAttribute?.('data-scr-search'))return;const [m,s]=field(b);if(!m)return;s.search=b.value;s.page=0;clearTimeout(timer);timer=setTimeout(()=>load(m),420)});
@@ -216,9 +241,30 @@ d.addEventListener('change',ev=>{
  }
 });
 d.addEventListener('click',async ev=>{
- const b=ev.target.closest('[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
+ const b=ev.target.closest('[data-scr-top-refresh],[data-scr-top-pdf],[data-scr-top-detail],[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
  if(!b||!b.closest('#an-root'))return;
  ev.preventDefault();const [m,s]=field(b);if(!m)return;
+ if(b.hasAttribute('data-scr-top-refresh')){void loadTopGlobal(m,true);return}
+ if(b.dataset.scrTopDetail){
+  s.detailTicker=b.dataset.scrTopDetail;render();
+  d.getElementById('scr-detail')?.scrollIntoView({behavior:'smooth',block:'start'});return;
+ }
+ if(b.hasAttribute('data-scr-top-pdf')){
+  const ranking=w.DiarioScreenersTop10?.generate(m,s.topData?.rows||[],w.DiarioScreenersInteligencia);
+  if(s.topPdfBusy)return;
+  if(!ranking?.entries.length){s.topPdfMessage='Não há empresas elegíveis para um Top 10 fundamentado; dados incompletos não recebem nota.';render();return}
+  s.topPdfBusy=true;s.topPdfMessage='';render();
+  try{
+   const rows=ranking.entries.map(x=>x.row);
+   const result=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows,{
+    automatic:true,universe:s.topData?.total||0,scored:s.topData?.coverage?.com_score||0,
+    method:ranking.reason,snapshot:s.topData?.last_update||null
+   });
+   if(!result.cancelled)s.topPdfMessage='Relatório automático pronto: '+rows.length+' empresas, '+result.pages+' páginas.';
+  }catch(e){s.topPdfMessage='Não foi possível gerar o Top 10: '+String(e.message||e).slice(0,160)}
+  finally{s.topPdfBusy=false;render()}
+  return;
+ }
  if(b.hasAttribute('data-scr-refresh')){void load(m,true);return}
  if(b.dataset.scrPage){s.page=Math.max(0,s.page+Number(b.dataset.scrPage));void load(m);return}
  if(b.dataset.scrZoom){const factor=b.dataset.scrZoom==='in'?1.6:1/1.6;s.zoom=Math.min(6,Math.max(1,(Number(s.zoom)||1)*factor));render();return}
