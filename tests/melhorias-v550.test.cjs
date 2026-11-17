@@ -15,9 +15,18 @@ test('v550: destaque WIN/WDO, análises recolhidas, guia de 3 passos, continuar 
  await p.evaluate(()=>{MKT.tab='lab';render()});
  await expect(app.locator('.m550-sanf').first()).toHaveClass(/m550-aberto/);
  await expect.poll(()=>app.locator('.m550-sanf:not(.m550-aberto)').count(),{timeout:12000}).toBeGreaterThanOrEqual(3);
- const fechados=await app.locator('.m550-sanf:not(.m550-aberto)').count();
- await app.locator('.m550-sanf:not(.m550-aberto) > .sw9t').first().click();
- assert.equal(await app.locator('.m550-sanf:not(.m550-aberto)').count(),fechados-1);
+ // A renderização pode substituir a grade entre duas leituras do DOM. Verifique
+ // o mesmo painel pela chave estável, sem subtrair contagens de frames distintos.
+ const chave=await app.locator('.m550-sanf:not(.m550-aberto) > .sw9t[data-m550-chave]').first().getAttribute('data-m550-chave');
+ assert.ok(chave);
+ const titulo=app.locator('.m550-sanf > .sw9t[data-m550-chave='+JSON.stringify(chave)+']');
+ await expect(titulo).toHaveAttribute('aria-expanded','false');
+ await titulo.click();
+ await expect(titulo).toHaveAttribute('aria-expanded','true');
+ await expect(titulo.locator('..')).toHaveClass(/m550-aberto/);
+ await titulo.click();
+ await expect(titulo).toHaveAttribute('aria-expanded','false');
+ await expect(titulo.locator('..')).not.toHaveClass(/m550-aberto/);
  await p.evaluate(()=>{MKT.tab='nt';render()});
  await app.locator('[data-m550-jornal="jornal"]').click();
  await expect.poll(()=>p.evaluate(()=>MKT.tab)).toBe('jr');
