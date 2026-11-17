@@ -5,8 +5,8 @@
 const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), ANON = ENV('SUPABASE_ANON_KEY'), CRON = ENV('CRON_SECRET');
 const svc = { apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json' };
-// Chave Resend: secret padrão da Edge Function ou alternativa criptografada no Vault.
-let chaveResendCache = ENV('RESEND_API_KEY');
+// Chave Resend ativa: somente Vault; ignora secret antigo da Edge Function para evitar destinatário bloqueado.
+let chaveResendCache = '';
 async function buscarChaveResend(): Promise<string> {
   if (chaveResendCache) return chaveResendCache;
   if (!SB || !SRK) return '';
