@@ -14,7 +14,8 @@ test('v550: destaque WIN/WDO, análises recolhidas, guia de 3 passos, continuar 
  await expect(app.locator('#cotbox .cqr').filter({hasText:'WDO'})).toContainText('WDO');
  await p.evaluate(()=>{MKT.tab='lab';render()});
  await expect(app.locator('.m550-sanf').first()).toHaveClass(/m550-aberto/);
- const fechados=await app.locator('.m550-sanf:not(.m550-aberto)').count();assert.ok(fechados>=3);
+ await expect.poll(()=>app.locator('.m550-sanf:not(.m550-aberto)').count(),{timeout:12000}).toBeGreaterThanOrEqual(3);
+ const fechados=await app.locator('.m550-sanf:not(.m550-aberto)').count();
  await app.locator('.m550-sanf:not(.m550-aberto) > .sw9t').first().click();
  assert.equal(await app.locator('.m550-sanf:not(.m550-aberto)').count(),fechados-1);
  await p.evaluate(()=>{MKT.tab='nt';render()});
