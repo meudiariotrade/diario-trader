@@ -65,7 +65,8 @@ test('Sem catálogo ao vivo, não presume gratuidade de IDs antigos',async()=>{
 test('Rotas de análise conservam Gemini principal e metadados da reserva',()=>{
  const a=fs.readFileSync('supabase/functions/analise/index.ts','utf8');
  assert.match(a,/await geminiG\(system, parts, principal\)/);
- assert.match(a,/preferir:\['openrouter-reserva'\]/);
+ assert.match(a,/preferir:\['groq'\]/);
+ assert.match(a,/excluir:\['gemini'\]/);
  assert.match(a,/__fontes_busca:\[\]/);
  assert.match(a,/sem_pesquisa_web:true/);
  assert.match(a,/openrouterConfigurado:!!Deno.env.get\('OPENROUTER_API_KEY'\)/);
