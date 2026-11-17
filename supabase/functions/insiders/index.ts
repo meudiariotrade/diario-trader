@@ -5,6 +5,14 @@ const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY');
 const svc = { apikey: SRK, Authorization: 'Bearer ' + SRK, 'Content-Type': 'application/json' };
 async function db(p: string, init: RequestInit = {}) { const r = await fetch(SB + '/rest/v1/' + p, { ...init, headers: { ...svc, ...((init.headers as any) || {}) } }); if (!r.ok) throw new Error('db ' + r.status + ' ' + (await r.text()).slice(0, 160)); const t = await r.text(); return t ? JSON.parse(t) : null; }
+async function autorizaAtualizacao(req:Request){
+  const enviado=req.headers.get('x-cron-secret')||'';
+  if(!enviado)return false;
+  const esperado=await db('rpc/diario_agendamento_chave',{method:'POST',body:'{}'}).catch(()=>null);
+  if(typeof esperado!=='string'||esperado.length!==enviado.length)return false;
+  let diff=0;for(let i=0;i<esperado.length;i++)diff|=esperado.charCodeAt(i)^enviado.charCodeAt(i);
+  return diff===0;
+}
 // ticker -> começo do nome na CVM (sem acento, maiúsculas); com * = em qualquer parte do nome
 const MAPA: Record<string, string> = { PETR4: 'PETROLEO BRASILEIRO', PETR3: 'PETROLEO BRASILEIRO', VALE3: 'VALE S', ITUB4: 'ITAU UNIBANCO HOLDING', BBDC4: 'BCO BRADESCO', BBAS3: 'BCO BRASIL', ABEV3: 'AMBEV', WEGE3: 'WEG S', B3SA3: 'B3 S.A', PRIO3: 'PRIO S', RENT3: 'LOCALIZA', SUZB3: 'SUZANO', GGBR4: 'GERDAU S', GOAU4: 'METALURGICA GERDAU', CSNA3: 'CIA SIDERURGICA NACIONAL', USIM5: 'USINAS SID', MGLU3: 'MAGAZINE LUIZA', LREN3: 'LOJAS RENNER', RADL3: 'RAIA DROGASIL', ELET3: 'CENTRAIS ELET', EQTL3: 'EQUATORIAL', SBSP3: '*SANEAMENTO BASICO', HAPV3: 'HAPVIDA', RDOR3: 'REDE D', BPAC11: 'BCO BTG PACTUAL', ITSA4: 'ITAUSA', SANB11: 'BCO SANTANDER', EMBR3: 'EMBRAER', JBSS3: 'JBS S', BRFS3: 'BRF S', CMIN3: 'CSN MINERACAO', RAIL3: 'RUMO S', VIVT3: 'TELEFONICA BRASIL', TIMS3: 'TIM S', CPLE6: 'CIA PARANAENSE', CMIG4: '*CEMIG', ENGI11: 'ENERGISA S', TOTS3: 'TOTVS', CYRE3: 'CYRELA', MRVE3: 'MRV ENGENHARIA', AZUL4: 'AZUL S', CVCB3: 'CVC BRASIL', RECV3: 'PETRORECONCAVO', BRAV3: 'BRAVA ENERGIA', VBBR3: 'VIBRA ENERGIA', UGPA3: 'ULTRAPAR', CSAN3: 'COSAN S', RAIZ4: 'RAIZEN', NTCO3: 'NATURA', ASAI3: 'SENDAS', PCAR3: 'CIA BRASILEIRA DE DISTRIBUICAO', SLCE3: 'SLC AGRICOLA', KLBN11: 'KLABIN', BBSE3: 'BB SEGURIDADE', CXSE3: 'CAIXA SEGURIDADE', IRBR3: 'IRB', COGN3: 'COGNA', YDUQ3: 'YDUQS', AURA33: 'AURA MINERALS', POMO4: 'MARCOPOLO', DIRR3: 'DIRECIONAL', CURY3: 'CURY' };
 const sa = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
@@ -75,6 +83,8 @@ Deno.serve(async (req) => {
   const hoje = new Date().toISOString().slice(0, 10);
   try {
     if (b.acao === 'lista') { const L = await db(`insiders?select=empresa,tickers,mes,cargo,compras,vendas,liquido&order=mes.desc&limit=400`); return new Response(JSON.stringify(L), { headers: h }); }
+    if(!(await autorizaAtualizacao(req)))
+      return new Response(JSON.stringify({error:'Não autorizado'}),{status:401,headers:h});
     if ((await db(`push_log?select=chave&chave=eq.insupd:${hoje}`))?.length) return new Response(JSON.stringify({ ok: true, ja: true }), { headers: h });
     await db('push_log', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ chave: 'insupd:' + hoje, em: new Date().toISOString() }) });
     const R = await atualiza(); const n = b.semAviso ? 0 : await avisa(R.L);
