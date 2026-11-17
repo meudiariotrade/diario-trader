@@ -28,7 +28,8 @@ async function publicSnapshot(req:Request,market:string){
  const tag=await etag(body),headers={...CORS,'Cache-Control':'public, max-age=900, s-maxage=1800',
   'ETag':tag,'X-Snapshot-Source':'precomputed','Vary':'Accept-Encoding',
   'Content-Type':'application/json; charset=utf-8'};
- if(req.headers.get('if-none-match')===tag)return new Response(null,{status:304,headers});
+ const conditional=req.headers.get('if-none-match')?.trim();
+ if(conditional===tag||conditional==='W/'+tag)return new Response(null,{status:304,headers});
  return new Response(body,{status:200,headers});
 }
 Deno.serve(async(req:Request)=>{
