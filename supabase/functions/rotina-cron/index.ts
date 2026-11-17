@@ -113,6 +113,28 @@ async function fechamento(dia: string) {
   await log('lembrete 17:45', true, `${dia}: ${pend.length} conta(s) com fechamento pendente · ${Object.values(out).join(', ') || 'nada a enviar'}`, Date.now() - t0);
   return out;
 }
+
+// Jornal clássico, em edições agendadas: usa motor original e cache; nunca cada 10 minutos.
+async function jornalAgendado(dia:string){
+  if(!CRON||!SB||!ANON)return {ok:false,motivo:'Credencial interna indisponível'};
+  const inicio=Date.now();
+  try{
+    const r=await fetch(SB+'/functions/v1/analise',{
+      method:'POST',signal:AbortSignal.timeout(116000),
+      headers:{'Content-Type':'application/json','x-cron-secret':CRON,
+        apikey:ANON,Authorization:'Bearer '+ANON},
+      body:JSON.stringify({modo:'jornal',partes:false,force:false})
+    });
+    const j=await r.json().catch(()=>({erro:'Resposta inválida'}));
+    const ok=r.ok&&!j.erro&&!j.antiga&&!!j.manchete;
+    await log('jornal programado',ok,dia+': HTTP '+r.status+'; '+(ok?'edição pronta':String(j.erro||j.motivo||'edição pendente').slice(0,120)),Date.now()-inicio);
+    return {ok,http:r.status,cache:!!j.cache,antiga:!!j.antiga};
+  }catch(e){
+    await log('jornal programado',false,dia+': '+String(e).slice(0,100),Date.now()-inicio);
+    return {ok:false,motivo:'Edição anterior preservada'};
+  }
+}
+
 Deno.serve(async (req) => {
   const out = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
   if (req.method !== 'POST') return out({ error: 'Método não permitido' }, 405);
@@ -122,6 +144,8 @@ Deno.serve(async (req) => {
   try {
     if (b.acao === 'matinal_leve') { if(!util && !b.forcar)return out({r:'fim de semana'}); return out(await matinalLeve(`${dia} ${b.hm || '06:50'}`)); }
     if (b.acao === 'matinal') return out(await matinal(`${dia} ${b.hm || '06:50'}`));
+    if (b.acao === 'diagnostico_leve')return out({autorizado:true,cronInternoConfigurado:!!CRON,semEnvio:true});
+    if (b.acao === 'jornal_agendado') { if(!util)return out({r:'fim de semana'});return out(await jornalAgendado(dia)); }
     if (b.acao === 'fechamento') { if (!util && !b.forcar) return out({ r: 'fim de semana' }); return out(await fechamento(/^\d{4}-\d{2}-\d{2}$/.test(b.dia || '') ? b.dia : dia)); }
     return out({ error: 'Ação desconhecida' }, 400);
   } catch (e) { await log('rotina ' + (b.acao || '?'), false, (e as Error).message); return out({ error: (e as Error).message }, 500); }
