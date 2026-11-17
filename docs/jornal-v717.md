@@ -14,3 +14,7 @@ Escopo: Jornal (tela, PDF e geração). Ordem dos modelos e das reservas preserv
 33 verificações específicas do Jornal aprovadas localmente antes do teste de navegador adicional; build/check aprovados. Consulta real a IBGE/BLS: 13 eventos em 14 dias. Corpo de notícia real: 1.678 caracteres recuperados. Testes de navegador executados pelo fluxo do GitHub porque Chromium local não consegue criar sockets neste ambiente.
 
 Pendências externas verificadas em 17/11/2026: logs registram GEMINI_API_KEY ausente; painel de secrets exige autenticação. Ponte salva WINFUT/WDOFUT, sem máxima e mínima, e só uma barra por raiz no histórico. Não há dados suficientes para validar OHLC completo do contrato vigente ou ajuste oficial. FedWatch oficial por API requer assinatura; nenhuma assinatura foi contratada. Ainda é necessário acompanhar edições reais de pré, intradiário e pós após configurar as fontes. A versão não declara qualidade 10/10 nem precisão financeira garantida.
+
+## Ajuste de isolamento v718
+
+O suplemento é anexado somente à leitura/exportação da conta que o capturou. O estado JRN usado para persistência da edição permanece sem o suplemento, inclusive depois de repintar a tela.

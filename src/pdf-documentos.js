@@ -115,7 +115,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(input) {
   [...e.qualidade.problemas,...e.qualidade.lacunas].forEach(t=>para(t,{size:7.8,color:colors.muted,gap:4}));
   para('Snapshot: '+snap.id+' | '+Q.VERSION+' | Conteúdo informativo. Cenários condicionados não são ordens de negociação.',{size:7.2,color:colors.muted});
   pages.forEach((page,i)=>{pg=page;rule(H-38);draw('DIÁRIO DE TRADER / '+(e.simulado?'DADOS SIMULADOS':'USO PESSOAL'),M,H-28,7,'b',colors.muted);draw('Página '+(i+1)+' de '+pages.length,W-M,H-28,7,'r',colors.muted,'right');});
-  doc.setTitle('Jornal do Pregão - '+date);doc.setAuthor('Diário de Trader');doc.setSubject(snap.id);doc.setCreator('Diário de Trader v717');
+  doc.setTitle('Jornal do Pregão - '+date);doc.setAuthor('Diário de Trader');doc.setSubject(snap.id);doc.setCreator('Diário de Trader v718');
   // Medidas ficam disponíveis para o teste de limites, sem alterar o PDF.
   window.__jornalPdfLayout=ops;
   return {bytes:await doc.save(),paginas:pages.length,snapshot_id:snap.id};

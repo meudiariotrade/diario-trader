@@ -12,13 +12,14 @@
     if(cache.size>8) cache.delete(cache.keys().next().value);
     return withPrivate(Q.clone(e));
   }
+  function publicEdition(value){const e=edition(value);if(e)delete e.profit_local;return e;}
   w.DiarioJornalEditorial={edition};
   const journalView=vJornal;let legacyRefresh=false;
   vJornal=function(){if(!legacyRefresh && JRN.v?.manchete && !JRN.v.prep_id && !JRN.busy){legacyRefresh=true;JRN.v.antiga=true;setTimeout(()=>jrCarrega(false),0);}return journalView.apply(this,arguments);};
   const original=jrPinta;
   jrPinta=function(){
-    if(JRN.v?.manchete) JRN.v=edition(JRN.v);
-    if(JRN.arq?.manchete) JRN.arq=edition(JRN.arq);
+    if(JRN.v?.manchete) JRN.v=publicEdition(JRN.v);
+    if(JRN.arq?.manchete) JRN.arq=publicEdition(JRN.arq);
     return original.apply(this,arguments);
   };
   // O painel da edição nunca é substituído por preços ao vivo de outro horário.
@@ -56,8 +57,8 @@
   function privateHtml(e){const p=e?.profit_local;return `<section class="jrsec"><h3>Referência privada do Profit</h3><p class="sm mut">Captura única. Não muda os números ou o texto da edição.</p><button class="btn s" data-jr-profit-capture>Capturar referência da ponte</button>${p?`<p class="sm">${esc(p.nota)}</p>${p.cotacoes.map(q=>`<p>${esc(q.contrato)} · ${esc(Q.price(q))} · ${esc(q.referencia_em)}${q.ohlc?' · OHLC informado':' · OHLC indisponível'}</p>`).join('')}${p.lacunas.map(x=>`<p class="sm mut">${esc(x)}</p>`).join('')}`:''}</section>`;}
   const renderBody=jrCorpo;
   jrCorpo=function(){
-    if(JRN.v?.manchete) JRN.v=edition(JRN.v);
-    if(JRN.arq?.manchete) JRN.arq=edition(JRN.arq);
+    if(JRN.v?.manchete) JRN.v=publicEdition(JRN.v);
+    if(JRN.arq?.manchete) JRN.arq=publicEdition(JRN.arq);
     const html=renderBody.apply(this,arguments),e=edition(jrVer());
     if(!e?.qualidade) return html;
     const q=e.qualidade;
