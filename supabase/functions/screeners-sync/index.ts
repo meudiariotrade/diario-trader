@@ -1,4 +1,5 @@
 // Catalogo institucional BR/EUA, sincronizacao somente por cron autorizado, sem polling ou dados privados.
+import { scoreEngine } from '../_shared/score-engine.js';
 const SB=Deno.env.get('SUPABASE_URL')||'', SVC=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
 const HEAD={apikey:SVC,Authorization:'Bearer '+SVC,'Content-Type':'application/json'};
 const now=new Date().toISOString().slice(0,10);
@@ -22,10 +23,12 @@ function table(text:string){const lines=text.replaceAll(String.fromCharCode(13),
 async function catalogoUS(){
  const urls=['https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt','https://www.nasdaqtrader.com/dynamic/symdir/otherlisted.txt'];
  const rr=await Promise.all(urls.map(x=>fetchText(x)));
- const nas=table(rr[0]).filter((r:any)=>r['Test Issue']==='N'&&r.ETF==='N').map((r:any)=>({ticker:clean(r.Symbol),company_name:r['Security Name'],exchange:'NASDAQ',fonte_principal:'Nasdaq Trader · Symbol Directory',dados_status:'catalogado'}));
- const ny=table(rr[1]).filter((r:any)=>r.Exchange==='N'&&r.ETF==='N'&&r['Test Issue']==='N').map((r:any)=>({ticker:clean(r['ACT Symbol']),company_name:r['Security Name'],exchange:'NYSE',fonte_principal:'Nasdaq Trader · Other Listed',dados_status:'catalogado'}));
+ const nas=table(rr[0]).filter((r:any)=>r['Test Issue']==='N'&&r.ETF==='N').map((r:any)=>({ticker:clean(r.Symbol),company_name:r['Security Name'],exchange:'NASDAQ',security_type:/\b(UNIT|WARRANT|RIGHT|PREFERRED|NOTE|DEPOSITARY|FUND|TRUST)\b/i.test(r['Security Name'])?'other':'stock',fonte_principal:'Nasdaq Trader · Symbol Directory',dados_status:'catalogado'}));
+ const ny=table(rr[1]).filter((r:any)=>r.Exchange==='N'&&r.ETF==='N'&&r['Test Issue']==='N').map((r:any)=>({ticker:clean(r['ACT Symbol']),company_name:r['Security Name'],exchange:'NYSE',security_type:/\b(UNIT|WARRANT|RIGHT|PREFERRED|NOTE|DEPOSITARY|FUND|TRUST)\b/i.test(r['Security Name'])?'other':'stock',fonte_principal:'Nasdaq Trader · Other Listed',dados_status:'catalogado'}));
  const unique=[...new Map([...ny,...nas].filter(r=>/^[A-Z0-9][A-Z0-9.-]{0,19}$/.test(r.ticker)&&r.company_name).map(r=>[r.exchange+':'+r.ticker,r])).values()];
- return {encontrados:unique.length,gravados:await lotes('US',unique),fonte:'Nasdaq Trader'};
+ const gravados=await lotes('US',unique);
+ for(let i=0;i<unique.length;i+=180)await rpc('quant_v2_classificar_us',{p_rows:unique.slice(i,i+180).map(({ticker,exchange,security_type})=>({ticker,exchange,security_type}))});
+ return {encontrados:unique.length,gravados,fonte:'Nasdaq Trader',classificados:unique.length};
 }
 async function catalogoBR(){
  const all:any[]=[];
@@ -44,20 +47,10 @@ async function catalogoBR(){
  const unique=[...new Map(all.map(r=>[r.ticker,r])).values()];
  return {encontrados:unique.length,gravados:await lotes('BR',unique),fonte:'brapi'};
 }
-function normalizeScore(v:unknown,low:number,high:number,invert=false){const n=numeric(v);if(n==null)return null;const score=Math.min(100,Math.max(0,(n-low)/(high-low)*100));return invert?100-score:score;}
-const mean=(v:(number|null)[])=>{const a=v.filter((x):x is number=>x!==null);return a.length?a.reduce((s,x)=>s+x,0)/a.length:null};
 function rating(m:string,r:any){
- const n=(v:any,lo:number,hi:number,inv=false)=>normalizeScore(v,lo,hi,inv);
- if(m==='BR'){
-  const q=mean([n(r.roe,5,25),n(r.roic,5,22)]),v=mean([n(r.pl,5,25,true),n(r.ev_ebitda,4,18,true),n(r.fcf_yield,0,12)]);
-  const d=mean([n(r.dividend_yield,0,12),r.payout_implicito==null?null:(r.payout_implicito>=20&&r.payout_implicito<=80?90:25)]);
-  const mo=n(r.momentum_12_1,-30,50);return q===null||v===null||d===null||mo===null?null:+(.3*q+.3*v+.25*d+.15*mo).toFixed(2);
- }
- const q=mean([n(r.roic,5,22),n(r.eps_growth_yoy,-10,35),n(r.fcf_margin,0,30)]);
- const v=mean([n(r.forward_pe,8,40,true),n(r.peg_ratio,0.7,3,true),n(r.ev_fcf,5,35,true)]);
- const mo=mean([n(r.momentum_12_1,-30,50),n(r.short_interest_pct,0,15,true)]);
- const ret=n(r.total_shareholder_yield,0,12);
- return q===null||v===null||mo===null||ret===null?null:+(.3*q+.25*v+.25*mo+.2*ret).toFixed(2);
+ const v=scoreEngine.calculate(m,r) as (number|null)[],weights=scoreEngine.weights[m] as {weight:number}[];
+ if(v.some(x=>x===null))return null;
+ return +v.reduce((sum:number,x:number|null,i:number)=>sum+Number(x)*weights[i].weight/100,0).toFixed(2);
 }
 async function momentoHistorico(market:string,ticker:string):Promise<number|null>{
  try{
@@ -104,12 +97,13 @@ async function scanner(market:string,tickers:string[],comHistorico=true){
     const cap=lookup('market_cap_basic'),fcf=lookup('free_cash_flow_ttm'),revenue=lookup('total_revenue_ttm'),ev=lookup('enterprise_value_fq');
     const margin=revenue!=null&&revenue>0&&fcf!=null?+(fcf/revenue*100).toFixed(4):null;
     const evFcf=lookup('enterprise_value_to_free_cash_flow_ttm')??(ev!=null&&fcf!=null&&fcf>0?+(ev/fcf).toFixed(4):null);
-    Object.assign(common,{company_name:String(d[columns.indexOf('description')]||code).slice(0,180),exchange:'NASDAQ',
+    Object.assign(common,{company_name:String(d[columns.indexOf('description')]||code).slice(0,180),exchange:String(item.s||'').startsWith('NYSE:')?'NYSE':'NASDAQ',
      sector:typeof d[columns.indexOf('sector')]==='string'?d[columns.indexOf('sector')]:null,
      market_cap_usd:cap,forward_pe:lookup('price_earnings_forward_fy'),
      peg_ratio:lookup('price_earnings_growth_ttm'),ev_fcf:evFcf,
      price_sales:lookup('price_sales_current'),fcf_margin:margin,
      net_debt_ebitda:lookup('net_debt_to_ebitda_fq'),preco_referencia_usd:price,
+     avg_daily_volume_usd:price!=null&&lookup('average_volume_30d_calc')!=null?+(price*lookup('average_volume_30d_calc')).toFixed(2):null,
      eps_growth_yoy:lookup('earnings_per_share_diluted_yoy_growth_ttm')});
     // Buyback yield nao pode ser confundido com variacao percentual de acoes em circulacao.
     const checked=['roe','roic','forward_pe','peg_ratio','ev_fcf','price_sales','dividend_yield','fcf_margin',
@@ -124,8 +118,8 @@ async function scanner(market:string,tickers:string[],comHistorico=true){
      valor_mercado_brl:cap,preco_referencia:price,pl:lookup('price_earnings_ttm'),
      pvp:lookup('price_book_fq'),ev_ebitda:lookup('enterprise_value_ebitda_current'),
      fcf_yield:cap!=null&&cap>0&&fcf!=null?+(fcf/cap*100).toFixed(4):null,
-     payout_implicito:payout??(lookup('price_earnings_ttm')!=null&&lookup('dividends_yield_current')!=null
-      ?lookup('price_earnings_ttm')*lookup('dividends_yield_current'):null),
+     payout_implicito:(payout!=null&&payout!==0?payout:(lookup('price_earnings_ttm')>0&&lookup('dividends_yield_current')>0
+      ?+(lookup('price_earnings_ttm')*lookup('dividends_yield_current')).toFixed(4):payout)),
      div_liq_ebitda:lookup('net_debt_to_ebitda_fq'),
      margem_liquida:lookup('net_margin_ttm'),
      liquidez_diaria_brl:price!=null&&lookup('average_volume_30d_calc')!=null
@@ -140,7 +134,7 @@ async function scanner(market:string,tickers:string[],comHistorico=true){
   }
   const unique=[...new Map(rows.map(x=>[x.ticker,x])).values()];
   // Momentum 12-1 por fechamentos mensais completos, como reserva para um subconjunto limitado.
-  if(comHistorico)await Promise.all(unique.filter(x=>x.momentum_12_1==null).slice(0,14).map(async x=>{
+  if(comHistorico&&false)await Promise.all(unique.filter(x=>x.momentum_12_1==null).slice(0,14).map(async x=>{
    const m=await momentoHistorico(market,x.ticker);
    if(m!=null){x.momentum_12_1=m;
     if(market==='BR')x.score_quant_br=rating('BR',x);
