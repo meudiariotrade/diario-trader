@@ -24,8 +24,8 @@ function table(text:string){const lines=text.replaceAll(String.fromCharCode(13),
 async function catalogoUS(){
  const urls=['https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt','https://www.nasdaqtrader.com/dynamic/symdir/otherlisted.txt'];
  const rr=await Promise.all(urls.map(x=>fetchText(x)));
- const nas=table(rr[0]).filter((r:any)=>r['Test Issue']==='N'&&r.ETF==='N').map((r:any)=>({ticker:clean(r.Symbol),company_name:r['Security Name'],exchange:'NASDAQ',security_type:/\b(UNIT|WARRANT|RIGHT|PREFERRED|NOTE|DEPOSITARY|FUND|TRUST)\b/i.test(r['Security Name'])?'other':'stock',fonte_principal:'Nasdaq Trader · Symbol Directory',dados_status:'catalogado'}));
- const ny=table(rr[1]).filter((r:any)=>r.Exchange==='N'&&r.ETF==='N'&&r['Test Issue']==='N').map((r:any)=>({ticker:clean(r['ACT Symbol']),company_name:r['Security Name'],exchange:'NYSE',security_type:/\b(UNIT|WARRANT|RIGHT|PREFERRED|NOTE|DEPOSITARY|FUND|TRUST)\b/i.test(r['Security Name'])?'other':'stock',fonte_principal:'Nasdaq Trader · Other Listed',dados_status:'catalogado'}));
+ const nas=table(rr[0]).filter((r:any)=>r['Test Issue']==='N'&&r.ETF==='N').map((r:any)=>({ticker:clean(r.Symbol),company_name:r['Security Name'],exchange:'NASDAQ',security_type:/\b(UNIT|WARRANT|RIGHT|PREFERRED|NOTE|ETF|ETN|FUND)\b/i.test(r['Security Name'])?'other':'stock',fonte_principal:'Nasdaq Trader · Symbol Directory',dados_status:'catalogado'}));
+ const ny=table(rr[1]).filter((r:any)=>r.Exchange==='N'&&r.ETF==='N'&&r['Test Issue']==='N').map((r:any)=>({ticker:clean(r['ACT Symbol']),company_name:r['Security Name'],exchange:'NYSE',security_type:/\b(UNIT|WARRANT|RIGHT|PREFERRED|NOTE|ETF|ETN|FUND)\b/i.test(r['Security Name'])?'other':'stock',fonte_principal:'Nasdaq Trader · Other Listed',dados_status:'catalogado'}));
  const unique=[...new Map([...ny,...nas].filter(r=>/^[A-Z0-9][A-Z0-9.-]{0,19}$/.test(r.ticker)&&r.company_name).map(r=>[r.exchange+':'+r.ticker,r])).values()];
  const gravados=await lotes('US',unique);
  for(let i=0;i<unique.length;i+=180)await rpc('quant_v2_classificar_us',{p_rows:unique.slice(i,i+180).map(({ticker,exchange,security_type})=>({ticker,exchange,security_type}))});
@@ -198,7 +198,7 @@ Deno.serve(async req=>{
    metodos:['catalogo','fundamentos','precos','enriquecer','sec'],sem_polling:true});
   if(mode==='catalogo'){
    const resp:any={};
-   for(const [m,fn] of [['US',catalogoUS],['BR',catalogoBR]] as const){
+   for(const [m,fn] of (b.mercado==='US'?[['US',catalogoUS]]:b.mercado==='BR'?[['BR',catalogoBR]]:[['US',catalogoUS],['BR',catalogoBR]]) as const){
     try{resp[m]=await fn();resp[m].final=await finalized(m,'catalogo',resp[m].gravados||0,0)}
     catch(e){resp[m]={erro:String(e).slice(0,160)}}
    }
