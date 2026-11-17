@@ -21,11 +21,14 @@ test('iPhone: Screeners ficam ao lado de B3 & EUA e preservam Pesquisa',{timeout
    header:el.closest('.an-header')!=null,visible:el.getBoundingClientRect().width>0}));
  assert.equal(pos.header,true,'barra posicionada ao lado do antigo selo B3 & EUA');
  assert.equal(pos.visible,true,'barra nao pode ficar oculta');
+ await nav.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
  await nav.locator('[data-an-sub="br"]').click();
  await expect(page.locator('#an-title')).toHaveText('Screener Brasil');
  await expect(page.locator('#an-root nav.an-subs')).toHaveCount(1);
+ await page.locator('#an-root nav.an-subs').evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
  await page.locator('[data-an-sub="us"]').click();
  await expect(page.locator('#an-title')).toHaveText('Screener EUA');
+ await page.locator('#an-root nav.an-subs').evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
  await page.locator('[data-an-sub="pesquisa"]').click();
  await expect(page.locator('#an-title')).toHaveText('Análise técnica e fundamentalista');
  await expect(page.locator('#an-command')).toBeVisible();
