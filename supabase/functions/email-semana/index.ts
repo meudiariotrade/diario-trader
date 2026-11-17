@@ -2,8 +2,8 @@
 // v600: também grava o resumo em weekly_reports. v601: anexa o Relatório de desempenho (PDF) enviado pelo app. Secret: RESEND_API_KEY. Opcional: EMAIL_DE (padrão onboarding@resend.dev). Idempotente (push_log). pg_cron domingo 21h como reserva.
 const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY');
-let KEY = ENV('RESEND_API_KEY');
-// Prioriza o secret da Edge Function; reserva no Supabase Vault, sem expor ao navegador.
+let KEY = '';
+// Usa exclusivamente a chave criptografada no Vault; evita que RESEND_API_KEY antiga da Edge Function sobreponha a conta atual.
 async function carregarChaveResend(): Promise<string> {
   if (KEY) return KEY;
   if (!SB || !SRK) return '';
