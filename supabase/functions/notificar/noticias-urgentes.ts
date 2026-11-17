@@ -52,7 +52,7 @@ export function mancheteUrgente(titulo: string): boolean {
   const n = normal(titulo);
   if (PESSOAL.test(n)) return false;
   if (/\b(?:copom|selic|fed|powell|fomc|payroll|cpi|ipca|tarifas?|tariffs?|petroleo|oil|crude|opep|opec|guerra|war|petrobras|petr[34]|bitcoin|btc)\b/.test(n)) return true;
-  if (/\b(?:Vale|VALE3|mineradora\s+vale|minerio de ferro|iron ore)\b/i.test(titulo)) return true;
+  if (/\b(?:VALE3|mineradora\s+vale|minerio de ferro|iron ore)\b/i.test(titulo) || /\bVale\b/.test(titulo)) return true;
   const t = temaPrioritario(titulo);
   return (t === 'politica' || t === 'acoes') &&
     /\b(?:breaking|urgent|urgente|aprova|aprovou|decide|decidiu|anuncia|anunciou|ataque|attack|votacao|vote|suspende|corta|cuts|sanctions|sancoes|tarifas|tariffs|embargo|dividendo|earnings|balanco|lucro|revenue|receita|prejuizo|losses|regulacao|regulation|intervencao|intervention|crise|crisis)\b/.test(n);
