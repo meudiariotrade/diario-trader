@@ -951,7 +951,31 @@ export function versaoResp(req: Request, nome: string, cors: Record<string, stri
 
 const PUB = Deno.env.get('VAPID_PUBLIC') || '';
 const PRIV = Deno.env.get('VAPID_PRIVATE') || '';
-const SUBJ = Deno.env.get('VAPID_SUBJECT') || 'mailto:contato@exemplo.com';
+const SUBJ = Deno.env.get('VAPID_SUBJECT') || '';
+type VapidCfg = { publicKey: string; privateKey: string; subject: string };
+let pushCfg: VapidCfg | null = null;
+/** O projeto v710 mantém as credenciais VAPID no Vault, nunca no navegador. */
+async function configPush(): Promise<VapidCfg> {
+  if (pushCfg) return pushCfg;
+  let publicKey = PUB, privateKey = PRIV, subject = SUBJ;
+  if (!publicKey || !privateKey || !subject) {
+    const { data, error } = await (await db()).rpc('push_configuracao');
+    if (error && (!publicKey || !privateKey)) {
+      throw new Error('Configuração Web Push indisponível no Vault do projeto.');
+    }
+    const vault = data && typeof data === 'object' ? data as Record<string, unknown> : {};
+    if (!publicKey || !privateKey) {
+      // Não misturar chaves de pares diferentes de projetos.
+      publicKey = String(vault.diario_vapid_public || '');
+      privateKey = String(vault.diario_vapid_private || '');
+    }
+    if (!subject) subject = String(vault.diario_vapid_subject || '');
+  }
+  if (!publicKey || !privateKey) throw new Error('Faltam as chaves VAPID no Vault ou Edge Function Secrets.');
+  if (!/^(mailto:|https:\/\/)/i.test(subject)) throw new Error('Contato VAPID inválido no servidor.');
+  pushCfg = { publicKey, privateKey, subject };
+  return pushCfg;
+}
 const CRON = Deno.env.get('CRON_SECRET') || '';
 const MAXSUBS = +(Deno.env.get('MAX_SUBS') || 20);
 const POR_PESSOA = 5; // aparelhos por pessoa
@@ -964,12 +988,12 @@ const UA = 'Mozilla/5.0 (compatible; diario-trader/1.0)';
 let wp: any = null;
 async function push() {
   if (wp) return wp;
-  if (!PUB || !PRIV) throw new Error('Faltam os secrets VAPID_PUBLIC e/ou VAPID_PRIVATE na função.');
+  const cfg = await configPush();
   // deno-lint-ignore no-explicit-any
   let mod: any;
   try { mod = await import('npm:web-push@3.6.7'); } catch (e) { throw new Error('Não consegui carregar a biblioteca de push: ' + (e as Error).message); }
   const w = mod.default ?? mod;
-  try { w.setVapidDetails(SUBJ, PUB, PRIV); } catch (e) { throw new Error('Chaves VAPID inválidas: ' + (e as Error).message); }
+  try { w.setVapidDetails(cfg.subject, cfg.publicKey, cfg.privateKey); } catch (e) { throw new Error('Chaves VAPID inválidas: ' + (e as Error).message); }
   return (wp = w);
 }
 // deno-lint-ignore no-explicit-any
@@ -1628,11 +1652,14 @@ Deno.serve(async (req) => {
       }
       case 'chave':
         await push(); // valida as chaves antes de entregar ao app
-        return out({ chave: PUB });
+        return out({ chave: (await configPush()).publicKey });
       case 'diag': {
         if (!(await usuarioDe(req))) return out({ error: 'Entre na sua conta no app.' }, 401);
+        const config = await configPush().catch(() => null);
         const r: Record<string, unknown> = {
-          vapidPublicTamanho: PUB.length, vapidPrivateTamanho: PRIV.length, subject: SUBJ.replace(/(.{3}).*(@.*)/, '$1***$2'),
+          vapidPublicTamanho: config?.publicKey.length || 0,
+          vapidPrivateTamanho: config?.privateKey.length || 0,
+          subjectValido: !!config?.subject,
           cronSecret: !!CRON, supabaseUrl: !!Deno.env.get('SUPABASE_URL'), serviceRole: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
         };
         try { await push(); r.push = 'ok'; } catch (e) { r.push = (e as Error).message; }
