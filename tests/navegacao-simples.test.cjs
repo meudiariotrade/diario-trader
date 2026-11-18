@@ -19,6 +19,8 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  await p.evaluate(()=>{const state={a:'EWZ',b:'SPX',per:'6M',freq:'D',mode:'dual',ma:[],ev:true,table:false};localStorage.setItem('diario-v421-gp',JSON.stringify(state));localStorage.setItem('diario-v428-ctx',JSON.stringify({'T:GP':state}));});
  await p.reload();await p.locator('#splash').waitFor({state:'hidden'});
  await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="term"]').first().click());
+ await expect(p.locator('body')).toHaveClass(/tf413-advanced/);
+ await app.locator('.tf415-nav [data-tf415-nav="HOME"]').click();
  await expect(p.locator('body')).toHaveClass(/tf413-home/);
  await expect(app.locator('#terminal-inicio')).toBeVisible();
  await expect(app.locator('.simple-terminal-intro')).toHaveCount(0);

@@ -4223,6 +4223,29 @@ function net188() {
   const t = 28,
     a = (E, P, B, G) => ({ x: E, y: P, w: B, h: G }),
     o = {
+      pro: {
+        n: "Terminal Pro",
+        uiPro: true,
+        p: ["PETR4 G", "MON", "TOP", "COMP PETR4 VALE3 IBOV", "TECH", "PETR4 FA", "ALRT"],
+        t: [
+          ["PETR4 G", "VALE3 G", "ITUB4 G"],
+          null,
+          ["TOP", "NEWS"],
+          null,
+          ["TECH", "ALC"],
+          ["PETR4 FA", "PETR4 DES"],
+          ["ALRT", "EVT"],
+        ],
+        g: [
+          a(2, 0, 7, 18),
+          a(0, 0, 2, 26),
+          a(2, 18, 4, 8),
+          a(6, 18, 3, 8),
+          a(9, 0, 3, 9),
+          a(9, 9, 3, 9),
+          a(9, 18, 3, 8),
+        ],
+      },
       br: {
         n: "Ações Brasil",
         p: ["MON", "PETR4 G", "ECO", "TOP", "TECH"],
@@ -4403,6 +4426,11 @@ function net188() {
               G.p.length === o[B].p.length &&
               (G.t = JSON.parse(JSON.stringify(o[B].t)));
           })),
+        /* v761: cria o palco Pro sem sobrescrever qualquer workspace salvo. */
+        P.m761 ||
+          ((P.m761 = 1),
+          P.wss.pro || (P.wss.pro = JSON.parse(JSON.stringify(o.pro))),
+          P.ws === "br" && (P.ws = "pro")),
         P.wss[P.ws] || (P.ws = Object.keys(P.wss)[0] || "br"),
         P.wss[P.ws] || (P.wss[P.ws] = JSON.parse(JSON.stringify(o.br))),
         P
@@ -5085,6 +5113,7 @@ function net188() {
     const E = r(),
       P = i(),
       B = l(),
+      pro = P.uiPro === true,
       G = P.p.length;
     (e.foco >= G && (e.foco = 0),
       e.mob >= G && (e.mob = 0),
@@ -5100,21 +5129,21 @@ function net188() {
     .join("")}<option value="__novo">+ Novo espaço…</option></select>
   <button class="trbtn" data-tr="addp" title="Abrir mais um painel">+ Painel</button>${B ? '<button class="trbtn" data-tr="org" title="Arrumar os painéis lado a lado">Organizar</button>' : ""}<button class="trbtn" data-tr="wsmenu" title="Renomear, duplicar ou excluir este espaço">${B ? "Espaço ▾" : "⋯"}</button><button class="trbtn" data-tr="sair">Sair</button></div>
   <div id="trtape" class="trtape">${typeof window.trTapeHtml == "function" ? window.trTapeHtml() : ""}</div>`,
-      _ = B
+      _ = B || pro
         ? ""
         : `<div class="trtabs">${P.p.map((De, Ne) => `<button class="${Ne === e.mob ? "on" : ""}" data-trmob="${Ne}">${Ne + 1} ${d(String(De).split(" ").slice(0, 2).join(" ").slice(0, 12))}</button>`).join("")}</div>`,
       ye = B ? Math.max(...P.g.map((De) => De.y + De.h)) * t : 0,
       Oe = P.p
         .map(
           (De, Ne) =>
-            `<section class="trp${Ne === e.foco ? " foco" : ""}${!B && Ne !== e.mob ? " oculto" : ""}${e.max === Ne ? " maxi" : ""}" id="trp${Ne}" data-trp="${Ne}"${B ? ` style="${Se(P.g[Ne])}"` : ""}><div class="trph"${B ? ' data-trdrag="1" title="Arraste para mover"' : ""}><b>${Ne + 1}</b>${de(P, Ne, De)}<span class="trpd">${Ce(P, Ne) ? "" : d(Ve(De))}</span><button class="trx" data-tr="csv" data-i="${Ne}" title="Exportar para planilha">CSV</button><button class="trx" data-tr="att" data-i="${Ne}" title="Atualizar">↻</button>${B && !window.TRPOP ? `<button class="trx" data-tr="pop" data-i="${Ne}" title="Abrir em outra janela (outro monitor)">⧉</button>` : ""}<button class="trx trmx" data-tr="maxi" data-i="${Ne}" title="Ampliar este painel">${e.max === Ne ? "⤡ Reduzir" : "⤢ Ampliar"}</button>${G > 1 ? `<button class="trx" data-tr="fecha" data-i="${Ne}" title="Fechar painel">✕</button>` : ""}</div><div class="trpb" id="trb${Ne}">${rt(De, Ne)}</div>${B ? '<i class="trrs" data-trrs="1" title="Arraste para redimensionar"></i>' : ""}</section>`,
+            `<section class="trp${Ne === e.foco ? " foco" : ""}${!B && !pro && Ne !== e.mob ? " oculto" : ""}${e.max === Ne ? " maxi" : ""}" id="trp${Ne}" data-trp="${Ne}"${B ? ` style="${Se(P.g[Ne])}"` : ""}><div class="trph"${B ? ' data-trdrag="1" title="Arraste para mover"' : ""}><b>${Ne + 1}</b>${de(P, Ne, De)}<span class="trpd">${Ce(P, Ne) ? "" : d(Ve(De))}</span><button class="trx" data-tr="csv" data-i="${Ne}" title="Exportar para planilha">CSV</button><button class="trx" data-tr="att" data-i="${Ne}" title="Atualizar">↻</button>${B && !window.TRPOP ? `<button class="trx" data-tr="pop" data-i="${Ne}" title="Abrir em outra janela (outro monitor)">⧉</button>` : ""}<button class="trx trmx" data-tr="maxi" data-i="${Ne}" title="Ampliar este painel">${e.max === Ne ? "⤡ Reduzir" : "⤢ Ampliar"}</button>${G > 1 ? `<button class="trx" data-tr="fecha" data-i="${Ne}" title="Fechar painel">✕</button>` : ""}</div><div class="trpb" id="trb${Ne}">${rt(De, Ne)}</div>${B ? '<i class="trrs" data-trrs="1" title="Arraste para redimensionar"></i>' : ""}</section>`,
         )
         .join("");
     return (
       setTimeout(() => {
         (P.p.forEach((De, Ne) => ot(Ne)), He());
       }, 0),
-      `<div class="trm">${te}${_}<div class="trgrid${B ? " pc" : ""}" id="trgrid"${B ? ` style="height:${ye}px"` : ""}>${Oe}</div><div class="trrod"><span>F1 ajuda · F2 comando · F8 bolsas · F9 juros · F10 moedas · Tab troca de painel · ↑ histórico · arraste o título para mover e o canto para redimensionar</span><span id="trst">${Je()}</span></div></div>`
+      `<div class="trm${pro ? " trm-pro" : ""}">${te}${_}<div class="trgrid${B ? " pc" : ""}" id="trgrid"${B ? ` style="height:${ye}px"` : ""}>${Oe}</div><div class="trrod"><span>F1 ajuda · F2 comando · F8 bolsas · F9 juros · F10 moedas · Tab troca de painel · ↑ histórico · arraste o título para mover e o canto para redimensionar</span><span id="trst">${Je()}</span></div></div>`
     );
   }
   const Ce = (E, P) =>

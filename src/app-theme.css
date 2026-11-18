@@ -3009,3 +3009,40 @@ html:root body #app #cotbox.market-quotes .dl-logo.dl-par>img{z-index:1}
 html:root body #app #cotbox.market-quotes .dl-logo.dl-par>img:first-of-type{z-index:2}
 html:root body #app #cotbox.market-quotes .cqm-logo>.ta-logo{z-index:1}
 html:root body #app #cotbox.market-quotes .dl-logo.dl-par>.cqm-logo-fallback{inset:0 auto 0 0;width:var(--dl);height:var(--dl)}
+
+/* v761 — Terminal Pro: palco assimétrico, OLED dark e navegação sem faixa duplicada.
+   Escopo deliberado: somente body.trmon; workspaces personalizados permanecem intactos. */
+html body.trmon #dt393-global-head nav.dt394-quicknav{display:none!important}
+html body.trmon #app .trm.trm-pro{--a:#D4AF37;--g:#10B981;--r:#EF4444;background:#08090B!important;color:#E7EBF2!important;font-variant-numeric:tabular-nums}
+html body.trmon #app .trm.trm-pro .trgrid{background:#08090B!important;min-width:0}
+html body.trmon #app .trm.trm-pro .trgrid.pc{position:relative;display:block}
+html body.trmon #app .trm.trm-pro .trp{background:#0F1115!important;border:1px solid #1E222A!important;border-radius:4px!important;box-shadow:none!important;min-width:0;overflow:hidden}
+html body.trmon #app .trm.trm-pro .trph{background:#0F1115!important;border:0!important;border-bottom:1px solid #1E222A!important;color:#CDD4E0!important;min-width:0}
+html body.trmon #app .trm.trm-pro .trph>b{background:#1E222A!important;color:#D4AF37!important}
+html body.trmon #app .trm.trm-pro .trpc,html body.trmon #app .trm.trm-pro .trph .trpc{color:#D4AF37!important}
+html body.trmon #app .trm.trm-pro .trpb{flex:1 1 auto;min-height:0;min-width:0;overflow:auto;scrollbar-color:#29303C transparent}
+html body.trmon #app .trm.trm-pro .trbar,html body.trmon #app .trm.trm-pro .trtabs{background:#0F1115!important;border-color:#1E222A!important}
+html body.trmon #app .trm.trm-pro #tf413 .tf413-top{display:none!important}
+html body.trmon #app .trm.trm-pro #tf413 .tf415-nav{background:#0F1115!important;border-color:#1E222A!important}
+html body.trmon #app .trm.trm-pro #tf413 .tf415-navitem{border-color:#1E222A!important;color:#BEC7D5!important}
+html body.trmon #app .trm.trm-pro #tf413 .tf415-navitem.on{color:#D4AF37!important;border-bottom-color:#D4AF37!important;background:#191A17!important}
+html body.trmon #app .trm.trm-pro .trt{font-variant-numeric:tabular-nums;width:100%;max-width:100%}
+html body.trmon #app .trm.trm-pro .trt :is(td,th){border-color:#1E222A!important}
+html body.trmon #app .trm.trm-pro .trt td:not(:first-child),html body.trmon #app .trm.trm-pro .trt th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+html body.trmon #app .trm.trm-pro :is(.tg,.up){color:#10B981!important}
+html body.trmon #app .trm.trm-pro :is(.tr,.dn){color:#EF4444!important}
+/* MON: preserva botões/remover e dados no DOM, compacta só a apresentação. */
+html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"]{width:100%;min-width:0;table-layout:auto}
+html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"] :is(th,td):nth-child(4),html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"] :is(th,td):nth-child(5),html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"] :is(th,td):nth-child(6){display:none!important}
+html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"] :is(th,td){padding:5px 3px!important;font-size:11px!important;white-space:nowrap;word-break:normal;overflow-wrap:normal}
+html body.trmon #app .trm.trm-pro #trp1 .trrow{gap:4px;flex-wrap:nowrap}
+html body.trmon #app .trm.trm-pro #trp1 .trrow .trin{min-width:0;flex:1 1 auto;max-width:100%}
+html body.trmon #app .trm.trm-pro #trp0 .trpb{min-height:0}
+@media(max-width:979px){
+ html body.trmon #app .trm.trm-pro #trgrid:not(.pc){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;height:auto!important}
+ html body.trmon #app .trm.trm-pro #trgrid:not(.pc) .trp:not(.maxi){display:flex!important;position:relative!important;width:100%!important;left:auto!important;top:auto!important;height:auto!important;min-height:250px!important}
+ html body.trmon #app .trm.trm-pro #trgrid:not(.pc) #trp0:not(.maxi){min-height:65dvh!important}
+ html body.trmon #app .trm.trm-pro #trgrid:not(.pc) .trpb{max-height:68dvh}
+ html body.trmon #app .trm.trm-pro :is(input,select,textarea){font-size:16px!important}
+ html body.trmon #app .trm.trm-pro .trph :is(button,.trx),html body.trmon #app .trm.trm-pro .trbtn{min-height:40px}
+}

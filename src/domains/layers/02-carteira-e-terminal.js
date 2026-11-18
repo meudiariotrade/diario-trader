@@ -5446,7 +5446,7 @@ try {
         ["5A", 1826],
         ["Máx", 36500],
       ];
-    let h = !1,
+    let h = !0,
       x = "1A",
       X = "Mensal",
       v = "IBOV",
@@ -5780,7 +5780,7 @@ try {
         )}<button type="button" data-tf415-nav="WORKSPACES" class="tf415-navitem${h ? " on" : ""}" ${h ? 'aria-current="page"' : ""}>Painéis e Workspaces</button></div><div class="tf413-layout"><div class="tf413-main">${pt()}</div><div class="tf413-side">${dt()}${ft()}${ut()}${ht()}</div></div><div class="tf413-bottom"><span>Visão consolidada das ferramentas existentes. Sem envio de ordens · dados sujeitos à fonte e ao horário de mercado.</span><button type="button" data-tf415-nav="WORKSPACES">Personalizar painéis →</button></div></div>`;
     }
     function Ot() {
-      if (!document.body.classList.contains("trmon")) return ((h = !1), null);
+      if (!document.body.classList.contains("trmon")) return ((h = !0), null);
       const e = document.getElementById($);
       return e ? (e.remove(), { node: e }) : null;
     }
