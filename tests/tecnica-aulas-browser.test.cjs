@@ -122,7 +122,18 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
  const details=page.locator('#tp-root .tp-bridge');
  await details.locator('summary').click();
  await expect(details).toHaveAttribute('open','');
- await details.locator('[data-tp-film-migrate]').click();
+ // A tela reconstrói a seção enquanto carrega o estado local: garantir
+ // um clique real/trusted mesmo se a primeira instância do botão for desmontada.
+ let migrated=false;
+ for(let attempt=0;attempt<4&&!migrated;attempt++){
+  if((await details.getAttribute('open'))===null)
+   await details.locator('summary').click({force:true,timeout:3000});
+  try{
+   await details.locator('[data-tp-film-migrate]').click({force:true,timeout:2000});
+   migrated=true;
+  }catch(error){if(attempt===3)throw error}
+ }
+
  // Exige o fluxo real de migração: assinatura -> GET do MP4 -> player.
  // Em caso de falha, registra status, sessão e requisições para diagnóstico.
  try{
