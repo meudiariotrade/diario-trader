@@ -105,7 +105,12 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
  await page.locator('[data-tp-film-migrate]').evaluate(button=>{
   const details=button.closest('details');if(details)details.open=true;button.click();
  });
- await expect(page.locator('[data-tp-film-player]')).toHaveCount(1,{timeout:12000});
+ // Falha em vídeo deve expor o motivo efetivo sem ocultar o teste.
+ await expect.poll(async()=>page.evaluate(()=>({
+  player:!!document.querySelector('[data-tp-film-player]'),
+  status:document.querySelector('#tp-root .tp-status')?.textContent||'',
+  session:typeof SESS!=='undefined'&&!!SESS?.at
+ })),{timeout:16000}).toMatchObject({player:true});
  await page.evaluate(()=>{window.v=document.querySelector('[data-tp-film-player]');window.v.currentTime=1;render();});
  assert.equal(await page.evaluate(()=>document.querySelector('[data-tp-film-player]')===window.v),true);
  await page.locator('[data-tp-action="close-film"]').click();

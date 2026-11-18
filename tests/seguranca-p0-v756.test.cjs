@@ -33,6 +33,7 @@ test('v756 fecha timers no ciclo de tela',()=>{
  assert.match(read('src/domains/core/07-conta-e-integracoes.js'),/clearInterval\(MDO_AUTO_INTERVAL\)/);
 });
 test('v756 alinha versões',()=>{
- assert.equal(JSON.parse(read('release.config.json')).version,756);
- assert.equal(JSON.parse(read('package.json')).version,'756.0.0');
+ const version=JSON.parse(read('release.config.json')).version;
+ assert.ok(version>=756);
+ assert.equal(JSON.parse(read('package.json')).version,version+'.0.0');
 });
