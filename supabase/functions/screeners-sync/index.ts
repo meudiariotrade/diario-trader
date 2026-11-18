@@ -364,7 +364,7 @@ async function cvmZipCsv(kind:'itr'|'dfp',parte:'metadados'|'DRE_con'|'DRE_ind'=
   if(dv.getUint32(i,true)!==0x02014b50)break;
   const nl=dv.getUint16(i+28,true),el=dv.getUint16(i+30,true),cl=dv.getUint16(i+32,true);
   const name=new TextDecoder().decode(dir.slice(i+46,i+46+nl)).split('/').pop();
-  if(name?.toLowerCase()===file){
+  if(name?.toLowerCase()===file.toLowerCase()){
    entry={offset:dv.getUint32(i+42,true),compressed:dv.getUint32(i+20,true),method:dv.getUint16(i+10,true)};break;
   }
   i+=46+nl+el+cl;
@@ -375,11 +375,14 @@ async function cvmZipCsv(kind:'itr'|'dfp',parte:'metadados'|'DRE_con'|'DRE_ind'=
  if(hv.getUint32(0,true)!==0x04034b50)throw Error('CVM ZIP: cabecalho local invalido');
  const start=entry.offset+30+hv.getUint16(26,true)+hv.getUint16(28,true);
  const compressed=await cvmRange(url,'bytes='+start+'-'+(start+entry.compressed-1));
- if(entry.method===0)return new TextDecoder().decode(compressed);
- if(entry.method!==8)throw Error('CVM ZIP: metodo sem suporte');
- const text=await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
- if(text.length>(parte==='metadados'?8_000_000:20_000_000))throw Error('CVM: CSV acima do limite de memoria');
- return text;
+ const dados=entry.method===0?compressed:
+  entry.method===8?new Uint8Array(await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()):
+  null;
+ if(!dados)throw Error('CVM ZIP: metodo sem suporte');
+ if(dados.byteLength>(parte==='metadados'?8_000_000:20_000_000))throw Error('CVM: CSV acima do limite de memoria');
+ try{return new TextDecoder('utf-8',{fatal:true}).decode(dados)}
+ catch{return new TextDecoder('windows-1252').decode(dados)}
+
 }
 function csvRows(raw:string,cnpjs?:Set<string>){
  const lines=raw.replace(/^\uFEFF/,'').replaceAll('\r','').split('\n');
