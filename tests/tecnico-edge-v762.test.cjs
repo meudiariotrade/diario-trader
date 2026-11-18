@@ -39,3 +39,33 @@ test('Cloudflare: candles criptográficos sob demanda, TTL intradiário e sem tr
   assert.ok(calls.every(x=>!x.includes('supabase.co')));
  }finally{globalThis.fetch=oldFetch;globalThis.caches=oldCaches}
 });
+
+
+test('Cloudflare: quando Binance responde 451, Bybit Spot fornece barras reais ordenadas e sem Supabase',{concurrency:false},async()=>{
+ const oldFetch=globalThis.fetch,oldCaches=globalThis.caches,calls=[];
+ const source=fs.readFileSync('cloudflare/diario-screeners/index.mjs','utf8');
+ const api=(await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source))).default;
+ globalThis.caches={default:{match:async()=>null,put:async()=>{}}};
+ globalThis.fetch=async url=>{
+  calls.push(String(url));
+  if(String(url).startsWith('https://api.binance.com/'))return new Response('Unavailable for legal reasons',{status:451});
+  if(String(url).startsWith('https://api.bybit.com/'))return Response.json({
+   retCode:0,result:{list:Array.from({length:300},(_,i)=>{
+    const price=200+(300-i)*.3;
+    return [String(1700000000000+(300-i)*900000),String(price),String(price+1),String(price-1),String(price+.2),'8900'];
+   })}
+  });
+  throw Error('Sem outras fontes esperadas');
+ };
+ try{
+  const url='https://diario-screeners-quant.example.workers.dev/v1/tecnico-candles?market=CRYPTO&ticker=BTCUSDT&tf=15m';
+  const resp=await api.fetch(new Request(url),{}, {waitUntil:()=>{}});
+  assert.equal(resp.status,200);
+  const body=await resp.json();
+  assert.equal(body.source,'Bybit Spot Klines');
+  assert.equal(body.candles.length,300);
+  assert.ok(body.candles.every((c,i)=>i===0||c[0]>body.candles[i-1][0]));
+  assert.ok(body.candles.every(c=>c[1]>0&&c[2]>=c[4]&&c[3]<=c[4]&&c[5]>0));
+  assert.equal(calls.length,2);
+ }finally{globalThis.fetch=oldFetch;globalThis.caches=oldCaches}
+});
