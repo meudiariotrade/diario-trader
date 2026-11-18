@@ -46,7 +46,9 @@ test('CVM: evidencia real requer CNPJ, versao, mesma competencia e conta DRE ofi
   '11.111.111/0001-11;2026-09-30;1;ÚLTIMO;2026-01-01;2026-09-30;3.01;9.999,00;REAL;MIL',
   '11.111.111/0001-11;2026-06-30;2;ÚLTIMO;2026-01-01;2026-06-30;3.01;8.888,00;REAL;MIL'
  ].join('\n');
- const context={cvmZipDreRows:async (_k,p)=>p==='DRE_con'?csv:csv.split('\n')[0],Date,Set,Map,Number,String};
+ const header=csv.split('\n')[0].split(';');
+ const dreRows=csv.split('\n').slice(1).map(line=>Object.fromEntries(line.split(';').map((value,i)=>[header[i],value])));
+ const context={cvmZipDreRows:async (_k,p)=>p==='DRE_con'?dreRows:[],Date,Set,Map,Number,String};
  const fn=vm.runInNewContext(stripTypeScriptTypes(source,{mode:'transform'})+'\ncvmDreEvidencias',context);
  const doc={formulario:'ITR',documento_id:'123456',publicado_em:'2026-11-01',competencia:'2026-09-30',versao:'2'};
  const r=await fn(new Map([['11111111000111',doc]]));
