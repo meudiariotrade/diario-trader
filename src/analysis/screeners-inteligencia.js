@@ -86,6 +86,8 @@
   if(coverage<70)concerns.push('Cobertura dos critérios do score: '+coverage+'%; leitura ainda incompleta.');
   if(oldFund===null)concerns.push('Data de coleta dos fundamentos não identificada.');
   if(!competence)concerns.push('Competência contábil do balanço não validada na fonte primária.');
+   const documentoConfirmado=!!(competence&&row?.documento_balanco_tipo&&row?.documento_balanco_id&&row?.documento_balanco_url&&row?.documento_balanco_publicado_em);
+   if(!documentoConfirmado)concerns.push('Documento oficial SEC 10-K/10-Q ou CVM DFP/ITR não identificado.');
   if(oldFund!==null&&oldFund>180)concerns.push('Fundamentos com referência antiga: '+oldFund+' dias.');
   if(oldTech===null)concerns.push('Data de coleta dos indicadores técnicos não identificada.');
   if(oldTech!==null&&oldTech>10)concerns.push('Indicadores técnicos com referência antiga: '+oldTech+' dias.');
@@ -98,7 +100,7 @@
     if(p.score!==null&&p.score>=67&&p.covered>=1)supports.push(p.name+': '+p.points.toFixed(1)+' de '+p.weight+' pontos.');
     if(p.score!==null&&p.score<=35)concerns.push(p.name+' abaixo do centro da escala interna ('+Math.round(p.score)+'/100).');
   }
-  const verified=official!==null&&model!==null&&diff<=0.1&&expected===version&&coverage>=70&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10;
+  const verified=official!==null&&model!==null&&diff<=0.1&&expected===version&&coverage>=70&&documentoConfirmado&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10;
   const level=verified?'Cálculo confere':official!==null?'Exige conferência':'Incompleto';
   const med=(key)=>medians&&isVal(medians[key])?Number(medians[key]):null;
   const sector=String(row?.setor||row?.sector||'').toLowerCase();

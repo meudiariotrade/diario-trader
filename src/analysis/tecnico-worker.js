@@ -21,6 +21,7 @@ self.onmessage=function(event){
   const list=Array.isArray(data.assets)?data.assets.slice(0,120):[];
   const benchmark=data.benchmarks||{};
   const scores=list.map(x=>({ticker:safeText(x.ticker),group:x.market==='CRYPTO'?'CRYPTO':x.market==='US'?'US':'BR',raw:perf(x.daily||x.candles)}));
+   const rsUniverse=data.rsUniverse||{},rsAsOf=String(data.rsAsOf||'');
   const strengths=scores.map(x=>{const base=perf(benchmark[x.group]);return {...x,relative:x.raw===null||base===null?null:x.raw-base}});
   const report=list.map((asset,i)=>{
    const group=strengths[i].group,peer=strengths.filter(x=>x.group===group&&x.relative!==null).map(x=>x.relative);
@@ -29,7 +30,9 @@ self.onmessage=function(event){
    const result=M.examine(asset.candles,opts);
    return {ticker:safeText(asset.ticker),name:String(asset.name||'').slice(0,90),
     market:group,bdr:String(asset.bdr||'').slice(0,16),holding:!!asset.holding,source:String(asset.source||'cache').slice(0,60),
-    updatedAt:String(asset.updatedAt||'').slice(0,40),buy:result.buy,sell:result.sell};
+    updatedAt:String(asset.updatedAt||'').slice(0,40),
+     rsMeta:{asOf:rs===null?null:rsAsOf,benchmark:rs===null?null:group==='BR'?'IBOV':group==='US'?'SPX':'BTCUSDT',denominator:rs===null?null:fixed.size,completo:rs!==null},
+     buy:result.buy,sell:result.sell};
   }).filter(x=>x.ticker);
   self.postMessage({action:'DONE',reqId,version:M.VERSION,rows:report,meta:{requested:list.length,valid:report.filter(x=>x.buy.valid).length,rsPeers:scores.filter(x=>x.raw!==null).length}});
  }catch(e){self.postMessage({action:'ERROR',reqId,error:String(e.message||e).slice(0,220)})}
