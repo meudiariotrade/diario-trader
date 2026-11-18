@@ -110,13 +110,18 @@ async function build(m,rows,tf='1d'){
   for(const p of x.pillars)bar(p.name,p.score,p.weight);
   y+=10;write('PLANO CONDICIONAL · REFERÊNCIAS FIBONACCING',M,y,10,bold,col.gold);y+=24;
   const pl=x.plan||{};
-  for(const [a,b] of [['Gatilho',pl.entry],['Stop técnico',pl.stop],['Alvo 1 · 111%',pl.target1],['Alvo 2 · 127,2%',pl.target2a],['Alvo 3 · 141,4%',pl.target2],['Alvo final · 161,8%',pl.targetFinal],['Risco/Retorno',pl.rr]]){
-   write(a,M,y,9,reg,col.muted);write(n(b,2),W-M,y,9,bold,col.ink,true);y+=21;
+  for(const [a,b] of [['Gatilho',pl.entry],['Stop técnico',pl.stop],['Alvo 1 · 111%',pl.target1],['Alvo 2 · 127,2%',pl.target2a],['Alvo 3 · 141,4%',pl.target2],['Alvo final · 161,8%',pl.targetFinal],['R/R bruto / líquido (est.)',n(pl.rr,2)+' / '+n(pl.rrNet,2)]]){
+   write(a,M,y,9,reg,col.muted);write(typeof b==='string'?b:n(b,2),W-M,y,9,bold,col.ink,true);y+=21;
   }
   y+=9;write('SINAIS E INVALIDAÇÕES',M,y,10,bold,col.gold);y+=21;
   const flags=(x.flags||[]).join('; ')||'Nenhuma trava antiarmadilha disparada';
   y=wrap('Alertas: '+flags+'. Fibo Cluster: '+(x.fib?.cluster?'sim':'não')+'. RMC 4-Barras: '+(x.turn?.confirmed?'confirmada':'não confirmada')+'. CISD: '+(x.turn?.cisd?'confirmado':'pendente')+'.',M,y,W-2*M,9,13,reg,col.ink,3)+9;
   y=wrap('Elliott: '+(x.elliott?.label||'indeterminado')+'. '+(x.elliott?.reason||'Contagem não conclusiva')+'.',M,y,W-2*M,8,12,reg,col.muted,2);
+  const bt=r.backtest?.setups||{},names={pisani:'Pisani',minervini:'Minervini',fibonaccing:'Fibo',elliott:'Elliott'};
+  const hist=Object.entries(names).map(([k,label])=>{
+   const v=bt[k];return label+': '+(v?.winRate==null?'amostra insuficiente':n(v.winRate,1)+'% acerto; E='+n(v.expectancyR,2)+'R');
+  }).join(' · ');
+  y=wrap('Walk-forward exploratório (custos estimados '+n(pl.costEstimateBps,0)+' bps, sem execução no Profit): '+hist+'.',M,y+8,W-2*M,8,12,reg,col.muted,3);
   footer();
   for(const [kind,label] of [['trend','Tendência · Médias · OBV'],['fibo','Fibonaccing · Plano de Trade'],['elliott','Elliott · ZigZag e Pivôs']]){
    const graph=desenharGrafico(r,x,kind,tf,samples[i]);
