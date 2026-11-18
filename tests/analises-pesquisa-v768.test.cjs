@@ -6,7 +6,7 @@ test('Pesquisa gera três gráficos verificados e mantém páginas de falta de p
  const pdf=read('src/analysis/pesquisa-pdf.js');
  for(const k of ['trend','fibo','elliott'])assert.match(pdf,new RegExp("'"+k+"'"));
  assert.match(pdf,/function candlesConferidos/);
- assert.match(pdf,/raw\.length<250/);
+ assert.match(pdf,/raw\.length<289/);
  assert.match(pdf,/asset\?\.ajustado/);
  assert.match(pdf,/graficoPDF\(chart,kind\)/);
  assert.match(pdf,/MM20\/50\/200/);
@@ -31,8 +31,8 @@ test('Pesquisa tem ajuste Yahoo adjclose auditável e validador de claims sem n�
  assert.match(candles,/adjclose/);
  assert.match(candles,/ajustado:adjusted/);
  assert.match(candles,/Lacuna temporal de candles sem comprovação/);
- assert.match(motor,/hist\.length>=250&&meta\.ajustado===true/);
- const s=motor.slice(motor.indexOf('function validarNumerosIA('),motor.indexOf('/** Etapa 3:'));
+ assert.match(motor,/hist\.length>=289&&meta\.ajustado===true/);
+ const s=motor.slice(motor.indexOf('function numero('),motor.indexOf('/** Etapa 3:')).replace(/export /g,'');
  const f=vm.runInNewContext(stripTypeScriptTypes(s,{mode:'transform'})+'\nvalidarNumerosIA',{Math,Number,String,Set});
  assert.equal(f('A ação subiu 3%','Retorno 3,0%').ok,true);
  assert.equal(f('O ROE é 3%','ROE 6,0%').ok,false,'3% não pode ser isento por ser número pequeno');
