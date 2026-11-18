@@ -24,8 +24,11 @@ self.onmessage=function(event){
    const rsUniverse=data.rsUniverse||{},rsAsOf=String(data.rsAsOf||'');
   const strengths=scores.map(x=>{const base=perf(benchmark[x.group]);return {...x,relative:x.raw===null||base===null?null:x.raw-base}});
   const report=list.map((asset,i)=>{
-   const group=strengths[i].group,peer=strengths.filter(x=>x.group===group&&x.relative!==null).map(x=>x.relative);
-   const rs=percentile(strengths[i].relative,peer);
+   const group=strengths[i].group,ids=Array.isArray(rsUniverse[group])?rsUniverse[group]:[];
+    const fixed=new Set(ids),peers=strengths.filter(x=>x.group===group&&fixed.has(x.ticker)&&x.relative!==null);
+    const minPeers=group==='CRYPTO'?15:30;
+    const complete=ids.length>=minPeers&&peers.length===fixed.size&&fixed.size===ids.length&&strengths[i].relative!==null;
+    const rs=complete?percentile(strengths[i].relative,peers.map(x=>x.relative)):null;
    const opts={tf:data.tf||'1d',daily:asset.daily||asset.candles,higher:asset.higher||(data.tf==='1d'?M.aggregateWeekly(asset.daily||asset.candles):null),rs};
    const result=M.examine(asset.candles,opts);
    return {ticker:safeText(asset.ticker),name:String(asset.name||'').slice(0,90),
