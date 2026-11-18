@@ -20,27 +20,15 @@ async function etag(value:string){
  return '"'+Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('').slice(0,24)+'"';
 }
 async function eligibleUniverse(market:string){
- // Somente dados PUBLICOS e colunas permitidas: nenhuma custodia ou user_id.
- const columns=['ticker','empresa','company_name','setor','sector','bdr_ticker','exchange','roe','roic','dividend_yield',
-  'payout_implicito','pl','pvp','ev_ebitda','fcf_yield','div_liq_ebitda','liquidez_diaria_brl','valor_mercado_brl',
-  'avg_daily_volume_usd','market_cap_usd','forward_pe','peg_ratio','ev_fcf','fcf_margin','eps_growth_yoy',
-  'revenue_growth_yoy','price_sales','score_quant_br','score_quant_us','score_model_version','cobertura_pct',
-  'ativo_elegivel','fonte_principal','fundamentais_em','tecnicos_em','data_competencia_balanco','sec_facts_at',
-  'sec_source_url','updated_at','dados_status','identificador_emissor','momentum_12_1','dist_mm200_pct','rsi_14'];
- const br=market==='BR',order=br?'score_quant_br':'score_quant_us';
- // Colunas especificas por schema evitam erros de SELECT (PostgREST).
- const skip=new Set(br?['company_name','sector','bdr_ticker','exchange','avg_daily_volume_usd','market_cap_usd',
-  'forward_pe','peg_ratio','ev_fcf','fcf_margin','eps_growth_yoy','revenue_growth_yoy','price_sales',
-  'score_quant_us','sec_facts_at','sec_source_url']:['empresa','setor','payout_implicito','pl','pvp',
-  'ev_ebitda','fcf_yield','div_liq_ebitda','liquidez_diaria_brl','valor_mercado_brl','score_quant_br']);
- const qs=new URLSearchParams({select:columns.filter(c=>!skip.has(c)).join(','),ativo_elegivel:'eq.true',
-  order:order+'.desc.nullslast',limit:'501'});
- const response=await fetch(SB+'/rest/v1/acoes?'+qs.toString(),{headers:{apikey:SVC,Authorization:'Bearer '+SVC,
-  'Accept-Profile':br?'quant_br':'quant_us'},signal:AbortSignal.timeout(12000)});
- if(!response.ok){console.warn('Screeners universo elegivel indisponivel HTTP',response.status);return null}
- const rows=await response.json();
- if(!Array.isArray(rows)||rows.length>500)return null;
- return rows;
+ // A RPC só pode ser executada pelo service_role; schemas quant nunca são expostos diretamente.
+ try{
+  const data=await rpc('quant_screeners_universo_publico',{p_market:market});
+  if(data?.market!==market||data?.complete!==true||!Array.isArray(data.rows))return null;
+  return data.rows;
+ }catch(e){
+  console.warn('Universo publico da RPC indisponivel',String(e).slice(0,110));
+  return null;
+ }
 }
 
 async function publicSnapshot(req:Request,market:string){
