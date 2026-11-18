@@ -11,12 +11,14 @@ test('iPhone: Screeners ficam ao lado de B3 & EUA e preservam Pesquisa',{timeout
  const nav=page.locator('#an-root nav.an-subs');
  await expect(nav).toHaveCount(1);
  await expect(nav).toBeVisible();
- await expect(nav.locator('[data-an-sub]')).toHaveCount(3);
+ await expect(nav.locator('[data-an-sub]')).toHaveCount(5);
  const pesquisa=nav.locator('[data-an-sub="pesquisa"]');
  await expect(pesquisa).toContainText('B3 & EUA');
  await expect(pesquisa).toHaveAttribute('aria-selected','true');
  await expect(nav.locator('[data-an-sub="br"]')).toBeVisible();
  await expect(nav.locator('[data-an-sub="us"]')).toBeVisible();
+ await expect(nav.locator('[data-an-sub="tecnico-br"]')).toHaveCount(1);
+ await expect(nav.locator('[data-an-sub="tecnico-world"]')).toHaveCount(1);
  const pos=await nav.evaluate(el=>({y:el.getBoundingClientRect().y,
    junto:el.closest('.an-screener-switch')!=null,
    antes:el.compareDocumentPosition(document.querySelector('#an-root .an-header'))&Node.DOCUMENT_POSITION_FOLLOWING,
