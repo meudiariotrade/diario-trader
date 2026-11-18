@@ -15,8 +15,18 @@ const percentile=(value,rows)=>{
 };
 self.onmessage=function(event){
  const data=event.data||{};
- if(data.action!=='RUN')return;
  const reqId=data.reqId;
+ if(data.action==='BACKTEST'){
+  try{
+   // Apenas candles fornecidos pelo navegador; nenhuma chamada de rede nem Supabase.
+   const r=M.walkForward(data.candles,{tf:data.tf,market:data.market,
+    adjustedVerified:data.adjustedVerified===true,
+    rsHistory:data.rsHistory||null});
+   self.postMessage({action:'BACKTEST_DONE',reqId,ticker:safeText(data.ticker),result:r});
+  }catch(e){self.postMessage({action:'ERROR',reqId,error:String(e.message||e).slice(0,220)})}
+  return;
+ }
+ if(data.action!=='RUN')return;
  try{
   const list=Array.isArray(data.assets)?data.assets.slice(0,120):[];
   const benchmark=data.benchmarks||{};
@@ -29,7 +39,9 @@ self.onmessage=function(event){
     const minPeers=group==='CRYPTO'?15:30;
     const complete=ids.length>=minPeers&&peers.length===fixed.size&&fixed.size===ids.length&&strengths[i].relative!==null;
     const rs=complete?percentile(strengths[i].relative,peers.map(x=>x.relative)):null;
-   const opts={tf:data.tf||'1d',daily:asset.daily||asset.candles,higher:asset.higher||(data.tf==='1d'?M.aggregateWeekly(asset.daily||asset.candles):null),rs};
+   const opts={tf:data.tf||'1d',daily:asset.daily||asset.candles,
+    higher:asset.higher||(data.tf==='1d'?M.aggregateWeekly(asset.daily||asset.candles):null),
+    rs,market:group};
    const result=M.examine(asset.candles,opts);
    return {ticker:safeText(asset.ticker),name:String(asset.name||'').slice(0,90),
     market:group,bdr:String(asset.bdr||'').slice(0,16),holding:!!asset.holding,source:String(asset.source||'cache').slice(0,60),

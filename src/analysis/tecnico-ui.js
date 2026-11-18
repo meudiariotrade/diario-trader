@@ -167,6 +167,48 @@ function graph(rows,s){
  (data.length?'<svg viewBox="0 0 690 290" class="tech-svg" role="img" aria-label="Dispersão de até 120 ativos analisados"><path d="M46 25V252H654" stroke="#68707a" fill="none"/><path d="M336 25V252" stroke="#4c535b" stroke-dasharray="4 4"/>'+
  pts+'<text x="46" y="277" fill="#9ba4af" font-size="12">Nota 0/10</text><text x="654" y="277" text-anchor="end" fill="#9ba4af" font-size="12">Nota 10/10</text><text x="47" y="18" fill="#9ba4af" font-size="11">HV semanal 30%+</text></svg>':'<p>Sem séries suficientes para calcular os pontos.</p>')+'</section>';
 }
+
+async function backtestFor(s,r,raw,tf){
+ if(!Array.isArray(raw)||raw.length<263)return {method:'walk-forward-next-open-v1',
+  status:'não comprovado',reason:'Histórico insuficiente: 252 candles de aquecimento e 11 de saída',setups:null};
+ if(s.backtestWorker){s.backtestReject?.(Error('Backtest anterior cancelado'));s.backtestWorker.terminate()}
+ const wk=new Worker('tecnico-worker.js?v=769');s.backtestWorker=wk;
+ const request=s.token;const market=r.market;
+ try{
+  const result=await new Promise((resolve,reject)=>{
+   s.backtestReject=reject;
+   wk.onmessage=event=>{if(event.data?.reqId!==request)return;
+    if(event.data.action==='BACKTEST_DONE')resolve(event.data.result);
+    else if(event.data.action==='ERROR')reject(Error(event.data.error||'Backtest indisponível'));
+   };
+   wk.onerror=e=>reject(Error(e.message||'Worker de backtest indisponível'));
+   wk.postMessage({action:'BACKTEST',reqId:request,market,ticker:r.ticker,
+    tf,candles:raw,adjustedVerified:false});
+  });
+  return result;
+ }finally{
+  wk.terminate();if(s.backtestWorker===wk){s.backtestWorker=null;s.backtestReject=null}
+ }
+}
+async function historicoNoDetalhe(m,ticker){
+ const s=states[m],token=s.token,r=s.rows.find(x=>x.ticker===ticker);
+ if(!r||r.backtest||s.busyPDF)return;
+ const data=await read('candles|'+r.market+'|'+ticker+'|1d',6*3600000);
+ if(token!==s.token||current!==m)return;
+ try{r.backtest=await backtestFor(s,r,data?.candles,'1d')}
+ catch(e){r.backtest={status:'não comprovado',reason:String(e.message||e).slice(0,90),setups:null}}
+ if(token===s.token&&current===m&&s.detail===ticker)render();
+}
+function resultadoBacktest(r){
+ const bt=r.backtest;
+ if(!bt)return 'Walk-forward: clique no plano para calcular sobre os candles locais; nenhuma taxa de acerto presumida.';
+ if(!bt.setups)return 'Walk-forward indisponível: '+E(bt.reason||'amostra insuficiente');
+ const labels={pisani:'Pisani',minervini:'Minervini',fibonaccing:'Fibonaccing',elliott:'Elliott'};
+ return 'Walk-forward (exploratório, custos estimados; até 250 decisões, sem look-ahead): '+
+  Object.entries(bt.setups).map(([k,v])=>labels[k]+': '+v.trades+' trades · '+
+   (v.winRate===null?'acerto N/D':'acerto '+fmt(v.winRate,1)+'%')+
+   ' · payoff '+fmt(v.payoff,2)+' · expectativa '+fmt(v.expectancyR,3)+'R ('+E(v.status)+')').join(' | ');
+}
 function detail(s,rows){
  const r=rows.find(x=>x.ticker===s.detail)||markHoldings(s.rows).find(x=>x.ticker===s.detail);if(!r)return '';
  const [direction,x]=side(r,s);if(!x?.valid)return '';
@@ -175,7 +217,7 @@ function detail(s,rows){
  '<div class="tech-tags">'+badges(r,x)+'</div><p>Heurística de estudo (VCP, Elliott, RMC/CISD e Fibonaccing) · validação condicional.</p><p>Fonte: '+E(r.source)+' · barras: '+x.barCount+' · dados: '+E(r.updatedAt||'não informada')+'</p>'+
  '<div class="tech-metrics">'+[['SMA 20',x.metrics.sma20],['SMA 50',x.metrics.sma50],['SMA 150',x.metrics.sma150],['SMA 200',x.metrics.sma200],['ATR 14',x.metrics.atr14],['RS Rating',x.metrics.rs],['IFR 14',x.metrics.rsi14],['Volume relativo',x.metrics.rvol],['HV Semanal %',x.metrics.hvWeek],['Minervini',x.minervini.score==null?'N/D':x.minervini.score+'/8']].map(a=>'<div><span>'+a[0]+'</span><b>'+E(String(a[1]??'N/D'))+'</b></div>').join('')+'</div>'+
  '<h4>Contribuição dos quatro pilares (0 a 10)</h4>'+x.pillars.map(p=>'<div class="tech-pillar"><span>'+E(p.name)+' ('+p.weight+'%)</span><b>'+fmt(p.score*p.weight/10,2)+'</b><i><em style="width:'+Math.round(p.score*100)+'%"></em></i></div>').join('')+
- '<div class="tech-trade-plan"><h4>Plano técnico condicional</h4><div>Gatilho <b>'+number(plan.entry)+'</b> · Stop <b>'+number(plan.stop)+'</b> · Alvo 1 (111%) <b>'+number(plan.target1)+'</b> · Alvo 2 (127,2%) <b>'+number(plan.target2a)+'</b> · Alvo 3 (141,4%) <b>'+number(plan.target2)+'</b> · Final (161,8%) <b>'+number(plan.targetFinal)+'</b> · R/R <b>'+number(plan.rr)+'</b></div><small>Gatilho, Stop e Alvos são estudo condicional, não ordens. Confirme preço e execução apenas no Profit.</small></div>'+
+ '<div class="tech-trade-plan"><h4>Plano técnico condicional</h4><div>Gatilho <b>'+number(plan.entry)+'</b> · Stop <b>'+number(plan.stop)+'</b> · Alvo 1 (111%) <b>'+number(plan.target1)+'</b> · Alvo 2 (127,2%) <b>'+number(plan.target2a)+'</b> · Alvo 3 (141,4%) <b>'+number(plan.target2)+'</b> · Final (161,8%) <b>'+number(plan.targetFinal)+'</b> · R/R <b>'+number(plan.rr)+'</b> · R/R líquido estimado <b>'+number(plan.rrNet)+'</b></div><small>Custos ilustrativos de ida+volta: '+number(plan.costEstimateBps)+' bps; não são cotações do book nem incluem impacto/impostos. Confirme execução apenas no Profit. '+resultadoBacktest(r)+'</small></div>'+
  '<p>Fibonaccing: '+(x.fib.zone?'zona de mitigação':'fora da zona')+' · '+(x.fib.cluster?'cluster presente':'sem cluster')+' · '+(x.fib.fibogap?'Fibogap na defesa '+(x.fib.gapZone||[]).map(v=>fmt(v,2)).join('–'):'sem Fibogap aberto')+' · RMC: '+(x.turn.confirmed?'confirmado':'aguardando')+' · CISD: '+(x.turn.cisd?'confirmado':'não confirmado')+'</p>'+
  '<p>Elliott: '+E(x.elliott.label)+' — '+E(x.elliott.reason)+'</p>'+
  '<button class="btn s" type="button" data-tech-ai="'+E(r.ticker)+'">Abrir pesquisa técnica com IA existente</button></section>';
@@ -200,7 +242,7 @@ function view(m){
  detail(s,rows)+'<p class="an-disclaimer">Estruturas de Fibonaccing, RMC/CISD, VCP e Elliott são heurísticas codificadas conforme os critérios deste projeto, não certificação dos autores. A classificação só se confirma com dados históricos suficientes.</p></div>';
 }
 function leave(){
- if(current){const s=states[current];s.token++;s.abort?.abort();s.abort=null;s.workerReject?.(Error('Análise técnica interrompida ao sair da aba'));s.workerReject=null;s.worker?.terminate();s.worker=null;s.loading=false;s.busyPDF=false;}
+ if(current){const s=states[current];s.token++;s.abort?.abort();s.abort=null;s.workerReject?.(Error('Análise técnica interrompida ao sair da aba'));s.workerReject=null;s.worker?.terminate();s.worker=null;s.backtestReject?.(Error('Aba fechada'));s.backtestWorker?.terminate();s.backtestWorker=null;s.backtestReject=null;s.loading=false;s.busyPDF=false;}
  current='';observer?.disconnect();observer=null;
 }
 function watch(){
@@ -274,7 +316,7 @@ async function load(m,more=false){
    for(const key of ['BR','US','CRYPTO'])try{const symbol=key==='BR'?'IBOV':key==='US'?'SPX':'BTCUSDT';let b=await read('candles|'+key+'|'+symbol+'|1d',6*3600000);if(!b?.candles)b=await candles({market:key,ticker:symbol},'1d',ac.signal);if(b?.candles)bench[key]=b.candles}catch{}
    const result=await new Promise((resolve,reject)=>{
     try{
-     const wk=new Worker('tecnico-worker.js?v=762');s.worker=wk;s.workerReject=reject;
+     const wk=new Worker('tecnico-worker.js?v=769');s.worker=wk;s.workerReject=reject;
      wk.onmessage=event=>{if(event.data.reqId!==token)return;if(event.data.action==='DONE')resolve(event.data.rows);else reject(Error(event.data.error||'Falha de cálculo'))};
      wk.onerror=e=>reject(Error(e.message||'Falha no worker'));
      const fixed=s.universe.slice(0,m==='br'?60:80);
@@ -311,7 +353,7 @@ d.addEventListener('click',async e=>{
  if(el.dataset.techPreset){s.preset=el.dataset.techPreset;s.detail='';render();return}
  if(el.hasAttribute('data-tech-reload')){void load(m);return}
  if(el.hasAttribute('data-tech-more')){void load(m,true);return}
- if(el.dataset.techDetail||el.dataset.techPoint){s.detail=el.dataset.techDetail||el.dataset.techPoint;render();d.getElementById('tech-detail')?.scrollIntoView({block:'start',behavior:'smooth'});return}
+ if(el.dataset.techDetail||el.dataset.techPoint){s.detail=el.dataset.techDetail||el.dataset.techPoint;render();void historicoNoDetalhe(m,s.detail);d.getElementById('tech-detail')?.scrollIntoView({block:'start',behavior:'smooth'});return}
  if(el.hasAttribute('data-tech-close')){s.detail='';render();return}
  if(el.dataset.techAi){w.DiarioAnalises?.command?.('TECNICO '+el.dataset.techAi);return}
  if(el.hasAttribute('data-tech-pdf')&&!s.busyPDF){
@@ -327,7 +369,9 @@ d.addEventListener('click',async e=>{
     const saved=await read(key,s.tf==='1d'?6*3600000:10*60000);
     if(!barrasRecentes(saved?.candles,r,s.tf))
      throw Error('Histórico OHLCV de '+r.ticker+' vencido ou ausente: atualize os candles antes do PDF.');
-    reportRows.push({...r,chartCandles:saved.candles,chartTimeframe:s.tf,chartSource:saved.source||r.source});
+    const history=s.tf==='1d'?saved:await read('candles|'+r.market+'|'+r.ticker+'|1d',6*3600000);
+    const backtest=r.backtest||await backtestFor(s,r,history?.candles,'1d');
+    reportRows.push({...r,chartCandles:saved.candles,chartTimeframe:s.tf,chartSource:saved.source||r.source,backtest});
    }
    const result=await w.DiarioTecnicoPDF.share(m,reportRows,s.tf,ticket);
    if(!result.cancelled)s.info='Dossiê técnico de 10 ativos: '+result.pages+' páginas.';
