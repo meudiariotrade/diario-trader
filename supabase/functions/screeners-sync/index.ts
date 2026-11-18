@@ -221,8 +221,35 @@ function secPeriodo(json:any){
  all.sort((a,b)=>b.end.localeCompare(a.end)||b.filed.localeCompare(a.filed));
  return all[0]||null;
 }
-async function secColetar(limit:number){
- const pending=await rpc('quant_screeners_sec_pendentes',{p_limit:Math.max(1,Math.min(16,limit))});
+function secAnnual(doc:any,tags:string[],unit='USD'){
+ const facts=doc?.facts?.['us-gaap']||{};
+ for(const tag of tags){
+  const entries=(facts[tag]?.units?.[unit]||[]).filter((x:any)=>
+   x.form==='10-K'&&x.start&&x.end&&x.end<=now&&x.filed<=now&&numeric(x.val)!==null
+   &&(Date.parse(x.end)-Date.parse(x.start))/86400000>=330
+   &&(Date.parse(x.end)-Date.parse(x.start))/86400000<=390);
+  if(!entries.length)continue;
+  entries.sort((a:any,b:any)=>b.end.localeCompare(a.end)||b.filed.localeCompare(a.filed));
+  const unique=new Map<string,any>();for(const x of entries)if(!unique.has(x.end))unique.set(x.end,x);
+  return [...unique.values()];
+ }
+ return [];
+}
+function secValores(doc:any){
+ const rev=secAnnual(doc,['RevenueFromContractWithCustomerExcludingAssessedTax',
+  'RevenueFromContractWithCustomerIncludingAssessedTax','Revenues','SalesRevenueNet']);
+ const eps=secAnnual(doc,['EarningsPerShareDiluted'],'USD/shares');
+ const operating=secAnnual(doc,['NetCashProvidedByUsedInOperatingActivities']);
+ const capex=secAnnual(doc,['PaymentsToAcquirePropertyPlantAndEquipment']);
+ const growth=(v:any[])=>v.length>=2&&numeric(v[0].val)!==null&&numeric(v[1].val)!==null&&
+  Number(v[1].val)>0?round((Number(v[0].val)/Number(v[1].val)-1)*100):null;
+ const cap=capex.find(x=>x.end===operating[0]?.end);
+ const margin=operating[0]&&cap&&rev[0]?.val>0&&rev[0].end===operating[0].end?
+  round((Number(operating[0].val)-Number(cap.val))/Number(rev[0].val)*100):null;
+ return {revenue_growth_yoy:growth(rev),eps_growth_yoy:growth(eps),fcf_margin:margin};
+}
+async function secColetar(limit:number,priority:'score'|'cap'='cap'){
+ const pending=await rpc(priority==='score'?'quant_screeners_sec_top':'quant_screeners_sec_pendentes',{p_limit:Math.max(1,Math.min(16,limit))});
  const updates:any[]=[],dates:any[]=[],errors:string[]=[];let http200=0,http403=0,http429=0;
  for(const row of Array.isArray(pending)?pending:[]){
   if(!/^[0-9]{10}$/.test(String(row.cik||'')))continue;
@@ -235,7 +262,7 @@ async function secColetar(limit:number){
    const doc=await r.json();if(Number(doc?.cik)!==Number(row.cik))throw Error('CIK divergente');
    http200++;const period=secPeriodo(doc);
    if(!period){errors.push(row.ticker+': 10-Q / 10-K sem periodo confirmado');continue}
-   updates.push({ticker:row.ticker,cik:row.cik,sec_status:'verificado',sec_facts_at:period.end,sec_source_url:url});
+   updates.push({ticker:row.ticker,cik:row.cik,sec_status:'verificado',sec_facts_at:period.end,sec_source_url:url,...secValores(doc)});
    dates.push({ticker:row.ticker,data_competencia_balanco:period.end});
   }catch(e){errors.push(row.ticker+': '+String(e).slice(0,90))}
  }
@@ -429,7 +456,7 @@ Deno.serve(async req=>{
  try{
   const b=await req.json().catch(()=>({})),mode=b.acao||'catalogo';
   if(mode==='diagnostico')return ok({ok:true,modelo:scoreEngine.version,lote_maximo_precos:20,
-   metodos:['catalogo','fundamentos','precos','enriquecer','principais','mapear_sec','sec','cvm'],sem_polling:true});
+   metodos:['catalogo','fundamentos','precos','enriquecer','principais','mapear_sec','sec','sec_top','cvm'],sem_polling:true});
   if(mode==='principais'){
    const page=Math.max(0,Math.min(10,Math.floor(Number(b.pagina)||0))),limit=Math.max(20,Math.min(180,Math.floor(Number(b.limite)||140)));
    return ok({acao:mode,mercado:'US',...await principaisUS(page,limit)});
@@ -474,6 +501,7 @@ Deno.serve(async req=>{
   }
   if(mode==='mapear_sec')return ok({acao:mode,...await secMapear()});
   if(mode==='sec')return ok({acao:mode,...await secColetar(Math.floor(Number(b.limite)||8))});
+  if(mode==='sec_top')return ok({acao:mode,...await secColetar(Math.floor(Number(b.limite)||12),'score')});
   return ok({error:'Acao desconhecida'},400);
  }catch(e){console.error('screeners-sync v2',String(e).slice(0,150));return ok({error:'Coleta temporariamente indisponivel'},503)}
 });
