@@ -77,3 +77,6 @@ jobs:
         run: node scripts/verify-published.cjs
         env:
           PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+      - name: Diagnosticar cache público do Worker (sem bloquear o app)
+        continue-on-error: true
+        run: node scripts/diagnostico-screeners-cloudflare.mjs
