@@ -53,7 +53,7 @@
   const zone=price>=min&&price<=max;
   const levels=macro.ret.concat(macro.ext);
   const clusters=[];
-  if(micro&&macro!==micro)for(const x of macro.ret.concat(macro.ext))for(const y of micro.ret.concat(micro.ext)){
+  if(micro&&macro!==micro&&(macro.from!==micro.from||macro.to!==micro.to||macro.age!==micro.age))for(const x of macro.ret.concat(macro.ext))for(const y of micro.ret.concat(micro.ext)){
    if(Math.abs(x.price-y.price)/Math.max(.01,Math.abs(x.price))<=.01)clusters.push(round((x.price+y.price)/2));
   }
   const expansion=(price-macro.from)*dir/macro.length;
@@ -101,7 +101,7 @@
   const earlier=o.slice(-8,-1).some((x,j,arr)=>j>0&&(dir===1?x>Math.max(...o.slice(Math.max(0,o.length-27+j),o.length-8+j)):x<Math.min(...o.slice(Math.max(0,o.length-27+j),o.length-8+j))));
   const obvConfirmed=obvHit||earlier,sw=swings(c),fib=fibo(c,dir,sw),turn=turn4(c,dir,fib.zone),vcpPass=vcp(c);
   const high=opts.higher?normalize(opts.higher):null,mtfn=opts.tf==='1d'?20:200,mtf=high?.length>=mtfn?dir*(high.at(-1).c-sma(high,mtfn))>0:null;
-  const recent=c.slice(-9,-1),pullback=recent.length>0&&recent.some(x=>Math.abs(x.l-s20)<atr14*1.2||Math.abs(x.h-s20)<atr14*1.2)&&recent.every(x=>dir===1?x.c>=s20:x.c<=s20);
+  const recent=c.slice(-9,-1),pullback=recent.length>0&&recent.some((x,j)=>{const avg=sma(c,20,c.length-9+j);return Math.abs(x.l-avg)<atr14*1.2||Math.abs(x.h-avg)<atr14*1.2})&&recent.every((x,j)=>{const avg=sma(c,20,c.length-9+j);return dir===1?x.c>=avg:x.c<=avg});
   const pivot=dir===1?Math.max(...recent.map(x=>x.h)):Math.min(...recent.map(x=>x.l));
   const breakout=dir===1?p>pivot:p<pivot,trend=dir===1?p>s20&&p>s200:p<s20&&p<s200;
   const dry=mean(recent.slice(-5).map(x=>x.v))<v20*.85;
@@ -119,14 +119,14 @@
   const entry=turn.confirmed&&turn.reference?turn.reference:pivot,riskBase=Math.max(atr14*.9,p*.005),st=dir===1?Math.min(p-riskBase,s20-atr14*.4,fib.defense?.[0]??p-riskBase):Math.max(p+riskBase,s20+atr14*.4,fib.defense?.[1]??p+riskBase);
   const risk=(entry-st)*dir,segments=fib.segments[0]||fib.segments[1],ext=segments?.ext||[],target=r=>ext.find(x=>x.r===r)?.price??null;
   const future=r=>{const p=target(r);return p!==null&&(p-entry)*dir>0?p:null};
-  const t1=future(1.11),t2=future(1.414),t3=future(1.618),rr=risk>0&&t2!==null?(t2-entry)*dir/risk:null;
+  const t1=future(1.11),t2a=future(1.272),t2=future(1.414),t3=future(1.618),rr=risk>0&&t2!==null?(t2-entry)*dir/risk:null;
   const active=trend&&breakout&&obvConfirmed&&rvol>1&&vol>3;
   const bollinger=boll(c);
   return {valid:true,dir,price:round(p),score,pillars,coverage:round((rs!==null?1:0)+(mtf!==null?1:0)+(template.score!==null?1:0),0),
    timestamp:last.t,barCount:c.length,metrics:{sma20:round(s20),sma50:round(s50),sma150:round(s150),sma200:round(s200),obv:round(o.at(-1),0),obvConfirmed,rvol:round(rvol,2),hvWeek:round(vol,2),rsi14:round(rsi14,1),macd:round(m.value),atr14:round(atr14),rs,mtf},
    fib,turn,pisani:{breakout:active,power:active&&rvol>=1.5&&turn.cisd,away:away>=2.5,pullback},minervini:template,vcp:vcpPass,elliott:elliott(sw,dir),bollinger:{...bollinger,breakout:bollinger.breakout&&rvol>1.5},
    flags:trap?[trap]:[],eligible:active&&!trap&&mtf!==false,
-   plan:{entry:round(entry),stop:round(st),target1:round(t1),target2:round(t2),targetFinal:round(t3),rr:round(rr,2)}};
+   plan:{entry:round(entry),stop:round(st),target1:round(t1),target2a:round(t2a),target2:round(t2),targetFinal:round(t3),rr:round(rr,2)}};
  }
  function examine(c,opts={}){return {buy:one(c,1,opts),sell:one(c,-1,opts)}}
  return Object.freeze({VERSION,normalize,sma,ema,atr,rsi,macd,obv,hvWeek,swings,fibo,turn4,elliott,vcp,boll,aggregateWeekly,passTemplate,one,examine});
