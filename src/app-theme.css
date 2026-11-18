@@ -3046,3 +3046,13 @@ html body.trmon #app .trm.trm-pro #trp0 .trpb{min-height:0}
  html body.trmon #app .trm.trm-pro :is(input,select,textarea){font-size:16px!important}
  html body.trmon #app .trm.trm-pro .trph :is(button,.trx),html body.trmon #app .trm.trm-pro .trbtn{min-height:40px}
 }
+
+/* v763 — apenas a organização responsiva dos botões da aba Técnico. */
+html:root body #app .tech-action-grid{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+html:root body #app .tech-action-grid button{min-width:0;min-height:44px;white-space:nowrap}
+@media(max-width:640px){
+ html:root body #app .scr-top:has(.tech-action-grid){display:flex;flex-direction:column;align-items:stretch;gap:8px}
+ html:root body #app .tech-action-grid{display:grid;width:100%;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+ html:root body #app .tech-action-grid button{min-width:0;width:100%;padding-inline:4px;font-size:clamp(11px,3vw,13px);white-space:nowrap}
+ html:root body #app .tech-action-grid [data-tech-pdf]{grid-column:1/-1}
+}
