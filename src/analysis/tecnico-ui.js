@@ -21,11 +21,11 @@ function db(){
 }
 async function store(key,item){
  const base=await db();if(!base)return;
- return new Promise(resolve=>{try{const tx=base.transaction('data','readwrite');tx.objectStore('data').put({key,version:'tecnico-771.1',when:Date.now(),item});tx.oncomplete=()=>{base.close();resolve()};tx.onerror=()=>{base.close();resolve()}}catch{base.close();resolve()}});
+ return new Promise(resolve=>{try{const tx=base.transaction('data','readwrite');tx.objectStore('data').put({key,version:'tecnico-774.1',when:Date.now(),item});tx.oncomplete=()=>{base.close();resolve()};tx.onerror=()=>{base.close();resolve()}}catch{base.close();resolve()}});
 }
 async function read(key,ttl){
  const base=await db();if(!base)return null;
- return new Promise(resolve=>{try{const tx=base.transaction('data','readonly'),r=tx.objectStore('data').get(key);r.onsuccess=()=>resolve(r.result?.version==='tecnico-771.1'&&Date.now()-r.result.when<ttl?r.result.item:null);r.onerror=()=>resolve(null);tx.oncomplete=()=>base.close()}catch{base.close();resolve(null)}});
+ return new Promise(resolve=>{try{const tx=base.transaction('data','readonly'),r=tx.objectStore('data').get(key);r.onsuccess=()=>resolve(r.result?.version==='tecnico-774.1'&&Date.now()-r.result.when<ttl?r.result.item:null);r.onerror=()=>resolve(null);tx.oncomplete=()=>base.close()}catch{base.close();resolve(null)}});
 }
 async function fundamental(m,signal){
  let snap=null;
@@ -172,7 +172,7 @@ async function backtestFor(s,r,raw,tf){
  if(!Array.isArray(raw)||raw.length<263)return {method:'walk-forward-next-open-v1',
   status:'não comprovado',reason:'Histórico insuficiente: 252 candles de aquecimento e 11 de saída',setups:null};
  if(s.backtestWorker){s.backtestReject?.(Error('Backtest anterior cancelado'));s.backtestWorker.terminate()}
- const wk=new Worker('tecnico-worker.js?v=771');s.backtestWorker=wk;
+ const wk=new Worker('tecnico-worker.js?v=774');s.backtestWorker=wk;
  const request=s.token;const market=r.market;
  try{
   const result=await new Promise((resolve,reject)=>{
@@ -258,7 +258,7 @@ async function enter(m){
  if(s.rows.length||s.loading)return;
  const cached=await read('snapshot|'+m+'|'+s.tf,15*60000);
  if(current!==m||owner()!==u)return;
- if(cached?.rows?.length&&cached.rsUniversoFixo==='v771'){s.rows=markHoldings(cached.rows);s.universe=cached.universe||[];s.next=cached.next||s.rows.length;s.updatedAt=cached.updatedAt||'';s.info='Snapshot local · '+s.updatedAt;render();return}
+ if(cached?.rows?.length&&cached.rsUniversoFixo==='v774'){s.rows=markHoldings(cached.rows);s.universe=cached.universe||[];s.next=cached.next||s.rows.length;s.updatedAt=cached.updatedAt||'';s.info='Snapshot local · '+s.updatedAt;render();return}
  void load(m);
 }
 async function load(m,more=false){
@@ -316,7 +316,7 @@ async function load(m,more=false){
    for(const key of ['BR','US','CRYPTO'])try{const symbol=key==='BR'?'IBOV':key==='US'?'SPX':'BTCUSDT';let b=await read('candles|'+key+'|'+symbol+'|1d',6*3600000);if(!b?.candles)b=await candles({market:key,ticker:symbol},'1d',ac.signal);if(b?.candles)bench[key]=b.candles}catch{}
    const result=await new Promise((resolve,reject)=>{
     try{
-     const wk=new Worker('tecnico-worker.js?v=771');s.worker=wk;s.workerReject=reject;
+     const wk=new Worker('tecnico-worker.js?v=774');s.worker=wk;s.workerReject=reject;
      wk.onmessage=event=>{if(event.data.reqId!==token)return;if(event.data.action==='DONE')resolve(event.data.rows);else reject(Error(event.data.error||'Falha de cálculo'))};
      wk.onerror=e=>reject(Error(e.message||'Falha no worker'));
      const fixed=s.universe.slice(0,m==='br'?60:80);
@@ -331,7 +331,7 @@ async function load(m,more=false){
    const merged=result.map(x=>({...x,fund:fund[x.ticker]??s.universe.find(y=>y.ticker===x.ticker)?.fund??null}));
    const replaced=new Set(merged.map(x=>x.ticker));s.rows=markHoldings(s.rows.filter(x=>!replaced.has(x.ticker)).concat(merged));
    s.updatedAt=new Date().toLocaleString('pt-BR');s.info='Cálculo local · '+s.updatedAt+' · '+failures.length+' indisponível(is)';
-   void store('snapshot|'+m+'|'+s.tf,{rows:s.rows.map(x=>({...x,holding:false})),universe:s.universe,next:s.next,updatedAt:s.updatedAt,rsUniversoFixo:'v771'});
+   void store('snapshot|'+m+'|'+s.tf,{rows:s.rows.map(x=>({...x,holding:false})),universe:s.universe,next:s.next,updatedAt:s.updatedAt,rsUniversoFixo:'v774'});
   }else s.error='Nenhum candle histórico válido nesta amostra. '+failures.slice(0,2).join('; ')+'. Confira a publicação da rota /v1/tecnico-candles no Cloudflare Worker.';
  }catch(e){if(!ac.signal.aborted&&token===s.token)s.error=String(e.message||e).slice(0,240)}
  finally{if(token===s.token){s.loading=false;s.abort=null;render()}}
