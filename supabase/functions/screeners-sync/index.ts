@@ -398,9 +398,12 @@ async function cvmZipDreRows(kind:'itr'|'dfp',parte:'DRE_con'|'DRE_ind',cnpjs:Se
  while(!terminou){
   const {value,done}=await reader.read();
   if(done)break;
-  total+=value.byteLength;
-  if(total>4_000_000){terminou=true;break;} // CPU de Edge Function: amostra segura, nunca alegar cobertura integral
-  pendente+=decoder.decode(value,{stream:true});
+  const restante=4_000_000-total;
+  if(restante<=0){terminou=true;break;}
+  const amostra=value.byteLength>restante?value.subarray(0,restante):value;
+  total+=amostra.byteLength;
+  if(amostra.byteLength<value.byteLength)terminou=true; // corta inclusive se a primeira leitura exceder o limite
+  pendente+=decoder.decode(amostra,{stream:!terminou});
   let pos=0,fim=0;
   while((fim=pendente.indexOf('\n',pos))>=0){
    const linha=pendente.slice(pos,fim).replace(/\r$/,'');
