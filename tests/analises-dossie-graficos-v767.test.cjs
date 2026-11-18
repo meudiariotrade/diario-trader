@@ -46,8 +46,8 @@ test('Valuation: DCF com patrimônio residual negativo nunca vira preço-alvo ne
  assert.equal(v.dcf,null);
  assert.match(v.dcfMotivo,/não calculável/i);
  assert.match(v.dcfMotivo,/não é positivo/);
- assert.equal(ctx.din(-5,'USD'),'US$ -5,00','perdas financeiras legítimas não devem ser escondidas');
- assert.equal(ctx.dinPreco(-.75,'USD'),'não calculável');
+ assert.equal(vm.runInContext('din(-5,"USD")',ctx),'US$ -5,00','perdas financeiras legítimas não devem ser escondidas');
+ assert.equal(vm.runInContext('dinPreco(-.75,"USD")',ctx),'não calculável');
 });
 test('Pesquisa: gráfico com 90 candles reais e níveis positivos; ausência de série não inventa gráfico',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true});
