@@ -143,14 +143,14 @@
   const entry=turn.confirmed&&turn.reference?turn.reference:pivot,riskBase=Math.max(atr14*.9,p*.005),st=dir===1?Math.min(p-riskBase,s20-atr14*.4,fib.defense?.[0]??p-riskBase):Math.max(p+riskBase,s20+atr14*.4,fib.defense?.[1]??p+riskBase);
   const risk=(entry-st)*dir,segments=fib.segments[0]||fib.segments[1],ext=segments?.ext||[],target=r=>ext.find(x=>x.r===r)?.price??null;
   const future=r=>{const p=target(r);return p!==null&&(p-entry)*dir>0?p:null};
-  const t1=future(1.11),t2a=future(1.272),t2=future(1.414),t3=future(1.618),rr=risk>0&&t2!==null?(t2-entry)*dir/risk:null;
+  const t1=future(1.11),t2a=future(1.272),t2=future(1.414),t3=future(1.618),rr=risk>0&&t2a!==null?(t2a-entry)*dir/risk:null,rrAlvo3=risk>0&&t2!==null?(t2-entry)*dir/risk:null;
   const active=trend&&breakout&&obvConfirmed&&rvol>1&&vol>3;
   const bollinger=boll(c);
   return {valid:true,dir,price:round(p),score,pillars,coverage:round((rs!==null?1:0)+(mtf!==null?1:0)+(template.score!==null?1:0),0),
    timestamp:last.t,barCount:c.length,metrics:{sma20:round(s20),sma50:round(s50),sma150:round(s150),sma200:round(s200),obv:round(o.at(-1),0),obvConfirmed,rvol:round(rvol,2),hvWeek:round(vol,2),rsi14:round(rsi14,1),macd:round(m.value),atr14:round(atr14),rs,mtf},
    fib,turn,pisani:{breakout:active,power:active&&rvol>=1.5&&turn.cisd,away:away>=2.5,pullback},minervini:template,vcp:vcpPass,elliott:elliott(sw,dir),bollinger:{...bollinger,breakout:bollinger.breakout&&rvol>1.5},
    flags:trap?[trap]:[],eligible:active&&!trap&&mtf!==false,
-   plan:{entry:round(entry),stop:round(st),target1:round(t1),target2a:round(t2a),target2:round(t2),targetFinal:round(t3),rr:round(rr,2)}};
+   plan:{entry:round(entry),stop:round(st),target1:round(t1),target2a:round(t2a),target2:round(t2),targetFinal:round(t3),rr:round(rr,2),rrAlvo3:round(rrAlvo3,2)}};
  }
  function examine(c,opts={}){return {buy:one(c,1,opts),sell:one(c,-1,opts)}}
  return Object.freeze({VERSION,normalize,sma,ema,atr,rsi,macd,obv,hvWeek,swings,fibo,turn4,elliott,vcp,boll,aggregateWeekly,passTemplate,one,examine});
