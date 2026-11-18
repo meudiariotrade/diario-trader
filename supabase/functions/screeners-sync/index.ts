@@ -354,7 +354,7 @@ function csvRows(raw:string){
 }
 function normalizeName(name:string){
  return String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
-  .replace(/\b(PFD|PREF|COMMON|SHARES|SHS|REGISTERED|S A|SA|S\.A\.|LTDA|HOLDING|NON|CUM|PERP|ADR|PREFERRED|DEPOSITARY)\b/g,' ')
+  .replace(/\b(PFD|PREF|COMMON|SHARES|SHS|REGISTERED|S A|SA|S\.A\.|LTDA|NON|CUM|PERP|ADR|PREFERRED|DEPOSITARY)\b/g,' ')
   .replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 }
 async function cvmEnriquecer(){
@@ -403,14 +403,16 @@ async function cvmEnriquecer(){
  for(const row of targets){
   const key=normalizeName(row.empresa),parts=key.split(' ').filter(x=>x.length>2);
   if(!parts.length)continue;
-  const matches=new Set<string>(),prefix=parts.slice(0,2).join(' ');
+  const exact=new Set<string>(),fallback=new Set<string>(),prefix=parts.slice(0,2).join(' ');
+  const aliases=String(row.ticker||'').startsWith('AXIA')?['CENTRAIS ELETRICAS BRASILEIRAS']:[];
   for(const [label,cnpjs] of names){
-   if(label===key||label.startsWith(key+' ')||
-     (parts.length>=2&&label.startsWith(prefix+' '))||
-     (parts.length===1&&parts[0].length>=4&&label.startsWith(parts[0]+' '))){
-    for(const c of cnpjs)matches.add(c);
-   }
+   if(label===key||label.startsWith(key+' ')||aliases.some(x=>label.startsWith(x+' ')))
+    for(const c of cnpjs)exact.add(c);
+   else if((parts.length>=2&&label.startsWith(prefix+' '))||
+      (parts.length===1&&parts[0].length>=4&&label.startsWith(parts[0]+' ')))
+    for(const c of cnpjs)fallback.add(c);
   }
+  const matches=exact.size?exact:fallback;
   if(matches.size!==1){if(unknown.length<12)unknown.push(row.ticker);continue}
   const date=periods.get([...matches][0]);if(date)updates.push({ticker:row.ticker,data_competencia_balanco:date});
  }
