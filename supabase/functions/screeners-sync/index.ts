@@ -587,7 +587,7 @@ async function cvmEnriquecer(){
    names.get(key)!.add(cnpj);
   }
  }
- const periods=new Map<string,string>(),docsByCnpj=new Map<string,any>(),fontes:string[]=[],errors:string[]=[];
+ const periods=new Map<string,string>(),docsByCnpj=new Map<string,any>(),docsPorProtocolo=new Map<string,any>(),fontes:string[]=[],errors:string[]=[];
  for(const kind of ['itr','dfp'] as const){
   try{
    const rows=csvRows(await cvmZipCsv(kind));
@@ -598,6 +598,15 @@ async function cvmEnriquecer(){
     // trimestre pode ter ID_DOC/versão mais recentes, sem apagar uma prova anterior.
     if(!periods.has(cnpj)||periods.get(cnpj)!<date)periods.set(cnpj,date);
     const id=String(x.ID_DOC||x.NUM_SEQ_DOC||'').trim(),publicado=String(x.DT_RECEB||x.DT_ENTREGA||'').slice(0,10),versao=String(x.VERSAO||'').trim();
+    // Protocolo antigo já vinculado ao ticker: recuperar o CNPJ diretamente
+    // da CVM, sem repetir um palpite de razão social após renomeações.
+    if(/^\d{1,18}$/.test(id)&&/^\d{4}-\d{2}-\d{2}$/.test(publicado)
+     &&publicado>=date&&publicado<=now){
+     const last=docsPorProtocolo.get(id);
+     if(!docsPorProtocolo.has(id))docsPorProtocolo.set(id,{cnpj,competencia:date,publicado_em:publicado});
+     else if(last&&(last.cnpj!==cnpj||last.competencia!==date||last.publicado_em!==publicado))
+      docsPorProtocolo.set(id,null); // mesmo protocolo com identidade ambígua é rejeitado
+    }
     if(!/^\d{1,18}$/.test(id)||!/^\d{4}-\d{2}-\d{2}$/.test(publicado)
      ||publicado<date||publicado>now||!/^\d{1,6}$/.test(versao))continue;
     const previous=docsByCnpj.get(cnpj),same=previous?.competencia===date;
@@ -634,7 +643,11 @@ async function cvmEnriquecer(){
       (parts.length===1&&parts[0].length>=4&&label.startsWith(parts[0]+' ')))
     for(const c of cnpjs)fallback.add(c);
   }
-  const matches=exact.size?exact:fallback;
+  const original=docsPorProtocolo.get(String(row.documento_balanco_id||''));
+  const protocoloValido=original
+   &&original.competencia===row.data_competencia_balanco
+   &&original.publicado_em===String(row.documento_balanco_publicado_em||'').slice(0,10);
+  const matches=protocoloValido?new Set<string>([original.cnpj]):exact.size?exact:fallback;
   if(matches.size!==1){if(unknown.length<12)unknown.push(row.ticker);continue}
   const cnpj=[...matches][0],date=periods.get(cnpj);
    if(date)updates.push({ticker:row.ticker,data_competencia_balanco:date});
