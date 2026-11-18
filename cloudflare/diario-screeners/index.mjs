@@ -83,19 +83,53 @@ export default {
      }
      if(!source)throw Error('Cripto sem OHLCV confiável: '+errors.join('; '));
     }else{
-     let response=null;
+     // Yahoo Chart pode bloquear a borda: recorrer somente a OHLCV verdadeiro.
+     const attempts=[];
+     const validRows=a=>Array.isArray(a)?a.filter(x=>x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[4]>0&&x[2]>=Math.max(x[1],x[4])&&x[3]>0&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0):[];
      for(const h of ['query1.finance.yahoo.com','query2.finance.yahoo.com']){
       try{
        const u='https://'+h+'/v8/finance/chart/'+encodeURIComponent(symbol)+'?range='+range+'&interval='+interval+'&includePrePost=false';
-       const r=await fetch(u,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(9000)});
-       if(r.ok){response=r;break}
-      }catch{}
+       const response=await fetch(u,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(7000)});
+       if(!response.ok){attempts.push('Yahoo '+response.status);continue}
+       const obj=await response.json(),series=obj?.chart?.result?.[0],q=series?.indicators?.quote?.[0];
+       if(!Array.isArray(series?.timestamp)||!q)continue;
+       const candidate=validRows(series.timestamp.map((t,i)=>[Number(t),Number(q.open?.[i]),Number(q.high?.[i]),Number(q.low?.[i]),Number(q.close?.[i]),Number(q.volume?.[i])]));
+       if(candidate.length>=210){items=candidate;source='Yahoo Finance Chart (histórico, sujeito a atraso)';break}
+       attempts.push('Yahoo histórico insuficiente');
+      }catch{attempts.push('Yahoo indisponível')}
      }
-     if(!response)throw Error('Yahoo Chart indisponível');
-     const obj=await response.json(),series=obj?.chart?.result?.[0],q=series?.indicators?.quote?.[0];
-     if(!Array.isArray(series?.timestamp)||!q)throw Error('Série não retornada');
-     items=series.timestamp.map((t,i)=>[Number(t),Number(q.open?.[i]),Number(q.high?.[i]),Number(q.low?.[i]),Number(q.close?.[i]),Number(q.volume?.[i])]);
-     source='Yahoo Finance Chart (histórico, sujeito a atraso)';
+     if(!source&&market==='BR'){
+      try{
+       // Apenas tickers liberados sem chave pela brapi.
+       if(['PETR4','VALE3','ITUB4','MGLU3'].includes(ticker)){
+        const r=await fetch('https://brapi.dev/api/quote/'+ticker+'?range='+range+'&interval='+interval,
+         {headers:{Accept:'application/json'},signal:AbortSignal.timeout(8000)});
+        if(!r.ok){attempts.push('brapi HTTP '+r.status)}
+        else{
+         const obj=await r.json(),data=obj?.results?.[0],history=data?.historicalDataPrice||data?.data?.historicalDataPrice||[];
+         const candidate=validRows(history.map(v=>[Number(v.date),Number(v.open),Number(v.high),Number(v.low),Number(v.close),Number(v.volume)]));
+         if(candidate.length>=210){items=candidate;source='brapi.dev OHLCV (histórico, sujeito a atraso)'}
+         else attempts.push('brapi histórico insuficiente');
+        }
+       }
+      }catch{attempts.push('brapi indisponível')}
+     }
+     if(!source&&market==='US'&&tf==='1d'&&ticker!=='SPX'){
+      try{
+       // Nasdaq publica EOD de ações; não converter EOD em intraday fictício.
+       const u='https://api.nasdaq.com/api/quote/'+encodeURIComponent(ticker)+'/historical?assetclass=stocks&limit=500';
+       const r=await fetch(u,{headers:{Accept:'application/json','User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(9000)});
+       if(!r.ok)attempts.push('Nasdaq HTTP '+r.status);
+       else{
+        const obj=await r.json(),history=obj?.data?.tradesTable?.rows||obj?.data?.rows||[];
+        const n=x=>Number(String(x??'').replace(/[$,]/g,''));
+        const candidate=validRows(history.map(v=>[Math.floor(new Date(v.date).getTime()/1000),n(v.open),n(v.high),n(v.low),n(v.close),n(v.volume)]));
+        if(candidate.length>=210){items=candidate;source='Nasdaq EOD (histórico diário, sujeito a atraso)'}
+        else attempts.push('Nasdaq histórico insuficiente');
+       }
+      }catch{attempts.push('Nasdaq indisponível')}
+     }
+     if(!source)throw Error('Ações sem OHLCV suficiente: '+attempts.slice(0,5).join('; '));
     }
     items=items.filter(x=>x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[4]>0&&x[2]>=Math.max(x[1],x[4])&&x[3]>0&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0).slice(-600);
     if(items.length<30)return json({error:'Histórico confiável insuficiente',candles:items.length},422);
