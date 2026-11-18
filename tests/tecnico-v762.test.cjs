@@ -78,3 +78,22 @@ test('Cloudflare: histórico técnico só de fornecedores públicos e limite por
  assert.equal(JSON.parse(read('package.json')).version,'762.0.0');
  for(const p of ['tecnico-engine.js','tecnico-worker.js','tecnico-ui.js','tecnico-pdf.js'])assert.ok(release.bundles[p]);
 });
+
+
+test('RSI de série lateral é neutro e indicadores ausentes não adicionam pontos fictícios',()=>{
+ const flat=Array.from({length:280},(_,i)=>[1700000000+i*86400,100,101,99,100,10000]);
+ assert.equal(M.rsi(M.normalize(flat)),50);
+ const bars=trend(),withEvidence=M.one(bars,1,{tf:'1d',daily:bars,higher:M.aggregateWeekly(bars),rs:90});
+ const noEvidence=M.one(bars,1,{tf:'1d',daily:bars});
+ assert.equal(noEvidence.metrics.rs,null);
+ assert.equal(noEvidence.metrics.mtf,null);
+ assert.ok(noEvidence.score<=withEvidence.score);
+});
+test('RS Rating pode reavaliar todos os ativos previamente carregados apenas pelo IndexedDB',()=>{
+ const ui=read('src/analysis/tecnico-ui.js');
+ assert.match(ui,/const previous=\[\]/);
+ assert.match(ui,/const batch=\[\.\.\.previous,\.\.\.collected\]/);
+ assert.match(ui,/const replaced=new Set/);
+ assert.match(ui,/const head=await read\('candles\|'/);
+ assert.doesNotMatch(ui,/setInterval\(/);
+});
