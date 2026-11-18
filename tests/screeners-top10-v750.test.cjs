@@ -51,8 +51,15 @@ test('EUA sem scores reais: ranking vazio, nunca inventa as dez melhores',()=>{
  assert.equal(out.entries.length,0);
  assert.equal(out.excluded,1);
 });
-test('Top 10 usa página global já carregada e geração de PDF local sem varrer tickers',()=>{
- assert.match(app,/isGlobalTopQuery\(s\)\)s\.topData=data/);
+test('Top 10 usa snapshot global elegível e gera PDF local sem varrer tickers',()=>{
+ // v754: o ranking automático é montado sobre o universo elegível do snapshot,
+ // não mais sobre a primeira página de até 50 resultados da consulta dinâmica.
+ assert.match(app,/function rankedSnapshot\(snapshot\)/);
+ assert.match(app,/snapshot\?\.universe_complete&&Array\.isArray\(snapshot\.universe_rows\)/);
+ assert.match(app,/rows:snapshot\.universe_rows\.slice\(0,250\)/);
+ assert.match(app,/s\.topData=rankedSnapshot\(snapshot\)/);
+ assert.match(app,/stateNow\.topData=rankedSnapshot\(result\)/);
+ assert.match(app,/getGlobalSnapshot\(m,refresh\)/);
  assert.match(app,/loadTopGlobal/);
  assert.match(app,/p(?:age)?:0|page:0/);
  assert.match(app,/s\.topData\?\.rows/);
