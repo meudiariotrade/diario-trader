@@ -5,7 +5,7 @@ const ok = (v: any) => typeof v === 'number' && Number.isFinite(v);
 export const fmt = (v: any, d = 2) => (ok(v) ? v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) : 'n/d');
 export const pct = (v: any, d = 1) => (ok(v) ? fmt(v * 100, d) + '%' : 'n/d');
 const pp = (v: any, d = 2) => (ok(v) ? (v > 0 ? '+' : '') + fmt(v, d) + '%' : 'n/d');
-export const din = (v: any, moeda: string) => (ok(v) ? (moeda === 'USD' ? 'US$ ' : moeda === 'BRL' ? 'R$ ' : moeda + ' ') + fmt(v) : 'n/d');
+export const din = (v: any, moeda: string) => (ok(v) && v>0 ? (moeda === 'USD' ? 'US$ ' : moeda === 'BRL' ? 'R$ ' : moeda + ' ') + fmt(v) : 'não calculável');
 const grande = (v: any, moeda: string) => {
   if (!ok(v)) return 'n/d';
   const a = Math.abs(v), [d, s] = a >= 1e12 ? [1e12, ' tri'] : a >= 1e9 ? [1e9, ' bi'] : a >= 1e6 ? [1e6, ' mi'] : [1, ''];
@@ -35,7 +35,8 @@ export function valuation(f: any, premissas: any) {
     for (let i = 1; i <= P.anos; i++) { fl *= 1 + P.crescimento; pv += fl / (1 + P.wacc) ** i; }
     const term = (fl * (1 + P.perpetuidade)) / (P.wacc - P.perpetuidade) / (1 + P.wacc) ** P.anos, ev = pv + term,
       liq = (ok(f.divida_total) ? f.divida_total : 0) - (ok(f.caixa) ? f.caixa : 0), preco = (ev - liq) / f.acoes;
-    dcf = { preco, ev, divida_liquida: liq, fcl: f.fcl };
+    if(!ok(preco)||preco<=0)dcfMotivo='DCF não calculável: o patrimônio projetado por ação não é positivo. A dívida/fluxo/premissas precisam ser revisados, sem arredondar para um preço artificial.';
+    else dcf = { preco, ev, divida_liquida: liq, fcl: f.fcl };
   }
   const margem = (v: any) => (ok(v) && v > 0 ? (v - px) / v : null);
   return { moeda, preco: px, graham, bazin, div12, dcf, dcfMotivo, premissas: P, margens: { graham: margem(graham), bazin: margem(bazin), dcf: margem(dcf?.preco) }, financeiro };
