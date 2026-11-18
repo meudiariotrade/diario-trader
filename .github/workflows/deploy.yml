@@ -70,6 +70,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Gate Cloudflare antes do Pages (v762+)
+        run: |
+          versao="$(node -p 'require("./release.config.json").version')"
+          if [ "$versao" -ge 762 ]; then
+            echo "Conferindo candles públicos antes de publicar o PWA v$versao"
+            node scripts/verify-tecnico-edge.cjs
+          fi
       - uses: actions/configure-pages@v5
       - id: deployment
         uses: actions/deploy-pages@v4
