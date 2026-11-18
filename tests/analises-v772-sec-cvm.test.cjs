@@ -1,0 +1,38 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
+const src=x=>fs.readFileSync(x,'utf8');
+test('v772: SEC não encerra indevidamente quando só há CIK em cooldown',()=>{
+ const sql=src('supabase/migrations/20261118223000_analises_documentos_cadencia_v772.sql');
+ assert.match(sql,/quant_sec_docs_cadencia/);
+ assert.match(sql,/sec_proxima_tentativa_em/);
+ assert.match(sql,/sec_falhas_consecutivas/);
+ assert.match(sql,/IF NOT unresolved THEN/);
+ assert.match(sql,/17 6 \* \* \*/);
+ assert.match(sql,/cron\.schedule\('screeners-sec-submissions-v771'/);
+ assert.match(sql,/quant_sec_docs_retry_patch/);
+ assert.match(sql,/REVOKE ALL ON FUNCTION public\.quant_sec_docs_retry_patch/);
+ const fn=src('supabase/functions/screeners-sec-docs/index.ts');
+ assert.match(fn,/retryRows\.push/);
+ assert.match(fn,/quant_sec_docs_retry_patch/);
+ assert.match(fn,/quant_sec_docs_cadencia/);
+ assert.doesNotMatch(fn,/quant_sec_docs_parar_backfill/);
+});
+test('v772: vínculo CVM exige identidade exata, CNPJ e protocolo; GitHub faz coleta pesada',()=>{
+ const gen=require('../scripts/cvm-issuer-index.cjs');
+ assert.deepEqual(gen.csvSplit('"A;B";C'),['A;B','C']);
+ assert.equal(gen.cnpj('01.234.567/0001-89'),'01234567000189');
+ const edge=src('supabase/functions/screeners-cvm-docs/index.ts');
+ assert.match(edge,/const found=exact\|\|new Set/);
+ assert.match(edge,/found\.size!==1/);
+ assert.match(edge,/quant_cvm_documentos_bulk/);
+ assert.match(edge,/\/v1\/cvm-provas/);
+ const sql=src('supabase/migrations/20261118223000_analises_documentos_cadencia_v772.sql');
+ assert.match(sql,/x\.cnpj~'\^\[0-9\]\{14\}\$'/);
+ assert.match(sql,/GRANT EXECUTE ON FUNCTION public\.quant_cvm_documentos_bulk\(jsonb\) TO service_role/);
+ assert.doesNotMatch(sql,/\b(?:DROP|TRUNCATE|DELETE)\b/i);
+ const cf=src('cloudflare/diario-screeners/index.mjs');
+ assert.match(cf,/\/v1\/cvm-provas/);
+ assert.match(cf,/s-maxage=86400/);
+ const wf=src('.github/workflows/cvm-oficial.yml');
+ assert.match(wf,/node scripts\/cvm-issuer-index\.cjs/);
+});
