@@ -246,13 +246,66 @@ async function secColetar(limit:number){
   fundamentos_validos:patched,competencias_gravadas:validated,erros:errors.slice(0,8),final};
 }
 
+
+async function principaisUS(page=0,limit=140){
+ const urls=[
+  'https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv',
+  'https://raw.githubusercontent.com/yfiua/index-constituents/main/docs/constituents-nasdaq100.csv'];
+ const universe=new Set<string>(),sources:string[]=[];
+ for(const url of urls){
+  try{
+   const lines=(await fetchText(url)).replaceAll('\r','').split('\n');
+   if(!/^(Symbol|Ticker)/i.test(lines[0]||''))throw Error('Cabecalho CSV invalido');
+   for(const line of lines.slice(1)){
+    const ticker=clean(line.split(',')[0]?.replaceAll('"','')).replaceAll('/','.');
+    if(/^[A-Z]{1,5}(?:[.-][A-Z])?$/.test(ticker))universe.add(ticker);
+   }
+   sources.push('OK '+url.split('/').pop());
+  }catch(e){sources.push(String(e).slice(0,90))}
+ }
+ if(universe.size<200)throw Error('Fonte S&P/Nasdaq insuficiente: '+sources.join('; '));
+ // Cap/líquidez observados pelo scanner, sem inferir market cap pela inicial do ticker.
+ const columns=['market_cap_basic','average_volume_30d_calc','close'];
+ const marketCap=new Map<string,{ticker:string,cap:number,liq:number}>(),errors:string[]=[];
+ const all=[...universe];
+ for(let i=0;i<all.length;i+=40){
+  const chunk=all.slice(i,i+40),body={symbols:{tickers:chunk.flatMap(t=>['NASDAQ:'+t,'NYSE:'+t]),query:{types:[]}},columns};
+  try{
+   const response=await fetch('https://scanner.tradingview.com/america/scan',{
+    method:'POST',headers:{'Content-Type':'application/json',Origin:'https://www.tradingview.com',Referer:'https://www.tradingview.com/'},
+    body:JSON.stringify(body),signal:AbortSignal.timeout(14000)});
+   if(!response.ok)throw Error('Scanner cap HTTP '+response.status);
+   const result=await response.json();
+   for(const row of result.data||[]){
+    const ticker=clean(String(row.s||'').split(':').pop()),[capRaw,volumeRaw,priceRaw]=row.d||[];
+    const cap=numeric(capRaw),volume=numeric(volumeRaw),price=numeric(priceRaw);
+    if(!universe.has(ticker)||cap===null||cap<=0)continue;
+    const liq=volume!==null&&price!==null?volume*price:0,prev=marketCap.get(ticker);
+    if(!prev||cap>prev.cap)marketCap.set(ticker,{ticker,cap,liq});
+   }
+  }catch(e){errors.push(String(e).slice(0,110));if(errors.length>=3)break}
+  await wait(180);
+ }
+ if(marketCap.size<100)throw Error('Sem capitalizacao para priorizar: '+errors.slice(0,3).join('; '));
+ const sorted=[...marketCap.values()].sort((a,b)=>b.cap-a.cap||b.liq-a.liq||a.ticker.localeCompare(b.ticker));
+ const tickers=sorted.slice(page*limit,(page+1)*limit).map(x=>x.ticker);
+ const fundamental=await scanner('US',tickers,false);
+ const final=await finalized('US','principais_sp500_nasdaq100',fundamental.atualizados,errors.length,tickers);
+ return {universo:universe.size,com_market_cap:marketCap.size,pagina:page,selecionados:tickers.length,
+  prioridades:sorted.slice(0,20).map(x=>x.ticker),origens:sources,erros:errors.slice(0,4),fundamental,final};
+}
+
 Deno.serve(async req=>{
  if(req.method!=='POST')return ok({error:'Somente POST'},405);
  if(!await autorizado(req))return ok({error:'Nao autorizado'},401);
  try{
   const b=await req.json().catch(()=>({})),mode=b.acao||'catalogo';
   if(mode==='diagnostico')return ok({ok:true,modelo:scoreEngine.version,lote_maximo_precos:20,
-   metodos:['catalogo','fundamentos','precos','enriquecer','mapear_sec','sec'],sem_polling:true});
+   metodos:['catalogo','fundamentos','precos','enriquecer','principais','mapear_sec','sec'],sem_polling:true});
+  if(mode==='principais'){
+   const page=Math.max(0,Math.min(10,Math.floor(Number(b.pagina)||0))),limit=Math.max(20,Math.min(180,Math.floor(Number(b.limite)||140)));
+   return ok({acao:mode,mercado:'US',...await principaisUS(page,limit)});
+  }
   if(mode==='catalogo'){
    const resp:any={};
    for(const [m,fn] of (b.mercado==='US'?[['US',catalogoUS]]:b.mercado==='BR'?[['BR',catalogoBR]]:[['US',catalogoUS],['BR',catalogoBR]]) as const){
