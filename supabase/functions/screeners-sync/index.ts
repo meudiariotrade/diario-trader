@@ -250,7 +250,7 @@ function secValores(doc:any){
 }
 async function secColetar(limit:number,priority:'score'|'cap'='cap'){
  const pending=await rpc(priority==='score'?'quant_screeners_sec_top':'quant_screeners_sec_pendentes',{p_limit:Math.max(1,Math.min(16,limit))});
- const updates:any[]=[],dates:any[]=[],docs:any[]=[],errors:string[]=[];let http200=0,http403=0,http429=0;
+ const updates:any[]=[],dates:any[]=[],docs:any[]=[],errors:string[]=[],semPeriodo:any[]=[];let http200=0,http403=0,http429=0;
  for(const row of Array.isArray(pending)?pending:[]){
   if(!/^[0-9]{10}$/.test(String(row.cik||'')))continue;
   const url='https://data.sec.gov/api/xbrl/companyfacts/CIK'+row.cik+'.json';
@@ -261,7 +261,7 @@ async function secColetar(limit:number,priority:'score'|'cap'='cap'){
    if(!r.ok){errors.push(row.ticker+': SEC HTTP '+r.status);continue}
    const doc=await r.json();if(Number(doc?.cik)!==Number(row.cik))throw Error('CIK divergente');
    http200++;const period=secPeriodo(doc);
-   if(!period){errors.push(row.ticker+': 10-Q / 10-K sem periodo confirmado');continue}
+   if(!period){semPeriodo.push({ticker:row.ticker,cik:row.cik});errors.push(row.ticker+': 10-Q / 10-K sem periodo confirmado; pausa de 7 dias');continue}
    const metricas=secValores(doc);
    updates.push({ticker:row.ticker,cik:row.cik,sec_status:'verificado',sec_facts_at:period.end,sec_source_url:url,...metricas});
    dates.push({ticker:row.ticker,data_competencia_balanco:period.end});
@@ -280,13 +280,14 @@ async function secColetar(limit:number,priority:'score'|'cap'='cap'){
    }
    }catch(e){errors.push(row.ticker+': '+String(e).slice(0,90))}
  }
+ const suspensos=semPeriodo.length?Number(await rpc('quant_screeners_sec_tentativa_patch',{p_rows:semPeriodo}))||0:0;
  const patched=updates.length?Number(await rpc('quant_screeners_sec_patch',{p_rows:updates}))||0:0;
  const validated=dates.length?Number(await rpc('quant_screeners_competencia_patch',{p_market:'US',p_rows:dates}))||0:0;
  let oficiais=0;
   for(let i=0;i<docs.length;i+=12)oficiais+=Number(await rpc('quant_screeners_documento_patch',{p_market:'US',p_rows:docs.slice(i,i+12)}))||0;
   const final=dates.length?await finalized('US','sec_edgar_competencia',patched,errors.length,dates.map(x=>x.ticker)):null;
  return {selecionados:pending?.length||0,http_200:http200,http_403:http403,http_429:http429,
-  fundamentos_validos:patched,competencias_gravadas:validated,documentos_oficiais:oficiais,erros:errors.slice(0,8),final};
+  fundamentos_validos:patched,competencias_gravadas:validated,documentos_oficiais:oficiais,sem_periodo_pausados:suspensos,erros:errors.slice(0,8),final};
 }
 
 
@@ -347,9 +348,10 @@ async function cvmRange(url:string,range:string){
  if(size>5_000_000)throw Error('CVM faixa excede limite de transferencia');
  return new Uint8Array(await r.arrayBuffer());
 }
-async function cvmZipCsv(kind:'itr'|'dfp'){
- // ZIP de 2026: baixa só diretorio e CSV de metadados, sem arquivos de dezenas de MB.
- const year=new Date().getUTCFullYear(),file=kind+'_cia_aberta_'+year+'.csv';
+async function cvmZipCsv(kind:'itr'|'dfp',parte:'metadados'|'DRE_con'|'DRE_ind'='metadados'){
+ // HTTP Range: acessa somente o CSV selecionado, jamais extrai o ZIP completo.
+ const year=new Date().getUTCFullYear();
+ const file=kind+'_cia_aberta_'+(parte==='metadados'?'':parte+'_')+year+'.csv';
  const url='https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/'+kind.toUpperCase()+'/DADOS/'+kind+'_cia_aberta_'+year+'.zip';
  const tail=await cvmRange(url,'bytes=-65536'),tv=new DataView(tail.buffer,tail.byteOffset,tail.byteLength);
  let eocd=-1;for(let i=tail.length-22;i>=0;i--)if(tv.getUint32(i,true)===0x06054b50){eocd=i;break}
@@ -367,7 +369,7 @@ async function cvmZipCsv(kind:'itr'|'dfp'){
   }
   i+=46+nl+el+cl;
  }
- if(!entry||entry.compressed<=0||entry.compressed>4_000_000)throw Error('CVM ZIP: CSV resumo ausente');
+ if(!entry||entry.compressed<=0||entry.compressed>(parte==='metadados'?4_000_000:5_000_000))throw Error('CVM ZIP: CSV indisponivel ou acima de 5 MB comprimidos: '+file);
  const header=await cvmRange(url,'bytes='+entry.offset+'-'+(entry.offset+511));
  const hv=new DataView(header.buffer,header.byteOffset,header.byteLength);
  if(hv.getUint32(0,true)!==0x04034b50)throw Error('CVM ZIP: cabecalho local invalido');
@@ -376,10 +378,10 @@ async function cvmZipCsv(kind:'itr'|'dfp'){
  if(entry.method===0)return new TextDecoder().decode(compressed);
  if(entry.method!==8)throw Error('CVM ZIP: metodo sem suporte');
  const text=await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
- if(text.length>8_000_000)throw Error('CVM: CSV acima do limite');
+ if(text.length>(parte==='metadados'?8_000_000:20_000_000))throw Error('CVM: CSV acima do limite de memoria');
  return text;
 }
-function csvRows(raw:string){
+function csvRows(raw:string,cnpjs?:Set<string>){
  const lines=raw.replace(/^\uFEFF/,'').replaceAll('\r','').split('\n');
  const parse=(line:string)=>{
   const cols:string[]=[];let cell='',quoted=false;
@@ -388,13 +390,66 @@ function csvRows(raw:string){
    else if(line[i]===';'&&!quoted){cols.push(cell);cell=''}else cell+=line[i];
   }cols.push(cell);return cols;
  };
- const fields=parse(lines.shift()||'');
- return lines.filter(x=>x).slice(0,35000).map(line=>{
-  const values=parse(line),x:Record<string,string>={};
+ const fields=parse(lines.shift()||''),idx=fields.indexOf('CNPJ_CIA'),out:Record<string,string>[]=[];
+ if(cnpjs&&idx<0)throw Error('CVM: CSV sem CNPJ_CIA');
+ for(const line of lines){
+  if(!line)continue;
+  const values=parse(line);
+  if(cnpjs&&!cnpjs.has(String(values[idx]||'').replace(/\D/g,'')))continue;
+  const x:Record<string,string>={};
   for(let i=0;i<fields.length;i++)x[fields[i]]=values[i]||'';
-  return x;
- });
+  out.push(x);
+  if(out.length>=35000)break; // leitura bounded; nunca carrega linhas sem CNPJ de interesse
+ }
+ return out;
 }
+function cvmNumero(value:string){
+ const s=String(value||'').trim().replace(/\./g,'').replace(',','.');
+ if(!/^-?\d+(?:\.\d+)?$/.test(s))return null;
+ const n=Number(s);return Number.isFinite(n)?n:null;
+}
+async function cvmDreEvidencias(docs:Map<string,any>){
+ const contas=new Map<string,Record<string,any>>(),fontes:string[]=[],erros:string[]=[];
+ for(const kind of ['itr','dfp'] as const){
+  const alvo=new Set([...docs].filter(([,d])=>d.formulario===kind.toUpperCase()).map(([cnpj])=>cnpj));
+  if(!alvo.size)continue;
+  for(const parte of ['DRE_con','DRE_ind'] as const){
+   try{
+    const rows=csvRows(await cvmZipCsv(kind,parte),alvo);
+    for(const row of rows){
+     const cnpj=String(row.CNPJ_CIA||'').replace(/\D/g,''),doc=docs.get(cnpj);
+     if(!doc||doc.formulario!==kind.toUpperCase()||row.DT_REFER!==doc.competencia)continue;
+     if(doc.versao&&row.VERSAO&&String(row.VERSAO)!==String(doc.versao))continue;
+     const ordem=String(row.ORDEM_EXERC||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+     if(ordem!=='ULTIMO'||row.DT_FIM_EXERC!==doc.competencia)continue;
+     const chave=row.CD_CONTA==='3.01'?'receita_liquida_dre':row.CD_CONTA==='3.11'?'lucro_prejuizo_dre':null;
+     if(!chave)continue;
+     const valor=cvmNumero(row.VL_CONTA);
+     if(valor===null||!['REAL','BRL'].includes(String(row.MOEDA||'').toUpperCase()))continue;
+     const grupo=parte==='DRE_con'?'consolidado':'individual',anterior=contas.get(cnpj)||{};
+     if(anterior._grupo&&anterior._grupo!==grupo)continue;
+     anterior._grupo=grupo;
+     if(!anterior[chave]){
+      anterior[chave]={
+       tipo:'conta_contabil_oficial',fonte:'CVM',documento_id:doc.documento_id,
+       competencia:doc.competencia,publicado_em:doc.publicado_em,
+       arquivo:kind+'_cia_aberta_'+parte+'_'+new Date().getUTCFullYear()+'.csv',
+       demonstracao:'DRE '+grupo,codigo_conta:row.CD_CONTA,
+       valor_reportado:valor,escala_moeda:row.ESCALA_MOEDA||null,
+       periodo_inicio:row.DT_INI_EXERC||null,periodo_fim:row.DT_FIM_EXERC,
+       valida_indicador_ttm:false
+      };
+     }
+     contas.set(cnpj,anterior);
+    }
+    fontes.push(kind.toUpperCase()+'/'+parte+': '+rows.length+' linhas examinadas');
+   }catch(e){erros.push(kind.toUpperCase()+'/'+parte+': '+String(e).slice(0,120))}
+  }
+ }
+ for(const [cnpj,obj] of contas){delete obj._grupo;if(!Object.keys(obj).length)contas.delete(cnpj)}
+ return {contas,fontes,erros};
+}
+
 function normalizeName(name:string){
  return String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
   .replace(/\b(PFD|PREF|COMMON|SHARES|SHS|REGISTERED|S A|SA|S\.A\.|LTDA|NON|CUM|PERP|ADR|PREFERRED|DEPOSITARY)\b/g,' ')
@@ -433,7 +488,7 @@ async function cvmEnriquecer(){
       if(/^\d{1,18}$/.test(id)&&/^\d{4}-\d{2}-\d{2}$/.test(publicado)&&publicado>=date&&publicado<=now){
        docsByCnpj.set(cnpj,{competencia:date,formulario:kind.toUpperCase(),documento_id:id,
         documento_url:'https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/'+kind.toUpperCase()+'/DADOS/'+kind+'_cia_aberta_'+new Date().getUTCFullYear()+'.zip',
-        publicado_em:publicado,linhagem:{}});
+        publicado_em:publicado,versao:String(x.VERSAO||'').trim(),linhagem:{}});
       }else docsByCnpj.delete(cnpj);
      }
    }
@@ -467,15 +522,26 @@ async function cvmEnriquecer(){
   if(matches.size!==1){if(unknown.length<12)unknown.push(row.ticker);continue}
   const cnpj=[...matches][0],date=periods.get(cnpj);
    if(date)updates.push({ticker:row.ticker,data_competencia_balanco:date});
-   const doc=docsByCnpj.get(cnpj);if(doc)docUpdates.push({ticker:row.ticker,...doc});
+   const doc=docsByCnpj.get(cnpj);if(doc)docUpdates.push({ticker:row.ticker,cnpj,...doc});
  }
  let gravadas=0;for(let i=0;i<updates.length;i+=150)
   gravadas+=Number(await rpc('quant_screeners_competencia_patch',{p_market:'BR',p_rows:updates.slice(i,i+150)}))||0;
- let documentosComId=0;
-  for(let i=0;i<docUpdates.length;i+=12)documentosComId+=Number(await rpc('quant_screeners_documento_patch',{p_market:'BR',p_rows:docUpdates.slice(i,i+12)}))||0;
+ // Prova CVM por conta contábil: não equivale a homologar índices TTM do TradingView.
+ const cnpjsAlvo=new Set(docUpdates.map(x=>x.cnpj));
+ const docsAlvo=new Map([...docsByCnpj].filter(([cnpj])=>cnpjsAlvo.has(cnpj)));
+ const dre=await cvmDreEvidencias(docsAlvo);
+ let documentosComId=0,comLinhagem=0;
+ for(let i=0;i<docUpdates.length;i+=12){
+  const lote=docUpdates.slice(i,i+12).map(({cnpj,...d})=>{
+   const linhagem=dre.contas.get(cnpj)||{};
+   if(Object.keys(linhagem).length)comLinhagem++;
+   return {...d,linhagem};
+  });
+  documentosComId+=Number(await rpc('quant_screeners_documento_patch',{p_market:'BR',p_rows:lote}))||0;
+ }
   const final=gravadas?await finalized('BR','cvm_dfp_itr',gravadas,errors.length,updates.map(x=>x.ticker)):null;
  return {elegiveis_consultadas:targets.length,documentos:periods.size,correspondencias:updates.length,
-  competencias_gravadas:gravadas,documentos_oficiais:documentosComId,fontes,erros:errors,amostra_competencias:updates.slice(0,10),amostra_sem_cnpj:unknown,final};
+  competencias_gravadas:gravadas,documentos_oficiais:documentosComId,contas_dre_encontradas:comLinhagem,origens_dre:dre.fontes,fontes,erros:[...errors,...dre.erros],amostra_competencias:updates.slice(0,10),amostra_sem_cnpj:unknown,final};
 }
 
 Deno.serve(async req=>{
