@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "diario-screeners-quant",
+  "main": "index.mjs",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "vars": {
+    "SUPABASE_URL": "https://vdzwydizostutukppcsj.supabase.co"
+  }
+}
