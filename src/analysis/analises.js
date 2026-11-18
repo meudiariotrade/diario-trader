@@ -22,7 +22,12 @@
  function enter(){syncAccount();afterRender();if(screenTab!=='pesquisa'){if(screenTab.startsWith('tecnico-'))void w.DiarioTecnico?.enter(screenTab==='tecnico-br'?'br':'world');else w.DiarioScreeners?.load(screenTab);return;}if(loadedFor!==owner()&&!loading&&SESS&&!w.DIARIO_DEMO)void history()}
  d.addEventListener('input',e=>{if(e.target.id==='an-command'){input=e.target.value;context()?.set('analises.comando',input)}if(e.target.dataset.anAssumption){premissas[e.target.dataset.anAssumption]=e.target.value;context()?.set('analises.premissas',premissas)}});
  d.addEventListener('submit',e=>{if(e.target.id==='an-form'){e.preventDefault();if(!w.DIARIO_DEMO)void run()}});
- d.addEventListener('click',async e=>{const b=e.target.closest('[data-an-example],[data-an-history],[data-an-open],[data-an-resume],[data-an-answer],[data-an-next],[data-an-export],[data-an-cancel],[data-an-del],[data-an-clean]');if(!b)return;e.preventDefault();if(b.dataset.anDel&&!busy){const id=b.dataset.anDel;busy=true;update();try{await api({acao:'excluir',id});jobs=jobs.filter(x=>x.id!==id);if(current?.id===id)current=null;message='Análise excluída do histórico.'}catch(err){message=err.message}finally{busy=false;update()}return}if(b.hasAttribute('data-an-clean')&&!busy){busy=true;update();try{const r=await api({acao:'limpar_falhas'});jobs=jobs.filter(x=>!['falhou','cancelado'].includes(x.status));if(current&&['falhou','cancelado'].includes(current.status))current=null;message=(r.removidos||0)+' análise(s) com falha removida(s).'}catch(err){message=err.message}finally{busy=false;update()}return}if(b.dataset.anExample){input=b.dataset.anExample;context()?.set('analises.comando',input);update();d.getElementById('an-command')?.focus();return}if(b.hasAttribute('data-an-history'))return void history();if(b.dataset.anOpen){current=jobs.find(x=>x.id===b.dataset.anOpen);context()?.set('analises.trabalho',current?.id);update();return}if(b.hasAttribute('data-an-resume'))return void run(current?.id);if(b.hasAttribute('data-an-cancel')&&current&&!busy){busy=true;try{const r=await api({acao:'cancelar',id:current.id});remember(r.trabalho);message='Trabalho cancelado. O histórico foi preservado.'}catch(err){message=err.message}finally{busy=false;update()}return}if(b.dataset.anNext!==undefined){input='MODO PROVA '+b.dataset.anNext;current=null;return void run()}if(b.dataset.anAnswer!==undefined&&current&&!busy){busy=true;update();try{const r=await api({acao:'responder',id:current.id,resposta:Number(b.dataset.anAnswer)});remember({...current,resultado:{...current.resultado,avaliacao:r.avaliacao}});message='Resposta registrada.'}catch(err){message=err.message}finally{busy=false;update()}return}if(b.dataset.anExport){const data=current?.resultado;if(!data?.texto)return;if(b.dataset.anExport==='print'){w.print();return}const body=data.texto+'\n\nFontes:\n'+(data.fontes||[]).map(x=>x.titulo+' — '+x.url).join('\n')+'\n\nPesquisa: '+data.consultado_em+'\nID: '+current.id;const url=URL.createObjectURL(new Blob([body],{type:'text/markdown;charset=utf-8'})),a=d.createElement('a');a.href=url;a.download='Analise-'+current.id.slice(0,8)+'.md';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}});
+ d.addEventListener('click',async e=>{const b=e.target.closest('[data-an-example],[data-an-history],[data-an-open],[data-an-resume],[data-an-answer],[data-an-next],[data-an-export],[data-an-cancel],[data-an-del],[data-an-clean]');if(!b)return;e.preventDefault();if(b.dataset.anDel&&!busy){const id=b.dataset.anDel;busy=true;update();try{await api({acao:'excluir',id});jobs=jobs.filter(x=>x.id!==id);if(current?.id===id)current=null;message='Análise excluída do histórico.'}catch(err){message=err.message}finally{busy=false;update()}return}if(b.hasAttribute('data-an-clean')&&!busy){busy=true;update();try{const r=await api({acao:'limpar_falhas'});jobs=jobs.filter(x=>!['falhou','cancelado'].includes(x.status));if(current&&['falhou','cancelado'].includes(current.status))current=null;message=(r.removidos||0)+' análise(s) com falha removida(s).'}catch(err){message=err.message}finally{busy=false;update()}return}if(b.dataset.anExample){input=b.dataset.anExample;context()?.set('analises.comando',input);update();d.getElementById('an-command')?.focus();return}if(b.hasAttribute('data-an-history'))return void history();if(b.dataset.anOpen){current=jobs.find(x=>x.id===b.dataset.anOpen);context()?.set('analises.trabalho',current?.id);update();return}if(b.hasAttribute('data-an-resume'))return void run(current?.id);if(b.hasAttribute('data-an-cancel')&&current&&!busy){busy=true;try{const r=await api({acao:'cancelar',id:current.id});remember(r.trabalho);message='Trabalho cancelado. O histórico foi preservado.'}catch(err){message=err.message}finally{busy=false;update()}return}if(b.dataset.anNext!==undefined){input='MODO PROVA '+b.dataset.anNext;current=null;return void run()}if(b.dataset.anAnswer!==undefined&&current&&!busy){busy=true;update();try{const r=await api({acao:'responder',id:current.id,resposta:Number(b.dataset.anAnswer)});remember({...current,resultado:{...current.resultado,avaliacao:r.avaliacao}});message='Resposta registrada.'}catch(err){message=err.message}finally{busy=false;update()}return}if(b.dataset.anExport){const data=current?.resultado;if(!data?.texto)return;if(b.dataset.anExport==='print'){
+ const job=current,ticket=w.DiarioPDFiOS?.prepare();message='Preparando PDF…';update();
+ try{const r=await w.DiarioPesquisaPDF.share(job,ticket);message=r.cancelled?'Compartilhamento cancelado.':'PDF preparado para salvar ou compartilhar.'}
+ catch(e){ticket?.close?.();message='PDF indisponível: '+String(e.message||e).slice(0,130)}
+ update();return;
+}const body=data.texto+'\n\nFontes:\n'+(data.fontes||[]).map(x=>x.titulo+' — '+x.url).join('\n')+'\n\nPesquisa: '+data.consultado_em+'\nID: '+current.id;const url=URL.createObjectURL(new Blob([body],{type:'text/markdown;charset=utf-8'})),a=d.createElement('a');a.href=url;a.download='Analise-'+current.id.slice(0,8)+'.md';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}});
  d.addEventListener('click',function(ev){const b=ev.target.closest('[data-an-sub]');if(!b)return;ev.preventDefault();if(!['pesquisa','br','us','tecnico-br','tecnico-world'].includes(b.dataset.anSub)||screenTab===b.dataset.anSub)return;if(screenTab.startsWith('tecnico-'))w.DiarioTecnico?.leave();screenTab=b.dataset.anSub;update();if(screenTab.startsWith('tecnico-'))void w.DiarioTecnico?.enter(screenTab==='tecnico-br'?'br':'world');else if(screenTab!=='pesquisa')w.DiarioScreeners?.load(screenTab)});
  w.DiarioAnalises={view,enter,syncAccount,history,command:function(value){input=String(value||'');screenTab='pesquisa';context()?.set('analises.comando',input);update();d.getElementById('an-command')?.focus()}};
 })(window,document);
@@ -128,7 +133,7 @@ function topTen(m,s){
  '<h3>10 empresas com as maiores notas verificáveis</h3>'+
  '<p>Nota de 0 a 10 · qualidade, preço, retorno e momentum. Uma empresa por posição.</p></div>'+
  '<div class="scr-top-ten-buttons"><button type="button" data-scr-top-refresh="1" '+(s.topBusy?'disabled':'')+'>'+(s.topBusy?'Consultando…':top?'Atualizar Top 10':'Montar Top 10')+'</button>'+
- '<button type="button" data-scr-top-pdf="1" '+(!ranks?.entries?.length||s.topPdfBusy?'disabled':'')+'>'+(s.topPdfBusy?'Gerando…':'PDF do Top 10')+'</button></div></div>'+
+ '<button type="button" data-scr-top-pdf="1" '+(s.topPdfBusy?'disabled':'')+'>'+(s.topPdfBusy?'Gerando…':'PDF do Top 10')+'</button></div></div>'+
  (!top?'<p class="scr-top-ten-empty">'+(s.topBusy?'Conferindo as notas do catálogo…':
  E(s.topError||'O ranking será montado com os dados já carregados ou em uma única consulta, sem monitoramento contínuo.'))+'</p>':
  !ranks.entries.length?'<p class="scr-top-ten-empty">Ainda não há empresas com os critérios completos para um Top 10 confiável. '+
@@ -147,14 +152,14 @@ function topTen(m,s){
  '<p class="scr-hint">'+ranks.entries.length+' empresas elegíveis no Top 10; '+fmt(found,0)+' com score entre '+
  fmt(total,0)+' ativos catalogados no mercado. '+E(ranks.reason)+
  ' Mesmo as notas verificáveis não são recomendações de compra.</p>')+
- (s.topPdfMessage?'<p class="scr-hint" role="status">'+E(s.topPdfMessage)+'</p>':'')+
+ (top?._historical_cache?'<p class="scr-alert" role="alert">Modo Histórico / Desatualizado — PDF Top 10 homologado indisponível.</p>':'')+(s.topPdfMessage?'<p class="scr-hint" role="status">'+E(s.topPdfMessage)+'</p>':'')+
  '</section>';
 }
 function selections(m,s){
  const count=s.selected.length;
  return '<section class="scr-selections" aria-label="Seleção para relatório">'+
  '<div class="scr-selections-head"><div><b>Seleção para estudo</b><span>'+count+' / 10 ações · permanece ao mudar páginas e filtros</span></div>'+
- '<button type="button" data-scr-pdf="1" '+(!count||s.pdfBusy?'disabled':'')+'>'+(s.pdfBusy?'Preparando PDF…':'Gerar PDF / Compartilhar')+'</button></div>'+
+ '<button type="button" data-scr-pdf="1" '+(s.pdfBusy?'disabled':'')+'>'+(s.pdfBusy?'Preparando PDF…':'Gerar PDF / Compartilhar')+'</button></div>'+
  (count?'<div class="scr-chips">'+s.selected.map(t=>
   '<button type="button" data-scr-remove="'+E(t)+'" aria-label="Remover '+E(t)+'">'+E(t)+' <span aria-hidden="true">×</span></button>').join('')+'</div>':'')+
  '<p class="scr-hint">Escolha até 10 ativos. O PDF detalha score, contribuições, qualidade das fontes e o que precisa ser conferido. A comparação aprofundada na Pesquisa continua limitada a 2–4 ativos.</p>'+
@@ -188,7 +193,7 @@ root.outerHTML=w.DiarioAnalises.view();if(searchFocused){const target=d.querySel
 
 /* Cache v753: snapshot público por mercado, persistido em IndexedDB (sem dados de custódia).
  * Filtros são calculados somente quando o universo elegível completo foi obtido. */
-const GLOBAL_TTL=15*60000,snapshotMemory=new Map(),snapshotPending=new Map();
+const GLOBAL_TTL=15*60000,GLOBAL_OFFLINE_SLA=6*3600000,snapshotMemory=new Map(),snapshotPending=new Map();
 function openScreenersDB(){
  if(!('indexedDB' in w))return Promise.resolve(null);
  return new Promise(resolve=>{
@@ -243,7 +248,11 @@ async function getGlobalSnapshot(m,refresh=false){
     return data;
    }catch(e){lastError=e}
   }
-  if(stored?.data){snapshotMemory.set(market,stored);return stored.data}
+  if(stored?.data){
+    const age=Date.now()-Number(stored.when||0),historical=age>GLOBAL_OFFLINE_SLA;
+    const data={...stored.data,_historical_cache:historical,_offline_cache:true,_cache_age_ms:age};
+    snapshotMemory.set(market,{...stored,data});return data;
+   }
   throw lastError||Error('Snapshot temporariamente indisponivel');
  })().finally(()=>snapshotPending.delete(market));
  snapshotPending.set(market,task);return task;
@@ -380,19 +389,19 @@ d.addEventListener('click',async ev=>{
   s.detailTicker=b.dataset.scrTopDetail;render();
   d.getElementById('scr-detail')?.scrollIntoView({behavior:'smooth',block:'start'});return;
  }
- if(b.hasAttribute('data-scr-top-pdf')){
+ if(b.hasAttribute('data-scr-top-pdf')){if(s.topData?._historical_cache){s.topPdfMessage='Modo Histórico / Desatualizado — PDF Top 10 homologado indisponível.';render();return}
   const ranking=w.DiarioScreenersTop10?.generate(m,s.topData?.rows||[],w.DiarioScreenersInteligencia,s.topData?.medians);
   if(s.topPdfBusy)return;
-  if(!ranking?.entries.length){s.topPdfMessage='Não há empresas elegíveis para um Top 10 fundamentado; dados incompletos não recebem nota.';render();return}
-  s.topPdfBusy=true;s.topPdfMessage='';render();
+  if(!ranking?.entries.length){s.topPdfMessage='Nenhum ativo confirmado no cenário atual para gerar o PDF.';render();return}
+  const ticket=w.DiarioPDFiOS?.prepare();s.topPdfBusy=true;s.topPdfMessage='';render();
   try{
    const rows=ranking.entries.map(x=>x.row);
    const result=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows,{
     automatic:true,universe:s.topData?.total||0,scored:s.topData?.coverage?.com_score||0,
     method:ranking.reason,snapshot:s.topData?.last_update||null,medians:s.topData?.medians||null
-   });
+    },ticket);
    if(!result.cancelled)s.topPdfMessage='Relatório automático pronto: '+rows.length+' empresas, '+result.pages+' páginas.';
-  }catch(e){s.topPdfMessage='Não foi possível gerar o Top 10: '+String(e.message||e).slice(0,160)}
+  }catch(e){ticket?.close?.();s.topPdfMessage='Não foi possível gerar o Top 10: '+String(e.message||e).slice(0,160)}
   finally{s.topPdfBusy=false;render()}
   return;
  }
@@ -406,14 +415,14 @@ d.addEventListener('click',async ev=>{
  if(b.dataset.scrDetail){s.detailTicker=s.detailTicker===b.dataset.scrDetail?'':b.dataset.scrDetail;render();if(s.detailTicker)d.getElementById('scr-detail')?.scrollIntoView({behavior:'smooth',block:'start'});return}
  if(b.dataset.scrDetailClose){s.detailTicker='';render();return}
  if(b.hasAttribute('data-scr-pdf')){
-  if(s.pdfBusy||!s.selected.length)return;
+  if(s.pdfBusy)return;if(!s.selected.length){s.pdfError='Nenhum ativo confirmado no cenário atual para gerar o PDF.';render();return}
   const rows=s.selected.map(t=>s.selectedRows[t]).filter(Boolean);
   if(rows.length!==s.selected.length){s.pdfError='Um ou mais ativos não têm snapshot salvo. Selecione-os novamente no ranking.';render();return}
-  s.pdfBusy=true;s.pdfError='';render();
+  const ticket=w.DiarioPDFiOS?.prepare();s.pdfBusy=true;s.pdfError='';render();
   try{
-   const res=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows);
+   const res=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows,{},ticket);
    if(!res.cancelled){s.pdfError='PDF pronto com '+res.pages+' páginas. '+(res.downloaded?'Abra em Arquivos/Downloads para compartilhar.':'Compartilhamento iniciado.')}
-  }catch(e){s.pdfError='Não foi possível gerar o PDF: '+String(e.message||e).slice(0,170)}
+  }catch(e){ticket?.close?.();s.pdfError='Não foi possível gerar o PDF: '+String(e.message||e).slice(0,170)}
   finally{s.pdfBusy=false;render()}
   return;
  }
