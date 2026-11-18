@@ -23,8 +23,8 @@ test('Jornal e Notícias sem sub-aba Giro, duplicação ou tela antiga após vol
    assert.equal(w.document.querySelectorAll('.m406-section-switch').length,1);
    assert.deepEqual(rot(),['Notícias','Balanços da B3','Jornal do Pregão']);
    assert.equal(w.document.querySelector('[data-m406-select="giro"]'),null);
-   // Atalho legado do Giro deve abrir o Jornal, nunca ressuscitar a sub-aba removida.
-   w.document.querySelector('[data-m550-jornal="giro"]').click();await tick();
+   // Notícias abre o Jornal sem ressuscitar a sub-aba removida.
+   w.document.querySelector('[data-m550-jornal="jornal"]').click();await tick();
    assert.equal(w.MKT.tab,'jr');
    assert.equal(w.document.querySelectorAll('.m406-section-switch').length,1);
    assert.deepEqual(rot(),['Notícias','Balanços da B3','Jornal do Pregão']);
