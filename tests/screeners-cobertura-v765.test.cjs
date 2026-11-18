@@ -52,3 +52,11 @@ test('B3: nomes societários com S.A., Banco/BCO e preposições casam com CVM',
  assert.equal(fn('BCO BRADESCO S.A.'),fn('BANCO BRADESCO S.A.'));
  assert.equal(fn('DIRECIONAL ENGENHARIA S.A.'),'DIRECIONAL ENGENHARIA');
 });
+
+test('CVM: identifica emissor por protocolo previamente provado, sem aceitar ambiguidade',()=>{
+ assert.match(src,/docsPorProtocolo=new Map/);
+ assert.match(src,/original\.competencia===row\.data_competencia_balanco/);
+ assert.match(src,/original\.publicado_em===String\(row\.documento_balanco_publicado_em/);
+ assert.match(src,/docsPorProtocolo\.set\(id,null\)/);
+ assert.match(src,/protocoloValido\?new Set<string>\(\[original\.cnpj\]\)/);
+});
