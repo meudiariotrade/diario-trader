@@ -11,7 +11,7 @@ test('Cloudflare: candles criptográficos sob demanda, TTL intradiário e sem tr
  }};
  globalThis.fetch=async url=>{
   calls.push(String(url));
-  if(!String(url).startsWith('https://api.binance.com/api/v3/klines?'))
+  if(!String(url).startsWith('https://data-api.binance.vision/api/v3/klines?'))
    throw Error('Endpoint externo não autorizado: '+url);
   return Response.json(Array.from({length:300},(_,i)=>{
    const price=100+i*.1;
@@ -48,7 +48,7 @@ test('Cloudflare: quando Binance responde 451, Bybit Spot fornece barras reais o
  globalThis.caches={default:{match:async()=>null,put:async()=>{}}};
  globalThis.fetch=async url=>{
   calls.push(String(url));
-  if(String(url).startsWith('https://api.binance.com/'))return new Response('Unavailable for legal reasons',{status:451});
+  if(String(url).startsWith('https://api.binance.com/')||String(url).startsWith('https://data-api.binance.vision/'))return new Response('Unavailable for legal reasons',{status:451});
   if(String(url).startsWith('https://api.bybit.com/'))return Response.json({
    retCode:0,result:{list:Array.from({length:300},(_,i)=>{
     const price=200+(300-i)*.3;
@@ -66,6 +66,6 @@ test('Cloudflare: quando Binance responde 451, Bybit Spot fornece barras reais o
   assert.equal(body.candles.length,300);
   assert.ok(body.candles.every((c,i)=>i===0||c[0]>body.candles[i-1][0]));
   assert.ok(body.candles.every(c=>c[1]>0&&c[2]>=c[4]&&c[3]<=c[4]&&c[5]>0));
-  assert.equal(calls.length,2);
+  assert.equal(calls.length,3);
  }finally{globalThis.fetch=oldFetch;globalThis.caches=oldCaches}
 });
