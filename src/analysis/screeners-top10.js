@@ -16,11 +16,16 @@
    // Tickers fora desse corte continuam disponíveis no Screener completo.
    const liquidity=market==='BR'?Number(row.liquidez_diaria_brl):Number(row.avg_daily_volume_usd);
    const liquid=Number.isFinite(liquidity)&&liquidity>=(market==='BR'?1000000:2000000);
+   const isFinance=intelligence.financialSubtype?.(row)===true;
+   // Para bancos/seguradoras, EV/EBITDA, dívida/EBITDA e FCF genérico não têm o mesmo sentido.
+   // Ainda exige preço/múltiplos saneados e proveniência para receber o selo de ranking.
    const sane=(market==='BR'?
-      (row.pl==null||Number(row.pl)>0)&&(row.ev_ebitda==null||Number(row.ev_ebitda)>0)&&
-      (row.fcf_yield==null||Number(row.fcf_yield)>=0)&&(row.dividend_yield==null||Number(row.dividend_yield)<=20):
+      (row.pl==null||Number(row.pl)>0)&&(isFinance||(
+      (row.ev_ebitda==null||Number(row.ev_ebitda)>0)&&
+      (row.fcf_yield==null||Number(row.fcf_yield)>=0)))&&
+      (row.dividend_yield==null||Number(row.dividend_yield)<=20):
       (row.forward_pe==null||Number(row.forward_pe)>0)&&
-      (row.ev_fcf==null||Number(row.ev_fcf)>0)&&
+      (isFinance||row.ev_fcf==null||Number(row.ev_fcf)>0)&&
       (row.total_shareholder_yield==null||Number(row.total_shareholder_yield)<=20));
    // Nota só existe se quatro famílias e dados forem conferíveis.
    if(!liquid||!sane||d.modelScore===null||d.score===null||d.difference===null||d.difference>0.1||
