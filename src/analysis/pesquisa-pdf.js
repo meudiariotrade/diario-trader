@@ -2,49 +2,146 @@
 (function(w){'use strict';
 // Gráfico editorial de Pesquisa: usa exclusivamente os 90 candles já coletados pelo backend.
 // Preços teóricos são referências horizontais condicionais, NUNCA candles futuros ou previsões certas.
-function graficoPDF(asset){
- const c=asset?.candles;
- if(!Array.isArray(c)||c.length!==90||!c.every((x,i)=>Array.isArray(x)&&x.length>=6&&
-  x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[3]>0&&x[4]>0&&
-  x[2]>=Math.max(x[1],x[3],x[4])&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0&&
-  (!i||x[0]>c[i-1][0])))return null;
- if(!asset.fonte||!asset.as_of||Date.parse(asset.as_of)>Date.now()+3600000)return null;
- const canvas=document.createElement('canvas');canvas.width=1320;canvas.height=720;
+function candlesConferidos(asset){
+ const raw=asset?.candles;
+ if(!asset?.ajustado||!/^https:\/\/query1\.finance\.yahoo\.com\/v8\/finance\/chart\//.test(String(asset?.fonte||''))||
+  !Array.isArray(raw)||raw.length<250||!asset.as_of||!Number.isFinite(Date.parse(asset.as_of)))return null;
+ const c=raw.map(z=>Array.isArray(z)&&z.length===6?z.map(Number):null);
+ if(c.some((z,i)=>!z||z.some(x=>!Number.isFinite(x))||z[0]<=0||z[1]<=0||z[3]<=0||
+   z[4]<=0||z[2]<Math.max(z[1],z[3],z[4])||z[3]>Math.min(z[1],z[4])||z[5]<0||
+   (i>0&&z[0]<=c[i-1][0])))return null;
+ if(new Date(c.at(-1)[0]*1000).toISOString()!==asset.as_of)return null;
+ return c;
+}
+function pivotsConfirmados(rows){
+ const piv=[];
+ for(let i=2;i<rows.length-2;i++){
+  const H=[i-2,i-1,i+1,i+2].every(j=>rows[i][2]>rows[j][2]);
+  const L=[i-2,i-1,i+1,i+2].every(j=>rows[i][3]<rows[j][3]);
+  for(const [ok,dir,value] of [[H,1,rows[i][2]],[L,-1,rows[i][3]]]){
+   if(!ok)continue;
+   const last=piv.at(-1);
+   if(last?.dir===dir){
+    if(dir===1?value>last.price:value<last.price)piv[piv.length-1]={i,dir,price:value};
+   }else piv.push({i,dir,price:value});
+  }
+ }
+ return piv;
+}
+function graficoPDF(asset,kind){
+ const all=candlesConferidos(asset);if(!all)return null;
+ const c=all.slice(-90),indicator=asset.estudo||{},tech=indicator.tech||{};
+ const W=1320,H=720,L=78,R=150,T=78,B=65,bottom=kind==='trend'?470:H-B,below=500;
+ const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
  const ctx=canvas.getContext('2d');if(!ctx)return null;
- const W=canvas.width,H=canvas.height,L=85,R=135,T=85,B=70,plotRight=W-R,plotBottom=H-B;
+ const fg='#111827',muted='#64748B',grid='#E5E7EB',up='#089981',down='#F23645';
+ const text=(z,x,y,size=17,color=fg,align='left')=>{
+  ctx.fillStyle=color;ctx.textAlign=align;ctx.font=size+'px Arial';ctx.fillText(String(z),x,y);
+ };
+ const pos=z=>typeof z==='number'&&Number.isFinite(z)&&z>0;
+ const fPrice=z=>Number(z).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:z<1?4:2});
+ const title={trend:'TENDÊNCIA · MM20/50/200 E OBV',fibo:'FIBONACCING · PLANO CONDICIONAL',
+  elliott:'ELLIOTT · ZIGZAG E PIVÔS OBSERVADOS'}[kind];
+ if(!title)return null;
+ const side=tech.perna?.direcao==='baixa'?'baixa':'alta';
+ const anchors=tech.perna||{},high=Math.max(Number(anchors.de),Number(anchors.ate)),
+  low=Math.min(Number(anchors.de),Number(anchors.ate));
+ const fibValid=pos(high)&&pos(low)&&high>low&&['alta','baixa'].includes(anchors.direcao);
+ const amplitude=fibValid?high-low:null;
+ const retrace=f=>!fibValid?null:side==='alta'?high-amplitude*f:low+amplitude*f;
+ const expand=f=>!fibValid?null:side==='alta'?low+amplitude*f:high-amplitude*f;
+ const fibRetr=[0,.236,.382,.5,.618,.764,1].map(f=>({label:(f*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%',v:retrace(f)})).filter(p=>pos(p.v));
+ const extensions=[1.11,1.272,1.414,1.618].map(f=>({label:(f*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%',v:expand(f)})).filter(p=>pos(p.v));
+ const trigger=tech.elliott?.gatilho,stop=tech.invalidacao?.v;
+ const piv=pivotsConfirmados(c),confirmed=piv.slice(-6);
+ const extra=kind==='fibo'?[...fibRetr,...extensions,{v:trigger},{v:stop}].map(z=>z.v).filter(pos):
+  kind==='elliott'?[tech.invalidacao?.v].filter(pos):[];
+ const values=c.flatMap(v=>[v[2],v[3]]).concat(extra);
+ const pmin=Math.min(...values),pmax=Math.max(...values),pad=Math.max((pmax-pmin)*.06,pmax*.005,.00001);
+ const lo=Math.max(.000001,pmin-pad),hi=pmax+pad;
+ const y=v=>bottom-(v-lo)/(hi-lo)*(bottom-T),x=i=>L+(i+.5)*(W-R-L)/90;
+ const line=(points,color,width=2,dash=[])=>{
+  if(points.length<2)return;
+  ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);
+  for(let i=0;i<points.length;i++)i?ctx.lineTo(points[i][0],points[i][1]):ctx.moveTo(points[i][0],points[i][1]);
+  ctx.stroke();ctx.setLineDash([]);
+ };
+ const labelLine=(value,label,color,dashed=true)=>{
+  if(!pos(value))return;
+  const py=y(value);line([[L,py],[W-R,py]],color,2,dashed?[7,6]:[]);
+  text(label+' '+fPrice(value),W-R-8,Math.max(T+18,Math.min(bottom-8,py-6)),16,color,'right');
+ };
  ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,W,H);
- const text=(v,x,y,size=18,color='#111827',align='left')=>{ctx.fillStyle=color;ctx.textAlign=align;ctx.font=size+'px Arial';ctx.fillText(String(v),x,y)};
- text(String(asset.ticker).slice(0,12)+' · 90 candles diários · REFERÊNCIAS NÃO PREDITIVAS',L,38,22);
- text('Dados: '+String(asset.as_of).slice(0,10),plotRight,38,16,'#64748B','right');
- const positive=v=>typeof v==='number'&&Number.isFinite(v)&&v>0;
- const refs=[['Último fechamento',asset.referencias?.preco,'#1D4ED8'],
-  ['Graham',asset.referencias?.graham,'#9333EA'],['Bazin',asset.referencias?.bazin,'#D97706'],
-  ['DCF',asset.referencias?.dcf,'#089981']].filter(x=>positive(x[1]));
- const prices=c.flatMap(x=>[x[2],x[3]]).concat(refs.map(x=>x[1]));
- const minPrice=Math.min(...prices),maxPrice=Math.max(...prices),pad=Math.max((maxPrice-minPrice)*.06,maxPrice*.005);
- const low=Math.max(.000001,minPrice-pad),high=maxPrice+pad;
- const y=v=>plotBottom-(v-low)/(high-low)*(plotBottom-T),x=i=>L+(i+.5)*(plotRight-L)/c.length;
- const axis=v=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:v<1?4:2});
- for(let j=0;j<=5;j++){const value=low+(high-low)*j/5,py=y(value);
-  ctx.strokeStyle='#E5E7EB';ctx.lineWidth=1;ctx.setLineDash([]);
-  ctx.beginPath();ctx.moveTo(L,py);ctx.lineTo(plotRight,py);ctx.stroke();
-  text(axis(value),plotRight+12,py+5,16,'#64748B');
+ text(String(asset.ticker).slice(0,12)+' · 1D · '+title,L,34,23);
+ text('Último candle '+String(asset.as_of).slice(0,10),W-R,34,16,muted,'right');
+ for(let i=0;i<=5;i++){
+  const v=lo+(hi-lo)*i/5,yy=y(v);
+  line([[L,yy],[W-R,yy]],grid,1,[]);
+  text(fPrice(v),W-R+12,yy+5,16,muted);
  }
- for(let i=0;i<c.length;i++){const z=c[i],col=z[4]>=z[1]?'#089981':'#F23645',xx=x(i),bw=(plotRight-L)/c.length*.57;
-  ctx.fillStyle=col;ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.beginPath();
-  ctx.moveTo(xx,y(z[2]));ctx.lineTo(xx,y(z[3]));ctx.stroke();
-  ctx.fillRect(xx-bw/2,Math.min(y(z[1]),y(z[4])),Math.max(3,bw),Math.max(2,Math.abs(y(z[1])-y(z[4]))));
+ line([[W-R,T],[W-R,bottom]],'#94A3B8',1);
+ for(let i=0;i<c.length;i++){
+  const z=c[i],color=z[4]>=z[1]?up:down,bw=Math.max(3,(W-R-L)/90*.54);
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=1.8;
+  ctx.beginPath();ctx.moveTo(x(i),y(z[2]));ctx.lineTo(x(i),y(z[3]));ctx.stroke();
+  ctx.fillRect(x(i)-bw/2,Math.min(y(z[1]),y(z[4])),bw,Math.max(2,Math.abs(y(z[1])-y(z[4]))));
  }
- for(const [name,price,color] of refs){
-  const yy=y(price);ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash([10,8]);
-  ctx.beginPath();ctx.moveTo(L,yy);ctx.lineTo(plotRight,yy);ctx.stroke();ctx.setLineDash([]);
-  text(name+' '+axis(price),plotRight-8,Math.max(T+14,Math.min(plotBottom-6,yy-6)),17,color,'right');
+ if(kind==='trend'){
+  for(const [n,col] of [[20,'#2563EB'],[50,'#EA580C'],[200,'#9333EA']]){
+   const points=[];
+   for(let i=all.length-90;i<all.length;i++){
+    let sum=0;for(let j=i-n+1;j<=i;j++)sum+=all[j][4];
+    points.push([x(i-(all.length-90)),y(sum/n)]);
+   }
+   line(points,col,3);text('MM'+n,L+(n===20?0:n===50?205:410),T-24,18,col);
+  }
+  const obv=[0];
+  for(let i=1;i<all.length;i++)obv.push(obv.at(-1)+Math.sign(all[i][4]-all[i-1][4])*all[i][5]);
+  const series=obv.slice(-90),min=Math.min(...series),max=Math.max(...series),scale=Math.max(1,max-min);
+  const oy=v=>H-B-(v-min+scale*.1)/(scale*1.2)*(H-B-below);
+  line([[L,below],[W-R,below]],grid,1);
+  text('OBV · rompimento somente com último valor acima/abaixo do intervalo anterior',L,below+22,16,muted);
+  const prior=series.slice(-21,-1),hiPrior=Math.max(...prior),loPrior=Math.min(...prior);
+  line(series.map((v,i)=>[x(i),oy(v)]),'#475569',3);
+  const level=side==='alta'?hiPrior:loPrior;
+  const broken=side==='alta'?series.at(-1)>hiPrior:series.at(-1)<loPrior;
+  line([[L,oy(level)],[W-R,oy(level)]],broken?up:down,2,[7,5]);
+  text('OBV '+(broken?'ROMPIDO':'não confirmado'),W-R,below+22,16,broken?up:down,'right');
  }
- for(const i of [0,30,60,89]){
-  const date=new Date(c[i][0]*1000).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-  text(date,x(i),H-24,17,'#64748B','center');
+ if(kind==='fibo'){
+  if(fibValid){
+   const z1=retrace(.5),z2=retrace(.618),yy=Math.min(y(z1),y(z2)),hh=Math.abs(y(z1)-y(z2));
+   ctx.fillStyle='rgba(8,153,129,0.13)';ctx.fillRect(L,yy,W-R-L,hh);
+   text('ZONA 50–61,8% · DEFESA CONDICIONAL',L+8,yy+20,16,up);
+   for(const v of fibRetr)labelLine(v.v,v.label,'#64748B',false);
+   for(const v of extensions)labelLine(v.v,'Exp '+v.label,'#089981',true);
+   if(pos(trigger))labelLine(trigger,'Gatilho','#1D4ED8');
+   if(pos(stop))labelLine(stop,'Stop / invalidação',down);
+  }else text('Sem pivô confirmado: retrações e alvos não calculáveis',L,T+24,19,down);
  }
- return canvas.toDataURL('image/png');
+ if(kind==='elliott'){
+  if(confirmed.length>=4){
+   line(confirmed.map(v=>[x(v.i),y(v.price)]),'#1D4ED8',3);
+   confirmed.forEach((v,i)=>{
+    ctx.fillStyle='#1D4ED8';ctx.beginPath();ctx.arc(x(v.i),y(v.price),5,0,Math.PI*2);ctx.fill();
+    text('P'+(i+1),x(v.i)+9,y(v.price)-9,18,'#1D4ED8');
+   });
+   if(pos(tech.invalidacao?.v))labelLine(tech.invalidacao.v,'Invalidação estrutural',down);
+  }else text('Pivôs insuficientes para hipótese de ondas 1–5 / A–C',L,T+24,19,down);
+ }
+ for(const i of [0,30,60,89])
+  text(new Date(c[i][0]*1000).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),
+   x(i),H-24,16,muted,'center');
+ const safe=v=>pos(v)?fPrice(v):'não calculável';
+ const explanation=kind==='trend'?
+  'MM20/50/200 calculadas sobre '+all.length+' candles ajustados. OBV acumulado do volume real; rompimento é comparado com as 20 barras anteriores. O alinhamento das médias e a confirmação devem ser conferidos no relatório técnico.':
+  kind==='fibo'?'Retrações ancoradas na perna documentada de '+safe(anchors.de)+' a '+safe(anchors.ate)+
+   '. Gatilho '+safe(trigger)+'; stop '+safe(stop)+
+   '; expansões 111/127,2/141,4/161,8% somente quando positivas. Padrão 4-Barras e CISD dependem de confirmação específica, não inferida pelo desenho.':
+   'Pivôs ZigZag confirmados com duas barras à direita. A hipótese Elliott é experimental: '+
+   String(tech.elliott?.fase||'sem identificação de onda')+
+   '. Invalidação '+safe(tech.invalidacao?.v)+'. Rótulos P1…P6 são pivôs observados, não contagem certificada.';
+ return {png:canvas.toDataURL('image/png'),explanation,title};
 }
 async function build(job){
  const r=job?.resultado;
@@ -77,18 +174,28 @@ async function build(job){
  }
  // Gráficos só existem quando o serviço forneceu séries verificáveis; sem gráfico fabricado.
  const charts=Array.isArray(r.graficos_pdf)?r.graficos_pdf.slice(0,5):[];
+ let chartCount=0;
  for(const chart of charts){
-  const png=graficoPDF(chart);if(!png)continue;
-  const picture=await doc.embedPng(png);
-  add();
-  line('EVOLUÇÃO DO PREÇO E REFERÊNCIAS · '+String(chart.ticker||''),true);
-  const width=W-2*M,height=width*720/1320;
-  page.drawImage(picture,{x:M,y:y-height-6,width,height});
-  y-=height+23;
-  line('Candles observados: '+String(chart.fonte||'Fonte não confirmada'));
-  line('Referências Graham/Bazin/DCF exibidas somente quando maiores que zero.');
-  line('Linhas horizontais são estudos condicionais, nunca trajetória ou cotação futura.');
-  if(chart.referencias?.dcf_motivo)line('DCF: '+String(chart.referencias.dcf_motivo).slice(0,210));
+  if(!candlesConferidos(chart))continue;
+  for(const kind of ['trend','fibo','elliott']){
+   const visual=graficoPDF(chart,kind);if(!visual)continue;
+   const picture=await doc.embedPng(visual.png);
+   add();chartCount++;
+   line(String(chart.ticker||'')+' · '+visual.title,true);
+   const width=W-2*M,height=width*720/1320;
+   page.drawImage(picture,{x:M,y:y-height-6,width,height});
+   y-=height+26;
+   line('LEITURA OBJETIVA DO ESTUDO',true);
+   line(visual.explanation);
+   line('Fonte OHLCV: '+String(chart.fonte||'não confirmada'));
+   line('Ajuste corporativo: '+String(chart.ajuste||'não confirmado'));
+   line('Última barra: '+String(chart.as_of||'não confirmada'));
+  }
+ }
+ if(!chartCount){add();line('GRÁFICOS NÃO DISPONÍVEIS PARA ESTE ESTUDO',true);
+  line('Esta pesquisa não contém 250+ candles ajustados, com fonte e período comprovados.');
+  line('Não foram desenhados candles, médias, alvos ou ondas artificiais.');
+  line('Para anexar gráficos, gere uma nova pesquisa com histórico diário confirmado.');
  }
  line('FONTES CONSULTADAS',true);
  for(const source of (r.fontes||[]).slice(0,24))line(String(source.titulo||'Fonte')+' — '+String(source.url||''));
