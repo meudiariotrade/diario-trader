@@ -216,29 +216,35 @@ async function getGlobalSnapshot(m,refresh=false){
   const stored=local||await snapshotDB(market);
   if(!refresh&&stored&&Date.now()-stored.when<GLOBAL_TTL){snapshotMemory.set(market,stored);return stored.data}
   const c=cfg();if(!c)throw Error('Configuração do Screener indisponível');
-  // Worker opcional: habilitar apenas depois de publicado e testado; nunca enviar JWT ou carteira.
-  const edge=String(w.DIARIO_SCREENERS_EDGE_URL||'').trim();
+  // Snapshot publico via Cloudflare (v755), sem token, identidade ou dados de carteira.
+  // Em caso de falha da borda, consultar imediatamente a origem ja utilizada na v754.
+  const edge=String(w.DIARIO_SCREENERS_EDGE_URL||
+   'https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/screeners').trim();
   const path='?market='+market+'&snapshot=1&universe=1';
-  const url=edge&&/^https:\/\//.test(edge)?edge.replace(/\/$/,'')+path:
-   c.url+'/functions/v1/screeners-quant'+path;
-  const headers={...(edge?{}:{apikey:c.key}),...(stored?.etag?{'If-None-Match':stored.etag}:{})};
-  try{
-   const response=await fetch(url,{method:'GET',headers,signal:AbortSignal.timeout(15000)});
-   if(response.status===304&&stored?.data){
-    const record={...stored,when:Date.now()};snapshotMemory.set(market,record);
-    void snapshotDB(market,record);return record.data;
-   }
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok||!data.ok)throw Error(data.error||'Snapshot HTTP '+response.status);
-   if(data.market&&data.market!==market)throw Error('Mercado incorreto no snapshot');
-   const record={market,when:Date.now(),etag:response.headers.get('ETag')||'',
-    updatedAt:data.last_update||null,data};
-   snapshotMemory.set(market,record);void snapshotDB(market,record);
-   return data;
-  }catch(e){
-   if(stored?.data){snapshotMemory.set(market,stored);return stored.data}
-   throw e;
+  const origin=c.url+'/functions/v1/screeners-quant'+path;
+  const endpoints=/^https:\/\//.test(edge)?[{url:edge.replace(/\/$/,'')+path,edge:true},{url:origin,edge:false}]:
+   [{url:origin,edge:false}];
+  let lastError=null;
+  for(const endpoint of endpoints){
+   const headers={...(endpoint.edge?{}:{apikey:c.key}),...(stored?.etag?{'If-None-Match':stored.etag}:{})};
+   try{
+    const response=await fetch(endpoint.url,{method:'GET',headers,
+     signal:AbortSignal.timeout(endpoint.edge?7000:15000)});
+    if(response.status===304&&stored?.data){
+     const record={...stored,when:Date.now()};snapshotMemory.set(market,record);
+     void snapshotDB(market,record);return record.data;
+    }
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)throw Error(data.error||'Snapshot HTTP '+response.status);
+    if(data.market&&data.market!==market)throw Error('Mercado incorreto no snapshot');
+    const record={market,when:Date.now(),etag:response.headers.get('ETag')||'',
+     updatedAt:data.last_update||null,data};
+    snapshotMemory.set(market,record);void snapshotDB(market,record);
+    return data;
+   }catch(e){lastError=e}
   }
+  if(stored?.data){snapshotMemory.set(market,stored);return stored.data}
+  throw lastError||Error('Snapshot temporariamente indisponivel');
  })().finally(()=>snapshotPending.delete(market));
  snapshotPending.set(market,task);return task;
 }
