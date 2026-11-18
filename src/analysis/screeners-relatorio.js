@@ -133,15 +133,9 @@ async function build(m,rows,opts={}){
  cover(L,m,rows,studies,opts);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length,opts));methodology(L,m,opts);
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:(opts.automatic?'Top10-Quantitativo-':'Dossie-')+m+'-'+new Date().toISOString().slice(0,10)+'-'+rows.length+'-acoes.pdf',pages:doc.getPageCount()};
 }
-async function share(m,rows,opts={}){
- const pdf=await build(m,rows,opts);
- if(navigator.canShare&&navigator.share&&typeof File==='function'){
-  const file=new File([pdf.blob],pdf.name,{type:'application/pdf'});
-  if(navigator.canShare({files:[file]}))try{await navigator.share({title:'Dossiê de ações — Diário de Trader',files:[file]});return {shared:true,pages:pdf.pages}}catch(e){if(e?.name==='AbortError')return {cancelled:true}}
- }
- const url=URL.createObjectURL(pdf.blob),a=document.createElement('a');
- a.href=url;a.download=pdf.name;document.body.appendChild(a);a.click();a.remove();
- setTimeout(()=>URL.revokeObjectURL(url),60000);return {downloaded:true,pages:pdf.pages};
+async function share(m,rows,opts={},ticket=null){
+ try{return await w.DiarioPDFiOS.deliver(await build(m,rows,opts),'Dossiê de ações — Diário de Trader',ticket)}
+ catch(e){ticket?.close?.();throw e}
 }
 w.DiarioScreenersRelatorio={build,share};
 })(window);

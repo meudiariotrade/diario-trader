@@ -113,14 +113,31 @@ async function build(m,rows,tf='1d'){
  doc.setTitle('Dossiê Técnico '+region+' · Diário de Trader');doc.setAuthor('Diário de Trader');
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Dossie-Tecnico-'+(m==='br'?'Brasil':'EUA-Cripto')+'-'+new Date().toISOString().slice(0,10)+'.pdf',pages:doc.getPageCount()};
 }
-async function share(m,rows,tf){
- const pdf=await build(m,rows,tf);
- if(typeof File==='function'&&navigator.canShare&&navigator.share){
-  const file=new File([pdf.blob],pdf.name,{type:'application/pdf'});
-  if(navigator.canShare({files:[file]}))try{await navigator.share({title:'Dossiê técnico',files:[file]});return {shared:true,pages:pdf.pages}}catch(e){if(e?.name==='AbortError')return {cancelled:true}}
- }
- const url=URL.createObjectURL(pdf.blob),link=document.createElement('a');link.href=url;link.download=pdf.name;document.body.appendChild(link);link.click();link.remove();
- setTimeout(()=>URL.revokeObjectURL(url),60000);return {downloaded:true,pages:pdf.pages};
+// Reservar a janela durante o clique evita bloqueio do Safari após tarefas assíncronas.
+function prepare(){
+ const ios=/iPad|iPhone|iPod/.test(navigator.userAgent||'')||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ if(!ios)return null;
+ try{const win=w.open('','_blank');if(win){win.document.title='Preparando PDF';win.document.body.textContent='Preparando PDF…'}return win}catch{return null}
 }
+async function deliver(pdf,title,ticket=null){
+ if(typeof File==='function'&&navigator.canShare&&navigator.share){
+  try{const file=new File([pdf.blob],pdf.name,{type:'application/pdf'});
+   if(navigator.canShare({files:[file]})){
+    try{await navigator.share({title,files:[file]});ticket?.close?.();return {shared:true,pages:pdf.pages}}
+    catch(e){if(e?.name==='AbortError'){ticket?.close?.();return {cancelled:true}}}
+   }
+  }catch{/* Safari pode negar compartilhar sem ativação temporária. */}
+ }
+ const url=URL.createObjectURL(pdf.blob);let preview=false;
+ if(ticket&&!ticket.closed)try{ticket.location.replace(url);preview=true}catch{}
+ if(!preview){const a=document.createElement('a');a.href=url;a.download=pdf.name;document.body.appendChild(a);a.click();a.remove()}
+ setTimeout(()=>URL.revokeObjectURL(url),300000);
+ return {preview,downloaded:!preview,pages:pdf.pages};
+}
+async function share(m,rows,tf,ticket=null){
+ try{return await deliver(await build(m,rows,tf),'Dossiê Técnico — Diário de Trader',ticket)}
+ catch(e){ticket?.close?.();throw e}
+}
+w.DiarioPDFiOS={prepare,deliver};
 w.DiarioTecnicoPDF={build,share};
 })(window);
