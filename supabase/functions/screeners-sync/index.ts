@@ -388,9 +388,8 @@ async function cvmEnriquecer(){
  if(!periods.size)throw Error('CVM DFP/ITR sem periodos confirmados: '+errors.join('; '));
  let targets:any[]=[];
  try{
-  const res=await fetch(SB+'/rest/v1/acoes?select=ticker,empresa&ativo_elegivel=eq.true&limit=400',
-   {headers:{...HEAD,'Accept-Profile':'quant_br'},signal:AbortSignal.timeout(12000)});
-  if(res.ok)targets=await res.json();
+  const universe=await rpc('quant_screeners_universo_publico',{p_market:'BR'});
+  if(universe?.complete&&Array.isArray(universe.rows))targets=universe.rows;
  }catch{}
  if(!targets.length){
   const global=await rpc('quant_v2_snapshot_read',{p_market:'BR'});
@@ -413,7 +412,7 @@ async function cvmEnriquecer(){
   gravadas+=Number(await rpc('quant_screeners_competencia_patch',{p_market:'BR',p_rows:updates.slice(i,i+150)}))||0;
  const final=gravadas?await finalized('BR','cvm_dfp_itr',gravadas,errors.length,updates.map(x=>x.ticker)):null;
  return {elegiveis_consultadas:targets.length,documentos:periods.size,correspondencias:updates.length,
-  competencias_gravadas:gravadas,fontes,erros:errors,amostra_sem_cnpj:unknown,final};
+  competencias_gravadas:gravadas,fontes,erros:errors,amostra_competencias:updates.slice(0,10),amostra_sem_cnpj:unknown,final};
 }
 
 Deno.serve(async req=>{
