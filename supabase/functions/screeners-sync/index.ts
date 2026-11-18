@@ -422,7 +422,7 @@ async function cvmDreEvidencias(docs:Map<string,any>){
     for(const row of rows){
      const cnpj=String(row.CNPJ_CIA||'').replace(/\D/g,''),doc=docs.get(cnpj);
      if(!doc||doc.formulario!==kind.toUpperCase()||row.DT_REFER!==doc.competencia)continue;
-     if(doc.versao&&row.VERSAO&&String(row.VERSAO)!==String(doc.versao))continue;
+     if(!doc.versao||!row.VERSAO||String(row.VERSAO)!==String(doc.versao))continue;
      const ordem=String(row.ORDEM_EXERC||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
      if(ordem!=='ULTIMO'||row.DT_FIM_EXERC!==doc.competencia)continue;
      const chave=row.CD_CONTA==='3.01'?'receita_liquida_dre':row.CD_CONTA==='3.11'?'lucro_prejuizo_dre':null;
