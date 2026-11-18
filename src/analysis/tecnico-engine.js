@@ -5,7 +5,7 @@
  else root.DiarioTecnicoEngine=api;
 })(typeof self!=='undefined'?self:globalThis,function(){
  'use strict';
- const VERSION='tecnico-771.1';
+ const VERSION='tecnico-774.1';
  const FIB_RET=[0,.236,.382,.5,.618,.764,1],FIB_EXT=[1.11,1.272,1.414,1.618];
  const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
  const mean=v=>v.length?v.reduce((a,b)=>a+b,0)/v.length:null;
@@ -113,9 +113,10 @@
  function passTemplate(c,dir,rs,vcpPass){
   if(c.length<252)return {score:null,checks:[],missing:['Histórico de 252 barras diárias']};
   const p=c.at(-1).c,s50=sma(c,50),s150=sma(c,150),s200=sma(c,200),old=sma(c,200,c.length-21),hi=Math.max(...c.slice(-252).map(x=>x.h)),lo=Math.min(...c.slice(-252).map(x=>x.l));
-  const checks=dir===1?[p>s50,s50>s150,s150>s200,p>s200,s200>old,p>=lo*1.3,p>=hi*.75,rs!==null&&rs>=70&&vcpPass]:
-    [p<s50,s50<s150,s150<s200,p<s200,s200<old,p<=hi/1.3,p<=lo*1.25,rs!==null&&rs<=30&&vcpPass];
-  return {score:checks.filter(Boolean).length,checks,missing:rs===null?['RS Rating cross-sectional não validado']:[]};
+  const checks=dir===1?[p>s50,s50>s150,s150>s200,p>s200,s200>old,p>=lo*1.3,p>=hi*.75,rs!==null&&rs>=70]:
+    [p<s50,s50<s150,s150<s200,p<s200,s200<old,p<=hi/1.3,p<=lo*1.25,rs!==null&&rs<=30];
+  return {score:checks.filter(Boolean).length,checks,missing:rs===null?['RS Rating cross-sectional não validado']:[],
+   vcpConfirmado:vcpPass===true,nota:'Trend Template 8/8 independente do VCP; RS é percentil proxy do universo fixo'};
  }
  // Cenário de custos exclusivamente ilustrativo. Sem book/Profit, NÃO é spread executável.
  // Valores por ida+volta em bps; não simula impostos nem impacto real.
@@ -160,7 +161,7 @@
     if(!x.valid||!x.plan)continue;
     const signals={
      pisani:!!(x.pisani?.breakout&&x.metrics?.obvConfirmed&&x.pisani?.pullback),
-     minervini:historicRs!==null&&x.minervini?.score===8,
+     minervini:historicRs!==null&&x.minervini?.score===8&&x.vcp===true,
      fibonaccing:!!(x.turn?.confirmed&&x.turn?.cisd&&x.fib?.zone),
      elliott:!!(x.elliott?.valid&&x.metrics?.obvConfirmed)
     };
@@ -189,20 +190,36 @@
     }
    }
   }
+  // Walk-forward fora da amostra: metade final das decisões, stop-first e custos ilustrativos.
+  // 5 trades não constituem amostra robusta. Exigir 30 trades totais + 10 posteriores à divisão.
+  const splitTimestamp=c[Math.floor((start+last)/2)]?.t||null;
+  const wilson=(wins,n)=>{
+   if(n<30)return null;
+   const z=1.96,p=wins/n,den=1+z*z/n,center=(p+z*z/(2*n))/den,
+    error=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/den;
+   return {lower:round(Math.max(0,(center-error)*100),2),upper:round(Math.min(100,(center+error)*100),2)};
+  };
   const stats={};
   for(const key of setups){
    const a=trades[key],n=a.length,wins=a.filter(x=>x.r>0),losses=a.filter(x=>x.r<0);
+   const holdout=splitTimestamp?a.filter(x=>x.t>=splitTimestamp):[];
+   const holdoutWins=holdout.filter(x=>x.r>0).length;
    const meanWin=wins.length?mean(wins.map(x=>x.r)):null;
    const meanLoss=losses.length?Math.abs(mean(losses.map(x=>x.r))):null;
-   const adequate=n>=5;
-   stats[key]={status:!adequate?'amostra insuficiente':opts.adjustedVerified===true?'exploratório (sem validação externa)':'ajuste corporativo não comprovado',
-    trades:n,winRate:adequate?round(wins.length/n*100,2):null,
-    payoff:adequate&&meanWin!==null&&meanLoss>0?round(meanWin/meanLoss,3):null,
-    expectancyR:adequate?round(mean(a.map(x=>x.r)),4):null,
+   const enough=n>=30&&holdout.length>=10,verified=opts.adjustedVerified===true;
+   stats[key]={status:!enough?'amostra insuficiente':verified?'exploratório (custos não verificados)':'ajuste corporativo não comprovado',
+    trades:n,winRate:enough?round(wins.length/n*100,2):null,
+    payoff:enough&&meanWin!==null&&meanLoss>0?round(meanWin/meanLoss,3):null,
+    expectancyR:enough?round(mean(a.map(x=>x.r)),4):null,
+    confidence95:enough?wilson(wins.length,n):null,
+    outOfSample:{trades:holdout.length,winRate:holdout.length>=10?round(holdoutWins/holdout.length*100,2):null,
+     expectancyR:holdout.length>=10?round(mean(holdout.map(x=>x.r)),4):null},
     reason:key==='minervini'&&!Object.keys(rsHistory).length?'RS histórico ausente; não reutilizar RS atual (look-ahead)':
-     !adequate?'Menos de 5 trades completos':opts.adjustedVerified!==true?'Série sem ajuste corporativo confirmado':'Backtest exploratório com até 250 decisões e aquecimento anterior'};
+     !enough?'Exigir ao menos 30 trades e 10 fora da amostra':
+      !verified?'Histórico sem ajuste corporativo certificado; não homologar':'Resultados exploratórios; custos ainda estimados'};
   }
-  return {method:'walk-forward-next-open-v1',bars:c.length,historyDecisions:Math.max(0,last-start+1),
+  return {method:'walk-forward-next-open-v1',statsModel:'validation-v774',bars:c.length,
+   historyDecisions:Math.max(0,last-start+1),sampleSplitAt:splitTimestamp,
    costs,holdBars:hold,setups:stats};
  }
  function one(c0,dir=1,opts={}){
