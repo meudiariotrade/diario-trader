@@ -275,3 +275,50 @@ html body #app nav.an-subs > button[aria-selected="true"] {
  #app[data-tela="analises"] .scr-top-ten-row button{grid-column:2 / 4;min-height:40px}
  #app[data-tela="analises"] .scr-top-ten-grade b{font-size:20px}
 }
+
+
+/* v762 — Técnico Brasil / EUA & Cripto: densidade flat, sem sobreposição de outras abas. */
+#an-root [data-tech-root]{--tech-bg:#0a0c10;--tech-card:#11141b;--tech-hover:#181c26;--tech-rule:#1e232e;--tech-gold:#d4a017;color:#eef0f3;font-variant-numeric:tabular-nums;min-width:0}
+#an-root .tech-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;align-items:end;padding:0 0 17px;border-bottom:1px solid var(--tech-rule)}
+#an-root .tech-controls label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:11px;font-weight:650;color:#abb3c3}
+#an-root .tech-controls select,#an-root .tech-controls input{width:100%;min-width:0;min-height:43px;padding:7px 9px;background:var(--tech-card);border:1px solid #313744;border-radius:4px;color:#e9eaf0;font:inherit;font-size:14px}
+#an-root .tech-presets{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;padding:14px 0 18px;scrollbar-width:thin}
+#an-root .tech-presets button{flex:none;min-height:42px;padding:7px 12px;color:#afb8c6;background:var(--tech-card);border:1px solid var(--tech-rule);border-radius:4px;font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+#an-root .tech-presets button.selected{color:#0a0c10;background:var(--tech-gold);border-color:var(--tech-gold);font-weight:750}
+#an-root .tech-presets button:hover{border-color:var(--tech-gold)}
+#an-root .scr-top{align-items:center;gap:10px}
+#an-root .scr-top>div{display:flex;flex-wrap:wrap;gap:6px}
+#an-root .tech-note{font-size:11px;line-height:1.55;color:#9da7b4;margin:8px 0 16px}
+#an-root .tech-kpis .scr-kpi{min-width:0;overflow-wrap:normal;background:#11141b;border-radius:4px}
+#an-root .tech-kpis .scr-kpi b{font-variant-numeric:tabular-nums}
+#an-root .tech-panel{min-width:0;background:var(--tech-card);border-radius:4px}
+#an-root .tech-svg{width:100%;height:auto;min-height:180px;display:block;background:var(--tech-bg);touch-action:pan-y}
+#an-root .tech-svg [data-tech-point]{cursor:pointer}
+#an-root .tech-svg [data-tech-point]:focus{outline:2px solid var(--tech-gold)}
+#an-root .scr-table-wrap{overflow:auto;max-width:100%;overscroll-behavior-x:contain}
+#an-root .tech-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+#an-root .tech-table th,#an-root .tech-table td{border-bottom:1px solid var(--tech-rule);padding:11px 8px;text-align:left}
+#an-root .tech-table th:first-child{min-width:98px}
+#an-root .tech-table td.tech-num{text-align:right;font-variant-numeric:tabular-nums}
+#an-root .tech-table thead th{color:#c2cbd4;font-size:11px}
+#an-root .tech-table td button,#an-root .tech-detail button{min-height:40px;background:#181c26;border:1px solid #343b48;color:#dec28a;border-radius:4px;padding:6px 10px;cursor:pointer}
+#an-root .tech-table small{display:inline-block;color:var(--tech-gold);font-size:10px;font-weight:500}
+#an-root .tech-detail{margin-top:16px;padding:18px;background:var(--tech-card);border:1px solid var(--tech-rule);border-radius:4px}
+#an-root .tech-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px}
+#an-root .tech-tag{font-size:10px;border:1px solid #4b4e4e;padding:3px 7px;border-radius:3px;color:var(--tech-gold)}
+#an-root .tech-tag.good{border-color:#17664b;color:#10b981}
+#an-root .tech-tag.bad{border-color:#924042;color:#ef4444}
+#an-root .tech-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border-top:1px solid var(--tech-rule);border-bottom:1px solid var(--tech-rule);margin:15px 0}
+#an-root .tech-metrics>div{display:flex;flex-direction:column;gap:3px;padding:11px 8px;min-width:0}
+#an-root .tech-metrics span{font-size:10px;color:#9ca6b3}
+#an-root .tech-metrics b{font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+#an-root .tech-pillar{display:grid;grid-template-columns:minmax(0,1fr) 68px;column-gap:10px;padding:5px 0;font-size:12px}
+#an-root .tech-pillar b{text-align:right;font-variant-numeric:tabular-nums}
+#an-root .tech-pillar i{grid-column:1/-1;height:5px;background:#2b303b;display:block;margin-top:6px}
+#an-root .tech-pillar em{display:block;background:var(--tech-gold);height:5px}
+#an-root .tech-trade-plan{background:#0d0f13;border-top:1px solid #2b313a;border-bottom:1px solid #2b313a;padding:12px 8px;margin:16px 0;font-variant-numeric:tabular-nums}
+#an-root .tech-trade-plan h4{margin:0 0 8px}
+#an-root .tech-trade-plan small{display:block;color:#9da6b4;line-height:1.5;margin-top:8px}
+#an-root .tech-detail h4{font-size:13px;color:var(--tech-gold)}
+@media(max-width:900px){#an-root .tech-controls{grid-template-columns:repeat(2,minmax(0,1fr))}#an-root .tech-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:480px){#an-root .tech-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#an-root .tech-controls select,#an-root .tech-controls input{font-size:16px;min-height:44px}#an-root .tech-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#an-root .tech-panel,#an-root .tech-detail{padding:12px}#an-root .tech-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#an-root .scr-top>div{width:100%}#an-root .scr-top .btn{flex:1;min-height:44px}#an-root .tech-presets{margin-right:-2px}#an-root .tech-table{font-size:11px}}
