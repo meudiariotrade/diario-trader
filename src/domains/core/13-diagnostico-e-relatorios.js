@@ -270,7 +270,7 @@ async function dgRoda() {
       })),
     t &&
       (await s("Balanços (CVM)", async () => {
-        const n = await fetch(t.url + "/functions/v1/macro", {
+        const n = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
             method: "POST",
             headers: { "Content-Type": "application/json", apikey: t.key },
             body: JSON.stringify({ modo: "balancos" }),
@@ -2937,7 +2937,7 @@ async function cqCarrega(e, t) {
         SESS.at &&
         (o.Authorization = "Bearer " + SESS.at);
     } catch {}
-    const s = await fetch(a.url + "/functions/v1/macro", {
+    const s = await edgeFetchAutenticado(a.url + "/functions/v1/macro", {
         method: "POST",
         headers: o,
         body: JSON.stringify({ modo: "cotacoes", aba: e }),
@@ -4442,7 +4442,7 @@ async function m606Carrega(forca) {
     try {
       typeof SESS < "u" && SESS && SESS.at && (o.Authorization = "Bearer " + SESS.at);
     } catch {}
-    const s = await fetch(a.url + "/functions/v1/mesa-macro", { method: "POST", headers: o, body: "{}", signal: AbortSignal.timeout(25e3) }),
+    const s = await edgeFetchAutenticado(a.url + "/functions/v1/mesa-macro", { method: "POST", headers: o, body: "{}", signal: AbortSignal.timeout(25e3) }),
       n = await s.json().catch(() => ({}));
     if (!s.ok || n.versao !== "v606") throw new Error(n.error || "Erro " + s.status);
     ((M606.v = n), (M606.ts = Date.now()), (M606.err = ""), (M606.salvoEm = 0), (mudou = !0));

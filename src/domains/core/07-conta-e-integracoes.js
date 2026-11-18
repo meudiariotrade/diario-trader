@@ -41,7 +41,7 @@ async function mdoCarrega(e) {
   }
   ((MDO.busy = 1), (MDO.err = ""), mdoPaint());
   try {
-    const a = await fetch(t.url + "/functions/v1/macro", {
+    const a = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
         method: "POST",
         headers: macroAuthHeaders(t),
         body: "{}",
@@ -1305,7 +1305,9 @@ function jrExtraHtml() {
       : t.slice(0, o) + jrExtraHtml() + t.slice(o);
   };
 }
-setInterval(async () => {
+// Timer limitado à aba Mercado > Mundo (v756).
+let MDO_AUTO_INTERVAL = null;
+async function mdoAutoTick() {
   try {
     if (
       document.hidden ||
@@ -1319,7 +1321,7 @@ setInterval(async () => {
       return;
     const e = cfg();
     if (!e) return;
-    const t = await fetch(e.url + "/functions/v1/macro", {
+    const t = await edgeFetchAutenticado(e.url + "/functions/v1/macro", {
       method: "POST",
       headers: macroAuthHeaders(e),
       body: "{}",
@@ -1334,7 +1336,15 @@ setInterval(async () => {
     const o = scrollY;
     (mdoPaint(), scrollTo(0, o));
   } catch {}
-}, 15e3);
+}
+function mdoAutoCiclo() {
+  const ativo = typeof tab !== "undefined" && tab === "mercado" && MKT.tab === "mu";
+  if (ativo && MDO_AUTO_INTERVAL === null) MDO_AUTO_INTERVAL = setInterval(mdoAutoTick,15e3);
+  else if (!ativo && MDO_AUTO_INTERVAL !== null) {
+    clearInterval(MDO_AUTO_INTERVAL); MDO_AUTO_INTERVAL = null;
+  }
+}
+
 {
   const e = anxCall;
   anxCall = async function (t) {
@@ -2779,7 +2789,7 @@ async function agCarrega(e) {
   }
   ((AG.busy = 1), (AG.err = ""), agPaint());
   try {
-    const o = await fetch(a.url + "/functions/v1/macro", {
+    const o = await edgeFetchAutenticado(a.url + "/functions/v1/macro", {
         method: "POST",
         headers: macroAuthHeaders(a),
         body: JSON.stringify({ modo: "agenda", semana: t }),
@@ -2974,7 +2984,7 @@ async function setCarrega(e) {
   if (t) {
     ((SET.busy = 1), (SET.err = ""), setPaint());
     try {
-      const a = await fetch(t.url + "/functions/v1/macro", {
+      const a = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
           method: "POST",
           headers: macroAuthHeaders(t),
           body: JSON.stringify({ modo: "setores" }),

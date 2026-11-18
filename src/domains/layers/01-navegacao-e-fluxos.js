@@ -7938,7 +7938,7 @@ de Carteira`,
                       try {
                         const a0 = cfg(), sem = 0; // v621: a semana da função macro vai de domingo a sábado — "0" já cobre a semana da edição
                         if (a0) {
-                          const ra = await fetch(a0.url + "/functions/v1/macro", { method: "POST", headers: { "Content-Type": "application/json", apikey: a0.key, ...(typeof SESS !== "undefined" && SESS?.at ? { Authorization: "Bearer " + SESS.at } : {}) }, body: JSON.stringify({ modo: "agenda", semana: sem }), signal: AbortSignal.timeout(15e3) }),
+                          const ra = await edgeFetchAutenticado(a0.url + "/functions/v1/macro", { method: "POST", headers: { "Content-Type": "application/json", apikey: a0.key, ...(typeof SESS !== "undefined" && SESS?.at ? { Authorization: "Bearer " + SESS.at } : {}) }, body: JSON.stringify({ modo: "agenda", semana: sem }), signal: AbortSignal.timeout(15e3) }),
                             ja = await ra.json().catch(() => ({}));
                           Array.isArray(ja.eventos) && (k.agenda = ja.eventos.filter((e) => e && e.imp === 1 && ["BR", "US"].includes(e.p)).map((e) => ({ em: e.em, p: e.p, t: e.t, imp: 1 })));
                         }

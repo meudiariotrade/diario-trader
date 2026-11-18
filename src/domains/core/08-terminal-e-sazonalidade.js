@@ -1,7 +1,7 @@
 function macroFetchComSessao(url,options) {
   if (typeof SESS === "undefined" || !SESS?.at)
     return Promise.reject(new Error("Entre na sua conta para consultar o macro."));
-  return fetch(url,options);
+  return edgeFetchAutenticado(url,options);
 }
 // Consultas macro privadas nunca precisam produzir HTTP 401 em sessão anônima.
 function vEco(e) {

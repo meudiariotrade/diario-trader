@@ -1,4 +1,9 @@
 function render0() {
+  window.DiarioCiclos?.enter(tab);
+  if (typeof SCA !== "undefined" && SCA && (tab !== "swing" || VW.S !== "sc")) {
+    clearInterval(SCA); SCA = null;
+  }
+  if (typeof mdoAutoCiclo === "function") mdoAutoCiclo();
   (fixS(), window.DiarioDados?.observe(diarioDaysCanonical()));
   const e = $("#app");
   ((e.style.animation = "none"),

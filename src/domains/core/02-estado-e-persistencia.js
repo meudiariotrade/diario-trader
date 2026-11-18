@@ -2020,6 +2020,36 @@ async function rq(e, t = {}, a = !0) {
   }
   return i;
 }
+// v756: deduplicar GETs iguais sem guardar o conteúdo privado do diário.
+const RQ_LEITURAS_PENDENTES = new Map();
+const RQ_DIARIO_REVISOES = new Map();
+const rqSemDeduplicacao = rq;
+rq = async function(path, opcoes = {}, autenticar = true) {
+  const metodo = String(opcoes.method || "GET").toUpperCase();
+  const leitura = metodo === "GET" && !opcoes.body && !opcoes.cacheRefresh && !opcoes.tok &&
+    /^\/rest\/v1\/(?:analise_cache|diario)\?/.test(path);
+  const conta = syncOwner();
+  if (!leitura || !conta) return rqSemDeduplicacao(path, opcoes, autenticar);
+  const chave = (cfg()?.url || "") + ":" + conta + ":" + path;
+  const revisao = /^\/rest\/v1\/diario\?select=revision&user_id=eq\./.test(path);
+  const memoria = revisao ? RQ_DIARIO_REVISOES.get(chave) : null;
+  if (memoria && Date.now() - memoria.em < 5000)
+    return new Response(memoria.body,{status:200,headers:{"Content-Type":"application/json","X-Diario-Cache":"revisao-5s"}});
+  if (RQ_LEITURAS_PENDENTES.has(chave))
+    return (await RQ_LEITURAS_PENDENTES.get(chave)).clone();
+  const consulta = (async () => {
+    const resposta = await rqSemDeduplicacao(path, opcoes, autenticar);
+    if (revisao && resposta.ok) {
+      const body = await resposta.clone().text();
+      if (body.length < 4096) RQ_DIARIO_REVISOES.set(chave,{em:Date.now(),body});
+    }
+    return resposta;
+  })();
+  RQ_LEITURAS_PENDENTES.set(chave, consulta);
+  try {return (await consulta).clone()}
+  finally {if(RQ_LEITURAS_PENDENTES.get(chave)===consulta)RQ_LEITURAS_PENDENTES.delete(chave)}
+};
+
 function setSess(e, t) {
   ((SESS = {
     at: e.access_token,
@@ -2067,6 +2097,31 @@ async function tok() {
     );
   }
 }
+// v756: renovação única por sessão; tokens nunca são enviados ao Worker.
+const tokOriginal756 = tok;
+let tokRenovacao756 = null;
+tok = function() {
+  if (tokRenovacao756) return tokRenovacao756;
+  const tentativa = Promise.resolve().then(() => tokOriginal756());
+  tokRenovacao756 = tentativa;
+  return tentativa.finally(() => {if(tokRenovacao756===tentativa)tokRenovacao756=null});
+};
+async function edgeFetchAutenticado(url, opcoes = {}) {
+  const server = cfg(), conta = syncOwner();
+  if (!server || !conta || !SESS?.at) throw Error("Entre na sua conta para consultar os dados.");
+  const destino = new URL(String(url),server.url);
+  if (destino.origin !== new URL(server.url).origin || !destino.pathname.startsWith("/functions/v1/"))
+    throw Error("Destino de função não autorizado.");
+  await tok();
+  assertSyncOwner(conta);
+  const cabecalhos = new Headers(opcoes.headers || {});
+  cabecalhos.set("apikey", server.key);
+  cabecalhos.set("Authorization", "Bearer " + SESS.at);
+  const resultado = await fetch(destino.href,{...opcoes,headers:cabecalhos});
+  assertSyncOwner(conta);
+  return resultado;
+}
+
 async function hashAuth() {
   const e = new URLSearchParams(location.hash.slice(1)),
     t = e.get("access_token");
@@ -2320,6 +2375,7 @@ async function up(e = null, revision = null) {
     ).json();
     assertSyncOwner(owner);
     if (result.saved) {
+      RQ_DIARIO_REVISOES.clear();
       S.st = data.mt;
       persist();
       window.TraderContinuo329?.signal("cloud");
@@ -3437,7 +3493,7 @@ async function scFetch(e, t) {
   if (!token) throw new Error("Entre na sua conta para consultar o screener.");
   let o;
   try {
-    o = await fetch(a.url + "/functions/v1/screener", {
+    o = await edgeFetchAutenticado(a.url + "/functions/v1/screener", {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: a.key, Authorization: "Bearer " + token },
       body: JSON.stringify({ symbols: e, detail: !!t }),

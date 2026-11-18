@@ -7190,9 +7190,10 @@ try {
       let c = null;
       try { c = typeof cfg == "function" ? cfg() : null; } catch {}
       if (!c || w.DIARIO_DEMO) { lote.forEach((k) => mem.set(k, null)); return; }
+      if (typeof SESS === "undefined" || !SESS?.uid || !SESS?.at) return;
       const h = { "Content-Type": "application/json", apikey: c.key };
       try { typeof SESS < "u" && SESS && SESS.at && (h.Authorization = "Bearer " + SESS.at); } catch {}
-      emCurso = fetch(c.url + "/functions/v1/logos", { method: "POST", headers: h, body: JSON.stringify({ tickers: lote }), signal: AbortSignal.timeout(2e4) })
+      emCurso = edgeFetchAutenticado(c.url + "/functions/v1/logos", { method: "POST", headers: h, body: JSON.stringify({ tickers: lote }), signal: AbortSignal.timeout(2e4) })
         .then((r) => r.json())
         .then((j) => {
           const it = (j && j.itens) || {};
