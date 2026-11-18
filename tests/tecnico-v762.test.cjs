@@ -74,8 +74,8 @@ test('Cloudflare: histórico técnico só de fornecedores públicos e limite por
  assert.match(edge,/caches\.default/);
  assert.doesNotMatch(edge,/SUPABASE_SERVICE_ROLE_KEY/);
  const release=JSON.parse(read('release.config.json'));
- assert.equal(release.version,763);
- assert.equal(JSON.parse(read('package.json')).version,'763.0.0');
+ assert.ok(Number.isSafeInteger(release.version)&&release.version>=763,'versao do app nao pode retroceder');
+ assert.equal(JSON.parse(read('package.json')).version,release.version+'.0.0');
  for(const p of ['tecnico-engine.js','tecnico-worker.js','tecnico-ui.js','tecnico-pdf.js'])assert.ok(release.bundles[p]);
 });
 
