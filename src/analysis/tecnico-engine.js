@@ -27,7 +27,7 @@
  function sma(c,n,i=c.length-1,k='c'){if(i+1<n)return null;let sum=0;for(let j=i-n+1;j<=i;j++)sum+=c[j][k];return sum/n}
  function ema(values,n){let value=null,k=2/(n+1);return values.map((x,i)=>{if(!valid(x))return null;if(i===n-1)value=mean(values.slice(0,n));else if(i>=n&&value!==null)value=x*k+value*(1-k);return value})}
  function atr(c,n=14){if(c.length<n+1)return null;const a=c.slice(1).map((v,i)=>Math.max(v.h-v.l,Math.abs(v.h-c[i].c),Math.abs(v.l-c[i].c)));return mean(a.slice(-n))}
- function rsi(c,n=14){if(c.length<n+1)return null;const d=c.slice(1).map((v,i)=>v.c-c[i].c),g=mean(d.slice(0,n).map(v=>Math.max(0,v))),l=mean(d.slice(0,n).map(v=>Math.max(0,-v)));let ag=g,al=l;for(let i=n;i<d.length;i++){ag=(ag*(n-1)+Math.max(0,d[i]))/n;al=(al*(n-1)+Math.max(0,-d[i]))/n}return al===0?100:100-100/(1+ag/al)}
+ function rsi(c,n=14){if(c.length<n+1)return null;const d=c.slice(1).map((v,i)=>v.c-c[i].c),g=mean(d.slice(0,n).map(v=>Math.max(0,v))),l=mean(d.slice(0,n).map(v=>Math.max(0,-v)));let ag=g,al=l;for(let i=n;i<d.length;i++){ag=(ag*(n-1)+Math.max(0,d[i]))/n;al=(al*(n-1)+Math.max(0,-d[i]))/n}return ag===0&&al===0?50:al===0?100:100-100/(1+ag/al)}
  function macd(c){if(c.length<35)return null;const v=c.map(x=>x.c),a=ema(v,12),b=ema(v,26),diff=v.map((_,i)=>a[i]===null||b[i]===null?null:a[i]-b[i]);const signal=ema(diff.filter(valid),9);const sig=signal.at(-1);return sig===null?null:{value:diff.at(-1),signal:sig,hist:diff.at(-1)-sig}}
  function obv(c){let n=0;const out=[0];for(let i=1;i<c.length;i++){if(c[i].c>c[i-1].c)n+=c[i].v;else if(c[i].c<c[i-1].c)n-=c[i].v;out.push(n)}return out}
  function std(v){if(v.length<2)return null;const m=mean(v);return Math.sqrt(mean(v.map(x=>(x-m)**2)))}
@@ -134,8 +134,8 @@
   const rs=Number.isInteger(opts.rs)?opts.rs:null,template=passTemplate(opts.daily?normalize(opts.daily):c,dir,rs,vcpPass);
   const momentum=(dir===1?rsi14>52:rsi14<48)&&dir*m.hist>0;
   const pillars=[
-   {id:'tendencia',name:'Tendência & Estrutura',weight:30,score:mean([trend?1:0,dir*(s50-s150)>0&&dir*(s150-s200)>0?1:0,pullback?1:0,mtf===null?.5:mtf?1:0])},
-   {id:'momentum',name:'Momentum / OBV / Força Relativa',weight:30,score:mean([obvConfirmed?1:0,rs===null?.5:dir===1?rs/99:(99-rs)/99,momentum?1:0,dir*m.value>dir*m.signal?1:0])},
+   {id:'tendencia',name:'Tendência & Estrutura',weight:30,score:mean([trend?1:0,dir*(s50-s150)>0&&dir*(s150-s200)>0?1:0,pullback?1:0,mtf===null?0:mtf?1:0])},
+   {id:'momentum',name:'Momentum / OBV / Força Relativa',weight:30,score:mean([obvConfirmed?1:0,rs===null?0:dir===1?rs/99:(99-rs)/99,momentum?1:0,dir*m.value>dir*m.signal?1:0])},
    {id:'volume',name:'Volume & Fluxo',weight:20,score:mean([rvol>1?1:0,dry?1:0])},
    {id:'fibo',name:'Fibonaccing / Volatilidade / Risco',weight:20,score:mean([fib.zone?1:0,fib.cluster?1:0,turn.confirmed&&turn.cisd?1:0,vol>3?1:0])}
   ];
