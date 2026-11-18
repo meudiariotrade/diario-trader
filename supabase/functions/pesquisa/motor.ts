@@ -47,8 +47,8 @@ export async function calcular(cmd:any,fetcher=fetch,pesquisa:any={}){
   let corrDolar=null;if(f.etf||f.mercado==='EUA'||['COMPARE','CARTEIRA'].includes(cmd.modo)){try{corrDolar=correlacao(c.diario||[],await dolar(fetcher))}catch{corrDolar=null}}
   // A MM200 requer pelo menos 200 barras anteriores; o PDF exibe apenas as 90 finais.
   // Nunca preencher uma barra faltante nem afirmar ajuste corporativo quando não houver adjclose.
-  const hist=(c.diario||[]).slice(-260),meta=c?._meta?.diario||{};
-  const serieValida=hist.length>=250&&meta.ajustado===true&&hist.every((q:any,i:number)=>Array.isArray(q)&&q.length===6&&
+  const hist=(c.diario||[]).slice(-300),meta=c?._meta?.diario||{};
+  const serieValida=hist.length>=289&&meta.ajustado===true&&hist.every((q:any,i:number)=>Array.isArray(q)&&q.length===6&&
    q.every((z:any)=>typeof z==='number'&&Number.isFinite(z))&&
    q[0]>0&&q[1]>0&&q[3]>0&&q[4]>0&&q[2]>=Math.max(q[1],q[3],q[4])&&
    q[3]<=Math.min(q[1],q[4])&&q[5]>=0&&
