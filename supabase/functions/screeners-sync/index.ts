@@ -589,15 +589,19 @@ async function cvmEnriquecer(){
    for(const x of rows){
     const cnpj=(x.CNPJ_CIA||'').replace(/\D/g,''),date=x.DT_REFER||'';
     if(cnpj.length!==14||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>now)continue;
-    if(!periods.has(cnpj)||periods.get(cnpj)!<date){
-      periods.set(cnpj,date);
-      const id=String(x.ID_DOC||x.NUM_SEQ_DOC||'').trim(),publicado=String(x.DT_RECEB||x.DT_ENTREGA||'').slice(0,10);
-      if(/^\d{1,18}$/.test(id)&&/^\d{4}-\d{2}-\d{2}$/.test(publicado)&&publicado>=date&&publicado<=now){
-       docsByCnpj.set(cnpj,{competencia:date,formulario:kind.toUpperCase(),documento_id:id,
-        documento_url:'https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/'+kind.toUpperCase()+'/DADOS/'+kind+'_cia_aberta_'+new Date().getUTCFullYear()+'.zip',
-        publicado_em:publicado,versao:String(x.VERSAO||'').trim(),linhagem:{}});
-      }else docsByCnpj.delete(cnpj);
-     }
+    // Competência e documento são evidências distintas: uma reapresentação no mesmo
+    // trimestre pode ter ID_DOC/versão mais recentes, sem apagar uma prova anterior.
+    if(!periods.has(cnpj)||periods.get(cnpj)!<date)periods.set(cnpj,date);
+    const id=String(x.ID_DOC||x.NUM_SEQ_DOC||'').trim(),publicado=String(x.DT_RECEB||x.DT_ENTREGA||'').slice(0,10),versao=String(x.VERSAO||'').trim();
+    if(!/^\d{1,18}$/.test(id)||!/^\d{4}-\d{2}-\d{2}$/.test(publicado)
+     ||publicado<date||publicado>now||!/^\d{1,6}$/.test(versao))continue;
+    const previous=docsByCnpj.get(cnpj),same=previous?.competencia===date;
+    if(previous&&(previous.competencia>date
+      ||(same&&(previous.publicado_em>publicado
+      ||(previous.publicado_em===publicado&&Number(previous.versao)>=Number(versao))))))continue;
+    docsByCnpj.set(cnpj,{competencia:date,formulario:kind.toUpperCase(),documento_id:id,
+     documento_url:'https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/'+kind.toUpperCase()+'/DADOS/'+kind+'_cia_aberta_'+new Date().getUTCFullYear()+'.zip',
+     publicado_em:publicado,versao,linhagem:{}});
    }
    fontes.push(kind.toUpperCase()+' OK');
   }catch(e){errors.push(kind.toUpperCase()+': '+String(e).slice(0,120))}
