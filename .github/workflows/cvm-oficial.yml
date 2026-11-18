@@ -1,0 +1,41 @@
+name: Preparar DRE CVM oficial
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/cvm-official-batch.cjs
+      - .github/workflows/cvm-oficial.yml
+  schedule:
+    - cron: '45 4 * * 6'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: cvm-batch-oficial
+  cancel-in-progress: false
+jobs:
+  cvm-batch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Extrair DRE direto da CVM, sem Supabase
+        run: node scripts/cvm-official-batch.cjs
+      - name: Versionar somente dados públicos auditáveis
+        shell: bash
+        run: |
+          git add dados-publicos/cvm-dre-*.json
+          if git diff --cached --quiet; then
+            echo "Nenhum documento novo"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "dados(CVM): atualizar DRE oficial ITR/DFP sem dados privados"
+          git pull --rebase origin main
+          git push origin HEAD:main
