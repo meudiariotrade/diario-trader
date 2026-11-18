@@ -20,7 +20,7 @@
  function financialSubtype(row){
   if(!/^(finance|financeiro|financials|financial services)$/i.test(String(row?.setor||row?.sector||'').trim()))return false;
   const detail=String(row?.segmento||row?.industry||'')+' '+String(row?.empresa||row?.company_name||'');
-  return /(?:\bbanc(?:o|os|orp)?\b|\bbank(?:ing|s)?\b|\bsegur(?:o|os|adora|adoras)?\b|\binsur(?:ance|er|ers)?\b|\bfinancial\s+holdings?\b|\bholdings?\s+financeiras?\b)/i.test(detail);
+  return /(?:\bbanc(?:o|os|orp)?\b|\bunibanco\b|\bbank(?:ing|s)?\b|\bsegur(?:o|os|adora|adoras|idade)?\b|\bresseguros?\b|\binsur(?:ance|er|ers)?\b|\bfinancial\s+holdings?\b|\bholdings?\s+financeiras?\b)/i.test(detail);
  }
  const financeWeights={
   BR:[{id:'qualidade',name:'Qualidade financeira',weight:30,fields:['roe']},
