@@ -413,7 +413,7 @@ async function cvmEnriquecer(){
   gravadas+=Number(await rpc('quant_screeners_competencia_patch',{p_market:'BR',p_rows:updates.slice(i,i+150)}))||0;
  const final=gravadas?await finalized('BR','cvm_dfp_itr',gravadas,errors.length,updates.map(x=>x.ticker)):null;
  return {elegiveis_consultadas:targets.length,documentos:periods.size,correspondencias:updates.length,
-  competencias_gravadas:gravadas,fontes,erros,amostra_sem_cnpj:unknown,final};
+  competencias_gravadas:gravadas,fontes,erros:errors,amostra_sem_cnpj:unknown,final};
 }
 
 Deno.serve(async req=>{
