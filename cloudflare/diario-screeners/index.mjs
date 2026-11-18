@@ -137,7 +137,9 @@ export default {
      }
      if(!source)throw Error('Ações sem OHLCV suficiente: '+attempts.slice(0,5).join('; '));
     }
-    items=items.filter(x=>x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[4]>0&&x[2]>=Math.max(x[1],x[4])&&x[3]>0&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0).slice(-600);
+    items=items.filter(x=>x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[4]>0&&x[2]>=Math.max(x[1],x[4])&&x[3]>0&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0)
+      .sort((a,b)=>a[0]-b[0])
+      .filter((x,i,a)=>i===0||x[0]!==a[i-1][0]).slice(-600);
     // Apenas barras fechadas e verificadas: nunca promover médias com candles parciais.
      const barSeconds=tf==='1d'?86400:tf==='1h'?3600:900;
      const nowSeconds=Math.floor(Date.now()/1000);
