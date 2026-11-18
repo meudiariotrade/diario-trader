@@ -40,7 +40,14 @@ export default {
    const key=new Request(url.origin+'/v1/tecnico-candles?market='+market+'&tf='+tf+'&ticker='+ticker);
    const cache=caches.default;
    const found=await cache.match(key);
-   if(found)return conditional(request,found,true);
+   // Para os candles, 15m/1h precisam de TTL menor que o snapshot fundamentalista.
+   if(found){
+    const response=conditional(request,found,true);
+    const headers=new Headers(response.headers);
+    headers.set('Cache-Control',tf==='1d'?'public, max-age=900, s-maxage=900':'public, max-age=300, s-maxage=300');
+    headers.set('X-Snapshot-Source','cloudflare-edge-candles');
+    return new Response(response.body,{status:response.status,headers});
+   }
    const interval=tf==='1d'?'1d':tf==='1h'?'60m':'15m';
    const range=tf==='1d'?'2y':tf==='1h'?'3mo':'1mo';
    const symbol=market==='BR'?(ticker==='IBOV'?'^BVSP':ticker+'.SA'):market==='US'&&ticker==='SPX'?'^GSPC':ticker;
@@ -74,7 +81,11 @@ export default {
     const response=Response.json({ok:true,ticker,market,tf,source,fetchedAt:new Date().toISOString(),candles:items},
       {headers:{'Cache-Control':'public, max-age='+ttl+', s-maxage='+ttl}});
     ctx.waitUntil(cache.put(key,response.clone()));
-    return conditional(request,response,false);
+    const out=conditional(request,response,false);
+    const headers=new Headers(out.headers);
+    headers.set('Cache-Control','public, max-age='+ttl+', s-maxage='+ttl);
+    headers.set('X-Snapshot-Source','cloudflare-edge-candles');
+    return new Response(out.body,{status:out.status,headers});
    }catch(e){return json({error:String(e.message||e).slice(0,120)},502)}
   }
 
