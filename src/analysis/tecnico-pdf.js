@@ -1,6 +1,16 @@
 /* Dossiê Técnico editorial v762: exportação 100% local, sem IA automática nem banco. */
 (function(w){
-'use strict';
+'use strict'
+async function hashSnapshot(input){
+ if(!globalThis.crypto?.subtle)throw Error('SHA-256 indisponível: PDF sem rastreabilidade não é emitido');
+ const stable=x=>Array.isArray(x)?'['+x.map(stable).join(',')+']':
+  x&&typeof x==='object'?'{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+stable(x[k])).join(',')+'}':
+  JSON.stringify(x===undefined?null:x);
+ const bytes=new TextEncoder().encode(stable(input));
+ const hash=await crypto.subtle.digest('SHA-256',bytes);
+ return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+;
 const n=(v,d=1)=>v==null||!Number.isFinite(Number(v))?'N/D':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const C={dark:'#11141B',gold:'#D4A017',paper:'#FFFFFF',muted:'#647080',line:'#DDE1E5',green:'#117A57',red:'#BF3B40',ink:'#161A22'};
 const color=(P,h)=>{const x=parseInt(h.slice(1),16);return P.rgb((x>>16&255)/255,(x>>8&255)/255,(x&255)/255)};
@@ -26,7 +36,8 @@ async function build(m,rows,tf='1d'){
    throw Error('OHLCV diverge da nota técnica calculada: '+String(r.ticker));
   return c;
  });
- const P=await libs(),doc=await P.PDFDocument.create();doc.registerFontkit(w.fontkit);
+ const hash=await hashSnapshot({tipo:'tecnico',m,tf,modelo:'tecnico-engine 762 / app v768',rows});
+  const P=await libs(),doc=await P.PDFDocument.create();doc.registerFontkit(w.fontkit);
  const fonts=await Promise.all(['pdf-sans.ttf','pdf-sans-bold.ttf','pdf-serif-bold.ttf'].map(async f=>{const r=await fetch(f,{cache:'force-cache'});if(!r.ok)throw Error('Fonte do PDF indisponível: '+f);return doc.embedFont(new Uint8Array(await r.arrayBuffer()),{subset:true})}));
  const [reg,bold,serif]=fonts,W=595.28,H=841.89,M=43,col=Object.fromEntries(Object.entries(C).map(([k,v])=>[k,color(P,v)]));
  let page,y,pageCount=0;
@@ -60,6 +71,7 @@ async function build(m,rows,tf='1d'){
   rect(M,791,W-2*M,.7,col.line);
   write('Estudo educacional · Dados de mercado sujeitos a atraso · Sem recomendação',M,802,7,reg,col.muted);
   write(String(pageCount).padStart(2,'0'),W-M,802,8,reg,col.muted,true);
+  write('SHA-256 '+hash+' · Fórmula tec-762 / app v768',M,818,6,reg,col.muted);
  }
  function comp(r){
   const x=r.pdfSide==='sell'?r.sell:r.buy;
