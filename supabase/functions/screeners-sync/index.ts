@@ -190,13 +190,69 @@ async function scanner(market:string,tickers:string[],comHistorico=true){
  }
  return {atualizados:updated,totalSolicitados:tickers.length};
 }
+
+const SEC_UA='DiarioTraderQuant/1.0 (contato@diariotrader.app)';
+let secLast=0;
+async function secGet(url:string,host:'www.sec.gov'|'data.sec.gov'){
+ await wait(Math.max(0,180-(Date.now()-secLast)));secLast=Date.now();
+ return fetch(url,{headers:{'User-Agent':SEC_UA,Accept:'application/json',Host:host},
+  signal:AbortSignal.timeout(14000)});
+}
+async function secMapear(){
+ // URL oficial do company_tickers.json usa www.sec.gov (Host precisa acompanhar o host real).
+ const r=await secGet('https://www.sec.gov/files/company_tickers.json','www.sec.gov');
+ if(!r.ok)return {http:r.status,erro:'SEC mapping HTTP '+r.status,mapeados:0};
+ const source=await r.json(),rows=Object.values(source).filter((x:any)=>x?.ticker&&Number.isSafeInteger(x.cik_str))
+  .map((x:any)=>({ticker:clean(x.ticker).replaceAll('-','.'),cik:String(x.cik_str).padStart(10,'0')}));
+ let count=0;for(let i=0;i<rows.length;i+=200)count+=Number(await rpc('quant_screeners_sec_map',{p_rows:rows.slice(i,i+200)}))||0;
+ return {http:200,mapeados:count,total:rows.length};
+}
+function secPeriodo(json:any){
+ const gaap=json?.facts?.['us-gaap']||{},all:any[]=[];
+ for(const tag of ['Assets','StockholdersEquity','Liabilities','NetIncomeLoss','Revenues',
+   'RevenueFromContractWithCustomerExcludingAssessedTax']){
+  for(const entries of Object.values(gaap[tag]?.units||{}) as any[][]){
+   for(const x of entries||[]){
+    if(['10-Q','10-K','10-Q/A','10-K/A'].includes(x.form)&&/^\d{4}-\d{2}-\d{2}$/.test(x.end||'')
+      &&x.end<=now&&x.filed&&x.filed<=now)all.push(x);
+   }
+  }
+ }
+ all.sort((a,b)=>b.end.localeCompare(a.end)||b.filed.localeCompare(a.filed));
+ return all[0]||null;
+}
+async function secColetar(limit:number){
+ const pending=await rpc('quant_screeners_sec_pendentes',{p_limit:Math.max(1,Math.min(16,limit))});
+ const updates:any[]=[],dates:any[]=[],errors:string[]=[];let http200=0,http403=0,http429=0;
+ for(const row of Array.isArray(pending)?pending:[]){
+  if(!/^[0-9]{10}$/.test(String(row.cik||'')))continue;
+  const url='https://data.sec.gov/api/xbrl/companyfacts/CIK'+row.cik+'.json';
+  try{
+   const r=await secGet(url,'data.sec.gov');
+   if(r.status===403||r.status===429){r.status===403?http403++:http429++;
+    errors.push(row.ticker+': SEC HTTP '+r.status+'; sem retentativa em massa');break}
+   if(!r.ok){errors.push(row.ticker+': SEC HTTP '+r.status);continue}
+   const doc=await r.json();if(Number(doc?.cik)!==Number(row.cik))throw Error('CIK divergente');
+   http200++;const period=secPeriodo(doc);
+   if(!period){errors.push(row.ticker+': 10-Q / 10-K sem periodo confirmado');continue}
+   updates.push({ticker:row.ticker,cik:row.cik,sec_status:'verificado',sec_facts_at:period.end,sec_source_url:url});
+   dates.push({ticker:row.ticker,data_competencia_balanco:period.end});
+  }catch(e){errors.push(row.ticker+': '+String(e).slice(0,90))}
+ }
+ const patched=updates.length?Number(await rpc('quant_screeners_sec_patch',{p_rows:updates}))||0:0;
+ const validated=dates.length?Number(await rpc('quant_screeners_competencia_patch',{p_market:'US',p_rows:dates}))||0:0;
+ const final=dates.length?await finalized('US','sec_edgar_competencia',patched,errors.length,dates.map(x=>x.ticker)):null;
+ return {selecionados:pending?.length||0,http_200:http200,http_403:http403,http_429:http429,
+  fundamentos_validos:patched,competencias_gravadas:validated,erros:errors.slice(0,8),final};
+}
+
 Deno.serve(async req=>{
  if(req.method!=='POST')return ok({error:'Somente POST'},405);
  if(!await autorizado(req))return ok({error:'Nao autorizado'},401);
  try{
   const b=await req.json().catch(()=>({})),mode=b.acao||'catalogo';
   if(mode==='diagnostico')return ok({ok:true,modelo:scoreEngine.version,lote_maximo_precos:20,
-   metodos:['catalogo','fundamentos','precos','enriquecer','sec'],sem_polling:true});
+   metodos:['catalogo','fundamentos','precos','enriquecer','mapear_sec','sec'],sem_polling:true});
   if(mode==='catalogo'){
    const resp:any={};
    for(const [m,fn] of (b.mercado==='US'?[['US',catalogoUS]]:b.mercado==='BR'?[['BR',catalogoBR]]:[['US',catalogoUS],['BR',catalogoBR]]) as const){
@@ -234,15 +290,8 @@ Deno.serve(async req=>{
    }
    return ok({acao:mode,...result});
   }
-  if(mode==='sec'){
-   // Reutiliza a função SEC existente; não baixa ZIP nem ignora bloqueios 403/429.
-   const r=await fetch(SB+'/functions/v1/screeners-sec',{
-     method:'POST',headers:{'Content-Type':'application/json','x-cron-secret':req.headers.get('x-cron-secret')||''},
-     body:JSON.stringify({acao:'sec'}),signal:AbortSignal.timeout(60000)});
-   const result=await r.json().catch(()=>({}));
-   await finalized('US','sec',Number(result.concluidos||0),Array.isArray(result.erros)?result.erros.length:0);
-   return ok({acao:mode,origem:'SEC companyfacts',...result},r.status);
-  }
+  if(mode==='mapear_sec')return ok({acao:mode,...await secMapear()});
+  if(mode==='sec')return ok({acao:mode,...await secColetar(Math.floor(Number(b.limite)||8))});
   return ok({error:'Acao desconhecida'},400);
  }catch(e){console.error('screeners-sync v2',String(e).slice(0,150));return ok({error:'Coleta temporariamente indisponivel'},503)}
 });
