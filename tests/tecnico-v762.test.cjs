@@ -32,7 +32,7 @@ test('motor: compra e venda são simétricas na tendência, com notas de 0 a 10 
 test('motor: não inventa alvo de alta abaixo da entrada ou R/R positivo sem projeção',()=>{
  const c=trend(),x=M.one(c,1,{tf:'1d',daily:c,higher:M.aggregateWeekly(c),rs:81});
  const p=x.plan;assert.ok(p.entry>0&&p.stop<p.entry);
- for(const k of ['target1','target2','targetFinal'])assert.ok(p[k]===null||p[k]>p.entry);
+ for(const k of ['target1','target2a','target2','targetFinal'])assert.ok(p[k]===null||p[k]>p.entry);
  assert.ok(p.rr===null||p.rr>0);
 });
 test('template não pode ser 8/8 sem RS válido; Elliott é condicional',()=>{
