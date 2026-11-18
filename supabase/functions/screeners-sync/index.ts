@@ -348,7 +348,7 @@ async function cvmRange(url:string,range:string){
  if(size>5_000_000)throw Error('CVM faixa excede limite de transferencia');
  return new Uint8Array(await r.arrayBuffer());
 }
-async function cvmZipCsv(kind:'itr'|'dfp',parte:'metadados'|'DRE_con'|'DRE_ind'='metadados'){
+async function cvmZipBytes(kind:'itr'|'dfp',parte:'metadados'|'DRE_con'|'DRE_ind'='metadados'){
  // HTTP Range: acessa somente o CSV selecionado, jamais extrai o ZIP completo.
  const year=new Date().getUTCFullYear();
  const file=kind+'_cia_aberta_'+(parte==='metadados'?'':parte+'_')+year+'.csv';
@@ -375,15 +375,57 @@ async function cvmZipCsv(kind:'itr'|'dfp',parte:'metadados'|'DRE_con'|'DRE_ind'=
  if(hv.getUint32(0,true)!==0x04034b50)throw Error('CVM ZIP: cabecalho local invalido');
  const start=entry.offset+30+hv.getUint16(26,true)+hv.getUint16(28,true);
  const compressed=await cvmRange(url,'bytes='+start+'-'+(start+entry.compressed-1));
- const dados=entry.method===0?compressed:
-  entry.method===8?new Uint8Array(await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()):
-  null;
+ return {compressed,method:entry.method};
+}
+async function cvmZipCsv(kind:'itr'|'dfp'){
+ const {compressed,method}=await cvmZipBytes(kind,'metadados');
+ const dados=method===0?compressed:
+  method===8?new Uint8Array(await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()):null;
  if(!dados)throw Error('CVM ZIP: metodo sem suporte');
- if(dados.byteLength>(parte==='metadados'?8_000_000:20_000_000))throw Error('CVM: CSV acima do limite de memoria');
+ if(dados.byteLength>8_000_000)throw Error('CVM: CSV de metadados acima do limite');
  try{return new TextDecoder('utf-8',{fatal:true}).decode(dados)}
  catch{return new TextDecoder('windows-1252').decode(dados)}
-
 }
+async function cvmZipDreRows(kind:'itr'|'dfp',parte:'DRE_con'|'DRE_ind',cnpjs:Set<string>){
+ // Streaming: CSV da DRE tem dezenas de MB descompactados.
+ // Nunca guardar todos os lançamentos em memória; reter apenas CNPJs autorizados da rodada.
+ const {compressed,method}=await cvmZipBytes(kind,parte);
+ if(method!==0&&method!==8)throw Error('CVM DRE: metodo ZIP nao suportado');
+ const input=new Blob([compressed]).stream();
+ const stream=method===8?input.pipeThrough(new DecompressionStream('deflate-raw')):input;
+ const reader=stream.getReader(),decoder=new TextDecoder('windows-1252');
+ let pendente='',cabecalho='',selecionadas:string[]=[],total=0,terminou=false;
+ while(!terminou){
+  const {value,done}=await reader.read();
+  if(done)break;
+  total+=value.byteLength;
+  if(total>120_000_000){await reader.cancel();throw Error('CVM DRE: limite de 120 MB de descompressao');}
+  pendente+=decoder.decode(value,{stream:true});
+  let pos=0,fim=0;
+  while((fim=pendente.indexOf('\n',pos))>=0){
+   const linha=pendente.slice(pos,fim).replace(/\r$/,'');
+   pos=fim+1;
+   if(!cabecalho){
+    cabecalho=linha.replace(/^\uFEFF/,'');
+    if(!cabecalho.split(';').includes('CNPJ_CIA')||cabecalho.split(';')[0]!=='CNPJ_CIA')
+     throw Error('CVM DRE: cabecalho inesperado');
+    selecionadas=[cabecalho];
+   }else if(linha&&cnpjs.has(linha.slice(0,linha.indexOf(';')).replace(/\D/g,''))){
+    selecionadas.push(linha);
+    if(selecionadas.length>=35001){terminou=true;break;}
+   }
+  }
+  pendente=pendente.slice(pos);
+  if(pendente.length>1_000_000)throw Error('CVM DRE: linha anormalmente grande');
+ }
+ if(terminou)await reader.cancel();
+ if(!cabecalho)throw Error('CVM DRE: arquivo vazio');
+ // No caso limite, o registro final sem quebra de linha também é processado.
+ if(!terminou&&pendente.trim()&&cnpjs.has(pendente.slice(0,pendente.indexOf(';')).replace(/\D/g,'')))
+  selecionadas.push(pendente.trim());
+ return csvRows(selecionadas.join('\n'),cnpjs);
+}
+
 function csvRows(raw:string,cnpjs?:Set<string>){
  const lines=raw.replace(/^\uFEFF/,'').replaceAll('\r','').split('\n');
  const parse=(line:string)=>{
@@ -418,7 +460,7 @@ async function cvmDreEvidencias(docs:Map<string,any>){
   if(!alvo.size)continue;
   for(const parte of ['DRE_con','DRE_ind'] as const){
    try{
-    const rows=csvRows(await cvmZipCsv(kind,parte),alvo);
+    const rows=await cvmZipDreRows(kind,parte,alvo);
     for(const row of rows){
      const cnpj=String(row.CNPJ_CIA||'').replace(/\D/g,''),doc=docs.get(cnpj);
      if(!doc||doc.formulario!==kind.toUpperCase()||row.DT_REFER!==doc.competencia)continue;
