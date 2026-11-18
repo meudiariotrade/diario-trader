@@ -6,6 +6,7 @@ export const fmt = (v: any, d = 2) => (ok(v) ? v.toLocaleString('pt-BR', { minim
 export const pct = (v: any, d = 1) => (ok(v) ? fmt(v * 100, d) + '%' : 'n/d');
 const pp = (v: any, d = 2) => (ok(v) ? (v > 0 ? '+' : '') + fmt(v, d) + '%' : 'n/d');
 export const din = (v: any, moeda: string) => (ok(v) ? (moeda === 'USD' ? 'US$ ' : moeda === 'BRL' ? 'R$ ' : moeda + ' ') + fmt(v) : 'n/d');
+const dinPreco=(v:any,moeda:string)=>(ok(v)&&v>0?din(v,moeda):'não calculável');
 const grande = (v: any, moeda: string) => {
   if (!ok(v)) return 'n/d';
   const a = Math.abs(v), [d, s] = a >= 1e12 ? [1e12, ' tri'] : a >= 1e9 ? [1e9, ' bi'] : a >= 1e6 ? [1e6, ' mi'] : [1, ''];
@@ -35,7 +36,8 @@ export function valuation(f: any, premissas: any) {
     for (let i = 1; i <= P.anos; i++) { fl *= 1 + P.crescimento; pv += fl / (1 + P.wacc) ** i; }
     const term = (fl * (1 + P.perpetuidade)) / (P.wacc - P.perpetuidade) / (1 + P.wacc) ** P.anos, ev = pv + term,
       liq = (ok(f.divida_total) ? f.divida_total : 0) - (ok(f.caixa) ? f.caixa : 0), preco = (ev - liq) / f.acoes;
-    dcf = { preco, ev, divida_liquida: liq, fcl: f.fcl };
+    if(!ok(preco)||preco<=0)dcfMotivo='DCF não calculável: o patrimônio projetado por ação não é positivo. A dívida/fluxo/premissas precisam ser revisados, sem arredondar para um preço artificial.';
+    else dcf = { preco, ev, divida_liquida: liq, fcl: f.fcl };
   }
   const margem = (v: any) => (ok(v) && v > 0 ? (v - px) / v : null);
   return { moeda, preco: px, graham, bazin, div12, dcf, dcfMotivo, premissas: P, margens: { graham: margem(graham), bazin: margem(bazin), dcf: margem(dcf?.preco) }, financeiro };
@@ -87,11 +89,11 @@ function tecnicoMd(tk: string, e: any, moeda: string) {
     ['Invalidação do cenário', t.invalidacao ? `${fmt(t.invalidacao.v)} (${t.invalidacao.tipo})` : 'n/d'],
   ];
   const op = [
-    ['Venda coberta (strike de referência acima do preço)', o.venda_coberta != null ? din(o.venda_coberta, moeda) : 'sem resistência próxima'],
-    ['Trava de alta (compra no suporte / venda na resistência)', o.trava_alta ? `${din(o.trava_alta.comprada, moeda)} / ${din(o.trava_alta.vendida, moeda)}` : 'n/d'],
-    ['Trava de baixa (compra na resistência / venda no suporte)', o.trava_baixa ? `${din(o.trava_baixa.comprada, moeda)} / ${din(o.trava_baixa.vendida, moeda)}` : 'n/d'],
-    [`Compra a seco de ${o.direcao === 'baixa' ? 'puts' : 'calls'} (perna de ${o.direcao || 'n/d'}): gatilho / alvo de extensão`, `${din(o.compra_seco_gatilho, moeda)} / ${din(o.alvo_extensao, moeda)}`],
-    ['Invalidação técnica', din(o.invalidacao, moeda)],
+    ['Venda coberta (strike de referência acima do preço)', o.venda_coberta != null ? dinPreco(o.venda_coberta, moeda) : 'sem resistência próxima'],
+    ['Trava de alta (compra no suporte / venda na resistência)', o.trava_alta ? `${dinPreco(o.trava_alta.comprada, moeda)} / ${dinPreco(o.trava_alta.vendida, moeda)}` : 'n/d'],
+    ['Trava de baixa (compra na resistência / venda no suporte)', o.trava_baixa ? `${dinPreco(o.trava_baixa.comprada, moeda)} / ${dinPreco(o.trava_baixa.vendida, moeda)}` : 'n/d'],
+    [`Compra a seco de ${o.direcao === 'baixa' ? 'puts' : 'calls'} (perna de ${o.direcao || 'n/d'}): gatilho / alvo de extensão`, `${dinPreco(o.compra_seco_gatilho, moeda)} / ${dinPreco(o.alvo_extensao, moeda)}`],
+    ['Invalidação técnica', dinPreco(o.invalidacao, moeda)],
   ];
   return `${tabela(['Mapa técnico', 'Valor'], L)}\n\n### Contexto para estruturação com opções\n${tabela(['Estrutura', 'Níveis de referência'], op)}\n\nRSI ${fmt(e.rsi, 1)} e elástico de ${pp(t.elastico20)} até a MM20: ${ok(e.rsi) && e.rsi >= 70 ? 'prêmios de calls tendem a estar mais caros — contexto que favorece estudar venda coberta/travas de alta com strike na resistência.' : ok(e.rsi) && e.rsi <= 30 ? 'contexto de sobrevenda — estudar travas de alta com risco limitado no suporte em vez de compra a seco alavancada.' : 'momento neutro — a escolha da estrutura depende do rompimento da referência acima ou da perda da referência abaixo.'} Níveis educacionais; confira liquidez, vencimento e volatilidade implícita na plataforma.`;
 }
@@ -112,7 +114,7 @@ function fundamentosMd(f: any, v: any) {
     out += `\n\n### Preço justo (${m === 'USD' ? 'US$' : 'R$'})\n` + tabela(['Método', 'Preço justo', 'Margem de segurança', 'Fórmula'], [
       ['Graham', din(v.graham, m), pct(v.margens.graham), '√(22,5 × LPA × VPA)'],
       ['Bazin', din(v.bazin, m), pct(v.margens.bazin), 'proventos 12m ÷ 6%'],
-      ['DCF', v.dcf ? din(v.dcf.preco, m) : 'indisponível', pct(v.margens.dcf), v.dcf ? `FCL ${grande(v.dcf.fcl, m)}, WACC ${pct(P.wacc)}, cresc. ${pct(P.crescimento)}, perp. ${pct(P.perpetuidade)}, ${P.anos} anos (${P.origem})` : v.dcfMotivo],
+      ['DCF', v.dcf ? din(v.dcf.preco, m) : 'não calculável', pct(v.margens.dcf), v.dcf ? `FCL ${grande(v.dcf.fcl, m)}, WACC ${pct(P.wacc)}, cresc. ${pct(P.crescimento)}, perp. ${pct(P.perpetuidade)}, ${P.anos} anos (${P.origem})` : v.dcfMotivo],
     ]) + '\n\nMargem de segurança = (preço justo − cotação) ÷ preço justo. Estimativas condicionais, não preço-alvo.';
   }
   const T = trimestres(f);

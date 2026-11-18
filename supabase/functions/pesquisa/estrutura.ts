@@ -113,8 +113,8 @@ const tend = (u: number, P: any, m: any) => (P == null || m == null ? "não aval
             tipo: prof != null && prof < 23.6 ? "impulso" : prof != null && prof < 100 ? "correção" : "reversão",
             fase, profundidade: prof, baseC: C0,
             gatilho: alta ? H : Lo,
-            ext100: amp > 0 ? (alta ? C0 + amp : C0 - amp) : null,
-            ext1618: amp > 0 ? (alta ? C0 + 1.618 * amp : C0 - 1.618 * amp) : null,
+            ext100: amp > 0 && (alta ? C0 + amp : C0 - amp)>0 ? (alta ? C0 + amp : C0 - amp) : null,
+            ext1618: amp > 0 && (alta ? C0 + 1.618 * amp : C0 - 1.618 * amp)>0 ? (alta ? C0 + 1.618 * amp : C0 - 1.618 * amp) : null,
             invalida: alta ? Lo : H,
           };
         // referências acionáveis mais próximas do preço (quadro final)
@@ -147,8 +147,8 @@ export function estudo(diario: any[], semanal: any[]) {
 /** Contexto prático para estruturas com opções (educacional): níveis para venda coberta, travas e compra a seco. */
 export function opcoes(h: any, t: any) {
   if (!t) return null;
-  const px = h.close, res = [t.refAlta?.[1], t.dow?.topoImediato, h.resistance].filter((v) => r(v) && v > px).sort((a, b) => a - b),
-    sup = [t.refBaixa?.[1], t.dow?.fundoImediato, h.support].filter((v) => r(v) && v < px).sort((a, b) => b - a);
+  const px = h.close, res = [t.refAlta?.[1], t.dow?.topoImediato, h.resistance].filter((v) => r(v) && v > px && v>0).sort((a, b) => a - b),
+    sup = [t.refBaixa?.[1], t.dow?.fundoImediato, h.support].filter((v) => r(v) && v < px && v>0).sort((a, b) => b - a);
   return {
     venda_coberta: res[0] ?? null, // strike de referência acima do preço (resistência mais próxima)
     trava_alta: sup[0] != null && res[0] != null ? { comprada: sup[0], vendida: res[0] } : null,

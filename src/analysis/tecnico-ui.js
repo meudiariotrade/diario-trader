@@ -74,12 +74,17 @@ async function candles(asset,tf,signal){
  // Reaproveita exclusivamente OHLCV local completo do gráfico legado, nunca snapshots de preço isolado.
  try{const h=typeof LVGC==='object'?LVGC[asset.ticker+'|'+tf]:null;
   const c=h?.v?.candles;
-  if(!h?.v?.proxy&&barrasRecentes(c,asset,tf)&&Date.now()-Number(h.ts)<ttl&&c.every(x=>Array.isArray(x)&&x.length>=6&&Number.isFinite(Number(x[5]))))
-   return {candles:c,source:'Histórico em cache do Terminal',fetchedAt:new Date(h.ts).toISOString()};
+  if(!h?.v?.proxy&&barrasRecentes(c,asset,tf)&&Date.now()-Number(h.ts)<ttl&&c.every(x=>Array.isArray(x)&&x.length>=6&&Number.isFinite(Number(x[5])))){
+   const result={candles:c,source:'Histórico em cache do Terminal',fetchedAt:new Date(h.ts).toISOString()};
+   void store(key,result);return result;
+  }
  }catch{}
  // Se uma ponte já oferecer OHLCV validado, reaproveitar sem outra requisição.
  try{const local=w.DiarioTecnicoFeeds?.getCandles?.(asset.ticker,tf,asset.market);
-  if(barrasRecentes(local,asset,tf))return {candles:local,source:'Feed local Profit/Finnhub/Binance',fetchedAt:new Date().toISOString()};
+  if(barrasRecentes(local,asset,tf)){
+   const result={candles:local,source:'Feed local Profit/Finnhub/Binance',fetchedAt:new Date().toISOString()};
+   void store(key,result);return result;
+  }
  }catch{}
  const url=edgeBase()+'/v1/tecnico-candles?market='+asset.market+'&ticker='+encodeURIComponent(asset.ticker)+'&tf='+tf;
  const response=await fetch(url,{signal,cache:'force-cache'});
@@ -124,7 +129,27 @@ function qualifies(r,s){
  }
 }
 function selectedRows(s){return markHoldings(s.rows).filter(r=>qualifies(r,s)).sort((a,b)=>(side(b,s)[1]?.score??-1)-(side(a,s)[1]?.score??-1)||a.ticker.localeCompare(b.ticker))}
-function autoTop(s){return selectedRows(s).filter(r=>{const x=side(r,s)[1];return x.eligible&&x.flags.length===0&&x.metrics.obvConfirmed&&x.metrics.rs!==null&&Number.isFinite(x.plan?.rr)&&x.plan.rr>=1.5}).slice(0,10)}
+function autoTop(s){
+ return selectedRows(s).filter(r=>{
+  const [direction,x]=side(r,s),plan=x?.plan||{};
+  // Não usar ativo sem candles, sem OBV/RS ou alvos negativos só para preencher dez posições.
+  const prices=['entry','stop','target1','target2a','target2','targetFinal'];
+  return x?.valid&&x.eligible&&x.barCount>=250&&x.flags.length===0&&
+   x.metrics?.obvConfirmed&&Number.isFinite(x.metrics.rs)&&
+   Number.isFinite(plan.rr)&&plan.rr>=1.5&&
+   prices.every(key=>Number.isFinite(plan[key])&&plan[key]>0)&&
+   (direction==='buy'?plan.stop<plan.entry&&plan.target1>plan.entry:
+      plan.stop>plan.entry&&plan.target1<plan.entry);
+ }).slice(0,10).map(r=>({...r,pdfSide:side(r,s)[0]}));
+}
+function avisoPdfInsuficiente(s,quantidade){
+ const message='Encontrados '+quantidade+' de 10 ativos validados no cenário atual. '+
+  'Por rigor metodológico, o dossiê completo exige 10 ativos com histórico OHLCV válido, '+
+  'OBV e força relativa confirmados, risco/retorno >= 1,5, preços positivos e sem sinais esticados. '+
+  (s.loading?'Aguarde a carga de candles.':'Atualize os candles ou amplie o cenário e carregue mais ativos.');
+ s.error=message;render();if(typeof w.alert==='function')w.alert(message);
+}
+
 function badges(r,x){return (x.eligible?'<span class="tech-tag">SETUP CONDICIONAL</span>':'')+(x.metrics?.obvConfirmed?'<span class="tech-tag good">OBV ROMPIDO</span>':'')+(x.metrics?.mtf===true?'<span class="tech-tag">MTF ALINHADO</span>':'')+(x.fib?.cluster?'<span class="tech-tag">FIBONACCING CLUSTER</span>':'')+(x.flags||[]).map(y=>'<span class="tech-tag bad">'+E(y)+'</span>').join('')}
 function kpis(s){
  const good=s.rows.filter(r=>r.buy?.eligible).length,short=s.rows.filter(r=>r.sell?.eligible).length,both=s.rows.filter(r=>r.buy?.metrics?.obvConfirmed&&r.buy?.metrics?.rvol>1||r.sell?.metrics?.obvConfirmed&&r.sell?.metrics?.rvol>1).length,
@@ -290,11 +315,23 @@ d.addEventListener('click',async e=>{
  if(el.hasAttribute('data-tech-close')){s.detail='';render();return}
  if(el.dataset.techAi){w.DiarioAnalises?.command?.('TECNICO '+el.dataset.techAi);return}
  if(el.hasAttribute('data-tech-pdf')&&!s.busyPDF){
-  const rows=autoTop(s);if(!rows.length){s.error='Nenhum ativo confirmado no cenário atual para gerar o PDF.';render();return}
-   const ticket=w.DiarioPDFiOS?.prepare();
-  s.busyPDF=true;render();
-  try{const result=await w.DiarioTecnicoPDF.share(m,rows,s.tf,ticket);if(!result.cancelled)s.info='Dossiê técnico de '+rows.length+' ativos: '+result.pages+' páginas.'}
-  catch(e){ticket?.close?.();s.error='PDF: '+String(e.message||e).slice(0,150)}
+  const rows=autoTop(s);
+  if(rows.length!==10){avisoPdfInsuficiente(s,rows.length);return}
+  // Safari/PWA: a janela precisa nascer no mesmo clique, antes do primeiro await.
+  const ticket=w.DiarioPDFiOS?.prepare();
+  s.busyPDF=true;s.error='';render();
+  try{
+   const reportRows=[];
+   for(const r of rows){
+    const key='candles|'+r.market+'|'+r.ticker+'|'+s.tf;
+    const saved=await read(key,s.tf==='1d'?6*3600000:10*60000);
+    if(!barrasRecentes(saved?.candles,r,s.tf))
+     throw Error('Histórico OHLCV de '+r.ticker+' vencido ou ausente: atualize os candles antes do PDF.');
+    reportRows.push({...r,chartCandles:saved.candles,chartTimeframe:s.tf,chartSource:saved.source||r.source});
+   }
+   const result=await w.DiarioTecnicoPDF.share(m,reportRows,s.tf,ticket);
+   if(!result.cancelled)s.info='Dossiê técnico de 10 ativos: '+result.pages+' páginas.';
+  }catch(e){ticket?.close?.();s.error='PDF: '+String(e.message||e).slice(0,190)}
   finally{s.busyPDF=false;render()}
  }
 });

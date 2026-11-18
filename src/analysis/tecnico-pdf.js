@@ -12,7 +12,20 @@ async function libs(){
  return w.PDFLib;
 }
 async function build(m,rows,tf='1d'){
- if(!['br','world'].includes(m)||!Array.isArray(rows)||rows.length<1||rows.length>10)throw Error('Dossiê requer de 1 a 10 ativos calculados');
+ if(!['br','world'].includes(m)||!Array.isArray(rows)||rows.length!==10)
+  throw Error('Dossiê PDF Top 10 exige exatamente 10 ativos concretos e validados');
+ if(new Set(rows.map(r=>r?.ticker)).size!==10)throw Error('Ativos repetidos no Top 10');
+ const samples=rows.map(r=>{
+  const x=r.pdfSide==='sell'?r.sell:r.buy;
+  const prices=['entry','stop','target1','target2a','target2','targetFinal'];
+  if(!x?.valid||!x.eligible||x.barCount<250||x.flags?.length||!x.metrics?.obvConfirmed||
+   !Number.isFinite(x.metrics?.rs)||!Number.isFinite(x.plan?.rr)||x.plan.rr<1.5||
+   !prices.every(k=>positivo(x.plan[k])))throw Error('Ativo sem confirmação completa: '+String(r.ticker));
+  const c=candlesPDF(r.chartCandles);
+  if(Math.abs(c.at(-1).c-x.price)>Math.max(.01,Math.abs(x.price)*.001))
+   throw Error('OHLCV diverge da nota técnica calculada: '+String(r.ticker));
+  return c;
+ });
  const P=await libs(),doc=await P.PDFDocument.create();doc.registerFontkit(w.fontkit);
  const fonts=await Promise.all(['pdf-sans.ttf','pdf-sans-bold.ttf','pdf-serif-bold.ttf'].map(async f=>{const r=await fetch(f,{cache:'force-cache'});if(!r.ok)throw Error('Fonte do PDF indisponível: '+f);return doc.embedFont(new Uint8Array(await r.arrayBuffer()),{subset:true})}));
  const [reg,bold,serif]=fonts,W=595.28,H=841.89,M=43,col=Object.fromEntries(Object.entries(C).map(([k,v])=>[k,color(P,v)]));
@@ -49,8 +62,8 @@ async function build(m,rows,tf='1d'){
   write(String(pageCount).padStart(2,'0'),W-M,802,8,reg,col.muted,true);
  }
  function comp(r){
-  const x=r.buy?.eligible&&(!r.sell?.eligible||r.buy.score>=r.sell.score)?r.buy:r.sell?.eligible?r.sell:(r.buy?.score??-1)>=(r.sell?.score??-1)?r.buy:r.sell;
-  return {x,side:x===r.buy?'COMPRA':'VENDA/SHORT'};
+  const x=r.pdfSide==='sell'?r.sell:r.buy;
+  return {x,side:r.pdfSide==='sell'?'VENDA/SHORT':'COMPRA'};
  }
  function verified(x){
   if(!x?.valid||x.score==null||x.pillars?.length!==4)return false;
@@ -93,6 +106,19 @@ async function build(m,rows,tf='1d'){
   y=wrap('Alertas: '+flags+'. Fibo Cluster: '+(x.fib?.cluster?'sim':'não')+'. RMC 4-Barras: '+(x.turn?.confirmed?'confirmada':'não confirmada')+'. CISD: '+(x.turn?.cisd?'confirmado':'pendente')+'.',M,y,W-2*M,9,13,reg,col.ink,3)+9;
   y=wrap('Elliott: '+(x.elliott?.label||'indeterminado')+'. '+(x.elliott?.reason||'Contagem não conclusiva')+'.',M,y,W-2*M,8,12,reg,col.muted,2);
   footer();
+  for(const [kind,label] of [['trend','Tendência · Médias · OBV'],['fibo','Fibonaccing · Plano de Trade'],['elliott','Elliott · ZigZag e Pivôs']]){
+   const graph=desenharGrafico(r,x,kind,tf,samples[i]);
+   newPage(String(i+1).padStart(2,'0')+' / 10   '+r.ticker+'   '+label,
+    'OHLCV do ativo · '+tf+' · '+(r.chartSource||r.source||'fonte não informada')+
+    ' · Último candle: '+new Date(samples[i].at(-1).t).toLocaleString('pt-BR'));
+   const png=await doc.embedPng(graph.png);
+   const wChart=W-2*M,hChart=wChart*graph.height/graph.width;
+   page.drawImage(png,{x:M,y:H-y-hChart,width:wChart,height:hChart});
+   y+=hChart+25;
+   write('LEITURA OBJETIVA / LIMITES',M,y,10,bold,col.gold);y+=22;
+   y=wrap(descricaoGrafico(kind,r,x,samples[i],graph),M,y,W-2*M,9.5,15,reg,col.ink,12);
+   footer();
+  }
  }
  newPage('Metodologia e conferência','Regras, fórmulas, evidências e limites do modelo local');
  write('PESOS DA NOTA',M,y,10,bold,col.gold);y+=26;
@@ -113,6 +139,199 @@ async function build(m,rows,tf='1d'){
  doc.setTitle('Dossiê Técnico '+region+' · Diário de Trader');doc.setAuthor('Diário de Trader');
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Dossie-Tecnico-'+(m==='br'?'Brasil':'EUA-Cripto')+'-'+new Date().toISOString().slice(0,10)+'.pdf',pages:doc.getPageCount()};
 }
+
+// Gráficos editoriais criados somente a partir do OHLCV já validado e armazenado no aparelho.
+// Aparência gráfica inspirada na legibilidade de terminais profissionais; sem logotipo, embed ou dados do TradingView.
+function candlesPDF(raw){
+ if(!Array.isArray(raw)||raw.length<250)throw Error('PDF técnico exige >=250 candles reais para SMA 200 e 90 barras visíveis');
+ const candles=[];
+ for(const v of raw){
+  const a=Array.isArray(v),t=Number(a?v[0]:v?.t??v?.time??v?.timestamp);
+  const c={t:t<1e11?t*1000:t,o:Number(a?v[1]:v?.o??v?.open),h:Number(a?v[2]:v?.h??v?.high),
+   l:Number(a?v[3]:v?.l??v?.low),c:Number(a?v[4]:v?.c??v?.close),v:Number(a?v[5]:v?.v??v?.volume)};
+  if(!Object.values(c).every(Number.isFinite)||c.t<=0||c.o<=0||c.l<=0||c.c<=0||
+    c.h<Math.max(c.o,c.c,c.l)||c.l>Math.min(c.o,c.c)||c.v<0)
+    throw Error('OHLCV inválido: não desenhar gráfico com candles artificiais');
+  if(candles.length&&c.t<=candles.at(-1).t)throw Error('OHLCV sem ordem temporal única');
+  candles.push(c);
+ }
+ if(candles.filter(x=>x.v>0).length<100)throw Error('OHLCV sem volume confirmado');
+ return candles;
+}
+const positivo=x=>typeof x==='number'&&Number.isFinite(x)&&x>0;
+function swingsPDF(c){
+ const points=[];for(let i=2;i<c.length-2;i++){
+  const high=[i-2,i-1,i+1,i+2].every(j=>c[i].h>c[j].h);
+  const low=[i-2,i-1,i+1,i+2].every(j=>c[i].l<c[j].l);
+  for(const [hit,d,p] of [[high,1,c[i].h],[low,-1,c[i].l]]){
+   if(!hit)continue;
+   const last=points.at(-1);
+   if(last?.d===d){if(d===1?p>last.p:p<last.p)points[points.length-1]={i,d,p}}
+   else points.push({i,d,p});
+  }
+ }
+ return points;
+}
+function desenharGrafico(r,x,kind,tf,candles){
+ const view=candles.slice(-90),offset=candles.length-view.length,canvas=document.createElement('canvas');
+ canvas.width=1320;canvas.height=720;const ctx=canvas.getContext('2d');
+ if(!ctx)throw Error('Canvas 2D indisponível no iPhone para produzir gráfico PDF');
+ const W=canvas.width,H=canvas.height,L=82,R=120,T=70,B=62;
+ const right=W-R,volTop=kind==='trend'?493:0,chartBottom=kind==='trend'?464:H-B;
+ const chartH=chartBottom-T;const plotW=right-L;
+ const fg='#111827',muted='#64748B',grid='#E5E7EB',rise='#089981',fall='#F23645';
+ const axisLabel=(v)=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:Math.abs(v)<2?4:2});
+ const candlesX=i=>L+(i+.5)*plotW/view.length;
+ const ctxText=(value,x,y,size=18,color=fg,align='left')=>{
+  ctx.fillStyle=color;ctx.textAlign=align;ctx.font=size+'px Arial, sans-serif';ctx.fillText(String(value),x,y);
+ };
+ const f=(y,a,b,min,max)=>b-(y-min)/(max-min)*(b-a);
+ ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,W,H);
+ ctxText(r.ticker+' · '+tf.toUpperCase()+' · '+(kind==='trend'?'MÉDIAS E FLUXO':
+  kind==='fibo'?'FIBONACCING E PLANO':'PIVÔS E ELLIOTT'),L,33,23);
+ ctxText('Fonte: '+String(r.chartSource||r.source||'Não informada').slice(0,60),right,34,15,muted,'right');
+ const side=r.pdfSide==='sell'?'sell':'buy';
+ const additions=[];
+ const fibLevels=Array.isArray(x.fib?.levels)?x.fib.levels.filter(z=>positivo(z.price)):[];
+ const plan=x.plan||{};
+ if(kind==='fibo'){
+  additions.push(...fibLevels.map(z=>z.price));
+  for(const key of ['entry','stop','target1','target2a','target2','targetFinal'])if(positivo(plan[key]))additions.push(plan[key]);
+ }
+ if(kind==='elliott'){const z=swingsPDF(candles);additions.push(...z.slice(-6).map(p=>p.p).filter(positivo))}
+ const prices=view.flatMap(c=>[c.h,c.l]).concat(additions);
+ const minPrice=Math.max(0.000001,Math.min(...prices)),maxPrice=Math.max(...prices);
+ const margin=Math.max((maxPrice-minPrice)*.07,maxPrice*.005,0.000001);
+ const lo=Math.max(0.000001,minPrice-margin),hi=maxPrice+margin;
+ const py=v=>f(v,T,chartBottom,lo,hi);
+ for(let z=0;z<=5;z++){
+  const value=lo+(hi-lo)*(5-z)/5,y=py(value);
+  ctx.strokeStyle=grid;ctx.lineWidth=1;ctx.setLineDash([]);ctx.beginPath();
+  ctx.moveTo(L,y);ctx.lineTo(right,y);ctx.stroke();
+  ctxText(axisLabel(value),right+12,y+5,16,muted);
+ }
+ ctx.strokeStyle='#94A3B8';ctx.beginPath();ctx.moveTo(right,T);ctx.lineTo(right,chartBottom);ctx.stroke();
+ for(let i=0;i<view.length;i++){
+  const c=view[i],xv=candlesX(i),col=c.c>=c.o?rise:fall,bw=Math.max(3,plotW/view.length*.57);
+  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1.9;ctx.beginPath();
+  ctx.moveTo(xv,py(c.h));ctx.lineTo(xv,py(c.l));ctx.stroke();
+  ctx.fillRect(xv-bw/2,Math.min(py(c.o),py(c.c)),bw,Math.max(2,Math.abs(py(c.c)-py(c.o))));
+ }
+ function trace(points,color,width=2,dash=[]){
+  if(points.length<2)return;
+  ctx.beginPath();ctx.lineWidth=width;ctx.strokeStyle=color;ctx.setLineDash(dash);
+  for(let i=0;i<points.length;i++)i?ctx.lineTo(points[i][0],points[i][1]):ctx.moveTo(points[i][0],points[i][1]);
+  ctx.stroke();ctx.setLineDash([]);
+ }
+ function horizontal(price,label,col,dashed=false){
+  if(!positivo(price))return;
+  const y=py(price);trace([[L,y],[right,y]],col,2,dashed?[8,6]:[]);
+  const yy=Math.max(T+12,Math.min(chartBottom-8,y-5));
+  ctxText(label+' '+axisLabel(price),right-8,yy,16,col,'right');
+ }
+ if(kind==='trend'){
+  const ma=[['SMA 20',20,'#2563EB'],['SMA 50',50,'#EA580C'],['SMA 150',150,'#9333EA'],['SMA 200',200,'#111827']];
+  const scale=candles.length;
+  for(let k=0;k<ma.length;k++){
+   const [name,n,col]=ma[k],pts=[];
+   for(let i=offset;i<scale;i++){if(i+1<n)continue;
+    let sum=0;for(let j=i-n+1;j<=i;j++)sum+=candles[j].c;
+    pts.push([candlesX(i-offset),py(sum/n)]);
+   }
+   trace(pts,col,3);
+   ctx.strokeStyle=col;ctx.lineWidth=4;ctx.beginPath();
+   ctx.moveTo(L+(k%4)*265,T-24);ctx.lineTo(L+(k%4)*265+24,T-24);ctx.stroke();
+   ctxText(name,L+(k%4)*265+33,T-18,16,col);
+  }
+  const obv=[0];
+  for(let i=1;i<candles.length;i++)obv.push(obv.at(-1)+(candles[i].c>candles[i-1].c?candles[i].v:
+    candles[i].c<candles[i-1].c?-candles[i].v:0));
+  const obv90=obv.slice(-90),oMin=Math.min(...obv90),oMax=Math.max(...obv90);
+  const oRange=Math.max(1,oMax-oMin),oy=v=>f(v,volTop+28,H-B,oMin-oRange*.1,oMax+oRange*.1);
+  ctxText('OBV · linha acumulada de volume',L,volTop+18,18,muted);
+  for(let z=0;z<=2;z++){let y=volTop+32+z*(H-B-volTop-36)/2;
+   trace([[L,y],[right,y]],grid,1);
+  }
+  trace(obv90.map((v,i)=>[candlesX(i),oy(v)]),'#475569',3);
+  const prior=obv.slice(-26,-1);
+  if(prior.length){
+   const broken=side==='buy'?Math.max(...prior):Math.min(...prior);
+   trace([[L,oy(broken)],[right,oy(broken)]],x.metrics?.obvConfirmed?rise:fall,1.5,[7,5]);
+   ctxText('Nível anterior OBV',right-6,volTop+16,15,muted,'right');
+  }
+ }
+ if(kind==='fibo'){
+  const d=x.fib?.defense;
+  if(Array.isArray(d)&&d.length===2&&d.every(positivo)){
+   const top=Math.min(py(d[0]),py(d[1])),bot=Math.max(py(d[0]),py(d[1]));
+   ctx.fillStyle='rgba(8,153,129,.10)';ctx.fillRect(L,top,plotW,Math.max(1,bot-top));
+   ctxText('DEFESA / FILÉ MIGNON · ZONA CONDICIONAL',L+8,top+21,15,rise);
+  }
+  for(const z of fibLevels){
+   const val=z.r||0,name=z.r>=1?'Exp '+(z.r*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%':
+     (z.r*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+   horizontal(z.price,name,'#64748B',val>=1);
+  }
+  const lines=[['Gatilho',plan.entry,'#2563EB'],['Stop',plan.stop,fall],
+   ['111%',plan.target1,rise],['127,2%',plan.target2a,rise],
+   ['141,4%',plan.target2,rise],['161,8%',plan.targetFinal,rise]];
+  for(const [label,v,col] of lines)if(positivo(v))horizontal(v,label,col,true);
+ }
+ if(kind==='elliott'){
+  const z=swingsPDF(candles),confirmed=z.filter(p=>p.i>=offset).slice(-6);
+  trace(confirmed.map(p=>[candlesX(p.i-offset),py(p.p)]),'#1D4ED8',3);
+  const labelMap=x.elliott?.valid&&confirmed.length>=6?['0','1','2','3','4','5']:
+   x.elliott?.correction&&confirmed.length>=4?['','A','B','C']:null;
+  confirmed.forEach((p,i)=>{
+   const label=labelMap?.length===confirmed.length?labelMap[i]:'P'+(i+1);
+   ctx.fillStyle='#1D4ED8';ctx.beginPath();ctx.arc(candlesX(p.i-offset),py(p.p),5,0,Math.PI*2);ctx.fill();
+   ctxText(label,candlesX(p.i-offset)+7,py(p.p)-11,17,'#1D4ED8');
+  });
+  const initial=confirmed.length>=4?confirmed[0]:null;
+  if(initial&&positivo(initial.p))horizontal(initial.p,'Invalidação estrutural possível',fall,true);
+  else ctxText('Invalidação não confirmada: pivôs insuficientes',L,T+21,17,fall);
+ }
+ for(const i of [0,30,60,89]){
+  const c=view[i],day=new Date(c.t);
+  const label=Number.isFinite(day.getTime())?day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'N/D';
+  ctxText(label,candlesX(i),H-24,16,muted,'center');
+ }
+ return {png:canvas.toDataURL('image/png'),width:canvas.width,height:canvas.height,
+   pivots:kind==='elliott'?swingsPDF(candles).filter(p=>p.i>=offset).slice(-6):[]};
+}
+function descricaoGrafico(kind,r,x,candles,graph){
+ const side=r.pdfSide==='sell'?'venda':'compra',dir=r.pdfSide==='sell'?-1:1;
+ const p=x.plan||{},met=x.metrics||{};
+ if(kind==='trend'){
+  const slope=dir*(met.sma20-met.sma50)>0&&dir*(met.sma50-met.sma150)>0&&dir*(met.sma150-met.sma200)>0;
+  return 'Médias '+(slope?'alinhadas na direção de '+side:'sem alinhamento integral confirmado')+
+   '. Pullback sem fechamento além da SMA 20: '+(x.pisani?.pullback?'critério atendido':'não confirmado')+
+   '. OBV: '+(met.obvConfirmed?'rompimento registrado':'rompimento não confirmado')+
+   '. Trend Template Minervini: '+(x.minervini?.score==null?'indisponível':x.minervini.score+'/8')+
+   ' (heurístico). São 90 candles exibidos, com médias calculadas sobre o histórico completo.';
+ }
+ if(kind==='fibo'){
+  const safe=v=>positivo(v)?n(v,2):'Não calculável';
+  const rr=Number.isFinite(p.rr)?n(p.rr,2):'Não calculável';
+  return 'Fibonaccing derivado de pivôs confirmados (heurística, não marcação autoral certificada). '+
+   'Gatilho '+safe(p.entry)+' via '+(x.turn?.confirmed?'modelo 4-Barras confirmado':'pivô condicional')+
+   '; CISD '+(x.turn?.cisd?'confirmado':'pendente')+
+   '. Stop técnico '+safe(p.stop)+'; alvos 111/127,2/141,4/161,8%: '+
+   [p.target1,p.target2a,p.target2,p.targetFinal].map(safe).join(' / ')+
+   '. Relação risco/retorno para 127,2% = '+rr+'. Nenhuma projeção menor ou igual a zero é plotada.';
+ }
+ const points=graph.pivots||[],initial=points.length>=4?points[0]:null;
+ const reference=initial&&positivo(initial.p)?n(initial.p,2):'não confirmada';
+ const last=points.at(-1);
+ return 'Contagem ZigZag baseada exclusivamente em pivôs observados com duas barras de confirmação. '+
+  'Hipótese Elliott: '+String(x.elliott?.label||'Indeterminada')+'. '+
+  String(x.elliott?.reason||'Sem estrutura suficiente')+'. '+
+  (x.elliott?.valid&&last?'Confirmação condicional exige rompimento do pivô '+n(last.p,2)+'. ':
+   'Não existe confirmação de onda em curso. ')+
+  'Invalidação estrutural candidata: '+reference+
+  '. A contagem é experimental; rótulos P indicam pivôs, não ondas certificadas.';
+}
+
 // Reservar a janela durante o clique evita bloqueio do Safari após tarefas assíncronas.
 function prepare(){
  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent||'')||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);

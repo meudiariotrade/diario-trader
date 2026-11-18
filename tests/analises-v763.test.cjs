@@ -35,7 +35,7 @@ test('RS não usa percentil parcial e setup só promove risco-retorno >=1.5',()=
  assert.match(worker,/peers\.length===fixed\.size/);
  assert.match(worker,/const complete=/);
  assert.match(worker,/denominator:rs===null\?null:fixed\.size/);
- assert.match(ui,/x\.plan\.rr>=1\.5/);
+ assert.match(ui,/plan\.rr>=1\.5/);
  assert.match(ui,/barrasRecentes\(payload\.candles,asset,tf\)/);
  assert.match(ui,/s\.next\+\(more\?12:\(m==='br'\?60:80\)\)/);
 });
