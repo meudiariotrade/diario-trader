@@ -54,12 +54,32 @@ export default {
    let items=[],source='';
    try{
     if(market==='CRYPTO'){
+     // Binance pode devolver HTTP 451 em algumas regiões Cloudflare.
+     // Usar apenas candles OHLCV públicos de mercado à vista, sem preços inventados.
      const rangeBin=tf==='1d'?'1d':tf==='1h'?'1h':'15m';
-     const resp=await fetch('https://api.binance.com/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=500',{signal:AbortSignal.timeout(9000)});
-     if(!resp.ok)throw Error('Binance HTTP '+resp.status);
-     const rows=await resp.json();
-     items=rows.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]);
-     source='Binance Klines';
+     const bybitInterval=tf==='1d'?'D':tf==='1h'?'60':'15';
+     const okxInterval=tf==='1d'?'1D':tf==='1h'?'1H':'15m';
+     const sources=[
+      {name:'Binance Klines',url:'https://api.binance.com/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=500',
+       parse:b=>Array.isArray(b)?b.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
+      {name:'Bybit Spot Klines',url:'https://api.bybit.com/v5/market/kline?category=spot&symbol='+ticker+'&interval='+bybitInterval+'&limit=500',
+       parse:b=>b?.retCode===0&&Array.isArray(b.result?.list)?b.result.list.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
+      {name:'OKX Spot Klines',url:'https://www.okx.com/api/v5/market/history-candles?instId='+ticker.replace(/USDT$/,'-USDT')+'&bar='+okxInterval+'&limit=300',
+       parse:b=>b?.code==='0'&&Array.isArray(b.data)?b.data.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]}
+     ];
+     const errors=[];
+     for(const provider of sources){
+      try{
+       const resp=await fetch(provider.url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(8000)});
+       if(!resp.ok){errors.push(provider.name+' HTTP '+resp.status);continue}
+       const data=provider.parse(await resp.json()).filter(x=>x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[4]>0&&x[2]>=Math.max(x[1],x[4])&&x[3]>0&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0);
+       if(data.length<210){errors.push(provider.name+' histórico incompleto');continue}
+       items=data.sort((a,b)=>a[0]-b[0]).slice(-600);
+       source=provider.name;
+       break;
+      }catch{errors.push(provider.name+' indisponível')}
+     }
+     if(!source)throw Error('Cripto sem OHLCV confiável: '+errors.join('; '));
     }else{
      let response=null;
      for(const h of ['query1.finance.yahoo.com','query2.finance.yahoo.com']){
