@@ -15,7 +15,7 @@ async function hashSnapshot(input){
 function candlesConferidos(asset){
  const raw=asset?.candles;
  if(!asset?.ajustado||!/^https:\/\/query1\.finance\.yahoo\.com\/v8\/finance\/chart\//.test(String(asset?.fonte||''))||
-  !Array.isArray(raw)||raw.length<250||!asset.as_of||!Number.isFinite(Date.parse(asset.as_of)))return null;
+  !Array.isArray(raw)||raw.length<289||!asset.as_of||!Number.isFinite(Date.parse(asset.as_of)))return null;
  const c=raw.map(z=>Array.isArray(z)&&z.length===6?z.map(Number):null);
  if(c.some((z,i)=>!z||z.some(x=>!Number.isFinite(x))||z[0]<=0||z[1]<=0||z[3]<=0||
    z[4]<=0||z[2]<Math.max(z[1],z[3],z[4])||z[3]>Math.min(z[1],z[4])||z[5]<0||
