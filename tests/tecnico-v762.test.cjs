@@ -10,7 +10,7 @@ function trend(dir=1,len=320,scale=1){
 }
 test('motor: sintaxe, versão e validação OHLCV (não aceita candles sem volume)',()=>{
  for(const file of ['src/analysis/tecnico-engine.js','src/analysis/tecnico-worker.js','src/analysis/tecnico-ui.js','src/analysis/tecnico-pdf.js'])new vm.Script(read(file),{filename:file});
- assert.equal(M.VERSION,'tecnico-769.1');
+ assert.equal(M.VERSION,'tecnico-771.1');
  const bars=trend();assert.equal(M.normalize(bars).length,bars.length);
  assert.equal(M.normalize([...bars,[1900000000,0,2,1,1,1000]]).length,bars.length);
  assert.equal(M.one(trend(1,120),1).valid,false);
