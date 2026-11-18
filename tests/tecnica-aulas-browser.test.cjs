@@ -75,7 +75,7 @@ test('Mentor gera aula de PDF e preserva dicionário e diagramas SVG',{timeout:9
  await expect(page.locator('.tp-script')).toContainText('MM200');
 }));
 test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de player',{timeout:90000},async()=>withApp(async(browser,base)=>{
- const page=await browser.newPage({viewport:{width:390,height:900}});
+ const page=await browser.newPage({viewport:{width:390,height:900},serviceWorkers:'block'});
  await page.addInitScript(()=>{
    window.testNativeFetch=window.fetch.bind(window);
    // Este teste verifica DOM e buffers, não o decodificador do Chrome headless.
@@ -85,7 +85,17 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
      if(e.target?.matches?.('[data-tp-film-player]'))e.stopImmediatePropagation();
    },true);
  });
- await page.route('**/storage/v1/object/sign/**',route=>route.request().method()==='POST'?route.fulfill({json:{signedURL:'/object/sign/aulas-videos/test-video/'+ID+'-16x9.mp4?token=test'}}):route.fulfill({path:path.join(__dirname,'../public/avatar-talking.mp4'),contentType:'video/mp4'}));
+ // O player usa GET de URL assinada. Bloquear SW impede que um fetch de mídia
+ // contorne o route do Playwright; testar o contrato sem acessar o Supabase.
+ const chamadas={assinatura:0,video:0};
+ await page.route('**/storage/v1/object/sign/**',route=>{
+   if(route.request().method()==='POST'){
+     chamadas.assinatura++;
+     return route.fulfill({json:{signedURL:'/object/sign/aulas-videos/test-video/'+ID+'-16x9.mp4?token=test'}});
+   }
+   chamadas.video++;
+   return route.fulfill({path:path.join(__dirname,'../public/avatar-talking.mp4'),contentType:'video/mp4'});
+ });
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  await page.evaluate(data=>{
   tab='estudos';ESV='aul';
@@ -93,6 +103,10 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
   // A sessão simulada deve pertencer ao projeto escolhido por cfg() (v710),
   // senão tok() a invalida antes de obter o vídeo.
   SESS={uid:'test-video',at:'test',exp:Date.now()+3600000,projectUrl:cfg()?.url||location.origin};
+  // Este cenário cobre URL assinada + continuidade do player, não o tempo
+  // de abertura/transação do IndexedDB (testado em armazenamento-local).
+  // O cache da mídia é simulado sem alterar a lógica real do app.
+  window.EstudosLocal={...window.EstudosLocal,get:async()=>null,put:async()=>true};
   const demoFetch=window.fetch;
   // Interceptar a URL real de Storage, seja a origem do teste ou a URL Supabase de config.js.
   window.fetch=(url,options)=>String(url).includes('/storage/v1/object/sign/aulas-videos/')
@@ -105,12 +119,23 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
  await page.locator('[data-tp-film-migrate]').evaluate(button=>{
   const details=button.closest('details');if(details)details.open=true;button.click();
  });
- // Falha em vídeo deve expor o motivo efetivo sem ocultar o teste.
- await expect.poll(async()=>page.evaluate(()=>({
-  player:!!document.querySelector('[data-tp-film-player]'),
-  status:document.querySelector('#tp-root .tp-status')?.textContent||'',
-  session:typeof SESS!=='undefined'&&!!SESS?.at
- })),{timeout:16000}).toMatchObject({player:true});
+ // Exige o fluxo real de migração: assinatura -> GET do MP4 -> player.
+ // Em caso de falha, registra status, sessão e requisições para diagnóstico.
+ try{
+  await expect.poll(()=>page.locator('[data-tp-film-player]').count(),{timeout:20000}).toBe(1);
+ }catch(error){
+  const estado=await page.evaluate(()=>({
+   status:document.querySelector('#tp-root .tp-status')?.textContent||'',
+   owner:typeof SESS!=='undefined'?SESS?.uid:null,
+   project:typeof cfg==='function'?cfg()?.url:null,
+   signedUrl:location.origin,
+   lesson:!!document.querySelector('#tp-title'),
+   mediaActive:window.TecnicaPratica?.view?.isMediaActive?.()
+  }));
+  throw Error('Migração não apresentou o player: '+JSON.stringify({estado,chamadas})+' · '+error.message);
+ }
+ assert.equal(chamadas.assinatura,1,'Assinatura privada solicitada uma única vez');
+ assert.equal(chamadas.video,1,'MP4 recebido pela URL assinada');
  await page.evaluate(()=>{window.v=document.querySelector('[data-tp-film-player]');window.v.currentTime=1;render();});
  assert.equal(await page.evaluate(()=>document.querySelector('[data-tp-film-player]')===window.v),true);
  await page.locator('[data-tp-action="close-film"]').click();
