@@ -7,6 +7,8 @@ test('CVM: parse numérico financeiro não inventa valores, separa CNPJ e moeda'
  const code=stripTypeScriptTypes(src,{mode:'transform'});
  const fn=vm.runInNewContext(code+'\n({csvRows,cvmNumero})');
  assert.equal(fn.cvmNumero('1.234,50'),1234.5);
+ assert.equal(fn.cvmNumero('9356000.000000'),9356000,'ponto decimal CVM nao vira multiplicacao por milhao');
+ assert.equal(fn.cvmNumero('1234.500000'),1234.5);
  assert.equal(fn.cvmNumero('-22,00'),-22);
  assert.equal(fn.cvmNumero(''),null);
  assert.equal(fn.cvmNumero('texto'),null);
@@ -23,6 +25,7 @@ test('CVM: linhagem usa documentos, periodo e versao, e nao valida automaticamen
  assert.match(sync,/CD_CONTA==='3\.01'/);
  assert.match(sync,/CD_CONTA==='3\.11'/);
  assert.match(sync,/valida_indicador_ttm:false/);
+ assert.match(sync,/valor_original_csv:String\(row\.VL_CONTA\)/);
  assert.match(sync,/comLinhagem\+\+/);
  assert.match(sync,/dados\.byteLength>/);
  assert.match(migration,/a\.documento_balanco_id=x\.documento_id/);
