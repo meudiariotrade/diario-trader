@@ -45,7 +45,16 @@ export async function calcular(cmd:any,fetcher=fetch,pesquisa:any={}){
   const f=pesquisa?.dados?.[t];if(!f){tecnico.push({ticker:t,erro:'sem dados coletados'});continue}
   const c=await candles(t,fetcher),e=estudo(c.diario||[],c.semanal||[]),v=valuation(f,cmd.premissas);
   let corrDolar=null;if(f.etf||f.mercado==='EUA'||['COMPARE','CARTEIRA'].includes(cmd.modo)){try{corrDolar=correlacao(c.diario||[],await dolar(fetcher))}catch{corrDolar=null}}
-  tecnico.push({ticker:t,estudo:e,valuation:v,corrDolar,candles:(c.diario||[]).length});
+  // Só transportar até 90 candles de mercado REAIS já coletados, sem chamadas adicionais no PDF.
+  const hist=(c.diario||[]).slice(-90);
+  const serieValida=hist.length===90&&hist.every((q:any,i:number)=>Array.isArray(q)&&q.length>=6&&
+   q.every((z:any)=>typeof z==='number'&&Number.isFinite(z))&&
+   q[0]>0&&q[1]>0&&q[3]>0&&q[4]>0&&q[2]>=Math.max(q[1],q[3],q[4])&&
+   q[3]<=Math.min(q[1],q[4])&&q[5]>=0&&
+   (i===0||q[0]>hist[i-1][0]));
+  tecnico.push({ticker:t,estudo:e,valuation:v,corrDolar,candles:(c.diario||[]).length,
+   serie_pdf:serieValida?{timeframe:'1d',fonte:'Yahoo Finance Chart · OHLCV não ajustado confirmado pelo provedor',
+    as_of:new Date(hist.at(-1)![0]*1000).toISOString(),candles:hist}:null});
  }
  return {tecnico,calculado_em:new Date().toISOString()};
 }
@@ -140,7 +149,15 @@ export async function redigir(cmd:any,p:any,c:any,env:Env,fetcher=fetch){
  catch(e){iaErro=String((e as Error).message).slice(0,600);leitura=''}
  const texto=(leitura?'## Leitura analítica\n\n'+leitura+'\n\n---\n\n':'> **IA indisponível agora:** relatório com os números calculados pelo código (sem texto da IA). Detalhe técnico: '+iaErro+'\n\n')+'# Dados e cálculos\n\n'+dados+`\n\nData dos dados: ${p.consultado_em} · cálculo: ${c?.calculado_em||gerado}\n\n_${leitura?'IA: '+modelo:'IA: nenhum provedor respondeu — '+iaErro.slice(0,300)}_\n\n${AVISO}`;
  const atualidade=confirmarAtualidade(cmd,p,Date.now());
-  return {texto,fontes:p.fontes,documentos:[],atualidade_confirmada:atualidade.estado,atualidade_por_ativo:atualidade.ativos,consultado_em:p.consultado_em,gerado_em:gerado,modelo,disclaimer:AVISO,ia_erro:iaErro||null,estado_dados:leitura?'Números do Yahoo Finance/brapi calculados pelo código; leitura redigida pela IA sobre esses números.':'Números do Yahoo Finance/brapi calculados pelo código. A IA não respondeu; veja o detalhe técnico no topo.'};
+  return {texto,fontes:p.fontes,documentos:[],
+  graficos_pdf:(c?.tecnico||[]).filter((t:any)=>t.serie_pdf).map((t:any)=>({
+   ticker:String(t.ticker).slice(0,12),...t.serie_pdf,
+   referencias:{preco:t.valuation?.preco??null,
+    graham:t.valuation?.graham??null,bazin:t.valuation?.bazin??null,
+    dcf:t.valuation?.dcf?.preco??null,dcf_motivo:t.valuation?.dcfMotivo??null},
+   moeda:t.valuation?.moeda||null
+  })).slice(0,5),
+  atualidade_confirmada:atualidade.estado,atualidade_por_ativo:atualidade.ativos,consultado_em:p.consultado_em,gerado_em:gerado,modelo,disclaimer:AVISO,ia_erro:iaErro||null,estado_dados:leitura?'Números do Yahoo Finance/brapi calculados pelo código; leitura redigida pela IA sobre esses números.':'Números do Yahoo Finance/brapi calculados pelo código. A IA não respondeu; veja o detalhe técnico no topo.'};
 }
 
 /** Verificação agendada: confirma que a cascata de IA responde. */
