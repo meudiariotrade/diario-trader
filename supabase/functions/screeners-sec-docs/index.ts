@@ -31,7 +31,7 @@ function isDoc(x:any,cik:string){
 async function collect(limit:number){
  // RPC retorna CIKs distintos: classes A/B do mesmo emissor compartilham uma só chamada HTTP.
  const pending=await rpc('quant_sec_docs_pendentes',{p_limit:limit});
- const accepted:any[]=[],missing:any[]=[],errors:string[]=[];
+ const accepted:any[]=[],missing:any[]=[],retryRows:any[]=[],errors:string[]=[];
  let fetched=0,blocked=false,last=0;
  for(const row of Array.isArray(pending)?pending:[]){
   const cik=String(row.cik||'');
@@ -42,29 +42,30 @@ async function collect(limit:number){
     headers:{Accept:'application/json'},signal:AbortSignal.timeout(14000)});
    const data=await r.json().catch(()=>({}));
    if(r.status===503&&(data.code===403||data.code===429)){
-    blocked=true;errors.push('SEC bloqueou/limitou acesso; lote interrompido sem repetição');break;
+    blocked=true;retryRows.push({cik,motivo:'SEC HTTP '+data.code+'; próxima tentativa com backoff'});errors.push('SEC bloqueou/limitou acesso; lote interrompido sem repetição');break;
    }
    if(r.status===404&&data.reason){
     missing.push({cik,motivo:'SEC Submissions sem 10-K/10-Q/20-F/40-F e período comprovados'});
     continue;
    }
-   if(!r.ok){errors.push(String(row.ticker)+': Cloudflare HTTP '+r.status);continue;}
-   if(!isDoc(data,cik)){errors.push(String(row.ticker)+': metadados inconsistentes');continue;}
+   if(!r.ok){retryRows.push({cik,motivo:'Cloudflare/SEC HTTP '+r.status});errors.push(String(row.ticker)+': Cloudflare HTTP '+r.status);continue;}
+   if(!isDoc(data,cik)){retryRows.push({cik,motivo:'Metadados SEC inconsistentes; não promover sem prova'});errors.push(String(row.ticker)+': metadados inconsistentes');continue;}
    fetched++;
    accepted.push({cik,competencia:data.reportDate,formulario:data.form,
     documento_id:data.accessionNumber,documento_url:data.documentUrl,publicado_em:data.filingDate});
-  }catch(e){errors.push(String(row.ticker)+': indisponível '+String(e).slice(0,55));}
+  }catch(e){retryRows.push({cik,motivo:'SEC indisponível; conferir em nova rodada'});errors.push(String(row.ticker)+': indisponível '+String(e).slice(0,55));}
  }
  const applied=accepted.length?Number(await rpc('quant_sec_docs_bulk_upsert',{p_rows:accepted}))||0:0;
  const paused=missing.length?Number(await rpc('quant_sec_docs_sem_prova',{p_rows:missing}))||0:0;
+ const cooldown=retryRows.length?Number(await rpc('quant_sec_docs_retry_patch',{p_rows:retryRows}))||0:0;
  // Somente quando a fila termina, atualizar snapshot público uma vez.
  const finished=Array.isArray(pending)&&pending.length<limit&&!blocked&&!errors.length;
  if(finished&&applied>0)await rpc('quant_v2_snapshot_refresh',{p_market:'US'});
  // Encerrar cron finito ao concluir; em HTTP 403/429 pausar sem insistir contra a SEC.
- const cronParado=(finished||blocked)?await rpc('quant_sec_docs_parar_backfill',{p_force:blocked}).catch(()=>false):false;
+ const cadence=await rpc('quant_sec_docs_cadencia',{p_bloqueio:blocked}).catch(()=>null);
  return {selecionados:Array.isArray(pending)?pending.length:0,consultados:fetched,
   emissores_gravados:accepted.length,linhas_atualizadas:applied,sem_formulario:paused,
-  terminado:finished,sec_bloqueada:blocked,cron_parado:cronParado,erros:errors.slice(0,5),
+  terminado:finished,sec_bloqueada:blocked,linhas_em_cooldown:cooldown,cadencia:cadence,erros:errors.slice(0,5),
   fonte:'SEC submissions via Cloudflare; somente prova documental'};
 }
 Deno.serve(async req=>{
