@@ -262,13 +262,29 @@ async function secColetar(limit:number,priority:'score'|'cap'='cap'){
    const doc=await r.json();if(Number(doc?.cik)!==Number(row.cik))throw Error('CIK divergente');
    http200++;const period=secPeriodo(doc);
    if(!period){errors.push(row.ticker+': 10-Q / 10-K sem periodo confirmado');continue}
-   updates.push({ticker:row.ticker,cik:row.cik,sec_status:'verificado',sec_facts_at:period.end,sec_source_url:url,...secValores(doc)});
+   const metricas=secValores(doc);
+   updates.push({ticker:row.ticker,cik:row.cik,sec_status:'verificado',sec_facts_at:period.end,sec_source_url:url,...metricas});
    dates.push({ticker:row.ticker,data_competencia_balanco:period.end});
-  }catch(e){errors.push(row.ticker+': '+String(e).slice(0,90))}
+   const id=String(period.accn||'');
+   if(/^\d{10}-\d{2}-\d{6}$/.test(id)){
+    const origin=(tags:string[],unit='USD',count=2)=>secAnnual(doc,tags,unit).slice(0,count)
+     .filter((x:any)=>x.accn&&x.end&&x.filed&&x.tag)
+     .map((x:any)=>({documento_id:x.accn,formulario:x.form,competencia:x.end,publicado_em:x.filed,codigo_xbrl:x.tag}));
+    const linhagem={
+     revenue_growth_yoy:metricas.revenue_growth_yoy!==null?origin(['RevenueFromContractWithCustomerExcludingAssessedTax','Revenues','SalesRevenueNet']):[],
+     eps_growth_yoy:metricas.eps_growth_yoy!==null?origin(['EarningsPerShareDiluted'],'USD/shares'):[],
+     fcf_margin:metricas.fcf_margin!==null?origin(['NetCashProvidedByUsedInOperatingActivities']):[]};
+    docs.push({ticker:row.ticker,cik:row.cik,competencia:period.end,formulario:period.form,
+     documento_id:id,documento_url:'https://www.sec.gov/Archives/edgar/data/'+Number(row.cik)+'/'+id.replaceAll('-','')+'/',
+     publicado_em:period.filed,linhagem});
+   }
+   }catch(e){errors.push(row.ticker+': '+String(e).slice(0,90))}
  }
  const patched=updates.length?Number(await rpc('quant_screeners_sec_patch',{p_rows:updates}))||0:0;
  const validated=dates.length?Number(await rpc('quant_screeners_competencia_patch',{p_market:'US',p_rows:dates}))||0:0;
- const final=dates.length?await finalized('US','sec_edgar_competencia',patched,errors.length,dates.map(x=>x.ticker)):null;
+ let oficiais=0;
+  for(let i=0;i<docs.length;i+=12)oficiais+=Number(await rpc('quant_screeners_documento_patch',{p_market:'US',p_rows:docs.slice(i,i+12)}))||0;
+  const final=dates.length?await finalized('US','sec_edgar_competencia',patched,errors.length,dates.map(x=>x.ticker)):null;
  return {selecionados:pending?.length||0,http_200:http200,http_403:http403,http_429:http429,
   fundamentos_validos:patched,competencias_gravadas:validated,documentos_oficiais:oficiais,erros:errors.slice(0,8),final};
 }
