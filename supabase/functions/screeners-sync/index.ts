@@ -208,13 +208,26 @@ async function secMapear(){
  return {http:200,mapeados:count,total:rows.length};
 }
 function secPeriodo(json:any){
- const gaap=json?.facts?.['us-gaap']||{},all:any[]=[];
- for(const tag of ['Assets','StockholdersEquity','Liabilities','NetIncomeLoss','Revenues',
-   'RevenueFromContractWithCustomerExcludingAssessedTax']){
-  for(const entries of Object.values(gaap[tag]?.units||{}) as any[][]){
-   for(const x of entries||[]){
-    if(['10-Q','10-K','10-Q/A','10-K/A'].includes(x.form)&&/^\d{4}-\d{2}-\d{2}$/.test(x.end||'')
-      &&x.end<=now&&x.filed&&x.filed<=now)all.push(x);
+ // Emissores estrangeiros reportam IFRS/20-F ou 40-F, não necessariamente us-gaap/10-K.
+ // Aceitar somente período documental verificável, accession oficial e data de protocolo.
+ const approved=new Set(['10-Q','10-K','10-Q/A','10-K/A','20-F','40-F']);
+ const groups=[
+  {data:json?.facts?.['us-gaap']||{},tags:['Assets','StockholdersEquity','Liabilities','NetIncomeLoss',
+   'Revenues','RevenueFromContractWithCustomerExcludingAssessedTax']},
+  {data:json?.facts?.['ifrs-full']||{},tags:['Assets','Equity','Liabilities','ProfitLoss',
+   'Revenue','RevenueFromContractsWithCustomers','ProfitLossAttributableToOwnersOfParent']}
+ ];
+ const all:any[]=[];
+ for(const group of groups){
+  for(const tag of group.tags){
+   for(const entries of Object.values(group.data[tag]?.units||{}) as any[][]){
+    for(const x of entries||[]){
+     if(approved.has(String(x.form))&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.end||''))
+      &&/^\d{4}-\d{2}-\d{2}$/.test(String(x.filed||''))
+      &&/^\d{10}-\d{2}-\d{6}$/.test(String(x.accn||''))
+      &&x.end<=(new Date().toISOString().slice(0,10))&&x.filed>=x.end
+      &&x.filed<=(new Date().toISOString().slice(0,10)))all.push(x);
+    }
    }
   }
  }
@@ -261,7 +274,7 @@ async function secColetar(limit:number,priority:'score'|'cap'='cap'){
    if(!r.ok){errors.push(row.ticker+': SEC HTTP '+r.status);continue}
    const doc=await r.json();if(Number(doc?.cik)!==Number(row.cik))throw Error('CIK divergente');
    http200++;const period=secPeriodo(doc);
-   if(!period){semPeriodo.push({ticker:row.ticker,cik:row.cik});errors.push(row.ticker+': 10-Q / 10-K sem periodo confirmado; pausa de 7 dias');continue}
+   if(!period){semPeriodo.push({ticker:row.ticker,cik:row.cik});errors.push(row.ticker+': 10-Q / 10-K / 20-F / 40-F sem periodo confirmado; pausa de 7 dias');continue}
    const metricas=secValores(doc);
    updates.push({ticker:row.ticker,cik:row.cik,sec_status:'verificado',sec_facts_at:period.end,sec_source_url:url,...metricas});
    dates.push({ticker:row.ticker,data_competencia_balanco:period.end});
@@ -459,7 +472,50 @@ function cvmNumero(value:string){
  if(!/^-?\d+(?:\.\d+)?$/.test(s))return null;
  const n=Number(s);return Number.isFinite(n)?n:null;
 }
+async function cvmDreArquivoOficial(docs:Map<string,any>){
+ // A extração pesada dos ZIPs ocorre em GitHub Actions semanalmente; Supabase lê
+ // apenas o JSON comprimível com provas, e o confronta com os metadados CVM atuais.
+ const year=new Date().getUTCFullYear();
+ const url='https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/cvm-dre-'+year+'.json';
+ const r=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(10000)});
+ if(!r.ok)throw Error('Espelho CVM HTTP '+r.status);
+ const payload=await r.text();
+ if(payload.length>1_900_000)throw Error('Espelho CVM acima do limite de 1.9 MB');
+ const j=JSON.parse(payload);
+ if(j?.versao!==1||j.ano!==year||!Array.isArray(j.documentos)||j.documentos.length<100
+  ||!j.resumo||!j.gerado_em)throw Error('Espelho CVM com esquema incompleto');
+ const ts=Date.parse(j.gerado_em);
+ if(!Number.isFinite(ts)||Date.now()-ts>14*86400000||ts>Date.now()+3600000)
+  throw Error('Espelho CVM desatualizado');
+ const map=new Map<string,any>();
+ for(const record of j.documentos){
+  if(/^\d{14}$/.test(String(record.cnpj||''))&&!map.has(record.cnpj))map.set(record.cnpj,record);
+ }
+ const contas=new Map<string,Record<string,any>>();
+ for(const [cnpj,doc] of docs){
+  const row=map.get(cnpj);
+  // Metadados locais da CVM prevalecem; nenhuma linha externa os substitui.
+  if(!row||row.documento_id!==doc.documento_id||row.competencia!==doc.competencia
+   ||row.publicado_em!==doc.publicado_em||row.formulario!==doc.formulario
+   ||row.versao!==doc.versao)continue;
+  const lineage:Record<string,any>={};
+  for(const key of ['receita_liquida_dre','lucro_prejuizo_dre']){
+   const ev=row.linhagem?.[key],n=ev&&cvmNumero(ev.valor_original_csv);
+   if(n===null||!Number.isFinite(n)||Math.abs(n-Number(ev.valor_reportado))>0.00001
+    ||ev.fonte!=='CVM'||ev.tipo!=='conta_contabil_oficial'||ev.documento_id!==doc.documento_id
+    ||ev.competencia!==doc.competencia||ev.periodo_fim!==doc.competencia
+    ||ev.valida_indicador_ttm!==false||!['MIL','UNIDADE'].includes(String(ev.escala_moeda||'')))
+    continue;
+   lineage[key]=ev;
+  }
+  if(Object.keys(lineage).length)contas.set(cnpj,lineage);
+ }
+ return {contas,fontes:['GitHub Actions · CVM oficial '+j.gerado_em,'Empresas no espelho: '+j.documentos.length],
+  erros:[] as string[],documentos_informados:j.documentos.length};
+}
 async function cvmDreEvidencias(docs:Map<string,any>){
+ try{return await cvmDreArquivoOficial(docs)}
+ catch(e){console.warn('CVM: espelho semanal indisponivel; fallback amostral',String(e).slice(0,120));}
  const contas=new Map<string,Record<string,any>>(),fontes:string[]=[],erros:string[]=[];
  for(const kind of ['itr','dfp'] as const){
   const alvo=new Set([...docs].filter(([,d])=>d.formulario===kind.toUpperCase()).map(([cnpj])=>cnpj));
@@ -502,8 +558,13 @@ async function cvmDreEvidencias(docs:Map<string,any>){
 }
 
 function normalizeName(name:string){
+ // Pontuação societária CVM: S.A. vira 'S A' somente se os pontos forem
+ // retirados ANTES da limpeza. Normalizar antes para casar com os tickers B3.
  return String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
-  .replace(/\b(PFD|PREF|COMMON|SHARES|SHS|REGISTERED|S A|SA|S\.A\.|LTDA|NON|CUM|PERP|ADR|PREFERRED|DEPOSITARY)\b/g,' ')
+  .replace(/\bS\s*[.\/-]?\s*A\b\.?/g,' ')
+  .replace(/\bBCO\b/g,'BANCO').replace(/\bCIA\b/g,'COMPANHIA')
+  .replace(/\b(DO|DA|DE|DOS|DAS)\b/g,' ')
+  .replace(/\b(PFD|PREF|COMMON|SHARES|SHS|REGISTERED|SA|LTDA|NON|CUM|PERP|ADR|PREFERRED|DEPOSITARY)\b/g,' ')
   .replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 }
 async function cvmEnriquecer(){
@@ -526,22 +587,35 @@ async function cvmEnriquecer(){
    names.get(key)!.add(cnpj);
   }
  }
- const periods=new Map<string,string>(),docsByCnpj=new Map<string,any>(),fontes:string[]=[],errors:string[]=[];
+ const periods=new Map<string,string>(),docsByCnpj=new Map<string,any>(),docsPorProtocolo=new Map<string,any>(),fontes:string[]=[],errors:string[]=[];
  for(const kind of ['itr','dfp'] as const){
   try{
    const rows=csvRows(await cvmZipCsv(kind));
    for(const x of rows){
     const cnpj=(x.CNPJ_CIA||'').replace(/\D/g,''),date=x.DT_REFER||'';
     if(cnpj.length!==14||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>now)continue;
-    if(!periods.has(cnpj)||periods.get(cnpj)!<date){
-      periods.set(cnpj,date);
-      const id=String(x.ID_DOC||x.NUM_SEQ_DOC||'').trim(),publicado=String(x.DT_RECEB||x.DT_ENTREGA||'').slice(0,10);
-      if(/^\d{1,18}$/.test(id)&&/^\d{4}-\d{2}-\d{2}$/.test(publicado)&&publicado>=date&&publicado<=now){
-       docsByCnpj.set(cnpj,{competencia:date,formulario:kind.toUpperCase(),documento_id:id,
-        documento_url:'https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/'+kind.toUpperCase()+'/DADOS/'+kind+'_cia_aberta_'+new Date().getUTCFullYear()+'.zip',
-        publicado_em:publicado,versao:String(x.VERSAO||'').trim(),linhagem:{}});
-      }else docsByCnpj.delete(cnpj);
-     }
+    // Competência e documento são evidências distintas: uma reapresentação no mesmo
+    // trimestre pode ter ID_DOC/versão mais recentes, sem apagar uma prova anterior.
+    if(!periods.has(cnpj)||periods.get(cnpj)!<date)periods.set(cnpj,date);
+    const id=String(x.ID_DOC||x.NUM_SEQ_DOC||'').trim(),publicado=String(x.DT_RECEB||x.DT_ENTREGA||'').slice(0,10),versao=String(x.VERSAO||'').trim();
+    // Protocolo antigo já vinculado ao ticker: recuperar o CNPJ diretamente
+    // da CVM, sem repetir um palpite de razão social após renomeações.
+    if(/^\d{1,18}$/.test(id)&&/^\d{4}-\d{2}-\d{2}$/.test(publicado)
+     &&publicado>=date&&publicado<=now){
+     const last=docsPorProtocolo.get(id);
+     if(!docsPorProtocolo.has(id))docsPorProtocolo.set(id,{cnpj,competencia:date,publicado_em:publicado});
+     else if(last&&(last.cnpj!==cnpj||last.competencia!==date||last.publicado_em!==publicado))
+      docsPorProtocolo.set(id,null); // mesmo protocolo com identidade ambígua é rejeitado
+    }
+    if(!/^\d{1,18}$/.test(id)||!/^\d{4}-\d{2}-\d{2}$/.test(publicado)
+     ||publicado<date||publicado>now||!/^\d{1,6}$/.test(versao))continue;
+    const previous=docsByCnpj.get(cnpj),same=previous?.competencia===date;
+    if(previous&&(previous.competencia>date
+      ||(same&&(previous.publicado_em>publicado
+      ||(previous.publicado_em===publicado&&Number(previous.versao)>=Number(versao))))))continue;
+    docsByCnpj.set(cnpj,{competencia:date,formulario:kind.toUpperCase(),documento_id:id,
+     documento_url:'https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/'+kind.toUpperCase()+'/DADOS/'+kind+'_cia_aberta_'+new Date().getUTCFullYear()+'.zip',
+     publicado_em:publicado,versao,linhagem:{}});
    }
    fontes.push(kind.toUpperCase()+' OK');
   }catch(e){errors.push(kind.toUpperCase()+': '+String(e).slice(0,120))}
@@ -569,7 +643,11 @@ async function cvmEnriquecer(){
       (parts.length===1&&parts[0].length>=4&&label.startsWith(parts[0]+' ')))
     for(const c of cnpjs)fallback.add(c);
   }
-  const matches=exact.size?exact:fallback;
+  const original=docsPorProtocolo.get(String(row.documento_balanco_id||''));
+  const protocoloValido=original
+   &&original.competencia===row.data_competencia_balanco
+   &&original.publicado_em===String(row.documento_balanco_publicado_em||'').slice(0,10);
+  const matches=protocoloValido?new Set<string>([original.cnpj]):exact.size?exact:fallback;
   if(matches.size!==1){if(unknown.length<12)unknown.push(row.ticker);continue}
   const cnpj=[...matches][0],date=periods.get(cnpj);
    if(date)updates.push({ticker:row.ticker,data_competencia_balanco:date});
