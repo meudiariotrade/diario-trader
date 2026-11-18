@@ -150,13 +150,13 @@ BEGIN
 END $ddl$;
 -- Recalcular somente emissores com subtipo financeiro identificado, sem alterar outros setores.
 SELECT public.quant_v2_recalcular_lote('BR',ARRAY(
- SELECT ticker FROM quant_br.acoes WHERE ativa
- AND (public.quant_v2_score('BR',to_jsonb(quant_br.acoes))->>'setor_financeiro_confirmado')='true'
+ SELECT a.ticker FROM quant_br.acoes a WHERE a.ativa
+ AND (public.quant_v2_score('BR',to_jsonb(a))->>'setor_financeiro_confirmado')='true'
  ORDER BY ticker LIMIT 250
 ));
 SELECT public.quant_v2_recalcular_lote('US',ARRAY(
- SELECT ticker FROM quant_us.acoes WHERE active
- AND (public.quant_v2_score('US',to_jsonb(quant_us.acoes))->>'setor_financeiro_confirmado')='true'
+ SELECT a.ticker FROM quant_us.acoes a WHERE a.active
+ AND (public.quant_v2_score('US',to_jsonb(a))->>'setor_financeiro_confirmado')='true'
  ORDER BY ticker LIMIT 250
 ));
 -- Atualização pontual de dois snapshots públicos (sem polling).
