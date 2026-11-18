@@ -61,9 +61,50 @@ jobs:
         if: github.event_name != 'pull_request'
         with:
           path: _site
-  deploy:
+  # Pré-checagem sem expor nem utilizar valores de credenciais em logs.
+  cloudflare-preflight:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Conferir presença das duas credenciais
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CF_API_TOKEN" ]; then echo "CLOUDFLARE_API_TOKEN: configurado"; else echo "::warning::CLOUDFLARE_API_TOKEN não encontrado"; fi
+          if [ -n "$CF_ACCOUNT_ID" ]; then echo "CLOUDFLARE_ACCOUNT_ID: configurado"; else echo "::warning::CLOUDFLARE_ACCOUNT_ID não encontrado"; fi
+  cloudflare:
     if: github.event_name != 'pull_request'
     needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    environment:
+      name: cloudflare-workers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verificar credenciais do Cloudflare sem imprimi-las
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CF_API_TOKEN" || { echo "::error::Configure CLOUDFLARE_API_TOKEN no GitHub Actions"; exit 1; }
+          test -n "$CF_ACCOUNT_ID" || { echo "::error::Configure CLOUDFLARE_ACCOUNT_ID no GitHub Actions"; exit 1; }
+          node --check cloudflare/diario-screeners/index.mjs
+      - name: Implantar o Worker existente preservando o nome
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/diario-screeners
+          command: deploy
+      - name: Confirmar dados de ações e cripto reais na borda
+        run: node scripts/verify-tecnico-edge.cjs
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: [validate, cloudflare]
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
