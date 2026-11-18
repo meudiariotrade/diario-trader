@@ -5313,47 +5313,72 @@ const IC = (e) =>
   let n = {},
     r = 0;
   window.tapeDados = () => n;
-  const i = ([c, p]) => {
-    const u = (window.tapeVivo && window.tapeVivo(c)) || n[c],
-      m = +u.chg || 0,
-      f = m >= 0;
-    return `<span>${p} <span class="${f ? "up" : "dn"}">${f ? "▲" : "▼"}</span></span><span class="${f ? "up" : "dn"}">${f2(u.px)} <b>${f ? "+" : ""}${f2(m)}%</b></span>`;
+  const ativo = (key) => {
+    const live = typeof window.tapeVivo === "function" ? window.tapeVivo(key) : null;
+    const v = live || n[key];
+    return v && Number.isFinite(+v.px) && +v.px > 0 ? v : null;
+  };
+  const i = ([key, nome]) => {
+    const v = ativo(key);
+    if (!v) return "";
+    const variacao = v.chg == null || v.chg === "" ? null : Number(v.chg);
+    const m = Number.isFinite(variacao) ? variacao : null;
+    const positivo = m == null || m >= 0;
+    const classe = positivo ? "up" : "dn";
+    const seta = m == null ? "" : positivo ? "▲" : "▼";
+    const percentual = m == null ? "—" : (positivo ? "+" : "") + f2(m) + "%";
+    return `<span>${nome} <span class="${classe}">${seta}</span></span><span class="${classe}">${f2(v.px)} <b>${percentual}</b></span>`;
   };
   function l() {
-    const c = document.getElementById("tape");
-    if (!c) return;
-    const p = s.filter((x) => n[x[0]]);
-    if (p.length < 4) return;
+    if (document.hidden) return;
+    const tape = document.getElementById("tape");
+    if (!tape) return;
+    const disponiveis = s.filter(([key]) => !!ativo(key));
+    if (disponiveis.length < 4) return;
+    const itens = tape.querySelectorAll(".mq .ti");
+    if (r && disponiveis.some(([key]) => ![...itens].some((el) => el.dataset.s === key))) {
+      tape.querySelector(".mq")?.remove();
+      r = 0;
+    }
     if (r) {
-      c.querySelectorAll(".ti").forEach((x) => {
-        const v = s.find((g) => g[0] === x.dataset.s);
-        v && n[v[0]] && (x.innerHTML = i(v));
+      tape.querySelectorAll(".ti").forEach((item) => {
+        const itemConf = s.find(([key]) => key === item.dataset.s);
+        const q = itemConf && ativo(itemConf[0]);
+        if (!q) return;
+        const novoHtml = i(itemConf);
+        if (novoHtml && item.innerHTML !== novoHtml) item.innerHTML = novoHtml;
+        const fonte = q.fonte || "Última referência disponível";
+        const momento = q.dadoEm ? new Date(q.dadoEm).toLocaleTimeString("pt-BR") : "";
+        item.title = fonte + (momento ? " · " + momento : "") + (q.fechado ? " · FECHADO" : "");
       });
       return;
     }
-    const u = p
-        .map((x) => `<div class="ti" data-s="${x[0]}">${i(x)}</div>`)
-        .join(""),
-      m = document.createElement("div");
-    ((m.className = "mq"),
-      (m.innerHTML = `<div class="tr" style="--d:${Math.max(30, p.length * 4)}s">${u}${u}</div>`));
-    const f = c.querySelector(".tradingview-widget-container");
-    (f && (f.style.display = "none"), c.appendChild(m), (r = 1));
+    const conteudo = disponiveis.map((item) => `<div class="ti" data-s="${item[0]}">${i(item)}</div>`).join("");
+    const faixa = document.createElement("div");
+    faixa.className = "mq";
+    faixa.innerHTML = `<div class="tr" style="--d:${Math.max(30, disponiveis.length * 4)}s">${conteudo}${conteudo}</div>`;
+    const widget = tape.querySelector(".tradingview-widget-container");
+    if (widget) widget.style.display = "none";
+    tape.appendChild(faixa);
+    r = 1;
+    l();
   }
+  let ultimaConsulta = 0;
   async function d() {
-    if (!document.hidden)
-      try {
-        (((await scFetch(s.map((c) => c[0]))).data || []).forEach((c) => {
-          c &&
-            c.ok &&
-            c.px != null &&
-            s.some((p) => p[0] === c.s) &&
-            (n[c.s] = c);
-        }),
-          l());
-      } catch {}
+    if (document.hidden || navigator.onLine === false || Date.now() - ultimaConsulta < 15 * 6e4) return;
+    ultimaConsulta = Date.now();
+    try {
+      const resposta = await scFetch(s.map(([key]) => key));
+      (resposta.data || []).forEach((item) => {
+        if (item?.ok && Number(item.px) > 0 && s.some(([key]) => key === item.s)) n[item.s] = item;
+      });
+      l();
+    } catch {}
   }
-  ((window.tapeRedraw = l), setTimeout(d, 1200), setInterval(d, 6e4));
+  window.tapeRedraw = l;
+  setTimeout(d, 1200);
+  setInterval(d, 15 * 6e4);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { l(); d(); } });
 })(),
   (function () {
     const e = TraderStyles.slot("legacy-004");

@@ -10035,7 +10035,7 @@ Energia;30">${j(
               N.fh.close(),
             (N.fhAuto = r()),
             F.trFinnhub(N.fhAuto),
-            F.trBinance(["btcusdt", "ethusdt"], "auto"));
+            F.trBinance(["btcusdt", "ethusdt", "solusdt", "xrpusdt"], "auto"));
         }
       }
       function O(o) {
