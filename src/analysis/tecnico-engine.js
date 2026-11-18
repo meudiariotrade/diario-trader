@@ -118,7 +118,8 @@
   const score=round(pillars.reduce((a,x)=>a+x.score*x.weight/10,0),1);
   const entry=turn.confirmed&&turn.reference?turn.reference:pivot,riskBase=Math.max(atr14*.9,p*.005),st=dir===1?Math.min(p-riskBase,s20-atr14*.4,fib.defense?.[0]??p-riskBase):Math.max(p+riskBase,s20+atr14*.4,fib.defense?.[1]??p+riskBase);
   const risk=(entry-st)*dir,segments=fib.segments[0]||fib.segments[1],ext=segments?.ext||[],target=r=>ext.find(x=>x.r===r)?.price??null;
-  const t1=target(1.11),t2=target(1.414),t3=target(1.618),rr=risk>0&&t2!==null?(t2-entry)*dir/risk:null;
+  const future=r=>{const p=target(r);return p!==null&&(p-entry)*dir>0?p:null};
+  const t1=future(1.11),t2=future(1.414),t3=future(1.618),rr=risk>0&&t2!==null?(t2-entry)*dir/risk:null;
   const active=trend&&breakout&&obvConfirmed&&rvol>1&&vol>3;
   const bollinger=boll(c);
   return {valid:true,dir,price:round(p),score,pillars,coverage:round((rs!==null?1:0)+(mtf!==null?1:0)+(template.score!==null?1:0),0),
