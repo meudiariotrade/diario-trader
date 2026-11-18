@@ -7,7 +7,7 @@ const pairs=['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT','DOGEUS
 const basicBR=['PETR4','VALE3','ITUB4','BBDC4','BBAS3','WEGE3','ABEV3','B3SA3','PRIO3','RENT3','SUZB3','ELET3','BPAC11','RADL3','GGBR4','VIVT3'];
 const basicUS=['AAPL','MSFT','NVDA','AMZN','GOOGL','META','AVGO','TSLA','AMD','NFLX','JPM','V','XOM','CVX','PBR','LLY','COST','UNH'];
 const presets=[['todos','Todos (Nota Geral)'],['fibo','Fibonaccing · Filé Mignon + 4-Barras'],['pisani','Pisani · Breakout + OBV Rompido'],['minervini','Minervini · 8/8 + VCP'],['dupla','Dupla Confluência · Fundam. + Técnico'],['afastamento','Pisani · Afastamento SMA20'],['squeeze','Bollinger · Squeeze'],['protecao','Proteção de Carteira · Exaustão']];
-const create=()=>({tf:'1d',dir:'both',filter:'all',preset:'todos',search:'',rows:[],universe:[],next:0,loading:false,worker:null,abort:null,error:'',info:'',detail:'',updatedAt:'',busyPDF:false,progress:0,token:0,source:'',owner:''});
+const create=()=>({tf:'1d',dir:'both',filter:'all',preset:'todos',search:'',rows:[],universe:[],next:0,loading:false,worker:null,workerReject:null,abort:null,error:'',info:'',detail:'',updatedAt:'',busyPDF:false,progress:0,token:0,source:'',owner:''});
 const states={br:create(),world:create()};
 let current='',observer=null;
 const owner=()=>typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local';
@@ -65,6 +65,12 @@ function candidates(s,m,snapshot){
 async function candles(asset,tf,signal){
  const key='candles|'+asset.market+'|'+asset.ticker+'|'+tf,ttl=tf==='1d'?6*3600000:10*60000;
  const hit=await read(key,ttl);if(hit?.candles?.length)return hit;
+ // Reaproveita exclusivamente OHLCV local completo do gráfico legado, nunca snapshots de preço isolado.
+ try{const h=typeof LVGC==='object'?LVGC[asset.ticker+'|'+tf]:null;
+  const c=h?.v?.candles;
+  if(!h?.v?.proxy&&Array.isArray(c)&&c.length>=210&&Date.now()-Number(h.ts)<ttl&&c.every(x=>Array.isArray(x)&&x.length>=6&&Number.isFinite(Number(x[5]))))
+   return {candles:c,source:'Histórico em cache do Terminal',fetchedAt:new Date(h.ts).toISOString()};
+ }catch{}
  // Se uma ponte já oferecer OHLCV validado, reaproveitar sem outra requisição.
  try{const local=w.DiarioTecnicoFeeds?.getCandles?.(asset.ticker,tf,asset.market);
   if(Array.isArray(local)&&local.length>=210)return {candles:local,source:'Feed local Profit/Finnhub/Binance',fetchedAt:new Date().toISOString()};
@@ -162,7 +168,7 @@ function view(m){
  detail(s,rows)+'<p class="an-disclaimer">Estruturas de Fibonaccing, RMC/CISD, VCP e Elliott são heurísticas codificadas conforme os critérios deste projeto, não certificação dos autores. A classificação só se confirma com dados históricos suficientes.</p></div>';
 }
 function leave(){
- if(current){const s=states[current];s.token++;s.abort?.abort();s.abort=null;s.worker?.terminate();s.worker=null;s.loading=false;s.busyPDF=false;}
+ if(current){const s=states[current];s.token++;s.abort?.abort();s.abort=null;s.workerReject?.(Error('Análise técnica interrompida ao sair da aba'));s.workerReject=null;s.worker?.terminate();s.worker=null;s.loading=false;s.busyPDF=false;}
  current='';observer?.disconnect();observer=null;
 }
 function watch(){
@@ -182,7 +188,7 @@ async function enter(m){
  void load(m);
 }
 async function load(m,more=false){
- const s=states[m],u=owner();s.token++;const token=s.token;s.abort?.abort();s.worker?.terminate();s.worker=null;
+ const s=states[m],u=owner();s.token++;const token=s.token;s.abort?.abort();s.workerReject?.(Error('Substituída por nova análise'));s.workerReject=null;s.worker?.terminate();s.worker=null;
  const ac=new AbortController();s.abort=ac;s.loading=true;s.error='';s.progress=0;
  if(!more){s.rows=[];s.next=0;s.universe=[]}render();
  try{
@@ -221,15 +227,15 @@ async function load(m,more=false){
    for(const key of ['BR','US','CRYPTO'])try{const symbol=key==='BR'?'IBOV':key==='US'?'SPX':'BTCUSDT';let b=await read('candles|'+key+'|'+symbol+'|1d',6*3600000);if(!b?.candles)b=await candles({market:key,ticker:symbol},'1d',ac.signal);if(b?.candles)bench[key]=b.candles}catch{}
    const result=await new Promise((resolve,reject)=>{
     try{
-     const wk=new Worker('tecnico-worker.js?v=762');s.worker=wk;
+     const wk=new Worker('tecnico-worker.js?v=762');s.worker=wk;s.workerReject=reject;
      wk.onmessage=event=>{if(event.data.reqId!==token)return;if(event.data.action==='DONE')resolve(event.data.rows);else reject(Error(event.data.error||'Falha de cálculo'))};
      wk.onerror=e=>reject(Error(e.message||'Falha no worker'));
      wk.postMessage({action:'RUN',reqId:token,tf:s.tf,assets:collected,benchmarks:bench});
     }catch(e){reject(e)}
-   }).finally(()=>{s.worker?.terminate();s.worker=null});
+   }).finally(()=>{s.worker?.terminate();s.worker=null;s.workerReject=null});
    if(ac.signal.aborted||token!==s.token)return;
    const fund=s.fundData||{};
-   const merged=result.map(x=>({...x,fund:fund[x.ticker]||null}));
+   const merged=result.map(x=>({...x,fund:fund[x.ticker]??s.universe.find(y=>y.ticker===x.ticker)?.fund??null}));
    s.rows=s.rows.concat(merged);s.rows=markHoldings(s.rows);
    s.updatedAt=new Date().toLocaleString('pt-BR');s.info='Cálculo local · '+s.updatedAt+' · '+failures.length+' indisponível(is)';
    void store('snapshot|'+m+'|'+s.tf,{rows:s.rows.map(x=>({...x,holding:false})),universe:s.universe,next:s.next,updatedAt:s.updatedAt});
@@ -244,7 +250,7 @@ d.addEventListener('change',e=>{
  s[key]=el.value;s.detail='';
  if(key==='tf'){s.rows=[];s.universe=[];s.next=0;void load(current)}else render();
 });
-d.addEventListener('input',e=>{if(!e.target?.matches?.('[data-tech-search]')||!active())return;const s=states[current];s.search=e.target.value;const rows=selectedRows(s);// Refiltrar sem requisição externa.
+d.addEventListener('input',e=>{if(!e.target?.matches?.('[data-tech-search]')||!active())return;const s=states[current];s.search=e.target.value;// Refiltrar sem requisição externa.
  // A pesquisa completa é aplicada no próximo redesenho, sem timer em segundo plano.
  if(e.target.value.length===0||e.target.value.length>=2){const sel=e.target.selectionStart;render();const field=d.querySelector('[data-tech-search]');if(field){field.focus();field.setSelectionRange(sel,sel)}}
 });
