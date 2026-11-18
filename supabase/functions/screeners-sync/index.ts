@@ -295,17 +295,139 @@ async function principaisUS(page=0,limit=140){
   prioridades:sorted.slice(0,20).map(x=>x.ticker),origens:sources,erros:errors.slice(0,4),fundamental,final};
 }
 
+
+async function cvmRange(url:string,range:string){
+ const r=await fetch(url,{headers:{Range:range,'Accept-Encoding':'identity'},
+  signal:AbortSignal.timeout(18000)});
+ if(r.status!==206)throw Error('CVM nao suportou HTTP Range: '+r.status);
+ const size=Number(r.headers.get('Content-Length')||0);
+ if(size>5_000_000)throw Error('CVM faixa excede limite de transferencia');
+ return new Uint8Array(await r.arrayBuffer());
+}
+async function cvmZipCsv(kind:'itr'|'dfp'){
+ // ZIP de 2026: baixa só diretorio e CSV de metadados, sem arquivos de dezenas de MB.
+ const year=new Date().getUTCFullYear(),file=kind+'_cia_aberta_'+year+'.csv';
+ const url='https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/'+kind.toUpperCase()+'/DADOS/'+kind+'_cia_aberta_'+year+'.zip';
+ const tail=await cvmRange(url,'bytes=-65536'),tv=new DataView(tail.buffer,tail.byteOffset,tail.byteLength);
+ let eocd=-1;for(let i=tail.length-22;i>=0;i--)if(tv.getUint32(i,true)===0x06054b50){eocd=i;break}
+ if(eocd<0)throw Error('CVM ZIP: diretorio nao localizado');
+ const size=tv.getUint32(eocd+12,true),offset=tv.getUint32(eocd+16,true);
+ if(size<=0||size>100000)throw Error('CVM ZIP: diretorio muito grande');
+ const dir=await cvmRange(url,'bytes='+offset+'-'+(offset+size-1)),dv=new DataView(dir.buffer,dir.byteOffset,dir.byteLength);
+ let entry:null|{offset:number,compressed:number,method:number}=null;
+ for(let i=0;i+46<=dir.length;){
+  if(dv.getUint32(i,true)!==0x02014b50)break;
+  const nl=dv.getUint16(i+28,true),el=dv.getUint16(i+30,true),cl=dv.getUint16(i+32,true);
+  const name=new TextDecoder().decode(dir.slice(i+46,i+46+nl)).split('/').pop();
+  if(name?.toLowerCase()===file){
+   entry={offset:dv.getUint32(i+42,true),compressed:dv.getUint32(i+20,true),method:dv.getUint16(i+10,true)};break;
+  }
+  i+=46+nl+el+cl;
+ }
+ if(!entry||entry.compressed<=0||entry.compressed>4_000_000)throw Error('CVM ZIP: CSV resumo ausente');
+ const header=await cvmRange(url,'bytes='+entry.offset+'-'+(entry.offset+511));
+ const hv=new DataView(header.buffer,header.byteOffset,header.byteLength);
+ if(hv.getUint32(0,true)!==0x04034b50)throw Error('CVM ZIP: cabecalho local invalido');
+ const start=entry.offset+30+hv.getUint16(26,true)+hv.getUint16(28,true);
+ const compressed=await cvmRange(url,'bytes='+start+'-'+(start+entry.compressed-1));
+ if(entry.method===0)return new TextDecoder().decode(compressed);
+ if(entry.method!==8)throw Error('CVM ZIP: metodo sem suporte');
+ const text=await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+ if(text.length>8_000_000)throw Error('CVM: CSV acima do limite');
+ return text;
+}
+function csvRows(raw:string){
+ const lines=raw.replace(/^\uFEFF/,'').replaceAll('\r','').split('\n');
+ const parse=(line:string)=>{
+  const cols:string[]=[];let cell='',quoted=false;
+  for(let i=0;i<line.length;i++){
+   if(line[i]==='"'){if(quoted&&line[i+1]==='"'){cell+='"';i++}else quoted=!quoted}
+   else if(line[i]===';'&&!quoted){cols.push(cell);cell=''}else cell+=line[i];
+  }cols.push(cell);return cols;
+ };
+ const fields=parse(lines.shift()||'');
+ return lines.filter(x=>x).slice(0,35000).map(line=>{
+  const values=parse(line),x:Record<string,string>={};
+  for(let i=0;i<fields.length;i++)x[fields[i]]=values[i]||'';
+  return x;
+ });
+}
+function normalizeName(name:string){
+ return String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
+  .replace(/\b(PFD|PREF|COMMON|SHARES|REGISTERED|S A|SA|S\.A\.|LTDA|HOLDING|NON|CUM|PERP)\b/g,' ')
+  .replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+async function cvmEnriquecer(){
+ // Identidade contábil exige correspondência ÚNICA de emissor/empresa com cadastro CVM.
+ const r=await fetch('https://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.csv',
+  {headers:{Accept:'text/csv'},signal:AbortSignal.timeout(18000)});
+ if(!r.ok)throw Error('Cadastro CVM HTTP '+r.status);
+ const cad=csvRows(await r.text()),names=new Map<string,Set<string>>();
+ for(const x of cad){
+  const cnpj=(x.CNPJ_CIA||'').replace(/\D/g,'');
+  if(cnpj.length!==14)continue;
+  for(const label of [x.DENOM_SOCIAL,x.DENOM_COMERC]){
+   const key=normalizeName(label);
+   if(key.length<9)continue;
+   if(!names.has(key))names.set(key,new Set());
+   names.get(key)!.add(cnpj);
+  }
+ }
+ const periods=new Map<string,string>(),fontes:string[]=[],errors:string[]=[];
+ for(const kind of ['itr','dfp'] as const){
+  try{
+   const rows=csvRows(await cvmZipCsv(kind));
+   for(const x of rows){
+    const cnpj=(x.CNPJ_CIA||'').replace(/\D/g,''),date=x.DT_REFER||'';
+    if(cnpj.length!==14||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>now)continue;
+    if(!periods.has(cnpj)||periods.get(cnpj)!<date)periods.set(cnpj,date);
+   }
+   fontes.push(kind.toUpperCase()+' OK');
+  }catch(e){errors.push(kind.toUpperCase()+': '+String(e).slice(0,120))}
+ }
+ if(!periods.size)throw Error('CVM DFP/ITR sem periodos confirmados: '+errors.join('; '));
+ let targets:any[]=[];
+ try{
+  const res=await fetch(SB+'/rest/v1/acoes?select=ticker,empresa&ativo_elegivel=eq.true&limit=400',
+   {headers:{...HEAD,'Accept-Profile':'quant_br'},signal:AbortSignal.timeout(12000)});
+  if(res.ok)targets=await res.json();
+ }catch{}
+ if(!targets.length){
+  const global=await rpc('quant_v2_snapshot_read',{p_market:'BR'});
+  targets=[...(global?.rows||[]),...(global?.top10||[])];
+ }
+ const updates:any[]=[],unknown:string[]=[];
+ for(const row of targets){
+  const key=normalizeName(row.empresa),parts=key.split(' ').filter(x=>x.length>2);
+  if(parts.length<2)continue;
+  const matches=new Set<string>();
+  for(const [label,cnpjs] of names){
+   if(label===key||label.startsWith(parts.slice(0,2).join(' ')+' ')){
+    for(const c of cnpjs)matches.add(c);
+   }
+  }
+  if(matches.size!==1){if(unknown.length<12)unknown.push(row.ticker);continue}
+  const date=periods.get([...matches][0]);if(date)updates.push({ticker:row.ticker,data_competencia_balanco:date});
+ }
+ let gravadas=0;for(let i=0;i<updates.length;i+=150)
+  gravadas+=Number(await rpc('quant_screeners_competencia_patch',{p_market:'BR',p_rows:updates.slice(i,i+150)}))||0;
+ const final=gravadas?await finalized('BR','cvm_dfp_itr',gravadas,errors.length,updates.map(x=>x.ticker)):null;
+ return {elegiveis_consultadas:targets.length,documentos:periods.size,correspondencias:updates.length,
+  competencias_gravadas:gravadas,fontes,erros,amostra_sem_cnpj:unknown,final};
+}
+
 Deno.serve(async req=>{
  if(req.method!=='POST')return ok({error:'Somente POST'},405);
  if(!await autorizado(req))return ok({error:'Nao autorizado'},401);
  try{
   const b=await req.json().catch(()=>({})),mode=b.acao||'catalogo';
   if(mode==='diagnostico')return ok({ok:true,modelo:scoreEngine.version,lote_maximo_precos:20,
-   metodos:['catalogo','fundamentos','precos','enriquecer','principais','mapear_sec','sec'],sem_polling:true});
+   metodos:['catalogo','fundamentos','precos','enriquecer','principais','mapear_sec','sec','cvm'],sem_polling:true});
   if(mode==='principais'){
    const page=Math.max(0,Math.min(10,Math.floor(Number(b.pagina)||0))),limit=Math.max(20,Math.min(180,Math.floor(Number(b.limite)||140)));
    return ok({acao:mode,mercado:'US',...await principaisUS(page,limit)});
   }
+  if(mode==='cvm')return ok({acao:mode,mercado:'BR',...await cvmEnriquecer()});
   if(mode==='catalogo'){
    const resp:any={};
    for(const [m,fn] of (b.mercado==='US'?[['US',catalogoUS]]:b.mercado==='BR'?[['BR',catalogoBR]]:[['US',catalogoUS],['BR',catalogoBR]]) as const){
