@@ -100,7 +100,7 @@
   const prior=o.slice(-26,-1),obvHit=dir===1?o.at(-1)>Math.max(...prior):o.at(-1)<Math.min(...prior);
   const earlier=o.slice(-8,-1).some((x,j,arr)=>j>0&&(dir===1?x>Math.max(...o.slice(Math.max(0,o.length-27+j),o.length-8+j)):x<Math.min(...o.slice(Math.max(0,o.length-27+j),o.length-8+j))));
   const obvConfirmed=obvHit||earlier,sw=swings(c),fib=fibo(c,dir,sw),turn=turn4(c,dir,fib.zone),vcpPass=vcp(c);
-  const high=opts.higher?normalize(opts.higher):null,mtf=high?.length>=200?dir*(high.at(-1).c-sma(high,200))>0:null;
+  const high=opts.higher?normalize(opts.higher):null,mtfn=opts.tf==='1d'?20:200,mtf=high?.length>=mtfn?dir*(high.at(-1).c-sma(high,mtfn))>0:null;
   const recent=c.slice(-9,-1),pullback=recent.length>0&&recent.some(x=>Math.abs(x.l-s20)<atr14*1.2||Math.abs(x.h-s20)<atr14*1.2)&&recent.every(x=>dir===1?x.c>=s20:x.c<=s20);
   const pivot=dir===1?Math.max(...recent.map(x=>x.h)):Math.min(...recent.map(x=>x.l));
   const breakout=dir===1?p>pivot:p<pivot,trend=dir===1?p>s20&&p>s200:p<s20&&p<s200;
