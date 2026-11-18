@@ -316,7 +316,7 @@ async function load(m,more=false){
    for(const key of ['BR','US','CRYPTO'])try{const symbol=key==='BR'?'IBOV':key==='US'?'SPX':'BTCUSDT';let b=await read('candles|'+key+'|'+symbol+'|1d',6*3600000);if(!b?.candles)b=await candles({market:key,ticker:symbol},'1d',ac.signal);if(b?.candles)bench[key]=b.candles}catch{}
    const result=await new Promise((resolve,reject)=>{
     try{
-     const wk=new Worker('tecnico-worker.js?v=762');s.worker=wk;s.workerReject=reject;
+     const wk=new Worker('tecnico-worker.js?v=769');s.worker=wk;s.workerReject=reject;
      wk.onmessage=event=>{if(event.data.reqId!==token)return;if(event.data.action==='DONE')resolve(event.data.rows);else reject(Error(event.data.error||'Falha de cálculo'))};
      wk.onerror=e=>reject(Error(e.message||'Falha no worker'));
      const fixed=s.universe.slice(0,m==='br'?60:80);
