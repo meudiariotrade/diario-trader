@@ -33,7 +33,7 @@ export default {
    if(!['BR','US','CRYPTO'].includes(market)||!['1d','1h','15m'].includes(tf)||
       [...url.searchParams.keys()].some(x=>!['ticker','market','tf'].includes(x))||
       !/^[A-Z0-9.-]{2,12}$/.test(ticker)||
-      (market==='BR'&&!/^[A-Z]{4}\d{1,2}$/.test(ticker))||
+      (market==='BR'&&ticker!=='IBOV'&&!/^[A-Z]{4}\d{1,2}$/.test(ticker))||
       (market==='US'&&!/^[A-Z]{1,5}(?:\.[A-Z])?$/.test(ticker))||
       (market==='CRYPTO'&&!/^(BTC|ETH|SOL|XRP|BNB|ADA|DOGE|LINK|AVAX|DOT|LTC|BCH|UNI|TRX|XLM|ATOM|NEAR|APT|SUI|TON)USDT$/.test(ticker)))
      return json({error:'Símbolo/intervalo não autorizado'},400);
@@ -43,7 +43,7 @@ export default {
    if(found)return conditional(request,found,true);
    const interval=tf==='1d'?'1d':tf==='1h'?'60m':'15m';
    const range=tf==='1d'?'2y':tf==='1h'?'3mo':'1mo';
-   const symbol=market==='BR'?ticker+'.SA':ticker;
+   const symbol=market==='BR'?(ticker==='IBOV'?'^BVSP':ticker+'.SA'):market==='US'&&ticker==='SPX'?'^GSPC':ticker;
    let items=[],source='';
    try{
     if(market==='CRYPTO'){
