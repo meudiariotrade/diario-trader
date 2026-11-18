@@ -28,6 +28,36 @@ UPDATE quant_us.acoes SET fundamentos_prova_status=CASE
 END
 WHERE active AND ativo_elegivel AND fundamentos_prova_status IS NULL;
 
+-- Estado de comprovação atualizado em BULK somente após extração real (não homologa scores terceiros).
+CREATE OR REPLACE FUNCTION public.quant_sec_xbrl_status_bulk(p_rows jsonb)
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+DECLARE n integer:=0;
+BEGIN
+ IF jsonb_typeof(p_rows)<>'array' OR jsonb_array_length(p_rows)>16
+ THEN RAISE EXCEPTION 'Lote XBRL inválido'; END IF;
+ UPDATE quant_us.acoes a SET
+  fundamentos_prova_status=CASE WHEN x.metricas_validas THEN 'xbrl_parcial_com_metrica'
+    ELSE 'xbrl_presente_sem_metrica' END
+ FROM jsonb_to_recordset(p_rows)x(ticker text,cik text,metricas_validas boolean)
+ WHERE a.active AND a.ativo_elegivel AND a.ticker=upper(btrim(x.ticker))
+  AND a.cik=x.cik AND x.cik~'^[0-9]{10}
+-- Os seis crons antigos passam a receber apenas resposta compactada da Cloudflare
+-- depois da publicação do Worker e da função v773.
+SELECT cron.schedule('screeners-sec-xbrl-v773','35 21 * * 1-5',$cron$
+ SELECT net.http_post(
+  url := 'https://vdzwydizostutukppcsj.supabase.co/functions/v1/screeners-sync',
+  headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',public.diario_agendamento_chave()),
+  body := '{"acao":"sec_xbrl","limite":10}'::jsonb,
+  timeout_milliseconds := 30000
+ );
+$cron$);
+
+  AND a.sec_facts_at IS NOT NULL;
+ GET DIAGNOSTICS n=ROW_COUNT;RETURN n;
+END $fn$;
+REVOKE ALL ON FUNCTION public.quant_sec_xbrl_status_bulk(jsonb) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.quant_sec_xbrl_status_bulk(jsonb) TO service_role;
+
 -- Uma rodada XBRL adicional diária, somente dados empresariais públicos.
 -- Os seis crons antigos passam a receber apenas resposta compactada da Cloudflare
 -- depois da publicação do Worker e da função v773.
