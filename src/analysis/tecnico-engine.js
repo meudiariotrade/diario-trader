@@ -34,6 +34,21 @@
  function hvWeek(c,tf){const perWeek=tf==='15m'?130:tf==='1h'?33:5;const sample=c.slice(-Math.max(20,perWeek*3));if(sample.length<Math.min(20,perWeek*2))return null;const rets=sample.slice(1).map((x,i)=>Math.log(x.c/sample[i].c));return std(rets)*Math.sqrt(perWeek)*100}
  function pivot(c,i,d){if(i<2||i>c.length-3)return false;const k=d>0?'h':'l',val=c[i][k];return d>0?[i-2,i-1,i+1,i+2].every(j=>val>c[j][k]):[i-2,i-1,i+1,i+2].every(j=>val<c[j][k])}
  function swings(c){const s=[];for(let i=2;i<c.length-2;i++){if(pivot(c,i,1))s.push({i,p:c[i].h,d:1});if(pivot(c,i,-1))s.push({i,p:c[i].l,d:-1})}s.sort((a,b)=>a.i-b.i);const out=[];for(const x of s){const last=out.at(-1);if(last?.d===x.d){if((x.d===1&&x.p>last.p)||(x.d===-1&&x.p<last.p))out[out.length-1]=x}else out.push(x)}return out}
+ function fibogaps(c,dir){
+  // Gap não preenchido: considera somente barras observadas e um limiar superior a ruído de spread.
+  const threshold=Math.max((atr(c)||0)*.5,c.at(-1).c*.004),result=[];
+  for(let i=Math.max(1,c.length-100);i<c.length;i++){
+   const prev=c[i-1],cur=c[i],up=cur.l-prev.h,down=prev.l-cur.h;
+   if(dir===1&&up>threshold){
+    const low=prev.h,high=cur.l,filled=c.slice(i+1).some(x=>x.l<=low);
+    if(!filled)result.push({low:round(low),high:round(high),age:c.length-1-i});
+   }else if(dir===-1&&down>threshold){
+    const low=cur.h,high=prev.l,filled=c.slice(i+1).some(x=>x.h>=high);
+    if(!filled)result.push({low:round(low),high:round(high),age:c.length-1-i});
+   }
+  }
+  return result.slice(-12);
+ }
  function fibo(c,dir,sw){
   const last=c.at(-1),segments=[120,40].map(window=>{
    const selected=sw.filter(x=>x.i>=c.length-window);
@@ -50,6 +65,8 @@
   const macro=segments[0]||segments[1],micro=segments[1]||segments[0];
   if(!macro)return {zone:false,cluster:false,segments,levels:[],exhausted:false};
   const price=last.c,min=Math.min(macro.to-dir*macro.length*.236,macro.to-dir*macro.length*.764),max=Math.max(macro.to-dir*macro.length*.236,macro.to-dir*macro.length*.764);
+  const gaps=fibogaps(c,dir),relevantGap=gaps.slice().reverse().find(x=>x.low<=max&&x.high>=min)||null;
+  const gapZone=relevantGap?[round(Math.max(min,relevantGap.low)),round(Math.min(max,relevantGap.high))]:null;
   const zone=price>=min&&price<=max;
   const levels=macro.ret.concat(macro.ext);
   const clusters=[];
@@ -57,7 +74,7 @@
    if(Math.abs(x.price-y.price)/Math.max(.01,Math.abs(x.price))<=.01)clusters.push(round((x.price+y.price)/2));
   }
   const expansion=(price-macro.from)*dir/macro.length;
-  return {zone,cluster:clusters.length>0,clusters:[...new Set(clusters)],segments,levels,expansion:round(expansion,3),
+  return {zone,cluster:clusters.length>0,clusters:[...new Set(clusters)],fibogap:relevantGap!==null,gapZone,segments,levels,expansion:round(expansion,3),
    exhausted:expansion>=1.414&&expansion<=1.618,defense:[min,max],files:[round(macro.to-dir*macro.length*.618),round(macro.to-dir*macro.length*.764)]};
  }
  function turn4(c,dir,zone){
@@ -73,6 +90,13 @@
  function elliott(sw,dir){
   // Contagem conservadora: hipótese, nunca conclusão de ciclo certo.
   const s=sw.filter(x=>x.d===dir||x.d===-dir).slice(-9);
+  if(s.length>=4){
+   const q=s.slice(-4),p=q.map(x=>x.p),d=q.map(x=>x.d);
+   const abc=dir===1?
+    d[0]===1&&d[1]===-1&&d[2]===1&&d[3]===-1&&p[2]<p[0]&&p[3]<p[1]:
+    d[0]===-1&&d[1]===1&&d[2]===-1&&d[3]===1&&p[2]>p[0]&&p[3]>p[1];
+   if(abc)return {label:'Possível correção A-B-C',valid:false,correction:true,reason:'Três movimentos corretivos alternados; rompimento ainda exige confirmação'};
+  }
   if(s.length<6)return {label:'Indeterminada',valid:false,reason:'Pivôs insuficientes'};
   const a=s.slice(-6);if(a.some((p,i)=>i>0&&p.d===a[i-1].d))return {label:'Indeterminada',valid:false,reason:'Alternância ausente'};
   const p=a.map(x=>x.p),sign=dir,one=Math.abs(p[1]-p[0]),three=Math.abs(p[3]-p[2]),five=Math.abs(p[5]-p[4]);
