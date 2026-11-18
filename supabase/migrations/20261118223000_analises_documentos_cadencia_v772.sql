@@ -52,7 +52,7 @@ GRANT EXECUTE ON FUNCTION public.quant_sec_docs_retry_patch(jsonb) TO service_ro
 CREATE OR REPLACE FUNCTION public.quant_sec_docs_cadencia(p_bloqueio boolean DEFAULT false)
 RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
 DECLARE unresolved boolean;ready boolean;current_schedule text;new_schedule text;
-DECLARE cmd text:=$command$
+cmd text:=$command$
  SELECT net.http_post(
   url := 'https://vdzwydizostutukppcsj.supabase.co/functions/v1/screeners-sec-docs',
   headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',public.diario_agendamento_chave()),
