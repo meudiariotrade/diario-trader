@@ -25,6 +25,73 @@ export default {
   const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,servico:'screeners-edge',sem_dados_privados:true});
 
+  // v773 — reduzir companyfacts SEC na borda: 1 download oficial, resposta XBRL compacta.
+  // Nem Supabase nem cliente baixam JSON volumoso; nenhuma credencial via cache público.
+  if(url.pathname==='/v1/sec-xbrl'){
+   const cik=url.searchParams.get('cik')||'';
+   if([...url.searchParams.keys()].some(k=>k!=='cik')||!/^[0-9]{10}$/.test(cik))
+    return json({error:'CIK obrigatório'},400);
+   const key=new Request(url.origin+'/v1/sec-xbrl?cik='+cik+'&revision=v773');
+   const cache=caches.default,hit=await cache.match(key);
+   if(hit)return conditional(request,hit,true);
+   try{
+    const urlSec='https://data.sec.gov/api/xbrl/companyfacts/CIK'+cik+'.json';
+    const remote=await fetch(urlSec,{headers:{
+     'User-Agent':'DiarioTraderQuant/1.0 (contato@diariotrader.app)',Accept:'application/json'},
+     signal:AbortSignal.timeout(16000)});
+    if(remote.status===403||remote.status===429)return json({error:'SEC bloqueada',code:remote.status},503);
+    if(!remote.ok)return json({error:'SEC Companyfacts indisponível',code:remote.status},502);
+    const length=Number(remote.headers.get('content-length')||0);
+    if(length>20000000)return json({error:'Arquivo XBRL acima do limite de borda'},413);
+    const raw=await remote.text();
+    if(raw.length>20000000)return json({error:'Arquivo XBRL acima do limite de borda'},413);
+    const source=JSON.parse(raw);
+    if(Number(source?.cik)!==Number(cik)||!source?.facts)return json({error:'CIK/XBRL inválido'},502);
+    const concepts={
+     'us-gaap':['Assets','StockholdersEquity','Liabilities','NetIncomeLoss','Revenues',
+      'RevenueFromContractWithCustomerExcludingAssessedTax','RevenueFromContractWithCustomerIncludingAssessedTax',
+      'SalesRevenueNet','EarningsPerShareDiluted','NetCashProvidedByUsedInOperatingActivities',
+      'PaymentsToAcquirePropertyPlantAndEquipment'],
+     'ifrs-full':['Assets','Equity','Liabilities','ProfitLoss','Revenue',
+      'RevenueFromContractsWithCustomers','ProfitLossAttributableToOwnersOfParent']
+    };
+    const eligible=new Set(['10-K','10-Q','10-K/A','10-Q/A','20-F','40-F','20-F/A','40-F/A']);
+    const minimum=new Date(Date.now()-4*366*86400000).toISOString().slice(0,10);
+    const today=new Date().toISOString().slice(0,10),facts={};
+    for(const [group,tags] of Object.entries(concepts)){
+     const result={};
+     for(const tag of tags){
+      const units=source.facts[group]?.[tag]?.units||{},selected={};
+      for(const [unit,rows] of Object.entries(units)){
+       if(!['USD','USD/shares'].includes(unit)||!Array.isArray(rows))continue;
+       const valid=rows.filter(r=>eligible.has(String(r.form))&&
+        /^\d{4}-\d{2}-\d{2}$/.test(String(r.end||''))&&r.end>=minimum&&r.end<=today&&
+        /^\d{4}-\d{2}-\d{2}$/.test(String(r.filed||''))&&r.filed<=today&&
+        /^\d{10}-\d{2}-\d{6}$/.test(String(r.accn||''))&&
+        typeof r.val==='number'&&Number.isFinite(r.val));
+       valid.sort((a,b)=>b.filed.localeCompare(a.filed)||b.end.localeCompare(a.end));
+       const annual=valid.filter(r=>/^(10-K|20-F|40-F)/.test(r.form)).slice(0,16);
+       const quarterly=valid.filter(r=>/^(10-Q)/.test(r.form)).slice(0,20);
+       const dedup=new Map();
+       for(const r of [...annual,...quarterly])dedup.set(r.accn+'|'+r.end+'|'+(r.start||'')+'|'+r.form,{
+        accn:r.accn,form:r.form,start:r.start||null,end:r.end,filed:r.filed,val:r.val});
+       if(dedup.size)selected[unit]=[...dedup.values()];
+      }
+      if(Object.keys(selected).length)result[tag]={units:selected};
+     }
+     if(Object.keys(result).length)facts[group]=result;
+    }
+    if(!Object.keys(facts).length)return json({error:'Sem conceitos XBRL aceitos (não inferir métricas)'},404);
+    const body={cik:Number(cik),entityName:String(source.entityName||'').slice(0,140),facts,
+     fonte_oficial:urlSec,transformacao:'sec-xbrl-compact-v773'};
+    const out=Response.json(body,{headers:{...CORS,
+     'Cache-Control':'public, max-age=43200, s-maxage=43200',
+     'X-Screeners-Cache':'MISS','X-Snapshot-Source':'sec-edgar-xbrl-compact',
+     ETag:'"xbrl-'+cik+'-v773"'}});
+    ctx.waitUntil(cache.put(key,out.clone()));return conditional(request,out,false);
+   }catch{return json({error:'SEC XBRL não confirmado; manter indicadores nulos'},503)}
+  }
+
   // v772 — espelhos públicos CVM produzidos semanalmente no GitHub, com cache de borda 24h.
   // Sem CPF, carteira, operações ou dados personalizados, com limites de tamanho e esquema.
   if(url.pathname==='/v1/cvm-provas'){
