@@ -65,6 +65,8 @@ jobs:
   cloudflare-preflight:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
+    environment:
+      name: cloudflare-workers
     steps:
       - name: Conferir presença das duas credenciais
         env:
