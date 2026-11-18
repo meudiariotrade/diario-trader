@@ -558,8 +558,13 @@ async function cvmDreEvidencias(docs:Map<string,any>){
 }
 
 function normalizeName(name:string){
+ // Pontuação societária CVM: S.A. vira 'S A' somente se os pontos forem
+ // retirados ANTES da limpeza. Normalizar antes para casar com os tickers B3.
  return String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
-  .replace(/\b(PFD|PREF|COMMON|SHARES|SHS|REGISTERED|S A|SA|S\.A\.|LTDA|NON|CUM|PERP|ADR|PREFERRED|DEPOSITARY)\b/g,' ')
+  .replace(/\bS\s*[.\/-]?\s*A\b\.?/g,' ')
+  .replace(/\bBCO\b/g,'BANCO').replace(/\bCIA\b/g,'COMPANHIA')
+  .replace(/\b(DO|DA|DE|DOS|DAS)\b/g,' ')
+  .replace(/\b(PFD|PREF|COMMON|SHARES|SHS|REGISTERED|SA|LTDA|NON|CUM|PERP|ADR|PREFERRED|DEPOSITARY)\b/g,' ')
   .replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 }
 async function cvmEnriquecer(){
