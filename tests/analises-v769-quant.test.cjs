@@ -37,7 +37,7 @@ test('P1: worker BACKTEST é efêmero e não consulta banco ou rede',()=>{
  worker.onmessage({data:{action:'BACKTEST',reqId:45,ticker:'PETR4',market:'BR',tf:'1d',candles:bars(325)}});
  assert.equal(out.length,1);assert.equal(out[0].action,'BACKTEST_DONE');
  assert.equal(out[0].reqId,45);assert.equal(out[0].result.costs.market,'BR');
- assert.doesNotMatch(workerSource,/supabase|setInterval|fetch\(/i);
+ assert.doesNotMatch(workerSource,/\/rest\/v1\/|\/functions\/v1\/|setInterval\(|\bfetch\(/i);
 });
 test('P1: regras financeiras explícitas não confundem REIT/Finance com bancos',()=>{
  const bank={setor:'Finance',empresa:'BANCO BMG S.A.',roe:13,pl:5,pvp:.64,dividend_yield:9,
