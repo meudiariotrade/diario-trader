@@ -27,7 +27,11 @@ export default {
   if(url.pathname!=='/v1/screeners')return json({error:'Rota nao encontrada'},404);
   const market=url.searchParams.get('market');
   if(!['BR','US'].includes(market))return json({error:'Mercado invalido'},400);
-  if([...url.searchParams.keys()].some(k=>k!=='market'&&k!=='v'))
+  // O frontend v754 solicita o universo público com estes dois parâmetros fixos.
+  // Aceitar apenas os valores esperados, evitando combinações e caches distintos.
+  if([...url.searchParams.keys()].some(k=>!['market','v','snapshot','universe'].includes(k))||
+     (url.searchParams.has('snapshot')&&url.searchParams.get('snapshot')!=='1')||
+     (url.searchParams.has('universe')&&url.searchParams.get('universe')!=='1'))
    return json({error:'Parametros nao suportados'},400);
   const revision=(url.searchParams.get('v')||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,40);
   const key=new Request(url.origin+'/v1/screeners?market='+market+(revision?'&v='+revision:''),{method:'GET'});
