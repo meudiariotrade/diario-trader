@@ -67,7 +67,12 @@ export default {
       {name:'Bybit Spot Klines',url:'https://api.bybit.com/v5/market/kline?category=spot&symbol='+ticker+'&interval='+bybitInterval+'&limit=500',
        parse:b=>b?.retCode===0&&Array.isArray(b.result?.list)?b.result.list.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
       {name:'OKX Spot Klines',url:'https://www.okx.com/api/v5/market/history-candles?instId='+ticker.replace(/USDT$/,'-USDT')+'&bar='+okxInterval+'&limit=300',
-       parse:b=>b?.code==='0'&&Array.isArray(b.data)?b.data.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]}
+       parse:b=>b?.code==='0'&&Array.isArray(b.data)?b.data.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
+      {name:'Kraken Spot OHLC (USDT)',url:'https://api.kraken.com/0/public/OHLC?pair='+ticker.replace(/^BTC/,'XBT')+'&interval='+(tf==='1d'?'1440':tf==='1h'?'60':'15'),
+       parse:b=>Array.isArray(b?.error)&&!b.error.length&&b?.result?
+        Object.entries(b.result).filter(([k,v])=>k!=='last'&&Array.isArray(v)).flatMap(([,rows])=>rows.map(x=>[Number(x[0]),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[6])])):[]},
+      {name:'MEXC Spot Klines (USDT)',url:'https://api.mexc.com/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=500',
+       parse:b=>Array.isArray(b)?b.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]}
      ];
      const errors=[];
      for(const provider of sources){
@@ -132,10 +137,19 @@ export default {
      }
      if(!source)throw Error('Ações sem OHLCV suficiente: '+attempts.slice(0,5).join('; '));
     }
-    items=items.filter(x=>x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[4]>0&&x[2]>=Math.max(x[1],x[4])&&x[3]>0&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0).slice(-600);
-    if(items.length<30)return json({error:'Histórico confiável insuficiente',candles:items.length},422);
+    items=items.filter(x=>x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[4]>0&&x[2]>=Math.max(x[1],x[4])&&x[3]>0&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0)
+      .sort((a,b)=>a[0]-b[0])
+      .filter((x,i,a)=>i===0||x[0]!==a[i-1][0]).slice(-600);
+    // Apenas barras fechadas e verificadas: nunca promover médias com candles parciais.
+     const barSeconds=tf==='1d'?86400:tf==='1h'?3600:900;
+     const nowSeconds=Math.floor(Date.now()/1000);
+     items=items.filter(x=>x[0]+barSeconds<=nowSeconds);
+     if(items.length<250)return json({error:'Não confirmado / Não calculável — menos de 250 barras completas',candles:items.length},422);
+     const lastAsOf=items.at(-1)[0],maxLagDays=tf==='1d'?(market==='CRYPTO'?2:7):(market==='CRYPTO'?1:5);
+     if(lastAsOf>nowSeconds||nowSeconds-lastAsOf>maxLagDays*86400)
+      return json({error:'Não confirmado / Não calculável — barras desatualizadas',as_of:new Date(lastAsOf*1000).toISOString()},503);
     const ttl=tf==='1d'?900:300;
-    const response=Response.json({ok:true,ticker,market,tf,source,fetchedAt:new Date().toISOString(),candles:items},
+    const response=Response.json({ok:true,ticker,market,tf,source,fetchedAt:new Date().toISOString(),as_of:new Date(items.at(-1)[0]*1000).toISOString(),candles:items},
       {headers:{'Cache-Control':'public, max-age='+ttl+', s-maxage='+ttl}});
     ctx.waitUntil(cache.put(key,response.clone()));
     const out=conditional(request,response,false);
