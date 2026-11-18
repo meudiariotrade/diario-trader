@@ -254,35 +254,44 @@ function secValores(doc:any){
  const eps=secAnnual(doc,['EarningsPerShareDiluted'],'USD/shares');
  const operating=secAnnual(doc,['NetCashProvidedByUsedInOperatingActivities']);
  const capex=secAnnual(doc,['PaymentsToAcquirePropertyPlantAndEquipment']);
- const growth=(v:any[])=>v.length>=2&&numeric(v[0].val)!==null&&numeric(v[1].val)!==null&&
-  Number(v[1].val)>0?round((Number(v[0].val)/Number(v[1].val)-1)*100):null;
+ const growth=(v:any[])=>{
+  if(v.length<2||numeric(v[0].val)===null||numeric(v[1].val)===null||Number(v[1].val)<=0)return null;
+  // YoY exige exercícios anuais realmente adjacentes; nunca saltar 2 anos ou duplicar o mesmo ano.
+  const gap=(Date.parse(v[0].end)-Date.parse(v[1].end))/86400000;
+  return gap>=320&&gap<=410?round((Number(v[0].val)/Number(v[1].val)-1)*100):null;
+ };
  const cap=capex.find(x=>x.end===operating[0]?.end);
  const margin=operating[0]&&cap&&rev[0]?.val>0&&rev[0].end===operating[0].end?
   round((Number(operating[0].val)-Number(cap.val))/Number(rev[0].val)*100):null;
  return {revenue_growth_yoy:growth(rev),eps_growth_yoy:growth(eps),fcf_margin:margin};
 }
-async function secColetar(limit:number,priority:'score'|'cap'='cap'){
- const pending=await rpc(priority==='score'?'quant_screeners_sec_top':'quant_screeners_sec_pendentes',{p_limit:Math.max(1,Math.min(16,limit))});
- const updates:any[]=[],dates:any[]=[],docs:any[]=[],errors:string[]=[],semPeriodo:any[]=[];let http200=0,http403=0,http429=0;
+async function secColetar(limit:number,priority:'score'|'cap'|'xbrl'='cap'){
+ const pending=await rpc(priority==='score'?'quant_screeners_sec_top':priority==='xbrl'?'quant_sec_xbrl_pendentes':'quant_screeners_sec_pendentes',{p_limit:Math.max(1,Math.min(16,limit))});
+ const updates:any[]=[],dates:any[]=[],docs:any[]=[],errors:string[]=[],semPeriodo:any[]=[],proofs:any[]=[];let http200=0,http403=0,http429=0;
  for(const row of Array.isArray(pending)?pending:[]){
   if(!/^[0-9]{10}$/.test(String(row.cik||'')))continue;
   const url='https://data.sec.gov/api/xbrl/companyfacts/CIK'+row.cik+'.json';
   try{
-   const r=await secGet(url,'data.sec.gov');
+   const r=await fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/sec-xbrl?cik='+row.cik,
+    {headers:{Accept:'application/json'},signal:AbortSignal.timeout(15000)});
    if(r.status===403||r.status===429){r.status===403?http403++:http429++;
     errors.push(row.ticker+': SEC HTTP '+r.status+'; sem retentativa em massa');break}
-   if(!r.ok){errors.push(row.ticker+': SEC HTTP '+r.status);continue}
+   if(r.status===503){const failure=await r.json().catch(()=>({}));if(failure.code===403||failure.code===429){
+    failure.code===403?http403++:http429++;errors.push(row.ticker+': SEC bloqueada na borda; interromper lote');break;}}
+   if(!r.ok){errors.push(row.ticker+': Cloudflare SEC HTTP '+r.status);continue}
    const doc=await r.json();if(Number(doc?.cik)!==Number(row.cik))throw Error('CIK divergente');
    http200++;const period=secPeriodo(doc);
    if(!period){semPeriodo.push({ticker:row.ticker,cik:row.cik});errors.push(row.ticker+': 10-Q / 10-K / 20-F / 40-F sem periodo confirmado; pausa de 7 dias');continue}
    const metricas=secValores(doc);
    updates.push({ticker:row.ticker,cik:row.cik,sec_status:'verificado',sec_facts_at:period.end,sec_source_url:url,...metricas});
+   proofs.push({ticker:row.ticker,cik:row.cik,metricas_validas:Object.values(metricas).some(x=>numeric(x)!==null)});
    dates.push({ticker:row.ticker,data_competencia_balanco:period.end});
    const id=String(period.accn||'');
    if(/^\d{10}-\d{2}-\d{6}$/.test(id)){
     const origin=(tags:string[],unit='USD',count=2)=>secAnnual(doc,tags,unit).slice(0,count)
      .filter((x:any)=>x.accn&&x.end&&x.filed&&x.tag)
-     .map((x:any)=>({documento_id:x.accn,formulario:x.form,competencia:x.end,publicado_em:x.filed,codigo_xbrl:x.tag}));
+     .map((x:any)=>({documento_id:x.accn,formulario:x.form,competencia:x.end,publicado_em:x.filed,codigo_xbrl:x.tag,
+      unidade:unit,valor_reportado:x.val,periodo_inicio:x.start||null,fonte:'SEC EDGAR XBRL',validacao:'parcial; sem TTM homologado'}));
     const linhagem={
      revenue_growth_yoy:metricas.revenue_growth_yoy!==null?origin(['RevenueFromContractWithCustomerExcludingAssessedTax','Revenues','SalesRevenueNet']):[],
      eps_growth_yoy:metricas.eps_growth_yoy!==null?origin(['EarningsPerShareDiluted'],'USD/shares'):[],
@@ -298,7 +307,8 @@ async function secColetar(limit:number,priority:'score'|'cap'='cap'){
  const validated=dates.length?Number(await rpc('quant_screeners_competencia_patch',{p_market:'US',p_rows:dates}))||0:0;
  let oficiais=0;
   for(let i=0;i<docs.length;i+=12)oficiais+=Number(await rpc('quant_screeners_documento_patch',{p_market:'US',p_rows:docs.slice(i,i+12)}))||0;
-  const final=dates.length?await finalized('US','sec_edgar_competencia',patched,errors.length,dates.map(x=>x.ticker)):null;
+  if(priority==='xbrl'&&proofs.length)await rpc('quant_sec_xbrl_status_bulk',{p_rows:proofs});
+  const final=priority==='xbrl'?null:dates.length?await finalized('US','sec_edgar_competencia',patched,errors.length,dates.map(x=>x.ticker)):null;
  return {selecionados:pending?.length||0,http_200:http200,http_403:http403,http_429:http429,
   fundamentos_validos:patched,competencias_gravadas:validated,documentos_oficiais:oficiais,sem_periodo_pausados:suspensos,erros:errors.slice(0,8),final};
 }
@@ -725,6 +735,7 @@ Deno.serve(async req=>{
   if(mode==='mapear_sec')return ok({acao:mode,...await secMapear()});
   if(mode==='sec')return ok({acao:mode,...await secColetar(Math.floor(Number(b.limite)||8))});
   if(mode==='sec_top')return ok({acao:mode,...await secColetar(Math.floor(Number(b.limite)||12),'score')});
+  if(mode==='sec_xbrl')return ok({acao:mode,...await secColetar(Math.floor(Number(b.limite)||10),'xbrl')});
   return ok({error:'Acao desconhecida'},400);
  }catch(e){console.error('screeners-sync v2',String(e).slice(0,150));return ok({error:'Coleta temporariamente indisponivel'},503)}
 });
