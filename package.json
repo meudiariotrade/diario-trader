@@ -1,6 +1,6 @@
 {
   "name": "diario-trader",
-  "version": "765.0.0",
+  "version": "766.0.0",
   "private": true,
   "scripts": {
     "build": "node scripts/export-tecnica.cjs && npm run bundle && node scripts/build.cjs",
