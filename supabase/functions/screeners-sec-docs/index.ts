@@ -60,9 +60,11 @@ async function collect(limit:number){
  // Somente quando a fila termina, atualizar snapshot público uma vez.
  const finished=Array.isArray(pending)&&pending.length<limit&&!blocked&&!errors.length;
  if(finished&&applied>0)await rpc('quant_v2_snapshot_refresh',{p_market:'US'});
+ // Encerrar cron finito ao concluir; em HTTP 403/429 pausar sem insistir contra a SEC.
+ const cronParado=(finished||blocked)?await rpc('quant_sec_docs_parar_backfill',{p_force:blocked}).catch(()=>false):false;
  return {selecionados:Array.isArray(pending)?pending.length:0,consultados:fetched,
   emissores_gravados:accepted.length,linhas_atualizadas:applied,sem_formulario:paused,
-  terminado:finished,sec_bloqueada:blocked,erros:errors.slice(0,5),
+  terminado:finished,sec_bloqueada:blocked,cron_parado:cronParado,erros:errors.slice(0,5),
   fonte:'SEC submissions via Cloudflare; somente prova documental'};
 }
 Deno.serve(async req=>{
