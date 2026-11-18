@@ -87,7 +87,7 @@ export default {
     const out=Response.json(body,{headers:{...CORS,
      'Cache-Control':'public, max-age=43200, s-maxage=43200',
      'X-Screeners-Cache':'MISS','X-Snapshot-Source':'sec-edgar-xbrl-compact',
-     ETag:'"xbrl-'+cik+'-v773"'}});
+     ETag:'"xbrl-'+cik+'-'+Date.now()+'"'}});
     ctx.waitUntil(cache.put(key,out.clone()));return conditional(request,out,false);
    }catch{return json({error:'SEC XBRL não confirmado; manter indicadores nulos'},503)}
   }
