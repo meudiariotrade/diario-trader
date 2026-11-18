@@ -25,7 +25,7 @@ self.onmessage=function(event){
   const report=list.map((asset,i)=>{
    const group=strengths[i].group,peer=strengths.filter(x=>x.group===group&&x.relative!==null).map(x=>x.relative);
    const rs=percentile(strengths[i].relative,peer);
-   const opts={tf:data.tf||'1d',daily:asset.daily||asset.candles,higher:asset.higher,rs};
+   const opts={tf:data.tf||'1d',daily:asset.daily||asset.candles,higher:asset.higher||(data.tf==='1d'?M.aggregateWeekly(asset.daily||asset.candles):null),rs};
    const result=M.examine(asset.candles,opts);
    return {ticker:safeText(asset.ticker),name:String(asset.name||'').slice(0,90),
     market:group,bdr:String(asset.bdr||'').slice(0,16),holding:!!asset.holding,source:String(asset.source||'cache').slice(0,60),
