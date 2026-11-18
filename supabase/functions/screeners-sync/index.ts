@@ -452,7 +452,10 @@ function csvRows(raw:string,cnpjs?:Set<string>){
  return out;
 }
 function cvmNumero(value:string){
- const s=String(value||'').trim().replace(/\./g,'').replace(',','.');
+ const raw=String(value||'').trim();
+ // CVM exporta VL_CONTA frequentemente como 9356000.000000 (ponto decimal).
+ // Virgula decimal brasileira e aceita, mas jamais remover o ponto quando ele e decimal.
+ const s=raw.includes(',')?raw.replace(/\./g,'').replace(',','.'):raw;
  if(!/^-?\d+(?:\.\d+)?$/.test(s))return null;
  const n=Number(s);return Number.isFinite(n)?n:null;
 }
@@ -483,7 +486,7 @@ async function cvmDreEvidencias(docs:Map<string,any>){
        competencia:doc.competencia,publicado_em:doc.publicado_em,
        arquivo:kind+'_cia_aberta_'+parte+'_'+new Date().getUTCFullYear()+'.csv',
        demonstracao:'DRE '+grupo,codigo_conta:row.CD_CONTA,
-       valor_reportado:valor,escala_moeda:row.ESCALA_MOEDA||null,
+       valor_reportado:valor,valor_original_csv:String(row.VL_CONTA),escala_moeda:row.ESCALA_MOEDA||null,
        periodo_inicio:row.DT_INI_EXERC||null,periodo_fim:row.DT_FIM_EXERC,
        valida_indicador_ttm:false
       };
