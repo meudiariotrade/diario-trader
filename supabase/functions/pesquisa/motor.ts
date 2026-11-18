@@ -45,16 +45,19 @@ export async function calcular(cmd:any,fetcher=fetch,pesquisa:any={}){
   const f=pesquisa?.dados?.[t];if(!f){tecnico.push({ticker:t,erro:'sem dados coletados'});continue}
   const c=await candles(t,fetcher),e=estudo(c.diario||[],c.semanal||[]),v=valuation(f,cmd.premissas);
   let corrDolar=null;if(f.etf||f.mercado==='EUA'||['COMPARE','CARTEIRA'].includes(cmd.modo)){try{corrDolar=correlacao(c.diario||[],await dolar(fetcher))}catch{corrDolar=null}}
-  // Só transportar até 90 candles de mercado REAIS já coletados, sem chamadas adicionais no PDF.
-  const hist=(c.diario||[]).slice(-90);
-  const serieValida=hist.length===90&&hist.every((q:any,i:number)=>Array.isArray(q)&&q.length>=6&&
+  // A MM200 requer pelo menos 200 barras anteriores; o PDF exibe apenas as 90 finais.
+  // Nunca preencher uma barra faltante nem afirmar ajuste corporativo quando não houver adjclose.
+  const hist=(c.diario||[]).slice(-300),meta=c?._meta?.diario||{};
+  const serieValida=hist.length>=289&&meta.ajustado===true&&hist.every((q:any,i:number)=>Array.isArray(q)&&q.length===6&&
    q.every((z:any)=>typeof z==='number'&&Number.isFinite(z))&&
    q[0]>0&&q[1]>0&&q[3]>0&&q[4]>0&&q[2]>=Math.max(q[1],q[3],q[4])&&
    q[3]<=Math.min(q[1],q[4])&&q[5]>=0&&
    (i===0||q[0]>hist[i-1][0]));
   tecnico.push({ticker:t,estudo:e,valuation:v,corrDolar,candles:(c.diario||[]).length,
-   serie_pdf:serieValida?{timeframe:'1d',fonte:'Yahoo Finance Chart · OHLCV não ajustado confirmado pelo provedor',
-    as_of:new Date(hist.at(-1)![0]*1000).toISOString(),candles:hist}:null});
+   serie_pdf:serieValida?{timeframe:'1d',fonte:meta.fonte,
+    ajuste:meta.metodologia,ajustado:meta.ajustado,referencia_ohlcv:meta.ultimo,
+    as_of:new Date(hist.at(-1)![0]*1000).toISOString(),candles:hist,
+    estudo:e}:null});
  }
  return {tecnico,calculado_em:new Date().toISOString()};
 }
@@ -118,13 +121,15 @@ function numero(v:string){
 }
 /** Bloqueia afirmações numéricas da IA que não aparecem nos dados determinísticos. */
 export function validarNumerosIA(texto:string,payload:string){
+ // Uma numeracao de secao (1. Titulo) nao e afirmacao quantitativa.
+ // Nao isentar arbitrariamente 0–10, 20, 50, 200 ou anos: podem ser numeros financeiros inventados.
+ const clean=texto.split('\n').map(line=>line.replace(/^\s*(?:#{1,6}\s*)?\d{1,2}[.)]\s+/,'')).join('\n');
  const rx=/(?<![\p{L}\d])(?:R\$\s*|US\$\s*)?(-?\d+(?:[.,]\d+)*)(?:\s*%)?(?![\p{L}\d])/gu;
  const extrair=(s:string)=>[...s.matchAll(rx)].map(m=>numero(m[1])).filter((n):n is number=>n!==null);
- const ref=extrair(payload),alegacoes=extrair(texto);
- const invalidos=alegacoes.filter(x=>{
-  if(Number.isInteger(x)&&(x<=10&&x>=0||[14,20,50,100,150,200,252].includes(x)||x>=2019&&x<=2035))return false;
-  return !ref.some(v=>Math.abs(v-x)<=Math.max(.1,Math.abs(v)*.001));
- });
+ const ref=extrair(payload),alegacoes=extrair(clean);
+ const invalidos=alegacoes.filter(x=>
+  !ref.some(v=>Math.abs(v-x)<=Math.max(.01,Math.abs(v)*.0001))
+ );
  return {ok:invalidos.length===0,divergencias:[...new Set(invalidos)].slice(0,12)};
 }
 
@@ -155,7 +160,9 @@ export async function redigir(cmd:any,p:any,c:any,env:Env,fetcher=fetch){
    referencias:{preco:t.valuation?.preco??null,
     graham:t.valuation?.graham??null,bazin:t.valuation?.bazin??null,
     dcf:t.valuation?.dcf?.preco??null,dcf_motivo:t.valuation?.dcfMotivo??null},
-   moeda:t.valuation?.moeda||null
+   moeda:t.valuation?.moeda||null,
+   proveniencia:{fonte_ohlcv:t.serie_pdf.fonte,periodo:t.serie_pdf.referencia_ohlcv,
+    estado_financeiro:'Indicadores derivados de dados Yahoo Finance/brapi; documento oficial individual não confirmado neste relatório'}
   })).slice(0,5),
   atualidade_confirmada:atualidade.estado,atualidade_por_ativo:atualidade.ativos,consultado_em:p.consultado_em,gerado_em:gerado,modelo,disclaimer:AVISO,ia_erro:iaErro||null,estado_dados:leitura?'Números do Yahoo Finance/brapi calculados pelo código; leitura redigida pela IA sobre esses números.':'Números do Yahoo Finance/brapi calculados pelo código. A IA não respondeu; veja o detalhe técnico no topo.'};
 }

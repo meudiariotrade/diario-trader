@@ -53,16 +53,27 @@ test('Pesquisa: gráfico com 90 candles reais e níveis positivos; ausência de 
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true});
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  const data=await page.evaluate(async()=>{
-  const base=Math.floor(Date.now()/86400000)*86400-90*86400;
-  const candles=Array.from({length:90},(_,i)=>{const p=22+i*.12+Math.sin(i/5);return [base+i*86400,p-.2,p+1,p-1,p,100000+i*10]});
+  const base=Math.floor(Date.now()/86400000)*86400-300*86400;
+  const candles=Array.from({length:300},(_,i)=>{const p=22+i*.12+Math.sin(i/5);return [base+i*86400,p-.2,p+1,p-1,p,100000+i*10]});
   const baseResult={id:'pdf-v767',resultado:{texto:'# Pesquisa técnica\\nDados reais somente quando documentados.',fontes:[],consultado_em:new Date().toISOString()}};
   const plain=await window.DiarioPesquisaPDF.build(baseResult);
-  const item={ticker:'PETR4',timeframe:'1d',fonte:'Yahoo Finance Chart',as_of:new Date().toISOString(),candles,
-   referencias:{preco:candles.at(-1)[4],graham:30,bazin:27,dcf:null,dcf_motivo:'Patrimônio projetado negativo'}};
+  const item={ticker:'PETR4',timeframe:'1d',
+   fonte:'https://query1.finance.yahoo.com/v8/finance/chart/PETR4.SA?range=2y&interval=1d',
+   ajustado:true,ajuste:'adjclose normalizado',as_of:new Date(candles.at(-1)[0]*1000).toISOString(),
+   candles,estudo:{ma20:51,ma50:49,ma200:44,tech:{
+    perna:{de:39,ate:55,direcao:'alta'},
+    elliott:{gatilho:55,fase:'correção condicional'},
+    invalidacao:{v:38}
+   }},referencias:{preco:candles.at(-1)[4],graham:30,bazin:27,dcf:null,
+    dcf_motivo:'Patrimônio projetado negativo'}};
   const withChart=await window.DiarioPesquisaPDF.build({...baseResult,resultado:{...baseResult.resultado,graficos_pdf:[item]}});
-  return {plain:plain.pages,charts:withChart.pages,bytes:withChart.blob.size,header:await withChart.blob.slice(0,7).text()};
+  const unverified=await window.DiarioPesquisaPDF.build({...baseResult,resultado:{...baseResult.resultado,
+   graficos_pdf:[{...item,ajustado:false}]}});
+  return {plain:plain.pages,charts:withChart.pages,unverified:unverified.pages,
+   bytes:withChart.blob.size,header:await withChart.blob.slice(0,7).text()};
  });
- assert.equal(data.charts,data.plain+1);
+ assert.equal(data.charts,data.plain+2,'Três gráficos novos substituem página de falta de prova');
+ assert.equal(data.unverified,data.plain,'Sem adjclose comprovado nenhum gráfico é inventado');
  assert.ok(data.bytes>15000);
  assert.match(data.header,/%PDF-/);
  await page.close();

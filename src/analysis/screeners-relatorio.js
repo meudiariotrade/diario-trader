@@ -1,6 +1,16 @@
 /* Dossiê de 1 a 10 ações. Reutiliza a biblioteca e as fontes PDF já instaladas no app. */
 (function(w){
-'use strict';
+'use strict'
+async function hashSnapshot(input){
+ if(!globalThis.crypto?.subtle)throw Error('SHA-256 indisponível: PDF sem rastreabilidade não é emitido');
+ const stable=x=>Array.isArray(x)?'['+x.map(stable).join(',')+']':
+  x&&typeof x==='object'?'{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+stable(x[k])).join(',')+'}':
+  JSON.stringify(x===undefined?null:x);
+ const bytes=new TextEncoder().encode(stable(input));
+ const hash=await crypto.subtle.digest('SHA-256',bytes);
+ return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+;
 const intelligence=()=>w.DiarioScreenersInteligencia;
 const colors={ink:'#1f2023',gold:'#ac8439',paper:'#fbfaf7',panel:'#efeeeb',muted:'#626770',rule:'#dcdad5',white:'#ffffff',green:'#24734c',red:'#ad4440'};
 const num=(v,d=1)=>v===null||v===undefined||!Number.isFinite(Number(v))?'N/D':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -115,7 +125,8 @@ async function build(m,rows,opts={}){
  if(!['BR','US'].includes(m)||!Array.isArray(rows)||rows.length<1||rows.length>10)throw Error('Selecione de 1 a 10 ações de um mesmo mercado.');
  if(new Set(rows.map(x=>x?.ticker)).size!==rows.length)throw Error('A seleção contém tickers repetidos.');
  if(!intelligence())throw Error('Validador de indicadores indisponível.');
- const P=await libs(),doc=await P.PDFDocument.create();
+ const hash=await hashSnapshot({tipo:'fundamental',m,metodo:'quant_v2_score / app v768',rows,automatic:!!opts.automatic,medianas:opts.medians||null});
+  const P=await libs(),doc=await P.PDFDocument.create();
  doc.setTitle((opts.automatic?'Top 10 automático':'Dossiê de ações')+' '+m+' - Diário de Trader');doc.setAuthor('Diário de Trader');
  doc.registerFontkit(w.fontkit);
  const loaded=await Promise.all(['pdf-sans.ttf','pdf-sans-bold.ttf','pdf-serif-bold.ttf'].map(async name=>{
@@ -123,6 +134,10 @@ async function build(m,rows,opts={}){
   return doc.embedFont(new Uint8Array(await r.arrayBuffer()),{subset:true});
  }));
  const L=drawing(doc,P,{sans:loaded[0],bold:loaded[1],serif:loaded[2]});
+ // Adicionar rastreabilidade sem alterar a composição editorial de capas e fichas.
+ const fontesOficiais=rows.filter(r=>r.documento_balanco_id&&r.documento_balanco_url&&
+  /^https:\/\/(?:dados\.cvm\.gov\.br|www\.sec\.gov)\//.test(r.documento_balanco_url));
+ 
  const studies=rows.map(r=>{
     const study=intelligence().diagnostics(m,r,Date.now(),opts.medians||null);
     // O retorno ao acionista no modelo US usa Dividend Yield validado, não exige buyback.
@@ -131,6 +146,18 @@ async function build(m,rows,opts={}){
     return study;
   });
  cover(L,m,rows,studies,opts);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length,opts));methodology(L,m,opts);
+ if(fontesOficiais.length){
+  L.page('Proveniência documental','URLs declaradas no snapshot; vínculo individual da métrica ainda pode ser parcial');
+  for(const row of fontesOficiais){
+   L.y=L.wrap(String(row.ticker)+' · Protocolo '+String(row.documento_balanco_id),L.M,L.y,L.CW,{font:'bold',size:8,leading:11})+4;
+   L.y=L.wrap(String(row.documento_balanco_url),L.M,L.y,L.CW,{size:7.4,leading:10})+12;
+  }
+  L.footer();
+ }
+ for(const pg of doc.getPages()){
+  pg.drawText('SHA-256 '+hash+' · Fórmula quant_v2_score / app v768',{
+   x:43,y:20,font:loaded[0],size:6,color:P.rgb(.38,.42,.46)});
+ }
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:(opts.automatic?'Top10-Quantitativo-':'Dossie-')+m+'-'+new Date().toISOString().slice(0,10)+'-'+rows.length+'-acoes.pdf',pages:doc.getPageCount()};
 }
 async function share(m,rows,opts={},ticket=null){

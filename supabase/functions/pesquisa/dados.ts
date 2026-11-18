@@ -107,15 +107,51 @@ export async function coletaAtivo(tk: string, env: Env, fetcher: typeof fetch = 
   };
 }
 
-/** Candles diários e semanais (Yahoo chart), B3 ou exterior. */
+/** OHLCV Yahoo Chart e eventos corporativos. Valores são normalizados ao último fator
+ *  adjclose/close confirmado; sem adjclose, série fica SEM AJUSTE COMPROVADO.
+ *  Nenhuma barra é criada para preencher lacunas. */
 export async function candles(tk: string, fetcher: typeof fetch = fetch) {
-  const sym = simbolo(tk), out: Record<string, number[][]> = {};
-  for (const [nome, range, interval] of [['diario', '2y', '1d'], ['semanal', '5y', '1wk']]) {
-    try {
-      const j = await yJson(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=${interval}`, fetcher, false);
-      const v = j?.chart?.result?.[0], q = v?.indicators?.quote?.[0];
-      out[nome] = (v?.timestamp || []).map((t: number, i: number) => [t, q.open[i], q.high[i], q.low[i], q.close[i], q.volume?.[i] || 0]).filter((c: any[]) => c.slice(1, 5).every((x) => typeof x === 'number' && x > 0));
-    } catch { out[nome] = []; }
+ const sym=simbolo(tk),out:any={_meta:{}};
+ for(const [name,range,interval] of [['diario','2y','1d'],['semanal','5y','1wk']]){
+  try{
+   const url='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(sym)+
+     '?range='+range+'&interval='+interval+'&events=div%2Csplits';
+   const j=await yJson(url,fetcher,false),v=j?.chart?.result?.[0],q=v?.indicators?.quote?.[0];
+   const adj=v?.indicators?.adjclose?.[0]?.adjclose||[],dates=v?.timestamp||[];
+   if(!Array.isArray(dates)||!q||dates.length<60)throw Error('Histórico insuficiente');
+   const end=dates.length-1,lastRatio=Number(adj[end])/Number(q.close?.[end]);
+   const adjusted=Array.isArray(adj)&&adj.length===dates.length&&
+     Number.isFinite(lastRatio)&&lastRatio>0&&
+     dates.every((_:number,i:number)=>Number.isFinite(Number(adj[i]))&&Number(adj[i])>0&&
+      Number.isFinite(Number(q.close?.[i]))&&Number(q.close[i])>0);
+   const corporate=Object.keys(v?.events?.splits||{}).length+
+     Object.keys(v?.events?.dividends||{}).length;
+   if(corporate&&!adjusted)throw Error('Evento corporativo sem adjclose verificável');
+   const records=dates.map((t:number,i:number)=>{
+    const raw=[Number(q.open?.[i]),Number(q.high?.[i]),Number(q.low?.[i]),
+     Number(q.close?.[i]),Number(q.volume?.[i])];
+    if(raw.slice(0,4).some(x=>!Number.isFinite(x)||x<=0)||
+     !Number.isFinite(raw[4])||raw[4]<0)return null;
+    const factor=adjusted?(Number(adj[i])/raw[3])/lastRatio:1;
+    if(!Number.isFinite(factor)||factor<=0)return null;
+    const z=[t,...raw.slice(0,4).map(x=>x*factor),raw[4]];
+    if(z[2]<Math.max(z[1],z[4])||z[3]>Math.min(z[1],z[4]))return null;
+    return z;
+   }).filter(Boolean) as number[][];
+   if(records.length<60||records.some((z,i)=>i&&z[0]<=records[i-1][0]))
+    throw Error('Série incompleta ou fora de ordem');
+   const maxGap=interval==='1wk'?28:14;
+   if(records.some((z,i)=>i&&(z[0]-records[i-1][0])>maxGap*86400))
+    throw Error('Lacuna temporal de candles sem comprovação');
+   out[name]=records;
+   out._meta[name]={fonte:url,ajustado:adjusted,
+     metodologia:adjusted?'adjclose Yahoo normalizado à última sessão':'OHLCV bruto; ajuste NÃO comprovado',
+     barras:records.length,ultimo:new Date(records.at(-1)![0]*1000).toISOString(),
+     eventos_corporativos:corporate,intervalo:interval};
+  }catch(e){
+   out[name]=[];out._meta[name]={fonte:'Yahoo Finance Chart',ajustado:false,
+    motivo:String((e as Error).message).slice(0,140),intervalo:interval};
   }
-  return out;
+ }
+ return out;
 }
