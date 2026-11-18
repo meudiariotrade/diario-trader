@@ -354,7 +354,7 @@ function csvRows(raw:string){
 }
 function normalizeName(name:string){
  return String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
-  .replace(/\b(PFD|PREF|COMMON|SHARES|REGISTERED|S A|SA|S\.A\.|LTDA|HOLDING|NON|CUM|PERP)\b/g,' ')
+  .replace(/\b(PFD|PREF|COMMON|SHARES|SHS|REGISTERED|S A|SA|S\.A\.|LTDA|HOLDING|NON|CUM|PERP|ADR|PREFERRED|DEPOSITARY)\b/g,' ')
   .replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 }
 async function cvmEnriquecer(){
@@ -362,7 +362,11 @@ async function cvmEnriquecer(){
  const r=await fetch('https://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.csv',
   {headers:{Accept:'text/csv'},signal:AbortSignal.timeout(18000)});
  if(!r.ok)throw Error('Cadastro CVM HTTP '+r.status);
- const cad=csvRows(await r.text()),names=new Map<string,Set<string>>();
+ const cadBytes=await r.arrayBuffer();
+ let cadText:string;
+ try{cadText=new TextDecoder('utf-8',{fatal:true}).decode(cadBytes)}
+ catch{cadText=new TextDecoder('windows-1252').decode(cadBytes)}
+ const cad=csvRows(cadText),names=new Map<string,Set<string>>();
  for(const x of cad){
   const cnpj=(x.CNPJ_CIA||'').replace(/\D/g,'');
   if(cnpj.length!==14)continue;
@@ -398,10 +402,12 @@ async function cvmEnriquecer(){
  const updates:any[]=[],unknown:string[]=[];
  for(const row of targets){
   const key=normalizeName(row.empresa),parts=key.split(' ').filter(x=>x.length>2);
-  if(parts.length<2)continue;
-  const matches=new Set<string>();
+  if(!parts.length)continue;
+  const matches=new Set<string>(),prefix=parts.slice(0,2).join(' ');
   for(const [label,cnpjs] of names){
-   if(label===key||label.startsWith(parts.slice(0,2).join(' ')+' ')){
+   if(label===key||label.startsWith(key+' ')||
+     (parts.length>=2&&label.startsWith(prefix+' '))||
+     (parts.length===1&&parts[0].length>=4&&label.startsWith(parts[0]+' '))){
     for(const c of cnpjs)matches.add(c);
    }
   }
