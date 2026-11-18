@@ -222,6 +222,21 @@ async function load(m,more=false){
   if(ac.signal.aborted||token!==s.token||current!==m||owner()!==u)return;
   s.next+=chunk.length;
   if(collected.length){
+   // Reavalia também ativos já analisados usando somente o IndexedDB local.
+   // A força relativa compara pares do conjunto acumulado, e não apenas 12 ativos de um lote.
+   const previous=[];
+   for(const prior of s.rows.slice(-108)){
+    if(ac.signal.aborted||token!==s.token)break;
+    const asset=s.universe.find(x=>x.ticker===prior.ticker);
+    if(!asset)continue;
+    const head=await read('candles|'+asset.market+'|'+asset.ticker+'|'+s.tf,6*3600000);
+    const daily=s.tf==='1d'?head:await read('candles|'+asset.market+'|'+asset.ticker+'|1d',6*3600000);
+    const higher=s.tf==='15m'?await read('candles|'+asset.market+'|'+asset.ticker+'|1h',6*3600000):s.tf==='1h'?daily:null;
+    if(head?.candles?.length>=210&&daily?.candles?.length>=210)
+     previous.push({...asset,candles:head.candles,daily:daily.candles,higher:higher?.candles||null,source:head.source,updatedAt:head.fetchedAt});
+   }
+   const batch=[...previous,...collected].slice(-120);
+   if(ac.signal.aborted||token!==s.token)return;
    const bench={};
    // Sem benchmark real no cache não inventar RS; a nota sinaliza a lacuna.
    for(const key of ['BR','US','CRYPTO'])try{const symbol=key==='BR'?'IBOV':key==='US'?'SPX':'BTCUSDT';let b=await read('candles|'+key+'|'+symbol+'|1d',6*3600000);if(!b?.candles)b=await candles({market:key,ticker:symbol},'1d',ac.signal);if(b?.candles)bench[key]=b.candles}catch{}
@@ -230,13 +245,13 @@ async function load(m,more=false){
      const wk=new Worker('tecnico-worker.js?v=762');s.worker=wk;s.workerReject=reject;
      wk.onmessage=event=>{if(event.data.reqId!==token)return;if(event.data.action==='DONE')resolve(event.data.rows);else reject(Error(event.data.error||'Falha de cálculo'))};
      wk.onerror=e=>reject(Error(e.message||'Falha no worker'));
-     wk.postMessage({action:'RUN',reqId:token,tf:s.tf,assets:collected,benchmarks:bench});
+     wk.postMessage({action:'RUN',reqId:token,tf:s.tf,assets:batch,benchmarks:bench});
     }catch(e){reject(e)}
    }).finally(()=>{s.worker?.terminate();s.worker=null;s.workerReject=null});
    if(ac.signal.aborted||token!==s.token)return;
    const fund=s.fundData||{};
    const merged=result.map(x=>({...x,fund:fund[x.ticker]??s.universe.find(y=>y.ticker===x.ticker)?.fund??null}));
-   s.rows=s.rows.concat(merged);s.rows=markHoldings(s.rows);
+   const replaced=new Set(merged.map(x=>x.ticker));s.rows=markHoldings(s.rows.filter(x=>!replaced.has(x.ticker)).concat(merged));
    s.updatedAt=new Date().toLocaleString('pt-BR');s.info='Cálculo local · '+s.updatedAt+' · '+failures.length+' indisponível(is)';
    void store('snapshot|'+m+'|'+s.tf,{rows:s.rows.map(x=>({...x,holding:false})),universe:s.universe,next:s.next,updatedAt:s.updatedAt});
   }else s.error='Nenhum candle histórico válido nesta amostra. '+failures.slice(0,2).join('; ')+'. Confira a publicação da rota /v1/tecnico-candles no Cloudflare Worker.';
