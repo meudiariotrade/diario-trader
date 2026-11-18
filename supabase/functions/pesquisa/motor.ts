@@ -121,13 +121,15 @@ function numero(v:string){
 }
 /** Bloqueia afirmações numéricas da IA que não aparecem nos dados determinísticos. */
 export function validarNumerosIA(texto:string,payload:string){
+ // Uma numeracao de secao (1. Titulo) nao e afirmacao quantitativa.
+ // Nao isentar arbitrariamente 0–10, 20, 50, 200 ou anos: podem ser numeros financeiros inventados.
+ const clean=texto.split('\n').map(line=>line.replace(/^\s*(?:#{1,6}\s*)?\d{1,2}[.)]\s+/,'')).join('\n');
  const rx=/(?<![\p{L}\d])(?:R\$\s*|US\$\s*)?(-?\d+(?:[.,]\d+)*)(?:\s*%)?(?![\p{L}\d])/gu;
  const extrair=(s:string)=>[...s.matchAll(rx)].map(m=>numero(m[1])).filter((n):n is number=>n!==null);
- const ref=extrair(payload),alegacoes=extrair(texto);
- const invalidos=alegacoes.filter(x=>{
-  if(Number.isInteger(x)&&(x<=10&&x>=0||[14,20,50,100,150,200,252].includes(x)||x>=2019&&x<=2035))return false;
-  return !ref.some(v=>Math.abs(v-x)<=Math.max(.1,Math.abs(v)*.001));
- });
+ const ref=extrair(payload),alegacoes=extrair(clean);
+ const invalidos=alegacoes.filter(x=>
+  !ref.some(v=>Math.abs(v-x)<=Math.max(.01,Math.abs(v)*.0001))
+ );
  return {ok:invalidos.length===0,divergencias:[...new Set(invalidos)].slice(0,12)};
 }
 
