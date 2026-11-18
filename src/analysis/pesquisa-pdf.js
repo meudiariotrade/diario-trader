@@ -1,5 +1,15 @@
 /* Pesquisa: exportação PDF local, sem alterar os relatórios editoriais existentes. */
-(function(w){'use strict';
+(function(w){'use strict'
+async function hashSnapshot(input){
+ if(!globalThis.crypto?.subtle)throw Error('SHA-256 indisponível: PDF sem rastreabilidade não é emitido');
+ const stable=x=>Array.isArray(x)?'['+x.map(stable).join(',')+']':
+  x&&typeof x==='object'?'{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+stable(x[k])).join(',')+'}':
+  JSON.stringify(x===undefined?null:x);
+ const bytes=new TextEncoder().encode(stable(input));
+ const hash=await crypto.subtle.digest('SHA-256',bytes);
+ return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+;
 // Gráfico editorial de Pesquisa: usa exclusivamente os 90 candles já coletados pelo backend.
 // Preços teóricos são referências horizontais condicionais, NUNCA candles futuros ou previsões certas.
 function candlesConferidos(asset){
@@ -146,6 +156,7 @@ function graficoPDF(asset,kind){
 async function build(job){
  const r=job?.resultado;
  if(!r?.texto)throw Error('Não confirmado / Não calculável: pesquisa sem relatório.');
+ const hash=await hashSnapshot({tipo:'pesquisa',formula:'pesquisa/relatorio v768',id:job.id||null,resultado:r});
  const load=f=>w.DiarioChunks?.load?w.DiarioChunks.load(f):new Promise((ok,no)=>{const el=document.createElement('script');el.src=f;el.onload=ok;el.onerror=no;document.head.appendChild(el)});
  if(!w.PDFLib)await load('pdf-lib.min.js');
  if(!w.fontkit)await load('fontkit.umd.min.js');
@@ -197,10 +208,21 @@ async function build(job){
   line('Não foram desenhados candles, médias, alvos ou ondas artificiais.');
   line('Para anexar gráficos, gere uma nova pesquisa com histórico diário confirmado.');
  }
- line('FONTES CONSULTADAS',true);
+ line('PROVENIÊNCIA E REPRODUTIBILIDADE',true);
+ line('Versão do método: pesquisa/relatorio v768; SHA-256 do snapshot impresso no rodapé.');
+ line('Documentos oficiais por indicador: somente quando identificados no relatório. Fonte genérica de catálogo não comprova demonstração financeira.');
+ for(const item of charts)if(item?.fonte&&item?.ticker){
+  line('OHLCV '+String(item.ticker)+': '+String(item.fonte));
+  line('Ajuste: '+String(item.ajuste||'não confirmado')+' · última barra: '+String(item.as_of||'n/d'));
+ }
+  line('FONTES CONSULTADAS',true);
  for(const source of (r.fontes||[]).slice(0,24))line(String(source.titulo||'Fonte')+' — '+String(source.url||''));
  line('Consulta: '+String(r.consultado_em||'Não confirmado / Não calculável'));
- doc.setTitle('Pesquisa B3 e EUA — Diário de Trader');doc.setAuthor('Diário de Trader');
+ for(const pg of doc.getPages()){
+  pg.drawText('Snapshot SHA-256: '+hash+' · Fórmula Pesquisa v768',{
+   x:M,y:24,font:normal,size:6,color:P.rgb(.38,.42,.46)});
+ }
+  doc.setTitle('Pesquisa B3 e EUA — Diário de Trader');doc.setAuthor('Diário de Trader');
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Pesquisa-'+String(job.id||'analise').slice(0,8)+'.pdf',pages};
 }
 async function share(job,ticket=null){
