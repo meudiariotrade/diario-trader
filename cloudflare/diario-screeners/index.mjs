@@ -117,7 +117,8 @@ export default {
      if(!source&&market==='US'&&tf==='1d'&&ticker!=='SPX'){
       try{
        // Nasdaq publica EOD de ações; não converter EOD em intraday fictício.
-       const u='https://api.nasdaq.com/api/quote/'+encodeURIComponent(ticker)+'/historical?assetclass=stocks&limit=500';
+       const startDay=new Date(Date.now()-730*86400000).toISOString().slice(0,10),endDay=new Date().toISOString().slice(0,10);
+       const u='https://api.nasdaq.com/api/quote/'+encodeURIComponent(ticker)+'/historical?assetclass=stocks&fromdate='+startDay+'&todate='+endDay+'&limit=500';
        const r=await fetch(u,{headers:{Accept:'application/json','User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(9000)});
        if(!r.ok)attempts.push('Nasdaq HTTP '+r.status);
        else{
@@ -125,7 +126,7 @@ export default {
         const n=x=>Number(String(x??'').replace(/[$,]/g,''));
         const candidate=validRows(history.map(v=>[Math.floor(new Date(v.date).getTime()/1000),n(v.open),n(v.high),n(v.low),n(v.close),n(v.volume)]));
         if(candidate.length>=210){items=candidate;source='Nasdaq EOD (histórico diário, sujeito a atraso)'}
-        else attempts.push('Nasdaq histórico insuficiente');
+        else attempts.push('Nasdaq histórico insuficiente: '+candidate.length+' barras');
        }
       }catch{attempts.push('Nasdaq indisponível')}
      }
