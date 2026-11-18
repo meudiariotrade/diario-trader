@@ -1,0 +1,38 @@
+name: Publicar Cloudflare Técnico (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: publicar-cloudflare-tecnico
+  cancel-in-progress: false
+jobs:
+  publicar-worker:
+    # Jamais implantar automaticamente a partir de Pull Request ou branch de experimento.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    environment:
+      name: cloudflare-workers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verificar pré-requisitos de publicação
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CF_TOKEN" || { echo "::error::Secret CLOUDFLARE_API_TOKEN não configurado"; exit 1; }
+          test -n "$CF_ACCOUNT" || { echo "::error::Secret CLOUDFLARE_ACCOUNT_ID não configurado"; exit 1; }
+          node --check cloudflare/diario-screeners/index.mjs
+      - name: Publicar apenas o Worker diario-screeners-quant
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/diario-screeners
+          command: deploy
+      - name: Conferir BTC, B3, EUA, 15M e 1D no endpoint público
+        run: node scripts/verify-tecnico-edge.cjs
