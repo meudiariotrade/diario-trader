@@ -4346,16 +4346,7 @@ try {
     const doc = document,
       state = {
         news: "noticias",
-        journal: (() => {
-          try {
-            return sessionStorage.getItem("diario-mercado-jornal-secao") ===
-              "giro"
-              ? "giro"
-              : "jornal";
-          } catch {
-            return "jornal";
-          }
-        })(),
+        journal: "jornal",
       },
       root = () => doc.querySelector("#app .dt395-native-mercado"),
       sub = () => {
@@ -4404,7 +4395,7 @@ try {
     }
     function showMode(e, o) {
       const n = o === "nt",
-        t = !n && state.journal === "giro",
+        t = false,
         a = n && state.news === "balancos";
       ((e.dataset.m406View = n
         ? a
@@ -4432,7 +4423,7 @@ try {
         c &&
           (c.textContent = n
             ? "Notícias e balanços"
-            : "Jornal e Giro do Pregão");
+            : "Jornal do Pregão");
         const l = r.querySelector(".m404-panel-nav");
         l && (l.hidden = a || t);
         const d = r.querySelector("p");
@@ -4482,17 +4473,9 @@ try {
           e.querySelector(":scope > .m406-section-switch"))
       )
         return;
-      if (
-        ((e.dataset.m406Sub = o),
-        e.classList.add("m406-content-page"),
-        o === "jr")
-      )
-        try {
-          state.journal =
-            sessionStorage.getItem("diario-mercado-jornal-secao") === "giro"
-              ? "giro"
-              : "jornal";
-        } catch {}
+      e.dataset.m406Sub = o;
+      e.classList.add("m406-content-page");
+      if (o === "jr") state.journal = "jornal";
       const n = o === "nt" ? state.news : state.journal,
         t = section(
           o,
@@ -4504,7 +4487,6 @@ try {
               ]
             : [
                 ["jornal", "Jornal do Pregão"],
-                ["giro", "Giro do mercado"],
               ],
         ),
         a = make("div", "m406-content-host");
@@ -4572,9 +4554,9 @@ try {
           a = sub();
         if (a === "nt") state.news = t;
         else if (a === "jr") {
-          state.journal = t;
+          state.journal = "jornal";
           try {
-            sessionStorage.setItem("diario-mercado-jornal-secao", t);
+            sessionStorage.setItem("diario-mercado-jornal-secao", "jornal");
           } catch {}
         } else return;
         (showMode(n, a), focusCurrent(o));
@@ -4595,9 +4577,9 @@ try {
           } catch {}
         }),
         (GOR.giro = () => {
-          state.journal = "giro";
+          state.journal = "jornal";
           try {
-            sessionStorage.setItem("diario-mercado-jornal-secao", "giro");
+            sessionStorage.setItem("diario-mercado-jornal-secao", "jornal");
           } catch {}
           try {
             ((MKT.tab = "jr"), irPara("mercado"));
@@ -4613,9 +4595,9 @@ try {
           try {
             if (MKT.tab === "mu" || MKT.tab === "cot") MKT.tab = "cq";
             else if (MKT.tab === "giro") {
-              state.journal = "giro";
+              state.journal = "jornal";
               try {
-                sessionStorage.setItem("diario-mercado-jornal-secao", "giro");
+                sessionStorage.setItem("diario-mercado-jornal-secao", "jornal");
               } catch {}
               MKT.tab = "jr";
             }

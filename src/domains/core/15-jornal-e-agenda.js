@@ -994,7 +994,6 @@ ${(e.em_poucas_linhas || []).length ? `<section class="jrsec"><h3>Em poucas linh
 <section class="jrsec"><h3>Mais do dia</h3>${(e.materias || []).map((s, n) => jrMateria(s, n)).join("")}</section>
 ${e.analise ? `<section class="jrsec jranal"><h3>Análise</h3><h2 class="jrtit">${esc(e.analise.titulo)}</h2><div class="jrtxt">${jrPar(e.analise.texto)}</div><div class="sm mut">Análise da redação, com os dados do dia. Não é recomendação de investimento.</div></section>` : ""}
 ${(e.agenda || []).length ? `<section class="jrsec"><h3>Agenda</h3>${e.agenda.map((s) => `<div class="jrag"><b>${esc(s.quando || "")}</b><div><div>${esc(s.evento)}</div>${s.por_que ? `<div class="sm mut">${esc(s.por_que)}</div>` : ""}</div></div>`).join("")}<button class="btn s" data-hub="mercado:ag" style="margin-top:6px">Agenda completa</button></section>` : ""}
-<section class="jrsec"><h3>Giro do pregão</h3><div class="sm mut" style="margin-bottom:6px">Os boletins da pré-abertura, do meio do dia e do fechamento continuam no Giro.</div><button class="btn s" data-hub="mercado:giro">Abrir o Giro</button></section>
 ${
   (e.manchetes_externas || []).length
     ? `<section class="jrsec"><h3>Na imprensa</h3><div class="sm mut" style="margin-bottom:6px">Manchetes de outros veículos usadas como pista pela redação (os textos acima são próprios). Para ler as matérias originais, veja a aba Notícias.</div>${e.manchetes_externas

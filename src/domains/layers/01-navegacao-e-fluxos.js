@@ -1191,7 +1191,6 @@ try {
             items: [
               ["mercado:mu", "Panorama global"],
               ["mercado:pn", "Painel de mercado"],
-              ["mercado:giro", "Giro de mercado"],
               ["mercado:jr", "Jornal do Pregão"],
               ["mercado:ag", "Agenda econômica"],
               ["mercado:nt", "Notícias"],
@@ -1258,7 +1257,6 @@ try {
             items: [
               ["mercado:mu", "Mundo"],
               ["mercado:pn", "Painel"],
-              ["mercado:giro", "Giro"],
               ["juros", "Juros e DI"],
             ],
           },
