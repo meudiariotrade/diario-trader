@@ -15,10 +15,29 @@
       {id:'momentum',name:'Momentum e tendência',weight:25,fields:['momentum_12_1','dist_mm200_pct']},
       {id:'retorno',name:'Retorno ao acionista',weight:15,fields:['dividend_yield','payout_implicito']}]
  };
+ // Subtipos bancários/seguradores confirmados por classificação explícita ou razão social.
+ // 'Finance' isolado inclui REITs/corretoras; não aplicar regra setorial sem evidência.
+ function financialSubtype(row){
+  if(!/^(finance|financeiro|financials|financial services)$/i.test(String(row?.setor||row?.sector||'').trim()))return false;
+  const detail=String(row?.segmento||row?.industry||'')+' '+String(row?.empresa||row?.company_name||'');
+  return /(?:\bbanc(?:o|os|orp)?\b|\bbank(?:ing|s)?\b|\bsegur(?:o|os|adora|adoras)?\b|\binsur(?:ance|er|ers)?\b|\bfinancial\s+holdings?\b|\bholdings?\s+financeiras?\b)/i.test(detail);
+ }
+ const financeWeights={
+  BR:[{id:'qualidade',name:'Qualidade financeira',weight:30,fields:['roe']},
+      {id:'valuation',name:'Valuation financeiro',weight:30,fields:['pl','pvp']},
+      {id:'dividendos',name:'Dividendos',weight:25,fields:['dividend_yield','payout_implicito']},
+      {id:'momentum',name:'Momentum',weight:15,fields:['momentum_12_1']}],
+  US:[{id:'qualidade',name:'Qualidade financeira',weight:30,fields:['roe']},
+      {id:'valuation',name:'Valuation financeiro',weight:30,fields:['forward_pe','pvp']},
+      {id:'momentum',name:'Momentum e tendência',weight:25,fields:['momentum_12_1','dist_mm200_pct']},
+      {id:'retorno',name:'Retorno ao acionista',weight:15,fields:['dividend_yield','payout_implicito']}]
+ };
+ const groupsFor=(m,row)=>financialSubtype(row)?financeWeights[m]:weights[m];
  const defs={
   roe:['ROE','%', 'Retorno sobre patrimônio; valores negativos exigem contexto'],
   roic:['ROIC','%', 'Retorno sobre capital investido'],
   pl:['P/L','x','Múltiplo histórico; não representa preço-alvo'],
+  pvp:['P/VP','x','Preço sobre valor patrimonial. Em bancos, exigir período e fonte do patrimônio'],
   ev_ebitda:['EV/EBITDA','x','Múltiplo de valor da firma'],
   fcf_yield:['FCF Yield','%', 'Fluxo de caixa livre / valor de mercado'],
   dividend_yield:['Dividend Yield','%', 'Dividendo histórico; não garante pagamento futuro'],
@@ -36,7 +55,7 @@
   buyback_yield:['Buyback Yield','%', 'Recompras sobre valor de mercado; conferir se é bruto ou líquido'],
   net_debt_ebitda:['Dívida líq./EBITDA','x','A dívida exige comparação com o setor']
  };
- const allRequired=m=>[...new Set((weights[m]||weights.BR).flatMap(g=>g.fields))];
+ const allRequired=(m,row)=>[...new Set(groupsFor(m,row).flatMap(g=>g.fields))];
  function isVal(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))}
  function value(row,k){if(!row)return null;const v=isVal(row[k])?Number(row[k]):null;
   if(k==='payout_implicito'&&(v===null||v===0)&&isVal(row.dividend_yield)&&Number(row.dividend_yield)>0&&isVal(row.pl)&&Number(row.pl)>0)
@@ -47,6 +66,22 @@
  function avg(vs){const a=vs.filter(x=>x!==null);return a.length?a.reduce((a,b)=>a+b,0)/a.length:null}
  function item(m,row){
   const v=k=>value(row,k);
+  if(financialSubtype(row)){
+   if(m==='BR')return [
+    scale(v('roe'),5,25),
+    avg([scale(v('pl'),5,25,true),scale(v('pvp'),.6,3,true)]),
+    avg([scale(v('dividend_yield'),0,12),
+      v('payout_implicito')===null?null:(v('payout_implicito')>=20&&v('payout_implicito')<=80?90:25)]),
+    scale(v('momentum_12_1'),-30,50)
+   ];
+   return [
+    scale(v('roe'),5,25),
+    avg([scale(v('forward_pe'),8,40,true),scale(v('pvp'),.6,3,true)]),
+    avg([scale(v('momentum_12_1'),-30,50),scale(v('dist_mm200_pct'),-35,35)]),
+    avg([scale(v('dividend_yield'),0,12),
+      v('payout_implicito')===null?null:(v('payout_implicito')>=20&&v('payout_implicito')<=80?90:25)])
+   ];
+  }
   if(m==='BR')return [
    avg([scale(v('roe'),5,25),scale(v('roic'),5,22)]),
    avg([scale(v('pl'),5,25,true),scale(v('ev_ebitda'),4,18,true),scale(v('fcf_yield'),0,12)]),
@@ -64,7 +99,7 @@
   if(!date)return null;const d=Date.parse(date);return Number.isFinite(d)?Math.max(0,Math.floor((now-d)/86400000)):null;
  }
  function diagnostics(market,row,now=Date.now(),medians=null){
-  const m=market==='US'?'US':'BR',groups=weights[m],vs=item(m,row),all=allRequired(m);
+  const m=market==='US'?'US':'BR',groups=groupsFor(m,row),vs=item(m,row),all=allRequired(m,row);
   const parts=groups.map((g,i)=>({id:g.id,name:g.name,weight:g.weight,score:vs[i]===null?null:Math.round(vs[i]*10)/10,
     points:vs[i]===null?null:Math.round(vs[i]*g.weight/100*100)/100,
     covered:g.fields.filter(k=>value(row,k)!==null).length,total:g.fields.length,
@@ -76,7 +111,7 @@
   const coverage=all.length?Math.round(eligible/all.length*100):0;
   const diff=official!==null&&model!==null?Math.abs(official-model):null;
   const oldFund=age(row?.sec_facts_at||row?.fundamentais_em,now);
-  const version=m==='BR'?'v2.0':'us_v2.0';const expected=String(row?.score_model_version||'legado');
+  const version=financialSubtype(row)?(m==='BR'?'v2.1-fin':'us_v2.1-fin'):(m==='BR'?'v2.0':'us_v2.0');const expected=String(row?.score_model_version||'legado');
   const competence=row?.data_competencia_balanco||null;
   const oldTech=age(row?.tecnicos_em,now);
   const concerns=[],supports=[];
@@ -100,7 +135,11 @@
     if(p.score!==null&&p.score>=67&&p.covered>=1)supports.push(p.name+': '+p.points.toFixed(1)+' de '+p.weight+' pontos.');
     if(p.score!==null&&p.score<=35)concerns.push(p.name+' abaixo do centro da escala interna ('+Math.round(p.score)+'/100).');
   }
-  const verified=official!==null&&model!==null&&diff<=0.1&&expected===version&&coverage>=70&&documentoConfirmado&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10;
+  const subtype=financialSubtype(row);
+  // Financeiro: ausência de múltiplos inaplicáveis não penaliza; sem P/VP comprovado, score permanece exploratório.
+  if(subtype&&value(row,'pvp')===null)concerns.push('P/VP financeiro ausente ou não verificado: classificação exploratória, sem homologação.');
+  const verified=official!==null&&model!==null&&diff<=0.1&&expected===version&&coverage>=70&&documentoConfirmado&&
+   (!subtype||value(row,'pvp')!==null)&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10;
   const level=verified?'Cálculo confere':official!==null?'Exige conferência':'Incompleto';
   const med=(key)=>medians&&isVal(medians[key])?Number(medians[key]):null;
   const sector=String(row?.setor||row?.sector||'').toLowerCase();
@@ -110,8 +149,8 @@
   if(roe!==null&&med('roe')!==null)signal.push('ROE de '+roe.toFixed(1)+'% ante mediana de '+med('roe').toFixed(1)+'%.');
   if(dy!==null&&med('dy')!==null)signal.push('DY histórico de '+dy.toFixed(1)+'% ante mediana de '+med('dy').toFixed(1)+'%.');
   if(momentum!==null&&momentum<0)concerns.push('Momentum de '+momentum.toFixed(1)+'%: preço abaixo do patamar de 12 meses, excluindo o mês recente.');
-  if(value(row,'div_liq_ebitda')>3)concerns.push('Dívida líquida/EBITDA acima de 3x: avaliar cronograma de amortização e ciclo do setor.');
-  if(value(row,'net_debt_ebitda')>3)concerns.push('Dívida líquida/EBITDA acima de 3x: avaliar caixa e vencimentos.');
+  if(!subtype&&value(row,'div_liq_ebitda')>3)concerns.push('Dívida líquida/EBITDA acima de 3x: avaliar cronograma de amortização e ciclo do setor.');
+  if(!subtype&&value(row,'net_debt_ebitda')>3)concerns.push('Dívida líquida/EBITDA acima de 3x: avaliar caixa e vencimentos.');
   if(value(row,'payout_implicito')>90)concerns.push('Payout estimado acima de 90%: sustentabilidade dos dividendos depende de geração de caixa.');
   const profile=roic!==null&&roic>=15&&((pl!==null&&pl<12)||(value(row,'forward_pe')!==null&&value(row,'forward_pe')<15))?'Perfil qualidade + múltiplos reduzidos':
     roic!==null&&roic>=15?'Perfil rentabilidade de capital':dy!==null&&dy>=5?'Perfil de distribuição de resultados':'Perfil quantitativo misto';
@@ -131,5 +170,5 @@
      'O método atribui pontuação baixa aos indicadores disponíveis; não significa necessariamente que a ação cairá.'};
  }
  function methodology(m){return (weights[m==='US'?'US':'BR']).map(g=>g.name+' '+g.weight+'%').join(' • ')}
- return Object.freeze({diagnostics,methodology,weights,definitions:defs,calculate:item,version:'v2.0'});
+ return Object.freeze({diagnostics,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,version:'v2.0'});
 });
