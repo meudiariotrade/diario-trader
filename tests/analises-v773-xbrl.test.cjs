@@ -7,7 +7,7 @@ test('v773: companyfacts gigante não trafega pelo Supabase',()=>{
  assert.match(cf,/data\.sec\.gov\/api\/xbrl\/companyfacts\/CIK/);
  assert.match(cf,/max-age=43200/);
  assert.match(cf,/20000000/);
- assert.match(cf,/SEC EDGAR/);
+ assert.match(cf,/sec-edgar-xbrl-compact/);
  assert.match(sb,/\/v1\/sec-xbrl\?cik=/);
  assert.doesNotMatch(sb,/const r=await secGet\(url,'data\.sec\.gov'\)/);
  assert.match(sb,/sec_source_url:url/);
