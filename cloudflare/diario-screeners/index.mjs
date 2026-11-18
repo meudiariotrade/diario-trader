@@ -24,6 +24,60 @@ export default {
   if(request.method!=='GET')return json({error:'Somente leitura'},405);
   const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,servico:'screeners-edge',sem_dados_privados:true});
+
+  // v762 — candles técnicos: cache compartilhado na borda, ZERO consultas ao PostgreSQL.
+  // Símbolos e intervalos fechados impedem proxy aberto, SSRF e varredura arbitrária.
+  if(url.pathname==='/v1/tecnico-candles'){
+   const ticker=(url.searchParams.get('ticker')||'').toUpperCase();
+   const market=url.searchParams.get('market'),tf=url.searchParams.get('tf');
+   if(!['BR','US','CRYPTO'].includes(market)||!['1d','1h','15m'].includes(tf)||
+      [...url.searchParams.keys()].some(x=>!['ticker','market','tf'].includes(x))||
+      !/^[A-Z0-9.-]{2,12}$/.test(ticker)||
+      (market==='BR'&&!/^[A-Z]{4}\d{1,2}$/.test(ticker))||
+      (market==='US'&&!/^[A-Z]{1,5}(?:\.[A-Z])?$/.test(ticker))||
+      (market==='CRYPTO'&&!/^(BTC|ETH|SOL|XRP|BNB|ADA|DOGE|LINK|AVAX|DOT|LTC|BCH|UNI|TRX|XLM|ATOM|NEAR|APT|SUI|TON)USDT$/.test(ticker)))
+     return json({error:'Símbolo/intervalo não autorizado'},400);
+   const key=new Request(url.origin+'/v1/tecnico-candles?market='+market+'&tf='+tf+'&ticker='+ticker);
+   const cache=caches.default;
+   const found=await cache.match(key);
+   if(found)return conditional(request,found,true);
+   const interval=tf==='1d'?'1d':tf==='1h'?'60m':'15m';
+   const range=tf==='1d'?'2y':tf==='1h'?'3mo':'1mo';
+   const symbol=market==='BR'?ticker+'.SA':ticker;
+   let items=[],source='';
+   try{
+    if(market==='CRYPTO'){
+     const rangeBin=tf==='1d'?'1d':tf==='1h'?'1h':'15m';
+     const resp=await fetch('https://api.binance.com/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=500',{signal:AbortSignal.timeout(9000)});
+     if(!resp.ok)throw Error('Binance HTTP '+resp.status);
+     const rows=await resp.json();
+     items=rows.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]);
+     source='Binance Klines';
+    }else{
+     let response=null;
+     for(const h of ['query1.finance.yahoo.com','query2.finance.yahoo.com']){
+      try{
+       const u='https://'+h+'/v8/finance/chart/'+encodeURIComponent(symbol)+'?range='+range+'&interval='+interval+'&includePrePost=false';
+       const r=await fetch(u,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(9000)});
+       if(r.ok){response=r;break}
+      }catch{}
+     }
+     if(!response)throw Error('Yahoo Chart indisponível');
+     const obj=await response.json(),series=obj?.chart?.result?.[0],q=series?.indicators?.quote?.[0];
+     if(!Array.isArray(series?.timestamp)||!q)throw Error('Série não retornada');
+     items=series.timestamp.map((t,i)=>[Number(t),Number(q.open?.[i]),Number(q.high?.[i]),Number(q.low?.[i]),Number(q.close?.[i]),Number(q.volume?.[i])]);
+     source='Yahoo Finance Chart (histórico, sujeito a atraso)';
+    }
+    items=items.filter(x=>x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[4]>0&&x[2]>=Math.max(x[1],x[4])&&x[3]>0&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0).slice(-600);
+    if(items.length<30)return json({error:'Histórico confiável insuficiente',candles:items.length},422);
+    const ttl=tf==='1d'?900:300;
+    const response=Response.json({ok:true,ticker,market,tf,source,fetchedAt:new Date().toISOString(),candles:items},
+      {headers:{'Cache-Control':'public, max-age='+ttl+', s-maxage='+ttl}});
+    ctx.waitUntil(cache.put(key,response.clone()));
+    return conditional(request,response,false);
+   }catch(e){return json({error:String(e.message||e).slice(0,120)},502)}
+  }
+
   if(url.pathname!=='/v1/screeners')return json({error:'Rota nao encontrada'},404);
   const market=url.searchParams.get('market');
   if(!['BR','US'].includes(market))return json({error:'Mercado invalido'},400);
