@@ -116,9 +116,13 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
   TecnicaPratica.pdf.insert(data);TecnicaPratica.view.refresh();
  },row);
  await page.locator('[data-tp-lesson]').click();
- await page.locator('[data-tp-film-migrate]').evaluate(button=>{
-  const details=button.closest('details');if(details)details.open=true;button.click();
- });
+ await expect.poll(()=>page.evaluate(()=>tab==='estudos'&&ESV==='aul')).toBe(true);
+ // Use interações reais (trusted click) do navegador: disparar .click()
+ // dentro de evaluate não reproduz as condições da interface do usuário.
+ const details=page.locator('#tp-root .tp-bridge');
+ await details.locator('summary').click();
+ await expect(details).toHaveAttribute('open','');
+ await details.locator('[data-tp-film-migrate]').click();
  // Exige o fluxo real de migração: assinatura -> GET do MP4 -> player.
  // Em caso de falha, registra status, sessão e requisições para diagnóstico.
  try{
@@ -130,6 +134,8 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
    project:typeof cfg==='function'?cfg()?.url:null,
    signedUrl:location.origin,
    lesson:!!document.querySelector('#tp-title'),
+   tab:typeof tab==='undefined'?null:tab,
+   estudosSubaba:typeof ESV==='undefined'?null:ESV,
    mediaActive:window.TecnicaPratica?.view?.isMediaActive?.()
   }));
   throw Error('Migração não apresentou o player: '+JSON.stringify({estado,chamadas})+' · '+error.message);
