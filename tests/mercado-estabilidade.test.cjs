@@ -52,6 +52,7 @@ test('consultas simultâneas: categoria em carga não exibe vazio e respostas fo
  await p.evaluate(()=>{
   CQ.d.idx=undefined;CQ.d.br=undefined;CQ.errors={};CQ.loading={};CQ.busy='';
   window.SUPA_URL='https://fixture.test';window.SUPA_KEY='fixture';
+  SESS={uid:'fixture-user',at:'valid-fixture-jwt',exp:Date.now()+3600000,projectUrl:'https://fixture.test'};
   window.marketPending={};fetch=async(url,options)=>{const body=JSON.parse(options.body);return new Promise(resolve=>{marketPending[body.aba]=items=>resolve(new Response(JSON.stringify({itens:items,em:new Date().toISOString()})))})};
   CQ.aba='idx';cqPinta();window.marketIdxJob=cqCarrega('idx',true);
   CQ.aba='br';cqPinta();window.marketBrJob=cqCarrega('br',true);

@@ -5,7 +5,7 @@ const names=new Set(['up','sync','syncOwner','assertSyncOwner']);
 const funcs=acorn.parse(source,{ecmaVersion:'latest'}).body.filter(n=>n.type==='FunctionDeclaration'&&names.has(n.id.name)).map(n=>source.slice(n.start,n.end)).join('\n');
 function app(options={}){
  const tasks=[],posts=[],reads=[];let failed=false;
- const c={Response,AbortSignal,Date,JSON,Error,Promise,setTimeout,clearTimeout,S:{mt:20,st:10,trades:[{id:'local'}]},SESS:{uid:'a'},SY:{busy:0,msg:''},tab:'home',window:{TraderContinuo329:{signal(){}}},DiarioSyncRecovery:{criar:args=>criar({...args,schedule:f=>{tasks.push(f);return tasks.length},cancel:()=>{},online:()=>true})},
+ const c={Response,AbortSignal,Date,JSON,Error,Promise,setTimeout,clearTimeout,S:{mt:20,st:10,trades:[{id:'local'}]},SESS:{uid:'a'},SY:{busy:0,msg:''},RQ_DIARIO_REVISOES:new Map(),tab:'home',window:{TraderContinuo329:{signal(){}}},DiarioSyncRecovery:{criar:args=>criar({...args,schedule:f=>{tasks.push(f);return tasks.length},cancel:()=>{},online:()=>true})},
  pub:()=>JSON.parse(JSON.stringify(c.S)),persist(){},photos:async()=>0,uiSy(){},svUi(){},typing:()=>false,render(){},hm:()=> '20:00',em:e=>e.message,syncSoon(){},adopt:r=>{Object.assign(c.S,r);c.S.st=r.mt},mergeIn:r=>{c.S.trades=[...new Map([...r.trades,...c.S.trades].map(t=>[t.id,t])).values()];c.S.mt=Math.max(c.S.mt,r.mt)},
  rq:async(path,init)=>{
   if(!init.method){

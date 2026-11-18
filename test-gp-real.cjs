@@ -12,7 +12,7 @@ async function run(){
  const index=fs.readFileSync('index.html','utf8');
  assert(/camadas-v560\.js\?v=\d+/.test(index),'Página versiona o bundle dos controles');
  const release=JSON.parse(fs.readFileSync('release.config.json','utf8'));
- assert(index.includes('estilo-v560.css?v='+release.version),'Folha de estilo atualizada');
+ assert(index.includes('estilo-v560.css?v=__APP_VERSION__') || index.includes('estilo-v560.css?v='+release.version),'Folha de estilo versionada no build');
  const worker=fs.readFileSync('sw.js','utf8');
  assert(/const C=['"]diario-v\d+[^'"]*['"]/.test(worker),'Cache PWA possui versão própria');
  for(const name of ['camadas-v560.js','terminal-gestos-seguros.js','estilo-v560.css']) assert(worker.includes('"'+name+'"'),'Cache inclui '+name);
