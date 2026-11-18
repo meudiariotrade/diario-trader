@@ -208,13 +208,26 @@ async function secMapear(){
  return {http:200,mapeados:count,total:rows.length};
 }
 function secPeriodo(json:any){
- const gaap=json?.facts?.['us-gaap']||{},all:any[]=[];
- for(const tag of ['Assets','StockholdersEquity','Liabilities','NetIncomeLoss','Revenues',
-   'RevenueFromContractWithCustomerExcludingAssessedTax']){
-  for(const entries of Object.values(gaap[tag]?.units||{}) as any[][]){
-   for(const x of entries||[]){
-    if(['10-Q','10-K','10-Q/A','10-K/A'].includes(x.form)&&/^\d{4}-\d{2}-\d{2}$/.test(x.end||'')
-      &&x.end<=now&&x.filed&&x.filed<=now)all.push(x);
+ // Emissores estrangeiros reportam IFRS/20-F ou 40-F, não necessariamente us-gaap/10-K.
+ // Aceitar somente período documental verificável, accession oficial e data de protocolo.
+ const approved=new Set(['10-Q','10-K','10-Q/A','10-K/A','20-F','40-F']);
+ const groups=[
+  {data:json?.facts?.['us-gaap']||{},tags:['Assets','StockholdersEquity','Liabilities','NetIncomeLoss',
+   'Revenues','RevenueFromContractWithCustomerExcludingAssessedTax']},
+  {data:json?.facts?.['ifrs-full']||{},tags:['Assets','Equity','Liabilities','ProfitLoss',
+   'Revenue','RevenueFromContractsWithCustomers','ProfitLossAttributableToOwnersOfParent']}
+ ];
+ const all:any[]=[];
+ for(const group of groups){
+  for(const tag of group.tags){
+   for(const entries of Object.values(group.data[tag]?.units||{}) as any[][]){
+    for(const x of entries||[]){
+     if(approved.has(String(x.form))&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.end||''))
+      &&/^\d{4}-\d{2}-\d{2}$/.test(String(x.filed||''))
+      &&/^\d{10}-\d{2}-\d{6}$/.test(String(x.accn||''))
+      &&x.end<=(new Date().toISOString().slice(0,10))&&x.filed>=x.end
+      &&x.filed<=(new Date().toISOString().slice(0,10)))all.push(x);
+    }
    }
   }
  }
@@ -261,7 +274,7 @@ async function secColetar(limit:number,priority:'score'|'cap'='cap'){
    if(!r.ok){errors.push(row.ticker+': SEC HTTP '+r.status);continue}
    const doc=await r.json();if(Number(doc?.cik)!==Number(row.cik))throw Error('CIK divergente');
    http200++;const period=secPeriodo(doc);
-   if(!period){semPeriodo.push({ticker:row.ticker,cik:row.cik});errors.push(row.ticker+': 10-Q / 10-K sem periodo confirmado; pausa de 7 dias');continue}
+   if(!period){semPeriodo.push({ticker:row.ticker,cik:row.cik});errors.push(row.ticker+': 10-Q / 10-K / 20-F / 40-F sem periodo confirmado; pausa de 7 dias');continue}
    const metricas=secValores(doc);
    updates.push({ticker:row.ticker,cik:row.cik,sec_status:'verificado',sec_facts_at:period.end,sec_source_url:url,...metricas});
    dates.push({ticker:row.ticker,data_competencia_balanco:period.end});
@@ -459,7 +472,50 @@ function cvmNumero(value:string){
  if(!/^-?\d+(?:\.\d+)?$/.test(s))return null;
  const n=Number(s);return Number.isFinite(n)?n:null;
 }
+async function cvmDreArquivoOficial(docs:Map<string,any>){
+ // A extração pesada dos ZIPs ocorre em GitHub Actions semanalmente; Supabase lê
+ // apenas o JSON comprimível com provas, e o confronta com os metadados CVM atuais.
+ const year=new Date().getUTCFullYear();
+ const url='https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/cvm-dre-'+year+'.json';
+ const r=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(10000)});
+ if(!r.ok)throw Error('Espelho CVM HTTP '+r.status);
+ const payload=await r.text();
+ if(payload.length>1_900_000)throw Error('Espelho CVM acima do limite de 1.9 MB');
+ const j=JSON.parse(payload);
+ if(j?.versao!==1||j.ano!==year||!Array.isArray(j.documentos)||j.documentos.length<100
+  ||!j.resumo||!j.gerado_em)throw Error('Espelho CVM com esquema incompleto');
+ const ts=Date.parse(j.gerado_em);
+ if(!Number.isFinite(ts)||Date.now()-ts>14*86400000||ts>Date.now()+3600000)
+  throw Error('Espelho CVM desatualizado');
+ const map=new Map<string,any>();
+ for(const record of j.documentos){
+  if(/^\d{14}$/.test(String(record.cnpj||''))&&!map.has(record.cnpj))map.set(record.cnpj,record);
+ }
+ const contas=new Map<string,Record<string,any>>();
+ for(const [cnpj,doc] of docs){
+  const row=map.get(cnpj);
+  // Metadados locais da CVM prevalecem; nenhuma linha externa os substitui.
+  if(!row||row.documento_id!==doc.documento_id||row.competencia!==doc.competencia
+   ||row.publicado_em!==doc.publicado_em||row.formulario!==doc.formulario
+   ||row.versao!==doc.versao)continue;
+  const lineage:Record<string,any>={};
+  for(const key of ['receita_liquida_dre','lucro_prejuizo_dre']){
+   const ev=row.linhagem?.[key],n=ev&&cvmNumero(ev.valor_original_csv);
+   if(n===null||!Number.isFinite(n)||Math.abs(n-Number(ev.valor_reportado))>0.00001
+    ||ev.fonte!=='CVM'||ev.tipo!=='conta_contabil_oficial'||ev.documento_id!==doc.documento_id
+    ||ev.competencia!==doc.competencia||ev.periodo_fim!==doc.competencia
+    ||ev.valida_indicador_ttm!==false||!['MIL','UNIDADE'].includes(String(ev.escala_moeda||'')))
+    continue;
+   lineage[key]=ev;
+  }
+  if(Object.keys(lineage).length)contas.set(cnpj,lineage);
+ }
+ return {contas,fontes:['GitHub Actions · CVM oficial '+j.gerado_em,'Empresas no espelho: '+j.documentos.length],
+  erros:[] as string[],documentos_informados:j.documentos.length};
+}
 async function cvmDreEvidencias(docs:Map<string,any>){
+ try{return await cvmDreArquivoOficial(docs)}
+ catch(e){console.warn('CVM: espelho semanal indisponivel; fallback amostral',String(e).slice(0,120));}
  const contas=new Map<string,Record<string,any>>(),fontes:string[]=[],erros:string[]=[];
  for(const kind of ['itr','dfp'] as const){
   const alvo=new Set([...docs].filter(([,d])=>d.formulario===kind.toUpperCase()).map(([cnpj])=>cnpj));
