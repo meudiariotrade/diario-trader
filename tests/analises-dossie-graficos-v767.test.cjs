@@ -53,8 +53,8 @@ test('Pesquisa: gráfico com 90 candles reais e níveis positivos; ausência de 
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true});
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  const data=await page.evaluate(async()=>{
-  const base=Math.floor(Date.now()/86400000)*86400-260*86400;
-  const candles=Array.from({length:260},(_,i)=>{const p=22+i*.12+Math.sin(i/5);return [base+i*86400,p-.2,p+1,p-1,p,100000+i*10]});
+  const base=Math.floor(Date.now()/86400000)*86400-300*86400;
+  const candles=Array.from({length:300},(_,i)=>{const p=22+i*.12+Math.sin(i/5);return [base+i*86400,p-.2,p+1,p-1,p,100000+i*10]});
   const baseResult={id:'pdf-v767',resultado:{texto:'# Pesquisa técnica\\nDados reais somente quando documentados.',fontes:[],consultado_em:new Date().toISOString()}};
   const plain=await window.DiarioPesquisaPDF.build(baseResult);
   const item={ticker:'PETR4',timeframe:'1d',
