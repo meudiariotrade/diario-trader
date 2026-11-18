@@ -123,7 +123,7 @@ function graph(rows,s){
  const data=rows.filter(r=>side(r,s)[1]?.score!=null).slice(0,120);
  const pts=data.map((r,i)=>{
   const x=side(r,s)[1],px=46+Math.max(0,Math.min(10,x.score))*58,vy=x.metrics.hvWeek||0,y=252-Math.min(30,vy)/30*210;
-  return '<circle cx="'+fmt(x,0)+'" cy="'+fmt(y,0)+'" r="'+(r.holding?5.6:4)+'" fill="'+(r.holding?'#d4a017':side(r,s)[0]==='buy'?'#10b981':'#ef4444')+'" stroke="#11141b" stroke-width="1" role="button" tabindex="0" data-tech-point="'+E(r.ticker)+'" aria-label="'+E(r.ticker)+' nota '+fmt(x.score)+' volatilidade '+fmt(vy)+' porcento"><title>'+E(r.ticker)+' · '+fmt(x.score)+'/10 · '+fmt(vy)+'% vol. semanal</title></circle>';
+  return '<circle cx="'+fmt(px,0)+'" cy="'+fmt(y,0)+'" r="'+(r.holding?5.6:4)+'" fill="'+(r.holding?'#d4a017':side(r,s)[0]==='buy'?'#10b981':'#ef4444')+'" stroke="#11141b" stroke-width="1" role="button" tabindex="0" data-tech-point="'+E(r.ticker)+'" aria-label="'+E(r.ticker)+' nota '+fmt(x.score)+' volatilidade '+fmt(vy)+' porcento"><title>'+E(r.ticker)+' · '+fmt(x.score)+'/10 · '+fmt(vy)+'% vol. semanal</title></circle>';
  }).join('');
  return '<section class="scr-panel tech-panel"><div class="scr-head"><h3>Dispersão · Nota Técnica × Volatilidade</h3><span class="scr-hint">Toque no ponto para abrir o ativo</span></div>'+
  (data.length?'<svg viewBox="0 0 690 290" class="tech-svg" role="img" aria-label="Dispersão de até 120 ativos analisados"><path d="M46 25V252H654" stroke="#68707a" fill="none"/><path d="M336 25V252" stroke="#4c535b" stroke-dasharray="4 4"/>'+
@@ -218,7 +218,7 @@ async function load(m,more=false){
   if(collected.length){
    const bench={};
    // Sem benchmark real no cache não inventar RS; a nota sinaliza a lacuna.
-   for(const key of ['BR','US','CRYPTO'])try{const b=await read('candles|'+key+'|'+(key==='BR'?'IBOV':key==='US'?'SPY':'BTCUSDT')+'|1d',6*3600000);if(b?.candles)bench[key]=b.candles}catch{}
+   for(const key of ['BR','US','CRYPTO'])try{const symbol=key==='BR'?'IBOV':key==='US'?'SPX':'BTCUSDT';let b=await read('candles|'+key+'|'+symbol+'|1d',6*3600000);if(!b?.candles)b=await candles({market:key,ticker:symbol},'1d',ac.signal);if(b?.candles)bench[key]=b.candles}catch{}
    const result=await new Promise((resolve,reject)=>{
     try{
      const wk=new Worker('tecnico-worker.js?v=762');s.worker=wk;
@@ -244,7 +244,7 @@ d.addEventListener('change',e=>{
  s[key]=el.value;s.detail='';
  if(key==='tf'){s.rows=[];s.universe=[];s.next=0;void load(current)}else render();
 });
-d.addEventListener('input',e=>{if(!e.target?.matches?.('[data-tech-search]')||!active())return;const s=states[current];s.search=e.target.value;const rows=selectedRows(s);d.querySelector('#an-root .tech-table tbody')?.replaceChildren(); // Refiltrar sem requisição externa.
+d.addEventListener('input',e=>{if(!e.target?.matches?.('[data-tech-search]')||!active())return;const s=states[current];s.search=e.target.value;const rows=selectedRows(s);// Refiltrar sem requisição externa.
  // A pesquisa completa é aplicada no próximo redesenho, sem timer em segundo plano.
  if(e.target.value.length===0||e.target.value.length>=2){const sel=e.target.selectionStart;render();const field=d.querySelector('[data-tech-search]');if(field){field.focus();field.setSelectionRange(sel,sel)}}
 });
