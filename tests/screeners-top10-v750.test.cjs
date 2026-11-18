@@ -73,3 +73,13 @@ test('Top 10 usa snapshot global elegível e gera PDF local sem varrer tickers',
  assert.match(sw,/"screeners-top10\.js"/);
  assert.ok(JSON.parse(read('release.config.json')).version>=750);
 });
+
+test('Snapshot v755 prioriza Worker publico e conserva fallback seguro ao Supabase',()=>{
+ assert.match(app,/diario-screeners-quant\.lucianosilva43567\.workers\.dev\/v1\/screeners/);
+ assert.match(app,/const endpoints=\/\^https:/);
+ assert.match(app,/for\(const endpoint of endpoints\)/);
+ assert.match(app,/endpoint\.edge\?\{\}:\{apikey:c\.key\}/);
+ assert.match(app,/endpoint\.edge\?7000:15000/);
+ assert.match(app,/const origin=c\.url\+'\/functions\/v1\/screeners-quant'\+path/);
+ assert.match(app,/if\(stored\?\.data\)\{snapshotMemory\.set\(market,stored\)/);
+});
