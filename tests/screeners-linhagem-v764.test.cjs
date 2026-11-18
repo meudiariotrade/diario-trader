@@ -36,3 +36,26 @@ test('SEC: ativo sem periodo recebe pausa finita, sem engolir limites 429',()=>{
  assert.match(migration,/GRANT EXECUTE ON FUNCTION public\.quant_screeners_sec_tentativa_patch\(jsonb\) TO service_role/);
  assert.doesNotMatch(sync,/setInterval\(/);
 });
+
+test('CVM: evidencia real requer CNPJ, versao, mesma competencia e conta DRE oficial',async()=>{
+ const source=sync.slice(sync.indexOf('function csvRows('),sync.indexOf('\nfunction normalizeName'));
+ const csv=[
+  'CNPJ_CIA;DT_REFER;VERSAO;ORDEM_EXERC;DT_INI_EXERC;DT_FIM_EXERC;CD_CONTA;VL_CONTA;MOEDA;ESCALA_MOEDA',
+  '11.111.111/0001-11;2026-09-30;2;ÚLTIMO;2026-01-01;2026-09-30;3.01;1.500,00;REAL;MIL',
+  '11.111.111/0001-11;2026-09-30;2;ÚLTIMO;2026-01-01;2026-09-30;3.11;120,50;REAL;MIL',
+  '11.111.111/0001-11;2026-09-30;1;ÚLTIMO;2026-01-01;2026-09-30;3.01;9.999,00;REAL;MIL',
+  '11.111.111/0001-11;2026-06-30;2;ÚLTIMO;2026-01-01;2026-06-30;3.01;8.888,00;REAL;MIL'
+ ].join('\n');
+ const context={cvmZipCsv:async (_k,p)=>p==='DRE_con'?csv:csv.split('\n')[0],Date,Set,Map,Number,String};
+ const fn=vm.runInNewContext(stripTypeScriptTypes(source,{mode:'transform'})+'\ncvmDreEvidencias',context);
+ const doc={formulario:'ITR',documento_id:'123456',publicado_em:'2026-11-01',competencia:'2026-09-30',versao:'2'};
+ const r=await fn(new Map([['11111111000111',doc]]));
+ const linhagem=r.contas.get('11111111000111');
+ assert.equal(linhagem.receita_liquida_dre.valor_reportado,1500);
+ assert.equal(linhagem.lucro_prejuizo_dre.valor_reportado,120.5);
+ assert.equal(linhagem.receita_liquida_dre.valida_indicador_ttm,false);
+ assert.equal(linhagem.receita_liquida_dre.documento_id,'123456');
+ assert.equal(linhagem.receita_liquida_dre.escala_moeda,'MIL');
+ const outro=await fn(new Map([['11111111000111',{...doc,versao:'3'}]]));
+ assert.equal(outro.contas.size,0,'Nunca vincular demonstração de versão divergente');
+});
