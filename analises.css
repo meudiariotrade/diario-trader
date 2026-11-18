@@ -286,8 +286,8 @@ html body #app nav.an-subs > button[aria-selected="true"] {
 #an-root .tech-presets button{flex:none;min-height:42px;padding:7px 12px;color:#afb8c6;background:var(--tech-card);border:1px solid var(--tech-rule);border-radius:4px;font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
 #an-root .tech-presets button.selected{color:#0a0c10;background:var(--tech-gold);border-color:var(--tech-gold);font-weight:750}
 #an-root .tech-presets button:hover{border-color:var(--tech-gold)}
-#an-root .scr-top{align-items:center;gap:10px}
-#an-root .scr-top>div{display:flex;flex-wrap:wrap;gap:6px}
+ #an-root [data-tech-root] .scr-top{align-items:center;gap:10px}
+ #an-root [data-tech-root] .scr-top>div{display:flex;flex-wrap:wrap;gap:6px}
 #an-root .tech-note{font-size:11px;line-height:1.55;color:#9da7b4;margin:8px 0 16px}
 #an-root .tech-kpis .scr-kpi{min-width:0;overflow-wrap:normal;background:#11141b;border-radius:4px}
 #an-root .tech-kpis .scr-kpi b{font-variant-numeric:tabular-nums}
@@ -295,7 +295,7 @@ html body #app nav.an-subs > button[aria-selected="true"] {
 #an-root .tech-svg{width:100%;height:auto;min-height:180px;display:block;background:var(--tech-bg);touch-action:pan-y}
 #an-root .tech-svg [data-tech-point]{cursor:pointer}
 #an-root .tech-svg [data-tech-point]:focus{outline:2px solid var(--tech-gold)}
-#an-root .scr-table-wrap{overflow:auto;max-width:100%;overscroll-behavior-x:contain}
+ #an-root [data-tech-root] .scr-table-wrap{overflow:auto;max-width:100%;overscroll-behavior-x:contain}
 #an-root .tech-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
 #an-root .tech-table th,#an-root .tech-table td{border-bottom:1px solid var(--tech-rule);padding:11px 8px;text-align:left}
 #an-root .tech-table th:first-child{min-width:98px}
@@ -321,4 +321,4 @@ html body #app nav.an-subs > button[aria-selected="true"] {
 #an-root .tech-trade-plan small{display:block;color:#9da6b4;line-height:1.5;margin-top:8px}
 #an-root .tech-detail h4{font-size:13px;color:var(--tech-gold)}
 @media(max-width:900px){#an-root .tech-controls{grid-template-columns:repeat(2,minmax(0,1fr))}#an-root .tech-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:480px){#an-root .tech-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#an-root .tech-controls select,#an-root .tech-controls input{font-size:16px;min-height:44px}#an-root .tech-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#an-root .tech-panel,#an-root .tech-detail{padding:12px}#an-root .tech-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#an-root .scr-top>div{width:100%}#an-root .scr-top .btn{flex:1;min-height:44px}#an-root .tech-presets{margin-right:-2px}#an-root .tech-table{font-size:11px}}
+@media(max-width:480px){#an-root .tech-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#an-root .tech-controls select,#an-root .tech-controls input{font-size:16px;min-height:44px}#an-root .tech-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#an-root .tech-panel,#an-root .tech-detail{padding:12px}#an-root .tech-metrics{grid-template-columns:repeat(2,minmax(0,1fr))} #an-root [data-tech-root] .scr-top>div{width:100%} #an-root [data-tech-root] .scr-top .btn{flex:1;min-height:44px}#an-root .tech-presets{margin-right:-2px}#an-root .tech-table{font-size:11px}}
