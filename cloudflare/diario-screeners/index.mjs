@@ -60,6 +60,8 @@ export default {
      const bybitInterval=tf==='1d'?'D':tf==='1h'?'60':'15';
      const okxInterval=tf==='1d'?'1D':tf==='1h'?'1H':'15m';
      const sources=[
+      {name:'Binance Klines',url:'https://data-api.binance.vision/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=500',
+       parse:b=>Array.isArray(b)?b.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
       {name:'Binance Klines',url:'https://api.binance.com/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=500',
        parse:b=>Array.isArray(b)?b.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
       {name:'Bybit Spot Klines',url:'https://api.bybit.com/v5/market/kline?category=spot&symbol='+ticker+'&interval='+bybitInterval+'&limit=500',
