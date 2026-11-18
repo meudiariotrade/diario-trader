@@ -5,7 +5,7 @@
  else root.DiarioTecnicoEngine=api;
 })(typeof self!=='undefined'?self:globalThis,function(){
  'use strict';
- const VERSION='tecnico-762.1';
+ const VERSION='tecnico-769.1';
  const FIB_RET=[0,.236,.382,.5,.618,.764,1],FIB_EXT=[1.11,1.272,1.414,1.618];
  const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
  const mean=v=>v.length?v.reduce((a,b)=>a+b,0)/v.length:null;
@@ -117,6 +117,94 @@
     [p<s50,s50<s150,s150<s200,p<s200,s200<old,p<=hi/1.3,p<=lo*1.25,rs!==null&&rs<=30&&vcpPass];
   return {score:checks.filter(Boolean).length,checks,missing:rs===null?['RS Rating cross-sectional não validado']:[]};
  }
+ // Cenário de custos exclusivamente ilustrativo. Sem book/Profit, NÃO é spread executável.
+ // Valores por ida+volta em bps; não simula impostos nem impacto real.
+ function costScenario(market){
+  const m=String(market||'').toUpperCase();
+  const fees=m==='BR'?8:m==='US'?2:m==='CRYPTO'?20:null;
+  if(fees===null)return null;
+  const spread=m==='BR'?10:m==='US'?8:10,slippage=m==='BR'?12:m==='US'?12:20;
+  return {market:m,feesBps:fees,spreadBps:spread,slippageBps:slippage,
+   roundTripBps:fees+spread+slippage,verified:false,
+   label:'Estimativa de cenário, não spread/book observado; sem tributos ou impacto de mercado'};
+ }
+ function riskNet(plan,dir,market){
+  const fees=costScenario(market),p=plan||{},entry=p.entry,stop=p.stop,target=p.target2a;
+  if(!fees||![entry,stop,target].every(x=>Number.isFinite(x)&&x>0)||![-1,1].includes(dir))return null;
+  const grossRisk=(entry-stop)*dir,grossReward=(target-entry)*dir;
+  if(grossRisk<=0||grossReward<=0)return null;
+  const cost=entry*fees.roundTripBps/10000;
+  const netRisk=grossRisk+cost,netReward=grossReward-cost;
+  return {...fees,costPerUnit:round(cost,5),netRisk:round(netRisk,5),
+   netReward:round(netReward,5),rrNet:netReward>0?round(netReward/netRisk,2):null};
+ }
+ function walkForward(raw,opts={}){
+  const c=normalize(raw).slice(-800),market=String(opts.market||'').toUpperCase(),
+   tf=String(opts.tf||'1d'),costs=costScenario(market),hold=10;
+  const setups=['pisani','minervini','fibonaccing','elliott'];
+  const empty=(reason)=>Object.fromEntries(setups.map(k=>[k,{status:'não comprovado',trades:0,
+    winRate:null,payoff:null,expectancyR:null,reason}]));
+  if(!costs)return {method:'walk-forward-next-open-v1',bars:c.length,setups:empty('Mercado sem custo estimado'),costs:null};
+  if(c.length<263)return {method:'walk-forward-next-open-v1',bars:c.length,
+   setups:empty('Exige 252 barras de aquecimento e 11 barras posteriores; 250 isoladas não bastam'),costs};
+  // A janela histórica de decisão ocupa no máximo os 250 candles finais; nunca usa candles futuros no indicador.
+  const start=Math.max(251,c.length-250),last=c.length-hold-1;
+  const trades=Object.fromEntries(setups.map(x=>[x,[]])),lastExit=Object.fromEntries(setups.map(x=>[x,-1]));
+  const rsHistory=opts.rsHistory&&typeof opts.rsHistory==='object'?opts.rsHistory:{};
+  for(let i=start;i<=last;i++){
+   const past=c.slice(0,i+1);
+   const historicRs=Number.isInteger(rsHistory[c[i].t])?rsHistory[c[i].t]:null;
+   const weekly=aggregateWeekly(past);
+   const both=examine(past,{tf,daily:past,higher:weekly,rs:historicRs,market});
+   for(const [dir,x] of [[1,both.buy],[-1,both.sell]]){
+    if(!x.valid||!x.plan)continue;
+    const signals={
+     pisani:!!(x.pisani?.breakout&&x.metrics?.obvConfirmed&&x.pisani?.pullback),
+     minervini:historicRs!==null&&x.minervini?.score===8,
+     fibonaccing:!!(x.turn?.confirmed&&x.turn?.cisd&&x.fib?.zone),
+     elliott:!!(x.elliott?.valid&&x.metrics?.obvConfirmed)
+    };
+    for(const key of setups){
+     if(!signals[key]||i<=lastExit[key])continue;
+     const stop=x.plan.stop,target=x.plan.target2a,entry=c[i+1].o;
+     if(![stop,target,entry].every(z=>Number.isFinite(z)&&z>0)||
+       (entry-stop)*dir<=0||(target-entry)*dir<=0)continue;
+     let exitPrice=null,exitIndex=null,trigger='prazo';
+     for(let j=i+1;j<=i+hold;j++){
+      const q=c[j];
+      // Stop primeiro: em barra que alcança stop e alvo, considerar sempre o pior caso.
+      if((q.o-stop)*dir<=0){exitPrice=q.o;exitIndex=j;trigger='gap stop';break}
+      const stopHit=dir===1?q.l<=stop:q.h>=stop;
+      const targetHit=dir===1?q.h>=target:q.l<=target;
+      if(stopHit){exitPrice=stop;exitIndex=j;trigger='stop';break}
+      if(targetHit){exitPrice=target;exitIndex=j;trigger='alvo';break}
+     }
+     if(exitPrice===null){exitIndex=i+hold;exitPrice=c[exitIndex].c}
+     const cost=entry*costs.roundTripBps/10000,
+      risk=(entry-stop)*dir+cost,pnl=(exitPrice-entry)*dir-cost;
+     if(risk<=0)continue;
+     trades[key].push({t:c[i].t,entryBar:c[i+1].t,exitBar:c[exitIndex].t,
+      direction:dir,r:round(pnl/risk,5),trigger});
+     lastExit[key]=exitIndex;
+    }
+   }
+  }
+  const stats={};
+  for(const key of setups){
+   const a=trades[key],n=a.length,wins=a.filter(x=>x.r>0),losses=a.filter(x=>x.r<0);
+   const meanWin=wins.length?mean(wins.map(x=>x.r)):null;
+   const meanLoss=losses.length?Math.abs(mean(losses.map(x=>x.r))):null;
+   const adequate=n>=5;
+   stats[key]={status:!adequate?'amostra insuficiente':opts.adjustedVerified===true?'exploratório (sem validação externa)':'ajuste corporativo não comprovado',
+    trades:n,winRate:adequate?round(wins.length/n*100,2):null,
+    payoff:adequate&&meanWin!==null&&meanLoss>0?round(meanWin/meanLoss,3):null,
+    expectancyR:adequate?round(mean(a.map(x=>x.r)),4):null,
+    reason:key==='minervini'&&!Object.keys(rsHistory).length?'RS histórico ausente; não reutilizar RS atual (look-ahead)':
+     !adequate?'Menos de 5 trades completos':opts.adjustedVerified!==true?'Série sem ajuste corporativo confirmado':'Backtest exploratório com até 250 decisões e aquecimento anterior'};
+  }
+  return {method:'walk-forward-next-open-v1',bars:c.length,historyDecisions:Math.max(0,last-start+1),
+   costs,holdBars:hold,setups:stats};
+ }
  function one(c0,dir=1,opts={}){
   const c=normalize(c0),last=c.at(-1);
   if(!last||c.length<210||c.filter(x=>x.v>0).length<100)return {valid:false,score:null,reason:'Histórico OHLCV insuficiente (mín. 210 barras, 100 com volume)'};
@@ -145,14 +233,17 @@
    segments=fib.segments[0]||fib.segments[1],ext=segments?.ext||[],target=r=>ext.find(x=>x.r===r)?.price??null;
   const future=r=>{const p=target(r);return Number.isFinite(p)&&p>0&&(p-entry)*dir>0?p:null};
   const t1=future(1.11),t2a=future(1.272),t2=future(1.414),t3=future(1.618),rr=risk>0&&t2a!==null?(t2a-entry)*dir/risk:null,rrAlvo3=risk>0&&t2!==null?(t2-entry)*dir/risk:null;
+  const net=riskNet({entry,stop,target2a:t2a},dir,opts.market);
   const active=trend&&breakout&&obvConfirmed&&rvol>1&&vol>3&&stop!==null;
   const bollinger=boll(c);
   return {valid:true,dir,price:round(p),score,pillars,coverage:round((rs!==null?1:0)+(mtf!==null?1:0)+(template.score!==null?1:0),0),
    timestamp:last.t,barCount:c.length,metrics:{sma20:round(s20),sma50:round(s50),sma150:round(s150),sma200:round(s200),obv:round(o.at(-1),0),obvConfirmed,rvol:round(rvol,2),hvWeek:round(vol,2),rsi14:round(rsi14,1),macd:round(m.value),atr14:round(atr14),rs,mtf},
    fib,turn,pisani:{breakout:active,power:active&&rvol>=1.5&&turn.cisd,away:away>=2.5,pullback},minervini:template,vcp:vcpPass,elliott:elliott(sw,dir),bollinger:{...bollinger,breakout:bollinger.breakout&&rvol>1.5},
    flags:trap?[trap]:[],eligible:active&&!trap&&mtf!==false,
-   plan:{entry:round(entry),stop:round(stop),target1:round(t1),target2a:round(t2a),target2:round(t2),targetFinal:round(t3),rr:round(rr,2),rrAlvo3:round(rrAlvo3,2)}};
+   plan:{entry:round(entry),stop:round(stop),target1:round(t1),target2a:round(t2a),target2:round(t2),targetFinal:round(t3),
+    rr:round(rr,2),rrAlvo3:round(rrAlvo3,2),rrNet:net?.rrNet??null,
+    costEstimateBps:net?.roundTripBps??null,costsVerified:false}};
  }
  function examine(c,opts={}){return {buy:one(c,1,opts),sell:one(c,-1,opts)}}
- return Object.freeze({VERSION,normalize,sma,ema,atr,rsi,macd,obv,hvWeek,swings,fibo,turn4,elliott,vcp,boll,aggregateWeekly,passTemplate,one,examine});
+ return Object.freeze({VERSION,normalize,sma,ema,atr,rsi,macd,obv,hvWeek,swings,fibo,turn4,elliott,vcp,boll,aggregateWeekly,passTemplate,one,examine,costScenario,riskNet,walkForward});
 });
