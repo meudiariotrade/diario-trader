@@ -43,3 +43,12 @@ test('Agendamentos SEC nunca fazem polling e CVM permanece semanal',()=>{
  assert.equal((cron.match(/"limite":12/g)||[]).length,3);
  assert.doesNotMatch(src,/setInterval\(/);
 });
+
+test('B3: nomes societários com S.A., Banco/BCO e preposições casam com CVM',()=>{
+ const source=src.slice(src.indexOf('function normalizeName('),src.indexOf('async function cvmEnriquecer('));
+ const fn=vm.runInNewContext(stripTypeScriptTypes(source,{mode:'transform'})+'\nnormalizeName',{String});
+ assert.equal(fn('WEG S.A.'),'WEG');
+ assert.equal(fn('BANCO DO BRASIL S.A.'),fn('BCO BRASIL SA'));
+ assert.equal(fn('BCO BRADESCO S.A.'),fn('BANCO BRADESCO S.A.'));
+ assert.equal(fn('DIRECIONAL ENGENHARIA S.A.'),'DIRECIONAL ENGENHARIA');
+});
