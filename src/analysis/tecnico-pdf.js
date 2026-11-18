@@ -85,7 +85,7 @@ async function build(m,rows,tf='1d'){
   for(const p of x.pillars)bar(p.name,p.score,p.weight);
   y+=10;write('PLANO CONDICIONAL · REFERÊNCIAS FIBONACCING',M,y,10,bold,col.gold);y+=24;
   const pl=x.plan||{};
-  for(const [a,b] of [['Gatilho',pl.entry],['Stop técnico',pl.stop],['Alvo 1 · 111%',pl.target1],['Alvo 2 · 141,4%',pl.target2],['Alvo final · 161,8%',pl.targetFinal],['Risco/Retorno',pl.rr]]){
+  for(const [a,b] of [['Gatilho',pl.entry],['Stop técnico',pl.stop],['Alvo 1 · 111%',pl.target1],['Alvo 2 · 127,2%',pl.target2a],['Alvo 3 · 141,4%',pl.target2],['Alvo final · 161,8%',pl.targetFinal],['Risco/Retorno',pl.rr]]){
    write(a,M,y,9,reg,col.muted);write(n(b,2),W-M,y,9,bold,col.ink,true);y+=21;
   }
   y+=9;write('SINAIS E INVALIDAÇÕES',M,y,10,bold,col.gold);y+=21;
