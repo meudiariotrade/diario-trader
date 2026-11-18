@@ -73,6 +73,6 @@ test('CVM: DRE gigante é lida em streaming, retendo apenas CNPJ solicitado',asy
  const rows=await fn('itr','DRE_con',new Set(['11111111000111']));
  assert.equal(rows.length,1);
  assert.equal(rows[0].VL_CONTA,'125,00');
- assert.match(sync,/total>4_000_000/);
+ assert.match(sync,/restante=4_000_000-total/);
  assert.match(sync,/selecionadas\.length>=35001/);
 });
