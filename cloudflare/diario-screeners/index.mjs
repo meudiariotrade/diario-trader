@@ -25,6 +25,51 @@ export default {
   const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,servico:'screeners-edge',sem_dados_privados:true});
 
+  // Metadados documentais oficiais: a borda SEC é pública e não usa Supabase nem credenciais.
+  if(url.pathname==='/v1/sec-documento'){
+   const cik=url.searchParams.get('cik')||'';
+   if([...url.searchParams.keys()].some(k=>k!=='cik')||!/^[0-9]{10}$/.test(cik))
+    return json({error:'CIK de 10 dígitos obrigatório'},400);
+   const key=new Request(url.origin+'/v1/sec-documento?cik='+cik+'&revision=v771');
+   const cache=caches.default,hit=await cache.match(key);
+   if(hit)return conditional(request,hit,true);
+   try{
+    const source='https://data.sec.gov/submissions/CIK'+cik+'.json';
+    const response=await fetch(source,{headers:{
+     'User-Agent':'DiarioTraderQuant/1.0 (contato@diariotrader.app)',
+     Accept:'application/json'},signal:AbortSignal.timeout(11000)});
+    if(response.status===403||response.status===429)
+     return json({error:'SEC temporariamente bloqueada',code:response.status},503);
+    if(!response.ok)return json({error:'Documento SEC indisponível',code:response.status},response.status===404?404:502);
+    const data=await response.json();
+    if(String(Number(data?.cik))!==String(Number(cik)))return json({error:'CIK divergente da fonte'},502);
+    const r=data?.filings?.recent||{},forms=new Set(['10-K','10-Q','10-K/A','10-Q/A','20-F','40-F','20-F/A','40-F/A']);
+    const today=new Date().toISOString().slice(0,10),docs=[];
+    for(let i=0;i<(Array.isArray(r.form)?r.form.length:0);i++){
+     const form=String(r.form[i]||''),reportDate=String(r.reportDate?.[i]||''),
+      filingDate=String(r.filingDate?.[i]||''),accessionNumber=String(r.accessionNumber?.[i]||'');
+     if(!forms.has(form)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(reportDate)||
+       !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(filingDate)||
+       !/^[0-9]{10}-[0-9]{2}-[0-9]{6}$/.test(accessionNumber)||
+       reportDate>today||filingDate>today||filingDate<reportDate)continue;
+     const primary=String(r.primaryDocument?.[i]||'');
+     const base='https://www.sec.gov/Archives/edgar/data/'+Number(cik)+'/'+accessionNumber.replaceAll('-','')+'/';
+     docs.push({form,reportDate,filingDate,accessionNumber,
+      documentUrl:base+(/^[A-Za-z0-9._-]{1,150}$/.test(primary)?primary:''),
+      sourceUrl:source});
+    }
+    docs.sort((a,b)=>b.reportDate.localeCompare(a.reportDate)||b.filingDate.localeCompare(a.filingDate));
+    if(!docs.length)return json({ok:false,cik,reason:'Sem documento/competência verificáveis em filings.recent'},404);
+    const value={ok:true,cik,...docs[0],model:'sec-submissions-v771'};
+    const out=Response.json(value,{headers:{...CORS,
+     'Cache-Control':'public, max-age=86400, s-maxage=86400',
+     'X-Screeners-Cache':'MISS','X-Snapshot-Source':'sec-edgar-official',
+     ETag:'"sec-'+docs[0].accessionNumber+'-'+docs[0].reportDate+'"'}});
+    ctx.waitUntil(cache.put(key,out.clone()));
+    return conditional(request,out,false);
+   }catch{return json({error:'SEC indisponível; sem documentos presumidos'},503)}
+  }
+
   // v762 — candles técnicos: cache compartilhado na borda, ZERO consultas ao PostgreSQL.
   // Símbolos e intervalos fechados impedem proxy aberto, SSRF e varredura arbitrária.
   if(url.pathname==='/v1/tecnico-candles'){
@@ -37,7 +82,7 @@ export default {
       (market==='US'&&!/^[A-Z]{1,5}(?:\.[A-Z])?$/.test(ticker))||
       (market==='CRYPTO'&&!/^(BTC|ETH|SOL|XRP|BNB|ADA|DOGE|LINK|AVAX|DOT|LTC|BCH|UNI|TRX|XLM|ATOM|NEAR|APT|SUI|TON)USDT$/.test(ticker)))
      return json({error:'Símbolo/intervalo não autorizado'},400);
-   const key=new Request(url.origin+'/v1/tecnico-candles?market='+market+'&tf='+tf+'&ticker='+ticker);
+   const key=new Request(url.origin+'/v1/tecnico-candles?market='+market+'&tf='+tf+'&ticker='+ticker+(tf==='1d'?'&revision=v771-2y':''));
    const cache=caches.default;
    const found=await cache.match(key);
    // Para os candles, 15m/1h precisam de TTL menor que o snapshot fundamentalista.
@@ -60,18 +105,18 @@ export default {
      const bybitInterval=tf==='1d'?'D':tf==='1h'?'60':'15';
      const okxInterval=tf==='1d'?'1D':tf==='1h'?'1H':'15m';
      const sources=[
-      {name:'Binance Klines',url:'https://data-api.binance.vision/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=500',
+      {name:'Binance Klines',url:'https://data-api.binance.vision/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=750',
        parse:b=>Array.isArray(b)?b.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
-      {name:'Binance Klines',url:'https://api.binance.com/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=500',
+      {name:'Binance Klines',url:'https://api.binance.com/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=750',
        parse:b=>Array.isArray(b)?b.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
-      {name:'Bybit Spot Klines',url:'https://api.bybit.com/v5/market/kline?category=spot&symbol='+ticker+'&interval='+bybitInterval+'&limit=500',
+      {name:'Bybit Spot Klines',url:'https://api.bybit.com/v5/market/kline?category=spot&symbol='+ticker+'&interval='+bybitInterval+'&limit=750',
        parse:b=>b?.retCode===0&&Array.isArray(b.result?.list)?b.result.list.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
       {name:'OKX Spot Klines',url:'https://www.okx.com/api/v5/market/history-candles?instId='+ticker.replace(/USDT$/,'-USDT')+'&bar='+okxInterval+'&limit=300',
        parse:b=>b?.code==='0'&&Array.isArray(b.data)?b.data.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]},
       {name:'Kraken Spot OHLC (USDT)',url:'https://api.kraken.com/0/public/OHLC?pair='+ticker.replace(/^BTC/,'XBT')+'&interval='+(tf==='1d'?'1440':tf==='1h'?'60':'15'),
        parse:b=>Array.isArray(b?.error)&&!b.error.length&&b?.result?
         Object.entries(b.result).filter(([k,v])=>k!=='last'&&Array.isArray(v)).flatMap(([,rows])=>rows.map(x=>[Number(x[0]),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[6])])):[]},
-      {name:'MEXC Spot Klines (USDT)',url:'https://api.mexc.com/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=500',
+      {name:'MEXC Spot Klines (USDT)',url:'https://api.mexc.com/api/v3/klines?symbol='+ticker+'&interval='+rangeBin+'&limit=750',
        parse:b=>Array.isArray(b)?b.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]}
      ];
      const errors=[];
@@ -123,7 +168,7 @@ export default {
       try{
        // Nasdaq publica EOD de ações; não converter EOD em intraday fictício.
        const startDay=new Date(Date.now()-730*86400000).toISOString().slice(0,10),endDay=new Date().toISOString().slice(0,10);
-       const u='https://api.nasdaq.com/api/quote/'+encodeURIComponent(ticker)+'/historical?assetclass=stocks&fromdate='+startDay+'&todate='+endDay+'&limit=500';
+       const u='https://api.nasdaq.com/api/quote/'+encodeURIComponent(ticker)+'/historical?assetclass=stocks&fromdate='+startDay+'&todate='+endDay+'&limit=750';
        const r=await fetch(u,{headers:{Accept:'application/json','User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(9000)});
        if(!r.ok)attempts.push('Nasdaq HTTP '+r.status);
        else{

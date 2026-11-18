@@ -13,6 +13,51 @@ const percentile=(value,rows)=>{
  const less=rows.filter(x=>x<value).length,equal=rows.filter(x=>x===value).length;
  return Math.max(0,Math.min(99,Math.round(99*(less+equal*.5)/rows.length)));
 };
+// RS percentual histórico: universo fixo e mesma data de pregão para TODOS os pares.
+// Requer benchmark histórico e 189 barras anteriores por emissor; não preenche faltas.
+// Percentil é proxy explícita de RS, não a classificação proprietária IBD.
+const historicalRS=(assets,rsUniverse,benchmarks)=>{
+ const out=new Map(),ymd=t=>new Date(t).toISOString().slice(0,10);
+ const perfAt=(rows,i)=>{
+  if(i<189)return null;
+  const price=rows[i].c;
+  return [63,126,189].reduce((total,n)=>total+(price/rows[i-n].c-1),0)/3;
+ };
+ for(const market of ['BR','US','CRYPTO']){
+  const ids=Array.isArray(rsUniverse?.[market])?rsUniverse[market]:[];
+  const fixed=new Set(ids),minimum=market==='CRYPTO'?15:30;
+  if(ids.length<minimum||fixed.size!==ids.length)continue;
+  const peers=assets.filter(a=>a.market===market&&fixed.has(a.ticker));
+  if(peers.length!==fixed.size)continue;
+  const benchmark=M.normalize(benchmarks?.[market]);
+  if(benchmark.length<190)continue;
+  const base=M.normalize(benchmark),baseDates=new Map(base.map((bar,i)=>[ymd(bar.t),i]));
+  const series=peers.map(a=>{
+   const bars=M.normalize(a.daily||a.candles);
+   return {ticker:a.ticker,bars,dates:new Map(bars.map((bar,i)=>[ymd(bar.t),i]))};
+  });
+  for(const seriesAsset of series){
+   const history={};
+   for(let i=Math.max(251,seriesAsset.bars.length-260);i<seriesAsset.bars.length;i++){
+    const day=ymd(seriesAsset.bars[i].t),bi=baseDates.get(day);
+    if(bi==null||perfAt(base,bi)==null)continue;
+    const peersToday=[];
+    for(const peer of series){
+     const pi=peer.dates.get(day);
+     if(pi==null){peersToday.length=0;break}
+     const p=perfAt(peer.bars,pi);
+     if(p==null){peersToday.length=0;break}
+     peersToday.push({ticker:peer.ticker,value:p});
+    }
+    if(peersToday.length!==fixed.size)continue;
+    const own=peersToday.find(x=>x.ticker===seriesAsset.ticker);
+    if(own)history[seriesAsset.bars[i].t]=percentile(own.value,peersToday.map(x=>x.value));
+   }
+   out.set(seriesAsset.ticker,history);
+  }
+ }
+ return out;
+};
 self.onmessage=function(event){
  const data=event.data||{};
  const reqId=data.reqId;
@@ -33,6 +78,7 @@ self.onmessage=function(event){
   const scores=list.map(x=>({ticker:safeText(x.ticker),group:x.market==='CRYPTO'?'CRYPTO':x.market==='US'?'US':'BR',raw:perf(x.daily||x.candles)}));
    const rsUniverse=data.rsUniverse||{},rsAsOf=String(data.rsAsOf||'');
   const strengths=scores.map(x=>{const base=perf(benchmark[x.group]);return {...x,relative:x.raw===null||base===null?null:x.raw-base}});
+  const rsHistories=historicalRS(list,rsUniverse,benchmark);
   const report=list.map((asset,i)=>{
    const group=strengths[i].group,ids=Array.isArray(rsUniverse[group])?rsUniverse[group]:[];
     const fixed=new Set(ids),peers=strengths.filter(x=>x.group===group&&fixed.has(x.ticker)&&x.relative!==null);
@@ -47,6 +93,7 @@ self.onmessage=function(event){
     market:group,bdr:String(asset.bdr||'').slice(0,16),holding:!!asset.holding,source:String(asset.source||'cache').slice(0,60),
     updatedAt:String(asset.updatedAt||'').slice(0,40),
      rsMeta:{asOf:rs===null?null:rsAsOf,benchmark:rs===null?null:group==='BR'?'IBOV':group==='US'?'SPX':'BTCUSDT',denominator:rs===null?null:fixed.size,completo:rs!==null},
+     rsHistory:rsHistories.get(asset.ticker)||null,
      buy:result.buy,sell:result.sell};
   }).filter(x=>x.ticker);
   self.postMessage({action:'DONE',reqId,version:M.VERSION,rows:report,meta:{requested:list.length,valid:report.filter(x=>x.buy.valid).length,rsPeers:scores.filter(x=>x.raw!==null).length}});
