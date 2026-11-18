@@ -1,5 +1,5 @@
 {
-  "version": 761,
+  "version": 762,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -38,6 +38,10 @@
     "runtime-dominios.js": "src/navigation/runtime-dominios.js",
     "organizacao.js": "src/navigation/organizacao.js",
     "analises-modelo.js": "src/analysis/analises-modelo.js",
+    "tecnico-engine.js": "src/analysis/tecnico-engine.js",
+    "tecnico-worker.js": "src/analysis/tecnico-worker.js",
+    "tecnico-ui.js": "src/analysis/tecnico-ui.js",
+    "tecnico-pdf.js": "src/analysis/tecnico-pdf.js",
     "analises.js": "src/analysis/analises.js",
     "relatorios-dados.js": "src/contracts/relatorios-dados.js",
     "fiscal-conferencia.js": "src/navigation/fiscal-conferencia.js",
