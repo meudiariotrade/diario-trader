@@ -16,7 +16,7 @@ test('CVM: parse numérico financeiro não inventa valores, separa CNPJ e moeda'
  assert.equal(rows[0].VL_CONTA,'100,50');
 });
 test('CVM: linhagem usa documentos, periodo e versao, e nao valida automaticamente o TTM',()=>{
- assert.match(sync,/cvmZipCsv\(kind,parte\)/);
+ assert.match(sync,/cvmZipDreRows\(kind,parte,alvo\)/);
  assert.match(sync,/row\.DT_REFER!==doc\.competencia/);
  assert.match(sync,/String\(row\.VERSAO\)!==String\(doc\.versao\)/);
  assert.match(sync,/row\.DT_FIM_EXERC!==doc\.competencia/);
@@ -46,7 +46,7 @@ test('CVM: evidencia real requer CNPJ, versao, mesma competencia e conta DRE ofi
   '11.111.111/0001-11;2026-09-30;1;ÚLTIMO;2026-01-01;2026-09-30;3.01;9.999,00;REAL;MIL',
   '11.111.111/0001-11;2026-06-30;2;ÚLTIMO;2026-01-01;2026-06-30;3.01;8.888,00;REAL;MIL'
  ].join('\n');
- const context={cvmZipCsv:async (_k,p)=>p==='DRE_con'?csv:csv.split('\n')[0],Date,Set,Map,Number,String};
+ const context={cvmZipDreRows:async (_k,p)=>p==='DRE_con'?csv:csv.split('\n')[0],Date,Set,Map,Number,String};
  const fn=vm.runInNewContext(stripTypeScriptTypes(source,{mode:'transform'})+'\ncvmDreEvidencias',context);
  const doc={formulario:'ITR',documento_id:'123456',publicado_em:'2026-11-01',competencia:'2026-09-30',versao:'2'};
  const r=await fn(new Map([['11111111000111',doc]]));
@@ -58,4 +58,21 @@ test('CVM: evidencia real requer CNPJ, versao, mesma competencia e conta DRE ofi
  assert.equal(linhagem.receita_liquida_dre.escala_moeda,'MIL');
  const outro=await fn(new Map([['11111111000111',{...doc,versao:'3'}]]));
  assert.equal(outro.contas.size,0,'Nunca vincular demonstração de versão divergente');
+});
+
+test('CVM: DRE gigante é lida em streaming, retendo apenas CNPJ solicitado',async()=>{
+ const source=sync.slice(sync.indexOf('async function cvmZipDreRows('),sync.indexOf('\nfunction normalizeName'));
+ const header='CNPJ_CIA;DT_REFER;VERSAO;VL_CONTA';
+ const linhas=Array.from({length:1200},(_,i)=>i===880?
+  '11.111.111/0001-11;2026-09-30;2;125,00':
+  '22.222.222/0001-22;2026-09-30;1;0,00');
+ const conteudo=[header,...linhas].join('\n');
+ const encoder=new TextEncoder();
+ const contexto={cvmZipBytes:async()=>({compressed:encoder.encode(conteudo),method:0}),Blob,TextDecoder,Set,Map,Number,String};
+ const fn=vm.runInNewContext(stripTypeScriptTypes(source,{mode:'transform'})+'\ncvmZipDreRows',contexto);
+ const rows=await fn('itr','DRE_con',new Set(['11111111000111']));
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].VL_CONTA,'125,00');
+ assert.match(sync,/total>120_000_000/);
+ assert.match(sync,/selecionadas\.length>=35001/);
 });
