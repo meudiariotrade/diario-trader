@@ -11,7 +11,7 @@ test('PDF Pesquisa iPhone: módulo carregado na página antes dos botões da aba
  assert.match(service,/CORE=\[[^;]*"pesquisa-pdf.js"/,'Cache da versão deve ser atômico');
  const release=JSON.parse(fs.readFileSync('release.config.json','utf8'));
  assert.equal(release.bundles['pesquisa-pdf.js'],'src/analysis/pesquisa-pdf.js');
- assert.equal(release.version,766);
+ assert.ok(release.version>=766,'correção do módulo Pesquisa deve permanecer após a v766');
 });
 test('PDF Pesquisa iPhone: biblioteca registrada e geração local produz PDF válido',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
@@ -36,8 +36,10 @@ test('PDF Pesquisa iPhone: biblioteca registrada e geração local produz PDF v�
 test('PDF técnico e Top10 continuam com travas de comprovação e mesmos modelos',()=>{
  const ui=fs.readFileSync('src/analysis/tecnico-ui.js','utf8');
  const top=fs.readFileSync('src/analysis/screeners-top10.js','utf8');
- assert.match(ui,/Nenhum ativo confirmado no cenário atual para gerar o PDF/);
- assert.match(ui,/x\.plan\.rr>=1\.5/);
+ assert.match(ui,/Encontrados /);
+ assert.match(ui,/rows\.length!==10/);
+ assert.match(ui,/avisoPdfInsuficiente/);
+ assert.match(ui,/plan\.rr>=1\.5/);
  assert.match(top,/d\.validated/);
  const pdfs=['src/analysis/pesquisa-pdf.js','src/analysis/tecnico-pdf.js','src/analysis/screeners-relatorio.js'];
  for(const file of pdfs)new vm.Script(fs.readFileSync(file,'utf8'),{filename:file});
