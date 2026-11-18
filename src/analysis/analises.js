@@ -242,6 +242,12 @@ async function getGlobalSnapshot(m,refresh=false){
  })().finally(()=>snapshotPending.delete(market));
  snapshotPending.set(market,task);return task;
 }
+function rankedSnapshot(snapshot){
+ // Ranking/PDF usa exclusivamente o universo elegível inteiro, ordenado por score na RPC.
+ // A primeira página da tabela continua inalterada em snapshot.rows.
+ return snapshot?.universe_complete&&Array.isArray(snapshot.universe_rows)?
+  {...snapshot,rows:snapshot.universe_rows.slice(0,250)}:snapshot;
+}
 function localScreener(m,s,global){
  if(!global?.universe_complete||!Array.isArray(global.universe_rows))return null;
  const usa=m==='us',ownSet=new Set(owned()),v=x=>x==null||x===''?null:Number.isFinite(Number(x))?Number(x):null;
@@ -302,7 +308,7 @@ async function load(m,refresh=false){
  const body={market:m.toUpperCase(),search:s.search,sector:s.sector,custody:s.custody,owned:owned(),
   liquidity:Number(s.liquidity),cap:s.cap,preset:s.preset,order:s.order,page:s.page};
  const key=u+'|'+JSON.stringify(body),previous=cache.get(key);
- if(!refresh&&previous&&Date.now()-previous.time<5*60000){s.data=previous.data;if(isGlobalTopQuery(s))s.topData=previous.data;
+ if(!refresh&&previous&&Date.now()-previous.time<5*60000){s.data=previous.data;if(isGlobalTopQuery(s))s.topData=rankedSnapshot(previous.data);
   for(const row of s.data.rows||[])if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;
   s.error='';render();return}
  if(!SESS||!cfg()||w.DIARIO_DEMO){s.error='Entre na sua conta para consultar os Screeners.';render();return}
@@ -320,7 +326,7 @@ async function load(m,refresh=false){
    if(!response.ok||!data.ok)throw Error(data.error||'Falha HTTP '+response.status);
   }
   if(u!==owner()||req!==reqId)return;
-  s.data=data;if(isTop)s.topData=snapshot;
+  s.data=data;if(isTop)s.topData=rankedSnapshot(snapshot);
   for(const row of data.rows||[])if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;
   cache.set(key,{time:Date.now(),data});if(cache.size>15)cache.delete(cache.keys().next().value);s.error='';
  }catch(e){if(req===reqId)s.error=String(e.message||'Não foi possível carregar.')}
@@ -332,13 +338,13 @@ const topCache=new Map();
 async function loadTopGlobal(m,refresh=false){
  const stateNow=init(m),uid=owner(),key=uid+'|'+m,stored=topCache.get(key);
  if(stateNow.topBusy)return;
- if(!refresh&&stored&&Date.now()-stored.when<GLOBAL_TTL){stateNow.topData=stored.data;stateNow.topError='';render();return}
+ if(!refresh&&stored&&Date.now()-stored.when<GLOBAL_TTL){stateNow.topData=rankedSnapshot(stored.data);stateNow.topError='';render();return}
  if(!SESS||!cfg()||w.DIARIO_DEMO){stateNow.topError='Faça login para consultar o catálogo.';render();return}
  stateNow.topBusy=true;stateNow.topError='';render();
  try{
   const result=await getGlobalSnapshot(m,refresh);
   if(uid!==owner())return;
-  stateNow.topData=result;topCache.set(key,{when:Date.now(),data:result});
+  stateNow.topData=rankedSnapshot(result);topCache.set(key,{when:Date.now(),data:result});
  }catch(e){stateNow.topError=String(e.message||e).slice(0,180)}
  finally{if(uid===owner()){stateNow.topBusy=false;render()}}
 }
