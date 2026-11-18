@@ -25,6 +25,34 @@ export default {
   const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,servico:'screeners-edge',sem_dados_privados:true});
 
+  // v772 — espelhos públicos CVM produzidos semanalmente no GitHub, com cache de borda 24h.
+  // Sem CPF, carteira, operações ou dados personalizados, com limites de tamanho e esquema.
+  if(url.pathname==='/v1/cvm-provas'){
+   if([...url.searchParams.keys()].length)return json({error:'Rota sem parâmetros'},400);
+   const year=new Date().getUTCFullYear(),key=new Request(url.origin+'/v1/cvm-provas?year='+year);
+   const cache=caches.default,hit=await cache.match(key);
+   if(hit)return conditional(request,hit,true);
+   try{
+    const prefix='https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/';
+    const [a,b]=await Promise.all([
+     fetch(prefix+'cvm-emissores-'+year+'.json',{signal:AbortSignal.timeout(12000)}),
+     fetch(prefix+'cvm-dre-'+year+'.json',{signal:AbortSignal.timeout(12000)})
+    ]);
+    if(!a.ok||!b.ok)return json({error:'Espelhos oficiais CVM indisponíveis'},503);
+    const [idx,docs]=await Promise.all([a.text(),b.text()]);
+    if(idx.length>950000||docs.length>1900000)return json({error:'Espelho CVM acima do limite'},502);
+    const issuers=JSON.parse(idx),filings=JSON.parse(docs);
+    const fresh=x=>x?.versao===1&&x?.ano===year&&
+      Number.isFinite(Date.parse(x.gerado_em))&&Date.now()-Date.parse(x.gerado_em)<14*86400000;
+    if(!fresh(issuers)||!fresh(filings)||!Array.isArray(issuers.emissores)||!Array.isArray(filings.documentos)||
+     issuers.emissores.length<100||filings.documentos.length<100)return json({error:'Espelhos CVM desatualizados'},503);
+    const result=Response.json({ok:true,ano:year,emissores:issuers.emissores,documentos:filings.documentos,
+     gerado_em:issuers.gerado_em,fonte:'CVM Cadastro / ITR / DFP / DRE; somente dados públicos'},{
+     headers:{...CORS,'Cache-Control':'public, max-age=86400, s-maxage=86400','X-Snapshot-Source':'cvm-github-oficial'}});
+    ctx.waitUntil(cache.put(key,result.clone()));return conditional(request,result,false);
+   }catch{return json({error:'Índice CVM não confirmado'},503)}
+  }
+
   // Metadados documentais oficiais: a borda SEC é pública e não usa Supabase nem credenciais.
   if(url.pathname==='/v1/sec-documento'){
    const cik=url.searchParams.get('cik')||'';
