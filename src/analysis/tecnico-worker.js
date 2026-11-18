@@ -4,9 +4,9 @@ importScripts('tecnico-engine.js');
 const M=self.DiarioTecnicoEngine;
 const safeText=s=>String(s||'').replace(/[^A-Z0-9.^-]/g,'').slice(0,16);
 const perf=c=>{
- const a=M.normalize(c);if(a.length<200)return null;
- const last=a.at(-1).c,lookbacks=[63,126,189].filter(n=>a.length>n);
- return lookbacks.length===3?lookbacks.reduce((s,n)=>s+((last/a[a.length-1-n].c)-1),0)/3:null;
+ const a=M.normalize(c);if(a.length<253)return null;
+ const last=a.at(-1).c,lookbacks=[63,126,189,252].filter(n=>a.length>n);
+ return lookbacks.length===4?lookbacks.reduce((s,n)=>s+((last/a[a.length-1-n].c)-1),0)/4:null;
 };
 const percentile=(value,rows)=>{
  if(value==null||rows.length<10)return null;
@@ -14,14 +14,14 @@ const percentile=(value,rows)=>{
  return Math.max(0,Math.min(99,Math.round(99*(less+equal*.5)/rows.length)));
 };
 // RS percentual histórico: universo fixo e mesma data de pregão para TODOS os pares.
-// Requer benchmark histórico e 189 barras anteriores por emissor; não preenche faltas.
+// Requer benchmark histórico e 252 barras anteriores por emissor; não preenche faltas.
 // Percentil é proxy explícita de RS, não a classificação proprietária IBD.
 const historicalRS=(assets,rsUniverse,benchmarks)=>{
  const out=new Map(),ymd=t=>new Date(t).toISOString().slice(0,10);
  const perfAt=(rows,i)=>{
-  if(i<189)return null;
+  if(i<252)return null;
   const price=rows[i].c;
-  return [63,126,189].reduce((total,n)=>total+(price/rows[i-n].c-1),0)/3;
+  return [63,126,189,252].reduce((total,n)=>total+(price/rows[i-n].c-1),0)/4;
  };
  for(const market of ['BR','US','CRYPTO']){
   const ids=Array.isArray(rsUniverse?.[market])?rsUniverse[market]:[];
@@ -30,7 +30,7 @@ const historicalRS=(assets,rsUniverse,benchmarks)=>{
   const peers=assets.filter(a=>a.market===market&&fixed.has(a.ticker));
   if(peers.length!==fixed.size)continue;
   const benchmark=M.normalize(benchmarks?.[market]);
-  if(benchmark.length<190)continue;
+  if(benchmark.length<253)continue;
   const base=M.normalize(benchmark),baseDates=new Map(base.map((bar,i)=>[ymd(bar.t),i]));
   const series=peers.map(a=>{
    const bars=M.normalize(a.daily||a.candles);
