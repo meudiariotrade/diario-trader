@@ -9,7 +9,9 @@ function br(ticker,index){
  const row={ticker,empresa:'Companhia '+ticker,roe:20-index/2,roic:17-index/3,pl:7+index/3,
   ev_ebitda:6+index/4,fcf_yield:7-index/5,dividend_yield:8-index/6,liquidez_diaria_brl:12000000,
   payout_implicito:45,momentum_12_1:22-index,updated_at:'2026-11-17',
-  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17',score_model_version:'v2.0',ativo_elegivel:true};
+  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17',score_model_version:'v2.0',ativo_elegivel:true,
+  data_competencia_balanco:'2026-09-30',documento_balanco_tipo:'ITR',documento_balanco_id:'123456789',
+  documento_balanco_url:'https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/',documento_balanco_publicado_em:'2026-11-14'};
  const weights=intel.weights.BR;
  row.score_quant_br=+intel.calculate('BR',row).reduce((sum,n,i)=>sum+n*weights[i].weight/100,0).toFixed(2);
  return row;
@@ -81,5 +83,6 @@ test('Snapshot v755 prioriza Worker publico e conserva fallback seguro ao Supaba
  assert.match(app,/endpoint\.edge\?\{\}:\{apikey:c\.key\}/);
  assert.match(app,/endpoint\.edge\?7000:15000/);
  assert.match(app,/const origin=c\.url\+'\/functions\/v1\/screeners-quant'\+path/);
- assert.match(app,/if\(stored\?\.data\)\{snapshotMemory\.set\(market,stored\)/);
+ assert.match(app,/if\(stored\?\.data\)\{\s*const age=Date\.now\(\)-Number\(stored\.when\|\|0\)/);
+ assert.match(app,/GLOBAL_OFFLINE_SLA/);
 });

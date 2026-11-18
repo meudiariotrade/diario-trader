@@ -11,7 +11,9 @@ const html=fs.readFileSync('src/index.html','utf8');
 test('Score BR: pesos batem com a fórmula de produção e grupos são explicáveis',()=>{
  const row={ticker:'PETR4',empresa:'Empresa Exemplo',roe:18,roic:14,pl:10,ev_ebitda:7,fcf_yield:6,
   dividend_yield:6,payout_implicito:45,momentum_12_1:12,
-  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17',updated_at:'2026-11-17',score_model_version:'v2.0'};
+  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17',updated_at:'2026-11-17',score_model_version:'v2.0',
+  data_competencia_balanco:'2026-09-30',documento_balanco_tipo:'ITR',documento_balanco_id:'123456789',
+  documento_balanco_url:'https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/',documento_balanco_publicado_em:'2026-11-14'};
  const scores=intel.calculate('BR',row);
  const groups=intel.weights.BR;
  row.score_quant_br=+scores.reduce((a,v,i)=>a+v*groups[i].weight/100,0).toFixed(2);

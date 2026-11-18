@@ -15,7 +15,7 @@ test('Cloudflare: candles criptográficos sob demanda, TTL intradiário e sem tr
    throw Error('Endpoint externo não autorizado: '+url);
   return Response.json(Array.from({length:300},(_,i)=>{
    const price=100+i*.1;
-   return [1700000000000+i*3600000,String(price),String(price+1),String(price-1),String(price+.2),'8000'];
+   return [Date.now()-(302-i)*900000,String(price),String(price+1),String(price-1),String(price+.2),'8000'];
   }));
  };
  const ctx={waitUntil:p=>p.catch(()=>{})},env={SUPABASE_URL:'https://example.supabase.co'};
@@ -52,7 +52,7 @@ test('Cloudflare: quando Binance responde 451, Bybit Spot fornece barras reais o
   if(String(url).startsWith('https://api.bybit.com/'))return Response.json({
    retCode:0,result:{list:Array.from({length:300},(_,i)=>{
     const price=200+(300-i)*.3;
-    return [String(1700000000000+(300-i)*900000),String(price),String(price+1),String(price-1),String(price+.2),'8900'];
+    return [String(Date.now()-(i+2)*900000),String(price),String(price+1),String(price-1),String(price+.2),'8900'];
    })}
   });
   throw Error('Sem outras fontes esperadas');
@@ -81,7 +81,7 @@ test('Cloudflare: B3 usa histórico real da brapi quando Yahoo bloqueia',{concur
   if(String(url).includes('finance.yahoo.com/'))return new Response('',{status:429});
   if(String(url).startsWith('https://brapi.dev/api/quote/PETR4?'))return Response.json({
    results:[{symbol:'PETR4',historicalDataPrice:Array.from({length:300},(_,i)=>({
-    date:1700000000+i*86400,open:30+i*.05,high:31+i*.05,low:29+i*.05,close:30.5+i*.05,volume:1000000
+    date:Math.floor((Date.now()-(301-i)*86400000)/1000),open:30+i*.05,high:31+i*.05,low:29+i*.05,close:30.5+i*.05,volume:1000000
    }))}]
   });
   throw Error('Endpoint não previsto');
@@ -104,7 +104,7 @@ test('Cloudflare: ação EUA recorre a histórico Nasdaq EOD sem sintetizar barr
   if(String(url).includes('finance.yahoo.com/'))return new Response('',{status:429});
   if(String(url).includes('api.nasdaq.com/api/quote/AAPL/historical'))return Response.json({data:{tradesTable:{rows:
    Array.from({length:300},(_,i)=>({
-    date:new Date(1700000000000+i*86400000).toISOString().slice(0,10),
+    date:new Date(Date.now()-(301-i)*86400000).toISOString().slice(0,10),
     open:'$'+(100+i*.1).toFixed(2),high:'$'+(101+i*.1).toFixed(2),
     low:'$'+(99+i*.1).toFixed(2),close:'$'+(100.5+i*.1).toFixed(2),volume:'1,000,000'
    }))
