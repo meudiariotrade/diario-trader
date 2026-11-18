@@ -399,7 +399,7 @@ async function cvmZipDreRows(kind:'itr'|'dfp',parte:'DRE_con'|'DRE_ind',cnpjs:Se
   const {value,done}=await reader.read();
   if(done)break;
   total+=value.byteLength;
-  if(total>120_000_000){await reader.cancel();throw Error('CVM DRE: limite de 120 MB de descompressao');}
+  if(total>4_000_000){terminou=true;break;} // CPU de Edge Function: amostra segura, nunca alegar cobertura integral
   pendente+=decoder.decode(value,{stream:true});
   let pos=0,fim=0;
   while((fim=pendente.indexOf('\n',pos))>=0){
@@ -487,7 +487,7 @@ async function cvmDreEvidencias(docs:Map<string,any>){
      }
      contas.set(cnpj,anterior);
     }
-    fontes.push(kind.toUpperCase()+'/'+parte+': '+rows.length+' linhas examinadas');
+    fontes.push(kind.toUpperCase()+'/'+parte+': '+rows.length+' linhas da amostra parcial de 4 MB');
    }catch(e){erros.push(kind.toUpperCase()+'/'+parte+': '+String(e).slice(0,120))}
   }
  }
