@@ -292,6 +292,8 @@ async function getGlobalSnapshot(m,refresh=false){
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw Error(data.error||'Snapshot HTTP '+response.status);
     if(data.market&&data.market!==market)throw Error('Mercado incorreto no snapshot');
+    const audit=w.DiarioSnapshotContrato?.check(data,{market,etag:response.headers.get('ETag')});
+    if(!audit?.valid)throw Error('Contrato do snapshot: '+String(audit?.reason||'validador ausente'));
     const record={market,when:Date.now(),etag:response.headers.get('ETag')||'',
      updatedAt:data.last_update||null,data};
     snapshotMemory.set(market,record);void snapshotDB(market,record);
