@@ -6,7 +6,7 @@
 ## Estrutura técnica
 - ZigZag de pivôs confirmados com duas barras posteriores, escolhendo a perna dominante entre até **250 candles observados**.
 - Escala orientada: início da perna = 0%, fim da perna = 100%. Níveis: -61,8/-41,4/-27,2/-11,8/0/23,6/38,2/50/61,8/76,4/100/111/127,2/141,4/161,8. Todos os preços devem permanecer >=0,01.
-- RMC 4-Barras e CISD se referem exclusivamente ao gatilho micro, não reancoram a grade. Em caso de pivôs macro insuficientes, não projetar valores.
+- A Zona de Defesa é retração **61,8%–76,4% medida a partir do extremo 100%**; quando a escala declara 0%=fundo e 100%=topo, os preços correspondem aos níveis 38,2%–23,6% da grade de alta. RMC 4-Barras e CISD se referem exclusivamente ao gatilho micro, não reancoram a grade. Em caso de pivôs macro insuficientes, não projetar valores.
 - A linha clássica de **111,8%** aparece em algumas referências do método Marco Rossi, mas **1,110** foi mantida como parâmetro solicitado do aplicativo; a diferença fica explicitamente identificada como adaptação do projeto.
 - Canvas PDF 1600x1000, corredor lateral exclusivo de 226 px para badges; espaçamento vertical mínimo de 22 px (>=16); desenho dos rótulos depois dos candles, nunca sobreposto ao gráfico. O modelo editorial (cores, fontes, páginas) permanece.
 - A Pesquisa só imprime grade macro quando os 15 valores forem fornecidos por um cálculo comprovado; não inventa pivôs.
