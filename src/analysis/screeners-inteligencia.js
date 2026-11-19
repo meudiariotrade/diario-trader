@@ -98,6 +98,21 @@
  function age(date,now=Date.now()){
   if(!date)return null;const d=Date.parse(date);return Number.isFinite(d)?Math.max(0,Math.floor((now-d)/86400000)):null;
  }
+ // v778 — flags conservadoras. Não altera o score SQL/JS nem infere qualidade de uma fonte secundária.
+ function qualityFlags(m,row){
+  const flags=[],numeric=k=>value(row,k);
+  for(const k of ['pl','pvp','ev_ebitda','forward_pe','peg_ratio','ev_fcf']){
+   const n=numeric(k);if(n!==null&&n<=0)flags.push('Múltiplo '+k+' não positivo: nota exige revisão.');
+  }
+  const dy=numeric('dividend_yield'),payout=numeric('payout_implicito');
+  if(dy!==null&&(dy<0||dy>20))flags.push('Dividend Yield fora de 0–20%: verificar evento não recorrente.');
+  if(payout!==null&&(payout<0||payout>120))flags.push('Payout fora de 0–120%: lucro/provento não comparável.');
+  for(const k of ['roe','roic']){const n=numeric(k);if(n!==null&&(n< -100||n>100))flags.push(k.toUpperCase()+' extremo: conferir patrimônio/capital e escala.');}
+  if(m==='US')for(const k of ['revenue_growth_yoy','eps_growth_yoy']){
+   const n=numeric(k);if(n!==null&&(n< -100||n>1000))flags.push(k+' extremo: conferir base anual/extraordinários.');
+  }
+  return flags;
+ }
  function diagnostics(market,row,now=Date.now(),medians=null){
   const m=market==='US'?'US':'BR',groups=groupsFor(m,row),vs=item(m,row),all=allRequired(m,row);
   const parts=groups.map((g,i)=>({id:g.id,name:g.name,weight:g.weight,score:vs[i]===null?null:Math.round(vs[i]*10)/10,
@@ -138,6 +153,11 @@
   const subtype=financialSubtype(row);
   // Financeiro: ausência de múltiplos inaplicáveis não penaliza; sem P/VP comprovado, score permanece exploratório.
   if(subtype&&value(row,'pvp')===null)concerns.push('P/VP financeiro ausente ou não verificado: classificação exploratória, sem homologação.');
+  const scoreAnomalias=qualityFlags(m,row);
+  const secXbrlIdentificado=m==='US'&&!!row?.sec_facts_at&&
+   /^https:\/\/data\.sec\.gov\/api\/xbrl\/companyfacts\/CIK\d{10}\.json$/.test(String(row?.sec_source_url||''));
+  if(m==='US'&&!secXbrlIdentificado)concerns.push('Origem XBRL SEC não identificada: score pode conter múltiplos de fonte secundária.');
+  if(scoreAnomalias.length)concerns.push(...scoreAnomalias);
   const verified=official!==null&&model!==null&&diff<=0.1&&expected===version&&coverage>=70&&documentoConfirmado&&
    (!subtype||value(row,'pvp')!==null)&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10;
   const level=verified?'Cálculo confere':official!==null?'Exige conferência':'Incompleto';
@@ -157,6 +177,7 @@
   const description=profile+(momentum!==null?(momentum>=0?'; tendência de preço positiva.':'; tendência de preço fraca.'):'; tendência ainda sem dados suficientes.');
   return {ticker:String(row?.ticker||''),company:String(row?.empresa||row?.company_name||row?.ticker||''),market:m,
     score:official,modelScore:model,difference:diff,validated:verified,level,modelVersion:expected,expectedVersion:version,
+    qualityFlags:scoreAnomalias,secXbrlIdentificado,provenanceLevel:m==='US'?(secXbrlIdentificado?'protocolo_mais_xbrl_parcial':'documento_sem_prova_xbrl'):(documentoConfirmado?'protocolo_cvm':'sem_documento'),
     competence,profile:description,
     coverage,parts,positives:[...signal,...supports].slice(0,3),risks:concerns.slice(0,6),
     missing:parts.flatMap(p=>p.missing),updated_at:row?.updated_at||null,
@@ -170,5 +191,5 @@
      'O método atribui pontuação baixa aos indicadores disponíveis; não significa necessariamente que a ação cairá.'};
  }
  function methodology(m){return (weights[m==='US'?'US':'BR']).map(g=>g.name+' '+g.weight+'%').join(' • ')}
- return Object.freeze({diagnostics,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,version:'v2.0'});
+ return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,version:'v2.0'});
 });
