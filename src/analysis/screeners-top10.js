@@ -28,8 +28,11 @@
       (isFinance||row.ev_fcf==null||Number(row.ev_fcf)>0)&&
       (row.total_shareholder_yield==null||Number(row.total_shareholder_yield)<=20));
    // Nota só existe se quatro famílias e dados forem conferíveis.
+   // v778: resultados suspeitos nunca entram no Top10 mesmo que a fórmula confira.
+   // Nos EUA, exigir evidência mínima de Companyfacts SEC, sem chamar isso de score 100% auditado.
    if(!liquid||!sane||d.modelScore===null||d.score===null||d.difference===null||d.difference>0.1||
-      d.coverage<70||!d.validated||row.ativo_elegivel===false){
+      d.coverage<70||!d.validated||(d.qualityFlags?.length||0)>0||
+      (market==='US'&&!d.secXbrlIdentificado)||row.ativo_elegivel===false){
     rejected.push({ticker:row.ticker,reason:d.risks[0]||'Cálculo não conferido'});
     continue;
    }
@@ -58,7 +61,7 @@
    entries.push({...x,rank:entries.length+1,reason:strengths.join(' · '),caution});
    if(entries.length===10)break;
   }
-  return {market,entries,reviewed:rows.length,excluded:rejected.length,reason:'Ranking por nota (score reconstituído ÷ 10); cobertura ≥70%, datas presentes e divergência ≤0,1 ponto. Liquidez diária mínima: BR R$ 1 milhão, EUA US$ 2 milhões; múltiplos positivos, FCF não negativo e DY até 20% na B3. Uma empresa por posição.'};
+  return {market,entries,reviewed:rows.length,excluded:rejected.length,reason:'Ranking por nota reconstituída, liquidez e documentação oficial; EUA exige também Companyfacts SEC identificado. Provas XBRL são parciais e não homologam todos os múltiplos. Limites de liquidez: BR R$ 1 milhão, EUA US$ 2 milhões. Uma empresa por emissor.'};
  }
  return Object.freeze({generate});
 });
