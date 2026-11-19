@@ -301,8 +301,8 @@ function localScreener(m,s,global){
  const asc=['pvp','forward_pe'].includes(s.order);
  rows.sort((a,b)=>{
   const method=s.order.startsWith('margem_')?s.order.slice(7):null;
-  const va=method&&!usa?w.DiarioScreenersInteligencia?.valuationBR(a,{yieldAceitavel:Number(s.yieldAceitavel)}).margins[method]:null;
-  const vb=method&&!usa?w.DiarioScreenersInteligencia?.valuationBR(b,{yieldAceitavel:Number(s.yieldAceitavel)}).margins[method]:null;
+  const va=method&&!usa?w.DiarioScreenersInteligencia?.valuationBR(a,{yieldAceitavel:Number(s.yieldAceitavel)})?.margins?.[method]:null;
+  const vb=method&&!usa?w.DiarioScreenersInteligencia?.valuationBR(b,{yieldAceitavel:Number(s.yieldAceitavel)})?.margins?.[method]:null;
   const av=method?va:v(a[key]),bv=method?vb:v(b[key]);
   if(av!==null&&bv===null)return -1;if(av===null&&bv!==null)return 1;
   if(av!==null&&bv!==null&&av!==bv)return asc?av-bv:bv-av;
@@ -409,7 +409,7 @@ d.addEventListener('click',async ev=>{
    const rows=ranking.entries.map(x=>x.row);
    const result=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows,{
     automatic:true,universe:s.topData?.total||0,scored:s.topData?.coverage?.com_score||0,
-    method:ranking.reason,snapshot:s.topData?.last_update||null,medians:s.topData?.medians||null
+    method:ranking.reason,snapshot:s.topData?.last_update||null,medians:s.topData?.medians||null,yieldAceitavel:Number(s.yieldAceitavel)
     },ticket);
    if(!result.cancelled)s.topPdfMessage='Relatório automático pronto: '+rows.length+' empresas, '+result.pages+' páginas.';
   }catch(e){ticket?.close?.();s.topPdfMessage='Não foi possível gerar o Top 10: '+String(e.message||e).slice(0,160)}
@@ -431,7 +431,7 @@ d.addEventListener('click',async ev=>{
   if(rows.length!==s.selected.length){s.pdfError='Um ou mais ativos não têm snapshot salvo. Selecione-os novamente no ranking.';render();return}
   const ticket=w.DiarioPDFiOS?.prepare();s.pdfBusy=true;s.pdfError='';render();
   try{
-   const res=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows,{},ticket);
+   const res=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows,{yieldAceitavel:Number(s.yieldAceitavel)},ticket);
    if(!res.cancelled){s.pdfError='PDF pronto com '+res.pages+' páginas. '+(res.downloaded?'Abra em Arquivos/Downloads para compartilhar.':'Compartilhamento iniciado.')}
   }catch(e){ticket?.close?.();s.pdfError='Não foi possível gerar o PDF: '+String(e.message||e).slice(0,170)}
   finally{s.pdfBusy=false;render()}
