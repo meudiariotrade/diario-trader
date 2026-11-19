@@ -5,7 +5,7 @@
  else root.DiarioTecnicoEngine=api;
 })(typeof self!=='undefined'?self:globalThis,function(){
  'use strict';
- const VERSION='tecnico-774.1';
+ const VERSION='tecnico-779.1';
  const FIB_RET=[0,.236,.382,.5,.618,.764,1],FIB_EXT=[1.11,1.272,1.414,1.618];
  const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
  const mean=v=>v.length?v.reduce((a,b)=>a+b,0)/v.length:null;
