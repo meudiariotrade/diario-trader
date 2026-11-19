@@ -31,6 +31,8 @@ jobs:
         run: npm run build
       - name: Testar circuito de reconexão Binance sem rede
         run: node --test tests/binance-ws-backoff-v805.test.cjs tests/analises-binance-demo-v805.test.cjs
+      - name: Conferir botões de navegação e sub-abas via Playwright
+        run: node --test tests/navegacao-simples.test.cjs tests/analises-subabas-mobile-v744.test.cjs
       - name: Medir mutações, CLS, erros de JS e capturar Desktop/iPhone emulado
         run: node scripts/qa-visual-e2e-v804.cjs
       - name: Publicar evidências sem dados privados
