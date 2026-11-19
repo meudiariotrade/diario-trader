@@ -1,6 +1,7 @@
 /* v762: Web Worker efêmero. Nunca acessa Supabase nem cria polling. */
 'use strict';
-importScripts('tecnico-engine.js','institutional-v781.js','xbrl-periodos.js','corporate-candles-v792.js','economatica-fatos-v795.js');
+importScripts('tecnico-engine.js','institutional-v781.js','xbrl-periodos.js','corporate-candles-v792.js','economatica-fatos-v795.js','feed-contract-v787.js','backtest-gates-v801.js');
+const BacktestGates=self.DiarioBacktestGates||null;
 const Econ=self.DiarioFatosLicenciados||null;
 const Adjust=self.DiarioCorporateCandles||null;
 const T=self.DiarioXBRLPeriodos||null;
@@ -68,9 +69,13 @@ self.onmessage=function(event){
  if(data.action==='BACKTEST'){
   try{
    // Apenas candles fornecidos pelo navegador; nenhuma chamada de rede nem Supabase.
+   const gate=BacktestGates?.check(data.candles,{tf:data.tf||'1d',market:data.market,
+    asOf:data.asOf,contract:self.DiarioFeedContrato})||null;
+   if(gate&&!gate.eligible){self.postMessage({action:'BACKTEST_DONE',reqId,ticker:safeText(data.ticker),result:BacktestGates.unavailable(gate)});return}
    const r=M.walkForward(data.candles,{tf:data.tf,market:data.market,
-    adjustedVerified:data.adjustedVerified===true,
+    adjustedVerified:gate?.adjustedVerified===true,
     rsHistory:data.rsHistory||null});
+   if(gate)r.gate=gate;
    self.postMessage({action:'BACKTEST_DONE',reqId,ticker:safeText(data.ticker),result:r});
   }catch(e){self.postMessage({action:'ERROR',reqId,error:String(e.message||e).slice(0,220)})}
   return;
