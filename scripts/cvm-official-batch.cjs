@@ -121,6 +121,38 @@ function applyDre(documents,kind,part,rows,year=ANO){
  }
  return updated;
 }
+// v785: BPA/BPP/DFC-MI com proveniência CVM, sem aproximar CAPEX a fluxo de investimento.
+const cvmAccounts={
+ BPA:{'1':'ativo_total_bpa','1.01':'ativo_circulante_bpa','1.02':'ativo_nao_circulante_bpa'},
+ BPP:{'2':'passivo_patrimonio_total_bpp','2.01':'passivo_circulante_bpp','2.02':'passivo_nao_circulante_bpp','2.03':'patrimonio_liquido_bpp'},
+ DFC_MI:{'6.01':'fluxo_caixa_operacional_dfc','6.02':'fluxo_investimento_total_dfc'}
+};
+function applyStatement(documents,kind,part,rows,year=ANO){
+ const match=/^(BPA|BPP|DFC_MI)_(con|ind)$/.exec(part);if(!match)return 0;
+ const statement=match[1],group=match[2]==='con'?'consolidado':'individual';
+ let updated=0;
+ for(const row of rows){
+  const d=documents.get(cnpj(row.CNPJ_CIA));
+  if(!d||d.formulario!==kind.toUpperCase()||d.grupo_dre!==group||
+   String(row.VERSAO||'')!==d.versao||row.DT_REFER!==d.competencia||
+   row.DT_FIM_EXERC!==d.competencia)continue;
+  const ordem=String(row.ORDEM_EXERC||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  if(ordem!=='ULTIMO'||!['REAL','BRL'].includes(String(row.MOEDA||'').toUpperCase()))continue;
+  const key=cvmAccounts[statement][String(row.CD_CONTA||'').trim()];
+  if(!key||d.linhagem[key])continue;
+  const n=cvmNumber(row.VL_CONTA);if(n===null)continue;
+  d.linhagem[key]={tipo:'conta_contabil_oficial',fonte:'CVM',documento_id:d.documento_id,
+   competencia:d.competencia,publicado_em:d.publicado_em,
+   arquivo:kind+'_cia_aberta_'+part+'_'+year+'.csv',demonstracao:statement+' '+group,
+   codigo_conta:String(row.CD_CONTA),valor_reportado:n,valor_original_csv:String(row.VL_CONTA),
+   escala_moeda:row.ESCALA_MOEDA||null,periodo_inicio:row.DT_INI_EXERC||null,
+   periodo_fim:row.DT_FIM_EXERC,valida_indicador_ttm:false,
+   observacao:statement==='DFC_MI'&&row.CD_CONTA==='6.02'?'Fluxo de investimento total não é CAPEX isolado':null};
+  updated++;
+ }
+ return updated;
+}
+
 async function run(){
  const docs=new Map(),sources=[],prepared=[];
  for(const kind of ['itr','dfp']){
@@ -146,16 +178,42 @@ async function run(){
    proofs+=n;sources.push({arquivo:file.name,url:file.url,linhas_filtradas:rows.length,evidencias:n});
   }
  }
+ // Extração semanal adicional: sem escrita em Supabase e sem bloquear a DRE em falha opcional.
+ let moreProofs=0;const cvmWarnings=[];
+ for(const kind of prepared){
+  const relevant=new Set([...docs].filter(([,d])=>d.formulario===kind.toUpperCase()).map(([id])=>id));
+  if(!relevant.size)continue;
+  for(const part of ['BPA_con','BPA_ind','BPP_con','BPP_ind','DFC_MI_con','DFC_MI_ind']){
+   try{
+    const file=await member(kind,part),rows=csvRecords(file.body,relevant);
+    const count=applyStatement(docs,kind,part,rows);
+    moreProofs+=count;sources.push({arquivo:file.name,url:file.url,linhas_filtradas:rows.length,evidencias:count});
+   }catch(e){cvmWarnings.push(kind+'/'+part+': '+String(e.message||e).slice(0,100))}
+  }
+ }
  const entries=[...docs.values()].map(({grupo_dre,...rest})=>rest).sort((a,b)=>a.cnpj.localeCompare(b.cnpj));
- const evidenced=entries.filter(x=>Object.keys(x.linhagem).length);
+ const dreOnly=entries.map(x=>({...x,linhagem:Object.fromEntries(Object.entries(x.linhagem).filter(([k])=>k.endsWith('_dre')))}));
+ const extraOnly=entries.map(x=>({cnpj:x.cnpj,formulario:x.formulario,competencia:x.competencia,
+  documento_id:x.documento_id,publicado_em:x.publicado_em,versao:x.versao,
+  linhagem:Object.fromEntries(Object.entries(x.linhagem).filter(([k])=>!k.endsWith('_dre')))}))
+  .filter(x=>Object.keys(x.linhagem).length);
+ const evidenced=dreOnly.filter(x=>Object.keys(x.linhagem).length);
  if(evidenced.length<50)throw Error('Amostra insuficiente de contas DRE; manter versão anterior: '+evidenced.length);
  const result={versao:1,ano:ANO,gerado_em:new Date().toISOString(),proveniencia:'CVM · ITR/DFP/DRE',
   limites:{indicador_ttm_homologado:false,associacao_ticker:'CNPJ exclusivo confirmado no cadastro CVM'},fontes:sources,
-  resumo:{documentos:entries.length,empresas_com_dre:evidenced.length,contas:proofs},documentos:entries};
+  resumo:{documentos:dreOnly.length,empresas_com_dre:evidenced.length,contas:proofs},documentos:dreOnly};
  fs.mkdirSync(DATA_DIR,{recursive:true});
  const dest=path.join(DATA_DIR,'cvm-dre-'+ANO+'.json');fs.writeFileSync(dest,JSON.stringify(result)+'\n');
- console.log(JSON.stringify({saida:dest,bytes:fs.statSync(dest).size,...result.resumo,fontes:sources.length}));
+ // Espelho adicional evita aumentar os payloads do contrato antigo /v1/cvm-provas.
+ const ext={versao:1,ano:ANO,gerado_em:result.gerado_em,
+  proveniencia:'CVM · ITR/DFP/BPA/BPP/DFC-MI',
+  limites:{ttm_homologado:false,fluxo_investimento_nao_e_capex:true},
+  resumo:{empresas:extraOnly.length,contas:moreProofs,arquivos_indisponiveis:cvmWarnings.length},
+  advertencias:cvmWarnings.slice(0,12),documentos:extraOnly};
+ const extDest=path.join(DATA_DIR,'cvm-demonstracoes-'+ANO+'.json');
+ fs.writeFileSync(extDest,JSON.stringify(ext)+'\n');
+ console.log(JSON.stringify({saida:dest,bytes:fs.statSync(dest).size,saida_demonstracoes:extDest,bytes_demonstracoes:fs.statSync(extDest).size,...result.resumo,fontes:sources.length}));
  return result;
 }
 if(require.main===module)run().catch(err=>{console.error(err);process.exitCode=1});
-module.exports={parseLine,csvRecords,cvmNumber,candidate,better,applyDre};
+module.exports={parseLine,csvRecords,cvmNumber,candidate,better,applyDre,applyStatement};
