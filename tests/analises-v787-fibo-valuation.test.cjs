@@ -15,7 +15,8 @@ test('v787: grade macro usa 0%=fundo e 100%=topo, inclui negativos e expansões'
  assert.equal(map['-0.414'],55.16);assert.equal(map['-0.618'],42.92);
  assert.equal(map['1.618'],177.08);assert.equal(map['1.414'],164.84);
  assert.equal(map['1.272'],156.32);assert.equal(map['1.11'],146.6);
- assert.ok(f.defense[0]>=116&&f.defense[1]<=126);
+ assert.deepEqual(f.defenseRetracement,[.618,.764]);
+ assert.ok(f.defense[0]>=94&&f.defense[1]<=103);
  assert.equal(f.segments[1].role,'gatilho RMC/CISD — não redesenha grade macro');
 });
 test('v787: negativos não ficam abaixo do piso de R$ 0,01',()=>{
