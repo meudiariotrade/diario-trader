@@ -267,7 +267,7 @@ function secValores(doc:any){
 }
 async function secColetar(limit:number,priority:'score'|'cap'|'xbrl'='cap'){
  const pending=await rpc(priority==='score'?'quant_screeners_sec_top':priority==='xbrl'?'quant_sec_xbrl_pendentes':'quant_screeners_sec_pendentes',{p_limit:Math.max(1,Math.min(16,limit))});
- const updates:any[]=[],dates:any[]=[],docs:any[]=[],errors:string[]=[],semPeriodo:any[]=[],proofs:any[]=[];let http200=0,http403=0,http429=0;
+ const updates:any[]=[],dates:any[]=[],docs:any[]=[],errors:string[]=[],semPeriodo:any[]=[],proofs:any[]=[],xbrlRetry:any[]=[];let http200=0,http403=0,http429=0;
  for(const row of Array.isArray(pending)?pending:[]){
   if(!/^[0-9]{10}$/.test(String(row.cik||'')))continue;
   const url='https://data.sec.gov/api/xbrl/companyfacts/CIK'+row.cik+'.json';
@@ -277,8 +277,9 @@ async function secColetar(limit:number,priority:'score'|'cap'|'xbrl'='cap'){
    if(r.status===403||r.status===429){r.status===403?http403++:http429++;
     errors.push(row.ticker+': SEC HTTP '+r.status+'; sem retentativa em massa');break}
    if(r.status===503){const failure=await r.json().catch(()=>({}));if(failure.code===403||failure.code===429){
-    failure.code===403?http403++:http429++;errors.push(row.ticker+': SEC bloqueada na borda; interromper lote');break;}}
-   if(!r.ok){errors.push(row.ticker+': Cloudflare SEC HTTP '+r.status);continue}
+    failure.code===403?http403++:http429++;errors.push(row.ticker+': SEC bloqueada na borda; interromper lote');
+    if(priority==='xbrl')xbrlRetry.push({cik:row.cik,motivo:'SEC HTTP '+failure.code});break;}}
+   if(!r.ok){if(priority==='xbrl')xbrlRetry.push({cik:row.cik,motivo:'Cloudflare SEC HTTP '+r.status});errors.push(row.ticker+': Cloudflare SEC HTTP '+r.status);continue}
    const doc=await r.json();if(Number(doc?.cik)!==Number(row.cik))throw Error('CIK divergente');
    http200++;const period=secPeriodo(doc);
    if(!period){semPeriodo.push({ticker:row.ticker,cik:row.cik});errors.push(row.ticker+': 10-Q / 10-K / 20-F / 40-F sem periodo confirmado; pausa de 7 dias');continue}
@@ -300,9 +301,10 @@ async function secColetar(limit:number,priority:'score'|'cap'|'xbrl'='cap'){
      documento_id:id,documento_url:'https://www.sec.gov/Archives/edgar/data/'+Number(row.cik)+'/'+id.replaceAll('-','')+'/',
      publicado_em:period.filed,linhagem});
    }
-   }catch(e){errors.push(row.ticker+': '+String(e).slice(0,90))}
+   }catch(e){if(priority==='xbrl')xbrlRetry.push({cik:row.cik,motivo:'Erro temporário na coleta XBRL'});errors.push(row.ticker+': '+String(e).slice(0,90))}
  }
  const suspensos=semPeriodo.length?Number(await rpc('quant_screeners_sec_tentativa_patch',{p_rows:semPeriodo}))||0:0;
+ const emCooldown=xbrlRetry.length?Number(await rpc('quant_sec_xbrl_retry_batch',{p_rows:xbrlRetry.slice(0,12)}))||0:0;
  const patched=updates.length?Number(await rpc('quant_screeners_sec_patch',{p_rows:updates}))||0:0;
  const validated=dates.length?Number(await rpc('quant_screeners_competencia_patch',{p_market:'US',p_rows:dates}))||0:0;
  let oficiais=0;
@@ -310,7 +312,7 @@ async function secColetar(limit:number,priority:'score'|'cap'|'xbrl'='cap'){
   if(priority==='xbrl'&&proofs.length)await rpc('quant_sec_xbrl_status_bulk',{p_rows:proofs});
   const final=priority==='xbrl'?null:dates.length?await finalized('US','sec_edgar_competencia',patched,errors.length,dates.map(x=>x.ticker)):null;
  return {selecionados:pending?.length||0,http_200:http200,http_403:http403,http_429:http429,
-  fundamentos_validos:patched,competencias_gravadas:validated,documentos_oficiais:oficiais,sem_periodo_pausados:suspensos,erros:errors.slice(0,8),final};
+  fundamentos_validos:patched,competencias_gravadas:validated,documentos_oficiais:oficiais,sem_periodo_pausados:suspensos,xbrl_cooldown:emCooldown,erros:errors.slice(0,8),final};
 }
 
 
