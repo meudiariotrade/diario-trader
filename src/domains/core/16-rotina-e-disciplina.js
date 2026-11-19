@@ -1802,11 +1802,11 @@ function epeetNota(e) {
 function epeetHtml(e) {
   const t = e.epeet || {},
     a = epeetNota(t);
-  return `<div class="gsec"><b>5. Escala emocional <span class="sm mut">(opcional)</span></b>
+  return `<details class="gsec"><summary style="cursor:pointer;min-height:44px"><b>Escala emocional EPEET-14 (opcional)</b></summary>
 <p class="sm mut" style="margin:4px 0 8px">1 discordo completamente · 2 discordo parcialmente · 3 indiferente · 4 concordo parcialmente · 5 concordo completamente</p>
 ${EPEET.map(([o], s) => `<div class="epq"><span>${s + 1}. ${esc(o)}</span><div class="epb">${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="${+t[s] === n ? "on" : ""}" data-ep="${s}" data-epv="${n}" aria-label="${n}">${n}</button>`).join("")}</div></div>`).join("")}
 ${a ? `<div class="epres ${a.cls}">Termômetro: <b>${a.n} de 70</b> · ${a.txt}${a.q < 14 ? ` <span class="sm">(${a.q} de 14 respondidas; a conta estima o total)</span>` : ""}</div>` : ""}
-<div class="sm mut" style="margin-top:6px">Afirmações da escala EPEET-14 (Psicologia Financeira, Celso Sant'Ana). A conta é simplificada pelo app: as afirmações de mau estado contam ao contrário, de 14 (instável) a 70 (estável). Não é a pontuação oficial da escala.</div></div>`;
+<div class="sm mut" style="margin-top:6px">Afirmações da escala EPEET-14 (Psicologia Financeira, Celso Sant'Ana). A conta é simplificada pelo app: as afirmações de mau estado contam ao contrário, de 14 (instável) a 70 (estável). Não é a pontuação oficial da escala.</div></details>`;
 }
 {
   const e = gateEstado;
