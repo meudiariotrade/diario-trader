@@ -319,8 +319,7 @@ function desenharGrafico(r,x,kind,tf,candles){
    horizontal(z.price,name,'#64748B',val>=1);
   }
   const lines=[['Gatilho',plan.entry,'#2563EB'],['Stop',plan.stop,fall],
-   ['111%',plan.target1,rise],['127,2%',plan.target2a,rise],
-   ['141,4%',plan.target2,rise],['161,8%',plan.targetFinal,rise]];
+   ['Invalidação',x.fib?.stopTolerance,fall]];
   for(const [label,v,col] of lines)if(positivo(v))horizontal(v,label,col,true);
  }
  if(kind==='elliott'){
