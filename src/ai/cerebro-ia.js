@@ -4,7 +4,7 @@
  const DB='diario-cerebro-local-v805',ST='obras',MAX=150;
  const categorias=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Gestao_Risco'];
  const tipos={pdf:'Livro_PDF',txt:'Livro_PDF',md:'Livro_PDF'};
- let progress='',progressPct=0,items=[],hits=[],busy=false,controller=null,viewer=false;
+ let progress='',progressPct=0,items=[],hits=[],busy=false,controller=null,viewer=false,observer=null;
  const owner=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'local';
  const key=(id)=>owner()+'|'+id;
  function open(){return new Promise((ok,no)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(ST,{keyPath:'key'});r.onerror=()=>no(r.error);r.onsuccess=()=>ok(r.result)})}
@@ -94,7 +94,13 @@
    (hits.length?'<ol>'+hits.map(x=>'<li><b>'+esc(x.titulo_obra)+'</b> · similaridade '+Number(x.similarity||0).toFixed(2)+'<p>'+esc(x.conteudo_chunk)+'</p></li>').join('')+'</ol>':'')+
    '<h3>Obras indexadas neste dispositivo</h3><div>'+local.map(x=>'<div style="border-top:1px solid #1E232E;padding:8px 0"><b>'+esc(x.titulo)+'</b><small> · '+x.sincronizados+'/'+x.blocos+' trechos · '+esc(x.categoria)+'</small><button class="btn s" data-brain-remove="'+esc(x.id)+'">Remover</button></div>').join('')+'</div></section>';
  }
- async function sync(){items=await all();refresh()}
+ async function sync(){items=await all();refresh();
+  observer?.disconnect();observer=null;
+  if(d.querySelector('[data-brain-root]')&&typeof MutationObserver!=='undefined'){
+   observer=new MutationObserver(()=>{if(d.querySelector('[data-brain-root]'))return;controller?.abort();observer?.disconnect();observer=null});
+   observer.observe(d.body,{subtree:true,childList:true});
+  }
+ }
  function value(id){return d.getElementById(id)?.value?.trim()||''}
  async function execute(action){
   const titulo=value('brain-title'),autor=value('brain-author'),categoria=value('brain-cat')||'Analise_Tecnica',url=value('brain-url'),text=value('brain-text');
@@ -128,5 +134,5 @@
    await execute(action);
   }catch(err){status('Não foi possível concluir: '+String(err.message||err).slice(0,150),0)}
  });
- w.DiarioCerebroIA={view,enter:sync,leave(){controller?.abort();controller=null},chunks,manual};
+ w.DiarioCerebroIA={view,enter:sync,leave(){controller?.abort();controller=null;observer?.disconnect();observer=null},chunks,manual};
 })(window,document);
