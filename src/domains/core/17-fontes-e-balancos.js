@@ -4776,6 +4776,8 @@ function net188() {
             : '<span class="trsrc dl" title="TradingView: confira o atraso e o horário na fonte">TV atraso</span>';
   }
   function J(E, P) {
+    // No modo demonstração nunca abrir rede externa; no segundo plano não reconectar.
+    if (window.DIARIO_DEMO || document.hidden || navigator.onLine === false) return;
     ((e.binReq = e.binReq || {}),
       (e.binReq[P || "cri"] = E || []),
       (E = [...new Set(Object.values(e.binReq).flat())]));
@@ -4789,6 +4791,8 @@ function net188() {
       }
       return;
     }
+    // Circuit breaker: erro de WS não pode disparar centenas de conexões por render.
+    if (e.binRetryAt && Date.now() < e.binRetryAt) return;
     if (!(e.ws && e.wsSyms === B && [0, 1].includes(e.ws.readyState)))
       try {
         e.ws && e.ws.close();
@@ -4799,9 +4803,22 @@ function net188() {
         ((e.wsStarted = Date.now()),
           (e.wsSyms = B),
           (e.ws = G),
-          (G.onopen = () =>
-            v("Binance", "conectado (" + E.length + " pares)", !0)),
-          (G.onclose = () => v("Binance", "conexão fechada", !1)),
+          (G.onopen = () => {
+            if (e.ws !== G) return;
+            e.binFailures = 0;
+            e.binRetryAt = 0;
+            v("Binance", "conectado (" + E.length + " pares)", !0);
+          }),
+          (G.onclose = () => {
+            if (e.ws !== G) return;
+            e.ws = null;
+            e.wsSyms = "";
+            if (!e.binRetryAt || Date.now() >= e.binRetryAt) {
+              e.binFailures = Math.min(6, (e.binFailures || 0) + 1);
+              e.binRetryAt = Date.now() + Math.min(60000, 1000 * (2 ** e.binFailures));
+            }
+            v("Binance", "conexão fechada", !1);
+          }),
           (G.onmessage = (te) => {
             try {
               const _ = JSON.parse(te.data).data;
@@ -4816,12 +4833,11 @@ function net188() {
             } catch {}
           }),
           (G.onerror = () => {
-            ((e.wsSyms = ""),
-              v(
-                "Binance",
-                "erro na conexão (o site pode estar bloqueado na sua rede)",
-                !1,
-              ));
+            if (e.ws !== G) return;
+            e.binFailures = Math.min(6, (e.binFailures || 0) + 1);
+            e.binRetryAt = Date.now() + Math.min(60000, 1000 * (2 ** e.binFailures));
+            e.wsSyms = "";
+            v("Binance", "erro na conexão (o site pode estar bloqueado na sua rede)", !1);
           }));
       } catch (G) {
         v("Binance", G.message, !1);
@@ -12385,8 +12401,10 @@ Depois ele abre em janela própria, sem a barra do navegador, com ícone na áre
               !document.querySelector(".trinst") &&
               r.insertAdjacentHTML(
                 "beforebegin",
-                '<button class="trbtn trinst" onclick="trInstalar()" title="Instalar o Diário de Trader como aplicativo no computador">⬇ Instalar no PC</button>',
+                '<button class="trbtn trinst" title="Instalar o Diário de Trader como aplicativo no computador">⬇ Instalar no PC</button>',
               );
+            const instalar = document.querySelector(".trinst");
+            instalar?.addEventListener("click", () => window.trInstalar?.());
           }
         } catch {}
         return n;

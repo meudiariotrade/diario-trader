@@ -12,6 +12,8 @@
  function create({contract,WebSocketImpl=root.WebSocket}={}){
   let socket=null,connected=false,closedByApp=true,latest=new Map(),pairs=[];
   function start(requested=['BTCUSDT','ETHUSDT']){
+   // QA e demonstração isolada: não iniciar WebSocket de rede externa.
+   if(root.DIARIO_DEMO || root.document?.hidden || root.navigator?.onLine===false)return false;
    if(typeof WebSocketImpl!=='function'||!contract?.quote)return false;
    const next=[...new Set(requested)].filter(s=>allow.has(s)).slice(0,4);
    if(!next.length)return false;

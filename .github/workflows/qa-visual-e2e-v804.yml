@@ -1,0 +1,47 @@
+name: QA Visual E2E - v805
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa-visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar dependências de teste
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Preparar Chromium real
+        run: |
+          browser_path="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$browser_path" ]; then
+            echo "CHROMIUM_PATH=$browser_path" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Conferir sintaxe dos testes e auditoria
+        run: node --check scripts/qa-visual-e2e-v804.cjs && node --check tests/csp-demo-v805.test.cjs
+      - name: Preparar build isolado v805
+        run: npm run build
+      - name: Testar circuito de reconexão Binance sem rede
+        run: node --test tests/binance-ws-backoff-v805.test.cjs tests/analises-binance-demo-v805.test.cjs tests/csp-demo-v805.test.cjs
+      - name: Conferir botões de navegação e sub-abas via Playwright
+        run: node --test tests/navegacao-simples.test.cjs tests/analises-subabas-mobile-v744.test.cjs
+      - name: Medir mutações, CLS, erros de JS e capturar Desktop/iPhone emulado
+        run: node scripts/qa-visual-e2e-v804.cjs
+      - name: Publicar evidências sem dados privados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-e2e-v805-screenshots-pdf-json
+          path: qa-output/
+          retention-days: 14
+          if-no-files-found: warn
