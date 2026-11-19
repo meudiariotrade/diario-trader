@@ -12401,8 +12401,10 @@ Depois ele abre em janela própria, sem a barra do navegador, com ícone na áre
               !document.querySelector(".trinst") &&
               r.insertAdjacentHTML(
                 "beforebegin",
-                '<button class="trbtn trinst" onclick="trInstalar()" title="Instalar o Diário de Trader como aplicativo no computador">⬇ Instalar no PC</button>',
+                '<button class="trbtn trinst" title="Instalar o Diário de Trader como aplicativo no computador">⬇ Instalar no PC</button>',
               );
+            const instalar = document.querySelector(".trinst");
+            instalar?.addEventListener("click", () => window.trInstalar?.());
           }
         } catch {}
         return n;
