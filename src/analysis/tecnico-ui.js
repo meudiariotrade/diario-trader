@@ -160,7 +160,7 @@ function avisoPdfInsuficiente(s,quantidade){
  s.error=message;render();if(typeof w.alert==='function')w.alert(message);
 }
 
-function badges(r,x){return (x.eligible?'<span class="tech-tag">SETUP CONDICIONAL</span>':'')+(x.metrics?.obvConfirmed?'<span class="tech-tag good">OBV ROMPIDO</span>':'')+(x.metrics?.mtf===true?'<span class="tech-tag">MTF ALINHADO</span>':'')+(x.fib?.cluster?'<span class="tech-tag">FIBONACCING CLUSTER</span>':'')+(x.flags||[]).map(y=>'<span class="tech-tag bad">'+E(y)+'</span>').join('')}
+function badges(r,x){return (x.eligible?'<span class="tech-tag">SETUP CONDICIONAL</span>':'')+(x.metrics?.obvConfirmed?'<span class="tech-tag good">'+E(x.metrics.obvSignal||'OBV CONFIRMADO')+'</span>':'')+(x.metrics?.mtf===true?'<span class="tech-tag">MTF ALINHADO</span>':'')+(x.fib?.cluster?'<span class="tech-tag">FIBONACCING CLUSTER</span>':'')+(x.flags||[]).map(y=>'<span class="tech-tag bad">'+E(y)+'</span>').join('')}
 function kpis(s){
  const good=s.rows.filter(r=>r.buy?.eligible).length,short=s.rows.filter(r=>r.sell?.eligible).length,both=s.rows.filter(r=>r.buy?.metrics?.obvConfirmed&&r.buy?.metrics?.rvol>1||r.sell?.metrics?.obvConfirmed&&r.sell?.metrics?.rvol>1).length,
  confl=s.rows.filter(r=>(r.buy?.fib?.cluster||r.sell?.fib?.cluster)&&(r.buy?.pisani?.breakout||r.sell?.pisani?.breakout||r.buy?.minervini?.score===8)).length;
