@@ -3,6 +3,9 @@ on:
   push:
     branches: ['qa/e2e-visual-20261119']
     paths: ['scripts/qa-e2e-live.cjs', '.github/workflows/qa-e2e-isolado.yml']
+concurrency:
+  group: qa-e2e-isolado
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

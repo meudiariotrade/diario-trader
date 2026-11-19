@@ -1,6 +1,15 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const {JSDOM}=require('jsdom');
+test('Binance: renderizações repetidas não furam o backoff após falha de rede',()=>{
+ const vm=require('node:vm'),source=fs.readFileSync('src/domains/core/17-fontes-e-balancos.js','utf8');
+ const from=source.indexOf('  function J(E, P) {'),to=source.indexOf('  function se(E) {',from);let now=10000;const sockets=[];
+ class Socket{constructor(){this.readyState=0;sockets.push(this)}close(){this.readyState=3;this.onclose?.()}}
+ const context={e:{},WebSocket:Socket,Date:{now:()=>now},v(){},Ie(){}};vm.createContext(context);vm.runInContext(source.slice(from,to)+'this.connect=J;',context);
+ context.connect(['btcusdt'],'tape');sockets[0].readyState=3;sockets[0].onerror();sockets[0].onclose();
+ for(let i=0;i<60;i++)context.connect(['btcusdt'],'tape');assert.equal(sockets.length,1);assert.equal(context.e.wsFailures,1);
+ now+=5000;context.connect(['btcusdt'],'tape');assert.equal(sockets.length,2);sockets[1].readyState=1;sockets[1].onopen();assert.equal(context.e.wsRetryAt,0);assert.equal(context.e.wsFailures,0);
+});
 test('Terminal: repetir instalação não regrava atributos dos controles já protegidos',()=>{
  const dom=new JSDOM('<body class="trmon"><main id="app"><div class="trm"><button data-trtela="FLUXO">Fluxo</button><button data-trcmd="ECO">Economia</button></div></main></body>',{runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window;w.tab='term';w.TRM={FN:{FLUXO:'Fluxo (abre a tela)',ECO:'Economia'},EXT:{},ALIAS:{},roda(){}};

@@ -4789,6 +4789,8 @@ function net188() {
       }
       return;
     }
+    // Falhas de conexão respeitam cooldown, mesmo se renderizações solicitarem o stream novamente.
+    if (Date.now() < (e.wsRetryAt || 0)) return;
     if (!(e.ws && e.wsSyms === B && [0, 1].includes(e.ws.readyState)))
       try {
         e.ws && e.ws.close();
@@ -4796,12 +4798,24 @@ function net188() {
           "wss://stream.binance.com:9443/stream?streams=" +
             E.map((te) => te + "@miniTicker").join("/"),
         );
+        const falhou = () => {
+          if (e.ws !== G || G.diarioFailureCounted) return;
+          G.diarioFailureCounted = true;
+          e.wsFailures = (e.wsFailures || 0) + 1;
+          e.wsRetryAt = Date.now() + Math.min(60000, 5000 * 2 ** Math.min(4, e.wsFailures - 1));
+        };
         ((e.wsStarted = Date.now()),
           (e.wsSyms = B),
           (e.ws = G),
-          (G.onopen = () =>
-            v("Binance", "conectado (" + E.length + " pares)", !0)),
-          (G.onclose = () => v("Binance", "conexão fechada", !1)),
+          (G.onopen = () => {
+            if (e.ws !== G) return;
+            e.wsFailures = 0; e.wsRetryAt = 0;
+            v("Binance", "conectado (" + E.length + " pares)", !0);
+          }),
+          (G.onclose = () => {
+            if (e.ws !== G) return;
+            falhou(); v("Binance", "conexão fechada", !1);
+          }),
           (G.onmessage = (te) => {
             try {
               const _ = JSON.parse(te.data).data;
@@ -4816,6 +4830,8 @@ function net188() {
             } catch {}
           }),
           (G.onerror = () => {
+            if (e.ws !== G) return;
+            falhou();
             ((e.wsSyms = ""),
               v(
                 "Binance",
