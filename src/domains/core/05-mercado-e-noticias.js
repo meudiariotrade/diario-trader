@@ -1342,6 +1342,38 @@ function numN(e) {
 function isOpen(e) {
   return numN(e.exit) == null;
 }
+
+/* v789: normalização EXCLUSIVA da entrada manual, sem migrar registros passados. */
+function precoManual789(raw, ativo) {
+  if (raw == null || String(raw).trim() === "") return { ok: true, value: "" };
+  const original = String(raw).trim().replace(/\s/g, "");
+  if (!/^\d[\d.,]*$/.test(original)) return { ok: false, erro: "Digite apenas números e separadores válidos." };
+  const codigo = String(ativo || "").trim().toUpperCase();
+  const win = /^WIN[A-Z]\d{2}$/.test(codigo) || codigo === "WIN";
+  const wdo = /^WDO[A-Z]\d{2}$/.test(codigo) || codigo === "WDO";
+  let normalized = original;
+  const comma = original.lastIndexOf(","), dot = original.lastIndexOf(".");
+  if (comma >= 0 && dot >= 0) {
+    normalized = comma > dot ? original.replace(/\./g, "").replace(",", ".") : original.replace(/,/g, "");
+  } else if (comma >= 0) {
+    if (win && /^\d{1,3},\d{3}$/.test(original)) normalized = original.replace(",", "");
+    else if (wdo && /^\d{1,3},\d{3}$/.test(original))
+      return { ok: false, erro: "Separador ambíguo no WDO. Digite 5500,5 ou 5.500,5." };
+    else normalized = original.replace(",", ".");
+  } else if (dot >= 0 && /^\d{1,3}\.\d{3}$/.test(original)) {
+    if (win || wdo) normalized = original.replace(".", "");
+    else return { ok: false, erro: "Separador ambíguo. Digite o valor sem separador de milhar." };
+  }
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return { ok: false, erro: "Formato numérico inválido." };
+  const valor = Number(normalized);
+  if (!(valor > 0) || !Number.isFinite(valor)) return { ok: false, erro: "Preço precisa ser positivo e finito." };
+  if (win && (valor < 10000 || Math.abs(valor / 5 - Math.round(valor / 5)) > 1e-7))
+    return { ok: false, erro: "WIN exige preço em pontos inteiros, múltiplo de 5. Ex.: 168880 (168.880 pontos). Não arredondamos automaticamente." };
+  if (wdo && Math.abs(valor * 2 - Math.round(valor * 2)) > 1e-7)
+    return { ok: false, erro: "WDO exige variação mínima de 0,5 ponto. Ex.: 5500,5." };
+  return { ok: true, value: String(valor), numero: valor };
+}
+
 function calc(e) {
   const t = e.side === "C" ? 1 : -1,
     a = numN(e.pv) || 1,
@@ -1359,7 +1391,19 @@ function calc(e) {
       s != null && n != null && l != null && s !== n
         ? Math.abs(l - s) / Math.abs(s - n)
         : null;
-  return { risk: c, pl: p, r: u, rr: m, semStop: s != null && n == null };
+  const futuro = /^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(e.ativo || ""));
+  const invalido = futuro && ["entry","stop","target","exit"].some((campo) => {
+    const valor = e[campo];
+    if (valor == null || String(valor).trim() === "") return false;
+    const avaliado = precoManual789(valor, e.ativo);
+    return !avaliado.ok || numN(valor) !== avaliado.numero;
+  });
+  const ticker = String(e.ativo || "").toUpperCase();
+  const pvErrado = /^WIN[A-Z][0-9]{2}$/.test(ticker) ? Math.abs((numN(e.pv) || 0) - .2) > 1e-8
+    : /^WDO[A-Z][0-9]{2}$/.test(ticker) ? Math.abs((numN(e.pv) || 0) - 10) > 1e-8 : false;
+  return invalido || pvErrado
+    ? { risk: null, pl: null, r: null, rr: null, semStop: false, invalidPrice: true }
+    : { risk: c, pl: p, r: u, rr: m, semStop: s != null && n == null };
 }
 function diasMais(e, t) {
   const a = new Date(e + "T12:00:00Z");

@@ -195,7 +195,7 @@ function fxHtml() {
 <div class="sm mut" style="margin-top:6px">${fdt(a.dt)}${a.dtx ? " → " + fdt(a.dtx) : ""}${l ? " · " + l : ""}</div></div>
 <h2>Plano × execução</h2><div class="card">${fxRegua(a, o)}</div>
 <div class="kv">${c("Risco planejado", o.risk == null ? "sem stop" : mT(a, o.risk) + (pctConta(o.risk, n, r) ? '<div class="sm mut" style="font-weight:500">' + pctConta(o.risk, n, r).replace("+", "") + "</div>" : ""))}${c("Ganho/risco planejado", o.rr == null ? "sem alvo" : o.rr.toFixed(1).replace(".", ",") + " para 1")}${c("Captura do alvo", m == null ? "–" : Math.round(m * 100) + "%", m != null && m < 0.6 ? "r" : "")}${c("Custos", mT(a, +a.cost || 0))}</div>
-<h2>Disciplina</h2><div class="card"><div class="sm">Regras: <b class="${a.rules === "n" ? "r" : "g"}">${a.rules === "n" ? "quebrei" : "segui"}</b>${a.emo ? " · Antes de entrar: " + (EMO[+a.emo - 1] || "") : ""}</div>
+<h2>Disciplina</h2><div class="card"><div class="sm">Regras: <b class="${a.rules === "n" ? "r" : a.rules === "s" ? "g" : "mut"}">${a.rules === "n" ? "quebrei" : a.rules === "s" ? "segui" : "não avaliadas"}</b>${a.emo ? " · Antes de entrar: " + (EMO[+a.emo - 1] || "") : ""}</div>
 ${f.length ? `<div class="chips2" style="margin-top:8px">${f.map((h) => `<span class="chip" style="color:var(--r);border-color:color-mix(in srgb,var(--r) 40%,transparent)" title="${esc(catErro(h))}">${esc(h)}</span>`).join("")}</div>` : '<div class="sm g" style="margin-top:6px">Nenhum erro marcado.</div>'}
 ${x.length ? `<div style="margin-top:10px"><div class="sm mut">Checklist do setup (${x.filter((h, b) => v[b]).length}/${x.length})</div>${x.map((h, b) => `<div class="sm" style="margin-top:4px">${v[b] ? '<span class="g">✓</span>' : '<span class="r">✗</span>'} ${esc(h)}</div>`).join("")}</div>` : ""}</div>
 ${g.length ? `<h2>Fotos</h2><div class="g${g.length > 1 ? "2" : ""}" style="gap:8px">${g.map(([h, b]) => `<div><div class="sm mut" style="margin-bottom:4px">${b}</div><img data-img="${a[h]}" style="width:100%;border-radius:12px;border:1px solid var(--bd);display:block;min-height:80px;background:var(--card2)"></div>`).join("")}</div>` : ""}
@@ -756,7 +756,7 @@ function semResumo(e, t) {
       limOk: i.filter((v) => v.v >= -v.l).length,
       estouro: l,
       regras: a.length
-        ? a.filter((v) => v.rules !== "n").length / a.length
+        ? a.filter((v) => v.rules === "s").length / a.length
         : null,
       semStop: a.filter((v) => numN(v.stop) == null).length,
     },
@@ -1715,7 +1715,7 @@ function crCalc(e) {
     c = S.trades
       .map((x) => ({ ...x, c: calc(x) }))
       .filter((x) => x.c.pl != null && dOf(x) >= d),
-    p = c.length ? c.filter((x) => x.rules !== "n").length / c.length : null,
+    p = c.length ? c.filter((x) => x.rules === "s").length / c.length : null,
     u = s > 0 ? (+e.reserva || 0) / s : null,
     m = s * (+e.mesesReserva || 0),
     f = [

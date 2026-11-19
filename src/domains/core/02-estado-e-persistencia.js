@@ -1635,7 +1635,7 @@ function ggOut() {
       return v >= s && v <= n;
     }),
     i = r.filter(
-      (x) => x.rules !== "n" && (!x.err || x.err === "Nenhum"),
+      (x) => x.rules === "s" && (!x.err || x.err === "Nenhum"),
     ).length,
     l = [
       ...new Set([
@@ -1761,7 +1761,7 @@ function vRev() {
       RP,
     )}</select></label><div class="mut sm">${e.split("-").reverse().join("/")} a ${t.split("-").reverse().join("/")}</div>` +
     (s
-      ? `<div class="kv" style="margin-top:8px">${KV("Trades", s, "", pc(n.filter((u) => u > 0).length / s) + " de acerto")}${KV("Resultado", mnyMix(somaMoedas(o)), cls(sum(n)), pctConta(totBRL(somaMoedas(o))))}${KV("Média por trade", mnyMix(mediaMoedas(o)), cls(avg(n)))}${KV("Regras seguidas", pc(o.filter((u) => u.rules !== "n").length / s))}${KV("Nota média do dia", l.length ? f2(avg(l)) : "–")}${KV("Dias registrados", i.length)}</div>${c ? `<div class="card">Erro mais caro: <b>${esc(c[0])}</b> <span class="r">${money(c[1])}</span></div>` : '<div class="card g">Nenhum erro registrado no período 👏</div>'}`
+      ? `<div class="kv" style="margin-top:8px">${KV("Trades", s, "", pc(n.filter((u) => u > 0).length / s) + " de acerto")}${KV("Resultado", mnyMix(somaMoedas(o)), cls(sum(n)), pctConta(totBRL(somaMoedas(o))))}${KV("Média por trade", mnyMix(mediaMoedas(o)), cls(avg(n)))}${KV("Regras seguidas", pc(o.filter((u) => u.rules === "s").length / s))}${KV("Nota média do dia", l.length ? f2(avg(l)) : "–")}${KV("Dias registrados", i.length)}</div>${c ? `<div class="card">Erro mais caro: <b>${esc(c[0])}</b> <span class="r">${money(c[1])}</span></div>` : '<div class="card g">Nenhum erro registrado no período 👏</div>'}`
       : '<p class="mut">Sem trades fechados neste período.</p>') +
     p("repetir", "O que vou repetir (o que funcionou)?") +
     p("parar", "O que vou parar de fazer?") +

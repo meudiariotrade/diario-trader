@@ -2383,7 +2383,7 @@ function dshTodas() {
       at: String(raizAtivo(t.ativo) || t.ativo || "?").toUpperCase(),
       us: ehUS(t),
       emo: t.emo2 || "",
-      ok: t.rules !== "n",
+      ok: t.rules === "s",
       err: t.err && t.err !== "Nenhum" ? t.err : "",
     });
   });
@@ -3628,7 +3628,7 @@ function stDsh(e) {
           at: String(raizAtivo(o.ativo) || o.ativo || "?").toUpperCase(),
           us: !!o.forex || ehUS(o),
           emo: o.emo2 || "",
-          ok: o.rules !== "n",
+          ok: o.rules === "s",
           err: o.err && o.err !== "Nenhum" ? o.err : "",
           fx: o.forex ? 1 : 0,
         };
@@ -4545,7 +4545,7 @@ function simRows() {
         r: s.r != null && isFinite(s.r) ? s.r : null,
         risk: r(s.risk),
         setup: String(o.setup || "").trim() || "Sem setup",
-        ok: o.rules !== "n",
+        ok: o.rules === "s",
         tilt: !!o.tilt,
       };
     })
@@ -4924,7 +4924,7 @@ function diarioPacote() {
         r: o.c.r != null ? +o.c.r.toFixed(2) : null,
         v: +emBRL(o.c.pl, moedaT(o)).toFixed(2),
         erro: o.err && o.err !== "Nenhum" ? o.err : "",
-        regras: o.rules === "n" ? "quebrou" : "seguiu",
+        regras: o.rules === "n" ? "quebrou" : o.rules === "s" ? "seguiu" : "não avaliada",
         emo: o.emo2 || "",
         nota: notaABC(o),
         tilt: o.tilt || "",

@@ -281,8 +281,8 @@ function render() {
         ...(r.dataset.tp === "O" ? { ot: "C", estr: ESTR[0] } : {}),
         pv: 1,
         cost: 0,
-        emo: "3",
-        rules: "s",
+        emo: "",
+        rules: "",
         err: "Nenhum",
         mkt: MK[0],
       }),
@@ -480,3 +480,37 @@ let ANX = {
     tkA: "",
   },
   ANL = 0;
+
+
+/* v789: validação do editor manual antes do salvamento, sem alterar a ponte Profit. */
+document.addEventListener("input", (evt) => {
+  const field = evt.target.closest?.('#sh input[name="entry"],#sh input[name="stop"],#sh input[name="target"],#sh input[name="exit"],#sh input[name="target2"],#sh input[name="target3"]');
+  if (!field || !T || !/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(T.ativo || ""))) return;
+  const parsed = precoManual789(field.value, T.ativo);
+  if (parsed.ok) T[field.name] = parsed.value;
+  const msg = document.querySelector("#sh #msg");
+  if (msg) msg.textContent = parsed.ok ? "" : parsed.erro;
+  prev();
+});
+document.addEventListener("click", (evt) => {
+  if (!evt.target.closest?.('#sh [data-a="savetrade"]') || !T || !/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(T.ativo || ""))) return;
+  for (const field of ["entry", "stop", "target", "exit", "target2", "target3"]) {
+    const node = document.querySelector('#sh [name="' + field + '"]');
+    if (!node) continue;
+    const checked = precoManual789(node.value, T.ativo);
+    if (!checked.ok) {
+      evt.preventDefault();
+      evt.stopImmediatePropagation();
+      const msg = document.querySelector("#sh #msg");
+      if (msg) { msg.textContent = field.toUpperCase() + ": " + checked.erro; msg.scrollIntoView?.({ block: "center" }); }
+      return;
+    }
+    T[field] = checked.value;
+  }
+  if ((/^WIN[A-Z][0-9]{2}$/i.test(String(T.ativo || "")) && Math.abs(Number(T.pv) - .2) > 1e-9) ||
+      (/^WDO[A-Z][0-9]{2}$/i.test(String(T.ativo || "")) && Math.abs(Number(T.pv) - 10) > 1e-9)) {
+    evt.preventDefault(); evt.stopImmediatePropagation();
+    const msg = document.querySelector("#sh #msg");
+    if (msg) msg.textContent = "Valor por ponto incorreto. WIN: R$ 0,20; WDO: R$ 10,00.";
+  }
+}, true);
