@@ -68,9 +68,9 @@ async function measure(page) {
  }));
 }
 function isExpectedDemoCsp(message){
- return /violates the following Content Security Policy directive/.test(message) &&
-  (/embed-widget-ticker-tape\\.js/.test(message) || /s3-symbol-logo\\.tradingview\\.com\\//.test(message)) &&
-  (/script-src 'self'/.test(message) || /img-src 'self' data: blob:/.test(message));
+ return message.includes('violates the following Content Security Policy directive') &&
+  (message.includes('embed-widget-ticker-tape.js') || message.includes('s3-symbol-logo.tradingview.com/')) &&
+  (message.includes("script-src 'self'") || message.includes("img-src 'self' data: blob:"));
 }
 function statusOf(r){
  if(r.error||r.pageErrors.length||r.localHttpErrors.length||r.metrics?.overflowPx>1||r.metrics?.cls>0.1||!r.metrics?.appChildren||r.metrics?.invalidSvgPaths?.length)return 'FALHA/REVISÃO';
