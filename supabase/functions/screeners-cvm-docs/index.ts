@@ -20,6 +20,17 @@ async function authorized(req:Request){
 const norm=(n:unknown)=>String(n||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
  .replace(/\bS\s*[.\/-]?\s*A\b\.?/g,' ').replace(/\bBCO\b/g,'BANCO').replace(/\bCIA\b/g,'COMPANHIA')
  .replace(/\b(DO|DA|DE|DOS|DAS)\b/g,' ').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+// v775 — vínculos de papéis B3 auditados por comunicados do RI/B3 e CNPJ oficial CVM.
+// Cada vínculo ainda exige CNPJ presente no espelho CVM e ITR/DFP oficial; nunca atribuir por
+// semelhança ou por suffix PN. Alterações futuras de empresa invalidam automaticamente o alias.
+const ALIAS_OFICIAL:Record<string,{cnpj:string,emissor:RegExp,prova:string}>={
+ CEAB3:{cnpj:'45242914000105',emissor:/C.?A MODAS/,prova:'https://sistemaswebb3-listados.b3.com.br/listedCompaniesPage/main/24848/overview?language=pt-br'},
+ CLSC4:{cnpj:'83878892000155',emissor:/CENTRAIS ELETRICAS DE SANTA CATARINA/,prova:'https://ri.celesc.com.br/servicos-aos-investidores/faq/'},
+ CMIG3:{cnpj:'17155730000164',emissor:/COMPANHIA ENERGETICA DE MINAS GERAIS/,prova:'https://ri.cemig.com.br/governanca-corporativa/descricao-das-acoes-e-adrs'},
+ CMIG4:{cnpj:'17155730000164',emissor:/COMPANHIA ENERGETICA DE MINAS GERAIS/,prova:'https://ri.cemig.com.br/governanca-corporativa/descricao-das-acoes-e-adrs'},
+ MDIA3:{cnpj:'07206816000115',emissor:/DIAS BRANCO/,prova:'https://ri.mdiasbranco.com.br/faq/m-dias-branco-e-mercado-de-acoes/'},
+ MLAS3:{cnpj:'59717553000102',emissor:/MULTI GROUP/,prova:'https://www.rad.cvm.gov.br/ENETCONSULTA/frmDownloadDocumento.aspx?CodigoInstituicao=1&Tela=99&descTipo=IPE&numProtocolo=1458661&numSequencia=983373&numVersao=1'}
+};
 const iso=x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x||'')),today=()=>new Date().toISOString().slice(0,10);
 async function run(){
  const pending=await rpc('quant_cvm_pendentes',{p_limit:24});
@@ -45,10 +56,15 @@ async function run(){
  const patches:any[]=[],notFound:string[]=[],ambiguous:string[]=[];
  for(const row of pending){
   const key=norm(row.empresa),exact=normalized.get(key);
+  const reviewed=ALIAS_OFICIAL[String(row.ticker||'').toUpperCase()];
+  const validatedAlias=reviewed&&reviewed.emissor.test(key)&&
+    src.emissores.some((e:any)=>e.cnpj===reviewed.cnpj&&Array.isArray(e.nomes)&&e.nomes.length>0)?
+    reviewed.cnpj:null;
   const found=exact||new Set<string>();
-  // Only an exact normalized name is an identity assertion; ambiguous remains pending.
-  if(found.size!==1){(found.size?ambiguous:notFound).push(String(row.ticker));continue;}
-  const id=[...found][0],d:any=docs.get(id);
+  // Nome exato só quando identifica CNPJ único; alias público depende do nome e da prova cadastral.
+  const id=found.size===1?[...found][0]:found.size===0?validatedAlias:null;
+  if(!id){(found.size?ambiguous:notFound).push(String(row.ticker));continue;}
+  const d:any=docs.get(id);
   if(!d){notFound.push(String(row.ticker));continue;}
   patches.push({ticker:row.ticker,cnpj:id,competencia:d.competencia,
    formulario:d.formulario,documento_id:String(d.documento_id),documento_url:d.documento_url,
