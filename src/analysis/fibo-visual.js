@@ -7,7 +7,7 @@ const fmt=n=>Number.isFinite(n)?Number(n).toLocaleString('pt-BR',{minimumFractio
 const uid=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'local';
 const safeTicker=s=>String(s||'').trim().toUpperCase().replace(/\.SA$/,'').replace(/[^A-Z0-9.\-]/g,'').slice(0,20);
 const state={br:{},world:{},pesquisa:{}};
-let fetcher=null;
+let fetcher=null,visionObserver=null;
 function opened(){return new Promise((ok,no)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'key'});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 async function tx(mode,exec){const db=await opened();try{return await new Promise((ok,no)=>{const r=exec(db.transaction(STORE,mode).objectStore(STORE));r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}finally{db.close()}}
 async function save(record){await tx('readwrite',s=>s.put({...record,key:uid()+'|'+record.ticker,owner:uid()}))}
@@ -63,6 +63,11 @@ async function visionApi(image,signal){
 async function load(file,scope){
  if(!file?.type.startsWith('image/'))throw Error('Selecione uma imagem');
  if(fetcher)fetcher.abort();fetcher=new AbortController();const signal=fetcher.signal,account=uid();
+ visionObserver?.disconnect();visionObserver=null;
+ if(typeof MutationObserver!=='undefined'&&d.querySelector('#an-root')){
+  visionObserver=new MutationObserver(()=>{if(!d.querySelector('#an-root')){fetcher?.abort();visionObserver?.disconnect();visionObserver=null}});
+  visionObserver.observe(d.body,{childList:true,subtree:true});
+ }
  const s=state[scope],data=await compress(file);
  s.status='Analisando imagem em Gemini Vision…';rerender(scope);
  try{const extracted=await visionApi(data,signal);if(signal.aborted||uid()!==account)return;
@@ -70,7 +75,7 @@ async function load(file,scope){
  if(!ticker)throw Error('Ticker ilegível. Faça novo print com o cabeçalho do ativo visível.');
  const row={ticker,tf:String(extracted.timeframe||''),origem:'visao_ia',criado_em:new Date().toISOString(),imagem:data,raw:extracted,analysis:calculated};
  await save(row);s.record=row;s.status='Print salvo somente neste aparelho; cálculo matemático local validado.';rerender(scope);
- }catch(e){if(!signal.aborted){s.status='Análise bloqueada: '+String(e.message||e).slice(0,200);rerender(scope)}}finally{if(fetcher?.signal===signal)fetcher=null}
+ }catch(e){if(!signal.aborted){s.status='Análise bloqueada: '+String(e.message||e).slice(0,200);rerender(scope)}}finally{if(fetcher?.signal===signal){fetcher=null;visionObserver?.disconnect();visionObserver=null}}
 }
 d.addEventListener('click',e=>{const btn=e.target.closest('[data-fibo-open]');if(!btn)return;
  const panel=btn.closest('[data-fibo-panel]');if(!panel||typeof tab!=='undefined'&&tab!=='analises')return;
@@ -122,5 +127,5 @@ async function appendPDF({doc,P,tickers}){
   write('Print local: '+study.criado_em+' · IA extrai, software calcula. Sem ordem automática.',35,y-15,7);
  }return added;
 }
-w.DiarioFiboVisual={view,calculate,get,appendPDF,leave(){fetcher?.abort();fetcher=null}};
+w.DiarioFiboVisual={view,calculate,get,appendPDF,leave(){fetcher?.abort();fetcher=null;visionObserver?.disconnect();visionObserver=null}};
 })(window,document);
