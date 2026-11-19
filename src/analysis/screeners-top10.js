@@ -5,6 +5,33 @@
  else root.DiarioScreenersTop10=api;
 })(typeof globalThis==='undefined'?this:globalThis,function(){
  'use strict';
+ // v786: filtro de provas auditáveis antes de classificar. Não consulta rede.
+ function qualityGate(market,row,diagnosis,asOf=new Date().toISOString().slice(0,10)){
+  const errors=[],date=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&
+   !Number.isNaN(Date.parse(s))&&new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;
+  const curr=date(asOf)?asOf:new Date().toISOString().slice(0,10);
+  const dated=['data_competencia_balanco','documento_balanco_publicado_em','fundamentais_em','tecnicos_em'];
+  for(const k of dated)if(row?.[k]&&( !date(row[k])||row[k]>curr))errors.push(k+' futuro/inválido');
+  if(date(row?.data_competencia_balanco)&&date(row?.documento_balanco_publicado_em)&&
+   row.documento_balanco_publicado_em<row.data_competencia_balanco)
+   errors.push('documento publicado antes da competência');
+  const form=String(row?.documento_balanco_tipo||''),id=String(row?.documento_balanco_id||''),
+   url=String(row?.documento_balanco_url||'');
+  if(market==='US'){
+   if(!/^(10-K|10-Q|20-F|40-F)(\/A)?$/.test(form)||!/^\d{10}-\d{2}-\d{6}$/.test(id)||
+    !url.startsWith('https://www.sec.gov/Archives/edgar/data/'))
+    errors.push('formulário e protocolo SEC não conferem');
+  }else if(!['ITR','DFP'].includes(form)||!/^\d{1,18}$/.test(id)||
+    !(url.startsWith('https://dados.cvm.gov.br/')||url.startsWith('https://www.rad.cvm.gov.br/')))
+    errors.push('documento e protocolo CVM não conferem');
+  if(diagnosis?.lineageAudit&&(diagnosis.lineageAudit.missing?.length||
+   diagnosis.lineageAudit.conflicts?.length))
+   errors.push('linhagem dos indicadores incompleta');
+  if(row?.dados_status==='catalogado'||row?.ativo_elegivel===false)
+   errors.push('ativo não auditado ou inelegível');
+  return {passed:errors.length===0,reasons:errors,asOf:curr};
+ }
+
  function generate(m,rows,intelligence,medians=null){
   const market=m==='us'||m==='US'?'US':'BR';
   if(!Array.isArray(rows)||!intelligence)return {market,entries:[],reviewed:0,excluded:0};
@@ -12,6 +39,7 @@
   for(const row of rows){
    if(!row?.ticker)continue;
    const d=intelligence.diagnostics(market,row,Date.now(),medians);
+   const proof=qualityGate(market,row,d);
    // Evita promover microcaps ilíquidas e valores negativos em múltiplos.
    // Tickers fora desse corte continuam disponíveis no Screener completo.
    const liquidity=market==='BR'?Number(row.liquidez_diaria_brl):Number(row.avg_daily_volume_usd);
@@ -30,10 +58,10 @@
    // Nota só existe se quatro famílias e dados forem conferíveis.
    // v778: resultados suspeitos nunca entram no Top10 mesmo que a fórmula confira.
    // Nos EUA, exigir evidência mínima de Companyfacts SEC, sem chamar isso de score 100% auditado.
-   if(!liquid||!sane||d.modelScore===null||d.score===null||d.difference===null||d.difference>0.1||
+   if(!proof.passed||!liquid||!sane||d.modelScore===null||d.score===null||d.difference===null||d.difference>0.1||
       d.coverage<70||!d.validated||(d.qualityFlags?.length||0)>0||
       (market==='US'&&!d.secXbrlIdentificado)||row.ativo_elegivel===false){
-    rejected.push({ticker:row.ticker,reason:d.risks[0]||'Cálculo não conferido'});
+    rejected.push({ticker:row.ticker,reason:proof.reasons[0]||d.risks[0]||'Cálculo não conferido'});
     continue;
    }
    eligible.push({row,diagnosis:d,score:d.modelScore,note:Math.round(d.modelScore)/10});
@@ -63,5 +91,5 @@
   }
   return {market,entries,reviewed:rows.length,excluded:rejected.length,reason:'Ranking por nota reconstituída, liquidez e documentação oficial; EUA exige também Companyfacts SEC identificado. Provas XBRL são parciais e não homologam todos os múltiplos. Limites de liquidez: BR R$ 1 milhão, EUA US$ 2 milhões. Uma empresa por emissor.'};
  }
- return Object.freeze({generate});
+ return Object.freeze({generate,qualityGate});
 });
