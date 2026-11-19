@@ -166,9 +166,17 @@ async function build(m,rows,opts={}){
  if(!['BR','US'].includes(m)||!Array.isArray(rows)||rows.length<1||rows.length>10)throw Error('Selecione de 1 a 10 ações de um mesmo mercado.');
  if(new Set(rows.map(x=>x?.ticker)).size!==rows.length)throw Error('A seleção contém tickers repetidos.');
  if(!intelligence())throw Error('Validador de indicadores indisponível.');
- const hash=await hashSnapshot({tipo:'fundamental',m,metodo:'quant_v2_score / app v768',rows,automatic:!!opts.automatic,medianas:opts.medians||null,yieldAceitavel:opts.yieldAceitavel||.07});
+ if(opts.requireVerified===true){
+  if(opts.automatic!==true||rows.length!==10)throw Error('Top 10 homologado exige dez empresas verificadas.');
+  const invalid=rows.filter(row=>{const d=intelligence().diagnostics(m,row,Date.now(),opts.medians||null);
+   return !d.validated||d.modelScore===null||d.difference===null||d.difference>0.1;});
+  if(invalid.length)throw Error('Documento/score não homologado: '+invalid.map(r=>r.ticker).join(', ').slice(0,90));
+ }
+ const hash=await hashSnapshot({tipo:'fundamental',m,metodo:'quant_v2_score / app v798',rows,automatic:!!opts.automatic,medianas:opts.medians||null,yieldAceitavel:opts.yieldAceitavel||.07});
   const P=await libs(),doc=await P.PDFDocument.create();
  doc.setTitle((opts.automatic?'Top 10 automático':'Dossiê de ações')+' '+m+' - Diário de Trader');doc.setAuthor('Diário de Trader');
+ doc.setSubject('Rastreabilidade do snapshot: SHA-256 '+hash+'; fonte quant_v2_score; metodologia v798');
+ doc.setKeywords(['quant_v2_score','sha256:'+hash,'v798','cálculo determinístico']);
  doc.registerFontkit(w.fontkit);
  const loaded=await Promise.all(['pdf-sans.ttf','pdf-sans-bold.ttf','pdf-serif-bold.ttf'].map(async name=>{
   const r=await fetch(name,{cache:'force-cache'});if(!r.ok)throw Error('Fonte PDF indisponível: '+name);
@@ -196,7 +204,7 @@ async function build(m,rows,opts={}){
   L.footer();
  }
  for(const pg of doc.getPages()){
-  pg.drawText('SHA-256 '+hash+' · Fórmula quant_v2_score / app v768',{
+  pg.drawText('SHA-256 '+hash+' · Fórmula quant_v2_score / app v798',{
    x:43,y:20,font:loaded[0],size:6,color:P.rgb(.38,.42,.46)});
  }
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:(opts.automatic?'Top10-Quantitativo-':'Dossie-')+m+'-'+new Date().toISOString().slice(0,10)+'-'+rows.length+'-acoes.pdf',pages:doc.getPageCount()};

@@ -448,7 +448,7 @@ d.addEventListener('click',async ev=>{
   try{
    const rows=ranking.entries.map(x=>x.row);
    const result=await w.DiarioScreenersRelatorio.share(m.toUpperCase(),rows,{
-    automatic:true,universe:s.topData?.total||0,scored:s.topData?.coverage?.com_score||0,
+    automatic:true,requireVerified:true,universe:s.topData?.total||0,scored:s.topData?.coverage?.com_score||0,
     method:ranking.reason,snapshot:s.topData?.last_update||null,medians:s.topData?.medians||null,yieldAceitavel:Number(s.yieldAceitavel)
     },ticket);
    if(!result.cancelled)s.topPdfMessage='Relatório automático pronto: '+rows.length+' empresas, '+result.pages+' páginas.';
