@@ -24,6 +24,13 @@ jobs:
           else
             npx playwright install --with-deps chromium
           fi
+      - name: Preparar identidade descartável sem enviar email
+        run: node scripts/qa-e2e-live.cjs --prepare
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qa-provision
+          path: qa-provision/request.json
+          retention-days: 1
       - name: Auditar app publicado com conta descartável
         run: node scripts/qa-e2e-live.cjs
       - uses: actions/upload-artifact@v4

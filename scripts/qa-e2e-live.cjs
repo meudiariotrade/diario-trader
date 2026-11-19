@@ -4,8 +4,13 @@ const fs=require('node:fs'),crypto=require('node:crypto'),{chromium}=require('pl
 const vm=require('node:vm'), cfg={window:{}};vm.runInNewContext(fs.readFileSync('config.js','utf8'),cfg);
 const SB=cfg.window.SUPA_URL,KEY=cfg.window.SUPA_KEY,BASE=process.env.QA_BASE_URL||'https://meudiariotrade.github.io/diario-trader/';
 const OUT='qa-results';fs.mkdirSync(OUT,{recursive:true});
-const email='qa-e2e-'+(process.env.GITHUB_RUN_ID||Date.now())+'-'+crypto.randomBytes(3).toString('hex')+'@example.com';
-const password=crypto.randomBytes(24).toString('base64url')+'aA1!';
+if(process.argv.includes('--prepare')){
+ const {execFileSync}=require('node:child_process');
+ const email='qa-e2e-'+process.env.GITHUB_RUN_ID+'@example.com',password=crypto.randomBytes(24).toString('base64url')+'aA1!',id=crypto.randomUUID();
+ const hash=execFileSync('python3',['-c',"import crypt,sys; print(crypt.crypt(sys.stdin.read(),crypt.mksalt(crypt.METHOD_BLOWFISH)))"],{input:password,encoding:'utf8'}).trim();
+ fs.writeFileSync('.qa-credentials.json',JSON.stringify({email,password,id}),{mode:0o600});fs.mkdirSync('qa-provision',{recursive:true});fs.writeFileSync('qa-provision/request.json',JSON.stringify({id,email,hash,run:process.env.GITHUB_RUN_ID}));process.exit(0);
+}
+const {email,password,id:qaId}=JSON.parse(fs.readFileSync('.qa-credentials.json','utf8'));
 const report={started:new Date().toISOString(),base:BASE,account:{email},screens:[],limitations:['iPhone: emulação Chromium 390x844 com toque; não é Safari em aparelho físico.','Janela de observação de 6 segundos por tela; não certifica ausência de problemas intermitentes.','Ações destrutivas e geração paga de IA não são disparadas para testar botões.']};
 let token,browser;
 const save=()=>fs.writeFileSync(OUT+'/results.json',JSON.stringify(report,null,2));
@@ -55,10 +60,8 @@ async function audit(page,device,id,name,sub,events){
 }
 (async()=>{
  try{
-  const created=await auth('/auth/v1/signup',{email,password,data:{qa_e2e:true,qa_run:process.env.GITHUB_RUN_ID}});
-  if(!created.ok)throw Error('Cadastro QA: '+created.status+' '+JSON.stringify(created.j));
-  report.account.id=created.j.user?.id||created.j.id;token=created.j.access_token;save();console.log('QA_ACCOUNT_PENDING',JSON.stringify(report.account));
-  for(let i=0;!token&&i<18;i++){await new Promise(r=>setTimeout(r,10000));const login=await auth('/auth/v1/token?grant_type=password',{email,password});if(login.ok)token=login.j.access_token;else if(login.j.error_code!=='email_not_confirmed'&&login.j.code!=='email_not_confirmed')console.log('QA_AUTH_STATUS',login.status,login.j.error_code||login.j.code);}
+  report.account.id=qaId;save();console.log('QA_ACCOUNT_PENDING',JSON.stringify(report.account));
+  for(let i=0;!token&&i<24;i++){await new Promise(r=>setTimeout(r,10000));const login=await auth('/auth/v1/token?grant_type=password',{email,password});if(login.ok)token=login.j.access_token;}
   if(!token)throw Error('Conta QA aguardando confirmação específica; nenhum usuário principal foi acessado.');
   report.account.authenticated=true;save();console.log('QA_AUTHENTICATED',report.account.id);
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox']});
