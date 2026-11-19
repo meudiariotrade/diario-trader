@@ -546,6 +546,10 @@ let FST = null,
   FST_ID = null;
 function qtdSugerida(e) {
   try {
+    const ticker = String(e.ativo || "").toUpperCase(), pv = numN(e.pv);
+    if ((/^WIN[A-Z][0-9]{2}$/.test(ticker) && (pv == null || Math.abs(pv - 0.2) > 1e-8)) ||
+        (/^WDO[A-Z][0-9]{2}$/.test(ticker) && (pv == null || Math.abs(pv - 10) > 1e-8)))
+      return { invalido: "Valor por ponto incoerente. WIN: R$ 0,20; WDO: R$ 10,00. Revise antes de usar a quantidade." };
     if (/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(e.ativo || ""))) for (const campo of ["entry", "stop"]) {
       const valor = e[campo];
       if (valor == null || String(valor).trim() === "") continue;
