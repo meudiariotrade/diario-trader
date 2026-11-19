@@ -105,7 +105,7 @@ async function build(m,rows,tf='1d'){
   write(n(x.score,1)+' / 10',M,y+18,23,serif);
   write(verified(x)?'CÁLCULO CONFERE':'EXIGE CONFERÊNCIA',W-M,y+28,9,bold,verified(x)?col.green:col.red,true);y+=76;
   rect(M,y,W-2*M,60,color(P,'#F2F3F4'));
-  y=wrap('Tendência '+(x.metrics?.mtf===true?'MTF alinhada':x.metrics?.mtf===null?'MTF não verificável':'MTF divergente')+'. OBV '+(x.metrics?.obvConfirmed?'rompeu nível anterior':'não confirmado')+'. Volume relativo '+n(x.metrics?.rvol,2)+'x. HV semanal '+n(x.metrics?.hvWeek)+'%.',M+11,y+10,W-2*M-22,9,13,reg,col.ink,3)+22;
+  y=wrap('Tendência '+(x.metrics?.mtf===true?'MTF alinhada':x.metrics?.mtf===null?'MTF não verificável':'MTF divergente')+'. OBV '+(x.metrics?.obvSignal||'não confirmado')+'. Volume relativo '+n(x.metrics?.rvol,2)+'x. HV semanal '+n(x.metrics?.hvWeek)+'%.',M+11,y+10,W-2*M-22,9,13,reg,col.ink,3)+22;
   write('COMPOSIÇÃO DA NOTA',M,y,10,bold,col.gold);y+=28;
   for(const p of x.pillars)bar(p.name,p.score,p.weight);
   y+=10;write('PLANO CONDICIONAL · REFERÊNCIAS FIBONACCING',M,y,10,bold,col.gold);y+=24;
@@ -240,9 +240,21 @@ function desenharGrafico(r,x,kind,tf,candles){
   for(let i=0;i<points.length;i++)i?ctx.lineTo(points[i][0],points[i][1]):ctx.moveTo(points[i][0],points[i][1]);
   ctx.stroke();ctx.setLineDash([]);
  }
+ const badgeY=[];
  function horizontal(price,label,col,dashed=false){
   if(!positivo(price))return;
   const y=py(price);trace([[L,y],[right,y]],col,2,dashed?[8,6]:[]);
+  if(/^(Gatilho|Stop|Invalidação)/.test(label)){
+   // v781: etiqueta somente na área da escala DIREITA, jamais em cima de velas/pivôs.
+   let yy=Math.max(T+17,Math.min(chartBottom-17,y));
+   for(let j=0;j<badgeY.length;j++)if(Math.abs(yy-badgeY[j])<34)
+    yy=Math.min(chartBottom-17,badgeY[j]+35);
+   badgeY.push(yy);
+   ctx.fillStyle=col;ctx.fillRect(right+3,yy-15,R-9,30);
+   ctxText(label.startsWith('Invalidação')?'Invalidação':label,right+9,yy-3,13,'#FFFFFF');
+   ctxText(axisLabel(price),right+9,yy+10,13,'#FFFFFF');
+   return;
+  }
   const yy=Math.max(T+12,Math.min(chartBottom-8,y-5));
   ctxText(label+' '+axisLabel(price),right-8,yy,16,col,'right');
  }
@@ -323,7 +335,7 @@ function descricaoGrafico(kind,r,x,candles,graph){
   const slope=dir*(met.sma20-met.sma50)>0&&dir*(met.sma50-met.sma150)>0&&dir*(met.sma150-met.sma200)>0;
   return 'Médias '+(slope?'alinhadas na direção de '+side:'sem alinhamento integral confirmado')+
    '. Pullback sem fechamento além da SMA 20: '+(x.pisani?.pullback?'critério atendido':'não confirmado')+
-   '. OBV: '+(met.obvConfirmed?'rompimento registrado':'rompimento não confirmado')+
+   '. OBV: '+(met.obvSignal||'não confirmado')+
    '. Trend Template Minervini: '+(x.minervini?.score==null?'indisponível':x.minervini.score+'/8')+
    ' (heurístico). São 90 candles exibidos, com médias calculadas sobre o histórico completo.';
  }

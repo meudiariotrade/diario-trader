@@ -1,6 +1,7 @@
 /* v762: Web Worker efêmero. Nunca acessa Supabase nem cria polling. */
 'use strict';
-importScripts('tecnico-engine.js');
+importScripts('tecnico-engine.js','institutional-v781.js');
+const I=self.DiarioInstitucional||null; // mocks legados de importScripts não fornecem segundo módulo
 const M=self.DiarioTecnicoEngine;
 const safeText=s=>String(s||'').replace(/[^A-Z0-9.^-]/g,'').slice(0,16);
 const perf=c=>{
@@ -89,6 +90,9 @@ self.onmessage=function(event){
     higher:asset.higher||(data.tf==='1d'?M.aggregateWeekly(asset.daily||asset.candles):null),
     rs,market:group};
    const result=M.examine(asset.candles,opts);
+   const daily=M.normalize(asset.daily||asset.candles);
+   const instOpts={market:group,rs,benchmark:M.normalize(benchmark[group]),fundamentals:asset.fundamentals||{}};
+   if(I&&daily.length>=210){result.buy.institutional=I.analyze(daily,1,instOpts);result.sell.institutional=I.analyze(daily,-1,instOpts);}
    return {ticker:safeText(asset.ticker),name:String(asset.name||'').slice(0,90),
     market:group,bdr:String(asset.bdr||'').slice(0,16),holding:!!asset.holding,source:String(asset.source||'cache').slice(0,60),
     updatedAt:String(asset.updatedAt||'').slice(0,40),

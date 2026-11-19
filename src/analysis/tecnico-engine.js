@@ -5,7 +5,7 @@
  else root.DiarioTecnicoEngine=api;
 })(typeof self!=='undefined'?self:globalThis,function(){
  'use strict';
- const VERSION='tecnico-779.1';
+ const VERSION='tecnico-781.1';
  const FIB_RET=[0,.236,.382,.5,.618,.764,1],FIB_EXT=[1.11,1.272,1.414,1.618];
  const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
  const mean=v=>v.length?v.reduce((a,b)=>a+b,0)/v.length:null;
@@ -226,9 +226,22 @@
   const c=normalize(c0),last=c.at(-1);
   if(!last||c.length<210||c.filter(x=>x.v>0).length<100)return {valid:false,score:null,reason:'Histórico OHLCV insuficiente (mín. 210 barras, 100 com volume)'};
   const p=last.c,s20=sma(c,20),s50=sma(c,50),s150=sma(c,150),s200=sma(c,200),v20=sma(c,20,c.length-2,'v'),rvol=v20?last.v/v20:null,atr14=atr(c),rsi14=rsi(c),m=macd(c),vol=hvWeek(c,opts.tf||'1d'),o=obv(c);
-  const prior=o.slice(-26,-1),obvHit=dir===1?o.at(-1)>Math.max(...prior):o.at(-1)<Math.min(...prior);
-  const earlier=o.slice(-8,-1).some((x,j,arr)=>j>0&&(dir===1?x>Math.max(...o.slice(Math.max(0,o.length-27+j),o.length-8+j)):x<Math.min(...o.slice(Math.max(0,o.length-27+j),o.length-8+j))));
-  const obvConfirmed=obvHit||earlier,sw=swings(c),fib=fibo(c,dir,sw),turn=turn4(c,dir,fib.zone),vcpPass=vcp(c);
+  const prior=o.slice(-26,-1),macroOBV=dir===1?o.at(-1)>Math.max(...prior):o.at(-1)<Math.min(...prior);
+  const sw=swings(c);
+  const reversal=sw.filter(x=>x.d===-dir&&x.i<=c.length-3).at(-1);
+  // Comparar nível LOCAL somente depois do último fundo/topo confirmado, entre 10 e 15 pregões.
+  const begin=Math.max(c.length-16,reversal?.i??0),priorLocal=o.slice(begin,-1);
+  const fastOBV=ema(o,9),slowOBV=ema(o,21),oi=o.length-1;
+  const obvAligned=dir*(fastOBV[oi]-slowOBV[oi])>0;
+  const obvCross=Array.from({length:Math.min(15,oi)},(_,j)=>oi-j).some(i=>
+   Number.isFinite(fastOBV[i])&&Number.isFinite(slowOBV[i])&&
+   Number.isFinite(fastOBV[i-1])&&Number.isFinite(slowOBV[i-1])&&
+   dir*(fastOBV[i]-slowOBV[i])>0&&dir*(fastOBV[i-1]-slowOBV[i-1])<=0);
+  const localOBV=priorLocal.length>=10&&priorLocal.length<=15&&obvAligned&&obvCross&&
+   (dir===1?o.at(-1)>Math.max(...priorLocal):o.at(-1)<Math.min(...priorLocal));
+  const obvConfirmed=macroOBV||localOBV,obvSignal=macroOBV?'OBV ROMPIDO (MACRO)':
+   localOBV?'OBV CONFIRMADO (PIVÔ LOCAL)':'OBV NÃO CONFIRMADO',
+   fib=fibo(c,dir,sw),turn=turn4(c,dir,fib.zone),vcpPass=vcp(c);
   const high=opts.higher?normalize(opts.higher):null,mtfn=opts.tf==='1d'?20:200,mtf=high?.length>=mtfn?dir*(high.at(-1).c-sma(high,mtfn))>0:null;
   const recent=c.slice(-9,-1),pullback=recent.length>0&&recent.some((x,j)=>{const avg=sma(c,20,c.length-9+j);return Math.abs(x.l-avg)<atr14*1.2||Math.abs(x.h-avg)<atr14*1.2})&&recent.every((x,j)=>{const avg=sma(c,20,c.length-9+j);return dir===1?x.c>=avg:x.c<=avg});
   const pivot=dir===1?Math.max(...recent.map(x=>x.h)):Math.min(...recent.map(x=>x.l));
@@ -254,7 +267,7 @@
   const active=trend&&breakout&&obvConfirmed&&rvol>1&&vol>3&&stop!==null;
   const bollinger=boll(c);
   return {valid:true,dir,price:round(p),score,pillars,coverage:round((rs!==null?1:0)+(mtf!==null?1:0)+(template.score!==null?1:0),0),
-   timestamp:last.t,barCount:c.length,metrics:{sma20:round(s20),sma50:round(s50),sma150:round(s150),sma200:round(s200),obv:round(o.at(-1),0),obvConfirmed,rvol:round(rvol,2),hvWeek:round(vol,2),rsi14:round(rsi14,1),macd:round(m.value),atr14:round(atr14),rs,mtf},
+   timestamp:last.t,barCount:c.length,metrics:{sma20:round(s20),sma50:round(s50),sma150:round(s150),sma200:round(s200),obv:round(o.at(-1),0),obvConfirmed,obvSignal,obvPivotLocal:priorLocal.length>=10?round(dir===1?Math.max(...priorLocal):Math.min(...priorLocal),0):null,obvEma9:round(fastOBV.at(-1),0),obvEma21:round(slowOBV.at(-1),0),rvol:round(rvol,2),hvWeek:round(vol,2),rsi14:round(rsi14,1),macd:round(m.value),atr14:round(atr14),rs,mtf},
    fib,turn,pisani:{breakout:active,power:active&&rvol>=1.5&&turn.cisd,away:away>=2.5,pullback},minervini:template,vcp:vcpPass,elliott:elliott(sw,dir),bollinger:{...bollinger,breakout:bollinger.breakout&&rvol>1.5},
    flags:trap?[trap]:[],eligible:active&&!trap&&mtf!==false,
    plan:{entry:round(entry),stop:round(stop),target1:round(t1),target2a:round(t2a),target2:round(t2),targetFinal:round(t3),

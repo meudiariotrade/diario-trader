@@ -6,7 +6,7 @@ const fmt=(v,n=1)=>v==null||!Number.isFinite(Number(v))?'N/D':Number(v).toLocale
 const pairs=['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT','DOGEUSDT','LINKUSDT','AVAXUSDT','DOTUSDT','LTCUSDT','BCHUSDT','UNIUSDT','TRXUSDT','XLMUSDT','ATOMUSDT','NEARUSDT','APTUSDT','SUIUSDT','TONUSDT'];
 const basicBR=['PETR4','VALE3','ITUB4','BBDC4','BBAS3','WEGE3','ABEV3','B3SA3','PRIO3','RENT3','SUZB3','ELET3','BPAC11','RADL3','GGBR4','VIVT3'];
 const basicUS=['AAPL','MSFT','NVDA','AMZN','GOOGL','META','AVGO','TSLA','AMD','NFLX','JPM','V','XOM','CVX','PBR','LLY','COST','UNH'];
-const presets=[['todos','Todos (Nota Geral)'],['fibo','Fibonaccing · Filé Mignon + 4-Barras'],['pisani','Pisani · Breakout + OBV Rompido'],['minervini','Minervini · 8/8 + VCP'],['dupla','Dupla Confluência · Fundam. + Técnico'],['afastamento','Pisani · Afastamento SMA20'],['squeeze','Bollinger · Squeeze'],['protecao','Proteção de Carteira · Exaustão']];
+const presets=[['todos','Todos (Nota Geral)'],['fibo','Fibonaccing · Filé Mignon + 4-Barras'],['pisani','Pisani · Breakout + OBV Rompido'],['minervini','Minervini · 8/8 + VCP'],['dupla','Dupla Confluência · Fundam. + Técnico'],['afastamento','Pisani · Afastamento SMA20'],['squeeze','Bollinger · Squeeze'],['protecao','Proteção de Carteira · Exaustão'],['oneil','O\'Neil: CAN SLIM + Cup & Handle / Flat Base'],['pocket','O\'Neil: Pocket Pivot (Entrada Antecipada)'],['stormer','Stormer: Setup 9.1/9.2/9.3 & PFR'],['stormer-trap','Stormer: Trap / Armadilha'],['lemos','Lemos: Cruzamento EMA 9 x 21 + 1-2-3'],['pring','Pring: KST + Virada de Momentum']];
 const create=()=>({tf:'1d',dir:'both',filter:'all',preset:'todos',search:'',rows:[],universe:[],next:0,loading:false,worker:null,workerReject:null,abort:null,error:'',info:'',detail:'',updatedAt:'',busyPDF:false,progress:0,token:0,source:'',owner:''});
 const states={br:create(),world:create()};
 let current='',observer=null;
@@ -21,11 +21,11 @@ function db(){
 }
 async function store(key,item){
  const base=await db();if(!base)return;
- return new Promise(resolve=>{try{const tx=base.transaction('data','readwrite');tx.objectStore('data').put({key,version:'tecnico-779.1',when:Date.now(),item});tx.oncomplete=()=>{base.close();resolve()};tx.onerror=()=>{base.close();resolve()}}catch{base.close();resolve()}});
+ return new Promise(resolve=>{try{const tx=base.transaction('data','readwrite');tx.objectStore('data').put({key,version:'tecnico-781.1',when:Date.now(),item});tx.oncomplete=()=>{base.close();resolve()};tx.onerror=()=>{base.close();resolve()}}catch{base.close();resolve()}});
 }
 async function read(key,ttl){
  const base=await db();if(!base)return null;
- return new Promise(resolve=>{try{const tx=base.transaction('data','readonly'),r=tx.objectStore('data').get(key);r.onsuccess=()=>resolve(r.result?.version==='tecnico-779.1'&&Date.now()-r.result.when<ttl?r.result.item:null);r.onerror=()=>resolve(null);tx.oncomplete=()=>base.close()}catch{base.close();resolve(null)}});
+ return new Promise(resolve=>{try{const tx=base.transaction('data','readonly'),r=tx.objectStore('data').get(key);r.onsuccess=()=>resolve(r.result?.version==='tecnico-781.1'&&Date.now()-r.result.when<ttl?r.result.item:null);r.onerror=()=>resolve(null);tx.oncomplete=()=>base.close()}catch{base.close();resolve(null)}});
 }
 async function fundamental(m,signal){
  let snap=null;
@@ -50,7 +50,8 @@ function candidates(s,m,snapshot){
  const region=m==='br'?'BR':'US',data=(snapshot?.universe_rows||[]),from=data.map(row=>{
   const ticker=String(row.ticker||'').toUpperCase(),market=region;
   const liq=Number(region==='BR'?row.liquidez_diaria_brl:row.avg_daily_volume_usd);
-  return {ticker,market,name:row.empresa||row.company_name||ticker,bdr:row.bdr_ticker||'',liquidity:Number.isFinite(liq)?liq:0,fund:Number(row[region==='BR'?'score_quant_br':'score_quant_us'])||null};
+  return {ticker,market,name:row.empresa||row.company_name||ticker,bdr:row.bdr_ticker||'',liquidity:Number.isFinite(liq)?liq:0,fund:Number(row[region==='BR'?'score_quant_br':'score_quant_us'])||null,
+   fundamentals:Object.fromEntries(['eps_growth_yoy','eps_growth_qoq','eps_growth_annual_3y','roe','institutional_sponsorship_verified'].map(k=>[k,typeof row[k]==='number'&&Number.isFinite(row[k])?row[k]:row[k]===true?true:null]))};
  }).filter(x=>validTicker(x.ticker,x.market)&&x.liquidity>=(region==='BR'?1e6:2e6));
  const pool=data.length?from:((region==='BR'?basicBR:basicUS).map(ticker=>({ticker,market:region,name:ticker,bdr:'',liquidity:0,fund:null})));
  const merged=new Map(pool.map(x=>[x.ticker,x]));
@@ -128,6 +129,12 @@ function qualifies(r,s){
   case 'afastamento':return x.pisani.away;
   case 'squeeze':return x.bollinger.squeeze||x.bollinger.breakout;
   case 'protecao':return r.holding&&(x.fib.exhausted||x.elliott.valid);
+  case 'oneil':return key==='buy'&&!!(x.institutional?.cupHandle?.armed||x.institutional?.flatBase?.armed||x.institutional?.canSlim?.partial);
+  case 'pocket':return key==='buy'&&!!x.institutional?.pocket?.armed;
+  case 'stormer':return !!(x.institutional?.stormer?.setup91?.armed||x.institutional?.stormer?.setup92?.armed||x.institutional?.stormer?.setup93?.armed||x.institutional?.stormer?.pfr?.armed);
+  case 'stormer-trap':return !!x.institutional?.stormer?.trap?.armed;
+  case 'lemos':return !!(x.institutional?.lemos?.ema921?.armed||x.institutional?.lemos?.reversal123?.armed);
+  case 'pring':return !!x.institutional?.pring?.armed;
   default:return true;
  }
 }
@@ -153,7 +160,7 @@ function avisoPdfInsuficiente(s,quantidade){
  s.error=message;render();if(typeof w.alert==='function')w.alert(message);
 }
 
-function badges(r,x){return (x.eligible?'<span class="tech-tag">SETUP CONDICIONAL</span>':'')+(x.metrics?.obvConfirmed?'<span class="tech-tag good">OBV ROMPIDO</span>':'')+(x.metrics?.mtf===true?'<span class="tech-tag">MTF ALINHADO</span>':'')+(x.fib?.cluster?'<span class="tech-tag">FIBONACCING CLUSTER</span>':'')+(x.flags||[]).map(y=>'<span class="tech-tag bad">'+E(y)+'</span>').join('')}
+function badges(r,x){return (x.eligible?'<span class="tech-tag">SETUP CONDICIONAL</span>':'')+(x.metrics?.obvConfirmed?'<span class="tech-tag good">'+E(x.metrics.obvSignal||'OBV CONFIRMADO')+'</span>':'')+(x.metrics?.mtf===true?'<span class="tech-tag">MTF ALINHADO</span>':'')+(x.fib?.cluster?'<span class="tech-tag">FIBONACCING CLUSTER</span>':'')+(x.flags||[]).map(y=>'<span class="tech-tag bad">'+E(y)+'</span>').join('')}
 function kpis(s){
  const good=s.rows.filter(r=>r.buy?.eligible).length,short=s.rows.filter(r=>r.sell?.eligible).length,both=s.rows.filter(r=>r.buy?.metrics?.obvConfirmed&&r.buy?.metrics?.rvol>1||r.sell?.metrics?.obvConfirmed&&r.sell?.metrics?.rvol>1).length,
  confl=s.rows.filter(r=>(r.buy?.fib?.cluster||r.sell?.fib?.cluster)&&(r.buy?.pisani?.breakout||r.sell?.pisani?.breakout||r.buy?.minervini?.score===8)).length;
@@ -175,7 +182,7 @@ async function backtestFor(s,r,raw,tf){
  if(!Array.isArray(raw)||raw.length<263)return {method:'walk-forward-next-open-v1',
   status:'não comprovado',reason:'Histórico insuficiente: 252 candles de aquecimento e 11 de saída',setups:null};
  if(s.backtestWorker){s.backtestReject?.(Error('Backtest anterior cancelado'));s.backtestWorker.terminate()}
- const wk=new Worker('tecnico-worker.js?v=779');s.backtestWorker=wk;
+ const wk=new Worker('tecnico-worker.js?v=781');s.backtestWorker=wk;
  const request=s.token;const market=r.market;
  try{
   const result=await new Promise((resolve,reject)=>{

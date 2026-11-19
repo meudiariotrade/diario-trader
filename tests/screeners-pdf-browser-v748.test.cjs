@@ -11,13 +11,13 @@ test('PDF: gera capa, fichas dos ativos e metodologia com as bibliotecas já exi
   const result=await window.DiarioScreenersRelatorio.build('BR',[make('PETR4'),make('VALE3')]);
   return {pages:result.pages,bytes:result.blob.size,header:await result.blob.slice(0,8).text()};
  });
- assert.equal(result.pages,4,'capa + duas fichas + metodologia');
+ assert.equal(result.pages,5,'capa + duas fichas + metodologia + tabela de preços-teto');
  assert.ok(result.bytes>12000,'PDF precisa conter texto e fontes');
  assert.match(result.header,/%PDF-/);
 }));
 
 
-test('Top 10 automático produz 12 páginas PDF válidas (capa, dez empresas, metodologia)',{timeout:120000},async()=>withApp(async(browser,base)=>{
+test('Top 10 automático produz 13 páginas PDF válidas (capa, dez empresas, metodologia e valuation)',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(base+'/?demo=1');await page.locator('#splash').waitFor({state:'hidden'});
  const result=await page.evaluate(async()=>{
@@ -34,7 +34,7 @@ test('Top 10 automático produz 12 páginas PDF válidas (capa, dez empresas, me
   const result=await window.DiarioScreenersRelatorio.build('BR',rows,{automatic:true,universe:369,scored:45});
   return {pages:result.pages,bytes:result.blob.size,header:await result.blob.slice(0,8).text(),name:result.name};
  });
- assert.equal(result.pages,12);
+ assert.equal(result.pages,13);
  assert.ok(result.bytes>30000);
  assert.match(result.header,/%PDF-/);
  assert.match(result.name,/Top10-Quantitativo/);

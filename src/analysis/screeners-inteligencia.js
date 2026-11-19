@@ -190,6 +190,66 @@
      official>=45?'O resultado é intermediário: há fatores favoráveis e restrições que precisam ser analisados.':
      'O método atribui pontuação baixa aos indicadores disponíveis; não significa necessariamente que a ação cairá.'};
  }
+
+ // v781: quatro metodologias independentes, exclusivamente com dados documentados.
+ // Nunca deduzir DPA/LPA/VPA/quantidade de ações de P/L, P/VP, DY ou de uma cotação isolada.
+ const finitePositive=x=>typeof x==='number'&&Number.isFinite(x)&&x>0?x:null;
+ const pctRatio=x=>typeof x!=='number'||!Number.isFinite(x)||x<0?null:x<=1?x:x<=100?x/100:null;
+ function dividendYears(input){
+  if(!Array.isArray(input)||input.length<3)return null;
+  const unique=new Set(),years=[];
+  for(const item of input){
+   const year=Number(item?.ano),dpa=Number(item?.dpa);
+   if(!Number.isInteger(year)||year<1990||year>new Date().getFullYear()||
+    unique.has(year)||!Number.isFinite(dpa)||dpa<0)return null;
+   unique.add(year);
+   years.push({year,dpa,extra:item?.extraordinario===true});
+  }
+  const selected=years.sort((a,b)=>b.year-a.year).slice(0,5);
+  if(selected.length<3||selected.some((x,i)=>i&&selected[i-1].year-x.year!==1))return null;
+  return selected;
+ }
+ function valuationBR(row={},options={}){
+  const price=finitePositive(row.preco_referencia),yieldOwn=[.06,.07,.08].includes(options.yieldAceitavel)?options.yieldAceitavel:.07;
+  const yieldDynamic=[.06,.07,.08].includes(options.yieldDinamico)?options.yieldDinamico:.06;
+  const result={config:{yieldAceitavel:yieldOwn,yieldBazin:.06,yieldDinamico:yieldDynamic},
+   methods:{proprio:null,bazin:null,bazinDinamico:null,graham:null},
+   margins:{proprio:null,bazin:null,bazinDinamico:null,graham:null},
+   reasons:{},source:'Snapshot fundamentalista local; fórmulas não inferem métricas ausentes',price};
+  const lucro=finitePositive(row.lucro_projetado_brl),shares=finitePositive(row.total_acoes);
+  const payout=pctRatio(row.payout_projetado);
+  if(lucro!==null&&shares!==null&&payout!==null&&payout>0){
+   result.methods.proprio=(lucro*payout/shares)/yieldOwn;
+  }else result.reasons.proprio='Exige lucro projetado BRL, payout projetado e total de ações de mesma base/competência';
+  const dpa=finitePositive(row.dpa_12m);
+  if(dpa!==null)result.methods.bazin=dpa/.06;
+  else result.reasons.bazin='Exige DPA acumulado 12 meses ajustado a eventos corporativos';
+  const history=dividendYears(row.dividendos_anuais);
+  if(history){
+   const normal=history.filter(x=>!x.extra).map(x=>x.dpa).sort((a,b)=>a-b);
+   const median=normal.length?normal[Math.floor(normal.length/2)]:null;
+   const adjusted=history.map(x=>
+    x.extra||median>0&&x.dpa>median*2?null:x.dpa);
+   // Dividendo extraordinário explícito não significa ausência do ano: rejeitar histórico
+   // se restarem menos de três observações independentes; preservar anos de zero dividendo.
+   const remaining=adjusted.filter(x=>x!==null);
+   if(remaining.length>=3&&remaining.some(x=>x>0))
+    result.methods.bazinDinamico=remaining.reduce((a,b)=>a+b,0)/remaining.length/yieldDynamic;
+   else result.reasons.bazinDinamico='Menos de três anos recorrentes após exclusão de extraordinários';
+  }else result.reasons.bazinDinamico='Exige histórico documentado de 3 a 5 anos consecutivos de DPA';
+  const lpa=finitePositive(row.lpa),vpa=finitePositive(row.vpa);
+  if(lpa!==null&&vpa!==null)result.methods.graham=Math.sqrt(22.5*lpa*vpa);
+  else result.reasons.graham='Graham requer LPA e VPA positivos da mesma classe da ação';
+  for(const [key,fair]of Object.entries(result.methods)){
+   if(fair!==null&&(!Number.isFinite(fair)||fair<=0)){
+    result.methods[key]=null;result.reasons[key]='Resultado numérico inválido';continue;
+   }
+   if(fair!==null&&price!==null)result.margins[key]=(fair-price)/fair*100;
+  }
+  if(price===null)result.reasons.cotacao='Cotação positiva com data não fornecida';
+  return result;
+ }
+
  function methodology(m){return (weights[m==='US'?'US':'BR']).map(g=>g.name+' '+g.weight+'%').join(' • ')}
- return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,version:'v2.0'});
+ return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,valuationBR,dividendYears,version:'v2.1'});
 });
