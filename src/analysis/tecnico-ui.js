@@ -396,6 +396,6 @@ d.addEventListener('visibilitychange',()=>{
  if(d.hidden)w.DiarioBinanceAnalises?.stop();
  else if(current==='world'&&active())w.DiarioBinanceAnalises?.start(['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT']);
 });
-const getQuote=ticker=>w.DiarioBinanceAnalises?.get(ticker)||w.DiarioProfitAnalises?.get(ticker)||w.DiarioFinnhubAnalises?.get(ticker)||null;
+const getQuote=ticker=>w.DiarioFeedSaude?.get(ticker)||null;
 w.DiarioTecnico={view,enter,leave,load,getQuote};
 })(window,document);
