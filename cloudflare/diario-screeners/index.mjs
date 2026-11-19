@@ -24,6 +24,28 @@ export default {
   if(request.method!=='GET')return json({error:'Somente leitura'},405);
   const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,servico:'screeners-edge',sem_dados_privados:true});
+   // v805 — Texto público via Cloudflare com allowlist e sem redirecionamentos.
+   if(url.pathname==='/v1/biblioteca-texto'){
+     const source=url.searchParams.get('url')||'';
+     if([...url.searchParams.keys()].some(k=>k!=='url')||source.length>1000)return json({erro:'URL inválida'},400);
+     let target;try{target=new URL(source)}catch{return json({erro:'URL inválida'},400)}
+     const host=target.hostname.toLowerCase();
+     const allow=['www.cvm.gov.br','cvm.gov.br','www.gov.br','gov.br','www.bcb.gov.br','bcb.gov.br','www.sec.gov','sec.gov','www.federalreserve.gov','federalreserve.gov','www.infomoney.com.br','infomoney.com.br','www.moneytimes.com.br','moneytimes.com.br','www.reuters.com','reuters.com','www.cnbc.com','cnbc.com','www.bloomberglinea.com','bloomberglinea.com'];
+     if(target.protocol!=='https:'||target.username||target.password||target.port||!allow.includes(host)||/\\/.test(source))return json({erro:'Fonte não autorizada; cole o texto com permissão'},403);
+     const cache=caches.default,cacheKey=new Request(url.toString(),{method:'GET'}),hit=await cache.match(cacheKey);
+     if(hit)return hit;
+     try{const r=await fetch(target.toString(),{redirect:'error',headers:{Accept:'text/html,text/plain'},signal:AbortSignal.timeout(10000)});
+       const mime=r.headers.get('content-type')||'',bytes=Number(r.headers.get('content-length')||0);
+       if(!r.ok||bytes>600000||!/(text\/html|text\/plain)/i.test(mime))return json({erro:'Artigo público não acessível'},422);
+       const html=await r.text();if(html.length>600000)return json({erro:'Artigo acima de 600 KB'},413);
+       const plain=html.replace(/<(script|style|noscript|nav|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi,' ')
+         .replace(/<[^>]+>/g,' ').replace(/&(?:nbsp|amp|quot|lt|gt);/g,' ').replace(/\s{2,}/g,' ').trim().slice(0,75000);
+       if(plain.length<150)return json({erro:'Sem texto público aproveitável'},422);
+       const out=Response.json({texto:plain,origem:target.toString(),publico:true},{headers:{...CORS,'Cache-Control':'public,max-age=900,s-maxage=1800'}});
+       ctx.waitUntil(cache.put(cacheKey,out.clone()));return out;
+     }catch{return json({erro:'Extração indisponível; cole texto autorizado'},503)}
+   }
+
 
   // v773 — reduzir companyfacts SEC na borda: 1 download oficial, resposta XBRL compacta.
   // Nem Supabase nem cliente baixam JSON volumoso; nenhuma credencial via cache público.
