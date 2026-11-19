@@ -1,5 +1,5 @@
 {
-  "version": 793,
+  "version": 794,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -59,7 +59,8 @@
     "binance-stream-v790.js": "src/analysis/binance-stream-v790.js",
     "feed-finnhub-v791.js": "src/analysis/feed-finnhub-v791.js",
     "corporate-candles-v792.js": "src/analysis/corporate-candles-v792.js",
-    "source-health-v793.js": "src/analysis/source-health-v793.js"
+    "source-health-v793.js": "src/analysis/source-health-v793.js",
+    "historico-qualidade-v794.js": "src/analysis/historico-qualidade-v794.js"
   },
   "templates": {
     "index.html": "src/index.html",

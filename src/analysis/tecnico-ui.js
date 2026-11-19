@@ -91,10 +91,11 @@ async function candles(asset,tf,signal){
  const response=await fetch(url,{signal,cache:'force-cache'});
  const payload=await response.json().catch(()=>({}));
  if(!response.ok||!payload.ok)throw Error(payload.error||'Candles HTTP '+response.status);
+ const quality=w.DiarioHistoricoQualidade?.audit(payload,{ticker:asset.ticker,market:asset.market,tf,now:Date.now(),contract:w.DiarioFeedContrato});
+ if(!quality?.valid)throw Error('Histórico não homologado: '+String(quality?.reason||'sem módulo de auditoria').slice(0,120));
   if(!barrasRecentes(payload.candles,asset,tf)||(tf==='1d'&&payload.candles.length<400))
   throw Error('Não confirmado / Não calculável — OHLCV diário incompleto, mínimo 400 barras');
- const adjusted=Array.isArray(payload.adjustedCandles)&&payload.adjustedCandles.length===payload.candles.length?
-  payload.adjustedCandles:null;
+ const adjusted=quality.adjustedVerified&&Array.isArray(quality.adjustedCandles)?quality.adjustedCandles:null;
  const result={candles:payload.candles,adjustedCandles:adjusted,source:payload.source,fetchedAt:payload.fetchedAt};
  void store(key,result);return result;
 }
