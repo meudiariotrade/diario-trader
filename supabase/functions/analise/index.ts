@@ -4,7 +4,7 @@ import '../_shared/jornal-quality.js';
 const JORNAL_Q = (globalThis as any).DiarioJornalQualidade;
 import { numerosFato, validaRelatorio, textoTecnicoConfere } from './validacao.ts';
 import { fatosTecnicos, revisaTecnica, VERSAO_CONSISTENCIA, INSTRUCAO_CONSISTENCIA } from '../_shared/consistencia-tecnica.ts';
-import { gerarTexto, status as iaStatus } from '../_shared/ai-router.ts';
+import { gerarTexto, status as iaStatus, especializarSistema } from '../_shared/ai-router.ts';
 export { numerosFato, validaRelatorio };
 
 /** Calendário B3: fins de semana, feriados fixos, móveis e encerramentos de fim de ano. */
@@ -3985,6 +3985,7 @@ async function gemini(system: string, parts: any[], opt: { json?: boolean; searc
   }
 }
 async function geminiG(system: string, parts: any[], opt: { json?: boolean; search?: boolean; model?: string; ate?: number; temp?: number } = {}) {
+  system=especializarSistema(system);
   if (!GEMINI_KEY) throw new Error('GEMINI_API_KEY não configurada no Supabase.');
   let modelo = modeloAtual(opt.model || MODELO);
   const ate = opt.ate || Date.now() + PRAZO_MS;
