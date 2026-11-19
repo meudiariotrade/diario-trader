@@ -3228,3 +3228,14 @@ try {
     candles: "v305",
   });
 } catch {}
+
+/* v805 — Entrada exclusiva em Estudos; sem telas zumbis. */
+;(function(){
+ const antigo=vEstudos;
+ vEstudos=function(){
+  if(ESV==='brain')return '<h1>Estudos</h1>'+(window.DiarioCerebroIA?.view()||'<p>Carregando biblioteca...</p>');
+  const html=antigo.apply(this,arguments);
+  return typeof html==='string'?html.replace('<h1>Estudos</h1>','<h1>Estudos</h1><button type="button" class="btn s" data-brain-open="1" style="margin:8px 0;min-height:44px">Cérebro da IA</button>'):html;
+ };
+ document.addEventListener('click',ev=>{const el=ev.target.closest?.('[data-brain-open]');if(!el||tab!=='estudos')return;ev.preventDefault();ESV='brain';render();void window.DiarioCerebroIA?.enter?.();});
+})();
