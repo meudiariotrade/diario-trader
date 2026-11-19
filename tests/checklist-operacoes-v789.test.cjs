@@ -55,7 +55,7 @@ test("v789: preparo exige campos concretos, não apenas checks antigos",()=>{
 test("v789: pós-pregão reabre após novo trade ou pendência",()=>{
   const post=vm.runInNewContext(block(rot,"function gateEstado158(hour) {","/* v789: valida o blob")+"\ngateEstado158",
     {S:{days:{"2026-11-19":{posop:1000}}},GATE_D:()=> "2026-11-19",
-     gateHoje:()=> [{u:1500,dt:"2026-11-19T09:30",entry:168880,stop:168805,exit:169055,pin:"img1",pout:"img2",rules:"s"}],
+     gateHoje:()=> [{u:1500,dt:"2026-11-19T09:30",entry:168880,stop:168805,target:169000,exit:169055,pin:"img1",pout:"img2",rules:"s"}],
      numN:engine.numN,calc:engine.calc,Number,String,Date});
   assert.equal(post(18).tipo,"tarde");
   assert.equal(post(18).falta.length,0);
