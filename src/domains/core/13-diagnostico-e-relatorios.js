@@ -861,11 +861,11 @@ function plExec(e) {
         ? `Passou do limite de perda (${money(r)})`
         : "Respeitou o limite de perda",
     ]);
-  const i = o.filter((l) => l.t.rules === "n").length;
+  const i = o.filter((l) => l.t.rules !== "s").length;
   return (
     s.push([
       !i,
-      i ? `${i} trade(s) quebrando regra` : "Nenhuma regra quebrada",
+      i ? `${i} trade(s) com regra quebrada ou não avaliada` : "Todas as regras avaliadas e seguidas",
     ]),
     { L: s, nota: s.length ? s.filter((l) => l[0]).length / s.length : null }
   );
@@ -2460,7 +2460,7 @@ ${s ? `<div class="tbbulk"><b>${s} selecionado(s)</b><input id="tbbs" placeholde
         l = r.c,
         d = l.pl == null;
       return `<tr class="${TB.sel.has(i.id) ? "sel" : ""}"><td><input type="checkbox" data-tbs="${esc(i.id)}"${TB.sel.has(i.id) ? " checked" : ""}></td><td class="nw">${esc(String(i.dt).slice(8, 10) + "/" + String(i.dt).slice(5, 7) + " " + String(i.dt).slice(11, 16))}</td><td><b>${esc(i.ativo || "")}</b></td><td>${i.side === "V" ? "Venda" : "Compra"}</td><td class="n">${esc(i.qty || "")}</td><td class="n">${esc(i.entry || "")}</td><td class="n r">${esc(i.stop || "")}</td><td class="n">${esc(i.exit || "")}</td><td class="n ${d ? "" : cls(l.pl)}"><b>${d ? "aberta" : mT(i, l.pl)}</b></td><td class="n">${l.r == null ? "–" : f2(l.r)}</td>
-<td><input class="tbin" data-tbe="${esc(i.id)}|setup" value="${esc(i.setup || "")}"></td><td><select class="tbin" data-tbe="${esc(i.id)}|err">${n(i.err || "Nenhum")}</select></td><td><select class="tbin" data-tbe="${esc(i.id)}|rules"><option value="s"${i.rules !== "n" ? " selected" : ""}>seguiu</option><option value="n"${i.rules === "n" ? " selected" : ""}>quebrou</option></select></td><td><button class="btn s" data-a="edit" data-id="${esc(i.id)}" style="padding:4px 9px">Abrir</button></td></tr>`;
+<td><input class="tbin" data-tbe="${esc(i.id)}|setup" value="${esc(i.setup || "")}"></td><td><select class="tbin" data-tbe="${esc(i.id)}|err">${n(i.err || "Nenhum")}</select></td><td><select class="tbin" data-tbe="${esc(i.id)}|rules"><option value=""${!["s","n"].includes(i.rules) ? " selected" : ""}>avaliar</option><option value="s"${i.rules === "s" ? " selected" : ""}>seguiu</option><option value="n"${i.rules === "n" ? " selected" : ""}>quebrou</option></select></td><td><button class="btn s" data-a="edit" data-id="${esc(i.id)}" style="padding:4px 9px">Abrir</button></td></tr>`;
     })
     .join(
       "",

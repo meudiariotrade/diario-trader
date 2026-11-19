@@ -3627,7 +3627,7 @@ function mesNum(e, t) {
     dd: u,
     diasPos: f.filter((I) => I > 0).length,
     diasNeg: f.filter((I) => I < 0).length,
-    regras: n ? a.filter((I) => I.rules !== "n").length / n : null,
+    regras: n ? a.filter((I) => I.rules === "s").length / n : null,
     erros: Object.entries(x).sort((I, J) => I[1].pl - J[1].pl),
     setups: Object.entries(v).sort((I, J) => J[1].pl - I[1].pl),
     tipos: g,

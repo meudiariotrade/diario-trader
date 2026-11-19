@@ -5070,7 +5070,7 @@ try {
           a = n.reduce((r, f) => r + f.c.r, 0),
           l = e.filter((r) => r.c.pl > 0).length,
           i = e.filter(
-            (r) => r.rules !== "n" && !(r.err && r.err !== "Nenhum"),
+            (r) => r.rules === "s" && !(r.err && r.err !== "Nenhum"),
           ).length,
           o = e.reduce((r, f) => r + f.c.pl, 0);
         return {
@@ -5516,7 +5516,7 @@ try {
       if (!a || !a.n)
         return `<div class="card v430-vt" data-v430vt="1">${v}<p class="v430-mut">Nenhum trade encerrado neste período.</p></div>`;
       const i = a.n
-          ? t.filter((o) => o.rules !== "n" && !(o.err && o.err !== "Nenhum"))
+          ? t.filter((o) => o.rules === "s" && !(o.err && o.err !== "Nenhum"))
               .length / a.n
           : null,
         u = a.nR
