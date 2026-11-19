@@ -1,4 +1,4 @@
-import { gerarTexto } from '../_shared/ai-router.ts';
+import { gerarTexto, especializarSistema, contextoPrivadoTrading } from '../_shared/ai-router.ts';
 import { validarMentor, SISTEMA_MENTOR } from './mentor-pdf.ts';
 // Função AULAS — gera videoaulas a partir do texto de capítulos de um livro (Gemini).
 // O app extrai o texto do PDF no aparelho e manda um capítulo por chamada:
@@ -166,6 +166,7 @@ async function modelos(): Promise<string[]> {
   return ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
 }
 async function gemini(prompt: string, sistema: string, prazoMs: number): Promise<any> {
+  sistema=especializarSistema(sistema);
   const fim = Date.now() + prazoMs; let ultimo = ''; const falhas: string[] = [];
   const fila = [...(await modelos())]; fila.push(fila[fila.length - 1]); // o último (o que costuma ter cota) ganha uma segunda chance
   for (const modelo of fila) {
