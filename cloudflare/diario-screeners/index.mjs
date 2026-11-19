@@ -31,7 +31,7 @@ export default {
    const cik=url.searchParams.get('cik')||'';
    if([...url.searchParams.keys()].some(k=>k!=='cik')||!/^[0-9]{10}$/.test(cik))
     return json({error:'CIK obrigatório'},400);
-   const key=new Request(url.origin+'/v1/sec-xbrl?cik='+cik+'&revision=v777');
+   const key=new Request(url.origin+'/v1/sec-xbrl?cik='+cik+'&revision=v782-concepts');
    const cache=caches.default,hit=await cache.match(key);
    if(hit)return conditional(request,hit,true);
    try{
@@ -48,14 +48,15 @@ export default {
     const source=JSON.parse(raw);
     if(Number(source?.cik)!==Number(cik)||!source?.facts)return json({error:'CIK/XBRL inválido'},502);
     const concepts={
-     'us-gaap':['Assets','StockholdersEquity','Liabilities','NetIncomeLoss','Revenues',
+     'us-gaap':['Assets','AssetsCurrent','LiabilitiesCurrent','StockholdersEquity','Liabilities','CashAndCashEquivalentsAtCarryingValue','LongTermDebtNoncurrent','LongTermDebtCurrent','OperatingIncomeLoss','NetIncomeLoss','Revenues',
       'RevenueFromContractWithCustomerExcludingAssessedTax','RevenueFromContractWithCustomerIncludingAssessedTax',
-      'SalesRevenueNet','EarningsPerShareDiluted','NetCashProvidedByUsedInOperatingActivities',
+      'SalesRevenueNet','EarningsPerShareBasic','EarningsPerShareDiluted','WeightedAverageNumberOfDilutedSharesOutstanding','WeightedAverageNumberOfSharesOutstandingBasic','CommonStockSharesOutstanding','PaymentsOfDividends','NetCashProvidedByUsedInOperatingActivities',
       'PaymentsToAcquirePropertyPlantAndEquipment'],
-     'ifrs-full':['Assets','Equity','Liabilities','ProfitLoss','Revenue',
+     'ifrs-full':['Assets','CurrentAssets','CurrentLiabilities','Equity','EquityAttributableToOwnersOfParent','Liabilities','CashAndCashEquivalents','ProfitLoss','Revenue',
       'RevenueFromContractsWithCustomers','ProfitLossAttributableToOwnersOfParent',
-      'DilutedEarningsLossPerShare','CashFlowsFromUsedInOperatingActivities',
-      'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities']
+      'BasicEarningsLossPerShare','DilutedEarningsLossPerShare','WeightedAverageShares','CashFlowsFromUsedInOperatingActivities',
+      'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities','DividendsPaidClassifiedAsFinancingActivities'],
+     'dei':['EntityCommonStockSharesOutstanding']
     };
     const eligible=new Set(['10-K','10-Q','10-K/A','10-Q/A','20-F','40-F','20-F/A','40-F/A']);
     const minimum=new Date(Date.now()-4*366*86400000).toISOString().slice(0,10);
@@ -65,10 +66,14 @@ export default {
      for(const tag of tags){
       const units=source.facts[group]?.[tag]?.units||{},selected={};
       for(const [unit,rows] of Object.entries(units)){
-       if(!/^(USD|EUR|CAD|GBP|BRL|CHF|JPY)(?:\/shares)?$/.test(unit)||!Array.isArray(rows))continue;
+       const shareTags=new Set(['CommonStockSharesOutstanding','WeightedAverageNumberOfDilutedSharesOutstanding','WeightedAverageNumberOfSharesOutstandingBasic','WeightedAverageShares','EntityCommonStockSharesOutstanding']);
+       const epsTags=new Set(['EarningsPerShareBasic','EarningsPerShareDiluted','BasicEarningsLossPerShare','DilutedEarningsLossPerShare']);
+       const allowed=shareTags.has(tag)?unit==='shares':epsTags.has(tag)?/^(USD|EUR|CAD|GBP|BRL|CHF|JPY)\/shares$/.test(unit):/^(USD|EUR|CAD|GBP|BRL|CHF|JPY)$/.test(unit);
+       if(!allowed||!Array.isArray(rows))continue;
        const valid=rows.filter(r=>eligible.has(String(r.form))&&
         /^\d{4}-\d{2}-\d{2}$/.test(String(r.end||''))&&r.end>=minimum&&r.end<=today&&
-        /^\d{4}-\d{2}-\d{2}$/.test(String(r.filed||''))&&r.filed<=today&&
+        /^\d{4}-\d{2}-\d{2}$/.test(String(r.filed||''))&&r.filed>=r.end&&r.filed<=today&&
+        (r.start==null||(/^\d{4}-\d{2}-\d{2}$/.test(String(r.start))&&r.start<=r.end))&&
         /^\d{10}-\d{2}-\d{6}$/.test(String(r.accn||''))&&
         typeof r.val==='number'&&Number.isFinite(r.val));
        valid.sort((a,b)=>b.filed.localeCompare(a.filed)||b.end.localeCompare(a.end));
@@ -76,7 +81,8 @@ export default {
        const quarterly=valid.filter(r=>/^(10-Q)/.test(r.form)).slice(0,20);
        const dedup=new Map();
        for(const r of [...annual,...quarterly])dedup.set(r.accn+'|'+r.end+'|'+(r.start||'')+'|'+r.form,{
-        accn:r.accn,form:r.form,start:r.start||null,end:r.end,filed:r.filed,val:r.val});
+        accn:r.accn,form:r.form,start:r.start||null,end:r.end,filed:r.filed,val:r.val,
+        fy:Number.isInteger(r.fy)?r.fy:null,fp:typeof r.fp==='string'?r.fp.slice(0,4):null,frame:typeof r.frame==='string'?r.frame.slice(0,32):null});
        if(dedup.size)selected[unit]=[...dedup.values()];
       }
       if(Object.keys(selected).length)result[tag]={units:selected};
@@ -85,7 +91,7 @@ export default {
     }
     if(!Object.keys(facts).length)return json({error:'Sem conceitos XBRL aceitos (não inferir métricas)'},404);
     const body={cik:Number(cik),entityName:String(source.entityName||'').slice(0,140),facts,
-     fonte_oficial:urlSec,transformacao:'sec-xbrl-compact-v777'};
+     fonte_oficial:urlSec,transformacao:'sec-xbrl-compact-v782'};
     const out=Response.json(body,{headers:{...CORS,
      'Cache-Control':'public, max-age=43200, s-maxage=43200',
      'X-Screeners-Cache':'MISS','X-Snapshot-Source':'sec-edgar-xbrl-compact',
