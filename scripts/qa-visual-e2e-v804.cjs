@@ -58,6 +58,7 @@ async function measure(page) {
    resolve({
     mutationCount,rootReplacements,cls:Math.round(cls*10000)/10000,layoutShifts,
     overflowPx:Math.max(0,root.scrollWidth-viewport),overflowElements:bad,
+    invalidSvgPaths:[...document.querySelectorAll('svg path[d]')].filter(p=>!/^[Mm]/.test((p.getAttribute('d')||'').trim())).slice(0,8).map(p=>({d:p.getAttribute('d'),html:p.parentElement?.outerHTML.slice(0,400)})),
     topMutationTargets:Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5),
     visibleButtons:[...document.querySelectorAll('#app button')].filter(el=>el.getBoundingClientRect().height>0&&!el.disabled).length,
     appChildren:app?.children.length||0,renderedText:(app?.innerText||'').trim().slice(0,100)
@@ -66,7 +67,7 @@ async function measure(page) {
  }));
 }
 function statusOf(r){
- if(r.error||r.pageErrors.length||r.localHttpErrors.length||r.metrics?.overflowPx>1||r.metrics?.cls>0.1||!r.metrics?.appChildren)return 'FALHA/REVISÃO';
+ if(r.error||r.pageErrors.length||r.localHttpErrors.length||r.metrics?.overflowPx>1||r.metrics?.cls>0.1||!r.metrics?.appChildren||r.metrics?.invalidSvgPaths?.length)return 'FALHA/REVISÃO';
  if(r.consoleErrors.length)return 'ALERTA NO CONSOLE / REVISÃO';
  if(r.metrics?.rootReplacements>30||r.metrics?.mutationCount>600)return 'SUSPEITA DE RE-RENDER';
  return 'SEM FALHA DETECTADA (DEMO)';
@@ -92,9 +93,10 @@ async function renderPDF(browser, rows){
  for(const r of rows){
   let src='';
   if(fs.existsSync(r.screenshot))src='data:image/png;base64,'+fs.readFileSync(r.screenshot).toString('base64');
-  const data=r.metrics||{},issues=[...r.pageErrors,...r.localHttpErrors,...r.consoleErrors.slice(0,5),...(r.error?[r.error]:[])];
+  const data=r.metrics||{},issues=[...r.pageErrors,...r.localHttpErrors,...r.consoleErrors.slice(0,5),...(data.invalidSvgPaths||[]).slice(0,2).map(x=>'SVG inválido: '+x.html),...(r.error?[r.error]:[])];
   const detail=[
    'Erros de console: '+r.consoleErrors.length,
+   'SVG inválidos: '+(data.invalidSvgPaths?.length||0),
    'Mutações: '+(data.mutationCount??'n/a'),
    'Substituições na raiz: '+(data.rootReplacements??'n/a'),
    'CLS 6s: '+(data.cls??'n/a'),
