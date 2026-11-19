@@ -29,12 +29,12 @@ test('v774: backtest 5 trades não é suficiente; holdout/intervalo e ajuste nã
   assert.notEqual(entry.status,'homologado');
  }
  const ui=src('src/analysis/tecnico-ui.js');
- assert.match(ui,/tecnico-worker\.js\?v=774/);
- assert.match(ui,/version:'tecnico-774\.1'/);
+ assert.match(ui,/tecnico-worker\.js\?v=779/);
+ assert.match(ui,/version:'tecnico-779\.1'/);
  assert.match(ui,/adjustedVerified:false/);
 });
 test('v774: sintaxe mantém gráfico, cliente e PDF sem mudanças visuais',()=>{
  for(const file of ['src/analysis/tecnico-engine.js','src/analysis/tecnico-worker.js','src/analysis/tecnico-ui.js','src/analysis/tecnico-pdf.js'])
   new vm.Script(src(file),{filename:file});
- assert.equal(M.VERSION,'tecnico-774.1');
+ assert.equal(M.VERSION,'tecnico-779.1');
 });
