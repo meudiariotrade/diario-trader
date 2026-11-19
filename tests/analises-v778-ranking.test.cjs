@@ -29,9 +29,9 @@ test('v778: valores extremos/projeções não produzem homologação automática
 });
 test('v778: ranking EUA exige XBRL identificado, além de protocolo SEC e fórmula',()=>{
  const valid=us(),analysis=I.diagnostics('US',valid);
- assert.equal(analysis.validated,true);
+ assert.equal(analysis.validated,false,'Apenas identificador Companyfacts não certifica a linhagem das métricas');
  assert.equal(analysis.secXbrlIdentificado,true);
- assert.equal(T.generate('US',[valid],I).entries.length,1);
+ assert.equal(T.generate('US',[valid],I).entries.length,0,'sem provas individuais de EPS, receita e FCF');
  const undocumented={...valid,sec_source_url:null,sec_facts_at:null};
  assert.equal(I.diagnostics('US',undocumented).secXbrlIdentificado,false);
  assert.equal(T.generate('US',[undocumented],I).entries.length,0);

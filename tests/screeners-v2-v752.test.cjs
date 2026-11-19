@@ -33,9 +33,10 @@ test('US v2 usa pesos novos sem precisar de short interest/buyback',()=>{
  assert.deepEqual(intelligence.weights.US.map(x=>x.weight),[30,30,25,15]);
  row.score_quant_us=+intelligence.calculate('US',row).reduce((a,x,i)=>a+x*intelligence.weights.US[i].weight/100,0).toFixed(2);
  const d=intelligence.diagnostics('US',row);
- assert.equal(d.validated,true);
+ assert.equal(d.validated,false,'Identificador XBRL sem provas individuais não homologa métricas');
  assert.equal(d.difference,0);
- assert.equal(ranking.generate('US',[row],intelligence).entries.length,1);
+ assert.ok(d.lineageAudit.missing.length>=2);
+ assert.equal(ranking.generate('US',[row],intelligence).entries.length,0);
 });
 test('Ranking escolhe a classe de maior liquidez por emissor e não altera Carteira',()=>{
  const today=new Date().toISOString().slice(0,10);
