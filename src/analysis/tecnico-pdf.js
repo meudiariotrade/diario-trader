@@ -311,7 +311,7 @@ function desenharGrafico(r,x,kind,tf,candles){
   if(Array.isArray(d)&&d.length===2&&d.every(positivo)){
    const top=Math.min(py(d[0]),py(d[1])),bot=Math.max(py(d[0]),py(d[1]));
    ctx.fillStyle='rgba(8,153,129,.10)';ctx.fillRect(L,top,plotW,Math.max(1,bot-top));
-   ctxText('DEFESA / FILÉ MIGNON · ZONA CONDICIONAL',L+8,top+21,15,rise);
+   // Apenas o sombreamento marca a zona de defesa; todos os rótulos ficam na escala direita.
   }
   for(const z of fibLevels){
    const val=z.r||0,name=z.r>1?'Exp '+(z.r*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%':
