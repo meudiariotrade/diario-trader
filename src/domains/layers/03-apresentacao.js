@@ -971,6 +971,108 @@ try {
           }
         }, 1e3),
       ));
+
+    /* v789: editor no próprio Meu dia; não remonta abas antigas do plano. */
+    let planoAberto789 = false;
+    function planoIntegrado789(data, dia) {
+      const p = dia.pl2 || {}, cl = dia.cl || {};
+      const esc789 = (x) => b(x == null ? "" : String(x));
+      const field = (key, label, val, numeric = true) => '<label style="min-width:0;display:block;font-size:13px">' +
+        label + '<input data-v789-field="' + key + '" value="' + esc789(val) + '" ' +
+        (numeric ? 'type="number" inputmode="decimal" min="0" step="any"' : 'type="text"') +
+        ' style="width:100%;min-height:44px;font-size:16px;margin-top:4px"></label>';
+      const option = (value, label, selected) => '<option value="' + value + '"' +
+        (selected === value ? ' selected' : '') + '>' + label + '</option>';
+      const modes = [["dt","Day trade"],["sw","Swing"],["op","Opções"],["ex","EUA/Forex"]];
+      const lack = typeof preparacaoPendente789 === "function" ? preparacaoPendente789(dia) : [];
+      const checklist = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
+        modes.map(([key, label]) => '<button type="button" class="btn s' + ((p.mods||[]).includes(key)?' on':'') +
+          '" style="min-height:44px" data-v789-mode="' + key + '" aria-pressed="' + ((p.mods||[]).includes(key)) + '">' + label + '</button>').join("") + '</div>';
+      return '<details id="v789-plano" data-v789-day="' + esc789(data) + '" class="v789-plano" ' +
+        (planoAberto789 ? 'open ' : '') +
+        'style="background:#11141B;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E;padding:12px 14px;color:inherit">' +
+        '<summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;color:#D4A017;font-weight:700">Editar preparação do dia <span>' +
+        (dia.ckok ? 'Concluída' : lack.length ? lack.length + ' pendência(s)' : 'Pronto para concluir') + '</span></summary>' +
+        '<div class="g2" style="margin-top:10px;gap:8px">' +
+        field("metaDia","Meta diária (R$)",dia.metaDia) +
+        field("maxP","Perda máxima (R$)",dia.maxP) +
+        field("max","Máximo de trades",p.max) +
+        '<label style="font-size:13px">Viés do dia<select data-v789-field="vies" style="min-height:44px;font-size:16px;width:100%;margin-top:4px">' +
+        [["","Escolher"],["compra","Compra"],["venda","Venda"],["neutro","Neutro"]].map(([v,t])=>option(v,t,p.vies||"")).join("") +
+        '</select></label></div>' +
+        '<div style="margin-top:10px;font-size:13px;font-weight:700">Foco operacional</div>' + checklist +
+        '<label style="display:block;margin-top:10px;font-size:13px">Como estou hoje? (1 a 5)<select data-v789-field="estado" style="min-height:44px;width:100%;font-size:16px">' +
+        [["","Escolher"],["1","1 — Muito mal"],["2","2 — Mal"],["3","3 — Neutro"],["4","4 — Bem"],["5","5 — Muito bem"]].map(([v,t])=>option(v,t,String(dia.estado||""))).join("") +
+        '</select></label>' +
+        '<label style="display:flex;align-items:center;min-height:44px;gap:8px;font-size:14px;margin-top:8px"><input type="checkbox" data-v789-stop ' +
+        (cl.p_stop?'checked ':'') + '> Confirmei que definirei stop e alvo antes das entradas</label>' +
+        '<label style="display:block;font-size:13px;margin-top:8px">Cenário e níveis (opcional)<textarea data-v789-field="txt" style="width:100%;min-height:70px;font-size:16px">' + esc789(p.txt) + '</textarea></label>' +
+        '<p style="font-size:13px;margin:10px 0;color:#aeb3bd">' + (lack.length ? 'Pendente: ' + esc789(lack.join(", ")) : 'Dados obrigatórios preenchidos. Confira antes de concluir.') + '</p>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" style="min-height:44px" data-v789-action="save">Salvar plano</button>' +
+        '<button type="button" class="btn" style="min-height:44px" data-v789-action="complete">' +
+        (dia.ckok ? 'Preparação concluída' : 'Concluir preparação do dia') + '</button></div></details>';
+    }
+    function salvaPlano789(completar = false) {
+      const root = v.querySelector("#v789-plano");
+      if (!root) return false;
+      const data = root.dataset.v789Day;
+      if (data !== ft() || data < V()) return false;
+      const base = S.days[data] ?? (S.days[data] = { chk: {} });
+      const dia = Tt() ? (base.us ?? (base.us = {})) : base;
+      const p = dia.pl2 ?? (dia.pl2 = {});
+      const value = (key) => root.querySelector('[data-v789-field="' + key + '"]')?.value ?? "";
+      for (const key of ["metaDia","maxP"]) {
+        const n = Number(value(key));
+        dia[key] = value(key).trim() && n > 0 && Number.isFinite(n) ? n : "";
+      }
+      const max = Number(value("max"));
+      p.max = Number.isInteger(max) && max > 0 ? max : 0;
+      p.vies = value("vies");
+      p.txt = value("txt");
+      p.mods = [...root.querySelectorAll("[data-v789-mode].on")].map(el => el.dataset.v789Mode);
+      dia.estado = Number(value("estado")) || 0;
+      dia.cl ??= {};
+      dia.cl.p_meta = Number(dia.metaDia) > 0;
+      dia.cl.p_limite = Number(dia.maxP) > 0;
+      dia.cl.p_stop = !!root.querySelector("[data-v789-stop]")?.checked;
+      const pendencias = typeof preparacaoPendente789 === "function" ? preparacaoPendente789(dia) : [];
+      if (completar && pendencias.length) {
+        const p = root.querySelector("p");
+        if (p) p.textContent = "Falta: " + pendencias.join(", ");
+      } else if (completar) dia.ckok = Date.now();
+      dia.u = Date.now();
+      save();
+      planoAberto789 = true;
+      render();
+      if (completar && pendencias.length && typeof toast === "function")
+        toast("Preencha: " + pendencias.join(", "));
+      if (completar && !pendencias.length && typeof toast === "function")
+        toast("Preparo concluído. Bom pregão!");
+      return pendencias.length === 0;
+    }
+    v.addEventListener("click", (ev) => {
+      const abrir = ev.target.closest?.('[data-v4tool="plano"][data-v4route="dia"]');
+      if (abrir) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        planoAberto789 = true;
+        const root = v.querySelector("#v789-plano");
+        if (root) { root.open = true; root.scrollIntoView({behavior:"smooth",block:"center"}); }
+        return;
+      }
+      const mode = ev.target.closest?.("#v789-plano [data-v789-mode]");
+      if (mode) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        mode.classList.toggle("on");
+        mode.setAttribute("aria-pressed",String(mode.classList.contains("on")));
+        return;
+      }
+      const save = ev.target.closest?.("#v789-plano [data-v789-action]");
+      if (save) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        salvaPlano789(save.dataset.v789Action === "complete");
+      }
+    }, true);
+
     function ie() {
       const t = ft(),
         e = ut(t),
@@ -1155,7 +1257,7 @@ try {
           ? `<p class="v4-turno" role="status"><b>Dia de turno</b> <span>${b(TH[c] || "")}</span> · plano: não operar</p>`
           : "";
       }, "");
-      return `<div class="v4-page v4-day">${turno593}${emo589}${y}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
+      return `<div class="v4-page v4-day">${turno593}${emo589}${y}${planoIntegrado789(t, e)}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
     }
     let At = "risk",
       bt = { k: "dt", d: 1 };
