@@ -81,8 +81,10 @@
     role:'gatilho RMC/CISD — não redesenha grade macro'}:null;
   const segment={from:a.p,to:b.p,age:best.age,length,ret,ext,neg:negatives,
    anchorFromIndex:a.i,anchorToIndex:b.i,macroConfirmed:true};
-  const defense=dir===1?[ret.find(z=>z.r===.618).price,ret.find(z=>z.r===.764).price]:
-   [ret.find(z=>z.r===.764).price,ret.find(z=>z.r===.618).price];
+  // Retração de 61,8–76,4% é medida a partir da extremidade 100% da perna:
+  // na grade 0%=fundo / 100%=topo corresponde aos níveis 38,2%–23,6%.
+  const retreat=[ret.find(z=>z.r===.382).price,ret.find(z=>z.r===.236).price];
+  const defense=[Math.min(...retreat),Math.max(...retreat)];
   const min=Math.min(...defense),max=Math.max(...defense),price=c.at(-1).c;
   const gaps=fibogaps(c,dir),relevantGap=gaps.slice().reverse().find(x=>x.low<=max&&x.high>=min)||null;
   const gapZone=relevantGap?[round(Math.max(min,relevantGap.low)),round(Math.min(max,relevantGap.high))]:null;
@@ -91,7 +93,7 @@
    fibogap:relevantGap!==null,gapZone,segments:[segment,micro],levels,
    macroConfirmed:true,macroSpan:window,anchor:{from:a.p,to:b.p,fromIndex:a.i,toIndex:b.i},
    expansion:round(expansion,3),exhausted:expansion>=1.414&&expansion<=1.618,
-   defense:[min,max],negativeBase:negatives,stopTolerance:negatives.find(z=>z.r===-.118)?.price,
+   defense:[min,max],defenseRetracement:[.618,.764],negativeBase:negatives,stopTolerance:negatives.find(z=>z.r===-.118)?.price,
    files:defense.map(z=>round(z))};
  }
 
