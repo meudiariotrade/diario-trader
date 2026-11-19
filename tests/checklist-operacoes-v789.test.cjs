@@ -68,3 +68,11 @@ test("v789: captura manual e exportação não dão como comprovado o que não f
   assert.match(view,/planoIntegrado789\(t, e\)/);
   assert.match(view,/data-v789-action="complete"/);
 });
+
+test("v789: preço por ponto de WIN/WDO precisa ser consistente",()=>{
+  const win={ativo:"WINZ26",side:"C",entry:"168880",stop:"168805",exit:"169055",qty:3,pv:0.2};
+  assert.equal(engine.calc({...win,pv:1}).invalidPrice,true);
+  assert.equal(engine.calc(win).invalidPrice,undefined);
+  assert.match(rot,/foto da entrada/);
+  assert.match(rot,/idb\("img","get",key\)/);
+});

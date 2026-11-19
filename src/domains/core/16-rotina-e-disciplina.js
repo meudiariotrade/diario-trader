@@ -454,6 +454,8 @@ function gateEstado158(hour) {
     if (!t.pin) reasons.push("falta a foto da entrada");
     if (numN(t.exit) != null && !t.pout) reasons.push("falta a foto da saída");
     if (numN(t.stop) == null) reasons.push("falta o stop inicial");
+    if (numN(t.target) == null && !/(alvo\s+m[oó]vel|trailing|sem\s+alvo\s+fixo|sa[ií]da\s+por\s+crit[eé]rio)/i.test(String(t.nota || "")))
+      reasons.push("falta alvo ou justificativa de saída dinâmica");
     if (!["s","n"].includes(t.rules)) reasons.push("falta avaliar regras");
     if (t.rules === "n" && !String(t.nota || "").trim() && (!t.err || t.err === "Nenhum"))
       reasons.push("falta justificar quebra de regra");
@@ -464,6 +466,40 @@ function gateEstado158(hour) {
   if (d.posop && !falta.length && !updated) return null;
   return {tipo:"tarde",T0:trades,falta};
 }
+
+/* v789: valida o blob da foto local somente no clique de concluir; zero polling/egress. */
+document.addEventListener("click", async (evt) => {
+  const button = evt.target.closest?.("#gateov [data-gate-ok]");
+  if (!button) return;
+  evt.preventDefault(); evt.stopImmediatePropagation();
+  if (button.disabled) return;
+  const state = gateEstado();
+  if (!state || state.tipo !== "tarde" || state.falta.length) { gateAtualiza(); return; }
+  button.disabled = true;
+  try {
+    const missing = [];
+    for (const t of state.T0) {
+      for (const field of numN(t.exit) != null ? ["pin","pout"] : ["pin"]) {
+        const key = t[field];
+        if (!key) continue;
+        const blob = (typeof M !== "undefined" ? M[key] : null) || await idb("img","get",key);
+        if (!blob) missing.push(String(t.ativo || "Trade") + ": foto " + (field === "pin"?"entrada":"saída") + " não encontrada no aparelho");
+      }
+    }
+    if (missing.length) {
+      const root = document.querySelector("#gateov .gc");
+      root?.insertAdjacentHTML("beforeend",'<p class="r" role="alert">' + esc(missing.join("; ")) +
+        '. Abra a operação e anexe novamente a imagem.</p>');
+      return;
+    }
+    const date = GATE_D(), day = S.days[date] ?? (S.days[date] = {chk:{}});
+    day.posop = Date.now(); day.u = Date.now(); save(); gateAtualiza();
+    toast("Diário de hoje conferido. Bom descanso.");
+  } finally {
+    if (button.isConnected) button.disabled = false;
+  }
+}, true);
+
 function gateManhaHtml(e) {
   const t = e.c || {},
     a = e.cl || {},

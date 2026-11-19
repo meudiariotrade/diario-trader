@@ -1398,7 +1398,10 @@ function calc(e) {
     const avaliado = precoManual789(valor, e.ativo);
     return !avaliado.ok || numN(valor) !== avaliado.numero;
   });
-  return invalido
+  const ticker = String(e.ativo || "").toUpperCase();
+  const pvErrado = /^WIN[A-Z][0-9]{2}$/.test(ticker) ? Math.abs((numN(e.pv) || 0) - .2) > 1e-8
+    : /^WDO[A-Z][0-9]{2}$/.test(ticker) ? Math.abs((numN(e.pv) || 0) - 10) > 1e-8 : false;
+  return invalido || pvErrado
     ? { risk: null, pl: null, r: null, rr: null, semStop: false, invalidPrice: true }
     : { risk: c, pl: p, r: u, rr: m, semStop: s != null && n == null };
 }
