@@ -7,8 +7,8 @@ test('iPhone: navega Técnico Brasil/EUA & Cripto, calcula localmente e desmonta
  const diagnostics={errors:[],warnings:[]};
  page.on('pageerror',e=>diagnostics.errors.push(String(e?.stack||e).slice(0,350)));
  page.on('console',m=>{if(m.type()==='error')diagnostics.warnings.push(m.text().slice(0,250))});
- const anchor=Math.floor((Date.now()-322*86400000)/1000);
- const data=Array.from({length:320},(_,i)=>{
+ const anchor=Math.floor((Date.now()-442*86400000)/1000);
+ const data=Array.from({length:440},(_,i)=>{
   const p=30+i*.10+Math.sin(i/9)*.55;
   return [anchor+i*86400,p,p+1,p-1,p+.10,100000+(i%20)*200];
  });
