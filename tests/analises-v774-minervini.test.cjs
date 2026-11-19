@@ -30,7 +30,7 @@ test('v774: backtest 5 trades não é suficiente; holdout/intervalo e ajuste nã
  }
  const ui=src('src/analysis/tecnico-ui.js');
  assert.match(ui,/tecnico-worker\.js\?v=787/);
- assert.match(ui,/version:'tecnico-787\\.1'/);
+ assert.match(ui,/version:'tecnico-787\.1'/);
  assert.match(ui,/adjustedVerified:false/);
 });
 test('v774: sintaxe mantém gráfico, cliente e PDF sem mudanças visuais',()=>{
