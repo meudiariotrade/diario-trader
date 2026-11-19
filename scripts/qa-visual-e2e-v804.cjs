@@ -67,9 +67,14 @@ async function measure(page) {
   },6000);
  }));
 }
+function isExpectedDemoCsp(message){
+ return /violates the following Content Security Policy directive/.test(message) &&
+  (/embed-widget-ticker-tape\\.js/.test(message) || /s3-symbol-logo\\.tradingview\\.com\\//.test(message)) &&
+  (/script-src 'self'/.test(message) || /img-src 'self' data: blob:/.test(message));
+}
 function statusOf(r){
  if(r.error||r.pageErrors.length||r.localHttpErrors.length||r.metrics?.overflowPx>1||r.metrics?.cls>0.1||!r.metrics?.appChildren||r.metrics?.invalidSvgPaths?.length)return 'FALHA/REVISÃO';
- if(r.consoleErrors.length)return 'ALERTA NO CONSOLE / REVISÃO';
+ if(r.consoleErrors.some(e=>!isExpectedDemoCsp(e)))return 'ALERTA NO CONSOLE / REVISÃO';
  if(r.metrics?.rootReplacements>30||r.metrics?.mutationCount>600)return 'SUSPEITA DE RE-RENDER';
  return 'SEM FALHA DETECTADA (DEMO)';
 }
@@ -94,9 +99,10 @@ async function renderPDF(browser, rows){
  for(const r of rows){
   let src='';
   if(fs.existsSync(r.screenshot))src='data:image/png;base64,'+fs.readFileSync(r.screenshot).toString('base64');
-  const data=r.metrics||{},issues=[...r.pageErrors,...r.localHttpErrors,...r.consoleErrors.slice(0,5),...(data.invalidSvgPaths||[]).slice(0,2).map(x=>'SVG inválido: '+x.html),...(r.error?[r.error]:[])];
+  const data=r.metrics||{},issues=[...r.pageErrors,...r.localHttpErrors,...r.consoleErrors.filter(e=>!isExpectedDemoCsp(e)).slice(0,5),...(data.invalidSvgPaths||[]).slice(0,2).map(x=>'SVG inválido: '+x.html),...(r.error?[r.error]:[])];
   const detail=[
-   'Erros de console: '+r.consoleErrors.length,
+   'Erros de console inesperados: '+r.consoleErrors.filter(e=>!isExpectedDemoCsp(e)).length,
+   'Bloqueios CSP esperados no demo: '+r.consoleErrors.filter(isExpectedDemoCsp).length,
    'SVG inválidos: '+(data.invalidSvgPaths?.length||0),
    'Mutações: '+(data.mutationCount??'n/a'),
    'Substituições na raiz: '+(data.rootReplacements??'n/a'),
@@ -108,7 +114,7 @@ async function renderPDF(browser, rows){
   blocks.push('<section class="page"><h2>'+htmlEscape(r.viewport+' · '+r.title)+'</h2><p><b>'+htmlEscape(r.status)+'</b></p><p>'+htmlEscape(detail)+'</p>'+(src?'<img src="'+src+'">':'<p>Captura não disponível</p>')+'<p class="foot">Erros: '+htmlEscape(issues.join(' | ')||'Nenhum erro de JS/local registrado')+'</p></section>');
  }
  const overall=rows.filter(r=>r.status==='SEM FALHA DETECTADA (DEMO)').length;
- const intro='<section class="page"><h1>QA & Layout — Diário de Trader</h1><p>Auditoria E2E em Chromium real, tamanhos 1440×900 e 390×844. Data: '+htmlEscape(new Date().toISOString())+'</p><p>Referência: v805 de release.config.json; navegador servido pelo build da branch de QA.</p><h2>Escopo e limites</h2><p>'+overall+'/'+rows.length+' verificações sem falha detectada no modo DEMO. Nenhuma tela recebeu certificação «APROVADA 100%» sem login real, iPhone Safari físico e correção/reteste das ocorrências.</p><p>Foram capturadas mutações de DOM, CLS durante 6 segundos, exceções JavaScript, erros HTTP locais e overflow global. Cliques destrutivos, operação real e a criação/exclusão de conta de QA NÃO foram executados. O modo demonstração não acessa dados pessoais.</p></section>';
+ const intro='<section class="page"><h1>QA & Layout — Diário de Trader</h1><p>Auditoria E2E em Chromium real, tamanhos 1440×900 e 390×844. Data: '+htmlEscape(new Date().toISOString())+'</p><p>Referência: v805 de release.config.json; navegador servido pelo build da branch de QA.</p><h2>Escopo e limites</h2><p>'+overall+'/'+rows.length+' verificações sem falha detectada no modo DEMO. Nenhuma tela recebeu certificação «APROVADA 100%» sem login real e iPhone Safari físico. No modo DEMO uma segunda política CSP bloqueia propositalmente scripts externos e logotipos TradingView; tais bloqueios são esperados e não equivalem a falha em produção.</p><p>Foram capturadas mutações de DOM, CLS durante 6 segundos, exceções JavaScript, erros HTTP locais e overflow global. Cliques destrutivos, operação real e a criação/exclusão de conta de QA NÃO foram executados. O modo demonstração não acessa dados pessoais.</p></section>';
  const markup='<!doctype html><html><meta charset="utf-8"><style>@page{size:A4;margin:11mm}body{font-family:Arial,sans-serif;color:#152033}h1{font-size:26px}h2{font-size:16px;margin:8px 0}p{font-size:11px;line-height:1.45}.page{page-break-after:always;min-height:260mm;box-sizing:border-box}.page img{max-width:100%;max-height:220mm;object-fit:contain;border:1px solid #ccd1d7}.foot{font-size:9px;color:#555;word-break:break-word}</style><body>'+intro+blocks.join('')+'</body></html>';
  const p=await browser.newPage({viewport:{width:900,height:1200}});
  await p.setContent(markup,{waitUntil:'load'});
@@ -144,6 +150,8 @@ async function main(){
      item.error=String(e.message).slice(0,650);
      try{await page.screenshot({path:item.screenshot,fullPage:false,timeout:8000});}catch{}
     }
+    item.expectedDemoCspBlocks=item.consoleErrors.filter(isExpectedDemoCsp).length;
+    item.unexpectedConsoleErrors=item.consoleErrors.filter(e=>!isExpectedDemoCsp(e));
     item.status=statusOf(item);
     results.push(item);
     process.stdout.write('QA '+device+' '+spec[1]+' '+item.status+' CLS='+String(item.metrics?.cls??'n/a')+' overflow='+String(item.metrics?.overflowPx??'n/a')+'\n');
