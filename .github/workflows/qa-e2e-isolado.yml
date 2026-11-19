@@ -1,0 +1,34 @@
+name: QA E2E isolado - Desktop e iPhone
+on:
+  push:
+    branches: ['qa/e2e-visual-20261119']
+    paths: ['scripts/qa-e2e-live.cjs', '.github/workflows/qa-e2e-isolado.yml']
+permissions:
+  contents: read
+jobs:
+  auditoria:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Preparar navegador
+        run: |
+          diario_browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$diario_browser" ]; then
+            printf 'CHROMIUM_PATH=%s\n' "$diario_browser" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Auditar app publicado com conta descartável
+        run: node scripts/qa-e2e-live.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-e2e-desktop-iphone
+          path: qa-results/
+          retention-days: 3
