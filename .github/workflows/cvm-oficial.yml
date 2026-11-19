@@ -32,7 +32,7 @@ jobs:
       - name: Versionar somente dados públicos auditáveis
         shell: bash
         run: |
-          git add dados-publicos/cvm-dre-*.json dados-publicos/cvm-emissores-*.json
+          git add dados-publicos/cvm-dre-*.json dados-publicos/cvm-emissores-*.json dados-publicos/cvm-demonstracoes-*.json
           if git diff --cached --quiet; then
             echo "Nenhum documento novo"
             exit 0
