@@ -1,5 +1,5 @@
 {
-  "version": 787,
+  "version": 788,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -54,7 +54,8 @@
     "tape-live.js": "src/market/tape-live.js",
     "institutional-v781.js": "src/analysis/institutional-v781.js",
     "xbrl-periodos.js": "src/analysis/xbrl-periodos.js",
-    "feed-contract-v787.js": "src/analysis/feed-contract-v787.js"
+    "feed-contract-v787.js": "src/analysis/feed-contract-v787.js",
+    "feed-profit-v788.js": "src/analysis/feed-profit-v788.js"
   },
   "templates": {
     "index.html": "src/index.html",
