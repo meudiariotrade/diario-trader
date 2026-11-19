@@ -1020,6 +1020,7 @@ try {
       const base = S.days[data] ?? (S.days[data] = { chk: {} });
       const dia = Tt() ? (base.us ?? (base.us = {})) : base;
       const p = dia.pl2 ?? (dia.pl2 = {});
+      const anterior = JSON.stringify({metaDia:dia.metaDia,maxP:dia.maxP,estado:dia.estado,pl2:p,cl:dia.cl});
       const value = (key) => root.querySelector('[data-v789-field="' + key + '"]')?.value ?? "";
       for (const key of ["metaDia","maxP"]) {
         const n = Number(value(key));
@@ -1036,6 +1037,7 @@ try {
       dia.cl.p_limite = Number(dia.maxP) > 0;
       dia.cl.p_stop = !!root.querySelector("[data-v789-stop]")?.checked;
       const pendencias = typeof preparacaoPendente789 === "function" ? preparacaoPendente789(dia) : [];
+      if (!completar && dia.ckok && anterior !== JSON.stringify({metaDia:dia.metaDia,maxP:dia.maxP,estado:dia.estado,pl2:p,cl:dia.cl})) dia.ckok = 0;
       if (completar && pendencias.length) {
         const p = root.querySelector("p");
         if (p) p.textContent = "Falta: " + pendencias.join(", ");

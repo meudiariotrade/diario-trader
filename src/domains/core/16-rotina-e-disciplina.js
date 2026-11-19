@@ -565,6 +565,27 @@ function csvParaLinhas(e) {
   }
   return ((o !== "" || a.length) && (a.push(o), t.push(a)), t);
 }
+
+/* v789: auditoria por trade na exportação, sem embutir fotos privadas. */
+function checklistTradeLinhas789() {
+  const rows = [["Data entrada","Data saída","Ativo","Lado","Qtd.","R$/ponto","Entrada","Stop","Alvo","Saída","Setup","Regras","Foto entrada","Foto saída","Pendências","Risco (R$)","Resultado (R$)","R","Notas"]];
+  for (const t of S.trades || []) {
+    const c=calc(t), miss=[];
+    if (!t.pin) miss.push("foto entrada");
+    if (numN(t.exit)!=null&&!t.pout) miss.push("foto saída");
+    if (numN(t.stop)==null) miss.push("stop inicial");
+    if (!["s","n"].includes(t.rules)) miss.push("avaliar regras");
+    if (t.rules==="n"&&!String(t.nota||"").trim()&&(!t.err||t.err==="Nenhum")) miss.push("justificar quebra");
+    if (c.invalidPrice) miss.push("preço/tick inválido");
+    rows.push([t.dt||"",t.dtx||"",t.ativo||"",t.side==="C"?"Compra":"Venda",t.qty||"",t.pv||"",t.entry||"",t.stop||"",t.target||"",t.exit||"",t.setup||"",
+      t.rules==="s"?"Sim":t.rules==="n"?"Não":"Não avaliada",
+      t.pin?"Referência cadastrada; arquivo não verificado":"Pendente",
+      t.pout?"Referência cadastrada; arquivo não verificado":numN(t.exit)==null?"Aberta":"Pendente",
+      miss.join("; ")||"Sem pendências declaradas",c.risk??"",c.pl??"",c.r??"",t.nota||""]);
+  }
+  return rows;
+}
+
 function checklistLinhas() {
   const e = [
       "data",
@@ -601,8 +622,8 @@ function checklistLinhas() {
         s,
         n.estado || "",
         GATE_PLANO.filter((c) => i[c]).length,
-        a.filter((c) => r[c.id]).length,
-        a.length,
+        (Array.isArray(n._rulesSnapshot?.rules) ? n._rulesSnapshot.rules.filter((c) => c.checked).length : a.filter((c) => r[c.id]).length),
+        (Array.isArray(n._rulesSnapshot?.rules) ? n._rulesSnapshot.rules.length : a.length),
         ["m_umdia", "m_erro", "m_aprend", "m_maior"].filter((c) => i[c]).length,
         n.posop ? "sim" : "não",
         l.length,
@@ -630,6 +651,7 @@ function checklistLinhas() {
     const s = [
         xlsAba("Operações", csvParaLinhas(a)),
         xlsAba("Checklist", checklistLinhas()),
+        xlsAba("Revisao por trade", checklistTradeLinhas789()),
       ],
       n = t === "all" ? "diario-trades.xls" : "diario-trades-" + t + ".xls";
     return saveFile(n, xlsArquivo(s), "application/vnd.ms-excel");
