@@ -33,7 +33,7 @@ const historicalRS=(assets,rsUniverse,benchmarks)=>{
   if(benchmark.length<253)continue;
   const base=M.normalize(benchmark),baseDates=new Map(base.map((bar,i)=>[ymd(bar.t),i]));
   const series=peers.map(a=>{
-   const bars=M.normalize(a.daily||a.candles);
+   const bars=M.normalize(a.adjustedDaily||a.daily||a.candles);
    return {ticker:a.ticker,bars,dates:new Map(bars.map((bar,i)=>[ymd(bar.t),i]))};
   });
   for(const seriesAsset of series){
@@ -75,7 +75,7 @@ self.onmessage=function(event){
  try{
   const list=Array.isArray(data.assets)?data.assets.slice(0,120):[];
   const benchmark=data.benchmarks||{};
-  const scores=list.map(x=>({ticker:safeText(x.ticker),group:x.market==='CRYPTO'?'CRYPTO':x.market==='US'?'US':'BR',raw:perf(x.daily||x.candles)}));
+  const scores=list.map(x=>({ticker:safeText(x.ticker),group:x.market==='CRYPTO'?'CRYPTO':x.market==='US'?'US':'BR',raw:perf(x.adjustedDaily||x.daily||x.candles)}));
    const rsUniverse=data.rsUniverse||{},rsAsOf=String(data.rsAsOf||'');
   const strengths=scores.map(x=>{const base=perf(benchmark[x.group]);return {...x,relative:x.raw===null||base===null?null:x.raw-base}});
   const rsHistories=historicalRS(list,rsUniverse,benchmark);
