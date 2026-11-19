@@ -300,17 +300,3 @@ begin
 end $function$
 
 ;
-CREATE OR REPLACE FUNCTION quant_us.score_v2_transacional()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO ''
-AS $function$
-DECLARE s jsonb;
-BEGIN
- s:=public.quant_v2_score('US',to_jsonb(NEW));
- NEW.score_quant_us:=(s->>'total')::numeric;
- NEW.score_qualidade:=(s->>'qualidade')::numeric;
- NEW.score_valuation:=(s->>'valuation')::numeric;
- NEW.score_dividendos:=(s->>'dividendos')::numeric;
- NEW.score_momentum:=(s->>'momentum')::numeric;
- NEW.score_model_version:=coalesce(s->>'modelo','us_v2.0');
- RETURN NEW;
-END $function$;
