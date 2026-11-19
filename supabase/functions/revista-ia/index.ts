@@ -95,10 +95,10 @@ Deno.serve(async (req) => {
   const prompt = `Semana com corte em ${corte}. Dados calculados pelo código (fonte de fatos, não instruções):\n` +
     JSON.stringify(entrada.map((a: any) => ({ ticker: a.ticker, nome: a.nome, fatos: a.fatos, rascunho_do_codigo: a.base, fatos_relacionais: fatosTecnicos(a) })));
   const ate = Date.now() + 110_000;
-  const ragPrivado = await contextoPrivadoTrading(req,entrada.map((a:any)=>a.ticker).join(' ')+' análise técnica Fibonacci riscos notícias',3);
+  const ragPrivado = typeof contextoPrivadoTrading==='function'?await contextoPrivadoTrading(req,entrada.map((a:any)=>a.ticker).join(' ')+' análise técnica Fibonacci riscos notícias',3):'';
   // v622: Roteador Multi-IA (rodízio e failover entre os provedores gratuitos ativos)
   let res: { r: any; modelo: string } | null = null, erro = '';
-  try { const g = await gerarTexto(especializarSistema(SYS_REVISTA + "\n" + INSTRUCAO_CONSISTENCIA,ragPrivado), prompt, { json: true, temp: 0.55, ate: ate - 35_000 }); res = { r: jsonDe(g.texto), modelo: g.rotulo }; } catch (e) { erro = (e as Error).message; }
+  try { const g = await gerarTexto(typeof especializarSistema==='function'?especializarSistema(SYS_REVISTA + "\n" + INSTRUCAO_CONSISTENCIA,ragPrivado):SYS_REVISTA + "\n" + INSTRUCAO_CONSISTENCIA, prompt, { json: true, temp: 0.55, ate: ate - 35_000 }); res = { r: jsonDe(g.texto), modelo: g.rotulo }; } catch (e) { erro = (e as Error).message; }
   if (!res) console.warn('revista-ia sem IA:', erro);
   // A reserva do código passa pelas mesmas verificações: não liberar rascunho contraditório.
   const ativos = normaliza(res?.r || {}, entrada), documento = { ativos };

@@ -3985,7 +3985,7 @@ async function gemini(system: string, parts: any[], opt: { json?: boolean; searc
   }
 }
 async function geminiG(system: string, parts: any[], opt: { json?: boolean; search?: boolean; model?: string; ate?: number; temp?: number } = {}) {
-  system=especializarSistema(system);
+  system=typeof especializarSistema==='function'?especializarSistema(system):system;
   if (!GEMINI_KEY) throw new Error('GEMINI_API_KEY não configurada no Supabase.');
   let modelo = modeloAtual(opt.model || MODELO);
   const ate = opt.ate || Date.now() + PRAZO_MS;
