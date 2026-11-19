@@ -31,7 +31,7 @@ export default {
    const cik=url.searchParams.get('cik')||'';
    if([...url.searchParams.keys()].some(k=>k!=='cik')||!/^[0-9]{10}$/.test(cik))
     return json({error:'CIK obrigatório'},400);
-   const key=new Request(url.origin+'/v1/sec-xbrl?cik='+cik+'&revision=v773');
+   const key=new Request(url.origin+'/v1/sec-xbrl?cik='+cik+'&revision=v777');
    const cache=caches.default,hit=await cache.match(key);
    if(hit)return conditional(request,hit,true);
    try{
@@ -53,7 +53,9 @@ export default {
       'SalesRevenueNet','EarningsPerShareDiluted','NetCashProvidedByUsedInOperatingActivities',
       'PaymentsToAcquirePropertyPlantAndEquipment'],
      'ifrs-full':['Assets','Equity','Liabilities','ProfitLoss','Revenue',
-      'RevenueFromContractsWithCustomers','ProfitLossAttributableToOwnersOfParent']
+      'RevenueFromContractsWithCustomers','ProfitLossAttributableToOwnersOfParent',
+      'DilutedEarningsLossPerShare','CashFlowsFromUsedInOperatingActivities',
+      'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities']
     };
     const eligible=new Set(['10-K','10-Q','10-K/A','10-Q/A','20-F','40-F','20-F/A','40-F/A']);
     const minimum=new Date(Date.now()-4*366*86400000).toISOString().slice(0,10);
@@ -63,7 +65,7 @@ export default {
      for(const tag of tags){
       const units=source.facts[group]?.[tag]?.units||{},selected={};
       for(const [unit,rows] of Object.entries(units)){
-       if(!['USD','USD/shares'].includes(unit)||!Array.isArray(rows))continue;
+       if(!/^(USD|EUR|CAD|GBP|BRL|CHF|JPY)(?:\/shares)?$/.test(unit)||!Array.isArray(rows))continue;
        const valid=rows.filter(r=>eligible.has(String(r.form))&&
         /^\d{4}-\d{2}-\d{2}$/.test(String(r.end||''))&&r.end>=minimum&&r.end<=today&&
         /^\d{4}-\d{2}-\d{2}$/.test(String(r.filed||''))&&r.filed<=today&&
@@ -83,7 +85,7 @@ export default {
     }
     if(!Object.keys(facts).length)return json({error:'Sem conceitos XBRL aceitos (não inferir métricas)'},404);
     const body={cik:Number(cik),entityName:String(source.entityName||'').slice(0,140),facts,
-     fonte_oficial:urlSec,transformacao:'sec-xbrl-compact-v773'};
+     fonte_oficial:urlSec,transformacao:'sec-xbrl-compact-v777'};
     const out=Response.json(body,{headers:{...CORS,
      'Cache-Control':'public, max-age=43200, s-maxage=43200',
      'X-Screeners-Cache':'MISS','X-Snapshot-Source':'sec-edgar-xbrl-compact',
