@@ -217,12 +217,15 @@ export default {
        parse:b=>Array.isArray(b)?b.map(x=>[Math.floor(Number(x[0])/1000),Number(x[1]),Number(x[2]),Number(x[3]),Number(x[4]),Number(x[5])]):[]}
      ];
      const errors=[];
+     // Séries diárias <400 barras não suportam o aquecimento/RS deste motor. 
+     // Não encerrar na primeira API OKX com apenas 300 barras: tentar Kraken/MEXC.
+     const minimumSourceBars=tf==='1d'?401:210;
      for(const provider of sources){
       try{
        const resp=await fetch(provider.url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(8000)});
        if(!resp.ok){errors.push(provider.name+' HTTP '+resp.status);continue}
        const data=provider.parse(await resp.json()).filter(x=>x.every(Number.isFinite)&&x[0]>0&&x[1]>0&&x[4]>0&&x[2]>=Math.max(x[1],x[4])&&x[3]>0&&x[3]<=Math.min(x[1],x[4])&&x[5]>=0);
-       if(data.length<210){errors.push(provider.name+' histórico incompleto');continue}
+       if(data.length<minimumSourceBars){errors.push(provider.name+' histórico incompleto ('+data.length+'/'+minimumSourceBars+')');continue}
        items=data.sort((a,b)=>a[0]-b[0]).slice(-600);
        source=provider.name;
        break;

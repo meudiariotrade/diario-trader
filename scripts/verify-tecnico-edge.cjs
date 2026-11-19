@@ -26,7 +26,7 @@ async function check(ticker,market,tf,min){
 (async()=>{
  if(!/^https:\/\/[a-z0-9.-]+\.workers\.dev$/.test(origin))throw Error('Origem da borda não autorizada');
  await check('BTCUSDT','CRYPTO','15m',210);
- await check('BTCUSDT','CRYPTO','1d',252);
- await check('PETR4','BR','1d',252);
- await check('AAPL','US','1d',252);
+ await check('BTCUSDT','CRYPTO','1d',400);
+ await check('PETR4','BR','1d',400);
+ await check('AAPL','US','1d',400);
 })().catch(e=>{console.error('Gate Cloudflare falhou: '+e.message);process.exitCode=1});
