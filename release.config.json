@@ -1,5 +1,5 @@
 {
-  "version": 790,
+  "version": 791,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -56,7 +56,8 @@
     "xbrl-periodos.js": "src/analysis/xbrl-periodos.js",
     "feed-contract-v787.js": "src/analysis/feed-contract-v787.js",
     "feed-profit-v788.js": "src/analysis/feed-profit-v788.js",
-    "binance-stream-v790.js": "src/analysis/binance-stream-v790.js"
+    "binance-stream-v790.js": "src/analysis/binance-stream-v790.js",
+    "feed-finnhub-v791.js": "src/analysis/feed-finnhub-v791.js"
   },
   "templates": {
     "index.html": "src/index.html",
