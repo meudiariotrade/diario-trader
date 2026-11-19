@@ -287,7 +287,7 @@ function secValores(doc:any){
  };
  const cfo=operating[0];
  // Mesma moeda, período, accession, início e fim: contas incompatíveis => nulo.
- const same=(a:any,b:any)=>a&&b&&a.accn===b.accn&&a.end===b.end&&a.start===b.start&&a.unit===b.unit;
+ const same=(a:any,b:any)=>a&&b&&a.accn===b.accn&&a.end===b.end&&a.start===b.start&&a.unit===b.unit&&a.namespace===b.namespace;
  const cap=capex.find(x=>same(x,cfo)&&Number(x.val)>=0);
  const income=rev.find(x=>same(x,cfo)&&Number(x.val)>0);
  const margin=cfo&&cap&&income?
@@ -326,13 +326,22 @@ async function secColetar(limit:number,priority:'score'|'cap'|'xbrl'='cap'){
       fonte:'SEC EDGAR XBRL',formula,validacao:'parcial; sem TTM homologado'}));
     const receitaTags=['RevenueFromContractWithCustomerExcludingAssessedTax',
      'RevenueFromContractWithCustomerIncludingAssessedTax','Revenues','SalesRevenueNet','Revenue','RevenueFromContractsWithCustomers'];
+    const cfoPeriod=secAnnual(doc,['NetCashProvidedByUsedInOperatingActivities','CashFlowsFromUsedInOperatingActivities'])[0];
+    const equalsFiscal=(x:any,y:any)=>x&&y&&x.accn===y.accn&&x.start===y.start&&
+      x.end===y.end&&x.unit===y.unit&&x.namespace===y.namespace;
+    const capPeriod=secAnnual(doc,['PaymentsToAcquirePropertyPlantAndEquipment',
+      'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities']).find((x:any)=>equalsFiscal(x,cfoPeriod));
+    const revPeriod=secAnnual(doc,receitaTags).find((x:any)=>equalsFiscal(x,cfoPeriod));
+    const proofOf=(x:any,formula:string)=>({documento_id:x.accn,formulario:x.form,competencia:x.end,
+      publicado_em:x.filed,codigo_xbrl:x.tag,namespace:x.namespace,unidade:x.unit,
+      valor_reportado:x.val,periodo_inicio:x.start,fonte:'SEC EDGAR XBRL',formula,
+      validacao:'parcial; sem TTM homologado'});
+    const fcfProof=metricas.fcf_margin!==null&&cfoPeriod&&capPeriod&&revPeriod?
+      [cfoPeriod,capPeriod,revPeriod].map(x=>proofOf(x,'(CFO-CAPEX)/receita*100')):[];
     const linhagem={
      revenue_growth_yoy:metricas.revenue_growth_yoy!==null?origin(receitaTags,'USD',2,'(receita_atual/receita_anterior-1)*100'):[],
      eps_growth_yoy:metricas.eps_growth_yoy!==null?origin(['EarningsPerShareDiluted','DilutedEarningsLossPerShare'],'USD/shares',2,'(EPS_atual/EPS_anterior-1)*100'):[],
-     fcf_margin:metricas.fcf_margin!==null?[
-      ...origin(['NetCashProvidedByUsedInOperatingActivities','CashFlowsFromUsedInOperatingActivities'],'USD',1,'(CFO-CAPEX)/receita*100'),
-      ...origin(['PaymentsToAcquirePropertyPlantAndEquipment','PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities'],'USD',1,'(CFO-CAPEX)/receita*100'),
-      ...origin(receitaTags,'USD',1,'(CFO-CAPEX)/receita*100')]:[]};
+     fcf_margin:fcfProof};
     docs.push({ticker:row.ticker,cik:row.cik,competencia:period.end,formulario:period.form,
      documento_id:id,documento_url:'https://www.sec.gov/Archives/edgar/data/'+Number(row.cik)+'/'+id.replaceAll('-','')+'/',
      publicado_em:period.filed,linhagem});
