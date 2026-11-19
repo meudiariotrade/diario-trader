@@ -47,6 +47,6 @@ test('v779 hotfix: não homologar histórico diário menor que 400 quando todas 
   const resp=await worker.fetch(new Request('https://diario-screeners-quant.example.workers.dev/v1/tecnico-candles?market=CRYPTO&ticker=BTCUSDT&tf=1d'),{}, {waitUntil:()=>{}});
   assert.notEqual(resp.status,200);
   const body=await resp.json();
-  assert.ok(String(body.error).includes('incompleto'));
+  assert.match(String(body.error),/Cripto sem OHLCV confiável/);
  }finally{globalThis.fetch=oldFetch;globalThis.caches=oldCaches}
 });
