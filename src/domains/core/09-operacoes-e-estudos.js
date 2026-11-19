@@ -288,6 +288,7 @@ function ideiaHtml(e) {
   const t = calc(e),
     a = numN(e.entry),
     o = numN(e.stop);
+  if (t.invalidPrice) return '<div class="warn">Preço inválido ou escala incompatível com o contrato. Revise antes de confiar no risco e no resultado.</div>';
   if (a == null || o == null || a === o) return "";
   const s = numN(e.target),
     n = numN(e.exit),
@@ -545,6 +546,13 @@ let FST = null,
   FST_ID = null;
 function qtdSugerida(e) {
   try {
+    for (const campo of ["entry", "stop"]) {
+      const valor = e[campo];
+      if (valor == null || String(valor).trim() === "") continue;
+      const checked = precoManual789(valor, e.ativo);
+      if (!checked.ok || (/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(e.ativo || "")) && numN(valor) !== checked.numero))
+        return { invalido: "Preço incompatível com o contrato. Revise os separadores e o tick antes de dimensionar." };
+    }
     const t = numN(e.entry),
       a = numN(e.stop);
     if (t == null || a == null || t === a) return null;
@@ -572,6 +580,7 @@ function qtdSugerida(e) {
 function qtdHtml(e) {
   const t = qtdSugerida(e);
   if (!t) return "";
+  if (t.invalido) return '<div class="qsug sm r">' + esc(t.invalido) + '</div>';
   if (t.semCap)
     return '<div class="qsug sm mut">Defina o capital (Configurar capital, na aba da operação) para o app sugerir a quantidade pelo seu risco.</div>';
   if (t.q < 1)
