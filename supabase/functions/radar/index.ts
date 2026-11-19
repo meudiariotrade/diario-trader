@@ -1,3 +1,4 @@
+import { especializarSistema } from '../_shared/ai-router.ts';
 // Função RADAR — arquivo único para colar no editor do Supabase (Edge Functions → radar → index.ts)
 
 // ===== indicadores =====
@@ -708,7 +709,7 @@ async function comenta(xs: (Sinal & { ticker: string })[]): Promise<Record<strin
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY }, signal: AbortSignal.timeout(40_000),
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: SYS }] }, contents: [{ role: 'user', parts: [{ text: JSON.stringify(dados) }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 4000, responseMimeType: 'application/json' } }),
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: especializarSistema(SYS) }] }, contents: [{ role: 'user', parts: [{ text: JSON.stringify(dados) }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 4000, responseMimeType: 'application/json' } }),
       });
       if (!r.ok) continue;
       const t = ((await r.json())?.candidates?.[0]?.content?.parts || []).map((p: any) => p.text || '').join('');
