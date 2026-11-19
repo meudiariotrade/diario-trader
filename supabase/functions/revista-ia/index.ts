@@ -5,7 +5,7 @@ import { SYS_REVISTA, normaliza, BLOCOS } from "./revista.ts";
 import { fatosTecnicos, revisaTecnica, VERSAO_CONSISTENCIA, INSTRUCAO_CONSISTENCIA } from "../_shared/consistencia-tecnica.ts";
 import { cobreMapa } from "../_shared/narrativa-tecnica.ts";
 import { textoTecnicoConfere } from "../analise/validacao.ts";
-import { gerarTexto, jsonDe } from "../_shared/ai-router.ts";
+import { gerarTexto, jsonDe, especializarSistema, contextoPrivadoTrading } from "../_shared/ai-router.ts";
 
 // ===== segurança =====
 // seguranca.ts — login obrigatório, limite de uso por pessoa e comparação de segredo em tempo constante.
