@@ -27,6 +27,8 @@ jobs:
           else
             npx playwright install --with-deps chromium
           fi
+      - name: Conferir sintaxe dos testes e auditoria
+        run: node --check scripts/qa-visual-e2e-v804.cjs && node --check tests/csp-demo-v805.test.cjs
       - name: Preparar build isolado v805
         run: npm run build
       - name: Testar circuito de reconexão Binance sem rede
