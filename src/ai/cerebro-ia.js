@@ -34,11 +34,18 @@
   // PDF.js é importado sob demanda. Bytes nunca vão ao servidor.
   const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.worker.min.mjs';
-  const doc=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,parts=[];
-  try{for(let i=1;i<=Math.min(doc.numPages,550);i++){const page=await doc.getPage(i),content=await page.getTextContent();
-   parts.push(content.items.map(t=>t.str||'').join(' '));
-   if(i%10===0)status('PDF local: '+i+'/'+doc.numPages+' páginas',Math.floor(i/doc.numPages*35));
-  }}finally{await doc.destroy()}
+  // PDF.js v6: destroy() pertence ao PDFDocumentLoadingTask, não ao PDFDocumentProxy.
+  const loadingTask=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}),parts=[];
+  try{
+   const doc=await loadingTask.promise;
+   for(let i=1;i<=Math.min(doc.numPages,550);i++){
+    const page=await doc.getPage(i),content=await page.getTextContent();
+    parts.push(content.items.map(t=>t.str||'').join(' '));
+    if(i%10===0)status('PDF local: '+i+'/'+doc.numPages+' páginas',Math.floor(i/doc.numPages*35));
+   }
+  }finally{
+   await loadingTask.destroy();
+  }
   return parts.join('\n\n');
  }
  const invalidUrl=u=>!/^https:\/\//.test(u)||u.length>1000;
