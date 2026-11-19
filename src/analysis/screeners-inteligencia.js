@@ -207,6 +207,31 @@
   return out;
  }
 
+
+ // v797: dimensão por ação, DPA/DY e múltiplos; não transforma divergência em dado inventado.
+ function reconcileValuationBR(row){
+  const num=x=>typeof x==='number'&&Number.isFinite(x)&&x>0?x:null;
+  const price=num(row?.preco_referencia),issues=[],values=[],checks=[];
+  const cmp=(name,actual,expected,limit)=>{
+   if(actual===null||expected===null||expected<=0)return;
+   const diff=Math.abs(actual-expected)/expected;
+   checks.push(name);
+   if(diff>limit)issues.push(name+': diferença '+Math.round(diff*100)+'% (conferir classe, data e ajustes)');
+   values.push({name,differencePct:Math.round(diff*10000)/100});
+  };
+  if(price!==null){
+   const shares=num(row?.total_acoes),cap=num(row?.valor_mercado_brl);
+   cmp('Valor mercado / preço × ações',cap,shares===null?null:price*shares,.15);
+   const dpa=num(row?.dpa_12m),dy=num(row?.dividend_yield);
+   cmp('DY / DPA 12m',dy,dpa===null?null:100*dpa/price,.08);
+   cmp('P/L / LPA',num(row?.pl),num(row?.lpa)===null?null:price/num(row.lpa),.18);
+   cmp('P/VP / VPA',num(row?.pvp),num(row?.vpa)===null?null:price/num(row.vpa),.18);
+  }
+  return {checked:checks.length,comparisons:values,conflicts:issues,
+   complete:checks.length>=2&&issues.length===0,
+   note:'A data da cotação e a classe da ação precisam corresponder aos denominadores; margem relativa não certifica origem.'};
+ }
+
  function diagnostics(market,row,now=Date.now(),medians=null){
   const m=market==='US'?'US':'BR',groups=groupsFor(m,row),vs=item(m,row),all=allRequired(m,row);
   const parts=groups.map((g,i)=>({id:g.id,name:g.name,weight:g.weight,score:vs[i]===null?null:Math.round(vs[i]*10)/10,
@@ -249,6 +274,7 @@
   if(subtype&&value(row,'pvp')===null)concerns.push('P/VP financeiro ausente ou não verificado: classificação exploratória, sem homologação.');
   const scoreAnomalias=qualityFlags(m,row);
   const valuationProof=m==='BR'?auditValuationEvidenceBR(row,new Date(now).toISOString().slice(0,10)):null;
+  const valuationReconciliation=m==='BR'?reconcileValuationBR(row):null;
   const secXbrlIdentificado=m==='US'&&!!row?.sec_facts_at&&
    /^https:\/\/data\.sec\.gov\/api\/xbrl\/companyfacts\/CIK\d{10}\.json$/.test(String(row?.sec_source_url||''));
   if(m==='US'&&!secXbrlIdentificado)concerns.push('Origem XBRL SEC não identificada: score pode conter múltiplos de fonte secundária.');
@@ -258,9 +284,11 @@
   if(scoreAnomalias.length)concerns.push(...scoreAnomalias);
   if(valuationProof?.required&&!valuationProof.complete)
    concerns.push('Preço justo com provas CVM incompletas: '+valuationProof.missing.concat(valuationProof.invalid).join(', ')+'.');
+  if(valuationProof?.required&&(!valuationReconciliation.complete||valuationReconciliation.conflicts.length))
+   concerns.push('Preços-teto sem conciliação entre ação, DY e múltiplos: '+valuationReconciliation.conflicts.join('; ')+'.');
   const verified=official!==null&&model!==null&&diff<=0.1&&expected===version&&coverage>=70&&documentoConfirmado&&
    (!subtype||value(row,'pvp')!==null)&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10&&
-    (!lineage||lineage.complete)&&(!valuationProof?.required||valuationProof.complete);
+    (!lineage||lineage.complete)&&(!valuationProof?.required||(valuationProof.complete&&valuationReconciliation.complete));
   const level=verified?'Cálculo confere':official!==null?'Exige conferência':'Incompleto';
   const med=(key)=>medians&&isVal(medians[key])?Number(medians[key]):null;
   const sector=String(row?.setor||row?.sector||'').toLowerCase();
@@ -278,7 +306,7 @@
   const description=profile+(momentum!==null?(momentum>=0?'; tendência de preço positiva.':'; tendência de preço fraca.'):'; tendência ainda sem dados suficientes.');
   return {ticker:String(row?.ticker||''),company:String(row?.empresa||row?.company_name||row?.ticker||''),market:m,
     score:official,modelScore:model,difference:diff,validated:verified,level,modelVersion:expected,expectedVersion:version,
-    qualityFlags:scoreAnomalias,valuationAudit:m==='BR'?valuationBR(row):null,valuationEvidence:valuationProof,lineageAudit:lineage,secXbrlIdentificado,provenanceLevel:m==='US'?(secXbrlIdentificado?'protocolo_mais_xbrl_parcial':'documento_sem_prova_xbrl'):(documentoConfirmado?'protocolo_cvm':'sem_documento'),
+    qualityFlags:scoreAnomalias,valuationAudit:m==='BR'?valuationBR(row):null,valuationEvidence:valuationProof,valuationReconciliation,lineageAudit:lineage,secXbrlIdentificado,provenanceLevel:m==='US'?(secXbrlIdentificado?'protocolo_mais_xbrl_parcial':'documento_sem_prova_xbrl'):(documentoConfirmado?'protocolo_cvm':'sem_documento'),
     competence,profile:description,
     coverage,parts,positives:[...signal,...supports].slice(0,3),risks:concerns.slice(0,6),
     missing:parts.flatMap(p=>p.missing),updated_at:row?.updated_at||null,
@@ -370,5 +398,5 @@
  }
 
  function methodology(m){return (weights[m==='US'?'US':'BR']).map(g=>g.name+' '+g.weight+'%').join(' • ')}
- return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,valuationBR,dividendYears,auditLineage,blendValuationBR,auditValuationEvidenceBR,version:'v2.2-val'});
+ return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,valuationBR,dividendYears,auditLineage,blendValuationBR,auditValuationEvidenceBR,reconcileValuationBR,version:'v2.2-val'});
 });
