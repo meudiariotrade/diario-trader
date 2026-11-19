@@ -28,7 +28,8 @@ test('US v2 usa pesos novos sem precisar de short interest/buyback',()=>{
   data_competencia_balanco:new Date(Date.now()-40*86400000).toISOString().slice(0,10),
   documento_balanco_tipo:'10-Q',documento_balanco_id:'0000000000-26-000001',
   documento_balanco_url:'https://www.sec.gov/Archives/edgar/data/0000000000/000000000026000001/',
-  documento_balanco_publicado_em:date};
+  documento_balanco_publicado_em:date,
+  sec_facts_at:date,sec_source_url:'https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json'};
  assert.deepEqual(intelligence.weights.US.map(x=>x.weight),[30,30,25,15]);
  row.score_quant_us=+intelligence.calculate('US',row).reduce((a,x,i)=>a+x*intelligence.weights.US[i].weight/100,0).toFixed(2);
  const d=intelligence.diagnostics('US',row);
