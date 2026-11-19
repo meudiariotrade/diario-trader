@@ -113,6 +113,63 @@
   }
   return flags;
  }
+
+ // v784: auditoria matemática de fatos XBRL. Nunca confundir existência de accession
+ // com validação numérica de indicadores (ausência => N/D/sem selo).
+ function auditLineage(row,asOf=new Date().toISOString().slice(0,10)){
+  const allowed=/^\d{4}-\d{2}-\d{2}$/,accn=/^\d{10}-\d{2}-\d{6}$/,
+   today=allowed.test(asOf)?asOf:new Date().toISOString().slice(0,10),
+   data=row?.linhagem_indicadores&&typeof row.linhagem_indicadores==='object'?row.linhagem_indicadores:{};
+  const days=(a,b)=>(Date.parse(a)-Date.parse(b))/86400000;
+  const valid=x=>x&&accn.test(String(x.documento_id||''))&&
+   allowed.test(String(x.competencia||''))&&x.competencia<=today&&
+   allowed.test(String(x.publicado_em||''))&&x.publicado_em>=x.competencia&&x.publicado_em<=today&&
+   allowed.test(String(x.periodo_inicio||''))&&x.periodo_inicio<x.competencia&&
+   ['us-gaap','ifrs-full'].includes(x.namespace)&&
+   typeof x.codigo_xbrl==='string'&&x.codigo_xbrl.length>0&&
+   /^(USD|EUR|CAD|GBP|BRL|CHF|JPY)(\/shares)?$/.test(String(x.unidade||''))&&
+   typeof x.valor_reportado==='number'&&Number.isFinite(x.valor_reportado);
+  const out={checked:0,verified:[],missing:[],conflicts:[],statuses:{}};
+  for(const key of ['revenue_growth_yoy','eps_growth_yoy','fcf_margin']){
+   const v=row?.[key],required=typeof v==='number'&&Number.isFinite(v);
+   if(!required)continue;
+   const rows=Array.isArray(data[key])?data[key]:[];
+   if(!rows.length){out.missing.push(key);out.statuses[key]='sem prova';continue}
+   out.checked++;let computed=null,ok=false;
+   if(rows.every(valid)){
+    const ns=rows[0].namespace,unit=rows[0].unidade;
+    if(key==='revenue_growth_yoy'||key==='eps_growth_yoy'){
+     const sorted=[...rows].sort((a,b)=>b.competencia.localeCompare(a.competencia));
+     const [cur,prior]=sorted;
+     const span=x=>days(x.competencia,x.periodo_inicio);
+     if(sorted.length>=2&&sorted.every(x=>x.namespace===ns&&x.unidade===unit&&
+      x.codigo_xbrl===cur.codigo_xbrl)&&
+      span(cur)>=330&&span(cur)<=390&&span(prior)>=330&&span(prior)<=390&&
+      days(cur.competencia,prior.competencia)>=320&&days(cur.competencia,prior.competencia)<=410&&
+      prior.valor_reportado>0){
+      computed=(cur.valor_reportado/prior.valor_reportado-1)*100;
+     }
+    }else{
+     const cfo=rows.find(x=>/NetCashProvidedByUsedInOperatingActivities|CashFlowsFromUsedInOperatingActivities/.test(x.codigo_xbrl));
+     const capex=rows.find(x=>/PaymentsToAcquirePropertyPlantAndEquipment|PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities/.test(x.codigo_xbrl));
+     const rev=rows.find(x=>/Revenues|RevenueFrom|SalesRevenueNet/.test(x.codigo_xbrl));
+     const same=(a,b)=>a&&b&&a.documento_id===b.documento_id&&
+      a.competencia===b.competencia&&a.periodo_inicio===b.periodo_inicio&&
+      a.namespace===b.namespace&&a.unidade===b.unidade;
+     if(cfo&&capex&&rev&&same(cfo,capex)&&same(cfo,rev)&&
+      capex.valor_reportado>=0&&rev.valor_reportado>0&&
+      days(cfo.competencia,cfo.periodo_inicio)>=330&&days(cfo.competencia,cfo.periodo_inicio)<=390)
+      computed=(cfo.valor_reportado-capex.valor_reportado)/rev.valor_reportado*100;
+    }
+    ok=computed!==null&&Number.isFinite(computed)&&Math.abs(computed-v)<=0.15;
+   }
+   if(ok){out.verified.push(key);out.statuses[key]='verificado'}
+   else{out.conflicts.push(key);out.statuses[key]='inconsistente'}
+  }
+  out.complete=out.checked>0&&out.checked===out.verified.length&&out.missing.length===0&&out.conflicts.length===0;
+  return out;
+ }
+
  function diagnostics(market,row,now=Date.now(),medians=null){
   const m=market==='US'?'US':'BR',groups=groupsFor(m,row),vs=item(m,row),all=allRequired(m,row);
   const parts=groups.map((g,i)=>({id:g.id,name:g.name,weight:g.weight,score:vs[i]===null?null:Math.round(vs[i]*10)/10,
@@ -157,9 +214,13 @@
   const secXbrlIdentificado=m==='US'&&!!row?.sec_facts_at&&
    /^https:\/\/data\.sec\.gov\/api\/xbrl\/companyfacts\/CIK\d{10}\.json$/.test(String(row?.sec_source_url||''));
   if(m==='US'&&!secXbrlIdentificado)concerns.push('Origem XBRL SEC não identificada: score pode conter múltiplos de fonte secundária.');
+   const lineage=m==='US'&&secXbrlIdentificado?auditLineage(row,new Date(now).toISOString().slice(0,10)):null;
+   if(lineage?.missing.length)concerns.push('Linhagem SEC ausente para '+lineage.missing.join(', ')+': sem selo de cálculo completo.');
+   if(lineage?.conflicts.length)concerns.push('Divergência matemática SEC: '+lineage.conflicts.join(', ')+'.');
   if(scoreAnomalias.length)concerns.push(...scoreAnomalias);
   const verified=official!==null&&model!==null&&diff<=0.1&&expected===version&&coverage>=70&&documentoConfirmado&&
-   (!subtype||value(row,'pvp')!==null)&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10;
+   (!subtype||value(row,'pvp')!==null)&&oldFund!==null&&oldFund<=180&&oldTech!==null&&oldTech<=10&&
+    (!lineage||lineage.complete);
   const level=verified?'Cálculo confere':official!==null?'Exige conferência':'Incompleto';
   const med=(key)=>medians&&isVal(medians[key])?Number(medians[key]):null;
   const sector=String(row?.setor||row?.sector||'').toLowerCase();
@@ -177,7 +238,7 @@
   const description=profile+(momentum!==null?(momentum>=0?'; tendência de preço positiva.':'; tendência de preço fraca.'):'; tendência ainda sem dados suficientes.');
   return {ticker:String(row?.ticker||''),company:String(row?.empresa||row?.company_name||row?.ticker||''),market:m,
     score:official,modelScore:model,difference:diff,validated:verified,level,modelVersion:expected,expectedVersion:version,
-    qualityFlags:scoreAnomalias,secXbrlIdentificado,provenanceLevel:m==='US'?(secXbrlIdentificado?'protocolo_mais_xbrl_parcial':'documento_sem_prova_xbrl'):(documentoConfirmado?'protocolo_cvm':'sem_documento'),
+    qualityFlags:scoreAnomalias,lineageAudit:lineage,secXbrlIdentificado,provenanceLevel:m==='US'?(secXbrlIdentificado?'protocolo_mais_xbrl_parcial':'documento_sem_prova_xbrl'):(documentoConfirmado?'protocolo_cvm':'sem_documento'),
     competence,profile:description,
     coverage,parts,positives:[...signal,...supports].slice(0,3),risks:concerns.slice(0,6),
     missing:parts.flatMap(p=>p.missing),updated_at:row?.updated_at||null,
@@ -251,5 +312,5 @@
  }
 
  function methodology(m){return (weights[m==='US'?'US':'BR']).map(g=>g.name+' '+g.weight+'%').join(' • ')}
- return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,valuationBR,dividendYears,version:'v2.1'});
+ return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,valuationBR,dividendYears,auditLineage,version:'v2.2'});
 });
