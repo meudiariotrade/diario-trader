@@ -20,5 +20,5 @@ test('CSP normal permite somente fontes TradingView necessárias',()=>{
 });
 test('botão instalar do Terminal não usa onclick inline',()=>{
  assert.doesNotMatch(terminal,/<button class="trbtn trinst" onclick=/);
- assert.match(terminal,/instalar\\?\\.addEventListener\\("click"/);
+ assert.ok(terminal.includes('instalar?.addEventListener("click"'));
 });
