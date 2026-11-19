@@ -380,39 +380,89 @@ function ajusta160() {
     );
   };
 }
-function gateEstado() {
-  const e = new Date(),
-    t = e.getDay(),
-    a = e.getHours();
-  if (t === 0 || t === 6) return null;
-  if (a >= 8 && a < 17) {
-    const o = GATE_D(),
-      s = S.days[o] || {},
-      n = s.chk || {},
-      r = s.cl || {},
-      i = [...(s.estado ? [] : ["estado"]), ...GATE_PLANO.filter((l) => !r[l])];
-    return i.length ? { tipo: "manha", falta: i, dia: s, c: n, cl: r } : null;
-  }
-  return gateEstado158(a);
+
+/* v789 — preparo único, sem marcar regras como cumpridas por inferência. */
+function preparacaoPendente789(d) {
+  const pend = [];
+  if (!(Number(d.estado) >= 1 && Number(d.estado) <= 5)) pend.push("estado emocional");
+  if (!(Number(d.metaDia) > 0)) pend.push("meta do dia (R$)");
+  if (!(Number(d.maxP) > 0)) pend.push("perda máxima (R$)");
+  if (!(Number.isInteger(Number(d.pl2?.max)) && Number(d.pl2?.max) > 0)) pend.push("máximo de trades");
+  if (!Array.isArray(d.pl2?.mods) || !d.pl2.mods.length) pend.push("foco operacional");
+  if (!d.cl?.p_stop) pend.push("confirmação de stop e alvo");
+  return pend;
 }
-function gateEstado158(e) {
-  if (e >= 17) {
-    const t = GATE_D();
-    if ((S.days[t] || {}).posop) return null;
-    const a = gateHoje(t),
-      o = a
-        .map((s) => ({
-          t: s,
-          motivo: s.pin
-            ? numN(s.exit) != null && !s.pout
-              ? "falta a foto da saída"
-              : ""
-            : "falta a foto da entrada",
-        }))
-        .filter((s) => s.motivo);
-    return { tipo: "tarde", T0: a, falta: o };
+function planoPreparacao789(e) {
+  const d = e.dia || {}, p = d.pl2 || {};
+  const field = (id,label,val) => '<label class="sm">' + label +
+    '<input type="number" inputmode="decimal" step="any" min="0" data-prep789="' + id +
+    '" value="' + esc(val ?? "") + '" style="width:100%;font-size:16px;min-height:44px"></label>';
+  const modes = [["dt","Day trade"],["sw","Swing"],["op","Opções"],["ex","EUA/Forex"]];
+  const vies = [["","Escolha"],["compra","Compra"],["venda","Venda"],["neutro","Neutro"]];
+  return '<div class="g2">' + field("metaDia","Meta diária (R$)",d.metaDia) +
+    field("maxP","Perda máxima diária (R$)",d.maxP) +
+    field("max","Máximo de trades",p.max) +
+    '<label class="sm">Viés<select data-prep789="vies" style="font-size:16px;min-height:44px">' +
+    vies.map(([v,t])=>'<option value="'+v+'"'+(p.vies===v?' selected':'')+'>'+t+'</option>').join("")+
+    '</select></label></div><div class="sm" style="margin:8px 0 4px">Foco operacional (ao menos um)</div><div class="chips2">' +
+    modes.map(([v,t])=>'<button type="button" data-prep789-mod="'+v+'" style="min-height:44px" class="'+((p.mods||[]).includes(v)?'on':'')+'">'+t+'</button>').join("") +
+    '</div><label class="gchk"><input type="checkbox" data-gcl="p_stop"'+(d.cl?.p_stop?' checked':'')+
+    '><span>Vou estabelecer stop e alvo antes de cada entrada</span></label>';
+}
+document.addEventListener("change", (ev) => {
+  const el = ev.target.closest?.("#gateov [data-prep789]");
+  if (!el) return;
+  const day = GATE_D(), d = S.days[day] ?? (S.days[day] = {chk:{}});
+  const key = el.dataset.prep789, val = Number(el.value);
+  if (key === "vies" || key === "max") {
+    d.pl2 ??= {};
+    d.pl2[key] = key === "max" ? (Number.isInteger(val) && val > 0 ? val : 0) : el.value;
+  } else {
+    d[key] = el.value.trim() && Number.isFinite(val) && val > 0 ? val : "";
+    d.cl ??= {};
+    if (key === "maxP") d.cl.p_limite = Number(d.maxP) > 0;
+    if (key === "metaDia") d.cl.p_meta = Number(d.metaDia) > 0;
   }
-  return null;
+  d.u = Date.now(); save(); gateAtualiza();
+});
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest?.("#gateov [data-prep789-mod]");
+  if (!el) return;
+  ev.preventDefault();
+  const day = GATE_D(), d = S.days[day] ?? (S.days[day] = {chk:{}});
+  const p = d.pl2 ?? (d.pl2 = {}), mods = new Set(p.mods || []);
+  mods.has(el.dataset.prep789Mod) ? mods.delete(el.dataset.prep789Mod) : mods.add(el.dataset.prep789Mod);
+  p.mods = [...mods]; d.u = Date.now(); save(); gateAtualiza();
+});
+
+function gateEstado() {
+  const now = new Date(), weekday = now.getDay(), hour = now.getHours();
+  if (weekday === 0 || weekday === 6) return null;
+  if (hour >= 8 && hour < 17) {
+    const d = S.days[GATE_D()] || {};
+    if (d.ckok) return null;
+    const falta = preparacaoPendente789(d);
+    return {tipo:"manha",falta,pronto:falta.length===0,dia:d,c:d.chk||{},cl:d.cl||{}};
+  }
+  return gateEstado158(hour);
+}
+function gateEstado158(hour) {
+  if (hour < 17) return null;
+  const date = GATE_D(), d = S.days[date] || {}, trades = gateHoje(date);
+  const falta = trades.map((t) => {
+    const reasons = [];
+    if (!t.pin) reasons.push("falta a foto da entrada");
+    if (numN(t.exit) != null && !t.pout) reasons.push("falta a foto da saída");
+    if (numN(t.stop) == null) reasons.push("falta o stop inicial");
+    if (!["s","n"].includes(t.rules)) reasons.push("falta avaliar regras");
+    if (t.rules === "n" && !String(t.nota || "").trim() && (!t.err || t.err === "Nenhum"))
+      reasons.push("falta justificar quebra de regra");
+    if (calc(t).invalidPrice) reasons.push("preço com escala/tick inválido");
+    return {t, motivo: reasons.join(", ")};
+  }).filter((x) => x.motivo);
+  const updated = trades.some(t => Number(t.u || 0) > Number(d.posop || 0));
+  if (d.posop && !falta.length && !updated) return null;
+  return {tipo:"tarde",T0:trades,falta};
 }
 function gateManhaHtml(e) {
   const t = e.c || {},
@@ -433,9 +483,7 @@ function gateManhaHtml(e) {
 <p class="sm">O preparo obrigatório é exigido ao iniciar um registro operacional. Consultas continuam disponíveis. Regras pessoais e mentalidade são opcionais.</p>
 <div class="gsec"><b>1. Como estou agora? <span class="sm mut">(obrigatório)</span></b><div class="gest-l">${r}</div></div>
 <div class="gsec"><b>2. Plano de hoje <span class="sm mut">(obrigatório)</span></b>
-${i("data-gcl", "p_limite", "Defini o limite de perda do dia, em vezes o risco")}
-${i("data-gcl", "p_meta", "Defini a meta do dia, ou o ganho que já me basta")}
-${i("data-gcl", "p_stop", "Sei onde saio de cada operação: stop e alvo")}</div>
+${planoPreparacao789(e)}</div>
 ${l.length ? `<div class="gsec"><b>3. Minhas regras <span class="sm mut">(opcional)</span></b>${l.map((d) => i("data-gate-chk", d.id, d.t)).join("")}</div>` : ""}
 <div class="gsec"><b>4. Mentalidade <span class="sm mut">(opcional)</span></b>${GATE_MENT.map(([d, c]) => i("data-gcl", d, c)).join("")}</div>
 <div class="gdica sm">“${esc(s)}” <span class="mut">Psicologia Financeira, Celso Sant'Ana</span></div>
@@ -1706,7 +1754,7 @@ ${a ? `<div class="epres ${a.cls}">Termômetro: <b>${a.n} de 70</b> · ${a.txt}$
   const e = gateEstado;
   gateEstado = function () {
     const t = e.apply(this, arguments);
-    if (t) return t.tipo === "manha" ? { ...t, pronto: !1 } : t;
+    if (t) return t;
     const a = new Date(),
       o = a.getDay(),
       s = a.getHours();
@@ -1760,6 +1808,8 @@ document.addEventListener("click", (e) => {
   const s = e.target.closest && e.target.closest("#gateov [data-gate-fim]");
   if (s) {
     if (s.disabled) return;
+    const current = gateEstado();
+    if (!current || !current.pronto) { gateAtualiza(); return; }
     const n = GATE_D(),
       r = (a = S.days)[n] ?? (a[n] = { chk: {} });
     ((r.ckok = Date.now()),
