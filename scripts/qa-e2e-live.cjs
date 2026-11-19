@@ -16,6 +16,7 @@ let token,browser;
 const save=()=>fs.writeFileSync(OUT+'/results.json',JSON.stringify(report,null,2));
 async function auth(path,body){const r=await fetch(SB+path,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});const j=await r.json();return {ok:r.ok,status:r.status,j};}
 async function route(page,id){
+ const skip=page.locator('[data-onbx="pular"]');if(await skip.isVisible())await skip.click();
  const buttons=page.locator('[data-dt393-route="'+id+'"]');
  for(const b of await buttons.all())if(await b.isVisible()){await b.click();await page.waitForTimeout(450);return;}
  const menu=page.getByRole('button',{name:'Abrir menu do aplicativo',exact:true});
@@ -46,7 +47,7 @@ async function observe(page){
 async function audit(page,device,id,name,sub,events){
  const result={device,id,name,sub,status:'PENDENTE',errors:[],console:[],network:[]};report.screens.push(result);const from=events.length;
  try{
-  await route(page,id);if(sub)await page.locator('[data-an-sub="'+sub+'"]').click();
+  await route(page,id);await dismiss(page);if(sub)await page.locator('[data-an-sub="'+sub+'"]').click();
   await page.waitForTimeout(1500);
   result.heading=await page.locator('#app').innerText().then(x=>x.slice(0,1400));
   result.metrics=await observe(page);
@@ -67,7 +68,7 @@ async function audit(page,device,id,name,sub,events){
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox']});
   for(const [device,width,height,mobile] of [['desktop',1440,900,false],['iphone',390,844,true]]){
    const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:1,timezoneId:'America/Sao_Paulo'});
-   const page=await context.newPage(),events=[];
+   const page=await context.newPage(),events=[];page.setDefaultTimeout(10000);
    page.on('pageerror',e=>events.push({type:'pageerror',message:e.message}));page.on('console',m=>{if(m.type()==='error')events.push({type:'console',message:m.text().slice(0,1000)})});
    page.on('response',r=>{if(r.status()>=400)events.push({type:'http',status:r.status(),url:r.url().replace(/([?&](?:token|key|apikey)=)[^&]+/gi,'$1REDACTED')})});page.on('requestfailed',r=>events.push({type:'requestfailed',url:r.url().split('?')[0],message:r.failure()?.errorText}));
    await page.goto(BASE,{waitUntil:'domcontentloaded',timeout:60000});
@@ -76,7 +77,7 @@ async function audit(page,device,id,name,sub,events){
    await page.locator('#ce').fill(email);await page.locator('#cp').fill(password);await page.locator('[data-a="auth"]').click();
    await page.waitForFunction(()=>typeof SESS!=='undefined'&&!!SESS?.uid,{timeout:45000});
    const actual=await page.evaluate(()=>SESS?.uid);if(actual!==report.account.id)throw Error('Conta divergente: auditoria interrompida.');
-   await dismiss(page);report[device]={version:await page.evaluate(()=>window.DIARIO_RELEASE),loginEvents:events.splice(0)};save();
+   await page.waitForFunction(()=>typeof SY!=='undefined'&&!SY.busy&&typeof S!=='undefined'&&!!S.lastSyncAt,null,{timeout:45000}).catch(()=>{});await route(page,'home');await page.waitForTimeout(1000);await dismiss(page);await page.locator('#onb').waitFor({state:'hidden',timeout:10000});report[device]={version:await page.evaluate(()=>window.DIARIO_RELEASE),loginEvents:events.splice(0)};save();
    for(const [id,name] of [['home','Início'],['mercado','Mercado'],['ops','Operações'],['carteiras','Carteira'],['term','Terminal'],['estudos','Estudos']])await audit(page,device,id,name,null,events);
    for(const [sub,name] of [['pesquisa','B3 & EUA'],['br','Screener Brasil'],['us','Screener EUA'],['tecnico-br','Técnico Brasil'],['tecnico-world','Técnico EUA & Cripto']])await audit(page,device,'analises',name,sub,events);
    await context.close();
