@@ -210,7 +210,7 @@ async function secMapear(){
 function secPeriodo(json:any){
  // Emissores estrangeiros reportam IFRS/20-F ou 40-F, não necessariamente us-gaap/10-K.
  // Aceitar somente período documental verificável, accession oficial e data de protocolo.
- const approved=new Set(['10-Q','10-K','10-Q/A','10-K/A','20-F','40-F']);
+ const approved=new Set(['10-Q','10-K','10-Q/A','10-K/A','20-F','40-F','20-F/A','40-F/A']);
  const groups=[
   {data:json?.facts?.['us-gaap']||{},tags:['Assets','StockholdersEquity','Liabilities','NetIncomeLoss',
    'Revenues','RevenueFromContractWithCustomerExcludingAssessedTax']},
@@ -234,37 +234,67 @@ function secPeriodo(json:any){
  all.sort((a,b)=>b.end.localeCompare(a.end)||b.filed.localeCompare(a.filed));
  return all[0]||null;
 }
+// v777: nunca misturar moeda, namespace, tag ou anos fiscais no mesmo indicador.
+// Annual 10-K/20-F/40-F (e retificações) exige 330–390 dias e accession SEC real.
 function secAnnual(doc:any,tags:string[],unit='USD'){
- const facts=doc?.facts?.['us-gaap']||{};
- for(const tag of tags){
-  const entries=(facts[tag]?.units?.[unit]||[]).filter((x:any)=>
-   x.form==='10-K'&&x.start&&x.end&&x.end<=now&&x.filed<=now&&numeric(x.val)!==null
-   &&(Date.parse(x.end)-Date.parse(x.start))/86400000>=330
-   &&(Date.parse(x.end)-Date.parse(x.start))/86400000<=390);
-  if(!entries.length)continue;
-  entries.sort((a:any,b:any)=>b.end.localeCompare(a.end)||b.filed.localeCompare(a.filed));
-  const unique=new Map<string,any>();for(const x of entries)if(!unique.has(x.end))unique.set(x.end,x);
-  return [...unique.values()].map(x=>({...x,tag}));
+ const preferred=unit.endsWith('/shares')?
+  ['USD/shares','EUR/shares','CAD/shares','GBP/shares','BRL/shares','CHF/shares','JPY/shares']:
+  ['USD','EUR','CAD','GBP','BRL','CHF','JPY'];
+ let best:any[]=[],bestPair=false;
+ const annual=new Set(['10-K','10-K/A','20-F','20-F/A','40-F','40-F/A']);
+ for(const tag of tags)for(const namespace of ['us-gaap','ifrs-full']){
+  const units=doc?.facts?.[namespace]?.[tag]?.units||{};
+  for(const currency of preferred){
+   const entries=(Array.isArray(units[currency])?units[currency]:[]).filter((x:any)=>{
+    if(!annual.has(String(x.form))||numeric(x.val)===null||
+     !/^\d{10}-\d{2}-\d{6}$/.test(String(x.accn||''))||
+     !/^\d{4}-\d{2}-\d{2}$/.test(String(x.start||''))||
+     !/^\d{4}-\d{2}-\d{2}$/.test(String(x.end||''))||
+     !/^\d{4}-\d{2}-\d{2}$/.test(String(x.filed||''))||
+     x.end>now||x.filed>now||x.filed<x.end)return false;
+    const span=(Date.parse(x.end)-Date.parse(x.start))/86400000;
+    return Number.isFinite(span)&&span>=330&&span<=390;
+   });
+   if(!entries.length)continue;
+   entries.sort((a:any,b:any)=>b.end.localeCompare(a.end)||b.filed.localeCompare(a.filed));
+   const unique=new Map<string,any>();
+   for(const x of entries)if(!unique.has(x.end))unique.set(x.end,{...x,tag,namespace,unit:currency});
+   const series=[...unique.values()];
+   const pair=series.length>=2&&
+    (Date.parse(series[0].end)-Date.parse(series[1].end))/86400000>=320&&
+    (Date.parse(series[0].end)-Date.parse(series[1].end))/86400000<=410;
+   if(!best.length||pair&&!bestPair||(pair===bestPair&&series[0].end>best[0].end)){
+    best=series;bestPair=pair;
+   }
+  }
  }
- return [];
+ return best;
 }
 function secValores(doc:any){
- const rev=secAnnual(doc,['RevenueFromContractWithCustomerExcludingAssessedTax',
-  'RevenueFromContractWithCustomerIncludingAssessedTax','Revenues','SalesRevenueNet']);
- const eps=secAnnual(doc,['EarningsPerShareDiluted'],'USD/shares');
- const operating=secAnnual(doc,['NetCashProvidedByUsedInOperatingActivities']);
- const capex=secAnnual(doc,['PaymentsToAcquirePropertyPlantAndEquipment']);
+ const revenueTags=['RevenueFromContractWithCustomerExcludingAssessedTax',
+  'RevenueFromContractWithCustomerIncludingAssessedTax','Revenues','SalesRevenueNet',
+  'Revenue','RevenueFromContractsWithCustomers'];
+ const rev=secAnnual(doc,revenueTags);
+ const eps=secAnnual(doc,['EarningsPerShareDiluted','DilutedEarningsLossPerShare'],'USD/shares');
+ const operating=secAnnual(doc,['NetCashProvidedByUsedInOperatingActivities','CashFlowsFromUsedInOperatingActivities']);
+ const capex=secAnnual(doc,['PaymentsToAcquirePropertyPlantAndEquipment',
+  'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities']);
  const growth=(v:any[])=>{
-  if(v.length<2||numeric(v[0].val)===null||numeric(v[1].val)===null||Number(v[1].val)<=0)return null;
-  // YoY exige exercícios anuais realmente adjacentes; nunca saltar 2 anos ou duplicar o mesmo ano.
+  if(v.length<2||numeric(v[0].val)===null||numeric(v[1].val)===null||Number(v[1].val)<=0||
+   v[0].tag!==v[1].tag||v[0].namespace!==v[1].namespace||v[0].unit!==v[1].unit)return null;
   const gap=(Date.parse(v[0].end)-Date.parse(v[1].end))/86400000;
   return gap>=320&&gap<=410?round((Number(v[0].val)/Number(v[1].val)-1)*100):null;
  };
- const cap=capex.find(x=>x.end===operating[0]?.end);
- const margin=operating[0]&&cap&&rev[0]?.val>0&&rev[0].end===operating[0].end?
-  round((Number(operating[0].val)-Number(cap.val))/Number(rev[0].val)*100):null;
+ const cfo=operating[0];
+ // Mesma moeda, período, accession, início e fim: contas incompatíveis => nulo.
+ const same=(a:any,b:any)=>a&&b&&a.accn===b.accn&&a.end===b.end&&a.start===b.start&&a.unit===b.unit;
+ const cap=capex.find(x=>same(x,cfo)&&Number(x.val)>=0);
+ const income=rev.find(x=>same(x,cfo)&&Number(x.val)>0);
+ const margin=cfo&&cap&&income?
+  round((Number(cfo.val)-Number(cap.val))/Number(income.val)*100):null;
  return {revenue_growth_yoy:growth(rev),eps_growth_yoy:growth(eps),fcf_margin:margin};
 }
+
 async function secColetar(limit:number,priority:'score'|'cap'|'xbrl'='cap'){
  const pending=await rpc(priority==='score'?'quant_screeners_sec_top':priority==='xbrl'?'quant_sec_xbrl_pendentes':'quant_screeners_sec_pendentes',{p_limit:Math.max(1,Math.min(16,limit))});
  const updates:any[]=[],dates:any[]=[],docs:any[]=[],errors:string[]=[],semPeriodo:any[]=[],proofs:any[]=[],xbrlRetry:any[]=[];let http200=0,http403=0,http429=0;
@@ -289,14 +319,20 @@ async function secColetar(limit:number,priority:'score'|'cap'|'xbrl'='cap'){
    dates.push({ticker:row.ticker,data_competencia_balanco:period.end});
    const id=String(period.accn||'');
    if(/^\d{10}-\d{2}-\d{6}$/.test(id)){
-    const origin=(tags:string[],unit='USD',count=2)=>secAnnual(doc,tags,unit).slice(0,count)
+    const origin=(tags:string[],unit='USD',count=2,formula='')=>secAnnual(doc,tags,unit).slice(0,count)
      .filter((x:any)=>x.accn&&x.end&&x.filed&&x.tag)
      .map((x:any)=>({documento_id:x.accn,formulario:x.form,competencia:x.end,publicado_em:x.filed,codigo_xbrl:x.tag,
-      unidade:unit,valor_reportado:x.val,periodo_inicio:x.start||null,fonte:'SEC EDGAR XBRL',validacao:'parcial; sem TTM homologado'}));
+      namespace:x.namespace,unidade:x.unit,valor_reportado:x.val,periodo_inicio:x.start||null,
+      fonte:'SEC EDGAR XBRL',formula,validacao:'parcial; sem TTM homologado'}));
+    const receitaTags=['RevenueFromContractWithCustomerExcludingAssessedTax',
+     'RevenueFromContractWithCustomerIncludingAssessedTax','Revenues','SalesRevenueNet','Revenue','RevenueFromContractsWithCustomers'];
     const linhagem={
-     revenue_growth_yoy:metricas.revenue_growth_yoy!==null?origin(['RevenueFromContractWithCustomerExcludingAssessedTax','Revenues','SalesRevenueNet']):[],
-     eps_growth_yoy:metricas.eps_growth_yoy!==null?origin(['EarningsPerShareDiluted'],'USD/shares'):[],
-     fcf_margin:metricas.fcf_margin!==null?origin(['NetCashProvidedByUsedInOperatingActivities']):[]};
+     revenue_growth_yoy:metricas.revenue_growth_yoy!==null?origin(receitaTags,'USD',2,'(receita_atual/receita_anterior-1)*100'):[],
+     eps_growth_yoy:metricas.eps_growth_yoy!==null?origin(['EarningsPerShareDiluted','DilutedEarningsLossPerShare'],'USD/shares',2,'(EPS_atual/EPS_anterior-1)*100'):[],
+     fcf_margin:metricas.fcf_margin!==null?[
+      ...origin(['NetCashProvidedByUsedInOperatingActivities','CashFlowsFromUsedInOperatingActivities'],'USD',1,'(CFO-CAPEX)/receita*100'),
+      ...origin(['PaymentsToAcquirePropertyPlantAndEquipment','PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities'],'USD',1,'(CFO-CAPEX)/receita*100'),
+      ...origin(receitaTags,'USD',1,'(CFO-CAPEX)/receita*100')]:[]};
     docs.push({ticker:row.ticker,cik:row.cik,competencia:period.end,formulario:period.form,
      documento_id:id,documento_url:'https://www.sec.gov/Archives/edgar/data/'+Number(row.cik)+'/'+id.replaceAll('-','')+'/',
      publicado_em:period.filed,linhagem});
