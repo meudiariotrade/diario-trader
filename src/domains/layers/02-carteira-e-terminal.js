@@ -7221,13 +7221,18 @@ try {
       const k = norm(t), ini = e(k.replace(/[^A-Z0-9]/g, "").slice(0, 2));
       if (!v) return `<span class="dl-logo dl-vazio" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true">${ini}</span>`;
       if (v.par) return `<span class="dl-logo dl-par" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true"><img src="${e(v.urls[0])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"><img src="${e(v.urls[1])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>`;
-      return `<span class="dl-logo" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true"><img src="${e(v.urls[0])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.DiarioLogos&&DiarioLogos._erro(this)"></span>`;
+      return `<span class="dl-logo" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true"><img src="${e(v.urls[0])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>`;
     }
     function _erro(img) {
       const sp = img.closest(".dl-logo"), k = sp && sp.dataset.dl, prox = k && falhou(k, img.src);
       if (prox) img.src = prox;
       else if (sp) (img.remove(), sp.classList.add("dl-vazio"), (sp.textContent = (k || "").replace(/[^A-Z0-9]/g, "").slice(0, 2)));
     }
+    // CSP sem unsafe-inline: delegação captura erros de imagens, que não propagam por bubbling.
+    document.addEventListener("error", (event) => {
+      const img = event.target;
+      if (img?.matches?.(".dl-logo:not(.dl-par) > img")) _erro(img);
+    }, true);
     // Atualiza na tela os logos que chegaram depois (sem refazer a página).
     w.addEventListener("diario-logos", (ev) => {
       const ks = new Set(ev.detail || []);

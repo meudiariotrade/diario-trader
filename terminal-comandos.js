@@ -11,6 +11,11 @@
  const notice=()=>{try{const notify=typeof toast==='function'?toast:root.toast;notify?.('Esse comando abre outra área e foi retirado do Terminal. Escolha uma função dos painéis.')}catch{}};
  const unavailable=()=>'<div class="trsec">Comando externo retirado</div><p class="trnote">Esta função abria outra área do aplicativo. Use o menu do Terminal para escolher uma função disponível nos painéis.</p>';
  function wrap(owner,key,fn){const old=owner?.[key];if(typeof old!=='function'||old.__terminalInternal)return;const next=function(...args){return fn.call(this,old,args)};next.__terminalInternal=true;owner[key]=next}
+ function hideExternal(n){
+  if(!n.hidden)n.hidden=true;if(!n.inert)n.inert=true;
+  if(n.dataset.terminalExternal!=='1')n.dataset.terminalExternal='1';
+  if(n.style.getPropertyValue('display')!=='none'||n.style.getPropertyPriority('display')!=='important')n.style.setProperty('display','none','important');
+ }
  function install(){
   queued=false;const api=root.TRM;if(!api)return;
   for(const [key,description]of Object.entries(api.FN))if(typeof description==='string'&&/\((?:tela cheia|abre a tela?)\)/i.test(description))blocked.add(key);
@@ -30,8 +35,8 @@
   if(active()){
    const app=doc.querySelector('#app:not(.v503-fantasma)');
    // Os adaptadores ficam ocultos: alguns módulos antigos os recriam se forem removidos.
-   for(const n of app?.querySelectorAll('.trm [data-trtela],.trm [data-terminal-window],.trm [data-tr="pop"],.trm [data-tr="menu"],.trm [data-tr="sair"],.trm .trinst,.trm [data-research-open],.trm [data-flow-open],.trm [data-consulta325],.trm [data-ti330],.trm [data-radar332],.trm [data-tr-qualidade-v374],.trm [data-tc326-menu],.trm [data-tc326-status],.trm [data-v329-open],.trm [data-t369-suggest],.trm [data-obs328],.trm .dtval-open')||[]){n.hidden=true;n.inert=true;n.dataset.terminalExternal='1';n.style.setProperty('display','none','important')};
-   for(const n of app?.querySelectorAll('.trm [data-trgo],.trm [data-trcmd]')||[]){const value=n.getAttribute('data-trgo')||n.getAttribute('data-trcmd');if(value&&!allows(value)){n.hidden=true;n.inert=true;n.dataset.terminalExternal='1';n.style.setProperty('display','none','important')}}
+   for(const n of app?.querySelectorAll('.trm [data-trtela],.trm [data-terminal-window],.trm [data-tr="pop"],.trm [data-tr="menu"],.trm [data-tr="sair"],.trm .trinst,.trm [data-research-open],.trm [data-flow-open],.trm [data-consulta325],.trm [data-ti330],.trm [data-radar332],.trm [data-tr-qualidade-v374],.trm [data-tc326-menu],.trm [data-tc326-status],.trm [data-v329-open],.trm [data-t369-suggest],.trm [data-obs328],.trm .dtval-open')||[]){hideExternal(n)};
+   for(const n of app?.querySelectorAll('.trm [data-trgo],.trm [data-trcmd]')||[]){const value=n.getAttribute('data-trgo')||n.getAttribute('data-trcmd');if(value&&!allows(value)){hideExternal(n)}}
   }
   root.DiarioTerminalInicio?.mount?.();
  }

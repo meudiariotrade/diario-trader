@@ -2239,6 +2239,7 @@ function vStats() {
     (a(), setTimeout(a, 0), addEventListener("load", a));
     const o = {
         home: "M3 11l9-8 9 8M5 10v10h14V10",
+        monitor: "M3 3h18v14H3zM8 21h8M12 17v4",
         bar: "M4 20V10M10 20V4M16 20v-7M2 20h20",
         up: "M3 17l6-6 4 4 8-8M15 7h6v6",
         down: "M3 7l6 6 4-4 8 8M15 17h6v-6",
@@ -2435,7 +2436,7 @@ function vStats() {
         "⚫": "var(--tx)",
       },
       r = (b) =>
-        `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${o[b]}"/></svg>`;
+        `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${o[b] || o.info}"/></svg>`;
     window.icoSvg = r;
     const i =
         /(?:\p{Regional_Indicator}{2}|(?:\p{Extended_Pictographic})(?:\ufe0f|\u20e3|\p{Emoji_Modifier}|\u200d\p{Extended_Pictographic}\ufe0f?)*)\s?/gu,

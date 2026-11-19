@@ -16,6 +16,10 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Gerar build corrigido
+        run: npm run build
+      - name: Regressões de DOM
+        run: node --test tests/qa-layout-v805.test.cjs
       - name: Preparar navegador
         run: |
           diario_browser="$(command -v google-chrome || command -v chromium || true)"
@@ -24,6 +28,8 @@ jobs:
           else
             npx playwright install --with-deps chromium
           fi
+      - name: Regressões de logos e comandos do Terminal
+        run: node --test tests/mercado-logos-v669.test.cjs tests/terminal-comandos.test.cjs
       - name: Preparar identidade descartável sem enviar email
         run: node scripts/qa-e2e-live.cjs --prepare
       - uses: actions/upload-artifact@v4
@@ -32,6 +38,8 @@ jobs:
           path: qa-provision/request.json
           retention-days: 1
       - name: Auditar app publicado com conta descartável
+        env:
+          QA_BUILD_DIR: _site
         run: node scripts/qa-e2e-live.cjs
       - uses: actions/upload-artifact@v4
         if: always()

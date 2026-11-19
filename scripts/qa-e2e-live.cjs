@@ -1,7 +1,7 @@
 'use strict';
 // Executado em runner descartável. Nunca usa credenciais da conta principal.
 const fs=require('node:fs'),crypto=require('node:crypto'),{chromium}=require('playwright');
-const vm=require('node:vm'), cfg={window:{}};vm.runInNewContext(fs.readFileSync('config.js','utf8'),cfg);
+const path=require('node:path');const vm=require('node:vm'), cfg={window:{}};vm.runInNewContext(fs.readFileSync('config.js','utf8'),cfg);
 const SB=cfg.window.SUPA_URL,KEY=cfg.window.SUPA_KEY,BASE=process.env.QA_BASE_URL||'https://meudiariotrade.github.io/diario-trader/';
 const OUT='qa-results';fs.mkdirSync(OUT,{recursive:true});
 if(process.argv.includes('--prepare')){
@@ -17,10 +17,15 @@ const save=()=>fs.writeFileSync(OUT+'/results.json',JSON.stringify(report,null,2
 async function auth(path,body){const r=await fetch(SB+path,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});const j=await r.json();return {ok:r.ok,status:r.status,j};}
 async function route(page,id){
  const skip=page.locator('[data-onbx="pular"]');if(await skip.isVisible())await skip.click();
- const buttons=page.locator('[data-dt393-route="'+id+'"]');
+ if(id==='analises'&&await page.locator('#an-root').isVisible())return;
+ const buttons=page.locator('[data-dt393-route="'+id+'"],[data-navroute="'+id+'"],[data-dt414-go="'+id+'"]');
  for(const b of await buttons.all())if(await b.isVisible()){await b.click();await page.waitForTimeout(450);return;}
  const menu=page.getByRole('button',{name:'Abrir menu do aplicativo',exact:true});
  if(await menu.isVisible())await menu.click();else await page.locator('#pcmenub').click();
+ await page.waitForTimeout(400);
+ for(const b of await buttons.all()){
+  const details=b.locator('xpath=ancestor::details[1]');if(await details.count()&&!await b.isVisible()){const summary=details.locator(':scope > summary');if(await summary.isVisible())await summary.click();}
+ }
  for(const b of await buttons.all())if(await b.isVisible()){await b.click();await page.waitForTimeout(450);return;}
  throw Error('Rota não acessível por controle visível: '+id);
 }
@@ -51,11 +56,22 @@ async function audit(page,device,id,name,sub,events){
   await page.waitForTimeout(1500);
   result.heading=await page.locator('#app').innerText().then(x=>x.slice(0,1400));
   result.metrics=await observe(page);
+  result.invalidSvg=await page.locator('path[d="undefined"]').count();result.inlineLogoHandlers=await page.locator('.dl-logo img[onerror]').count();
+  result.interactions=[];
+  if(sub==='br'||sub==='us'){
+   const search=page.locator('[data-scr-search="'+sub+'"]');await search.fill('ZZZQA404');await page.waitForTimeout(400);if(await search.inputValue()!=='ZZZQA404')throw Error('Busca não mantém texto');await search.fill('');await page.waitForTimeout(400);result.interactions.push('Busca do screener recebe e limpa texto sem perder o controle.');
+  }
+  if(id==='term'){
+   const originalMode=await page.evaluate(()=>window.DIARIO_V428?.page||'GP');
+   const before=await page.evaluate(()=>new Promise(resolve=>{let n=0;const mo=new MutationObserver(x=>n+=x.length);mo.observe(document.querySelector('#app'),{attributes:true,subtree:true});window.TerminalCommandPolicy?.install();queueMicrotask(()=>{mo.disconnect();resolve(n)});}));result.policyRepeatedMutations=before;
+   for(const mode of ['HOME','GP','WORKSPACES']){const b=page.locator('[data-tf415-nav="'+mode+'"]');if(await b.isVisible()){await b.click();await page.waitForTimeout(300);const visible=await page.locator(mode==='HOME'?'#terminal-inicio':mode==='GP'?'#v421-gp':'#trgrid').isVisible();if(!visible)throw Error('Botão do Terminal não exibiu o destino: '+mode);result.interactions.push('Terminal: botão '+mode+' exibiu o destino esperado.');}}
+   const restore=page.locator('[data-tf415-nav="'+originalMode+'"]');if(await restore.isVisible())await restore.click();
+  }
   result.screenshot=device+'-'+(sub||id)+'.png';await page.screenshot({path:OUT+'/'+result.screenshot,fullPage:false});
   result.fullScreenshot=device+'-'+(sub||id)+'-full.png';await page.screenshot({path:OUT+'/'+result.fullScreenshot,fullPage:true});
   const controls=await page.locator('#app button:visible').evaluateAll(bs=>bs.map(b=>({text:b.textContent.trim().slice(0,90),disabled:b.disabled,attrs:[...b.attributes].filter(a=>a.name.startsWith('data-')).map(a=>[a.name,a.value])})));result.controls=controls;
   result.events=events.slice(from);result.errors=result.events.filter(e=>e.type==='pageerror');result.console=result.events.filter(e=>e.type==='console');result.network=result.events.filter(e=>e.type==='http'||e.type==='requestfailed');
-  result.status=result.errors.length||result.metrics.scrollWidth>result.metrics.clientWidth||result.metrics.cls>0.1||result.metrics.rootReplacements>5||result.metrics.narrow.length?'REPROVADA':'REVISÃO VISUAL';
+  result.status=result.errors.length||result.metrics.scrollWidth>result.metrics.clientWidth||result.metrics.cls>0.1||result.metrics.rootReplacements>5||result.metrics.narrow.length||result.invalidSvg||result.inlineLogoHandlers?'REPROVADA':'REVISÃO VISUAL';
  }catch(e){result.status='BLOQUEADA';result.error=String(e);await page.screenshot({path:OUT+'/'+device+'-'+(sub||id)+'-blocked.png'}).catch(()=>{});}
  console.log('QA_SCREEN',JSON.stringify({device,name,status:result.status,metrics:result.metrics&&{mutations:result.metrics.mutations,cls:result.metrics.cls,width:result.metrics.scrollWidth,root:result.metrics.rootReplacements},error:result.error}));save();
 }
@@ -67,8 +83,13 @@ async function audit(page,device,id,name,sub,events){
   report.account.authenticated=true;save();console.log('QA_AUTHENTICATED',report.account.id);
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox']});
   for(const [device,width,height,mobile] of [['desktop',1440,900,false],['iphone',390,844,true]]){
-   const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:1,timezoneId:'America/Sao_Paulo'});
+   const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:1,serviceWorkers:'block',timezoneId:'America/Sao_Paulo'});
    const page=await context.newPage(),events=[];page.setDefaultTimeout(10000);
+   if(process.env.QA_BUILD_DIR){
+    const build=path.resolve(process.env.QA_BUILD_DIR),types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.ttf':'font/ttf','.webmanifest':'application/manifest+json'};
+    await page.route(BASE+'**',async r=>{const u=new URL(r.request().url()),base=new URL(BASE);let rel=decodeURIComponent(u.pathname.slice(base.pathname.length))||'index.html';const f=path.resolve(build,rel);if(f.startsWith(build+path.sep)&&fs.statSync(f,{throwIfNoEntry:false})?.isFile())await r.fulfill({path:f,contentType:types[path.extname(f)]||'application/octet-stream'});else await r.continue();});
+    report.build={dir:process.env.QA_BUILD_DIR,commit:process.env.GITHUB_SHA,mode:'Build estático da branch QA servido pelo Playwright sob a origem do app; APIs reais, sem mock de dados; Service Worker desabilitado.'};
+   }
    page.on('pageerror',e=>events.push({type:'pageerror',message:e.message}));page.on('console',m=>{if(m.type()==='error')events.push({type:'console',message:m.text().slice(0,1000)})});
    page.on('response',r=>{if(r.status()>=400)events.push({type:'http',status:r.status(),url:r.url().replace(/([?&](?:token|key|apikey)=)[^&]+/gi,'$1REDACTED')})});page.on('requestfailed',r=>events.push({type:'requestfailed',url:r.url().split('?')[0],message:r.failure()?.errorText}));
    await page.goto(BASE,{waitUntil:'domcontentloaded',timeout:60000});
