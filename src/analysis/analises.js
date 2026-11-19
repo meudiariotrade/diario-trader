@@ -267,15 +267,18 @@ async function getGlobalSnapshot(m,refresh=false){
  const task=(async()=>{
   const stored=local||await snapshotDB(market);
   if(!refresh&&stored&&Date.now()-stored.when<GLOBAL_TTL){snapshotMemory.set(market,stored);return stored.data}
-  const c=cfg();if(!c)throw Error('Configuração do Screener indisponível');
-  // Snapshot publico via Cloudflare (v755), sem token, identidade ou dados de carteira.
-  // Em caso de falha da borda, consultar imediatamente a origem ja utilizada na v754.
-  const edge=String(w.DIARIO_SCREENERS_EDGE_URL||
+  // v799: GET de fundamento público SOMENTE via cache Cloudflare; falha usa IndexedDB.
+  // Nunca disparar fallback automático por cliente contra Edge Function do Supabase.
+  const configured=String(w.DIARIO_SCREENERS_EDGE_URL||
    'https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/screeners').trim();
+  const fallback='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/screeners';
+  let edgeUrl=fallback;
+  try{const dest=new URL(configured);
+   if(dest.protocol==='https:'&&dest.hostname.endsWith('.workers.dev')&&
+      dest.pathname==='/v1/screeners')edgeUrl=dest.origin+dest.pathname;
+  }catch{}
   const path='?market='+market+'&snapshot=1&universe=1';
-  const origin=c.url+'/functions/v1/screeners-quant'+path;
-  const endpoints=/^https:\/\//.test(edge)?[{url:edge.replace(/\/$/,'')+path,edge:true},{url:origin,edge:false}]:
-   [{url:origin,edge:false}];
+  const endpoints=[{url:edgeUrl+path,edge:true}];
   let lastError=null;
   for(const endpoint of endpoints){
    const headers={...(endpoint.edge?{}:{apikey:c.key}),...(stored?.etag?{'If-None-Match':stored.etag}:{})};

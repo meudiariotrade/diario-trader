@@ -76,13 +76,14 @@ test('Top 10 usa snapshot global elegível e gera PDF local sem varrer tickers',
  assert.ok(JSON.parse(read('release.config.json')).version>=750);
 });
 
-test('Snapshot v755 prioriza Worker publico e conserva fallback seguro ao Supabase',()=>{
- assert.match(app,/diario-screeners-quant\.lucianosilva43567\.workers\.dev\/v1\/screeners/);
- assert.match(app,/const endpoints=\/\^https:/);
- assert.match(app,/for\(const endpoint of endpoints\)/);
- assert.match(app,/endpoint\.edge\?\{\}:\{apikey:c\.key\}/);
- assert.match(app,/endpoint\.edge\?7000:15000/);
- assert.match(app,/const origin=c\.url\+'\/functions\/v1\/screeners-quant'\+path/);
- assert.match(app,/if\(stored\?\.data\)\{\s*const age=Date\.now\(\)-Number\(stored\.when\|\|0\)/);
- assert.match(app,/GLOBAL_OFFLINE_SLA/);
+test('Snapshot v799 prioriza Worker público e cache local, sem fallback direto ao Supabase',()=>{
+ const begin=app.indexOf('async function getGlobalSnapshot('),
+  end=app.indexOf('function rankedSnapshot(',begin),
+  snapshot=app.slice(begin,end);
+ assert.match(snapshot,/diario-screeners-quant\.lucianosilva43567\.workers\.dev\/v1\/screeners/);
+ assert.match(snapshot,/const endpoints=\[\{url:edgeUrl\+path,edge:true\}\]/);
+ assert.match(snapshot,/for\(const endpoint of endpoints\)/);
+ assert.doesNotMatch(snapshot,/\/functions\/v1\/screeners-quant/);
+ assert.match(snapshot,/if\(stored\?\.data\)\{\s*const age=Date\.now\(\)-Number\(stored\.when\|\|0\)/);
+ assert.match(snapshot,/GLOBAL_OFFLINE_SLA/);
 });
