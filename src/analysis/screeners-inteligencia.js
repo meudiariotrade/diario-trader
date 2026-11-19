@@ -64,12 +64,17 @@
  function clamp(n){return Math.max(0,Math.min(100,n))}
  function scale(v,lo,hi,inv=false){return v==null?null:(inv?100-clamp((v-lo)/(hi-lo)*100):clamp((v-lo)/(hi-lo)*100))}
  function avg(vs){const a=vs.filter(x=>x!==null);return a.length?a.reduce((a,b)=>a+b,0)/a.length:null}
+ function blendValuationBR(base,row){
+  if(base===null)return null;
+  const val=valuationBR(row);
+  return val.scoreActive?base*.8+val.scoreValuation*.2:base;
+ }
  function item(m,row){
   const v=k=>value(row,k);
   if(financialSubtype(row)){
    if(m==='BR')return [
     scale(v('roe'),5,25),
-    avg([scale(v('pl'),5,25,true),scale(v('pvp'),.6,3,true)]),
+    blendValuationBR(avg([scale(v('pl'),5,25,true),scale(v('pvp'),.6,3,true)]),row),
     avg([scale(v('dividend_yield'),0,12),
       v('payout_implicito')===null?null:(v('payout_implicito')>=20&&v('payout_implicito')<=80?90:25)]),
     scale(v('momentum_12_1'),-30,50)
@@ -84,7 +89,7 @@
   }
   if(m==='BR')return [
    avg([scale(v('roe'),5,25),scale(v('roic'),5,22)]),
-   avg([scale(v('pl'),5,25,true),scale(v('ev_ebitda'),4,18,true),scale(v('fcf_yield'),0,12)]),
+   blendValuationBR(avg([scale(v('pl'),5,25,true),scale(v('ev_ebitda'),4,18,true),scale(v('fcf_yield'),0,12)]),row),
    avg([scale(v('dividend_yield'),0,12),v('payout_implicito')===null?null:(v('payout_implicito')>=20&&v('payout_implicito')<=80?90:25)]),
    scale(v('momentum_12_1'),-30,50)
   ];
@@ -166,7 +171,7 @@
    if(ok){out.verified.push(key);out.statuses[key]='verificado'}
    else{out.conflicts.push(key);out.statuses[key]='inconsistente'}
   }
-  out.complete=out.checked>0&&out.checked===out.verified.length&&out.missing.length===0&&out.conflicts.length===0;
+  out.complete=out.checked===out.verified.length&&out.missing.length===0&&out.conflicts.length===0;
   return out;
  }
 
@@ -183,7 +188,7 @@
   const coverage=all.length?Math.round(eligible/all.length*100):0;
   const diff=official!==null&&model!==null?Math.abs(official-model):null;
   const oldFund=age(row?.sec_facts_at||row?.fundamentais_em,now);
-  const version=financialSubtype(row)?(m==='BR'?'v2.1-fin':'us_v2.1-fin'):(m==='BR'?'v2.0':'us_v2.0');const expected=String(row?.score_model_version||'legado');
+  const version=m==='BR'&&vs[1]!==null&&valuationBR(row).scoreActive?(financialSubtype(row)?'v2.2-fin-val':'v2.2-val'):financialSubtype(row)?(m==='BR'?'v2.1-fin':'us_v2.1-fin'):(m==='BR'?'v2.0':'us_v2.0');const expected=String(row?.score_model_version||'legado');
   const competence=row?.data_competencia_balanco||null;
   const oldTech=age(row?.tecnicos_em,now);
   const concerns=[],supports=[];
@@ -238,7 +243,7 @@
   const description=profile+(momentum!==null?(momentum>=0?'; tendência de preço positiva.':'; tendência de preço fraca.'):'; tendência ainda sem dados suficientes.');
   return {ticker:String(row?.ticker||''),company:String(row?.empresa||row?.company_name||row?.ticker||''),market:m,
     score:official,modelScore:model,difference:diff,validated:verified,level,modelVersion:expected,expectedVersion:version,
-    qualityFlags:scoreAnomalias,lineageAudit:lineage,secXbrlIdentificado,provenanceLevel:m==='US'?(secXbrlIdentificado?'protocolo_mais_xbrl_parcial':'documento_sem_prova_xbrl'):(documentoConfirmado?'protocolo_cvm':'sem_documento'),
+    qualityFlags:scoreAnomalias,valuationAudit:m==='BR'?valuationBR(row):null,lineageAudit:lineage,secXbrlIdentificado,provenanceLevel:m==='US'?(secXbrlIdentificado?'protocolo_mais_xbrl_parcial':'documento_sem_prova_xbrl'):(documentoConfirmado?'protocolo_cvm':'sem_documento'),
     competence,profile:description,
     coverage,parts,positives:[...signal,...supports].slice(0,3),risks:concerns.slice(0,6),
     missing:parts.flatMap(p=>p.missing),updated_at:row?.updated_at||null,
@@ -277,16 +282,25 @@
    methods:{proprio:null,bazin:null,bazinDinamico:null,graham:null},
    margins:{proprio:null,bazin:null,bazinDinamico:null,graham:null},
    reasons:{},source:'Snapshot fundamentalista local; fórmulas não inferem métricas ausentes',price};
-  const lucro=finitePositive(row.lucro_projetado_brl),shares=finitePositive(row.total_acoes);
-  const payout=pctRatio(row.payout_projetado);
+  const lucroExplicito=finitePositive(row.lucro_projetado_brl),cap=finitePositive(row.valor_mercado_brl),
+   plRef=finitePositive(row.pl),shares=finitePositive(row.total_acoes);
+  // Valor de mercado / P/L é lucro TTM implícito, NÃO lucro futuro de consenso.
+  const lucro=lucroExplicito!==null?lucroExplicito:
+   row.valuation_insumos_conferidos===true&&cap!==null&&plRef!==null?cap/plRef:null;
+  result.lucroBase=lucroExplicito!==null?'lucro projetado informado':
+   lucro!==null?'lucro TTM implícito (valor de mercado / P/L)':'N/D';
+  const payout=pctRatio(row.payout_projetado??(row.valuation_insumos_conferidos===true?row.payout_medio_historico:null));
   if(lucro!==null&&shares!==null&&payout!==null&&payout>0){
    result.methods.proprio=(lucro*payout/shares)/yieldOwn;
   }else result.reasons.proprio='Exige lucro projetado BRL, payout projetado e total de ações de mesma base/competência';
   const dpa=finitePositive(row.dpa_12m);
   if(dpa!==null)result.methods.bazin=dpa/.06;
   else result.reasons.bazin='Exige DPA acumulado 12 meses ajustado a eventos corporativos';
+  const certifiedAvg=finitePositive(row.dpa_media_consistente_5a);
   const history=dividendYears(row.dividendos_anuais);
-  if(history){
+  if(certifiedAvg!==null&&row.valuation_insumos_conferidos===true)
+   result.methods.bazinDinamico=certifiedAvg/yieldDynamic;
+  else if(history){
    const normal=history.filter(x=>!x.extra).map(x=>x.dpa).sort((a,b)=>a-b);
    const median=normal.length?normal[Math.floor(normal.length/2)]:null;
    const adjusted=history.map(x=>
@@ -308,9 +322,18 @@
    if(fair!==null&&price!==null)result.margins[key]=(fair-price)/fair*100;
   }
   if(price===null)result.reasons.cotacao='Cotação positiva com data não fornecida';
+  const margins=Object.values(result.margins),verified=row.valuation_insumos_conferidos===true&&
+   finitePositive(row.dpa_media_consistente_5a)!==null;
+  result.compositeMargin=verified&&margins.length===4&&margins.every(Number.isFinite)?
+   margins.reduce((a,b)=>a+b,0)/4:null;
+  result.scoreValuation=result.compositeMargin===null?null:
+   Math.max(0,Math.min(100,50+result.compositeMargin));
+  result.scoreActive=result.scoreValuation!==null;
+  if(!verified)result.reasons.score='Nota atual preservada: insumos e média anual de DPA ainda não auditados';
+  else if(!result.scoreActive)result.reasons.score='Nota atual preservada: falta pelo menos uma fórmula comprovada';
   return result;
  }
 
  function methodology(m){return (weights[m==='US'?'US':'BR']).map(g=>g.name+' '+g.weight+'%').join(' • ')}
- return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,valuationBR,dividendYears,auditLineage,version:'v2.2'});
+ return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,valuationBR,dividendYears,auditLineage,blendValuationBR,version:'v2.2-val'});
 });

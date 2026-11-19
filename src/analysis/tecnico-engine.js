@@ -5,7 +5,7 @@
  else root.DiarioTecnicoEngine=api;
 })(typeof self!=='undefined'?self:globalThis,function(){
  'use strict';
- const VERSION='tecnico-781.1';
+ const VERSION='tecnico-787.1';
  const FIB_RET=[0,.236,.382,.5,.618,.764,1],FIB_EXT=[1.11,1.272,1.414,1.618];
  const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
  const mean=v=>v.length?v.reduce((a,b)=>a+b,0)/v.length:null;
@@ -50,33 +50,51 @@
   return result.slice(-12);
  }
  function fibo(c,dir,sw){
-  const last=c.at(-1),segments=[120,40].map(window=>{
-   const selected=sw.filter(x=>x.i>=c.length-window);
-   let a=null,b=null;
-   for(let j=selected.length-1;j>=1;j--){
-    const x=selected[j-1],y=selected[j];
-    if(dir===1&&x.d===-1&&y.d===1&&y.p>x.p){a=x;b=y;break}
-    if(dir===-1&&x.d===1&&y.d===-1&&y.p<x.p){a=x;b=y;break}
-   }
-   if(!a||!b)return null;
-   const length=Math.abs(b.p-a.p);
-   return {from:a.p,to:b.p,age:c.length-1-b.i,length,ret:FIB_RET.map(r=>({r,price:b.p-dir*length*r})),ext:FIB_EXT.map(r=>({r,price:a.p+dir*length*r}))};
-  });
-  const macro=segments[0]||segments[1],micro=segments[1]||segments[0];
-  if(!macro)return {zone:false,cluster:false,segments,levels:[],exhausted:false};
-  const price=last.c,min=Math.min(macro.to-dir*macro.length*.236,macro.to-dir*macro.length*.764),max=Math.max(macro.to-dir*macro.length*.236,macro.to-dir*macro.length*.764);
+  // v787: ancoragem em ZigZag MACRO confirmado (2 candles posteriores observados).
+  // O eixo segue 0%=início da perna, 100%=fim da perna; negativos são espelhamentos.
+  // Só pivôs passados (máximo 250 candles) entram no cálculo; micro é gatilho RMC/CISD.
+  const window=Math.min(c.length,250),minIndex=c.length-window;
+  const macroTurns=sw.filter(x=>x.i>=minIndex&&x.i<=c.length-3);
+  const threshold=Math.max((atr(c)||0)*2,c.at(-1).c*.025);
+  const candidates=[];
+  for(let i=1;i<macroTurns.length;i++){
+   const a=macroTurns[i-1],b=macroTurns[i];
+   if(a.d!==-dir||b.d!==dir||dir*(b.p-a.p)<=threshold)continue;
+   const span=Math.abs(b.p-a.p),age=c.length-1-b.i;
+   // Maior amplitude domina. Recência desempata sem substituir por microperna.
+   candidates.push({from:a,to:b,length:span,age,score:span*(1-age/(window*2))});
+  }
+  candidates.sort((a,b)=>b.score-a.score||b.to.i-a.to.i);
+  const best=candidates[0];
+  if(!best)return {zone:false,cluster:false,segments:[null,null],levels:[],
+   exhausted:false,defense:null,macroConfirmed:false,
+   reason:'Sem par ZigZag macro confirmado com amplitude mínima (250 candles)'};
+  const a=best.from,b=best.to,length=best.length,floor=.01;
+  const normalized=r=>({r,price:round(Math.max(floor,a.p+dir*length*r)),anchor:'macro',macroFrom:a.i,macroTo:b.i});
+  const negatives=[-.618,-.414,-.272,-.118].map(normalized);
+  const ret=FIB_RET.map(normalized),ext=FIB_EXT.map(normalized);
+  const levels=[...negatives,...ret,...ext];
+  const microTurns=sw.filter(x=>x.i>=c.length-40&&x.i<=c.length-3);
+  const microLast=microTurns.slice(-2);
+  const micro=microLast.length===2&&microLast[0].d===-dir&&microLast[1].d===dir?
+   {from:microLast[0].p,to:microLast[1].p,age:c.length-1-microLast[1].i,
+    role:'gatilho RMC/CISD — não redesenha grade macro'}:null;
+  const segment={from:a.p,to:b.p,age:best.age,length,ret,ext,neg:negatives,
+   anchorFromIndex:a.i,anchorToIndex:b.i,macroConfirmed:true};
+  const defense=dir===1?[ret.find(z=>z.r===.618).price,ret.find(z=>z.r===.764).price]:
+   [ret.find(z=>z.r===.764).price,ret.find(z=>z.r===.618).price];
+  const min=Math.min(...defense),max=Math.max(...defense),price=c.at(-1).c;
   const gaps=fibogaps(c,dir),relevantGap=gaps.slice().reverse().find(x=>x.low<=max&&x.high>=min)||null;
   const gapZone=relevantGap?[round(Math.max(min,relevantGap.low)),round(Math.min(max,relevantGap.high))]:null;
-  const zone=price>=min&&price<=max;
-  const levels=macro.ret.concat(macro.ext);
-  const clusters=[];
-  if(micro&&macro!==micro&&(macro.from!==micro.from||macro.to!==micro.to||macro.age!==micro.age))for(const x of macro.ret.concat(macro.ext))for(const y of micro.ret.concat(micro.ext)){
-   if(Math.abs(x.price-y.price)/Math.max(.01,Math.abs(x.price))<=.01)clusters.push(round((x.price+y.price)/2));
-  }
-  const expansion=(price-macro.from)*dir/macro.length;
-  return {zone,cluster:clusters.length>0,clusters:[...new Set(clusters)],fibogap:relevantGap!==null,gapZone,segments,levels,expansion:round(expansion,3),
-   exhausted:expansion>=1.414&&expansion<=1.618,defense:[min,max],files:[round(macro.to-dir*macro.length*.618),round(macro.to-dir*macro.length*.764)]};
+  const expansion=(price-a.p)*dir/length;
+  return {zone:price>=min&&price<=max,cluster:false,clusters:[],
+   fibogap:relevantGap!==null,gapZone,segments:[segment,micro],levels,
+   macroConfirmed:true,macroSpan:window,anchor:{from:a.p,to:b.p,fromIndex:a.i,toIndex:b.i},
+   expansion:round(expansion,3),exhausted:expansion>=1.414&&expansion<=1.618,
+   defense:[min,max],negativeBase:negatives,stopTolerance:negatives.find(z=>z.r===-.118)?.price,
+   files:defense.map(z=>round(z))};
  }
+
  function turn4(c,dir,zone){
   if(c.length<8)return {armed:false,confirmed:false,cisd:false};
   // Candidato central + duas barras posteriores: nenhum pivô futuro é presumido.

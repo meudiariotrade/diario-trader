@@ -145,7 +145,7 @@ async function build(m,rows,tf='1d'){
  y+=22;
  for(const [head,paragraph] of [
   ['DADOS / HISTÓRICO','Cálculos exclusivamente sobre candles OHLCV normalizados, descartando dados inconsistentes. Mínimo 210 candles e 100 candles com volume positivo. Timeframes intradiários são conferidos contra um período superior quando disponível. Histórico pode apresentar atraso ou ajustes.'],
-  ['FIBONACCING · IMPLEMENTAÇÃO HEURÍSTICA','Retrações 0/23,6/38,2/50/61,8/76,4/100%; extensões 111/127,2/141,4/161,8%. Pivôs são confirmados com duas barras futuras observadas. Clusters exigem convergência de até 1%. RMC/CISD usam condições explícitas de barras e estrutura. A implementação não afirma reproduzir integralmente regras autorais dos instrutores.'],
+  ['FIBONACCING · IMPLEMENTAÇÃO HEURÍSTICA','Grade macro 0/23,6/38,2/50/61,8/76,4/100%; extensões 111/127,2/141,4/161,8% e negativos -11,8/-27,2/-41,4/-61,8%. Ancoragem em ZigZag dominante de até 250 candles, com dois candles posteriores de confirmação. A microperna só define o gatilho RMC/CISD. Não extrapolar histórico. A implementação não afirma reproduzir integralmente regras autorais dos instrutores.'],
   ['PISANI · MINERVINI · ELLIOTT','SMA 20/50/150/200, OBV, volume relativo, volatilidade semanal, VCP e checagem direcional. Trend Template 8/8 requer histórico diário e RS válido. Elliott é hipótese de contagem sob regras mínimas de invalidação, nunca detecção inequívoca de ondas.'],
   ['CÁLCULO CONFERE / ANTIARMADILHA','Selo atesta somente soma ponderada dos quatro pilares, 100% de pesos e histórico mínimo. Não certifica proveniência, atrasos, uma tese ou lucratividade. Top 10 bloqueia exaustão (extensões 141,4%–161,8%, afastamento 2,5 ATR), falta de volume ou OBV não confirmado.'],
   ['IA E RESPONSABILIDADE','Este dossiê determinístico não faz requisições à IA nem ao Supabase. A pesquisa por IA é uma ação separada e depende de confirmação externa dos números. Liquidez, slippage, spreads, ajustes corporativos e regras locais de short selling devem ser conferidos antes de operar.']
@@ -191,10 +191,10 @@ function swingsPDF(c){
 }
 function desenharGrafico(r,x,kind,tf,candles){
  const view=candles.slice(-90),offset=candles.length-view.length,canvas=document.createElement('canvas');
- canvas.width=1320;canvas.height=720;const ctx=canvas.getContext('2d');
+ canvas.width=1600;canvas.height=1000;const ctx=canvas.getContext('2d');
  if(!ctx)throw Error('Canvas 2D indisponível no iPhone para produzir gráfico PDF');
- const W=canvas.width,H=canvas.height,L=82,R=120,T=70,B=62;
- const right=W-R,volTop=kind==='trend'?493:0,chartBottom=kind==='trend'?464:H-B;
+ const W=canvas.width,H=canvas.height,L=82,R=226,T=82,B=74;
+ const right=W-R,volTop=kind==='trend'?685:0,chartBottom=kind==='trend'?650:H-B;
  const chartH=chartBottom-T;const plotW=right-L;
  const fg='#111827',muted='#64748B',grid='#E5E7EB',rise='#089981',fall='#F23645';
  const axisLabel=(v)=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:Math.abs(v)<2?4:2});
@@ -225,7 +225,7 @@ function desenharGrafico(r,x,kind,tf,candles){
   const value=lo+(hi-lo)*(5-z)/5,y=py(value);
   ctx.strokeStyle=grid;ctx.lineWidth=1;ctx.setLineDash([]);ctx.beginPath();
   ctx.moveTo(L,y);ctx.lineTo(right,y);ctx.stroke();
-  ctxText(axisLabel(value),right+12,y+5,16,muted);
+  if(kind!=='fibo')ctxText(axisLabel(value),right+12,y+5,16,muted);
  }
  ctx.strokeStyle='#94A3B8';ctx.beginPath();ctx.moveTo(right,T);ctx.lineTo(right,chartBottom);ctx.stroke();
  for(let i=0;i<view.length;i++){
@@ -240,24 +240,41 @@ function desenharGrafico(r,x,kind,tf,candles){
   for(let i=0;i<points.length;i++)i?ctx.lineTo(points[i][0],points[i][1]):ctx.moveTo(points[i][0],points[i][1]);
   ctx.stroke();ctx.setLineDash([]);
  }
- const badgeY=[];
+ // v787: labels são desenhados SOMENTE NA COLUNA DIREITA, em duas passagens.
+ // Primeiro coleta coordenadas e traça linhas; depois posiciona badges sem colisão.
+ const labelQueue=[];
  function horizontal(price,label,col,dashed=false){
   if(!positivo(price))return;
-  const y=py(price);trace([[L,y],[right,y]],col,2,dashed?[8,6]:[]);
-  if(/^(Gatilho|Stop|Invalidação)/.test(label)){
-   // v781: etiqueta somente na área da escala DIREITA, jamais em cima de velas/pivôs.
-   let yy=Math.max(T+17,Math.min(chartBottom-17,y));
-   for(let j=0;j<badgeY.length;j++)if(Math.abs(yy-badgeY[j])<34)
-    yy=Math.min(chartBottom-17,badgeY[j]+35);
-   badgeY.push(yy);
-   ctx.fillStyle=col;ctx.fillRect(right+3,yy-15,R-9,30);
-   ctxText(label.startsWith('Invalidação')?'Invalidação':label,right+9,yy-3,13,'#FFFFFF');
-   ctxText(axisLabel(price),right+9,yy+10,13,'#FFFFFF');
-   return;
-  }
-  const yy=Math.max(T+12,Math.min(chartBottom-8,y-5));
-  ctxText(label+' '+axisLabel(price),right-8,yy,16,col,'right');
+  const y=py(price);
+  trace([[L,y],[right,y]],col,2,dashed?[8,6]:[]);
+  labelQueue.push({price,label:String(label),color:col,ideal:y});
  }
+ function drawPriceLabels(){
+  if(!labelQueue.length)return;
+  const minY=T+14,maxY=chartBottom-14,gap=22;
+  const ordered=labelQueue.slice().sort((a,b)=>a.ideal-b.ideal||a.price-b.price);
+  // Todas as etiquetas ficam em corredor lateral exclusivo de largura >=135px.
+  // O algoritmo não esconde valores: reduz a fonte, mas preserva 22px entre centros.
+  if(ordered.length*gap>maxY-minY+gap)throw Error('Escala sem altura para rótulos do Fibonaccing');
+  ordered.forEach((p,i)=>{p.y=Math.max(minY,Math.min(maxY,p.ideal));
+   if(i)p.y=Math.max(p.y,ordered[i-1].y+gap);
+  });
+  const overflow=ordered.at(-1).y-maxY;
+  if(overflow>0){for(const p of ordered)p.y-=overflow;}
+  for(let i=ordered.length-2;i>=0;i--)ordered[i].y=Math.min(ordered[i].y,ordered[i+1].y-gap);
+  const underflow=minY-ordered[0].y;
+  if(underflow>0)for(const p of ordered)p.y+=underflow;
+  const labelX=right+10,width=R-20;
+  for(const p of ordered){
+   ctx.strokeStyle=p.color;ctx.lineWidth=1.3;ctx.beginPath();
+   ctx.moveTo(right,p.ideal);ctx.lineTo(right+5,p.y);ctx.stroke();
+   ctx.fillStyle=/^(Gatilho|Stop|Invalidação)/.test(p.label)?p.color:'#1E293B';
+   ctx.fillRect(labelX,p.y-10,width,20);
+   ctxText(p.label.slice(0,17),labelX+6,p.y+4,12,'#FFFFFF');
+   ctxText(axisLabel(p.price),labelX+width-5,p.y+4,12,'#FFFFFF','right');
+  }
+ }
+
  if(kind==='trend'){
   const ma=[['SMA 20',20,'#2563EB'],['SMA 50',50,'#EA580C'],['SMA 150',150,'#9333EA'],['SMA 200',200,'#111827']];
   const scale=candles.length;
@@ -297,7 +314,7 @@ function desenharGrafico(r,x,kind,tf,candles){
    ctxText('DEFESA / FILÉ MIGNON · ZONA CONDICIONAL',L+8,top+21,15,rise);
   }
   for(const z of fibLevels){
-   const val=z.r||0,name=z.r>=1?'Exp '+(z.r*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%':
+   const val=z.r||0,name=z.r>1?'Exp '+(z.r*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%':
      (z.r*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
    horizontal(z.price,name,'#64748B',val>=1);
   }
@@ -320,6 +337,7 @@ function desenharGrafico(r,x,kind,tf,candles){
   if(initial&&positivo(initial.p))horizontal(initial.p,'Invalidação estrutural possível',fall,true);
   else ctxText('Invalidação não confirmada: pivôs insuficientes',L,T+21,17,fall);
  }
+ drawPriceLabels();
  for(const i of [0,30,60,89]){
   const c=view[i],day=new Date(c.t);
   const label=Number.isFinite(day.getTime())?day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'N/D';

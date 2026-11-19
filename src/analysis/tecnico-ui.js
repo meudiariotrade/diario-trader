@@ -21,11 +21,11 @@ function db(){
 }
 async function store(key,item){
  const base=await db();if(!base)return;
- return new Promise(resolve=>{try{const tx=base.transaction('data','readwrite');tx.objectStore('data').put({key,version:'tecnico-781.1',when:Date.now(),item});tx.oncomplete=()=>{base.close();resolve()};tx.onerror=()=>{base.close();resolve()}}catch{base.close();resolve()}});
+ return new Promise(resolve=>{try{const tx=base.transaction('data','readwrite');tx.objectStore('data').put({key,version:'tecnico-787.1',when:Date.now(),item});tx.oncomplete=()=>{base.close();resolve()};tx.onerror=()=>{base.close();resolve()}}catch{base.close();resolve()}});
 }
 async function read(key,ttl){
  const base=await db();if(!base)return null;
- return new Promise(resolve=>{try{const tx=base.transaction('data','readonly'),r=tx.objectStore('data').get(key);r.onsuccess=()=>resolve(r.result?.version==='tecnico-781.1'&&Date.now()-r.result.when<ttl?r.result.item:null);r.onerror=()=>resolve(null);tx.oncomplete=()=>base.close()}catch{base.close();resolve(null)}});
+ return new Promise(resolve=>{try{const tx=base.transaction('data','readonly'),r=tx.objectStore('data').get(key);r.onsuccess=()=>resolve(r.result?.version==='tecnico-787.1'&&Date.now()-r.result.when<ttl?r.result.item:null);r.onerror=()=>resolve(null);tx.oncomplete=()=>base.close()}catch{base.close();resolve(null)}});
 }
 async function fundamental(m,signal){
  let snap=null;
@@ -182,7 +182,7 @@ async function backtestFor(s,r,raw,tf){
  if(!Array.isArray(raw)||raw.length<263)return {method:'walk-forward-next-open-v1',
   status:'não comprovado',reason:'Histórico insuficiente: 252 candles de aquecimento e 11 de saída',setups:null};
  if(s.backtestWorker){s.backtestReject?.(Error('Backtest anterior cancelado'));s.backtestWorker.terminate()}
- const wk=new Worker('tecnico-worker.js?v=781');s.backtestWorker=wk;
+ const wk=new Worker('tecnico-worker.js?v=787');s.backtestWorker=wk;
  const request=s.token;const market=r.market;
  try{
   const result=await new Promise((resolve,reject)=>{

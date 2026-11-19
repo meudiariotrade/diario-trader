@@ -141,6 +141,7 @@ function methodology(L,m,opts={}){
    const v=calc(r,{yieldAceitavel:Number(opts.yieldAceitavel)||.07});
    L.rectangle(L.M,L.y,L.CW,43,i%2?L.C.paper:L.C.panel);
    L.write(String(r.ticker).slice(0,15),L.M+7,L.y+9,{font:'bold',size:8.2});
+   L.write((v.lucroBase||'N/D').includes('TTM')?'Lucro TTM':(v.lucroBase||'').includes('projetado')?'Lucro proj.':'Lucro N/D',L.M+7,L.y+25,{size:6.8,color:L.C.muted});
    for(let j=0;j<cols.length;j++){
     const key=cols[j][1],price=v.methods[key],margin=v.margins[key],x=L.M+124+j*92;
     L.write(price===null?'N/D':'R$ '+num(price,2),x,L.y+6,{size:7.4});
@@ -150,7 +151,10 @@ function methodology(L,m,opts={}){
    L.y+=43;
   }
   L.y+=18;
-  L.y=L.wrap('N/D não significa preço justo igual a zero. É ausência de insumo '+
+  L.y=L.wrap('A fórmula própria usa lucro projetado informado ou lucro TTM implícito (valor mercado / P/L), ' +
+   'identificado em cada linha. A média de Bazin de 3–5 anos é uma adaptação certificada por proventos. ' +
+   'Margem composta é média aritmética das quatro margens e, quando 100% auditada, entra com 20% do pilar Valuation (30% do score). '+
+   'N/D não significa preço justo igual a zero. É ausência de insumo '+
    'documentado e compatível (lucro projetado, payout, ações, DPA, histórico, LPA/VPA). '+
    'A versão ajustada de Bazin é uma adaptação, não a formulação clássica. '+
    'Valuation não equivale a recomendação ou preço-alvo.',

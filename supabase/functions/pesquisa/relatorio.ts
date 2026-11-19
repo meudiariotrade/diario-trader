@@ -80,6 +80,11 @@ function tecnicoMd(tk: string, e: any, moeda: string) {
     ['Dow · primária / secundária', `${D.primaria || 'n/d'} / ${D.secundaria || 'n/d'}`], ['Pivô de reversão (Dow)', D.pivo ? `${fmt(D.pivo.v)} · ${D.pivo.tipo} (${dm(D.pivo.dia)})` : 'n/d'],
     ['Perna dominante', t.perna ? `${t.perna.direcao}: ${fmt(t.perna.de)} → ${fmt(t.perna.ate)}` : 'n/d'],
     ['Fibonacci 38,2% · 50% · 61,8%', t.fibo ? t.fibo.map((q: any) => fmt(q.v)).join(' · ') : 'n/d'],
+    ['Fibonaccing macro · grade completa (-61,8% a 161,8%)',
+      Array.isArray(t.fiboMacroGrade) && t.fiboMacroGrade.length === 15 &&
+      t.fiboMacroGrade.every((q: any) => ok(q.r) && ok(q.price))
+       ? t.fiboMacroGrade.map((q: any) => fmt(q.r * 100, 1) + '%: ' + din(q.price, moeda)).join(' · ')
+       : 'n/d — ancoragem ZigZag macro não certificada no motor de Pesquisa'],
     ['Elliott · ciclo', E.fase || 'n/d'], ['Extensões 100% · 161,8%', `${fmt(E.ext100)} · ${fmt(E.ext1618)} (se romper ${fmt(E.gatilho)})`],
     ['Elástico MM20 · MM10s', `${pp(t.elastico20)} · ${pp(t.elastico10s)} (${t.zonaValor || 'n/d'})`],
     ['Últimos 5 candles', (t.pa || []).length ? t.pa.map((q: any) => q.tipo + ' ' + dm(q.dia).slice(0, 5)).join(' · ') : 'sem inside bar ou pavio de rejeição'],

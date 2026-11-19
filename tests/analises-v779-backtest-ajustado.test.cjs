@@ -29,7 +29,7 @@ test('v779: série ajustada é apenas exploratória e não simula custos execut�
  assert.ok(Object.values(backtest.setups).every(x=>x.status!=='homologado'));
 });
 test('v779: não alterar PDF nem lógica de apresentação',()=>{
- assert.equal(M.VERSION,'tecnico-781.1');
+ assert.equal(M.VERSION,'tecnico-787.1');
  for(const p of ['src/analysis/tecnico-engine.js','src/analysis/tecnico-worker.js','src/analysis/tecnico-ui.js','src/analysis/tecnico-pdf.js'])
   new vm.Script(read(p),{filename:p});
 });
