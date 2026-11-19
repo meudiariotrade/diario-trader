@@ -1,5 +1,5 @@
 {
-  "version": 804,
+  "version": 805,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -24,7 +24,7 @@
     "LICENSE-fontkit.txt"
   ],
   "debug": [],
-  "base": "19b61e58ed3d1d3e84e0cc2b5c48d0b5c1050af5",
+  "base": "b7d2e84d24ac578d329d535e2ec5280d1b3ef927",
   "bundles": {
     "nucleo-v560.js": "src/app-core.js",
     "camadas-v560.js": "src/app-layers.js",
@@ -63,7 +63,9 @@
     "historico-qualidade-v794.js": "src/analysis/historico-qualidade-v794.js",
     "economatica-fatos-v795.js": "src/analysis/economatica-fatos-v795.js",
     "snapshot-contract-v800.js": "src/analysis/snapshot-contract-v800.js",
-    "backtest-gates-v801.js": "src/analysis/backtest-gates-v801.js"
+    "backtest-gates-v801.js": "src/analysis/backtest-gates-v801.js",
+    "cerebro-ia.js": "src/ai/cerebro-ia.js",
+    "fibo-visual.js": "src/analysis/fibo-visual.js"
   },
   "templates": {
     "index.html": "src/index.html",

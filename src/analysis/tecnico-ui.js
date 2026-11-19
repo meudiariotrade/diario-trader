@@ -238,7 +238,7 @@ function view(m){
  const option=(v,label,sel)=>'<option value="'+v+'"'+(sel===v?' selected':'')+'>'+E(label)+'</option>';
  const choice=(name,opts,val)=>'<select data-tech-change="'+name+'">'+opts.map(x=>option(x[0],x[1],val)).join('')+'</select>';
  return '<div data-tech-root="'+m+'"><header class="an-header"><div><p class="an-kicker">SCREENING TÉCNICO · CLIENT-SIDE</p><h1 id="an-title">'+title+'</h1><p>Fibonaccing / Pisani / Minervini / Elliott · cálculos por candle · não constitui recomendação</p></div><span class="an-badge">'+s.rows.length+' analisados</span></header>'+
- '<div class="tech-controls"><label>Direção '+choice('dir',[['buy','Compra · Alta'],['sell','Venda / Short · Baixa'],['both','Ambos']],s.dir)+'</label>'+
+ (w.DiarioFiboVisual?.view(m)||'')+'<div class="tech-controls"><label>Direção '+choice('dir',[['buy','Compra · Alta'],['sell','Venda / Short · Baixa'],['both','Ambos']],s.dir)+'</label>'+
  '<label>Timeframe '+choice('tf',[['1d','Diário (1D)'],['1h','60 minutos (1H)'],['15m','15 minutos (15M)']],s.tf)+'</label>'+
  (m==='world'?'<label>Mercado '+choice('filter',[['all','Todos'],['us','Ações EUA'],['crypto','Cripto Binance']],s.filter)+'</label>':'')+
  '<label>Busca <input data-tech-search type="search" value="'+E(s.search)+'" placeholder="Ticker / nome" autocomplete="off"></label></div>'+
@@ -253,6 +253,7 @@ function view(m){
  detail(s,rows)+'<p class="an-disclaimer">Estruturas de Fibonaccing, RMC/CISD, VCP e Elliott são heurísticas codificadas conforme os critérios deste projeto, não certificação dos autores. A classificação só se confirma com dados históricos suficientes.</p></div>';
 }
 function leave(){
+ w.DiarioFiboVisual?.leave?.();
  w.DiarioBinanceAnalises?.stop();
  if(current){const s=states[current];s.token++;s.abort?.abort();s.abort=null;s.workerReject?.(Error('Análise técnica interrompida ao sair da aba'));s.workerReject=null;s.worker?.terminate();s.worker=null;s.backtestReject?.(Error('Aba fechada'));s.backtestWorker?.terminate();s.backtestWorker=null;s.backtestReject=null;s.loading=false;s.busyPDF=false;}
  current='';observer?.disconnect();observer=null;

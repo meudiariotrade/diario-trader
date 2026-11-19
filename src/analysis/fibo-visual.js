@@ -1,0 +1,131 @@
+/* v805: leitura assistida do print; imagem só no IndexedDB, níveis sempre calculados localmente. */
+;(function(w,d){'use strict';
+const DB='diario-fibo-visual-v805',STORE='prints';
+const LEVELS=[-61.8,-41.4,-27.2,-11.8,0,23.6,38.2,50,61.8,76.4,100,111,127.2,141.4,161.8];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number.isFinite(n)?Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:6}):'N/D';
+const uid=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'local';
+const safeTicker=s=>String(s||'').trim().toUpperCase().replace(/\.SA$/,'').replace(/[^A-Z0-9.\-]/g,'').slice(0,20);
+const state={br:{},world:{},pesquisa:{}};
+let fetcher=null,visionObserver=null;
+function opened(){return new Promise((ok,no)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'key'});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+async function tx(mode,exec){const db=await opened();try{return await new Promise((ok,no)=>{const r=exec(db.transaction(STORE,mode).objectStore(STORE));r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}finally{db.close()}}
+async function save(record){await tx('readwrite',s=>s.put({...record,key:uid()+'|'+record.ticker,owner:uid()}))}
+async function get(ticker){return tx('readonly',s=>s.get(uid()+'|'+safeTicker(ticker)))}
+const valid=n=>typeof n==='number'&&Number.isFinite(n)&&n>0&&n<1e12;
+function calculate(raw){
+ const a=raw?.ancora_0,b=raw?.ancora_100,side=raw?.direcao;
+ if(!valid(a)||!valid(b)||a===b)throw Error('Âncoras 0% e 100% não legíveis. Confirme no gráfico antes de calcular.');
+ if(!['Compra / Alta','Venda / Baixa'].includes(side))throw Error('Direção não identificada. A leitura requer confirmação.');
+ if((side==='Compra / Alta'&&b<=a)||(side==='Venda / Baixa'&&b>=a))throw Error('Âncoras contradizem a direção no print. Verifique 0% e 100%.');
+ const price=p=>a+(b-a)*p/100;
+ const levels=LEVELS.map(p=>({percentual:p,preco:price(p)}));
+ const conflicting=(raw.niveis_visiveis||[]).filter(v=>Number.isFinite(v.percentual)&&valid(v.preco))
+  .filter(v=>Math.abs(price(v.percentual)-v.preco)>Math.max(Math.abs(b-a)*0.035,Math.abs(v.preco)*0.002));
+ if(conflicting.length)throw Error('Preços visíveis divergem da grade calculada. Não é seguro gerar o plano.');
+ const entry=price(100),stop=price(76.4),targets=[111,127.2,141.4,161.8].map(price);
+ const risk=Math.abs(entry-stop);if(!risk)throw Error('Risco nulo');
+ const rr=targets.map(x=>Math.abs(x-entry)/risk);
+ const cur=valid(raw.preco_atual)?raw.preco_atual:null;
+ const ratio=cur===null?null:(cur-a)/(b-a)*100;
+ const zone=ratio===null?'Preço atual não identificado':ratio>=100?'Projeção / expansão':ratio>=50&&ratio<=76.4?'Zona de mitigação':ratio<0?'Perna invalidada ou início anterior':'Entre níveis da perna';
+ return {levels,plan:{entry,stop,targets,rr,invalidation:stop},zone,ratio,medido:cur!==null,side};
+}
+function view(scope){const s=state[scope]||state.pesquisa,verified=s.record?.analysis;
+ return '<section data-fibo-panel="'+scope+'" style="background:#11141B;border:1px solid #1E232E;border-radius:4px;margin:12px 0;padding:12px;color:#E5E7EB;font-variant-numeric:tabular-nums">'+
+ '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="color:#D4A017">Importar Print de Fibonaccing (IA)</b><p style="margin:4px 0;font-size:12px">Profit, TradingView ou MetaTrader · imagem comprimida no aparelho (até 1280px)</p></div><button type="button" class="btn s" data-fibo-open="1" style="min-height:44px">Anexar / Galeria</button></div>'+
+ '<input data-fibo-file="1" type="file" accept="image/png,image/jpeg,image/webp" style="display:none">'+
+ '<small>Também aceita Ctrl+V ou colar print no computador. A leitura requer âncoras legíveis; números são validados por cálculo local.</small>'+
+ '<p role="status" style="color:#D4A017">'+esc(s.status||'')+'</p>'+
+ (verified?'<div style="border-top:1px solid #1E232E;padding-top:12px"><b>'+esc(s.record.ticker)+' · '+esc(s.record.tf||'Timeframe N/D')+' · '+esc(verified.side)+'</b><p>Zona: '+esc(verified.zone)+'</p><div style="max-height:185px;overflow:auto"><table style="width:100%"><thead><tr><th style="text-align:left">Nível</th><th style="text-align:right">Preço calculado</th></tr></thead><tbody>'+verified.levels.map(l=>'<tr><td>'+fmt(l.percentual)+'%</td><td style="text-align:right">'+fmt(l.preco)+'</td></tr>').join('')+'</tbody></table></div>'+
+ '<p>Gatilho condicional <b>'+fmt(verified.plan.entry)+'</b> · Stop '+fmt(verified.plan.stop)+' · Alvos '+verified.plan.targets.map(fmt).join(' | ')+'</p>'+
+ '<p>R/R teórico '+verified.plan.rr.map(x=>fmt(x)+'R').join(' / ')+' · Invalidação: cruzamento do stop em sentido contrário à hipótese.</p>'+
+ '<small>Não são ordens, nem preços de book. Custos, spread, volume, fechamento e contexto técnico precisam ser validados.</small></div>':'')+'</section>';
+}
+function rerender(scope){const el=d.querySelector('[data-fibo-panel="'+scope+'"]');if(el)el.outerHTML=view(scope)}
+async function compress(file){
+ if(file.size>20*1024*1024)throw Error('Imagem acima de 20 MB');
+ const image=await createImageBitmap(file);
+ try{const factor=Math.min(1,1280/Math.max(image.width,image.height));const canvas=d.createElement('canvas');
+ canvas.width=Math.max(1,Math.round(image.width*factor));canvas.height=Math.max(1,Math.round(image.height*factor));
+ canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+ let data=canvas.toDataURL('image/jpeg',.86);if(data.length>1080000)data=canvas.toDataURL('image/jpeg',.67);
+ if(data.length>1100000)throw Error('O print tem detalhes demais; recorte a região do gráfico para leitura.');
+ return data;
+ }finally{image.close?.()}
+}
+async function visionApi(image,signal){
+ if(typeof SESS==='undefined'||!SESS||typeof tok!=='function'||typeof cfg!=='function')throw Error('Entre na conta para usar a visão por IA');
+ await tok();const c=cfg();if(!c?.url||!c?.key)throw Error('Configuração indisponível');
+ const r=await fetch(c.url+'/functions/v1/conhecimento-ia',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify({acao:'visao',imagem:image}),signal});
+ const v=await r.json();if(!r.ok)throw Error(v.erro||'Visão indisponível');return v.resultado;
+}
+async function load(file,scope){
+ if(!file?.type.startsWith('image/'))throw Error('Selecione uma imagem');
+ if(fetcher)fetcher.abort();fetcher=new AbortController();const signal=fetcher.signal,account=uid();
+ visionObserver?.disconnect();visionObserver=null;
+ if(typeof MutationObserver!=='undefined'&&d.querySelector('#an-root')){
+  visionObserver=new MutationObserver(()=>{if(!d.querySelector('#an-root')){fetcher?.abort();visionObserver?.disconnect();visionObserver=null}});
+  visionObserver.observe(d.body,{childList:true,subtree:true});
+ }
+ const s=state[scope],data=await compress(file);
+ s.status='Analisando imagem em Gemini Vision…';rerender(scope);
+ try{const extracted=await visionApi(data,signal);if(signal.aborted||uid()!==account)return;
+ const calculated=calculate(extracted);const ticker=safeTicker(extracted.ticker);
+ if(!ticker)throw Error('Ticker ilegível. Faça novo print com o cabeçalho do ativo visível.');
+ const row={ticker,tf:String(extracted.timeframe||''),origem:'visao_ia',criado_em:new Date().toISOString(),imagem:data,raw:extracted,analysis:calculated};
+ await save(row);s.record=row;s.status='Print salvo somente neste aparelho; cálculo matemático local validado.';rerender(scope);
+ }catch(e){if(!signal.aborted){s.status='Análise bloqueada: '+String(e.message||e).slice(0,200);rerender(scope)}}finally{if(fetcher?.signal===signal){fetcher=null;visionObserver?.disconnect();visionObserver=null}}
+}
+d.addEventListener('click',e=>{const btn=e.target.closest('[data-fibo-open]');if(!btn)return;
+ const panel=btn.closest('[data-fibo-panel]');if(!panel||typeof tab!=='undefined'&&tab!=='analises')return;
+ e.preventDefault();panel.querySelector('[data-fibo-file]')?.click()});
+d.addEventListener('change',e=>{if(!e.target.matches?.('[data-fibo-file]'))return;
+ const scope=e.target.closest('[data-fibo-panel]')?.dataset.fiboPanel;
+ if(scope&&state[scope])void load(e.target.files?.[0],scope)});
+d.addEventListener('paste',e=>{if(!d.querySelector('#an-root')||typeof tab!=='undefined'&&tab!=='analises')return;
+ if(e.target.matches?.('input,textarea,[contenteditable="true"]'))return;
+ const file=[...(e.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'))?.getAsFile();
+ if(!file)return;const scope=d.querySelector('[data-fibo-panel]')?.dataset.fiboPanel;if(!scope)return;
+ e.preventDefault();void load(file,scope)});
+async function loadSaved(tickers){
+ const output=[];for(const ticker of [...new Set((tickers||[]).map(safeTicker))].slice(0,15)){
+  const found=await get(ticker).catch(()=>null);
+  if(found?.owner===uid()&&found?.imagem&&found?.analysis)output.push(found);
+ }return output;
+}
+async function appendPDF({doc,P,tickers}){
+ const list=await loadSaved(tickers);if(!list.length)return 0;
+ const rgb=(hex)=>{const n=parseInt(hex,16);return P.rgb((n>>>16&255)/255,(n>>>8&255)/255,(n&255)/255)};
+ const face=await fetch('pdf-sans.ttf',{cache:'force-cache'}).then(r=>r.arrayBuffer()).then(b=>doc.embedFont(new Uint8Array(b),{subset:true}));
+ let added=0;for(const study of list){
+  // A imagem é incorporada APENAS no PDF local solicitado pelo proprietário.
+  const page=doc.addPage([595.28,841.89]);added++;const H=841.89;
+  page.drawRectangle({x:0,y:H-73,width:595.28,height:73,color:rgb('11141B')});
+  function write(value,x,y,size=9,color=rgb('161A22')){
+   let s=String(value||'');while(s.length&&face.widthOfTextAtSize(s,size)>500-x)s=s.slice(0,-2)+'…';
+   page.drawText(s,{x,y,size,font:face,color});}
+  write('DIÁRIO DE TRADER · ESTUDO VISUAL DE FIBONACCING',35,H-31,11,rgb('D4A017'));
+  write('Análise por Visão de IA · '+study.ticker+' · '+(study.tf||'N/D'),35,H-53,9,rgb('FFFFFF'));
+  const pic=await doc.embedJpg(Uint8Array.from(atob(study.imagem.split(',')[1]),c=>c.charCodeAt(0)));
+  const dim=pic.scale(Math.min(525/pic.width,310/pic.height));
+  page.drawImage(pic,{x:35,y:H-90-dim.height,width:dim.width,height:dim.height});
+  let y=H-115-dim.height;
+  write('Gatilho: '+fmt(study.analysis.plan.entry)+'   Stop: '+fmt(study.analysis.plan.stop),35,y,9);y-=17;
+  write('Alvos: '+study.analysis.plan.targets.map(fmt).join(' / '),35,y,9);y-=17;
+  write('R/R teórico: '+study.analysis.plan.rr.map(x=>fmt(x)+'R').join(' / '),35,y,9);y-=20;
+  write('Grade completa calculada de 0% a 100% + expansões e negativos',35,y,10,rgb('D4A017'));y-=15;
+  const half=Math.ceil(study.analysis.levels.length/2);
+  for(let i=0;i<half;i++){
+   const left=study.analysis.levels[i],right=study.analysis.levels[i+half];
+   write(fmt(left.percentual)+'%   '+fmt(left.preco),35,y,9);
+   if(right)write(fmt(right.percentual)+'%   '+fmt(right.preco),300,y,9);
+   y-=18;
+  }
+  y-=18;
+  write('Conferir ticker, timeframe, fonte, candles, custos, liquidez e invalidação.',35,y,8,rgb('BF3B40'));
+  write('Print local: '+study.criado_em+' · IA extrai, software calcula. Sem ordem automática.',35,y-15,7);
+ }return added;
+}
+w.DiarioFiboVisual={view,calculate,get,appendPDF,leave(){fetcher?.abort();fetcher=null;visionObserver?.disconnect();visionObserver=null}};
+})(window,document);

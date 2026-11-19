@@ -14,7 +14,7 @@ function verify(root=process.cwd()){
   config=JSON.parse(load('release.config.json')),
   html=load('src/index.html'),sw=load('src/service-worker.js'),
   claude=load('CLAUDE.md');
- if(config.version!==804)failures.push('Versão final diferente de 804');
+ if(!Number.isInteger(config.version)||config.version<804)failures.push('Versão inferior à base auditada v804');
  for(const name of CRITICAL){
   if(!config.bundles[name])failures.push('Bundle ausente: '+name);
   if(!sw.includes('"'+name+'"'))failures.push('Sem precache: '+name);
