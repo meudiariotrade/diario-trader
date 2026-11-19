@@ -1,5 +1,5 @@
 {
-  "version": 782,
+  "version": 783,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -52,7 +52,8 @@
     "screeners-grafico.js": "src/analysis/screeners-grafico.js",
     "screeners-top10.js": "src/analysis/screeners-top10.js",
     "tape-live.js": "src/market/tape-live.js",
-    "institutional-v781.js": "src/analysis/institutional-v781.js"
+    "institutional-v781.js": "src/analysis/institutional-v781.js",
+    "xbrl-periodos.js": "src/analysis/xbrl-periodos.js"
   },
   "templates": {
     "index.html": "src/index.html",
