@@ -6,7 +6,7 @@ test('v779 hotfix: OKX com 300 candles não interrompe busca por histórico Krak
  const worker=(await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source))).default;
  globalThis.caches={default:{match:async()=>null,put:async()=>{}}};
  const urls=[];
- const now=Math.floor(Date.now()/86400000)*86400;
+ const now=Math.floor(Date.now()/1000);
  globalThis.fetch=async url=>{
   urls.push(String(url));
   if(String(url).includes('okx.com/api/v5/market/history-candles'))return Response.json({
