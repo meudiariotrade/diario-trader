@@ -1,3 +1,4 @@
+import { especializarSistema } from '../_shared/ai-router.ts';
 // Função RESUMO — arquivo único para colar no editor do Supabase (Edge Functions → resumo → index.ts)
 
 // ===== resumo =====
@@ -578,7 +579,7 @@ async function gerarCom(modelo: string, system: string, parts: unknown[], o: Ger
     fetch(`${GBASE}/v1beta/models/${modelo}:generateContent`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', ...gkey() }, signal: AbortSignal.timeout(o.timeoutMs || 100_000),
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
+        systemInstruction: { parts: [{ text: especializarSistema(system) }] },
         contents: [{ role: 'user', parts }],
         generationConfig: {
           temperature: o.temperatura ?? 0.3, maxOutputTokens: o.max || 16000,
