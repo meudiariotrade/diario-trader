@@ -121,11 +121,48 @@ function methodology(L,m,opts={}){
  ]){L.y=L.wrap(p,L.M,L.y,L.CW,{size:9.2,leading:14})+19}
  L.footer();
 }
+
+ // Página informativa adicional com a mesma tipografia/paleta editorial existente.
+ // Não desloca a capa nem as fichas fundamentais já publicadas.
+ function valuationPage(L,rows,opts={}){
+  L.page('Preço justo e preços-teto','Quatro métodos independentes · dados faltantes são N/D');
+  const calc=intelligence()?.valuationBR;
+  if(typeof calc!=='function')throw Error('Motor de valuation BR indisponível');
+  L.y=L.wrap('Fórmula própria: lucro projetado × payout / ações / yield aceito ('+
+   (Number(opts.yieldAceitavel||.07)*100).toFixed(0)+'%). Bazin: DPA 12m / 6%. '+
+   'Bazin dinâmico: média de 3 a 5 anos válidos / 6%. Graham: raiz de 22,5 × LPA × VPA.',
+   L.M,L.y,L.CW,{size:8.5,leading:12})+17;
+  L.write('PREÇO JUSTO/TETO (R$) E MARGEM DE SEGURANÇA (%)',L.M,L.y,{font:'bold',size:9,color:L.C.gold});L.y+=20;
+  const cols=[['Próprio','proprio'],['Bazin','bazin'],['Dinâmico','bazinDinamico'],['Graham','graham']];
+  L.rectangle(L.M,L.y,L.CW,27,L.C.ink);
+  L.write('ATIVO',L.M+7,L.y+7,{font:'bold',size:7.4,color:L.C.white});
+  cols.forEach(([label],i)=>L.write(label,L.M+124+i*92,L.y+7,{font:'bold',size:7.2,color:L.C.white}));L.y+=27;
+  for(const [i,r]of rows.entries()){
+   const v=calc(r,{yieldAceitavel:Number(opts.yieldAceitavel)||.07});
+   L.rectangle(L.M,L.y,L.CW,43,i%2?L.C.paper:L.C.panel);
+   L.write(String(r.ticker).slice(0,15),L.M+7,L.y+9,{font:'bold',size:8.2});
+   for(let j=0;j<cols.length;j++){
+    const key=cols[j][1],price=v.methods[key],margin=v.margins[key],x=L.M+124+j*92;
+    L.write(price===null?'N/D':'R$ '+num(price,2),x,L.y+6,{size:7.4});
+    L.write(margin===null?'Margem N/D':num(margin,1)+'%',x,L.y+23,{size:7.3,
+     color:margin!==null&&margin>=0?L.C.green:L.C.red});
+   }
+   L.y+=43;
+  }
+  L.y+=18;
+  L.y=L.wrap('N/D não significa preço justo igual a zero. É ausência de insumo '+
+   'documentado e compatível (lucro projetado, payout, ações, DPA, histórico, LPA/VPA). '+
+   'A versão ajustada de Bazin é uma adaptação, não a formulação clássica. '+
+   'Valuation não equivale a recomendação ou preço-alvo.',
+   L.M,L.y,L.CW,{size:8.4,leading:12,maxLines:7});
+  L.footer();
+ }
+
 async function build(m,rows,opts={}){
  if(!['BR','US'].includes(m)||!Array.isArray(rows)||rows.length<1||rows.length>10)throw Error('Selecione de 1 a 10 ações de um mesmo mercado.');
  if(new Set(rows.map(x=>x?.ticker)).size!==rows.length)throw Error('A seleção contém tickers repetidos.');
  if(!intelligence())throw Error('Validador de indicadores indisponível.');
- const hash=await hashSnapshot({tipo:'fundamental',m,metodo:'quant_v2_score / app v768',rows,automatic:!!opts.automatic,medianas:opts.medians||null});
+ const hash=await hashSnapshot({tipo:'fundamental',m,metodo:'quant_v2_score / app v768',rows,automatic:!!opts.automatic,medianas:opts.medians||null,yieldAceitavel:opts.yieldAceitavel||.07});
   const P=await libs(),doc=await P.PDFDocument.create();
  doc.setTitle((opts.automatic?'Top 10 automático':'Dossiê de ações')+' '+m+' - Diário de Trader');doc.setAuthor('Diário de Trader');
  doc.registerFontkit(w.fontkit);
@@ -145,7 +182,7 @@ async function build(m,rows,opts={}){
       study.risks=study.risks.filter(v=>!v.startsWith('Total Yield sem evidência suficiente'));
     return study;
   });
- cover(L,m,rows,studies,opts);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length,opts));methodology(L,m,opts);
+ cover(L,m,rows,studies,opts);rows.forEach((r,i)=>individual(L,m,r,studies[i],i,rows.length,opts));methodology(L,m,opts);if(m==='BR')valuationPage(L,rows,opts);
  if(fontesOficiais.length){
   L.page('Proveniência documental','URLs declaradas no snapshot; vínculo individual da métrica ainda pode ser parcial');
   for(const row of fontesOficiais){
