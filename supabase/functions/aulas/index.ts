@@ -428,7 +428,8 @@ Deno.serve(async (req) => {
       const reserva=await reservaUso(uid,'iniciar','mentor:'+id);
       if(!reserva.permitido)return out({error:'Geração já em andamento ou limite diário de aulas atingido.'},429);
       reservaId=reserva.id;
-      const result=await gerarTexto(SISTEMA_MENTOR,JSON.stringify({tema,arquivo,paginas,conteudoPDF:texto}),{json:true,ate:Date.now()+110000,temp:0.35});
+      const biblioteca=await contextoPrivadoTrading(req,tema+' estudo técnico mercados e gestão de risco',3);
+       const result=await gerarTexto(especializarSistema(SISTEMA_MENTOR,biblioteca),JSON.stringify({tema,arquivo,paginas,conteudoPDF:texto}),{json:true,ate:Date.now()+110000,temp:0.35});
       const raw=result.texto.replace(/^```(?:json)?\s*|\s*```$/g,'');let parsed;try{parsed=JSON.parse(raw);}catch{throw Error('A IA não devolveu uma aula estruturada. Tente novamente.');}
       const mentor=validarMentor(parsed,{id,arquivo,paginas});
       const cenas=mentor.stages.map((t:string,i:number)=>({titulo:mentor.stageNames[i],vis:{tipo:'topicos',t:mentor.stageNames[i],itens:mentor.visuals[i].items.map((t:string)=>({t}))},fala:[mentor.roteiroVoz.etapas[i]],pausa:900}));
