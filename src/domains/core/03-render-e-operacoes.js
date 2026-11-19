@@ -281,8 +281,8 @@ function render() {
         ...(r.dataset.tp === "O" ? { ot: "C", estr: ESTR[0] } : {}),
         pv: 1,
         cost: 0,
-        emo: "3",
-        rules: "s",
+        emo: "",
+        rules: "",
         err: "Nenhum",
         mkt: MK[0],
       }),
@@ -493,7 +493,7 @@ document.addEventListener("input", (evt) => {
   prev();
 });
 document.addEventListener("click", (evt) => {
-  if (!evt.target.closest?.('#sh [data-a="savetrade"]') || !T) return;
+  if (!evt.target.closest?.('#sh [data-a="savetrade"]') || !T || !/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(T.ativo || ""))) return;
   for (const field of ["entry", "stop", "target", "exit", "target2", "target3"]) {
     const node = document.querySelector('#sh [name="' + field + '"]');
     if (!node) continue;

@@ -546,7 +546,7 @@ let FST = null,
   FST_ID = null;
 function qtdSugerida(e) {
   try {
-    for (const campo of ["entry", "stop"]) {
+    if (/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(e.ativo || ""))) for (const campo of ["entry", "stop"]) {
       const valor = e[campo];
       if (valor == null || String(valor).trim() === "") continue;
       const checked = precoManual789(valor, e.ativo);
