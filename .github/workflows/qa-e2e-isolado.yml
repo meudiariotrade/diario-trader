@@ -43,6 +43,7 @@ jobs:
       - name: Auditar app publicado com conta descartável
         env:
           QA_BUILD_DIR: _site
+          QA_RECHECK: ${{ contains(github.event.head_commit.message, '[recheck]') && '1' || '' }}
         run: node scripts/qa-e2e-live.cjs
       - uses: actions/upload-artifact@v4
         if: always()

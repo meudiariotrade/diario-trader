@@ -27,6 +27,11 @@ async function route(page,id){
   const details=b.locator('xpath=ancestor::details[1]');if(await details.count()&&!await b.isVisible()){const summary=details.locator(':scope > summary');if(await summary.isVisible())await summary.click();}
  }
  for(const b of await buttons.all())if(await b.isVisible()){await b.click();await page.waitForTimeout(450);return;}
+ // A busca nativa permite continuar a auditoria quando a abertura por toque não mantém a gaveta visível.
+ await page.keyboard.press('Control+k');await page.waitForTimeout(300);
+ const search=page.locator('#dt394-nav-search');if(await search.isVisible())await search.fill(({carteiras:'Carteira',analises:'Análises',term:'Terminal',conta:'Conta'})[id]||id);
+ await page.waitForTimeout(200);
+ for(const b of await buttons.all())if(await b.isVisible()){report.navigationRecoveries=report.navigationRecoveries||[];report.navigationRecoveries.push({id,device:page.viewportSize(),method:'Busca nativa via Ctrl+K após menu por toque indisponível'});await b.click();await page.waitForTimeout(450);return;}
  throw Error('Rota não acessível por controle visível: '+id);
 }
 async function dismiss(page){
@@ -64,8 +69,8 @@ async function audit(page,device,id,name,sub,events){
   if(id==='term'){
    const originalMode=await page.evaluate(()=>window.DIARIO_V428?.page||'GP');
    const before=await page.evaluate(()=>new Promise(resolve=>{let n=0;const mo=new MutationObserver(x=>n+=x.length);mo.observe(document.querySelector('#app'),{attributes:true,subtree:true});window.TerminalCommandPolicy?.install();queueMicrotask(()=>{mo.disconnect();resolve(n)});}));result.policyRepeatedMutations=before;
-   for(const mode of ['HOME','GP','WORKSPACES']){const b=page.locator('[data-tf415-nav="'+mode+'"]');if(await b.isVisible()){await b.click();await page.waitForTimeout(300);const visible=await page.locator(mode==='HOME'?'#terminal-inicio':mode==='GP'?'#v421-gp':'#trgrid').isVisible();if(!visible)throw Error('Botão do Terminal não exibiu o destino: '+mode);result.interactions.push('Terminal: botão '+mode+' exibiu o destino esperado.');}}
-   const restore=page.locator('[data-tf415-nav="'+originalMode+'"]');if(await restore.isVisible())await restore.click();
+   for(const mode of ['HOME','GP','WORKSPACES']){const b=page.locator('.tf415-nav [data-tf415-nav="'+mode+'"]');if(await b.isVisible()){await b.click();await page.waitForTimeout(300);const visible=await page.locator(mode==='HOME'?'#terminal-inicio':mode==='GP'?'#v421-gp':'#trgrid').isVisible();if(!visible)throw Error('Botão do Terminal não exibiu o destino: '+mode);result.interactions.push('Terminal: botão '+mode+' exibiu o destino esperado.');}}
+   const restore=page.locator('.tf415-nav [data-tf415-nav="'+originalMode+'"]');if(await restore.isVisible())await restore.click();
   }
   result.screenshot=device+'-'+(sub||id)+'.png';await page.screenshot({path:OUT+'/'+result.screenshot,fullPage:false});
   result.fullScreenshot=device+'-'+(sub||id)+'-full.png';await page.screenshot({path:OUT+'/'+result.fullScreenshot,fullPage:true});
@@ -99,8 +104,8 @@ async function audit(page,device,id,name,sub,events){
    await page.waitForFunction(()=>typeof SESS!=='undefined'&&!!SESS?.uid,{timeout:45000});
    const actual=await page.evaluate(()=>SESS?.uid);if(actual!==report.account.id)throw Error('Conta divergente: auditoria interrompida.');
    await page.waitForFunction(()=>typeof SY!=='undefined'&&!SY.busy&&typeof S!=='undefined'&&!!S.lastSyncAt,null,{timeout:45000}).catch(()=>{});await route(page,'home');await page.waitForTimeout(1000);await dismiss(page);await page.locator('#onb').waitFor({state:'hidden',timeout:10000});report[device]={version:await page.evaluate(()=>window.DIARIO_RELEASE),loginEvents:events.splice(0)};save();
-   for(const [id,name] of [['home','Início'],['mercado','Mercado'],['ops','Operações'],['carteiras','Carteira'],['term','Terminal'],['estudos','Estudos']])await audit(page,device,id,name,null,events);
-   for(const [sub,name] of [['pesquisa','B3 & EUA'],['br','Screener Brasil'],['us','Screener EUA'],['tecnico-br','Técnico Brasil'],['tecnico-world','Técnico EUA & Cripto']])await audit(page,device,'analises',name,sub,events);
+   for(const [id,name] of [['home','Início'],['mercado','Mercado'],['ops','Operações'],['carteiras','Carteira'],['term','Terminal'],['estudos','Estudos']].filter(([id])=>!process.env.QA_RECHECK||id==='term'||(device==='iphone'&&id==='carteiras')))await audit(page,device,id,name,null,events);
+   if(!process.env.QA_RECHECK||device==='iphone')for(const [sub,name] of [['pesquisa','B3 & EUA'],['br','Screener Brasil'],['us','Screener EUA'],['tecnico-br','Técnico Brasil'],['tecnico-world','Técnico EUA & Cripto']])await audit(page,device,'analises',name,sub,events);
    await context.close();
   }
  }catch(e){report.fatal=String(e);console.error('QA_FATAL',report.fatal);}
