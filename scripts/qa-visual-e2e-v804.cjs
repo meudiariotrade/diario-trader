@@ -60,6 +60,7 @@ async function measure(page) {
     overflowPx:Math.max(0,root.scrollWidth-viewport),overflowElements:bad,
     invalidSvgPaths:[...document.querySelectorAll('svg path[d]')].filter(p=>!/^[Mm]/.test((p.getAttribute('d')||'').trim())).slice(0,8).map(p=>({d:p.getAttribute('d'),html:p.parentElement?.outerHTML.slice(0,400)})),
     topMutationTargets:Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5),
+    cspMeta:[...document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]')].map(el=>el.content),
     visibleButtons:[...document.querySelectorAll('#app button')].filter(el=>el.getBoundingClientRect().height>0&&!el.disabled).length,
     appChildren:app?.children.length||0,renderedText:(app?.innerText||'').trim().slice(0,100)
    });
@@ -128,14 +129,16 @@ async function main(){
    page.on('console',m=>{if(active&&m.type()==='error'){const loc=m.location();let source='';try{const u=new URL(loc.url);source=u.origin+u.pathname;}catch{source=loc.url||'fonte desconhecida';}active.consoleErrors.push(source+' linha '+loc.lineNumber+': '+m.text().replace(/token=[^&\s'\"]+/gi,'token=[oculto]').slice(0,250));}});
    page.on('response',r=>{if(active&&r.url().startsWith(base)&&r.status()>=400)active.localHttpErrors.push(r.status()+' '+r.url().slice(base.length));});
    page.on('requestfailed',req=>{if(active&&req.url().startsWith(base))failures.push(req.url());});
+   await page.addInitScript(()=>document.addEventListener('securitypolicyviolation',e=>{window.__qaCsp=(window.__qaCsp||[]);window.__qaCsp.push({directive:e.violatedDirective,blocked:e.blockedURI,policy:e.originalPolicy.slice(0,600),source:e.sourceFile});}));
    await page.goto(base+'/?demo=1',{waitUntil:'domcontentloaded',timeout:30000});
    await page.locator('#splash').waitFor({state:'hidden',timeout:20000});
    for(const spec of specs){
-    const item={device,viewport:device,title:spec[1],key:spec[0],pageErrors:[],consoleErrors:[],localHttpErrors:[],screenshot:path.join(out,slug(device+'-'+spec[0])+'.png')};
+    const item={device,viewport:device,title:spec[1],key:spec[0],pageErrors:[],consoleErrors:[],cspViolations:[],localHttpErrors:[],screenshot:path.join(out,slug(device+'-'+spec[0])+'.png')};
     active=item;
     try{
      await go(page,spec);
      item.metrics=await measure(page);
+     item.cspViolations=await page.evaluate(()=>{const a=window.__qaCsp||[];window.__qaCsp=[];return a.slice(0,50);});
      await page.screenshot({path:item.screenshot,fullPage:false,animations:'disabled',timeout:12000});
     }catch(e){
      item.error=String(e.message).slice(0,650);
