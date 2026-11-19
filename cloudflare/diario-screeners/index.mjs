@@ -179,7 +179,7 @@ export default {
       (market==='US'&&!/^[A-Z]{1,5}(?:\.[A-Z])?$/.test(ticker))||
       (market==='CRYPTO'&&!/^(BTC|ETH|SOL|XRP|BNB|ADA|DOGE|LINK|AVAX|DOT|LTC|BCH|UNI|TRX|XLM|ATOM|NEAR|APT|SUI|TON)USDT$/.test(ticker)))
      return json({error:'Símbolo/intervalo não autorizado'},400);
-   const key=new Request(url.origin+'/v1/tecnico-candles?market='+market+'&tf='+tf+'&ticker='+ticker+(tf==='1d'?'&revision=v771-2y':''));
+   const key=new Request(url.origin+'/v1/tecnico-candles?market='+market+'&tf='+tf+'&ticker='+ticker+(tf==='1d'?'&revision=v779-adjusted':''));
    const cache=caches.default;
    const found=await cache.match(key);
    // Para os candles, 15m/1h precisam de TTL menor que o snapshot fundamentalista.
@@ -193,7 +193,7 @@ export default {
    const interval=tf==='1d'?'1d':tf==='1h'?'60m':'15m';
    const range=tf==='1d'?'2y':tf==='1h'?'3mo':'1mo';
    const symbol=market==='BR'?(ticker==='IBOV'?'^BVSP':ticker+'.SA'):market==='US'&&ticker==='SPX'?'^GSPC':ticker;
-   let items=[],source='';
+   let items=[],source='',adjustedSeries=null;
    try{
     if(market==='CRYPTO'){
      // Binance pode devolver HTTP 451 em algumas regiões Cloudflare.
@@ -241,7 +241,22 @@ export default {
        const obj=await response.json(),series=obj?.chart?.result?.[0],q=series?.indicators?.quote?.[0];
        if(!Array.isArray(series?.timestamp)||!q)continue;
        const candidate=validRows(series.timestamp.map((t,i)=>[Number(t),Number(q.open?.[i]),Number(q.high?.[i]),Number(q.low?.[i]),Number(q.close?.[i]),Number(q.volume?.[i])]));
-       if(candidate.length>=210){items=candidate;source='Yahoo Finance Chart (histórico, sujeito a atraso)';break}
+       if(candidate.length>=210){
+        items=candidate;source='Yahoo Finance Chart (histórico, sujeito a atraso)';
+        // Série paralela ajustada para ESTUDO: preços executáveis e gráfico continuam nominais.
+        // Ajuste adjclose/close vem do Yahoo; volume não é ajustado e NÃO é certificado por corretora.
+        const adj=series.indicators?.adjclose?.[0]?.adjclose;
+        if(tf==='1d'&&Array.isArray(adj)&&adj.length===series.timestamp.length){
+         const adjusted=validRows(series.timestamp.map((t,i)=>{
+          const close=Number(q.close?.[i]),adjustedClose=Number(adj[i]),
+           factor=close>0&&adjustedClose>0?adjustedClose/close:NaN;
+          return [Number(t),Number(q.open?.[i])*factor,Number(q.high?.[i])*factor,
+           Number(q.low?.[i])*factor,adjustedClose,Number(q.volume?.[i])];
+         }));
+         if(adjusted.length===candidate.length)adjustedSeries=new Map(adjusted.map(x=>[x[0],x]));
+        }
+        break;
+       }
        attempts.push('Yahoo histórico insuficiente');
       }catch{attempts.push('Yahoo indisponível')}
      }
@@ -287,11 +302,19 @@ export default {
      const nowSeconds=Math.floor(Date.now()/1000);
      items=items.filter(x=>x[0]+barSeconds<=nowSeconds);
      if(items.length<250)return json({error:'Não confirmado / Não calculável — menos de 250 barras completas',candles:items.length},422);
+     // RS e backtest precisam mais que 252 barras de aquecimento. Histórico incompleto permanece N/D.
+     if(tf==='1d'&&items.length<400)return json({error:'Histórico diário menor que 400 barras; RS/backtest não certificado',candles:items.length},422);
+     const adjustedCandles=tf==='1d'&&adjustedSeries?
+      items.map(x=>adjustedSeries.get(x[0])).filter(Boolean):null;
+     const adjustedReady=Array.isArray(adjustedCandles)&&adjustedCandles.length===items.length;
      const lastAsOf=items.at(-1)[0],maxLagDays=tf==='1d'?(market==='CRYPTO'?2:7):(market==='CRYPTO'?1:5);
      if(lastAsOf>nowSeconds||nowSeconds-lastAsOf>maxLagDays*86400)
       return json({error:'Não confirmado / Não calculável — barras desatualizadas',as_of:new Date(lastAsOf*1000).toISOString()},503);
     const ttl=tf==='1d'?900:300;
-    const response=Response.json({ok:true,ticker,market,tf,source,fetchedAt:new Date().toISOString(),as_of:new Date(items.at(-1)[0]*1000).toISOString(),candles:items},
+    const response=Response.json({ok:true,ticker,market,tf,source,fetchedAt:new Date().toISOString(),as_of:new Date(items.at(-1)[0]*1000).toISOString(),candles:items,
+      adjustedCandles:adjustedReady?adjustedCandles:null,
+      adjustmentBasis:adjustedReady?'Yahoo adjclose/close; volume não ajustado; exploratório':null,
+      adjustedVerified:false},
       {headers:{'Cache-Control':'public, max-age='+ttl+', s-maxage='+ttl}});
     ctx.waitUntil(cache.put(key,response.clone()));
     const out=conditional(request,response,false);
