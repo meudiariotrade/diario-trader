@@ -24,6 +24,8 @@
   }else if(!['ITR','DFP'].includes(form)||!/^\d{1,18}$/.test(id)||
     !(url.startsWith('https://dados.cvm.gov.br/')||url.startsWith('https://www.rad.cvm.gov.br/')))
     errors.push('documento e protocolo CVM não conferem');
+  if(diagnosis?.valuationEvidence?.required&&!diagnosis.valuationEvidence.complete)
+   errors.push('documentos CVM insuficientes para as quatro fórmulas de preço justo');
   if(diagnosis?.lineageAudit&&(diagnosis.lineageAudit.missing?.length||
    diagnosis.lineageAudit.conflicts?.length))
    errors.push('linhagem dos indicadores incompleta');
