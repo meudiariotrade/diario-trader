@@ -117,9 +117,9 @@
    handleHigh+buffer,handleLow-buffer,{cupDepth:round(depth),handleDepth:round(handleDepth),
     rounded,relativeVolume:round(rvol,2)});
   const last9=e9[i],prior9=e9[i-1],priorPrior9=e9[i-2];
-  const turned=signed(last9-prior9,d)>0&&signed(prior9-priorPrior9,d)<=0;
+  const turned=signed(prior9-priorPrior9,d)>0&&signed(priorPrior9-e9[i-3],d)<=0;
   const ref91=x[i-1];
-  const stormer91=signal(turned,above(last,up?ref91.h+buffer:ref91.l-buffer,d),
+  const stormer91=signal(turned&&trend,above(last,up?ref91.h+buffer:ref91.l-buffer,d),
    up?ref91.h+buffer:ref91.l-buffer,up?ref91.l-buffer:ref91.h+buffer);
   // 9.2: referência é maior fechamento da perna; correção fecha além de sua extrema.
   const reference=x.slice(-11,-2).reduce((b,z)=>!b||signed(z.c,d)>signed(b.c,d)?z:b,null);
@@ -159,9 +159,9 @@
    if(x[j].l===low(local))pivots.push({j,p:x[j].l,kind:'low'});
    if(x[j].h===high(local))pivots.push({j,p:x[j].h,kind:'high'});
   }
-  const lastPivots=pivots.slice(-14),p1=lastPivots.findLast(z=>z.kind===(up?'low':'high'));
-  const p2=p1?lastPivots.filter(z=>z.j>p1.j&&z.kind===(up?'high':'low')).at(-1):null;
-  const p3=p2?lastPivots.filter(z=>z.j>p2.j&&z.kind===(up?'low':'high')).at(-1):null;
+  const lastPivots=pivots.slice(-20),p3=lastPivots.findLast(z=>z.kind===(up?'low':'high'));
+  const p2=p3?lastPivots.filter(z=>z.j<p3.j&&z.kind===(up?'high':'low')).at(-1):null;
+  const p1=p2?lastPivots.filter(z=>z.j<p2.j&&z.kind===(up?'low':'high')).at(-1):null;
   const valid123=!!p1&&!!p2&&!!p3&&p1.j<p2.j&&p2.j<p3.j&&
    (up?p3.p>p1.p:p3.p<p1.p);
   const lemos123=signal(valid123,valid123&&above(last,up?p2.p+buffer:p2.p-buffer,d),
