@@ -1,7 +1,8 @@
+import {envComVault} from '../_shared/ai-router.ts';
 /** v805 — IA de biblioteca e visão; JWT obrigatório, sem Storage, sem polling. */
 const sb=Deno.env.get('SUPABASE_URL')||'';
 const pub=Deno.env.get('SUPABASE_ANON_KEY')||'';
-const key=Deno.env.get('GEMINI_API_KEY')||Deno.env.get('GOOGLE_API_KEY')||'';
+async function chaveDeEmbeddings(){const env=await envComVault();const key=env('GEMINI_API_KEY')||env('GOOGLE_API_KEY');if(!key)throw Error('Provedor Gemini não configurado para embeddings/visão');return key;}
 const origins=new Set(['https://meudiariotrade.github.io','http://localhost:3000','http://127.0.0.1:3000','http://localhost:5173','http://127.0.0.1:5173']);
 function cors(req:Request){const o=req.headers.get('origin')||'';return {'Access-Control-Allow-Origin':origins.has(o)?o:'https://meudiariotrade.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS',Vary:'Origin','Cache-Control':'no-store'}}
 function response(req:Request,data:unknown,status=200){return new Response(JSON.stringify(data),{status,headers:{...cors(req),'Content-Type':'application/json'}})}
@@ -12,7 +13,7 @@ const CATEGORIA=new Set(['Analise_Tecnica','Fibonaccing','Price_Action','Fundame
 async function user(jwt:string){const r=await fetch(sb+'/auth/v1/user',{headers:{apikey:pub,Authorization:'Bearer '+jwt},signal:AbortSignal.timeout(7000)});if(!r.ok)throw Error('Sessão inválida ou expirada');const j=await r.json();if(!UUID.test(j.id||''))throw Error('Conta inválida');return j.id}
 async function db(path:string,jwt:string,init:RequestInit={}){const r=await fetch(sb+'/rest/v1/'+path,{...init,headers:{apikey:pub,Authorization:'Bearer '+jwt,...init.headers},signal:AbortSignal.timeout(15000)});if(!r.ok){await r.body?.cancel();throw Error('Persistência segura indisponível (HTTP '+r.status+')')}return r.status===204?null:await r.json()}
 async function embed(text:string,task:'RETRIEVAL_QUERY'|'RETRIEVAL_DOCUMENT'){
- if(!key)throw Error('Configure GEMINI_API_KEY nos Secrets da Edge Function');
+ const key=await chaveDeEmbeddings();
  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',{
  method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
  body:JSON.stringify({model:'models/gemini-embedding-001',content:{parts:[{text}]},taskType:task,outputDimensionality:768}),signal:AbortSignal.timeout(18000)});
@@ -22,7 +23,7 @@ async function embed(text:string,task:'RETRIEVAL_QUERY'|'RETRIEVAL_DOCUMENT'){
  return v;
 }
 async function vision(dataURL:string){
- if(!key)throw Error('Configure GEMINI_API_KEY');
+ const key=await chaveDeEmbeddings();
  const m=/^data:(image\/(?:jpeg|webp|png));base64,([A-Za-z0-9+/=]+)$/.exec(dataURL);
  if(!m||m[2].length>1_200_000)throw Error('Imagem inválida ou superior ao limite de segurança');
  const instruction=`Você é um leitor de gráficos com Fibonaccing. Extraia exclusivamente valores que sejam LEGÍVEIS na imagem. Não invente preços.
