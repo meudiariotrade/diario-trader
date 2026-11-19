@@ -80,8 +80,8 @@ test('Cloudflare: B3 usa histórico real da brapi quando Yahoo bloqueia',{concur
   calls.push(String(url));
   if(String(url).includes('finance.yahoo.com/'))return new Response('',{status:429});
   if(String(url).startsWith('https://brapi.dev/api/quote/PETR4?'))return Response.json({
-   results:[{symbol:'PETR4',historicalDataPrice:Array.from({length:300},(_,i)=>({
-    date:Math.floor((Date.now()-(301-i)*86400000)/1000),open:30+i*.05,high:31+i*.05,low:29+i*.05,close:30.5+i*.05,volume:1000000
+   results:[{symbol:'PETR4',historicalDataPrice:Array.from({length:440},(_,i)=>({
+    date:Math.floor((Date.now()-(441-i)*86400000)/1000),open:30+i*.05,high:31+i*.05,low:29+i*.05,close:30.5+i*.05,volume:1000000
    }))}]
   });
   throw Error('Endpoint não previsto');
@@ -91,7 +91,7 @@ test('Cloudflare: B3 usa histórico real da brapi quando Yahoo bloqueia',{concur
   assert.equal(resp.status,200);
   const data=await resp.json();
   assert.match(data.source,/brapi.dev/);
-  assert.equal(data.candles.length,300);
+  assert.equal(data.candles.length,440);
   assert.ok(calls.some(x=>x.startsWith('https://brapi.dev/')));
  }finally{globalThis.fetch=oldFetch;globalThis.caches=oldCaches}
 });
@@ -103,8 +103,8 @@ test('Cloudflare: ação EUA recorre a histórico Nasdaq EOD sem sintetizar barr
  globalThis.fetch=async url=>{
   if(String(url).includes('finance.yahoo.com/'))return new Response('',{status:429});
   if(String(url).includes('api.nasdaq.com/api/quote/AAPL/historical'))return Response.json({data:{tradesTable:{rows:
-   Array.from({length:300},(_,i)=>({
-    date:new Date(Date.now()-(301-i)*86400000).toISOString().slice(0,10),
+   Array.from({length:440},(_,i)=>({
+    date:new Date(Date.now()-(441-i)*86400000).toISOString().slice(0,10),
     open:'$'+(100+i*.1).toFixed(2),high:'$'+(101+i*.1).toFixed(2),
     low:'$'+(99+i*.1).toFixed(2),close:'$'+(100.5+i*.1).toFixed(2),volume:'1,000,000'
    }))
@@ -116,6 +116,6 @@ test('Cloudflare: ação EUA recorre a histórico Nasdaq EOD sem sintetizar barr
   assert.equal(resp.status,200);
   const data=await resp.json();
   assert.match(data.source,/Nasdaq EOD/);
-  assert.equal(data.candles.length,300);
+  assert.equal(data.candles.length,440);
  }finally{globalThis.fetch=oldFetch;globalThis.caches=oldCaches}
 });
