@@ -39,7 +39,7 @@ test('v771: sem benchmark ou universo incompleto, histórico RS não é inventad
 test('v771: Cloudflare já usava 2y, mas agora revoga cache antigo; SEC sem companyfacts para documentos',()=>{
  const src=source('cloudflare/diario-screeners/index.mjs');
  assert.match(src,/const range=tf==='1d'\?'2y'/);
- assert.match(src,/revision=v771-2y/);
+ assert.match(src,/revision=v779-adjusted/);
  assert.match(src,/\/v1\/sec-documento/);
  assert.match(src,/https:\/\/data\.sec\.gov\/submissions\/CIK/);
  assert.match(src,/accessionNumber/);
