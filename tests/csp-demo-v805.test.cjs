@@ -8,17 +8,18 @@ const source=fs.readFileSync(path.join(root,'src/domains/core/01-runtime-estilos
 const terminal=fs.readFileSync(path.join(root,'src/domains/core/17-fontes-e-balancos.js'),'utf8');
 const htmls=['index.html','src/index.html'].map(f=>fs.readFileSync(path.join(root,f),'utf8'));
 test('modo demo mantém CSP restritiva para fontes externas',()=>{
- assert.match(source,/frame-src 'none'; script-src 'self'; img-src 'self' data: blob:/);
- assert.match(source,/w\\.DIARIO_DEMO = f/);
+ assert.ok(source.includes("frame-src 'none'; script-src 'self'; img-src 'self' data: blob:"));
+ assert.ok(source.includes('w.DIARIO_DEMO = f'));
 });
-test('CSP normal permite somente fontes TradingView necessárias',()=>{
+test('CSP normal permite fontes TradingView necessárias sem unsafe-inline em scripts',()=>{
  for(const html of htmls){
-  assert.match(html,/script-src[^;]*https:\/\/s3\\.tradingview\\.com\/external-embedding\//);
-  assert.match(html,/img-src[^;]*https:/);
-  assert.match(html,/object-src 'none'/);
+  assert.ok(html.includes('https://s3.tradingview.com/external-embedding/'));
+  assert.ok(html.includes("img-src 'self' data: blob: https:"));
+  assert.ok(html.includes("object-src 'none'"));
+  assert.ok(!html.split('script-src ')[1].split(';')[0].includes('unsafe-inline'));
  }
 });
 test('botão instalar do Terminal não usa onclick inline',()=>{
- assert.doesNotMatch(terminal,/<button class="trbtn trinst" onclick=/);
+ assert.ok(!terminal.includes('<button class="trbtn trinst" onclick='));
  assert.ok(terminal.includes('instalar?.addEventListener("click"'));
 });
