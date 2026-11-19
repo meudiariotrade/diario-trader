@@ -36,11 +36,11 @@ returns table (titulo_obra text, autor text, tipo_fonte text, conteudo_chunk tex
 language sql stable security invoker set search_path = ''
 as $$
  select k.titulo_obra,k.autor,k.tipo_fonte,k.conteudo_chunk,
-        (1-(k.embedding <=> query_embedding))::double precision as similarity
+        (1-(k.embedding OPERATOR(extensions.<=>) query_embedding))::double precision as similarity
  from public.conhecimento_trading k
  where k.owner_id=(select auth.uid())
  and (filtro_categoria is null or k.categoria=filtro_categoria)
- order by k.embedding <=> query_embedding
+ order by k.embedding OPERATOR(extensions.<=>) query_embedding
  limit least(greatest(coalesce(match_count,5),1),8);
 $$;
 revoke all on function public.buscar_conhecimento_trading(extensions.vector,int,text) from public,anon;
