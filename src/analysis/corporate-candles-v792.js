@@ -1,0 +1,56 @@
+/* v792 — OHLCV histórico e ações corporativas verificadas (somente client/Web Worker).
+ * Dados nominais de execução permanecem imutáveis; ajustes exploratórios não simulam book.
+ */
+(function(root,factory){
+ const api=factory();
+ if(typeof module==='object'&&module.exports)module.exports=api;
+ else root.DiarioCorporateCandles=api;
+})(typeof self!=='undefined'?self:globalThis,function(){
+ 'use strict';
+ const zones=Object.freeze({BR:'America/Sao_Paulo',US:'America/New_York',CRYPTO:'UTC'});
+ function marketDate(timestamp,market){
+  if(!Number.isFinite(timestamp)||!zones[market])return null;
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:zones[market],
+   year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(timestamp));
+  const get=k=>parts.find(x=>x.type===k)?.value;
+  return get('year')+'-'+get('month')+'-'+get('day');
+ }
+ const date=s=>typeof s==='string'&&/^\d{4}-\d\d-\d\d$/.test(s)&&
+  Number.isFinite(Date.parse(s+'T00:00:00Z'))&&new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;
+ function adjust(raw,events,{market,asOf}={}){
+  if(!['BR','US','CRYPTO'].includes(market)||!Array.isArray(raw)||raw.length<1||
+   !Array.isArray(events))return {verified:false,reason:'Parâmetros ausentes',adjusted:null};
+  const today=asOf||new Date().toISOString().slice(0,10);
+  if(!date(today)||events.some(e=>!e||e.type!=='split'||!date(e.exDate)||
+   e.exDate>today||typeof e.ratio!=='number'||!Number.isFinite(e.ratio)||
+   e.ratio<=0||e.ratio>100||e.ratio<.01||
+   !/^https:\/\/(?:www\.)?(?:sec\.gov|cvm\.gov\.br|b3\.com\.br)\//.test(String(e.document_url||''))))
+   return {verified:false,reason:'Evento sem prova oficial; dividendos não são ajustes automáticos',adjusted:null};
+  const sorted=[...events].sort((a,b)=>a.exDate.localeCompare(b.exDate));
+  if(sorted.some((e,i)=>i&&sorted[i-1].exDate===e.exDate))
+   return {verified:false,reason:'Eventos coincidentes sem ordenação inequívoca',adjusted:null};
+  const candle=(x)=>x&&Number.isSafeInteger(x.t)&&Number.isFinite(x.o)&&x.o>0&&
+   Number.isFinite(x.c)&&x.c>0&&Number.isFinite(x.h)&&x.h>=Math.max(x.o,x.c)&&
+   Number.isFinite(x.l)&&x.l>0&&x.l<=Math.min(x.o,x.c)&&
+   Number.isFinite(x.v)&&x.v>=0;
+  if(raw.some((x,i)=>!candle(x)||(i&&x.t<=raw[i-1].t)))
+   return {verified:false,reason:'OHLCV nominal inválido ou fora de ordem',adjusted:null};
+  if(market==='CRYPTO'&&events.length===0)return {verified:true,kind:'spot sem eventos',adjusted:raw.map(x=>({...x})),actions:0};
+  if(market==='CRYPTO')return {verified:false,reason:'Cripto spot não recebe ações societárias',adjusted:null};
+  if(!events.length)return {verified:false,reason:'Sem manifesto oficial de eventos; manter série nominal',adjusted:null};
+  if(sorted.some(e=>!raw.some(x=>marketDate(x.t,market)===e.exDate)))
+   return {verified:false,reason:'Data ex não corresponde ao calendário de candles',adjusted:null};
+  const result=raw.map(bar=>{
+   const key=marketDate(bar.t,market);
+   const ratio=sorted.filter(e=>e.exDate>key).reduce((p,x)=>p*x.ratio,1);
+   if(!Number.isFinite(ratio)||ratio<=0)return null;
+   const o=bar.o/ratio,h=bar.h/ratio,l=bar.l/ratio,c=bar.c/ratio,v=bar.v*ratio;
+   return [o,h,l,c,v].every(x=>Number.isFinite(x)&&x>=0)?
+    {...bar,o,h,l,c,v}:null;
+  });
+  if(result.some(x=>x===null))return {verified:false,reason:'Ajuste numérico inválido',adjusted:null};
+  return {verified:true,kind:'split explícito, só para estudo',adjusted:result,
+   actions:events.length,asOf:today,disclaimer:'Dados nominais originais preservados para execução; ajuste não certifica slippage.'};
+ }
+ return Object.freeze({VERSION:'v792',adjust,marketDate});
+});
