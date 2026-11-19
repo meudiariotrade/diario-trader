@@ -64,7 +64,7 @@
    // Maior amplitude domina. Recência desempata sem substituir por microperna.
    candidates.push({from:a,to:b,length:span,age,score:span*(1-age/(window*2))});
   }
-  candidates.sort((a,b)=>b.score-a.score||b.to.i-a.to.i);
+  candidates.sort((a,b)=>b.length-a.length||b.to.i-a.to.i);
   const best=candidates[0];
   if(!best)return {zone:false,cluster:false,segments:[null,null],levels:[],
    exhausted:false,defense:null,macroConfirmed:false,
