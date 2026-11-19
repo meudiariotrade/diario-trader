@@ -23,7 +23,9 @@ test('v772: vínculo CVM exige identidade exata, CNPJ e protocolo; GitHub faz co
  assert.equal(gen.cnpj('01.234.567/0001-89'),'01234567000189');
  const edge=src('supabase/functions/screeners-cvm-docs/index.ts');
  assert.match(edge,/const found=exact\|\|new Set/);
- assert.match(edge,/found\.size!==1/);
+ assert.ok(edge.includes('const id=found.size===1'));
+ assert.ok(edge.includes('reviewed.emissor.test(key)'));
+ assert.ok(edge.includes('src.emissores.some'));
  assert.match(edge,/quant_cvm_documentos_bulk/);
  assert.match(edge,/\/v1\/cvm-provas/);
  const sql=src('supabase/migrations/20261118223000_analises_documentos_cadencia_v772.sql');
