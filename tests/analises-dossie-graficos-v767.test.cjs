@@ -22,7 +22,7 @@ test('Cadeado Top 10: exatamente dez, sem inventar OHLCV, OBV, RS ou alvos',()=>
 test('Canvas técnico: 90 barras, SMA 20/50/150/200, OBV, Fibo e pivôs reais',()=>{
  for(const f of ['src/analysis/tecnico-ui.js','src/analysis/tecnico-pdf.js','src/analysis/pesquisa-pdf.js'])
   new vm.Script(source(f),{filename:f});
- assert.match(pdf,/canvas\.width=1320;canvas\.height=720/);
+ assert.match(pdf,/canvas\.width=1600;canvas\.height=1000/);
  assert.match(pdf,/const view=candles\.slice\(-90\)/);
  assert.match(pdf,/'#FFFFFF'/);
  assert.match(pdf,/'#E5E7EB'/);

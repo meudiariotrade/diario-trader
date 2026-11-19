@@ -138,7 +138,10 @@ function detail(m,s){
  valuation.methods[key]==null?'N/D':'R$ '+fmt(valuation.methods[key],2))+'</span></div><small>'+
  (valuation.margins[key]==null?'Margem N/D':'Margem '+fmt(valuation.margins[key],1)+'%')+
  (valuation.reasons[key]?' · '+E(valuation.reasons[key]):'')+'</small></div>').join('')+
- '</div><p class="scr-hint">Preço-teto é estimativa condicional, não cotação-alvo. Ausência de LPA/VPA/DPA/lucro projetado = N/D.</p>':'';
+ '</div><p class="scr-hint">Margem composta: '+(valuation.compositeMargin===null?'N/D':fmt(valuation.compositeMargin,1)+'%')+
+  '. '+(valuation.scoreActive?'Aplicada a 20% do pilar Valuation (pilar pesa 30% da nota).':'Sem inclusão na nota até auditoria dos quatro métodos.')+
+  ' Base da fórmula própria: '+E(valuation.lucroBase||'N/D')+
+  '. O cálculo da nota usa yield padrão de 7%; seletor de yield altera apenas a simulação exibida. Preço-teto é estimativa condicional, não cotação-alvo.</p>':'';
  return '<section class="scr-detail" id="scr-detail" aria-live="polite">'+
  '<div class="scr-head"><div><p class="an-kicker">VALIDAÇÃO DO ATIVO</p><h3>'+E(row.ticker)+' · '+E(meta.company)+'</h3></div>'+
  '<button type="button" data-scr-detail-close="1" aria-label="Fechar explicação">Fechar</button></div>'+
