@@ -21,7 +21,8 @@ test('Todos os PDFs trazem SHA-256 do snapshot e versão do método',()=>{
   const s=read(file);new vm.Script(s,{filename:file});
   assert.match(s,/hashSnapshot/);
   assert.match(s,/SHA-256/);
-  assert.match(s,/app v768|v768/);
+  const versao=file.includes('screeners-relatorio.js')?/app v798|v798/:/app v768|v768/;
+  assert.match(s,versao);
  }
 });
 test('Pesquisa tem ajuste Yahoo adjclose auditável e validador de claims sem números ignorados',()=>{
