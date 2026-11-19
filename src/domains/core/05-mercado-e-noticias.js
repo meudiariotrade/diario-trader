@@ -2435,7 +2435,7 @@ function vStats() {
         "⚫": "var(--tx)",
       },
       r = (b) =>
-        `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${o[b]}"/></svg>`;
+        `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${o[b] || o.info}"/></svg>`;
     window.icoSvg = r;
     const i =
         /(?:\p{Regional_Indicator}{2}|(?:\p{Extended_Pictographic})(?:\ufe0f|\u20e3|\p{Emoji_Modifier}|\u200d\p{Extended_Pictographic}\ufe0f?)*)\s?/gu,
