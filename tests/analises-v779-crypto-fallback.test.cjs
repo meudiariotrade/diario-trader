@@ -15,7 +15,7 @@ test('v779 hotfix: OKX com 300 candles não interrompe busca por histórico Krak
   });
   if(String(url).includes('api.kraken.com/0/public/OHLC'))return Response.json({
    error:[],result:{XBTUSDT:Array.from({length:500},(_,i)=>[
-    now-(501-i)*86400,'100','103','98','101','100','2000'
+    now-(500-i)*86400,'100','103','98','101','100','2000'
    ]),last:now}
   });
   return new Response('source regionally unavailable',{status:451});
