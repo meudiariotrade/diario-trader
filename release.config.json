@@ -1,5 +1,5 @@
 {
-  "version": 802,
+  "version": 803,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
