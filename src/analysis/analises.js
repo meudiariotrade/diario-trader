@@ -74,7 +74,7 @@ const fmt=(n,dg=1)=>n==null||!Number.isFinite(Number(n))?'—':Number(n).toLocal
 const pct=(x)=>x==null||!Number.isFinite(Number(x))?'—':fmt(x,1)+'%';
 const mny=(x,usd)=>x==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:usd?'USD':'BRL',maximumFractionDigits:0,notation:'compact'}).format(Number(x));
 const state={br:{},us:{}},cache=new Map();let timer=null,reqId=0;
-function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',yieldAceitavel:'0.07',page:0,chart:'auto',zoom:1,panX:0,panY:0,focus:'',detailTicker:'',selected:[],selectedRows:{},rows:null,data:null,loading:false,error:'',pdfBusy:false,pdfError:'',topData:null,topBusy:false,topError:'',topPdfBusy:false,topPdfMessage:'',requested:''});const uid=owner();if(s.account!==uid){s.account=uid;s.selected=[];s.selectedRows={};s.detailTicker='';s.focus='';s.data=null;s.topData=null;s.topError='';s.topBusy=false;s.topPdfMessage='';}return s}
+function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',yieldAceitavel:'0.07',safetyMethod:'todos',page:0,chart:'auto',zoom:1,panX:0,panY:0,focus:'',detailTicker:'',selected:[],selectedRows:{},rows:null,data:null,loading:false,error:'',pdfBusy:false,pdfError:'',topData:null,topBusy:false,topError:'',topPdfBusy:false,topPdfMessage:'',requested:''});const uid=owner();if(s.account!==uid){s.account=uid;s.selected=[];s.selectedRows={};s.detailTicker='';s.focus='';s.data=null;s.topData=null;s.topError='';s.topBusy=false;s.topPdfMessage='';}return s}
 let holdingsCache=[],holdingsAt=0,holdingsOwner='';function holdings(){const uid=typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local';if(holdingsOwner===uid&&Date.now()-holdingsAt<5000)return holdingsCache;try{const snapshot=w.pfCalc();holdingsCache=(snapshot.pos||[]).filter(p=>+p.q>0&&+p.v>0).map(p=>({ticker:String(p.tk||'').toUpperCase().replace(/\.SA$/,''),market:p.mk,pct:Number(p.peso)||0,sector:p.setor||'',value:Number(p.v)||0}));holdingsAt=Date.now();holdingsOwner=uid;return holdingsCache}catch{return []}}
 function owner(){return typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local'}
 function owned(){return [...new Set(holdings().map(p=>p.ticker))].slice(0,80)}
@@ -89,7 +89,8 @@ return '<div class="scr-filters"><label>Buscar ticker ou empresa<input type="sea
 '<label>Custódia<select data-scr-filter="custody">'+options([['todos','Todos'],['carteira','Na Minha Carteira'],['fora','Fora da Carteira']],s.custody)+'</select></label>'+
 (m==='br'?'<label>Liquidez<select data-scr-filter="liquidity">'+options([['0','Todas as ações (inclui Small/Micro Caps)'],['1000000','> R$ 1M/dia'],['5000000','> R$ 5M/dia'],['20000000','> R$ 20M/dia']],s.liquidity)+'</select></label>':
 '<label>Capitalização<select data-scr-filter="cap">'+options([['all','All Stocks'],['large','Large Cap'],['mid','Mid Cap'],['small','Small Cap']],s.cap)+'</select></label>')+
-'<label>Estratégia<select data-scr-filter="preset">'+options(presets,s.preset)+'</select></label>'+(m==='br'?'<label>Yield aceito<select data-scr-filter="yieldAceitavel">'+options([['0.06','6%'],['0.07','7%'],['0.08','8%']],s.yieldAceitavel)+'</select></label>':'')+'</div>';
+'<label>Estratégia<select data-scr-filter="preset">'+options(presets,s.preset)+'</select></label>'+(m==='br'?'<label>Yield aceito<select data-scr-filter="yieldAceitavel">'+options([['0.06','6%'],['0.07','7%'],['0.08','8%']],s.yieldAceitavel)+'</select></label>':'')+
+(m==='br'?'<label>Margem positiva<select data-scr-filter="safetyMethod">'+options([['todos','Todos'],['proprio','Fórmula própria'],['bazin','Bazin 6%'],['graham','Graham']],s.safetyMethod)+'</select></label>':'')+'</div>';
 }
 function coverage(m,s){const c=s.data?.coverage||{},total=Number(s.data?.total||0),scores=Number(c.com_score||0);
 const scorePct=total?((scores/total)*100).toFixed(1).replace('.',','):'0';
@@ -165,7 +166,7 @@ function detail(m,s){
  * Não há varredura por ticker; uma consulta de 50 linhas já é usada no Screener. */
 function isGlobalTopQuery(s){
  return !s.search&&!s.sector&&s.custody==='todos'&&Number(s.liquidity)===0&&
- s.cap==='all'&&s.preset==='top'&&s.order==='score'&&s.page===0;
+ s.cap==='all'&&s.preset==='top'&&s.order==='score'&&s.safetyMethod==='todos'&&s.page===0;
 }
 function topTen(m,s){
  const top=s.topData,alg=w.DiarioScreenersTop10;
@@ -324,6 +325,7 @@ function localScreener(m,s,global){
    if(s.preset==='buybacks'&&!(v(r.buyback_yield)>0))return false;
   }else{
    if(Number(s.liquidity)>0&&!(v(r.liquidez_diaria_brl)>=Number(s.liquidity)))return false;
+   if(s.safetyMethod!=='todos'&&!(w.DiarioScreenersInteligencia?.valuationBR(r,{yieldAceitavel:Number(s.yieldAceitavel)})?.margins?.[s.safetyMethod]>0))return false;
    if(s.preset==='dividendos'&&!(v(r.dividend_yield)>0&&v(r.fcf_yield)>0&&v(r.payout_implicito)>=10&&v(r.payout_implicito)<=90))return false;
    if(s.preset==='valor'&&!(v(r.roic)>0&&(v(r.pl)>0||v(r.ev_ebitda)>0)))return false;
    if(s.preset==='bancos'&&!(v(r.roe)>0&&v(r.pvp)!=null&&/banc|financ|segur/i.test(r.setor||'')))return false;
@@ -410,7 +412,7 @@ async function loadTopGlobal(m,refresh=false){
  finally{if(uid===owner()){stateNow.topBusy=false;render()}}
 }
 function field(el){const m=d.querySelector('[data-an-sub].selected')?.dataset.anSub;if(m==='br'||m==='us')return [m,init(m)];return [null,null]}
-function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;if(key==='yieldAceitavel'){s.data=null;const snapshot=snapshotMemory.get(m.toUpperCase())?.data;if(snapshot?.universe_complete){s.data=localScreener(m,s,snapshot);render();return}}s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
+function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;if(key==='yieldAceitavel'||key==='safetyMethod'){s.data=null;const snapshot=snapshotMemory.get(m.toUpperCase())?.data;if(snapshot?.universe_complete){s.data=localScreener(m,s,snapshot);render();return}}s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
 d.addEventListener('input',ev=>{const b=ev.target;if(!b?.hasAttribute?.('data-scr-search'))return;const [m,s]=field(b);if(!m)return;s.search=b.value;s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';clearTimeout(timer);timer=setTimeout(()=>load(m),420)});
 d.addEventListener('change',ev=>{
  const b=ev.target,[m,s]=field(b);if(!m||!b.closest('#an-root'))return;
