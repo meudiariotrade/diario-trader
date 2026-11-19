@@ -23,6 +23,8 @@ test('v775: CNPJ revisado exige também nome do emissor e protocolo CVM existent
   assert.ok(obj.emissor instanceof RegExp||Object.prototype.toString.call(obj.emissor)==='[object RegExp]');
  }
  assert.equal(values.CMIG3.cnpj,values.CMIG4.cnpj,'ON e PN do mesmo emissor');
+ assert.equal(values.CMIG3.emissor.test('COMPANHIA ENERGETICA MINAS GERAIS SA'),true);
+ assert.equal(values.CLSC4.emissor.test('CENTRAIS ELETRICAS SANTA CATARINA SA PFD'),true);
  assert.match(s,/reviewed\.emissor\.test\(key\)/);
  assert.match(s,/src\.emissores\.some/);
  assert.match(s,/docs\.get\(id\)/);

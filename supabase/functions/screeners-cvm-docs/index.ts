@@ -25,9 +25,9 @@ const norm=(n:unknown)=>String(n||'').normalize('NFD').replace(/[\u0300-\u036f]/
 // semelhança ou por suffix PN. Alterações futuras de empresa invalidam automaticamente o alias.
 const ALIAS_OFICIAL:Record<string,{cnpj:string,emissor:RegExp,prova:string}>={
  CEAB3:{cnpj:'45242914000105',emissor:/C.?A MODAS/,prova:'https://sistemaswebb3-listados.b3.com.br/listedCompaniesPage/main/24848/overview?language=pt-br'},
- CLSC4:{cnpj:'83878892000155',emissor:/CENTRAIS ELETRICAS DE SANTA CATARINA/,prova:'https://ri.celesc.com.br/servicos-aos-investidores/faq/'},
- CMIG3:{cnpj:'17155730000164',emissor:/COMPANHIA ENERGETICA DE MINAS GERAIS/,prova:'https://ri.cemig.com.br/governanca-corporativa/descricao-das-acoes-e-adrs'},
- CMIG4:{cnpj:'17155730000164',emissor:/COMPANHIA ENERGETICA DE MINAS GERAIS/,prova:'https://ri.cemig.com.br/governanca-corporativa/descricao-das-acoes-e-adrs'},
+ CLSC4:{cnpj:'83878892000155',emissor:/CENTRAIS ELETRICAS SANTA CATARINA/,prova:'https://ri.celesc.com.br/servicos-aos-investidores/faq/'},
+ CMIG3:{cnpj:'17155730000164',emissor:/COMPANHIA ENERGETICA MINAS GERAIS/,prova:'https://ri.cemig.com.br/governanca-corporativa/descricao-das-acoes-e-adrs'},
+ CMIG4:{cnpj:'17155730000164',emissor:/COMPANHIA ENERGETICA MINAS GERAIS/,prova:'https://ri.cemig.com.br/governanca-corporativa/descricao-das-acoes-e-adrs'},
  MDIA3:{cnpj:'07206816000115',emissor:/DIAS BRANCO/,prova:'https://ri.mdiasbranco.com.br/faq/m-dias-branco-e-mercado-de-acoes/'},
  MLAS3:{cnpj:'59717553000102',emissor:/MULTI GROUP/,prova:'https://www.rad.cvm.gov.br/ENETCONSULTA/frmDownloadDocumento.aspx?CodigoInstituicao=1&Tela=99&descTipo=IPE&numProtocolo=1458661&numSequencia=983373&numVersao=1'}
 };
