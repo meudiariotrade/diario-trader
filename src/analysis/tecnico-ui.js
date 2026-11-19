@@ -252,6 +252,7 @@ function view(m){
  detail(s,rows)+'<p class="an-disclaimer">Estruturas de Fibonaccing, RMC/CISD, VCP e Elliott são heurísticas codificadas conforme os critérios deste projeto, não certificação dos autores. A classificação só se confirma com dados históricos suficientes.</p></div>';
 }
 function leave(){
+ w.DiarioBinanceAnalises?.stop();
  if(current){const s=states[current];s.token++;s.abort?.abort();s.abort=null;s.workerReject?.(Error('Análise técnica interrompida ao sair da aba'));s.workerReject=null;s.worker?.terminate();s.worker=null;s.backtestReject?.(Error('Aba fechada'));s.backtestWorker?.terminate();s.backtestWorker=null;s.backtestReject=null;s.loading=false;s.busyPDF=false;}
  current='';observer?.disconnect();observer=null;
 }
@@ -263,6 +264,7 @@ function watch(){
 async function enter(m){
  if(!states[m])return;
  if(current&&current!==m)leave();current=m;watch();
+ if(m==='world'&&!d.hidden)w.DiarioBinanceAnalises?.start(['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT']);
  const s=states[m],u=owner();
  if(s.owner!==u){s.owner=u;s.rows=[];s.universe=[];s.next=0;s.detail='';}
  if(s.rows.length||s.loading)return;
@@ -390,5 +392,10 @@ d.addEventListener('click',async e=>{
  }
 });
 d.addEventListener('keydown',e=>{if(!['Enter',' '].includes(e.key)||!e.target.matches?.('[data-tech-point]'))return;e.preventDefault();e.target.click()});
-w.DiarioTecnico={view,enter,leave,load};
+d.addEventListener('visibilitychange',()=>{
+ if(d.hidden)w.DiarioBinanceAnalises?.stop();
+ else if(current==='world'&&active())w.DiarioBinanceAnalises?.start(['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT']);
+});
+const getQuote=ticker=>w.DiarioBinanceAnalises?.get(ticker)||w.DiarioProfitAnalises?.get(ticker)||null;
+w.DiarioTecnico={view,enter,leave,load,getQuote};
 })(window,document);
