@@ -1,3 +1,4 @@
+import { especializarSistema } from '../_shared/ai-router.ts';
 // Jornal do Pregão (v562) — Editor-Chefe de mesa proprietária.
 // Lê a última edição do Jornal já gerada pela função "analise" (tabela analise_cache),
 // reescreve no formato de 5 seções (Capa, Plano do Pregão, Macro, Radar Corporativo, Agenda & Coluna)
@@ -152,7 +153,7 @@ async function gemini(pedido: string, ate: number): Promise<any> {
           method: 'POST', signal: AbortSignal.timeout(Math.min(ms, 90_000)),
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: SYS }] },
+            systemInstruction: { parts: [{ text: especializarSistema(SYS) }] },
             contents: [{ role: 'user', parts: [{ text: pedido }] }],
             generationConfig: { temperature: 0.35, maxOutputTokens: 12000, responseMimeType: 'application/json', ...(pensar && /gemini-3/.test(m) ? { thinkingConfig: { thinkingLevel: 'low' } } : {}) },
           }),
