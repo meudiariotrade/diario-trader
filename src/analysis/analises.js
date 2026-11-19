@@ -39,7 +39,7 @@ const fmt=(n,dg=1)=>n==null||!Number.isFinite(Number(n))?'—':Number(n).toLocal
 const pct=(x)=>x==null||!Number.isFinite(Number(x))?'—':fmt(x,1)+'%';
 const mny=(x,usd)=>x==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:usd?'USD':'BRL',maximumFractionDigits:0,notation:'compact'}).format(Number(x));
 const state={br:{},us:{}},cache=new Map();let timer=null,reqId=0;
-function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',page:0,chart:'auto',zoom:1,panX:0,panY:0,focus:'',detailTicker:'',selected:[],selectedRows:{},rows:null,data:null,loading:false,error:'',pdfBusy:false,pdfError:'',topData:null,topBusy:false,topError:'',topPdfBusy:false,topPdfMessage:'',requested:''});const uid=owner();if(s.account!==uid){s.account=uid;s.selected=[];s.selectedRows={};s.detailTicker='';s.focus='';s.data=null;s.topData=null;s.topError='';s.topBusy=false;s.topPdfMessage='';}return s}
+function init(m){const s=state[m]||(state[m]={});if(s.preset===undefined)Object.assign(s,{search:'',sector:'',custody:'todos',liquidity:'0',cap:'all',preset:'top',order:'score',yieldAceitavel:'0.07',page:0,chart:'auto',zoom:1,panX:0,panY:0,focus:'',detailTicker:'',selected:[],selectedRows:{},rows:null,data:null,loading:false,error:'',pdfBusy:false,pdfError:'',topData:null,topBusy:false,topError:'',topPdfBusy:false,topPdfMessage:'',requested:''});const uid=owner();if(s.account!==uid){s.account=uid;s.selected=[];s.selectedRows={};s.detailTicker='';s.focus='';s.data=null;s.topData=null;s.topError='';s.topBusy=false;s.topPdfMessage='';}return s}
 let holdingsCache=[],holdingsAt=0,holdingsOwner='';function holdings(){const uid=typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local';if(holdingsOwner===uid&&Date.now()-holdingsAt<5000)return holdingsCache;try{const snapshot=w.pfCalc();holdingsCache=(snapshot.pos||[]).filter(p=>+p.q>0&&+p.v>0).map(p=>({ticker:String(p.tk||'').toUpperCase().replace(/\.SA$/,''),market:p.mk,pct:Number(p.peso)||0,sector:p.setor||'',value:Number(p.v)||0}));holdingsAt=Date.now();holdingsOwner=uid;return holdingsCache}catch{return []}}
 function owner(){return typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local'}
 function owned(){return [...new Set(holdings().map(p=>p.ticker))].slice(0,80)}
@@ -54,7 +54,7 @@ return '<div class="scr-filters"><label>Buscar ticker ou empresa<input type="sea
 '<label>Custódia<select data-scr-filter="custody">'+options([['todos','Todos'],['carteira','Na Minha Carteira'],['fora','Fora da Carteira']],s.custody)+'</select></label>'+
 (m==='br'?'<label>Liquidez<select data-scr-filter="liquidity">'+options([['0','Todas as ações (inclui Small/Micro Caps)'],['1000000','> R$ 1M/dia'],['5000000','> R$ 5M/dia'],['20000000','> R$ 20M/dia']],s.liquidity)+'</select></label>':
 '<label>Capitalização<select data-scr-filter="cap">'+options([['all','All Stocks'],['large','Large Cap'],['mid','Mid Cap'],['small','Small Cap']],s.cap)+'</select></label>')+
-'<label>Estratégia<select data-scr-filter="preset">'+options(presets,s.preset)+'</select></label></div>';
+'<label>Estratégia<select data-scr-filter="preset">'+options(presets,s.preset)+'</select></label>'+(m==='br'?'<label>Yield aceito<select data-scr-filter="yieldAceitavel">'+options([['0.06','6%'],['0.07','7%'],['0.08','8%']],s.yieldAceitavel)+'</select></label>':'')+'</div>';
 }
 function coverage(m,s){const c=s.data?.coverage||{},total=Number(s.data?.total||0),scores=Number(c.com_score||0);
 const scorePct=total?((scores/total)*100).toFixed(1).replace('.',','):'0';
@@ -95,13 +95,21 @@ function detail(m,s){
  const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row,Date.now(),s.topData?.medians||s.data?.medians||null);
  if(!meta)return '';
  const owned=ownRow(row);
+ const valuation=m==='br'?w.DiarioScreenersInteligencia?.valuationBR(row,{yieldAceitavel:Number(s.yieldAceitavel)}):null;
+ const valuationHTML=valuation?'<div class="scr-detail-groups" aria-label="Quatro preços justos e teto">' +
+ [['proprio','Teto próprio'],['bazin','Bazin 6%'],['bazinDinamico','Bazin dinâmico'],['graham','Graham']].map(([key,label])=>
+ '<div class="scr-detail-group"><div><b>'+label+'</b><span>'+(
+ valuation.methods[key]==null?'N/D':'R$ '+fmt(valuation.methods[key],2))+'</span></div><small>'+
+ (valuation.margins[key]==null?'Margem N/D':'Margem '+fmt(valuation.margins[key],1)+'%')+
+ (valuation.reasons[key]?' · '+E(valuation.reasons[key]):'')+'</small></div>').join('')+
+ '</div><p class="scr-hint">Preço-teto é estimativa condicional, não cotação-alvo. Ausência de LPA/VPA/DPA/lucro projetado = N/D.</p>':'';
  return '<section class="scr-detail" id="scr-detail" aria-live="polite">'+
  '<div class="scr-head"><div><p class="an-kicker">VALIDAÇÃO DO ATIVO</p><h3>'+E(row.ticker)+' · '+E(meta.company)+'</h3></div>'+
  '<button type="button" data-scr-detail-close="1" aria-label="Fechar explicação">Fechar</button></div>'+
  '<div class="scr-score-line"><strong>'+(meta.score==null?'Nota indisponível':fmt(meta.score/10,1)+'/10')+'</strong>'+
  '<span class="'+(meta.validated?'is-ok':'is-review')+'">'+E(meta.level)+'</span>'+
  '<span>'+fmt(meta.coverage,0)+'% dos critérios disponíveis</span></div>'+
- '<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+
+ '<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+valuationHTML+
  '<div class="scr-detail-groups">'+meta.parts.map(p=>
  '<div class="scr-detail-group"><div><b>'+E(p.name)+'</b><span>'+(p.points==null?'Não calculado':fmt(p.points/10,1)+' / '+fmt(p.weight/10,1)+' pontos')+'</span></div>'+
  '<div class="scr-meter"><i style="width:'+(p.points==null?0:p.points/p.weight*100)+'%"></i></div>'+
@@ -170,7 +178,7 @@ function table(m,s){const all=s.data?.rows||[],us=m==='us';
 const cols=us?[['ticker','Ticker'],['company_name','Empresa'],['score_quant_us','Nota /10'],['cobertura_pct','Cobertura'],['roic','ROIC'],['forward_pe','Fwd P/E'],['total_shareholder_yield','Total Yield'],['momentum_12_1','Mom. 12-1']]:
 [['ticker','Ticker'],['empresa','Empresa'],['score_quant_br','Nota /10'],['cobertura_pct','Cobertura'],['roe','ROE'],['dividend_yield','DY'],['payout_implicito','Payout'],['momentum_12_1','Mom. 12-1']];
 const percentKeys=new Set(['roic','roe','dividend_yield','total_shareholder_yield','payout_implicito','momentum_12_1','cobertura_pct']);
-return '<section class="scr-panel"><div class="scr-head"><h3>Ranking · '+fmt(s.data?.total||0,0)+' ações</h3><div class="scr-actions"><label>Ordenação <select data-scr-filter="order">'+options(us?[['score','Score'],['roic','ROIC'],['forward_pe','Forward P/E'],['yield','Total Yield'],['momentum','Momentum']]:[['score','Score'],['roe','ROE'],['dy','DY'],['pvp','P/VP'],['momentum','Momentum']],s.order)+'</select></label>'+
+return '<section class="scr-panel"><div class="scr-head"><h3>Ranking · '+fmt(s.data?.total||0,0)+' ações</h3><div class="scr-actions"><label>Ordenação <select data-scr-filter="order">'+options(us?[['score','Score'],['roic','ROIC'],['forward_pe','Forward P/E'],['yield','Total Yield'],['momentum','Momentum']]:[['score','Score'],['roe','ROE'],['dy','DY'],['pvp','P/VP'],['momentum','Momentum'],['margem_proprio','Margem própria'],['margem_bazin','Margem Bazin'],['margem_graham','Margem Graham']],s.order)+'</select></label>'+
 '<button class="btn s" data-scr-bulk="1" '+(s.selected.length<2||s.selected.length>4?'disabled':'')+'>Comparar na Pesquisa (até 4)</button></div></div>'+
 '<div class="scr-scroll"><table class="scr-table"><thead><tr><th>Sel.</th>'+cols.map(c=>'<th>'+E(c[1])+'</th>').join('')+'<th>Contexto</th><th>Ações</th></tr></thead><tbody>'+
 all.map(row=>{const own=ownRow(row);const tk=E(row.ticker),score=us?row.score_quant_us:row.score_quant_br;const valid=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row);
@@ -292,7 +300,10 @@ function localScreener(m,s,global){
   s.order==='momentum'?'momentum_12_1':s.order==='score'?score:s.order;
  const asc=['pvp','forward_pe'].includes(s.order);
  rows.sort((a,b)=>{
-  const av=v(a[key]),bv=v(b[key]);
+  const method=s.order.startsWith('margem_')?s.order.slice(7):null;
+  const va=method&&!usa?w.DiarioScreenersInteligencia?.valuationBR(a,{yieldAceitavel:Number(s.yieldAceitavel)}).margins[method]:null;
+  const vb=method&&!usa?w.DiarioScreenersInteligencia?.valuationBR(b,{yieldAceitavel:Number(s.yieldAceitavel)}).margins[method]:null;
+  const av=method?va:v(a[key]),bv=method?vb:v(b[key]);
   if(av!==null&&bv===null)return -1;if(av===null&&bv!==null)return 1;
   if(av!==null&&bv!==null&&av!==bv)return asc?av-bv:bv-av;
   return (v(b[score])??-1)-(v(a[score])??-1)||String(a.ticker).localeCompare(String(b.ticker));
@@ -364,7 +375,7 @@ async function loadTopGlobal(m,refresh=false){
  finally{if(uid===owner()){stateNow.topBusy=false;render()}}
 }
 function field(el){const m=d.querySelector('[data-an-sub].selected')?.dataset.anSub;if(m==='br'||m==='us')return [m,init(m)];return [null,null]}
-function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
+function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;if(key==='yieldAceitavel'){s.data=null;const snapshot=snapshotMemory.get(m.toUpperCase())?.data;if(snapshot?.universe_complete){s.data=localScreener(m,s,snapshot);render();return}}s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
 d.addEventListener('input',ev=>{const b=ev.target;if(!b?.hasAttribute?.('data-scr-search'))return;const [m,s]=field(b);if(!m)return;s.search=b.value;s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';clearTimeout(timer);timer=setTimeout(()=>load(m),420)});
 d.addEventListener('change',ev=>{
  const b=ev.target,[m,s]=field(b);if(!m||!b.closest('#an-root'))return;
