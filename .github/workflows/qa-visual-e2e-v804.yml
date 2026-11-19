@@ -1,4 +1,4 @@
-name: QA Visual E2E - v804
+name: QA Visual E2E - v805
 on:
   pull_request:
     branches: [main]
@@ -27,15 +27,17 @@ jobs:
           else
             npx playwright install --with-deps chromium
           fi
-      - name: Preparar build isolado v804
+      - name: Preparar build isolado v805
         run: npm run build
+      - name: Testar circuito de reconexão Binance sem rede
+        run: node --test tests/binance-ws-backoff-v805.test.cjs
       - name: Medir mutações, CLS, erros de JS e capturar Desktop/iPhone emulado
         run: node scripts/qa-visual-e2e-v804.cjs
       - name: Publicar evidências sem dados privados
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qa-e2e-v804-screenshots-pdf-json
+          name: qa-e2e-v805-screenshots-pdf-json
           path: qa-output/
           retention-days: 14
           if-no-files-found: warn
