@@ -1,6 +1,7 @@
 /* v762: Web Worker efêmero. Nunca acessa Supabase nem cria polling. */
 'use strict';
-importScripts('tecnico-engine.js','institutional-v781.js','xbrl-periodos.js','corporate-candles-v792.js');
+importScripts('tecnico-engine.js','institutional-v781.js','xbrl-periodos.js','corporate-candles-v792.js','economatica-fatos-v795.js');
+const Econ=self.DiarioFatosLicenciados||null;
 const Adjust=self.DiarioCorporateCandles||null;
 const T=self.DiarioXBRLPeriodos||null;
 const I=self.DiarioInstitucional||null; // mocks legados de importScripts não fornecem segundo módulo
@@ -92,6 +93,7 @@ self.onmessage=function(event){
     higher:asset.higher||(data.tf==='1d'?M.aggregateWeekly(asset.daily||asset.candles):null),
     rs,market:group};
    const result=M.examine(asset.candles,opts);
+   const licensed=Econ&&asset.economatica?Econ.normalize(asset.economatica,{ticker:asset.ticker,asOf:data.asOf||new Date().toISOString().slice(0,10)}):null;
    const corporate=Adjust&&Array.isArray(asset.corporateActions)?Adjust.adjust(M.normalize(asset.daily||asset.candles),asset.corporateActions,
     {market:group,asOf:data.asOf||new Date().toISOString().slice(0,10)}):null;
    const fundamentalTTM=T&&asset.xbrl?.facts?T.fcfMargin(asset.xbrl,{
@@ -106,6 +108,7 @@ self.onmessage=function(event){
      rsMeta:{asOf:rs===null?null:rsAsOf,benchmark:rs===null?null:group==='BR'?'IBOV':group==='US'?'SPX':'BTCUSDT',denominator:rs===null?null:fixed.size,completo:rs!==null},
      rsHistory:rsHistories.get(asset.ticker)||null,
      fundamentalTTM,
+     licensedEvidence:licensed?{accepted:licensed.accepted,scoreEligible:false,source:'economatica',reason:licensed.reason||null}:null,
      corporateStatus:corporate?{verified:corporate.verified,actions:corporate.actions||0,reason:corporate.reason||null}:null,
      buy:result.buy,sell:result.sell};
   }).filter(x=>x.ticker);
