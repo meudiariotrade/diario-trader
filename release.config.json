@@ -1,5 +1,5 @@
 {
-  "version": 780,
+  "version": 781,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -51,7 +51,8 @@
     "screeners-relatorio.js": "src/analysis/screeners-relatorio.js",
     "screeners-grafico.js": "src/analysis/screeners-grafico.js",
     "screeners-top10.js": "src/analysis/screeners-top10.js",
-    "tape-live.js": "src/market/tape-live.js"
+    "tape-live.js": "src/market/tape-live.js",
+    "institutional-v781.js": "src/analysis/institutional-v781.js"
   },
   "templates": {
     "index.html": "src/index.html",
