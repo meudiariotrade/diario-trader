@@ -31,7 +31,8 @@ test('iPhone: navega Técnico Brasil/EUA & Cripto, calcula localmente e desmonta
     window.__techTestRequests.push('candles:'+url.searchParams.get('ticker')+':'+url.searchParams.get('tf'));
     return Promise.resolve(Response.json({ok:true,market:url.searchParams.get('market'),
      ticker:url.searchParams.get('ticker'),tf:url.searchParams.get('tf'),
-     source:'OHLCV simulado no navegador de teste',fetchedAt:new Date().toISOString(),candles}));
+     source:'OHLCV simulado no navegador de teste',fetchedAt:new Date().toISOString(),
+     as_of:new Date(candles.at(-1)[0]*1000).toISOString(),candles}));
    }
    return original(input,init);
   };
