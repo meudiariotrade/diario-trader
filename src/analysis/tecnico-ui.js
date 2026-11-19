@@ -21,11 +21,11 @@ function db(){
 }
 async function store(key,item){
  const base=await db();if(!base)return;
- return new Promise(resolve=>{try{const tx=base.transaction('data','readwrite');tx.objectStore('data').put({key,version:'tecnico-779.1',when:Date.now(),item});tx.oncomplete=()=>{base.close();resolve()};tx.onerror=()=>{base.close();resolve()}}catch{base.close();resolve()}});
+ return new Promise(resolve=>{try{const tx=base.transaction('data','readwrite');tx.objectStore('data').put({key,version:'tecnico-781.1',when:Date.now(),item});tx.oncomplete=()=>{base.close();resolve()};tx.onerror=()=>{base.close();resolve()}}catch{base.close();resolve()}});
 }
 async function read(key,ttl){
  const base=await db();if(!base)return null;
- return new Promise(resolve=>{try{const tx=base.transaction('data','readonly'),r=tx.objectStore('data').get(key);r.onsuccess=()=>resolve(r.result?.version==='tecnico-779.1'&&Date.now()-r.result.when<ttl?r.result.item:null);r.onerror=()=>resolve(null);tx.oncomplete=()=>base.close()}catch{base.close();resolve(null)}});
+ return new Promise(resolve=>{try{const tx=base.transaction('data','readonly'),r=tx.objectStore('data').get(key);r.onsuccess=()=>resolve(r.result?.version==='tecnico-781.1'&&Date.now()-r.result.when<ttl?r.result.item:null);r.onerror=()=>resolve(null);tx.oncomplete=()=>base.close()}catch{base.close();resolve(null)}});
 }
 async function fundamental(m,signal){
  let snap=null;
