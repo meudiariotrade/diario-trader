@@ -18,14 +18,26 @@ create table if not exists public.conhecimento_trading (
 alter table public.conhecimento_trading enable row level security;
 revoke all on public.conhecimento_trading from public,anon;
 grant select,insert,update,delete on public.conhecimento_trading to authenticated;
-create policy "conhecimento_leitura_propria" on public.conhecimento_trading
- for select to authenticated using (owner_id=(select auth.uid()));
-create policy "conhecimento_insercao_propria" on public.conhecimento_trading
- for insert to authenticated with check (owner_id=(select auth.uid()));
-create policy "conhecimento_atualizacao_propria" on public.conhecimento_trading
- for update to authenticated using (owner_id=(select auth.uid())) with check (owner_id=(select auth.uid()));
-create policy "conhecimento_remocao_propria" on public.conhecimento_trading
- for delete to authenticated using (owner_id=(select auth.uid()));
+do $policy$ begin
+ if not exists(select 1 from pg_policies where schemaname='public' and tablename='conhecimento_trading' and policyname='conhecimento_leitura_propria')
+ then create policy "conhecimento_leitura_propria" on public.conhecimento_trading
+ for select to authenticated using (owner_id=(select auth.uid())); end if;
+end $policy$;
+do $policy$ begin
+ if not exists(select 1 from pg_policies where schemaname='public' and tablename='conhecimento_trading' and policyname='conhecimento_insercao_propria')
+ then create policy "conhecimento_insercao_propria" on public.conhecimento_trading
+ for insert to authenticated with check (owner_id=(select auth.uid())); end if;
+end $policy$;
+do $policy$ begin
+ if not exists(select 1 from pg_policies where schemaname='public' and tablename='conhecimento_trading' and policyname='conhecimento_atualizacao_propria')
+ then create policy "conhecimento_atualizacao_propria" on public.conhecimento_trading
+ for update to authenticated using (owner_id=(select auth.uid())) with check (owner_id=(select auth.uid())); end if;
+end $policy$;
+do $policy$ begin
+ if not exists(select 1 from pg_policies where schemaname='public' and tablename='conhecimento_trading' and policyname='conhecimento_remocao_propria')
+ then create policy "conhecimento_remocao_propria" on public.conhecimento_trading
+ for delete to authenticated using (owner_id=(select auth.uid())); end if;
+end $policy$;
 create index if not exists conhecimento_trading_hnsw on public.conhecimento_trading
  using hnsw (embedding extensions.vector_cosine_ops) with (m=8,ef_construction=64);
 create index if not exists conhecimento_trading_obras on public.conhecimento_trading(owner_id,obra_id,chunk_index);
