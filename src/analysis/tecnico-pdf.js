@@ -153,6 +153,7 @@ async function build(m,rows,tf='1d'){
   write(head,M,y,8.5,bold,col.gold);y+=16;y=wrap(paragraph,M,y,W-2*M,8.5,12,reg,col.ink,7)+12;
  }
  footer();
+ if(w.DiarioFiboVisual?.appendPDF)await w.DiarioFiboVisual.appendPDF({doc,P,tickers:rows.map(r=>r.ticker)});
  doc.setTitle('Dossiê Técnico '+region+' · Diário de Trader');doc.setAuthor('Diário de Trader');
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Dossie-Tecnico-'+(m==='br'?'Brasil':'EUA-Cripto')+'-'+new Date().toISOString().slice(0,10)+'.pdf',pages:doc.getPageCount()};
 }
