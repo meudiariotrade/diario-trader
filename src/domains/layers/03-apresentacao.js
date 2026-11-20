@@ -231,6 +231,13 @@ try {
         '</span><time>'+horario+' BRT</time></div><p>'+b(texto)+'</p>'+
         (aviso?'<small class="v810-caveat">'+b(aviso)+'</small>':'')+'</header>';
     }
+    function v810NoticiaValida(n) {
+      const titulo=String(n?.t||n?.titulo||"");
+      const at=Date.parse(n?.d||"");
+      return !!titulo && Number.isFinite(at) && at<=Date.now()+60000 &&
+        Date.now()-at<=48*3600000 &&
+        !/loteria|mega.sena|lotof[aá]cil|hor[oó]scopo|advertorial|conte[uú]do patrocinado/i.test(titulo);
+    }
     function v810AgendaNoticias(dia) {
       const agenda=f(()=>AG.v.flatMap(g=>g?.eventos||[]),[]);
       const relevantes=agenda.filter(g=>{
@@ -242,9 +249,7 @@ try {
         const ts=Date.parse(raw||"");
         return Number.isFinite(ts)?new Date(ts).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"Sem horário";
       };
-      const noticias=f(()=>(MKT.items||[]).filter(g=>{
-        const ts=Date.parse(g?.d||"");return Number.isFinite(ts)&&ts<=Date.now()+60000&&Date.now()-ts<=48*3600000;
-      }).filter(g=>!/loteria|mega.sena|hor[oó]scopo|advertorial/i.test(String(g.t||g.titulo||""))).slice(0,3),[]);
+      const noticias=f(()=>(MKT.items||[]).filter(v810NoticiaValida).slice(0,3),[]);
       return C("cal","Agenda e notícias",
         '<button type="button" class="v4-inline" data-v4mkt="ag">Abrir agenda</button>',
         '<div class="v810-agenda"><div><h3>Eventos prioritários</h3><ul>'+
@@ -796,7 +801,8 @@ try {
         u = Ft(),
         i = St() ?? o?.lim ?? null,
         h = o ? o.rest : i != null ? Math.max(0, i - Math.max(0, -a)) : null,
-        M = v810Manual ? {pre:"Visão pré-mercado",pregao:"Visão do pregão",pos:"Visão pós-mercado"}[u] : {
+        M = v810Manual ? {pre:"Visão pré-mercado",pregao:"Visão do pregão",pos:"Visão pós-mercado"}[u] :
+          ["b3_fechada","cripto_macro"].includes(window.DiarioSessoes?.context()?.mode) ? "B3 fechada" : {
           pre: "Pré-abertura",
           pregao: "Pregão aberto",
           pos: "Pregão encerrado",
@@ -817,7 +823,7 @@ try {
         ]
           .map(
             ([c, w]) =>
-              `<button type="button" data-v4phase="${c}" class="${u === c ? "on" : ""}" ${u === c ? 'aria-current="true"' : ""}><i></i>${w}${u === c && c === "pregao" ? " <small>(aberto)</small>" : ""}</button>`,
+              `<button type="button" data-v4phase="${c}" class="${u === c ? "on" : ""}" ${u === c ? 'aria-current="true"' : ""}><i></i>${w}${u === c && c === "pregao" && !v810Manual ? " <small>(aberto)</small>" : ""}</button>`,
           )
           .join("")}</div>`,
         Z = `<div class="v4-tiles">${[
@@ -885,7 +891,7 @@ try {
               )
               .join("")
           : '<li class="v4-none">Sem eventos carregados.</li>';
-      let x = f(() => (MKT.items || []).slice(0, 3), []),
+      let x = f(() => (MKT.items || []).filter(v810NoticiaValida).slice(0, 3), []),
         m = null;
       if (x.length)
         try {
@@ -902,7 +908,7 @@ try {
           const c = JSON.parse(
             localStorage.getItem("diario-v423-news") || "null",
           );
-          c && Array.isArray(c.items) && ((x = c.items), (m = c.ts));
+          c && Array.isArray(c.items) && c.ts && Date.now()-c.ts < 48*3600000 && ((x = c.items.filter(v810NoticiaValida).slice(0,3)), (m = c.ts));
         } catch {}
       const F = x.length
           ? x
@@ -1148,7 +1154,7 @@ try {
         ev.preventDefault(); ev.stopImmediatePropagation();
         planoAberto789 = true;
         const root = v.querySelector("#v789-plano");
-        if (root) { root.open = true; root.scrollIntoView({behavior:"smooth",block:"center"}); }
+        if (root) { const panel=root.closest(".v810-more"); if(panel)panel.open=true; root.open = true; root.scrollIntoView({behavior:"smooth",block:"center"}); }
         return;
       }
       const mode = ev.target.closest?.("#v789-plano [data-v789-mode]");
