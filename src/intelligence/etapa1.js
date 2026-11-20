@@ -85,9 +85,10 @@
   }
   function briefing() {
     const m=mercadoPlan(),hot=timeline().filter(e=>e.prioridade==='alta');
+    const mine=relacionados().filter(e=>e.prioridade==='alta');
     return '<div><b>Regime: '+escape(m.nome)+'</b> <span class="mut">Confiança heurística: '+(m.confianca==null?'—':m.confianca+'%')+'</span></div>'+
       '<p class="mut sm">Fonte: '+escape(state.mercado?.fonte||'não verificada')+' · Leitura: '+when(state.mercado?.atualizadoEm)+' · '+escape(m.motivo)+'</p>'+
-      '<div><b>O que movimenta o mercado</b></div>'+rowsEvent(hot.slice(0,3),3);
+      '<div><b>O que movimenta o mercado</b> <span class="mut sm">· '+mine.length+' relevante(s) aos seus ativos</span></div>'+rowsEvent(hot.slice(0,3),3);
   }
   function agenda() {
     const events=timeline().filter(e=>e.tema==='politica_economica').slice(0,5);
@@ -98,11 +99,15 @@
   }
   function noticias() {
     const mine=relacionados();
+    const pushAtivo=typeof NP!=='undefined' && NP.on?.intel===true;
     const count=mine.filter(e=>e.prioridade==='alta').length;
     return '<div><b>Linha do tempo de acontecimentos</b> <span class="mut sm">Atualizada: '+when(state.eventos?.atualizadoEm)+(state.eventos?.desatualizado?' · DADOS ATRASADOS':'')+'</span></div>'+
       '<p class="mut sm">Agrupamento de matérias repetidas; notícias não representam recomendações nem fatos verificados independentemente da fonte.</p>'+
       '<div class="sm"><b>Alertas ligados aos seus ativos: '+count+'</b> · triagem feita somente neste dispositivo.</div>'+
-      '<div class="sm" style="margin:6px 0"><button type="button" class="btn s" data-intel-notify="1" style="min-height:40px">Ativar avisos com app aberto</button></div>'+
+      '<div class="sm" style="margin:6px 0"><button type="button" class="btn s" data-intel-push="1" style="min-height:40px">'+
+      (pushAtivo?'Desativar alertas Web Push por ativo':'Ativar alertas Web Push por ativo')+'</button> '+
+      '<button type="button" class="btn s" data-intel-notify="1" style="min-height:40px">Avisos locais (app aberto)</button></div>'+
+      '<p class="mut sm">Web Push usa sua inscrição existente em Configurações → Alertas. Não envia valores nem operações; somente os tickers escolhidos. O aviso do servidor é entregue após a sincronização da preferência.</p>'+
       rowsEvent(mine.length?mine:timeline(),8);
   }
   function terminal() {
@@ -129,6 +134,9 @@
       state.abort?.abort();
       state.abort=route?new AbortController():null;
       state.route=route;
+      if(route && w.DiarioInteligencia?.subscribe){
+        w.DiarioInteligencia.subscribe('ativo:selecionado',repaint,state.abort.signal);
+      }
     }
     app.querySelectorAll('[data-intel-etapa1]').forEach(x=>x.remove());
     if(!route)return;
@@ -171,6 +179,7 @@
   }
   function avaliarAvisos() {
     if(!w.Notification || Notification.permission!=='granted')return;
+    if(typeof NP!=='undefined' && NP.on?.intel===true && typeof AL!=='undefined' && AL.sub)return;
     let enabledAt=0;
     try{enabledAt=Number(localStorage.getItem('diario-intel-avisos-since')||0);}catch(_){}
     if(!enabledAt)return;
@@ -194,6 +203,17 @@
     if(tick){
       const value=safeTicker(tick.dataset.intelTicker);
       if(value)w.DiarioInteligencia?.selectAsset(value,state.route);
+      return;
+    }
+    if(event.target.closest('[data-intel-push]')){
+      if(typeof NP==='undefined')return;
+      NP.on ||= {};
+      NP.on.intel=NP.on.intel!==true;
+      if(typeof alSave==='function')alSave();
+      if(typeof turnoPushSync==='function') {
+        try{await turnoPushSync(true);}catch(_){}
+      }
+      repaint();
       return;
     }
     if(!event.target.closest('[data-intel-notify]'))return;
