@@ -231,7 +231,13 @@
     const conteudo = html(capturar());
     atualizarCard(card,conteudo);
   }
-  w.TermometroAbertura670 = Object.freeze({calcular,capturar,montar});
+  /* v811: variação observada de WIN/WDO no dia (mesmas fontes e validade), para a memória previsto × ocorrido. */
+  function observado() {
+    const now = Date.now(), f = lista();
+    const hm = new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(now));
+    return {win: variacao("win",f,now), wdo: variacao("wdo",f,now), em: diaBrt(new Date(now)) + "T" + hm + "-03:00"};
+  }
+  w.TermometroAbertura670 = Object.freeze({calcular,capturar,montar,observado});
   w.TraderUI?.onRender?.("termometro-abertura-teorica-v670",()=>w.setTimeout(montar,0));
   // A tela V4 troca seu conteúdo depois do render principal. Reposicionar
   // após o evento de render final preserva o termômetro nas duas rotas.
@@ -256,7 +262,8 @@
   if(d.readyState==="loading")d.addEventListener("DOMContentLoaded",observarMontagem,{once:true});
   else observarMontagem();
   w.addEventListener("focus",montar);
-  w.setInterval(()=>{if(!d.hidden)montar();},5000);
+  // v811: o intervalo só trabalha onde o termômetro aparece (Início e Meu dia).
+  w.setInterval(()=>{try{if(!d.hidden&&(tab==="home"||tab==="dia"))montar();}catch{}},5000);
   if (d.readyState === "loading") d.addEventListener("DOMContentLoaded",()=>w.setTimeout(montar,0),{once:true});
   else w.setTimeout(montar,0);
 })(window, document);

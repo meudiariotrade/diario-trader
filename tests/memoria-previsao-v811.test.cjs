@@ -1,0 +1,26 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const M=require('../src/shared/memoria-previsao.js');
+const mem=()=>{const m=new Map();return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v))};};
+test('previsão é congelada: segunda leitura do mesmo dia não sobrescreve',()=>{const s=mem();
+ M.registrarPrevisao('2026-11-23',{winPct:0.8,wdoPct:-0.3,ewz:1.2,spf:0.5,wti:-0.2},Date.parse('2026-11-23T11:00Z'),s);
+ M.registrarPrevisao('2026-11-23',{winPct:-2,wdoPct:1},Date.parse('2026-11-23T11:30Z'),s);
+ assert.equal(M.ler(s)['2026-11-23'].previsao.winPct,0.8);});
+test('fechamento de outra data é recusado; da mesma data compara direção',()=>{const s=mem();
+ M.registrarPrevisao('2026-11-23',{winPct:0.8,wdoPct:-0.3,ewz:1.2,spf:0.5,wti:-0.2},Date.parse('2026-11-23T11:00Z'),s);
+ assert.equal(M.registrarFechamento('2026-11-23',{win:1.1,wdo:0.4,em:'2026-11-22T18:00-03:00'},s),null);
+ M.registrarFechamento('2026-11-23',{win:1.1,wdo:0.4,em:'2026-11-23T18:31-03:00'},s);
+ const a=M.avaliar(M.ler(s)['2026-11-23']);
+ assert.equal(a.itens[0].resultado,'direção confirmada');
+ assert.equal(a.itens[1].resultado,'direção contrária');
+ assert.match(a.insumos.join(' '),/EWZ \+1,20%/);
+ assert.match(a.aviso,/não previsão de preço/);});
+test('leitura neutra, sem fechamento ou sem insumos = inconclusivo, sem inventar número',()=>{const s=mem();
+ M.registrarPrevisao('2026-11-24',{winPct:0.05,wdoPct:null},0,s);
+ const a=M.avaliar(M.ler(s)['2026-11-24']);
+ assert.equal(a.itens[0].resultado,'inconclusivo');
+ assert.equal(a.itens[1].resultado,'inconclusivo');
+ assert.equal(a.itens[1].ocorrido,'Dados insuficientes');
+ assert.equal(M.registrarPrevisao('2026-11-25',{winPct:null,wdoPct:null},0,s),null);});
+test('memória limitada a 40 sessões',()=>{const s=mem();
+ for(let i=0;i<45;i++){const d=new Date(Date.UTC(2027,0,4+i)).toISOString().slice(0,10);M.registrarPrevisao(d,{winPct:1},0,s);}
+ assert.ok(Object.keys(M.ler(s)).length<=40);});

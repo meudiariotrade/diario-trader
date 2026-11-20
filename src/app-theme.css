@@ -3315,3 +3315,18 @@ html body #app .v811-pxe-trade>summary{min-height:40px;display:flex;align-items:
   html body #app .v811-pxe-row>span[data-l]::before{content:attr(data-l) ": ";color:#7E8494;font-size:11px}
   html body #app .v811-pxe-row>span.v811-vazio{display:none}
 }
+
+/* v811 — selos padronizados de natureza da informação (P1-04). */
+html body .v811-cls{display:inline-block;font-size:10px;line-height:16px;padding:0 6px;border-radius:4px;border:1px solid #1E232E;letter-spacing:.04em;text-transform:uppercase;font-weight:700;white-space:nowrap;vertical-align:1px;margin-right:4px}
+html body .v811-cls-fato{color:#10B981;border-color:rgba(16,185,129,.4)}
+html body .v811-cls-publicada{color:#9DB4D8;border-color:rgba(157,180,216,.35)}
+html body .v811-cls-observado{color:#C9CDD6;border-color:#2A303D}
+html body .v811-cls-interpretacao{color:#D4A017;border-color:rgba(212,160,23,.4)}
+html body .v811-cls-hipotese,html body .v811-cls-cenario{color:#E0A526;border-color:rgba(224,165,38,.3);border-style:dashed}
+html body .v811-cls-indisponivel{color:#7E8494;border-color:#2A303D}
+/* Previsto × ocorrido (Início · pós-mercado). */
+html body .v811-pxo{margin-top:12px;border-top:1px solid #1E232E;padding-top:10px;min-width:0}
+html body .v811-pxo h4{margin:0 0 6px;font-size:13px;color:#D4A017;text-transform:uppercase;letter-spacing:.06em}
+html body .v811-pxo-row{display:grid;grid-template-columns:60px minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr);gap:10px;padding:8px 0;border-bottom:1px solid #1E232E;font-size:13px;font-variant-numeric:tabular-nums}
+html body .v811-r-ok b:first-child{color:#10B981}html body .v811-r-contra b:first-child{color:#EF4444}
+@media (max-width:767px){html body .v811-pxo-row{grid-template-columns:1fr}}

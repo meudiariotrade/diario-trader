@@ -27,6 +27,27 @@
     } catch (_) {}
     return [...set].slice(0,60);
   }
+  /* v811: classificação padronizada (P1-04). Toda frase da inteligência leva um destes selos. */
+  const CLS={fato:'Fato confirmado',publicada:'Informação publicada',observado:'Dado observado',interpretacao:'Interpretação',hipotese:'Hipótese',cenario:'Cenário condicionado',indisponivel:'Indisponível'};
+  const tag=k=>'<span class="v811-cls v811-cls-'+k+'">'+CLS[k]+'</span> ';
+  const oficial=e=>(e?.fontes||[]).some(f=>/^https:\/\/([a-z0-9-]+\.)*(gov\.br|cvm\.gov\.br|b3\.com\.br|sec\.gov|federalreserve\.gov|bcb\.gov\.br|ibge\.gov\.br|bls\.gov)(\/|$)/i.test(String(f?.url||'')));
+  /* v811: memória previsto × ocorrido do termômetro (P1-05). Grava no aparelho; não usa rede. */
+  function memoriaPrevisao(c){
+    const M=w.DiarioMemoriaPrevisao,T=w.TermometroAbertura670;if(!M||!T||!c)return '';
+    const sess=c.b3?.date;if(!sess)return '';
+    try{
+      if(c.mode==='pre'&&c.win?.date===sess)M.registrarPrevisao(sess,T.capturar());
+      if(c.mode==='pos'&&c.b3?.verified)M.registrarFechamento(sess,{...T.observado(),fonte:state.mercado?.fonte||''});
+    }catch(_){}
+    if(c.mode!=='pos'&&c.mode!=='b3_fechada'&&c.mode!=='cripto_macro')return '';
+    const alvo=c.mode==='pos'?sess:c.anchorDate;const a=M.avaliar(M.ler()[alvo]);
+    if(!a)return '<div class="v811-pxo"><h4>Previsto × ocorrido</h4><p class="mut sm">'+tag('indisponivel')+'Sem leitura do termômetro salva antes da abertura de '+escape(String(alvo||'').split('-').reverse().join('/'))+'. A memória começa a valer a partir do próximo pré-mercado com dados.</p></div>';
+    const h=M.historico();
+    return '<div class="v811-pxo"><h4>Previsto × ocorrido · '+escape(String(alvo).split('-').reverse().join('/'))+'</h4>'+
+      '<div class="v811-pxo-tab">'+a.itens.map(i=>'<div class="v811-pxo-row v811-r-'+(i.resultado==='direção confirmada'?'ok':i.resultado==='direção contrária'?'contra':'inc')+'"><b>'+escape(i.nome)+'</b><span>'+tag('hipotese')+'Previsto: '+escape(i.previsto)+'</span><span>'+(i.ocorrido==='Dados insuficientes'?tag('indisponivel'):tag('observado'))+'Ocorrido: '+escape(i.ocorrido)+'</span><span><b>'+escape(i.resultado)+'</b> — '+escape(i.porque)+'</span></div>').join('')+'</div>'+
+      '<p class="mut sm">Leitura salva '+when(a.leituraEm)+(a.insumos.length?' com '+escape(a.insumos.join(', ')):'')+'. '+escape(a.aviso)+'</p>'+
+      (h.sessoes>1?'<p class="mut sm">Histórico no aparelho: '+h.sessoes+' sessões · '+h.confirmadas+' direção confirmada · '+h.contrarias+' contrária · '+h.inconclusivas+' inconclusiva.</p>':'')+'</div>';
+  }
   function painel(title,desc,compact) {
     if(compact){
       /* v811: no Terminal a inteligência fica recolhida no fim do painel, numa linha,
@@ -90,11 +111,11 @@
       const ticker=(e.tickers||[]).filter(t=>mine.has(t)).slice(0,5);
       const first=(e.fontes||[]).at(-1);
       const source=first&&/^https:\/\//.test(first.url) ? '<a href="'+escape(first.url)+'" target="_blank" rel="noopener noreferrer">'+escape(first.nome||'Fonte')+'</a>' : escape(first?.nome||'Fonte indisponível');
-      return '<div style="padding:9px 0;border-bottom:1px solid var(--bd,#1E232E);min-width:0"><b>'+escape(e.titulo)+'</b>'+
+      return '<div style="padding:9px 0;border-bottom:1px solid var(--bd,#1E232E);min-width:0">'+tag(oficial(e)?'fato':'publicada')+'<b>'+escape(e.titulo)+'</b>'+
         '<div class="mut sm">'+escape(e.tema)+' · '+escape(e.prioridade)+' · '+when(e.ultimaAtualizacao)+' · '+source+' · '+(e.quantidadeFontes||e.fontes?.length||0)+' fonte(s)</div>'+
         (ticker.length?'<div style="margin-top:5px">'+ticker.map(t=>'<button type="button" class="btn s" data-intel-ticker="'+escape(t)+'" style="margin:2px;min-height:40px">'+escape(t)+'</button>').join('')+'</div>':'')+
         '<button type="button" class="btn s" data-intel-study="'+escape(e.id)+'" style="min-height:40px;margin:5px 0">Estudar impacto</button>'+
-        '<div class="mut sm" style="margin-top:4px">Impactos indiretos: hipóteses econômicas, não causalidades comprovadas.</div></div>';
+        '<div class="mut sm" style="margin-top:4px">'+tag('hipotese')+'Impactos indiretos: hipóteses econômicas, não causalidades comprovadas.</div></div>';
     }).join('');
   }
   function transmissao(e) {
@@ -154,8 +175,8 @@
     if(c.warning)html+='<p class="warn">'+escape(c.warning)+'</p>';
     html+='<p class="mut sm">Cotações sem horário de negócio não comprovam negociação atual. Variações diárias não medem a mudança acumulada desde o fechamento B3.</p>';
     if(state.eventos?.desatualizado)html+='<p class="warn">Coleta de notícias atrasada ou offline; confira a publicação em cada fonte.</p>';
-    if(latest)html+='<p><b>Fluxo estrangeiro · '+escape(latest.d)+'</b> · '+escape(state.fluxo?.fonte||'fonte não identificada')+' · diário defasado. '+escape(f.text)+' Acumulado da amostra do mês: '+format(f.monthObserved)+' milhões de reais.</p>';
-    else html+='<p class="mut sm">Fluxo estrangeiro sem snapshot público disponível; consulte a área existente em Mercado.</p>';
+    if(latest)html+='<p>'+tag('observado')+'<b>Fluxo estrangeiro · '+escape(latest.d)+'</b> · '+escape(state.fluxo?.fonte||'fonte não identificada')+' · diário defasado. '+escape(f.text)+' Acumulado da amostra do mês: '+format(f.monthObserved)+' milhões de reais.</p>';
+    else html+='<p class="mut sm">'+tag('indisponivel')+'Fluxo estrangeiro sem snapshot público disponível; consulte a área existente em Mercado.</p>';
     try {
       if(typeof SNT!=='undefined'&&SNT.v)for(const key of ['b3','eua','cripto']){
         const v=SNT.v[key];if(!v)continue;
@@ -163,7 +184,7 @@
         const history=(v.hist||[]).map(x=>({date:x.d||x.data,value:x.v,method}));
         if(number(v.ontem)&&v.data)history.push({date:w.DiarioSessoes.shift(v.data,-1),value:v.ontem,method});
         const reading=w.DiarioInterpretacao?.sentiment({date:v.data,value:v.valor},history,method);
-        if(reading)html+='<p><b>Sentimento '+escape(key.toUpperCase())+' · '+reading.value+'</b> · '+escape(reading.date)+' · Δ diário '+format(reading.daily)+' · Δ semanal '+format(reading.weekly)+'. '+escape(reading.text)+'</p>';
+        if(reading)html+='<p>'+tag('observado')+'<b>Sentimento '+escape(key.toUpperCase())+' · '+reading.value+'</b> · '+escape(reading.date)+' · Δ diário '+format(reading.daily)+' · Δ semanal '+format(reading.weekly)+'. '+escape(reading.text)+'</p>';
       }
     }catch(_){}
     const dates=[];
@@ -174,7 +195,7 @@
     const events=w.DiarioInterpretacao?.prioritize(timeline(),c)||[];
     for(const e of events.slice(0,3)){
       const scenario=w.DiarioInterpretacao?.adrScenario(e,state.mercado?.adrs||[],c);
-      if(scenario)html+='<p><b>'+escape(scenario.ticker+' ↔ '+scenario.symbol)+'</b> · '+when(e.ultimaAtualizacao)+'. '+escape(scenario.text)+' '+escape(scenario.scenario)+' '+escape(scenario.note)+'</p>';
+      if(scenario)html+='<p>'+tag('cenario')+'<b>'+escape(scenario.ticker+' ↔ '+scenario.symbol)+'</b> · '+when(e.ultimaAtualizacao)+'. '+escape(scenario.text)+' '+escape(scenario.scenario)+' '+escape(scenario.note)+'</p>';
     }
     if(state.memoria?.anchorDate===c.anchorDate)html+='<p class="mut sm">Memória desde a sessão '+escape(c.anchorDate)+': '+state.memoria.eventos.length+' evento(s) preservado(s). '+escape(state.memoria.note)+'</p>';
     return html;
@@ -213,14 +234,14 @@
     const atualizado=Date.parse(state.mercado?.atualizadoEm||'');
     const recent=Number.isFinite(atualizado)&&Date.now()-atualizado<20*60000&&atualizado<=Date.now()+60000;
     const fonte=escape(state.mercado?.fonte||'não verificada');
-    const resumo=(m.nome==='Sem leitura validada'||m.nome==='Amostra insuficiente')?
-      'Dados insuficientes para caracterizar o mercado nesta sessão.':
-      'Interpretação das variações disponíveis: '+escape(m.nome)+'. A classificação não prevê preços.';
+    const semLeitura=(m.nome==='Sem leitura validada'||m.nome==='Amostra insuficiente');
+    const resumo=semLeitura?tag('indisponivel')+'Dados insuficientes para caracterizar o mercado nesta sessão.':
+      tag('interpretacao')+'Variações disponíveis indicam: '+escape(m.nome)+'. A classificação não prevê preços.';
     const top=hot.slice(0,3).map(e=>{
       const data=when(e.ultimaAtualizacao),fonte=e.fontes?.find(f=>/^https:\/\/|^http:\/\//.test(f?.url));
-      return '<li><b>'+escape(e.titulo||'Acontecimento publicado')+'</b>'+
+      return '<li>'+tag(oficial(e)?'fato':'publicada')+'<b>'+escape(e.titulo||'Acontecimento publicado')+'</b>'+
         '<small> · '+escape(data)+' · '+escape(fonte?.nome||'Fonte não informada')+
-        ' · Informação publicada; efeito nos ativos depende de confirmação.</small></li>';
+        ' · efeito nos ativos depende de confirmação.</small></li>';
     }).join('')||'<li>Não há acontecimentos recentes com fontes identificadas.</li>';
     return '<div class="v810-intel-brief"><h3>'+title+'</h3>'+
       '<p><b>'+resumo+'</b></p>'+
@@ -230,15 +251,15 @@
       '<details><summary>Fatos publicados, hipóteses e fontes · '+mine.length+' ligados aos seus ativos</summary>'+
       '<ul class="v810-intel-events">'+top+'</ul>'+
       (hot.length?'<div><b>Hipóteses condicionadas</b></div>'+
-        hot.slice(0,2).map(e=>'<p class="mut sm">'+escape(transmissao(e))+
+        hot.slice(0,2).map(e=>'<p class="mut sm">'+tag('cenario')+escape(transmissao(e))+
         ' — cenário condicionado, não atribuição comprovada de causalidade.</p>').join(''):'')+
-      '<p class="mut sm">'+escape(m.motivo)+'</p></details></div>';
+      '<p class="mut sm">'+escape(m.motivo)+'</p></details>'+memoriaPrevisao(context)+'</div>';
   }
   function agenda() {
     const events=timeline().filter(e=>e.tema==='politica_economica').slice(0,5);
     return '<p class="mut sm">Agenda inteligente: confrontar Anterior × Consenso × Realizado somente quando a fonte trouxer os três dados. Surpresa = Realizado − Consenso.</p>'+
       '<div><b>Eventos e transmissão potencial</b></div>'+rowsEvent(events,5)+
-      events.slice(0,3).map(e=>'<p class="mut sm"><b>Hipótese econômica:</b> '+escape(transmissao(e))+'</p>').join('')+
+      events.slice(0,3).map(e=>'<p class="mut sm">'+tag('hipotese')+escape(transmissao(e))+'</p>').join('')+
       '<p class="mut sm">CPI/Fed → Treasuries → USD/BRL → WIN/WDO/DI é hipótese de transmissão, não causalidade provada.</p>'+
       '<p class="mut sm">Reações históricas 5m/15m/60m: aguardando série sincronizada com horário de divulgação, sem simulação de números.</p>';
   }
