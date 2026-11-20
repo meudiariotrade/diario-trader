@@ -68,3 +68,21 @@ test('v832: snapshot público aceita tickers de uma letra (V, T, F, C) dos EUA',
   assert.match(fs.readFileSync('src/analysis/snapshot-contract-v800.js','utf8'),/\[A-Z0-9\.-\]\{1,14\}/);
   assert.match(fs.readFileSync('src/app-theme.css','utf8'),/html\[data-v427-tema=claro\]\{--ui-bg:#F3F0E8/);
 });
+test('v833: última vez parecida acha o dia mais recente com a mesma direção e o que veio depois',async()=>{
+  const m=await import('../cloudflare/diario-noticias/analogia.mjs');
+  const datas=[];for(let i=0;i<60;i++){const d=new Date(Date.UTC(2026,0,1)+i*864e5);datas.push(d.toISOString().slice(0,10));}
+  const mk=(f)=>{const s=new Map();let v=100;datas.forEach((d,i)=>{v*=1+f(i)/100;s.set(d,v)});return s};
+  // dia 30 e o último dia (59): tudo cai ~1%; resto oscila pouco
+  const queda=(i)=>i===30||i===59?-1.2:(i%2?0.1:-0.1);
+  const series={spx:mk(queda),ndx:mk(queda),ibov:mk(queda),ouro:mk(queda),btc:mk(queda),petroleo:mk(queda)};
+  const a=m.calcularAnalogia(series,new Date('2026-03-01T15:00:00Z'));
+  assert.equal(a.titulo,'Tudo caindo junto hoje');
+  assert.equal(a.ultima.data,datas[30]);
+  assert.equal(a.vezes,1);
+  assert.equal(typeof a.ultima.depois5.spx,'number');
+  assert.equal(m.analogiaAgora(new Date('2026-11-20T15:00:00Z')),true);
+  assert.equal(m.analogiaAgora(new Date('2026-11-21T15:00:00Z')),false);
+  const e=fs.readFileSync('src/intelligence/etapa1.js','utf8');
+  assert.match(e,/function importante\(e\)/);assert.match(e,/VALE3/);assert.match(e,/PETR4/);
+  assert.doesNotMatch(e,/>Estudar impacto</);
+});
