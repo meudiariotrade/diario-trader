@@ -152,6 +152,7 @@
     var b = t.closest('[data-dt815]');
     if (b) {
       var go = b.getAttribute('data-dt815') === 'foco' ? 'term' : 'dia';
+      if (b.hasAttribute('data-tk')) definirFoco(b.getAttribute('data-tk'), 'clique');
       var tk = focoAtual();
       if (typeof root.irPara === 'function') root.irPara(go);
       /* Foco → Terminal já abre o gráfico do ativo (comando "TICKER G"). */

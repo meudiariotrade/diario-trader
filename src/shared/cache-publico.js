@@ -19,7 +19,7 @@
   signal?.addEventListener('abort',abort,{once:true});job.promise.then(v=>{if(!done){end();resolve(v);}},e=>{if(!done){end();reject(e);}});
  });}
  function get(path,{signal,ttl=120000}={}){
-  if(!paths.has(path))return Promise.reject(Error('Rota pública não permitida'));
+  if(!paths.has(path)&&!/^\/v1\/series\?serie=[a-z0-9]{2,20}&desde=\d{4}$/.test(path))return Promise.reject(Error('Rota pública não permitida'));
   if(signal?.aborted)return Promise.reject(new DOMException('Aborted','AbortError'));
   const hot=memory.get(path);
   if(hot&&Date.now()>=hot.at&&Date.now()-hot.at<ttl)return Promise.resolve(hot.data);

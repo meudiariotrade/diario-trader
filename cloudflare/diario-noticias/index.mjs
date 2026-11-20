@@ -4,6 +4,8 @@ import {FLOW_KEY,coletarFluxo} from './fluxo.mjs';
 import {agruparEventos} from './eventos.mjs';
 import {coletarAgenda,coletarSentimento,agendaAgora,sentimentoAgora} from './dados-publicos.mjs';
 import {coletarJuros} from './juros.mjs';
+import {seriePublica} from './series.mjs';
+import {resolveLogos} from './logos.mjs';
 const AGENDA_KEY=s=>'diario:agenda:v1:'+s, SENT_KEY='diario:sentimento:v1', JUROS_KEY='diario:juros:v1';
 /* v820: Juros e DI a cada 10 min no horário de mercado (08:30–18:30, dias úteis); de hora em hora fora dele. */
 export function jurosAgora(date){const b=globalThis.DiarioSessoes.local(+date,'America/Sao_Paulo');return !b.weekend&&b.minute>=510&&b.minute<1110?b.minute%10===0:b.minute%60===0;}
@@ -189,6 +191,26 @@ export default {
     const path=new URL(request.url).pathname;
     if(request.method!=='GET')return json({erro:'metodo_nao_permitido'},request,env,405);
     if(path==='/health')return json({ok:Boolean(env.NEWS_CACHE),servico:'diario-noticias',modo:'independente'},request,env,env.NEWS_CACHE?200:503);
+    /* v823: logotipos (até 120 tickers) com cache de borda de 7 dias por lote; dado público. */
+    if(path==='/v1/logos'){
+      const u=new URL(request.url),lista=[...new Set(String(u.searchParams.get('t')||'').toUpperCase().split(',').map(x=>x.trim()).filter(x=>/^[A-Z0-9.^_=!:-]{1,24}$/.test(x)))].sort().slice(0,120);
+      if(!lista.length)return json({erro:'informe t=TICKER1,TICKER2'},request,env,400);
+      const cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/logos?t='+lista.join(','));
+      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
+      try{const v={versao:'v823',itens:await resolveLogos(lista)};
+        if(cache)await cache.put(chave,new Response(JSON.stringify(v),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=604800'}}));
+        return json(v,request,env);
+      }catch(e){return json({error:String(e?.message||e)},request,env,502);}
+    }
+    /* v823: séries do Banco Central sob demanda, com cache de borda de 6 h (dado público, sem usuário). */
+    if(path==='/v1/series'){
+      const u=new URL(request.url),cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/series?serie='+encodeURIComponent((u.searchParams.get('serie')||'').toLowerCase())+'&desde='+encodeURIComponent(u.searchParams.get('desde')||''));
+      if(cache){const hit=await cache.match(chave);if(hit){const v=await hit.json();return json(v,request,env);}}
+      try{const r=await seriePublica(u.searchParams.get('serie'),u.searchParams.get('desde'));
+        if(r.status===200&&cache)await cache.put(chave,new Response(JSON.stringify(r.body),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=21600'}}));
+        return json(r.body,request,env,r.status);
+      }catch(e){return json({error:String(e?.message||e)},request,env,502);}
+    }
     if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes','/v1/agenda','/v1/sentimento','/v1/juros'].includes(path))
       return json({erro:'rota_nao_encontrada'},request,env,404);
     if(path==='/v1/sessoes')return json(globalThis.DiarioSessoes.context(),request,env);

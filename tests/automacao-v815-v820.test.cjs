@@ -25,3 +25,25 @@ test('v817: Fibonaccing sem notação em R',()=>{
   assert.doesNotMatch(s,/\+'R'\)/);
   assert.match(s,/vezes o risco/);
 });
+test('v822: níveis do plano por ativo, com validade e sem valores inválidos',()=>{
+  const store={},evs=[];
+  const win={localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=String(v)}},dispatchEvent:e=>evs.push(e)};
+  vm.runInNewContext(fs.readFileSync('src/shared/niveis-plano.js','utf8'),{window:win,document:null,CustomEvent:function(t,o){this.type=t;this.detail=o&&o.detail}});
+  assert.equal(win.DiarioNiveis.set('petr4',{entrada:'37,60',stop:37.2,alvos:['38,4','x',null]}),true);
+  const n=win.DiarioNiveis.get('PETR4');
+  assert.equal(n.entrada,37.6);assert.equal(n.stop,37.2);assert.deepEqual(n.alvos,[38.4]);
+  assert.equal(win.DiarioNiveis.set('VALE3',{entrada:'',stop:null,alvos:[]}),false);
+  const o=JSON.parse(store['diario-niveis-v822']);o.PETR4.em=Date.now()-8*864e5;store['diario-niveis-v822']=JSON.stringify(o);
+  assert.equal(win.DiarioNiveis.get('PETR4'),null);
+  assert.match(fs.readFileSync('src/domains/core/17-fontes-e-balancos.js','utf8'),/DiarioNiveis\.get\(F\)/);
+});
+test('v823: séries do BC e logos na Cloudflare, com reserva no Supabase',async()=>{
+  const sm=await import('../cloudflare/diario-noticias/series.mjs');
+  assert.equal((await sm.seriePublica('inexistente')).status,400);
+  const lm=await import('../cloudflare/diario-noticias/logos.mjs');
+  assert.equal(typeof lm.resolveLogos,'function');
+  const idx=fs.readFileSync('cloudflare/diario-noticias/index.mjs','utf8');
+  assert.match(idx,/path==='\/v1\/series'/);assert.match(idx,/path==='\/v1\/logos'/);
+  const cp=fs.readFileSync('src/shared/cache-publico.js','utf8');assert.match(cp,/v1\\\/series/);
+  assert.match(fs.readFileSync('src/domains/layers/02-carteira-e-terminal.js','utf8'),/workers\.dev\/v1\/logos/);
+});

@@ -93965,6 +93965,15 @@ Dados do terminal agora:
         ct < Lt || ct > Rt
           ? ""
           : `<line x1="0" x2="${tt}" y1="${At(ct)}" y2="${At(ct)}" stroke="${gt}" stroke-width="1" ${kt ? 'stroke-dasharray="5 4"' : ""} opacity=".85"/><text x="4" y="${At(ct) - 3}" class="g9tx" fill="${gt}">${mt}</text>`;
+      /* v822: níveis do plano do dia ("Levar para o plano") desenhados no gráfico do ativo. */
+      try {
+        const pn = window.DiarioNiveis && window.DiarioNiveis.get(F);
+        if (pn) {
+          pn.entrada != null && (St += Bt(pn.entrada, "#D4A017", `Entrada ${g(pn.entrada, Dt)}`, 0));
+          pn.stop != null && (St += Bt(pn.stop, "#EF4444", `Stop ${g(pn.stop, Dt)}`, 0));
+          (pn.alvos || []).forEach((a, i) => { St += Bt(a, "#10B981", `Alvo ${i + 1} ${g(a, Dt)}`, 0); });
+        }
+      } catch {}
       if (
         (Ee.sr &&
           De &&

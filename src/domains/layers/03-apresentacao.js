@@ -2457,6 +2457,18 @@ try {
       if (!force && Date.now() - (asked.get(k) || 0) < 90000) return;
       asked.set(k, Date.now());
       try {
+        /* v823: séries do Banco Central vêm da Cloudflare (cache de 6 h); Supabase só como reserva. */
+        const desde823 = new Date().getFullYear() - 6;
+        let pub = null;
+        if (window.DiarioPublico && !window.DIARIO_DEMO) {
+          try { pub = await window.DiarioPublico.get("/v1/series?serie=" + id + "&desde=" + desde823, { ttl: 6 * 36e5 }); } catch {}
+        }
+        if (pub && Array.isArray(pub.pontos) && pub.pontos.length) {
+          econ.set(k, { ...pub, ts: Date.now() });
+          econErr.delete(k);
+          econSave();
+          return;
+        }
         if (typeof rq !== "function")
           throw Error("Conexão do app indisponível.");
         const r = await rq("/functions/v1/series", {
