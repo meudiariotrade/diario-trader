@@ -7,6 +7,8 @@ import {coletarJuros} from './juros.mjs';
 import {seriePublica} from './series.mjs';
 import {coletarAnalogia,analogiaAgora} from './analogia.mjs';
 import {coletarExtras,extrasAgora,registrarReacoes} from './extras.mjs';
+import {buscarPrecos,temChaves} from './precos.mjs';
+import {buscarCandles} from './candles.mjs';
 import {resolveLogos} from './logos.mjs';
 import {loadQuotes as adrsCotacoes,limpa as adrLimpa} from './adrs.mjs';
 const AGENDA_KEY=s=>'diario:agenda:v1:'+s, SENT_KEY='diario:sentimento:v1', JUROS_KEY='diario:juros:v1';
@@ -18,6 +20,13 @@ const FONTES = [
   { nome: 'InfoMoney', host: 'infomoney.com.br', url: 'https://www.infomoney.com.br/feed/' },
   { nome: 'Money Times', host: 'moneytimes.com.br', url: 'https://www.moneytimes.com.br/mercados/feed/' },
   { nome: 'CNBC', host: 'cnbc.com', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' },
+  /* v836: mais fontes públicas (nacional e internacional); fonte fora do ar é ignorada e listada como indisponível. */
+  { nome: 'Estadão Economia', host: 'estadao.com.br', url: 'https://www.estadao.com.br/arc/outboundfeeds/feeds/rss/sections/economia/' },
+  { nome: 'Bloomberg Línea', host: 'bloomberglinea.com.br', url: 'https://www.bloomberglinea.com.br/arc/outboundfeeds/rss/?outputType=xml' },
+  { nome: 'Investing.com Brasil', host: 'br.investing.com', url: 'https://br.investing.com/rss/news.rss' },
+  { nome: 'CNBC Economia', host: 'cnbc.com', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html' },
+  { nome: 'MarketWatch', host: 'marketwatch.com', url: 'https://feeds.content.dowjones.io/public/rss/mw_topstories' },
+  { nome: 'Federal Reserve', host: 'federalreserve.gov', url: 'https://www.federalreserve.gov/feeds/press_all.xml' },
   { nome: 'SEC EDGAR', host: 'sec.gov', url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom', formato:'atom' },
 ];
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -237,6 +246,26 @@ export default {
       if(cache){const hit=await cache.match(chave);if(hit){const v=await hit.json();return json(v,request,env);}}
       try{const r=await seriePublica(u.searchParams.get('serie'),u.searchParams.get('desde'));
         if(r.status===200&&cache)await cache.put(chave,new Response(JSON.stringify(r.body),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=21600'}}));
+        return json(r.body,request,env,r.status);
+      }catch(e){return json({error:String(e?.message||e)},request,env,502);}
+    }
+    /* v836: preços sob demanda com as chaves guardadas no Worker; cache de borda de 60 s por lista. */
+    if(path==='/v1/precos'){
+      if(!temChaves(env))return json({erro:'sem_chave'},request,env,503);
+      const u=new URL(request.url),br=(u.searchParams.get('br')||'').split(',').filter(Boolean),us=(u.searchParams.get('us')||'').split(',').filter(Boolean);
+      const cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/precos?br='+[...br].sort().join(',')+'&us='+[...us].sort().join(','));
+      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
+      const v=await buscarPrecos(env,br,us);
+      if(cache&&(Object.keys(v.br).length||Object.keys(v.us).length))await cache.put(chave,new Response(JSON.stringify(v),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=60'}}));
+      return json(v,request,env);
+    }
+    /* v836: candles públicos do Yahoo (gráfico e janela do trade) com cache de borda; o Replay segue no Supabase. */
+    if(path==='/v1/candles'){
+      const u=new URL(request.url),q=u.searchParams,p={ativo:q.get('ativo'),sub:q.get('sub'),intervalo:q.get('intervalo'),de:q.get('de'),ate:q.get('ate')};
+      const cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/candles?'+['ativo','sub','intervalo','de','ate'].map(k=>k+'='+encodeURIComponent(String(p[k]||'').toUpperCase())).join('&'));
+      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
+      try{const r=await buscarCandles(p);
+        if(r.status===200&&cache)await cache.put(chave,new Response(JSON.stringify(r.body),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age='+r.ttl}}));
         return json(r.body,request,env,r.status);
       }catch(e){return json({error:String(e?.message||e)},request,env,502);}
     }
