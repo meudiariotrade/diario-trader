@@ -289,6 +289,27 @@ try {
         '</strong></div></div><ul class="v810-oprows">'+
         (dataRows||'<li>Nenhuma operação registrada nesta data.</li>')+'</ul></section>';
     }
+    /* v829: KPIs de mercado no topo do Início (barra superior já carregada; sem rede nova). */
+    function v829MercadoKpis() {
+      const U=window.DiarioUI;if(!U)return "";
+      const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>f(()=>window.tapeVivo?.(k),null)||tape[k];
+      const itens=[["^BVSP","Ibovespa"],["BRL=X","Dólar"],["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["EWZ","EWZ"],["BTC-USD","Bitcoin"]].map(([k,n])=>{
+        const v=viva(k);if(!v||!(+v.px>0))return null;const c=v.chg==null||v.chg===""?null:+v.chg;
+        return {rotulo:n,valor:q(v.px),detalhe:c==null?"sem variação":Q(c)+(v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
+      }).filter(Boolean);
+      return '<section class="v4-summary v829-kpis" aria-label="Resumo do mercado">'+(itens.length?U.kpis(itens):'<p class="v4-sub">Cotações carregando na barra superior.</p>')+'</section>';
+    }
+    /* v829: KPIs pessoais no topo do Meu dia (resultado, limites, risco disponível, trades). */
+    function v829DiaKpis(resultado,meta,perdaMax,trades) {
+      const U=window.DiarioUI;if(!U)return "";
+      const rk=f(()=>window.DiarioRisco?.hoje(),null);
+      return '<section class="v829-kpis" aria-label="Resumo do dia">'+U.kpis([
+        {rotulo:"Resultado do dia",valor:j(resultado),detalhe:trades+" trade(s) hoje",tom:resultado>0?"g":resultado<0?"r":""},
+        {rotulo:"Meta do dia",valor:meta?j(meta):"—",detalhe:meta?"ganho planejado":"defina no preparo"},
+        {rotulo:"Perda máxima",valor:perdaMax?j(perdaMax):"—",detalhe:"limite do dia"},
+        {rotulo:"Risco disponível",valor:rk&&rk.disponivel!=null?j(rk.disponivel):"—",detalhe:rk&&rk.limite?"de "+j(rk.limite):"sem limite definido"}
+      ])+'</section>';
+    }
     /* v827: EUA e ADRs agora no Início — índices, EWZ, petróleo, ADRs brasileiras e manchetes dos EUA.
        Lê só os caches que o app já tem (barra superior e ADRs); as ADRs vêm da Cloudflare. */
     function v827Eua() {
@@ -986,12 +1007,14 @@ try {
     <button type="button" data-dt393-route="stats">${p("up", 22)}<span><b>Avaliar resultados e consistência</b><small>Curva, win rate e pontos de atenção.</small></span>${p("right", 16)}</button></div></div>`,
           "v4-iacard",
         );
-      return `<div class="v4-page v4-home v810-home" data-v810-phase="${u}">
+      /* v829: Início = mercado. KPIs de mercado no topo; EUA/ADRs, agenda, notícias e alertas no centro;
+         níveis do plano e IA na coluna da direita. O resumo pessoal do dia foi para o Meu dia. */
+      const b3Aberta829=f(()=>window.DiarioSessoes.session("B3").state==="regular",!1);
+      return `<div class="v4-page v4-home v810-home v829-home" data-v810-phase="${u}">
     ${v810Seletor($)}
     ${v810Faixa("home",u,u==="pre"?"Referências internacionais, agenda e preparação para a próxima abertura.":u==="pregao"?"Acompanhe acontecimentos, preços disponíveis e riscos; confira a atualização de cada dado.":"Compare o fechamento com a preparação e acompanhe os riscos para a próxima sessão.")}
-    ${C("cal",`Resumo do dia<small class="v4-date">${Kt(t)}</small>`,`<button type="button" class="v4-pill" data-dt393-route="mercado">${p("up",16)} ${M}${p("right",14)}</button>`,y+P,"v4-summary")}
-    <div class="v810-home-grid">${f(()=>window.DiarioSessoes.session("B3").state!=="regular",!1)?v827Eua():""}${u!=="pos"?v825Niveis():""}${K}${f(()=>window.DiarioSessoes.session("B3").state==="regular",!1)?v827Eua():""}</div>
-    ${$t}
+    ${v829MercadoKpis()}
+    <div class="ui-split v829-split"><div class="ui-main">${b3Aberta829?K+v827Eua():v827Eua()+K}</div><aside class="ui-aside">${u!=="pos"?v825Niveis():""}${$t}</aside></div>
     </div>`;
     }
     let qt = null;
@@ -1395,19 +1418,18 @@ try {
         contexto='<section class="v810-day-context" data-intel-content-wrapper="1"><div data-intel-content class="sm">Aguardando contexto verificável do mercado.</div></section>',
         operacoes=v810Operacoes(t,a),
         niveis825=v825Niveis(),
-        agenda=v810AgendaNoticias(t),
-        base=v810Seletor(seletor)+v810Faixa("dia",sessao,chamada)+turno593+contexto,
-        extras='<details class="v810-more"><summary>Plano detalhado, anotações e outras ferramentas</summary><div class="v810-more-inner">'+
-          planoIntegrado789(t, e)+emo589+it+dt+'</div></details>';
-      return '<div class="v4-page v4-day v810-day" data-v810-phase="'+sessao+'">'+base+
+        base=v810Seletor(seletor)+v810Faixa("dia",sessao,chamada)+turno593+contexto;
+      /* v829: Meu dia = você. KPIs do dia no topo; checklist, operações e plano no centro;
+         capital, plano detalhado e anotações na coluna da direita. Agenda e cenário de mercado foram para o Início. */
+      const kpis829=v829DiaKpis(r,l,s,u.length),
+        lado829='<details class="v810-more"><summary>Plano detalhado, emoção e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>';
+      return '<div class="v4-page v4-day v810-day v829-day" data-v810-phase="'+sessao+'">'+base+kpis829+
         (sessao==="pre"
-          ? y+'<div class="v810-day-grid">'+niveis825+U+m+agenda+X+'</div>'+extras
+          ? '<div class="ui-split v829-split"><div class="ui-main">'+U+y+niveis825+'</div><aside class="ui-aside">'+m+lado829+'</aside></div>'
           : sessao==="pregao"
-          ? '<div class="v810-day-grid">'+U+m+niveis825+operacoes+agenda+X+'</div>'+
-            '<details class="v810-more"><summary>Estado emocional e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>'+y
-          : operacoes+v811PlanoExecucao(t,e)+'<div class="v810-day-grid">'+U+agenda+it+'</div>'+
-            '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+
-            '<details class="v810-more"><summary>Limites e revisão detalhada</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+m+X+emo589+dt+'</div></details>'+y)+
+          ? '<div class="ui-split v829-split"><div class="ui-main">'+operacoes+U+niveis825+'</div><aside class="ui-aside">'+m+y+lado829+'</aside></div>'
+          : '<div class="ui-split v829-split"><div class="ui-main">'+operacoes+v811PlanoExecucao(t,e)+U+'</div><aside class="ui-aside">'+m+
+            '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+lado829+'</aside></div>')+
         '</div>';
     }
     let At = "risk",
@@ -1530,7 +1552,7 @@ try {
       m &&
         T(m) > 0 &&
         x.push(
-          `Melhor execução: ${b(m.ativo)}${m.setup ? " (" + b(m.setup) + ")" : ""} com ${_(T(m))} R.`,
+          `Melhor execução: ${b(m.ativo)}${m.setup ? " (" + b(m.setup) + ")" : ""} com ${_(T(m))} vezes o risco.`,
         );
       const F = e.filter((d) => d.stop == null || d.stop === "");
       F.length &&
@@ -1547,14 +1569,15 @@ try {
           ));
       const K = a.filter((d) => R(d) < 0 && T(d) != null && T(d) < -1.05);
       K.length &&
-        x.push(`${K.length} perda(s) acima de 1 R: o stop foi respeitado?`);
+        x.push(`${K.length} perda(s) maiores que o risco planejado: o stop foi respeitado?`);
       const $t = C(
         "spark",
         "Sugestões",
         '<span class="v4-ctx">Contexto: suas operações</span>',
         `<p class="v4-sub">Calculadas a partir dos seus trades de hoje.</p><ul class="v4-tips">${x.length ? x.map((d) => `<li>${p("check", 18)}<span>${d}</span></li>`).join("") : '<li class="v4-none">Registre trades para receber sugestões.</li>'}</ul>${st("Perguntar à IA", 'data-v4ia="1"')}`,
       );
-      return `<div class="v4-page v4-ops">${P}${$}${Y}<div class="v4-two">${ot}${$t}</div></div>`;
+      /* v829: Operações em tela dividida — KPIs no topo, posições e trades no centro, revisão e sugestões à direita. */
+      return `<div class="v4-page v4-ops v829-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${$}${Y}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
     }
     let mt = "3M",
       kt = !1;

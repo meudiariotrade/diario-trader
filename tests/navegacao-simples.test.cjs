@@ -54,9 +54,9 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  await app.locator('.simple-calendar>summary').click();
  await expect(app.locator('#mkcal')).toBeVisible();
  await p.getByRole('button',{name:'Início',exact:true}).last().click();
- // A navegação simples move a agenda para o painel nativo existente.
- await expect(app.locator('.simple-context')).toHaveCount(1);
- await app.locator('.simple-context [data-v4mkt="ag"]').click();
+ // v829: agenda, notícias e alertas ficam no centro do Início (painel nativo).
+ await expect(app.locator('.v829-home .v4-pano')).toHaveCount(1);
+ await app.locator('.v829-home .v4-pano [data-v4mkt="ag"]').first().click();
  await expect(app.locator('.dt395-native-mercado')).toHaveAttribute('data-m403-sub','ag');
  await p.getByRole('button',{name:'Início',exact:true}).last().click();
  await app.getByRole('button',{name:'Perguntar à IA',exact:true}).click();

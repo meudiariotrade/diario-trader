@@ -32,8 +32,7 @@
    text(ia.querySelector('[data-v4ia]'),'Perguntar à IA');
    text(ia.querySelector('.v4-sub'),'Encontre o que acompanhar. Abra a conversa quando quiser aprofundar.');
    ia.querySelector('.v4-ia')?.remove();
-   const panorama=h.querySelector('.v4-pano');
-   if(panorama){const previous=panorama.closest('section');panorama.classList.remove('v4-pano');panorama.classList.add('simple-context');ia.querySelector('.v4-sub')?.after(panorama);if(previous&&previous!==ia)previous.remove()}
+   /* v829: o panorama (agenda, notícias, alertas) fica no centro do Início, não dentro do card de IA. */
   }
  }
  // v536: apresentação anterior do Terminal; somente menu e exclusividade dos modos.

@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 4801266943a7b3b97193dbc249c1975dcae07dde84a3e95647c28bc2c8811158 */
+/* Gerado de src/app-theme.css · SHA256 77da3ae06337a863e8f53a87538e05b2ed4c761fdfd2ce0549ae4df835871840 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 /* v828 — design system novo no escuro, em todas as abas menos o Terminal (que mantém os tokens originais). */
 html:not([data-v427-tema=claro]) body:not([data-v4route=term]){--dt-bg:var(--ui-bg);--dt-s1:var(--ui-card);--dt-hover:var(--ui-sub);--dt-line:var(--ui-card-line);--dt-tx:var(--ui-title);--dt-mut:var(--ui-text-2);--dt-faint:var(--ui-label);--dt-gold:var(--ui-accent)}
@@ -1516,10 +1516,7 @@ html body.modo-simples #app[data-ms-passo-atual="3"] #dt393-workspace[data-ms-pa
 .ms-proximo small{letter-spacing:.12em;font-size:11px;color:#b58b3d;font-weight:700}
 .ms-proximo h2{margin:0;font-size:22px}
 .ms-proximo p{margin:0;opacity:.8;font-size:14px;line-height:1.4}
-.ms-acao{margin-top:8px;min-height:50px;border-radius:8px;border:0;background:#b58b3d;color:#09090a;font:inherit;font-weight:700;font-size:16px;cursor:pointer;width:100%;max-width:420px}
-.ms-tudo{margin:16px auto 0;display:block;min-height:44px;padding:0 16px;border-radius:8px;border:1px dashed rgba(255,255,255,0.25);background:transparent;color:inherit;font:inherit;cursor:pointer}
-html body.modo-simples #app[data-ms-inicio-tudo="false"] [data-ms-extra-inicio],
-html body.modo-simples #app[data-ms-inicio-tudo="false"] #dt393-workspace[data-ms-extra-inicio]{display:none!important}
+.ms-acao{margin-top:8px;min-height:48px;border-radius:6px;border:0;background:var(--ui-accent);color:#08090D;font:inherit;font-weight:700;font-size:16px;cursor:pointer;width:100%;max-width:420px}
 
 /* Configurações em grupos */
 body.modo-simples h2[data-ms-grupo]{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px;padding:8px 16px;margin:8px 0;border:1px solid rgba(61,181,121,0.2);border-radius:8px;font-size:16px}
@@ -3414,3 +3411,14 @@ html[data-v427-tema=claro] .ui-kpi{background:var(--dt-s1);border-color:var(--dt
 .ui-badge.ok{background:rgba(16,185,129,.12);color:var(--ui-gain)}.ui-badge.warn{background:rgba(245,158,11,.10);color:var(--ui-accent)}.ui-badge.err{background:rgba(239,68,68,.12);color:var(--ui-loss)}
 .ui-cta{min-height:44px;padding:0 18px;border:0;border-radius:6px;background:var(--ui-accent);color:#08090D;font:inherit;font-weight:700;cursor:pointer}
 .ui-cta:focus-visible,.ui-card>header .ui-act:focus-visible{outline:2px solid var(--ui-accent);outline-offset:2px}
+
+/* v829 — Início, Meu dia e Operações em tela dividida (centro + coluna direita), sem espaços vazios no PC */
+html:root body #app .v829-split{margin-top:12px;align-items:flex-start}
+html:root body #app .v829-split>.ui-main>*,html:root body #app .v829-split>.ui-aside>*{margin:0!important;max-width:none!important;width:100%}
+html:root body #app .v829-split>.ui-aside{position:sticky;top:12px;flex:1 1 360px;max-width:440px}
+@media(max-width:899px){html:root body #app .v829-split>.ui-aside{max-width:none}}
+@media(max-width:899px){html:root body #app .v829-split>.ui-aside{position:static}}
+html:root body #app .v829-kpis{margin:12px 0 0;padding:0;border:0;background:none}
+html:root body #app .v829-kpis .ui-kpis{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}
+@media(max-width:640px){html:root body #app .v829-kpis .ui-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}html:root body #app .v829-kpis .ui-kpi b{font-size:18px}}
+html:root body #app .ms-proximo{margin:12px 0 0!important}
