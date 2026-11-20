@@ -3471,3 +3471,34 @@ html:root body #app .i835-bloco p{margin:4px 0;font-variant-numeric:tabular-nums
 html:root body #app .i835-nts{margin:4px 0 0 16px;padding:0;font-size:13px}
 html:root body #app .an835-porque{margin:0 0 12px;padding:10px 12px;border-radius:4px;background:var(--ui-sub)}
 html:root body #app .an835-porque>b{display:block;margin:0 0 4px;font-size:13px}
+/* v836 — Mercado › Notícias e Agenda no PC: lista à esquerda, acontecimentos e estudo à direita (flex, sem grade) */
+@media(min-width:1100px){
+html:root body:not([data-v4route=term]) #app#app .dt395-native-mercado.m404-internal{display:flex!important;flex-wrap:wrap;align-items:flex-start;gap:12px}
+html:root body:not([data-v4route=term]) #app#app .dt395-native-mercado.m404-internal>*{flex:1 1 100%;min-width:0;margin:0!important}
+html:root body:not([data-v4route=term]) #app#app .dt395-native-mercado.m404-internal>.m404-panel{flex:999 1 560px}
+html:root body:not([data-v4route=term]) #app#app .dt395-native-mercado.m404-internal>[data-intel-etapa1]{flex:1 1 360px;max-width:460px;position:sticky;top:12px}
+}
+/* v836 — Cotações no PC: as seções se distribuem entre as 3 colunas pela altura (sem buraco embaixo de uma coluna) */
+@media(min-width:1100px){
+html:root body #app #cotbox .m623-term{display:block!important;column-count:3;column-gap:12px}
+html:root body #app #cotbox .m623-term>.m623-col{display:contents!important}
+html:root body #app #cotbox .m623-term>.m623-col>*{break-inside:avoid;display:block;width:100%;margin:0 0 12px!important}
+}
+/* v836 — Imposto de renda, Configurações e Estudos no PC: conteúdo em duas colunas equilibradas (título sempre junto do seu bloco) */
+@media(min-width:1100px){
+html:root body #app .dt395-native-imposto,
+html:root body #app .dt395-native-mais,
+html:root body #app .dt397-native-mount #dt393-workspace>div{display:block!important;column-count:2;column-gap:16px}
+html:root body #app .dt395-native-imposto>*,
+html:root body #app .dt395-native-mais>*,
+html:root body #app .dt397-native-mount #dt393-workspace>div>*{break-inside:avoid;min-width:0}
+html:root body #app .dt395-native-imposto>h2,
+html:root body #app .dt395-native-mais>h2,html:root body #app .dt395-native-mais>h1,
+html:root body #app .dt397-native-mount #dt393-workspace>div>h2{break-after:avoid;margin-top:4px}
+html:root body #app .dt395-native-imposto>:is(section:not(#ir-cobertura),.ir599-seg,.pro-subtabs,.platform-area),
+html:root body #app .dt395-native-mais>:is(#ms-modo,#dt414-settings,.platform-area,h1,h1+p.mut,.m355-alerts-link),
+html:root body #app .dt397-native-mount #dt393-workspace>div>:is(.platform-area,.studio-tabs,.estchips,.kv){column-span:all}
+html:root body #app .dt395-native-imposto>*:not(:last-child),
+html:root body #app .dt395-native-mais>*:not(:last-child){margin-bottom:12px}
+}
+html:root body #app .dt395-native-mais .card button{white-space:nowrap}

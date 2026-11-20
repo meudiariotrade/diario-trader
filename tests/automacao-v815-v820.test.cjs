@@ -102,3 +102,22 @@ test('v835: correlação quebrada, gap desde o fechamento e reação histórica 
   assert.match(fs.readFileSync('cloudflare/diario-noticias/index.mjs','utf8'),/path==='\/v1\/extras'/);
   assert.match(fs.readFileSync('src/analysis/analises.js','utf8'),/Por que mexeu/);
 });
+test('v836: preços e candles na Cloudflare com volta ao Supabase, mais fontes e layout em colunas no PC',async()=>{
+  const p=await import('../cloudflare/diario-noticias/precos.mjs');
+  assert.equal(p.temChaves({}),false);assert.equal(p.temChaves({TWELVE_KEY:'x'}),true);
+  const f=async(u)=>({json:async()=>u.includes('brapi')?{results:[{symbol:'PETR4',regularMarketPrice:38.5}]}:{AAPL:{price:'230'},'USD/BRL':{price:'5.4'}}});
+  const v=await p.buscarPrecos({BRAPI_TOKEN:'a',TWELVE_KEY:'b'},['petr4'],['aapl'],f);
+  assert.equal(v.br.PETR4,38.5);assert.equal(v.us.AAPL,230);assert.equal(v.fx,5.4);
+  const c=await import('../cloudflare/diario-noticias/candles.mjs');
+  assert.equal(c.mapa('WDOZ26').mult,1000);assert.equal(c.mapa('PETR4').y,'PETR4.SA');
+  assert.equal(c.janela('2026-11-20T10:00','2026-11-20T11:00',Date.parse('2026-11-21T00:00:00Z')/1000).intervalo,'5m');
+  const w=fs.readFileSync('cloudflare/diario-noticias/index.mjs','utf8');
+  assert.ok(w.indexOf("path==='/v1/precos'")<w.indexOf("if(!['/v1/noticias'"));
+  assert.ok(w.indexOf("path==='/v1/candles'")<w.indexOf("if(!['/v1/noticias'"));
+  for(const h of ['estadao.com.br','bloomberglinea','investing.com','cnbc.com','federalreserve.gov'])assert.match(w,new RegExp(h.replace('.','\\.')));
+  const s=fs.readFileSync('src/shared/cache-publico.js','utf8');
+  assert.match(s,/functions\\\/v1\\\/precos/);assert.match(s,/b\.modo!=='replay'/);assert.match(s,/return nativo\(input,init\)/);
+  const css=fs.readFileSync('src/app-theme.css','utf8');
+  assert.match(css,/m404-internal>\.m404-panel\{flex:999/);assert.match(css,/#cotbox \.m623-term\{display:block!important;column-count:3/);
+  assert.match(css,/dt395-native-imposto,[\s\S]*column-count:2/);
+});
