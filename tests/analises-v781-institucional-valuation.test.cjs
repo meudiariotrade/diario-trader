@@ -14,11 +14,14 @@ test('fórmula própria usa lucro, payout percentual, quantidade de ações e yi
   total_acoes:5730834040},{yieldAceitavel:.06});
  assert.ok(low.methods.proprio>v.methods.proprio);
 });
-test('Bazin e Graham independentes; sem dados => N/D, nunca zero inventado',()=>{
+test('Bazin e Graham independentes; sem dados => N/D, nunca zero inventado (v839: estimativa do snapshot marcada)',()=>{
  const v=intel.valuationBR({preco_referencia:25,dpa_12m:2.4,lpa:4,vpa:16});
  near(v.methods.bazin,40);near(v.methods.graham,Math.sqrt(22.5*4*16));
  near(v.margins.bazin,37.5);
- const missing=intel.valuationBR({preco_referencia:30,pl:7,pvp:1.2,dividend_yield:10,payout_implicito:40});
+ const est=intel.valuationBR({preco_referencia:30,pl:7,pvp:1.2,dividend_yield:10,payout_implicito:40});
+ near(est.methods.bazin,30*.1/.06);near(est.methods.graham,Math.sqrt(22.5*(30/7)*(30/1.2)));
+ assert.equal(est.estimados.bazin,true);assert.equal(est.estimados.graham,true);assert.equal(est.methods.proprio,null);
+ const missing=intel.valuationBR({preco_referencia:30});
  for(const val of Object.values(missing.methods))assert.equal(val,null);
  for(const val of Object.values(missing.margins))assert.equal(val,null);
 });
