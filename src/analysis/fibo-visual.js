@@ -32,14 +32,19 @@ function calculate(raw){
  return {levels,plan:{entry,stop,targets,rr,invalidation:stop},zone,ratio,medido:cur!==null,side};
 }
 function view(scope){const s=state[scope]||state.pesquisa,verified=s.record?.analysis;
- return '<section data-fibo-panel="'+scope+'" style="background:#11141B;border:1px solid #1E232E;border-radius:4px;margin:12px 0;padding:12px;color:#E5E7EB;font-variant-numeric:tabular-nums">'+
+ /* v817: sem leitura em andamento nem resultado, o painel vira uma linha compacta. */
+ if(!verified&&!s.status)return '<section data-fibo-panel="'+scope+'" class="fibo817-min" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--dt-s1);border:1px solid var(--dt-line);border-radius:4px;margin:8px 0;padding:6px 6px 6px 12px;color:var(--dt-tx)">'+
+  '<span style="font-size:13px"><b style="color:var(--dt-gold)">Fibonaccing por print (IA)</b> <small style="color:var(--dt-mut)">Profit, TradingView ou MetaTrader · ou Ctrl+V</small></span>'+
+  '<button type="button" class="btn s" data-fibo-open="1" style="min-height:40px">Anexar print</button>'+
+  '<input data-fibo-file="1" type="file" accept="image/png,image/jpeg,image/webp" style="display:none"></section>';
+ return '<section data-fibo-panel="'+scope+'" style="background:var(--dt-s1);border:1px solid var(--dt-line);border-radius:4px;margin:12px 0;padding:12px;color:var(--dt-tx);font-variant-numeric:tabular-nums">'+
  '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="color:#D4A017">Importar Print de Fibonaccing (IA)</b><p style="margin:4px 0;font-size:12px">Profit, TradingView ou MetaTrader · imagem comprimida no aparelho (até 1280px)</p></div><button type="button" class="btn s" data-fibo-open="1" style="min-height:44px">Anexar / Galeria</button></div>'+
  '<input data-fibo-file="1" type="file" accept="image/png,image/jpeg,image/webp" style="display:none">'+
  '<small>Também aceita Ctrl+V ou colar print no computador. A leitura requer âncoras legíveis; números são validados por cálculo local.</small>'+
  '<p role="status" style="color:#D4A017">'+esc(s.status||'')+'</p>'+
- (verified?'<div style="border-top:1px solid #1E232E;padding-top:12px"><b>'+esc(s.record.ticker)+' · '+esc(s.record.tf||'Timeframe N/D')+' · '+esc(verified.side)+'</b><p>Zona: '+esc(verified.zone)+'</p><div style="max-height:185px;overflow:auto"><table style="width:100%"><thead><tr><th style="text-align:left">Nível</th><th style="text-align:right">Preço calculado</th></tr></thead><tbody>'+verified.levels.map(l=>'<tr><td>'+fmt(l.percentual)+'%</td><td style="text-align:right">'+fmt(l.preco)+'</td></tr>').join('')+'</tbody></table></div>'+
+ (verified?'<div style="border-top:1px solid var(--dt-line);padding-top:12px"><b>'+esc(s.record.ticker)+' · '+esc(s.record.tf||'Timeframe N/D')+' · '+esc(verified.side)+'</b><p>Zona: '+esc(verified.zone)+'</p><div style="max-height:185px;overflow:auto"><table style="width:100%"><thead><tr><th style="text-align:left">Nível</th><th style="text-align:right">Preço calculado</th></tr></thead><tbody>'+verified.levels.map(l=>'<tr><td>'+fmt(l.percentual)+'%</td><td style="text-align:right">'+fmt(l.preco)+'</td></tr>').join('')+'</tbody></table></div>'+
  '<p>Gatilho condicional <b>'+fmt(verified.plan.entry)+'</b> · Stop '+fmt(verified.plan.stop)+' · Alvos '+verified.plan.targets.map(fmt).join(' | ')+'</p>'+
- '<p>R/R teórico '+verified.plan.rr.map(x=>fmt(x)+'R').join(' / ')+' · Invalidação: cruzamento do stop em sentido contrário à hipótese.</p>'+
+ '<p>Retorno teórico '+verified.plan.rr.map(x=>fmt(x)+' vezes o risco').join(' / ')+' · Invalidação: cruzamento do stop em sentido contrário à hipótese.</p>'+
  '<small>Não são ordens, nem preços de book. Custos, spread, volume, fechamento e contexto técnico precisam ser validados.</small></div>':'')+'</section>';
 }
 function rerender(scope){const el=d.querySelector('[data-fibo-panel="'+scope+'"]');if(el)el.outerHTML=view(scope)}
@@ -113,7 +118,7 @@ async function appendPDF({doc,P,tickers}){
   let y=H-115-dim.height;
   write('Gatilho: '+fmt(study.analysis.plan.entry)+'   Stop: '+fmt(study.analysis.plan.stop),35,y,9);y-=17;
   write('Alvos: '+study.analysis.plan.targets.map(fmt).join(' / '),35,y,9);y-=17;
-  write('R/R teórico: '+study.analysis.plan.rr.map(x=>fmt(x)+'R').join(' / '),35,y,9);y-=20;
+  write('Retorno teórico: '+study.analysis.plan.rr.map(x=>fmt(x)+' vezes o risco').join(' / '),35,y,9);y-=20;
   write('Grade completa calculada de 0% a 100% + expansões e negativos',35,y,10,rgb('D4A017'));y-=15;
   const half=Math.ceil(study.analysis.levels.length/2);
   for(let i=0;i<half;i++){
