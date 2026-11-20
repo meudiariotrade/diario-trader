@@ -14,7 +14,21 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  const expand=app.locator('.v810-home .v810-more').first();
  await expect(expand).not.toHaveAttribute('open');
  await expand.locator(':scope > summary').click();
- await expect(app.locator('.v810-home .v810-more [data-dt393-route="estudos"]')).toBeVisible();
+ const studiesLink=app.locator('.v810-home .v810-more [data-dt393-route="estudos"]');
+ const visible=await studiesLink.isVisible();
+ if(!visible) {
+   const diag=await studiesLink.evaluate(el=>{
+     const trail=[];let n=el;
+     while(n&&trail.length<12){
+       const st=getComputedStyle(n);
+       trail.push({tag:n.tagName,cls:String(n.className).slice(0,80),display:st.display,visibility:st.visibility,
+         opacity:st.opacity,hidden:n.hidden,open:n.open,client:n.getBoundingClientRect().toJSON()});
+       n=n.parentElement;
+     } return trail;
+   });
+   console.log('V810_NAV_DIAGNOSTIC',JSON.stringify(diag));
+ }
+ await expect(studiesLink).toBeVisible();
  await p.evaluate(()=>render());
  await expect(app.locator('.v810-home .v810-more').first()).toHaveAttribute('open');
  // Novo começo do Terminal preserva as preferências reais do GP.
