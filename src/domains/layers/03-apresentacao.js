@@ -934,7 +934,7 @@ try {
         $t = C(
           "spark",
           'Central de Inteligência <span class="v4-iachip">IA</span>',
-          st("Ver análises", 'data-v4ia="1"'),
+          st("Perguntar à IA", 'data-v4ia="1"'),
           `<div data-intel-content class="sm"></div><p class="v4-sub">Sugestões com base no mercado, no seu plano e no seu histórico. Sem ordens automáticas.</p><div class="v4-ia"><div class="v4-iaart" aria-hidden="true"><span>${p("bars", 30)}<b>IA</b></span></div><div class="v4-ialist">
     <button type="button" data-dt393-route="term">${p("crosshair", 22)}<span><b>Radar global e oportunidades</b><small>Fluxo, juros, índices e ativos no Terminal.</small></span>${p("right", 16)}</button>
     <button type="button" data-dt393-route="ops">${p("shield", 22)}<span><b>Revisar operações e risco</b><small>Posições abertas, stops e risco consumido.</small></span>${p("right", 16)}</button>
@@ -2022,7 +2022,7 @@ try {
         u > 0 && o.remove();
       });
       let l = e.querySelector(".v4-panel");
-      if (l && (t === "home" || t === "dia")) {
+      if (l && (t === "home" ? !!l.querySelector(".v810-home") : t === "dia" ? !!l.querySelector(".v810-day") : false)) {
         l.querySelectorAll(".v810-more").forEach((node,i) => {
           const key=String(i);
           if(node.open)v810Details[t].add(key);else v810Details[t].delete(key);
