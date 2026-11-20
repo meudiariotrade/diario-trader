@@ -30193,7 +30193,7 @@ try {
           : sessao==="pregao"
           ? '<div class="ui-split v829-split"><div class="ui-main">'+operacoes+U+niveis825+'</div><aside class="ui-aside">'+m+y+lado829+'</aside></div>'
           : '<div class="ui-split v829-split"><div class="ui-main">'+operacoes+v811PlanoExecucao(t,e)+U+'</div><aside class="ui-aside">'+m+
-            '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+lado829+'</aside></div>')+
+            '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+y+lado829+'</aside></div>')+
         '</div>';
     }
     let At = "risk",

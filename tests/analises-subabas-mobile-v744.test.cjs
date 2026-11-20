@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {expect}=require('playwright/test');
 const {withApp}=require('./helpers/app.cjs');
-test('iPhone: Screeners ficam ao lado de B3 & EUA e preservam Pesquisa',{timeout:90000},async()=>withApp(async(browser,base)=>{
+test('iPhone: Análises numa aba só — telas e mercado no topo, Pesquisa preservada (v830)',{timeout:90000},async()=>withApp(async(browser,base)=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(base+'/?demo=1');
  await page.locator('#splash').waitFor({state:'hidden'});
@@ -11,14 +11,12 @@ test('iPhone: Screeners ficam ao lado de B3 & EUA e preservam Pesquisa',{timeout
  const nav=page.locator('#an-root nav.an-subs');
  await expect(nav).toHaveCount(1);
  await expect(nav).toBeVisible();
- await expect(nav.locator('[data-an-sub]')).toHaveCount(5);
+ await expect(nav.locator('[data-an-sub]')).toHaveCount(3);
  const pesquisa=nav.locator('[data-an-sub="pesquisa"]');
- await expect(pesquisa).toContainText('B3 & EUA');
+ await expect(pesquisa).toContainText('Pesquisa com IA');
  await expect(pesquisa).toHaveAttribute('aria-selected','true');
  await expect(nav.locator('[data-an-sub="br"]')).toBeVisible();
- await expect(nav.locator('[data-an-sub="us"]')).toBeVisible();
  await expect(nav.locator('[data-an-sub="tecnico-br"]')).toHaveCount(1);
- await expect(nav.locator('[data-an-sub="tecnico-world"]')).toHaveCount(1);
  const pos=await nav.evaluate(el=>({y:el.getBoundingClientRect().y,
    junto:el.closest('.an-screener-switch')!=null,
    antes:el.compareDocumentPosition(document.querySelector('#an-root .an-header'))&Node.DOCUMENT_POSITION_FOLLOWING,
@@ -36,8 +34,11 @@ test('iPhone: Screeners ficam ao lado de B3 & EUA e preservam Pesquisa',{timeout
  await expect(page.locator('#an-title')).toHaveText('Screener Brasil');
  await expect(page.locator('#an-root nav.an-subs')).toHaveCount(1);
  await page.locator('#an-root nav.an-subs').evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
+ await expect(page.locator('#an-root nav.an-subs [data-an-sub="us"]')).toHaveCount(1);
  await page.locator('[data-an-sub="us"]').click();
  await expect(page.locator('#an-title')).toHaveText('Screener EUA');
+ await expect(page.locator('#an-root nav.an-subs [data-an-sub="tecnico-world"]')).toHaveCount(1);
+ await expect(page.locator('#an830-ficha')).toHaveCount(1);
  await page.locator('#an-root nav.an-subs').evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
  await page.locator('[data-an-sub="pesquisa"]').click();
  await expect(page.locator('#an-title')).toHaveText('Análise técnica e fundamentalista');

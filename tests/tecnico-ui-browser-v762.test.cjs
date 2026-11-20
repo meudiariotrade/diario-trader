@@ -39,7 +39,7 @@ test('iPhone: navega Técnico Brasil/EUA & Cripto, calcula localmente e desmonta
  },data);
  await page.evaluate(()=>{tab='analises';render();window.scrollTo(0,0)});
  const nav=page.locator('#an-root nav.an-subs');
- await expect(nav.locator('[data-an-sub]')).toHaveCount(5);
+ await expect(nav.locator('[data-an-sub]')).toHaveCount(3);
  await nav.locator('[data-an-sub="tecnico-br"]').click();
  await expect(page.locator('#an-title')).toHaveText('Técnico Brasil');
  await expect(page.locator('#an-root .tech-kpis .scr-kpi')).toHaveCount(4);
