@@ -58,5 +58,12 @@
    baseline:same?old.baseline||null:null,note:'Referência da última sessão brasileira. Sem fechamento sincronizado não calcular retorno acumulado entre sessões.'};
   await save(key,next);return next;
  }
- w.DiarioPublico=Object.freeze({get,remember,read,inspect:()=>({pending:pending.size,cached:[...memory.keys()]})});
+ /* v824: ADRs sob demanda pela Cloudflare (cotação pública, cache de borda de 20 s). */
+ async function adrs(symbols,signal){
+  const lista=[...new Set((symbols||[]).map(x=>String(x||'').toUpperCase().replace(/[^A-Z0-9.\-]/g,'').slice(0,12)).filter(Boolean))].slice(0,40);
+  if(!lista.length)return {itens:[],erros:[]};
+  const r=await fetch(base+'/v1/adrs?s='+encodeURIComponent(lista.join(',')),{credentials:'omit',mode:'cors',signal:signal||AbortSignal.timeout(2e4)});
+  if(!r.ok)throw Error('HTTP '+r.status);return r.json();
+ }
+ w.DiarioPublico=Object.freeze({get,remember,read,adrs,inspect:()=>({pending:pending.size,cached:[...memory.keys()]})});
 })(typeof window!=='undefined'?window:globalThis);

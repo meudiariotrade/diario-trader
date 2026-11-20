@@ -3119,7 +3119,7 @@ html:root body #app .v810-modebar .v4-phase button.on {
 html:root body #app .v810-auto {
   flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
   gap:6px;min-height:44px;padding:8px 13px;
-  background:var(--v810-card);color:#CCD0D6;
+  background:var(--v810-card);color:var(--dt-tx);
   border:1px solid var(--v810-line);border-radius:6px;font-size:13px;
   font-weight:650;cursor:pointer;
 }
@@ -3362,3 +3362,18 @@ html:root body #dt815-ctx .dt815-st.s-r{color:var(--dt-loss)}
 @media(min-width:641px){html:root body #dt815-ctx button.dt815-fase{min-height:20px!important;height:20px!important;line-height:20px}}
 html:root body #dt815-ctx .dt815-ev b{font-size:10px;letter-spacing:.04em;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,.15);color:var(--dt-loss)}
 html:root body #dt815-ctx .dt815-ev span{color:var(--dt-tx);max-width:260px;overflow:hidden;text-overflow:clip;display:inline-block;vertical-align:bottom}
+/* v825 — Meu dia por fase: fase no topo, avisos em uma linha, sem cartão dentro de cartão */
+html:root body #app .v810-day{display:flex;flex-direction:column}
+html:root body #app .v810-day>.v810-modebar{order:-3}
+html:root body #app .v810-day>.v810-hero{order:-2}
+html:root body #app .v810-day>.v4-turno{order:-1}
+html:root body #app :is(#v508-ontem,#rotina-estado)#v508-ontem,html:root body #app #rotina-estado.card{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 12px!important;margin:0 0 8px!important;border-radius:4px!important;box-shadow:none!important;font-size:13px;line-height:1.4}
+html:root body #app #v508-ontem>*,html:root body #app #rotina-estado.card>*{margin:0!important}
+html:root body #app :is(#v508-ontem,#rotina-estado) :is(button,.btn){min-height:40px!important;padding:0 12px!important;font-size:13px!important}
+html:root body #app .v810-day .v508-falta{border:0!important;border-top:1px solid var(--dt-line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:12px 0 0!important;margin:8px 0 0!important}
+html:root body #app .v810-day .v508-falta.ruim h3{color:var(--dt-loss)}
+html:root body #app .v825-niv{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+html:root body #app .v825-niv th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dt-mut);text-align:right;font-weight:600;padding:0 8px 6px;border-bottom:1px solid var(--dt-line)}
+html:root body #app .v825-niv th:first-child,html:root body #app .v825-niv td:first-child{text-align:left;padding-left:0}
+html:root body #app .v825-niv td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--dt-line);white-space:nowrap}
+html:root body #app .v825-niv td button{min-height:40px;padding:0 8px;border:0;background:transparent;color:var(--dt-gold);font:inherit;font-weight:700;cursor:pointer}
