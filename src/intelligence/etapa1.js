@@ -171,9 +171,16 @@
     return html;
   }
   function meuDia(){
-    const c=w.DiarioSessoes?.context();
-    const task=c?.mode==='cripto_macro'?'Revisão semanal, estudos e planejamento.':c?.mode==='b3_fechada'?'Revisar pendências e preparar a próxima sessão válida.':c?.phase==='pre'?'Conferir checklist pré-pregão, capital operacional, limites cadastrados e eventos próximos.':c?.phase==='during'?'Acompanhar checklist durante o pregão, parciais e risco aberto nos registros existentes.':'Conciliar operações encerradas, resultado e checklist de revisão.';
-    return '<p><b>Sessão: '+escape(c?.mode||'não verificada')+'</b> · próxima B3 '+escape(c?.b3?.nextDate||'a confirmar')+'</p><p>'+escape(task)+'</p>'+riscoTerminal();
+    const c=w.DiarioSessoes?.context(),manual=w.DiarioSessaoVisual?.manual?.(),
+      phase=manual||c?.phase, data=c?.b3?.nextDate;
+    const task=c?.mode==='cripto_macro'?'Mercado B3 fechado: revisar a rotina e preparar os próximos eventos.':
+      c?.mode==='b3_fechada'?'B3 fechada: não tratar referências antigas como negociações em tempo real.':
+      phase==='pre'?'Conferir cenário, regras e notícias antes de operar.':
+      phase==='during'?'Acompanhar riscos, execução e operações abertas sem somá-las ao resultado realizado.':
+      'Conciliar operações encerradas, checklist original e plano de amanhã.';
+    return '<div class="v810-intel-day"><strong>Orientação da sessão</strong><p>'+escape(task)+'</p>'+
+      '<small>Próxima sessão B3: '+escape(data?data.split('-').reverse().join('/'):'data não verificada')+
+      ' · Fonte: calendário de negociação da B3 / regras do aplicativo</small></div>';
   }
   async function memorizar(){
     if(!w.DiarioPublico||!w.DiarioSessoes)return;
@@ -185,15 +192,38 @@
     clearTimeout(state.boundary);state.boundary=null;if(document.hidden||!state.route||!w.DiarioSessoes)return;
     const now=Date.now(),next=w.DiarioSessoes.nextTransition(now);
     // Um único despertador para a próxima transição de calendário. Nenhum polling de rede.
-    state.boundary=setTimeout(()=>{state.boundary=null;if(!state.route||document.hidden)return;repaint();refresh();armSession();},Math.max(1000,next-now));
+    state.boundary=setTimeout(()=>{state.boundary=null;if(!state.route||document.hidden)return;if(['home','dia'].includes(state.route))w.DiarioSessaoVisual?.atualizar?.();repaint();refresh();armSession();},Math.max(1000,next-now));
   }
   function briefing() {
-    const m=mercadoPlan(),context=w.DiarioSessoes?.context(),hot=w.DiarioInterpretacao?.prioritize(timeline(),context,Date.now(),context?.anchorDate?Date.parse(context.anchorAt):undefined)||timeline().filter(e=>e.prioridade==='alta');
+    const m=mercadoPlan(),context=w.DiarioSessoes?.context(),
+      hot=w.DiarioInterpretacao?.prioritize(timeline(),context,Date.now(),context?.anchorAt?Date.parse(context.anchorAt):undefined)||
+        timeline().filter(e=>e.prioridade==='alta');
     const mine=relacionados().filter(e=>e.prioridade==='alta');
-    return contextoSessao(context)+'<div><b>Leitura descritiva das referências: '+escape(m.nome)+'</b></div>'+
-      '<p class="mut sm">Fonte: '+escape(state.mercado?.fonte||'não verificada')+' · Leitura: '+when(state.mercado?.atualizadoEm)+' · '+escape(m.motivo)+'</p>'+
-      '<div><b>O que movimenta o mercado</b> <span class="mut sm">· '+mine.length+' relevante(s) aos seus ativos</span></div>'+rowsEvent(hot.slice(0,3),3)+
-      hot.slice(0,2).map(e=>'<p class="mut sm"><b>Hipótese de transmissão:</b> '+escape(transmissao(e))+'</p>').join('');
+    const phase=w.DiarioSessaoVisual?.manual?.()||context?.phase||'post';
+    const title=phase==='pre'?'O que importa antes da abertura':phase==='during'?'O que está acontecendo agora':'O que importa para a próxima sessão';
+    const atualizado=Date.parse(state.mercado?.atualizadoEm||'');
+    const recent=Number.isFinite(atualizado)&&Date.now()-atualizado<20*60000&&atualizado<=Date.now()+60000;
+    const fonte=escape(state.mercado?.fonte||'não verificada');
+    const resumo=(m.nome==='Sem leitura validada'||m.nome==='Amostra insuficiente')?
+      'Dados insuficientes para caracterizar o mercado nesta sessão.':
+      'Interpretação das variações disponíveis: '+escape(m.nome)+'. A classificação não prevê preços.';
+    const top=hot.slice(0,3).map(e=>{
+      const data=when(e.ultimaAtualizacao),fonte=e.fontes?.find(f=>/^https:\/\/|^http:\/\//.test(f?.url));
+      return '<li><b>'+escape(e.titulo||'Acontecimento publicado')+'</b>'+
+        '<small> · '+escape(data)+' · '+escape(fonte?.nome||'Fonte não informada')+
+        ' · Informação publicada; efeito nos ativos depende de confirmação.</small></li>';
+    }).join('')||'<li>Não há acontecimentos recentes com fontes identificadas.</li>';
+    return '<div class="v810-intel-brief"><h3>'+title+'</h3>'+
+      '<p><b>'+resumo+'</b></p>'+
+      '<p class="mut sm">Fonte: '+fonte+' · '+(recent?'Atualizado: ':'Último registro (não é tempo real): ')+
+        when(state.mercado?.atualizadoEm)+'</p>'+
+      (context?.warning?'<p class="mut sm">'+escape(context.warning)+'</p>':'')+
+      '<details><summary>Fatos publicados, hipóteses e fontes · '+mine.length+' ligados aos seus ativos</summary>'+
+      '<ul class="v810-intel-events">'+top+'</ul>'+
+      (hot.length?'<div><b>Hipóteses condicionadas</b></div>'+
+        hot.slice(0,2).map(e=>'<p class="mut sm">'+escape(transmissao(e))+
+        ' — cenário condicionado, não atribuição comprovada de causalidade.</p>').join(''):'')+
+      '<p class="mut sm">'+escape(m.motivo)+'</p></details></div>';
   }
   function agenda() {
     const events=timeline().filter(e=>e.tema==='politica_economica').slice(0,5);
@@ -258,7 +288,7 @@
       app.querySelector('.dt393-workspace .dt393-native')||app.querySelector('.dt393-native')||app;
     const title={home:'Central de Inteligência',dia:'Preparação e revisão da sessão',agenda:'Agenda econômica inteligente',noticias:'Notícias por acontecimento e por ativo',term:'Inteligência do Terminal · regime e divergências'}[route];
     let box=app.querySelector('[data-intel-etapa1]');
-    const central=route==='home'?app.querySelector('.v4-iacard'):null;
+    const central=route==='home'?app.querySelector('.v4-iacard'):route==='dia'?app.querySelector('.v810-day-context'):null;
     if(central&&box!==central){box?.remove();box=central;box.dataset.intelEtapa1='1';box.dataset.route=route;box.dataset.intelNative='1';}
     if(box&&box.dataset.route!==route){box.remove();box=null;}
     if(!box){box=painel(title,'Consultando dados públicos compartilhados.');box.dataset.route=route;native.prepend(box);}
