@@ -1104,7 +1104,7 @@ try {
           '" style="min-height:44px" data-v789-mode="' + key + '" aria-pressed="' + ((p.mods||[]).includes(key)) + '">' + label + '</button>').join("") + '</div>';
       return '<details id="v789-plano" data-v789-day="' + esc789(data) + '" class="v789-plano" ' +
         (planoAberto789 ? 'open ' : '') +
-        'style="background:#11141B;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E;padding:12px 14px;color:inherit">' +
+        'style="background:var(--dt-s1);border-top:1px solid #1E232E;border-bottom:1px solid #1E232E;padding:12px 14px;color:inherit">' +
         '<summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;color:#D4A017;font-weight:700">Editar preparação do dia <span>' +
         (dia.ckok ? 'Concluída' : lack.length ? lack.length + ' pendência(s)' : 'Pronto para concluir') + '</span></summary>' +
         '<div class="g2" style="margin-top:10px;gap:8px">' +
