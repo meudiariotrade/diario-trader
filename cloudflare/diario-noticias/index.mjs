@@ -1,4 +1,6 @@
 // Motor de notícias públicas. Não consulta Supabase, dados financeiros privados nem IA.
+import '../../src/shared/sessoes-mercado.js';
+import {FLOW_KEY,coletarFluxo} from './fluxo.mjs';
 import {agruparEventos} from './eventos.mjs';
 export {agruparEventos} from './eventos.mjs';
 const KEY = 'diario:noticias:v1';
@@ -31,6 +33,7 @@ function linkSeguro(s,host) {
 }
 export function tema(t) {
   const n=normal(t);
+  if(/\b(bitcoin|ethereum|solana|criptomoeda|crypto|btc|eth)\b/.test(n))return 'cripto';
   if(/\b(petroleo|brent|wti|crude|oil|opep|opec|petrobras|petr4|diesel)\b/.test(n))return 'petroleo';
   if(/\b(minerio|iron ore|iron-ore|vale3|siderurgia|mining|steel)\b/.test(n))return 'minerio';
   if(/\b(copom|selic|fed|fomc|powell|ipca|payroll|tarifa|tariff|congresso|congress|governo|government|eleicao|election|sancao|sanction|guerra|war)\b/.test(n))return 'politica_economica';
@@ -43,6 +46,7 @@ export function lerRSS(xml,fonte,agora=Date.now()) {
   for(const b of blocos.slice(0,45)){
     const t=tag(b,'title').slice(0,200),l=linkSeguro(tag(b,'link'),fonte.host);
     const d=Date.parse(tag(b,'pubDate')||tag(b,'dc:date')),cat=tema(t);
+    if(/\b(loteria|mega.sena|lotofacil|horoscopo|horoscope|moneyist|dear penny|conteudo patrocinado|advertorial)\b/.test(normal(t)))continue;
     if(!cat||t.length<12||!l||!Number.isFinite(d)||d>agora+300000||d<agora-86400000)continue;
     out.push({t,l,fonte:fonte.nome,d:new Date(d).toISOString(),tema:cat});
   }
@@ -122,12 +126,12 @@ export async function coletarMercado(fetcher=fetch,agora=Date.now()){
   for(const item of (Array.isArray(resposta?.data)?resposta.data:[])){
     const x=nomes.get(item?.s);
     if(!x||seen.has(item.s))continue;
-    const px=Number(item?.d?.[0]),chp=Number(item?.d?.[1]);
+    const px=item?.d?.[0],chp=item?.d?.[1];
     if(!Number.isFinite(px)||px<=0||!Number.isFinite(chp)||Math.abs(chp)>60)continue;
     seen.add(item.s);
-    if(x[1]==='ADR')adrs.push({s:x[2],px,chp,state:'reg'});
+    if(x[1]==='ADR')adrs.push({s:x[2],px,chp,state:'referencia',priceAt:null,source:'TradingView (atrasado)'});
     else { if(!grupos.has(x[1]))grupos.set(x[1],[]);
-      grupos.get(x[1]).push({n:x[2],px,d1:chp}); }
+      grupos.get(x[1]).push({n:x[2],px,d1:chp,priceAt:null,source:'TradingView (atrasado)'}); }
   }
   if(seen.size<4)throw Error('Mercado sem dados suficientes');
   return {atualizadoEm:new Date(agora).toISOString(),fonte:'TradingView (atrasado)',total:seen.size,
@@ -141,10 +145,17 @@ function cabecalhos(req,env){
     ...(o&&o===env.ALLOWED_ORIGIN?{'Access-Control-Allow-Origin':o}:{})};
 }
 function json(v,req,env,status=200){
-  return new Response(JSON.stringify(v),{status,headers:cabecalhos(req,env)});
+  const body=JSON.stringify(v);let hash=2166136261;for(let i=0;i<body.length;i++)hash=Math.imul(hash^body.charCodeAt(i),16777619);
+  const etag='W/"'+(hash>>>0).toString(16)+'"',headers={...cabecalhos(req,env),ETag:etag};
+  return req.headers.get('if-none-match')===etag&&status===200?new Response(null,{status:304,headers}):new Response(body,{status,headers});
 }
 export default {
   async scheduled(event,env,ctx){
+    // Coleta diária limitada, inclusive quando B3 estiver fechada; conserva snapshot em falha.
+    const b=globalThis.DiarioSessoes.local(event.scheduledTime,'America/Sao_Paulo');
+    if(env.NEWS_CACHE&&!b.weekend&&[660,1020].includes(b.minute))ctx.waitUntil((async()=>{try{
+      await env.NEWS_CACHE.put(FLOW_KEY,JSON.stringify(await coletarFluxo(fetch,event.scheduledTime)));
+    }catch(_){/* último dado permanece identificável pela data efetiva */}})());
     if(!env.NEWS_CACHE||!deveColetar(new Date(event.scheduledTime)))return;
     ctx.waitUntil((async()=>{
       let anteriores=[];
@@ -163,9 +174,14 @@ export default {
     const path=new URL(request.url).pathname;
     if(request.method!=='GET')return json({erro:'metodo_nao_permitido'},request,env,405);
     if(path==='/health')return json({ok:Boolean(env.NEWS_CACHE),servico:'diario-noticias',modo:'independente'},request,env,env.NEWS_CACHE?200:503);
-    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos'].includes(path))
+    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes'].includes(path))
       return json({erro:'rota_nao_encontrada'},request,env,404);
+    if(path==='/v1/sessoes')return json(globalThis.DiarioSessoes.context(),request,env);
     if(!env.NEWS_CACHE)return json({erro:'cache_nao_configurado'},request,env,503);
+    if(path==='/v1/fluxo'){
+      const raw=await env.NEWS_CACHE.get(FLOW_KEY);if(!raw)return json({erro:'aguardando_fluxo'},request,env,503);
+      const f=JSON.parse(raw);return json({...f,desatualizado:Date.now()-Date.parse(f.atualizadoEm)>36*3600000},request,env);
+    }
     if(path==='/v1/mercado'||path==='/v1/panorama'){
       const salvoMercado=await env.NEWS_CACHE.get(MARKET_KEY);
       if(!salvoMercado)return json({erro:'aguardando_cotacoes'},request,env,503);

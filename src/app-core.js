@@ -1,3 +1,193 @@
+/* Contrato editorial compartilhado pelo servidor, tela e PDF. Sem rede ou armazenamento. */
+(function (root) {
+  'use strict';
+  const VERSION = 'jornal-v717';
+  const clone = x => JSON.parse(JSON.stringify(x ?? null));
+  const number = x => typeof x === 'number' && Number.isFinite(x);
+  const text = x => String(x ?? '').trim();
+  const url = x => { try { const u = new URL(text(x)); return u.protocol === 'https:' && !u.username && !u.password ? u.href : ''; } catch { return ''; } };
+  const freeze = x => { if (x && typeof x === 'object' && !Object.isFrozen(x)) { Object.values(x).forEach(freeze); Object.freeze(x); } return x; };
+  const brDay = iso => { const d = new Date(iso); return Number.isFinite(+d) ? d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) : ''; };
+  function phase(e) {
+    return e.edicao === 'meio' ? { title: 'Pregão em andamento', table: 'Cotações na coleta', next: 'O que observar no restante da sessão' }
+      : e.edicao === 'tarde' ? { title: 'Balanço da sessão', table: 'Referências da edição', next: 'Preparação para o próximo pregão' }
+      : e.edicao === 'fds' ? { title: 'Balanço da semana', table: 'Últimas referências disponíveis', next: 'O que observar na próxima semana' }
+      : { title: 'Preparação para a abertura', table: 'Últimas referências disponíveis', next: 'O que observar no pregão' };
+  }
+  const isRate = q => /^di\d|^di$|^us10/.test(text(q.k));
+  function quote(q, collected) {
+    const rate = isRate(q), ref = text(q.referencia_em || q.updated_at);
+    const k = text(q.k), px = number(q.px) ? q.px : null;
+    // Não converter escalas silenciosamente: uma cotação incompatível fica indisponível.
+    const badScale = (k === 'wdo' && px !== null && px < 100) || (k === 'win' && px !== null && px < 1000);
+    return { ...clone(q), k, px: badScale ? null : px, d1: number(q.d1) ? q.d1 : null,
+      unidade: rate ? '% a.a.' : ['win', 'ibov', 'wdo'].includes(k) ? 'pontos' : text(q.unidade) || (k === 'dolar' ? 'R$/US$' : 'unidade da fonte'),
+      unidade_variacao: rate ? 'p.p.' : '%', fonte: text(q.fonte) || 'Fonte não identificada',
+      simbolo: text(q.simbolo), contrato: text(q.contrato) || (/1!$/.test(text(q.simbolo)) ? 'Série contínua; vencimento não identificado' : ''),
+      coletado_em: text(q.coletado_em) || collected || '', referencia_em: ref,
+      referencia_tipo: text(q.referencia_tipo) || 'último disponível; fechamento/ajuste não confirmado',
+      status: badScale || q.status === 'divergente' ? 'divergente' : px === null ? 'indisponivel' : !ref ? 'horario_nao_informado' : 'referenciado' };
+  }
+  function price(q) {
+    if (!number(q?.px)) return 'Indisponível';
+    const dec = q.k === 'dolar' ? 4 : q.k === 'wdo' ? 1 : isRate(q) ? 3 : q.px >= 1000 ? 0 : 2;
+    return q.px.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+  function change(q) {
+    return number(q?.d1) ? (q.d1 > 0 ? '+' : '') + q.d1.toLocaleString('pt-BR', { minimumFractionDigits: isRate(q) ? 3 : 2, maximumFractionDigits: isRate(q) ? 3 : 2 }) + (isRate(q) ? ' p.p.' : '%') : 'Indisponível';
+  }
+  function sources(list) {
+    const seen = new Set();
+    return (Array.isArray(list) ? list : []).filter(x => x && url(x.url)).map(x => ({ titulo: text(x.titulo), url: url(x.url), publicado_em: text(x.publicado_em), consultado_em: text(x.consultado_em) })).filter(x => !seen.has(x.url) && seen.add(x.url)).slice(0, 30);
+  }
+  function fed(f) {
+    // A faixa-alvo vigente precisa de confirmação independente da EFFR.
+    if (!f || !f.faixa_confirmada || !url(f.fonte_url) || !f.referencia_em || !/^\d{4}-\d{2}-\d{2}$/.test(f.reuniao || '') || !Array.isArray(f.faixa) || f.faixa.length !== 2 || !f.faixa.every(number) || f.faixa[1] <= f.faixa[0]) return null;
+    if (!['cme', 'proprio'].includes(f.metodo) || (f.metodo === 'proprio' && !text(f.metodologia))) return null;
+    const cs = f.cenarios;
+    if (!Array.isArray(cs) || !cs.length || cs.some(c => !number(c.p) || c.p < 0 || c.p > 100 || !number(c.mov) || c.mov % 25 !== 0) || Math.abs(cs.reduce((a,c) => a+c.p,0)-100) > .2) return null;
+    return clone(f);
+  }
+  function levels(ses, q, edition) {
+    if (!ses || ses.proxy || !ses.completa || !ses.dia || !ses.contrato || !ses.fonte || !ses.referencia_em || !q?.contrato || q.contrato !== ses.contrato || ![ses.H,ses.L,ses.C].every(number) || ses.H < ses.L || ses.C > ses.H || ses.C < ses.L || edition.edicao === 'meio') return null;
+    const step = q.k === 'win' ? 5 : .5, P = (ses.H+ses.L+ses.C)/3, range = ses.H-ses.L;
+    const round = v => +(Math.round(v/step)*step).toFixed(q.k === 'win' ? 0 : 1);
+    return { tk:q.k.toUpperCase(), contrato:ses.contrato, dia:ses.dia, fonte:ses.fonte, referencia_em:ses.referencia_em, H:ses.H,L:ses.L,C:ses.C,P:round(P),R1:round(2*P-ses.L),R2:round(P+range),S1:round(2*P-ses.H),S2:round(P-range), passo:step };
+  }
+  function chart(g, q) {
+    if (!g || g.proxy || !g.fonte || !g.contrato || !q?.contrato || g.contrato !== q.contrato || !g.dia || !Array.isArray(g.d)) return null;
+    const d = g.d.filter(c => Array.isArray(c) && c.slice(0,5).length === 5 && c.slice(0,5).every(number) && brDay(c[0]*1000) === g.dia && c[2]>=Math.max(c[1],c[4]) && c[3]<=Math.min(c[1],c[4]));
+    if (d.length < 5) return null;
+    return { ...clone(g), d, parcial:true };
+  }
+  function snapshot(e, market = {}) {
+    if (e.snapshot?.versao === VERSION) return freeze(clone(e.snapshot));
+    const collected = text(e.dados_coletados_em), quotes = (e.cotacoes || []).map(q => quote(q,collected));
+    for(const q of quotes) { if(q.dia_referencia && q.dia_referencia>e.dia){q.px=null;q.d1=null;q.status='divergente';q.observacao='Referência posterior à data da edição.';} else if(q.dia_referencia && Date.parse(e.dia)-Date.parse(q.dia_referencia)>7*86400000){q.status='antigo';q.observacao='Referência com mais de sete dias; não tratar como atual.';} }
+    const data = { versao:VERSION, dia:e.dia, edicao:e.edicao, coletado_em:collected, cotacoes:quotes,
+      sessoes:clone(market.sessoes || {}), graficos:{}, niveis:{}, movers:{altas:[],baixas:[]}, macro:clone(market.macro || {}), fed:fed(market.fed) };
+    for (const k of ['win','wdo']) {
+      const q = quotes.find(q=>q.k===k);
+      data.niveis[k] = levels(data.sessoes[k],q,e);
+      data.graficos[k] = chart(market.graficos?.[k],q);
+    }
+    // Ranking sem data de referência não é misturado a uma edição histórica.
+    if (market.movers?.dia === e.dia && market.movers?.referencia_em) data.movers = clone(market.movers);
+    // Conteúdo integral identifica snapshots mesmo se duas gerações ocorrerem no mesmo horário.
+    let hash=2166136261; for(const c of JSON.stringify(data)) hash=Math.imul(hash^c.charCodeAt(0),16777619)>>>0;
+    data.id=`${e.dia}:${e.edicao}:${hash.toString(16)}`;
+    return freeze(data);
+  }
+  function agenda(list, edition={}) {
+    return (Array.isArray(list)?list:[]).filter(a=>a && text(a.evento) && !/divulga[cç][aã]o de indicadores econ[oô]micos|monitoramento da trajet[oó]ria/i.test(a.evento) && url(a.fonte_url) && /^\d{4}-\d{2}-\d{2}$/.test(a.data || '') && a.pais && Number.isFinite(Date.parse(a.data+'T12:00:00Z')) && new Date(a.data+'T12:00:00Z').toISOString().slice(0,10)===a.data && (!a.horario || /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(a.horario)) && (!edition.dia || a.data>=edition.dia) && (!edition.gerado || !a.horario || a.realizado || Date.parse(a.data+'T'+a.horario+':00-03:00')>=Date.parse(edition.gerado))).map(a=>({...clone(a), fonte_url:url(a.fonte_url), horario:text(a.horario), quando:a.data+(a.horario?' '+a.horario+' Brasília':' · horário não confirmado')}));
+  }
+  function inspect(e, snap) {
+    const problems=[], gaps=[...(e.agenda_lacunas||[])], texts=[e.manchete,...(e.materias||[])].filter(Boolean);
+    if(e.verificacao_fontes) gaps.push(e.verificacao_fontes);
+    if(e.pesquisa_web_parcial) gaps.push('Pesquisa web disponível apenas em parte da edição; demais textos usam os dados recebidos.');
+    else if(e.pesquisa_web===false) gaps.push('Pesquisa web não disponível nesta geração; análise limitada aos dados e resumos recebidos.');
+    for(const q of snap.cotacoes) {
+      if(q.status==='antigo') gaps.push(`${q.n||q.k}: referência antiga; consultar data da sessão.`);
+      if(q.status==='divergente') problems.push(`${q.n||q.k}: escala incompatível; valor omitido.`);
+      if(!q.referencia_em && !gaps.includes('Horário do negócio não informado para parte das cotações; confira a rastreabilidade dos dados.')) gaps.push('Horário do negócio não informado para parte das cotações; confira a rastreabilidade dos dados.');
+      if(q.px===null) gaps.push(`${q.n||q.k}: cotação indisponível.`);
+    }
+    const vals = [...snap.cotacoes,...(snap.movers.altas||[]).map(x=>({k:x.tk,n:x.tk,d1:x.var})),...(snap.movers.baixas||[]).map(x=>({k:x.tk,n:x.tk,d1:x.var}))];
+    const blocked = new Set();
+    texts.forEach((m,index)=>{
+      if(m.revisao){problems.push(m.titulo+': '+m.revisao);blocked.add(index);}
+      const txt=[m.titulo,m.linha_fina,m.texto,m.por_que_importa,...(m.numeros||[]).map(n=>n.rotulo+' '+n.valor)].join('\n');
+      for(const q of vals) {
+        const aliases=q.k==='ibov'?['Ibovespa','IBOV']:q.k==='win'?['WIN','mini índice']:q.k==='wdo'?['WDO','dólar futuro']:q.k==='dolar'?['dólar à vista','dólar comercial']:/^[A-Z]{4}\d/.test(q.k)?[q.k]:[];
+        for(const alias of aliases) {
+          const escaped=alias.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+          const re=new RegExp('\\b'+escaped+'\\b[^.!?;\\n%]{0,75}?([+−-]?\\d+(?:[,.]\\d+)?)\\s*%','gi');
+          if(number(q.px)) {
+            const priceRe=new RegExp('\\b'+escaped+'\\b[^!?;\\n]{0,100}?\\b(?:aos|cotad[oa](?: a| em)?|negociad[oa](?: a| em)?)\\s*(?:R\\$\\s*)?([\\d.]+(?:,\\d+)?)','gi');
+            for(const h of txt.matchAll(priceRe)) { const raw=h[1],v=Number(raw.replace(/\./g,'').replace(',','.')),dec=raw.includes(',')?raw.split(',')[1].length:0;
+              if(number(v)&&Math.abs(v-q.px)>Math.max(.0001,.51*10**-dec)) { problems.push(`${alias}: preço citado diverge do snapshot (${price(q)}).`);blocked.add(index); }
+            }
+          }
+          for(const hit of txt.matchAll(re)) {
+            let n=Number(hit[1].replace(',','.').replace('−','-'));
+            if(n>0 && /queda|recu|cai|baixa|despenc|perd/i.test(hit[0])) n=-n;
+            if(number(q.d1) && Math.abs(n-q.d1)>.055) { problems.push(`${alias}: variação citada diverge do snapshot (${change(q)}).`); blocked.add(index); }
+          }
+        }
+      }
+      for(const metric of m.numeros||[]) {
+        const label=text(metric.rotulo).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+        const q=snap.cotacoes.find(q=>q.k==='ibov'?label==='ibovespa':q.k==='win'?/^(mini indice|win)$/.test(label):q.k==='wdo'?/^(dolar futuro|wdo)$/.test(label):q.k==='dolar'?/^(dolar comercial|dolar a vista)$/.test(label):false);
+        if(!q||!number(q.px))continue;
+        const token=text(metric.valor).match(/[+−-]?\d[\d.,]*/)?.[0];if(!token)continue;
+        const raw=token.includes(',')?token.replace(/\./g,'').replace(',','.'):token.replace(/\.(?=\d{3}(?:\D|$))/g,'');
+        const value=Number(raw),dec=token.includes(',')?token.split(',')[1].length:0;
+        if(number(value)&&Math.abs(value-q.px)>Math.max(.0001,.51*10**-dec)) { problems.push((q.n||q.k)+': preço no card diverge do snapshot.');blocked.add(index); }
+      }
+      if(!blocked.has(index) && !url(m.fonte_url) && !(m.fontes||[]).some(f=>url(typeof f==='string'?f:f.url))) gaps.push(`${m.titulo}: fonte específica não vinculada.`);
+    });
+    if(!snap.fed) gaps.push('FedWatch omitido: faixa-alvo, metodologia ou referência não confirmadas.');
+    if(!Object.values(snap.niveis).some(Boolean)) gaps.push('Pivôs indisponíveis: falta sessão completa do contrato; proxies à vista não são usados.');
+    return { versao:VERSION, estado:problems.length?'revisar':'com_limitacoes', problemas:[...new Set(problems)], lacunas:[...new Set(gaps)], artigos_bloqueados:[...blocked] };
+  }
+  function prepare(input, market={}) {
+    if(input.editorial_versao===VERSION && input.snapshot?.versao===VERSION) return clone(input);
+    const e=clone(input), snap=snapshot(e,market), review=inspect(e,snap);
+    e.editorial_versao=VERSION;
+    e.snapshot=snap; e.cotacoes=snap.cotacoes; e.qualidade=review;
+    const old=[e.manchete,...(e.materias||[])];
+    for(const i of review.artigos_bloqueados) {
+      const m=old[i]; if(m) old[i]={...m,titulo:'Conteúdo retido para revisão de consistência',linha_fina:'A evidência desta matéria requer conferência.',texto:'Consulte o painel de referências e as fontes vinculadas. O texto foi retido porque a evidência ou os números não passaram pela conferência.',numeros:[],impacto:{ativos:[],setores:[],direcao:''},por_que_importa:'',placar:'',consenso:'',fato:'',interpretacao:'',cenario:''};
+    }
+    e.manchete=old[0]; e.materias=old.slice(1);
+    // Uma divergência em UMA matéria não deve destruir TODAS as editorias do jornal.
+    // Filtra cada bloco independente contra o mesmo snapshot; mantém a edição extensa
+    // quando o texto sobrevivente é coerente. O artigo divergente segue retido acima.
+    if (review.problemas.length) {
+      const trechoSeguro = t => {
+        const x=text(t);
+        if (!x) return false;
+        const v=inspect({manchete:{titulo:'Conferência de bloco',texto:x},materias:[]},snap);
+        return !v.artigos_bloqueados.length;
+      };
+      if(e.analise && !trechoSeguro([e.analise.titulo,e.analise.texto].join(' ')))e.analise=null;
+      if(e.mesa && !trechoSeguro(JSON.stringify(e.mesa)))e.mesa=null;
+      e.em_poucas_linhas=(Array.isArray(e.em_poucas_linhas)?e.em_poucas_linhas:[]).filter(trechoSeguro).slice(0,8);
+      e.cinco_coisas=(Array.isArray(e.cinco_coisas)?e.cinco_coisas:[]).filter(x=>x&&trechoSeguro([x.titulo,x.texto].join(' '))).slice(0,5);
+      if(!trechoSeguro(e.fechamento_texto))e.fechamento_texto='';
+      if(e.grafico_do_dia && !snap.graficos?.win && !snap.graficos?.wdo)e.grafico_do_dia=null;
+    }
+    for(const m of [e.manchete,...e.materias].filter(Boolean)) {
+      if(!m.consenso_valor || !url(m.consenso_fonte) || !m.periodo) { m.placar=''; m.consenso=''; }
+      m.fonte_url=url(m.fonte_url); m.fontes=sources((m.fontes||[]).map(f=>typeof f==='string'?{url:f}:f));
+      // Uma direção única para vários ativos não descreve relações opostas.
+      if((m.impacto?.ativos||[]).length>1) m.impacto.direcao='misto';
+    }
+    const originalAgenda=e.agenda||[]; e.agenda=agenda(originalAgenda,e);
+    if(originalAgenda.length!==e.agenda.length) review.lacunas.push('Itens de agenda sem data, país ou fonte foram omitidos.');
+    e.fontes=sources([...(e.fontes||[]),...[e.manchete,...e.materias].flatMap(m=>m?[{titulo:m.titulo,url:m.fonte_url},...(m.fontes||[])]:[]),...e.agenda.map(a=>({titulo:a.evento,url:a.fonte_url}))]);
+    return e;
+  }
+  /** Suplemento privado: não altera a referência pública nem assume contrato pelo mês. */
+  function profit(rows,edition,collected=new Date().toISOString()) {
+    const cotacoes=[],lacunas=[];
+    for(const root of ['WIN','WDO']) {
+      const matches=(Array.isArray(rows)?rows:[]).filter(x=>String(x.ticker||'').startsWith(root));
+      const candidates=matches.filter(x=>new RegExp('^'+root+'[FGHJKMNQUVXZ](?:\\d{2}|\\d{4})$').test(text(x.contrato||x.ticker)));
+      if(candidates.length!==1){lacunas.push(root+': contrato específico ausente ou ambíguo na ponte.');continue;}
+      const r=candidates[0],contract=text(r.contrato||r.ticker),raw=text(r.dat),d=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/),day=d?`${d[3]}-${d[2]}-${d[1]}`:raw;
+      const time=text(r.hor),ref=/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(time)&&/^\d{4}-\d{2}-\d{2}$/.test(day)?day+'T'+time+'-03:00':'';
+      const numeric=x=>x!==null&&x!==undefined&&x!==''&&Number.isFinite(Number(x))?Number(x):null;
+      const px=numeric(r.ult),step=root==='WIN'?5:.5;
+      if(!ref||brDay(ref)!==day||day!==edition.dia||Date.parse(ref)>Date.parse(collected)+60000||!px||Math.abs(px/step-Math.round(px/step))>1e-6){lacunas.push(root+': preço, data ou horário do negócio incompatível com a edição.');continue;}
+      const H=numeric(r.max),L=numeric(r.min),O=numeric(r.abe),ohlc=[H,L,O,px].every(x=>number(x)&&x>0&&Math.abs(x/step-Math.round(x/step))<1e-6)&&H>=Math.max(O,px)&&L<=Math.min(O,px)?{O,H,L,C:px}:null;
+      cotacoes.push({...quote({k:root.toLowerCase(),n:root,px,d1:numeric(r.var),contrato:contract,simbolo:contract,fonte:'Profit / ponte privada',referencia_em:ref,referencia_tipo:'último negócio informado pela ponte; não é ajuste oficial'},collected),ohlc,sessao_completa:!!ohlc&&r.sessao_completa===true});
+      if(!ohlc)lacunas.push(root+': OHLC completo indisponível na ponte.');
+    }
+    return freeze({cotacoes,lacunas,coletado_em:collected,nota:'Suplemento privado capturado sob solicitação; não substitui o snapshot editorial. FEC da ponte não é tratado como ajuste oficial.'});
+  }
+  root.DiarioJornalQualidade=Object.freeze({VERSION,freeze,clone,url,phase,quote,price,change,sources,fed,levels,chart,snapshot,inspect,prepare,profit});
+})(globalThis);
 /* Diário de Trader v560 — núcleo (paleta Terminal Grafite). Gerado a partir de: recursos.js, inicio.js, terminal-chart-mode-v415.js, app.js */
 /* v594 — registro de ações do Terminal: cada recurso registra sua função; o Início do Terminal e a barra de Painéis
    executam a mesma função, sem precisar da barra antiga montada (CLAUDE.md, tela única). */
@@ -219,8 +409,7 @@ try {
       }
     });
   })(typeof window > "u" ? globalThis : window),
-    (window.SUPA_URL = "https://wbpsmszecpzioaijfnsl.supabase.co"),
-    (window.SUPA_KEY = "sb_publishable_GNuBD5Oyo2Wk-iE2s4TbUQ_1XiKvzhV"),
+    // Configuração única: config.js, carregado antes deste núcleo.
     (function (w) {
       "use strict";
       let f = null,
@@ -20403,45 +20592,40 @@ function lvCalc(e) {
   };
 }
 async function lvPoll() {
-  if (
-    !(
-      LV.busy ||
-      !SESS ||
-      !window.CLOUD_OK ||
-      document.hidden ||
-      !(LVT.includes(tab) || tab === "live") ||
-      (tab !== "live" && !S.trades.some((e) => isOpen(e) && lvKey(e)))
-    )
-  ) {
-    LV.busy = 1;
-    try {
-      const e = await (
-          await rq("/rest/v1/cotacoes?select=*&user_id=eq." + SESS.uid)
-        ).json(),
-        t = {};
-      (e.forEach(
-        (a) =>
-          (t[String(a.ticker).toUpperCase()] = {
-            ult: +a.ult,
-            hor: a.hor,
-            up: Date.parse(a.updated_at) || 0,
-          }),
-      ),
-        (LV.px = t),
-        (LV.all = e),
-        (LV.ts = Date.now()),
-        (LV.err = ""));
-    } catch (e) {
-      LV.err =
-        e.status === 404
-          ? 'ponte não configurada (tabela "cotacoes" não existe)'
-          : String(e.message || e);
+  if (LV.busy || document.hidden || !(LVT.includes(tab) || tab === "live")) return;
+  LV.busy = 1;
+  try {
+    const rows = new Map();
+    const add = (ticker, price, em, other = {}) => {
+      const tk = String(ticker || "").toUpperCase().replace(/^.*:/, "");
+      const px = Number(price), timestamp = Date.parse(em || "") || 0;
+      if (!tk || !(px > 0) || !timestamp || timestamp > Date.now() + 60000) return;
+      const old = rows.get(tk);
+      if (!old || timestamp > Date.parse(old.updated_at || "")) {
+        rows.set(tk, { ticker: tk, ult: px, updated_at: em, hor: em, ...other });
+      }
+    };
+    if (typeof CQ !== "undefined") {
+      Object.entries(CQ.pf || {}).forEach(([ticker, r]) => add(ticker, r?.px, r?.em, { var: r?.d1 }));
+      Object.values(CQ.d || {}).forEach(group => (group?.itens || []).forEach(r =>
+        add(r?.ticker || r?.c || r?.s, r?.px, r?.horarioPreco || group.em, { var: r?.d1 })));
     }
-    try {
-      await lvDelayed();
-    } catch {}
-    ((LV.busy = 0), lvPaint(), lvcPaint());
-  }
+    const trData = window.TRM?.TR?.dados || {};
+    Object.values(trData).forEach(item => (item?.v?.itens || []).forEach(r =>
+      add(r?.ticker || r?.c || r?.s, r?.px, r?.horarioPreco || item.v.em, { var: r?.d1 })));
+    const next = {};
+    rows.forEach((r, ticker) => {
+      next[ticker] = { ult: r.ult, hor: r.hor, up: Date.parse(r.updated_at) };
+      const root = /^(WIN|WDO|IND|DOL)/.exec(ticker)?.[1];
+      if (root && (!next[root] || next[root].up < next[ticker].up)) next[root] = next[ticker];
+    });
+    LV.all = [...rows.values()];
+    LV.px = next;
+    LV.ts = Date.now();
+    LV.err = rows.size ? "" : "Ponte local desligada; utilizando apenas fontes diretas disponíveis.";
+    await lvDelayed();
+  } catch (e) { LV.err = String(e?.message || e); }
+  finally { LV.busy = 0; lvPaint(); lvcPaint(); }
 }
 async function lvDelayed() {
   const e = cfg(),
@@ -20451,7 +20635,7 @@ async function lvDelayed() {
     ].filter(
       (o) => !t.test(o) && !(LV.px[o] && Date.now() - LV.px[o].up < 3e4),
     );
-  if (!(!e || !a.length || Date.now() - LV.td < 6e4)) {
+  if (!(!e || !a.length || Date.now() - LV.td < 15 * 6e4)) {
     LV.td = Date.now();
     try {
       await tok();
@@ -20594,7 +20778,7 @@ function lvPaint() {
       : "–";
   }
 }
-setInterval(lvPoll, 2500);
+setInterval(lvPoll, 15000);
 let LVC = { q: "", f: "all" };
 const lvcHoje = () => {
   const e = new Date();
@@ -21272,7 +21456,7 @@ function ggOut() {
       return v >= s && v <= n;
     }),
     i = r.filter(
-      (x) => x.rules !== "n" && (!x.err || x.err === "Nenhum"),
+      (x) => x.rules === "s" && (!x.err || x.err === "Nenhum"),
     ).length,
     l = [
       ...new Set([
@@ -21398,7 +21582,7 @@ function vRev() {
       RP,
     )}</select></label><div class="mut sm">${e.split("-").reverse().join("/")} a ${t.split("-").reverse().join("/")}</div>` +
     (s
-      ? `<div class="kv" style="margin-top:8px">${KV("Trades", s, "", pc(n.filter((u) => u > 0).length / s) + " de acerto")}${KV("Resultado", mnyMix(somaMoedas(o)), cls(sum(n)), pctConta(totBRL(somaMoedas(o))))}${KV("Média por trade", mnyMix(mediaMoedas(o)), cls(avg(n)))}${KV("Regras seguidas", pc(o.filter((u) => u.rules !== "n").length / s))}${KV("Nota média do dia", l.length ? f2(avg(l)) : "–")}${KV("Dias registrados", i.length)}</div>${c ? `<div class="card">Erro mais caro: <b>${esc(c[0])}</b> <span class="r">${money(c[1])}</span></div>` : '<div class="card g">Nenhum erro registrado no período 👏</div>'}`
+      ? `<div class="kv" style="margin-top:8px">${KV("Trades", s, "", pc(n.filter((u) => u > 0).length / s) + " de acerto")}${KV("Resultado", mnyMix(somaMoedas(o)), cls(sum(n)), pctConta(totBRL(somaMoedas(o))))}${KV("Média por trade", mnyMix(mediaMoedas(o)), cls(avg(n)))}${KV("Regras seguidas", pc(o.filter((u) => u.rules === "s").length / s))}${KV("Nota média do dia", l.length ? f2(avg(l)) : "–")}${KV("Dias registrados", i.length)}</div>${c ? `<div class="card">Erro mais caro: <b>${esc(c[0])}</b> <span class="r">${money(c[1])}</span></div>` : '<div class="card g">Nenhum erro registrado no período 👏</div>'}`
       : '<p class="mut">Sem trades fechados neste período.</p>') +
     p("repetir", "O que vou repetir (o que funcionou)?") +
     p("parar", "O que vou parar de fazer?") +
@@ -21569,10 +21753,51 @@ function assertSyncOwner(e) {
     throw ((t.code = "SESSION_CHANGED"), t);
   }
 }
+// Cache protegido por usuário, limitado e com validade de 15 min somente para
+// leituras de consulta. Transações, autenticação, diário e ordens NÃO são cacheados.
+const LEITURAS_TTL = 15 * 60 * 1000, LEITURAS_CACHE = new Map();
+function leituraCacheKey(path) { return 'diario:leitura:v706:' + syncOwner() + ':' + path; }
+function leituraSnapshot(path) {
+  const key = leituraCacheKey(path);
+  let item = LEITURAS_CACHE.get(key);
+  if (!item) try { item = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+  if (item && typeof item.body === 'string' && item.t > 0) LEITURAS_CACHE.set(key, item);
+  return item || null;
+}
+function leituraGuardar(path, body) {
+  if (typeof body !== 'string' || body.length > 64000) return;
+  const key = leituraCacheKey(path), entry = {t:Date.now(),body};
+  LEITURAS_CACHE.delete(key);
+  LEITURAS_CACHE.set(key,entry);
+  try { localStorage.setItem(key,JSON.stringify(entry)); } catch {}
+  if (LEITURAS_CACHE.size > 30) {
+    const old = LEITURAS_CACHE.keys().next().value;
+    LEITURAS_CACHE.delete(old);
+    try { localStorage.removeItem(old); } catch {}
+  }
+}
 async function rq(e, t = {}, a = !0) {
   const o = syncOwner(),
-    s = cfg();
+    s = cfg(),
+    somenteLeitura = !t.method || String(t.method).toUpperCase() === 'GET',
+    podeCache = somenteLeitura && !t.cacheRefresh &&
+      /^\/rest\/v1\/(cotacoes|mercado_cache|radar_cache|analise_cache|opcoes_grade|fluxo_acoes|ewz_serie|radar_sinais|insiders|carteira_cfg)\?/.test(e),
+    cached = podeCache ? leituraSnapshot(e) : null;
   if (!s) throw new Error("Configure o Supabase.");
+  if (cached && Date.now() - cached.t < LEITURAS_TTL) {
+    return new Response(cached.body, {status:200,headers:{'Content-Type':'application/json','X-Diario-Cache':'local'}});
+  }
+  // Limite temporário no app: evita repetir centenas de requisições 402 e preserva a fila local.
+  const ehAuth = /^\/auth\/v1\//.test(e);
+  const quota = window.DiarioNuvemQuota;
+  // Cota de projeto antigo/expirada nunca bloqueia autenticação no projeto novo.
+  if(quota && (quota.projeto !== s.url || quota.ate <= Date.now())) window.DiarioNuvemQuota=null;
+  if (!ehAuth && window.DiarioNuvemQuota?.projeto === s.url && window.DiarioNuvemQuota.ate > Date.now()) {
+    const erro = new Error("Supabase temporariamente bloqueado por limite de transferência. Seus dados continuam salvos neste aparelho.");
+    erro.status = 402;
+    erro.code = "EGRESS_QUOTA";
+    throw erro;
+  }
   (a && (await tok()), assertSyncOwner(o));
   const n = t.tok || (a && SESS ? SESS.at : /^eyJ/.test(s.key) ? s.key : ""),
     r = {
@@ -21580,18 +21805,72 @@ async function rq(e, t = {}, a = !0) {
       ...(n ? { Authorization: "Bearer " + n } : {}),
       ...(t.headers || {}),
     },
-    i = await fetch(s.url + e, { ...t, headers: r });
+    i = await fetch(s.url + e, {
+      ...t,
+      headers: r,
+      ...(somenteLeitura && !t.signal && typeof AbortSignal?.timeout === 'function'
+        ? {signal:AbortSignal.timeout(4000)} : {}),
+    }).catch(error => {
+      // Na falta de rede, somente leituras históricas recebem cópia local.
+      // Cotações continuam sujeitas à verificação de horário/FECHADO do componente.
+      if (cached && Date.now() - cached.t < 24 * 3600000 && !/^\/rest\/v1\/cotacoes\?/.test(e)) {
+        window.DiarioLeituraOffline = true;
+        return new Response(cached.body,{status:200,headers:{'Content-Type':'application/json','X-Diario-Cache':'stale'}});
+      }
+      throw error;
+    });
   if ((assertSyncOwner(o), !i.ok)) {
     let l = "";
     try {
       const c = await i.json();
       l = c.msg || c.message || c.error_description || c.error || "";
     } catch {}
-    const d = new Error(l || "Erro " + i.status);
+    const bloqueado = i.status === 402 && !ehAuth;
+    const d = new Error(bloqueado
+      ? "Supabase temporariamente bloqueado por limite de transferência. Dados locais preservados; tente sincronizar após a liberação do serviço."
+      : l || (ehAuth ? "Erro de autenticação HTTP " + i.status + ". Confira a conta do projeto atual." : "Erro " + i.status));
+    if (bloqueado) {
+      window.DiarioNuvemQuota = { projeto:s.url, ate: Date.now() + 120000, motivo: "limite-de-transferencia" };
+      d.code = "EGRESS_QUOTA";
+    }
     throw ((d.status = i.status), d);
+  }
+  if (window.DiarioNuvemQuota) window.DiarioNuvemQuota = null;
+  if (podeCache && i.ok) {
+    try { leituraGuardar(e, await i.clone().text()); } catch {}
   }
   return i;
 }
+// v756: deduplicar GETs iguais sem guardar o conteúdo privado do diário.
+const RQ_LEITURAS_PENDENTES = new Map();
+const RQ_DIARIO_REVISOES = new Map();
+const rqSemDeduplicacao = rq;
+rq = async function(path, opcoes = {}, autenticar = true) {
+  const metodo = String(opcoes.method || "GET").toUpperCase();
+  const leitura = metodo === "GET" && !opcoes.body && !opcoes.cacheRefresh && !opcoes.tok &&
+    /^\/rest\/v1\/(?:analise_cache|diario)\?/.test(path);
+  const conta = syncOwner();
+  if (!leitura || !conta) return rqSemDeduplicacao(path, opcoes, autenticar);
+  const chave = (cfg()?.url || "") + ":" + conta + ":" + path;
+  const revisao = /^\/rest\/v1\/diario\?select=revision&user_id=eq\./.test(path);
+  const memoria = revisao ? RQ_DIARIO_REVISOES.get(chave) : null;
+  if (memoria && Date.now() - memoria.em < 5000)
+    return new Response(memoria.body,{status:200,headers:{"Content-Type":"application/json","X-Diario-Cache":"revisao-5s"}});
+  if (RQ_LEITURAS_PENDENTES.has(chave))
+    return (await RQ_LEITURAS_PENDENTES.get(chave)).clone();
+  const consulta = (async () => {
+    const resposta = await rqSemDeduplicacao(path, opcoes, autenticar);
+    if (revisao && resposta.ok) {
+      const body = await resposta.clone().text();
+      if (body.length < 4096) RQ_DIARIO_REVISOES.set(chave,{em:Date.now(),body});
+    }
+    return resposta;
+  })();
+  RQ_LEITURAS_PENDENTES.set(chave, consulta);
+  try {return (await consulta).clone()}
+  finally {if(RQ_LEITURAS_PENDENTES.get(chave)===consulta)RQ_LEITURAS_PENDENTES.delete(chave)}
+};
+
 function setSess(e, t) {
   ((SESS = {
     at: e.access_token,
@@ -21599,10 +21878,17 @@ function setSess(e, t) {
     exp: Date.now() + (e.expires_in || 3600) * 1e3,
     uid: e.user.id,
     email: t || e.user.email,
+    projectUrl: cfg()?.url || '',
   }),
     ls.set("diario-sess", SESS));
 }
 async function tok() {
+  // v710: sessão do projeto anterior nunca pode ser enviada ao backend novo.
+  const principal=cfg()?.url||'';
+  if(SESS && (!SESS.projectUrl || SESS.projectUrl!==principal)){
+    SESS=null;ls.del("diario-sess");
+    throw new Error("Projeto Supabase atualizado: entre novamente no novo projeto para sincronizar com segurança.");
+  }
   if (!SESS) throw new Error("Entre na sua conta.");
   if (SESS.exp - Date.now() > 6e4) return;
   const e = syncOwner(),
@@ -21632,6 +21918,31 @@ async function tok() {
     );
   }
 }
+// v756: renovação única por sessão; tokens nunca são enviados ao Worker.
+const tokOriginal756 = tok;
+let tokRenovacao756 = null;
+tok = function() {
+  if (tokRenovacao756) return tokRenovacao756;
+  const tentativa = Promise.resolve().then(() => tokOriginal756());
+  tokRenovacao756 = tentativa;
+  return tentativa.finally(() => {if(tokRenovacao756===tentativa)tokRenovacao756=null});
+};
+async function edgeFetchAutenticado(url, opcoes = {}) {
+  const server = cfg(), conta = syncOwner();
+  if (!server || !conta || !SESS?.at) throw Error("Entre na sua conta para consultar os dados.");
+  const destino = new URL(String(url),server.url);
+  if (destino.origin !== new URL(server.url).origin || !destino.pathname.startsWith("/functions/v1/"))
+    throw Error("Destino de função não autorizado.");
+  await tok();
+  assertSyncOwner(conta);
+  const cabecalhos = new Headers(opcoes.headers || {});
+  cabecalhos.set("apikey", server.key);
+  cabecalhos.set("Authorization", "Bearer " + SESS.at);
+  const resultado = await fetch(destino.href,{...opcoes,headers:cabecalhos});
+  assertSyncOwner(conta);
+  return resultado;
+}
+
 async function hashAuth() {
   const e = new URLSearchParams(location.hash.slice(1)),
     t = e.get("access_token");
@@ -21721,8 +22032,9 @@ async function doAuth(e) {
     ((SY.msg = em(o)), render());
   }
 }
+// Biblioteca é local: livros e anotações não entram no JSON do diário enviado ao Supabase.
 const pub = () => {
-  const { uid: e, st: t, up: a, lastSyncAt: o, ...s } = S;
+  const { uid: e, st: t, up: a, lastSyncAt: o, books: livrosLocais, ...s } = S;
   return { ...s, days: diarioDaysCanonical() };
 };
 function syncSoon() {
@@ -21734,7 +22046,9 @@ function uiSy() {
 }
 function adopt(e) {
   const t = { uid: S.uid, up: S.up };
-  ((S = { trades: [], days: {}, rules: [], seed: 1, ...e, ...t, st: e.mt }),
+  // Migração aditiva: preserva livros deste dispositivo e recupera antigos do diário remoto uma vez.
+  const livros = new Map([...(e.books || []), ...(S.books || [])].filter(b => b && b.id).map(b => [b.id, b]));
+  ((S = { trades: [], days: {}, rules: [], seed: 1, ...e, ...t, books: [...livros.values()], st: e.mt }),
     window.DiarioDados?.reset(S.days),
     persist());
 }
@@ -21882,6 +22196,7 @@ async function up(e = null, revision = null) {
     ).json();
     assertSyncOwner(owner);
     if (result.saved) {
+      RQ_DIARIO_REVISOES.clear();
       S.st = data.mt;
       persist();
       window.TraderContinuo329?.signal("cloud");
@@ -21899,11 +22214,37 @@ async function up(e = null, revision = null) {
 async function sync(force) {
   const owner = syncOwner();
   if (!SESS || SY.busy) return;
+  // Cache de revisão apenas na sessão atual, isolado por usuário.
+  // O número de revisão é atualizado pelo RPC de gravação com controle de conflito.
+  if (window.DiarioSyncRevision?.owner !== owner) window.DiarioSyncRevision = { owner, revision: null };
+  const known = window.DiarioSyncRevision;
   SY.busy = 1;
   SY.msg = "Sincronizando…";
   uiSy();
   let failed = false;
   try {
+    // Em consulta automática com dados locais sincronizados, verifica somente a
+    // revisão (poucos bytes), em vez de baixar todo o diário JSON outra vez.
+    // Escritas locais, sincronização manual e primeiro acesso mantêm a leitura integral.
+    if (!force && S.st && S.mt <= S.st && known.revision !== null) {
+      const meta = await (
+        await rq("/rest/v1/diario?select=revision&user_id=eq." + SESS.uid, {
+          signal: AbortSignal.timeout(20000),
+        })
+      ).json();
+      assertSyncOwner(owner);
+      if (Array.isArray(meta) && meta.length === 1 && meta[0].revision != null &&
+          String(meta[0].revision) === String(known.revision)) {
+        const count = await photos();
+        assertSyncOwner(owner);
+        S.lastSyncAt = Date.now();
+        persist();
+        SY_RECOVERY.saved();
+        SY.msg = "Sincronizado às " + hm();
+        if (count && !typing()) render();
+        return;
+      }
+    }
     const rows = await (
       await rq("/rest/v1/diario?select=data,revision&user_id=eq." + SESS.uid, {
         signal: AbortSignal.timeout(20000),
@@ -21931,7 +22272,13 @@ async function sync(force) {
     S.uid = SESS.uid;
     const count = await photos();
     assertSyncOwner(owner);
-    if (upload || !S.st) await up(remote, revision);
+    if (upload || !S.st) {
+      // A gravação avança a revisão no servidor: só confiar em nova leitura.
+      known.revision = null;
+      await up(remote, revision);
+    } else {
+      known.revision = revision;
+    }
     assertSyncOwner(owner);
     S.lastSyncAt = Date.now();
     persist();
@@ -21941,9 +22288,11 @@ async function sync(force) {
   } catch (error) {
     failed = true;
     if (syncOwner() === owner) {
-      SY.msg = SY_RECOVERY.failed(error)
-        ? "Salvo neste aparelho · sincronização pendente. Nova tentativa automática."
-        : "Falha ao sincronizar: " + em(error);
+      SY.msg = error?.status === 402
+        ? "Nuvem temporariamente bloqueada pelo limite de transferência. Dados preservados neste aparelho; não apague o app."
+        : SY_RECOVERY.failed(error)
+          ? "Salvo neste aparelho · sincronização pendente. Nova tentativa automática."
+          : "Falha ao sincronizar: " + em(error);
     }
   } finally {
     SY.busy = 0;
@@ -22960,11 +23309,14 @@ const wl = () => (S.wl && S.wl.length ? S.wl : WL0),
 async function scFetch(e, t) {
   const a = cfg();
   if (!a) throw new Error("Configure o Supabase na aba Conta.");
+  // Screener exige sessão: não consumir banda enviando chamadas que retornariam 401.
+  const token = (typeof SESS !== "undefined" && SESS?.at) || "";
+  if (!token) throw new Error("Entre na sua conta para consultar o screener.");
   let o;
   try {
-    o = await fetch(a.url + "/functions/v1/screener", {
+    o = await edgeFetchAutenticado(a.url + "/functions/v1/screener", {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: a.key },
+      headers: { "Content-Type": "application/json", apikey: a.key, Authorization: "Bearer " + token },
       body: JSON.stringify({ symbols: e, detail: !!t }),
     });
   } catch {
@@ -23294,7 +23646,7 @@ function impBuild() {
       n = !t.open && s ? sum(t.cl.map((u) => u[0] * u[1])) / s : null,
       r = impKind(t),
       i = t.a.slice(0, 3),
-      l = i === "WIN" ? 0.2 : i === "WDO" ? 10 : 1;
+      l = i === "WIN" ? 0.2 : i === "WDO" ? 10 : i === "DOL" ? 50 : 1;
     let d = impStop(t, IM.orders),
       c = 0;
     if (d == null) {
@@ -23462,27 +23814,39 @@ const typing = () => {
   );
 };
 function persistNow() {
-  clearTimeout(st);
-  const e = LOCAL_SAVE.revision;
-  LOCAL_SAVE.pending = !0;
-  try {
-    if (!db) throw new Error("Armazenamento do aparelho indisponível.");
-    const t = JSON.parse(JSON.stringify(S)),
-      a = db.transaction("kv", "readwrite");
-    (a.objectStore("kv").put(t, "s"),
-      (a.oncomplete = () => {
-        (e === LOCAL_SAVE.revision &&
-          ((LOCAL_SAVE.committed = e),
-          (LOCAL_SAVE.pending = !1),
-          (LOCAL_SAVE.error = "")),
-          svUi());
-      }),
-      (a.onabort = () => localSaveFailed(a.error, e)),
-      (a.onerror = () => localSaveFailed(a.error, e)));
-  } catch (t) {
-    localSaveFailed(t, e);
-  }
-  svUi();
+  // Chamadores que confirmam recebimento remoto precisam esperar o commit local.
+  // Resolve false em falhas: os outros salvamentos automáticos não precisam capturar rejeições.
+  return new Promise((resolve) => {
+    clearTimeout(st);
+    const e = LOCAL_SAVE.revision;
+    LOCAL_SAVE.pending = !0;
+    try {
+      if (!db) throw new Error("Armazenamento do aparelho indisponível.");
+      const t = JSON.parse(JSON.stringify(S)),
+        a = db.transaction("kv", "readwrite");
+      (a.objectStore("kv").put(t, "s"),
+        (a.oncomplete = () => {
+          (e === LOCAL_SAVE.revision &&
+            ((LOCAL_SAVE.committed = e),
+            (LOCAL_SAVE.pending = !1),
+            (LOCAL_SAVE.error = "")),
+            svUi());
+          resolve(true);
+        }),
+        (a.onabort = () => {
+          localSaveFailed(a.error, e);
+          resolve(false);
+        }),
+        (a.onerror = () => {
+          localSaveFailed(a.error, e);
+          resolve(false);
+        }));
+    } catch (t) {
+      localSaveFailed(t, e);
+      resolve(false);
+    }
+    svUi();
+  });
 }
 function localSaveFailed(e, t) {
   if (t !== LOCAL_SAVE.revision) return;
@@ -24770,47 +25134,72 @@ const IC = (e) =>
   let n = {},
     r = 0;
   window.tapeDados = () => n;
-  const i = ([c, p]) => {
-    const u = (window.tapeVivo && window.tapeVivo(c)) || n[c],
-      m = +u.chg || 0,
-      f = m >= 0;
-    return `<span>${p} <span class="${f ? "up" : "dn"}">${f ? "▲" : "▼"}</span></span><span class="${f ? "up" : "dn"}">${f2(u.px)} <b>${f ? "+" : ""}${f2(m)}%</b></span>`;
+  const ativo = (key) => {
+    const live = typeof window.tapeVivo === "function" ? window.tapeVivo(key) : null;
+    const v = live || n[key];
+    return v && Number.isFinite(+v.px) && +v.px > 0 ? v : null;
+  };
+  const i = ([key, nome]) => {
+    const v = ativo(key);
+    if (!v) return "";
+    const variacao = v.chg == null || v.chg === "" ? null : Number(v.chg);
+    const m = Number.isFinite(variacao) ? variacao : null;
+    const positivo = m == null || m >= 0;
+    const classe = positivo ? "up" : "dn";
+    const seta = m == null ? "" : positivo ? "▲" : "▼";
+    const percentual = m == null ? "—" : (positivo ? "+" : "") + f2(m) + "%";
+    return `<span>${nome} <span class="${classe}">${seta}</span></span><span class="${classe}">${f2(v.px)} <b>${percentual}</b></span>`;
   };
   function l() {
-    const c = document.getElementById("tape");
-    if (!c) return;
-    const p = s.filter((x) => n[x[0]]);
-    if (p.length < 4) return;
+    if (document.hidden) return;
+    const tape = document.getElementById("tape");
+    if (!tape) return;
+    const disponiveis = s.filter(([key]) => !!ativo(key));
+    if (disponiveis.length < 4) return;
+    const itens = tape.querySelectorAll(".mq .ti");
+    if (r && disponiveis.some(([key]) => ![...itens].some((el) => el.dataset.s === key))) {
+      tape.querySelector(".mq")?.remove();
+      r = 0;
+    }
     if (r) {
-      c.querySelectorAll(".ti").forEach((x) => {
-        const v = s.find((g) => g[0] === x.dataset.s);
-        v && n[v[0]] && (x.innerHTML = i(v));
+      tape.querySelectorAll(".ti").forEach((item) => {
+        const itemConf = s.find(([key]) => key === item.dataset.s);
+        const q = itemConf && ativo(itemConf[0]);
+        if (!q) return;
+        const novoHtml = i(itemConf);
+        if (novoHtml && item.innerHTML !== novoHtml) item.innerHTML = novoHtml;
+        const fonte = q.fonte || "Última referência disponível";
+        const momento = q.dadoEm ? new Date(q.dadoEm).toLocaleTimeString("pt-BR") : "";
+        item.title = fonte + (momento ? " · " + momento : "") + (q.fechado ? " · FECHADO" : "");
       });
       return;
     }
-    const u = p
-        .map((x) => `<div class="ti" data-s="${x[0]}">${i(x)}</div>`)
-        .join(""),
-      m = document.createElement("div");
-    ((m.className = "mq"),
-      (m.innerHTML = `<div class="tr" style="--d:${Math.max(30, p.length * 4)}s">${u}${u}</div>`));
-    const f = c.querySelector(".tradingview-widget-container");
-    (f && (f.style.display = "none"), c.appendChild(m), (r = 1));
+    const conteudo = disponiveis.map((item) => `<div class="ti" data-s="${item[0]}">${i(item)}</div>`).join("");
+    const faixa = document.createElement("div");
+    faixa.className = "mq";
+    faixa.innerHTML = `<div class="tr" style="--d:${Math.max(30, disponiveis.length * 4)}s">${conteudo}${conteudo}</div>`;
+    const widget = tape.querySelector(".tradingview-widget-container");
+    if (widget) widget.style.display = "none";
+    tape.appendChild(faixa);
+    r = 1;
+    l();
   }
+  let ultimaConsulta = 0;
   async function d() {
-    if (!document.hidden)
-      try {
-        (((await scFetch(s.map((c) => c[0]))).data || []).forEach((c) => {
-          c &&
-            c.ok &&
-            c.px != null &&
-            s.some((p) => p[0] === c.s) &&
-            (n[c.s] = c);
-        }),
-          l());
-      } catch {}
+    if (document.hidden || navigator.onLine === false || Date.now() - ultimaConsulta < 15 * 6e4) return;
+    ultimaConsulta = Date.now();
+    try {
+      const resposta = await scFetch(s.map(([key]) => key));
+      (resposta.data || []).forEach((item) => {
+        if (item?.ok && Number(item.px) > 0 && s.some(([key]) => key === item.s)) n[item.s] = item;
+      });
+      l();
+    } catch {}
   }
-  ((window.tapeRedraw = l), setTimeout(d, 1200), setInterval(d, 6e4));
+  window.tapeRedraw = l;
+  setTimeout(d, 1200);
+  setInterval(d, 15 * 6e4);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { l(); d(); } });
 })(),
   (function () {
     const e = TraderStyles.slot("legacy-004");
@@ -26325,6 +26714,11 @@ function irExteriorHtml(ano, num) {
   return h;
 }
 function render0() {
+  window.DiarioCiclos?.enter(tab);
+  if (typeof SCA !== "undefined" && SCA && (tab !== "swing" || VW.S !== "sc")) {
+    clearInterval(SCA); SCA = null;
+  }
+  if (typeof mdoAutoCiclo === "function") mdoAutoCiclo();
   (fixS(), window.DiarioDados?.observe(diarioDaysCanonical()));
   const e = $("#app");
   ((e.style.animation = "none"),
@@ -26602,8 +26996,8 @@ function render() {
         ...(r.dataset.tp === "O" ? { ot: "C", estr: ESTR[0] } : {}),
         pv: 1,
         cost: 0,
-        emo: "3",
-        rules: "s",
+        emo: "",
+        rules: "",
         err: "Nenhum",
         mkt: MK[0],
       }),
@@ -26801,6 +27195,40 @@ let ANX = {
     tkA: "",
   },
   ANL = 0;
+
+
+/* v789: validação do editor manual antes do salvamento, sem alterar a ponte Profit. */
+document.addEventListener("input", (evt) => {
+  const field = evt.target.closest?.('#sh input[name="entry"],#sh input[name="stop"],#sh input[name="target"],#sh input[name="exit"],#sh input[name="target2"],#sh input[name="target3"]');
+  if (!field || !T || !/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(T.ativo || ""))) return;
+  const parsed = precoManual789(field.value, T.ativo);
+  if (parsed.ok) T[field.name] = parsed.value;
+  const msg = document.querySelector("#sh #msg");
+  if (msg) msg.textContent = parsed.ok ? "" : parsed.erro;
+  prev();
+});
+document.addEventListener("click", (evt) => {
+  if (!evt.target.closest?.('#sh [data-a="savetrade"]') || !T || !/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(T.ativo || ""))) return;
+  for (const field of ["entry", "stop", "target", "exit", "target2", "target3"]) {
+    const node = document.querySelector('#sh [name="' + field + '"]');
+    if (!node) continue;
+    const checked = precoManual789(node.value, T.ativo);
+    if (!checked.ok) {
+      evt.preventDefault();
+      evt.stopImmediatePropagation();
+      const msg = document.querySelector("#sh #msg");
+      if (msg) { msg.textContent = field.toUpperCase() + ": " + checked.erro; msg.scrollIntoView?.({ block: "center" }); }
+      return;
+    }
+    T[field] = checked.value;
+  }
+  if ((/^WIN[A-Z][0-9]{2}$/i.test(String(T.ativo || "")) && Math.abs(Number(T.pv) - .2) > 1e-9) ||
+      (/^WDO[A-Z][0-9]{2}$/i.test(String(T.ativo || "")) && Math.abs(Number(T.pv) - 10) > 1e-9)) {
+    evt.preventDefault(); evt.stopImmediatePropagation();
+    const msg = document.querySelector("#sh #msg");
+    if (msg) msg.textContent = "Valor por ponto incorreto. WIN: R$ 0,20; WDO: R$ 10,00.";
+  }
+}, true);
 const anxLoad = async () => {
     if (ANL) return;
     ANL = 1;
@@ -28342,6 +28770,11 @@ const MKT = {
     ["dolar", "Dólar"],
     ["juros", "Juros"],
     ["x", "X / Breaking"],
+    ["prioritaria", "Alto impacto"],
+    ["petroleo", "Petróleo"],
+    ["minerio", "Minério"],
+    ["acoes", "Ações"],
+    ["politica", "Política econômica"],
     ["cripto", "Cripto"],
   ],
   mkBtn = (e, t, a, o) =>
@@ -28438,7 +28871,14 @@ function mkPaint() {
   }
   a = a.slice(0, 50);
   if (!a.length) {
-    e.innerHTML = '<div class="mut sm" style="padding:12px 0">Nenhuma notícia neste filtro.</div>';
+    const falhas = MKT.nf === "x" && MKT.fontesX?.falhas?.length;
+    const mensagem = falhas && !MKT.fontesX?.ok?.length
+      ? "Os feeds do X estão temporariamente indisponíveis. Use Atualizar para tentar novamente."
+      : MKT.nf === "x" ? "Nenhuma notícia financeira recente desses perfis do X." : "Nenhuma notícia neste filtro.";
+    const last = MKT.fontesTs ? new Date(MKT.fontesTs).toLocaleTimeString("pt-BR",{timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit"}) : "";
+    e.innerHTML = '<div class="mut sm" style="padding:12px 0">' + esc(mensagem) + '</div>' +
+      (MKT.nf==="x" && last ? '<div class="sm mut" style="padding:0 12px 8px">RSS verificado às '+esc(last)+
+      ' · Perfis disponíveis: '+esc(String(MKT.fontesX?.ok?.length||0))+'</div>' : '');
     return;
   }
   e.innerHTML =
@@ -28450,7 +28890,13 @@ function mkPaint() {
         const r = (n.c || []).some((i) => mkNorm(i) === "urgente");
         return `<a class="card" href="${esc(urlSegura(n.l))}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;color:var(--tx);margin:6px 0"><div style="font-weight:600;line-height:1.35">${r ? '<span style="color:var(--r);font-size:12px;margin-right:6px">URGENTE</span>' : ""}${esc(n.t)}</div><div class="sm mut" style="margin-top:4px">${esc(mkAgo(n.d))}${n.a ? " · " + esc(n.a) : ""}</div></a>`;
       })
-      .join("");
+      .join("") +
+    (MKT.nf === "x" && MKT.fontesTs
+      ? '<div class="sm mut" style="padding:8px 0 2px">Atualizado às ' +
+        esc(new Date(MKT.fontesTs).toLocaleTimeString("pt-BR", {timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit"})) +
+        ' · Perfis X disponíveis: ' + esc(String(MKT.fontesX?.ok?.length || 0)) +
+        (MKT.fontesX?.falhas?.length ? ' · Indisponíveis: ' + esc(MKT.fontesX.falhas.join(", ")) : '') + '</div>'
+      : "");
 }
 
 /* Notícias do dia: coleta isolada para Mercado e mini-feeds do Terminal.
@@ -28465,7 +28911,6 @@ const MK_FONTES_RSS = [
   // A Reuters não oferece RSS público estável: consulta Google Notícias restrita ao domínio.
   ["Reuters", "https://news.google.com/rss/search?q=when%3A24h%20site%3Areuters.com&hl=en-US&gl=US&ceid=US:en"],
 ];
-const MK_CONTAS_X = ["FirstSquawk", "DeItaone", "LiveSquawk", "WatcherGuru", "zerohedge"];
 const MK_STOPWORDS = new Set("a o as os um uma uns umas de da do das dos na no nas nos em por para com e ou que ao aos sua seu suas seus the a an and or to from in on for of with by at this that is are market markets news said says after before sobre entre como mais less than amid amid".split(" "));
 /* Curadoria estritamente da lista de noticias: sem alterar cards nem filtros existentes. */
 const MK_TEMA_MERCADO = /\b(?:econom\w*|mercad\w*|market\w*|finance\w*|financ\w*|inflac\w*|inflation|cpi|pce|payroll|empreg\w*|unemployment|jobs|gdp|pib|growth|crescimento|recession|recessao|banco\w*|bank\w*|central|federal|fed|fomc|copom|selic|ecb|bce|boj|boe|interest|juros|rates?|yield\w*|bond\w*|treasur\w*|titulos|debt|divida|fiscal|deficit|budget|orcamento|trade|comercio|tarif\w*|tariff\w*|sanction\w*|sanc\w*|export\w*|import\w*|currency|currencies|forex|cambio|dolar|dollar|euro|yen|yuan|real|brl|usd|dxy|fx|stocks?|shares?|equities|acoes|acao|bolsa|exchang\w*|indice\w*|index|indexes|indices|ibov\w*|ibovespa|b3|nasdaq|dow|s&p|sp500|futures?|futur\w*|opcoes|options?|ipo|earnings?|balanco\w*|results?|resultado\w*|lucro\w*|profit\w*|receita\w*|revenue|dividend\w*|empresa\w*|company|companies|corporat\w*|merger\w*|acquisit\w*|acquisic\w*|fusao|fusoes|oil|petroleo|brent|wti|opec|gas|natural|gold|ouro|silver|prata|copper|cobre|iron|minerio|commodit\w*|soy|soja|corn|milho|wheat|trigo|bitcoin|btc|ethereum|eth|cripto\w*|crypto\w*|stablecoin\w*|blockchain|token\w*|etf|sec|cv[mn]|stockholder\w*|shareholder\w*|invest\w*|trader\w*|wall\s+street|petrobras|vale|nvidia|apple|tesla|microsoft|amazon|alphabet|google|meta|netflix|openai|ai\s+chip\w*|semiconductor\w*|chipmaker\w*|tesouro|capital|fund\w*|credit\w*|credito|liquidez|liquidity|volatil\w*|vix)\b/i;
@@ -28509,9 +28954,20 @@ function mkDedup(itens) {
     });
     if (duplicate) continue;
     seenUrls.add(key); tokenSets.push(distinct); accepted.push(n);
-    if (accepted.length === 50) break;
+    if (accepted.length === 100) break;
   }
   return accepted;
+}
+function mkTemaPrioritario(t) {
+  const n = mkNorm(t);
+  const topicos = [];
+  if (/\b(?:petroleo|brent|wti|opep|opec|crude|oil|refinaria|refinery|petrobras|petr[34]|combustiveis|gasolina|diesel)\b/.test(n)) topicos.push("petroleo");
+  if (/\b(?:minerio|iron ore|iron-ore|vale3|mineradora vale|siderurg|steel|mineracao|mining|cm[in]\d)\b/.test(n)) topicos.push("minerio");
+  if (/\b(?:acoes|acao|stocks|shares|equities|bolsa|ibovespa|ibov|b3|nasdaq|dow|s&p|earnings|balanco|resultados|lucro|dividend|ipo|petrobras|vale3)\b/.test(n)) topicos.push("acoes");
+  if (/\b(?:governo|congresso|camara|senado|planalto|presidente|ministerio|eleicoes|election|congress|senate|white house|trump|tarifa|tariffs|sancoes|sanctions|guerra|war|politica fiscal|budget|impostos|tax)\b/.test(n) &&
+      /\b(?:fiscal|orcamento|budget|tarif|tax|impost|comercio|trade|export|import|sanc|guerra|war|econom|mercad|market|petroleo|oil|mineri|iron|bolsa|stocks|acoes|juros|rates|dolar|dollar|energia|energy|empresa|company|banco central|fed)\b/.test(n)) topicos.push("politica");
+  const forte = /\b(?:breaking|urgent|urgente|plantao|alerta|ataque|attack|guerra|war|sancoes|sanctions|embargo|interrompe|shutdown|suspende|suspension|bloqueia|blocks|corta|cuts|aprova|approves|rejeita|rejects|decisao|decisao|decide|decides|anuncia|announces|dispara|surges|tomba|plunges|despenca|collapses|recorde|record|lucro|earnings|dolar|dollar|tarifa|tariffs|greve|strike|opep|opec)\b/.test(n) || /\b\d+(?:[,.]\d+)?\s*%/.test(n);
+  return {topicos,prioritaria:topicos.length>0&&forte};
 }
 function mkNoticia(dado) {
   const t = mkLimpaTitulo(dado.t), ms = Date.parse(dado.d || "");
@@ -28519,6 +28975,9 @@ function mkNoticia(dado) {
   let url;
   try { url = new URL(String(dado.l)); if (!["https:","http:"].includes(url.protocol)) return null; } catch { return null; }
   const assunto = mkNorm(t), cats = new Set((Array.isArray(dado.c) ? dado.c : []).map(x => mkNorm(x)));
+  const foco = mkTemaPrioritario(t);
+  foco.topicos.forEach(x=>cats.add(x));
+  if (foco.prioritaria) cats.add("prioritaria");
   if (/cripto|crypto|bitcoin|\bbtc\b|ethereum|\beth\b|blockchain|stablecoin/.test(assunto)) cats.add("cripto");
   if (/dolar|dollar|\busd\b|\bbrl\b|cambio|forex|moeda/.test(assunto)) cats.add("dolar");
   if (/ibovespa|\bibov\b|\bb3\b|bolsa brasileira|petrobras|vale\b/.test(assunto)) cats.add("ibovespa");
@@ -28561,14 +29020,25 @@ async function mkRss(url, fonte, perfil) {
   // Proxies públicos independentes, em paralelo: não esperar um timeout para iniciar o fallback.
   return Promise.any([mkRssProxy(url,fonte,perfil,false),mkRssProxy(url,fonte,perfil,true)]);
 }
-async function mkRssX(perfil) {
-  const feeds=[
-    "https://rsshub.app/twitter/user/"+perfil,
-    "https://nitter.mie.foundation/"+perfil+"/rss",
-    "https://nitter.mizuki.st/"+perfil+"/rss",
-  ];
-  try {return await Promise.any(feeds.map(u=>mkRssProxy(u,"X · @"+perfil,perfil,false)));}
-  catch {return Promise.any(feeds.map(u=>mkRssProxy(u,"X · @"+perfil,perfil,true)));}
+/* Cloudflare v735: snapshot público compartilhado, sem Supabase ou segredos no navegador.
+   O feed é opcional: erro HTTP/CORS, cache velho ou payload inválido aciona a reserva. */
+async function mkCloudflareNoticias() {
+  const resposta=await fetch("https://diario-trader.lucianosilva43567.workers.dev/v1/noticias",{
+    signal:AbortSignal.timeout(6500),cache:"default"
+  });
+  if(!resposta.ok)throw new Error("Cloudflare notícias "+resposta.status);
+  const obj=await resposta.json();
+  const atualizado=Date.parse(obj?.atualizadoEm||"");
+  if(!Array.isArray(obj?.itens)||obj?.desatualizado===true||
+     !Number.isFinite(atualizado)||atualizado>Date.now()+300000||
+     Date.now()-atualizado>15*60000||!Array.isArray(obj.fontesOk)||!obj.fontesOk.length)
+    throw new Error("Cloudflare: notícias indisponíveis ou desatualizadas");
+  const itens=obj.itens.slice(0,50).map(n=>mkNoticia({
+    t:n.t,l:n.l,d:n.d,a:n.fonte||"Fonte não indicada",
+    c:n.tema==="politica_economica"?["politica"]:[n.tema]
+  })).filter(Boolean);
+  if(!itens.length)throw new Error("Cloudflare: nenhum título financeiro válido");
+  return itens;
 }
 async function mkFinnhubNoticias(category) {
   const key = String((typeof fhChave==="function" ? await fhChave().catch(()=>"") : "")
@@ -28599,6 +29069,10 @@ async function mkEdgeNoticias(acao) {
   if(!resposta.ok)throw new Error("Fonte "+acao+" "+resposta.status);
   const obj=await resposta.json();
   if(!Array.isArray(obj.itens))throw new Error("Resposta inválida "+acao);
+  if(acao!=="terminal") {
+    MKT.fontesX = obj.fontesX || null;
+    MKT.fontesTs = obj.atualizadoEm || obj.gerado || null;
+  }
   return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.a||"Money Times",c:n.tags||n.c||[]})).filter(Boolean);
 }
 
@@ -28663,7 +29137,7 @@ async function mkTraduzLote(itens) {
 }
 
 async function mkLoad(force) {
-  if (MKT.busy || (!force && MKT.items && Date.now()-MKT.ts<18e4)) return;
+  if (MKT.busy || (!force && MKT.items && Date.now()-MKT.ts<12e4)) return;
   // Respeita o bloqueio original de notícias sem sessão; modo demo não consulta proxies externos.
   if (window.DIARIO_DEMO || !cfg() || !SESS?.at) {
     if (!MKT.items) {
@@ -28674,14 +29148,38 @@ async function mkLoad(force) {
   }
   MKT.busy=1;MKT.err="";mkPaint();
   try {
+    // Cloudflare agrega RSS públicos; Finnhub complementa diretamente no navegador.
     const tarefas=[
-      mkEdgeNoticias("noticias"),mkEdgeNoticias("terminal"),
-      mkFinnhubNoticias("forex"),mkFinnhubNoticias("crypto"),
-      ...MK_FONTES_RSS.map(([nome,url])=>mkRss(url,nome)),
-      ...MK_CONTAS_X.map(perfil=>mkRssX(perfil)),
+      mkCloudflareNoticias(),
+      mkFinnhubNoticias("general"),mkFinnhubNoticias("forex"),mkFinnhubNoticias("crypto")
     ];
     const respostas=await Promise.allSettled(tarefas);
-    const resultados=respostas.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
+    const cloudOk=respostas[0].status==="fulfilled"&&respostas[0].value.length>0;
+    let totalFontes=respostas.length, fontesOk=respostas.filter(r=>r.status==="fulfilled").length;
+    let resultados=respostas.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
+    // Apenas se o Cloudflare falhar, houver poucas manchetes ou o usuário abrir X.
+    if(!cloudOk||MKT.nf==="x"||resultados.length<12) {
+      const reserva=await Promise.allSettled([mkEdgeNoticias("noticias")]);
+      totalFontes+=reserva.length;
+      fontesOk+=reserva.filter(r=>r.status==="fulfilled").length;
+      resultados=resultados.concat(reserva.filter(r=>r.status==="fulfilled").flatMap(r=>r.value));
+    }
+    // A função terminal é a segunda reserva, não uma consulta permanente.
+    if(!cloudOk&&resultados.length<12) {
+      const reserva=await Promise.allSettled([mkEdgeNoticias("terminal")]);
+      totalFontes+=reserva.length;
+      fontesOk+=reserva.filter(r=>r.status==="fulfilled").length;
+      resultados=resultados.concat(reserva.filter(r=>r.status==="fulfilled").flatMap(r=>r.value));
+    }
+    if(resultados.length<12) {
+      // Último recurso: somente dois feeds com proxies, nunca varredura geral.
+      const reserva=await Promise.allSettled(MK_FONTES_RSS.slice(0,2).map(([nome,url])=>mkRss(url,nome)));
+      totalFontes+=reserva.length;
+      fontesOk+=reserva.filter(r=>r.status==="fulfilled").length;
+      resultados=resultados.concat(reserva.filter(r=>r.status==="fulfilled").flatMap(r=>r.value));
+    }
+    MKT.totalFontes=totalFontes;
+    MKT.fontesOkTotal=fontesOk;
     const reunidas=mkDedup(resultados);
     if(reunidas.length)MKT.items=await mkTraduzLote(reunidas);
     else MKT.err="Não consegui consultar as fontes agora.";
@@ -28699,7 +29197,7 @@ async function mkLoad(force) {
 setInterval(() => {
   if (document.hidden || MKT.busy) return;
   if (tab==="term" || (tab==="mercado"&&MKT.tab==="cq"&&typeof m623Ativo==="function"&&m623Ativo())) mkLoad(false);
-},18e4);
+},12e4);
 function mkAfter() {
   if ((MKT.tm && (clearInterval(MKT.tm), (MKT.tm = null)), MKT.tab === "cot")) {
     cotAfter();
@@ -28719,7 +29217,7 @@ function mkAfter() {
       tab === "mercado" && MKT.tab === "nt" && !document.hidden
         ? mkLoad(!0)
         : tab !== "mercado" && (clearInterval(MKT.tm), (MKT.tm = null));
-    }, 18e4)));
+    }, 12e4)));
 }
 (function () {
   const e = render0;
@@ -28738,7 +29236,7 @@ function mkAfter() {
           : o === "im"
             ? ((MKT.im = s), ls.set("diario-mkt-im", s), render())
             : o === "nf"
-              ? ((MKT.nf = s), render())
+              ? ((MKT.nf = s), render(), s === "x" && mkLoad(true))
               : o === "rf" && mkLoad(!0);
     }));
 })();
@@ -29103,7 +29601,7 @@ const NP = Object.assign(
   ls.get("diario-np") || {},
 );
 ((NP.on = Object.assign(
-  { m: !0, n: !0, ev: !0, ab: !0, tr: !0, trv: !0 },
+  { m: !0, n: !0, ev: !0, urg: !0, ab: !0, tr: !0, trv: !0 },
   NP.on || {},
 )),
   Array.isArray(NP.mk) || (NP.mk = ["b3", "ny", "tk"]));
@@ -29204,18 +29702,22 @@ async function alEnable() {
       throw new Error(
         "Permissão negada. Libere as notificações nas configurações do navegador ou do app instalado.",
       );
-    const e = await navigator.serviceWorker.ready,
-      t = (await alFn("chave")).chave;
-    let a = await e.pushManager.getSubscription();
-    (a ||
-      (a = await e.pushManager.subscribe({
-        userVisibleOnly: !0,
-        applicationServerKey: u8(t),
-      })),
-      await alFn("inscrever", { sub: a.toJSON(), prefs: npComTurno() }),
-      (AL.sub = a),
-      (AL.ok = "on"),
-      (AL.msg = "Notificações ativadas neste aparelho."));
+    const registro = await navigator.serviceWorker.ready;
+    const chave = (await alFn("chave")).chave;
+    let assinatura = await registro.pushManager.getSubscription();
+    // Reativação renova o endpoint, inclusive quando a chave VAPID mudou.
+    if (assinatura) {
+      try { await alFn("cancelar", { endpoint: assinatura.endpoint }); } catch {}
+      if (!await assinatura.unsubscribe()) throw new Error("Não foi possível renovar a inscrição. Desative e tente novamente.");
+    }
+    assinatura = await registro.pushManager.subscribe({
+      userVisibleOnly: !0,
+      applicationServerKey: u8(chave),
+    });
+    await alFn("inscrever", { sub: assinatura.toJSON(), prefs: npComTurno() });
+    AL.sub = assinatura;
+    AL.ok = "on";
+    AL.msg = "Inscrição push renovada neste aparelho. Use Enviar teste para confirmar o recebimento.";
   } catch (e) {
     AL.msg = e.message || String(e);
   }
@@ -29241,18 +29743,18 @@ async function alTest() {
   try {
     if (!AL.sub)
       throw Error(
-        "Este PC não está inscrito. Clique em Ativar notificações antes de testar.",
+        "Este aparelho não está inscrito. Ative ou reative as notificações antes de testar.",
       );
     (await alFn("teste", { endpoint: AL.sub.endpoint }),
       (AL.msg =
-        "Servidor aceitou o teste push. Isso ainda não confirma exibição no Windows; se não apareceu, faça o teste local e verifique permissões."));
+        "O servidor aceitou o push. Confirme se o aviso apareceu no aparelho; caso contrário, faça o teste local e verifique as permissões."));
   } catch (e) {
     AL.msg = e.message || String(e);
   }
   ((AL.busy = 0), alPaint());
 }
 async function alLocalTest() {
-  ((AL.busy = 1), (AL.msg = "Testando exibição local do Windows…"), alPaint());
+  ((AL.busy = 1), (AL.msg = "Testando notificação local neste aparelho…"), alPaint());
   try {
     if (!alSup()) throw Error("Este navegador não suporta notificações push.");
     if (Notification.permission !== "granted")
@@ -29271,21 +29773,48 @@ async function alLocalTest() {
           ),
         ),
       ])
-    ).showNotification("🖥️ Teste local · Diário Trader", {
-      body: "Se esta notificação apareceu, o Windows permite exibição local. O push remoto ainda precisa ser testado.",
+    ).showNotification("🔔 Teste local · Diário Trader", {
+      body: "Se esta notificação apareceu, o aparelho permite avisos locais. O push remoto ainda precisa ser testado.",
       tag: "diario-teste-local-346",
       icon: "icon-192.png",
     }),
       (AL.msg =
-        "Teste local solicitado ao Windows. Se não aparecer, verifique Sistema → Notificações, o aplicativo/navegador e Não incomodar. Este teste não valida o servidor."));
+        "Teste local solicitado. Se não aparecer, confira as permissões de notificações do aparelho, o app instalado e Não Perturbe. Este teste não valida o servidor."));
   } catch (e) {
     AL.msg = "Falha no teste local: " + (e.message || String(e));
   }
   ((AL.busy = 0), alPaint());
 }
+/* Diagnóstico local do Push processado pelo Service Worker, sem rede ou dados pessoais. */
+function alPushLocalUltimos() {
+  return new Promise(resolve => {
+    if (typeof indexedDB === "undefined") return resolve(null);
+    try {
+      const req = indexedDB.open("diario-push-diagnostico-v1", 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains("eventos"))
+          req.result.createObjectStore("eventos");
+      };
+      req.onerror = () => resolve(null);
+      req.onsuccess = () => {
+        const db = req.result, dados = {};
+        try {
+          const tx = db.transaction("eventos", "readonly");
+          for (const tipo of ["ultimo", "clique"]) {
+            const leitura = tx.objectStore("eventos").get(tipo);
+            leitura.onsuccess = () => { dados[tipo] = leitura.result || null; };
+          }
+          tx.oncomplete = () => { db.close(); resolve(dados); };
+          tx.onerror = () => { db.close(); resolve(null); };
+          tx.onabort = () => { db.close(); resolve(null); };
+        } catch (_) { db.close(); resolve(null); }
+      };
+    } catch (_) { resolve(null); }
+  });
+}
 async function alDiag() {
   ((AL.busy = 1),
-    (AL.msg = "Verificando conexão e inscrição deste PC…"),
+    (AL.msg = "Verificando conexão e inscrição deste aparelho…"),
     alPaint());
   try {
     const e = alSup(),
@@ -29310,19 +29839,48 @@ async function alDiag() {
       "Service Worker: " + o,
       "Inscrição push: " + (a ? "presente" : "ausente"),
     ];
+    const historicoLocal = await alPushLocalUltimos();
+    const formatoLocal = (data) => new Date(data).toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit",
+      hour: "2-digit", minute: "2-digit"
+    });
+    if (historicoLocal?.ultimo?.quando)
+      s.push("Push processado no aparelho: " + formatoLocal(historicoLocal.ultimo.quando));
+    else s.push("Push processado no aparelho: ainda não confirmado");
+    if (historicoLocal?.clique?.quando)
+      s.push("Último aviso aberto: " + formatoLocal(historicoLocal.clique.quando));
     if (!SESS?.at) s.push("Conta: é preciso entrar em Mais → Conta");
     else {
-      const n = await alFn("diag");
+      const n = await alFn("diag", { endpoint: a?.endpoint || "" });
       s.push(
         "Servidor push: " + String(n.push || "sem resposta"),
         "Banco: " + String(n.banco || "sem resposta"),
-        "Chaves públicas configuradas: " +
-          (n.vapidPublicTamanho > 0 ? "sim" : "não"),
+        "Inscrição deste aparelho no servidor: " + (n.aparelhoRegistrado ? "confirmada" : "não encontrada; toque em Reativar"),
+        "Chaves Web Push no servidor: " +
+          (n.vapidPublicTamanho > 0 && n.vapidPrivateTamanho > 0 ? "ok" : "ausentes"),
+        "Agendamento automático: " + (n.agendamentoVault || n.cronSecret ? "credencial configurada" : "não configurado"),
       );
+      if (n.monitorNoticias) {
+        const monitor = n.monitorNoticias;
+        const hora = monitor.consultado_em
+          ? new Date(monitor.consultado_em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})
+          : "sem execução";
+        s.push("Notícias urgentes: " + (monitor.estado || "desconhecido") +
+          " · último ciclo: " + hora + " · fontes ativas: " + (monitor.fontes_ok || 0));
+        if (monitor.fontes_falhas?.length)
+          s.push("Fontes indisponíveis: " + monitor.fontes_falhas.slice(0, 4).join(", "));
+      } else s.push("Monitor de notícias: sem diagnóstico ainda");
+      if (n.ultimoEnvio) {
+        const ultimo = n.ultimoEnvio;
+        s.push("Último envio ao seu aparelho: " + (ultimo.status || "desconhecido") + " · " +
+          new Date(ultimo.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}));
+      } else s.push("Nenhum envio Push registrado para este aparelho");
+      if (a && n.aparelhoRegistrado && !historicoLocal?.ultimo?.quando)
+        s.push("O provedor pode ter aceitado o aviso sem que o Service Worker o tenha processado: verifique Foco e permissões do iPhone");
     }
-    AL.msg =
-      s.join(" · ") +
-      ". Se não aparecer no Windows: Configurações → Sistema → Notificações → permitir navegador/aplicativo e desativar Não incomodar.";
+    AL.msg = s.join(" · ") + (/Windows/i.test(navigator.userAgent || "")
+      ? ". No Windows, confirme Sistema → Notificações e Não incomodar."
+      : ". No iPhone, use o app adicionado à Tela de Início, permita notificações e confira o modo Foco.");
   } catch (e) {
     AL.msg = "Diagnóstico: " + (e.message || String(e));
   }
@@ -29406,14 +29964,14 @@ function alHtml() {
             '<div class="warn">As notificações estão bloqueadas para este app. Libere nas configurações do navegador ou do app instalado e volte aqui.</div>')
         : AL.ok === "off"
           ? (t = `<div class="sm" style="margin-bottom:8px">Receba lembretes dos checklists e um aviso antes das notícias importantes, mesmo com o app fechado.</div>${e("on", "🔔 Ativar notificações")}`)
-          : (t = `<div class="sm g" style="margin-bottom:8px">✅ Ativas neste aparelho</div><div style="display:flex;gap:6px;flex-wrap:wrap">${e("test", "Enviar teste", 1)}${e("off", "Desativar", 1)}</div>`);
+          : (t = `<div class="sm g" style="margin-bottom:8px">✅ Inscrição push neste aparelho</div><div style="display:flex;gap:6px;flex-wrap:wrap">${e("test", "Enviar teste", 1)}${e("on", "Reativar", 1)}${e("off", "Desativar", 1)}</div>`);
   const a = (o, s) =>
     `<label class="ck"><input type="checkbox" data-al="on.${o}"${NP.on[o] ? " checked" : ""}><span>${s}</span></label>`;
-  return `${t}<div style="margin:10px 0">${e("diag", "🔎 Diagnosticar notificações do PC", 1)} ${e("local", "🖥️ Testar aviso local do Windows", 1)}</div>${AL.msg ? `<div class="sm" style="margin-top:8px">${esc(AL.msg)}</div>` : ""}
+  return `${t}<div style="margin:10px 0">${e("diag", "🔎 Diagnosticar notificações", 1)} ${e("local", "🔔 Testar aviso local", 1)}</div>${AL.msg ? `<div class="sm" style="margin-top:8px">${esc(AL.msg)}</div>` : ""}
 <h3 style="margin-top:14px">Quando avisar</h3>
 ${a("m", "☀️ Checklist da manhã")}<label>Horário<input type="time" data-al="m" value="${esc(NP.m)}"></label>
 ${a("n", "🌐 Checklist da abertura americana")}<label>Horário<input type="time" data-al="n" value="${esc(NP.n)}"></label>
-${a("ev", "⏰ Notícias importantes")}
+${a("ev", "⏰ Notícias importantes")}${a("urg", "⚡ Notícias urgentes · Breaking News")}<div class="sm mut" style="margin:2px 0 8px">Avisos do mercado a cada 5 minutos no pregão e 15 minutos fora dele. Limite de 12 notícias por dia e sem repetição.</div>
 <div class="g2"><label>Avisar antes<select data-al="lead">${opt(
     [
       [3, "3 min"],
@@ -29935,6 +30493,7 @@ const RS_MAX = 50 * 1024 * 1024,
     Date.now() - new Date(e.atualizado || e.criado) >
       (e.erro && /sozinho/.test(e.erro) ? 35 : 6) * 6e4;
 async function rsFn(e, t) {
+  if (t?.id && String(t.id).startsWith('local-') && window.ResumosLocais) return window.ResumosLocais.handleFn(e,t);
   const a = cfg();
   if (!a) throw new Error("Configure o Supabase na aba Conta.");
   if (!SESS || !SESS.at)
@@ -29979,12 +30538,12 @@ function rsRefresh() {
 }
 var rsLoad;
 function rsPoll() {
-  const e = Object.values(RS.jobs).some(rsPend);
+  const e = Object.values(RS.jobs).some(j => rsPend(j) && !j.local);
   (e &&
     !RS.poll &&
     (RS.poll = setInterval(() => {
-      document.hidden || rsLoad(!0);
-    }, 6e3)),
+      if (!document.hidden && navigator.onLine && rsTela()) rsLoad(!0);
+    }, 45e3)),
     !e && RS.poll && (clearInterval(RS.poll), (RS.poll = null)),
     e &&
       !RS.clock &&
@@ -30007,47 +30566,9 @@ const rsPdfErro = (e) =>
           : ""
       : "Envie um arquivo PDF."
     : "";
-function rsUpload(e, t, a) {
-  return new Promise((o, s) => {
-    const n = cfg();
-    if (!n) return s(new Error("Configure o Supabase na aba Conta."));
-    tok()
-      .then(() => {
-        const r = SESS.uid + "/" + t.id + "-" + Date.now() + ".pdf",
-          i = new XMLHttpRequest();
-        (i.open("POST", n.url + "/storage/v1/object/livros/" + r),
-          i.setRequestHeader("apikey", n.key),
-          i.setRequestHeader("Authorization", "Bearer " + SESS.at),
-          i.setRequestHeader("Content-Type", "application/pdf"),
-          i.setRequestHeader("x-upsert", "false"),
-          (i.timeout = 10 * 6e4),
-          (i.upload.onprogress = (l) => {
-            l.lengthComputable &&
-              a &&
-              a(Math.round((l.loaded / l.total) * 100));
-          }),
-          (i.onload = () => {
-            if (i.status >= 200 && i.status < 300) return o(r);
-            let l = "";
-            try {
-              l = JSON.parse(i.responseText).message || "";
-            } catch {}
-            s(
-              new Error(
-                i.status === 413
-                  ? "O PDF passa do limite de envio do servidor (50 MB)."
-                  : l || "Não consegui enviar o PDF (erro " + i.status + ").",
-              ),
-            );
-          }),
-          (i.onerror = () =>
-            s(new Error("Falha de rede no envio do PDF. Tente de novo."))),
-          (i.ontimeout = () => s(new Error("O envio do PDF demorou demais."))),
-          i.send(e));
-      })
-      .catch(s);
-  });
-}
+// PDF local é guardado pelo módulo ResumosLocais; upload para Storage removido.
+async function rsUpload(){ throw new Error('O armazenamento de PDFs é exclusivamente local.'); }
+
 function rsUpUi(e, t) {
   (document.querySelectorAll('[data-rs-up="' + e + '"]').forEach((a) => {
     a.textContent = t + "%";
@@ -30378,6 +30899,7 @@ function mdHtml(e) {
 }
 async function rsFull(e, t) {
   const a = RS.jobs[e.id];
+  if(a?.local)return window.ResumosLocais?.carregar(e.id) || null;
   if (!a) return null;
   const o = RS.full[e.id];
   if (o && o.id === a.id && !t && o.at > Date.parse(a.atualizado || 0) - 1)
@@ -30433,7 +30955,8 @@ const rsPartes = (e) =>
             (s = 1),
           (a[n.book_id] = l));
       }
-      (Object.keys(RS.jobs).some((n) => !a[n]) && (s = 1),
+      (Object.keys(RS.jobs).some((n) => !a[n] && !RS.jobs[n]?.local) && (s = 1),
+        Object.entries(RS.jobs).forEach(([id,j]) => {if(j?.local&&j.owner===SESS?.uid)a[id]=j;}),
         (RS.jobs = a),
         ls.set("diario-rs", a),
         (RS.err = ""),
@@ -30465,6 +30988,12 @@ const rsPartes = (e) =>
       (RSNEXT = null),
       (RS.err = ""));
     try {
+      if(a){
+        const problema=rsPdfErro(a);if(problema)throw new Error(problema);
+        if(!window.ResumosLocais)throw new Error('O gerador local de resumos não carregou. Atualize a página.');
+        await window.ResumosLocais.gerar(e,t,a,o);
+        return;
+      }
       if (o.modo === "completo" && !a)
         throw new Error(
           "O resumo completo (50+ páginas) é feito a partir do PDF: anexe o arquivo do livro.",
@@ -30475,19 +31004,7 @@ const rsPartes = (e) =>
           d = await l.pushManager.getSubscription();
         s = d && d.endpoint;
       } catch {}
-      let n;
-      if (a) {
-        const l = rsPdfErro(a);
-        if (l) throw new Error(l);
-        ((RS.up[e.id] = { p: 0 }), rsRefresh());
-        try {
-          n = await rsUpload(a, e, (d) => {
-            ((RS.up[e.id].p = d), rsUpUi(e.id, d));
-          });
-        } finally {
-          delete RS.up[e.id];
-        }
-      }
+      const n = null; // arquivo local nunca entra na fila/Storage
       const r = await rsFn("criar", {
           book_id: e.id,
           titulo: e.t,
@@ -30530,16 +31047,16 @@ function rsForm(e) {
   const t = rspPref("modo", "padrao"),
     a = rspPref("pag", 100),
     o = rspPref("def", "");
-  return `<div class="sm mut" style="margin:6px 0 8px">Escolha o tipo de resumo. Tudo roda em segundo plano: pode sair da tela.</div>
+  return `<div class="sm mut" style="margin:6px 0 8px">Escolha o tipo de resumo. Com PDF, mantenha o aplicativo aberto até finalizar; sem PDF, a fila continua em segundo plano.</div>
 <div class="seg" style="margin-bottom:8px"><button class="${t === "padrao" ? "on" : ""}" data-ep="modo" data-id="padrao">📄 Padrão</button><button class="${t === "completo" ? "on" : ""}" data-ep="modo" data-id="completo">📚 Completo</button></div>
-${t === "completo" ? `<div class="card" style="margin:0 0 8px;background:var(--bg)"><div class="sm"><b>Resumo completo, capítulo a capítulo</b>, com no mínimo:</div><div class="seg" style="margin:6px 0">${RS_PAGS.map((s) => `<button class="${+a === s ? "on" : ""}" data-ep="pag" data-id="${s}">${s} pág.</button>`).join("")}</div><div class="sm mut">Feito a partir do <b>PDF</b> (obrigatório). O Gemini lê o sumário, faz o resumo geral e escreve cada capítulo em profundidade, com páginas citadas, pontos-chave e aplicação no trading. Leva de 15 a 40 min e usa várias chamadas ao Gemini (custa mais que o padrão). Página = A4, fonte 12, ~${RS_PPAG} palavras.</div></div>` : '<div class="sm mut" style="margin-bottom:8px">Resumo estruturado (tese, ideias, conceitos, aplicação no trading, perguntas). 30 s a 2 min. Com PDF usa o texto real do livro; sem PDF usa o que o Gemini conhece do livro.</div>'}
+${t === "completo" ? `<div class="card" style="margin:0 0 8px;background:var(--bg)"><div class="sm"><b>Resumo completo, capítulo a capítulo</b>, com meta de páginas:</div><div class="seg" style="margin:6px 0">${RS_PAGS.map((s) => `<button class="${+a === s ? "on" : ""}" data-ep="pag" data-id="${s}">${s} pág.</button>`).join("")}</div><div class="sm mut">Feito a partir do <b>PDF</b> (obrigatório). O Gemini lê o sumário, faz o resumo geral e escreve cada capítulo em profundidade, com páginas citadas, pontos-chave e aplicação no trading. É gerado em partes locais; mantenha a aba aberta. O total de páginas é uma meta, não uma garantia, e depende do texto disponível. O PDF não é enviado ao Supabase Storage.</div></div>` : '<div class="sm mut" style="margin-bottom:8px">Resumo estruturado (tese, ideias, conceitos, aplicação no trading, perguntas). 30 s a 2 min. Com PDF usa o texto real do livro; sem PDF usa o que o Gemini conhece do livro.</div>'}
 <label>🧩 Prompt (opcional)<select id="rspsel">${rspOpts(o)}</select></label>
 <textarea id="rsptx" rows="3" placeholder="Escreva aqui o que você quer além do padrão (ex.: foque em gestão de risco e traga exemplos com mini índice)" style="width:100%;margin-top:4px">${esc(rspTexto(o))}</textarea>
 <div class="sm mut" style="margin-bottom:6px">Seus prompts ficam em Estudos → 🧩 Meus prompts. As regras de fidelidade ao livro continuam valendo.</div>
 <label>Foco (opcional)<input id="rsfoco" placeholder="ex.: gestão de risco e psicologia"></label>
 <label>📎 PDF do livro ${t === "completo" ? "<b>(obrigatório)</b>" : "(opcional)"}, até 50 MB<input type="file" id="rspdf2" accept="application/pdf,.pdf"></label>
-<div class="sm mut">O arquivo vai para o Gemini (Google) e é apagado do seu armazenamento e do Gemini assim que o resumo fica pronto.</div>
-<button class="btn" style="margin-top:8px;width:100%" data-ep="gen" data-id="${e.id}">✨ Gerar ${t === "completo" ? "resumo completo (mín. " + a + " páginas)" : "resumo"}</button>`;
+<div class="sm mut">O PDF permanece no IndexedDB deste aparelho. Somente trechos de texto são enviados à IA. Faça backup JSON antes de limpar os dados do navegador.</div>
+<button class="btn" style="margin-top:8px;width:100%" data-ep="gen" data-id="${e.id}">✨ Gerar ${t === "completo" ? "resumo completo (meta " + a + " páginas)" : "resumo"}</button>`;
 }
 function rsAndamento(e, t) {
   const a = t.progresso || {},
@@ -30564,7 +31081,7 @@ function rsAndamento(e, t) {
 <div class="sm mut" style="margin-top:6px">${a.palavras ? a.palavras.toLocaleString("pt-BR") + " palavras · " + rsPagTxt(a.paginas) + " de " + o : "Meta: " + o + " páginas"}${l ? " · faltam ~" + l + " min" : ""}</div>
 ${t.erro ? `<div class="sm" style="margin-top:4px;color:#a57d34">Tentando de novo: ${esc(t.erro)}</div>` : ""}
 ${a.prontas ? `<button class="btn s" style="margin-top:8px" data-ep="ler" data-id="${e.id}">📖 Ler o que já está pronto (${a.prontas} parte${a.prontas > 1 ? "s" : ""})</button>` : ""}
-<div class="sm mut" style="margin-top:6px">Pode fechar o app. ${rsPushHint()}</div>`;
+<div class="sm mut" style="margin-top:6px">${t.local ? 'Geração local em andamento: mantenha a aba aberta.':'Pode fechar o app. '+rsPushHint()}</div>`;
 }
 function rsCompletoCard(e, t) {
   const a = t.resultado || {},
@@ -32055,6 +32572,38 @@ function numN(e) {
 function isOpen(e) {
   return numN(e.exit) == null;
 }
+
+/* v789: normalização EXCLUSIVA da entrada manual, sem migrar registros passados. */
+function precoManual789(raw, ativo) {
+  if (raw == null || String(raw).trim() === "") return { ok: true, value: "" };
+  const original = String(raw).trim().replace(/\s/g, "");
+  if (!/^\d[\d.,]*$/.test(original)) return { ok: false, erro: "Digite apenas números e separadores válidos." };
+  const codigo = String(ativo || "").trim().toUpperCase();
+  const win = /^WIN[A-Z]\d{2}$/.test(codigo) || codigo === "WIN";
+  const wdo = /^WDO[A-Z]\d{2}$/.test(codigo) || codigo === "WDO";
+  let normalized = original;
+  const comma = original.lastIndexOf(","), dot = original.lastIndexOf(".");
+  if (comma >= 0 && dot >= 0) {
+    normalized = comma > dot ? original.replace(/\./g, "").replace(",", ".") : original.replace(/,/g, "");
+  } else if (comma >= 0) {
+    if (win && /^\d{1,3},\d{3}$/.test(original)) normalized = original.replace(",", "");
+    else if (wdo && /^\d{1,3},\d{3}$/.test(original))
+      return { ok: false, erro: "Separador ambíguo no WDO. Digite 5500,5 ou 5.500,5." };
+    else normalized = original.replace(",", ".");
+  } else if (dot >= 0 && /^\d{1,3}\.\d{3}$/.test(original)) {
+    if (win || wdo) normalized = original.replace(".", "");
+    else return { ok: false, erro: "Separador ambíguo. Digite o valor sem separador de milhar." };
+  }
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return { ok: false, erro: "Formato numérico inválido." };
+  const valor = Number(normalized);
+  if (!(valor > 0) || !Number.isFinite(valor)) return { ok: false, erro: "Preço precisa ser positivo e finito." };
+  if (win && (valor < 10000 || Math.abs(valor / 5 - Math.round(valor / 5)) > 1e-7))
+    return { ok: false, erro: "WIN exige preço em pontos inteiros, múltiplo de 5. Ex.: 168880 (168.880 pontos). Não arredondamos automaticamente." };
+  if (wdo && Math.abs(valor * 2 - Math.round(valor * 2)) > 1e-7)
+    return { ok: false, erro: "WDO exige variação mínima de 0,5 ponto. Ex.: 5500,5." };
+  return { ok: true, value: String(valor), numero: valor };
+}
+
 function calc(e) {
   const t = e.side === "C" ? 1 : -1,
     a = numN(e.pv) || 1,
@@ -32072,7 +32621,19 @@ function calc(e) {
       s != null && n != null && l != null && s !== n
         ? Math.abs(l - s) / Math.abs(s - n)
         : null;
-  return { risk: c, pl: p, r: u, rr: m, semStop: s != null && n == null };
+  const futuro = /^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(e.ativo || ""));
+  const invalido = futuro && ["entry","stop","target","exit"].some((campo) => {
+    const valor = e[campo];
+    if (valor == null || String(valor).trim() === "") return false;
+    const avaliado = precoManual789(valor, e.ativo);
+    return !avaliado.ok || numN(valor) !== avaliado.numero;
+  });
+  const ticker = String(e.ativo || "").toUpperCase();
+  const pvErrado = /^WIN[A-Z][0-9]{2}$/.test(ticker) ? Math.abs((numN(e.pv) || 0) - .2) > 1e-8
+    : /^WDO[A-Z][0-9]{2}$/.test(ticker) ? Math.abs((numN(e.pv) || 0) - 10) > 1e-8 : false;
+  return invalido || pvErrado
+    ? { risk: null, pl: null, r: null, rr: null, semStop: false, invalidPrice: true }
+    : { risk: c, pl: p, r: u, rr: m, semStop: s != null && n == null };
 }
 function diasMais(e, t) {
   const a = new Date(e + "T12:00:00Z");
@@ -33345,16 +33906,10 @@ var segM, segD;
         "ferr",
         "grid",
         "Ferramentas",
-        "Mesa, plano de transição, impostos e mais",
+        "Plano de transição, gestão de risco e impostos",
       ],
     ],
     o = [
-      [
-        "mesa",
-        "shield",
-        "Mesa proprietária",
-        "Regras, meta e quanto posso perder hoje",
-      ],
       ["carreira", "star", "Plano de transição", "Quando dá para sair da CLT"],
       ["painel", "target", "Painel", "Metas, tamanho da posição e backup"],
       ["contratos", "calc", "Contratos", "Lotes pelo capital e volatilidade"],
@@ -33901,7 +34456,7 @@ function fxHtml() {
 <div class="sm mut" style="margin-top:6px">${fdt(a.dt)}${a.dtx ? " → " + fdt(a.dtx) : ""}${l ? " · " + l : ""}</div></div>
 <h2>Plano × execução</h2><div class="card">${fxRegua(a, o)}</div>
 <div class="kv">${c("Risco planejado", o.risk == null ? "sem stop" : mT(a, o.risk) + (pctConta(o.risk, n, r) ? '<div class="sm mut" style="font-weight:500">' + pctConta(o.risk, n, r).replace("+", "") + "</div>" : ""))}${c("Ganho/risco planejado", o.rr == null ? "sem alvo" : o.rr.toFixed(1).replace(".", ",") + " para 1")}${c("Captura do alvo", m == null ? "–" : Math.round(m * 100) + "%", m != null && m < 0.6 ? "r" : "")}${c("Custos", mT(a, +a.cost || 0))}</div>
-<h2>Disciplina</h2><div class="card"><div class="sm">Regras: <b class="${a.rules === "n" ? "r" : "g"}">${a.rules === "n" ? "quebrei" : "segui"}</b>${a.emo ? " · Antes de entrar: " + (EMO[+a.emo - 1] || "") : ""}</div>
+<h2>Disciplina</h2><div class="card"><div class="sm">Regras: <b class="${a.rules === "n" ? "r" : a.rules === "s" ? "g" : "mut"}">${a.rules === "n" ? "quebrei" : a.rules === "s" ? "segui" : "não avaliadas"}</b>${a.emo ? " · Antes de entrar: " + (EMO[+a.emo - 1] || "") : ""}</div>
 ${f.length ? `<div class="chips2" style="margin-top:8px">${f.map((h) => `<span class="chip" style="color:var(--r);border-color:color-mix(in srgb,var(--r) 40%,transparent)" title="${esc(catErro(h))}">${esc(h)}</span>`).join("")}</div>` : '<div class="sm g" style="margin-top:6px">Nenhum erro marcado.</div>'}
 ${x.length ? `<div style="margin-top:10px"><div class="sm mut">Checklist do setup (${x.filter((h, b) => v[b]).length}/${x.length})</div>${x.map((h, b) => `<div class="sm" style="margin-top:4px">${v[b] ? '<span class="g">✓</span>' : '<span class="r">✗</span>'} ${esc(h)}</div>`).join("")}</div>` : ""}</div>
 ${g.length ? `<h2>Fotos</h2><div class="g${g.length > 1 ? "2" : ""}" style="gap:8px">${g.map(([h, b]) => `<div><div class="sm mut" style="margin-bottom:4px">${b}</div><img data-img="${a[h]}" style="width:100%;border-radius:12px;border:1px solid var(--bd);display:block;min-height:80px;background:var(--card2)"></div>`).join("")}</div>` : ""}
@@ -34147,6 +34702,13 @@ function npComTurno() {
     }),
       (t.turno = { on: e.on ? 1 : 0, niv: e.niv, dias: s }));
   }
+  /* Preferências mínimas por ativo; só tickers, nunca preços, valores ou operações.
+     Enviadas ao Push já existente via opção explícita, sem novo polling. */
+  if (t.on?.intel === true) {
+    const ativos = window.DiarioInteligenciaEtapa1?.meusAtivos?.() || [];
+    t.intelAtivos = [...new Set(ativos.map(v => String(v).toUpperCase())
+      .filter(v => /^[A-Z0-9.^_-]{2,24}$/.test(v)))].slice(0,40);
+  } else t.intelAtivos = [];
   return t;
 }
 async function turnoPushSync(e) {
@@ -34462,7 +35024,7 @@ function semResumo(e, t) {
       limOk: i.filter((v) => v.v >= -v.l).length,
       estouro: l,
       regras: a.length
-        ? a.filter((v) => v.rules !== "n").length / a.length
+        ? a.filter((v) => v.rules === "s").length / a.length
         : null,
       semStop: a.filter((v) => numN(v.stop) == null).length,
     },
@@ -35421,7 +35983,7 @@ function crCalc(e) {
     c = S.trades
       .map((x) => ({ ...x, c: calc(x) }))
       .filter((x) => x.c.pl != null && dOf(x) >= d),
-    p = c.length ? c.filter((x) => x.rules !== "n").length / c.length : null,
+    p = c.length ? c.filter((x) => x.rules === "s").length / c.length : null,
     u = s > 0 ? (+e.reserva || 0) / s : null,
     m = s * (+e.mesesReserva || 0),
     f = [
@@ -35669,23 +36231,57 @@ function pfJaTem(e) {
       String(a.ativo || "").toUpperCase() === e.ativo &&
       a.side === e.side &&
       String(+a.qty) === String(+e.qty) &&
-      Math.abs(Date.parse(a.dt) - t) <= 6e5,
+      Number(a.entry) === Number(e.entry) &&
+      (a.exit === "" || a.exit == null) === (e.exit === "" || e.exit == null) &&
+      (e.exit === "" || e.exit == null || Number(a.exit) === Number(e.exit)) &&
+      Math.abs(Date.parse(a.dt) - t) < 6e4,
   );
 }
 async function profitImporta(e) {
   if (!(!SESS || !cfg() || PFX.busy || (PFX.off && !e))) {
     PFX.busy = 1;
     try {
+      const dono = SESS.uid,
+        estado = S;
+      const mesmaConta = () => SESS?.uid === dono && S === estado;
       const t = await (
           await rq(
             "/rest/v1/operacoes_profit?select=*&importado=eq.false&order=abertura.asc&limit=500",
           )
         ).json(),
-        a = new Set(S.trades.flatMap((r) => [r.ext, r.id]).filter(Boolean)),
+        a = new Set(
+          estado.trades.flatMap((r) => [r.ext, r.id]).filter(Boolean),
+        ),
         o = [],
         s = [];
       let n = 0;
-      ((t || []).forEach((r) => {
+      if (!mesmaConta())
+        throw new Error(
+          "A conta ou o diário mudou durante a leitura do Profit. Tente novamente.",
+        );
+      if (!Array.isArray(t))
+        throw new Error(
+          "Resposta inválida do Profit. Nenhuma operação foi confirmada.",
+        );
+      t.forEach((r) => {
+        // Dados incompletos continuam pendentes para correção na origem.
+        if (
+          !r ||
+          !r.id ||
+          !r.id_externo ||
+          !r.ativo ||
+          !["C", "V"].includes(r.lado) ||
+          r.preco_entrada == null ||
+          !Number.isFinite(+r.preco_entrada) ||
+          +r.preco_entrada <= 0 ||
+          !Number.isFinite(+r.qtd) ||
+          +r.qtd <= 0 ||
+          !Number.isFinite(Date.parse(r.abertura)) ||
+          (r.preco_saida != null &&
+            (!Number.isFinite(+r.preco_saida) || +r.preco_saida < 0)) ||
+          (r.custos != null && !Number.isFinite(+r.custos))
+        )
+          return;
         s.push(r.id);
         const i = "profit:" + r.id_externo;
         if (
@@ -35701,42 +36297,52 @@ async function profitImporta(e) {
           return;
         }
         (a.add(i), a.add(l.id), o.push(l));
-      }),
-        n &&
-          !o.length &&
-          window.toast &&
-          toast(n + " operação(ões) do Profit já estavam no diário.", 3e3),
-        o.length
-          ? (S.trades.push(...o),
-            save(),
-            render(),
-            window.toast &&
-              toast(
-                `${o.length} operação(ões) importada(s) do Profit. Complete stop e setup na ficha.`,
-                5e3,
-              ),
-            setTimeout(() => {
-              try {
-                limiteConfere();
-              } catch {}
-            }, 300))
-          : n &&
-            window.toast &&
-            toast("Nenhuma operação nova do Profit.", 2500),
-        s.length &&
-          (await rq("/rest/v1/operacoes_profit?id=in.(" + s.join(",") + ")", {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Prefer: "return=minimal",
-            },
-            body: JSON.stringify({ importado: !0 }),
-          })),
-        (PFX.n += o.length),
-        (PFX.ult = new Date().toISOString()),
-        ls.set("diario-pf-ult", PFX.ult),
-        (PFX.err = ""),
-        (PFX.off = 0));
+      });
+      if (o.length) {
+        S.trades.push(...o);
+        save();
+        render();
+      }
+      // save() agenda a escrita. Só confirme no servidor depois do commit IndexedDB,
+      // inclusive ao retomar uma importação cuja tentativa anterior falhou ao salvar.
+      if (s.length && !(await persistNow()))
+        throw new Error(
+          "Não foi possível gravar as operações neste aparelho. O Profit continua pendente para tentar novamente.",
+        );
+      if (!mesmaConta())
+        throw new Error(
+          "A conta ou o diário mudou. A importação não foi confirmada no Profit.",
+        );
+      if (s.length)
+        await rq("/rest/v1/operacoes_profit?id=in.(" + s.join(",") + ")", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({ importado: !0 }),
+        });
+      PFX.n += o.length;
+      PFX.ult = new Date().toISOString();
+      ls.set("diario-pf-ult", PFX.ult);
+      PFX.err =
+        t.length > s.length
+          ? `${t.length - s.length} operação(ões) com dados inválidos continuam pendentes no Profit. Revise os dados na origem e tente novamente.`
+          : "";
+      PFX.off = 0;
+      if (n && !o.length && window.toast)
+        toast(n + " operação(ões) do Profit já estavam no diário.", 3e3);
+      if (o.length && window.toast)
+        toast(
+          `${o.length} operação(ões) importada(s) do Profit. Complete stop e setup na ficha.`,
+          5e3,
+        );
+      if (o.length)
+        setTimeout(() => {
+          try {
+            limiteConfere();
+          } catch {}
+        }, 300);
     } catch (t) {
       ((PFX.err =
         t.status === 404 || /operacoes_profit/.test(t.message || "")
@@ -39403,19 +40009,32 @@ const MDO_AB = { k: null },
     ts: 0,
     busy: 0,
     err: "",
+    errTs: 0,
   };
+// Todas as chamadas ao macro exigem login; não deixar reenfileirar 401.
+function macroAuthHeaders(config) {
+  const h = { "Content-Type": "application/json", apikey: config.key };
+  try { if (typeof SESS !== "undefined" && SESS?.at) h.Authorization = "Bearer " + SESS.at; } catch {}
+  return h;
+}
 async function mdoCarrega(e) {
-  if (MDO.busy || (!e && MDO.v && Date.now() - MDO.ts < 5 * 6e4)) return;
+  if (MDO.busy || (!e && ((MDO.v && Date.now() - MDO.ts < 5 * 6e4) || (MDO.errTs && Date.now() - MDO.errTs < 2 * 6e4)))) return;
   const t = cfg();
   if (!t) {
     ((MDO.err = "Configure o Supabase na aba Conta."), mdoPaint());
     return;
   }
+  if (typeof SESS === "undefined" || !SESS?.at) {
+    MDO.err = "Entre na sua conta para atualizar o panorama.";
+    MDO.errTs = Date.now();
+    mdoPaint();
+    return;
+  }
   ((MDO.busy = 1), (MDO.err = ""), mdoPaint());
   try {
-    const a = await fetch(t.url + "/functions/v1/macro", {
+    const a = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: t.key },
+        headers: macroAuthHeaders(t),
         body: "{}",
       }),
       o = await a.json();
@@ -39425,12 +40044,13 @@ async function mdoCarrega(e) {
           ? 'Função "macro" não encontrada: publique-a no Supabase.'
           : o.error || "Erro " + a.status,
       );
-    ((MDO.v = o), (MDO.ts = Date.now()));
+    ((MDO.v = o), (MDO.ts = Date.now()), (MDO.errTs = 0));
     try {
       ls.set("diario-mdo", o);
     } catch {}
   } catch (a) {
     MDO.err = String(a.message || a);
+    MDO.errTs = Date.now();
   }
   ((MDO.busy = 0), mdoPaint());
 }
@@ -40676,34 +41296,46 @@ function jrExtraHtml() {
       : t.slice(0, o) + jrExtraHtml() + t.slice(o);
   };
 }
-setInterval(async () => {
+// Timer limitado à aba Mercado > Mundo (v756).
+let MDO_AUTO_INTERVAL = null;
+async function mdoAutoTick() {
   try {
     if (
       document.hidden ||
       tab !== "mercado" ||
       MKT.tab !== "mu" ||
       MDO.busy ||
-      (MDO.ts && Date.now() - MDO.ts < 55e3)
+      (typeof SESS === "undefined" || !SESS?.at) ||
+      (MDO.ts && Date.now() - MDO.ts < 55e3) ||
+      (MDO.errTs && Date.now() - MDO.errTs < 2 * 6e4)
     )
       return;
     const e = cfg();
     if (!e) return;
-    const t = await fetch(e.url + "/functions/v1/macro", {
+    const t = await edgeFetchAutenticado(e.url + "/functions/v1/macro", {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: e.key },
+      headers: macroAuthHeaders(e),
       body: "{}",
     });
-    if (!t.ok) return;
+    if (!t.ok) { MDO.errTs = Date.now(); return; }
     const a = await t.json();
     if (!a || !a.mercados) return;
-    ((MDO.v = a), (MDO.ts = Date.now()));
+    ((MDO.v = a), (MDO.ts = Date.now()), (MDO.errTs = 0));
     try {
       ls.set("diario-mdo", a);
     } catch {}
     const o = scrollY;
     (mdoPaint(), scrollTo(0, o));
   } catch {}
-}, 15e3);
+}
+function mdoAutoCiclo() {
+  const ativo = typeof tab !== "undefined" && tab === "mercado" && MKT.tab === "mu";
+  if (ativo && MDO_AUTO_INTERVAL === null) MDO_AUTO_INTERVAL = setInterval(mdoAutoTick,15e3);
+  else if (!ativo && MDO_AUTO_INTERVAL !== null) {
+    clearInterval(MDO_AUTO_INTERVAL); MDO_AUTO_INTERVAL = null;
+  }
+}
+
 {
   const e = anxCall;
   anxCall = async function (t) {
@@ -42148,9 +42780,9 @@ async function agCarrega(e) {
   }
   ((AG.busy = 1), (AG.err = ""), agPaint());
   try {
-    const o = await fetch(a.url + "/functions/v1/macro", {
+    const o = await edgeFetchAutenticado(a.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: a.key },
+        headers: macroAuthHeaders(a),
         body: JSON.stringify({ modo: "agenda", semana: t }),
       }),
       s = await o.json().catch(() => ({}));
@@ -42240,7 +42872,9 @@ function agHtml() {
         ]
           .filter(Boolean)
           .join("");
-      return `<div class="ag-ev${u}${n && p === n ? " prox" : ""}"><div class="ag-h">${agHora(p.em)}</div><div class="ag-fl">${AG_FL[p.p] || ""}</div><div class="ag-tx"><div><b>${esc(AG_NM[p.p] || p.p)}:</b> ${esc(p.t)}${p.per ? ` <span class="mut">(${esc(p.per)})</span>` : ""} ${agImp(p.imp)}${n && p === n ? ' <span class="ag-tag">próximo</span>' : ""}</div>${m ? `<div class="ag-n sm">${m}</div>` : ""}</div></div>`;
+      const reading=window.DiarioInterpretacao?.calendarSurprise(p,e.em);
+      const surprise=reading?`<div class="sm mut">Surpresa: ${reading.delta.toLocaleString('pt-BR',{maximumFractionDigits:4})} ${esc(reading.unit)} (${esc(reading.direction)} do consenso). ${esc(reading.note)}</div>`:'';
+      return `<div class="ag-ev${u}${n && p === n ? " prox" : ""}"><div class="ag-h">${agHora(p.em)}</div><div class="ag-fl">${AG_FL[p.p] || ""}</div><div class="ag-tx"><div><b>${esc(AG_NM[p.p] || p.p)}:</b> ${esc(p.t)}${p.per ? ` <span class="mut">(${esc(p.per)})</span>` : ""} ${agImp(p.imp)}${n && p === n ? ' <span class="ag-tag">próximo</span>' : ""}</div>${m ? `<div class="ag-n sm">${m}</div>` : ""}${surprise}</div></div>`;
     },
     c = (p) => {
       const u = new Date(p + "T12:00:00-03:00"),
@@ -42343,9 +42977,9 @@ async function setCarrega(e) {
   if (t) {
     ((SET.busy = 1), (SET.err = ""), setPaint());
     try {
-      const a = await fetch(t.url + "/functions/v1/macro", {
+      const a = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
           method: "POST",
-          headers: { "Content-Type": "application/json", apikey: t.key },
+          headers: macroAuthHeaders(t),
           body: JSON.stringify({ modo: "setores" }),
         }),
         o = await a.json().catch(() => ({}));
@@ -42359,7 +42993,7 @@ async function setCarrega(e) {
         ls.set("diario-setores", o);
       } catch {}
     } catch (a) {
-      ((SET.err = String(a.message || a)), (SET.ts = Date.now() - 15e4));
+      ((SET.err = String(a.message || a)), (SET.ts = Date.now()));
     }
     ((SET.busy = 0), setPaint());
   }
@@ -42711,6 +43345,12 @@ function ecoResp(e) {
   ${t.fontes && t.fontes.length ? `<div class="sm mut" style="margin-top:8px">Fontes: ${esc(t.fontes.join(" · "))}</div>` : ""}
   <div class="eco-ac"><span class="sm mut">${esc(new Date(e.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}</span><span><button class="btn s" data-eco="pdf" data-v="${esc(e.id)}">📄 PDF</button> <button class="btn s" data-eco="del" data-v="${esc(e.id)}" aria-label="Apagar">🗑</button></span></div></div>`;
 }
+function macroFetchComSessao(url,options) {
+  if (typeof SESS === "undefined" || !SESS?.at)
+    return Promise.reject(new Error("Entre na sua conta para consultar o macro."));
+  return edgeFetchAutenticado(url,options);
+}
+// Consultas macro privadas nunca precisam produzir HTTP 401 em sessão anônima.
 function vEco(e) {
   return `<div class="card"><div class="top"><b>🎓 Economista IA</b>${ECO.l.length ? '<button class="btn s" data-eco="limpa">Limpar</button>' : ""}</div>${e}
   <div class="sm mut">Economista com formação de mestrado e doutorado, sem viés político. Cole uma notícia (texto ou link) ou pergunte sobre cenários: ele confirma os fatos na internet, explica o mecanismo, mostra o efeito no Ibovespa, dólar e DI e monta cenários com probabilidade.</div>
@@ -42946,9 +43586,9 @@ async function pnlCarrega(e) {
   }
   ((PNL.busy = 1), (PNL.err = ""), pnlPaint());
   try {
-    const a = await fetch(t.url + "/functions/v1/macro", {
+    const a = await macroFetchComSessao(t.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: t.key },
+        headers: macroAuthHeaders(t),
         body: JSON.stringify({ modo: "painel" }),
       }),
       o = await a.json().catch(() => ({}));
@@ -44663,9 +45303,10 @@ setInterval(() => {
   const e = typeof GO < "u" && GO.r;
   if (!(!e || !GOR[e]))
     try {
+      GO.r = null; // consumir o pedido uma única vez; não reexecutar fetch em loop
       GOR[e]();
     } catch {}
-}, 700);
+}, 3000);
 {
   const e = vPainelMk;
   vPainelMk = function () {
@@ -44690,32 +45331,17 @@ const FE = {
   err: "",
 };
 async function feCarrega() {
-  if (FE.busy || Date.now() - FE.ts < 30 * 6e4) return;
-  const e = cfg();
-  if (!e) return;
-  FE.busy = 1;
+  if (FE.busy || Date.now()-FE.ts<3600000 || !document.getElementById('febox') || document.hidden || window.DIARIO_DEMO) return;
+  if (!window.DiarioPublico) return;
+  FE.busy=1;FE.abort?.abort();const controller=new AbortController();FE.abort=controller;
   try {
-    const a = await fetch(e.url + "/functions/v1/macro", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: e.key },
-        body: JSON.stringify({ modo: "fluxo" }),
-      }),
-      o = await a.json().catch(() => ({}));
-    if (!a.ok) throw new Error(o.error || "Erro " + a.status);
-    if (!o.ultimo)
-      throw new Error(
-        'Para ver o fluxo estrangeiro, publique a nova versão da função "macro".',
-      );
-    ((FE.v = o), (FE.err = ""));
-    try {
-      ls.set("diario-fluxo", o);
-    } catch {}
-  } catch (a) {
-    FE.err = String(a.message || a);
-  }
-  ((FE.ts = Date.now()), (FE.busy = 0));
-  const t = document.getElementById("febox");
-  t && (t.outerHTML = feHtml());
+    const data=await window.DiarioPublico.get('/v1/fluxo',{signal:controller.signal,ttl:3600000});
+    if(controller.signal.aborted)return;
+    if(!data.ultimo||!Array.isArray(data.linhas))throw Error('Fluxo público sem dados verificáveis.');
+    FE.v=data;FE.err=data.desatualizado?'Snapshot de fluxo atrasado; confira a data efetiva.':'';
+    try{ls.set('diario-fluxo',data);}catch(_){}
+  }catch(e){if(e.name!=='AbortError')FE.err=String(e.message||e);}
+  finally{FE.busy=0;if(!controller.signal.aborted){FE.ts=Date.now();const el=document.getElementById('febox');if(el)el.outerHTML=feHtml();}}
 }
 const feMi = (e) => {
     const t = Math.abs(e),
@@ -44738,6 +45364,7 @@ function feHtml() {
   const e = FE.v;
   if (!e)
     return `<div class="card" id="febox" style="margin-bottom:10px"><b>🌎 Fluxo estrangeiro na B3</b><div class="sm ${FE.err ? "am" : "mut"}" style="margin-top:4px">${esc(FE.err || "Carregando…")}</div></div>`;
+  const interpretation=window.DiarioInterpretacao?.flow(e.linhas||[]);
   const t = e.ultimo,
     a = (n) => (n > 0 ? "g" : n < 0 ? "r" : "mut"),
     o = Math.max(...e.linhas.slice(0, 10).map((n) => Math.abs(n.est)), 1),
@@ -44752,7 +45379,7 @@ function feHtml() {
   return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><span class="sm mut">${feDia(t.d)}</span></div>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:6px 0"><div><div class="sm mut">No dia</div><b class="${a(t.est)}" style="font-size:18px">${feMi(t.est)}</b></div><div><div class="sm mut">No mês (${e.dias_no_mes} pregões)</div><b class="${a(e.mes)}" style="font-size:18px">${feMi(e.mes)}</b></div><div><div class="sm mut">Sequência</div><b>${e.dias_seguidos} dia(s) de ${esc(e.sentido)}</b></div></div>
 <div style="display:flex;gap:3px;align-items:stretch;margin:6px 0 2px">${s}</div>
-<div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div></div>`;
+<div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div><p class="sm">${esc(interpretation?.text||"Histórico insuficiente para interpretar tendência.")}</p><div class="sm mut">5 / 10 / 20 pregões: ${[5,10,20].map(n=>interpretation?.windows[n]==null?"N/D":feMi(interpretation.windows[n])).join(" · ")} · ${esc(FE.err||"")}</div></div>`;
 }
 {
   const e = vPainelMk;
@@ -44815,9 +45442,9 @@ async function balCarrega() {
   if (!e) return;
   BAL.busy = 1;
   try {
-    const a = await fetch(e.url + "/functions/v1/macro", {
+    const a = await macroFetchComSessao(e.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: e.key },
+        headers: macroAuthHeaders(e),
         body: JSON.stringify({ modo: "balancos" }),
       }),
       o = await a.json().catch(() => ({}));
@@ -45314,9 +45941,9 @@ async function szCarrega(e) {
   }
   ((SZ.busy = 1), (SZ.err = ""), szPinta());
   try {
-    const a = await fetch(t.url + "/functions/v1/macro", {
+    const a = await macroFetchComSessao(t.url + "/functions/v1/macro", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: t.key },
+        headers: macroAuthHeaders(t),
         body: JSON.stringify({ modo: "sazonal" }),
       }),
       o = await a.json().catch(() => ({}));
@@ -45815,7 +46442,7 @@ const rkAcao = (e) =>
   !/3[1-9]$/.test(e) &&
   !/^(WIN|WDO|IND|DOL|DI1|BGI|CCM|ICF)/.test(e);
 async function rkCarrega(e) {
-  if (RK.busy || (!e && Date.now() - RK.ts < 45e3 && RK.v)) return;
+  if (RK.busy || (!e && Date.now() - RK.ts < 15 * 6e4 && RK.v)) return;
   const t = cfg();
   if (!t) {
     RK.err = "Configure o Supabase na aba Conta.";
@@ -45823,9 +46450,9 @@ async function rkCarrega(e) {
   }
   ((RK.busy = 1), (RK.err = ""), rkPinta());
   const [a, o] = await Promise.allSettled([
-    fetch(t.url + "/functions/v1/macro", {
+    macroFetchComSessao(t.url + "/functions/v1/macro", {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: t.key },
+      headers: macroAuthHeaders(t),
       body: JSON.stringify({ modo: "ranking" }),
     }).then(async (s) => {
       const n = await s.json().catch(() => ({}));
@@ -45838,7 +46465,7 @@ async function rkCarrega(e) {
     }),
     SESS
       ? rq(
-          "/rest/v1/cotacoes?select=ticker,ult,fec,var,updated_at&user_id=eq." +
+          "/rest/v1/cotacoes?select=ticker,ult,fec,var,updated_at&limit=250&user_id=eq." +
             SESS.uid,
         ).then((s) => s.json())
       : Promise.resolve([]),
@@ -45952,7 +46579,7 @@ setInterval(() => {
   try {
     tab === "mercado" && MKT.tab === "rk" && !document.hidden && rkCarrega();
   } catch {}
-}, 6e4);
+}, 15 * 6e4);
 function rkDesenha(e) {
   const t = document.createElement("canvas");
   ((t.width = 1080), (t.height = 1580));
@@ -46254,9 +46881,9 @@ async function dgTesta() {
   }
   ((DG.busy = 1), (DG.err = ""), dgPinta());
   const [t, a, o, s] = await Promise.allSettled([
-    fetch(e.url + "/functions/v1/macro", {
+    macroFetchComSessao(e.url + "/functions/v1/macro", {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: e.key },
+      headers: macroAuthHeaders(e),
       body: JSON.stringify({ modo: "diag" }),
     }).then(async (n) => {
       const r = await n.json().catch(() => ({}));
@@ -47114,6 +47741,7 @@ function ideiaHtml(e) {
   const t = calc(e),
     a = numN(e.entry),
     o = numN(e.stop);
+  if (t.invalidPrice) return '<div class="warn">Preço inválido ou escala incompatível com o contrato. Revise antes de confiar no risco e no resultado.</div>';
   if (a == null || o == null || a === o) return "";
   const s = numN(e.target),
     n = numN(e.exit),
@@ -47371,6 +47999,17 @@ let FST = null,
   FST_ID = null;
 function qtdSugerida(e) {
   try {
+    const ticker = String(e.ativo || "").toUpperCase(), pv = numN(e.pv);
+    if ((/^WIN[A-Z][0-9]{2}$/.test(ticker) && (pv == null || Math.abs(pv - 0.2) > 1e-8)) ||
+        (/^WDO[A-Z][0-9]{2}$/.test(ticker) && (pv == null || Math.abs(pv - 10) > 1e-8)))
+      return { invalido: "Valor por ponto incoerente. WIN: R$ 0,20; WDO: R$ 10,00. Revise antes de usar a quantidade." };
+    if (/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(e.ativo || ""))) for (const campo of ["entry", "stop"]) {
+      const valor = e[campo];
+      if (valor == null || String(valor).trim() === "") continue;
+      const checked = precoManual789(valor, e.ativo);
+      if (!checked.ok || (/^(WIN|WDO)[A-Z][0-9]{2}$/i.test(String(e.ativo || "")) && numN(valor) !== checked.numero))
+        return { invalido: "Preço incompatível com o contrato. Revise os separadores e o tick antes de dimensionar." };
+    }
     const t = numN(e.entry),
       a = numN(e.stop);
     if (t == null || a == null || t === a) return null;
@@ -47398,6 +48037,7 @@ function qtdSugerida(e) {
 function qtdHtml(e) {
   const t = qtdSugerida(e);
   if (!t) return "";
+  if (t.invalido) return '<div class="qsug sm r">' + esc(t.invalido) + '</div>';
   if (t.semCap)
     return '<div class="qsug sm mut">Defina o capital (Configurar capital, na aba da operação) para o app sugerir a quantidade pelo seu risco.</div>';
   if (t.q < 1)
@@ -50444,7 +51084,7 @@ function mesNum(e, t) {
     dd: u,
     diasPos: f.filter((I) => I > 0).length,
     diasNeg: f.filter((I) => I < 0).length,
-    regras: n ? a.filter((I) => I.rules !== "n").length / n : null,
+    regras: n ? a.filter((I) => I.rules === "s").length / n : null,
     erros: Object.entries(x).sort((I, J) => I[1].pl - J[1].pl),
     setups: Object.entries(v).sort((I, J) => J[1].pl - I[1].pl),
     tipos: g,
@@ -58269,7 +58909,7 @@ function dshTodas() {
       at: String(raizAtivo(t.ativo) || t.ativo || "?").toUpperCase(),
       us: ehUS(t),
       emo: t.emo2 || "",
-      ok: t.rules !== "n",
+      ok: t.rules === "s",
       err: t.err && t.err !== "Nenhum" ? t.err : "",
     });
   });
@@ -59514,7 +60154,7 @@ function stDsh(e) {
           at: String(raizAtivo(o.ativo) || o.ativo || "?").toUpperCase(),
           us: !!o.forex || ehUS(o),
           emo: o.emo2 || "",
-          ok: o.rules !== "n",
+          ok: o.rules === "s",
           err: o.err && o.err !== "Nenhum" ? o.err : "",
           fx: o.forex ? 1 : 0,
         };
@@ -60431,7 +61071,7 @@ function simRows() {
         r: s.r != null && isFinite(s.r) ? s.r : null,
         risk: r(s.risk),
         setup: String(o.setup || "").trim() || "Sem setup",
-        ok: o.rules !== "n",
+        ok: o.rules === "s",
         tilt: !!o.tilt,
       };
     })
@@ -60810,7 +61450,7 @@ function diarioPacote() {
         r: o.c.r != null ? +o.c.r.toFixed(2) : null,
         v: +emBRL(o.c.pl, moedaT(o)).toFixed(2),
         erro: o.err && o.err !== "Nenhum" ? o.err : "",
-        regras: o.rules === "n" ? "quebrou" : "seguiu",
+        regras: o.rules === "n" ? "quebrou" : o.rules === "s" ? "seguiu" : "não avaliada",
         emo: o.emo2 || "",
         nota: notaABC(o),
         tilt: o.tilt || "",
@@ -61760,20 +62400,20 @@ function nivGrava(e) {
       const f = Object.keys(a[l]).sort();
       for (; f.length > 40; ) delete a[l][f.shift()];
     }),
-      o && save());
+      o && (
+        // Persistir extremos no próprio aparelho, sem enviar o diário inteiro
+        // para a nuvem a cada novo tick de preço.
+        (S.mt = Date.now()),
+        persist(),
+        (Date.now() - (nivGrava.ultimoEnvio || 0) > 15 * 6e4
+          ? ((nivGrava.ultimoEnvio = Date.now()), syncSoon())
+          : null)
+      ));
   } catch {}
 }
-setInterval(async () => {
-  try {
-    if (document.hidden || !SESS || !window.CLOUD_OK) return;
-    const e = new Date().getHours();
-    if (e < 9 || e > 18) return;
-    const t = await (
-      await rq("/rest/v1/cotacoes?select=*&user_id=eq." + SESS.uid)
-    ).json();
-    nivGrava(t);
-  } catch {}
-}, 5 * 6e4);
+// Removido o segundo polling de cotacoes no Supabase (5 min).
+// Os níveis vêm de LV.all, atualizado pelas conexões diretas do navegador.
+
 {
   const e = lvPoll;
   lvPoll = async function () {
@@ -62187,7 +62827,7 @@ function custosHtml() {
         `<tr><td>${g[0]}</td><td class="${cls(g[1])}">${money(g[1])}</td><td>${l > 0 ? pct0(Math.abs(g[1]) / l) : "–"}</td></tr>`,
     ),
   )}
-<div class="sm" style="margin-top:6px">${l > 0 ? `De cada R$ 100 que o mercado te deu, <b>R$ ${dshN(((s + n + r599) / l) * 100, 0)}</b> ficaram com corretora, bolsa, mesas e governo.` : "Ano ainda sem ganho bruto."} Taxas das mesas: preencha em Mesa → Esta mesa.</div></div>`;
+<div class="sm" style="margin-top:6px">${l > 0 ? `De cada R$ 100 que o mercado te deu, <b>R$ ${dshN(((s + n + r599) / l) * 100, 0)}</b> ficaram com corretora, bolsa, mesas e governo.` : "Ano ainda sem ganho bruto."}</div></div>`;
 }
 function contadorHtml() {
   const e = [
@@ -62931,10 +63571,12 @@ function oaPede() {
   } catch {}
 }
 async function oaBusca() {
+  // A grade de opções faz uma consulta quando abre e apenas snapshots espaçados.
+  if (OA.ts && Date.now() - OA.ts < 15 * 6e4) { oaPinta(); return; }
   if (!(!OA.tk || typeof SESS > "u" || !SESS || !cfg())) {
     try {
       const e = await rq(
-          `/rest/v1/cotacoes?select=*&user_id=eq.${SESS.uid}&ticker=in.(${encodeURIComponent(OA.tk)},${encodeURIComponent(OA.sub)})`,
+          `/rest/v1/cotacoes?select=ticker,ult,fec,var,updated_at,ocp,ovd,qoc,qov,pex,ven,ivp,cab,abe,max,min,neg,hor,dat&limit=4&user_id=eq.${SESS.uid}&ticker=in.(${encodeURIComponent(OA.tk)},${encodeURIComponent(OA.sub)})`,
         ),
         t = await e.json();
       ((OA.row = t.find((a) => a.ticker === OA.tk) || OA.row),
@@ -63255,7 +63897,7 @@ function oaAbre(e) {
         return;
       }
       document.hidden || oaBusca();
-    }, 3e3)));
+    }, 15 * 6e4)));
   const n = (t = S.ax ?? (S.ax = {})).oaHist ?? (t.oaHist = []);
   n.includes(e) || (n.unshift(e), n.splice(8));
 }
@@ -63629,7 +64271,7 @@ function vOpsHub() {
       return `<button class="modc" data-modcard="${n}"><span class="ic">${window.icoSvg ? window.icoSvg(i) : ""}</span><span class="tx"><b>${r}</b><small>${l}</small><span class="sm">${f ? `<span class="chip" style="padding:1px 7px;margin-right:4px">${f} aberta(s)</span>` : ""}${u.length ? `mês <b class="${cls(m)}">${money(m)}</b> · ${u.length} trade(s)` : '<span class="mut">sem trades no mês</span>'}</span></span><span class="hj ${cls(p)}">${p ? money(p) : ""}<i>${p ? "hoje" : ""}</i></span></button>`;
     };
   return `<h1>Operações</h1><div class="sm mut" style="margin:-6px 0 10px">Escolha a modalidade: tudo dela fica lá dentro.</div><div class="modg">${MODS.map(s).join("")}</div>
-<h2>Visão geral</h2><div class="g2"><button class="btn s" data-modgo="">📊 Estatísticas gerais</button><button class="btn s" data-a="gotab" data-id="rev">📅 Revisão da semana</button></div><button class="btn s" data-a="gotab" data-id="mesa" style="width:100%;margin-top:8px">🛡️ Mesa e risco</button>`;
+<h2>Visão geral</h2><div class="g2"><button class="btn s" data-modgo="">📊 Estatísticas gerais</button><button class="btn s" data-a="gotab" data-id="rev">📅 Revisão da semana</button></div>`;
 }
 function vOpGrade() {
   return (setTimeout(() => opgCarrega(!1), 0), opgHtml());
@@ -63638,7 +64280,7 @@ function vOpGrade() {
   try {
     tab === "opgrade" && !document.hidden && opgCarrega(!1);
   } catch {}
-}, 6e4),
+}, 15 * 6e4),
   (GOR.opc = () => {
     ((GO.r = null), (GXV.vw = "grade"), irPara("opgrade"));
   }),
@@ -64016,18 +64658,14 @@ var mrHeader;
   vPainel = function () {
     const t = e.apply(this, arguments);
     return (
-      mrHeader("painel") + t.replace(/<h1>[^<]*<\/h1>/, "<h1>Mesa e risco</h1>")
+      mrHeader("painel") + t.replace(/<h1>[^<]*<\/h1>/, "<h1>Contratos e risco</h1>")
     );
   };
 }
 try {
   FER2.forEach((e) => {
-    const t = e[1].findIndex((o) => o[0] === "painel");
-    t >= 0 && e[1].splice(t, 1);
-    const a = e[1].find((o) => o[0] === "mesa");
-    a &&
-      ((a[2] = "Mesa e risco"),
-      (a[3] = "Mesas, metas, limites, trava e backup"));
+    // Retira a Mesa proprietária, preservando o Painel de metas e risco.
+    e[1] = e[1].filter((item) => item[0] !== "mesa");
   });
 } catch {}
 (new MutationObserver(() => {
@@ -64043,10 +64681,7 @@ try {
       ).join("")),
       t.after(a));
   }
-  (e.querySelectorAll('[data-m2="painel"]').forEach((a) => a.remove()),
-    e
-      .querySelectorAll('[data-m2="mesa"] b')
-      .forEach((a) => (a.textContent = "Mesa e risco")),
+  (e.querySelectorAll('[data-m2="mesa"]').forEach((a) => a.remove()),
     setTimeout(() => {
       e.isConnected && delete e.dataset.m111;
     }, 0));
@@ -64123,7 +64758,7 @@ function vOpFluxo() {
   try {
     tab === "opfluxo" && !document.hidden && flwCarrega(!1);
   } catch {}
-}, 6e4),
+}, 15 * 6e4),
   (GOR.ewz = () => {
     ((GO.r = null), irPara("opfluxo"));
   }));
@@ -64162,7 +64797,6 @@ const GRUPOS = [
     ["analise", "Análises clássicas"],
   ],
   [
-    ["mesa", "Mesas proprietárias"],
     ["painel", "Metas, limites e backup"],
     ["contratos", "Contratos"],
   ],
@@ -64182,7 +64816,7 @@ mrHeader = function (e) {
     const t = e.apply(this, arguments);
     return (
       grpHeader("contratos") +
-      t.replace(/<h1>[^<]*<\/h1>/, "<h1>Mesa e risco</h1>")
+      t.replace(/<h1>[^<]*<\/h1>/, "<h1>Metas e risco</h1>")
     );
   };
 }
@@ -64223,9 +64857,8 @@ mrHeader = function (e) {
   };
 }
 try {
-  const e = ["contratos", "analise", "import", "status", "painel", "estudos"],
+  const e = ["contratos", "analise", "import", "status", "mesa", "estudos"],
     t = {
-      mesa: ["Mesa e risco", "Mesas, metas, limites, contratos e backup"],
       carteiras: [
         "Carteira e análise IA",
         "Posições, desempenho, radar e relatórios da IA",
@@ -64248,13 +64881,12 @@ try {
   const e = document.querySelector("#mdr2 .pn");
   !e ||
     e.dataset.m112 === e.innerHTML.length + "" ||
-    (["contratos", "analise", "import", "status", "painel"].forEach((t) =>
+    (["contratos", "analise", "import", "status", "mesa"].forEach((t) =>
       e.querySelectorAll(`.it[data-m2="${t}"]`).forEach((a) => a.remove()),
     ),
     Object.entries({
       imposto: "Imposto e importação",
       carteiras: "Carteira e análise IA",
-      mesa: "Mesa e risco",
     }).forEach(([t, a]) =>
       e.querySelectorAll(`.it[data-m2="${t}"] b`).forEach((o) => {
         o.textContent !== a && (o.textContent = a);
@@ -65113,13 +65745,6 @@ const BUSCA = [
       },
     ],
     [
-      "Mesa e risco",
-      "mesa proprietária metas limites backup prop",
-      () => {
-        tab = "mesa";
-      },
-    ],
-    [
       "Contratos",
       "contratos lote tamanho posição",
       () => {
@@ -65668,14 +66293,15 @@ function filaPinta() {
   try {
     const e = typeof SESS < "u" && !!SESS,
       t = e ? filaPend() : 0,
-      a = !navigator.onLine;
+      a = !navigator.onLine,
+      quota = window.DiarioNuvemQuota?.ate > Date.now();
     let o = document.getElementById("filap");
     if (
       !(
         e &&
         t > 0 &&
-        (a ||
-          (SY && /erro|falh|n\xe3o/i.test(SY.msg || "")) ||
+        (a || quota ||
+          (SY && /erro|falh|n\xe3o|bloquead/i.test(SY.msg || "")) ||
           Date.now() - (+S.lastSyncAt || 0) > 5 * 6e4)
       )
     ) {
@@ -65686,6 +66312,10 @@ function filaPinta() {
       ((o = document.createElement("button")),
       (o.id = "filap"),
       o.addEventListener("click", () => {
+        if (window.DiarioNuvemQuota?.ate > Date.now()) {
+          toast("Supabase atingiu o limite de transferência. Seus dados estão salvos no aparelho. Tente após a liberação.");
+          return;
+        }
         try {
           sync(!0);
         } catch {}
@@ -65696,7 +66326,7 @@ function filaPinta() {
         );
       }),
       document.body.appendChild(o)),
-      (o.innerHTML = `${a ? "📴" : "⏳"} ${t} alteração(ões) esperando para subir${a ? " · sem internet" : " · toque para enviar"}`));
+      (o.innerHTML = `${quota ? "⚠️" : a ? "📴" : "⏳"} ${t} alteração(ões) aguardando sincronização${quota ? " · Supabase temporariamente bloqueado" : a ? " · sem internet" : " · toque para enviar"}`));
   } catch {}
 }
 (setInterval(filaPinta, 5e3),
@@ -66003,7 +66633,7 @@ async function dgRoda() {
       })),
     t &&
       (await s("Balanços (CVM)", async () => {
-        const n = await fetch(t.url + "/functions/v1/macro", {
+        const n = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
             method: "POST",
             headers: { "Content-Type": "application/json", apikey: t.key },
             body: JSON.stringify({ modo: "balancos" }),
@@ -66594,11 +67224,11 @@ function plExec(e) {
         ? `Passou do limite de perda (${money(r)})`
         : "Respeitou o limite de perda",
     ]);
-  const i = o.filter((l) => l.t.rules === "n").length;
+  const i = o.filter((l) => l.t.rules !== "s").length;
   return (
     s.push([
       !i,
-      i ? `${i} trade(s) quebrando regra` : "Nenhuma regra quebrada",
+      i ? `${i} trade(s) com regra quebrada ou não avaliada` : "Todas as regras avaliadas e seguidas",
     ]),
     { L: s, nota: s.length ? s.filter((l) => l[0]).length / s.length : null }
   );
@@ -68193,7 +68823,7 @@ ${s ? `<div class="tbbulk"><b>${s} selecionado(s)</b><input id="tbbs" placeholde
         l = r.c,
         d = l.pl == null;
       return `<tr class="${TB.sel.has(i.id) ? "sel" : ""}"><td><input type="checkbox" data-tbs="${esc(i.id)}"${TB.sel.has(i.id) ? " checked" : ""}></td><td class="nw">${esc(String(i.dt).slice(8, 10) + "/" + String(i.dt).slice(5, 7) + " " + String(i.dt).slice(11, 16))}</td><td><b>${esc(i.ativo || "")}</b></td><td>${i.side === "V" ? "Venda" : "Compra"}</td><td class="n">${esc(i.qty || "")}</td><td class="n">${esc(i.entry || "")}</td><td class="n r">${esc(i.stop || "")}</td><td class="n">${esc(i.exit || "")}</td><td class="n ${d ? "" : cls(l.pl)}"><b>${d ? "aberta" : mT(i, l.pl)}</b></td><td class="n">${l.r == null ? "–" : f2(l.r)}</td>
-<td><input class="tbin" data-tbe="${esc(i.id)}|setup" value="${esc(i.setup || "")}"></td><td><select class="tbin" data-tbe="${esc(i.id)}|err">${n(i.err || "Nenhum")}</select></td><td><select class="tbin" data-tbe="${esc(i.id)}|rules"><option value="s"${i.rules !== "n" ? " selected" : ""}>seguiu</option><option value="n"${i.rules === "n" ? " selected" : ""}>quebrou</option></select></td><td><button class="btn s" data-a="edit" data-id="${esc(i.id)}" style="padding:4px 9px">Abrir</button></td></tr>`;
+<td><input class="tbin" data-tbe="${esc(i.id)}|setup" value="${esc(i.setup || "")}"></td><td><select class="tbin" data-tbe="${esc(i.id)}|err">${n(i.err || "Nenhum")}</select></td><td><select class="tbin" data-tbe="${esc(i.id)}|rules"><option value=""${!["s","n"].includes(i.rules) ? " selected" : ""}>avaliar</option><option value="s"${i.rules === "s" ? " selected" : ""}>seguiu</option><option value="n"${i.rules === "n" ? " selected" : ""}>quebrou</option></select></td><td><button class="btn s" data-a="edit" data-id="${esc(i.id)}" style="padding:4px 9px">Abrir</button></td></tr>`;
     })
     .join(
       "",
@@ -68670,7 +69300,7 @@ async function cqCarrega(e, t) {
         SESS.at &&
         (o.Authorization = "Bearer " + SESS.at);
     } catch {}
-    const s = await fetch(a.url + "/functions/v1/macro", {
+    const s = await edgeFetchAutenticado(a.url + "/functions/v1/macro", {
         method: "POST",
         headers: o,
         body: JSON.stringify({ modo: "cotacoes", aba: e }),
@@ -69167,6 +69797,101 @@ function cqAlertasHtml() {
 }
 // v626: o rótulo "Profit ao vivo" é só da ponte do Profit; Binance e Finnhub mostram a própria fonte.
 const cqFonteVivo = (a) => (a && a.bnc ? "Binance · Tempo real" : a && a.fh ? "Finnhub · Tempo real" : "Profit ao vivo");
+/* v678 — Blindagem WebKit das logos, somente Mercado > Cotações.
+ * Mantém <img> no DOM mesmo quando a URL falha; nenhuma lógica de cotação muda. */
+const CQ_LOGO_MEMO = new Map(), CQ_LOGO_URL_STATUS = new Map();
+function cqLogoHtml(html) {
+ // A transformação é feita ANTES de o WebKit criar o elemento IMG.
+ // O erro será tratado no contêiner Mercado, sem DiarioLogos._erro remover a imagem.
+ return String(html || "").replace(/<img\b[^>]*>/gi, tag =>
+   tag.replace(/\s(?:loading|decoding|draggable|onerror)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+      .replace(/>$/, ' decoding="sync" draggable="false">'));
+}
+function cqLogoMemo(symbol,color,mark){
+ const key=String(symbol||"").trim().toUpperCase();
+ if(CQ_LOGO_MEMO.has(key))return CQ_LOGO_MEMO.get(key);
+ let el=null;
+ try{el=window.TraderAssetIdentity?.avatar(symbol);}catch{}
+ let html;
+ if(el){
+  el.classList.add("cqi","cqm-logo");el.dataset.cqmSymbol=key;
+  html=cqLogoHtml(el.outerHTML);
+ }else{
+  html='<span class="cqi cqm-logo" data-cqm-symbol="'+esc(key)+'" style="color:'+color+';background:color-mix(in srgb,'+color+' 16%,transparent)">'+esc(mark)+'</span>';
+ }
+ if(!el?.dataset.dlPendente){
+  if(CQ_LOGO_MEMO.size>=700)CQ_LOGO_MEMO.delete(CQ_LOGO_MEMO.keys().next().value);
+  CQ_LOGO_MEMO.set(key,html);
+ }
+ return html;
+}
+function cqLogoFallback(logo) {
+ if(!logo || logo.classList.contains("ta-avatar") || logo.querySelector(":scope > .cqm-logo-fallback"))return;
+ const t=document.createElement("span");
+ t.className="cqm-logo-fallback";
+ t.textContent=String(logo.dataset.dl||logo.dataset.cqmSymbol||"").replace(/[^A-Z0-9]/gi,"").slice(0,2).toUpperCase()||"•";
+ t.setAttribute("aria-hidden","true");
+ logo.prepend(t);
+}
+function cqLogoEstado(img,state) {
+ const url=img.getAttribute("src");
+ if(url)CQ_LOGO_URL_STATUS.set(url,state);
+ const logo=img.closest(".dl-logo,.ta-avatar,.cqm-logo");
+ if(state==="error"){
+  img.dataset.cqmError="1";
+  if(logo?.classList.contains("ta-avatar"))logo.classList.remove("ta-has-logo");
+ }else if(state==="loaded"){
+  delete img.dataset.cqmError;
+  if(logo?.classList.contains("ta-avatar"))logo.classList.add("ta-has-logo");
+ }
+ if(logo?.classList.contains("dl-logo") || (logo?.classList.contains("cqm-logo") && !logo.classList.contains("ta-avatar"))){
+  cqLogoFallback(logo);
+  const imgs=[...logo.querySelectorAll("img")];
+  logo.classList.toggle("cqm-img-failed",imgs.length>0&&imgs.every(x=>x.dataset.cqmError==="1"));
+ }
+}
+function cqLogoAcompanha(root){
+ if(!root?.classList.contains("market-quotes"))return;
+ if(!root._cqmGuard){
+  // Captura o erro antes de qualquer onerror inline do provedor. Não remove IMG.
+  root.addEventListener("error",e=>{
+   const img=e.target;
+   if(img?.tagName!=="IMG" || !img.closest(".cqm-logo,.dl-logo"))return;
+   e.stopImmediatePropagation();
+   cqLogoEstado(img,"error");
+  },true);
+  root._cqmGuard=true;
+ }
+ for(const img of root.querySelectorAll(".cqm-logo img,.dl-logo img")){
+  if(img.hasAttribute("loading"))img.removeAttribute("loading");
+  if(img.getAttribute("decoding")!=="sync")img.setAttribute("decoding","sync");
+  if(img.getAttribute("draggable")!=="false")img.setAttribute("draggable","false");
+  if(img.hasAttribute("onerror"))img.removeAttribute("onerror");
+  const url=img.getAttribute("src");
+  if(!url || img.dataset.cqmSeenSrc===url)continue;
+  img.dataset.cqmSeenSrc=url;
+  const logo=img.closest(".dl-logo,.cqm-logo");
+  cqLogoFallback(logo);
+  const cached=CQ_LOGO_URL_STATUS.get(url);
+  if(cached==="error"){cqLogoEstado(img,"error");continue;}
+  if(img.complete){
+   if(img.naturalWidth>0)cqLogoEstado(img,"loaded");
+   else cqLogoEstado(img,"error");
+   continue;
+  }
+  img.addEventListener("load",()=>cqLogoEstado(img,"loaded"),{once:true});
+  img.addEventListener("error",()=>cqLogoEstado(img,"error"),{once:true});
+ }
+ if(!root._cqmObserve && typeof MutationObserver!=="undefined"){
+  // Só reage a novos logos carregados tardiamente; ticks de preço não exigem observar novamente.
+  const observer=new MutationObserver(records=>{
+   if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches?.("img,.dl-logo,.cqm-logo")||n.querySelector?.("img")))))cqLogoAcompanha(root);
+  });
+  observer.observe(root,{subtree:true,childList:true});
+  root._cqmObserve=observer;
+ }
+}
+
 cqLinha = function (e, t) {
   t = e._aba || t;
   const a = cqPf(e, t),
@@ -69178,14 +69903,8 @@ cqLinha = function (e, t) {
       .slice(0, 4),
     i = cqEhFav(e.s),
     l = cqAls().some((c) => c.s === e.s && !c.fired),
-    d = (() => {
-      try {
-        const c = window.TraderAssetIdentity?.avatar(e.s || e.c);
-        if (c) return (c.classList.add("cqi"), c.outerHTML);
-      } catch {}
-      return null;
-    })();
-  return `<div class="cqr" data-market-symbol="${esc(e.s || e.c)}"${a && a.bnc ? ` data-bnc="${esc(String(e.c || "").toUpperCase())}"` : a && a.fh ? ` data-fh="${esc(fhSym(e.c))}"` : ""}${d ? ' data-ta-done="1"' : ""}>${d || `<span class="cqi" style="color:${n};background:color-mix(in srgb,${n} 16%,transparent)">${esc(r)}</span>`}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? (a.fechado ? ' · <span class="market-closed">FECHADO</span>' : ` · <span class="g">${cqFonteVivo(a)}</span>`) : ""}</small>${a ? `<small class="market-quote-time">${a.fechado ? "Profit" : cqFonteVivo(a)} · ${esc(a.em ? new Date(a.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) + " BRT" : "horário não informado")}</small>` : cotacaoReferencia(e)}</div>
+    d = cqLogoMemo(e.s || e.c, n, r);
+  return `<div class="cqr" data-market-symbol="${esc(e.s || e.c)}"${a && a.bnc ? ` data-bnc="${esc(String(e.c || "").toUpperCase())}"` : a && a.fh ? ` data-fh="${esc(fhSym(e.c))}"` : ""}${d ? ' data-ta-done="1"' : ""}>${d}<div class="cqn"><b>${esc(e.c || "")}${a && a.tk && a.tk !== e.c ? ` <small class="mut">${esc(a.tk)}</small>` : ""}</b><small>${esc(e.n || "")}${a ? (a.fechado ? ' · <span class="market-closed">FECHADO</span>' : ` · <span class="g">${cqFonteVivo(a)}</span>`) : ""}</small>${a ? `<small class="market-quote-time">${a.fechado ? "Profit" : cqFonteVivo(a)} · ${esc(a.em ? new Date(a.em).toLocaleString("pt-BR", {timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) + " BRT" : "horário não informado")}</small>` : cotacaoReferencia(e)}</div>
 <div class="cqp"><b>${o == null ? '<span class="mut">—</span>' : (e.un && e.un !== "%" ? "<small>" + esc(e.un) + "</small> " : "") + cqNum(o, e.dp) + (e.un === "%" ? "%" : "")}</b>${e.dabs != null && !a ? `<small class="${cls(e.dabs)}">${e.dabs > 0 ? "+" : ""}${cqNum(e.dabs, e.dp)}</small>` : ""}</div>
 <span class="cqv ${s == null ? "" : s > 0 ? "up" : s < 0 ? "dn" : ""}">${s == null ? "–" : (s > 0 ? "+" : "") + cqNum(s, 2) + "%"}</span><span class="cqac"><button class="cqb${i ? " on" : ""}" data-cqfav="${esc(e.s)}" data-ab="${esc(t)}" aria-label="Favorito">${i ? "★" : "☆"}</button><button class="cqb${l ? " on" : ""}" data-cqal="${esc(e.s)}" aria-label="Alerta de preço">🔔</button></span></div>`;
 };
@@ -69328,8 +70047,17 @@ function cqItens(category) {
     const end = searching ? focus.selectionEnd : null;
     const scroller = node.querySelector('.market-categories');
     const left = scroller?.scrollLeft || 0;
-    node.outerHTML = cotHtml();
+    const html = cotHtml();
+    if(node.dataset.category===CQ.aba){
+      try {
+        const t=document.createElement("template");t.innerHTML=html.trim();
+        const next=t.content.firstElementChild;
+        if(next?.id==="cotbox"){cqmMorph(node,next);cqLogoAcompanha(node);return;}
+      }catch{}
+    }
+    node.outerHTML = html;
     const fresh = document.getElementById('cotbox');
+    cqLogoAcompanha(fresh);
     const sources = fresh?.querySelector('.market-sources');
     if (sources) sources.open = !!openSources;
     for (const row of fresh?.querySelectorAll('.cqr') || []) {
@@ -69623,28 +70351,38 @@ function slipHtml(e) {
     }
   };
 }
-const SYQ = { busy: 0 };
-setInterval(async () => {
+// v713: sincronização remota econômica; alterações locais e sincronização manual continuam imediatas.
+const SYQ = { busy: 0, last: 0 };
+async function syConferirEstado() {
+  if (
+    document.hidden ||
+    typeof SESS > "u" ||
+    !SESS?.uid ||
+    !window.CLOUD_OK ||
+    SY.busy ||
+    SYQ.busy ||
+    !navigator.onLine ||
+    Date.now() - SYQ.last < 3 * 60e3
+  ) return;
+  SYQ.busy = 1;
+  SYQ.last = Date.now();
   try {
-    if (
-      document.hidden ||
-      typeof SESS > "u" ||
-      !SESS ||
-      !window.CLOUD_OK ||
-      SY.busy ||
-      SYQ.busy ||
-      !navigator.onLine
-    )
-      return;
-    SYQ.busy = 1;
-    const e = await (
-        await rq("/rest/v1/diario?select=mt:data->mt&user_id=eq." + SESS.uid)
-      ).json(),
-      t = +(e && e[0] && e[0].mt) || 0;
-    t && t !== +(S.st || 0) && t > +(S.mt || 0) && (await sync());
-  } catch {}
-  SYQ.busy = 0;
-}, 15e3);
+    const rows = await (await rq(
+      "/rest/v1/diario?select=mt:data->mt&user_id=eq." + SESS.uid
+    )).json();
+    const remote = +(rows && rows[0] && rows[0].mt) || 0;
+    if (remote && remote !== +(S.st || 0) && remote > +(S.mt || 0)) await sync();
+  } catch {} finally {
+    SYQ.busy = 0;
+  }
+}
+setInterval(syConferirEstado, 10 * 60e3);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) syConferirEstado();
+});
+window.addEventListener("focus", syConferirEstado);
+window.addEventListener("online", syConferirEstado);
+
 {
   const e = render0;
   render0 = function () {
@@ -70048,10 +70786,18 @@ function cqCacheSalva606(aba) {
   };
 }
 async function m606Carrega(forca) {
-  if (M606.busy || (!forca && M606.v && Date.now() - M606.ts < 25e3)) return;
+  // Mesa Macro é leitura de contexto, não cotação tick a tick.
+  // Compartilhar resultado por 5 min e pausar falhas por 3 min reduz Egress.
+  const intervalo = M606.v ? 5 * 60e3 : 3 * 60e3;
+  if (M606.busy || (!forca && (M606.v || M606.err) && Date.now() - M606.ts < intervalo)) return;
   if (window.DIARIO_DEMO) return;
   const a = cfg();
   if (!a) return;
+  if (typeof SESS === "undefined" || !SESS?.at) {
+    M606.err = "Entre na sua conta para atualizar Mesa Macro.";
+    M606.ts = Date.now();
+    return; // sem JWT nunca chamar Edge: HTTP 401 repetido
+  }
   M606.busy = !0;
   let mudou = !1;
   try {
@@ -70059,7 +70805,7 @@ async function m606Carrega(forca) {
     try {
       typeof SESS < "u" && SESS && SESS.at && (o.Authorization = "Bearer " + SESS.at);
     } catch {}
-    const s = await fetch(a.url + "/functions/v1/mesa-macro", { method: "POST", headers: o, body: "{}", signal: AbortSignal.timeout(25e3) }),
+    const s = await edgeFetchAutenticado(a.url + "/functions/v1/mesa-macro", { method: "POST", headers: o, body: "{}", signal: AbortSignal.timeout(25e3) }),
       n = await s.json().catch(() => ({}));
     if (!s.ok || n.versao !== "v606") throw new Error(n.error || "Erro " + s.status);
     ((M606.v = n), (M606.ts = Date.now()), (M606.err = ""), (M606.salvoEm = 0), (mudou = !0));
@@ -70127,7 +70873,7 @@ function m606MapaHtml() {
   return `<div class="m606-mapa" role="list" aria-label="Termômetros do pregão">${v.mapa
     .map((it) => {
       const lv = m606Vivo(it), px = lv ? lv.px : it.px, d1 = lv ? lv.d1 : it.d1, ab = m606Aberto({ ...it, live: lv && lv.live });
-      return `<div class="m606-t" role="listitem"><div class="m606-th"><b>${window.DiarioLogos ? DiarioLogos.html(it.k, 18) : ""}${esc(it.k)}</b><i class="m606-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}" title="${ab ? "Aberto agora" : "Fechado agora"}"></i></div><span class="m606-px">${px == null ? "–" : cqNum(px, it.dp) + (it.un === "%" ? "%" : "")}</span><span class="m606-v ${m606Cls(d1)}">${m606Sinal(d1)}</span><small>${esc(it.n)}${lv && lv.live ? " · " + (lv.bnc ? "Binance" : lv.fh ? "Finnhub" : "Profit") : ""}</small></div>`;
+      return `<div class="m606-t" data-market-symbol="${esc(it.k)}" role="listitem"><div class="m606-th"><b>${window.DiarioLogos ? cqLogoHtml(DiarioLogos.html(it.k, 18)) : ""}${esc(it.k)}</b><i class="m606-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}" title="${ab ? "Aberto agora" : "Fechado agora"}"></i></div><span class="m606-px">${px == null ? "–" : cqNum(px, it.dp) + (it.un === "%" ? "%" : "")}</span><span class="m606-v ${m606Cls(d1)}">${m606Sinal(d1)}</span><small>${esc(it.n)}${lv && lv.live ? " · " + (lv.bnc ? "Binance" : lv.fh ? "Finnhub" : "Profit") : ""}</small></div>`;
     })
     .join("")}</div><p class="m606-src">● aberto agora · ● fechado (último preço) · TradingView, B3 com ~15 min de atraso; WIN, WDO e DIs pelo Profit quando a ponte está ligada · ${esc(m606Consulta())}</p>`;
 }
@@ -70157,7 +70903,7 @@ function m606DiHtml() {
   const corpo = M606.di === "curva"
     ? m606DiCurva(di)
     : `<div class="m606-tab"><div class="m606-row m606-cab"><span>Vértice</span><span>Taxa</span><span>Dia</span></div>${di
-        .map((x) => `<div class="m606-row"><span><b>${window.DiarioLogos ? DiarioLogos.html(x.k, 16) : ""}${esc(x.k)}</b> <small>${mes(x.venc)}${x.live ? " · Profit" : ""}</small></span><span class="n">${x.taxa == null ? "–" : cqNum(x.taxa, 3) + "%"}</span><span class="n ${m606Cls(x.bps)}">${x.bps == null ? "–" : (x.bps > 0 ? "+" : x.bps < 0 ? "−" : "") + cqNum(Math.abs(Math.round(x.bps)), 0)}</span></div>`)
+        .map((x) => `<div class="m606-row" data-market-symbol="${esc(x.k)}"><span><b>${window.DiarioLogos ? cqLogoHtml(DiarioLogos.html(x.k, 16)) : ""}${esc(x.k)}</b> <small>${mes(x.venc)}${x.live ? " · Profit" : ""}</small></span><span class="n">${x.taxa == null ? "–" : cqNum(x.taxa, 3) + "%"}</span><span class="n ${m606Cls(x.bps)}">${x.bps == null ? "–" : (x.bps > 0 ? "+" : x.bps < 0 ? "−" : "") + cqNum(Math.abs(Math.round(x.bps)), 0)}</span></div>`)
         .join("")}<p class="m606-src">Variação do dia em pontos-base (bps): 1 bps = 0,01 ponto percentual.</p></div>`;
   return `<section class="m606-card" aria-label="DIs Brasil"><div class="m606-hd"><h3>DIs Brasil</h3><div class="m606-seg" role="group" aria-label="Visão dos DIs">${[["cot", "Cotações"], ["curva", "Curva"]].map(([k, t]) => `<button type="button" data-m606di="${k}" class="${M606.di === k ? "on" : ""}" aria-pressed="${M606.di === k}">${t}</button>`).join("")}</div></div>
 <div class="m606-kpis"><div><small>Inclinação 2a–5a</small><b class="n">${inc ? m606Sinal(inc.hoje, 1, " bps") : "–"}</b></div><div><small>Variação do dia</small><b class="n ${inc ? m606Cls(inc.varBps) : ""}">${inc && inc.varBps != null ? m606Sinal(inc.varBps, 1, " bps") : "–"}</b></div></div>
@@ -70192,7 +70938,7 @@ function m606EmHtml() {
   const txt = dif == null ? "" : dif > 0.15 ? "Real mais fraco que a cesta emergente hoje: pressão local no câmbio." : dif < -0.15 ? "Real mais forte que a cesta emergente hoje." : "Real em linha com os emergentes hoje.";
   return `<section class="m606-card" aria-label="Cesta emergente"><div class="m606-hd"><h3>Cesta emergente × USD/BRL</h3><small>variação do dia</small></div>
 <div class="m606-kpis k3"><div><small>Média EM (${e.n})</small><b class="n ${m606Cls(e.media)}">${m606Sinal(e.media)}</b></div><div><small>USD/BRL</small><b class="n ${m606Cls(brl)}">${m606Sinal(brl)}</b></div><div><small>Diferença</small><b class="n">${dif == null ? "–" : m606Sinal(dif, 2, " pp")}</b></div></div>
-<p class="m606-note">${txt}</p><div class="m606-em">${e.itens.map((x) => `<span><b>${window.DiarioLogos ? DiarioLogos.html(x.k, 16) : ""}${esc(x.k)}</b><em class="n ${m606Cls(x.d1)}">${m606Sinal(x.d1)}</em></span>`).join("")}</div><p class="m606-src">Média simples de USD/MXN, USD/CLP, USD/COP, USD/ZAR e USD/CNY. Alta = dólar mais forte. TradingView · ${esc(m606Consulta())}</p></section>`;
+<p class="m606-note">${txt}</p><div class="m606-em">${e.itens.map((x) => `<span><b>${window.DiarioLogos ? cqLogoHtml(DiarioLogos.html(x.k, 16)) : ""}${esc(x.k)}</b><em class="n ${m606Cls(x.d1)}">${m606Sinal(x.d1)}</em></span>`).join("")}</div><p class="m606-src">Média simples de USD/MXN, USD/CLP, USD/COP, USD/ZAR e USD/CNY. Alta = dólar mais forte. TradingView · ${esc(m606Consulta())}</p></section>`;
 }
 function m606BarHtml() {
   const b = M606.v && M606.v.barometro;
@@ -70208,7 +70954,7 @@ function m606BarHtml() {
   ].filter(Boolean);
   return `<section class="m606-card m606-bar" aria-label="US Market Barometer"><div class="m606-hd"><h3>US Market Barometer</h3><div class="m606-seg" role="group" aria-label="Período">${[["d1", "Dia"], ["m1", "1 mês"]].map(([x, t]) => `<button type="button" data-m606bar="${x}" class="${k === x ? "on" : ""}" aria-pressed="${k === x}">${t}</button>`).join("")}</div></div>
 <div class="m606-mx" role="table" aria-label="Matriz tamanho por estilo"><div role="row" class="m606-mxr"><span role="columnheader"></span>${b.colunas.map((x) => `<span role="columnheader" class="m606-mxh">${esc(x)}</span>`).join("")}</div>${b.linhas
-    .map((ln, i) => `<div role="row" class="m606-mxr"><span role="rowheader" class="m606-mxh">${esc(ln)}</span>${[0, 1, 2].map((j) => { const x = c[i][j], v = x[k]; return `<span role="cell" class="m606-mxc" style="background:${cor(v)}"><small>${window.DiarioLogos ? DiarioLogos.html(x.tk, 14) : ""}${esc(x.tk)}</small><b class="n">${m606Sinal(v)}</b></span>`; }).join("")}</div>`)
+    .map((ln, i) => `<div role="row" class="m606-mxr"><span role="rowheader" class="m606-mxh">${esc(ln)}</span>${[0, 1, 2].map((j) => { const x = c[i][j], v = x[k]; return `<span role="cell" class="m606-mxc" style="background:${cor(v)}"><small>${window.DiarioLogos ? cqLogoHtml(DiarioLogos.html(x.tk, 14)) : ""}${esc(x.tk)}</small><b class="n">${m606Sinal(v)}</b></span>`; }).join("")}</div>`)
     .join("")}</div>${leit.map((x) => `<p class="m606-note">${x}</p>`).join("")}<p class="m606-src">ETFs iShares: S&amp;P 500 (IVE/IVV/IVW), S&amp;P 400 (IJJ/IJH/IJK) e S&amp;P 600 (IJS/IJR/IJT). Verde = alta, vermelho = queda; cor mais forte = movimento maior. TradingView, ~15 min de atraso · ${esc(m606Consulta())}</p></section>`;
 }
 document.addEventListener("click", (e) => {
@@ -70400,8 +71146,8 @@ function m623Linha(it) {
     varTxt = juro && it.dabs != null && !vivo ? m606Sinal(it.dabs * 100, 1, " bps") : m606Sinal(d1),
     varCls = m606Cls(juro && it.dabs != null && !vivo ? it.dabs : d1),
     chave = M623_LOGO[it.k] || it.k,
-    logo = window.DiarioLogos ? DiarioLogos.html(chave, 16) : "";
-  return `<div class="m623-r"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k, it.g))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
+    logo = window.DiarioLogos ? cqLogoHtml(DiarioLogos.html(chave, 16)) : "";
+  return `<div class="m623-r" data-market-symbol="${esc(it.s || it.k)}"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k, it.g))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
 }
 function m623Bloco(tit, itens, extra = "") {
   return `<section class="m623-sec"><header><h3>${tit}</h3>${extra}</header><div class="m623-tb" role="table">${itens.length ? itens.map(m623Linha).join("") : '<div class="market-state" role="status">Consultando…</div>'}</div></section>`;
@@ -70906,7 +71652,7 @@ function m624PintaPaleta() {
   M624.sel = Math.min(M624.sel, Math.max(0, M624.lista.length - 1));
   p.querySelector(".m624-pl").innerHTML = M624.lista.length
     ? M624.lista
-        .map((x, i) => `<button type="button" role="option" id="m624-o${i}" aria-selected="${i === M624.sel}" class="${i === M624.sel ? "on" : ""}" data-m624-op="${i}"><span class="m624-pt">${x.t === "aba" ? "Aba" : x.t === "ativo" ? "Ativo" : "Comando"}</span>${x.t === "ativo" && window.DiarioLogos ? DiarioLogos.html(x.rot, 16) : ""}<b>${esc(x.rot)}</b><small>${esc(x.sub)}</small></button>`)
+        .map((x, i) => `<button type="button" role="option" id="m624-o${i}" aria-selected="${i === M624.sel}" class="${i === M624.sel ? "on" : ""}" data-m624-op="${i}"><span class="m624-pt">${x.t === "aba" ? "Aba" : x.t === "ativo" ? "Ativo" : "Comando"}</span>${x.t === "ativo" && window.DiarioLogos ? cqLogoHtml(DiarioLogos.html(x.rot, 16)) : ""}<b>${esc(x.rot)}</b><small>${esc(x.sub)}</small></button>`)
         .join("")
     : '<p class="m624-pv">Nada encontrado. Tente um ticker (PETR4, AAPL) ou um comando (ANALISE PETR4).</p>';
   inp.setAttribute("aria-activedescendant", M624.lista.length ? "m624-o" + M624.sel : "");
@@ -70999,17 +71745,17 @@ setInterval(() => {
    recriados enquanto o ticker e o tamanho forem os mesmos — o equivalente ao React.memo.
    ===================================================================================== */
 const CQM_LOGO = ".cqi,.ta-avatar,.dl-logo";
-const cqmChave = (el) => (el && el.nodeType === 1 ? el.getAttribute("data-market-symbol") || el.getAttribute("data-tv") : null);
-const cqmLogoId = (el) => (el.getAttribute("data-dl") || el.getAttribute("data-ticker") || "") + "|" + (el.getAttribute("style") || "").replace(/color[^;]*;?|background[^;]*;?/g, "");
-function cqmMorph(a, b) {
-  if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName) return void a.replaceWith(b);
-  if (a.nodeType === 3 || a.nodeType === 8) return void (a.nodeValue !== b.nodeValue && (a.nodeValue = b.nodeValue));
-  if (a.nodeType !== 1) return;
-  if (a.matches(CQM_LOGO)) {
-    // Mesmo ticker e tamanho: mantém o logo já carregado (sem recarregar nem piscar).
-    if (cqmLogoId(a) === cqmLogoId(b) && a.className.split(" ")[0] === b.className.split(" ")[0]) return;
-    return void a.replaceWith(b);
+const cqmChave = el => el?.nodeType===1 ? el.getAttribute("data-market-symbol")||el.getAttribute("data-tv") : null;
+// Comparador: símbolo estável, sem preço/variação/horário.
+const cqmLogoId = el => el.getAttribute("data-cqm-symbol") || el.getAttribute("data-dl") || el.getAttribute("data-ticker") || el.closest("[data-market-symbol]")?.getAttribute("data-market-symbol") || "";
+const cqmLogoSize = el => el.style.getPropertyValue("--dl")||(el.classList.contains("ta-small")?"small":"normal");
+function cqmMorph(a,b){
+  if(a.nodeType===1&&b.nodeType===1&&a.matches(CQM_LOGO)&&b.matches(CQM_LOGO)){
+    if(cqmLogoId(a)&&cqmLogoId(a)===cqmLogoId(b)&&cqmLogoSize(a)===cqmLogoSize(b))return;
   }
+  if(a.nodeType!==b.nodeType||a.nodeName!==b.nodeName)return void a.replaceWith(b);
+  if(a.nodeType===3||a.nodeType===8)return void(a.nodeValue!==b.nodeValue&&(a.nodeValue=b.nodeValue));
+  if(a.nodeType!==1)return;
   const foco = a === document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
   const det = a.tagName === "DETAILS";
   for (const at of [...a.attributes]) !b.hasAttribute(at.name) && !(det && at.name === "open") && a.removeAttribute(at.name);
@@ -71042,8 +71788,10 @@ function cqmFilhos(a, b) {
       cqmMorph(o, n);
       return o;
     });
-    const atual = [...a.childNodes];
-    if (atual.length !== ordem.length || atual.some((x, i) => x !== ordem[i])) a.replaceChildren(...ordem);
+    // Mantém os nós associados ao ticker, movendo somente as linhas que mudaram.
+    for(let i=0;i<ordem.length;i++)if(a.children[i]!==ordem[i])a.insertBefore(ordem[i],a.children[i]||null);
+    const manter=new Set(ordem);
+    for(const el of [...a.children])if(!manter.has(el))el.remove();
     return;
   }
   const na = [...a.childNodes];
@@ -71063,11 +71811,68 @@ function cqMorph() {
     const fresh = t.content.firstElementChild;
     if (!fresh || fresh.id !== "cotbox") return void cqPinta();
     cqmMorph(node, fresh);
+    cqLogoAcompanha(node);
   } catch {
     cqPinta();
   }
 }
 
+/* v679 — Quando outra rotina remonta a tela Mercado por inteiro, conserva
+ * a IMG já carregada do iOS em vez de disparar nova decodificação/requisição.
+ * O morph de cotações continua sendo a via normal; este é um resgate restrito
+ * a #cotbox, apenas para a MESMA categoria e MESMO símbolo. */
+function cqmResgatarLogos(antigo, novo) {
+  if(!antigo || !novo || antigo.dataset.category!==novo.dataset.category)return;
+  const sel=".cqr[data-market-symbol],.m623-r[data-market-symbol],.m606-row[data-market-symbol]";
+  const antigas=new Map();
+  for(const row of antigo.querySelectorAll(sel)){
+    const k=row.className+"|"+row.getAttribute("data-market-symbol");
+    if(!antigas.has(k))antigas.set(k,row);
+  }
+  const logos=row=>[...row.querySelectorAll(".cqm-logo,.dl-logo")]
+    .filter(el=>!el.parentElement?.closest(".cqm-logo,.dl-logo"));
+  for(const row of novo.querySelectorAll(sel)){
+    const old=antigas.get(row.className+"|"+row.getAttribute("data-market-symbol"));
+    if(!old)continue;
+    const antes=logos(old),depois=logos(row);
+    for(let i=0;i<Math.min(antes.length,depois.length);i++){
+      const a=antes[i],b=depois[i];
+      if(!cqmLogoId(a)||cqmLogoId(a)!==cqmLogoId(b)||cqmLogoSize(a)!==cqmLogoSize(b))continue;
+      const anterior=[...a.querySelectorAll("img")].map(img=>img.getAttribute("src"));
+      const seguinte=[...b.querySelectorAll("img")].map(img=>img.getAttribute("src"));
+      if(!anterior.length && seguinte.length)continue; // Nova imagem resolvida deve aparecer.
+      if(anterior.length&&seguinte.length&&anterior.join("|")!==seguinte.join("|"))continue;
+      b.replaceWith(a); // Transfere o mesmo nó e a textura já decodificada pelo WebKit.
+    }
+  }
+}
+function cqmVigiarRemontagem(){
+  const app=document.getElementById("app");
+  if(!app || app._cqmRemountObserver || typeof MutationObserver==="undefined")return;
+  let anterior=null;
+  const busca=n=>n?.nodeType===1 ? (n.id==="cotbox"?n:n.querySelector?.("#cotbox")):null;
+  const obs=new MutationObserver(registros=>{
+    for(const reg of registros)for(const node of reg.removedNodes){
+      const box=busca(node);
+      if(box && !anterior)anterior=box; // Preserve a primeira textura mesmo em renders síncronos em sequência.
+    }
+    if(typeof tab==="undefined"||tab!=="mercado"||MKT.tab!=="cq"){anterior=null;return;}
+    const atual=document.getElementById("cotbox");
+    if(anterior && atual && anterior!==atual){
+      cqmResgatarLogos(anterior,atual);
+      anterior=null;
+      cqLogoAcompanha(atual);
+    }
+  });
+  obs.observe(app,{childList:true,subtree:true});
+  app._cqmRemountObserver=obs;
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",cqmVigiarRemontagem,{once:true});
+else cqmVigiarRemontagem();
+
+window.TraderUI?.onRender?.("mercado-logo-v669",()=>{
+ if(typeof tab!=="undefined"&&tab==="mercado"&&MKT.tab==="cq")cqLogoAcompanha(document.getElementById("cotbox"));
+});
 /* v638 — 20 criptos ao vivo (Binance) na categoria Cripto e no Terminal; nomes para a lista. */
 const BNC_NOMES = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", XRP: "XRP", BNB: "BNB", DOGE: "Dogecoin", ADA: "Cardano", AVAX: "Avalanche", LINK: "Chainlink", SUI: "Sui", TON: "Toncoin", DOT: "Polkadot", SHIB: "Shiba Inu", LTC: "Litecoin", UNI: "Uniswap", NEAR: "NEAR", APT: "Aptos", ARB: "Arbitrum", OP: "Optimism", RENDER: "Render" };
 const BNC_TOP = Object.keys(BNC_NOMES);
@@ -76081,7 +76886,6 @@ ${(e.em_poucas_linhas || []).length ? `<section class="jrsec"><h3>Em poucas linh
 <section class="jrsec"><h3>Mais do dia</h3>${(e.materias || []).map((s, n) => jrMateria(s, n)).join("")}</section>
 ${e.analise ? `<section class="jrsec jranal"><h3>Análise</h3><h2 class="jrtit">${esc(e.analise.titulo)}</h2><div class="jrtxt">${jrPar(e.analise.texto)}</div><div class="sm mut">Análise da redação, com os dados do dia. Não é recomendação de investimento.</div></section>` : ""}
 ${(e.agenda || []).length ? `<section class="jrsec"><h3>Agenda</h3>${e.agenda.map((s) => `<div class="jrag"><b>${esc(s.quando || "")}</b><div><div>${esc(s.evento)}</div>${s.por_que ? `<div class="sm mut">${esc(s.por_que)}</div>` : ""}</div></div>`).join("")}<button class="btn s" data-hub="mercado:ag" style="margin-top:6px">Agenda completa</button></section>` : ""}
-<section class="jrsec"><h3>Giro do pregão</h3><div class="sm mut" style="margin-bottom:6px">Os boletins da pré-abertura, do meio do dia e do fechamento continuam no Giro.</div><button class="btn s" data-hub="mercado:giro">Abrir o Giro</button></section>
 ${
   (e.manchetes_externas || []).length
     ? `<section class="jrsec"><h3>Na imprensa</h3><div class="sm mut" style="margin-bottom:6px">Manchetes de outros veículos usadas como pista pela redação (os textos acima são próprios). Para ler as matérias originais, veja a aba Notícias.</div>${e.manchetes_externas
@@ -76942,24 +77746,8 @@ function jrIndsHtml(e) {
     viv: t,
   };
 }
-setInterval(() => {
-  try {
-    if (
-      document.hidden ||
-      JRN.arq ||
-      tab !== "mercado" ||
-      MKT.tab !== "jr" ||
-      !JRN.v
-    )
-      return;
-    const e = document.getElementById("jrinds");
-    if (!e) return;
-    const t = jrIndsHtml(JRN.v);
-    e.innerHTML = t.h;
-    const a = document.getElementById("jrviv");
-    (a && (a.hidden = !t.viv), jrPlantoes(!1));
-  } catch {}
-}, 2e4);
+// v714: a edição é imutável; não consultar plantões nem repintar cotações por polling.
+
 {
   const e = jrTexto;
   jrTexto = function (t) {
@@ -78511,6 +79299,7 @@ const JR_PNOME = {
               try {
                 const r = await anxCall({
                   modo: "jornal_parte",
+                  snapshot_id: a.snapshot_id,
                   parte: n,
                   force: !!e || !!a.atualizar,
                 });
@@ -78546,6 +79335,7 @@ const JR_PNOME = {
             );
           const s = await anxCall({
             modo: "jornal_junta",
+            snapshot_id: a.snapshot_id,
             partes_prontas: JRN.pr,
           });
           if (s.erro) throw new Error(s.erro);
@@ -81093,40 +81883,126 @@ function ajusta160() {
     );
   };
 }
+
+/* v789 — preparo único, sem marcar regras como cumpridas por inferência. */
+function preparacaoPendente789(d) {
+  const pend = [];
+  if (!(Number(d.estado) >= 1 && Number(d.estado) <= 5)) pend.push("estado emocional");
+  if (!(Number(d.metaDia) > 0)) pend.push("meta do dia (R$)");
+  if (!(Number(d.maxP) > 0)) pend.push("perda máxima (R$)");
+  if (!(Number.isInteger(Number(d.pl2?.max)) && Number(d.pl2?.max) > 0)) pend.push("máximo de trades");
+  if (!Array.isArray(d.pl2?.mods) || !d.pl2.mods.length) pend.push("foco operacional");
+  if (!d.cl?.p_stop) pend.push("confirmação de stop e alvo");
+  return pend;
+}
+function planoPreparacao789(e) {
+  const d = e.dia || {}, p = d.pl2 || {};
+  const field = (id,label,val) => '<label class="sm">' + label +
+    '<input type="number" inputmode="decimal" step="any" min="0" data-prep789="' + id +
+    '" value="' + esc(val ?? "") + '" style="width:100%;font-size:16px;min-height:44px"></label>';
+  const modes = [["dt","Day trade"],["sw","Swing"],["op","Opções"],["ex","EUA/Forex"]];
+  const vies = [["","Escolha"],["compra","Compra"],["venda","Venda"],["neutro","Neutro"]];
+  return '<div class="g2">' + field("metaDia","Meta diária (R$)",d.metaDia) +
+    field("maxP","Perda máxima diária (R$)",d.maxP) +
+    field("max","Máximo de trades",p.max) +
+    '<label class="sm">Viés<select data-prep789="vies" style="font-size:16px;min-height:44px">' +
+    vies.map(([v,t])=>'<option value="'+v+'"'+(p.vies===v?' selected':'')+'>'+t+'</option>').join("")+
+    '</select></label></div><div class="sm" style="margin:8px 0 4px">Foco operacional (ao menos um)</div><div class="chips2">' +
+    modes.map(([v,t])=>'<button type="button" data-prep789-mod="'+v+'" style="min-height:44px" class="'+((p.mods||[]).includes(v)?'on':'')+'">'+t+'</button>').join("") +
+    '</div><label class="gchk"><input type="checkbox" data-gcl="p_stop"'+(d.cl?.p_stop?' checked':'')+
+    '><span>Vou estabelecer stop e alvo antes de cada entrada</span></label>';
+}
+document.addEventListener("change", (ev) => {
+  const el = ev.target.closest?.("#gateov [data-prep789]");
+  if (!el) return;
+  const day = GATE_D(), d = S.days[day] ?? (S.days[day] = {chk:{}});
+  const key = el.dataset.prep789, val = Number(el.value);
+  if (key === "vies" || key === "max") {
+    d.pl2 ??= {};
+    d.pl2[key] = key === "max" ? (Number.isInteger(val) && val > 0 ? val : 0) : el.value;
+  } else {
+    d[key] = el.value.trim() && Number.isFinite(val) && val > 0 ? val : "";
+    d.cl ??= {};
+    if (key === "maxP") d.cl.p_limite = Number(d.maxP) > 0;
+    if (key === "metaDia") d.cl.p_meta = Number(d.metaDia) > 0;
+  }
+  d.u = Date.now(); save(); gateAtualiza();
+});
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest?.("#gateov [data-prep789-mod]");
+  if (!el) return;
+  ev.preventDefault();
+  const day = GATE_D(), d = S.days[day] ?? (S.days[day] = {chk:{}});
+  const p = d.pl2 ?? (d.pl2 = {}), mods = new Set(p.mods || []);
+  mods.has(el.dataset.prep789Mod) ? mods.delete(el.dataset.prep789Mod) : mods.add(el.dataset.prep789Mod);
+  p.mods = [...mods]; d.u = Date.now(); save(); gateAtualiza();
+});
+
 function gateEstado() {
-  const e = new Date(),
-    t = e.getDay(),
-    a = e.getHours();
-  if (t === 0 || t === 6) return null;
-  if (a >= 8 && a < 17) {
-    const o = GATE_D(),
-      s = S.days[o] || {},
-      n = s.chk || {},
-      r = s.cl || {},
-      i = [...(s.estado ? [] : ["estado"]), ...GATE_PLANO.filter((l) => !r[l])];
-    return i.length ? { tipo: "manha", falta: i, dia: s, c: n, cl: r } : null;
+  const now = new Date(), weekday = now.getDay(), hour = now.getHours();
+  if (weekday === 0 || weekday === 6) return null;
+  if (hour >= 8 && hour < 17) {
+    const d = S.days[GATE_D()] || {};
+    if (d.ckok) return null;
+    const falta = preparacaoPendente789(d);
+    return {tipo:"manha",falta,pronto:falta.length===0,dia:d,c:d.chk||{},cl:d.cl||{}};
   }
-  return gateEstado158(a);
+  return gateEstado158(hour);
 }
-function gateEstado158(e) {
-  if (e >= 17) {
-    const t = GATE_D();
-    if ((S.days[t] || {}).posop) return null;
-    const a = gateHoje(t),
-      o = a
-        .map((s) => ({
-          t: s,
-          motivo: s.pin
-            ? numN(s.exit) != null && !s.pout
-              ? "falta a foto da saída"
-              : ""
-            : "falta a foto da entrada",
-        }))
-        .filter((s) => s.motivo);
-    return { tipo: "tarde", T0: a, falta: o };
+function gateEstado158(hour) {
+  if (hour < 17) return null;
+  const date = GATE_D(), d = S.days[date] || {}, trades = gateHoje(date);
+  const falta = trades.map((t) => {
+    const reasons = [];
+    if (!t.pin) reasons.push("falta a foto da entrada");
+    if (numN(t.exit) != null && !t.pout) reasons.push("falta a foto da saída");
+    if (numN(t.stop) == null) reasons.push("falta o stop inicial");
+    if (numN(t.target) == null && !/(alvo\s+m[oó]vel|trailing|sem\s+alvo\s+fixo|sa[ií]da\s+por\s+crit[eé]rio)/i.test(String(t.nota || "")))
+      reasons.push("falta alvo ou justificativa de saída dinâmica");
+    if (!["s","n"].includes(t.rules)) reasons.push("falta avaliar regras");
+    if (t.rules === "n" && !String(t.nota || "").trim() && (!t.err || t.err === "Nenhum"))
+      reasons.push("falta justificar quebra de regra");
+    if (calc(t).invalidPrice) reasons.push("preço com escala/tick inválido");
+    return {t, motivo: reasons.join(", ")};
+  }).filter((x) => x.motivo);
+  const updated = trades.some(t => Number(t.u || 0) > Number(d.posop || 0));
+  if (d.posop && !falta.length && !updated) return null;
+  return {tipo:"tarde",T0:trades,falta};
+}
+
+/* v789: valida o blob da foto local somente no clique de concluir; zero polling/egress. */
+document.addEventListener("click", async (evt) => {
+  const button = evt.target.closest?.("#gateov [data-gate-ok]");
+  if (!button) return;
+  evt.preventDefault(); evt.stopImmediatePropagation();
+  if (button.disabled) return;
+  const state = gateEstado();
+  if (!state || state.tipo !== "tarde" || state.falta.length) { gateAtualiza(); return; }
+  button.disabled = true;
+  try {
+    const missing = [];
+    for (const t of state.T0) {
+      for (const field of numN(t.exit) != null ? ["pin","pout"] : ["pin"]) {
+        const key = t[field];
+        if (!key) continue;
+        const blob = (typeof M !== "undefined" ? M[key] : null) || await idb("img","get",key);
+        if (!blob) missing.push(String(t.ativo || "Trade") + ": foto " + (field === "pin"?"entrada":"saída") + " não encontrada no aparelho");
+      }
+    }
+    if (missing.length) {
+      const root = document.querySelector("#gateov .gc");
+      root?.insertAdjacentHTML("beforeend",'<p class="r" role="alert">' + esc(missing.join("; ")) +
+        '. Abra a operação e anexe novamente a imagem.</p>');
+      return;
+    }
+    const date = GATE_D(), day = S.days[date] ?? (S.days[date] = {chk:{}});
+    day.posop = Date.now(); day.u = Date.now(); save(); gateAtualiza();
+    toast("Diário de hoje conferido. Bom descanso.");
+  } finally {
+    if (button.isConnected) button.disabled = false;
   }
-  return null;
-}
+}, true);
+
 function gateManhaHtml(e) {
   const t = e.c || {},
     a = e.cl || {},
@@ -81146,9 +82022,7 @@ function gateManhaHtml(e) {
 <p class="sm">O preparo obrigatório é exigido ao iniciar um registro operacional. Consultas continuam disponíveis. Regras pessoais e mentalidade são opcionais.</p>
 <div class="gsec"><b>1. Como estou agora? <span class="sm mut">(obrigatório)</span></b><div class="gest-l">${r}</div></div>
 <div class="gsec"><b>2. Plano de hoje <span class="sm mut">(obrigatório)</span></b>
-${i("data-gcl", "p_limite", "Defini o limite de perda do dia, em vezes o risco")}
-${i("data-gcl", "p_meta", "Defini a meta do dia, ou o ganho que já me basta")}
-${i("data-gcl", "p_stop", "Sei onde saio de cada operação: stop e alvo")}</div>
+${planoPreparacao789(e)}</div>
 ${l.length ? `<div class="gsec"><b>3. Minhas regras <span class="sm mut">(opcional)</span></b>${l.map((d) => i("data-gate-chk", d.id, d.t)).join("")}</div>` : ""}
 <div class="gsec"><b>4. Mentalidade <span class="sm mut">(opcional)</span></b>${GATE_MENT.map(([d, c]) => i("data-gcl", d, c)).join("")}</div>
 <div class="gdica sm">“${esc(s)}” <span class="mut">Psicologia Financeira, Celso Sant'Ana</span></div>
@@ -81230,6 +82104,27 @@ function csvParaLinhas(e) {
   }
   return ((o !== "" || a.length) && (a.push(o), t.push(a)), t);
 }
+
+/* v789: auditoria por trade na exportação, sem embutir fotos privadas. */
+function checklistTradeLinhas789() {
+  const rows = [["Data entrada","Data saída","Ativo","Lado","Qtd.","R$/ponto","Entrada","Stop","Alvo","Saída","Setup","Regras","Foto entrada","Foto saída","Pendências","Risco (R$)","Resultado (R$)","R","Notas"]];
+  for (const t of S.trades || []) {
+    const c=calc(t), miss=[];
+    if (!t.pin) miss.push("foto entrada");
+    if (numN(t.exit)!=null&&!t.pout) miss.push("foto saída");
+    if (numN(t.stop)==null) miss.push("stop inicial");
+    if (!["s","n"].includes(t.rules)) miss.push("avaliar regras");
+    if (t.rules==="n"&&!String(t.nota||"").trim()&&(!t.err||t.err==="Nenhum")) miss.push("justificar quebra");
+    if (c.invalidPrice) miss.push("preço/tick inválido");
+    rows.push([t.dt||"",t.dtx||"",t.ativo||"",t.side==="C"?"Compra":"Venda",t.qty||"",t.pv||"",t.entry||"",t.stop||"",t.target||"",t.exit||"",t.setup||"",
+      t.rules==="s"?"Sim":t.rules==="n"?"Não":"Não avaliada",
+      t.pin?"Referência cadastrada; arquivo não verificado":"Pendente",
+      t.pout?"Referência cadastrada; arquivo não verificado":numN(t.exit)==null?"Aberta":"Pendente",
+      miss.join("; ")||"Sem pendências declaradas",c.risk??"",c.pl??"",c.r??"",t.nota||""]);
+  }
+  return rows;
+}
+
 function checklistLinhas() {
   const e = [
       "data",
@@ -81266,8 +82161,8 @@ function checklistLinhas() {
         s,
         n.estado || "",
         GATE_PLANO.filter((c) => i[c]).length,
-        a.filter((c) => r[c.id]).length,
-        a.length,
+        (Array.isArray(n._rulesSnapshot?.rules) ? n._rulesSnapshot.rules.filter((c) => c.checked).length : a.filter((c) => r[c.id]).length),
+        (Array.isArray(n._rulesSnapshot?.rules) ? n._rulesSnapshot.rules.length : a.length),
         ["m_umdia", "m_erro", "m_aprend", "m_maior"].filter((c) => i[c]).length,
         n.posop ? "sim" : "não",
         l.length,
@@ -81295,6 +82190,7 @@ function checklistLinhas() {
     const s = [
         xlsAba("Operações", csvParaLinhas(a)),
         xlsAba("Checklist", checklistLinhas()),
+        xlsAba("Revisao por trade", checklistTradeLinhas789()),
       ],
       n = t === "all" ? "diario-trades.xls" : "diario-trades-" + t + ".xls";
     return saveFile(n, xlsArquivo(s), "application/vnd.ms-excel");
@@ -81387,10 +82283,7 @@ function jrSetAgg(e) {
       .slice(0, 10)
   );
 }
-const jrChip = (e, t, a) => {
-  const [o, s, n] = JR_DIR[t] || JR_DIR[""];
-  return `<span class="jrchip ${s}" title="${esc(n)}">${o} ${esc(e)}${a > 1 ? ` <small>×${a}</small>` : ""}</span>`;
-};
+const jrChip = (e) => `<span class="jrchip">${esc(e)} · efeito condicionado</span>`;
 function jrImpTxt(e) {
   if (!jrTemImp(e)) return "";
   const t = (JR_DIR[e.direcao] || JR_DIR[""])[2];
@@ -81449,8 +82342,8 @@ function jrTecDados(e) {
 }
 const jrNumF = (e, t) =>
   e.toLocaleString("pt-BR", {
-    minimumFractionDigits: t > 1 ? 4 : 0,
-    maximumFractionDigits: t > 1 ? 4 : 0,
+    minimumFractionDigits: t > 1 ? 1 : 0,
+    maximumFractionDigits: t > 1 ? 1 : 0,
   });
 var jrTecHtml;
 {
@@ -82412,17 +83305,17 @@ function epeetNota(e) {
 function epeetHtml(e) {
   const t = e.epeet || {},
     a = epeetNota(t);
-  return `<div class="gsec"><b>5. Escala emocional <span class="sm mut">(opcional)</span></b>
+  return `<details class="gsec"><summary style="cursor:pointer;min-height:44px"><b>Escala emocional EPEET-14 (opcional)</b></summary>
 <p class="sm mut" style="margin:4px 0 8px">1 discordo completamente · 2 discordo parcialmente · 3 indiferente · 4 concordo parcialmente · 5 concordo completamente</p>
 ${EPEET.map(([o], s) => `<div class="epq"><span>${s + 1}. ${esc(o)}</span><div class="epb">${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="${+t[s] === n ? "on" : ""}" data-ep="${s}" data-epv="${n}" aria-label="${n}">${n}</button>`).join("")}</div></div>`).join("")}
 ${a ? `<div class="epres ${a.cls}">Termômetro: <b>${a.n} de 70</b> · ${a.txt}${a.q < 14 ? ` <span class="sm">(${a.q} de 14 respondidas; a conta estima o total)</span>` : ""}</div>` : ""}
-<div class="sm mut" style="margin-top:6px">Afirmações da escala EPEET-14 (Psicologia Financeira, Celso Sant'Ana). A conta é simplificada pelo app: as afirmações de mau estado contam ao contrário, de 14 (instável) a 70 (estável). Não é a pontuação oficial da escala.</div></div>`;
+<div class="sm mut" style="margin-top:6px">Afirmações da escala EPEET-14 (Psicologia Financeira, Celso Sant'Ana). A conta é simplificada pelo app: as afirmações de mau estado contam ao contrário, de 14 (instável) a 70 (estável). Não é a pontuação oficial da escala.</div></details>`;
 }
 {
   const e = gateEstado;
   gateEstado = function () {
     const t = e.apply(this, arguments);
-    if (t) return t.tipo === "manha" ? { ...t, pronto: !1 } : t;
+    if (t) return t;
     const a = new Date(),
       o = a.getDay(),
       s = a.getHours();
@@ -82476,6 +83369,8 @@ document.addEventListener("click", (e) => {
   const s = e.target.closest && e.target.closest("#gateov [data-gate-fim]");
   if (s) {
     if (s.disabled) return;
+    const current = gateEstado();
+    if (!current || !current.pronto) { gateAtualiza(); return; }
     const n = GATE_D(),
       r = (a = S.days)[n] ?? (a[n] = { chk: {} });
     ((r.ckok = Date.now()),
@@ -82543,7 +83438,8 @@ async function jvPdfBytes(...args) {
       try {
         errAdd("jornal · PDF editorial (vetor)", a.message || a);
       } catch {}
-      return e.apply(this, arguments);
+      toast("Não foi possível exportar esta edição. " + String(a?.message || a));
+      return;
     }
   };
 }
@@ -89318,6 +90214,29 @@ function net188() {
   const t = 28,
     a = (E, P, B, G) => ({ x: E, y: P, w: B, h: G }),
     o = {
+      pro: {
+        n: "Terminal Pro",
+        uiPro: true,
+        p: ["PETR4 G", "MON", "TOP", "COMP PETR4 VALE3 IBOV", "TECH", "PETR4 FA", "ALRT"],
+        t: [
+          ["PETR4 G", "VALE3 G", "ITUB4 G"],
+          null,
+          ["TOP", "NEWS"],
+          null,
+          ["TECH", "ALC"],
+          ["PETR4 FA", "PETR4 DES"],
+          ["ALRT", "EVT"],
+        ],
+        g: [
+          a(2, 0, 7, 18),
+          a(0, 0, 2, 26),
+          a(2, 18, 4, 8),
+          a(6, 18, 3, 8),
+          a(9, 0, 3, 9),
+          a(9, 9, 3, 9),
+          a(9, 18, 3, 8),
+        ],
+      },
       br: {
         n: "Ações Brasil",
         p: ["MON", "PETR4 G", "ECO", "TOP", "TECH"],
@@ -89498,6 +90417,11 @@ function net188() {
               G.p.length === o[B].p.length &&
               (G.t = JSON.parse(JSON.stringify(o[B].t)));
           })),
+        /* v761: cria o palco Pro sem sobrescrever qualquer workspace salvo. */
+        P.m761 ||
+          ((P.m761 = 1),
+          P.wss.pro || (P.wss.pro = JSON.parse(JSON.stringify(o.pro))),
+          P.ws === "br" && (P.ws = "pro")),
         P.wss[P.ws] || (P.ws = Object.keys(P.wss)[0] || "br"),
         P.wss[P.ws] || (P.wss[P.ws] = JSON.parse(JSON.stringify(o.br))),
         P
@@ -90180,6 +91104,7 @@ function net188() {
     const E = r(),
       P = i(),
       B = l(),
+      pro = P.uiPro === true,
       G = P.p.length;
     (e.foco >= G && (e.foco = 0),
       e.mob >= G && (e.mob = 0),
@@ -90195,21 +91120,21 @@ function net188() {
     .join("")}<option value="__novo">+ Novo espaço…</option></select>
   <button class="trbtn" data-tr="addp" title="Abrir mais um painel">+ Painel</button>${B ? '<button class="trbtn" data-tr="org" title="Arrumar os painéis lado a lado">Organizar</button>' : ""}<button class="trbtn" data-tr="wsmenu" title="Renomear, duplicar ou excluir este espaço">${B ? "Espaço ▾" : "⋯"}</button><button class="trbtn" data-tr="sair">Sair</button></div>
   <div id="trtape" class="trtape">${typeof window.trTapeHtml == "function" ? window.trTapeHtml() : ""}</div>`,
-      _ = B
+      _ = B || pro
         ? ""
         : `<div class="trtabs">${P.p.map((De, Ne) => `<button class="${Ne === e.mob ? "on" : ""}" data-trmob="${Ne}">${Ne + 1} ${d(String(De).split(" ").slice(0, 2).join(" ").slice(0, 12))}</button>`).join("")}</div>`,
       ye = B ? Math.max(...P.g.map((De) => De.y + De.h)) * t : 0,
       Oe = P.p
         .map(
           (De, Ne) =>
-            `<section class="trp${Ne === e.foco ? " foco" : ""}${!B && Ne !== e.mob ? " oculto" : ""}${e.max === Ne ? " maxi" : ""}" id="trp${Ne}" data-trp="${Ne}"${B ? ` style="${Se(P.g[Ne])}"` : ""}><div class="trph"${B ? ' data-trdrag="1" title="Arraste para mover"' : ""}><b>${Ne + 1}</b>${de(P, Ne, De)}<span class="trpd">${Ce(P, Ne) ? "" : d(Ve(De))}</span><button class="trx" data-tr="csv" data-i="${Ne}" title="Exportar para planilha">CSV</button><button class="trx" data-tr="att" data-i="${Ne}" title="Atualizar">↻</button>${B && !window.TRPOP ? `<button class="trx" data-tr="pop" data-i="${Ne}" title="Abrir em outra janela (outro monitor)">⧉</button>` : ""}<button class="trx trmx" data-tr="maxi" data-i="${Ne}" title="Ampliar este painel">${e.max === Ne ? "⤡ Reduzir" : "⤢ Ampliar"}</button>${G > 1 ? `<button class="trx" data-tr="fecha" data-i="${Ne}" title="Fechar painel">✕</button>` : ""}</div><div class="trpb" id="trb${Ne}">${rt(De, Ne)}</div>${B ? '<i class="trrs" data-trrs="1" title="Arraste para redimensionar"></i>' : ""}</section>`,
+            `<section class="trp${Ne === e.foco ? " foco" : ""}${!B && !pro && Ne !== e.mob ? " oculto" : ""}${e.max === Ne ? " maxi" : ""}" id="trp${Ne}" data-trp="${Ne}"${B ? ` style="${Se(P.g[Ne])}"` : ""}><div class="trph"${B ? ' data-trdrag="1" title="Arraste para mover"' : ""}><b>${Ne + 1}</b>${de(P, Ne, De)}<span class="trpd">${Ce(P, Ne) ? "" : d(Ve(De))}</span><button class="trx" data-tr="csv" data-i="${Ne}" title="Exportar para planilha">CSV</button><button class="trx" data-tr="att" data-i="${Ne}" title="Atualizar">↻</button>${B && !window.TRPOP ? `<button class="trx" data-tr="pop" data-i="${Ne}" title="Abrir em outra janela (outro monitor)">⧉</button>` : ""}<button class="trx trmx" data-tr="maxi" data-i="${Ne}" title="Ampliar este painel">${e.max === Ne ? "⤡ Reduzir" : "⤢ Ampliar"}</button>${G > 1 ? `<button class="trx" data-tr="fecha" data-i="${Ne}" title="Fechar painel">✕</button>` : ""}</div><div class="trpb" id="trb${Ne}">${rt(De, Ne)}</div>${B ? '<i class="trrs" data-trrs="1" title="Arraste para redimensionar"></i>' : ""}</section>`,
         )
         .join("");
     return (
       setTimeout(() => {
         (P.p.forEach((De, Ne) => ot(Ne)), He());
       }, 0),
-      `<div class="trm">${te}${_}<div class="trgrid${B ? " pc" : ""}" id="trgrid"${B ? ` style="height:${ye}px"` : ""}>${Oe}</div><div class="trrod"><span>F1 ajuda · F2 comando · F8 bolsas · F9 juros · F10 moedas · Tab troca de painel · ↑ histórico · arraste o título para mover e o canto para redimensionar</span><span id="trst">${Je()}</span></div></div>`
+      `<div class="trm${pro ? " trm-pro" : ""}">${te}${_}<div class="trgrid${B ? " pc" : ""}" id="trgrid"${B ? ` style="height:${ye}px"` : ""}>${Oe}</div><div class="trrod"><span>F1 ajuda · F2 comando · F8 bolsas · F9 juros · F10 moedas · Tab troca de painel · ↑ histórico · arraste o título para mover e o canto para redimensionar</span><span id="trst">${Je()}</span></div></div>`
     );
   }
   const Ce = (E, P) =>
@@ -109848,3 +110773,167 @@ try {
     candles: "v305",
   });
 } catch {}
+
+/* v805 — Entrada exclusiva em Estudos; sem telas zumbis. */
+;(function(){
+ const antigo=vEstudos;
+ vEstudos=function(){
+  if(ESV==='brain')return '<h1>Estudos</h1>'+(window.DiarioCerebroIA?.view()||'<p>Carregando biblioteca...</p>');
+  const html=antigo.apply(this,arguments);
+  return typeof html==='string'?html.replace('<h1>Estudos</h1>','<h1>Estudos</h1><button type="button" class="btn s" data-brain-open="1" style="margin:8px 0;min-height:44px">Cérebro da IA</button>'):html;
+ };
+ document.addEventListener('click',ev=>{const el=ev.target.closest?.('[data-brain-open]');if(!el||tab!=='estudos')return;ev.preventDefault();ESV='brain';render();void window.DiarioCerebroIA?.enter?.();});
+})();
+/* v714: mesma edição e mesmas referências na tela e no PDF. */
+(function (w) {
+  'use strict';
+  const Q=w.DiarioJornalQualidade, cache=new Map(), privados=new Map();
+  const privateKey=e=>String(e.prep_id||e.snapshot?.id||'');
+  function withPrivate(e){const p=privados.get(privateKey(e));const owner=typeof SESS!=='undefined'?SESS?.uid:'';const {profit_local:ignored,...base}=e;return p&&p.owner===owner?{...base,profit_local:Q.clone(p)}:base;}
+  function edition(value) {
+    if(!value?.manchete) return value;
+    const key=JSON.stringify(value);
+    if(cache.has(key)) return withPrivate(Q.clone(cache.get(key)));
+    const e=Q.prepare(value); cache.set(key,e);
+    if(cache.size>8) cache.delete(cache.keys().next().value);
+    return withPrivate(Q.clone(e));
+  }
+  // Projeção visual: validação não substitui uma capa por mensagens técnicas repetidas.
+  function presentation(value){
+    const e=edition(value);if(!e)return e;
+    const retained=m=>/^Conteúdo retido para revisão/.test(m?.titulo||'');
+    const articles=(e.materias||[]).filter(m=>!retained(m));
+    if(retained(e.manchete)){
+      if(articles.length)e.manchete=articles.shift();
+      else {
+        const quotes=(e.snapshot?.cotacoes||e.cotacoes||[]).filter(q=>Number.isFinite(q.px)),q=quotes.find(q=>q.k==='ibov')||quotes[0];
+        const references=quotes.slice(0,6).map(q=>(q.n||q.k)+': '+Q.price(q)+' '+q.unidade+(Number.isFinite(q.d1)?' ('+Q.change(q)+')':'')+(q.dia_referencia?' · sessão '+q.dia_referencia:'')+'.');
+        e.manchete={editoria:'Mercados',chapeu:'PANORAMA DA EDIÇÃO',titulo:q?(q.n||q.k)+' tem última referência em '+Q.price(q)+'; '+Q.phase(e).next.toLowerCase():'Mercados: '+Q.phase(e).title.toLowerCase(),linha_fina:'Cotações de referência e agenda oficial para acompanhar a sessão, com os horários de cada fonte.',texto:references.join('\n\n')+'\n\nOs valores são os últimos disponíveis na coleta desta edição. Consulte a data de cada referência antes de comparar com o pregão atual. Notícias sem confirmação suficiente permanecem fora desta leitura.',numeros:quotes.slice(0,4).map(q=>({rotulo:q.n||q.k,valor:Q.price(q)+' '+q.unidade})),por_que_importa:'Compare as referências com o contrato e os preços exibidos no Profit antes de tomar uma decisão.',impacto:{ativos:[],setores:[],direcao:''}};
+      }
+    }
+    e.materias=articles;
+    // Retoma a densidade do Jornal clássico de 16/11 com editorias completas.
+    // Na ausência de reportagem comprovada, o texto de contexto usa EXCLUSIVAMENTE
+    // cotações, data, fonte e variação do snapshot da edição. Não fabrica notícias.
+    const referencias=(e.snapshot?.cotacoes||e.cotacoes||[]).filter(q=>Number.isFinite(q.px));
+    const normal=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const buscar=re=>referencias.filter(q=>re.test(normal((q.k||'')+' '+(q.n||'')))).slice(0,4);
+    const resumoRef=q=>{
+      const sessao=q.dia_referencia?'na sessão '+q.dia_referencia:'na última referência disponível';
+      const mudanca=Number.isFinite(q.d1)?' (variação '+Q.change(q)+')':'';
+      return (q.n||q.k)+': '+Q.price(q)+' '+(q.unidade||'')+mudanca+'; '+sessao+'; fonte: '+(q.fonte||'não identificada')+'.';
+    };
+    const contexto=(editoria,chapeu,titulo,refs,interpretacao)=>{
+      if(!refs.length)return null;
+      const fatos=refs.map(resumoRef).join('\n\n');
+      return {editoria,chapeu,titulo,linha_fina:'Leitura contextual das referências verificáveis, sem substituir a análise de notícias confirmadas.',
+        texto:fatos+'\n\n'+interpretacao+'\n\nOs números são os últimos disponíveis nesta edição, não necessariamente preços ao vivo. Compare horários e contratos antes de operar.',
+        por_que_importa:'Mudanças nessas referências podem alterar o cenário e os riscos monitorados pelo trader; não determinam por si só um movimento futuro.',
+        numeros:refs.slice(0,3).map(q=>({rotulo:q.n||q.k,valor:Q.price(q)+' '+(q.unidade||'')})),
+        impacto:{ativos:[],setores:[],direcao:''},fontes:[],contexto_snapshot:true};
+    };
+    if(e.materias.length<4){
+      const grupos=[
+        contexto('Commodities','ENERGIA E MINERAÇÃO','Petróleo e minério: preços de referência e fatores de atenção',
+          buscar(/brent|wti|petroleo|minerio|iron|iron ore/),
+          'Petróleo e minério são indicadores importantes para acompanhar os setores de energia e mineração. Variações de oferta, demanda, câmbio e custos podem afetar empresas relacionadas, mas o efeito depende do contexto e das informações divulgadas por cada companhia.'),
+        contexto('Empresas','BOLSA E COMPANHIAS','Empresas e ações: sinais disponíveis na sessão',
+          buscar(/ibov|ewz|vale3|petr4|petrobras/),
+          'O índice e os instrumentos ligados ao mercado brasileiro ajudam a dimensionar o cenário para as ações. O desempenho de empresas específicas exige conferir seus balanços e comunicados antes de atribuir causas.'),
+        contexto('Economia brasileira','CÂMBIO E JUROS','Juros e dólar: como ler as referências brasileiras',
+          buscar(/di jan|^di[0-9]|dolar|wdo|usd.?brl/),
+          'Taxas futuras de juros e câmbio estão entre os fatores que influenciam o custo do crédito e os preços de ativos. A sensibilidade depende do vencimento, do setor e das condições de liquidez; preços coincidentes não comprovam relação causal.'),
+        contexto('Internacional','MERCADOS GLOBAIS','Bolsas internacionais e dólar: referências externas',
+          buscar(/nasdaq|s&p|sp500|dow|dxy|treasury|us10|vix/),
+          'Os índices americanos e as taxas de juros externas ajudam a contextualizar o pregão local. Sua influência pode variar ao longo da sessão e não permite concluir, isoladamente, se haverá entrada ou saída de capital estrangeiro.')
+      ].filter(Boolean);
+      for(const m of grupos){
+        if(e.materias.length>=4)break;
+        if(e.materias.some(a=>normal(a.editoria)===normal(m.editoria)))continue;
+        e.materias.push(m);
+      }
+    }
+    const references=referencias;
+    if(!e.em_poucas_linhas?.length)e.em_poucas_linhas=references.slice(0,4).map(q=>(q.n||q.k)+': '+Q.price(q)+' '+q.unidade+(Number.isFinite(q.d1)?' ('+Q.change(q)+')':'')+'.');
+    if(!e.cinco_coisas?.length)e.cinco_coisas=references.slice(0,5).map(q=>({titulo:(q.n||q.k)+': '+Q.price(q)+' '+q.unidade,texto:(Number.isFinite(q.d1)?'Variação: '+Q.change(q)+'. ':'')+(q.dia_referencia?'Sessão de referência: '+q.dia_referencia+'. ':'')+'Último disponível na coleta da edição.'}));
+    return e;
+  }
+  function publicEdition(value){const e=presentation(value);if(e)delete e.profit_local;return e;}
+  w.DiarioJornalEditorial={edition,presentation};
+  const journalView=vJornal;let legacyRefresh=false;
+  vJornal=function(){if(!legacyRefresh && JRN.v?.manchete && !JRN.v.prep_id && !JRN.busy){legacyRefresh=true;JRN.v.antiga=true;setTimeout(()=>jrCarrega(false),0);}return journalView.apply(this,arguments);};
+  const original=jrPinta;
+  jrPinta=function(){
+    if(JRN.v?.manchete) JRN.v=publicEdition(JRN.v);
+    if(JRN.arq?.manchete) JRN.arq=publicEdition(JRN.arq);
+    return original.apply(this,arguments);
+  };
+  // O painel da edição nunca é substituído por preços ao vivo de outro horário.
+  jrIndsHtml=function(e){return {viv:false,h:(edition(e)?.cotacoes||[]).map(q=>`<span class="jrind"><small>${esc(q.n||q.k)}</small><b>${esc(Q.price(q))}</b><i class="${q.d1>=0?'g':'r'}">${esc(Q.change(q))}</i></span>`).join('')};};
+jrFechHtml=function(e) {
+  const t = (e.cotacoes || []).filter((a) => a && a.px != null);
+  return t.length
+    ? `<section class="jrsec jrfech"><h3>${esc(Q.phase(e).table)}</h3>${e.fechamento_texto ? `<p class="jrtx2">${esc(e.fechamento_texto)}</p>` : ""}<div class="jrvtab"><table><thead><tr><th>Ativo</th><th>Último</th><th>Variação</th></tr></thead><tbody>${t.map((a) => `<tr><td><b>${esc(a.n || a.k)}</b></td><td>${Q.price(a)}</td><td class="${a.d1 > 0 ? "g" : a.d1 < 0 ? "r" : "mut"}"><b>${Q.change(a)}</b></td></tr>`).join("")}</tbody></table></div></section>`
+    : "";
+}
+
+  // Candles fornecidos atualmente por candles/WIN e candles/WDO são proxies à vista.
+  // Não calcular pivôs do futuro nem descrever esse gráfico como o contrato negociável.
+  jrTecDados=function(k){const e=edition(jrVer()),p=e?.snapshot?.niveis?.[k];return p?{...p,k,nome:p.tk,div:k==='wdo'?1000:1,tend:'Lateral',n:0}:null;};
+  jrPlano=function(k){return jrTecDados(k);};
+  jrPre=function(){return null;};
+  jrGrafHtml=function(k){
+    const e=edition(jrVer()),g=e?.snapshot?.graficos?.[k];
+    return `<div class="jrgr" data-g="${esc(k)}"><p class="sm mut">${g?'Série do contrato disponível no PDF desta edição.':'Gráfico do contrato indisponível nesta edição. A série à vista não substitui WIN/WDO.'}</p></div>`;
+  };
+  jrGraf=async function(){ /* A leitura de uma edição não faz consulta de candles por polling. */ };
+  jrGdHtml=function(){return '';};
+  jrIndHtml=function(e){const m=edition(e)?.snapshot?.macro||{},L=m.ind||[];return L.length?`<section class="jrsec jrind2"><h3>Indicadores</h3><div class="jrkp4">${L.map(x=>`<div><small>${esc(x.nome)}</small><b>${esc(Number(x.v).toLocaleString('pt-BR')+' '+x.un)}</b><span>${esc(x.periodo)}</span></div>`).join('')}</div></section>`:'';};
+jrRkHtml=function(){
+  const e=edition(jrVer())?.snapshot?.movers;
+  if (!e) return "";
+  const t = (e.altas || [])
+      .filter((s) => s.var > 0)
+      .sort((s, n) => n.var - s.var)
+      .slice(0, 5),
+    a = (e.baixas || [])
+      .filter((s) => s.var < 0)
+      .sort((s, n) => s.var - n.var)
+      .slice(0, 5);
+  if (!t.length && !a.length) return "";
+  const o = (s, n) =>
+    s
+      .map(
+        (r) =>
+          `<div class="jrrk"><b>${esc(r.tk)}</b><span class="sm mut">${esc(r.nome || "")}</span><b class="${n}">${(r.var > 0 ? "+" : "") + Number(r.var).toFixed(2).replace(".", ",")}%</b></div>`,
+      )
+      .join("");
+  return `<section class="jrsec jrrks"><h3>Maiores altas e baixas do Ibovespa</h3><div class="jrrk2"><div><div class="jrrkt g">▲ Altas</div>${o(t, "g")}</div><div><div class="jrrkt r">▼ Baixas</div>${o(a, "r")}</div></div></section>`;
+}
+
+  document.addEventListener('click',async ev=>{
+    const button=ev.target.closest?.('[data-jr-profit-capture]');if(!button||button.disabled)return;
+    const e=edition(jrVer()),owner=typeof SESS!=='undefined'?SESS?.uid:'';if(!e?.snapshot||!owner){button.textContent='Entre na conta para consultar a ponte';return;}
+    button.disabled=true;button.textContent='Consultando ponte…';
+    try{
+      let rows=null;const configured=w.DIARIO_PONTE_LOCAL?.cotacoesUrl;
+      if(configured){const u=new URL(configured);if(u.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(u.hostname)&&!u.username&&!u.password){const r=await fetch(u.href,{signal:AbortSignal.timeout(4000),cache:'no-store',credentials:'omit'});if(r.ok){const data=await r.json();rows=Array.isArray(data)?data:data.cotacoes;}}}
+      if(!Array.isArray(rows)){const r=await rq('/rest/v1/cotacoes?select=ticker,ult,var,abe,max,min,hor,dat,updated_at&user_id=eq.'+encodeURIComponent(owner)+'&or=(ticker.like.WIN*,ticker.like.WDO*)&limit=12',{signal:AbortSignal.timeout(4000)});if(!r.ok)throw Error('Ponte indisponível');rows=await r.json();}
+      if(typeof SESS==='undefined'||SESS?.uid!==owner)return;
+      privados.set(privateKey(e),{...Q.profit(rows,e),owner});jrPinta();
+    }catch{button.disabled=false;button.textContent='Ponte indisponível · tentar novamente';}
+  });
+  function privateHtml(e){const p=e?.profit_local;return `<section class="jrsec"><h3>Referência privada do Profit</h3><p class="sm mut">Captura única. Não muda os números ou o texto da edição.</p><button class="btn s" data-jr-profit-capture>Capturar referência da ponte</button>${p?`<p class="sm">${esc(p.nota)}</p>${p.cotacoes.map(q=>`<p>${esc(q.contrato)} · ${esc(Q.price(q))} · ${esc(q.referencia_em)}${q.ohlc?' · OHLC informado':' · OHLC indisponível'}</p>`).join('')}${p.lacunas.map(x=>`<p class="sm mut">${esc(x)}</p>`).join('')}`:''}</section>`;}
+  const renderBody=jrCorpo;
+  jrCorpo=function(){
+    if(JRN.v?.manchete) JRN.v=publicEdition(JRN.v);
+    if(JRN.arq?.manchete) JRN.arq=publicEdition(JRN.arq);
+    const html=renderBody.apply(this,arguments),e=edition(jrVer());
+    if(!e?.qualidade) return html;
+    const q=e.qualidade;
+    const normalizedHtml=html.replace(/com pesquisa na internet e os números do app/g,e.pesquisa_web===true?'com pesquisa recuperada e dados desta edição':'com os dados recebidos; pesquisa web não confirmada em toda a edição');
+    return normalizedHtml+`<details class="jr-editorial-details"><summary>Fontes e conferência</summary><p class="sm mut">${esc(Q.phase(e).title)} · ${esc(e.snapshot.id)}</p>${[...q.problemas,...q.lacunas].map(x=>`<p class="sm mut">${esc(x)}</p>`).join('')}${privateHtml(e)}</details>`;
+  };
+
+  const style=document.createElement('style');style.id='jornal-editorial-v714';style.textContent=`#app #jrbox button[data-jr-profit-capture]{min-height:44px!important;height:auto!important;max-height:none!important}.jr-editorial-details{margin-top:8px}.jr-editorial-details>summary{cursor:pointer;min-height:44px;font-size:12px;color:var(--mut)}.jrind b,.jrfech td{font-variant-numeric:tabular-nums}`;document.head.append(style);
+})(window);

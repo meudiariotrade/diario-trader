@@ -2881,7 +2881,9 @@ function agHtml() {
         ]
           .filter(Boolean)
           .join("");
-      return `<div class="ag-ev${u}${n && p === n ? " prox" : ""}"><div class="ag-h">${agHora(p.em)}</div><div class="ag-fl">${AG_FL[p.p] || ""}</div><div class="ag-tx"><div><b>${esc(AG_NM[p.p] || p.p)}:</b> ${esc(p.t)}${p.per ? ` <span class="mut">(${esc(p.per)})</span>` : ""} ${agImp(p.imp)}${n && p === n ? ' <span class="ag-tag">próximo</span>' : ""}</div>${m ? `<div class="ag-n sm">${m}</div>` : ""}</div></div>`;
+      const reading=window.DiarioInterpretacao?.calendarSurprise(p,e.em);
+      const surprise=reading?`<div class="sm mut">Surpresa: ${reading.delta.toLocaleString('pt-BR',{maximumFractionDigits:4})} ${esc(reading.unit)} (${esc(reading.direction)} do consenso). ${esc(reading.note)}</div>`:'';
+      return `<div class="ag-ev${u}${n && p === n ? " prox" : ""}"><div class="ag-h">${agHora(p.em)}</div><div class="ag-fl">${AG_FL[p.p] || ""}</div><div class="ag-tx"><div><b>${esc(AG_NM[p.p] || p.p)}:</b> ${esc(p.t)}${p.per ? ` <span class="mut">(${esc(p.per)})</span>` : ""} ${agImp(p.imp)}${n && p === n ? ' <span class="ag-tag">próximo</span>' : ""}</div>${m ? `<div class="ag-n sm">${m}</div>` : ""}${surprise}</div></div>`;
     },
     c = (p) => {
       const u = new Date(p + "T12:00:00-03:00"),

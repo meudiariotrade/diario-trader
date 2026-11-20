@@ -3,7 +3,7 @@
   'use strict';
   if (w.DiarioInteligenciaEtapa1) return;
   const URL_BASE = 'https://diario-trader.lucianosilva43567.workers.dev';
-  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null };
+  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '' };
   const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = x => typeof x==='number' && Number.isFinite(x);
   const format = x => number(x) ? x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—';
@@ -32,7 +32,7 @@
     el.className='card';
     el.dataset.intelEtapa1='1';
     el.style.cssText='min-width:0;margin:8px 0 12px;overflow-wrap:normal;';
-    el.innerHTML='<div class="top"><b>'+escape(title)+'</b><span class="mut sm" style="font-variant-numeric:tabular-nums">v807</span></div><div data-intel-content class="sm">'+escape(desc)+'</div>';
+    el.innerHTML='<div class="top"><b>'+escape(title)+'</b></div><div data-intel-content class="sm">'+escape(desc)+'</div>';
     return el;
   }
   function mercadoPlan() {
@@ -52,8 +52,8 @@
     else if(magnitude>2.2&&pos>0.35&&pos<0.65)nome='Alta Volatilidade (proxy diária)';
     else if(pos>=0.67)nome='Tendência de Alta (amplitude diária)';
     else if(pos<=0.33)nome='Tendência de Baixa (amplitude diária)';
-    const coerencia=Math.abs(pos-0.5)*2;
-    const confianca=Math.min(80,Math.round(25+Math.min(relevant.length/16,1)*30+coerencia*25));
+
+    const confianca=null; // Não atribuir confiança percentual sem validação estatística.
     const divergencias=[];
     if(number(petroleo)&&number(pbr)&&Math.sign(petroleo)!==Math.sign(pbr)&&Math.abs(petroleo-pbr)>0.8)
       divergencias.push('Petróleo '+format(petroleo)+'% × ADR Petrobras '+format(pbr)+'% — desacoplamento, sem inferir causa.');
@@ -65,7 +65,10 @@
   }
   function timeline() {
     const out=state.eventos;
-    return Array.isArray(out?.eventos)?out.eventos:[];
+    const latest=Array.isArray(out?.eventos)?out.eventos:[];
+    const c=w.DiarioSessoes?.context(),stored=state.memoria&&state.memoria.anchorDate===c?.anchorDate?state.memoria.eventos||[]:[];
+    const map=new Map();for(const e of [...stored,...latest])if(e?.id)map.set(e.id,e);
+    return [...map.values()].sort((a,b)=>String(b.ultimaAtualizacao).localeCompare(String(a.ultimaAtualizacao)));
   }
   function relacionados() {
     const ativos=new Set(meusAtivos());
@@ -129,10 +132,65 @@
       '<p class="mut sm">Sem violação detectada nos registros carregados. Confirme o estado real da conta e do Profit.</p>')+
       '<p class="mut sm">Somente leitura. Não envia ordens, não modifica trades ou limites.</p>';
   }
+  function contextoSessao(c) {
+    if(!c)return '';
+    const status=x=>({regular:'negociação regular',pre:'pré-mercado',post:'encerrado',fechado:'fechado',leilao:'leilão',desconhecido:'não verificado'}[x]||x);
+    const date=x=>x?String(x).split('-').reverse().join('/'):'a confirmar';
+    const names={fechamento:'fechamento',fato_relevante:'fatos relevantes',adr:'ADRs',commodities:'commodities',proxima_sessao:'próxima sessão',cripto:'cripto',macro:'macro',agenda:'agenda',ewz:'EWZ',eua:'EUA',futuros:'futuros',juros:'juros',balancos:'balanços',opcoes:'opções',urgente:'notícias urgentes',b3:'B3',cambio:'câmbio'};
+    const label={pre:'Preparação da abertura',pregao:'Pregão brasileiro',pos:'Fechamento e próxima sessão',b3_fechada:'B3 fechada · referências internacionais',cripto_macro:'Fim de semana · cripto & macro'}[c.mode];
+    const f=w.DiarioInterpretacao?.flow(state.fluxo?.linhas||[]);
+    const latest=f?.last;
+    let html='<p><b>'+escape(label||'Sessão não verificada')+'</b> · ações B3: '+escape(status(c.b3.state))+' · WIN: '+escape(status(c.win.state))+' · WDO: '+escape(status(c.wdo.state))+' · EUA: '+escape(status(c.us.state))+'</p>'+
+      '<p class="mut sm">Próxima sessão B3: '+escape(date(c.b3.nextDate))+' · última referência B3: '+escape(date(c.anchorDate))+'. Acompanhar: '+escape(c.priorities.slice(0,4).map(x=>names[x]||x).join(', '))+'.</p>';
+    if(c.warning)html+='<p class="warn">'+escape(c.warning)+'</p>';
+    html+='<p class="mut sm">Cotações sem horário de negócio não comprovam negociação atual. Variações diárias não medem a mudança acumulada desde o fechamento B3.</p>';
+    if(state.eventos?.desatualizado)html+='<p class="warn">Coleta de notícias atrasada ou offline; confira a publicação em cada fonte.</p>';
+    if(latest)html+='<p><b>Fluxo estrangeiro · '+escape(latest.d)+'</b> · '+escape(state.fluxo?.fonte||'fonte não identificada')+' · diário defasado. '+escape(f.text)+' Acumulado da amostra do mês: '+format(f.monthObserved)+' milhões de reais.</p>';
+    else html+='<p class="mut sm">Fluxo estrangeiro sem snapshot público disponível; consulte a área existente em Mercado.</p>';
+    try {
+      if(typeof SNT!=='undefined'&&SNT.v)for(const key of ['b3','eua','cripto']){
+        const v=SNT.v[key];if(!v)continue;
+        const method=key+':'+String(v.metodo||v.fonte||'metodologia existente');
+        const history=(v.hist||[]).map(x=>({date:x.d||x.data,value:x.v,method}));
+        if(number(v.ontem)&&v.data)history.push({date:w.DiarioSessoes.shift(v.data,-1),value:v.ontem,method});
+        const reading=w.DiarioInterpretacao?.sentiment({date:v.data,value:v.valor},history,method);
+        if(reading)html+='<p><b>Sentimento '+escape(key.toUpperCase())+' · '+reading.value+'</b> · '+escape(reading.date)+' · Δ diário '+format(reading.daily)+' · Δ semanal '+format(reading.weekly)+'. '+escape(reading.text)+'</p>';
+      }
+    }catch(_){}
+    const dates=[];
+    try {if(typeof AG!=='undefined')for(const group of Object.values(AG.v||{}))for(const e of group.eventos||[]){const at=e.em||e.d||e.data;if(at&&String(at).slice(0,10)>=c.b3.date&&e.imp===1)dates.push(String(e.t||e.nome||e.titulo||'Evento econômico')+' · '+String(at));}}catch(_){}
+    try {if(typeof BAL!=='undefined')for(const e of BAL.v?.proximos||[])if(e.d>=c.b3.date&&e.d<=(c.b3.nextDate||c.b3.date))dates.push(e.tk+' · balanço '+e.d+' · '+(e.conf==='cvm'?'documento CVM':'data prevista, conferir publicação'));}catch(_){}
+    try {for(const e of w.VencB3?.entre(c.b3.date,c.b3.nextDate||c.b3.date)||[])dates.push(e.t+' · '+e.d+' (não implica direção de preço)');}catch(_){}
+    if(dates.length)html+='<p><b>Acompanhar na agenda existente:</b> '+dates.slice(0,4).map(escape).join(' · ')+'</p>';
+    const events=w.DiarioInterpretacao?.prioritize(timeline(),c)||[];
+    for(const e of events.slice(0,3)){
+      const scenario=w.DiarioInterpretacao?.adrScenario(e,state.mercado?.adrs||[],c);
+      if(scenario)html+='<p><b>'+escape(scenario.ticker+' ↔ '+scenario.symbol)+'</b> · '+when(e.ultimaAtualizacao)+'. '+escape(scenario.text)+' '+escape(scenario.scenario)+' '+escape(scenario.note)+'</p>';
+    }
+    if(state.memoria?.anchorDate===c.anchorDate)html+='<p class="mut sm">Memória desde a sessão '+escape(c.anchorDate)+': '+state.memoria.eventos.length+' evento(s) preservado(s). '+escape(state.memoria.note)+'</p>';
+    return html;
+  }
+  function meuDia(){
+    const c=w.DiarioSessoes?.context();
+    const task=c?.mode==='cripto_macro'?'Revisão semanal, estudos e planejamento.':c?.mode==='b3_fechada'?'Revisar pendências e preparar a próxima sessão válida.':c?.phase==='pre'?'Conferir checklist pré-pregão, capital operacional, limites cadastrados e eventos próximos.':c?.phase==='during'?'Acompanhar checklist durante o pregão, parciais e risco aberto nos registros existentes.':'Conciliar operações encerradas, resultado e checklist de revisão.';
+    return '<p><b>Sessão: '+escape(c?.mode||'não verificada')+'</b> · próxima B3 '+escape(c?.b3?.nextDate||'a confirmar')+'</p><p>'+escape(task)+'</p>'+riscoTerminal();
+  }
+  async function memorizar(){
+    if(!w.DiarioPublico||!w.DiarioSessoes)return;
+    const c=w.DiarioSessoes.context();
+    const m=await w.DiarioPublico.remember(c,timeline(),state.mercado);
+    if(m&&state.route){state.memoria=m;repaint();}
+  }
+  function armSession(){
+    clearTimeout(state.boundary);state.boundary=null;if(document.hidden||!state.route||!w.DiarioSessoes)return;
+    const now=Date.now(),next=w.DiarioSessoes.nextTransition(now);
+    // Um único despertador para a próxima transição de calendário. Nenhum polling de rede.
+    state.boundary=setTimeout(()=>{state.boundary=null;if(!state.route||document.hidden)return;repaint();refresh();armSession();},Math.max(1000,next-now));
+  }
   function briefing() {
-    const m=mercadoPlan(),hot=timeline().filter(e=>e.prioridade==='alta');
+    const m=mercadoPlan(),context=w.DiarioSessoes?.context(),hot=w.DiarioInterpretacao?.prioritize(timeline(),context,Date.now(),context?.anchorDate?Date.parse(context.anchorAt):undefined)||timeline().filter(e=>e.prioridade==='alta');
     const mine=relacionados().filter(e=>e.prioridade==='alta');
-    return '<div><b>Regime: '+escape(m.nome)+'</b> <span class="mut">Confiança heurística: '+(m.confianca==null?'—':m.confianca+'%')+'</span></div>'+
+    return contextoSessao(context)+'<div><b>Leitura descritiva das referências: '+escape(m.nome)+'</b></div>'+
       '<p class="mut sm">Fonte: '+escape(state.mercado?.fonte||'não verificada')+' · Leitura: '+when(state.mercado?.atualizadoEm)+' · '+escape(m.motivo)+'</p>'+
       '<div><b>O que movimenta o mercado</b> <span class="mut sm">· '+mine.length+' relevante(s) aos seus ativos</span></div>'+rowsEvent(hot.slice(0,3),3)+
       hot.slice(0,2).map(e=>'<p class="mut sm"><b>Hipótese de transmissão:</b> '+escape(transmissao(e))+'</p>').join('');
@@ -160,7 +218,7 @@
   }
   function terminal() {
     const m=mercadoPlan(),news=relacionados().filter(e=>e.prioridade==='alta');
-    return '<div><b>Regime: '+escape(m.nome)+'</b> · Confiança heurística '+(m.confianca==null?'—':m.confianca+'%')+'</div>'+
+    return '<div><b>Leitura descritiva: '+escape(m.nome)+'</b></div>'+
       '<p class="mut sm">'+escape(m.motivo)+' · Fonte: '+escape(state.mercado?.fonte||'indisponível')+' · '+when(state.mercado?.atualizadoEm)+'</p>'+
       '<b>Radar de divergências</b>'+(m.divergencias.length?'<div>'+m.divergencias.map(x=>'<p>'+escape(x)+'</p>').join('')+'</div>':'<p class="mut sm">Nenhuma divergência validada com os instrumentos disponíveis; não equivale a ausência de risco.</p>')+
       '<b>Acontecimentos ligados aos seus ativos</b>'+rowsEvent(news,3)+
@@ -169,36 +227,49 @@
   function eligibleRoute() {
     if (typeof tab==='undefined')return '';
     if(tab==='home')return 'home';
+    if(tab==='dia')return 'dia';
     if(tab==='term')return 'term';
     if(tab==='mercado'&&typeof MKT!=='undefined'){
       if(MKT.tab==='ag')return 'agenda';
-      if(['nt','jr'].includes(MKT.tab))return 'noticias';
+      if(MKT.tab==='nt')return 'noticias'; // Jornal editorial não recebe o painel redundante.
     }
     return '';
   }
   function mount() {
     const route=eligibleRoute(),app=document.getElementById('app');
+    try{if(typeof FE!=='undefined'&&!document.getElementById('febox'))FE.abort?.abort();}catch(_){}
     if(!app)return;
+    try{
+      if(typeof tab!=='undefined'&&tab==='mercado'&&typeof MKT!=='undefined'&&['mu','pn','cq'].includes(MKT.tab)){
+        if(!app.querySelector('#febox')&&typeof feHtml==='function'){const host=app.querySelector('.dt393-native')||app;host.insertAdjacentHTML('beforeend',feHtml());}
+        if(typeof feCarrega==='function')void feCarrega();
+      }
+    }catch(_){}
     if(route!==state.route) {
-      state.abort?.abort();
+      state.abort?.abort();state.loadingNews=false;state.loadingMarket=false;state.flowBusy=false;
       state.abort=route?new AbortController():null;
       state.route=route;
       if(route && w.DiarioInteligencia?.subscribe){
         w.DiarioInteligencia.subscribe('ativo:selecionado',repaint,state.abort.signal);
       }
     }
-    app.querySelectorAll('[data-intel-etapa1]').forEach(x=>x.remove());
-    if(!route)return;
+    if(!route){app.querySelectorAll('[data-intel-etapa1]').forEach(x=>{if(x.dataset.intelNative){delete x.dataset.intelEtapa1;x.querySelector('[data-intel-content]')?.replaceChildren();}else x.remove();});clearTimeout(state.boundary);state.boundary=null;return;}
     const native=route==='term'?(app.querySelector('.tf413-dashboard')||app.querySelector('.dt393-native-term')||app):
       app.querySelector('.dt393-workspace .dt393-native')||app.querySelector('.dt393-native')||app;
-    const title={home:'Inteligência de abertura e regime',agenda:'Agenda econômica inteligente',noticias:'Notícias por acontecimento e por ativo',term:'Inteligência do Terminal · regime e divergências'}[route];
-    const box=painel(title,'Consultando dados públicos compartilhados. Sem acesso às suas operações no Worker.');
-    native.prepend(box);
+    const title={home:'Central de Inteligência',dia:'Preparação e revisão da sessão',agenda:'Agenda econômica inteligente',noticias:'Notícias por acontecimento e por ativo',term:'Inteligência do Terminal · regime e divergências'}[route];
+    let box=app.querySelector('[data-intel-etapa1]');
+    const central=route==='home'?app.querySelector('.v4-iacard'):null;
+    if(central&&box!==central){box?.remove();box=central;box.dataset.intelEtapa1='1';box.dataset.route=route;box.dataset.intelNative='1';}
+    if(box&&box.dataset.route!==route){box.remove();box=null;}
+    if(!box){box=painel(title,'Consultando dados públicos compartilhados.');box.dataset.route=route;native.prepend(box);}
     const content=box.querySelector('[data-intel-content]');
-    content.innerHTML=({home:briefing,agenda,noticias,term:terminal}[route])();
+    const html=({home:briefing,dia:meuDia,agenda,noticias,term:terminal}[route])();
+    if(content.innerHTML!==html)content.innerHTML=html;
+    armSession();
     if(!state.abort?.signal.aborted)refresh();
   }
   async function request(path,signal) {
+    if(w.DiarioPublico)return w.DiarioPublico.get(path,{signal,ttl:path==='/v1/mercado'?300000:path==='/v1/fluxo'?3600000:120000});
     const response=await fetch(URL_BASE+path,{method:'GET',mode:'cors',credentials:'omit',cache:'no-store',signal});
     if(!response.ok)throw new Error('HTTP '+response.status);
     return response.json();
@@ -206,7 +277,7 @@
   function repaint() {
     if(!state.route)return;
     const el=document.querySelector('#app [data-intel-etapa1] [data-intel-content]');
-    if(el)el.innerHTML=({home:briefing,agenda,noticias,term:terminal}[state.route])();
+    if(el){const html=({home:briefing,dia:meuDia,agenda,noticias,term:terminal}[state.route])();if(el.innerHTML!==html)el.innerHTML=html;}
   }
   function refresh() {
     const signal=state.abort?.signal;if(!signal || signal.aborted)return;
@@ -215,14 +286,17 @@
       state.loadingNews=true;
       request('/v2/eventos',signal).then(data=>{
         if(signal.aborted)return;
-        if(Array.isArray(data.eventos)){state.eventos=data;state.newsAt=Date.now();repaint();avaliarAvisos();}
+        if(Array.isArray(data.eventos)){state.eventos=data;state.newsAt=Date.now();repaint();memorizar();avaliarAvisos();}
       }).catch(()=>{}).finally(()=>state.loadingNews=false);
+    }
+    if(['home','dia'].includes(state.route)&&!state.flowBusy&&now-state.flowAt>3600000){
+      state.flowBusy=true;state.flowAt=now;request('/v1/fluxo',signal).then(data=>{if(!signal.aborted&&Array.isArray(data.linhas)){state.fluxo=data;repaint();}}).catch(()=>{}).finally(()=>state.flowBusy=false);
     }
     if(!state.loadingMarket && now-state.marketAt>300000) {
       state.loadingMarket=true;
       request('/v1/mercado',signal).then(data=>{
         if(signal.aborted)return;
-        if(data.mercados){state.mercado=data;state.marketAt=Date.now();repaint();}
+        if(data.mercados){state.mercado=data;state.marketAt=Date.now();repaint();memorizar();}
       }).catch(()=>{}).finally(()=>state.loadingMarket=false);
     }
   }
@@ -274,9 +348,11 @@
     }catch(_){}
   });
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden)state.abort?.abort();
-    else if(state.route){state.abort=new AbortController();refresh();}
+    if(document.hidden){try{if(typeof FE!=='undefined')FE.abort?.abort();}catch(_){}state.abort?.abort();clearTimeout(state.boundary);state.boundary=null;}
+    else if(state.route){state.abort=new AbortController();repaint();armSession();refresh();}
   });
+  w.DiarioPublico?.read('memoria').then(m=>{if(m){state.memoria=m;repaint();}}).catch(()=>{});
   if(w.TraderUI?.onRender)w.TraderUI.onRender('inteligencia-integrada-v807',mount);
-  w.DiarioInteligenciaEtapa1=Object.freeze({meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
+  w.DiarioInteligenciaEtapa1=Object.freeze({montar:mount,meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
+  mount();
 })(window);

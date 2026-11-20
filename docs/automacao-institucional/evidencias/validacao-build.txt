@@ -1,0 +1,15 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> diario-trader@809.0.0 check
+> npm run build:check && node scripts/check-backend.cjs
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> diario-trader@809.0.0 build:check
+> node scripts/generate-bundles.cjs --check && node scripts/build.cjs --check
+
+Bundles conferidos: nucleo-v560.js, camadas-v560.js, estilo-v560.css, pdf-documentos.js, sw.js, organizacao-v573.js, navegacao-simples.js, modo-simples.js, dominios.js, runtime-dominios.js, organizacao.js, analises-modelo.js, tecnico-engine.js, tecnico-worker.js, tecnico-ui.js, tecnico-pdf.js, pesquisa-pdf.js, analises.js, relatorios-dados.js, fiscal-conferencia.js, terminal-fonte-v533.js, screeners-inteligencia.js, screeners-relatorio.js, screeners-grafico.js, screeners-top10.js, tape-live.js, institutional-v781.js, xbrl-periodos.js, feed-contract-v787.js, feed-profit-v788.js, binance-stream-v790.js, feed-finnhub-v791.js, corporate-candles-v792.js, source-health-v793.js, historico-qualidade-v794.js, economatica-fatos-v795.js, snapshot-contract-v800.js, backtest-gates-v801.js, cerebro-ia.js, fibo-visual.js, version.js, index.html, manifest.webmanifest, deploy.txt, package.json, package-lock.json
+Recursos e sintaxe válidos: 228 arquivos estáticos.
+25 funções e 43 arquivos TypeScript conferidos.
+(node:99) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

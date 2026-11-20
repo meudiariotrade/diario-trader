@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 6100fd345bdd053e163ab5e04ba03db21dba7bd8b45545ca940f0bece1989a7f */
+/* Gerado de src/app-theme.css · SHA256 04211b7e7cb6327ef631920e96975819af201be84ba74e16a962e2052f806293 */
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
    1) Tokens do design system  2) Telas existentes já normalizadas (cores, 8 pt, bordas 1 px)  3) Componentes do design system. */
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2894,4 +2894,166 @@ html body #app#app #rpyset{min-height:40px;max-width:170px;font-size:16px}@media
 html body #app#app .rpy7-tb{table-layout:auto!important;min-width:560px}
 html body #app#app .rpy7-tb :is(th,td){padding:8px 10px!important;letter-spacing:0!important;font-size:12px!important;white-space:nowrap!important;overflow:visible!important}
 html body #app#app .rpy7-hist>div{overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+
+/* v669 — dimensões fixas e flex-shrink:0 somente na aba Mercado. */
+html:root body #app .market-quotes .cqr > .cqm-logo{
+ --cqm-size:34px;--ta-size:var(--cqm-size);box-sizing:border-box;
+ width:var(--cqm-size);height:var(--cqm-size);min-width:var(--cqm-size);
+ flex:0 0 var(--cqm-size);flex-shrink:0;aspect-ratio:1;
+}
+html:root body #app .market-quotes .dl-logo{flex-shrink:0;min-width:var(--dl,20px);height:var(--dl,20px)}
+@media(max-width:600px){html:root body #app .market-quotes .cqr > .cqm-logo{--cqm-size:30px}}
+@media(max-width:350px){html:root body #app .market-quotes .cqr > .cqm-logo{--cqm-size:29px}}
+
+
+/* v670 — somente Termômetro de Abertura Teórica (Início, Meu dia e Mercado). */
+#app .dt670-opening{box-sizing:border-box;width:100%;min-width:0;max-width:none;margin:10px 0 14px;padding:12px 14px;background:#11141B;border:1px solid #1E232E;border-left:3px solid #D4A017;border-radius:4px;box-shadow:none;color:#e8ebf1;font:13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+#app .dt670-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;padding:0 0 9px;border-bottom:1px solid #1E232E}
+#app .dt670-head>div{min-width:0}
+#app .dt670-head small{font-size:10px;color:#D4A017;letter-spacing:.08em;font-weight:700}
+#app .dt670-head h2{font:650 15px/1.3 system-ui,sans-serif;margin:3px 0 0;color:#eef1f6;letter-spacing:-.015em;white-space:normal;overflow-wrap:normal}
+#app .dt670-head h2 span{font-weight:450;color:#a0a7b5;white-space:nowrap}
+#app .dt670-selo{flex-shrink:0;color:#a2aabb;font-size:11px;white-space:nowrap}
+#app .dt670-duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;min-width:0}
+#app .dt670-instrument{min-width:0;padding:3px 14px 5px 0}
+#app .dt670-instrument+.dt670-instrument{border-left:1px solid #1E232E;padding:3px 0 5px 14px}
+#app .dt670-val{display:flex;align-items:flex-start;justify-content:space-between;gap:9px;min-width:0}
+#app .dt670-val>span{min-width:0;display:flex;flex-direction:column;gap:3px}
+#app .dt670-val>span>b{font-size:13px;letter-spacing:.08em}
+#app .dt670-val>span>small{font-size:10px;color:#8d95a3;line-height:1.3;white-space:normal;overflow-wrap:normal}
+#app .dt670-val>strong{flex-shrink:0;text-align:right;font-size:20px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+#app .dt670-val>strong.positive{color:#10B981}
+#app .dt670-val>strong.negative{color:#EF4444}
+#app .dt670-val>strong.neutral{color:#e9ecf1}
+#app .dt670-instrument>small{display:block;color:#aeb4bf;margin-top:5px;font-size:11px;line-height:1.45;font-variant-numeric:tabular-nums}
+#app .dt670-instrument>small b{font-weight:700;color:#f1f3f6}
+#app .dt670-instrument>small.dt670-pend{color:#9197a3}
+#app .dt670-instrument>small.dt670-pt{color:#D4A017;font-weight:650;font-size:12px}
+#app .dt670-note{font-size:10px;color:#9096a1;margin:10px 0 0;padding-top:8px;border-top:1px solid #1E232E;line-height:1.45}
+@media(max-width:640px){
+ #app .dt670-opening{padding:11px 12px;margin:8px 0 12px}
+ #app .dt670-selo{display:none}
+ #app .dt670-duo{grid-template-columns:minmax(0,1fr)}
+ #app .dt670-instrument{padding:3px 0 10px}
+ #app .dt670-instrument+.dt670-instrument{border-left:0;border-top:1px solid #1E232E;padding:10px 0 4px}
+ #app .dt670-val>strong{font-size:19px}
+}
+
+
+/* v672 — Apenas dentro do componente de cálculo de posição. */
+.v598-calc-dlg:has(.v672-calc){width:min(500px,calc(100vw - 20px));max-height:min(90dvh,790px);overflow-y:auto}
+.v598-calc .v672-details{min-width:0;border:0;margin:0;padding:0}
+.v598-calc .v672-details>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;font-size:12px;font-weight:700;color:#e8e6e1}
+.v598-calc .v672-details>summary small{font-size:11px;font-weight:400;color:#8a93a6}
+.v598-calc .v672-content{display:grid;gap:10px;min-width:0}
+.v598-calc .v672-tabs,.v598-calc .v672-modos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;min-width:0}
+.v598-calc :is(.v672-tabs,.v672-modos) button{min-width:0;min-height:44px;padding:6px 8px;background:#0A0C10;border:1px solid #1E232E;border-radius:4px;font:600 12px/1.35 system-ui,sans-serif;color:#8A93A6;cursor:pointer;white-space:normal;overflow-wrap:normal}
+.v598-calc :is(.v672-tabs,.v672-modos) button[aria-selected="true"],.v598-calc :is(.v672-tabs,.v672-modos) button[aria-pressed="true"]{color:#D4A017;border-color:#D4A017;background:#181C26}
+.v598-calc :is(.v672-tabs,.v672-modos) button:focus-visible{outline:2px solid #D4A017;outline-offset:2px}
+.v598-calc .v672-pane{display:grid;gap:10px;min-width:0}
+.v598-calc .v672-pane[hidden],.v598-calc [data-c672-field][hidden]{display:none!important}
+.v598-calc .v672-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+.v598-calc .v672-grid>label{min-width:0;overflow-wrap:normal}
+.v598-calc .v672-grid>label>input,.v598-calc .v672-grid>label>select{width:100%;min-width:0;box-sizing:border-box}
+.v598-calc .v672-alvos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:10px;padding-top:9px;border-top:1px solid #1E232E}
+.v598-calc .v672-alvos>div{min-width:0;display:grid;gap:3px;padding-right:8px}
+.v598-calc .v672-alvos>div+div{padding:0 0 0 8px;border-left:1px solid #1E232E}
+.v598-calc .v672-alvos span,.v598-calc .v672-line span{font-size:11px;line-height:1.35;color:#8A93A6}
+.v598-calc .v672-alvos strong{font-size:18px;color:#D4A017;font-variant-numeric:tabular-nums}
+.v598-calc .v672-alvos small{color:#10B981;font-size:11px;font-variant-numeric:tabular-nums}
+.v598-calc .v672-alert{color:#D4A017!important}
+.v598-calc .v672-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #1E232E}
+.v598-calc .v672-line strong{flex-shrink:0;text-align:right;font-size:14px;font-variant-numeric:tabular-nums}
+.v598-calc .v672-line strong.v672-gain{color:#10B981}
+.v598-calc .v672-line strong.v672-loss{color:#EF4444}
+.v598-calc .v672-zero strong{font-size:18px;color:#D4A017}
+.v598-calc .v672-parcial-res>small{display:block;margin-top:8px;color:#8A93A6;font-size:11px}
+.v598-calc .v672-parcial-res>small b{color:#D4A017}
+@media(max-width:380px){.v598-calc .v672-grid{grid-template-columns:minmax(0,1fr)}.v598-calc .v672-alvos{grid-template-columns:minmax(0,1fr)}.v598-calc .v672-alvos>div+div{border-left:0;border-top:1px solid #1E232E;padding:9px 0 0}}
+
+
+/* v678 — Mercado/Cotações: compositing persistente para WebKit iOS, sem alterar o layout.
+   Restringe transformações e transições aos logos e linhas desta aba. */
+html:root body #app #cotbox.market-quotes :is(.cqr>.cqm-logo,.m623-r .dl-logo,.m606-t .dl-logo,.m606-row .dl-logo,.m606-em .dl-logo,.m606-mxc .dl-logo,.dl-logo){
+  transform:translateZ(0);
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+  flex-shrink:0;
+}
+html:root body #app #cotbox.market-quotes :is(.cqm-logo>.ta-logo,.cqm-logo>img,.cqm-logo .ta-logo,.dl-logo>img){
+  transform:translateZ(0);
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+}
+html:root body #app #cotbox.market-quotes :is(.cqr,.m623-r,.m606-t,.m606-row,.adr-quote){
+  transition-property:color,background-color,border-color!important;
+}
+html:root body #app #cotbox.market-quotes :is(.dl-logo,.cqm-logo){position:relative}
+html:root body #app #cotbox.market-quotes img[data-cqm-error="1"]{
+  opacity:0!important;
+  visibility:hidden!important;
+}
+html:root body #app #cotbox.market-quotes .cqm-logo-fallback{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font:700 10px/1 system-ui,-apple-system,sans-serif;
+  color:#D4A017;background:#181C26;border-radius:50%;
+  opacity:0;pointer-events:none;z-index:0;
+}
+html:root body #app #cotbox.market-quotes .dl-logo:not(.cqm-img-failed)>.cqm-logo-fallback,
+html:root body #app #cotbox.market-quotes .cqm-logo:not(.cqm-img-failed)>.cqm-logo-fallback{visibility:hidden}
+html:root body #app #cotbox.market-quotes :is(.dl-logo,.cqm-logo).cqm-img-failed>.cqm-logo-fallback{
+  visibility:visible;opacity:1;
+}
+html:root body #app #cotbox.market-quotes .dl-logo:not(.dl-par)>img{position:relative;z-index:1}
+html:root body #app #cotbox.market-quotes .dl-logo.dl-par>img{z-index:1}
+html:root body #app #cotbox.market-quotes .dl-logo.dl-par>img:first-of-type{z-index:2}
+html:root body #app #cotbox.market-quotes .cqm-logo>.ta-logo{z-index:1}
+html:root body #app #cotbox.market-quotes .dl-logo.dl-par>.cqm-logo-fallback{inset:0 auto 0 0;width:var(--dl);height:var(--dl)}
+
+/* v761 — Terminal Pro: palco assimétrico, OLED dark e navegação sem faixa duplicada.
+   Escopo deliberado: somente body.trmon; workspaces personalizados permanecem intactos. */
+html body.trmon #dt393-global-head nav.dt394-quicknav{display:none!important}
+html body.trmon #app .trm.trm-pro{--a:#D4AF37;--g:#10B981;--r:#EF4444;background:#08090B!important;color:#E7EBF2!important;font-variant-numeric:tabular-nums}
+html body.trmon #app .trm.trm-pro .trgrid{background:#08090B!important;min-width:0}
+html body.trmon #app .trm.trm-pro .trgrid.pc{position:relative;display:block}
+html body.trmon #app .trm.trm-pro .trp{background:#0F1115!important;border:1px solid #1E222A!important;border-radius:4px!important;box-shadow:none!important;min-width:0;overflow:hidden}
+html body.trmon #app .trm.trm-pro .trph{background:#0F1115!important;border:0!important;border-bottom:1px solid #1E222A!important;color:#CDD4E0!important;min-width:0}
+html body.trmon #app .trm.trm-pro .trph>b{background:#1E222A!important;color:#D4AF37!important}
+html body.trmon #app .trm.trm-pro .trpc,html body.trmon #app .trm.trm-pro .trph .trpc{color:#D4AF37!important}
+html body.trmon #app .trm.trm-pro .trpb{flex:1 1 auto;min-height:0;min-width:0;overflow:auto;scrollbar-color:#29303C transparent}
+html body.trmon #app .trm.trm-pro .trbar,html body.trmon #app .trm.trm-pro .trtabs{background:#0F1115!important;border-color:#1E222A!important}
+html body.trmon #app .trm.trm-pro #tf413 .tf413-top{display:none!important}
+html body.trmon #app .trm.trm-pro #tf413 .tf415-nav{background:#0F1115!important;border-color:#1E222A!important}
+html body.trmon #app .trm.trm-pro #tf413 .tf415-navitem{border-color:#1E222A!important;color:#BEC7D5!important}
+html body.trmon #app .trm.trm-pro #tf413 .tf415-navitem.on{color:#D4AF37!important;border-bottom-color:#D4AF37!important;background:#191A17!important}
+html body.trmon #app .trm.trm-pro .trt{font-variant-numeric:tabular-nums;width:100%;max-width:100%}
+html body.trmon #app .trm.trm-pro .trt :is(td,th){border-color:#1E222A!important}
+html body.trmon #app .trm.trm-pro .trt td:not(:first-child),html body.trmon #app .trm.trm-pro .trt th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+html body.trmon #app .trm.trm-pro :is(.tg,.up){color:#10B981!important}
+html body.trmon #app .trm.trm-pro :is(.tr,.dn){color:#EF4444!important}
+/* MON: preserva botões/remover e dados no DOM, compacta só a apresentação. */
+html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"]{width:100%;min-width:0;table-layout:auto}
+html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"] :is(th,td):nth-child(4),html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"] :is(th,td):nth-child(5),html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"] :is(th,td):nth-child(6){display:none!important}
+html body.trmon #app .trm.trm-pro #trp1 table.trt[data-csv="mon"] :is(th,td){padding:5px 3px!important;font-size:11px!important;white-space:nowrap;word-break:normal;overflow-wrap:normal}
+html body.trmon #app .trm.trm-pro #trp1 .trrow{gap:4px;flex-wrap:nowrap}
+html body.trmon #app .trm.trm-pro #trp1 .trrow .trin{min-width:0;flex:1 1 auto;max-width:100%}
+html body.trmon #app .trm.trm-pro #trp0 .trpb{min-height:0}
+@media(max-width:979px){
+ html body.trmon #app .trm.trm-pro #trgrid:not(.pc){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;height:auto!important}
+ html body.trmon #app .trm.trm-pro #trgrid:not(.pc) .trp:not(.maxi){display:flex!important;position:relative!important;width:100%!important;left:auto!important;top:auto!important;height:auto!important;min-height:250px!important}
+ html body.trmon #app .trm.trm-pro #trgrid:not(.pc) #trp0:not(.maxi){min-height:65dvh!important}
+ html body.trmon #app .trm.trm-pro #trgrid:not(.pc) .trpb{max-height:68dvh}
+ html body.trmon #app .trm.trm-pro :is(input,select,textarea){font-size:16px!important}
+ html body.trmon #app .trm.trm-pro .trph :is(button,.trx),html body.trmon #app .trm.trm-pro .trbtn{min-height:40px}
+}
+
+/* v763 — apenas a organização responsiva dos botões da aba Técnico. */
+html:root body #app .tech-action-grid{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+html:root body #app .tech-action-grid button{min-width:0;min-height:44px;white-space:nowrap}
+@media(max-width:640px){
+ html:root body #app .scr-top:has(.tech-action-grid){display:flex;flex-direction:column;align-items:stretch;gap:8px}
+ html:root body #app .tech-action-grid{display:grid;width:100%;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+ html:root body #app .tech-action-grid button{min-width:0;width:100%;padding-inline:4px;font-size:clamp(11px,3vw,13px);white-space:nowrap}
+ html:root body #app .tech-action-grid [data-tech-pdf]{grid-column:1/-1}
 }

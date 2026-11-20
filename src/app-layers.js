@@ -1246,7 +1246,6 @@ try {
             items: [
               ["mercado:mu", "Panorama global"],
               ["mercado:pn", "Painel de mercado"],
-              ["mercado:giro", "Giro de mercado"],
               ["mercado:jr", "Jornal do Pregão"],
               ["mercado:ag", "Agenda econômica"],
               ["mercado:nt", "Notícias"],
@@ -1281,7 +1280,6 @@ try {
             icon: "shield",
             description: "Risco, capital e processo",
             items: [
-              ["mesa", "Mesa proprietária"],
               ["painel", "Metas, posição e backup"],
               ["contratos", "Dimensionamento de contratos"],
               ["carreira", "Plano de transição"],
@@ -1314,7 +1312,6 @@ try {
             items: [
               ["mercado:mu", "Mundo"],
               ["mercado:pn", "Painel"],
-              ["mercado:giro", "Giro"],
               ["juros", "Juros e DI"],
             ],
           },
@@ -7994,7 +7991,7 @@ de Carteira`,
                       try {
                         const a0 = cfg(), sem = 0; // v621: a semana da função macro vai de domingo a sábado — "0" já cobre a semana da edição
                         if (a0) {
-                          const ra = await fetch(a0.url + "/functions/v1/macro", { method: "POST", headers: { "Content-Type": "application/json", apikey: a0.key }, body: JSON.stringify({ modo: "agenda", semana: sem }), signal: AbortSignal.timeout(15e3) }),
+                          const ra = await edgeFetchAutenticado(a0.url + "/functions/v1/macro", { method: "POST", headers: { "Content-Type": "application/json", apikey: a0.key, ...(typeof SESS !== "undefined" && SESS?.at ? { Authorization: "Bearer " + SESS.at } : {}) }, body: JSON.stringify({ modo: "agenda", semana: sem }), signal: AbortSignal.timeout(15e3) }),
                             ja = await ra.json().catch(() => ({}));
                           Array.isArray(ja.eventos) && (k.agenda = ja.eventos.filter((e) => e && e.imp === 1 && ["BR", "US"].includes(e.p)).map((e) => ({ em: e.em, p: e.p, t: e.t, imp: 1 })));
                         }
@@ -10093,7 +10090,7 @@ Energia;30">${j(
               N.fh.close(),
             (N.fhAuto = r()),
             F.trFinnhub(N.fhAuto),
-            F.trBinance(["btcusdt", "ethusdt"], "auto"));
+            F.trBinance(["btcusdt", "ethusdt", "solusdt", "xrpusdt"], "auto"));
         }
       }
       function O(o) {
@@ -10168,7 +10165,7 @@ Energia;30">${j(
             navigator.onLine === !1 ||
             !SESS?.at ||
             l ||
-            Date.now() - s < (o ? 2e3 : 6e4))
+            Date.now() - s < 15 * 6e4)
         )
           return;
         s = Date.now();
@@ -10210,8 +10207,9 @@ Energia;30">${j(
         window.addEventListener("online", () => G(!0)),
         window.TraderUI.onRender("cotacoes-conexao", () => G()),
         setInterval(() => {
-          (j(), G());
-        }, 15e3),
+          // WebSockets da Finnhub/Binance são diretos; não consultar mercado_cache a cada 15s.
+          j();
+        }, 6e4),
         (window.QuoteConnection = { refresh: G, sockets: j, seed: O }),
         G(!0));
     })(),
@@ -10225,7 +10223,7 @@ Energia;30">${j(
         O = "aulas-vel",
         G = "aulas-neural-mode",
         o = "aulas-neural-voice",
-        F = { lista: null, busy: 0, err: "", ts: 0 },
+        F = { lista: null, busy: 0, err: "", ts: 0, blockedUntil: 0 },
         N = {
           prev: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
           next: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>',
@@ -10342,6 +10340,7 @@ Energia;30">${j(
           (F.busy = 0),
           (F.err = ""),
           (F.ts = 0),
+          (F.blockedUntil = 0),
           typeof de < "u" &&
             ((de.aberto = 0),
             (de.livros = null),
@@ -10360,13 +10359,14 @@ Energia;30">${j(
       async function R(t) {
         g();
         const p = B();
+        if (Date.now() < F.blockedUntil) return;
         if (!F.busy) {
           if (!H()) {
             ((F.lista = (window.AULAS_LOCAIS || []).filter((x) => x.local)),
               (F.err = F.lista.length ? "" : "login"));
             return;
           }
-          if (!(!t && F.lista && Date.now() - F.ts < 6e4)) {
+          if (!(!t && F.lista && Date.now() - F.ts < 15 * 6e4)) {
             ((F.busy = 1), (F.err = ""));
             try {
               await tok();
@@ -10382,13 +10382,15 @@ Energia;30">${j(
                   window.AULAS_LOCAIS || [],
                 )),
                 P(s, A),
-                (F.ts = Date.now()));
+                (F.ts = Date.now()),
+                (F.blockedUntil = 0));
             } catch (x) {
               if (p !== B()) return;
+              const erro = String(x.message || x);
+              const quota = x?.status === 402 || x?.code === "EGRESS_QUOTA" || /exceed_egress_quota|service for this project is restricted/i.test(erro);
               ((F.lista = E(s, [])),
-                (F.err = /aulas|schema cache|404/.test(String(x.message || x))
-                  ? "tabela"
-                  : String(x.message || x)));
+                (F.err = quota ? "cota" : /aulas|schema cache|404/i.test(erro) ? "tabela" : erro),
+                (F.blockedUntil = quota ? Date.now() + 5 * 60000 : 0));
             }
             ((F.busy = 0),
               C(),
@@ -10663,8 +10665,10 @@ ${W.text}
           : F.err === "tabela"
             ? (t +=
                 '<div class="card warn"><b>Videoaulas temporariamente indisponíveis</b><div class="sm">A biblioteca de aulas precisa de manutenção. Tente novamente mais tarde.</div></div>')
-            : F.err &&
-              (t += `<div class="card warn"><b>Não consegui carregar as aulas</b><div class="sm">${i(F.err)}</div><button class="btn s" data-aurel="1">Tentar de novo</button></div>`),
+            : F.err === "cota"
+              ? (t += '<div class="card warn" role="status"><b>Nuvem de aulas temporariamente indisponível</b><p class="sm">O Supabase atingiu o limite de transferência do projeto. As aulas guardadas neste aparelho continuam disponíveis. Não saia da conta nem apague o aplicativo. A lista será conferida automaticamente após o intervalo de proteção.</p></div>')
+              : F.err &&
+                (t += `<div class="card warn"><b>Não consegui carregar as aulas</b><div class="sm">${i(F.err)}</div><button class="btn s" data-aurel="1">Tentar de novo</button></div>`),
           (t += L()));
         const p = F.lista.filter(d),
           x = {};
@@ -14252,7 +14256,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
         ensureOwner: g,
         limparConta: za,
         getLista: () => (Array.isArray(F.lista) ? F.lista.slice() : []),
-        getStatus: () => ({ busy: !!F.busy, error: F.err, lastUpdated: F.ts }),
+        getStatus: () => ({ busy: !!F.busy, error: F.err, lastUpdated: F.ts, blockedUntil: F.blockedUntil }),
         progresso: (t) => f(t),
         /* v597: sala de aula — concluir e anotar (mesma coluna de progresso, sem mudar a engine). */
         concluida: (id) => !!f((F.lista || []).find((a) => a.id === id) || { id }).fim,
@@ -15122,7 +15126,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
         [["carteiras", "analise", "imposto"], "Patrimônio e pesquisa"],
         [["mercado", "juros", "live", "graf"], "Mercado e contexto"],
         [["estudos", "livro", "ingles", "cnpi"], "Estudos e formação"],
-        [["mesa", "painel", "contratos", "carreira"], "Gestão e risco"],
+        [["painel", "contratos", "carreira"], "Gestão e risco"],
         [["mais", "conta", "import", "status"], "Configurações e dados"],
       ];
       function r() {
@@ -25734,16 +25738,7 @@ try {
     const doc = document,
       state = {
         news: "noticias",
-        journal: (() => {
-          try {
-            return sessionStorage.getItem("diario-mercado-jornal-secao") ===
-              "giro"
-              ? "giro"
-              : "jornal";
-          } catch {
-            return "jornal";
-          }
-        })(),
+        journal: "jornal",
       },
       root = () => doc.querySelector("#app .dt395-native-mercado"),
       sub = () => {
@@ -25792,7 +25787,7 @@ try {
     }
     function showMode(e, o) {
       const n = o === "nt",
-        t = !n && state.journal === "giro",
+        t = false,
         a = n && state.news === "balancos";
       ((e.dataset.m406View = n
         ? a
@@ -25820,7 +25815,7 @@ try {
         c &&
           (c.textContent = n
             ? "Notícias e balanços"
-            : "Jornal e Giro do Pregão");
+            : "Jornal do Pregão");
         const l = r.querySelector(".m404-panel-nav");
         l && (l.hidden = a || t);
         const d = r.querySelector("p");
@@ -25870,17 +25865,9 @@ try {
           e.querySelector(":scope > .m406-section-switch"))
       )
         return;
-      if (
-        ((e.dataset.m406Sub = o),
-        e.classList.add("m406-content-page"),
-        o === "jr")
-      )
-        try {
-          state.journal =
-            sessionStorage.getItem("diario-mercado-jornal-secao") === "giro"
-              ? "giro"
-              : "jornal";
-        } catch {}
+      e.dataset.m406Sub = o;
+      e.classList.add("m406-content-page");
+      if (o === "jr") state.journal = "jornal";
       const n = o === "nt" ? state.news : state.journal,
         t = section(
           o,
@@ -25892,7 +25879,6 @@ try {
               ]
             : [
                 ["jornal", "Jornal do Pregão"],
-                ["giro", "Giro do mercado"],
               ],
         ),
         a = make("div", "m406-content-host");
@@ -25960,9 +25946,9 @@ try {
           a = sub();
         if (a === "nt") state.news = t;
         else if (a === "jr") {
-          state.journal = t;
+          state.journal = "jornal";
           try {
-            sessionStorage.setItem("diario-mercado-jornal-secao", t);
+            sessionStorage.setItem("diario-mercado-jornal-secao", "jornal");
           } catch {}
         } else return;
         (showMode(n, a), focusCurrent(o));
@@ -25983,9 +25969,9 @@ try {
           } catch {}
         }),
         (GOR.giro = () => {
-          state.journal = "giro";
+          state.journal = "jornal";
           try {
-            sessionStorage.setItem("diario-mercado-jornal-secao", "giro");
+            sessionStorage.setItem("diario-mercado-jornal-secao", "jornal");
           } catch {}
           try {
             ((MKT.tab = "jr"), irPara("mercado"));
@@ -26001,9 +25987,9 @@ try {
           try {
             if (MKT.tab === "mu" || MKT.tab === "cot") MKT.tab = "cq";
             else if (MKT.tab === "giro") {
-              state.journal = "giro";
+              state.journal = "jornal";
               try {
-                sessionStorage.setItem("diario-mercado-jornal-secao", "giro");
+                sessionStorage.setItem("diario-mercado-jornal-secao", "jornal");
               } catch {}
               MKT.tab = "jr";
             }
@@ -26852,7 +26838,7 @@ try {
         ["5A", 1826],
         ["Máx", 36500],
       ];
-    let h = !1,
+    let h = !0,
       x = "1A",
       X = "Mensal",
       v = "IBOV",
@@ -27186,7 +27172,7 @@ try {
         )}<button type="button" data-tf415-nav="WORKSPACES" class="tf415-navitem${h ? " on" : ""}" ${h ? 'aria-current="page"' : ""}>Painéis e Workspaces</button></div><div class="tf413-layout"><div class="tf413-main">${pt()}</div><div class="tf413-side">${dt()}${ft()}${ut()}${ht()}</div></div><div class="tf413-bottom"><span>Visão consolidada das ferramentas existentes. Sem envio de ordens · dados sujeitos à fonte e ao horário de mercado.</span><button type="button" data-tf415-nav="WORKSPACES">Personalizar painéis →</button></div></div>`;
     }
     function Ot() {
-      if (!document.body.classList.contains("trmon")) return ((h = !1), null);
+      if (!document.body.classList.contains("trmon")) return ((h = !0), null);
       const e = document.getElementById($);
       return e ? (e.remove(), { node: e }) : null;
     }
@@ -28578,9 +28564,10 @@ try {
       let c = null;
       try { c = typeof cfg == "function" ? cfg() : null; } catch {}
       if (!c || w.DIARIO_DEMO) { lote.forEach((k) => mem.set(k, null)); return; }
+      if (typeof SESS === "undefined" || !SESS?.uid || !SESS?.at) return;
       const h = { "Content-Type": "application/json", apikey: c.key };
       try { typeof SESS < "u" && SESS && SESS.at && (h.Authorization = "Bearer " + SESS.at); } catch {}
-      emCurso = fetch(c.url + "/functions/v1/logos", { method: "POST", headers: h, body: JSON.stringify({ tickers: lote }), signal: AbortSignal.timeout(2e4) })
+      emCurso = edgeFetchAutenticado(c.url + "/functions/v1/logos", { method: "POST", headers: h, body: JSON.stringify({ tickers: lote }), signal: AbortSignal.timeout(2e4) })
         .then((r) => r.json())
         .then((j) => {
           const it = (j && j.itens) || {};
@@ -28968,6 +28955,7 @@ try {
       },
       jt = () => f(() => segundaDe(V()), V().slice(0, 8) + "01");
     function Ft() {
+      if(window.DiarioSessoes){const c=window.DiarioSessoes.context();return c.mode==='cripto_macro'||c.mode==='b3_fechada'?'fechado':({pre:'pre',during:'pregao',post:'pos'}[c.phase]);}
       try {
         const t = new Intl.DateTimeFormat("pt-BR", {
             timeZone: "America/Sao_Paulo",
@@ -29118,6 +29106,7 @@ try {
               (t) => t.matches(".modg") || /^Minhas modalidades/.test(W(t)),
             ],
             ["geral", "Visão geral", () => !0],
+            ["import", "Importar", () => !1],
           ],
         },
         stats: {
@@ -29178,6 +29167,11 @@ try {
       /* Grupos já desmontados nesta mesma tela continuam com aba (a troca remonta a tela). */
       ((e.dataset.v4grupos || "").split(",").filter(Boolean).forEach((g) => (l[g] = 1)),
         (e.dataset.v4grupos = Object.keys(l).join(",")));
+      // A terceira aba existe desde a primeira pintura, sem injeção após render.
+      if (t === "ops") {
+        l.import = 1;
+        e.dataset.v4grupos = Object.keys(l).join(",");
+      }
       const s = a.groups.filter(
         ([i]) => l[["pre", "dur", "pos"].includes(i) ? "fases" : i],
       );
@@ -29615,7 +29609,7 @@ try {
           "spark",
           'Central de Inteligência <span class="v4-iachip">IA</span>',
           st("Ver análises", 'data-v4ia="1"'),
-          `<p class="v4-sub">Sugestões com base no mercado, no seu plano e no seu histórico. Sem ordens automáticas.</p><div class="v4-ia"><div class="v4-iaart" aria-hidden="true"><span>${p("bars", 30)}<b>IA</b></span></div><div class="v4-ialist">
+          `<div data-intel-content class="sm"></div><p class="v4-sub">Sugestões com base no mercado, no seu plano e no seu histórico. Sem ordens automáticas.</p><div class="v4-ia"><div class="v4-iaart" aria-hidden="true"><span>${p("bars", 30)}<b>IA</b></span></div><div class="v4-ialist">
     <button type="button" data-dt393-route="term">${p("crosshair", 22)}<span><b>Radar global e oportunidades</b><small>Fluxo, juros, índices e ativos no Terminal.</small></span>${p("right", 16)}</button>
     <button type="button" data-dt393-route="ops">${p("shield", 22)}<span><b>Revisar operações e risco</b><small>Posições abertas, stops e risco consumido.</small></span>${p("right", 16)}</button>
     <button type="button" data-dt393-route="stats">${p("up", 22)}<span><b>Avaliar resultados e consistência</b><small>Curva, win rate e pontos de atenção.</small></span>${p("right", 16)}</button></div></div>`,
@@ -29654,6 +29648,7 @@ try {
           return N("hour") * 60 + N("minute");
         }, 12 * 60),
       fase589 = () => {
+        if(window.DiarioSessoes)return window.DiarioSessoes.context().phase;
         const g = hora589();
         return g < 540 ? "pre" : g < 1020 ? "during" : "post";
       },
@@ -29732,6 +29727,110 @@ try {
           }
         }, 1e3),
       ));
+
+    /* v789: editor no próprio Meu dia; não remonta abas antigas do plano. */
+    let planoAberto789 = false;
+    function planoIntegrado789(data, dia) {
+      const p = dia.pl2 || {}, cl = dia.cl || {};
+      const esc789 = (x) => b(x == null ? "" : String(x));
+      const field = (key, label, val, numeric = true) => '<label style="min-width:0;display:block;font-size:13px">' +
+        label + '<input data-v789-field="' + key + '" value="' + esc789(val) + '" ' +
+        (numeric ? 'type="number" inputmode="decimal" min="0" step="any"' : 'type="text"') +
+        ' style="width:100%;min-height:44px;font-size:16px;margin-top:4px"></label>';
+      const option = (value, label, selected) => '<option value="' + value + '"' +
+        (selected === value ? ' selected' : '') + '>' + label + '</option>';
+      const modes = [["dt","Day trade"],["sw","Swing"],["op","Opções"],["ex","EUA/Forex"]];
+      const lack = typeof preparacaoPendente789 === "function" ? preparacaoPendente789(dia) : [];
+      const checklist = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
+        modes.map(([key, label]) => '<button type="button" class="btn s' + ((p.mods||[]).includes(key)?' on':'') +
+          '" style="min-height:44px" data-v789-mode="' + key + '" aria-pressed="' + ((p.mods||[]).includes(key)) + '">' + label + '</button>').join("") + '</div>';
+      return '<details id="v789-plano" data-v789-day="' + esc789(data) + '" class="v789-plano" ' +
+        (planoAberto789 ? 'open ' : '') +
+        'style="background:#11141B;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E;padding:12px 14px;color:inherit">' +
+        '<summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;color:#D4A017;font-weight:700">Editar preparação do dia <span>' +
+        (dia.ckok ? 'Concluída' : lack.length ? lack.length + ' pendência(s)' : 'Pronto para concluir') + '</span></summary>' +
+        '<div class="g2" style="margin-top:10px;gap:8px">' +
+        field("metaDia","Meta diária (R$)",dia.metaDia) +
+        field("maxP","Perda máxima (R$)",dia.maxP) +
+        field("max","Máximo de trades",p.max) +
+        '<label style="font-size:13px">Viés do dia<select data-v789-field="vies" style="min-height:44px;font-size:16px;width:100%;margin-top:4px">' +
+        [["","Escolher"],["compra","Compra"],["venda","Venda"],["neutro","Neutro"]].map(([v,t])=>option(v,t,p.vies||"")).join("") +
+        '</select></label></div>' +
+        '<div style="margin-top:10px;font-size:13px;font-weight:700">Foco operacional</div>' + checklist +
+        '<label style="display:block;margin-top:10px;font-size:13px">Como estou hoje? (1 a 5)<select data-v789-field="estado" style="min-height:44px;width:100%;font-size:16px">' +
+        [["","Escolher"],["1","1 — Muito mal"],["2","2 — Mal"],["3","3 — Neutro"],["4","4 — Bem"],["5","5 — Muito bem"]].map(([v,t])=>option(v,t,String(dia.estado||""))).join("") +
+        '</select></label>' +
+        '<label style="display:flex;align-items:center;min-height:44px;gap:8px;font-size:14px;margin-top:8px"><input type="checkbox" data-v789-stop ' +
+        (cl.p_stop?'checked ':'') + '> Confirmei que definirei stop e alvo antes das entradas</label>' +
+        '<label style="display:block;font-size:13px;margin-top:8px">Cenário e níveis (opcional)<textarea data-v789-field="txt" style="width:100%;min-height:70px;font-size:16px">' + esc789(p.txt) + '</textarea></label>' +
+        '<p style="font-size:13px;margin:10px 0;color:#aeb3bd">' + (lack.length ? 'Pendente: ' + esc789(lack.join(", ")) : 'Dados obrigatórios preenchidos. Confira antes de concluir.') + '</p>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" style="min-height:44px" data-v789-action="save">Salvar plano</button>' +
+        '<button type="button" class="btn" style="min-height:44px" data-v789-action="complete">' +
+        (dia.ckok ? 'Preparação concluída' : 'Concluir preparação do dia') + '</button></div></details>';
+    }
+    function salvaPlano789(completar = false) {
+      const root = v.querySelector("#v789-plano");
+      if (!root) return false;
+      const data = root.dataset.v789Day;
+      if (data !== ft() || data < V()) return false;
+      const base = S.days[data] ?? (S.days[data] = { chk: {} });
+      const dia = Tt() ? (base.us ?? (base.us = {})) : base;
+      const p = dia.pl2 ?? (dia.pl2 = {});
+      const anterior = JSON.stringify({metaDia:dia.metaDia,maxP:dia.maxP,estado:dia.estado,pl2:p,cl:dia.cl});
+      const value = (key) => root.querySelector('[data-v789-field="' + key + '"]')?.value ?? "";
+      for (const key of ["metaDia","maxP"]) {
+        const n = Number(value(key));
+        dia[key] = value(key).trim() && n > 0 && Number.isFinite(n) ? n : "";
+      }
+      const max = Number(value("max"));
+      p.max = Number.isInteger(max) && max > 0 ? max : 0;
+      p.vies = value("vies");
+      p.txt = value("txt");
+      p.mods = [...root.querySelectorAll("[data-v789-mode].on")].map(el => el.dataset.v789Mode);
+      dia.estado = Number(value("estado")) || 0;
+      dia.cl ??= {};
+      dia.cl.p_meta = Number(dia.metaDia) > 0;
+      dia.cl.p_limite = Number(dia.maxP) > 0;
+      dia.cl.p_stop = !!root.querySelector("[data-v789-stop]")?.checked;
+      const pendencias = typeof preparacaoPendente789 === "function" ? preparacaoPendente789(dia) : [];
+      if (!completar && dia.ckok && anterior !== JSON.stringify({metaDia:dia.metaDia,maxP:dia.maxP,estado:dia.estado,pl2:p,cl:dia.cl})) dia.ckok = 0;
+      if (completar && pendencias.length) {
+        const p = root.querySelector("p");
+        if (p) p.textContent = "Falta: " + pendencias.join(", ");
+      } else if (completar) dia.ckok = Date.now();
+      dia.u = Date.now();
+      save();
+      planoAberto789 = true;
+      render();
+      if (completar && pendencias.length && typeof toast === "function")
+        toast("Preencha: " + pendencias.join(", "));
+      if (completar && !pendencias.length && typeof toast === "function")
+        toast("Preparo concluído. Bom pregão!");
+      return pendencias.length === 0;
+    }
+    v.addEventListener("click", (ev) => {
+      const abrir = ev.target.closest?.('[data-v4tool="plano"][data-v4route="dia"]');
+      if (abrir) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        planoAberto789 = true;
+        const root = v.querySelector("#v789-plano");
+        if (root) { root.open = true; root.scrollIntoView({behavior:"smooth",block:"center"}); }
+        return;
+      }
+      const mode = ev.target.closest?.("#v789-plano [data-v789-mode]");
+      if (mode) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        mode.classList.toggle("on");
+        mode.setAttribute("aria-pressed",String(mode.classList.contains("on")));
+        return;
+      }
+      const save = ev.target.closest?.("#v789-plano [data-v789-action]");
+      if (save) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        salvaPlano789(save.dataset.v789Action === "complete");
+      }
+    }, true);
+
     function ie() {
       const t = ft(),
         e = ut(t),
@@ -29916,7 +30015,7 @@ try {
           ? `<p class="v4-turno" role="status"><b>Dia de turno</b> <span>${b(TH[c] || "")}</span> · plano: não operar</p>`
           : "";
       }, "");
-      return `<div class="v4-page v4-day">${turno593}${emo589}${y}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
+      return `<div class="v4-page v4-day">${turno593}${emo589}${y}${planoIntegrado789(t, e)}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
     }
     let At = "risk",
       bt = { k: "dt", d: 1 };
@@ -30332,7 +30431,6 @@ try {
         "dtrpy",
         "swbt",
         "live",
-        "mesa",
       ],
       zt = [
         [
@@ -30583,6 +30681,9 @@ try {
         e.querySelector("#dt393-workspace")?.classList.remove("v419-recolhido"),
         ee(t, a),
         f(poe598));
+      // v676: após substituir o painel V4, insere o termômetro na tela real
+      // de Início/Meu dia, independentemente do ciclo de cotações.
+      if (t === "home" || t === "dia") {window.TermometroAbertura670?.montar?.();window.DiarioInteligenciaEtapa1?.montar?.();}
     }
     function Ut() {
       if (typeof window.render0 != "function" || window.render0.__v420)
@@ -30611,6 +30712,11 @@ try {
         const a = t.target.closest("[data-v4tool]");
         if (a && a.dataset.v4route === "home") {
           (t.preventDefault(), Pt(a.dataset.v4tool));
+          return;
+        }
+        if (a && a.dataset.v4route === "ops" && a.dataset.v4tool === "import") {
+          t.preventDefault();
+          irPara("import"); // usa a rota oficial do Profit, sem alterar a integração
           return;
         }
         if (a) {
@@ -33720,7 +33826,7 @@ try {
           a = n.reduce((r, f) => r + f.c.r, 0),
           l = e.filter((r) => r.c.pl > 0).length,
           i = e.filter(
-            (r) => r.rules !== "n" && !(r.err && r.err !== "Nenhum"),
+            (r) => r.rules === "s" && !(r.err && r.err !== "Nenhum"),
           ).length,
           o = e.reduce((r, f) => r + f.c.pl, 0);
         return {
@@ -34166,7 +34272,7 @@ try {
       if (!a || !a.n)
         return `<div class="card v430-vt" data-v430vt="1">${v}<p class="v430-mut">Nenhum trade encerrado neste período.</p></div>`;
       const i = a.n
-          ? t.filter((o) => o.rules !== "n" && !(o.err && o.err !== "Nenhum"))
+          ? t.filter((o) => o.rules === "s" && !(o.err && o.err !== "Nenhum"))
               .length / a.n
           : null,
         u = a.nR
@@ -36051,6 +36157,7 @@ try {
       return { h: o.getHours(), m: o.getMinutes(), d: o };
     }
     function k() {
+      if(window.DiarioSessoes)return window.DiarioSessoes.context().phase;
       const { h: e, m: o } = T(),
         t = e * 60 + o;
       return t < 540 ? "pre" : t < 1110 ? "during" : "post";
@@ -36574,7 +36681,116 @@ try {
           return null;
         }
       };
+
+    /* v672 — Somente a calculadora de Operações, sem modificar a versão do Terminal. */
+    const preco672 = (v,ativo) => Number.isFinite(v) ? Number(v).toLocaleString("pt-BR",{minimumFractionDigits:ativo==="WIN"?0:2,maximumFractionDigits:6}) : "—";
+    function tamanho672(o) {
+      const tipo=o.ativo in ATIVOS?o.ativo:"WIN", a=ATIVOS[tipo], lado=o.lado==="V"?"V":"C";
+      const r=num(o.risco), e=num(o.entrada), stop=num(o.stop), direto=num(o.stopDireto);
+      if(!(r>0))return {erro:"Informe o risco disponível em R$."};
+      let dist;
+      if(o.modo!=="direto"){
+        if(!(e>0)||!(stop>0))return {erro:"Informe os preços de entrada e do stop."};
+        dist=Math.abs(e-stop);
+        if(!(dist>0))return {erro:"Entrada e stop não podem ser iguais."};
+      }else{
+        if(!(direto>0))return {erro:"Informe a distância do stop em pontos ou R$ por unidade."};
+        dist=o.unidade==="reais"?direto/a.porPonto:direto;
+      }
+      if(!(dist>0)||!Number.isFinite(dist))return {erro:"Distância de stop inválida."};
+      const porUnid=dist*a.porPonto;
+      let qtd=Math.floor(r/porUnid+1e-9),limitado=false;
+      if(!a.lote&&o.capitalMax!=null&&Number.isFinite(o.capitalMax)&&o.capitalMax>=0&&o.capitalMax<qtd){
+        qtd=Math.floor(o.capitalMax);limitado=true;
+      }
+      const sinal=lado==="C"?1:-1;
+      const alvo=k=>e>0&&qtd>0?{preco:e+sinal*k*dist,lucro:qtd*porUnid*k}:null;
+      return {tipo,lado,qtd,dist,porUnid,riscoUsado:qtd*porUnid,limitado,
+        alvo2:alvo(2),alvo3:alvo(3),
+        ladoInvalido:o.modo!=="direto"&&((lado==="C"&&stop>=e)||(lado==="V"&&stop<=e))};
+    }
+    function parcial672(o){
+      const tipo=o.ativo in ATIVOS?o.ativo:"WIN",a=ATIVOS[tipo],lado=o.lado==="V"?"V":"C";
+      const total=num(o.total),q=num(o.parcial),entrada=num(o.entrada),saida=num(o.saida);
+      if(!Number.isInteger(total)||total<=0)return {erro:"Informe uma quantidade total inteira e maior que zero."};
+      if(!(entrada>0)||!(saida>0))return {erro:"Informe os preços de entrada e da parcial."};
+      if(!Number.isInteger(q)||q<=0||q>total)return {erro:"A parcial deve ser inteira, positiva e não superar a quantidade total."};
+      const sinal=lado==="C"?1:-1,restante=total-q;
+      const realizado=(saida-entrada)*q*a.porPonto*sinal;
+      const riscoZero=restante>0?entrada-sinal*realizado/(restante*a.porPonto):null;
+      const tick=a.tick||.01;
+      const executavel=riscoZero===null?null:(sinal===1
+        ?Math.ceil(riscoZero/tick-1e-9)*tick:Math.floor(riscoZero/tick+1e-9)*tick);
+      return {tipo,lado,realizado,restante,medioOriginal:entrada,medioAjustado:riscoZero,
+        riscoZero,executavel,tick};
+    }
+    function html672(){
+      const r=risco(),disp=Number.isFinite(r.disponivel)?r.disponivel:null;
+      const opcoes=Object.entries(ATIVOS).map(([k,a])=>'<option value="'+k+'">'+esc(a.nome)+'</option>').join("");
+      return '<form class="v598-calc v672-calc" data-calc598 data-origem="operacoes" data-c672-modo="preco" onsubmit="return false" aria-label="Calculadora de Tamanho de Posição e Parcial">'+
+        '<details class="v672-details" open><summary>Gerenciamento de risco <small>Recolher / expandir</small></summary><div class="v672-content">'+
+        '<div class="v672-tabs" role="tablist" aria-label="Ferramentas de risco">'+
+        '<button type="button" role="tab" id="v672-tab-tam" data-c672-tab="tamanho" aria-selected="true" aria-controls="v672-pane-tam">Tamanho de Posição</button>'+
+        '<button type="button" role="tab" id="v672-tab-par" data-c672-tab="parcial" aria-selected="false" aria-controls="v672-pane-par">Parcial &amp; Risco Zero</button></div>'+
+        '<section class="v672-pane" data-c672-pane="tamanho" role="tabpanel" id="v672-pane-tam" aria-labelledby="v672-tab-tam">'+
+        '<div class="v672-modos" role="group" aria-label="Modo de informar stop"><button type="button" data-c672-modo="preco" aria-pressed="true">Modo Preço</button><button type="button" data-c672-modo="direto" aria-pressed="false">Modo Direto</button></div>'+
+        '<div class="v672-grid"><label>Ativo<select data-c598="ativo">'+opcoes+'</select></label>'+
+        '<label>Lado<select data-c672="lado"><option value="C">Compra</option><option value="V">Venda</option></select></label></div>'+
+        '<label>Risco disponível hoje (R$)<input data-c598="risco" inputmode="decimal" autocomplete="off" value="'+(disp===null?'':String(Math.round(disp*100)/100).replace(".",","))+'" placeholder="Risco em R$"></label>'+
+        '<div class="v672-grid"><label>Preço de Entrada<input data-c598="ent" inputmode="decimal" autocomplete="off" placeholder="Ex.: 130.250"></label>'+
+        '<label data-c672-field="preco">Preço do Stop<input data-c598="stop" inputmode="decimal" autocomplete="off" placeholder="Ex.: 130.000"></label></div>'+
+        '<div class="v672-grid" data-c672-field="direto" hidden><label>Unidade de Stop<select data-c672="unidade"><option value="pontos">Pontos / diferença de preço</option><option value="reais">R$ por contrato/ação</option></select></label>'+
+        '<label>Distância do Stop<input data-c672="stopDireto" inputmode="decimal" autocomplete="off" placeholder="Ex.: 150"></label></div>'+
+        '<output class="v598-calc-res" data-c598="res" aria-live="polite">Informe os dados para calcular o lote.</output>'+
+        '<small class="v598-calc-nota">Alvos 2:1 e 3:1 usam a distância do stop e o lote permitido. No Modo Direto, a entrada é necessária apenas para calcular os preços dos alvos.</small>'+
+        '<small class="v598-calc-nota">Limite de perda: '+(Number.isFinite(r.limite)?brl(r.limite):"não definido")+'. Sem taxas, corretagem ou emolumentos.</small></section>'+
+        '<section class="v672-pane" data-c672-pane="parcial" role="tabpanel" id="v672-pane-par" aria-labelledby="v672-tab-par" hidden>'+
+        '<div class="v672-grid"><label>Ativo<select data-c672="ativoParcial"><option value="WDO">WDO · mini dólar</option><option value="WIN">WIN · mini índice</option><option value="ACAO">Ações</option></select></label>'+
+        '<label>Lado<select data-c672="ladoParcial"><option value="C">Compra</option><option value="V">Venda</option></select></label>'+
+        '<label>Quantidade total<input data-c672="total" inputmode="numeric" autocomplete="off" placeholder="Ex.: 10"></label>'+
+        '<label>Preço médio de entrada<input data-c672="entradaParcial" inputmode="decimal" autocomplete="off" placeholder="Ex.: 5.500"></label>'+
+        '<label>Quantidade da parcial<input data-c672="quantidadeParcial" inputmode="numeric" autocomplete="off" placeholder="Ex.: 4"></label>'+
+        '<label>Preço da parcial<input data-c672="precoParcial" inputmode="decimal" autocomplete="off" placeholder="Ex.: 5.490"></label></div>'+
+        '<output class="v598-calc-res v672-parcial-res" data-c672="resParcial" aria-live="polite">Preencha os dados para calcular o risco zero.</output>'+
+        '<small class="v598-calc-nota">O preço médio contábil do saldo permanece na entrada. O médio ajustado incorpora o resultado já realizado. Projeção teórica sem taxas nem slippage.</small>'+
+        '</section></div></details></form>';
+    }
+    function calcula672(f){
+      const g=k=>f.querySelector('[data-c598="'+k+'"]'),h=k=>f.querySelector('[data-c672="'+k+'"]');
+      const a=tamanho672({ativo:g("ativo").value,lado:h("lado").value,risco:g("risco").value,modo:f.dataset.c672Modo,
+        entrada:g("ent").value,stop:g("stop").value,stopDireto:h("stopDireto").value,
+        unidade:h("unidade").value,capitalMax:lotesCapital()});
+      const out=g("res");
+      if(a.erro)out.textContent=a.erro;
+      else{
+        const m=ATIVOS[a.tipo],plural=a.qtd===1?m.unid:m.unids;
+        const lotes=m.lote?' · '+Math.floor(a.qtd/m.lote)+' lote(s) de '+m.lote+(a.qtd%m.lote?' + '+a.qtd%m.lote+' no fracionário':''):'';
+        let texto='<b>'+a.qtd.toLocaleString("pt-BR")+'</b> '+plural+lotes+(a.limitado?' · limitado pelo capital':'')+
+          '<span>Distância: '+preco672(a.dist,a.tipo)+' '+(m.lote?'R$ por ação':'pontos')+' · custo por unidade '+brl(a.porUnid)+' · perda no stop '+brl(a.riscoUsado)+'</span>';
+        if(a.qtd>0&&a.alvo2&&a.alvo3){
+          texto+='<div class="v672-alvos"><div><span>Alvo 2:1 · '+(a.lado==="C"?"Compra":"Venda")+'</span><strong>'+preco672(a.alvo2.preco,a.tipo)+'</strong><small>Lucro potencial '+brl(a.alvo2.lucro)+'</small></div>'+
+            '<div><span>Alvo 3:1 · '+(a.lado==="C"?"Compra":"Venda")+'</span><strong>'+preco672(a.alvo3.preco,a.tipo)+'</strong><small>Lucro potencial '+brl(a.alvo3.lucro)+'</small></div></div>';
+          if(a.ladoInvalido)texto+='<span class="v672-alert">Confira o sentido do stop: compra abaixo da entrada, venda acima.</span>';
+        }else if(a.qtd>0)texto+='<span>Informe o preço de entrada para mostrar o preço exato dos alvos 2:1 e 3:1.</span>';
+        if(!a.qtd)texto+='<span>O risco unitário supera o disponível: nenhum lote permitido.</span>';
+        out.innerHTML=texto;
+      }
+      const b=parcial672({ativo:h("ativoParcial").value,lado:h("ladoParcial").value,total:h("total").value,
+        entrada:h("entradaParcial").value,parcial:h("quantidadeParcial").value,saida:h("precoParcial").value});
+      const res=h("resParcial");
+      if(b.erro){res.textContent=b.erro;return;}
+      let html='<div class="v672-line"><span>Lucro / perda realizados na parcial</span><strong class="'+(b.realizado<0?'v672-loss':'v672-gain')+'">'+brl(b.realizado)+'</strong></div>'+
+        '<div class="v672-line"><span>Quantidade restante</span><strong>'+b.restante.toLocaleString("pt-BR")+'</strong></div>';
+      if(b.restante){
+        html+='<div class="v672-line"><span>Preço médio contábil do saldo</span><strong>'+preco672(b.medioOriginal,b.tipo)+'</strong></div>'+
+          '<div class="v672-line"><span>Novo preço médio ajustado</span><strong>'+preco672(b.medioAjustado,b.tipo)+'</strong></div>'+
+          '<div class="v672-line v672-zero"><span>Ponto teórico de Risco Zero</span><strong>'+preco672(b.riscoZero,b.tipo)+'</strong></div>'+
+          '<small>Preço favorável ao zero no tick de '+preco672(b.tick,b.tipo)+': <b>'+preco672(b.executavel,b.tipo)+'</b>.</small>';
+      }else html+='<small>Posição totalmente encerrada: não há saldo nem ponto de risco zero.</small>';
+      res.innerHTML=html;
+    }
     function html(origem) {
+      if (origem === "operacoes") return html672();
       const r = risco(),
         disp = Number.isFinite(r.disponivel) ? r.disponivel : "";
       return `<form class="v598-calc" data-calc598 data-origem="${esc(origem)}" onsubmit="return false" aria-label="Calculadora de posição">
@@ -36586,6 +36802,7 @@ try {
 </form>`;
     }
     function calcula(f) {
+      if (f.dataset.origem === "operacoes") return calcula672(f);
       const g = (k) => f.querySelector(`[data-c598="${k}"]`),
         a = ATIVOS[g("ativo").value] || ATIVOS.WIN,
         rs = num(g("risco").value),
@@ -36638,7 +36855,26 @@ try {
     d.addEventListener("click", (e) => {
       e.target.closest?.("[data-v598-calc]") && (e.preventDefault(), abrir());
     });
-    w.CalcPosicao = { abrir, html };
+
+    d.addEventListener("click",e=>{
+      const b=e.target.closest?.("[data-c672-tab],[data-c672-modo]");
+      if(!b)return;
+      const f=b.closest("[data-calc598]");
+      if(!f||f.dataset.origem!=="operacoes")return;
+      e.preventDefault();
+      const tab=b.getAttribute("data-c672-tab"),modo=b.getAttribute("data-c672-modo");
+      if(tab){
+        f.querySelectorAll("[data-c672-tab]").forEach(x=>x.setAttribute("aria-selected",String(x.dataset.c672Tab===tab)));
+        f.querySelectorAll("[data-c672-pane]").forEach(x=>x.hidden=x.dataset.c672Pane!==tab);
+      }
+      if(modo){
+        f.dataset.c672Modo=modo;
+        f.querySelectorAll("[data-c672-modo]").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.c672Modo===modo)));
+        f.querySelectorAll("[data-c672-field]").forEach(x=>x.hidden=x.dataset.c672Field!==modo);
+      }
+      calcula672(f);
+    });
+    w.CalcPosicao = { abrir, html, tamanho672, parcial672 };
     /* Terminal: comando CALC abre a calculadora dentro do painel. */
     const regTerminal = () => {
       const T = w.TRM;
@@ -40344,7 +40580,7 @@ try {
           f ||
           !v(() => SESS && SESS.uid, null) ||
           r.visibilityState !== "visible" ||
-          Date.now() - p < 6e4
+          Date.now() - p < 5 * 6e4
         )
       ) {
         ((f = !0), (p = Date.now()));
@@ -40414,7 +40650,7 @@ try {
         }
       }
     }
-    (setInterval(d, 2e4),
+    (setInterval(d, 5 * 6e4),
       setTimeout(d, 8e3),
       r.addEventListener("visibilitychange", () => {
         r.visibilityState === "visible" && ((p = 0), setTimeout(d, 1500));
@@ -40714,6 +40950,9 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
       if (!e.isConnected) return;
       if (!a) {
         e.innerHTML = '<summary class="v518-h">Movimentos fortes</summary><p class="mut">' + (c(() => SESS && SESS.uid, null) ? 'Não foi possível consultar os movimentos agora.' : 'Entre na sua conta para consultar os movimentos.') + '</p><button type="button" data-v518-refresh>Atualizar movimentos</button>';
+        e.dataset.v518Ready = "1";
+        p.DIARIO_V519?.insCartao?.();
+        p.DIARIO_V520?.cartao?.();
         return;
       }
       const o = a.filter(
@@ -40742,10 +40981,12 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
               })
               .join("")
           : '<div class="mut" style="padding:6px 0">Nenhum movimento forte. Você é avisado quando algo passar do limite.</div>');
+      e.dataset.v518Ready = "1";
+      p.DIARIO_V519?.insCartao?.();
+      p.DIARIO_V520?.cartao?.();
     }
-    setInterval(() => {
-      u().catch(() => {});
-    }, 1500);
+    setTimeout(() => { u().catch(() => {}); }, 250);
+    setInterval(() => { u().catch(() => {}); }, 3e4);
     try {
       const t = r.createElement("style");
       ((t.textContent =
@@ -40777,35 +41018,7 @@ try {
           /[&<>"]/g,
           (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e],
         );
-    try {
-      const t = feCarrega;
-      feCarrega = async function () {
-        if (FE.busy || Date.now() - FE.ts < 30 * 6e4) return;
-        const e = cfg();
-        if (!e) return t.apply(this, arguments);
-        FE.busy = 1;
-        let a = !1;
-        try {
-          const o = await fetch(e.url + "/functions/v1/movimentos", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", apikey: e.key },
-              body: JSON.stringify({ acao: "fluxo" }),
-            }),
-            c = await o.json().catch(() => ({}));
-          if (o.ok && c.ultimo) {
-            ((FE.v = c), (FE.err = ""));
-            try {
-              ls.set("diario-fluxo", c);
-            } catch {}
-            a = !0;
-          }
-        } catch {}
-        if (((FE.busy = 0), !a)) return t.apply(this, arguments);
-        FE.ts = Date.now();
-        const s = r.getElementById("febox");
-        s && (s.outerHTML = feHtml());
-      };
-    } catch {}
+    // Fluxo estrangeiro usa o adaptador público compartilhado feCarrega; sem segunda tentativa Supabase.
     try {
       const t = jrTexto;
       jrTexto = function (e) {
@@ -40888,7 +41101,7 @@ try {
       )
         return;
       const t = r.getElementById("v518-mov");
-      if (!t || !u(() => SESS && SESS.uid, null)) return;
+      if (!t || t.dataset.v518Ready !== "1" || !u(() => SESS && SESS.uid, null)) return;
       const e = r.createElement("details");
       ((e.id = "v519-ins"),
         (e.className = "v518-mov"),
@@ -40944,10 +41157,10 @@ try {
           (e.querySelector("div").textContent = "Não consegui carregar agora.");
       }
     }
-    (setInterval(() => {
-      v().catch(() => {});
-    }, 1700),
-      (p.DIARIO_V519 = { insCartao: v }));
+    r.addEventListener("diario:render", () => { v().catch(() => {}); });
+    setTimeout(() => { v().catch(() => {}); }, 1000);
+    setInterval(() => { v().catch(() => {}); }, 3e4);
+    p.DIARIO_V519 = { insCartao: v };
   })(typeof window < "u" ? window : globalThis);
 } catch (e) {
   console.error("[v522] falha em extras-v519.js", e);
@@ -40991,13 +41204,13 @@ try {
       l = (a, e) => (i(a) ? h(e) : y(e));
     let s = { t: 0, L: null };
     async function m() {
-      if (s.L && Date.now() - s.t < 6e4) return s.L;
+      if (s.L && Date.now() - s.t < 15 * 6e4) return s.L;
       await tok();
       const a = cfg(),
         e = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10),
         o = await fetch(
           a.url +
-            "/rest/v1/fluxo_acoes?select=*&user_id=eq." +
+            "/rest/v1/fluxo_acoes?select=ativo,dia,ag_compra,ag_venda,est_compra,est_venda,atualizado&user_id=eq." +
             SESS.uid +
             "&order=dia.desc&limit=60",
           { headers: { apikey: a.key, Authorization: "Bearer " + SESS.at } },
@@ -41055,9 +41268,9 @@ try {
         r && (r.textContent = "Não consegui carregar agora.");
       }
     }
-    setInterval(() => {
-      p().catch(() => {});
-    }, 1800);
+    n.addEventListener("diario:render", () => { p().catch(() => {}); });
+    setTimeout(() => { p().catch(() => {}); }, 1200);
+    setInterval(() => { p().catch(() => {}); }, 3e4);
     try {
       const a = n.createElement("style");
       ((a.textContent =
@@ -41341,7 +41554,360 @@ try {
 } catch (e) {
   console.error("[v606] barômetro EUA", e);
 }
-/* v657 · Laboratório de Economia, apenas Estudos. */
+/* v692 — Auditoria & Monte Carlo exclusivamente em Operações (sem novas APIs ou dados persistidos). */
+;(function(){
+'use strict';
+const w=window,d=document;
+const B={expanded:false,period:'all',module:'all',inputs:null,paramsKey:'',result:null};
+const h=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=x=>Number.isFinite(x)?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(x):'—';
+const nu=(x,n=2)=>Number.isFinite(x)?Number(x).toLocaleString('pt-BR',{minimumFractionDigits:n,maximumFractionDigits:n}):'—';
+const pct=x=>Number.isFinite(x)?nu(x*100,1)+'%':'—';
+const sum=arr=>arr.reduce((a,b)=>a+b,0);
+const avg=arr=>arr.length?sum(arr)/arr.length:null;
+const cut=(days)=>{
+ const today=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const f=key=>+today.find(x=>x.type===key).value;
+ return new Date(Date.UTC(f('year'),f('month')-1,f('day')-Number(days),12)).toISOString().slice(0,10);
+};
+function brazilStamp(raw){
+ const text=String(raw||'').trim();
+ if(!text)return null;
+ const m=/^(\d{4}-\d\d-\d\d)[T ](\d\d):(\d\d)/.exec(text);
+ if(!m)return null;
+ // O diário e o Profit gravam hora local; timestamps com sufixo UTC/offset são convertidos.
+ if(/(?:Z|[+-]\d\d:?\d\d)$/i.test(text)){
+  const dt=new Date(text);if(!Number.isFinite(+dt))return null;
+  const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(dt);
+  const v=k=>p.find(x=>x.type===k)?.value;
+  return {date:v('year')+'-'+v('month')+'-'+v('day'),minutes:+v('hour')*60+(+v('minute'))};
+ }
+ const min=+m[2]*60+(+m[3]);return min<1440?{date:m[1],minutes:min}:null;
+}
+function scope(rows,period=B.period,module=B.module){
+ const from=period==='all'?'0000-00-00':cut(+period);
+ return rows.filter(x=>(module==='all'||x.module===module)&&x.exitDate>=from);
+}
+function records(){
+ // São as MESMAS operações carregadas no hub; reutiliza cálculo e câmbio existentes.
+ const all=typeof modLinhas==='function'?modLinhas():S.trades.map(t=>({t,c:calc(t),m:''}));
+ const normalized=[];
+ for(const item of all){
+  const t=item.t||{},c=item.c||{};
+  if(t.lanc||c.pl==null||!Number.isFinite(+c.pl))continue; // excluir lançamentos e operações abertas
+  let pl;
+  try{pl=typeof emBRL==='function'?emBRL(+c.pl,moedaT(t)):+c.pl;}catch{pl=NaN;}
+  if(!Number.isFinite(pl))continue; // jamais somar resultado em USD como se fosse BRL
+  const stamp=String(t.dtx||t.dt||''),exitDate=stamp.slice(0,10);
+  if(!/^\d{4}-\d\d-\d\d$/.test(exitDate))continue;
+  normalized.push({id:String(t.id||t.ext||''),module:String(item.m||''),pl,exitDate,entry:brazilStamp(t.dt),setup:String(t.setup||'').trim(),rules:String(t.rules||''),error:String(t.err||''),raw:t});
+ }
+ return normalized.sort((a,b)=>a.exitDate.localeCompare(b.exitDate)||
+  String(a.raw.dtx||a.raw.dt).localeCompare(String(b.raw.dtx||b.raw.dt))||
+  a.id.localeCompare(b.id));
+}
+function summary(rows){
+ const n=rows.length,wins=rows.filter(r=>r.pl>0),losses=rows.filter(r=>r.pl<0),winValues=wins.map(r=>r.pl),lossValues=losses.map(r=>-r.pl);
+ const wp=n?wins.length/n:null,avgWin=avg(winValues),avgLoss=avg(lossValues);
+ const grossPlus=sum(winValues),grossMinus=sum(lossValues);
+ let running=0,peak=0,maxDD=0,streakWin=0,streakLoss=0,maxWin=0,maxLoss=0;
+ const dd=[{n:0,v:0}];
+ for(const r of rows){
+  running+=r.pl;peak=Math.max(peak,running);const drop=Math.max(0,peak-running);
+  maxDD=Math.max(maxDD,drop);dd.push({n:dd.length,v:-drop});
+  if(r.pl>0){streakWin++;streakLoss=0;}
+  else if(r.pl<0){streakLoss++;streakWin=0;}
+  else{streakWin=streakLoss=0;}
+  maxWin=Math.max(maxWin,streakWin);maxLoss=Math.max(maxLoss,streakLoss);
+ }
+ const ev=n?running/n:null;
+ return {n,wins:wins.length,losses:losses.length,net:running,winRate:wp,avgWin,avgLoss,
+  ev,payoff:avgWin!==null&&avgLoss>0?avgWin/avgLoss:null,
+  pf:grossMinus>0?grossPlus/grossMinus:grossPlus>0?Infinity:null,
+  dd,maxDD,maxWin,maxLoss};
+}
+function timeslot(minutes){
+ if(!Number.isFinite(minutes))return null;
+ if(minutes>=540&&minutes<600)return 0;
+ if(minutes>=600&&minutes<690)return 1;
+ if(minutes>=690&&minutes<840)return 2;
+ if(minutes>=840&&minutes<1020)return 3;
+ return null;
+}
+const SLOTS=['09h–10h · Abertura','10h–11h30 · NY','11h30–14h · Almoço','14h–17h · Tarde'];
+const WEEK=['Segunda','Terça','Quarta','Quinta','Sexta'];
+function weekday(date){
+ if(!/^\d{4}-\d\d-\d\d$/.test(date))return null;
+ const dt=new Date(date+'T12:00:00Z');if(!Number.isFinite(+dt))return null;
+ const n=dt.getUTCDay();return n>=1&&n<=5?n-1:null;
+}
+function groups(rows){
+ const hour=SLOTS.map((name,i)=>({name,list:rows.filter(x=>timeslot(x.entry?.minutes)===i)}));
+ const week=WEEK.map((name,i)=>({name,list:rows.filter(x=>weekday(x.entry?.date||'')===i)}));
+ const stats=hour.map(a=>({...a,stat:summary(a.list)}));
+ const dependable=stats.filter(x=>x.stat.n>=3);
+ const best=[...dependable].sort((a,b)=>b.stat.ev-a.stat.ev)[0]||null;
+ const worst=[...dependable].sort((a,b)=>a.stat.ev-b.stat.ev)[0]||null;
+ return {hour:stats,week:week.map(x=>({...x,stat:summary(x.list)})),best,worst,
+  excluded:rows.length-hour.reduce((a,b)=>a+b.list.length,0)};
+}
+function discipline(row){
+ const label=row.setup.toLocaleLowerCase('pt-BR');
+ const invalid=!label||/^(?:sem setup|sem padr[aã]o|n[aã]o informado|indefinido|importado do profit|importado|sem estrat[eé]gia|impulsiv[oa]|fora do plano)$/i.test(label);
+ const explicitOutside=row.rules.toLowerCase()==='n'||/dica\/emo[cç][aã]o|fora do sistema|impulsiv|fora do plano/i.test(row.error+' '+row.setup);
+ if(explicitOutside)return 'outside';
+ return invalid?'noSetup':'plan';
+}
+function disciplineSummary(rows){
+ const plan=rows.filter(r=>discipline(r)==='plan');
+ const noSetup=rows.filter(r=>discipline(r)==='noSetup');
+ const outside=rows.filter(r=>discipline(r)==='outside');
+ return {plan:summary(plan),noSetup:summary(noSetup),outside:summary(outside),
+  other:summary(noSetup.concat(outside)),difference:plan.length&&noSetup.length+outside.length?summary(plan).ev-summary(noSetup.concat(outside)).ev:null};
+}
+function monteCarlo(options,count=500,horizon=100,rng=Math.random){
+ const {winRate,avgWin,avgLoss,limit}=options;
+ if(![winRate,avgWin,avgLoss,limit].every(Number.isFinite)||winRate<0||winRate>100||!(avgWin>0&&avgLoss>0&&limit>0))return null;
+ const runs=[],all=Array.from({length:horizon+1},()=>[]);
+ let hits=0;
+ for(let k=0;k<count;k++){
+  let equity=0,peak=0,hit=false;
+  const points=[0];all[0].push(0);
+  for(let j=1;j<=horizon;j++){
+   equity+=rng()*100<winRate?avgWin:-avgLoss;
+   peak=Math.max(peak,equity);
+   if(peak-equity>=limit)hit=true;
+   points.push(equity);all[j].push(equity);
+  }
+  if(hit)hits++;
+  runs.push({points,final:equity,hit});
+ }
+ const med=all.map(values=>{values.sort((a,b)=>a-b);return (values[(count-1)>>1]+values[count>>1])/2;});
+ runs.sort((a,b)=>a.final-b.final);
+ return {count,horizon,hit:hits,risk:hits/count,median:med,worst:runs[0].points,best:runs.at(-1).points,
+  worstFinal:runs[0].final,bestFinal:runs.at(-1).final,medianFinal:med.at(-1)};
+}
+function graph(lines,alt,labels){
+ const arr=lines.flatMap(v=>v).filter(Number.isFinite);if(arr.length<2)return '';
+ let mi=Math.min(...arr),ma=Math.max(...arr);if(mi===ma){mi-=1;ma+=1;}
+ const n=Math.max(...lines.map(x=>x.length))-1||1;
+ const colors=['#D4A017','#EF4444','#10B981'];
+ const poly=lines.map((a,i)=>'<polyline points="'+a.map((v,j)=>(48+571*j/n).toFixed(1)+','+(168-134*(v-mi)/(ma-mi)).toFixed(1)).join(' ')+
+   '" stroke="'+colors[i]+'" fill="none" stroke-width="'+(i===0?2.5:1.5)+'"/>').join('');
+ return '<svg class="a691-svg" viewBox="0 0 646 203" role="img" aria-label="'+h(alt)+'"><path d="M48 24V168H620" fill="none" stroke="#596273"/>'+
+ '<text x="4" y="27" font-size="11" fill="#A6B1C0">'+h(nu(ma,0))+'</text><text x="4" y="167" font-size="11" fill="#A6B1C0">'+h(nu(mi,0))+'</text>'+
+ '<text x="48" y="191" font-size="11" fill="#A6B1C0">0</text><text x="591" y="191" font-size="11" fill="#A6B1C0">'+h(n)+'</text>'+
+ poly+'</svg><div class="a691-legend">'+labels.map((x,i)=>'<span><i style="background:'+colors[i]+'"></i>'+h(x)+'</span>').join('')+'</div>';
+}
+function kpi(label,value,sub=''){
+ return '<div class="a691-kpi"><small>'+h(label)+'</small><b>'+value+'</b>'+(sub?'<span>'+h(sub)+'</span>':'')+'</div>';
+}
+function rowTable(list,highlight){
+ return '<div class="a691-scroll"><table class="a691-table"><thead><tr><th>Janela</th><th>Trades</th><th>Acerto</th><th>Líquido</th><th>EV / trade</th></tr></thead><tbody>'+
+ list.map(r=>'<tr'+(highlight===r.name?' class="a691-mark"':'')+'><th>'+h(r.name)+'</th><td>'+r.stat.n+'</td><td>'+pct(r.stat.winRate)+'</td><td class="'+(r.stat.net<0?'a691-loss':'a691-profit')+'">'+brl(r.stat.net)+'</td><td>'+brl(r.stat.ev)+'</td></tr>').join('')+
+ '</tbody></table></div>';
+}
+function drawSummary(s){
+ return '<div class="a691-kpis">'+kpi('Expectativa / trade',brl(s.ev),'líquido médio')+
+  kpi('Taxa de acerto',pct(s.winRate),s.wins+' ganhos · '+s.losses+' perdas')+
+  kpi('Payoff médio',s.payoff==null?'—':nu(s.payoff,2)+'×','gain médio / loss médio')+
+  kpi('Fator de lucro',s.pf===Infinity?'Sem perdas':s.pf==null?'—':nu(s.pf,2)+'×','gain bruto / loss bruto')+
+  kpi('Drawdown máximo',brl(s.maxDD),'pico-a-vale no acumulado')+
+  kpi('Sequências G / L',s.maxWin+' / '+s.maxLoss,'ganhos / perdas consecutivos')+'</div>'+
+  graph([s.dd.map(x=>x.v)],'Drawdown acumulado pico-a-vale em reais, valores negativos',['Drawdown em R$'])+
+  '<p class="a691-note">EV = (% acerto × ganho médio) − (% perda × perda média). Trades zerados entram na amostra com resultado 0. A curva parte de R$ 0 e mede quedas em relação ao maior lucro acumulado anterior.</p>';
+}
+function settings(rows,s){
+ const key=B.period+'|'+B.module+'|'+rows.length+'|'+nu(s.net,2)+'|'+rows.at(-1)?.exitDate;
+ if(key!==B.paramsKey){
+  const prop=typeof S!=='undefined'?S.prop||{}:{};
+  const limit=+prop.ddTotal>0?+prop.ddTotal:s.maxDD>0?s.maxDD:s.avgLoss>0?s.avgLoss*5:null;
+  B.inputs={winRate:s.winRate==null?'':+(s.winRate*100).toFixed(1),avgWin:s.avgWin==null?'':+s.avgWin.toFixed(2),
+   avgLoss:s.avgLoss==null?'':+s.avgLoss.toFixed(2),limit:limit==null?'':+limit.toFixed(2)};
+  B.paramsKey=key;B.result=null;
+ }
+ return B.inputs;
+}
+function mcResults(){
+ const r=B.result;if(!r)return '<p class="a691-note">Ajuste os parâmetros e execute 500 cenários de 100 trades. Nenhuma previsão será calculada sem inputs válidos.</p>';
+ return '<div class="a691-kpis">'+kpi('Risco de atingir limite',pct(r.risk),'em qualquer ponto dos 100 trades')+
+  kpi('Mediana final',brl(r.medianFinal),'resultado acumulado')+
+  kpi('Pior cenário final',brl(r.worstFinal),'entre as 500 sequências')+
+  kpi('Melhor cenário final',brl(r.bestFinal),'entre as 500 sequências')+'</div>'+
+  graph([r.median,r.worst,r.best],'Monte Carlo 100 operações, cenário mediano, pior e melhor resultado final em R$',['Mediana','Pior cenário','Melhor cenário'])+
+  '<p class="a691-note">Risco = '+r.hit+' de '+r.count+' trajetórias que atingiram o drawdown limite desde o pico. Simulação amostral de P&amp;L sem custos adicionais, mudança de lote ou dependência temporal; <b>não é probabilidade de falência da conta</b>.</p>';
+}
+function montePanel(s,rows){
+ const p=settings(rows,s);
+ const field=(key,name,step,min,max)=>'<label>'+h(name)+'<input type="number" inputmode="decimal" step="'+step+'" min="'+min+'" max="'+max+'" data-a691-set="'+key+'" value="'+h(p[key])+'"></label>';
+ const isValid=s.n>=2&&s.wins>0&&s.losses>0;
+ return '<div class="a691-fields">'+field('winRate','Acerto %',0.1,0,100)+field('avgWin','Gain médio R$',0.01,0.01,10000000)+
+  field('avgLoss','Loss médio R$ (magnitude)',0.01,0.01,10000000)+field('limit','Limite de drawdown R$',0.01,0.01,100000000)+'</div>'+
+ '<div class="a691-actions"><button type="button" data-a691-run>Simular 500 × 100 trades</button>'+
+ '<button type="button" data-a691-reset>Restaurar médias dos trades</button></div>'+
+ (!isValid?'<p class="a691-note">Amostra sem ganhos e perdas suficientes: informe manualmente valores válidos, sem números fictícios automáticos.</p>':'')+
+ '<div id="a691-monte-results" aria-live="polite">'+mcResults()+'</div>';
+}
+function disciplinePanel(rows){
+ const dis=disciplineSummary(rows),display=(title,s)=>'<div class="a691-discipline"><span>'+h(title)+'</span><b>'+s.n+' trades</b><b>'+pct(s.winRate)+'</b><b class="'+(s.net<0?'a691-loss':'a691-profit')+'">'+brl(s.net)+'</b></div>';
+ return '<div class="a691-discipline a691-dhead"><span>Classificação</span><b>Amostra</b><b>Acerto</b><b>Resultado</b></div>'+
+ display('Setup válido registrado',dis.plan)+display('Sem setup informado',dis.noSetup)+display('Fora do plano / impulsivo',dis.outside)+
+ '<div class="a691-difference">Diferença de EV/trade (com setup − sem setup/fora do plano): <b>'+brl(dis.difference)+'</b></div>'+
+ '<p class="a691-note">“Importado do Profit” não comprova setup: entra em “sem setup informado”. Fora do plano exige marcação em regras/erro. Associação histórica, não prova causal de disciplina no resultado.</p>';
+}
+function mainPanel(){
+ const rows=scope(records()),s=summary(rows),g=groups(rows);
+ return '<div class="a691-panel"><div class="a691-head"><b>BASE ANALISADA</b><span>'+s.n+' operações encerradas · resultado '+brl(s.net)+'</span></div>'+
+ '<div class="a691-fields a691-filters"><label>Período<select data-a691-filter="period">'+[['all','Todas'],['30','Últimos 30 dias'],['90','Últimos 90 dias'],['180','Últimos 180 dias']].map(([k,v])=>'<option value="'+k+'"'+(B.period===k?' selected':'')+'>'+v+'</option>').join('')+'</select></label>'+
+ '<label>Modalidade<select data-a691-filter="module">'+[['all','Todas'],['dt','Day trade'],['sw','Swing trade'],['op','Opções'],['fx','Forex'],['us','Mercado americano'],['ex','Exterior']].map(([k,v])=>'<option value="'+k+'"'+(B.module===k?' selected':'')+'>'+v+'</option>').join('')+'</select></label></div>'+
+ (s.n?'<section class="a691-section"><h3>01 · Raio-X de horário e semana</h3>'+
+ '<p class="a691-note">Hora de entrada em Brasília. Janelas exclusivas (09h–17h). Melhor/pior = maior/menor EV por trade, com mínimo de 3 operações na faixa.</p>'+
+ rowTable(g.hour,g.best?.name)+
+ '<div class="a691-signals">'+(g.best?'<div><small>Melhor janela</small><b class="a691-profit">'+h(g.best.name)+'</b></div>':'')+
+ (g.worst&&g.worst!==g.best?'<div><small>Maior risco histórico</small><b class="a691-loss">'+h(g.worst.name)+'</b></div>':'')+'</div>'+
+ (g.excluded?'<p class="a691-note">'+g.excluded+' operações sem horário de entrada 09h–17h foram excluídas apenas da tabela de horários.</p>':'')+
+ '<h4>Por dia da semana</h4>'+rowTable(g.week)+'</section>'+
+ '<section class="a691-section"><h3>02 · EV, payoff & drawdown</h3>'+drawSummary(s)+'</section>'+
+ '<section class="a691-section"><h3>03 · Monte Carlo | 100 trades</h3>'+montePanel(s,rows)+'</section>'+
+ '<section class="a691-section"><h3>04 · Disciplina e setups</h3>'+disciplinePanel(rows)+'</section>':
+ '<p class="a691-note">Nenhuma operação encerrada com P&amp;L válido neste recorte. Ajuste os filtros ou sincronize seus trades do Profit; nenhum resultado é inventado.</p>')+
+ '<p class="a691-foot">Cálculos locais sobre operações já carregadas; não altera trades, integração Profit nem banco. P&amp;L convertido para R$ pela taxa já usada no aplicativo. Apenas resultados encerrados, sem lançamentos financeiros.</p></div>';
+}
+function auditMarkup(){
+ return '<details class="a691-root" id="ops-audit-691"'+(B.expanded?' open':'')+
+  '><summary>Auditoria &amp; Monte Carlo <small>Horários · EV · Risco · Disciplina</small></summary>'+
+  (B.expanded?mainPanel():'')+'</details>';
+}
+// A rota Operações pode ser reconstruída por uma camada posterior.
+// Encaixa a auditoria no DOM final, sem manter qualquer outra aba montada.
+function mount(){
+ if(typeof tab==='undefined'||tab!=='ops')return;
+ const app=d.getElementById('app');
+ if(!app||app.querySelector('#ops-audit-691'))return;
+ const anchor=app.querySelector('.modg')||app.querySelector('h1');
+ const host=d.createElement('div');
+ host.innerHTML=auditMarkup();
+ const element=host.firstElementChild;
+ if(anchor)anchor.after(element);
+ else app.prepend(element);
+}
+// Montagem única no DOM final: não interceptar vOpsHub, que pode ser repintado
+// pelas camadas de apresentação e duplicava o caminho de inserção da auditoria.
+function watchApp(){
+ const app=d.getElementById('app');
+ if(!app)return;
+ if(!app._opsAuditObserver){
+  const observer=new MutationObserver(mount);
+  observer.observe(app,{childList:true,subtree:true}); // camadas V4 repintam subárvores internas
+  app._opsAuditObserver=observer;
+ }
+ mount();
+}
+if(w.TraderUI?.onRender)w.TraderUI.onRender('ops-audit-691',mount);
+if(d.readyState==='loading')d.addEventListener('DOMContentLoaded',watchApp,{once:true});
+else watchApp();
+function reconcileDetails(element){
+ if(!element||element.id!=='ops-audit-691'||typeof tab==='undefined'||tab!=='ops')return;
+ // Eventos toggle atrasados de painéis já desmontados não podem sobrescrever
+ // o estado que o usuário escolheu no painel atualmente exibido.
+ if(!element.isConnected||d.getElementById('ops-audit-691')!==element)return;
+ B.expanded=element.open;
+ const body=element.querySelector('.a691-panel');
+ if(element.open&&!body){
+  try{element.insertAdjacentHTML('beforeend',mainPanel());}
+  catch(error){
+   console.error('[auditoria-691] falha ao montar painel',error);
+   element.insertAdjacentHTML('beforeend','<div class="a691-panel" role="status"><p class="a691-note">Não foi possível carregar os dados históricos da auditoria agora. A abertura do painel independe de novos trades.</p></div>');
+  }
+ }
+ if(!element.open&&body)body.remove();
+}
+d.addEventListener('toggle',e=>reconcileDetails(e.target),true);
+// O clique é registrado antes da atualização do layout: evita perder a intenção
+// do usuário quando o hub de Operações reconstrói a seção no mesmo instante.
+d.addEventListener('click',e=>{
+ const summary=e.target.closest?.('#ops-audit-691 summary');
+ if(!summary||typeof tab==='undefined'||tab!=='ops')return;
+ // Controle explícito: evita perder o clique no WebKit quando o hub é remontado.
+ e.preventDefault(); // impede o toggle nativo de desfazer o estado controlado
+ e.stopPropagation(); // impede a navegação global de interpretar a abertura como troca de aba
+ const root=summary.closest('#ops-audit-691'),next=!root.open;
+ B.expanded=next;
+ root.open=next;
+ reconcileDetails(root);
+},true);
+d.addEventListener('change',e=>{
+ if(typeof tab==='undefined'||tab!=='ops'||!e.target.closest?.('#ops-audit-691'))return;
+ if(e.target.hasAttribute('data-a691-filter')){
+  const key=e.target.getAttribute('data-a691-filter'),value=e.target.value;
+  if(key==='period'&&['all','30','90','180'].includes(value))B.period=value;
+  if(key==='module'&&['all','dt','sw','op','fx','us','ex'].includes(value))B.module=value;
+  B.paramsKey='';B.result=null;render();return;
+ }
+ if(e.target.hasAttribute('data-a691-set')){
+  const key=e.target.getAttribute('data-a691-set');
+  if(Object.prototype.hasOwnProperty.call(B.inputs||{},key)){B.inputs[key]=e.target.value;B.result=null;const out=d.getElementById('a691-monte-results');if(out)out.innerHTML=mcResults();}
+ }
+},true);
+d.addEventListener('click',e=>{
+ if(typeof tab==='undefined'||tab!=='ops'||!e.target.closest?.('#ops-audit-691'))return;
+ if(e.target.closest('[data-a691-reset]')){
+  B.paramsKey='';B.result=null;
+  const panel=d.querySelector('#ops-audit-691 .a691-panel');
+  if(panel)panel.outerHTML=mainPanel();
+  return;
+ }
+ if(!e.target.closest('[data-a691-run]'))return;
+ const panel=d.getElementById('ops-audit-691');if(!panel)return;
+ for(const el of panel.querySelectorAll('[data-a691-set]')){
+  const key=el.dataset.a691Set;B.inputs[key]=el.value;
+ }
+ const toNum=x=>String(x??'').trim()===''?NaN:Number(x);
+ B.result=monteCarlo(Object.fromEntries(['winRate','avgWin','avgLoss','limit'].map(k=>[k,toNum(B.inputs[k])])));
+ const target=d.getElementById('a691-monte-results');
+ if(target)target.innerHTML=B.result?mcResults():'<p class="a691-note a691-loss">Preencha acerto entre 0 e 100%, médias de gain/loss positivas e limite de drawdown maior que zero.</p>';
+},true);
+const styles=[
+'#ops-audit-691{background:#11141B;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E;margin:14px 0;color:#E3E8EF;font-variant-numeric:tabular-nums}',
+'#ops-audit-691 summary{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:7px;min-height:44px;padding:12px 14px;cursor:pointer;color:#D4A017;font-weight:750;font-size:14px;list-style-position:inside}',
+'#ops-audit-691 summary small{color:#9CA9B9;font-size:11px;font-weight:400}',
+'#ops-audit-691 .a691-panel{padding:4px 14px 14px;min-width:0}',
+'#ops-audit-691 .a691-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;border-bottom:1px solid #1E232E;padding:10px 0;font-size:12px}',
+'#ops-audit-691 .a691-head b{color:#D4A017}#ops-audit-691 .a691-head span{color:#B6C0CC}',
+'#ops-audit-691 .a691-section{border-top:1px solid #1E232E;padding-top:13px;margin-top:18px;min-width:0}',
+'#ops-audit-691 h3{font-size:14px;color:#F0F3F6;margin:0 0 8px}#ops-audit-691 h4{font-size:12px;color:#BBC6D2;margin:13px 0 6px}',
+'#ops-audit-691 .a691-note,#ops-audit-691 .a691-foot{font-size:11px;line-height:1.6;color:#A8B4C2;margin:10px 0}',
+'#ops-audit-691 .a691-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:12px 0}',
+'#ops-audit-691 .a691-fields label{font-size:11px;color:#ABB6C5;min-width:0}',
+'#ops-audit-691 .a691-fields input,#ops-audit-691 .a691-fields select{display:block;width:100%;min-width:0;margin-top:5px;min-height:44px;background:#181C26;color:#F0F2F5;border:1px solid #313947;border-radius:4px;padding:8px;font-size:16px;font-variant-numeric:tabular-nums}',
+'#ops-audit-691 .a691-scroll{overflow-x:auto;max-width:100%;overscroll-behavior-x:contain}',
+'#ops-audit-691 .a691-table{border-collapse:collapse;min-width:575px;width:100%;font-size:11px}',
+'#ops-audit-691 .a691-table th,#ops-audit-691 .a691-table td{padding:9px 8px;border-bottom:1px solid #252D38;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}',
+'#ops-audit-691 .a691-table th:first-child{text-align:left}',
+'#ops-audit-691 .a691-table thead th{font-weight:600;color:#99AABC}',
+'#ops-audit-691 .a691-table .a691-mark{background:#181C26}#ops-audit-691 .a691-table .a691-mark th{color:#D4A017}',
+'#ops-audit-691 .a691-profit{color:#10B981!important}#ops-audit-691 .a691-loss{color:#EF4444!important}',
+'#ops-audit-691 .a691-signals{display:flex;flex-wrap:wrap;gap:16px;margin:10px 0}',
+'#ops-audit-691 .a691-signals div{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:12px}#ops-audit-691 .a691-signals small{color:#9FAEBE}',
+'#ops-audit-691 .a691-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));border-top:1px solid #252D38;margin:11px 0}',
+'#ops-audit-691 .a691-kpi{display:flex;flex-direction:column;min-width:0;padding:12px 9px;gap:5px;border-bottom:1px solid #252D38}',
+'#ops-audit-691 .a691-kpi small,#ops-audit-691 .a691-kpi span{font-size:10px;color:#A1ADBC}',
+'#ops-audit-691 .a691-kpi b{font-size:17px;color:#F0F2F5;white-space:nowrap}',
+'#ops-audit-691 .a691-svg{max-width:100%;width:100%;height:auto;max-height:230px;display:block;margin:12px 0}',
+'#ops-audit-691 .a691-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:10px;color:#A6B3C2}',
+'#ops-audit-691 .a691-legend span{display:flex;align-items:center;gap:5px}#ops-audit-691 .a691-legend i{width:9px;height:9px;display:inline-block}',
+'#ops-audit-691 .a691-actions{display:flex;flex-wrap:wrap;gap:10px}',
+'#ops-audit-691 .a691-actions button{min-height:44px;background:#181C26;border:1px solid #343B47;border-radius:4px;color:#E1E6ED;padding:9px 11px;font-size:12px;cursor:pointer}',
+'#ops-audit-691 .a691-actions button:first-child{color:#D4A017;border-color:#58451E}',
+'#ops-audit-691 .a691-discipline{display:grid;grid-template-columns:minmax(140px,1.8fr) repeat(3,minmax(83px,1fr));gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #28303C;font-size:12px}',
+'#ops-audit-691 .a691-discipline b{font-weight:600;text-align:right;white-space:nowrap;font-size:11px}',
+'#ops-audit-691 .a691-dhead{color:#92A1B4;font-size:10px}#ops-audit-691 .a691-difference{font-size:12px;margin-top:12px;display:flex;justify-content:space-between;gap:10px}',
+'#ops-audit-691 .a691-difference b{color:#D4A017;white-space:nowrap}',
+'@media(max-width:550px){#ops-audit-691 .a691-panel{padding:2px 10px 12px}#ops-audit-691 .a691-discipline{grid-template-columns:minmax(85px,1.7fr) repeat(3,minmax(55px,1fr));gap:5px;font-size:10px}#ops-audit-691 .a691-discipline b{font-size:10px}#ops-audit-691 .a691-kpi b{font-size:15px}}'
+].join('\n');
+const style=d.createElement('style');style.id='ops-audit-style-v691';style.textContent=styles;d.head.appendChild(style);
+w.OperacoesAuditoria691=Object.freeze({brazilStamp,scope,records,summary,groups,discipline,disciplineSummary,monteCarlo,timeslot,weekday,render:mainPanel});
+})();/* v657 · Laboratório de Economia, apenas Estudos. */
 ;(function(){
 'use strict';
 const L=window.EconomiaLab=window.EconomiaLab||{views:{},events:{},state:{}};
@@ -41354,12 +41920,12 @@ L.kpi=(t,v)=>'<div class="eco-kpi"><small>'+t+'</small><b>'+v+'</b></div>';
 L.note=v=>'<p class="eco-note">'+v+'</p>';
 L.slider=(id,t,min,max,step,u)=>'<label class="eco-slider"><span>'+t+' <output data-eco-out="'+id+'">'+L.f(S[id],1)+u+'</output></span><input data-eco-range="'+id+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+S[id]+'"></label>';
 L.label=(s)=>L.esc(s).slice(0,900);
-const tabList=[['mon','Política monetária'],['mf','IS–LM–BP'],['eco','Econometria'],['quiz','Questões & ANPEC'],['tempo','Brasil pós-Real'],['ficha','Fichamentos'],['micro','Microeconomia'],['flash','Flashcards'],['series','Séries BCB / IBGE'],['revisao','Resumo de prova']];
+const tabList=[['mon','Política monetária'],['mf','IS–LM–BP'],['eco','Econometria'],['quiz','Questões & ANPEC'],['tempo','Brasil pós-Real'],['ficha','Fichamentos'],['micro','Microeconomia'],['flash','Flashcards'],['series','Séries BCB / IBGE'],['revisao','Resumo de prova'],['port','Markowitz & Sharpe'],['real','Juro real & NTN-B'],['back','Backtester técnico'],['abnt','TCC & ABNT']];
 function tabeco(){return '<nav class="eco-nav" aria-label="Ferramentas de economia">'+tabList.map(([id,n])=>'<button type="button" data-eco-tool="'+id+'" class="'+(S.tool===id?'on':'')+'">'+n+'</button>').join('')+'</nav>';}
 function corpo(){return typeof L.views[S.tool]==='function'?L.views[S.tool]():'<p>Ferramenta indisponível.</p>';}
 L.paint=()=>{if(typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='eco')return;const e=document.getElementById('eco-body');if(e)e.innerHTML=corpo();};
 function viewEco(){
-return '<h1>Estudos</h1><div class="eco-root"><header class="eco-head"><small>CIÊNCIAS ECONÔMICAS · FERRAMENTAS DIDÁTICAS</small><h2>Laboratório de Economia</h2><p>Dez ferramentas acadêmicas, sem alterações nas suas operações ou no banco de dados.</p></header>'+
+return '<h1>Estudos</h1><div class="eco-root"><header class="eco-head"><small>CIÊNCIAS ECONÔMICAS · FERRAMENTAS DIDÁTICAS</small><h2>Laboratório de Economia</h2><p>Quatorze ferramentas acadêmicas, sem alterações nas suas operações ou no banco de dados.</p></header>'+
 '<div class="eco-storage"><span>Histórico guardado somente neste navegador</span><button type="button" data-eco-btn="uniExport">Exportar JSON</button><label>Importar JSON<input type="file" data-eco-history accept="application/json,.json"></label></div>'+
 tabeco()+'<div id="eco-body" class="eco-body">'+corpo()+'</div></div>';
 }
@@ -41860,7 +42426,7 @@ L.events.uniFichar=geraFicha;
 L.events.uniLocal=()=>{
  S.uniText=valorTexto().trim();if(S.uniText.length<100){S.uniStatus='Cole um trecho antes de salvar.';refresh();return;}
  const disc=document.querySelector('[data-uni-disc]')?.value||S.uniDisc;
- const title=document.querySelector('[data-uni-title]')?.value||'Texto acadêmico';
+ const title=(document.querySelector('[data-uni-title]')?.value||S.uniTitle||'Texto acadêmico').trim().slice(0,160);
  const f=offline(S.uniText,title,disc);db.fichas.unshift(f);db.fichas=db.fichas.slice(0,80);S.uniFid=f.id;S.uniTitle=title;persist();S.uniStatus='Ficha de extração local salva (não é análise de IA).';refresh();
 };
 L.events.uniAbrir=el=>{S.uniFid=el.dataset.id;refresh();};
@@ -42257,6 +42823,459 @@ L.views.revisao=()=>{
  L.uni.data.resumos.length?'<div class="uni-saved">'+L.uni.data.resumos.map(x=>'<button data-eco-btn="uniAbrirResumo" data-id="'+E(x.id)+'" type="button"><b>'+E(THEMES[x.tema]?.t||x.tema)+'</b><small>'+E(x.em.slice(0,10))+'</small></button>').join('')+'</div>':N('Nenhuma ficha de revisão salva.'));
 };
 })();
+/* v684: cálculos quantitativos e consultas apenas no Laboratório (front-end). */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state;
+const A=['PETR4','VALE3','IAU','BTC','IVVB11','CDI'],M=['PETR4','VALE3','IAU','BTC','IVVB11','IBOV','USDBRL'];
+const Q=S.quant=S.quant||{candles:{},series:{},cdi:[],ts:0,busy:false,error:'',pesos:[20,20,20,20,20,0],ativo:'PETR4',regra:'mm',stop:2,alvo:4,unidade:'%',lado:'ambos',titulos:[],tdTime:'',tdError:'',tdBusy:false,ratePre:'',rateReal:'',titulo:''};
+const sum=a=>a.reduce((s,x)=>s+x,0),mean=a=>sum(a)/a.length,num=x=>x==null||x===''?null:Number.isFinite(+x)?+x:null;
+function candles(json){
+ const map=new Map();
+ for(const x of json?.candles||[]){
+  if(!Array.isArray(x)||x.length<5||!Number.isFinite(+x[0]))continue;
+  const o=+x[1],h=+x[2],l=+x[3],c=+x[4];
+  if(![o,h,l,c].every(v=>Number.isFinite(v)&&v>0)||h<l)continue;
+  const d=new Date(+x[0]*1000).toISOString().slice(0,10);
+  map.set(d,{d,o,h,l,c});
+ }
+ return [...map.values()].sort((a,b)=>a.d.localeCompare(b.d)).slice(-550);
+}
+function cdiParse(json){
+ if(!Array.isArray(json))throw Error('CDI: resposta BCB inválida.');
+ const map=new Map();
+ for(const x of json){
+  const d=/^(\d\d)\/(\d\d)\/(\d{4})$/.exec(String(x?.data||'')),v=Number(String(x?.valor??'').replace(',','.'));
+  if(!d||!Number.isFinite(v)||v< -1||v>3)continue;
+  map.set(d[3]+'-'+d[2]+'-'+d[1],v);
+ }
+ return [...map].sort((a,b)=>a[0].localeCompare(b[0])).map(([d,taxa])=>({d,taxa}));
+}
+function cdiIndex(arr){
+ let p=100;return arr.map(x=>{p*=1+x.taxa/100;return {d:x.d,p};});
+}
+async function bcb(){
+ const end=new Date(),start=new Date(end);start.setMonth(start.getMonth()-26);
+ const fmt=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+ const url='https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial='+encodeURIComponent(fmt(start))+'&dataFinal='+encodeURIComponent(fmt(end));
+ const r=await fetch(url,{signal:AbortSignal.timeout(18000)});if(!r.ok)throw Error('CDI SGS 12 HTTP '+r.status);
+ const a=cdiParse(await r.json());if(a.length<30)throw Error('CDI sem amostra suficiente.');Q.cdi=a;
+}
+function prices(){
+ const o={...S.series,...Q.series};if(Q.cdi.length)o.CDI=cdiIndex(Q.cdi);return o;
+}
+async function load(force=false){
+ if(Q.busy)return;
+ if(!force&&Q.ts&&Date.now()-Q.ts<15*60e3&&Q.cdi.length&&M.every(t=>Q.candles[t]?.length>=21))return;
+ Q.busy=true;Q.error='';L.paint();
+ try{
+  const c=typeof cfg==='function'?cfg():null,session=typeof SESS!=='undefined'?SESS:null;
+  if(!c||!session?.at)throw Error('Entre na conta para consultar Candles já integrados.');
+  const requests=M.filter(t=>force||!Q.candles[t]?.length).map(async ativo=>{
+   const r=await fetch(c.url+'/functions/v1/candles',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+session.at},body:JSON.stringify({ativo,intervalo:'1d'}),signal:AbortSignal.timeout(25000)});
+   if(!r.ok)throw Error(ativo+': HTTP '+r.status);
+   const a=candles(await r.json());if(a.length<21)throw Error(ativo+': menos de 21 candles.');
+   Q.candles[ativo]=a;Q.series[ativo]=a.map(c=>({d:c.d,p:c.c}));S.series[ativo]=Q.series[ativo];
+  });
+  if(force||!Q.cdi.length)requests.push(bcb());
+  const results=await Promise.allSettled(requests);
+  Q.error=results.filter(x=>x.status==='rejected').map(x=>String(x.reason?.message||x.reason)).join(' · ');
+  Q.ts=Date.now();
+ }catch(e){Q.error=String(e.message||e);}
+ finally{Q.busy=false;L.paint();}
+}
+function join(series,keys,days=252){
+ const maps=keys.map(k=>new Map((series[k]||[]).filter(x=>x?.d&&x.p>0).map(x=>[x.d,+x.p])));
+ if(maps.some(x=>x.size<30))return [];
+ return [...maps[0].keys()].filter(d=>maps.every(m=>m.has(d))).sort().slice(-Math.min(501,days+1)).map(d=>({d,p:maps.map(m=>m.get(d))}));
+}
+function returns(rows){
+ const out=[];
+ for(let i=1;i<rows.length;i++){
+  const r=rows[i].p.map((v,j)=>v/rows[i-1].p[j]-1);
+  if(r.every(Number.isFinite))out.push({d:rows[i].d,r});
+ }return out;
+}
+function stats(a){
+ if(a.length<30)return null;
+ const n=a[0].r.length,mu=Array.from({length:n},(_,j)=>mean(a.map(x=>x.r[j]))*252);
+ const cov=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>sum(a.map(x=>(x.r[i]-mu[i]/252)*(x.r[j]-mu[j]/252)))/(a.length-1)*252));
+ return {n:a.length,mu,cov};
+}
+function simplex(v){
+ const a=[...v].sort((x,y)=>y-x);let s=0,tau=0;
+ a.forEach((x,i)=>{s+=x;if(x+(1-s)/(i+1)>0)tau=(s-1)/(i+1);});
+ return v.map(x=>Math.max(0,x-tau));
+}
+function portfolio(w,p,rf){
+ const ret=sum(w.map((x,i)=>x*p.mu[i])),variance=sum(w.map((x,i)=>x*sum(w.map((y,j)=>y*p.cov[i][j]))));
+ const vol=Math.sqrt(Math.max(0,variance));
+ return {w,ret,vol,sharpe:vol>1e-10?(ret-rf)/vol:null};
+}
+function optimize(p,gamma,rf){
+ let w=Array(p.mu.length).fill(1/p.mu.length);
+ const bound=Math.max(...p.cov.map(a=>sum(a.map(Math.abs))),1e-6),step=1/(2*gamma*bound+Math.max(...p.mu.map(Math.abs),.02));
+ for(let k=0;k<1200;k++){
+  const g=w.map((_,i)=>p.mu[i]-2*gamma*sum(w.map((v,j)=>p.cov[i][j]*v)));
+  const next=simplex(w.map((v,i)=>v+step*g[i]));
+  if(sum(next.map((v,i)=>(v-w[i])**2))<1e-15){w=next;break;}
+  w=next;
+ }
+ return portfolio(w,p,rf);
+}
+function markowitz(series,w=Q.pesos){
+ const a=returns(join(series,A,252)),p=stats(a);if(!p)return null;
+ const rf=mean(a.map(x=>x.r[5]))*252,total=sum(w.map(x=>Math.max(0,+x||0)));
+ const weights=total?w.map(x=>Math.max(0,+x||0)/total):Array(6).fill(1/6);
+ const chosen=portfolio(weights,p,rf),min=optimize(p,50000,rf),front=[min];
+ for(let i=0;i<42;i++)front.push(optimize(p,Math.pow(10,4-i/9),rf));
+ front.sort((a,b)=>a.vol-b.vol);let previous=-Infinity;
+ const efficient=front.filter(x=>{if(x.ret>previous+1e-6){previous=x.ret;return true;}return false;});
+ const maximum=[...efficient].sort((a,b)=>(b.sharpe??-Infinity)-(a.sharpe??-Infinity))[0]||min;
+ return {a,p,rf,chosen,min,maximum,efficient};
+}
+function rsi(a,n=14){
+ const out=Array(a.length).fill(null);if(a.length<=n)return out;
+ let g=0,l=0;
+ for(let i=1;i<=n;i++){const d=a[i].c-a[i-1].c;g+=Math.max(0,d);l+=Math.max(0,-d);}g/=n;l/=n;
+ for(let i=n;i<a.length;i++){
+  if(i>n){const d=a[i].c-a[i-1].c;g=(g*(n-1)+Math.max(0,d))/n;l=(l*(n-1)+Math.max(0,-d))/n;}
+  out[i]=l===0?100:100-100/(1+g/l);
+ }return out;
+}
+function sma(a,n,i){if(i<n-1)return null;let s=0;for(let j=i-n+1;j<=i;j++)s+=a[j].c;return s/n;}
+function backtest(a,o){
+ if(!a||a.length<75||!(+o.stop>0&&+o.alvo>0)||!['%','pts'].includes(o.unidade))return null;
+ const osc=rsi(a),signals=Array(a.length).fill(0);
+ for(let i=51;i<a.length;i++){
+  if(o.regra==='mm'){
+   const s=sma(a,20,i),l=sma(a,50,i),ps=sma(a,20,i-1),pl=sma(a,50,i-1);
+   signals[i]=ps<=pl&&s>l?1:ps>=pl&&s<l?-1:0;
+  }else if(o.regra==='rsi')signals[i]=osc[i-1]!=null?(osc[i-1]<=30&&osc[i]>30?1:osc[i-1]>=70&&osc[i]<70?-1:0):0;
+  else if(o.regra==='break')signals[i]=a[i].c>a[i-1].h?1:a[i].c<a[i-1].l?-1:0;
+ }
+ let capital=10000,position=null,peak=capital,dd=0;const trades=[],curve=[{d:a[0].d,v:capital}];
+ for(let i=52;i<a.length;i++){
+  const x=a[i],sig=signals[i-1];
+  if(!position&&sig&&(o.lado==='ambos'||sig===(o.lado==='long'?1:-1))){
+   const d=o.unidade==='%'?x.o*o.stop/100:+o.stop,t=o.unidade==='%'?x.o*o.alvo/100:+o.alvo;
+   if(d>0&&t>0&&d<x.o)position={side:sig,entry:x.o,day:x.d,stop:x.o-sig*d,target:x.o+sig*t};
+  }
+  if(position){
+   const p=position,st=p.side>0?x.l<=p.stop:x.h>=p.stop,tg=p.side>0?x.h>=p.target:x.l<=p.target;
+   const exit=st?p.stop:tg?p.target:i===a.length-1?x.c:null;
+   if(exit!==null){
+    // Em gap desfavorável o stop é executado no preço de abertura, não no nível teórico.
+    const executed=st?(p.side>0?Math.min(x.o,p.stop):Math.max(x.o,p.stop)):
+      tg?(p.side>0?Math.max(x.o,p.target):Math.min(x.o,p.target)):exit;
+    const ret=p.side*(executed-p.entry)/p.entry,before=capital;
+    capital=Math.max(0,capital*(1+ret));
+    trades.push({start:p.day,end:x.d,side:p.side,ret,pnl:capital-before,entry:p.entry,exit:executed});
+    position=null;
+   }
+  }
+  const marked=position?Math.max(0,capital*(1+position.side*(x.c-position.entry)/position.entry)):capital;
+  peak=Math.max(peak,marked);dd=Math.max(dd,peak?(peak-marked)/peak:0);curve.push({d:x.d,v:marked});
+ }
+ const gain=sum(trades.filter(t=>t.pnl>0).map(t=>t.pnl)),loss=-sum(trades.filter(t=>t.pnl<0).map(t=>t.pnl));
+ return {trades,curve,capital,drawdown:dd*100,win:trades.length?100*trades.filter(t=>t.ret>0).length/trades.length:null,pf:loss>0?gain/loss:gain>0?Infinity:null};
+}
+function tdParse(j){
+ return (j?.response?.TrsrBdTradgList||[]).map(x=>x.TrsrBd||x).filter(x=>/Tesouro (IPCA|Prefixado)/i.test(x?.nm||''))
+ .map(x=>({name:String(x.nm),maturity:String(x.mtrtyDt||'').slice(0,10),rate:num(x.anulInvstmtRate),type:/IPCA/i.test(x.nm)?'real':'pre'}))
+ .filter(x=>x.rate!=null&&x.rate>-10&&x.rate<55&&/^\d{4}-/.test(x.maturity));
+}
+async function tesouro(){
+ if(Q.tdBusy)return;Q.tdBusy=true;Q.tdError='';L.paint();
+ try{
+  const r=await fetch('https://www.tesourodireto.com.br/json/br/com/b3/tesourodireto/service/api/treasurybondsinfo.json',{signal:AbortSignal.timeout(14000)});
+  if(!r.ok)throw Error('HTTP '+r.status);const a=tdParse(await r.json());
+  if(!a.length)throw Error('Título sem taxa válida.');Q.titulos=a;Q.tdTime=new Date().toISOString();
+ }catch(e){Q.tdError='Consulta Tesouro indisponível no navegador (possível CORS): '+String(e.message||e).slice(0,100);}
+ finally{Q.tdBusy=false;L.paint();}
+}
+function usdIndex(series){return join(series,['IBOV','USDBRL'],500).map(x=>({d:x.d,p:x.p[0]/x.p[1]})).filter(x=>Number.isFinite(x.p)&&x.p>0);}
+const inflation=(pre,real)=>({approx:pre-real,exact:((1+pre/100)/(1+real/100)-1)*100});
+L.quant={A,M,Q,num,load,prices,candles,cdiParse,cdiIndex,join,returns,stats,simplex,markowitz,backtest,rsi,tdParse,tesouro,usdIndex,inflation};
+})();
+/* v684 · Telas Markowitz, Juro Real e Backtester — apenas Laboratório. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state,U=L.quant,Q=U.Q,E=L.esc,F=L.f,C=L.card,K=L.kpi,N=L.note;
+const pct=(x,n=2)=>Number.isFinite(x)?F(x,n)+'%':'—';
+const line=(name,value)=>'<div class="eco-qline"><span>'+E(name)+'</span><b>'+value+'</b></div>';
+function chart(lines,desc,points=[]){
+ const raw=lines.flatMap(a=>a.map(p=>p[1])).filter(Number.isFinite);
+ if(!raw.length)return N('Sem pontos válidos para o gráfico.');
+ let lo=Math.min(...raw),hi=Math.max(...raw);if(lo===hi){lo-=1;hi+=1;}
+ const xv=lines.flatMap(x=>x.map(p=>p[0])),x0=Math.min(...xv),x1=Math.max(...xv),colors=['#D4A017','#10B981','#709BC2','#EF4444'];
+ const plot=p=>[48+575*(p[0]-x0)/(x1-x0||1),178-145*(p[1]-lo)/(hi-lo)];
+ const shape=lines.map((series,i)=>'<polyline fill="none" stroke="'+colors[i%4]+'" stroke-width="2.4" points="'+series.map(p=>plot(p).map(z=>z.toFixed(1)).join(',')).join(' ')+'"/>').join('');
+ const pins=points.map((p,i)=>{const v=plot(p.coords);return '<circle cx="'+v[0].toFixed(1)+'" cy="'+v[1].toFixed(1)+'" r="5" fill="'+colors[(i+1)%4]+'" stroke="#0A0C10"><title>'+E(p.name)+'</title></circle>';}).join('');
+ return '<svg class="eco-plot eco-q-plot" viewBox="0 0 655 222" role="img" aria-label="'+E(desc)+'"><path d="M48 28V178H623" stroke="#657080" fill="none"/><text x="4" y="32" fill="#abb8c8" font-size="11">'+E(F(hi,2))+'</text><text x="4" y="177" fill="#abb8c8" font-size="11">'+E(F(lo,2))+'</text><text x="48" y="205" fill="#abb8c8" font-size="11">'+E(F(x0,1))+'</text><text x="568" y="205" fill="#abb8c8" font-size="11">'+E(F(x1,1))+'</text>'+shape+pins+'</svg>';
+}
+const refresh='<button type="button" class="eco-action" data-eco-btn="quantRefresh"'+(Q.busy?' disabled':'')+'>'+(Q.busy?'Consultando…':'Atualizar históricos')+'</button>';
+const choice=(name,items,values)=>'<select data-quant-field="'+name+'">'+items.map((value,i)=>'<option value="'+E(value)+'"'+(Q[name]===value?' selected':'')+'>'+E(values?.[i]||value)+'</option>').join('')+'</select>';
+L.views.port=()=>{
+ const m=U.markowitz(U.prices());
+ let html='<div class="eco-controls">'+refresh+'</div>';
+ html+=N('Históricos reais do Candles já integrado; CDI diário BCB/SGS 12 convertido em índice acumulado. Pesos ajustáveis: simulação (não acessa seus lotes).');
+ if(Q.error)html+=N('<b>Fonte:</b> '+E(Q.error));
+ html+='<div class="eco-qweights">'+U.A.map((s,i)=>'<label>'+E(s)+' · peso %<input type="number" data-quant-weight="'+i+'" min="0" max="100" step="1" value="'+E(Q.pesos[i])+'"></label>').join('')+'</div>';
+ if(!m)html+=N('Aguardando seis séries com ao menos 30 retornos em pregões coincidentes. Sem dados não há fronteira nem Sharpe calculados.');
+ else{
+  html+='<div class="eco-grid-stats">'+K('Retorno anual histórico',pct(m.chosen.ret*100))+K('Volatilidade anual',pct(m.chosen.vol*100))+
+   K('Sharpe anualizado',F(m.chosen.sharpe,3))+K('Amostra',String(m.p.n)+' retornos')+'</div>';
+  html+=chart([m.efficient.map(x=>[x.vol*100,x.ret*100])],'Fronteira eficiente · eixo X risco anual %; eixo Y retorno anual %',[
+   {name:'Mínima variância',coords:[m.min.vol*100,m.min.ret*100]},
+   {name:'Máximo Sharpe',coords:[m.maximum.vol*100,m.maximum.ret*100]},
+   {name:'Simulada',coords:[m.chosen.vol*100,m.chosen.ret*100]}]);
+  html+=line('Mínima variância',pct(m.min.vol*100)+' risco')+line('Máximo Sharpe',F(m.maximum.sharpe,3))+
+   '<div class="eco-qscroll"><table class="eco-qtable"><caption>Matriz de covariância anualizada × 10.000</caption><thead><tr><th>Ativo</th>'+U.A.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+
+   U.A.map((x,i)=>'<tr><th>'+x+'</th>'+m.p.cov[i].map(v=>'<td>'+F(v*10000,2)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+ }
+ return C('Markowitz · Fronteira Eficiente & Sharpe',html)+
+ C('Modelo e premissas',N('E[Rp] = wᵀμ; Var(Rp) = wᵀΣw; Sharpe = (retorno anual médio − CDI anual médio) / volatilidade anual. Retornos diários simples × 252; covariância amostral × 252. Otimização numérica aproximada, somente posições compradas, sem alavancagem. Séries históricas não são previsão.'));
+};
+function diReference(years){
+ try{
+  if(typeof M606==='undefined'||!Array.isArray(M606.v?.di)||!(years>0))return null;
+  const d=M606.v.di.filter(x=>+x.anos>0&&+x.taxa>0).sort((a,b)=>Math.abs(a.anos-years)-Math.abs(b.anos-years))[0];
+  if(d&&Math.abs(d.anos-years)<=1.5)return {rate:+d.taxa,code:d.k||'DI'};
+ }catch{}
+ return null;
+}
+L.views.real=()=>{
+ const titles=Q.titulos.filter(x=>x.type==='real').sort((a,b)=>a.maturity.localeCompare(b.maturity));
+ const picked=titles.find(t=>t.name===Q.titulo)||titles[0];
+ const years=picked?(Date.parse(picked.maturity)-Date.now())/(365.25*864e5):null,di=diReference(years);
+ const pre=U.num(Q.ratePre)??di?.rate??null,real=U.num(Q.rateReal)??picked?.rate??null;
+ const implicit=pre!==null&&real!==null?U.inflation(pre,real):null;
+ let html='<div class="eco-controls"><button type="button" class="eco-action" data-eco-btn="quantTreasury"'+(Q.tdBusy?' disabled':'')+'>'+(Q.tdBusy?'Consultando…':'Consultar taxas Tesouro Direto')+'</button>'+refresh+'</div>';
+ if(Q.tdError)html+=N(E(Q.tdError));
+ if(titles.length)html+='<label>NTN-B · Tesouro IPCA+<select data-quant-field="titulo">'+titles.map(t=>'<option value="'+E(t.name)+'"'+(picked===t?' selected':'')+'>'+E(t.name)+' · '+F(t.rate)+'% a.a.</option>').join('')+'</select></label>';
+ html+='<div class="eco-controls"><label>DI pré % a.a. (manual, opcional)<input data-quant-field="ratePre" type="number" step=".01" value="'+E(Q.ratePre)+'" placeholder="Informe se DI não carregou"></label>'+
+ '<label>NTN-B % a.a. (manual, opcional)<input data-quant-field="rateReal" type="number" step=".01" value="'+E(Q.rateReal)+'" placeholder="Informe se Tesouro não carregou"></label></div>';
+ html+='<div class="eco-grid-stats">'+K('DI pré',pre===null?'Indisponível':pct(pre))+
+  K('NTN-B real',real===null?'Indisponível':pct(real))+K('Breakeven aprox.',implicit?pct(implicit.approx):'Sem par válido')+
+  K('Fisher exato',implicit?pct(implicit.exact):'Sem par válido')+'</div>';
+ html+=N('Breakeven ≈ Taxa pré DI − juro real NTN-B. Forma equivalente: [(1 + DI)/(1 + real) − 1] × 100. Comparação só faz sentido com prazos semelhantes; inflação implícita inclui prêmios de risco e liquidez.');
+ html+=N('Fonte direta: Tesouro Direto (taxas de investimento)'+(Q.tdTime?' · '+E(new Date(Q.tdTime).toLocaleString('pt-BR')):'')+'. DI: curva Mesa Macro se vencimento compatível'+(di?' · '+E(di.code):'')+'. Campos manuais sempre identificados como tal.');
+ const usd=U.usdIndex(U.prices()),last=usd.at(-1);
+ let other='<div class="eco-controls">'+refresh+'</div>';
+ if(last)other+='<div class="eco-grid-stats">'+K('IBOV / USD/BRL',F(last.p,2))+K('Data',E(last.d))+K('Observações',String(usd.length))+'</div>'+
+ chart([usd.map((x,i)=>[i,x.p])],'Ibovespa dolarizado, IBOV dividido pelo USD/BRL em datas coincidentes');
+ else other+=N('IBOV e USD/BRL precisam ter fechamentos diários coincidentes. Carregue as séries para calcular.');
+ other+=N('Índice relativo em pontos por dólar: IBOV / USD/BRL; não representa cotação de ativo negociável.');
+ return C('Juro real NTN-B & inflação implícita',html)+C('Ibovespa dolarizado',other);
+};
+L.views.back=()=>{
+ const result=U.backtest(Q.candles[Q.ativo],Q);
+ let html='<div class="eco-controls"><label>Ativo'+choice('ativo',['PETR4','VALE3','IAU','BTC','IVVB11','IBOV'])+'</label>'+
+ '<label>Regra'+choice('regra',['mm','rsi','break'],['Cruzamento MM20 / MM50','RSI 14 · retorno dos extremos','Rompimento máxima/mínima anterior'])+'</label>'+
+ '<label>Direção'+choice('lado',['ambos','long','short'],['Compras e vendas','Só compras','Só vendas'])+'</label></div>'+
+ '<div class="eco-controls"><label>Stop<input type="number" data-quant-field="stop" min=".01" max="100000" step=".1" value="'+E(Q.stop)+'"></label>'+
+ '<label>Alvo<input type="number" data-quant-field="alvo" min=".01" max="100000" step=".1" value="'+E(Q.alvo)+'"></label>'+
+ '<label>Unidade'+choice('unidade',['%','pts'],['Percentual','Pontos do ativo'])+'</label>'+refresh+'</div>';
+ if(Q.error)html+=N(E(Q.error));
+ if(!result)html+=N('Para testar, carregue ao menos 75 candles diários OHLC reais do ativo. Não são criadas operações fictícias.');
+ else{
+  html+='<div class="eco-grid-stats">'+K('Taxa de acerto',pct(result.win,1))+K('Fator de lucro',result.pf===Infinity?'Sem perdas':F(result.pf,2))+
+   K('Drawdown máximo',pct(result.drawdown))+K('Trades',String(result.trades.length))+'</div>';
+  html+=chart([result.curve.map((v,i)=>[i,v.v])],'Curva de capital da estratégia · valores em unidades de conta');
+  html+=line('Capital inicial','10.000 unidades')+line('Capital final',F(result.capital,2)+' unidades');
+  html+='<div class="eco-qscroll"><table class="eco-qtable"><caption>Últimas operações simuladas</caption><thead><tr><th>Entrada</th><th>Saída</th><th>Direção</th><th>Resultado</th></tr></thead><tbody>'+
+   result.trades.slice(-12).reverse().map(t=>'<tr><td>'+E(t.start)+'</td><td>'+E(t.end)+'</td><td>'+(t.side>0?'Compra':'Venda')+'</td><td>'+pct(t.ret*100)+'</td></tr>').join('')+'</tbody></table></div>';
+ }
+ html+=N('Sem look-ahead: sinal no fechamento, entrada na abertura seguinte. Usa máximo/mínimo de cada candle para stop e alvo; se ambos ocorrem, considera stop primeiro; gaps adversos usam a abertura. Não contempla corretagem, impostos, spread, slippage ou financiamento de short; capital nocional de 10.000 unidades, exposição de 100%.');
+ return C('Backtester rápido · regras técnicas',html);
+};
+L.events.quantRefresh=()=>U.load(true);
+L.events.quantTreasury=()=>U.tesouro();
+L.events.enter=L.events.enter||{};
+L.events.enter.port=()=>{if(!Q.ts)U.load();};
+L.events.enter.back=()=>{if(!Q.ts)U.load();};
+L.events.enter.real=()=>{if(!Q.ts)U.load();if(!Q.tdTime&&!Q.tdError)U.tesouro();};
+document.addEventListener('input',event=>{
+ if(typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='eco')return;
+ const e=event.target;
+ if(e.matches('[data-quant-weight]')){const i=+e.dataset.quantWeight;const n=+e.value;if(i>=0&&i<6&&Number.isFinite(n))Q.pesos[i]=Math.max(0,Math.min(100,n));}
+ if(e.matches('input[data-quant-field]')&&Object.hasOwn(Q,e.dataset.quantField))Q[e.dataset.quantField]=e.value;
+},true);
+document.addEventListener('change',event=>{
+ if(typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='eco'||!['port','real','back'].includes(S.tool))return;
+ const e=event.target;
+ if(e.matches('[data-quant-weight]')){L.paint();return;}
+ if(e.matches('[data-quant-field]')&&Object.hasOwn(Q,e.dataset.quantField)){
+  Q[e.dataset.quantField]=e.value;L.paint();
+ }
+},true);
+})();
+/* v684 · Assistente acadêmico ABNT (NBR 6023:2025, 10520:2023, 14724:2024). Apenas front-end. */
+;(function(){
+'use strict';
+const L=window.EconomiaLab,S=L.state,E=L.esc,N=L.note,C=L.card;
+const KEY='diario-laboratorio-abnt-v684';
+const blank={tipo:'livro',autores:'',org:'',titulo:'',ano:'',cidade:'',editora:'',periodico:'',volume:'',numero:'',paginas:'',doi:'',url:'',acesso:new Date().toISOString().slice(0,10),pagina:'',modo:'indireta',tcc:'',curso:'',instituicao:'',capitulo:'Introdução',texto:'',tabela:null,tabelaCSV:'',abntSource:'',aviso:''};
+let state={...blank};
+try{const old=JSON.parse(localStorage.getItem(KEY)||'null');if(old&&typeof old==='object')state={...blank,...old};}catch{}
+S.abnt=state;
+const safe=(v,n=5000)=>String(v??'').trim().slice(0,n);
+function autorNome(s){
+ const a=safe(s,150);
+ if(!a)return '';
+ if(a===a.toUpperCase()&&a.length>5)return a;
+ if(a.includes(',')){
+  const i=a.indexOf(',');return a.slice(0,i).trim().toLocaleUpperCase('pt-BR')+', '+a.slice(i+1).trim();
+ }
+ const p=a.split(/\s+/),last=p.pop();
+ return last.toLocaleUpperCase('pt-BR')+', '+p.join(' ');
+}
+const authors=s=>safe(s,800).split(/\s*;\s*|\n+/).map(x=>x.trim()).filter(Boolean).slice(0,8);
+const authorList=s=>{
+ const a=authors(s).map(autorNome);if(a.length<=3)return a.join('; ');
+ return a[0]+' et al.';
+};
+const citeName=s=>{
+ const a=authors(s);
+ return a.map(x=>{let name=x.includes(',')?x.split(',')[0]:x.trim().split(/\s+/).at(-1);return name.charAt(0).toLocaleUpperCase('pt-BR')+name.slice(1).toLocaleLowerCase('pt-BR');}).slice(0,3).join('; ');
+};
+const accessDate=d=>{
+ if(!/^\d{4}-\d\d-\d\d$/.test(String(d)))return '';
+ const p=d.split('-');return p[2]+' '+['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'][+p[1]-1]+' '+p[0];
+};
+function formatRef(s){
+ const creator=safe(s.tipo==='site'&&s.org?s.org:s.autores,500);
+ if(!creator||!s.titulo||!/^\d{4}[a-z]?$/.test(String(s.ano)))return 'Preencha autoria (ou instituição), título e ano válido antes de gerar a referência.';
+ const author=s.tipo==='site'&&s.org?safe(s.org,150).toLocaleUpperCase('pt-BR'):authorList(creator);
+ const yr=s.ano,ct=safe(s.cidade,100)||'[S. l.]',pub=safe(s.editora,130)||'[s. n.]';
+ const url=/^https:\/\//i.test(s.url)?safe(s.url,450):'';
+ const doi=/^10\.\d{4,9}\//.test(s.doi)?' DOI: '+safe(s.doi,150)+'.':'';
+ if(s.tipo==='livro')return author+'. '+safe(s.titulo,300)+'. '+ct+': '+pub+', '+yr+'.';
+ if(s.tipo==='artigo')return author+'. '+safe(s.titulo,300)+'. '+(safe(s.periodico,150)||'[Periódico não informado]')+', '+
+  ct+(s.volume?', v. '+safe(s.volume,20):'')+(s.numero?', n. '+safe(s.numero,20):'')+
+  (s.paginas?', p. '+safe(s.paginas,35):'')+', '+yr+'.'+doi+(url?' Disponível em: '+url+'. Acesso em: '+accessDate(s.acesso)+'.':'');
+ return author+'. '+safe(s.titulo,300)+'. '+yr+'.'+(url?' Disponível em: '+url+'. Acesso em: '+accessDate(s.acesso)+'.':' Acesso eletrônico não informado.');
+}
+function citation(s){
+ const creator=safe(s.tipo==='site'&&s.org?s.org:s.autores,500),name=s.tipo==='site'&&s.org?safe(s.org,150):citeName(creator);
+ if(!name||!/^\d{4}[a-z]?$/.test(String(s.ano)))return 'Informe autoria e ano para gerar a citação.';
+ const page=s.modo==='direta'?(s.pagina?', p. '+safe(s.pagina,20):' [informe a página]'):'';
+ return '('+name+', '+s.ano+page+')';
+}
+function outliner(s){
+ return ['1 INTRODUÇÃO','2 REFERENCIAL TEÓRICO','3 METODOLOGIA','4 RESULTADOS E DISCUSSÃO','5 CONSIDERAÇÕES FINAIS','REFERÊNCIAS'];
+}
+function csvRows(text){
+ const lines=safe(text,150000).split(/\r?\n/).filter(x=>x.trim()).slice(0,61);
+ const delimiter=lines[0]?.includes('\t')?'\t':';';
+ return lines.map(row=>{
+  const cells=[],re=new RegExp('(?:^|'+(delimiter==='\t'?'\\t':';')+')(?:"((?:[^"]|"")*)"|([^'+(delimiter==='\t'?'\\t':';')+']*))','g');
+  for(const m of row.matchAll(re))cells.push(safe((m[1]??m[2]??'').replace(/""/g,'"'),200));
+  return cells.slice(0,8);
+ }).filter(a=>a.length);
+}
+function tableHTML(t){
+ if(!t?.rows?.length)return '';
+ return '<figure class="eco-abnt-table"><figcaption>'+E(t.name||'Tabela 1 — Série consultada')+'</figcaption><div class="eco-qscroll"><table><thead><tr>'+t.rows[0].map(x=>'<th>'+E(x)+'</th>').join('')+'</tr></thead><tbody>'+
+ t.rows.slice(1,61).map(row=>'<tr>'+row.map(x=>'<td>'+E(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div><small>Fonte: '+E(t.source||'dados informados pelo usuário')+'</small></figure>';
+}
+function documentHTML(s){
+ const ref=formatRef(s),citationText=citation(s);
+ return '<article class="eco-abnt-paper"><header><strong>'+E(safe(s.instituicao||'INSTITUIÇÃO',150))+'</strong><p>'+E(safe(s.autores||'AUTOR(A)',250))+'</p><h2>'+E(safe(s.tcc||'TÍTULO DO TRABALHO',250))+'</h2>'+
+ '<p>'+E(safe(s.curso||'Curso / disciplina não informado',150))+'</p></header>'+
+ '<h3>'+E(s.capitulo)+'</h3><div class="eco-abnt-text">'+E(s.texto||'Escreva aqui o texto autoral do seu capítulo.').replace(/\n/g,'<p></p>')+'</div>'+
+ tableHTML(s.tabela)+'<h3>REFERÊNCIAS</h3><p class="eco-abnt-reference">'+E(ref)+'</p>'+
+ '<footer>Exemplo de chamada autor-data: '+E(citationText)+'. Conferir regras complementares do manual da sua instituição.</footer></article>';
+}
+function remember(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch{state.aviso='Não foi possível gravar neste dispositivo. Exporte seu trabalho.';}}
+const f=(key,label,type='text')=>'<label>'+label+'<input data-abnt-field="'+key+'" type="'+type+'" value="'+E(state[key])+'"></label>';
+const options=(key,arr)=>'<label>'+ (key==='tipo'?'Tipo de referência':key==='modo'?'Citação':'Capítulo')+
+ '<select data-abnt-field="'+key+'">'+arr.map(([v,n])=>'<option value="'+E(v)+'"'+(state[key]===v?' selected':'')+'>'+E(n)+'</option>').join('')+'</select></label>';
+L.views.abnt=()=>{
+ const current=L.uni?.data?.consultas||[];
+ const sourceOptions=current.map(a=>'<option value="'+E(a.id)+'"'+(state.abntSource===a.id?' selected':'')+'>'+E(a.serie)+' · '+E(a.fonte)+'</option>').join('');
+ let html='<div class="eco-controls">'+options('tipo',[['livro','Livro'],['artigo','Artigo científico'],['site','Site / BCB / IBGE']])+
+ options('modo',[['indireta','Citação indireta'],['direta','Citação direta']])+'</div>';
+ html+='<div class="eco-qform">'+f('autores','Autores: sobrenome, prenome; próximo autor')+f('org','Instituição (site, BCB, IBGE)')+
+ f('titulo','Título da obra, artigo ou página')+f('ano','Ano (AAAA)')+f('cidade','Cidade')+f('editora','Editora')+
+ (state.tipo==='artigo'?f('periodico','Periódico')+f('volume','Volume')+f('numero','Número')+f('paginas','Páginas')+f('doi','DOI'):'')+
+ (state.tipo!=='livro'?f('url','URL HTTPS')+f('acesso','Data de acesso','date'):'')+
+ (state.modo==='direta'?f('pagina','Página para a citação direta'):'')+'</div>';
+ html+='<div class="eco-qresults"><h4>Referência · NBR 6023:2025</h4><p>'+E(formatRef(state))+'</p><h4>Citação autor-data · NBR 10520:2023</h4><p>'+E(citation(state))+'</p>'+
+ '<div class="eco-controls"><button type="button" data-eco-btn="abntCopy">Copiar referência</button></div></div>';
+ let work=options('capitulo',outliner(state).map(x=>[x,x]))+
+ '<div class="eco-qform">'+f('instituicao','Instituição de ensino')+f('curso','Curso / disciplina')+f('tcc','Título do TCC / trabalho')+'</div>'+
+ '<label>Texto do capítulo<textarea data-abnt-field="texto" rows="7" placeholder="Cole seu texto autoral e as citações verificadas...">'+E(state.texto)+'</textarea></label>';
+ work+='<div class="eco-qresults"><h4>Importar dados do extrator BCB/IBGE</h4>'+
+ '<div class="eco-controls"><label>Consulta já feita<select data-abnt-source><option value="">Selecione uma série</option>'+sourceOptions+'</select></label>'+
+ '<button type="button" data-eco-btn="abntSeries">Inserir tabela oficial</button></div>'+
+ '<label>Ou colar CSV (;)/tabela TSV (TAB)<textarea data-abnt-field="tabelaCSV" rows="3" placeholder="data;valor;fonte;serie;unidade">'+E(state.tabelaCSV)+'</textarea></label>'+
+ '<button type="button" data-eco-btn="abntCSV">Montar tabela colada</button>'+
+ (state.tabela?N('Tabela incorporada à prévia acadêmica abaixo, com fonte e valores originais.'):N('Nenhuma tabela importada. Os números serão mantidos exatamente como estiverem na fonte, sem interpolação.'))+'</div>';
+ work+='<div class="eco-controls"><button type="button" class="eco-action" data-eco-btn="abntSave">Salvar rascunho local</button>'+
+ '<button type="button" data-eco-btn="abntExport">Exportar HTML para Word</button><button type="button" data-eco-btn="abntPrint">Imprimir A4 / PDF</button></div>'+
+ (state.aviso?N(E(state.aviso)):'')+documentHTML(state);
+ return C('Assistente ABNT · citações e referências',html+N('Referências: NBR 6023:2025; citações NBR 10520:2023. O preenchimento de campos essenciais é necessário; não são inventados autores ou fontes.'))+
+ C('TCC · estruturação e tabelas oficiais',work+N('Padrão de apresentação acadêmica inspirado na NBR 14724:2024. Confira capa, pré-textuais e manual da faculdade; este editor não substitui revisão bibliográfica.'));
+};
+document.addEventListener('input',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='abnt')return;
+ const el=e.target;if(el?.matches?.('[data-abnt-field]')&&Object.hasOwn(state,el.dataset.abntField)){
+  state[el.dataset.abntField]=safe(el.value,el.dataset.abntField==='texto'?30000:el.dataset.abntField==='tabelaCSV'?120000:1000);
+  remember(); // Rascunho local sempre acompanha o que o usuário digitou.
+ }
+},true);
+document.addEventListener('change',e=>{
+ if(typeof ESV==='undefined'||ESV!=='eco'||S.tool!=='abnt')return;
+ const el=e.target;if(el?.matches?.('[data-abnt-source]')){state.abntSource=safe(el.value,120);remember();return;}
+ if(el?.matches?.('[data-abnt-field]')){state[el.dataset.abntField]=safe(el.value,100000);remember();L.paint();}
+},true);
+function syncFields(){
+ // Valor atual do DOM prevalece no instante de salvar; não depende de blur/change
+ // nem de atualizações assíncronas do Laboratório que podem remontar formulários.
+ for(const el of document.querySelectorAll('#eco-body [data-abnt-field]')){
+  const key=el.dataset.abntField;
+  if(Object.prototype.hasOwnProperty.call(state,key)){
+   const max=key==='texto'?30000:key==='tabelaCSV'?120000:1000;
+   state[key]=safe(el.value,max);
+  }
+ }
+}
+L.events.abntSave=()=>{syncFields();remember();state.aviso='Rascunho salvo no navegador deste aparelho.';L.paint();};
+L.events.abntSeries=()=>{
+ const id=state.abntSource||document.querySelector('#eco-body [data-abnt-source]')?.value;
+ const row=L.uni?.data?.consultas?.find(x=>x.id===id);
+ if(!row){state.aviso='Selecione uma série oficial consultada antes de importar.';L.paint();return;}
+ state.abntSource=row.id;
+ state.tabela={name:'Tabela 1 — '+safe(row.serie,150),source:safe(row.fonte,100)+' · '+safe(row.url,350)+' · consulta '+safe(row.em,20),
+ rows:[['Data / período','Valor ('+safe(row.unidade,60)+')'],...(row.pontos||[]).slice(-60).map(x=>[String(x.data),String(x.valor)])]};
+ state.aviso='Série oficial importada; confira o período e a fonte.';remember();L.paint();
+};
+L.events.abntCSV=()=>{
+ const rows=csvRows(state.tabelaCSV);
+ if(rows.length<2){state.aviso='Cole ao menos cabeçalho e uma linha de valores.';L.paint();return;}
+ state.tabela={name:'Tabela 1 — Dados importados',source:'tabela colada pelo usuário · confira origem',rows};
+ state.aviso='Tabela colada convertida; revise fonte e unidades.';remember();L.paint();
+};
+L.events.abntCopy=async()=>{
+ const ref=formatRef(state);
+ try{
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(ref);
+  else{const e=document.createElement('textarea');e.value=ref;document.body.appendChild(e);e.select();document.execCommand('copy');e.remove();}
+  state.aviso='Referência copiada.';
+ }catch{state.aviso='Copie a referência exibida manualmente.';}
+ L.paint();
+};
+L.events.abntPrint=()=>window.print();
+L.events.abntExport=()=>{
+ const html='<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>'+E(state.tcc||'Trabalho acadêmico')+'</title><style>@page{size:A4;margin:3cm 2cm 2cm 3cm}body{font:12pt "Times New Roman",serif;line-height:1.5;color:#111}h2,h3{text-align:left}p{text-align:justify}table{border-collapse:collapse;width:100%;font-size:10pt}td,th{border:1px solid #555;padding:4px}figure{margin:18px 0}footer{font-size:10pt}</style>'+
+ documentHTML(state)+'</html>';
+ const blob=new Blob([html],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='trabalho-academico-abnt.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),2500);
+};
+L.abnt={formatRef,citation,csvRows,documentHTML,autorNome,accessDate};
+})();
 /* v657 · Estilos institucionais exclusivos do Laboratório de Economia em Estudos. */
 ;(function(){
 'use strict';
@@ -42322,144 +43341,274 @@ const css=[
 ].join('\n');
 const e=document.createElement('style');e.id='estudos-eco-style-v657';e.textContent=css;document.head.appendChild(e);
 })();
-/* Trilha aditiva de Aulas. Exemplos autorais esquemáticos; nunca cotações ou páginas de livros. */
+/* v684 · Complementos visuais apenas do Laboratório quantitativo/ABNT. */
 ;(function(){
 'use strict';
-const modules=[
- ['medias','Médias Móveis','John Murphy · Flávio Lemos'],
- ['candles','Candles & Price Action','Al Brooks · Flávio Lemos'],
- ['padroes','Padrões Gráficos Clássicos','John Murphy · Thomas Bulkowski'],
- ['confirmacao','Volume, VWAP, RSI e Bollinger','Leitura conjunta de preço e indicadores']
-];
-const lessons=[];
-function add(id,module,title,chart,side,summary,context,trigger,stop,target,questions){
- const sell=side==='sell';
- lessons.push({id,module,title,chart,side,summary,minutes:3,entry:100,stop:sell?106:94,target:sell?88:112,
- stages:[context,trigger,stop,target],questions:questions.map(([q,options,answer,why])=>({q,options,answer,why}))});
-}
-add('sma-ema','medias','SMA e EMA: o peso dos preços','averages','buy',
- 'Entenda o cálculo e veja por que a MME9 reage antes da MM20.',
- 'A média simples, SMA, soma os últimos N fechamentos e divide por N. A exponencial, EMA ou MME, dá peso maior aos preços recentes: EMA atual = preço × alfa + EMA anterior × (1 − alfa), com alfa = 2 ÷ (N + 1). Para nove períodos, alfa é 0,20. Uma EMA reage antes, mas também pode oscilar mais em lateralização. O desenho compara médias de um mesmo conjunto de fechamentos.',
- 'No exemplo de alta, a MME9 se inclina para cima e o preço recupera a região da MM20. O gatilho didático é a superação de 100 depois da confirmação do candle. Cruzamento de médias isolado não basta: observe fundos ascendentes, resistência e liquidez.',
- 'O fundo da correção está em 94. A perda desse nível invalida a estrutura de compra; a média móvel não deve ser usada para alargar o stop depois da entrada. Entre 100 e 94, o risco ilustrativo é de seis pontos antes de custos e eventual deslizamento.',
- 'A resistência projetada está em 112: doze pontos acima da entrada, ou duas vezes o risco inicial. Esta relação organiza o plano, mas não estima probabilidade de acerto. O preço pode voltar ao stop antes de alcançar qualquer alvo.',
- [['O que muda entre SMA e EMA?',['EMA ignora preços antigos','EMA dá mais peso aos preços recentes','SMA usa apenas o último fechamento'],1,'Ambas usam histórico; a EMA altera os pesos e a SMA dá peso igual aos N fechamentos.'],['Qual alfa corresponde à EMA de 9 períodos?',['0,20','0,90','2,00'],0,'O peso do preço mais recente é 2 ÷ (9 + 1) = 0,20, ou vinte por cento.'],['Uma média mais rápida implica o quê?',['Acerto garantido','Fim dos sinais falsos','Maior reação e maior sensibilidade ao ruído'],2,'Rapidez de resposta não elimina lateralizações nem falsos sinais.']]);
-add('alinhamento','medias','MME9, MM20, MM50 e MM200','alignment','buy',
- 'Leia inclinação, ordem das médias e localização do preço.',
- 'A MME9 mostra impulso curto; a MM20 suaviza oscilações; a MM50 ajuda a observar a tendência intermediária e a MM200 o contexto mais longo. Declare sempre o método: neste desenho a 9 é exponencial e as demais são simples. O alinhamento de alta costuma colocar a rápida acima das lentas, com inclinação positiva. São filtros atrasados, não suportes infalíveis.',
- 'Observe a recuperação da região de médias e a superação do topo local em 100. O desenho separa o histórico de uma trajetória futura apenas hipotética. Se as médias estiverem entrelaçadas e quase horizontais, prefira reconhecer uma faixa de negociação em vez de forçar uma leitura de tendência.',
- 'A invalidação fica no fundo estrutural 94, não no primeiro toque na MME9. Ajuste o tamanho da posição ao risco de seis pontos. O stop deve respeitar a volatilidade e a estrutura escolhidas antes da entrada.',
- 'O exemplo projeta 112 como resistência de trabalho, equivalente a duas vezes o risco. Antes de usar uma projeção, confira barreiras intermediárias e o período do gráfico. A disposição das médias não promete continuidade.',
- [['Qual cenário sugere tendência mais organizada?',['Médias cruzando sem inclinação','MME9 acima das lentas, todas ascendentes','Preço alternando lados a cada candle'],1,'Inclinação e ordem coerentes ajudam a filtrar a tendência.'],['O toque na MM200 garante suporte?',['Não','Sim, sempre','Somente em ações'],0,'A MM200 é uma referência, não uma ordem de compra.'],['Onde fica a invalidação deste exemplo?',['No alvo 112','No último preço','No fundo estrutural 94'],2,'A perda do fundo é a invalidação definida para o plano.']]);
-add('periodos','medias','20, 50 e 200 em múltiplos tempos','timeframes','buy',
- 'Compare diário, semanal e mensal sem confundir barras com dias.',
- 'No diário, vinte barras representam aproximadamente um mês de pregões, cinquenta cerca de dez semanas e duzentas perto de um ano de negociação. Esses períodos são convenções amplamente acompanhadas, não uma regra universal de instituições. No semanal, vinte barras são vinte semanas; no mensal, vinte meses. Não existe equivalência automática entre MM20 diária e MM20 mensal.',
- 'Comece pelo contexto do período maior e procure confirmação no período operacional. Neste esquema diário, a entrada é 100 depois da retomada do topo local. Se o semanal estiver em resistência, isso pode limitar o espaço da compra, mesmo com médias diárias ascendentes.',
- 'Use o fundo 94 do período operacional para definir a invalidação ilustrativa. Um stop do diário não deve virar um stop mensal depois de uma perda. Misturar períodos no meio da operação altera o risco que você aceitou inicialmente.',
- 'A projeção de 112 pertence ao mesmo exemplo diário. Compare-a com a resistência do semanal antes de avaliar a relação retorno e risco. Na troca de período, recalcule a estrutura inteira: média, gatilho, stop e alvo.',
- [['MM20 no semanal usa quantas barras?',['20 dias','20 semanas','20 meses'],1,'O número da média conta barras do período selecionado.'],['MM200 diária representa aproximadamente o quê?',['Um dia','Duzentos meses','Perto de um ano de pregões'],2,'A referência aproximada depende do calendário de negociação.'],['Por que olhar o período maior?',['Para localizar tendência e barreiras','Para eliminar o stop','Para garantir o alvo'],0,'O contexto maior ajuda a avaliar espaço e conflito de tendências.']]);
-add('martelo','candles','Martelo em suporte','hammer','buy',
- 'Pavio inferior longo só ganha sentido com contexto e confirmação.',
- 'O martelo tem corpo pequeno próximo da parte superior e sombra inferior longa, frequentemente ao menos duas vezes o corpo. Depois de uma queda, em suporte, mostra que preços baixos foram rejeitados naquela barra. A mesma forma no meio de uma faixa não carrega o mesmo contexto. Na leitura de price action, localização e continuidade pesam mais do que decorar o nome.',
- 'No diagrama, o martelo tem mínima 94 e máxima 99. O gatilho ilustrativo fica em 100, acima da máxima: aguarde reação posterior e confirme a disponibilidade de espaço até a resistência. Não antecipe a compra apenas porque surgiu um pavio.',
- 'O nível estrutural é a mínima 94. Em operação real, a ordem pode precisar de margem compatível com tick e volatilidade, e a execução pode ocorrer além do stop. O tamanho da posição precisa refletir essa diferença.',
- 'A resistência didática em 112 oferece doze pontos para seis de risco. Trata-se de uma hipótese de planejamento, não de uma propriedade obrigatória do martelo. Se a resistência estiver perto da entrada, o padrão pode não oferecer espaço útil.',
- [['Onde um martelo tem contexto de reversão de alta?',['Em qualquer lugar','Após queda, próximo de suporte','Somente no topo'],1,'A posição na estrutura dá sentido ao candle.'],['A sombra inferior longa indica o quê?',['Rejeição dos preços mais baixos naquela barra','Compra institucional comprovada','Alvo garantido'],0,'O candle mostra preços negociados, não identifica sozinho quem comprou.'],['Qual evento é o gatilho desenhado?',['Ver o pavio antes do fechamento','Atingir 112','Superar a máxima, na região de 100'],2,'O exemplo espera confirmação acima da máxima.']]);
-add('estrela','candles','Estrela Cadente em resistência','shooting','sell',
- 'Observe a rejeição da máxima após uma alta e espere confirmação.',
- 'A estrela cadente tem sombra superior longa e corpo pequeno perto da mínima. Procure-a após uma alta, próxima de resistência. Ela descreve uma tentativa de avanço que não se sustentou no fechamento. Um único candle não confirma uma tendência de baixa; o contexto e as barras seguintes precisam apoiar a hipótese.',
- 'A barra do desenho alcança 106 e fecha perto da mínima 101. O gatilho ilustrativo de venda é a perda de 100. A confirmação abaixo do candle reduz a antecipação, mas não elimina falsos rompimentos nem o risco de um retorno rápido.',
- 'A máxima 106 é o ponto de invalidação técnico. Se o preço a superar, a hipótese de rejeição falhou neste plano. Considere margem operacional e custo de execução; o stop não garante negociação exata nesse valor.',
- 'A região de 88 representa um suporte projetado, doze pontos abaixo da entrada. Com seis pontos de risco, a relação é duas vezes o risco. A projeção precisa ceder lugar à leitura de suportes reais, se houver barreiras anteriores.',
- [['Qual é a sombra dominante?',['Inferior','Nenhuma','Superior'],2,'A rejeição característica aparece acima do corpo.'],['Qual é o contexto buscado?',['Alta anterior e resistência','Queda sem referência','Qualquer candle verde'],0,'O padrão precisa ser lido na localização da estrutura.'],['O que invalida a venda desenhada?',['Uma mínima nova','Superar a máxima 106','Queda até 88'],1,'A superação da máxima nega a hipótese de rejeição adotada.']]);
-add('engolfo','candles','Engolfo: corpo e continuidade','engulfing','buy',
- 'Compare dois corpos e confirme a mudança de pressão em suporte.',
- 'No engolfo de alta, um corpo comprador cobre o corpo vendedor anterior. A definição clássica compara corpos; não exige que toda a amplitude de sombras seja coberta. Depois de uma correção, junto a suporte, isso sugere mudança de pressão no fechamento. Engolfo de baixa faz a leitura inversa perto de resistência.',
- 'Neste exemplo, o primeiro corpo vai de 98 a 96 e o seguinte de 95 a 99. A superação de 100 é o gatilho posterior. Observe se a compra ganha continuidade; um engolfo sem espaço até a próxima resistência pode virar apenas mais uma oscilação da faixa.',
- 'A mínima conjunta está em 94, nível que invalida o plano ilustrado de alta. Não use somente a cor do segundo candle para definir risco. Uma barra muito grande pode tornar a distância até o stop inadequada ao objetivo.',
- 'O plano usa resistência em 112 e relação de duas vezes o risco. Não há projeção própria obrigatória para engolfo. A distância ao alvo vem da estrutura e deve ser comparada à amplitude do risco, incluindo custos.',
- [['O que precisa ser engolfado na definição por corpos?',['Todo o histórico','O corpo anterior','A MM200'],1,'As sombras não precisam necessariamente ser totalmente cobertas.'],['O que reforça a leitura?',['Contexto de suporte e continuidade','Cor isolada','Ignorar resistência'],0,'A localização e as barras seguintes ajudam a confirmar a pressão.'],['Um engolfo muito amplo pode causar o quê?',['Risco zero','Lucro certo','Stop distante e relação desfavorável'],2,'O tamanho da barra pode prejudicar o plano de risco.']]);
-add('inside','candles','Inside Bar e rompimento da barra-mãe','inside','buy',
- 'Identifique contração e diferencie rompimento válido de armadilha.',
- 'Inside bar é uma barra cuja máxima fica abaixo da máxima anterior e cuja mínima fica acima da mínima anterior. A barra anterior é a barra-mãe. O padrão descreve contração; não determina sozinho a direção. Em tendência pode preceder continuação, e em lateralização pode produzir vários rompimentos falsos.',
- 'O exemplo usa a quebra da máxima da barra-mãe: região de 100. Esta é uma escolha didática explícita; outros métodos operam a barra interna com regras diferentes. Espere aceitação fora da faixa em vez de concluir que qualquer pequena ultrapassagem confirma tendência.',
- 'O plano mais amplo usa a mínima da barra-mãe em 94 como invalidação. Uma alternativa mais curta precisaria de outra regra e outro tamanho de posição. Não misture as duas depois da entrada, pois isso aumenta o risco sem planejamento.',
- 'O alvo estrutural de 112 é uma hipótese de continuidade, não um múltiplo obrigatório da barra interna. Antes de considerar a operação, veja se a próxima resistência deixa espaço para compensar os seis pontos de risco.',
- [['Qual relação define uma inside bar?',['Corpo maior que o anterior','Máxima e mínima dentro da barra anterior','Volume sempre maior'],1,'A definição usa toda a amplitude da barra.'],['Inside bar determina alta?',['Sim','Só no diário','Não; descreve contração'],2,'A direção depende do rompimento e do contexto.'],['Qual referência de rompimento este plano usa?',['Máxima da barra-mãe','Qualquer média','O alvo'],0,'A regra ilustrada é a quebra da faixa da barra-mãe.']]);
-add('rejeicao','candles','Rejeição: pavio e falha de rompimento','rejection','buy',
- 'Leia a tentativa de perder suporte e a recuperação da faixa.',
- 'Um pavio inferior junto ao suporte mostra que o preço caiu e voltou antes de fechar. Para uma leitura de falha de rompimento, observe a tentativa de sair da faixa e o retorno para dentro dela. A forma do candle não revela a identidade dos participantes nem prova absorção institucional.',
- 'Neste esquema, o preço varre a região de 94 e recupera a faixa; a confirmação de compra é a superação de 100. Compare o fechamento e a continuidade com a hipótese de rejeição. Se o preço permanecer abaixo do suporte, a leitura precisa ser reconsiderada.',
- 'A mínima da rejeição em 94 delimita a invalidação ilustrativa. O stop deve existir antes da operação. Não aumente a posição para compensar uma rejeição que não se confirmou; um padrão de falha também pode falhar.',
- 'A resistência oposta em 112 é o alvo de trabalho. Em faixas menores, o alvo pode estar perto demais e tornar a relação pouco atraente. A projeção de duas vezes o risco serve aqui apenas para comparar distância, não para prometer resultado.',
- [['Um pavio prova ação de uma instituição específica?',['Sim','Não','Somente com RSI'],1,'OHLC não identifica o participante responsável.'],['Qual evidência apoia falha de rompimento?',['Retorno e fechamento dentro da faixa','Somente tocar o suporte','Média sem inclinação'],0,'O retorno nega a aceitação fora da faixa naquele momento.'],['O que fazer se a rejeição falhar?',['Alargar stop sempre','Dobrar posição','Respeitar a invalidação prevista'],2,'O risco definido não depende de o padrão ter um nome conhecido.']]);
-function pattern(id,title,chart,side,context,trigger,stop,target,questions){add(id,'padroes',title,chart,side,'Reconheça a formação, confirme o rompimento e projete sua dimensão.',context,trigger,stop,target,questions);}
-pattern('oco','OCO: ombro, cabeça e ombro','hstop','sell',
- 'Após alta, o ombro esquerdo, a cabeça mais alta e o ombro direito formam três picos. A linha de pescoço conecta os fundos intermediários. No esquema, a cabeça está em 112 e o pescoço horizontal em 100. Os ombros não precisam ter simetria perfeita; a estrutura fica confirmada somente com a perda do pescoço.',
- 'O gatilho de venda é a perda confirmada de 100. Alguns planos esperam reteste, que pode não acontecer. Observe aceitação abaixo da linha e resistência no retorno. Não chame de OCO confirmado apenas porque apareceram três picos.',
- 'O ombro direito termina abaixo de 106; superar 106 invalida o plano de venda escolhido. Usar a cabeça como stop seria outra estratégia, com risco maior e tamanho de posição diferente. A linha de pescoço nem sempre é horizontal em gráficos reais.',
- 'A altura entre cabeça 112 e pescoço 100 é 12. Na projeção geométrica clássica, subtraia 12 do rompimento 100: alvo 88. A seta mostra essa medida; não é garantia de que o alvo será atingido. Estudos empíricos de Bulkowski tratam resultados probabilísticos e podem usar ajustes próprios.',
- [['Quando o OCO se confirma neste esquema?',['No primeiro ombro','Na perda do pescoço','Antes da cabeça'],1,'A perda do pescoço é a confirmação adotada.'],['Qual é a altura da formação?',['12 pontos','100 pontos','6 pontos'],0,'A altura entre a cabeça e o pescoço é 112 − 100 = 12 pontos.'],['Qual é a projeção geométrica?',['112','106','88'],2,'Subtraia a altura de doze pontos do rompimento em cem: 100 − 12 = 88.']]);
-pattern('ocoi','OCOI: reversão pela linha de pescoço','hsbottom','buy',
- 'O OCO invertido aparece como três fundos, com a cabeça mais baixa e os ombros mais altos. No esquema, a cabeça está em 88 e o pescoço em 100. A formação é uma hipótese até que o preço consiga romper a resistência do pescoço.',
- 'A superação confirmada de 100 é o gatilho de compra. Volume e continuidade podem apoiar a leitura, mas um rompimento aparente também pode falhar. Um reteste do pescoço pode oferecer outra avaliação de risco e não é obrigatório.',
- 'O fundo do ombro direito fica acima de 94; perder 94 invalida este plano. É diferente de um stop sob a cabeça em 88. Escolha a regra antes da entrada e avalie se a volatilidade permite o stop adotado.',
- 'A altura é 100 menos 88, igual a 12. Some-a ao rompimento 100 para obter a projeção clássica de 112. A distância é medida verticalmente na mesma escala de preço. Barreiras intermediárias e falhas continuam possíveis.',
- [['Qual fundo deve ser o mais profundo?',['Ombro direito','Ombro esquerdo','Cabeça'],2,'A cabeça fica abaixo dos ombros no OCOI.'],['Qual é a confirmação adotada?',['Superar o pescoço 100','Tocar a cabeça','Perder 94'],0,'É necessário romper a resistência da formação.'],['Qual conta projeta o alvo?',['100 − 12','100 + (100 − 88)','88 ÷ 100'],1,'A altura é somada ao ponto de rompimento.']]);
-pattern('topoduplo','Topo Duplo: o vale confirma','doubletop','sell',
- 'Dois picos na região de 112, separados por um vale em 100, sugerem resistência repetida. Não é necessário que as máximas sejam idênticas. Enquanto o vale não for perdido, o desenho pode ser apenas uma consolidação dentro de uma tendência de alta.',
- 'A perda confirmada do vale 100 é o gatilho didático de venda. Observe se o preço aceita negociar abaixo dessa referência. Vender no segundo topo anteciparia a confirmação e exigiria outro plano.',
- 'O plano usa uma recuperação acima de 106 como invalidação de trabalho após o rompimento. Esse é um stop de reteste, não o stop conservador acima dos topos em 112. A diferença deve ser explícita porque muda a chance de um stop precoce.',
- 'A altura entre topos 112 e vale 100 é 12. A projeção clássica fica em 88, abaixo do rompimento. O desenho evidencia tanto a altura original quanto o segmento projetado. O alvo continua sendo uma hipótese.',
- [['Dois picos bastam para confirmar?',['Não; falta perder o vale','Sim','Somente se forem iguais'],0,'O rompimento do vale confirma a leitura adotada.'],['A altura é medida entre quais níveis?',['Os dois topos','Topo e vale','Stop e alvo'],1,'O vale é a linha de confirmação neste esquema.'],['Um stop em 106 é o mesmo que acima de 112?',['Sim','Nunca há diferença','Não; é um stop de reteste mais curto'],2,'Regras diferentes mudam risco e sensibilidade a oscilações.']]);
-pattern('fundoduplo','Fundo Duplo: supere o topo intermediário','doublebottom','buy',
- 'Dois fundos na região de 88, separados por um topo em 100, sugerem defesa de suporte. Os fundos podem ter formas e preços ligeiramente diferentes. A compra por reversão só ganha confirmação neste plano ao superar o topo intermediário.',
- 'O gatilho ilustrativo é a superação confirmada de 100, depois do segundo fundo. Não confunda tocar o segundo fundo com romper a resistência. A confirmação pode ocorrer tarde e deixar pouco espaço até outra barreira.',
- 'O exemplo usa um stop de reteste em 94, abaixo da região recuperada. Um stop abaixo dos fundos em 88 seria mais amplo e precisaria de outro dimensionamento. Nenhuma das duas regras protege contra execução pior em gaps.',
- 'A altura é 100 menos 88, igual a 12. Somada a 100, produz alvo geométrico em 112. Confira resistências anteriores à projeção e não transforme a medida em certeza de lucro.',
- [['O gatilho confirmado fica onde?',['No segundo fundo','Acima do topo intermediário','Na mínima histórica'],1,'O rompimento da resistência confirma este plano.'],['Os fundos precisam ter preço idêntico?',['Sim','Somente no semanal','Não'],2,'A formação admite pequenas diferenças e deve respeitar o contexto.'],['Qual alvo resulta da altura 12 sobre 100?',['112','94','88'],0,'Some doze pontos ao rompimento em cem: 100 + 12 = 112.']]);
-pattern('triangulo','Triângulos: contração e altura da base','triangle','buy',
- 'Triângulos têm amplitude decrescente delimitada por linhas convergentes. Podem ser simétricos, ascendentes ou descendentes. O esquema simétrico mostra uma base de 88 a 100 e topos e fundos convergindo. A forma não obriga o rompimento a ocorrer para cima.',
- 'A direção do exemplo é de alta: a entrada de referência em 100 exige rompimento e continuidade além da linha superior. Compare volume e espaço até a resistência. Rompimentos para baixo exigiriam a leitura inversa, não uma compra automática.',
- 'O fundo recente da contração está perto de 94 e delimita a invalidação ilustrativa. Um stop curto dentro da região de ruído pode ser acionado antes de qualquer continuidade. Adeque a regra à amplitude e à liquidez.',
- 'A base mais larga mede 12 pontos, de 88 a 100. Na regra geométrica simplificada, projete 12 a partir do rompimento em 100, chegando a 112. Há variações de método; a medida não substitui a confirmação.',
- [['Um triângulo simétrico obriga alta?',['Não','Sim','Somente com três toques'],0,'A direção precisa ser confirmada pelo rompimento.'],['Qual dimensão é projetada aqui?',['Último candle','Base mais larga','Distância da MM200'],1,'A regra ilustrada usa a amplitude inicial da formação.'],['Qual evidência evita antecipação?',['Apenas linhas desenhadas','Candle antes de fechar','Rompimento e aceitação fora da figura'],2,'O desenho sozinho não confirma a direção.']]);
-pattern('bandeira','Bandeira: mastro e pausa corretiva','flag','buy',
- 'Uma bandeira de alta combina um avanço rápido, o mastro, e uma correção curta em canal. No exemplo, o impulso vai de 88 a 100, seguido de pausa descendente. Volume menor na pausa pode apoiar a leitura de contração; uma queda longa e profunda pode negar a ideia de simples bandeira.',
- 'A saída acima do canal com retomada do impulso define o gatilho. A referência de entrada do esquema é 100. Observe a qualidade do fechamento e a continuidade, em vez de comprar qualquer toque na linha superior.',
- 'O fundo da pausa em 94 é a invalidação ilustrativa. Se a correção romper sua estrutura, o plano de continuação falha. Avalie o risco sem assumir que uma tendência anterior precisa continuar.',
- 'O mastro mede 12 pontos. A projeção simplificada soma essa distância ao rompimento 100: alvo 112. Em gráficos reais há métodos com pontos de projeção distintos e estatísticas próprias. Aqui o segmento tracejado representa apenas a construção geométrica.',
- [['Qual elemento distingue a bandeira?',['Dois fundos iguais','Um mastro seguido de pausa curta','Somente um candle'],1,'O impulso anterior é parte central da formação.'],['Qual dimensão o exemplo projeta?',['Altura do mastro','Largura em minutos','Volume total'],0,'A projeção usa a dimensão vertical do impulso.'],['Correção profunda e longa faz o quê?',['Confirma sempre','Elimina o risco','Pode invalidar a leitura de bandeira'],2,'É preciso distinguir pausa curta de mudança de estrutura.']]);
-add('volume','confirmacao','Volume: VSA e RVOL','volume','buy',
- 'Compare esforço, amplitude e fechamento para avaliar rompimentos.',
- 'VSA relaciona volume, amplitude da barra e posição do fechamento; uma barra de alto volume e pouca progressão pode sugerir disputa, sem provar quem participou. RVOL compara volume observado com uma referência histórica equivalente. No intradiário, compare o mesmo horário: abertura e almoço têm perfis diferentes. No esquema, volume 180 dividido por média 100 resulta em RVOL de 1,8.',
- 'A superação de 100 com fechamento forte e RVOL de 1,8 apoia o exemplo de rompimento. Volume isolado não basta: muito esforço sem progresso, com pavio superior e retorno à faixa, pode indicar falha. Compare sempre a resposta do preço com o volume.',
- 'O fundo 94 delimita a invalidação do plano. Volume alto não autoriza retirar o stop nem identifica sozinho uma instituição. A leitura de esforço e resultado deve acrescentar contexto ao risco já definido.',
- 'A resistência de 112 permanece a hipótese de alvo. RVOL não fornece distância de alvo por si só. Ele é um filtro de participação, enquanto a projeção usa a estrutura e a distância ao stop.',
- [['180 ÷ 100 resulta em qual RVOL?',['0,8','1,8','180'],1,'O volume observado é 1,8 vez a referência escolhida.'],['O que a VSA combina?',['Somente quantidade de negócios','Nome da corretora','Volume, amplitude e fechamento'],2,'A relação esforço e resultado depende dos três elementos.'],['Como comparar volume intradiário?',['Com horários equivalentes','Sempre com a média do almoço','Ignorando horário'],0,'A sazonalidade ao longo do dia altera a comparação.']]);
-add('vwap','confirmacao','VWAP: preço ponderado por volume','vwap','buy',
- 'Use o preço médio negociado como contexto, sem tratá-lo como barreira garantida.',
- 'A VWAP soma preço vezes volume e divide pelo volume acumulado; uma implementação por barras pode usar preço típico, média de máxima, mínima e fechamento. A VWAP de sessão reinicia no começo da sessão configurada. A ancorada usa um ponto de partida escolhido. Diferem de uma média móvel que usa uma janela de barras.',
- 'Neste esquema, o preço recupera a VWAP ascendente e supera 100. A leitura busca aceitação acima do preço médio da sessão e continuidade. Em tendência forte o preço pode ficar longe da VWAP; distância não exige retorno imediato.',
- 'O fundo 94 é a invalidação estrutural. O plano não coloca o stop automaticamente na VWAP, pois cruzamentos em faixa podem ser frequentes. Horário de sessão, tipo de volume e fonte de dados mudam o cálculo.',
- 'A referência 112 corresponde à próxima resistência do exemplo. A VWAP não promete reversão à média nem fornece esse alvo por conta própria. Compare a estrutura com os custos e o risco de seis pontos.',
- [['Qual ponderação caracteriza a VWAP?',['Tempo somente','Volume','RSI'],1,'Preços com mais volume têm maior influência no cálculo.'],['Quando a VWAP de sessão reinicia?',['Na abertura da sessão configurada','A cada nove candles','Nunca'],0,'A versão de sessão usa esse ponto de partida.'],['Preço distante da VWAP garante retorno?',['Sim','Somente à tarde','Não'],2,'Tendências podem manter o preço distante por bastante tempo.']]);
-add('rsi','confirmacao','RSI: força e divergência','rsi','sell',
- 'Compare dois topos do preço com dois topos do oscilador.',
- 'RSI resume a relação entre ganhos e perdas médios de um período, frequentemente catorze barras, numa escala de zero a cem. Acima de setenta é uma convenção de sobrecompra e abaixo de trinta de sobrevenda; uma tendência pode permanecer nesses extremos. O exemplo mostra preço fazendo um topo mais alto, enquanto o RSI forma topo mais baixo: divergência de baixa.',
- 'A divergência é um alerta de perda de impulso, não um gatilho automático. O esquema espera a perda do suporte 100 para confirmar a venda. Verifique se os dois topos comparados pertencem aos mesmos instantes do gráfico de preço.',
- 'A recuperação de 106 invalida este plano de rompimento. Vender apenas porque o RSI passou de setenta pode contrariar uma tendência forte. O stop precisa vir da regra estrutural, não da expectativa de que o oscilador volte a cinquenta.',
- 'O suporte projetado 88 é uma hipótese de preço. RSI não produz esse alvo em pontos. A divergência pode persistir sem reversão; por isso o alvo é subordinado ao comportamento do preço e ao risco inicial.',
- [['Qual desenho representa divergência de baixa?',['Preço sobe e RSI faz topo mais baixo','Preço e RSI sobem juntos','Preço sem dois topos'],0,'Comparam-se extremos correspondentes nos dois gráficos.'],['RSI acima de 70 exige venda?',['Sim','Não','Somente em ações'],1,'O extremo pode persistir numa tendência forte.'],['Qual é o gatilho deste exemplo?',['RSI tocar 50','Segundo topo isolado','Perder o suporte 100'],2,'A divergência alerta; a estrutura de preço confirma o plano.']]);
-add('bollinger','confirmacao','Bandas de Bollinger: contração e expansão','bollinger','buy',
- 'Diferencie volatilidade baixa, expansão e caminhada pela banda.',
- 'A configuração clássica usa média simples de vinte barras e bandas a dois desvios-padrão acima e abaixo. A largura varia com a dispersão dos preços. Bandas estreitas descrevem baixa volatilidade recente; não determinam a direção do próximo movimento. Em tendência, o preço pode caminhar junto de uma banda por várias barras.',
- 'O exemplo mostra contração seguida de expansão de alta e rompimento em 100. A confirmação pede preço aceitando acima da faixa e continuidade, preferencialmente com participação. Tocar a banda superior não é, sozinho, sinal de venda.',
- 'A perda do fundo 94 é a invalidação do plano de expansão. Não substitua a regra por um stop móvel improvisado no meio da operação. A média central pode ser uma referência adicional, mas não elimina a necessidade de uma estrutura de risco.',
- 'A projeção de 112 vem da resistência e de duas vezes o risco, não da distância matemática entre bandas. A expansão pode falhar e retornar à faixa. Avalie a trajetória de preço sem pressupor que toda contração terá um rompimento duradouro.',
- [['Bandas estreitas indicam o quê?',['Alta garantida','Baixa garantida','Menor volatilidade recente'],2,'A contração não determina a direção.'],['Qual é a configuração clássica?',['SMA20 e dois desvios-padrão','EMA9 e cem desvios','VWAP sem dispersão'],0,'As configurações podem variar, mas esta é a referência clássica.'],['Tocar a banda superior obriga venda?',['Sim','Não','Somente no diário'],1,'O preço pode caminhar pela banda durante tendência.']]);
-window.TecnicaPratica={modules:modules.map(([id,title,reference])=>({id,title,reference})),lessons};
+if(document.getElementById('eco-quant-style-v684'))return;
+const css=[
+'.eco-root .eco-body>.eco-card:has(.eco-qweights),.eco-root .eco-body>.eco-card:has(.eco-q-plot),.eco-root .eco-body>.eco-card:has(.eco-qresults){grid-column:1/-1}',
+'.eco-qweights,.eco-qform{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 12px;min-width:0}',
+'.eco-qweights label,.eco-qform label{min-width:0;overflow-wrap:normal}',
+'.eco-qline{border-top:1px solid #1E232E;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:9px 0;font-size:12px;color:#a9b4c2}',
+'.eco-qline b{color:#E8EAF0;white-space:nowrap;font-variant-numeric:tabular-nums}',
+'.eco-q-plot{width:100%;max-height:320px;margin:14px 0 8px}',
+'.eco-qscroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;margin-top:12px}',
+'.eco-qtable{border-collapse:collapse;width:100%;min-width:510px;font-size:11px;font-variant-numeric:tabular-nums}',
+'.eco-qtable caption,.eco-abnt-table figcaption{text-align:left;color:#aeb8c7;padding:8px 0;font-size:11px}',
+'.eco-qtable td,.eco-qtable th{padding:8px 10px;border-bottom:1px solid #1E232E;text-align:right;white-space:nowrap}',
+'.eco-qtable th:first-child,.eco-qtable td:first-child{text-align:left}',
+'.eco-qtable th{color:#D4A017;font-weight:700}',
+'.eco-qresults{border-top:1px solid #1E232E;margin:16px 0;padding-top:12px;min-width:0}',
+'.eco-qresults h4{color:#D4A017;font-size:12px;margin:9px 0 4px}',
+'.eco-qresults p{overflow-wrap:anywhere;font-size:12px;line-height:1.7}',
+'.eco-abnt-paper{background:#f9faf8;color:#171b20;max-width:880px;padding:24px 30px;font:12pt/1.5 "Times New Roman",serif;overflow-wrap:anywhere}',
+'.eco-abnt-paper header{text-align:center;padding:12px 0 32px;border:0}',
+'.eco-abnt-paper h2{color:#171b20!important;font-size:17pt;text-transform:uppercase;margin:30px 0}',
+'.eco-abnt-paper h3{color:#171b20;font-size:13pt;margin:26px 0 12px;text-transform:uppercase}',
+'.eco-abnt-paper p{color:#171b20;text-align:justify}',
+'.eco-abnt-paper .eco-abnt-text{white-space:pre-wrap;text-align:justify;text-indent:1.25cm}',
+'.eco-abnt-paper footer,.eco-abnt-table small{display:block;color:#484d54;font-size:10pt;margin-top:15px}',
+'.eco-abnt-table table{border-collapse:collapse;width:100%;font-size:10pt;color:#171b20}',
+'.eco-abnt-table th,.eco-abnt-table td{padding:5px;border-bottom:1px solid #888;text-align:left}',
+'.eco-abnt-table figcaption{color:#171b20;font-size:10pt}',
+'.eco-root [data-eco-btn="abntExport"],.eco-root [data-eco-btn="abntPrint"],.eco-root [data-eco-btn="abntCopy"],.eco-root [data-eco-btn="abntSeries"],.eco-root [data-eco-btn="abntCSV"]{min-height:44px;padding:8px 11px;color:#dae0e9;background:#181C26;border:1px solid #303948;border-radius:4px}',
+'@media(max-width:760px){.eco-qweights,.eco-qform{grid-template-columns:repeat(2,minmax(0,1fr))}.eco-abnt-paper{padding:14px;font-size:11pt}.eco-abnt-paper h2{font-size:14pt}}',
+'@media(max-width:380px){.eco-qweights,.eco-qform{grid-template-columns:1fr}}',
+'@media print{@page{size:A4;margin:3cm 2cm 2cm 3cm}body:has(.eco-abnt-paper) *{visibility:hidden!important}body:has(.eco-abnt-paper) .eco-abnt-paper,body:has(.eco-abnt-paper) .eco-abnt-paper *{visibility:visible!important}body:has(.eco-abnt-paper) .eco-abnt-paper{position:absolute;top:0;left:0;width:100%;max-width:none;border:0;background:white;padding:0;margin:0;font-size:12pt;color:#111}body:has(.eco-abnt-paper) .eco-abnt-table{break-inside:avoid}}'
+].join('\n');
+const style=document.createElement('style');style.id='eco-quant-style-v684';style.textContent=css;document.head.appendChild(style);
 })();
+/* Estudos · arquivos locais e backup portátil. Nada deste serviço envia conteúdo à rede. */
+;(function(){
+ 'use strict';
+ const DB='diario-estudos-local-v1',STORE='arquivos',VERSION=1,MAX_IMPORT=350*1024*1024;
+ const owner=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'visitante';
+ const token=(tipo,id,uid=owner())=>uid+'|'+tipo+'|'+id;
+ let opening;
+ function open(){
+  if(opening)return opening;
+  opening=new Promise((resolve,reject)=>{
+   if(!('indexedDB'in window)){reject(Error('IndexedDB indisponível neste navegador.'));return;}
+   const req=indexedDB.open(DB,VERSION);
+   req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE,{keyPath:'key'});};
+   req.onsuccess=()=>resolve(req.result);
+   req.onerror=()=>reject(req.error||Error('Não foi possível abrir os arquivos locais.'));
+   req.onblocked=()=>reject(Error('Feche outras janelas do aplicativo e tente novamente.'));
+  }).catch(err=>{opening=null;throw err;});
+  return opening;
+ }
+ async function transaction(mode,operation){
+  const db=await open();
+  return new Promise((resolve,reject)=>{
+   const tx=db.transaction(STORE,mode),store=tx.objectStore(STORE);
+   let result;
+   try{const req=operation(store);req.onsuccess=()=>{result=req.result;};req.onerror=()=>reject(req.error||Error('Falha no armazenamento local.'));}catch(err){reject(err);return;}
+   tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error||Error('Sem espaço para salvar no dispositivo.'));tx.onabort=()=>reject(tx.error||Error('Gravação local cancelada.'));
+  });
+ }
+ async function put(tipo,id,blob,meta={}){
+  if(!(blob instanceof Blob)||!blob.size)throw Error('Selecione um arquivo válido.');
+  const uid=owner();
+  await transaction('readwrite',s=>s.put({key:token(tipo,id,uid),owner:uid,tipo,id,blob,meta,atualizado:Date.now()}));
+  try{await navigator.storage?.persist?.();}catch{}
+  return true;
+ }
+ async function get(tipo,id){return (await transaction('readonly',s=>s.get(token(tipo,id))))||null;}
+ async function remove(tipo,id){await transaction('readwrite',s=>s.delete(token(tipo,id)));return true;}
+ async function all(){return (await transaction('readonly',s=>s.getAll())).filter(r=>r.owner===owner());}
+ async function legacy(){
+  const uid=owner(),out=[];
+  const name=window.DIARIO_DEMO?'diario-trader-demo-v286':'diario-trader';
+  await new Promise(resolve=>{
+   try{
+    const req=indexedDB.open(name,1);
+    req.onerror=()=>resolve();
+    req.onupgradeneeded=()=>{req.transaction.abort();resolve();};
+    req.onsuccess=()=>{
+     const db=req.result;if(!db.objectStoreNames.contains('kv')){db.close();resolve();return;}
+     const tx=db.transaction('kv','readonly'),cursor=tx.objectStore('kv').openCursor();
+     cursor.onsuccess=()=>{
+      const c=cursor.result;if(!c)return;
+      const k=String(c.key);
+      if((k.startsWith('diario:mentor-local:')||k.startsWith('diario:mentor-voz:'))&&(k.includes(':'+uid+':')||k.endsWith(':'+uid)))out.push({key:k,value:c.value});
+      c.continue();
+     };
+     tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();resolve();};
+    };
+   }catch{resolve();}
+  });
+  return out;
+ }
+ const encode=blob=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]||'');r.onerror=()=>reject(r.error);r.readAsDataURL(blob);});
+ function decode(b64,mime){
+  const bin=atob(b64),parts=[];
+  for(let i=0;i<bin.length;i+=65536){const raw=bin.slice(i,i+65536),u=new Uint8Array(raw.length);for(let j=0;j<raw.length;j++)u[j]=raw.charCodeAt(j);parts.push(u);}
+  return new Blob(parts,{type:mime||'application/octet-stream'});
+ }
+ const olderKey=k=>/^(diario:mentor-local:|diario:mentor-voz:)/.test(k);
+ async function exportar(){
+  const uid=owner(),records=await all(),old=await legacy(),keys={},saved=[];
+  if(typeof S!=='undefined'&&Array.isArray(S.books))saved.push(...S.books);
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&(/^(diario-rs|diario-foco|diario:voz:|diario:tecnica-pratica:)/.test(k)))keys[k]=localStorage.getItem(k);}
+  let bytes=0;
+  const items=[];
+  for(const row of records){
+   bytes+=row.blob?.size||0;
+   if(bytes>MAX_IMPORT)throw Error('Backup acima de 350 MB. Exporte os vídeos separadamente para evitar travar o iPhone.');
+   items.push({tipo:row.tipo,id:row.id,meta:row.meta,mime:row.blob.type,b64:await encode(row.blob)});
+  }
+  const cached=[];
+  for(const item of old){if(item.value instanceof Blob){bytes+=item.value.size;if(bytes>MAX_IMPORT)throw Error('Backup acima de 350 MB.');cached.push({key:item.key,mime:item.value.type,b64:await encode(item.value)});}else cached.push({key:item.key,value:item.value});}
+  const backup={format:'diario-estudos-backup',version:1,exportadoEm:new Date().toISOString(),livros:saved,preferencias:keys,arquivos:items,cache:cached};
+  const json=new Blob([JSON.stringify(backup)],{type:'application/json'}),url=URL.createObjectURL(json),a=document.createElement('a');
+  a.href=url;a.download='estudos-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  return {arquivos:items.length,cache:cached.length,livros:saved.length};
+ }
+ async function importar(file){
+  if(!file||file.size>MAX_IMPORT*1.4)throw Error('Backup muito grande ou inválido.');
+  const data=JSON.parse(await file.text());
+  if(data?.format!=='diario-estudos-backup'||data.version!==1||!Array.isArray(data.arquivos)||!Array.isArray(data.cache))throw Error('Formato de backup de Estudos inválido.');
+  if(data.arquivos.length>2000||data.cache.length>10000)throw Error('Backup contém registros demais.');
+  for(const r of data.arquivos){if(typeof r.tipo!=='string'||typeof r.id!=='string'||typeof r.b64!=='string'||r.b64.length>MAX_IMPORT*1.4)throw Error('Arquivo do backup inválido.');await put(r.tipo.slice(0,60),r.id.slice(0,255),decode(r.b64,r.mime),r.meta||{});}
+  // A importação é aditiva: nunca exclui livros ou arquivos deste aparelho.
+  if(Array.isArray(data.livros)&&typeof S!=='undefined'){
+   const list=new Map((S.books||[]).map(b=>[b.id,b]));
+   for(const b of data.livros.slice(0,2000))if(b&&typeof b.id==='string')list.set(b.id,b);
+   S.books=[...list.values()];if(typeof persist==='function')persist();
+  }
+  if(data.preferencias&&typeof data.preferencias==='object'){
+   for(const [k,v] of Object.entries(data.preferencias))if(/^(diario-rs|diario-foco|diario:voz:|diario:tecnica-pratica:)/.test(k)&&typeof v==='string'&&v.length<2000000)try{localStorage.setItem(k,v);}catch{}
+  }
+  if(typeof idb==='function')for(const item of data.cache){if(!item||typeof item.key!=='string'||!olderKey(item.key))continue;const key=item.key.replace(/^(diario:mentor-(?:local|voz):v\d+:)(.*)$/,(_whole,prefix,rest)=>prefix+(prefix.includes('mentor-voz')?rest.replace(/^[^:]+/,owner()):rest.replace(/^(aulas|texto):[^:]+/,(_v,kind)=>kind+':'+owner())));try{await idb('kv','put',item.b64?decode(item.b64,item.mime):item.value,key);}catch{}}
+  return {arquivos:data.arquivos.length,livros:data.livros?.length||0};
+ }
+ window.EstudosLocal={put,get,remove,all,exportar,importar,owner};
+})();/* Estudos · Resumos PDF locais v709. O PDF nunca sai do aparelho.
+   Só trechos limitados de texto são enviados à IA. Não há polling ou Storage. */
+;(function(){
+ 'use strict';
+ const MAX_PAGES=240,MAX_PARTS=45,CHARS=18000,MAX_PDF=50*1024*1024;
+ const session=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'';
+ const ensure=()=>{if(!window.EstudosLocal)throw Error('IndexedDB de Estudos indisponível.');};
+ const jobs=()=>RS.jobs||{};
+ const persistJobs=()=>{ls.set('diario-rs',RS.jobs);if(typeof rsRefresh==='function')rsRefresh();};
+ const byId=id=>Object.values(jobs()).find(j=>j&&j.local&&j.owner===session()&&j.id===id);
+ const jobFor=bookId=>jobs()[bookId]?.local&&jobs()[bookId]?.owner===session()?jobs()[bookId]:null;
+ const words=t=>String(t||'').trim().split(/\s+/).filter(Boolean).length;
+ async function save(bookId,record){
+  ensure();const blob=new Blob([JSON.stringify(record)],{type:'application/json'});
+  await window.EstudosLocal.put('resumo-local',bookId,blob,{nome:record?.titulo||'',formato:'json-v709'});
+ }
+ async function read(bookId){
+  ensure();const row=await window.EstudosLocal.get('resumo-local',bookId);
+  return row?.blob?JSON.parse(await row.blob.text()):null;
+ }
+ async function carregar(bookId){
+  const data=await read(bookId);if(!data)return null;
+  const record={id:data.id,at:Date.now(),longo:{partes:data.partes||[]},resultado:data.resultado||null,extras:data.extras||[]};
+  RS.full[bookId]=record;
+  return record;
+ }
+ async function extract(pdfFile,progress){
+  if(pdfFile.size>MAX_PDF||pdfFile.size<=0)throw Error('Escolha um PDF válido de até 50 MB.');
+  const header=new TextDecoder().decode((await pdfFile.slice(0,1024).arrayBuffer()));
+  if(!header.includes('%PDF-'))throw Error('O arquivo não parece ser um PDF válido.');
+  const lib=await ntLib(),task=lib.getDocument({data:new Uint8Array(await pdfFile.arrayBuffer()),isEvalSupported:false,enableScripting:false});
+  const pdf=await task.promise,parts=[];let text='',start=1,end=1;
+  try{
+   if(pdf.numPages>MAX_PAGES)throw Error('Para não sobrecarregar o iPhone e a IA, processe um PDF de até '+MAX_PAGES+' páginas por vez.');
+   for(let p=1;p<=pdf.numPages;p++){
+    if(session()!==progress.uid)throw Error('Conta alterada durante a leitura do PDF.');
+    const page=await pdf.getPage(p),content=await page.getTextContent();
+    const raw=(content.items||[]).map(x=>x.str||'').join(' ').replace(/\s+/g,' ').trim();
+    page.cleanup?.();
+    if(raw.length>CHARS)throw Error('A página '+p+' contém texto demais; divida o PDF em partes menores.');
+    if(text&&(text.length+raw.length>CHARS||p-start>=7)){
+      if(text.length>=250)parts.push({inicio:start,fim:end,texto:text});
+      text='';start=p;
+    }
+    if(raw){text+=(text?' \n ':'')+'[Página '+p+'] '+raw;end=p;}
+    progress.step(p,pdf.numPages);
+   }
+   if(text.length>=250)parts.push({inicio:start,fim:end,texto:text});
+   if(!parts.length)throw Error('PDF sem texto selecionável. Converta o documento com OCR no PC.');
+   if(parts.length>MAX_PARTS)throw Error('PDF muito extenso para uma sessão. Divida-o em volumes menores.');
+   return {parts,pages:pdf.numPages};
+  }finally{await pdf.destroy();}
+ }
+ async function gerar(book,foco,file,opt={}){
+  ensure();if(!session())throw Error('Entre na conta para usar a IA.');
+  if(!file)throw Error('Anexe o PDF do livro.');
+  const modo=opt?.modo==='completo'?'completo':'padrao',uid=session(),old=jobFor(book.id);
+  let job={id:old?.id||'local-'+(crypto.randomUUID?.()||Date.now()),book_id:book.id,titulo:book.t,autor:book.a||'',foco:String(foco||''),local:true,modo,paginas:modo==='completo'?Number(opt.paginas||100):null,status:'processando',criado:new Date().toISOString(),atualizado:new Date().toISOString(),progresso:{etapa:'lendo',partes:0,prontas:0,geral:0},resultado:old?.resultado||null,owner:uid,prompt:String(opt.prompt||'')};
+  const previous=jobs()[book.id],saveStatus=()=>{job.atualizado=new Date().toISOString();RS.jobs[book.id]=job;persistJobs();};
+  RS.jobs[book.id]=job;saveStatus();
+  try{
+   await window.EstudosLocal.put('livro-pdf',book.id,file,{nome:file.name||book.t});
+   let progress=(page,pages)=>{job.progresso={...job.progresso,etapa:'lendo',paginas_originais:pages,pagina_lida:page};if(page===1||page%5===0||page===pages)saveStatus();};
+   progress.uid=uid;progress.step=progress;
+   const extracted=await extract(file,progress);
+   const requests=modo==='completo'?extracted.parts:extracted.parts.slice(0,Math.min(5,extracted.parts.length));
+   const partials=[];let stored={id:job.id,titulo:book.t,modo,partes:[],resultado:job.resultado,extras:[],origem:'pdf'};
+   for(let i=0;i<requests.length;i++){
+    if(uid!==session())throw Error('Conta alterada. A geração foi interrompida.');
+    job.progresso={etapa:'parte',partes:requests.length,prontas:i,parte:i+1,geral:0,meta_paginas:job.paginas||null};saveStatus();
+    const section=requests[i];
+    const output=await rsFn('texto_local_parte',{titulo:book.t,autor:book.a||'',foco,modo,parte:i+1,total:requests.length,inicio:section.inicio,fim:section.fim,texto:section.texto,prompt:job.prompt});
+    if(!output?.texto||output.texto.length<250)throw Error('A IA não conseguiu resumir as páginas '+section.inicio+' a '+section.fim+'.');
+    const part={titulo:'Parte '+(i+1)+' · páginas '+section.inicio+'–'+section.fim,paginas:section.inicio+'–'+section.fim,texto:output.texto,palavras:words(output.texto)};
+    partials.push(part);stored.partes=partials.slice();await save(book.id,stored);
+    RS.full[book.id]={id:job.id,at:Date.now(),longo:{partes:partials.slice()},resultado:stored.resultado,extras:stored.extras};
+    job.progresso={...job.progresso,prontas:i+1};saveStatus();
+   }
+   const base=partials.map(p=>'# '+p.titulo+'\n'+p.texto).join('\n\n').slice(0,45000);
+   job.progresso={...job.progresso,etapa:'geral',geral:0};saveStatus();
+   const final=await rsFn('texto_local_final',{titulo:book.t,autor:book.a||'',foco,modo,resumos:base});
+   if(!final?.resultado)throw Error('A IA não consolidou o resumo.');
+   const count=partials.reduce((n,p)=>n+p.palavras,0),estimate=Math.max(1,Math.ceil(count/400));
+   final.resultado.completo=modo==='completo'?{partes:partials.length,palavras:count,paginas:estimate,meta_paginas:job.paginas,paginas_originais:extracted.pages}:undefined;
+   stored.resultado=final.resultado;stored.concluido=new Date().toISOString();await save(book.id,stored);
+   job.resultado=final.resultado;job.status='concluido';job.concluido=stored.concluido;
+   job.progresso={...job.progresso,etapa:'fim',geral:1,palavras:count,paginas:estimate};saveStatus();
+   RS.full[book.id]={id:job.id,at:Date.now(),longo:{partes:partials},resultado:final.resultado,extras:stored.extras};
+   window.toast?.('Resumo do PDF salvo neste aparelho. Exporte backup JSON.',5500);
+   return job;
+  }catch(err){
+   job.status='erro';job.erro=String(err?.message||err).slice(0,350);
+   if(previous&&!(await read(book.id).catch(()=>null)))RS.jobs[book.id]=previous;
+   else saveStatus();
+   window.toast?.(job.erro,5500);throw err;
+  }
+ }
+ async function handleFn(action,args){
+  const j=byId(args?.id);if(!j)return null;
+  const bookId=j.book_id,book=(S.books||[]).find(b=>b.id===bookId);
+  if(action==='obter'){const data=await read(bookId);if(!data)throw Error('Resumo local não encontrado.');return {item:{id:j.id,resultado:data.resultado,longo:{partes:data.partes||[]},extras:data.extras||[],modo:j.modo}};}
+  if(action==='apagar'){
+   if(typeof window.EstudosLocal.remove==='function')await window.EstudosLocal.remove('resumo-local',bookId);
+   delete RS.full[bookId];return {ok:true};
+  }
+  if(action==='retomar'){
+   const pdf=await window.EstudosLocal.get('livro-pdf',bookId);if(!pdf?.blob)throw Error('PDF local não encontrado. Importe um backup JSON.');
+   if(!book)throw Error('Livro não encontrado na Biblioteca.');
+   await gerar(book,j.foco,new File([pdf.blob],pdf.meta?.nome||'livro.pdf',{type:'application/pdf'}),{modo:j.modo,paginas:j.paginas,prompt:j.prompt});return {ok:true,status:'concluido'};
+  }
+  const data=await read(bookId);if(!data)throw Error('Resumo local não encontrado.');
+  if(action==='extra_apagar'){
+   data.extras=(data.extras||[]).filter(x=>x.id!==args.eid);await save(bookId,data);await carregar(bookId);return {ok:true,extras:data.extras};
+  }
+  if(action==='extra'||action==='quiz'){
+   const base=(data.partes||[]).map(p=>p.texto).join('\n').slice(0,35000);
+   const output=await rsFn(action==='extra'?'texto_local_extra':'texto_local_quiz',{titulo:j.titulo,autor:j.autor,resumos:base,prompt:args.prompt||'',tituloExtra:args.titulo||'',n:args.n,nivel:args.nivel});
+   if(!output?.item)throw Error('A IA não retornou o resultado.');
+   data.extras=[output.item,...(data.extras||[])].slice(0,20);await save(bookId,data);await carregar(bookId);
+   return {ok:true,item:output.item,extras:data.extras};
+  }
+  throw Error('Operação local não suportada: '+action);
+ }
+ window.ResumosLocais={gerar,carregar,handleFn,byId,jobFor};
+})();/* Estudos > Aulas: o Mentor 3D começa vazio e recebe exclusivamente aulas geradas de PDFs da conta. */
+;(function(){'use strict';window.TecnicaPratica={modules:[],lessons:[]};})();
 /* Serviço de pronúncia de Aulas. Nunca modifica o texto de leitura. */
 ;(function(){'use strict';
 const defaults=Object.freeze({MM200:'média móvel de duzentos períodos',MM50:'média móvel de cinquenta períodos',MM20:'média móvel de vinte períodos',MME9:'média móvel exponencial de nove períodos',OCOI:'ombro cabeça ombro invertido',OCO:'ombro cabeça ombro',RSI:'índice de força relativa',MACD:'méqui dê',VWAP:'preço médio ponderado pelo volume',VSA:'análise de volume e spread',RVOL:'volume relativo',WIN:'mini índice',WDO:'mini dólar',B3:'bê três',ETF:'ê tê éfe',SMA:'média móvel simples',EMA:'média móvel exponencial'});
@@ -42472,124 +43621,64 @@ function normalizarTextoParaVoz(texto,dicionario=dictionary()){
  const regex=new RegExp('(^|[^\\p{L}\\p{N}_])('+keys.map(escape).join('|')+')(?=$|[^\\p{L}\\p{N}_])','giu');
  return String(texto??'').replace(regex,(_,before,term)=>before+map[term.toLocaleUpperCase('pt-BR')]);
 }
-function save(data){const value=validate(data);localStorage.setItem(key(),JSON.stringify(value));return value;}
+function save(data){const value=validate(data);localStorage.setItem(key(),JSON.stringify(value));if(owner()!=='visitante'){localStorage.setItem(dirtyKey(owner()),'1');cloudSync(true).catch(()=>{});}return value;}
+
+/* Glossário TTS por conta: sincronização automática e fila offline v668. */
+const dirtyKey=uid=>'diario:voz:pendente:v668:'+uid;
+let cloudPromise=null,cloudLast=0,cloudOwner='',cloudRetryAfter=0;
+function cloudStatus(message){const el=typeof document!=='undefined'?document.querySelector('#tp-root [data-tp-dict-status]'):null;if(el)el.textContent=message;}
+async function cloudSync(force=false){
+ const uid=owner();
+ if(uid==='visitante'||typeof SESS==='undefined'||!SESS?.at||typeof fetch!=='function')return;
+ if(cloudOwner!==uid){cloudOwner=uid;cloudLast=0;cloudRetryAfter=0;}
+ if(cloudPromise)return cloudPromise;
+ const pendente=localStorage.getItem(dirtyKey(uid))==='1';
+ if(Date.now()<cloudRetryAfter)return;
+ if(!pendente&&Date.now()-cloudLast<15*60*1000)return;
+ cloudPromise=(async()=>{
+  try{
+   if(typeof tok==='function')await tok();
+   if(owner()!==uid||!SESS?.at)return;
+   const c=cfg(),endpoint=c.url+'/rest/v1/aulas_glossario_tts',headers={apikey:c.key,Authorization:'Bearer '+SESS.at,'Content-Type':'application/json'};
+   const res=await fetch(endpoint+'?select=user_id,termos,revisao&user_id=eq.'+encodeURIComponent(uid)+'&limit=1',{headers,signal:AbortSignal.timeout(4000)});
+   if(!res.ok)throw Error('Falha ao carregar o glossário.');
+   const rows=await res.json();if(!Array.isArray(rows))throw Error('Glossário inválido.');
+   if(owner()!==uid)return;
+   const row=rows.find(r=>r.user_id===uid),local=localStorage.getItem(key());
+   if(localStorage.getItem(dirtyKey(uid))==='1'||(!row&&local!==null)){
+    const termos=validate(JSON.parse(local||'{}')),snapshot=JSON.stringify(termos);
+    const put=await fetch(endpoint+'?on_conflict=user_id',{method:'POST',headers:{...headers,Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify({user_id:uid,termos,revisao:Math.max(1,Number(row?.revisao||0)+1)}),signal:AbortSignal.timeout(4000)});
+    if(!put.ok)throw Error('Falha ao salvar na nuvem.');
+    if(owner()!==uid)return;
+    if(JSON.stringify(validate(JSON.parse(localStorage.getItem(key())||'{}')))===snapshot){
+     localStorage.removeItem(dirtyKey(uid));
+     cloudStatus('Sincronizado. A ponte receberá o dicionário na próxima consulta.');
+    }
+   }else if(row){
+    const termos=validate(row.termos);
+    localStorage.setItem(key(),JSON.stringify(termos));
+    const input=document.querySelector('#tp-root [data-tp-dictionary]');
+    if(input&&document.activeElement!==input)input.value=Object.entries({...defaults,...termos}).map(([k,v])=>k+' = '+v).join('\n');
+   }
+   cloudLast=Date.now();cloudRetryAfter=0;
+  }catch{
+   cloudRetryAfter=Date.now()+5*60*1000;
+   if(owner()===uid&&localStorage.getItem(dirtyKey(uid))==='1')cloudStatus('Salvo neste aparelho. Envio pendente; nova tentativa após a pausa de rede.');
+  }
+ })();
+ try{await cloudPromise;}finally{cloudPromise=null;}
+}
+
 const T=window.TecnicaPratica;window.DiarioVoz={defaults,dictionary,validate,save,normalizarTextoParaVoz};T.normalizarTextoParaVoz=normalizarTextoParaVoz;
-T.voiceControls=()=>`<details class="tp-voice-dict"><summary>Dicionário de Voz</summary><p>Um termo por linha: SIGLA = como deve ser falada. Vale para a voz das aulas neste navegador e nesta conta.</p><label>Termos e pronúncias<textarea data-tp-dictionary rows="7" spellcheck="false">${T.escape(Object.entries(dictionary()).map(([k,v])=>k+' = '+v).join('\n'))}</textarea></label><div class="tp-controls"><button type="button" data-tp-dict="save">Salvar dicionário</button><button type="button" data-tp-dict="reset">Restaurar padrão</button><button type="button" data-tp-dict="export">Exportar para a ponte</button></div><p role="status" data-tp-dict-status></p></details>`;
+T.voiceControls=()=>{cloudSync().catch(()=>{});return `<details class="tp-voice-dict"><summary>Dicionário de Voz</summary><p>Um termo por linha: SIGLA = como deve ser falada. A pronúncia é salva por conta na nuvem e sincronizada automaticamente com a ponte do PC.</p><label>Termos e pronúncias<textarea data-tp-dictionary rows="7" spellcheck="false">${T.escape(Object.entries(dictionary()).map(([k,v])=>k+' = '+v).join('\n'))}</textarea></label><div class="tp-controls"><button type="button" data-tp-dict="save">Salvar dicionário</button><button type="button" data-tp-dict="reset">Restaurar padrão</button></div><p role="status" data-tp-dict-status></p></details>`;};
 if(typeof document==='undefined')return;
-document.addEventListener('click',e=>{const b=e.target.closest?.('#tp-root [data-tp-dict]');if(!b)return;e.preventDefault();const box=b.closest('.tp-voice-dict'),input=box.querySelector('textarea'),status=box.querySelector('[data-tp-dict-status]');try{if(b.dataset.tpDict==='reset'){localStorage.removeItem(key());input.value=Object.entries(defaults).map(([k,v])=>k+' = '+v).join('\n');status.textContent='Pronúncias padrão restauradas.';return;}const entries=Object.create(null);for(const line of input.value.split(/\r?\n/)){if(!line.trim())continue;const i=line.indexOf('=');if(i<1)throw Error('Use SIGLA = pronúncia em cada linha.');entries[line.slice(0,i).trim()]=line.slice(i+1).trim();}const data=validate(entries);save(data);status.textContent='Dicionário salvo. Será usado na próxima narração.';if(b.dataset.tpDict==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify({schema:1,terms:{...defaults,...data}},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='dicionario-voz.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='Salvo. Copie dicionario-voz.json para a pasta da ponte no PC.';}}catch(err){status.textContent=err.message||'Não foi possível salvar neste navegador.';}});
+// Sem polling: tenta ao reabrir a página (TTL 15 min) ou ao editar o glossário.
+window.addEventListener('online',()=>{cloudRetryAfter=0;cloudSync(true).catch(()=>{});});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&document.querySelector('#tp-root'))cloudSync().catch(()=>{});});
+document.addEventListener('click',e=>{const b=e.target.closest?.('#tp-root [data-tp-dict]');if(!b)return;e.preventDefault();const box=b.closest('.tp-voice-dict'),input=box.querySelector('textarea'),status=box.querySelector('[data-tp-dict-status]');try{if(b.dataset.tpDict==='reset'){save({});input.value=Object.entries(defaults).map(([k,v])=>k+' = '+v).join('\n');status.textContent='Pronúncias padrão restauradas e sincronizando.';return;}const entries=Object.create(null);for(const line of input.value.split(/\r?\n/)){if(!line.trim())continue;const i=line.indexOf('=');if(i<1)throw Error('Use SIGLA = pronúncia em cada linha.');entries[line.slice(0,i).trim()]=line.slice(i+1).trim();}const data=validate(entries);save(data);status.textContent='Dicionário salvo. Sincronização automática ativada.';if(b.dataset.tpDict==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify({schema:1,terms:{...defaults,...data}},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='dicionario-voz.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='Salvo. Copie dicionario-voz.json para a pasta da ponte no PC.';}}catch(err){status.textContent=err.message||'Não foi possível salvar neste navegador.';}});
 })();
-/* Roteiros exclusivos da voz; leitura, perguntas e gráficos originais preservados. */
-;(function(){const T=window.TecnicaPratica;const roteiros={
- "sma-ema": [
-  "Olha como a média curta acompanha as últimas barras mais de perto. A média simples distribui esse peso pelo histórico, enquanto a exponencial responde mais rápido ao movimento recente. Repare na inclinação e nos fundos; rapidez sozinha também pode trazer mais sinais falsos.",
-  "No exemplo, a MME9 aponta para cima e o preço recupera a MM20. Agora procure o rompimento de cem com confirmação, sem comprar só porque as linhas se cruzaram. Veja primeiro se há resistência logo à frente.",
-  "O fundo da correção, em noventa e quatro, é onde esta compra perde sentido. Defina o tamanho da posição antes de entrar. Se o preço perder esse fundo, não afaste o stop esperando a média buscar o preço.",
-  "A região de cento e doze é a resistência de trabalho. Compare o espaço até ela com a distância até o stop. O erro é tratar o alinhamento das médias como promessa de que o alvo vai sair."
- ],
- "alinhamento": [
-  "Comece de fora para dentro: a MM200 ajuda no contexto maior, a MM50 mostra a direção intermediária e a MM20 e a MME9 acompanham o movimento curto. Observe se todas apontam para o mesmo lado. Linhas emboladas e horizontais pedem outra leitura.",
-  "Procure o preço retomando a região das médias, com fundos mais altos. Neste desenho, a confirmação está acima de cem. Se o preço atravessa as linhas para os dois lados o tempo todo, não force uma compra de tendência.",
-  "O stop deste plano está no fundo em noventa e quatro. Um toque na média rápida, sozinho, não muda essa regra. O erro é aumentar a distância do stop depois da entrada para acomodar uma operação que já perdeu a estrutura.",
-  "Confira a resistência em cento e doze e qualquer barreira antes dela. Médias organizadas ajudam a escolher o contexto, mas o espaço até o alvo ainda precisa compensar o risco."
- ],
- "periodos": [
-  "Antes de olhar a média, confira o tempo do gráfico. A MM20 conta vinte barras: no diário são pregões; no semanal, semanas. Mudar o período muda a leitura. Não compare as duas linhas como se representassem a mesma janela.",
-  "Olhe o gráfico maior para encontrar a direção e as barreiras. Depois volte ao período em que vai planejar a operação. Aqui, a retomada acima de cem é a confirmação; uma resistência no semanal pode limitar o avanço.",
-  "O fundo em noventa e quatro pertence ao período operacional deste exemplo. Se ele for perdido, o plano falhou. O erro é começar com stop no diário e mudar para o mensal só para não aceitar a saída.",
-  "A referência de cento e doze também pertence a este desenho. Compare esse ponto com as resistências do período maior. Ao trocar o tempo do gráfico, reveja entrada, stop e alvo juntos."
- ],
- "martelo": [
-  "Olha a tentativa de cair junto ao suporte: o preço foi para baixo e voltou, deixando um pavio comprido. Isso mostra rejeição naquela barra. O martelo ganha sentido pela localização; no meio de uma faixa ele pode ser só ruído.",
-  "A mínima está em noventa e quatro e a máxima em noventa e nove. O plano espera a reação acima de cem. Não entre só porque apareceu um pavio; espere a confirmação e confira se há espaço até a resistência.",
-  "A perda da mínima em noventa e quatro invalida a compra deste desenho. Considere a volatilidade e a execução ao definir a ordem. O erro é comprar a rejeição sem saber quanto aceita perder se ela falhar.",
-  "Observe a resistência em cento e doze. O martelo não obriga o preço a chegar lá. Se houver uma barreira muito perto da entrada, pode faltar espaço para o plano, mesmo com um candle bonito."
- ],
- "estrela": [
-  "Depois da alta, o preço tentou avançar perto da resistência e devolveu boa parte do movimento. O pavio de cima registra essa rejeição. Agora olhe as barras seguintes: uma estrela cadente sozinha ainda não confirma uma tendência de baixa.",
-  "O desenho chega a cento e seis e fecha perto de cento e um. O plano de venda espera perder cem. Evite antecipar enquanto a barra está formando; a rejeição precisa de continuidade para baixo.",
-  "Se o preço recuperar cento e seis, esta hipótese de venda perde sentido. Esse é o ponto de invalidação do plano, com a margem operacional necessária. Não afaste o stop só porque o preço ficou perto de acioná-lo.",
-  "O suporte de trabalho está em oitenta e oito. Confira se existe outra defesa compradora antes dele. A projeção orienta o plano, mas não obriga a queda a continuar."
- ],
- "engolfo": [
-  "Compare os corpos dos dois candles, perto do suporte. O corpo comprador cobre o vendedor anterior e muda a pressão no fechamento. Não precisa cobrir todos os pavios. A localização e a continuidade valem mais do que a cor isolada.",
-  "No desenho, o segundo corpo fecha em noventa e nove. O plano espera superar cem e sustentar a compra. Veja se a próxima resistência deixa espaço; um engolfo dentro de uma faixa pode não ganhar sequência.",
-  "A mínima conjunta, em noventa e quatro, é a invalidação deste exemplo. Se a barra for grande demais, o stop pode ficar distante para o espaço disponível. O erro é ignorar esse risco porque o padrão parece forte.",
-  "A resistência em cento e doze é a referência do plano, não um alvo obrigatório do engolfo. Compare a distância até ela com o risco assumido e acompanhe as barreiras no caminho."
- ],
- "inside": [
-  "Olha a barra menor inteira dentro da amplitude da anterior, a barra-mãe. O mercado reduziu o espaço de negociação, mas ainda não escolheu uma direção. Dentro de uma lateralização, essa contração pode gerar armadilhas para os dois lados.",
-  "Neste plano, a referência é a máxima da barra-mãe, na região de cem. Procure rompimento e aceitação fora da faixa. Um toque rápido do lado de fora, seguido de retorno, ainda pode ser uma armadilha.",
-  "A mínima da barra-mãe, em noventa e quatro, invalida a compra adotada aqui. Há métodos com stop mais curto, mas eles exigem outra regra. Não misture as duas estratégias depois de entrar.",
-  "A resistência de trabalho está em cento e doze. Antes da entrada, veja se há espaço até ela para o risco da barra-mãe. O erro é operar toda contração sem olhar o contexto."
- ],
- "rejeicao": [
-  "O preço tentou perder o suporte e voltou para dentro da faixa. Olhe o fechamento e o que aconteceu depois da varredura. O pavio mostra rejeição, mas não identifica quem comprou e não prova sozinho uma atuação institucional.",
-  "Neste exemplo, a confirmação vem ao superar cem depois de recuperar a faixa. Se o preço continua aceitando negociar abaixo do suporte, a hipótese de rejeição não se sustenta. Evite comprar só pela primeira reação.",
-  "A mínima em noventa e quatro delimita o risco escolhido. Se a rejeição falhar, respeite a saída planejada. Dobrar a posição ou alargar o stop não transforma uma falha de leitura em uma boa operação.",
-  "A região oposta da faixa, em cento e doze, é o alvo de trabalho. Em uma faixa menor, o espaço pode ser insuficiente. Não use o nome do padrão como justificativa para ignorar uma resistência próxima."
- ],
- "oco": [
-  "Depois da alta, procure três picos: um ombro, uma cabeça mais alta e o outro ombro. Os fundos intermediários formam a linha de pescoço. Enquanto essa linha segura, o OCO ainda é uma hipótese de reversão.",
-  "No desenho, o pescoço está em cem. A venda precisa da perda dessa região com aceitação abaixo dela. Se você esperar um reteste, lembre que ele pode não acontecer. Evite vender apenas por enxergar três picos.",
-  "Este plano usa a recuperação acima de cento e seis para invalidar a venda. Um stop acima da cabeça seria outra estratégia, com risco diferente. Escolha a regra antes da entrada e não a troque quando o preço voltar.",
-  "A altura da formação ajuda a localizar a região projetada em oitenta e oito. Use a seta do gráfico como referência visual, sem transformar a medida em certeza. Confira suportes que possam interromper a queda antes do alvo."
- ],
- "ocoi": [
-  "Agora a formação aparece pelos fundos. A cabeça é o fundo mais baixo, com um ombro de cada lado. A linha de pescoço marca a resistência. O OCOI só ganha confirmação neste plano quando o preço consegue superar essa barreira.",
-  "O gatilho do exemplo está acima de cem, com continuidade compradora. Volume pode reforçar a leitura, mas não salva um rompimento que volta imediatamente para baixo. Não compre só porque o segundo ombro parece pronto.",
-  "A perda de noventa e quatro invalida este plano de compra. É um stop baseado no ombro direito, diferente de um stop sob a cabeça. Confira se a volatilidade cabe nessa distância antes de dimensionar a posição.",
-  "A projeção visual aponta para cento e doze. Observe as resistências no caminho e a reação do preço no reteste. O erro é assumir que toda formação invertida termina em uma reversão duradoura."
- ],
- "topoduplo": [
-  "O preço testou duas vezes a região de cento e doze, sem avançar com firmeza. O vale entre os picos está em cem. Dois topos sugerem resistência, mas a reversão deste plano ainda depende da perda do vale.",
-  "A confirmação da venda é perder cem e aceitar negociar abaixo. Antecipar no segundo topo seria outro plano. Cuidado com uma perda rápida seguida de recuperação: pode ser um falso rompimento.",
-  "Aqui a recuperação acima de cento e seis invalida a venda após o rompimento. Este é um stop de reteste, mais curto que um stop acima dos dois topos. Não confunda essas duas escolhas de risco.",
-  "A região projetada fica em oitenta e oito. A altura do desenho ajuda a localizar esse ponto, mas a queda pode parar antes. Confira os suportes e não mantenha uma venda só para cumprir a projeção."
- ],
- "fundoduplo": [
-  "O preço voltou duas vezes à região de oitenta e oito e encontrou reação. Entre os fundos existe um topo em cem. Essa defesa sugere suporte; a compra por reversão ainda precisa superar a resistência intermediária.",
-  "O gatilho é a superação de cem depois do segundo fundo. Espere o preço confirmar força acima dessa referência. Tocar o segundo fundo não equivale a romper a resistência.",
-  "O stop de reteste deste plano fica em noventa e quatro. Um stop sob os fundos seria bem mais amplo e exigiria outro tamanho de posição. Defina qual estrutura está operando antes de entrar.",
-  "A projeção aponta para cento e doze. Confira se há resistências antes dela e se a confirmação não deixou o preço esticado demais. O erro é chegar atrasado e aceitar qualquer risco para participar."
- ],
- "triangulo": [
-  "Repare nos movimentos cada vez menores entre linhas que convergem. O mercado está comprimindo a amplitude, sem garantir para qual lado vai sair. O desenho de um triângulo não é uma ordem de compra.",
-  "Neste exemplo, a compra espera a saída pela linha de cima, na região de cem. Procure aceitação fora da figura e continuidade. Se o preço sair para baixo, a hipótese de compra precisa ser abandonada.",
-  "O fundo recente, perto de noventa e quatro, é a invalidação escolhida. Um stop apertado dentro da zona de ruído pode sair antes de o movimento se definir. Ajuste a posição à estrutura, sem improvisar depois.",
-  "A base mais larga orienta a projeção até cento e doze. Use a distância marcada no gráfico para planejar, mas confira as resistências intermediárias. O erro é projetar o alvo antes de confirmar a direção."
- ],
- "bandeira": [
-  "Primeiro vem um avanço rápido; depois, uma pausa curta em canal. Olhe se a correção parece apenas uma respiração do movimento. Uma queda longa e profunda já pode estar mudando a estrutura, em vez de formar uma bandeira.",
-  "O gatilho é sair acima do canal e retomar o impulso, na região de cem deste exemplo. Observe o fechamento e a continuidade. Comprar qualquer toque na linha de cima pode levar a uma entrada antecipada.",
-  "A perda do fundo da pausa em noventa e quatro invalida esta compra. A alta anterior não obriga o mercado a continuar. Não use o mastro como desculpa para retirar o stop se a correção se aprofundar.",
-  "A referência projetada está em cento e doze, usando o impulso anterior como medida visual. Confira as barreiras no caminho. O erro é acreditar que o mercado precisa repetir o movimento na mesma velocidade."
- ],
- "volume": [
-  "Compare o esforço com o resultado. Uma barra movimenta bastante volume, mas consegue avançar e fechar perto da máxima? Essa é a leitura da VSA. O RVOL ajuda a comparar a participação com um horário equivalente, sem confundir abertura com almoço.",
-  "O preço supera cem, fecha forte e o RVOL mostra participação acima da referência. Isso apoia o rompimento. Se aparece muito volume, pouco avanço e retorno à faixa, desconfie: volume alto sozinho não confirma a compra.",
-  "O fundo em noventa e quatro continua sendo a invalidação. Volume elevado não é autorização para retirar o stop e não prova quem está operando. O erro é trocar uma regra de preço por uma história sobre participantes.",
-  "A resistência em cento e doze vem da estrutura do gráfico. O RVOL ajuda a avaliar participação, mas não entrega um alvo de preço. Acompanhe o avanço até a resistência sem exigir que o volume explique tudo."
- ],
- "vwap": [
-  "Olhe a VWAP como uma referência do preço médio negociado, dando mais peso aos negócios com maior volume. Observe de que lado o preço trabalha e a inclinação da linha. Confira também se ela é da sessão ou foi ancorada em outro ponto.",
-  "Aqui o preço recupera a VWAP ascendente e supera cem. Procure aceitação acima da região, em vez de comprar o primeiro toque. Se o mercado está forte, ficar distante da linha não obriga um retorno imediato.",
-  "A perda do fundo em noventa e quatro invalida o plano. O stop não fica automaticamente na VWAP: em uma faixa, o preço pode cruzá-la várias vezes. O erro é tratar cada cruzamento como uma nova tendência.",
-  "A resistência de trabalho está em cento e doze. A VWAP não fornece esse alvo nem garante retorno à média. Confira o espaço no gráfico e mantenha o risco definido antes da entrada."
- ],
- "rsi": [
-  "Compare os dois topos do preço com os mesmos momentos no RSI. Neste exemplo, o preço faz um topo mais alto e o indicador já não acompanha. Isso alerta para perda de impulso; ainda não é uma confirmação de venda.",
-  "O plano espera perder o suporte em cem. É o preço que confirma a hipótese, enquanto o RSI acrescenta contexto. Vender só porque o indicador passou de setenta pode colocar você contra uma tendência ainda forte.",
-  "Se o preço recuperar cento e seis, esta venda perde sentido. Respeite a invalidação estrutural. O erro é manter a posição esperando que o indicador volte para o meio da escala.",
-  "O suporte projetado está em oitenta e oito. Esse alvo vem da leitura do preço, não do RSI. Uma divergência pode durar bastante sem gerar reversão; acompanhe a estrutura, sem apostar no indicador isolado."
- ],
- "bollinger": [
-  "Repare nas bandas se aproximando: o mercado reduziu a volatilidade recente. Ainda não sabemos para que lado vai sair. Em uma tendência, o preço também pode caminhar junto da banda sem precisar voltar imediatamente para o meio.",
-  "O exemplo mostra saída para cima e expansão, com confirmação na região de cem. Observe se o preço aceita negociar fora da faixa e ganha continuidade. Tocar a banda superior, sozinho, não é motivo para vender.",
-  "A perda do fundo em noventa e quatro invalida este plano de expansão. Não invente uma nova regra de stop depois da entrada. A linha central ajuda no contexto, mas não substitui o ponto de invalidação escolhido.",
-  "A resistência em cento e doze orienta o alvo. Ela vem da estrutura, não de uma obrigação matemática das bandas. O erro é presumir que toda contração termina em um rompimento forte e duradouro."
- ]
-};
-for(const l of T.lessons){if(!roteiros[l.id]||roteiros[l.id].length!==4)throw Error("Roteiro de voz ausente: "+l.id);l.roteiroVoz={abertura:"Vamos olhar o gráfico com calma. "+l.summary,etapas:roteiros[l.id]};}})();
+/* Roteiros das 18 aulas demonstrativas removidos. Roteiro e quatro etapas vêm de cada PDF salvo. */
+;(function(){'use strict';})();
 /* Diagramas SVG calculados localmente, independentes dos dados de mercado. */
 ;(function(){
 'use strict';
@@ -42673,33 +43762,124 @@ T.chart=(l,step)=>{
 };
 T.math={sma,ema};
 })();
-/* PDF do Mentor: mesma conta, tabela aulas existente e roteador do servidor. */
-;(function(){'use strict';const T=window.TecnicaPratica,E=T.escape,baseChart=T.chart;let disposed=false,owner='',file=null,busy=false,message='',theme='',first=1,last=8,requestId='',controller=null,task=null,loadedAt=0,loadingList=false;
+/* Estudos > Mentor: PDF e aulas ficam no dispositivo; IA processa somente texto. */
+;(function(){'use strict';const T=window.TecnicaPratica,E=T.escape,baseChart=T.chart;let disposed=false,owner='',file=null,busy=false,message='',theme='',first=1,last=8,requestId='',controller=null,task=null,loadedAt=0,loadingList=false,pdfExpanded=false,storedRows=[],retryAt=0;
 const uid=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'',active=()=>typeof tab!=='undefined'&&tab==='estudos'&&typeof ESV!=='undefined'&&ESV==='aul';
-function reset(){if(owner===uid())return;controller?.abort();task?.destroy();owner=uid();file=null;busy=false;message='';requestId='';loadedAt=0;T.lessons=T.lessons.filter(l=>!l.pdf);T.modules=T.modules.filter(m=>m.id!=='mentor-pdf');}
-function safeLesson(row){const l=row?.roteiro?.mentor;if(!l||!row.id||!Array.isArray(l.stages)||l.stages.length!==4||l.stages.some(t=>typeof t!=='string')||!Array.isArray(l.questions)||l.questions.length!==3||l.questions.some(q=>typeof q.q!=='string'||!Array.isArray(q.options)||q.options.length!==3||!Number.isInteger(q.answer)||q.answer<0||q.answer>2)||!Array.isArray(l.stageNames)||l.stageNames.length!==4||!Array.isArray(l.visuals)||l.visuals.length!==4||l.visuals.some(v=>!Array.isArray(v.items)))throw Error('A aula salva está incompleta.');return {...l,id:String(row.id),videoId:String(row.id),module:'mentor-pdf',pdf:true,title:String(l.title).slice(0,120),summary:String(l.summary).slice(0,500),minutes:Math.max(1,Math.min(60,Number(l.minutes)||3)),stageNames:l.stageNames.map(t=>String(t).slice(0,70))};}
-function insert(row){const l=safeLesson(row);T.lessons=T.lessons.filter(x=>x.id!==l.id);T.lessons.push(l);if(!T.modules.some(m=>m.id==='mentor-pdf'))T.modules.push({id:'mentor-pdf',title:'Minhas aulas do Mentor · PDF',reference:'Material enviado por você'});return l;}
+const CACHE_TTL=15*60*1000;
+const cacheKey=(kind,who)=>'diario:mentor-local:v706:'+kind+':'+who;
+async function localRead(kind,who){
+ const key=cacheKey(kind,who);
+ try{if(typeof idb==='function'){const v=await idb('kv','get',key);if(v)return v;}}catch{}
+ try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}
+}
+async function localWrite(kind,who,data){
+ const key=cacheKey(kind,who);
+ try{if(typeof idb==='function'&&await idb('kv','put',data,key)!==undefined)return;}catch{}
+ // iOS pode bloquear localStorage por cota: cache opcional, nunca perder a aula em memória.
+ try{const json=JSON.stringify(data);if(json.length<180000)localStorage.setItem(key,json);}catch{}
+}
+async function guardarAulas(current){
+ const value={time:Date.now(),rows:storedRows.filter(r=>r?.user_id===current).slice(-100)};
+ await localWrite('aulas',current,value);
+}
+function carregarLocalSeguro(rows,current){
+ if(!Array.isArray(rows))return;
+ for(const row of rows.slice(-100))if(row?.user_id===current)try{insert(row);}catch{}
+}
+function reset(){if(owner===uid())return;controller?.abort();task?.destroy();owner=uid();file=null;busy=false;message='';requestId='';loadedAt=0;retryAt=0;storedRows=[];pdfExpanded=false;T.lessons=T.lessons.filter(l=>!l.pdf);T.modules=T.modules.filter(m=>m.id!=='mentor-pdf');}
+function safeLesson(row){const l=row?.roteiro?.mentor;if(!l||!row.id||!Array.isArray(l.stages)||l.stages.length!==4||l.stages.some(t=>typeof t!=='string')||!Array.isArray(l.questions)||l.questions.length!==3||l.questions.some(q=>typeof q.q!=='string'||!Array.isArray(q.options)||q.options.length!==3||!Number.isInteger(q.answer)||q.answer<0||q.answer>2)||!Array.isArray(l.roteiroVoz?.etapas)||l.roteiroVoz.etapas.length!==4||l.roteiroVoz.etapas.some(v=>typeof v!=='string')||!Array.isArray(l.stageNames)||l.stageNames.length!==4||!Array.isArray(l.visuals)||l.visuals.length!==4||l.visuals.some(v=>!Array.isArray(v.items)))throw Error('A aula salva está incompleta.');return {...l,id:String(row.id),videoId:String(row.id),module:'mentor-pdf',pdf:true,title:String(l.title).slice(0,120),summary:String(l.summary).slice(0,500),minutes:Math.max(1,Math.min(60,Number(l.minutes)||3)),stageNames:l.stageNames.map(t=>String(t).slice(0,70))};}
+function insert(row){const ownRow={...row,user_id:row.user_id||uid()};const l=safeLesson(ownRow);T.lessons=T.lessons.filter(x=>x.id!==l.id);T.lessons.push(l);storedRows=storedRows.filter(x=>x.id!==ownRow.id);storedRows.push(ownRow);if(!T.modules.some(m=>m.id==='mentor-pdf'))T.modules.push({id:'mentor-pdf',title:'Minhas aulas do Mentor · PDF',reference:'Material enviado por você'});return l;}
 T.chart=function(l,step){if(!l.pdf)return baseChart(l,step);const v=l.visuals[step]||{},items=(v.items||[]).slice(0,4);return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 370" role="img" aria-label="${E(v.title||l.stageNames?.[step]||'Mapa da etapa')}"><rect width="760" height="370" fill="#0A0C10"/><text x="28" y="40" fill="#D4A017" font-size="21">${E(String(v.title||'Etapa').slice(0,60))}</text>${items.map((t,i)=>{const text=String(t).slice(0,105),words=text.split(' ');let lines=[''];for(const w of words){const k=lines.length-1;if((lines[k]+' '+w).length>58)lines.push(w);else lines[k]+=(lines[k]?' ':'')+w;}return `<line x1="30" y1="${76+i*69}" x2="730" y2="${76+i*69}" stroke="#1E232E"/><text x="32" y="${102+i*69}" fill="#D4A017" font-size="18">${i+1}</text><text x="67" y="${102+i*69}" fill="#E7EBF2" font-size="17">${lines.slice(0,2).map((line,j)=>`<tspan x="67" dy="${j?22:0}">${E(line)}</tspan>`).join('')}</text>`;}).join('')}</svg>`;};
-T.pdfControls=()=>{reset();return `<details class="tp-pdf" ${busy||message?'open':''}><summary>Gerar Aula do Mentor via PDF</summary><form data-tp-pdf-form><label>Arquivo PDF<input data-tp-pdf-file type="file" accept=".pdf,application/pdf" ${busy?'disabled':''}></label><button type="button" data-tp-pdf="refresh">Atualizar minhas aulas</button><small>${E(file?.name||'Até 25 MB. Selecione um trecho de até 40 páginas com texto selecionável.')}</small><label>Foco ou tema<input data-tp-pdf-theme maxlength="180" value="${E(theme)}" placeholder="Ex.: leitura de suportes ou resposta de circuitos" required ${busy?'disabled':''}></label><div class="tp-controls"><label>Página inicial<input data-tp-pdf-first type="number" min="1" value="${first}" required ${busy?'disabled':''}></label><label>Página final<input data-tp-pdf-last type="number" min="1" value="${last}" required ${busy?'disabled':''}></label></div><p>O texto das páginas selecionadas será enviado à IA configurada no app. O PDF original fica no aparelho. A aula será salva na sua conta.</p><button type="submit" ${busy?'disabled':''}>${busy?'Preparando aula…':'Gerar e salvar aula'}</button>${busy?'<button type="button" data-tp-pdf="cancel">Cancelar espera</button>':''}<p role="status" data-tp-pdf-status>${E(message)}</p></form></details>`;};
+T.pdfControls=()=>{reset();const atual=document.querySelector('#tp-root .tp-pdf');if(atual)pdfExpanded=atual.open;return `<details class="tp-pdf" ${pdfExpanded||busy||message?'open':''}><summary>Gerar Aula do Mentor via PDF</summary><form data-tp-pdf-form><label>Arquivo PDF<input data-tp-pdf-file type="file" accept=".pdf,application/pdf" ${busy?'disabled':''}></label><button type="button" data-tp-pdf="refresh">Atualizar minhas aulas</button><small>${E(file?.name||'Até 25 MB · até 150 páginas por trecho (limite de 85 mil caracteres extraídos).')}</small><label>Foco ou tema<input data-tp-pdf-theme maxlength="180" value="${E(theme)}" placeholder="Ex.: leitura de suportes ou resposta de circuitos" required ${busy?'disabled':''}></label><div class="tp-controls"><label>Página inicial<input data-tp-pdf-first type="number" min="1" value="${first}" required ${busy?'disabled':''}></label><label>Página final<input data-tp-pdf-last type="number" min="1" value="${last}" required ${busy?'disabled':''}></label></div><p>O texto das páginas selecionadas será enviado à IA configurada no app. O PDF original fica no aparelho. A aula ficará salva somente neste aparelho. Exporte backup JSON para outro aparelho.</p><button type="submit" ${busy?'disabled':''}>${busy?'Preparando aula…':'Gerar e salvar aula'}</button>${busy?'<button type="button" data-tp-pdf="cancel">Cancelar espera</button>':''}<p role="status" data-tp-pdf-status>${E(message)}</p></form></details><details class="tp-backup"><summary>Backup local · Estudos</summary><p>Livros, PDFs, aulas e áudios ficam neste aparelho. Faça backup antes de limpar dados do iPhone.</p><div class="tp-controls"><button type="button" data-tp-backup="export">Exportar backup JSON</button><label>Importar backup JSON<input type="file" data-tp-backup-file accept=".json,application/json"></label></div><button type="button" data-tp-pdf="migrate">Migrar aulas antigas da nuvem (uma única vez)</button><p role="status" data-tp-backup-status></p></details>`;};
 function update(text){message=text;const s=document.querySelector('[data-tp-pdf-status]');if(s)s.textContent=text;}
 function validOwner(current){if(uid()!==current)throw Error('A conta mudou. A geração anterior não será exibida nesta conta.');}
 async function call(body,signal){await tok();const c=cfg(),res=await fetch(c.url+'/functions/v1/aulas',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify(body),signal});let data;try{data=await res.json();}catch{throw Error('O servidor não respondeu corretamente. Tente novamente.');}if(!res.ok)throw Error(data.error||'Não foi possível gerar a aula.');return data;}
-async function generate(){reset();if(busy)return;if(!uid())throw Error('Entre na sua conta para gerar e salvar a aula.');if(!file||!(/\.pdf$/i.test(file.name)||file.type==='application/pdf')||file.size>25*1024*1024)throw Error('Escolha um PDF de até 25 MB.');if(!theme.trim()||!Number.isInteger(first)||!Number.isInteger(last)||first<1||last<first||last-first>=40)throw Error('Informe tema e intervalo de até 40 páginas.');const current=uid(),selectedFile=file;T.view?.stop();busy=true;controller=new AbortController();const signal=controller.signal;requestId=requestId||crypto.randomUUID();T.view?.refresh();try{
- update('Lendo o trecho selecionado do PDF…');const buffer=await selectedFile.arrayBuffer();validOwner(current);if(new TextDecoder().decode(buffer.slice(0,1024)).indexOf('%PDF-')<0)throw Error('O arquivo selecionado não é um PDF válido.');const lib=await ntLib();validOwner(current);task=lib.getDocument({data:new Uint8Array(buffer),isEvalSupported:false,enableScripting:false});const pdf=await task.promise;try{if(last>pdf.numPages)throw Error('A página final ultrapassa as '+pdf.numPages+' páginas do PDF.');let text='';for(let i=first;i<=last;i++){validOwner(current);if(signal.aborted)throw new DOMException('Cancelado','AbortError');update('Lendo página '+i+' de '+last+'…');const page=await pdf.getPage(i),content=await page.getTextContent();text+='\n[Página '+i+']\n'+content.items.map(x=>typeof x.str==='string'?x.str:'').join(' ');page.cleanup?.();if(text.length>85000)throw Error('O trecho tem mais de 85 mil caracteres. Escolha menos páginas.');}if(text.replace(/\s/g,'').length<300)throw Error('Este trecho não tem texto suficiente. PDFs escaneados precisam de OCR antes do envio.');update('Criando roteiro, etapas visuais e revisão com a IA…');const timeout=setTimeout(()=>controller?.abort(),140000);try{const result=await call({acao:'mentor_pdf',requestId,texto:text,tema:theme.trim(),arquivo:selectedFile.name,paginas:first+'–'+last},signal);validOwner(current);insert(result.aula);requestId='';update('Aula salva. Abra Minhas aulas do Mentor · PDF na lista abaixo.');}finally{clearTimeout(timeout);}}finally{await pdf.destroy();task=null;}
- }catch(err){if(uid()===current)update(err.name==='AbortError'?'Espera cancelada. A aula pode terminar no servidor; use Atualizar minhas aulas antes de gerar novamente.':err.message);}finally{if(uid()===current){busy=false;controller=null;T.view?.refresh();}}}
-async function load(force=false){if(disposed)return;reset();if(!uid()||loadingList||!active()||(!force&&Date.now()-loadedAt<60000))return;const current=uid();loadingList=true;loadedAt=Date.now();try{await tok();if(disposed)return;validOwner(current);const c=cfg(),res=await fetch(c.url+'/rest/v1/aulas?select=id,user_id,roteiro&user_id=eq.'+encodeURIComponent(current)+'&status=eq.pronta&roteiro->>tipo=eq.mentor-pdf-v1&order=criado_em.asc&limit=100',{headers:{apikey:c.key,Authorization:'Bearer '+SESS.at}});if(!res.ok)throw Error('Não foi possível atualizar suas aulas de PDF.');const rows=await res.json();if(disposed)return;validOwner(current);if(!Array.isArray(rows))throw Error('Lista de aulas inválida.');for(const row of rows)if(row.user_id===current)try{insert(row);}catch{}if(rows.length&&active()&&!T.view?.isMediaActive())T.view?.refresh();}catch(err){if(!disposed&&force&&uid()===current){update(err.message);T.view?.refresh();}}finally{loadingList=false;}}
+async function generate(){
+ reset();if(busy)return;
+ if(!uid())throw Error('Entre na sua conta para gerar e salvar a aula.');
+ if(!file||!(/\.pdf$/i.test(file.name)||file.type==='application/pdf')||file.size>25*1024*1024)throw Error('Escolha um PDF de até 25 MB.');
+ if(!theme.trim()||!Number.isInteger(first)||!Number.isInteger(last)||first<1||last<first||last-first>=150)throw Error('Informe tema e intervalo de até 150 páginas.');
+ const current=uid(),selectedFile=file,range=first+'–'+last;
+ T.view?.stop();busy=true;controller=new AbortController();const signal=controller.signal;requestId=requestId||crypto.randomUUID();T.view?.refresh();
+ try{
+  const textKey=current+':'+selectedFile.name+':'+selectedFile.size+':'+(selectedFile.lastModified||0)+':'+range;
+  let text='';
+  const saved=await localRead('texto',textKey);
+  if(saved?.text&&typeof saved.text==='string'&&saved.text.length<=85000){
+   text=saved.text;update('Trecho extraído recuperado deste aparelho.');
+  }else{
+   update('Lendo o trecho selecionado do PDF…');
+   const buffer=await selectedFile.arrayBuffer();validOwner(current);
+   if(new TextDecoder().decode(buffer.slice(0,1024)).indexOf('%PDF-')<0)throw Error('O arquivo selecionado não é um PDF válido.');
+   const lib=await ntLib();validOwner(current);
+   task=lib.getDocument({data:new Uint8Array(buffer),isEvalSupported:false,enableScripting:false});
+   const pdf=await task.promise;
+   try{
+    if(last>pdf.numPages)throw Error('A página final ultrapassa as '+pdf.numPages+' páginas do PDF.');
+    for(let i=first;i<=last;i++){
+     validOwner(current);if(signal.aborted)throw new DOMException('Cancelado','AbortError');
+     update('Lendo página '+i+' de '+last+'…');
+     const page=await pdf.getPage(i),content=await page.getTextContent();
+     text+='\n[Página '+i+']\n'+content.items.map(x=>typeof x.str==='string'?x.str:'').join(' ');
+     page.cleanup?.();
+     if(text.length>85000)throw Error('O trecho tem mais de 85 mil caracteres. Escolha menos páginas.');
+    }
+   }finally{await pdf.destroy();task=null;}
+   if(text.replace(/\s/g,'').length<300)throw Error('Este trecho não tem texto suficiente. PDFs escaneados precisam de OCR antes do envio.');
+   await localWrite('texto',textKey,{time:Date.now(),text});
+  }
+  validOwner(current);
+  if(window.EstudosLocal&&selectedFile instanceof Blob)await window.EstudosLocal.put('livro-pdf',selectedFile.name+':'+selectedFile.size+':'+(selectedFile.lastModified||0),selectedFile,{nome:selectedFile.name,paginas:range});
+  update('Criando roteiro, etapas visuais e revisão com a IA…');
+  const timeout=setTimeout(()=>controller?.abort(),140000);
+  try{
+   const result=await call({acao:'mentor_pdf_local',requestId,texto:text,tema:theme.trim(),arquivo:selectedFile.name,paginas:range},signal);
+   validOwner(current);if(!result.local||!result.aula)throw Error('A função de IA ainda não suporta aulas locais. Atualize a Edge Function aulas.');insert(result.aula);await guardarAulas(current);
+   requestId='';update('Aula salva exclusivamente neste aparelho. Exporte backup JSON para levá-la ao iPhone ou PC.');
+  }finally{clearTimeout(timeout);}
+ }catch(err){if(uid()===current)update(err.name==='AbortError'?'Espera cancelada. A aula pode terminar no servidor; use Atualizar minhas aulas antes de gerar novamente.':err.message);}
+ finally{if(uid()===current){busy=false;controller=null;T.view?.refresh();}}
+}
+async function load(force=false){
+ if(disposed)return;reset();if(loadingList||!active()||(!force&&Date.now()-loadedAt<CACHE_TTL))return;
+ const current=uid();loadingList=true;
+ try{
+  const saved=await localRead('aulas',current);
+  if(disposed||uid()!==current)return;
+  carregarLocalSeguro(saved?.rows,current);
+  loadedAt=Date.now();if((saved?.rows?.length||force)&&active()&&!T.view?.isMediaActive())T.view?.refresh();
+ }catch{if(force)update('Não foi possível ler as aulas locais. Confira espaço do navegador e backup.');}
+ finally{loadingList=false;}
+}
+async function migrarDaNuvem(){
+ const current=uid();if(!current)throw Error('Entre na conta usada para criar as aulas antigas.');
+ await tok();const c=cfg();
+ const res=await fetch(c.url+'/rest/v1/aulas?select=id,user_id,roteiro&user_id=eq.'+encodeURIComponent(current)+'&status=eq.pronta&roteiro->>tipo=eq.mentor-pdf-v1&order=criado_em.asc&limit=100',{headers:{apikey:c.key,Authorization:'Bearer '+SESS.at},signal:AbortSignal.timeout(12000)});
+ if(!res.ok)throw Error('Não foi possível recuperar aulas antigas. Nenhum arquivo local foi apagado.');
+ const rows=await res.json();if(!Array.isArray(rows))throw Error('Resposta de aulas inválida.');
+ if(uid()!==current)throw Error('A conta mudou durante a importação.');
+ carregarLocalSeguro(rows,current);await guardarAulas(current);T.view?.refresh();return rows.length;
+}
 T.pdf={generate,load,insert,safeLesson,dispose(){disposed=true;observer.disconnect();controller?.abort();task?.destroy();}};
+/* Mantém a escolha do usuário quando a trilha atualiza o HTML e recria o form.
+   A mudança de conta já limpa pdfExpanded em reset(). */
+document.addEventListener('toggle',e=>{
+ const el=e.target;
+ if(!disposed&&el?.matches?.('#tp-root .tp-pdf'))pdfExpanded=el.open;
+},true);
 document.addEventListener('change',e=>{const el=e.target;if(!el.closest?.('#tp-root'))return;if(el.matches('[data-tp-pdf-file]')){file=el.files?.[0]||null;requestId='';const hint=el.parentElement.nextElementSibling;if(hint)hint.textContent=file?.name||'Selecione um PDF.';}});
 document.addEventListener('input',e=>{const el=e.target;if(!el.closest?.('#tp-root'))return;if(el.matches('[data-tp-pdf-theme]')){theme=el.value;requestId='';}if(el.matches('[data-tp-pdf-first]')){first=Number(el.value);requestId='';}if(el.matches('[data-tp-pdf-last]')){last=Number(el.value);requestId='';}});
 document.addEventListener('submit',e=>{if(!e.target.matches('[data-tp-pdf-form]'))return;e.preventDefault();generate().catch(err=>{update(err.message);});});
-document.addEventListener('click',e=>{const b=e.target.closest?.('[data-tp-pdf]');if(!b||!b.closest('#tp-root'))return;if(b.dataset.tpPdf==='cancel'){controller?.abort();update('Cancelando espera…');}if(b.dataset.tpPdf==='refresh')load(true);});
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-tp-pdf]');if(!b||!b.closest('#tp-root'))return;if(b.dataset.tpPdf==='cancel'){controller?.abort();update('Cancelando espera…');}if(b.dataset.tpPdf==='refresh')load(true);if(b.dataset.tpPdf==='migrate'){update('Importando aulas antigas, uma única vez…');migrarDaNuvem().then(n=>update(n+' aulas antigas preservadas neste aparelho. Exporte backup JSON.')).catch(err=>update(err.message));}});
+document.addEventListener('click',e=>{const b=e.target.closest?.('#tp-root [data-tp-backup]');if(!b)return;e.preventDefault();const status=document.querySelector('#tp-root [data-tp-backup-status]');if(!window.EstudosLocal){if(status)status.textContent='Armazenamento local indisponível.';return;}status.textContent='Preparando backup…';window.EstudosLocal.exportar().then(r=>{status.textContent='Backup gerado: '+r.arquivos+' arquivos, '+r.livros+' livros.';}).catch(err=>status.textContent=err.message);});
+document.addEventListener('change',e=>{const f=e.target.closest?.('#tp-root [data-tp-backup-file]');if(!f||!f.files?.[0])return;const status=document.querySelector('#tp-root [data-tp-backup-status]');status.textContent='Importando…';window.EstudosLocal?.importar(f.files[0]).then(r=>{status.textContent='Importados '+r.arquivos+' arquivos e '+r.livros+' livros. Reabra Estudos para atualizar.';load(true);}).catch(err=>status.textContent=err.message);});
 let scheduled=false;const observer=new MutationObserver(()=>{if(disposed||scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;if(disposed)return;reset();if(active()&&document.getElementById('tp-root'))load();});});observer.observe(document.body,{childList:true,subtree:true});
 })();
 /* Estudos > Aulas, extensão isolada; sem escrita no servidor ou substituição de aulas. */
 ;(function(){
 'use strict';
 const T=window.TecnicaPratica,E=T.escape,names=['Contexto','Gatilho de Entrada','Stop Técnico','Alvo Projetado'];
-let selected=null,step=0,visual=false,playing=false,loading=false,status='',owner='',progress={},storageOK=true,run=0,controller=null,audio=null,objectURL='',utterance=null,bridgeFailed=false,videoFailed=false,film=null;
+let aulaSubaba='tradicionais',selected=null,step=0,visual=false,playing=false,loading=false,status='',owner='',progress={},storageOK=true,run=0,controller=null,audio=null,objectURL='',utterance=null,bridgeFailed=false,videoFailed=false,film=null,videoFormat='16x9';
 const active=()=>typeof tab!=='undefined'&&tab==='estudos'&&typeof ESV!=='undefined'&&ESV==='aul';
 const currentOwner=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'visitante';
 const key=()=>`diario:tecnica-pratica:v1:${owner}`;
@@ -42709,13 +43889,50 @@ function record(l){let r=progress[l.id];if(!r||typeof r!=='object'||!Array.isArr
 function passed(l){const r=progress[l.id];return !!r&&l.questions.every((q,i)=>r.answers?.[i]===q.answer)&&[0,1,2,3].every(s=>r.viewed?.includes(s));}
 function asset(name){return 'avatar-'+name;}
 function mentor(){const image=visual?asset('mentor-chart.png'):asset('mentor.png');return `<aside class="tp-mentor ${visual?'tp-pip':''} ${playing?'tp-speaking':''}" aria-label="Avatar Mentor"><img src="${image}" alt="Mentor 3D ${visual?'apontando para um gráfico':'no estúdio de podcast'}" data-tp-image="1"><div class="tp-avatar-fallback" hidden><b>MENTOR</b><span>Acompanhe o gráfico e o roteiro da aula</span></div>${playing&&!videoFailed?`<video data-tp-video="1" src="${asset('talking.mp4')}" autoplay loop muted playsinline preload="none" aria-label="Gestos do mentor"></video>`:''}<small>${playing?'Mentor narrando':loading?'Preparando voz':'Avatar Mentor'}</small></aside>`;}
-function catalog(){const done=T.lessons.filter(passed).length;return `<header class="tp-head"><span>TRILHA ILUSTRADA · MENTOR 3D</span><h2>Análise Técnica na Prática</h2><p>Da leitura do contexto ao plano de entrada, stop e alvo. ${T.lessons.length} lições, ${T.modules.length} módulos e três perguntas por lição.</p><div class="tp-progress"><progress max="${T.lessons.length}" value="${done}" aria-label="Progresso da trilha"></progress><b>${done}/${T.lessons.length} concluídas</b></div></header><div class="tp-modules">${T.modules.map((m,i)=>`<details open><summary>Módulo ${i+1} — ${E(m.title)}</summary><p class="tp-ref">Referências conceituais: ${E(m.reference)}</p>${T.lessons.filter(l=>l.module===m.id).map(l=>`<button type="button" data-tp-lesson="${l.id}" class="tp-lesson-row"><span>${passed(l)?'✓ ':''}${E(l.title)}</span><small>3 min · ${progress[l.id]?.answers?.filter(Number.isInteger).length||0}/3 respostas</small></button>`).join('')}</details>`).join('')}</div><p class="tp-note">Progresso salvo neste navegador, separado por conta. As aulas existentes continuam abaixo.</p><details class="tp-origin"><summary>Sobre os exemplos e as referências</summary><p>Diagramas autorais com preços hipotéticos para ensinar conceitos associados a Flávio Lemos, John Murphy, Al Brooks e Thomas Bulkowski. Não são reproduções de páginas, exemplos históricos verificados nem transcrições dos livros da Biblioteca.</p><p><a href="https://thepatternsite.com/measure.html" target="_blank" rel="noopener noreferrer">Bulkowski: regras de projeção e resultados empíricos</a> · <a href="https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/overview" target="_blank" rel="noopener noreferrer">Guia de indicadores</a></p></details>`;}
+function catalog(){
+ const lessons=T.lessons.filter(l=>l.pdf),done=lessons.filter(passed).length;
+ return `<header class="tp-head"><span>MENTOR 3D · AULAS CRIADAS COM SEUS PDFs</span><h2>Minhas aulas do Mentor</h2><p>Suas aulas geradas a partir dos PDFs enviados. O histórico é exclusivo da sua conta; nenhuma lição demonstrativa aparece aqui.</p></header>`+
+ (lessons.length?`<div class="tp-progress"><progress max="${lessons.length}" value="${done}" aria-label="Progresso das minhas aulas"></progress><b>${done}/${lessons.length} concluídas</b></div><div class="tp-modules" aria-label="Minhas aulas geradas">${lessons.map(l=>`<button type="button" data-tp-lesson="${E(l.id)}" class="tp-lesson-row"><span>${passed(l)?'✓ ':''}${E(l.title)}</span><small>${progress[l.id]?.answers?.filter(Number.isInteger).length||0}/3 respostas · ${l.minutes||3} min</small></button>`).join('')}</div>`:
+ '<div class="tp-empty" role="status"><strong>Nenhuma aula gerada ainda</strong><p>Use o gerador abaixo para enviar um PDF, escolher até 150 páginas e criar sua primeira aula com o Mentor 3D.</p></div>');
+}
+
 function quiz(l){const r=record(l);return `<section class="tp-check" aria-label="Mini-check de fixação"><h3>Mini-check de fixação</h3><p>Três perguntas. O feedback aparece ao responder; você pode tentar novamente.</p>${l.questions.map((q,i)=>{const a=r.answers[i],answered=Number.isInteger(a)&&a>=0&&a<q.options.length,ok=a===q.answer;return `<fieldset><legend>${i+1}. ${E(q.q)}</legend>${q.options.map((o,j)=>`<label class="${answered&&a===j?(ok?'tp-correct':'tp-wrong'):''}"><input type="radio" name="tp-${l.id}-${i}" data-tp-question="${i}" value="${j}" ${answered&&a===j?'checked':''}>${E(o)}</label>`).join('')}<p class="tp-feedback" data-tp-feedback="${i}" role="status">${answered?(ok?'Correto. ':'Reveja. ')+E(q.why):''}</p></fieldset>`;}).join('')}<p class="tp-result" role="status">${passed(l)?'✓ Lição concluída: quatro etapas vistas e três respostas corretas.':`Etapas vistas: ${[0,1,2,3].filter(s=>r.viewed.includes(s)).length}/4 · Acertos: ${l.questions.filter((q,i)=>r.answers[i]===q.answer).length}/3`}</p></section>`;}
-function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>O PC gera e envia o vídeo completo para sua conta. A ponte trabalha em segundo plano, sem endereço ou porta. Após atualizar a ponte, mantenha-a ligada e consulte o vídeo aqui.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="auto" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video><button type="button" data-tp-action="close-film">Fechar vídeo</button>`:''}<p>Ouvir Aula usa a voz disponível no aparelho. O vídeo da ponte usa a voz neural configurada no PC.</p></details>`;}
-async function openFilm(format){
+function bridgeDetails(){return `<details class="tp-bridge" ${film?'open':''}><summary>Vídeo com voz neural · Ponte Vídeo</summary><p>Os vídeos ficam no IndexedDB. No PC, a ponte local entrega o MP4 sem Supabase. No iPhone, importe o arquivo/backup; a ponte do PC não é acessível por 127.0.0.1 do iPhone.</p><div class="tp-controls">${['16x9','9x16','1x1'].map(f=>`<button type="button" data-tp-film="${f}">Assistir ${f.replace('x',':')}</button>`).join('')}</div><div class="tp-controls"><label>Formato<select data-tp-film-format><option value="16x9">16:9</option><option value="9x16">9:16</option><option value="1x1">1:1</option></select></label><label>Importar MP4<input type="file" data-tp-film-file accept=".mp4,video/mp4"></label><button type="button" data-tp-generate>Gerar vídeo na ponte do PC</button><button type="button" data-tp-film-migrate>Migrar vídeo antigo da nuvem</button></div>${film?`<video class="tp-full-video" data-tp-film-player controls playsinline preload="none" src="${E(film)}" aria-label="Videoaula narrada da trilha"></video><button type="button" data-tp-action="close-film">Fechar vídeo</button>`:''}<p>Ouvir Aula utiliza exclusivamente a voz configurada na Ponte Vídeo do PC. Sem substituição pela voz do navegador.</p></details>`;}
+async function salvarVideoLocal(chave,blob,meta){
+ const store=window.EstudosLocal;
+ if(typeof store?.put!=='function')return false;
+ try{await store.put('mentor-video',chave,blob,meta);return true;}
+ catch{return false;}
+}
+async function openFilm(format,fromCloud=false){
  stop();const token=run,l=T.lessons.find(l=>l.id===selected);if(!l)return;
  if(typeof SESS==='undefined'||!SESS?.uid){status='Entre na sua conta para assistir ao vídeo da ponte.';paint();return;}
- status='Consultando vídeo na sua conta…';loading=true;paint();
+ videoFormat=format;status='Buscando vídeo neste aparelho…';loading=true;paint();
+ const localKey=(l.videoId||'tecnica-v1-'+l.id)+'-'+format;
+ try{const cached=await window.EstudosLocal?.get('mentor-video',localKey);if(token!==run)return;if(cached?.blob?.size){film=URL.createObjectURL(cached.blob);loading=false;status='Vídeo carregado do aparelho.';paint();return;}}catch{}
+ if(!fromCloud){
+  // No PC o servidor vinculado somente à interface de loopback serve mídia diretamente.
+  // iPhone usa importação MP4/backup: 127.0.0.1 no iPhone NÃO acessa o PC.
+  const source='http://127.0.0.1:8766/video/'+encodeURIComponent(localKey)+'.mp4';
+  try{
+   const ctl=new AbortController(),ttl=setTimeout(()=>ctl.abort(),3500);
+   let response;
+   try{response=await fetch(source,{method:'GET',signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});}
+   finally{clearTimeout(ttl);}
+   if(response?.ok&&/^video\/mp4/i.test(response.headers?.get('content-type')||'')){
+    const bytes=Number(response.headers.get('content-length')||0);
+    if(bytes>350*1024*1024)throw Error('MP4 muito grande para armazenar no aparelho.');
+    const data=await response.blob();
+    if(!data.size||data.size>350*1024*1024)throw Error('MP4 inválido ou grande demais.');
+    if(token!==run||currentOwner()!==owner||!active())return;
+    const salvo=await salvarVideoLocal(localKey,data,{formato:format,aula:l.id,origem:'ponte-local'});
+    film=URL.createObjectURL(data);loading=false;
+    status=salvo?'Vídeo recebido diretamente da ponte do PC e salvo neste aparelho.':'Vídeo disponível nesta sessão; armazenamento local indisponível.';paint();return;
+   }
+  }catch{}
+  if(token!==run)return;
+  loading=false;status='Sem vídeo local. No PC, ligue o servidor da ponte; no iPhone, importe o MP4 ou um backup JSON.';paint();return;
+ }
  const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),10000);
  try{
   await tok();if(token!==run||currentOwner()!==owner)return;
@@ -42725,60 +43942,115 @@ async function openFilm(format){
   if(!res.ok||!data.signedURL)throw Error('missing');
   const url=new URL(c.url+'/storage/v1'+data.signedURL);
   if(url.origin!==new URL(c.url).origin||!url.pathname.startsWith('/storage/v1/object/sign/aulas-videos/'+path))throw Error('invalid');
-  film=url.href;loading=false;status='Vídeo pronto. Toque em reproduzir nos controles abaixo.';paint();
- }catch{if(token!==run)return;loading=false;status='Vídeo ainda indisponível neste formato. Confirme que a ponte foi atualizada e aguarde a geração e o envio pelo PC. Você pode ouvir a aula pela voz do aparelho.';paint();}
+  const dataVideo=await fetch(url.href,{signal:ctl.signal});if(!dataVideo.ok)throw Error('Falha na migração do vídeo.');
+   const blob=await dataVideo.blob();if(!blob.size||blob.size>350*1024*1024)throw Error('Vídeo inválido ou muito grande.');
+   const salvo=await salvarVideoLocal(localKey,blob,{formato:format,aula:l.id});if(token!==run)return;
+   film=URL.createObjectURL(blob);loading=false;
+   status=salvo?'Vídeo migrado. Agora ficará no aparelho.':'Vídeo disponível nesta sessão; armazenamento local indisponível.';paint();
+ }catch{if(token!==run)return;loading=false;status='Vídeo ainda indisponível neste formato. Para o iPhone, importe o arquivo MP4 do PC; não é enviado ao Supabase. O áudio somente será reproduzido pela ponte de voz configurada no PC.';paint();}
  finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
 }
+async function gerarVideoNaPonte(){
+ const l=T.lessons.find(x=>x.id===selected);if(!l?.pdf){status='Escolha uma aula do Mentor criada a partir de PDF.';paint();return;}
+ const formato=videoFormat,base='http://127.0.0.1:8766';
+ status='Enviando apenas o roteiro à ponte local do PC…';paint();
+ try{
+  const id=String(l.videoId||l.id),aula={id,roteiro:{mentor:l}};
+  const res=await fetch(base+'/aula',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({aula,formato}),credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(6500)});
+  if(!res.ok)throw Error('Ponte local não recebeu a aula.');
+  status='Roteiro entregue ao PC. A ponte está gerando o MP4 localmente; toque em Assistir depois de terminar.';paint();
+ }catch{
+  status='Ponte local não encontrada. No PC, abra INICIAR SERVIDOR LOCAL.bat ou LIGAR AUTOMATICO.bat.';paint();
+ }
+}
 function lesson(l){const idx=T.lessons.indexOf(l),r=record(l);return `<header class="tp-head"><button type="button" data-tp-action="catalog">← Todas as lições</button><span>ANÁLISE TÉCNICA NA PRÁTICA · ${idx+1}/${T.lessons.length}</span><h2 tabindex="-1" id="tp-title">${E(l.title)}</h2><p>${l.minutes||3} min de leitura · ${E(T.modules.find(m=>m.id===l.module).reference)}</p></header><div class="tp-class ${visual?'tp-visual':''}"><div class="tp-main"><p class="tp-summary">${E(l.summary)}</p><div class="tp-controls"><button type="button" data-tp-action="listen" ${loading?'disabled':''}>${loading?'Preparando…':playing?'Reiniciar etapa':visual?'Ouvir etapa':'Ouvir Aula'}</button><button type="button" data-tp-action="pause" ${!playing&&!loading?'disabled':''}>Pausar</button><button type="button" data-tp-action="visual">${visual?'Voltar à abertura':'Explorar o exemplo'}</button></div><p class="tp-status" role="status" aria-live="polite">${E(status)}</p>${visual?`<div class="tp-stages" role="navigation" aria-label="Etapas da lição">${(l.stageNames||names).map((n,i)=>`<button type="button" data-tp-step="${i}" aria-current="${step===i?'step':'false'}">${i+1}. ${E(n)}</button>`).join('')}</div><div class="tp-chart">${T.chart(l,step)}</div><section class="tp-script"><h3>${step+1}. ${E((l.stageNames||names)[step])}</h3><p>${E(l.stages[step])}</p></section><div class="tp-controls"><button type="button" data-tp-action="prev" ${step===0?'disabled':''}>← Etapa anterior</button><button type="button" data-tp-action="next" ${step===3?'disabled':''}>Próxima etapa →</button></div>`:`<p class="tp-intro">Ouça a explicação com etapas sincronizadas ou explore o gráfico no seu ritmo. Os níveis de preço são didáticos e não representam uma operação em andamento.</p>`}</div>${mentor()}</div>${visual?quiz(l):''}<div class="tp-footer"><button type="button" data-tp-lesson="${T.lessons[Math.max(0,idx-1)].id}" ${idx===0?'disabled':''}>← Lição anterior</button><button type="button" data-tp-lesson="${T.lessons[Math.min(T.lessons.length-1,idx+1)].id}" ${idx===T.lessons.length-1?'disabled':''}>Próxima lição →</button></div>${bridgeDetails()}<p class="tp-note">${l.pdf?'Aula gerada a partir do PDF selecionado. Confira o conteúdo com o material original.':'Exemplo autoral hipotético, inspirado em conceitos clássicos. Não reproduz uma página do livro.'} ${!storageOK?'O navegador bloqueou o armazenamento: progresso somente nesta sessão.':''}</p>`;}
-function markup(){readOwner();const l=T.lessons.find(l=>l.id===selected);return `<section id="tp-root" class="tp-root ${visual&&l?'tp-is-visual':''}" aria-label="Trilha Análise Técnica na Prática">${T.voiceControls?.()||''}${T.pdfControls?.()||''}${l?lesson(l):catalog()}</section>`;}
-function paint(focus=false){const root=document.getElementById('tp-root');if(!root||!active())return;root.outerHTML=markup();const v=document.querySelector('#tp-root [data-tp-video]');if(v){v.muted=true;v.defaultMuted=true;}if(v)v.play().catch(()=>{videoFailed=true;v.remove();});dock();if(focus)document.getElementById('tp-title')?.focus({preventScroll:true});}
+function markup(){readOwner();const pdfControls=T.pdfControls?.()||'',voiceControls=T.voiceControls?.()||'';const l=T.lessons.find(l=>l.id===selected&&l.pdf);return `<section id="tp-root" class="tp-root ${visual&&l?'tp-is-visual':''}" aria-label="Aulas geradas pelo Mentor 3D">${l?lesson(l):catalog()}${voiceControls}${pdfControls}</section>`;}
+function paint(focus=false){const root=document.getElementById('tp-root');if(!root||!active())return;
+ // Conserva o elemento <video> com seus buffers ao atualizar controles,
+ // evitando repetir os downloads de vários MB a cada repaint.
+ const oldPlayer=root.querySelector('[data-tp-film-player]');
+ const keepPlayer=oldPlayer&&film&&oldPlayer.getAttribute('src')===film;
+ if(keepPlayer)oldPlayer.remove();
+ root.outerHTML=markup();
+ if(keepPlayer)document.querySelector('#tp-root [data-tp-film-player]')?.replaceWith(oldPlayer);
+ const v=document.querySelector('#tp-root [data-tp-video]');if(v){v.muted=true;v.defaultMuted=true;}if(v)v.play().catch(()=>{videoFailed=true;v.remove();});dock();if(focus)document.getElementById('tp-title')?.focus({preventScroll:true});}
 function dock(){const root=document.getElementById('tp-root'),mentor=root?.querySelector('.tp-pip');if(!root||!mentor)return;const rect=root.getBoundingClientRect();root.style.setProperty('--tp-right',Math.max(16,window.innerWidth-rect.right+16)+'px');mentor.style.visibility=window.innerWidth>=1000&&(rect.bottom<110||rect.top>window.innerHeight-80)?'hidden':'';}
 let dockFrame=0;function scheduleDock(){if(dockFrame)return;dockFrame=requestAnimationFrame(()=>{dockFrame=0;dock();});}
 window.addEventListener('scroll',scheduleDock,{passive:true});window.addEventListener('resize',scheduleDock,{passive:true});
 function releaseAudio(){if(audio){audio.onended=audio.onerror=audio.onplaying=audio.onpause=null;audio.pause();audio.removeAttribute('src');audio.load();audio=null;}if(objectURL){URL.revokeObjectURL(objectURL);objectURL='';}}
-function stop(){document.querySelector('#tp-root [data-tp-video]')?.pause();const player=document.querySelector('#tp-root [data-tp-film-player]');if(player){player.pause();player.removeAttribute('src');player.load();}film=null;run++;controller?.abort();controller=null;releaseAudio();if(utterance){utterance.onend=utterance.onerror=utterance.onstart=null;window.speechSynthesis?.cancel();utterance=null;}playing=false;loading=false;}
+function stop(){document.querySelector('#tp-root [data-tp-video]')?.pause();const player=document.querySelector('#tp-root [data-tp-film-player]');if(player){player.pause();player.removeAttribute('src');player.load();}if(film?.startsWith('blob:'))URL.revokeObjectURL(film);film=null;run++;controller?.abort();controller=null;releaseAudio();if(utterance){utterance.onend=utterance.onerror=utterance.onstart=null;window.speechSynthesis?.cancel();utterance=null;}playing=false;loading=false;}
 function mark(){const l=T.lessons.find(l=>l.id===selected);if(!l||!visual)return;const r=record(l);r.step=step;if(!r.viewed.includes(step))r.viewed.push(step);save();}
 function validEndpoint(s){try{const u=new URL(s);if(u.username||u.password||u.hash)return false;return ['http:','https:'].includes(u.protocol);}catch{return false;}}
+function vozChave(l,etapa,texto){
+ let h=2166136261;
+ for(let i=0;i<texto.length;i++){h^=texto.charCodeAt(i);h=Math.imul(h,16777619);}
+ return 'diario:mentor-voz:v706:'+currentOwner()+':'+l.id+':'+etapa+':'+(h>>>0).toString(16);
+}
+async function vozCacheLer(chave){
+ if(typeof idb!=='function')return null;
+ try{const b=await idb('kv','get',chave);return b instanceof Blob&&b.size>0?b:null;}catch{return null;}
+}
+async function vozCacheSalvar(chave,blob){
+ if(typeof idb!=='function'||blob.size>10*1024*1024)return;
+ try{await idb('kv','put',blob,chave);}catch{}
+}
 function configuredBridge(){let stored='';try{stored=localStorage.getItem('diario:ponte-video:voz-url')||'';}catch{}const candidate=window.DIARIO_PONTE_VIDEO?.vozUrl||stored;return candidate&&validEndpoint(candidate)?candidate:'';}
 function finishScene(token){if(token!==run||!active()||currentOwner()!==owner)return;playing=false;loading=false;utterance=null;releaseAudio();if(step<3){step++;mark();paint();speak();}else{status='Narração concluída. Responda ao mini-check abaixo.';paint();}}
-function browserVoice(text,token){
- if(token!==run)return;
- if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){loading=false;playing=false;status='Voz indisponível neste navegador. O roteiro e as etapas continuam disponíveis para leitura.';paint();return;}
- loading=false;const u=utterance=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=1;
- const voices=window.speechSynthesis.getVoices();u.voice=voices.find(v=>/^pt[-_]BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang))||null;
- u.onstart=()=>{if(token!==run)return;playing=true;status=bridgeFailed?'Ponte Vídeo indisponível · narrando com a voz do aparelho.':'Narrando com a voz do aparelho · pt-BR.';paint();};
- u.onend=()=>finishScene(token);
- u.onerror=()=>{if(token!==run)return;playing=false;loading=false;utterance=null;status='A narração foi interrompida. Toque em Ouvir etapa para tentar novamente.';paint();};
- // Guarda referência para Safari; a fala pertence apenas a esta trilha.
- window.speechSynthesis.speak(u);
-}
 async function speak(){
  const l=T.lessons.find(l=>l.id===selected);if(!l||!active())return;
- stop();const token=run;visual=true;loading=true;status='Preparando narração da etapa…';mark();paint();
+ stop();bridgeFailed=false;const token=run;visual=true;loading=true;status='Preparando narração da etapa…';mark();paint();
  const text=T.normalizarTextoParaVoz(`${step+1}. ${(l.stageNames||names)[step]}. ${l.roteiroVoz?.etapas?.[step]||l.stages[step]}`);
- const endpoint=configuredBridge();
- if(endpoint&&!bridgeFailed){
+ const key=vozChave(l,step,text),endpoint=configuredBridge();
+ let blob=await vozCacheLer(key);if(token!==run)return;
+ if(!blob&&endpoint){
   const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),8000);
   try{
    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:'pt-BR',lesson_id:l.id,stage:step}),signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
    if(!res.ok||!/^audio\//i.test(res.headers.get('content-type')||''))throw Error('Resposta de áudio inválida');
-   const blob=await res.blob();if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
+   blob=await res.blob();if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
    if(token!==run)return;
-   objectURL=URL.createObjectURL(blob);audio=new Audio(objectURL);audio.preload='auto';
-   audio.onplaying=()=>{if(token!==run)return;playing=true;loading=false;status='Narrando pela Ponte Vídeo.';paint();};
-   audio.onpause=()=>{if(token!==run||!playing)return;playing=false;status='Áudio pausado. Toque em Ouvir etapa para reiniciá-la.';paint();};
-   audio.onended=()=>finishScene(token);audio.onerror=()=>{if(token!==run)return;releaseAudio();bridgeFailed=true;browserVoice(text,token);};
-   await audio.play();return;
-  }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;}
+   await vozCacheSalvar(key,blob);
+  }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;blob=null;}
   finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
  }
- browserVoice(text,token);
+ if(blob&&token===run){
+  try{
+   objectURL=URL.createObjectURL(blob);audio=new Audio(objectURL);audio.preload='auto';
+   audio.onplaying=()=>{if(token!==run)return;playing=true;loading=false;status='Narrando pela Ponte Vídeo'+(endpoint?'':' · áudio salvo neste aparelho')+'.';paint();};
+   audio.onpause=()=>{if(token!==run||!playing)return;playing=false;status='Áudio pausado. Toque em Ouvir etapa para reiniciá-la.';paint();};
+   audio.onended=()=>finishScene(token);
+   audio.onerror=()=>{if(token!==run)return;releaseAudio();bridgeFailed=true;playing=false;loading=false;status='Áudio da ponte interrompido. Confira a ponte no PC e tente novamente.';paint();};
+   await audio.play();return;
+  }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;}
+ }
+ loading=false;playing=false;
+ status=endpoint?'Ponte de voz indisponível. Confira a conexão local do PC e tente novamente.':'Configure ou ligue a ponte de voz do PC para ouvir a aula. Áudios já salvos podem ser reproduzidos offline; não haverá voz robótica.';
+ paint();
 }
+function aulasTabs(){return `<div class="tp-aulas-nav" role="tablist" aria-label="Tipos de aulas"><button type="button" role="tab" data-tp-aula-sub="tradicionais" aria-selected="${aulaSubaba==='tradicionais'}" class="${aulaSubaba==='tradicionais'?'on':''}">Aulas Tradicionais</button><button type="button" role="tab" data-tp-aula-sub="mentor" aria-selected="${aulaSubaba==='mentor'}" class="${aulaSubaba==='mentor'?'on':''}">Mentor 3D</button></div>`;}
 const previous=typeof vEstudos==='function'?vEstudos:null;
-if(previous)vEstudos=function(){const html=previous.apply(this,arguments);return active()?markup()+html:html;};
+if(previous)vEstudos=function(){
+ const html=previous.apply(this,arguments);
+ if(!active())return html;
+ const nav=aulasTabs();
+ // Montagem exclusiva: a sub-aba não selecionada não fica escondida no DOM.
+ if(aulaSubaba==='mentor')return '<h1>Estudos</h1>'+nav+markup();
+ return /<h1[^>]*>Estudos<\/h1>/.test(html)?html.replace(/<h1[^>]*>Estudos<\/h1>/,s=>s+nav):nav+html;
+};
 document.addEventListener('click',e=>{
- const b=e.target.closest?.('#tp-root button');if(!b||!active())return;if(b.dataset.tpDict||b.dataset.tpPdf||b.closest('[data-tp-pdf-form]'))return;e.preventDefault();e.stopPropagation();readOwner();
+ const b=e.target.closest?.('[data-tp-aula-sub]');
+ if(!b||!active())return;
+ e.preventDefault();e.stopImmediatePropagation();
+ const next=b.dataset.tpAulaSub;
+ if(!['tradicionais','mentor'].includes(next)||next===aulaSubaba)return;
+ stop();document.dispatchEvent(new Event('au-study-pause'));aulaSubaba=next;selected=null;visual=false;status='';
+ if(typeof render==='function')render();
+},true);
+document.addEventListener('click',e=>{
+ const b=e.target.closest?.('#tp-root button');if(!b||!active())return;if(b.dataset.tpDict||b.dataset.tpPdf||b.dataset.tpBackup||b.closest('[data-tp-pdf-form]'))return;e.preventDefault();e.stopPropagation();readOwner();
+ if(b.hasAttribute('data-tp-generate')){document.dispatchEvent(new Event('au-study-pause'));gerarVideoNaPonte();return;}
  if(b.dataset.tpFilm){document.dispatchEvent(new Event('au-study-pause'));openFilm(b.dataset.tpFilm);return;}
+ if(b.hasAttribute('data-tp-film-migrate')){document.dispatchEvent(new Event('au-study-pause'));openFilm(videoFormat,true);return;}
  if(b.dataset.tpLesson){stop();selected=b.dataset.tpLesson;step=0;visual=false;status='';bridgeFailed=false;paint(true);document.getElementById('tp-root')?.scrollIntoView({block:'start'});return;}
  if(b.hasAttribute('data-tp-step')){stop();step=Number(b.dataset.tpStep);status='';mark();paint();return;}
  switch(b.dataset.tpAction){
@@ -42791,6 +44063,13 @@ document.addEventListener('click',e=>{
 
  }
 },true);
+document.addEventListener('change',e=>{const el=e.target.closest?.('#tp-root [data-tp-film-format],#tp-root [data-tp-film-file]');if(!el||!active())return;
+ if(el.matches('[data-tp-film-format]')){videoFormat=el.value;return;}
+ const f=el.files?.[0],l=T.lessons.find(l=>l.id===selected);if(!l||!f)return;
+ if(f.size>350*1024*1024||!(/\.mp4$/i.test(f.name)||f.type==='video/mp4')){status='Escolha MP4 até 350 MB.';paint();return;}
+ const format=videoFormat;status='Salvando vídeo no aparelho…';paint();
+ window.EstudosLocal?.put('mentor-video',(l.videoId||'tecnica-v1-'+l.id)+'-'+format,f,{nome:f.name,formato:format,aula:l.id}).then(()=>openFilm(format)).catch(err=>{status=err.message;paint();});
+});
 document.addEventListener('change',e=>{
  const el=e.target.closest?.('#tp-root [data-tp-question]');if(!el||!active())return;
  readOwner();const l=T.lessons.find(l=>l.id===selected);if(!l)return;
@@ -42829,6 +44108,1015 @@ T.view={markup,stop,refresh:paint,isMediaActive:()=>!!(playing||loading||film),d
 const s=document.createElement('style');s.textContent=`
 .tp-voice-dict textarea,.tp-pdf input{display:block;width:100%;font:16px/1.5 system-ui;color:#E7EBF2;background:#0A0C10;border:1px solid #384052;border-radius:4px;padding:10px;margin:6px 0 12px;min-height:44px}.tp-voice-dict textarea{resize:vertical}.tp-pdf label{display:block;flex:1 1 140px;min-width:0}.tp-pdf small{display:block;color:#B7C0CF;margin:8px 0}.tp-voice-dict summary,.tp-pdf summary{color:#D4A017}.tp-pdf form{max-width:800px}
 
-.tp-full-video{display:block;width:100%;max-height:75vh;background:#0A0C10;margin-top:12px}.tp-root{background:#11141B;color:#E7EBF2;border:1px solid #1E232E;border-radius:4px;margin:12px 0 20px;padding:16px;font:14px/1.55 system-ui,sans-serif;font-variant-numeric:tabular-nums;isolation:isolate;min-width:0}.tp-root *{box-sizing:border-box}.tp-root h2{font-size:24px;line-height:1.2;margin:10px 0}.tp-root h3{font-size:17px;margin:12px 0}.tp-root p{margin:8px 0 12px}.tp-root button{background:#181C26;color:#E7EBF2;border:1px solid #384052;border-radius:4px;min-height:44px;padding:9px 12px;font:inherit;cursor:pointer;white-space:normal;text-align:left}.tp-root button:hover{border-color:#D4A017}.tp-root button:disabled{opacity:.45;cursor:default}.tp-root button:focus-visible,.tp-root input:focus-visible,.tp-root summary:focus-visible,.tp-root a:focus-visible{outline:2px solid #D4A017;outline-offset:3px}.tp-head>span{display:block;font-size:11px;color:#D4A017;letter-spacing:.08em;margin-top:10px}.tp-head>p,.tp-ref,.tp-note,.tp-origin,.tp-bridge small{color:#B7C0CF}.tp-progress{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.tp-progress progress{width:min(300px,100%);height:8px;accent-color:#D4A017}.tp-progress b{font-size:12px}.tp-modules{margin-top:14px}.tp-root details{border-top:1px solid #1E232E;padding:10px 0}.tp-root summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;overflow-wrap:normal}.tp-root .tp-ref{font-size:12px;margin:0 0 8px}.tp-root .tp-lesson-row{display:flex;justify-content:space-between;gap:12px;width:100%;border:0;border-top:1px solid #1E232E;border-radius:0;background:transparent}.tp-lesson-row span{min-width:0}.tp-lesson-row small{white-space:nowrap;color:#AEB9CA;font-size:11px;align-self:center}.tp-class{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:20px;padding:12px 0}.tp-main{min-width:0}.tp-summary{font-size:17px}.tp-controls,.tp-footer{display:flex;flex-wrap:wrap;gap:8px}.tp-controls button:first-child{border-color:#D4A017}.tp-status{font-size:12px;color:#D4A017;min-height:20px}.tp-mentor{position:relative;width:100%;align-self:start;border:1px solid #384052;border-radius:4px;overflow:hidden;background:#0A0C10}.tp-mentor img{width:100%;height:290px;object-fit:cover;object-position:center 25%;display:block}.tp-mentor video{position:absolute;inset:0;width:100%;height:calc(100% - 28px);object-fit:cover}.tp-mentor small{display:block;height:28px;padding:4px 8px;color:#D4A017;font-size:11px}.tp-avatar-fallback{height:220px;align-content:center;text-align:center;padding:14px;background:#181C26}.tp-avatar-fallback b,.tp-avatar-fallback span{display:block}.tp-avatar-fallback b{color:#D4A017;font-size:22px}.tp-avatar-fallback span{font-size:12px;color:#B7C0CF}.tp-root [hidden]{display:none!important}.tp-visual{grid-template-columns:minmax(0,1fr) 180px}.tp-visual .tp-mentor{position:sticky;top:90px;align-self:end}.tp-visual .tp-mentor img{height:215px}.tp-speaking{border-color:#D4A017;animation:tp-gold 1.8s ease-in-out infinite}.tp-stages{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0}.tp-stages button{flex:1 1 135px;font-size:12px}.tp-stages [aria-current=step]{background:#302711;color:#FFD977;border-color:#D4A017}.tp-chart{overflow-x:auto;background:#0A0C10;max-width:100%;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E}.tp-chart svg{display:block;width:100%;min-width:620px;height:auto;font-variant-numeric:tabular-nums}.tp-script{padding-top:6px}.tp-script p{line-height:1.75;max-width:900px}.tp-check{border-top:1px solid #1E232E;margin-top:14px;padding-top:12px}.tp-check>p{color:#B7C0CF}.tp-check fieldset{margin:14px 0;padding:12px 0;border:0;border-bottom:1px solid #1E232E;min-width:0}.tp-check legend{font-weight:600;padding:0}.tp-check label{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px;cursor:pointer}.tp-check input{accent-color:#D4A017;min-width:18px;width:18px;height:18px;flex-shrink:0}.tp-check label.tp-correct{background:#103B30;color:#91EACD}.tp-check label.tp-wrong{background:#412126;color:#FFB5B5}.tp-feedback{min-height:22px;font-size:13px;color:#C4CEDC}.tp-result{color:#D4A017}.tp-footer{justify-content:space-between;border-top:1px solid #1E232E;padding-top:14px;margin:14px 0}.tp-bridge label{display:block}.tp-bridge input{display:block;width:100%;max-width:600px;background:#0A0C10;color:#E7EBF2;border:1px solid #384052;min-height:44px;font-size:16px;padding:8px;margin:6px 0}.tp-bridge small{display:block;margin-top:8px}.tp-origin a{color:#FFD977}.tp-note{font-size:12px}.tp-intro{max-width:650px}@keyframes tp-gold{50%{border-color:#FFE1A0}}@media(min-width:1000px){.tp-root.tp-is-visual{padding-right:216px}.tp-is-visual .tp-class{grid-template-columns:minmax(0,1fr)}.tp-root.tp-is-visual .tp-mentor{position:fixed;top:auto;right:var(--tp-right,20px);bottom:calc(86px + env(safe-area-inset-bottom,0px));width:170px;z-index:45}}@media(max-width:700px){.tp-root{padding:12px}.tp-root h2{font-size:21px}.tp-class{grid-template-columns:minmax(0,1fr);gap:12px}.tp-mentor{width:180px;justify-self:end}.tp-mentor img{height:200px}.tp-visual .tp-mentor{position:relative;top:auto;align-self:auto;width:128px;justify-self:end;margin-bottom:env(safe-area-inset-bottom,0px)}.tp-visual .tp-mentor img{height:145px}.tp-visual .tp-mentor small{font-size:10px}.tp-root .tp-lesson-row{flex-wrap:wrap;gap:3px}.tp-lesson-row small{white-space:normal}.tp-head>span{letter-spacing:.03em}.tp-footer button{flex:1 1 130px}.tp-chart{overscroll-behavior-x:contain;touch-action:pan-x pan-y}.tp-controls button{flex:1 1 110px}}@media(prefers-reduced-motion:reduce){.tp-speaking{animation:none}}
+.tp-aulas-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 16px;max-width:800px;border-bottom:1px solid #1E232E;padding-bottom:10px}.tp-aulas-nav button{min-width:0;min-height:44px;padding:9px 10px;border-radius:4px;border:1px solid #1E232E;background:#11141B;color:#B7C0CF;font:600 14px/1.3 system-ui;cursor:pointer}.tp-aulas-nav button.on{color:#D4A017;background:#181C26;border-color:#D4A017}.tp-aulas-nav button:focus-visible{outline:2px solid #D4A017;outline-offset:2px}.tp-empty{margin:14px 0;padding:24px 12px;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E;background:#0A0C10;text-align:center}.tp-empty strong{font-size:16px;color:#E7EBF2}.tp-empty p{color:#B7C0CF;max-width:540px;margin:8px auto 0}.tp-full-video{display:block;width:100%;max-height:75vh;background:#0A0C10;margin-top:12px}.tp-root{background:#11141B;color:#E7EBF2;border:1px solid #1E232E;border-radius:4px;margin:12px 0 20px;padding:16px;font:14px/1.55 system-ui,sans-serif;font-variant-numeric:tabular-nums;isolation:isolate;min-width:0}.tp-root *{box-sizing:border-box}.tp-root h2{font-size:24px;line-height:1.2;margin:10px 0}.tp-root h3{font-size:17px;margin:12px 0}.tp-root p{margin:8px 0 12px}.tp-root button{background:#181C26;color:#E7EBF2;border:1px solid #384052;border-radius:4px;min-height:44px;padding:9px 12px;font:inherit;cursor:pointer;white-space:normal;text-align:left}.tp-root button:hover{border-color:#D4A017}.tp-root button:disabled{opacity:.45;cursor:default}.tp-root button:focus-visible,.tp-root input:focus-visible,.tp-root summary:focus-visible,.tp-root a:focus-visible{outline:2px solid #D4A017;outline-offset:3px}.tp-head>span{display:block;font-size:11px;color:#D4A017;letter-spacing:.08em;margin-top:10px}.tp-head>p,.tp-ref,.tp-note,.tp-origin,.tp-bridge small{color:#B7C0CF}.tp-progress{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.tp-progress progress{width:min(300px,100%);height:8px;accent-color:#D4A017}.tp-progress b{font-size:12px}.tp-modules{margin-top:14px}.tp-root details{border-top:1px solid #1E232E;padding:10px 0}.tp-root summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;overflow-wrap:normal}.tp-root .tp-ref{font-size:12px;margin:0 0 8px}.tp-root .tp-lesson-row{display:flex;justify-content:space-between;gap:12px;width:100%;border:0;border-top:1px solid #1E232E;border-radius:0;background:transparent}.tp-lesson-row span{min-width:0}.tp-lesson-row small{white-space:nowrap;color:#AEB9CA;font-size:11px;align-self:center}.tp-class{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:20px;padding:12px 0}.tp-main{min-width:0}.tp-summary{font-size:17px}.tp-controls,.tp-footer{display:flex;flex-wrap:wrap;gap:8px}.tp-controls button:first-child{border-color:#D4A017}.tp-status{font-size:12px;color:#D4A017;min-height:20px}.tp-mentor{position:relative;width:100%;align-self:start;border:1px solid #384052;border-radius:4px;overflow:hidden;background:#0A0C10}.tp-mentor img{width:100%;height:290px;object-fit:cover;object-position:center 25%;display:block}.tp-mentor video{position:absolute;inset:0;width:100%;height:calc(100% - 28px);object-fit:cover}.tp-mentor small{display:block;height:28px;padding:4px 8px;color:#D4A017;font-size:11px}.tp-avatar-fallback{height:220px;align-content:center;text-align:center;padding:14px;background:#181C26}.tp-avatar-fallback b,.tp-avatar-fallback span{display:block}.tp-avatar-fallback b{color:#D4A017;font-size:22px}.tp-avatar-fallback span{font-size:12px;color:#B7C0CF}.tp-root [hidden]{display:none!important}.tp-visual{grid-template-columns:minmax(0,1fr) 180px}.tp-visual .tp-mentor{position:sticky;top:90px;align-self:end}.tp-visual .tp-mentor img{height:215px}.tp-speaking{border-color:#D4A017;animation:tp-gold 1.8s ease-in-out infinite}.tp-stages{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0}.tp-stages button{flex:1 1 135px;font-size:12px}.tp-stages [aria-current=step]{background:#302711;color:#FFD977;border-color:#D4A017}.tp-chart{overflow-x:auto;background:#0A0C10;max-width:100%;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E}.tp-chart svg{display:block;width:100%;min-width:620px;height:auto;font-variant-numeric:tabular-nums}.tp-script{padding-top:6px}.tp-script p{line-height:1.75;max-width:900px}.tp-check{border-top:1px solid #1E232E;margin-top:14px;padding-top:12px}.tp-check>p{color:#B7C0CF}.tp-check fieldset{margin:14px 0;padding:12px 0;border:0;border-bottom:1px solid #1E232E;min-width:0}.tp-check legend{font-weight:600;padding:0}.tp-check label{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px;cursor:pointer}.tp-check input{accent-color:#D4A017;min-width:18px;width:18px;height:18px;flex-shrink:0}.tp-check label.tp-correct{background:#103B30;color:#91EACD}.tp-check label.tp-wrong{background:#412126;color:#FFB5B5}.tp-feedback{min-height:22px;font-size:13px;color:#C4CEDC}.tp-result{color:#D4A017}.tp-footer{justify-content:space-between;border-top:1px solid #1E232E;padding-top:14px;margin:14px 0}.tp-bridge label{display:block}.tp-bridge input{display:block;width:100%;max-width:600px;background:#0A0C10;color:#E7EBF2;border:1px solid #384052;min-height:44px;font-size:16px;padding:8px;margin:6px 0}.tp-bridge small{display:block;margin-top:8px}.tp-origin a{color:#FFD977}.tp-note{font-size:12px}.tp-intro{max-width:650px}@keyframes tp-gold{50%{border-color:#FFE1A0}}@media(min-width:1000px){.tp-root.tp-is-visual{padding-right:216px}.tp-is-visual .tp-class{grid-template-columns:minmax(0,1fr)}.tp-root.tp-is-visual .tp-mentor{position:fixed;top:auto;right:var(--tp-right,20px);bottom:calc(86px + env(safe-area-inset-bottom,0px));width:170px;z-index:45}}@media(max-width:700px){.tp-root{padding:12px}.tp-root h2{font-size:21px}.tp-class{grid-template-columns:minmax(0,1fr);gap:12px}.tp-mentor{width:180px;justify-self:end}.tp-mentor img{height:200px}.tp-visual .tp-mentor{position:relative;top:auto;align-self:auto;width:128px;justify-self:end;margin-bottom:env(safe-area-inset-bottom,0px)}.tp-visual .tp-mentor img{height:145px}.tp-visual .tp-mentor small{font-size:10px}.tp-root .tp-lesson-row{flex-wrap:wrap;gap:3px}.tp-lesson-row small{white-space:normal}.tp-head>span{letter-spacing:.03em}.tp-footer button{flex:1 1 130px}.tp-chart{overscroll-behavior-x:contain;touch-action:pan-x pan-y}.tp-controls button{flex:1 1 110px}}@media(prefers-reduced-motion:reduce){.tp-speaking{animation:none}}
 `;document.head.appendChild(s);
+})();
+/* v679 — Termômetro de Abertura Teórica apenas em Início e Meu dia (sem novas requisições).
+ * Os proxies são percentuais do dia, não sinais nem preço oficial de leilão. */
+(function (w, d) {
+  "use strict";
+  if (w.TermometroAbertura670) return;
+
+  const HORA = 3600000;
+  const MAX_FONTE = 96 * HORA;
+  const num = v => {
+    if (v === null || v === undefined || v === "" || typeof v === "boolean") return null;
+    if (typeof v === "string") {
+      const s = v.trim().replace(/%$/, "").trim();
+      if (!/^[+-]?\d+(?:[.,]\d+)?$/.test(s)) return null;
+      v = Number(s.replace(",", "."));
+    }
+    return typeof v === "number" && Number.isFinite(v) ? v : null;
+  };
+  const pct = v => {
+    if (!v || typeof v !== "object") return null;
+    const x = [v.d1, v.chp, v.variacaoPercentual, v.variacao_pct, v.var].map(num).find(n => n !== null);
+    return x !== undefined && x !== null && Math.abs(x) <= 35 ? x : null;
+  };
+  const stamp = v => {
+    if (v === null || v === undefined || v === "") return null;
+    if (typeof v === "number") return v < 1e11 ? v * 1000 : v;
+    const t = Date.parse(String(v));
+    return Number.isFinite(t) ? t : null;
+  };
+  const valido = (registro, coleta, tempo = Date.now()) => {
+    const em = stamp(registro?.em || registro?.updated_at || registro?.horarioPreco || registro?.ts);
+    const ts = stamp(coleta);
+    // A fonte precisa ter sido carregada nesta sessão; o valor não pode ser muito antigo.
+    if (em !== null && (tempo < em || tempo - em >= MAX_FONTE)) return false;
+    return (ts !== null && ts > 0 && tempo >= ts && tempo - ts < 12 * HORA) ||
+      (em !== null && tempo >= em && tempo - em < MAX_FONTE);
+  };
+  const chave = x => String(x || "").trim().toUpperCase().replace(/^(BMFBOVESPA|TVC|FX_IDC|OANDA|AMEX|NYSE|NASDAQ|CME_MINI|CME|NYMEX|ICE|FOREXCOM):/, "").replace(/_/g, "/");
+  const aliases = {
+    ewz: new Set(["EWZ"]),
+    spf: new Set(["ES=F", "ES1!", "ES", "SP500F", "SPFUT", "SP500FUT", "S&P500FUT", "S&P500FUTURO", "ESZ26", "ESH27"]),
+    wti: new Set(["WTI", "USOIL", "CL=F", "CL1!", "CL", "OILWTI"]),
+    dxy: new Set(["DXY", "DX-Y.NYB", "DX=F", "DOLLARINDEX", "USDINDEX"]),
+    zar: new Set(["USDZAR", "USD/ZAR"]),
+    mxn: new Set(["USDMXN", "USD/MXN"]),
+    win: new Set(["WIN", "WINFUT", "WIN1!"]),
+    wdo: new Set(["WDO", "WDOFUT", "WDO1!"])
+  };
+  function combina(tipo, item) {
+    const nomes = [item?.k, item?.c, item?.s, item?.ticker, item?.simboloFonte, item?.n];
+    return nomes.some(raw => {
+      const s = chave(raw);
+      if (aliases[tipo].has(s)) return true;
+      if (tipo === "spf") return /^ES[FGHJKMNQUVXZ]\d{2,4}$/.test(s) || /^S&P\s*500\s*(?:FUT|FUTURO)/.test(s);
+      if (tipo === "win" || tipo === "wdo") return new RegExp("^" + tipo.toUpperCase() + "[FGHJKMNQUVXZ]\\d{2,4}$").test(s);
+      return false;
+    });
+  }
+  function lista() {
+    const a = [];
+    try {
+      if (typeof FH !== "undefined" && FH?.q) {
+        for (const [k, q] of Object.entries(FH.q)) {
+          const ant = num(FH.pc?.[k]);
+          const atual = num(q?.px);
+          if (!ant || !atual || ant <= 0 || atual <= 0) continue;
+          a.push({ item: { s:k, d1: (atual / ant - 1) * 100, em:q.em }, coleta:q.em });
+        }
+      }
+    } catch {}
+    try {
+      if (typeof AD !== "undefined" && Array.isArray(AD?.data?.itens)) {
+        const ts = AD.data.ts || AD.data.em || AD.ts;
+        AD.data.itens.forEach(item => {
+          const cot = item.active || item.regular || item;
+          a.push({ item: { ...item, d1: pct(cot) ?? pct(item), em: cot?.em || item?.em }, coleta:ts });
+        });
+      }
+    } catch {}
+    try {
+      if (typeof CQ !== "undefined" && CQ?.d) {
+        for (const [grupo, conjunto] of Object.entries(CQ.d)) {
+          // Cache local restaurado usa CQ.ts[grupo]=0 e não vale como nova consulta.
+          const t = CQ.ts?.[grupo] || null;
+          for (const it of conjunto?.itens || []) a.push({item:it,coleta:t || conjunto?.em,grupo});
+        }
+      }
+    } catch {}
+    try {
+      if (typeof M606 !== "undefined" && M606?.v) {
+        const t = M606.ts || M606.v.em;
+        for (const it of M606.v.terminal || []) a.push({item:it,coleta:t,grupo:it.g});
+        for (const it of M606.v.emergentes?.itens || []) a.push({item:it,coleta:t,grupo:"em"});
+      }
+    } catch {}
+    try {
+      if (typeof MDO !== "undefined" && MDO?.v) {
+        const t = MDO.ts || MDO.v.em;
+        for (const grupo of MDO.v.mercados?.grupos || []) for (const it of grupo.itens || []) a.push({item:it,coleta:t,grupo:grupo.g});
+      }
+    } catch {}
+    return a;
+  }
+  function variacao(tipo, fontes, now) {
+    for (const f of fontes) {
+      if (!combina(tipo, f.item) || !valido(f.item, f.coleta, now)) continue;
+      const n = pct(f.item);
+      if (n !== null) return n;
+    }
+    return null;
+  }
+  const diaBrt = date => new Intl.DateTimeFormat("en-CA", {timeZone:"America/Sao_Paulo", year:"numeric",month:"2-digit",day:"2-digit"}).format(date);
+  const horaBrt = date => Number(new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",hourCycle:"h23"}).format(date));
+  function fechamento(tipo, fontes, now) {
+    // O fechamento informado pela fonte tem prioridade; senão, reconstituir só de
+    // cotação com percentual diário verificável ou de último preço pré-abertura.
+    for (const f of fontes) {
+      if (!combina(tipo, f.item) || !valido(f.item, f.coleta, now)) continue;
+      const item = f.item;
+      const base = [item.fechamentoAnterior, item.previousClose, item.prevClose, item.pc, item.ultimoFechamento].map(num).find(x=>x !== null && x > 0);
+      if (base) return base;
+    }
+    for (const f of fontes) {
+      if (!combina(tipo, f.item) || !valido(f.item, f.coleta, now)) continue;
+      const item = f.item, px = num(item.px ?? item.ult ?? item.preco);
+      if (px === null || px <= 0) continue;
+      const em = stamp(item.em || item.horarioPreco || item.updated_at);
+      // Antes das 09:00, última cotação datada de pregão anterior é a referência
+      // carregada. Sem data, não presumir que seja o fechamento de ontem.
+      if (em !== null && diaBrt(new Date(em)) < diaBrt(new Date(now))) return px;
+      if (item.fechado === true) return px;
+      const d = pct(item);
+      // Com cotação do dia e variação relativa ao fechamento anterior.
+      if (d !== null && 1 + d / 100 > 0 && (em === null || diaBrt(new Date(em)) === diaBrt(new Date(now))) && horaBrt(new Date(now)) >= 9) return px / (1 + d / 100);
+    }
+    return null;
+  }
+  function calcular(v) {
+    const ok = x => typeof x === "number" && Number.isFinite(x);
+    const winPct = ["ewz","spf","wti"].every(k => ok(v[k])) ? 0.50*v.ewz + 0.35*v.spf + 0.15*v.wti : null;
+    const wdoPct = ["dxy","zar","mxn","ewz"].every(k => ok(v[k])) ? 0.45*v.dxy + 0.35*((v.zar+v.mxn)/2) - 0.20*v.ewz : null;
+    return {
+      winPct, wdoPct,
+      winDelta: ok(winPct) && ok(v.winBase) ? v.winBase*winPct/100 : null,
+      winProjetado: ok(winPct) && ok(v.winBase) ? v.winBase*(1+winPct/100) : null,
+      wdoProjetado: ok(wdoPct) && ok(v.wdoBase) ? v.wdoBase*(1+wdoPct/100) : null
+    };
+  }
+  function capturar() {
+    const now = Date.now(), f = lista();
+    const v = {};
+    for (const nome of ["ewz","spf","wti","dxy","zar","mxn"]) v[nome] = variacao(nome,f,now);
+    v.winBase = fechamento("win",f,now);
+    v.wdoBase = fechamento("wdo",f,now);
+    return {...v,...calcular(v)};
+  }
+  const nfmt = (value, digits=2) => Number(value).toLocaleString("pt-BR",{minimumFractionDigits:digits,maximumFractionDigits:digits});
+  const taxa = v => v === null ? "—" : (v>0?"+":"") + nfmt(v,2) + "%";
+  const cls = x => x === null ? "" : x > 0 ? "positive" : x < 0 ? "negative" : "neutral";
+  function bloco(nome, sigla, value, projetado, base, detalhe, d) {
+    const incompleto = value === null || projetado === null;
+    const complemento = incompleto
+      ? '<small class="dt670-pend">Dados insuficientes: '+detalhe+'</small>'
+      : '<small>Fech. ref. '+nfmt(base, nome==="WIN"?0:2)+' → teórico <b>'+nfmt(projetado,nome==="WIN"?0:2)+'</b> '+(nome==="WIN"?"pts":"pts · futuro")+'</small>';
+    const diferenca = !incompleto && nome === "WIN" ? '<small class="dt670-pt">'+(d>0?"+":"")+nfmt(d,0)+' pontos</small>' : '';
+    return '<div class="dt670-instrument" data-dt670-ativo="'+sigla+'"><div class="dt670-val"><span><b>'+nome+'</b><small>'+sigla+'</small></span><strong class="'+cls(value)+'">'+taxa(value)+'</strong></div>'+diferenca+complemento+'</div>';
+  }
+  function html(v) {
+    const pendWin = [["EWZ","ewz"],["S&P futuro","spf"],["WTI","wti"],["fechamento WIN","winBase"]].filter(([_,k])=>v[k]===null).map(([n])=>n);
+    const pendWdo = [["DXY","dxy"],["USD/ZAR","zar"],["USD/MXN","mxn"],["EWZ","ewz"],["fechamento WDO","wdoBase"]].filter(([_,k])=>v[k]===null).map(([n])=>n);
+    return '<header class="dt670-head"><div><small>INTELIGÊNCIA DE PRÉ-MERCADO</small><h2>Termômetro de Abertura Teórica <span>WIN &amp; WDO</span></h2></div><span class="dt670-selo">Proxies globais</span></header>'+
+      '<div class="dt670-duo">'+
+      bloco("WIN","ÍNDICE · 50% EWZ + 35% S&P fut. + 15% WTI",v.winPct,v.winProjetado,v.winBase,pendWin.join(", ")||"referência pendente",v.winDelta)+
+      bloco("WDO","DÓLAR · 45% DXY + 35% EM (ZAR/MXN) − 20% EWZ",v.wdoPct,v.wdoProjetado,v.wdoBase,pendWdo.join(", ")||"referência pendente",null)+
+      '</div><p class="dt670-note">Estimativa pré-abertura baseada em proxies globais · Atualize às 09:00 com o leilão da B3. Não é preço oficial de abertura.</p>';
+  }
+  function alvo() {
+    let t;
+    try { t = typeof tab !== "undefined" ? tab : null; } catch { t = null; }
+    const app = d.getElementById("app");
+    if (!app) return null;
+    // v675: Início/Meu dia usam a página V4; a versão v670 buscava apenas
+    // .dt393-page, substituída pelo renderizador atual (v4-panel).
+    const activeRoute = d.body?.dataset?.v4route;
+    const homeV4 = app.querySelector(".v4-panel .v4-page.v4-home");
+    const dayV4 = app.querySelector(".v4-panel .v4-page.v4-day");
+    // V4 mantém a rota atual no body e desmonta os painéis ao navegar.
+    if (homeV4 && (activeRoute === "home" || t === "home")) return {root:homeV4,route:"home"};
+    if (dayV4 && (activeRoute === "dia" || t === "dia")) return {root:dayV4,route:"dia"};
+    if (t === "home") return {root:app.querySelector(".dt393-page.dt393-home"),route:t};
+    if (t === "dia") return {root:app.querySelector(".dt393-page.dt393-day"),route:t};
+    return null;
+  }
+  // v679: preserva os nós do card nos ticks; apenas o texto numérico muda.
+  // Assim o Safari não desmonta a seção nem reinicia seu layout a cada cotação.
+  function mesmaEstrutura(a,b) {
+    if(a.nodeType!==b.nodeType || a.nodeName!==b.nodeName || a.childNodes.length!==b.childNodes.length)return false;
+    for(let i=0;i<a.childNodes.length;i++)if(!mesmaEstrutura(a.childNodes[i],b.childNodes[i]))return false;
+    return true;
+  }
+  function sincronizar(a,b) {
+    if(a.nodeType===3){if(a.nodeValue!==b.nodeValue)a.nodeValue=b.nodeValue;return;}
+    if(a.nodeType!==1)return;
+    for(const attr of [...a.attributes])if(!b.hasAttribute(attr.name))a.removeAttribute(attr.name);
+    for(const attr of [...b.attributes])if(a.getAttribute(attr.name)!==attr.value)a.setAttribute(attr.name,attr.value);
+    for(let i=0;i<a.childNodes.length;i++)sincronizar(a.childNodes[i],b.childNodes[i]);
+  }
+  function atualizarCard(card,conteudo) {
+    if(card.dataset.view===conteudo)return;
+    const tmp=d.createElement("template");
+    tmp.innerHTML=conteudo;
+    const antigos=[...card.childNodes],novos=[...tmp.content.childNodes];
+    if(antigos.length===novos.length && antigos.every((n,i)=>mesmaEstrutura(n,novos[i])))
+      antigos.forEach((n,i)=>sincronizar(n,novos[i]));
+    else card.replaceChildren(tmp.content);
+    card.dataset.view=conteudo;
+  }
+  function montar() {
+    const dest = alvo();
+    if (!dest?.root) return;
+    let card = dest.root.querySelector(":scope > .dt670-opening");
+    if (!card) {
+      card = d.createElement("section");
+      card.className = "dt670-opening";
+      card.setAttribute("aria-label","Termômetro de Abertura Teórica WIN e WDO");
+    }
+    if (dest.route === "home") {
+      const resumo = dest.root.querySelector(":scope > .v4-summary, :scope > .dt393-summary");
+      if (resumo) { if (card.previousElementSibling !== resumo) resumo.after(card); }
+      else if (dest.root.firstElementChild !== card) dest.root.prepend(card);
+    } else if (dest.root.firstElementChild !== card) dest.root.prepend(card);
+    const conteudo = html(capturar());
+    atualizarCard(card,conteudo);
+  }
+  w.TermometroAbertura670 = Object.freeze({calcular,capturar,montar});
+  w.TraderUI?.onRender?.("termometro-abertura-teorica-v670",()=>w.setTimeout(montar,0));
+  // A tela V4 troca seu conteúdo depois do render principal. Reposicionar
+  // após o evento de render final preserva o termômetro nas duas rotas.
+  d.addEventListener("diario:render",()=>w.requestAnimationFrame(()=>w.requestAnimationFrame(montar)));
+  // Também observa a troca do painel V4. Filtra apenas novos nós de página,
+  // evitando fazer trabalho extra quando preços ou campos recebem atualizações.
+  function observarMontagem() {
+    const app = d.getElementById("app");
+    if (!app || !w.MutationObserver) return;
+    const observador = new w.MutationObserver(registros => {
+      for (const registro of registros) for (const n of registro.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.matches?.(".v4-page.v4-home,.v4-page.v4-day") ||
+            n.querySelector?.(".v4-page.v4-home,.v4-page.v4-day")) {
+          montar();
+          return;
+        }
+      }
+    });
+    observador.observe(app,{childList:true,subtree:true});
+  }
+  if(d.readyState==="loading")d.addEventListener("DOMContentLoaded",observarMontagem,{once:true});
+  else observarMontagem();
+  w.addEventListener("focus",montar);
+  w.setInterval(()=>{if(!d.hidden)montar();},5000);
+  if (d.readyState === "loading") d.addEventListener("DOMContentLoaded",()=>w.setTimeout(montar,0),{once:true});
+  else w.setTimeout(montar,0);
+})(window, document);
+/* v694 — Gestão & Rebalanceamento na aba Carteira, exclusivamente front-end. */
+;(function(){
+'use strict';
+const W=window,D=document;
+if(typeof vCarteiras!=='function'||typeof W.pfCalc!=='function')return;
+const CLASS=[
+ ['br','Ações Brasil'],['fii','FIIs'],['rf','Renda Fixa / Tesouro'],
+ ['ext','Exterior / ETFs'],['crypto','Cripto'],['other','Outros / não classificados']
+];
+const state={open:false,mode:'class',contribution:1000,monthly:500,realRate:5,years:20,goal:1000,target:{class:{},asset:{}},identity:'',message:''};
+const asNum=(x,fallback=null)=>x!==''&&x!==null&&x!==undefined&&Number.isFinite(+x)?+x:fallback;
+const sum=a=>a.reduce((acc,x)=>acc+x,0);
+const money=n=>Number.isFinite(n)?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n):'—';
+const num=(n,d=1)=>Number.isFinite(n)?n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
+const percent=n=>Number.isFinite(n)?num(n,1)+'%':'—';
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const portfolio=()=>{try{return W.pfCalc();}catch{return {pos:[],v:0,fx:0};}};
+const owned=()=>{try{return (S.cart||{});}catch{return {};}};
+const storageId=()=>{
+ let uid='local';
+ try{uid=String(SESS?.uid||S.uid||'local').replace(/[^a-z0-9_-]/ig,'').slice(0,80)||'local';}catch{}
+ return 'diario-gestao-rebalanceamento-v694:'+uid;
+};
+function restore(){
+ const id=storageId();
+ if(state.identity===id)return;
+ state.identity=id;
+ state.target={class:{},asset:{}};
+ state.contribution=1000;state.goal=1000;state.monthly=500;state.realRate=5;state.years=20;state.mode='class';
+ try{
+  const v=JSON.parse(localStorage.getItem(id)||'null');
+  if(v&&typeof v==='object'){
+   if(v.target&&typeof v.target==='object'){
+    for(const type of ['class','asset']){
+     const input=v.target[type]||{};
+     state.target[type]={};
+     Object.entries(input).slice(0,500).forEach(([key,value])=>{
+      const n=asNum(value);
+      if(key.length<=100&&n!==null&&n>=0&&n<=100)state.target[type][key]=n;
+     });
+   }}
+   for(const key of ['contribution','goal','monthly','realRate','years']){
+    const n=asNum(v[key]);
+    if(n!==null&&n>=0&&n<=100000000&&key!=='realRate'||key==='realRate'&&n!==null&&n>=-20&&n<=30)
+     state[key]=n;
+   }
+   if(['class','asset'].includes(v.mode))state.mode=v.mode;
+  }
+ }catch{}
+}
+function persist(){
+ try{localStorage.setItem(state.identity,JSON.stringify({
+  target:state.target,mode:state.mode,contribution:state.contribution,goal:state.goal,
+  monthly:state.monthly,realRate:state.realRate,years:state.years
+ }));state.message='';}
+ catch{state.message='Não foi possível salvar neste navegador.';}
+}
+const foreignETF=tk=>/^(IVVB11|SPXI11|NASD11|WRLD11|XINA11|EURP11|ACWI11|BIVB39|BOVA39|USTK11)$/i.test(tk);
+function groupOf(p){
+ if(p.cl==='cripto')return 'crypto';
+ if(p.cl==='fii')return 'fii';
+ if(p.cl==='tesouro'||p.cl==='rf')return 'rf';
+ if(p.mk==='US'||['etf','etf_ext','bdr','acao_ext'].includes(p.cl)||foreignETF(p.tk))return 'ext';
+ if(p.cl==='acao')return 'br';
+ return 'other';
+}
+function holdings(snapshot){
+ return (snapshot.pos||[]).filter(p=>Number.isFinite(+p.v)&&+p.v>=0&&+p.q>0)
+  .map(p=>({...p,group:groupOf(p),key:String(p.mk||'BR')+':'+String(p.tk||''),v:+p.v,
+    custo:Number.isFinite(+p.custo)?+p.custo:0,setor:String(p.setor||'Sem setor').trim()||'Sem setor'}));
+}
+function groups(snapshot,mode){
+ const pos=holdings(snapshot),total=Math.max(0,+snapshot.v||0);
+ if(mode==='asset')return pos.map(p=>({key:p.key,name:p.tk+' · '+p.mk,v:p.v,weight:total?p.v/total*100:0,position:p}));
+ return CLASS.map(([key,name])=>({
+  key,name,v:sum(pos.filter(p=>p.group===key).map(p=>p.v)),
+  weight:total?sum(pos.filter(p=>p.group===key).map(p=>p.v))/total*100:0,
+  count:pos.filter(p=>p.group===key).length
+ }));
+}
+function initializedTargets(snapshot,mode){
+ const arr=groups(snapshot,mode),existing=state.target[mode];
+ if(!Object.keys(existing).length&&arr.length){
+  if((+snapshot.v||0)>0){
+   arr.forEach(o=>existing[o.key]=+o.weight.toFixed(5));
+   // Ajuste decimal no último item para fechar 100% sem criar meta inventada.
+   existing[arr.at(-1).key]=Math.max(0,100-sum(arr.slice(0,-1).map(o=>existing[o.key])));
+  }else if(mode==='class'){
+   CLASS.forEach(([key])=>existing[key]=key==='other'?0:20);
+  }
+ }
+ return arr;
+}
+function allocation(groups,target,wealth,aporte){
+ const contribution=Math.round(Math.max(0,aporte)*100)/100;
+ const required=groups.map(p=>Math.max(0,(target[p.key]||0)/100*(wealth+contribution)-p.v));
+ const sumNeed=sum(required);
+ if(contribution<=0||!sumNeed)return {rows:groups.map((g,i)=>({...g,buy:0,newWeight:wealth?g.v/wealth*100:0})),unused:contribution};
+ // Proporcional aos déficits, sem venda, com arredondamento determinístico em centavos.
+ const ideal=required.map(x=>x/sumNeed*contribution*100),cents=ideal.map(x=>Math.floor(x+1e-9));
+ let remaining=Math.round(contribution*100)-sum(cents);
+ const order=ideal.map((x,i)=>({i,remainder:x-cents[i]})).sort((a,b)=>b.remainder-a.remainder);
+ for(let i=0;i<remaining&&i<order.length;i++)cents[order[i].i]++;
+ const buys=cents.map(x=>x/100);
+ return {rows:groups.map((g,i)=>({...g,buy:buys[i],newWeight:(wealth+contribution)>0?(g.v+buys[i])/(wealth+contribution)*100:0})),unused:Math.max(0,contribution-sum(buys))};
+}
+function rebalance(snapshot){
+ const arr=initializedTargets(snapshot,state.mode),targets=state.target[state.mode],total=sum(arr.map(p=>targets[p.key]??0));
+ const amount=asNum(state.contribution);
+ const valid=amount!==null&&amount>=0&&amount<=100000000&&arr.length&&Math.abs(total-100)<=0.06;
+ return {arr,targets,total,amount,valid,simulation:valid?allocation(arr,targets,+snapshot.v||0,amount):null};
+}
+function yieldMetrics(snapshot){
+ const pos=holdings(snapshot),meta=owned().meta||{};
+ let annual=0,coveredMarket=0,coveredCost=0,n=0;
+ const items=pos.map(p=>{
+  const raw=asNum(meta[p.tk]?.fs?.dy),valid=raw!==null&&raw>=0&&raw<=100&&!['cripto','rf','tesouro'].includes(p.cl);
+  const rate=valid?raw:null,ann=rate!==null?p.v*rate/100:null;
+  if(valid){annual+=ann;coveredMarket+=p.v;coveredCost+=Math.max(0,p.custo);n++;}
+  return {...p,dy:rate,annual:ann};
+ });
+ return {items,n,annual:n?annual:null,monthly:n?annual/12:null,
+  dy:coveredMarket>0?annual/coveredMarket*100:null,
+  yoc:coveredCost>0?annual/coveredCost*100:null,
+  coverage:snapshot.v>0?coveredMarket/snapshot.v*100:0,
+  sampleValue:coveredMarket,missing:items.filter(p=>p.dy===null).length};
+}
+function concentration(snapshot){
+ const pos=holdings(snapshot),total=+snapshot.v||0;
+ const sectors=new Map();
+ pos.forEach(p=>sectors.set(p.setor,(sectors.get(p.setor)||0)+p.v));
+ const topAssets=pos.filter(p=>total&&p.v/total>.20).sort((a,b)=>b.v-a.v);
+ const topSectors=[...sectors.entries()].filter(([s,v])=>!/^(?:sem setor|etfs?|fundos imobiliários|renda fixa|cripto|outros)$/i.test(s)&&total&&v/total>.35).sort((a,b)=>b[1]-a[1]);
+ const foreign=pos.filter(p=>p.group==='ext').reduce((s,p)=>s+p.v,0);
+ const usd=pos.filter(p=>p.mk==='US').reduce((s,p)=>s+p.v,0);
+ const crypto=pos.filter(p=>p.cl==='cripto').reduce((s,p)=>s+p.v,0);
+ const unknown=pos.filter(p=>/^sem setor$/i.test(p.setor)).reduce((s,p)=>s+p.v,0);
+ const missingFx=pos.some(p=>p.mk==='US')&&!(+snapshot.fx>0);
+ return {topAssets,topSectors,foreign,usd,crypto,unknown,missingFx,
+  foreignPct:total?foreign/total*100:null,usdPct:total?usd/total*100:null,
+  sectors:[...sectors.entries()].sort((a,b)=>b[1]-a[1])};
+}
+function compound(initial,monthly,annualReal,years){
+ if(![initial,monthly,annualReal,years].every(Number.isFinite)||initial<0||monthly<0||annualReal<=-100||years<1||years>60)return null;
+ const r=Math.pow(1+annualReal/100,1/12)-1,months=Math.round(years*12);
+ let wealth=initial,paid=initial;
+ const points=[{year:0,wealth,paid}];
+ for(let i=1;i<=months;i++){
+  wealth=wealth*(1+r)+monthly;paid+=monthly;
+  if(i%12===0||i===months)points.push({year:i/12,wealth,paid});
+ }
+ return {points,end:wealth,paid,withdrawal:wealth*0.04/12,realAnnual:annualReal,months};
+}
+function chart(items,field,title){
+ if(items.length<2)return '';
+ const arr=items.map(p=>p[field]),min=Math.min(0,...arr),max=Math.max(1,...arr);
+ const coords=arr.map((v,i)=>[48+550*i/(arr.length-1),155-130*(v-min)/(max-min||1)]);
+ const poly=coords.map(x=>x.map(v=>v.toFixed(1)).join(',')).join(' ');
+ return '<svg role="img" aria-label="'+esc(title)+'" viewBox="0 0 620 189" class="rb694-svg"><path d="M48 22V155H598" fill="none" stroke="#566172"/>'+
+ '<text x="5" y="28" fill="#9BA6B5" font-size="11">'+esc(num(max,0))+'</text><text x="5" y="155" fill="#9BA6B5" font-size="11">'+esc(num(min,0))+'</text>'+
+ '<polyline points="'+poly+'" fill="none" stroke="#D4A017" stroke-width="2.3"/>'+
+ '<text x="48" y="180" fill="#9BA6B5" font-size="11">0</text><text x="573" y="180" fill="#9BA6B5" font-size="11">'+esc(items.at(-1).year) +' anos</text></svg>';
+}
+function metric(label,value,foot=''){return '<div class="rb694-metric"><small>'+esc(label)+'</small><b>'+value+'</b>'+(foot?'<span>'+esc(foot)+'</span>':'')+'</div>';}
+function field(key,label,value,step,min,max){
+ return '<label>'+esc(label)+'<input data-rb694-field="'+esc(key)+'" type="number" inputmode="decimal" step="'+step+'" min="'+min+'" max="'+max+'" value="'+esc(value)+'"></label>';
+}
+function table(headers,rows){
+ return '<div class="rb694-scroll"><table class="rb694-table"><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+
+ rows.join('')+'</tbody></table></div>';
+}
+function sectionOne(p){
+ const r=rebalance(p),target=r.targets;
+ const options=[['class','Por classe'],['asset','Por ativo']].map(([k,name])=>'<option value="'+k+'"'+(state.mode===k?' selected':'')+'>'+name+'</option>').join('');
+ const form='<div class="rb694-controls"><label>Simulação de metas<select data-rb694-mode>'+options+'</select></label>'+
+ field('contribution','Novo aporte (R$)',state.contribution,0.01,0,100000000)+'</div>';
+ const tr=r.arr.map(row=>'<tr><th>'+esc(row.name)+'</th><td>'+percent(row.weight)+'</td><td><input class="rb694-target" data-rb694-target="'+esc(row.key)+'" type="number" inputmode="decimal" step="0.1" min="0" max="100" value="'+esc(num(target[row.key]??0,2).replace(/\./g,'').replace(',','.'))+'"></td>'+
+ '<td>'+(r.simulation?money(r.simulation.rows.find(x=>x.key===row.key)?.buy):'—')+'</td></tr>');
+ const byAsset=state.mode==='class'&&r.simulation?.rows.filter(x=>x.buy>0&&!(x.count>0)).map(x=>x.name).join(', ');
+ return '<section class="rb694-section"><h3>01 · Novo aporte e rebalanceamento</h3>'+
+ form+table(['Classe / ativo','Peso atual','Meta %','Comprar R$'],tr)+
+ '<p class="rb694-note">Metas: <b>'+percent(r.total)+'</b> · valor atual '+money(p.v||0)+'. Metas devem somar 100% para simular.</p>'+
+ (!r.valid?'<p class="rb694-notice">Ajuste as metas para 100% e informe um aporte válido.</p>':
+ '<div class="rb694-stats">'+metric('Aporte distribuído',money(sum(r.simulation.rows.map(x=>x.buy))))+
+ metric('Patrimônio após aporte',money((+p.v||0)+r.amount))+
+ metric('Venda simulada',money(0),'Somente compras')+'</div>'+
+ (byAsset?'<p class="rb694-notice">Aporte destinado a classe sem posição: '+esc(byAsset)+'. Escolha o ativo antes de investir; esta simulação não executa ordens.</p>':''))+
+ '<p class="rb694-note">Aloca o aporte proporcionalmente aos déficits frente às metas, em centavos, sem vender posições. Não inclui corretagem, spread, IR nem arredondamento por lotes. Não representa recomendação.</p></section>';
+}
+function sectionTwo(p){
+ const y=yieldMetrics(p),goal=state.goal,progress=goal>0&&y.monthly!==null?Math.min(100,y.monthly/goal*100):0;
+ const lines=y.items.filter(x=>x.dy!==null).sort((a,b)=>b.annual-a.annual).slice(0,8).map(a=>
+ '<tr><th>'+esc(a.tk)+'</th><td>'+percent(a.dy)+'</td><td>'+money(a.annual)+'</td></tr>');
+ return '<section class="rb694-section"><h3>02 · Renda passiva e Yield on Cost</h3>'+
+ '<div class="rb694-stats">'+metric('DY médio ponderado',percent(y.dy),'apenas ativos com DY informado')+
+ metric('Yield on Cost',percent(y.yoc),'provento estimado / custo de compra')+
+ metric('Renda mensal estimada',money(y.monthly))+
+ metric('Renda anual estimada',money(y.annual))+'</div>'+
+ '<div class="rb694-controls">'+field('goal','Meta inicial mensal (R$)',goal,.01,1,100000000)+'</div>'+
+ '<div class="rb694-progress"><div class="rb694-progress-title"><span>Rumo à meta mensal</span><strong>'+percent(goal>0&&y.monthly!==null?y.monthly/goal*100:null)+'</strong></div>'+
+ '<div class="rb694-track"><i style="width:'+progress.toFixed(2)+'%;background:'+(progress>=100?'#10B981':'#D4A017')+'"></i></div></div>'+
+ (lines.length?table(['Ativo','DY anual','Proventos / ano'],lines):'<p class="rb694-notice">Faltam DYs válidos nos fundamentos já carregados. Não foi inventada uma estimativa de dividendos.</p>')+
+ '<p class="rb694-note">Cobertura: '+percent(y.coverage)+' do patrimônio, '+y.n+' ativos com DY disponível; '+y.missing+' sem taxa válida. Previsão anual = valor de mercado × DY divulgado, mensal = anual ÷ 12. É uma média ilustrativa, não calendário de pagamento; FIIs e ações podem mudar distribuições e datas.</p></section>';
+}
+function sectionThree(p){
+ const r=concentration(p);
+ const alert=r.topAssets.length||r.topSectors.length;
+ const lines=[...r.topAssets.map(x=>'<tr><th>Ativo · '+esc(x.tk)+'</th><td>'+percent(p.v>0?x.v/p.v*100:null)+'</td><td>Limite 20%</td></tr>'),
+ ...r.topSectors.map(([sector,v])=>'<tr><th>Setor · '+esc(sector)+'</th><td>'+percent(p.v>0?v/p.v*100:null)+'</td><td>Limite 35%</td></tr>')];
+ return '<section class="rb694-section"><h3>03 · Concentração e risco setorial</h3>'+
+ '<div class="rb694-stats">'+metric('Exposição Exterior / ETFs',percent(r.foreignPct),'classificação por ativo')+
+ metric('Posições em moeda USD',percent(r.usdPct),'sem look-through de ETFs')+
+ metric('Valor fora do Brasil',money(r.foreign))+
+ metric('Setor não classificado',money(r.unknown))+'</div>'+
+ (alert?table(['Alerta','Peso atual','Referência'],lines):'<p class="rb694-note">Nenhum ativo acima de 20% ou setor identificado acima de 35% nesta carteira.</p>')+
+ (r.missingFx?'<p class="rb694-notice">Dólar não cadastrado: ativos dos EUA podem ficar sem conversão correta. Atualize o câmbio da Carteira para análise confiável.</p>':'')+
+ '<p class="rb694-note">Exterior inclui posições no mercado EUA, BDRs e ETFs classificados como internacionais. Cripto global: '+money(r.crypto)+'. A exposição cambial de fundos/ETFs brasileiros não pode ser determinada com precisão sem seus componentes; indicador aproximado, sem dupla contagem.</p></section>';
+}
+function sectionFour(p){
+ const initial=Math.max(0,+p.v||0),r=compound(initial,+state.monthly,+state.realRate,+state.years);
+ const fields='<div class="rb694-controls">'+field('monthly','Aporte mensal real (R$)',state.monthly,.01,0,10000000)+
+ field('realRate','Taxa real anual (%)',state.realRate,.1,-20,30)+field('years','Prazo (anos)',state.years,1,1,60)+'</div>';
+ return '<section class="rb694-section"><h3>04 · Independência financeira (valores reais)</h3>'+
+ metric('Patrimônio atual',money(initial),'base: posições existentes')+fields+
+ (r?'<div class="rb694-stats">'+metric('Patrimônio projetado',money(r.end),'em reais de hoje')+
+ metric('Total aportado',money(r.paid),'patrimônio inicial + aportes')+
+ metric('Renda pela regra 4%',money(r.withdrawal),'por mês, início da retirada')+'</div>'+
+ chart(r.points,'wealth','Evolução do patrimônio real em poder de compra constante')+
+ '<p class="rb694-note">Aporte constante em poder de compra, no final de cada mês; taxa real convertida para juros mensais compostos. Regra dos 4% = 4% do patrimônio projetado ao ano ÷ 12. Não é renda vitalícia garantida nem renda de dividendos; impostos, custos e variações não estão modelados.</p>':
+ '<p class="rb694-notice">Ajuste o aporte, a taxa real e o prazo para valores válidos.</p>')+'</section>';
+}
+function body(){
+ restore();
+ const p=portfolio(),pos=holdings(p);
+ return '<div class="rb694-body"><div class="rb694-overline">'+pos.length+' posição(ões) · carteira '+money(p.v||0)+' · parâmetros guardados somente neste navegador</div>'+
+ (state.message?'<p class="rb694-notice">'+esc(state.message)+'</p>':'')+
+ sectionOne(p)+sectionTwo(p)+sectionThree(p)+sectionFour(p)+'</div>';
+}
+function content(){
+ return '<details id="rebalanceamento-carteira-v694" class="rb694"'+(state.open?' open':'')+'><summary>Gestão &amp; Rebalanceamento de Carteira <small>Aporte · Proventos · Concentração · Independência</small></summary>'+
+ (state.open?body():'')+'</details>';
+}
+const old=vCarteiras;
+vCarteiras=function(){
+ const existing=old.apply(this,arguments);
+ if(typeof tab==='undefined'||tab!=='carteiras'||typeof existing!=='string')return existing;
+ restore();
+ const insert=content(),marker='<div class="pftabs"';
+ const i=existing.indexOf(marker);
+ if(i>=0)return existing.slice(0,i)+insert+existing.slice(i);
+ const j=existing.lastIndexOf('</div>');
+ return j>=0?existing.slice(0,j)+insert+existing.slice(j):existing+insert;
+};
+function refreshBody(){
+ const root=D.getElementById('rebalanceamento-carteira-v694');
+ if(root&&root.open){const oldBody=root.querySelector('.rb694-body');if(oldBody)oldBody.outerHTML=body();else root.insertAdjacentHTML('beforeend',body());}
+}
+function reconcile(el){
+ if(el?.id!=='rebalanceamento-carteira-v694'||typeof tab==='undefined'||tab!=='carteiras'||!el.isConnected)return;
+ state.open=el.open;
+ const panel=el.querySelector('.rb694-body');
+ if(el.open&&!panel)el.insertAdjacentHTML('beforeend',body());
+ if(!el.open&&panel)panel.remove();
+}
+D.addEventListener('toggle',event=>reconcile(event.target),true);
+// Captura a intenção antes de um repaint da tela que possa desmontar o <details>.
+D.addEventListener('click',event=>{
+ const summary=event.target.closest?.('#rebalanceamento-carteira-v694 summary');
+ if(!summary||typeof tab==='undefined'||tab!=='carteiras')return;
+ const root=summary.closest('#rebalanceamento-carteira-v694'),next=!root.open;
+ state.open=next;
+ queueMicrotask(()=>{
+  if(!root.isConnected)return;
+  if(root.open!==next)root.open=next;
+  reconcile(root);
+ });
+},true);
+D.addEventListener('change',event=>{
+ const el=event.target,root=el?.closest?.('#rebalanceamento-carteira-v694');
+ if(!root||typeof tab==='undefined'||tab!=='carteiras')return;
+ if(el.hasAttribute('data-rb694-mode')){
+  state.mode=el.value==='asset'?'asset':'class';persist();refreshBody();return;
+ }
+ if(el.hasAttribute('data-rb694-target')){
+  const k=el.getAttribute('data-rb694-target'),n=asNum(el.value);
+  if(k.length<=100&&n!==null&&n>=0&&n<=100){state.target[state.mode][k]=n;persist();refreshBody();}
+  return;
+ }
+ const k=el.getAttribute('data-rb694-field');
+ if(k&&['contribution','monthly','realRate','years','goal'].includes(k)){
+  const n=asNum(el.value);
+  if(n!==null&&n>= (k==='realRate'?-20:k==='years'||k==='goal'?1:0)&&n<=(k==='realRate'?30:k==='years'?60:100000000)){
+   state[k]=n;persist();refreshBody();
+  }
+ }
+},true);
+const css=[
+'#rebalanceamento-carteira-v694{display:block;background:#11141B;margin:14px 0;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E;color:#E6E9ED;font-variant-numeric:tabular-nums}',
+'#rebalanceamento-carteira-v694 summary{cursor:pointer;min-height:44px;padding:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;color:#D4A017;font-weight:700;font-size:13px}',
+'#rebalanceamento-carteira-v694 summary small{font-size:11px;color:#AAB5C2;font-weight:400}',
+'#rebalanceamento-carteira-v694 .rb694-body{padding:0 12px 14px}',
+'#rebalanceamento-carteira-v694 .rb694-overline{font-size:11px;color:#A9B6C4;margin:8px 0 12px}',
+'#rebalanceamento-carteira-v694 .rb694-section{border-top:1px solid #1E232E;margin-top:16px;padding-top:15px;min-width:0}',
+'#rebalanceamento-carteira-v694 h3{font-size:13px;color:#E9EDF1;margin:0 0 10px}',
+'#rebalanceamento-carteira-v694 .rb694-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}',
+'#rebalanceamento-carteira-v694 label{font-size:11px;color:#ABB7C5;min-width:0}',
+'#rebalanceamento-carteira-v694 input,#rebalanceamento-carteira-v694 select{display:block;min-width:0;width:100%;font-size:16px;color:#EFF2F4;background:#181C26;border:1px solid #323B48;padding:8px;border-radius:4px;min-height:44px;font-variant-numeric:tabular-nums}',
+'#rebalanceamento-carteira-v694 .rb694-target{max-width:105px;margin:0 0 0 auto;text-align:right}',
+'#rebalanceamento-carteira-v694 .rb694-scroll{overflow-x:auto;max-width:100%;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}',
+'#rebalanceamento-carteira-v694 .rb694-table{border-collapse:collapse;width:100%;min-width:520px;font-size:11px}',
+'#rebalanceamento-carteira-v694 .rb694-table th,#rebalanceamento-carteira-v694 .rb694-table td{border-bottom:1px solid #29313D;padding:7px 8px;text-align:right;white-space:nowrap}',
+'#rebalanceamento-carteira-v694 .rb694-table th:first-child{text-align:left}',
+'#rebalanceamento-carteira-v694 .rb694-table thead th{font-weight:600;color:#9FABBA}',
+'#rebalanceamento-carteira-v694 .rb694-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border-top:1px solid #252C35;margin:10px 0}',
+'#rebalanceamento-carteira-v694 .rb694-metric{padding:10px 8px;border-bottom:1px solid #252C35;display:flex;flex-direction:column;gap:5px;min-width:0}',
+'#rebalanceamento-carteira-v694 .rb694-metric small,#rebalanceamento-carteira-v694 .rb694-metric span{font-size:10px;color:#9EACBC}',
+'#rebalanceamento-carteira-v694 .rb694-metric b{font-size:16px;color:#F0F3F5;white-space:nowrap}',
+'#rebalanceamento-carteira-v694 .rb694-note{margin:10px 0;font-size:11px;color:#AAB6C3;line-height:1.6}',
+'#rebalanceamento-carteira-v694 .rb694-notice{font-size:11px;line-height:1.5;color:#D4A017;border-left:2px solid #D4A017;padding:7px 10px;background:#181C26}',
+'#rebalanceamento-carteira-v694 .rb694-progress{margin:12px 0}',
+'#rebalanceamento-carteira-v694 .rb694-progress-title{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#B9C2CF}',
+'#rebalanceamento-carteira-v694 .rb694-track{height:8px;background:#29313D;margin-top:5px;overflow:hidden;border-radius:4px}',
+'#rebalanceamento-carteira-v694 .rb694-track i{display:block;height:100%;border-radius:4px}',
+'#rebalanceamento-carteira-v694 .rb694-svg{display:block;width:100%;height:auto;max-height:200px}',
+'@media(max-width:480px){#rebalanceamento-carteira-v694 .rb694-body{padding:0 9px 12px}#rebalanceamento-carteira-v694 .rb694-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#rebalanceamento-carteira-v694 .rb694-metric b{font-size:14px}}'
+].join('\n');
+const style=D.createElement('style');style.id='rebalanceamento-carteira-style-v694';style.textContent=css;D.head.appendChild(style);
+W.CarteiraGestao694=Object.freeze({groupOf,holdings,groups,allocation,rebalance,yieldMetrics,concentration,compound,content});
+})();
+/* v697 — Engenharia reversa do Plano de Transição; mantém 5 critérios e divisão 50/30/20. */
+;(function(){
+'use strict';
+const w=window,d=document;
+if(typeof vCarreira!=='function'||typeof crMeses!=='function'||typeof crCfg!=='function')return;
+const key='carreiraEngenharia';
+const state={cdi:null,busy:false,failedAt:0};
+const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=(x,p=1)=>Number.isFinite(x)?x.toLocaleString('pt-BR',{minimumFractionDigits:p,maximumFractionDigits:p}):'—';
+const brl=x=>Number.isFinite(x)?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(x):'—';
+const pct=x=>Number.isFinite(x)?fmt(x,1)+'%':'—';
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const clamp=(n,lo,hi)=>Math.min(hi,Math.max(lo,n));
+const num=(v,def=0)=>Number.isFinite(+v)?+v:def;
+const addMonths=(base,n)=>new Date(Date.UTC(base.getUTCFullYear(),base.getUTCMonth()+n,1,12));
+const monthText=dt=>dt.toLocaleDateString('pt-BR',{month:'short',year:'numeric',timeZone:'UTC'}).replace('.','');
+const dateKey=dt=>dt.toISOString().slice(0,7);
+function cfg(){return (S.ax||{})[key]||{};}
+const defaults=()=>({months:60,prazo:'60',sustainable:7,ipca:4,include13:false,includeVacation:false,benefits:0,health:0,
+  manual:false,reserveManual:0,protocol:'',rehearsalStart:'',milestones:{}});
+const get=()=>({...defaults(),...cfg()});
+function saveCfg(patch){
+ const old=get(),next={...old,...patch};
+ if(typeof S.ax!=='object'||!S.ax)S.ax={};
+ S.ax[key]=next;
+ if(typeof save==='function')save();
+ return next;
+}
+function reserveSource(){
+ let ledger=null,portfolio=null,legacy=null;
+ try{
+  const raw=(S.fin||{}).res||[];
+  if(raw.length)ledger=Math.max(0,sum(raw.map(x=>num(x.v))));
+ }catch{}
+ try{
+  const pos=typeof w.pfCalc==='function'?w.pfCalc().pos||[]:[];
+  const candidates=pos.filter(p=>['tesouro','rf','outro'].includes(p.cl)&&
+   /SELIC|CAIXA|LIQUIDEZ|CDB[\s_-]*DI|^LFT\b|CDI\s*(?:100|110|120)/i.test(
+    [p.tk,p.nome,(S.cart?.meta||{})[p.tk]?.nome].filter(Boolean).join(' ')));
+  if(candidates.length)portfolio=Math.max(0,sum(candidates.map(p=>num(p.v))));
+ }catch{}
+ try{legacy=Number.isFinite(+crCfg().reserva)?Math.max(0,+crCfg().reserva):null;}catch{}
+ // Contas distintas podem conter o mesmo dinheiro; não somar sem conciliação.
+ if(ledger!==null)return {value:ledger,source:'Depósitos líquidos em Carteira / Reserva',verified:true,
+  separate:portfolio!==null?portfolio:null};
+ if(portfolio!==null)return {value:portfolio,source:'Posições Tesouro Selic / Caixa da Carteira',verified:true};
+ return {value:legacy||0,source:'Valor informado anteriormente (sem vínculo de custódia)',verified:false};
+}
+function effectiveReserve(c,res){
+ return c.manual?Math.max(0,num(c.reserveManual)):res.value;
+}
+function salarySplits(){
+ const raw=(S.ax||{}).sal||{};
+ return {salary:num(raw.saque,50),reinvest:clamp(num(raw.reinv,30),0,100),
+  reserve:clamp(num(raw.res,20),0,100),repasse:clamp(num(raw.rep,80),0,100)};
+}
+function latestNet(){
+ const e=crCfg(),ms=crMeses(e)||[];
+ const closed=ms.filter(x=>!x.atual);
+ const sample=closed.slice(-6);
+ const mean=sample.length?sum(sample.map(x=>num(x.liq)))/sample.length:0;
+ const table=ms;
+ let mesa=0;
+ try{
+  // Repasse de mesas: mesma base e configuração usada em "Salário do trader".
+  const by={};
+  (S.mesaTr||[]).forEach(x=>{const k=String(x.dt).slice(0,7);by[k]=(by[k]||0)+num(x.v)});
+  const split=salarySplits();
+  for(const m of sample){const payout=by[m.k]||0;mesa+=payout>0?payout*split.repasse/100:payout;}
+  mesa=sample.length?mesa/sample.length:0;
+ }catch{}
+ return {monthly:mean+mesa,monthlyTrades:mean,mesa,sample:sample.length,months:table};
+}
+function cdiCached(){
+ if(state.cdi)return state.cdi;
+ try{
+  const v=JSON.parse(localStorage.getItem('diario-transicao-cdi-sgs4389')||'null');
+  if(v&&num(v.rate,-1)>=0&&num(v.rate,100)<80&&/^\d{2}\/\d{2}\/\d{4}$/.test(v.date)){
+   state.cdi=v;return v;
+  }
+ }catch{}
+ return null;
+}
+async function fetchCDI(){
+ if(state.busy||Date.now()-state.failedAt<3600000)return;
+ const cache=cdiCached();
+ if(cache&&Date.now()-num(cache.at)<12*3600000)return;
+ state.busy=true;
+ let error='';
+ try{
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),9000);
+  let response;
+  try{response=await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.4389/dados/ultimos/1?formato=json',{signal:controller.signal,cache:'no-store'});}
+  finally{clearTimeout(timeout);}
+  if(!response.ok)throw Error('SGS '+response.status);
+  const rows=await response.json(),last=Array.isArray(rows)?rows.at(-1):null;
+  const rate=Number(String(last?.valor||'').replace(',','.')),date=String(last?.data||'');
+  if(!Number.isFinite(rate)||rate<0||rate>=80||!/^\d{2}\/\d{2}\/\d{4}$/.test(date))throw Error('resposta inválida');
+  const next={rate,date,at:Date.now(),source:'BCB SGS 4389'};
+  state.cdi=next;
+  try{localStorage.setItem('diario-transicao-cdi-sgs4389',JSON.stringify(next));}catch{}
+ }catch(e){error=String(e?.message||e);state.failedAt=Date.now();}
+ finally{
+  state.busy=false;
+  if(typeof tab!=='undefined'&&tab==='carreira'&&typeof FIN!=='undefined'&&FIN.t==='plano'&&(!error||!cache)){
+   try{render();}catch{}
+  }
+ }
+}
+function cdiAnnual(){
+ const cache=cdiCached();
+ if(cache){
+  const age=Date.now()-num(cache.at);
+  return {rate:cache.rate,source:age>72*3600000?'BCB SGS 4389 (dado antigo)':'BCB SGS 4389',date:cache.date,
+    stale:age>72*3600000};
+ }
+ const jr=typeof cdiAno==='function'?cdiAno():null;
+ return Number.isFinite(jr)&&jr>=0?{rate:jr,source:'CDI do painel Juros (cache)',date:'',stale:true}:
+  {rate:null,source:'CDI indisponível; projeção sem juros',date:'',stale:true};
+}
+function targetMonths(c){
+ const chosen=c.prazo==='custom'?num(c.months,60):num(c.prazo,60);
+ return clamp(Math.round(chosen||60),1,360);
+}
+function capitalTarget(input){
+ const {salary,cost,renda,health,benefits,extra13,extraVacation,monthlyRate,ipca,months}=input;
+ const add13=extra13?salary/12:0,addVacation=extraVacation?salary/36:0;
+ const living=Math.max(0,cost)+Math.max(0,health);
+ const base=Math.max(Math.max(0,cost),Math.max(0,renda||salary));
+ const income=base+Math.max(0,benefits)+Math.max(0,health)+(add13+addVacation);
+ const reserve=12*living,capital=monthlyRate>0?income/(monthlyRate/100):null;
+ const inflation=Math.pow(1+ipca/100,months/12);
+ return {living,income,reserve,capital,total:capital!==null?reserve+capital:null,
+  inflation,nominalReserve:reserve*inflation,nominalCapital:capital===null?null:capital*inflation,
+  nominalTotal:capital===null?null:(reserve+capital)*inflation,extra13:add13,extraVacation:addVacation};
+}
+function runProjection(params,extra=0){
+ const {reserve,bank,months,annualCDI,monthlyReinvest,monthlyReserve,monthlyCLT,goalReserve,goalBank}=params;
+ const rate=Math.pow(1+Math.max(0,annualCDI)/100,1/12)-1;
+ let R=reserve,B=bank;
+ const path=[{month:0,reserve:R,bank:B}];
+ for(let k=1;k<=months;k++){
+  R*=1+rate;
+  const saving=Math.max(0,monthlyReserve+monthlyCLT+extra);
+  const toReserve=Math.min(saving,Math.max(0,goalReserve-R));
+  R+=toReserve;
+  B+=Math.max(0,monthlyReinvest)+saving-toReserve;
+  path.push({month:k,reserve:R,bank:B});
+ }
+ return {path,reserve:R,bank:B,total:R+B,achieved:R+0.01>=goalReserve&&B+0.01>=goalBank};
+}
+function requiredExtra(params){
+ if(!(params.goalReserve>=0&&params.goalBank>=0))return null;
+ if(runProjection(params).achieved)return 0;
+ let lo=0,hi=Math.max(100,params.goalReserve+params.goalBank);
+ for(let i=0;i<44;i++){
+  const mid=(lo+hi)/2;
+  if(runProjection(params,mid).achieved)hi=mid;else lo=mid;
+ }
+ return Math.ceil(hi*100)/100;
+}
+function reverse(cfgRaw={},base={},reserveData={},net={},cdi=null,bankValue=null){
+ const c={...defaults(),...cfgRaw},months=targetMonths(c);
+ const salary=Math.max(0,num(base.renda)),cost=Math.max(0,num(base.custo));
+ const renda=Math.max(0,num(base.alvo||base.renda||base.custo));
+ const t=capitalTarget({salary,cost,renda,health:Math.max(0,num(c.health)),benefits:Math.max(0,num(c.benefits)),
+  extra13:!!c.include13,extraVacation:!!c.includeVacation,monthlyRate:num(c.sustainable,7),ipca:num(c.ipca,4),months});
+ const splits=salarySplits(),profit=Math.max(0,num(net.monthly)),clt=Math.max(0,salary-cost);
+ const account=Math.max(0,bankValue===null?num(typeof capRef==='function'?capRef():0):bankValue);
+ const startingReserve=effectiveReserve(c,reserveData);
+ const model={reserve:startingReserve,bank:account,months,annualCDI:cdi?.rate??0,
+  monthlyReserve:profit*splits.reserve/100,monthlyReinvest:profit*splits.reinvest/100,
+  monthlyCLT:clt,goalReserve:t.nominalReserve,goalBank:t.nominalCapital};
+ const valid=t.capital!==null&&t.nominalTotal>0&&cost>0;
+ const path=valid?runProjection(model):null;
+ const additional=valid?requiredExtra(model):null;
+ const current=clt+model.monthlyReserve+model.monthlyReinvest;
+ const necessary=additional===null?null:current+additional;
+ const ratio=path&&t.nominalTotal?path.total/t.nominalTotal:null;
+ const status=!valid?'Dados insuficientes':path.achieved?(ratio>=1.10?'Adiantado':'No ritmo'):'Atrasado';
+ return {months,t,model,path,additional,current,necessary,status,ratio,splits,profit,salary,cost,renda,
+  cdiKnown:cdi?.rate!==null&&cdi?.rate!==undefined};
+}
+function xmlChart(path,months,goal){
+ if(!path||!path.length)return '';
+ const width=660,height=214,left=52,right=645,top=10,bottom=183;
+ const max=Math.max(1,...path.map(x=>x.bank+x.reserve),goal||0)*1.07;
+ const x=i=>left+(right-left)*i/months,yy=n=>bottom-(bottom-top)*n/max;
+ const stroke=(field,color)=>'<polyline fill="none" stroke="'+color+'" stroke-width="2" points="'+path.map(p=>x(p.month).toFixed(1)+','+yy(p[field]).toFixed(1)).join(' ')+'"/>';
+ const total='<polyline fill="none" stroke="#D4A017" stroke-width="2.5" points="'+path.map(p=>x(p.month).toFixed(1)+','+yy(p.reserve+p.bank).toFixed(1)).join(' ')+'"/>';
+ return '<svg viewBox="0 0 '+width+' '+height+'" class="trx-plot" role="img" aria-label="Projeção mensal da Reserva, Banca e Patrimônio até o alvo"><path d="M52 10V183H645" fill="none" stroke="#374151"/>'+
+ '<path d="M52 '+yy(goal||0)+'H645" stroke="#A3AAB6" stroke-dasharray="5 5" fill="none"/>'+
+ '<text x="3" y="19" font-size="10" fill="#A7B5C4">'+safe(fmt(max/1000,0))+' mil</text>'+
+ stroke('reserve','#10B981')+stroke('bank','#769FC2')+total+
+ '<text x="52" y="206" font-size="10" fill="#A7B5C4">Hoje</text><text x="601" y="206" font-size="10" fill="#A7B5C4">'+months+' meses</text></svg>'+
+ '<div class="trx-legend"><span><i style="background:#10B981"></i>Reserva</span><span><i style="background:#769FC2"></i>Banca</span><span><i style="background:#D4A017"></i>Total</span><span><i style="background:#A3AAB6"></i>Meta</span></div>';
+}
+function benchmark(){
+ const cfg=crCfg(),months=crMeses(cfg)||[],date=loc().slice(0,10),account=Math.max(0,num(typeof capRef==='function'?capRef():0));
+ const cd=cdiAnnual(),cdRate=cd.rate;
+ const year=date.slice(0,4)+'-01',twelve=dateKey(addMonths(new Date(Date.UTC(+date.slice(0,4),+date.slice(5,7)-1,1)), -11));
+ let history=null;
+ try{history=typeof perfCalc==='function'?perfCalc():null;}catch{}
+ const ibov=(since)=>{
+  if(!history||!Array.isArray(history.D)||!Array.isArray(history.ib))return null;
+  const combined=history.D.map((v,i)=>({d:v,p:history.ib[i]})).filter(x=>Number.isFinite(+x.p)&&x.p>0&&x.d<=date);
+  if(combined.length<2)return null;
+  const prior=[...combined].reverse().find(x=>x.d<since)||combined.find(x=>x.d>=since);
+  return prior&&combined.at(-1).d>prior.d?combined.at(-1).p/prior.p-1:null;
+ };
+ const entries=[['Este ano',year],['Últimos 12 meses',twelve]].map(([label,start])=>{
+  const mo=months.filter(m=>m.k>=start&&m.k<=date.slice(0,7));
+  const net=sum(mo.map(m=>num(m.liq))),irs=sum(mo.map(m=>num(m.ir)));
+  const elapsed=mo.length||Math.max(1,Math.round((Date.parse(date+'T12:00:00Z')-Date.parse(start+'-01T12:00:00Z'))/86400000/30.4));
+  const cdi=cdRate===null?null:Math.pow(1+cdRate/100,elapsed/12)-1;
+  return {label,net,irs,tradePct:account>0?net/account:null,cdiPct:cdi,ibPct:ibov(start)};
+ });
+ const line=(label,value)=>'<span>'+safe(label)+'</span><b class="'+(value<0?'r':value>0?'g':'')+'">'+(value===null?'—':pct(value*100))+'</b>';
+ return '<h2>Seu trading × CDI × Ibovespa</h2><div class="card trx-benchmark">'+
+ entries.map(v=>'<div class="trx-bmrow"><strong>'+safe(v.label)+'</strong><div class="trx-bmgrid">'+
+ line('Trading líquido',v.tradePct)+line('CDI',v.cdiPct)+line('Ibovespa',v.ibPct)+
+ '<span>Resultado em R$</span><b class="'+(v.net<0?'r':'g')+'">'+brl(v.net)+'</b>'+
+ '<span>IR estimado incluído</span><b>'+brl(v.irs)+'</b></div></div>').join('')+
+ '<p class="sm mut">Mesmo valor líquido de <b>Resultado por mês</b>: trades fechados, taxas e IR por categoria apurados em <code>crMeses()</code>. '+
+ 'CDI '+(cd.rate===null?'indisponível':pct(cd.rate)+' a.a.')+' · '+safe(cd.source)+(cd.date?' ('+safe(cd.date)+')':'')+
+ '. Retornos comparados com o capital configurado'+(account?' ('+brl(account)+')':' (não informado)')+
+ '. Ibovespa só aparece se houver histórico oficial do índice na Carteira; sem usar WIN como substituto.</p></div>';
+}
+function yearsList(result,c){
+ const list=[];
+ const base=new Date(Date.UTC(+loc().slice(0,4),+loc().slice(5,7)-1,1,12));
+ const count=Math.ceil(result.months/12);
+ for(let i=1;i<=count;i++){
+  const m=Math.min(i*12,result.months),row=result.path?.path[m],
+    p=i/count,marks=[];
+  if(i===1)marks.push('Reserva de 6 meses');
+  if(i===2||count===1)marks.push('Reserva de 12 meses');
+  if(p>=0.33&&p<0.85)marks.push('Banca em crescimento rumo à meta');
+  if(i===Math.max(2,count-1))marks.push('Formação / CNPI (conferir requisitos)');
+  if(i===count)marks.push('Ensaio geral de 90 dias e decisão de saída');
+  const label=marks.join(' · ')||'Revisão de ritmo, risco e aportes';
+  list.push({i,month:m,label,date:monthText(addMonths(base,m)),reserve:row?.reserve,bank:row?.bank,
+   done:!!c.milestones?.[i]});
+ }
+ return list;
+}
+function rehearsal(c,net,cost){
+ if(!c.rehearsalStart)return '';
+ const date=new Date(c.rehearsalStart+'T12:00:00Z');
+ if(!Number.isFinite(+date))return '';
+ const days=clamp(Math.floor((Date.now()-date.getTime())/86400000),0,90);
+ const split=salarySplits();
+ const salary=net.monthly>0?net.monthly*split.salary/100:0;
+ return '<p class="trx-note">Ensaio iniciado: '+safe(c.rehearsalStart)+' · '+days+'/90 dias · salário médio do trader '+
+ brl(salary)+'/mês · custo de vida '+brl(cost)+'/mês · cobertura '+(cost>0?pct(salary/cost*100):'—')+
+ '. Registre gastos reais em Finanças; usar o saldo da reserva para sustentar o ensaio invalida o teste.</p>';
+}
+function view(){
+ const c=get(),base=crCfg(),reserve=reserveSource(),net=latestNet(),cd=cdiAnnual(),months=targetMonths(c);
+ const result=reverse(c,base,reserve,net,cd),t=result.t;
+ const start=new Date(Date.UTC(+loc().slice(0,4),+loc().slice(5,7)-1,1,12)),end=addMonths(start,months);
+ const sel=(a,b)=>a===b?' selected':'';
+ const input=(k,label,v,min=0,max=1e9,step='any')=>
+  '<label>'+safe(label)+'<input data-trx="'+k+'" type="number" step="'+step+'" min="'+min+'" max="'+max+'" inputmode="decimal" value="'+safe(v)+'"></label>';
+ const line=(name,today,nominal)=>'<div class="trx-value"><span>'+safe(name)+'</span><b>'+brl(today)+'</b><b>'+brl(nominal)+'</b></div>';
+ const tr=result,available=result.path?.total??null;
+ const ratio=result.ratio;
+ const records=yearsList(tr,c);
+ const statusColor=tr.status==='Adiantado'?'g':tr.status==='No ritmo'?'g':tr.status==='Atrasado'?'r':'mut';
+ const contingency=String(c.protocol||'');
+ return '<section id="trx697" class="trx-root"><div class="trx-heading"><h2>Meta de saída da CLT · Engenharia reversa</h2><span class="trx-tag">'+safe(tr.status)+'</span></div>'+
+ '<div class="trx-formgrid"><label>Prazo-alvo<select data-trx="prazo">'+
+ [['36','3 anos'],['60','5 anos'],['72','6 anos'],['custom','Personalizado em meses']].map(([v,label])=>'<option value="'+v+'"'+sel(String(c.prazo),v)+'>'+label+'</option>').join('')+'</select></label>'+
+ (c.prazo==='custom'?input('months','Número de meses',months,1,360,1):'')+
+ input('sustainable','Rendimento sustentável simulado (% a.m.)',num(c.sustainable,7),.01,30,.1)+
+ input('ipca','IPCA esperado no cenário (% a.a.)',num(c.ipca,4),-5,30,.1)+'</div>'+
+ '<p class="trx-note">Data-alvo: <b>'+safe(monthText(end))+'</b> · '+months+' meses. Rendimento de 7% ao mês é <b>hipótese agressiva</b>, não garantia; revise com cenário conservador.</p>'+
+ '<div class="trx-subheading">Proteção CLT e despesas de saída (opcionais)</div><div class="trx-formgrid">'+
+ input('benefits','Benefícios CLT perdidos (R$/mês)',num(c.benefits),0,1e8,.01)+
+ input('health','Plano de saúde particular (R$/mês)',num(c.health),0,1e8,.01)+
+ '<label class="trx-check"><input type="checkbox" data-trx="include13"'+(c.include13?' checked':'')+'>Incluir 13º (1 salário / 12)</label>'+
+ '<label class="trx-check"><input type="checkbox" data-trx="includeVacation"'+(c.includeVacation?' checked':'')+'>Incluir adicional de férias (1/3 / 12)</label></div>'+
+ '<div class="trx-subheading">Patrimônio necessário até '+safe(monthText(end))+'</div>'+
+ '<div class="trx-values"><div class="trx-value trx-vhead"><span>Objetivo</span><b>Reais de hoje</b><b>Nominal no alvo</b></div>'+
+ line('Custo de vida mensal + saúde',t.living,t.living*t.inflation)+line('Reserva 12 meses',t.reserve,t.nominalReserve)+
+ line('Renda alvo líquida CLT equivalente',t.income,t.income*t.inflation)+line('Banca operacional ideal',t.capital,t.nominalCapital)+
+ '<div class="trx-value trx-total"><span>Reserva + banca</span><b>'+brl(t.total)+'</b><b>'+brl(t.nominalTotal)+'</b></div></div>'+
+ '<p class="trx-note">Inflação: poder de compra de hoje convertido em valores nominais pelo IPCA assumido. Reserva preservada separadamente da banca. Meta de renda inclui custos extras optativos; equivalência não incorpora imposto futuro nem custos previdenciários não informados.</p>'+
+ '<div class="trx-subheading">Reserva sincronizada com Carteira / Reserva</div>'+
+ '<div class="trx-inline"><b>'+brl(effectiveReserve(c,reserve))+'</b><span>'+safe(c.manual?'Valor manual de cenário':reserve.source)+'</span></div>'+
+ (reserve.separate!==undefined?'<p class="trx-note">Há também '+brl(reserve.separate)+' em posições Tesouro Selic/Caixa. Não somamos automaticamente para evitar contagem dupla.</p>':'')+
+ '<label class="trx-check"><input type="checkbox" data-trx="manual"'+(c.manual?' checked':'')+'>Sobrescrever reserva para simular cenário</label>'+
+ (c.manual?input('reserveManual','Reserva manual simulada (R$)',num(c.reserveManual),0,1e9,.01):'')+
+ '<div class="trx-subheading">Ritmo mensal necessário × atual</div>'+
+ '<div class="trx-metrics">'+
+ '<div><small>Necessário por mês</small><b>'+brl(tr.necessary)+'</b></div>'+
+ '<div><small>Ritmo atual estimado</small><b>'+brl(tr.current)+'</b></div>'+
+ '<div><small>Diferença mensal</small><b class="'+statusColor+'">'+(tr.additional===null?'—':tr.additional===0?'Meta coberta':brl(tr.additional)+' faltantes')+'</b></div>'+
+ '<div><small>Reserva + banca na data-alvo</small><b>'+brl(available)+'</b></div></div>'+
+ '<p class="trx-note">Simulação de aportes: sobra CLT '+brl(result.model.monthlyCLT)+
+ '/mês + '+fmt(tr.splits.reinvest,0)+'% reinvestidos '+brl(result.model.monthlyReinvest)+
+ '/mês + '+fmt(tr.splits.reserve,0)+'% para reserva '+brl(result.model.monthlyReserve)+
+ '/mês. Amostra: '+net.sample+' meses fechados, trading líquido médio '+brl(net.monthly)+
+ '/mês; perdas não são projetadas como aportes positivos. CDI '+(cd.rate===null?'indisponível (0% no cenário)':pct(cd.rate)+' a.a. ('+safe(cd.source)+')')+
+ '. CDI mantido constante só neste cenário, sem projetar decisões futuras do Copom. Aporte extra é valor adicional à projeção atual, não rendimento garantido. '+(reserve.verified?'Saldo da reserva conectado.':'Saldo de reserva sem confirmação por lançamentos.')+'</p>'+
+ (result.path?xmlChart(result.path.path,months,t.nominalTotal):'<p class="trx-warning">Informe custo de vida, renda alvo e rentabilidade mensal maior que zero para calcular a meta.</p>')+
+ '<div class="trx-subheading">Marcos anuais e ensaio geral</div>'+
+ '<div class="trx-milestones">'+records.map(m=>'<label class="trx-milestone"><input type="checkbox" data-trx-done="'+m.i+'"'+(m.done?' checked':'')+'><span><b>Ano '+m.i+' · '+safe(m.date)+'</b><small>'+safe(m.label)+'</small><small>Reserva '+brl(m.reserve)+' · banca '+brl(m.bank)+'</small></span></label>').join('')+'</div>'+
+ '<div class="trx-formgrid"><label>Modo ensaio geral: início dos 90 dias<input type="date" data-trx="rehearsalStart" value="'+safe(c.rehearsalStart||'')+'"></label></div>'+rehearsal(c,net,t.living)+
+ '<label class="trx-protocol">Protocolo de Contingência Pós-CLT<textarea data-trx="protocol" rows="4" placeholder="Perda máxima mensal, meses sem saque, quando retornar à CLT, regras de reserva...">'+safe(contingency)+'</textarea></label>'+
+ '<p class="trx-note">Marcos são orientativos e editáveis. Certificação/CNPI e ensaio não equivalem a aprovação ou habilitação profissional; decisão final exige reserva protegida, histórico líquido robusto e análise previdenciária.</p></section>';
+}
+const previous=vCarreira;
+vCarreira=function(){
+ if(typeof tab==='undefined'||tab!=='carreira'||typeof FIN==='undefined'||FIN.t!=='plano')
+  return previous.apply(this,arguments);
+ const config=get(),r=reserveSource(),chosen=effectiveReserve(config,r);
+ // A leitura reflete os mesmos cinco critérios, sem gravar um saldo derivado no servidor.
+ if(!S.ax)S.ax={};
+ if(!S.ax.carreira)S.ax.carreira={};
+ S.ax.carreira.reserva=chosen;
+ const raw=previous.apply(this,arguments);
+ if(typeof raw!=='string')return raw;
+ const injected=view();
+ let html=raw.replace('<h2>Critérios</h2>',injected+'<h2>Critérios</h2>');
+ // O campo legado permanece visível mas passa a ser somente leitura; cenário no painel.
+ html=html.replace(/<input([^>]*\bdata-cr="reserva"[^>]*)>/,(_,attrs)=>
+  '<input'+attrs.replace('data-cr="reserva"','data-trx-readonly-reserve="1" readonly aria-label="Reserva vinculada ao painel de transição"')+'>');
+ const a=html.indexOf('<h2>Seu trading × CDI × Ibovespa</h2>');
+ const b=html.indexOf('<h2>Salário do trader</h2>',a+1);
+ if(a>=0&&b>a)html=html.slice(0,a)+benchmark()+html.slice(b);
+ if(!state.busy)queueMicrotask(()=>{if(typeof tab!=='undefined'&&tab==='carreira'&&FIN.t==='plano')fetchCDI();});
+ return html;
+};
+d.addEventListener('change',e=>{
+ const el=e.target?.closest?.('#trx697 [data-trx]');
+ if(!el||typeof tab==='undefined'||tab!=='carreira'||typeof FIN==='undefined'||FIN.t!=='plano')return;
+ const name=el.dataset.trx;
+ const bounds={months:[1,360],sustainable:[.01,30],ipca:[-5,30],benefits:[0,1e8],health:[0,1e8],reserveManual:[0,1e9]};
+ const patch={};
+ if(['manual','include13','includeVacation'].includes(name))patch[name]=el.checked;
+ else if(name==='prazo'&&['36','60','72','custom'].includes(el.value))patch[name]=el.value;
+ else if(name==='protocol')patch[name]=String(el.value).slice(0,5000);
+ else if(name==='rehearsalStart'&&(!el.value||/^\d{4}-\d{2}-\d{2}$/.test(el.value)))patch[name]=el.value;
+ else if(bounds[name]){
+  const n=Number(el.value),[a,b]=bounds[name];
+  if(el.value.trim()!==''&&Number.isFinite(n)&&n>=a&&n<=b)patch[name]=name==='months'?Math.round(n):n;
+ }
+ if(!Object.keys(patch).length)return;
+ saveCfg(patch);
+ const scroll=window.scrollY;render();if(Math.abs(window.scrollY-scroll)>50)window.scrollTo(0,scroll);
+},true);
+d.addEventListener('change',e=>{
+ const el=e.target?.closest?.('#trx697 [data-trx-done]');
+ if(!el||typeof tab==='undefined'||tab!=='carreira'||FIN.t!=='plano')return;
+ const n=+el.dataset.trxDone;
+ if(n<1||n>30)return;
+ const c=get(),milestones={...c.milestones,[n]:el.checked};
+ saveCfg({milestones}); // Mantém a rolagem e não desmonta o controle.
+},true);
+d.addEventListener('input',e=>{
+ const el=e.target?.closest?.('#trx697 textarea[data-trx="protocol"]');
+ if(!el||typeof tab==='undefined'||tab!=='carreira'||FIN.t!=='plano')return;
+ clearTimeout(state.protocolTimer);
+ state.protocolTimer=setTimeout(()=>saveCfg({protocol:el.value.slice(0,5000)}),650);
+},true);
+const style=d.createElement('style');style.id='plano-transicao-v697-style';
+style.textContent=[
+'#trx697{margin:14px 0 16px;padding:12px 0;border-top:1px solid #1E232E;border-bottom:1px solid #1E232E;background:#11141B;font-variant-numeric:tabular-nums}',
+'#trx697 .trx-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:0 12px}',
+'#trx697 .trx-heading h2{margin:0;color:#E2E6EC;font-size:15px}',
+'#trx697 .trx-tag{color:#D4A017;font-size:12px;font-weight:700;white-space:nowrap}',
+'#trx697 .trx-formgrid{padding:0 12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}',
+'#trx697 .trx-formgrid label,#trx697 .trx-protocol{font-size:11px;color:#ADBAC8;min-width:0;display:block}',
+'#trx697 .trx-formgrid input:not([type=checkbox]),#trx697 .trx-formgrid select,#trx697 textarea{display:block;background:#181C26;color:#E8EDF3;border:1px solid #2D3848;border-radius:4px;padding:8px;width:100%;min-height:44px;font-size:16px;min-width:0;margin-top:5px;font-variant-numeric:tabular-nums}',
+'#trx697 .trx-formgrid .trx-check,#trx697>.trx-check{display:flex;align-items:center;gap:8px;min-height:44px}',
+'#trx697 .trx-check input{accent-color:#D4A017;width:18px;height:18px;flex:none}',
+'#trx697>.trx-check,#trx697>.trx-inline{padding:0 12px}',
+'#trx697 .trx-subheading{padding:12px 12px 6px;margin-top:12px;border-top:1px solid #1E232E;font-size:12px;font-weight:700;color:#D4A017}',
+'#trx697 .trx-note{padding:0 12px;color:#9EACBB;font-size:11px;line-height:1.65;margin:9px 0}',
+'#trx697 .trx-note b{color:#D5DEE8}',
+'#trx697 .trx-values{margin:4px 12px 0}',
+'#trx697 .trx-value{display:grid;grid-template-columns:minmax(120px,1.5fr) repeat(2,minmax(100px,1fr));gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #222A35;font-size:11px}',
+'#trx697 .trx-value b{font-weight:600;white-space:nowrap;text-align:right;color:#E9EEF3}',
+'#trx697 .trx-vhead{font-size:10px;color:#A5B4C5}',
+'#trx697 .trx-vhead b{font-size:10px;color:#A5B4C5}',
+'#trx697 .trx-total span,#trx697 .trx-total b{color:#D4A017;font-weight:800}',
+'#trx697 .trx-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px}',
+'#trx697 .trx-inline b{color:#10B981;font-size:18px}',
+'#trx697 .trx-inline span{color:#A4B0BF}',
+'#trx697 .trx-metrics{margin:8px 12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));border-top:1px solid #242C38}',
+'#trx697 .trx-metrics div{padding:11px 8px;display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #242C38;min-width:0}',
+'#trx697 .trx-metrics small{font-size:10px;color:#A9B4C2}',
+'#trx697 .trx-metrics b{font-size:15px;color:#F1F4F7;white-space:nowrap}',
+'#trx697 .trx-metrics b.r{color:#EF4444}#trx697 .trx-metrics b.g{color:#10B981}',
+'#trx697 .trx-plot{display:block;width:100%;height:auto;max-height:260px;margin:10px 0}',
+'#trx697 .trx-legend{display:flex;flex-wrap:wrap;gap:12px;padding:0 12px;color:#9DACBC;font-size:10px}',
+'#trx697 .trx-legend span{display:flex;align-items:center;gap:5px}',
+'#trx697 .trx-legend i{display:inline-block;width:10px;height:3px}',
+'#trx697 .trx-milestones{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:0;padding:0 12px}',
+'#trx697 .trx-milestone{display:flex;gap:8px;min-width:0;padding:11px 4px;border-bottom:1px solid #262E3B;align-items:flex-start}',
+'#trx697 .trx-milestone input{width:18px;height:18px;flex:none;accent-color:#D4A017}',
+'#trx697 .trx-milestone span{display:flex;flex-direction:column;gap:4px;font-size:11px;min-width:0}',
+'#trx697 .trx-milestone b{color:#D8E0E9}',
+'#trx697 .trx-milestone small{font-size:10px;color:#9BA9B9}',
+'#trx697 .trx-protocol{padding:8px 12px}',
+'#trx697 .trx-benchmark .trx-bmrow{padding:8px 0;border-bottom:1px solid #28303B}',
+'#trx697 .trx-bmgrid{display:grid;grid-template-columns:1fr auto;gap:6px;font-size:11px;margin-top:6px}',
+'#trx697 .trx-bmgrid b{text-align:right;white-space:nowrap}',
+'#trx697 .trx-warning{margin:9px 12px;padding:8px;border-left:2px solid #D4A017;color:#D4A017;font-size:11px}',
+'.trx-benchmark{font-variant-numeric:tabular-nums;min-width:0}',
+'.trx-benchmark .trx-bmrow{padding:9px 0;border-bottom:1px solid #1E232E}',
+'.trx-benchmark .trx-bmgrid{display:grid;grid-template-columns:minmax(100px,1fr) auto;gap:6px;font-size:11px}',
+'.trx-benchmark .trx-bmgrid b{white-space:nowrap;text-align:right}',
+'@media(max-width:480px){#trx697 .trx-value{grid-template-columns:minmax(80px,1.45fr) repeat(2,minmax(74px,1fr));gap:4px;font-size:10px}#trx697 .trx-value b{font-size:10px}#trx697 .trx-formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}#trx697 .trx-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}'
+].join('\n');d.head.appendChild(style);
+w.PlanoTransicao697=Object.freeze({capitalTarget,reverse,runProjection,requiredExtra,reserveSource,cdiAnnual,benchmark,yearsList,targetMonths,view});
 })();

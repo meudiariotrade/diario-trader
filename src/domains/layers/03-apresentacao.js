@@ -201,6 +201,7 @@ try {
       },
       jt = () => f(() => segundaDe(V()), V().slice(0, 8) + "01");
     function Ft() {
+      if(window.DiarioSessoes){const c=window.DiarioSessoes.context();return c.mode==='cripto_macro'||c.mode==='b3_fechada'?'fechado':({pre:'pre',during:'pregao',post:'pos'}[c.phase]);}
       try {
         const t = new Intl.DateTimeFormat("pt-BR", {
             timeZone: "America/Sao_Paulo",
@@ -854,7 +855,7 @@ try {
           "spark",
           'Central de Inteligência <span class="v4-iachip">IA</span>',
           st("Ver análises", 'data-v4ia="1"'),
-          `<p class="v4-sub">Sugestões com base no mercado, no seu plano e no seu histórico. Sem ordens automáticas.</p><div class="v4-ia"><div class="v4-iaart" aria-hidden="true"><span>${p("bars", 30)}<b>IA</b></span></div><div class="v4-ialist">
+          `<div data-intel-content class="sm"></div><p class="v4-sub">Sugestões com base no mercado, no seu plano e no seu histórico. Sem ordens automáticas.</p><div class="v4-ia"><div class="v4-iaart" aria-hidden="true"><span>${p("bars", 30)}<b>IA</b></span></div><div class="v4-ialist">
     <button type="button" data-dt393-route="term">${p("crosshair", 22)}<span><b>Radar global e oportunidades</b><small>Fluxo, juros, índices e ativos no Terminal.</small></span>${p("right", 16)}</button>
     <button type="button" data-dt393-route="ops">${p("shield", 22)}<span><b>Revisar operações e risco</b><small>Posições abertas, stops e risco consumido.</small></span>${p("right", 16)}</button>
     <button type="button" data-dt393-route="stats">${p("up", 22)}<span><b>Avaliar resultados e consistência</b><small>Curva, win rate e pontos de atenção.</small></span>${p("right", 16)}</button></div></div>`,
@@ -893,6 +894,7 @@ try {
           return N("hour") * 60 + N("minute");
         }, 12 * 60),
       fase589 = () => {
+        if(window.DiarioSessoes)return window.DiarioSessoes.context().phase;
         const g = hora589();
         return g < 540 ? "pre" : g < 1020 ? "during" : "post";
       },
@@ -1927,7 +1929,7 @@ try {
         f(poe598));
       // v676: após substituir o painel V4, insere o termômetro na tela real
       // de Início/Meu dia, independentemente do ciclo de cotações.
-      if (t === "home" || t === "dia") window.TermometroAbertura670?.montar?.();
+      if (t === "home" || t === "dia") {window.TermometroAbertura670?.montar?.();window.DiarioInteligenciaEtapa1?.montar?.();}
     }
     function Ut() {
       if (typeof window.render0 != "function" || window.render0.__v420)
@@ -7401,6 +7403,7 @@ try {
       return { h: o.getHours(), m: o.getMinutes(), d: o };
     }
     function k() {
+      if(window.DiarioSessoes)return window.DiarioSessoes.context().phase;
       const { h: e, m: o } = T(),
         t = e * 60 + o;
       return t < 540 ? "pre" : t < 1110 ? "during" : "post";

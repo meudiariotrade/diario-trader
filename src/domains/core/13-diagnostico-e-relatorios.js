@@ -3690,7 +3690,7 @@ function cqItens(category) {
         const t=document.createElement("template");t.innerHTML=html.trim();
         const next=t.content.firstElementChild;
         if(next?.id==="cotbox"){cqmMorph(node,next);cqLogoAcompanha(node);return;}
-      }catch{} 
+      }catch{}
     }
     node.outerHTML = html;
     const fresh = document.getElementById('cotbox');
