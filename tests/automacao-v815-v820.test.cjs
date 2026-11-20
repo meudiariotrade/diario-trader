@@ -37,3 +37,13 @@ test('v822: níveis do plano por ativo, com validade e sem valores inválidos',(
   assert.equal(win.DiarioNiveis.get('PETR4'),null);
   assert.match(fs.readFileSync('src/domains/core/17-fontes-e-balancos.js','utf8'),/DiarioNiveis\.get\(F\)/);
 });
+test('v823: séries do BC e logos na Cloudflare, com reserva no Supabase',async()=>{
+  const sm=await import('../cloudflare/diario-noticias/series.mjs');
+  assert.equal((await sm.seriePublica('inexistente')).status,400);
+  const lm=await import('../cloudflare/diario-noticias/logos.mjs');
+  assert.equal(typeof lm.resolveLogos,'function');
+  const idx=fs.readFileSync('cloudflare/diario-noticias/index.mjs','utf8');
+  assert.match(idx,/path==='\/v1\/series'/);assert.match(idx,/path==='\/v1\/logos'/);
+  const cp=fs.readFileSync('src/shared/cache-publico.js','utf8');assert.match(cp,/v1\\\/series/);
+  assert.match(fs.readFileSync('src/domains/layers/02-carteira-e-terminal.js','utf8'),/workers\.dev\/v1\/logos/);
+});

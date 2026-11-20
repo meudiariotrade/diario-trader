@@ -28563,12 +28563,16 @@ try {
       if (!lote.length) return;
       let c = null;
       try { c = typeof cfg == "function" ? cfg() : null; } catch {}
-      if (!c || w.DIARIO_DEMO) { lote.forEach((k) => mem.set(k, null)); return; }
-      if (typeof SESS === "undefined" || !SESS?.uid || !SESS?.at) return;
-      const h = { "Content-Type": "application/json", apikey: c.key };
-      try { typeof SESS < "u" && SESS && SESS.at && (h.Authorization = "Bearer " + SESS.at); } catch {}
-      emCurso = edgeFetchAutenticado(c.url + "/functions/v1/logos", { method: "POST", headers: h, body: JSON.stringify({ tickers: lote }), signal: AbortSignal.timeout(2e4) })
-        .then((r) => r.json())
+      if (w.DIARIO_DEMO) { lote.forEach((k) => mem.set(k, null)); return; }
+      /* v823: logos vêm da Cloudflare (dado público, cache de 7 dias); Supabase só como reserva. */
+      const viaSupabase = () => {
+        if (!c || typeof SESS === "undefined" || !SESS?.uid || !SESS?.at) return Promise.reject(Error("sem conta"));
+        const h = { "Content-Type": "application/json", apikey: c.key, Authorization: "Bearer " + SESS.at };
+        return edgeFetchAutenticado(c.url + "/functions/v1/logos", { method: "POST", headers: h, body: JSON.stringify({ tickers: lote }), signal: AbortSignal.timeout(2e4) }).then((r) => r.json());
+      };
+      emCurso = fetch("https://diario-trader.lucianosilva43567.workers.dev/v1/logos?t=" + encodeURIComponent(lote.join(",")), { credentials: "omit", mode: "cors", signal: AbortSignal.timeout(2e4) })
+        .then((r) => (r.ok ? r.json() : Promise.reject(Error("HTTP " + r.status))))
+        .then((j) => (j && j.itens ? j : viaSupabase()), viaSupabase)
         .then((j) => {
           const it = (j && j.itens) || {};
           lote.forEach((k) => mem.set(k, it[k] || null));
@@ -31211,6 +31215,18 @@ try {
       if (!force && Date.now() - (asked.get(k) || 0) < 90000) return;
       asked.set(k, Date.now());
       try {
+        /* v823: séries do Banco Central vêm da Cloudflare (cache de 6 h); Supabase só como reserva. */
+        const desde823 = new Date().getFullYear() - 6;
+        let pub = null;
+        if (window.DiarioPublico && !window.DIARIO_DEMO) {
+          try { pub = await window.DiarioPublico.get("/v1/series?serie=" + id + "&desde=" + desde823, { ttl: 6 * 36e5 }); } catch {}
+        }
+        if (pub && Array.isArray(pub.pontos) && pub.pontos.length) {
+          econ.set(k, { ...pub, ts: Date.now() });
+          econErr.delete(k);
+          econSave();
+          return;
+        }
         if (typeof rq !== "function")
           throw Error("Conexão do app indisponível.");
         const r = await rq("/functions/v1/series", {
