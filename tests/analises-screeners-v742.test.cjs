@@ -38,7 +38,7 @@ test('Sincronização sem polling e limitada por lotes',()=>{
 test('Estética profissional compacta somente nas sub-abas',()=>{
   assert.match(css,/\.an-subs/);
   assert.match(css,/#d4a017/i);
-  assert.match(css,/#11141b/i);
+  assert.match(css,/#11141b|var\(--dt-s1\)/i);
   assert.match(css,/\.scr-table/);
   assert.match(css,/@media\(max-width:480px\)/);
 });

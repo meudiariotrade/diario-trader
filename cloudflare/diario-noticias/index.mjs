@@ -3,7 +3,10 @@ import '../../src/shared/sessoes-mercado.js';
 import {FLOW_KEY,coletarFluxo} from './fluxo.mjs';
 import {agruparEventos} from './eventos.mjs';
 import {coletarAgenda,coletarSentimento,agendaAgora,sentimentoAgora} from './dados-publicos.mjs';
-const AGENDA_KEY=s=>'diario:agenda:v1:'+s, SENT_KEY='diario:sentimento:v1';
+import {coletarJuros} from './juros.mjs';
+const AGENDA_KEY=s=>'diario:agenda:v1:'+s, SENT_KEY='diario:sentimento:v1', JUROS_KEY='diario:juros:v1';
+/* v820: Juros e DI a cada 10 min no horário de mercado (08:30–18:30, dias úteis); de hora em hora fora dele. */
+export function jurosAgora(date){const b=globalThis.DiarioSessoes.local(+date,'America/Sao_Paulo');return !b.weekend&&b.minute>=510&&b.minute<1110?b.minute%10===0:b.minute%60===0;}
 export {agruparEventos} from './eventos.mjs';
 const KEY = 'diario:noticias:v1';
 const FONTES = [
@@ -165,6 +168,9 @@ export default {
     if(env.NEWS_CACHE&&sentimentoAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
       try{await env.NEWS_CACHE.put(SENT_KEY,JSON.stringify(await coletarSentimento(fetch,event.scheduledTime)));}catch(_){/* conserva o último índice */}
     })());
+    if(env.NEWS_CACHE&&jurosAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
+      try{const j=await coletarJuros();if(j&&(j.selic||j.curva))await env.NEWS_CACHE.put(JUROS_KEY,JSON.stringify(j));}catch(_){/* conserva o último quadro */}
+    })());
     if(!env.NEWS_CACHE||!deveColetar(new Date(event.scheduledTime)))return;
     ctx.waitUntil((async()=>{
       let anteriores=[];
@@ -183,7 +189,7 @@ export default {
     const path=new URL(request.url).pathname;
     if(request.method!=='GET')return json({erro:'metodo_nao_permitido'},request,env,405);
     if(path==='/health')return json({ok:Boolean(env.NEWS_CACHE),servico:'diario-noticias',modo:'independente'},request,env,env.NEWS_CACHE?200:503);
-    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes','/v1/agenda','/v1/sentimento'].includes(path))
+    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes','/v1/agenda','/v1/sentimento','/v1/juros'].includes(path))
       return json({erro:'rota_nao_encontrada'},request,env,404);
     if(path==='/v1/sessoes')return json(globalThis.DiarioSessoes.context(),request,env);
     if(!env.NEWS_CACHE)return json({erro:'cache_nao_configurado'},request,env,503);
@@ -191,6 +197,10 @@ export default {
       const semana=new URL(request.url).searchParams.get('semana')==='1'?1:0;
       const raw=await env.NEWS_CACHE.get(AGENDA_KEY(semana));if(!raw)return json({erro:'aguardando_agenda'},request,env,503);
       const a=JSON.parse(raw);return json({...a,desatualizado:Date.now()-Date.parse(a.em)>6*3600000},request,env);
+    }
+    if(path==='/v1/juros'){
+      const raw=await env.NEWS_CACHE.get(JUROS_KEY);if(!raw)return json({erro:'aguardando_juros'},request,env,503);
+      const v=JSON.parse(raw);return json({...v,desatualizado:Date.now()-Date.parse(v.gerado)>3*3600000},request,env);
     }
     if(path==='/v1/sentimento'){
       const raw=await env.NEWS_CACHE.get(SENT_KEY);if(!raw)return json({erro:'aguardando_sentimento'},request,env,503);

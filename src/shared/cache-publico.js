@@ -3,7 +3,7 @@
 (function(w){
  'use strict';if(w.DiarioPublico)return;
  const base='https://diario-trader.lucianosilva43567.workers.dev';
- const paths=new Set(['/v2/eventos','/v1/mercado','/v1/fluxo','/v1/agenda?semana=0','/v1/agenda?semana=1','/v1/sentimento']);
+ const paths=new Set(['/v2/eventos','/v1/mercado','/v1/fluxo','/v1/agenda?semana=0','/v1/agenda?semana=1','/v1/sentimento','/v1/juros']);
  const memory=new Map(),pending=new Map();let dbPromise;let memoryQueue=Promise.resolve();
  function db(){if(!w.indexedDB)return Promise.resolve(null);if(!dbPromise)dbPromise=new Promise(resolve=>{
   const r=w.indexedDB.open('diario-contexto-publico-v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('snapshots');

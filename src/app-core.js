@@ -19788,7 +19788,7 @@ try {
     e.forEach(function (r) {
       if (!(s < r.prox) && ((r.prox = s + r.ms), !(n && r.ms >= 5e3)))
         try {
-          r.fn.apply(window, r.a);
+          ((r.n = (r.n || 0) + 1), r.fn.apply(window, r.a));
         } catch (i) {
           console.error(i);
         }
@@ -19804,6 +19804,7 @@ try {
           ms: n,
           a: [].slice.call(arguments, 2),
           prox: Date.now() + n,
+          orig: String(new Error().stack || "").split("\n")[2] || "",
         }),
         r
       );
@@ -19817,6 +19818,10 @@ try {
     }),
     (window.relogioInfo = function () {
       return e.size;
+    }),
+    /* v811: auditoria de ciclo de vida — lista os timers ativos no relógio central (origem, período, disparos). */
+    (window.relogioLista = function () {
+      return [...e.values()].map((r) => ({ ms: r.ms, n: r.n || 0, orig: r.orig }));
     }));
 })();
 const MK = [
@@ -26804,6 +26809,8 @@ function render0() {
 function render() {
   try {
     render0();
+    /* v811: avisa módulos com ciclo de vida por tela (ex.: faixa do Terminal) sem polling. */
+    try { window.dispatchEvent(new Event("diario:render")); } catch {}
   } catch (e) {
     console.error(e);
     const t = $("#app");
@@ -32285,6 +32292,19 @@ function jrCotHtml() {
   (jrLoad = async function (e) {
     if (JR.busy || (!e && JR.data && JR.ts && Date.now() - JR.ts < 18e4))
       return;
+    /* v820: Juros e DI vêm do snapshot público da Cloudflare; Supabase só como reserva. */
+    if (window.DiarioPublico && !window.DIARIO_DEMO) {
+      JR.busy = 1;
+      try {
+        const v = await window.DiarioPublico.get("/v1/juros", { ttl: 5 * 6e4 });
+        if (v && (v.selic || v.curva)) {
+          ((JR.data = v), (JR.ts = Date.now()), (JR.err = ""), ls.set("diario-jr", v));
+          JR.busy = 0;
+          jrPaint();
+          return;
+        }
+      } catch {} finally { JR.busy = 0; }
+    }
     const t = cfg();
     if (!t) {
       ((JR.err = "Configure o Supabase na aba Conta para ver os juros."),
@@ -33469,6 +33489,7 @@ function vStats() {
     (a(), setTimeout(a, 0), addEventListener("load", a));
     const o = {
         home: "M3 11l9-8 9 8M5 10v10h14V10",
+        monitor: "M3 4h18v12H3zM8 20h8M12 16v4",
         bar: "M4 20V10M10 20V4M16 20v-7M2 20h20",
         up: "M3 17l6-6 4 4 8-8M15 7h6v6",
         down: "M3 7l6 6 4-4 8 8M15 17h6v-6",
@@ -33665,7 +33686,7 @@ function vStats() {
         "⚫": "var(--tx)",
       },
       r = (b) =>
-        `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${o[b]}"/></svg>`;
+        `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${o[b] || "M4 12h16"}"/></svg>`;
     window.icoSvg = r;
     const i =
         /(?:\p{Regional_Indicator}{2}|(?:\p{Extended_Pictographic})(?:\ufe0f|\u20e3|\p{Emoji_Modifier}|\u200d\p{Extended_Pictographic}\ufe0f?)*)\s?/gu,
@@ -39504,6 +39525,19 @@ const SNT = {
 };
 async function sntCarrega(e) {
   if (SNT.busy || (!e && SNT.v && Date.now() - SNT.ts < 10 * 6e4)) return;
+  /* v811: primeiro o snapshot público da Cloudflare (uma coleta para todos); o Supabase
+     fica só como reserva enquanto a borda ainda não tiver dado. */
+  if (window.DiarioPublico && !window.DIARIO_DEMO) {
+    SNT.busy = 1;
+    try {
+      const v = await window.DiarioPublico.get("/v1/sentimento", { ttl: 15 * 6e4 });
+      if (v && (v.b3 || v.eua || v.cripto)) {
+        ((SNT.v = v), (SNT.ts = Date.now()), (SNT.err = v.desatualizado ? "Índices da borda atrasados; confira a data de cada um." : ""));
+        try { ls.set("diario-snt", v); } catch {}
+        SNT.busy = 0; sntPaint(); return;
+      }
+    } catch {} finally { SNT.busy = 0; }
+  }
   const t = cfg();
   if (!t) {
     ((SNT.err = "Configure o Supabase na aba Conta."), sntPaint());
@@ -42773,6 +42807,18 @@ async function agCarrega(e) {
     (!e && AG.err && Date.now() - (AG.errTs || 0) < 2 * 6e4)
   )
     return;
+  /* v811: agenda vem do snapshot público da Cloudflare; Supabase só como reserva. */
+  if (window.DiarioPublico && !window.DIARIO_DEMO && (t === 0 || t === 1)) {
+    AG.busy = 1;
+    try {
+      const v = await window.DiarioPublico.get("/v1/agenda?semana=" + t, { ttl: 15 * 6e4 });
+      if (v && Array.isArray(v.eventos) && v.eventos.length) {
+        ((AG.v[t] = v), (AG.ts[t] = Date.now()), (AG.err = ""));
+        try { ls.set("diario-agenda", { v: AG.v }); } catch {}
+        AG.busy = 0; agPaint(); return;
+      }
+    } catch {} finally { AG.busy = 0; }
+  }
   const a = cfg();
   if (!a) {
     ((AG.err = "Configure o Supabase na aba Conta."), agPaint());
@@ -44998,7 +45044,7 @@ function imgMostra(e) {
   ((a.id = "imgov"),
     (a.style.cssText =
       "position:fixed;inset:0;z-index:99999;background:rgba(13,13,14,0.92);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(14px + env(safe-area-inset-bottom,0px))"),
-    (a.innerHTML = `<div style="display:flex;gap:8px;margin-bottom:10px"><button data-img="x" class="imgov-voltar" style="flex:0 0 auto;min-height:44px;padding:12px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#11141B;color:#ffffff;-webkit-text-fill-color:#ffffff;font-weight:600;font-size:16px;cursor:pointer">← Voltar</button><button data-img="s" style="flex:1;padding:12px;border-radius:12px;border:0;background:#3b3e43;color:#ffffff;font-weight:700;font-size:16px">📤 Compartilhar / salvar</button></div><div style="flex:1;overflow:auto;display:flex;justify-content:center"><img src="${e}" alt="Panorama do mercado" style="max-width:100%;height:auto;border-radius:12px;align-self:flex-start"></div><div style="color:#e9e7e4;font-size:13px;margin-top:8px;text-align:center">No iPhone: Compartilhar → "Salvar imagem" ou mande direto no WhatsApp. Ou segure a imagem para salvar.</div>`),
+    (a.innerHTML = `<div style="display:flex;gap:8px;margin-bottom:10px"><button data-img="x" class="imgov-voltar" style="flex:0 0 auto;min-height:44px;padding:12px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:var(--dt-s1);color:#ffffff;-webkit-text-fill-color:#ffffff;font-weight:600;font-size:16px;cursor:pointer">← Voltar</button><button data-img="s" style="flex:1;padding:12px;border-radius:12px;border:0;background:#3b3e43;color:#ffffff;font-weight:700;font-size:16px">📤 Compartilhar / salvar</button></div><div style="flex:1;overflow:auto;display:flex;justify-content:center"><img src="${e}" alt="Panorama do mercado" style="max-width:100%;height:auto;border-radius:12px;align-self:flex-start"></div><div style="color:#e9e7e4;font-size:13px;margin-top:8px;text-align:center">No iPhone: Compartilhar → "Salvar imagem" ou mande direto no WhatsApp. Ou segure a imagem para salvar.</div>`),
     a.addEventListener("click", async (o) => {
       const s = o.target.closest("[data-img]");
       if (!s) return;
@@ -45340,6 +45386,8 @@ async function feCarrega() {
     if(!data.ultimo||!Array.isArray(data.linhas))throw Error('Fluxo público sem dados verificáveis.');
     FE.v=data;FE.err=data.desatualizado?'Snapshot de fluxo atrasado; confira a data efetiva.':'';
     try{ls.set('diario-fluxo',data);}catch(_){}
+    /* v811: fluxo × Ibovespa — BOVA11 (ETF que replica o índice) como referencial de fechamento. */
+    try{const s=await window.DiarioTecnico?.serie?.('BOVA11','br');if(s&&!controller.signal.aborted)FE.ibov=s;}catch(_){FE.ibov=null;}
   }catch(e){if(e.name!=='AbortError')FE.err=String(e.message||e);}
   finally{FE.busy=0;if(!controller.signal.aborted){FE.ts=Date.now();const el=document.getElementById('febox');if(el)el.outerHTML=feHtml();}}
 }
@@ -45379,7 +45427,7 @@ function feHtml() {
   return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><span class="sm mut">${feDia(t.d)}</span></div>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:6px 0"><div><div class="sm mut">No dia</div><b class="${a(t.est)}" style="font-size:18px">${feMi(t.est)}</b></div><div><div class="sm mut">No mês (${e.dias_no_mes} pregões)</div><b class="${a(e.mes)}" style="font-size:18px">${feMi(e.mes)}</b></div><div><div class="sm mut">Sequência</div><b>${e.dias_seguidos} dia(s) de ${esc(e.sentido)}</b></div></div>
 <div style="display:flex;gap:3px;align-items:stretch;margin:6px 0 2px">${s}</div>
-<div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div><p class="sm">${esc(interpretation?.text||"Histórico insuficiente para interpretar tendência.")}</p><div class="sm mut">5 / 10 / 20 pregões: ${[5,10,20].map(n=>interpretation?.windows[n]==null?"N/D":feMi(interpretation.windows[n])).join(" · ")} · ${esc(FE.err||"")}</div></div>`;
+<div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div>${(()=>{const dv=FE.ibov&&window.DiarioInterpretacao?.flowDivergence?.(e.linhas||[],FE.ibov.closes,'BOVA11');if(!dv)return '<p class="sm mut">Fluxo × Ibovespa: referencial do índice indisponível no momento.</p>';const w=dv.windows.map(x=>x.k+' pregões: fluxo '+feMi(x.flow)+' · índice '+(x.ret>0?'+':'')+x.ret.toLocaleString('pt-BR',{maximumFractionDigits:2})+'%').join(' · ');return '<p class="sm"><b>Fluxo × Ibovespa</b> (BOVA11 como referencial, mesmas datas). '+esc(dv.text)+'</p>'+(w?'<p class="sm mut">'+esc(w)+'</p>':'');})()}<p class="sm">${esc(interpretation?.text||"Histórico insuficiente para interpretar tendência.")}</p><div class="sm mut">5 / 10 / 20 pregões: ${[5,10,20].map(n=>interpretation?.windows[n]==null?"N/D":feMi(interpretation.windows[n])).join(" · ")} · ${esc(FE.err||"")}</div></div>`;
 }
 {
   const e = vPainelMk;
@@ -90780,9 +90828,18 @@ function net188() {
       }
       return;
     }
-    if (!(e.ws && e.wsSyms === B && [0, 1].includes(e.ws.readyState)))
+    if (e.ws && e.wsSyms === B && [0, 1].includes(e.ws.readyState)) return;
+    /* v811: backoff exponencial. Sem isso, cada tique da faixa abria um WebSocket novo
+       (~12/s) quando a Binance estava bloqueada na rede. */
+    if (e.wsSyms === B && Date.now() < (e.wsRetryAt || 0)) return;
+    if (e.wsSyms !== B) ((e.wsFails = 0), (e.wsRetryAt = 0));
+    const falhou = () => {
+      e.wsFails = (e.wsFails || 0) + 1;
+      e.wsRetryAt = Date.now() + Math.min(6e5, 2e3 * 2 ** Math.min(e.wsFails - 1, 8));
+    };
+    if (!0)
       try {
-        e.ws && e.ws.close();
+        e.ws && ((e.ws.onclose = e.ws.onerror = null), e.ws.close());
         const G = new WebSocket(
           "wss://stream.binance.com:9443/stream?streams=" +
             E.map((te) => te + "@miniTicker").join("/"),
@@ -90790,9 +90847,13 @@ function net188() {
         ((e.wsStarted = Date.now()),
           (e.wsSyms = B),
           (e.ws = G),
-          (G.onopen = () =>
-            v("Binance", "conectado (" + E.length + " pares)", !0)),
-          (G.onclose = () => v("Binance", "conexão fechada", !1)),
+          (G.onopen = () => (
+            (e.wsFails = 0),
+            (e.wsRetryAt = 0),
+            v("Binance", "conectado (" + E.length + " pares)", !0))),
+          (G.onclose = () => (
+            e.ws === G && falhou(),
+            v("Binance", "conexão fechada", !1))),
           (G.onmessage = (te) => {
             try {
               const _ = JSON.parse(te.data).data;
@@ -90807,7 +90868,7 @@ function net188() {
             } catch {}
           }),
           (G.onerror = () => {
-            ((e.wsSyms = ""),
+            (e.ws === G && falhou(),
               v(
                 "Binance",
                 "erro na conexão (o site pode estar bloqueado na sua rede)",
@@ -95708,19 +95769,41 @@ Dados do terminal agora:
       ["Treasury 10a", "TVC:US10Y", 3, ""],
       ["DI jan/27", "BMFBOVESPA:DI1F2027", 3, ""],
     ];
-    (setInterval(() => {
-      try {
-        if (tab === "term" && !document.hidden) {
-          a(["btcusdt"], "base");
+    ((function () {
+      /* v811: sem setInterval permanente (CLAUDE.md §8.3). O laço roda por
+         requestAnimationFrame só enquanto o Terminal está visível; ao sair,
+         libera o pedido "base" da Binance e para. */
+      let raf = 0, last = 0, binAt = 0, ativo = !1;
+      const tick = (ts) => {
+        raf = 0;
+        try {
+          if (tab !== "term" || document.hidden) {
+            ativo && ((ativo = !1), a([], "base"));
+            return;
+          }
+          ativo = !0;
+          if (Date.now() - binAt >= 5e3) ((binAt = Date.now()), a(["btcusdt"], "base"));
           const q = document.getElementById("trtape");
-          if (q && innerWidth < 980 && Date.now() > (o.tapeP || 0)) {
+          if (q && innerWidth < 980 && Date.now() > (o.tapeP || 0) && ts - last >= 40) {
+            last = ts;
             q.scrollLeft += 1;
             const L = q.scrollWidth / 2;
             q.scrollLeft >= L && (q.scrollLeft -= L);
           }
-        }
-      } catch {}
-    }, 40),
+        } catch {}
+        raf = requestAnimationFrame(tick);
+      };
+      const kick = () => {
+        try {
+          if (!raf && tab === "term" && !document.hidden) raf = requestAnimationFrame(tick);
+          else if (!raf && ativo) tick(0);
+        } catch {}
+      };
+      window.addEventListener("diario:render", kick);
+      document.addEventListener("visibilitychange", kick);
+      window.trTapeKick = kick;
+      setTimeout(kick, 0);
+    })(),
       document.addEventListener(
         "pointerdown",
         (q) => {
@@ -107457,7 +107540,7 @@ setInterval(() => {
   if (!el || document.hidden) return;
   const t = rpyCdTexto();
   el.textContent !== t && (el.textContent = t);
-}, 250);
+}, 1000); /* v811: 1 s basta para mm:ss e entra no relógio central único (antes 4×/s em todas as telas). */
 
 /* =====================================================================================
    v636 — Diário do treino: setup de cada trade e relatório por setup e por horário.

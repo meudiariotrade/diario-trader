@@ -1,8 +1,8 @@
 /* Mercado — CLAUDE.md: superfícies planas, dados tabulares e controles de 44px.
    A marcação de cotações já nasce completa; não depende de uma segunda montagem. */
 html:root body #app#app .dt395-native-mercado {
-  --market-bg:#0A0C10;--market-panel:#11141B;--market-active:#181C26;
-  --market-line:#1E232E;--market-gold:#D4A017;--market-text:#E7EAF0;--market-muted:#ADB5C4;
+  --market-bg:var(--dt-bg);--market-panel:var(--dt-s1);--market-active:var(--dt-hover);
+  --market-line:var(--dt-line);--market-gold:var(--dt-gold);--market-text:var(--dt-tx);--market-muted:var(--dt-mut);
   color:var(--market-text);background:var(--market-bg)!important;
   font-variant-numeric:tabular-nums;min-width:0;
 }
