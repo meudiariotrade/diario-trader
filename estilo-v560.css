@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 627039bd53b0e12a417190ab82dea3cbd5e95764141874cb655e00bb8bc1d75c */
+/* Gerado de src/app-theme.css · SHA256 04d3161a55342689e86774f9acc5fe4110b75b92472d568a9af547e74135497c */
 :root{--dt-bg:#0A0C10;--dt-s1:#11141B;--dt-hover:#181C26;--dt-line:#1E232E;--dt-tx:#E6E8EE;--dt-mut:#8A90A0;--dt-faint:#5B6170;--dt-gold:#D4A017;--dt-gain:#10B981;--dt-loss:#EF4444}
 html[data-v427-tema=claro]{--dt-bg:#F3F0E8;--dt-s1:#FBFAF6;--dt-hover:#EFEBE1;--dt-line:#DDD8CC;--dt-tx:#1A1B1E;--dt-mut:#5B5649;--dt-faint:#7A7568;--dt-gold:#8D6C10;--dt-gain:#047857;--dt-loss:#B91C1C}
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
@@ -3378,3 +3378,9 @@ html:root body #app .v825-niv th{font-size:11px;letter-spacing:.06em;text-transf
 html:root body #app .v825-niv th:first-child,html:root body #app .v825-niv td:first-child{text-align:left;padding-left:0}
 html:root body #app .v825-niv td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--dt-line);white-space:nowrap}
 html:root body #app .v825-niv td button{min-height:40px;padding:0 8px;border:0;background:transparent;color:var(--dt-gold);font:inherit;font-weight:700;cursor:pointer}
+/* v827 — EUA e ADRs agora (Início) */
+html:root body #app .v827-adr{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:0 16px;font-variant-numeric:tabular-nums}
+html:root body #app .v827-adr li{display:flex;align-items:baseline;gap:8px;min-height:32px;border-top:1px solid var(--dt-line);font-size:13px;white-space:nowrap}
+html:root body #app .v827-adr li span{margin-left:auto;color:var(--dt-mut)}
+html:root body #app .v827-adr li em{font-style:normal;font-weight:700;min-width:56px;text-align:right}
+html:root body #app .v827-adr li small{font-size:10px;color:var(--dt-gold)}

@@ -49,8 +49,8 @@ test('v823: séries do BC e logos na Cloudflare, com reserva no Supabase',async(
 });
 test('v824: ADRs na Cloudflare sem WebSocket e com reserva no Supabase',async()=>{
   const m=await import('../cloudflare/diario-noticias/adrs.mjs');
-  assert.equal(typeof m.loadQuotes,'function');assert.deepEqual(await m.overnightQuotes(['PBR']),{});
+  assert.equal(typeof m.loadQuotes,'function');assert.equal(typeof m.overnightQuotes,'function');
   assert.match(fs.readFileSync('cloudflare/diario-noticias/index.mjs','utf8'),/path==='\/v1\/adrs'/);
   assert.match(fs.readFileSync('src/shared/cache-publico.js','utf8'),/\/v1\/adrs\?s=/);
-  assert.doesNotMatch(fs.readFileSync('cloudflare/diario-noticias/adrs.mjs','utf8'),/npm:ws|new WebSocket/);
+  const a=fs.readFileSync('cloudflare/diario-noticias/adrs.mjs','utf8');assert.doesNotMatch(a,/npm:ws|new WebSocket/);assert.match(a,/Upgrade:'websocket'/);
 });
