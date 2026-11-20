@@ -3281,7 +3281,8 @@ html:root body #dt393-global-head .dt393-topactions .m624-kbtn.m624-kbtn{display
 /* v811 — iPhone: inputs a 16px (CLAUDE.md §3, evita zoom do Safari no comando do Terminal e na busca do menu). */
 @media (max-width:820px){
   html:root body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
-  html:root body select,html:root body textarea{font-size:16px!important}
+  html:root body select,html:root body textarea,
+  html:root body :is(#app#app,#dt394-drawer#dt394-drawer) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea){font-size:16px!important}
   /* Sub-abas de Análises: duas linhas no iPhone em vez de esconder "Técnico EUA & Cripto". */
   html:root body #app .an-subs{flex-wrap:wrap!important;overflow:visible!important;gap:6px}
   html:root body #app .an-subs>button{flex:1 1 calc(33.333% - 6px)!important;min-width:0!important;white-space:normal!important;min-height:40px}
@@ -3330,3 +3331,5 @@ html body .v811-pxo h4{margin:0 0 6px;font-size:13px;color:#D4A017;text-transfor
 html body .v811-pxo-row{display:grid;grid-template-columns:60px minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr);gap:10px;padding:8px 0;border-bottom:1px solid #1E232E;font-size:13px;font-variant-numeric:tabular-nums}
 html body .v811-r-ok b:first-child{color:#10B981}html body .v811-r-contra b:first-child{color:#EF4444}
 @media (max-width:767px){html body .v811-pxo-row{grid-template-columns:1fr}}
+/* v811: sub-aba ativa de Análises visível (antes ficava igual às outras). */
+html:root body #app#app .an-subs>button.selected,html:root body #app#app .an-subs>button[aria-selected="true"]{color:#D4A017!important;border-bottom-color:#D4A017!important;background:#181C26!important}
