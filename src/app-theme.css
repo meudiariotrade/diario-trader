@@ -3463,3 +3463,11 @@ html:root body #app .i833-mais{margin-top:10px}
 html:root body #app .i833-mais summary{min-height:40px;display:flex;align-items:center;cursor:pointer;color:var(--ui-text-2)}
 /* v834 — Movimentos fortes, Insiders e Fluxo por ação no Início, no padrão dos cards */
 html:root body #app .v829-home :is(#v518-mov,#v519-ins,#v520-fa){background:var(--ui-card)!important;border:1px solid var(--ui-card-line)!important;border-radius:6px!important;padding:14px 16px!important;margin:0!important}
+/* v835 — sinais entre mercados, reação histórica e por que mexeu */
+html:root body #app #i835-sinais{margin:12px 0 0}
+html:root body #app .i835-bloco{padding:8px 0;border-top:1px solid var(--ui-card-line)}
+html:root body #app .i835-bloco:first-of-type{border-top:0;padding-top:0}
+html:root body #app .i835-bloco p{margin:4px 0;font-variant-numeric:tabular-nums}
+html:root body #app .i835-nts{margin:4px 0 0 16px;padding:0;font-size:13px}
+html:root body #app .an835-porque{margin:0 0 12px;padding:10px 12px;border-radius:4px;background:var(--ui-sub)}
+html:root body #app .an835-porque>b{display:block;margin:0 0 4px;font-size:13px}
