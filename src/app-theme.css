@@ -3221,3 +3221,23 @@ html:root body #app :is(.v810-home,.v810-day) :is(strong,b,.v4-kpis,.v4-rows,tim
   }
   html:root body #app .v810-agenda li{flex-wrap:wrap}
 }
+
+
+/* v810 — a largura limitada do #app em >=1024px não pode criar margens mortas nas telas contextuais. */
+html:root body.v4-on:is([data-v4route="home"],[data-v4route="dia"]){
+  background:#0A0C10!important;
+}
+@media (min-width:1024px) {
+  html:root body[data-v4route="home"] #app#app,
+  html:root body[data-v4route="dia"] #app#app {
+    box-sizing:border-box!important;
+    width:100%!important;max-width:none!important;min-width:0!important;
+    margin-left:0!important;margin-right:0!important;
+    padding-left:clamp(16px,2.2vw,36px)!important;
+    padding-right:clamp(16px,2.2vw,36px)!important;
+  }
+  html:root body[data-v4route="home"] #app .v4-panel,
+  html:root body[data-v4route="dia"] #app .v4-panel{
+    max-width:none!important;width:100%!important;min-width:0;
+  }
+}
