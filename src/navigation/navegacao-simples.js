@@ -23,10 +23,10 @@
  }
  function home(app){
   const h=app.querySelector('.v4-home');if(!h||h.dataset.simpleHome)return;
-  const shortcuts=h.querySelector('.v4-short'),summary=h.querySelector('.v4-summary');if(!shortcuts||!summary)return;
+  const shortcuts=h.querySelector('.v4-short'),summary=h.querySelector('.v4-summary');if(!summary)return;
   h.dataset.simpleHome='1';
   // v563: sem "Comece por aqui" e atalhos no Início; o Terminal fica no menu.
-  shortcuts.closest('section')?.remove();
+  shortcuts?.closest('section')?.remove();
   const tiles=h.querySelector('.v4-tiles');wrap(tiles,'Explorar todas as áreas','simple-explore');
   const ia=h.querySelector('.v4-iacard');if(ia){
    text(ia.querySelector('[data-v4ia]'),'Perguntar à IA');
