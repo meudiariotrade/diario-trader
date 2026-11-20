@@ -12,7 +12,7 @@
 
  /* ---------- estilos ---------- */
  const css=`
-html body .org-grp{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8b8a86;margin:16px 8px 4px}
+html body .org-grp{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ui-label,#64748B);margin:18px 12px 6px}
 html body .org-grp:first-child{margin-top:4px}
 html body .org-oculto,html body #dt394-market-search{display:none!important}
 html body #app #mkt565-ctx[data-k^="Análises"]{display:none!important}
@@ -26,11 +26,12 @@ html body .dt394-nav-list.org-buscando .org-grp{display:none}
 /* PC: barra lateral fixa */
 #org-side{display:none}
 @media (min-width:1100px){
- html body.org-side-on nav#org-side{display:flex!important;flex-direction:column;position:fixed;left:0;top:var(--org-top,0px);bottom:0;width:232px;padding:16px;gap:4px;overflow-y:auto;background:#0f1012;border-right:1px solid #2a2b2f;z-index:40;box-sizing:border-box}
- #org-side .org-brand{font-weight:780;font-size:16px;color:#fff;padding:4px 8px 8px}
- html body nav#org-side button{display:flex!important;align-items:center;gap:12px;height:40px!important;min-height:40px!important;margin:0!important;flex:none!important;padding:0 12px;border:0;border-radius:8px;background:none;color:#cfcdc8;font:inherit;font-size:14px;text-align:left;cursor:pointer;width:100%}
- #org-side button:hover{background:#1b1c20}
- #org-side button.on{background:#24211a;color:#d4a85a;font-weight:650}
+ html body.org-side-on nav#org-side{display:flex!important;flex-direction:column;position:fixed;left:0;top:var(--org-top,0px);bottom:0;width:232px;padding:16px;gap:4px;overflow-y:auto;background:var(--ui-chrome,#0C0E14);border-right:1px solid var(--ui-card-line,rgba(255,255,255,.06));z-index:40;box-sizing:border-box}
+ #org-side .org-brand{font-weight:700;font-size:15px;color:var(--ui-num,#fff);padding:4px 8px 10px}
+ html body nav#org-side button{display:flex!important;align-items:center;gap:12px;height:40px!important;min-height:40px!important;margin:0!important;flex:none!important;padding:0 12px;border:0;border-radius:6px;background:none;color:#94A3B8;font:inherit;font-size:14px;text-align:left;cursor:pointer;width:100%}
+ #org-side button:hover{background:var(--ui-sub,#181C28);color:var(--ui-title,#E2E8F0)}
+ #org-side button.on{background:var(--ui-sub,#181C28);color:var(--ui-num,#fff);font-weight:600;box-shadow:inset 2px 0 0 var(--ui-accent,#F59E0B)}
+ #org-side button.on svg{color:var(--ui-accent,#F59E0B)}
  html body.org-side-on{padding-left:232px!important}
  html body.org-side-on #dt393-global-head nav.dt394-quicknav.dt394-quicknav,html body.org-side-on .ms-mais{display:none!important}
  html body.org-side-on #dt393-global-head .dt393-brand{display:none!important}

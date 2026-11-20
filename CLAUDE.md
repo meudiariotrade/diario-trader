@@ -3,14 +3,16 @@
 ## 1. Identidade Visual e Estética (Anti-AI Slop)
 Este aplicativo é uma ferramenta profissional de mesa proprietária e gestão de risco. Abandone qualquer estética de template genérico:
 - **Superfícies Planas (Flat High-Density):** Nunca crie cartões com bordas dentro de outros cartões com bordas. Separe blocos de informação usando diferença sutil de fundo e linhas divisórias finas (`1px solid #1E232E`).
-- **Paleta de Cores Institucional:**
-  - Fundo Base (Background): `#0A0C10`
-  - Superfície de Painéis/Cards: `#11141B`
-  - Superfície Hover/Ativa: `#181C26`
-  - Bordas e Divisórias: `#1E232E`
-  - Destaque Institucional (Âmbar/Ouro): `#D4A017`
-  - Gain / Positivo: `#10B981`
-  - Loss / Risco Crítico: `#EF4444`
+- **Paleta de Cores Institucional (v828, escuro — todas as abas menos o Terminal):**
+  - Fundo Base: `#08090D`
+  - Sidebar, Topbar e Ticker: `#0C0E14`
+  - Cards principais: `#12151E` com borda `1px solid rgba(255,255,255,0.06)`
+  - Sub-cards e Hover: `#181C28`
+  - Destaque (Âmbar) — só no CTA principal, indicador da aba ativa e micro-detalhes: `#F59E0B`
+  - Texto: números principais `#FFFFFF`, títulos `#E2E8F0`, rótulos `#64748B`
+  - Gain / Positivo: `#10B981` · Loss / Risco Crítico: `#EF4444` (só para variações financeiras)
+  - Tokens no código: `--ui-*` (src/app-theme.css); componentes base em `src/shared/ui-base.js` (DiarioUI).
+  - **Terminal:** mantém a paleta original (`#0A0C10`, `#11141B`, `#181C26`, `#1E232E`, `#D4A017`) e não deve ser alterado.
 - **Geometria:** Utilize `border-radius` máximo de `4px` ou `6px`. Mantenha paddings compactos para alta densidade de dados sem rolagem excessiva.
 - **Proibições Estritas:**
   - NUNCA use botões flutuantes (FAB) cobrindo conteúdo na tela.
