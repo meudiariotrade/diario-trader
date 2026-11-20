@@ -214,6 +214,8 @@ function selections(m,s){
  (s.pdfError?'<p class="scr-alert" role="alert">'+E(s.pdfError)+'</p>':'')+
  '</section>';
 }
+/* v821: nota com barra na célula (verde ≥ 7, âmbar ≥ 5). */
+function scoreCel(v){const n=Number(v);if(!isFinite(n))return '—';const c=n>=7?'ok':n>=5?'at':'';return '<span class="scr821-score '+c+'"><i style="width:'+Math.max(0,Math.min(100,n*10)).toFixed(0)+'%"></i></span><b>'+fmt(n,1)+'</b>'}
 function table(m,s){const all=s.data?.rows||[],us=m==='us';
 const cols=us?[['ticker','Ticker'],['company_name','Empresa'],['score_quant_us','Nota /10'],['cobertura_pct','Cobertura'],['roic','ROIC'],['forward_pe','Fwd P/E'],['total_shareholder_yield','Total Yield'],['momentum_12_1','Mom. 12-1']]:
 [['ticker','Ticker'],['empresa','Empresa'],['score_quant_br','Nota /10'],['cobertura_pct','Cobertura'],['roe','ROE'],['dividend_yield','DY'],['payout_implicito','Payout'],['momentum_12_1','Mom. 12-1']];
@@ -222,11 +224,11 @@ return '<section class="scr-panel"><div class="scr-head"><h3>Ranking · '+fmt(s.
 '<button class="btn s" data-scr-bulk="1" '+(s.selected.length<2||s.selected.length>4?'disabled':'')+'>Comparar na Pesquisa (até 4)</button></div></div>'+
 '<div class="scr-scroll"><table class="scr-table"><thead><tr><th>Sel.</th>'+cols.map(c=>'<th>'+E(c[1])+'</th>').join('')+'<th>Contexto</th><th>Ações</th></tr></thead><tbody>'+
 all.map(row=>{const own=ownRow(row);const tk=E(row.ticker),score=us?row.score_quant_us:row.score_quant_br;const valid=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row);
-return '<tr><td><input type="checkbox" data-scr-select="'+tk+'" '+(s.selected.includes(row.ticker)?'checked':'')+' aria-label="Selecionar '+tk+'"></td>'+
-cols.map(([key])=>'<td>'+((key==='ticker')?'<b>'+tk+'</b>':(key==='company_name'||key==='empresa')?E(row[key]):(row[key]==null?'—':(key==='score_quant_br'||key==='score_quant_us'?fmt(row[key]/10,1):percentKeys.has(key)?pct(row[key]):fmt(row[key],1))))+'</td>').join('')+
+return '<tr data-tk="'+tk+'"><td><input type="checkbox" data-scr-select="'+tk+'" '+(s.selected.includes(row.ticker)?'checked':'')+' aria-label="Selecionar '+tk+'"></td>'+
+cols.map(([key])=>'<td>'+((key==='ticker')?'<b>'+tk+'</b>':(key==='company_name'||key==='empresa')?E(row[key]):(row[key]==null?'—':(key==='score_quant_br'||key==='score_quant_us'?scoreCel(row[key]/10):percentKeys.has(key)?pct(row[key]):fmt(row[key],1))))+'</td>').join('')+
 '<td><span class="scr-tech">'+(row.rsi_14==null?'Técnico indisponível':Number(row.rsi_14)>=70?'RSI esticado':Number(row.rsi_14)<=30?'RSI pressionado':'RSI neutro')+'</span>'+
 (own?'<span class="scr-owned" title="Peso '+fmt(own.pct)+'%">CARTEIRA · '+pct(own.pct)+'</span>':'')+(valid?'<span class="scr-verified '+(valid.validated?'is-ok':'is-review')+'">'+E(valid.level)+'</span>':'')+'</td>'+
-'<td class="scr-buttons"><button data-scr-detail="'+tk+'">Por quê?</button><button data-scr-analyze="'+tk+'">Analisar</button><button data-scr-add="'+tk+'">+ Carteira</button></td></tr>'}).join('')+
+'<td class="scr-buttons"><button data-scr-detail="'+tk+'">Por quê?</button><button data-dt815="foco" data-tk="'+tk+'" title="Abrir no Terminal">Terminal</button><button data-scr-analyze="'+tk+'">Analisar</button><button data-scr-add="'+tk+'">+ Carteira</button></td></tr>'}).join('')+
 '</tbody></table></div>'+
 (all.length?'':'<p class="scr-empty">Nenhuma ação neste filtro. Se os dados fundamentais ainda não estiverem preenchidos, escolha Todos os ativos.</p>')+
 '<div class="scr-pager"><button class="btn s" data-scr-page="-1" '+(s.page<=0?'disabled':'')+'>Anterior</button><span>Página '+(s.page+1)+' de '+Math.max(1,Math.ceil((s.data?.total||0)/50))+'</span><button class="btn s" data-scr-page="1" '+((s.page+1)*50>=(s.data?.total||0)?'disabled':'')+'>Próxima</button></div></section>';
