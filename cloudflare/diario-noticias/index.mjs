@@ -51,9 +51,9 @@ export function lerRSS(xml,fonte,agora=Date.now()) {
 /* Feed Atom SEC: somente 8-K público. Validação de domínio e horário. */
 export function lerSECAtom(xml,fonte,agora=Date.now()) {
   const out=[];
-  for(const b of (String(xml||'').slice(0,160000).match(/<entry\\b[^>]*>[\\s\\S]*?<\\/entry>/gi)||[]).slice(0,30)) {
+  for(const b of (String(xml||'').slice(0,160000).match(/<entry\b[^>]*>[\s\S]*?<\/entry>/gi)||[]).slice(0,30)) {
     const t=tag(b,'title').slice(0,200);
-    const l=/<link\\b[^>]*href=["']([^"']+)["']/i.exec(b)?.[1]||'';
+    const l=/<link\b[^>]*href=["']([^"']+)["']/i.exec(b)?.[1]||'';
     const seguro=linkSeguro(l,fonte.host),dt=Date.parse(tag(b,'updated')||tag(b,'published'));
     if(!seguro||!Number.isFinite(dt)||dt>agora+300000||dt<agora-86400000||t.length<12)continue;
     out.push({t,l:seguro,fonte:'SEC',d:new Date(dt).toISOString(),tema:tema(t)||'acoes'});
