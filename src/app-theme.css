@@ -3249,3 +3249,43 @@ html body #app details.intel-compact>summary::-webkit-details-marker{display:non
 html body #app details.intel-compact>summary::before{content:"›";color:#D4A017;transition:transform .15s}
 html body #app details.intel-compact[open]>summary::before{transform:rotate(90deg)}
 html body #app details.intel-compact>[data-intel-content]{padding:4px 12px 12px;max-height:50vh;overflow:auto}
+
+/* v811 — Tema Claro: casca (fundo, cabeçalho, sidebar, abas e alertas) coerente.
+   Antes o conteúdo clareava, mas fundo, cabeçalho e marca continuavam escuros (texto invisível). */
+html:root[data-v427-tema="claro"] body,
+html:root[data-v427-tema="claro"] body #app#app,
+html:root[data-v427-tema="claro"] body #dt393-workspace,
+html:root[data-v427-tema="claro"] body .dt393-topbar{background:#F3F0E8!important;color:#1A1B1E!important}
+html:root[data-v427-tema="claro"] body .dt393-topbar{border-bottom:1px solid #DDD8CC!important}
+html:root[data-v427-tema="claro"] body .dt393-topbar h1,
+html:root[data-v427-tema="claro"] body .dt393-topbar [class*="title"],
+html:root[data-v427-tema="claro"] body .org-brand,
+html:root[data-v427-tema="claro"] body .org-brand *{color:#1A1B1E!important}
+html:root[data-v427-tema="claro"] body .dt393-topbar button,
+html:root[data-v427-tema="claro"] body .m624-kbtn{background:#FBFAF6!important;color:#1A1B1E!important;border-color:#DDD8CC!important}
+html:root[data-v427-tema="claro"] body #app h1,
+html:root[data-v427-tema="claro"] body #app h2,
+html:root[data-v427-tema="claro"] body #app h3{color:#1A1B1E}
+html:root[data-v427-tema="claro"] body #app .v4-tabs button{color:#4F5A55!important;background:transparent!important}
+html:root[data-v427-tema="claro"] body #app .v4-tabs button.on,
+html:root[data-v427-tema="claro"] body #app .v4-tabs button[aria-current],
+html:root[data-v427-tema="claro"] body #app .v4-tabs button[aria-selected="true"]{color:#8D6C33!important;background:rgba(212,160,23,.14)!important}
+html:root[data-v427-tema="claro"] body #app #v508-ontem,
+html:root[data-v427-tema="claro"] body #app #v508-ontem *:not(button){color:#7A2E24!important}
+html:root[data-v427-tema="claro"] body #app #v508-ontem{background:rgba(239,68,68,.08)!important}
+html:root[data-v427-tema="claro"] body #dt393-global-head .dt393-topbar .dt393-title.dt393-title.dt393-title{color:#1A1B1E!important;-webkit-text-fill-color:#1A1B1E}
+html:root[data-v427-tema="claro"] body.pcfull.studio-design{background:#F3F0E8!important}
+/* Ctrl K no cabeçalho: uma linha só (antes quebrava em duas no desktop). */
+html:root body #dt393-global-head .dt393-topactions .m624-kbtn.m624-kbtn{display:inline-flex!important;flex-direction:row!important;gap:3px;white-space:nowrap!important;word-break:keep-all}
+
+/* v811 — iPhone: inputs a 16px (CLAUDE.md §3, evita zoom do Safari no comando do Terminal e na busca do menu). */
+@media (max-width:820px){
+  html:root body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
+  html:root body select,html:root body textarea{font-size:16px!important}
+  /* Sub-abas de Análises: duas linhas no iPhone em vez de esconder "Técnico EUA & Cripto". */
+  html:root body #app .an-subs{flex-wrap:wrap!important;overflow:visible!important;gap:6px}
+  html:root body #app .an-subs>button{flex:1 1 calc(33.333% - 6px)!important;min-width:0!important;white-space:normal!important;min-height:40px}
+  /* Faixas roláveis de categorias do Mercado: indica que há mais itens à direita. */
+  html:root body #app .cqtabs{-webkit-mask-image:linear-gradient(to right,#000 82%,transparent);mask-image:linear-gradient(to right,#000 82%,transparent);padding-right:24px}
+}
+html body #app #v508-ontem.v811-foco{outline:2px solid #D4A017;outline-offset:2px;transition:outline-color .3s}
