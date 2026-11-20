@@ -29053,6 +29053,17 @@ try {
         '</strong></div></div><ul class="v810-oprows">'+
         (dataRows||'<li>Nenhuma operação registrada nesta data.</li>')+'</ul></section>';
     }
+    /* v825: níveis levados ao plano (Técnico / Fibonaccing) no Meu dia; tocar no ativo abre o Terminal. */
+    function v825Niveis() {
+      const lista=f(()=>window.DiarioNiveis?.list()||[],[]).slice(0,6);
+      if(!lista.length)return "";
+      const fx=v=>v==null?"—":q(v);
+      return C("target","Níveis do plano",'<span class="v4-muted">'+lista.length+' ativo(s)</span>',
+        '<table class="v825-niv"><thead><tr><th>Ativo</th><th>Entrada</th><th>Stop</th><th>Alvos</th></tr></thead><tbody>'+
+        lista.map(n=>'<tr><td><button type="button" data-dt815="foco" data-tk="'+b(n.ticker)+'">'+b(n.ticker)+'</button></td><td>'+fx(n.entrada)+
+          '</td><td class="v-neg">'+fx(n.stop)+'</td><td class="v-pos">'+(n.alvos||[]).map(fx).join(" · ")+'</td></tr>').join("")+
+        '</tbody></table>');
+    }
     function v811PlanoExecucao(dia,registro) {
       const api=window.DiarioPlanoExecucao;
       if(!api)return '';
@@ -30154,15 +30165,16 @@ try {
           ).join('')+'</div>',
         contexto='<section class="v810-day-context" data-intel-content-wrapper="1"><div data-intel-content class="sm">Aguardando contexto verificável do mercado.</div></section>',
         operacoes=v810Operacoes(t,a),
+        niveis825=v825Niveis(),
         agenda=v810AgendaNoticias(t),
         base=v810Seletor(seletor)+v810Faixa("dia",sessao,chamada)+turno593+contexto,
         extras='<details class="v810-more"><summary>Plano detalhado, anotações e outras ferramentas</summary><div class="v810-more-inner">'+
           planoIntegrado789(t, e)+emo589+it+dt+'</div></details>';
       return '<div class="v4-page v4-day v810-day" data-v810-phase="'+sessao+'">'+base+
         (sessao==="pre"
-          ? y+'<div class="v810-day-grid">'+U+m+agenda+X+'</div>'+extras
+          ? y+'<div class="v810-day-grid">'+niveis825+U+m+agenda+X+'</div>'+extras
           : sessao==="pregao"
-          ? '<div class="v810-day-grid">'+U+m+operacoes+agenda+X+'</div>'+
+          ? '<div class="v810-day-grid">'+U+m+niveis825+operacoes+agenda+X+'</div>'+
             '<details class="v810-more"><summary>Estado emocional e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>'+y
           : operacoes+v811PlanoExecucao(t,e)+'<div class="v810-day-grid">'+U+agenda+it+'</div>'+
             '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+
@@ -44531,6 +44543,9 @@ const s=document.createElement('style');s.textContent=`
     const dest = alvo();
     if (!dest?.root) return;
     let card = dest.root.querySelector(":scope > .dt670-opening");
+    /* v825: o termômetro é estimativa de pré-abertura; no pregão e no pós a tela mostra a fase atual. */
+    const fase = dest.root.closest?.("[data-v810-phase]")?.dataset.v810Phase || dest.root.querySelector?.("[data-v810-phase]")?.dataset.v810Phase;
+    if (fase && fase !== "pre") { card?.remove(); return; }
     if (!card) {
       card = d.createElement("section");
       card.className = "dt670-opening";

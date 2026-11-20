@@ -24,6 +24,11 @@
     try { root.dispatchEvent(new CustomEvent('diario:niveis', { detail: { ticker: k } })); } catch (e) { /* segue */ }
     return true;
   }
+  function list() {
+    var o = le(), out = [];
+    Object.keys(o).forEach(function (k) { var v = get(k); if (v) out.push(Object.assign({ ticker: k }, v)); });
+    return out.sort(function (a, b) { return b.em - a.em; });
+  }
   function remove(t) { var k = tk(t), o = le(); if (k && o[k]) { delete o[k]; grava(o); } }
   /* Botão "Levar para o plano": data-niv822="TICKER" data-e data-s data-a="a1|a2|a3" data-o="origem". */
   if (doc) doc.addEventListener('click', function (e) {
@@ -36,5 +41,5 @@
     if (typeof root.toast === 'function') root.toast(msg);
     b.textContent = ok ? 'No plano ✓' : b.textContent;
   });
-  root.DiarioNiveis = Object.freeze({ get: get, set: set, remove: remove });
+  root.DiarioNiveis = Object.freeze({ get: get, set: set, remove: remove, list: list });
 })(typeof window !== 'undefined' ? window : globalThis, typeof document !== 'undefined' ? document : null);
