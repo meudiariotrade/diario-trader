@@ -2650,10 +2650,12 @@ html:root body .bnc-selo i{width:7px;height:7px;border-radius:50%;background:var
 html:root body .bnc-selo.on{color:#10B981}
 html:root body .bnc-selo.on i{background:#10B981;animation:bncPulso 1.6s ease-in-out infinite}
 @keyframes bncPulso{0%,100%{opacity:1}50%{opacity:.35}}
-@keyframes bncUp{0%{background:rgba(16,185,129,.22)}100%{background:transparent}}
-@keyframes bncDn{0%{background:rgba(239,68,68,.22)}100%{background:transparent}}
+/* v833: atualização de preço marcada só por um traço lateral (sem piscar a linha inteira) */
+@keyframes bncUp{0%{box-shadow:inset 2px 0 0 #10B981}100%{box-shadow:inset 2px 0 0 transparent}}
+@keyframes bncDn{0%{box-shadow:inset 2px 0 0 #EF4444}100%{box-shadow:inset 2px 0 0 transparent}}
 html:root body .bnc-up{animation:bncUp .9s ease-out}
 html:root body .bnc-dn{animation:bncDn .9s ease-out}
+@media (prefers-reduced-motion:reduce){html:root body :is(.bnc-up,.bnc-dn){animation:none}}
 @media (prefers-reduced-motion:reduce){html:root body .bnc-up,html:root body .bnc-dn,html:root body .bnc-selo.on i{animation:none}}
 html:root body #app .m623-sw{display:none}
 @media (min-width:1024px){
@@ -3443,3 +3445,19 @@ html:root body #app#app .dt395-native-carteiras>*{grid-column:1/-1;min-width:0}
 html:root body #app#app .dt395-native-carteiras>.pf{grid-column:1;margin:0!important}
 html:root body #app#app .dt395-native-carteiras>section.card:first-child{grid-column:2;grid-row:1;position:sticky;top:12px;margin:0!important}
 }
+/* v833 — Fatos que importam e Última vez parecida (Início); estudo automático nas notícias importantes */
+html:root body #app .i833-card{margin:0}
+html:root body #app #i833-analogia{margin:12px 0 0}
+html:root body #app .i833-hoje{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 8px;font-size:13px;font-variant-numeric:tabular-nums}
+html:root body #app .i833-hoje span{color:var(--ui-text-2)}
+html:root body #app .i833-fato{padding:10px 0;border-top:1px solid var(--ui-card-line)}
+html:root body #app .i833-fato:first-of-type{border-top:0;padding-top:0}
+html:root body #app .i833-row{padding:9px 0;border-bottom:1px solid var(--dt-line);min-width:0}
+html:root body #app .i833-row:not(.imp) b{font-weight:500}
+html:root body #app .i833-estudo{margin-top:8px;padding:10px 12px;border-radius:4px;background:var(--ui-sub)}
+html:root body #app .i833-lig{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+html:root body #app .i833-lig li{display:flex;align-items:center;gap:10px;font-size:13px}
+html:root body #app .i833-lig li .btn{flex:none;font-variant-numeric:tabular-nums}
+html:root body #app .i833-lab{margin-top:8px;min-height:40px;padding:0;border:0;background:none;color:var(--ui-accent);font:inherit;font-weight:600;cursor:pointer}
+html:root body #app .i833-mais{margin-top:10px}
+html:root body #app .i833-mais summary{min-height:40px;display:flex;align-items:center;cursor:pointer;color:var(--ui-text-2)}

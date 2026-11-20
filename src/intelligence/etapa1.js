@@ -3,7 +3,7 @@
   'use strict';
   if (w.DiarioInteligenciaEtapa1) return;
   const URL_BASE = 'https://diario-trader.lucianosilva43567.workers.dev';
-  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '' };
+  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false };
   const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = x => typeof x==='number' && Number.isFinite(x);
   const format = x => number(x) ? x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—';
@@ -108,16 +108,14 @@
   }
   function rowsEvent(events,limit=5) {
     if(!events.length)return '<p class="mut sm">Nenhum acontecimento confirmado nas fontes atualmente carregadas.</p>';
-    const mine=new Set(meusAtivos());
+    /* v833: notícia importante já vem com o estudo aberto; as demais ficam numa linha, sem botões. */
     return events.slice(0,limit).map(e=>{
-      const ticker=(e.tickers||[]).filter(t=>mine.has(t)).slice(0,5);
       const first=(e.fontes||[]).at(-1);
       const source=first&&/^https:\/\//.test(first.url) ? '<a href="'+escape(first.url)+'" target="_blank" rel="noopener noreferrer">'+escape(first.nome||'Fonte')+'</a>' : escape(first?.nome||'Fonte indisponível');
-      return '<div style="padding:9px 0;border-bottom:1px solid var(--bd,#1E232E);min-width:0">'+tag(oficial(e)?'fato':'publicada')+'<b>'+escape(e.titulo)+'</b>'+
-        '<div class="mut sm">'+escape(e.tema)+' · '+escape(e.prioridade)+' · '+when(e.ultimaAtualizacao)+' · '+source+' · '+(e.quantidadeFontes||e.fontes?.length||0)+' fonte(s)</div>'+
-        (ticker.length?'<div style="margin-top:5px">'+ticker.map(t=>'<button type="button" class="btn s" data-intel-ticker="'+escape(t)+'" style="margin:2px;min-height:40px">'+escape(t)+'</button>').join('')+'</div>':'')+
-        '<button type="button" class="btn s" data-intel-study="'+escape(e.id)+'" style="min-height:40px;margin:5px 0">Estudar impacto</button>'+
-        '<div class="mut sm" style="margin-top:4px">'+tag('hipotese')+'Impactos indiretos: hipóteses econômicas, não causalidades comprovadas.</div></div>';
+      const imp=importante(e);
+      return '<div class="i833-row'+(imp?' imp':'')+'">'+(imp?tag(oficial(e)?'fato':'publicada'):'')+'<b>'+escape(e.titulo)+'</b>'+
+        '<div class="mut sm">'+when(e.ultimaAtualizacao)+' · '+source+((e.quantidadeFontes||e.fontes?.length||0)>1?' · '+(e.quantidadeFontes||e.fontes.length)+' fontes':'')+'</div>'+
+        (imp?estudo(e):'')+'</div>';
     }).join('');
   }
   function transmissao(e) {
@@ -129,6 +127,67 @@
       if(/ipca|copom|selic/.test(titulo))return 'Indicador Brasil → curva DI → câmbio → empresas e WIN/WDO';
     }
     return 'Evento → expectativas e prêmio de risco → preços de mercado (hipótese sem causalidade demonstrada)';
+  }
+
+  /* v833: ligação notícia → ativo com o motivo, em linguagem simples. Regras fixas (sem IA, sem custo). */
+  const LIGA=[
+    [/min[eé]rio|iron ore|vale\b|vale3|vale s\.?a/i,'VALE3','A Vale vive da venda de minério de ferro: preço e demanda do minério mexem direto no resultado dela.'],
+    [/petr[oó]leo|brent|wti|\bopep|\bopec|petrobras|petr4|\boil\b|crude/i,'PETR4','A Petrobras vende petróleo e derivados: o preço do barril e decisões da empresa mudam receita e dividendos.'],
+    [/sider|a[cç]o\b|steel|gerdau/i,'GGBR4','Gerdau é siderúrgica: preço do aço, minério e tarifas de importação afetam a margem.'],
+    [/selic|copom|juros futuros|\bdi\b|ipca|infla[cç][aã]o/i,'ITUB4','Bancos e varejo reagem a juros: Selic e inflação mudam crédito, inadimplência e custo de capital.'],
+    [/d[oó]lar|c[aâ]mbio|usd\/?brl|real brasileiro/i,'SUZB3','Suzano exporta celulose em dólar: câmbio mais alto aumenta a receita em reais.'],
+    [/fed\b|fomc|powell|warsh|treasur|payroll|\bcpi\b/i,'WIN','Juros americanos mexem no dólar global e no apetite por emergentes, e isso chega ao índice futuro (WIN) e ao dólar (WDO).'],
+    [/banco do brasil|bbas3/i,'BBAS3','Notícia sobre o Banco do Brasil afeta diretamente a ação.'],
+    [/ita[uú]|itub4/i,'ITUB4','Notícia sobre o Itaú afeta diretamente a ação.'],
+    [/eletrobras|elet3/i,'ELET3','Notícia sobre a Eletrobras afeta diretamente a ação.'],
+    [/ambev|abev3/i,'ABEV3','Notícia sobre a Ambev afeta diretamente a ação.'],
+    [/\bweg\b|wege3/i,'WEGE3','Notícia sobre a WEG afeta diretamente a ação.'],
+    [/bitcoin|cripto|crypto|\bbtc\b|ether/i,'BTC','Cripto costuma andar junto com o apetite a risco: queda forte em cripto sinaliza aversão a risco.']
+  ];
+  function ligar(e) {
+    const txt=String(e?.titulo||'')+' '+String(e?.tema||''),out=[],vistos=new Set();
+    for(const [re,tk,porque] of LIGA)if(re.test(txt)&&!vistos.has(tk)){vistos.add(tk);out.push({tk,porque});}
+    for(const tk of (e?.tickers||[]))if(!vistos.has(tk)){vistos.add(tk);out.push({tk,porque:'A notícia cita '+tk+' diretamente.'});}
+    return out.slice(0,3);
+  }
+  /* Só o que importa recebe estudo automático: prioridade alta, fato oficial (CVM/B3/BC/Fed) ou média ligada a um ativo. */
+  function importante(e) { return !!e&&(e.prioridade==='alta'||oficial(e)||(e.prioridade==='media'&&ligar(e).length>0)); }
+  function estudo(e) {
+    const lig=ligar(e);
+    return '<div class="i833-estudo"><div class="sm"><b>Por que importa:</b> '+escape(transmissao(e))+'.</div>'+
+      (lig.length?'<ul class="i833-lig">'+lig.map(l=>'<li><button type="button" class="btn s" data-intel-ticker="'+escape(l.tk)+'" style="min-height:40px">'+escape(l.tk)+'</button><span>'+escape(l.porque)+'</span></li>').join('')+'</ul>':'')+
+      '<button type="button" class="i833-lab" data-intel-study="'+escape(e.id)+'">Abrir no laboratório</button></div>';
+  }
+  function fatosHtml() {
+    const lista=timeline().filter(importante).slice(0,5);
+    if(!lista.length)return '<header><h2>Fatos que importam hoje</h2></header><p class="mut sm">Nenhuma notícia importante ligada aos seus ativos ou ao mercado nas fontes carregadas.</p>';
+    return '<header><h2>Fatos que importam hoje</h2><span class="ui-badge">'+lista.length+' de '+timeline().length+' notícias</span></header>'+
+      lista.map(e=>'<article class="i833-fato">'+tag(oficial(e)?'fato':'publicada')+'<b>'+escape(e.titulo)+'</b><div class="mut sm">'+when(e.ultimaAtualizacao)+' · '+escape((e.fontes||[]).at(-1)?.nome||'Fonte')+'</div>'+estudo(e)+'</article>').join('');
+  }
+  function analogiaHtml() {
+    const a=state.analogia;
+    if(!a||!a.hoje)return '';
+    const nomes={spx:'S&P 500',ndx:'Nasdaq',ibov:'Ibovespa',ouro:'Ouro',btc:'Bitcoin',petroleo:'Petróleo'};
+    const pct=v=>v==null?'—':(v>0?'+':'')+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+    const cor=v=>v==null?'':v>=0?' class="ui-g"':' class="ui-r"';
+    const hoje=Object.entries(a.hoje).map(([k,v])=>'<span>'+escape(nomes[k]||k)+' <b'+cor(v)+'>'+pct(v)+'</b></span>').join('');
+    const u=a.ultima;
+    return '<header><h2>'+escape(a.titulo||'Movimento do dia')+'</h2><span class="ui-badge">'+escape(a.padrao||'')+'</span></header>'+
+      '<div class="i833-hoje">'+hoje+'</div>'+
+      (u?'<p class="sm"><b>Última vez parecida: '+escape(new Date(u.data+'T12:00:00Z').toLocaleDateString('pt-BR'))+'</b> ('+escape(u.diasAtras)+' pregões atrás). '+
+        'Naquele dia: '+Object.entries(u.dia||{}).map(([k,v])=>escape(nomes[k]||k)+' '+pct(v)).join(' · ')+'.</p>'+
+        '<p class="sm">Nos 5 pregões seguintes: S&amp;P '+pct(u.depois5?.spx)+' · Ibovespa '+pct(u.depois5?.ibov)+'. '+escape(a.vezes||0)+' dia(s) parecido(s) desde '+escape(a.desde||'')+'.</p>'
+        :'<p class="mut sm">Nenhum dia parecido nos últimos anos de histórico.</p>')+
+      '<p class="mut sm">Histórico diário (Yahoo, via Cloudflare). Comparação de direção, não previsão.</p>';
+  }
+  function cardsInicio(app) {
+    const home=app.querySelector('.v829-home');if(!home)return;
+    const kp=home.querySelector(':scope>.v829-kpis');
+    let an=home.querySelector('#i833-analogia');const ah=analogiaHtml();
+    if(ah){if(!an){an=document.createElement('section');an.id='i833-analogia';an.className='ui-card i833-card';(kp||home.firstElementChild)?.after(an);}if(an.innerHTML!==ah)an.innerHTML=ah;}else an?.remove();
+    const main=home.querySelector('.v829-split>.ui-main');if(!main)return;
+    let f=home.querySelector('#i833-fatos');if(!f){f=document.createElement('section');f.id='i833-fatos';f.className='ui-card i833-card';main.prepend(f);}
+    const fh=fatosHtml();if(f.innerHTML!==fh)f.innerHTML=fh;
   }
   function riscoTerminal() {
     if(typeof S==='undefined'||!S)return '<p class="mut sm">Diário não carregado para esta sessão.</p>';
@@ -260,26 +319,22 @@
       '<p class="mut sm">'+escape(m.motivo)+'</p></details>'+memoriaPrevisao(context)+'</div>';
   }
   function agenda() {
-    const events=timeline().filter(e=>e.tema==='politica_economica').slice(0,5);
-    return '<p class="mut sm">Agenda inteligente: confrontar Anterior × Consenso × Realizado somente quando a fonte trouxer os três dados. Surpresa = Realizado − Consenso.</p>'+
-      '<div><b>Eventos e transmissão potencial</b></div>'+rowsEvent(events,5)+
-      events.slice(0,3).map(e=>'<p class="mut sm">'+tag('hipotese')+escape(transmissao(e))+'</p>').join('')+
-      '<p class="mut sm">CPI/Fed → Treasuries → USD/BRL → WIN/WDO/DI é hipótese de transmissão, não causalidade provada.</p>'+
-      '<p class="mut sm">Reações históricas 5m/15m/60m: aguardando série sincronizada com horário de divulgação, sem simulação de números.</p>';
+    const events=timeline().filter(e=>e.tema==='politica_economica'&&importante(e)).slice(0,5);
+    return '<div><b>Eventos que movem o mercado</b> <span class="mut sm">Surpresa = Realizado − Consenso, só quando a fonte traz os três.</span></div>'+rowsEvent(events,5);
   }
+
   function noticias() {
-    const mine=relacionados();
     const pushAtivo=typeof NP!=='undefined' && NP.on?.intel===true;
-    const count=mine.filter(e=>e.prioridade==='alta').length;
-    return '<div><b>Linha do tempo de acontecimentos</b> <span class="mut sm">Atualizada: '+when(state.eventos?.atualizadoEm)+(state.eventos?.desatualizado?' · DADOS ATRASADOS':'')+'</span></div>'+
-      '<p class="mut sm">Agrupamento de matérias repetidas; notícias não representam recomendações nem fatos verificados independentemente da fonte.</p>'+
-      '<div class="sm"><b>Alertas ligados aos seus ativos: '+count+'</b> · triagem feita somente neste dispositivo.</div>'+
-      '<div class="sm" style="margin:6px 0"><button type="button" class="btn s" data-intel-push="1" style="min-height:40px">'+
+    const todas=timeline(),imp=todas.filter(importante),resto=todas.filter(e=>!importante(e));
+    return '<div><b>Importantes agora</b> <span class="mut sm">'+imp.length+' de '+todas.length+' · atualizada '+when(state.eventos?.atualizadoEm)+(state.eventos?.desatualizado?' · DADOS ATRASADOS':'')+'</span></div>'+
+      rowsEvent(imp,6)+
+      (resto.length?'<details class="i833-mais"><summary>Outras '+resto.length+' notícias agrupadas</summary>'+rowsEvent(resto,12)+'</details>':'')+
+      '<details class="i833-mais"><summary>Alertas por ativo</summary><div class="sm" style="margin:6px 0"><button type="button" class="btn s" data-intel-push="1" style="min-height:40px">'+
       (pushAtivo?'Desativar alertas Web Push por ativo':'Ativar alertas Web Push por ativo')+'</button> '+
       '<button type="button" class="btn s" data-intel-notify="1" style="min-height:40px">Avisos locais (app aberto)</button></div>'+
-      '<p class="mut sm">Web Push usa sua inscrição existente em Configurações → Alertas. Não envia valores nem operações; somente os tickers escolhidos. O aviso do servidor é entregue após a sincronização da preferência.</p>'+
-      rowsEvent(mine.length?mine:timeline(),8);
+      '<p class="mut sm">Web Push usa sua inscrição em Configurações → Alertas e envia só os tickers escolhidos. Notícias não são recomendação.</p></details>';
   }
+
   function terminal() {
     const m=mercadoPlan(),news=relacionados().filter(e=>e.prioridade==='alta');
     return '<div><b>Leitura descritiva: '+escape(m.nome)+'</b></div>'+
@@ -325,16 +380,17 @@
     const central=route==='home'?app.querySelector('.v4-iacard'):route==='dia'?app.querySelector('.v810-day-context'):null;
     if(central&&box!==central){box?.remove();box=central;box.dataset.intelEtapa1='1';box.dataset.route=route;box.dataset.intelNative='1';}
     if(box&&box.dataset.route!==route){box.remove();box=null;}
-    if(!box){box=painel(title,'Consultando dados públicos compartilhados.',route==='term');box.dataset.route=route;if(route==='term')native.append(box);else native.prepend(box);}
+    if(!box){box=painel(title,'Consultando dados públicos compartilhados.',route==='term');box.dataset.route=route;if(route==='term'||route==='noticias'||route==='agenda')native.append(box);else native.prepend(box);}
     if(route==='term'){const r=box.querySelector('[data-intel-resumo]');const m=mercadoPlan();const t=' · '+(m.nome||'Sem leitura validada');if(r&&r.textContent!==t)r.textContent=t;}
     const content=box.querySelector('[data-intel-content]');
     const html=({home:briefing,dia:meuDia,agenda,noticias,term:terminal}[route])();
     if(content.innerHTML!==html)content.innerHTML=html;
+    if(route==='home')cardsInicio(app);
     armSession();
     if(!state.abort?.signal.aborted)refresh();
   }
   async function request(path,signal) {
-    if(w.DiarioPublico)return w.DiarioPublico.get(path,{signal,ttl:path==='/v1/mercado'?300000:path==='/v1/fluxo'?3600000:120000});
+    if(w.DiarioPublico)return w.DiarioPublico.get(path,{signal,ttl:path==='/v1/mercado'?300000:path==='/v1/fluxo'?3600000:path==='/v1/analogia'?900000:120000});
     const response=await fetch(URL_BASE+path,{method:'GET',mode:'cors',credentials:'omit',cache:'no-store',signal});
     if(!response.ok)throw new Error('HTTP '+response.status);
     return response.json();
@@ -343,6 +399,7 @@
     if(!state.route)return;
     const el=document.querySelector('#app [data-intel-etapa1] [data-intel-content]');
     if(el){const html=({home:briefing,dia:meuDia,agenda,noticias,term:terminal}[state.route])();if(el.innerHTML!==html)el.innerHTML=html;}
+    if(state.route==='home'){const app=document.getElementById('app');if(app)cardsInicio(app);}
   }
   function refresh() {
     const signal=state.abort?.signal;if(!signal || signal.aborted)return;
@@ -356,6 +413,9 @@
     }
     if(['home','dia'].includes(state.route)&&!state.flowBusy&&now-state.flowAt>3600000){
       state.flowBusy=true;state.flowAt=now;request('/v1/fluxo',signal).then(data=>{if(!signal.aborted&&Array.isArray(data.linhas)){state.fluxo=data;repaint();}}).catch(()=>{}).finally(()=>state.flowBusy=false);
+    }
+    if(state.route==='home'&&!state.analogiaBusy&&now-state.analogiaAt>900000){
+      state.analogiaBusy=true;state.analogiaAt=now;request('/v1/analogia',signal).then(data=>{if(!signal.aborted&&data&&data.hoje){state.analogia=data;repaint();}}).catch(()=>{}).finally(()=>state.analogiaBusy=false);
     }
     if(!state.loadingMarket && now-state.marketAt>300000) {
       state.loadingMarket=true;

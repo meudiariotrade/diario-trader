@@ -5,6 +5,7 @@ import {agruparEventos} from './eventos.mjs';
 import {coletarAgenda,coletarSentimento,agendaAgora,sentimentoAgora} from './dados-publicos.mjs';
 import {coletarJuros} from './juros.mjs';
 import {seriePublica} from './series.mjs';
+import {coletarAnalogia,analogiaAgora} from './analogia.mjs';
 import {resolveLogos} from './logos.mjs';
 import {loadQuotes as adrsCotacoes,limpa as adrLimpa} from './adrs.mjs';
 const AGENDA_KEY=s=>'diario:agenda:v1:'+s, SENT_KEY='diario:sentimento:v1', JUROS_KEY='diario:juros:v1';
@@ -171,6 +172,9 @@ export default {
     if(env.NEWS_CACHE&&sentimentoAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
       try{await env.NEWS_CACHE.put(SENT_KEY,JSON.stringify(await coletarSentimento(fetch,event.scheduledTime)));}catch(_){/* conserva o último índice */}
     })());
+    if(env.NEWS_CACHE&&analogiaAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
+      try{const a=await coletarAnalogia();if(a&&a.hoje)await env.NEWS_CACHE.put('diario:analogia:v1',JSON.stringify(a));}catch(_){/* mantém o último quadro */}
+    })());
     if(env.NEWS_CACHE&&jurosAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
       try{const j=await coletarJuros();if(j&&(j.selic||j.curva))await env.NEWS_CACHE.put(JUROS_KEY,JSON.stringify(j));}catch(_){/* conserva o último quadro */}
     })());
@@ -223,7 +227,7 @@ export default {
         return json(r.body,request,env,r.status);
       }catch(e){return json({error:String(e?.message||e)},request,env,502);}
     }
-    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes','/v1/agenda','/v1/sentimento','/v1/juros'].includes(path))
+    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes','/v1/agenda','/v1/sentimento','/v1/juros','/v1/analogia'].includes(path))
       return json({erro:'rota_nao_encontrada'},request,env,404);
     if(path==='/v1/sessoes')return json(globalThis.DiarioSessoes.context(),request,env);
     if(!env.NEWS_CACHE)return json({erro:'cache_nao_configurado'},request,env,503);
@@ -231,6 +235,13 @@ export default {
       const semana=new URL(request.url).searchParams.get('semana')==='1'?1:0;
       const raw=await env.NEWS_CACHE.get(AGENDA_KEY(semana));if(!raw)return json({erro:'aguardando_agenda'},request,env,503);
       const a=JSON.parse(raw);return json({...a,desatualizado:Date.now()-Date.parse(a.em)>6*3600000},request,env);
+    }
+    /* v833: última vez parecida entre mercados (KV; na primeira vez calcula e guarda). */
+    if(path==='/v1/analogia'){
+      let raw=await env.NEWS_CACHE.get('diario:analogia:v1');
+      if(!raw){try{const a=await coletarAnalogia();if(a&&a.hoje){raw=JSON.stringify(a);await env.NEWS_CACHE.put('diario:analogia:v1',raw);}}catch(_){}}
+      if(!raw)return json({erro:'aguardando_analogia'},request,env,503);
+      return json(JSON.parse(raw),request,env);
     }
     if(path==='/v1/juros'){
       const raw=await env.NEWS_CACHE.get(JUROS_KEY);if(!raw)return json({erro:'aguardando_juros'},request,env,503);
