@@ -1032,7 +1032,7 @@ const MOEDAS: Record<string, string> = {
 
 type Turno = { on: boolean; dias: Record<string, string>; niv: Record<string, string> };
 type Semana = { id: string; titulo: string; corpo: string };
-type Prefs = { m: string; n: string; sem: string; lead: number; cur: string[]; imp: 'high' | 'med'; on: { m: boolean; n: boolean; ev: boolean; sem: boolean; ab: boolean; tr: boolean; trv: boolean; ol: boolean; br: boolean; bal: boolean; giro: boolean; coach: boolean; rel: boolean; opc: boolean; opciv: boolean; ir: boolean; ewz: boolean; lemb: boolean; jr: boolean; pl: boolean; kw: boolean; urg: boolean; res: boolean }; kw: string[]; br: string; bal: string; turno: Turno | null; copom: boolean; semana: Semana | null; semres: Semana | null; alpx: Alpx[]; en: EnLemb | null; mk: Mk[]; abertos: Aberto[]; trava: Trava | null; olho: Olho[]; opc: Opc[]; opa: OpAlvo[]; ivh: IvResumo; darf: Darf[]; scan: Scan | null; estudo: Estudo | null; lemb: Lemb | null; alc: Alc[]; dqp: boolean; pano: Pano };
+type Prefs = { m: string; n: string; sem: string; lead: number; cur: string[]; imp: 'high' | 'med'; on: { m: boolean; n: boolean; ev: boolean; sem: boolean; ab: boolean; tr: boolean; trv: boolean; ol: boolean; br: boolean; bal: boolean; giro: boolean; coach: boolean; rel: boolean; opc: boolean; opciv: boolean; ir: boolean; ewz: boolean; lemb: boolean; jr: boolean; pl: boolean; kw: boolean; urg: boolean; res: boolean; intel: boolean }; kw: string[]; br: string; bal: string; turno: Turno | null; copom: boolean; semana: Semana | null; semres: Semana | null; alpx: Alpx[]; en: EnLemb | null; mk: Mk[]; abertos: Aberto[]; trava: Trava | null; olho: Olho[]; opc: Opc[]; opa: OpAlvo[]; ivh: IvResumo; darf: Darf[]; scan: Scan | null; estudo: Estudo | null; lemb: Lemb | null; alc: Alc[]; dqp: boolean; pano: Pano; intelAtivos: string[] };
 /** Resumo da semana calculado pelo app (o servidor não lê os trades): id = segunda-feira da semana. */
 export function limpaSemana(x: any): Semana | null {
   if (!x || typeof x !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.id))) return null;
@@ -1088,13 +1088,13 @@ function limpaPrefs(p: any): Prefs {
     lead: Number.isInteger(+p.lead) && +p.lead >= 1 && +p.lead <= 60 ? +p.lead : 5,
     cur: cur.length ? cur : ['USD'],
     imp: p.imp === 'med' ? 'med' : 'high',
-    on: { m: p.on?.m !== false, n: p.on?.n !== false, ev: p.on?.ev !== false, sem: p.on?.sem !== false, ab: p.on?.ab !== false, tr: p.on?.tr !== false, trv: p.on?.trv !== false, ol: p.on?.ol !== false, br: p.on?.br !== false, bal: p.on?.bal !== false, giro: p.on?.giro !== false, coach: p.on?.coach !== false, rel: p.on?.rel !== false, opc: p.on?.opc !== false, opciv: p.on?.opciv !== false, ir: p.on?.ir !== false, ewz: p.on?.ewz === true , lemb: p.on?.lemb !== false, jr: p.on?.jr !== false, pl: p.on?.pl !== false, kw: p.on?.kw !== false, urg: p.on?.urg !== false, res: p.on?.res !== false },
+    on: { m: p.on?.m !== false, n: p.on?.n !== false, ev: p.on?.ev !== false, sem: p.on?.sem !== false, ab: p.on?.ab !== false, tr: p.on?.tr !== false, trv: p.on?.trv !== false, ol: p.on?.ol !== false, br: p.on?.br !== false, bal: p.on?.bal !== false, giro: p.on?.giro !== false, coach: p.on?.coach !== false, rel: p.on?.rel !== false, opc: p.on?.opc !== false, opciv: p.on?.opciv !== false, ir: p.on?.ir !== false, ewz: p.on?.ewz === true , lemb: p.on?.lemb !== false, jr: p.on?.jr !== false, pl: p.on?.pl !== false, kw: p.on?.kw !== false, urg: p.on?.urg !== false, res: p.on?.res !== false, intel: p.on?.intel === true },
     kw: (Array.isArray(p.kw) ? p.kw : []).map((x: unknown) => String(x || '').trim().slice(0, 30)).filter((x: string) => x.length >= 2).slice(0, 12),
     bal: hhmm(p.bal) ? p.bal : '07:00',
     br: hhmm(p.br) ? p.br : '09:30',
     turno: limpaTurno(p.turno), copom: p.copom !== false, semana: limpaSemana(p.semana), semres: limpaSemana(p.semres),
     mk: (Array.isArray(p.mk) ? p.mk : ['b3', 'ny', 'tk']).filter((x: string) => ['b3', 'ny', 'tk'].includes(x)) as Mk[],
-    abertos: limpaAbertos(p.abertos), trava: limpaTrava(p.trava), olho: limpaOlho(p.olho), alpx: limpaAlpx(p.alpx), en: limpaEn(p.en), opc: limpaOpc(p.opc), opa: limpaOpa(p.opa), ivh: limpaIvh(p.ivh), darf: limpaDarf(p.darf), scan: limpaScan(p.scan), estudo: limpaEstudo(p.estudo), lemb: limpaLemb(p.lemb), alc: limpaAlc(p.alc), dqp: p.dqp === true, pano: limpaPano(p.pano),
+    abertos: limpaAbertos(p.abertos), trava: limpaTrava(p.trava), olho: limpaOlho(p.olho), alpx: limpaAlpx(p.alpx), en: limpaEn(p.en), opc: limpaOpc(p.opc), opa: limpaOpa(p.opa), ivh: limpaIvh(p.ivh), darf: limpaDarf(p.darf), scan: limpaScan(p.scan), estudo: limpaEstudo(p.estudo), lemb: limpaLemb(p.lemb), alc: limpaAlc(p.alc), dqp: p.dqp === true, pano: limpaPano(p.pano), intelAtivos: [...new Set((Array.isArray(p.intelAtivos) ? p.intelAtivos : []).map((v: unknown) => String(v || '').toUpperCase().trim()).filter((v: string) => /^[A-Z0-9.^_-]{2,24}$/.test(v)))].slice(0,40),
   };
 }
 
