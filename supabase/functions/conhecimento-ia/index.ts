@@ -26,10 +26,23 @@ async function db(path:string,jwt:string,init:RequestInit={}){
 }
 async function embed(text:string,task:'RETRIEVAL_QUERY'|'RETRIEVAL_DOCUMENT'){
  const key=await chaveDeEmbeddings();
- const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',{
+ const signal=AbortSignal.timeout(18000);
+ const request=()=>fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',{
  method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
- body:JSON.stringify({model:'models/gemini-embedding-001',content:{parts:[{text}]},taskType:task,outputDimensionality:768}),signal:AbortSignal.timeout(18000)});
- if(r.status===429){await r.body?.cancel();throw Error('O Gemini atingiu o limite de uso da indexação ou busca (HTTP 429). Tente novamente mais tarde.')}
+ body:JSON.stringify({model:'models/gemini-embedding-001',content:{parts:[{text}]},taskType:task,outputDimensionality:768}),signal});
+ let r=await request();
+ if(r.status===429){
+  const header=r.headers.get('Retry-After');
+  const error=await r.json().catch(()=>null);
+  const delay=error?.error?.details?.find((d:any)=>d['@type']==='type.googleapis.com/google.rpc.RetryInfo')?.retryDelay;
+  const seconds=header!==null && /^\d+$/.test(header)?Number(header):
+   typeof delay==='string' && /^\d+(?:\.\d+)?s$/.test(delay)?Number(delay.slice(0,-1)):NaN;
+  if(Number.isFinite(seconds) && seconds<=2 && !signal.aborted){
+   await new Promise(resolve=>setTimeout(resolve,seconds*1000));
+   r=await request();
+  }
+  if(r.status===429){if(!r.bodyUsed)await r.body?.cancel();throw Error('O Gemini atingiu o limite de uso da indexação ou busca (HTTP 429). Tente novamente mais tarde.')}
+ }
  if(!r.ok){await r.body?.cancel();throw Error('Embedding indisponível (HTTP '+r.status+')')}
  const v=(await r.json())?.embedding?.values;
  if(!Array.isArray(v)||v.length!==768||!v.every((n:unknown)=>typeof n==='number'&&Number.isFinite(n)))throw Error('Embedding de 768 dimensões não confirmado');
