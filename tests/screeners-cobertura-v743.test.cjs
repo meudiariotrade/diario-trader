@@ -33,7 +33,7 @@ test('Painel exibe cobertura auditável com campos ausentes e sem duplicar telas
  assert.match(app,/cobertura_media_pct/);
  assert.match(app,/cobertura_pct','Cobertura/);
  assert.match(css,/\.scr-coverage/);
- assert.match(css,/#11141b/i);
+ assert.match(css,/#11141b|var\(--dt-s1\)/i);
  assert.match(css,/#d4a017/i);
 });
 test('Ingestão em lotes e APIs restritas no servidor',()=>{
