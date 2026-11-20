@@ -22,7 +22,7 @@ test('v810 preserva cards nativos e seleção contextual sem navegar ou criar ro
 });
 test('v810 usa dados reais de risco, checklists e operações sem números fictícios',()=>{
   assert.match(root,/v810Operacoes\(t,a\)/);
-  assert.match(root,/const completas=fechadas\.length===validas\.length&&validas\.length>0/);
+  assert.match(root,/const completas=encerradas\.length===validas\.length&&validas\.length>0/);
   assert.match(root,/typeof isOpen==="function"&&isOpen\(t\)/);
   assert.match(root,/Dados insuficientes/);
   assert.match(root,/Sem resultado realizado/);
