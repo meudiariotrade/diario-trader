@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 fa5bcd037a8e6627c165fc091dddca41512e5eb47433473a40437eab20ce1b83 */
+/* Gerado de src/app-theme.css · SHA256 436d4669b9b4c2e1f11fbba62a5b16494fc19665da5b064947d9fa2dd520f9aa */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -3462,3 +3462,5 @@ html:root body #app .i833-lig li .btn{flex:none;font-variant-numeric:tabular-num
 html:root body #app .i833-lab{margin-top:8px;min-height:40px;padding:0;border:0;background:none;color:var(--ui-accent);font:inherit;font-weight:600;cursor:pointer}
 html:root body #app .i833-mais{margin-top:10px}
 html:root body #app .i833-mais summary{min-height:40px;display:flex;align-items:center;cursor:pointer;color:var(--ui-text-2)}
+/* v834 — Movimentos fortes, Insiders e Fluxo por ação no Início, no padrão dos cards */
+html:root body #app .v829-home :is(#v518-mov,#v519-ins,#v520-fa){background:var(--ui-card)!important;border:1px solid var(--ui-card-line)!important;border-radius:6px!important;padding:14px 16px!important;margin:0!important}
