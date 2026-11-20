@@ -6,6 +6,7 @@ import {coletarAgenda,coletarSentimento,agendaAgora,sentimentoAgora} from './dad
 import {coletarJuros} from './juros.mjs';
 import {seriePublica} from './series.mjs';
 import {resolveLogos} from './logos.mjs';
+import {loadQuotes as adrsCotacoes,limpa as adrLimpa} from './adrs.mjs';
 const AGENDA_KEY=s=>'diario:agenda:v1:'+s, SENT_KEY='diario:sentimento:v1', JUROS_KEY='diario:juros:v1';
 /* v820: Juros e DI a cada 10 min no horário de mercado (08:30–18:30, dias úteis); de hora em hora fora dele. */
 export function jurosAgora(date){const b=globalThis.DiarioSessoes.local(+date,'America/Sao_Paulo');return !b.weekend&&b.minute>=510&&b.minute<1110?b.minute%10===0:b.minute%60===0;}
@@ -191,6 +192,17 @@ export default {
     const path=new URL(request.url).pathname;
     if(request.method!=='GET')return json({erro:'metodo_nao_permitido'},request,env,405);
     if(path==='/health')return json({ok:Boolean(env.NEWS_CACHE),servico:'diario-noticias',modo:'independente'},request,env,env.NEWS_CACHE?200:503);
+    /* v824: ADRs brasileiras (TradingView com Yahoo de reserva), cache de borda de 20 s. */
+    if(path==='/v1/adrs'){
+      const u=new URL(request.url),lista=[...new Set(String(u.searchParams.get('s')||'').split(',').map(adrLimpa).filter(Boolean))].slice(0,40);
+      if(!lista.length)return json({itens:[],erros:[]},request,env);
+      const cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/adrs?s='+lista.join(','));
+      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
+      try{const v=await adrsCotacoes(lista);
+        if(cache&&v.itens?.length)await cache.put(chave,new Response(JSON.stringify(v),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=20'}}));
+        return json(v,request,env);
+      }catch(e){return json({error:String(e?.message||e)},request,env,502);}
+    }
     /* v823: logotipos (até 120 tickers) com cache de borda de 7 dias por lote; dado público. */
     if(path==='/v1/logos'){
       const u=new URL(request.url),lista=[...new Set(String(u.searchParams.get('t')||'').toUpperCase().split(',').map(x=>x.trim()).filter(x=>/^[A-Z0-9.^_=!:-]{1,24}$/.test(x)))].sort().slice(0,120);

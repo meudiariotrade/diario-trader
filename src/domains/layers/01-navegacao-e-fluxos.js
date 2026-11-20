@@ -2108,7 +2108,8 @@ try {
           const m = window.TraderAdr.phase() === "closed" ? 3e5 : 25e3;
           if (!P && AD.data && G() < m) return Promise.resolve(!0);
           if (window.DIARIO_DEMO) return Promise.resolve(!1);
-          if (!SESS?.at)
+          /* v824: ADRs vêm da Cloudflare sem login; o Supabase só entra como reserva (aí precisa da conta). */
+          if (!SESS?.at && !window.DiarioPublico?.adrs)
             return (
               (AD.err =
                 "Entre na sua conta para atualizar as cotações. A cópia anterior, se houver, continua identificada."),
@@ -2123,14 +2124,19 @@ try {
             adrPaint(),
             (j = (async () => {
               try {
-                const H = await (
-                  await rq("/functions/v1/adrs", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ symbols: c }),
-                    signal: AbortSignal.timeout(25e3),
-                  })
-                ).json();
+                let H = null;
+                try { H = window.DiarioPublico?.adrs ? await window.DiarioPublico.adrs(c) : null; } catch {}
+                if (!H || !Array.isArray(H.itens) || !H.itens.length) {
+                  if (!SESS?.at) throw Error("Entre na sua conta para atualizar as cotações.");
+                  H = await (
+                    await rq("/functions/v1/adrs", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ symbols: c }),
+                      signal: AbortSignal.timeout(25e3),
+                    })
+                  ).json();
+                }
                 if (!Array.isArray(H.itens) || !H.itens.length)
                   throw Error(
                     H.error || "A fonte não retornou cotações válidas.",
