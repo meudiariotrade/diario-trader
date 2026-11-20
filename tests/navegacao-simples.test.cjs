@@ -10,11 +10,13 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  // v563: Início sem "Comece por aqui" e sem atalhos; o Terminal fica no menu.
  await expect(app.locator('.simple-actions')).toHaveCount(0);
  await expect(app.locator('.simple-day-review')).toHaveCount(0);
- await expect(app.locator('.simple-explore')).not.toHaveAttribute('open');
- await app.locator('.simple-explore>summary').click();
- await expect(app.locator('.simple-explore [data-dt393-route="estudos"],.simple-explore [data-dt393-route="est"]')).toBeVisible();
+ // v810: os atalhos existentes estão no painel de ferramentas, não na tela nativa oculta.
+ const expand=app.locator('.v810-home .v810-more').first();
+ await expect(expand).not.toHaveAttribute('open');
+ await expand.locator(':scope > summary').click();
+ await expect(app.locator('.v810-home .v810-more [data-dt393-route="estudos"]')).toBeVisible();
  await p.evaluate(()=>render());
- await expect(app.locator('.simple-explore')).toHaveAttribute('open');
+ await expect(app.locator('.v810-home .v810-more').first()).toHaveAttribute('open');
  // Novo começo do Terminal preserva as preferências reais do GP.
  await p.evaluate(()=>{const state={a:'EWZ',b:'SPX',per:'6M',freq:'D',mode:'dual',ma:[],ev:true,table:false};localStorage.setItem('diario-v421-gp',JSON.stringify(state));localStorage.setItem('diario-v428-ctx',JSON.stringify({'T:GP':state}));});
  await p.reload();await p.locator('#splash').waitFor({state:'hidden'});
@@ -55,8 +57,8 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  await app.locator('.simple-calendar>summary').click();
  await expect(app.locator('#mkcal')).toBeVisible();
  await p.getByRole('button',{name:'Início',exact:true}).last().click();
- await expect(app.locator('.simple-context')).toHaveCount(1);
- await app.locator('.simple-context [data-v4mkt="ag"]').click();
+ await expect(app.locator('.v810-home .v4-pano')).toHaveCount(1);
+ await app.locator('.v810-home .v4-pano [data-v4mkt="ag"]').click();
  await expect(app.locator('.dt395-native-mercado')).toHaveAttribute('data-m403-sub','ag');
  await p.getByRole('button',{name:'Início',exact:true}).last().click();
  await app.getByRole('button',{name:'Perguntar à IA',exact:true}).click();
