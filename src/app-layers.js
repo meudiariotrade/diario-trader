@@ -29507,7 +29507,7 @@ try {
         capital: yt(),
       };
     }
-    window.DiarioRisco = { hoje: riscoHoje598 };
+    window.DiarioRisco = { hoje: riscoHoje598, status: ne };
     /* v598 — Impacto emocional no resultado: estado registrado antes das 09:00 (Meu dia) × P&L dos trades do dia. */
     const EMO598 = [["calmo", "Calmo"], ["focado", "Focado"], ["ansioso", "Ansioso"], ["cansado", "Cansado"], ["euforico", "Eufórico"]];
     function impactoEmocional598() {

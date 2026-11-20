@@ -1055,6 +1055,19 @@ function jrCotHtml() {
   (jrLoad = async function (e) {
     if (JR.busy || (!e && JR.data && JR.ts && Date.now() - JR.ts < 18e4))
       return;
+    /* v820: Juros e DI vêm do snapshot público da Cloudflare; Supabase só como reserva. */
+    if (window.DiarioPublico && !window.DIARIO_DEMO) {
+      JR.busy = 1;
+      try {
+        const v = await window.DiarioPublico.get("/v1/juros", { ttl: 5 * 6e4 });
+        if (v && (v.selic || v.curva)) {
+          ((JR.data = v), (JR.ts = Date.now()), (JR.err = ""), ls.set("diario-jr", v));
+          JR.busy = 0;
+          jrPaint();
+          return;
+        }
+      } catch {} finally { JR.busy = 0; }
+    }
     const t = cfg();
     if (!t) {
       ((JR.err = "Configure o Supabase na aba Conta para ver os juros."),
