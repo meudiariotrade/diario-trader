@@ -59,19 +59,37 @@ async function vision(dataURL:string){
  "niveis_visiveis":[{"percentual":number,"preco":number}],"confianca":"alta"|"media"|"baixa","observacoes":string}.
  Não calcule alvos, não presuma a posição dos marcadores 0/100 pela orientação do gráfico. Se a ancoragem
  e os rótulos não forem legíveis, retorne null. Os preços são NUMÉRICOS e precisam corresponder aos rótulos.`;
- const body=JSON.stringify({contents:[{role:'user',parts:[{text:instruction},{inlineData:{mimeType:m[1],data:m[2]}}]}],generationConfig:{temperature:0,responseMimeType:'application/json',maxOutputTokens:1700}});
- const signal=AbortSignal.timeout(24000);
- let resposta:Response|undefined;
+ const contents=[{role:'user',parts:[{text:instruction},{inlineData:{mimeType:m[1],data:m[2]}}]}];
+ const deadline=Date.now()+85000;
  let modelo='';
+ let t='';
+ let motivo='modelo indisponível';
  for(const candidato of provider.modelos){
+  const restante=deadline-Date.now();
+  if(restante<3000)break;
+  const signal=AbortSignal.timeout(Math.min(38000,restante));
   const url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(candidato)+':generateContent';
-  const tentativa=await fetch(url,{method:'POST',headers:{'x-goog-api-key':provider.chave,'Content-Type':'application/json'},body,signal});
-  if(tentativa.ok){resposta=tentativa;modelo=candidato;break}
-  await tentativa.body?.cancel();
-  if(tentativa.status!==404)throw Error('Leitura visual indisponível (HTTP '+tentativa.status+')');
+  const thinkingConfig=/^gemini-2\.5-flash/.test(candidato)?{thinkingBudget:0}:
+   /^gemini-3.*flash/.test(candidato)?{thinkingLevel:'low'}:undefined;
+  const body=JSON.stringify({contents,generationConfig:{temperature:0,responseMimeType:'application/json',maxOutputTokens:1700,thinkingConfig}});
+  try{
+   const tentativa=await fetch(url,{method:'POST',headers:{'x-goog-api-key':provider.chave,'Content-Type':'application/json'},body,signal});
+   if(!tentativa.ok){
+    await tentativa.body?.cancel();
+    motivo='HTTP '+tentativa.status;
+    if([404,408,502,503,504].includes(tentativa.status))continue;
+    throw Error('Leitura visual indisponível ('+motivo+')');
+   }
+   const j=await tentativa.json();
+   t=(j.candidates?.[0]?.content?.parts||[]).filter((x:any)=>!x.thought).map((x:any)=>x.text||'').join('');
+   modelo=candidato;
+   break;
+  }catch(e){
+   if(!signal.aborted && !(e instanceof DOMException && e.name==='TimeoutError'))throw e;
+   motivo='tempo de resposta esgotado';
+  }
  }
- if(!resposta)throw Error('Nenhum modelo de leitura visual configurado está disponível (HTTP 404)');
- const j=await resposta.json(),t=(j.candidates?.[0]?.content?.parts||[]).map((x:any)=>x.text||'').join('');
+ if(!modelo)throw Error('A leitura do gráfico não foi concluída ('+motivo+'). Tente novamente.');
  let v;try{v=JSON.parse(t)}catch{throw Error('A IA não retornou JSON válido')}
  const number=(n:unknown)=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<1e12?n:null;
  const levels=Array.isArray(v.niveis_visiveis)?v.niveis_visiveis.slice(0,35).map((n:any)=>({percentual:number(n.percentual),preco:number(n.preco)})).filter((n:any)=>n.percentual!==null&&n.preco!==null):[];
