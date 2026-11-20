@@ -2003,6 +2003,24 @@ try {
     });
     const be = { home: le, dia: ie, ops: de, stats: ue };
     const v810Details = {home:new Set(),dia:new Set()};
+    /* v810: o clique em <summary> deve abrir a seção antes que listeners
+       globais reconstruam a rota; o estado é restaurado no próximo render. */
+    v.addEventListener("click", (ev) => {
+      const summary=ev.target.closest?.(".v810-more > summary");
+      if (!summary || !["home","dia"].includes(et())) return;
+      const details=summary.parentElement;
+      const page=details.closest(".v810-home,.v810-day");
+      if (!page) return;
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      details.open=!details.open;
+      const i=[...page.querySelectorAll(".v810-more")].indexOf(details);
+      if(i>=0){
+        const store=v810Details[et()];
+        if(details.open)store.add(String(i));
+        else store.delete(String(i));
+      }
+    }, true);
     function xt() {
       const t = et(),
         e = v.getElementById("app");
