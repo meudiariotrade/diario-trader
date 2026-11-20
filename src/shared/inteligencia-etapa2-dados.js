@@ -73,10 +73,11 @@
        const val=n(p.v),tk=ticker(p.tk);
        if(!tk||!(val>0))continue;
        const meta=metadados[market+':'+tk]||{},setor=String(meta.setor||meta.sector||'Setor não identificado').slice(0,70);
+       const emissor=String(meta.empresa||meta.company_name||tk).slice(0,90);
        const f=/^(PETR|PRIO|RECV|BRAV|XOM|CVX)/.test(tk)?'Energia e petróleo':
          /^(VALE|CSNA|GGBR|USIM|BHP|RIO)/.test(tk)?'Minério e metais':
          /^(ITUB|BBDC|BBAS|SANB|JPM|BAC)/.test(tk)?'Financeiro':null;
-       issuer.set(tk,(issuer.get(tk)||0)+val);sector.set(setor,(sector.get(setor)||0)+val);
+       issuer.set(emissor,(issuer.get(emissor)||0)+val);sector.set(setor,(sector.get(setor)||0)+val);
        if(f)factors.set(f,(factors.get(f)||0)+val);
      }
      const rows=map=>[...map].sort((a,b)=>b[1]-a[1]).map(([nome,v])=>({nome,v,pct:total>0?100*v/total:null}));
