@@ -11,7 +11,19 @@ const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]
 const TIPO=new Set(['Livro_PDF','Video_YouTube','Artigo_Web','Guia_Mercado']);
 const CATEGORIA=new Set(['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Gestao_Risco']);
 async function user(jwt:string){const r=await fetch(sb+'/auth/v1/user',{headers:{apikey:pub,Authorization:'Bearer '+jwt},signal:AbortSignal.timeout(7000)});if(!r.ok)throw Error('Sessão inválida ou expirada');const j=await r.json();if(!UUID.test(j.id||''))throw Error('Conta inválida');return j.id}
-async function db(path:string,jwt:string,init:RequestInit={}){const r=await fetch(sb+'/rest/v1/'+path,{...init,headers:{apikey:pub,Authorization:'Bearer '+jwt,...init.headers},signal:AbortSignal.timeout(15000)});if(!r.ok){await r.body?.cancel();throw Error('Persistência segura indisponível (HTTP '+r.status+')')}return r.status===204?null:await r.json()}
+async function db(path:string,jwt:string,init:RequestInit={}){
+ const headers=new Headers(init.headers);
+ headers.set('apikey',pub);
+ headers.set('Authorization','Bearer '+jwt);
+ const r=await fetch(sb+'/rest/v1/'+path,{...init,headers,signal:AbortSignal.timeout(15000)});
+ if(!r.ok){await r.body?.cancel();throw Error('Persistência segura indisponível (HTTP '+r.status+')')}
+ // PostgREST também responde 201 sem corpo ao gravar com return=minimal.
+ if(headers.get('Prefer')?.split(',').some(p=>p.trim()==='return=minimal')){
+  await r.body?.cancel();
+  return null;
+ }
+ try{return await r.json()}catch{throw Error('A biblioteca recebeu uma resposta de consulta inválida. Tente novamente.')}
+}
 async function embed(text:string,task:'RETRIEVAL_QUERY'|'RETRIEVAL_DOCUMENT'){
  const key=await chaveDeEmbeddings();
  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',{
