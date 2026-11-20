@@ -72,3 +72,42 @@ export async function destaquesJornal(dia:string) {
     return {altas:sorted.filter((x:any)=>x.var>0).slice(0,5),baixas:sorted.filter((x:any)=>x.var<0).slice(-5).reverse(),dia,referencia_em:collected,fonte:'TradingView - universo de componentes informado pela fonte'};
   }catch{return {altas:[],baixas:[],dia,referencia_em:collected,fonte:'TradingView indisponível'};}
 }
+
+/* v840: painel técnico de índices americanos e criptos para o Jornal. Candles diários vêm do cache
+   compartilhado da Cloudflare (/v1/diario); sem resposta, Yahoo direto. Cálculo determinístico, sem IA. */
+export const TEC_GLOBAL: [string, string, string][] = [
+  ['^GSPC', 'S&P 500', 'indice'], ['^IXIC', 'Nasdaq', 'indice'], ['^DJI', 'Dow Jones', 'indice'], ['^RUT', 'Russell 2000', 'indice'],
+  ['BTC-USD', 'Bitcoin', 'cripto'], ['ETH-USD', 'Ethereum', 'cripto'], ['SOL-USD', 'Solana', 'cripto'], ['XRP-USD', 'XRP', 'cripto'],
+];
+const smaT = (a: number[], n: number) => a.length >= n ? a.slice(-n).reduce((s, x) => s + x, 0) / n : null;
+function rsiT(c: number[], n = 14) {
+  if (c.length < n + 1) return null; let g = 0, l = 0;
+  for (let i = 1; i <= n; i++) { const d = c[i] - c[i - 1]; if (d >= 0) g += d; else l -= d; }
+  g /= n; l /= n;
+  for (let i = n + 1; i < c.length; i++) { const d = c[i] - c[i - 1]; g = (g * (n - 1) + Math.max(d, 0)) / n; l = (l * (n - 1) + Math.max(-d, 0)) / n; }
+  return l === 0 ? (g === 0 ? 50 : 100) : 100 - 100 / (1 + g / l);
+}
+export function tecnicoDe(sym: string, nome: string, tipo: string, j: any) {
+  const r = j?.chart?.result?.[0], ts: number[] = r?.timestamp || [], q = r?.indicators?.quote?.[0] || {};
+  const rows = ts.map((t, i) => [t, q.high?.[i], q.low?.[i], q.close?.[i]]).filter((x) => [x[1], x[2], x[3]].every((v) => finite(v) && (v as number) > 0)) as number[][];
+  if (rows.length < 30) return null;
+  const c = rows.map((x) => x[3]), px = c[c.length - 1], ant = c[c.length - 2];
+  const s20 = smaT(c, 20), s50 = smaT(c, 50), s200 = smaT(c, 200), rsi = rsiT(c), ano = rows.slice(-252);
+  const ret = (n: number) => c.length > n ? (px / c[c.length - 1 - n] - 1) * 100 : null;
+  const tend = s50 != null && s200 != null ? (px > s50 && s50 > s200 ? 'Alta' : px < s50 && s50 < s200 ? 'Baixa' : 'Lateral') : s20 != null && s50 != null ? (px > s20 && s20 > s50 ? 'Alta' : px < s20 && s20 < s50 ? 'Baixa' : 'Lateral') : 'Lateral';
+  const r2 = (x: number | null, d = 2) => x == null || !finite(x) ? null : +x.toFixed(d);
+  return { sym, nome, tipo, px: r2(px, 2), d1: r2((px / ant - 1) * 100), rsi14: r2(rsi, 1), sma20: r2(s20), sma50: r2(s50), sma200: r2(s200),
+    dist20: s20 ? r2((px / s20 - 1) * 100) : null, dist200: s200 ? r2((px / s200 - 1) * 100) : null, ret1m: r2(ret(21)), ret3m: r2(ret(63)),
+    max52: r2(Math.max(...ano.map((x) => x[1]))), min52: r2(Math.min(...ano.map((x) => x[2]))), tendencia: tend,
+    dia: new Date(rows[rows.length - 1][0] * 1000).toISOString().slice(0, 10), serie: c.slice(-60).map((v) => +v.toFixed(2)) };
+}
+export async function tecnicoGlobal() {
+  const collected = new Date().toISOString();
+  const out = await Promise.all(TEC_GLOBAL.map(async ([sym, nome, tipo]) => {
+    for (const url of [`https://diario-trader.lucianosilva43567.workers.dev/v1/diario?t=${encodeURIComponent(sym)}&range=1y`, `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1y&interval=1d`]) {
+      try { const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(9000) }); if (r.ok) { const t = tecnicoDe(sym, nome, tipo, await r.json()); if (t) return t; } } catch { /* próxima fonte */ }
+    }
+    return null;
+  }));
+  return { itens: out.filter(Boolean), coletado_em: collected, fonte: 'Yahoo Finance (candles diários) via cache da Cloudflare' };
+}

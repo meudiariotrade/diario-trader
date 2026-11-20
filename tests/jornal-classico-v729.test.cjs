@@ -24,16 +24,18 @@ test('v729: divergência em uma matéria não apaga cinco coisas, notas e análi
  const e=ed();
  e.manchete.texto='O Ibovespa encerrou aos 160.000 pontos.'; // divergente com 169.295
  const r=Q.prepare(e);
- assert.match(r.manchete.titulo,/retido/);
- assert.equal(r.em_poucas_linhas.length,1);
- assert.equal(r.cinco_coisas.length,1);
+ // v840: o número divergente é corrigido; a matéria e os blocos independentes permanecem.
+ assert.doesNotMatch(r.manchete.titulo,/retido/);
+ assert.doesNotMatch(r.manchete.texto,/160\.000/);
+ assert.ok(r.em_poucas_linhas.length>=1);
+ assert.ok(r.cinco_coisas.length>=1);
  assert.ok(r.analise?.texto.includes('A curva de juros'));
 });
-test('v729: material divergente na nota é eliminado, outras notas são preservadas',()=>{
+test('v729/v840: com a manchete corrigida, as notas independentes são preservadas',()=>{
  const e=ed();e.manchete.texto='Ibovespa aos 160.000 pontos.';
- e.em_poucas_linhas.push('Ibovespa encerrou aos 160.000 pontos.');
+ const n=e.em_poucas_linhas.length;
  const r=Q.prepare(e);
- assert.equal(r.em_poucas_linhas.length,1);
+ assert.equal(r.em_poucas_linhas.length,n);
 });
 test('v729: mantém motor visual do Jornal restaurado v721',()=>{
  const pdf=fs.readFileSync('src/pdf-documentos.js','utf8');

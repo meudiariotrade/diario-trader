@@ -56,9 +56,27 @@ export function agendaIBGE(data:any,url:string) {
     // A API não explicita o fuso de data_divulgacao: preservar só a data, sem inferir hora.
     return [{data:`${d[3]}-${d[2]}-${d[1]}`,horario:'',pais:'Brasil',evento:String(x.titulo).slice(0,140),periodo:[x.mes_referencia_inicio,x.ano_referencia_inicio].filter(Boolean).join('/'),fonte_url:url,por_que:'Data programada pelo IBGE; horário não confirmado nesta fonte.',consenso:'',anterior:''}];});
 }
+/* v840: calendário econômico com impacto, consenso e anterior (o mesmo da aba Agenda, coletado na Cloudflare).
+   Volta a dar ao Jornal a agenda completa; IBGE e BLS ficam como complemento. */
+const CAL_URL='https://br.tradingview.com/economic-calendar/';
+export function agendaCalendario(ev:any[]) {
+  const pais:Record<string,string>={BR:'Brasil',US:'EUA',EU:'Zona do Euro',CN:'China',GB:'Reino Unido',JP:'Japão',DE:'Alemanha'};
+  return (Array.isArray(ev)?ev:[]).flatMap((e:any)=>{
+    const t=Date.parse(e?.em||'');if(!Number.isFinite(t)||!e?.t||!pais[e.p]||(e.imp??-1)<0)return [];
+    const l=new Date(t-3*3600000),data=l.toISOString().slice(0,10),horario=l.toISOString().slice(11,16);
+    return [{data,horario,pais:pais[e.p],evento:String(e.t).slice(0,140),periodo:String(e.per||''),fonte_url:CAL_URL,impacto:e.imp>=1?'alto':'médio',
+      consenso:String(e.proj||''),anterior:String(e.ant||''),realizado:String(e.atual||''),por_que:''}];
+  });
+}
 export async function agendaJornal(dia:string) {
   const ate=new Date(Date.parse(dia+'T12:00:00Z')+14*86400000).toISOString().slice(0,10),ibge=`https://servicodados.ibge.gov.br/api/v3/calendario/?qtd=100&de=${dia}&ate=${ate}`;
-  const results=await Promise.allSettled([leituraLimitada(BLS).then(agendaBLS),leituraLimitada(ibge).then(x=>agendaIBGE(JSON.parse(x),ibge))]);
-  const itens=results.flatMap(r=>r.status==='fulfilled'?r.value:[]).filter(x=>x.data>=dia&&x.data<=ate).sort((a,b)=>(a.data+(a.horario||'99:99')).localeCompare(b.data+(b.horario||'99:99'))).slice(0,25);
-  return {itens,fontes:results.flatMap((r,i)=>r.status==='fulfilled'?[{titulo:i?'Calendário IBGE':'Calendário BLS',url:i?ibge:BLS}]:[]),lacunas:results.flatMap((r,i)=>r.status==='rejected'?[(i?'IBGE':'BLS')+': calendário não recuperado.']:[])};
+  const cal=(s:number)=>fetch('https://diario-trader.lucianosilva43567.workers.dev/v1/agenda?semana='+s,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():Promise.reject(new Error(String(r.status)))).then(j=>agendaCalendario(j?.eventos||[]));
+  const results=await Promise.allSettled([leituraLimitada(BLS).then(agendaBLS),leituraLimitada(ibge).then(x=>agendaIBGE(JSON.parse(x),ibge)),Promise.all([cal(0),cal(1).catch(()=>[])]).then(x=>x.flat())]);
+  const vistos=new Set<string>(),todos=results.flatMap(r=>r.status==='fulfilled'?r.value:[]).filter(x=>x.data>=dia&&x.data<=ate);
+  const peso=(x:any)=>x.impacto==='alto'?0:x.impacto==='médio'?1:2;
+  const itens=todos.sort((a,b)=>peso(a)-peso(b)||(a.data+(a.horario||'99:99')).localeCompare(b.data+(b.horario||'99:99')))
+    .filter(x=>{const k=x.data+'|'+String(x.evento).toLowerCase().slice(0,40);if(vistos.has(k))return false;vistos.add(k);return true;}).slice(0,25)
+    .sort((a,b)=>(a.data+(a.horario||'99:99')).localeCompare(b.data+(b.horario||'99:99')));
+  const nomes=['Calendário BLS','Calendário IBGE','Calendário econômico'],urls=[BLS,ibge,CAL_URL];
+  return {itens,fontes:results.flatMap((r,i)=>r.status==='fulfilled'?[{titulo:nomes[i],url:urls[i]}]:[]),lacunas:results.flatMap((r,i)=>r.status==='rejected'?[nomes[i]+': não recuperado.']:[])};
 }

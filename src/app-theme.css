@@ -3523,3 +3523,16 @@ html:root body #app .scr839-grid input,html:root body #app .scr839-grid select{m
 html:root body #app .scr839-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 html:root body #app .scr839-acoes .btn{min-height:40px}
 @media(max-width:700px){html:root body #app .scr839-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* v840 — Jornal: painel técnico (índices EUA e criptos) */
+html:root body #app .jr840-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+html:root body #app .jr840-c{min-width:0;padding:10px;border:1px solid var(--ui-card-line,rgba(255,255,255,.06));border-radius:6px;display:grid;gap:4px}
+html:root body #app .jr840-t{display:flex;justify-content:space-between;align-items:center;gap:6px}
+html:root body #app .jr840-tend{font:600 10px/1 system-ui;padding:3px 6px;border-radius:4px;background:rgba(100,116,139,.14);white-space:nowrap}
+html:root body #app .jr840-tend.Alta{color:#10B981;background:rgba(16,185,129,.12)}
+html:root body #app .jr840-tend.Baixa{color:#EF4444;background:rgba(239,68,68,.12)}
+html:root body #app .jr840-p{display:flex;justify-content:space-between;align-items:baseline;font-variant-numeric:tabular-nums}
+html:root body #app .jr840-p b{font-size:16px}
+html:root body #app .jr840-p i{font-style:normal;font-weight:600}
+html:root body #app .jr840-p i.g{color:#10B981}html:root body #app .jr840-p i.r{color:#EF4444}
+html:root body #app .jr840-sp{width:100%;height:36px;display:block}
+html:root body #app .jr840-c small{font-size:11px;color:var(--ui-label,#64748B);font-variant-numeric:tabular-nums}

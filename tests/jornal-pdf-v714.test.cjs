@@ -28,8 +28,8 @@ test('PDF completo usa snapshot, fontes clicáveis, números íntegros e todos o
 test('PDF omite dados contraditórios sem substituir a capa por avisos técnicos',async()=>{
  const {e}=fixture();e.cotacoes=[{k:'ibov',px:169295,d1:-1.83}];e.manchete={titulo:'Ibovespa cai 5,1%',texto:'O Ibovespa cai 5,1%.'};const r=await render(e,{});assert.ok(!r.ops.some(op=>op.text.includes('Conteúdo retido')));assert.ok(r.ops.some(op=>/agenda/i.test(op.text)));assert.ok(!r.ops.some(op=>op.text.includes('Rastreabilidade dos dados')));assert.ok(!r.ops.some(op=>op.text.includes('Ibovespa cai 5,1%')));
 });
-test('edição toda retida mantém capa editorial com referências reais, sem inventar matérias',async()=>{
+test('v840: manchete com número divergente é corrigida (não retida) e o PDF usa o dado real',async()=>{
  const {e}=fixture();e.materias=[];e.cotacoes=[{k:'ibov',n:'Ibovespa',px:169295,d1:-1.83,fonte:'Fixture',dia_referencia:e.dia}];e.manchete={titulo:'Ibovespa cai 5,1%',texto:'O Ibovespa cai 5,1%.'};
- const r=await render(e,{});assert.ok(r.ops.some(x=>x.text.includes('169.295')));assert.ok(r.ops.some(x=>x.text.includes('última referência')));assert.ok(!r.ops.some(x=>/Conteúdo retido|cai 5,1%/.test(x.text)));assert.equal(r.snapshot_id,r.prepared.snapshot.id);assert.equal(e.manchete.titulo,'Ibovespa cai 5,1%');
+ const r=await render(e,{});assert.ok(r.ops.some(x=>x.text.includes('169.295')));assert.ok(r.ops.some(x=>/cai 1,83%/.test(x.text)));assert.ok(!r.ops.some(x=>/Conteúdo retido|cai 5,1%/.test(x.text)));assert.equal(r.snapshot_id,r.prepared.snapshot.id);assert.equal(e.manchete.titulo,'Ibovespa cai 5,1%');
 });
 module.exports={fixture,render};

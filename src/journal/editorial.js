@@ -73,6 +73,21 @@
     return e;
   }
   function publicEdition(value){const e=presentation(value);if(e)delete e.profit_local;return e;}
+
+  /* v840: painel técnico na tela do Jornal (índices EUA e criptos da edição), com mini gráfico de 60 dias. */
+  function jrTecGlobalHtml(e){
+    const L=edition(e)?.snapshot?.tecnico?.itens||[];if(!L.length)return '';
+    const nf=(x,d=2)=>x==null||!Number.isFinite(x)?'—':Number(x).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+    const spark=S=>{if(!S||S.length<3)return '';const mn=Math.min(...S),mx=Math.max(...S),w=160,h=36,dx=w/(S.length-1);
+      const pts=S.map((v,i)=>(i*dx).toFixed(1)+','+(h-(mx>mn?(v-mn)/(mx-mn)*h:h/2)).toFixed(1)).join(' ');
+      return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" class="jr840-sp" aria-hidden="true"><polyline fill="none" stroke="'+(S.at(-1)>=S[0]?'#10B981':'#EF4444')+'" stroke-width="1.5" points="'+pts+'"/></svg>';};
+    return '<section class="jrsec jr840"><h3>Painel técnico · índices EUA e criptos</h3><div class="jr840-grid">'+L.map(x=>
+      '<div class="jr840-c"><div class="jr840-t"><b>'+esc(x.nome)+'</b><span class="jr840-tend '+esc(x.tendencia)+'">'+esc(x.tendencia)+'</span></div>'+
+      '<div class="jr840-p"><b>'+(x.tipo==='cripto'?'US$ ':'')+nf(x.px,x.px<10?4:2)+'</b><i class="'+(x.d1>=0?'g':'r')+'">'+(x.d1==null?'':(x.d1>0?'+':'')+nf(x.d1)+'%')+'</i></div>'+spark(x.serie)+
+      '<small>RSI 14 '+nf(x.rsi14,1)+' · vs MM20 '+(x.dist20==null?'—':nf(x.dist20,1)+'%')+' · vs MM200 '+(x.dist200==null?'—':nf(x.dist200,1)+'%')+'</small>'+
+      '<small>1m '+(x.ret1m==null?'—':nf(x.ret1m,1)+'%')+' · 3m '+(x.ret3m==null?'—':nf(x.ret3m,1)+'%')+' · 52s '+nf(x.min52)+'–'+nf(x.max52)+'</small></div>').join('')+
+      '</div><p class="sm mut">Candles diários (Yahoo). RSI de Wilder e médias simples. Não é recomendação.</p></section>';
+  }
   w.DiarioJornalEditorial={edition,presentation};
   const journalView=vJornal;let legacyRefresh=false;
   vJornal=function(){if(!legacyRefresh && JRN.v?.manchete && !JRN.v.prep_id && !JRN.busy){legacyRefresh=true;JRN.v.antiga=true;setTimeout(()=>jrCarrega(false),0);}return journalView.apply(this,arguments);};
@@ -102,7 +117,8 @@ jrFechHtml=function(e) {
   };
   jrGraf=async function(){ /* A leitura de uma edição não faz consulta de candles por polling. */ };
   jrGdHtml=function(){return '';};
-  jrIndHtml=function(e){const m=edition(e)?.snapshot?.macro||{},L=m.ind||[];return L.length?`<section class="jrsec jrind2"><h3>Indicadores</h3><div class="jrkp4">${L.map(x=>`<div><small>${esc(x.nome)}</small><b>${esc(Number(x.v).toLocaleString('pt-BR')+' '+x.un)}</b><span>${esc(x.periodo)}</span></div>`).join('')}</div></section>`:'';};
+  jrIndHtml=function(e){return jrIndBase(e)+jrTecGlobalHtml(e);};
+  const jrIndBase=function(e){const m=edition(e)?.snapshot?.macro||{},L=m.ind||[];return L.length?`<section class="jrsec jrind2"><h3>Indicadores</h3><div class="jrkp4">${L.map(x=>`<div><small>${esc(x.nome)}</small><b>${esc(Number(x.v).toLocaleString('pt-BR')+' '+x.un)}</b><span>${esc(x.periodo)}</span></div>`).join('')}</div></section>`:'';};
 jrRkHtml=function(){
   const e=edition(jrVer())?.snapshot?.movers;
   if (!e) return "";

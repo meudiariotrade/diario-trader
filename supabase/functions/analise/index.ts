@@ -1,5 +1,5 @@
 import { fontesJornal, agendaJornal, confereEvidencia } from './jornal-fontes.ts';
-import { coletaJornal, macroJornal, destaquesJornal } from './jornal-dados.ts';
+import { coletaJornal, macroJornal, destaquesJornal, tecnicoGlobal } from './jornal-dados.ts';
 import '../_shared/jornal-quality.js';
 const JORNAL_Q = (globalThis as any).DiarioJornalQualidade;
 import { numerosFato, validaRelatorio, textoTecnicoConfere } from './validacao.ts';
@@ -3699,10 +3699,10 @@ function balJunta(v: any, app: any) {
   return { ...v, ontem: j(v.ontem, a.ontem), hoje_lista: j(v.hoje_lista, a.hoje_lista), proximos: j(v.proximos, a.proximos) };
 }
 async function jrPrep(E: { dia: string; ed: Edicao }, sp: Date, novo: boolean, balApp: any = null) {
-  const k = `jornal:prep:${E.dia}:${E.ed}:v717`;
+  const k = `jornal:prep:${E.dia}:${E.ed}:v840`;
   if (!novo) { const c = await cacheGet(k); if (c?.dados?.pedido && Date.now() - (+c.dados.ts || 0) < 15 * 60_000) return c.dados; }
   const jan = E.ed === 'manha' ? 'pre' : E.ed === 'meio' ? 'meio' : 'fech';
-  const [mercado, cx, mans, vb, macroEd, moversEd, agendaEd] = await Promise.all([
+  const [mercado, cx, mans, vb, macroEd, moversEd, agendaEd, tecGlobal] = await Promise.all([
     coletaJornal(GIRO_TV, E.dia).catch(() => ({ q: [] as any[], sessoes: {}, coletado_em: new Date().toISOString() })),
     giroContexto(hoje()).catch(() => ({ eleicao: [] as string[], sazonal: [] as string[], sentimento: [] as string[] })),
     jrManchetes(E.ed === 'fds' ? 72 : 30).catch(() => []),
@@ -3710,6 +3710,7 @@ async function jrPrep(E: { dia: string; ed: Edicao }, sp: Date, novo: boolean, b
     macroJornal().catch(() => ({ ind: [], focus: [], fontes: [] })),
     destaquesJornal(E.dia),
     agendaJornal(E.dia).catch(() => ({itens:[],fontes:[],lacunas:['Agenda oficial indisponível.']})),
+    tecnicoGlobal().catch(() => ({ itens: [] as any[] })),
   ]);
   const documentos = await fontesJornal(mans).catch(() => []);
   const coletado = mercado.coletado_em, q = mercado.q;
@@ -3760,7 +3761,7 @@ async function jrPrep(E: { dia: string; ed: Edicao }, sp: Date, novo: boolean, b
     return L.filter((x: any, i: number, a: any[]) => a.findIndex((y: any) => y.tk.slice(0, 4) === x.tk.slice(0, 4)) === i).sort((a: any, b: any) => (a.d < b.d ? -1 : a.d > b.d ? 1 : (b.cap || 0) - (a.cap || 0))).slice(0, 6)
       .map((x: any) => ({ data: x.d, horario: x.hora || '', pais: 'Brasil', fonte_url: x.conf === 'com' ? JORNAL_Q.url(x.link) : '', quando: dd(x.d) + (x.hora ? ' ' + x.hora : x.quando === 'antes' ? ' (antes da abertura)' : x.quando === 'depois' ? ' (após o fechamento)' : ''), evento: `Balanço: ${x.tk}${x.nome && x.nome.toUpperCase() !== x.tk ? ' (' + String(x.nome).slice(0, 30) + ')' : ''}`, por_que: x.conf === 'com' ? 'Data confirmada pela empresa em comunicado à CVM.' : 'Data estimada pelo calendário de resultados; a empresa ainda não confirmou.' }));
   } catch { return []; } })();
-  const d = { mercado: { sessoes: mercado.sessoes, macro: macroEd, movers: moversEd }, agenda_oficial: agendaEd, documentos, fontes_primarias: [...macroEd.fontes,...agendaEd.fontes], evidencias_numericas: [...qJornal.flatMap((q: any) => [q.px, q.d1].filter((v: any) => typeof v === 'number')), ...(macroEd.ind || []).map((x: any) => x.v), ...(macroEd.focus || []).flatMap((x: any) => [x.mediana,x.anterior].filter((v: any) => typeof v === 'number')), ...[...(moversEd.altas || []),...(moversEd.baixas || [])].flatMap((x: any) => [x.px,x.var]), ...mans.flatMap((m) => numerosFato(m.t + ' ' + (m.r || ''))), ...tec.flatMap((t) => numerosFato(t))], prep_id: String(Date.now()), coletado_em: coletado, pedido, q: qJornal, mans: mans.slice(0, 25), bal_ag: balAg, bal_saiu: balSaiu, ts: Date.now() };
+  const d = { mercado: { sessoes: mercado.sessoes, macro: macroEd, movers: moversEd, tecnico: tecGlobal }, agenda_oficial: agendaEd, documentos, fontes_primarias: [...macroEd.fontes,...agendaEd.fontes], evidencias_numericas: [...qJornal.flatMap((q: any) => [q.px, q.d1].filter((v: any) => typeof v === 'number')), ...(macroEd.ind || []).map((x: any) => x.v), ...(macroEd.focus || []).flatMap((x: any) => [x.mediana,x.anterior].filter((v: any) => typeof v === 'number')), ...[...(moversEd.altas || []),...(moversEd.baixas || [])].flatMap((x: any) => [x.px,x.var]), ...mans.flatMap((m) => numerosFato(m.t + ' ' + (m.r || ''))), ...tec.flatMap((t) => numerosFato(t)), ...((tecGlobal as any)?.itens || []).flatMap((x: any) => [x.px, x.d1, x.rsi14].filter((v: any) => typeof v === 'number'))], prep_id: String(Date.now()), coletado_em: coletado, pedido, q: qJornal, mans: mans.slice(0, 25), bal_ag: balAg, bal_saiu: balSaiu, ts: Date.now() };
   await cachePut(k, d);
   await cachePut(k + ':' + d.prep_id, d);
   return d;
