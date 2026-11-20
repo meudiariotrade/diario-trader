@@ -3335,3 +3335,30 @@ html body .v811-r-ok b:first-child{color:#10B981}html body .v811-r-contra b:firs
 @media (max-width:767px){html body .v811-pxo-row{grid-template-columns:1fr}}
 /* v811: sub-aba ativa de Análises visível (antes ficava igual às outras). */
 html:root body #app#app .an-subs>button.selected,html:root body #app#app .an-subs>button[aria-selected="true"]{color:#D4A017!important;border-bottom-color:#D4A017!important;background:var(--dt-hover)!important}
+/* v815 — Barra de contexto única (cabeçalho raiz, todas as abas) */
+html:root body #dt815-ctx{display:flex;align-items:center;gap:16px;min-height:32px;padding:0 16px;border-top:1px solid var(--dt-line);border-bottom:1px solid var(--dt-line);background:var(--dt-bg);color:var(--dt-mut);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+html:root body #dt815-ctx::-webkit-scrollbar{display:none}
+html:root body #dt815-ctx b{color:var(--dt-tx);font-weight:600}
+html:root body #dt815-ctx>*{flex:none}
+html:root body #dt815-ctx .dt815-sp{flex:1 1 auto}
+html:root body #dt815-ctx button{min-height:28px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:inherit;font:inherit;cursor:pointer;white-space:nowrap}
+html:root body #dt815-ctx button:hover{background:var(--dt-hover)}
+html:root body #dt815-ctx .dt815-fase{min-height:20px;height:20px;padding:0 6px;font-size:10px;font-weight:700;letter-spacing:.05em;color:#0A0C10;background:var(--dt-mut)}
+html:root body #dt815-ctx .dt815-fase.f-pre{background:#D4A017}
+html:root body #dt815-ctx .dt815-fase.f-pregao{background:#10B981}
+html:root body #dt815-ctx .dt815-foco b{color:var(--dt-gold)}
+html:root body #dt815-ctx .dt815-risco{display:inline-flex;align-items:center;gap:6px}
+html:root body #dt815-ctx .dt815-risco i{display:inline-block;width:56px;height:6px;border-radius:3px;background:var(--dt-hover);overflow:hidden}
+html:root body #dt815-ctx .dt815-risco u{display:block;height:100%;width:0;background:var(--dt-gain);text-decoration:none}
+html:root body #dt815-ctx .dt815-risco.at u{background:#D4A017}
+html:root body #dt815-ctx .dt815-risco.cr u{background:var(--dt-loss)}
+html:root body #dt815-ctx .dt815-risco.at b{color:var(--dt-gold)}
+html:root body #dt815-ctx .dt815-risco.cr b{color:var(--dt-loss)}
+html:root body #dt815-ctx .dt815-st{font-weight:700}
+html:root body #dt815-ctx .dt815-st.s-g{color:var(--dt-gain)}
+html:root body #dt815-ctx .dt815-st.s-a{color:var(--dt-gold)}
+html:root body #dt815-ctx .dt815-st.s-r{color:var(--dt-loss)}
+@media(max-width:640px){html:root body #dt815-ctx{gap:10px;padding:0 12px}html:root body #dt815-ctx .dt815-rel,html:root body #dt815-ctx .dt815-foco,html:root body #dt815-ctx [data-k=rot]{display:none}html:root body #dt815-ctx button{min-height:32px}}
+@media(min-width:641px){html:root body #dt815-ctx button.dt815-fase{min-height:20px!important;height:20px!important;line-height:20px}}
+html:root body #dt815-ctx .dt815-ev b{font-size:10px;letter-spacing:.04em;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,.15);color:var(--dt-loss)}
+html:root body #dt815-ctx .dt815-ev span{color:var(--dt-tx);max-width:260px;overflow:hidden;text-overflow:clip;display:inline-block;vertical-align:bottom}
