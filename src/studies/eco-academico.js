@@ -148,7 +148,7 @@ L.events.uniFichar=geraFicha;
 L.events.uniLocal=()=>{
  S.uniText=valorTexto().trim();if(S.uniText.length<100){S.uniStatus='Cole um trecho antes de salvar.';refresh();return;}
  const disc=document.querySelector('[data-uni-disc]')?.value||S.uniDisc;
- const title=document.querySelector('[data-uni-title]')?.value||'Texto acadêmico';
+ const title=(document.querySelector('[data-uni-title]')?.value||S.uniTitle||'Texto acadêmico').trim().slice(0,160);
  const f=offline(S.uniText,title,disc);db.fichas.unshift(f);db.fichas=db.fichas.slice(0,80);S.uniFid=f.id;S.uniTitle=title;persist();S.uniStatus='Ficha de extração local salva (não é análise de IA).';refresh();
 };
 L.events.uniAbrir=el=>{S.uniFid=el.dataset.id;refresh();};

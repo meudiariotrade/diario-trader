@@ -81,6 +81,7 @@
       return '<div style="padding:9px 0;border-bottom:1px solid var(--bd,#1E232E);min-width:0"><b>'+escape(e.titulo)+'</b>'+
         '<div class="mut sm">'+escape(e.tema)+' · '+escape(e.prioridade)+' · '+when(e.ultimaAtualizacao)+' · '+source+' · '+(e.quantidadeFontes||e.fontes?.length||0)+' fonte(s)</div>'+
         (ticker.length?'<div style="margin-top:5px">'+ticker.map(t=>'<button type="button" class="btn s" data-intel-ticker="'+escape(t)+'" style="margin:2px;min-height:40px">'+escape(t)+'</button>').join('')+'</div>':'')+
+        '<button type="button" class="btn s" data-intel-study="'+escape(e.id)+'" style="min-height:40px;margin:5px 0">Estudar impacto</button>'+
         '<div class="mut sm" style="margin-top:4px">Impactos indiretos: hipóteses econômicas, não causalidades comprovadas.</div></div>';
     }).join('');
   }
@@ -277,5 +278,5 @@
     else if(state.route){state.abort=new AbortController();refresh();}
   });
   if(w.TraderUI?.onRender)w.TraderUI.onRender('inteligencia-integrada-v807',mount);
-  w.DiarioInteligenciaEtapa1=Object.freeze({meusAtivos,mercadoPlan,relacionados,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
+  w.DiarioInteligenciaEtapa1=Object.freeze({meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
 })(window);

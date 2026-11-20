@@ -516,5 +516,22 @@ d.addEventListener('keydown',ev=>{
  const dot=ev.target.closest('[data-scr-point]');if(!dot)return;
  ev.preventDefault();dot.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
 });
-w.DiarioScreeners={view,load,holdings};
+/* API pública e somente leitura para o radar fundamentalista da Carteira.
+ * Reutiliza o snapshot existente via Cloudflare/IndexedDB; nenhum GET por ticker. */
+async function metricasPublicas(m,tickers){
+ const market=String(m||'').toUpperCase();
+ if(market!=='BR'&&market!=='US')throw Error('Mercado não reconhecido');
+ const wanted=new Set((Array.isArray(tickers)?tickers:[]).slice(0,30).map(t=>String(t||'').toUpperCase()));
+ if(!wanted.size)return {market,reference:null,source:null,rows:[]};
+ const data=await getGlobalSnapshot(market.toLowerCase());
+ if(!data?.universe_complete||!Array.isArray(data.universe_rows))throw Error('Snapshot completo indisponível');
+ const keys=['ticker','empresa','company_name','setor','sector','roe','roic','margem_ebitda','margem_liquida',
+  'fcf_yield','divida_liquida_ebitda','pvp','pl','forward_pe','momentum_12_1','score_quant_br',
+  'score_quant_us','fundamentals_at','balance_date','source','fonte'];
+ const rows=data.universe_rows.filter(x=>wanted.has(String(x.ticker||'').toUpperCase()))
+  .slice(0,30).map(x=>Object.fromEntries(keys.filter(k=>x[k]!==undefined).map(k=>[k,x[k]])));
+ return {market,reference:data.last_update||null,source:data.source||'Screener público',rows,
+  cacheHistorico:!!data._historical_cache,cacheOffline:!!data._offline_cache};
+}
+w.DiarioScreeners={view,load,holdings,metricasPublicas};
 })(window,document);
