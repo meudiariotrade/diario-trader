@@ -59,19 +59,22 @@
   const j=await res.json();if(!res.ok)throw Error(j.erro||'Fonte não disponível; cole o conteúdo autorizado');
   return j.texto;
  }
- async function ingest({titulo,autor,tipo,categoria,texto,url=''}){
+ async function ingest({titulo,autor,tipo,categoria,texto,url=''},anterior=null){
   if(busy)throw Error('Importação anterior em andamento');
   const blocks=chunks(texto);if(!blocks.length)throw Error('Texto insuficiente para indexar');
-  if(!confirm('Indexar '+blocks.length+' trechos no Supabase? Originais ficam apenas neste dispositivo.'))return;
-  busy=true;controller=new AbortController();const origin=owner(),id=crypto.randomUUID();
+  if(!anterior&&!confirm('Indexar '+blocks.length+' trechos no Supabase? Originais ficam apenas neste dispositivo.'))return;
+  busy=true;controller=new AbortController();const origin=owner(),id=anterior?.id||crypto.randomUUID();
+  const inicio=anterior?.sincronizados||0;
+  const criado=anterior?.criado||new Date().toISOString();
   try{
-   await store({id,titulo,autor,tipo,categoria,texto,origem:url,blocos:blocks.length,criado:new Date().toISOString(),sincronizados:0});
-   for(let i=0;i<blocks.length;i+=6){
+   if(!anterior)await store({id,titulo,autor,tipo,categoria,texto,origem:url,blocos:blocks.length,criado,sincronizados:0});
+   for(let i=inicio;i<blocks.length;i+=6){
     if(controller.signal.aborted||owner()!==origin)throw Error('Importação interrompida');
     const group=blocks.slice(i,i+6);
     await api({acao:'indexar',obra_id:id,titulo_obra:titulo,autor,tipo_fonte:tipo,categoria,chunks:group},controller.signal);
+    if(owner()!==origin)throw Error('Conta alterada durante a importação');
     status('Indexados '+Math.min(i+6,blocks.length)+' de '+blocks.length+' trechos',35+Math.round((i+6)/blocks.length*65));
-    await store({id,titulo,autor,tipo,categoria,texto,origem:url,blocos:blocks.length,criado:new Date().toISOString(),sincronizados:Math.min(i+6,blocks.length)});
+    await store({id,titulo,autor,tipo,categoria,texto,origem:url,blocos:blocks.length,criado,sincronizados:Math.min(i+6,blocks.length)});
    }
    status('Biblioteca atualizada: '+titulo,100);
   }finally{busy=false;controller=null;items=await all();refresh()}
@@ -99,7 +102,7 @@
    '<p role="status" aria-live="polite">'+esc(progress)+'</p><progress max="100" value="'+progressPct+'" style="width:100%;accent-color:#D4A017"></progress>'+
    '<h3>Buscar na base privada</h3><input id="brain-query" maxlength="480" placeholder="Ex.: impacto do Copom no DI e Fibonaccing" style="font-size:16px"><button class="btn s" data-brain-search="1">Buscar trechos</button>'+
    (hits.length?'<ol>'+hits.map(x=>'<li><b>'+esc(x.titulo_obra)+'</b> · similaridade '+Number(x.similarity||0).toFixed(2)+'<p>'+esc(x.conteudo_chunk)+'</p></li>').join('')+'</ol>':'')+
-   '<h3>Obras indexadas neste dispositivo</h3><div>'+local.map(x=>'<div style="border-top:1px solid #1E232E;padding:8px 0"><b>'+esc(x.titulo)+'</b><small> · '+x.sincronizados+'/'+x.blocos+' trechos · '+esc(x.categoria)+'</small><button class="btn s" data-brain-remove="'+esc(x.id)+'">Remover</button></div>').join('')+'</div></section>';
+   '<h3>Obras indexadas neste dispositivo</h3><div>'+local.map(x=>'<div style="border-top:1px solid #1E232E;padding:8px 0"><b>'+esc(x.titulo)+'</b><small> · '+x.sincronizados+'/'+x.blocos+' trechos · '+esc(x.categoria)+'</small>'+(x.sincronizados<x.blocos&&x.texto?'<button class="btn s" data-brain-resume="'+esc(x.id)+'">Continuar</button>':'')+'<button class="btn s" data-brain-remove="'+esc(x.id)+'">Remover</button></div>').join('')+'</div></section>';
  }
  async function sync(){items=await all();refresh();
   observer?.disconnect();observer=null;
@@ -128,14 +131,19 @@
   }
  }
  d.addEventListener('click',async e=>{
-  const btn=e.target.closest('[data-brain-import-file],[data-brain-import-video],[data-brain-import-web],[data-brain-manual],[data-brain-refresh],[data-brain-cancel],[data-brain-search],[data-brain-remove],[data-brain-back]');
+  const btn=e.target.closest('[data-brain-import-file],[data-brain-import-video],[data-brain-import-web],[data-brain-manual],[data-brain-refresh],[data-brain-cancel],[data-brain-search],[data-brain-remove],[data-brain-resume],[data-brain-back]');
   if(!btn||typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='brain')return;
   e.preventDefault();
   if(btn.hasAttribute('data-brain-back')){controller?.abort();ESV='est';if(typeof render==='function')render();return}
   if(btn.hasAttribute('data-brain-cancel')){controller?.abort();status('Importação interrompida.',0);return}
   try{
    if(btn.hasAttribute('data-brain-refresh'))return void await sync();
-   if(btn.hasAttribute('data-brain-search')){const q=value('brain-query');if(!q)throw Error('Digite uma consulta');const j=await api({acao:'buscar',consulta:q});hits=j.trechos||[];status('Pesquisa semântica concluída',100);return}
+   if(btn.hasAttribute('data-brain-search')){const q=value('brain-query');if(!q)throw Error('Digite uma consulta');const j=await api({acao:'buscar',consulta:q});hits=j.trechos||[];status('Pesquisa concluída',100);return}
+   if(btn.dataset.brainResume){
+    const obra=items.find(x=>x.owner===owner()&&x.id===btn.dataset.brainResume);
+    if(!obra?.texto)throw Error('Texto original indisponível neste dispositivo');
+    return void await ingest({...obra,url:obra.origem},obra);
+   }
    if(btn.dataset.brainRemove){if(!confirm('Excluir esta obra indexada?'))return;const id=btn.dataset.brainRemove;await api({acao:'remover',obra_id:id});await tx('readwrite',s=>s.delete(key(id)));return void await sync()}
    const action=btn.hasAttribute('data-brain-manual')?'manual':btn.hasAttribute('data-brain-import-file')?'file':btn.hasAttribute('data-brain-import-video')?'video':'web';
    await execute(action);
