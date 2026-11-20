@@ -1,4 +1,6 @@
-// Piloto de notícias públicas. Não consulta Supabase, dados financeiros privados nem IA.
+// Motor de notícias públicas. Não consulta Supabase, dados financeiros privados nem IA.
+import {agruparEventos} from './eventos.mjs';
+export {agruparEventos} from './eventos.mjs';
 const KEY = 'diario:noticias:v1';
 const FONTES = [
   { nome: 'InfoMoney', host: 'infomoney.com.br', url: 'https://www.infomoney.com.br/feed/' },
@@ -52,7 +54,7 @@ export function deveColetar(now=new Date()){
   const pregao=!['Sat','Sun'].includes(p.weekday)&&+p.hour>=9&&+p.hour<18;
   return +p.minute%(pregao?2:10)===0;
 }
-export async function coletarNoticias(fetcher=fetch,agora=Date.now()){
+export async function coletarNoticias(fetcher=fetch,agora=Date.now(),anteriores=[]){
   const resultados=await Promise.allSettled(FONTES.map(async f=>{
     const r=await fetcher(f.url,{headers:{Accept:'application/rss+xml, application/xml, text/xml'},signal:AbortSignal.timeout(5500)});
     if(!r.ok)throw Error('Feed HTTP '+r.status);
@@ -69,6 +71,7 @@ export async function coletarNoticias(fetcher=fetch,agora=Date.now()){
   });
   return {atualizadoEm:new Date(agora).toISOString(),
     itens:[...map.values()].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,50),
+    eventos:agruparEventos([...map.values()],anteriores,agora),
     fontesOk,fontesIndisponiveis};
 }
 
@@ -131,7 +134,9 @@ export default {
   async scheduled(event,env,ctx){
     if(!env.NEWS_CACHE||!deveColetar(new Date(event.scheduledTime)))return;
     ctx.waitUntil((async()=>{
-      const data=await coletarNoticias(fetch,event.scheduledTime);
+      let anteriores=[];
+      try{const antigo=await env.NEWS_CACHE.get(KEY,'json');anteriores=Array.isArray(antigo?.eventos)?antigo.eventos:[];}catch(_){/* historico opcional */}
+      const data=await coletarNoticias(fetch,event.scheduledTime,anteriores);
       // Falha de todas as fontes não substitui o último snapshot.
       if(data.fontesOk.length)await env.NEWS_CACHE.put(KEY,JSON.stringify(data));
     })());
@@ -145,7 +150,7 @@ export default {
     const path=new URL(request.url).pathname;
     if(request.method!=='GET')return json({erro:'metodo_nao_permitido'},request,env,405);
     if(path==='/health')return json({ok:Boolean(env.NEWS_CACHE),servico:'diario-noticias',modo:'independente'},request,env,env.NEWS_CACHE?200:503);
-    if(!['/v1/noticias','/v1/mercado','/v1/panorama'].includes(path))
+    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos'].includes(path))
       return json({erro:'rota_nao_encontrada'},request,env,404);
     if(!env.NEWS_CACHE)return json({erro:'cache_nao_configurado'},request,env,503);
     if(path==='/v1/mercado'||path==='/v1/panorama'){
@@ -162,6 +167,9 @@ export default {
     const salvo=await env.NEWS_CACHE.get(KEY);
     if(!salvo)return json({erro:'ainda_sem_coleta',itens:[]},request,env,503);
     const data=JSON.parse(salvo);
-    return json({...data,desatualizado:Date.now()-Date.parse(data.atualizadoEm)>15*60000},request,env);
+    const desatualizado=Date.now()-Date.parse(data.atualizadoEm)>15*60000;
+    if(path==='/v2/eventos')return json({atualizadoEm:data.atualizadoEm,desatualizado,
+      eventos:Array.isArray(data.eventos)?data.eventos:[],fontesOk:data.fontesOk||[],fontesIndisponiveis:data.fontesIndisponiveis||[]},request,env);
+    return json({...data,desatualizado},request,env);
   }
 };
