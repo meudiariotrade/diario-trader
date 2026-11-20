@@ -89,6 +89,8 @@ function render0() {
 function render() {
   try {
     render0();
+    /* v811: avisa módulos com ciclo de vida por tela (ex.: faixa do Terminal) sem polling. */
+    try { window.dispatchEvent(new Event("diario:render")); } catch {}
   } catch (e) {
     console.error(e);
     const t = $("#app");

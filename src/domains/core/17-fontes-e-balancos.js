@@ -4789,9 +4789,18 @@ function net188() {
       }
       return;
     }
-    if (!(e.ws && e.wsSyms === B && [0, 1].includes(e.ws.readyState)))
+    if (e.ws && e.wsSyms === B && [0, 1].includes(e.ws.readyState)) return;
+    /* v811: backoff exponencial. Sem isso, cada tique da faixa abria um WebSocket novo
+       (~12/s) quando a Binance estava bloqueada na rede. */
+    if (e.wsSyms === B && Date.now() < (e.wsRetryAt || 0)) return;
+    if (e.wsSyms !== B) ((e.wsFails = 0), (e.wsRetryAt = 0));
+    const falhou = () => {
+      e.wsFails = (e.wsFails || 0) + 1;
+      e.wsRetryAt = Date.now() + Math.min(6e5, 2e3 * 2 ** Math.min(e.wsFails - 1, 8));
+    };
+    if (!0)
       try {
-        e.ws && e.ws.close();
+        e.ws && ((e.ws.onclose = e.ws.onerror = null), e.ws.close());
         const G = new WebSocket(
           "wss://stream.binance.com:9443/stream?streams=" +
             E.map((te) => te + "@miniTicker").join("/"),
@@ -4799,9 +4808,13 @@ function net188() {
         ((e.wsStarted = Date.now()),
           (e.wsSyms = B),
           (e.ws = G),
-          (G.onopen = () =>
-            v("Binance", "conectado (" + E.length + " pares)", !0)),
-          (G.onclose = () => v("Binance", "conexão fechada", !1)),
+          (G.onopen = () => (
+            (e.wsFails = 0),
+            (e.wsRetryAt = 0),
+            v("Binance", "conectado (" + E.length + " pares)", !0))),
+          (G.onclose = () => (
+            e.ws === G && falhou(),
+            v("Binance", "conexão fechada", !1))),
           (G.onmessage = (te) => {
             try {
               const _ = JSON.parse(te.data).data;
@@ -4816,7 +4829,7 @@ function net188() {
             } catch {}
           }),
           (G.onerror = () => {
-            ((e.wsSyms = ""),
+            (e.ws === G && falhou(),
               v(
                 "Binance",
                 "erro na conexão (o site pode estar bloqueado na sua rede)",
@@ -9717,19 +9730,41 @@ Dados do terminal agora:
       ["Treasury 10a", "TVC:US10Y", 3, ""],
       ["DI jan/27", "BMFBOVESPA:DI1F2027", 3, ""],
     ];
-    (setInterval(() => {
-      try {
-        if (tab === "term" && !document.hidden) {
-          a(["btcusdt"], "base");
+    ((function () {
+      /* v811: sem setInterval permanente (CLAUDE.md §8.3). O laço roda por
+         requestAnimationFrame só enquanto o Terminal está visível; ao sair,
+         libera o pedido "base" da Binance e para. */
+      let raf = 0, last = 0, binAt = 0, ativo = !1;
+      const tick = (ts) => {
+        raf = 0;
+        try {
+          if (tab !== "term" || document.hidden) {
+            ativo && ((ativo = !1), a([], "base"));
+            return;
+          }
+          ativo = !0;
+          if (Date.now() - binAt >= 5e3) ((binAt = Date.now()), a(["btcusdt"], "base"));
           const q = document.getElementById("trtape");
-          if (q && innerWidth < 980 && Date.now() > (o.tapeP || 0)) {
+          if (q && innerWidth < 980 && Date.now() > (o.tapeP || 0) && ts - last >= 40) {
+            last = ts;
             q.scrollLeft += 1;
             const L = q.scrollWidth / 2;
             q.scrollLeft >= L && (q.scrollLeft -= L);
           }
-        }
-      } catch {}
-    }, 40),
+        } catch {}
+        raf = requestAnimationFrame(tick);
+      };
+      const kick = () => {
+        try {
+          if (!raf && tab === "term" && !document.hidden) raf = requestAnimationFrame(tick);
+          else if (!raf && ativo) tick(0);
+        } catch {}
+      };
+      window.addEventListener("diario:render", kick);
+      document.addEventListener("visibilitychange", kick);
+      window.trTapeKick = kick;
+      setTimeout(kick, 0);
+    })(),
       document.addEventListener(
         "pointerdown",
         (q) => {
