@@ -44543,9 +44543,6 @@ const s=document.createElement('style');s.textContent=`
     const dest = alvo();
     if (!dest?.root) return;
     let card = dest.root.querySelector(":scope > .dt670-opening");
-    /* v825: o termômetro é estimativa de pré-abertura; no pregão e no pós a tela mostra a fase atual. */
-    const fase = dest.root.closest?.("[data-v810-phase]")?.dataset.v810Phase || dest.root.querySelector?.("[data-v810-phase]")?.dataset.v810Phase;
-    if (fase && fase !== "pre") { card?.remove(); return; }
     if (!card) {
       card = d.createElement("section");
       card.className = "dt670-opening";
