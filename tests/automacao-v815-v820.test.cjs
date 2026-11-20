@@ -64,3 +64,7 @@ test('v828: componentes base do redesign escapam texto e montam as classes .ui-*
   assert.match(css,/body:not\(\[data-v4route=term\]\)\{--dt-bg:var\(--ui-bg\)/);
   assert.match(css,/--ui-accent:#F59E0B/);
 });
+test('v832: snapshot público aceita tickers de uma letra (V, T, F, C) dos EUA',()=>{
+  assert.match(fs.readFileSync('src/analysis/snapshot-contract-v800.js','utf8'),/\[A-Z0-9\.-\]\{1,14\}/);
+  assert.match(fs.readFileSync('src/app-theme.css','utf8'),/html\[data-v427-tema=claro\]\{--ui-bg:#F3F0E8/);
+});
