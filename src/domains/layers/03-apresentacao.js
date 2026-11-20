@@ -2014,6 +2014,9 @@ try {
       ev.preventDefault();
       ev.stopImmediatePropagation();
       details.open=!details.open;
+      // O adaptador legado envolve os atalhos em .simple-explore.
+      // Abrir também esse invólucro existente; jamais clonar os atalhos.
+      if (page.matches(".v810-home")) details.querySelectorAll(".simple-explore").forEach(inner => {inner.open=details.open;});
       const i=[...page.querySelectorAll(".v810-more")].indexOf(details);
       if(i>=0){
         const store=v810Details[et()];
@@ -2074,6 +2077,7 @@ try {
         f(poe598));
       // v676: após substituir o painel V4, insere o termômetro na tela real
       // de Início/Meu dia, independentemente do ciclo de cotações.
+      if(t==="home")e.querySelectorAll(".v810-home .v810-more[open] .simple-explore").forEach(inner=>{inner.open=true;});
       if (t === "home" || t === "dia") {window.TermometroAbertura670?.montar?.();window.DiarioInteligenciaEtapa1?.montar?.();}
     }
     window.DiarioSessaoVisual=Object.freeze({
