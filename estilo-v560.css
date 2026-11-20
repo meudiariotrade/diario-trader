@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 a46e81170e802ded5f609d0f402d0ed84f312aa32ea74f7ac711e2667112fbf4 */
+/* Gerado de src/app-theme.css · SHA256 627039bd53b0e12a417190ab82dea3cbd5e95764141874cb655e00bb8bc1d75c */
 :root{--dt-bg:#0A0C10;--dt-s1:#11141B;--dt-hover:#181C26;--dt-line:#1E232E;--dt-tx:#E6E8EE;--dt-mut:#8A90A0;--dt-faint:#5B6170;--dt-gold:#D4A017;--dt-gain:#10B981;--dt-loss:#EF4444}
 html[data-v427-tema=claro]{--dt-bg:#F3F0E8;--dt-s1:#FBFAF6;--dt-hover:#EFEBE1;--dt-line:#DDD8CC;--dt-tx:#1A1B1E;--dt-mut:#5B5649;--dt-faint:#7A7568;--dt-gold:#8D6C10;--dt-gain:#047857;--dt-loss:#B91C1C}
 /* Diário Trader v560 — folha única. Gerada por scripts/redesign-v560.cjs.
@@ -3120,7 +3120,7 @@ html:root body #app .v810-modebar .v4-phase button.on {
 html:root body #app .v810-auto {
   flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
   gap:6px;min-height:44px;padding:8px 13px;
-  background:var(--v810-card);color:#CCD0D6;
+  background:var(--v810-card);color:var(--dt-tx);
   border:1px solid var(--v810-line);border-radius:6px;font-size:13px;
   font-weight:650;cursor:pointer;
 }

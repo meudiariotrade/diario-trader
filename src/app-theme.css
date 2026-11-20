@@ -3119,7 +3119,7 @@ html:root body #app .v810-modebar .v4-phase button.on {
 html:root body #app .v810-auto {
   flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
   gap:6px;min-height:44px;padding:8px 13px;
-  background:var(--v810-card);color:#CCD0D6;
+  background:var(--v810-card);color:var(--dt-tx);
   border:1px solid var(--v810-line);border-radius:6px;font-size:13px;
   font-weight:650;cursor:pointer;
 }

@@ -29759,9 +29759,9 @@ try {
       return `<div class="v4-page v4-home v810-home" data-v810-phase="${u}">
     ${v810Seletor($)}
     ${v810Faixa("home",u,u==="pre"?"Referências internacionais, agenda e preparação para a próxima abertura.":u==="pregao"?"Acompanhe acontecimentos, preços disponíveis e riscos; confira a atualização de cada dado.":"Compare o fechamento com a preparação e acompanhe os riscos para a próxima sessão.")}
-    ${$t}
     ${C("cal",`Resumo do dia<small class="v4-date">${Kt(t)}</small>`,`<button type="button" class="v4-pill" data-dt393-route="mercado">${p("up",16)} ${M}${p("right",14)}</button>`,y+P,"v4-summary")}
-    <div class="v810-home-grid">${K}</div>
+    <div class="v810-home-grid">${u!=="pos"?v825Niveis():""}${K}</div>
+    ${$t}
     <details class="v810-more"><summary>Atalhos e ferramentas adicionais</summary><div class="v810-more-inner">${Z}${d}</div></details>
     </div>`;
     }
