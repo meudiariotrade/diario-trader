@@ -122,7 +122,8 @@
   if(!s){s=el('div',null,'bbg-status');s.id='bbg-status';s.setAttribute('role','status');s.append(el('span','','bbg-hora'),el('span','','bbg-b3'),el('span','','bbg-ny'),el('span','','bbg-fontes'),el('span','F2 comando · Esc menu','bbg-dica'));trm.append(s)}
   const [hora,b3,ny,fontes]=s.children;
   const agora=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})+' BRT';if(hora.textContent!==agora)hora.textContent=agora;
-  const sB3=aberto('America/Sao_Paulo',600,1075),sNY=aberto('America/New_York',570,960);
+  /* v820: mesma fonte da barra de contexto (calendário B3/NYSE com feriados); a conta por horário simples ficou só como reserva. */
+  const S=root.DiarioSessoes,sB3=S?S.session('B3').state==='regular':aberto('America/Sao_Paulo',600,1075),sNY=S?S.session('NYSE').state==='regular':aberto('America/New_York',570,960);
   const tb='B3 '+(sB3?'ABERTA':'FECHADA'),tn='NY '+(sNY?'ABERTA':'FECHADA');
   if(b3.textContent!==tb)b3.textContent=tb;b3.className='bbg-b3 '+(sB3?'on':'off');if(ny.textContent!==tn)ny.textContent=tn;ny.className='bbg-ny '+(sNY?'on':'off');
   const f=String(g(()=>root.TRM.statusFontes(),'')).replace(/<button[\s\S]*?<\/button>/g,'').replace(/<[^>]+>/g,'').replace(/\s*·\s*·\s*/g,' · ').replace(/\s+/g,' ').trim().slice(0,90);if(fontes.textContent!==f)fontes.textContent=f;
