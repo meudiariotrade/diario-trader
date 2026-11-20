@@ -1993,6 +1993,8 @@ async function feCarrega() {
     if(!data.ultimo||!Array.isArray(data.linhas))throw Error('Fluxo público sem dados verificáveis.');
     FE.v=data;FE.err=data.desatualizado?'Snapshot de fluxo atrasado; confira a data efetiva.':'';
     try{ls.set('diario-fluxo',data);}catch(_){}
+    /* v811: fluxo × Ibovespa — BOVA11 (ETF que replica o índice) como referencial de fechamento. */
+    try{const s=await window.DiarioTecnico?.serie?.('BOVA11','br');if(s&&!controller.signal.aborted)FE.ibov=s;}catch(_){FE.ibov=null;}
   }catch(e){if(e.name!=='AbortError')FE.err=String(e.message||e);}
   finally{FE.busy=0;if(!controller.signal.aborted){FE.ts=Date.now();const el=document.getElementById('febox');if(el)el.outerHTML=feHtml();}}
 }
@@ -2032,7 +2034,7 @@ function feHtml() {
   return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><span class="sm mut">${feDia(t.d)}</span></div>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:6px 0"><div><div class="sm mut">No dia</div><b class="${a(t.est)}" style="font-size:18px">${feMi(t.est)}</b></div><div><div class="sm mut">No mês (${e.dias_no_mes} pregões)</div><b class="${a(e.mes)}" style="font-size:18px">${feMi(e.mes)}</b></div><div><div class="sm mut">Sequência</div><b>${e.dias_seguidos} dia(s) de ${esc(e.sentido)}</b></div></div>
 <div style="display:flex;gap:3px;align-items:stretch;margin:6px 0 2px">${s}</div>
-<div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div><p class="sm">${esc(interpretation?.text||"Histórico insuficiente para interpretar tendência.")}</p><div class="sm mut">5 / 10 / 20 pregões: ${[5,10,20].map(n=>interpretation?.windows[n]==null?"N/D":feMi(interpretation.windows[n])).join(" · ")} · ${esc(FE.err||"")}</div></div>`;
+<div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div>${(()=>{const dv=FE.ibov&&window.DiarioInterpretacao?.flowDivergence?.(e.linhas||[],FE.ibov.closes,'BOVA11');if(!dv)return '<p class="sm mut">Fluxo × Ibovespa: referencial do índice indisponível no momento.</p>';const w=dv.windows.map(x=>x.k+' pregões: fluxo '+feMi(x.flow)+' · índice '+(x.ret>0?'+':'')+x.ret.toLocaleString('pt-BR',{maximumFractionDigits:2})+'%').join(' · ');return '<p class="sm"><b>Fluxo × Ibovespa</b> (BOVA11 como referencial, mesmas datas). '+esc(dv.text)+'</p>'+(w?'<p class="sm mut">'+esc(w)+'</p>':'');})()}<p class="sm">${esc(interpretation?.text||"Histórico insuficiente para interpretar tendência.")}</p><div class="sm mut">5 / 10 / 20 pregões: ${[5,10,20].map(n=>interpretation?.windows[n]==null?"N/D":feMi(interpretation.windows[n])).join(" · ")} · ${esc(FE.err||"")}</div></div>`;
 }
 {
   const e = vPainelMk;

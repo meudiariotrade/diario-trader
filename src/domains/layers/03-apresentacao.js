@@ -236,7 +236,8 @@ try {
       const at=Date.parse(n?.d||"");
       return !!titulo && Number.isFinite(at) && at<=Date.now()+60000 &&
         Date.now()-at<=48*3600000 &&
-        !/loteria|mega.sena|lotof[aá]cil|hor[oó]scopo|advertorial|conte[uú]do patrocinado/i.test(titulo);
+        !(window.DiarioInterpretacao?.isNoise ? window.DiarioInterpretacao.isNoise(titulo) :
+          /loteria|mega.sena|lotof[aá]cil|hor[oó]scopo|advertorial|conte[uú]do patrocinado/i.test(titulo));
     }
     function v810AgendaNoticias(dia) {
       const agenda=f(()=>AG.v.flatMap(g=>g?.eventos||[]),[]);

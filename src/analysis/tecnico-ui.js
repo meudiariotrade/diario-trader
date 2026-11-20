@@ -399,5 +399,17 @@ d.addEventListener('visibilitychange',()=>{
  else if(current==='world'&&active())w.DiarioBinanceAnalises?.start(['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT']);
 });
 const getQuote=ticker=>w.DiarioFeedSaude?.get(ticker)||null;
-w.DiarioTecnico={view,enter,leave,load,getQuote};
+/* v811: série diária compartilhada (ex.: BOVA11 como referencial do Ibovespa para fluxo × índice).
+   Reaproveita o cache e a auditoria de candles; no máximo uma requisição por ativo por hora. */
+const series=new Map();
+function serie(ticker,market='br'){
+ const k=market+':'+ticker,hit=series.get(k);
+ if(hit&&Date.now()-hit.at<3600000)return hit.p;
+ const p=candles({ticker,market},'1d').then(r=>{
+  const fmt=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'});
+  return {source:r.source,closes:(r.candles||[]).map(x=>({d:fmt.format(new Date(Number(x.t??x.time))),c:Number(x.c??x.close)})).filter(x=>x.d&&Number.isFinite(x.c))};
+ });
+ series.set(k,{at:Date.now(),p});p.catch(()=>series.delete(k));return p;
+}
+w.DiarioTecnico={view,enter,leave,load,getQuote,serie};
 })(window,document);

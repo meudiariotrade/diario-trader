@@ -8,6 +8,8 @@
   const number = x => typeof x==='number' && Number.isFinite(x);
   const format = x => number(x) ? x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—';
   const when = v => { const d=new Date(v);return Number.isFinite(d.getTime()) ? d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}) : 'Horário indisponível'; };
+  /* v811: datas técnicas ISO viram pt-BR na tela. */
+  const br = d => { const m=/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(String(d||'')); return m ? m[3]+'/'+m[2]+'/'+m[1]+(m[4]?' '+m[4]+':'+m[5]:'') : String(d||''); };
   const safeTicker = t => /^[A-Z0-9.^_-]{1,24}$/.test(String(t||'').toUpperCase()) ? String(t).toUpperCase() : '';
   function meusAtivos() {
     const set=new Set();
@@ -175,8 +177,10 @@
     if(c.warning)html+='<p class="warn">'+escape(c.warning)+'</p>';
     html+='<p class="mut sm">Cotações sem horário de negócio não comprovam negociação atual. Variações diárias não medem a mudança acumulada desde o fechamento B3.</p>';
     if(state.eventos?.desatualizado)html+='<p class="warn">Coleta de notícias atrasada ou offline; confira a publicação em cada fonte.</p>';
-    if(latest)html+='<p>'+tag('observado')+'<b>Fluxo estrangeiro · '+escape(latest.d)+'</b> · '+escape(state.fluxo?.fonte||'fonte não identificada')+' · diário defasado. '+escape(f.text)+' Acumulado da amostra do mês: '+format(f.monthObserved)+' milhões de reais.</p>';
-    else html+='<p class="mut sm">'+tag('indisponivel')+'Fluxo estrangeiro sem snapshot público disponível; consulte a área existente em Mercado.</p>';
+    if(latest)html+='<p>'+tag('observado')+'<b>Fluxo estrangeiro · '+escape(br(latest.d))+'</b> · '+escape(state.fluxo?.fonte||'fonte não identificada')+' · diário defasado. '+escape(f.text)+' Acumulado da amostra do mês: '+format(f.monthObserved)+' milhões de reais.</p>';
+    try{const ib=typeof FE!=='undefined'&&FE.ibov;const dv=latest&&ib&&w.DiarioInterpretacao?.flowDivergence?.(state.fluxo?.linhas||[],ib.closes,'BOVA11');
+      if(dv&&dv.classification!=='amostra_insuficiente')html+='<p>'+tag('interpretacao')+'<b>Fluxo × Ibovespa</b> (BOVA11, mesmas datas). '+escape(dv.text)+'</p>';}catch(_){}
+    if(!latest)html+='<p class="mut sm">'+tag('indisponivel')+'Fluxo estrangeiro sem snapshot público disponível; consulte a área existente em Mercado.</p>';
     try {
       if(typeof SNT!=='undefined'&&SNT.v)for(const key of ['b3','eua','cripto']){
         const v=SNT.v[key];if(!v)continue;
@@ -184,20 +188,20 @@
         const history=(v.hist||[]).map(x=>({date:x.d||x.data,value:x.v,method}));
         if(number(v.ontem)&&v.data)history.push({date:w.DiarioSessoes.shift(v.data,-1),value:v.ontem,method});
         const reading=w.DiarioInterpretacao?.sentiment({date:v.data,value:v.valor},history,method);
-        if(reading)html+='<p>'+tag('observado')+'<b>Sentimento '+escape(key.toUpperCase())+' · '+reading.value+'</b> · '+escape(reading.date)+' · Δ diário '+format(reading.daily)+' · Δ semanal '+format(reading.weekly)+'. '+escape(reading.text)+'</p>';
+        if(reading)html+='<p>'+tag('observado')+'<b>Sentimento '+escape(key.toUpperCase())+' · '+reading.value+'</b> · '+escape(br(reading.date))+' · Δ diário '+format(reading.daily)+' · Δ semanal '+format(reading.weekly)+'. '+escape(reading.text)+' '+escape(reading.accelText||'')+'</p>';
       }
     }catch(_){}
     const dates=[];
-    try {if(typeof AG!=='undefined')for(const group of Object.values(AG.v||{}))for(const e of group.eventos||[]){const at=e.em||e.d||e.data;if(at&&String(at).slice(0,10)>=c.b3.date&&e.imp===1)dates.push(String(e.t||e.nome||e.titulo||'Evento econômico')+' · '+String(at));}}catch(_){}
-    try {if(typeof BAL!=='undefined')for(const e of BAL.v?.proximos||[])if(e.d>=c.b3.date&&e.d<=(c.b3.nextDate||c.b3.date))dates.push(e.tk+' · balanço '+e.d+' · '+(e.conf==='cvm'?'documento CVM':'data prevista, conferir publicação'));}catch(_){}
-    try {for(const e of w.VencB3?.entre(c.b3.date,c.b3.nextDate||c.b3.date)||[])dates.push(e.t+' · '+e.d+' (não implica direção de preço)');}catch(_){}
+    try {if(typeof AG!=='undefined')for(const group of Object.values(AG.v||{}))for(const e of group.eventos||[]){const at=e.em||e.d||e.data;if(at&&String(at).slice(0,10)>=c.b3.date&&e.imp===1)dates.push(String(e.t||e.nome||e.titulo||'Evento econômico')+' · '+br(at));}}catch(_){}
+    try {if(typeof BAL!=='undefined')for(const e of BAL.v?.proximos||[])if(e.d>=c.b3.date&&e.d<=(c.b3.nextDate||c.b3.date))dates.push(e.tk+' · balanço '+br(e.d)+' · '+(e.conf==='cvm'?'documento CVM':'data prevista, conferir publicação'));}catch(_){}
+    try {for(const e of w.VencB3?.entre(c.b3.date,c.b3.nextDate||c.b3.date)||[])dates.push(e.t+' · '+br(e.d)+' (não implica direção de preço)');}catch(_){}
     if(dates.length)html+='<p><b>Acompanhar na agenda existente:</b> '+dates.slice(0,4).map(escape).join(' · ')+'</p>';
     const events=w.DiarioInterpretacao?.prioritize(timeline(),c)||[];
     for(const e of events.slice(0,3)){
       const scenario=w.DiarioInterpretacao?.adrScenario(e,state.mercado?.adrs||[],c);
       if(scenario)html+='<p>'+tag('cenario')+'<b>'+escape(scenario.ticker+' ↔ '+scenario.symbol)+'</b> · '+when(e.ultimaAtualizacao)+'. '+escape(scenario.text)+' '+escape(scenario.scenario)+' '+escape(scenario.note)+'</p>';
     }
-    if(state.memoria?.anchorDate===c.anchorDate)html+='<p class="mut sm">Memória desde a sessão '+escape(c.anchorDate)+': '+state.memoria.eventos.length+' evento(s) preservado(s). '+escape(state.memoria.note)+'</p>';
+    if(state.memoria?.anchorDate===c.anchorDate)html+='<p class="mut sm">Memória desde a sessão '+escape(br(c.anchorDate))+': '+state.memoria.eventos.length+' evento(s) preservado(s). '+escape(state.memoria.note)+'</p>';
     return html;
   }
   function meuDia(){

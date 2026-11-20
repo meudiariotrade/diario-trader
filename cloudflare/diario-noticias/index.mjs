@@ -46,7 +46,7 @@ export function lerRSS(xml,fonte,agora=Date.now()) {
   for(const b of blocos.slice(0,45)){
     const t=tag(b,'title').slice(0,200),l=linkSeguro(tag(b,'link'),fonte.host);
     const d=Date.parse(tag(b,'pubDate')||tag(b,'dc:date')),cat=tema(t);
-    if(/\b(loteria|mega.sena|lotofacil|horoscopo|horoscope|moneyist|dear penny|conteudo patrocinado|advertorial)\b/.test(normal(t)))continue;
+    if(/\b(loterias?|mega.?sena|lotofacil|quina|dupla.sena|timemania|resultado do sorteio|horoscopo|horoscope|signo|moneyist|dear penny|conteudo patrocinado|publieditorial|patrocinado|advertorial|sponsored|bbb|novela|celebridade|fofoca|futebol|brasileirao|campeonato|receita de|cupom de desconto)\b/.test(normal(t)))continue; // v811: mesmo filtro de ruído do app
     if(!cat||t.length<12||!l||!Number.isFinite(d)||d>agora+300000||d<agora-86400000)continue;
     out.push({t,l,fonte:fonte.nome,d:new Date(d).toISOString(),tema:cat});
   }

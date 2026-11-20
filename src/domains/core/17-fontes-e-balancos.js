@@ -21501,7 +21501,7 @@ setInterval(() => {
   if (!el || document.hidden) return;
   const t = rpyCdTexto();
   el.textContent !== t && (el.textContent = t);
-}, 250);
+}, 1000); /* v811: 1 s basta para mm:ss e entra no relógio central único (antes 4×/s em todas as telas). */
 
 /* =====================================================================================
    v636 — Diário do treino: setup de cada trade e relatório por setup e por horário.
