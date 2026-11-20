@@ -1984,32 +1984,17 @@ const FE = {
   err: "",
 };
 async function feCarrega() {
-  if (FE.busy || Date.now() - FE.ts < 30 * 6e4) return;
-  const e = cfg();
-  if (!e) return;
-  FE.busy = 1;
+  if (FE.busy || Date.now()-FE.ts<3600000 || !document.getElementById('febox') || document.hidden || window.DIARIO_DEMO) return;
+  if (!window.DiarioPublico) return;
+  FE.busy=1;FE.abort?.abort();const controller=new AbortController();FE.abort=controller;
   try {
-    const a = await macroFetchComSessao(e.url + "/functions/v1/macro", {
-        method: "POST",
-        headers: macroAuthHeaders(e),
-        body: JSON.stringify({ modo: "fluxo" }),
-      }),
-      o = await a.json().catch(() => ({}));
-    if (!a.ok) throw new Error(o.error || "Erro " + a.status);
-    if (!o.ultimo)
-      throw new Error(
-        'Para ver o fluxo estrangeiro, publique a nova versão da função "macro".',
-      );
-    ((FE.v = o), (FE.err = ""));
-    try {
-      ls.set("diario-fluxo", o);
-    } catch {}
-  } catch (a) {
-    FE.err = String(a.message || a);
-  }
-  ((FE.ts = Date.now()), (FE.busy = 0));
-  const t = document.getElementById("febox");
-  t && (t.outerHTML = feHtml());
+    const data=await window.DiarioPublico.get('/v1/fluxo',{signal:controller.signal,ttl:3600000});
+    if(controller.signal.aborted)return;
+    if(!data.ultimo||!Array.isArray(data.linhas))throw Error('Fluxo público sem dados verificáveis.');
+    FE.v=data;FE.err=data.desatualizado?'Snapshot de fluxo atrasado; confira a data efetiva.':'';
+    try{ls.set('diario-fluxo',data);}catch(_){}
+  }catch(e){if(e.name!=='AbortError')FE.err=String(e.message||e);}
+  finally{FE.busy=0;if(!controller.signal.aborted){FE.ts=Date.now();const el=document.getElementById('febox');if(el)el.outerHTML=feHtml();}}
 }
 const feMi = (e) => {
     const t = Math.abs(e),
@@ -2032,6 +2017,7 @@ function feHtml() {
   const e = FE.v;
   if (!e)
     return `<div class="card" id="febox" style="margin-bottom:10px"><b>🌎 Fluxo estrangeiro na B3</b><div class="sm ${FE.err ? "am" : "mut"}" style="margin-top:4px">${esc(FE.err || "Carregando…")}</div></div>`;
+  const interpretation=window.DiarioInterpretacao?.flow(e.linhas||[]);
   const t = e.ultimo,
     a = (n) => (n > 0 ? "g" : n < 0 ? "r" : "mut"),
     o = Math.max(...e.linhas.slice(0, 10).map((n) => Math.abs(n.est)), 1),
@@ -2046,7 +2032,7 @@ function feHtml() {
   return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><span class="sm mut">${feDia(t.d)}</span></div>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:6px 0"><div><div class="sm mut">No dia</div><b class="${a(t.est)}" style="font-size:18px">${feMi(t.est)}</b></div><div><div class="sm mut">No mês (${e.dias_no_mes} pregões)</div><b class="${a(e.mes)}" style="font-size:18px">${feMi(e.mes)}</b></div><div><div class="sm mut">Sequência</div><b>${e.dias_seguidos} dia(s) de ${esc(e.sentido)}</b></div></div>
 <div style="display:flex;gap:3px;align-items:stretch;margin:6px 0 2px">${s}</div>
-<div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div></div>`;
+<div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div><p class="sm">${esc(interpretation?.text||"Histórico insuficiente para interpretar tendência.")}</p><div class="sm mut">5 / 10 / 20 pregões: ${[5,10,20].map(n=>interpretation?.windows[n]==null?"N/D":feMi(interpretation.windows[n])).join(" · ")} · ${esc(FE.err||"")}</div></div>`;
 }
 {
   const e = vPainelMk;

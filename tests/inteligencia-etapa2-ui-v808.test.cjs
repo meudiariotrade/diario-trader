@@ -30,7 +30,7 @@ test('v808: Auditoria n=1 usa trades sem mutar a operação original',()=>{
 test('v808: monta e desmonta somente nas telas existentes',()=>{
  const {w,draw,dom}=mock();draw();
  w.tab='carteiras';draw();assert.match(w.document.querySelector('[data-intel-etapa2]').textContent,/Radar de risco/);
- w.tab='analises';draw();assert.match(w.document.querySelector('[data-intel-etapa2]').textContent,/Mudanças fundamentalistas/);
+ w.tab='analises';draw();assert.equal(w.document.querySelector('[data-intel-etapa2]'),null);assert.equal(typeof w.DiarioInteligenciaEtapa2.fundamental,'function');
  w.tab='home';draw();assert.equal(w.document.querySelectorAll('[data-intel-etapa2]').length,0);
  dom.window.close();
 });
@@ -49,5 +49,5 @@ test('v808: sem polling ou consulta direta ao Supabase, HTML e Worker cacheados'
  assert.match(sw,/src\/intelligence\/etapa2\.js/);
  assert.doesNotMatch(ui,/setInterval\s*\(/);
  assert.doesNotMatch(ui,/\/rest\/v1\//);
- assert.equal(JSON.parse(fs.readFileSync('release.config.json','utf8')).version,808);
+ assert.equal(JSON.parse(fs.readFileSync('release.config.json','utf8')).version>=808,true);
 });

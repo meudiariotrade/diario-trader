@@ -40,14 +40,14 @@ function fonteValida(item) {
   return item && typeof item.l==='string' && /^https:\/\//.test(item.l) && toDate(item.d)>0;
 }
 export function agruparEventos(itens=[], anteriores=[], agora=Date.now()) {
-  const eventos = Array.isArray(anteriores) ? anteriores.filter(e => e && e.id && e.titulo && toDate(e.ultimaAtualizacao)>agora-48*3600000 && toDate(e.ultimaAtualizacao)<=agora+300000).slice(0,75).map(e => ({
+  const eventos = Array.isArray(anteriores) ? anteriores.filter(e => e && e.id && e.titulo && toDate(e.ultimaAtualizacao)>agora-7*24*3600000 && toDate(e.ultimaAtualizacao)<=agora+300000).slice(0,75).map(e => ({
     id:safe(e.id),titulo:safe(e.titulo),tema:safe(e.tema),prioridade:safe(e.prioridade),
     primeiraPublicacao:e.primeiraPublicacao,ultimaAtualizacao:e.ultimaAtualizacao,
     fontes:Array.isArray(e.fontes)?e.fontes.slice(-8).filter(f=>f&&f.url&&f.publicadoEm):[],
     tickers:Array.isArray(e.tickers)?e.tickers.slice(0,12):[],
     relacoes:e.relacoes||{diretos:[],hipoteses:[]},
   })) : [];
-  const sorted=(Array.isArray(itens)?itens:[]).filter(fonteValida).filter(x=>toDate(x.d)>=agora-48*3600000 && toDate(x.d)<=agora+300000).sort((a,b)=>toDate(a.d)-toDate(b.d));
+  const sorted=(Array.isArray(itens)?itens:[]).filter(fonteValida).filter(x=>toDate(x.d)>=agora-7*24*3600000 && toDate(x.d)<=agora+300000).sort((a,b)=>toDate(a.d)-toDate(b.d));
   for (const item of sorted) {
     let e=eventos.find(v=>v.fontes.some(f=>f.url===item.l));
     if(!e) {

@@ -4122,35 +4122,7 @@ try {
           /[&<>"]/g,
           (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e],
         );
-    try {
-      const t = feCarrega;
-      feCarrega = async function () {
-        if (FE.busy || Date.now() - FE.ts < 30 * 6e4) return;
-        const e = cfg();
-        if (!e) return t.apply(this, arguments);
-        FE.busy = 1;
-        let a = !1;
-        try {
-          const o = await fetch(e.url + "/functions/v1/movimentos", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", apikey: e.key },
-              body: JSON.stringify({ acao: "fluxo" }),
-            }),
-            c = await o.json().catch(() => ({}));
-          if (o.ok && c.ultimo) {
-            ((FE.v = c), (FE.err = ""));
-            try {
-              ls.set("diario-fluxo", c);
-            } catch {}
-            a = !0;
-          }
-        } catch {}
-        if (((FE.busy = 0), !a)) return t.apply(this, arguments);
-        FE.ts = Date.now();
-        const s = r.getElementById("febox");
-        s && (s.outerHTML = feHtml());
-      };
-    } catch {}
+    // Fluxo estrangeiro usa o adaptador público compartilhado feCarrega; sem segunda tentativa Supabase.
     try {
       const t = jrTexto;
       jrTexto = function (e) {

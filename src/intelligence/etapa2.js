@@ -76,8 +76,7 @@
    if(available.length){state.eventos=available;state.newsAt=Date.now();return;}
    if(state.newsBusy||Date.now()-state.newsAt<120000)return;
    state.newsBusy=true;state.newsAt=Date.now();
-   fetch(URL,{method:'GET',mode:'cors',credentials:'omit',cache:'no-store',signal:state.abort?.signal})
-     .then(r=>r.ok?r.json():null).then(x=>{
+   (w.DiarioPublico?w.DiarioPublico.get('/v2/eventos',{signal:state.abort?.signal,ttl:120000}):fetch(URL,{method:'GET',mode:'cors',credentials:'omit',cache:'default',signal:state.abort?.signal}).then(r=>r.ok?r.json():null)).then(x=>{
        if(!x||!Array.isArray(x.eventos)||x.desatualizado)return;
        state.eventos=x.eventos;repaint();
      }).catch(()=>{}).finally(()=>state.newsBusy=false);
@@ -85,7 +84,7 @@
  function painel(t,body){
    const e=d.createElement('section');e.className='card';e.dataset.intelEtapa2='1';
    e.style.cssText='margin:8px 0 12px;min-width:0;overflow-wrap:anywhere';
-   e.innerHTML='<div class="top"><b>'+esc(t)+'</b><span class="sm mut">v808 · local</span></div><div data-intel-2-content class="sm">'+body+'</div>';
+   e.innerHTML='<div class="top"><b>'+esc(t)+'</b></div><div data-intel-2-content class="sm">'+body+'</div>';
    return e;
  }
  function aviso(v){return '<div class="mut sm">'+esc(v)+'</div>';}
@@ -149,11 +148,12 @@
      (ev||aviso('Nenhum evento correlacionado disponível no cache público atual.'))+
      '<p class="mut sm">Setores vêm exclusivamente do screener público quando disponível; concentração não equivale a VaR ou recomendação.</p>';
  }
- function fundamental(){
+ function fundamental(onlyTicker){
    const groups=mercadosAtivos(),entries=groups.flatMap(({m,tickers})=>tickers.map(t=>[m+':'+t,m,t]));
+   if(onlyTicker&&!entries.some(x=>x[2]===onlyTicker))return '';
    if(!entries.length)return aviso('Cadastre ativos na Carteira para acompanhar mudanças fundamentalistas.');
    let hit=0,html='';
-   for(const [key,market,t] of entries.slice(0,12)){
+   for(const [key,market,t] of entries.filter(x=>!onlyTicker||x[2]===onlyTicker).slice(0,12)){
      const raw=state.metricas[key];if(!raw)continue;hit++;
      const current=core.extrairFundamentos(raw,raw.referencia);
      const prev=state.prevFund[key]||null;
@@ -193,22 +193,35 @@
    const app=d.getElementById('app');if(!app)return;
    const route=currentRoute(),changed=state.route!==route;
    if(changed){state.abort?.abort();state.abort=route?new AbortController():null;state.route=route;}
-   app.querySelectorAll('[data-intel-etapa2]').forEach(x=>x.remove());
-   if(!route)return;
+   if(!route){app.querySelectorAll('[data-intel-etapa2]').forEach(x=>x.remove());return;}
+   if(route==='analises'){
+     app.querySelectorAll('[data-intel-etapa2]').forEach(x=>x.remove());
+     if(changed){obterMetricas();obterEventos();}
+     integrarFundamental();return;
+   }
    const el=route==='analises'?app.querySelector('#an-root')||app.querySelector('.dt393-native')||app:
      route==='estudos'?app.querySelector('.dt397-native-mount')||app.querySelector('.dt393-native')||app:
      app.querySelector('.dt393-native')||app.querySelector('.dt393-page')||app;
    const heading={operacoes:'Auditoria e condições operacionais',carteira:'Radar de risco da Carteira',
      analises:'Mudanças fundamentalistas verificáveis',estudos:'Estudos ↔ Mercado real'}[route];
    const html=({operacoes,carteira:exposure,analises:fundamental,estudos:estudo}[route])();
-   const panel=painel(heading,html);el.prepend(panel);
+   let panel=app.querySelector('[data-intel-etapa2]');
+   if(panel&&panel.dataset.route!==route){panel.remove();panel=null;}
+   if(!panel){panel=painel(heading,html);panel.dataset.route=route;el.prepend(panel);}
+   else {const node=panel.querySelector('[data-intel-2-content]');if(node.innerHTML!==html)node.innerHTML=html;}
    if(changed){
      if(route==='carteira'||route==='analises'){obterMetricas();obterEventos();}
      if(route==='estudos')obterEventos();
    }
  }
+ function integrarFundamental(){
+   // O conteúdo passa a fazer parte da explicação do ativo existente, sem card substituto.
+   const node=d.querySelector('#scr-detail [data-fundamental-history]');
+   if(node){const html=fundamental(node.dataset.fundamentalHistory);if(node.innerHTML!==html)node.innerHTML=html;}
+ }
  function repaint(){
    if(!state.route)return;
+   if(state.route==='analises'){integrarFundamental();return;}
    const node=d.querySelector('[data-intel-etapa2] [data-intel-2-content]');
    if(node)node.innerHTML=({operacoes,carteira:exposure,analises:fundamental,estudos:estudo}[state.route])();
  }
@@ -230,5 +243,5 @@
    }
  });
  if(w.TraderUI?.onRender)w.TraderUI.onRender('inteligencia-integrada-v808',mount);
- w.DiarioInteligenciaEtapa2=Object.freeze({auditar,exposure,estudo,inspecionar:()=>({route:state.route,newsAt:state.newsAt,fundAt:state.fundAt})});
+ w.DiarioInteligenciaEtapa2=Object.freeze({auditar,exposure,estudo,fundamental,inspecionar:()=>({route:state.route,newsAt:state.newsAt,fundAt:state.fundAt})});
 })(window,document);
