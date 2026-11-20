@@ -141,7 +141,7 @@ function methodology(L,m,opts={}){
    const v=calc(r,{yieldAceitavel:Number(opts.yieldAceitavel)||.07});
    L.rectangle(L.M,L.y,L.CW,43,i%2?L.C.paper:L.C.panel);
    L.write(String(r.ticker).slice(0,15),L.M+7,L.y+9,{font:'bold',size:8.2});
-   L.write((v.lucroBase||'N/D').includes('TTM')?'Lucro TTM':(v.lucroBase||'').includes('projetado')?'Lucro proj.':'Lucro N/D',L.M+7,L.y+25,{size:6.8,color:L.C.muted});
+   L.write(/TTM|12 meses/.test(v.lucroBase||'')?'Lucro TTM':(v.lucroBase||'').includes('projetado')?'Lucro proj.':'Lucro N/D',L.M+7,L.y+25,{size:6.8,color:L.C.muted});
    for(let j=0;j<cols.length;j++){
     const key=cols[j][1],price=v.methods[key],margin=v.margins[key],x=L.M+124+j*92;
     L.write(price===null?'N/D':'R$ '+num(price,2),x,L.y+6,{size:7.4});

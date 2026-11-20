@@ -47,14 +47,14 @@ test('v787: sem prova completa mantém score anterior, sem inventar DPA/lucro',(
  const original=I.calculate('BR',{...row,valuation_insumos_conferidos:false})[1];
  assert.equal(I.calculate('BR',row)[1],original);
 });
-test('v787: fórmula própria aceita lucro TTM derivado de valuation somente com comprovação',()=>{
+test('v787: fórmula própria aceita lucro TTM derivado (v839: sem comprovação vira estimativa marcada)',()=>{
  const row=fixture();delete row.lucro_projetado_brl;
  row.valor_mercado_brl=90000000000;row.pl=10;
  const val=I.valuationBR(row);
- assert.equal(val.lucroBase,'lucro TTM implícito (valor de mercado / P/L)');
+ assert.equal(val.lucroBase,'lucro dos últimos 12 meses (valor de mercado ÷ P/L)');
  assert.ok(Math.abs(val.methods.proprio-(90000000000/10*.25/5730834040/.07))<1e-10);
  const absent=I.valuationBR({...row,valuation_insumos_conferidos:false});
- assert.equal(absent.methods.proprio,null);
+ assert.equal(absent.estimados.proprio,true);assert.equal(absent.scoreActive,false);
 });
 test('v787: SQL e JS explicitam mesmos pesos, limites e fontes do score',()=>{
  const sql=fs.readFileSync('supabase/migrations/20261119110000_analises_valor_composto_v787.sql','utf8');

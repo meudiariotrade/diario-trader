@@ -3509,3 +3509,17 @@ html:root body #app .i838-neg{color:#EF4444;background:rgba(239,68,68,.12)}
 html:root body #app .i838-neu{color:var(--ui-label,#64748B);background:rgba(100,116,139,.14)}
 html:root body #app .i838-meu{display:inline-block;font:600 11px/1 system-ui;padding:3px 6px;border-radius:4px;margin-right:4px;color:#F59E0B;border:1px solid rgba(245,158,11,.45);white-space:nowrap}
 html:root body #app .i838-pontos{margin:0;padding-left:18px;display:grid;gap:6px;font-variant-numeric:tabular-nums}
+/* v839 — preço teto (fórmula do usuário), estimativas e selo de compra no Screener Brasil */
+html:root body #app .scr839-est{display:inline-block;font:600 10px/1 system-ui;padding:2px 5px;border-radius:4px;color:var(--ui-label,#64748B);border:1px solid var(--ui-card-line,rgba(255,255,255,.08));vertical-align:middle}
+html:root body #app .scr839-mg{font-variant-numeric:tabular-nums;white-space:nowrap}
+html:root body #app .scr839-mg.ok{color:#10B981}
+html:root body #app .scr839-mg.neg{color:#EF4444}
+html:root body #app .scr839-compra{display:inline-block;font:600 10px/1 system-ui;padding:3px 5px;border-radius:4px;color:#10B981;background:rgba(16,185,129,.12);white-space:nowrap}
+html:root body #app .scr839-calc{margin:12px 0;padding:12px 0;border-top:1px solid var(--ui-card-line,#1E232E);border-bottom:1px solid var(--ui-card-line,#1E232E)}
+html:root body #app .scr839-calc-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:8px}
+html:root body #app .scr839-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+html:root body #app .scr839-grid label{display:grid;gap:4px;min-width:0;font-size:12px;color:var(--ui-label,#64748B)}
+html:root body #app .scr839-grid input,html:root body #app .scr839-grid select{min-height:40px;font-size:16px;font-variant-numeric:tabular-nums;text-align:right;min-width:0}
+html:root body #app .scr839-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+html:root body #app .scr839-acoes .btn{min-height:40px}
+@media(max-width:700px){html:root body #app .scr839-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

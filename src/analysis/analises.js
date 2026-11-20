@@ -109,7 +109,7 @@ return '<div class="scr-filters"><label>Buscar ticker ou empresa<input type="sea
 (m==='br'?'<label>Liquidez<select data-scr-filter="liquidity">'+options([['0','Todas as ações (inclui Small/Micro Caps)'],['1000000','> R$ 1M/dia'],['5000000','> R$ 5M/dia'],['20000000','> R$ 20M/dia']],s.liquidity)+'</select></label>':
 '<label>Capitalização<select data-scr-filter="cap">'+options([['all','All Stocks'],['large','Large Cap'],['mid','Mid Cap'],['small','Small Cap']],s.cap)+'</select></label>')+
 '<label>Estratégia<select data-scr-filter="preset">'+options(presets,s.preset)+'</select></label>'+(m==='br'?'<label>Yield aceito<select data-scr-filter="yieldAceitavel">'+options([['0.06','6%'],['0.07','7%'],['0.08','8%']],s.yieldAceitavel)+'</select></label>':'')+
-(m==='br'?'<label>Margem positiva<select data-scr-filter="safetyMethod">'+options([['todos','Todos'],['proprio','Fórmula própria'],['bazin','Bazin 6%'],['graham','Graham']],s.safetyMethod)+'</select></label>':'')+'</div>';
+(m==='br'?'<label>Comprar abaixo de<select data-scr-filter="safetyMethod">'+options([['todos','Todos'],['proprio','Preço teto (sua fórmula)'],['bazin','Bazin 6%'],['bazinDinamico','Bazin dinâmico'],['graham','Graham']],s.safetyMethod)+'</select></label>':'')+'</div>';
 }
 function coverage(m,s){const c=s.data?.coverage||{},total=Number(s.data?.total||0),scores=Number(c.com_score||0);
 const scorePct=total?((scores/total)*100).toFixed(1).replace('.',','):'0';
@@ -150,10 +150,10 @@ function detail(m,s){
  const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row,Date.now(),s.topData?.medians||s.data?.medians||null);
  if(!meta)return '';
  const owned=ownRow(row);
- const valuation=m==='br'?w.DiarioScreenersInteligencia?.valuationBR(row,{yieldAceitavel:Number(s.yieldAceitavel)}):null;
+ const valuation=m==='br'?vBR(row,s):null;
  const valuationHTML=valuation?'<div class="scr-detail-groups" aria-label="Quatro preços justos e teto">' +
- [['proprio','Teto próprio'],['bazin','Bazin 6%'],['bazinDinamico','Bazin dinâmico'],['graham','Graham']].map(([key,label])=>
- '<div class="scr-detail-group"><div><b>'+label+'</b><span>'+(
+ [['proprio','Preço teto (sua fórmula)'],['bazin','Bazin 6%'],['bazinDinamico','Bazin dinâmico'],['graham','Graham']].map(([key,label])=>
+ '<div class="scr-detail-group"><div><b>'+label+(valuation.estimados?.[key]?' <span class="scr839-est">estimado</span>':'')+'</b><span>'+(
  valuation.methods[key]==null?'N/D':'R$ '+fmt(valuation.methods[key],2))+'</span></div><small>'+
  (valuation.margins[key]==null?'Margem N/D':'Margem '+fmt(valuation.margins[key],1)+'%')+
  (valuation.reasons[key]?' · '+E(valuation.reasons[key]):'')+'</small></div>').join('')+
@@ -161,6 +161,16 @@ function detail(m,s){
   '. '+(valuation.scoreActive?'Aplicada a 20% do pilar Valuation (pilar pesa 30% da nota).':'Sem inclusão na nota até auditoria dos quatro métodos.')+
   ' Base da fórmula própria: '+E(valuation.lucroBase||'N/D')+
   '. O cálculo da nota usa yield padrão de 7%; seletor de yield altera apenas a simulação exibida. Preço-teto é estimativa condicional, não cotação-alvo.</p>':'';
+ const ins=valuation?.insumosProprio||{},man=m==='br'?tetoManual(row.ticker):null,yv=man?.yield||ins.yield||Number(s.yieldAceitavel)||.07;
+ const calcHTML=m==='br'?'<div class="scr839-calc"><div class="scr839-calc-h"><b>Sua fórmula · preço teto</b><span class="mut sm">(lucro projetado × payout ÷ nº de ações) ÷ yield desejado'+(man?' · valores seus salvos neste aparelho':' · pré-preenchido com o snapshot')+'</span></div>'+
+  '<div class="scr839-grid"><label>Lucro projetado (R$)<input inputmode="decimal" data-teto="lucro" value="'+(ins.lucro?Math.round(ins.lucro).toLocaleString('pt-BR'):'')+'"></label>'+
+  '<label>Payout (%)<input inputmode="decimal" data-teto="payout" value="'+(ins.payout?fmt(ins.payout*100,1):'')+'"></label>'+
+  '<label>Nº de ações<input inputmode="numeric" data-teto="acoes" value="'+(ins.acoes?Math.round(ins.acoes).toLocaleString('pt-BR'):'')+'"></label>'+
+  '<label>Yield desejado<select data-teto="yield">'+[.05,.06,.07,.08,.09,.1].map(y=>'<option value="'+y+'"'+(Math.abs(y-yv)<1e-9?' selected':'')+'>'+fmt(y*100,0)+'%</option>').join('')+'</select></label></div>'+
+  '<div class="scr839-acoes"><button type="button" class="btn s" data-scr-teto-save="'+E(row.ticker)+'">Calcular e salvar</button>'+
+  '<button type="button" class="btn s" data-scr-analyze="'+E(row.ticker)+'" title="A Pesquisa traz lucro projetado, payout e número de ações com fontes">Pedir à IA (Pesquisa)</button>'+
+  (man?'<button type="button" class="btn s" data-scr-teto-clear="'+E(row.ticker)+'">Voltar ao snapshot</button>':'')+'</div>'+
+  '<p class="scr-hint">Exemplo do seu caderno: R$ 14,613 bi × 25% ÷ 5.730.834.040 ações = R$ 0,6375 por ação; ÷ 7% = <b>R$ 9,11</b>. Comprar só abaixo do preço teto. Estimativa, não recomendação.</p></div>':'';
  return '<section class="scr-detail" id="scr-detail" aria-live="polite">'+
  '<div class="scr-head"><div><p class="an-kicker">VALIDAÇÃO DO ATIVO</p><h3>'+E(row.ticker)+' · '+E(meta.company)+'</h3></div>'+
  '<button type="button" data-scr-detail-close="1" aria-label="Fechar explicação">Fechar</button></div>'+
@@ -168,7 +178,7 @@ function detail(m,s){
  '<span class="'+(meta.validated?'is-ok':'is-review')+'">'+E(meta.level)+'</span>'+
  '<span>'+fmt(meta.coverage,0)+'% dos critérios disponíveis</span></div>'+
  '<div class="sm" data-fundamental-history="'+E(tk)+'">'+(w.DiarioInteligenciaEtapa2?.fundamental?.(tk)||'')+'</div>'+
-'<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+valuationHTML+
+'<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+valuationHTML+calcHTML+
  '<div class="scr-detail-groups">'+meta.parts.map(p=>
  '<div class="scr-detail-group"><div><b>'+E(p.name)+'</b><span>'+(p.points==null?'Não calculado':fmt(p.points/10,1)+' / '+fmt(p.weight/10,1)+' pontos')+'</span></div>'+
  '<div class="scr-meter"><i style="width:'+(p.points==null?0:p.points/p.weight*100)+'%"></i></div>'+
@@ -233,18 +243,27 @@ function selections(m,s){
  (s.pdfError?'<p class="scr-alert" role="alert">'+E(s.pdfError)+'</p>':'')+
  '</section>';
 }
+/* v839: preço teto da sua fórmula — (lucro projetado × payout ÷ nº de ações) ÷ yield desejado.
+   Valores que você (ou a IA na Pesquisa) definir ficam no aparelho, por ativo. */
+const TETO_KEY='dt-teto-v1';
+function tetos(){try{return JSON.parse(localStorage.getItem(TETO_KEY)||'{}')||{}}catch{return {}}}
+function tetoManual(tk){const t=tetos()[tk];return t&&typeof t==='object'?t:null}
+function vBR(row,s){return w.DiarioScreenersInteligencia?.valuationBR(row,{yieldAceitavel:Number(s?.yieldAceitavel||.07),manual:tetoManual(row?.ticker)})||null}
+function tetoCel(row,s){const v=vBR(row,s),f=v?.methods?.proprio,mg=v?.margins?.proprio;if(f==null)return ['—','—'];
+ const est=v.estimados?.proprio?' <span class="scr839-est" title="Estimado do snapshot (P/L, payout implícito)">est.</span>':'';
+ return ['R$ '+fmt(f,2)+est,'<span class="scr839-mg '+(mg>0?'ok':'neg')+'">'+(mg>0?'+':'')+fmt(mg,1)+'%</span>'+(mg>0?' <span class="scr839-compra">Abaixo do teto</span>':'')]}
 /* v821: nota com barra na célula (verde ≥ 7, âmbar ≥ 5). */
 function scoreCel(v){const n=Number(v);if(!isFinite(n))return '—';const c=n>=7?'ok':n>=5?'at':'';return '<span class="scr821-score '+c+'"><i style="width:'+Math.max(0,Math.min(100,n*10)).toFixed(0)+'%"></i></span><b>'+fmt(n,1)+'</b>'}
 function table(m,s){const all=s.data?.rows||[],us=m==='us';
 const cols=us?[['ticker','Ticker'],['company_name','Empresa'],['score_quant_us','Nota /10'],['cobertura_pct','Cobertura'],['roic','ROIC'],['forward_pe','Fwd P/E'],['total_shareholder_yield','Total Yield'],['momentum_12_1','Mom. 12-1']]:
-[['ticker','Ticker'],['empresa','Empresa'],['score_quant_br','Nota /10'],['cobertura_pct','Cobertura'],['roe','ROE'],['dividend_yield','DY'],['payout_implicito','Payout'],['momentum_12_1','Mom. 12-1']];
+[['ticker','Ticker'],['empresa','Empresa'],['score_quant_br','Nota /10'],['__teto','Preço teto'],['__margem','Margem'],['cobertura_pct','Cobertura'],['roe','ROE'],['dividend_yield','DY'],['payout_implicito','Payout'],['momentum_12_1','Mom. 12-1']];
 const percentKeys=new Set(['roic','roe','dividend_yield','total_shareholder_yield','payout_implicito','momentum_12_1','cobertura_pct']);
-return '<section class="scr-panel"><div class="scr-head"><h3>Ranking · '+fmt(s.data?.total||0,0)+' ações</h3><div class="scr-actions"><label>Ordenação <select data-scr-filter="order">'+options(us?[['score','Score'],['roic','ROIC'],['forward_pe','Forward P/E'],['yield','Total Yield'],['momentum','Momentum']]:[['score','Score'],['roe','ROE'],['dy','DY'],['pvp','P/VP'],['momentum','Momentum'],['margem_proprio','Margem própria'],['margem_bazin','Margem Bazin'],['margem_graham','Margem Graham']],s.order)+'</select></label>'+
+return '<section class="scr-panel"><div class="scr-head"><h3>Ranking · '+fmt(s.data?.total||0,0)+' ações</h3><div class="scr-actions"><label>Ordenação <select data-scr-filter="order">'+options(us?[['score','Score'],['roic','ROIC'],['forward_pe','Forward P/E'],['yield','Total Yield'],['momentum','Momentum']]:[['score','Score'],['roe','ROE'],['dy','DY'],['pvp','P/VP'],['momentum','Momentum'],['margem_proprio','Margem do preço teto'],['margem_bazin','Margem Bazin'],['margem_graham','Margem Graham']],s.order)+'</select></label>'+
 '<button class="btn s" data-scr-bulk="1" '+(s.selected.length<2||s.selected.length>4?'disabled':'')+'>Comparar na Pesquisa (até 4)</button></div></div>'+
 '<div class="scr-scroll"><table class="scr-table"><thead><tr><th>Sel.</th>'+cols.map(c=>'<th>'+E(c[1])+'</th>').join('')+'<th>Contexto</th><th>Ações</th></tr></thead><tbody>'+
 all.map(row=>{const own=ownRow(row);const tk=E(row.ticker),score=us?row.score_quant_us:row.score_quant_br;const valid=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row);
 return '<tr data-tk="'+tk+'"><td><input type="checkbox" data-scr-select="'+tk+'" '+(s.selected.includes(row.ticker)?'checked':'')+' aria-label="Selecionar '+tk+'"></td>'+
-cols.map(([key])=>'<td>'+((key==='ticker')?'<b>'+tk+'</b>':(key==='company_name'||key==='empresa')?E(row[key]):(row[key]==null?'—':(key==='score_quant_br'||key==='score_quant_us'?scoreCel(row[key]/10):percentKeys.has(key)?pct(row[key]):fmt(row[key],1))))+'</td>').join('')+
+cols.map(([key])=>'<td>'+(key==='__teto'?tetoCel(row,s)[0]:key==='__margem'?tetoCel(row,s)[1]:(key==='ticker')?'<b>'+tk+'</b>':(key==='company_name'||key==='empresa')?E(row[key]):(row[key]==null?'—':(key==='score_quant_br'||key==='score_quant_us'?scoreCel(row[key]/10):percentKeys.has(key)?pct(row[key]):fmt(row[key],1))))+'</td>').join('')+
 '<td><span class="scr-tech">'+(row.rsi_14==null?'Técnico indisponível':Number(row.rsi_14)>=70?'RSI esticado':Number(row.rsi_14)<=30?'RSI pressionado':'RSI neutro')+'</span>'+
 (own?'<span class="scr-owned" title="Peso '+fmt(own.pct)+'%">CARTEIRA · '+pct(own.pct)+'</span>':'')+(valid?'<span class="scr-verified '+(valid.validated?'is-ok':'is-review')+'">'+E(valid.level)+'</span>':'')+'</td>'+
 '<td class="scr-buttons"><button data-scr-detail="'+tk+'">Por quê?</button><button data-dt815="foco" data-tk="'+tk+'" title="Abrir no Terminal">Terminal</button><button data-scr-analyze="'+tk+'">Analisar</button><button data-scr-add="'+tk+'">+ Carteira</button></td></tr>'}).join('')+
@@ -355,7 +374,7 @@ function localScreener(m,s,global){
    if(s.preset==='buybacks'&&!(v(r.buyback_yield)>0))return false;
   }else{
    if(Number(s.liquidity)>0&&!(v(r.liquidez_diaria_brl)>=Number(s.liquidity)))return false;
-   if(s.safetyMethod!=='todos'&&!(w.DiarioScreenersInteligencia?.valuationBR(r,{yieldAceitavel:Number(s.yieldAceitavel)})?.margins?.[s.safetyMethod]>0))return false;
+   if(s.safetyMethod!=='todos'&&!(vBR(r,s)?.margins?.[s.safetyMethod]>0))return false;
    if(s.preset==='dividendos'&&!(v(r.dividend_yield)>0&&v(r.fcf_yield)>0&&v(r.payout_implicito)>=10&&v(r.payout_implicito)<=90))return false;
    if(s.preset==='valor'&&!(v(r.roic)>0&&(v(r.pl)>0||v(r.ev_ebitda)>0)))return false;
    if(s.preset==='bancos'&&!(v(r.roe)>0&&v(r.pvp)!=null&&/banc|financ|segur/i.test(r.setor||'')))return false;
@@ -368,8 +387,8 @@ function localScreener(m,s,global){
  const asc=['pvp','forward_pe'].includes(s.order);
  rows.sort((a,b)=>{
   const method=s.order.startsWith('margem_')?s.order.slice(7):null;
-  const va=method&&!usa?w.DiarioScreenersInteligencia?.valuationBR(a,{yieldAceitavel:Number(s.yieldAceitavel)})?.margins?.[method]:null;
-  const vb=method&&!usa?w.DiarioScreenersInteligencia?.valuationBR(b,{yieldAceitavel:Number(s.yieldAceitavel)})?.margins?.[method]:null;
+  const va=method&&!usa?vBR(a,s)?.margins?.[method]:null;
+  const vb=method&&!usa?vBR(b,s)?.margins?.[method]:null;
   const av=method?va:v(a[key]),bv=method?vb:v(b[key]);
   if(av!==null&&bv===null)return -1;if(av===null&&bv!==null)return 1;
   if(av!==null&&bv!==null&&av!==bv)return asc?av-bv:bv-av;
@@ -459,9 +478,15 @@ d.addEventListener('change',ev=>{
  }
 });
 d.addEventListener('click',async ev=>{
- const b=ev.target.closest('[data-scr-top-refresh],[data-scr-top-pdf],[data-scr-top-detail],[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
+ const b=ev.target.closest('[data-scr-teto-save],[data-scr-teto-clear],[data-scr-top-refresh],[data-scr-top-pdf],[data-scr-top-detail],[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
  if(!b||!b.closest('#an-root'))return;
  ev.preventDefault();const [m,s]=field(b);if(!m)return;
+ if(b.dataset.scrTetoSave||b.dataset.scrTetoClear){const tk=b.dataset.scrTetoSave||b.dataset.scrTetoClear,all=tetos();
+  if(b.dataset.scrTetoClear)delete all[tk];
+  else{const box=b.closest('.scr839-calc'),num=k=>{const v=String(box?.querySelector('[data-teto="'+k+'"]')?.value||'').replace(/\./g,'').replace(',','.');return Number(v)};
+   const reg={lucro:num('lucro'),payout:num('payout'),acoes:num('acoes'),yield:Number(box?.querySelector('[data-teto="yield"]')?.value||.07),fonte:'manual',em:new Date().toISOString()};
+   if(!(reg.lucro>0&&reg.payout>0&&reg.payout<=100&&reg.acoes>0))return;all[tk]=reg}
+  try{localStorage.setItem(TETO_KEY,JSON.stringify(all))}catch{}if(s.data&&s.order==='margem_proprio'){const snap=snapshotMemory.get(m.toUpperCase())?.data;if(snap?.universe_complete)s.data=localScreener(m,s,snap)}render();return}
  if(b.hasAttribute('data-scr-top-refresh')){void loadTopGlobal(m,true);return}
  if(b.dataset.scrTopDetail){
   s.detailTicker=b.dataset.scrTopDetail;render();

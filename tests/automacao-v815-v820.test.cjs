@@ -159,3 +159,18 @@ test('v838: tom da notícia, seus ativos primeiro no pregão e pontos para amanh
   assert.equal(I.sentimento({titulo:'Copom mantém Selic'}),'neu');
   assert.match(fs.readFileSync('src/app-theme.css','utf8'),/\.i838-pos\{color:#10B981/);
 });
+test('v839: preço teto da fórmula do usuário, Bazin e Graham com estimativa do snapshot',()=>{
+  const I=require('../src/analysis/screeners-inteligencia.js');
+  assert.equal(+I.precoTeto(14613000000,25,5730834040,.07).toFixed(2),9.11);
+  const row={ticker:'X',preco_referencia:8,pl:6,pvp:1.2,dividend_yield:9,valor_mercado_brl:8*5730834040,payout_implicito:54};
+  const v=I.valuationBR(row,{yieldAceitavel:.07});
+  assert.equal(+v.methods.bazin.toFixed(2),12);assert.equal(+v.methods.graham.toFixed(2),14.14);
+  assert.deepEqual(v.estimados,{proprio:true,bazin:true,graham:true});
+  assert.equal(v.scoreActive,false,'estimativa não entra na nota');
+  const m=I.valuationBR(row,{manual:{lucro:14613000000,payout:25,acoes:5730834040,yield:.07}});
+  assert.equal(+m.methods.proprio.toFixed(2),9.11);assert.equal(m.estimados.proprio,undefined);assert.ok(m.margins.proprio>0);
+  const a=fs.readFileSync('src/analysis/analises.js','utf8');
+  assert.match(a,/\['__teto','Preço teto'\],\['__margem','Margem'\]/);assert.match(a,/Abaixo do teto/);
+  assert.match(a,/data-scr-teto-save/);assert.match(a,/localStorage\.setItem\(TETO_KEY/);
+  assert.match(a,/\['bazinDinamico','Bazin dinâmico'\]/);
+});

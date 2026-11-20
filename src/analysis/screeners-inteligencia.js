@@ -320,8 +320,9 @@
      'O método atribui pontuação baixa aos indicadores disponíveis; não significa necessariamente que a ação cairá.'};
  }
 
- // v781: quatro metodologias independentes, exclusivamente com dados documentados.
- // Nunca deduzir DPA/LPA/VPA/quantidade de ações de P/L, P/VP, DY ou de uma cotação isolada.
+ // v781: quatro metodologias independentes. v839: quando o dado documentado falta, usa a estimativa do
+ // próprio snapshot (P/L, P/VP, DY, valor de mercado e cotação da mesma data) e marca o método como "estimado".
+ // A nota (score) continua exigindo os insumos auditados; a estimativa serve só para o preço justo exibido.
  const finitePositive=x=>typeof x==='number'&&Number.isFinite(x)&&x>0?x:null;
  const pctRatio=x=>typeof x!=='number'||!Number.isFinite(x)||x<0?null:x<=1?x:x<=100?x/100:null;
  function dividendYears(input){
@@ -348,15 +349,26 @@
   const lucroExplicito=finitePositive(row.lucro_projetado_brl),cap=finitePositive(row.valor_mercado_brl),
    plRef=finitePositive(row.pl),shares=finitePositive(row.total_acoes);
   // Valor de mercado / P/L é lucro TTM implícito, NÃO lucro futuro de consenso.
-  const lucro=lucroExplicito!==null?lucroExplicito:
-   row.valuation_insumos_conferidos===true&&cap!==null&&plRef!==null?cap/plRef:null;
-  result.lucroBase=lucroExplicito!==null?'lucro projetado informado':
-   lucro!==null?'lucro TTM implícito (valor de mercado / P/L)':'N/D';
-  const payout=pctRatio(row.payout_projetado??(row.valuation_insumos_conferidos===true?row.payout_medio_historico:null));
-  if(lucro!==null&&shares!==null&&payout!==null&&payout>0){
-   result.methods.proprio=(lucro*payout/shares)/yieldOwn;
+  const man=options.manual&&typeof options.manual==='object'?options.manual:{};
+  const est=result.estimados={};
+  const lucroManual=finitePositive(man.lucro);
+  const lucro=lucroManual!==null?lucroManual:lucroExplicito!==null?lucroExplicito:
+   cap!==null&&plRef!==null?(est.proprio=true,cap/plRef):null;
+  result.lucroBase=lucroManual!==null?'lucro projetado seu ('+(man.fonte||'manual')+')':lucroExplicito!==null?'lucro projetado informado':
+   lucro!==null?'lucro dos últimos 12 meses (valor de mercado ÷ P/L)':'N/D';
+  const sharesUse=finitePositive(man.acoes)??shares??(cap!==null&&price!==null?(est.proprio=true,cap/price):null);
+  const payoutMan=pctRatio(man.payout);
+  const payout=payoutMan!==null&&payoutMan>0?payoutMan:pctRatio(row.payout_projetado??(row.valuation_insumos_conferidos===true?row.payout_medio_historico:null))??
+   (pctRatio(row.payout_implicito)!==null?(est.proprio=true,pctRatio(row.payout_implicito)):null);
+  if(lucroManual!==null&&finitePositive(man.acoes)!==null&&payoutMan!==null)delete est.proprio;
+  const yManual=[.05,.06,.07,.08,.09,.1].includes(Number(man.yield))?Number(man.yield):null;
+  if(yManual!==null)result.config.yieldAceitavel=yManual;
+  if(lucro!==null&&sharesUse!==null&&payout!==null&&payout>0){
+   result.methods.proprio=(lucro*payout/sharesUse)/(yManual??yieldOwn);
+   result.insumosProprio={lucro,payout,acoes:sharesUse,yield:yManual??yieldOwn};
   }else result.reasons.proprio='Exige lucro projetado BRL, payout projetado e total de ações de mesma base/competência';
-  const dpa=finitePositive(row.dpa_12m);
+  const dyR=pctRatio(row.dividend_yield);
+  const dpa=finitePositive(row.dpa_12m)??(price!==null&&dyR!==null&&dyR>0?(est.bazin=true,price*dyR):null);
   if(dpa!==null)result.methods.bazin=dpa/.06;
   else result.reasons.bazin='Exige DPA acumulado 12 meses ajustado a eventos corporativos';
   const certifiedAvg=finitePositive(row.dpa_media_consistente_5a);
@@ -375,7 +387,9 @@
     result.methods.bazinDinamico=remaining.reduce((a,b)=>a+b,0)/remaining.length/yieldDynamic;
    else result.reasons.bazinDinamico='Menos de três anos recorrentes após exclusão de extraordinários';
   }else result.reasons.bazinDinamico='Exige histórico documentado de 3 a 5 anos consecutivos de DPA';
-  const lpa=finitePositive(row.lpa),vpa=finitePositive(row.vpa);
+  const pvpRef=finitePositive(row.pvp);
+  const lpa=finitePositive(row.lpa)??(price!==null&&plRef!==null?(est.graham=true,price/plRef):null),
+   vpa=finitePositive(row.vpa)??(price!==null&&pvpRef!==null?(est.graham=true,price/pvpRef):null);
   if(lpa!==null&&vpa!==null)result.methods.graham=Math.sqrt(22.5*lpa*vpa);
   else result.reasons.graham='Graham requer LPA e VPA positivos da mesma classe da ação';
   for(const [key,fair]of Object.entries(result.methods)){
@@ -398,5 +412,5 @@
  }
 
  function methodology(m){return (weights[m==='US'?'US':'BR']).map(g=>g.name+' '+g.weight+'%').join(' • ')}
- return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,valuationBR,dividendYears,auditLineage,blendValuationBR,auditValuationEvidenceBR,reconcileValuationBR,version:'v2.2-val'});
+ return Object.freeze({diagnostics,qualityFlags,methodology,weights,financeWeights,financialSubtype,groupsFor,definitions:defs,calculate:item,valuationBR,precoTeto:(lucro,payout,acoes,y)=>{const l=finitePositive(lucro),p=pctRatio(payout),a=finitePositive(acoes),r=finitePositive(y);return l!==null&&p!==null&&p>0&&a!==null&&r!==null?l*p/a/r:null},dividendYears,auditLineage,blendValuationBR,auditValuationEvidenceBR,reconcileValuationBR,version:'v2.2-val'});
 });
