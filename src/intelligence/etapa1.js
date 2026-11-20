@@ -10,8 +10,9 @@
   const when = v => { const d=new Date(v);return Number.isFinite(d.getTime()) ? d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}) : 'Horário indisponível'; };
   const safeTicker = t => /^[A-Z0-9.^_-]{1,24}$/.test(String(t||'').toUpperCase()) ? String(t).toUpperCase() : '';
   function meusAtivos() {
-    try { if (typeof jrMeusAtivos==='function') return jrMeusAtivos().map(safeTicker).filter(Boolean); } catch (_) {}
     const set=new Set();
+    /* Não antecipar retorno de jrMeusAtivos: a Lista de Olho e a Watchlist
+       precisam ser unificadas, sem enviar os registros ao Worker público. */
     try {
       if (typeof S!=='undefined' && S) {
         for (const t of [...(S.watch||[]),...(S.olho||[]).map(x=>x.a)]) { const v=safeTicker(t);if(v)set.add(v); }
