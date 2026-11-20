@@ -54,3 +54,13 @@ test('v824: ADRs na Cloudflare sem WebSocket e com reserva no Supabase',async()=
   assert.match(fs.readFileSync('src/shared/cache-publico.js','utf8'),/\/v1\/adrs\?s=/);
   const a=fs.readFileSync('cloudflare/diario-noticias/adrs.mjs','utf8');assert.doesNotMatch(a,/npm:ws|new WebSocket/);assert.match(a,/Upgrade:'websocket'/);
 });
+test('v828: componentes base do redesign escapam texto e montam as classes .ui-*',()=>{
+  const win={};vm.runInNewContext(fs.readFileSync('src/shared/ui-base.js','utf8'),{window:win});
+  const U=win.DiarioUI;
+  assert.match(U.kpi({rotulo:'Resultado',valor:'+R$ 312,00',tom:'g'}),/class="ui-kpi".*class="ui-g"/);
+  assert.match(U.card({titulo:'<b>x</b>',span:8,corpo:'<p>ok</p>'}),/ui-card ui-s8.*&lt;b&gt;x/);
+  assert.match(U.badge('B3 fechada'),/ui-badge">B3 fechada/);
+  const css=fs.readFileSync('src/app-theme.css','utf8');
+  assert.match(css,/body:not\(\[data-v4route=term\]\)\{--dt-bg:var\(--ui-bg\)/);
+  assert.match(css,/--ui-accent:#F59E0B/);
+});
