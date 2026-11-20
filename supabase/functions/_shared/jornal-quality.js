@@ -67,7 +67,10 @@
         sma20:number(x.sma20)?x.sma20:null,sma50:number(x.sma50)?x.sma50:null,sma200:number(x.sma200)?x.sma200:null,dist20:number(x.dist20)?x.dist20:null,dist200:number(x.dist200)?x.dist200:null,
         ret1m:number(x.ret1m)?x.ret1m:null,ret3m:number(x.ret3m)?x.ret3m:null,max52:number(x.max52)?x.max52:null,min52:number(x.min52)?x.min52:null,
         tendencia:['Alta','Baixa','Lateral'].includes(x.tendencia)?x.tendencia:'Lateral',dia:text(x.dia).slice(0,10),serie:(Array.isArray(x.serie)?x.serie:[]).filter(number).slice(-60)}));
-    return {itens,coletado_em:text(t?.coletado_em),fonte:text(t?.fonte)};
+    const f=t?.fng,fng=f&&number(f.v)&&f.v>=0&&f.v<=100?{v:f.v,classe:text(f.classe).slice(0,30),semana_passada:number(f.semana_passada)?f.semana_passada:null,fonte_url:url(f.fonte_url)}:null;
+    const setores_eua=(Array.isArray(t?.setores_eua)?t.setores_eua:[]).filter(x=>x&&number(x.d1)&&/^[A-Z]{2,5}$/.test(text(x.sym))).slice(0,12).map(x=>({sym:text(x.sym),nome:text(x.nome).slice(0,30),d1:x.d1,m1:number(x.m1)?x.m1:null}));
+    const w=t?.ewz,ewz=w&&number(w.spot)?{spot:w.spot,vies:['comprador','vendedor','misto'].includes(w.vies)?w.vies:'misto',netC:number(w.netC)?w.netC:null,netP:number(w.netP)?w.netP:null,pcVol:number(w.pcVol)?w.pcVol:null,iv30:number(w.iv30)?w.iv30:null,rank:number(w.rank)?w.rank:null,mov30:number(w.mov30)?w.mov30:null,estruturas:number(w.estruturas)?w.estruturas:0,gerado:text(w.gerado).slice(0,30),fonte:text(w.fonte).slice(0,80)}:null;
+    return {itens,fng,setores_eua,ewz,coletado_em:text(t?.coletado_em),fonte:text(t?.fonte)};
   }
   function snapshot(e, market = {}) {
     if (e.snapshot?.versao === VERSION) return freeze(clone(e.snapshot));

@@ -65,11 +65,14 @@ export async function macroJornal() {
 export async function destaquesJornal(dia:string) {
   const collected=new Date().toISOString();
   try{
-    const r=await fetch('https://scanner.tradingview.com/brazil/scan',{method:'POST',signal:AbortSignal.timeout(8000),headers:{'Content-Type':'application/json','User-Agent':'Mozilla/5.0'},body:JSON.stringify({symbols:{symbolset:['SYML:BMFBOVESPA;IBOV']},columns:['name','close','change','time'],range:[0,150]})});
+    const r=await fetch('https://scanner.tradingview.com/brazil/scan',{method:'POST',signal:AbortSignal.timeout(8000),headers:{'Content-Type':'application/json','User-Agent':'Mozilla/5.0'},body:JSON.stringify({symbols:{symbolset:['SYML:BMFBOVESPA;IBOV']},columns:['name','close','change','time','sector'],range:[0,150]})});
     if(!r.ok)throw new Error(String(r.status));const data=await r.json();
-    const rows=(data?.data||[]).map((x:any)=>({tk:x.d?.[0],px:x.d?.[1],var:x.d?.[2],dia:finite(x.d?.[3])?new Date(x.d[3]*1000).toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'}):''})).filter((x:any)=>x.dia===dia&&finite(x.px)&&finite(x.var));
+    const rows=(data?.data||[]).map((x:any)=>({tk:x.d?.[0],px:x.d?.[1],var:x.d?.[2],setor:String(x.d?.[4]||''),dia:finite(x.d?.[3])?new Date(x.d[3]*1000).toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'}):''})).filter((x:any)=>x.dia===dia&&finite(x.px)&&finite(x.var));
     const sorted=rows.sort((a:any,b:any)=>b.var-a.var);
-    return {altas:sorted.filter((x:any)=>x.var>0).slice(0,5),baixas:sorted.filter((x:any)=>x.var<0).slice(-5).reverse(),dia,referencia_em:collected,fonte:'TradingView - universo de componentes informado pela fonte'};
+    const ps:Record<string,string>={'Finance':'Financeiro','Energy Minerals':'Petróleo e gás','Non-Energy Minerals':'Mineração e siderurgia','Utilities':'Utilidades','Retail Trade':'Varejo','Consumer Non-Durables':'Consumo básico','Consumer Durables':'Consumo durável','Consumer Services':'Serviços ao consumidor','Health Services':'Saúde','Health Technology':'Saúde','Transportation':'Transporte','Process Industries':'Indústria de base','Producer Manufacturing':'Bens de capital','Industrial Services':'Serviços industriais','Communications':'Telecom','Technology Services':'Tecnologia','Electronic Technology':'Tecnologia','Distribution Services':'Distribuição','Commercial Services':'Serviços'};
+    const ag=new Map<string,number[]>();for(const x of rows){const k=ps[x.setor]||'';if(!k)continue;const a=ag.get(k)||[];a.push(x.var);ag.set(k,a);}
+    const setores=[...ag.entries()].filter(([,a])=>a.length>=2).map(([setor,a])=>({setor,var:+(a.reduce((s,v)=>s+v,0)/a.length).toFixed(2),n:a.length})).sort((a,b)=>b.var-a.var);
+    return {setores,altas:sorted.filter((x:any)=>x.var>0).slice(0,5),baixas:sorted.filter((x:any)=>x.var<0).slice(-5).reverse(),dia,referencia_em:collected,fonte:'TradingView - universo de componentes informado pela fonte'};
   }catch{return {altas:[],baixas:[],dia,referencia_em:collected,fonte:'TradingView indisponível'};}
 }
 
@@ -109,5 +112,35 @@ export async function tecnicoGlobal() {
     }
     return null;
   }));
-  return { itens: out.filter(Boolean), coletado_em: collected, fonte: 'Yahoo Finance (candles diários) via cache da Cloudflare' };
+  const [fng, setores_eua, ewz] = await Promise.all([fngCripto(), setoresEUA(), ewzJornal()]);
+  return { itens: out.filter(Boolean), fng, setores_eua, ewz, coletado_em: collected, fonte: 'Yahoo Finance (candles diários) via cache da Cloudflare' };
+}
+/* v841: medo e ganância das criptos (alternative.me, índice público de 0 a 100). */
+export async function fngCripto() {
+  try { const r = await fetch('https://api.alternative.me/fng/?limit=8', { signal: AbortSignal.timeout(7000) }); if (!r.ok) return null;
+    const d = (await r.json())?.data || [], v = Number(d[0]?.value), ant = Number(d[7]?.value ?? d[1]?.value);
+    const tr: Record<string, string> = { 'Extreme Fear': 'Medo extremo', 'Fear': 'Medo', 'Neutral': 'Neutro', 'Greed': 'Ganância', 'Extreme Greed': 'Ganância extrema' };
+    return finite(v) ? { v, classe: tr[String(d[0]?.value_classification || '')] || String(d[0]?.value_classification || ''), semana_passada: finite(ant) ? ant : null, fonte_url: 'https://alternative.me/crypto/fear-and-greed-index/' } : null;
+  } catch { return null; }
+}
+/* v841: mapa de calor dos setores do S&P 500 (ETFs setoriais SPDR), variação do dia e de 1 mês. */
+const SETORES_SP: [string, string][] = [['XLK','Tecnologia'],['XLF','Financeiro'],['XLV','Saúde'],['XLY','Consumo discricionário'],['XLP','Consumo básico'],['XLE','Energia'],['XLI','Indústria'],['XLB','Materiais'],['XLU','Utilidades'],['XLRE','Imobiliário'],['XLC','Comunicação']];
+export async function setoresEUA() {
+  const out = await Promise.all(SETORES_SP.map(async ([sym, nome]) => {
+    try { const r = await fetch(`https://diario-trader.lucianosilva43567.workers.dev/v1/diario?t=${sym}&range=1mo`, { signal: AbortSignal.timeout(8000) }); if (!r.ok) return null;
+      const c = ((await r.json())?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []).filter((v: any) => finite(v) && v > 0);
+      if (c.length < 3) return null; const px = c[c.length - 1];
+      return { sym, nome, d1: +((px / c[c.length - 2] - 1) * 100).toFixed(2), m1: +((px / c[0] - 1) * 100).toFixed(2) };
+    } catch { return null; }
+  }));
+  return out.filter(Boolean);
+}
+/* v841: fluxo de opções do EWZ (coletado na Cloudflare a partir da Cboe, cotações atrasadas ~15 min). */
+export async function ewzJornal() {
+  try { const r = await fetch('https://diario-trader.lucianosilva43567.workers.dev/v1/ewz', { signal: AbortSignal.timeout(12000) }); if (!r.ok) return null;
+    const j = await r.json(); if (!finite(j?.spot)) return null;
+    return { spot: j.spot, vies: String(j.vies || ''), netC: finite(j.netC) ? j.netC : null, netP: finite(j.netP) ? j.netP : null, pcVol: finite(j.pcVol) ? +j.pcVol.toFixed(2) : null,
+      iv30: finite(j.vol?.iv30) ? +(j.vol.iv30 * 100).toFixed(1) : null, rank: finite(j.vol?.rank) ? Math.round(j.vol.rank * 100) : null,
+      mov30: finite(j.vol?.mov1dp) ? +(j.vol.mov1dp * 100).toFixed(1) : null, estruturas: Array.isArray(j.estruturas) ? j.estruturas.length : 0, gerado: String(j.gerado || ''), fonte: 'Cboe (atrasado ~15 min) via Cloudflare' };
+  } catch { return null; }
 }

@@ -1465,7 +1465,7 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
         const ke = jvpResumo(Le);
         (ke.n &&
           ve(
-            `A leitura acertou a direção em ${ke.acertos} de ${ke.n} análises${ke.medUp != null ? "; as ações com leitura de alta variaram em média " + jvPc(ke.medUp) : ""}.`,
+            `A leitura acertou a direção em ${ke.acertos} de ${ke.n} análises${ke.medUp != null ? "; as ações com leitura de alta variaram em média " + jvPc(ke.medUp) : ""}.` + (() => { const sem = typeof jvpSemana == "function" ? jvpSemana(Le) : { n: 0 }; return sem.n ? ` Nesta semana: ${sem.acertos} de ${sem.n}.` : ""; })(),
             { s: 8.8 },
           ),
           Ye(
@@ -1876,9 +1876,9 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
   }
   {
     // v840: painel técnico — índices americanos e principais criptos, com dados desta edição.
-    const TG=(snap.tecnico&&snap.tecnico.itens)||[];
-    if(TG.length){
-      Je({ico:"tec",tit:"Painel técnico",sub:"Índices americanos e criptos: tendência, RSI, médias e gráfico de 60 dias"});
+    const TT=snap.tecnico||{},TG=TT.itens||[],SETB=((snap.movers||{}).setores)||[];
+    if(TG.length||TT.fng||TT.ewz||(TT.setores_eua||[]).length||SETB.length){
+      Je({ico:"tec",tit:"Painel técnico",sub:"Índices americanos, criptos, setores e fluxo de opções do EWZ"});
       const gw=10,cw=(p-gw)/2,ch=114,nf=(x,dd=2)=>x==null||!isFinite(x)?"—":Number(x).toLocaleString("pt-BR",{minimumFractionDigits:dd,maximumFractionDigits:dd});
       for(let i=0;i<TG.length;i+=2){
         J(ch+8);const y0=o.y;
@@ -1897,7 +1897,31 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
         });
         o.y=y0+ch+8;
       }
-      ve("Candles diários do Yahoo Finance. RSI de Wilder (14) e médias simples de 20, 50 e 200 dias. Tendência de alta: preço acima da média de 50 e ela acima da de 200. Não é recomendação.",{s:6.8,c:d.mu});
+      TG.length&&ve("Candles diários do Yahoo Finance. RSI de Wilder (14) e médias simples de 20, 50 e 200 dias. Tendência de alta: preço acima da média de 50 e ela acima da de 200. Não é recomendação.",{s:6.8,c:d.mu});
+      // v841: medo e ganância das criptos + fluxo de opções do EWZ, lado a lado.
+      if(TT.fng||TT.ewz){
+        const bh=70;J(bh+8);const y1=o.y,half=(p-10)/2;
+        if(TT.fng){const f=TT.fng,fc=f.v>=55?d.up:f.v<=45?d.dn:d.mu;
+          ue(c,y1,half,bh,{fill:d.wh});h("Medo e ganância · cripto",c+10,y1+9,{s:9,f:"b",c:d.nv});
+          h(String(f.v),c+10,y1+26,{s:18,f:"b",c:fc});h(f.classe+(f.semana_passada!=null?" · semana passada "+f.semana_passada:""),c+48,y1+31,{s:7.5,c:d.mu,w:half-58});
+          o.rect(c+10,y1+54,half-20,5,{fill:d.cz});o.rect(c+10,y1+54,(half-20)*f.v/100,5,{fill:fc});}
+        if(TT.ewz){const z=TT.ewz,x1=c+(TT.fng?half+10:0),ww=TT.fng?half:p,vc=z.vies==="comprador"?d.up:z.vies==="vendedor"?d.dn:d.mu,mi=v=>v==null?"—":(v>=0?"+":"−")+"US$ "+(Math.abs(v)/1e6).toFixed(1).replace(".",",")+" mi";
+          ue(x1,y1,ww,bh,{fill:d.wh});h("Fluxo de opções do EWZ",x1+10,y1+9,{s:9,f:"b",c:d.nv});
+          o.pill(z.vies.toUpperCase(),x1+ww-10,y1+8,{s:6.8,bg:z.vies==="comprador"?d.grl:z.vies==="vendedor"?l("#fdf2f0"):d.cz,c:vc,al:"r"});
+          h("Calls "+mi(z.netC)+" · Puts "+mi(z.netP)+(z.pcVol!=null?" · put/call "+nf(z.pcVol):""),x1+10,y1+28,{s:8,c:d.tx,w:ww-20});
+          h("Volatilidade 30 dias "+(z.iv30==null?"—":nf(z.iv30,1)+"%")+(z.rank!=null?" · IV Rank "+z.rank+"%":"")+(z.mov30!=null?" · ±"+nf(z.mov30,1)+"% em 30 dias":""),x1+10,y1+42,{s:7.5,c:d.mu,w:ww-20});
+          h("Cboe, cotações atrasadas cerca de 15 min.",x1+10,y1+56,{s:6.6,c:d.mu});}
+        o.y=y1+bh+8;
+      }
+      // v841: mapa de calor dos setores (S&P 500 pelos ETFs setoriais e Ibovespa pela média das ações do índice).
+      const heat=(tit,L,lab)=>{if(!L.length)return;const cols=4,cw2=(p-(cols-1)*6)/cols,rh=30,rows=Math.ceil(L.length/cols);
+        J(22+rows*(rh+6));Me(tit,c,o.y);o.y+=22;
+        L.forEach((x,ix)=>{const v=x.d1??x.var,xx=c+(ix%cols)*(cw2+6),yy=o.y+Math.floor(ix/cols)*(rh+6),
+          bg=v>=1.5?l("#0f7a52"):v>=0.5?l("#3fae7c"):v>0?l("#bfe5d2"):v>-0.5?l("#f6d3cc"):v>-1.5?l("#e07a66"):l("#b8402c"),tc=Math.abs(v)>=0.5?d.wh:d.tx;
+          o.rr(xx,yy,cw2,rh,{fill:bg,r:4});h(lab(x),xx+6,yy+5,{s:7.2,f:"b",c:tc,w:cw2-12});h((v>0?"+":"")+nf(v)+"%"+(x.m1!=null?" · 1m "+(x.m1>0?"+":"")+nf(x.m1,1)+"%":""),xx+6,yy+17,{s:7,c:tc,w:cw2-12});});
+        o.y+=rows*(rh+6)+4;};
+      heat("Setores do S&P 500 hoje",TT.setores_eua||[],x=>x.nome);
+      heat("Setores do Ibovespa hoje",SETB,x=>x.setor+" ("+x.n+")");
     }
   }
   {

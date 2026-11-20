@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 776a723934681935ceb0af9b4084a8ee7469434812e932ab3a5c6e506a7be977 */
+/* Gerado de src/app-theme.css · SHA256 9f4530decb16142cad57c564ecc2724a48c036d75d56ea3ebda6c7076f791dbb */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -3537,3 +3537,53 @@ html:root body #app .jr840-p i{font-style:normal;font-weight:600}
 html:root body #app .jr840-p i.g{color:#10B981}html:root body #app .jr840-p i.r{color:#EF4444}
 html:root body #app .jr840-sp{width:100%;height:36px;display:block}
 html:root body #app .jr840-c small{font-size:11px;color:var(--ui-label,#64748B);font-variant-numeric:tabular-nums}
+/* v841 — Cérebro da IA no visual institucional */
+html:root body #app .cb842{display:grid;gap:12px;color:var(--ui-title,#E2E8F0)}
+html:root body #app .cb842-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+html:root body #app .cb842-h h2{margin:0;font-size:20px;color:#FFFFFF}
+html:root body #app .cb842-h p,html:root body #app .cb842-mut{margin:4px 0 0;font-size:13px;color:var(--ui-label,#64748B)}
+html:root body #app .cb842-split{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media(min-width:1100px){html:root body #app .cb842-split{grid-template-columns:minmax(0,1fr) 360px;align-items:start}html:root body #app .cb842-side{position:sticky;top:12px}}
+html:root body #app .cb842-main,html:root body #app .cb842-side{display:grid;gap:12px;min-width:0}
+html:root body #app .cb842-blk{background:var(--ui-card,#12151E);border:1px solid var(--ui-card-line,rgba(255,255,255,.06));border-radius:6px;padding:12px;display:grid;gap:8px;min-width:0}
+html:root body #app .cb842-blk h3{margin:0;font-size:14px;color:var(--ui-title,#E2E8F0)}
+html:root body #app .cb842-h2{display:flex;justify-content:space-between;align-items:center;gap:8px}
+html:root body #app .cb842-row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+html:root body #app .cb842-row>label{flex:1 1 180px;min-width:0}
+html:root body #app .cb842 label{display:grid;gap:4px;font-size:12px;color:var(--ui-label,#64748B)}
+html:root body #app .cb842 input,html:root body #app .cb842 select,html:root body #app .cb842 textarea{font-size:16px;min-height:40px;min-width:0}
+html:root body #app .cb842 .btn{min-height:40px}
+html:root body #app .cb842-pg{width:100%;height:6px;accent-color:#F59E0B}
+html:root body #app .cb842-st{margin:0;font-size:12px;color:var(--ui-label,#64748B)}
+html:root body #app .cb842-obra{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--ui-card-line,rgba(255,255,255,.06));flex-wrap:wrap}
+html:root body #app .cb842-obra small{display:block;color:var(--ui-label,#64748B);font-size:12px;font-variant-numeric:tabular-nums}
+html:root body #app .cb842-hits{margin:0;padding-left:18px;display:grid;gap:8px}
+html:root body #app .cb842-hits p{margin:4px 0 0;font-size:13px;color:var(--ui-label,#94A3B8)}
+html:root body #app .cb842-sim{font-size:11px;color:var(--ui-label,#64748B);font-variant-numeric:tabular-nums}
+html:root body #app .cb842-kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+html:root body #app .cb842-kpi small{display:block;font-size:12px;color:var(--ui-label,#64748B)}
+html:root body #app .cb842-kpi b{font-size:20px;color:#FFFFFF;font-variant-numeric:tabular-nums}
+html:root body #app .cb842-tb{width:100%;border-collapse:collapse;font-size:12px}
+html:root body #app .cb842-tb th{text-align:left;color:var(--ui-label,#64748B);font-weight:500;padding:4px}
+html:root body #app .cb842-tb td{padding:6px 4px;border-top:1px solid var(--ui-card-line,rgba(255,255,255,.06));font-variant-numeric:tabular-nums}
+html:root body #app .cb842-tb td:not(:first-child){text-align:right;white-space:nowrap}
+html:root body #app .cb842-bar{display:inline-block;width:48px;height:5px;background:rgba(255,255,255,.08);border-radius:3px;margin-right:6px;vertical-align:middle;overflow:hidden}
+html:root body #app .cb842-bar i{display:block;height:100%}
+html:root body #app .cb842-bar i.ok{background:#10B981}html:root body #app .cb842-bar i.at{background:#F59E0B}html:root body #app .cb842-bar i.neg{background:#EF4444}
+html:root body #app .cb842 ul{margin:0;padding-left:18px;display:grid;gap:4px}
+/* v841 — Jornal: sentimento cripto, fluxo do EWZ e mapa de calor dos setores */
+html:root body #app .jr841-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-bottom:8px}
+html:root body #app .jr841-bar{display:block;height:5px;border-radius:3px;background:rgba(100,116,139,.2);overflow:hidden}
+html:root body #app .jr841-bar i{display:block;height:100%;background:#F59E0B}
+html:root body #app .jr840-p b.g{color:#10B981}html:root body #app .jr840-p b.r{color:#EF4444}
+html:root body #app .jr841-hh{font-size:12px;color:var(--ui-label,#64748B);margin:8px 0 4px}
+html:root body #app .jr841-heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+html:root body #app .jr841-hc{border-radius:4px;padding:6px 8px;min-width:0;display:grid;gap:2px;font-variant-numeric:tabular-nums}
+html:root body #app .jr841-hc b{font-size:12px;overflow-wrap:anywhere}
+html:root body #app .jr841-hc span{font-size:11px}
+html:root body #app .jr841-hc.p3{background:#0f7a52;color:#fff}html:root body #app .jr841-hc.p2{background:#1f9466;color:#fff}html:root body #app .jr841-hc.p1{background:rgba(16,185,129,.18)}
+html:root body #app .jr841-hc.n1{background:rgba(239,68,68,.16)}html:root body #app .jr841-hc.n2{background:#c2503d;color:#fff}html:root body #app .jr841-hc.n3{background:#9f3324;color:#fff}
+html:root body #app .jr841 td.g{color:#10B981}html:root body #app .jr841 td.r{color:#EF4444}
+html:root body #app .jr841 td:not(:first-child),html:root body #app .jr841 th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+html:root body #app .dt397-native-mount #dt393-workspace>div:has([data-brain-root]){column-count:auto!important}
+html:root body #app .dt397-native-mount #dt393-workspace>div:has([data-brain-root])>*{column-span:all}
