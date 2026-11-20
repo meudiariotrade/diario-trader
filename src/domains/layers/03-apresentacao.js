@@ -783,10 +783,10 @@ try {
     });
     function le() {
       const t = V(),
-        e = pt(t),
+        e = pt(t).filter(g => !Gt(g)),
         a = lt(e, R),
         r = jt(),
-        n = pt().filter((c) => nt(c) >= r && nt(c) <= t),
+        n = pt().filter(c => !Gt(c) && nt(c) >= r && nt(c) <= t),
         l = lt(n, R),
         s = yt(),
         o = ne(),
@@ -958,10 +958,8 @@ try {
     ${v810Seletor($)}
     ${v810Faixa("home",u,u==="pre"?"Referências internacionais, agenda e preparação para a próxima abertura.":u==="pregao"?"Acompanhe acontecimentos, preços disponíveis e riscos; confira a atualização de cada dado.":"Compare o fechamento com a preparação e acompanhe os riscos para a próxima sessão.")}
     ${$t}
-    <div class="v810-home-grid">
-      ${K}
-      ${C("cal",`Resumo do dia<small class="v4-date">${Kt(t)}</small>`,`<button type="button" class="v4-pill" data-dt393-route="mercado">${p("up",16)} ${M}${p("right",14)}</button>`,y+P,"v4-summary")}
-    </div>
+    ${C("cal",`Resumo do dia<small class="v4-date">${Kt(t)}</small>`,`<button type="button" class="v4-pill" data-dt393-route="mercado">${p("up",16)} ${M}${p("right",14)}</button>`,y+P,"v4-summary")}
+    <div class="v810-home-grid">${K}</div>
     <details class="v810-more"><summary>Atalhos e ferramentas adicionais</summary><div class="v810-more-inner">${Z}${d}</div></details>
     </div>`;
     }
@@ -1167,7 +1165,7 @@ try {
     function ie() {
       const t = ft(),
         e = ut(t),
-        a = pt(t),
+        a = pt(t).filter(g => !Gt(g)),
         r = lt(a, R),
         n = yt(),
         l = Yt(),
@@ -1363,16 +1361,16 @@ try {
         agenda=v810AgendaNoticias(t),
         base=v810Seletor(seletor)+v810Faixa("dia",sessao,chamada)+turno593+contexto,
         extras='<details class="v810-more"><summary>Plano detalhado, anotações e outras ferramentas</summary><div class="v810-more-inner">'+
-          planoIntegrado789(t,e)+emo589+it+dt+'</div></details>';
+          planoIntegrado789(t, e)+emo589+it+dt+'</div></details>';
       return '<div class="v4-page v4-day v810-day" data-v810-phase="'+sessao+'">'+base+
         (sessao==="pre"
           ? y+'<div class="v810-day-grid">'+U+m+agenda+X+'</div>'+extras
           : sessao==="pregao"
           ? '<div class="v810-day-grid">'+U+m+operacoes+agenda+X+'</div>'+
-            '<details class="v810-more"><summary>Plano original, estado emocional e anotações</summary><div class="v810-more-inner">'+y+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>'
+            '<details class="v810-more"><summary>Estado emocional e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>'+y
           : operacoes+'<div class="v810-day-grid">'+U+agenda+it+'</div>'+
             '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+
-            '<details class="v810-more"><summary>Plano original, limites e revisão detalhada</summary><div class="v810-more-inner">'+y+planoIntegrado789(t,e)+m+X+emo589+dt+'</div></details>')+
+            '<details class="v810-more"><summary>Limites e revisão detalhada</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+m+X+emo589+dt+'</div></details>'+y)+
         '</div>';
     }
     let At = "risk",
@@ -1995,6 +1993,7 @@ try {
         }, 0));
     });
     const be = { home: le, dia: ie, ops: de, stats: ue };
+    const v810Details = {home:new Set(),dia:new Set()};
     function xt() {
       const t = et(),
         e = v.getElementById("app");
@@ -2023,6 +2022,12 @@ try {
         u > 0 && o.remove();
       });
       let l = e.querySelector(".v4-panel");
+      if (l && (t === "home" || t === "dia")) {
+        l.querySelectorAll(".v810-more").forEach((node,i) => {
+          const key=String(i);
+          if(node.open)v810Details[t].add(key);else v810Details[t].delete(key);
+        });
+      }
       const s = e.querySelector(".dt393-page");
       if (
         (!l && s && s.parentElement !== e && (l = s.parentElement),
@@ -2035,6 +2040,7 @@ try {
       (s && !l.contains(s) && s.remove(),
         (l.className = "v4-panel"),
         (l.innerHTML = n),
+        (t === "home" || t === "dia") && l.querySelectorAll(".v810-more").forEach((node,i) => {node.open=v810Details[t].has(String(i));}),
         v.getElementById("v419-mais")?.remove(),
         e.querySelector("#dt393-workspace")?.classList.remove("v419-recolhido"),
         ee(t, a),
