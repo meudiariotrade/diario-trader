@@ -10,27 +10,10 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  // v563: Início sem "Comece por aqui" e sem atalhos; o Terminal fica no menu.
  await expect(app.locator('.simple-actions')).toHaveCount(0);
  await expect(app.locator('.simple-day-review')).toHaveCount(0);
- // v810: os atalhos existentes estão no painel de ferramentas, não na tela nativa oculta.
- const expand=app.locator('.v810-home .v810-more').first();
- await expect(expand).not.toHaveAttribute('open');
- await expand.locator(':scope > summary').click();
- const studiesLink=app.locator('.v810-home .v810-more [data-dt393-route="estudos"]');
- const visible=await studiesLink.isVisible();
- if(!visible) {
-   const diag=await studiesLink.evaluate(el=>{
-     const trail=[];let n=el;
-     while(n&&trail.length<12){
-       const st=getComputedStyle(n);
-       trail.push({tag:n.tagName,cls:String(n.className).slice(0,80),display:st.display,visibility:st.visibility,
-         opacity:st.opacity,hidden:n.hidden,open:n.open,client:n.getBoundingClientRect().toJSON()});
-       n=n.parentElement;
-     } return trail;
-   });
-   console.log('V810_NAV_DIAGNOSTIC',JSON.stringify(diag));
- }
- await expect(studiesLink).toBeVisible();
- await p.evaluate(()=>render());
- await expect(app.locator('.v810-home .v810-more').first()).toHaveAttribute('open');
+ // v827: "Atalhos e ferramentas adicionais" saiu do Início a pedido do usuário; Estudos segue no menu.
+ await expect(app.locator('.v810-home .v810-more')).toHaveCount(0);
+ await expect(app.locator('.v810-home .v4-tiles')).toHaveCount(0);
+ await expect(p.locator('[data-dt393-route="estudos"]').first()).toBeAttached();
  // Novo começo do Terminal preserva as preferências reais do GP.
  await p.evaluate(()=>{const state={a:'EWZ',b:'SPX',per:'6M',freq:'D',mode:'dual',ma:[],ev:true,table:false};localStorage.setItem('diario-v421-gp',JSON.stringify(state));localStorage.setItem('diario-v428-ctx',JSON.stringify({'T:GP':state}));});
  await p.reload();await p.locator('#splash').waitFor({state:'hidden'});

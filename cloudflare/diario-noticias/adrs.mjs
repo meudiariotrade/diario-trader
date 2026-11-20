@@ -93,8 +93,36 @@ async function yahoo(s        , estado                             )            
   return leYahoo(s, await r.json(), estado);
 }
 
-/* Overnight (BOATS) usa WebSocket do TradingView: na Cloudflare fica de fora; o app mostra o último preço com data. */
-export function overnightQuotes(symbols){return Promise.resolve({});}
+/* v827: overnight (BOATS) pelo WebSocket público do TradingView, aberto pela Cloudflare (fetch com Upgrade),
+   conexão curta de até 7 s, sem conta e sem token do usuário. */
+export async function overnightQuotes(symbols){
+  const resp=await fetch('https://data.tradingview.com/socket.io/websocket',{headers:{Upgrade:'websocket',Origin:'https://www.tradingview.com','User-Agent':UA}});
+  const socket=resp.webSocket;if(!socket)throw Error('Overnight feed unavailable');
+  socket.accept();
+  return new Promise((resolve,reject)=>{
+    const wanted=new Set(symbols.map(s=>'BOATS:'+s)),complete=new Set(),quotes={};
+    let finished=false;
+    const finish=(error)=>{if(finished)return;finished=true;clearTimeout(timer);try{socket.close()}catch{};error?reject(error):resolve(quotes)};
+    const timer=setTimeout(()=>finish(Object.keys(quotes).length?undefined:Error('Overnight timeout')),7000);
+    const session='qs_'+crypto.randomUUID().replace(/-/g,'').slice(0,16);
+    const envelope=(text)=>'~m~'+text.length+'~m~'+text;
+    const send=(m,p)=>socket.send(envelope(JSON.stringify({m,p})));
+    socket.addEventListener('message',(ev)=>{
+      const text=typeof ev.data==='string'?ev.data:'';if(text.length>500000){finish(Error('Overnight response too large'));return}
+      try{for(const body of frames(text)){
+        if(body.startsWith('~h~')){socket.send(envelope(body));continue}
+        let message;try{message=JSON.parse(body)}catch{continue}
+        if(message.p?.[0]!==session)continue;
+        if(message.m==='qsd'){const row=message.p[1];if(!wanted.has(row?.n))continue;if(row.s==='ok'&&row.v)quotes[row.n]={...quotes[row.n],...row.v};else complete.add(row.n)}
+        if(message.m==='quote_completed'&&wanted.has(message.p[1]))complete.add(message.p[1]);
+        if(complete.size===wanted.size)finish();
+      }}catch{finish(Error('Invalid overnight response'))}
+    });
+    socket.addEventListener('error',()=>finish(Error('Overnight feed unavailable')));
+    socket.addEventListener('close',()=>finish(Object.keys(quotes).length?undefined:Error('Overnight feed closed')));
+    try{send('set_auth_token',['unauthorized_user_token']);send('quote_create_session',[session]);send('quote_set_fields',[session,'lp','lp_time','current_session','update_mode']);send('quote_add_symbols',[session,...wanted])}catch{finish(Error('Overnight connection unavailable'))}
+  });
+}
 const jobs=new Map                     ();
 async function loadQuotes(symbols         ){
   const ch=symbols.join(',');if(jobs.has(ch))return jobs.get(ch);

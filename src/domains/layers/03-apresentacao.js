@@ -289,6 +289,30 @@ try {
         '</strong></div></div><ul class="v810-oprows">'+
         (dataRows||'<li>Nenhuma operação registrada nesta data.</li>')+'</ul></section>';
     }
+    /* v827: EUA e ADRs agora no Início — índices, EWZ, petróleo, ADRs brasileiras e manchetes dos EUA.
+       Lê só os caches que o app já tem (barra superior e ADRs); as ADRs vêm da Cloudflare. */
+    function v827Eua() {
+      const S=window.DiarioSessoes, us=f(()=>S.session("NYSE"),null);
+      if(!us||us.state==="fechado"&&!f(()=>(AD.data?.itens||[]).length,0))return "";
+      f(()=>typeof adrLoad==="function"&&adrLoad(),null);
+      const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>f(()=>window.tapeVivo?.(k),null)||tape[k];
+      const idx=[["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["^DJI","Dow"],["EWZ","EWZ"],["CL=F","WTI"]].map(([k,n])=>{
+        const v=viva(k);if(!v||!(+v.px>0))return "";const c=v.chg==null||v.chg===""?null:+v.chg;
+        return '<div><span>'+n+'</span><b>'+q(v.px)+'</b><em class="'+L(c)+'">'+(c==null?"":Q(c))+'</em></div>';}).join("");
+      const itens=f(()=>(AD.data?.itens||[]).map(r=>{const w=window.TraderAdr?.view(r)||{};return {s:r.s,px:w.active?.px??r.px,ch:w.change??r.chp,k:w.active?.kind};}).filter(r=>r.ch!=null),[]);
+      itens.sort((a,b)=>Math.abs(b.ch)-Math.abs(a.ch));
+      const media=itens.length?itens.reduce((a,r)=>a+(+r.ch||0),0)/itens.length:null;
+      const adrs=itens.slice(0,6).map(r=>'<li><b>'+b(r.s)+'</b><span>'+(+r.px>0?(+r.px).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}):"—")+'</span><em class="'+L(r.ch)+'">'+Q(r.ch)+'</em>'+(r.k&&r.k!=="regular"?'<small>'+b(r.k==="overnight"?"overnight":r.k==="pre"?"pré":"pós")+'</small>':'')+'</li>').join("");
+      const re=/\b(fed|wall street|nasdaq|s&p|dow|treasur|nvidia|apple|tesla|eua|estados unidos|powell|warsh|ações americanas|bolsas de ny|nova york)\b/i;
+      const nts=f(()=>(MKT.items||[]).filter(v810NoticiaValida).filter(n=>re.test(n.t||n.titulo||"")).slice(0,3),[]);
+      const fase={pre:"pré-mercado",regular:"pregão aberto",pos:"after-market",fechado:"fechado"}[us.state]||us.state;
+      const texto=media==null?"":(media<=-1?"ADRs em queda forte":media>=1?"ADRs em alta forte":"ADRs sem direção forte")+" · média "+Q(media);
+      return C("bars","EUA e ADRs agora",'<span class="v4-muted">NY '+b(fase)+'</span>',
+        (idx?'<div class="v4-quotes">'+idx+'</div>':'')+
+        (adrs?'<p class="v4-sub">'+b(texto)+'</p><ul class="v827-adr">'+adrs+'</ul>':'<p class="v4-sub">ADRs: aguardando cotação.</p>')+
+        (nts.length?'<ul class="v4-list">'+nts.map(n=>'<li><time>'+b(new Date(Date.parse(n.d)).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"}))+'</time><span>'+b(n.t||n.titulo||"")+'</span></li>').join("")+'</ul>':''),
+        "v827-eua");
+    }
     /* v825: níveis levados ao plano (Técnico / Fibonaccing) no Meu dia; tocar no ativo abre o Terminal. */
     function v825Niveis() {
       const lista=f(()=>window.DiarioNiveis?.list()||[],[]).slice(0,6);
@@ -855,23 +879,6 @@ try {
               `<button type="button" data-v4phase="${c}" class="${u === c ? "on" : ""}" ${u === c ? 'aria-current="true"' : ""}><i></i>${w}${u === c && c === "pregao" && !v810Manual ? " <small>(aberto)</small>" : ""}</button>`,
           )
           .join("")}</div>`,
-        Z = `<div class="v4-tiles">${[
-          ["bars", "Mercado", "Ações, índices, moedas e mais", "mercado"],
-          [
-            "monitor",
-            "Terminal",
-            "Gráficos, comparativos e indicadores",
-            "term",
-          ],
-          ["book", "Operações", "Trades, histórico e desempenho", "ops"],
-          ["grad", "Estudos", "Aulas, trilhas e materiais", "estudos"],
-          ["checksq", "Checklist", "Setup, plano e disciplina", "regras"],
-        ]
-          .map(
-            ([c, w, k, it]) =>
-              `<button type="button" class="v4-tile" data-dt393-route="${it}">${p(c, 26)}<b>${w}</b><small>${k}</small>${p("arrow", 18)}</button>`,
-          )
-          .join("")}</div>`,
         H = f(() => {
           const c = AG.v[0];
           return c && Array.isArray(c.eventos)
@@ -957,7 +964,7 @@ try {
         rt = X.length
           ? X.map(
               ([c, w]) =>
-                `<li><i class="${w.d1 > 0 ? "dot-g" : "dot-r"}"></i><span><b>${b(c)}</b> ${w.d1 > 0 ? "sobe" : "cai"} ${Q(w.d1)} hoje</span></li>`,
+                `<li><i class="${w.d1 > 0 ? "dot-g" : "dot-r"}"></i><span><b>${b(c)}</b> ${w.d1 > 0 ? "subiu" : "caiu"} ${Q(w.d1)} ${["IBOV","PETR4","USD/BRL"].includes(c) && f(() => window.DiarioSessoes.session("B3").state !== "regular", !1) ? "no último pregão" : "hoje"}</span></li>`,
             ).join("")
           : '<li class="v4-none">Sem movimentos fortes nas cotações recebidas.</li>',
         K = C(
@@ -978,27 +985,13 @@ try {
     <button type="button" data-dt393-route="ops">${p("shield", 22)}<span><b>Revisar operações e risco</b><small>Posições abertas, stops e risco consumido.</small></span>${p("right", 16)}</button>
     <button type="button" data-dt393-route="stats">${p("up", 22)}<span><b>Avaliar resultados e consistência</b><small>Curva, win rate e pontos de atenção.</small></span>${p("right", 16)}</button></div></div>`,
           "v4-iacard",
-        ),
-        d = C(
-          "bolt",
-          "Atalhos rápidos",
-          "",
-          `<div class="v4-short">
-    <button type="button" data-dt393-route="term">${p("monitor", 24)}<span>Abrir Terminal</span></button>
-    <button type="button" data-dt393-action="newtrade">${p("plus", 24)}<span>Registrar trade</span></button>
-    <button type="button" data-qkn="1">${p("bolt", 24)}<span>Registro rápido</span></button>
-    <button type="button" data-dt393-route="stats">${p("book", 24)}<span>Rever Diário</span></button>
-    <button type="button" data-v4mkt="nt">${p("news", 24)}<span>Ver notícias</span></button>
-    <button type="button" class="v4-round" data-v4custom="1" aria-label="Personalizar o Início">${p("sliders", 24)}</button></div>`,
-          "v4-gold-icon",
         );
       return `<div class="v4-page v4-home v810-home" data-v810-phase="${u}">
     ${v810Seletor($)}
     ${v810Faixa("home",u,u==="pre"?"Referências internacionais, agenda e preparação para a próxima abertura.":u==="pregao"?"Acompanhe acontecimentos, preços disponíveis e riscos; confira a atualização de cada dado.":"Compare o fechamento com a preparação e acompanhe os riscos para a próxima sessão.")}
     ${C("cal",`Resumo do dia<small class="v4-date">${Kt(t)}</small>`,`<button type="button" class="v4-pill" data-dt393-route="mercado">${p("up",16)} ${M}${p("right",14)}</button>`,y+P,"v4-summary")}
-    <div class="v810-home-grid">${u!=="pos"?v825Niveis():""}${K}</div>
+    <div class="v810-home-grid">${f(()=>window.DiarioSessoes.session("B3").state!=="regular",!1)?v827Eua():""}${u!=="pos"?v825Niveis():""}${K}${f(()=>window.DiarioSessoes.session("B3").state==="regular",!1)?v827Eua():""}</div>
     ${$t}
-    <details class="v810-more"><summary>Atalhos e ferramentas adicionais</summary><div class="v810-more-inner">${Z}${d}</div></details>
     </div>`;
     }
     let qt = null;

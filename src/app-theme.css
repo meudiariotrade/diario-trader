@@ -3377,3 +3377,9 @@ html:root body #app .v825-niv th{font-size:11px;letter-spacing:.06em;text-transf
 html:root body #app .v825-niv th:first-child,html:root body #app .v825-niv td:first-child{text-align:left;padding-left:0}
 html:root body #app .v825-niv td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--dt-line);white-space:nowrap}
 html:root body #app .v825-niv td button{min-height:40px;padding:0 8px;border:0;background:transparent;color:var(--dt-gold);font:inherit;font-weight:700;cursor:pointer}
+/* v827 — EUA e ADRs agora (Início) */
+html:root body #app .v827-adr{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:0 16px;font-variant-numeric:tabular-nums}
+html:root body #app .v827-adr li{display:flex;align-items:baseline;gap:8px;min-height:32px;border-top:1px solid var(--dt-line);font-size:13px;white-space:nowrap}
+html:root body #app .v827-adr li span{margin-left:auto;color:var(--dt-mut)}
+html:root body #app .v827-adr li em{font-style:normal;font-weight:700;min-width:56px;text-align:right}
+html:root body #app .v827-adr li small{font-size:10px;color:var(--dt-gold)}
