@@ -200,8 +200,85 @@ try {
         return e && Number.isFinite(t) ? (t / e) * 100 : null;
       },
       jt = () => f(() => segundaDe(V()), V().slice(0, 8) + "01");
+
+    /* v810 — reutiliza as telas V4; seleção manual expira na próxima mudança de sessão. */
+    let v810Manual = null;
+    function v810FaseAtiva() {
+      const now=Date.now(), c=window.DiarioSessoes?.context(now);
+      if (v810Manual && (now>=v810Manual.until || v810Manual.anchor!==c?.anchorDate)) v810Manual=null;
+      return v810Manual?.phase || ({pre:"pre",during:"pregao",post:"pos"}[c?.phase]||"pos");
+    }
+    function v810Seletor(botoes) {
+      const c=window.DiarioSessoes?.context();
+      const label=c?.b3?.verified===false?"Calendário não verificado":"Automático";
+      return '<div class="v810-modebar">'+botoes+
+        '<button type="button" class="v810-auto '+(!v810Manual?'on':'')+
+        '" data-v4auto="1" aria-pressed="'+(!v810Manual)+'">'+p("cal",16)+' '+label+'</button></div>';
+    }
+    function v810Faixa(pagina,fase,texto) {
+      const titulos=pagina==="home"?
+        {pre:"Panorama pré-mercado",pregao:"Acompanhamento do mercado",pos:"Resumo do fechamento"}:
+        {pre:"Plano operacional do dia",pregao:"Controle do pregão",pos:"Revisão da sessão"};
+      const contexto=window.DiarioSessoes?.context();
+      const horario=new Date().toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+      const aviso=contexto?.warning||(contexto?.b3?.verified===false?"Calendário não verificado.":"");
+      return '<header class="v810-hero"><div class="v810-hero-top"><h2>'+
+        p(pagina==="home"?"bars":"target",22)+' '+titulos[fase]+'</h2>'+
+        '<span class="v810-status">'+(fase==="pregao"?"Em acompanhamento":fase==="pre"?"Preparação":"Sessão encerrada / referência")+
+        '</span><time>'+horario+' BRT</time></div><p>'+b(texto)+'</p>'+
+        (aviso?'<small class="v810-caveat">'+b(aviso)+'</small>':'')+'</header>';
+    }
+    function v810AgendaNoticias(dia) {
+      const agenda=f(()=>AG.v.flatMap(g=>g?.eventos||[]),[]);
+      const relevantes=agenda.filter(g=>{
+        const ts=Date.parse(g?.em||"");if(!Number.isFinite(ts))return false;
+        const local=new Date(ts).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});
+        return local===dia||(ts>Date.now()&&(g.imp===1||g.imp==null));
+      }).sort((a,b)=>Date.parse(a.em)-Date.parse(b.em)).slice(0,4);
+      const horario=raw=>{
+        const ts=Date.parse(raw||"");
+        return Number.isFinite(ts)?new Date(ts).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"Sem horário";
+      };
+      const noticias=f(()=>(MKT.items||[]).filter(g=>{
+        const ts=Date.parse(g?.d||"");return Number.isFinite(ts)&&ts<=Date.now()+60000&&Date.now()-ts<=48*3600000;
+      }).filter(g=>!/loteria|mega.sena|hor[oó]scopo|advertorial/i.test(String(g.t||g.titulo||""))).slice(0,3),[]);
+      return C("cal","Agenda e notícias",
+        '<button type="button" class="v4-inline" data-v4mkt="ag">Abrir agenda</button>',
+        '<div class="v810-agenda"><div><h3>Eventos prioritários</h3><ul>'+
+        (relevantes.length?relevantes.map(g=>'<li><time>'+horario(g.em)+'</time><span>'+b(g.t||g.n||"Evento")+'</span></li>').join(''):
+          '<li>Agenda sem eventos verificáveis carregados.</li>')+
+        '</ul></div><div><h3>Notícias recentes</h3><ul>'+
+        (noticias.length?noticias.map(g=>'<li><time>'+horario(g.d)+'</time><span>'+b(g.t||g.titulo||"Notícia")+'</span></li>').join(''):
+          '<li>Nenhuma notícia recente com horário verificável no cache.</li>')+
+        '</ul><button type="button" class="v4-inline" data-v4mkt="nt">Ver notícias</button></div></div>');
+    }
+    function v810Operacoes(dia,fechadas) {
+      const abertas=f(()=>Jt(),[]).filter(t=>String(t.dt||t.dtx||"").slice(0,10)===dia);
+      const validas=fechadas.filter(t=>{
+        try{return !(typeof isOpen==="function"&&isOpen(t))&&t.exit!=null&&t.exit!==""&&Number.isFinite(R(t));}
+        catch{return false;}
+      });
+      const completas=fechadas.length===validas.length&&validas.length>0;
+      const acertos=validas.filter(t=>R(t)>0).length;
+      const resumo=completas?'<strong class="'+L(lt(validas,R))+'">'+j(lt(validas,R))+'</strong>':'<strong>Dados insuficientes</strong>';
+      const dataRows=fechadas.slice(-5).reverse().map(t=>{
+        const ok=Number.isFinite(R(t))&&t.exit!=null&&t.exit!=="";
+        return '<li><button type="button" data-a="edit" data-id="'+b(t.id||"")+'"><span>'+b(t.ativo||"Ativo não informado")+'</span>'+
+          '<span>Encerrada</span><b class="'+(ok?L(R(t)):'')+'">'+(ok?j(R(t)):'Dados insuficientes')+'</b></button></li>';
+      }).concat(abertas.slice(-3).reverse().map(t=>
+        '<li><button type="button" data-a="edit" data-id="'+b(t.id||"")+'"><span>'+b(t.ativo||"Ativo não informado")+'</span>'+
+        '<span class="v810-open">Aberta</span><b>Sem resultado realizado</b></button></li>')).join('');
+      return '<section class="v810-ops v4-card"><div class="v4-head"><h2>'+p("trade",20)+
+        ' Operações do dia</h2><button type="button" class="v4-inline" data-dt393-route="ops">Ver operações</button></div>'+
+        '<div class="v810-ops-stats"><div><small>Resultado realizado</small>'+resumo+'</div>'+
+        '<div><small>Encerradas</small><strong>'+fechadas.length+'</strong></div>'+
+        '<div><small>Abertas hoje</small><strong>'+abertas.length+'</strong></div>'+
+        '<div><small>Taxa de acerto</small><strong>'+(completas?_(100*acertos/validas.length,1)+'%':'Dados insuficientes')+
+        '</strong></div></div><ul class="v810-oprows">'+
+        (dataRows||'<li>Nenhuma operação registrada nesta data.</li>')+'</ul></section>';
+    }
     function Ft() {
-      if(window.DiarioSessoes){const c=window.DiarioSessoes.context();return c.mode==='cripto_macro'||c.mode==='b3_fechada'?'fechado':({pre:'pre',during:'pregao',post:'pos'}[c.phase]);}
+      if(window.DiarioSessoes)return v810FaseAtiva();
       try {
         const t = new Intl.DateTimeFormat("pt-BR", {
             timeZone: "America/Sao_Paulo",
@@ -874,9 +951,16 @@ try {
     <button type="button" class="v4-round" data-v4custom="1" aria-label="Personalizar o Início">${p("sliders", 24)}</button></div>`,
           "v4-gold-icon",
         );
-      return `<div class="v4-page v4-home">
-    ${C("cal", `Resumo do dia<small class="v4-date">${Kt(t)}</small>`, `<button type="button" class="v4-pill" data-dt393-route="mercado">${p("up", 16)} ${M}${p("right", 14)}</button>`, y + P, "v4-summary")}
-    ${$}${Z}${K}${$t}${d}</div>`;
+      return `<div class="v4-page v4-home v810-home" data-v810-phase="${u}">
+    ${v810Seletor($)}
+    ${v810Faixa("home",u,u==="pre"?"Referências internacionais, agenda e preparação para a próxima abertura.":u==="pregao"?"Acompanhe acontecimentos, preços disponíveis e riscos; confira a atualização de cada dado.":"Compare o fechamento com a preparação e acompanhe os riscos para a próxima sessão.")}
+    ${$t}
+    <div class="v810-home-grid">
+      ${K}
+      ${C("cal",`Resumo do dia<small class="v4-date">${Kt(t)}</small>`,`<button type="button" class="v4-pill" data-dt393-route="mercado">${p("up",16)} ${M}${p("right",14)}</button>`,y+P,"v4-summary")}
+    </div>
+    <details class="v810-more"><summary>Atalhos e ferramentas adicionais</summary><div class="v810-more-inner">${Z}${d}</div></details>
+    </div>`;
     }
     let qt = null;
     /* v589: estado emocional de 1 toque, fase do checklist pelo horário e contagem até a abertura (Supabase: estado_diario). */
@@ -1112,7 +1196,7 @@ try {
         $ = P.filter((g) => A[g.id]).length,
         I = P.length ? Math.round(($ / P.length) * 100) : 0,
         Z = Ft(),
-        H = qt || fase589(),
+        H = qt || ({pre:"pre",pregao:"during",pos:"post"}[Ft()] || fase589()),
         z = { pre: "Pré-mercado", during: "Durante", post: "Pós-mercado" },
         B = ["pre", "during", "post"]
           .map((g) => {
@@ -1261,7 +1345,32 @@ try {
           ? `<p class="v4-turno" role="status"><b>Dia de turno</b> <span>${b(TH[c] || "")}</span> · plano: não operar</p>`
           : "";
       }, "");
-      return `<div class="v4-page v4-day">${turno593}${emo589}${y}${planoIntegrado789(t, e)}${U}<div class="v4-two">${m}${X}</div><div class="v4-two">${it}${dt}</div></div>`;
+      const sessao=Ft()==="fechado"?"pos":Ft(),
+        textoPlano=String(e.plano||i.txt||"").trim(),
+        resumoDia=String(e.resumo||e.bem||"").trim(),
+        chamada=sessao==="pre"?(textoPlano||"Plano ainda não preenchido. Confira cenário, regras e limites antes de operar."):
+          sessao==="pregao"?"Acompanhe os stops, o checklist e as operações — sem tratar P&L aberto como realizado.":
+          (resumoDia||"Revisão ainda não registrada. Compare o plano com a execução antes de encerrar o dia."),
+        seletor='<div class="v4-phase" role="group" aria-label="Fase de Meu Dia">'+
+          [["pre","Pré-mercado"],["pregao","Pregão"],["pos","Pós-mercado"]].map(([fase,nome])=>
+            '<button type="button" data-v4phase="'+fase+'" class="'+(sessao===fase?'on':'')+'" aria-pressed="'+(sessao===fase)+'"><i></i>'+nome+'</button>'
+          ).join('')+'</div>',
+        contexto='<section class="v810-day-context" data-intel-content-wrapper="1"><div data-intel-content class="sm">Aguardando contexto verificável do mercado.</div></section>',
+        operacoes=v810Operacoes(t,a),
+        agenda=v810AgendaNoticias(t),
+        base=v810Seletor(seletor)+v810Faixa("dia",sessao,chamada)+turno593+contexto,
+        extras='<details class="v810-more"><summary>Plano detalhado, anotações e outras ferramentas</summary><div class="v810-more-inner">'+
+          planoIntegrado789(t,e)+emo589+it+dt+'</div></details>';
+      return '<div class="v4-page v4-day v810-day" data-v810-phase="'+sessao+'">'+base+
+        (sessao==="pre"
+          ? y+'<div class="v810-day-grid">'+U+m+agenda+X+'</div>'+extras
+          : sessao==="pregao"
+          ? '<div class="v810-day-grid">'+U+m+operacoes+agenda+X+'</div>'+
+            '<details class="v810-more"><summary>Plano original, estado emocional e anotações</summary><div class="v810-more-inner">'+y+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>'
+          : operacoes+'<div class="v810-day-grid">'+U+agenda+it+'</div>'+
+            '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+
+            '<details class="v810-more"><summary>Plano original, limites e revisão detalhada</summary><div class="v810-more-inner">'+y+planoIntegrado789(t,e)+m+X+emo589+dt+'</div></details>')+
+        '</div>';
     }
     let At = "risk",
       bt = { k: "dt", d: 1 };
@@ -1931,6 +2040,10 @@ try {
       // de Início/Meu dia, independentemente do ciclo de cotações.
       if (t === "home" || t === "dia") {window.TermometroAbertura670?.montar?.();window.DiarioInteligenciaEtapa1?.montar?.();}
     }
+    window.DiarioSessaoVisual=Object.freeze({
+      manual:()=>v810Manual?({pre:"pre",pregao:"during",pos:"post"}[v810Manual.phase]):null,
+      atualizar:()=>{v810Manual=null;qt=null;if(["home","dia"].includes(et()))xt();}
+    });
     function Ut() {
       if (typeof window.render0 != "function" || window.render0.__v420)
         return !1;
@@ -1974,23 +2087,16 @@ try {
                 ?.scrollIntoView({ behavior: "smooth", block: "start" }));
           return;
         }
+        if (t.target.closest("[data-v4auto]")) {
+          t.preventDefault();v810Manual=null;qt=null;xt();return;
+        }
         const r = t.target.closest("[data-v4phase]");
         if (r) {
           t.preventDefault();
-          const i = r.dataset.v4phase;
-          try {
-            if (i === "pos" && typeof GOR < "u" && GOR.deb) {
-              (GOR.deb(), scrollTo(0, 0));
-              return;
-            }
-          } catch {}
-          try {
-            ((D = V()),
-              (DFASE = { d: V(), f: i === "pre" ? "pre" : "dur" }),
-              (Mt.dia = i === "pre" ? "pre" : "dur"),
-              irPara("dia"),
-              scrollTo(0, 0));
-          } catch {}
+          const i=r.dataset.v4phase,c=window.DiarioSessoes?.context();
+          if(!["pre","pregao","pos"].includes(i))return;
+          v810Manual={phase:i,anchor:c?.anchorDate,until:window.DiarioSessoes?.nextTransition(Date.now())||Date.now()+3600000};
+          qt=null;xt();
           return;
         }
         const n = t.target.closest("[data-v4mkt]");
