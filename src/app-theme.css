@@ -3289,3 +3289,29 @@ html:root body #dt393-global-head .dt393-topactions .m624-kbtn.m624-kbtn{display
   html:root body #app .cqtabs{-webkit-mask-image:linear-gradient(to right,#000 82%,transparent);mask-image:linear-gradient(to right,#000 82%,transparent);padding-right:24px}
 }
 html body #app #v508-ontem.v811-foco{outline:2px solid #D4A017;outline-offset:2px;transition:outline-color .3s}
+
+/* v811 — Plano × execução (Meu Dia · pós-mercado). Superfície plana, divisórias de 1px. */
+html body #app .v811-pxe{min-width:0}
+html body #app .v811-pxe-sum{margin:4px 0 10px;font-size:13px;color:#A3A7B0}
+html body #app .v811-pxe-tab{display:grid;border-top:1px solid #1E232E;min-width:0}
+html body #app .v811-pxe-row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(110px,1fr) minmax(120px,1fr) minmax(120px,1fr) minmax(160px,1.6fr);gap:12px;padding:10px 4px;border-bottom:1px solid #1E232E;font-size:13px;align-items:start;min-width:0}
+html body #app .v811-pxe-row>span{min-width:0;overflow-wrap:anywhere;word-break:normal}
+html body #app .v811-pxe-row .num{font-variant-numeric:tabular-nums;text-align:right}
+html body #app .v811-pxe-head{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#7E8494}
+html body #app .v811-pxe-row em{display:block;font-style:normal;font-size:11px;margin-top:2px}
+html body #app .v811-ok em{color:#10B981}
+html body #app .v811-desvio em{color:#EF4444}
+html body #app .v811-desvio{background:rgba(239,68,68,.05)}
+html body #app .v811-info em{color:#D4A017}
+html body #app .v811-sem em{color:#7E8494}
+html body #app .v811-pxe-sub{font-size:13px;margin:14px 0 6px;color:#D4A017;text-transform:uppercase;letter-spacing:.06em}
+html body #app .v811-pxe-trade{border-bottom:1px solid #1E232E}
+html body #app .v811-pxe-trade>summary{min-height:40px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;flex-wrap:wrap}
+@media (max-width:767px){
+  html body #app .v811-pxe-head{display:none}
+  html body #app .v811-pxe-row{grid-template-columns:1fr 1fr;gap:4px 12px}
+  html body #app .v811-pxe-row>span:first-child,html body #app .v811-pxe-row>span:last-child{grid-column:1/-1}
+  html body #app .v811-pxe-row .num{text-align:left}
+  html body #app .v811-pxe-row>span[data-l]::before{content:attr(data-l) ": ";color:#7E8494;font-size:11px}
+  html body #app .v811-pxe-row>span.v811-vazio{display:none}
+}

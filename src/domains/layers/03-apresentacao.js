@@ -288,6 +288,23 @@ try {
         '</strong></div></div><ul class="v810-oprows">'+
         (dataRows||'<li>Nenhuma operação registrada nesta data.</li>')+'</ul></section>';
     }
+    function v811PlanoExecucao(dia,registro) {
+      const api=window.DiarioPlanoExecucao;
+      if(!api)return '';
+      const cmp=f(()=>api.compararPlano(registro||{},ct(),dia,{pl:R,risco:Nt}),null);
+      if(!cmp)return '';
+      const cor={ok:'v811-ok',desvio:'v811-desvio',info:'v811-info',sem_dados:'v811-sem'};
+      const rot={ok:'No plano',desvio:'Desvio',info:'Referência',sem_dados:'Dados insuficientes'};
+      const tabela=(linhas)=>'<div class="v811-pxe-tab" role="table"><div class="v811-pxe-row v811-pxe-head" role="row"><span role="columnheader">Item</span><span role="columnheader">Planejado</span><span role="columnheader">Executado</span><span role="columnheader">Diferença</span><span role="columnheader">Evidência</span></div>'+
+        linhas.map(l=>{const c=(v,lbl,cls)=>'<span role="cell" data-l="'+lbl+'" class="'+cls+(v==='—'||v===''?' v811-vazio':'')+'">'+b(v)+'</span>';
+          return '<div class="v811-pxe-row '+cor[l.status]+'" role="row"><span role="cell"><b>'+b(l.item)+'</b><em>'+rot[l.status]+'</em></span>'+c(l.planejado,'Planejado','num')+c(l.executado,'Executado','num')+c(l.diferenca,'Diferença','')+c(l.evidencia,'Evidência','mut')+'</div>';}).join('')+'</div>';
+      const trades=cmp.porTrade.map(t=>'<details class="v811-pxe-trade"><summary><b>'+b(t.ativo)+'</b>'+(t.setup?' · '+b(t.setup):'')+(t.aberta?' · <span class="v810-open">Aberta</span>':'')+
+        ' <span class="mut">'+t.linhas.filter(l=>l.status==='desvio').length+' desvio(s)</span></summary>'+tabela(t.linhas)+'</details>').join('');
+      return '<section class="v811-pxe v4-card" aria-label="Plano versus execução"><div class="v4-head"><h2>'+p("list",20)+' Plano × execução</h2><span class="v4-muted">'+
+        (cmp.plano.congelado?'Plano congelado às '+b(new Date(cmp.plano.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})):'Plano atual (preparo não concluído — pode ter sido editado)')+
+        '</span></div><p class="v811-pxe-sum">'+(cmp.operacoes?cmp.desvios+' desvio(s) em '+cmp.operacoes+' operação(ões).':'Nenhuma operação registrada nesta data.')+'</p>'+
+        tabela(cmp.sessao)+(trades?'<h3 class="v811-pxe-sub">Por operação</h3>'+trades:'')+'</section>';
+    }
     function Ft() {
       if(window.DiarioSessoes)return v810FaseAtiva();
       try {
@@ -1137,7 +1154,12 @@ try {
       if (completar && pendencias.length) {
         const p = root.querySelector("p");
         if (p) p.textContent = "Falta: " + pendencias.join(", ");
-      } else if (completar) dia.ckok = Date.now();
+      } else if (completar) {
+        dia.ckok = Date.now();
+        /* v811: plano congelado na conclusão do preparo, para o Plano × Execução do pós-mercado
+           comparar com o que foi decidido antes do pregão (não com edições posteriores). */
+        dia.planoSnap = { em: new Date().toISOString(), metaDia: dia.metaDia, maxP: dia.maxP, max: p.max, vies: p.vies, mods: [...(p.mods || [])], txt: p.txt, stopConfirmado: !!dia.cl.p_stop };
+      }
       dia.u = Date.now();
       save();
       planoAberto789 = true;
@@ -1377,7 +1399,7 @@ try {
           : sessao==="pregao"
           ? '<div class="v810-day-grid">'+U+m+operacoes+agenda+X+'</div>'+
             '<details class="v810-more"><summary>Estado emocional e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>'+y
-          : operacoes+'<div class="v810-day-grid">'+U+agenda+it+'</div>'+
+          : operacoes+v811PlanoExecucao(t,e)+'<div class="v810-day-grid">'+U+agenda+it+'</div>'+
             '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+
             '<details class="v810-more"><summary>Limites e revisão detalhada</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+m+X+emo589+dt+'</div></details>'+y)+
         '</div>';
