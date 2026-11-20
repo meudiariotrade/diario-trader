@@ -1,0 +1,43 @@
+name: QA focal Início e Meu Dia v810
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/qa-v810-focal.yml"
+permissions:
+  contents: read
+concurrency:
+  group: qa-v810-focal-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  focal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Navegador para testes funcionais
+        run: |
+          browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$browser" ]; then
+            echo "CHROMIUM_PATH=$browser" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Build local da candidata
+        run: npm run build
+      - name: Testes focais de layout e navegação
+        run: node --test --test-concurrency=1 tests/navegacao-simples.test.cjs tests/inicio-meudia-visual-v810.test.cjs
+      - name: Evidências de layout
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-v810-focal
+          path: test-results/v810-*.png
+          if-no-files-found: ignore

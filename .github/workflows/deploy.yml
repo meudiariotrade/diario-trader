@@ -50,12 +50,14 @@ jobs:
           node scripts/check-versao.cjs
       - run: npm run build
       - run: npm run verify
-      - name: Capturas de validação de Análises
+      - name: Capturas de validação de Análises e Início/Meu Dia
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: analises-v581-validacao
-          path: test-results/analises-v581-*.png
+          name: interface-validacao-v810
+          path: |
+            test-results/analises-v581-*.png
+            test-results/v810-*.png
           if-no-files-found: ignore
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'

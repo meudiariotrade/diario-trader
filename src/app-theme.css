@@ -3056,3 +3056,188 @@ html:root body #app .tech-action-grid button{min-width:0;min-height:44px;white-s
  html:root body #app .tech-action-grid button{min-width:0;width:100%;padding-inline:4px;font-size:clamp(11px,3vw,13px);white-space:nowrap}
  html:root body #app .tech-action-grid [data-tech-pdf]{grid-column:1/-1}
 }
+
+
+/* v810 — Início e Meu Dia. Escopo restrito às duas telas; sem alterar PDF, Terminal ou navegação. */
+html:root body #app .v810-home,
+html:root body #app .v810-day {
+  --v810-bg:#0A0C10;--v810-card:#11141B;--v810-line:#1E232E;
+  --v810-gold:#D4A017;--v810-pos:#10B981;--v810-neg:#EF4444;
+  width:100%!important;max-width:none!important;min-width:0;
+  display:flex;flex-direction:column;gap:12px;
+  color:#F2F3F5;background:transparent;overflow-x:clip;
+}
+html:root body #app .v810-home *,
+html:root body #app .v810-day * {box-sizing:border-box;min-width:0;}
+html:root body #app :is(.v810-home,.v810-day) :is(.v4-card,.v810-ops) {
+  background:var(--v810-card)!important;
+  border:1px solid var(--v810-line)!important;
+  box-shadow:none!important;border-radius:6px!important;
+  padding:clamp(12px,1.4vw,20px)!important;
+  margin:0!important;max-width:none!important;
+}
+html:root body #app :is(.v810-home,.v810-day) :is(.v-pos,.dot-g){color:var(--v810-pos)!important}
+html:root body #app :is(.v810-home,.v810-day) :is(.v-neg,.dot-r){color:var(--v810-neg)!important}
+html:root body #app .v810-hero {
+  border:1px solid var(--v810-line);border-left:4px solid var(--v810-gold);
+  border-radius:6px;background:var(--v810-card);padding:14px 18px;
+}
+html:root body #app .v810-hero-top {
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;
+}
+html:root body #app .v810-hero h2 {
+  display:flex;align-items:center;gap:9px;flex:1 1 240px;
+  margin:0!important;color:#F2F3F5!important;
+  font-size:clamp(17px,1.5vw,23px)!important;letter-spacing:0;
+}
+html:root body #app .v810-hero h2 svg{color:var(--v810-gold)}
+html:root body #app .v810-hero p{margin:10px 0 0;font-size:clamp(14px,1.1vw,16px);line-height:1.5;overflow-wrap:break-word}
+html:root body #app .v810-hero time,
+html:root body #app .v810-hero small{font-variant-numeric:tabular-nums;color:#A6AAB3}
+html:root body #app .v810-status {
+  font-size:12px;font-weight:700;padding:5px 9px;border:1px solid var(--v810-gold);
+  border-radius:4px;color:#E6BE55;white-space:nowrap;
+}
+html:root body #app .v810-caveat {display:block;margin-top:8px}
+html:root body #app .v810-modebar {
+  display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;width:100%;min-width:0;
+}
+html:root body #app .v810-modebar>.v4-phase{
+  flex:1 1 410px;width:auto;max-width:none;min-width:0;margin:0;
+  border:1px solid var(--v810-line);border-radius:6px;background:var(--v810-bg);
+}
+html:root body #app .v810-modebar .v4-phase button {
+  min-height:44px;border-radius:4px;white-space:normal;line-height:1.2;
+  padding:6px 5px;font-size:clamp(11px,1.1vw,15px);
+}
+html:root body #app .v810-modebar .v4-phase button.on {
+  background:var(--v810-gold)!important;color:var(--v810-bg)!important;
+  box-shadow:none!important;border-color:var(--v810-gold)!important;
+}
+html:root body #app .v810-auto {
+  flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  gap:6px;min-height:44px;padding:8px 13px;
+  background:var(--v810-card);color:#CCD0D6;
+  border:1px solid var(--v810-line);border-radius:6px;font-size:13px;
+  font-weight:650;cursor:pointer;
+}
+html:root body #app .v810-auto.on {color:var(--v810-gold);border-color:var(--v810-gold)}
+html:root body #app :is(.v810-home-grid,.v810-day-grid) {
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));
+  gap:12px;align-items:start;min-width:0;width:100%;
+}
+html:root body #app :is(.v810-home-grid,.v810-day-grid)>* {
+  min-width:0;max-width:none!important;width:100%;margin:0!important;
+}
+html:root body #app .v810-home .v4-pano{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important;
+  gap:12px!important;
+}
+html:root body #app .v810-home .v4-pano>div {
+  min-width:0;border-left:0!important;padding-left:0!important;
+}
+html:root body #app .v810-home .v4-kpis,
+html:root body #app .v810-day .v4-kpis{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;
+}
+html:root body #app .v810-day-context {
+  border-left:2px solid var(--v810-gold);
+  padding:6px 12px;background:#11141B;line-height:1.5;
+  overflow-wrap:break-word;
+}
+html:root body #app .v810-ops-stats {
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+  gap:0;border-top:1px solid var(--v810-line);
+  border-bottom:1px solid var(--v810-line);
+}
+html:root body #app .v810-ops-stats>div{padding:12px 10px;min-width:0}
+html:root body #app .v810-ops-stats small{display:block;font-size:12px;color:#A6AAB3}
+html:root body #app .v810-ops-stats strong {
+  display:block;margin-top:4px;font-size:clamp(14px,1.5vw,21px);
+  font-variant-numeric:tabular-nums;overflow-wrap:normal;word-break:normal;
+}
+html:root body #app .v810-oprows,
+html:root body #app .v810-agenda ul{
+  list-style:none;padding:0;margin:0;
+}
+html:root body #app .v810-oprows li+li,
+html:root body #app .v810-agenda li+li {border-top:1px solid var(--v810-line)}
+html:root body #app .v810-oprows button{
+  border:0;background:transparent;color:#F2F3F5;
+  width:100%;min-height:44px;display:grid;
+  grid-template-columns:minmax(85px,1fr) minmax(74px,.7fr) minmax(120px,1.2fr);
+  align-items:center;gap:8px;text-align:left;padding:9px 2px;
+}
+html:root body #app .v810-oprows button b {
+  text-align:right;font-variant-numeric:tabular-nums;
+  overflow-wrap:break-word;font-size:clamp(11px,1.1vw,15px);
+}
+html:root body #app .v810-oprows .v810-open {color:#6EB9EE}
+html:root body #app .v810-agenda {
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));
+  gap:15px;
+}
+html:root body #app .v810-agenda h3 {margin:0 0 8px;color:#E6BE55;font-size:14px}
+html:root body #app .v810-agenda li {
+  display:flex;align-items:baseline;gap:8px;
+  min-height:38px;padding:8px 0;font-size:13px;line-height:1.4;
+}
+html:root body #app .v810-agenda time{
+  color:#E6BE55;font-variant-numeric:tabular-nums;flex:none;
+  font-size:12px;white-space:nowrap;
+}
+html:root body #app .v810-more {
+  border:1px solid var(--v810-line);background:#0E1118;
+  border-radius:6px;width:100%;min-width:0;
+}
+html:root body #app .v810-more>summary {
+  cursor:pointer;min-height:44px;padding:12px 16px;
+  font-size:14px;color:#E7C670;font-weight:700;
+}
+html:root body #app .v810-more-inner {
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));
+  gap:12px;padding:12px;align-items:start;
+}
+html:root body #app .v810-more-inner>*{width:100%;max-width:none;min-width:0}
+html:root body #app .v810-more-inner>.v4-tiles {grid-column:1/-1}
+html:root body #app .v810-home .v4-iacard [data-intel-content] details{
+  border-top:1px solid var(--v810-line);margin-top:10px;padding-top:8px;
+}
+html:root body #app .v810-home .v4-iacard [data-intel-content] summary{
+  color:var(--v810-gold);cursor:pointer;min-height:40px;padding:8px 0;
+}
+html:root body #app :is(.v810-home,.v810-day) :is(strong,b,.v4-kpis,.v4-rows,time){
+  font-variant-numeric:tabular-nums;
+}
+@media (max-width:640px) {
+  html:root body #app :is(.v810-home,.v810-day){gap:10px}
+  html:root body #app .v810-modebar>.v4-phase{flex-basis:100%}
+  html:root body #app .v810-modebar>.v810-auto{width:100%}
+  html:root body #app .v810-hero{padding:12px}
+  html:root body #app .v810-ops-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  html:root body #app .v810-oprows button{
+    grid-template-columns:minmax(65px,1fr) minmax(55px,.6fr) minmax(95px,1.2fr);
+    gap:5px;
+  }
+  html:root body #app .v810-agenda li{flex-wrap:wrap}
+}
+
+
+/* v810 — a largura limitada do #app em >=1024px não pode criar margens mortas nas telas contextuais. */
+html:root body.v4-on:is([data-v4route="home"],[data-v4route="dia"]){
+  background:#0A0C10!important;
+}
+@media (min-width:1024px) {
+  html:root body[data-v4route="home"] #app#app,
+  html:root body[data-v4route="dia"] #app#app {
+    box-sizing:border-box!important;
+    width:100%!important;max-width:none!important;min-width:0!important;
+    margin-left:0!important;margin-right:0!important;
+    padding-left:clamp(16px,2.2vw,36px)!important;
+    padding-right:clamp(16px,2.2vw,36px)!important;
+  }
+  html:root body[data-v4route="home"] #app .v4-panel,
+  html:root body[data-v4route="dia"] #app .v4-panel{
+    max-width:none!important;width:100%!important;min-width:0;
+  }
+}
