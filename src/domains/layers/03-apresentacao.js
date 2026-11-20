@@ -256,15 +256,18 @@ try {
         '</ul><button type="button" class="v4-inline" data-v4mkt="nt">Ver notícias</button></div></div>');
     }
     function v810Operacoes(dia,fechadas) {
-      const abertas=f(()=>Jt(),[]).filter(t=>String(t.dt||t.dtx||"").slice(0,10)===dia);
-      const validas=fechadas.filter(t=>{
+      // As posições carregadas de pregões anteriores continuam abertas hoje.
+      // Contar também encerradas sem resultado validável, sem inventar seu P&L.
+      const abertas=f(()=>Jt(),[]),
+        encerradas=ct().filter(t=>nt(t)===dia&&!Gt(t)&&t.exit!=null&&t.exit!=="");
+      const validas=encerradas.filter(t=>{
         try{return !(typeof isOpen==="function"&&isOpen(t))&&t.exit!=null&&t.exit!==""&&Number.isFinite(R(t));}
         catch{return false;}
       });
-      const completas=fechadas.length===validas.length&&validas.length>0;
+      const completas=encerradas.length===validas.length&&validas.length>0;
       const acertos=validas.filter(t=>R(t)>0).length;
       const resumo=completas?'<strong class="'+L(lt(validas,R))+'">'+j(lt(validas,R))+'</strong>':'<strong>Dados insuficientes</strong>';
-      const dataRows=fechadas.slice(-5).reverse().map(t=>{
+      const dataRows=encerradas.slice(-5).reverse().map(t=>{
         const ok=Number.isFinite(R(t))&&t.exit!=null&&t.exit!=="";
         return '<li><button type="button" data-a="edit" data-id="'+b(t.id||"")+'"><span>'+b(t.ativo||"Ativo não informado")+'</span>'+
           '<span>Encerrada</span><b class="'+(ok?L(R(t)):'')+'">'+(ok?j(R(t)):'Dados insuficientes')+'</b></button></li>';
@@ -274,8 +277,8 @@ try {
       return '<section class="v810-ops v4-card"><div class="v4-head"><h2>'+p("trade",20)+
         ' Operações do dia</h2><button type="button" class="v4-inline" data-dt393-route="ops">Ver operações</button></div>'+
         '<div class="v810-ops-stats"><div><small>Resultado realizado</small>'+resumo+'</div>'+
-        '<div><small>Encerradas</small><strong>'+fechadas.length+'</strong></div>'+
-        '<div><small>Abertas hoje</small><strong>'+abertas.length+'</strong></div>'+
+        '<div><small>Encerradas</small><strong>'+encerradas.length+'</strong></div>'+
+        '<div><small>Abertas agora</small><strong>'+abertas.length+'</strong></div>'+
         '<div><small>Taxa de acerto</small><strong>'+(completas?_(100*acertos/validas.length,1)+'%':'Dados insuficientes')+
         '</strong></div></div><ul class="v810-oprows">'+
         (dataRows||'<li>Nenhuma operação registrada nesta data.</li>')+'</ul></section>';
