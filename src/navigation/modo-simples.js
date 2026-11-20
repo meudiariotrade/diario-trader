@@ -56,8 +56,7 @@
  }
 
  /* ---------- Início: um próximo passo; o resto fica em "Ver tudo" ---------- */
- let inicioTudo=false;
- function proximo(a){
+  function proximo(a){
   const foto=a.querySelector(':scope>#v508-ontem button');
   if(foto)return{t:'Colocar a foto que falta',s:'Sem a foto do trade anterior o app não deixa registrar um novo.',f:()=>foto.click()};
   const h=new Date().getHours(),d=new Date().getDay(),util=d>0&&d<6;
@@ -67,19 +66,16 @@
   return{t:'Fechar o dia',s:'Pregão encerrado: resultado, disciplina e o que aprendeu.',f:()=>{passoEscolhido='3';ir('dia')}};
  }
  function inicio(a){
-  const h=a.querySelector('.v4-page.v4-home'),velho=a.querySelector('#ms-proximo');
-  if(!simples()||!h){velho?.remove();a.querySelector('#ms-tudo')?.remove();for(const n of a.querySelectorAll('[data-ms-extra-inicio]'))delete n.dataset.msExtraInicio;return}
-  const resumo=h.querySelector(':scope>.v4-summary');
-  for(const n of h.children)if(n!==resumo&&n.id!=='ms-proximo'&&n.id!=='ms-tudo'&&!n.dataset.msExtraInicio)n.dataset.msExtraInicio='1';
-  const ws=a.querySelector(':scope>#dt393-workspace');if(ws&&!ws.dataset.msExtraInicio)ws.dataset.msExtraInicio='1';
+  /* v829: o Início é a tela do mercado e aparece inteiro; o "próximo passo" (registrar trade, preparar, fechar o dia)
+     passa a abrir o Meu dia, junto do resumo pessoal. */
+  a.querySelector('#ms-tudo')?.remove();for(const n of a.querySelectorAll('[data-ms-extra-inicio]'))delete n.dataset.msExtraInicio;delete a.dataset.msInicioTudo;
+  const d=a.querySelector('.v4-page.v4-day'),velho=a.querySelector('#ms-proximo');
+  if(!simples()||!d){velho?.remove();return}
   const p=proximo(a);let card=velho;
-  if(!card){card=el('section',null,'v4-card ms-proximo');card.id='ms-proximo';card.append(el('small','PRÓXIMO PASSO'),el('h2',''),el('p',''),el('button','','ms-acao'));card.querySelector('button').type='button';(resumo||h.firstElementChild)?.before(card);if(!card.isConnected)h.prepend(card)}
+  if(!card||!d.contains(card)){card?.remove();card=el('section',null,'v4-card ms-proximo');card.id='ms-proximo';card.append(el('small','Próximo passo'),el('h2',''),el('p',''),el('button','','ms-acao'));card.querySelector('button').type='button';const kp=d.querySelector(':scope>.v829-kpis');kp?kp.after(card):d.prepend(card)}
   const [,titulo,sub,botao]=card.children;if(titulo.textContent!==p.t)titulo.textContent=p.t;if(sub.textContent!==p.s)sub.textContent=p.s;if(botao.textContent!==p.t)botao.textContent=p.t;botao.onclick=p.f;
-  let tudo=a.querySelector('#ms-tudo');
-  if(!tudo){tudo=el('button','','ms-tudo');tudo.id='ms-tudo';tudo.type='button';tudo.addEventListener('click',()=>{inicioTudo=!inicioTudo;aplica()});h.append(tudo)}
-  const rot=inicioTudo?'Mostrar só o essencial':'Ver tudo do Início';if(tudo.textContent!==rot)tudo.textContent=rot;
-  if(a.dataset.msInicioTudo!==String(inicioTudo))a.dataset.msInicioTudo=String(inicioTudo);
  }
+
 
  /* ---------- Configurações: escolha do modo + grupos fechados ---------- */
  const abertos=new Set();

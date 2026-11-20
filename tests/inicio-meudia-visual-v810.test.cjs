@@ -20,7 +20,7 @@ test('v810 E2E: duas telas, três fases, override/auto, CLS, overflow e captura 
    await expect(home).toBeVisible({timeout:10000});
    await expect(home).toHaveAttribute('data-v810-phase',phase);
    await expect(home.locator(':scope > .dt670-opening')).toHaveCount(1);
-   await expect(home.locator(':scope > .v4-iacard')).toHaveCount(1);
+   await expect(home.locator('.v829-split .v4-iacard')).toHaveCount(1);
    await page.screenshot({path:'test-results/v810-'+name+'-inicio-'+phase+'.png',fullPage:false});
    const g=await page.evaluate(()=>{
      const el=document.querySelector('#app .v810-home');

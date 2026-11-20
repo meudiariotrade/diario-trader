@@ -1913,7 +1913,8 @@ html[data-v508-semmesa] [data-dt414-go="mesa"]{display:none!important}
     function J() {
       const t = d(() => tab, ""),
         a = i.getElementById("v508-ontem");
-      if (t !== "home" && t !== "dia") {
+      /* v829: aviso de trade sem foto só no Meu dia (o Início é a tela do mercado). */
+      if (t !== "dia") {
         a && a.remove();
         return;
       }

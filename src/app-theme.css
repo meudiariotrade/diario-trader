@@ -1515,10 +1515,7 @@ html body.modo-simples #app[data-ms-passo-atual="3"] #dt393-workspace[data-ms-pa
 .ms-proximo small{letter-spacing:.12em;font-size:11px;color:#b58b3d;font-weight:700}
 .ms-proximo h2{margin:0;font-size:22px}
 .ms-proximo p{margin:0;opacity:.8;font-size:14px;line-height:1.4}
-.ms-acao{margin-top:8px;min-height:50px;border-radius:8px;border:0;background:#b58b3d;color:#09090a;font:inherit;font-weight:700;font-size:16px;cursor:pointer;width:100%;max-width:420px}
-.ms-tudo{margin:16px auto 0;display:block;min-height:44px;padding:0 16px;border-radius:8px;border:1px dashed rgba(255,255,255,0.25);background:transparent;color:inherit;font:inherit;cursor:pointer}
-html body.modo-simples #app[data-ms-inicio-tudo="false"] [data-ms-extra-inicio],
-html body.modo-simples #app[data-ms-inicio-tudo="false"] #dt393-workspace[data-ms-extra-inicio]{display:none!important}
+.ms-acao{margin-top:8px;min-height:48px;border-radius:6px;border:0;background:var(--ui-accent);color:#08090D;font:inherit;font-weight:700;font-size:16px;cursor:pointer;width:100%;max-width:420px}
 
 /* Configurações em grupos */
 body.modo-simples h2[data-ms-grupo]{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px;padding:8px 16px;margin:8px 0;border:1px solid rgba(61,181,121,0.2);border-radius:8px;font-size:16px}
@@ -3413,3 +3410,27 @@ html[data-v427-tema=claro] .ui-kpi{background:var(--dt-s1);border-color:var(--dt
 .ui-badge.ok{background:rgba(16,185,129,.12);color:var(--ui-gain)}.ui-badge.warn{background:rgba(245,158,11,.10);color:var(--ui-accent)}.ui-badge.err{background:rgba(239,68,68,.12);color:var(--ui-loss)}
 .ui-cta{min-height:44px;padding:0 18px;border:0;border-radius:6px;background:var(--ui-accent);color:#08090D;font:inherit;font-weight:700;cursor:pointer}
 .ui-cta:focus-visible,.ui-card>header .ui-act:focus-visible{outline:2px solid var(--ui-accent);outline-offset:2px}
+
+/* v829 — Início, Meu dia e Operações em tela dividida (centro + coluna direita), sem espaços vazios no PC */
+html:root body #app .v829-split{margin-top:12px;align-items:flex-start}
+html:root body #app .v829-split>.ui-main>*,html:root body #app .v829-split>.ui-aside>*{margin:0!important;max-width:none!important;width:100%}
+html:root body #app .v829-split>.ui-aside{position:sticky;top:12px;flex:1 1 360px;max-width:440px}
+@media(max-width:899px){html:root body #app .v829-split>.ui-aside{max-width:none}}
+@media(max-width:899px){html:root body #app .v829-split>.ui-aside{position:static}}
+html:root body #app .v829-kpis{margin:12px 0 0;padding:0;border:0;background:none}
+html:root body #app .v829-kpis .ui-kpis{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}
+@media(max-width:640px){html:root body #app .v829-kpis .ui-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}html:root body #app .v829-kpis .ui-kpi b{font-size:18px}}
+html:root body #app .ms-proximo{margin:12px 0 0!important}
+/* v830 — Mercado (menos Cotações) */
+@media(min-width:1100px){
+/* Long & Short: par e parâmetros no centro, explicações à direita */
+html:root body #app #v512-ls.v512-pg{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr)) minmax(300px,380px);grid-auto-flow:row dense;gap:12px;align-items:start}
+html:root body #app #v512-ls.v512-pg>*{grid-column:1/3;margin:0!important;min-width:0}
+html:root body #app #v512-ls.v512-pg>.v592-ls-tit{grid-column:1/-1}
+html:root body #app #v512-ls.v512-pg>details{grid-column:3}
+}
+/* v830 — logos de ativos com caixa fixa (sem pular ao carregar ou ao trocar para as iniciais) */
+html:root body #app .dl-logo:not(.dl-par){position:relative;flex:0 0 var(--dl,20px);width:var(--dl,20px);height:var(--dl,20px);min-width:var(--dl,20px);overflow:hidden}
+html:root body #app .dl-logo:not(.dl-par)>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+html:root body #app .dl-logo:not(.dl-par)>.cqm-logo-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+html:root body #app .dl-logo:not(.dl-par):not(.cqm-img-failed)>.cqm-logo-fallback{visibility:hidden}
