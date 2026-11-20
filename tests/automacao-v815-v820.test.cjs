@@ -86,3 +86,19 @@ test('v833: última vez parecida acha o dia mais recente com a mesma direção e
   assert.match(e,/function importante\(e\)/);assert.match(e,/VALE3/);assert.match(e,/PETR4/);
   assert.doesNotMatch(e,/>Estudar impacto</);
 });
+test('v835: correlação quebrada, gap desde o fechamento e reação histórica por evento',async()=>{
+  const m=await import('../cloudflare/diario-noticias/extras.mjs');
+  const datas=[];for(let i=0;i<70;i++)datas.push(new Date(Date.UTC(2026,5,1)+i*864e5).toISOString().slice(0,10));
+  const mk=(f)=>{const s=new Map();let v=100;datas.forEach((d,i)=>{v*=1+f(i)/100;s.set(d,v)});return s};
+  const base=i=>Math.sin(i)*1.5;
+  const series={'PETR4.SA':mk(i=>i===69?2:base(i)),'CL=F':mk(i=>i===69?-2:base(i))};
+  const p=m.avaliarPares(series).find(x=>x.id==='petr-oleo');
+  assert.ok(p.correlacao60>0.9);assert.equal(p.quebrou,true);
+  const ts=[1000,2000,3000],js={chart:{result:[{timestamp:ts,indicators:{quote:[{close:[100,101,99]}]}}]}};
+  assert.equal(m.variacaoDesde(js,2000*1000),-1.98);
+  const r=m.registrarReacoes({},[{t:'EUA: CPI (Nov. 2026)'}],{data:'2026-11-20',ret:-0.69});
+  assert.deepEqual(r[m.chaveEvento('EUA: CPI (Dez. 2026)')],[{data:'2026-11-20',ibov:-0.69}]);
+  assert.deepEqual(m.extrasAgora(new Date('2026-11-20T21:30:00Z')),{coleta:false,reacoes:true});
+  assert.match(fs.readFileSync('cloudflare/diario-noticias/index.mjs','utf8'),/path==='\/v1\/extras'/);
+  assert.match(fs.readFileSync('src/analysis/analises.js','utf8'),/Por que mexeu/);
+});

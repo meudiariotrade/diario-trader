@@ -3,7 +3,7 @@
   'use strict';
   if (w.DiarioInteligenciaEtapa1) return;
   const URL_BASE = 'https://diario-trader.lucianosilva43567.workers.dev';
-  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false };
+  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false, extras: null, extrasAt: 0, extrasBusy: false };
   const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = x => typeof x==='number' && Number.isFinite(x);
   const format = x => number(x) ? x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—';
@@ -180,11 +180,52 @@
         :'<p class="mut sm">Nenhum dia parecido nos últimos anos de histórico.</p>')+
       '<p class="mut sm">Histórico diário (Yahoo, via Cloudflare). Comparação de direção, não previsão.</p>';
   }
+
+  /* v835: sinais entre mercados — gap de amanhã (depois das 17h) e pares que se separaram hoje. */
+  function sinaisHtml() {
+    const x=state.extras;if(!x)return '';
+    const pct=v=>v==null?'—':(v>0?'+':'')+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+    const b3=w.DiarioSessoes?.session('B3')?.state;
+    const gap=x.gap&&b3!=='regular'?'<div class="i835-bloco"><b>Gap de amanhã</b><p class="sm">'+escape(x.gap.texto)+'</p></div>':'';
+    const q=(x.pares||[]).filter(p=>p.quebrou);
+    const pares=q.length?'<div class="i835-bloco"><b>Correlação quebrada hoje</b>'+q.map(p=>'<p class="sm"><b>'+escape(p.a)+' '+pct(p.hojeA)+'</b> × <b>'+escape(p.b)+' '+pct(p.hojeB)+'</b> — costumam andar juntos (correlação de 60 dias '+escape(String(p.correlacao60).replace('.',','))+'). '+escape(p.porque)+'</p>').join('')+'</div>':'';
+    if(!gap&&!pares)return '';
+    return '<header><h2>Sinais entre mercados</h2><span class="ui-badge">Cloudflare · Yahoo</span></header>'+gap+pares+'<p class="mut sm">Leitura automática de dados públicos; não é recomendação.</p>';
+  }
+  function chaveEvento(t){return String(t||'').toLowerCase().replace(/\(.*?\)/g,'').replace(/\b(nov|dez|jan|fev|mar|abr|mai|jun|jul|ago|set|out)\.?\s*\d{4}\b/g,'').replace(/[^a-z0-9à-ú ]/g,' ').replace(/\s+/g,' ').trim().slice(0,80);}
+  /* v835: eventos fortes da semana com a reação do Ibovespa nas vezes anteriores (o histórico cresce a cada dia). */
+  function reacoesHtml() {
+    let ag=null;try{ag=JSON.parse(localStorage.getItem('diario-agenda')||'null');}catch(_){}
+    const v=ag&&(ag.v||ag),evs=[];[0,1].forEach(k=>{const e=v&&v[k]&&v[k].eventos;if(Array.isArray(e))evs.push(...e);});
+    const agora=Date.now(),rx=state.extras?.reacoes||{};
+    const prox=evs.filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&Date.parse(e.em)>agora-36e5).sort((a,b)=>Date.parse(a.em)-Date.parse(b.em)).slice(0,6);
+    if(!prox.length)return '';
+    const pct=v=>(v>0?'+':'')+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+    return '<div class="i835-bloco"><b>Como o Ibovespa reagiu nas vezes anteriores</b>'+prox.map(e=>{
+      const h=rx[chaveEvento(e.t)]||[];
+      return '<p class="sm"><span class="n">'+escape(new Date(Date.parse(e.em)).toLocaleString('pt-BR',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}))+'</span> · '+escape(e.t)+' — '+
+        (h.length?h.slice(0,6).map(x=>'<b class="'+(x.ibov>=0?'ui-g':'ui-r')+'">'+pct(x.ibov)+'</b>').join(' '):'<span class="mut">histórico começa a ser gravado a partir deste evento</span>')+'</p>';
+    }).join('')+'</div>';
+  }
+  /* v835: por que o ativo mexeu — notícias ligadas, motivo do setor e o par de referência. */
+  function porQue(tk) {
+    tk=String(tk||'').toUpperCase();if(!tk)return '';
+    const evs=timeline().filter(e=>ligar(e).some(l=>l.tk===tk)||String(e.titulo||'').toUpperCase().includes(tk)).slice(0,3);
+    const regra=LIGA.find(r=>r[1]===tk);
+    const par=(state.extras?.pares||[]).find(p=>p.a===tk);
+    const pct=v=>v==null?'—':(v>0?'+':'')+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+    if(!evs.length&&!regra&&!par)return '<p class="mut sm">Sem notícia ligada a '+escape(tk)+' nas fontes carregadas.</p>';
+    return (regra?'<p class="sm"><b>O que costuma mexer:</b> '+escape(regra[2])+'</p>':'')+
+      (par?'<p class="sm"><b>Hoje:</b> '+escape(par.a)+' '+pct(par.hojeA)+' × '+escape(par.b)+' '+pct(par.hojeB)+(par.quebrou?' — separou do par.':' — andando junto com o par.')+'</p>':'')+
+      (evs.length?'<p class="sm"><b>Notícias ligadas:</b></p><ul class="i835-nts">'+evs.map(e=>'<li>'+escape(e.titulo)+' <span class="mut">'+when(e.ultimaAtualizacao)+'</span></li>').join('')+'</ul>':'');
+  }
   function cardsInicio(app) {
     const home=app.querySelector('.v829-home');if(!home)return;
     const kp=home.querySelector(':scope>.v829-kpis');
     let an=home.querySelector('#i833-analogia');const ah=analogiaHtml();
     if(ah){if(!an){an=document.createElement('section');an.id='i833-analogia';an.className='ui-card i833-card';(kp||home.firstElementChild)?.after(an);}if(an.innerHTML!==ah)an.innerHTML=ah;}else an?.remove();
+    let si=home.querySelector('#i835-sinais');const sh=sinaisHtml();
+    if(sh){if(!si){si=document.createElement('section');si.id='i835-sinais';si.className='ui-card i833-card';(home.querySelector('#i833-analogia')||kp||home.firstElementChild)?.after(si);}if(si.innerHTML!==sh)si.innerHTML=sh;}else si?.remove();
     const main=home.querySelector('.v829-split>.ui-main');if(!main)return;
     let f=home.querySelector('#i833-fatos');if(!f){f=document.createElement('section');f.id='i833-fatos';f.className='ui-card i833-card';main.prepend(f);}
     const fh=fatosHtml();if(f.innerHTML!==fh)f.innerHTML=fh;
@@ -320,7 +361,7 @@
   }
   function agenda() {
     const events=timeline().filter(e=>e.tema==='politica_economica'&&importante(e)).slice(0,5);
-    return '<div><b>Eventos que movem o mercado</b> <span class="mut sm">Surpresa = Realizado − Consenso, só quando a fonte traz os três.</span></div>'+rowsEvent(events,5);
+    return reacoesHtml()+'<div><b>Eventos que movem o mercado</b> <span class="mut sm">Surpresa = Realizado − Consenso, só quando a fonte traz os três.</span></div>'+rowsEvent(events,5);
   }
 
   function noticias() {
@@ -390,7 +431,7 @@
     if(!state.abort?.signal.aborted)refresh();
   }
   async function request(path,signal) {
-    if(w.DiarioPublico)return w.DiarioPublico.get(path,{signal,ttl:path==='/v1/mercado'?300000:path==='/v1/fluxo'?3600000:path==='/v1/analogia'?900000:120000});
+    if(w.DiarioPublico)return w.DiarioPublico.get(path,{signal,ttl:path==='/v1/mercado'?300000:path==='/v1/fluxo'?3600000:path==='/v1/analogia'||path==='/v1/extras'?900000:120000});
     const response=await fetch(URL_BASE+path,{method:'GET',mode:'cors',credentials:'omit',cache:'no-store',signal});
     if(!response.ok)throw new Error('HTTP '+response.status);
     return response.json();
@@ -413,6 +454,9 @@
     }
     if(['home','dia'].includes(state.route)&&!state.flowBusy&&now-state.flowAt>3600000){
       state.flowBusy=true;state.flowAt=now;request('/v1/fluxo',signal).then(data=>{if(!signal.aborted&&Array.isArray(data.linhas)){state.fluxo=data;repaint();}}).catch(()=>{}).finally(()=>state.flowBusy=false);
+    }
+    if(['home','agenda'].includes(state.route)&&!state.extrasBusy&&now-state.extrasAt>900000){
+      state.extrasBusy=true;state.extrasAt=now;request('/v1/extras',signal).then(data=>{if(!signal.aborted&&data&&data.pares){state.extras=data;repaint();}}).catch(()=>{}).finally(()=>state.extrasBusy=false);
     }
     if(state.route==='home'&&!state.analogiaBusy&&now-state.analogiaAt>900000){
       state.analogiaBusy=true;state.analogiaAt=now;request('/v1/analogia',signal).then(data=>{if(!signal.aborted&&data&&data.hoje){state.analogia=data;repaint();}}).catch(()=>{}).finally(()=>state.analogiaBusy=false);
@@ -478,6 +522,6 @@
   });
   w.DiarioPublico?.read('memoria').then(m=>{if(m){state.memoria=m;repaint();}}).catch(()=>{});
   if(w.TraderUI?.onRender)w.TraderUI.onRender('inteligencia-integrada-v807',mount);
-  w.DiarioInteligenciaEtapa1=Object.freeze({montar:mount,meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
+  w.DiarioInteligenciaEtapa1=Object.freeze({montar:mount,porQue,meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
   mount();
 })(window);

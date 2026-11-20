@@ -6,6 +6,7 @@ import {coletarAgenda,coletarSentimento,agendaAgora,sentimentoAgora} from './dad
 import {coletarJuros} from './juros.mjs';
 import {seriePublica} from './series.mjs';
 import {coletarAnalogia,analogiaAgora} from './analogia.mjs';
+import {coletarExtras,extrasAgora,registrarReacoes} from './extras.mjs';
 import {resolveLogos} from './logos.mjs';
 import {loadQuotes as adrsCotacoes,limpa as adrLimpa} from './adrs.mjs';
 const AGENDA_KEY=s=>'diario:agenda:v1:'+s, SENT_KEY='diario:sentimento:v1', JUROS_KEY='diario:juros:v1';
@@ -172,6 +173,18 @@ export default {
     if(env.NEWS_CACHE&&sentimentoAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
       try{await env.NEWS_CACHE.put(SENT_KEY,JSON.stringify(await coletarSentimento(fetch,event.scheduledTime)));}catch(_){/* conserva o último índice */}
     })());
+    const ex835=extrasAgora(new Date(event.scheduledTime));
+    if(env.NEWS_CACHE&&ex835.coleta)ctx.waitUntil((async()=>{
+      try{const x=await coletarExtras();if(x&&x.pares)await env.NEWS_CACHE.put('diario:extras:v1',JSON.stringify(x));}catch(_){/* mantém o último */}
+    })());
+    if(env.NEWS_CACHE&&ex835.reacoes)ctx.waitUntil((async()=>{
+      try{
+        const x=JSON.parse(await env.NEWS_CACHE.get('diario:extras:v1')||'null'),ag=JSON.parse(await env.NEWS_CACHE.get(AGENDA_KEY(0))||'null');
+        const hoje=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+        const evs=(ag?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})===hoje);
+        if(x?.ibovHoje?.data===hoje&&evs.length){const r=JSON.parse(await env.NEWS_CACHE.get('diario:reacoes:v1')||'{}');await env.NEWS_CACHE.put('diario:reacoes:v1',JSON.stringify(registrarReacoes(r,evs,x.ibovHoje)));}
+      }catch(_){/* segue */}
+    })());
     if(env.NEWS_CACHE&&analogiaAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
       try{const a=await coletarAnalogia();if(a&&a.hoje)await env.NEWS_CACHE.put('diario:analogia:v1',JSON.stringify(a));}catch(_){/* mantém o último quadro */}
     })());
@@ -227,7 +240,7 @@ export default {
         return json(r.body,request,env,r.status);
       }catch(e){return json({error:String(e?.message||e)},request,env,502);}
     }
-    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes','/v1/agenda','/v1/sentimento','/v1/juros','/v1/analogia'].includes(path))
+    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes','/v1/agenda','/v1/sentimento','/v1/juros','/v1/analogia','/v1/extras'].includes(path))
       return json({erro:'rota_nao_encontrada'},request,env,404);
     if(path==='/v1/sessoes')return json(globalThis.DiarioSessoes.context(),request,env);
     if(!env.NEWS_CACHE)return json({erro:'cache_nao_configurado'},request,env,503);
@@ -235,6 +248,14 @@ export default {
       const semana=new URL(request.url).searchParams.get('semana')==='1'?1:0;
       const raw=await env.NEWS_CACHE.get(AGENDA_KEY(semana));if(!raw)return json({erro:'aguardando_agenda'},request,env,503);
       const a=JSON.parse(raw);return json({...a,desatualizado:Date.now()-Date.parse(a.em)>6*3600000},request,env);
+    }
+    /* v835: correlação quebrada, gap de amanhã e reação histórica por evento (KV; na primeira vez calcula). */
+    if(path==='/v1/extras'){
+      let raw=await env.NEWS_CACHE.get('diario:extras:v1');
+      if(!raw){try{const x=await coletarExtras();if(x&&x.pares){raw=JSON.stringify(x);await env.NEWS_CACHE.put('diario:extras:v1',raw);}}catch(_){}}
+      if(!raw)return json({erro:'aguardando_extras'},request,env,503);
+      const reacoes=JSON.parse(await env.NEWS_CACHE.get('diario:reacoes:v1')||'{}');
+      return json({...JSON.parse(raw),reacoes},request,env);
     }
     /* v833: última vez parecida entre mercados (KV; na primeira vez calcula e guarda). */
     if(path==='/v1/analogia'){
