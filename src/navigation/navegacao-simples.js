@@ -46,7 +46,7 @@
   for(const n of t.querySelectorAll(':scope>.tf413-layout,:scope>.tf413-bottom')){if(n.hidden!==advanced)n.hidden=advanced;n.inert=advanced}
  }
  function marketSignals(app){
-  let show=false;try{show=tab==='mercado'&&MKT.tab==='cq'}catch{}
+  let show=false;try{show=tab==='home'}catch{} /* v834: movimentos, insiders e fluxo por ação moram no Início */
   if(!show)for(const n of app.querySelectorAll('#v518-mov,#v519-ins,#v520-fa'))n.remove();
  }
  // Consolida as referências do antigo radar nas categorias já existentes.

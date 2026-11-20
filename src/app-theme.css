@@ -3461,3 +3461,5 @@ html:root body #app .i833-lig li .btn{flex:none;font-variant-numeric:tabular-num
 html:root body #app .i833-lab{margin-top:8px;min-height:40px;padding:0;border:0;background:none;color:var(--ui-accent);font:inherit;font-weight:600;cursor:pointer}
 html:root body #app .i833-mais{margin-top:10px}
 html:root body #app .i833-mais summary{min-height:40px;display:flex;align-items:center;cursor:pointer;color:var(--ui-text-2)}
+/* v834 — Movimentos fortes, Insiders e Fluxo por ação no Início, no padrão dos cards */
+html:root body #app .v829-home :is(#v518-mov,#v519-ins,#v520-fa){background:var(--ui-card)!important;border:1px solid var(--ui-card-line)!important;border-radius:6px!important;padding:14px 16px!important;margin:0!important}

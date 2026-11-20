@@ -41149,7 +41149,7 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
     );
     let l = { t: 0, L: null };
     async function v() {
-      if (Date.now() - l.t < 12e4 && l.L) return l.L;
+      if (Date.now() - l.t < 6e5 && l.L) return l.L; /* v834: 10 min de cache (menos consultas ao Supabase) */
       if (!c(() => SESS && SESS.uid, null)) return null;
       await tok();
       const t = cfg(),
@@ -41166,20 +41166,18 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
     const b = () => new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10);
     async function u(force = false) {
       if (force) { l.t = 0; r.getElementById("v518-mov")?.remove(); }
-      if (
-        c(() => tab, "") !== "mercado" ||
-        c(() => MKT.tab, "") !== "cq" ||
-        r.getElementById("v518-mov")
-      )
-        return;
-      const t = r.querySelector("#app:not(.v503-fantasma) #cotbox");
-      if (!t) return;
+      /* v834: Movimentos fortes (qualquer ação que passou do limite, com o motivo) agora ficam no Início. */
+      if (c(() => tab, "") !== "home" || r.getElementById("v518-mov")) return;
+      const alvo = r.querySelector("#app:not(.v503-fantasma) .v829-home .v829-split>.ui-main");
+      if (!alvo) return;
+      const t = r.getElementById("i833-fatos") || null;
       const e = r.createElement("details");
       ((e.id = "v518-mov"),
         (e.className = "v518-mov"),
+        (e.open = !0),
         (e.innerHTML =
           '<summary class="v518-h">Movimentos fortes <span class="mut">carregando…</span></summary>'),
-        t.after(e));
+        t && t.parentElement === alvo ? t.after(e) : alvo.prepend(e));
       const a = await v().catch(() => null);
       if (!e.isConnected) return;
       if (!a) {
@@ -41221,6 +41219,7 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
     }
     setTimeout(() => { u().catch(() => {}); }, 250);
     setInterval(() => { u().catch(() => {}); }, 3e4);
+    p.addEventListener?.("diario:render", () => { u().catch(() => {}); });
     try {
       const t = r.createElement("style");
       ((t.textContent =
@@ -41329,8 +41328,7 @@ try {
     }
     async function v() {
       if (
-        u(() => tab, "") !== "mercado" ||
-        u(() => MKT.tab, "") !== "cq" ||
+        u(() => tab, "") !== "home" ||
         r.getElementById("v519-ins")
       )
         return;
@@ -41453,8 +41451,7 @@ try {
     }
     async function p() {
       if (
-        d(() => tab, "") !== "mercado" ||
-        d(() => MKT.tab, "") !== "cq" ||
+        d(() => tab, "") !== "home" ||
         n.getElementById("v520-fa") ||
         !d(() => SESS && SESS.uid, null)
       )
