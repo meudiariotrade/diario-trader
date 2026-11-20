@@ -3502,3 +3502,10 @@ html:root body #app .dt395-native-imposto>*:not(:last-child),
 html:root body #app .dt395-native-mais>*:not(:last-child){margin-bottom:12px}
 }
 html:root body #app .dt395-native-mais .card button{white-space:nowrap}
+/* v838 — tom da notícia, selo "Seu ativo" e pontos para amanhã */
+html:root body #app .i838-sent{display:inline-block;font:600 11px/1 system-ui;padding:3px 6px;border-radius:4px;margin-right:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+html:root body #app .i838-pos{color:#10B981;background:rgba(16,185,129,.12)}
+html:root body #app .i838-neg{color:#EF4444;background:rgba(239,68,68,.12)}
+html:root body #app .i838-neu{color:var(--ui-label,#64748B);background:rgba(100,116,139,.14)}
+html:root body #app .i838-meu{display:inline-block;font:600 11px/1 system-ui;padding:3px 6px;border-radius:4px;margin-right:4px;color:#F59E0B;border:1px solid rgba(245,158,11,.45);white-space:nowrap}
+html:root body #app .i838-pontos{margin:0;padding-left:18px;display:grid;gap:6px;font-variant-numeric:tabular-nums}

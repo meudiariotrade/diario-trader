@@ -144,3 +144,18 @@ test('v836b: Macro, EWZ e candles do Radar na Cloudflare (gerados da fonte do Su
   assert.match(s,/b\.modo==='diag'\?null/);assert.match(s,/nHist>=20/);
   assert.match(fs.readFileSync('supabase/functions/radar/index.ts','utf8'),/workers\.dev\/v1\/diario/);
 });
+test('v838: tom da notícia, seus ativos primeiro no pregão e pontos para amanhã',()=>{
+  const e=fs.readFileSync('src/intelligence/etapa1.js','utf8');
+  assert.match(e,/function sentimento\(e\)/);assert.match(e,/function minha\(e\)/);assert.match(e,/function pontosDoDia\(hoje, proxima\)/);
+  assert.match(e,/fase==='during'\?todas\.filter\(minha\)/);
+  assert.match(e,/request\('\/v1\/agenda\?semana=0'/);
+  assert.match(e,/localStorage\.setItem\(PONTOS_KEY/);
+  assert.doesNotMatch(e.slice(e.indexOf('function pontosDoDia'),e.indexOf('function pontosHtml')),/supabase|functions\/v1/i);
+  const ctx={window:{},document:{addEventListener(){},removeEventListener(){},getElementById:()=>null,querySelector:()=>null,querySelectorAll:()=>[]},addEventListener(){},removeEventListener(){},setTimeout,clearTimeout,localStorage:{getItem:()=>null,setItem(){}},console};ctx.window=ctx;
+  vm.runInNewContext(e,ctx);
+  const I=ctx.DiarioInteligenciaEtapa1;
+  assert.equal(I.sentimento({titulo:'Petrobras sobe com alta do petróleo'}),'pos');
+  assert.equal(I.sentimento({titulo:'Vale cai após queda do minério'}),'neg');
+  assert.equal(I.sentimento({titulo:'Copom mantém Selic'}),'neu');
+  assert.match(fs.readFileSync('src/app-theme.css','utf8'),/\.i838-pos\{color:#10B981/);
+});

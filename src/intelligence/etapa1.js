@@ -3,7 +3,7 @@
   'use strict';
   if (w.DiarioInteligenciaEtapa1) return;
   const URL_BASE = 'https://diario-trader.lucianosilva43567.workers.dev';
-  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false, extras: null, extrasAt: 0, extrasBusy: false };
+  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false, extras: null, extrasAt: 0, extrasBusy: false, agenda: null, agendaAt: 0, agendaBusy: false };
   const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = x => typeof x==='number' && Number.isFinite(x);
   const format = x => number(x) ? x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—';
@@ -113,7 +113,7 @@
       const first=(e.fontes||[]).at(-1);
       const source=first&&/^https:\/\//.test(first.url) ? '<a href="'+escape(first.url)+'" target="_blank" rel="noopener noreferrer">'+escape(first.nome||'Fonte')+'</a>' : escape(first?.nome||'Fonte indisponível');
       const imp=importante(e);
-      return '<div class="i833-row'+(imp?' imp':'')+'">'+(imp?tag(oficial(e)?'fato':'publicada'):'')+'<b>'+escape(e.titulo)+'</b>'+
+      return '<div class="i833-row'+(imp?' imp':'')+'">'+(imp?tag(oficial(e)?'fato':'publicada'):'')+sentTag(e)+'<b>'+escape(e.titulo)+'</b>'+
         '<div class="mut sm">'+when(e.ultimaAtualizacao)+' · '+source+((e.quantidadeFontes||e.fontes?.length||0)>1?' · '+(e.quantidadeFontes||e.fontes.length)+' fontes':'')+'</div>'+
         (imp?estudo(e):'')+'</div>';
     }).join('');
@@ -150,6 +150,20 @@
     for(const tk of (e?.tickers||[]))if(!vistos.has(tk)){vistos.add(tk);out.push({tk,porque:'A notícia cita '+tk+' diretamente.'});}
     return out.slice(0,3);
   }
+  /* v838: tom da notícia para o ativo (positiva · negativa · neutra), por regras fixas em PT e EN, sem IA. */
+  const SENT_POS=/\b(alta|sobe|subiu|dispara|disparou|avan[cç]a|recorde|lucro (cresce|sobe|recorde)|supera|acima do esperado|eleva|aumenta (dividendo|produ)|aprova|compra de a[cç][oõ]es|recompra|upgrade|rally|surge|soar|beat|beats|raises|record)\b/i;
+  const SENT_NEG=/\b(queda|cai|caiu|despenca|desaba|recua|recuou|preju[ií]zo|abaixo do esperado|rebaixa|corta|reduz|suspende|multa|investiga[cç][aã]o|greve|acidente|rompimento|downgrade|plunge|falls|drops|miss|misses|cuts|probe|lawsuit|recall)\b/i;
+  function sentimento(e) {
+    const t=String(e?.titulo||''),p=SENT_POS.test(t),n=SENT_NEG.test(t);
+    return p&&!n?'pos':n&&!p?'neg':'neu';
+  }
+  const SENT_TXT={pos:'Positiva',neg:'Negativa',neu:'Neutra'};
+  const sentTag=e=>{const k=sentimento(e);return '<span class="i838-sent i838-'+k+'">'+SENT_TXT[k]+'</span> ';};
+  /* v838: a notícia toca um ativo seu (lista de olho, posição aberta ou carteira)? */
+  function minha(e) {
+    const meus=new Set(meusAtivos());if(!meus.size)return false;
+    return (e?.tickers||[]).some(t=>meus.has(t))||ligar(e).some(l=>meus.has(l.tk));
+  }
   /* Só o que importa recebe estudo automático: prioridade alta, fato oficial (CVM/B3/BC/Fed) ou média ligada a um ativo. */
   function importante(e) { return !!e&&(e.prioridade==='alta'||oficial(e)||(e.prioridade==='media'&&ligar(e).length>0)); }
   function estudo(e) {
@@ -159,10 +173,10 @@
       '<button type="button" class="i833-lab" data-intel-study="'+escape(e.id)+'">Abrir no laboratório</button></div>';
   }
   function fatosHtml() {
-    const lista=timeline().filter(importante).slice(0,5);
+    const lista=timeline().filter(e=>importante(e)||minha(e)).sort((a,b)=>minha(b)-minha(a)).slice(0,5);
     if(!lista.length)return '<header><h2>Fatos que importam hoje</h2></header><p class="mut sm">Nenhuma notícia importante ligada aos seus ativos ou ao mercado nas fontes carregadas.</p>';
     return '<header><h2>Fatos que importam hoje</h2><span class="ui-badge">'+lista.length+' de '+timeline().length+' notícias</span></header>'+
-      lista.map(e=>'<article class="i833-fato">'+tag(oficial(e)?'fato':'publicada')+'<b>'+escape(e.titulo)+'</b><div class="mut sm">'+when(e.ultimaAtualizacao)+' · '+escape((e.fontes||[]).at(-1)?.nome||'Fonte')+'</div>'+estudo(e)+'</article>').join('');
+      lista.map(e=>'<article class="i833-fato">'+tag(oficial(e)?'fato':'publicada')+sentTag(e)+(minha(e)?'<span class="i838-meu">Seu ativo</span> ':'')+'<b>'+escape(e.titulo)+'</b><div class="mut sm">'+when(e.ultimaAtualizacao)+' · '+escape((e.fontes||[]).at(-1)?.nome||'Fonte')+'</div>'+estudo(e)+'</article>').join('');
   }
   function analogiaHtml() {
     const a=state.analogia;
@@ -219,6 +233,46 @@
       (par?'<p class="sm"><b>Hoje:</b> '+escape(par.a)+' '+pct(par.hojeA)+' × '+escape(par.b)+' '+pct(par.hojeB)+(par.quebrou?' — separou do par.':' — andando junto com o par.')+'</p>':'')+
       (evs.length?'<p class="sm"><b>Notícias ligadas:</b></p><ul class="i835-nts">'+evs.map(e=>'<li>'+escape(e.titulo)+' <span class="mut">'+when(e.ultimaAtualizacao)+'</span></li>').join('')+'</ul>':'');
   }
+  /* v838: pontos para amanhã — montados sozinhos no pós-mercado a partir dos registros do dia e da agenda;
+     ficam no aparelho e aparecem no Início até a abertura da próxima sessão. Sem Supabase. */
+  const PONTOS_KEY='dt-pontos-amanha-v1';
+  function pontosDoDia(hoje, proxima) {
+    if(typeof S==='undefined'||!S)return null;
+    const trades=(S.trades||[]).filter(t=>String(t.dtx||t.dt||'').slice(0,10)===hoje);
+    const pts=[];
+    let saldo=null,limite=null;
+    try{if(typeof dayPL==='function'&&typeof dayFech==='function')saldo=dayPL(dayFech(hoje));if(typeof limPerda==='function')limite=limPerda((S.days||{})[hoje]||{});}catch(_){}
+    const pl=trades.map(t=>{try{return typeof cBRL==='function'?cBRL(t)?.pl:null;}catch(_){return null;}}).filter(number);
+    const ganhos=pl.filter(x=>x>0).length,perdas=pl.filter(x=>x<0).length;
+    if(trades.length)pts.push('No dia: '+trades.length+' trade(s), '+ganhos+' com ganho e '+perdas+' com perda'+(number(saldo)?' · resultado '+saldo.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'')+'.');
+    else pts.push('Dia sem trades registrados.');
+    if(number(limite)&&limite>0&&number(saldo)&&saldo<=-0.8*limite)pts.push('O dia usou '+Math.round(-saldo/limite*100)+'% do limite de perda: amanhã comece com a mão menor.');
+    let seq=0;for(let i=pl.length-1;i>=0&&pl[i]<0;i--)seq++;
+    if(seq>=2)pts.push('O dia terminou com '+seq+' perdas seguidas: rever o que mudou nesses trades antes de operar.');
+    const semStop=trades.filter(t=>!(Number(t.stop)>0)).length;
+    if(semStop)pts.push(semStop+' trade(s) sem stop registrado: definir o stop antes da entrada.');
+    const maxT=Number((S.days||{})[hoje]?.maxT);
+    if(maxT>0&&trades.length>maxT)pts.push('Passou do máximo de '+maxT+' trades do dia.');
+    const evs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})===proxima)
+      .slice(0,3).map(e=>new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' '+String(e.t||'').slice(0,60));
+    if(evs.length)pts.push('Agenda forte em '+br(proxima)+': '+evs.join(' · ')+'.');
+    return {de:hoje,para:proxima,pontos:pts.slice(0,5),em:new Date().toISOString()};
+  }
+  function pontosHtml() {
+    const c=w.DiarioSessoes?.context();if(!c)return '';
+    const fase=w.DiarioSessaoVisual?.manual?.()||c.phase,hoje=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+    let p=null;try{p=JSON.parse(localStorage.getItem(PONTOS_KEY)||'null');}catch(_){}
+    if(fase==='post'&&c.mode!=='b3_fechada'&&c.b3?.nextDate){
+      const novo=pontosDoDia(hoje,c.b3.nextDate);
+      if(novo&&JSON.stringify(novo.pontos)!==JSON.stringify(p?.pontos)){p=novo;try{localStorage.setItem(PONTOS_KEY,JSON.stringify(p));}catch(_){}}
+    }
+    if(!p||!Array.isArray(p.pontos)||!p.pontos.length)return '';
+    const vale=(fase==='post'&&p.de===hoje)||((fase==='pre'||c.mode==='b3_fechada')&&p.para>=hoje&&p.de<hoje);
+    if(!vale)return '';
+    return '<header><h2>'+(p.de===hoje?'Pontos para amanhã':'Pontos de '+escape(br(p.de))+' para hoje')+'</h2><span class="ui-badge">automático</span></header>'+
+      '<ul class="i838-pontos">'+p.pontos.map(x=>'<li>'+escape(x)+'</li>').join('')+'</ul>'+
+      '<p class="mut sm">Montado dos seus registros no aparelho e da agenda pública. Não é recomendação.</p>';
+  }
   function cardsInicio(app) {
     const home=app.querySelector('.v829-home');if(!home)return;
     const kp=home.querySelector(':scope>.v829-kpis');
@@ -226,6 +280,8 @@
     if(ah){if(!an){an=document.createElement('section');an.id='i833-analogia';an.className='ui-card i833-card';(kp||home.firstElementChild)?.after(an);}if(an.innerHTML!==ah)an.innerHTML=ah;}else an?.remove();
     let si=home.querySelector('#i835-sinais');const sh=sinaisHtml();
     if(sh){if(!si){si=document.createElement('section');si.id='i835-sinais';si.className='ui-card i833-card';(home.querySelector('#i833-analogia')||kp||home.firstElementChild)?.after(si);}if(si.innerHTML!==sh)si.innerHTML=sh;}else si?.remove();
+    let po=home.querySelector('#i838-pontos');const ph=pontosHtml();
+    if(ph){if(!po){po=document.createElement('section');po.id='i838-pontos';po.className='ui-card i833-card';(kp||home.firstElementChild)?.after(po);}if(po.innerHTML!==ph)po.innerHTML=ph;}else po?.remove();
     const main=home.querySelector('.v829-split>.ui-main');if(!main)return;
     let f=home.querySelector('#i833-fatos');if(!f){f=document.createElement('section');f.id='i833-fatos';f.className='ui-card i833-card';main.prepend(f);}
     const fh=fatosHtml();if(f.innerHTML!==fh)f.innerHTML=fh;
@@ -366,8 +422,12 @@
 
   function noticias() {
     const pushAtivo=typeof NP!=='undefined' && NP.on?.intel===true;
-    const todas=timeline(),imp=todas.filter(importante),resto=todas.filter(e=>!importante(e));
-    return '<div><b>Importantes agora</b> <span class="mut sm">'+imp.length+' de '+todas.length+' · atualizada '+when(state.eventos?.atualizadoEm)+(state.eventos?.desatualizado?' · DADOS ATRASADOS':'')+'</span></div>'+
+    const todas=timeline(),c=w.DiarioSessoes?.context(),fase=w.DiarioSessaoVisual?.manual?.()||c?.phase;
+    /* v838: no pregão, primeiro o que toca os seus ativos; o resto vem depois. */
+    const meus=fase==='during'?todas.filter(minha):[],sem=todas.filter(e=>!meus.includes(e));
+    const imp=sem.filter(importante),resto=sem.filter(e=>!importante(e));
+    return (meus.length?'<div><b>Dos seus ativos</b> <span class="mut sm">pregão aberto · '+meus.length+' notícia(s)</span></div>'+rowsEvent(meus,6):'')+
+      '<div><b>Importantes agora</b> <span class="mut sm">'+imp.length+' de '+todas.length+' · atualizada '+when(state.eventos?.atualizadoEm)+(state.eventos?.desatualizado?' · DADOS ATRASADOS':'')+'</span></div>'+
       rowsEvent(imp,6)+
       (resto.length?'<details class="i833-mais"><summary>Outras '+resto.length+' notícias agrupadas</summary>'+rowsEvent(resto,12)+'</details>':'')+
       '<details class="i833-mais"><summary>Alertas por ativo</summary><div class="sm" style="margin:6px 0"><button type="button" class="btn s" data-intel-push="1" style="min-height:40px">'+
@@ -458,6 +518,9 @@
     if(['home','agenda'].includes(state.route)&&!state.extrasBusy&&now-state.extrasAt>900000){
       state.extrasBusy=true;state.extrasAt=now;request('/v1/extras',signal).then(data=>{if(!signal.aborted&&data&&data.pares){state.extras=data;repaint();}}).catch(()=>{}).finally(()=>state.extrasBusy=false);
     }
+    if(state.route==='home'&&!state.agendaBusy&&now-state.agendaAt>1800000){
+      state.agendaBusy=true;state.agendaAt=now;request('/v1/agenda?semana=0',signal).then(data=>{if(!signal.aborted&&data&&Array.isArray(data.eventos)){state.agenda=data;repaint();}}).catch(()=>{}).finally(()=>state.agendaBusy=false);
+    }
     if(state.route==='home'&&!state.analogiaBusy&&now-state.analogiaAt>900000){
       state.analogiaBusy=true;state.analogiaAt=now;request('/v1/analogia',signal).then(data=>{if(!signal.aborted&&data&&data.hoje){state.analogia=data;repaint();}}).catch(()=>{}).finally(()=>state.analogiaBusy=false);
     }
@@ -522,6 +585,6 @@
   });
   w.DiarioPublico?.read('memoria').then(m=>{if(m){state.memoria=m;repaint();}}).catch(()=>{});
   if(w.TraderUI?.onRender)w.TraderUI.onRender('inteligencia-integrada-v807',mount);
-  w.DiarioInteligenciaEtapa1=Object.freeze({montar:mount,porQue,meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
+  w.DiarioInteligenciaEtapa1=Object.freeze({montar:mount,porQue,sentimento,minha,pontosDoDia,meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
   mount();
 })(window);
