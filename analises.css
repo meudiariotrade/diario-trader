@@ -349,3 +349,5 @@ html body #app nav.an-subs > button[aria-selected="true"] {
 #an-root.an830 .an830-acoes .btn{min-height:40px}
 #an-root.an830 .an-header{margin:0 0 12px}
 #an-root.an830 .an-header h1{font-size:22px}
+#an-root.an830 .an830-acoes .ui-cta{background:var(--ui-accent,#F59E0B)!important;color:#08090D!important;border:0!important;min-height:44px;border-radius:6px;font-weight:700}
+html[data-v427-tema=claro] #an-root.an830 .an830-acoes .ui-cta{color:#FFFFFF!important}

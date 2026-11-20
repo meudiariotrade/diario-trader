@@ -1200,18 +1200,22 @@ try {
         const fx = i.DiarioLogos?.fixo?.(a.ticker),
           c = fx ? { url: fx.urls[0], provider: "tradingview", local: !1 } : H(a.ticker, e.group);
         if (c) {
+          /* v832: logo já carregado antes aparece na hora, sem piscar as iniciais a cada atualização da lista. */
+          const ok832 = i.__taLogoOk || (i.__taLogoOk = new Set()),
+            ja832 = ok832.has(c.url);
+          ja832 && t.classList.add("ta-has-logo");
           const s = d.createElement("img");
           ((s.className = "ta-logo"),
             (s.alt = ""),
-            (s.loading = c.local ? "eager" : "lazy"),
+            (s.loading = c.local || ja832 ? "eager" : "lazy"),
             (s.decoding = "async"),
             (s.referrerPolicy = "no-referrer"),
             c.local && (t.dataset.logoLocal = "1"),
             (s.onload = () => {
-              s.naturalWidth > 0 && t.classList.add("ta-has-logo");
+              s.naturalWidth > 0 && (t.classList.add("ta-has-logo"), ok832.add(c.url));
             }),
             (s.onerror = () => {
-              (s.remove?.(), t.classList.remove?.("ta-has-logo"));
+              (s.remove?.(), t.classList.remove?.("ta-has-logo"), ok832.delete(c.url));
             }),
             (s.src = c.url),
             t.append(s),

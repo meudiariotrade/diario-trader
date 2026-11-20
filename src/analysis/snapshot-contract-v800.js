@@ -30,7 +30,7 @@
    for(const row of rows){
     if(row.ticker==null)continue;
     const ticker=String(row.ticker).toUpperCase();
-    if(!/^[A-Z0-9.-]{2,14}$/.test(ticker))return fail('Ticker fora do contrato');
+    if(!/^[A-Z0-9.-]{1,14}$/.test(ticker))return fail('Ticker fora do contrato');
     if(seen.has(ticker))return fail('Ticker duplicado');
     seen.add(ticker);
    }
