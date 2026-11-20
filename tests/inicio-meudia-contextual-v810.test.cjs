@@ -10,8 +10,8 @@ const intel=fs.readFileSync('src/intelligence/etapa1.js','utf8');
 test('v810 preserva cards nativos e seleção contextual sem navegar ou criar rotas',()=>{
   assert.match(root,/v810Seletor\(\$\)/);
   assert.match(root,/v810-hero/);
-  assert.match(root,/v810-home-grid/);
-  assert.match(root,/v810-day-grid/);
+  assert.match(root,/v829-split/); // v829: grades viraram tela dividida
+  assert.match(root,/v829DiaKpis/);
   assert.match(root,/data-v4auto="1"/);
   assert.match(root,/v810Manual=\{phase:i,anchor:c\?\.anchorDate,until:/);
   assert.match(root,/v810Manual=null;qt=null;xt\(\)/);

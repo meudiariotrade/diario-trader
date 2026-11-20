@@ -1422,7 +1422,7 @@ try {
       /* v829: Meu dia = você. KPIs do dia no topo; checklist, operações e plano no centro;
          capital, plano detalhado e anotações na coluna da direita. Agenda e cenário de mercado foram para o Início. */
       const kpis829=v829DiaKpis(r,l,s,u.length),
-        lado829='<details class="v810-more"><summary>Plano detalhado, emoção e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>';
+        lado829='<details class="v810-more"><summary>Plano detalhado, emoção e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t, e)+emo589+it+dt+'</div></details>';
       return '<div class="v4-page v4-day v810-day v829-day" data-v810-phase="'+sessao+'">'+base+kpis829+
         (sessao==="pre"
           ? '<div class="ui-split v829-split"><div class="ui-main">'+U+y+niveis825+'</div><aside class="ui-aside">'+m+lado829+'</aside></div>'
