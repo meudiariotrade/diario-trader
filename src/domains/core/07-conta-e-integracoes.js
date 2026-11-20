@@ -2782,6 +2782,18 @@ async function agCarrega(e) {
     (!e && AG.err && Date.now() - (AG.errTs || 0) < 2 * 6e4)
   )
     return;
+  /* v811: agenda vem do snapshot público da Cloudflare; Supabase só como reserva. */
+  if (window.DiarioPublico && !window.DIARIO_DEMO && (t === 0 || t === 1)) {
+    AG.busy = 1;
+    try {
+      const v = await window.DiarioPublico.get("/v1/agenda?semana=" + t, { ttl: 15 * 6e4 });
+      if (v && Array.isArray(v.eventos) && v.eventos.length) {
+        ((AG.v[t] = v), (AG.ts[t] = Date.now()), (AG.err = ""));
+        try { ls.set("diario-agenda", { v: AG.v }); } catch {}
+        AG.busy = 0; agPaint(); return;
+      }
+    } catch {} finally { AG.busy = 0; }
+  }
   const a = cfg();
   if (!a) {
     ((AG.err = "Configure o Supabase na aba Conta."), agPaint());

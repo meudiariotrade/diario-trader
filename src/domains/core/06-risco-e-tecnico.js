@@ -5243,6 +5243,19 @@ const SNT = {
 };
 async function sntCarrega(e) {
   if (SNT.busy || (!e && SNT.v && Date.now() - SNT.ts < 10 * 6e4)) return;
+  /* v811: primeiro o snapshot público da Cloudflare (uma coleta para todos); o Supabase
+     fica só como reserva enquanto a borda ainda não tiver dado. */
+  if (window.DiarioPublico && !window.DIARIO_DEMO) {
+    SNT.busy = 1;
+    try {
+      const v = await window.DiarioPublico.get("/v1/sentimento", { ttl: 15 * 6e4 });
+      if (v && (v.b3 || v.eua || v.cripto)) {
+        ((SNT.v = v), (SNT.ts = Date.now()), (SNT.err = v.desatualizado ? "Índices da borda atrasados; confira a data de cada um." : ""));
+        try { ls.set("diario-snt", v); } catch {}
+        SNT.busy = 0; sntPaint(); return;
+      }
+    } catch {} finally { SNT.busy = 0; }
+  }
   const t = cfg();
   if (!t) {
     ((SNT.err = "Configure o Supabase na aba Conta."), sntPaint());

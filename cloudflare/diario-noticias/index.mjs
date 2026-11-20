@@ -2,6 +2,8 @@
 import '../../src/shared/sessoes-mercado.js';
 import {FLOW_KEY,coletarFluxo} from './fluxo.mjs';
 import {agruparEventos} from './eventos.mjs';
+import {coletarAgenda,coletarSentimento,agendaAgora,sentimentoAgora} from './dados-publicos.mjs';
+const AGENDA_KEY=s=>'diario:agenda:v1:'+s, SENT_KEY='diario:sentimento:v1';
 export {agruparEventos} from './eventos.mjs';
 const KEY = 'diario:noticias:v1';
 const FONTES = [
@@ -156,6 +158,13 @@ export default {
     if(env.NEWS_CACHE&&!b.weekend&&[660,1020].includes(b.minute))ctx.waitUntil((async()=>{try{
       await env.NEWS_CACHE.put(FLOW_KEY,JSON.stringify(await coletarFluxo(fetch,event.scheduledTime)));
     }catch(_){/* último dado permanece identificável pela data efetiva */}})());
+    /* v811: agenda e Medo & Ganância saem do Supabase e passam a ser coletados aqui, uma vez para todos. */
+    if(env.NEWS_CACHE&&agendaAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
+      for(const s of [0,1])try{await env.NEWS_CACHE.put(AGENDA_KEY(s),JSON.stringify(await coletarAgenda(fetch,event.scheduledTime,s)));}catch(_){/* conserva a última agenda */}
+    })());
+    if(env.NEWS_CACHE&&sentimentoAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
+      try{await env.NEWS_CACHE.put(SENT_KEY,JSON.stringify(await coletarSentimento(fetch,event.scheduledTime)));}catch(_){/* conserva o último índice */}
+    })());
     if(!env.NEWS_CACHE||!deveColetar(new Date(event.scheduledTime)))return;
     ctx.waitUntil((async()=>{
       let anteriores=[];
@@ -174,10 +183,19 @@ export default {
     const path=new URL(request.url).pathname;
     if(request.method!=='GET')return json({erro:'metodo_nao_permitido'},request,env,405);
     if(path==='/health')return json({ok:Boolean(env.NEWS_CACHE),servico:'diario-noticias',modo:'independente'},request,env,env.NEWS_CACHE?200:503);
-    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes'].includes(path))
+    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes','/v1/agenda','/v1/sentimento'].includes(path))
       return json({erro:'rota_nao_encontrada'},request,env,404);
     if(path==='/v1/sessoes')return json(globalThis.DiarioSessoes.context(),request,env);
     if(!env.NEWS_CACHE)return json({erro:'cache_nao_configurado'},request,env,503);
+    if(path==='/v1/agenda'){
+      const semana=new URL(request.url).searchParams.get('semana')==='1'?1:0;
+      const raw=await env.NEWS_CACHE.get(AGENDA_KEY(semana));if(!raw)return json({erro:'aguardando_agenda'},request,env,503);
+      const a=JSON.parse(raw);return json({...a,desatualizado:Date.now()-Date.parse(a.em)>6*3600000},request,env);
+    }
+    if(path==='/v1/sentimento'){
+      const raw=await env.NEWS_CACHE.get(SENT_KEY);if(!raw)return json({erro:'aguardando_sentimento'},request,env,503);
+      const v=JSON.parse(raw);return json({...v,desatualizado:Date.now()-Date.parse(v.gerado)>12*3600000},request,env);
+    }
     if(path==='/v1/fluxo'){
       const raw=await env.NEWS_CACHE.get(FLOW_KEY);if(!raw)return json({erro:'aguardando_fluxo'},request,env,503);
       const f=JSON.parse(raw);return json({...f,desatualizado:Date.now()-Date.parse(f.atualizadoEm)>36*3600000},request,env);
