@@ -6,6 +6,7 @@ const FONTES = [
   { nome: 'InfoMoney', host: 'infomoney.com.br', url: 'https://www.infomoney.com.br/feed/' },
   { nome: 'Money Times', host: 'moneytimes.com.br', url: 'https://www.moneytimes.com.br/mercados/feed/' },
   { nome: 'CNBC', host: 'cnbc.com', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' },
+  { nome: 'SEC EDGAR', host: 'sec.gov', url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom', formato:'atom' },
 ];
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const ent = { amp:'&', lt:'<', gt:'>', quot:'"', apos:"'", nbsp:' ' };
@@ -47,6 +48,18 @@ export function lerRSS(xml,fonte,agora=Date.now()) {
   }
   return out;
 }
+/* Feed Atom SEC: somente 8-K público. Validação de domínio e horário. */
+export function lerSECAtom(xml,fonte,agora=Date.now()) {
+  const out=[];
+  for(const b of (String(xml||'').slice(0,160000).match(/<entry\\b[^>]*>[\\s\\S]*?<\\/entry>/gi)||[]).slice(0,30)) {
+    const t=tag(b,'title').slice(0,200);
+    const l=/<link\\b[^>]*href=["']([^"']+)["']/i.exec(b)?.[1]||'';
+    const seguro=linkSeguro(l,fonte.host),dt=Date.parse(tag(b,'updated')||tag(b,'published'));
+    if(!seguro||!Number.isFinite(dt)||dt>agora+300000||dt<agora-86400000||t.length<12)continue;
+    out.push({t,l:seguro,fonte:'SEC',d:new Date(dt).toISOString(),tema:tema(t)||'acoes'});
+  }
+  return out;
+}
 export function deveColetar(now=new Date()){
   const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{
     timeZone:'America/Sao_Paulo',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
@@ -56,9 +69,9 @@ export function deveColetar(now=new Date()){
 }
 export async function coletarNoticias(fetcher=fetch,agora=Date.now(),anteriores=[]){
   const resultados=await Promise.allSettled(FONTES.map(async f=>{
-    const r=await fetcher(f.url,{headers:{Accept:'application/rss+xml, application/xml, text/xml'},signal:AbortSignal.timeout(5500)});
+    const r=await fetcher(f.url,{headers:{Accept:'application/rss+xml, application/atom+xml, application/xml, text/xml','User-Agent':'DiarioTraderPublicFeed/1.0 (GitHub meudiariotrade)'},signal:AbortSignal.timeout(5500)});
     if(!r.ok)throw Error('Feed HTTP '+r.status);
-    return lerRSS(await r.text(),f,agora);
+    const xml=await r.text();return f.formato==='atom'?lerSECAtom(xml,f,agora):lerRSS(xml,f,agora);
   }));
   const map=new Map(),fontesOk=[],fontesIndisponiveis=[];
   resultados.forEach((r,i)=>{
