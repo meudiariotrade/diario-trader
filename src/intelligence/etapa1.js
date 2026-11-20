@@ -84,17 +84,63 @@
         '<div class="mut sm" style="margin-top:4px">Impactos indiretos: hipóteses econômicas, não causalidades comprovadas.</div></div>';
     }).join('');
   }
+  function transmissao(e) {
+    const titulo=String(e?.titulo||'').toLowerCase();
+    if(e?.tema==='petroleo')return 'Petróleo → Petrobras e setor de energia → Ibovespa/WIN';
+    if(e?.tema==='minerio')return 'Minério de ferro → Vale e siderurgia → Ibovespa/WIN';
+    if(e?.tema==='politica_economica'){
+      if(/cpi|payroll|fed|fomc|treasur/.test(titulo))return 'Indicador EUA → Treasuries → dólar global → USD/BRL/WDO e Ibovespa/WIN';
+      if(/ipca|copom|selic/.test(titulo))return 'Indicador Brasil → curva DI → câmbio → empresas e WIN/WDO';
+    }
+    return 'Evento → expectativas e prêmio de risco → preços de mercado (hipótese sem causalidade demonstrada)';
+  }
+  function riscoTerminal() {
+    if(typeof S==='undefined'||!S)return '<p class="mut sm">Diário não carregado para esta sessão.</p>';
+    const hoje=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+    const trades=(S.trades||[]).filter(t=>String(t.dtx||t.dt||'').slice(0,10)===hoje);
+    let saldo=null,limite=null;
+    try {
+      if(typeof dayPL==='function'&&typeof dayFech==='function')saldo=dayPL(dayFech(hoje));
+      if(typeof limPerda==='function')limite=limPerda((S.days||{})[hoje]||{});
+    }catch(_){}
+    const fechados=trades.filter(t=>typeof isOpen==='function'?!isOpen(t):t.exit!=null);
+    const resultados=fechados.slice().sort((a,b)=>String(a.dtx||a.dt).localeCompare(String(b.dtx||b.dt)))
+      .map(t=>{try{return typeof cBRL==='function'?cBRL(t)?.pl:null;}catch(_){return null;}})
+      .filter(number);
+    let losses=0;
+    for(let i=resultados.length-1;i>=0&&resultados[i]<0;i--)losses++;
+    const semStop=(S.trades||[]).filter(t=>{
+      try{return typeof isOpen==='function'&&isOpen(t) && !(Number(t.stop)>0);}catch(_){return false;}
+    });
+    const avisos=[];
+    if(number(limite)&&limite>0&&number(saldo)){
+      if(saldo<=-limite)avisos.push('Limite diário cadastrado atingido. Não iniciar novas operações.');
+      else if(saldo<=-0.8*limite)avisos.push('Consumo de 80% ou mais do limite de perda diário.');
+    }
+    if(losses>=3)avisos.push('Sequência de '+losses+' perdas encerradas: revisar tamanho da próxima posição.');
+    if(semStop.length)avisos.push(semStop.length+' operação(ões) sinalizada(s) como aberta(s) sem stop válido.');
+    const maxT=Number((S.days||{})[hoje]?.maxT);
+    if(maxT>0&&trades.length>=maxT)avisos.push('Quantidade máxima de trades do dia registrada ('+maxT+').');
+    return '<div class="sm">Perda/ganho do dia (registros locais): <b>'+ (number(saldo)?'R$ '+format(saldo):'indisponível')+'</b>'+
+      (limite>0?' · limite de perda: R$ '+format(limite):' · limite não configurado')+
+      ' · n = '+fechados.length+' trade(s) encerrado(s)</div>'+
+      (avisos.length?avisos.map(x=>'<div class="warn" style="margin:5px 0">'+escape(x)+'</div>').join(''):
+      '<p class="mut sm">Sem violação detectada nos registros carregados. Confirme o estado real da conta e do Profit.</p>')+
+      '<p class="mut sm">Somente leitura. Não envia ordens, não modifica trades ou limites.</p>';
+  }
   function briefing() {
     const m=mercadoPlan(),hot=timeline().filter(e=>e.prioridade==='alta');
     const mine=relacionados().filter(e=>e.prioridade==='alta');
     return '<div><b>Regime: '+escape(m.nome)+'</b> <span class="mut">Confiança heurística: '+(m.confianca==null?'—':m.confianca+'%')+'</span></div>'+
       '<p class="mut sm">Fonte: '+escape(state.mercado?.fonte||'não verificada')+' · Leitura: '+when(state.mercado?.atualizadoEm)+' · '+escape(m.motivo)+'</p>'+
-      '<div><b>O que movimenta o mercado</b> <span class="mut sm">· '+mine.length+' relevante(s) aos seus ativos</span></div>'+rowsEvent(hot.slice(0,3),3);
+      '<div><b>O que movimenta o mercado</b> <span class="mut sm">· '+mine.length+' relevante(s) aos seus ativos</span></div>'+rowsEvent(hot.slice(0,3),3)+
+      hot.slice(0,2).map(e=>'<p class="mut sm"><b>Hipótese de transmissão:</b> '+escape(transmissao(e))+'</p>').join('');
   }
   function agenda() {
     const events=timeline().filter(e=>e.tema==='politica_economica').slice(0,5);
     return '<p class="mut sm">Agenda inteligente: confrontar Anterior × Consenso × Realizado somente quando a fonte trouxer os três dados. Surpresa = Realizado − Consenso.</p>'+
       '<div><b>Eventos e transmissão potencial</b></div>'+rowsEvent(events,5)+
+      events.slice(0,3).map(e=>'<p class="mut sm"><b>Hipótese econômica:</b> '+escape(transmissao(e))+'</p>').join('')+
       '<p class="mut sm">CPI/Fed → Treasuries → USD/BRL → WIN/WDO/DI é hipótese de transmissão, não causalidade provada.</p>'+
       '<p class="mut sm">Reações históricas 5m/15m/60m: aguardando série sincronizada com horário de divulgação, sem simulação de números.</p>';
   }
@@ -116,7 +162,8 @@
     return '<div><b>Regime: '+escape(m.nome)+'</b> · Confiança heurística '+(m.confianca==null?'—':m.confianca+'%')+'</div>'+
       '<p class="mut sm">'+escape(m.motivo)+' · Fonte: '+escape(state.mercado?.fonte||'indisponível')+' · '+when(state.mercado?.atualizadoEm)+'</p>'+
       '<b>Radar de divergências</b>'+(m.divergencias.length?'<div>'+m.divergencias.map(x=>'<p>'+escape(x)+'</p>').join('')+'</div>':'<p class="mut sm">Nenhuma divergência validada com os instrumentos disponíveis; não equivale a ausência de risco.</p>')+
-      '<b>Acontecimentos ligados aos seus ativos</b>'+rowsEvent(news,3);
+      '<b>Acontecimentos ligados aos seus ativos</b>'+rowsEvent(news,3)+
+      '<b>Guardião preventivo de risco</b>'+riscoTerminal();
   }
   function eligibleRoute() {
     if (typeof tab==='undefined')return '';
