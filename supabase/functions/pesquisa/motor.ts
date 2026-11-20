@@ -152,9 +152,11 @@ export async function redigir(cmd:any,p:any,c:any,env:Env,fetcher=fetch){
    const validacao=validarNumerosIA(leitura,dados);
    if(!validacao.ok)throw Error('IA citou valores sem correspondência nos dados calculados: '+validacao.divergencias.join(', '));}
  catch(e){iaErro=String((e as Error).message).slice(0,600);leitura=''}
- const texto=(leitura?'## Leitura analítica\n\n'+leitura+'\n\n---\n\n':'> **IA indisponível agora:** relatório com os números calculados pelo código (sem texto da IA). Detalhe técnico: '+iaErro+'\n\n')+'# Dados e cálculos\n\n'+dados+`\n\nData dos dados: ${p.consultado_em} · cálculo: ${c?.calculado_em||gerado}\n\n_${leitura?'IA: '+modelo:'IA: nenhum provedor respondeu — '+iaErro.slice(0,300)}_\n\n${AVISO}`;
+ const refsCerebro=(p.rag_trading||[]).slice(0,5).map((t:any)=>String(t.titulo||'').slice(0,120)).filter(Boolean);
+ const cerebroMd=leitura&&refsCerebro.length?'\n\n**Referências do Cérebro usadas:** '+[...new Set(refsCerebro)].join(' · ')+'\n':'';
+ const texto=(leitura?'## Leitura analítica\n\n'+leitura+cerebroMd+'\n\n---\n\n':'> **IA indisponível agora:** relatório com os números calculados pelo código (sem texto da IA). Detalhe técnico: '+iaErro+'\n\n')+'# Dados e cálculos\n\n'+dados+`\n\nData dos dados: ${p.consultado_em} · cálculo: ${c?.calculado_em||gerado}\n\n_${leitura?'IA: '+modelo:'IA: nenhum provedor respondeu — '+iaErro.slice(0,300)}_\n\n${AVISO}`;
  const atualidade=confirmarAtualidade(cmd,p,Date.now());
-  return {texto,fontes:p.fontes,documentos:[],
+  return {texto,referencias_cerebro:[...new Set(refsCerebro)],fontes:p.fontes,documentos:[],
   graficos_pdf:(c?.tecnico||[]).filter((t:any)=>t.serie_pdf).map((t:any)=>({
    ticker:String(t.ticker).slice(0,12),...t.serie_pdf,
    referencias:{preco:t.valuation?.preco??null,

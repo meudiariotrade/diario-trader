@@ -3527,6 +3527,8 @@ function jvoGuarda(e) {
             : null,
         val: s.valuation || "",
         vies: r.vies || "",
+        // v841: obras do Cérebro usadas nesta leitura (para a taxa de acerto por fonte).
+        refs: [...new Set([...(((e.tec || {}).referencias_cerebro) || []), ...((((e.funs || {})[o] || {}).referencias_cerebro) || [])])].slice(0, 6),
       },
       c = t.findIndex((p) => p.tk === o && p.dia === a);
     c >= 0 ? (t[c] = d) : t.push(d);
@@ -3633,6 +3635,12 @@ function jvpResumo(e) {
     nUp: o.length,
   };
 }
+/* v841: placar da semana — leituras feitas nos últimos 7 dias e quantas acertaram a direção. */
+function jvpSemana(e) {
+  const d = new Date(Date.now() - 7 * 864e5).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" }),
+    t = (e || []).filter((x) => x.dia >= d && x.ok != null);
+  return { n: t.length, acertos: t.filter((x) => x.ok).length };
+}
 function jvpHtml() {
   const e = jvHist(),
     t = loc().slice(0, 10),
@@ -3643,7 +3651,7 @@ function jvpHtml() {
     s = jvpResumo(o),
     n = (i) => i.slice(8, 10) + "/" + i.slice(5, 7),
     r = (i) => (i > 0 ? "alta" : i < 0 ? "queda" : "neutra");
-  return `<div class="jvp"><h4>Placar das análises</h4><p class="sm mut" style="margin:0 0 8px">Cada análise completa fica guardada. Aqui o app compara o preço daquele dia com o de hoje, para você ver se a leitura funcionou.</p>
+  return `<div class="jvp"><h4>Placar das análises</h4><p class="sm mut" style="margin:0 0 8px">Cada análise completa fica guardada. Aqui o app compara o preço daquele dia com o de hoje, para você ver se a leitura funcionou.</p>${(() => { const w = jvpSemana(jvpLinhas()); return w.n ? `<p class="sm" style="margin:0 0 8px"><b>Placar da semana:</b> ${w.acertos} de ${w.n} leituras acertaram a direção.</p>` : ""; })()}
 ${s.n ? `<div class="jrkp3"><div><small>Acertou a direção</small><b class="${s.taxa >= 0.5 ? "g" : "r"}">${s.acertos} de ${s.n}</b></div>${s.medUp != null ? `<div><small>Média das que deram alta</small><b class="${s.medUp >= 0 ? "g" : "r"}">${jvPc(s.medUp)}</b></div>` : ""}<div><small>Análises guardadas</small><b>${a.length}</b></div></div>` : ""}
 ${o.length ? `<div class="jrvtab"><table><thead><tr><th>Ação</th><th>Dia</th><th>Leitura</th><th>Preço</th><th>Hoje</th><th>Variação</th></tr></thead><tbody>${o.map((i) => `<tr><td><b>${esc(i.tk)}</b></td><td>${n(i.dia)}</td><td>${r(i.dir)}</td><td>${jvF2(i.px)}</td><td>${jvF2(i.now)}</td><td class="${i.ret >= 0 ? "g" : "r"}"><b>${jvPc(i.ret)}</b>${i.ok == null ? "" : i.ok ? " ✓" : " ✗"}</td></tr>`).join("")}</tbody></table></div>` : `<div class="sm mut">${JVP.busy ? "Buscando os preços de hoje…" : "Toque em atualizar para buscar os preços de hoje."}</div>`}
 ${JVP.err ? `<div class="warn sm" style="margin-top:6px">${esc(JVP.err)}</div>` : ""}

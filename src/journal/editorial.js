@@ -76,7 +76,7 @@
 
   /* v840: painel técnico na tela do Jornal (índices EUA e criptos da edição), com mini gráfico de 60 dias. */
   function jrTecGlobalHtml(e){
-    const L=edition(e)?.snapshot?.tecnico?.itens||[];if(!L.length)return '';
+    const SN=edition(e)?.snapshot||{},TT=SN.tecnico||{},L=TT.itens||[];if(!L.length)return jrExtrasHtml(SN)+jrSeusAtivosHtml();
     const nf=(x,d=2)=>x==null||!Number.isFinite(x)?'—':Number(x).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
     const spark=S=>{if(!S||S.length<3)return '';const mn=Math.min(...S),mx=Math.max(...S),w=160,h=36,dx=w/(S.length-1);
       const pts=S.map((v,i)=>(i*dx).toFixed(1)+','+(h-(mx>mn?(v-mn)/(mx-mn)*h:h/2)).toFixed(1)).join(' ');
@@ -86,7 +86,36 @@
       '<div class="jr840-p"><b>'+(x.tipo==='cripto'?'US$ ':'')+nf(x.px,x.px<10?4:2)+'</b><i class="'+(x.d1>=0?'g':'r')+'">'+(x.d1==null?'':(x.d1>0?'+':'')+nf(x.d1)+'%')+'</i></div>'+spark(x.serie)+
       '<small>RSI 14 '+nf(x.rsi14,1)+' · vs MM20 '+(x.dist20==null?'—':nf(x.dist20,1)+'%')+' · vs MM200 '+(x.dist200==null?'—':nf(x.dist200,1)+'%')+'</small>'+
       '<small>1m '+(x.ret1m==null?'—':nf(x.ret1m,1)+'%')+' · 3m '+(x.ret3m==null?'—':nf(x.ret3m,1)+'%')+' · 52s '+nf(x.min52)+'–'+nf(x.max52)+'</small></div>').join('')+
-      '</div><p class="sm mut">Candles diários (Yahoo). RSI de Wilder e médias simples. Não é recomendação.</p></section>';
+      '</div><p class="sm mut">Candles diários (Yahoo). RSI de Wilder e médias simples. Não é recomendação.</p></section>'+jrExtrasHtml(SN)+jrSeusAtivosHtml();
+  }
+  /* v841: medo e ganância cripto, fluxo do EWZ e mapa de calor dos setores (S&P 500 e Ibovespa). */
+  function jrExtrasHtml(SN){
+    const TT=SN.tecnico||{},f=TT.fng,z=TT.ewz,se=TT.setores_eua||[],sb=SN.movers?.setores||[];
+    const nf=(x,d=2)=>x==null||!Number.isFinite(x)?'—':Number(x).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+    const mi=v=>v==null?'—':(v>=0?'+':'−')+'US$ '+nf(Math.abs(v)/1e6,1)+' mi';
+    const cor=v=>v>=1.5?'p3':v>=.5?'p2':v>0?'p1':v>-.5?'n1':v>-1.5?'n2':'n3';
+    const heat=(t,X,lab)=>X.length?'<div class="jr841-hh">'+t+'</div><div class="jr841-heat">'+X.map(x=>{const v=x.d1??x.var;return '<div class="jr841-hc '+cor(v)+'"><b>'+esc(lab(x))+'</b><span>'+(v>0?'+':'')+nf(v)+'%'+(x.m1!=null?' · 1m '+(x.m1>0?'+':'')+nf(x.m1,1)+'%':'')+'</span></div>'}).join('')+'</div>':'';
+    if(!f&&!z&&!se.length&&!sb.length)return '';
+    return '<section class="jrsec jr841"><h3>Sentimento, fluxo e setores</h3><div class="jr841-two">'+
+      (f?'<div class="jr840-c"><b>Medo e ganância · cripto</b><div class="jr840-p"><b class="'+(f.v>=55?'g':f.v<=45?'r':'')+'">'+f.v+'</b><small>'+esc(f.classe)+(f.semana_passada!=null?' · semana passada '+f.semana_passada:'')+'</small></div><span class="jr841-bar"><i style="width:'+f.v+'%"></i></span></div>':'')+
+      (z?'<div class="jr840-c"><div class="jr840-t"><b>Fluxo de opções do EWZ</b><span class="jr840-tend '+(z.vies==='comprador'?'Alta':z.vies==='vendedor'?'Baixa':'')+'">'+esc(z.vies)+'</span></div><small>Calls '+mi(z.netC)+' · Puts '+mi(z.netP)+(z.pcVol!=null?' · put/call '+nf(z.pcVol):'')+'</small><small>Volatilidade 30 dias '+(z.iv30==null?'—':nf(z.iv30,1)+'%')+(z.rank!=null?' · IV Rank '+z.rank+'%':'')+(z.mov30!=null?' · ±'+nf(z.mov30,1)+'% em 30 dias':'')+'</small><small>Cboe, atrasado ~15 min.</small></div>':'')+
+      '</div>'+heat('Setores do S&P 500 hoje',se,x=>x.nome)+heat('Setores do Ibovespa hoje',sb,x=>x.setor+' ('+x.n+')')+'</section>';
+  }
+  /* v841: seus ativos com o preço teto da sua fórmula (só na tela; usa o snapshot público do Screener e os valores salvos no aparelho). */
+  const SA={rows:null,busy:false,at:0};
+  function jrSeusAtivosHtml(){
+    const I=w.DiarioInteligenciaEtapa1,V=w.DiarioScreenersInteligencia;if(!I?.meusAtivos||!V?.valuationBR)return '';
+    let tetos={};try{tetos=JSON.parse(localStorage.getItem('dt-teto-v1')||'{}')||{}}catch{}
+    const tks=[...new Set([...I.meusAtivos(),...Object.keys(tetos)])].filter(t=>/^[A-Z]{4}\d{1,2}$/.test(t)).slice(0,20);if(!tks.length)return '';
+    if(!SA.rows&&!SA.busy&&Date.now()-SA.at>600000&&w.DiarioScreeners?.metricasPublicas){SA.busy=true;SA.at=Date.now();
+      w.DiarioScreeners.metricasPublicas('BR',tks).then(r=>{SA.rows=r?.rows||[];}).catch(()=>{SA.rows=[];}).finally(()=>{SA.busy=false;try{jrPinta()}catch(_){}});}
+    if(!SA.rows?.length)return SA.busy?'<section class="jrsec"><h3>Seus ativos · preço teto</h3><p class="sm mut">Carregando…</p></section>':'';
+    const nf=(x,d=2)=>x==null||!Number.isFinite(x)?'—':Number(x).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+    const L=SA.rows.map(r=>{const v=V.valuationBR(r,{manual:tetos[r.ticker]||null});return {tk:r.ticker,px:r.preco_referencia,teto:v?.methods?.proprio,mg:v?.margins?.proprio,est:!!v?.estimados?.proprio,bazin:v?.methods?.bazin,graham:v?.methods?.graham}}).filter(x=>x.teto!=null).sort((a,b)=>(b.mg??-999)-(a.mg??-999));
+    if(!L.length)return '';
+    return '<section class="jrsec jr841"><h3>Seus ativos · preço teto</h3><div class="jrvtab"><table><thead><tr><th>Ativo</th><th>Preço</th><th>Preço teto</th><th>Margem</th><th>Bazin</th><th>Graham</th></tr></thead><tbody>'+
+      L.map(x=>'<tr><td><b>'+esc(x.tk)+'</b></td><td>'+nf(x.px)+'</td><td>'+nf(x.teto)+(x.est?' <small class="mut">est.</small>':'')+'</td><td class="'+(x.mg>0?'g':'r')+'">'+(x.mg>0?'+':'')+nf(x.mg,1)+'%'+(x.mg>0?' · abaixo do teto':'')+'</td><td>'+nf(x.bazin)+'</td><td>'+nf(x.graham)+'</td></tr>').join('')+
+      '</tbody></table></div><p class="sm mut">Preço teto da sua fórmula (lucro projetado × payout ÷ ações ÷ yield). "est." = estimado do snapshot; ajuste na ficha do Screener Brasil. Não é recomendação.</p></section>';
   }
   w.DiarioJornalEditorial={edition,presentation};
   const journalView=vJornal;let legacyRefresh=false;
@@ -95,6 +124,7 @@
   jrPinta=function(){
     if(JRN.v?.manchete) JRN.v=publicEdition(JRN.v);
     if(JRN.arq?.manchete) JRN.arq=publicEdition(JRN.arq);
+    try{w.DiarioCerebroIA?.licoes?.(false)?.catch?.(()=>{});}catch(_){} // v841: lições do placar, uma vez por dia
     return original.apply(this,arguments);
   };
   // O painel da edição nunca é substituído por preços ao vivo de outro horário.

@@ -98,24 +98,65 @@
  'MACRO — Copom/Selic, FOMC/Fed Funds, IPCA, CPI, payroll, Treasuries, DI, DXY, petróleo e minério têm canais e defasagens distintos. Checar calendário, valor anterior, consenso, realizado, revisão e curva de juros; exigir fonte e carimbo temporal antes de inferir impacto causal.',
  'CONFLUÊNCIA — Confrontar notícia e estrutura de preços, volumes, liquidez e tendência; classificar impacto real, ruído e incerteza. Informação sem confirmação não modifica os números determinísticos nem gera recomendação de entrada.'
  ].join('\n\n');
- function view(){const local=items.filter(x=>x.owner===owner());
-  return '<section data-brain-root="1" style="background:#11141B;color:#E5E7EB;padding:16px;border:1px solid #1E232E;border-radius:4px">'+
-   '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="color:#D4A017">Cérebro da IA · Biblioteca local e RAG</h2><button data-brain-back="1" class="btn s">Voltar aos Estudos</button></div>'+
-   '<p>Livros, vídeos e artigos: extração no dispositivo, originais apenas no IndexedDB e somente trechos enviados com sua confirmação. Até 12.000 trechos por obra, com retomada por lote. Embeddings privativos por conta; sem atualização automática.</p>'+
-   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" data-brain-manual="1">Indexar Manual Mestre original</button><button class="btn s" data-brain-refresh="1">Atualizar lista</button>'+(busy?'<button class="btn s" data-brain-cancel="1">Cancelar importação</button>':'')+'</div>'+
-   '<label style="display:block;margin-top:12px">Título <input id="brain-title" maxlength="200" placeholder="Nome da obra / aula"></label>'+
-   '<label style="display:block">Autor <input id="brain-author" maxlength="120" placeholder="Autor ou fonte"></label>'+
-   '<label style="display:block">Categoria <select id="brain-cat">'+categorias.map(x=>'<option value="'+x+'">'+x.replace(/_/g,' ')+'</option>').join('')+'</select></label>'+
-   '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><input type="file" id="brain-file" accept=".pdf,.txt,.md" style="max-width:240px"><button class="btn s" data-brain-import-file="1">Importar arquivo</button></div>'+
-   '<label>Link HTTPS de YouTube ou artigo <input id="brain-url" inputmode="url" placeholder="https://..." style="font-size:16px"></label>'+
-   '<label>Transcrição ou texto autorizado (opcional para artigos) <textarea id="brain-text" rows="4" placeholder="Cole aqui uma transcrição de vídeo, ou um artigo que você pode utilizar"></textarea></label>'+
-   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" data-brain-import-video="1">Importar vídeo</button><button class="btn s" data-brain-import-web="1">Importar artigo</button></div>'+
-   '<p role="status" aria-live="polite">'+esc(progress)+'</p><progress max="100" value="'+progressPct+'" style="width:100%;accent-color:#D4A017"></progress>'+
-   '<h3>Buscar na base privada</h3><input id="brain-query" maxlength="480" placeholder="Ex.: impacto do Copom no DI e Fibonaccing" style="font-size:16px"><button class="btn s" data-brain-search="1">Buscar trechos</button>'+
-   (hits.length?'<ol>'+hits.map(x=>'<li><b>'+esc(x.titulo_obra)+'</b> · similaridade '+Number(x.similarity||0).toFixed(2)+'<p>'+esc(x.conteudo_chunk)+'</p></li>').join('')+'</ol>':'')+
-   '<h3>Obras indexadas neste dispositivo</h3><div>'+local.map(x=>'<div style="border-top:1px solid #1E232E;padding:8px 0"><b>'+esc(x.titulo)+'</b><small> · '+x.sincronizados+'/'+x.blocos+' trechos · '+esc(x.categoria)+'</small>'+(x.sincronizados<x.blocos&&x.texto?'<button class="btn s" data-brain-resume="'+esc(x.id)+'">Continuar</button>':'')+'<button class="btn s" data-brain-remove="'+esc(x.id)+'">Remover</button></div>').join('')+'</div></section>';
+ /* v841: Lições automáticas — cada leitura do placar que errou vira um trecho do Cérebro
+    (uma vez por dia, no máximo 6 por lote). As próximas análises do mesmo ativo leem esses erros. */
+ const LIC_KEY='diario-cerebro-licoes-v841';
+ const licEstado=()=>{try{const v=JSON.parse(localStorage.getItem(LIC_KEY)||'null');if(v&&v.owner===owner())return v}catch{}return {owner:owner(),obra:crypto.randomUUID(),n:0,feitas:{},dia:'',total:0}};
+ const licSalva=v=>{try{localStorage.setItem(LIC_KEY,JSON.stringify(v))}catch{}};
+ const brd=x=>String(x||'').slice(0,10).split('-').reverse().join('/');
+ function linhasPlacar(){try{return typeof jvpLinhas==='function'?jvpLinhas():[]}catch{return []}}
+ function textoLicao(x){
+  const dir=x.dir>0?'alta':'queda',ret=(x.ret>0?'+':'')+Number(x.ret).toFixed(1).replace('.',',')+'%';
+  return ('LIÇÃO DA IA — '+x.tk+'. Em '+brd(x.dia)+' a leitura foi de '+dir+' (valuation: '+(x.val||'sem dado')+'; viés técnico: '+(x.vies||'sem dado')+') com o preço em R$ '+Number(x.px).toFixed(2).replace('.',',')+'. '+
+   'Depois de '+x.dias+' dias o preço estava em R$ '+Number(x.now).toFixed(2).replace('.',',')+' ('+ret+'): a leitura errou. '+
+   'Antes de repetir uma leitura de '+dir+' em '+x.tk+', confirmar a tendência no gráfico semanal, rompimento com volume e o contexto do setor; preço descontado sozinho não basta.'+
+   (x.refs&&x.refs.length?' Fontes usadas naquela leitura: '+x.refs.join(', ')+'.':'')).slice(0,1380);
  }
- async function sync(){items=await all();
+ async function licoes(force){
+  if(busy||typeof SESS==='undefined'||!SESS||w.DIARIO_DEMO)return 0;
+  const st=licEstado(),hoje=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+  if(!force&&st.dia===hoje)return 0;
+  const novos=linhasPlacar().filter(x=>x.ok===false&&x.dias>=5&&!st.feitas[x.tk+'|'+x.dia]).slice(0,6);
+  st.dia=hoje;
+  if(!novos.length){licSalva(st);return 0}
+  const chunks=novos.map(x=>({indice:st.n++,texto:textoLicao(x)}));
+  await api({acao:'indexar',obra_id:st.obra,titulo_obra:'Lições da IA (erros do placar)',autor:'Diário de Trader',tipo_fonte:'Guia_Mercado',categoria:'Gestao_Risco',chunks});
+  novos.forEach(x=>st.feitas[x.tk+'|'+x.dia]=1);st.total=(st.total||0)+novos.length;licSalva(st);
+  try{const id=st.obra,old=(await all()).find(o=>o.id===id);await store({id,titulo:'Lições da IA (erros do placar)',autor:'Diário de Trader',tipo:'Guia_Mercado',categoria:'Gestao_Risco',texto:'',origem:'',blocos:st.total,criado:old?.criado||new Date().toISOString(),sincronizados:st.total})}catch{}
+  return novos.length;
+ }
+ /* v841: taxa de acerto por fonte — quantas leituras que usaram cada obra acertaram a direção. */
+ function porFonte(){
+  const m=new Map();
+  for(const x of linhasPlacar()){if(x.ok==null)continue;for(const t of x.refs||[]){const v=m.get(t)||{n:0,ok:0};v.n++;if(x.ok)v.ok++;m.set(t,v)}}
+  return [...m.entries()].map(([titulo,v])=>({titulo,...v,taxa:v.ok/v.n})).sort((a,b)=>b.n-a.n).slice(0,12);
+ }
+ function view(){const local=items.filter(x=>x.owner===owner()),fontes=porFonte(),st=licEstado(),erros=linhasPlacar().filter(x=>x.ok===false).length;
+  const pct=x=>Math.round(x*100)+'%';
+  return '<section data-brain-root="1" class="cb842">'+
+   '<header class="cb842-h"><div><h2>Cérebro da IA</h2><p>Biblioteca privada que a IA consulta antes de escrever: Pesquisa, análise técnica, fundamentalista, Economista, Revista e Aulas.</p></div><button data-brain-back="1" class="btn s">Voltar aos Estudos</button></header>'+
+   '<div class="cb842-split"><div class="cb842-main">'+
+   '<section class="cb842-blk"><h3>Adicionar conhecimento</h3>'+
+   '<div class="cb842-row"><label>Título<input id="brain-title" maxlength="200" placeholder="Nome da obra ou aula"></label><label>Autor<input id="brain-author" maxlength="120" placeholder="Autor ou fonte"></label>'+
+   '<label>Categoria<select id="brain-cat">'+categorias.map(x=>'<option value="'+x+'">'+x.replace(/_/g,' ')+'</option>').join('')+'</select></label></div>'+
+   '<div class="cb842-row"><input type="file" id="brain-file" accept=".pdf,.txt,.md"><button class="btn s" data-brain-import-file="1">Importar arquivo</button></div>'+
+   '<label>Link HTTPS de vídeo do YouTube ou artigo<input id="brain-url" inputmode="url" placeholder="https://..."></label>'+
+   '<label>Transcrição ou texto autorizado<textarea id="brain-text" rows="3" placeholder="Cole a transcrição do vídeo ou o texto do artigo"></textarea></label>'+
+   '<div class="cb842-row"><button class="btn s" data-brain-import-video="1">Importar vídeo</button><button class="btn s" data-brain-import-web="1">Importar artigo</button><button class="btn s" data-brain-manual="1">Indexar Manual Mestre</button>'+(busy?'<button class="btn s" data-brain-cancel="1">Cancelar importação</button>':'')+'</div>'+
+   '<p role="status" aria-live="polite" class="cb842-st">'+esc(progress)+'</p><progress max="100" value="'+progressPct+'" class="cb842-pg"></progress></section>'+
+   '<section class="cb842-blk"><h3>Buscar na base</h3><div class="cb842-row"><input id="brain-query" maxlength="480" placeholder="Ex.: impacto do Copom no DI e Fibonaccing"><button class="btn s" data-brain-search="1">Buscar trechos</button></div>'+
+   (hits.length?'<ol class="cb842-hits">'+hits.map(x=>'<li><b>'+esc(x.titulo_obra)+'</b> <span class="cb842-sim">relevância '+Number(x.similarity||0).toFixed(2).replace('.',',')+'</span><p>'+esc(x.conteudo_chunk)+'</p></li>').join('')+'</ol>':'')+'</section>'+
+   '<section class="cb842-blk"><div class="cb842-h2"><h3>Obras indexadas</h3><button class="btn s" data-brain-refresh="1">Atualizar lista</button></div>'+
+   (local.length?local.map(x=>'<div class="cb842-obra"><div><b>'+esc(x.titulo)+'</b><small>'+x.sincronizados+' de '+x.blocos+' trechos · '+esc(String(x.categoria).replace(/_/g,' '))+'</small></div><div class="cb842-row">'+(x.sincronizados<x.blocos&&x.texto?'<button class="btn s" data-brain-resume="'+esc(x.id)+'">Continuar</button>':'')+'<button class="btn s" data-brain-remove="'+esc(x.id)+'">Excluir</button></div></div>').join(''):'<p class="cb842-mut">Nenhuma obra neste aparelho.</p>')+'</section>'+
+   '</div><aside class="cb842-side">'+
+   '<section class="cb842-blk"><h3>Lições automáticas</h3><p class="cb842-mut">Toda leitura do placar que errou vira uma lição. Nas próximas análises do mesmo ativo, a IA lê o erro antes de escrever.</p>'+
+   '<div class="cb842-kpi"><div><small>Lições gravadas</small><b>'+(st.total||0)+'</b></div><div><small>Erros no placar</small><b>'+erros+'</b></div></div>'+
+   '<button class="btn s" data-brain-licoes="1">Gravar lições agora</button></section>'+
+   '<section class="cb842-blk"><h3>Acerto por fonte</h3>'+(fontes.length?'<table class="cb842-tb"><thead><tr><th>Obra</th><th>Leituras</th><th>Acerto</th></tr></thead><tbody>'+fontes.map(f=>'<tr><td>'+esc(f.titulo)+'</td><td>'+f.n+'</td><td><span class="cb842-bar"><i style="width:'+pct(f.taxa)+'" class="'+(f.taxa>=.6?'ok':f.taxa>=.4?'at':'neg')+'"></i></span>'+pct(f.taxa)+'</td></tr>').join('')+'</tbody></table>':'<p class="cb842-mut">Aparece depois que as análises do Jornal usarem obras do Cérebro e o placar conferir o resultado.</p>')+'</section>'+
+   '<section class="cb842-blk"><h3>Como a IA usa</h3><ul class="cb842-mut"><li>Busca por tema: ativo + assunto + lições de erro.</li><li>Só trechos com relevância mínima entram.</li><li>A Pesquisa mostra no relatório quais obras foram usadas.</li><li>Originais ficam neste aparelho; só os trechos vão para a sua conta.</li></ul></section>'+
+   '</aside></div></section>';
+ }
+ async function sync(){items=await all();licoes(false).then(n=>{if(n)sync()}).catch(()=>{});
   for(const obra of items){
    if(obra.blocos===150&&obra.texto){
     const total=chunks(obra.texto).length;
@@ -149,13 +190,14 @@
   }
  }
  d.addEventListener('click',async e=>{
-  const btn=e.target.closest('[data-brain-import-file],[data-brain-import-video],[data-brain-import-web],[data-brain-manual],[data-brain-refresh],[data-brain-cancel],[data-brain-search],[data-brain-remove],[data-brain-resume],[data-brain-back]');
+  const btn=e.target.closest('[data-brain-licoes],[data-brain-import-file],[data-brain-import-video],[data-brain-import-web],[data-brain-manual],[data-brain-refresh],[data-brain-cancel],[data-brain-search],[data-brain-remove],[data-brain-resume],[data-brain-back]');
   if(!btn||typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='brain')return;
   e.preventDefault();
   if(btn.hasAttribute('data-brain-back')){controller?.abort();ESV='est';if(typeof render==='function')render();return}
   if(btn.hasAttribute('data-brain-cancel')){controller?.abort();status('Importação interrompida.',0);return}
   try{
    if(btn.hasAttribute('data-brain-refresh'))return void await sync();
+   if(btn.hasAttribute('data-brain-licoes')){status('Gravando lições…',30);const n=await licoes(true);status(n?n+' lição(ões) gravada(s) no Cérebro.':'Nenhum erro novo no placar.',100);return}
    if(btn.hasAttribute('data-brain-search')){const q=value('brain-query');if(!q)throw Error('Digite uma consulta');const j=await api({acao:'buscar',consulta:q});hits=j.trechos||[];status('Pesquisa concluída',100);return}
    if(btn.dataset.brainResume){
     const obra=items.find(x=>x.owner===owner()&&x.id===btn.dataset.brainResume);
@@ -167,5 +209,5 @@
    await execute(action);
   }catch(err){status('Não foi possível concluir: '+String(err.message||err).slice(0,150),0)}
  });
- w.DiarioCerebroIA={view,enter:sync,leave(){controller?.abort();controller=null;observer?.disconnect();observer=null},chunks,manual};
+ w.DiarioCerebroIA={view,enter:sync,licoes,porFonte,textoLicao,leave(){controller?.abort();controller=null;observer?.disconnect();observer=null},chunks,manual};
 })(window,document);
