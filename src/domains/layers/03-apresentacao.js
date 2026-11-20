@@ -220,11 +220,13 @@ try {
         {pre:"Panorama pré-mercado",pregao:"Acompanhamento do mercado",pos:"Resumo do fechamento"}:
         {pre:"Plano operacional do dia",pregao:"Controle do pregão",pos:"Revisão da sessão"};
       const contexto=window.DiarioSessoes?.context();
+      const fechado=contexto?.mode==="b3_fechada"||contexto?.mode==="cripto_macro";
       const horario=new Date().toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
       const aviso=contexto?.warning||(contexto?.b3?.verified===false?"Calendário não verificado.":"");
+      const titulo=fechado&&fase==="pos"?"B3 fechada · Preparação":titulos[fase];
       return '<header class="v810-hero"><div class="v810-hero-top"><h2>'+
-        p(pagina==="home"?"bars":"target",22)+' '+titulos[fase]+'</h2>'+
-        '<span class="v810-status">'+(fase==="pregao"?"Em acompanhamento":fase==="pre"?"Preparação":"Sessão encerrada / referência")+
+        p(pagina==="home"?"bars":"target",22)+' '+titulo+'</h2>'+
+        '<span class="v810-status">'+(fechado?"Mercado B3 fechado":fase==="pregao"?"Em acompanhamento":fase==="pre"?"Preparação":"Sessão encerrada / referência")+
         '</span><time>'+horario+' BRT</time></div><p>'+b(texto)+'</p>'+
         (aviso?'<small class="v810-caveat">'+b(aviso)+'</small>':'')+'</header>';
     }
