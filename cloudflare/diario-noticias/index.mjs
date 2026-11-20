@@ -1,9 +1,12 @@
-// Piloto de notícias públicas. Não consulta Supabase, dados financeiros privados nem IA.
+// Motor de notícias públicas. Não consulta Supabase, dados financeiros privados nem IA.
+import {agruparEventos} from './eventos.mjs';
+export {agruparEventos} from './eventos.mjs';
 const KEY = 'diario:noticias:v1';
 const FONTES = [
   { nome: 'InfoMoney', host: 'infomoney.com.br', url: 'https://www.infomoney.com.br/feed/' },
   { nome: 'Money Times', host: 'moneytimes.com.br', url: 'https://www.moneytimes.com.br/mercados/feed/' },
   { nome: 'CNBC', host: 'cnbc.com', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' },
+  { nome: 'SEC EDGAR', host: 'sec.gov', url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom', formato:'atom' },
 ];
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const ent = { amp:'&', lt:'<', gt:'>', quot:'"', apos:"'", nbsp:' ' };
@@ -45,6 +48,18 @@ export function lerRSS(xml,fonte,agora=Date.now()) {
   }
   return out;
 }
+/* Feed Atom SEC: somente 8-K público. Validação de domínio e horário. */
+export function lerSECAtom(xml,fonte,agora=Date.now()) {
+  const out=[];
+  for(const b of (String(xml||'').slice(0,160000).match(/<entry\b[^>]*>[\s\S]*?<\/entry>/gi)||[]).slice(0,30)) {
+    const t=tag(b,'title').slice(0,200);
+    const l=/<link\b[^>]*href=["']([^"']+)["']/i.exec(b)?.[1]||'';
+    const seguro=linkSeguro(l,fonte.host),dt=Date.parse(tag(b,'updated')||tag(b,'published'));
+    if(!seguro||!Number.isFinite(dt)||dt>agora+300000||dt<agora-86400000||t.length<12)continue;
+    out.push({t,l:seguro,fonte:'SEC',d:new Date(dt).toISOString(),tema:tema(t)||'acoes'});
+  }
+  return out;
+}
 export function deveColetar(now=new Date()){
   const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{
     timeZone:'America/Sao_Paulo',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
@@ -52,11 +67,11 @@ export function deveColetar(now=new Date()){
   const pregao=!['Sat','Sun'].includes(p.weekday)&&+p.hour>=9&&+p.hour<18;
   return +p.minute%(pregao?2:10)===0;
 }
-export async function coletarNoticias(fetcher=fetch,agora=Date.now()){
+export async function coletarNoticias(fetcher=fetch,agora=Date.now(),anteriores=[]){
   const resultados=await Promise.allSettled(FONTES.map(async f=>{
-    const r=await fetcher(f.url,{headers:{Accept:'application/rss+xml, application/xml, text/xml'},signal:AbortSignal.timeout(5500)});
+    const r=await fetcher(f.url,{headers:{Accept:'application/rss+xml, application/atom+xml, application/xml, text/xml','User-Agent':'DiarioTraderPublicFeed/1.0 (GitHub meudiariotrade)'},signal:AbortSignal.timeout(5500)});
     if(!r.ok)throw Error('Feed HTTP '+r.status);
-    return lerRSS(await r.text(),f,agora);
+    const xml=await r.text();return f.formato==='atom'?lerSECAtom(xml,f,agora):lerRSS(xml,f,agora);
   }));
   const map=new Map(),fontesOk=[],fontesIndisponiveis=[];
   resultados.forEach((r,i)=>{
@@ -69,6 +84,7 @@ export async function coletarNoticias(fetcher=fetch,agora=Date.now()){
   });
   return {atualizadoEm:new Date(agora).toISOString(),
     itens:[...map.values()].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,50),
+    eventos:agruparEventos([...map.values()],anteriores,agora),
     fontesOk,fontesIndisponiveis};
 }
 
@@ -131,7 +147,9 @@ export default {
   async scheduled(event,env,ctx){
     if(!env.NEWS_CACHE||!deveColetar(new Date(event.scheduledTime)))return;
     ctx.waitUntil((async()=>{
-      const data=await coletarNoticias(fetch,event.scheduledTime);
+      let anteriores=[];
+      try{const antigo=await env.NEWS_CACHE.get(KEY,'json');anteriores=Array.isArray(antigo?.eventos)?antigo.eventos:[];}catch(_){/* historico opcional */}
+      const data=await coletarNoticias(fetch,event.scheduledTime,anteriores);
       // Falha de todas as fontes não substitui o último snapshot.
       if(data.fontesOk.length)await env.NEWS_CACHE.put(KEY,JSON.stringify(data));
     })());
@@ -145,7 +163,7 @@ export default {
     const path=new URL(request.url).pathname;
     if(request.method!=='GET')return json({erro:'metodo_nao_permitido'},request,env,405);
     if(path==='/health')return json({ok:Boolean(env.NEWS_CACHE),servico:'diario-noticias',modo:'independente'},request,env,env.NEWS_CACHE?200:503);
-    if(!['/v1/noticias','/v1/mercado','/v1/panorama'].includes(path))
+    if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos'].includes(path))
       return json({erro:'rota_nao_encontrada'},request,env,404);
     if(!env.NEWS_CACHE)return json({erro:'cache_nao_configurado'},request,env,503);
     if(path==='/v1/mercado'||path==='/v1/panorama'){
@@ -162,6 +180,9 @@ export default {
     const salvo=await env.NEWS_CACHE.get(KEY);
     if(!salvo)return json({erro:'ainda_sem_coleta',itens:[]},request,env,503);
     const data=JSON.parse(salvo);
-    return json({...data,desatualizado:Date.now()-Date.parse(data.atualizadoEm)>15*60000},request,env);
+    const desatualizado=Date.now()-Date.parse(data.atualizadoEm)>15*60000;
+    if(path==='/v2/eventos')return json({atualizadoEm:data.atualizadoEm,desatualizado,
+      eventos:Array.isArray(data.eventos)?data.eventos:[],fontesOk:data.fontesOk||[],fontesIndisponiveis:data.fontesIndisponiveis||[]},request,env);
+    return json({...data,desatualizado},request,env);
   }
 };

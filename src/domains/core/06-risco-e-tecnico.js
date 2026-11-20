@@ -441,6 +441,13 @@ function npComTurno() {
     }),
       (t.turno = { on: e.on ? 1 : 0, niv: e.niv, dias: s }));
   }
+  /* Preferências mínimas por ativo; só tickers, nunca preços, valores ou operações.
+     Enviadas ao Push já existente via opção explícita, sem novo polling. */
+  if (t.on?.intel === true) {
+    const ativos = window.DiarioInteligenciaEtapa1?.meusAtivos?.() || [];
+    t.intelAtivos = [...new Set(ativos.map(v => String(v).toUpperCase())
+      .filter(v => /^[A-Z0-9.^_-]{2,24}$/.test(v)))].slice(0,40);
+  } else t.intelAtivos = [];
   return t;
 }
 async function turnoPushSync(e) {

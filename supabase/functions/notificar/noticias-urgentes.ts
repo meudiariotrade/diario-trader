@@ -244,6 +244,35 @@ async function tituloEmPortugues(n: NoticiaUrgente, fetcher: Fetcher): Promise<s
     return traduzido.length >= 10 ? tituloLimpo(traduzido) : n.titulo;
   } catch { return n.titulo; }
 }
+/** Dados públicos agregados. A lista privada de ativos nunca é enviada à Cloudflare. */
+export type EventoPublico = {
+  id: string; titulo: string; prioridade: string; ultimaAtualizacao: string;
+  relacoes?: {diretos?: string[]; hipoteses?: string[]};
+  fontes?: { nome: string; url: string; publicadoEm: string }[];
+};
+export function eventosParaAtivo(eventos: EventoPublico[], ativos: string[], agora = Date.now()) {
+  const interesse = new Set(ativos.map(x => String(x).toUpperCase()).filter(x => /^[A-Z0-9.^_-]{2,24}$/.test(x)));
+  if (!interesse.size || !Array.isArray(eventos)) return [];
+  return eventos.filter(e => {
+    if (!e || e.prioridade !== 'alta' || !/^evt-[a-z0-9]{4,16}$/.test(e.id)) return false;
+    const horario = Date.parse(e.ultimaAtualizacao);
+    return Number.isFinite(horario) && horario <= agora + 120_000 && agora - horario <= 30 * 60_000 &&
+      Array.isArray(e.fontes) && e.fontes.some(f => !!linkSeguro(f.url) && Number.isFinite(Date.parse(f.publicadoEm))) &&
+      (e.relacoes?.diretos || []).some(t => interesse.has(String(t).toUpperCase()));
+  }).slice(0, 4);
+}
+async function buscarEventosPublicos(agora: Date, fetcher: Fetcher): Promise<EventoPublico[]> {
+  const r=await fetcher('https://diario-trader.lucianosilva43567.workers.dev/v2/eventos',{
+    headers:{Accept:'application/json'},signal:AbortSignal.timeout(5500)
+  });
+  if(!r.ok)throw new Error('Eventos Cloudflare HTTP '+r.status);
+  const j=await r.json(),ts=Date.parse(j?.atualizadoEm||'');
+  if(j?.desatualizado || !Array.isArray(j?.eventos) || !Number.isFinite(ts) ||
+    ts>agora.getTime()+120_000 || agora.getTime()-ts>15*60_000)
+    throw new Error('Linha do tempo desatualizada');
+  return j.eventos.slice(0, 65);
+}
+
 export async function dispararNoticias(op: {
   cliente: any; subs: any[]; enviar: (sub: any, payload: Record<string, unknown>, chave: string) => Promise<boolean>;
   token: string; agora?: Date; fetcher?: Fetcher;
@@ -251,6 +280,10 @@ export async function dispararNoticias(op: {
   const agora = op.agora || new Date(), janela = janelaNoticias(agora);
   if (!janela.consultar) return { consultou: false, intervalo: janela.intervalo, enviados: 0 };
   if (!op.subs.length) return { consultou: false, intervalo: janela.intervalo, enviados: 0, semInscricoes: true };
+  /* Um único GET público por ciclo. Falha opcional não interrompe o push original. */
+  let eventosPublicos: EventoPublico[]=[];
+  if (op.subs.some(s=>s.prefs?.on?.intel===true && Array.isArray(s.prefs?.intelAtivos) && s.prefs.intelAtivos.length))
+    try {eventosPublicos=await buscarEventosPublicos(agora,op.fetcher||fetch);}catch{/* mantém notificações atuais */}
   const dados = await coletarNoticias(op.token, agora, op.fetcher || fetch, 'leve');
   // Traduz uma vez por notícia (sem alterar a assinatura usada para deduplicar).
   const titulos = await Promise.all(dados.noticias.map((n) => tituloEmPortugues(n, op.fetcher || fetch)));
@@ -282,9 +315,35 @@ export async function dispararNoticias(op: {
       String(x.payload?.data?.assinatura_original || assinaturaNoticia(String(x.payload?.data?.titulo_original || ''))),
     ]).filter(Boolean);
     let n = 0, erros = 0;
+    const ativosSub=sub.prefs?.on?.intel===true ? (Array.isArray(sub.prefs?.intelAtivos) ? sub.prefs.intelAtivos.slice(0,40) : []) : [];
+    const relevantes=eventosParaAtivo(eventosPublicos,ativosSub,agora.getTime());
+    const linksNotificados=new Set<string>();
+    /* A mesma inscrição VAPID continua responsável por entregar em segundo plano.
+       Reserva atômica por evento + aparelho previne 10 notificações sobre a mesma história. */
+    for(const evento of relevantes.slice(0,2)) {
+      if(n >= 3 || jaEnviados+n >= 12)break;
+      const afetados=(evento.relacoes?.diretos||[]).filter(t=>ativosSub.includes(t));
+      if(!afetados.length)continue;
+      const fonte=evento.fontes?.find(f=>!!linkSeguro(f.url));
+      if(!fonte)continue;
+      const titulo='['+afetados.slice(0,3).join(', ')+'] '+evento.titulo;
+      const hora=new Date(evento.ultimaAtualizacao).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      const payload={
+        title:titulo.slice(0,120),
+        body:(fonte.nome+' · '+hora+' · Impacto potencial no ativo. Confira a fonte e o contexto.').slice(0,290),
+        tag:'int-'+evento.id,
+        data:{go:'mercado',r:'noticias',evento_id:evento.id,ativo:afetados[0],url:fonte.url}
+      };
+      try{
+        if(await op.enviar(sub,payload,sub.id+'|int|'+evento.id)){
+          n++;for(const f of evento.fontes||[])linksNotificados.add(f.url);
+        }
+      }catch{erros++;}
+    }
     for (const i of indices) {
       if (n >= 3 || jaEnviados + n >= 12) break;
       const item = dados.noticias[i], assinatura = assinaturasPT[i];
+      if(linksNotificados.has(item.link))continue;
       if (assinaturas.some((a: string) => mesmaNoticia(a, assinatura) || mesmaNoticia(a, item.assinatura))) continue;
       const identificador = assinatura + '|' + new Date(item.publicado).toISOString().slice(0, 10);
       const id = await hash(identificador);
