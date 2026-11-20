@@ -27,7 +27,16 @@
     } catch (_) {}
     return [...set].slice(0,60);
   }
-  function painel(title,desc) {
+  function painel(title,desc,compact) {
+    if(compact){
+      /* v811: no Terminal a inteligência fica recolhida no fim do painel, numa linha,
+         para não ocupar a tela de trabalho. Conteúdo e motores preservados. */
+      const el=document.createElement('details');
+      el.className='intel-compact';
+      el.dataset.intelEtapa1='1';
+      el.innerHTML='<summary><b>'+escape(title)+'</b><span class="mut sm" data-intel-resumo></span></summary><div data-intel-content class="sm">'+escape(desc)+'</div>';
+      return el;
+    }
     const el=document.createElement('section');
     el.className='card';
     el.dataset.intelEtapa1='1';
@@ -284,14 +293,15 @@
       }
     }
     if(!route){app.querySelectorAll('[data-intel-etapa1]').forEach(x=>{if(x.dataset.intelNative){delete x.dataset.intelEtapa1;x.querySelector('[data-intel-content]')?.replaceChildren();}else x.remove();});clearTimeout(state.boundary);state.boundary=null;return;}
-    const native=route==='term'?(app.querySelector('.tf413-dashboard')||app.querySelector('.dt393-native-term')||app):
+    const native=route==='term'?(app.querySelector('.trm')||app.querySelector('.dt393-native-term')||app):
       app.querySelector('.dt393-workspace .dt393-native')||app.querySelector('.dt393-native')||app;
-    const title={home:'Central de Inteligência',dia:'Preparação e revisão da sessão',agenda:'Agenda econômica inteligente',noticias:'Notícias por acontecimento e por ativo',term:'Inteligência do Terminal · regime e divergências'}[route];
+    const title={home:'Central de Inteligência',dia:'Preparação e revisão da sessão',agenda:'Agenda econômica inteligente',noticias:'Notícias por acontecimento e por ativo',term:'Inteligência do Terminal'}[route];
     let box=app.querySelector('[data-intel-etapa1]');
     const central=route==='home'?app.querySelector('.v4-iacard'):route==='dia'?app.querySelector('.v810-day-context'):null;
     if(central&&box!==central){box?.remove();box=central;box.dataset.intelEtapa1='1';box.dataset.route=route;box.dataset.intelNative='1';}
     if(box&&box.dataset.route!==route){box.remove();box=null;}
-    if(!box){box=painel(title,'Consultando dados públicos compartilhados.');box.dataset.route=route;native.prepend(box);}
+    if(!box){box=painel(title,'Consultando dados públicos compartilhados.',route==='term');box.dataset.route=route;if(route==='term')native.append(box);else native.prepend(box);}
+    if(route==='term'){const r=box.querySelector('[data-intel-resumo]');const m=mercadoPlan();const t=' · '+(m.nome||'Sem leitura validada');if(r&&r.textContent!==t)r.textContent=t;}
     const content=box.querySelector('[data-intel-content]');
     const html=({home:briefing,dia:meuDia,agenda,noticias,term:terminal}[route])();
     if(content.innerHTML!==html)content.innerHTML=html;

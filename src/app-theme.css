@@ -3241,3 +3241,11 @@ html:root body.v4-on:is([data-v4route="home"],[data-v4route="dia"]){
     max-width:none!important;width:100%!important;min-width:0;
   }
 }
+
+/* v811 — Terminal: inteligência recolhida em uma linha no fim do painel (não ocupa o topo). */
+html body #app details.intel-compact{margin:8px 0 0;border-top:1px solid #1E232E;background:#11141B;border-radius:4px;min-width:0}
+html body #app details.intel-compact>summary{list-style:none;cursor:pointer;display:flex;gap:8px;align-items:center;min-height:40px;padding:0 12px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #app details.intel-compact>summary::-webkit-details-marker{display:none}
+html body #app details.intel-compact>summary::before{content:"›";color:#D4A017;transition:transform .15s}
+html body #app details.intel-compact[open]>summary::before{transform:rotate(90deg)}
+html body #app details.intel-compact>[data-intel-content]{padding:4px 12px 12px;max-height:50vh;overflow:auto}
