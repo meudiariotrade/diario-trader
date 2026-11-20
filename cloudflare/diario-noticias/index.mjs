@@ -9,6 +9,8 @@ import {coletarAnalogia,analogiaAgora} from './analogia.mjs';
 import {coletarExtras,extrasAgora,registrarReacoes} from './extras.mjs';
 import {buscarPrecos,temChaves} from './precos.mjs';
 import {buscarCandles} from './candles.mjs';
+import {macroResponder} from './macro-gerado.mjs';
+import {ewzColeta,ewzAgora} from './ewz.mjs';
 import {resolveLogos} from './logos.mjs';
 import {loadQuotes as adrsCotacoes,limpa as adrLimpa} from './adrs.mjs';
 const AGENDA_KEY=s=>'diario:agenda:v1:'+s, SENT_KEY='diario:sentimento:v1', JUROS_KEY='diario:juros:v1';
@@ -200,6 +202,8 @@ export default {
     if(env.NEWS_CACHE&&jurosAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
       try{const j=await coletarJuros();if(j&&(j.selic||j.curva))await env.NEWS_CACHE.put(JUROS_KEY,JSON.stringify(j));}catch(_){/* conserva o último quadro */}
     })());
+    /* v836: EWZ — uma escrita no KV a cada ~6 min só no pregão americano. */
+    if(env.NEWS_CACHE)ctx.waitUntil(ewzColeta(env,fetch,new Date(event.scheduledTime)).catch(()=>null));
     if(!env.NEWS_CACHE||!deveColetar(new Date(event.scheduledTime)))return;
     ctx.waitUntil((async()=>{
       let anteriores=[];
@@ -267,6 +271,36 @@ export default {
       try{const r=await buscarCandles(p);
         if(r.status===200&&cache)await cache.put(chave,new Response(JSON.stringify(r.body),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age='+r.ttl}}));
         return json(r.body,request,env,r.status);
+      }catch(e){return json({error:String(e?.message||e)},request,env,502);}
+    }
+    /* v836: candles diários crus do Yahoo para o Radar do Supabase (mesmos tickers para todos → cache de borda de 10 min). */
+    if(path==='/v1/diario'){
+      const u=new URL(request.url),t=(u.searchParams.get('t')||'').toUpperCase(),range=u.searchParams.get('range')||'1y';
+      if(!/^[A-Z0-9.^=\-]{1,16}$/.test(t)||!/^(5d|1mo|3mo|6mo|1y|2y|3y|5y)$/.test(range))return json({error:'parametros'},request,env,400);
+      const cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/diario?t='+encodeURIComponent(t)+'&range='+range);
+      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
+      for(const h of ['query1','query2']){try{const r=await fetch('https://'+h+'.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(t)+'?range='+range+'&interval=1d',{headers:{'User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(9000)});
+        if(r.ok){const v=await r.json();if(cache)await cache.put(chave,new Response(JSON.stringify(v),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=600'}}));return json(v,request,env);}}catch(_){}}
+      return json({error:'yahoo'},request,env,502);
+    }
+    /* v836: painéis do Macro (dados públicos) com cache de borda por modo; o app volta ao Supabase se falhar. */
+    if(path==='/v1/macro'){
+      const u=new URL(request.url),q=u.searchParams,c={modo:q.get('modo')||'',aba:q.get('aba')||'',semana:q.get('semana')||''};
+      const TTL={painel:60,cotacoes:60,setores:300,ranking:600,fluxo:1800,agenda:1800,balancos:21600,sazonal:43200,sazonal_us:43200,'':120};
+      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana));
+      if(ttl==null)return json({error:'modo_nao_suportado'},request,env,400);
+      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
+      const r=await macroResponder(c);
+      if(r.status===200&&cache)await cache.put(chave,new Response(JSON.stringify(r.body),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age='+ttl}}));
+      return json(r.body,request,env,r.status);
+    }
+    /* v836: fluxo de opções do EWZ (coletado no cron do Worker e guardado no KV). */
+    if(path==='/v1/ewz'){
+      const u=new URL(request.url),venc=(u.searchParams.get('venc')||'').slice(0,10),cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/ewz?venc='+encodeURIComponent(venc));
+      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
+      try{const v=await ewzAgora(env,venc);
+        if(cache)await cache.put(chave,new Response(JSON.stringify(v),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=60'}}));
+        return json(v,request,env);
       }catch(e){return json({error:String(e?.message||e)},request,env,502);}
     }
     if(!['/v1/noticias','/v1/mercado','/v1/panorama','/v2/eventos','/v1/fluxo','/v1/sessoes','/v1/agenda','/v1/sentimento','/v1/juros','/v1/analogia','/v1/extras'].includes(path))
