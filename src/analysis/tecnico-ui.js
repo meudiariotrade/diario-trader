@@ -231,6 +231,7 @@ function detail(s,rows){
  '<div class="tech-trade-plan"><h4>Plano técnico condicional</h4><div>Gatilho <b>'+number(plan.entry)+'</b> · Stop <b>'+number(plan.stop)+'</b> · Alvo 1 (111%) <b>'+number(plan.target1)+'</b> · Alvo 2 (127,2%) <b>'+number(plan.target2a)+'</b> · Alvo 3 (141,4%) <b>'+number(plan.target2)+'</b> · Final (161,8%) <b>'+number(plan.targetFinal)+'</b> · R/R <b>'+number(plan.rr)+'</b> · R/R líquido estimado <b>'+number(plan.rrNet)+'</b></div><small>Custos ilustrativos de ida+volta: '+number(plan.costEstimateBps)+' bps; não são cotações do book nem incluem impacto/impostos. Confirme execução apenas no Profit. '+resultadoBacktest(r)+'</small></div>'+
  '<p>Fibonaccing: '+(x.fib.zone?'zona de mitigação':'fora da zona')+' · '+(x.fib.cluster?'cluster presente':'sem cluster')+' · '+(x.fib.fibogap?'Fibogap na defesa '+(x.fib.gapZone||[]).map(v=>fmt(v,2)).join('–'):'sem Fibogap aberto')+' · RMC: '+(x.turn.confirmed?'confirmado':'aguardando')+' · CISD: '+(x.turn.cisd?'confirmado':'não confirmado')+'</p>'+
  '<p>Elliott: '+E(x.elliott.label)+' — '+E(x.elliott.reason)+'</p>'+
+ '<button class="btn s" type="button" data-niv822="'+E(r.ticker)+'" data-e="'+(plan.entry??'')+'" data-s="'+(plan.stop??'')+'" data-a="'+[plan.target1,plan.target2a,plan.target2].filter(v=>v!=null).join('|')+'" data-o="tecnico">Levar para o plano</button> '+
  '<button class="btn s" type="button" data-tech-ai="'+E(r.ticker)+'">Abrir pesquisa técnica com IA existente</button></section>';
 }
 function view(m){

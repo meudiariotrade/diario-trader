@@ -45,6 +45,7 @@ function view(scope){const s=state[scope]||state.pesquisa,verified=s.record?.ana
  (verified?'<div style="border-top:1px solid var(--dt-line);padding-top:12px"><b>'+esc(s.record.ticker)+' · '+esc(s.record.tf||'Timeframe N/D')+' · '+esc(verified.side)+'</b><p>Zona: '+esc(verified.zone)+'</p><div style="max-height:185px;overflow:auto"><table style="width:100%"><thead><tr><th style="text-align:left">Nível</th><th style="text-align:right">Preço calculado</th></tr></thead><tbody>'+verified.levels.map(l=>'<tr><td>'+fmt(l.percentual)+'%</td><td style="text-align:right">'+fmt(l.preco)+'</td></tr>').join('')+'</tbody></table></div>'+
  '<p>Gatilho condicional <b>'+fmt(verified.plan.entry)+'</b> · Stop '+fmt(verified.plan.stop)+' · Alvos '+verified.plan.targets.map(fmt).join(' | ')+'</p>'+
  '<p>Retorno teórico '+verified.plan.rr.map(x=>fmt(x)+' vezes o risco').join(' / ')+' · Invalidação: cruzamento do stop em sentido contrário à hipótese.</p>'+
+ (s.record.ticker?'<p><button type="button" class="btn s" data-niv822="'+esc(s.record.ticker)+'" data-e="'+verified.plan.entry+'" data-s="'+verified.plan.stop+'" data-a="'+verified.plan.targets.slice(0,3).join('|')+'" data-o="fibonaccing" style="min-height:40px">Levar para o plano</button></p>':'')+
  '<small>Não são ordens, nem preços de book. Custos, spread, volume, fechamento e contexto técnico precisam ser validados.</small></div>':'')+'</section>';
 }
 function rerender(scope){const el=d.querySelector('[data-fibo-panel="'+scope+'"]');if(el)el.outerHTML=view(scope)}
