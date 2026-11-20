@@ -17,7 +17,8 @@ test('v810 preserva cards nativos e seleção contextual sem navegar ou criar ro
   assert.match(root,/v810Manual=null;qt=null;xt\(\)/);
   assert.match(root,/v810Manual && \(now>=v810Manual\.until/);
   assert.match(root,/const be = \{ home: le, dia: ie, ops: de, stats: ue \}/);
-  assert.doesNotMatch(root,/function v810Operacoes[\s\S]*?function Ft[\s\S]*?fetch\(/);
+  const v810=root.slice(root.indexOf('function v810Operacoes'),root.indexOf('function Ft()'));
+  assert.doesNotMatch(v810,/fetch\(|supabase\./);
 });
 test('v810 usa dados reais de risco, checklists e operações sem números fictícios',()=>{
   assert.match(root,/v810Operacoes\(t,a\)/);
@@ -47,7 +48,7 @@ test('sessões B3 e EUA respeitam dia comum, feriado B3 e pós-pregão',()=>{
   assert.equal(w.DiarioSessoes.context(time('2026-11-19','08:00:00')).phase,'pre');
   assert.equal(w.DiarioSessoes.context(time('2026-11-19','10:30:00')).phase,'during');
   assert.equal(w.DiarioSessoes.context(time('2026-11-19','19:30:00')).phase,'post');
-  const holiday=w.DiarioSessoes.context(time('2026-11-20','11:00:00'));
+  const holiday=w.DiarioSessoes.context(time('2026-11-20','12:00:00'));
   assert.equal(holiday.b3.state,'fechado');
   assert.equal(holiday.mode,'b3_fechada');
   assert.equal(holiday.us.tradable,true);
