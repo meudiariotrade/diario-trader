@@ -1,7 +1,7 @@
 /* v805 — biblioteca local com RAG opt-in. Zero Storage, zero polling. */
 ;(function(w,d){'use strict';
  const esc=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
- const DB='diario-cerebro-local-v805',ST='obras',MAX=150;
+ const DB='diario-cerebro-local-v805',ST='obras',MAX=12000;
  const categorias=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Gestao_Risco'];
  const tipos={pdf:'Livro_PDF',txt:'Livro_PDF',md:'Livro_PDF'};
  let progress='',progressPct=0,items=[],hits=[],busy=false,controller=null,viewer=false,observer=null;
@@ -28,7 +28,7 @@
     acc+=(acc?' ':'')+item;}
   }
   if(acc)arr.push(acc);
-  return arr.slice(0,MAX).filter(x=>x.trim().length>=50).map((texto,indice)=>({texto,indice}));
+  return arr.filter(x=>x.trim().length>=50).map((texto,indice)=>({texto,indice}));
  }
  async function extractPDF(file){
   // PDF.js é importado sob demanda. Bytes nunca vão ao servidor.
@@ -38,9 +38,10 @@
   const loadingTask=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}),parts=[];
   try{
    const doc=await loadingTask.promise;
-   for(let i=1;i<=Math.min(doc.numPages,550);i++){
+   for(let i=1;i<=doc.numPages;i++){
     const page=await doc.getPage(i),content=await page.getTextContent();
     parts.push(content.items.map(t=>t.str||'').join(' '));
+    page.cleanup?.();
     if(i%10===0)status('PDF local: '+i+'/'+doc.numPages+' páginas',Math.floor(i/doc.numPages*35));
    }
   }finally{
@@ -62,12 +63,22 @@
  async function ingest({titulo,autor,tipo,categoria,texto,url=''},anterior=null){
   if(busy)throw Error('Importação anterior em andamento');
   const blocks=chunks(texto);if(!blocks.length)throw Error('Texto insuficiente para indexar');
+  if(blocks.length>MAX)throw Error('Este arquivo excede 12.000 trechos. Divida o livro em volumes para importar todo o texto.');
   if(!anterior&&!confirm('Indexar '+blocks.length+' trechos no Supabase? Originais ficam apenas neste dispositivo.'))return;
-  busy=true;controller=new AbortController();const origin=owner(),id=anterior?.id||crypto.randomUUID();
-  const inicio=anterior?.sincronizados||0;
-  const criado=anterior?.criado||new Date().toISOString();
+  busy=true;controller=new AbortController();const origin=owner();
   try{
-   if(!anterior)await store({id,titulo,autor,tipo,categoria,texto,origem:url,blocos:blocks.length,criado,sincronizados:0});
+   let inicio=anterior?.sincronizados||0;
+   if(!anterior&&tipo==='Livro_PDF'){
+    const candidatos=(await all()).filter(x=>x.owner===origin&&x.tipo===tipo&&x.titulo===titulo&&x.autor===autor&&x.categoria===categoria&&x.texto&&texto.startsWith(x.texto));
+    if(candidatos.length===1){
+     anterior=candidatos[0];
+     const antigos=chunks(anterior.texto);
+     while(inicio<anterior.sincronizados&&antigos[inicio]?.texto===blocks[inicio]?.texto)inicio++;
+    }
+   }
+   if(owner()!==origin||!controller||controller.signal.aborted)throw Error('Importação interrompida');
+   const id=anterior?.id||crypto.randomUUID(),criado=anterior?.criado||new Date().toISOString();
+   await store({id,titulo,autor,tipo,categoria,texto,origem:url,blocos:blocks.length,criado,sincronizados:inicio});
    for(let i=inicio;i<blocks.length;i+=6){
     if(controller.signal.aborted||owner()!==origin)throw Error('Importação interrompida');
     const group=blocks.slice(i,i+6);
@@ -90,7 +101,7 @@
  function view(){const local=items.filter(x=>x.owner===owner());
   return '<section data-brain-root="1" style="background:#11141B;color:#E5E7EB;padding:16px;border:1px solid #1E232E;border-radius:4px">'+
    '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="color:#D4A017">Cérebro da IA · Biblioteca local e RAG</h2><button data-brain-back="1" class="btn s">Voltar aos Estudos</button></div>'+
-   '<p>Livros, vídeos e artigos: extração no dispositivo, originais apenas no IndexedDB e somente trechos enviados com sua confirmação. Limite de 150 trechos por obra. Embeddings privativos por conta; sem atualização automática.</p>'+
+   '<p>Livros, vídeos e artigos: extração no dispositivo, originais apenas no IndexedDB e somente trechos enviados com sua confirmação. Até 12.000 trechos por obra, com retomada por lote. Embeddings privativos por conta; sem atualização automática.</p>'+
    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" data-brain-manual="1">Indexar Manual Mestre original</button><button class="btn s" data-brain-refresh="1">Atualizar lista</button>'+(busy?'<button class="btn s" data-brain-cancel="1">Cancelar importação</button>':'')+'</div>'+
    '<label style="display:block;margin-top:12px">Título <input id="brain-title" maxlength="200" placeholder="Nome da obra / aula"></label>'+
    '<label style="display:block">Autor <input id="brain-author" maxlength="120" placeholder="Autor ou fonte"></label>'+
@@ -104,7 +115,14 @@
    (hits.length?'<ol>'+hits.map(x=>'<li><b>'+esc(x.titulo_obra)+'</b> · similaridade '+Number(x.similarity||0).toFixed(2)+'<p>'+esc(x.conteudo_chunk)+'</p></li>').join('')+'</ol>':'')+
    '<h3>Obras indexadas neste dispositivo</h3><div>'+local.map(x=>'<div style="border-top:1px solid #1E232E;padding:8px 0"><b>'+esc(x.titulo)+'</b><small> · '+x.sincronizados+'/'+x.blocos+' trechos · '+esc(x.categoria)+'</small>'+(x.sincronizados<x.blocos&&x.texto?'<button class="btn s" data-brain-resume="'+esc(x.id)+'">Continuar</button>':'')+'<button class="btn s" data-brain-remove="'+esc(x.id)+'">Remover</button></div>').join('')+'</div></section>';
  }
- async function sync(){items=await all();refresh();
+ async function sync(){items=await all();
+  for(const obra of items){
+   if(obra.blocos===150&&obra.texto){
+    const total=chunks(obra.texto).length;
+    if(total>150&&total<=MAX)obra.blocos=total;
+   }
+  }
+  refresh();
   observer?.disconnect();observer=null;
   if(d.querySelector('[data-brain-root]')&&typeof MutationObserver!=='undefined'){
    observer=new MutationObserver(()=>{if(d.querySelector('[data-brain-root]'))return;controller?.abort();observer?.disconnect();observer=null});
@@ -116,7 +134,7 @@
   const titulo=value('brain-title'),autor=value('brain-author'),categoria=value('brain-cat')||'Analise_Tecnica',url=value('brain-url'),text=value('brain-text');
   if(action==='manual')return ingest({titulo:'Manual Mestre Institucional',autor:'Diário de Trader',tipo:'Guia_Mercado',categoria:'Fatos_Relevantes_Macro',texto:manual});
   if(action==='file'){const f=d.getElementById('brain-file')?.files?.[0];if(!f)throw Error('Escolha um PDF, TXT ou MD');
-   const ext=f.name.split('.').pop().toLowerCase();if(!tipos[ext]||f.size>35*1024*1024)throw Error('Formato ou tamanho não aceito (máximo 35 MB)');
+   const ext=f.name.split('.').pop().toLowerCase();if(!tipos[ext]||f.size>100*1024*1024)throw Error('Formato ou tamanho não aceito (máximo 100 MB)');
    status('Extraindo texto localmente…',5);const s=ext==='pdf'?await extractPDF(f):await f.text();
    return ingest({titulo:titulo||f.name,autor,tipo:'Livro_PDF',categoria,texto:s});
   }

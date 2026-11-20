@@ -148,7 +148,7 @@ Deno.serve(async(req:Request)=>{
    const seen=new Set<number>();const rows=[];
    let usarReserva=false;
    for(const c of b.chunks){
-    if(!Number.isInteger(c.indice)||c.indice<0||c.indice>=150||seen.has(c.indice))return response(req,{erro:'Índice inválido ou duplicado'},400);
+    if(!Number.isInteger(c.indice)||c.indice<0||c.indice>=12000||seen.has(c.indice))return response(req,{erro:'Índice inválido ou duplicado'},400);
     const chunk=short(c.texto,1400);if(chunk.length<50||String(c.texto).length>1400)return response(req,{erro:'Bloco deve conter 50 a 1400 caracteres'},400);
     seen.add(c.indice);
     const embedding=usarReserva?null:await vetorDisponivel(chunk,'RETRIEVAL_DOCUMENT');

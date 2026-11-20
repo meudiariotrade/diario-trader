@@ -40,3 +40,14 @@ test('v806: falha ao abrir PDF também finaliza loading task',async()=>{
  await assert.rejects(extrator({GlobalWorkerOptions:{},getDocument})(arquivo),/PDF inválido/);
  assert.equal(destroyed,1);
 });
+
+test('livro longo inclui a página 850 nos trechos pesquisáveis',async()=>{
+ const doc={numPages:850,getPage:async i=>({getTextContent:async()=>({items:[{str:'Página '+i+' '+('material de estudo '.repeat(60))+' marcador-'+i}]})})};
+ const texto=await extrator({GlobalWorkerOptions:{},getDocument:()=>({promise:Promise.resolve(doc),destroy:async()=>{}})})(arquivo);
+ const window={};
+ vm.runInNewContext(fs.readFileSync('src/ai/cerebro-ia.js','utf8'),{window,document:{addEventListener(){}}});
+ const partes=window.DiarioCerebroIA.chunks(texto);
+ assert.ok(partes.length>501);
+ assert.ok(partes.every((p,i)=>p.indice===i&&p.texto.length<=1400));
+ assert.match(partes.at(-1).texto,/marcador-850/);
+});
