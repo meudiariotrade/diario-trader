@@ -1,4 +1,4 @@
-import {envComVault} from '../_shared/ai-router.ts';
+import {envComVault, provedores} from '../_shared/ai-router.ts';
 /** v805 — IA de biblioteca e visão; JWT obrigatório, sem Storage, sem polling. */
 const sb=Deno.env.get('SUPABASE_URL')||'';
 const pub=Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -29,13 +29,15 @@ async function embed(text:string,task:'RETRIEVAL_QUERY'|'RETRIEVAL_DOCUMENT'){
  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',{
  method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
  body:JSON.stringify({model:'models/gemini-embedding-001',content:{parts:[{text}]},taskType:task,outputDimensionality:768}),signal:AbortSignal.timeout(18000)});
+ if(r.status===429){await r.body?.cancel();throw Error('O Gemini atingiu o limite de uso da indexação ou busca (HTTP 429). Tente novamente mais tarde.')}
  if(!r.ok){await r.body?.cancel();throw Error('Embedding indisponível (HTTP '+r.status+')')}
  const v=(await r.json())?.embedding?.values;
  if(!Array.isArray(v)||v.length!==768||!v.every((n:unknown)=>typeof n==='number'&&Number.isFinite(n)))throw Error('Embedding de 768 dimensões não confirmado');
  return v;
 }
 async function vision(dataURL:string){
- const key=await chaveDeEmbeddings();
+ const provider=provedores(await envComVault()).find(p=>p.id==='gemini');
+ if(!provider?.chave)throw Error('Provedor Gemini não configurado para visão');
  const m=/^data:(image\/(?:jpeg|webp|png));base64,([A-Za-z0-9+/=]+)$/.exec(dataURL);
  if(!m||m[2].length>1_200_000)throw Error('Imagem inválida ou superior ao limite de segurança');
  const instruction=`Você é um leitor de gráficos com Fibonaccing. Extraia exclusivamente valores que sejam LEGÍVEIS na imagem. Não invente preços.
@@ -44,12 +46,19 @@ async function vision(dataURL:string){
  "niveis_visiveis":[{"percentual":number,"preco":number}],"confianca":"alta"|"media"|"baixa","observacoes":string}.
  Não calcule alvos, não presuma a posição dos marcadores 0/100 pela orientação do gráfico. Se a ancoragem
  e os rótulos não forem legíveis, retorne null. Os preços são NUMÉRICOS e precisam corresponder aos rótulos.`;
- const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
- method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
- body:JSON.stringify({contents:[{role:'user',parts:[{text:instruction},{inlineData:{mimeType:m[1],data:m[2]}}]}],generationConfig:{temperature:0,responseMimeType:'application/json',maxOutputTokens:1700}}),
- signal:AbortSignal.timeout(24000)});
- if(!r.ok){await r.body?.cancel();throw Error('Leitura visual indisponível (HTTP '+r.status+')')}
- const j=await r.json(),t=(j.candidates?.[0]?.content?.parts||[]).map((x:any)=>x.text||'').join('');
+ const body=JSON.stringify({contents:[{role:'user',parts:[{text:instruction},{inlineData:{mimeType:m[1],data:m[2]}}]}],generationConfig:{temperature:0,responseMimeType:'application/json',maxOutputTokens:1700}});
+ const signal=AbortSignal.timeout(24000);
+ let resposta:Response|undefined;
+ let modelo='';
+ for(const candidato of provider.modelos){
+  const url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(candidato)+':generateContent';
+  const tentativa=await fetch(url,{method:'POST',headers:{'x-goog-api-key':provider.chave,'Content-Type':'application/json'},body,signal});
+  if(tentativa.ok){resposta=tentativa;modelo=candidato;break}
+  await tentativa.body?.cancel();
+  if(tentativa.status!==404)throw Error('Leitura visual indisponível (HTTP '+tentativa.status+')');
+ }
+ if(!resposta)throw Error('Nenhum modelo de leitura visual configurado está disponível (HTTP 404)');
+ const j=await resposta.json(),t=(j.candidates?.[0]?.content?.parts||[]).map((x:any)=>x.text||'').join('');
  let v;try{v=JSON.parse(t)}catch{throw Error('A IA não retornou JSON válido')}
  const number=(n:unknown)=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<1e12?n:null;
  const levels=Array.isArray(v.niveis_visiveis)?v.niveis_visiveis.slice(0,35).map((n:any)=>({percentual:number(n.percentual),preco:number(n.preco)})).filter((n:any)=>n.percentual!==null&&n.preco!==null):[];
@@ -57,7 +66,7 @@ async function vision(dataURL:string){
  direcao:['Compra / Alta','Venda / Baixa'].includes(v.direcao)?v.direcao:null,
  ancora_0:number(v.ancora_0),ancora_100:number(v.ancora_100),preco_atual:number(v.preco_atual),
  niveis_visiveis:levels,confianca:['alta','media','baixa'].includes(v.confianca)?v.confianca:'baixa',
- observacoes:short(v.observacoes,450),modelo:'gemini-2.5-flash'};
+ observacoes:short(v.observacoes,450),modelo};
 }
 Deno.serve(async(req:Request)=>{
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(req)});
