@@ -47,20 +47,25 @@ test('v810 E2E: duas telas, três fases, override/auto, CLS, overflow e captura 
   await expect(page.locator('#app .v810-day')).toHaveAttribute('data-v810-phase','pregao');
   await expect(page.locator('#app .v810-day [data-v4auto]')).toHaveClass(/on/);
   await page.evaluate(()=>{
-    window.__v810qa={mutations:0,removed:0,cls:0};
+    window.__v810qa={mutations:0,removed:0,cls:0,shifts:[]};
     const target=document.querySelector('#app .v810-day');
     window.__v810mo=new MutationObserver(ms=>{__v810qa.mutations+=ms.length;
       for(const m of ms)for(const n of m.removedNodes)if(n.nodeType===1&&n.matches?.('[data-intel-etapa1]'))__v810qa.removed++;
     });
     __v810mo.observe(target,{subtree:true,childList:true});
     window.__v810po=typeof PerformanceObserver==='function' ? new PerformanceObserver(list=>{
-      for(const e of list.getEntries())if(!e.hadRecentInput)__v810qa.cls+=e.value;
+      for(const e of list.getEntries())if(!e.hadRecentInput){
+        __v810qa.cls+=e.value;
+        __v810qa.shifts.push({score:e.value,time:e.startTime,
+          nodes:(e.sources||[]).slice(0,4).map(s=>({tag:s.node?.tagName,classes:String(s.node?.className||'').slice(0,90),previous:s.previousRect,current:s.currentRect}))});
+      }
     }):null;
     try{__v810po?.observe({type:'layout-shift'});}catch{}
   });
   await page.waitForTimeout(6000);
   const audit=await page.evaluate(()=>{__v810mo.disconnect();__v810po?.disconnect();return __v810qa;});
   assert.equal(audit.removed,0,'Central não desmonta sozinha');
+  if(audit.cls>=0.1)console.log('V810_LAYOUT_SHIFT_DIAGNOSTIC',JSON.stringify({name,audit}));
   assert.ok(audit.cls<0.1,'layout shift na observação: '+audit.cls);
   assert.deepEqual(errors,[],'Sem exceção JS: '+name);
   await page.close();
