@@ -42,7 +42,7 @@ test('v807: frontend só consulta GET público sem enviar posições ou saldo',a
   assert.ok(calls.some(x=>x.url.endsWith('/v2/eventos')));
   assert.ok(calls.some(x=>x.url.endsWith('/v1/mercado')));
   assert.ok(calls.every(x=>x.params.method==='GET' && !x.params.body && x.params.credentials==='omit'));
-  assert.deepEqual(w.DiarioInteligenciaEtapa1.meusAtivos(),['PETR4']);
+  assert.equal(w.DiarioInteligenciaEtapa1.meusAtivos().join(','),'PETR4');
   dom.window.close();
 });
 test('v807: fonte publica mantém SEC em branch e VAPID existente não é substituído',()=>{
