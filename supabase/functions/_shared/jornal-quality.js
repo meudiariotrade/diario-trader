@@ -1,7 +1,7 @@
 /* Contrato editorial compartilhado pelo servidor, tela e PDF. Sem rede ou armazenamento. */
 (function (root) {
   'use strict';
-  const VERSION = 'jornal-v717';
+  const VERSION = 'jornal-v840';
   const clone = x => JSON.parse(JSON.stringify(x ?? null));
   const number = x => typeof x === 'number' && Number.isFinite(x);
   const text = x => String(x ?? '').trim();
@@ -60,12 +60,21 @@
     if (d.length < 5) return null;
     return { ...clone(g), d, parcial:true };
   }
+  /* v840: painel técnico (índices EUA e criptos) — só números finitos e série curta. */
+  function tecnico(t) {
+    const itens=(Array.isArray(t?.itens)?t.itens:[]).filter(x=>x&&number(x.px)&&x.px>0&&/^[\^A-Z0-9.=-]{1,12}$/.test(text(x.sym))).slice(0,8)
+      .map(x=>({sym:text(x.sym),nome:text(x.nome).slice(0,30),tipo:x.tipo==='cripto'?'cripto':'indice',px:x.px,d1:number(x.d1)?x.d1:null,rsi14:number(x.rsi14)?x.rsi14:null,
+        sma20:number(x.sma20)?x.sma20:null,sma50:number(x.sma50)?x.sma50:null,sma200:number(x.sma200)?x.sma200:null,dist20:number(x.dist20)?x.dist20:null,dist200:number(x.dist200)?x.dist200:null,
+        ret1m:number(x.ret1m)?x.ret1m:null,ret3m:number(x.ret3m)?x.ret3m:null,max52:number(x.max52)?x.max52:null,min52:number(x.min52)?x.min52:null,
+        tendencia:['Alta','Baixa','Lateral'].includes(x.tendencia)?x.tendencia:'Lateral',dia:text(x.dia).slice(0,10),serie:(Array.isArray(x.serie)?x.serie:[]).filter(number).slice(-60)}));
+    return {itens,coletado_em:text(t?.coletado_em),fonte:text(t?.fonte)};
+  }
   function snapshot(e, market = {}) {
     if (e.snapshot?.versao === VERSION) return freeze(clone(e.snapshot));
     const collected = text(e.dados_coletados_em), quotes = (e.cotacoes || []).map(q => quote(q,collected));
     for(const q of quotes) { if(q.dia_referencia && q.dia_referencia>e.dia){q.px=null;q.d1=null;q.status='divergente';q.observacao='Referência posterior à data da edição.';} else if(q.dia_referencia && Date.parse(e.dia)-Date.parse(q.dia_referencia)>7*86400000){q.status='antigo';q.observacao='Referência com mais de sete dias; não tratar como atual.';} }
     const data = { versao:VERSION, dia:e.dia, edicao:e.edicao, coletado_em:collected, cotacoes:quotes,
-      sessoes:clone(market.sessoes || {}), graficos:{}, niveis:{}, movers:{altas:[],baixas:[]}, macro:clone(market.macro || {}), fed:fed(market.fed) };
+      sessoes:clone(market.sessoes || {}), graficos:{}, niveis:{}, movers:{altas:[],baixas:[]}, macro:clone(market.macro || {}), fed:fed(market.fed), tecnico:tecnico(market.tecnico) };
     for (const k of ['win','wdo']) {
       const q = quotes.find(q=>q.k===k);
       data.niveis[k] = levels(data.sessoes[k],q,e);
@@ -82,7 +91,7 @@
     return (Array.isArray(list)?list:[]).filter(a=>a && text(a.evento) && !/divulga[cç][aã]o de indicadores econ[oô]micos|monitoramento da trajet[oó]ria/i.test(a.evento) && url(a.fonte_url) && /^\d{4}-\d{2}-\d{2}$/.test(a.data || '') && a.pais && Number.isFinite(Date.parse(a.data+'T12:00:00Z')) && new Date(a.data+'T12:00:00Z').toISOString().slice(0,10)===a.data && (!a.horario || /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(a.horario)) && (!edition.dia || a.data>=edition.dia) && (!edition.gerado || !a.horario || a.realizado || Date.parse(a.data+'T'+a.horario+':00-03:00')>=Date.parse(edition.gerado))).map(a=>({...clone(a), fonte_url:url(a.fonte_url), horario:text(a.horario), quando:a.data+(a.horario?' '+a.horario+' Brasília':' · horário não confirmado')}));
   }
   function inspect(e, snap) {
-    const problems=[], gaps=[...(e.agenda_lacunas||[])], texts=[e.manchete,...(e.materias||[])].filter(Boolean);
+    const problems=[], fixes=[], gaps=[...(e.agenda_lacunas||[])], texts=[e.manchete,...(e.materias||[])].filter(Boolean);
     if(e.verificacao_fontes) gaps.push(e.verificacao_fontes);
     if(e.pesquisa_web_parcial) gaps.push('Pesquisa web disponível apenas em parte da edição; demais textos usam os dados recebidos.');
     else if(e.pesquisa_web===false) gaps.push('Pesquisa web não disponível nesta geração; análise limitada aos dados e resumos recebidos.');
@@ -105,13 +114,13 @@
           if(number(q.px)) {
             const priceRe=new RegExp('\\b'+escaped+'\\b[^!?;\\n]{0,100}?\\b(?:aos|cotad[oa](?: a| em)?|negociad[oa](?: a| em)?)\\s*(?:R\\$\\s*)?([\\d.]+(?:,\\d+)?)','gi');
             for(const h of txt.matchAll(priceRe)) { const raw=h[1],v=Number(raw.replace(/\./g,'').replace(',','.')),dec=raw.includes(',')?raw.split(',')[1].length:0;
-              if(number(v)&&Math.abs(v-q.px)>Math.max(.0001,.51*10**-dec)) { problems.push(`${alias}: preço citado diverge do snapshot (${price(q)}).`);blocked.add(index); }
+              if(number(v)&&Math.abs(v-q.px)>Math.max(.0001,.51*10**-dec)) { fixes.push({index,alias,de:raw,para:price(q),tipo:'preco'}); }
             }
           }
           for(const hit of txt.matchAll(re)) {
             let n=Number(hit[1].replace(',','.').replace('−','-'));
             if(n>0 && /queda|recu|cai|baixa|despenc|perd/i.test(hit[0])) n=-n;
-            if(number(q.d1) && Math.abs(n-q.d1)>.055) { problems.push(`${alias}: variação citada diverge do snapshot (${change(q)}).`); blocked.add(index); }
+            if(number(q.d1) && Math.abs(n-q.d1)>.055) { fixes.push({index,alias,de:hit[1],para:change(q).replace(/^[+−-]/,'').replace(/%$/,''),tipo:'variacao',sinal:q.d1<0?'-':'+',trecho:hit[0]}); }
           }
         }
       }
@@ -122,13 +131,23 @@
         const token=text(metric.valor).match(/[+−-]?\d[\d.,]*/)?.[0];if(!token)continue;
         const raw=token.includes(',')?token.replace(/\./g,'').replace(',','.'):token.replace(/\.(?=\d{3}(?:\D|$))/g,'');
         const value=Number(raw),dec=token.includes(',')?token.split(',')[1].length:0;
-        if(number(value)&&Math.abs(value-q.px)>Math.max(.0001,.51*10**-dec)) { problems.push((q.n||q.k)+': preço no card diverge do snapshot.');blocked.add(index); }
+        if(number(value)&&Math.abs(value-q.px)>Math.max(.0001,.51*10**-dec)) { metric.valor=text(metric.valor).replace(token,price(q)); gaps.push((q.n||q.k)+': número do card ajustado ao último dado da edição.'); }
       }
       if(!blocked.has(index) && !url(m.fonte_url) && !(m.fontes||[]).some(f=>url(typeof f==='string'?f:f.url))) gaps.push(`${m.titulo}: fonte específica não vinculada.`);
     });
     if(!snap.fed) gaps.push('FedWatch omitido: faixa-alvo, metodologia ou referência não confirmadas.');
     if(!Object.values(snap.niveis).some(Boolean)) gaps.push('Pivôs indisponíveis: falta sessão completa do contrato; proxies à vista não são usados.');
-    return { versao:VERSION, estado:problems.length?'revisar':'com_limitacoes', problemas:[...new Set(problems)], lacunas:[...new Set(gaps)], artigos_bloqueados:[...blocked] };
+    /* v840: número divergente é corrigido para o dado da edição em vez de reter a matéria inteira
+       (antes, um único número derrubava o texto e o Jornal encolhia). Só "revisao" explícita ainda retém. */
+    for(const f of fixes){const m=texts[f.index];if(!m)continue;
+      for(const campo of ['titulo','linha_fina','texto','por_que_importa']){
+        if(typeof m[campo]!=='string')continue;
+        if(f.tipo==='variacao'&&f.trecho){const novo=f.trecho.replace(f.de,f.para);m[campo]=m[campo].split(f.trecho).join(novo);}
+        else{const re=new RegExp('(\\b'+f.alias.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b[^!?;\\n]{0,100}?)'+f.de.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');m[campo]=m[campo].replace(re,'$1'+f.para);}
+      }
+      gaps.push(`${f.alias}: número citado ajustado ao último dado da edição.`);
+    }
+    return { versao:VERSION, estado:problems.length?'revisar':'com_limitacoes', problemas:[...new Set(problems)], lacunas:[...new Set(gaps)], artigos_bloqueados:[...blocked], ajustes:fixes.length };
   }
   function prepare(input, market={}) {
     if(input.editorial_versao===VERSION && input.snapshot?.versao===VERSION) return clone(input);

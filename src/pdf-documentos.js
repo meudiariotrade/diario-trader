@@ -1875,6 +1875,32 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
     );
   }
   {
+    // v840: painel técnico — índices americanos e principais criptos, com dados desta edição.
+    const TG=(snap.tecnico&&snap.tecnico.itens)||[];
+    if(TG.length){
+      Je({ico:"tec",tit:"Painel técnico",sub:"Índices americanos e criptos: tendência, RSI, médias e gráfico de 60 dias"});
+      const gw=10,cw=(p-gw)/2,ch=114,nf=(x,dd=2)=>x==null||!isFinite(x)?"—":Number(x).toLocaleString("pt-BR",{minimumFractionDigits:dd,maximumFractionDigits:dd});
+      for(let i=0;i<TG.length;i+=2){
+        J(ch+8);const y0=o.y;
+        TG.slice(i,i+2).forEach((x,k)=>{
+          const x0=c+k*(cw+gw),tc=x.tendencia==="Alta"?d.up:x.tendencia==="Baixa"?d.dn:d.mu;
+          ue(x0,y0,cw,ch,{fill:d.wh});
+          h(x.nome,x0+10,y0+9,{s:11,f:"b",c:d.nv});
+          o.pill(x.tendencia.toUpperCase(),x0+cw-10,y0+8,{s:6.8,bg:x.tendencia==="Alta"?d.grl:x.tendencia==="Baixa"?l("#fdf2f0"):d.cz,c:tc,al:"r"});
+          h((x.tipo==="cripto"?"US$ ":"")+nf(x.px,x.px<10?4:2),x0+10,y0+26,{s:13,f:"b",c:d.tx});
+          x.d1!=null&&h((x.d1>0?"+":"")+nf(x.d1)+"%",x0+cw-10,y0+29,{s:9,f:"b",c:x.d1>=0?d.up:d.dn,al:"r"});
+          const S=x.serie||[];
+          if(S.length>2){const mn=Math.min(...S),mx=Math.max(...S),sw=cw-20,sh=32,dx=sw/(S.length-1);
+            o.path(S.map((v,j)=>(j?"L ":"M ")+(j*dx).toFixed(1)+" "+(sh-(mx>mn?(v-mn)/(mx-mn)*sh:sh/2)).toFixed(1)).join(" "),x0+10,y0+46,{stroke:S[S.length-1]>=S[0]?d.up:d.dn,bw:1.2});}
+          h("RSI 14: "+nf(x.rsi14,1)+" · vs média 20: "+(x.dist20==null?"—":(x.dist20>0?"+":"")+nf(x.dist20,1)+"%")+" · vs média 200: "+(x.dist200==null?"—":(x.dist200>0?"+":"")+nf(x.dist200,1)+"%"),x0+10,y0+84,{s:7,c:d.mu,w:cw-20});
+          h("1 mês: "+(x.ret1m==null?"—":nf(x.ret1m,1)+"%")+" · 3 meses: "+(x.ret3m==null?"—":nf(x.ret3m,1)+"%")+" · 52 sem.: "+nf(x.min52)+" a "+nf(x.max52),x0+10,y0+97,{s:7,c:d.mu,w:cw-20});
+        });
+        o.y=y0+ch+8;
+      }
+      ve("Candles diários do Yahoo Finance. RSI de Wilder (14) e médias simples de 20, 50 e 200 dias. Tendência de alta: preço acima da média de 50 e ela acima da de 200. Não é recomendação.",{s:6.8,c:d.mu});
+    }
+  }
+  {
     const qe = e.agenda || [],
       Le = qe.filter((Re) => /balan/i.test(Re.evento || "")),
       ke = [
