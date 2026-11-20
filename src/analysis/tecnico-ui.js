@@ -243,7 +243,7 @@ function view(m){
  (m==='world'?'<label>Mercado '+choice('filter',[['all','Todos'],['us','Ações EUA'],['crypto','Cripto Binance']],s.filter)+'</label>':'')+
  '<label>Busca <input data-tech-search type="search" value="'+E(s.search)+'" placeholder="Ticker / nome" autocomplete="off"></label></div>'+
  '<div class="tech-presets" role="group" aria-label="Cenários técnicos">'+presets.map(x=>'<button type="button" data-tech-preset="'+x[0]+'" class="'+(s.preset===x[0]?'selected':'')+'">'+E(x[1])+'</button>').join('')+'</div>'+
- '<div class="scr-top"><span role="status" aria-live="polite">'+(s.loading?'Coletando candles sob demanda: '+s.progress+' ativo(s)…':s.error?E(s.error):E(s.info||'Snapshot local com prazo de validade.'))+'</span><div class="tech-action-grid"><button class="btn s" type="button" data-tech-reload="1" '+(s.loading?'disabled':'')+'>Atualizar</button> <button class="btn s" type="button" data-tech-more="1" '+(s.loading||s.next>=s.universe.length?'disabled':'')+'>Carregar mais</button> <button class="btn s" type="button" data-tech-pdf="1" '+(s.busyPDF?'disabled':'')+'>Dossiê PDF Top '+top.length+'</button></div></div>'+
+ '<div class="scr-top"><span role="status" aria-live="polite">'+(s.loading?'Coletando candles sob demanda: '+s.progress+' ativo(s)…':s.error?E(s.error):E(s.info||'Snapshot local com prazo de validade.'))+'</span><div class="tech-action-grid"><button class="btn s" type="button" data-tech-reload="1" '+(s.loading?'disabled':'')+'>Atualizar</button> <button class="btn s" type="button" data-tech-more="1" '+(s.loading||s.next>=s.universe.length?'disabled':'')+'>Carregar mais</button> <button class="btn s" type="button" data-tech-pdf="1" '+(s.busyPDF||top.length<10?'disabled':'')+' title="'+(top.length<10?'Rode a varredura: o dossiê precisa de 10 ativos validados ('+top.length+' agora).':'Gerar o Dossiê PDF com os 10 melhores')+'">'+(top.length<10?'Dossiê PDF · rode a varredura':'Dossiê PDF Top 10')+'</button></div></div>'+
  '<p class="tech-note">Cobertura: '+s.rows.length+' de '+s.universe.length+' ativos candidatos · filtragem mínima B3 R$ 1 milhão/dia; EUA US$ 2 milhões/dia. RS usa o universo fixo inicial (até 60 BR, 60 EUA e 20 cripto), com benchmark e data; sem cobertura total o RS é Não confirmado. Nunca há varredura ou polling de banco em segundo plano.</p>'+
  kpis(s)+graph(rows,s)+
  '<section class="scr-panel tech-panel"><div class="scr-head"><h3>Ranking · '+rows.length+' no cenário</h3><span class="scr-hint">Nota de 0 a 10 · top automático exige confirmação e não estar esticado</span></div>'+
@@ -399,5 +399,17 @@ d.addEventListener('visibilitychange',()=>{
  else if(current==='world'&&active())w.DiarioBinanceAnalises?.start(['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT']);
 });
 const getQuote=ticker=>w.DiarioFeedSaude?.get(ticker)||null;
-w.DiarioTecnico={view,enter,leave,load,getQuote};
+/* v811: série diária compartilhada (ex.: BOVA11 como referencial do Ibovespa para fluxo × índice).
+   Reaproveita o cache e a auditoria de candles; no máximo uma requisição por ativo por hora. */
+const series=new Map();
+function serie(ticker,market='br'){
+ const k=market+':'+ticker,hit=series.get(k);
+ if(hit&&Date.now()-hit.at<3600000)return hit.p;
+ const p=candles({ticker,market},'1d').then(r=>{
+  const fmt=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'});
+  return {source:r.source,closes:(r.candles||[]).map(x=>({d:fmt.format(new Date(Number(x.t??x.time))),c:Number(x.c??x.close)})).filter(x=>x.d&&Number.isFinite(x.c))};
+ });
+ series.set(k,{at:Date.now(),p});p.catch(()=>series.delete(k));return p;
+}
+w.DiarioTecnico={view,enter,leave,load,getQuote,serie};
 })(window,document);

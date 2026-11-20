@@ -31,8 +31,45 @@
   const rows=(history||[]).filter(x=>x&&finite(x.value)&&x.value>=0&&x.value<=100&&day(x.date)&&x.date<current.date&&x.method===method).sort((a,b)=>b.date.localeCompare(a.date));
   const prev=rows[0],week=rows.find(x=>Date.parse(current.date)-Date.parse(x.date)>=7*86400000);
   const delta=prev?current.value-prev.value:null;
-  return {value:current.value,date:current.date,method,daily:prev&&Date.parse(current.date)-Date.parse(prev.date)<=4*86400000?delta:null,weekly:week&&Date.parse(current.date)-Date.parse(week.date)<=10*86400000?current.value-week.value:null,
+  /* v811: aceleração = variação do dia menos a variação do dia anterior (mesma metodologia, datas próximas). */
+  const prev2=rows[1],close=(a,b)=>a&&b&&Date.parse(a.date)-Date.parse(b.date)<=4*86400000;
+  const daily=prev&&Date.parse(current.date)-Date.parse(prev.date)<=4*86400000?delta:null;
+  const before=close(prev,prev2)?prev.value-prev2.value:null;
+  const accel=daily!=null&&before!=null?daily-before:null;
+  const accelText=accel==null?'Aceleração não calculável (faltam leituras consecutivas na mesma metodologia).':
+    Math.abs(accel)<1?'Ritmo de mudança estável em relação ao dia anterior.':
+    daily>0&&accel>0?'A melhora ganhou ritmo em relação ao dia anterior.':daily>0?'A melhora perdeu ritmo em relação ao dia anterior.':
+    daily<0&&accel<0?'A piora ganhou ritmo em relação ao dia anterior.':daily<0?'A piora perdeu ritmo em relação ao dia anterior.':'Sem variação no dia.';
+  return {value:current.value,date:current.date,method,daily,accel,accelText,weekly:week&&Date.parse(current.date)-Date.parse(week.date)<=10*86400000?current.value-week.value:null,
    text:current.value<25&&delta>0?'Permanece em medo extremo, mas a melhora indica redução da pressão pessimista; não confirma reversão.':delta>0?'Sentimento melhorou na mesma metodologia, sem confirmar direção dos preços.':delta<0?'Sentimento piorou na mesma metodologia; avaliar preços e fluxo antes de concluir.':'Sem mudança comparável confirmada.'};
+ }
+ /* v811: divergência entre fluxo estrangeiro (R$ mi, B3, defasado) e a variação do Ibovespa nas mesmas datas.
+    closes: [{d:'AAAA-MM-DD', c:fechamento}] de um referencial do índice (ex.: BOVA11). Só datas idênticas contam. */
+ function flowDivergence(rows,closes,ref){
+  const px=new Map();for(const x of closes||[])if(x&&day(x.d)&&finite(x.c)&&x.c>0)px.set(x.d,x.c);
+  const f=flow(rows);
+  const seen=new Set(),all=(Array.isArray(rows)?rows:[]).filter(r=>r&&day(r.d)&&finite(r.est)&&px.has(r.d)&&!seen.has(r.d)&&seen.add(r.d)).sort((a,b)=>b.d.localeCompare(a.d));
+  const dates=[...px.keys()].sort().reverse();
+  const out={ref:ref||'referencial do Ibovespa',aligned:all.length,windows:[],warning:'Fluxo diário divulgado com defasagem; comparação de mesmas datas, sem causalidade.'};
+  if(all.length<5){out.text='Amostra insuficiente: menos de 5 pregões com fluxo e fechamento do índice na mesma data.';out.classification='amostra_insuficiente';return out;}
+  const scale=all.slice(0,20).reduce((s,r)=>s+Math.abs(r.est),0)/Math.min(20,all.length);
+  for(const k of [5,10,20]){
+   if(all.length<k)continue;
+   const win=all.slice(0,k),last=win[0].d,first=win[k-1].d;
+   const iFirst=dates.indexOf(first),base=dates[iFirst+1];
+   if(!base)continue;
+   const ret=(px.get(last)/px.get(base)-1)*100,sum=win.reduce((s,r)=>s+r.est,0);
+   const weak=Math.abs(ret)<0.5||Math.abs(sum)<scale*0.5;
+   out.windows.push({k,flow:sum,ret,state:weak?'neutro':Math.sign(ret)!==Math.sign(sum)?'divergencia':'convergencia',from:base,to:last});
+  }
+  const main=out.windows.at(-1);
+  if(!main){out.text='Sem janela comparável.';out.classification='amostra_insuficiente';return out;}
+  out.classification=main.state;
+  out.text=main.state==='divergencia'?(main.flow<0?'Em '+main.k+' pregões o índice subiu apesar das saídas de estrangeiros: divergência. Pode refletir compras de outros investidores; não indica direção futura.':'Em '+main.k+' pregões o índice caiu apesar das entradas de estrangeiros: divergência. Não indica direção futura.')
+   :main.state==='convergencia'?'Em '+main.k+' pregões fluxo estrangeiro e índice andaram no mesmo sentido (convergência).'
+   :'Em '+main.k+' pregões a variação do índice ou do fluxo foi pequena demais para falar em divergência.';
+  out.flowClass=f.classification;
+  return out;
  }
  function surprise(e){
   if(!e||!finite(e.actual)||!finite(e.consensus)||!e.unit||e.unit!==e.consensusUnit||!e.period||e.period!==e.consensusPeriod||!e.source||!Number.isFinite(Date.parse(e.publishedAt)))return null;
@@ -49,7 +86,8 @@
   return surprise({actual:a.value,consensus:c.value,unit:a.unit,consensusUnit:c.unit,period:event.per,consensusPeriod:event.per,
    source:event.fonte||'TradingView (calendário existente)',publishedAt:collectedAt,previous:p?.unit===a.unit?p.value:null});
  }
- const noise=/\b(loteria|mega.sena|lotof[aá]cil|hor[oó]scopo|horoscope|moneyist|dear penny|conte[uú]do patrocinado|advertorial)\b/i;
+ /* v811: ruído ampliado — loterias, apostas, horóscopo, publieditorial, celebridades/esportes e colunas pessoais. */
+ const noise=/\b(loterias?|mega.?sena|lotof[aá]cil|quina|dupla.sena|timemania|\+milion[aá]ria|resultado do sorteio|hor[oó]scopo|horoscope|signo|moneyist|dear penny|conte[uú]do patrocinado|publieditorial|patrocinado|advertorial|sponsored|bbb|novela|celebridade|fofoca|futebol|brasileir[aã]o|campeonato|receita de|cupom de desconto|black friday:? ofertas)\b/i;
  function prioritize(events,context,now=Date.now(),anchor){
   const seen=new Set(),cut=Math.max(now-7*86400000,Number.isFinite(anchor)?anchor:now-48*3600000);
   return (events||[]).filter(e=>{
@@ -69,5 +107,5 @@
    scenario:'Se a informação alterar perspectivas e for confirmada por minério/petróleo, câmbio e mercado global, poderá influenciar a próxima abertura. Reavaliar se houver novo comunicado, reversão das referências ou baixa liquidez.',
    parity:null,note:'Paridade indisponível sem razão ADR/ação oficial vigente, câmbio e preços sincronizados. Não converter variação da ADR em previsão exata da ação.'};
  }
- root.DiarioInterpretacao=Object.freeze({flow,sentiment,surprise,calendarSurprise,prioritize,adrScenario,noise});
+ root.DiarioInterpretacao=Object.freeze({isNoise:t=>noise.test(String(t||'')),flow,flowDivergence,sentiment,surprise,calendarSurprise,prioritize,adrScenario,noise});
 })(typeof window!=='undefined'?window:globalThis);

@@ -19,7 +19,11 @@
     var el = m.querySelector('#mkt565-ctx');
     if (!el) { el = doc.createElement('div'); el.id = 'mkt565-ctx'; }
     // só reposiciona se não estiver depois da referência (evita briga com outros módulos)
-    if (el.parentNode !== m || !(ref.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)) ref.after(el);
+    // v811: âncora fora de .m403-section-header. Esse cabeçalho é reescrito por innerHTML
+    // (02-carteira-e-terminal.js → V); inserir dentro dele criava um laço de ~120 trocas/s.
+    var anchor = ref.closest('.m403-section-header') || ref;
+    if (anchor.parentNode !== m) anchor = ref;
+    if (el.parentNode !== m || el.previousElementSibling !== anchor && !(anchor.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)) anchor.after(el);
     var t = TITULOS[sub()] || '';
     var html = '';
     if (t) html += '<button type="button" data-mkt565-voltar>‹ Mais</button><h2>' + t + '</h2>';

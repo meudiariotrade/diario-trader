@@ -3570,6 +3570,15 @@ try {
         } catch {}
         const r = u.querySelector('[data-dt393-route="ops"]');
         r && b() !== "ops" && r.click();
+        /* v811: o aviso não some sozinho sem caminho — leva o cliente ao alerta
+           "trade sem foto", que tem o botão para abrir o dia pendente. */
+        setTimeout(() => {
+          const a = u.getElementById("v508-ontem");
+          if (!a) return;
+          a.scrollIntoView({ block: "center", behavior: "smooth" });
+          a.classList.add("v811-foco");
+          setTimeout(() => a.classList.remove("v811-foco"), 2400);
+        }, 350);
       },
       !0,
     );

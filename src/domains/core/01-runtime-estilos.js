@@ -19598,7 +19598,7 @@ try {
     e.forEach(function (r) {
       if (!(s < r.prox) && ((r.prox = s + r.ms), !(n && r.ms >= 5e3)))
         try {
-          r.fn.apply(window, r.a);
+          ((r.n = (r.n || 0) + 1), r.fn.apply(window, r.a));
         } catch (i) {
           console.error(i);
         }
@@ -19614,6 +19614,7 @@ try {
           ms: n,
           a: [].slice.call(arguments, 2),
           prox: Date.now() + n,
+          orig: String(new Error().stack || "").split("\n")[2] || "",
         }),
         r
       );
@@ -19627,5 +19628,9 @@ try {
     }),
     (window.relogioInfo = function () {
       return e.size;
+    }),
+    /* v811: auditoria de ciclo de vida — lista os timers ativos no relógio central (origem, período, disparos). */
+    (window.relogioLista = function () {
+      return [...e.values()].map((r) => ({ ms: r.ms, n: r.n || 0, orig: r.orig }));
     }));
 })();

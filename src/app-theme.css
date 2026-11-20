@@ -3241,3 +3241,95 @@ html:root body.v4-on:is([data-v4route="home"],[data-v4route="dia"]){
     max-width:none!important;width:100%!important;min-width:0;
   }
 }
+
+/* v811 — Terminal: inteligência recolhida em uma linha no fim do painel (não ocupa o topo). */
+html body #app details.intel-compact{margin:8px 0 0;border-top:1px solid #1E232E;background:#11141B;border-radius:4px;min-width:0}
+html body #app details.intel-compact>summary{list-style:none;cursor:pointer;display:flex;gap:8px;align-items:center;min-height:40px;padding:0 12px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #app details.intel-compact>summary::-webkit-details-marker{display:none}
+html body #app details.intel-compact>summary::before{content:"›";color:#D4A017;transition:transform .15s}
+html body #app details.intel-compact[open]>summary::before{transform:rotate(90deg)}
+html body #app details.intel-compact>[data-intel-content]{padding:4px 12px 12px;max-height:50vh;overflow:auto}
+
+/* v811 — Tema Claro: casca (fundo, cabeçalho, sidebar, abas e alertas) coerente.
+   Antes o conteúdo clareava, mas fundo, cabeçalho e marca continuavam escuros (texto invisível). */
+html:root[data-v427-tema="claro"] body,
+html:root[data-v427-tema="claro"] body #app#app,
+html:root[data-v427-tema="claro"] body #dt393-workspace,
+html:root[data-v427-tema="claro"] body .dt393-topbar{background:#F3F0E8!important;color:#1A1B1E!important}
+html:root[data-v427-tema="claro"] body .dt393-topbar{border-bottom:1px solid #DDD8CC!important}
+html:root[data-v427-tema="claro"] body .dt393-topbar h1,
+html:root[data-v427-tema="claro"] body .dt393-topbar [class*="title"],
+html:root[data-v427-tema="claro"] body .org-brand,
+html:root[data-v427-tema="claro"] body .org-brand *{color:#1A1B1E!important}
+html:root[data-v427-tema="claro"] body .dt393-topbar button,
+html:root[data-v427-tema="claro"] body .m624-kbtn{background:#FBFAF6!important;color:#1A1B1E!important;border-color:#DDD8CC!important}
+html:root[data-v427-tema="claro"] body #app h1,
+html:root[data-v427-tema="claro"] body #app h2,
+html:root[data-v427-tema="claro"] body #app h3{color:#1A1B1E}
+html:root[data-v427-tema="claro"] body #app .v4-tabs button{color:#4F5A55!important;background:transparent!important}
+html:root[data-v427-tema="claro"] body #app .v4-tabs button.on,
+html:root[data-v427-tema="claro"] body #app .v4-tabs button[aria-current],
+html:root[data-v427-tema="claro"] body #app .v4-tabs button[aria-selected="true"]{color:#8D6C33!important;background:rgba(212,160,23,.14)!important}
+html:root[data-v427-tema="claro"] body #app #v508-ontem,
+html:root[data-v427-tema="claro"] body #app #v508-ontem *:not(button){color:#7A2E24!important}
+html:root[data-v427-tema="claro"] body #app #v508-ontem{background:rgba(239,68,68,.08)!important}
+html:root[data-v427-tema="claro"] body #dt393-global-head .dt393-topbar .dt393-title.dt393-title.dt393-title{color:#1A1B1E!important;-webkit-text-fill-color:#1A1B1E}
+html:root[data-v427-tema="claro"] body.pcfull.studio-design{background:#F3F0E8!important}
+/* Ctrl K no cabeçalho: uma linha só (antes quebrava em duas no desktop). */
+html:root body #dt393-global-head .dt393-topactions .m624-kbtn.m624-kbtn{display:inline-flex!important;flex-direction:row!important;gap:3px;white-space:nowrap!important;word-break:keep-all}
+
+/* v811 — iPhone: inputs a 16px (CLAUDE.md §3, evita zoom do Safari no comando do Terminal e na busca do menu). */
+@media (max-width:820px){
+  html:root body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
+  html:root body select,html:root body textarea,
+  html:root body :is(#app#app,#dt394-drawer#dt394-drawer) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea){font-size:16px!important}
+  /* Sub-abas de Análises: duas linhas no iPhone em vez de esconder "Técnico EUA & Cripto". */
+  html:root body #app .an-subs{flex-wrap:wrap!important;overflow:visible!important;gap:6px}
+  html:root body #app .an-subs>button{flex:1 1 calc(33.333% - 6px)!important;min-width:0!important;white-space:normal!important;min-height:40px}
+  /* Faixas roláveis de categorias do Mercado: indica que há mais itens à direita. */
+  html:root body #app .cqtabs{-webkit-mask-image:linear-gradient(to right,#000 82%,transparent);mask-image:linear-gradient(to right,#000 82%,transparent);padding-right:24px}
+}
+html body #app #v508-ontem.v811-foco{outline:2px solid #D4A017;outline-offset:2px;transition:outline-color .3s}
+
+/* v811 — Plano × execução (Meu Dia · pós-mercado). Superfície plana, divisórias de 1px. */
+html body #app .v811-pxe{min-width:0}
+html body #app .v811-pxe-sum{margin:4px 0 10px;font-size:13px;color:#A3A7B0}
+html body #app .v811-pxe-tab{display:grid;border-top:1px solid #1E232E;min-width:0}
+html body #app .v811-pxe-row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(110px,1fr) minmax(120px,1fr) minmax(120px,1fr) minmax(160px,1.6fr);gap:12px;padding:10px 4px;border-bottom:1px solid #1E232E;font-size:13px;align-items:start;min-width:0}
+html body #app .v811-pxe-row>span{min-width:0;overflow-wrap:anywhere;word-break:normal}
+html body #app .v811-pxe-row .num{font-variant-numeric:tabular-nums;text-align:right}
+html body #app .v811-pxe-head{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#7E8494}
+html body #app .v811-pxe-row em{display:block;font-style:normal;font-size:11px;margin-top:2px}
+html body #app .v811-ok em{color:#10B981}
+html body #app .v811-desvio em{color:#EF4444}
+html body #app .v811-desvio{background:rgba(239,68,68,.05)}
+html body #app .v811-info em{color:#D4A017}
+html body #app .v811-sem em{color:#7E8494}
+html body #app .v811-pxe-sub{font-size:13px;margin:14px 0 6px;color:#D4A017;text-transform:uppercase;letter-spacing:.06em}
+html body #app .v811-pxe-trade{border-bottom:1px solid #1E232E}
+html body #app .v811-pxe-trade>summary{min-height:40px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;flex-wrap:wrap}
+@media (max-width:767px){
+  html body #app .v811-pxe-head{display:none}
+  html body #app .v811-pxe-row{grid-template-columns:1fr 1fr;gap:4px 12px}
+  html body #app .v811-pxe-row>span:first-child,html body #app .v811-pxe-row>span:last-child{grid-column:1/-1}
+  html body #app .v811-pxe-row .num{text-align:left}
+  html body #app .v811-pxe-row>span[data-l]::before{content:attr(data-l) ": ";color:#7E8494;font-size:11px}
+  html body #app .v811-pxe-row>span.v811-vazio{display:none}
+}
+
+/* v811 — selos padronizados de natureza da informação (P1-04). */
+html body .v811-cls{display:inline-block;font-size:10px;line-height:16px;padding:0 6px;border-radius:4px;border:1px solid #1E232E;letter-spacing:.04em;text-transform:uppercase;font-weight:700;white-space:nowrap;vertical-align:1px;margin-right:4px}
+html body .v811-cls-fato{color:#10B981;border-color:rgba(16,185,129,.4)}
+html body .v811-cls-publicada{color:#9DB4D8;border-color:rgba(157,180,216,.35)}
+html body .v811-cls-observado{color:#C9CDD6;border-color:#2A303D}
+html body .v811-cls-interpretacao{color:#D4A017;border-color:rgba(212,160,23,.4)}
+html body .v811-cls-hipotese,html body .v811-cls-cenario{color:#E0A526;border-color:rgba(224,165,38,.3);border-style:dashed}
+html body .v811-cls-indisponivel{color:#7E8494;border-color:#2A303D}
+/* Previsto × ocorrido (Início · pós-mercado). */
+html body .v811-pxo{margin-top:12px;border-top:1px solid #1E232E;padding-top:10px;min-width:0}
+html body .v811-pxo h4{margin:0 0 6px;font-size:13px;color:#D4A017;text-transform:uppercase;letter-spacing:.06em}
+html body .v811-pxo-row{display:grid;grid-template-columns:60px minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr);gap:10px;padding:8px 0;border-bottom:1px solid #1E232E;font-size:13px;font-variant-numeric:tabular-nums}
+html body .v811-r-ok b:first-child{color:#10B981}html body .v811-r-contra b:first-child{color:#EF4444}
+@media (max-width:767px){html body .v811-pxo-row{grid-template-columns:1fr}}
+/* v811: sub-aba ativa de Análises visível (antes ficava igual às outras). */
+html:root body #app#app .an-subs>button.selected,html:root body #app#app .an-subs>button[aria-selected="true"]{color:#D4A017!important;border-bottom-color:#D4A017!important;background:#181C26!important}
