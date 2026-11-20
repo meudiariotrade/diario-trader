@@ -65,26 +65,24 @@
   const r=await fetch(base+'/v1/adrs?s='+encodeURIComponent(lista.join(',')),{credentials:'omit',mode:'cors',signal:signal||AbortSignal.timeout(2e4)});
   if(!r.ok)throw Error('HTTP '+r.status);return r.json();
  }
- /* v836: preços e candles pela Cloudflare (preços só quando as chaves estão no Worker; Replay fica no Supabase); sem resposta válida, segue para o Supabase como antes. */
+ /* v836: funções públicas pela Cloudflare (preços só com as chaves no Worker; candles sem o Replay; macro; EWZ com
+  * pelo menos 20 dias de histórico na borda). Sem resposta válida, segue para o Supabase como antes. */
+ const rotas836={
+  precos:b=>({q:'/v1/precos?br='+encodeURIComponent((b.br||[]).join(','))+'&us='+encodeURIComponent((b.us||[]).join(',')),ok:j=>Object.keys(j.br||{}).length||Object.keys(j.us||{}).length}),
+  candles:b=>b.modo==='replay'?null:{q:'/v1/candles?'+['ativo','sub','intervalo','de','ate'].filter(k=>b[k]!=null&&b[k]!=='').map(k=>k+'='+encodeURIComponent(b[k])).join('&'),ok:j=>Array.isArray(j.candles)},
+  macro:b=>b.modo==='diag'?null:{q:'/v1/macro?modo='+encodeURIComponent(b.modo||'')+'&aba='+encodeURIComponent(b.aba||'')+'&semana='+encodeURIComponent(b.semana??''),ok:j=>j&&!j.error},
+  ewz:b=>b.acao&&b.acao!=='agora'?null:{q:'/v1/ewz?venc='+encodeURIComponent(b.venc||''),ok:j=>j&&j.spot&&j.vol&&j.vol.nHist>=20}
+ };
  if(typeof w.fetch==='function'&&!w.fetch.__v836){
   const nativo=w.fetch.bind(w);
   const novo=async function(input,init){
    try{
-    const url=typeof input==='string'?input:input?.url||'';
-    if(/\/functions\/v1\/precos$/.test(url)&&String(init?.method||'').toUpperCase()==='POST'&&!w.DIARIO_DEMO){
-     const b=JSON.parse(init.body||'{}'),q='br='+encodeURIComponent((b.br||[]).join(','))+'&us='+encodeURIComponent((b.us||[]).join(','));
-     const r=await nativo(base+'/v1/precos?'+q,{credentials:'omit',mode:'cors',signal:AbortSignal.timeout(15000)});
-     if(r.ok){const j=await r.json();if(j&&(Object.keys(j.br||{}).length||Object.keys(j.us||{}).length))return new Response(JSON.stringify(j),{status:200,headers:{'Content-Type':'application/json'}});}
-    }
-   }catch(_){}
-   try{
-    const url=typeof input==='string'?input:input?.url||'';
-    if(/\/functions\/v1\/candles$/.test(url)&&String(init?.method||'').toUpperCase()==='POST'&&!w.DIARIO_DEMO){
-     const b=JSON.parse(init.body||'{}');
-     if(b.modo!=='replay'){
-      const q=['ativo','sub','intervalo','de','ate'].filter(k=>b[k]!=null&&b[k]!=='').map(k=>k+'='+encodeURIComponent(b[k])).join('&');
-      const r=await nativo(base+'/v1/candles?'+q,{credentials:'omit',mode:'cors',signal:init.signal||AbortSignal.timeout(15000)});
-      if(r.ok){const j=await r.json();if(j&&Array.isArray(j.candles))return new Response(JSON.stringify(j),{status:200,headers:{'Content-Type':'application/json'}});}
+    const url=typeof input==='string'?input:input?.url||'',m=/\/functions\/v1\/(precos|candles|macro|ewz)$/.exec(url);
+    if(m&&String(init?.method||'').toUpperCase()==='POST'&&!w.DIARIO_DEMO){
+     const r0=rotas836[m[1]](JSON.parse(init.body||'{}'));
+     if(r0){
+      const r=await nativo(base+r0.q,{credentials:'omit',mode:'cors',signal:init.signal||AbortSignal.timeout(20000)});
+      if(r.ok){const j=await r.json();if(r0.ok(j))return new Response(JSON.stringify(j),{status:200,headers:{'Content-Type':'application/json'}});}
      }
     }
    }catch(e){if(e&&e.name==='AbortError'&&init?.signal?.aborted)throw e;}

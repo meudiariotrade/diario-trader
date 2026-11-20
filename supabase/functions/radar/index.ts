@@ -633,7 +633,10 @@ export const CRIPTO = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'BNB-USD', 'A
 const ehCripto = (t: string) => /-USD$/.test(t);
 const diaUTC = () => new Date().toISOString().slice(0, 10);
 async function yahoo(tk: string, range: string): Promise<Candle[]> {
-  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(tk)}${ehCripto(tk) ? '' : '.SA'}?range=${range}&interval=1d`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10_000) });
+  // v836: primeiro o cache compartilhado da Cloudflare (todos os usuários pedem os mesmos tickers); sem resposta, Yahoo direto.
+  const sym = `${tk}${ehCripto(tk) ? '' : '.SA'}`;
+  let r = await fetch(`https://diario-trader.lucianosilva43567.workers.dev/v1/diario?t=${encodeURIComponent(sym)}&range=${range}`, { signal: AbortSignal.timeout(8_000) }).catch(() => null);
+  if (!r || !r.ok) r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=1d`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10_000) });
   if (!r.ok) throw new Error('Yahoo ' + r.status);
   const R = (await r.json())?.chart?.result?.[0], ts: number[] = R?.timestamp || [], q = R?.indicators?.quote?.[0] || {};
   const out: Candle[] = [];
