@@ -18,12 +18,59 @@ function conditional(req,response,hit){
   return new Response(null,{status:304,headers});
  return new Response(response.body,{status:response.status,headers});
 }
+// v860 — voz neural gratuita (Microsoft Edge Read Aloud) na borda, para ouvir as aulas no iPhone sem a ponte do PC.
+// Texto público da aula → MP3 com cache de borda; nenhum dado da conta passa por aqui.
+const EDGE_TOKEN='6A5AA1D4EAFF4E9FB37E23D68491D6F4',EDGE_VER='1-143.0.3650.75';
+const VOZES=new Set(['pt-BR-AntonioNeural','pt-BR-FranciscaNeural','pt-BR-ThalitaMultilingualNeural']);
+async function sha256Hex(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase()}
+const xmlEsc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+async function edgeTTS(texto,voz,taxa){
+ let ticks=Math.floor(Date.now()/1000)+11644473600;ticks-=ticks%300;
+ const gec=await sha256Hex(String(BigInt(ticks)*10000000n)+EDGE_TOKEN),id=crypto.randomUUID().replace(/-/g,'');
+ const res=await fetch('https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken='+EDGE_TOKEN+
+  '&Sec-MS-GEC='+gec+'&Sec-MS-GEC-Version='+EDGE_VER+'&ConnectionId='+id,{headers:{Upgrade:'websocket',
+  Origin:'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
+  'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0'}});
+ const ws=res.webSocket;if(!ws)throw Error('Voz recusada: HTTP '+res.status);
+ ws.accept();
+ const partes=[];let total=0;
+ const fim=new Promise((ok,no)=>{
+  const t=setTimeout(()=>{try{ws.close()}catch{}no(Error('Tempo esgotado na voz'))},25000);
+  ws.addEventListener('message',ev=>{
+   if(typeof ev.data==='string'){if(ev.data.includes('Path:turn.end')){clearTimeout(t);try{ws.close()}catch{}ok()}return}
+   const b=new Uint8Array(ev.data),n=(b[0]<<8)|b[1],cab=new TextDecoder().decode(b.slice(2,2+n));
+   if(cab.includes('Path:audio')){const a=b.slice(2+n);partes.push(a);total+=a.length;if(total>12e6){clearTimeout(t);no(Error('Áudio grande demais'))}}});
+  ws.addEventListener('close',()=>{clearTimeout(t);total?ok():no(Error('Voz encerrada sem áudio'))});
+  ws.addEventListener('error',()=>{clearTimeout(t);no(Error('Falha na voz'))});
+ });
+ const ts=new Date().toUTCString();
+ ws.send('X-Timestamp:'+ts+'\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n'+
+  '{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}');
+ ws.send('X-RequestId:'+id+'\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:'+ts+'Z\r\nPath:ssml\r\n\r\n'+
+  "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'><voice name='"+voz+"'><prosody pitch='+0Hz' rate='"+taxa+"' volume='+0%'>"+xmlEsc(texto)+'</prosody></voice></speak>');
+ await fim;
+ const out=new Uint8Array(total);let o=0;for(const p of partes){out.set(p,o);o+=p.length}
+ return out;
+}
 export default {
  async fetch(request,env,ctx){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:CORS});
   if(request.method!=='GET')return json({error:'Somente leitura'},405);
   const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,servico:'screeners-edge',sem_dados_privados:true});
+  if(url.pathname==='/v1/voz'){
+   const texto=String(url.searchParams.get('t')||'').replace(/\s+/g,' ').trim(),voz=url.searchParams.get('v')||'pt-BR-AntonioNeural',
+    taxa=url.searchParams.get('r')||'+0%';
+   if([...url.searchParams.keys()].some(k=>!['t','v','r'].includes(k))||texto.length<2||texto.length>2500||!VOZES.has(voz)||!/^[+-]\d{1,2}%$/.test(taxa))
+    return json({error:'Texto ou voz inválidos'},400);
+   const cache=caches.default,key=new Request(url.origin+'/v1/voz?k='+(await sha256Hex(voz+'|'+taxa+'|'+texto)).slice(0,40)+'&rev=v860');
+   const hit=await cache.match(key);if(hit)return hit;
+   try{
+    const mp3=await edgeTTS(texto,voz,taxa);
+    const out=new Response(mp3,{headers:{...CORS,'Content-Type':'audio/mpeg','Cache-Control':'public, max-age=2592000, s-maxage=2592000','X-Snapshot-Source':'edge-tts-borda'}});
+    ctx.waitUntil(cache.put(key,out.clone()));return out;
+   }catch(e){return json({error:'Voz indisponível agora',detalhe:String(e?.message||e).slice(0,120)},503)}
+  }
    // v805 — Texto público via Cloudflare com allowlist e sem redirecionamentos.
    if(url.pathname==='/v1/biblioteca-texto'){
      const source=url.searchParams.get('url')||'';

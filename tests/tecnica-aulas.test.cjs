@@ -114,7 +114,7 @@ test('dicionário normaliza cada etapa só na voz e não substitui a ponte por v
  assert.doesNotMatch(sent.text,/MM200/);
  assert.match(w.document.querySelector('.tp-script').textContent,/MM200/);
  assert.equal(w.speechSynthesis.last,undefined);
- assert.match(w.document.querySelector('.tp-status').textContent,/Ponte de voz indisponível/i);
+ assert.match(w.document.querySelector('.tp-status').textContent,/Não consegui gerar a voz/i);
  w.close();
 });
 test('voz válida da ponte avança somente após terminar o áudio',async()=>{

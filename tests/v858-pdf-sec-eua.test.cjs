@@ -37,3 +37,12 @@ test('v858: fundamentos SEC via GitHub Actions, sem Supabase',()=>{
  assert.match(R('src/analysis/analises.js'),/workers\.dev\/v1\/sec-fundamentos/);
  assert.match(R('cloudflare/diario-screeners/index.mjs'),/\/v1\/sec-fundamentos/);
 });
+
+test('v860: voz das aulas — ponte local no PC e voz neural na borda para o iPhone',()=>{
+ const t=R('src/studies/tecnica-aulas.js'),srv=R('bridge-video/servidor_local.py'),wk=R('cloudflare/diario-screeners/index.mjs'),html=R('src/index.html');
+ assert.match(t,/127\.0\.0\.1:8766\/voz/);assert.match(t,/workers\.dev\/v1\/voz/);assert.match(t,/iosAparelho\(\)/);
+ assert.ok(!/speechSynthesis\.speak/.test(t),'sem voz robótica');
+ assert.match(srv,/def _voz\(self\)/);assert.match(srv,/GET, POST, OPTIONS/);
+ assert.match(wk,/\/v1\/voz/);assert.match(wk,/audio-24khz-48kbitrate-mono-mp3/);
+ assert.match(html,/connect-src 'self' data: http:\/\/127\.0\.0\.1:8766/);
+});
