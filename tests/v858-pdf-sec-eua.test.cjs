@@ -67,3 +67,11 @@ test('v865: apagar aulas — Mentor (aparelho) e tradicionais (lista, inclusive 
  assert.match(n,/data-audelid="\$\{i\(Z\.id\)\}"/);assert.match(n,/data-audelid="\$\{i\(t\.id\)\}"/);
  assert.match(n,/\/rest\/v1\/aulas\?id=eq\." \+ encodeURIComponent\(id\)/);
 });
+
+test('v866: color linking por painel (screener e técnico), sem servidor',()=>{
+ const c=R('src/shared/color-link.js'),a=R('src/analysis/analises.js'),t=R('src/analysis/tecnico-ui.js'),h=R('src/index.html');
+ assert.match(c,/registrar/);assert.match(c,/data-cl-src/);assert.ok(!/fetch\(/.test(c));
+ assert.match(a,/registrar\('scr-'\+m/);assert.match(a,/data-cl-src="scr-'\+m\+'"/);
+ assert.match(t,/registrar\('tec-'\+m/);assert.match(t,/data-cl-src="tec-'\+m\+'"/);
+ assert.ok(h.indexOf('color-link.js')<h.indexOf('analises.js')||h.indexOf('analises.js')<0);
+});
