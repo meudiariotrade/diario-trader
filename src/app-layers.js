@@ -10955,7 +10955,7 @@ ${W.text}
 <div class="aup-prog" id="aupprog">${t.r.cenas.map((x, A) => `<i data-aucena="${A}" title="${i(x.titulo || "")}"></i>`).join("")}</div>
 <div class="au353-voice-alert" id="au353-voice-alert" role="alert" hidden><span id="au353-voice-message"></span><button type="button" data-au353retry="1">▶ Tentar voz novamente</button></div>
 <div class="aup-ctl"><button data-auprev="1" aria-label="Cena anterior">${N.prev}</button><button class="aup-pp" data-aupp="1" aria-label="Tocar">${N.play}</button><button data-aunext="1" aria-label="Próxima cena">${N.next}</button>
-<button data-autv="1" class="aup-tv-btn" title="Explorar o exemplo no TradingView" aria-label="Abrir gráfico no TradingView">📈 Gráfico</button><button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden role="dialog" aria-modal="true" aria-label="Opções e narração da aula"><div class="au348-opt-head"><div><strong>🎙️ Narração</strong><small>Escolha como ouvir esta cena</small></div><button type="button" data-au348close="1" aria-label="Fechar opções">✕</button></div><details class="au352-tools"><summary>Mais ferramentas da aula</summary><div class="au348-first"><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><button type="button" data-auvisualmap="1" class="au336-map-btn">🗺️ Mapa visual</button><button type="button" data-au337gerar="1" class="au337-gen-btn">🎨 Gerar imagem desta cena</button><button type="button" data-au338diag="1" class="au338-diag-btn">🧪 Testar aulas</button><button type="button" data-au348mode="piper" aria-pressed="${E(G, "local") === "piper"}">🎧 Piper (avançado)</button></div></details><div class="au339-voices"><div class="au348-mode-tabs" role="group" aria-label="Modo de narração"><button type="button" data-au348mode="local" aria-pressed="${E(G, "local") === "local"}">📱 Voz gratuita do aparelho</button><button type="button" data-au348mode="off" aria-pressed="${E(G, "local") === "off"}">🔇 Sem voz</button></div><select id="au339mode" hidden aria-hidden="true"><option value="local">Local</option><option value="piper" ${E(G, "local") === "piper" ? "selected" : ""}>Piper</option><option value="off" ${E(G, "local") === "off" ? "selected" : ""}>Sem narração</option></select><div class="au349-piper"><strong>🎧 Piper TTS · gratuito e offline</strong><small>Gere a voz no computador, depois importe os arquivos WAV aqui. Sem API paga ou cobrança por cena.</small><div class="au349-piper-actions"><button type="button" data-au349export="1">⬇ Exportar roteiro da aula</button><label class="au349-import-btn" for="au349files">📂 Importar áudios WAV</label><input id="au349files" type="file" accept="audio/wav,.wav" multiple hidden></div><small id="au349status" role="status" aria-live="polite">Nenhum áudio Piper carregado nesta cena.</small><audio id="au349native" controls preload="metadata" playsinline aria-label="Ouvir áudio Piper da cena" hidden></audio></div><span id="au339status" hidden></span><div class="au348-actions"><button type="button" data-au349test="1">▶ Ouvir Piper desta cena</button><button type="button" data-au340resume="1" class="au340-resume">▶ Voltar à aula</button></div></div><span id="au337status" class="au337-status" role="status" aria-live="polite"></span><label class="au336-opt"><input type="checkbox" id="au336-auto" ${E("aulas-motor-visual-v336", !0) ? "checked" : ""}> Visuais por fala</label><label class="au352-control-label" for="aupvel">Velocidade da narração</label><select id="aupvel" aria-label="Velocidade">${[0.8, 0.9, 0.95, 1, 1.1, 1.2, 1.35].map((x) => `<option value="${x}"${x == p ? " selected" : ""}>${String(x).replace(".", ",")}×</option>`).join("")}</select>
+<button data-autv="1" class="aup-tv-btn" title="Explorar o exemplo no TradingView" aria-label="Abrir gráfico no TradingView">📈 Gráfico</button><button data-auoptions="1" class="aup-options-toggle" aria-expanded="false">Opções</button></div><div class="aup-options" id="aupoptions" hidden role="dialog" aria-modal="true" aria-label="Opções e narração da aula"><div class="au348-opt-head"><div><strong>🎙️ Narração</strong><small>Escolha como ouvir esta cena</small></div><button type="button" data-au348close="1" aria-label="Fechar opções">✕</button></div><details class="au352-tools"><summary>Mais ferramentas da aula</summary><div class="au348-first"><button class="au-study-note-btn" data-austnotes="1">Meu caderno</button><button type="button" data-auvisualmap="1" class="au336-map-btn">🗺️ Mapa visual</button><button type="button" data-au337gerar="1" class="au337-gen-btn">🎨 Gerar imagem desta cena</button><button type="button" data-au338diag="1" class="au338-diag-btn">🧪 Testar aulas</button><button type="button" data-au348mode="piper" aria-pressed="${E(G, "local") === "piper"}">🎧 Piper (avançado)</button></div></details><div class="au339-voices"><div class="au348-mode-tabs" role="group" aria-label="Modo de narração"><button type="button" data-au348mode="ia" aria-pressed="${E(G, "local") === "ia"}">🎙️ Voz por IA</button><button type="button" data-au348mode="local" aria-pressed="${E(G, "local") === "local"}">📱 Voz gratuita do aparelho</button><button type="button" data-au348mode="off" aria-pressed="${E(G, "local") === "off"}">🔇 Sem voz</button></div><select id="au339mode" hidden aria-hidden="true"><option value="local">Local</option><option value="piper" ${E(G, "local") === "piper" ? "selected" : ""}>Piper</option><option value="off" ${E(G, "local") === "off" ? "selected" : ""}>Sem narração</option></select><div class="au349-piper"><strong>🎧 Piper TTS · gratuito e offline</strong><small>Gere a voz no computador, depois importe os arquivos WAV aqui. Sem API paga ou cobrança por cena.</small><div class="au349-piper-actions"><button type="button" data-au349export="1">⬇ Exportar roteiro da aula</button><label class="au349-import-btn" for="au349files">📂 Importar áudios WAV</label><input id="au349files" type="file" accept="audio/wav,.wav" multiple hidden></div><small id="au349status" role="status" aria-live="polite">Nenhum áudio Piper carregado nesta cena.</small><audio id="au349native" controls preload="metadata" playsinline aria-label="Ouvir áudio Piper da cena" hidden></audio></div><span id="au339status" hidden></span><div class="au348-actions"><button type="button" data-au349test="1">▶ Ouvir Piper desta cena</button><button type="button" data-au340resume="1" class="au340-resume">▶ Voltar à aula</button></div></div><span id="au337status" class="au337-status" role="status" aria-live="polite"></span><label class="au336-opt"><input type="checkbox" id="au336-auto" ${E("aulas-motor-visual-v336", !0) ? "checked" : ""}> Visuais por fala</label><label class="au352-control-label" for="aupvel">Velocidade da narração</label><select id="aupvel" aria-label="Velocidade">${[0.8, 0.9, 0.95, 1, 1.1, 1.2, 1.35].map((x) => `<option value="${x}"${x == p ? " selected" : ""}>${String(x).replace(".", ",")}×</option>`).join("")}</select>
 <label class="au352-control-label" for="aupvoz">Voz gratuita do aparelho</label><select id="aupvoz" aria-label="Voz">${U() ? Me() : "<option>sem voz</option>"}</select>${U() ? '<button data-auvozteste="1" aria-label="Ouvir voz selecionada" style="font-size:12px;width:auto;padding:8px">▶ Testar voz gratuita</button>' : ""}<small id="au352-voice-status" class="au352-voice-status" role="status" aria-live="polite">Se não houver som, escolha outra voz e toque em Testar voz gratuita.</small></div>
 <div class="aup-idx" id="aupidx" hidden>${t.r.cenas.map((x, A) => `<button data-aucena="${A}"><span>${A + 1}</span>${i(x.titulo || "Cena " + (A + 1))}</button>`).join("")}${t.local ? "" : '<button class="aup-del" data-audel="1"><span>✕</span>Apagar esta aula</button>'}</div>
 </div>`;
@@ -10991,6 +10991,7 @@ ${W.text}
         ((e.play = 0), e.tok++, clearTimeout(e.t), clearTimeout(e.wd));
         try {
           speechSynthesis.cancel();
+          window.AulaVozIA?.parar();
         } catch {}
         (Ye(), _e());
         const p =
@@ -11020,6 +11021,7 @@ ${W.text}
               A = !0;
               try {
                 speechSynthesis.cancel();
+          window.AulaVozIA?.parar();
               } catch {}
               xe(
                 "A voz não iniciou. Experimente tocar em Testar voz novamente ou selecionar outra voz.",
@@ -11072,6 +11074,7 @@ ${W.text}
         A && (A.pause(), A.removeAttribute("src"));
         try {
           speechSynthesis.cancel();
+          window.AulaVozIA?.parar();
         } catch {}
         ((e.i = Math.max(0, Math.min(t, x.r.cenas.length - 1))),
           (e.j = p || 0));
@@ -11129,6 +11132,24 @@ ${W.text}
           return;
         }
         if (sa() && !e.nEl && la(e.i, p)) return;
+        // v863: voz por IA (Cloudflare/Gemini) por cena; legenda e visuais seguem a fala. Falhou → voz do aparelho.
+        if (E(G, "local") === "ia" && window.AulaVozIA && e.iaFalhou !== e.i + ":" + e.a.id) {
+          const ini = e.j, linhas = p.slice(ini), A = ++e.tok, prox = e.a.r.cenas[e.i + 1];
+          window.AulaVozIA.cena(linhas.map((y) => y.t), {
+            tok: () => A === e.tok && !!e.play,
+            vel: +E(O, 0.95) || 0.95,
+            proxima: prox ? (ge(prox) || []).map((y) => y.t) : null,
+            onLinha: (k) => { const y = p[ini + k]; y && (tt(y.k), je(y), (e.j = ini + k)); },
+          }).then((ok) => {
+            if (ok === null || A !== e.tok || !e.play) return;
+            if (ok) { e.j = p.length; e.t = setTimeout(Ue, 150); return; }
+            e.iaFalhou = e.i + ":" + e.a.id; e.j = ini;
+            xe("Voz por IA indisponível agora; usando a voz do aparelho nesta cena.");
+            Ue();
+          });
+          je(p[ini] || null);
+          return;
+        }
         const x = p[e.j];
         (tt(x.k), je(x));
         const A = ++e.tok,
@@ -11245,6 +11266,7 @@ ${W.text}
         ((e.play = 0), e.tok++, clearTimeout(e.t), clearTimeout(e.wd), Qe());
         try {
           speechSynthesis.cancel();
+          window.AulaVozIA?.parar();
         } catch {}
         (Ye(), _e());
       }
@@ -11756,6 +11778,13 @@ ${W.text}
           ((e.aiBusy = 0), x && (x.disabled = !1));
         }
       }
+      // v863: quem usava a voz do aparelho passa para a voz por IA (pode voltar em Opções).
+      try {
+        if (!localStorage.getItem("aulas-ia-v863")) {
+          localStorage.setItem("aulas-ia-v863", "1");
+          E(G, "local") === "local" && P(G, "ia");
+        }
+      } catch {}
       const At = () => E(o, "Kore"),
         sa = () => ["neural", "piper"].includes(E(G, "local"));
       function Qe() {
@@ -44072,6 +44101,52 @@ async function todas(l){
 }
 function pronta(l){return mem.get(l?.id)||null}
 w.MentorFiguras={todas,pronta,origem,medir};
+})(window);
+/* v863 — Voz por IA nas aulas tradicionais (mesma voz Gemini do Mentor, servida pela Cloudflare).
+ * Uma requisição por cena; legenda e visuais acompanham a fala pela proporção de caracteres.
+ * Áudio guardado no aparelho (Cache Storage) para tocar de novo sem gastar a chave. */
+;(function(w){
+'use strict';
+const URL_VOZ='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/voz',CACHE='aulas-voz-ia-v863',VOZ='Charon';
+let atual=null;const pend=new Map();
+function pedacos(t){const out=[];let cur='';for(const f of String(t).split(/(?<=[.!?;:])\s+/)){if((cur+' '+f).length>1800&&cur){out.push(cur);cur=f}else cur=cur?cur+' '+f:f}if(cur)out.push(cur);return out.flatMap(x=>x.length>2400?x.match(/[\s\S]{1,2400}/g):[x])}
+async function juntarWav(bs){const arr=await Promise.all(bs.map(b=>b.arrayBuffer().then(x=>new Uint8Array(x))));const d=arr.map(b=>b.slice(44)),n=d.reduce((s,x)=>s+x.length,0),o=new Uint8Array(44+n);o.set(arr[0].slice(0,44));const v=new DataView(o.buffer);v.setUint32(4,36+n,true);v.setUint32(40,n,true);let k=44;for(const x of d){o.set(x,k);k+=x.length}return new Blob([o],{type:'audio/wav'})}
+async function um(texto){
+ const url=URL_VOZ+'?t='+encodeURIComponent(texto)+'&v='+VOZ;
+ let c=null;try{c=await caches.open(CACHE);const hit=await c.match(url);if(hit)return await hit.blob()}catch{}
+ const tk=(typeof SESS!=='undefined'&&SESS?.at)||'';
+ const r=await fetch(url,{headers:tk?{Authorization:'Bearer '+tk}:{},credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(120000)});
+ if(!r.ok||!/^audio\//i.test(r.headers.get('content-type')||''))throw Error('Voz por IA indisponível');
+ const b=await r.blob();try{await c?.put(url,new Response(b,{headers:{'Content-Type':b.type}}))}catch{}return b;
+}
+function obter(texto){
+ const t=(w.DiarioVoz?.normalizarTextoParaVoz?.(texto)||texto).replace(/\s+/g,' ').trim();if(!t)return Promise.reject(Error('Cena sem texto'));
+ if(pend.has(t))return pend.get(t);
+ const job=(async()=>{const ps=pedacos(t),bs=[];for(const p of ps)bs.push(await um(p));return bs.length>1?juntarWav(bs):bs[0]})();
+ pend.set(t,job);job.catch(()=>{}).finally(()=>setTimeout(()=>pend.delete(t),60000));return job;
+}
+function parar(){if(!atual)return;try{atual.a.pause()}catch{}try{URL.revokeObjectURL(atual.u)}catch{}clearInterval(atual.iv);atual.fim?.(false,true);atual=null}
+/* Toca as linhas da cena. Resolve true ao terminar, false se a voz falhar; nada se for cancelada (tok inválido). */
+function cena(linhas,{tok,onLinha,vel=1,proxima=null}={}){
+ parar();
+ return new Promise(async res=>{
+  let blob;try{blob=await obter(linhas.join(' '))}catch{return tok()?res(false):res(null)}
+  if(!tok())return res(null);
+  if(proxima?.length)obter(proxima.join(' ')).catch(()=>{});
+  const u=URL.createObjectURL(blob),a=new Audio(u);a.playbackRate=Math.max(.5,Math.min(2,vel));
+  const tam=linhas.map(l=>Math.max(1,l.length)),tot=tam.reduce((s,x)=>s+x,0),marcos=[];let acc=0;for(const x of tam){marcos.push(acc/tot);acc+=x}
+  let linha=-1,feito=false;
+  const fim=(ok,cancelado)=>{if(feito)return;feito=true;clearInterval(me.iv);try{URL.revokeObjectURL(u)}catch{}if(atual===me)atual=null;res(cancelado?null:ok)};
+  const me={a,u,fim,iv:0};atual=me;
+  const passo=()=>{if(!tok()){try{a.pause()}catch{}fim(false,true);return}
+   const f=a.duration>0?a.currentTime/a.duration:0;let i=0;while(i+1<marcos.length&&f>=marcos[i+1])i++;if(i!==linha){linha=i;try{onLinha?.(i)}catch{}}};
+  a.addEventListener('timeupdate',passo);me.iv=setInterval(passo,250);
+  a.addEventListener('ended',()=>{if(tok())fim(true)});
+  a.addEventListener('error',()=>fim(false));
+  try{onLinha?.(0);linha=0;await a.play()}catch{fim(false)}
+ });
+}
+w.AulaVozIA={cena,parar,obter};
 })(window);
 /* Estudos > Mentor: PDF e aulas ficam no dispositivo; IA processa somente texto. */
 ;(function(){'use strict';const T=window.TecnicaPratica,E=T.escape,baseChart=T.chart;let disposed=false,owner='',file=null,busy=false,message='',theme='',first=1,last=8,requestId='',controller=null,task=null,loadedAt=0,loadingList=false,pdfExpanded=false,storedRows=[],retryAt=0;

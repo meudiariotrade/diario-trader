@@ -53,3 +53,10 @@ test('v862: modo vídeo do Mentor — avatar no quadro, figuras do PDF e tela ch
  assert.match(f,/EstudosLocal\.put\('mentor-figura'/);assert.match(f,/getOperatorList/);assert.ok(!/fetch\(/.test(f),'figuras nunca saem do aparelho');
  assert.match(R('release.config.json'),/src\/studies\/mentor-figuras\.js/);
 });
+
+test('v863: aulas tradicionais com voz por IA por cena e volta à voz do aparelho se falhar',()=>{
+ const n=R('src/domains/layers/01-navegacao-e-fluxos.js'),v=R('src/studies/aulas-voz-ia.js');
+ assert.match(n,/E\(G, "local"\) === "ia" && window\.AulaVozIA/);assert.match(n,/data-au348mode="ia"/);assert.match(n,/aulas-ia-v863/);
+ assert.match(v,/workers\.dev\/v1\/voz/);assert.match(v,/caches\.open/);
+ assert.match(R('release.config.json'),/src\/studies\/aulas-voz-ia\.js/);
+});
