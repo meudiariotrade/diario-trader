@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 9f4530decb16142cad57c564ecc2724a48c036d75d56ea3ebda6c7076f791dbb */
+/* Gerado de src/app-theme.css · SHA256 a5dfa08d0902b3b5b365b480626d28093419b063d81e6a1540b976e883e7ad34 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -3587,3 +3587,17 @@ html:root body #app .jr841 td.g{color:#10B981}html:root body #app .jr841 td.r{co
 html:root body #app .jr841 td:not(:first-child),html:root body #app .jr841 th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 html:root body #app .dt397-native-mount #dt393-workspace>div:has([data-brain-root]){column-count:auto!important}
 html:root body #app .dt397-native-mount #dt393-workspace>div:has([data-brain-root])>*{column-span:all}
+/* v842 — Atalhos do iPhone em Configurações */
+html:root body #app .atl842{display:grid;gap:8px;min-width:0;column-span:all}
+html:root body #app .atl842-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+html:root body #app .atl842-h h3{margin:0;font-size:15px}
+html:root body #app .atl842-h p,html:root body #app .atl842-uso{margin:4px 0 0;font-size:13px;color:var(--ui-label,#64748B)}
+html:root body #app .atl842-uso b{font-variant-numeric:tabular-nums}
+html:root body #app .atl842-uso b.ok{color:#10B981}html:root body #app .atl842-uso b.neg{color:#EF4444}
+html:root body #app .atl842-aviso{margin:0;font-size:13px;color:#F59E0B}
+html:root body #app .atl842-lista{display:grid;gap:8px}
+html:root body #app .atl842-it{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center;padding:8px 0;border-top:1px solid var(--ui-card-line,rgba(255,255,255,.06))}
+html:root body #app .atl842-it b{grid-column:1/-1;font-size:13px}
+html:root body #app .atl842-it code{font-size:11px;word-break:break-all;color:var(--ui-label,#94A3B8)}
+html:root body #app .atl842 .btn{min-height:40px}
+html:root body #app .atl842-passos{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}

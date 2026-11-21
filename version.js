@@ -1,1 +1,1 @@
-window.DIARIO_RELEASE=Object.freeze({"version":841,"label":"v841","base":"87edf640575c9c692c1dd251d56d40a6123a8388"});
+window.DIARIO_RELEASE=Object.freeze({"version":842,"label":"v842","base":"87edf640575c9c692c1dd251d56d40a6123a8388"});
