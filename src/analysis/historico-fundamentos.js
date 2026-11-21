@@ -101,7 +101,7 @@
    '<div class="hf-acoes"><button type="button" class="btn s" data-hf="pdf">Salvar PDF</button><button type="button" class="btn s" data-hf="fechar">Fechar</button></div></header>'+
    '<h3 class="hf-sec">Qualidade histórica · últimos 10 anos</h3>'+
    '<div class="hf-grid hf-g5">'+cartaoIndicador('roe','Rentabilidade (ROE)',a.roe,h.roe,v=>pct(v))+cartaoIndicador('margem','Margem líquida',a.margem,h.margem,v=>pct(v))+
-   cartaoIndicador('dy','Dividend yield',a.dy,h.dy,v=>pct(v))+cartaoIndicador('dlpl','Dívida líquida / PL',a.dlpl,h.dlpl,v=>fmt(v,2)+'x')+
+   cartaoIndicador('dy','Dividend yield',a.dy,h.dy,v=>pct(v))+cartaoIndicador('dlpl','Dívida líquida / PL',a.dlpl,h.dlpl,v=>v==null||!Number.isFinite(v)?'—':fmt(v,2)+'x')+
    '<div class="hf-card hf-desc"><h4>Preço × valor intrínseco</h4><div class="hf-pares"><span><small>Valor intrínseco</small><b>'+MO+fmt(a.intrinseco,2)+'</b></span><span><small>Preço</small><b>'+MO+fmt(a.preco,2)+'</b></span></div>'+
    '<p class="hf-big '+(c.desconto<0?'ok':'neg')+'">'+(c.desconto==null?'—':(c.desconto<0?'Desconto ':'Ágio ')+pct(Math.abs(c.desconto)))+'</p><p class="hf-leg">Graham sobre o último balanço anual. Estimativa, não recomendação.</p></div></div>'+
    '<div class="hf-card hf-full"><h4>Criação de valor · preço × valor intrínseco</h4>'+precoIntrinseco(c)+'</div>'+
