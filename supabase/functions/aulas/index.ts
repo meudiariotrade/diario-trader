@@ -423,7 +423,7 @@ Deno.serve(async (req) => {
     if (b.acao === 'mentor_pdf' || b.acao === 'mentor_pdf_local') {
       const localOnly=b.acao==='mentor_pdf_local';
       const id=String(b.requestId||''),texto=String(b.texto||'').replace(/\u0000/g,''),tema=txt(b.tema,180),arquivo=txt(b.arquivo,140),paginas=txt(b.paginas,40);
-      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)||!tema||!arquivo||!paginas||texto.trim().length<300||texto.length>85000)return out({error:'Informe PDF com texto selecionável, tema e até 85 mil caracteres por aula.'},400);
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)||!tema||!arquivo||!paginas||texto.trim().length<300||texto.length>120000)return out({error:'Informe PDF com texto selecionável, tema e até 120 mil caracteres por aula.'},400);
       if(!localOnly){const existing=await db(`aulas?id=eq.${id}&user_id=eq.${uid}&select=id,roteiro`);if(existing?.[0]?.roteiro?.mentor)return out({aula:existing[0]});}
       const reserva=await reservaUso(uid,'iniciar','mentor:'+id);
       if(!reserva.permitido)return out({error:'Geração já em andamento ou limite diário de aulas atingido.'},429);

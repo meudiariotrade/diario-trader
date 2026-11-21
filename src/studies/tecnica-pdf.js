@@ -26,6 +26,21 @@ function reset(){if(owner===uid())return;controller?.abort();task?.destroy();own
 function safeLesson(row){const l=row?.roteiro?.mentor;if(!l||!row.id||!Array.isArray(l.stages)||l.stages.length!==4||l.stages.some(t=>typeof t!=='string')||!Array.isArray(l.questions)||l.questions.length!==3||l.questions.some(q=>typeof q.q!=='string'||!Array.isArray(q.options)||q.options.length!==3||!Number.isInteger(q.answer)||q.answer<0||q.answer>2)||!Array.isArray(l.roteiroVoz?.etapas)||l.roteiroVoz.etapas.length!==4||l.roteiroVoz.etapas.some(v=>typeof v!=='string')||!Array.isArray(l.stageNames)||l.stageNames.length!==4||!Array.isArray(l.visuals)||l.visuals.length!==4||l.visuals.some(v=>!Array.isArray(v.items)))throw Error('A aula salva está incompleta.');return {...l,id:String(row.id),videoId:String(row.id),module:'mentor-pdf',pdf:true,title:String(l.title).slice(0,120),summary:String(l.summary).slice(0,500),minutes:Math.max(1,Math.min(60,Number(l.minutes)||3)),stageNames:l.stageNames.map(t=>String(t).slice(0,70))};}
 function insert(row){const ownRow={...row,user_id:row.user_id||uid()};const l=safeLesson(ownRow);T.lessons=T.lessons.filter(x=>x.id!==l.id);T.lessons.push(l);storedRows=storedRows.filter(x=>x.id!==ownRow.id);storedRows.push(ownRow);if(!T.modules.some(m=>m.id==='mentor-pdf'))T.modules.push({id:'mentor-pdf',title:'Minhas aulas do Mentor · PDF',reference:'Material enviado por você'});return l;}
 T.chart=function(l,step){if(!l.pdf)return baseChart(l,step);const v=l.visuals[step]||{},items=(v.items||[]).slice(0,4);return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 370" role="img" aria-label="${E(v.title||l.stageNames?.[step]||'Mapa da etapa')}"><rect width="760" height="370" fill="#0A0C10"/><text x="28" y="40" fill="#D4A017" font-size="21">${E(String(v.title||'Etapa').slice(0,60))}</text>${items.map((t,i)=>{const text=String(t).slice(0,105),words=text.split(' ');let lines=[''];for(const w of words){const k=lines.length-1;if((lines[k]+' '+w).length>58)lines.push(w);else lines[k]+=(lines[k]?' ':'')+w;}return `<line x1="30" y1="${76+i*69}" x2="730" y2="${76+i*69}" stroke="#1E232E"/><text x="32" y="${102+i*69}" fill="#D4A017" font-size="18">${i+1}</text><text x="67" y="${102+i*69}" fill="#E7EBF2" font-size="17">${lines.slice(0,2).map((line,j)=>`<tspan x="67" dy="${j?22:0}">${E(line)}</tspan>`).join('')}</text>`;}).join('')}</svg>`;};
+/* v855: lê até ~600 mil caracteres e, se passar do limite da aula, guarda as páginas mais ligadas ao tema (no aparelho, sem custo). */
+const LIMITE_LEITURA=600000,LIMITE_AULA=120000;
+function selecionarPorTema(texto,tema,limite){
+ const norm=x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+ const SIN={elliott:['elliott','onda','ondas','impulso','impulsiva','corretiva','correcao','abc','fibonacci','extensao','retracao'],fibonacci:['fibonacci','retracao','extensao','61,8','38,2','50%','projecao'],
+  candle:['candle','candlestick','martelo','engolfo','doji','pavio','sombra','corpo'],media:['media','medias','mme','mms','cruzamento','tendencia'],suporte:['suporte','resistencia','rompimento','pullback'],
+  risco:['risco','stop','gerenciamento','posicao','capital','drawdown'],volume:['volume','vwap','fluxo','agressao'],ifr:['ifr','rsi','sobrecompra','sobrevenda','divergencia'],tendencia:['tendencia','topo','fundo','dow','canal']};
+ let termos=norm(tema).split(/[^a-z0-9%,]+/).filter(t=>t.length>=3&&!['das','dos','de','para','com','uma','como'].includes(t));
+ for(const [k,v] of Object.entries(SIN))if(termos.some(t=>t.startsWith(k.slice(0,5))||v.includes(t)))termos=termos.concat(v);
+ termos=[...new Set(termos)];
+ const paginas=texto.split(/(?=\n\[Página \d+\]\n)/).filter(Boolean).map((p,i)=>{const n=norm(p);let sc=0;for(const t of termos){let k=0,j=-1;while((j=n.indexOf(t,j+1))>=0&&k<50)k++;sc+=k}return {i,p,sc:sc/Math.sqrt(Math.max(400,p.length)/400)}});
+ const escolhidas=new Set();let total=0;
+ for(const pg of [...paginas].sort((a,b)=>b.sc-a.sc)){if(pg.sc<=0&&escolhidas.size)break;if(total+pg.p.length>limite)continue;escolhidas.add(pg.i);total+=pg.p.length}
+ return paginas.filter(pg=>escolhidas.has(pg.i)).map(pg=>pg.p).join('');
+}
 T.pdfControls=()=>{reset();const atual=document.querySelector('#tp-root .tp-pdf');if(atual)pdfExpanded=atual.open;return `<details class="tp-pdf" ${pdfExpanded||busy||message?'open':''}><summary>Gerar Aula do Mentor via PDF</summary><form data-tp-pdf-form><label>Arquivo PDF<input data-tp-pdf-file type="file" accept=".pdf,application/pdf" ${busy?'disabled':''}></label><button type="button" data-tp-pdf="refresh">Atualizar minhas aulas</button><small>${E(file?.name||'Até 25 MB · até 150 páginas por trecho (limite de 85 mil caracteres extraídos).')}</small><label>Foco ou tema<input data-tp-pdf-theme maxlength="180" value="${E(theme)}" placeholder="Ex.: leitura de suportes ou resposta de circuitos" required ${busy?'disabled':''}></label><div class="tp-controls"><label>Página inicial<input data-tp-pdf-first type="number" min="1" value="${first}" required ${busy?'disabled':''}></label><label>Página final<input data-tp-pdf-last type="number" min="1" value="${last}" required ${busy?'disabled':''}></label></div><p>O texto das páginas selecionadas será enviado à IA configurada no app. O PDF original fica no aparelho. A aula ficará salva somente neste aparelho. Exporte backup JSON para outro aparelho.</p><button type="submit" ${busy?'disabled':''}>${busy?'Preparando aula…':'Gerar e salvar aula'}</button>${busy?'<button type="button" data-tp-pdf="cancel">Cancelar espera</button>':''}<p role="status" data-tp-pdf-status>${E(message)}</p></form></details><details class="tp-backup"><summary>Backup local · Estudos</summary><p>Livros, PDFs, aulas e áudios ficam neste aparelho. Faça backup antes de limpar dados do iPhone.</p><div class="tp-controls"><button type="button" data-tp-backup="export">Exportar backup JSON</button><label>Importar backup JSON<input type="file" data-tp-backup-file accept=".json,application/json"></label></div><button type="button" data-tp-pdf="migrate">Migrar aulas antigas da nuvem (uma única vez)</button><p role="status" data-tp-backup-status></p></details>`;};
 function update(text){message=text;const s=document.querySelector('[data-tp-pdf-status]');if(s)s.textContent=text;}
 function validOwner(current){if(uid()!==current)throw Error('A conta mudou. A geração anterior não será exibida nesta conta.');}
@@ -41,7 +56,7 @@ async function generate(){
   const textKey=current+':'+selectedFile.name+':'+selectedFile.size+':'+(selectedFile.lastModified||0)+':'+range;
   let text='';
   const saved=await localRead('texto',textKey);
-  if(saved?.text&&typeof saved.text==='string'&&saved.text.length<=85000){
+  if(saved?.text&&typeof saved.text==='string'&&saved.text.length<=LIMITE_AULA){
    text=saved.text;update('Trecho extraído recuperado deste aparelho.');
   }else{
    update('Lendo o trecho selecionado do PDF…');
@@ -58,10 +73,11 @@ async function generate(){
      const page=await pdf.getPage(i),content=await page.getTextContent();
      text+='\n[Página '+i+']\n'+content.items.map(x=>typeof x.str==='string'?x.str:'').join(' ');
      page.cleanup?.();
-     if(text.length>85000)throw Error('O trecho tem mais de 85 mil caracteres. Escolha menos páginas.');
+     if(text.length>LIMITE_LEITURA)throw Error('O trecho passa de '+Math.round(LIMITE_LEITURA/1000)+' mil caracteres (cerca de 250 páginas). Escolha menos páginas.');
     }
    }finally{await pdf.destroy();task=null;}
    if(text.replace(/\s/g,'').length<300)throw Error('Este trecho não tem texto suficiente. PDFs escaneados precisam de OCR antes do envio.');
+   if(text.length>LIMITE_AULA){const total=text.length;text=selecionarPorTema(text,theme,LIMITE_AULA);update('Trecho grande ('+Math.round(total/1000)+' mil caracteres): usei as páginas mais ligadas a "'+theme.trim()+'" ('+Math.round(text.length/1000)+' mil).')}
    await localWrite('texto',textKey,{time:Date.now(),text});
   }
   validOwner(current);
