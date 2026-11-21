@@ -31,6 +31,9 @@ const FONTES = [
   { nome: 'Federal Reserve', host: 'federalreserve.gov', url: 'https://www.federalreserve.gov/feeds/press_all.xml' },
   { nome: 'SEC EDGAR', host: 'sec.gov', url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom', formato:'atom' },
 ];
+/* v846: perfis do X (FxTwitter RSS) lidos na borda, com cache compartilhado; títulos em inglês são traduzidos no app. */
+export const X_PERFIS = ['FirstSquawk','DeItaone','LiveSquawk','financialjuice','KobeissiLetter','unusual_whales','zerohedge','WalterBloomberg'];
+FONTES.push(...X_PERFIS.map(p=>({nome:'X · @'+p, host:'x.com', perfil:p, formato:'x', url:'https://fxtwitter.com/'+p+'/feed.xml?count=25'})));
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const ent = { amp:'&', lt:'<', gt:'>', quot:'"', apos:"'", nbsp:' ' };
 function limpa(s) {
@@ -85,6 +88,21 @@ export function lerSECAtom(xml,fonte,agora=Date.now()) {
   }
   return out;
 }
+/* v846: post do X vira manchete só se o link for do próprio perfil; sem tema identificado, entra como macro. */
+export function lerX(xml,fonte,agora=Date.now()) {
+  const out=[];
+  for(const b of (String(xml||'').slice(0,200000).match(/<item\b[^>]*>[\s\S]*?<\/item>/gi)||[]).slice(0,30)){
+    const t=tag(b,'title').replace(/^R to @\w+:\s*/i,'').replace(/https?:\/\/\S+/g,'').replace(/\s+/g,' ').trim().slice(0,220);
+    const l=tag(b,'link').replace(/^https:\/\/(?:fxtwitter|fixupx|twitter)\.com\//i,'https://x.com/');
+    const d=Date.parse(tag(b,'pubDate'));
+    if(!new RegExp('^https://(?:www\\.)?x\\.com/'+fonte.perfil+'/status/[0-9]+','i').test(l))continue;
+    if(t.length<15||!Number.isFinite(d)||d>agora+300000||d<agora-86400000)continue;
+    if(/\b(giveaway|subscribe|sign up|link in bio|promo|discount|webinar)\b/i.test(t))continue;
+    out.push({t,l:l.slice(0,300),fonte:fonte.nome,d:new Date(d).toISOString(),tema:tema(t)||'politica_economica'});
+    if(out.length>=12)break;
+  }
+  return out;
+}
 export function deveColetar(now=new Date()){
   const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{
     timeZone:'America/Sao_Paulo',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
@@ -94,9 +112,10 @@ export function deveColetar(now=new Date()){
 }
 export async function coletarNoticias(fetcher=fetch,agora=Date.now(),anteriores=[]){
   const resultados=await Promise.allSettled(FONTES.map(async f=>{
-    const r=await fetcher(f.url,{headers:{Accept:'application/rss+xml, application/atom+xml, application/xml, text/xml','User-Agent':'DiarioTraderPublicFeed/1.0 (GitHub meudiariotrade)'},signal:AbortSignal.timeout(5500)});
+    // FxTwitter recusa User-Agent de robô: o X segue sem ele.
+    const r=await fetcher(f.url,{headers:f.formato==='x'?{Accept:'application/rss+xml, application/xml, text/xml'}:{Accept:'application/rss+xml, application/atom+xml, application/xml, text/xml','User-Agent':'DiarioTraderPublicFeed/1.0 (GitHub meudiariotrade)'},signal:AbortSignal.timeout(5500)});
     if(!r.ok)throw Error('Feed HTTP '+r.status);
-    const xml=await r.text();return f.formato==='atom'?lerSECAtom(xml,f,agora):lerRSS(xml,f,agora);
+    const xml=await r.text();return f.formato==='atom'?lerSECAtom(xml,f,agora):f.formato==='x'?lerX(xml,f,agora):lerRSS(xml,f,agora);
   }));
   const map=new Map(),fontesOk=[],fontesIndisponiveis=[];
   resultados.forEach((r,i)=>{
@@ -108,7 +127,7 @@ export async function coletarNoticias(fetcher=fetch,agora=Date.now(),anteriores=
     }
   });
   return {atualizadoEm:new Date(agora).toISOString(),
-    itens:[...map.values()].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,50),
+    itens:[...map.values()].sort((a,b)=>b.d.localeCompare(a.d)).slice(0,70),
     eventos:agruparEventos([...map.values()],anteriores,agora),
     fontesOk,fontesIndisponiveis};
 }

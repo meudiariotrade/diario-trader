@@ -63,7 +63,7 @@ test("v670: monta somente uma instância na aba ativa sem modificar as demais te
  assert.equal(w.document.querySelectorAll(".dt670-opening").length,0);
  w.close();
 });
-test("v682: abertura apenas em Início e Meu dia, nunca em Mercado",()=>{
+test("v682/v846: abertura apenas no Início, nunca em Mercado nem no Meu dia",()=>{
  const w=page();
  w.tab="mercado";w.document.getElementById("app").innerHTML='<div class="dt395-native-mercado"><div class="m403-section-header">Mercado</div><section>Conteúdo existente</section></div>';
  w.TermometroAbertura670.montar();
@@ -71,7 +71,7 @@ test("v682: abertura apenas em Início e Meu dia, nunca em Mercado",()=>{
  assert.equal(w.document.querySelector(".m403-section-header").nextElementSibling.textContent,"Conteúdo existente");
  w.tab="dia";w.document.getElementById("app").innerHTML='<div class="dt393-page dt393-day"><section>Plano existente</section></div>';
  w.TermometroAbertura670.montar();
- assert.equal(w.document.querySelector(".dt393-day").firstElementChild.className,"dt670-opening");
+ assert.equal(w.document.querySelectorAll(".dt393-day .dt670-opening").length,0);
  w.close();
 });
 

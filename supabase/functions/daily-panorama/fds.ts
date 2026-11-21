@@ -2,6 +2,7 @@
 // 12 criptoativos pela Binance (24h: preço, variação, máxima e mínima), termômetro de risco e
 // manchetes do fim de semana (Google Notícias). Mesmo visual escuro/âmbar do Panorama.
 import { svgDe } from './resolve.ts';
+import { decodeEntidades } from '../_shared/entidades.ts';
 export const FDS_CRIPTO = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'DOGE', 'ADA', 'AVAX', 'LINK', 'SUI', 'TON', 'DOT'];
 // v640: sábado 00:00 até domingo 19:59 (Brasília). Domingo 20:00 os futuros dos EUA reabrem → Panorama normal.
 export const ehFimDeSemana = (d = new Date()) => {
@@ -61,7 +62,7 @@ export async function manchetes(): Promise<string[]> {
         if (!tt) continue;
         const d = pd ? Date.parse(pd[1].trim()) : Date.now();
         if (!(d >= limite)) continue;
-        const t = tt[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/<[^>]+>/g, '').replace(/\s+-\s+[^-]{2,40}$/, '').trim();
+        const t = decodeEntidades(tt[1].replace(/<!\[CDATA\[|\]\]>/g, '')).replace(/<[^>]+>/g, '').replace(/\s+-\s+[^-]{2,40}$/, '').trim();
         if (t.length < 25) continue;
         const s = PESO.reduce((a, [re, w]) => a + (re.test(t) ? w : 0), 0);
         itens.push({ t, f: fonte, s, d });

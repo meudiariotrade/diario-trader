@@ -32,7 +32,7 @@ test('v810 E2E: duas telas, três fases, override/auto, CLS, overflow e captura 
    const dia=page.locator('#app .v810-day');
    await expect(dia).toBeVisible();
    await expect(dia).toHaveAttribute('data-v810-phase',phase);
-   await expect(dia.locator(':scope > .dt670-opening')).toHaveCount(1);
+   await expect(dia.locator(':scope > .dt670-opening')).toHaveCount(0);
    await expect(dia.locator('.v810-day-context[data-intel-etapa1]')).toHaveCount(1);
    await expect(dia.getByText('Plano do dia',{exact:true})).toBeVisible();
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'Meu Dia sem overflow');

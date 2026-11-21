@@ -106,7 +106,7 @@ const sectors=(s.data?.sectors||[]).filter(Boolean).sort((a,b)=>a.localeCompare(
 return '<div class="scr-filters"><label>Buscar ticker ou empresa<input type="search" data-scr-search="'+m+'" value="'+E(s.search)+'" placeholder="Ticker / empresa" autocomplete="off"></label>'+
 '<label>Setor<select data-scr-filter="sector">'+options([['','Todos os setores'],...sectors.map(x=>[x,x])],s.sector)+'</select></label>'+
 '<label>Custódia<select data-scr-filter="custody">'+options([['todos','Todos'],['carteira','Na Minha Carteira'],['fora','Fora da Carteira']],s.custody)+'</select></label>'+
-(m==='br'?'<label>Liquidez<select data-scr-filter="liquidity">'+options([['0','Todas as ações (inclui Small/Micro Caps)'],['1000000','> R$ 1M/dia'],['5000000','> R$ 5M/dia'],['20000000','> R$ 20M/dia']],s.liquidity)+'</select></label>':
+(m==='br'?'<label>Liquidez<select data-scr-filter="liquidity">'+options([['0','Todas'],['1000000','> R$ 1M/dia'],['5000000','> R$ 5M/dia'],['20000000','> R$ 20M/dia']],s.liquidity)+'</select></label>':
 '<label>Capitalização<select data-scr-filter="cap">'+options([['all','All Stocks'],['large','Large Cap'],['mid','Mid Cap'],['small','Small Cap']],s.cap)+'</select></label>')+
 '<label>Estratégia<select data-scr-filter="preset">'+options(presets,s.preset)+'</select></label>'+(m==='br'?'<label>Yield aceito<select data-scr-filter="yieldAceitavel">'+options([['0.06','6%'],['0.07','7%'],['0.08','8%']],s.yieldAceitavel)+'</select></label>':'')+
 (m==='br'?'<label>Comprar abaixo de<select data-scr-filter="safetyMethod">'+options([['todos','Todos'],['proprio','Preço teto (sua fórmula)'],['bazin','Bazin 6%'],['bazinDinamico','Bazin dinâmico'],['graham','Graham']],s.safetyMethod)+'</select></label>':'')+'</div>';
@@ -143,6 +143,31 @@ function chart(m,s){
  const view=w.DiarioScreenersGrafico?.plot(m,s,ownRow);
  return view||'<section class="scr-panel"><p>Gráfico indisponível. Atualize o aplicativo.</p></section>';
 }
+/* v846: gráficos fundamentalistas da ficha — desenhados no aparelho (SVG), sem nova consulta. */
+const MENOR_MELHOR=new Set(['pl','pvp','ev_ebitda','div_liq_ebitda','forward_pe','peg_ratio','divida_liquida_ebitda','p_l','p_vp']);
+function graficoValuation(row,v){
+ const preco=Number(row?.preco_referencia);if(!v||!(preco>0))return '';
+ const itens=[['proprio','Sua fórmula'],['bazin','Bazin 6%'],['bazinDinamico','Bazin dinâmico'],['graham','Graham']].map(([k,l])=>[l,Number(v.methods?.[k])]).filter(x=>x[1]>0);
+ if(!itens.length)return '';
+ const max=Math.max(preco,...itens.map(x=>x[1]))*1.12,W=320,lin=26,H=itens.length*lin+30,x0=104,larg=W-x0-8,px=x=>x0+larg*x/max;
+ const barras=itens.map(([l,val],i)=>{const y=8+i*lin,acima=val>=preco;return '<text x="0" y="'+(y+13)+'" class="rot">'+l+'</text><rect x="'+x0+'" y="'+(y+2)+'" width="'+Math.max(2,px(val)-x0).toFixed(1)+'" height="14" rx="2" class="'+(acima?'ok':'neg')+'"/><text x="'+Math.min(W-2,px(val)+4).toFixed(1)+'" y="'+(y+13)+'" class="val"'+(px(val)>W-60?' text-anchor="end" dx="-8"':'')+'>'+fmt(val,2)+'</text>'}).join('');
+ const xp=px(preco).toFixed(1);
+ return '<figure class="scr846-fig"><figcaption>Preço × valor justo</figcaption><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Preço atual comparado aos valores justos">'+barras+
+  '<line x1="'+xp+'" x2="'+xp+'" y1="2" y2="'+(H-16)+'" class="px"/><text x="'+xp+'" y="'+(H-3)+'" text-anchor="middle" class="pxt">preço R$ '+fmt(preco,2)+'</text></svg>'+
+  '<p class="scr-hint">Verde: valor justo acima do preço (margem de segurança). Vermelho: abaixo do preço.</p></figure>';
+}
+function graficoPosicao(row,meta,s){
+ const linhas=(s.data?.rows||[]).concat(s.topData?.rows||[]),vistos=new Set(),base=linhas.filter(r=>r&&!vistos.has(r.ticker)&&vistos.add(r.ticker));
+ if(base.length<8)return '';
+ const ms=meta.parts.flatMap(p=>p.metrics).filter(x=>x.number!=null).slice(0,10);
+ const itens=ms.map(x=>{const vals=base.map(r=>Number(r[x.key])).filter(Number.isFinite);if(vals.length<8)return null;
+  const abaixo=vals.filter(v=>v<x.number).length,iguais=vals.filter(v=>v===x.number).length,pct=(abaixo+iguais/2)/vals.length*100;
+  return {label:x.label,valor:x.number,unit:x.unit,p:MENOR_MELHOR.has(x.key)?100-pct:pct}}).filter(Boolean);
+ if(itens.length<2)return '';
+ return '<figure class="scr846-fig"><figcaption>Posição no ranking por indicador</figcaption><div class="scr846-pos">'+itens.map(x=>
+  '<div class="scr846-li"><span>'+E(x.label)+' <small>'+fmt(x.valor,1)+(x.unit==='%'?'%':x.unit==='x'?'x':'')+'</small></span><span class="scr846-bar" title="Melhor que '+Math.round(x.p)+'% dos ativos listados"><i style="width:'+Math.round(x.p)+'%" class="'+(x.p>=66?'ok':x.p>=33?'at':'neg')+'"></i></span><b>'+Math.round(x.p)+'</b></div>').join('')+
+  '</div><p class="scr-hint">0 a 100: quanto maior, melhor o ativo neste indicador em relação aos '+base.length+' ativos carregados (P/L, P/VP e dívida contam ao contrário).</p></figure>';
+}
 function detail(m,s){
  const tk=s.detailTicker;if(!tk)return '';
  const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk];
@@ -178,7 +203,7 @@ function detail(m,s){
  '<span class="'+(meta.validated?'is-ok':'is-review')+'">'+E(meta.level)+'</span>'+
  '<span>'+fmt(meta.coverage,0)+'% dos critérios disponíveis</span></div>'+
  '<div class="sm" data-fundamental-history="'+E(tk)+'">'+(w.DiarioInteligenciaEtapa2?.fundamental?.(tk)||'')+'</div>'+
-'<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+valuationHTML+calcHTML+
+'<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+'<div class="scr846-graficos">'+graficoValuation(row,valuation)+graficoPosicao(row,meta,s)+'</div>'+valuationHTML+calcHTML+
  '<div class="scr-detail-groups">'+meta.parts.map(p=>
  '<div class="scr-detail-group"><div><b>'+E(p.name)+'</b><span>'+(p.points==null?'Não calculado':fmt(p.points/10,1)+' / '+fmt(p.weight/10,1)+' pontos')+'</span></div>'+
  '<div class="scr-meter"><i style="width:'+(p.points==null?0:p.points/p.weight*100)+'%"></i></div>'+

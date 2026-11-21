@@ -4,6 +4,7 @@ import '../_shared/jornal-quality.js';
 const JORNAL_Q = (globalThis as any).DiarioJornalQualidade;
 import { numerosFato, validaRelatorio, textoTecnicoConfere } from './validacao.ts';
 import { fatosTecnicos, revisaTecnica, VERSAO_CONSISTENCIA, INSTRUCAO_CONSISTENCIA } from '../_shared/consistencia-tecnica.ts';
+import { decodeEntidades } from '../_shared/entidades.ts';
 import { gerarTexto, status as iaStatus, especializarSistema, contextoPrivadoTrading } from '../_shared/ai-router.ts';
 export { numerosFato, validaRelatorio };
 
@@ -3153,7 +3154,7 @@ export function resumoTecnico(c: Candle[] | null) {
 export type ResTec = NonNullable<ReturnType<typeof resumoTecnico>>;
 
 // ---------- notícias (Google Notícias, últimos 7 dias) ----------
-const c_tira = (s: string) => s.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+const c_tira = (s: string) => decodeEntidades(s.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, '')).trim();
 export function leRSSNoticias(xml: string, max = 6) {
   const it = [...String(xml || '').matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 30).map((m) => {
     const g = (t: string) => { const x = new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`).exec(m[1]); return x ? c_tira(x[1]) : ''; };
