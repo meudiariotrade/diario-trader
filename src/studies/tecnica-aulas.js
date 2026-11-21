@@ -21,7 +21,7 @@ function player(l){
  const quadro=usaFig?`<figure class="tp-fig"><img src="${fig.url}" alt="Figura do seu PDF, página ${E(fig.pagina)}"><figcaption>Do seu PDF · página ${E(fig.pagina)}</figcaption></figure>`:`<div class="tp-chart">${T.chart(l,step)}</div>`;
  const fala=E(String(l.roteiroVoz?.etapas?.[step]||l.stages[step]||'').slice(0,220));
  return `<div class="tp-player ${telaCheia?'tp-fs':''}" data-tp-player="1"><div class="tp-stage">${quadro}
- <div class="tp-pres ${playing?'on':''}" aria-label="Avatar Mentor"><img src="${asset('mentor.png')}" alt="Mentor" data-tp-image="1">${(playing||loading)&&!videoFailed?`<video data-tp-video="1" src="${asset('talking.mp4')}" autoplay loop muted playsinline preload="auto"></video>`:''}<span>${playing?'Mentor explicando':loading?'Preparando voz…':'Mentor'}</span></div>
+ <div class="tp-pres ${playing?'on':''}" aria-label="${playing?'Mentor explicando':'Mentor'}"><img src="${asset('mentor.png')}" alt="Mentor" data-tp-image="1">${!videoFailed?`<video data-tp-video="1" src="${asset('talking.mp4')}" ${playing?'autoplay':''} loop muted playsinline preload="auto"></video>`:''}${playing?'<i class="tp-rec" aria-hidden="true"></i>':''}</div>
  <div class="tp-legenda"><b>${step+1}. ${E((l.stageNames||names)[step])}</b>${playing?`<span>${fala}${fala.length>=220?'…':''}</span>`:''}</div></div>
  <div class="tp-pctl"><button type="button" data-tp-action="${playing||loading?'pause':'listen'}">${playing||loading?'❚❚ Pausar':'▶ Ouvir'}</button><button type="button" data-tp-action="prev" ${step===0?'disabled':''} aria-label="Etapa anterior">←</button><button type="button" data-tp-action="next" ${step===3?'disabled':''} aria-label="Próxima etapa">→</button>${temFig?`<button type="button" data-tp-action="quadro">${modoQuadro==='figura'?'Gráfico':'Figura do livro'}</button>`:figs===null&&l.pdf?'<span class="tp-pinfo">Buscando figuras do PDF…</span>':''}<button type="button" data-tp-action="tela">${telaCheia?'Sair da tela cheia':'⛶ Tela cheia'}</button></div></div>`;
 }
@@ -120,7 +120,20 @@ function animarEtapa(){try{const l=T.lessons.find(x=>x.id===selected),svg=docume
 function dock(){const root=document.getElementById('tp-root'),mentor=root?.querySelector('.tp-pip');if(!root||!mentor)return;const rect=root.getBoundingClientRect();root.style.setProperty('--tp-right',Math.max(16,window.innerWidth-rect.right+16)+'px');mentor.style.visibility=window.innerWidth>=1000&&(rect.bottom<110||rect.top>window.innerHeight-80)?'hidden':'';}
 let dockFrame=0;function scheduleDock(){if(dockFrame)return;dockFrame=requestAnimationFrame(()=>{dockFrame=0;dock();});}
 window.addEventListener('scroll',scheduleDock,{passive:true});window.addEventListener('resize',scheduleDock,{passive:true});
-function releaseAudio(){if(audio){audio.onended=audio.onerror=audio.onplaying=audio.onpause=null;audio.pause();audio.removeAttribute('src');audio.load();audio=null;}if(objectURL){URL.revokeObjectURL(objectURL);objectURL='';}}
+/* v864: o avatar reage à própria voz — gestos só enquanto há fala, leve movimento com o volume. */
+let actx=null,raf=0;
+function prepararAudio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume?.().catch(()=>{})}catch{}}
+function reagir(a){cancelAnimationFrame(raf);try{if(!actx||actx.state!=='running')return; // sem contexto ativo, não desviar o som
+
+ const src=actx.createMediaElementSource(a),an=actx.createAnalyser();an.fftSize=512;src.connect(an);an.connect(actx.destination);
+ const buf=new Uint8Array(an.fftSize);let suave=0,quieto=0;
+ const loop=()=>{if(audio!==a)return;an.getByteTimeDomainData(buf);let sum=0;for(const v of buf){const d=(v-128)/128;sum+=d*d}
+  const rms=Math.min(1,Math.sqrt(sum/buf.length)*4);suave=suave*.8+rms*.2;
+  const el=document.querySelector('#tp-root .tp-pres,#tp-fs-host .tp-pres'),vid=el?.querySelector('video');
+  if(el)el.style.setProperty('--fala',suave.toFixed(3));
+  if(vid){if(suave>.06){quieto=0;if(vid.paused)vid.play().catch(()=>{})}else if(++quieto>18&&!vid.paused)vid.pause()}
+  raf=requestAnimationFrame(loop)};raf=requestAnimationFrame(loop);}catch{}}
+function releaseAudio(){cancelAnimationFrame(raf);if(audio){audio.onended=audio.onerror=audio.onplaying=audio.onpause=null;audio.pause();audio.removeAttribute('src');audio.load();audio=null;}if(objectURL){URL.revokeObjectURL(objectURL);objectURL='';}}
 function stop(){document.querySelector('#tp-root [data-tp-video]')?.pause();const player=document.querySelector('#tp-root [data-tp-film-player]');if(player){player.pause();player.removeAttribute('src');player.load();}if(film?.startsWith('blob:'))URL.revokeObjectURL(film);film=null;run++;controller?.abort();controller=null;releaseAudio();if(utterance){utterance.onend=utterance.onerror=utterance.onstart=null;window.speechSynthesis?.cancel();utterance=null;}playing=false;loading=false;}
 function mark(){const l=T.lessons.find(l=>l.id===selected);if(!l||!visual)return;const r=record(l);r.step=step;if(!r.viewed.includes(step))r.viewed.push(step);save();}
 function validEndpoint(s){try{const u=new URL(s);if(u.username||u.password||u.hash)return false;return ['http:','https:'].includes(u.protocol);}catch{return false;}}
@@ -177,7 +190,7 @@ async function speak(){
  }
  if(blob&&token===run){
   try{
-   objectURL=URL.createObjectURL(blob);audio=new Audio(objectURL);audio.preload='auto';
+   objectURL=URL.createObjectURL(blob);audio=new Audio(objectURL);audio.preload='auto';reagir(audio);
    audio.onplaying=()=>{if(token!==run)return;playing=true;loading=false;status='Narrando'+(fonteVoz?' · '+fonteVoz:' · áudio salvo neste aparelho')+'.';fonteVoz='';paint();};
    audio.onpause=()=>{if(token!==run||!playing)return;playing=false;status='Áudio pausado. Toque em Ouvir etapa para reiniciá-la.';paint();};
    audio.onended=()=>finishScene(token);
@@ -218,7 +231,7 @@ document.addEventListener('click',e=>{
  switch(b.dataset.tpAction){
  case 'close-film':stop();status='Vídeo fechado.';paint();break;
  case 'catalog':stop();selected=null;visual=false;telaCheia=false;document.getElementById('tp-fs-host')?.remove();document.body.classList.remove('tp-fs-on');status='';paint();break;
- case 'listen':document.dispatchEvent(new Event('au-study-pause'));speak();break;
+ case 'listen':prepararAudio();document.dispatchEvent(new Event('au-study-pause'));speak();break;
  case 'pause':stop();status='Pausado. Ouvir etapa reinicia a etapa atual.';paint();break;
  case 'visual':stop();visual=!visual;telaCheia=false;document.body.classList.remove('tp-fs-on');status='';mark();paint();break;
  case 'quadro':modoQuadro=modoQuadro==='figura'?'grafico':'figura';paint();break;
