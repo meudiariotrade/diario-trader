@@ -62,7 +62,8 @@ function drawing(doc,P,font){
   write(title,M,y,{size:8.7,color:C.muted});write(value==null?'N/D':num(value,1)+' / '+num(max,0),W-M,y,{font:'bold',size:8.7,right:true});
   rectangle(M,y+17,CW,4,C.rule);if(value!=null)rectangle(M,y+17,CW*Math.max(0,Math.min(1,value/max)),4,C.gold);y+=29;
  }
- return {W,H,M,C,CW,page,footer,rectangle,write,wrap,bar,line,get y(){return y},set y(t){y=t}};
+ const logos={map:null};function logo(tk,x,t,size){return w.DiarioPDFLogos?.desenhar(pg,logos.map,tk,x,t,size,H)||0}
+ return {W,H,M,C,CW,page,footer,rectangle,write,wrap,bar,line,logo,logos,get y(){return y},set y(t){y=t}};
 }
 function cover(L,market,rows,studies,opts={}){
  const scored=studies.filter(x=>x.score!==null).length,verified=studies.filter(x=>x.validated).length;
@@ -73,7 +74,8 @@ function cover(L,market,rows,studies,opts={}){
  const heads=[['TICKER',L.M+8],['EMPRESA',L.M+90],['NOTA',L.M+325],['COB.',L.M+397],['STATUS',L.M+447]];
  heads.forEach(([s,x])=>L.write(s,x,L.y+7,{font:'bold',size:7,color:L.C.white}));L.y+=25;
  rows.forEach((r,i)=>{const s=studies[i];L.rectangle(L.M,L.y,L.CW,33,i%2?L.C.paper:L.C.panel);
-  L.write((opts.automatic?String(i+1).padStart(2,'0')+'  ':'')+r.ticker,L.M+8,L.y+10,{font:'bold',size:8.5});
+  const pre=opts.automatic?String(i+1).padStart(2,'0')+'  ':'';L.write(pre,L.M+8,L.y+10,{font:'bold',size:8.5});
+  const dx=L.logo(r.ticker,L.M+8+(pre?18:0),L.y+8,14);L.write(r.ticker,L.M+8+(pre?18:0)+dx,L.y+10,{font:'bold',size:8.5});
   L.wrap(r.empresa||r.company_name||r.ticker,L.M+90,L.y+10,226,{size:8,maxLines:1});
   L.write(s.score===null?'N/D':num((opts.automatic?s.modelScore:s.score)/10,1)+'/10',L.M+325,L.y+10,{size:8});
   L.write(num(s.coverage,0)+'%',L.M+397,L.y+10,{size:8});
@@ -84,7 +86,7 @@ function cover(L,market,rows,studies,opts={}){
 }
 function individual(L,m,row,st,i,total,opts={}){
  const title=String(i+1).padStart(2,'0')+' / '+String(total).padStart(2,'0')+'  '+row.ticker+'  —  '+st.company;
- L.page(title,(row.setor||row.sector||'Setor não informado')+'  |  Snapshot: '+date(row.updated_at));
+ L.page(title,(row.setor||row.sector||'Setor não informado')+'  |  Snapshot: '+date(row.updated_at));L.logo(row.ticker,L.W-L.M-34,76,34);
  L.write(opts.automatic?'NOTA NO RANKING AUTOMÁTICO':'NOTA QUANTITATIVA',L.M,L.y,{font:'bold',size:9,color:L.C.gold});
  L.write(st.score===null?'INCOMPLETO':num((opts.automatic?st.modelScore:st.score)/10,1)+' / 10',L.M,L.y+21,{font:'serif',size:22});
  L.write(st.level.toUpperCase(),L.W-L.M,L.y+27,{font:'bold',size:9,right:true,color:st.validated?L.C.green:L.C.red});L.y+=67;
@@ -183,6 +185,7 @@ async function build(m,rows,opts={}){
   return doc.embedFont(new Uint8Array(await r.arrayBuffer()),{subset:true});
  }));
  const L=drawing(doc,P,{sans:loaded[0],bold:loaded[1],serif:loaded[2]});
+ L.logos.map=await (w.DiarioPDFLogos?.carregar(doc,rows.map(r=>r.ticker))||new Map());
  // Adicionar rastreabilidade sem alterar a composição editorial de capas e fichas.
  const fontesOficiais=rows.filter(r=>r.documento_balanco_id&&r.documento_balanco_url&&
   /^https:\/\/(?:dados\.cvm\.gov\.br|www\.sec\.gov)\//.test(r.documento_balanco_url));

@@ -40,7 +40,7 @@ async function build(m,rows,tf='1d'){
   const P=await libs(),doc=await P.PDFDocument.create();doc.registerFontkit(w.fontkit);
  const fonts=await Promise.all(['pdf-sans.ttf','pdf-sans-bold.ttf','pdf-serif-bold.ttf'].map(async f=>{const r=await fetch(f,{cache:'force-cache'});if(!r.ok)throw Error('Fonte do PDF indisponível: '+f);return doc.embedFont(new Uint8Array(await r.arrayBuffer()),{subset:true})}));
  const [reg,bold,serif]=fonts,W=595.28,H=841.89,M=43,col=Object.fromEntries(Object.entries(C).map(([k,v])=>[k,color(P,v)]));
- let page,y,pageCount=0;
+ let page,y,pageCount=0;const LOGOS=await (w.DiarioPDFLogos?.carregar(doc,rows.map(r=>r.ticker))||new Map());const logo=(tk,x,top,sz)=>w.DiarioPDFLogos?.desenhar(page,LOGOS,tk,x,top,sz,H)||0;
  function rect(x,top,w,h,fill){page.drawRectangle({x,y:H-top-h,width:w,height:h,color:fill})}
  function write(text,x,top,size=9,font=reg,fill=col.ink,right=false){
   const value=String(text??'').replace(/[\r\n\t]+/g,' ').trim();if(!value)return;
@@ -93,7 +93,7 @@ async function build(m,rows,tf='1d'){
   const r=rows[i],s=comp(r),x=s.x;
   rect(M,y,W-2*M,33,i%2?col.paper:color(P,'#F3F4F5'));
   write(String(i+1).padStart(2,'0'),M+10,y+10,9,bold);
-  write(r.ticker,M+62,y+10,9,bold);write(s.side,M+178,y+10,8);
+  logo(r.ticker,M+44,y+8,14);write(r.ticker,M+62,y+10,9,bold);write(s.side,M+178,y+10,8);
   write(n(x.score,1)+'/10',M+327,y+10,9,bold);
   write(verified(x)?'CÁLCULO CONFERE':'REVISAR BASE',M+395,y+10,7.4,bold,verified(x)?col.green:col.red);
   y+=33;
@@ -101,7 +101,7 @@ async function build(m,rows,tf='1d'){
  y+=29;y=wrap('Snapshot local: '+new Date().toLocaleString('pt-BR')+' · Período: '+tf+'. Fontes de preços informadas individualmente. RS Rating usa percentis da amostra se houver benchmark e pares suficientes; não é a classificação proprietária de terceiros.',M,y,W-2*M,8,12,reg,col.muted,6);footer();
  for(let i=0;i<rows.length;i++){
   const r=rows[i],{x,side}=comp(r);newPage(String(i+1).padStart(2,'0')+' / '+String(rows.length).padStart(2,'0')+'   '+r.ticker+'   '+side,'OHLCV '+tf+' · '+(r.source||'fonte não informada')+' · '+(r.updatedAt||'data indisponível'));
-  write('NOTA TÉCNICA',M,y,10,bold,col.gold);
+  logo(r.ticker,W-M-34,80,34);write('NOTA TÉCNICA',M,y,10,bold,col.gold);
   write(n(x.score,1)+' / 10',M,y+18,23,serif);
   write(verified(x)?'CÁLCULO CONFERE':'EXIGE CONFERÊNCIA',W-M,y+28,9,bold,verified(x)?col.green:col.red,true);y+=76;
   rect(M,y,W-2*M,60,color(P,'#F2F3F4'));
