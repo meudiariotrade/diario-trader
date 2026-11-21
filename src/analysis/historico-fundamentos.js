@@ -18,7 +18,7 @@
   const meses=(precos?.meses||[]).map(([t,c,a])=>({t,ano:new Date(t*1000).getUTCFullYear(),c,a}));
   const fimAno=ano=>{const m=meses.filter(x=>x.ano===ano);return m.length?m[m.length-1]:null};
   const dps=ano=>(precos?.dividendos||[]).filter(([t])=>new Date(t*1000).getUTCFullYear()===ano).reduce((s,[,v])=>s+v,0);
-  const ult=anos.length?hist.anos[anos[anos.length-1]]:null,acoesHoje=ult?.acoes>0?ult.acoes:null;
+  const ult=anos.length?hist.anos[anos[anos.length-1]]:null,acoesHoje=ult?.acoes>0?(ult.pl>0&&ult.pl/ult.acoes>1000?ult.acoes*1000:ult.acoes):null;
   const serie=anos.map(ano=>{const x=hist.anos[ano]||{},p=fimAno(ano),dl=Number.isFinite(x.div)?x.div-(x.cx||0):null;
    const intr=x.luc>0&&x.pl>0&&acoesHoje?Math.sqrt(22.5*x.luc*x.pl)/acoesHoje:null,d=dps(ano);
    return {ano,rec:x.rec??null,luc:x.luc??null,pl:x.pl??null,dl,dvd:x.dvd??null,acoes:x.acoes??null,
@@ -33,9 +33,10 @@
   const n=serie.length-1,pri=serie[0]||{},a1=meses[0],an=hoje;
   const anosPreco=a1&&an?(an.t-a1.t)/(365.25*86400):0;
   const crescimento={
-   lucros:cagr(pri.luc,u.luc,n),receita:cagr(pri.rec,u.rec,n),
+   /* Começa no primeiro ano com lucro positivo (CAGR não existe a partir de prejuízo). */
+   lucros:(()=>{const i=serie.findIndex(x=>x.luc>0);return i>=0&&i<n?cagr(serie[i].luc,u.luc,n-i):null})(),receita:cagr(pri.rec,u.rec,n),
    valorMercado:a1&&an?cagr(a1.c,an.c,anosPreco):null,
-   intrinseco:cagr(serie.find(x=>x.intrinseco)?.intrinseco,u.intrinseco,n),
+   intrinseco:(()=>{const i=serie.findIndex(x=>x.intrinseco>0);return i>=0&&i<n?cagr(serie[i].intrinseco,u.intrinseco,n-i):null})(),
    totalReturn:a1?.a&&an?.a?cagr(a1.a,an.a,anosPreco):null,
    totalReturnAcum:a1?.a&&an?.a?an.a/a1.a-1:null};
   const desconto=atual.preco&&atual.intrinseco?atual.preco/atual.intrinseco-1:null;

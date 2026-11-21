@@ -62,8 +62,11 @@ function conta(emp,ano){emp.anos[ano]=emp.anos[ano]||{};return emp.anos[ano]}
 function aplicaDRE(text,emps,ano,grupo){const v=versoes(text);
  for(const r of linhas(text)){const c=cnpj(r.CNPJ_CIA);if(!ultimo(r)||Number(r.VERSAO)!==v.get(c)||r.DT_FIM_EXERC.slice(0,4)!==String(ano))continue;
   const e=emps.get(c);if(!e||(grupo==='ind'&&e.grupo[ano]==='con'))continue;const a=conta(e,ano),n=numero(r.VL_CONTA);if(n==null)continue;
-  const k=r.CD_CONTA==='3.01'?'rec':r.CD_CONTA==='3.11'?'luc':null;if(!k)continue;
+  const ds=norm(r.DS_CONTA);
+  /* Bancos e seguradoras usam outra numeração na DRE: o lucro vem pela descrição da conta de nível 2. */
+  const k=r.CD_CONTA==='3.01'?'rec':r.CD_CONTA==='3.11'?'luc':/^3\.\d{2}$/.test(r.CD_CONTA)&&/^lucro.{0,25}(liquido|prejuizo).{0,40}periodo/.test(ds)?'luc2':null;if(!k)continue;
   a[k]=n*escala(r);e.grupo[ano]=grupo;}
+ for(const e of emps.values()){const a=e.anos[ano];if(a&&a.luc==null&&a.luc2!=null)a.luc=a.luc2;if(a)delete a.luc2}
 }
 function aplicaBP(text,emps,ano,grupo,lado){const v=versoes(text);
  for(const r of linhas(text)){const c=cnpj(r.CNPJ_CIA);if(!ultimo(r)||Number(r.VERSAO)!==v.get(c)||r.DT_REFER.slice(0,4)!==String(ano))continue;
@@ -87,6 +90,8 @@ function aplicaCapital(text,emps,ano){const v=versoes(text);
  for(const r of linhas(text)){const c=cnpj(r.CNPJ_CIA),e=emps.get(c);if(!e||Number(r.VERSAO)!==v.get(c))continue;
   const tot=numero(r.QT_ACAO_TOTAL_CAP_INTEGR),tes=numero(r.QT_ACAO_TOTAL_TESOURO)||0;
   if(tot>0)conta(e,ano).acoes=tot-tes;}
+ /* Parte das companhias informa a composição do capital em milhares: corrige pelo valor patrimonial por ação. */
+ for(const e of emps.values()){const a=e.anos[ano];if(a?.acoes>0&&a.pl>0&&a.pl/a.acoes>1000)a.acoes*=1000}
 }
 /* FCA: código de negociação → CNPJ (ex.: PETR4 → 33000167000101). */
 function aplicaTickers(text,tickers){
@@ -107,7 +112,7 @@ async function main(){
    for(const [lado,p] of [['A','BPA'],['P','BPP']]){try{aplicaBP(await membro(url,arq(p+s)),emps,ano,g,lado)}catch(e){falhas.push(ano+' '+p+s+': '+e.message)}}
    for(const p of ['DFC_MI','DFC_MD']){try{aplicaDFC(await membro(url,arq(p+s)),emps,ano,g)}catch(e){falhas.push(ano+' '+p+s+': '+e.message)}}
   }
-  try{aplicaCapital(await membro(url,arq('composicao_capital')),emps,ano)}catch(e){falhas.push(ano+' capital: '+e.message)}
+  try{aplicaCapital(await membro(url,arq('composicao_capital')),emps,ano)}catch(e){if(ano>=2020)falhas.push(ano+' capital: '+e.message)}
   console.log('DFP',ano,'ok');
  }
  const empresas={};
