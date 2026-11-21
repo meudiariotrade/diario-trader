@@ -13,7 +13,7 @@ import { validarMentor, SISTEMA_MENTOR } from './mentor-pdf.ts';
 const ENV = (k: string) => Deno.env.get(k) || '';
 const SB = ENV('SUPABASE_URL'), SRK = ENV('SUPABASE_SERVICE_ROLE_KEY'), ANON = ENV('SUPABASE_ANON_KEY'), GEMINI_KEY = ENV('GEMINI_API_KEY');
 export const VERSAO_FN = 'v708';
-const LIMITE_AULAS_DIA = 6, LIMITE_PARTES_DIA = 80, MAX_TEXTO = 90_000;
+const LIMITE_AULAS_DIA = 10, LIMITE_PARTES_DIA = 80, MAX_TEXTO = 90_000;
 
 // ---------- segurança (mesmo padrão das outras funções) ----------
 const CACHE = new Map<string, { uid: string; ate: number }>();
@@ -418,7 +418,7 @@ Deno.serve(async (req) => {
   if (!uid) return out({ error: 'Entre na sua conta no app (Mais → Conta).' }, 401);
   if (!dentroDoLimite(uid, 8)) return out({ error: 'Muitos pedidos seguidos. Espere um minuto.' }, 429);
 
-  let reservaId: string | null = null;
+  let reservaId: string | null = null; let gerouOk=false;
   try {
     if (b.acao === 'mentor_pdf' || b.acao === 'mentor_pdf_local') {
       const localOnly=b.acao==='mentor_pdf_local';
@@ -426,7 +426,7 @@ Deno.serve(async (req) => {
       if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)||!tema||!arquivo||!paginas||texto.trim().length<300||texto.length>120000)return out({error:'Informe PDF com texto selecionável, tema e até 120 mil caracteres por aula.'},400);
       if(!localOnly){const existing=await db(`aulas?id=eq.${id}&user_id=eq.${uid}&select=id,roteiro`);if(existing?.[0]?.roteiro?.mentor)return out({aula:existing[0]});}
       const reserva=await reservaUso(uid,'iniciar','mentor:'+id);
-      if(!reserva.permitido)return out({error:'Geração já em andamento ou limite diário de aulas atingido.'},429);
+      if(!reserva.permitido)return out({error:reserva.motivo==='em_andamento'?'Esta aula já está sendo gerada. Espere alguns instantes.':'Limite de '+(reserva.limite||10)+' aulas geradas por dia atingido. Tentativas que falharam não contam. Volta amanhã.'},429);
       reservaId=reserva.id;
       const biblioteca=typeof contextoPrivadoTrading==='function'?await contextoPrivadoTrading(req,tema+' estudo técnico mercados e gestão de risco',3):'';
       const sistema=typeof especializarSistema==='function'?especializarSistema(SISTEMA_MENTOR,biblioteca):SISTEMA_MENTOR;
@@ -445,9 +445,10 @@ Deno.serve(async (req) => {
       const cenas=mentor.stages.map((t:string,i:number)=>({titulo:mentor.stageNames[i],vis:{tipo:'topicos',t:mentor.stageNames[i],itens:mentor.visuals[i].items.map((t:string)=>({t}))},fala:[mentor.roteiroVoz.etapas[i]],pausa:900}));
       const roteiro={versao:1,tipo:'mentor-pdf-v1',mentor,livro:'Mentor PDF · '+id,min:mentor.minutes,cenas,partes:[],caps:[tema],modelo:result.rotulo};
       const linha={id,user_id:uid,livro:'Mentor PDF · '+id,numero:1,titulo:mentor.title,capitulos:paginas,status:'pronta',erro:null,roteiro,progresso:{},criado_em:new Date().toISOString(),atualizado_em:new Date().toISOString()};
+      gerouOk=true;
       if(localOnly)return out({aula:linha,modelo:result.rotulo,local:true});
       const saved=await db('aulas?select=id,roteiro',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(linha)});
-      return out({aula:saved?.[0],modelo:result.rotulo});
+      gerouOk=true;return out({aula:saved?.[0],modelo:result.rotulo});
     }
     if (b.acao === 'iniciar') {
       const livro = txt(b.livro, 140), numero = Math.round(num(b.numero, 1, 999, 0)!), caps = arr(b.capitulos).map((c) => txt(c, 120)).filter(Boolean).slice(0, 4);
@@ -457,7 +458,7 @@ Deno.serve(async (req) => {
       reservaId=reserva.id;
       const linha = { user_id: uid, livro, numero, titulo: 'Gerando…', capitulos: caps.map((c) => (/^\d+/.exec(c.replace(/^cap[íi]tulo\s*/i, '')) || [c.slice(0, 18)])[0]).join(', '), status: 'gerando', erro: null, roteiro: { versao: 1, livro, min: 0, cenas: [], partes: [], caps }, progresso: {}, criado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() };
       const r = await db('aulas?on_conflict=user_id,livro,numero', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(linha) });
-      return out({ id: r?.[0]?.id });
+      gerouOk=true;return out({ id: r?.[0]?.id });
     }
 
     if (b.acao === 'parte') { const r = await fazParte(uid, b); return out(r.o, r.s); }
@@ -476,5 +477,5 @@ Deno.serve(async (req) => {
     }
     return out({ error: 'Ação desconhecida.' }, 400);
   } catch (e) { return out({ error: String((e as Error).message || e).slice(0, 300) }, 500); }
-  finally { if(reservaId)await db('rpc/aulas_finalizar_uso',{method:'POST',body:JSON.stringify({p_uid:uid,p_id:reservaId})}).catch(()=>{}); }
+  finally { if(reservaId)await db(gerouOk?'rpc/aulas_finalizar_uso':'rpc/aulas_estornar_uso',{method:'POST',body:JSON.stringify({p_uid:uid,p_id:reservaId})}).catch(()=>{}); }
 });
