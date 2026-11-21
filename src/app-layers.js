@@ -44251,6 +44251,7 @@ async function vozCacheSalvar(chave,blob){
 const PONTE_LOCAL_VOZ='http://127.0.0.1:8766/voz',VOZ_BORDA='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/voz';let fonteVoz='';
 function iosAparelho(){return /iPad|iPhone|iPod/.test(navigator.userAgent||'')||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
 function pedacosVoz(t){const out=[];let cur='';for(const f of String(t).split(/(?<=[.!?;:])\s+/)){if((cur+' '+f).length>1800&&cur){out.push(cur);cur=f}else cur=cur?cur+' '+f:f}if(cur)out.push(cur);return out.flatMap(x=>x.length>2400?x.match(/[\s\S]{1,2400}/g):[x])}
+async function juntarWav(partes){const bs=await Promise.all(partes.map(b=>b.arrayBuffer().then(x=>new Uint8Array(x))));const dados=bs.map(b=>b.slice(44)),n=dados.reduce((s,d)=>s+d.length,0),out=new Uint8Array(44+n);out.set(bs[0].slice(0,44),0);const v=new DataView(out.buffer);v.setUint32(4,36+n,true);v.setUint32(40,n,true);let o=44;for(const d of dados){out.set(d,o);o+=d.length}return new Blob([out],{type:'audio/wav'})}
 function configuredBridge(){let stored='';try{stored=localStorage.getItem('diario:ponte-video:voz-url')||'';}catch{}const candidate=window.DIARIO_PONTE_VIDEO?.vozUrl||stored;return candidate&&validEndpoint(candidate)?candidate:'';}
 function finishScene(token){if(token!==run||!active()||currentOwner()!==owner)return;playing=false;loading=false;utterance=null;releaseAudio();if(step<3){step++;mark();paint();speak();}else{status='Narração concluída. Responda ao mini-check abaixo.';paint();}}
 async function speak(){
@@ -44265,21 +44266,21 @@ async function speak(){
   const fontes=[];
   if(endpoint)fontes.push({url:endpoint,post:true,ms:15000});
   if(!iosAparelho()&&endpoint!==PONTE_LOCAL_VOZ)fontes.push({url:PONTE_LOCAL_VOZ,post:true,ms:15000});
-  fontes.push({borda:true,ms:30000});
+  fontes.push({borda:true,ms:120000});
   for(const f of fontes){
    const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),f.ms);
    try{
     let partes=[];
     if(f.borda){for(const pedaco of pedacosVoz(text)){
-      const res=await fetch(VOZ_BORDA+'?t='+encodeURIComponent(pedaco)+'&v=pt-BR-AntonioNeural',{signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+      const tk=(typeof SESS!=='undefined'&&SESS?.at)||'';const res=await fetch(VOZ_BORDA+'?t='+encodeURIComponent(pedaco)+'&v=Charon',{headers:tk?{Authorization:'Bearer '+tk}:{},signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
       if(!res.ok||!/^audio\//i.test(res.headers.get('content-type')||''))throw Error('Voz da borda indisponível');
       partes.push(await res.blob());}}
     else{const res=await fetch(f.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:'pt-BR',lesson_id:l.id,stage:step}),signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
      if(!res.ok||!/^audio\//i.test(res.headers.get('content-type')||''))throw Error('Resposta de áudio inválida');
      partes=[await res.blob()];}
-    blob=new Blob(partes,{type:'audio/mpeg'});if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
+    blob=partes.length>1&&/wav/i.test(partes[0].type||'')?await juntarWav(partes):new Blob(partes,{type:partes[0]?.type||'audio/mpeg'});if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
     if(token!==run)return;
-    fonteVoz=f.borda?'voz neural online':'Ponte Vídeo do PC';
+    fonteVoz=f.borda?'voz por IA (Cloudflare)':'Ponte Vídeo do PC';
     await vozCacheSalvar(key,blob);break;
    }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;blob=null;}
    finally{clearTimeout(timeout);if(controller===ctl)controller=null;}

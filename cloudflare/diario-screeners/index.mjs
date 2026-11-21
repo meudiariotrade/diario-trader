@@ -3,7 +3,7 @@ const CACHE_CONTROL='public, max-age=900, s-maxage=1800';
 const CORS={
  'Access-Control-Allow-Origin':'*',
  'Access-Control-Allow-Methods':'GET, OPTIONS',
- 'Access-Control-Allow-Headers':'if-none-match',
+ 'Access-Control-Allow-Headers':'if-none-match, authorization',
  'Access-Control-Expose-Headers':'ETag, X-Screeners-Cache, X-Snapshot-Source',
 };
 const json=(value,status=200)=>Response.json(value,{status,headers:{...CORS,'Cache-Control':'no-store'}});
@@ -18,39 +18,29 @@ function conditional(req,response,hit){
   return new Response(null,{status:304,headers});
  return new Response(response.body,{status:response.status,headers});
 }
-// v860 — voz neural gratuita (Microsoft Edge Read Aloud) na borda, para ouvir as aulas no iPhone sem a ponte do PC.
-// Texto público da aula → MP3 com cache de borda; nenhum dado da conta passa por aqui.
-const EDGE_TOKEN='6A5AA1D4EAFF4E9FB37E23D68491D6F4',EDGE_VER='1-143.0.3650.75';
-const VOZES=new Set(['pt-BR-AntonioNeural','pt-BR-FranciscaNeural','pt-BR-ThalitaMultilingualNeural']);
+// v861 — voz das aulas por IA (Gemini TTS, API oficial) na borda. Texto público da lição → WAV em cache de borda.
+// Só gera para quem está logado no app (token Supabase conferido apenas quando não há cache).
+const VOZES=new Set(['Charon','Kore','Puck','Fenrir','Aoede','Orus']);
 async function sha256Hex(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase()}
-const xmlEsc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
-async function edgeTTS(texto,voz,taxa){
- let ticks=Math.floor(Date.now()/1000)+11644473600;ticks-=ticks%300;
- const gec=await sha256Hex(String(BigInt(ticks)*10000000n)+EDGE_TOKEN),id=crypto.randomUUID().replace(/-/g,'');
- const res=await fetch('https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken='+EDGE_TOKEN+
-  '&Sec-MS-GEC='+gec+'&Sec-MS-GEC-Version='+EDGE_VER+'&ConnectionId='+id,{headers:{Upgrade:'websocket',
-  Origin:'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
-  'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0'}});
- const ws=res.webSocket;if(!ws)throw Error('Voz recusada: HTTP '+res.status);
- ws.accept();
- const partes=[];let total=0;
- const fim=new Promise((ok,no)=>{
-  const t=setTimeout(()=>{try{ws.close()}catch{}no(Error('Tempo esgotado na voz'))},25000);
-  ws.addEventListener('message',ev=>{
-   if(typeof ev.data==='string'){if(ev.data.includes('Path:turn.end')){clearTimeout(t);try{ws.close()}catch{}ok()}return}
-   const b=new Uint8Array(ev.data),n=(b[0]<<8)|b[1],cab=new TextDecoder().decode(b.slice(2,2+n));
-   if(cab.includes('Path:audio')){const a=b.slice(2+n);partes.push(a);total+=a.length;if(total>12e6){clearTimeout(t);no(Error('Áudio grande demais'))}}});
-  ws.addEventListener('close',()=>{clearTimeout(t);total?ok():no(Error('Voz encerrada sem áudio'))});
-  ws.addEventListener('error',()=>{clearTimeout(t);no(Error('Falha na voz'))});
- });
- const ts=new Date().toUTCString();
- ws.send('X-Timestamp:'+ts+'\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n'+
-  '{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}');
- ws.send('X-RequestId:'+id+'\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:'+ts+'Z\r\nPath:ssml\r\n\r\n'+
-  "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'><voice name='"+voz+"'><prosody pitch='+0Hz' rate='"+taxa+"' volume='+0%'>"+xmlEsc(texto)+'</prosody></voice></speak>');
- await fim;
- const out=new Uint8Array(total);let o=0;for(const p of partes){out.set(p,o);o+=p.length}
- return out;
+function wav(pcm,rate=24000){const b=new Uint8Array(44+pcm.length),v=new DataView(b.buffer),t=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i)};
+ t(0,'RIFF');v.setUint32(4,36+pcm.length,true);t(8,'WAVE');t(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+ v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);t(36,'data');v.setUint32(40,pcm.length,true);b.set(pcm,44);return b}
+async function geminiTTS(env,texto,voz){
+ const instr='Narre exatamente este texto em português brasileiro natural, como um professor experiente e acolhedor de análise técnica. Tom claro, conversacional, pausas naturais. Não invente nem acrescente palavras. Texto: '+texto;
+ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{method:'POST',
+  headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},signal:AbortSignal.timeout(110000),
+  body:JSON.stringify({contents:[{parts:[{text:instr}]}],generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:voz}}}}})});
+ const out=await r.json().catch(()=>({}));if(!r.ok)throw Error('IA de voz respondeu '+r.status);
+ const d=(out?.candidates?.[0]?.content?.parts||[]).find(x=>x.inlineData?.data)?.inlineData;if(!d?.data)throw Error('IA não devolveu áudio');
+ const bin=atob(d.data),raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);
+ if(raw.length>20e6)throw Error('Áudio grande demais');
+ const rate=Number(/rate=(\d+)/.exec(String(d.mimeType||''))?.[1]||24000);
+ return String(d.mimeType||'').includes('wav')?raw:wav(raw,rate);
+}
+async function logado(env,req){
+ const tk=(req.headers.get('Authorization')||'').replace(/^Bearer\s+/i,'').trim();if(tk.length<40)return false;
+ const r=await fetch((env.SUPABASE_URL||'')+'/auth/v1/user',{headers:{Authorization:'Bearer '+tk,apikey:env.SUPABASE_ANON_KEY||tk},signal:AbortSignal.timeout(8000)}).catch(()=>null);
+ return !!r?.ok;
 }
 export default {
  async fetch(request,env,ctx){
@@ -59,15 +49,16 @@ export default {
   const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,servico:'screeners-edge',sem_dados_privados:true});
   if(url.pathname==='/v1/voz'){
-   const texto=String(url.searchParams.get('t')||'').replace(/\s+/g,' ').trim(),voz=url.searchParams.get('v')||'pt-BR-AntonioNeural',
-    taxa=url.searchParams.get('r')||'+0%';
-   if([...url.searchParams.keys()].some(k=>!['t','v','r'].includes(k))||texto.length<2||texto.length>2500||!VOZES.has(voz)||!/^[+-]\d{1,2}%$/.test(taxa))
+   const texto=String(url.searchParams.get('t')||'').replace(/\s+/g,' ').trim(),voz=url.searchParams.get('v')||'Charon';
+   if([...url.searchParams.keys()].some(k=>!['t','v'].includes(k))||texto.length<2||texto.length>2500||!VOZES.has(voz))
     return json({error:'Texto ou voz inválidos'},400);
-   const cache=caches.default,key=new Request(url.origin+'/v1/voz?k='+(await sha256Hex(voz+'|'+taxa+'|'+texto)).slice(0,40)+'&rev=v860');
+   const cache=caches.default,key=new Request(url.origin+'/v1/voz?k='+(await sha256Hex(voz+'|'+texto)).slice(0,40)+'&rev=v861');
    const hit=await cache.match(key);if(hit)return hit;
+   if(!env.GEMINI_API_KEY)return json({error:'Voz por IA ainda não configurada na Cloudflare (GEMINI_API_KEY)'},503);
+   if(!await logado(env,request))return json({error:'Entre na conta do app para gerar a voz'},401);
    try{
-    const mp3=await edgeTTS(texto,voz,taxa);
-    const out=new Response(mp3,{headers:{...CORS,'Content-Type':'audio/mpeg','Cache-Control':'public, max-age=2592000, s-maxage=2592000','X-Snapshot-Source':'edge-tts-borda'}});
+    const audio=await geminiTTS(env,texto,voz);
+    const out=new Response(audio,{headers:{...CORS,'Content-Type':'audio/wav','Cache-Control':'public, max-age=2592000, s-maxage=2592000','X-Snapshot-Source':'gemini-tts-borda'}});
     ctx.waitUntil(cache.put(key,out.clone()));return out;
    }catch(e){return json({error:'Voz indisponível agora',detalhe:String(e?.message||e).slice(0,120)},503)}
   }

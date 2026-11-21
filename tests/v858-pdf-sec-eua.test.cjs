@@ -43,6 +43,6 @@ test('v860: voz das aulas — ponte local no PC e voz neural na borda para o iPh
  assert.match(t,/127\.0\.0\.1:8766\/voz/);assert.match(t,/workers\.dev\/v1\/voz/);assert.match(t,/iosAparelho\(\)/);
  assert.ok(!/speechSynthesis\.speak/.test(t),'sem voz robótica');
  assert.match(srv,/def _voz\(self\)/);assert.match(srv,/GET, POST, OPTIONS/);
- assert.match(wk,/\/v1\/voz/);assert.match(wk,/audio-24khz-48kbitrate-mono-mp3/);
+ assert.match(wk,/\/v1\/voz/);assert.match(wk,/gemini-2\.5-flash-preview-tts/);assert.match(wk,/env\.GEMINI_API_KEY/);assert.ok(!/TrustedClientToken/.test(wk));
  assert.match(html,/connect-src 'self' data: http:\/\/127\.0\.0\.1:8766/);
 });
