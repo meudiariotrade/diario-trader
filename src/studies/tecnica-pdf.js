@@ -112,7 +112,12 @@ async function migrarDaNuvem(){
  if(uid()!==current)throw Error('A conta mudou durante a importação.');
  carregarLocalSeguro(rows,current);await guardarAulas(current);T.view?.refresh();return rows.length;
 }
-T.pdf={generate,load,insert,safeLesson,dispose(){disposed=true;observer.disconnect();controller?.abort();task?.destroy();}};
+/* v865: apagar aula do Mentor — some da lista, do aparelho e as figuras/vídeos guardados dela. */
+async function remover(id){const current=uid();if(!current)throw Error('Entre na conta para apagar.');
+ T.lessons=T.lessons.filter(l=>l.id!==id);storedRows=storedRows.filter(r=>r.id!==id);await guardarAulas(current);
+ try{for(const r of (await window.EstudosLocal?.all())||[])if((r.tipo==='mentor-figura'&&String(r.id).startsWith(id+':'))||(r.tipo==='mentor-video'&&String(r.id).startsWith(id)))await window.EstudosLocal.remove(r.tipo,r.id)}catch{}
+ try{localStorage.removeItem('tp-fig-v862:'+id)}catch{}}
+T.pdf={generate,load,insert,safeLesson,remover,dispose(){disposed=true;observer.disconnect();controller?.abort();task?.destroy();}};
 /* Mantém a escolha do usuário quando a trilha atualiza o HTML e recria o form.
    A mudança de conta já limpa pdfExpanded em reset(). */
 document.addEventListener('toggle',e=>{

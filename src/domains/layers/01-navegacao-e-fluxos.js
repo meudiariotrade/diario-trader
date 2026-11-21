@@ -10654,7 +10654,7 @@ ${W.text}
               ie = k(Z);
             /* v596: card vertical — número + título na largura toda; Vídeo (MP4, quando houver), duração e favorito na linha de baixo. */
             const min596 = Z.roteiro_min || Z.min;
-            t += `<div class="au-study-row v596-aula"><button class="au-item" data-auopen="${i(Z.id)}"><span class="au-n">${re ? "✓" : Z.numero}</span><span class="au-tx"><b>Aula ${Z.numero} · ${i(Z.titulo)}</b><span class="sm mut">${i(Z.capitulos ? "Capítulos " + Z.capitulos : "")}${re ? (Z.capitulos ? " · " : "") + "concluída" : ie ? (Z.capitulos ? " · " : "") + "parou em " + ie + "%" : ""}</span>${ie && !re ? `<span class="au-pb"><i style="width:${ie}%"></i></span>` : ""}</span></button><div class="v596-aula-acoes">${min596 ? `<span class="v596-min">~${i(min596)} min</span>` : ""}<button class="au-fav" type="button" data-austfav="${i(Z.id)}" aria-label="Favoritar ${i(Z.titulo)}" aria-pressed="${!!J().fav?.[Z.id]}">${J().fav?.[Z.id] ? "★" : "☆"}</button></div></div>`;
+            t += `<div class="au-study-row v596-aula"><button class="au-item" data-auopen="${i(Z.id)}"><span class="au-n">${re ? "✓" : Z.numero}</span><span class="au-tx"><b>Aula ${Z.numero} · ${i(Z.titulo)}</b><span class="sm mut">${i(Z.capitulos ? "Capítulos " + Z.capitulos : "")}${re ? (Z.capitulos ? " · " : "") + "concluída" : ie ? (Z.capitulos ? " · " : "") + "parou em " + ie + "%" : ""}</span>${ie && !re ? `<span class="au-pb"><i style="width:${ie}%"></i></span>` : ""}</span></button><div class="v596-aula-acoes">${min596 ? `<span class="v596-min">~${i(min596)} min</span>` : ""}<button class="au-del-lista" type="button" data-audelid="${i(Z.id)}" aria-label="Apagar ${i(Z.titulo)}">Apagar</button><button class="au-fav" type="button" data-austfav="${i(Z.id)}" aria-label="Favoritar ${i(Z.titulo)}" aria-pressed="${!!J().fav?.[Z.id]}">${J().fav?.[Z.id] ? "★" : "☆"}</button></div></div>`;
           }
           t += "</div>";
         }
@@ -12803,6 +12803,15 @@ ${fe(1, "#cca764", "futuro acima do à vista (normal)", t.emA)}${fe(-1, "#c69a49
             (t.preventDefault(), oe(x.dataset.auopen));
             return;
           }
+          if ((x = p("[data-audelid]"))) {
+            // v865: apagar direto da lista (inclusive aula travada em "gerando").
+            const id = x.dataset.audelid, A = (F.lista || []).find((W) => W.id === id);
+            if (!id || !confirm(`Apagar a aula ${A?.numero || ""} de “${A?.livro || "este livro"}”? Isso não pode ser desfeito.`)) return;
+            rq("/rest/v1/aulas?id=eq." + encodeURIComponent(id), { method: "DELETE", headers: { Prefer: "return=minimal" } })
+              .then(() => { try { (u(l + id), u(r + id)); } catch {} ((F.lista = null), me(), R(1), toast && toast("Aula apagada.")); })
+              .catch((W) => toast && toast("Não apagou: " + (W.message || W)));
+            return;
+          }
           if (p("[data-aurel]")) {
             ((F.lista = null), R(1), C());
             return;
@@ -13350,7 +13359,7 @@ ${fe(1, "#cca764", "futuro acima do à vista (normal)", t.emA)}${fe(-1, "#c69a49
           meu: !!x,
         });
         if (estado) return estado;
-        return `<div class="au-item au-ger"><span class="au-n">…</span><span class="au-tx"><b>Aula ${t.numero} · gerando</b><span class="sm mut">${de.busy && x ? i(de.msg) : x ? "Interrompida. Toque em continuar." : "Em geração em outro aparelho ou interrompida."}</span></span>${!de.busy && x ? '<button class="btn s" data-aucont="1">Continuar</button>' : ""}</div>`;
+        return `<div class="au-item au-ger"><span class="au-n">…</span><span class="au-tx"><b>Aula ${t.numero} · gerando</b><span class="sm mut">${de.busy && x ? i(de.msg) : x ? "Interrompida. Toque em continuar." : "Em geração em outro aparelho ou interrompida."}</span></span>${!de.busy && x ? '<button class="btn s" data-aucont="1">Continuar</button>' : ""}<button class="au-del-lista" type="button" data-audelid="${i(t.id)}" aria-label="Apagar esta aula">Apagar</button></div>`;
       }
       async function ft(t, p, x) {
         (M(x), await tok(), M(x));
