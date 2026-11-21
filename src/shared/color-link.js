@@ -1,4 +1,5 @@
-/* v866 — Color linking (estilo Bloomberg): cada painel tem um quadradinho de cor.
+/* v867 — Link automático (estilo Bloomberg): tocar num ativo em qualquer tela abre o mesmo ativo em todos os painéis.
+ * Sem botão de cor: um único grupo para o app inteiro. (v866 tinha grupos por cor.)
  * Tocar num ativo dentro de um painel atualiza só os painéis do mesmo grupo de cor.
  * Âmbar = grupo principal, ligado também ao "ativo em foco" da barra de contexto.
  * Nada vai para servidor: grupos e último ativo de cada grupo ficam no aparelho. */
@@ -16,9 +17,10 @@ let cfg=ler(KEY),ultimo=ler(ULT);
 const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=tk=>String(tk||'').trim().toUpperCase().replace(/\.SA$/,'').slice(0,20);
 function registrar(id,{nome,aplicar,padrao='ambar'}={}){paineis.set(id,{nome:nome||id,aplicar,padrao})}
-function grupo(id){const g=cfg[id]||paineis.get(id)?.padrao||'ambar';return GRUPOS.some(x=>x[0]===g)?g:'ambar'}
+function grupo(){return 'ambar'}
 function rotulo(g){return (GRUPOS.find(x=>x[0]===g)||GRUPOS[0])[1]}
-function chip(id){const g=grupo(id),p=paineis.get(id);
+function chip(){return ''}
+function chipAntigo(id){const g=grupo(id),p=paineis.get(id);
  return '<button type="button" class="cl-chip cl-'+g+'" style="'+estilo(g)+'" data-cl-chip="'+E(id)+'" title="Link de cor: '+rotulo(g)+' — toque para trocar" aria-label="Link de cor de '+E(p?.nome||id)+': '+rotulo(g)+'. Toque para trocar."></button>'}
 function atual(id){const g=grupo(id);return g==='sem'?'':(ultimo[g]||'')}
 function publicar(origem,tk){
@@ -36,11 +38,11 @@ function trocar(id){
 d.addEventListener('click',e=>{
  const c=e.target.closest?.('[data-cl-chip]');
  if(c){e.preventDefault();e.stopPropagation();trocar(c.dataset.clChip);return}
- const src=e.target.closest?.('[data-cl-src]');if(!src)return;
- const a=e.target.closest('[data-cl-tk],[data-tk],[data-ticker],[data-scr-detail],[data-tech-detail]');if(!a||!src.contains(a))return;
+ const a=e.target.closest?.('[data-cl-tk],[data-tk],[data-ticker],[data-scr-detail],[data-tech-detail]');if(!a)return;
+ const src=a.closest('[data-cl-src]');
  const tk=a.getAttribute('data-cl-tk')||a.getAttribute('data-tk')||a.getAttribute('data-ticker')||a.getAttribute('data-scr-detail')||a.getAttribute('data-tech-detail');
  // Depois do clique original (abre a ficha/detalhe do próprio painel), avisa os painéis do mesmo grupo.
- setTimeout(()=>publicar(src.dataset.clSrc,tk),0);
+ setTimeout(()=>publicar(src?src.dataset.clSrc:'app',tk),0);
 },true);
 const css=d.createElement('style');css.textContent=
 'html body button.cl-chip{display:inline-block!important;flex:0 0 14px!important;width:14px!important;height:14px!important;min-width:14px!important;min-height:14px!important;padding:0!important;margin:0 8px 0 0!important;border-radius:3px!important;border:1px solid rgba(255,255,255,.35)!important;box-shadow:none!important;vertical-align:middle;cursor:pointer;position:relative}'+

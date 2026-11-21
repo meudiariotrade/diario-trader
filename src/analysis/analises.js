@@ -655,6 +655,7 @@ async function loadTopGlobal(m,refresh=false){
 }
 /* v866: color linking — screener abre a ficha do ativo vindo de outro painel do mesmo grupo. */
 for(const m of ['br','us'])w.DiarioColorLink?.registrar('scr-'+m,{nome:'Screener '+(m==='br'?'Brasil':'EUA'),aplicar(tk){const s=init(m),ok=[...(s.data?.rows||[]),...(s.topData?.rows||[]),...(s.data?.universe_rows||[])].some(x=>x.ticker===tk);if(!ok)return;s.detailTicker=tk;if(d.querySelector('[data-an-sub].selected')?.dataset.anSub===m)render()}});
+w.DiarioColorLink?.registrar('pesquisa',{nome:'Pesquisa com IA',aplicar(tk){if(busy)return;input='ANALISE '+tk;context()?.set('analises.comando',input);const el=d.getElementById('an-command');if(el&&!el.matches(':focus'))el.value=input}});
 function field(el){const m=d.querySelector('[data-an-sub].selected')?.dataset.anSub;if(m==='br'||m==='us')return [m,init(m)];return [null,null]}
 function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;if(key==='yieldAceitavel'||key==='safetyMethod'){s.data=null;const snapshot=snapshotMemory.get(m.toUpperCase())?.data;if(snapshot?.universe_complete){s.data=localScreener(m,s,snapshot);render();return}}s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
 d.addEventListener('input',ev=>{const b=ev.target;if(!b?.hasAttribute?.('data-scr-search'))return;const [m,s]=field(b);if(!m)return;s.search=b.value;s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';clearTimeout(timer);timer=setTimeout(()=>load(m),420)});
