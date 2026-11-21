@@ -149,7 +149,7 @@ export default {
   if(url.pathname==='/v1/sec-historico'){
    const ticker=(url.searchParams.get('ticker')||'').toUpperCase();
    if([...url.searchParams.keys()].some(k=>k!=='ticker')||!/^[A-Z]{1,5}(?:[.-][A-Z])?$/.test(ticker))return json({error:'Ticker EUA obrigatório'},400);
-   const cache=caches.default,key=new Request(url.origin+'/v1/sec-historico?ticker='+ticker+'&rev=v849');
+   const cache=caches.default,key=new Request(url.origin+'/v1/sec-historico?ticker='+ticker+'&rev=v850');
    const hit=await cache.match(key);if(hit)return conditional(request,hit,true);
    const UA={'User-Agent':'DiarioTraderQuant/1.0 (contato@diariotrader.app)',Accept:'application/json'};
    try{
@@ -167,14 +167,15 @@ export default {
     const DIAS=864e5;
     // Valor anual por exercício: duração ~1 ano (fluxos) ou posição no fim do exercício (saldos); vale o arquivo mais recente.
     const serie=(tags,tipo)=>{const out={};
-     for(const [grupo,tag] of tags){const units=F[grupo]?.[tag]?.units||{};
+     for(const [grupo,tag] of tags){const units=F[grupo]?.[tag]?.units||{},tagOut={};
       for(const [u,rows] of Object.entries(units)){if(tipo==='acoes'?u!=='shares':!/^(USD|EUR|CAD|GBP|BRL|CHF|JPY|CNY|TWD|KRW|INR|MXN|AUD|SEK|DKK|NOK|ILS|HKD)$/.test(u))continue;
        for(const x of rows||[]){if(!anuais.has(String(x.form))||typeof x.val!=='number'||!/^\d{4}-\d{2}-\d{2}$/.test(String(x.end||'')))continue;
         if(tipo==='fluxo'){if(!x.start)continue;const d=(Date.parse(x.end)-Date.parse(x.start))/DIAS;if(d<330||d>400)continue}
-        const ano=Number(String(x.end).slice(0,4)),old=out[ano];
-        if(!old||String(x.filed)>old.filed||(String(x.filed)===old.filed&&String(x.end)>old.end))out[ano]={v:x.val,filed:String(x.filed),end:String(x.end),moeda:u}}
+        const ano=Number(String(x.end).slice(0,4)),old=tagOut[ano];
+        if(!old||String(x.filed)>old.filed||(String(x.filed)===old.filed&&String(x.end)>old.end))tagOut[ano]={v:x.val,filed:String(x.filed),end:String(x.end),moeda:u}}
       }
-      if(Object.keys(out).length>=3)break;}
+      // Empresas trocam de conceito ao longo dos anos (ex.: Revenues → RevenueFromContract...): cada ano usa o primeiro conceito da lista que o tenha.
+      for(const [a,val] of Object.entries(tagOut))if(!out[a])out[a]=val;}
      return out};
     const G='us-gaap',I='ifrs-full';
     const campos={
@@ -203,12 +204,12 @@ export default {
    const ticker=(url.searchParams.get('ticker')||'').toUpperCase(),market=url.searchParams.get('market')||'BR';
    if([...url.searchParams.keys()].some(k=>!['ticker','market'].includes(k))||!['BR','US'].includes(market)||
     (market==='BR'&&!/^[A-Z]{4}\d{1,2}$/.test(ticker))||(market==='US'&&!/^[A-Z]{1,5}(?:\.[A-Z])?$/.test(ticker)))return json({error:'Ticker inválido'},400);
-   const cache=caches.default,key=new Request(url.origin+'/v1/historico-preco?market='+market+'&ticker='+ticker+'&rev=v847');
+   const cache=caches.default,key=new Request(url.origin+'/v1/historico-preco?market='+market+'&ticker='+ticker+'&rev=v850');
    const hit=await cache.match(key);if(hit)return conditional(request,hit,true);
    const symbol=market==='BR'?ticker+'.SA':ticker;
    for(const h of ['query1.finance.yahoo.com','query2.finance.yahoo.com']){
     try{
-     const r=await fetch('https://'+h+'/v8/finance/chart/'+encodeURIComponent(symbol)+'?range=10y&interval=1mo&events=div&includePrePost=false',{headers:{Accept:'application/json'},signal:AbortSignal.timeout(8000)});
+     const r=await fetch('https://'+h+'/v8/finance/chart/'+encodeURIComponent(symbol)+'?range=10y&interval=1mo&events=div&includePrePost=false',{headers:{'User-Agent':'Mozilla/5.0',Accept:'application/json'},signal:AbortSignal.timeout(8000)});
      if(!r.ok)continue;
      const o=await r.json(),sr=o?.chart?.result?.[0],q=sr?.indicators?.quote?.[0],adj=sr?.indicators?.adjclose?.[0]?.adjclose;
      if(!Array.isArray(sr?.timestamp)||!q)continue;

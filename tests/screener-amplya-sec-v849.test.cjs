@@ -4,7 +4,7 @@ test('v849: SEC Companyfacts → histórico anual dos EUA (fluxo de 1 ano, saldo
  const fluxo=(v0)=>anos.map((a,i)=>({start:a+'-01-01',end:a+'-12-31',val:v0*(1+i*.1),form:'10-K',filed:(a+1)+'-02-15',fy:a,fp:'FY'}))
   .concat([{start:'2024-10-01',end:'2024-12-31',val:1,form:'10-K',filed:'2025-02-15'}]);
  const saldo=(v0)=>anos.map((a,i)=>({end:a+'-12-31',val:v0+i,form:'10-K',filed:(a+1)+'-02-15'}));
- const facts={'us-gaap':{Revenues:{units:{USD:fluxo(1000)}},NetIncomeLoss:{units:{USD:fluxo(100)}},StockholdersEquity:{units:{USD:saldo(500)}},
+ const facts={'us-gaap':{Revenues:{units:{USD:fluxo(1000).filter(x=>!x.end.startsWith('2024'))}},RevenueFromContractWithCustomerExcludingAssessedTax:{units:{USD:fluxo(1000)}},NetIncomeLoss:{units:{USD:fluxo(100)}},StockholdersEquity:{units:{USD:saldo(500)}},
   Assets:{units:{USD:saldo(2000)}},CashAndCashEquivalentsAtCarryingValue:{units:{USD:saldo(50)}},LongTermDebt:{units:{USD:saldo(300)}},
   PaymentsOfDividends:{units:{USD:fluxo(-40)}},WeightedAverageNumberOfDilutedSharesOutstanding:{units:{shares:fluxo(10)}}}};
  globalThis.caches={default:{match:async()=>undefined,put:async()=>{}}};
