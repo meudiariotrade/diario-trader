@@ -182,12 +182,9 @@
     // .dt393-page, substituída pelo renderizador atual (v4-panel).
     const activeRoute = d.body?.dataset?.v4route;
     const homeV4 = app.querySelector(".v4-panel .v4-page.v4-home");
-    const dayV4 = app.querySelector(".v4-panel .v4-page.v4-day");
     // V4 mantém a rota atual no body e desmonta os painéis ao navegar.
     if (homeV4 && (activeRoute === "home" || t === "home")) return {root:homeV4,route:"home"};
-    if (dayV4 && (activeRoute === "dia" || t === "dia")) return {root:dayV4,route:"dia"};
     if (t === "home") return {root:app.querySelector(".dt393-page.dt393-home"),route:t};
-    if (t === "dia") return {root:app.querySelector(".dt393-page.dt393-day"),route:t};
     return null;
   }
   // v679: preserva os nós do card nos ticks; apenas o texto numérico muda.
@@ -215,6 +212,8 @@
     card.dataset.view=conteudo;
   }
   function montar() {
+    // v846: o termômetro fica só no Início; o Meu dia não mostra mais o card.
+    d.querySelectorAll(".v4-page.v4-day > .dt670-opening, .dt393-page.dt393-day > .dt670-opening").forEach(n=>n.remove());
     const dest = alvo();
     if (!dest?.root) return;
     let card = dest.root.querySelector(":scope > .dt670-opening");

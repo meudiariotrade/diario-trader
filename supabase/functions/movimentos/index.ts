@@ -1,3 +1,4 @@
+import { decodeEntidades } from '../_shared/entidades.ts';
 // Função MOVIMENTOS — vigia petróleo, minério, dólar, índices etc. Quando um ativo passa do limite do dia (ex.: ±3%),
 // busca as notícias do dia (Google Notícias / Bing, em português e inglês), a IA resume o motivo em 1–2 frases e manda push. pg_cron a cada 5 min.
 // Também: ações da B3 com puxada forte, fluxo estrangeiro da B3 (acao 'fluxo' + aviso acima de R$ 1 bi) e fluxo forte por ação (dados da ponte).
@@ -36,7 +37,7 @@ async function cotacoes() {
   return out;
 }
 const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36', 'Accept-Language': 'pt-BR,pt;q=0.9' };
-const limpa = (t: string) => t.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&lt;|&gt;/g, '').trim();
+const limpa = (t: string) => decodeEntidades(t.replace(/<!\[CDATA\[|\]\]>/g, '')).replace(/[<>]/g, '').trim();
 function itens(x: string) { return [...x.matchAll(/<item>[\s\S]*?<title>([\s\S]*?)<\/title>[\s\S]*?<link>([\s\S]*?)<\/link>[\s\S]*?<\/item>/g)].slice(0, 8).map((m) => ({ t: limpa(m[1]), u: limpa(m[2]) })); }
 const EN: Record<string, string> = { 'petróleo Brent': 'Brent crude oil prices', 'minério de ferro': 'iron ore prices', 'cobre preço mercado': 'copper prices', 'ouro preço': 'gold prices', 'soja Chicago': 'soybean futures', 'gás natural preço': 'natural gas prices', 'dólar real câmbio': 'Brazilian real dollar', 'índice DXY dólar': 'dollar index', 'Ibovespa': 'Ibovespa Brazil stocks', 'S&P 500 Wall Street': 'S&P 500 stocks', 'EWZ Brasil Wall Street': 'Brazil stocks EWZ', 'Petrobras ações': 'Petrobras shares', 'Vale ações': 'Vale shares', 'bitcoin': 'bitcoin price' };
 async function manchetes(q: string) {

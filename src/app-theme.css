@@ -3650,3 +3650,16 @@ html:root body #app .ce845 details summary{cursor:pointer;font-size:13px;color:v
 @media (min-width:1100px){html:root body #app .ce845{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}html:root body #app .ce845-tabs{grid-column:1/-1}}
 html:root body #app .ce845-tabs button{background:none!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;color:var(--ui-label,#64748B)!important;flex:0 0 auto}
 html:root body #app .ce845-tabs button[aria-selected="true"]{color:var(--ui-title,#E2E8F0)!important;border-bottom-color:#F59E0B!important}
+/* v846 — Fim de semana: botões Gráfico e Inglês sem quebrar letra por letra */
+html:root body #app .fdsl{flex-wrap:wrap}
+html:root body #app .fdsl>div{flex:1 1 180px;min-width:0}
+html:root body #app .fdsl>span{flex:0 0 auto;flex-wrap:nowrap}
+html:root body #app .fdsl>span .btn{white-space:nowrap;word-break:normal;overflow-wrap:normal;min-height:40px;width:auto;flex:0 0 auto}
+/* v846 — visualizador do panorama: fundo escuro e "Voltar" visível também no tema claro */
+html:root body #imgov#imgov{background:rgba(8,9,13,.96)!important;color:#F4F3F1!important;opacity:1!important}
+html:root body #imgov#imgov .imgov-voltar{background:#1E232E!important;color:#FFFFFF!important;-webkit-text-fill-color:#FFFFFF!important;border:1px solid rgba(255,255,255,.28)!important;opacity:1!important;visibility:visible!important}
+html:root body #imgov#imgov [data-img="s"]{background:#2A2F3B!important;color:#FFFFFF!important;-webkit-text-fill-color:#FFFFFF!important}
+html:root body #imgov#imgov>div:last-child{color:#E9E7E4!important;-webkit-text-fill-color:#E9E7E4!important}
+/* v846 — Análises: aba e mercado selecionados visíveis */
+html:root body #app #an-root.an830 .an830-seg button{background:transparent!important;color:var(--ui-label,#64748B)!important;border:0!important}
+html:root body #app #an-root.an830 .an830-seg button.selected{background:var(--ui-sub,#181C28)!important;color:var(--ui-num,#FFFFFF)!important;box-shadow:inset 0 -2px 0 #F59E0B!important}

@@ -7042,7 +7042,7 @@ de Carteira`,
           n.text("1. Conferir agenda e vencimentos · 2. Atualizar preços e confirmar o cenário · 3. Registrar cenário, alternativo e invalidação · 4. Dimensionar o risco · 5. Revisar a execução ao encerrar."),
           n.heading("Fontes e método"),
           n.text(
-            (g.ia?.modelo ? "Leitura técnica redigida por " + g.ia.modelo + " (Roteador Multi-IA). " : "Leitura técnica montada pelo app (nenhuma IA respondeu" + (g.iaErro ? ": " + g.iaErro : "") + "). ") + "Candles das fontes integradas ao app até o corte da edição. Médias, RSI 14 (Wilder), topos e fundos por fractal (Dow), Fibonacci e extensões (Elliott / Flávio Lemos) e padrões de candles são calculados pelo código; a IA só redige a leitura e os números são conferidos. Futuros: snapshot do terminal, sem histórico inventado. Revista original, sem reproduzir outras publicações.",
+            (g.ia?.modelo ? "Leitura técnica redigida por " + g.ia.modelo + " (Roteador Multi-IA)" + (g.ia.refs?.length ? ", consultando o Cérebro da IA: " + g.ia.refs.join(", ") : "") + ". " : "Leitura técnica montada pelo app (nenhuma IA respondeu" + (g.iaErro ? ": " + g.iaErro : "") + "). ") + "Candles das fontes integradas ao app até o corte da edição. Médias, RSI 14 (Wilder), topos e fundos por fractal (Dow), Fibonacci e extensões (Elliott / Flávio Lemos) e padrões de candles são calculados pelo código; a IA só redige a leitura e os números são conferidos. Futuros: snapshot do terminal, sem histórico inventado. Revista original, sem reproduzir outras publicações.",
           ),
           n.finish()
         );
@@ -8028,7 +8028,7 @@ de Carteira`,
         try {
           const r = await rq("/functions/v1/revista-ia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ corte: n.window.cutoff, ativos }), signal: AbortSignal.timeout(120e3) }),
             j = await r.json().catch(() => ({}));
-          j?.ativos && ((n.ia = { versao: 619, ativos: j.ativos, modelo: j.modelo, gerado: j.gerado }), z(n));
+          j?.ativos && ((n.ia = { versao: 619, ativos: j.ativos, modelo: j.modelo, gerado: j.gerado, refs: Array.isArray(j.referencias_cerebro) ? j.referencias_cerebro.slice(0, 5).map(String) : [] }), z(n));
           j?.erro && !j?.ativos && (n.iaErro = String(j.erro).slice(0, 200));
         } catch {}
         return n;
@@ -44528,12 +44528,9 @@ const s=document.createElement('style');s.textContent=`
     // .dt393-page, substituída pelo renderizador atual (v4-panel).
     const activeRoute = d.body?.dataset?.v4route;
     const homeV4 = app.querySelector(".v4-panel .v4-page.v4-home");
-    const dayV4 = app.querySelector(".v4-panel .v4-page.v4-day");
     // V4 mantém a rota atual no body e desmonta os painéis ao navegar.
     if (homeV4 && (activeRoute === "home" || t === "home")) return {root:homeV4,route:"home"};
-    if (dayV4 && (activeRoute === "dia" || t === "dia")) return {root:dayV4,route:"dia"};
     if (t === "home") return {root:app.querySelector(".dt393-page.dt393-home"),route:t};
-    if (t === "dia") return {root:app.querySelector(".dt393-page.dt393-day"),route:t};
     return null;
   }
   // v679: preserva os nós do card nos ticks; apenas o texto numérico muda.
@@ -44561,6 +44558,8 @@ const s=document.createElement('style');s.textContent=`
     card.dataset.view=conteudo;
   }
   function montar() {
+    // v846: o termômetro fica só no Início; o Meu dia não mostra mais o card.
+    d.querySelectorAll(".v4-page.v4-day > .dt670-opening, .dt393-page.dt393-day > .dt670-opening").forEach(n=>n.remove());
     const dest = alvo();
     if (!dest?.root) return;
     let card = dest.root.querySelector(":scope > .dt670-opening");

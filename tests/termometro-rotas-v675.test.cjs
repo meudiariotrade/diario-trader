@@ -20,8 +20,7 @@ test("v675: termômetro visível em Início e Meu dia no renderizador V4 real, i
   await page.evaluate(()=>{tab="dia";render();});
   const dia=page.locator("#app .v4-panel .v4-page.v4-day");
   await expect(dia).toBeVisible();
-  await expect(dia.locator(":scope > .dt670-opening")).toBeVisible();
-  await expect(dia.locator(":scope > .dt670-opening")).toHaveCount(1);
+  await expect(dia.locator(":scope > .dt670-opening")).toHaveCount(0);
   await page.evaluate(()=>{tab="mercado";MKT.tab="cq";render();});
   await expect(page.locator("#app .dt670-opening")).toHaveCount(0);
   await page.evaluate(()=>{tab="home";render();});
@@ -43,7 +42,7 @@ test("v676: termômetro permanece montado após atualizações repetidas de Iní
    await page.evaluate(route=>{tab=route;render();render();},route);
    const container=page.locator(route==="home"?"#app .v4-panel .v4-page.v4-home":"#app .v4-panel .v4-page.v4-day");
    await expect(container).toBeVisible();
-   await expect(container.locator(":scope > .dt670-opening")).toHaveCount(1,{timeout:10000});
+   await expect(container.locator(":scope > .dt670-opening")).toHaveCount(route==="home"?1:0,{timeout:10000});
  }
  await page.close();
 }));

@@ -63,7 +63,7 @@ test("v670: monta somente uma instância na aba ativa sem modificar as demais te
  assert.equal(w.document.querySelectorAll(".dt670-opening").length,0);
  w.close();
 });
-test("v682: abertura apenas em Início e Meu dia, nunca em Mercado",()=>{
+test("v682/v846: abertura apenas no Início, nunca em Mercado nem no Meu dia",()=>{
  const w=page();
  w.tab="mercado";w.document.getElementById("app").innerHTML='<div class="dt395-native-mercado"><div class="m403-section-header">Mercado</div><section>Conteúdo existente</section></div>';
  w.TermometroAbertura670.montar();
@@ -71,7 +71,7 @@ test("v682: abertura apenas em Início e Meu dia, nunca em Mercado",()=>{
  assert.equal(w.document.querySelector(".m403-section-header").nextElementSibling.textContent,"Conteúdo existente");
  w.tab="dia";w.document.getElementById("app").innerHTML='<div class="dt393-page dt393-day"><section>Plano existente</section></div>';
  w.TermometroAbertura670.montar();
- assert.equal(w.document.querySelector(".dt393-day").firstElementChild.className,"dt670-opening");
+ assert.equal(w.document.querySelectorAll(".dt393-day .dt670-opening").length,0);
  w.close();
 });
 
@@ -97,7 +97,7 @@ test("v670: dados reais da estrutura mesa-macro reconhecem futuro ES, EWZ, WTI e
 });
 
 
-test("v675: nas páginas atuais V4, Início e Meu dia recebem o card no contêiner visível sem duplicar",()=>{
+test("v675/v846: nas páginas atuais V4, só o Início recebe o card, sem duplicar",()=>{
  const w=page(),app=w.document.getElementById("app");
  app.innerHTML='<section class="v4-panel"><div class="v4-page v4-home"><section class="v4-summary">Resumo</section><section>Outros dados</section></div></section>';
  w.tab="home";
@@ -111,7 +111,6 @@ test("v675: nas páginas atuais V4, Início e Meu dia recebem o card no contêin
  w.tab="dia";
  w.document.dispatchEvent(new w.CustomEvent("diario:render"));
  w.TermometroAbertura670.montar();
- assert.equal(app.querySelectorAll(".v4-day > .dt670-opening").length,1);
- assert.equal(app.querySelector(".v4-day").firstElementChild.className,"dt670-opening");
+ assert.equal(app.querySelectorAll(".v4-day > .dt670-opening").length,0);
  w.close();
 });

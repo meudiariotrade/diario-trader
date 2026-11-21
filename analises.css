@@ -351,3 +351,21 @@ html body #app nav.an-subs > button[aria-selected="true"] {
 #an-root.an830 .an-header h1{font-size:22px}
 #an-root.an830 .an830-acoes .ui-cta{background:var(--ui-accent,#F59E0B)!important;color:#08090D!important;border:0!important;min-height:44px;border-radius:6px;font-weight:700}
 html[data-v427-tema=claro] #an-root.an830 .an830-acoes .ui-cta{color:#FFFFFF!important}
+/* v846 — ficha: gráficos fundamentalistas */
+.scr846-graficos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:10px 0 14px;min-width:0}
+.scr846-fig{margin:0;padding:10px 0 0;border-top:1px solid var(--ui-card-line,rgba(255,255,255,.06));min-width:0}
+.scr846-fig figcaption{font-size:12px;font-weight:650;color:var(--ui-title,#E2E8F0);margin-bottom:6px}
+.scr846-fig svg{width:100%;height:auto;display:block;font-variant-numeric:tabular-nums}
+.scr846-fig svg .rot{font-size:11px;fill:var(--ui-label,#64748B)}
+.scr846-fig svg .val{font-size:11px;fill:var(--ui-title,#E2E8F0)}
+.scr846-fig svg rect.ok{fill:#10B981}.scr846-fig svg rect.neg{fill:#EF4444}
+.scr846-fig svg .px{stroke:#F59E0B;stroke-width:1.5;stroke-dasharray:3 2}
+.scr846-fig svg .pxt{font-size:10px;fill:#F59E0B}
+.scr846-pos{display:grid;gap:6px}
+.scr846-li{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(60px,1fr) 28px;gap:8px;align-items:center;font-size:12px}
+.scr846-li span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ui-title,#E2E8F0)}
+.scr846-li small{color:var(--ui-label,#64748B);font-variant-numeric:tabular-nums}
+.scr846-li b{text-align:right;font-variant-numeric:tabular-nums}
+.scr846-bar{display:block;height:8px;background:var(--ui-sub,#181C28);border-radius:3px;overflow:hidden}
+.scr846-bar i{display:block;height:100%}.scr846-bar i.ok{background:#10B981}.scr846-bar i.at{background:#F59E0B}.scr846-bar i.neg{background:#EF4444}
+@media(max-width:899px){#an-root.an830 .an830-aside:has(.an830-vazio){display:none}}

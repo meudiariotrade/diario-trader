@@ -124,7 +124,7 @@ test('Edge revista: autenticação, JSON público, cache versionado/isolado e fa
  });
  let r=await h.handler(reqRevista(dadosRevista(),''));assert.equal(r.status,401);assert.equal(n,0);
  r=await h.handler(reqRevista(dadosRevista()));assert.equal(r.status,200);const j=await r.json();assert.equal(n,2);
- assert.deepEqual(Object.keys(j).sort(),['ativos','corte','gerado','modelo']);assert.deepEqual(Object.keys(j.ativos.ITUB4).sort(),['cenarios','dow','elliott','fonte','pa','trocados']);
+ assert.deepEqual(Object.keys(j).sort(),['ativos','corte','gerado','modelo','referencias_cerebro']);assert.deepEqual(Object.keys(j.ativos.ITUB4).sort(),['cenarios','dow','elliott','fonte','pa','trocados']);
  assert.ok(!JSON.stringify(j).includes('fatos_relacionais'));assert.ok(!JSON.stringify(j).includes('versao'));
  const chaves=h.requisicoes.filter(x=>x.url.includes('chave=eq.')).map(x=>decodeURIComponent(x.url));assert.ok(chaves[0].includes(C.VERSAO_CONSISTENCIA+':usuario-a'));
  await h.handler(reqRevista(dadosRevista(),'outro.bbb.ccc'));
