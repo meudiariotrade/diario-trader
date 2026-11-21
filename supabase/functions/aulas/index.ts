@@ -429,8 +429,18 @@ Deno.serve(async (req) => {
       if(!reserva.permitido)return out({error:'Geração já em andamento ou limite diário de aulas atingido.'},429);
       reservaId=reserva.id;
       const biblioteca=typeof contextoPrivadoTrading==='function'?await contextoPrivadoTrading(req,tema+' estudo técnico mercados e gestão de risco',3):'';
-       const result=await gerarTexto(typeof especializarSistema==='function'?especializarSistema(SISTEMA_MENTOR,biblioteca):SISTEMA_MENTOR,JSON.stringify({tema,arquivo,paginas,conteudoPDF:texto}),{json:true,ate:Date.now()+110000,temp:0.35});
-      const raw=result.texto.replace(/^```(?:json)?\s*|\s*```$/g,'');let parsed;try{parsed=JSON.parse(raw);}catch{throw Error('A IA não devolveu uma aula estruturada. Tente novamente.');}
+      const sistema=typeof especializarSistema==='function'?especializarSistema(SISTEMA_MENTOR,biblioteca):SISTEMA_MENTOR;
+      // v857: JSON solto (texto antes/depois, cercas, vírgula sobrando) é recuperado; se ainda falhar, uma 2ª tentativa com trecho menor e pedido explícito de JSON.
+      const solto=(t:string)=>{let r=String(t||'').replace(/^```(?:json)?\s*|\s*```$/g,'').trim();const a=r.indexOf('{'),z=r.lastIndexOf('}');if(a<0||z<=a)return null;r=r.slice(a,z+1).replace(/,\s*([}\]])/g,'$1');try{return JSON.parse(r);}catch{return null;}};
+      const inicio=Date.now();
+      let result=await gerarTexto(sistema,JSON.stringify({tema,arquivo,paginas,conteudoPDF:texto}),{json:true,ate:inicio+85000,temp:0.35});
+      let parsed=solto(result.texto);
+      if(!parsed&&Date.now()-inicio<95000){
+        const curto=texto.length>60000?texto.slice(0,60000):texto;
+        result=await gerarTexto(sistema+'\nResponda SOMENTE com o objeto JSON pedido, completo e válido, sem texto antes ou depois. Seja conciso nos campos de texto.',JSON.stringify({tema,arquivo,paginas,conteudoPDF:curto}),{json:true,ate:Date.now()+50000,temp:0.2});
+        parsed=solto(result.texto);
+      }
+      if(!parsed)throw Error('A IA não devolveu uma aula estruturada. Tente um intervalo menor de páginas ou tente novamente.');
       const mentor=validarMentor(parsed,{id,arquivo,paginas});
       const cenas=mentor.stages.map((t:string,i:number)=>({titulo:mentor.stageNames[i],vis:{tipo:'topicos',t:mentor.stageNames[i],itens:mentor.visuals[i].items.map((t:string)=>({t}))},fala:[mentor.roteiroVoz.etapas[i]],pausa:900}));
       const roteiro={versao:1,tipo:'mentor-pdf-v1',mentor,livro:'Mentor PDF · '+id,min:mentor.minutes,cenas,partes:[],caps:[tema],modelo:result.rotulo};

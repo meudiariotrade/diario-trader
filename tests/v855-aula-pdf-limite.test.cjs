@@ -8,3 +8,7 @@ test('v855: PDF grande → páginas mais ligadas ao tema até 120 mil caracteres
  assert.match(fs.readFileSync('supabase/functions/aulas/index.ts','utf8'),/texto\.length>120000/);
  assert.match(fs.readFileSync('src/studies/tecnica-aulas.js','utf8'),/\(playing\|\|visual\)&&!videoFailed/);
 });
+test('v857: aula de PDF recupera JSON solto e tenta de novo com trecho menor',()=>{
+ const s=fs.readFileSync('supabase/functions/aulas/index.ts','utf8');
+ assert.match(s,/const solto=/);assert.match(s,/texto\.slice\(0,60000\)/);assert.match(s,/Responda SOMENTE com o objeto JSON/);
+});
