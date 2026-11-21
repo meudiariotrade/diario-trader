@@ -49,7 +49,7 @@ test('v860: voz das aulas — ponte local no PC e voz neural na borda para o iPh
 
 test('v862: modo vídeo do Mentor — avatar no quadro, figuras do PDF e tela cheia',()=>{
  const t=R('src/studies/tecnica-aulas.js'),f=R('src/studies/mentor-figuras.js');
- assert.match(t,/function player\(l\)/);assert.match(t,/tp-pres/);assert.match(t,/data-tp-action="tela"/);assert.match(t,/tp-fs-host/);
+ assert.match(t,/function player\(l\)/);assert.match(t,/tp-wave/);assert.match(t,/data-tp-action="tela"/);assert.match(t,/tp-fs-host/);
  assert.match(f,/EstudosLocal\.put\('mentor-figura'/);assert.match(f,/getOperatorList/);assert.ok(!/fetch\(/.test(f),'figuras nunca saem do aparelho');
  assert.match(R('release.config.json'),/src\/studies\/mentor-figuras\.js/);
 });

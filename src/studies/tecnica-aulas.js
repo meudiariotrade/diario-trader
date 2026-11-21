@@ -136,7 +136,7 @@ function acompanhar(a){
   const bar=raiz.querySelector('.tp-prog i');if(bar)bar.style.width=(((st+f)/4)*100).toFixed(1)+'%';
   let i=0;while(i+1<marcos.length&&f>=marcos[i+1])i++;if(i!==atual){atual=i;const el=raiz.querySelector('[data-tp-frase]');if(el)el.textContent=fs[i]||''}});
 }
-function reagir(a){cancelAnimationFrame(raf);acompanhar(a);try{if(!actx||actx.state!=='running')return; // sem contexto ativo, não desviar o som
+function reagir(a){cancelAnimationFrame(raf);try{if(typeof a?.addEventListener==='function')acompanhar(a)}catch{}try{if(!actx||actx.state!=='running')return; // sem contexto ativo, não desviar o som
  const src=actx.createMediaElementSource(a),an=actx.createAnalyser();an.fftSize=64;an.smoothingTimeConstant=.7;src.connect(an);an.connect(actx.destination);
  const buf=new Uint8Array(an.frequencyBinCount);
  const loop=()=>{if(audio!==a)return;an.getByteFrequencyData(buf);
