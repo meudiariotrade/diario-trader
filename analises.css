@@ -470,3 +470,21 @@ body.hf-aberto{overflow:hidden}
 .scr852-riscos{display:grid;gap:6px;line-height:1.5}
 #an-root .dl-logo{margin-right:6px;vertical-align:middle}
 #an-root .scr849-table td .dl-logo{--dl:18px}
+/* v853 — valores estimados em tom secundário, aviso de valuation, conferência e PDF da ficha */
+.scr853-est{color:var(--ui-label,#94A3B8);font-style:italic}
+.scr849-bar.est i{background:#64748B!important}.scr849-bar.est b{color:var(--ui-label,#94A3B8)}
+.scr853-conf{display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#B45309;color:#fff;font-size:11px;font-weight:700;cursor:help}
+.scr853-aviso{margin:10px 0;padding:8px 10px;border-left:2px solid #F59E0B;background:var(--ui-sub,#181C28);border-radius:4px;font-size:13px;line-height:1.5}
+.scr853-aviso ul{margin:4px 0 0;padding-left:18px;display:grid;gap:4px}
+.scr853-print-head{display:none}
+@media print{
+ body.scr853-imprimir *{visibility:hidden!important}
+ body.scr853-imprimir #scr-detail,body.scr853-imprimir #scr-detail *{visibility:visible!important}
+ body.scr853-imprimir #scr-detail{position:absolute;left:0;top:0;width:100%;background:#fff!important;color:#111!important;padding:12px}
+ body.scr853-imprimir #scr-detail *{color:#111!important;background-color:transparent!important;box-shadow:none!important}
+ body.scr853-imprimir .scr853-print-head{display:grid!important;gap:4px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #111}
+ body.scr853-imprimir .scr853-print-head span{font-size:11px}
+ body.scr853-imprimir #scr-detail button,body.scr853-imprimir .scr839-calc,body.scr853-imprimir .scr847-sim,body.scr853-imprimir .scr-detail-footer{display:none!important}
+ body.scr853-imprimir .scr849-bar i,body.scr853-imprimir .scr846-bar i,body.scr853-imprimir .scr-meter i{background:#555!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ body.scr853-imprimir .scr846-fig svg rect.ok{fill:#10B981!important}body.scr853-imprimir .scr846-fig svg rect.neg{fill:#EF4444!important}
+}
