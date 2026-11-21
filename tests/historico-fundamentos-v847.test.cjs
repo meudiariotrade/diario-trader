@@ -31,3 +31,13 @@ test('v847: rotas públicas na Cloudflare, workflow semanal no GitHub e recursos
  const f=fs.readFileSync('src/analysis/historico-fundamentos.js','utf8');assert.doesNotMatch(f,/supabase\.co|functions\/v1|setInterval/);assert.match(f,/diario:render/);
  assert.match(fs.readFileSync('src/index.html','utf8'),/historico-fundamentos\.js/);
 });
+test('v848: lucro de banco pela descrição e ações informadas em milhares',()=>{
+ const m=require('../scripts/cvm-historico.cjs');
+ const H='CNPJ_CIA;DT_REFER;VERSAO;MOEDA;ESCALA_MOEDA;ORDEM_EXERC;DT_INI_EXERC;DT_FIM_EXERC;CD_CONTA;DS_CONTA;VL_CONTA\n';
+ const L=(cd,ds,val)=>'60.872.504/0001-23;2025-12-31;1;REAL;MIL;ÚLTIMO;2025-01-01;2025-12-31;'+cd+';'+ds+';'+val+'\n';
+ const emps=new Map([['60872504000123',{anos:{},grupo:{}}]]);
+ m.aplicaDRE(H+L('3.01','Receitas da Intermediação Financeira',300)+L('3.09','Lucro ou Prejuízo Líquido Consolidado do Período',40),emps,2025,'con');
+ m.aplicaBP(H+L('2.07','Patrimônio Líquido Consolidado',215000),emps,2025,'con','P');
+ m.aplicaCapital('CNPJ_CIA;VERSAO;QT_ACAO_TOTAL_CAP_INTEGR;QT_ACAO_TOTAL_TESOURO\n60.872.504/0001-23;1;11000;0\n',emps,2025);
+ const a=emps.get('60872504000123').anos[2025];assert.equal(a.luc,40000);assert.equal(a.acoes,11000000);
+});
