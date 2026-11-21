@@ -121,6 +121,9 @@ async function vozCacheSalvar(chave,blob){
  if(typeof idb!=='function'||blob.size>10*1024*1024)return;
  try{await idb('kv','put',blob,chave);}catch{}
 }
+const PONTE_LOCAL_VOZ='http://127.0.0.1:8766/voz',VOZ_BORDA='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/voz';let fonteVoz='';
+function iosAparelho(){return /iPad|iPhone|iPod/.test(navigator.userAgent||'')||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
+function pedacosVoz(t){const out=[];let cur='';for(const f of String(t).split(/(?<=[.!?;:])\s+/)){if((cur+' '+f).length>1800&&cur){out.push(cur);cur=f}else cur=cur?cur+' '+f:f}if(cur)out.push(cur);return out.flatMap(x=>x.length>2400?x.match(/[\s\S]{1,2400}/g):[x])}
 function configuredBridge(){let stored='';try{stored=localStorage.getItem('diario:ponte-video:voz-url')||'';}catch{}const candidate=window.DIARIO_PONTE_VIDEO?.vozUrl||stored;return candidate&&validEndpoint(candidate)?candidate:'';}
 function finishScene(token){if(token!==run||!active()||currentOwner()!==owner)return;playing=false;loading=false;utterance=null;releaseAudio();if(step<3){step++;mark();paint();speak();}else{status='Narração concluída. Responda ao mini-check abaixo.';paint();}}
 async function speak(){
@@ -129,21 +132,36 @@ async function speak(){
  const text=T.normalizarTextoParaVoz(`${step+1}. ${(l.stageNames||names)[step]}. ${l.roteiroVoz?.etapas?.[step]||l.stages[step]}`);
  const key=vozChave(l,step,text),endpoint=configuredBridge();
  let blob=await vozCacheLer(key);if(token!==run)return;
- if(!blob&&endpoint){
-  const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),8000);
-  try{
-   const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:'pt-BR',lesson_id:l.id,stage:step}),signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
-   if(!res.ok||!/^audio\//i.test(res.headers.get('content-type')||''))throw Error('Resposta de áudio inválida');
-   blob=await res.blob();if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
-   if(token!==run)return;
-   await vozCacheSalvar(key,blob);
-  }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;blob=null;}
-  finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
+ // v860: ordem das fontes de voz — ponte configurada → ponte local do PC (127.0.0.1, só no computador)
+ // → voz neural na borda Cloudflare (funciona no iPhone, sem a ponte). Sempre a mesma voz neural, nunca robótica.
+ if(!blob){
+  const fontes=[];
+  if(endpoint)fontes.push({url:endpoint,post:true,ms:15000});
+  if(!iosAparelho()&&endpoint!==PONTE_LOCAL_VOZ)fontes.push({url:PONTE_LOCAL_VOZ,post:true,ms:15000});
+  fontes.push({borda:true,ms:30000});
+  for(const f of fontes){
+   const ctl=controller=new AbortController(),timeout=setTimeout(()=>ctl.abort(),f.ms);
+   try{
+    let partes=[];
+    if(f.borda){for(const pedaco of pedacosVoz(text)){
+      const res=await fetch(VOZ_BORDA+'?t='+encodeURIComponent(pedaco)+'&v=pt-BR-AntonioNeural',{signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+      if(!res.ok||!/^audio\//i.test(res.headers.get('content-type')||''))throw Error('Voz da borda indisponível');
+      partes.push(await res.blob());}}
+    else{const res=await fetch(f.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:'pt-BR',lesson_id:l.id,stage:step}),signal:ctl.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+     if(!res.ok||!/^audio\//i.test(res.headers.get('content-type')||''))throw Error('Resposta de áudio inválida');
+     partes=[await res.blob()];}
+    blob=new Blob(partes,{type:'audio/mpeg'});if(!blob.size||blob.size>30*1024*1024)throw Error('Áudio vazio ou grande demais');
+    if(token!==run)return;
+    fonteVoz=f.borda?'voz neural online':'Ponte Vídeo do PC';
+    await vozCacheSalvar(key,blob);break;
+   }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;blob=null;}
+   finally{clearTimeout(timeout);if(controller===ctl)controller=null;}
+  }
  }
  if(blob&&token===run){
   try{
    objectURL=URL.createObjectURL(blob);audio=new Audio(objectURL);audio.preload='auto';
-   audio.onplaying=()=>{if(token!==run)return;playing=true;loading=false;status='Narrando pela Ponte Vídeo'+(endpoint?'':' · áudio salvo neste aparelho')+'.';paint();};
+   audio.onplaying=()=>{if(token!==run)return;playing=true;loading=false;status='Narrando'+(fonteVoz?' · '+fonteVoz:' · áudio salvo neste aparelho')+'.';fonteVoz='';paint();};
    audio.onpause=()=>{if(token!==run||!playing)return;playing=false;status='Áudio pausado. Toque em Ouvir etapa para reiniciá-la.';paint();};
    audio.onended=()=>finishScene(token);
    audio.onerror=()=>{if(token!==run)return;releaseAudio();bridgeFailed=true;playing=false;loading=false;status='Áudio da ponte interrompido. Confira a ponte no PC e tente novamente.';paint();};
@@ -151,7 +169,7 @@ async function speak(){
   }catch{if(token!==run)return;releaseAudio();bridgeFailed=true;}
  }
  loading=false;playing=false;
- status=endpoint?'Ponte de voz indisponível. Confira a conexão local do PC e tente novamente.':'Configure ou ligue a ponte de voz do PC para ouvir a aula. Áudios já salvos podem ser reproduzidos offline; não haverá voz robótica.';
+ status='Não consegui gerar a voz agora (sem internet ou serviço de voz fora do ar). Tente de novo em instantes; áudios já ouvidos tocam offline.';
  paint();
 }
 function aulasTabs(){return `<div class="tp-aulas-nav" role="tablist" aria-label="Tipos de aulas"><button type="button" role="tab" data-tp-aula-sub="tradicionais" aria-selected="${aulaSubaba==='tradicionais'}" class="${aulaSubaba==='tradicionais'?'on':''}">Aulas Tradicionais</button><button type="button" role="tab" data-tp-aula-sub="mentor" aria-selected="${aulaSubaba==='mentor'}" class="${aulaSubaba==='mentor'?'on':''}">Mentor 3D</button></div>`;}

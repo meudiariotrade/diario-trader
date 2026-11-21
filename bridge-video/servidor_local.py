@@ -57,7 +57,7 @@ def create_handler(root):
             origin = self.headers.get("Origin", "")
             if origin == ALLOWED_ORIGIN:
                 self.send_header("Access-Control-Allow-Origin", origin)
-                self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "Content-Type, Range")
                 self.send_header("Access-Control-Allow-Private-Network", "true")
                 self.send_header("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges")
@@ -72,6 +72,8 @@ def create_handler(root):
             self.end_headers()
 
         def do_POST(self):
+            if self.headers.get("Origin","") == ALLOWED_ORIGIN and urlsplit(self.path).path == "/voz":
+                return self._voz()
             if self.headers.get("Origin","") != ALLOWED_ORIGIN or urlsplit(self.path).path != "/aula":
                 self.send_error(403)
                 return
@@ -98,6 +100,38 @@ def create_handler(root):
                 self.end_headers();self.wfile.write(body)
             except Exception:
                 self.send_error(400)
+
+        def _voz(self):
+            # v860: narração das aulas no app (Estudos > Mentor) com a mesma voz neural dos vídeos. Só no PC.
+            try:
+                size=int(self.headers.get("Content-Length","0"))
+                if size<2 or size>64*1024:
+                    self.send_error(413);return
+                data=json.loads(self.rfile.read(size).decode("utf-8"))
+                texto=str(data.get("text") or "").strip()
+                if len(texto)<2 or len(texto)>6000:
+                    self.send_error(400);return
+                import ponte_video, tempfile, os
+                cfg=ponte_video.le_cfg()
+                voz=cfg.get("auto",{}).get("voz") or ponte_video.VOZES["1"][0]
+                taxa=cfg.get("auto",{}).get("taxa") or "+0%"
+                fd,tmp=tempfile.mkstemp(suffix=".mp3");os.close(fd)
+                try:
+                    asyncio.run(ponte_video.tts(texto,voz,taxa,tmp))
+                    body=Path(tmp).read_bytes()
+                finally:
+                    Path(tmp).unlink(missing_ok=True)
+                if not body:
+                    self.send_error(502);return
+                self.send_response(200);self._cors()
+                self.send_header("Content-Type","audio/mpeg")
+                self.send_header("Content-Length",str(len(body)))
+                self.send_header("Cache-Control","no-store")
+                self.end_headers();self.wfile.write(body)
+            except Exception as err:
+                print("Erro na voz da ponte: "+str(err)[:160],flush=True)
+                try: self.send_error(502)
+                except Exception: pass
 
         def do_GET(self):
             origin = self.headers.get("Origin", "")
