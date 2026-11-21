@@ -145,6 +145,21 @@ export default {
     ctx.waitUntil(cache.put(key,out.clone()));return conditional(request,out,false);
    }catch{return json({error:'Histórico CVM não confirmado'},503)}
   }
+  // v859 — fundamentos anuais SEC dos EUA (gerados no GitHub Actions), servidos com cache de borda.
+  if(url.pathname==='/v1/sec-fundamentos'){
+   if([...url.searchParams.keys()].length)return json({error:'Sem parâmetros'},400);
+   const cache=caches.default,key=new Request(url.origin+'/v1/sec-fundamentos?rev=v859');
+   const hit=await cache.match(key);if(hit)return conditional(request,hit,true);
+   try{
+    const r=await fetch('https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/sec-fundamentos.json',{signal:AbortSignal.timeout(15000)});
+    if(!r.ok)return json({error:'Fundamentos SEC ainda não gerados'},503);
+    const txt=await r.text();if(txt.length>8_000_000)return json({error:'Arquivo SEC acima do limite'},502);
+    const all=JSON.parse(txt);if(!all?.tickers||typeof all.tickers!=='object')return json({error:'Formato SEC inválido'},502);
+    const out=new Response(txt,{headers:{...CORS,'Content-Type':'application/json','Cache-Control':'public, max-age=21600, s-maxage=21600',
+     'X-Snapshot-Source':'sec-fundamentos-github',ETag:'"secf-'+String(all.gerado_em||'').slice(0,16)+'"'}});
+    ctx.waitUntil(cache.put(key,out.clone()));return conditional(request,out,false);
+   }catch{return json({error:'Fundamentos SEC não confirmados'},503)}
+  }
   // v849 — histórico anual (até 10 exercícios) de empresa dos EUA a partir do SEC XBRL Companyfacts (10-K/20-F/40-F).
   if(url.pathname==='/v1/sec-historico'){
    const ticker=(url.searchParams.get('ticker')||'').toUpperCase();
