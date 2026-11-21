@@ -170,7 +170,7 @@ test('v839: preço teto da fórmula do usuário, Bazin e Graham com estimativa d
   const m=I.valuationBR(row,{manual:{lucro:14613000000,payout:25,acoes:5730834040,yield:.07}});
   assert.equal(+m.methods.proprio.toFixed(2),9.11);assert.equal(m.estimados.proprio,undefined);assert.ok(m.margins.proprio>0);
   const a=fs.readFileSync('src/analysis/analises.js','utf8');
-  assert.match(a,/\['__teto','Preço teto'\],\['__margem','Margem'\]/);assert.match(a,/Abaixo do teto/);
+  assert.match(a,/th\('Preço justo',''/);assert.match(a,/th\('Desconto %','margem_proprio'\)/);assert.match(a,/Abaixo do teto/);
   assert.match(a,/data-scr-teto-save/);assert.match(a,/localStorage\.setItem\(TETO_KEY/);
   assert.match(a,/\['bazinDinamico','Bazin dinâmico'\]/);
 });
