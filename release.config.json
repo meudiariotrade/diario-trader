@@ -1,5 +1,5 @@
 {
-  "version": 846,
+  "version": 847,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -66,6 +66,7 @@
     "backtest-gates-v801.js": "src/analysis/backtest-gates-v801.js",
     "cerebro-ia.js": "src/ai/cerebro-ia.js",
     "cerebro-estudos.js": "src/ai/cerebro-estudos.js",
+    "historico-fundamentos.js": "src/analysis/historico-fundamentos.js",
     "fibo-visual.js": "src/analysis/fibo-visual.js"
   },
   "templates": {

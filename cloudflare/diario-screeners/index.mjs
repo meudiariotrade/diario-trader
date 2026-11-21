@@ -122,6 +122,53 @@ export default {
    }catch{return json({error:'SEC XBRL não confirmado; manter indicadores nulos'},503)}
   }
 
+  // v847 — histórico anual (10 exercícios DFP) de uma companhia, recortado do espelho público CVM no GitHub.
+  if(url.pathname==='/v1/cvm-historico'){
+   const ticker=(url.searchParams.get('ticker')||'').toUpperCase();
+   if([...url.searchParams.keys()].some(k=>k!=='ticker')||!/^[A-Z]{4}\d{1,2}$/.test(ticker))return json({error:'Ticker B3 obrigatório'},400);
+   const cache=caches.default,key=new Request(url.origin+'/v1/cvm-historico?ticker='+ticker+'&rev=v847');
+   const hit=await cache.match(key);if(hit)return conditional(request,hit,true);
+   try{
+    const fileKey=new Request(url.origin+'/v1/cvm-historico-arquivo?rev=v847');
+    let file=await cache.match(fileKey);
+    if(!file){
+     const r=await fetch('https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/cvm-historico.json',{signal:AbortSignal.timeout(15000)});
+     if(!r.ok)return json({error:'Histórico CVM ainda não gerado'},503);
+     const txt=await r.text();if(txt.length>12_000_000)return json({error:'Histórico CVM acima do limite'},502);
+     file=new Response(txt,{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=43200'}});
+     ctx.waitUntil(cache.put(fileKey,file.clone()));
+    }
+    const all=await file.json(),cnpj=all?.tickers?.[ticker],emp=cnpj&&all.empresas?.[cnpj];
+    if(!emp)return json({error:'Sem histórico CVM para '+ticker},404);
+    const body={ok:true,ticker,cnpj,nome:emp.n,setor:emp.s,anos:emp.a,exercicios:all.exercicios,gerado_em:all.gerado_em,fonte:all.fonte,campos:all.campos};
+    const out=Response.json(body,{headers:{...CORS,'Cache-Control':'public, max-age=43200, s-maxage=43200','X-Snapshot-Source':'cvm-historico-github',ETag:'"cvmh-'+ticker+'-'+String(all.gerado_em||'').slice(0,10)+'"'}});
+    ctx.waitUntil(cache.put(key,out.clone()));return conditional(request,out,false);
+   }catch{return json({error:'Histórico CVM não confirmado'},503)}
+  }
+  // v847 — preço mensal de 10 anos com dividendos (Yahoo), para valor de mercado, DY e retorno total.
+  if(url.pathname==='/v1/historico-preco'){
+   const ticker=(url.searchParams.get('ticker')||'').toUpperCase(),market=url.searchParams.get('market')||'BR';
+   if([...url.searchParams.keys()].some(k=>!['ticker','market'].includes(k))||!['BR','US'].includes(market)||
+    (market==='BR'&&!/^[A-Z]{4}\d{1,2}$/.test(ticker))||(market==='US'&&!/^[A-Z]{1,5}(?:\.[A-Z])?$/.test(ticker)))return json({error:'Ticker inválido'},400);
+   const cache=caches.default,key=new Request(url.origin+'/v1/historico-preco?market='+market+'&ticker='+ticker+'&rev=v847');
+   const hit=await cache.match(key);if(hit)return conditional(request,hit,true);
+   const symbol=market==='BR'?ticker+'.SA':ticker;
+   for(const h of ['query1.finance.yahoo.com','query2.finance.yahoo.com']){
+    try{
+     const r=await fetch('https://'+h+'/v8/finance/chart/'+encodeURIComponent(symbol)+'?range=10y&interval=1mo&events=div&includePrePost=false',{headers:{Accept:'application/json'},signal:AbortSignal.timeout(8000)});
+     if(!r.ok)continue;
+     const o=await r.json(),sr=o?.chart?.result?.[0],q=sr?.indicators?.quote?.[0],adj=sr?.indicators?.adjclose?.[0]?.adjclose;
+     if(!Array.isArray(sr?.timestamp)||!q)continue;
+     const meses=sr.timestamp.map((t,i)=>[Number(t),Number(q.close?.[i]),Number(adj?.[i])]).filter(x=>x[0]>0&&x[1]>0).map(x=>[x[0],Math.round(x[1]*10000)/10000,x[2]>0?Math.round(x[2]*10000)/10000:null]);
+     const divs=Object.values(sr.events?.dividends||{}).map(d=>[Number(d.date),Number(d.amount)]).filter(d=>d[0]>0&&d[1]>0).sort((a,b)=>a[0]-b[0]);
+     if(meses.length<12)continue;
+     const out=Response.json({ok:true,ticker,market,moeda:sr.meta?.currency||null,meses,dividendos:divs,fonte:'Yahoo Finance (mensal, 10 anos; dividendos por ação, sujeito a atraso)'},
+      {headers:{...CORS,'Cache-Control':'public, max-age=43200, s-maxage=43200','X-Snapshot-Source':'yahoo-historico-mensal'}});
+     ctx.waitUntil(cache.put(key,out.clone()));return conditional(request,out,false);
+    }catch{}
+   }
+   return json({error:'Histórico de preço indisponível'},503);
+  }
   // v772 — espelhos públicos CVM produzidos semanalmente no GitHub, com cache de borda 24h.
   // Sem CPF, carteira, operações ou dados personalizados, com limites de tamanho e esquema.
   if(url.pathname==='/v1/cvm-provas'){
