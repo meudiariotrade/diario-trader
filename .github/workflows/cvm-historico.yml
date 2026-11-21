@@ -1,0 +1,41 @@
+name: Histórico CVM 10 anos
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/cvm-historico.cjs
+      - .github/workflows/cvm-historico.yml
+  schedule:
+    - cron: '15 5 * * 6'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: cvm-historico
+  cancel-in-progress: false
+jobs:
+  historico:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Extrair 10 exercícios da DFP direto da CVM, sem Supabase
+        run: node scripts/cvm-historico.cjs
+      - name: Versionar somente dados públicos
+        shell: bash
+        run: |
+          git add dados-publicos/cvm-historico.json
+          if git diff --cached --quiet; then
+            echo "Sem mudanças"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "dados(CVM): histórico anual de 10 exercícios (DFP) sem dados privados"
+          git pull --rebase origin main
+          git push origin HEAD:main
