@@ -1,5 +1,6 @@
 ;(function(){
 const s=document.createElement('style');s.textContent=`
+.tp-row-wrap{display:flex;gap:6px;align-items:stretch;min-width:0}.tp-row-wrap .tp-lesson-row{flex:1;min-width:0}#tp-root .tp-del,#tp-root button.tp-del{min-height:44px;padding:8px 12px;border-radius:4px;border:1px solid rgba(239,68,68,.45)!important;background:transparent!important;color:#EF4444!important;white-space:nowrap;flex:0 0 auto}
 .tp-player{margin:10px 0;border:1px solid #1E232E;border-radius:6px;background:#0A0C10;overflow:hidden}
 .tp-stage{position:relative;aspect-ratio:16/9;background:#0A0C10;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .tp-stage .tp-chart{width:100%;height:100%;margin:0;border:0}.tp-stage .tp-chart svg{width:100%;height:100%}

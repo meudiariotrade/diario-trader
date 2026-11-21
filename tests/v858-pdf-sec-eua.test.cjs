@@ -60,3 +60,10 @@ test('v863: aulas tradicionais com voz por IA por cena e volta à voz do aparelh
  assert.match(v,/workers\.dev\/v1\/voz/);assert.match(v,/caches\.open/);
  assert.match(R('release.config.json'),/src\/studies\/aulas-voz-ia\.js/);
 });
+
+test('v865: apagar aulas — Mentor (aparelho) e tradicionais (lista, inclusive travadas)',()=>{
+ const t=R('src/studies/tecnica-aulas.js'),p=R('src/studies/tecnica-pdf.js'),n=R('src/domains/layers/01-navegacao-e-fluxos.js');
+ assert.match(t,/data-tp-del=/);assert.match(t,/confirm\(/);assert.match(p,/async function remover\(id\)/);
+ assert.match(n,/data-audelid="\$\{i\(Z\.id\)\}"/);assert.match(n,/data-audelid="\$\{i\(t\.id\)\}"/);
+ assert.match(n,/\/rest\/v1\/aulas\?id=eq\." \+ encodeURIComponent\(id\)/);
+});

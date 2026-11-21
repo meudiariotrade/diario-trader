@@ -10709,7 +10709,7 @@ ${W.text}
               ie = k(Z);
             /* v596: card vertical — número + título na largura toda; Vídeo (MP4, quando houver), duração e favorito na linha de baixo. */
             const min596 = Z.roteiro_min || Z.min;
-            t += `<div class="au-study-row v596-aula"><button class="au-item" data-auopen="${i(Z.id)}"><span class="au-n">${re ? "✓" : Z.numero}</span><span class="au-tx"><b>Aula ${Z.numero} · ${i(Z.titulo)}</b><span class="sm mut">${i(Z.capitulos ? "Capítulos " + Z.capitulos : "")}${re ? (Z.capitulos ? " · " : "") + "concluída" : ie ? (Z.capitulos ? " · " : "") + "parou em " + ie + "%" : ""}</span>${ie && !re ? `<span class="au-pb"><i style="width:${ie}%"></i></span>` : ""}</span></button><div class="v596-aula-acoes">${min596 ? `<span class="v596-min">~${i(min596)} min</span>` : ""}<button class="au-fav" type="button" data-austfav="${i(Z.id)}" aria-label="Favoritar ${i(Z.titulo)}" aria-pressed="${!!J().fav?.[Z.id]}">${J().fav?.[Z.id] ? "★" : "☆"}</button></div></div>`;
+            t += `<div class="au-study-row v596-aula"><button class="au-item" data-auopen="${i(Z.id)}"><span class="au-n">${re ? "✓" : Z.numero}</span><span class="au-tx"><b>Aula ${Z.numero} · ${i(Z.titulo)}</b><span class="sm mut">${i(Z.capitulos ? "Capítulos " + Z.capitulos : "")}${re ? (Z.capitulos ? " · " : "") + "concluída" : ie ? (Z.capitulos ? " · " : "") + "parou em " + ie + "%" : ""}</span>${ie && !re ? `<span class="au-pb"><i style="width:${ie}%"></i></span>` : ""}</span></button><div class="v596-aula-acoes">${min596 ? `<span class="v596-min">~${i(min596)} min</span>` : ""}<button class="au-del-lista" type="button" data-audelid="${i(Z.id)}" aria-label="Apagar ${i(Z.titulo)}">Apagar</button><button class="au-fav" type="button" data-austfav="${i(Z.id)}" aria-label="Favoritar ${i(Z.titulo)}" aria-pressed="${!!J().fav?.[Z.id]}">${J().fav?.[Z.id] ? "★" : "☆"}</button></div></div>`;
           }
           t += "</div>";
         }
@@ -12858,6 +12858,15 @@ ${fe(1, "#cca764", "futuro acima do à vista (normal)", t.emA)}${fe(-1, "#c69a49
             (t.preventDefault(), oe(x.dataset.auopen));
             return;
           }
+          if ((x = p("[data-audelid]"))) {
+            // v865: apagar direto da lista (inclusive aula travada em "gerando").
+            const id = x.dataset.audelid, A = (F.lista || []).find((W) => W.id === id);
+            if (!id || !confirm(`Apagar a aula ${A?.numero || ""} de “${A?.livro || "este livro"}”? Isso não pode ser desfeito.`)) return;
+            rq("/rest/v1/aulas?id=eq." + encodeURIComponent(id), { method: "DELETE", headers: { Prefer: "return=minimal" } })
+              .then(() => { try { (u(l + id), u(r + id)); } catch {} ((F.lista = null), me(), R(1), toast && toast("Aula apagada.")); })
+              .catch((W) => toast && toast("Não apagou: " + (W.message || W)));
+            return;
+          }
           if (p("[data-aurel]")) {
             ((F.lista = null), R(1), C());
             return;
@@ -13405,7 +13414,7 @@ ${fe(1, "#cca764", "futuro acima do à vista (normal)", t.emA)}${fe(-1, "#c69a49
           meu: !!x,
         });
         if (estado) return estado;
-        return `<div class="au-item au-ger"><span class="au-n">…</span><span class="au-tx"><b>Aula ${t.numero} · gerando</b><span class="sm mut">${de.busy && x ? i(de.msg) : x ? "Interrompida. Toque em continuar." : "Em geração em outro aparelho ou interrompida."}</span></span>${!de.busy && x ? '<button class="btn s" data-aucont="1">Continuar</button>' : ""}</div>`;
+        return `<div class="au-item au-ger"><span class="au-n">…</span><span class="au-tx"><b>Aula ${t.numero} · gerando</b><span class="sm mut">${de.busy && x ? i(de.msg) : x ? "Interrompida. Toque em continuar." : "Em geração em outro aparelho ou interrompida."}</span></span>${!de.busy && x ? '<button class="btn s" data-aucont="1">Continuar</button>' : ""}<button class="au-del-lista" type="button" data-audelid="${i(t.id)}" aria-label="Apagar esta aula">Apagar</button></div>`;
       }
       async function ft(t, p, x) {
         (M(x), await tok(), M(x));
@@ -44262,7 +44271,12 @@ async function migrarDaNuvem(){
  if(uid()!==current)throw Error('A conta mudou durante a importação.');
  carregarLocalSeguro(rows,current);await guardarAulas(current);T.view?.refresh();return rows.length;
 }
-T.pdf={generate,load,insert,safeLesson,dispose(){disposed=true;observer.disconnect();controller?.abort();task?.destroy();}};
+/* v865: apagar aula do Mentor — some da lista, do aparelho e as figuras/vídeos guardados dela. */
+async function remover(id){const current=uid();if(!current)throw Error('Entre na conta para apagar.');
+ T.lessons=T.lessons.filter(l=>l.id!==id);storedRows=storedRows.filter(r=>r.id!==id);await guardarAulas(current);
+ try{for(const r of (await window.EstudosLocal?.all())||[])if((r.tipo==='mentor-figura'&&String(r.id).startsWith(id+':'))||(r.tipo==='mentor-video'&&String(r.id).startsWith(id)))await window.EstudosLocal.remove(r.tipo,r.id)}catch{}
+ try{localStorage.removeItem('tp-fig-v862:'+id)}catch{}}
+T.pdf={generate,load,insert,safeLesson,remover,dispose(){disposed=true;observer.disconnect();controller?.abort();task?.destroy();}};
 /* Mantém a escolha do usuário quando a trilha atualiza o HTML e recria o form.
    A mudança de conta já limpa pdfExpanded em reset(). */
 document.addEventListener('toggle',e=>{
@@ -44307,7 +44321,7 @@ function player(l){
 function catalog(){
  const lessons=T.lessons.filter(l=>l.pdf),done=lessons.filter(passed).length;
  return `<header class="tp-head"><span>MENTOR 3D · AULAS CRIADAS COM SEUS PDFs</span><h2>Minhas aulas do Mentor</h2><p>Suas aulas geradas a partir dos PDFs enviados. O histórico é exclusivo da sua conta; nenhuma lição demonstrativa aparece aqui.</p></header>`+
- (lessons.length?`<div class="tp-progress"><progress max="${lessons.length}" value="${done}" aria-label="Progresso das minhas aulas"></progress><b>${done}/${lessons.length} concluídas</b></div><div class="tp-modules" aria-label="Minhas aulas geradas">${lessons.map(l=>`<button type="button" data-tp-lesson="${E(l.id)}" class="tp-lesson-row"><span>${passed(l)?'✓ ':''}${E(l.title)}</span><small>${progress[l.id]?.answers?.filter(Number.isInteger).length||0}/3 respostas · ${l.minutes||3} min</small></button>`).join('')}</div>`:
+ (lessons.length?`<div class="tp-progress"><progress max="${lessons.length}" value="${done}" aria-label="Progresso das minhas aulas"></progress><b>${done}/${lessons.length} concluídas</b></div><div class="tp-modules" aria-label="Minhas aulas geradas">${lessons.map(l=>`<div class="tp-row-wrap"><button type="button" data-tp-lesson="${E(l.id)}" class="tp-lesson-row"><span>${passed(l)?'✓ ':''}${E(l.title)}</span><small>${progress[l.id]?.answers?.filter(Number.isInteger).length||0}/3 respostas · ${l.minutes||3} min</small></button><button type="button" class="tp-del" data-tp-del="${E(l.id)}" aria-label="Apagar a aula ${E(l.title)}">Apagar</button></div>`).join('')}</div>`:
  '<div class="tp-empty" role="status"><strong>Nenhuma aula gerada ainda</strong><p>Use o gerador abaixo para enviar um PDF, escolher até 150 páginas e criar sua primeira aula com o Mentor 3D.</p></div>');
 }
 
@@ -44378,7 +44392,7 @@ async function gerarVideoNaPonte(){
   status='Ponte local não encontrada. No PC, abra INICIAR SERVIDOR LOCAL.bat ou LIGAR AUTOMATICO.bat.';paint();
  }
 }
-function lesson(l){const idx=T.lessons.indexOf(l),r=record(l);return `<header class="tp-head"><button type="button" data-tp-action="catalog">← Todas as lições</button><span>ANÁLISE TÉCNICA NA PRÁTICA · ${idx+1}/${T.lessons.length}</span><h2 tabindex="-1" id="tp-title">${E(l.title)}</h2><p>${l.minutes||3} min de leitura · ${E(T.modules.find(m=>m.id===l.module).reference)}</p></header><div class="tp-class ${visual?'tp-visual':''}"><div class="tp-main"><p class="tp-summary">${E(l.summary)}</p><div class="tp-controls"><button type="button" data-tp-action="listen" ${loading?'disabled':''}>${loading?'Preparando…':playing?'Reiniciar etapa':visual?'Ouvir etapa':'Ouvir Aula'}</button><button type="button" data-tp-action="pause" ${!playing&&!loading?'disabled':''}>Pausar</button><button type="button" data-tp-action="visual">${visual?'Voltar à abertura':'Explorar o exemplo'}</button></div><p class="tp-status" role="status" aria-live="polite">${E(status)}</p>${visual?`<div class="tp-stages" role="navigation" aria-label="Etapas da lição">${(l.stageNames||names).map((n,i)=>`<button type="button" data-tp-step="${i}" aria-current="${step===i?'step':'false'}">${i+1}. ${E(n)}</button>`).join('')}</div>${player(l)}<section class="tp-script"><h3>${step+1}. ${E((l.stageNames||names)[step])}</h3><p>${E(l.stages[step])}</p></section><div class="tp-controls"><button type="button" data-tp-action="prev" ${step===0?'disabled':''}>← Etapa anterior</button><button type="button" data-tp-action="next" ${step===3?'disabled':''}>Próxima etapa →</button></div>`:`<p class="tp-intro">Ouça a explicação com etapas sincronizadas ou explore o gráfico no seu ritmo. Os níveis de preço são didáticos e não representam uma operação em andamento.</p>`}</div>${visual?'':mentor()}</div>${visual?quiz(l):''}<div class="tp-footer"><button type="button" data-tp-lesson="${T.lessons[Math.max(0,idx-1)].id}" ${idx===0?'disabled':''}>← Lição anterior</button><button type="button" data-tp-lesson="${T.lessons[Math.min(T.lessons.length-1,idx+1)].id}" ${idx===T.lessons.length-1?'disabled':''}>Próxima lição →</button></div>${bridgeDetails()}<p class="tp-note">${l.pdf?'Aula gerada a partir do PDF selecionado. Confira o conteúdo com o material original.':'Exemplo autoral hipotético, inspirado em conceitos clássicos. Não reproduz uma página do livro.'} ${!storageOK?'O navegador bloqueou o armazenamento: progresso somente nesta sessão.':''}</p>`;}
+function lesson(l){const idx=T.lessons.indexOf(l),r=record(l);return `<header class="tp-head"><button type="button" data-tp-action="catalog">← Todas as lições</button><button type="button" class="tp-del" data-tp-del="${E(l.id)}">Apagar aula</button><span>ANÁLISE TÉCNICA NA PRÁTICA · ${idx+1}/${T.lessons.length}</span><h2 tabindex="-1" id="tp-title">${E(l.title)}</h2><p>${l.minutes||3} min de leitura · ${E(T.modules.find(m=>m.id===l.module).reference)}</p></header><div class="tp-class ${visual?'tp-visual':''}"><div class="tp-main"><p class="tp-summary">${E(l.summary)}</p><div class="tp-controls"><button type="button" data-tp-action="listen" ${loading?'disabled':''}>${loading?'Preparando…':playing?'Reiniciar etapa':visual?'Ouvir etapa':'Ouvir Aula'}</button><button type="button" data-tp-action="pause" ${!playing&&!loading?'disabled':''}>Pausar</button><button type="button" data-tp-action="visual">${visual?'Voltar à abertura':'Explorar o exemplo'}</button></div><p class="tp-status" role="status" aria-live="polite">${E(status)}</p>${visual?`<div class="tp-stages" role="navigation" aria-label="Etapas da lição">${(l.stageNames||names).map((n,i)=>`<button type="button" data-tp-step="${i}" aria-current="${step===i?'step':'false'}">${i+1}. ${E(n)}</button>`).join('')}</div>${player(l)}<section class="tp-script"><h3>${step+1}. ${E((l.stageNames||names)[step])}</h3><p>${E(l.stages[step])}</p></section><div class="tp-controls"><button type="button" data-tp-action="prev" ${step===0?'disabled':''}>← Etapa anterior</button><button type="button" data-tp-action="next" ${step===3?'disabled':''}>Próxima etapa →</button></div>`:`<p class="tp-intro">Ouça a explicação com etapas sincronizadas ou explore o gráfico no seu ritmo. Os níveis de preço são didáticos e não representam uma operação em andamento.</p>`}</div>${visual?'':mentor()}</div>${visual?quiz(l):''}<div class="tp-footer"><button type="button" data-tp-lesson="${T.lessons[Math.max(0,idx-1)].id}" ${idx===0?'disabled':''}>← Lição anterior</button><button type="button" data-tp-lesson="${T.lessons[Math.min(T.lessons.length-1,idx+1)].id}" ${idx===T.lessons.length-1?'disabled':''}>Próxima lição →</button></div>${bridgeDetails()}<p class="tp-note">${l.pdf?'Aula gerada a partir do PDF selecionado. Confira o conteúdo com o material original.':'Exemplo autoral hipotético, inspirado em conceitos clássicos. Não reproduz uma página do livro.'} ${!storageOK?'O navegador bloqueou o armazenamento: progresso somente nesta sessão.':''}</p>`;}
 function markup(){readOwner();const pdfControls=T.pdfControls?.()||'',voiceControls=T.voiceControls?.()||'';const l=T.lessons.find(l=>l.id===selected&&l.pdf);return `<section id="tp-root" class="tp-root ${visual&&l?'tp-is-visual':''}" aria-label="Aulas geradas pelo Mentor 3D">${l?lesson(l):catalog()}${voiceControls}${pdfControls}</section>`;}
 function paint(focus=false){const root=document.getElementById('tp-root');if(!root||!active())return;
  // Conserva o elemento <video> com seus buffers ao atualizar controles,
@@ -44506,6 +44520,7 @@ document.addEventListener('click',e=>{
  if(b.dataset.tpFilm){document.dispatchEvent(new Event('au-study-pause'));openFilm(b.dataset.tpFilm);return;}
  if(b.hasAttribute('data-tp-film-migrate')){document.dispatchEvent(new Event('au-study-pause'));openFilm(videoFormat,true);return;}
  if(b.dataset.tpLesson){stop();selected=b.dataset.tpLesson;step=0;visual=false;status='';bridgeFailed=false;paint(true);document.getElementById('tp-root')?.scrollIntoView({block:'start'});return;}
+ if(b.dataset.tpDel){const id=b.dataset.tpDel,l=T.lessons.find(x=>x.id===id);if(!l||!confirm('Apagar a aula “'+l.title+'” deste aparelho? As figuras e vídeos dela também saem. Não dá para desfazer.'))return;stop();if(selected===id){selected=null;visual=false}T.pdf?.remover(id).then(()=>{status='Aula apagada.';paint()}).catch(err=>{status=err.message;paint()});return;}
  if(b.hasAttribute('data-tp-step')){stop();step=Number(b.dataset.tpStep);status='';mark();paint();return;}
  switch(b.dataset.tpAction){
  case 'close-film':stop();status='Vídeo fechado.';paint();break;
@@ -44562,6 +44577,7 @@ T.view={markup,stop,refresh:paint,isMediaActive:()=>!!(playing||loading||film),d
 })();
 ;(function(){
 const s=document.createElement('style');s.textContent=`
+.tp-row-wrap{display:flex;gap:6px;align-items:stretch;min-width:0}.tp-row-wrap .tp-lesson-row{flex:1;min-width:0}#tp-root .tp-del,#tp-root button.tp-del{min-height:44px;padding:8px 12px;border-radius:4px;border:1px solid rgba(239,68,68,.45)!important;background:transparent!important;color:#EF4444!important;white-space:nowrap;flex:0 0 auto}
 .tp-player{margin:10px 0;border:1px solid #1E232E;border-radius:6px;background:#0A0C10;overflow:hidden}
 .tp-stage{position:relative;aspect-ratio:16/9;background:#0A0C10;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .tp-stage .tp-chart{width:100%;height:100%;margin:0;border:0}.tp-stage .tp-chart svg{width:100%;height:100%}

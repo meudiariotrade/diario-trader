@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 712107eda1e26e214a4e2ef807508e53ad695a5c9d9366561af4689a4ad5afc9 */
+/* Gerado de src/app-theme.css · SHA256 e17fe213b7303f298fac45a6fd9c47330600a36d35a0fd83587798c93237e2bb */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -2336,6 +2336,7 @@ html body #app#app .v596-aula .au-tx b{display:block;white-space:normal;word-bre
 html body #app#app .v596-aula-acoes{display:flex;align-items:center;gap:8px;margin:6px 0 10px;padding-left:4px}
 html body #app#app .v596-aula-acoes .v434-vid{margin:0!important}
 html body #app#app .v596-aula-acoes .au-fav{margin-left:auto;min-width:40px;min-height:40px}
+html body #app#app .au-del-lista{min-height:40px;padding:6px 10px;border-radius:4px;border:1px solid rgba(239,68,68,.45);background:transparent;color:#EF4444;font-size:13px;white-space:nowrap;margin-left:auto}html body #app#app .v596-aula-acoes .au-del-lista+.au-fav{margin-left:6px}html body #app#app .au-ger .au-del-lista{margin-left:8px}
 html body #app#app .v596-min{color:#8A93A6;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
 html body #app#app .dt397-lesson-art.dt397-lesson-art--capa{height:72px!important;min-height:72px!important;width:100px!important;min-width:100px!important;flex:0 0 100px!important}
 html body #app#app .m584-capa{height:72px!important;min-height:72px!important;padding:6px 3px 6px 10px!important}
