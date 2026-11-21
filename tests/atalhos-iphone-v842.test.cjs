@@ -11,3 +11,8 @@ test('v842: Configurações gera o link dos Atalhos do iPhone (Panorama no Whats
  assert.equal(L.length,4);assert.equal(L[0][1],'https://x.supabase.co/functions/v1/daily-panorama?token='+'a'.repeat(48)+'&turno=manha');
  assert.match(L[1][1],/turno=fechamento$/);
 });
+test('v844: tela não pisca no tema claro (sem transição de cor) e progresso do Cérebro não refaz a tela',()=>{
+ const css=fs.readFileSync('src/app-theme.css','utf8');
+ assert.match(css,/html:root body #app :not\(\.cqr,\.cqr \*\),[^{]+\{transition-property:transform,opacity,width,height,max-height,flex-basis!important\}/);
+ const c=fs.readFileSync('src/ai/cerebro-ia.js','utf8');assert.match(c,/st\.textContent=message;pg\.value=pct;return/);
+});

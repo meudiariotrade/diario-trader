@@ -12,7 +12,8 @@
  async function store(v){await tx('readwrite',s=>s.put({...v,key:key(v.id),owner:owner()}));}
  async function all(){return (await tx('readonly',s=>s.getAll())).filter(x=>x.owner===owner())}
  function refresh(){if(typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='brain')return;const root=d.querySelector('[data-brain-root]');if(root)root.outerHTML=view()}
- function status(message,pct){progress=message;progressPct=pct;refresh()}
+ /* v844: progresso atualiza só o texto e a barra; refazer a tela inteira a cada lote fazia ela piscar e apagava o que estava digitado. */
+ function status(message,pct){progress=message;progressPct=pct;const root=d.querySelector('[data-brain-root]'),st=root&&root.querySelector('.cb842-st'),pg=root&&root.querySelector('.cb842-pg');if(st&&pg){st.textContent=message;pg.value=pct;return}refresh()}
  async function api(payload,signal){
   if(typeof cfg!=='function'||typeof tok!=='function'||typeof SESS==='undefined'||!SESS)throw Error('Entre na sua conta para indexar ou consultar.');
   await tok();const c=cfg();if(!c?.url||!c?.key||!SESS.at)throw Error('Sessão ou Supabase indisponível');
