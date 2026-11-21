@@ -94,7 +94,7 @@ test('Gerador aceita 150 páginas por trecho e rejeita 151, mantendo extração 
  let payload;
  w.fetch=async(url,opt)=>url.includes('/rest/')?{ok:true,json:async()=>[]}:(payload=JSON.parse(opt.body),{ok:true,json:async()=>({aula:fixture(),local:true})});
  await w.TecnicaPratica.pdf.generate();
- assert.equal(payload.acao,'mentor_pdf_local');
+ assert.equal(payload.acao,'mentor_pdf');
  assert.equal(payload.paginas,'1–150');
  assert.match(payload.texto,/Página 150/);
  assert.ok(payload.texto.length<=120000);

@@ -49,7 +49,7 @@ test('v860: voz das aulas — ponte local no PC e voz neural na borda para o iPh
 
 test('v862: modo vídeo do Mentor — avatar no quadro, figuras do PDF e tela cheia',()=>{
  const t=R('src/studies/tecnica-aulas.js'),f=R('src/studies/mentor-figuras.js');
- assert.match(t,/function player\(l\)/);assert.match(t,/tp-pres/);assert.match(t,/data-tp-action="tela"/);assert.match(t,/tp-fs-host/);
+ assert.match(t,/function player\(l\)/);assert.match(t,/tp-wave/);assert.match(t,/data-tp-action="tela"/);assert.match(t,/tp-fs-host/);
  assert.match(f,/EstudosLocal\.put\('mentor-figura'/);assert.match(f,/getOperatorList/);assert.ok(!/fetch\(/.test(f),'figuras nunca saem do aparelho');
  assert.match(R('release.config.json'),/src\/studies\/mentor-figuras\.js/);
 });
@@ -82,4 +82,12 @@ test('v868: ficha do ativo (drill-down), vigia, comparar, abertura e risco sem S
  assert.ok(!/supabase/i.test(f)&&!/supabase/i.test(p.replace(/Nenhuma consulta ao Supabase/,'')),'sem Supabase');
  assert.match(p,/Perda provável/);assert.match(p,/data-fa-abrir/);
  assert.match(h,/ficha-ativo\.js/);assert.match(h,/painel-carteira\.js/);
+});
+
+test('v869: Estudos — ticker oculto só na aba, player escuro com equalizador e aulas na conta',()=>{
+ const v=R('src/studies/estudos-visual.js'),t=R('src/studies/tecnica-aulas.js'),p=R('src/studies/tecnica-pdf.js'),e=R('supabase/functions/aulas/index.ts'),n=R('src/domains/layers/01-navegacao-e-fluxos.js');
+ assert.match(v,/body\.aba-estudos \.dt393-ticker/);assert.match(v,/tab==='estudos'/);
+ assert.match(t,/tp-wave/);assert.match(t,/tp-prog/);assert.match(t,/getByteFrequencyData/);assert.ok(!/class="tp-pres/.test(t),'sem avatar estático');
+ assert.match(p,/acao:'mentor_pdf'/);assert.match(p,/await migrarDaNuvem\(\)/);
+ assert.match(e,/b\.acao === 'retomar'/);assert.match(n,/data-auretomar/);
 });

@@ -463,6 +463,16 @@ Deno.serve(async (req) => {
 
     if (b.acao === 'parte') { const r = await fazParte(uid, b); return out(r.o, r.s); }
 
+    // v869: retomar a geração em qualquer aparelho — as partes já estão na fila do servidor com o texto do PDF.
+    if (b.acao === 'retomar') {
+      const id = txt(b.id, 40); if (!/^[0-9a-f-]{36}$/.test(id)) return out({ error: 'Aula inválida.' }, 400);
+      const A = await db(`aulas?select=id,status&id=eq.${id}&user_id=eq.${uid}`); if (!A?.[0]) return out({ error: 'Aula não encontrada.' }, 404);
+      await db(`aulas_fila?aula_id=eq.${id}&user_id=eq.${uid}&status=in.(erro,falhou)`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'pendente' }) }).catch(() => {});
+      const F = await db(`aulas_fila?select=idx,total,status&aula_id=eq.${id}&user_id=eq.${uid}`) || [];
+      const total = Math.max(0, ...F.map((r: any) => Number(r.total) || 0)), feitas = F.filter((r: any) => r.status === 'feito').length;
+      if (F.some((r: any) => r.status === 'pendente')) { const job = processar().catch(e => console.warn('retomar', String(e).slice(0, 120))); try { (globalThis as any).EdgeRuntime?.waitUntil(job); } catch { /* segue */ } }
+      return out({ ok: true, status: A[0].status, feitas, total: total || F.length, naFila: F.length });
+    }
     if (b.acao === 'enfileirar') {
       const id = txt(b.id, 40); if (!/^[0-9a-f-]{36}$/.test(id)) return out({ error: 'Aula inválida.' }, 400);
       const A = await db(`aulas?select=id&id=eq.${id}&user_id=eq.${uid}`); if (!A?.[0]) return out({ error: 'Aula não encontrada.' }, 404);
