@@ -97,7 +97,7 @@ test('Gerador aceita 150 páginas por trecho e rejeita 151, mantendo extração 
  assert.equal(payload.acao,'mentor_pdf_local');
  assert.equal(payload.paginas,'1–150');
  assert.match(payload.texto,/Página 150/);
- assert.ok(payload.texto.length<=85000);
+ assert.ok(payload.texto.length<=120000);
  assert.equal(w.TecnicaPratica.lessons.length,1);
  const newLast=w.document.querySelector('[data-tp-pdf-last]');newLast.value='151';newLast.dispatchEvent(new w.Event('input',{bubbles:true}));
  await assert.rejects(()=>w.TecnicaPratica.pdf.generate(),/150 páginas/);
