@@ -9,6 +9,8 @@ const basicUS=['AAPL','MSFT','NVDA','AMZN','GOOGL','META','AVGO','TSLA','AMD','N
 const presets=[['todos','Todos (Nota Geral)'],['fibo','Fibonaccing · Filé Mignon + 4-Barras'],['pisani','Pisani · Breakout + OBV Rompido'],['minervini','Minervini · 8/8 + VCP'],['dupla','Dupla Confluência · Fundam. + Técnico'],['afastamento','Pisani · Afastamento SMA20'],['squeeze','Bollinger · Squeeze'],['protecao','Proteção de Carteira · Exaustão'],['oneil','O\'Neil: CAN SLIM + Cup & Handle / Flat Base'],['pocket','O\'Neil: Pocket Pivot (Entrada Antecipada)'],['stormer','Stormer: Setup 9.1/9.2/9.3 & PFR'],['stormer-trap','Stormer: Trap / Armadilha'],['lemos','Lemos: Cruzamento EMA 9 x 21 + 1-2-3'],['pring','Pring: KST + Virada de Momentum']];
 const create=()=>({tf:'1d',dir:'both',filter:'all',preset:'todos',search:'',rows:[],universe:[],next:0,loading:false,worker:null,workerReject:null,abort:null,error:'',info:'',detail:'',updatedAt:'',busyPDF:false,progress:0,token:0,source:'',owner:''});
 const states={br:create(),world:create()};
+/* v866: color linking — abre o detalhe técnico do ativo vindo de outro painel do mesmo grupo. */
+for(const m of ['br','world'])w.DiarioColorLink?.registrar('tec-'+m,{nome:m==='br'?'Técnico Brasil':'Técnico EUA & Cripto',aplicar(tk){const s=states[m],r=s.rows.find(x=>x.ticker===tk||String(x.ticker).replace(/USDT$/,'')===tk);if(!r)return;s.detail=r.ticker;if(current===m){render();void historicoNoDetalhe(m,s.detail)}}});
 let current='',observer=null;
 const owner=()=>typeof SESS!=='undefined'&&SESS?.uid?SESS.uid:'local';
 const holdings=()=>{try{return w.DiarioScreeners?.holdings?.()||[]}catch{return []}};
@@ -238,7 +240,7 @@ function view(m){
  const s=states[m],title=m==='br'?'Técnico Brasil':'Técnico EUA & Cripto',rows=selectedRows(s),top=autoTop(s);
  const option=(v,label,sel)=>'<option value="'+v+'"'+(sel===v?' selected':'')+'>'+E(label)+'</option>';
  const choice=(name,opts,val)=>'<select data-tech-change="'+name+'">'+opts.map(x=>option(x[0],x[1],val)).join('')+'</select>';
- return '<div data-tech-root="'+m+'"><header class="an-header"><div><p class="an-kicker">SCREENING TÉCNICO · CLIENT-SIDE</p><h1 id="an-title">'+title+'</h1><p>Fibonaccing / Pisani / Minervini / Elliott · cálculos por candle · não constitui recomendação</p></div><span class="an-badge">'+s.rows.length+' analisados</span></header>'+
+ return '<div data-tech-root="'+m+'" data-cl-src="tec-'+m+'"><header class="an-header"><div><p class="an-kicker">SCREENING TÉCNICO · CLIENT-SIDE</p><h1 id="an-title" class="cl-head">'+(w.DiarioColorLink?.chip('tec-'+m)||'')+title+'</h1><p>Fibonaccing / Pisani / Minervini / Elliott · cálculos por candle · não constitui recomendação</p></div><span class="an-badge">'+s.rows.length+' analisados</span></header>'+
  (w.DiarioFiboVisual?.view(m)||'')+'<div class="tech-controls"><label>Direção '+choice('dir',[['buy','Compra · Alta'],['sell','Venda / Short · Baixa'],['both','Ambos']],s.dir)+'</label>'+
  '<label>Timeframe '+choice('tf',[['1d','Diário (1D)'],['1h','60 minutos (1H)'],['15m','15 minutos (15M)']],s.tf)+'</label>'+
  (m==='world'?'<label>Mercado '+choice('filter',[['all','Todos'],['us','Ações EUA'],['crypto','Cripto Binance']],s.filter)+'</label>':'')+

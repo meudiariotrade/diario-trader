@@ -250,7 +250,7 @@ function alternaObs(tk){const l=observados(),i=l.indexOf(tk);if(i>=0)l.splice(i,
 function estrela(tk){const on=observados().includes(tk);return '<button type="button" class="scr847-star'+(on?' on':'')+'" data-scr-obs="'+E(tk)+'" aria-pressed="'+on+'" aria-label="'+(on?'Tirar da':'Pôr na')+' lista de observação" title="Lista de observação">'+(on?'★':'☆')+'</button>'}
 function detail(m,s){
  const tk=s.detailTicker;if(!tk)return '';
- const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk];
+ const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk]||(s.data?.universe_rows||[]).find(x=>x.ticker===tk);
  if(!row)return '';
  const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row,Date.now(),s.topData?.medians||s.data?.medians||null);
  if(!meta)return '';
@@ -389,10 +389,10 @@ all.map(row=>{const own=ownRow(row),tk=E(row.ticker),r=rk.get(row.ticker)||{},sc
 (all.length?'':'<p class="scr-empty">Nenhuma ação neste filtro. Se os dados fundamentais ainda não estiverem preenchidos, escolha Todos os ativos.</p>')+
 '<div class="scr-pager"><button class="btn s" data-scr-page="-1" '+(s.page<=0?'disabled':'')+'>Anterior</button><span>Página '+(s.page+1)+' de '+Math.max(1,Math.ceil((s.data?.total||0)/50))+'</span><button class="btn s" data-scr-page="1" '+((s.page+1)*50>=(s.data?.total||0)?'disabled':'')+'>Próxima</button></div></section>';
 }
-function view(m){const s=init(m);return '<header class="an-header"><div><p class="an-kicker">SCREENING QUANTITATIVO · '+(m==='br'?'B3':'NYSE / NASDAQ')+'</p><h1 id="an-title">Screener '+(m==='br'?'Brasil':'EUA')+'</h1><p>Universo dinâmico, indicadores com fontes e datas. Não representa recomendação de compra ou venda.</p></div><span class="an-badge">'+(s.data?.total||0)+' no filtro</span></header>'+
+function view(m){const s=init(m);return '<div data-cl-src="scr-'+m+'"><header class="an-header"><div><p class="an-kicker">SCREENING QUANTITATIVO · '+(m==='br'?'B3':'NYSE / NASDAQ')+'</p><h1 id="an-title" class="cl-head">'+(w.DiarioColorLink?.chip('scr-'+m)||'')+'Screener '+(m==='br'?'Brasil':'EUA')+'</h1><p>Universo dinâmico, indicadores com fontes e datas. Não representa recomendação de compra ou venda.</p></div><span class="an-badge">'+(s.data?.total||0)+' no filtro</span></header>'+
 opts(m,s)+
 '<div class="scr-top"><span role="status">'+(s.loading?'Consultando snapshot compartilhado…':s.error?E(s.error):(s.data?'Snapshot: '+(s.data.last_update?new Date(s.data.last_update).toLocaleString('pt-BR'):'sem atualização'):'Abra para consultar dados'))+'</span><button class="btn s" data-scr-refresh="1" '+(s.loading?'disabled':'')+'>Atualizar</button></div>'+
-(s.data?coverage(m,s)+kpis(m,s)+topTen(m,s)+detail(m,s)+selections(m,s)+stats(m,s)+chart(m,s)+table(m,s):'<section class="scr-panel scr-empty">'+(s.loading?'Carregando indicadores…':E(s.error||'Aguardando dados do catálogo.'))+'</section>');
+(s.data?coverage(m,s)+kpis(m,s)+topTen(m,s)+detail(m,s)+selections(m,s)+stats(m,s)+chart(m,s)+table(m,s):'<section class="scr-panel scr-empty">'+(s.loading?'Carregando indicadores…':E(s.error||'Aguardando dados do catálogo.'))+'</section>')+'</div>';
 }
 function render(){try{if(typeof tab==='undefined'||tab!=='analises')return;const root=d.getElementById('an-root');if(!root)return;const active=d.activeElement,searchFocused=!!active?.matches?.('[data-scr-search]'),ss=searchFocused?{pos:active.selectionStart,end:active.selectionEnd}:null;
 root.outerHTML=w.DiarioAnalises.view();d.querySelectorAll('.scr847-sim').forEach(b=>{try{simula(b)}catch{}});if(searchFocused){const target=d.querySelector('[data-scr-search]');if(target){target.focus();if(ss?.pos!=null)try{target.setSelectionRange(ss.pos,ss.end)}catch{}}}}catch(e){console.warn('Screener render',e)}}
@@ -653,6 +653,8 @@ async function loadTopGlobal(m,refresh=false){
  }catch(e){stateNow.topError=String(e.message||e).slice(0,180)}
  finally{if(uid===owner()){stateNow.topBusy=false;render()}}
 }
+/* v866: color linking — screener abre a ficha do ativo vindo de outro painel do mesmo grupo. */
+for(const m of ['br','us'])w.DiarioColorLink?.registrar('scr-'+m,{nome:'Screener '+(m==='br'?'Brasil':'EUA'),aplicar(tk){const s=init(m),ok=[...(s.data?.rows||[]),...(s.topData?.rows||[]),...(s.data?.universe_rows||[])].some(x=>x.ticker===tk);if(!ok)return;s.detailTicker=tk;if(d.querySelector('[data-an-sub].selected')?.dataset.anSub===m)render()}});
 function field(el){const m=d.querySelector('[data-an-sub].selected')?.dataset.anSub;if(m==='br'||m==='us')return [m,init(m)];return [null,null]}
 function changeFilter(m,s,key,value){if(!(key in s))return;s[key]=value;if(key==='yieldAceitavel'||key==='safetyMethod'){s.data=null;const snapshot=snapshotMemory.get(m.toUpperCase())?.data;if(snapshot?.universe_complete){s.data=localScreener(m,s,snapshot);render();return}}s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';if(key!=='chart'&&key!=='zoom'){s.data=null;clearTimeout(timer);timer=setTimeout(()=>load(m),110)}render()}
 d.addEventListener('input',ev=>{const b=ev.target;if(!b?.hasAttribute?.('data-scr-search'))return;const [m,s]=field(b);if(!m)return;s.search=b.value;s.page=0;s.panX=0;s.panY=0;s.zoom=1;s.focus='';clearTimeout(timer);timer=setTimeout(()=>load(m),420)});
