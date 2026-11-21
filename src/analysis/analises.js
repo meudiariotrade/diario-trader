@@ -420,6 +420,50 @@ async function snapshotDB(m,record){
  });
 }
 async function getGlobalSnapshot(m,refresh=false){
+ const data=await getGlobalSnapshotRaw(m,refresh);
+ return m.toUpperCase()==='US'?enriquecerSEC(data):data;
+}
+/* v858: EUA — fundamentos anuais do SEC EDGAR XBRL (arquivo público gerado no GitHub Actions).
+ * Substitui crescimento, margem FCF e Total Yield por valores do 10-K com prova (protocolo, conceito, período)
+ * e recalcula a nota no aparelho. Uma leitura por 12 h; falha mantém o snapshot original. */
+const SEC_URL='https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/sec-fundamentos.json',SEC_KEY='diario-sec-fund-v858',SEC_TTL=12*3600000;
+let secMem=null,secPend=null;const secFeito=new WeakMap();
+async function secFundamentos(){
+ if(secMem&&Date.now()-secMem.when<SEC_TTL)return secMem.data;
+ if(secPend)return secPend;
+ secPend=(async()=>{
+  let salvo=null;try{salvo=JSON.parse(localStorage.getItem(SEC_KEY)||'null')}catch{}
+  if(salvo?.data&&Date.now()-salvo.when<SEC_TTL){secMem=salvo;return salvo.data}
+  try{const r=await fetch(SEC_URL,{signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error('HTTP '+r.status);
+   const data=await r.json();if(!data?.tickers)throw Error('formato');
+   secMem={when:Date.now(),data};try{localStorage.setItem(SEC_KEY,JSON.stringify(secMem))}catch{}return data;
+  }catch{if(salvo?.data){secMem={...salvo,when:Date.now()-SEC_TTL+600000};return salvo.data}return null}
+ })().finally(()=>{secPend=null});
+ return secPend;
+}
+function mesclarSEC(row,sec,I){
+ const f=sec.tickers?.[row?.ticker];if(!f)return row;
+ const o={...row};
+ for(const k of ['revenue_growth_yoy','eps_growth_yoy','fcf_margin','buyback_yield','total_shareholder_yield'])if(f[k]!=null)o[k]=f[k];
+ o.linhagem_indicadores=f.linhagem_indicadores||{};
+ // Sem prova no 10-K, o indicador de fonte secundária sai da nota em vez de entrar sem conferência.
+ for(const k of ['revenue_growth_yoy','eps_growth_yoy','fcf_margin'])if(!o.linhagem_indicadores[k])o[k]=null;o.sec_fundamentos_em=String(sec.gerado_em||'').slice(0,10);
+ const d=I?.diagnostics('US',o,Date.now(),null);
+ if(d&&d.modelScore!=null){o.score_quant_us=d.modelScore;o.score_origem='recalculado no aparelho com SEC XBRL'}
+ return o;
+}
+async function enriquecerSEC(data){
+ if(!data||typeof data!=='object')return data;
+ const pronto=secFeito.get(data);if(pronto)return pronto;
+ const sec=await secFundamentos(),I=w.DiarioScreenersInteligencia;
+ if(!sec||!I)return data;
+ const sc=r=>Number.isFinite(Number(r?.score_quant_us))&&r?.score_quant_us!=null?Number(r.score_quant_us):-1;
+ const out={...data,sec_fundamentos:{gerado_em:sec.gerado_em,empresas:sec.empresas,fonte:sec.fonte}};
+ if(Array.isArray(data.universe_rows))out.universe_rows=data.universe_rows.map(r=>mesclarSEC(r,sec,I)).sort((a,b)=>sc(b)-sc(a));
+ if(Array.isArray(data.rows))out.rows=data.rows.map(r=>mesclarSEC(r,sec,I));
+ secFeito.set(data,out);return out;
+}
+async function getGlobalSnapshotRaw(m,refresh=false){
  const market=m.toUpperCase(),local=snapshotMemory.get(market);
  if(!refresh&&local&&Date.now()-local.when<GLOBAL_TTL)return local.data;
  if(snapshotPending.has(market))return snapshotPending.get(market);
@@ -658,7 +702,16 @@ d.addEventListener('click',async ev=>{
   finally{s.topPdfBusy=false;render()}
   return;
  }
- if(b.dataset.scrPdfFicha){d.body.classList.add('scr853-imprimir');const fim=()=>{d.body.classList.remove('scr853-imprimir');w.removeEventListener('afterprint',fim)};w.addEventListener('afterprint',fim);setTimeout(()=>{w.print();setTimeout(fim,1500)},50);return}
+ if(b.dataset.scrPdfFicha){
+  // v858: iPhone/PWA não imprime; gera o PDF de verdade (mesma ficha do dossiê) e abre o compartilhar.
+  const tk=s.detailTicker,row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk];
+  if(!row||!w.DiarioScreenersRelatorio||b.disabled)return;
+  const ticket=w.DiarioPDFiOS?.prepare(),txt=b.textContent;b.disabled=true;b.textContent='Gerando PDF…';
+  try{await w.DiarioScreenersRelatorio.share(m.toUpperCase(),[row],{medians:s.topData?.medians||s.data?.medians||null,
+    snapshot:s.data?.last_update||null,yieldAceitavel:Number(s.yieldAceitavel)},ticket);b.textContent=txt}
+  catch(e){ticket?.close?.();b.textContent='Não foi possível gerar o PDF';setTimeout(()=>{b.textContent=txt},4000)}
+  finally{b.disabled=false}
+  return}
  if(b.dataset.scrIa){void explicarIA(b.dataset.scrIa,m,s,b.closest('[data-scr852-ia]'));return}
  if(b.dataset.scrSort){changeFilter(m,s,'order',b.dataset.scrSort);return}
  if(b.dataset.scrObs){ev.preventDefault();ev.stopPropagation();alternaObs(b.dataset.scrObs);if(s.custody==='observados')void load(m,true);else render();return}

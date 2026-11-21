@@ -42,7 +42,7 @@ test('v777: FCF sem a mesma moeda/documento/ano nunca é homologado',()=>{
  assert.equal(funcs.secValores(doc).revenue_growth_yoy,null);
 });
 test('v777: Cloudflare conserva IFRS e unidades monetárias sem converter taxa',()=>{
- assert.match(edge,/revision=v782-concepts/);
+ assert.match(edge,/revision=v(782|858)-concepts/);
  assert.match(edge,/DilutedEarningsLossPerShare/);
  assert.match(edge,/CashFlowsFromUsedInOperatingActivities/);
  assert.match(edge,/\(USD\|EUR\|CAD\|GBP\|BRL\|CHF\|JPY\)/);

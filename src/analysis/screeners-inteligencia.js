@@ -13,7 +13,7 @@
   US:[{id:'qualidade',name:'Crescimento e qualidade',weight:30,fields:['roic','roe','fcf_margin','eps_growth_yoy','revenue_growth_yoy']},
       {id:'valuation',name:'Valuation',weight:30,fields:['forward_pe','peg_ratio','ev_fcf']},
       {id:'momentum',name:'Momentum e tendência',weight:25,fields:['momentum_12_1','dist_mm200_pct']},
-      {id:'retorno',name:'Retorno ao acionista',weight:15,fields:['dividend_yield','payout_implicito']}]
+      {id:'retorno',name:'Retorno ao acionista',weight:15,fields:['total_shareholder_yield','dividend_yield','payout_implicito']}]
  };
  // Subtipos bancários/seguradores confirmados por classificação explícita ou razão social.
  // 'Finance' isolado inclui REITs/corretoras; não aplicar regra setorial sem evidência.
@@ -51,7 +51,7 @@
   peg_ratio:['PEG','x','Preço/lucro ajustado à taxa de crescimento'],
   ev_fcf:['EV/FCF','x','Valor da firma / fluxo de caixa livre'],
   short_interest_pct:['Short interest','%', 'Parcela vendida a descoberto; fonte pode estar indisponível'],
-  total_shareholder_yield:['Total Yield','%', 'Dividendos mais recompras líquidas estimadas; recompra bruta não equivale a yield líquido'],
+  total_shareholder_yield:['Total Yield','%', 'Dividendos pagos + recompras − emissões de ações (10-K SEC) ÷ valor de mercado'],
   buyback_yield:['Buyback Yield','%', 'Recompras sobre valor de mercado; conferir se é bruto ou líquido'],
   net_debt_ebitda:['Dívida líq./EBITDA','x','A dívida exige comparação com o setor']
  };
@@ -97,7 +97,9 @@
    avg([scale(v('roic'),5,22),scale(v('roe'),5,25),scale(v('fcf_margin'),0,30),scale(v('eps_growth_yoy'),-10,35),scale(v('revenue_growth_yoy'),-10,35)]),
    avg([scale(v('forward_pe'),8,40,true),scale(v('peg_ratio'),.7,3,true),scale(v('ev_fcf'),5,35,true)]),
    avg([scale(v('momentum_12_1'),-30,50),scale(v('dist_mm200_pct'),-35,35)]),
-   avg([scale(v('dividend_yield'),0,12),v('payout_implicito')===null?null:(v('payout_implicito')>=0&&v('payout_implicito')<=80?90:25)])
+   // v858: com Total Yield do SEC (dividendos + recompras líquidas), ele substitui o DY isolado — nos EUA
+   // a maior parte do caixa devolvido sai por recompras. Sem ele, mantém a fórmula anterior.
+   avg([v('total_shareholder_yield')!==null?scale(v('total_shareholder_yield'),0,10):scale(v('dividend_yield'),0,12),v('payout_implicito')===null?null:(v('payout_implicito')>=0&&v('payout_implicito')<=80?90:25)])
   ];
  }
  function age(date,now=Date.now()){
@@ -112,7 +114,10 @@
   const dy=numeric('dividend_yield'),payout=numeric('payout_implicito');
   if(dy!==null&&(dy<0||dy>20))flags.push('Dividend Yield fora de 0–20%: verificar evento não recorrente.');
   if(payout!==null&&(payout<0||payout>120))flags.push('Payout fora de 0–120%: lucro/provento não comparável.');
-  for(const k of ['roe','roic']){const n=numeric(k);if(n!==null&&(n< -100||n>100))flags.push(k.toUpperCase()+' extremo: conferir patrimônio/capital e escala.');}
+  // v858: nos EUA, ROE acima de 100% com ROIC normal costuma vir de patrimônio encolhido por recompras
+  // (ex.: Apple, McDonald's); continua como alerta, mas não bloqueia a nota.
+  const roicOk=m==='US'&&numeric('roic')!==null&&numeric('roic')>0&&numeric('roic')<=100;
+  for(const k of ['roe','roic']){const n=numeric(k);if(n!==null&&(n< -100||n>100)&&!(k==='roe'&&n>100&&roicOk))flags.push(k.toUpperCase()+' extremo: conferir patrimônio/capital e escala.');}
   if(m==='US')for(const k of ['revenue_growth_yoy','eps_growth_yoy']){
    const n=numeric(k);if(n!==null&&(n< -100||n>1000))flags.push(k+' extremo: conferir base anual/extraordinários.');
   }
@@ -156,7 +161,7 @@
      }
     }else{
      const cfo=rows.find(x=>/NetCashProvidedByUsedInOperatingActivities|CashFlowsFromUsedInOperatingActivities/.test(x.codigo_xbrl));
-     const capex=rows.find(x=>/PaymentsToAcquirePropertyPlantAndEquipment|PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities/.test(x.codigo_xbrl));
+     const capex=rows.find(x=>/PaymentsToAcquirePropertyPlantAndEquipment|PaymentsToAcquireProductiveAssets|PaymentsForCapitalImprovements|PaymentsToAcquireOilAndGasProperty|PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities/.test(x.codigo_xbrl));
      const rev=rows.find(x=>/Revenues|RevenueFrom|SalesRevenueNet/.test(x.codigo_xbrl));
      const same=(a,b)=>a&&b&&a.documento_id===b.documento_id&&
       a.competencia===b.competencia&&a.periodo_inicio===b.periodo_inicio&&

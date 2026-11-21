@@ -130,7 +130,7 @@
   ov.innerHTML='<div class="hf-wrap"><p class="hf-vazio">Carregando 10 anos de balanços de '+E(tk)+(us?' (SEC)':' (CVM)')+'…</p><button type="button" class="btn s" data-hf="fechar">Fechar</button></div>';
   d.body.appendChild(ov);d.body.classList.add('hf-aberto');
   try{const [h,p]=await Promise.all([obter((us?'/v1/sec-historico':'/v1/cvm-historico')+'?ticker='+encodeURIComponent(tk),ctrl.signal),obter('/v1/historico-preco?market='+(us?'US':'BR')+'&ticker='+encodeURIComponent(tk),ctrl.signal).catch(()=>({meses:[],dividendos:[]}))]);
-   if(!ov.isConnected)return;const c=calcular(h,p);w.__hf847={tk,c};
+   if(!ov.isConnected)return;const c=calcular(h,p);w.__hf847={tk,c,meta:h,pos};
    ov.querySelector('.hf-wrap').innerHTML=html(tk,c,h,pos);
   }catch(e){if(e?.name==='AbortError'||!ov.isConnected)return;
    ov.querySelector('.hf-wrap').innerHTML='<p class="hf-vazio">Não foi possível carregar o histórico: '+E(String(e.message||e).slice(0,140))+'. '+(us?'A SEC às vezes limita consultas; tente de novo em alguns minutos.':'A base da CVM é atualizada aos sábados.')+'</p><button type="button" class="btn s" data-hf="fechar">Fechar</button>'}
@@ -139,7 +139,12 @@
   w.document.addEventListener('click',e=>{const b=e.target.closest?.('[data-hf],[data-hf-abrir]');if(!b)return;
    if(b.dataset.hfAbrir){e.preventDefault();const tk=b.dataset.hfAbrir,pos=(w.DiarioScreeners?.holdings?.()||[]).find(x=>x.ticker===tk);return void abrir(tk,pos,b.dataset.hfMarket)}
    if(b.dataset.hf==='fechar'){e.preventDefault();fechar()}
-   if(b.dataset.hf==='pdf'){e.preventDefault();w.print()}
+   if(b.dataset.hf==='pdf'){e.preventDefault();
+    // v858: iPhone/PWA não imprime; o PDF é gerado no aparelho (historico-pdf.js) e vai para o compartilhar.
+    const x=w.__hf847;if(!x||!w.DiarioHistoricoPDF||b.disabled)return;
+    const ticket=w.DiarioPDFiOS?.prepare?.(),t=b.textContent;b.disabled=true;b.textContent='Gerando PDF…';
+    w.DiarioHistoricoPDF.salvar(x.tk,x.c,x.meta||{},x.pos,ticket).then(()=>{b.textContent=t})
+     .catch(()=>{b.textContent='Não foi possível gerar';setTimeout(()=>{b.textContent=t},4000)}).finally(()=>{b.disabled=false})}
   });
   w.document.addEventListener('keydown',e=>{if(e.key==='Escape'&&w.document.getElementById('hf847'))fechar()});
   /* Tela única: trocar de aba fecha a avaliação e cancela a carga pendente. */
