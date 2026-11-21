@@ -193,8 +193,16 @@ function tecnicoFicha(row){
 }
 /* v852: riscos com o porquê, a partir dos números da ficha (sem IA). */
 const ESTATAIS=new Set(['BBAS3','PETR3','PETR4','CMIG3','CMIG4','CSMG3','SAPR3','SAPR4','SAPR11','BRSR3','BRSR5','BRSR6','BAZA3','BNBR3','CEEB3','CEEB5','CEBR3','CEBR5','CEBR6','CASN3','CASN4','BEES3','BEES4','BGIP3','BGIP4','BMEB3','BMEB4']);
+/* v853: quando Graham, Bazin e a fórmula por lucro enganam. */
+function avisoValuation(row,valuation){
+ const set=String(row.setor||row.sector||''),A=[];
+ if(/banc|financ|segur|bank|insur/i.test(set))A.push('Banco/seguradora: Graham e Bazin usam lucro e patrimônio contábeis, que em banco dependem de provisões para calote. Compare P/VP e ROE com outros bancos, não com empresas comuns.');
+ if(/petr|oil|gas|miner|mining|sider|steel|metal|papel|celulose|paper|pulp|qu[ií]mic|chemic|commodit/i.test(set))A.push('Setor cíclico: o lucro sobe e desce com o preço da commodity. Valor justo calculado com o lucro de um ano bom fica alto demais (e o de um ano ruim, baixo demais); prefira a média de vários anos na Avaliação histórica.');
+ if(valuation?.estimados?.proprio)A.push('Seu preço teto está estimado pelo snapshot (P/L e payout implícito), não por lucro projetado. Preencha os campos da sua fórmula ou use "Pedir à IA (Pesquisa)" antes de usar o desconto.');
+ return A.length?'<div class="scr853-aviso"><b>Cuidado com o valor justo</b><ul>'+A.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul></div>':'';
+}
 function riscosExplicados(row,meta,valuation,m,s){
- const R=[],n=k=>{const v=Number(row[k]);return Number.isFinite(v)?v:null},med=s.data?.medians||{},banco=/banc|financ|segur|bank|insur/i.test(String(row.setor||row.sector||''));
+ const R=[],n=k=>{const v=Number(row[k]);return Number.isFinite(v)?v:null},med=medianasMercado(m)||s.data?.medians||{},banco=/banc|financ|segur|bank|insur/i.test(String(row.setor||row.sector||''));
  const roe=n('roe'),pvp=n('pvp'),pl=n('pl'),dy=n('dividend_yield'),pay=n('payout_implicito'),dv=n(m==='us'?'net_debt_ebitda':'div_liq_ebitda'),mom=n('momentum_12_1'),mm=n('dist_mm200_pct');
  if(roe!=null&&med.roe!=null&&roe<med.roe)R.push(['Rentabilidade abaixo dos pares','ROE de '+fmt(roe,1)+'% contra mediana de '+fmt(med.roe,1)+'%: a empresa gera menos lucro para cada real de patrimônio. Quando o ROE cai, o mercado costuma pagar menos pela ação.']);
  if(pvp!=null&&pvp>0&&pvp<0.7)R.push(['Mercado desconfia do patrimônio','P/VP de '+fmt(pvp,2)+'x: a ação vale menos que o patrimônio contábil. Isso costuma refletir medo de lucro em queda'+(banco?', de inadimplência e de mais provisões para calote':' ou de ativos que valem menos do que o balanço mostra')+'. Barato por P/VP pode continuar barato se o lucro não voltar.']);
@@ -227,7 +235,7 @@ async function explicarIA(tk,m,s,box){
   'ROE: '+num('roe')+'% · ROIC: '+num('roic')+'% · P/L: '+num('pl')+' · P/VP: '+num('pvp')+' · DY: '+num('dividend_yield')+'% · Payout: '+num('payout_implicito')+'% · Dívida/EBITDA: '+num(m==='us'?'net_debt_ebitda':'div_liq_ebitda'),
   meta?'Nota '+fmt(meta.score/10,1)+'/10 · pilares: '+meta.parts.map(p=>p.name+' '+(p.points==null?'—':fmt(p.points/10,1)+'/'+fmt(p.weight/10,1))).join('; '):'',
   v?'Preço teto (fórmula do usuário): '+(v.methods.proprio==null?'sem dado':fmt(v.methods.proprio,2))+' · margem '+(v.margins.proprio==null?'—':fmt(v.margins.proprio,1)+'%')+' · Graham '+(v.methods.graham==null?'—':fmt(v.methods.graham,2))+' · Bazin '+(v.methods.bazin==null?'—':fmt(v.methods.bazin,2)):'',
-  'Medianas do ranking: ROE '+(s.data?.medians?.roe==null?'—':fmt(s.data.medians.roe,1)+'%')+' · DY '+(s.data?.medians?.dy==null?'—':fmt(s.data.medians.dy,1)+'%'),
+  (()=>{const md=medianasMercado(m)||s.data?.medians||{};return 'Medianas do mercado inteiro'+(md.n?' ('+md.n+' ações)':'')+': ROE '+(md.roe==null?'—':fmt(md.roe,1)+'%')+' · DY '+(md.dy==null?'—':fmt(md.dy,1)+'%')})(),
   'Notícias recentes ligadas ao ativo: '+((w.DiarioInteligenciaEtapa1?.noticiasDo?.(tk)||[]).join(' | ')||'nenhuma carregada')].filter(Boolean).join('\n');
  try{const j=await w.DiarioCerebroIA.api({acao:'gerar',modo:'ficha',tema:'tendência média móvel 200 RSI momentum valuation risco '+(row.setor||''),extra:fatos});
   try{sessionStorage.setItem(chave,JSON.stringify(j))}catch{}desenha(j);
@@ -280,7 +288,7 @@ function detail(m,s){
  '<span class="'+(meta.validated?'is-ok':'is-review')+'">'+E(meta.level)+'</span>'+
  '<span>'+fmt(meta.coverage,0)+'% dos critérios disponíveis</span></div>'+
  '<div class="sm" data-fundamental-history="'+E(tk)+'">'+(w.DiarioInteligenciaEtapa2?.fundamental?.(tk)||'')+'</div>'+
-'<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+tecnicoFicha(row)+'<div class="scr846-graficos">'+graficoValuation(row,valuation)+graficoPosicao(row,meta,s)+'</div>'+valuationHTML+calcHTML+
+'<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+tecnicoFicha(row)+'<div class="scr846-graficos">'+graficoValuation(row,valuation)+graficoPosicao(row,meta,s)+'</div>'+valuationHTML+avisoValuation(row,valuation)+calcHTML+
  '<div class="scr-detail-groups">'+meta.parts.map(p=>
  '<div class="scr-detail-group"><div><b>'+E(p.name)+'</b><span>'+(p.points==null?'Não calculado':fmt(p.points/10,1)+' / '+fmt(p.weight/10,1)+' pontos')+'</span></div>'+
  '<div class="scr-meter"><i style="width:'+(p.points==null?0:p.points/p.weight*100)+'%"></i></div>'+
@@ -293,7 +301,8 @@ function detail(m,s){
  '<p class="scr-hint">Fonte: '+E(meta.source)+' · Fundamentos: '+E(meta.fundamentals_at||'sem data')+
  ' · Técnico: '+E(meta.technical_at||'sem data')+' · Snapshot: '+E(meta.updated_at||'sem data')+
  (owned?' · Carteira: '+pct(owned.pct):'')+'</p>'+
- '<div class="scr-detail-footer">'+'<button type="button" data-hf-abrir="'+E(row.ticker)+'" data-hf-market="'+(m==='us'?'US':'BR')+'">Avaliação histórica (10 anos)</button>'+'<button type="button" data-scr-analyze="'+E(row.ticker)+'">Abrir pesquisa completa</button>'+
+ '<div class="scr853-print-head"><b>Ficha educativa · '+E(row.ticker)+' · '+E(meta.company)+'</b><span>Gerada em '+new Date().toLocaleString('pt-BR')+' pelo Diário de Trader. Material para estudo entre amigos: não é recomendação de compra ou venda. Fontes e datas no rodapé da ficha.</span></div>'+
+ '<div class="scr-detail-footer"><button type="button" data-scr-pdf-ficha="1">Salvar ficha em PDF</button>'+'<button type="button" data-hf-abrir="'+E(row.ticker)+'" data-hf-market="'+(m==='us'?'US':'BR')+'">Avaliação histórica (10 anos)</button>'+'<button type="button" data-scr-analyze="'+E(row.ticker)+'">Abrir pesquisa completa</button>'+
  '<button type="button" data-scr-detail-close="1">Voltar ao ranking</button></div>'+
  '</section>';
 }
@@ -363,6 +372,7 @@ const posi=v=>v?'<span class="scr849-rk">'+v+'º</span>':'<span class="scr849-na
 const divChip=row=>{const d=Number(us?row.net_debt_ebitda:row.div_liq_ebitda);if(!Number.isFinite(d))return '<span class="scr849-na">—</span>';const c=d<=1?'ok':d<=3?'at':'neg';return '<span class="scr849-chip '+c+'" title="Dívida líquida / EBITDA">'+fmt(d,1)+'x</span>'};
 const banco=row=>/banc|financ|segur|bank|insur/i.test(String(row.setor||row.sector||''))?'<span class="scr849-banco" title="Banco ou seguradora (fora da Fórmula Mágica)">🏛</span>':'';
 const COB=['cobertura_pct','Cobertura'];
+const conf=row=>{try{const d=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row);return d&&!d.validated?' <span class="scr853-conf" title="'+E(d.level)+': confira fonte e documento antes de usar">!</span>':''}catch{return ''}};
 const th=(lbl,ord,title)=>'<th'+(ord?' class="scr849-ord'+(s.order===ord?' on':'')+'"':'')+(title?' title="'+title+'"':'')+'>'+(ord?'<button type="button" data-scr-sort="'+ord+'">'+lbl+(s.order===ord?' ↓':'')+'</button>':lbl)+'</th>';
 const heads=us?[th('Ticker'),th('Empresa'),th('Cotação'),th('Nota','score'),th('Ranking','rk'),th('F. Mágica','mag','Greenblatt: ROIC alto + lucro barato'),th('ROIC %','roic'),th('Fwd P/E','forward_pe'),th('Rank yield','rkdy'),th('Total yield %','yield'),th('Momentum %','momentum'),th('Dív/EBITDA'),th(COB[1],'','Parte dos critérios do score com dado')]
  :[th('Ticker'),th('Cotação'),th('Preço justo','','Preço teto da sua fórmula'),th('Desconto %','margem_proprio'),th('Ranking','rk'),th('F. Mágica','mag','Greenblatt: ROIC alto + lucro barato'),th('ROE %','roe'),th('Rank DY','rkdy'),th('DY %','dy'),th('Nota','score'),th('Dív/EBITDA'),th(COB[1],'','Parte dos critérios do score com dado'),th('')];
@@ -371,8 +381,8 @@ return '<section class="scr-panel"><div class="scr-head"><h3>Ranking · '+fmt(s.
 '<div class="scr849-tg" role="group" aria-label="Filtros rápidos">'+[['tgLP',us?'Lucro positivo':'Lucro e patrimônio positivos'],['tgDiv',us?'Paga dividendos ou recompra':'Paga dividendos'],['tgMag','Entre as 30 da Fórmula Mágica']].map(([k,l])=>'<label class="scr849-sw"><input type="checkbox" data-scr-tg="'+k+'"'+(s[k]==='1'?' checked':'')+'><span>'+l+'</span></label>').join('')+'</div>'+
 '<div class="scr-scroll"><table class="scr-table scr849-table"><thead><tr><th class="scr849-sel">Sel.</th>'+heads.join('')+'<th>Ações</th></tr></thead><tbody>'+
 all.map(row=>{const own=ownRow(row),tk=E(row.ticker),r=rk.get(row.ticker)||{},score=us?row.score_quant_us:row.score_quant_br,v=us?null:vBR(row,s),teto=v?.methods?.proprio,mg=v?.margins?.proprio,preco=Number(row.preco_referencia);
- const cel=us?[logo(row.ticker)+'<b>'+tk+'</b>',E(row.company_name),Number.isFinite(preco)&&preco>0?'US$ '+fmt(preco,2):'—',scoreCel(score/10),posi(r.rk),posi(r.mag),barra(Number(row.roic),40),row.forward_pe==null?'—':fmt(row.forward_pe,1),posi(r.rdy),barra(Number(row.total_shareholder_yield),10),barra(Number(row.momentum_12_1),60),divChip(row),row[COB[0]]==null?'—':pct(row[COB[0]])]
-  :[logo(row.ticker)+'<b>'+tk+'</b>',Number.isFinite(preco)&&preco>0?fmt(preco,2):'—',teto==null?'<span class="scr849-na">—</span>':fmt(teto,2)+(v.estimados?.proprio?' <span class="scr839-est" title="Estimado do snapshot">est.</span>':''),barra(mg,100),posi(r.rk),posi(r.mag),barra(Number(row.roe),40),posi(r.rdy),barra(Number(row.dividend_yield),15),scoreCel(score/10),divChip(row),row[COB[0]]==null?'—':pct(row[COB[0]]),banco(row)];
+ const cel=us?[logo(row.ticker)+'<b>'+tk+'</b>',E(row.company_name),Number.isFinite(preco)&&preco>0?'US$ '+fmt(preco,2):'—',scoreCel(score/10)+conf(row),posi(r.rk),posi(r.mag),barra(Number(row.roic),40),row.forward_pe==null?'—':fmt(row.forward_pe,1),posi(r.rdy),barra(Number(row.total_shareholder_yield),10),barra(Number(row.momentum_12_1),60),divChip(row),row[COB[0]]==null?'—':pct(row[COB[0]])]
+  :[logo(row.ticker)+'<b>'+tk+'</b>',Number.isFinite(preco)&&preco>0?fmt(preco,2):'—',teto==null?'<span class="scr849-na">—</span>':(v.estimados?.proprio?'<span class="scr853-est" title="Estimado do snapshot (P/L e payout implícito); confira lucro projetado e payout na ficha">≈ '+fmt(teto,2)+'</span>':fmt(teto,2)),v?.estimados?.proprio?'<span class="scr849-bar est" title="Desconto sobre teto estimado: confirme na ficha"><i style="width:'+Math.min(100,Math.abs(mg||0)).toFixed(0)+'%"></i><b>'+(mg==null?'N/A':'≈ '+fmt(mg,1))+'</b></span>':barra(mg,100),posi(r.rk),posi(r.mag),barra(Number(row.roe),40),posi(r.rdy),barra(Number(row.dividend_yield),15),scoreCel(score/10)+conf(row),divChip(row),row[COB[0]]==null?'—':pct(row[COB[0]]),banco(row)];
  return '<tr data-tk="'+tk+'"'+(own?' class="scr849-own" title="Na carteira · peso '+fmt(own.pct)+'%"':'')+'><td class="scr849-sel"><input type="checkbox" data-scr-select="'+tk+'" '+(s.selected.includes(row.ticker)?'checked':'')+' aria-label="Selecionar '+tk+'">'+estrela(row.ticker)+'</td>'+cel.map(c=>'<td>'+c+'</td>').join('')+
  '<td class="scr-buttons"><button data-scr-detail="'+tk+'">Ficha</button><button data-scr-analyze="'+tk+'">Analisar</button><button data-dt815="foco" data-tk="'+tk+'" title="Abrir no Terminal">Terminal</button><button data-scr-add="'+tk+'" title="Adicionar à carteira">+</button></td></tr>'}).join('')+
 '</tbody></table></div>'+
@@ -480,6 +490,14 @@ function rankings(m){
  const mag=new Map(soma.map((x,i)=>[x.t,i+1]));
  const out=new Map(uni.map(r=>[r.ticker,{rk:rk.get(r.ticker)||null,mag:mag.get(r.ticker)||null,rdy:rdy.get(r.ticker)||null}]));
  rankMemo.set(uni,out);return out;
+}
+/* v853: medianas do mercado inteiro (não da lista filtrada), para comparar ROE e DY. */
+const medMemo=new WeakMap();
+function medianasMercado(m){
+ const snap=snapshotMemory.get(m.toUpperCase())?.data,uni=Array.isArray(snap?.universe_rows)?snap.universe_rows:null;if(!uni)return null;
+ if(medMemo.has(uni))return medMemo.get(uni);
+ const md=k=>{const v=uni.map(r=>Number(r[k])).filter(Number.isFinite).sort((a,b)=>a-b);return v.length?v[Math.floor((v.length-1)/2)]:null};
+ const o={roe:md('roe'),dy:md(m==='us'?'total_shareholder_yield':'dividend_yield'),roic:md('roic'),n:uni.length};medMemo.set(uni,o);return o;
 }
 function localScreener(m,s,global){
  if(!global?.universe_complete||!Array.isArray(global.universe_rows))return null;
@@ -610,7 +628,7 @@ d.addEventListener('change',ev=>{
  }
 });
 d.addEventListener('click',async ev=>{
- const b=ev.target.closest('[data-scr-ia],[data-scr-sort],[data-scr-obs],[data-scr-teto-save],[data-scr-teto-clear],[data-scr-top-refresh],[data-scr-top-pdf],[data-scr-top-detail],[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
+ const b=ev.target.closest('[data-scr-pdf-ficha],[data-scr-ia],[data-scr-sort],[data-scr-obs],[data-scr-teto-save],[data-scr-teto-clear],[data-scr-top-refresh],[data-scr-top-pdf],[data-scr-top-detail],[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
  if(!b||!b.closest('#an-root'))return;
  ev.preventDefault();const [m,s]=field(b);if(!m)return;
  if(b.dataset.scrTetoSave||b.dataset.scrTetoClear){const tk=b.dataset.scrTetoSave||b.dataset.scrTetoClear,all=tetos();
@@ -640,6 +658,7 @@ d.addEventListener('click',async ev=>{
   finally{s.topPdfBusy=false;render()}
   return;
  }
+ if(b.dataset.scrPdfFicha){d.body.classList.add('scr853-imprimir');const fim=()=>{d.body.classList.remove('scr853-imprimir');w.removeEventListener('afterprint',fim)};w.addEventListener('afterprint',fim);setTimeout(()=>{w.print();setTimeout(fim,1500)},50);return}
  if(b.dataset.scrIa){void explicarIA(b.dataset.scrIa,m,s,b.closest('[data-scr852-ia]'));return}
  if(b.dataset.scrSort){changeFilter(m,s,'order',b.dataset.scrSort);return}
  if(b.dataset.scrObs){ev.preventDefault();ev.stopPropagation();alternaObs(b.dataset.scrObs);if(s.custody==='observados')void load(m,true);else render();return}
