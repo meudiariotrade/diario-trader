@@ -53,7 +53,7 @@ export default {
    const cik=url.searchParams.get('cik')||'';
    if([...url.searchParams.keys()].some(k=>k!=='cik')||!/^[0-9]{10}$/.test(cik))
     return json({error:'CIK obrigatório'},400);
-   const key=new Request(url.origin+'/v1/sec-xbrl?cik='+cik+'&revision=v782-concepts');
+   const key=new Request(url.origin+'/v1/sec-xbrl?cik='+cik+'&revision=v858-concepts');
    const cache=caches.default,hit=await cache.match(key);
    if(hit)return conditional(request,hit,true);
    try{
@@ -73,7 +73,7 @@ export default {
      'us-gaap':['Assets','AssetsCurrent','LiabilitiesCurrent','StockholdersEquity','Liabilities','CashAndCashEquivalentsAtCarryingValue','LongTermDebtNoncurrent','LongTermDebtCurrent','OperatingIncomeLoss','NetIncomeLoss','Revenues',
       'RevenueFromContractWithCustomerExcludingAssessedTax','RevenueFromContractWithCustomerIncludingAssessedTax',
       'SalesRevenueNet','EarningsPerShareBasic','EarningsPerShareDiluted','WeightedAverageNumberOfDilutedSharesOutstanding','WeightedAverageNumberOfSharesOutstandingBasic','CommonStockSharesOutstanding','PaymentsOfDividends','NetCashProvidedByUsedInOperatingActivities',
-      'PaymentsToAcquirePropertyPlantAndEquipment'],
+      'PaymentsToAcquirePropertyPlantAndEquipment','PaymentsForRepurchaseOfCommonStock','ProceedsFromIssuanceOfCommonStock','PaymentsOfDividendsCommonStock','PaymentsToAcquireProductiveAssets','PaymentsForCapitalImprovements','PaymentsToAcquireOilAndGasPropertyAndEquipment','PaymentsToAcquireOilAndGasProperty'],
      'ifrs-full':['Assets','CurrentAssets','CurrentLiabilities','Equity','EquityAttributableToOwnersOfParent','Liabilities','CashAndCashEquivalents','ProfitLoss','Revenue',
       'RevenueFromContractsWithCustomers','ProfitLossAttributableToOwnersOfParent',
       'BasicEarningsLossPerShare','DilutedEarningsLossPerShare','WeightedAverageShares','CashFlowsFromUsedInOperatingActivities',

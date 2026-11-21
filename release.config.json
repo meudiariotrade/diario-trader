@@ -1,5 +1,5 @@
 {
-  "version": 855,
+  "version": 858,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -67,6 +67,7 @@
     "cerebro-ia.js": "src/ai/cerebro-ia.js",
     "cerebro-estudos.js": "src/ai/cerebro-estudos.js",
     "historico-fundamentos.js": "src/analysis/historico-fundamentos.js",
+    "historico-pdf.js": "src/analysis/historico-pdf.js",
     "pdf-logos.js": "src/shared/pdf-logos.js",
     "aula-animada.js": "src/studies/aula-animada.js",
     "fibo-visual.js": "src/analysis/fibo-visual.js"
