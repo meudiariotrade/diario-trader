@@ -97,7 +97,7 @@ test("v670: dados reais da estrutura mesa-macro reconhecem futuro ES, EWZ, WTI e
 });
 
 
-test("v675: nas páginas atuais V4, Início e Meu dia recebem o card no contêiner visível sem duplicar",()=>{
+test("v675/v846: nas páginas atuais V4, só o Início recebe o card, sem duplicar",()=>{
  const w=page(),app=w.document.getElementById("app");
  app.innerHTML='<section class="v4-panel"><div class="v4-page v4-home"><section class="v4-summary">Resumo</section><section>Outros dados</section></div></section>';
  w.tab="home";
@@ -111,7 +111,6 @@ test("v675: nas páginas atuais V4, Início e Meu dia recebem o card no contêin
  w.tab="dia";
  w.document.dispatchEvent(new w.CustomEvent("diario:render"));
  w.TermometroAbertura670.montar();
- assert.equal(app.querySelectorAll(".v4-day > .dt670-opening").length,1);
- assert.equal(app.querySelector(".v4-day").firstElementChild.className,"dt670-opening");
+ assert.equal(app.querySelectorAll(".v4-day > .dt670-opening").length,0);
  w.close();
 });

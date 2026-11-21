@@ -34,7 +34,7 @@ test('v735: cache velho, dados vazios e erro HTTP ativam contingencia',async()=>
 test('v735: reduz consultas Edge em caso normal, preserva X e reservas sob falha',()=>{
   const load=src.slice(src.indexOf('async function mkLoad(force)'),src.indexOf('// Atualização compartilhada',src.indexOf('async function mkLoad(force)')));
   assert.match(load,/mkCloudflareNoticias\(\)/);
-  assert.match(load,/if\(!cloudOk\|\|MKT\.nf==="x"\|\|resultados\.length<12\)/);
+  assert.match(load,/if\(!cloudOk\|\|\(MKT\.nf==="x"&&!MKT\.xBorda\)\|\|resultados\.length<12\)/);
   assert.match(load,/if\(!cloudOk&&resultados\.length<12\)/);
   assert.match(load,/mkEdgeNoticias\("noticias"\)/);
   assert.match(load,/mkEdgeNoticias\("terminal"\)/);

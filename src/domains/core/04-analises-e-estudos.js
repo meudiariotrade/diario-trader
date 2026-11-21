@@ -1808,9 +1808,9 @@ async function mkCloudflareNoticias() {
   })).filter(Boolean);
   if(!itens.length)throw new Error("Cloudflare: nenhum título financeiro válido");
   /* v846: perfis do X vêm da borda; o app só usa a função do Supabase se nenhum perfil responder. */
-  const xOk=obj.fontesOk.filter(f=>String(f).startsWith("X · @")),xFalhas=(obj.fontesIndisponiveis||[]).filter(f=>String(f).startsWith("X · @"));
+  if(typeof MKT!=="undefined"){const xOk=obj.fontesOk.filter(f=>String(f).startsWith("X · @")),xFalhas=(obj.fontesIndisponiveis||[]).filter(f=>String(f).startsWith("X · @"));
   if(xOk.length){MKT.fontesX={ok:xOk.map(f=>String(f).slice(5)),falhas:xFalhas.map(f=>String(f).slice(5))};MKT.fontesTs=obj.atualizadoEm;MKT.xBorda=itens.some(n=>String(n.a||"").startsWith("X · @"));}
-  else MKT.xBorda=false;
+  else MKT.xBorda=false;}
   return itens;
 }
 async function mkFinnhubNoticias(category) {
