@@ -8,7 +8,7 @@ test('v846: entidades HTML de manchetes (inclusive duplas) viram texto',async()=
 });
 test('v846: perfis do X lidos na Cloudflare, só com link do próprio perfil',async()=>{
  const m=await import('../cloudflare/diario-noticias/index.mjs');
- assert.ok(m.X_PERFIS.length>=8);assert.ok(m.X_PERFIS.includes('FirstSquawk'));
+ assert.ok(m.X_PERFIS.length>=7);assert.ok(!m.X_PERFIS.includes('zerohedge'));assert.ok(m.X_PERFIS.includes('FirstSquawk'));
  const agora=Date.now(),pd=new Date(agora-600000).toUTCString();
  const xml='<rss><item><title>FED&#8217;S WALLER: CUTS STILL ON TABLE https://t.co/x</title><link>https://x.com/DeItaone/status/1999</link><pubDate>'+pd+'</pubDate></item><item><title>FAKE NEWS FROM OTHER ACCOUNT HERE</title><link>https://x.com/outro/status/2</link><pubDate>'+pd+'</pubDate></item></rss>';
  const r=m.lerX(xml,{nome:'X · @DeItaone',perfil:'DeItaone'},agora);

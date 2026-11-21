@@ -3663,3 +3663,5 @@ html:root body #imgov#imgov>div:last-child{color:#E9E7E4!important;-webkit-text-
 /* v846 — Análises: aba e mercado selecionados visíveis */
 html:root body #app #an-root.an830 .an830-seg button{background:transparent!important;color:var(--ui-label,#64748B)!important;border:0!important}
 html:root body #app #an-root.an830 .an830-seg button.selected{background:var(--ui-sub,#181C28)!important;color:var(--ui-num,#FFFFFF)!important;box-shadow:inset 0 -2px 0 #F59E0B!important}
+/* v852 — Fatos que importam: ligação por hipótese em tom secundário */
+html:root body #app .i833-lig li.i852-hip span{color:var(--ui-label,#94A3B8);font-style:italic}

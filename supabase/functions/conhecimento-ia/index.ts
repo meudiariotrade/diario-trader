@@ -196,16 +196,17 @@ Deno.serve(async(req:Request)=>{
     glossario:'Liste termos importantes dos trechos com definição simples em português e o termo em inglês. JSON: {"termos":[{"pt":"","en":"","definicao":""}]}',
     materia:'Ligue a matéria da faculdade em MATERIA a exemplos reais de mercado presentes nos trechos e no contexto. JSON: {"materia":"","ligacoes":[{"conceito":"","exemplo_mercado":""}]}',
     perguntar:'Responda à pergunta usando apenas os trechos e cite a obra de cada afirmação. JSON: {"resposta":"","citacoes":[{"obra":"","trecho":""}],"lacuna":"o que os trechos não cobrem, se houver"}',
-    trade:'O trade do usuário está em TRADE. Escolha o trecho que mais se aplica e diga por quê, em 2 frases. JSON: {"trecho":"","obra":"","por_que":""}'
+    trade:'O trade do usuário está em TRADE. Escolha o trecho que mais se aplica e diga por quê, em 2 frases. JSON: {"trecho":"","obra":"","por_que":""}',
+    ficha:'Os DADOS do ativo (calculados pelo app) estão em CONTEXTO. Explique para um trader iniciante, em português simples. Use os trechos para os conceitos (tendência, médias, RSI, valuation, risco) e SOMENTE os DADOS para números; se um dado não estiver em CONTEXTO, diga que não há dado. JSON: {"tendencia":"4 a 6 frases: o que a distância da média de 200, o momentum e o RSI mostram juntos, o que é tendência de alta ou baixa aqui e o que precisaria acontecer no gráfico para virar","cenario":"3 a 5 frases: por que a ação está nesse cenário, ligando lucro, rentabilidade, dividendos, dívida, setor e as notícias de CONTEXTO, sem inventar","riscos":[{"risco":"","por_que":"1 a 2 frases ligando o risco aos dados"}],"o_que_observar":["sinal objetivo a acompanhar"],"fontes":["título da obra usada"]}'
    };
    const modo=String(b.modo||'');if(!MODOS[modo])return response(req,{erro:'Modo inválido'},400);
-   const tema=short(b.tema,400)||'gestão de risco análise técnica',extra=short(b.extra,1600),n=Math.max(1,Math.min(10,Number(b.n)||5));
+   const tema=short(b.tema,400)||'gestão de risco análise técnica',extra=short(b.extra,b.modo==='ficha'?3500:1600),n=Math.max(1,Math.min(10,Number(b.n)||5));
    const vector=await vetorDisponivel(tema,'RETRIEVAL_QUERY');
    const found=await db('rpc/buscar_biblioteca_hibrida',jwt,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({consulta:tema,query_embedding:vector,match_count:6,filtro_categoria:CATEGORIA.has(b.filtro_categoria)?b.filtro_categoria:null})}).catch(()=>[]);
    const trechos=(Array.isArray(found)?found:[]).slice(0,6);
    if(!trechos.length)return response(req,{erro:'O Cérebro não tem trechos sobre esse tema ainda. Importe material primeiro.'},404);
    const ctx=trechos.map((t:any,i:number)=>'['+(i+1)+'] '+t.titulo_obra+(t.autor?' ('+t.autor+')':'')+': '+String(t.conteudo_chunk).slice(0,1200)).join('\n\n');
-   const sys='Você é um professor de mercado financeiro. Use SOMENTE os trechos fornecidos; não invente números nem fatos. Escreva em português do Brasil. Nunca use a notação R (R-múltiplo); use "vezes o risco", R$ ou %. Responda só com JSON válido.';
+   const sys=(modo==='ficha'?'Você é um analista e professor de mercado financeiro. Os trechos são a base dos conceitos e os DADOS do CONTEXTO são a única fonte de números e fatos do ativo; não invente números, notícias nem eventos.':'Você é um professor de mercado financeiro. Use SOMENTE os trechos fornecidos; não invente números nem fatos.')+' Escreva em português do Brasil. Nunca use a notação R (R-múltiplo); use "vezes o risco", R$ ou %. Responda só com JSON válido.';
    const prompt=MODOS[modo].replace('N questões',n+' questões')+'\n\nTEMA: '+tema+(extra?'\nCONTEXTO: '+extra:'')+'\n\nTRECHOS:\n'+ctx;
    const r=await gerarTexto(sys,prompt,{json:true,temp:0.3,ate:Date.now()+45000});
    let v;try{v=JSON.parse(String(r.texto||'').replace(/^```json\s*|```$/g,''))}catch{return response(req,{erro:'A IA não retornou um resultado válido. Tente de novo.'},502)}

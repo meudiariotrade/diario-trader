@@ -30,7 +30,7 @@
   const tk=w.DiarioBarraContexto?.focoAtual?.()||'',niv=tk&&w.DiarioNiveis?.get(tk);
   const f=v=>v==null?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   if(!tk)return '<section class="ui-card an830-ficha" id="an830-ficha"><header><h2>Ficha do ativo</h2></header><p class="an830-vazio">Clique numa linha do ranking ou do técnico para abrir a ficha aqui.</p></section>';
-  return '<section class="ui-card an830-ficha" id="an830-ficha" aria-live="polite"><header><h2>'+E(tk)+'</h2><span class="ui-badge">Ativo em foco</span></header>'+
+  return '<section class="ui-card an830-ficha" id="an830-ficha" aria-live="polite"><header><h2>'+(w.DiarioLogos?.html?.(String(tk).replace(/USDT$/,''),22)||'')+E(tk)+'</h2><span class="ui-badge">Ativo em foco</span></header>'+
    (niv?'<div class="an830-niv"><div><span>Entrada</span><b>'+f(niv.entrada)+'</b></div><div><span>Stop</span><b class="ui-r">'+f(niv.stop)+'</b></div><div><span>Alvo</span><b class="ui-g">'+f((niv.alvos||[])[0])+'</b></div></div>':'<p class="an830-vazio">Sem níveis no plano. Use "Levar para o plano" no plano técnico.</p>')+
    '<div class="an835-porque"><b>Por que mexeu</b>'+(w.DiarioInteligenciaEtapa1?.porQue?.(tk)||'<p class="mut sm">Carregando notícias…</p>')+'</div>'+
    '<div class="an830-acoes"><button type="button" class="ui-cta" data-dt815="foco" data-tk="'+E(tk)+'">Abrir gráfico no Terminal</button>'+(/^[A-Z]{4}\d{1,2}$/.test(tk)||((screenTab==='us'||screenTab==='tecnico-world')&&/^[A-Z]{1,5}(?:[.-][A-Z])?$/.test(tk))?'<button type="button" class="btn s" data-hf-abrir="'+E(tk)+'" data-hf-market="'+(/^[A-Z]{4}\d{1,2}$/.test(tk)?'BR':'US')+'">Avaliação histórica (10 anos)</button>':'')+'<button type="button" class="btn s" data-an830-ia="'+E(tk)+'">Pesquisar com IA</button>'+(screenTab==='br'||screenTab==='us'?'<button type="button" class="btn s" data-scr-detail="'+E(tk)+'">Por que está no ranking?</button>':'')+'</div></section>';
@@ -171,13 +171,70 @@ function graficoPosicao(row,meta,s){
   '</div><p class="scr-hint">0 a 100: quanto maior, melhor o ativo neste indicador em relação aos '+base.length+' ativos '+E(ref)+' carregados (P/L, P/VP e dívida contam ao contrário).</p></figure>';
 }
 function tecnicoFicha(row){
- const mm=Number(row.dist_mm200_pct),mom=Number(row.momentum_12_1),rsi=Number(row.rsi_14);
+ const mm=Number(row.dist_mm200_pct),mom=Number(row.momentum_12_1),rsi=Number(row.rsi_14),preco=Number(row.preco_referencia);
  if(![mm,mom,rsi].some(Number.isFinite))return '';
- const tend=Number.isFinite(mm)?(mm>=0?['Alta','ok','acima da MM200 ('+fmt(mm,1)+'%)']:['Baixa','neg','abaixo da MM200 ('+fmt(mm,1)+'%)']):['Sem dado','','MM200 indisponível'];
- const r=Number.isFinite(rsi)?(rsi>=70?'esticado':rsi<=30?'pressionado':'neutro'):'—';
- return '<div class="scr847-tec"><b>Momento técnico</b><span class="'+tend[1]+'">Tendência de '+tend[0]+'</span><small>Preço '+tend[2]+' · momentum 12-1 '+(Number.isFinite(mom)?fmt(mom,1)+'%':'—')+' · RSI '+(Number.isFinite(rsi)?fmt(rsi,0)+' ('+r+')':'—')+'</small>'+
-  '<small class="mut">'+(tend[1]==='ok'?'Valuation barato com tendência de alta é a combinação mais favorável.':'Preço barato em tendência de baixa pode ficar mais barato: espere o gráfico confirmar.')+'</small></div>';
+ const alta=Number.isFinite(mm)&&mm>=0,tend=Number.isFinite(mm)?(alta?['Alta','ok']:['Baixa','neg']):['Sem dado',''];
+ const mm200=Number.isFinite(mm)&&preco>0?preco/(1+mm/100):null,abs=Math.abs(mm);
+ const L=[];
+ /* v852: explicação em linguagem simples, montada no aparelho a partir dos números da ficha. */
+ if(Number.isFinite(mm))L.push('<b>Média de 200 dias:</b> é o preço médio de quase um ano'+(mm200?' (≈ R$ '+fmt(mm200,2)+')':'')+'. O preço está '+fmt(abs,1)+'% '+(alta?'acima':'abaixo')+' dela. '+
+  (alta?'Em média, quem comprou no último ano está no lucro, e a média costuma funcionar como suporte nas correções.':'Em média, quem comprou no último ano está no prejuízo; quando o preço volta perto da média, muita gente vende para sair no zero a zero, e ela vira resistência.')+
+  ' '+(abs>=20?'Distância grande: o movimento é forte e longo.':abs>=5?'Distância moderada: tendência definida, sem exagero.':'Perto da média: a tendência ainda está indefinida.'));
+ if(Number.isFinite(mom))L.push('<b>Momentum 12-1:</b> retorno de 12 meses sem contar o último mês ('+(mom>0?'+':'')+fmt(mom,1)+'%). '+
+  (mom>15?'Ano forte.':mom>3?'Ano levemente positivo.':mom>=-3?'Ano praticamente de lado.':mom>=-15?'Ano levemente negativo.':'Ano fraco.')+
+  (Number.isFinite(mm)&&mm<0&&mom>0?' Como o ano ainda está positivo e o preço está abaixo da média, a queda aconteceu nos últimos meses e foi rápida.':Number.isFinite(mm)&&mm>0&&mom<0?' O preço já recuperou a média, mas o ano ainda está negativo: recuperação recente.':''));
+ if(Number.isFinite(rsi))L.push('<b>RSI '+fmt(rsi,0)+':</b> '+(rsi<=30?'sobrevendido. A queda recente foi forte e pode haver um repique, mas em tendência de baixa o RSI pode ficar abaixo de 30 por semanas; sozinho não é sinal de compra.':rsi>=70?'sobrecomprado. A alta recente foi forte; correções são comuns, mas em tendência de alta ele pode ficar acima de 70 por um tempo.':'neutro: nem euforia nem pânico no curto prazo.'));
+ const virar=alta?'A tendência de alta perde força se o preço fechar abaixo da média de 200'+(mm200?' (≈ R$ '+fmt(mm200,2)+')':'')+' e fizer topos mais baixos.':
+  'Para a tendência virar para alta, o preço precisa voltar e fechar acima da média de 200'+(mm200?' (≈ R$ '+fmt(mm200,2)+')':'')+', fazer um fundo mais alto que o anterior e o RSI passar de 50.';
+ return '<div class="scr847-tec"><b>Momento técnico</b><span class="'+tend[1]+'">Tendência de '+tend[0]+'</span>'+
+  '<ul class="scr852-exp">'+L.map(x=>'<li>'+x+'</li>').join('')+'<li><b>O que mudaria o quadro:</b> '+virar+'</li></ul>'+
+  '<small class="mut">'+(tend[1]==='ok'?'Valuation barato com tendência de alta é a combinação mais favorável.':'Preço barato em tendência de baixa pode ficar mais barato: espere o gráfico confirmar.')+'</small>'+
+  '<div class="scr852-ia" data-scr852-ia="'+E(row.ticker)+'">'+(()=>{let c=null;try{c=JSON.parse(sessionStorage.getItem(iaChave(row.ticker))||'null')}catch{}return c?iaHtml(c):'<button type="button" class="btn s" data-scr-ia="'+E(row.ticker)+'">Explicar o cenário com a IA (usa seu Cérebro)</button>'})()+'</div></div>';
 }
+/* v852: riscos com o porquê, a partir dos números da ficha (sem IA). */
+const ESTATAIS=new Set(['BBAS3','PETR3','PETR4','CMIG3','CMIG4','CSMG3','SAPR3','SAPR4','SAPR11','BRSR3','BRSR5','BRSR6','BAZA3','BNBR3','CEEB3','CEEB5','CEBR3','CEBR5','CEBR6','CASN3','CASN4','BEES3','BEES4','BGIP3','BGIP4','BMEB3','BMEB4']);
+function riscosExplicados(row,meta,valuation,m,s){
+ const R=[],n=k=>{const v=Number(row[k]);return Number.isFinite(v)?v:null},med=s.data?.medians||{},banco=/banc|financ|segur|bank|insur/i.test(String(row.setor||row.sector||''));
+ const roe=n('roe'),pvp=n('pvp'),pl=n('pl'),dy=n('dividend_yield'),pay=n('payout_implicito'),dv=n(m==='us'?'net_debt_ebitda':'div_liq_ebitda'),mom=n('momentum_12_1'),mm=n('dist_mm200_pct');
+ if(roe!=null&&med.roe!=null&&roe<med.roe)R.push(['Rentabilidade abaixo dos pares','ROE de '+fmt(roe,1)+'% contra mediana de '+fmt(med.roe,1)+'%: a empresa gera menos lucro para cada real de patrimônio. Quando o ROE cai, o mercado costuma pagar menos pela ação.']);
+ if(pvp!=null&&pvp>0&&pvp<0.7)R.push(['Mercado desconfia do patrimônio','P/VP de '+fmt(pvp,2)+'x: a ação vale menos que o patrimônio contábil. Isso costuma refletir medo de lucro em queda'+(banco?', de inadimplência e de mais provisões para calote':' ou de ativos que valem menos do que o balanço mostra')+'. Barato por P/VP pode continuar barato se o lucro não voltar.']);
+ if(ESTATAIS.has(String(row.ticker).toUpperCase()))R.push(['Controle estatal','O governo é o controlador: decisões de preço, crédito, dividendos ou investimentos podem atender a objetivos políticos e não só ao acionista. Esse risco costuma aumentar o desconto da ação.']);
+ if(banco)R.push(['Risco de crédito','Em banco, o lucro depende de quanto dos empréstimos é pago: alta da inadimplência obriga a provisionar perdas, o que reduz o lucro e os dividendos.']);
+ if(pl!=null&&pl<=0)R.push(['Prejuízo','P/L negativo: a empresa teve prejuízo nos últimos 12 meses. Valuation por lucro (Bazin, Graham, sua fórmula) fica frágil até o lucro voltar.']);
+ if(dy!=null&&dy>8&&pay!=null&&pay>90)R.push(['Dividendo pode não se repetir','DY de '+fmt(dy,1)+'% com payout de '+fmt(pay,0)+'%: a empresa distribui quase tudo o que lucra; qualquer queda de lucro tende a cortar o dividendo.']);
+ if(dv!=null&&dv>3)R.push(['Dívida alta','Dívida líquida de '+fmt(dv,1)+'x o EBITDA: com juros altos, boa parte do caixa vai para pagar a dívida, sobrando menos para crescer e distribuir.']);
+ if(mm!=null&&mm<0&&mom!=null)R.push(['Tendência contra','Preço '+fmt(Math.abs(mm),1)+'% abaixo da média de 200 dias'+(mom<0?' e ano negativo':'')+': mesmo barata, a ação pode seguir caindo enquanto o fluxo vendedor não acabar.']);
+ const mg=valuation?.margins?.proprio;if(mg!=null&&mg<0)R.push(['Acima do seu preço teto','Pela sua fórmula o preço está '+fmt(Math.abs(mg),1)+'% acima do teto'+(valuation?.estimados?.proprio?' (teto estimado pelo snapshot; confirme lucro projetado e payout)':'')+'.']);
+ return R.slice(0,7);
+}
+const iaChave=tk=>'scr852-ia|'+tk+'|'+new Date().toISOString().slice(0,10);
+function iaHtml(r){const v=r?.resultado||{};return '<div class="scr852-res"><p><b>Tendência:</b> '+E(v.tendencia)+'</p><p><b>Por que está nesse cenário:</b> '+E(v.cenario)+'</p>'+
+  (Array.isArray(v.riscos)&&v.riscos.length?'<b>Riscos</b><ul>'+v.riscos.map(x=>'<li><b>'+E(x.risco)+':</b> '+E(x.por_que)+'</li>').join('')+'</ul>':'')+
+  (Array.isArray(v.o_que_observar)&&v.o_que_observar.length?'<b>O que observar</b><ul>'+v.o_que_observar.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul>':'')+
+  '<p class="scr-hint">Escrito pela IA com os números desta ficha e os trechos do seu Cérebro'+(r?.fontes?.length?' ('+r.fontes.map(E).join(', ')+')':'')+'. Não é recomendação.</p></div>'}
+async function explicarIA(tk,m,s,box){
+ const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk];if(!row||!box)return;
+ const chave=iaChave(tk);
+ let r=null;try{r=JSON.parse(sessionStorage.getItem(chave)||'null')}catch{}
+ const desenha=r=>{box.innerHTML=iaHtml(r)};
+
+ if(r)return desenha(r);
+ if(!w.DiarioCerebroIA?.api){box.innerHTML='<p class="scr-hint">Abra Estudos → Cérebro uma vez para ativar a IA.</p>';return}
+ box.innerHTML='<p class="scr-hint">A IA está lendo os números e o seu Cérebro…</p>';
+ const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row),v=m==='br'?vBR(row,s):null,num=k=>row[k]==null?'sem dado':fmt(Number(row[k]),2);
+ const fatos=['ATIVO: '+tk+' · '+(row.empresa||row.company_name||'')+' · setor '+(row.setor||row.sector||'não informado'),'Preço: '+num('preco_referencia'),
+  'Distância da média de 200 dias: '+num('dist_mm200_pct')+'% · Momentum 12-1: '+num('momentum_12_1')+'% · RSI 14: '+num('rsi_14'),
+  'ROE: '+num('roe')+'% · ROIC: '+num('roic')+'% · P/L: '+num('pl')+' · P/VP: '+num('pvp')+' · DY: '+num('dividend_yield')+'% · Payout: '+num('payout_implicito')+'% · Dívida/EBITDA: '+num(m==='us'?'net_debt_ebitda':'div_liq_ebitda'),
+  meta?'Nota '+fmt(meta.score/10,1)+'/10 · pilares: '+meta.parts.map(p=>p.name+' '+(p.points==null?'—':fmt(p.points/10,1)+'/'+fmt(p.weight/10,1))).join('; '):'',
+  v?'Preço teto (fórmula do usuário): '+(v.methods.proprio==null?'sem dado':fmt(v.methods.proprio,2))+' · margem '+(v.margins.proprio==null?'—':fmt(v.margins.proprio,1)+'%')+' · Graham '+(v.methods.graham==null?'—':fmt(v.methods.graham,2))+' · Bazin '+(v.methods.bazin==null?'—':fmt(v.methods.bazin,2)):'',
+  'Medianas do ranking: ROE '+(s.data?.medians?.roe==null?'—':fmt(s.data.medians.roe,1)+'%')+' · DY '+(s.data?.medians?.dy==null?'—':fmt(s.data.medians.dy,1)+'%'),
+  'Notícias recentes ligadas ao ativo: '+((w.DiarioInteligenciaEtapa1?.noticiasDo?.(tk)||[]).join(' | ')||'nenhuma carregada')].filter(Boolean).join('\n');
+ try{const j=await w.DiarioCerebroIA.api({acao:'gerar',modo:'ficha',tema:'tendência média móvel 200 RSI momentum valuation risco '+(row.setor||''),extra:fatos});
+  try{sessionStorage.setItem(chave,JSON.stringify(j))}catch{}desenha(j);
+ }catch(e){box.innerHTML='<p class="scr-hint">Não foi possível explicar agora: '+E(String(e.message||e).slice(0,140))+'</p><button type="button" class="btn s" data-scr-ia="'+E(tk)+'">Tentar de novo</button>'}
+}
+/* v852: logotipo do ativo (mesmo componente de Mercado). */
+const logo=(tk,t=18)=>{try{return w.DiarioLogos?.html?.(String(tk||''),t)||''}catch{return ''}};
 /* v847: lista de observação neste aparelho (sem servidor). */
 const OBS_KEY='dt-observar-v847';
 function observados(){try{const v=JSON.parse(localStorage.getItem(OBS_KEY)||'[]');return Array.isArray(v)?v.filter(x=>/^[A-Z0-9.]{3,12}$/.test(x)).slice(0,60):[]}catch{return []}}
@@ -217,7 +274,7 @@ function detail(m,s){
    '<p class="scr847-sim-res" data-sim-res="1">—</p></div>':'')+
   '<p class="scr-hint">Exemplo do seu caderno: R$ 14,613 bi × 25% ÷ 5.730.834.040 ações = R$ 0,6375 por ação; ÷ 7% = <b>R$ 9,11</b>. Comprar só abaixo do preço teto. Estimativa, não recomendação.</p></div>':'';
  return '<section class="scr-detail" id="scr-detail" aria-live="polite">'+
- '<div class="scr-head"><div><p class="an-kicker">VALIDAÇÃO DO ATIVO</p><h3>'+estrela(row.ticker)+E(row.ticker)+' · '+E(meta.company)+'</h3></div>'+
+ '<div class="scr-head"><div><p class="an-kicker">VALIDAÇÃO DO ATIVO</p><h3>'+estrela(row.ticker)+logo(row.ticker,22)+E(row.ticker)+' · '+E(meta.company)+'</h3></div>'+
  '<button type="button" data-scr-detail-close="1" aria-label="Fechar explicação">Fechar</button></div>'+
  '<div class="scr-score-line"><strong>'+(meta.score==null?'Nota indisponível':fmt(meta.score/10,1)+'/10')+'</strong>'+
  '<span class="'+(meta.validated?'is-ok':'is-review')+'">'+E(meta.level)+'</span>'+
@@ -232,7 +289,7 @@ function detail(m,s){
  '<div class="scr-detail-columns"><div><b>O que favorece</b>'+
  (meta.positives.length?'<ul>'+meta.positives.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul>':'<p>Sem evidência suficiente para apontar forças no score.</p>')+
  '</div><div><b>Limitações e riscos</b>'+
- '<ul>'+(meta.risks.length?meta.risks:['Confirmar valuation, preço, setor e risco.']).map(x=>'<li>'+E(x)+'</li>').join('')+'</ul></div></div></details>'+
+ '<ul class="scr852-riscos">'+riscosExplicados(row,meta,valuation,m,s).map(([t,p])=>'<li><b>'+E(t)+':</b> '+E(p)+'</li>').join('')+(meta.risks.length?meta.risks:['Confirmar valuation, preço, setor e risco.']).map(x=>'<li>'+E(x)+'</li>').join('')+'</ul></div></div></details>'+
  '<p class="scr-hint">Fonte: '+E(meta.source)+' · Fundamentos: '+E(meta.fundamentals_at||'sem data')+
  ' · Técnico: '+E(meta.technical_at||'sem data')+' · Snapshot: '+E(meta.updated_at||'sem data')+
  (owned?' · Carteira: '+pct(owned.pct):'')+'</p>'+
@@ -314,8 +371,8 @@ return '<section class="scr-panel"><div class="scr-head"><h3>Ranking · '+fmt(s.
 '<div class="scr849-tg" role="group" aria-label="Filtros rápidos">'+[['tgLP',us?'Lucro positivo':'Lucro e patrimônio positivos'],['tgDiv',us?'Paga dividendos ou recompra':'Paga dividendos'],['tgMag','Entre as 30 da Fórmula Mágica']].map(([k,l])=>'<label class="scr849-sw"><input type="checkbox" data-scr-tg="'+k+'"'+(s[k]==='1'?' checked':'')+'><span>'+l+'</span></label>').join('')+'</div>'+
 '<div class="scr-scroll"><table class="scr-table scr849-table"><thead><tr><th class="scr849-sel">Sel.</th>'+heads.join('')+'<th>Ações</th></tr></thead><tbody>'+
 all.map(row=>{const own=ownRow(row),tk=E(row.ticker),r=rk.get(row.ticker)||{},score=us?row.score_quant_us:row.score_quant_br,v=us?null:vBR(row,s),teto=v?.methods?.proprio,mg=v?.margins?.proprio,preco=Number(row.preco_referencia);
- const cel=us?['<b>'+tk+'</b>',E(row.company_name),Number.isFinite(preco)&&preco>0?'US$ '+fmt(preco,2):'—',scoreCel(score/10),posi(r.rk),posi(r.mag),barra(Number(row.roic),40),row.forward_pe==null?'—':fmt(row.forward_pe,1),posi(r.rdy),barra(Number(row.total_shareholder_yield),10),barra(Number(row.momentum_12_1),60),divChip(row),row[COB[0]]==null?'—':pct(row[COB[0]])]
-  :['<b>'+tk+'</b>',Number.isFinite(preco)&&preco>0?fmt(preco,2):'—',teto==null?'<span class="scr849-na">—</span>':fmt(teto,2)+(v.estimados?.proprio?' <span class="scr839-est" title="Estimado do snapshot">est.</span>':''),barra(mg,100),posi(r.rk),posi(r.mag),barra(Number(row.roe),40),posi(r.rdy),barra(Number(row.dividend_yield),15),scoreCel(score/10),divChip(row),row[COB[0]]==null?'—':pct(row[COB[0]]),banco(row)];
+ const cel=us?[logo(row.ticker)+'<b>'+tk+'</b>',E(row.company_name),Number.isFinite(preco)&&preco>0?'US$ '+fmt(preco,2):'—',scoreCel(score/10),posi(r.rk),posi(r.mag),barra(Number(row.roic),40),row.forward_pe==null?'—':fmt(row.forward_pe,1),posi(r.rdy),barra(Number(row.total_shareholder_yield),10),barra(Number(row.momentum_12_1),60),divChip(row),row[COB[0]]==null?'—':pct(row[COB[0]])]
+  :[logo(row.ticker)+'<b>'+tk+'</b>',Number.isFinite(preco)&&preco>0?fmt(preco,2):'—',teto==null?'<span class="scr849-na">—</span>':fmt(teto,2)+(v.estimados?.proprio?' <span class="scr839-est" title="Estimado do snapshot">est.</span>':''),barra(mg,100),posi(r.rk),posi(r.mag),barra(Number(row.roe),40),posi(r.rdy),barra(Number(row.dividend_yield),15),scoreCel(score/10),divChip(row),row[COB[0]]==null?'—':pct(row[COB[0]]),banco(row)];
  return '<tr data-tk="'+tk+'"'+(own?' class="scr849-own" title="Na carteira · peso '+fmt(own.pct)+'%"':'')+'><td class="scr849-sel"><input type="checkbox" data-scr-select="'+tk+'" '+(s.selected.includes(row.ticker)?'checked':'')+' aria-label="Selecionar '+tk+'">'+estrela(row.ticker)+'</td>'+cel.map(c=>'<td>'+c+'</td>').join('')+
  '<td class="scr-buttons"><button data-scr-detail="'+tk+'">Ficha</button><button data-scr-analyze="'+tk+'">Analisar</button><button data-dt815="foco" data-tk="'+tk+'" title="Abrir no Terminal">Terminal</button><button data-scr-add="'+tk+'" title="Adicionar à carteira">+</button></td></tr>'}).join('')+
 '</tbody></table></div>'+
@@ -553,7 +610,7 @@ d.addEventListener('change',ev=>{
  }
 });
 d.addEventListener('click',async ev=>{
- const b=ev.target.closest('[data-scr-sort],[data-scr-obs],[data-scr-teto-save],[data-scr-teto-clear],[data-scr-top-refresh],[data-scr-top-pdf],[data-scr-top-detail],[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
+ const b=ev.target.closest('[data-scr-ia],[data-scr-sort],[data-scr-obs],[data-scr-teto-save],[data-scr-teto-clear],[data-scr-top-refresh],[data-scr-top-pdf],[data-scr-top-detail],[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
  if(!b||!b.closest('#an-root'))return;
  ev.preventDefault();const [m,s]=field(b);if(!m)return;
  if(b.dataset.scrTetoSave||b.dataset.scrTetoClear){const tk=b.dataset.scrTetoSave||b.dataset.scrTetoClear,all=tetos();
@@ -583,6 +640,7 @@ d.addEventListener('click',async ev=>{
   finally{s.topPdfBusy=false;render()}
   return;
  }
+ if(b.dataset.scrIa){void explicarIA(b.dataset.scrIa,m,s,b.closest('[data-scr852-ia]'));return}
  if(b.dataset.scrSort){changeFilter(m,s,'order',b.dataset.scrSort);return}
  if(b.dataset.scrObs){ev.preventDefault();ev.stopPropagation();alternaObs(b.dataset.scrObs);if(s.custody==='observados')void load(m,true);else render();return}
  if(b.hasAttribute('data-scr-refresh')){void load(m,true);return}

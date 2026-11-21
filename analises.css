@@ -461,3 +461,12 @@ body.hf-aberto{overflow:hidden}
 #an-root .scr-table.scr849-table input[type=checkbox]{width:16px;height:16px}
 @media(min-width:1100px){#an-root.an830 .an830-split:has(.scr849-table) .an830-aside:has(.an830-vazio){display:none}}
 @media(min-width:1100px){#an-root .scr-table.scr849-table .scr-buttons{display:flex;gap:4px;flex-wrap:nowrap}#an-root .scr-table.scr849-table .scr-buttons button{min-height:28px!important;height:28px;padding:0 8px!important;font-size:11px!important}}
+/* v852 — explicação do momento técnico, riscos com porquê, IA na ficha e logos */
+.scr852-exp{margin:4px 0 2px;padding-left:18px;display:grid;gap:4px;font-size:13px;line-height:1.5;color:var(--ui-title,#E2E8F0)}
+.scr852-exp b{font-weight:650}
+.scr852-ia{margin-top:6px}.scr852-ia .btn{min-height:40px}
+.scr852-res{display:grid;gap:6px;font-size:13px;line-height:1.55;padding:8px 0 0;border-top:1px solid var(--ui-card-line,rgba(255,255,255,.06))}
+.scr852-res p{margin:0}.scr852-res ul{margin:0;padding-left:18px;display:grid;gap:3px}
+.scr852-riscos{display:grid;gap:6px;line-height:1.5}
+#an-root .dl-logo{margin-right:6px;vertical-align:middle}
+#an-root .scr849-table td .dl-logo{--dl:18px}
