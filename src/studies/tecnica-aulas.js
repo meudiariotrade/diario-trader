@@ -96,7 +96,11 @@ function paint(focus=false){const root=document.getElementById('tp-root');if(!ro
  if(keepPlayer)oldPlayer.remove();
  root.outerHTML=markup();
  if(keepPlayer)document.querySelector('#tp-root [data-tp-film-player]')?.replaceWith(oldPlayer);
- const v=document.querySelector('#tp-root [data-tp-video]');if(v){v.muted=true;v.defaultMuted=true;}if(v)v.play().catch(()=>{videoFailed=true;v.remove();});dock();if(focus)document.getElementById('tp-title')?.focus({preventScroll:true});}
+ const v=document.querySelector('#tp-root [data-tp-video]');if(v){v.muted=true;v.defaultMuted=true;}if(v)v.play().catch(()=>{videoFailed=true;v.remove();});dock();animarEtapa();if(focus)document.getElementById('tp-title')?.focus({preventScroll:true});}
+/* v854: gráfico da etapa desenhado em sequência (motion graphics), retomando do ponto certo a cada redesenho. */
+let chaveAnim='';
+function animarEtapa(){try{const l=T.lessons.find(x=>x.id===selected),svg=document.querySelector('#tp-root .tp-chart svg');if(!l||!svg||!window.AulaAnimada)return;
+ const k=l.id+':'+step;if(k!==chaveAnim){window.AulaAnimada.reiniciar(k);chaveAnim=k}window.AulaAnimada.tocar(svg,k)}catch{}}
 function dock(){const root=document.getElementById('tp-root'),mentor=root?.querySelector('.tp-pip');if(!root||!mentor)return;const rect=root.getBoundingClientRect();root.style.setProperty('--tp-right',Math.max(16,window.innerWidth-rect.right+16)+'px');mentor.style.visibility=window.innerWidth>=1000&&(rect.bottom<110||rect.top>window.innerHeight-80)?'hidden':'';}
 let dockFrame=0;function scheduleDock(){if(dockFrame)return;dockFrame=requestAnimationFrame(()=>{dockFrame=0;dock();});}
 window.addEventListener('scroll',scheduleDock,{passive:true});window.addEventListener('resize',scheduleDock,{passive:true});
@@ -121,7 +125,7 @@ function configuredBridge(){let stored='';try{stored=localStorage.getItem('diari
 function finishScene(token){if(token!==run||!active()||currentOwner()!==owner)return;playing=false;loading=false;utterance=null;releaseAudio();if(step<3){step++;mark();paint();speak();}else{status='Narração concluída. Responda ao mini-check abaixo.';paint();}}
 async function speak(){
  const l=T.lessons.find(l=>l.id===selected);if(!l||!active())return;
- stop();bridgeFailed=false;const token=run;visual=true;loading=true;status='Preparando narração da etapa…';mark();paint();
+ stop();bridgeFailed=false;const token=run;visual=true;loading=true;status='Preparando narração da etapa…';window.AulaAnimada?.reiniciar(l.id+':'+step);chaveAnim=l.id+':'+step;mark();paint();
  const text=T.normalizarTextoParaVoz(`${step+1}. ${(l.stageNames||names)[step]}. ${l.roteiroVoz?.etapas?.[step]||l.stages[step]}`);
  const key=vozChave(l,step,text),endpoint=configuredBridge();
  let blob=await vozCacheLer(key);if(token!==run)return;

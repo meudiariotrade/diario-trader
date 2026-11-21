@@ -1,3 +1,11 @@
+ATUALIZAÇÃO DA PONTE VÍDEO — AULA ANIMADA v854
+
+1. Feche a Ponte Vídeo, se estiver rodando.
+2. Copie para a pasta da ponte: tecnica_video.py e aula_animada.js (substitua o tecnica_video.py antigo).
+3. Mantenha o seu config.json. Abra RETOMAR PONTE.bat.
+
+Novidade: nos vídeos, o gráfico de cada etapa agora é desenhado em sequência (linhas, candles, níveis de gatilho, stop e alvo aparecendo e pulsando), no mesmo ritmo do app. A voz neural continua a mesma (gratuita).
+
 ATUALIZAÇÃO DA PONTE VÍDEO — TRILHA TÉCNICA v664
 
 1. Feche a janela antiga da Ponte Vídeo, se estiver rodando.

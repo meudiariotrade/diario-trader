@@ -331,7 +331,7 @@ function topTen(m,s){
   const observed=d.parts.filter(x=>x.score!==null).sort((a,b)=>b.points/b.weight-a.points/a.weight);
   const why=observed.slice(0,2).map(x=>x.name+': '+fmt(x.points/10,1)+'/'+fmt(x.weight/10,1)).join(' · ');
   return '<article class="scr-top-ten-row"><span class="scr-top-ten-rank">'+String(item.rank).padStart(2,'0')+'</span>'+
-  '<div class="scr-top-ten-company"><b>'+E(row.ticker)+'</b><small>'+E(d.company)+'</small>'+
+  '<div class="scr-top-ten-company"><b>'+logo(row.ticker,22)+E(row.ticker)+'</b><small>'+E(d.company)+'</small>'+
   '<p>Por que entrou: '+E(why||'Critérios calculados')+'</p>'+
   '<span class="scr-top-ten-caution">A conferir: '+E(item.caution)+'</span></div>'+
   '<div class="scr-top-ten-grade"><b>'+fmt(item.note,1)+'</b><small>/ 10</small></div>'+

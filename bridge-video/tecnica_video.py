@@ -82,6 +82,10 @@ def manifesto_pdf(aula):
 def assinatura(lesson):
     return hashlib.sha256(json.dumps(lesson, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
 
+# v854: mesmo motor de animação do app (gráfico desenhado em sequência); o quadro depende só do tempo.
+_ANIM = Path(__file__).with_name('aula_animada.js')
+ANIMACAO = _ANIM.read_text(encoding='utf-8').replace('</script', '<\\/script') if _ANIM.exists() else ''
+
 def documento(lesson, stage, cfg):
     image = RESOURCE / ('avatar-mentor.png' if stage < 0 else 'avatar-mentor-chart.png')
     portrait = 'data:image/png;base64,' + base64.b64encode(image.read_bytes()).decode()
@@ -95,7 +99,7 @@ def documento(lesson, stage, cfg):
     main{display:flex;gap:2vw;flex:1;min-height:0;align-items:center}.chart{flex:1;min-width:0}.chart svg{width:100%;max-height:55vh}aside{width:27%;height:100%;display:flex;align-items:center;justify-content:center;position:relative}aside img,aside video{width:100%;max-height:54vh;object-fit:contain}aside:has(video) img{display:none}body.intro aside{width:48%}
     #caption{min-height:17vh;font-size:clamp(19px,2vw,30px);line-height:1.4;text-align:center;color:#B7C0CF}#caption b{font-weight:500}#caption b.spoken{color:#E7EBF2}#caption b.current{color:#D4A017}footer{font-size:clamp(12px,1.1vw,18px);color:#B7C0CF}
     @media(max-aspect-ratio:4/5){main{flex-direction:column}aside,body.intro aside{width:100%;height:25vh}aside img,aside video{max-height:25vh}.chart{width:100%}.chart svg{max-height:32vh}h1{font-size:34px}h2{font-size:28px}#caption{font-size:30px;min-height:22vh}footer{font-size:18px}}
-    </style><body class="''' + ('intro' if stage < 0 else '') + '''"><header>DIÁRIO DE TRADER · ANÁLISE TÉCNICA NA PRÁTICA</header><h1>''' + e(lesson['title']) + '</h1><h2>' + e(s['title']) + '</h2><main><div class="chart">' + (s['svg'] if stage >= 0 else '<p>'+e(lesson['reference'])+'</p>') + '</div><aside><img src="' + portrait + '" alt="Avatar Mentor">' + animation + '</aside></main><div id="caption"></div><footer>Exemplo autoral hipotético · Conteúdo educacional · Gestos em loop, sem sincronização labial</footer></body></html>'
+    </style><body class="''' + ('intro' if stage < 0 else '') + '''"><header>DIÁRIO DE TRADER · ANÁLISE TÉCNICA NA PRÁTICA</header><h1>''' + e(lesson['title']) + '</h1><h2>' + e(s['title']) + '</h2><main><div class="chart">' + (s['svg'] if stage >= 0 else '<p>'+e(lesson['reference'])+'</p>') + '</div><aside><img src="' + portrait + '" alt="Avatar Mentor">' + animation + '</aside></main><div id="caption"></div><footer>Exemplo autoral hipotético · Conteúdo educacional · Gestos em loop, sem sincronização labial</footer><script>' + ANIMACAO + '</script></body></html>'
 
 async def gravar(p, lesson, cfg, voice, rate, fmt, output, sem_voz=False):
     from playwright.async_api import async_playwright
@@ -111,6 +115,8 @@ async def gravar(p, lesson, cfg, voice, rate, fmt, output, sem_voz=False):
                     await page.evaluate('()=>document.fonts.ready')
                     await page.wait_for_function('Array.from(document.images).every(i=>i.complete&&i.naturalWidth>0)')
                     animated=await page.locator('#mentor-motion').count() > 0
+                    grafico=stage>=0 and bool(ANIMACAO) and await page.locator('.chart svg').count() > 0
+                    t_etapa=0.0
                     if animated:
                         await page.wait_for_function('document.getElementById("mentor-motion").readyState>=2')
                     text=lesson.get('aberturaVoz',lesson['summary']) if stage<0 else lesson['stages'][stage].get('roteiroVoz',lesson['stages'][stage]['text'])
@@ -138,13 +144,15 @@ async def gravar(p, lesson, cfg, voice, rate, fmt, output, sem_voz=False):
                             await page.evaluate("q=>document.querySelectorAll('#caption b').forEach((b,i)=>{b.classList.toggle('spoken',i<q);b.classList.toggle('current',i===q)})",q)
                             interval=max(.001,marks[q+1]-marks[q]); remaining=interval
                             while remaining>0.000001:
-                                length=min(1/12,remaining) if animated else remaining
+                                length=min(1/12,remaining) if (animated or grafico) else remaining
+                                if grafico:
+                                    await page.evaluate("t=>window.AulaAnimada&&AulaAnimada.quadro(document.querySelector('.chart svg'),t)",t_etapa)
                                 if animated:
                                     await page.evaluate('''async seconds=>{const v=document.getElementById('mentor-motion');v.pause();const target=seconds%v.duration;if(Math.abs(v.currentTime-target)<0.001)return;await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{v.removeEventListener('seeked',done);reject(new Error('Falha ao posicionar vídeo do mentor'))},10000);function done(){clearTimeout(timer);resolve()}v.addEventListener('seeked',done,{once:true});v.currentTime=target;})}''',elapsed)
                                 img=tmp/f'img{len(frames):06d}.jpg';await page.screenshot(path=str(img),type='jpeg',quality=88)
-                                frames.append((img,length));elapsed+=length;remaining-=length
+                                frames.append((img,length));elapsed+=length;remaining-=length;t_etapa+=length
                         pause=.9 if phrase.endswith('?') else .18
-                        frames.append((frames[-1][0],pause));sound+=p.silencio(pause);elapsed+=pause;counter+=1
+                        frames.append((frames[-1][0],pause));sound+=p.silencio(pause);elapsed+=pause;counter+=1;t_etapa+=pause
             finally:
                 await browser.close()
         wavfile=tmp/'voz.wav'

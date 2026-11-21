@@ -97,7 +97,7 @@
  }
  function html(tk,c,meta,pos){
   const a=c.atual,h=c.historico,cr=c.crescimento,u=c.serie[c.serie.length-1]||{};
-  return '<header class="hf-head"><div><h2>'+E(tk)+' · '+E(meta.nome||'')+'</h2><p>'+E(meta.setor||'')+' · exercícios '+E((meta.exercicios||[]).join('–'))+' · preço '+MO+fmt(a.preco,2)+'</p></div>'+
+  return '<header class="hf-head"><div><h2>'+(w.DiarioLogos?.html?.(tk,26)||'')+E(tk)+' · '+E(meta.nome||'')+'</h2><p>'+E(meta.setor||'')+' · exercícios '+E((meta.exercicios||[]).join('–'))+' · preço '+MO+fmt(a.preco,2)+'</p></div>'+
    '<div class="hf-acoes"><button type="button" class="btn s" data-hf="pdf">Salvar PDF</button><button type="button" class="btn s" data-hf="fechar">Fechar</button></div></header>'+
    '<h3 class="hf-sec">Qualidade histórica · últimos 10 anos</h3>'+
    '<div class="hf-grid hf-g5">'+cartaoIndicador('roe','Rentabilidade (ROE)',a.roe,h.roe,v=>pct(v))+cartaoIndicador('margem','Margem líquida',a.margem,h.margem,v=>pct(v))+
