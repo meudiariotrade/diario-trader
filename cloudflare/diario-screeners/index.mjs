@@ -145,6 +145,59 @@ export default {
     ctx.waitUntil(cache.put(key,out.clone()));return conditional(request,out,false);
    }catch{return json({error:'Histórico CVM não confirmado'},503)}
   }
+  // v849 — histórico anual (até 10 exercícios) de empresa dos EUA a partir do SEC XBRL Companyfacts (10-K/20-F/40-F).
+  if(url.pathname==='/v1/sec-historico'){
+   const ticker=(url.searchParams.get('ticker')||'').toUpperCase();
+   if([...url.searchParams.keys()].some(k=>k!=='ticker')||!/^[A-Z]{1,5}(?:[.-][A-Z])?$/.test(ticker))return json({error:'Ticker EUA obrigatório'},400);
+   const cache=caches.default,key=new Request(url.origin+'/v1/sec-historico?ticker='+ticker+'&rev=v849');
+   const hit=await cache.match(key);if(hit)return conditional(request,hit,true);
+   const UA={'User-Agent':'DiarioTraderQuant/1.0 (contato@diariotrader.app)',Accept:'application/json'};
+   try{
+    const mapKey=new Request(url.origin+'/v1/sec-tickers?rev=v849');let mapa=await cache.match(mapKey);
+    if(!mapa){const r=await fetch('https://www.sec.gov/files/company_tickers.json',{headers:UA,signal:AbortSignal.timeout(12000)});
+     if(!r.ok)return json({error:'Lista de tickers da SEC indisponível'},503);
+     const raw=await r.json(),m={};for(const x of Object.values(raw||{}))if(x?.ticker&&x?.cik_str)m[String(x.ticker).toUpperCase()]=String(x.cik_str).padStart(10,'0');
+     mapa=new Response(JSON.stringify(m),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=604800'}});ctx.waitUntil(cache.put(mapKey,mapa.clone()));}
+    const tab=await mapa.json(),cik=tab[ticker]||tab[ticker.replace('.','-')];
+    if(!cik)return json({error:'Ticker não encontrado na SEC'},404);
+    const r=await fetch('https://data.sec.gov/api/xbrl/companyfacts/CIK'+cik+'.json',{headers:UA,signal:AbortSignal.timeout(16000)});
+    if(!r.ok)return json({error:'SEC Companyfacts indisponível',code:r.status},r.status===404?404:502);
+    const txt=await r.text();if(txt.length>40_000_000)return json({error:'Arquivo XBRL acima do limite'},413);
+    const src=JSON.parse(txt),F=src?.facts||{},anuais=new Set(['10-K','10-K/A','20-F','20-F/A','40-F','40-F/A']);
+    const DIAS=864e5;
+    // Valor anual por exercício: duração ~1 ano (fluxos) ou posição no fim do exercício (saldos); vale o arquivo mais recente.
+    const serie=(tags,tipo)=>{const out={};
+     for(const [grupo,tag] of tags){const units=F[grupo]?.[tag]?.units||{};
+      for(const [u,rows] of Object.entries(units)){if(tipo==='acoes'?u!=='shares':!/^(USD|EUR|CAD|GBP|BRL|CHF|JPY|CNY|TWD|KRW|INR|MXN|AUD|SEK|DKK|NOK|ILS|HKD)$/.test(u))continue;
+       for(const x of rows||[]){if(!anuais.has(String(x.form))||typeof x.val!=='number'||!/^\d{4}-\d{2}-\d{2}$/.test(String(x.end||'')))continue;
+        if(tipo==='fluxo'){if(!x.start)continue;const d=(Date.parse(x.end)-Date.parse(x.start))/DIAS;if(d<330||d>400)continue}
+        const ano=Number(String(x.end).slice(0,4)),old=out[ano];
+        if(!old||String(x.filed)>old.filed||(String(x.filed)===old.filed&&String(x.end)>old.end))out[ano]={v:x.val,filed:String(x.filed),end:String(x.end),moeda:u}}
+      }
+      if(Object.keys(out).length>=3)break;}
+     return out};
+    const G='us-gaap',I='ifrs-full';
+    const campos={
+     rec:serie([[G,'Revenues'],[G,'RevenueFromContractWithCustomerExcludingAssessedTax'],[G,'SalesRevenueNet'],[G,'RevenuesNetOfInterestExpense'],[I,'Revenue']],'fluxo'),
+     luc:serie([[G,'NetIncomeLoss'],[G,'ProfitLoss'],[I,'ProfitLossAttributableToOwnersOfParent'],[I,'ProfitLoss']],'fluxo'),
+     pl:serie([[G,'StockholdersEquity'],[G,'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest'],[I,'EquityAttributableToOwnersOfParent'],[I,'Equity']],'saldo'),
+     at:serie([[G,'Assets'],[I,'Assets']],'saldo'),
+     cx:serie([[G,'CashAndCashEquivalentsAtCarryingValue'],[G,'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents'],[I,'CashAndCashEquivalents']],'saldo'),
+     div:serie([[G,'LongTermDebt'],[G,'LongTermDebtNoncurrent'],[I,'Borrowings'],[I,'NoncurrentBorrowings']],'saldo'),
+     dvd:serie([[G,'PaymentsOfDividends'],[G,'PaymentsOfDividendsCommonStock'],[I,'DividendsPaidClassifiedAsFinancingActivities']],'fluxo'),
+     acoes:serie([[G,'WeightedAverageNumberOfDilutedSharesOutstanding'],[G,'WeightedAverageNumberOfSharesOutstandingBasic'],[I,'WeightedAverageShares']],'acoes')};
+    const anosTodos=[...new Set(Object.values(campos).flatMap(o=>Object.keys(o).map(Number)))].sort((a,b)=>a-b).slice(-10),anos={};
+    let moeda=null;
+    for(const a of anosTodos){const o={};for(const [k,ser] of Object.entries(campos))if(ser[a]){o[k]=Math.round(k==='dvd'?Math.abs(ser[a].v):ser[a].v);if(k==='rec'||k==='luc')moeda=moeda||ser[a].moeda}
+     if(o.rec!=null||o.luc!=null||o.pl!=null)anos[a]=o}
+    if(Object.keys(anos).length<2)return json({error:'Sem balanços anuais suficientes na SEC'},404);
+    const ks=Object.keys(anos);
+    const body={ok:true,ticker,cik:Number(cik),nome:String(src.entityName||'').slice(0,140),setor:'',anos,exercicios:[Number(ks[0]),Number(ks[ks.length-1])],moeda:moeda||'USD',
+     gerado_em:new Date().toISOString(),fonte:'SEC EDGAR XBRL Companyfacts (10-K/20-F/40-F)',fonte_oficial:'https://data.sec.gov/api/xbrl/companyfacts/CIK'+cik+'.json'};
+    const out=Response.json(body,{headers:{...CORS,'Cache-Control':'public, max-age=86400, s-maxage=86400','X-Snapshot-Source':'sec-historico'}});
+    ctx.waitUntil(cache.put(key,out.clone()));return conditional(request,out,false);
+   }catch{return json({error:'Histórico SEC não confirmado'},503)}
+  }
   // v847 — preço mensal de 10 anos com dividendos (Yahoo), para valor de mercado, DY e retorno total.
   if(url.pathname==='/v1/historico-preco'){
    const ticker=(url.searchParams.get('ticker')||'').toUpperCase(),market=url.searchParams.get('market')||'BR';

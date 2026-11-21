@@ -7,6 +7,7 @@
  const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const fmt=(v,c=1)=>v==null||!Number.isFinite(v)?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c});
  const pct=(v,c=1)=>v==null||!Number.isFinite(v)?'—':fmt(v*100,c)+'%';
+ let MO='R$ ';
  const bi=v=>v==null||!Number.isFinite(v)?'—':Math.abs(v)>=1e9?fmt(v/1e9,1)+' bi':fmt(v/1e6,0)+' mi';
  const div=(a,b)=>Number.isFinite(a)&&Number.isFinite(b)&&b!==0?a/b:null;
  const media=xs=>{const v=xs.filter(Number.isFinite);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null};
@@ -18,7 +19,7 @@
   const meses=(precos?.meses||[]).map(([t,c,a])=>({t,ano:new Date(t*1000).getUTCFullYear(),c,a}));
   const fimAno=ano=>{const m=meses.filter(x=>x.ano===ano);return m.length?m[m.length-1]:null};
   const dps=ano=>(precos?.dividendos||[]).filter(([t])=>new Date(t*1000).getUTCFullYear()===ano).reduce((s,[,v])=>s+v,0);
-  const ult=anos.length?hist.anos[anos[anos.length-1]]:null,acoesHoje=ult?.acoes>0?(ult.pl>0&&ult.pl/ult.acoes>1000?ult.acoes*1000:ult.acoes):null;
+  const ult=anos.length?hist.anos[anos[anos.length-1]]:null,acoesHoje=ult?.acoes>0?(!hist.cik&&ult.pl>0&&ult.pl/ult.acoes>1000?ult.acoes*1000:ult.acoes):null;
   const serie=anos.map(ano=>{const x=hist.anos[ano]||{},p=fimAno(ano),dl=Number.isFinite(x.div)?x.div-(x.cx||0):null;
    const intr=x.luc>0&&x.pl>0&&acoesHoje?Math.sqrt(22.5*x.luc*x.pl)/acoesHoje:null,d=dps(ano);
    return {ano,rec:x.rec??null,luc:x.luc??null,pl:x.pl??null,dl,dvd:x.dvd??null,acoes:x.acoes??null,
@@ -89,31 +90,31 @@
  function dividendosHtml(c,pos){
   const anos=c.serie.filter(x=>x.dps!=null||x.preco!=null);
   const qtd=Number(pos?.q)||0,ult=c.serie[c.serie.length-1],med=media(c.serie.slice(-5).map(x=>x.dps||0));
-  return '<div class="hf-card hf-span2"><h4>Dividendos por ação (R$ por ano)</h4>'+linha(anos.map(x=>({x:x.ano,y:x.dps||0})),{barras:true,fmtY:v=>fmt(v,2)})+
-   '<div class="hf-pares"><span><small>Média 5 anos</small><b>R$ '+fmt(med,2)+'</b></span><span><small>Payout '+(ult?.ano||'')+'</small><b>'+pct(ult?.payout)+'</b></span>'+
-   (qtd?'<span><small>Você recebe (média, '+qtd+' ações)</small><b class="ok">R$ '+fmt(med*qtd,2)+'/ano</b></span>':'')+'</div>'+
+  return '<div class="hf-card hf-span2"><h4>Dividendos por ação ('+MO.trim()+' por ano)</h4>'+linha(anos.map(x=>({x:x.ano,y:x.dps||0})),{barras:true,fmtY:v=>fmt(v,2)})+
+   '<div class="hf-pares"><span><small>Média 5 anos</small><b>'+MO+fmt(med,2)+'</b></span><span><small>Payout '+(ult?.ano||'')+'</small><b>'+pct(ult?.payout)+'</b></span>'+
+   (qtd?'<span><small>Você recebe (média, '+qtd+' ações)</small><b class="ok">'+MO+fmt(med*qtd,2)+'/ano</b></span>':'')+'</div>'+
    '<p class="hf-leg">Datas-com futuras ainda não são publicadas em fonte aberta confiável; o valor acima é a média paga nos últimos 5 anos.</p></div>';
  }
  function html(tk,c,meta,pos){
   const a=c.atual,h=c.historico,cr=c.crescimento,u=c.serie[c.serie.length-1]||{};
-  return '<header class="hf-head"><div><h2>'+E(tk)+' · '+E(meta.nome||'')+'</h2><p>'+E(meta.setor||'')+' · exercícios '+E((meta.exercicios||[]).join('–'))+' · preço R$ '+fmt(a.preco,2)+'</p></div>'+
+  return '<header class="hf-head"><div><h2>'+E(tk)+' · '+E(meta.nome||'')+'</h2><p>'+E(meta.setor||'')+' · exercícios '+E((meta.exercicios||[]).join('–'))+' · preço '+MO+fmt(a.preco,2)+'</p></div>'+
    '<div class="hf-acoes"><button type="button" class="btn s" data-hf="pdf">Salvar PDF</button><button type="button" class="btn s" data-hf="fechar">Fechar</button></div></header>'+
    '<h3 class="hf-sec">Qualidade histórica · últimos 10 anos</h3>'+
    '<div class="hf-grid hf-g5">'+cartaoIndicador('roe','Rentabilidade (ROE)',a.roe,h.roe,v=>pct(v))+cartaoIndicador('margem','Margem líquida',a.margem,h.margem,v=>pct(v))+
    cartaoIndicador('dy','Dividend yield',a.dy,h.dy,v=>pct(v))+cartaoIndicador('dlpl','Dívida líquida / PL',a.dlpl,h.dlpl,v=>fmt(v,2)+'x')+
-   '<div class="hf-card hf-desc"><h4>Preço × valor intrínseco</h4><div class="hf-pares"><span><small>Valor intrínseco</small><b>R$ '+fmt(a.intrinseco,2)+'</b></span><span><small>Preço</small><b>R$ '+fmt(a.preco,2)+'</b></span></div>'+
+   '<div class="hf-card hf-desc"><h4>Preço × valor intrínseco</h4><div class="hf-pares"><span><small>Valor intrínseco</small><b>'+MO+fmt(a.intrinseco,2)+'</b></span><span><small>Preço</small><b>'+MO+fmt(a.preco,2)+'</b></span></div>'+
    '<p class="hf-big '+(c.desconto<0?'ok':'neg')+'">'+(c.desconto==null?'—':(c.desconto<0?'Desconto ':'Ágio ')+pct(Math.abs(c.desconto)))+'</p><p class="hf-leg">Graham sobre o último balanço anual. Estimativa, não recomendação.</p></div></div>'+
    '<div class="hf-card hf-full"><h4>Criação de valor · preço × valor intrínseco</h4>'+precoIntrinseco(c)+'</div>'+
    '<div class="hf-grid hf-g4">'+
    '<div class="hf-card"><h4>Histórico do ROE</h4>'+linha(c.serie.map(x=>({x:x.ano,y:x.roe!=null?x.roe*100:null})),{fmtY:v=>fmt(v,0)+'%'})+'</div>'+
    '<div class="hf-card"><h4>Histórico da margem líquida</h4>'+linha(c.serie.map(x=>({x:x.ano,y:x.margem!=null?x.margem*100:null})),{fmtY:v=>fmt(v,0)+'%'})+'</div>'+
    '<div class="hf-card"><h4>Histórico do dividend yield</h4>'+linha(c.serie.map(x=>({x:x.ano,y:x.dy!=null?x.dy*100:null})),{fmtY:v=>fmt(v,1)+'%'})+'</div>'+
-   '<div class="hf-card"><h4>Dívida líquida (R$)</h4>'+linha(c.serie.map(x=>({x:x.ano,y:x.dl})),{fmtY:bi,barras:true})+'</div></div>'+
+   '<div class="hf-card"><h4>Dívida líquida ('+MO.trim()+')</h4>'+linha(c.serie.map(x=>({x:x.ano,y:x.dl})),{fmtY:bi,barras:true})+'</div></div>'+
    '<h3 class="hf-sec">Crescimento histórico</h3>'+
-   '<div class="hf-grid hf-g6"><div class="hf-card hf-span2"><h4>Lucro líquido (R$)</h4>'+linha(c.serie.map(x=>({x:x.ano,y:x.luc})),{fmtY:bi,barras:true})+'</div>'+
+   '<div class="hf-grid hf-g6"><div class="hf-card hf-span2"><h4>Lucro líquido ('+MO.trim()+')</h4>'+linha(c.serie.map(x=>({x:x.ano,y:x.luc})),{fmtY:bi,barras:true})+'</div>'+
    cagrCard('CAGR de lucros',cr.lucros)+cagrCard('CAGR do valor de mercado',cr.valorMercado)+cagrCard('CAGR do valor intrínseco',cr.intrinseco)+cagrCard('Retorno total (com dividendos)',cr.totalReturn,'tr')+'</div>'+
    '<div class="hf-grid hf-g2">'+dividendosHtml(c,pos)+'</div>'+
-   '<p class="hf-fonte">Fontes: CVM (DFP: DRE, balanço, DFC e composição do capital, '+E((meta.exercicios||[]).join('–'))+'), Yahoo Finance (preço mensal e dividendos). Retorno total acumulado: '+pct(cr.totalReturnAcum,0)+'. Dados atualizados semanalmente. Não é recomendação.</p>';
+   '<p class="hf-fonte">Fontes: '+(meta.cik?'SEC EDGAR (XBRL dos relatórios anuais 10-K/20-F, '+E((meta.exercicios||[]).join('–'))+')':'CVM (DFP: DRE, balanço, DFC e composição do capital, '+E((meta.exercicios||[]).join('–'))+')')+', Yahoo Finance (preço mensal e dividendos). Retorno total acumulado: '+pct(cr.totalReturnAcum,0)+'. Dados atualizados semanalmente. Não é recomendação.</p>';
  }
 
  /* ---------- carga (Cloudflare + cache local) ---------- */
@@ -122,20 +123,21 @@
  async function obter(rota,signal){const c=lerCache(rota);if(c)return c;const r=await fetch(BASE+rota,{signal});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw Error(j.error||'HTTP '+r.status);salvaCache(rota,j);return j}
  let ctrl=null;
  function fechar(){ctrl?.abort();ctrl=null;w.document?.getElementById('hf847')?.remove();w.document?.body?.classList.remove('hf-aberto')}
- async function abrir(tk,pos){
+ async function abrir(tk,pos,market){
+  const us=market==='US'||(!/^[A-Z]{4}\d{1,2}$/.test(tk)&&/^[A-Z]{1,5}(?:[.-][A-Z])?$/.test(tk));MO=us?'US$ ':'R$ ';
   const d=w.document;fechar();ctrl=new AbortController();
   const ov=d.createElement('div');ov.id='hf847';ov.setAttribute('role','dialog');ov.setAttribute('aria-label','Avaliação histórica de '+tk);
-  ov.innerHTML='<div class="hf-wrap"><p class="hf-vazio">Carregando 10 anos de balanços de '+E(tk)+'…</p><button type="button" class="btn s" data-hf="fechar">Fechar</button></div>';
+  ov.innerHTML='<div class="hf-wrap"><p class="hf-vazio">Carregando 10 anos de balanços de '+E(tk)+(us?' (SEC)':' (CVM)')+'…</p><button type="button" class="btn s" data-hf="fechar">Fechar</button></div>';
   d.body.appendChild(ov);d.body.classList.add('hf-aberto');
-  try{const [h,p]=await Promise.all([obter('/v1/cvm-historico?ticker='+encodeURIComponent(tk),ctrl.signal),obter('/v1/historico-preco?market=BR&ticker='+encodeURIComponent(tk),ctrl.signal).catch(()=>({meses:[],dividendos:[]}))]);
+  try{const [h,p]=await Promise.all([obter((us?'/v1/sec-historico':'/v1/cvm-historico')+'?ticker='+encodeURIComponent(tk),ctrl.signal),obter('/v1/historico-preco?market='+(us?'US':'BR')+'&ticker='+encodeURIComponent(tk),ctrl.signal).catch(()=>({meses:[],dividendos:[]}))]);
    if(!ov.isConnected)return;const c=calcular(h,p);w.__hf847={tk,c};
    ov.querySelector('.hf-wrap').innerHTML=html(tk,c,h,pos);
   }catch(e){if(e?.name==='AbortError'||!ov.isConnected)return;
-   ov.querySelector('.hf-wrap').innerHTML='<p class="hf-vazio">Não foi possível carregar o histórico: '+E(String(e.message||e).slice(0,140))+'. A base da CVM é atualizada aos sábados.</p><button type="button" class="btn s" data-hf="fechar">Fechar</button>'}
+   ov.querySelector('.hf-wrap').innerHTML='<p class="hf-vazio">Não foi possível carregar o histórico: '+E(String(e.message||e).slice(0,140))+'. '+(us?'A SEC às vezes limita consultas; tente de novo em alguns minutos.':'A base da CVM é atualizada aos sábados.')+'</p><button type="button" class="btn s" data-hf="fechar">Fechar</button>'}
  }
  if(w.document){
   w.document.addEventListener('click',e=>{const b=e.target.closest?.('[data-hf],[data-hf-abrir]');if(!b)return;
-   if(b.dataset.hfAbrir){e.preventDefault();const tk=b.dataset.hfAbrir,pos=(w.DiarioScreeners?.holdings?.()||[]).find(x=>x.ticker===tk);return void abrir(tk,pos)}
+   if(b.dataset.hfAbrir){e.preventDefault();const tk=b.dataset.hfAbrir,pos=(w.DiarioScreeners?.holdings?.()||[]).find(x=>x.ticker===tk);return void abrir(tk,pos,b.dataset.hfMarket)}
    if(b.dataset.hf==='fechar'){e.preventDefault();fechar()}
    if(b.dataset.hf==='pdf'){e.preventDefault();w.print()}
   });

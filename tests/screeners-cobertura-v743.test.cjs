@@ -31,7 +31,7 @@ test('Painel exibe cobertura auditável com campos ausentes e sem duplicar telas
  new vm.Script(app);
  assert.match(app,/function coverage\(m,s\)/);
  assert.match(app,/cobertura_media_pct/);
- assert.match(app,/cobertura_pct','Cobertura/);
+ assert.match(app,/cobertura_pct','Cobertura/);assert.match(app,/row\[COB\[0\]\]/);
  assert.match(css,/\.scr-coverage/);
  assert.match(css,/#11141b|var\(--dt-s1\)/i);
  assert.match(css,/#d4a017/i);
