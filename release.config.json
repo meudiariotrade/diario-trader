@@ -1,5 +1,5 @@
 {
-  "version": 861,
+  "version": 862,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -127,6 +127,7 @@
       "src/studies/tecnica-voz.js",
       "src/studies/tecnica-roteiros.js",
       "src/studies/tecnica-graficos.js",
+      "src/studies/mentor-figuras.js",
       "src/studies/tecnica-pdf.js",
       "src/studies/tecnica-aulas.js",
       "src/studies/tecnica-estilos.js",
