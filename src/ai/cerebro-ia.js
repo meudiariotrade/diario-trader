@@ -61,11 +61,11 @@
   const j=await res.json();if(!res.ok)throw Error(j.erro||'Fonte não disponível; cole o conteúdo autorizado');
   return j.texto;
  }
- async function ingest({titulo,autor,tipo,categoria,texto,url=''},anterior=null){
+ async function ingest({titulo,autor,tipo,categoria,texto,url=''},anterior=null,semConfirmar=false){
   if(busy)throw Error('Importação anterior em andamento');
   const blocks=chunks(texto);if(!blocks.length)throw Error('Texto insuficiente para indexar');
   if(blocks.length>MAX)throw Error('Este arquivo excede 12.000 trechos. Divida o livro em volumes para importar todo o texto.');
-  if(!anterior&&!confirm('Indexar '+blocks.length+' trechos no Supabase? Originais ficam apenas neste dispositivo.'))return;
+  if(!anterior&&!semConfirmar&&!confirm('Indexar '+blocks.length+' trechos no Supabase? Originais ficam apenas neste dispositivo.'))return;
   busy=true;controller=new AbortController();const origin=owner();
   try{
    let inicio=anterior?.sincronizados||0;
@@ -146,7 +146,7 @@
    '<div class="cb842-row"><button class="btn s" data-brain-import-video="1">Importar vídeo</button><button class="btn s" data-brain-import-web="1">Importar artigo</button><button class="btn s" data-brain-manual="1">Indexar Manual Mestre</button>'+(busy?'<button class="btn s" data-brain-cancel="1">Cancelar importação</button>':'')+'</div>'+
    '<p role="status" aria-live="polite" class="cb842-st">'+esc(progress)+'</p><progress max="100" value="'+progressPct+'" class="cb842-pg"></progress></section>'+
    '<section class="cb842-blk"><h3>Buscar na base</h3><div class="cb842-row"><input id="brain-query" maxlength="480" placeholder="Ex.: impacto do Copom no DI e Fibonaccing"><button class="btn s" data-brain-search="1">Buscar trechos</button></div>'+
-   (hits.length?'<ol class="cb842-hits">'+hits.map(x=>'<li><b>'+esc(x.titulo_obra)+'</b> <span class="cb842-sim">relevância '+Number(x.similarity||0).toFixed(2).replace('.',',')+'</span><p>'+esc(x.conteudo_chunk)+'</p></li>').join('')+'</ol>':'')+'</section>'+
+   (hits.length?'<ol class="cb842-hits">'+hits.map((x,i)=>'<li><b>'+esc(x.titulo_obra)+'</b> <span class="cb842-sim">relevância '+Number(x.similarity||0).toFixed(2).replace('.',',')+'</span><p>'+esc(x.conteudo_chunk)+'</p><button class="btn s" data-brain-del-hit="'+i+'">Excluir este trecho</button></li>').join('')+'</ol>':'')+'</section>'+
    '<section class="cb842-blk"><div class="cb842-h2"><h3>Obras indexadas</h3><button class="btn s" data-brain-refresh="1">Atualizar lista</button></div>'+
    (local.length?local.map(x=>'<div class="cb842-obra"><div><b>'+esc(x.titulo)+'</b><small>'+x.sincronizados+' de '+x.blocos+' trechos · '+esc(String(x.categoria).replace(/_/g,' '))+'</small></div><div class="cb842-row">'+(x.sincronizados<x.blocos&&x.texto?'<button class="btn s" data-brain-resume="'+esc(x.id)+'">Continuar</button>':'')+'<button class="btn s" data-brain-remove="'+esc(x.id)+'">Excluir</button></div></div>').join(''):'<p class="cb842-mut">Nenhuma obra neste aparelho.</p>')+'</section>'+
    '</div><aside class="cb842-side">'+
@@ -155,7 +155,7 @@
    '<button class="btn s" data-brain-licoes="1">Gravar lições agora</button></section>'+
    '<section class="cb842-blk"><h3>Acerto por fonte</h3>'+(fontes.length?'<table class="cb842-tb"><thead><tr><th>Obra</th><th>Leituras</th><th>Acerto</th></tr></thead><tbody>'+fontes.map(f=>'<tr><td>'+esc(f.titulo)+'</td><td>'+f.n+'</td><td><span class="cb842-bar"><i style="width:'+pct(f.taxa)+'" class="'+(f.taxa>=.6?'ok':f.taxa>=.4?'at':'neg')+'"></i></span>'+pct(f.taxa)+'</td></tr>').join('')+'</tbody></table>':'<p class="cb842-mut">Aparece depois que as análises do Jornal usarem obras do Cérebro e o placar conferir o resultado.</p>')+'</section>'+
    '<section class="cb842-blk"><h3>Como a IA usa</h3><ul class="cb842-mut"><li>Busca por tema: ativo + assunto + lições de erro.</li><li>Só trechos com relevância mínima entram.</li><li>A Pesquisa mostra no relatório quais obras foram usadas.</li><li>Originais ficam neste aparelho; só os trechos vão para a sua conta.</li></ul></section>'+
-   '</aside></div></section>';
+   '</aside></div>'+(w.DiarioCerebroEstudos?w.DiarioCerebroEstudos.html():'')+'</section>';
  }
  async function sync(){items=await all();licoes(false).then(n=>{if(n)sync()}).catch(()=>{});
   for(const obra of items){
@@ -167,7 +167,7 @@
   refresh();
   observer?.disconnect();observer=null;
   if(d.querySelector('[data-brain-root]')&&typeof MutationObserver!=='undefined'){
-   observer=new MutationObserver(()=>{if(d.querySelector('[data-brain-root]'))return;controller?.abort();observer?.disconnect();observer=null});
+   observer=new MutationObserver(()=>{if(d.querySelector('[data-brain-root]'))return;controller?.abort();w.DiarioCerebroEstudos?.leave?.();observer?.disconnect();observer=null});
    observer.observe(d.body,{subtree:true,childList:true});
   }
  }
@@ -191,7 +191,7 @@
   }
  }
  d.addEventListener('click',async e=>{
-  const btn=e.target.closest('[data-brain-licoes],[data-brain-import-file],[data-brain-import-video],[data-brain-import-web],[data-brain-manual],[data-brain-refresh],[data-brain-cancel],[data-brain-search],[data-brain-remove],[data-brain-resume],[data-brain-back]');
+  const btn=e.target.closest('[data-brain-del-hit],[data-brain-licoes],[data-brain-import-file],[data-brain-import-video],[data-brain-import-web],[data-brain-manual],[data-brain-refresh],[data-brain-cancel],[data-brain-search],[data-brain-remove],[data-brain-resume],[data-brain-back]');
   if(!btn||typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='brain')return;
   e.preventDefault();
   if(btn.hasAttribute('data-brain-back')){controller?.abort();ESV='est';if(typeof render==='function')render();return}
@@ -199,7 +199,8 @@
   try{
    if(btn.hasAttribute('data-brain-refresh'))return void await sync();
    if(btn.hasAttribute('data-brain-licoes')){status('Gravando lições…',30);const n=await licoes(true);status(n?n+' lição(ões) gravada(s) no Cérebro.':'Nenhum erro novo no placar.',100);return}
-   if(btn.hasAttribute('data-brain-search')){const q=value('brain-query');if(!q)throw Error('Digite uma consulta');const j=await api({acao:'buscar',consulta:q});hits=j.trechos||[];status('Pesquisa concluída',100);return}
+   if(btn.dataset.brainDelHit!=null){const x=hits[Number(btn.dataset.brainDelHit)];if(!x||!confirm('Excluir só este trecho de "'+x.titulo_obra+'"?'))return;await api({acao:'remover_trecho',titulo_obra:x.titulo_obra,conteudo_chunk:x.conteudo_chunk});hits=hits.filter(h=>h!==x);status('Trecho excluído.',100);return void refresh()}
+   if(btn.hasAttribute('data-brain-search')){const q=value('brain-query');if(!q)throw Error('Digite uma consulta');const pesos={};porFonte().forEach(f=>{if(f.n>=3)pesos[f.titulo]=f.taxa});const j=await api({acao:'buscar',consulta:q,pesos});hits=j.trechos||[];status('Pesquisa concluída',100);return}
    if(btn.dataset.brainResume){
     const obra=items.find(x=>x.owner===owner()&&x.id===btn.dataset.brainResume);
     if(!obra?.texto)throw Error('Texto original indisponível neste dispositivo');
@@ -210,5 +211,11 @@
    await execute(action);
   }catch(err){status('Não foi possível concluir: '+String(err.message||err).slice(0,150),0)}
  });
- w.DiarioCerebroIA={view,enter:sync,licoes,porFonte,textoLicao,leave(){controller?.abort();controller=null;observer?.disconnect();observer=null},chunks,manual};
+ /* v845: importação em lote — um arquivo por vez, sem perguntar de novo a cada arquivo. */
+ async function importar(f,{autor='',categoria='Analise_Tecnica'}={}){
+  const ext=f.name.split('.').pop().toLowerCase();if(!tipos[ext]||f.size>100*1024*1024)throw Error('Formato ou tamanho não aceito');
+  status('Extraindo '+f.name+'…',5);const s=ext==='pdf'?await extractPDF(f):await f.text();
+  return ingest({titulo:f.name.replace(/\.[^.]+$/,'').slice(0,200),autor,tipo:'Livro_PDF',categoria,texto:s},null,true);
+ }
+ w.DiarioCerebroIA={view,enter:sync,licoes,porFonte,textoLicao,api,importar,leave(){controller?.abort();controller=null;observer?.disconnect();observer=null;w.DiarioCerebroEstudos?.leave?.()},chunks,manual};
 })(window,document);

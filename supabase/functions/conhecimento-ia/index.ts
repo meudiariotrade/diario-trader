@@ -1,4 +1,4 @@
-import {envComVault, provedores} from '../_shared/ai-router.ts';
+import {envComVault, provedores, gerarTexto} from '../_shared/ai-router.ts';
 /** v805 — IA de biblioteca e visão; JWT obrigatório, sem Storage, sem polling. */
 const sb=Deno.env.get('SUPABASE_URL')||'';
 const pub=Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -168,7 +168,60 @@ Deno.serve(async(req:Request)=>{
    if(b.filtro_categoria&&!CATEGORIA.has(b.filtro_categoria))return response(req,{erro:'Categoria inválida'},400);
    const vector=await vetorDisponivel(texto,'RETRIEVAL_QUERY');
    const found=await db('rpc/buscar_biblioteca_hibrida',jwt,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({consulta:texto,query_embedding:vector,match_count:Math.min(6,Math.max(1,Number(b.match_count)||5)),filtro_categoria:b.filtro_categoria||null})});
-   return response(req,{trechos:found||[]});
+   /* v845: peso por qualidade (acerto por obra enviado pelo app) e prazo de validade para artigo, vídeo e macro. */
+   let trechos=Array.isArray(found)?found:[];
+   if(trechos.length){
+    const pesos=b.pesos&&typeof b.pesos==='object'?b.pesos:{};
+    const titulos=[...new Set(trechos.map((t:any)=>String(t.titulo_obra||'')))].slice(0,12);
+    let idade:Record<string,number>={},macro:Record<string,boolean>={};
+    try{const r=await db('conhecimento_trading?select=titulo_obra,categoria,criado_em&titulo_obra=in.('+titulos.map(t=>'"'+t.replace(/"/g,'')+'"').map(encodeURIComponent).join(',')+')&limit=60',jwt);
+     for(const x of r||[]){const dias=(Date.now()-Date.parse(x.criado_em))/864e5;if(Number.isFinite(dias))idade[x.titulo_obra]=Math.max(idade[x.titulo_obra]||0,dias);if(x.categoria==='Fatos_Relevantes_Macro')macro[x.titulo_obra]=true;}}catch{}
+    trechos=trechos.map((t:any)=>{const p=Number(pesos[t.titulo_obra]);const q=Number.isFinite(p)?0.8+0.4*Math.max(0,Math.min(1,p)):1;
+     const efemero=t.tipo_fonte==='Artigo_Web'||t.tipo_fonte==='Video_YouTube'||!!macro[t.titulo_obra];const dias=Math.max(0,idade[t.titulo_obra]??0);
+     const v=efemero?Math.max(0.5,1-dias/365):1;const base=Number(t.similarity)||0;return {...t,similarity:base*q*v,similarity_original:base};})
+     .sort((a:any,b:any)=>b.similarity-a.similarity);
+   }
+   return response(req,{trechos});
+  }
+  /* v845: estudar com o Cérebro — gera material de estudo SÓ a partir dos trechos da biblioteca do usuário. */
+  if(b.acao==='gerar'){
+   const MODOS:Record<string,string>={
+    pergunta:'Crie UMA pergunta de múltipla escolha (4 alternativas, uma correta) baseada nos trechos. JSON: {"pergunta":"","alternativas":["","","",""],"correta":0,"explicacao":"","fonte":"título da obra"}',
+    explicar:'Explique o conteúdo dos trechos para um iniciante, em português simples, com um exemplo prático no mini índice (WIN) ou no mini dólar (WDO). JSON: {"titulo":"","explicacao":"","exemplo":"","fonte":""}',
+    comparar:'Compare o que cada obra/autor dos trechos diz sobre o tema pedido. JSON: {"tema":"","visoes":[{"obra":"","resumo":""}],"pontos_comuns":"","diferencas":""}',
+    mapa:'Monte um mapa de conceitos com os conceitos dos trechos e como se ligam. JSON: {"centro":"","nos":[{"id":"","rotulo":""}],"ligacoes":[{"de":"","para":"","relacao":""}]}',
+    simulado:'Crie N questões de múltipla escolha no estilo da prova CNPI-T, com dificuldade indicada, usando os trechos. JSON: {"questoes":[{"pergunta":"","alternativas":["","","",""],"correta":0,"explicacao":"","fonte":"","trecho":"","topico":""}]}',
+    resumo:'Faça um resumo para revisão de prova, em tópicos curtos, com os pontos que mais caem. JSON: {"titulo":"","topicos":[""],"para_ouvir":"texto corrido de 1 a 2 minutos para ouvir"}',
+    aula_erro:'O erro do usuário está em ERRO. Monte uma aula curta para corrigir esse erro usando os trechos. JSON: {"titulo":"","por_que_acontece":"","o_que_fazer":[""],"exercicio":"","fonte":""}',
+    glossario:'Liste termos importantes dos trechos com definição simples em português e o termo em inglês. JSON: {"termos":[{"pt":"","en":"","definicao":""}]}',
+    materia:'Ligue a matéria da faculdade em MATERIA a exemplos reais de mercado presentes nos trechos e no contexto. JSON: {"materia":"","ligacoes":[{"conceito":"","exemplo_mercado":""}]}',
+    perguntar:'Responda à pergunta usando apenas os trechos e cite a obra de cada afirmação. JSON: {"resposta":"","citacoes":[{"obra":"","trecho":""}],"lacuna":"o que os trechos não cobrem, se houver"}',
+    trade:'O trade do usuário está em TRADE. Escolha o trecho que mais se aplica e diga por quê, em 2 frases. JSON: {"trecho":"","obra":"","por_que":""}'
+   };
+   const modo=String(b.modo||'');if(!MODOS[modo])return response(req,{erro:'Modo inválido'},400);
+   const tema=short(b.tema,400)||'gestão de risco análise técnica',extra=short(b.extra,1600),n=Math.max(1,Math.min(10,Number(b.n)||5));
+   const vector=await vetorDisponivel(tema,'RETRIEVAL_QUERY');
+   const found=await db('rpc/buscar_biblioteca_hibrida',jwt,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({consulta:tema,query_embedding:vector,match_count:6,filtro_categoria:CATEGORIA.has(b.filtro_categoria)?b.filtro_categoria:null})}).catch(()=>[]);
+   const trechos=(Array.isArray(found)?found:[]).slice(0,6);
+   if(!trechos.length)return response(req,{erro:'O Cérebro não tem trechos sobre esse tema ainda. Importe material primeiro.'},404);
+   const ctx=trechos.map((t:any,i:number)=>'['+(i+1)+'] '+t.titulo_obra+(t.autor?' ('+t.autor+')':'')+': '+String(t.conteudo_chunk).slice(0,1200)).join('\n\n');
+   const sys='Você é um professor de mercado financeiro. Use SOMENTE os trechos fornecidos; não invente números nem fatos. Escreva em português do Brasil. Nunca use a notação R (R-múltiplo); use "vezes o risco", R$ ou %. Responda só com JSON válido.';
+   const prompt=MODOS[modo].replace('N questões',n+' questões')+'\n\nTEMA: '+tema+(extra?'\nCONTEXTO: '+extra:'')+'\n\nTRECHOS:\n'+ctx;
+   const r=await gerarTexto(sys,prompt,{json:true,temp:0.3,ate:Date.now()+45000});
+   let v;try{v=JSON.parse(String(r.texto||'').replace(/^```json\s*|```$/g,''))}catch{return response(req,{erro:'A IA não retornou um resultado válido. Tente de novo.'},502)}
+   return response(req,{modo,resultado:v,fontes:[...new Set(trechos.map((t:any)=>t.titulo_obra))],modelo:r.modelo||''});
+  }
+  /* v845: cobertura — quantos trechos por categoria e por obra, para mostrar onde falta material. */
+  if(b.acao==='cobertura'){
+   const rows=await db('conhecimento_trading?select=categoria,titulo_obra&limit=20000',jwt);
+   const cat:Record<string,number>={},obra:Record<string,number>={};for(const r of rows||[]){cat[r.categoria]=(cat[r.categoria]||0)+1;obra[r.titulo_obra]=(obra[r.titulo_obra]||0)+1;}
+   return response(req,{categorias:cat,obras:obra,total:(rows||[]).length});
+  }
+  /* v845: remover só um trecho errado (dono + obra + texto exato). */
+  if(b.acao==='remover_trecho'){
+   const titulo=short(b.titulo_obra,200),texto=String(b.conteudo_chunk||'').slice(0,1400);if(!titulo||texto.length<50)return response(req,{erro:'Trecho inválido'},400);
+   await db('conhecimento_trading?owner_id=eq.'+uid+'&titulo_obra=eq.'+encodeURIComponent(titulo)+'&conteudo_chunk=eq.'+encodeURIComponent(texto),jwt,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+   return response(req,{removido:true});
   }
   if(b.acao==='obras'){
    const rows=await db('conhecimento_trading?select=obra_id,titulo_obra,autor,tipo_fonte,categoria,criado_em&order=criado_em.desc&limit=400',jwt);

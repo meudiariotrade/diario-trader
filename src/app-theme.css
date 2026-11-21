@@ -3605,3 +3605,48 @@ html:root body #app .atl842-passos{margin:0;padding-left:18px;font-size:13px;dis
    Cores mudam na hora; continuam animados só movimento, opacidade e tamanho. As linhas de Cotações (.cqr) mantêm o
    piscar de preço do v678. */
 html:root body #app :not(.cqr,.cqr *),html:root body #app :not(.cqr,.cqr *)::before,html:root body #app :not(.cqr,.cqr *)::after{transition-property:transform,opacity,width,height,max-height,flex-basis!important}
+/* v845 — Cérebro: alimentar e estudar */
+html:root body #app .ce845{display:grid;gap:12px;margin-top:12px;min-width:0}
+html:root body #app .ce845-tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--ui-card-line,#1E232E)}
+html:root body #app .ce845-tabs button{min-height:40px;padding:0 14px;background:none;border:0;border-bottom:2px solid transparent;color:var(--ui-label,#64748B);font-size:14px;white-space:nowrap;cursor:pointer}
+html:root body #app .ce845-tabs button[aria-selected="true"]{color:var(--ui-title,#E2E8F0);border-bottom-color:#F59E0B}
+html:root body #app .ce845-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+html:root body #app .ce845 .btn{min-height:40px}
+html:root body #app .ce845 input,html:root body #app .ce845 select,html:root body #app .ce845 textarea{min-height:40px;min-width:0;flex:1 1 180px}
+html:root body #app .ce845-list{display:grid;gap:0}
+html:root body #app .ce845-li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--ui-card-line,rgba(255,255,255,.06));min-width:0}
+html:root body #app .ce845-li span{min-width:0;overflow-wrap:anywhere}
+html:root body #app .ce845-res{display:grid;gap:6px;padding-top:8px;border-top:1px solid var(--ui-card-line,rgba(255,255,255,.06))}
+html:root body #app .ce845-res h4{margin:0;font-size:14px;color:var(--ui-title,#E2E8F0)}
+html:root body #app .ce845-res p,html:root body #app .ce845-res li{font-size:14px;line-height:1.5;margin:0}
+html:root body #app .ce845 q{display:block;font-size:13px;line-height:1.5;padding:6px 10px;border-left:2px solid #F59E0B;background:var(--ui-sub,#181C28);color:var(--ui-title,#E2E8F0)}
+html:root body #app .ce845 q::before,html:root body #app .ce845 q::after{content:none}
+html:root body #app .ce845-cit{display:grid;gap:6px;padding-left:16px;margin:0}
+html:root body #app .ce845-fonte{font-size:12px;color:var(--ui-label,#64748B)}
+html:root body #app .ce845-err{color:#EF4444;font-size:13px}
+html:root body #app .ce845-num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+html:root body #app .ce845-q{display:grid;gap:6px}
+html:root body #app .ce845-q p{margin:0}
+html:root body #app .ce845-alt{min-height:44px;text-align:left;padding:8px 10px;border-radius:4px;border:1px solid var(--ui-card-line,rgba(255,255,255,.06));background:var(--ui-sub,#181C28);color:var(--ui-title,#E2E8F0);font-size:14px;cursor:pointer}
+html:root body #app .ce845-alt.ok{border-color:#10B981;background:rgba(16,185,129,.14)}
+html:root body #app .ce845-alt.neg{border-color:#EF4444;background:rgba(239,68,68,.14)}
+html:root body #app .ce845-exp{display:grid;gap:6px}
+html:root body #app .ce845-som{min-width:40px;min-height:40px;border-radius:4px;border:1px solid var(--ui-card-line,rgba(255,255,255,.06));background:var(--ui-sub,#181C28);color:#F59E0B;cursor:pointer}
+html:root body #app .ce845-glos td:not(:first-child){text-align:left;white-space:normal}
+html:root body #app .ce845-mapa{width:100%;max-width:520px;height:auto}
+html:root body #app .ce845-mapa .l line{stroke:var(--ui-label,#64748B);stroke-width:1}
+html:root body #app .ce845-mapa text{fill:var(--ui-title,#E2E8F0);font-size:11px}
+html:root body #app .ce845-mapa text.c{fill:#F59E0B;font-size:13px;font-weight:600}
+html:root body #app .ce845-dias{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+html:root body #app .ce845-dias span{display:grid;gap:2px;padding:4px;background:var(--ui-sub,#181C28);border-radius:4px;text-align:center;min-width:0}
+html:root body #app .ce845-dias small{font-size:11px;color:var(--ui-label,#64748B);white-space:nowrap;font-variant-numeric:tabular-nums}
+html:root body #app .ce845-leit{display:grid;gap:6px;padding-top:8px}
+html:root body #app .ce845-hist{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:68px}
+html:root body #app .ce845-hist span{display:grid;justify-items:center;gap:2px}
+html:root body #app .ce845-hist i{display:block;width:100%;max-width:28px;min-height:2px;background:#10B981;border-radius:2px}
+html:root body #app .ce845-hist small{font-size:11px;color:var(--ui-label,#64748B);font-variant-numeric:tabular-nums}
+html:root body #app .ce845 details summary{cursor:pointer;font-size:13px;color:var(--ui-label,#64748B);min-height:32px}
+@media (max-width:767px){html:root body #app .ce845 input,html:root body #app .ce845 select,html:root body #app .ce845 textarea{font-size:16px}}
+@media (min-width:1100px){html:root body #app .ce845{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}html:root body #app .ce845-tabs{grid-column:1/-1}}
+html:root body #app .ce845-tabs button{background:none!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;color:var(--ui-label,#64748B)!important;flex:0 0 auto}
+html:root body #app .ce845-tabs button[aria-selected="true"]{color:var(--ui-title,#E2E8F0)!important;border-bottom-color:#F59E0B!important}
