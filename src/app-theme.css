@@ -3600,3 +3600,8 @@ html:root body #app .atl842-it b{grid-column:1/-1;font-size:13px}
 html:root body #app .atl842-it code{font-size:11px;word-break:break-all;color:var(--ui-label,#94A3B8)}
 html:root body #app .atl842 .btn{min-height:40px}
 html:root body #app .atl842-passos{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}
+/* v844 — fim do "pisca preto" no tema claro (iPhone): ao redesenhar uma tela, o Safari às vezes calcula o estilo
+   no meio da troca de classes do <body> e a transição de cor de 0,2 s partia do fundo escuro até o claro.
+   Cores mudam na hora; continuam animados só movimento, opacidade e tamanho. As linhas de Cotações (.cqr) mantêm o
+   piscar de preço do v678. */
+html:root body #app :not(.cqr,.cqr *),html:root body #app :not(.cqr,.cqr *)::before,html:root body #app :not(.cqr,.cqr *)::after{transition-property:transform,opacity,width,height,max-height,flex-basis!important}

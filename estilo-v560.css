@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 a5dfa08d0902b3b5b365b480626d28093419b063d81e6a1540b976e883e7ad34 */
+/* Gerado de src/app-theme.css · SHA256 d883f5121bee37f28a6f705e46292771d3249b064eca29388910af6b2e050c89 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -3601,3 +3601,8 @@ html:root body #app .atl842-it b{grid-column:1/-1;font-size:13px}
 html:root body #app .atl842-it code{font-size:11px;word-break:break-all;color:var(--ui-label,#94A3B8)}
 html:root body #app .atl842 .btn{min-height:40px}
 html:root body #app .atl842-passos{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}
+/* v844 — fim do "pisca preto" no tema claro (iPhone): ao redesenhar uma tela, o Safari às vezes calcula o estilo
+   no meio da troca de classes do <body> e a transição de cor de 0,2 s partia do fundo escuro até o claro.
+   Cores mudam na hora; continuam animados só movimento, opacidade e tamanho. As linhas de Cotações (.cqr) mantêm o
+   piscar de preço do v678. */
+html:root body #app :not(.cqr,.cqr *),html:root body #app :not(.cqr,.cqr *)::before,html:root body #app :not(.cqr,.cqr *)::after{transition-property:transform,opacity,width,height,max-height,flex-basis!important}
