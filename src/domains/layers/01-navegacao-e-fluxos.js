@@ -12803,6 +12803,21 @@ ${fe(1, "#cca764", "futuro acima do à vista (normal)", t.emA)}${fe(-1, "#c69a49
             (t.preventDefault(), oe(x.dataset.auopen));
             return;
           }
+          if ((x = p("[data-auretomar]"))) {
+            // v869: continua no servidor (fila com o texto do PDF), sem precisar do aparelho que começou.
+            const id = x.dataset.auretomar; x.disabled = !0; x.textContent = "Continuando…";
+            (async () => {
+              try {
+                await tok(); const W = cfg();
+                const Z = await fetch(W.url + "/functions/v1/aulas", { method: "POST", headers: { "Content-Type": "application/json", apikey: W.key, Authorization: "Bearer " + SESS.at }, body: JSON.stringify({ acao: "retomar", id }), signal: AbortSignal.timeout(20e3) });
+                const ne = await Z.json().catch(() => ({}));
+                window.__auProg869 = window.__auProg869 || {};
+                window.__auProg869[id] = Z.ok ? { feitas: ne.feitas || 0, total: ne.total || 0 } : { erro: ne.error || "Não foi possível continuar agora." };
+              } catch (W) { (window.__auProg869 = window.__auProg869 || {})[id] = { erro: "Sem conexão para continuar agora." }; }
+              (F.lista = null), R(1);
+            })();
+            return;
+          }
           if ((x = p("[data-audelid]"))) {
             // v865: apagar direto da lista (inclusive aula travada em "gerando").
             const id = x.dataset.audelid, A = (F.lista || []).find((W) => W.id === id);
@@ -13359,7 +13374,8 @@ ${fe(1, "#cca764", "futuro acima do à vista (normal)", t.emA)}${fe(-1, "#c69a49
           meu: !!x,
         });
         if (estado) return estado;
-        return `<div class="au-item au-ger"><span class="au-n">…</span><span class="au-tx"><b>Aula ${t.numero} · gerando</b><span class="sm mut">${de.busy && x ? i(de.msg) : x ? "Interrompida. Toque em continuar." : "Em geração em outro aparelho ou interrompida."}</span></span>${!de.busy && x ? '<button class="btn s" data-aucont="1">Continuar</button>' : ""}<button class="au-del-lista" type="button" data-audelid="${i(t.id)}" aria-label="Apagar esta aula">Apagar</button></div>`;
+        const pg869 = (window.__auProg869 || {})[t.id];
+        return `<div class="au-item au-ger"><span class="au-n">…</span><span class="au-tx"><b>Aula ${t.numero} · gerando</b><span class="sm mut">${de.busy && x ? i(de.msg) : pg869 ? (pg869.erro ? i(pg869.erro) : "Gerando no servidor: " + pg869.feitas + " de " + pg869.total + " partes prontas. Toque em Atualizar daqui a pouco.") : "Toque em continuar para terminar em qualquer aparelho."}</span>${pg869 && pg869.total ? `<span class="au-pb"><i style="width:${Math.round((pg869.feitas / pg869.total) * 100)}%"></i></span>` : ""}</span>${!de.busy ? (x ? '<button class="btn s" data-aucont="1">Continuar</button>' : `<button class="btn s" data-auretomar="${i(t.id)}">Continuar</button>`) : ""}<button class="au-del-lista" type="button" data-audelid="${i(t.id)}" aria-label="Apagar esta aula">Apagar</button></div>`;
       }
       async function ft(t, p, x) {
         (M(x), await tok(), M(x));

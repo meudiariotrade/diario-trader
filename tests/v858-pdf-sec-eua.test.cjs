@@ -83,3 +83,11 @@ test('v868: ficha do ativo (drill-down), vigia, comparar, abertura e risco sem S
  assert.match(p,/Perda provável/);assert.match(p,/data-fa-abrir/);
  assert.match(h,/ficha-ativo\.js/);assert.match(h,/painel-carteira\.js/);
 });
+
+test('v869: Estudos — ticker oculto só na aba, player escuro com equalizador e aulas na conta',()=>{
+ const v=R('src/studies/estudos-visual.js'),t=R('src/studies/tecnica-aulas.js'),p=R('src/studies/tecnica-pdf.js'),e=R('supabase/functions/aulas/index.ts'),n=R('src/domains/layers/01-navegacao-e-fluxos.js');
+ assert.match(v,/body\.aba-estudos \.dt393-ticker/);assert.match(v,/tab==='estudos'/);
+ assert.match(t,/tp-wave/);assert.match(t,/tp-prog/);assert.match(t,/getByteFrequencyData/);assert.ok(!/class="tp-pres/.test(t),'sem avatar estático');
+ assert.match(p,/acao:'mentor_pdf'/);assert.match(p,/await migrarDaNuvem\(\)/);
+ assert.match(e,/b\.acao === 'retomar'/);assert.match(n,/data-auretomar/);
+});
