@@ -75,3 +75,11 @@ test('v866: color linking por painel (screener e técnico), sem servidor',()=>{
  assert.match(t,/registrar\('tec-'\+m/);assert.match(t,/data-cl-src="tec-'\+m\+'"/);
  assert.ok(h.indexOf('color-link.js')<h.indexOf('analises.js')||h.indexOf('analises.js')<0);
 });
+
+test('v868: ficha do ativo (drill-down), vigia, comparar, abertura e risco sem Supabase',()=>{
+ const f=R('src/shared/ficha-ativo.js'),p=R('src/shared/painel-carteira.js'),h=R('src/index.html');
+ assert.match(f,/function abrir\(tk\)/);assert.match(f,/pointerdown/);assert.match(f,/dt-vigia-v868/);assert.match(f,/compHtml/);
+ assert.ok(!/supabase/i.test(f)&&!/supabase/i.test(p.replace(/Nenhuma consulta ao Supabase/,'')),'sem Supabase');
+ assert.match(p,/Perda provável/);assert.match(p,/data-fa-abrir/);
+ assert.match(h,/ficha-ativo\.js/);assert.match(h,/painel-carteira\.js/);
+});

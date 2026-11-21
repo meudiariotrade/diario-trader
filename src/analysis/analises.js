@@ -302,7 +302,7 @@ function detail(m,s){
  ' · Técnico: '+E(meta.technical_at||'sem data')+' · Snapshot: '+E(meta.updated_at||'sem data')+
  (owned?' · Carteira: '+pct(owned.pct):'')+'</p>'+
  '<div class="scr853-print-head"><b>Ficha educativa · '+E(row.ticker)+' · '+E(meta.company)+'</b><span>Gerada em '+new Date().toLocaleString('pt-BR')+' pelo Diário de Trader. Material para estudo entre amigos: não é recomendação de compra ou venda. Fontes e datas no rodapé da ficha.</span></div>'+
- '<div class="scr-detail-footer"><button type="button" data-scr-pdf-ficha="1">Salvar ficha em PDF</button>'+'<button type="button" data-hf-abrir="'+E(row.ticker)+'" data-hf-market="'+(m==='us'?'US':'BR')+'">Avaliação histórica (10 anos)</button>'+'<button type="button" data-scr-analyze="'+E(row.ticker)+'">Abrir pesquisa completa</button>'+
+ '<div class="scr-detail-footer"><button type="button" data-fa-abrir="'+E(row.ticker)+'">Ficha completa</button><button type="button" data-scr-pdf-ficha="1">Salvar ficha em PDF</button>'+'<button type="button" data-hf-abrir="'+E(row.ticker)+'" data-hf-market="'+(m==='us'?'US':'BR')+'">Avaliação histórica (10 anos)</button>'+'<button type="button" data-scr-analyze="'+E(row.ticker)+'">Abrir pesquisa completa</button>'+
  '<button type="button" data-scr-detail-close="1">Voltar ao ranking</button></div>'+
  '</section>';
 }
