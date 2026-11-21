@@ -1,5 +1,5 @@
 {
-  "version": 844,
+  "version": 845,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -65,6 +65,7 @@
     "snapshot-contract-v800.js": "src/analysis/snapshot-contract-v800.js",
     "backtest-gates-v801.js": "src/analysis/backtest-gates-v801.js",
     "cerebro-ia.js": "src/ai/cerebro-ia.js",
+    "cerebro-estudos.js": "src/ai/cerebro-estudos.js",
     "fibo-visual.js": "src/analysis/fibo-visual.js"
   },
   "templates": {

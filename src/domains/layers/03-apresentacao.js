@@ -2131,6 +2131,8 @@ try {
       // de Início/Meu dia, independentemente do ciclo de cotações.
       if(t==="home")e.querySelectorAll(".v810-home .v810-more[open] .simple-explore").forEach(inner=>{inner.open=true;});
       if (t === "home" || t === "dia") {window.TermometroAbertura670?.montar?.();window.DiarioInteligenciaEtapa1?.montar?.();}
+      /* v845: o painel novo apaga o cartão de Movimentos fortes; recoloca usando o cache de 10 min (sem nova consulta). */
+      if (t === "home") window.DIARIO_V518?.cartao?.()?.catch?.(()=>{});
     }
     window.DiarioSessaoVisual=Object.freeze({
       manual:()=>v810Manual?({pre:"pre",pregao:"during",pos:"post"}[v810Manual.phase]):null,
