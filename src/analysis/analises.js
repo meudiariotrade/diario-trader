@@ -426,7 +426,7 @@ async function getGlobalSnapshot(m,refresh=false){
 /* v858: EUA — fundamentos anuais do SEC EDGAR XBRL (arquivo público gerado no GitHub Actions).
  * Substitui crescimento, margem FCF e Total Yield por valores do 10-K com prova (protocolo, conceito, período)
  * e recalcula a nota no aparelho. Uma leitura por 12 h; falha mantém o snapshot original. */
-const SEC_URL='https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/sec-fundamentos.json',SEC_KEY='diario-sec-fund-v858',SEC_TTL=12*3600000;
+const SEC_URL='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/sec-fundamentos',SEC_KEY='diario-sec-fund-v858',SEC_TTL=12*3600000;
 let secMem=null,secPend=null;const secFeito=new WeakMap();
 async function secFundamentos(){
  if(secMem&&Date.now()-secMem.when<SEC_TTL)return secMem.data;

@@ -34,5 +34,6 @@ test('v858: fundamentos SEC via GitHub Actions, sem Supabase',()=>{
  assert.ok(!/supabase/i.test(sc.replace(/Supabase\./g,'')),'script não acessa Supabase');
  assert.match(sc,/PaymentsForRepurchaseOfCommonStock/);assert.match(sc,/ProceedsFromIssuanceOfCommonStock/);
  assert.match(wf,/node scripts\/sec-fundamentos\.cjs/);
- assert.match(R('src/analysis/analises.js'),/sec-fundamentos\.json/);
+ assert.match(R('src/analysis/analises.js'),/workers\.dev\/v1\/sec-fundamentos/);
+ assert.match(R('cloudflare/diario-screeners/index.mjs'),/\/v1\/sec-fundamentos/);
 });
