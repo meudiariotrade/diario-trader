@@ -16,7 +16,8 @@ export function tickersAfetados(title, cat) {
   ]) if (match(re)) direct.add(name);
   if (cat === 'petroleo' && match(/\b(brent|wti|petroleo|opep|opec)\b/)) indirect.add('PETR4');
   if (cat === 'minerio') indirect.add('VALE3');
-  if (cat === 'petroleo' || cat === 'minerio' || cat === 'politica_economica') indirect.add('WIN');
+  if (cat === 'petroleo' || cat === 'minerio' || cat === 'politica_economica' || cat === 'geopolitica') indirect.add('WIN');
+  if (cat === 'geopolitica') indirect.add('WDO');
   if (cat === 'politica_economica' && match(/\b(cpi|fed|fomc|payroll|ipca|copom|selic|juros|inflacao|treasury|dolar)\b/)) indirect.add('WDO');
   if (cat === 'politica_economica' && match(/\b(copom|selic|ipca|inflacao)\b/)) indirect.add('DI');
   for (const ticker of direct) indirect.delete(ticker);

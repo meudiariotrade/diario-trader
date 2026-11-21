@@ -32,7 +32,8 @@ const FONTES = [
   { nome: 'SEC EDGAR', host: 'sec.gov', url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom', formato:'atom' },
 ];
 /* v846: perfis do X (FxTwitter RSS) lidos na borda, com cache compartilhado; títulos em inglês são traduzidos no app. */
-export const X_PERFIS = ['FirstSquawk','DeItaone','LiveSquawk','financialjuice','KobeissiLetter','unusual_whales','zerohedge','WalterBloomberg'];
+/* v852: @zerohedge saiu (muito conteúdo fora de mercado); post sem tema de mercado não entra. */
+export const X_PERFIS = ['FirstSquawk','DeItaone','LiveSquawk','financialjuice','KobeissiLetter','unusual_whales','WalterBloomberg'];
 FONTES.push(...X_PERFIS.map(p=>({nome:'X · @'+p, host:'x.com', perfil:p, formato:'x', url:'https://fxtwitter.com/'+p+'/feed.xml?count=25'})));
 const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const ent = { amp:'&', lt:'<', gt:'>', quot:'"', apos:"'", nbsp:' ' };
@@ -60,7 +61,8 @@ export function tema(t) {
   if(/\b(bitcoin|ethereum|solana|criptomoeda|crypto|btc|eth)\b/.test(n))return 'cripto';
   if(/\b(petroleo|brent|wti|crude|oil|opep|opec|petrobras|petr4|diesel)\b/.test(n))return 'petroleo';
   if(/\b(minerio|iron ore|iron-ore|vale3|siderurgia|mining|steel)\b/.test(n))return 'minerio';
-  if(/\b(copom|selic|fed|fomc|powell|ipca|payroll|tarifa|tariff|congresso|congress|governo|government|eleicao|election|sancao|sanction|guerra|war)\b/.test(n))return 'politica_economica';
+  if(/\b(copom|selic|fed|fomc|powell|ipca|payroll|tarifa|tariff|congresso|congress|governo|government|eleicao|election|sancao|sanction|guerra|war|cpi|pce|gdp|pib|treasury|treasuries|yields?|juros|rates?|inflation|inflacao|ecb|boj|pboc|dolar|dollar)\b/.test(n))return 'politica_economica';
+  if(/\b(ira|iran|iranian|israel|israeli|missil|missile|ucrania|ukraine|russia|russian|china|chinese|taiwan|otan|nato|gaza|hormuz|ormuz|ataque militar|airstrike|military|militar|pentagon|pentagono)\b/.test(n))return 'geopolitica';
   if(/\b(acoes|acao|stock|shares|ibov|ibovespa|nasdaq|bolsa|earnings|balanco|resultado|lucro|dividendos|wall street)\b/.test(n))return 'acoes';
   return '';
 }
@@ -97,8 +99,9 @@ export function lerX(xml,fonte,agora=Date.now()) {
     const d=Date.parse(tag(b,'pubDate'));
     if(!new RegExp('^https://(?:www\\.)?x\\.com/'+fonte.perfil+'/status/[0-9]+','i').test(l))continue;
     if(t.length<15||!Number.isFinite(d)||d>agora+300000||d<agora-86400000)continue;
-    if(/\b(giveaway|subscribe|sign up|link in bio|promo|discount|webinar)\b/i.test(t))continue;
-    out.push({t,l:l.slice(0,300),fonte:fonte.nome,d:new Date(d).toISOString(),tema:tema(t)||'politica_economica'});
+    if(/\b(giveaway|subscribe|sign up|link in bio|promo|discount|webinar|sexual|assault|rape|migrant|murder|stabbing|celebrity|nfl|nba|soccer|football)\b/i.test(t))continue;
+    const tm=tema(t);if(!tm)continue;
+    out.push({t,l:l.slice(0,300),fonte:fonte.nome,d:new Date(d).toISOString(),tema:tm});
     if(out.length>=12)break;
   }
   return out;

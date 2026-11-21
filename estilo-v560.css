@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 b951a189ad05da3f899b4f2d938d6f9071aeaf060f9e6071e3971cbda2adf9f2 */
+/* Gerado de src/app-theme.css · SHA256 712107eda1e26e214a4e2ef807508e53ad695a5c9d9366561af4689a4ad5afc9 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -3664,3 +3664,5 @@ html:root body #imgov#imgov>div:last-child{color:#E9E7E4!important;-webkit-text-
 /* v846 — Análises: aba e mercado selecionados visíveis */
 html:root body #app #an-root.an830 .an830-seg button{background:transparent!important;color:var(--ui-label,#64748B)!important;border:0!important}
 html:root body #app #an-root.an830 .an830-seg button.selected{background:var(--ui-sub,#181C28)!important;color:var(--ui-num,#FFFFFF)!important;box-shadow:inset 0 -2px 0 #F59E0B!important}
+/* v852 — Fatos que importam: ligação por hipótese em tom secundário */
+html:root body #app .i833-lig li.i852-hip span{color:var(--ui-label,#94A3B8);font-style:italic}

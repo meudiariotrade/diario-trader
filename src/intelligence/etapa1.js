@@ -106,6 +106,16 @@
     const ativos=new Set(meusAtivos());
     return timeline().filter(e=>e&&Array.isArray(e.tickers)&&e.tickers.some(t=>ativos.has(t)));
   }
+  /* v852: manchete em inglês aparece traduzida (mesma tradução da aba Notícias, guardada no aparelho). */
+  const tentou=new Set();
+  function tit(e){const t=String(e?.titulo||'');try{if(typeof MK_TRADUCOES!=='undefined'&&MK_TRADUCOES.has(t))return MK_TRADUCOES.get(t)}catch(_){}return t}
+  async function traduzirTitulos(eventos,depois){
+   try{if(typeof mkTraduzLote!=='function'||typeof mkTituloIngles!=='function')return;
+    const itens=eventos.map(e=>({t:String(e.titulo||''),a:String((e.fontes||[]).at(-1)?.nome||'')})).filter(n=>n.t&&!tentou.has(n.t)&&mkTituloIngles(n));
+    if(!itens.length)return;itens.forEach(n=>tentou.add(n.t));
+    await mkTraduzLote(itens);depois&&depois();
+   }catch(_){}
+  }
   function rowsEvent(events,limit=5) {
     if(!events.length)return '<p class="mut sm">Nenhum acontecimento confirmado nas fontes atualmente carregadas.</p>';
     /* v833: notícia importante já vem com o estudo aberto; as demais ficam numa linha, sem botões. */
@@ -113,7 +123,7 @@
       const first=(e.fontes||[]).at(-1);
       const source=first&&/^https:\/\//.test(first.url) ? '<a href="'+escape(first.url)+'" target="_blank" rel="noopener noreferrer">'+escape(first.nome||'Fonte')+'</a>' : escape(first?.nome||'Fonte indisponível');
       const imp=importante(e);
-      return '<div class="i833-row'+(imp?' imp':'')+'">'+(imp?tag(oficial(e)?'fato':'publicada'):'')+sentTag(e)+'<b>'+escape(e.titulo)+'</b>'+
+      return '<div class="i833-row'+(imp?' imp':'')+'">'+(imp?tag(oficial(e)?'fato':'publicada'):'')+sentTag(e)+'<b>'+escape(tit(e))+'</b>'+
         '<div class="mut sm">'+when(e.ultimaAtualizacao)+' · '+source+((e.quantidadeFontes||e.fontes?.length||0)>1?' · '+(e.quantidadeFontes||e.fontes.length)+' fontes':'')+'</div>'+
         (imp?estudo(e):'')+'</div>';
     }).join('');
@@ -144,10 +154,23 @@
     [/\bweg\b|wege3/i,'WEGE3','Notícia sobre a WEG afeta diretamente a ação.'],
     [/bitcoin|cripto|crypto|\bbtc\b|ether/i,'BTC','Cripto costuma andar junto com o apetite a risco: queda forte em cripto sinaliza aversão a risco.']
   ];
+  /* v852: "cita diretamente" só quando o título cita o ativo; índice, dólar e DI aparecem como hipótese explicada. */
+  const HIP={
+    WIN:{geopolitica:'Hipótese: tensão geopolítica costuma aumentar a aversão a risco; emergentes e o índice futuro (WIN) tendem a sofrer.',
+      petroleo:'Hipótese: o petróleo pesa no Ibovespa via Petrobras, que tem grande peso no índice futuro (WIN).',
+      minerio:'Hipótese: o minério pesa no Ibovespa via Vale, que tem grande peso no índice futuro (WIN).',
+      politica_economica:'Hipótese: notícia macro mexe nas expectativas de juros e de risco; o efeito no índice futuro (WIN) é indireto, não garantido.'},
+    WDO:{geopolitica:'Hipótese: em momentos de tensão o investidor busca dólar, o que pressiona o dólar futuro (WDO) para cima.',
+      _:'Hipótese: juros e inflação mudam o diferencial de juros entre Brasil e EUA, o que mexe no dólar futuro (WDO).'},
+    DI:{_:'Hipótese: Copom e inflação mudam as apostas para a Selic, o que move a curva de juros futuros (DI).'}
+  };
   function ligar(e) {
     const txt=String(e?.titulo||'')+' '+String(e?.tema||''),out=[],vistos=new Set();
-    for(const [re,tk,porque] of LIGA)if(re.test(txt)&&!vistos.has(tk)){vistos.add(tk);out.push({tk,porque});}
-    for(const tk of (e?.tickers||[]))if(!vistos.has(tk)){vistos.add(tk);out.push({tk,porque:'A notícia cita '+tk+' diretamente.'});}
+    for(const [re,tk,porque] of LIGA)if(re.test(txt)&&!vistos.has(tk)){vistos.add(tk);out.push({tk,porque,tipo:'regra'});}
+    const rel=e?.relacoes,diretos=new Set(rel?.diretos||(e?.tickers||[]).filter(t=>!['WIN','WDO','DI'].includes(t)));
+    for(const tk of (e?.tickers||[])){if(vistos.has(tk))continue;vistos.add(tk);
+      if(diretos.has(tk)){out.push({tk,porque:'O título cita '+tk+' diretamente.',tipo:'direto'});continue}
+      const h=HIP[tk];if(h)out.push({tk,porque:h[e?.tema]||h._||h.politica_economica,tipo:'hipotese'});}
     return out.slice(0,3);
   }
   /* v838: tom da notícia para o ativo (positiva · negativa · neutra), por regras fixas em PT e EN, sem IA. */
@@ -165,18 +188,18 @@
     return (e?.tickers||[]).some(t=>meus.has(t))||ligar(e).some(l=>meus.has(l.tk));
   }
   /* Só o que importa recebe estudo automático: prioridade alta, fato oficial (CVM/B3/BC/Fed) ou média ligada a um ativo. */
-  function importante(e) { return !!e&&(e.prioridade==='alta'||oficial(e)||(e.prioridade==='media'&&ligar(e).length>0)); }
+  function importante(e) { return !!e&&(e.prioridade==='alta'||oficial(e)||(e.prioridade==='media'&&ligar(e).some(l=>l.tipo!=='hipotese'))); }
   function estudo(e) {
     const lig=ligar(e);
     return '<div class="i833-estudo"><div class="sm"><b>Por que importa:</b> '+escape(transmissao(e))+'.</div>'+
-      (lig.length?'<ul class="i833-lig">'+lig.map(l=>'<li><button type="button" class="btn s" data-intel-ticker="'+escape(l.tk)+'" style="min-height:40px">'+escape(l.tk)+'</button><span>'+escape(l.porque)+'</span></li>').join('')+'</ul>':'')+
+      (lig.length?'<ul class="i833-lig">'+lig.map(l=>'<li'+(l.tipo==='hipotese'?' class="i852-hip"':'')+'><button type="button" class="btn s" data-intel-ticker="'+escape(l.tk)+'" style="min-height:40px">'+escape(l.tk)+'</button><span>'+escape(l.porque)+'</span></li>').join('')+'</ul>':'')+
       '<button type="button" class="i833-lab" data-intel-study="'+escape(e.id)+'">Abrir no laboratório</button></div>';
   }
   function fatosHtml() {
     const lista=timeline().filter(e=>importante(e)||minha(e)).sort((a,b)=>minha(b)-minha(a)).slice(0,5);
     if(!lista.length)return '<header><h2>Fatos que importam hoje</h2></header><p class="mut sm">Nenhuma notícia importante ligada aos seus ativos ou ao mercado nas fontes carregadas.</p>';
     return '<header><h2>Fatos que importam hoje</h2><span class="ui-badge">'+lista.length+' de '+timeline().length+' notícias</span></header>'+
-      lista.map(e=>'<article class="i833-fato">'+tag(oficial(e)?'fato':'publicada')+sentTag(e)+(minha(e)?'<span class="i838-meu">Seu ativo</span> ':'')+'<b>'+escape(e.titulo)+'</b><div class="mut sm">'+when(e.ultimaAtualizacao)+' · '+escape((e.fontes||[]).at(-1)?.nome||'Fonte')+'</div>'+estudo(e)+'</article>').join('');
+      lista.map(e=>'<article class="i833-fato">'+tag(oficial(e)?'fato':'publicada')+sentTag(e)+(minha(e)?'<span class="i838-meu">Seu ativo</span> ':'')+'<b>'+escape(tit(e))+'</b><div class="mut sm">'+when(e.ultimaAtualizacao)+' · '+escape((e.fontes||[]).at(-1)?.nome||'Fonte')+'</div>'+estudo(e)+'</article>').join('');
   }
   function analogiaHtml() {
     const a=state.analogia;
@@ -231,7 +254,7 @@
     if(!evs.length&&!regra&&!par)return '<p class="mut sm">Sem notícia ligada a '+escape(tk)+' nas fontes carregadas.</p>';
     return (regra?'<p class="sm"><b>O que costuma mexer:</b> '+escape(regra[2])+'</p>':'')+
       (par?'<p class="sm"><b>Hoje:</b> '+escape(par.a)+' '+pct(par.hojeA)+' × '+escape(par.b)+' '+pct(par.hojeB)+(par.quebrou?' — separou do par.':' — andando junto com o par.')+'</p>':'')+
-      (evs.length?'<p class="sm"><b>Notícias ligadas:</b></p><ul class="i835-nts">'+evs.map(e=>'<li>'+escape(e.titulo)+' <span class="mut">'+when(e.ultimaAtualizacao)+'</span></li>').join('')+'</ul>':'');
+      (evs.length?'<p class="sm"><b>Notícias ligadas:</b></p><ul class="i835-nts">'+evs.map(e=>'<li>'+escape(tit(e))+' <span class="mut">'+when(e.ultimaAtualizacao)+'</span></li>').join('')+'</ul>':'');
   }
   /* v838: pontos para amanhã — montados sozinhos no pós-mercado a partir dos registros do dia e da agenda;
      ficam no aparelho e aparecem no Início até a abertura da próxima sessão. Sem Supabase. */
@@ -285,6 +308,7 @@
     const main=home.querySelector('.v829-split>.ui-main');if(!main)return;
     let f=home.querySelector('#i833-fatos');if(!f){f=document.createElement('section');f.id='i833-fatos';f.className='ui-card i833-card';main.prepend(f);}
     const fh=fatosHtml();if(f.innerHTML!==fh)f.innerHTML=fh;
+    traduzirTitulos(timeline().slice(0,40),()=>{const h=fatosHtml();if(f.isConnected&&f.innerHTML!==h)f.innerHTML=h;});
   }
   function riscoTerminal() {
     if(typeof S==='undefined'||!S)return '<p class="mut sm">Diário não carregado para esta sessão.</p>';
@@ -585,6 +609,8 @@
   });
   w.DiarioPublico?.read('memoria').then(m=>{if(m){state.memoria=m;repaint();}}).catch(()=>{});
   if(w.TraderUI?.onRender)w.TraderUI.onRender('inteligencia-integrada-v807',mount);
-  w.DiarioInteligenciaEtapa1=Object.freeze({montar:mount,porQue,sentimento,minha,pontosDoDia,meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
+  /* v852: manchetes recentes ligadas a um ativo (texto puro, para a explicação da IA na ficha). */
+  function noticiasDo(tk){const t=String(tk||'').toUpperCase(),base=t.replace(/\d+$/,'');return timeline().filter(e=>(e.relacoes?.diretos||[]).includes(t)||ligar(e).some(l=>l.tk===t&&l.tipo!=='hipotese')||new RegExp('\\b'+base,'i').test(String(e.titulo||''))).slice(0,6).map(e=>when(e.ultimaAtualizacao)+' · '+tit(e))}
+  w.DiarioInteligenciaEtapa1=Object.freeze({montar:mount,porQue,noticiasDo,sentimento,minha,pontosDoDia,meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
   mount();
 })(window);

@@ -1804,7 +1804,7 @@ async function mkCloudflareNoticias() {
     throw new Error("Cloudflare: notícias indisponíveis ou desatualizadas");
   const itens=obj.itens.slice(0,50).map(n=>mkNoticia({
     t:n.t,l:n.l,d:n.d,a:n.fonte||"Fonte não indicada",
-    c:n.tema==="politica_economica"?["politica"]:[n.tema]
+    c:n.tema==="politica_economica"||n.tema==="geopolitica"?["politica"]:[n.tema]
   })).filter(Boolean);
   if(!itens.length)throw new Error("Cloudflare: nenhum título financeiro válido");
   /* v846: perfis do X vêm da borda; o app só usa a função do Supabase se nenhum perfil responder. */
