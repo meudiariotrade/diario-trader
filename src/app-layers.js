@@ -7900,7 +7900,30 @@ de Carteira`,
         G = null,
         o = "",
         F = 0,
-        N = !1;
+        N = !1,
+        falando = !1,
+        comCart = !1;
+      try {
+        comCart = APP_STORAGE.getItem("diario-revista-carteira-v1") === "1";
+      } catch {}
+      const extrasCarteira = () => {
+        if (!comCart) return [];
+        try {
+          const base = new Set(["PETR4", "VALE3", "ITUB4"]);
+          const meus = window.DiarioInteligenciaEtapa1?.meusAtivos?.() || [];
+          return [...new Set(meus)]
+            .filter((t) => /^[A-Z]{4}\d{1,2}$/.test(t) && !base.has(t))
+            .slice(0, 3)
+            .map((t) => ({
+              ticker: t,
+              name: t + " · Sua carteira",
+              request: t,
+              scale: 1,
+            }));
+        } catch {
+          return [];
+        }
+      };
       try {
         const n = JSON.parse(APP_STORAGE.getItem(l) || "null");
         n?.formato === s.VERSION && (O = n);
@@ -7968,6 +7991,7 @@ de Carteira`,
                             request: "ITUB4",
                             scale: 1,
                           },
+                          ...extrasCarteira(),
                         ],
                         J = await Promise.allSettled(
                           Q.map(async (L) => {
@@ -8086,27 +8110,106 @@ de Carteira`,
         return `<div class="rv-scenarios">${n.scenarios.map((f) => `<article><b>${r(f.name)}</b><p>${r(f.condition)}</p><strong>${f.trigger != null ? j(f.trigger) : j(f.low) + " a " + j(f.high)}</strong><small>Reavaliar: ${r(f.invalidation)}</small></article>`).join("")}</div>`;
       }
       function u(n) {
+        const sid = "rv-sec-" + String(n.ticker || "").toLowerCase().replace(/[^a-z0-9]/g, "");
         if (!n.available)
-          return `<section class="rv-study"><h2>${r(n.ticker)} · ${r(n.name)}</h2><p class="rv-missing">${r(n.reason)}</p></section>`;
+          return `<section class="rv-study" id="${sid}"><h2>${r(n.ticker)} · ${r(n.name)}</h2><p class="rv-missing">${r(n.reason)}</p></section>`;
         const f = n.bars.map((h) => ({ date: s.date(h[0]), value: h[4] }));
-        return `<section class="rv-study"><div class="rv-kicker">ESTUDO TÉCNICO · ${r(n.asOf)}</div><h2>${r(n.ticker)} · ${r(n.name)}</h2><p>Estrutura diária: <b>${r(n.dailyTrend)}</b> · semanal: <b>${r(n.weeklyTrend)}</b> · variação da última semana disponível: <b>${j(n.weeklyReturn)}%</b></p>${window.CarteiraExperience?.svgLine(f.slice(-120), n.ticker + " · fechamentos diários") || ""}<p class="rv-source">${r(n.source)} · ${r(n.from)} a ${r(n.asOf)}. O gráfico mostra fechamentos observados.</p><div class="rv-metrics"><span>Fechamento <b>${j(n.close)}</b></span><span>MM20 <b>${j(n.ma20)}</b></span><span>MM50 <b>${j(n.ma50)}</b></span><span>MM200 <b>${j(n.ma200)}</b></span><span>RSI14 <b>${j(n.rsi)}</b></span></div><p>Diário: preço e ordenação das MM20/MM50. Semanal: preço e ordenação das médias de 10/40 semanas. Uma estrutura indefinida pede confirmação; médias descrevem o histórico e podem atrasar reversões.</p>${E(n)}</section>`;
+        return `<section class="rv-study" id="${sid}"><div class="rv-kicker">ESTUDO TÉCNICO · ${r(n.asOf)}</div><h2>${r(n.ticker)} · ${r(n.name)}</h2><p>Estrutura diária: <b>${r(n.dailyTrend)}</b> · semanal: <b>${r(n.weeklyTrend)}</b> · variação da última semana disponível: <b>${j(n.weeklyReturn)}%</b></p>${window.CarteiraExperience?.svgLine(f.slice(-120), n.ticker + " · fechamentos diários") || ""}<p class="rv-source">${r(n.source)} · ${r(n.from)} a ${r(n.asOf)}. O gráfico mostra fechamentos observados.</p><div class="rv-metrics"><span>Fechamento <b>${j(n.close)}</b></span><span>MM20 <b>${j(n.ma20)}</b></span><span>MM50 <b>${j(n.ma50)}</b></span><span>MM200 <b>${j(n.ma200)}</b></span><span>RSI14 <b>${j(n.rsi)}</b></span></div><p>Diário: preço e ordenação das MM20/MM50. Semanal: preço e ordenação das médias de 10/40 semanas. Uma estrutura indefinida pede confirmação; médias descrevem o histórico e podem atrasar reversões.</p>${E(n)}</section>`;
       }
-      function P(n) {
-        return `<section class="rv-study"><div class="rv-kicker">CONTRATO FUTURO · COBERTURA LIMITADA</div><h2>${r(n.ticker)} · ${r(n.name)}</h2>${n.available ? `<p>${r(n.symbol)} · consulta ${r(n.queried || "sem horário")}</p><div class="rv-metrics"><span>Último informado <b>${j(n.price)}</b></span><span>Máxima da amostra <b>${j(n.high)}</b></span><span>Mínima da amostra <b>${j(n.low)}</b></span></div><p class="rv-missing">${r(n.note)}</p><p>Acima de ${j(n.high)}: acompanhar a sustentação e reavaliar se retornar à faixa. Abaixo de ${j(n.low)}: acompanhar a continuidade e reavaliar se recuperar a faixa. Entre as referências: aguardar definição. Esses níveis pertencem ao snapshot do futuro, não ao gráfico do ativo à vista.</p>` : `<p class="rv-missing">${r(n.reason)}</p>`}</section>`;
+      function P(n, idx) {
+        return `<section class="rv-study"${idx === 0 ? ' id="rv-sec-futuros"' : ""}>
+<div class="rv-kicker">CONTRATO FUTURO · COBERTURA LIMITADA</div><h2>${r(n.ticker)} · ${r(n.name)}</h2>${n.available ? `<p>${r(n.symbol)} · consulta ${r(n.queried || "sem horário")}</p><div class="rv-metrics"><span>Último informado <b>${j(n.price)}</b></span><span>Máxima da amostra <b>${j(n.high)}</b></span><span>Mínima da amostra <b>${j(n.low)}</b></span></div><p class="rv-missing">${r(n.note)}</p><p>Acima de ${j(n.high)}: acompanhar a sustentação e reavaliar se retornar à faixa. Abaixo de ${j(n.low)}: acompanhar a continuidade e reavaliar se recuperar a faixa. Entre as referências: aguardar definição. Esses níveis pertencem ao snapshot do futuro, não ao gráfico do ativo à vista.</p>` : `<p class="rv-missing">${r(n.reason)}</p>`}</section>`;
+      }
+      function agHtml(n) {
+        const A = Array.isArray(n.agenda) ? n.agenda.slice(0, 12) : [];
+        if (!A.length) return "";
+        const fmt = (iso) => {
+          try {
+            const d = new Date(iso);
+            return d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" }) + " · " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+          } catch {
+            return String(iso || "").slice(0, 16);
+          }
+        };
+        return `<section class="rv-study" id="rv-sec-agenda"><div class="rv-kicker">AGENDA DA SEMANA · ALTO IMPACTO (BR E EUA)</div><h2>Eventos que podem mexer no preço</h2><ul class="rv-agenda-list">${A.map((x) => `<li><span class="rv-ag-dt">${r(fmt(x.em))}</span><span class="rv-ag-pais">${r(x.p === "US" ? "EUA" : x.p)}</span><b>${r(x.t)}</b></li>`).join("")}</ul></section>`;
+      }
+      function navHtml(n) {
+        const pills = [];
+        (n.studies || []).slice(0, 2).forEach((x) => pills.push([x.ticker, "rv-sec-" + String(x.ticker || "").toLowerCase().replace(/[^a-z0-9]/g, "")]));
+        if ((n.futures || []).length) pills.push(["WIN/WDO", "rv-sec-futuros"]);
+        (n.studies || []).slice(2).forEach((x) => pills.push([x.ticker, "rv-sec-" + String(x.ticker || "").toLowerCase().replace(/[^a-z0-9]/g, "")]));
+        if (Array.isArray(n.agenda) && n.agenda.length) pills.push(["Agenda", "rv-sec-agenda"]);
+        pills.push(["Plano", "rv-sec-plano"]);
+        return `<nav class="rv-nav" aria-label="Navegação rápida da revista">${pills.map(([lab, id]) => `<button type="button" data-rv-go="${r(id)}">${r(lab)}</button>`).join("")}</nav>`;
+      }
+      function rvTextoFala(n) {
+        if (!n) return "";
+        const partes = [`Revista da Semana, janela de ${n.window.from} a ${n.window.to}.`];
+        (n.studies || []).filter((x) => x.available).forEach((x) => {
+          partes.push(`${x.ticker}, ${x.name}: fechamento ${j(x.close)}, tendência diária ${x.dailyTrend}, semanal ${x.weeklyTrend}, variação semanal de ${j(x.weeklyReturn)} por cento.`);
+        });
+        if (Array.isArray(n.agenda) && n.agenda.length) {
+          partes.push(`A agenda de alto impacto da semana traz ${n.agenda.length} eventos entre Brasil e Estados Unidos.`);
+        }
+        partes.push("Abra o PDF da revista para ler a análise técnica completa de Dow, Elliott, Price Action e Cenários.");
+        return partes.join(" ");
+      }
+      function rvFala(n) {
+        try {
+          const sp = window.speechSynthesis;
+          if (!sp) return toast("Este aparelho não lê em voz alta.");
+          if (falando) { sp.cancel(); falando = !1; qBar(); return; }
+          const txt = rvTextoFala(n);
+          if (!txt) return;
+          const fr = txt.match(/[^.!?]+[.!?]+|\S[^.!?]*$/g) || [txt];
+          const voz = (sp.getVoices() || []).find((x) => /^pt(-|_)BR/i.test(x.lang));
+          falando = !0; qBar();
+          let k = 0;
+          const prox = () => {
+            if (!falando || k >= fr.length) { falando = !1; qBar(); return; }
+            const ut = new SpeechSynthesisUtterance(fr[k++].trim());
+            ut.lang = "pt-BR";
+            voz && (ut.voice = voz);
+            ut.rate = 1.02;
+            ut.onend = prox;
+            ut.onerror = () => { falando = !1; qBar(); };
+            sp.speak(ut);
+          };
+          sp.cancel();
+          prox();
+        } catch {
+          falando = !1;
+          toast("Não consegui ler em voz alta.");
+        }
+      }
+      function rvAurea(n) {
+        if (!n) return;
+        const linhas = (n.studies || []).filter((x) => x.available).map((x) => `${x.ticker}: fechamento ${j(x.close)} · diário ${x.dailyTrend} · semanal ${x.weeklyTrend} · RSI14 ${j(x.rsi)} · semana ${j(x.weeklyReturn)}%`);
+        const ag = (n.agenda || []).slice(0, 6).map((x) => `${x.p}: ${x.t}`).join(" | ");
+        const prompt = `@livermore Analise o panorama técnico da Revista da Semana (${n.window.from} a ${n.window.to}) e monte um plano objetivo de atenção para a abertura da semana (principais gatilhos, ativos em tendência limpa e riscos da agenda):\n\n${linhas.join("\n")}${ag ? "\n\nAgenda alto impacto: " + ag : ""}`;
+        try { window.TraderChat?.open?.(); } catch {}
+        if (typeof ecoPergunta === "function") void ecoPergunta(prompt, { pergunta: "✦ Debater Revista da Semana" });
       }
       function m() {
         const n = B();
         return n
-          ? `<article class="rv-magazine"><header class="rv-cover"><span>JORNAL DO PREGÃO · EDIÇÃO DE ESTUDOS</span><h1>Revista da Semana</h1><p>Cenários técnicos · ${r(n.window.from)} a ${r(n.window.to)}</p><small>Corte: ${r(n.window.cutoff)} · cada ativo informa a última sessão realmente disponível.</small></header>${o ? `<p class="warn">${r(o)} Exibindo a edição anterior com a referência acima.</p>` : ""}<section class="rv-intro"><h2>Mapa da edição</h2><p>Ibovespa, dólar à vista, contratos futuros e ações de referência. Leitura original para preparar a semana, com condições de confirmação e invalidação. A abertura efetiva depende do calendário de negociação e dos feriados.</p><p class="rv-source">Esta edição substitui as matérias de notícias do fim de semana por estudos. O PDF inclui gráficos diários e semanais. Não há previsão garantida, notícia gerada ou probabilidade atribuída aos cenários.</p></section>${n.studies.slice(0, 2).map(u).join("")}${n.futures.map(P).join("")}${n.studies.slice(2).map(u).join("")}<section class="rv-study"><h2>Plano para a próxima sessão</h2><ol><li>Conferir agenda, feriados e vencimento do contrato.</li><li>Atualizar os níveis com dados da abertura.</li><li>Escrever cenário principal, alternativo e invalidação no diário.</li><li>Dimensionar o risco antes da decisão e revisar o checklist.</li></ol><button class="btn s" data-navroute="dia:ed">Levar a preparação ao diário</button></section></article>`
+          ? `<article class="rv-magazine"><header class="rv-cover"><span>JORNAL DO PREGÃO · EDIÇÃO DE ESTUDOS</span><h1>Revista da Semana</h1><p>Cenários técnicos · ${r(n.window.from)} a ${r(n.window.to)}</p><small>Corte: ${r(n.window.cutoff)} · cada ativo informa a última sessão realmente disponível.</small></header>${navHtml(n)}${o ? `<p class="warn">${r(o)} Exibindo a edição anterior com a referência acima.</p>` : ""}<section class="rv-intro"><h2>Mapa da edição</h2><p>Ibovespa, dólar à vista, contratos futuros e ações de referência${comCart ? " + ativos da sua carteira" : ""}. Leitura original para preparar a semana, com condições de confirmação e invalidação. A abertura efetiva depende do calendário de negociação e dos feriados.</p><div class="rv-pdf-cta"><div><b>Leitura completa exclusiva no PDF</b><p>O PDF da Revista reúne gráficos diários e semanais e os 4 blocos técnicos completos (Dow, Elliott, Price Action e Cenários).</p></div><button class="btn" data-revista="pdf">📄 Abrir PDF da revista</button></div></section>${n.studies.slice(0, 2).map(u).join("")}${n.futures.map((x, idx) => P(x, idx)).join("")}${n.studies.slice(2).map(u).join("")}${agHtml(n)}<section class="rv-study" id="rv-sec-plano"><h2>Plano para a próxima sessão</h2><ol><li>Conferir agenda, feriados e vencimento do contrato.</li><li>Atualizar os níveis com dados da abertura.</li><li>Escrever cenário principal, alternativo e invalidação no diário.</li><li>Dimensionar o risco antes da decisão e revisar o checklist.</li></ol><button class="btn s" data-navroute="dia:ed">Levar a preparação ao diário</button></section></article>`
           : `<div class="rv-empty">${JRN.busy ? "Consultando séries para a revista técnica…" : r(o || "A revista técnica ainda não foi carregada.")}<p><button class="btn" data-revista="refresh">Gerar revista técnica</button></p></div>`;
       }
+      function barHtml() {
+        return `<b>Revista · fim de semana</b><div><button class="btn" data-revista="pdf">📄 PDF da revista</button><button class="btn s" data-revista="fala">${falando ? "⏹ Parar" : "🔊 Ouvir"}</button><button class="btn s" data-revista="aurea">✦ Áurea</button><button class="btn s" data-revista="carteira">${comCart ? "✓ Com carteira" : "+ Minha carteira"}</button><button class="btn s" data-revista="refresh"${JRN.busy ? " disabled" : ""}>${JRN.busy ? "Consultando…" : "Atualizar"}</button>${e() ? "" : '<button class="btn s" data-revista="daily">Jornal diário</button>'}</div>`;
+      }
+      function qBar() {
+        const b = document.querySelector(".rv-shell .rv-toolbar");
+        if (b) b.innerHTML = barHtml();
+      }
       function c() {
-        return `<div class="card rv-shell"><div class="rv-toolbar"><b>Jornal · fim de semana</b><div><button class="btn s" data-revista="refresh"${JRN.busy ? " disabled" : ""}>${JRN.busy ? "Consultando…" : "Atualizar estudos"}</button><button class="btn" data-revista="pdf">PDF da revista</button>${e() ? "" : '<button class="btn s" data-revista="daily">Jornal diário</button>'}</div></div><div id="revista-body">${m()}</div></div>`;
+        return `<div class="card rv-shell"><div class="rv-toolbar">${barHtml()}</div><div id="revista-body">${m()}</div></div>`;
       }
       function q() {
         const n = document.getElementById("revista-body");
         n
-          ? (n.innerHTML = m())
+          ? ((n.innerHTML = m()), qBar())
           : tab === "mercado" && MKT.tab === "jr" && render();
       }
       const H = vJornal;
@@ -8151,6 +8254,13 @@ de Carteira`,
         window.addEventListener(
           "click",
           (n) => {
+            const go = n.target.closest("[data-rv-go]");
+            if (go) {
+              n.preventDefault();
+              const t = document.getElementById(go.dataset.rvGo);
+              t && t.scrollIntoView({ behavior: "smooth", block: "start" });
+              return;
+            }
             const f = n.target.closest(
               "[data-revista], [data-jrpdf], [data-jrrf]",
             );
@@ -8170,6 +8280,21 @@ de Carteira`,
               }
               if (f.dataset.revista === "open") {
                 ((N = !0), (JRN.arq = null), render(), M(!1));
+                return;
+              }
+              if (f.dataset.revista === "fala") {
+                rvFala(B());
+                return;
+              }
+              if (f.dataset.revista === "aurea") {
+                rvAurea(B());
+                return;
+              }
+              if (f.dataset.revista === "carteira") {
+                comCart = !comCart;
+                try { APP_STORAGE.setItem("diario-revista-carteira-v1", comCart ? "1" : "0"); } catch {}
+                qBar();
+                M(!0);
                 return;
               }
               f.dataset.revista === "refresh" || f.hasAttribute("data-jrrf")
