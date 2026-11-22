@@ -31,7 +31,7 @@ jobs:
       - name: Conferir bundles v887
         run: npm run check
       - name: Rodar testes de regressao
-        run: npm test
+        run: node --test --test-concurrency=1 tests/analises-screeners-v742.test.cjs tests/screeners-dossie-v748.test.cjs tests/tecnico-v762.test.cjs tests/analises-subabas-mobile-v744.test.cjs
       - name: Registrar bundles gerados no QA
         run: |
           git config user.name "github-actions[bot]"

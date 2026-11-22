@@ -12,7 +12,7 @@ test('Análises mantém a Pesquisa e acrescenta dois Screeners sem outra aba',()
   assert.match(app,/ANALISE PETR4/);
   assert.match(app,/COMPARE PETR4 PBR/);
   assert.match(app,/screenTab='pesquisa'/);
-  assert.match(app,/Screener Brasil/);
+  assert.match(app,/Rankings completos B3/);assert.match(app,/Telas de Research/);
   assert.match(app,/Screener EUA/);
   assert.match(app,/DiarioAnalises\.command/);
 });
