@@ -1,0 +1,53 @@
+name: Preparar v883 Aurea
+on:
+  push:
+    branches: [automation-v883-aurea]
+permissions:
+  contents: write
+jobs:
+  preparar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Aplicar v883 sobre o commit solicitado
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .ci/aurea_v883.patch "$RUNNER_TEMP/aurea.patch"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "3aecef39bfedc11f868fd7d87c7ac5476b1450e9"
+          git checkout -B release-v883 origin/main
+          git apply --check "$RUNNER_TEMP/aurea.patch"
+          git apply "$RUNNER_TEMP/aurea.patch"
+          git diff --check
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Check
+        run: npm run check
+      - name: Conferir versao e bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node -p 'require("./release.config.json").version')" = "883"
+          git status --short
+          git diff --name-only
+          test "$(git diff --name-only | wc -l)" -ge 10
+          git diff --name-only | grep -Eq '(bundle|\.min\.js|\.css|index\.html)' || { echo 'Nenhum bundle atualizado'; exit 1; }
+      - name: Preparar commit de release para verificacao
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Diario Trader CI"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "v883: Áurea (roteador do Conselho), Markowitz na Carteira, fix Cérebro e validador 2026"
+          git push origin HEAD:refs/heads/ready-v883-aurea
+          echo "SHA: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
