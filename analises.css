@@ -349,8 +349,8 @@ html body #app nav.an-subs > button[aria-selected="true"] {
 #an-root.an830 .an830-acoes .btn{min-height:40px}
 #an-root.an830 .an-header{margin:0 0 12px}
 #an-root.an830 .an-header h1{font-size:22px}
-#an-root.an830 .an830-acoes .ui-cta{background:var(--ui-accent,#F59E0B)!important;color:#08090D!important;border:0!important;min-height:44px;border-radius:6px;font-weight:700}
-html[data-v427-tema=claro] #an-root.an830 .an830-acoes .ui-cta{color:#FFFFFF!important}
+#an-root.an830 .an830-acoes .ui-cta{background:var(--accent,#C9A66B)!important;color:#0A0B0F!important;border:0!important;min-height:44px;border-radius:6px;font-weight:700}
+html[data-v427-tema=claro] #an-root.an830 .an830-acoes .ui-cta{background:#8B6524!important;color:#FFFDF9!important}
 /* v846 — ficha: gráficos fundamentalistas */
 .scr846-graficos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:10px 0 14px;min-width:0}
 .scr846-fig{margin:0;padding:10px 0 0;border-top:1px solid var(--ui-card-line,rgba(255,255,255,.06));min-width:0}
@@ -488,8 +488,16 @@ body.hf-aberto{overflow:hidden}
  body.scr853-imprimir .scr849-bar i,body.scr853-imprimir .scr846-bar i,body.scr853-imprimir .scr-meter i{background:#555!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
  body.scr853-imprimir .scr846-fig svg rect.ok{fill:#10B981!important}body.scr853-imprimir .scr846-fig svg rect.neg{fill:#EF4444!important}
 }
-/* v873: barra de telas com Rankings/Radar/Teses — rola no iPhone sem quebrar a página */
-.an-subs.an830-bar .an830-seg{max-width:100%;min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+/* v873/v881: barra de telas com Rankings/Radar/Teses — rola no iPhone sem quebrar a página + botão '?' */
+html body #app nav.an-subs.an830-bar{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;min-width:0}
+.an-subs.an830-bar .an830-seg{flex:0 1 auto;max-width:100%;min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;position:relative}
 .an-subs.an830-bar .an830-seg::-webkit-scrollbar{display:none}
 .an-subs.an830-bar .an830-seg button{flex:0 0 auto;white-space:nowrap}
+.an-subs.an830-bar .an830-seg button.selected{border-color:var(--accent,#C9A66B)!important;color:var(--accent,#C9A66B)!important;background:rgba(201,166,107,.12)!important}
+html[data-v427-tema=claro] .an-subs.an830-bar .an830-seg button.selected{border-color:#8B6524!important;color:#8B6524!important;background:rgba(139,101,36,.12)!important}
+html body #app nav.an-subs.an830-bar > button.an881-guia-btn{margin-left:auto!important;flex:0 0 32px!important;width:32px!important;max-width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;padding:0!important;border-radius:50%!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-weight:700!important;font-size:13px!important;border:1px solid var(--border,rgba(255,255,255,.14))!important;background:var(--surface-2,#181C28)!important;color:var(--text-muted,#94A3B8)!important;cursor:pointer}
+html body #app nav.an-subs.an830-bar > button.an881-guia-btn:hover,html body #app nav.an-subs.an830-bar > button.an881-guia-btn.selected{border-color:var(--accent,#C9A66B)!important;color:var(--accent,#C9A66B)!important;background:rgba(201,166,107,.14)!important}
+html[data-v427-tema=claro] body #app nav.an-subs.an830-bar > button.an881-guia-btn{border-color:rgba(28,25,23,.18)!important;background:#F0ECE2!important;color:#57534E!important}
+html[data-v427-tema=claro] body #app nav.an-subs.an830-bar > button.an881-guia-btn:hover,html[data-v427-tema=claro] body #app nav.an-subs.an830-bar > button.an881-guia-btn.selected{border-color:#8B6524!important;color:#8B6524!important;background:rgba(139,101,36,.14)!important}
+@media(max-width:767px){.an-subs.an830-bar .an830-seg{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent 100%);mask-image:linear-gradient(90deg,#000 88%,transparent 100%);padding-right:18px}}
 #an-root.an873{min-width:0}

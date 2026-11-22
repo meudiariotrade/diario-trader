@@ -13,7 +13,8 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, Pesquisa prese
  await expect(nav).toBeVisible();
  await expect(nav.locator('[data-an-sub]')).toHaveCount(7);
  const pesquisa=nav.locator('[data-an-sub="pesquisa"]');
- await expect(pesquisa).toContainText('Pesquisa com IA');
+ await expect(pesquisa).toContainText('Pesquisa IA');
+ await expect(pesquisa).toHaveAttribute('aria-label',/Pesquisa com IA/);
  await expect(pesquisa).toHaveAttribute('aria-selected','true');
  await expect(nav.locator('[data-an-sub="br"]')).toBeVisible();
  await expect(nav.locator('[data-an-sub="tecnico-br"]')).toHaveCount(1);
