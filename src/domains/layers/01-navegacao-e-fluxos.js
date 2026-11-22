@@ -1167,10 +1167,10 @@ try {
           },
           {
             id: "analises",
-            name: "Análises",
+            name: "Research",
             icon: "chart",
-            description: "Pesquisa técnica e fundamentalista com fontes",
-            items: [["analises", "Análise técnica e fundamentalista"]],
+            description: "Rankings, Radar, EUA, Técnico, Teses e O Conselho",
+            items: [["analises", "Research & O Conselho"]],
           },
           {
             id: "operacoes",

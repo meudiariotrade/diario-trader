@@ -218,49 +218,74 @@
       '<p class="mut sm">Histórico diário (Yahoo Finance). Comparação de direção, não previsão.</p>';
   }
 
-  /* v886: Paridade de ADRs (cesta de ADRs + USD/BRL) para preço teórico na B3 e abertura teórica do Ibovespa. */
+  /* v886/v887: Paridade de ADRs (cesta de ADRs + USD/BRL) comparada ao fechamento B3 real (Profit / TradingView). */
   const ADR_REGRAS=[
-    {s:'PBR',tk:'PETR4',razao:2,peso:12.0},
+    {s:'PBR',tk:'PETR3',razao:2,peso:12.0},
     {s:'VALE',tk:'VALE3',razao:1,peso:11.5},
     {s:'ITUB',tk:'ITUB4',razao:1,peso:7.5},
     {s:'BBD',tk:'BBDC4',razao:1,peso:3.5},
     {s:'ABEV',tk:'ABEV3',razao:1,peso:2.8},
     {s:'GGB',tk:'GGBR4',razao:1,peso:1.3}
   ];
+  function cotacaoApp(tk){
+    const k=String(tk||'').toUpperCase();
+    try{
+      if(typeof CQ!=='undefined'&&CQ){
+        const p=CQ.pf&&CQ.pf[k];
+        if(p&&Number(p.px)>0)return {px:Number(p.px),d1:Number(p.d1),fonte:'Profit'};
+        for(const g of Object.values(CQ.d||{})){
+          for(const r of (g?.itens||[])){
+            const sym=String(r?.ticker||r?.c||r?.s||'').toUpperCase().replace(/^.*:/,'');
+            if(sym===k&&Number(r?.px)>0)return {px:Number(r.px),d1:Number(r.d1),fonte:'TradingView'};
+          }
+        }
+      }
+    }catch(_){}
+    try{
+      const av=w.DiarioAnalisesPlus?.avaliarAtivo?.(k);
+      if(av&&Number(av.preco)>0)return {px:Number(av.preco),d1:null,fonte:'B3'};
+    }catch(_){}
+    return null;
+  }
   function paridadeAdrsHtml(){
     const m=state.mercado;if(!m||!Array.isArray(m.adrs)||!m.adrs.length)return '';
     const itens=(m.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
+    const fxApp=cotacaoApp('USDBRL');
     const fxObj=itens.find(i=>/USD\/?BRL/i.test(String(i.n||'')));
     const ewzObj=itens.find(i=>/^EWZ\b/i.test(String(i.n||'')));
-    const fx=Number(fxObj?.px),fxD1=Number(fxObj?.d1);
+    const fx=Number(fxApp?.px||fxObj?.px),fxD1=Number(fxApp?.d1!=null&&Number.isFinite(fxApp.d1)?fxApp.d1:fxObj?.d1);
     if(!Number.isFinite(fx)||fx<=0)return '';
     const fxPct=Number.isFinite(fxD1)?fxD1:0;
     const pct=v=>(v>=0?'+':'')+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
     const brl=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-    const usd=v=>'US$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-    let somaPond=0,somaPeso=0;
+    const ibovRef=cotacaoApp('IBOV');
+    let somaPond=0,somaPeso=0,comB3=0;
     const linhas=[];
     for(const reg of ADR_REGRAS){
       const a=m.adrs.find(x=>String(x.s||'').toUpperCase()===reg.s);
       if(!a||!Number.isFinite(Number(a.px))||Number(a.px)<=0)continue;
       const pxUsd=Number(a.px),chpUsd=Number.isFinite(Number(a.chp))?Number(a.chp):0;
       const teorico=(pxUsd/reg.razao)*fx;
-      const varBrl=((1+chpUsd/100)*(1+fxPct/100)-1)*100;
-      somaPond+=varBrl*reg.peso;somaPeso+=reg.peso;
-      linhas.push({tk:reg.tk,adr:reg.s,razao:reg.razao,pxUsd,teorico,varBrl});
+      const b3Ref=cotacaoApp(reg.tk);
+      const fechB3=b3Ref&&b3Ref.px>0?b3Ref.px:null;
+      const gapPct=fechB3?((teorico/fechB3)-1)*100:((1+chpUsd/100)*(1+fxPct/100)-1)*100;
+      if(fechB3)comB3++;
+      somaPond+=gapPct*reg.peso;somaPeso+=reg.peso;
+      linhas.push({tk:reg.tk,adr:reg.s,razao:reg.razao,pxUsd,fechB3,teorico,gapPct});
     }
     if(!linhas.length)return '';
     const ibovVar=somaPeso>0?somaPond/somaPeso:0;
+    const ibovPts=ibovRef&&ibovRef.px>0?Math.round(ibovRef.px*(1+ibovVar/100)):null;
     const ewzBrl=ewzObj&&Number.isFinite(Number(ewzObj.d1))?((1+Number(ewzObj.d1)/100)*(1+fxPct/100)-1)*100:null;
     const cor=v=>v>0.15?'ui-g':v<-0.15?'ui-r':'';
-    const trs=linhas.map(l=>'<tr><td style="padding:4px 6px"><b>'+l.tk+'</b> <span class="mut">('+l.adr+(l.razao>1?' ÷'+l.razao:'')+')</span></td><td style="padding:4px 6px;text-align:right">'+usd(l.pxUsd)+'</td><td style="padding:4px 6px;text-align:right"><b>'+brl(l.teorico)+'</b></td><td style="padding:4px 6px;text-align:right"><b class="'+cor(l.varBrl)+'">'+pct(l.varBrl)+'</b></td></tr>').join('');
+    const trs=linhas.map(l=>'<tr><td style="padding:4px 6px"><b>'+l.tk+'</b> <span class="mut">('+l.adr+(l.razao>1?' ÷'+l.razao:'')+')</span></td><td style="padding:4px 6px;text-align:right">'+(l.fechB3?brl(l.fechB3):'—')+'</td><td style="padding:4px 6px;text-align:right"><b>'+brl(l.teorico)+'</b></td><td style="padding:4px 6px;text-align:right"><b class="'+cor(l.gapPct)+'">'+pct(l.gapPct)+'</b></td></tr>').join('');
     return '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.24);background:rgba(201,166,107,.05)">'+
-      '<p class="sm" style="margin:0"><b>Ibovespa teórico (Cesta de ADRs):</b> <b class="'+cor(ibovVar)+'">'+pct(ibovVar)+'</b>'+
+      '<p class="sm" style="margin:0"><b>Ibovespa teórico (Cesta de ADRs):</b> '+(ibovPts?'<b>'+ibovPts.toLocaleString('pt-BR')+' pts</b> ':'')+'<b class="'+cor(ibovVar)+'">'+pct(ibovVar)+'</b>'+
       (ewzBrl!=null?' · <b>EWZ em R$:</b> <b class="'+cor(ewzBrl)+'">'+pct(ewzBrl)+'</b>':'')+
-      ' · Dólar: <b>'+brl(fx)+'</b> ('+pct(fxPct)+')</p>'+
+      ' · Dólar: <b>'+brl(fx)+'</b></p>'+
       '<details style="margin-top:6px"><summary class="sm" style="cursor:pointer;color:var(--accent,#C9A66B)">Ver preço teórico das ações (Paridade de ADRs · '+linhas.length+' ativos)</summary>'+
-      '<div style="overflow-x:auto;margin-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.1)"><th style="text-align:left;padding:4px 6px">Ação (ADR)</th><th style="text-align:right;padding:4px 6px">ADR</th><th style="text-align:right;padding:4px 6px">Teórico B3</th><th style="text-align:right;padding:4px 6px">Var. R$</th></tr></thead><tbody>'+trs+'</tbody></table></div>'+
-      '<p class="mut sm" style="margin:6px 0 0">Fórmula: <b>(ADR em US$ ÷ equivalência) × USD/BRL</b>. Ponderação estimada pelos pesos da cesta (~'+somaPeso.toFixed(0)+'% do Ibov). Referência teórica, não preço de leilão.</p></details></div>';
+      '<div style="overflow-x:auto;margin-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.1)"><th style="text-align:left;padding:4px 6px">Ação (ADR)</th><th style="text-align:right;padding:4px 6px">Fech. B3</th><th style="text-align:right;padding:4px 6px">Teórico</th><th style="text-align:right;padding:4px 6px">Gap</th></tr></thead><tbody>'+trs+'</tbody></table></div>'+
+      '<p class="mut sm" style="margin:6px 0 0">Fórmula: <b>(ADR em US$ ÷ equivalência) × USD/BRL</b> vs fechamento B3 ('+(comB3?'Profit/TradingView':'variação ADR+dólar')+'). PBR equivale a 2 PETR3 (ON). Referência teórica, não preço de leilão.</p></details></div>';
   }
   /* v835: sinais entre mercados — expectativa de abertura do Ibovespa (B3) e pares que se separaram hoje. */
   function sinaisHtml() {
@@ -569,7 +594,8 @@
       '<p class="mut sm">Fonte: '+fonte+' · '+(recent?'Atualizado: ':'Último registro (não é tempo real): ')+
         when(state.mercado?.atualizadoEm)+'</p>'+
       (context?.warning?'<p class="mut sm">'+escape(context.warning)+'</p>':'')+
-      '<p style="margin:8px 0"><button type="button" class="btn s" data-aurea-resumao="'+ed+'">'+info.cta+'</button></p>'+
+      '<div style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" data-aurea-resumao="'+ed+'">'+info.cta+'</button>'+
+      ('speechSynthesis' in w?'<button type="button" class="btn s" data-aurea-ouvir="'+ed+'">'+(state.falando?'⏹ Parar áudio':'🔊 Ouvir')+'</button>':'')+'</div>'+
       '<details><summary>Fatos publicados, hipóteses e fontes · '+mine.length+' ligados aos seus ativos</summary>'+
       '<ul class="v810-intel-events">'+top+'</ul>'+
       (hot.length?'<div><b>Hipóteses condicionadas</b></div>'+
@@ -716,6 +742,27 @@
     }
   }
   document.addEventListener('click',async event=>{
+    const ouvBtn=event.target.closest('[data-aurea-ouvir]');
+    if(ouvBtn&&'speechSynthesis' in w){
+      if(state.falando){try{w.speechSynthesis.cancel();}catch(_){}state.falando=false;repaint();return;}
+      const ed=ouvBtn.dataset.aureaOuvir||'manha';
+      const nomes={fimdesemana:'Edição de fim de semana. B3 e Wall Street estão fechados.',manha:'Edição da manhã, pré-abertura.',meiodia:'Edição do meio-dia, B3 e Estados Unidos em pregão.',fechamento:'Edição de fechamento.'};
+      const p=pulsoDoisMercados(),m=mercadoPlan();
+      const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,2).map(e=>tit(e)).join('. ');
+      const fala='Olá, aqui é a Áurea. '+(nomes[ed]||'')+' '+
+        (p.texto?p.texto.replace(/\|/g,'. ').replace(/·/g,', ')+'. ':'')+
+        (m.nome&&!/insuficiente|Sem leitura/i.test(m.nome)?'Leitura atual: '+m.nome+'. ':'')+
+        (topNews?'Destaques nas notícias: '+topNews+'.':'');
+      try{
+        w.speechSynthesis.cancel();
+        const u=new SpeechSynthesisUtterance(fala);
+        u.lang='pt-BR';u.rate=1.02;
+        u.onend=u.onerror=()=>{state.falando=false;repaint();};
+        state.falando=true;repaint();
+        w.speechSynthesis.speak(u);
+      }catch(_){state.falando=false;repaint();}
+      return;
+    }
     const edBtn=event.target.closest('[data-aurea-edicao]');
     if(edBtn){
       state.edicaoManual=edBtn.dataset.aureaEdicao||'';

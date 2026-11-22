@@ -166,13 +166,13 @@
   finally{cerebroBusy=false;update()}
  }
  function subnav(){
-  /* v882: barra enxuta (6 telas com 'Conselho' + ícone '?' para Entenda os dados). */
+  /* v887: Research com 6 telas distintas — Rankings, Radar, EUA (Screener EUA), Técnico, Teses, Conselho + '?'. */
   const PLUS=['rankpro','radar','teses','guia'],tela=PLUS.includes(screenTab)?screenTab:screenTab==='pesquisa'?'pesquisa':screenTab.startsWith('tecnico-')?'tecnico':'ranking',eua=screenTab==='us'||screenTab==='tecnico-world';
   const alvo=(t,e)=>t==='pesquisa'?'pesquisa':t==='tecnico'?(e?'tecnico-world':'tecnico-br'):(e?'us':'br');
   const bt=(sub,rot,on,label,cls)=>'<button type="button" role="tab" data-an-sub="'+sub+'" class="'+(on?'selected':'')+(cls?' '+cls:'')+'" aria-selected="'+(on?'true':'false')+'"'+(label?' aria-label="'+label+'" title="'+label+'"':'')+'>'+rot+'</button>';
-  return '<nav class="an-subs an830-bar" aria-label="Telas de Análises"><div class="an830-seg" role="tablist" aria-label="Tela">'+
-   bt('rankpro','Rankings',tela==='rankpro','Rankings completos B3')+bt('radar','Radar',tela==='radar','Radar e distorções')+bt(alvo('ranking',eua),'Screener',tela==='ranking',eua?'Screener EUA':'Screener Brasil')+bt(alvo('tecnico',eua),'Técnico',tela==='tecnico',eua?'Técnico EUA &amp; Cripto':'Técnico Brasil')+bt('teses','Teses',tela==='teses','Minhas teses')+bt('pesquisa','Conselho',tela==='pesquisa','O Conselho — especialistas de mercado (Graham, Livermore, Munger, Markowitz, Schwartz e Dow)')+
-   '</div>'+(tela==='pesquisa'||PLUS.includes(tela)?'':'<div class="an830-seg" role="tablist" aria-label="Mercado">'+bt(alvo(tela,false),'Brasil',!eua)+bt(alvo(tela,true),tela==='tecnico'?'EUA e cripto':'EUA',eua)+'</div>')+
+  return '<nav class="an-subs an830-bar" aria-label="Telas de Research"><div class="an830-seg" role="tablist" aria-label="Tela">'+
+   bt('rankpro','Rankings',tela==='rankpro'||screenTab==='br','Rankings completos B3')+bt('radar','Radar',tela==='radar','Radar e distorções')+bt('us','EUA',screenTab==='us','Screener EUA')+bt(alvo('tecnico',eua),'Técnico',tela==='tecnico',eua?'Técnico EUA &amp; Cripto':'Técnico Brasil')+bt('teses','Teses',tela==='teses','Minhas teses')+bt('pesquisa','Conselho',tela==='pesquisa','O Conselho — especialistas de mercado (Graham, Livermore, Munger, Markowitz, Schwartz e Dow)')+
+   '</div>'+(tela==='tecnico'||screenTab==='br'?'<div class="an830-seg" role="tablist" aria-label="Mercado">'+bt(alvo(tela,false),'Brasil',!eua)+bt(alvo(tela,true),tela==='tecnico'?'EUA e cripto':'EUA',eua)+'</div>':'')+
    bt('guia','?',tela==='guia','Entenda os dados — guia de indicadores','an881-guia-btn')+'</nav>'}
  /* v830: ficha do ativo em foco ao lado da lista (clique numa linha para trocar). */
  function ficha(){
