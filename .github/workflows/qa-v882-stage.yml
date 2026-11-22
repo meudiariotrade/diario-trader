@@ -1,0 +1,28 @@
+name: QA stage fix v882 Conselho
+on:
+  push:
+    branches: [stage-v882-qa-fix-20261122]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Preparar navegador dos testes
+        run: |
+          diario_browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$diario_browser" ]; then
+            printf 'CHROMIUM_PATH=%s\n' "$diario_browser" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - run: npm run build && npm run check
+      - name: Rodar testes corrigidos
+        run: node --test --test-concurrency=1 tests/analises-subabas-mobile-v744.test.cjs tests/organizacao-analises.test.cjs
