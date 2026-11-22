@@ -1,0 +1,44 @@
+name: QA temporario v888 PETR4 WIN Gatilhos
+on:
+  push:
+    branches: [qa/petr4-win-gatilhos-v888]
+permissions:
+  contents: write
+jobs:
+  verify:
+    if: "!contains(github.event.head_commit.message, 'CI: bundles v888')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Preparar navegador dos testes
+        run: |
+          diario_browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$diario_browser" ]; then
+            printf 'CHROMIUM_PATH=%s\n' "$diario_browser" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Gerar bundles v888
+        run: npm run build
+      - name: Conferir bundles v888
+        run: npm run check
+      - name: Rodar testes de regressao
+        run: npm test
+      - name: Registrar bundles no QA
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git status --short
+          if ! git diff --cached --quiet; then
+            git commit -m "CI: bundles v888 [skip ci]"
+            git push origin HEAD:refs/heads/qa/petr4-win-gatilhos-v888
+          fi

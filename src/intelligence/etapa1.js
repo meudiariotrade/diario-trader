@@ -218,9 +218,9 @@
       '<p class="mut sm">Histórico diário (Yahoo Finance). Comparação de direção, não previsão.</p>';
   }
 
-  /* v886/v887: Paridade de ADRs (cesta de ADRs + USD/BRL) comparada ao fechamento B3 real (Profit / TradingView). */
+  /* v886/v888: Paridade de ADRs (cesta de ADRs + USD/BRL) comparada ao fechamento B3 real (Profit / TradingView), com PETR4 e WIN teórico. */
   const ADR_REGRAS=[
-    {s:'PBR',tk:'PETR3',razao:2,peso:12.0},
+    {s:'PBR',tk:'PETR4',on:'PETR3',razao:2,peso:12.0},
     {s:'VALE',tk:'VALE3',razao:1,peso:11.5},
     {s:'ITUB',tk:'ITUB4',razao:1,peso:7.5},
     {s:'BBD',tk:'BBDC4',razao:1,peso:3.5},
@@ -242,6 +242,9 @@
       }
     }catch(_){}
     try{
+      if(typeof LV!=='undefined'&&LV?.px&&LV.px[k]?.ult>0)return {px:Number(LV.px[k].ult),d1:null,fonte:'Profit'};
+    }catch(_){}
+    try{
       const av=w.DiarioAnalisesPlus?.avaliarAtivo?.(k);
       if(av&&Number(av.preco)>0)return {px:Number(av.preco),d1:null,fonte:'B3'};
     }catch(_){}
@@ -259,16 +262,25 @@
     const pct=v=>(v>=0?'+':'')+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
     const brl=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     const ibovRef=cotacaoApp('IBOV');
+    const winRef=cotacaoApp('WIN')||cotacaoApp('WINFUT')||cotacaoApp('WIN1!');
     let somaPond=0,somaPeso=0,comB3=0;
     const linhas=[];
     for(const reg of ADR_REGRAS){
       const a=m.adrs.find(x=>String(x.s||'').toUpperCase()===reg.s);
       if(!a||!Number.isFinite(Number(a.px))||Number(a.px)<=0)continue;
       const pxUsd=Number(a.px),chpUsd=Number.isFinite(Number(a.chp))?Number(a.chp):0;
-      const teorico=(pxUsd/reg.razao)*fx;
+      const teoricoBase=(pxUsd/reg.razao)*fx;
       const b3Ref=cotacaoApp(reg.tk);
       const fechB3=b3Ref&&b3Ref.px>0?b3Ref.px:null;
-      const gapPct=fechB3?((teorico/fechB3)-1)*100:((1+chpUsd/100)*(1+fxPct/100)-1)*100;
+      let teorico=teoricoBase,gapPct=null;
+      if(reg.on){
+        const onRef=cotacaoApp(reg.on);
+        if(fechB3&&onRef&&onRef.px>0){
+          teorico=teoricoBase*(fechB3/onRef.px);
+          gapPct=((teoricoBase/onRef.px)-1)*100;
+        }
+      }
+      if(gapPct==null)gapPct=fechB3?((teorico/fechB3)-1)*100:((1+chpUsd/100)*(1+fxPct/100)-1)*100;
       if(fechB3)comB3++;
       somaPond+=gapPct*reg.peso;somaPeso+=reg.peso;
       linhas.push({tk:reg.tk,adr:reg.s,razao:reg.razao,pxUsd,fechB3,teorico,gapPct});
@@ -276,16 +288,18 @@
     if(!linhas.length)return '';
     const ibovVar=somaPeso>0?somaPond/somaPeso:0;
     const ibovPts=ibovRef&&ibovRef.px>0?Math.round(ibovRef.px*(1+ibovVar/100)):null;
+    const winPts=winRef&&winRef.px>0?Math.round((winRef.px*(1+ibovVar/100))/5)*5:null;
     const ewzBrl=ewzObj&&Number.isFinite(Number(ewzObj.d1))?((1+Number(ewzObj.d1)/100)*(1+fxPct/100)-1)*100:null;
     const cor=v=>v>0.15?'ui-g':v<-0.15?'ui-r':'';
     const trs=linhas.map(l=>'<tr><td style="padding:4px 6px"><b>'+l.tk+'</b> <span class="mut">('+l.adr+(l.razao>1?' ÷'+l.razao:'')+')</span></td><td style="padding:4px 6px;text-align:right">'+(l.fechB3?brl(l.fechB3):'—')+'</td><td style="padding:4px 6px;text-align:right"><b>'+brl(l.teorico)+'</b></td><td style="padding:4px 6px;text-align:right"><b class="'+cor(l.gapPct)+'">'+pct(l.gapPct)+'</b></td></tr>').join('');
     return '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.24);background:rgba(201,166,107,.05)">'+
       '<p class="sm" style="margin:0"><b>Ibovespa teórico (Cesta de ADRs):</b> '+(ibovPts?'<b>'+ibovPts.toLocaleString('pt-BR')+' pts</b> ':'')+'<b class="'+cor(ibovVar)+'">'+pct(ibovVar)+'</b>'+
+      (winPts?' · <b>WIN teórico:</b> <b>'+winPts.toLocaleString('pt-BR')+' pts</b>':'')+
       (ewzBrl!=null?' · <b>EWZ em R$:</b> <b class="'+cor(ewzBrl)+'">'+pct(ewzBrl)+'</b>':'')+
       ' · Dólar: <b>'+brl(fx)+'</b></p>'+
       '<details style="margin-top:6px"><summary class="sm" style="cursor:pointer;color:var(--accent,#C9A66B)">Ver preço teórico das ações (Paridade de ADRs · '+linhas.length+' ativos)</summary>'+
       '<div style="overflow-x:auto;margin-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.1)"><th style="text-align:left;padding:4px 6px">Ação (ADR)</th><th style="text-align:right;padding:4px 6px">Fech. B3</th><th style="text-align:right;padding:4px 6px">Teórico</th><th style="text-align:right;padding:4px 6px">Gap</th></tr></thead><tbody>'+trs+'</tbody></table></div>'+
-      '<p class="mut sm" style="margin:6px 0 0">Fórmula: <b>(ADR em US$ ÷ equivalência) × USD/BRL</b> vs fechamento B3 ('+(comB3?'Profit/TradingView':'variação ADR+dólar')+'). PBR equivale a 2 PETR3 (ON). Referência teórica, não preço de leilão.</p></details></div>';
+      '<p class="mut sm" style="margin:6px 0 0">Fórmula: <b>(ADR em US$ ÷ equivalência) × USD/BRL</b> vs fechamento B3 ('+(comB3?'Profit/TradingView':'variação ADR+dólar')+'). PETR4 ajustada pelo spread real PETR4/PETR3 sobre PBR. Referência teórica, não preço de leilão.</p></details></div>';
   }
   /* v835: sinais entre mercados — expectativa de abertura do Ibovespa (B3) e pares que se separaram hoje. */
   function sinaisHtml() {
@@ -574,6 +588,20 @@
       keys.map(k=>'<button type="button" data-aurea-edicao="'+k+'" style="padding:4px 10px;border-radius:999px;font-size:11.5px;cursor:pointer;border:1px solid '+(ed===k?'rgba(201,166,107,.75)':'rgba(255,255,255,.14)')+';background:'+(ed===k?'rgba(201,166,107,.16)':'transparent')+';color:inherit;font-weight:'+(ed===k?'700':'500')+'">'+META[k].rot+(k===edAuto?' · agora':'')+'</button>').join('')+
       '</div>';
     const relogio='<p class="mut sm" style="margin:0 0 6px">B3: <b>'+escape(b3St)+'</b> · EUA (NYSE/Nasdaq): <b>'+escape(usSt)+'</b>'+(context?.b3?.nextDate?' · Próxima B3: '+escape(br(context.b3.nextDate)):'')+'</p>';
+    let gatilhosLine='';
+    try{
+      const ts=JSON.parse(localStorage.getItem('diario-teses-v873')||'[]');
+      const hits=[];
+      for(const t of (Array.isArray(ts)?ts:[])){
+        if(!t||t.status!=='ativa'||!t.tk)continue;
+        const c=cotacaoApp(t.tk),px=c?.px;if(!(px>0))continue;
+        const ent=Number(t.entrada),alv=Number(t.alvo),stp=Number(t.stop);
+        if(stp>0&&px<=stp)hits.push(t.tk+' atingiu stop/invalidação (R$ '+px.toFixed(2).replace('.',',')+')');
+        else if(alv>0&&px>=alv)hits.push(t.tk+' atingiu preço-alvo (R$ '+px.toFixed(2).replace('.',',')+')');
+        else if(ent>0&&px<=ent)hits.push(t.tk+' na zona de entrada (R$ '+px.toFixed(2).replace('.',',')+')');
+      }
+      if(hits.length)gatilhosLine='<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.55);background:rgba(201,166,107,.11)"><b>🎯 Gatilhos das suas Teses:</b> '+escape(hits.slice(0,3).join(' · '))+'</p>';
+    }catch(_){}
     const doisMkts=pulso.texto?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.22);background:rgba(201,166,107,.05)">'+escape(pulso.texto)+'</p>':'';
     const schwartzLine=agEvs.length?'<p class="sm" style="margin:4px 0"><b>S · Schwartz (Agenda BR/EUA):</b> '+escape(agEvs.join(' · '))+'</p>':'';
     const atualizado=Date.parse(state.mercado?.atualizadoEm||'');
@@ -589,7 +617,7 @@
         ' · efeito nos ativos depende de confirmação.</small></li>';
     }).join('')||'<li>Não há acontecimentos recentes com fontes identificadas.</li>';
     return '<div class="v810-intel-brief">'+pills+'<h3>'+info.titulo+'</h3>'+relogio+
-      '<p class="mut sm" style="margin:0 0 6px">'+info.foco+'</p>'+doisMkts+schwartzLine+
+      '<p class="mut sm" style="margin:0 0 6px">'+info.foco+'</p>'+gatilhosLine+doisMkts+schwartzLine+
       '<p><b>'+resumo+'</b></p>'+
       '<p class="mut sm">Fonte: '+fonte+' · '+(recent?'Atualizado: ':'Último registro (não é tempo real): ')+
         when(state.mercado?.atualizadoEm)+'</p>'+
