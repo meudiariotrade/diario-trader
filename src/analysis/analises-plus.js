@@ -326,7 +326,7 @@ function viewAtivo(){
  return '<div class="ap-ativo"><div class="ap-bc" aria-label="Caminho"><button type="button" class="ap-link" data-ap-voltar>← Rankings</button><span>/</span><b>'+r.ticker+'</b></div>'+
   '<header class="ap-hero"><div class="ap-hero-l"><div class="ap-hero-t"><h2>'+logo(r.ticker)+r.ticker+'</h2><div class="ap-tags"><span class="ap-tag">'+E(r.setor)+'</span>'+(r.porte?'<span class="ap-tag">'+r.porte+' Cap</span>':'')+'</div></div><p class="ap-mut ap-hero-emp">'+E(r.empresa)+'</p>'+
   '<div class="ap-hk"><div><span>Cotação</span><b>'+brl(r.preco)+(r.profit&&r.d1!=null?' <small class="'+cor(r.d1)+'">'+sinal(r.d1,2)+'</small>':'')+'</b></div><div><span>Justo médio (3 métodos)</span><b>~'+fmt(r.justo)+' <small class="'+cor(u)+'">'+sinal(u,0)+'</small></b></div></div></div>'+
-  '<div class="ap-acoes"><button type="button" class="ui-cta" data-noclaro data-dt815="foco" data-tk="'+r.ticker+'">Gráfico no Terminal</button><div class="ap-acoes-sec"><button type="button" class="btn s" data-hf-abrir="'+r.ticker+'" data-hf-market="BR">Histórico 10 anos</button><button type="button" class="btn s" data-ap-ia="'+r.ticker+'">Analisar com IA</button></div></div></header>'+
+  '<div class="ap-acoes"><button type="button" class="ui-cta" data-noclaro data-dt815="foco" data-tk="'+r.ticker+'">Gráfico no Terminal</button><div class="ap-acoes-sec"><button type="button" class="btn s" data-hf-abrir="'+r.ticker+'" data-hf-market="BR">Histórico 10 anos</button><button type="button" class="btn s" data-ap-ia="'+r.ticker+'">Parecer de Graham</button></div></div></header>'+
   '<div class="ap-subs" role="tablist">'+subs.map(([k,t])=>'<button type="button" role="tab" data-ap-sub="'+k+'" class="'+(st.sub===k?'on':'')+'">'+t+'</button>').join('')+'</div>'+body+'</div>';
 }
 
@@ -345,7 +345,7 @@ function viewTeses(){
    '<div class="ap-kv"><div><span>Atual</span><b>'+brl(p)+'</b></div><div><span>Entrada</span><b>'+brl(N(t.entrada))+'</b></div><div><span>Alvo</span><b>'+brl(N(t.alvo))+' <small class="'+cor(up)+'">'+sinal(up,0)+'</small></b></div><div><span>Horizonte</span><b>'+E(t.horizonte||'—')+'</b></div></div>'+
    (prog!=null?'<div class="ap-prog"><i style="width:'+prog.toFixed(0)+'%"></i></div><p class="ap-mut">'+fmt(prog,0)+'% do caminho até o alvo'+(t.stop&&p&&p<t.stop?' · <b class="ap-r">abaixo do ponto de invalidação</b>':'')+'</p>':'')+
    (t.texto?'<p>'+E(t.texto)+'</p>':'')+(t.criterios?'<ul>'+String(t.criterios).split('\n').filter(Boolean).map(c=>'<li>'+E(c)+'</li>').join('')+'</ul>':'')+(t.riscos?'<p class="ap-mut">Riscos: '+E(t.riscos)+'</p>':'')+
-   '<div class="ap-bar ap-tese-actions"><button type="button" class="btn s ap-btn-acc" data-ap-ia="'+E(t.tk)+'">Validar com IA</button><button type="button" class="btn s" data-ap-tedit="'+t.id+'">Editar</button><button type="button" class="btn s ap-del" data-ap-tdel="'+t.id+'">'+(st.excluir===t.id?'Confirmar exclusão':'Excluir')+'</button></div></article>'};
+   '<div class="ap-bar ap-tese-actions"><button type="button" class="btn s ap-btn-acc" data-ap-ia="'+E(t.tk)+'" data-ap-membro="munger">Testar com Munger</button><button type="button" class="btn s" data-ap-tedit="'+t.id+'">Editar</button><button type="button" class="btn s ap-del" data-ap-tdel="'+t.id+'">'+(st.excluir===t.id?'Confirmar exclusão':'Excluir')+'</button></div></article>'};
  return '<div class="ap-teses"><header class="ap-bar ap-teses-head"><div><h3>Minhas teses</h3><p class="ap-mut">'+l.length+' tese(s) · salvas neste aparelho (inclua no backup)</p></div>'+(ed?'':'<button type="button" class="ui-cta" data-noclaro data-ap-novatese="">+ Nova tese</button>')+'</header>'+form+
   (l.length?'<div class="ap-tgrid">'+l.sort((a,b)=>(a.status==='ativa'?0:1)-(b.status==='ativa'?0:1)).map(card).join('')+'</div>':ed?'':'<section class="ap-card ap-vazio"><h4>Nenhuma tese documentada</h4><p class="ap-mut">Faça o valuation na página do ativo, registre aqui o preço-alvo e os critérios e acompanhe a evolução.</p></section>')+'</div>';
 }
@@ -370,7 +370,7 @@ d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-q],[data-a
  if('apQ' in ds){ev.preventDefault();ev.stopPropagation();st.q=ds.apQ;render();return}
  if('apGuia' in ds){st.q='';d.querySelector('[data-an-sub="guia"]')?.click();return}
  if('apQx' in ds||t.classList?.contains('ap-qbox')){if(ev.target.closest('.ap-qcard')&&!('apQx' in ds))return;st.q='';render();return}
- if('apIa' in ds){w.DiarioAnalises?.command?.('ANALISE '+ds.apIa);d.querySelector('[data-an-sub="pesquisa"]')?.click();return}
+ if('apIa' in ds){w.DiarioAnalises?.command?.('ANALISE '+ds.apIa,ds.apMembro||'graham');d.querySelector('[data-an-sub="pesquisa"]')?.click();return}
  if('apRecarregar' in ds){carregar(true);return}
  if('apSerie' in ds){carregaSerie(ds.apSerie,true);return}
  if('apFaltam' in ds){const R=st.X?.retornos||{},P=pf(),l=st.rows.rows.filter(r=>!R[r.ticker]&&!P[r.ticker]).map(r=>r.ticker);navigator.clipboard?.writeText(l.join('\n'));t.textContent=l.length+' tickers copiados';return}
@@ -540,5 +540,43 @@ html[data-v427-tema=claro] .ap-del{color:#B91C1C!important;border-color:rgba(185
 }
 `;d.head.appendChild(s)}
 
-w.DiarioAnalisesPlus={view,enter,abrir,TABS:['rankpro','radar','teses','guia','ativo']};
+function briefing(){
+ if(!st.rows)return null;
+ aplicaProfit();
+ const rows=st.rows.rows.filter(r=>r.preco>0);
+ const risco=r=>(r.div_liq_ebitda!=null&&r.div_liq_ebitda>3.5)||(r.momentum!=null&&r.momentum<-10&&r.div_liq_ebitda!=null&&r.div_liq_ebitda>2);
+ const margem=r=>r.justo&&r.preco?(r.justo/r.preco-1)*100:null;
+ const liqOk=rows.filter(r=>r.liquidez==null||r.liquidez>=5e5);
+ const pool=liqOk.length>=6?liqOk:rows;
+ const avaliar=pool.filter(r=>!risco(r)&&r.nota!=null).map(r=>({r,m:margem(r),sc:(r.nota||0)*25+Math.max(-30,Math.min(80,margem(r)||0))*.35+(r.dy>6?8:0)+(r.roe>15?8:0)}))
+  .sort((a,b)=>b.sc-a.sc).slice(0,4).map(({r,m})=>({
+   ticker:r.ticker,empresa:r.empresa,setor:r.setor,preco:r.preco,nota:r.nota,pl:r.pl,dy:r.dy,roe:r.roe,dl:r.div_liq_ebitda,margem:m,
+   motivo:['Nota '+fmt(r.nota,2)+'/4',r.pl>0?'P/L '+fmt(r.pl,1)+'x':null,r.roe!=null?'ROE '+pct(r.roe):null,r.dy>0?'DY '+pct(r.dy):null,m!=null&&m>0?'Margem '+sinal(m,0):null].filter(Boolean).join(' · ')
+  }));
+ const cautela=pool.filter(r=>risco(r)||(margem(r)!=null&&margem(r)<-35)).sort((a,b)=>(b.div_liq_ebitda??0)-(a.div_liq_ebitda??0)).slice(0,4).map(r=>{
+  const m=margem(r),raz=[];
+  if(r.div_liq_ebitda!=null&&r.div_liq_ebitda>3.5)raz.push('DL/EBITDA '+fmt(r.div_liq_ebitda,1)+'x (alavancagem elevada)');
+  else if(r.momentum!=null&&r.momentum<-10&&r.div_liq_ebitda>2)raz.push('Queda '+sinal(r.momentum,0)+' com DL/EBITDA '+fmt(r.div_liq_ebitda,1)+'x');
+  if(m!=null&&m<-35)raz.push('Preço '+fmt(Math.abs(m),0)+'% acima do justo médio');
+  if(!raz.length)raz.push('Sinal de risco fundamentalista');
+  return {ticker:r.ticker,empresa:r.empresa,setor:r.setor,preco:r.preco,nota:r.nota,dl:r.div_liq_ebitda,margem:m,motivo:raz.join(' · ')};
+ });
+ const rotLin=st.rot?.s?Object.entries(st.rot.s).filter(([,o])=>o['1M']!=null).sort((a,b)=>b[1]['1M']-a[1]['1M']):[];
+ const setoresFortes=rotLin.slice(0,3).map(([s,o])=>({setor:s,m1:o['1M']}));
+ const setoresFracos=rotLin.slice(-3).reverse().map(([s,o])=>({setor:s,m1:o['1M']}));
+ const alta=pool.filter(r=>(r.momentum!=null&&r.momentum>0)&&(r.mm200==null||r.mm200>-2)&&(r.rsi==null||r.rsi<72))
+  .sort((a,b)=>((b.momentum||0)+(b.mm200||0)*.5)-((a.momentum||0)+(a.mm200||0)*.5)).slice(0,4).map(r=>({
+   ticker:r.ticker,empresa:r.empresa,setor:r.setor,preco:r.preco,momentum:r.momentum,mm200:r.mm200,rsi:r.rsi,
+   motivo:[r.momentum!=null?'Momentum '+sinal(r.momentum,1):null,r.mm200!=null?'MM200 '+sinal(r.mm200,1):null,r.rsi!=null?'RSI '+fmt(r.rsi,0):null].filter(Boolean).join(' · ')
+  }));
+ const tecAlertas=pool.filter(r=>(r.rsi!=null&&(r.rsi>=70||r.rsi<=35))||(r.mm200!=null&&(r.mm200>=28||r.mm200<=-12))||(r.momentum!=null&&r.momentum<=-15))
+  .sort((a,b)=>Math.abs(b.mm200??b.momentum??0)-Math.abs(a.mm200??a.momentum??0)).slice(0,4).map(r=>{
+   const tag=r.rsi!=null&&r.rsi>=70?'Sobrecomprado (RSI '+fmt(r.rsi,0)+')':r.rsi!=null&&r.rsi<=35?'Sobrevendido · possível repique (RSI '+fmt(r.rsi,0)+')':r.mm200!=null&&r.mm200>=28?'Esticado acima da MM200 ('+sinal(r.mm200,0)+')':'Tendência fraca ('+(r.momentum!=null?'Mom '+sinal(r.momentum,0):'MM200 '+sinal(r.mm200,0))+')';
+   return {ticker:r.ticker,empresa:r.empresa,setor:r.setor,preco:r.preco,momentum:r.momentum,mm200:r.mm200,rsi:r.rsi,motivo:tag};
+  });
+ return {total:rows.length,ref:st.ref,graham:{avaliar,cautela,setoresFortes,setoresFracos},livermore:{alta,alertas:tecAlertas}};
+}
+async function garantirDados(){await carregar();return briefing()}
+
+w.DiarioAnalisesPlus={view,enter,abrir,briefing,garantirDados,TABS:['rankpro','radar','teses','guia','ativo']};
 })(window,document);

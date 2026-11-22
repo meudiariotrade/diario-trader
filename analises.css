@@ -501,3 +501,47 @@ html[data-v427-tema=claro] body #app nav.an-subs.an830-bar > button.an881-guia-b
 html[data-v427-tema=claro] body #app nav.an-subs.an830-bar > button.an881-guia-btn:hover,html[data-v427-tema=claro] body #app nav.an-subs.an830-bar > button.an881-guia-btn.selected{border-color:#8B6524!important;color:#8B6524!important;background:rgba(139,101,36,.14)!important}
 @media(max-width:767px){.an-subs.an830-bar .an830-seg{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent 100%);mask-image:linear-gradient(90deg,#000 88%,transparent 100%);padding-right:18px}}
 #an-root.an873{min-width:0}
+/* v882: O Conselho (Schwartz, Graham, Munger, Markowitz, Livermore, Dow) + Briefing Automático */
+.an-conselho-bar{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 10px;margin:0 0 8px}
+.an-conselho-bar::-webkit-scrollbar{display:none}
+.an-c-pill{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;background:var(--surface-1,#12151E);border:1px solid var(--border,rgba(255,255,255,.08));border-radius:8px;padding:7px 11px;color:var(--text,#F1F5F9);cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+.an-c-pill b{display:block;font-size:12.5px;line-height:1.2;font-weight:700}
+.an-c-pill small{display:block;font-size:10.5px;color:var(--text-muted,#94A3B8);line-height:1.2}
+.an-c-pill.on,.an-c-pill:hover{border-color:var(--accent,#C9A66B);background:rgba(201,166,107,.12)}
+.an-mono{display:inline-flex!important;align-items:center!important;justify-content:center!important;border-radius:50%!important;border:1.5px solid var(--accent,#C9A66B)!important;color:var(--accent,#C9A66B)!important;font-family:Georgia,serif!important;font-weight:700!important;line-height:1!important;flex:0 0 auto!important;padding:0!important}
+.an-mono.sm{width:28px!important;height:28px!important;font-size:12px!important}
+.an-mono.lg{width:48px!important;height:48px!important;font-size:21px!important;background:rgba(201,166,107,.08)!important}
+.an-conselho-hero{display:flex!important;justify-content:flex-start!important;align-items:center!important;gap:16px!important;background:var(--surface-1,#12151E);border:1px solid var(--border,rgba(255,255,255,.08));border-radius:8px;padding:16px 18px!important;margin:0 0 14px!important}
+.an-history-tools button{white-space:nowrap!important}
+.an-conselho-hero h1{margin:2px 0 4px!important;font-size:22px!important}
+.an-conselho-hero .an-kicker{color:var(--accent,#C9A66B)!important;margin:0!important}
+.an-conselho-hero p{margin:0;color:var(--text-muted,#94A3B8);font-size:13px}
+html body #app #an-root .an-conselho-cta{background:var(--accent,#C9A66B)!important;color:#0A0B0F!important;border:1px solid transparent!important;font-weight:700!important}
+.an-briefing{display:flex;flex-direction:column;gap:14px}
+.an-br-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.an-br-head h3{margin:2px 0 4px;font-size:16px}.an-br-head .mut{margin:0;font-size:12.5px}
+.an-br-acts{display:flex;gap:8px;flex-wrap:wrap}
+.an-br-cer{border-color:var(--accent,#C9A66B)!important;color:var(--accent,#C9A66B)!important;background:rgba(201,166,107,.12)!important}
+.an-br-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.an-br-grid h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted,#94A3B8)}
+.an-br-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:6px;background:var(--surface-2,#181C28);border:1px solid var(--border,rgba(255,255,255,.07));border-left:3px solid var(--up,#34D399);margin-bottom:7px}
+.an-br-item.warn{border-left-color:var(--down,#F87171)}
+.an-br-l{min-width:0;flex:1}
+.an-br-l b{display:inline-flex;align-items:center;gap:6px;font-size:13.5px}
+.an-br-l small{margin-left:8px;font-size:11.5px;color:var(--text-muted,#94A3B8)}
+.an-br-l p{margin:3px 0 0;font-size:12px;color:var(--text-muted,#94A3B8);line-height:1.35}
+.an-br-rot{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:6px;background:var(--surface-2,#181C28);border:1px solid var(--border,rgba(255,255,255,.07));font-size:12px}
+.an-br-rot span{color:var(--text-muted,#94A3B8);margin-right:4px}
+.an-br-rot em{font-style:normal;font-weight:700}.an-br-rot .an-up{color:var(--up,#34D399)}.an-br-rot .an-dn{color:var(--down,#F87171)}
+.an-cerebro-out{padding:12px 14px;border-radius:6px;border:1px solid var(--accent,#C9A66B);background:rgba(201,166,107,.07)}
+.an-br-nota{margin:0;font-size:11px;color:var(--text-muted,#94A3B8)}
+html[data-v427-tema=claro] .an-c-pill,html[data-v427-tema=claro] .an-conselho-hero{background:#FAF8F3;border-color:rgba(28,25,23,.14);color:#1C1917}
+html[data-v427-tema=claro] .an-c-pill small,html[data-v427-tema=claro] .an-conselho-hero p,html[data-v427-tema=claro] .an-br-l small,html[data-v427-tema=claro] .an-br-l p,html[data-v427-tema=claro] .an-br-grid h4,html[data-v427-tema=claro] .an-br-rot span,html[data-v427-tema=claro] .an-br-nota{color:#57534E}
+html[data-v427-tema=claro] .an-c-pill.on,html[data-v427-tema=claro] .an-c-pill:hover{border-color:#8B6524;background:rgba(139,101,36,.12)}
+html[data-v427-tema=claro] .an-mono{border-color:#8B6524;color:#8B6524}
+html[data-v427-tema=claro] .an-conselho-hero .an-kicker,html[data-v427-tema=claro] .an-br-cer{color:#8B6524!important;border-color:#8B6524!important}
+html[data-v427-tema=claro] body #app #an-root .an-conselho-cta{background:#8B6524!important;color:#FFFDF9!important}
+html[data-v427-tema=claro] .an-br-item,html[data-v427-tema=claro] .an-br-rot{background:#F0ECE2;border-color:rgba(28,25,23,.12)}
+html[data-v427-tema=claro] .an-br-rot .an-up{color:#15803D}
+html[data-v427-tema=claro] .an-br-rot .an-dn{color:#B91C1C}
+@media(max-width:767px){.an-br-grid{grid-template-columns:1fr}.an-conselho-hero{padding:12px 14px!important}.an-conselho-hero h1{font-size:18px!important}.an-mono.lg{width:40px;height:40px;font-size:17px}}
