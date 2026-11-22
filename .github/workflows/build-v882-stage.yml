@@ -1,0 +1,33 @@
+name: Build temporario v882 Conselho
+on:
+  push:
+    branches:
+      - stage-v882-conselho-20261122
+permissions:
+  contents: write
+jobs:
+  compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Gerar bundles e validar v882
+        run: npm run build && npm run check
+      - name: Registrar outputs gerados na branch temporaria
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          if git diff --cached --quiet; then
+            echo "Nenhum artefato regenerado"
+          else
+            git commit -m "build: bundles regenerados v882 [skip ci]"
+            git push origin HEAD:stage-v882-conselho-20261122
+          fi
