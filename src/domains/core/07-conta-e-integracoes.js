@@ -3300,15 +3300,15 @@ const AUREA = {
     },
     livermore: {
       nome: "Livermore",
-      papel: "Técnico",
+      papel: "Técnico · Fear-Setting",
       lente:
-        "análise técnica no estilo de Jesse Livermore: tendência primária, médias móveis, suportes e resistências, volume, pontos de invalidação e gestão de risco. Não recomende compra nem venda.",
+        "análise técnica no estilo de Jesse Livermore combinada com Fear-Setting (Tim Ferriss): leia tendência primária, médias móveis, suportes/resistências, volume e sempre estruture o risco operacional em 4 passos: 1) Definir o pior cenário (invalidação técnica e impacto 1–10 no capital), 2) Prevenir (stop técnico e tamanho de posição), 3) Reparar (plano imediato se estopar, sem fazer preço médio para trás), 4) Assimetria (risco temporário vs retorno provável). Não recomende compra nem venda.",
     },
     munger: {
       nome: "Munger",
-      papel: "Crítico de Teses",
+      papel: "Crítico de Teses · Fear-Setting",
       lente:
-        "advogado do diabo no estilo de Charlie Munger: inverta a tese, aponte vieses, riscos ocultos e o que precisaria ser verdade para a tese funcionar.",
+        "advogado do diabo no estilo de Charlie Munger combinado com Fear-Setting (Tim Ferriss / Sêneca): inverta a tese, exponha vieses e 'negação otimista' (medo disfarçado de otimismo) e responda nos 4 blocos do Fear-Setting: 1) Definir o pior cenário (impacto 1–10, temporário ou permanente?), 2) Prevenir (margem de segurança e limites), 3) Reparar (como recuperar se a tese quebrar), 4) Custo da inação (em 6 meses, 1 ano e 3 anos).",
     },
     markowitz: {
       nome: "Markowitz",
@@ -3346,7 +3346,7 @@ function aureaRota(texto) {
         /\b(tecnic\w*|grafico|suporte|resistencia|tendencia|media movel|mm ?\d+|rsi|ifr|rompimento|rompeu|candle\w*|fibonacci|fibo|stop|entrada|alvo|price action|topo|fundo|pivo\w*|volume|livermore|elliott)\b/g,
       ),
       munger: conta(
-        /\b(minha tese|tese|advogado do diabo|riscos? ocultos?|furos?|vies|vieses|estou certo|estou errado|o que pode dar errado|munger|contra-?argumento)\b/g,
+        /\b(minha tese|tese|advogado do diabo|riscos? ocultos?|furos?|vies|vieses|estou certo|estou errado|o que pode dar errado|munger|contra-?argumento|fear-?setting|pior cenario|custo da inacao|negacao otimista|medo de)\b/g,
       ),
       markowitz: conta(
         /\b(minha carteira|carteira|portfolio|rebalance\w*|alocacao|aloco|diversifica\w*|concentra\w*|correlac\w*|aporte|markowitz|peso dos? ativos?)\b/g,

@@ -576,7 +576,76 @@ function briefing(){
   });
  return {total:rows.length,ref:st.ref,graham:{avaliar,cautela,setoresFortes,setoresFracos},livermore:{alta,alertas:tecAlertas}};
 }
+function avaliarAtivo(tk){
+ if(!st.rows)return null;
+ aplicaProfit();
+ const clean=String(tk||'').trim().toUpperCase();
+ const r=st.rows.rows.find(x=>String(x.ticker||'').toUpperCase()===clean);
+ if(!r)return null;
+ const mg=r.justo&&r.preco?(r.justo/r.preco-1)*100:null;
+ // Graham — Fundamentalista
+ let gPts=0;const gFatos=[];
+ if(r.nota!=null){gFatos.push('Nota '+fmt(r.nota,2)+'/4');gPts+=r.nota>=2.6?2:r.nota>=1.8?1:-1}
+ if(r.pl>0){gFatos.push('P/L '+fmt(r.pl,1)+'x');gPts+=r.pl<=12?1:r.pl>25?-1:0}
+ if(r.roe!=null){gFatos.push('ROE '+pct(r.roe));gPts+=r.roe>=15?1:r.roe<8?-1:0}
+ if(r.dy>0){gFatos.push('DY '+pct(r.dy));if(r.dy>=6)gPts+=1}
+ if(mg!=null){gFatos.push((mg>=0?'Margem +':'Acima do justo ')+fmt(Math.abs(mg),0)+'%');gPts+=mg>=10?1:mg<-20?-1:0}
+ if(r.div_liq_ebitda!=null){gFatos.push('DL/EBITDA '+fmt(r.div_liq_ebitda,1)+'x');if(r.div_liq_ebitda>3.5)gPts-=2}
+ const gVer=gPts>=3?'Favorável':gPts<=0?'Cautela':'Neutro';
+ // Livermore — Técnico
+ let lPts=0;const lFatos=[];
+ if(r.mm200!=null){lFatos.push('MM200 '+sinal(r.mm200,1));lPts+=r.mm200>0&&r.mm200<25?1:r.mm200<=-8||r.mm200>=30?-1:0}
+ if(r.momentum!=null){lFatos.push('Momentum '+sinal(r.momentum,1));lPts+=r.momentum>2?1:r.momentum<-10?-1:0}
+ if(r.rsi!=null){lFatos.push('RSI '+fmt(r.rsi,0));lPts+=r.rsi>=45&&r.rsi<=68?1:r.rsi>=72||r.rsi<=30?-1:0}
+ const lVer=lPts>=2?'Favorável':lPts<=-1?'Cautela':'Neutro';
+ // Munger — Riscos ocultos
+ const riscos=[];
+ if(r.div_liq_ebitda!=null&&r.div_liq_ebitda>3)riscos.push('Alavancagem alta (DL/EBITDA '+fmt(r.div_liq_ebitda,1)+'x) pressiona em juros elevados.');
+ if(mg!=null&&mg<-15)riscos.push('Negocia '+fmt(Math.abs(mg),0)+'% acima do justo médio — margem de segurança comprimida.');
+ if(r.momentum!=null&&r.momentum<-10)riscos.push('Queda recente ('+sinal(r.momentum,0)+') pode esconder deterioração operacional ("faca caindo").');
+ if(r.rsi!=null&&r.rsi>=70)riscos.push('RSI esticado ('+fmt(r.rsi,0)+') aumenta risco de realização no curto prazo.');
+ if(r.liquidez!=null&&r.liquidez<5e5)riscos.push('Liquidez diária reduzida pode dificultar saída sem spread.');
+ if(r.roe!=null&&r.roe<10)riscos.push('Retorno sobre patrimônio baixo (ROE '+pct(r.roe)+') abaixo do custo de capital.');
+ if(!riscos.length)riscos.push('Sem alertas numéricos críticos nos dados carregados — valide governança e fatos relevantes antes de decidir.');
+ const mVer=riscos.length>=3?'Cautela':riscos.length===2?'Neutro':'Favorável';
+ const votos=[gVer,lVer,mVer];
+ const fav=votos.filter(v=>v==='Favorável').length,cau=votos.filter(v=>v==='Cautela').length,neu=votos.filter(v=>v==='Neutro').length;
+ const resumo=fav>=2?'Consenso construtivo ('+fav+'/3 favoráveis), mas valide riscos com Munger e fatos relevantes.':cau>=2?'Conselho em modo defensivo ('+cau+'/3 em cautela) — exige margem de segurança extra.':'Visões divididas no Conselho — bom caso para aprofundar antes de alocar.';
+ const fearSetting={
+  definir:riscos[0],
+  prevenir:r.mm200!=null&&r.mm200<0?'Aguardar retomada da tendência ou entrar com posição fracionada e stop técnico definido.':'Definir stop/invalidação antes da entrada e limitar o peso na carteira.',
+  reparar:'Se a tese ou suporte quebrar, encerrar sem fazer preço médio para trás e revisar o diário antes do próximo aporte.',
+  inacao:mg!=null&&mg>15?'Custo da inação: ficar paralisado pode fazer perder uma margem de segurança de '+fmt(mg,0)+'% — se o risco é temporário e limitado, teste com mão pequena.':'Evitar negação otimista: só aja com assimetria clara entre ganho provável e perda limitada.'
+ };
+ return {
+  ticker:r.ticker,empresa:r.empresa,setor:r.setor,preco:r.preco,nota:r.nota,margem:mg,
+  graham:{veredito:gVer,pts:gPts,fatos:gFatos},
+  livermore:{veredito:lVer,pts:lPts,fatos:lFatos},
+  munger:{veredito:mVer,riscos:riscos.slice(0,3)},
+  fearSetting,
+  aurea:{fav,neu,cau,resumo}
+ };
+}
+function dueloAtivos(t1,t2){
+ const a=avaliarAtivo(t1),b=avaliarAtivo(t2);
+ if(!a||!b)return null;
+ const win=(x,y)=>x>y?a.ticker:y>x?b.ticker:'Empate';
+ let mkNota='Compare peso setorial na sua Carteira antes de escolher.';
+ try{
+  const calc=typeof w.carCalc==='function'?w.carCalc():null;
+  const pos=[...(calc?.BR?.pos||[]),...(calc?.US?.pos||[])];
+  if(pos.length){
+   const pesoSetor=sec=>pos.filter(p=>String(p.setor||'').toLowerCase()===String(sec||'').toLowerCase()).reduce((s,p)=>s+(Number(p.peso)||0),0);
+   const pa=pesoSetor(a.setor),pb=pesoSetor(b.setor);
+   const jaA=pos.some(p=>String(p.tk||'').toUpperCase()===a.ticker),jaB=pos.some(p=>String(p.tk||'').toUpperCase()===b.ticker);
+   if(pa!==pb)mkNota=(pa<pb?a.ticker:b.ticker)+' diversifica melhor sua carteira ('+a.setor+': '+fmt(pa,1)+'% vs '+b.setor+': '+fmt(pb,1)+'%).';
+   else if(jaA!==jaB)mkNota=(jaA?b.ticker:a.ticker)+' traz um ativo novo que ainda não está na sua carteira.';
+   else mkNota='Ambos têm exposição parecida na sua carteira atual ('+fmt(pa,1)+'%).';
+  }
+ }catch(_){}
+ return {a,b,vencedorGraham:win(a.graham.pts,b.graham.pts),vencedorLivermore:win(a.livermore.pts,b.livermore.pts),markowitz:mkNota};
+}
 async function garantirDados(){await carregar();return briefing()}
 
-w.DiarioAnalisesPlus={view,enter,abrir,briefing,garantirDados,TABS:['rankpro','radar','teses','guia','ativo']};
+w.DiarioAnalisesPlus={view,enter,abrir,briefing,avaliarAtivo,dueloAtivos,garantirDados,TABS:['rankpro','radar','teses','guia','ativo']};
 })(window,document);

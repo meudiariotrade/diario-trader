@@ -545,3 +545,30 @@ html[data-v427-tema=claro] .an-br-item,html[data-v427-tema=claro] .an-br-rot{bac
 html[data-v427-tema=claro] .an-br-rot .an-up{color:#15803D}
 html[data-v427-tema=claro] .an-br-rot .an-dn{color:#B91C1C}
 @media(max-width:767px){.an-br-grid{grid-template-columns:1fr}.an-conselho-hero{padding:12px 14px!important}.an-conselho-hero h1{font-size:18px!important}.an-mono.lg{width:40px;height:40px;font-size:17px}}
+/* v884: Mesa Redonda do Conselho & Duelo de Ativos */
+.an-mesa-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.an-mesa-form input{width:96px;min-height:36px;padding:6px 10px;border-radius:6px;border:1px solid var(--border,rgba(255,255,255,.12));background:var(--surface-2,#181C28);color:inherit;font-weight:700;text-transform:uppercase;font-size:13px}
+.an-mesa-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;padding:10px 12px;border-radius:8px;background:rgba(201,166,107,.07);border:1px solid rgba(201,166,107,.28)}
+.an-mesa-head h3{display:flex;align-items:center;gap:6px;margin:0;font-size:16px;flex-wrap:wrap}
+.an-mesa-head h3 small{font-weight:400;font-size:12px;color:var(--text-muted,#94A3B8)}
+.an-mesa-consenso{margin:6px 0 0;font-size:12.5px;line-height:1.45}
+.an-mesa-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.an-duelo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.an-mesa-col{padding:11px 12px;border-radius:8px;background:var(--surface-2,#181C28);border:1px solid var(--border,rgba(255,255,255,.08));display:flex;flex-direction:column;gap:8px}
+.an-mesa-col header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.an-mesa-col header b{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.an-mesa-col ul{margin:0;padding-left:16px;font-size:12px;line-height:1.45;color:var(--text-muted,#CBD5E1)}
+.an-mesa-col p{margin:0;font-size:12.5px;line-height:1.45}
+.an-ver{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.an-ver.ok{background:rgba(52,211,153,.15);color:#34D399}
+.an-ver.warn{background:rgba(248,113,113,.15);color:#F87171}
+.an-ver.neu{background:rgba(201,166,107,.16);color:#C9A66B}
+.an-duelo-sum{padding:11px 13px;border-radius:8px;background:rgba(201,166,107,.07);border:1px solid rgba(201,166,107,.28);display:flex;flex-direction:column;gap:8px;font-size:12.5px}
+.an-duelo-sum p{margin:0}
+html[data-v427-tema=claro] .an-mesa-col,html[data-v427-tema=claro] .an-mesa-form input{background:#F0ECE2;border-color:rgba(28,25,23,.14);color:#1C1917}
+html[data-v427-tema=claro] .an-mesa-col ul{color:#44403C}
+html[data-v427-tema=claro] .an-ver.ok{color:#15803D}
+html[data-v427-tema=claro] .an-ver.warn{color:#B91C1C}
+html[data-v427-tema=claro] .an-ver.neu{color:#8B6524}
+@media(max-width:767px){.an-mesa-grid,.an-duelo-grid{grid-template-columns:1fr}.an-mesa-form input{font-size:16px;width:90px}}
+

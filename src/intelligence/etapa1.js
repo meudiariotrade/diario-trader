@@ -3,7 +3,7 @@
   'use strict';
   if (w.DiarioInteligenciaEtapa1) return;
   const URL_BASE = 'https://diario-trader.lucianosilva43567.workers.dev';
-  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false, extras: null, extrasAt: 0, extrasBusy: false, agenda: null, agendaAt: 0, agendaBusy: false };
+  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false, extras: null, extrasAt: 0, extrasBusy: false, agenda: null, agendaAt: 0, agendaBusy: false, edicaoManual: '', revisaoBusy: false, revisaoOut: '' };
   const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = x => typeof x==='number' && Number.isFinite(x);
   const format = x => number(x) ? x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—';
@@ -384,6 +384,27 @@
     if(state.memoria?.anchorDate===c.anchorDate)html+='<p class="mut sm">Memória desde a sessão '+escape(br(c.anchorDate))+': '+state.memoria.eventos.length+' evento(s) preservado(s). '+escape(state.memoria.note)+'</p>';
     return html;
   }
+  /* v884: Revisão Pós-Pregão da Áurea (lê trades locais dos últimos 14 dias e cruza com os livros do Cérebro). */
+  function analiseTradesRecentes(){
+    if(typeof S==='undefined'||!S||!Array.isArray(S.trades))return null;
+    const lim=new Date(Date.now()-14*86400000).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+    const list=S.trades.filter(t=>String(t.dtx||t.dt||'').slice(0,10)>=lim&&(typeof isOpen==='function'?!isOpen(t):t.exit!=null));
+    if(!list.length)return null;
+    let mN=0,mW=0,tN=0,tW=0,semStop=0,totPL=0;
+    const porAtivo={};
+    for(const t of list){
+      let pl=null;try{pl=typeof cBRL==='function'?cBRL(t)?.pl:null;}catch(_){}
+      if(!number(pl))continue;
+      totPL+=pl;
+      if(!(Number(t.stop)>0))semStop++;
+      const h=Number(String(t.hr||t.h||String(t.dt||'').slice(11,13)||'').slice(0,2));
+      if(Number.isFinite(h)&&h>0){if(h<12){mN++;if(pl>0)mW++;}else{tN++;if(pl>0)tW++;}}
+      const tk=String(t.ativo||t.tk||'Outro').toUpperCase();
+      porAtivo[tk]=(porAtivo[tk]||0)+pl;
+    }
+    const rank=Object.entries(porAtivo).sort((a,b)=>b[1]-a[1]);
+    return {n:list.length,totPL,mN,mTaxa:mN?Math.round(mW/mN*100):null,tN,tTaxa:tN?Math.round(tW/tN*100):null,semStop,melhor:rank[0]||null,pior:rank.length>1?rank[rank.length-1]:null};
+  }
   function meuDia(){
     const c=w.DiarioSessoes?.context(),manual=w.DiarioSessaoVisual?.manual?.(),
       phase=manual||c?.phase, data=c?.b3?.nextDate;
@@ -392,7 +413,23 @@
       phase==='pre'?'Conferir cenário, regras e notícias antes de operar.':
       phase==='during'?'Acompanhar riscos, execução e operações abertas sem somá-las ao resultado realizado.':
       'Conciliar operações encerradas, checklist original e plano de amanhã.';
+    const st14=analiseTradesRecentes();
+    const padroes=st14?
+      '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.28);background:rgba(201,166,107,.06)">'+
+      '<p style="margin:0 0 4px"><b>✦ Revisão da Áurea (últimos 14 dias · '+st14.n+' trades)</b></p>'+
+      '<p class="mut sm" style="margin:0">'+
+        (st14.mTaxa!=null?'Manhã (&lt;12h): <b>'+st14.mTaxa+'%</b> ('+st14.mN+')':'')+
+        (st14.mTaxa!=null&&st14.tTaxa!=null?' · ':'')+
+        (st14.tTaxa!=null?'Tarde (≥12h): <b>'+st14.tTaxa+'%</b> ('+st14.tN+')':'')+
+        (st14.melhor?' · Melhor: <b>'+escape(st14.melhor[0])+'</b>':'')+
+        (st14.pior&&st14.pior[1]<0?' · Atenção: <b>'+escape(st14.pior[0])+'</b>':'')+
+        (st14.semStop?' · '+st14.semStop+' sem stop':'')+
+      '</p>'+
+      '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" data-aurea-revisao="1"'+(state.revisaoBusy?' disabled':'')+'>'+(state.revisaoBusy?'Consultando seus livros…':'✦ Revisão da Áurea com seus livros')+'</button></div>'+
+      (state.revisaoOut?'<div class="sm" style="margin-top:8px;line-height:1.5">'+state.revisaoOut+'</div>':'')+
+      '</div>':'';
     return '<div class="v810-intel-day"><strong>Orientação da sessão</strong><p>'+escape(task)+'</p>'+
+      padroes+
       '<small>Próxima sessão B3: '+escape(data?data.split('-').reverse().join('/'):'data não verificada')+
       ' · Fonte: calendário de negociação da B3 / regras do aplicativo</small></div>';
   }
@@ -408,13 +445,52 @@
     // Um único despertador para a próxima transição de calendário. Nenhum polling de rede.
     state.boundary=setTimeout(()=>{state.boundary=null;if(!state.route||document.hidden)return;if(['home','dia'].includes(state.route))w.DiarioSessaoVisual?.atualizar?.();repaint();refresh();armSession();},Math.max(1000,next-now));
   }
+  /* v884: 3 edições automáticas da Áurea (Manhã, Meio-dia, Fechamento) cruzando B3 + EUA. */
+  function edicaoAuto(context){
+    const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+    const hm=Number(parts.find(x=>x.type==='hour')?.value||0)*60+Number(parts.find(x=>x.type==='minute')?.value||0);
+    const b3=context?.b3?.state,us=context?.us?.state;
+    if(context?.mode==='cripto_macro'||context?.mode==='b3_fechada')return hm<720?'manha':'fechamento';
+    if(b3==='pre'||(hm<720&&b3!=='post'&&b3!=='fechado'))return 'manha';
+    if((b3==='regular'||us==='regular')&&hm>=720&&hm<990)return 'meiodia';
+    return 'fechamento';
+  }
+  function pulsoDoisMercados(){
+    const groups=state.mercado?.mercados?.grupos;
+    if(!Array.isArray(groups))return {br:[],us:[],texto:''};
+    const all=groups.flatMap(g=>(g.itens||[]).map(x=>({n:String(x.n||''),d1:Number(x.d1)}))).filter(x=>Number.isFinite(x.d1));
+    const pick=rx=>all.find(x=>rx.test(x.n));
+    const fmtP=x=>x?x.n+' '+(x.d1>=0?'+':'')+x.d1.toFixed(2).replace('.',',')+'%':'';
+    const br=[pick(/ibov|bvsp/i),pick(/d[oó]lar|usd\/?brl|wdo/i),pick(/di1|juros|ifix/i)].filter(Boolean);
+    const us=[pick(/s&p\s*500|spx/i),pick(/nasdaq|ndx/i),pick(/ouro|gold|brent|petr[oó]leo|btc|bitcoin/i)].filter(Boolean);
+    const texto=[br.length?'Brasil: '+br.map(fmtP).join(' · '):'',us.length?'Exterior: '+us.map(fmtP).join(' · '):''].filter(Boolean).join(' | ');
+    return {br,us,texto};
+  }
   function briefing() {
     const m=mercadoPlan(),context=w.DiarioSessoes?.context(),
       hot=w.DiarioInterpretacao?.prioritize(timeline(),context,Date.now(),context?.anchorAt?Date.parse(context.anchorAt):undefined)||
         timeline().filter(e=>e.prioridade==='alta');
     const mine=relacionados().filter(e=>e.prioridade==='alta');
-    const phase=w.DiarioSessaoVisual?.manual?.()||context?.phase||'post';
-    const title=phase==='pre'?'O que importa antes da abertura':phase==='during'?'O que está acontecendo agora':'O que importa para a próxima sessão';
+    const edAuto=edicaoAuto(context),ed=state.edicaoManual||edAuto;
+    const META={
+      manha:{rot:'🌅 Manhã',titulo:'Edição da Manhã · Pré-abertura B3 & EUA',foco:'Preparação antes dos pregões: exterior, dólar, agenda macro e ativos da sua carteira.'},
+      meiodia:{rot:'☀️ Meio-dia',titulo:'Edição do Meio-dia · Pulso B3 & Wall Street',foco:'B3 e EUA em negociação simultânea: direção intraday, fluxo e notícias que estão mexendo.'},
+      fechamento:{rot:'🌙 Fechamento',titulo:'Edição de Fechamento · Balanço B3 & EUA',foco:'Resumo do dia nos dois mercados e o que já entra no radar para a próxima sessão.'}
+    };
+    const info=META[ed]||META.manha;
+    const stNome=x=>({regular:'Aberto',pre:'Pré-mercado',post:'Pós-mercado',fechado:'Fechado',leilao:'Leilão'}[x]||'—');
+    const b3St=stNome(context?.b3?.state),usSt=stNome(context?.us?.state);
+    const pulso=pulsoDoisMercados();
+    const hojeIso=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+    const agAlvo=ed==='fechamento'&&context?.b3?.nextDate?context.b3.nextDate:hojeIso;
+    const agEvs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})===agAlvo)
+      .slice(0,3).map(e=>new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' ['+e.p+'] '+String(e.t||'').slice(0,50));
+    const pills='<div class="aurea-ed-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px" role="tablist" aria-label="Edições da Áurea">'+
+      ['manha','meiodia','fechamento'].map(k=>'<button type="button" data-aurea-edicao="'+k+'" style="padding:4px 10px;border-radius:999px;font-size:11.5px;cursor:pointer;border:1px solid '+(ed===k?'rgba(201,166,107,.75)':'rgba(255,255,255,.14)')+';background:'+(ed===k?'rgba(201,166,107,.16)':'transparent')+';color:inherit;font-weight:'+(ed===k?'700':'500')+'">'+META[k].rot+(k===edAuto?' · agora':'')+'</button>').join('')+
+      '</div>';
+    const relogio='<p class="mut sm" style="margin:0 0 6px">B3: <b>'+escape(b3St)+'</b> · EUA (NYSE/Nasdaq): <b>'+escape(usSt)+'</b>'+(context?.b3?.nextDate?' · Próxima B3: '+escape(br(context.b3.nextDate)):'')+'</p>';
+    const doisMkts=pulso.texto?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.22);background:rgba(201,166,107,.05)">'+escape(pulso.texto)+'</p>':'';
+    const schwartzLine=agEvs.length?'<p class="sm" style="margin:4px 0"><b>S · Schwartz (Agenda BR/EUA):</b> '+escape(agEvs.join(' · '))+'</p>':'';
     const atualizado=Date.parse(state.mercado?.atualizadoEm||'');
     const recent=Number.isFinite(atualizado)&&Date.now()-atualizado<20*60000&&atualizado<=Date.now()+60000;
     const fonte=escape(state.mercado?.fonte||'não verificada');
@@ -427,11 +503,13 @@
         '<small> · '+escape(data)+' · '+escape(fonte?.nome||'Fonte não informada')+
         ' · efeito nos ativos depende de confirmação.</small></li>';
     }).join('')||'<li>Não há acontecimentos recentes com fontes identificadas.</li>';
-    return '<div class="v810-intel-brief"><h3>'+title+'</h3>'+
+    return '<div class="v810-intel-brief">'+pills+'<h3>'+info.titulo+'</h3>'+relogio+
+      '<p class="mut sm" style="margin:0 0 6px">'+info.foco+'</p>'+doisMkts+schwartzLine+
       '<p><b>'+resumo+'</b></p>'+
       '<p class="mut sm">Fonte: '+fonte+' · '+(recent?'Atualizado: ':'Último registro (não é tempo real): ')+
         when(state.mercado?.atualizadoEm)+'</p>'+
       (context?.warning?'<p class="mut sm">'+escape(context.warning)+'</p>':'')+
+      '<p style="margin:8px 0"><button type="button" class="btn s" data-aurea-resumao="'+ed+'">✦ Gerar resumão completo com a Áurea ('+META[ed].rot.replace(/^\S+\s*/,'')+')</button></p>'+
       '<details><summary>Fatos publicados, hipóteses e fontes · '+mine.length+' ligados aos seus ativos</summary>'+
       '<ul class="v810-intel-events">'+top+'</ul>'+
       (hot.length?'<div><b>Hipóteses condicionadas</b></div>'+
@@ -578,6 +656,57 @@
     }
   }
   document.addEventListener('click',async event=>{
+    const edBtn=event.target.closest('[data-aurea-edicao]');
+    if(edBtn){
+      state.edicaoManual=edBtn.dataset.aureaEdicao||'';
+      repaint();
+      return;
+    }
+    const resBtn=event.target.closest('[data-aurea-resumao]');
+    if(resBtn){
+      const ed=resBtn.dataset.aureaResumao||'manha';
+      const nomes={manha:'Edição da Manhã (Pré-abertura)',meiodia:'Edição do Meio-dia (Meio do pregão)',fechamento:'Edição de Fechamento (Pós-pregão)'};
+      const c=w.DiarioSessoes?.context(),p=pulsoDoisMercados(),m=mercadoPlan();
+      const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,3).map(e=>tit(e)).join(' | ');
+      const prompt='@schwartz Monte o resumão executivo da Áurea — '+(nomes[ed]||ed)+', englobando Brasil (B3: '+(c?.b3?.state||'—')+') e Exterior (EUA: '+(c?.us?.state||'—')+'). '+
+        (p.texto?'Mercados agora: '+p.texto+'. ':'')+
+        (m.nome?'Leitura atual: '+m.nome+'. ':'')+
+        (topNews?'Principais manchetes: '+topNews+'. ':'')+
+        'Estruture em: 1) Brasil (B3, dólar e juros), 2) Exterior (Wall Street e commodities), 3) O que observar agora.';
+      w.TraderChat?.open?.();
+      if(typeof ecoPergunta==='function')void ecoPergunta(prompt,{pergunta:'✦ Resumão da Áurea · '+(nomes[ed]||ed)});
+      return;
+    }
+    const revBtn=event.target.closest('[data-aurea-revisao]');
+    if(revBtn&&!state.revisaoBusy){
+      const st14=analiseTradesRecentes();
+      if(!st14)return;
+      const resumo='Últimos 14 dias: '+st14.n+' trades encerrados. '+
+        (st14.mTaxa!=null?'Acerto manhã (<12h): '+st14.mTaxa+'% ('+st14.mN+' trades). ':'')+
+        (st14.tTaxa!=null?'Acerto tarde (>=12h): '+st14.tTaxa+'% ('+st14.tN+' trades). ':'')+
+        (st14.melhor?'Melhor ativo: '+st14.melhor[0]+'. ':'')+
+        (st14.pior&&st14.pior[1]<0?'Pior ativo: '+st14.pior[0]+'. ':'')+
+        (st14.semStop?st14.semStop+' trade(s) sem stop registrado.':'Todos os trades com stop registrado.');
+      if(!w.DiarioCerebroIA?.api){
+        w.TraderChat?.open?.();
+        if(typeof ecoPergunta==='function')void ecoPergunta('@dow Faça uma revisão pós-pregão dos meus padrões: '+resumo,{pergunta:'✦ Revisão pós-pregão da Áurea'});
+        return;
+      }
+      state.revisaoBusy=true;state.revisaoOut='';repaint();
+      try{
+        const j=await w.DiarioCerebroIA.api({acao:'gerar',modo:'aula_erro',tema:'gestao de risco psicologia disciplina overtrading stop',extra:'ERRO / PADRÃO DO DIÁRIO: '+resumo});
+        const r=j&&j.resultado||{};
+        const passos=Array.isArray(r.o_que_fazer)&&r.o_que_fazer.length?'<ul style="margin:4px 0;padding-left:16px">'+r.o_que_fazer.map(x=>'<li>'+escape(x)+'</li>').join('')+'</ul>':'';
+        state.revisaoOut='<b>'+escape(r.titulo||'Revisão da Áurea')+'</b>'+
+          (r.por_que_acontece?'<p style="margin:4px 0">'+escape(r.por_que_acontece)+'</p>':'')+
+          passos+
+          (r.exercicio?'<p style="margin:4px 0"><b>Exercício prático:</b> '+escape(r.exercicio)+'</p>':'')+
+          (r.fonte?'<p class="mut sm" style="margin:4px 0">Fonte do seu Cérebro: '+escape(r.fonte)+'</p>':'');
+      }catch(err){
+        state.revisaoOut='<span class="mut">Não foi possível consultar o Cérebro agora ('+escape(err?.message||'erro')+').</span>';
+      }finally{state.revisaoBusy=false;repaint();}
+      return;
+    }
     const tick=event.target.closest('[data-intel-ticker]');
     if(tick){
       const value=safeTicker(tick.dataset.intelTicker);

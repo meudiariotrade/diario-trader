@@ -44127,7 +44127,7 @@ const CLASS=[
  ['br','Ações Brasil'],['fii','FIIs'],['rf','Renda Fixa / Tesouro'],
  ['ext','Exterior / ETFs'],['crypto','Cripto'],['other','Outros / não classificados']
 ];
-const state={open:false,mode:'class',contribution:1000,monthly:500,realRate:5,years:20,goal:1000,target:{class:{},asset:{}},identity:'',message:''};
+const state={open:false,mode:'class',contribution:1000,monthly:500,realRate:5,years:20,goal:1000,buyTk:'WEGE3',buyVal:2000,target:{class:{},asset:{}},identity:'',message:''};
 const asNum=(x,fallback=null)=>x!==''&&x!==null&&x!==undefined&&Number.isFinite(+x)?+x:fallback;
 const sum=a=>a.reduce((acc,x)=>acc+x,0);
 const money=n=>Number.isFinite(n)?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n):'—';
@@ -44349,15 +44349,45 @@ function sectionFour(p){
  '<p class="rb694-note">Aporte constante em poder de compra, no final de cada mês; taxa real convertida para juros mensais compostos. Regra dos 4% = 4% do patrimônio projetado ao ano ÷ 12. Não é renda vitalícia garantida nem renda de dividendos; impostos, custos e variações não estão modelados.</p>':
  '<p class="rb694-notice">Ajuste o aporte, a taxa real e o prazo para valores válidos.</p>')+'</section>';
 }
+function sectionFive(p){
+ const tk=String(state.buyTk||'').trim().toUpperCase(),val=Math.max(0,+state.buyVal||0);
+ const pos=holdings(p),atual=Math.max(0,+p.v||0),novoTotal=atual+val;
+ const ja=pos.find(x=>String(x.tk||'').toUpperCase()===tk);
+ const valAtivo=(ja?Math.max(0,+ja.v||0):0)+val;
+ const pesoAtivo=novoTotal>0?valAtivo/novoTotal*100:0;
+ const av=tk&&W.DiarioAnalisesPlus?.avaliarAtivo?.(tk);
+ const setor=ja?.setor||av?.setor||'Não classificado';
+ const valSetor=pos.filter(x=>String(x.setor||'').toLowerCase()===String(setor).toLowerCase()).reduce((s,x)=>s+Math.max(0,+x.v||0),0)+(ja?0:val)+(ja?val:0);
+ const pesoSetor=novoTotal>0?valSetor/novoTotal*100:0;
+ const alertas=[];
+ if(pesoAtivo>20)alertas.push('Markowitz: '+tk+' passaria a '+percent(pesoAtivo)+' da carteira (acima do limite saudável de 20%).');
+ if(setor!=='Não classificado'&&pesoSetor>35)alertas.push('Markowitz: setor '+setor+' chegaria a '+percent(pesoSetor)+' (acima do limite de 35%).');
+ const mungerHtml=av?
+  '<div class="rb694-note" style="margin-top:8px"><b>M · Munger — Riscos antes de comprar '+esc(tk)+':</b><ul style="margin:4px 0 0;padding-left:16px">'+av.munger.riscos.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':
+  '<p class="rb694-note">Dica: abra a aba <b>Análises</b> uma vez para carregar os alertas automáticos de Munger para '+esc(tk||'este ativo')+', ou clique abaixo para consultar a Áurea.</p>';
+ return '<section class="rb694-section"><h3>05 · Simulador “E se eu comprar?” (Markowitz + Munger)</h3>'+
+  '<div class="rb694-controls"><label>Ticker<input data-rb694-field="buyTk" value="'+esc(tk)+'" placeholder="WEGE3" maxlength="10" autocapitalize="characters"></label>'+
+  field('buyVal','Valor da compra (R$)',val,.01,0,100000000)+'</div>'+
+  (tk&&val>0?
+   '<div class="rb694-stats">'+
+   metric('Novo peso de '+tk,percent(pesoAtivo),ja?'já existe na carteira':'posição nova')+
+   metric('Novo peso do setor',percent(pesoSetor),setor)+
+   metric('Patrimônio simulado',money(novoTotal),'somente simulação')+'</div>'+
+   (alertas.length?alertas.map(a=>'<p class="rb694-notice">'+esc(a)+'</p>').join(''):'<p class="rb694-note">Markowitz: compra dentro dos limites de diversificação (≤ 20% por ativo e ≤ 35% por setor).</p>')+
+   mungerHtml+
+   '<p style="margin-top:8px"><button type="button" class="pfbt" data-rb694-munger="'+esc(tk)+'|'+esc(val)+'|'+esc(percent(pesoAtivo))+'|'+esc(setor)+'">✦ Testar esta compra com @munger na Áurea</button></p>'
+  :'<p class="rb694-note">Informe um ticker e o valor do aporte para simular o impacto antes de enviar a ordem.</p>')+
+  '</section>';
+}
 function body(){
  restore();
  const p=portfolio(),pos=holdings(p);
  return '<div class="rb694-body"><div class="rb694-overline">'+pos.length+' posição(ões) · carteira '+money(p.v||0)+' · parâmetros guardados somente neste navegador</div>'+
  (state.message?'<p class="rb694-notice">'+esc(state.message)+'</p>':'')+
- sectionOne(p)+sectionTwo(p)+sectionThree(p)+sectionFour(p)+'</div>';
+ sectionOne(p)+sectionTwo(p)+sectionThree(p)+sectionFour(p)+sectionFive(p)+'</div>';
 }
 function content(){
- return '<details id="rebalanceamento-carteira-v694" class="rb694"'+(state.open?' open':'')+'><summary>Gestão &amp; Rebalanceamento de Carteira <small>Aporte · Proventos · Concentração · Independência</small></summary>'+
+ return '<details id="rebalanceamento-carteira-v694" class="rb694"'+(state.open?' open':'')+'><summary>Gestão &amp; Rebalanceamento de Carteira <small>Aporte · Proventos · Concentração · Simulador</small></summary>'+
  (state.open?body():'')+'</details>';
 }
 const old=vCarteiras;
@@ -44395,6 +44425,14 @@ D.addEventListener('click',event=>{
   reconcile(root);
  });
 },true);
+D.addEventListener('click',event=>{
+ const btn=event.target.closest?.('[data-rb694-munger]');
+ if(!btn)return;
+ const [tk,val,peso,setor]=(btn.getAttribute('data-rb694-munger')||'').split('|');
+ const prompt='@munger Estou pensando em comprar '+tk+' (aporte de R$ '+val+', que ficaria com '+peso+' da minha carteira no setor '+setor+'). Aplique o Fear-Setting (Tim Ferriss): 1) Definir o pior cenário (impacto 1-10), 2) Prevenir, 3) Reparar se der errado, 4) Custo da inação e possíveis vieses de negação otimista.';
+ W.TraderChat?.open?.();
+ if(typeof ecoPergunta==='function')void ecoPergunta(prompt,{pergunta:prompt});
+},true);
 D.addEventListener('change',event=>{
  const el=event.target,root=el?.closest?.('#rebalanceamento-carteira-v694');
  if(!root||typeof tab==='undefined'||tab!=='carteiras')return;
@@ -44407,7 +44445,10 @@ D.addEventListener('change',event=>{
   return;
  }
  const k=el.getAttribute('data-rb694-field');
- if(k&&['contribution','monthly','realRate','years','goal'].includes(k)){
+ if(k==='buyTk'){
+  state.buyTk=String(el.value||'').trim().toUpperCase().slice(0,10);refreshBody();return;
+ }
+ if(k&&['contribution','monthly','realRate','years','goal','buyVal'].includes(k)){
   const n=asNum(el.value);
   if(n!==null&&n>= (k==='realRate'?-20:k==='years'||k==='goal'?1:0)&&n<=(k==='realRate'?30:k==='years'?60:100000000)){
    state[k]=n;persist();refreshBody();
