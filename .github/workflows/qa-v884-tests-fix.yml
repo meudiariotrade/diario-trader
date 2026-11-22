@@ -1,0 +1,29 @@
+name: QA v884 correção de testes
+on:
+  push:
+    branches: [qa/v884-tests-fix]
+permissions:
+  contents: read
+jobs:
+  targeted:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Preparar navegador Playwright
+        run: |
+          diario_browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$diario_browser" ]; then
+            printf 'CHROMIUM_PATH=%s\n' "$diario_browser" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - run: npm run build
+      - run: npm run check
+      - name: Executar os três testes anteriormente reprovados
+        run: node --test --test-concurrency=1 tests/carteira-gestao-v694.test.cjs tests/organizacao-analises.test.cjs tests/pesquisa.test.cjs
