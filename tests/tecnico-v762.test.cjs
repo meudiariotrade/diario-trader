@@ -58,7 +58,7 @@ test('worker recebe lote e devolve ambas as direções sem Supabase',()=>{
 test('roteamento técnico mantém screeners antigos e teardown idempotente por troca de aba',()=>{
  const src=read('src/analysis/analises.js'),ui=read('src/analysis/tecnico-ui.js');
  assert.match(src,/Técnico Brasil/);assert.match(src,/Técnico EUA &amp; Cripto/);
- assert.match(src,/Screener Brasil/);assert.match(src,/Screener EUA/);
+ assert.match(src,/Rankings completos B3/);assert.match(src,/Telas de Research/);assert.match(src,/Screener EUA/);
  assert.match(src,/DiarioTecnico\?\.leave/);assert.match(src,/DiarioTecnico\?\.enter/);
  assert.match(ui,/new Worker\(/);assert.match(ui,/\.terminate\(\)/);
  assert.match(ui,/AbortController/);assert.match(ui,/MutationObserver/);

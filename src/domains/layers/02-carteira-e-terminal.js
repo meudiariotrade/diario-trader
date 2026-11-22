@@ -1906,7 +1906,7 @@ try {
           "briefcase",
           "investimentos patrimônio proventos relatório",
         ],
-        ["analises", "Análises", "chart", "técnica fundamentalista balanço valuation pesquisa CNPI"],
+        ["analises", "Research", "chart", "research análises técnica fundamentalista balanço valuation pesquisa CNPI conselho"],
         ["estudos", "Estudos", "graduation", "livros inglês cnpi vídeos aulas"],
         ["regras", "Checklist", "check", "regras disciplina risco"],
         [

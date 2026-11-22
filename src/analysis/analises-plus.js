@@ -183,7 +183,7 @@ function viewRank(){
   '<div class="ap-seg" role="group" aria-label="Modo de colunas"><button type="button" class="'+(st.colMode==='essencial'?'on':'')+'" data-ap-colmode="essencial">Essencial</button><button type="button" class="'+(st.colMode!=='essencial'?'on':'')+'" data-ap-colmode="completo">Completo</button></div>'+
   '<details class="ap-cols"><summary class="btn s">Colunas</summary><div>'+COLS.map(c=>'<label><input type="checkbox" data-ap-col="'+c[0]+'"'+(vis.includes(c[0])?' checked':'')+'> '+c[1]+'</label>').join('')+'</div></details>'+
   '<select data-ap-f="pg">'+[30,50,100].map(n=>'<option value="'+n+'"'+(pg===n?' selected':'')+'>'+n+'/pág</option>').join('')+'</select>'+
-  (st.nProfit?'<span class="ap-tag st-ativa">Profit ao vivo · '+st.nProfit+'</span>':'')+'<button type="button" class="btn s ap-desk-only" data-ap-csv>CSV</button><span class="ap-mut ap-pag-info">'+(tot?f.page*pg+1:0)+'–'+Math.min(tot,f.page*pg+pg)+' de '+tot+'</span>'+
+  (st.nProfit?'<span class="ap-tag st-ativa">Profit ao vivo · '+st.nProfit+'</span>':'')+'<button type="button" class="btn s" data-an-sub="br" title="Gráfico de dispersão e PDF comparativo B3">Screener / PDF</button><button type="button" class="btn s ap-desk-only" data-ap-csv>CSV</button><span class="ap-mut ap-pag-info">'+(tot?f.page*pg+1:0)+'–'+Math.min(tot,f.page*pg+pg)+' de '+tot+'</span>'+
   '<button type="button" class="btn s" data-ap-page="-1"'+(f.page?'':' disabled')+'>‹</button><button type="button" class="btn s" data-ap-page="1"'+(f.page<pages-1?'':' disabled')+'>›</button></div>'+
   mobPresets+
   '<p class="ap-mut ap-leg">~ = estimado no aparelho (Graham · Bazin · Gordon) · Nota Raio-X 0–4 por percentis do mercado · Crowded = giro ÷ mediana</p>'+
@@ -340,9 +340,16 @@ function viewTeses(){
   '<label>Tese (por que comprar)<textarea rows="3" data-ap-tf="texto" placeholder="Ex.: ROE alto, dívida controlada, desconto vs pares">'+E(ed.texto||'')+'</textarea></label>'+
   '<label>Critérios para acompanhar (1 por linha)<textarea rows="3" data-ap-tf="criterios" placeholder="ROE > 15%&#10;DL/EBITDA < 2x">'+E(ed.criterios||'')+'</textarea></label>'+
   '<label>Riscos<textarea rows="2" data-ap-tf="riscos">'+E(ed.riscos||'')+'</textarea></label><div class="ap-bar"><button type="button" class="ui-cta" data-noclaro data-ap-tsalvar>Salvar tese</button><button type="button" class="btn s" data-ap-tcancel>Cancelar</button></div></section>':'';
- const card=t=>{const r=map?.get(t.tk),p=r?.preco,prog=p&&t.entrada&&t.alvo&&t.alvo!==t.entrada?Math.max(0,Math.min(100,(p-t.entrada)/(t.alvo-t.entrada)*100)):null,up=p&&t.alvo?(t.alvo/p-1)*100:null;
+ const card=t=>{const r=map?.get(t.tk),p=r?.preco,ref=N(t.precoRef)||N(t.entrada),ret=p&&ref?(p/ref-1)*100:null,prog=p&&t.entrada&&t.alvo&&t.alvo!==t.entrada?Math.max(0,Math.min(100,(p-t.entrada)/(t.alvo-t.entrada)*100)):null,up=p&&t.alvo?(t.alvo/p-1)*100:null;
+  const dtRef=t.criada?new Date(t.criada).toLocaleDateString('pt-BR'):'';
+  const memHtml=(ret!=null||t.conselho)?'<p class="ap-mut" style="margin:6px 0 0;padding:6px 8px;border-radius:6px;background:rgba(201,166,107,.07);border:1px solid rgba(201,166,107,.22)">'+
+   (ret!=null?'<b>Desde a tese'+(dtRef?' ('+dtRef+')':'')+':</b> <b class="'+cor(ret)+'">'+sinal(ret,1)+'</b>':'')+
+   (ret!=null&&t.conselho?' · ':'')+
+   (t.conselho?'<b>Conselho na data:</b> G '+E(t.conselho.g)+' · L '+E(t.conselho.l)+' · M '+E(t.conselho.m):'')+
+  '</p>':'';
   return '<article class="ap-card ap-tese"><header><h4 data-ap-ativo="'+E(t.tk)+'">'+logo(t.tk)+E(t.tk)+'</h4><span class="ap-tag st-'+E(t.status)+'">'+E(t.status)+'</span></header>'+
    '<div class="ap-kv"><div><span>Atual</span><b>'+brl(p)+'</b></div><div><span>Entrada</span><b>'+brl(N(t.entrada))+'</b></div><div><span>Alvo</span><b>'+brl(N(t.alvo))+' <small class="'+cor(up)+'">'+sinal(up,0)+'</small></b></div><div><span>Horizonte</span><b>'+E(t.horizonte||'—')+'</b></div></div>'+
+   memHtml+
    (prog!=null?'<div class="ap-prog"><i style="width:'+prog.toFixed(0)+'%"></i></div><p class="ap-mut">'+fmt(prog,0)+'% do caminho até o alvo'+(t.stop&&p&&p<t.stop?' · <b class="ap-r">abaixo do ponto de invalidação</b>':'')+'</p>':'')+
    (t.texto?'<p>'+E(t.texto)+'</p>':'')+(t.criterios?'<ul>'+String(t.criterios).split('\n').filter(Boolean).map(c=>'<li>'+E(c)+'</li>').join('')+'</ul>':'')+(t.riscos?'<p class="ap-mut">Riscos: '+E(t.riscos)+'</p>':'')+
    '<div class="ap-bar ap-tese-actions"><button type="button" class="btn s ap-btn-acc" data-ap-ia="'+E(t.tk)+'" data-ap-membro="munger">Testar com Munger</button><button type="button" class="btn s" data-ap-tedit="'+t.id+'">Editar</button><button type="button" class="btn s ap-del" data-ap-tdel="'+t.id+'">'+(st.excluir===t.id?'Confirmar exclusão':'Excluir')+'</button></div></article>'};
@@ -392,7 +399,8 @@ d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-q],[data-a
  else if('apTcancel' in ds)st.teseEdit=null;
  else if('apTdel' in ds){if(st.excluir===ds.apTdel){ls.set(K_TESES,teses().filter(x=>x.id!==ds.apTdel));st.excluir=''}else st.excluir=ds.apTdel}
  else if('apTsalvar' in ds){const f=st.teseEdit,tk=String(f.tk||'').trim().toUpperCase();if(!tk){d.querySelector('[data-ap-tf="tk"]')?.focus();return}
-  const t={...f,tk,id:f.id||Date.now().toString(36),entrada:N(f.entrada),alvo:N(f.alvo),stop:N(f.stop),atualizada:new Date().toISOString()},l=teses().filter(x=>x.id!==t.id);l.push(t);ls.set(K_TESES,l);st.teseEdit=null}
+  const r=st.rows?.map.get(tk),av=avaliarAtivo(tk),agora=new Date().toISOString();
+  const t={...f,tk,id:f.id||Date.now().toString(36),entrada:N(f.entrada),alvo:N(f.alvo),stop:N(f.stop),criada:f.criada||agora,precoRef:N(f.precoRef)||r?.preco||N(f.entrada),conselho:f.conselho||(av?{g:av.graham.veredito,l:av.livermore.veredito,m:av.munger.veredito}:null),atualizada:agora},l=teses().filter(x=>x.id!==t.id);l.push(t);ls.set(K_TESES,l);st.teseEdit=null}
  render()});
 d.addEventListener('click',ev=>{const b=ev.target.closest?.('[data-ap-abrir]');if(b)abrir(b.dataset.apAbrir)},true);
 d.addEventListener('input',ev=>{const t=ev.target;if(!t.closest?.('#ap-root'))return;

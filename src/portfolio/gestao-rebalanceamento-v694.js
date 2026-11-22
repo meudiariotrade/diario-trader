@@ -259,12 +259,32 @@ function sectionFive(p){
   :'<p class="rb694-note">Informe um ticker e o valor do aporte para simular o impacto antes de enviar a ordem.</p>')+
   '</section>';
 }
+function sectionSix(p){
+ const pos=holdings(p),total=Math.max(0,+p.v||0);
+ if(!total||!pos.length)return '';
+ const sumCls=ks=>sum(pos.filter(x=>ks.includes(cls(x))).map(x=>Math.max(0,+x.v||0)));
+ const vBR=sumCls(['br']),vFII=sumCls(['fii']),vEXT=sumCls(['ext']),vCRP=sumCls(['crypto']);
+ const cenarios=[
+  {nome:'Dólar +10%',delta:vEXT*0.10+vCRP*0.10,nota:'Valoriza exterior/ETFs e cripto em R$'},
+  {nome:'B3 −15%',delta:-(vBR*0.15+vFII*0.08),nota:'Ações BR −15% · FIIs −8%'},
+  {nome:'S&P 500 −10%',delta:-(vEXT*0.10+vCRP*0.12+vBR*0.04),nota:'Exterior −10% · cripto −12% · contágio B3 −4%'},
+  {nome:'Crise local (B3 −15% + Dólar +10%)',delta:-(vBR*0.15+vFII*0.08)+(vEXT*0.10+vCRP*0.10),nota:'Testa se o exterior protege sua carteira'}
+ ];
+ const rows=cenarios.map(c=>{
+  const pct=total>0?c.delta/total*100:0;
+  const cor=c.delta>=0?'#10B981':'#F87171';
+  return '<tr><th>'+esc(c.nome)+'<br><small style="color:#9FABBA;font-weight:400">'+esc(c.nota)+'</small></th><td style="color:'+cor+';font-weight:700">'+(c.delta>=0?'+':'')+money(c.delta)+'</td><td style="color:'+cor+';font-weight:700">'+(pct>=0?'+':'')+percent(pct)+'</td></tr>';
+ });
+ return '<section class="rb694-section"><details><summary style="padding:0;min-height:32px;font-size:13px">06 · Teste de estresse da carteira (Markowitz) <small>4 cenários</small></summary>'+
+  table(['Cenário simulado','Impacto R$','Impacto %'],rows)+
+  '<p class="rb694-note">Simulação linear aproximada pelas classes da sua carteira atual (sem correlação dinâmica ou opções). Uso educacional.</p></details></section>';
+}
 function body(){
  restore();
  const p=portfolio(),pos=holdings(p);
  return '<div class="rb694-body"><div class="rb694-overline">'+pos.length+' posição(ões) · carteira '+money(p.v||0)+' · parâmetros guardados somente neste navegador</div>'+
  (state.message?'<p class="rb694-notice">'+esc(state.message)+'</p>':'')+
- sectionOne(p)+sectionTwo(p)+sectionThree(p)+sectionFour(p)+sectionFive(p)+'</div>';
+ sectionOne(p)+sectionTwo(p)+sectionThree(p)+sectionFour(p)+sectionFive(p)+sectionSix(p)+'</div>';
 }
 function content(){
  return '<details id="rebalanceamento-carteira-v694" class="rb694"'+(state.open?' open':'')+'><summary>Gestão &amp; Rebalanceamento de Carteira <small>Aporte · Proventos · Concentração · Simulador</small></summary>'+

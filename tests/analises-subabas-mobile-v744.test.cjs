@@ -17,7 +17,7 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, O Conselho pre
  await expect(pesquisa).toHaveAttribute('aria-label',/O Conselho — especialistas de mercado/);
  await expect(page.locator('#an-root [data-an-membro]')).toHaveCount(6);
  await expect(pesquisa).toHaveAttribute('aria-selected','true');
- await expect(nav.locator('[data-an-sub="br"]')).toBeVisible();
+ await expect(nav.locator('[data-an-sub="us"]')).toBeVisible();
  await expect(nav.locator('[data-an-sub="tecnico-br"]')).toHaveCount(1);
  const pos=await nav.evaluate(el=>({y:el.getBoundingClientRect().y,
    junto:el.closest('.an-screener-switch')!=null,
@@ -26,19 +26,16 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, O Conselho pre
  assert.equal(pos.junto,true,'barra unica no local da selecao B3 & EUA');
  assert.ok(pos.antes,'sub-abas acima do cabeçalho do Conselho');
  assert.equal(pos.visible,true,'barra nao pode ficar oculta');
- const tap=await nav.locator('[data-an-sub="br"]').evaluate(el=>{
+ const tap=await nav.locator('[data-an-sub="us"]').evaluate(el=>{
   const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
   return {acessivel:hit===el||el.contains(hit),y:r.y,viewport:innerHeight,sobreposto:hit?.closest?.('#v4-bnav')!=null};
  });
- assert.equal(tap.acessivel,true,'Screener Brasil precisa aceitar toque sem sobreposicao: '+JSON.stringify(tap));
+ assert.equal(tap.acessivel,true,'Screener EUA precisa aceitar toque sem sobreposicao: '+JSON.stringify(tap));
  await nav.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
- await nav.locator('[data-an-sub="br"]').click();
- await expect(page.locator('#an-title')).toHaveText('Screener Brasil');
+ await nav.locator('[data-an-sub="us"]').click();
+ await expect(page.locator('#an-title')).toHaveText('Screener EUA');
  await expect(page.locator('#an-root nav.an-subs')).toHaveCount(1);
  await page.locator('#an-root nav.an-subs').evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
- await expect(page.locator('#an-root nav.an-subs [data-an-sub="us"]')).toHaveCount(1);
- await page.locator('[data-an-sub="us"]').click();
- await expect(page.locator('#an-title')).toHaveText('Screener EUA');
  await expect(page.locator('#an-root nav.an-subs [data-an-sub="tecnico-world"]')).toHaveCount(1);
  await expect(page.locator('#an830-ficha')).toHaveCount(1);
  await page.locator('#an-root nav.an-subs').evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));

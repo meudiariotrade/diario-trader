@@ -68,7 +68,7 @@ test('Interface: até 10 ações e PDF de snapshot local preservando Pesquisa',(
  assert.match(app,/data-scr-pdf/);
  assert.match(app,/data-scr-detail/);
  assert.match(app,/DiarioScreenersRelatorio\.share/);
- assert.match(app,/Screener Brasil/);
+ assert.match(app,/Rankings completos B3/);assert.match(app,/Telas de Research/);
  assert.match(app,/Screener EUA/);
  assert.doesNotMatch(pdf,new RegExp('supabase\\.co|/functions/v1|SERVICE_ROLE_KEY|fetch\\(.https:'));
 
