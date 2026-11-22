@@ -29529,27 +29529,20 @@ try {
       const a = J && Dt[J] ? J : null;
       (v.body.classList.toggle("v4-homeview", !!a),
         t.setAttribute("data-v4act", a || "mais"));
-      let r = 0;
       [...t.children].forEach((l) => {
         const s = l.getAttribute("data-v4g");
         if (!s || s === "*") return;
-        let o = a ? s !== a : s !== "mais";
-        (!a && s === "mais" && ae(l) && (o = !0),
-          !o && !a && r++,
-          o && l.remove());
+        let o = a ? s !== a : !0;
+        o && l.remove();
       });
       const n = v.createElement("div");
-      a
-        ? (t.querySelectorAll(`[data-v4g="${a}"] details`).forEach((l) => {
-            l.dataset.v427 || ((l.open = !0), (l.dataset.v427 = "1"));
-          }),
-          (n.className = "v4-tools-head v4-viewhead"),
-          (n.innerHTML = `<button type="button" class="v4-back" data-v4homeback="1">${p("left", 18)}<span>Início</span></button><h2>${p(Dt[a][1], 20)}<span>${Dt[a][0]}</span></h2>`),
-          e.prepend(n))
-        : r &&
-          ((n.className = "v4-tools-head v4-morehead"),
-          (n.innerHTML = `<h2>${p("list", 20)}<span>Últimos registros</span></h2>`),
-          e.prepend(n));
+      a &&
+        (t.querySelectorAll(`[data-v4g="${a}"] details`).forEach((l) => {
+          l.dataset.v427 || ((l.open = !0), (l.dataset.v427 = "1"));
+        }),
+        (n.className = "v4-tools-head v4-viewhead"),
+        (n.innerHTML = `<button type="button" class="v4-back" data-v4homeback="1">${p("left", 18)}<span>Início</span></button><h2>${p(Dt[a][1], 20)}<span>${Dt[a][0]}</span></h2>`),
+        e.prepend(n));
     }
     function Pt(t) {
       J = Dt[t] ? t : null;
