@@ -179,10 +179,17 @@ function viewRadar(){
 }
 
 /* ---------- página do ativo ---------- */
-async function carregaSerie(tk){if(st.serie[tk]||!w.DiarioTecnico?.serie)return;st.serie[tk]={loading:1};render();
- try{const r=await w.DiarioTecnico.serie(tk,'br');st.serie[tk]={c:r?.closes||[],src:r?.source}}catch(e){st.serie[tk]={c:[],erro:e.message}}render()}
+/* v876: série diária com 3 fontes — Técnico (Cloudflare), cache do gráfico do Terminal (LVGC) e ponte local. */
+function deCandles(cs){const f=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'});
+ return (cs||[]).map(x=>{const t=Array.isArray(x)?Number(x[0]):Number(x.t??x.time),c=Number(Array.isArray(x)?x[4]:x.c??x.close),ms=t<1e12?t*1000:t;
+  if(!Number.isFinite(ms)||!Number.isFinite(c))return null;try{return {d:f.format(new Date(ms)),c}}catch{return null}}).filter(Boolean)}
+async function carregaSerie(tk,force){if(st.serie[tk]&&!force)return;st.serie[tk]={loading:1};render();const erros=[];
+ for(const mk of ['BR','br']){try{const r=await w.DiarioTecnico?.serie?.(tk,mk);if(r?.closes?.length>1){st.serie[tk]={c:r.closes,src:r.source||'Técnico'};render();return}}catch(e){erros.push(e.message)}}
+ try{for(const k of [tk+'|1d',tk+'|D',tk+'|1D']){const h=typeof LVGC==='object'?LVGC[k]:null,c=deCandles(h?.v?.candles);if(c.length>1){st.serie[tk]={c,src:'Gráfico do Terminal'};render();return}}}catch{}
+ try{const c=deCandles(w.DiarioTecnicoFeeds?.getCandles?.(tk,'1d','BR'));if(c.length>1){st.serie[tk]={c,src:'Ponte local (Profit)'};render();return}}catch{}
+ st.serie[tk]={c:[],erro:erros[0]||'sem dados nas 3 fontes'};render()}
 function grafico(r){
- const s=st.serie[r.ticker];if(!s||s.loading)return '<div class="ap-graf ap-mut">Carregando cotações…</div>';if(!s.c.length)return '<div class="ap-graf ap-mut">Sem série diária disponível.</div>';
+ const s=st.serie[r.ticker];if(!s||s.loading)return '<div class="ap-graf ap-mut">Carregando cotações…</div>';if(!s.c.length)return '<div class="ap-graf ap-mut">Não consegui a série diária ('+E(s.erro||'')+'). <button type="button" class="btn s" data-ap-serie="'+E(r.ticker)+'">Tentar de novo</button> <button type="button" class="btn s" data-dt815="foco" data-tk="'+E(r.ticker)+'">Abrir no Terminal</button></div>';
  const n={'1M':21,'3M':63,'6M':126,'1A':252,'3A':756,'Máx':1e9}[st.per]||252,c=s.c.slice(-n),ib=st.ibov&&st.serie.BOVA11?.c?.length?st.serie.BOVA11.c:null;
  const W=760,H=260,P=34,ys=c.map(x=>x.c);let lines=[],lo,hi;
  if(ib){const m=new Map(ib.map(x=>[x.d,x.c])),b0=c.find(x=>m.has(x.d)),i0=b0?m.get(b0.d):null,p0=c[0].c;
@@ -278,10 +285,11 @@ function enter(tab){if(tab)st.tab=tab;st._rotTentou=0;if(tab!=='ativo'&&!st._abr
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
-d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam]');
+d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie]');
  if(!t||!t.closest('#ap-root'))return;const ds=t.dataset;
  if('apIa' in ds){w.DiarioAnalises?.command?.('ANALISE '+ds.apIa);d.querySelector('[data-an-sub="pesquisa"]')?.click();return}
  if('apRecarregar' in ds){carregar(true);return}
+ if('apSerie' in ds){carregaSerie(ds.apSerie,true);return}
  if('apFaltam' in ds){const R=st.X?.retornos||{},P=pf(),l=st.rows.rows.filter(r=>!R[r.ticker]&&!P[r.ticker]).map(r=>r.ticker);navigator.clipboard?.writeText(l.join('\n'));t.textContent=l.length+' tickers copiados';return}
  if('apVoltar' in ds){st.tk='';}
  else if('apAtivo' in ds&&!ev.target.closest('button[data-ap-tedit],button[data-ap-tdel]')){st.tk=ds.apAtivo;st.sub='visao';w.DiarioBarraContexto?.definirFoco?.(ds.apAtivo);d.getElementById('ap-root')?.scrollIntoView({block:'start'})}
