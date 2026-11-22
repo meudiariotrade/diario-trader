@@ -30,3 +30,39 @@ test('endpoint exige usuário confirmado e não aceita anon como sessão nem aç
 });
 test('fontes oficiais e datas são exigidas para afirmar atualidade; seções dependentes ficam inconclusivas',()=>{const t=moduleAt('atualidade.ts',{urlSegura:s=>{try{return new URL(s).protocol==='https:'?s:null}catch{return null}}});const sources=[{url:'https://ri.petrobras.com.br/resultado.pdf',url_original:'https://ri.petrobras.com.br/resultado.pdf',primaria:true}],doc={periodo:'3T2026',divulgado_em:new Date().toISOString(),url:sources[0].url,ultimo_confirmado:true};assert.equal(t.documentos({ativos:[{ticker:'PETR4',itr:doc,dfp:doc}]},sources,['PETR4'])[0].itr.confirmado,true);assert.equal(t.documentos({ativos:[{ticker:'PETR4',itr:{...doc,url:'https://blog.test/inventado'}}]},sources,['PETR4'])[0].itr.confirmado,false);const restricted=t.restringir('## 1. Cabeçalho\nPesquisa\n## 6. Valuation\nPreço justo 999\n## 7. Macro\nRisco\n## 14. Conclusão\nCompra',false);assert.ok(!restricted.includes('Preço justo 999'));assert.ok(!restricted.includes('\nCompra'));assert.ok(restricted.includes('inconclusiva'))});
 test('YoY, QoQ e histórico anual são calculados sem misturar YTD ou fontes secundárias',()=>{const t=moduleAt('financeiro.ts'),url='https://ri.petrobras.com.br/resultado.pdf',source=[{url,primaria:true}],metric=(periodo,valor,base='trimestre')=>({ticker:'PETR4',metrica:'receita',periodo,valor,unidade:'BRL',base,fonte_url:url});const rows=[metric('2026-09-30',120),metric('2026-06-30',100),metric('2025-09-30',80),metric('2026-09-30',320,'YTD'),...[2021,2022,2023,2024,2025].map((y,i)=>metric(y+'-12-31',100*1.1**i,'anual')),{...metric('2026-09-30',999),fonte_url:'https://blog.test'}];const c=t.calcularFinanceiros(rows,source);assert.equal(c.comparativos[0].qoq_pct,20);assert.equal(c.comparativos[0].yoy_pct,50);assert.ok(Math.abs(c.historicos[0].cagr_pct-10)<1e-9);assert.equal(c.descartadas,1);assert.equal(c.valuation[0].dcf,null)});
+
+
+test('agenda: JWT autenticado segue de pesquisa para macro; cron permanece só para diagnóstico interno', async()=>{
+ const origem=fs.readFileSync('supabase/functions/pesquisa/index.ts','utf8');
+ assert.match(origem,/checkpoint\\.pesquisa=await pesquisar\\(job\\.comando,env,fetch,token\\)/);
+ const m=moduleAt('motor.ts',{hoje:()=> '2026-11-22'});
+ const env=k=>({SUPABASE_URL:'https://sb.test',SUPABASE_ANON_KEY:'anon-publica',CRON_SECRET:'segredo-interno'})[k];
+ const chamadas=[];
+ const fetcher=async(url,opts)=>{
+   chamadas.push({url,headers:opts.headers,corpo:JSON.parse(opts.body)});
+   return Response.json({eventos:[{em:'2026-11-23T12:00:00Z',p:'BR',imp:1,t:'Indicador econômico'}]});
+ };
+ const cmd={modo:'AGENDA',tickers:[]};
+ const usuario=await m.pesquisar(cmd,env,fetcher,'jwt.usuario.valido');
+ assert.equal(chamadas[0].url,'https://sb.test/functions/v1/macro');
+ assert.equal(chamadas[0].headers.Authorization,'Bearer jwt.usuario.valido');
+ assert.equal(chamadas[0].headers.apikey,'anon-publica');
+ assert.equal(chamadas[0].headers['x-cron-secret'],undefined);
+ assert.equal(chamadas[0].corpo.modo,'agenda');
+ assert.equal(usuario.falhas.length,0);
+ assert.equal(usuario.dados.agenda.de,'2026-11-23');
+ const interno=await m.pesquisar(cmd,env,fetcher);
+ assert.equal(chamadas[1].headers.Authorization,undefined);
+ assert.equal(chamadas[1].headers['x-cron-secret'],'segredo-interno');
+ assert.equal(interno.falhas.length,0);
+});
+
+
+test('agenda: não reaproveita por seis horas um resultado antigo com erro de autenticação',async()=>{
+ const agora=new Date().toISOString(),cmd={modo:'AGENDA',tickers:[],texto:'AGENDA'};
+ const linhas=[{id:'antigo',comando:cmd,status:'concluido',atualizado:agora,resultado:{texto:'Agenda econômica indisponível'},checkpoint:{pesquisa:{dados:{agenda:{eventos:[]}},falhas:['Agenda: agenda HTTP 401 — Entre na sua conta'],consultado_em:agora}}}];
+ const env={SUPABASE_URL:'https://sb.test',SUPABASE_SERVICE_ROLE_KEY:'privado',SUPABASE_ANON_KEY:'publico'};
+ const c=moduleAt('index.ts',{Deno:{env:{get:k=>env[k]},serve(){}},fetch:async()=>Response.json(linhas)});
+ const r=await c.reaproveitar('usuario','novo',cmd);
+ assert.equal(r,null,'falha na agenda não pode ser reutilizada após corrigir o servidor');
+});
