@@ -1,0 +1,2 @@
+v880 — Rankings: botão ? pequeno (14px) e discreto; cabeçalhos alinhados com os valores (números à direita, texto à esquerda, nota centralizada); barra de busca/colunas/CSV compacta; legenda escondida no celular (explicada no ?).
+Arquivos: src/analysis/analises-plus.js, release.config.json

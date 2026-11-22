@@ -148,7 +148,7 @@ function valor(r,k){if(['graham','bazin','gordon','justo','proprio'].includes(k)
 function justoCel(v,p){if(v==null)return '<td class="ap-n">—</td>';const u=p?(v/p-1)*100:null;return '<td class="ap-n"><span class="ap-est">~'+fmt(v)+'</span><small class="'+cor(u)+'">'+sinal(u,0)+'</small></td>'}
 function notaCel(n){if(n==null)return '<td>—</td>';const p=Math.round(n/4*100);return '<td><span class="ap-nota" style="--p:'+p+'">'+fmt(n,2)+'</span></td>'}
 function cel(r,k){
- switch(k){case 'nota':return notaCel(r.nota);case 'setor':return '<td class="ap-up">'+E(r.setor)+'</td>';case 'porte':return '<td>'+E(r.porte||'—')+'</td>';
+ switch(k){case 'nota':return notaCel(r.nota).replace('<td>','<td class="ap-c">');case 'setor':return '<td class="ap-up">'+E(r.setor)+'</td>';case 'porte':return '<td>'+E(r.porte||'—')+'</td>';
   case 'crowded':return '<td class="ap-n"><span class="ap-pill'+(r.crowded>150?' hot':'')+'">'+(r.crowded==null?'—':fmt(r.crowded,0)+'%')+'</span></td>';
   case 'preco':return '<td class="ap-n">'+brl(r.preco)+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'"> '+sinal(r.d1,2)+'</small>':'')+'</td>';case 'graham':case 'bazin':case 'gordon':case 'justo':case 'proprio':return justoCel(r[k],r.preco);
   case 'pl':case 'pvp':case 'ev_ebitda':case 'div_liq_ebitda':return '<td class="ap-n">'+(r[k]==null?'—':fmt(r[k],1)+'x')+'</td>';
@@ -159,7 +159,7 @@ function cel(r,k){
 function viewRank(){
  const f=st.f,l=filtrados(),tot=l.length,pg=f.pg,pages=Math.max(1,Math.ceil(tot/pg));if(f.page>=pages)f.page=0;
  const pag=l.slice(f.page*pg,f.page*pg+pg),setores=Object.keys(st.rows.porSetor).sort(),cols=COLS.filter(c=>vis.includes(c[0]));
- const th=(k,t)=>'<th data-ap-sort="'+k+'" class="'+(f.sort===k?'on':'')+'">'+t+(f.sort===k?(f.dir<0?' ▾':' ▴'):'')+q(k)+'</th>';
+ const TXT=['setor','porte','balanco'],th=(k,t)=>'<th data-ap-sort="'+k+'" class="'+(f.sort===k?'on ':'')+(TXT.includes(k)?'':k==='nota'?'ap-c':'ap-n')+'">'+t+(f.sort===k?(f.dir<0?' ▾':' ▴'):'')+q(k)+'</th>';
  return '<div class="ap-rank"><aside class="ap-filtros"><details open><summary>Filtros'+(f.preset||f.setor||f.porte||f.nota||f.liq||f.q?' <button type="button" class="ap-link" data-ap-limpar>Limpar</button>':'')+'</summary>'+
   '<p class="ap-lbl">Screeners por gestor</p>'+Object.entries(PRESETS).map(([k,p])=>'<button type="button" class="ap-preset'+(f.preset===k?' on':'')+'" data-ap-preset="'+k+'"><b>'+p.n+'</b><small>'+p.d+'</small></button>').join('')+
   '<label class="ap-lbl">Setor<select data-ap-f="setor"><option value="">Todos</option>'+setores.map(s=>'<option'+(f.setor===s?' selected':'')+'>'+E(s)+'</option>').join('')+'</select></label>'+
@@ -426,6 +426,16 @@ let cssOk=false;function css(){if(cssOk)return;cssOk=true;const s=d.createElemen
 .ap-qcard p,.ap-glos p{margin:8px 0;font-size:13px;line-height:1.5}.ap-qcard p b,.ap-glos p b{display:block;color:var(--am);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
 .ap-glos details{border-top:1px solid var(--ln);padding:8px 0}.ap-glos summary{cursor:pointer;font-weight:600;font-size:13px;min-height:32px;display:flex;align-items:center}.ap-passos{font-size:13px;line-height:1.7;padding-left:20px}
 @media(max-width:900px){.ap-qbox{align-items:flex-end;padding:0}.ap-qcard{max-width:none;border-radius:6px 6px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom))}.ap-q{width:20px;height:20px}}
+.ap-mob-fix{}
+#ap-root button.ap-q,#ap-root span.ap-q{all:unset;box-sizing:border-box;display:inline-flex!important;align-items:center;justify-content:center;width:14px!important;height:14px!important;min-height:0!important;min-width:0!important;margin:0 0 0 4px!important;padding:0!important;border:1px solid currentColor!important;border-radius:50%!important;background:transparent!important;box-shadow:none!important;color:var(--mu)!important;font:700 9px/1 system-ui,sans-serif!important;cursor:pointer;vertical-align:1px;opacity:.75}
+#ap-root button.ap-q:hover{opacity:1;color:var(--am)!important}
+#ap-root .ap-t th{white-space:nowrap;vertical-align:middle;text-align:left}#ap-root .ap-t th.ap-n,#ap-root .ap-t td.ap-n{text-align:right!important}#ap-root .ap-t th.ap-c,#ap-root .ap-t td.ap-c{text-align:center!important}
+#ap-root .ap-t td{text-align:left;vertical-align:middle}#ap-root .ap-t td.ap-up{text-align:left!important}
+#ap-root .ap-nota{width:30px;height:30px;font-size:10.5px}
+#ap-root .ap-bar .btn,#ap-root .ap-bar select,#ap-root .ap-cols>summary{min-height:34px!important;height:34px;padding:0 10px!important;font-size:12.5px!important;line-height:32px;width:auto!important;flex:0 0 auto}
+#ap-root .ap-bar .ap-busca{flex:1 1 160px;min-height:34px;height:34px}
+#ap-root .ap-leg{font-size:10.5px;line-height:1.4}
+@media(max-width:900px){#ap-root .ap-bar .ap-busca{font-size:16px}#ap-root .ap-leg{display:none}#ap-root .ap-t td.ap-stk{min-width:120px}#ap-root .ap-stk small{max-width:120px}#ap-root .ap-t td,#ap-root .ap-t th{padding:6px 8px}}
 @media(max-width:900px){.ap-rank,.ap-2,.ap-2w,.ap-rotgrid,.ap-hero{grid-template-columns:minmax(0,1fr)}.ap-filtros details{position:static}.ap-filtros details:not([open]){padding:10px}.ap-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.ap-hk{gap:16px}.ap input,.ap select,.ap textarea{font-size:16px}.ap-cols>div{width:280px}}
 `;d.head.appendChild(s)}
 
