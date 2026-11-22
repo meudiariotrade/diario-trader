@@ -278,6 +278,18 @@ export default {
   }
   // v772 — espelhos públicos CVM produzidos semanalmente no GitHub, com cache de borda 24h.
   // Sem CPF, carteira, operações ou dados personalizados, com limites de tamanho e esquema.
+  // v876: espelho público do Análises+ (lucro CVM e retornos diários por ticker), cache de 1 h na borda.
+  if(url.pathname==='/v1/analises-plus'){
+   const key=new Request(url.origin+'/v1/analises-plus'),cache=caches.default,hit=await cache.match(key);
+   if(hit)return conditional(request,hit,true);
+   try{const r=await fetch('https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/analises-plus.json',{signal:AbortSignal.timeout(15000)});
+    if(!r.ok)return json({error:'Arquivo Análises+ indisponível'},503);
+    const txt=await r.text();if(txt.length>3000000)return json({error:'Arquivo acima do limite'},502);
+    const d=JSON.parse(txt);if(d?.versao!==1||!d.crescimento||!d.retornos)return json({error:'Esquema inválido'},502);
+    const res=new Response(txt,{headers:{'content-type':'application/json; charset=utf-8','cache-control':'public, max-age=3600','access-control-allow-origin':'*'}});
+    await cache.put(key,res.clone());return conditional(request,res,false);
+   }catch{return json({error:'Falha ao ler Análises+'},502)}
+  }
   if(url.pathname==='/v1/cvm-provas'){
    if([...url.searchParams.keys()].length)return json({error:'Rota sem parâmetros'},400);
    const year=new Date().getUTCFullYear(),key=new Request(url.origin+'/v1/cvm-provas?year='+year);

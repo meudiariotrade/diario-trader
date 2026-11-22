@@ -1,0 +1,5 @@
+v876 — Correções do Análises+
+- Gráfico da página do ativo: a série diária do Técnico/Terminal vinha em formato de lista [t,o,h,l,c,v] e era descartada ("Sem série diária disponível"). Corrigido em tecnico-ui.js (serie).
+- Arquivo do Análises+ era bloqueado pela política de segurança do app; agora vem pelo Worker Cloudflare /v1/analises-plus (cache 1 h).
+- Botão "Copiar tickers sem cotação" fixo na barra do Radar.
+Arquivos: src/analysis/analises-plus.js, src/analysis/tecnico-ui.js, cloudflare/diario-screeners/index.mjs, release.config.json

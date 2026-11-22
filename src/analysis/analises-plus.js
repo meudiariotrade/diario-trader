@@ -13,7 +13,7 @@ const cmp=n=>n==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',curre
 const cor=n=>n==null?'':n>=0?'ap-g':'ap-r';
 const logo=tk=>w.DiarioLogos?.html?.(tk,20)||'';
 const ls={get(k,f){try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-const K_EXTRA='ap874-extra',URL_EXTRA='https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/analises-plus.json',K_COLS='ap874-colunas',K_ROT='ap873-rotacao',K_TESES='diario-teses-v873',K_FILT='ap873-filtros';
+const K_EXTRA='ap874-extra',URL_EXTRA='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/analises-plus',K_COLS='ap874-colunas',K_ROT='ap873-rotacao',K_TESES='diario-teses-v873',K_FILT='ap873-filtros';
 
 /* ---------- estado ---------- */
 const st={tab:'rankpro',rows:null,loading:false,erro:'',ref:null,tk:'',sub:'visao',per:'1A',ibov:false,
@@ -64,7 +64,7 @@ function enrich(raw,X){const CR=X?.crescimento||{};
  return {rows,porSetor,medPL,map:new Map(rows.map(r=>[r.ticker,r]))};
 }
 async function extra(){const c=ls.get(K_EXTRA,null);if(c&&Date.now()-c.at<12*3600000)return c.d;
- try{const r=await fetch(URL_EXTRA,{cache:'no-cache'});if(!r.ok)throw 0;const j=await r.json();ls.set(K_EXTRA,{at:Date.now(),d:j});return j}catch{return c?.d||null}}
+ try{const r=await fetch(URL_EXTRA);if(!r.ok)throw 0;const j=await r.json();ls.set(K_EXTRA,{at:Date.now(),d:j});return j}catch{return c?.d||null}}
 /* v875: cotações ao vivo da ponte do Profit (mesmo CQ.pf do app: {px,d1,em}); só leitura, sem rede extra. */
 function pf(){try{return typeof CQ!=='undefined'&&CQ?.pf?CQ.pf:{}}catch{return {}}}
 function aplicaProfit(){if(!st.rows)return 0;const P=pf();let n=0;for(const r of st.rows.rows){const q=P[r.ticker];if(q&&q.px>0){r.preco=q.px;r.d1=q.d1;r.profit=1;n++}else r.profit=0}
@@ -164,9 +164,9 @@ function viewRadar(){
    lin.map(([s,o])=>'<tr data-ap-setor="'+E(s)+'" class="'+(st.radarSetor===s?'on':'')+'"><td>'+E(s)+'</td><td class="ap-n">'+o.n+'</td>'+PER.map(p=>'<td class="ap-n" style="'+heat(o[p[0]],mx[p[0]])+'">'+sinal(o[p[0]])+'</td>').join('')+'</tr>').join('')+
    '</tbody></table></div><aside class="ap-dest"><p class="ap-lbl">Mais fortes · mês</p>'+forte.map(([s,o])=>'<div><span>'+E(s)+'</span><b class="'+cor(o['1M'])+'">'+sinal(o['1M'])+'</b></div>').join('')+
    '<p class="ap-lbl">Mais fracos · mês</p>'+fraco.map(([s,o])=>'<div><span>'+E(s)+'</span><b class="'+cor(o['1M'])+'">'+sinal(o['1M'])+'</b></div>').join('')+
-   '<p class="ap-mut">Calculado em '+new Date(st.rot.at).toLocaleString('pt-BR')+(st.nProfit?' · 1D ao vivo pelo Profit ('+st.nProfit+' ativos)':'')+'</p>'+(st.X?.retornos?'<button type="button" class="btn s" data-ap-faltam>Copiar tickers sem cotação</button>':'')+'</aside></div>':'<p class="ap-mut">'+(st.rotLoading?'Buscando séries diárias…':'Toque em "Calcular rotação" (usa o cache de cotações do Técnico).')+'</p>')+'</section>'+
+   '<p class="ap-mut">Calculado em '+new Date(st.rot.at).toLocaleString('pt-BR')+(st.nProfit?' · 1D ao vivo pelo Profit ('+st.nProfit+' ativos)':'')+'</p>'+'</aside></div>':'<p class="ap-mut">'+(st.rotLoading?'Buscando séries diárias…':'Toque em "Calcular rotação" (usa o cache de cotações do Técnico).')+'</p>')+'</section>'+
   '<div class="ap-bar"><b>Radar &amp; Distorções</b>'+['','Large','Mid','Small','Micro'].map(p=>'<button type="button" class="ap-chip'+(st.radarPorte===p?' on':'')+'" data-ap-rporte="'+p+'">'+(p||'Todas')+'</button>').join('')+
-  (st.radarSetor?'<button type="button" class="ap-chip on" data-ap-setor="">'+E(st.radarSetor)+' ✕</button>':'')+'</div>'+
+  (st.radarSetor?'<button type="button" class="ap-chip on" data-ap-setor="">'+E(st.radarSetor)+' ✕</button>':'')+'<button type="button" class="btn s" data-ap-faltam style="margin-left:auto">Copiar tickers sem cotação</button></div>'+
   cardsLista('Oportunidades claras','Em Distorções de valuation e em pelo menos mais um radar (Reprecificação, PEG ou Ignoradas), sem risco elevado. Convergência reduz falsos positivos.',R.op,r=>'Nota '+fmt(r.nota,1),'dest')+
   cardsLista('Reprecificação (momentum)','Crescimento do lucro > 10% (último exercício CVM), ROIC > 10% e P/L < 20: momentum operacional forte com valuation ainda contido.',R.rep,r=>'Cresc. lucro '+sinal(r.g1,1))+
   cardsLista('Distorções de valuation','P/L abaixo de 50% da mediana do setor. Desconto excessivo ou deterioração: analise caso a caso.',R.dist,r=>'P/L '+fmt(r.pl,1))+

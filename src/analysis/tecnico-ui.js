@@ -415,7 +415,7 @@ function serie(ticker,market='br'){
  if(hit&&Date.now()-hit.at<3600000)return hit.p;
  const p=candles({ticker,market},'1d').then(r=>{
   const fmt=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'});
-  return {source:r.source,closes:(r.candles||[]).map(x=>({d:fmt.format(new Date(Number(x.t??x.time))),c:Number(x.c??x.close)})).filter(x=>x.d&&Number.isFinite(x.c))};
+  return {source:r.source,closes:(r.candles||[]).map(x=>Array.isArray(x)?{t:Number(x[0])<1e12?Number(x[0])*1000:Number(x[0]),c:x[4]}:x).map(x=>({d:fmt.format(new Date(Number(x.t??x.time))),c:Number(x.c??x.close)})).filter(x=>x.d&&Number.isFinite(x.c))};
  });
  series.set(k,{at:Date.now(),p});p.catch(()=>series.delete(k));return p;
 }
