@@ -1,0 +1,2 @@
+v878 — Página do ativo: série diária com 3 fontes (Técnico, gráfico do Terminal, ponte Profit), erro visível e botão Tentar de novo.
+Arquivos: src/analysis/analises-plus.js, release.config.json
