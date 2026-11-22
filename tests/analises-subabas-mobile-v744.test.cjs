@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {expect}=require('playwright/test');
 const {withApp}=require('./helpers/app.cjs');
-test('iPhone: Análises numa aba só — telas e mercado no topo, Pesquisa preservada (v830)',{timeout:90000},async()=>withApp(async(browser,base)=>{
+test('iPhone: Análises numa aba só — telas e mercado no topo, O Conselho preservado (v882)',{timeout:90000},async()=>withApp(async(browser,base)=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(base+'/?demo=1');
  await page.locator('#splash').waitFor({state:'hidden'});
@@ -13,8 +13,9 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, Pesquisa prese
  await expect(nav).toBeVisible();
  await expect(nav.locator('[data-an-sub]')).toHaveCount(7);
  const pesquisa=nav.locator('[data-an-sub="pesquisa"]');
- await expect(pesquisa).toContainText('Pesquisa IA');
- await expect(pesquisa).toHaveAttribute('aria-label',/Pesquisa com IA/);
+ await expect(pesquisa).toHaveText('Conselho');
+ await expect(pesquisa).toHaveAttribute('aria-label',/O Conselho — especialistas de mercado/);
+ await expect(page.locator('#an-root [data-an-membro]')).toHaveCount(6);
  await expect(pesquisa).toHaveAttribute('aria-selected','true');
  await expect(nav.locator('[data-an-sub="br"]')).toBeVisible();
  await expect(nav.locator('[data-an-sub="tecnico-br"]')).toHaveCount(1);
@@ -23,7 +24,7 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, Pesquisa prese
    antes:el.compareDocumentPosition(document.querySelector('#an-root .an-header'))&Node.DOCUMENT_POSITION_FOLLOWING,
    visible:el.getBoundingClientRect().width>0}));
  assert.equal(pos.junto,true,'barra unica no local da selecao B3 & EUA');
- assert.ok(pos.antes,'sub-abas acima da Pesquisa de Investimentos');
+ assert.ok(pos.antes,'sub-abas acima do cabeçalho do Conselho');
  assert.equal(pos.visible,true,'barra nao pode ficar oculta');
  const tap=await nav.locator('[data-an-sub="br"]').evaluate(el=>{
   const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
@@ -42,7 +43,7 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, Pesquisa prese
  await expect(page.locator('#an830-ficha')).toHaveCount(1);
  await page.locator('#an-root nav.an-subs').evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
  await page.locator('[data-an-sub="pesquisa"]').click();
- await expect(page.locator('#an-title')).toHaveText('Análise técnica e fundamentalista');
+ await expect(page.locator('#an-title')).toHaveText('Graham — Dossiê de Empresas');
  await expect(page.locator('#an-command')).toBeVisible();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'sem rolagem lateral no iPhone');
  fs.mkdirSync('test-results',{recursive:true});
@@ -51,7 +52,7 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, Pesquisa prese
 test('Sub-abas nao alteram telas e mantem apenas um container principal',()=>{
  const source=fs.readFileSync('src/analysis/analises.js','utf8');
  assert.match(source,/function subnav\(\)/);
- assert.match(source,/\$\{subnav\(\)\}<\/div><header class="an-header"/);
+ assert.match(source,/\$\{subnav\(\)\}<\/div>\$\{conselhoBar\(\)\}<header class="an-header an-conselho-hero"/);
  assert.match(source,/an-screener-switch/);
  assert.doesNotMatch(source,/\$\{subnav\(\)\}<header class="an-header"/);
  const cfg=JSON.parse(fs.readFileSync('release.config.json','utf8'));
