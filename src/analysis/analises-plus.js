@@ -65,16 +65,20 @@ function enrich(raw,X){const CR=X?.crescimento||{};
 }
 async function extra(){const c=ls.get(K_EXTRA,null);if(c&&Date.now()-c.at<12*3600000)return c.d;
  try{const r=await fetch(URL_EXTRA,{cache:'no-cache'});if(!r.ok)throw 0;const j=await r.json();ls.set(K_EXTRA,{at:Date.now(),d:j});return j}catch{return c?.d||null}}
+/* v875: cotações ao vivo da ponte do Profit (mesmo CQ.pf do app: {px,d1,em}); só leitura, sem rede extra. */
+function pf(){try{return typeof CQ!=='undefined'&&CQ?.pf?CQ.pf:{}}catch{return {}}}
+function aplicaProfit(){if(!st.rows)return 0;const P=pf();let n=0;for(const r of st.rows.rows){const q=P[r.ticker];if(q&&q.px>0){r.preco=q.px;r.d1=q.d1;r.profit=1;n++}else r.profit=0}
+ st.nProfit=n;if(st.X){const ra=rotacaoArquivo(st.rows,st.X);if(ra)st.rot=ra}return n}
 function rotacaoArquivo(D,X){const R=X?.retornos;if(!R||!Object.keys(R).length)return null;const s={};let data='';
  for(const[setor,l]of Object.entries(D.porSetor)){const v=l.filter(r=>r.cap&&R[r.ticker]);if(!v.length)continue;const o={n:l.length};
-  for(const[k]of PER){const q=v.filter(r=>R[r.ticker][k]!=null),tw=q.reduce((a,r)=>a+r.cap,0);o[k]=tw?q.reduce((a,r)=>a+r.cap*R[r.ticker][k],0)/tw:null}
+  const val=(r,k)=>k==='1D'&&r.profit&&r.d1!=null?r.d1:R[r.ticker]?.[k];for(const[k]of PER){const q=v.filter(r=>val(r,k)!=null),tw=q.reduce((a,r)=>a+r.cap,0);o[k]=tw?q.reduce((a,r)=>a+r.cap*val(r,k),0)/tw:null}
   v.forEach(r=>{if(R[r.ticker].data>data)data=R[r.ticker].data});s[setor]=o}
  return {at:Date.parse(X.gerado_em)||Date.now(),s,arquivo:1,data}}
 async function carregar(force){
  if(st.rows&&!force)return;if(st.loading)return;st.loading=true;st.erro='';render();
  try{const fn=w.DiarioScreeners?.universo;if(!fn)throw Error('Screener ainda carregando');
   const res=await fn('br');if(!res?.rows?.length)throw Error('Snapshot do Screener indisponível');
-  st.ref=res.reference;const X=await extra();st.rows=enrich(res.rows,X);const ra=rotacaoArquivo(st.rows,X);if(ra)st.rot=ra;
+  st.ref=res.reference;const X=await extra();st.X=X;st.rows=enrich(res.rows,X);const ra=rotacaoArquivo(st.rows,X);if(ra)st.rot=ra;
  }catch(e){st.erro=e.message||String(e)}st.loading=false;render();
 }
 
@@ -94,7 +98,7 @@ function notaCel(n){if(n==null)return '<td>—</td>';const p=Math.round(n/4*100)
 function cel(r,k){
  switch(k){case 'nota':return notaCel(r.nota);case 'setor':return '<td class="ap-up">'+E(r.setor)+'</td>';case 'porte':return '<td>'+E(r.porte||'—')+'</td>';
   case 'crowded':return '<td class="ap-n"><span class="ap-pill'+(r.crowded>150?' hot':'')+'">'+(r.crowded==null?'—':fmt(r.crowded,0)+'%')+'</span></td>';
-  case 'preco':return '<td class="ap-n">'+brl(r.preco)+'</td>';case 'graham':case 'bazin':case 'gordon':case 'justo':case 'proprio':return justoCel(r[k],r.preco);
+  case 'preco':return '<td class="ap-n">'+brl(r.preco)+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'"> '+sinal(r.d1,2)+'</small>':'')+'</td>';case 'graham':case 'bazin':case 'gordon':case 'justo':case 'proprio':return justoCel(r[k],r.preco);
   case 'pl':case 'pvp':case 'ev_ebitda':case 'div_liq_ebitda':return '<td class="ap-n">'+(r[k]==null?'—':fmt(r[k],1)+'x')+'</td>';
   case 'g1':case 'cagr3':return '<td class="ap-n '+cor(r[k])+'">'+sinal(r[k])+'</td>';case 'pegC':return '<td class="ap-n">'+fmt(r.pegC,2)+'</td>';case 'dy':case 'payout':case 'roe':case 'roic':case 'margem_liquida':case 'fcf_yield':return '<td class="ap-n">'+pct(r[k])+'</td>';
   case 'momentum':case 'mm200':return '<td class="ap-n '+cor(r[k])+'">'+sinal(r[k])+'</td>';case 'rsi':return '<td class="ap-n">'+fmt(r.rsi,0)+'</td>';
@@ -113,7 +117,7 @@ function viewRank(){
   '</details></aside><section class="ap-tabela"><div class="ap-bar"><input type="search" placeholder="Buscar ticker ou empresa…" value="'+E(f.q)+'" data-ap-f="q" class="ap-busca">'+
   '<details class="ap-cols"><summary class="btn s">Colunas</summary><div>'+COLS.map(c=>'<label><input type="checkbox" data-ap-col="'+c[0]+'"'+(vis.includes(c[0])?' checked':'')+'> '+c[1]+'</label>').join('')+'</div></details>'+
   '<select data-ap-f="pg">'+[30,50,100].map(n=>'<option value="'+n+'"'+(pg===n?' selected':'')+'>'+n+'/pág</option>').join('')+'</select>'+
-  '<button type="button" class="btn s" data-ap-csv>Exportar CSV</button><span class="ap-mut">'+(tot?f.page*pg+1:0)+'–'+Math.min(tot,f.page*pg+pg)+' de '+tot+'</span>'+
+  (st.nProfit?'<span class="ap-tag st-ativa">Profit ao vivo · '+st.nProfit+'</span>':'')+'<button type="button" class="btn s" data-ap-csv>Exportar CSV</button><span class="ap-mut">'+(tot?f.page*pg+1:0)+'–'+Math.min(tot,f.page*pg+pg)+' de '+tot+'</span>'+
   '<button type="button" class="btn s" data-ap-page="-1"'+(f.page?'':' disabled')+'>‹</button><button type="button" class="btn s" data-ap-page="1"'+(f.page<pages-1?'':' disabled')+'>›</button></div>'+
   '<p class="ap-mut ap-leg">~ = estimado no aparelho (Graham √22,5·LPA·VPA · Bazin DPA÷6% · Gordon k 10%, g 4%) · Nota Raio-X 0–4 por percentis do mercado · Crowded = giro ÷ mediana do mercado</p>'+
   '<div class="ap-scroll"><table class="ap-t"><thead><tr><th class="ap-stk" data-ap-sort="ticker">Ativo</th>'+cols.map(c=>th(c[0],c[1])).join('')+'</tr></thead><tbody>'+
@@ -160,7 +164,7 @@ function viewRadar(){
    lin.map(([s,o])=>'<tr data-ap-setor="'+E(s)+'" class="'+(st.radarSetor===s?'on':'')+'"><td>'+E(s)+'</td><td class="ap-n">'+o.n+'</td>'+PER.map(p=>'<td class="ap-n" style="'+heat(o[p[0]],mx[p[0]])+'">'+sinal(o[p[0]])+'</td>').join('')+'</tr>').join('')+
    '</tbody></table></div><aside class="ap-dest"><p class="ap-lbl">Mais fortes · mês</p>'+forte.map(([s,o])=>'<div><span>'+E(s)+'</span><b class="'+cor(o['1M'])+'">'+sinal(o['1M'])+'</b></div>').join('')+
    '<p class="ap-lbl">Mais fracos · mês</p>'+fraco.map(([s,o])=>'<div><span>'+E(s)+'</span><b class="'+cor(o['1M'])+'">'+sinal(o['1M'])+'</b></div>').join('')+
-   '<p class="ap-mut">Calculado em '+new Date(st.rot.at).toLocaleString('pt-BR')+'</p></aside></div>':'<p class="ap-mut">'+(st.rotLoading?'Buscando séries diárias…':'Toque em "Calcular rotação" (usa o cache de cotações do Técnico).')+'</p>')+'</section>'+
+   '<p class="ap-mut">Calculado em '+new Date(st.rot.at).toLocaleString('pt-BR')+(st.nProfit?' · 1D ao vivo pelo Profit ('+st.nProfit+' ativos)':'')+'</p>'+(st.X?.retornos?'<button type="button" class="btn s" data-ap-faltam>Copiar tickers sem cotação</button>':'')+'</aside></div>':'<p class="ap-mut">'+(st.rotLoading?'Buscando séries diárias…':'Toque em "Calcular rotação" (usa o cache de cotações do Técnico).')+'</p>')+'</section>'+
   '<div class="ap-bar"><b>Radar &amp; Distorções</b>'+['','Large','Mid','Small','Micro'].map(p=>'<button type="button" class="ap-chip'+(st.radarPorte===p?' on':'')+'" data-ap-rporte="'+p+'">'+(p||'Todas')+'</button>').join('')+
   (st.radarSetor?'<button type="button" class="ap-chip on" data-ap-setor="">'+E(st.radarSetor)+' ✕</button>':'')+'</div>'+
   cardsLista('Oportunidades claras','Em Distorções de valuation e em pelo menos mais um radar (Reprecificação, PEG ou Ignoradas), sem risco elevado. Convergência reduz falsos positivos.',R.op,r=>'Nota '+fmt(r.nota,1),'dest')+
@@ -267,17 +271,18 @@ function corpo(){
  return st.tab==='radar'?viewRadar():st.tab==='teses'?viewTeses():viewRank();
 }
 function view(tab){if(tab)st.tab=tab;css();return '<div id="ap-root" class="ap">'+corpo()+'</div>'}
-function render(){const el=d.getElementById('ap-root');if(!el)return;const sc=el.querySelector('.ap-scroll')?.scrollLeft;el.innerHTML=corpo();if(sc)el.querySelector('.ap-scroll')&&(el.querySelector('.ap-scroll').scrollLeft=sc);
+function render(){const el=d.getElementById('ap-root');if(!el)return;aplicaProfit();const sc=el.querySelector('.ap-scroll')?.scrollLeft;el.innerHTML=corpo();if(sc)el.querySelector('.ap-scroll')&&(el.querySelector('.ap-scroll').scrollLeft=sc);
  calcRun(el.querySelector('.ap-calcs'));if(st.tk&&st.sub==='visao'){carregaSerie(st.tk);if(st.ibov)carregaSerie('BOVA11')}
  if(st.tab==='radar'&&st.rows&&!st.rotLoading&&!st.tk&&!st.rot?.arquivo&&(!st.rot||Date.now()-st.rot.at>12*3600000)&&!st._rotTentou){st._rotTentou=1;rotacao()}}
 function enter(tab){if(tab)st.tab=tab;st._rotTentou=0;if(tab!=='ativo'&&!st._abrindo)st.tk='';st._abrindo=0;carregar().then(render);render()}
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
-d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar]');
+d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam]');
  if(!t||!t.closest('#ap-root'))return;const ds=t.dataset;
  if('apIa' in ds){w.DiarioAnalises?.command?.('ANALISE '+ds.apIa);d.querySelector('[data-an-sub="pesquisa"]')?.click();return}
  if('apRecarregar' in ds){carregar(true);return}
+ if('apFaltam' in ds){const R=st.X?.retornos||{},P=pf(),l=st.rows.rows.filter(r=>!R[r.ticker]&&!P[r.ticker]).map(r=>r.ticker);navigator.clipboard?.writeText(l.join('\n'));t.textContent=l.length+' tickers copiados';return}
  if('apVoltar' in ds){st.tk='';}
  else if('apAtivo' in ds&&!ev.target.closest('button[data-ap-tedit],button[data-ap-tdel]')){st.tk=ds.apAtivo;st.sub='visao';w.DiarioBarraContexto?.definirFoco?.(ds.apAtivo);d.getElementById('ap-root')?.scrollIntoView({block:'start'})}
  else if('apSort' in ds){const k=ds.apSort;if(st.f.sort===k)st.f.dir*=-1;else{st.f.sort=k;st.f.dir=['ticker','setor','porte','pl','pvp','ev_ebitda','div_liq_ebitda'].includes(k)?1:-1}salvaF()}

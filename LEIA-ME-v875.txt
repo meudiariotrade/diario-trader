@@ -1,0 +1,5 @@
+v875 — Ponte do Profit no Análises+
+- Rankings/Radar/Página do ativo usam o preço ao vivo do Profit (CQ.pf) quando a ponte está ligada; selo "Profit ao vivo".
+- Rotação setorial: coluna 1D ao vivo pelo Profit; demais períodos pelo arquivo diário.
+- Botão "Copiar tickers sem cotação" para incluir na lista da ponte.
+Arquivos: src/analysis/analises-plus.js, release.config.json
