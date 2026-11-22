@@ -43323,40 +43323,184 @@ function ecoSalva() {
     ls.set("diario-eco", ECO.l.slice(-20));
   } catch {}
 }
-async function ecoPergunta(e) {
-  if (((e = String(e || "").trim()), e.length < 3 || ECO.busy)) return;
-  const t = e.match(/https?:\/\/\S+/),
-    a = t ? t[0] : "";
-  ((ECO.busy = 1), (ECO.err = ""), (ECO.rascunho = ""), ecoPaint());
+/* v883 — Áurea: IA principal do app. Ela lê a pergunta, escolhe o especialista do Conselho
+   (Schwartz, Graham, Livermore, Munger, Markowitz ou Dow) e responde com a ótica certa.
+   Tudo no aparelho: a função "analise" (modo economista) e o Cérebro continuam os mesmos. */
+const AUREA = {
+  nome: "Áurea",
+  papel: "Estrategista-chefe · preside O Conselho",
+  membros: {
+    schwartz: { nome: "Schwartz", papel: "Macro & Notícias", lente: "" },
+    graham: {
+      nome: "Graham",
+      papel: "Fundamentalista",
+      lente:
+        "análise fundamentalista no estilo de Benjamin Graham: qualidade do balanço, lucro, rentabilidade, endividamento, dividendos, valuation e margem de segurança. Diga claramente quando não houver dado confirmado e cite datas e fontes.",
+    },
+    livermore: {
+      nome: "Livermore",
+      papel: "Técnico",
+      lente:
+        "análise técnica no estilo de Jesse Livermore: tendência primária, médias móveis, suportes e resistências, volume, pontos de invalidação e gestão de risco. Não recomende compra nem venda.",
+    },
+    munger: {
+      nome: "Munger",
+      papel: "Crítico de Teses",
+      lente:
+        "advogado do diabo no estilo de Charlie Munger: inverta a tese, aponte vieses, riscos ocultos e o que precisaria ser verdade para a tese funcionar.",
+    },
+    markowitz: {
+      nome: "Markowitz",
+      papel: "Carteira",
+      lente:
+        "gestão de carteira no estilo de Harry Markowitz: diversificação, correlação, concentração por setor e por ativo, e relação entre risco e retorno.",
+    },
+    dow: {
+      nome: "Dow",
+      papel: "Estudos",
+      lente:
+        "mentor de estudos: explique o conceito de forma didática, com exemplo claramente hipotético, armadilhas comuns e como o tema costuma cair na prova CNPI.",
+    },
+  },
+};
+function aureaRota(texto) {
+  const t = String(texto || ""),
+    n = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+    tickers = [
+      ...new Set(
+        (t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|11)\b/g) || []).map((x) => x.toUpperCase()),
+      ),
+    ].slice(0, 4),
+    forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow)\b/);
+  if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você" };
+  const conta = (rx) => (n.match(rx) || []).length,
+    pontos = {
+      schwartz: conta(
+        /\b(juros?|selic|copom|fed|fomc|inflacao|ipca|cpi|payroll|pib|cambio|dolar|wdo|treasur\w*|curva|di1?|bancos? centra\w*|noticia|tesouro|recessao|fiscal|petroleo|minerio|china|eua|guerra|tarifa\w*|eleica\w*)\b/g,
+      ) + (/https?:\/\//.test(t) ? 3 : 0),
+      graham: conta(
+        /\b(valuation|preco (justo|teto)|dividend\w*|proventos?|balanco|lucro|receita|p\/?l|p\/?vp|roe|roic|ebitda|divida|alavancag\w*|fundament\w*|vale a pena|barat[oa]|car[oa]|margem de seguranca|dossie|graham|bazin|dcf|resultado trimestral)\b/g,
+      ),
+      livermore: conta(
+        /\b(tecnic\w*|grafico|suporte|resistencia|tendencia|media movel|mm ?\d+|rsi|ifr|rompimento|rompeu|candle\w*|fibonacci|fibo|stop|entrada|alvo|price action|topo|fundo|pivo\w*|volume|livermore|elliott)\b/g,
+      ),
+      munger: conta(
+        /\b(minha tese|tese|advogado do diabo|riscos? ocultos?|furos?|vies|vieses|estou certo|estou errado|o que pode dar errado|munger|contra-?argumento)\b/g,
+      ),
+      markowitz: conta(
+        /\b(minha carteira|carteira|portfolio|rebalance\w*|alocacao|aloco|diversifica\w*|concentra\w*|correlac\w*|aporte|markowitz|peso dos? ativos?)\b/g,
+      ),
+      dow: conta(
+        /\b(o que e|o que significa|explique o conceito|conceito|como funciona|cnpi|prova|simulado|estudar|estudo|livro|teoria de dow|aprender|definicao|me ensina|didatic\w*)\b/g,
+      ),
+    };
+  if (tickers.length) {
+    pontos.graham += 1;
+    pontos.dow = Math.max(0, pontos.dow - 1);
+  }
+  let id = "schwartz",
+    max = 0;
+  for (const [k, v] of Object.entries(pontos)) if (v > max) ((max = v), (id = k));
+  if (tickers.length && id === "schwartz" && pontos.schwartz < 2) id = "graham";
+  const motivo = max
+    ? "a pergunta fala de " +
+      {
+        schwartz: "macro, juros ou notícias",
+        graham: "fundamentos e valuation",
+        livermore: "gráfico e análise técnica",
+        munger: "uma tese a ser testada",
+        markowitz: "carteira e alocação",
+        dow: "um conceito para estudar",
+      }[id]
+    : tickers.length
+      ? "a pergunta cita " + tickers.join(", ")
+      : "pergunta geral de mercado";
+  return { id, tickers, motivo };
+}
+function aureaTexto(e, rota) {
+  const m = rota && AUREA.membros[rota.id];
+  if (!m || !m.lente) return e;
+  return (
+    "[A Áurea encaminhou esta pergunta ao especialista " +
+    m.nome +
+    " (" +
+    m.papel +
+    ") do Conselho. Responda sob a ótica de " +
+    m.lente +
+    "]\n\n" +
+    e
+  );
+}
+async function aureaCerebro(e) {
+  const api = window.DiarioCerebroIA && window.DiarioCerebroIA.api;
+  if (!api) return null;
   try {
-    const o = await anxCall({
-      modo: "economista",
-      texto: e,
-      link: a,
-      hist: ECO.l
-        .slice(-4)
-        .map((s) => ({
-          p: s.q,
-          r: [s.r.resumo, ...(s.r.explicacao || []).slice(0, 2)].join(" "),
-        })),
+    const j = await api({
+      acao: "gerar",
+      modo: "perguntar",
+      tema: e.replace(/^\s*@\w+\s*/, "").slice(0, 400),
     });
-    if (!o || !o.resposta)
-      throw new Error(
-        o && o.erro
-          ? o.erro
-          : 'Para usar o Economista, publique a nova versão da função "analise" no Supabase.',
-      );
+    const r = (j && j.resultado) || {};
+    if (!r.resposta) return null;
+    return {
+      titulo: "Dow responde com os seus livros",
+      resumo: String(r.resposta),
+      explicacao: r.lacuna ? ["Não coberto pela sua biblioteca: " + r.lacuna] : [],
+      fatos: Array.isArray(r.citacoes)
+        ? r.citacoes.map((c) => (c.obra ? c.obra + ": " : "") + (c.trecho || ""))
+        : [],
+      fontes: Array.isArray(j.fontes) ? j.fontes : [],
+    };
+  } catch {
+    return null;
+  }
+}
+async function ecoPergunta(e, opt) {
+  if (((e = String(e || "").trim()), e.length < 3 || ECO.busy)) return;
+  opt = opt || {};
+  const rota = opt.rota || aureaRota(opt.pergunta || e),
+    q = opt.pergunta || e,
+    t = e.match(/https?:\/\/\S+/),
+    a = t ? t[0] : "";
+  ((ECO.busy = 1), (ECO.err = ""), (ECO.rascunho = ""), (ECO.rota = rota), ecoPaint());
+  try {
+    let resposta = null;
+    if (rota.id === "dow") resposta = await aureaCerebro(q);
+    if (!resposta) {
+      const o = await anxCall({
+        modo: "economista",
+        texto: aureaTexto(e, rota),
+        link: a,
+        hist: ECO.l
+          .slice(-4)
+          .map((s) => ({
+            p: s.q,
+            r: [s.r.resumo, ...(s.r.explicacao || []).slice(0, 2)].join(" "),
+          })),
+      });
+      if (!o || !o.resposta)
+        throw new Error(
+          o && o.erro
+            ? o.erro
+            : 'Para usar a Áurea, publique a nova versão da função "analise" no Supabase.',
+        );
+      resposta = o.resposta;
+    }
     (ECO.l.push({
       id: Date.now().toString(36),
-      q: e,
+      q,
       em: new Date().toISOString(),
-      r: o.resposta,
+      r: resposta,
+      por: rota.id,
+      motivo: rota.motivo,
+      tickers: rota.tickers,
     }),
       ecoSalva());
   } catch (o) {
-    ((ECO.err = String(o.message || o)), (ECO.rascunho = e));
+    ((ECO.err = String(o.message || o)), (ECO.rascunho = q));
   }
   ((ECO.busy = 0),
+    (ECO.rota = null),
     ecoPaint(),
     ECO.err ||
       setTimeout(() => {
@@ -43417,10 +43561,10 @@ function macroFetchComSessao(url,options) {
 }
 // Consultas macro privadas nunca precisam produzir HTTP 401 em sessão anônima.
 function vEco(e) {
-  return `<div class="card"><div class="top"><b>🎓 Economista IA</b>${ECO.l.length ? '<button class="btn s" data-eco="limpa">Limpar</button>' : ""}</div>${e}
-  <div class="sm mut">Economista com formação de mestrado e doutorado, sem viés político. Cole uma notícia (texto ou link) ou pergunte sobre cenários: ele confirma os fatos na internet, explica o mecanismo, mostra o efeito no Ibovespa, dólar e DI e monta cenários com probabilidade.</div>
-  <textarea id="eco_tx" rows="4" placeholder="Ex.: cole aqui a notícia ou o link, ou pergunte: o que muda para o WDO se o Fed cortar juros?" style="width:100%;margin-top:8px">${esc(ECO.rascunho)}</textarea>
-  <button class="btn" data-eco="vai" style="width:100%;margin-top:6px"${ECO.busy ? " disabled" : ""}>${ECO.busy ? "Pensando… (pode levar até 1 minuto, deixe a tela acesa)" : "Perguntar ao economista"}</button>
+  return `<div class="card"><div class="top"><b>✦ Áurea</b>${ECO.l.length ? '<button class="btn s" data-eco="limpa">Limpar</button>' : ""}</div>${e}
+  <div class="sm mut">Estrategista-chefe que preside O Conselho. Cole uma notícia (texto ou link) ou pergunte sobre macro, empresas, gráficos, carteira ou estudos: ela direciona para Schwartz, Graham, Livermore, Munger, Markowitz ou Dow (ou use @nome).</div>
+  <textarea id="eco_tx" rows="4" placeholder="Ex.: cole uma notícia, pergunte sobre PETR4, RSI, sua carteira ou um conceito..." style="width:100%;margin-top:8px">${esc(ECO.rascunho)}</textarea>
+  <button class="btn" data-eco="vai" style="width:100%;margin-top:6px"${ECO.busy ? " disabled" : ""}>${ECO.busy ? "Pensando… (pode levar até 1 minuto, deixe a tela acesa)" : "Perguntar à Áurea"}</button>
   ${ECO.err ? `<div class="sm r" style="margin-top:6px">${esc(ECO.err)}</div>` : ""}
   ${ECO.l.length ? "" : `<div class="sm mut" style="margin-top:10px">Sugestões:</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">${ECO_SUG.map((t) => `<button class="btn s" data-eco="sug" style="text-align:left">${esc(t)}</button>`).join("")}</div>`}
   <div class="sm mut" style="margin-top:8px">Explica e mostra cenários; não diz para comprar ou vender. Conta no limite diário de análises da IA.</div></div>
@@ -43430,7 +43574,7 @@ function vEco(e) {
   const e = HUB_M.findIndex((t) => t[0] === "mercado:nt");
   HUB_M.splice(e < 0 ? HUB_M.length : e + 1, 0, [
     "mercado:eco",
-    "Economista IA",
+    "Áurea",
   ]);
 }
 {
@@ -43444,15 +43588,15 @@ async function rpEco(e) {
     a = e.r || {},
     o = "Gerado em " + rpAgora(),
     s = await rpNovo(t, {
-      titulo: "Economista IA · " + (a.titulo || ""),
-      cabecalho: "Economista IA · " + (a.titulo || ""),
-      tipo: "Análise econômica",
+      titulo: "Áurea · " + (a.titulo || ""),
+      cabecalho: "Áurea · " + (a.titulo || ""),
+      tipo: "Análise · Áurea",
       data: o,
     }),
     n = a.titulo && s.wd(a.titulo, 30, "b") <= s.W - 2 * s.M - 170;
   return (
     rpCapa(s, {
-      tipo: "Análise econômica · Economista IA",
+      tipo: "Análise · Áurea",
       titulo: n ? a.titulo : "Análise econômica",
       sub: n ? "" : a.titulo || "",
       rec: "Confiança " + (a.confianca || "–"),
@@ -43563,14 +43707,14 @@ document.addEventListener("click", (e) => {
       ecoSalva(),
       ecoPaint());
   else if (a === "limpa")
-    confirm("Apagar toda a conversa com o economista?") &&
+    confirm("Apagar toda a conversa com a Áurea?") &&
       ((ECO.l = []), ecoSalva(), ecoPaint());
   else if (a === "pdf") {
     const o = ECO.l.find((s) => s.id === t.dataset.v);
     o &&
       rpAbrir(
-        "Economista IA · " + (o.r.titulo || ""),
-        "economista-" + loc().slice(0, 10) + ".pdf",
+        "Áurea · " + (o.r.titulo || ""),
+        "aurea-" + loc().slice(0, 10) + ".pdf",
         () => rpEco(o),
       );
   } else if (a === "news") {
@@ -104045,7 +104189,7 @@ Validação do app: atenção a ` +
       Be = [
         ["geral", "Visão Geral", we.home],
         ["ativos", "Meus Ativos", we.lista],
-        ["ia", "Análise IA", we.ia],
+        ["ia", "Markowitz", we.ia],
         ["des", "Desempenho", we.des],
         ["radar", "Radar", we.radar],
         ["hist", "Histórico", we.hist],
@@ -104367,7 +104511,7 @@ Validação do app: atenção a ` +
           : `<p class="pfmut">${e.relErr ? esc(e.relErr) : "Ainda não há relatório consolidado."}</p><button class="pfbt pfam pfw" data-pf="cons">Gerar agora</button>`;
       return `<div class="pfg pfg3">${Se(`${he(we.des, 16)} Evolução patrimonial`, le, Y, "pfs2")}${Se("Alocação por classe", Ce(q, "100%", I(V.v)))}</div>
   <div class="pfg pfg3">${Se("Distribuição por setor", Ce(L, L.length + "", L.length === 1 ? "setor" : "setores"))}${Se("Distribuição geográfica e moeda", Qe(F) + '<div class="pfsep"></div>' + Qe(O))}${Se("Melhores e piores", ge)}</div>
-  <div class="pfg pfg3">${Se("Alertas relevantes", je, '<button class="pflk" data-pf="aba|radar">Ver todos →</button>')}${Se(`${he(we.ia, 16)} Análise da IA`, He, '<button class="pflk" data-pf="aba|ia">Abrir →</button>', "pfia")}${Se("Risco e concentração", Le(V, ae))}</div>
+  <div class="pfg pfg3">${Se("Alertas relevantes", je, '<button class="pflk" data-pf="aba|radar">Ver todos →</button>')}${Se(`${he(we.ia, 16)} Markowitz · Carteira`, He, '<button class="pflk" data-pf="aba|ia">Abrir →</button>', "pfia")}${Se("Risco e concentração", Le(V, ae))}</div>
   <div class="pfg pfg3">${Se("Portfolio Intelligence Scorecard", ke(V), '<span class="pfsm pfmut">por peso na carteira</span>', "pfs2")}${Se(
     "Maiores posições",
     V.pos
@@ -104573,7 +104717,7 @@ Validação do app: atenção a ` +
     ${Y && Y.ref ? `<p class="pfsm">Rodada de ${ue(Y.ref)}: ${Y.feitos.length} novo(s), ${Y.reap.length} sem mudança${Y.falhas.length ? ", " + Y.falhas.length + " falha(s)" : ""}${Y.cons ? " · consolidado pronto" : Y.erro_cons ? " · consolidado: " + esc(Y.erro_cons) : ""}.</p>` : ""}${e.cfgErr ? `<p class="pfsm dn">${esc(e.cfgErr)}</p>` : ""}`,
       )}
     ${Se("Gerar agora", `<button class="pfbt pfam pfw" data-pf="cons"${e.busy ? " disabled" : ""}>Relatório consolidado da carteira</button><button class="pfbt pfw" data-pf="rodada"${e.busy ? " disabled" : ""}>Rodada completa (ativos com mudança + consolidado)</button><p class="pfnota">Cada relatório gerado conta uma análise do seu limite diário de IA. Os ativos sem mudança relevante não gastam.</p>`)}
-    ${Se("Como a IA trabalha", '<p class="pfsm"><b class="pfF">Fatos</b> só com números que vieram dos dados (o servidor confere cada número). <b class="pfI">Interpretações</b> são a leitura do analista. <b class="pfH">Hipóteses</b> dizem o que confirma e o que invalida.</p><p class="pfsm">Indicador sem dado aparece como “sem dado”; indicador que não se aplica à classe (P/L em ETF, cripto, renda fixa) não é usado. Sem recomendação de compra ou venda.</p>')}</div>`;
+    ${Se("Como Markowitz trabalha", '<p class="pfsm"><b class="pfF">Fatos</b> só com números que vieram dos dados (o servidor confere cada número). <b class="pfI">Interpretações</b> são a leitura do analista. <b class="pfH">Hipóteses</b> dizem o que confirma e o que invalida.</p><p class="pfsm">Indicador sem dado aparece como “sem dado”; indicador que não se aplica à classe (P/L em ETF, cripto, renda fixa) não é usado. Sem recomendação de compra ou venda.</p>')}</div>`;
       if (
         ((q += `<div class="pfchs">${Ve("cons", e.ia, "Consolidado", "iasub")}${Ve("ativos", e.ia, "Por ativo", "iasub")}${Ve("lista", e.ia, "Todos os relatórios", "iasub")}${Ve("ferr", e.ia, "Ferramentas clássicas", "iasub")}</div>`),
         e.ia === "cons")

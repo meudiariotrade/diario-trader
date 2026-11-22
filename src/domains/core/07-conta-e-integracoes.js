@@ -3284,40 +3284,184 @@ function ecoSalva() {
     ls.set("diario-eco", ECO.l.slice(-20));
   } catch {}
 }
-async function ecoPergunta(e) {
-  if (((e = String(e || "").trim()), e.length < 3 || ECO.busy)) return;
-  const t = e.match(/https?:\/\/\S+/),
-    a = t ? t[0] : "";
-  ((ECO.busy = 1), (ECO.err = ""), (ECO.rascunho = ""), ecoPaint());
+/* v883 — Áurea: IA principal do app. Ela lê a pergunta, escolhe o especialista do Conselho
+   (Schwartz, Graham, Livermore, Munger, Markowitz ou Dow) e responde com a ótica certa.
+   Tudo no aparelho: a função "analise" (modo economista) e o Cérebro continuam os mesmos. */
+const AUREA = {
+  nome: "Áurea",
+  papel: "Estrategista-chefe · preside O Conselho",
+  membros: {
+    schwartz: { nome: "Schwartz", papel: "Macro & Notícias", lente: "" },
+    graham: {
+      nome: "Graham",
+      papel: "Fundamentalista",
+      lente:
+        "análise fundamentalista no estilo de Benjamin Graham: qualidade do balanço, lucro, rentabilidade, endividamento, dividendos, valuation e margem de segurança. Diga claramente quando não houver dado confirmado e cite datas e fontes.",
+    },
+    livermore: {
+      nome: "Livermore",
+      papel: "Técnico",
+      lente:
+        "análise técnica no estilo de Jesse Livermore: tendência primária, médias móveis, suportes e resistências, volume, pontos de invalidação e gestão de risco. Não recomende compra nem venda.",
+    },
+    munger: {
+      nome: "Munger",
+      papel: "Crítico de Teses",
+      lente:
+        "advogado do diabo no estilo de Charlie Munger: inverta a tese, aponte vieses, riscos ocultos e o que precisaria ser verdade para a tese funcionar.",
+    },
+    markowitz: {
+      nome: "Markowitz",
+      papel: "Carteira",
+      lente:
+        "gestão de carteira no estilo de Harry Markowitz: diversificação, correlação, concentração por setor e por ativo, e relação entre risco e retorno.",
+    },
+    dow: {
+      nome: "Dow",
+      papel: "Estudos",
+      lente:
+        "mentor de estudos: explique o conceito de forma didática, com exemplo claramente hipotético, armadilhas comuns e como o tema costuma cair na prova CNPI.",
+    },
+  },
+};
+function aureaRota(texto) {
+  const t = String(texto || ""),
+    n = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+    tickers = [
+      ...new Set(
+        (t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|11)\b/g) || []).map((x) => x.toUpperCase()),
+      ),
+    ].slice(0, 4),
+    forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow)\b/);
+  if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você" };
+  const conta = (rx) => (n.match(rx) || []).length,
+    pontos = {
+      schwartz: conta(
+        /\b(juros?|selic|copom|fed|fomc|inflacao|ipca|cpi|payroll|pib|cambio|dolar|wdo|treasur\w*|curva|di1?|bancos? centra\w*|noticia|tesouro|recessao|fiscal|petroleo|minerio|china|eua|guerra|tarifa\w*|eleica\w*)\b/g,
+      ) + (/https?:\/\//.test(t) ? 3 : 0),
+      graham: conta(
+        /\b(valuation|preco (justo|teto)|dividend\w*|proventos?|balanco|lucro|receita|p\/?l|p\/?vp|roe|roic|ebitda|divida|alavancag\w*|fundament\w*|vale a pena|barat[oa]|car[oa]|margem de seguranca|dossie|graham|bazin|dcf|resultado trimestral)\b/g,
+      ),
+      livermore: conta(
+        /\b(tecnic\w*|grafico|suporte|resistencia|tendencia|media movel|mm ?\d+|rsi|ifr|rompimento|rompeu|candle\w*|fibonacci|fibo|stop|entrada|alvo|price action|topo|fundo|pivo\w*|volume|livermore|elliott)\b/g,
+      ),
+      munger: conta(
+        /\b(minha tese|tese|advogado do diabo|riscos? ocultos?|furos?|vies|vieses|estou certo|estou errado|o que pode dar errado|munger|contra-?argumento)\b/g,
+      ),
+      markowitz: conta(
+        /\b(minha carteira|carteira|portfolio|rebalance\w*|alocacao|aloco|diversifica\w*|concentra\w*|correlac\w*|aporte|markowitz|peso dos? ativos?)\b/g,
+      ),
+      dow: conta(
+        /\b(o que e|o que significa|explique o conceito|conceito|como funciona|cnpi|prova|simulado|estudar|estudo|livro|teoria de dow|aprender|definicao|me ensina|didatic\w*)\b/g,
+      ),
+    };
+  if (tickers.length) {
+    pontos.graham += 1;
+    pontos.dow = Math.max(0, pontos.dow - 1);
+  }
+  let id = "schwartz",
+    max = 0;
+  for (const [k, v] of Object.entries(pontos)) if (v > max) ((max = v), (id = k));
+  if (tickers.length && id === "schwartz" && pontos.schwartz < 2) id = "graham";
+  const motivo = max
+    ? "a pergunta fala de " +
+      {
+        schwartz: "macro, juros ou notícias",
+        graham: "fundamentos e valuation",
+        livermore: "gráfico e análise técnica",
+        munger: "uma tese a ser testada",
+        markowitz: "carteira e alocação",
+        dow: "um conceito para estudar",
+      }[id]
+    : tickers.length
+      ? "a pergunta cita " + tickers.join(", ")
+      : "pergunta geral de mercado";
+  return { id, tickers, motivo };
+}
+function aureaTexto(e, rota) {
+  const m = rota && AUREA.membros[rota.id];
+  if (!m || !m.lente) return e;
+  return (
+    "[A Áurea encaminhou esta pergunta ao especialista " +
+    m.nome +
+    " (" +
+    m.papel +
+    ") do Conselho. Responda sob a ótica de " +
+    m.lente +
+    "]\n\n" +
+    e
+  );
+}
+async function aureaCerebro(e) {
+  const api = window.DiarioCerebroIA && window.DiarioCerebroIA.api;
+  if (!api) return null;
   try {
-    const o = await anxCall({
-      modo: "economista",
-      texto: e,
-      link: a,
-      hist: ECO.l
-        .slice(-4)
-        .map((s) => ({
-          p: s.q,
-          r: [s.r.resumo, ...(s.r.explicacao || []).slice(0, 2)].join(" "),
-        })),
+    const j = await api({
+      acao: "gerar",
+      modo: "perguntar",
+      tema: e.replace(/^\s*@\w+\s*/, "").slice(0, 400),
     });
-    if (!o || !o.resposta)
-      throw new Error(
-        o && o.erro
-          ? o.erro
-          : 'Para usar o Economista, publique a nova versão da função "analise" no Supabase.',
-      );
+    const r = (j && j.resultado) || {};
+    if (!r.resposta) return null;
+    return {
+      titulo: "Dow responde com os seus livros",
+      resumo: String(r.resposta),
+      explicacao: r.lacuna ? ["Não coberto pela sua biblioteca: " + r.lacuna] : [],
+      fatos: Array.isArray(r.citacoes)
+        ? r.citacoes.map((c) => (c.obra ? c.obra + ": " : "") + (c.trecho || ""))
+        : [],
+      fontes: Array.isArray(j.fontes) ? j.fontes : [],
+    };
+  } catch {
+    return null;
+  }
+}
+async function ecoPergunta(e, opt) {
+  if (((e = String(e || "").trim()), e.length < 3 || ECO.busy)) return;
+  opt = opt || {};
+  const rota = opt.rota || aureaRota(opt.pergunta || e),
+    q = opt.pergunta || e,
+    t = e.match(/https?:\/\/\S+/),
+    a = t ? t[0] : "";
+  ((ECO.busy = 1), (ECO.err = ""), (ECO.rascunho = ""), (ECO.rota = rota), ecoPaint());
+  try {
+    let resposta = null;
+    if (rota.id === "dow") resposta = await aureaCerebro(q);
+    if (!resposta) {
+      const o = await anxCall({
+        modo: "economista",
+        texto: aureaTexto(e, rota),
+        link: a,
+        hist: ECO.l
+          .slice(-4)
+          .map((s) => ({
+            p: s.q,
+            r: [s.r.resumo, ...(s.r.explicacao || []).slice(0, 2)].join(" "),
+          })),
+      });
+      if (!o || !o.resposta)
+        throw new Error(
+          o && o.erro
+            ? o.erro
+            : 'Para usar a Áurea, publique a nova versão da função "analise" no Supabase.',
+        );
+      resposta = o.resposta;
+    }
     (ECO.l.push({
       id: Date.now().toString(36),
-      q: e,
+      q,
       em: new Date().toISOString(),
-      r: o.resposta,
+      r: resposta,
+      por: rota.id,
+      motivo: rota.motivo,
+      tickers: rota.tickers,
     }),
       ecoSalva());
   } catch (o) {
-    ((ECO.err = String(o.message || o)), (ECO.rascunho = e));
+    ((ECO.err = String(o.message || o)), (ECO.rascunho = q));
   }
   ((ECO.busy = 0),
+    (ECO.rota = null),
     ecoPaint(),
     ECO.err ||
       setTimeout(() => {

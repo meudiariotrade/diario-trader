@@ -3237,9 +3237,30 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           ? `<details><summary>${s(M)}</summary><ul>${E.map((u) => `<li>${s(typeof u == "string" ? u : JSON.stringify(u))}</li>`).join("")}</ul></details>`
           : "";
       }
+      function aureaAcao(M) {
+        const por = M.por || "",
+          tk = Array.isArray(M.tickers) && M.tickers.length ? M.tickers[0] : "",
+          m = typeof AUREA < "u" && AUREA.membros[por];
+        if (!m) return "";
+        const chip = `<div class="wf-aurea-route" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:6px 0 8px;padding:6px 10px;border-radius:10px;border:1px solid rgba(201,166,107,.28);background:rgba(201,166,107,.07);font-size:12px"><span>✦ <b>Áurea → ${s(m.nome)}</b> · ${s(m.papel)}</span>`;
+        let btn = "";
+        if (por === "graham")
+          btn = `<button type="button" data-aurea-go="conselho:graham:${s(tk ? "ANALISE " + tk : "ANALISE PETR4")}" style="border:1px solid rgba(201,166,107,.45);background:transparent;color:inherit;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer">Abrir Dossiê ${s(tk || "no Conselho")} →</button>`;
+        else if (por === "livermore")
+          btn = `<button type="button" data-aurea-go="conselho:livermore:${s(tk ? "TÉCNICO " + tk : "TÉCNICO PETR4")}" style="border:1px solid rgba(201,166,107,.45);background:transparent;color:inherit;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer">Abrir Técnico ${s(tk || "no Conselho")} →</button>`;
+        else if (por === "munger")
+          btn = `<button type="button" data-aurea-go="conselho:munger:${s(tk ? "ANALISE " + tk : "ANALISE PETR4")}" style="border:1px solid rgba(201,166,107,.45);background:transparent;color:inherit;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer">Testar tese com Munger →</button>`;
+        else if (por === "markowitz")
+          btn = `<button type="button" data-aurea-go="carteira:ia" style="border:1px solid rgba(201,166,107,.45);background:transparent;color:inherit;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer">Abrir Markowitz na Carteira →</button>`;
+        else if (por === "dow")
+          btn = `<button type="button" data-aurea-go="conselho:dow:${s("EXPLIQUE " + String(M.q || "").replace(/^\s*@\w+\s*/, "").slice(0, 60))}" style="border:1px solid rgba(201,166,107,.45);background:transparent;color:inherit;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer">Estudar com Dow →</button>`;
+        else if (por === "schwartz")
+          btn = `<button type="button" data-aurea-go="conselho:schwartz:AGENDA" style="border:1px solid rgba(201,166,107,.45);background:transparent;color:inherit;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer">Ver Agenda com Schwartz →</button>`;
+        return chip + btn + "</div>";
+      }
       function e(M) {
         const E = M.r || {};
-        return `<article class="wf-chat-message"><p class="wf-chat-question">${s(M.q)}</p><h3>${s(E.titulo || "Resposta da Economista IA")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}
+        return `<article class="wf-chat-message"><p class="wf-chat-question">${s(M.q)}</p>${aureaAcao(M)}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}
       ${N("Fatos apresentados pelo modelo — confira as fontes", E.fatos)}
       ${N(
         "Impactos descritos",
@@ -3270,13 +3291,21 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           P = O.querySelector('[type="submit"]'),
           m = ECO.l.length
             ? ECO.l.map(e).join("")
-            : '<p class="wf-chat-empty">Pergunte sobre juros, notícias, indicadores ou cenários. A conversa acompanha você entre as telas.</p>';
+            : '<p class="wf-chat-empty">Pergunte sobre notícias, empresas, gráficos, carteira ou estudos. A <b>Áurea</b> direciona automaticamente para <b>Schwartz, Graham, Livermore, Munger, Markowitz ou Dow</b> (ou digite <code>@nome</code>).</p>';
         if (m !== o) {
           const q = M.scrollTop,
             H = M.scrollHeight - M.clientHeight - q < 40;
           ((M.innerHTML = m), (o = m), (M.scrollTop = H ? M.scrollHeight : q));
         }
-        ((u.textContent = ECO.busy ? "Preparando a resposta…" : ECO.err || ""),
+        const rotaNome =
+          ECO.rota && typeof AUREA < "u" && AUREA.membros[ECO.rota.id]
+            ? AUREA.membros[ECO.rota.id].nome
+            : "";
+        ((u.textContent = ECO.busy
+          ? rotaNome
+            ? `Áurea encaminhou para ${rotaNome}… preparando resposta`
+            : "Áurea está preparando a resposta…"
+          : ECO.err || ""),
           (P.disabled = !!ECO.busy),
           (E.disabled = !!ECO.busy));
         const c = O.querySelector(".wf-chat-context");
@@ -3297,13 +3326,33 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         if (r) return;
         ((r = document.createElement("div")),
           (r.id = "economista-flutuante"),
-          (r.innerHTML = `<button type="button" class="wf-chat-launcher" aria-label="Abrir Economista IA" aria-expanded="false" aria-controls="wf-chat-panel"><span aria-hidden="true">IA</span></button>
-      <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Economista IA" hidden><header><div><b>Economista IA</b><small>Assistente virtual · mesma conversa entre telas</small></div><button type="button" data-chat-close aria-label="Minimizar conversa">−</button></header>
+          (r.innerHTML = `<button type="button" class="wf-chat-launcher" aria-label="Abrir Áurea" aria-expanded="false" aria-controls="wf-chat-panel"><span aria-hidden="true">✦</span></button>
+      <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Áurea" hidden><header><div><b>✦ Áurea</b><small>Estrategista-chefe · preside O Conselho</small></div><button type="button" data-chat-close aria-label="Minimizar conversa">−</button></header>
       <div class="wf-chat-history" aria-label="Histórico da conversa"></div><div class="wf-chat-status" role="status" aria-live="polite"></div>
-      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Anexar tela, ativo e indicadores públicos, sem saldos ou textos do diário</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-input-label">Sua pergunta<textarea rows="2" maxlength="6000" placeholder="O que você quer entender?"></textarea></label><div class="wf-chat-actions"><button type="button" data-chat-clear>Limpar conversa</button><button type="submit">Enviar</button></div><small>A consulta utiliza o provedor de IA configurado. Respostas e cenários podem conter erros; confirme fontes e datas.</small></form></aside>`),
+      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Anexar tela, ativo e indicadores públicos, sem saldos ou textos do diário</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-input-label">Sua pergunta<textarea rows="2" maxlength="6000" placeholder="Pergunte sobre macro, ativos, gráficos, carteira ou estudos… (ou @graham, @livermore)"></textarea></label><div class="wf-chat-actions"><button type="button" data-chat-clear>Limpar conversa</button><button type="submit">Enviar</button></div><small>Áurea direciona cada pergunta ao especialista certo do Conselho. Respostas podem conter erros; confirme fontes e datas.</small></form></aside>`),
           document.body.append(r),
           (j = r.querySelector(".wf-chat-launcher")),
           (O = r.querySelector("aside")),
+          O.addEventListener("click", (E) => {
+            const btn = E.target.closest("[data-aurea-go]");
+            if (!btn) return;
+            const raw = btn.dataset.aureaGo || "";
+            B(!1);
+            if (raw === "carteira:ia") {
+              if (window.PF) window.PF.aba = "ia";
+              typeof irPara === "function" && irPara("carteiras");
+              return;
+            }
+            const parts = raw.split(":");
+            if (parts[0] === "conselho") {
+              const membro = parts[1] || "graham",
+                cmd = parts.slice(2).join(":");
+              typeof irPara === "function" && irPara("analises");
+              setTimeout(() => {
+                window.DiarioAnalises?.command?.(cmd, membro);
+              }, 80);
+            }
+          }),
           j.addEventListener("click", () => {
             (j._dragged || B(!l), (j._dragged = !1));
           }),
@@ -3312,7 +3361,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           (O.querySelector("[data-chat-clear]").onclick = () => {
             ECO.busy ||
               !confirm(
-                "Limpar apenas o histórico da Economista IA neste aparelho?",
+                "Limpar apenas o histórico da Áurea neste aparelho?",
               ) ||
               ((ECO.l = []), (ECO.err = ""), ecoSalva(), i());
           }),
@@ -3335,7 +3384,7 @@ Contexto autorizado:
 ` + F()
                 : "");
             ((u.value = ""),
-              await ecoPergunta(m),
+              await ecoPergunta(m, { pergunta: P }),
               ECO.err && (u.value = P),
               i(),
               (O.querySelector(".wf-chat-history").scrollTop = 1e9));
@@ -3397,8 +3446,8 @@ Contexto autorizado:
           const b = document.createElement("button");
           b.type = "button";
           b.dataset.iaTopo = "1";
-          b.title = "Assistente IA";
-          b.setAttribute("aria-label", "Abrir assistente IA");
+          b.title = "Áurea · Estrategista-chefe";
+          b.setAttribute("aria-label", "Abrir Áurea");
           b.setAttribute("aria-controls", "wf-chat-panel");
           b.setAttribute("aria-expanded", String(!!l));
           b.innerHTML = iaIcone;

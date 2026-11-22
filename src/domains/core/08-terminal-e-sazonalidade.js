@@ -5,10 +5,10 @@ function macroFetchComSessao(url,options) {
 }
 // Consultas macro privadas nunca precisam produzir HTTP 401 em sessão anônima.
 function vEco(e) {
-  return `<div class="card"><div class="top"><b>🎓 Economista IA</b>${ECO.l.length ? '<button class="btn s" data-eco="limpa">Limpar</button>' : ""}</div>${e}
-  <div class="sm mut">Economista com formação de mestrado e doutorado, sem viés político. Cole uma notícia (texto ou link) ou pergunte sobre cenários: ele confirma os fatos na internet, explica o mecanismo, mostra o efeito no Ibovespa, dólar e DI e monta cenários com probabilidade.</div>
-  <textarea id="eco_tx" rows="4" placeholder="Ex.: cole aqui a notícia ou o link, ou pergunte: o que muda para o WDO se o Fed cortar juros?" style="width:100%;margin-top:8px">${esc(ECO.rascunho)}</textarea>
-  <button class="btn" data-eco="vai" style="width:100%;margin-top:6px"${ECO.busy ? " disabled" : ""}>${ECO.busy ? "Pensando… (pode levar até 1 minuto, deixe a tela acesa)" : "Perguntar ao economista"}</button>
+  return `<div class="card"><div class="top"><b>✦ Áurea</b>${ECO.l.length ? '<button class="btn s" data-eco="limpa">Limpar</button>' : ""}</div>${e}
+  <div class="sm mut">Estrategista-chefe que preside O Conselho. Cole uma notícia (texto ou link) ou pergunte sobre macro, empresas, gráficos, carteira ou estudos: ela direciona para Schwartz, Graham, Livermore, Munger, Markowitz ou Dow (ou use @nome).</div>
+  <textarea id="eco_tx" rows="4" placeholder="Ex.: cole uma notícia, pergunte sobre PETR4, RSI, sua carteira ou um conceito..." style="width:100%;margin-top:8px">${esc(ECO.rascunho)}</textarea>
+  <button class="btn" data-eco="vai" style="width:100%;margin-top:6px"${ECO.busy ? " disabled" : ""}>${ECO.busy ? "Pensando… (pode levar até 1 minuto, deixe a tela acesa)" : "Perguntar à Áurea"}</button>
   ${ECO.err ? `<div class="sm r" style="margin-top:6px">${esc(ECO.err)}</div>` : ""}
   ${ECO.l.length ? "" : `<div class="sm mut" style="margin-top:10px">Sugestões:</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">${ECO_SUG.map((t) => `<button class="btn s" data-eco="sug" style="text-align:left">${esc(t)}</button>`).join("")}</div>`}
   <div class="sm mut" style="margin-top:8px">Explica e mostra cenários; não diz para comprar ou vender. Conta no limite diário de análises da IA.</div></div>
@@ -18,7 +18,7 @@ function vEco(e) {
   const e = HUB_M.findIndex((t) => t[0] === "mercado:nt");
   HUB_M.splice(e < 0 ? HUB_M.length : e + 1, 0, [
     "mercado:eco",
-    "Economista IA",
+    "Áurea",
   ]);
 }
 {
@@ -32,15 +32,15 @@ async function rpEco(e) {
     a = e.r || {},
     o = "Gerado em " + rpAgora(),
     s = await rpNovo(t, {
-      titulo: "Economista IA · " + (a.titulo || ""),
-      cabecalho: "Economista IA · " + (a.titulo || ""),
-      tipo: "Análise econômica",
+      titulo: "Áurea · " + (a.titulo || ""),
+      cabecalho: "Áurea · " + (a.titulo || ""),
+      tipo: "Análise · Áurea",
       data: o,
     }),
     n = a.titulo && s.wd(a.titulo, 30, "b") <= s.W - 2 * s.M - 170;
   return (
     rpCapa(s, {
-      tipo: "Análise econômica · Economista IA",
+      tipo: "Análise · Áurea",
       titulo: n ? a.titulo : "Análise econômica",
       sub: n ? "" : a.titulo || "",
       rec: "Confiança " + (a.confianca || "–"),
@@ -151,14 +151,14 @@ document.addEventListener("click", (e) => {
       ecoSalva(),
       ecoPaint());
   else if (a === "limpa")
-    confirm("Apagar toda a conversa com o economista?") &&
+    confirm("Apagar toda a conversa com a Áurea?") &&
       ((ECO.l = []), ecoSalva(), ecoPaint());
   else if (a === "pdf") {
     const o = ECO.l.find((s) => s.id === t.dataset.v);
     o &&
       rpAbrir(
-        "Economista IA · " + (o.r.titulo || ""),
-        "economista-" + loc().slice(0, 10) + ".pdf",
+        "Áurea · " + (o.r.titulo || ""),
+        "aurea-" + loc().slice(0, 10) + ".pdf",
         () => rpEco(o),
       );
   } else if (a === "news") {

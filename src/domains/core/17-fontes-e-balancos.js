@@ -17918,7 +17918,7 @@ Validação do app: atenção a ` +
       Be = [
         ["geral", "Visão Geral", we.home],
         ["ativos", "Meus Ativos", we.lista],
-        ["ia", "Análise IA", we.ia],
+        ["ia", "Markowitz", we.ia],
         ["des", "Desempenho", we.des],
         ["radar", "Radar", we.radar],
         ["hist", "Histórico", we.hist],
@@ -18240,7 +18240,7 @@ Validação do app: atenção a ` +
           : `<p class="pfmut">${e.relErr ? esc(e.relErr) : "Ainda não há relatório consolidado."}</p><button class="pfbt pfam pfw" data-pf="cons">Gerar agora</button>`;
       return `<div class="pfg pfg3">${Se(`${he(we.des, 16)} Evolução patrimonial`, le, Y, "pfs2")}${Se("Alocação por classe", Ce(q, "100%", I(V.v)))}</div>
   <div class="pfg pfg3">${Se("Distribuição por setor", Ce(L, L.length + "", L.length === 1 ? "setor" : "setores"))}${Se("Distribuição geográfica e moeda", Qe(F) + '<div class="pfsep"></div>' + Qe(O))}${Se("Melhores e piores", ge)}</div>
-  <div class="pfg pfg3">${Se("Alertas relevantes", je, '<button class="pflk" data-pf="aba|radar">Ver todos →</button>')}${Se(`${he(we.ia, 16)} Análise da IA`, He, '<button class="pflk" data-pf="aba|ia">Abrir →</button>', "pfia")}${Se("Risco e concentração", Le(V, ae))}</div>
+  <div class="pfg pfg3">${Se("Alertas relevantes", je, '<button class="pflk" data-pf="aba|radar">Ver todos →</button>')}${Se(`${he(we.ia, 16)} Markowitz · Carteira`, He, '<button class="pflk" data-pf="aba|ia">Abrir →</button>', "pfia")}${Se("Risco e concentração", Le(V, ae))}</div>
   <div class="pfg pfg3">${Se("Portfolio Intelligence Scorecard", ke(V), '<span class="pfsm pfmut">por peso na carteira</span>', "pfs2")}${Se(
     "Maiores posições",
     V.pos
@@ -18446,7 +18446,7 @@ Validação do app: atenção a ` +
     ${Y && Y.ref ? `<p class="pfsm">Rodada de ${ue(Y.ref)}: ${Y.feitos.length} novo(s), ${Y.reap.length} sem mudança${Y.falhas.length ? ", " + Y.falhas.length + " falha(s)" : ""}${Y.cons ? " · consolidado pronto" : Y.erro_cons ? " · consolidado: " + esc(Y.erro_cons) : ""}.</p>` : ""}${e.cfgErr ? `<p class="pfsm dn">${esc(e.cfgErr)}</p>` : ""}`,
       )}
     ${Se("Gerar agora", `<button class="pfbt pfam pfw" data-pf="cons"${e.busy ? " disabled" : ""}>Relatório consolidado da carteira</button><button class="pfbt pfw" data-pf="rodada"${e.busy ? " disabled" : ""}>Rodada completa (ativos com mudança + consolidado)</button><p class="pfnota">Cada relatório gerado conta uma análise do seu limite diário de IA. Os ativos sem mudança relevante não gastam.</p>`)}
-    ${Se("Como a IA trabalha", '<p class="pfsm"><b class="pfF">Fatos</b> só com números que vieram dos dados (o servidor confere cada número). <b class="pfI">Interpretações</b> são a leitura do analista. <b class="pfH">Hipóteses</b> dizem o que confirma e o que invalida.</p><p class="pfsm">Indicador sem dado aparece como “sem dado”; indicador que não se aplica à classe (P/L em ETF, cripto, renda fixa) não é usado. Sem recomendação de compra ou venda.</p>')}</div>`;
+    ${Se("Como Markowitz trabalha", '<p class="pfsm"><b class="pfF">Fatos</b> só com números que vieram dos dados (o servidor confere cada número). <b class="pfI">Interpretações</b> são a leitura do analista. <b class="pfH">Hipóteses</b> dizem o que confirma e o que invalida.</p><p class="pfsm">Indicador sem dado aparece como “sem dado”; indicador que não se aplica à classe (P/L em ETF, cripto, renda fixa) não é usado. Sem recomendação de compra ou venda.</p>')}</div>`;
       if (
         ((q += `<div class="pfchs">${Ve("cons", e.ia, "Consolidado", "iasub")}${Ve("ativos", e.ia, "Por ativo", "iasub")}${Ve("lista", e.ia, "Todos os relatórios", "iasub")}${Ve("ferr", e.ia, "Ferramentas clássicas", "iasub")}</div>`),
         e.ia === "cons")

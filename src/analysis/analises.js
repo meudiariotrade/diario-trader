@@ -70,7 +70,20 @@
    'Especialista: '+m.nome+' (Fundamentalista). Bons para avaliar: '+br.graham.avaliar.map(x=>x.ticker+' ['+x.setor+'] '+x.motivo).join('; ')+'. Sinais de cautela: '+br.graham.cautela.map(x=>x.ticker+' ['+x.setor+'] '+x.motivo).join('; ')+'. Setores fortes 1M: '+br.graham.setoresFortes.map(s=>s.setor+' '+s.m1.toFixed(1)+'%').join(', ')+'. Setores fracos 1M: '+br.graham.setoresFracos.map(s=>s.setor+' '+s.m1.toFixed(1)+'%').join(', ')+'.';
   try{
    const j=await w.DiarioCerebroIA.api({acao:'gerar',modo:'ficha',tema:m.tema,extra:fatos});
-   cerebroOut=j?.texto||j?.resposta||j?.resumo||'O Cérebro não retornou texto para esta consulta.';
+   const res=j&&j.resultado&&typeof j.resultado==='object'?j.resultado:null;
+   if(res){
+    const parts=[];
+    if(res.tendencia)parts.push('**Tendência & momento**\n'+String(res.tendencia));
+    if(res.cenario)parts.push('**Cenário & fundamentos**\n'+String(res.cenario));
+    if(res.resposta)parts.push(String(res.resposta));
+    if(Array.isArray(res.riscos)&&res.riscos.length)parts.push('**Riscos mapeados**\n'+res.riscos.map(r=>'- **'+(r.risco||'Risco')+':** '+(r.por_que||'')).join('\n'));
+    if(Array.isArray(res.o_que_observar)&&res.o_que_observar.length)parts.push('**O que observar**\n'+res.o_que_observar.map(x=>'- '+x).join('\n'));
+    const fts=[...new Set([...(Array.isArray(j.fontes)?j.fontes:[]),...(Array.isArray(res.fontes)?res.fontes:[])].filter(Boolean))];
+    if(fts.length)parts.push('_Fontes do seu Cérebro: '+fts.join(' · ')+'_');
+    cerebroOut=parts.join('\n\n')||'O Cérebro não retornou texto para esta consulta.';
+   }else{
+    cerebroOut=j?.texto||j?.resposta||j?.resumo||'O Cérebro não retornou texto para esta consulta.';
+   }
   }catch(err){cerebroOut='Não foi possível consultar o Cérebro agora: '+(err?.message||String(err))}
   finally{cerebroBusy=false;update()}
  }

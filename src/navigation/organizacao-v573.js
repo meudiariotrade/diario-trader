@@ -218,7 +218,7 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
  function carteira(a){
   const tabs=a.querySelector('.pftabs');if(!tabs)return;
   let extra=tabs.nextElementSibling;if(!extra?.classList.contains('org-pfextra')){extra=el('div','org-pfextra');extra.setAttribute('role','tablist');extra.setAttribute('aria-label','Relatórios e histórico da carteira');tabs.after(extra)}
-  const NOMES={'aba|ativos':'Ativos','aba|ia':'✦ Relatórios da carteira','aba|hist':'Histórico'};
+  const NOMES={'aba|ativos':'Ativos','aba|ia':'✦ Markowitz','aba|hist':'Histórico'};
   for(const k of ['aba|ia','aba|hist']){const b=tabs.querySelector(`[data-pf="${k}"]`);if(b)extra.append(b)}
   for(const [k,v] of Object.entries(NOMES)){const b=a.querySelector(`[data-pf="${k}"]`);const sp=b?.querySelector('span')||b;if(sp&&sp.textContent!==v)sp.textContent=v}
  }

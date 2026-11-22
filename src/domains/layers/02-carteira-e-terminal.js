@@ -6269,7 +6269,7 @@ try {
       const e = t.querySelector("[data-chat-close]");
       e &&
         ((e.textContent = "×"),
-        e.setAttribute("aria-label", "Fechar a Economista IA"));
+        e.setAttribute("aria-label", "Fechar a Áurea"));
     }
     function q() {
       if (window.__dt414ChatBound) return;
