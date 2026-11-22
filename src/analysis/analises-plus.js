@@ -1,4 +1,4 @@
-/* v873 — Análises+: Rankings completos, Radar & Distorções, Página do ativo e Teses.
+/* v873/v874 — Análises+: Rankings completos, Radar & Distorções, Página do ativo e Teses.
  * Layout inspirado em telas de stock picking, na identidade escura do Diário (CLAUDE.md).
  * Tudo calculado no aparelho a partir do snapshot público do Screener (Cloudflare/IndexedDB).
  * Sem Supabase, sem polling: séries só sob ação do usuário ou 1x por entrada (cache 12 h). */
@@ -13,7 +13,7 @@ const cmp=n=>n==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',curre
 const cor=n=>n==null?'':n>=0?'ap-g':'ap-r';
 const logo=tk=>w.DiarioLogos?.html?.(tk,20)||'';
 const ls={get(k,f){try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-const K_COLS='ap873-colunas',K_ROT='ap873-rotacao',K_TESES='diario-teses-v873',K_FILT='ap873-filtros';
+const K_EXTRA='ap874-extra',URL_EXTRA='https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/analises-plus.json',K_COLS='ap874-colunas',K_ROT='ap873-rotacao',K_TESES='diario-teses-v873',K_FILT='ap873-filtros';
 
 /* ---------- estado ---------- */
 const st={tab:'rankpro',rows:null,loading:false,erro:'',ref:null,tk:'',sub:'visao',per:'1A',ibov:false,
@@ -23,7 +23,7 @@ const COLS=[
  ['nota','Nota Raio-X',1],['setor','Setor',1],['porte','Porte',1],['crowded','Crowded',1],['preco','Preço',1],
  ['graham','Justo Graham',1],['bazin','Justo Bazin',1],['gordon','Justo Gordon',1],['justo','Justo médio',1],['proprio','Teto próprio',1],
  ['pl','P/L',1],['pvp','P/VP',1],['ev_ebitda','EV/EBITDA',1],['dy','DY',1],['payout','Payout',0],['roe','ROE',1],['roic','ROIC',1],
- ['margem_liquida','Margem líq.',1],['fcf_yield','FCF yield',0],['div_liq_ebitda','DL/EBITDA',1],['momentum','Momentum 12m',1],
+ ['margem_liquida','Margem líq.',1],['fcf_yield','FCF yield',0],['div_liq_ebitda','DL/EBITDA',1],['momentum','Momentum 12m',1],['g1','Cresc. lucro',1],['cagr3','CAGR lucro 3a',0],['pegC','PEG',0],
  ['mm200','Dist. MM200',0],['rsi','RSI 14',0],['lpa','LPA',0],['vpa','VPA',0],['dpa','DPA',0],['liquidez','Liquidez diária',1],
  ['cap','Valor de mercado',1],['balanco','Balanço',0]];
 let vis=ls.get(K_COLS,null)||COLS.filter(c=>c[2]).map(c=>c[0]);
@@ -37,7 +37,7 @@ const PRESETS={
 const median=a=>{const v=a.filter(x=>x!=null&&Number.isFinite(x)).sort((x,y)=>x-y);return v.length?v[Math.floor((v.length-1)/2)]:null};
 function rankPct(rows,key,desc){const v=rows.filter(r=>r[key]!=null).sort((a,b)=>desc?a[key]-b[key]:b[key]-a[key]),n=v.length,m=new Map();v.forEach((r,i)=>m.set(r.ticker,n>1?i/(n-1):.5));return m}
 function porte(cap){return cap==null?null:cap>=2e10?'Large':cap>=5e9?'Mid':cap>=1e9?'Small':'Micro'}
-function enrich(raw){
+function enrich(raw,X){const CR=X?.crescimento||{};
  const rows=raw.filter(r=>r&&r.ticker).map(r=>{
   const preco=N(r.preco_referencia),pl=N(r.pl),pvp=N(r.pvp),dy=N(r.dividend_yield),cap=N(r.valor_mercado_brl),liq=N(r.liquidez_diaria_brl);
   const lpa=preco&&pl>0?preco/pl:null,vpa=preco&&pvp>0?preco/pvp:null,dpa=preco&&dy>0?preco*dy/100:null;
@@ -48,7 +48,8 @@ function enrich(raw){
    preco,pl,pvp,dy,cap,liquidez:liq,lpa,vpa,dpa,graham,bazin,gordon,justo,proprio,ev_ebitda:N(r.ev_ebitda),payout:N(r.payout_implicito),
    roe:N(r.roe),roic:N(r.roic),margem_liquida:N(r.margem_liquida),fcf_yield:N(r.fcf_yield),div_liq_ebitda:N(r.div_liq_ebitda??r.divida_liquida_ebitda),
    momentum:N(r.momentum_12_1),mm200:N(r.dist_mm200_pct),rsi:N(r.rsi_14),peg:N(r.peg_ratio),balanco:r.data_competencia_balanco||r.fundamentais_em||'',porte:porte(cap),
-   giro:cap>0&&liq!=null?liq/cap:null};
+   giro:cap>0&&liq!=null?liq/cap:null,...(()=>{const c=CR[String(r.ticker).toUpperCase()];if(!c)return {};
+   const pegC=pl>0&&c.cagr3>0&&!c.prejuizo4&&c.atualizado?pl/c.cagr3:null;return {g1:c.g1,cagr3:c.cagr3,pegC}})()};
  });
  const mg=median(rows.map(r=>r.giro));rows.forEach(r=>r.crowded=r.giro!=null&&mg?r.giro/mg*100:null);
  const P=(k,desc)=>rankPct(rows,k,desc);
@@ -62,11 +63,18 @@ function enrich(raw){
  const medPL={};for(const[s,l]of Object.entries(porSetor))medPL[s]=median(l.map(r=>r.pl>0?r.pl:null));
  return {rows,porSetor,medPL,map:new Map(rows.map(r=>[r.ticker,r]))};
 }
+async function extra(){const c=ls.get(K_EXTRA,null);if(c&&Date.now()-c.at<12*3600000)return c.d;
+ try{const r=await fetch(URL_EXTRA,{cache:'no-cache'});if(!r.ok)throw 0;const j=await r.json();ls.set(K_EXTRA,{at:Date.now(),d:j});return j}catch{return c?.d||null}}
+function rotacaoArquivo(D,X){const R=X?.retornos;if(!R||!Object.keys(R).length)return null;const s={};let data='';
+ for(const[setor,l]of Object.entries(D.porSetor)){const v=l.filter(r=>r.cap&&R[r.ticker]);if(!v.length)continue;const o={n:l.length};
+  for(const[k]of PER){const q=v.filter(r=>R[r.ticker][k]!=null),tw=q.reduce((a,r)=>a+r.cap,0);o[k]=tw?q.reduce((a,r)=>a+r.cap*R[r.ticker][k],0)/tw:null}
+  v.forEach(r=>{if(R[r.ticker].data>data)data=R[r.ticker].data});s[setor]=o}
+ return {at:Date.parse(X.gerado_em)||Date.now(),s,arquivo:1,data}}
 async function carregar(force){
  if(st.rows&&!force)return;if(st.loading)return;st.loading=true;st.erro='';render();
  try{const fn=w.DiarioScreeners?.universo;if(!fn)throw Error('Screener ainda carregando');
   const res=await fn('br');if(!res?.rows?.length)throw Error('Snapshot do Screener indisponível');
-  st.ref=res.reference;st.rows=enrich(res.rows);
+  st.ref=res.reference;const X=await extra();st.rows=enrich(res.rows,X);const ra=rotacaoArquivo(st.rows,X);if(ra)st.rot=ra;
  }catch(e){st.erro=e.message||String(e)}st.loading=false;render();
 }
 
@@ -88,7 +96,7 @@ function cel(r,k){
   case 'crowded':return '<td class="ap-n"><span class="ap-pill'+(r.crowded>150?' hot':'')+'">'+(r.crowded==null?'—':fmt(r.crowded,0)+'%')+'</span></td>';
   case 'preco':return '<td class="ap-n">'+brl(r.preco)+'</td>';case 'graham':case 'bazin':case 'gordon':case 'justo':case 'proprio':return justoCel(r[k],r.preco);
   case 'pl':case 'pvp':case 'ev_ebitda':case 'div_liq_ebitda':return '<td class="ap-n">'+(r[k]==null?'—':fmt(r[k],1)+'x')+'</td>';
-  case 'dy':case 'payout':case 'roe':case 'roic':case 'margem_liquida':case 'fcf_yield':return '<td class="ap-n">'+pct(r[k])+'</td>';
+  case 'g1':case 'cagr3':return '<td class="ap-n '+cor(r[k])+'">'+sinal(r[k])+'</td>';case 'pegC':return '<td class="ap-n">'+fmt(r.pegC,2)+'</td>';case 'dy':case 'payout':case 'roe':case 'roic':case 'margem_liquida':case 'fcf_yield':return '<td class="ap-n">'+pct(r[k])+'</td>';
   case 'momentum':case 'mm200':return '<td class="ap-n '+cor(r[k])+'">'+sinal(r[k])+'</td>';case 'rsi':return '<td class="ap-n">'+fmt(r.rsi,0)+'</td>';
   case 'lpa':case 'vpa':case 'dpa':return '<td class="ap-n">'+fmt(r[k])+'</td>';case 'liquidez':return '<td class="ap-n">'+cmp(r.liquidez)+'</td>';
   case 'cap':return '<td class="ap-n">'+cmp(r.cap)+'</td>';case 'balanco':return '<td>'+E(String(r.balanco).slice(0,10)||'—')+'</td>'}return '<td>—</td>'}
@@ -120,8 +128,8 @@ function csv(){const cols=COLS.filter(c=>vis.includes(c[0])),l=filtrados(),q=v=>
 function listasRadar(){
  const D=st.rows,pf=st.radarPorte,sf=st.radarSetor,base=D.rows.filter(r=>(!pf||r.porte===pf)&&(!sf||r.setor===sf)&&r.preco);
  const risco=r=>(r.div_liq_ebitda!=null&&r.div_liq_ebitda>3.5)||(r.momentum!=null&&r.momentum<-10&&r.div_liq_ebitda!=null&&r.div_liq_ebitda>2);
- const dist=base.filter(r=>r.pl>0&&D.medPL[r.setor]&&r.pl<D.medPL[r.setor]*.5),rep=base.filter(r=>r.momentum>10&&r.roic>10&&r.pl>0&&r.pl<20),
-  peg=base.filter(r=>r.peg>0&&r.peg<1),ign=base.filter(r=>(r.porte==='Small'||r.porte==='Micro')&&r.crowded!=null&&r.crowded<80&&(r.nota??0)>=2),
+ const dist=base.filter(r=>r.pl>0&&D.medPL[r.setor]&&r.pl<D.medPL[r.setor]*.5),rep=base.filter(r=>r.g1>10&&r.roic>10&&r.pl>0&&r.pl<20),
+  peg=base.filter(r=>r.pegC>0&&r.pegC<1),ign=base.filter(r=>(r.porte==='Small'||r.porte==='Micro')&&r.crowded!=null&&r.crowded<80&&(r.nota??0)>=2),
   ris=base.filter(risco),sD=new Set(dist.map(r=>r.ticker)),outros=new Set([...rep,...peg,...ign].map(r=>r.ticker)),
   op=base.filter(r=>sD.has(r.ticker)&&outros.has(r.ticker)&&!risco(r)),ok=base.filter(r=>!risco(r));
  const top=(l,k,asc)=>l.filter(r=>r[k]!=null&&(k!=='pl'||r.pl>0)&&(k!=='dy'||r.dy>0)).sort((a,b)=>asc?a[k]-b[k]:b[k]-a[k]).slice(0,20);
@@ -146,8 +154,8 @@ function viewRadar(){
  const R=listasRadar(),rot=st.rot?.s,mx={};
  if(rot)for(const[k]of PER)mx[k]=Math.max(...Object.values(rot).map(o=>Math.abs(o[k]??0)),.1);
  const lin=rot?Object.entries(rot).sort((a,b)=>(b[1]['1M']??-999)-(a[1]['1M']??-999)):[],forte=lin.slice(0,3),fraco=lin.slice(-3).reverse();
- return '<div class="ap-radar"><section class="ap-card ap-rot"><header><div><h3>Rotação setorial</h3><p>Retorno por setor ponderado por valor de mercado (até 6 maiores líquidas de cada setor). Clique num setor para filtrar o Radar.</p></div>'+
-  '<button type="button" class="btn s" data-ap-rot'+(st.rotLoading?' disabled':'')+'>'+(st.rotLoading?'Calculando…':rot?'Atualizar':'Calcular rotação')+'</button></header>'+
+ return '<div class="ap-radar"><section class="ap-card ap-rot"><header><div><h3>Rotação setorial</h3><p>Retorno por setor ponderado por valor de mercado'+(st.rot?.arquivo?' (todas as ações do setor, fechamento de '+E(st.rot.data)+')':' (até 6 maiores líquidas de cada setor)')+'. Clique num setor para filtrar o Radar.</p></div>'+
+  (st.rot?.arquivo?'':'<button type="button" class="btn s" data-ap-rot'+(st.rotLoading?' disabled':'')+'>'+(st.rotLoading?'Calculando…':rot?'Atualizar':'Calcular rotação')+'</button>')+'</header>'+
   (rot?'<div class="ap-rotgrid"><div class="ap-scroll"><table class="ap-t ap-heat"><thead><tr><th>Setor</th><th>Ações</th>'+PER.map(p=>'<th>'+p[0]+'</th>').join('')+'</tr></thead><tbody>'+
    lin.map(([s,o])=>'<tr data-ap-setor="'+E(s)+'" class="'+(st.radarSetor===s?'on':'')+'"><td>'+E(s)+'</td><td class="ap-n">'+o.n+'</td>'+PER.map(p=>'<td class="ap-n" style="'+heat(o[p[0]],mx[p[0]])+'">'+sinal(o[p[0]])+'</td>').join('')+'</tr>').join('')+
    '</tbody></table></div><aside class="ap-dest"><p class="ap-lbl">Mais fortes · mês</p>'+forte.map(([s,o])=>'<div><span>'+E(s)+'</span><b class="'+cor(o['1M'])+'">'+sinal(o['1M'])+'</b></div>').join('')+
@@ -156,9 +164,9 @@ function viewRadar(){
   '<div class="ap-bar"><b>Radar &amp; Distorções</b>'+['','Large','Mid','Small','Micro'].map(p=>'<button type="button" class="ap-chip'+(st.radarPorte===p?' on':'')+'" data-ap-rporte="'+p+'">'+(p||'Todas')+'</button>').join('')+
   (st.radarSetor?'<button type="button" class="ap-chip on" data-ap-setor="">'+E(st.radarSetor)+' ✕</button>':'')+'</div>'+
   cardsLista('Oportunidades claras','Em Distorções de valuation e em pelo menos mais um radar (Reprecificação, PEG ou Ignoradas), sem risco elevado. Convergência reduz falsos positivos.',R.op,r=>'Nota '+fmt(r.nota,1),'dest')+
-  cardsLista('Reprecificação (momentum)','Momentum 12m > 10%, ROIC > 10% e P/L < 20: operação forte com valuation ainda contido.',R.rep,r=>'Mom. '+sinal(r.momentum,0))+
+  cardsLista('Reprecificação (momentum)','Crescimento do lucro > 10% (último exercício CVM), ROIC > 10% e P/L < 20: momentum operacional forte com valuation ainda contido.',R.rep,r=>'Cresc. lucro '+sinal(r.g1,1))+
   cardsLista('Distorções de valuation','P/L abaixo de 50% da mediana do setor. Desconto excessivo ou deterioração: analise caso a caso.',R.dist,r=>'P/L '+fmt(r.pl,1))+
-  (R.peg.length?cardsLista('PEG < 1','P/L ÷ crescimento do lucro abaixo de 1.',R.peg,r=>'PEG '+fmt(r.peg,2)):'')+
+  cardsLista('PEG Ratio (< 1)','PEG = P/L ÷ crescimento anual médio do lucro nos últimos 3 anos (%). Fica de fora quem teve prejuízo em algum dos 4 anos ou está com balanço desatualizado.',R.peg,r=>'PEG '+fmt(r.pegC,2))+
   cardsLista('Small caps ignoradas','Small e Micro com crowded < 80% e nota ≥ 2: pouca cobertura, possível ineficiência.',R.ign,r=>'Crowded '+fmt(r.crowded,0)+'%')+
   cardsLista('Riscos elevados','DL/EBITDA > 3,5x, ou momentum < −10% com DL/EBITDA > 2x.',R.ris,r=>'DL/EBITDA '+fmt(r.div_liq_ebitda,1),'risco')+
   '<h3 class="ap-h">Rankings <small>Top 20 por métrica, sem riscos elevados</small></h3><div class="ap-tops">'+R.tops.map(([t,s,l,m])=>'<section class="ap-card"><h4>'+t+'</h4><p class="ap-mut">'+s+'</p><ol>'+
@@ -261,7 +269,7 @@ function corpo(){
 function view(tab){if(tab)st.tab=tab;css();return '<div id="ap-root" class="ap">'+corpo()+'</div>'}
 function render(){const el=d.getElementById('ap-root');if(!el)return;const sc=el.querySelector('.ap-scroll')?.scrollLeft;el.innerHTML=corpo();if(sc)el.querySelector('.ap-scroll')&&(el.querySelector('.ap-scroll').scrollLeft=sc);
  calcRun(el.querySelector('.ap-calcs'));if(st.tk&&st.sub==='visao'){carregaSerie(st.tk);if(st.ibov)carregaSerie('BOVA11')}
- if(st.tab==='radar'&&st.rows&&!st.rotLoading&&!st.tk&&(!st.rot||Date.now()-st.rot.at>12*3600000)&&!st._rotTentou){st._rotTentou=1;rotacao()}}
+ if(st.tab==='radar'&&st.rows&&!st.rotLoading&&!st.tk&&!st.rot?.arquivo&&(!st.rot||Date.now()-st.rot.at>12*3600000)&&!st._rotTentou){st._rotTentou=1;rotacao()}}
 function enter(tab){if(tab)st.tab=tab;st._rotTentou=0;if(tab!=='ativo'&&!st._abrindo)st.tk='';st._abrindo=0;carregar().then(render);render()}
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});

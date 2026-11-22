@@ -1,0 +1,42 @@
+name: Análises+ dados (lucro CVM e retornos setoriais)
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/analises-plus-dados.cjs
+      - .github/workflows/analises-plus-dados.yml
+      - dados-publicos/cvm-historico.json
+  schedule:
+    - cron: '40 21 * * 1-5'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: analises-plus-dados
+  cancel-in-progress: false
+jobs:
+  historico:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Crescimento do lucro e retornos por ticker, sem Supabase
+        run: node scripts/analises-plus-dados.cjs
+      - name: Versionar somente dados públicos
+        shell: bash
+        run: |
+          git add dados-publicos/analises-plus.json
+          if git diff --cached --quiet; then
+            echo "Sem mudanças"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "dados(Análises+): crescimento do lucro e retornos diários"
+          git pull --rebase origin main
+          git push origin HEAD:main

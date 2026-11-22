@@ -1,0 +1,7 @@
+v874 — Radar igual ao de referência
+- Reprecificação: crescimento do lucro > 10% (último exercício DFP da CVM), ROIC > 10% e P/L < 20.
+- PEG < 1: P/L ÷ CAGR do lucro em 3 anos; exclui prejuízo em algum dos 4 anos e balanço desatualizado.
+- Rotação setorial: todas as ações do setor, ponderadas por valor de mercado, fechamento diário.
+- Novo robô .github/workflows/analises-plus-dados.yml (seg–sex 18:40 BRT) gera dados-publicos/analises-plus.json
+  com scripts/analises-plus-dados.cjs (CVM + Yahoo). O app lê o arquivo (cache 12 h). Sem Supabase.
+- Rankings: novas colunas Cresc. lucro, CAGR lucro 3a e PEG.
