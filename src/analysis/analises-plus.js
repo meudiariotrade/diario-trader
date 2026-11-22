@@ -82,6 +82,58 @@ async function carregar(force){
  }catch(e){st.erro=e.message||String(e)}st.loading=false;render();
 }
 
+/* v879: Entenda os dados — "?" em cada métrica abre um cartão explicando o que é, como calcula e como ler. */
+const GLOS={
+ nota:['Nota Raio-X','Uma nota de 0 a 4 que resume a empresa em 6 áreas: Valuation (se está barata), Rentabilidade, Margens, Endividamento, Dividendos e Momentum.','Em cada área, a empresa é comparada com todas as ações da bolsa e recebe uma posição (percentil). 4 = entre as melhores do mercado naquela área; 0 = entre as piores. A nota final é a média das áreas.','Acima de 3: muito boa no conjunto. Entre 2 e 3: mediana. Abaixo de 2: fraca. É um filtro para começar o estudo, não uma ordem de compra.'],
+ setor:['Setor','O ramo de atuação da empresa (bancos, energia, varejo…).','Vem do cadastro do Screener.','Compare sempre a empresa com outras do mesmo setor: um P/L de 6 é barato no varejo, mas normal em bancos.'],
+ porte:['Porte','Tamanho da empresa pelo valor de mercado.','Large: acima de R$ 20 bi · Mid: R$ 5 a 20 bi · Small: R$ 1 a 5 bi · Micro: abaixo de R$ 1 bi.','Empresas menores costumam oscilar mais e ter menos liquidez (mais difícil comprar/vender sem mexer no preço).'],
+ crowded:['Crowded (negociação)','Mostra se a ação é muito ou pouco negociada para o tamanho dela.','Volume financeiro diário ÷ valor de mercado, comparado com a mediana da bolsa. 100% = normal.','Acima de 150%: ação "lotada", muita gente operando (mais volátil). Abaixo de 80%: fora do radar do mercado — pode haver oportunidade ou falta de interesse.'],
+ preco:['Preço','Última cotação da ação.','Do snapshot do Screener ou, com a ponte ligada, ao vivo pelo Profit (aparece a variação do dia ao lado).','É a base de comparação com o preço justo.'],
+ graham:['Preço justo de Graham','Quanto a ação valeria pelo método de Benjamin Graham, que junta lucro e patrimônio.','√(22,5 × LPA × VPA). LPA = lucro por ação; VPA = patrimônio por ação.','O % ao lado é a distância do preço atual: +30% = a ação está 30% abaixo do valor de Graham (desconto). Funciona mal em empresas de tecnologia e com prejuízo.'],
+ bazin:['Preço justo de Bazin','Preço máximo para receber pelo menos 6% ao ano em dividendos (método de Décio Bazin).','Dividendos pagos por ação em 12 meses ÷ 6%.','Se o preço atual está abaixo, você compra com yield acima de 6%. Só faz sentido para empresas que pagam dividendos de forma estável.'],
+ gordon:['Preço justo de Gordon','Valor da ação pelo fluxo de dividendos futuros que crescem com o tempo.','DPA × (1 + g) ÷ (k − g), com retorno exigido k = 10% e crescimento g = 4% ao ano.','Bom para pagadoras estáveis (energia, saneamento, bancos). Pequenas mudanças em k e g mudam muito o resultado — ajuste na página do ativo.'],
+ justo:['Preço justo médio','Média dos três métodos: Graham, Bazin e Gordon.','(Graham + Bazin + Gordon) ÷ 3, usando os que existirem.','Visão rápida de desconto ou ágio. Positivo (verde) = preço atual abaixo do justo. Sempre confira se os lucros e dividendos são recorrentes.'],
+ proprio:['Teto próprio (Novo Bazin)','O seu método: preço teto pelo lucro projetado.','(lucro projetado × payout ÷ nº de ações) ÷ yield desejado (7%).','Abaixo do teto = margem de segurança. Edite lucro, payout e yield na aba Dividendos da página do ativo.'],
+ pl:['P/L (Preço/Lucro)','Quantos anos de lucro atual você paga pela empresa.','Preço da ação ÷ lucro por ação dos últimos 12 meses.','Menor = mais barato. P/L 5 = paga 5 anos de lucro. Negativo = empresa com prejuízo. Compare com o setor.'],
+ pvp:['P/VP (Preço/Valor Patrimonial)','Quanto você paga por cada R$ 1 de patrimônio da empresa.','Preço ÷ patrimônio líquido por ação.','Abaixo de 1 = paga menos que o patrimônio (pode ser barganha ou empresa com problema). Bancos costumam ficar entre 1 e 2.'],
+ ev_ebitda:['EV/EBITDA','Quantos anos de geração de caixa operacional pagam a empresa inteira (incluindo a dívida).','(Valor de mercado + dívida líquida) ÷ EBITDA.','Menor = mais barato. Abaixo de 6 costuma ser barato; acima de 12, caro. Não se aplica a bancos.'],
+ dy:['DY (Dividend Yield)','Quanto a empresa pagou de dividendos em 12 meses, em % do preço.','Dividendos por ação 12m ÷ preço × 100.','Acima de 6% é alto. Cuidado com yields muito altos (acima de 15%): podem vir de um pagamento extraordinário que não se repete.'],
+ payout:['Payout','Quanto do lucro virou dividendo.','Dividendos ÷ lucro × 100.','Entre 25% e 80% é saudável. Acima de 100% = pagou mais do que lucrou (não se sustenta).'],
+ roe:['ROE (Retorno sobre o Patrimônio)','Quanto a empresa lucra com o dinheiro dos sócios.','Lucro líquido ÷ patrimônio líquido × 100.','Acima de 15% é bom; acima de 20%, excelente. Muito alto com muita dívida pode ser enganoso.'],
+ roic:['ROIC (Retorno sobre o Capital Investido)','Quanto a empresa lucra com todo o capital aplicado no negócio (sócios + dívida).','Lucro operacional após impostos ÷ capital investido × 100.','Acima de 10% indica negócio que cria valor. É um dos melhores sinais de qualidade.'],
+ margem_liquida:['Margem líquida','Quanto sobra de lucro a cada R$ 100 vendidos.','Lucro líquido ÷ receita × 100.','Quanto maior, melhor. Varia muito por setor: varejo tem margem baixa, software tem alta.'],
+ fcf_yield:['FCF yield (rendimento do fluxo de caixa livre)','Caixa que sobra de verdade depois dos investimentos, em % do valor de mercado.','Fluxo de caixa livre ÷ valor de mercado × 100.','Acima de 8% é muito bom. Negativo = a empresa está queimando caixa.'],
+ div_liq_ebitda:['DL/EBITDA (Dívida líquida/EBITDA)','Quantos anos de geração de caixa seriam precisos para pagar a dívida.','(Dívida − caixa) ÷ EBITDA.','Abaixo de 2 é confortável. Acima de 3,5 é risco elevado. Negativo = a empresa tem mais caixa que dívida (ótimo).'],
+ momentum:['Momentum 12 meses','Quanto a ação subiu ou caiu no último ano (sem o último mês).','Variação do preço de 12 meses atrás até 1 mês atrás.','Positivo = tendência de alta. Ações com momentum forte tendem a continuar subindo por um tempo.'],
+ g1:['Crescimento do lucro','Quanto o lucro anual cresceu do penúltimo para o último ano.','Lucro do último balanço anual (CVM) ÷ lucro do ano anterior − 1.','Acima de 10% = lucro crescendo bem. Lucro crescendo com P/L baixo costuma levar à reprecificação (alta) da ação.'],
+ cagr3:['CAGR do lucro em 3 anos','Crescimento médio anual do lucro nos últimos 3 anos.','(Lucro último ano ÷ lucro de 3 anos antes)^(1/3) − 1.','Mostra se o crescimento é consistente, não só de um ano. Acima de 10% ao ano é forte.'],
+ pegC:['PEG','Compara o preço (P/L) com a velocidade de crescimento do lucro.','P/L ÷ CAGR do lucro em 3 anos (%). Fica de fora quem teve prejuízo em algum dos 4 anos.','Abaixo de 1 = barato para o ritmo em que cresce. Acima de 2 = caro. Crescimento passado não garante o futuro.'],
+ mm200:['Distância da média de 200 dias','Quanto o preço está acima ou abaixo da média dos últimos 200 pregões.','(Preço ÷ média de 200 dias − 1) × 100.','Acima de 0 = tendência de longo prazo de alta. Muito acima (+30%) = esticado. Abaixo = tendência de baixa.'],
+ rsi:['RSI 14 (Índice de Força Relativa)','Mede se a ação subiu ou caiu demais em pouco tempo.','Média de altas vs quedas nos últimos 14 pregões, de 0 a 100.','Acima de 70 = sobrecomprada (pode corrigir). Abaixo de 30 = sobrevendida (pode repicar).'],
+ lpa:['LPA (Lucro por Ação)','Quanto de lucro cabe a cada ação.','Lucro 12 meses ÷ nº de ações (estimado = preço ÷ P/L).','Usado no Graham e no P/L. Crescendo ano a ano é bom sinal.'],
+ vpa:['VPA (Valor Patrimonial por Ação)','Quanto de patrimônio cabe a cada ação.','Patrimônio ÷ nº de ações (estimado = preço ÷ P/VP).','Usado no Graham e no P/VP.'],
+ dpa:['DPA (Dividendo por Ação)','Quanto cada ação recebeu de dividendos em 12 meses.','Preço × DY.','Usado no Bazin e no Gordon.'],
+ liquidez:['Liquidez diária','Quanto dinheiro é negociado por dia na ação.','Volume financeiro médio diário.','Abaixo de R$ 1 milhão/dia: difícil entrar e sair sem mexer no preço. Para swing, prefira acima de R$ 5 mi.'],
+ cap:['Valor de mercado','Quanto a bolsa diz que a empresa inteira vale.','Preço × total de ações.','Define o porte (Large, Mid, Small, Micro).'],
+ balanco:['Balanço','Data do último balanço usado nos números.','Do snapshot do Screener (CVM).','Se estiver antigo, os indicadores podem não refletir a situação atual.'],
+ rot:['Rotação setorial','Mostra para onde o dinheiro está indo: quais setores sobem e quais caem.','Retorno de cada setor ponderado pelo valor de mercado das ações, em 1 dia, 7 dias, 1 mês, 6 meses, 12 meses e no ano. Verde = alta, vermelho = queda; cor mais forte = movimento maior.','Setores verdes em vários prazos estão em tendência de alta. Toque num setor para ver só as ações dele no Radar.'],
+ op:['Oportunidades claras','Ações que aparecem em mais de um radar ao mesmo tempo.','Estão em Distorções de valuation e também em Reprecificação, PEG ou Small caps ignoradas, sem risco elevado.','Vários sinais juntos reduzem o alarme falso. É a melhor lista para começar a estudar.'],
+ rep:['Reprecificação','Empresas com lucro crescendo e preço ainda baixo.','Crescimento do lucro > 10%, ROIC > 10% e P/L < 20.','O mercado pode ainda não ter percebido a melhora: possível alta de preço à frente.'],
+ dist:['Distorções de valuation','Ações muito mais baratas que as do próprio setor.','P/L abaixo da metade da mediana do setor.','Pode ser barganha ou problema sério (lucro que vai cair). Investigue o motivo antes de comprar.'],
+ peg:['PEG < 1','Ações baratas para o ritmo em que o lucro cresce.','P/L ÷ crescimento médio do lucro em 3 anos menor que 1.','Combina preço baixo com crescimento. Crescimento passado não garante o futuro.'],
+ ign:['Small caps ignoradas','Empresas pequenas e pouco negociadas, mas com boa nota.','Small/Micro, Crowded < 80% e Nota Raio-X ≥ 2.','Pouca gente acompanha, então preços podem estar errados. Atenção à liquidez.'],
+ ris:['Riscos elevados','Empresas com dívida alta ou piorando.','DL/EBITDA > 3,5x, ou queda de mais de 10% no ano com DL/EBITDA > 2x.','Lista de alerta: evite ou exija desconto muito maior. Ficam fora dos Top 20.'],
+ eixos:['Eixos do Raio-X','As 6 áreas que formam a nota.','Valuation: P/L, P/VP, EV/EBITDA · Rentabilidade: ROE, ROIC · Margens: margem líquida, FCF yield · Endividamento: DL/EBITDA · Dividendos: DY · Momentum: momentum 12m e distância da MM200. Cada eixo vai de 0 a 4 (percentil no mercado).','Quanto mais o hexágono preenche o desenho, mais equilibrada é a empresa. Um eixo "murcho" mostra o ponto fraco.'],
+ pos:['Posição no setor','Em que percentil a empresa está entre os pares do setor.','Percentual de pares que ela supera naquela métrica.','100º pct = melhor do setor; 50º = no meio; 0º = pior.']};
+const q=k=>GLOS[k]?'<button type="button" class="ap-q" data-ap-q="'+k+'" aria-label="O que é '+E(GLOS[k][0])+'">?</button>':'';
+function cartaoQ(k){const g=GLOS[k];if(!g)return '';return '<div class="ap-qbox" role="dialog" aria-label="'+E(g[0])+'"><div class="ap-qcard"><header><h4>'+E(g[0])+'</h4><button type="button" class="ap-link" data-ap-qx>Fechar ✕</button></header>'+
+ '<p><b>O que é</b>'+E(g[1])+'</p><p><b>Como é calculado</b>'+E(g[2])+'</p><p><b>Como ler</b>'+E(g[3])+'</p><button type="button" class="ap-link" data-ap-guia>Ver todos os termos</button></div></div>'}
+function viewGuia(){const grupos=[['Comece por aqui',['nota','justo','pl','dy','roe','div_liq_ebitda']],['Preço justo',['graham','bazin','gordon','proprio']],['Valuation (preço)',['pvp','ev_ebitda','pegC','lpa','vpa','dpa']],
+ ['Qualidade e crescimento',['roic','margem_liquida','fcf_yield','payout','g1','cagr3']],['Técnico e mercado',['momentum','mm200','rsi','crowded','liquidez','cap','porte']],['Radar',['rot','op','rep','dist','peg','ign','ris']],['Página do ativo',['eixos','pos','balanco']]];
+ return '<div class="ap-guia"><section class="ap-card"><h3>Entenda os dados</h3><p class="ap-mut">Como ler cada número das Análises, em linguagem simples. Em qualquer tela, toque no <span class="ap-q">?</span> ao lado de um termo para ver a explicação.</p>'+
+ '<ol class="ap-passos"><li><b>Filtre:</b> em Rankings, escolha uma tela pronta (ex.: Dividendos Saudáveis).</li><li><b>Priorize:</b> ordene pela Nota Raio-X ou pelo Preço justo médio.</li><li><b>Investigue:</b> toque no ativo e veja Raio-X, preço justo e gráfico.</li><li><b>Registre:</b> crie uma Tese com alvo e critérios e acompanhe.</li></ol></section>'+
+ grupos.map(([t,ks])=>'<section class="ap-card"><h3>'+t+'</h3><div class="ap-glos">'+ks.map(k=>{const g=GLOS[k];return '<details><summary>'+E(g[0])+'</summary><p><b>O que é</b>'+E(g[1])+'</p><p><b>Como é calculado</b>'+E(g[2])+'</p><p><b>Como ler</b>'+E(g[3])+'</p></details>'}).join('')+'</div></section>').join('')+'</div>'}
+
 /* ---------- rankings ---------- */
 function filtrados(){
  const f=st.f,q=f.q.trim().toUpperCase(),pr=PRESETS[f.preset];
@@ -107,7 +159,7 @@ function cel(r,k){
 function viewRank(){
  const f=st.f,l=filtrados(),tot=l.length,pg=f.pg,pages=Math.max(1,Math.ceil(tot/pg));if(f.page>=pages)f.page=0;
  const pag=l.slice(f.page*pg,f.page*pg+pg),setores=Object.keys(st.rows.porSetor).sort(),cols=COLS.filter(c=>vis.includes(c[0]));
- const th=(k,t)=>'<th data-ap-sort="'+k+'" class="'+(f.sort===k?'on':'')+'">'+t+(f.sort===k?(f.dir<0?' ▾':' ▴'):'')+'</th>';
+ const th=(k,t)=>'<th data-ap-sort="'+k+'" class="'+(f.sort===k?'on':'')+'">'+t+(f.sort===k?(f.dir<0?' ▾':' ▴'):'')+q(k)+'</th>';
  return '<div class="ap-rank"><aside class="ap-filtros"><details open><summary>Filtros'+(f.preset||f.setor||f.porte||f.nota||f.liq||f.q?' <button type="button" class="ap-link" data-ap-limpar>Limpar</button>':'')+'</summary>'+
   '<p class="ap-lbl">Screeners por gestor</p>'+Object.entries(PRESETS).map(([k,p])=>'<button type="button" class="ap-preset'+(f.preset===k?' on':'')+'" data-ap-preset="'+k+'"><b>'+p.n+'</b><small>'+p.d+'</small></button>').join('')+
   '<label class="ap-lbl">Setor<select data-ap-f="setor"><option value="">Todos</option>'+setores.map(s=>'<option'+(f.setor===s?' selected':'')+'>'+E(s)+'</option>').join('')+'</select></label>'+
@@ -140,7 +192,7 @@ function listasRadar(){
  return {op,rep,dist,peg,ign,ris,tops:[['Top Value (P/L)','Menor P/L',top(ok,'pl',1),r=>fmt(r.pl,1)+'x'],['Top Quality (ROE)','Maior ROE',top(ok,'roe'),r=>pct(r.roe)],
   ['Top Yield','Maior dividend yield',top(ok,'dy'),r=>pct(r.dy)],['Top Crowded','Mais negociadas vs porte',top(ok,'crowded'),r=>fmt(r.crowded,0)+'%']]};
 }
-function cardsLista(t,desc,l,met,tone){return '<section class="ap-lista'+(tone?' '+tone:'')+'"><header><h3>'+t+' <span>('+l.length+')</span></h3><p>'+desc+'</p></header><div class="ap-chips">'+
+function cardsLista(t,desc,l,met,tone,k){return '<section class="ap-lista'+(tone?' '+tone:'')+'"><header><h3>'+t+q(k)+' <span>('+l.length+')</span></h3><p>'+desc+'</p></header><div class="ap-chips">'+
  (l.length?l.slice(0,80).map(r=>'<button type="button" data-ap-ativo="'+r.ticker+'"><b>'+r.ticker+'</b><small>'+E(r.setor)+'</small><em>'+met(r)+'</em></button>').join(''):'<p class="ap-mut">Nada detectado.</p>')+'</div></section>'}
 const PER=[['1D',1],['7D',5],['1M',21],['6M',126],['12M',252],['YTD',0]];
 function retornos(cl){if(!cl?.length)return null;const u=cl[cl.length-1].c,ano=String(new Date().getFullYear()),o={};
@@ -158,7 +210,7 @@ function viewRadar(){
  const R=listasRadar(),rot=st.rot?.s,mx={};
  if(rot)for(const[k]of PER)mx[k]=Math.max(...Object.values(rot).map(o=>Math.abs(o[k]??0)),.1);
  const lin=rot?Object.entries(rot).sort((a,b)=>(b[1]['1M']??-999)-(a[1]['1M']??-999)):[],forte=lin.slice(0,3),fraco=lin.slice(-3).reverse();
- return '<div class="ap-radar"><section class="ap-card ap-rot"><header><div><h3>Rotação setorial</h3><p>Retorno por setor ponderado por valor de mercado'+(st.rot?.arquivo?' (todas as ações do setor, fechamento de '+E(st.rot.data)+')':' (até 6 maiores líquidas de cada setor)')+'. Clique num setor para filtrar o Radar.</p></div>'+
+ return '<div class="ap-radar"><section class="ap-card ap-rot"><header><div><h3>Rotação setorial'+q('rot')+'</h3><p>Retorno por setor ponderado por valor de mercado'+(st.rot?.arquivo?' (todas as ações do setor, fechamento de '+E(st.rot.data)+')':' (até 6 maiores líquidas de cada setor)')+'. Clique num setor para filtrar o Radar.</p></div>'+
   (st.rot?.arquivo?'':'<button type="button" class="btn s" data-ap-rot'+(st.rotLoading?' disabled':'')+'>'+(st.rotLoading?'Calculando…':rot?'Atualizar':'Calcular rotação')+'</button>')+'</header>'+
   (rot?'<div class="ap-rotgrid"><div class="ap-scroll"><table class="ap-t ap-heat"><thead><tr><th>Setor</th><th>Ações</th>'+PER.map(p=>'<th>'+p[0]+'</th>').join('')+'</tr></thead><tbody>'+
    lin.map(([s,o])=>'<tr data-ap-setor="'+E(s)+'" class="'+(st.radarSetor===s?'on':'')+'"><td>'+E(s)+'</td><td class="ap-n">'+o.n+'</td>'+PER.map(p=>'<td class="ap-n" style="'+heat(o[p[0]],mx[p[0]])+'">'+sinal(o[p[0]])+'</td>').join('')+'</tr>').join('')+
@@ -167,12 +219,12 @@ function viewRadar(){
    '<p class="ap-mut">Calculado em '+new Date(st.rot.at).toLocaleString('pt-BR')+(st.nProfit?' · 1D ao vivo pelo Profit ('+st.nProfit+' ativos)':'')+'</p>'+'</aside></div>':'<p class="ap-mut">'+(st.rotLoading?'Buscando séries diárias…':'Toque em "Calcular rotação" (usa o cache de cotações do Técnico).')+'</p>')+'</section>'+
   '<div class="ap-bar"><b>Radar &amp; Distorções</b>'+['','Large','Mid','Small','Micro'].map(p=>'<button type="button" class="ap-chip'+(st.radarPorte===p?' on':'')+'" data-ap-rporte="'+p+'">'+(p||'Todas')+'</button>').join('')+
   (st.radarSetor?'<button type="button" class="ap-chip on" data-ap-setor="">'+E(st.radarSetor)+' ✕</button>':'')+'<button type="button" class="btn s" data-ap-faltam style="margin-left:auto">Copiar tickers sem cotação</button></div>'+
-  cardsLista('Oportunidades claras','Em Distorções de valuation e em pelo menos mais um radar (Reprecificação, PEG ou Ignoradas), sem risco elevado. Convergência reduz falsos positivos.',R.op,r=>'Nota '+fmt(r.nota,1),'dest')+
-  cardsLista('Reprecificação (momentum)','Crescimento do lucro > 10% (último exercício CVM), ROIC > 10% e P/L < 20: momentum operacional forte com valuation ainda contido.',R.rep,r=>'Cresc. lucro '+sinal(r.g1,1))+
-  cardsLista('Distorções de valuation','P/L abaixo de 50% da mediana do setor. Desconto excessivo ou deterioração: analise caso a caso.',R.dist,r=>'P/L '+fmt(r.pl,1))+
-  cardsLista('PEG Ratio (< 1)','PEG = P/L ÷ crescimento anual médio do lucro nos últimos 3 anos (%). Fica de fora quem teve prejuízo em algum dos 4 anos ou está com balanço desatualizado.',R.peg,r=>'PEG '+fmt(r.pegC,2))+
-  cardsLista('Small caps ignoradas','Small e Micro com crowded < 80% e nota ≥ 2: pouca cobertura, possível ineficiência.',R.ign,r=>'Crowded '+fmt(r.crowded,0)+'%')+
-  cardsLista('Riscos elevados','DL/EBITDA > 3,5x, ou momentum < −10% com DL/EBITDA > 2x.',R.ris,r=>'DL/EBITDA '+fmt(r.div_liq_ebitda,1),'risco')+
+  cardsLista('Oportunidades claras','Em Distorções de valuation e em pelo menos mais um radar (Reprecificação, PEG ou Ignoradas), sem risco elevado. Convergência reduz falsos positivos.',R.op,r=>'Nota '+fmt(r.nota,1),'dest','op')+
+  cardsLista('Reprecificação (momentum)','Crescimento do lucro > 10% (último exercício CVM), ROIC > 10% e P/L < 20: momentum operacional forte com valuation ainda contido.',R.rep,r=>'Cresc. lucro '+sinal(r.g1,1),'','rep')+
+  cardsLista('Distorções de valuation','P/L abaixo de 50% da mediana do setor. Desconto excessivo ou deterioração: analise caso a caso.',R.dist,r=>'P/L '+fmt(r.pl,1),'','dist')+
+  cardsLista('PEG Ratio (< 1)','PEG = P/L ÷ crescimento anual médio do lucro nos últimos 3 anos (%). Fica de fora quem teve prejuízo em algum dos 4 anos ou está com balanço desatualizado.',R.peg,r=>'PEG '+fmt(r.pegC,2),'','peg')+
+  cardsLista('Small caps ignoradas','Small e Micro com crowded < 80% e nota ≥ 2: pouca cobertura, possível ineficiência.',R.ign,r=>'Crowded '+fmt(r.crowded,0)+'%','','ign')+
+  cardsLista('Riscos elevados','DL/EBITDA > 3,5x, ou momentum < −10% com DL/EBITDA > 2x.',R.ris,r=>'DL/EBITDA '+fmt(r.div_liq_ebitda,1),'risco','ris')+
   '<h3 class="ap-h">Rankings <small>Top 20 por métrica, sem riscos elevados</small></h3><div class="ap-tops">'+R.tops.map(([t,s,l,m])=>'<section class="ap-card"><h4>'+t+'</h4><p class="ap-mut">'+s+'</p><ol>'+
   l.map(r=>'<li data-ap-ativo="'+r.ticker+'"><b>'+r.ticker+'</b><span>'+m(r)+'</span></li>').join('')+'</ol></section>').join('')+'</div>'+
   '<p class="ap-mut">Filtros estatísticos para investigar, não recomendação de compra ou venda.</p></div>';
@@ -213,9 +265,9 @@ function radarSvg(r){const ks=Object.keys(r.eixos),C=130,R0=100,pt=(i,v)=>{const
 function raiox(r){const pares=st.rows.porSetor[r.setor]||[],M=[['P/L','pl',0,'x'],['P/VP','pvp',0,'x'],['EV/EBITDA','ev_ebitda',0,'x'],['DY','dy',1,'%'],['Payout','payout',null,'%'],['ROE','roe',1,'%'],['ROIC','roic',1,'%'],
   ['Margem líquida','margem_liquida',1,'%'],['FCF yield','fcf_yield',1,'%'],['DL/EBITDA','div_liq_ebitda',0,'x'],['Momentum 12m','momentum',1,'%'],['Dist. MM200','mm200',null,'%'],['RSI 14','rsi',null,'']];
  const pos=(k,hb)=>{if(hb==null||r[k]==null)return '—';const v=pares.map(p=>p[k]).filter(x=>x!=null&&(k!=='pl'||x>0));if(v.length<3)return '—';const melhor=v.filter(x=>hb?x<r[k]:x>r[k]).length;return Math.round(melhor/(v.length-1)*100)+'º pct'};
- return '<div class="ap-2"><section class="ap-card"><h3>Nota Raio-X <b class="ap-big">'+(r.nota==null?'—':fmt(r.nota,2))+'</b><small>/ 4</small></h3>'+radarSvg(r)+
+ return '<div class="ap-2"><section class="ap-card"><h3>Nota Raio-X'+q('eixos')+' <b class="ap-big">'+(r.nota==null?'—':fmt(r.nota,2))+'</b><small>/ 4</small></h3>'+radarSvg(r)+
   '<p class="ap-mut">Cada eixo = percentil do ativo no mercado (0–4). Cálculo próprio do app com o snapshot do Screener; não é recomendação.</p></section>'+
-  '<section class="ap-card"><h3>Comparar com pares · '+E(r.setor)+' <small>('+pares.length+')</small></h3><div class="ap-scroll"><table class="ap-t"><thead><tr><th>Métrica</th><th>'+r.ticker+'</th><th>Mediana setor</th><th>Posição</th></tr></thead><tbody>'+
+  '<section class="ap-card"><h3>Comparar com pares · '+E(r.setor)+' <small>('+pares.length+')</small></h3><div class="ap-scroll"><table class="ap-t"><thead><tr><th>Métrica</th><th>'+r.ticker+'</th><th>Mediana setor</th><th>Posição'+q('pos')+'</th></tr></thead><tbody>'+
   M.map(([t,k,hb,u])=>'<tr><td>'+t+'</td><td class="ap-n">'+(r[k]==null?'—':fmt(r[k],u==='x'?1:1)+u)+'</td><td class="ap-n">'+(()=>{const m=median(pares.map(p=>k==='pl'&&!(p.pl>0)?null:p[k]));return m==null?'—':fmt(m,1)+u})()+'</td><td class="ap-n">'+pos(k,hb===0?true:hb===1?false:null)+'</td></tr>').join('')+
   '</tbody></table></div></section></div>'}
 function calcs(r){const lucro=r.cap&&r.pl>0?r.cap/r.pl:null,acoes=r.cap&&r.preco?r.cap/r.preco:null;
@@ -230,6 +282,7 @@ function calcRun(root){if(!root)return;const p=Number(root.dataset.preco);root.q
  switch(s.dataset.calc){case 'graham':v=g('lpa')>0&&g('vpa')>0?Math.sqrt(22.5*g('lpa')*g('vpa')):null;break;case 'bazin':v=g('dpa')>0&&g('y')>0?g('dpa')/(g('y')/100):null;break;
   case 'gordon':v=g('dpa')>0&&g('k')>g('g')?g('dpa')*(1+g('g')/100)/((g('k')-g('g'))/100):null;break;case 'novo':v=g('l')>0&&g('a')>0&&g('y')>0?g('l')*(g('p')/100)/g('a')/(g('y')/100):null}
  const u=v&&p?(v/p-1)*100:null;s.querySelector('.ap-res').innerHTML=v==null?'<span class="ap-mut">Dados insuficientes</span>':'Preço justo <b>'+brl(v)+'</b> <span class="'+cor(u)+'">'+(u==null?'':(u>=0?'margem ':'acima em ')+fmt(Math.abs(u),1)+'%')+'</span>'})}
+const KQ={'Nota Raio-X':'nota','P/L':'pl','P/VP':'pvp','DY':'dy','ROE':'roe','ROIC':'roic','DL/EBITDA':'div_liq_ebitda','Momentum 12m':'momentum','RSI 14':'rsi','Crowded':'crowded'};
 function viewAtivo(){
  const r=st.rows.map.get(st.tk);if(!r)return '<p class="ap-mut">Ativo '+E(st.tk)+' fora do universo do Screener. <button type="button" class="ap-link" data-ap-voltar>Voltar</button></p>';
  const u=r.justo&&r.preco?(r.justo/r.preco-1)*100:null,tese=teses().find(t=>t.tk===r.ticker&&t.status==='ativa');
@@ -237,8 +290,8 @@ function viewAtivo(){
  let body='';
  if(st.sub==='visao')body='<div class="ap-2 ap-2w"><section class="ap-card"><h3>Cotação</h3>'+grafico(r)+'</section><section class="ap-card"><h3>Resumo</h3><div class="ap-kv">'+
   [['Nota Raio-X',r.nota==null?'—':fmt(r.nota,2)+' / 4'],['P/L',r.pl==null?'—':fmt(r.pl,1)+'x'],['P/VP',r.pvp==null?'—':fmt(r.pvp,2)+'x'],['DY',pct(r.dy)],['ROE',pct(r.roe)],['ROIC',pct(r.roic)],
-   ['DL/EBITDA',r.div_liq_ebitda==null?'—':fmt(r.div_liq_ebitda,1)+'x'],['Momentum 12m',sinal(r.momentum)],['RSI 14',fmt(r.rsi,0)],['Crowded',r.crowded==null?'—':fmt(r.crowded,0)+'%']].map(([k,v])=>'<div><span>'+k+'</span><b>'+v+'</b></div>').join('')+'</div>'+
-  '<h4>Preço justo</h4><div class="ap-kv">'+[['Graham',r.graham],['Bazin',r.bazin],['Gordon',r.gordon],['Teto próprio',r.proprio]].map(([k,v])=>'<div><span>'+k+'</span><b>'+(v==null?'—':'~'+fmt(v)+' <small class="'+cor(r.preco?(v/r.preco-1):null)+'">'+sinal(r.preco?(v/r.preco-1)*100:null,0)+'</small>')+'</b></div>').join('')+'</div>'+
+   ['DL/EBITDA',r.div_liq_ebitda==null?'—':fmt(r.div_liq_ebitda,1)+'x'],['Momentum 12m',sinal(r.momentum)],['RSI 14',fmt(r.rsi,0)],['Crowded',r.crowded==null?'—':fmt(r.crowded,0)+'%']].map(([k,v])=>'<div><span>'+k+(KQ[k]?q(KQ[k]):'')+'</span><b>'+v+'</b></div>').join('')+'</div>'+
+  '<h4>Preço justo'+q('justo')+'</h4><div class="ap-kv">'+[['Graham',r.graham],['Bazin',r.bazin],['Gordon',r.gordon],['Teto próprio',r.proprio]].map(([k,v])=>'<div><span>'+k+'</span><b>'+(v==null?'—':'~'+fmt(v)+' <small class="'+cor(r.preco?(v/r.preco-1):null)+'">'+sinal(r.preco?(v/r.preco-1)*100:null,0)+'</small>')+'</b></div>').join('')+'</div>'+
   '<h4>Minha tese</h4>'+(tese?'<p>Alvo <b>'+brl(tese.alvo)+'</b> · '+E(tese.texto).slice(0,160)+'</p>':'<p class="ap-mut">Sem tese para '+r.ticker+'.</p>')+'<button type="button" class="btn s" data-ap-novatese="'+r.ticker+'">'+(tese?'Editar tese':'Nova tese')+'</button></section></div>';
  else if(st.sub==='raiox')body=raiox(r);else if(st.sub==='div')body=calcs(r);
  else body='<section class="ap-card"><h3>'+E(r.empresa||r.ticker)+'</h3><div class="ap-kv">'+[['Setor',r.setor],['Segmento',r.segmento||'—'],['Porte',r.porte||'—'],['Valor de mercado',cmp(r.cap)],['Liquidez diária',cmp(r.liquidez)],
@@ -274,19 +327,22 @@ function viewTeses(){
 function corpo(){
  if(st.erro&&!st.rows)return '<section class="ap-card ap-vazio"><p>'+E(st.erro)+'</p><button type="button" class="btn s" data-ap-recarregar>Tentar de novo</button></section>';
  if(!st.rows)return '<section class="ap-card ap-vazio"><p class="ap-mut">Carregando universo do Screener Brasil…</p></section>';
- if(st.tk)return viewAtivo();
- return st.tab==='radar'?viewRadar():st.tab==='teses'?viewTeses():viewRank();
+ if(st.tk&&st.tab!=='guia')return viewAtivo();
+ return st.tab==='guia'?viewGuia():st.tab==='radar'?viewRadar():st.tab==='teses'?viewTeses():viewRank();
 }
 function view(tab){if(tab)st.tab=tab;css();return '<div id="ap-root" class="ap">'+corpo()+'</div>'}
-function render(){const el=d.getElementById('ap-root');if(!el)return;aplicaProfit();const sc=el.querySelector('.ap-scroll')?.scrollLeft;el.innerHTML=corpo();if(sc)el.querySelector('.ap-scroll')&&(el.querySelector('.ap-scroll').scrollLeft=sc);
+function render(){const el=d.getElementById('ap-root');if(!el)return;aplicaProfit();const sc=el.querySelector('.ap-scroll')?.scrollLeft;el.innerHTML=corpo()+(st.q?cartaoQ(st.q):'');if(sc)el.querySelector('.ap-scroll')&&(el.querySelector('.ap-scroll').scrollLeft=sc);
  calcRun(el.querySelector('.ap-calcs'));if(st.tk&&st.sub==='visao'){carregaSerie(st.tk);if(st.ibov)carregaSerie('BOVA11')}
  if(st.tab==='radar'&&st.rows&&!st.rotLoading&&!st.tk&&!st.rot?.arquivo&&(!st.rot||Date.now()-st.rot.at>12*3600000)&&!st._rotTentou){st._rotTentou=1;rotacao()}}
 function enter(tab){if(tab)st.tab=tab;st._rotTentou=0;if(tab!=='ativo'&&!st._abrindo)st.tk='';st._abrindo=0;carregar().then(render);render()}
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
-d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie]');
+d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie]');
  if(!t||!t.closest('#ap-root'))return;const ds=t.dataset;
+ if('apQ' in ds){ev.preventDefault();ev.stopPropagation();st.q=ds.apQ;render();return}
+ if('apGuia' in ds){st.q='';d.querySelector('[data-an-sub="guia"]')?.click();return}
+ if('apQx' in ds||t.classList?.contains('ap-qbox')){if(ev.target.closest('.ap-qcard')&&!('apQx' in ds))return;st.q='';render();return}
  if('apIa' in ds){w.DiarioAnalises?.command?.('ANALISE '+ds.apIa);d.querySelector('[data-an-sub="pesquisa"]')?.click();return}
  if('apRecarregar' in ds){carregar(true);return}
  if('apSerie' in ds){carregaSerie(ds.apSerie,true);return}
@@ -363,8 +419,15 @@ let cssOk=false;function css(){if(cssOk)return;cssOk=true;const s=d.createElemen
 .ap-res{font-size:13px;margin:8px 0 0}.ap-res b{font-size:16px}.ap-fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0 12px}
 .ap-tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}.ap-tese header{display:flex;justify-content:space-between;align-items:center}.ap-tese h4{cursor:pointer;display:flex;gap:6px;align-items:center}.ap-tese ul{margin:6px 0;padding-left:18px;font-size:12.5px}
 .ap-prog{height:4px;background:var(--b2);border-radius:2px}.ap-prog i{display:block;height:100%;background:var(--am);border-radius:2px}.ap-del{color:#FCA5A5}
+.ap-q{display:inline-grid;place-items:center;width:16px;height:16px;margin-left:5px;border-radius:50%;border:1px solid var(--mu);background:transparent;color:var(--mu);font-size:10px;font-weight:700;line-height:1;cursor:pointer;padding:0;vertical-align:middle;text-transform:none}
+.ap-q:hover{border-color:var(--am);color:var(--am)}.ap-t th .ap-q{position:relative}
+.ap-qbox{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.ap-qcard{background:var(--b2);border:1px solid var(--ln);border-radius:6px;max-width:440px;width:100%;padding:16px;max-height:80vh;overflow:auto}.ap-qcard header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.ap-qcard h4{margin:0;font-size:15px}
+.ap-qcard p,.ap-glos p{margin:8px 0;font-size:13px;line-height:1.5}.ap-qcard p b,.ap-glos p b{display:block;color:var(--am);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.ap-glos details{border-top:1px solid var(--ln);padding:8px 0}.ap-glos summary{cursor:pointer;font-weight:600;font-size:13px;min-height:32px;display:flex;align-items:center}.ap-passos{font-size:13px;line-height:1.7;padding-left:20px}
+@media(max-width:900px){.ap-qbox{align-items:flex-end;padding:0}.ap-qcard{max-width:none;border-radius:6px 6px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom))}.ap-q{width:20px;height:20px}}
 @media(max-width:900px){.ap-rank,.ap-2,.ap-2w,.ap-rotgrid,.ap-hero{grid-template-columns:minmax(0,1fr)}.ap-filtros details{position:static}.ap-filtros details:not([open]){padding:10px}.ap-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.ap-hk{gap:16px}.ap input,.ap select,.ap textarea{font-size:16px}.ap-cols>div{width:280px}}
 `;d.head.appendChild(s)}
 
-w.DiarioAnalisesPlus={view,enter,abrir,TABS:['rankpro','radar','teses','ativo']};
+w.DiarioAnalisesPlus={view,enter,abrir,TABS:['rankpro','radar','teses','guia','ativo']};
 })(window,document);

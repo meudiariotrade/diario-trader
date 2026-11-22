@@ -1,0 +1,4 @@
+v879 — Entenda os dados
+- Botão ? em cada coluna dos Rankings, em cada lista do Radar, na rotação setorial, no Raio-X e no resumo do ativo: abre cartão com O que é / Como é calculado / Como ler.
+- Nova sub-aba Análises > Entenda os dados: passo a passo para leigo e glossário de todos os termos.
+Arquivos: src/analysis/analises-plus.js, src/analysis/analises.js, release.config.json, 2 testes (sub-abas 6→7)
