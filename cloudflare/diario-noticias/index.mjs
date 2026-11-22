@@ -244,6 +244,17 @@ export default {
     const path=new URL(request.url).pathname;
     if(request.method!=='GET')return json({erro:'metodo_nao_permitido'},request,env,405);
     if(path==='/health')return json({ok:Boolean(env.NEWS_CACHE),servico:'diario-noticias',modo:'independente'},request,env,env.NEWS_CACHE?200:503);
+    /* v876: espelho público do Análises+ (lucro CVM e retornos diários por ticker), cache de borda de 1 h. */
+    if(path==='/v1/analises-plus'){
+      const u=new URL(request.url),cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/analises-plus');
+      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
+      try{const r=await fetch('https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/analises-plus.json');
+        if(!r.ok)return json({error:'analises_plus_indisponivel'},request,env,503);
+        const v=await r.json();if(v?.versao!==1||!v.crescimento||!v.retornos)return json({error:'esquema_invalido'},request,env,502);
+        if(cache)await cache.put(chave,new Response(JSON.stringify(v),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=3600'}}));
+        return json(v,request,env);
+      }catch(e){return json({error:String(e?.message||e)},request,env,502);}
+    }
     /* v824: ADRs brasileiras (TradingView com Yahoo de reserva), cache de borda de 20 s. */
     if(path==='/v1/adrs'){
       const u=new URL(request.url),lista=[...new Set(String(u.searchParams.get('s')||'').split(',').map(adrLimpa).filter(Boolean))].slice(0,40);

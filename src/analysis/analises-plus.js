@@ -13,7 +13,7 @@ const cmp=n=>n==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',curre
 const cor=n=>n==null?'':n>=0?'ap-g':'ap-r';
 const logo=tk=>w.DiarioLogos?.html?.(tk,20)||'';
 const ls={get(k,f){try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-const K_EXTRA='ap874-extra',URL_EXTRA='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/analises-plus',K_COLS='ap874-colunas',K_ROT='ap873-rotacao',K_TESES='diario-teses-v873',K_FILT='ap873-filtros';
+const K_EXTRA='ap874-extra',URL_EXTRA='https://diario-trader.lucianosilva43567.workers.dev/v1/analises-plus',K_COLS='ap874-colunas',K_ROT='ap873-rotacao',K_TESES='diario-teses-v873',K_FILT='ap873-filtros';
 
 /* ---------- estado ---------- */
 const st={tab:'rankpro',rows:null,loading:false,erro:'',ref:null,tk:'',sub:'visao',per:'1A',ibov:false,

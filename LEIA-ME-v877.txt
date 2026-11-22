@@ -1,0 +1,2 @@
+v877 — Arquivo do Análises+ servido pelo Worker diario-trader (publicado pela Cloudflare a partir do GitHub): /v1/analises-plus, cache 1 h.
+Arquivos: cloudflare/diario-noticias/index.mjs, src/analysis/analises-plus.js, release.config.json
