@@ -25110,19 +25110,7 @@ const IC = (e) =>
     if (document.getElementById("tape")) return;
     const c = document.createElement("div");
     c.id = "tape";
-    const p = document.createElement("div");
-    ((p.className = "tradingview-widget-container"),
-      (p.innerHTML =
-        '<div class="tradingview-widget-container__widget"></div>'));
-    const u = document.createElement("script");
-    ((u.src =
-      "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js"),
-      (u.async = !0),
-      (u.innerHTML = JSON.stringify(a)),
-      c.appendChild(p),
-      setTimeout(() => {
-        r || p.appendChild(u);
-      }, 7e3));
+    c.setAttribute("data-noclaro", "1");
     const m = document.createElement("div");
     ((m.id = "tapeSp"),
       document.body.insertBefore(m, document.body.firstChild),
@@ -40740,14 +40728,19 @@ document.addEventListener("click", (e) => {
 });
 {
   const e = render;
-  render = function () {
-    e.apply(this, arguments);
+  function mostraOnbSeLivre() {
     try {
+      if (document.getElementById("capa") || (window.DiarioCapa && window.DiarioCapa.aberta)) return;
       contaNova() &&
         !["conta", "termos"].includes(tab) &&
         !document.getElementById("onb") &&
         document.body.insertAdjacentHTML("beforeend", onbHtml());
     } catch {}
+  }
+  window.addEventListener("diario:capa-aberta", mostraOnbSeLivre);
+  render = function () {
+    e.apply(this, arguments);
+    mostraOnbSeLivre();
   };
 }
 {
@@ -43606,21 +43599,34 @@ document.addEventListener("click", (e) => {
     t &&
       t.querySelectorAll("a.card").forEach((a) => {
         if (
-          a.nextElementSibling &&
-          a.nextElementSibling.classList.contains("eco-nw")
+          a.querySelector('[data-eco="news"]') ||
+          (a.nextElementSibling &&
+            a.nextElementSibling.classList.contains("eco-nw"))
         )
           return;
         const o = (a.querySelector("div") || a).textContent
             .replace(/^URGENTE/, "")
-            .trim(),
-          s = document.createElement("div");
-        ((s.className = "eco-nw"),
-          (s.innerHTML =
-            '<button class="btn s" data-eco="news">🎓 Explicar</button>'));
-        const n = s.firstChild;
-        ((n.dataset.t = o),
-          (n.dataset.l = a.getAttribute("href") || ""),
-          a.after(s));
+            .trim();
+        const meta = a.querySelector(".sm.mut, .mut.sm, small");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn s eco-nw-inline";
+        btn.dataset.eco = "news";
+        btn.dataset.t = o;
+        btn.dataset.l = a.getAttribute("href") || "";
+        btn.textContent = "Explicar";
+        if (meta) {
+          meta.style.display = "flex";
+          meta.style.alignItems = "center";
+          meta.style.justifyContent = "space-between";
+          meta.style.gap = "8px";
+          meta.appendChild(btn);
+        } else {
+          const s = document.createElement("div");
+          s.className = "eco-nw";
+          s.appendChild(btn);
+          a.after(s);
+        }
       });
   };
 }
@@ -45067,15 +45073,31 @@ function imgMostra(e) {
   const t = document.getElementById("imgov");
   t && t.remove();
   const a = document.createElement("div");
+  const fecha = () => {
+    a.remove();
+    document.removeEventListener("keydown", onEsc);
+    document.removeEventListener("click", onNav, true);
+    try { URL.revokeObjectURL(e); } catch {}
+  };
+  const onEsc = (ev) => { if (ev.key === "Escape") fecha(); };
+  const onNav = (ev) => {
+    if (ev.target && ev.target.closest && ev.target.closest("[data-dt393-route],[data-v4-go],[data-tab],[data-navroute]")) {
+      fecha();
+    }
+  };
+  document.addEventListener("keydown", onEsc);
+  document.addEventListener("click", onNav, true);
   ((a.id = "imgov"),
+    a.setAttribute("data-noclaro", "1"),
     (a.style.cssText =
-      "position:fixed;inset:0;z-index:99999;background:rgba(13,13,14,0.92);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(14px + env(safe-area-inset-bottom,0px))"),
-    (a.innerHTML = `<div style="display:flex;gap:8px;margin-bottom:10px"><button data-img="x" class="imgov-voltar" style="flex:0 0 auto;min-height:44px;padding:12px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:var(--dt-s1);color:#ffffff;-webkit-text-fill-color:#ffffff;font-weight:600;font-size:16px;cursor:pointer">← Voltar</button><button data-img="s" style="flex:1;padding:12px;border-radius:12px;border:0;background:#3b3e43;color:#ffffff;font-weight:700;font-size:16px">📤 Compartilhar / salvar</button></div><div style="flex:1;overflow:auto;display:flex;justify-content:center"><img src="${e}" alt="Panorama do mercado" style="max-width:100%;height:auto;border-radius:12px;align-self:flex-start"></div><div style="color:#e9e7e4;font-size:13px;margin-top:8px;text-align:center">No iPhone: Compartilhar → "Salvar imagem" ou mande direto no WhatsApp. Ou segure a imagem para salvar.</div>`),
+      "position:fixed;inset:0;z-index:99999;background:rgba(10,11,15,0.94);backdrop-filter:blur(10px);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(14px + env(safe-area-inset-bottom,0px))"),
+    (a.innerHTML = `<div style="display:flex;gap:8px;margin-bottom:10px"><button data-img="x" class="imgov-voltar" style="flex:0 0 auto;min-height:44px;padding:12px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:var(--dt-s1,#12151E);color:#ffffff;-webkit-text-fill-color:#ffffff;font-weight:600;font-size:16px;cursor:pointer">← Voltar</button><button data-img="s" style="flex:1;padding:12px;border-radius:12px;border:0;background:#C9A66B;color:#0A0B0F;font-weight:700;font-size:16px;cursor:pointer">📤 Compartilhar / salvar</button></div><div style="flex:1;overflow:auto;display:flex;justify-content:center"><img src="${e}" alt="Panorama do mercado" style="max-width:100%;height:auto;border-radius:12px;align-self:flex-start"></div><div style="color:#e9e7e4;font-size:13px;margin-top:8px;text-align:center">No iPhone: Compartilhar → "Salvar imagem" ou mande direto no WhatsApp. Ou segure a imagem para salvar.</div>`),
     a.addEventListener("click", async (o) => {
+      if (o.target === a) { fecha(); return; }
       const s = o.target.closest("[data-img]");
       if (!s) return;
       if (s.dataset.img === "x") {
-        (a.remove(), URL.revokeObjectURL(e));
+        fecha();
         return;
       }
       const n = new File([IMG.blob], IMG.nome, { type: "image/jpeg" });
@@ -57140,6 +57162,8 @@ if ((setTimeout(privBotao, 500), "serviceWorker" in navigator))
     });
   } catch {}
 function netAviso() {
+  const dup = document.getElementById("net188");
+  if (dup) dup.remove();
   let e = document.getElementById("netbar");
   if (navigator.onLine) {
     e && e.remove();
@@ -57148,9 +57172,11 @@ function netAviso() {
   e ||
     ((e = document.createElement("div")),
     (e.id = "netbar"),
+    e.setAttribute("role", "status"),
+    e.setAttribute("data-noclaro", "1"),
     (e.style.cssText =
-      "position:fixed;top:calc(env(safe-area-inset-top) + 6px);left:50%;transform:translateX(-50%);z-index:9998;background:#111111;color:#ffffff;border-radius:999px;padding:6px 14px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,0.3)"),
-    (e.textContent = "Sem internet: mostrando a última cópia salva"),
+      "position:fixed;top:calc(env(safe-area-inset-top) + 6px);left:50%;transform:translateX(-50%);z-index:880;max-width:calc(100vw - 24px);background:#141720;color:#F3F0E8;border:1px solid rgba(201,166,107,0.38);border-radius:999px;padding:6px 14px;font-size:12px;line-height:1.3;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.38);pointer-events:none"),
+    (e.textContent = "Sem internet · diário offline ativo (cotações voltam ao reconectar)"),
     document.body.appendChild(e));
 }
 (addEventListener("online", netAviso),
@@ -69877,7 +69903,10 @@ const CQ_LOGO_MEMO = new Map(), CQ_LOGO_URL_STATUS = new Map();
 function cqLogoHtml(html) {
  // A transformação é feita ANTES de o WebKit criar o elemento IMG.
  // O erro será tratado no contêiner Mercado, sem DiarioLogos._erro remover a imagem.
- return String(html || "").replace(/<img\b[^>]*>/gi, tag =>
+ return String(html || "")
+  .replace(/<span\b([^>]*\bclass="[^"]*\b(?:dl-logo|cqm-logo)\b[^"]*"[^>]*)>/gi, (m, attrs) =>
+    /\bdata-noclaro\b/i.test(attrs) ? m : `<span${attrs} data-noclaro="1">`)
+  .replace(/<img\b[^>]*>/gi, tag =>
    tag.replace(/\s(?:loading|decoding|draggable|onerror)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
       .replace(/>$/, ' decoding="sync" draggable="false">'));
 }
@@ -69888,10 +69917,10 @@ function cqLogoMemo(symbol,color,mark){
  try{el=window.TraderAssetIdentity?.avatar(symbol);}catch{}
  let html;
  if(el){
-  el.classList.add("cqi","cqm-logo");el.dataset.cqmSymbol=key;
+  el.classList.add("cqi","cqm-logo");el.dataset.cqmSymbol=key;el.setAttribute("data-noclaro","1");
   html=cqLogoHtml(el.outerHTML);
  }else{
-  html='<span class="cqi cqm-logo" data-cqm-symbol="'+esc(key)+'" style="color:'+color+';background:color-mix(in srgb,'+color+' 16%,transparent)">'+esc(mark)+'</span>';
+  html='<span class="cqi cqm-logo" data-noclaro="1" data-cqm-symbol="'+esc(key)+'" style="color:'+color+';background:color-mix(in srgb,'+color+' 16%,transparent)">'+esc(mark)+'</span>';
  }
  if(!el?.dataset.dlPendente){
   if(CQ_LOGO_MEMO.size>=700)CQ_LOGO_MEMO.delete(CQ_LOGO_MEMO.keys().next().value);
@@ -69903,7 +69932,9 @@ function cqLogoFallback(logo) {
  if(!logo || logo.classList.contains("ta-avatar") || logo.querySelector(":scope > .cqm-logo-fallback"))return;
  const t=document.createElement("span");
  t.className="cqm-logo-fallback";
- t.textContent=String(logo.dataset.dl||logo.dataset.cqmSymbol||"").replace(/[^A-Z0-9]/gi,"").slice(0,2).toUpperCase()||"•";
+ const raw=String(logo.dataset.dl||logo.dataset.cqmSymbol||"");
+ const pm=/^PAIS:([A-Z]{2})$/i.exec(raw);
+ t.textContent=(pm?pm[1]:raw.replace(/[^A-Z0-9]/gi,"").slice(0,2)).toUpperCase()||"•";
  t.setAttribute("aria-hidden","true");
  logo.prepend(t);
 }
@@ -70099,13 +70130,13 @@ function cqItens(category) {
   const adrN = category === 'adr' ? (AD.data?.itens || []).filter(item=>(item.regular?.px ?? item.px)>0).length : 0;
   const total = visible.length + adrN;
   const cache606 = CQ.cache606?.[category];
-  const summary606 = mapa606 ? `12 termômetros${M606.busy ? ' · atualizando…' : ''}` : busy ? (total ? `${total} ativos · atualizando${cache606 ? ' (mostrando o salvo às '+new Date(cache606).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})+')' : ''}…` : 'Atualizando…') : total+' ativos';
+  const summary606 = mapa606 ? `12 termômetros${M606.busy ? ' · atualizando…' : ''}` : busy && !total ? 'Atualizando…' : total+' ativos';
   return `<div id="cotbox" class="market-quotes${term623 ? ' m624-t' : ''}" data-category="${esc(category)}">
-    <div class="market-categories" role="group" aria-label="Categorias de ativos">${CQ_ABAS.map(([key,label])=>`<button type="button" data-cqa="${key}" class="${category===key?'on':''}" aria-pressed="${category===key}">${esc(label.replace('★ ',''))}</button>`).join('')}</div>
+    <div class="market-categories" role="group" aria-label="Categorias de ativos">${CQ_ABAS.map(([key,label])=>`<button type="button" data-cqa="${key}" class="${!mapa606 && category===key?'on':''}" aria-pressed="${!mapa606 && category===key}">${esc(label.replace('★ ',''))}</button>`).join('')}</div>
     <div class="market-tools"><label class="market-search"><span class="market-sr">Buscar ativo</span><input type="search" data-market-search placeholder="Buscar ativo" value="${esc(CQ.search || '')}" autocomplete="off"></label><button type="button" data-cqr="1" aria-label="Atualizar preços" ${busy?'disabled':''}>↻</button><label class="market-order"><span class="market-sr">Ordenar ativos</span><select data-market-order>${[['lista','Ordem padrão'],['alta','Maiores altas'],['baixa','Maiores quedas']].map(([key,label])=>`<option value="${key}" ${CQ.ord===key?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-cqv="${CQ.vis==='mapa'?'lista':'mapa'}" aria-label="${CQ.vis==='mapa'?'Ver lista':'Ver mapa de calor'}">${CQ.vis==='mapa'?'Lista':'Mapa'}</button>${desk624 ? `<button type="button" class="m624-b" data-imgger="1" title="Gerar a imagem Panorama do mercado">Panorama</button>${term623 ? '<button type="button" class="m624-b" data-m624-mon aria-pressed="false" title="Tela limpa só com a grade (Esc para sair)">Modo Monitor</button>' : ''}` : ''}</div>
     ${term623 ? m623Html() : `<div class="market-summary" role="status">${summary606}${!mapa606 && data?.em ? ' · Consulta '+esc(new Date(data.em).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}))+' BRT' : ''}</div>
     ${error ? `<p class="market-error" role="status">${esc(error)}${items.length?' Mantendo a consulta anterior.':''}</p>` : ''}
-    <div class="market-results" aria-busy="${busy}">${content}</div>`}
+    <div class="market-results" aria-busy="${busy && !total}">${content}</div>`}
     <details class="market-sources"><summary>Fontes e ferramentas</summary><p>Profit para ativos da B3 quando a ponte está conectada. Após o pregão, o último registro salvo aparece como FECHADO, com contrato e horário. As demais fontes e seus atrasos aparecem em cada ativo.</p><button type="button" data-navroute="term">Abrir gráficos e comparação no Terminal</button><button type="button" data-market-longshort>Long &amp; Short</button>${cqAlertasHtml()}${category==='jur'?'<button type="button" data-market-di>Ver curva DI no Terminal</button>'+cqJurosExtra():''}</details>
   </div>`;
 }),
@@ -71215,7 +71246,7 @@ function m623Linha(it) {
     const f = fhAplica(it.k, it.px, it.d1, it.g);
     f && ((px = f.px), (d1 = f.d1), (em = f.em), (vivo = "fh"));
   }
-  ab = vivo ? !0 : m623Aberto({ ...it, em });
+  ab = px != null && (vivo ? !0 : m623Aberto({ ...it, em }));
   const juro = it.un === "%",
     varTxt = juro && it.dabs != null && !vivo ? m606Sinal(it.dabs * 100, 1, " bps") : m606Sinal(d1),
     varCls = m606Cls(juro && it.dabs != null && !vivo ? it.dabs : d1),
@@ -71952,12 +71983,35 @@ const BNC_NOMES = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", XRP: "XRP", 
 const BNC_TOP = Object.keys(BNC_NOMES);
 const bncDp = (px) => (px >= 1e3 ? 2 : px >= 1 ? 3 : px >= 0.01 ? 5 : 8);
 /** Completa a lista com os 20 pares (os que vieram do servidor ficam; os que faltam entram com o preço da Binance). */
+function bncCacheFallback(k) {
+  const q = bncQ(k);
+  if (q && q.px != null) return q;
+  try {
+    const u = String(k || "").toUpperCase();
+    const fontes = [
+      ...(CQ?.d?.cri?.itens || []),
+      ...(M606?.v?.terminal || []),
+      ...(M606?.v?.mapa || []),
+      ...((MDO?.v?.mercados?.grupos || []).flatMap((g) => g.itens || [])),
+    ];
+    for (const it of fontes) {
+      const sym = String(it.k || it.c || it.s || "").toUpperCase().replace(/^(?:BINANCE|CRYPTO):/, "").replace(/(?:USDT|USD)$/, "");
+      if (sym === u && it.px != null && Number.isFinite(+it.px) && +it.px > 0) {
+        return { px: +it.px, d1: it.d1 ?? it.chp ?? null, em: it.em ? Date.parse(it.em) || Date.now() : Date.now() };
+      }
+    }
+    const td = typeof window.tapeDados === "function" ? window.tapeDados() : null;
+    const tq = td && (td[u + "-USD"] || td[u]);
+    if (tq && Number(tq.px) > 0) return { px: +tq.px, d1: tq.chg ?? tq.d1 ?? null, em: tq.dadoEm || Date.now() };
+  } catch {}
+  return null;
+}
 function bncTop20(base) {
   const L = (base || []).slice(),
     tem = new Set(L.map((x) => String(x.k || x.c || "").toUpperCase()));
   BNC_TOP.forEach((k) => {
     if (tem.has(k)) return;
-    const q = bncQ(k);
+    const q = bncCacheFallback(k);
     L.push({ g: "cri", k, n: BNC_NOMES[k], s: "BINANCE:" + k + "USDT", px: q ? q.px : null, d1: q ? q.d1 : null, dp: q ? bncDp(q.px) : 2, ss: "24h", em: q ? new Date(q.em).toISOString() : null });
   });
   return L;
@@ -71971,7 +72025,7 @@ function bncTop20(base) {
           L = d.itens || (d.itens = []),
           tem = new Set(L.map((x) => String(x.c || "").toUpperCase()));
         BNC_TOP.forEach((k) => {
-          const q = bncQ(k);
+          const q = bncCacheFallback(k);
           !tem.has(k) && q && L.push({ c: k, n: BNC_NOMES[k], s: "BINANCE:" + k + "USDT", px: q.px, d1: q.d1, dp: bncDp(q.px), _aba: "cri" });
         });
       }
@@ -90229,18 +90283,9 @@ try {
 }
 function net188() {
   try {
-    let e = document.getElementById("net188");
-    if (navigator.onLine) {
-      e && e.remove();
-      return;
-    }
-    e ||
-      ((e = document.createElement("div")),
-      (e.id = "net188"),
-      e.setAttribute("role", "status"),
-      (e.textContent =
-        "Sem internet. O diário funciona normal; cotações, notícias e IA voltam quando a conexão voltar."),
-      document.body.appendChild(e));
+    const dup = document.getElementById("net188");
+    if (dup) dup.remove();
+    if (typeof netAviso === "function") netAviso();
   } catch {}
 }
 (addEventListener("online", () => {
@@ -91254,16 +91299,19 @@ function net188() {
     const E = Object.values(e.src).filter((De) => Date.now() - De.em < 12e4),
       P = E.filter((De) => De.rt && !De.falha).length,
       B = E.filter((De) => !De.rt && !De.falha).length,
-      G = E.filter((De) => De.falha).length,
-      te = E.length
-        ? `<b class="tg">${P} tempo real</b> · <b class="am">${B} atrasados</b>${G ? ` · <b class="tr">${G} com falha</b>` : ""} · `
-        : "",
       _ = Object.keys(e.profit).length,
       ye = e.ws && e.ws.readyState === 1,
-      Oe = e.fh && e.fh.readyState === 1;
+      Oe = e.fh && e.fh.readyState === 1,
+      partes = [];
+    if (P > 0) partes.push(`<b class="tg">${P} ao vivo</b>`);
+    else if (B > 0) partes.push(`<b class="am">${B} atualizados</b>`);
+    if (_) partes.push(`<i class="tg">●</i> Profit (${_})`);
+    if (ye) partes.push('<i class="tg">●</i> Cripto ao vivo');
+    if (Oe) partes.push('<i class="tg">●</i> EUA ao vivo');
+    if (!partes.length) partes.push('Dados de mercado em espera');
     return (
-      te +
-      `<button class="trlk" data-trcmd="STAT">fontes</button> · ${_ ? '<i class="tg">●</i> Profit ao vivo (' + _ + ")" : "<i>●</i> Profit desligado"} · ${ye ? '<i class="tg">●</i> Binance' : "<i>●</i> Binance"} · ${Oe ? '<i class="tg">●</i> Finnhub' : r().fh || window.fhTokServidor ? "<i>●</i> Finnhub" : "Finnhub sem chave"}`
+      partes.join(' · ') +
+      ' · <button class="trlk" data-trcmd="STAT">Fontes</button>'
     );
   }
   function Ye(E) {
@@ -93973,7 +94021,7 @@ Dados do terminal agora:
           const gt = pt(0).toFixed(2),
             mt = pt($t - 1).toFixed(2),
             kt = (it - 18).toFixed(2);
-          St += `<defs><linearGradient id="g9ln${L}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#595e67" stop-opacity=".44"/><stop offset="1" stop-color="#32353a" stop-opacity=".04"/></linearGradient></defs><path d="${ct} L${mt} ${kt} L${gt} ${kt} Z" fill="url(#g9ln${L})"/><path d="${ct}" fill="none" stroke="#f4f3f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${mt}" cy="${At(ut[$t - 1][4])}" r="3.2" fill="#6896be" stroke="#f4f3f1" stroke-width="1.2"/>`;
+          St += `<defs><linearGradient id="g9ln${L}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9F1C" stop-opacity=".28"/><stop offset="1" stop-color="#FF9F1C" stop-opacity=".01"/></linearGradient></defs><path d="${ct} L${mt} ${kt} L${gt} ${kt} Z" fill="url(#g9ln${L})"/><path d="${ct}" fill="none" stroke="#FF9F1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${mt}" cy="${At(ut[$t - 1][4])}" r="3.4" fill="#FF9F1C" stroke="#000000" stroke-width="1.3"/>`;
         }
       }
       St += "</g>";
@@ -94026,7 +94074,7 @@ Dados do terminal agora:
           });
       }
       const Pt = E[E.length - 1];
-      St += `<line x1="0" x2="${tt}" y1="${At(Pt)}" y2="${At(Pt)}" stroke="#c2933d" stroke-dasharray="2 3"/><rect x="${tt + 1}" y="${At(Pt) - 8}" width="${bt - 2}" height="16" fill="#c2933d"/><text x="${tt + 4}" y="${At(Pt) + 4}" class="g9tx" fill="#000000" style="font-weight:700">${g(Pt, Dt)}</text>`;
+      St += `<line x1="0" x2="${tt}" y1="${At(Pt)}" y2="${At(Pt)}" stroke="#FF9F1C" stroke-dasharray="2 3"/><rect x="${tt + 1}" y="${At(Pt) - 9}" width="${bt - 2}" height="18" rx="2" fill="#FF9F1C"/><text x="${tt + 5}" y="${At(Pt) + 4}" class="g9tx g9last-px" style="fill:#000000!important;font-weight:800">${g(Pt, Dt)}</text>`;
       let qt = it + 6;
       if (Ee.rsi) {
         const ct = (mt) => qt + 4 + ((100 - mt) / 100) * (nt - 8);
@@ -94070,7 +94118,7 @@ Dados do terminal agora:
           kt(ye.sig, "#c9a156") +
           `<text x="4" y="${qt + 12}" class="g9tx">MACD 12/26/9: ${g(ye.m[ye.m.length - 1], Dt > 2 ? 4 : 3)} · sinal ${g(ye.sig[ye.sig.length - 1], Dt > 2 ? 4 : 3)}</text>`;
       }
-      ((St += `<line class="g9cx" x1="-10" x2="-10" y1="0" y2="${lt}"/><line class="g9cy" x1="0" x2="${tt}" y1="-10" y2="-10"/><text class="g9cursor-price" x="${tt + 3}" y="-10"></text><rect x="0" y="0" width="${tt}" height="${lt}" fill="transparent" data-g9hit="${L}"/></svg>`),
+      ((St += `<line class="g9cx" x1="-10" x2="-10" y1="0" y2="${lt}"/><line class="g9cy" x1="0" x2="${tt}" y1="-10" y2="-10"/><circle class="g9dot" cx="-10" cy="-10" r="3.4" fill="#FF9F1C" stroke="#000" stroke-width="1.2"/><g class="g9tip" hidden><rect class="g9tip-bg" rx="3" fill="#0B1220" stroke="#FF9F1C" stroke-width="1" opacity="0.95"/><text class="g9tip-tx" fill="#F8FAFC" font-size="10.5" font-family="ui-monospace,monospace"></text></g><text class="g9cursor-price" x="${tt + 3}" y="-10"></text><rect x="0" y="0" width="${tt}" height="${lt}" fill="transparent" data-g9hit="${L}"/></svg>`),
         (o.gm[L] = {
           tk: F,
           iv: O,
@@ -94108,7 +94156,7 @@ Dados do terminal agora:
       return (
         I(F) +
         Ae +
-        `<p class="trfont g9help">Arraste na horizontal ou use as setas. Pinça / Ctrl + rolagem: zoom. Duplo toque: ajustar. ${Ze.offset ? "Histórico · " + Ze.offset + " velas antes da última" : "Últimas velas disponíveis"}.</p>` +
+        `<p class="trfont g9help">Arraste para navegar · Roda do mouse ou pinça: zoom · Duplo toque: auto-ajustar. ${Ze.offset ? "Histórico · " + Ze.offset + " velas antes da última" : "Últimas velas disponíveis"}.</p>` +
         Ht +
         St +
         Vt +
@@ -94153,11 +94201,53 @@ Dados do terminal agora:
           O.dp,
         )));
       const E = ne.querySelector(".g9cx");
+      const P = ge * O.bw + O.bw / 2;
       if (E) {
-        const P = ge * O.bw + O.bw / 2;
         (E.setAttribute("x1", P), E.setAttribute("x2", P));
       }
+      const bar = O.L[ge];
+      const dot = ne.querySelector(".g9dot");
+      const tip = ne.querySelector(".g9tip");
+      if (bar && dot && tip) {
+        const yClose = 6 + O.priceAxis.ratio(bar[4]) * (O.chartHeight - 24);
+        dot.setAttribute("cx", P.toFixed(1));
+        dot.setAttribute("cy", yClose.toFixed(1));
+        const dtBar = new Date(bar[0] * 1e3);
+        const dtStr = O.iv === "1d" ? dtBar.toLocaleDateString("pt-BR") : dtBar.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        const tipTxt = `${dtStr} · ${g(bar[4], O.dp)}`;
+        const txEl = tip.querySelector(".g9tip-tx");
+        const bgEl = tip.querySelector(".g9tip-bg");
+        if (txEl && bgEl) {
+          txEl.textContent = tipTxt;
+          const tw = Math.max(88, tipTxt.length * 6.8 + 14);
+          const bx = P + 10 + tw > O.cw ? Math.max(4, P - 10 - tw) : P + 10;
+          const by = Math.max(8, Math.min(O.chartHeight - 28, yClose - 12));
+          bgEl.setAttribute("x", bx.toFixed(1));
+          bgEl.setAttribute("y", by.toFixed(1));
+          bgEl.setAttribute("width", tw.toFixed(1));
+          bgEl.setAttribute("height", "20");
+          txEl.setAttribute("x", (bx + 7).toFixed(1));
+          txEl.setAttribute("y", (by + 13.5).toFixed(1));
+          tip.hidden = false;
+        }
+      }
     });
+    document.addEventListener("pointerleave", (q) => {
+      const svg = q.target && q.target.closest && q.target.closest("svg[data-g9svg]");
+      if (!svg) return;
+      const tip = svg.querySelector(".g9tip");
+      if (tip) tip.hidden = true;
+    }, true);
+    document.addEventListener("wheel", (q) => {
+      const svg = q.target && q.target.closest && q.target.closest("svg[data-g9svg]");
+      if (!svg || !window.TRM?.tec?.chartView) return;
+      const panel = Number(svg.dataset.g9svg);
+      if (!Number.isInteger(panel) || panel < 0) return;
+      if (q.cancelable) q.preventDefault();
+      const r = svg.getBoundingClientRect();
+      const anchor = Math.max(0, Math.min(1, (q.clientX - r.left) / Math.max(20, r.width)));
+      window.TRM.tec.chartView(panel, "zoom", q.deltaY < 0 ? 0.85 : 1.18, anchor);
+    }, { passive: false });
     async function ht(q) {
       await Promise.all([Xe(q.tk, dt(q)), d("cot", { s: [q.tk] }, 15e3)]);
     }

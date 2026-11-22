@@ -187,21 +187,34 @@ document.addEventListener("click", (e) => {
     t &&
       t.querySelectorAll("a.card").forEach((a) => {
         if (
-          a.nextElementSibling &&
-          a.nextElementSibling.classList.contains("eco-nw")
+          a.querySelector('[data-eco="news"]') ||
+          (a.nextElementSibling &&
+            a.nextElementSibling.classList.contains("eco-nw"))
         )
           return;
         const o = (a.querySelector("div") || a).textContent
             .replace(/^URGENTE/, "")
-            .trim(),
-          s = document.createElement("div");
-        ((s.className = "eco-nw"),
-          (s.innerHTML =
-            '<button class="btn s" data-eco="news">🎓 Explicar</button>'));
-        const n = s.firstChild;
-        ((n.dataset.t = o),
-          (n.dataset.l = a.getAttribute("href") || ""),
-          a.after(s));
+            .trim();
+        const meta = a.querySelector(".sm.mut, .mut.sm, small");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn s eco-nw-inline";
+        btn.dataset.eco = "news";
+        btn.dataset.t = o;
+        btn.dataset.l = a.getAttribute("href") || "";
+        btn.textContent = "Explicar";
+        if (meta) {
+          meta.style.display = "flex";
+          meta.style.alignItems = "center";
+          meta.style.justifyContent = "space-between";
+          meta.style.gap = "8px";
+          meta.appendChild(btn);
+        } else {
+          const s = document.createElement("div");
+          s.className = "eco-nw";
+          s.appendChild(btn);
+          a.after(s);
+        }
       });
   };
 }
@@ -1648,15 +1661,31 @@ function imgMostra(e) {
   const t = document.getElementById("imgov");
   t && t.remove();
   const a = document.createElement("div");
+  const fecha = () => {
+    a.remove();
+    document.removeEventListener("keydown", onEsc);
+    document.removeEventListener("click", onNav, true);
+    try { URL.revokeObjectURL(e); } catch {}
+  };
+  const onEsc = (ev) => { if (ev.key === "Escape") fecha(); };
+  const onNav = (ev) => {
+    if (ev.target && ev.target.closest && ev.target.closest("[data-dt393-route],[data-v4-go],[data-tab],[data-navroute]")) {
+      fecha();
+    }
+  };
+  document.addEventListener("keydown", onEsc);
+  document.addEventListener("click", onNav, true);
   ((a.id = "imgov"),
+    a.setAttribute("data-noclaro", "1"),
     (a.style.cssText =
-      "position:fixed;inset:0;z-index:99999;background:rgba(13,13,14,0.92);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(14px + env(safe-area-inset-bottom,0px))"),
-    (a.innerHTML = `<div style="display:flex;gap:8px;margin-bottom:10px"><button data-img="x" class="imgov-voltar" style="flex:0 0 auto;min-height:44px;padding:12px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:var(--dt-s1);color:#ffffff;-webkit-text-fill-color:#ffffff;font-weight:600;font-size:16px;cursor:pointer">← Voltar</button><button data-img="s" style="flex:1;padding:12px;border-radius:12px;border:0;background:#3b3e43;color:#ffffff;font-weight:700;font-size:16px">📤 Compartilhar / salvar</button></div><div style="flex:1;overflow:auto;display:flex;justify-content:center"><img src="${e}" alt="Panorama do mercado" style="max-width:100%;height:auto;border-radius:12px;align-self:flex-start"></div><div style="color:#e9e7e4;font-size:13px;margin-top:8px;text-align:center">No iPhone: Compartilhar → "Salvar imagem" ou mande direto no WhatsApp. Ou segure a imagem para salvar.</div>`),
+      "position:fixed;inset:0;z-index:99999;background:rgba(10,11,15,0.94);backdrop-filter:blur(10px);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(14px + env(safe-area-inset-bottom,0px))"),
+    (a.innerHTML = `<div style="display:flex;gap:8px;margin-bottom:10px"><button data-img="x" class="imgov-voltar" style="flex:0 0 auto;min-height:44px;padding:12px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:var(--dt-s1,#12151E);color:#ffffff;-webkit-text-fill-color:#ffffff;font-weight:600;font-size:16px;cursor:pointer">← Voltar</button><button data-img="s" style="flex:1;padding:12px;border-radius:12px;border:0;background:#C9A66B;color:#0A0B0F;font-weight:700;font-size:16px;cursor:pointer">📤 Compartilhar / salvar</button></div><div style="flex:1;overflow:auto;display:flex;justify-content:center"><img src="${e}" alt="Panorama do mercado" style="max-width:100%;height:auto;border-radius:12px;align-self:flex-start"></div><div style="color:#e9e7e4;font-size:13px;margin-top:8px;text-align:center">No iPhone: Compartilhar → "Salvar imagem" ou mande direto no WhatsApp. Ou segure a imagem para salvar.</div>`),
     a.addEventListener("click", async (o) => {
+      if (o.target === a) { fecha(); return; }
       const s = o.target.closest("[data-img]");
       if (!s) return;
       if (s.dataset.img === "x") {
-        (a.remove(), URL.revokeObjectURL(e));
+        fecha();
         return;
       }
       const n = new File([IMG.blob], IMG.nome, { type: "image/jpeg" });

@@ -3440,7 +3440,10 @@ const CQ_LOGO_MEMO = new Map(), CQ_LOGO_URL_STATUS = new Map();
 function cqLogoHtml(html) {
  // A transformação é feita ANTES de o WebKit criar o elemento IMG.
  // O erro será tratado no contêiner Mercado, sem DiarioLogos._erro remover a imagem.
- return String(html || "").replace(/<img\b[^>]*>/gi, tag =>
+ return String(html || "")
+  .replace(/<span\b([^>]*\bclass="[^"]*\b(?:dl-logo|cqm-logo)\b[^"]*"[^>]*)>/gi, (m, attrs) =>
+    /\bdata-noclaro\b/i.test(attrs) ? m : `<span${attrs} data-noclaro="1">`)
+  .replace(/<img\b[^>]*>/gi, tag =>
    tag.replace(/\s(?:loading|decoding|draggable|onerror)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
       .replace(/>$/, ' decoding="sync" draggable="false">'));
 }
@@ -3451,10 +3454,10 @@ function cqLogoMemo(symbol,color,mark){
  try{el=window.TraderAssetIdentity?.avatar(symbol);}catch{}
  let html;
  if(el){
-  el.classList.add("cqi","cqm-logo");el.dataset.cqmSymbol=key;
+  el.classList.add("cqi","cqm-logo");el.dataset.cqmSymbol=key;el.setAttribute("data-noclaro","1");
   html=cqLogoHtml(el.outerHTML);
  }else{
-  html='<span class="cqi cqm-logo" data-cqm-symbol="'+esc(key)+'" style="color:'+color+';background:color-mix(in srgb,'+color+' 16%,transparent)">'+esc(mark)+'</span>';
+  html='<span class="cqi cqm-logo" data-noclaro="1" data-cqm-symbol="'+esc(key)+'" style="color:'+color+';background:color-mix(in srgb,'+color+' 16%,transparent)">'+esc(mark)+'</span>';
  }
  if(!el?.dataset.dlPendente){
   if(CQ_LOGO_MEMO.size>=700)CQ_LOGO_MEMO.delete(CQ_LOGO_MEMO.keys().next().value);
@@ -3466,7 +3469,9 @@ function cqLogoFallback(logo) {
  if(!logo || logo.classList.contains("ta-avatar") || logo.querySelector(":scope > .cqm-logo-fallback"))return;
  const t=document.createElement("span");
  t.className="cqm-logo-fallback";
- t.textContent=String(logo.dataset.dl||logo.dataset.cqmSymbol||"").replace(/[^A-Z0-9]/gi,"").slice(0,2).toUpperCase()||"•";
+ const raw=String(logo.dataset.dl||logo.dataset.cqmSymbol||"");
+ const pm=/^PAIS:([A-Z]{2})$/i.exec(raw);
+ t.textContent=(pm?pm[1]:raw.replace(/[^A-Z0-9]/gi,"").slice(0,2)).toUpperCase()||"•";
  t.setAttribute("aria-hidden","true");
  logo.prepend(t);
 }
@@ -3662,13 +3667,13 @@ function cqItens(category) {
   const adrN = category === 'adr' ? (AD.data?.itens || []).filter(item=>(item.regular?.px ?? item.px)>0).length : 0;
   const total = visible.length + adrN;
   const cache606 = CQ.cache606?.[category];
-  const summary606 = mapa606 ? `12 termômetros${M606.busy ? ' · atualizando…' : ''}` : busy ? (total ? `${total} ativos · atualizando${cache606 ? ' (mostrando o salvo às '+new Date(cache606).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})+')' : ''}…` : 'Atualizando…') : total+' ativos';
+  const summary606 = mapa606 ? `12 termômetros${M606.busy ? ' · atualizando…' : ''}` : busy && !total ? 'Atualizando…' : total+' ativos';
   return `<div id="cotbox" class="market-quotes${term623 ? ' m624-t' : ''}" data-category="${esc(category)}">
-    <div class="market-categories" role="group" aria-label="Categorias de ativos">${CQ_ABAS.map(([key,label])=>`<button type="button" data-cqa="${key}" class="${category===key?'on':''}" aria-pressed="${category===key}">${esc(label.replace('★ ',''))}</button>`).join('')}</div>
+    <div class="market-categories" role="group" aria-label="Categorias de ativos">${CQ_ABAS.map(([key,label])=>`<button type="button" data-cqa="${key}" class="${!mapa606 && category===key?'on':''}" aria-pressed="${!mapa606 && category===key}">${esc(label.replace('★ ',''))}</button>`).join('')}</div>
     <div class="market-tools"><label class="market-search"><span class="market-sr">Buscar ativo</span><input type="search" data-market-search placeholder="Buscar ativo" value="${esc(CQ.search || '')}" autocomplete="off"></label><button type="button" data-cqr="1" aria-label="Atualizar preços" ${busy?'disabled':''}>↻</button><label class="market-order"><span class="market-sr">Ordenar ativos</span><select data-market-order>${[['lista','Ordem padrão'],['alta','Maiores altas'],['baixa','Maiores quedas']].map(([key,label])=>`<option value="${key}" ${CQ.ord===key?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-cqv="${CQ.vis==='mapa'?'lista':'mapa'}" aria-label="${CQ.vis==='mapa'?'Ver lista':'Ver mapa de calor'}">${CQ.vis==='mapa'?'Lista':'Mapa'}</button>${desk624 ? `<button type="button" class="m624-b" data-imgger="1" title="Gerar a imagem Panorama do mercado">Panorama</button>${term623 ? '<button type="button" class="m624-b" data-m624-mon aria-pressed="false" title="Tela limpa só com a grade (Esc para sair)">Modo Monitor</button>' : ''}` : ''}</div>
     ${term623 ? m623Html() : `<div class="market-summary" role="status">${summary606}${!mapa606 && data?.em ? ' · Consulta '+esc(new Date(data.em).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}))+' BRT' : ''}</div>
     ${error ? `<p class="market-error" role="status">${esc(error)}${items.length?' Mantendo a consulta anterior.':''}</p>` : ''}
-    <div class="market-results" aria-busy="${busy}">${content}</div>`}
+    <div class="market-results" aria-busy="${busy && !total}">${content}</div>`}
     <details class="market-sources"><summary>Fontes e ferramentas</summary><p>Profit para ativos da B3 quando a ponte está conectada. Após o pregão, o último registro salvo aparece como FECHADO, com contrato e horário. As demais fontes e seus atrasos aparecem em cada ativo.</p><button type="button" data-navroute="term">Abrir gráficos e comparação no Terminal</button><button type="button" data-market-longshort>Long &amp; Short</button>${cqAlertasHtml()}${category==='jur'?'<button type="button" data-market-di>Ver curva DI no Terminal</button>'+cqJurosExtra():''}</details>
   </div>`;
 }),
@@ -4778,7 +4783,7 @@ function m623Linha(it) {
     const f = fhAplica(it.k, it.px, it.d1, it.g);
     f && ((px = f.px), (d1 = f.d1), (em = f.em), (vivo = "fh"));
   }
-  ab = vivo ? !0 : m623Aberto({ ...it, em });
+  ab = px != null && (vivo ? !0 : m623Aberto({ ...it, em }));
   const juro = it.un === "%",
     varTxt = juro && it.dabs != null && !vivo ? m606Sinal(it.dabs * 100, 1, " bps") : m606Sinal(d1),
     varCls = m606Cls(juro && it.dabs != null && !vivo ? it.dabs : d1),
@@ -5515,12 +5520,35 @@ const BNC_NOMES = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", XRP: "XRP", 
 const BNC_TOP = Object.keys(BNC_NOMES);
 const bncDp = (px) => (px >= 1e3 ? 2 : px >= 1 ? 3 : px >= 0.01 ? 5 : 8);
 /** Completa a lista com os 20 pares (os que vieram do servidor ficam; os que faltam entram com o preço da Binance). */
+function bncCacheFallback(k) {
+  const q = bncQ(k);
+  if (q && q.px != null) return q;
+  try {
+    const u = String(k || "").toUpperCase();
+    const fontes = [
+      ...(CQ?.d?.cri?.itens || []),
+      ...(M606?.v?.terminal || []),
+      ...(M606?.v?.mapa || []),
+      ...((MDO?.v?.mercados?.grupos || []).flatMap((g) => g.itens || [])),
+    ];
+    for (const it of fontes) {
+      const sym = String(it.k || it.c || it.s || "").toUpperCase().replace(/^(?:BINANCE|CRYPTO):/, "").replace(/(?:USDT|USD)$/, "");
+      if (sym === u && it.px != null && Number.isFinite(+it.px) && +it.px > 0) {
+        return { px: +it.px, d1: it.d1 ?? it.chp ?? null, em: it.em ? Date.parse(it.em) || Date.now() : Date.now() };
+      }
+    }
+    const td = typeof window.tapeDados === "function" ? window.tapeDados() : null;
+    const tq = td && (td[u + "-USD"] || td[u]);
+    if (tq && Number(tq.px) > 0) return { px: +tq.px, d1: tq.chg ?? tq.d1 ?? null, em: tq.dadoEm || Date.now() };
+  } catch {}
+  return null;
+}
 function bncTop20(base) {
   const L = (base || []).slice(),
     tem = new Set(L.map((x) => String(x.k || x.c || "").toUpperCase()));
   BNC_TOP.forEach((k) => {
     if (tem.has(k)) return;
-    const q = bncQ(k);
+    const q = bncCacheFallback(k);
     L.push({ g: "cri", k, n: BNC_NOMES[k], s: "BINANCE:" + k + "USDT", px: q ? q.px : null, d1: q ? q.d1 : null, dp: q ? bncDp(q.px) : 2, ss: "24h", em: q ? new Date(q.em).toISOString() : null });
   });
   return L;
@@ -5534,7 +5562,7 @@ function bncTop20(base) {
           L = d.itens || (d.itens = []),
           tem = new Set(L.map((x) => String(x.c || "").toUpperCase()));
         BNC_TOP.forEach((k) => {
-          const q = bncQ(k);
+          const q = bncCacheFallback(k);
           !tem.has(k) && q && L.push({ c: k, n: BNC_NOMES[k], s: "BINANCE:" + k + "USDT", px: q.px, d1: q.d1, dp: bncDp(q.px), _aba: "cri" });
         });
       }

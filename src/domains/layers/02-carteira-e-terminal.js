@@ -7112,7 +7112,7 @@ try {
     // Dicionário fixo (resolve na hora, sem consulta): índices, futuros, commodities, cripto, juros e ADRs/ETFs do app.
     const FIXO = {
       IBOV: "indices/bovespa-index", IBOVESPA: "indices/bovespa-index", "^BVSP": "indices/bovespa-index", IFIX: "b3-on-nm", SMLL: "b3-on-nm", IBXX: "b3-on-nm", IDIV: "b3-on-nm",
-      WIN: "country/BR", IND: "country/BR", WDO: "country/US", DOL: "country/US",
+      WIN: "country/BR", IND: "country/BR", WDO: "country/BR", DOL: "country/BR",
       SPX: "indices/s-and-p-500", "S&P 500": "indices/s-and-p-500", SP500: "indices/s-and-p-500", "^GSPC": "indices/s-and-p-500", ES: "indices/s-and-p-500",
       NDX: "indices/nasdaq-100", NQ: "indices/nasdaq-100", "^IXIC": "indices/nasdaq-composite", DJI: "indices/dow-30", YM: "indices/dow-30", RUT: "indices/russell-2000", RTY: "indices/russell-2000",
       VIX: "indices/volatility-s-and-p-500", DXY: "indices/u-s-dollar-index", "DX-Y.NYB": "indices/u-s-dollar-index",
@@ -7226,15 +7226,22 @@ try {
     /** HTML do logo (círculo) — bandeiras sobrepostas nos pares. */
     function html(t, tam = 20) {
       const v = urls(t), e = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-      const k = norm(t), ini = e(k.replace(/[^A-Z0-9]/g, "").slice(0, 2));
-      if (!v) return `<span class="dl-logo dl-vazio" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true">${ini}</span>`;
-      if (v.par) return `<span class="dl-logo dl-par" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true"><img src="${e(v.urls[0])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"><img src="${e(v.urls[1])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>`;
-      return `<span class="dl-logo" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true"><img src="${e(v.urls[0])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.DiarioLogos&&DiarioLogos._erro(this)"></span>`;
+      const k = norm(t), pm = /^PAIS:([A-Z]{2})$/.exec(k), ini = e(pm ? pm[1] : k.replace(/[^A-Z0-9]/g, "").slice(0, 2));
+      if (!v) return `<span class="dl-logo dl-vazio" data-noclaro="1" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true">${ini}</span>`;
+      if (v.par) return `<span class="dl-logo dl-par" data-noclaro="1" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true"><img src="${e(v.urls[0])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.DiarioLogos&&DiarioLogos._erro(this)"><img src="${e(v.urls[1])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.DiarioLogos&&DiarioLogos._erro(this)"></span>`;
+      return `<span class="dl-logo" data-noclaro="1" data-dl="${e(k)}" style="--dl:${tam}px" aria-hidden="true"><img src="${e(v.urls[0])}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.DiarioLogos&&DiarioLogos._erro(this)"></span>`;
     }
     function _erro(img) {
       const sp = img.closest(".dl-logo"), k = sp && sp.dataset.dl, prox = k && falhou(k, img.src);
       if (prox) img.src = prox;
-      else if (sp) (img.remove(), sp.classList.add("dl-vazio"), (sp.textContent = (k || "").replace(/[^A-Z0-9]/g, "").slice(0, 2)));
+      else if (sp) {
+        const pm = /^PAIS:([A-Z]{2})$/.exec(k || "");
+        img.remove();
+        if (!sp.querySelector("img")) {
+          sp.classList.add("dl-vazio");
+          sp.textContent = pm ? pm[1] : (k || "").replace(/[^A-Z0-9]/g, "").slice(0, 2);
+        }
+      }
     }
     // Atualiza na tela os logos que chegaram depois (sem refazer a página).
     w.addEventListener("diario-logos", (ev) => {

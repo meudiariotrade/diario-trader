@@ -5262,19 +5262,7 @@ const IC = (e) =>
     if (document.getElementById("tape")) return;
     const c = document.createElement("div");
     c.id = "tape";
-    const p = document.createElement("div");
-    ((p.className = "tradingview-widget-container"),
-      (p.innerHTML =
-        '<div class="tradingview-widget-container__widget"></div>'));
-    const u = document.createElement("script");
-    ((u.src =
-      "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js"),
-      (u.async = !0),
-      (u.innerHTML = JSON.stringify(a)),
-      c.appendChild(p),
-      setTimeout(() => {
-        r || p.appendChild(u);
-      }, 7e3));
+    c.setAttribute("data-noclaro", "1");
     const m = document.createElement("div");
     ((m.id = "tapeSp"),
       document.body.insertBefore(m, document.body.firstChild),

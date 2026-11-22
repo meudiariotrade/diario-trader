@@ -21,8 +21,8 @@ const PRESETS=[
  ['USDBRL','DXY','Dólar × DXY'],['OURO','DXY','Ouro × DXY'],
  ['IBOV','BC:SELIC','Ibovespa × Selic'],['IBOV','BC:IPCA12','Ibovespa × IPCA 12 meses'],['IBOV','BC:IBCBR','Ibovespa × IBC-Br'],['USDBRL','BC:SELIC','Dólar × Selic']];
 const PER=[['1D','5m',1],['3D','15m',3],['1M','60m',31],['6M','1d',183],['YTD','1d',-1],['1A','1d',366],['2A','1d',731],['Máx','1d',99999]];
-const def={a:'IBOV',b:'SPX',per:'1A',freq:'D',mode:'dual',ma:[],ev:true,table:false};
-let st=(()=>{try{return Object.assign({},def,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){return {...def}}})();
+const def={a:'IBOV',b:'SPX',per:'1A',freq:'D',mode:'dual',style:'line',ma:[],ev:true,table:false};
+let st=(()=>{try{const o=Object.assign({},def,JSON.parse(localStorage.getItem(KEY)||'{}'));if(!['line','candles'].includes(o.style))o.style='line';return o}catch(e){return {...def}}})();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fin=n=>typeof n==='number'&&Number.isFinite(n);
@@ -222,13 +222,22 @@ function svg(){
   if(mode==='ratio'){const r=pairs.map(([a,b])=>b?a[4]/b[4]:null);const f0=r.find(v=>v!=null);sa=r.map(v=>v==null?null:v/f0*100);sb=null;labelA=st.a+' / '+st.b}
   const xs=A.map(r=>r[0]);const t0=xs[0],t1=xs[xs.length-1];
   const X=i=>L+(i/(xs.length-1))*cw;
+  const isCandles=(st.style||'line')==='candles'&&mode==='single'&&!isEcon(st.a);
   const rng=v=>{const f=v.filter(fin);let lo=Math.min(...f),hi=Math.max(...f);const m=(hi-lo)*.08||Math.abs(hi)*.01||1;return [lo-m,hi+m]};
+  const rngA=isCandles?rng(A.flatMap(r=>[r[2],r[3]])):rng(sa);
   const both=mode==='base'?rng([...sa,...(sb||[])]):null;
-  const [ra0,ra1]=navPriceBounds(both||rng(sa));const [rb0,rb1]=sb?(both?[ra0,ra1]:rng(sb)):[0,1];
+  const [ra0,ra1]=navPriceBounds(both||rngA);const [rb0,rb1]=sb?(both?[ra0,ra1]:rng(sb)):[0,1];
   const YA=v=>T+(1-(v-ra0)/(ra1-ra0))*chh, YB=v=>T+(1-(v-rb0)/(rb1-rb0))*chh;
   const path=(s,Y)=>{let d='',pen=false;s.forEach((v,i)=>{if(v==null){pen=false;return}d+=(pen?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1);pen=true});return d};
   const dA=path(sa,YA);const area=dA+`L${X(sa.length-1).toFixed(1)},${(T+chh).toFixed(1)}L${X(0).toFixed(1)},${(T+chh).toFixed(1)}Z`;
   const dB=sb?path(sb,mode==='base'?YA:YB):'';
+  let seriesSvg='';
+  if(isCandles){
+    const bw=Math.max(2,Math.min(14,(cw/Math.max(1,A.length))*0.68));
+    seriesSvg=A.map((r,i)=>{const x=X(i),up=r[4]>=r[1],col=up?'#34D399':'#F87171',yO=YA(r[1]),yC=YA(r[4]),yH=YA(r[2]),yL=YA(r[3]),top=Math.min(yO,yC),h=Math.max(1.2,Math.abs(yC-yO));return `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${yH.toFixed(1)}" y2="${yL.toFixed(1)}" stroke="${col}" stroke-width="1.2"/><rect x="${(x-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}" rx="0.6"/>`}).join('');
+  }else{
+    seriesSvg=`<path class="gp-area" d="${area}"/>${dB?`<path class="gp-lb" d="${dB}"/>`:''}<path class="gp-la" d="${dA}"/>`;
+  }
   // eixos (principal à direita = R1, como no Bloomberg)
   const ticks=(a0,a1,n=6)=>Array.from({length:n},(_,i)=>a0+(a1-a0)*i/(n-1));
   const fmtAx=v=>mode==='base'||mode==='ratio'?nf(v,1):nf(v,Math.abs(v)>=1000?0:Math.abs(v)<10?2:1);
@@ -242,26 +251,26 @@ function svg(){
     const yr=iv==='1d'&&(i===0||new Date(xs[Math.round((i-1)*(xs.length-1)/(nX-1))]*1000).getFullYear()!==d.getFullYear())?d.getFullYear():'';
     grid+=`<path class="gp-g" d="M${x} ${T}V${T+chh}"/>`;xl+=`<text class="gp-ax" x="${x}" y="${H-Bm+16}" text-anchor="middle">${lab}</text>${yr?`<text class="gp-ax gp-yr" x="${x}" y="${H-Bm+31}" text-anchor="middle">${yr}</text>`:''}`}
   // médias móveis da série principal (em preço; não em razão)
-  let mas='';const colors={20:'#cfab69',50:'#b6b1a6',200:'#ed8c7d'};
+  let mas='';const colors={20:'#FF9F1C',50:'#94A3B8',200:'#F87171'};
   if(mode!=='ratio')st.ma.forEach(n=>{const m=sma(pa,n).map(v=>v==null?null:(mode==='base'?v/pa[0]*100:v));if(m.filter(v=>v!=null).length>1)mas+=`<path class="gp-ma" stroke="${colors[n]}" d="${path(m,YA)}"/>`});
   // eventos-chave
   const evs=events(t0,t1,st.a);let evg='';
   evs.forEach((e,i)=>{let j=0;while(j<xs.length-1&&xs[j+1]<=e.t)j++;const x=X(j).toFixed(1);
     if(e.k==='ev')evg+=`<g class="gp-ev" data-gp-ev="${i}"><path d="M${x} ${T}V${T+chh}"/><rect x="${+x-6}" y="${T+chh-12}" width="12" height="12" rx="2"/><text x="${x}" y="${T+chh-3}" text-anchor="middle">E</text><title>${esc(e.l)}</title></g>`;
     else{const y=YA(sa[j]??sa[sa.length-1]);evg+=`<g class="gp-trade ${e.k}"><path d="${e.k==='buy'?`M${x} ${(y+6).toFixed(1)}l-6 10h12z`:`M${x} ${(y-6).toFixed(1)}l-6 -10h12z`}"/><title>${esc(e.l)}</title></g>`}});
-  // etiquetas do último valor nos eixos
+  // etiquetas do último valor nos eixos (preto sobre âmbar para alto contraste)
   const lastA=sa[sa.length-1],lastB=sb?[...sb].reverse().find(v=>v!=null):null;
-  const tagR=`<g class="gp-tag gp-tag-a"><rect x="${W-R+2}" y="${(YA(lastA)-9).toFixed(1)}" width="${R-4}" height="18" rx="2"/><text x="${W-R/2}" y="${(YA(lastA)+4).toFixed(1)}" text-anchor="middle">${fmtAx(lastA)}</text></g>`;
+  const tagR=`<g class="gp-tag gp-tag-a"><rect x="${W-R+2}" y="${(YA(lastA)-9).toFixed(1)}" width="${R-4}" height="18" rx="2" fill="#FF9F1C"/><text x="${W-R/2}" y="${(YA(lastA)+4).toFixed(1)}" text-anchor="middle" style="fill:#000000;font-weight:800">${fmtAx(lastA)}</text></g>`;
   const tagL=lastB!=null?(mode==='dual'?`<g class="gp-tag gp-tag-b"><rect x="2" y="${(YB(lastB)-9).toFixed(1)}" width="${L-4}" height="18" rx="2"/><text x="${L/2}" y="${(YB(lastB)+4).toFixed(1)}" text-anchor="middle">${fmtAx(lastB)}</text></g>`:`<g class="gp-tag gp-tag-b"><rect x="${W-R+2}" y="${(YA(lastB)-9).toFixed(1)}" width="${R-4}" height="18" rx="2"/><text x="${W-R/2}" y="${(YA(lastB)+4).toFixed(1)}" text-anchor="middle">${fmtAx(lastB)}</text></g>`):'';
-  const legendRows=[[labelA,mode==='dual'?'R1':'',sa[sa.length-1],'#fff']].concat(sb?[[labelB,mode==='dual'?'L1':'',lastB,'#6d9ac1']]:[]);
-  const legend=`<g class="gp-legend"><rect x="${L+8}" y="${T+6}" width="210" height="${18+legendRows.length*16}" rx="3"/><text class="gp-lt" x="${L+113}" y="${T+19}" text-anchor="middle">${mode==='base'?'Base 100':mode==='ratio'?'Razão (base 100)':'Último preço'}</text>${legendRows.map((r,i)=>`<rect x="${L+16}" y="${T+26+i*16}" width="9" height="9" fill="${r[3]}"/><text class="gp-lv" x="${L+30}" y="${T+34+i*16}">${esc(r[0])}${r[1]?' ('+r[1]+')':''}</text><text class="gp-lv" x="${L+210}" y="${T+34+i*16}" text-anchor="end">${fmtAx(r[2])}</text>`).join('')}</g>`;
-  lastGeom={xs,A,B:pairs,sa,sb,X,L,R,W,T,chh,mode,fmtAx};
+  const legendRows=[[labelA,mode==='dual'?'R1':'',sa[sa.length-1],'#FF9F1C']].concat(sb?[[labelB,mode==='dual'?'L1':'',lastB,'#6d9ac1']]:[]);
+  const legend=`<g class="gp-legend"><rect x="${L+8}" y="${T+6}" width="210" height="${18+legendRows.length*16}" rx="3"/><text class="gp-lt" x="${L+113}" y="${T+19}" text-anchor="middle">${mode==='base'?'Base 100':mode==='ratio'?'Razão (base 100)':isCandles?'Candles OHLC':'Último preço'}</text>${legendRows.map((r,i)=>`<rect x="${L+16}" y="${T+26+i*16}" width="9" height="9" fill="${r[3]}"/><text class="gp-lv" x="${L+30}" y="${T+34+i*16}">${esc(r[0])}${r[1]?' ('+r[1]+')':''}</text><text class="gp-lv" x="${L+210}" y="${T+34+i*16}" text-anchor="end">${fmtAx(r[2])}</text>`).join('')}</g>`;
+  lastGeom={xs,A,B:pairs,sa,sb,X,YA,L,R,W,T,chh,mode,fmtAx};
   return {html:`<svg class="gp-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Gráfico de ${esc(labelA)}${sb?' e '+esc(labelB):''}, período ${esc(st.per)}">
     <defs><clipPath id="gp421-plot-clip"><rect x="${L}" y="${T}" width="${cw}" height="${chh}"/></clipPath></defs>
     <rect class="gp-bg" x="${L}" y="${T}" width="${cw}" height="${chh}"/>${grid}
-    <g class="gp-view-series" clip-path="url(#gp421-plot-clip)"><path class="gp-area" d="${area}"/>${dB?`<path class="gp-lb" d="${dB}"/>`:''}<path class="gp-la" d="${dA}"/>${mas}${evg}</g>
+    <g class="gp-view-series" clip-path="url(#gp421-plot-clip)">${seriesSvg}${mas}${evg}</g>
     <path class="gp-frame" d="M${L} ${T}V${T+chh}H${W-R}V${T}"/>${ax}${xl}${tagR}${tagL}${legend}
-    <g class="gp-cross" hidden><path class="gp-cv" d=""/><rect class="gp-cbox" rx="3"/><text class="gp-ct"></text></g></svg>`,ok:true};
+    <g class="gp-cross" hidden><path class="gp-cv" d=""/><path class="gp-ch" d="" stroke="#FF9F1C" stroke-dasharray="3 3" opacity="0.6"/><circle class="gp-cdot" r="3.5" fill="#FF9F1C" stroke="#000" stroke-width="1.2"/><rect class="gp-cbox" rx="3"/><text class="gp-ct"></text></g></svg>`,ok:true};
 }
 function table(){
   const iv=ivOf();const A=resample(cut(bars(st.a,iv))),B=st.b?(isEcon(st.b)?bars(st.b,iv):resample(cut(bars(st.b,iv)))):[];
@@ -277,7 +286,7 @@ function shell(){
   return `<section id="v421-gp" class="gp" aria-label="Gráfico do Terminal">
   <div class="gp-head" data-gp-head></div>
   <div class="gp-bar1">
-    <span class="gp-type">Gráfico de linha</span>
+    <div class="gp-seg gp-style-seg" role="group" aria-label="Tipo de gráfico"><button type="button" data-gp-style="line" aria-pressed="${(st.style||'line')==='line'}">Linha</button><button type="button" data-gp-style="candles" aria-pressed="${st.style==='candles'}">Candles</button></div>
     <label class="gp-sel gp-a"><span class="sr">Ativo principal</span><select data-gp-a>${opt(st.a)}</select></label>
     <div class="gp-menuwrap"><button type="button" class="gp-btn" data-gp="presets" aria-expanded="false">Gráficos prontos ▾</button><div class="gp-menu" data-gp-menu hidden>${PRESETS.map(([a,b,l],i)=>`<button type="button" data-gp-preset="${i}">${esc(l)}</button>`).join('')}</div></div>
     <div class="gp-seg" role="group" aria-label="Escala"><button type="button" data-gp-mode="dual">Eixo duplo</button><button type="button" data-gp-mode="base">Base 100</button><button type="button" data-gp-mode="ratio">Razão A/B</button></div>
@@ -369,8 +378,15 @@ root.DIARIO_V421={get:()=>JSON.parse(JSON.stringify(st)),set:o=>{Object.assign(s
 /* ---------- interação ---------- */
 doc.addEventListener('click',e=>{
   const el=e.target.closest('#v421-gp');if(!el)return;
-  const t=e.target.closest('[data-gp],[data-gp-per],[data-gp-mode],[data-gp-ma],[data-gp-preset],[data-gp-rel],[data-gp-nav]');if(!t)return;
+  const t=e.target.closest('[data-gp],[data-gp-style],[data-gp-per],[data-gp-mode],[data-gp-ma],[data-gp-preset],[data-gp-rel],[data-gp-nav]');if(!t)return;
   e.preventDefault();
+  if(t.dataset.gpStyle){
+    st.style=t.dataset.gpStyle==='candles'?'candles':'line';
+    if(st.style==='candles'&&st.mode!=='single'){st.mode='single';}
+    save();
+    el.querySelectorAll('[data-gp-style]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.gpStyle===st.style)));
+    paint();return;
+  }
   if(t.dataset.gpNav){
     const mode=t.dataset.gpNav;
     if(['hand','price','time'].includes(mode)){st.navMode=mode;save();syncControls(el);return}
@@ -485,29 +501,35 @@ root.addEventListener('blur',()=>{
 });
 doc.addEventListener('wheel',e=>{
   const svgEl=e.target.closest?.('#v421-gp .gp-svg');
-  if(!(e.ctrlKey||e.metaKey)||!svgEl)return;
+  if(!svgEl)return;
   const rect=svgEl.getBoundingClientRect();
   if(e.cancelable)e.preventDefault();
   e.stopImmediatePropagation();
-  navZoom(e.deltaY<0?.85:1.18,clip((e.clientX-rect.left)/Math.max(20,rect.width),0,1));
+  const factor=e.deltaY<0?.86:1.16;
+  navZoom(factor,clip((e.clientX-rect.left)/Math.max(20,rect.width),0,1));
   paint();
 },{capture:true,passive:false});
 
-// acompanhamento (Track) por toque ou mouse
+// acompanhamento (Track) por toque ou mouse — crosshair horizontal + vertical + tooltip limpo
 function track(ev){
   const svgEl=ev.target.closest?.('#v421-gp .gp-svg');if(!svgEl||!lastGeom)return;
   const pt=(ev.touches?ev.touches[0]:ev);const r=svgEl.getBoundingClientRect();
   const G=lastGeom;const vx=(pt.clientX-r.left)/r.width*G.W;
   let i=Math.round((vx-G.L)/(G.W-G.L-G.R)*(G.xs.length-1));i=Math.max(0,Math.min(G.xs.length-1,i));
-  const x=G.X(i);const c=svgEl.querySelector('.gp-cross');c.hidden=false;
+  const x=G.X(i);const va=G.sa[i]??G.A[i][4];const y=G.YA?G.YA(va):G.T+G.chh/2;
+  const c=svgEl.querySelector('.gp-cross');c.hidden=false;
   c.querySelector('.gp-cv').setAttribute('d',`M${x.toFixed(1)} ${G.T}V${G.T+G.chh}`);
+  const ch=c.querySelector('.gp-ch');if(ch)ch.setAttribute('d',`M${G.L} ${y.toFixed(1)}H${G.W-G.R}`);
+  const dot=c.querySelector('.gp-cdot');if(dot){dot.setAttribute('cx',x.toFixed(1));dot.setAttribute('cy',y.toFixed(1));}
   const d=new Date(G.xs[i]*1000).toLocaleString('pt-BR',ivOf()==='1d'?{day:'2-digit',month:'2-digit',year:'numeric'}:{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-  const va=G.A[i][4],vb=G.B?.[i]?.[1]?.[4];
-  const txt=`${d} · ${st.a} ${nf(va)}${vb!=null?' · '+st.b+' '+nf(vb):''}`;
+  const bar=G.A[i],vb=G.B?.[i]?.[1]?.[4];
+  const ohlc=(st.style==='candles'&&bar)?` A:${nf(bar[1])} M:${nf(bar[2])} m:${nf(bar[3])} F:${nf(bar[4])}`:` ${nf(bar[4])}`;
+  const txt=`${d} · ${st.a}${ohlc}${vb!=null?' · '+st.b+' '+nf(vb):''}`;
   const tEl=c.querySelector('.gp-ct');tEl.textContent=txt;
-  const w=Math.min(G.W-20,txt.length*6.6+16);let bx=x+10;if(bx+w>G.W-G.R)bx=x-10-w;
-  tEl.setAttribute('x',(bx+8).toFixed(1));tEl.setAttribute('y',(G.T+G.chh-12).toFixed(1));
-  const box=c.querySelector('.gp-cbox');box.setAttribute('x',bx.toFixed(1));box.setAttribute('y',(G.T+G.chh-28).toFixed(1));box.setAttribute('width',w.toFixed(1));box.setAttribute('height','22');
+  const w=Math.min(G.W-20,txt.length*6.3+18);let bx=x+12;if(bx+w>G.W-G.R)bx=Math.max(G.L+4,x-12-w);
+  const by=Math.max(G.T+6,Math.min(G.T+G.chh-26,y-12));
+  tEl.setAttribute('x',(bx+9).toFixed(1));tEl.setAttribute('y',(by+15).toFixed(1));
+  const box=c.querySelector('.gp-cbox');box.setAttribute('x',bx.toFixed(1));box.setAttribute('y',by.toFixed(1));box.setAttribute('width',w.toFixed(1));box.setAttribute('height','22');
 }
 doc.addEventListener('pointermove',track,{passive:true});
 doc.addEventListener('touchmove',e=>{if(e.target.closest?.('#v421-gp .gp-svg'))track(e)},{passive:true});

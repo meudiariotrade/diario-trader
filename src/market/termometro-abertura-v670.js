@@ -86,16 +86,27 @@
       }
     } catch {}
     try {
-      if (typeof M606 !== "undefined" && M606?.v) {
-        const t = M606.ts || M606.v.em;
-        for (const it of M606.v.terminal || []) a.push({item:it,coleta:t,grupo:it.g});
-        for (const it of M606.v.emergentes?.itens || []) a.push({item:it,coleta:t,grupo:"em"});
+      const m6 = (typeof M606 !== "undefined" && M606?.v) ? M606 : (typeof ls !== "undefined" && ls?.get ? ls.get("diario-m606") : null);
+      if (m6?.v) {
+        const t = m6.ts || m6.v.em || Date.now();
+        for (const it of m6.v.mapa || []) a.push({item:it,coleta:t,grupo:"mapa"});
+        for (const it of m6.v.terminal || []) a.push({item:it,coleta:t,grupo:it.g});
+        for (const it of m6.v.emergentes?.itens || []) a.push({item:it,coleta:t,grupo:"em"});
       }
     } catch {}
     try {
       if (typeof MDO !== "undefined" && MDO?.v) {
         const t = MDO.ts || MDO.v.em;
         for (const grupo of MDO.v.mercados?.grupos || []) for (const it of grupo.itens || []) a.push({item:it,coleta:t,grupo:grupo.g});
+      }
+    } catch {}
+    try {
+      const td = typeof w.tapeDados === "function" ? w.tapeDados() : null;
+      if (td && typeof td === "object") {
+        for (const [k, q] of Object.entries(td)) {
+          if (!q || q.px == null) continue;
+          a.push({ item: { s: k, k, px: q.px, d1: q.chg ?? q.d1, em: q.dadoEm || Date.now() }, coleta: q.dadoEm || Date.now(), grupo: "tape" });
+        }
       }
     } catch {}
     return a;

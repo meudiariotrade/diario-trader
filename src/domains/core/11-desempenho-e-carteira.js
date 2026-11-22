@@ -540,6 +540,8 @@ if ((setTimeout(privBotao, 500), "serviceWorker" in navigator))
     });
   } catch {}
 function netAviso() {
+  const dup = document.getElementById("net188");
+  if (dup) dup.remove();
   let e = document.getElementById("netbar");
   if (navigator.onLine) {
     e && e.remove();
@@ -548,9 +550,11 @@ function netAviso() {
   e ||
     ((e = document.createElement("div")),
     (e.id = "netbar"),
+    e.setAttribute("role", "status"),
+    e.setAttribute("data-noclaro", "1"),
     (e.style.cssText =
-      "position:fixed;top:calc(env(safe-area-inset-top) + 6px);left:50%;transform:translateX(-50%);z-index:9998;background:#111111;color:#ffffff;border-radius:999px;padding:6px 14px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,0.3)"),
-    (e.textContent = "Sem internet: mostrando a última cópia salva"),
+      "position:fixed;top:calc(env(safe-area-inset-top) + 6px);left:50%;transform:translateX(-50%);z-index:880;max-width:calc(100vw - 24px);background:#141720;color:#F3F0E8;border:1px solid rgba(201,166,107,0.38);border-radius:999px;padding:6px 14px;font-size:12px;line-height:1.3;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.38);pointer-events:none"),
+    (e.textContent = "Sem internet · diário offline ativo (cotações voltam ao reconectar)"),
     document.body.appendChild(e));
 }
 (addEventListener("online", netAviso),

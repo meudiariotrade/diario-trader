@@ -32,10 +32,10 @@
     <div class="cp-texto">
       <div class="cp-eyebrow">Diário Trader · segunda tela</div>
       <h1>Cada pregão,<br>escrito à mão<br>e medido em números.</h1>
-      <p class="cp-desc">Consulta, mercado, carteira, diário e estudos num só caderno. A execução continua no Profit Pro.</p>
+      <p class="cp-desc">Consulta, mercado, carteira, diário e estudos num só caderno — feito para acompanhar a sua plataforma de execução.</p>
       <div class="cp-acoes">
         <button type="button" class="pri" data-capa-abrir>Abrir o diário</button>
-        <button type="button" data-capa-mov aria-pressed="false">Pausar movimento</button>
+        <button type="button" class="cp-mov" data-capa-mov aria-pressed="false">Pausar movimento</button>
       </div>
       <div class="cp-meta"><span>${dataBR}</span><span data-capa-versao>v—</span></div>
     </div>
@@ -80,8 +80,11 @@
     setTimeout(() => {
       el.classList.add('sai');
       d.removeEventListener('keydown', tecla, true);
-      setTimeout(() => { el.remove(); try { (foco && foco.isConnected ? foco : d.querySelector('#app button, #app a'))?.focus({ preventScroll: true }); } catch { } }, 520);
-      w.dispatchEvent(new CustomEvent('diario:capa-aberta'));
+      setTimeout(() => {
+        el.remove();
+        w.dispatchEvent(new CustomEvent('diario:capa-aberta'));
+        try { (foco && foco.isConnected ? foco : d.querySelector('#onb input, #app button, #app a'))?.focus({ preventScroll: true }); } catch { }
+      }, 520);
     }, parado ? 120 : 1150);
   }
   function tecla(e) {

@@ -5,7 +5,7 @@
   'use strict';
   if (root.DiarioClaro568) return;
   var visto = new WeakMap(), vtx = new WeakSet();
-  var PULA = '.trm,#tf413,#terminal-inicio,img,svg,canvas,video,iframe,picture,#wf-demo-banner,.wf-chat-launcher,#capa,#c561,#splash,.v503-fantasma,[class*="tradingview"],.c561-arte,.jr561-arte,.dt397-cover,.pf-logo,[data-noclaro]';
+  var PULA = '.trm,#tf413,#terminal-inicio,img,svg,canvas,video,iframe,picture,#wf-demo-banner,.wf-chat-launcher,#capa,#c561,#splash,.v503-fantasma,[class*="tradingview"],.c561-arte,.jr561-arte,.dt397-cover,.pf-logo,.dl-logo,.cqm-logo,.ta-avatar,.m606-mxc,#netbar,#tape,.tp-player,.tp-chart,[data-noclaro]';
   var SEL = '.on,.active,.ativo,.sel,.pri,[aria-pressed="true"],[aria-current],[aria-selected="true"]';
   function claro() { return doc.documentElement.getAttribute('data-v427-tema') === 'claro'; }
   function lum(c) {

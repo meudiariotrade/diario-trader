@@ -689,14 +689,19 @@ document.addEventListener("click", (e) => {
 });
 {
   const e = render;
-  render = function () {
-    e.apply(this, arguments);
+  function mostraOnbSeLivre() {
     try {
+      if (document.getElementById("capa") || (window.DiarioCapa && window.DiarioCapa.aberta)) return;
       contaNova() &&
         !["conta", "termos"].includes(tab) &&
         !document.getElementById("onb") &&
         document.body.insertAdjacentHTML("beforeend", onbHtml());
     } catch {}
+  }
+  window.addEventListener("diario:capa-aberta", mostraOnbSeLivre);
+  render = function () {
+    e.apply(this, arguments);
+    mostraOnbSeLivre();
   };
 }
 {

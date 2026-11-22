@@ -1,5 +1,7 @@
-/* v854 — Aula animada: desenha o gráfico da etapa em sequência (motion graphics), no app e na Ponte Vídeo.
-   Determinístico: o quadro depende só do tempo t, então o mesmo código serve para assistir e para gravar o MP4. */
+/* v870 — Aula animada 60fps: desenha o gráfico da etapa em sequência (motion graphics),
+   com palco vetorial (candles, ondas de Elliott 1–5, retrações de Fibonacci, zonas de invalidação
+   e suportes/resistências) e destaque de termos técnicos na legenda.
+   Determinístico: o quadro depende só do tempo t, servindo para assistir e para gravar o MP4. */
 (function(root){'use strict';
  const DESENHA='line,polyline,path,rect,circle,text';
  const ease=p=>p<0?0:p>1?1:1-Math.pow(1-p,3);
@@ -10,17 +12,17 @@
  function preparar(svg){
   if(!svg||svg.__aula)return svg?.__aula||null;
   const els=[...svg.querySelectorAll(DESENHA)].filter(el=>!el.closest('title'));
-  const grade=el=>el.tagName==='line'&&/^#1E232E$/i.test(el.getAttribute('stroke')||'');
+  const grade=el=>el.tagName==='line'&&/^#(1E232E|1B2030)$/i.test(el.getAttribute('stroke')||'');
   const base=els.filter(grade),resto=els.filter(el=>!grade(el));
-  const n=resto.length,gap=n?Math.min(.32,6.5/n):0;
-  const itens=resto.map((el,i)=>{const tag=el.tagName,o={el,tag,ini:.35+i*gap,dur:tag==='text'?.45:.7};
+  const n=resto.length,gap=n?Math.min(.28,5.8/n):0;
+  const itens=resto.map((el,i)=>{const tag=el.tagName,o={el,tag,ini:.25+i*gap,dur:tag==='text'?.4:.65};
    if(tag==='line')Object.assign(o,{x1:num(el.getAttribute('x1')),y1:num(el.getAttribute('y1')),x2:num(el.getAttribute('x2')),y2:num(el.getAttribute('y2'))});
    else if(tag==='polyline'){o.pts=pontos(el);o.len=comprimento(o.pts)}
    else if(tag==='rect')Object.assign(o,{y:num(el.getAttribute('y')),h:num(el.getAttribute('height'))});
    else if(tag==='circle')o.r=num(el.getAttribute('r'));
    else if(tag==='path'){try{o.len=el.getTotalLength?.()||0}catch{o.len=0}o.dash=el.getAttribute('stroke-dasharray')}
-   /* Linhas tracejadas coloridas (gatilho, stop, alvo) pulsam depois de aparecer. */
-   o.destaque=tag==='line'&&!!el.getAttribute('stroke-dasharray')&&/#(D4A017|EF4444|10B981)/i.test(el.getAttribute('stroke')||'');
+   /* Linhas tracejadas coloridas (gatilho, stop, alvo, Fibonacci) pulsam depois de aparecer. */
+   o.destaque=tag==='line'&&!!el.getAttribute('stroke-dasharray')&&/#(C9A66B|D4A017|EF4444|F87171|10B981|34D399)/i.test(el.getAttribute('stroke')||'');
    return o});
   const fim=itens.length?Math.max(...itens.map(o=>o.ini+o.dur)):0;
   svg.__aula={itens,base,fim};quadro(svg,0);return svg.__aula;
@@ -30,7 +32,7 @@
  /* Aplica o quadro do instante t (segundos desde o início da etapa). */
  function quadro(svg,t){
   const a=svg?.__aula||preparar(svg);if(!a)return;
-  for(const el of a.base)el.style.opacity=String(ease(t/.4));
+  for(const el of a.base)el.style.opacity=String(ease(t/.35));
   for(const o of a.itens){const p=ease((t-o.ini)/o.dur),el=o.el;
    el.style.opacity=p<=0?'0':'1';
    if(o.tag==='line'){el.setAttribute('x2',String(o.x1+(o.x2-o.x1)*p));el.setAttribute('y2',String(o.y1+(o.y2-o.y1)*p));
@@ -41,6 +43,40 @@
    else if(o.tag==='path'){if(o.len&&!o.dash){el.style.strokeDasharray=String(o.len);el.style.strokeDashoffset=String(o.len*(1-p))}else el.style.opacity=String(p)}
    else if(o.tag==='text'){el.style.opacity=String(p);el.style.transform='translateY('+(8*(1-p)).toFixed(1)+'px)';el.style.transformBox='fill-box'}
   }
+ }
+ /* Palco vetorial didático 16:9: candles + Ondas de Elliott 1–5 + Fibonacci + zona de invalidação + S/R. */
+ function palcoVetorial(titulo,etapa){
+  const st=Math.max(0,Math.min(3,Number(etapa)||0));
+  const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const grid=[60,115,170,225,280].map(y=>`<line x1="28" y1="${y}" x2="572" y2="${y}" stroke="#1E232E" stroke-width="1"/>`).join('');
+  const candles=[
+   [52,258,236,268,242,1],[82,242,212,248,218,1],[112,218,176,222,184,1],[142,184,146,190,154,1],
+   [172,154,148,186,178,0],[202,178,170,208,198,0],[232,198,162,204,168,1],[262,168,128,172,134,1],
+   [292,134,92,140,98,1],[322,98,84,116,108,0],[352,108,102,144,136,0],[382,136,118,142,122,1],
+   [412,122,82,128,88,1],[442,88,58,94,64,1]
+  ];
+  const cSvg=candles.map(([x,o,h,l,c,up])=>{
+   const col=up?'#34D399':'#F87171',top=Math.min(o,c),ht=Math.max(6,Math.abs(c-o));
+   return `<line x1="${x}" y1="${h}" x2="${x}" y2="${l}" stroke="${col}" stroke-width="1.6"/><rect x="${x-6}" y="${top}" width="12" height="${ht}" rx="1.5" fill="${col}"/>`;
+  }).join('');
+  const elliott=`<polyline points="52,258 142,152 202,200 292,96 352,138 442,62" fill="none" stroke="#C9A66B" stroke-width="2.2" stroke-linejoin="round"/>
+   <circle cx="142" cy="152" r="4" fill="#C9A66B"/><text x="142" y="138" fill="#C9A66B" font-size="11" font-weight="700" text-anchor="middle">1</text>
+   <circle cx="202" cy="200" r="4" fill="#C9A66B"/><text x="202" y="218" fill="#C9A66B" font-size="11" font-weight="700" text-anchor="middle">2</text>
+   <circle cx="292" cy="96" r="4" fill="#C9A66B"/><text x="292" y="82" fill="#C9A66B" font-size="11" font-weight="700" text-anchor="middle">3</text>
+   <circle cx="352" cy="138" r="4" fill="#C9A66B"/><text x="352" y="156" fill="#C9A66B" font-size="11" font-weight="700" text-anchor="middle">4</text>
+   <circle cx="442" cy="62" r="4.5" fill="#34D399"/><text x="442" y="48" fill="#34D399" font-size="11" font-weight="700" text-anchor="middle">5</text>`;
+  const fibo=st>=1?`<line x1="142" y1="186" x2="548" y2="186" stroke="#C9A66B" stroke-width="1.2" stroke-dasharray="5 4"/><text x="552" y="190" fill="#C9A66B" font-size="10" font-weight="700">38.2%</text>
+   <line x1="142" y1="200" x2="548" y2="200" stroke="#C9A66B" stroke-width="1.4" stroke-dasharray="5 4"/><text x="552" y="204" fill="#C9A66B" font-size="10" font-weight="700">61.8%</text>`:'';
+  const zonaInv=st>=2?`<rect x="28" y="246" width="520" height="36" fill="#F87171" fill-opacity="0.12"/><line x1="28" y1="246" x2="548" y2="246" stroke="#F87171" stroke-width="1.5" stroke-dasharray="6 4"/><text x="36" y="268" fill="#F87171" font-size="11" font-weight="700">Zona de Invalidação / Stop Técnico</text>`:'';
+  const alvo=st>=3?`<line x1="292" y1="62" x2="548" y2="62" stroke="#34D399" stroke-width="1.6" stroke-dasharray="6 4"/><text x="552" y="66" fill="#34D399" font-size="10.5" font-weight="700">Alvo</text>`:'';
+  const sr=`<line x1="28" y1="152" x2="548" y2="152" stroke="#60A5FA" stroke-width="1.1" stroke-dasharray="3 4"/><text x="36" y="146" fill="#93C5FD" font-size="10">Resistência / Gatilho</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 338" role="img" aria-label="${esc(titulo||'Gráfico didático animado')}"><rect width="600" height="338" fill="#0A0B0F" rx="8"/>${grid}${zonaInv}${sr}${fibo}${alvo}${cSvg}${elliott}<text x="28" y="26" fill="#C9A66B" font-size="12" font-weight="700" letter-spacing="0.06em">${esc((titulo||'ESTRUTURA DE PREÇO · ONDAS & FIBONACCI').slice(0,56).toUpperCase())}</text></svg>`;
+ }
+ /* Destaca termos técnicos na legenda da aula em dourado champanhe. */
+ const TERMOS=/\b(Fibonacci|Elliott|Onda\s*[1-5A-C]|Stop(?:\s+técnico)?|Gatilho|Suporte|Resistência|Invalidação|Tendência|Alvo|Rompimento|Pullback|Volume|Média\s+móvel|Retração|Liquidez)\b/gi;
+ function destacarTermos(texto){
+  const esc=String(texto||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  return esc.replace(TERMOS,'<mark class="tp-term">$1</mark>');
  }
  /* No app: toca em tempo real e continua do ponto certo se a tela for redesenhada. */
  const inicio=new Map();let raf=0;
@@ -53,5 +89,5 @@
  }
  function parar(){cancelAnimationFrame(raf);raf=0}
  function reiniciar(chave){inicio.delete(chave)}
- root.AulaAnimada={preparar,quadro,tocar,parar,reiniciar};
+ root.AulaAnimada={preparar,quadro,tocar,parar,reiniciar,palcoVetorial,destacarTermos};
 })(typeof window!=='undefined'?window:globalThis);

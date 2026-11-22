@@ -89,7 +89,10 @@ async function candles(asset,tf,signal){
    void store(key,result);return result;
   }
  }catch{}
- const url=edgeBase()+'/v1/tecnico-candles?market='+asset.market+'&ticker='+encodeURIComponent(asset.ticker)+'&tf='+tf;
+ const normMarket=String(asset.market||'BR').trim().toUpperCase();
+ const normTicker=String(asset.ticker||'').trim().toUpperCase().replace(/\.SA$/,'');
+ const normTf=tf==='60m'?'1h':tf;
+ const url=edgeBase()+'/v1/tecnico-candles?market='+encodeURIComponent(normMarket)+'&ticker='+encodeURIComponent(normTicker)+'&tf='+encodeURIComponent(normTf);
  const response=await fetch(url,{signal,cache:'force-cache'});
  const payload=await response.json().catch(()=>({}));
  if(!response.ok||!payload.ok)throw Error(payload.error||'Candles HTTP '+response.status);

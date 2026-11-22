@@ -2691,8 +2691,8 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
       return `<div class="top"><h2>Long &amp; Short</h2><button class="x" type="button" data-v512ls="fecha" aria-label="Fechar">×</button></div>
   <h3 class="v592-ls-tit" style="margin:16px 0 8px">Analisar um par <button type="button" class="v592-ajuda" data-v512ls="ajuda" aria-label="O que é Long &amp; Short" aria-expanded="${u.ajuda ? "true" : "false"}"><span aria-hidden="true">?</span></button></h3>
   ${u.ajuda ? `<div class="v592-pop-fundo" data-v512ls="ajuda"></div><div class="v592-pop" role="dialog" aria-modal="true" aria-label="O que é Long &amp; Short"><button type="button" class="x" data-v512ls="ajuda" aria-label="Fechar">×</button>${zeIntro}</div>` : ""}
-  <div class="f"><input id="v512-a" value="${g(u.a)}" placeholder="Ativo A" autocomplete="off"><input id="v512-b" value="${g(u.b)}" placeholder="Ativo B" autocomplete="off"></div>
-  <div class="f"><select id="v512-j">${[
+  <div class="f v512-grid"><label class="v512-fld"><span>Ativo A (Compra)</span><input id="v512-a" value="${g(u.a)}" placeholder="Ex.: ITUB4" autocomplete="off"></label><label class="v512-fld"><span>Ativo B (Venda)</span><input id="v512-b" value="${g(u.b)}" placeholder="Ex.: BBDC4" autocomplete="off"></label></div>
+  <div class="f v512-grid"><label class="v512-fld"><span>Período</span><select id="v512-j">${[
     [126, "6 meses"],
     [252, "1 ano"],
     [400, "1 ano e meio"],
@@ -2703,8 +2703,8 @@ body.v512-lsv #app .dt395-native-mercado>:not(.m403-section-header):not(#v512-ls
     )
     .join(
       "",
-    )}</select><input id="v512-cap" inputmode="numeric" value="${g(u.cap)}" placeholder="Capital (R$)" style="text-transform:none"></div>
-  <button class="go" type="button" data-v512ls="calc">${u.busy ? "Calculando…" : "Analisar par"}</button>
+    )}</select></label><label class="v512-fld"><span>Capital (R$)</span><input id="v512-cap" inputmode="numeric" value="${g(u.cap)}" placeholder="10000" style="text-transform:none"></label></div>
+  <button class="go v512-cta" type="button" data-v512ls="calc">${u.busy ? "Calculando…" : "Analisar par"}</button>
   <details class="v512-aula"><summary>Pares sugeridos e salvos</summary>
   ${[...new Set(ne.map((o) => o[2]))]
     .map(
@@ -3486,7 +3486,7 @@ try {
           ? "Meta da semana concluída."
           : Math.max(0, meta.min - total) + " min para sua meta."
         : "Escolha sua meta semanal. Sugestão: 180 minutos.";
-      const html = `<details class="est-meta-details" ${meta.definida ? "" : "open"}><summary>Meta da semana · ${Math.round(total)} / ${meta.min} min${meta.definida ? "" : " sugeridos"}</summary><p class="mut">${status}</p><div class="v514-bar" role="progressbar" aria-label="Tempo de estudo na semana" aria-valuemin="0" aria-valuemax="${meta.min}" aria-valuenow="${Math.min(meta.min, Math.round(total))}"><i style="width:${percent}%"></i></div><label for="v514-meta-in">Minutos por semana</label><div class="v514-row"><input id="v514-meta-in" type="number" min="30" max="6000" step="1" inputmode="numeric" value="${meta.min}"><button type="button" data-v514="meta">Salvar meta</button></div>${!meta.definida && legacyValido ? ' <p class="sm">Meta antiga deste aparelho: ' + legacyValido + ' min. <button type="button" class="btn s" data-est-meta-legado="' + legacyValido + '">Usar esta meta</button></p>' : ""}</details>`;
+      const html = `<details class="est-meta-details" ${meta.definida ? "" : "open"}><summary>Meta da semana · ${Math.round(total)} / ${meta.min} min${meta.definida ? "" : " sugeridos"}</summary><p class="mut">${status}</p><div class="v514-compact-goal"><div class="v514-bar" role="progressbar" aria-label="Tempo de estudo na semana" aria-valuemin="0" aria-valuemax="${meta.min}" aria-valuenow="${Math.min(meta.min, Math.round(total))}"><i style="width:${percent}%"></i></div><div class="v514-row v514-inline-meta"><label for="v514-meta-in" class="v514-lbl">Min/sem</label><input id="v514-meta-in" type="number" min="30" max="6000" step="1" inputmode="numeric" value="${meta.min}" aria-label="Minutos por semana"><button type="button" data-v514="meta">Salvar</button></div></div>${!meta.definida && legacyValido ? ' <p class="sm">Meta antiga deste aparelho: ' + legacyValido + ' min. <button type="button" class="btn s" data-est-meta-legado="' + legacyValido + '">Usar esta meta</button></p>' : ""}</details>`;
       let card = u.getElementById("v514-meta");
       if (card && card.contains(u.activeElement)) return;
       if (!card) {

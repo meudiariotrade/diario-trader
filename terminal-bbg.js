@@ -110,7 +110,9 @@
    const dl=el('datalist');dl.id='bbg-lista-cmd';k.append(dl);
   }
   const nav=trm.querySelector('#tf413 .tf415-nav');if(nav){if(k.previousElementSibling!==nav)nav.after(k)}else if(!k.isConnected)trm.prepend(k);
-  const t=k.querySelector('[data-bbg-cheia]'),rot=cheia()?'✕ Sair da tela cheia':'⛶ Tela cheia';if(t.textContent!==rot)t.textContent=rot;
+  const t=k.querySelector('[data-bbg-cheia]'),ehCheia=cheia();
+  const fsIco=ehCheia?'<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="vertical-align:-2px;margin-right:5px"><path d="M3 3l10 10M13 3L3 13"/></svg>Sair da tela cheia':'<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="vertical-align:-2px;margin-right:5px"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>Tela cheia';
+  if(t.dataset.bbgState!==(ehCheia?'1':'0')){t.dataset.bbgState=ehCheia?'1':'0';t.innerHTML=fsIco;}
   const dl=k.querySelector('datalist');
   if(!dl.childElementCount&&root.TRM?.FN){for(const [c,d]of Object.entries(root.TRM.FN)){if(typeof d!=='string'||!permitido(c))continue;const o=el('option');o.value=c;o.label=d.split(' · ')[0];dl.append(o)}}
  }
@@ -126,7 +128,7 @@
   const S=root.DiarioSessoes,sB3=S?S.session('B3').state==='regular':aberto('America/Sao_Paulo',600,1075),sNY=S?S.session('NYSE').state==='regular':aberto('America/New_York',570,960);
   const tb='B3 '+(sB3?'ABERTA':'FECHADA'),tn='NY '+(sNY?'ABERTA':'FECHADA');
   if(b3.textContent!==tb)b3.textContent=tb;b3.className='bbg-b3 '+(sB3?'on':'off');if(ny.textContent!==tn)ny.textContent=tn;ny.className='bbg-ny '+(sNY?'on':'off');
-  const f=String(g(()=>root.TRM.statusFontes(),'')).replace(/<button[\s\S]*?<\/button>/g,'').replace(/<[^>]+>/g,'').replace(/\s*·\s*·\s*/g,' · ').replace(/\s+/g,' ').trim().slice(0,90);if(fontes.textContent!==f)fontes.textContent=f;
+  const f=String(g(()=>root.TRM.statusFontes(),'')).replace(/<button[\s\S]*?<\/button>/g,'').replace(/<[^>]+>/g,'').replace(/\s*·\s*·\s*/g,' · ').replace(/^\s*·\s*|\s*·\s*$/g,'').replace(/\s+/g,' ').trim();if(fontes.textContent!==f)fontes.textContent=f;
  }
 
  /* ---------- montagem ---------- */

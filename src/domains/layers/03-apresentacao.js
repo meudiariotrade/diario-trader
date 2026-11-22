@@ -6924,7 +6924,7 @@ try {
     <button type="button" class="v598-pula" data-v598-pula="15" aria-label="Avançar 15 segundos">+15s</button>
     <input type="range" class="v597-seek" data-v597-seek min="0" max="1000" value="0" step="1" aria-label="Posição do vídeo">
     <span class="v597-tempo" data-v597-tempo>0:00 / 0:00</span>
-    <button type="button" class="v597-fs" data-v597-fs aria-label="Tela cheia">⛶</button></div>
+    <button type="button" class="v597-fs" data-v597-fs aria-label="Tela cheia"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button></div>
   <div class="v597-estudo">
     <div class="v597-vel" role="group" aria-label="Velocidade">${VEL597.map((x) => `<button type="button" data-v597-vel="${x}" class="${x === v ? "on" : ""}" aria-pressed="${x === v}">${String(x).replace(".", ",")}x</button>`).join("")}</div>
     <button type="button" class="v598-audio" data-v598-audio aria-pressed="false">🎧 Ouvir com a tela bloqueada</button>

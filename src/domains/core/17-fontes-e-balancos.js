@@ -4156,18 +4156,9 @@ try {
 }
 function net188() {
   try {
-    let e = document.getElementById("net188");
-    if (navigator.onLine) {
-      e && e.remove();
-      return;
-    }
-    e ||
-      ((e = document.createElement("div")),
-      (e.id = "net188"),
-      e.setAttribute("role", "status"),
-      (e.textContent =
-        "Sem internet. O diário funciona normal; cotações, notícias e IA voltam quando a conexão voltar."),
-      document.body.appendChild(e));
+    const dup = document.getElementById("net188");
+    if (dup) dup.remove();
+    if (typeof netAviso === "function") netAviso();
   } catch {}
 }
 (addEventListener("online", () => {
@@ -5181,16 +5172,19 @@ function net188() {
     const E = Object.values(e.src).filter((De) => Date.now() - De.em < 12e4),
       P = E.filter((De) => De.rt && !De.falha).length,
       B = E.filter((De) => !De.rt && !De.falha).length,
-      G = E.filter((De) => De.falha).length,
-      te = E.length
-        ? `<b class="tg">${P} tempo real</b> · <b class="am">${B} atrasados</b>${G ? ` · <b class="tr">${G} com falha</b>` : ""} · `
-        : "",
       _ = Object.keys(e.profit).length,
       ye = e.ws && e.ws.readyState === 1,
-      Oe = e.fh && e.fh.readyState === 1;
+      Oe = e.fh && e.fh.readyState === 1,
+      partes = [];
+    if (P > 0) partes.push(`<b class="tg">${P} ao vivo</b>`);
+    else if (B > 0) partes.push(`<b class="am">${B} atualizados</b>`);
+    if (_) partes.push(`<i class="tg">●</i> Profit (${_})`);
+    if (ye) partes.push('<i class="tg">●</i> Cripto ao vivo');
+    if (Oe) partes.push('<i class="tg">●</i> EUA ao vivo');
+    if (!partes.length) partes.push('Dados de mercado em espera');
     return (
-      te +
-      `<button class="trlk" data-trcmd="STAT">fontes</button> · ${_ ? '<i class="tg">●</i> Profit ao vivo (' + _ + ")" : "<i>●</i> Profit desligado"} · ${ye ? '<i class="tg">●</i> Binance' : "<i>●</i> Binance"} · ${Oe ? '<i class="tg">●</i> Finnhub' : r().fh || window.fhTokServidor ? "<i>●</i> Finnhub" : "Finnhub sem chave"}`
+      partes.join(' · ') +
+      ' · <button class="trlk" data-trcmd="STAT">Fontes</button>'
     );
   }
   function Ye(E) {
@@ -7900,7 +7894,7 @@ Dados do terminal agora:
           const gt = pt(0).toFixed(2),
             mt = pt($t - 1).toFixed(2),
             kt = (it - 18).toFixed(2);
-          St += `<defs><linearGradient id="g9ln${L}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#595e67" stop-opacity=".44"/><stop offset="1" stop-color="#32353a" stop-opacity=".04"/></linearGradient></defs><path d="${ct} L${mt} ${kt} L${gt} ${kt} Z" fill="url(#g9ln${L})"/><path d="${ct}" fill="none" stroke="#f4f3f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${mt}" cy="${At(ut[$t - 1][4])}" r="3.2" fill="#6896be" stroke="#f4f3f1" stroke-width="1.2"/>`;
+          St += `<defs><linearGradient id="g9ln${L}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9F1C" stop-opacity=".28"/><stop offset="1" stop-color="#FF9F1C" stop-opacity=".01"/></linearGradient></defs><path d="${ct} L${mt} ${kt} L${gt} ${kt} Z" fill="url(#g9ln${L})"/><path d="${ct}" fill="none" stroke="#FF9F1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${mt}" cy="${At(ut[$t - 1][4])}" r="3.4" fill="#FF9F1C" stroke="#000000" stroke-width="1.3"/>`;
         }
       }
       St += "</g>";
@@ -7953,7 +7947,7 @@ Dados do terminal agora:
           });
       }
       const Pt = E[E.length - 1];
-      St += `<line x1="0" x2="${tt}" y1="${At(Pt)}" y2="${At(Pt)}" stroke="#c2933d" stroke-dasharray="2 3"/><rect x="${tt + 1}" y="${At(Pt) - 8}" width="${bt - 2}" height="16" fill="#c2933d"/><text x="${tt + 4}" y="${At(Pt) + 4}" class="g9tx" fill="#000000" style="font-weight:700">${g(Pt, Dt)}</text>`;
+      St += `<line x1="0" x2="${tt}" y1="${At(Pt)}" y2="${At(Pt)}" stroke="#FF9F1C" stroke-dasharray="2 3"/><rect x="${tt + 1}" y="${At(Pt) - 9}" width="${bt - 2}" height="18" rx="2" fill="#FF9F1C"/><text x="${tt + 5}" y="${At(Pt) + 4}" class="g9tx g9last-px" style="fill:#000000!important;font-weight:800">${g(Pt, Dt)}</text>`;
       let qt = it + 6;
       if (Ee.rsi) {
         const ct = (mt) => qt + 4 + ((100 - mt) / 100) * (nt - 8);
@@ -7997,7 +7991,7 @@ Dados do terminal agora:
           kt(ye.sig, "#c9a156") +
           `<text x="4" y="${qt + 12}" class="g9tx">MACD 12/26/9: ${g(ye.m[ye.m.length - 1], Dt > 2 ? 4 : 3)} · sinal ${g(ye.sig[ye.sig.length - 1], Dt > 2 ? 4 : 3)}</text>`;
       }
-      ((St += `<line class="g9cx" x1="-10" x2="-10" y1="0" y2="${lt}"/><line class="g9cy" x1="0" x2="${tt}" y1="-10" y2="-10"/><text class="g9cursor-price" x="${tt + 3}" y="-10"></text><rect x="0" y="0" width="${tt}" height="${lt}" fill="transparent" data-g9hit="${L}"/></svg>`),
+      ((St += `<line class="g9cx" x1="-10" x2="-10" y1="0" y2="${lt}"/><line class="g9cy" x1="0" x2="${tt}" y1="-10" y2="-10"/><circle class="g9dot" cx="-10" cy="-10" r="3.4" fill="#FF9F1C" stroke="#000" stroke-width="1.2"/><g class="g9tip" hidden><rect class="g9tip-bg" rx="3" fill="#0B1220" stroke="#FF9F1C" stroke-width="1" opacity="0.95"/><text class="g9tip-tx" fill="#F8FAFC" font-size="10.5" font-family="ui-monospace,monospace"></text></g><text class="g9cursor-price" x="${tt + 3}" y="-10"></text><rect x="0" y="0" width="${tt}" height="${lt}" fill="transparent" data-g9hit="${L}"/></svg>`),
         (o.gm[L] = {
           tk: F,
           iv: O,
@@ -8035,7 +8029,7 @@ Dados do terminal agora:
       return (
         I(F) +
         Ae +
-        `<p class="trfont g9help">Arraste na horizontal ou use as setas. Pinça / Ctrl + rolagem: zoom. Duplo toque: ajustar. ${Ze.offset ? "Histórico · " + Ze.offset + " velas antes da última" : "Últimas velas disponíveis"}.</p>` +
+        `<p class="trfont g9help">Arraste para navegar · Roda do mouse ou pinça: zoom · Duplo toque: auto-ajustar. ${Ze.offset ? "Histórico · " + Ze.offset + " velas antes da última" : "Últimas velas disponíveis"}.</p>` +
         Ht +
         St +
         Vt +
@@ -8080,11 +8074,53 @@ Dados do terminal agora:
           O.dp,
         )));
       const E = ne.querySelector(".g9cx");
+      const P = ge * O.bw + O.bw / 2;
       if (E) {
-        const P = ge * O.bw + O.bw / 2;
         (E.setAttribute("x1", P), E.setAttribute("x2", P));
       }
+      const bar = O.L[ge];
+      const dot = ne.querySelector(".g9dot");
+      const tip = ne.querySelector(".g9tip");
+      if (bar && dot && tip) {
+        const yClose = 6 + O.priceAxis.ratio(bar[4]) * (O.chartHeight - 24);
+        dot.setAttribute("cx", P.toFixed(1));
+        dot.setAttribute("cy", yClose.toFixed(1));
+        const dtBar = new Date(bar[0] * 1e3);
+        const dtStr = O.iv === "1d" ? dtBar.toLocaleDateString("pt-BR") : dtBar.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        const tipTxt = `${dtStr} · ${g(bar[4], O.dp)}`;
+        const txEl = tip.querySelector(".g9tip-tx");
+        const bgEl = tip.querySelector(".g9tip-bg");
+        if (txEl && bgEl) {
+          txEl.textContent = tipTxt;
+          const tw = Math.max(88, tipTxt.length * 6.8 + 14);
+          const bx = P + 10 + tw > O.cw ? Math.max(4, P - 10 - tw) : P + 10;
+          const by = Math.max(8, Math.min(O.chartHeight - 28, yClose - 12));
+          bgEl.setAttribute("x", bx.toFixed(1));
+          bgEl.setAttribute("y", by.toFixed(1));
+          bgEl.setAttribute("width", tw.toFixed(1));
+          bgEl.setAttribute("height", "20");
+          txEl.setAttribute("x", (bx + 7).toFixed(1));
+          txEl.setAttribute("y", (by + 13.5).toFixed(1));
+          tip.hidden = false;
+        }
+      }
     });
+    document.addEventListener("pointerleave", (q) => {
+      const svg = q.target && q.target.closest && q.target.closest("svg[data-g9svg]");
+      if (!svg) return;
+      const tip = svg.querySelector(".g9tip");
+      if (tip) tip.hidden = true;
+    }, true);
+    document.addEventListener("wheel", (q) => {
+      const svg = q.target && q.target.closest && q.target.closest("svg[data-g9svg]");
+      if (!svg || !window.TRM?.tec?.chartView) return;
+      const panel = Number(svg.dataset.g9svg);
+      if (!Number.isInteger(panel) || panel < 0) return;
+      if (q.cancelable) q.preventDefault();
+      const r = svg.getBoundingClientRect();
+      const anchor = Math.max(0, Math.min(1, (q.clientX - r.left) / Math.max(20, r.width)));
+      window.TRM.tec.chartView(panel, "zoom", q.deltaY < 0 ? 0.85 : 1.18, anchor);
+    }, { passive: false });
     async function ht(q) {
       await Promise.all([Xe(q.tk, dt(q)), d("cot", { s: [q.tk] }, 15e3)]);
     }

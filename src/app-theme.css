@@ -3666,3 +3666,542 @@ html:root body #app #an-root.an830 .an830-seg button{background:transparent!impo
 html:root body #app #an-root.an830 .an830-seg button.selected{background:var(--ui-sub,#181C28)!important;color:var(--ui-num,#FFFFFF)!important;box-shadow:inset 0 -2px 0 #F59E0B!important}
 /* v852 — Fatos que importam: ligação por hipótese em tom secundário */
 html:root body #app .i833-lig li.i852-hip span{color:var(--ui-label,#94A3B8);font-style:italic}
+
+/* ==========================================================================
+   v870 — CAMADA SEMÂNTICA & REFORMULAÇÃO VISUAL (FASE 1 + BASE FASE 2/3)
+   Breakpoints fixos: 480px (sm), 768px (md), 1024px (lg), 1280px (xl)
+   Escala z-index (6 níveis): base(1), sticky(100), nav(400), banner(880), drawer(950), modal(9000)
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+  --bg: #0A0B0F;
+  --surface-1: #12151E;
+  --surface-2: #181C28;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #EDF0F7;
+  --text-muted: #94A3B8;
+  --accent: #C9A66B;
+  --accent-hover: #D8BA84;
+  --accent-ink: #0A0B0F;
+  --accent-soft: rgba(201, 166, 107, 0.14);
+  --up: #34D399;
+  --down: #F87171;
+  --z-base: 1;
+  --z-sticky: 100;
+  --z-nav: 400;
+  --z-banner: 880;
+  --z-drawer: 950;
+  --z-modal: 9000;
+  /* Sincroniza tokens legados para coerência imediata */
+  --dt-bg: var(--bg);
+  --dt-s1: var(--surface-1);
+  --dt-hover: var(--surface-2);
+  --dt-line: var(--border);
+  --dt-tx: var(--text);
+  --dt-mut: var(--text-muted);
+  --ui-bg: var(--bg);
+  --ui-card: var(--surface-1);
+  --ui-sub: var(--surface-2);
+  --ui-chrome: #0D0F16;
+  --ui-label: var(--text-muted);
+  --ds-amber: var(--accent);
+  --ds-on-amber: var(--accent-ink);
+  --ds-amber-bg: var(--accent-soft);
+}
+html {
+  background: var(--bg);
+  color: var(--text);
+}
+html[data-v427-tema="claro"] {
+  color-scheme: light;
+  --bg: #F3F0E8;
+  --surface-1: #FAF8F3;
+  --surface-2: #ECE7DC;
+  --border: rgba(24, 22, 18, 0.13);
+  --border-strong: rgba(24, 22, 18, 0.22);
+  --text: #1A1916;
+  --text-muted: #5C584F;
+  --accent: #9A7432;
+  --accent-hover: #815F25;
+  --accent-ink: #FAF8F3;
+  --accent-soft: rgba(154, 116, 50, 0.13);
+  --up: #15803D;
+  --down: #C81E1E;
+  --dt-bg: var(--bg);
+  --dt-s1: var(--surface-1);
+  --dt-hover: var(--surface-2);
+  --dt-line: var(--border);
+  --dt-tx: var(--text);
+  --dt-mut: var(--text-muted);
+  --ui-bg: var(--bg);
+  --ui-card: var(--surface-1);
+  --ui-sub: var(--surface-2);
+  --ui-chrome: #F3F0E8;
+  --ui-label: var(--text-muted);
+  --ds-amber: var(--accent);
+  --ds-on-amber: var(--accent-ink);
+  --ds-amber-bg: var(--accent-soft);
+}
+
+/* Capa 3D: sem scrollbar no desktop, botão "Pausar movimento" discreto e dourado champanhe */
+#capa {
+  background: radial-gradient(circle at 72% 45%, #161923 0%, #0A0B0F 65%);
+}
+@media (min-width: 900px) {
+  #capa {
+    overflow: hidden;
+    height: 100dvh;
+  }
+}
+#capa .cp-eyebrow {
+  color: #C9A66B;
+}
+#capa .cp-acoes {
+  align-items: center;
+  gap: 12px;
+}
+#capa button.pri {
+  background: #C9A66B;
+  border-color: #C9A66B;
+  color: #0A0B0F;
+  font-weight: 700;
+  padding: 0 22px;
+}
+#capa button.cp-mov {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94A3B8;
+  font-weight: 500;
+  font-size: 13px;
+  padding: 0 14px;
+}
+#capa button.cp-mov:hover {
+  color: #EDF0F7;
+  border-color: rgba(201, 166, 107, 0.4);
+}
+
+/* Modal #onb: backdrop opaco + blur limpo */
+#onb.ov {
+  background: rgba(10, 11, 15, 0.88) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: var(--z-modal) !important;
+}
+html[data-v427-tema="claro"] #onb.ov {
+  background: rgba(24, 22, 18, 0.62) !important;
+}
+
+/* Ticker #tape: sem faixa branca vazia */
+#tape:empty,
+#tape:empty + #tapeSp {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  border: 0 !important;
+}
+#tape {
+  background: var(--ui-chrome) !important;
+  color: var(--text) !important;
+}
+#tape .dn {
+  color: var(--down) !important;
+}
+#tape .up {
+  color: var(--up) !important;
+}
+
+/* Mobile: bottom nav opaca, Drawer acima da bottom nav e offset superior sem cortes */
+html body #v4-bnav {
+  background: #0D0F16 !important;
+  z-index: var(--z-nav) !important;
+  border-top: 1px solid var(--border) !important;
+}
+html[data-v427-tema="claro"] body #v4-bnav {
+  background: #FAF8F3 !important;
+  border-top: 1px solid rgba(24, 22, 18, 0.14) !important;
+  box-shadow: 0 -2px 12px rgba(24, 22, 18, 0.06) !important;
+}
+html body #dt394-drawer,
+html body .dt394-drawer-backdrop {
+  z-index: var(--z-drawer) !important;
+}
+@media (max-width: 767px) {
+  html body:not(.trmon) #app {
+    padding-top: calc(12px + var(--dt-mobile-top-extra, 0px)) !important;
+  }
+  html body:not(.trmon) #app > :first-child {
+    margin-top: 4px;
+  }
+}
+
+/* Botão Mapa sem quebrar "Map / a" */
+html:root body #app .market-tools button[data-cqv],
+html:root body #app .market-tools button {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+/* Botão ? em Conta sem encostar no card */
+html:root body #app [data-tela="conta"] .help-btn,
+html:root body #app .ct-help,
+html:root body #app button[aria-label*="Ajuda"] {
+  margin-bottom: 10px;
+}
+
+/* Cotações (Mercado): ocultar descrição truncada de 1 letra na grade 3 col desktop */
+@media (min-width: 1024px) {
+  html:root body #app .m623-n small {
+    display: none !important;
+  }
+}
+
+/* Fallback limpo para logos que falharem (503) — sem bolinhas pretas vazias no US Market Barometer */
+html:root body #app #cotbox.market-quotes .cqm-logo-fallback {
+  color: var(--accent) !important;
+  background: rgba(201, 166, 107, 0.16) !important;
+  border: 1px solid rgba(201, 166, 107, 0.35);
+}
+html:root body #app #cotbox.market-quotes .m606-mxc .dl-logo.cqm-img-failed,
+html:root body #app #cotbox.market-quotes .m606-mxc .dl-logo.dl-vazio {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #F8FAFC !important;
+  font-size: 8px !important;
+}
+html:root body #app #cotbox.market-quotes .m606-mxc .cqm-logo-fallback {
+  font-size: 8px !important;
+  color: #F8FAFC !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  border: 0 !important;
+}
+
+/* Contraste crítico no tema escuro: vermelho legível (#F87171) e muted (#94A3B8) */
+html:not([data-v427-tema="claro"]) body #app :is(.m623-d.dn, .m606-v.dn, .m606-em em.dn, .m606-row .dn, .cqr .dn, .dn, .r, .tr) {
+  color: #F87171 !important;
+}
+html:not([data-v427-tema="claro"]) body #app :is(.mut, .dt393-muted, .m606-src, .m623-src, .scr-empty, .scr-hint) {
+  color: #94A3B8;
+}
+
+/* Terminal Bloomberg Autêntico: #000 absoluto, âmbar #FF9F1C, azul cobalto, contraste 100% */
+html body.trmon #app .trm,
+html body.trmon #app .trm.trm-pro {
+  --a: #FF9F1C;
+  --g: #34D399;
+  --r: #F87171;
+  background: #000000 !important;
+  color: #F3F4F6 !important;
+}
+html body.trmon #app .trm .trbar {
+  background: #000000 !important;
+  border-bottom: 1px solid #262A34 !important;
+}
+html body.trmon #app .trm .trbar .trlogo {
+  background: #FF9F1C !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  padding: 5px 10px !important;
+  border-radius: 3px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em;
+}
+html body.trmon #app .trm .trbar .trlogo b {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background: transparent !important;
+  margin-left: 4px;
+  font-weight: 900 !important;
+}
+html body.trmon #app #bbg-keys .bbg-k.bbg-amarela {
+  background: #FF9F1C !important;
+  border-color: #FF9F1C !important;
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+html body.trmon #app #bbg-keys .bbg-k.bbg-menu-k {
+  background: #C62828 !important;
+  border-color: #C62828 !important;
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+}
+html body.trmon #app .trm .trp .trph {
+  background: #0B2A5B !important;
+  border-bottom: 1px solid #1E4484 !important;
+  color: #F8FAFC !important;
+}
+html body.trmon #app .trm .trp .trpb {
+  overflow-x: auto !important;
+}
+html body.trmon #app .trm .trp table {
+  width: 100%;
+  border-collapse: collapse;
+}
+html body.trmon #app .trm .trp table td,
+html body.trmon #app .trm .trp table th {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  padding: 5px 8px;
+}
+html body.trmon #app #bbg-status {
+  background: #000000 !important;
+  border-top: 1px solid #262A34 !important;
+  color: #CBD5E1 !important;
+}
+html body.trmon #app #bbg-status .bbg-hora {
+  color: #FF9F1C !important;
+}
+html body.trmon #app #bbg-status .bbg-dica {
+  color: #94A3B8 !important;
+}
+
+/* Análises: botão "Pesquisar e analisar" visível e aba ativa destacada */
+html:not([data-v427-tema="claro"]) body #app #an-root .an-command-line .btn {
+  background: #C9A66B !important;
+  color: #0A0B0F !important;
+  -webkit-text-fill-color: #0A0B0F !important;
+  border: 1px solid #DFC18A !important;
+  font-weight: 700 !important;
+}
+html:not([data-v427-tema="claro"]) body #app #an-root .an-command-line .btn:hover:not(:disabled) {
+  background: #D8BA84 !important;
+}
+html body #app #an-root .an-subs button.selected,
+html body #app #an-root .an-subs button[aria-selected="true"],
+html body #app #an-root.an830 .an830-seg button.selected {
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+  border-bottom: 2px solid var(--accent) !important;
+  box-shadow: inset 0 -2px 0 var(--accent) !important;
+  font-weight: 700 !important;
+}
+
+/* Panorama cards (DOGE / cripto): espaçamento consistente */
+html:root body #app .m405-quote,
+html:root body #app .m606-t {
+  gap: 6px;
+}
+
+/* Tema Claro: corrigir botões marrom-escuro com texto preto, amarelo claro sobre branco, sub-aba Mercado e bordas #000 */
+html[data-v427-tema="claro"] body #app :is(.btn, button.pri, button[data-a="calc"], button[data-a="aprender"], .cl568-on) {
+  border-color: rgba(154, 116, 50, 0.45) !important;
+}
+html[data-v427-tema="claro"] body #app :is(.btn:not(.s):not(.ghost):not(.cl568), button.pri),
+html[data-v427-tema="claro"] body #onb .btn:not(.s) {
+  background: #1A1916 !important;
+  background-image: none !important;
+  color: #FAF8F3 !important;
+  -webkit-text-fill-color: #FAF8F3 !important;
+}
+html[data-v427-tema="claro"] body #app :is(.btn.s, .btn.ghost, button.cl568-on) {
+  background: #F4ECDC !important;
+  color: #5C4314 !important;
+  -webkit-text-fill-color: #5C4314 !important;
+  border: 1px solid rgba(154, 116, 50, 0.5) !important;
+}
+html[data-v427-tema="claro"] body #app .cqtabs button.on {
+  background: #1A1916 !important;
+  color: #FAF8F3 !important;
+  -webkit-text-fill-color: #FAF8F3 !important;
+  border-color: #1A1916 !important;
+  font-weight: 700 !important;
+}
+html[data-v427-tema="claro"] body #app nav.m403-primary-tabs button.on,
+html[data-v427-tema="claro"] body #app nav.m403-primary-tabs button[aria-current="page"] {
+  background: #F4ECDC !important;
+  color: #5C4314 !important;
+  -webkit-text-fill-color: #5C4314 !important;
+  border-bottom: 2px solid #9A7432 !important;
+  font-weight: 700 !important;
+}
+html[data-v427-tema="claro"] body #app :is(.card, .an-section, .scr-panel, .dt393-card, hr, .m623-sec, .m606-card) {
+  border-color: rgba(24, 22, 18, 0.14) !important;
+}
+html[data-v427-tema="claro"] body #app .m623-r,
+html[data-v427-tema="claro"] body #app .m606-row {
+  border-color: rgba(24, 22, 18, 0.1) !important;
+}
+html[data-v427-tema="claro"] body #app [style*="color:#D4A017"],
+html[data-v427-tema="claro"] body #app [style*="color: #D4A017"],
+html[data-v427-tema="claro"] body #app [style*="color:#F59E0B"],
+html[data-v427-tema="claro"] body #app .am {
+  color: #7A5618 !important;
+  -webkit-text-fill-color: #7A5618 !important;
+}
+
+/* ==========================================================================
+   v870 — FASE 2 & FASE 3: UNIFICAÇÃO CHAMPANHE, TELAS SIMPLIFICADAS E TOKENS
+   ========================================================================== */
+
+/* Elimina faixa vazia no topo quando #tape está vazio */
+body:has(#tape:empty) #dt393-global-head,
+body:has(#tape:empty) .dt393-topbar {
+  top: 0 !important;
+}
+body:has(#tape:empty) {
+  padding-top: 0 !important;
+}
+
+/* Unificação de paleta fora do Terminal: dourado champanhe #C9A66B único */
+html:not([data-v427-tema="claro"]) body:not(.trmon) #app :is(.btn:not(.s):not(.ghost), button.pri, .v512-cta, .g9b.on) {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-ink) !important;
+  -webkit-text-fill-color: var(--accent-ink) !important;
+  font-weight: 700;
+}
+html:not([data-v427-tema="claro"]) body:not(.trmon) #app :is(.v597-curso-bar em, .v514-bar i) {
+  background: var(--accent) !important;
+}
+
+/* Tema Claro: suaviza divisores pretos (#000) em Início e Análises + contraste de Automático */
+html[data-v427-tema="claro"] body #app :is(.dt393-step, .dt393-steps > div, .dt393-steps li, .an-history-item, .an-result-head, .an-sources, .an-table td, .an-table th, .card > div) {
+  border-color: rgba(24, 22, 18, 0.13) !important;
+}
+html[data-v427-tema="claro"] body #app button[data-sessao="auto"],
+html[data-v427-tema="claro"] body #app .sessao-auto,
+html[data-v427-tema="claro"] body #app [data-auto] {
+  color: #6B4A14 !important;
+  -webkit-text-fill-color: #6B4A14 !important;
+  border-color: rgba(154, 116, 50, 0.55) !important;
+  background: #F6EFE0 !important;
+}
+
+/* Meu dia (mobile): compactação limpa das barras de controle */
+@media (max-width: 767px) {
+  html body #app [data-tela="dia"] .dia-ctrl-bar,
+  html body #app .dt393-page .dia-sessoes,
+  html body #app .v514-steps {
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+  html body #app .sessao-bar,
+  html body #app .dt815-bar {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+  }
+}
+
+/* Estudos: meta semanal compacta ao lado da barra de progresso + cards equilibrados */
+html body #app .v514-compact-goal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+html body #app .v514-compact-goal .v514-bar {
+  flex: 1 1 160px;
+  margin: 0 !important;
+}
+html body #app .v514-inline-meta {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin: 0 !important;
+}
+html body #app .v514-inline-meta .v514-lbl {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+  white-space: nowrap;
+}
+html body #app .v514-inline-meta input {
+  width: 76px !important;
+  min-width: 68px;
+  min-height: 36px !important;
+  padding: 4px 8px !important;
+  text-align: center;
+}
+html body #app .v514-inline-meta button {
+  min-height: 36px !important;
+  padding: 0 12px !important;
+  white-space: nowrap;
+}
+@media (min-width: 900px) {
+  html body #app .dt397-top-grid,
+  html body #app .dt397-cards {
+    align-items: stretch !important;
+  }
+  html body #app .v596-foco {
+    height: 100%;
+    align-items: center;
+  }
+}
+
+/* Long & Short: campos rotulados, bordas padronizadas e CTA em destaque */
+html body #app .v512-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+html body #app .v512-fld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+html body #app .v512-fld > span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+html body #app .v512-fld input,
+html body #app .v512-fld select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+}
+html body #app .v512-cta {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+/* Notícias: botão Explicar compacto na linha de metadados */
+html body #app .eco-nw-inline {
+  min-height: 28px !important;
+  padding: 3px 10px !important;
+  font-size: 11.5px !important;
+  border-radius: 999px !important;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* GP Chart: toggle Linha / Candles 1 clique */
+#v421-gp .gp-style-seg button[aria-pressed="true"] {
+  background: #FF9F1C !important;
+  color: #000000 !important;
+  border-color: #FF9F1C !important;
+  font-weight: 800 !important;
+}
+#v421-gp .gp-la {
+  stroke: #FF9F1C !important;
+  stroke-width: 2 !important;
+}
+#v421-gp .gp-tag-a rect {
+  fill: #FF9F1C !important;
+}
+#v421-gp .gp-tag-a text {
+  fill: #000000 !important;
+  font-weight: 800 !important;
+}
+
+/* Fase 3: módulos principais governados diretamente por tokens semânticos (Dark & Light nativo) */
+html body :is(.card, .an-section, .scr-panel, .m623-sec, .m606-card, .dt393-card) {
+  background: var(--surface-1);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+
