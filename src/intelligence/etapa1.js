@@ -215,19 +215,65 @@
         'Naquele dia: '+Object.entries(u.dia||{}).map(([k,v])=>escape(nomes[k]||k)+' '+pct(v)).join(' · ')+'.</p>'+
         '<p class="sm">Nos 5 pregões seguintes: S&amp;P '+pct(u.depois5?.spx)+' · Ibovespa '+pct(u.depois5?.ibov)+'. '+escape(a.vezes||0)+' dia(s) parecido(s) desde '+escape(a.desde||'')+'.</p>'
         :'<p class="mut sm">Nenhum dia parecido nos últimos anos de histórico.</p>')+
-      '<p class="mut sm">Histórico diário (Yahoo, via Cloudflare). Comparação de direção, não previsão.</p>';
+      '<p class="mut sm">Histórico diário (Yahoo Finance). Comparação de direção, não previsão.</p>';
   }
 
-  /* v835: sinais entre mercados — gap de amanhã (depois das 17h) e pares que se separaram hoje. */
+  /* v886: Paridade de ADRs (cesta de ADRs + USD/BRL) para preço teórico na B3 e abertura teórica do Ibovespa. */
+  const ADR_REGRAS=[
+    {s:'PBR',tk:'PETR4',razao:2,peso:12.0},
+    {s:'VALE',tk:'VALE3',razao:1,peso:11.5},
+    {s:'ITUB',tk:'ITUB4',razao:1,peso:7.5},
+    {s:'BBD',tk:'BBDC4',razao:1,peso:3.5},
+    {s:'ABEV',tk:'ABEV3',razao:1,peso:2.8},
+    {s:'GGB',tk:'GGBR4',razao:1,peso:1.3}
+  ];
+  function paridadeAdrsHtml(){
+    const m=state.mercado;if(!m||!Array.isArray(m.adrs)||!m.adrs.length)return '';
+    const itens=(m.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
+    const fxObj=itens.find(i=>/USD\/?BRL/i.test(String(i.n||'')));
+    const ewzObj=itens.find(i=>/^EWZ\b/i.test(String(i.n||'')));
+    const fx=Number(fxObj?.px),fxD1=Number(fxObj?.d1);
+    if(!Number.isFinite(fx)||fx<=0)return '';
+    const fxPct=Number.isFinite(fxD1)?fxD1:0;
+    const pct=v=>(v>=0?'+':'')+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+    const brl=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const usd=v=>'US$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    let somaPond=0,somaPeso=0;
+    const linhas=[];
+    for(const reg of ADR_REGRAS){
+      const a=m.adrs.find(x=>String(x.s||'').toUpperCase()===reg.s);
+      if(!a||!Number.isFinite(Number(a.px))||Number(a.px)<=0)continue;
+      const pxUsd=Number(a.px),chpUsd=Number.isFinite(Number(a.chp))?Number(a.chp):0;
+      const teorico=(pxUsd/reg.razao)*fx;
+      const varBrl=((1+chpUsd/100)*(1+fxPct/100)-1)*100;
+      somaPond+=varBrl*reg.peso;somaPeso+=reg.peso;
+      linhas.push({tk:reg.tk,adr:reg.s,razao:reg.razao,pxUsd,teorico,varBrl});
+    }
+    if(!linhas.length)return '';
+    const ibovVar=somaPeso>0?somaPond/somaPeso:0;
+    const ewzBrl=ewzObj&&Number.isFinite(Number(ewzObj.d1))?((1+Number(ewzObj.d1)/100)*(1+fxPct/100)-1)*100:null;
+    const cor=v=>v>0.15?'ui-g':v<-0.15?'ui-r':'';
+    const trs=linhas.map(l=>'<tr><td style="padding:4px 6px"><b>'+l.tk+'</b> <span class="mut">('+l.adr+(l.razao>1?' ÷'+l.razao:'')+')</span></td><td style="padding:4px 6px;text-align:right">'+usd(l.pxUsd)+'</td><td style="padding:4px 6px;text-align:right"><b>'+brl(l.teorico)+'</b></td><td style="padding:4px 6px;text-align:right"><b class="'+cor(l.varBrl)+'">'+pct(l.varBrl)+'</b></td></tr>').join('');
+    return '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.24);background:rgba(201,166,107,.05)">'+
+      '<p class="sm" style="margin:0"><b>Ibovespa teórico (Cesta de ADRs):</b> <b class="'+cor(ibovVar)+'">'+pct(ibovVar)+'</b>'+
+      (ewzBrl!=null?' · <b>EWZ em R$:</b> <b class="'+cor(ewzBrl)+'">'+pct(ewzBrl)+'</b>':'')+
+      ' · Dólar: <b>'+brl(fx)+'</b> ('+pct(fxPct)+')</p>'+
+      '<details style="margin-top:6px"><summary class="sm" style="cursor:pointer;color:var(--accent,#C9A66B)">Ver preço teórico das ações (Paridade de ADRs · '+linhas.length+' ativos)</summary>'+
+      '<div style="overflow-x:auto;margin-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.1)"><th style="text-align:left;padding:4px 6px">Ação (ADR)</th><th style="text-align:right;padding:4px 6px">ADR</th><th style="text-align:right;padding:4px 6px">Teórico B3</th><th style="text-align:right;padding:4px 6px">Var. R$</th></tr></thead><tbody>'+trs+'</tbody></table></div>'+
+      '<p class="mut sm" style="margin:6px 0 0">Fórmula: <b>(ADR em US$ ÷ equivalência) × USD/BRL</b>. Ponderação estimada pelos pesos da cesta (~'+somaPeso.toFixed(0)+'% do Ibov). Referência teórica, não preço de leilão.</p></details></div>';
+  }
+  /* v835: sinais entre mercados — expectativa de abertura do Ibovespa (B3) e pares que se separaram hoje. */
   function sinaisHtml() {
-    const x=state.extras;if(!x)return '';
+    const x=state.extras;
     const pct=v=>v==null?'—':(v>0?'+':'')+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
-    const b3=w.DiarioSessoes?.session('B3')?.state;
-    const gap=x.gap&&b3!=='regular'?'<div class="i835-bloco"><b>Gap de amanhã</b><p class="sm">'+escape(x.gap.texto)+'</p></div>':'';
-    const q=(x.pares||[]).filter(p=>p.quebrou);
+    const c=w.DiarioSessoes?.context(),b3=c?.b3?.state||w.DiarioSessoes?.session('B3')?.state;
+    const gapTitulo=c?.mode==='cripto_macro'||c?.mode==='b3_fechada'?'Expectativa de abertura da B3 na próxima sessão':'Expectativa de abertura do Ibovespa (B3)';
+    const paridade=b3!=='regular'?paridadeAdrsHtml():'';
+    const gap=(x?.gap||paridade)&&b3!=='regular'?'<div class="i835-bloco"><b>'+gapTitulo+'</b>'+(x?.gap?'<p class="sm">'+escape(x.gap.texto)+'</p>':'')+paridade+'</div>':'';
+    const q=(x?.pares||[]).filter(p=>p.quebrou);
     const pares=q.length?'<div class="i835-bloco"><b>Correlação quebrada hoje</b>'+q.map(p=>'<p class="sm"><b>'+escape(p.a)+' '+pct(p.hojeA)+'</b> × <b>'+escape(p.b)+' '+pct(p.hojeB)+'</b> — costumam andar juntos (correlação de 60 dias '+escape(String(p.correlacao60).replace('.',','))+'). '+escape(p.porque)+'</p>').join('')+'</div>':'';
     if(!gap&&!pares)return '';
-    return '<header><h2>Sinais entre mercados</h2><span class="ui-badge">Cloudflare · Yahoo</span></header>'+gap+pares+'<p class="mut sm">Leitura automática de dados públicos; não é recomendação.</p>';
+    return '<header><h2>Sinais entre mercados</h2><span class="ui-badge">Referência externa</span></header>'+gap+pares+'<p class="mut sm">Leitura automática de dados públicos; não é recomendação.</p>';
   }
   function chaveEvento(t){return String(t||'').toLowerCase().replace(/\(.*?\)/g,'').replace(/\b(nov|dez|jan|fev|mar|abr|mai|jun|jul|ago|set|out)\.?\s*\d{4}\b/g,'').replace(/[^a-z0-9à-ú ]/g,' ').replace(/\s+/g,' ').trim().slice(0,80);}
   /* v835: eventos fortes da semana com a reação do Ibovespa nas vezes anteriores (o histórico cresce a cada dia). */
@@ -405,6 +451,18 @@
     const rank=Object.entries(porAtivo).sort((a,b)=>b[1]-a[1]);
     return {n:list.length,totPL,mN,mTaxa:mN?Math.round(mW/mN*100):null,tN,tTaxa:tN?Math.round(tW/tN*100):null,semStop,melhor:rank[0]||null,pior:rank.length>1?rank[rank.length-1]:null};
   }
+  function ultimosRegistrosDia(){
+    if(typeof S==='undefined'||!S||!Array.isArray(S.trades))return '';
+    const rec=S.trades.slice().sort((a,b)=>String(b.dtx||b.dt||'').localeCompare(String(a.dtx||a.dt||''))).slice(0,4);
+    if(!rec.length)return '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.08)"><p style="margin:0"><b>Últimos registros</b></p><p class="mut sm" style="margin:4px 0 0">Nenhum trade registrado ainda. Toque no + em Operações para registrar o primeiro.</p></div>';
+    const rows=rec.map(t=>{
+      let pl=null;try{pl=typeof cBRL==='function'?cBRL(t)?.pl:null;}catch(_){}
+      const tk=String(t.ativo||t.tk||'—').toUpperCase(),dt=br(String(t.dtx||t.dt||'').slice(0,10));
+      const plTxt=number(pl)?'<b class="'+(pl>=0?'ui-g':'ui-r')+'">'+(pl>=0?'+':'')+pl.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})+'</b>':'<span class="mut">em aberto</span>';
+      return '<li style="display:flex;justify-content:space-between;gap:8px;padding:3px 0"><span><b>'+escape(tk)+'</b> <span class="mut sm">'+escape(dt)+'</span></span>'+plTxt+'</li>';
+    }).join('');
+    return '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.08)"><p style="margin:0 0 4px"><b>Últimos registros</b></p><ul style="list-style:none;margin:0;padding:0;font-size:12.5px">'+rows+'</ul></div>';
+  }
   function meuDia(){
     const c=w.DiarioSessoes?.context(),manual=w.DiarioSessaoVisual?.manual?.(),
       phase=manual||c?.phase, data=c?.b3?.nextDate;
@@ -429,7 +487,7 @@
       (state.revisaoOut?'<div class="sm" style="margin-top:8px;line-height:1.5">'+state.revisaoOut+'</div>':'')+
       '</div>':'';
     return '<div class="v810-intel-day"><strong>Orientação da sessão</strong><p>'+escape(task)+'</p>'+
-      padroes+
+      padroes+ultimosRegistrosDia()+
       '<small>Próxima sessão B3: '+escape(data?data.split('-').reverse().join('/'):'data não verificada')+
       ' · Fonte: calendário de negociação da B3 / regras do aplicativo</small></div>';
   }
@@ -445,12 +503,12 @@
     // Um único despertador para a próxima transição de calendário. Nenhum polling de rede.
     state.boundary=setTimeout(()=>{state.boundary=null;if(!state.route||document.hidden)return;if(['home','dia'].includes(state.route))w.DiarioSessaoVisual?.atualizar?.();repaint();refresh();armSession();},Math.max(1000,next-now));
   }
-  /* v884: 3 edições automáticas da Áurea (Manhã, Meio-dia, Fechamento) cruzando B3 + EUA. */
+  /* v884/v885: Edições automáticas da Áurea (Fim de semana + Manhã, Meio-dia, Fechamento) cruzando B3 + EUA. */
   function edicaoAuto(context){
     const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
     const hm=Number(parts.find(x=>x.type==='hour')?.value||0)*60+Number(parts.find(x=>x.type==='minute')?.value||0);
     const b3=context?.b3?.state,us=context?.us?.state;
-    if(context?.mode==='cripto_macro'||context?.mode==='b3_fechada')return hm<720?'manha':'fechamento';
+    if(context?.mode==='cripto_macro'||context?.mode==='b3_fechada')return 'fimdesemana';
     if(b3==='pre'||(hm<720&&b3!=='post'&&b3!=='fechado'))return 'manha';
     if((b3==='regular'||us==='regular')&&hm>=720&&hm<990)return 'meiodia';
     return 'fechamento';
@@ -473,20 +531,22 @@
     const mine=relacionados().filter(e=>e.prioridade==='alta');
     const edAuto=edicaoAuto(context),ed=state.edicaoManual||edAuto;
     const META={
-      manha:{rot:'🌅 Manhã',titulo:'Edição da Manhã · Pré-abertura B3 & EUA',foco:'Preparação antes dos pregões: exterior, dólar, agenda macro e ativos da sua carteira.'},
-      meiodia:{rot:'☀️ Meio-dia',titulo:'Edição do Meio-dia · Pulso B3 & Wall Street',foco:'B3 e EUA em negociação simultânea: direção intraday, fluxo e notícias que estão mexendo.'},
-      fechamento:{rot:'🌙 Fechamento',titulo:'Edição de Fechamento · Balanço B3 & EUA',foco:'Resumo do dia nos dois mercados e o que já entra no radar para a próxima sessão.'}
+      fimdesemana:{rot:'📅 Fim de semana',titulo:'Edição de Fim de Semana · Preparação da Semana',foco:'B3 e Wall Street fechados. Acompanhe cripto (24/7), o último fechamento e a agenda da próxima semana.',cta:'✦ Preparar a semana com a Áurea'},
+      manha:{rot:'🌅 Manhã',titulo:'Edição da Manhã · Pré-abertura B3 & EUA',foco:'Preparação antes dos pregões: exterior, dólar, agenda macro e ativos da sua carteira.',cta:'✦ Gerar resumão da Manhã com a Áurea'},
+      meiodia:{rot:'☀️ Meio-dia',titulo:'Edição do Meio-dia · Pulso B3 & Wall Street',foco:'B3 e EUA em negociação simultânea: direção intraday, fluxo e notícias que estão mexendo.',cta:'✦ Gerar resumão do Meio-dia com a Áurea'},
+      fechamento:{rot:'🌙 Fechamento',titulo:'Edição de Fechamento · Balanço B3 & EUA',foco:'Resumo do dia nos dois mercados e o que já entra no radar para a próxima sessão.',cta:'✦ Gerar resumão de Fechamento com a Áurea'}
     };
     const info=META[ed]||META.manha;
     const stNome=x=>({regular:'Aberto',pre:'Pré-mercado',post:'Pós-mercado',fechado:'Fechado',leilao:'Leilão'}[x]||'—');
     const b3St=stNome(context?.b3?.state),usSt=stNome(context?.us?.state);
     const pulso=pulsoDoisMercados();
     const hojeIso=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
-    const agAlvo=ed==='fechamento'&&context?.b3?.nextDate?context.b3.nextDate:hojeIso;
-    const agEvs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})===agAlvo)
+    const agAlvo=(ed==='fechamento'||ed==='fimdesemana')&&context?.b3?.nextDate?context.b3.nextDate:hojeIso;
+    const agEvs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})>=agAlvo)
       .slice(0,3).map(e=>new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' ['+e.p+'] '+String(e.t||'').slice(0,50));
+    const keys=edAuto==='fimdesemana'?['fimdesemana','manha','meiodia','fechamento']:['manha','meiodia','fechamento'];
     const pills='<div class="aurea-ed-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px" role="tablist" aria-label="Edições da Áurea">'+
-      ['manha','meiodia','fechamento'].map(k=>'<button type="button" data-aurea-edicao="'+k+'" style="padding:4px 10px;border-radius:999px;font-size:11.5px;cursor:pointer;border:1px solid '+(ed===k?'rgba(201,166,107,.75)':'rgba(255,255,255,.14)')+';background:'+(ed===k?'rgba(201,166,107,.16)':'transparent')+';color:inherit;font-weight:'+(ed===k?'700':'500')+'">'+META[k].rot+(k===edAuto?' · agora':'')+'</button>').join('')+
+      keys.map(k=>'<button type="button" data-aurea-edicao="'+k+'" style="padding:4px 10px;border-radius:999px;font-size:11.5px;cursor:pointer;border:1px solid '+(ed===k?'rgba(201,166,107,.75)':'rgba(255,255,255,.14)')+';background:'+(ed===k?'rgba(201,166,107,.16)':'transparent')+';color:inherit;font-weight:'+(ed===k?'700':'500')+'">'+META[k].rot+(k===edAuto?' · agora':'')+'</button>').join('')+
       '</div>';
     const relogio='<p class="mut sm" style="margin:0 0 6px">B3: <b>'+escape(b3St)+'</b> · EUA (NYSE/Nasdaq): <b>'+escape(usSt)+'</b>'+(context?.b3?.nextDate?' · Próxima B3: '+escape(br(context.b3.nextDate)):'')+'</p>';
     const doisMkts=pulso.texto?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.22);background:rgba(201,166,107,.05)">'+escape(pulso.texto)+'</p>':'';
@@ -509,7 +569,7 @@
       '<p class="mut sm">Fonte: '+fonte+' · '+(recent?'Atualizado: ':'Último registro (não é tempo real): ')+
         when(state.mercado?.atualizadoEm)+'</p>'+
       (context?.warning?'<p class="mut sm">'+escape(context.warning)+'</p>':'')+
-      '<p style="margin:8px 0"><button type="button" class="btn s" data-aurea-resumao="'+ed+'">✦ Gerar resumão completo com a Áurea ('+META[ed].rot.replace(/^\S+\s*/,'')+')</button></p>'+
+      '<p style="margin:8px 0"><button type="button" class="btn s" data-aurea-resumao="'+ed+'">'+info.cta+'</button></p>'+
       '<details><summary>Fatos publicados, hipóteses e fontes · '+mine.length+' ligados aos seus ativos</summary>'+
       '<ul class="v810-intel-events">'+top+'</ul>'+
       (hot.length?'<div><b>Hipóteses condicionadas</b></div>'+
@@ -665,7 +725,7 @@
     const resBtn=event.target.closest('[data-aurea-resumao]');
     if(resBtn){
       const ed=resBtn.dataset.aureaResumao||'manha';
-      const nomes={manha:'Edição da Manhã (Pré-abertura)',meiodia:'Edição do Meio-dia (Meio do pregão)',fechamento:'Edição de Fechamento (Pós-pregão)'};
+      const nomes={fimdesemana:'Edição de Fim de Semana (Preparação da Semana)',manha:'Edição da Manhã (Pré-abertura)',meiodia:'Edição do Meio-dia (Meio do pregão)',fechamento:'Edição de Fechamento (Pós-pregão)'};
       const c=w.DiarioSessoes?.context(),p=pulsoDoisMercados(),m=mercadoPlan();
       const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,3).map(e=>tit(e)).join(' | ');
       const prompt='@schwartz Monte o resumão executivo da Áurea — '+(nomes[ed]||ed)+', englobando Brasil (B3: '+(c?.b3?.state||'—')+') e Exterior (EUA: '+(c?.us?.state||'—')+'). '+
