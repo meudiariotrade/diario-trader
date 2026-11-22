@@ -1,55 +1,8 @@
-name: Aplicar e publicar v881 em commit unico
+name: v881 build-check-publish historico
 on:
-  push:
-    branches: [ci-v881-20261122]
-permissions:
-  contents: write
+  workflow_dispatch:
 jobs:
-  build-check-publish:
+  info:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
     steps:
-      - name: Checkout da main para gerar uma unica revisao publicavel
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: true
-      - name: Conferir base e aplicar patch enviado
-        shell: bash
-        env:
-          EXPECTED_BASE: 0cdedfce0dab435b11516f0ac93934ad895525e9
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$EXPECTED_BASE" || { echo "A main mudou: abortando sem publicar"; exit 1; }
-          git fetch origin "$GITHUB_SHA" --depth=1
-          git show "$GITHUB_SHA:patches/melhorias_analises_v881.patch" > /tmp/melhorias_analises_v881.patch
-          git apply --check /tmp/melhorias_analises_v881.patch
-          git apply /tmp/melhorias_analises_v881.patch
-          test "$(node -p 'require("./release.config.json").version')" = 881
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-      - name: Instalar dependencias de build
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Regenerar bundles e validar
-        run: npm run build && npm run check
-      - name: Um unico commit na main com fontes e bundles regenerados
-        shell: bash
-        env:
-          EXPECTED_BASE: 0cdedfce0dab435b11516f0ac93934ad895525e9
-        run: |
-          set -euo pipefail
-          git config user.name "diario-trader-ci"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --cached --name-only
-          test -n "$(git diff --cached --name-only)" || { echo "Sem mudancas para publicar"; exit 1; }
-          for file in analises.css src/analysis/analises-plus.js src/analysis/analises.js release.config.json analises-plus.js analises.js version.js sw.js index.html package.json package-lock.json; do
-            git diff --cached --name-only | grep -Fx "$file" >/dev/null || { echo "Arquivo gerado ausente: $file"; exit 1; }
-          done
-          git commit -m "v881: reformulação visual da aba Análises (fontes e bundles)"
-          git fetch origin main
-          test "$(git rev-parse origin/main)" = "$EXPECTED_BASE" || { echo "A main mudou durante o build: abortando push"; exit 1; }
-          git push origin HEAD:refs/heads/main
+      - run: echo "v881 validada e publicada na main no commit 680e6f500054c07cbfc0125e4631a8c78373c1c2"
