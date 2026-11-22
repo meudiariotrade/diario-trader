@@ -139,19 +139,91 @@
   }
   function dataBR(d) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : '–'; }
 
+  var falando = false;
+  function textoResumo(v) {
+    if (!v) return '';
+    var c = v.capa || {}, P = v.plano || {}, partes = [];
+    if (v.titulo) partes.push('Jornal do Pregão, ' + v.titulo + '.');
+    if (c.manchete) partes.push(c.manchete + '.');
+    if (c.subtitulo) partes.push(c.subtitulo + '.');
+    if (c.por_que_importa) partes.push('Por que importa: ' + c.por_que_importa + '.');
+    if (Array.isArray(c.cinco) && c.cinco.length) {
+      partes.push('Cinco pontos para saber: ' + c.cinco.slice(0, 5).join('. ') + '.');
+    }
+    if (P.win && P.win.vies) {
+      partes.push('Mini índice WIN, viés ' + P.win.vies + (P.win.leitura ? '. ' + P.win.leitura : '') + '.');
+    }
+    if (P.wdo && P.wdo.vies) {
+      partes.push('Mini dólar WDO, viés ' + P.wdo.vies + (P.wdo.leitura ? '. ' + P.wdo.leitura : '') + '.');
+    }
+    return partes.join(' ').replace(/\s+/g, ' ').trim();
+  }
+  function alternarFala(v) {
+    try {
+      var sp = window.speechSynthesis;
+      if (!sp) { if (typeof toast === 'function') toast('Este aparelho não lê em voz alta.'); return; }
+      if (falando) { sp.cancel(); falando = false; pinta(); return; }
+      var txt = textoResumo(v);
+      if (!txt) return;
+      var fr = txt.match(/[^.!?]+[.!?]+|\S[^.!?]*$/g) || [txt];
+      var voz = (sp.getVoices() || []).find(function (x) { return /^pt(-|_)BR/i.test(x.lang); });
+      falando = true; pinta();
+      var i = 0;
+      var prox = function () {
+        if (!falando || i >= fr.length) { falando = false; pinta(); return; }
+        var u = new SpeechSynthesisUtterance(fr[i++].trim());
+        u.lang = 'pt-BR';
+        if (voz) u.voice = voz;
+        u.rate = 1.02;
+        u.onend = prox;
+        u.onerror = function () { falando = false; pinta(); };
+        sp.speak(u);
+      };
+      sp.cancel();
+      prox();
+    } catch (x) {
+      falando = false;
+      if (typeof toast === 'function') toast('Não consegui ler em voz alta.');
+    }
+  }
+  function abrirAurea(v) {
+    if (!v) return;
+    var c = v.capa || {}, P = v.plano || {};
+    var resumo = [
+      'Edição: ' + (v.titulo || 'Jornal do Pregão') + ' (' + dataBR(v.dia) + ')',
+      c.manchete ? 'Manchete: ' + c.manchete : '',
+      c.por_que_importa ? 'Por que importa: ' + c.por_que_importa : '',
+      Array.isArray(c.cinco) && c.cinco.length ? '5 pontos: ' + c.cinco.slice(0, 5).join(' | ') : '',
+      P.win ? 'WIN viés ' + (P.win.vies || '–') + (P.win.gatilho_alta ? ' · alta: ' + P.win.gatilho_alta : '') + (P.win.gatilho_baixa ? ' · baixa: ' + P.win.gatilho_baixa : '') : '',
+      P.wdo ? 'WDO viés ' + (P.wdo.vies || '–') + (P.wdo.gatilho_alta ? ' · alta: ' + P.wdo.gatilho_alta : '') + (P.wdo.gatilho_baixa ? ' · baixa: ' + P.wdo.gatilho_baixa : '') : ''
+    ].filter(Boolean).join('\n');
+    var prompt = '@schwartz Comente o Jornal do Pregão de hoje de forma objetiva: qual o principal vetor macro, onde está a assimetria em WIN/WDO e qual o risco de armadilha na sessão?\n\n' + resumo;
+    try { if (window.TraderChat && typeof window.TraderChat.open === 'function') window.TraderChat.open(); } catch (x) {}
+    if (typeof ecoPergunta === 'function') void ecoPergunta(prompt, { pergunta: '✦ Debater Jornal do Pregão (' + dataBR(v.dia) + ')' });
+  }
+
   function html() {
     var v = M.v || (demo ? DEMO : null);
+    var acoes = v
+      ? '<div class="m562-acoes">' +
+          '<button type="button" class="btn" data-jrpdf="1">📄 PDF do Jornal</button>' +
+          '<button type="button" class="btn s" data-m562="fala">' + (falando ? '⏹ Parar' : '🔊 Ouvir') + '</button>' +
+          '<button type="button" class="btn s" data-m562="aurea">✦ Áurea</button>' +
+          '<button type="button" class="btn s" data-m562="ab" aria-expanded="' + (M.aberta ? 'true' : 'false') + '">' + (M.aberta ? 'Ocultar edição completa' : 'Edição completa') + '</button>' +
+        '</div>'
+      : '<button type="button" class="btn s" data-m562="ab" aria-expanded="' + (M.aberta ? 'true' : 'false') + '">' + (M.aberta ? 'Ocultar edição completa' : 'Edição completa') + '</button>';
     var bar = '<div class="m562-bar">' +
       (demo && !M.v ? '<span class="m562-demo">Exemplo fictício</span>' : '<span></span>') +
-      '<button type="button" class="btn s" data-m562="ab" aria-expanded="' + (M.aberta ? 'true' : 'false') + '">' + (M.aberta ? 'Ocultar edição completa' : 'Edição completa') + '</button></div>';
+      acoes + '</div>';
     if (!v) {
       var msg = M.busy ? 'Montando o Jornal do Pregão a partir da edição de hoje…' : M.err ? e(M.err) : sessao() ? 'O Jornal do Pregão aparece aqui assim que a edição do dia estiver pronta.' : 'Entre na sua conta para ver o Jornal do Pregão.';
       return bar + '<p class="m562-estado" role="status">' + msg + '</p>';
     }
     var ed = edAtual(), velha = !!M.v && ed && v.dia && ed.dia && (ed.dia !== v.dia || (ed.edicao && v.edicao && ed.edicao !== v.edicao));
+    var ctaPdf = '<div class="m562-pdf-cta"><div><b>Leitura completa no PDF</b><p class="sm mut">Baixe o PDF da edição para ler todas as matérias, painel técnico EUA/cripto, fluxo EWZ, setores e fontes conferidas.</p></div><button type="button" class="btn" data-jrpdf="1">📄 Abrir PDF</button></div>';
     return bar + (M.err ? '<p class="m562-estado erro" role="alert">' + e(M.err) + '</p>' : '') +
       (velha && !M.busy ? '<p class="m562-estado">Há uma edição mais nova do Jornal. <button type="button" class="lnk" data-m562="rf">Montar agora</button></p>' : '') +
-      capa(v) + plano(v) + macro(v) + radar(v) + agenda(v);
+      capa(v) + plano(v) + macro(v) + radar(v) + agenda(v) + ctaPdf;
   }
 
   var pintando = false;
@@ -174,7 +246,11 @@
   document.addEventListener('click', function (ev) {
     var b = ev.target && ev.target.closest && ev.target.closest('[data-m562]'); if (!b) return;
     ev.preventDefault();
-    if (b.getAttribute('data-m562') === 'rf') carrega(true);
+    var act = b.getAttribute('data-m562');
+    var v = M.v || (demo ? DEMO : null);
+    if (act === 'rf') carrega(true);
+    else if (act === 'fala') alternarFala(v);
+    else if (act === 'aurea') abrirAurea(v);
     else { M.aberta = !M.aberta; try { localStorage.setItem(LS_AB, M.aberta ? '1' : '0'); } catch (x) { /* sem storage */ } pinta(); }
   });
 
