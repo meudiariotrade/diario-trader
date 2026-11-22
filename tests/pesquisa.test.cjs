@@ -34,7 +34,7 @@ test('YoY, QoQ e histórico anual são calculados sem misturar YTD ou fontes sec
 
 test('agenda: JWT autenticado segue de pesquisa para macro; cron permanece só para diagnóstico interno', async()=>{
  const origem=fs.readFileSync('supabase/functions/pesquisa/index.ts','utf8');
- assert.match(origem,/checkpoint\\.pesquisa=await pesquisar\\(job\\.comando,env,fetch,token\\)/);
+ assert.ok(origem.includes('checkpoint.pesquisa=await pesquisar(job.comando,env,fetch,token)'), 'JWT autenticado precisa ser repassado à pesquisa');
  const m=moduleAt('motor.ts',{hoje:()=> '2026-11-22'});
  const env=k=>({SUPABASE_URL:'https://sb.test',SUPABASE_ANON_KEY:'anon-publica',CRON_SECRET:'segredo-interno'})[k];
  const chamadas=[];
