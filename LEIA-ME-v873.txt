@@ -1,0 +1,14 @@
+v873 — Análises+ (layout de stock picking na identidade escura do Diário)
+Novas telas na barra de Análises: Rankings · Radar · Screener · Técnico · Teses · Pesquisa com IA
+1. Rankings: tabela completa B3 com filtros laterais, 4 screeners por gestor (Deep Value, Dividendos Saudáveis,
+   Quality Compounders, Small Caps Ocultas), escolha de colunas, Graham/Bazin/Gordon/Justo médio/Teto próprio,
+   Nota Raio-X (0–4, percentis), Crowded, paginação 30/50/100 e exportação CSV.
+2. Radar: rotação setorial (1D/7D/1M/6M/12M/YTD, ponderada por valor de mercado) + Oportunidades claras,
+   Reprecificação, Distorções de valuation, PEG<1, Small caps ignoradas, Riscos elevados e Top 20.
+3. Página do ativo: Visão geral (gráfico com linha do justo médio e comparação com BOVA11), Raio-X (radar de 6 eixos
+   e comparação com pares do setor), Dividendos e preço justo (calculadoras Graham, Bazin, Gordon e Novo Bazin), Empresa.
+   Abre clicando em qualquer ativo ou pelo botão "Página do ativo" na ficha.
+4. Teses: tese por ativo com entrada, alvo, invalidação, critérios, riscos, status e progresso até o alvo.
+Arquivos: src/analysis/analises-plus.js (novo), src/analysis/analises.js, analises.css, src/index.html,
+src/service-worker.js, release.config.json, 2 testes (contagem de sub-abas 3→6).
+Sem Supabase e sem polling: tudo calculado no aparelho a partir do snapshot do Screener; séries do cache do Técnico.

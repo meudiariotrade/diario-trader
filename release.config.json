@@ -1,5 +1,5 @@
 {
-  "version": 872,
+  "version": 873,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -24,7 +24,7 @@
     "LICENSE-fontkit.txt"
   ],
   "debug": [],
-  "base": "87edf640575c9c692c1dd251d56d40a6123a8388",
+  "base": "1d581bf1526ecefe2dbc2350fbc69261f93a6584",
   "bundles": {
     "nucleo-v560.js": "src/app-core.js",
     "camadas-v560.js": "src/app-layers.js",
@@ -43,6 +43,7 @@
     "tecnico-ui.js": "src/analysis/tecnico-ui.js",
     "tecnico-pdf.js": "src/analysis/tecnico-pdf.js",
     "pesquisa-pdf.js": "src/analysis/pesquisa-pdf.js",
+    "analises-plus.js": "src/analysis/analises-plus.js",
     "analises.js": "src/analysis/analises.js",
     "relatorios-dados.js": "src/contracts/relatorios-dados.js",
     "fiscal-conferencia.js": "src/navigation/fiscal-conferencia.js",

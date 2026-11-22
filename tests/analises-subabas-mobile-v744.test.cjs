@@ -11,7 +11,7 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, Pesquisa prese
  const nav=page.locator('#an-root nav.an-subs');
  await expect(nav).toHaveCount(1);
  await expect(nav).toBeVisible();
- await expect(nav.locator('[data-an-sub]')).toHaveCount(3);
+ await expect(nav.locator('[data-an-sub]')).toHaveCount(6);
  const pesquisa=nav.locator('[data-an-sub="pesquisa"]');
  await expect(pesquisa).toContainText('Pesquisa com IA');
  await expect(pesquisa).toHaveAttribute('aria-selected','true');

@@ -488,3 +488,8 @@ body.hf-aberto{overflow:hidden}
  body.scr853-imprimir .scr849-bar i,body.scr853-imprimir .scr846-bar i,body.scr853-imprimir .scr-meter i{background:#555!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
  body.scr853-imprimir .scr846-fig svg rect.ok{fill:#10B981!important}body.scr853-imprimir .scr846-fig svg rect.neg{fill:#EF4444!important}
 }
+/* v873: barra de telas com Rankings/Radar/Teses — rola no iPhone sem quebrar a página */
+.an-subs.an830-bar .an830-seg{max-width:100%;min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.an-subs.an830-bar .an830-seg::-webkit-scrollbar{display:none}
+.an-subs.an830-bar .an830-seg button{flex:0 0 auto;white-space:nowrap}
+#an-root.an873{min-width:0}
