@@ -571,4 +571,16 @@ html[data-v427-tema=claro] .an-ver.ok{color:#15803D}
 html[data-v427-tema=claro] .an-ver.warn{color:#B91C1C}
 html[data-v427-tema=claro] .an-ver.neu{color:#8B6524}
 @media(max-width:767px){.an-mesa-grid,.an-duelo-grid{grid-template-columns:1fr}.an-mesa-form input{font-size:16px;width:90px}}
+/* v885: Conselho mais limpo — histórico recolhido por padrão e estado vazio discreto */
+.an-empty-slim{margin:0;padding:12px 14px;border-radius:8px;border:1px dashed var(--border,rgba(255,255,255,.12));font-size:12.5px;color:var(--text-muted,#94A3B8)}
+.an-history-drawer{padding:0!important;overflow:hidden}
+.an-history-summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font-weight:700;font-size:13.5px;user-select:none}
+.an-history-summary::-webkit-details-marker{display:none}
+.an-history-summary::before{content:"▸ ";color:var(--accent,#C9A66B);margin-right:6px}
+.an-history-drawer[open]>.an-history-summary::before{content:"▾ "}
+.an-history-summary small{font-weight:500;font-size:12px;color:var(--text-muted,#94A3B8)}
+.an-history-body{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border,rgba(255,255,255,.08));padding-top:10px}
+html[data-v427-tema=claro] .an-empty-slim{border-color:rgba(28,25,23,.16);color:#57534E}
+html[data-v427-tema=claro] .an-history-summary::before{color:#8B6524}
+
 

@@ -1,0 +1,45 @@
+name: QA temporario Conselho v885
+on:
+  push:
+    branches: [qa/limpeza-conselho-v885]
+permissions:
+  contents: write
+jobs:
+  verify:
+    if: "!contains(github.event.head_commit.message, 'CI: bundles v885')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Preparar browser dos testes
+        run: |
+          diario_browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$diario_browser" ]; then
+            "$diario_browser" --version
+            printf 'CHROMIUM_PATH=%s\n' "$diario_browser" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Gerar bundles v885
+        run: npm run build
+      - name: Verificar bundles v885
+        run: npm run check
+      - name: Rodar suite completa antes de publicar
+        run: npm test
+      - name: Registrar bundles gerados para publicacao
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git status --short
+          if ! git diff --cached --quiet; then
+            git commit -m "CI: bundles v885 [skip ci]"
+            git push origin HEAD:refs/heads/qa/limpeza-conselho-v885
+          fi
