@@ -81,12 +81,12 @@
     const spark=S=>{if(!S||S.length<3)return '';const mn=Math.min(...S),mx=Math.max(...S),w=160,h=36,dx=w/(S.length-1);
       const pts=S.map((v,i)=>(i*dx).toFixed(1)+','+(h-(mx>mn?(v-mn)/(mx-mn)*h:h/2)).toFixed(1)).join(' ');
       return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" class="jr840-sp" aria-hidden="true"><polyline fill="none" stroke="'+(S.at(-1)>=S[0]?'#10B981':'#EF4444')+'" stroke-width="1.5" points="'+pts+'"/></svg>';};
-    return '<section class="jrsec jr840"><h3>Painel técnico · índices EUA e criptos</h3><div class="jr840-grid">'+L.map(x=>
+    return '<details class="jrsec jr840 jr-gaveta"><summary>Painel técnico · índices EUA e criptos <span class="jr-gaveta-n">('+L.length+')</span></summary><div class="jr840-grid">'+L.map(x=>
       '<div class="jr840-c"><div class="jr840-t"><b>'+esc(x.nome)+'</b><span class="jr840-tend '+esc(x.tendencia)+'">'+esc(x.tendencia)+'</span></div>'+
       '<div class="jr840-p"><b>'+(x.tipo==='cripto'?'US$ ':'')+nf(x.px,x.px<10?4:2)+'</b><i class="'+(x.d1>=0?'g':'r')+'">'+(x.d1==null?'':(x.d1>0?'+':'')+nf(x.d1)+'%')+'</i></div>'+spark(x.serie)+
       '<small>RSI 14 '+nf(x.rsi14,1)+' · vs MM20 '+(x.dist20==null?'—':nf(x.dist20,1)+'%')+' · vs MM200 '+(x.dist200==null?'—':nf(x.dist200,1)+'%')+'</small>'+
       '<small>1m '+(x.ret1m==null?'—':nf(x.ret1m,1)+'%')+' · 3m '+(x.ret3m==null?'—':nf(x.ret3m,1)+'%')+' · 52s '+nf(x.min52)+'–'+nf(x.max52)+'</small></div>').join('')+
-      '</div><p class="sm mut">Candles diários (Yahoo). RSI de Wilder e médias simples. Não é recomendação.</p></section>'+jrExtrasHtml(SN)+jrSeusAtivosHtml();
+      '</div><p class="sm mut">Candles diários (Yahoo). RSI de Wilder e médias simples. Não é recomendação.</p></details>'+jrExtrasHtml(SN)+jrSeusAtivosHtml();
   }
   /* v841: medo e ganância cripto, fluxo do EWZ e mapa de calor dos setores (S&P 500 e Ibovespa). */
   function jrExtrasHtml(SN){
@@ -96,10 +96,10 @@
     const cor=v=>v>=1.5?'p3':v>=.5?'p2':v>0?'p1':v>-.5?'n1':v>-1.5?'n2':'n3';
     const heat=(t,X,lab)=>X.length?'<div class="jr841-hh">'+t+'</div><div class="jr841-heat">'+X.map(x=>{const v=x.d1??x.var;return '<div class="jr841-hc '+cor(v)+'"><b>'+esc(lab(x))+'</b><span>'+(v>0?'+':'')+nf(v)+'%'+(x.m1!=null?' · 1m '+(x.m1>0?'+':'')+nf(x.m1,1)+'%':'')+'</span></div>'}).join('')+'</div>':'';
     if(!f&&!z&&!se.length&&!sb.length)return '';
-    return '<section class="jrsec jr841"><h3>Sentimento, fluxo e setores</h3><div class="jr841-two">'+
+    return '<details class="jrsec jr841 jr-gaveta"><summary>Sentimento, fluxo e setores</summary><div class="jr841-two">'+
       (f?'<div class="jr840-c"><b>Medo e ganância · cripto</b><div class="jr840-p"><b class="'+(f.v>=55?'g':f.v<=45?'r':'')+'">'+f.v+'</b><small>'+esc(f.classe)+(f.semana_passada!=null?' · semana passada '+f.semana_passada:'')+'</small></div><span class="jr841-bar"><i style="width:'+f.v+'%"></i></span></div>':'')+
       (z?'<div class="jr840-c"><div class="jr840-t"><b>Fluxo de opções do EWZ</b><span class="jr840-tend '+(z.vies==='comprador'?'Alta':z.vies==='vendedor'?'Baixa':'')+'">'+esc(z.vies)+'</span></div><small>Calls '+mi(z.netC)+' · Puts '+mi(z.netP)+(z.pcVol!=null?' · put/call '+nf(z.pcVol):'')+'</small><small>Volatilidade 30 dias '+(z.iv30==null?'—':nf(z.iv30,1)+'%')+(z.rank!=null?' · IV Rank '+z.rank+'%':'')+(z.mov30!=null?' · ±'+nf(z.mov30,1)+'% em 30 dias':'')+'</small><small>Cboe, atrasado ~15 min.</small></div>':'')+
-      '</div>'+heat('Setores do S&P 500 hoje',se,x=>x.nome)+heat('Setores do Ibovespa hoje',sb,x=>x.setor+' ('+x.n+')')+'</section>';
+      '</div>'+heat('Setores do S&P 500 hoje',se,x=>x.nome)+heat('Setores do Ibovespa hoje',sb,x=>x.setor+' ('+x.n+')')+'</details>';
   }
   /* v841: seus ativos com o preço teto da sua fórmula (só na tela; usa o snapshot público do Screener e os valores salvos no aparelho). */
   const SA={rows:null,busy:false,at:0};
@@ -113,9 +113,9 @@
     const nf=(x,d=2)=>x==null||!Number.isFinite(x)?'—':Number(x).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
     const L=SA.rows.map(r=>{const v=V.valuationBR(r,{manual:tetos[r.ticker]||null});return {tk:r.ticker,px:r.preco_referencia,teto:v?.methods?.proprio,mg:v?.margins?.proprio,est:!!v?.estimados?.proprio,bazin:v?.methods?.bazin,graham:v?.methods?.graham}}).filter(x=>x.teto!=null).sort((a,b)=>(b.mg??-999)-(a.mg??-999));
     if(!L.length)return '';
-    return '<section class="jrsec jr841"><h3>Seus ativos · preço teto</h3><div class="jrvtab"><table><thead><tr><th>Ativo</th><th>Preço</th><th>Preço teto</th><th>Margem</th><th>Bazin</th><th>Graham</th></tr></thead><tbody>'+
+    return '<details class="jrsec jr841 jr-gaveta"><summary>Seus ativos · preço teto <span class="jr-gaveta-n">('+L.length+')</span></summary><div class="jrvtab"><table><thead><tr><th>Ativo</th><th>Preço</th><th>Preço teto</th><th>Margem</th><th>Bazin</th><th>Graham</th></tr></thead><tbody>'+
       L.map(x=>'<tr><td><b>'+esc(x.tk)+'</b></td><td>'+nf(x.px)+'</td><td>'+nf(x.teto)+(x.est?' <small class="mut">est.</small>':'')+'</td><td class="'+(x.mg>0?'g':'r')+'">'+(x.mg>0?'+':'')+nf(x.mg,1)+'%'+(x.mg>0?' · abaixo do teto':'')+'</td><td>'+nf(x.bazin)+'</td><td>'+nf(x.graham)+'</td></tr>').join('')+
-      '</tbody></table></div><p class="sm mut">Preço teto da sua fórmula (lucro projetado × payout ÷ ações ÷ yield). "est." = estimado do snapshot; ajuste na ficha do Screener Brasil. Não é recomendação.</p></section>';
+      '</tbody></table></div><p class="sm mut">Preço teto da sua fórmula (lucro projetado × payout ÷ ações ÷ yield). "est." = estimado do snapshot; ajuste na ficha em Research → Rankings. Não é recomendação.</p></details>';
   }
   w.DiarioJornalEditorial={edition,presentation};
   const journalView=vJornal;let legacyRefresh=false;
@@ -168,7 +168,7 @@ jrRkHtml=function(){
           `<div class="jrrk"><b>${esc(r.tk)}</b><span class="sm mut">${esc(r.nome || "")}</span><b class="${n}">${(r.var > 0 ? "+" : "") + Number(r.var).toFixed(2).replace(".", ",")}%</b></div>`,
       )
       .join("");
-  return `<section class="jrsec jrrks"><h3>Maiores altas e baixas do Ibovespa</h3><div class="jrrk2"><div><div class="jrrkt g">▲ Altas</div>${o(t, "g")}</div><div><div class="jrrkt r">▼ Baixas</div>${o(a, "r")}</div></div></section>`;
+  return `<details class="jrsec jrrks jr-gaveta"><summary>Maiores altas e baixas do Ibovespa</summary><div class="jrrk2"><div><div class="jrrkt g">▲ Altas</div>${o(t, "g")}</div><div><div class="jrrkt r">▼ Baixas</div>${o(a, "r")}</div></div></details>`;
 }
 
   document.addEventListener('click',async ev=>{
@@ -195,5 +195,5 @@ jrRkHtml=function(){
     return normalizedHtml+`<details class="jr-editorial-details"><summary>Fontes e conferência</summary><p class="sm mut">${esc(Q.phase(e).title)} · ${esc(e.snapshot.id)}</p>${[...q.problemas,...q.lacunas].map(x=>`<p class="sm mut">${esc(x)}</p>`).join('')}${privateHtml(e)}</details>`;
   };
 
-  const style=document.createElement('style');style.id='jornal-editorial-v714';style.textContent=`#app #jrbox button[data-jr-profit-capture]{min-height:44px!important;height:auto!important;max-height:none!important}.jr-editorial-details{margin-top:8px}.jr-editorial-details>summary{cursor:pointer;min-height:44px;font-size:12px;color:var(--mut)}.jrind b,.jrfech td{font-variant-numeric:tabular-nums}`;document.head.append(style);
+  const style=document.createElement('style');style.id='jornal-editorial-v714';style.textContent=`#app #jrbox button[data-jr-profit-capture]{min-height:44px!important;height:auto!important;max-height:none!important}.jr-editorial-details{margin-top:8px}.jr-editorial-details>summary{cursor:pointer;min-height:44px;font-size:12px;color:var(--mut)}.jr-gaveta{border:1px solid var(--bd);border-radius:10px;padding:0 12px;margin:10px 0;background:var(--bg)}.jr-gaveta>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:700;color:var(--tx);list-style:none}.jr-gaveta>summary::-webkit-details-marker{display:none}.jr-gaveta>summary::after{content:'▾';font-size:12px;color:var(--mut);transition:transform .16s ease}.jr-gaveta[open]>summary::after{transform:rotate(180deg)}.jr-gaveta[open]{padding-bottom:12px}.jr-gaveta-n{font-weight:500;color:var(--mut)}.jrind b,.jrfech td{font-variant-numeric:tabular-nums}`;document.head.append(style);
 })(window);
