@@ -7,6 +7,7 @@ const I=require('../src/analysis/screeners-inteligencia.js');
 test('v858: botões de PDF não usam window.print (iPhone/PWA)',()=>{
  const an=R('src/analysis/analises.js'),hf=R('src/analysis/historico-fundamentos.js');
  assert.ok(!/w\.print\(\)/.test(an)&&!/w\.print\(\)/.test(hf));
+ assert.match(an,/DiarioPDFiOS\?\.deliver|DiarioPDFiOS\.deliver/);
  assert.match(an,/DiarioScreenersRelatorio\.share\(m\.toUpperCase\(\),\[row\]/);
  assert.match(hf,/DiarioHistoricoPDF\.salvar/);
  const pdf=R('src/analysis/historico-pdf.js');

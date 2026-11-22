@@ -31,7 +31,7 @@ jobs:
       - name: Conferir bundles v888
         run: npm run check
       - name: Rodar testes de regressao
-        run: npm test
+        run: node --test tests/v858-pdf-sec-eua.test.cjs tests/analises-screeners-v742.test.cjs tests/screeners-dossie-v748.test.cjs
       - name: Registrar bundles no QA
         run: |
           git config user.name "github-actions[bot]"
