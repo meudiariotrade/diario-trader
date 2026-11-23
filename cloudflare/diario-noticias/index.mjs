@@ -1,5 +1,6 @@
 // Motor de notícias públicas. Não consulta Supabase, dados financeiros privados nem IA.
 import '../../src/shared/sessoes-mercado.js';
+import {buscarFinnhubV940,mesclarFinnhubV940} from './finnhub-v940.mjs';
 import {FLOW_KEY,coletarFluxo} from './fluxo.mjs';
 import {agruparEventos} from './eventos.mjs';
 import {coletarAgenda,coletarSentimento,agendaAgora,sentimentoAgora} from './dados-publicos.mjs';
@@ -234,7 +235,11 @@ export default {
     ctx.waitUntil((async()=>{
       let anteriores=[];
       try{const antigo=await env.NEWS_CACHE.get(KEY,'json');anteriores=Array.isArray(antigo?.eventos)?antigo.eventos:[];}catch(_){/* historico opcional */}
-      const data=await coletarNoticias(fetch,event.scheduledTime,anteriores);
+      let data=await coletarNoticias(fetch,event.scheduledTime,anteriores);
+      if(env.FINNHUB_API_KEY)try{
+        const extra=await buscarFinnhubV940(fetch,env.FINNHUB_API_KEY,tema,event.scheduledTime);
+        data=mesclarFinnhubV940(data,extra);
+      }catch(_){/* conserva snapshot RSS e X */}
       // Falha de todas as fontes não substitui o último snapshot.
       if(data.fontesOk.length)await env.NEWS_CACHE.put(KEY,JSON.stringify(data));
     })());
