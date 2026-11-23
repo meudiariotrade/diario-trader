@@ -104,3 +104,28 @@ jobs:
       - name: Diagnosticar cache público do Worker (sem bloquear o app)
         continue-on-error: true
         run: node scripts/diagnostico-screeners-cloudflare.mjs
+
+  sync-bundles:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [validate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build && npm run check
+      - name: Persistir bundles regenerados depois dos testes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u
+          if ! git diff --cached --quiet; then
+            git commit -m "build: sincroniza bundles e manifestos da v891"
+            git push origin HEAD:main
+          fi

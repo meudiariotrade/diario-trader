@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/wrangler.json",
   "name": "diario-trader",
-  "main": "cloudflare/diario-noticias/index.mjs",
+  "main": "cloudflare/diario-noticias/producao-snapshot-v890.mjs",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
   "triggers": {
@@ -14,7 +14,26 @@
   },
   "kv_namespaces": [
     {
-      "binding": "NEWS_CACHE"
+      "binding": "NEWS_CACHE",
+      "id": "6fbbde51848b47919b38de922f6c0362"
+    }
+  ],
+  "keep_vars": true,
+  "d1_databases": [
+    {
+      "binding": "HISTORICO",
+      "database_name": "diario-mercado-historico",
+      "database_id": "af90d130-db64-40ba-96e3-77a5a0c81ce5"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "REPLAY_LIMIT",
+      "namespace_id": "89101",
+      "simple": {
+        "limit": 90,
+        "period": 60
+      }
     }
   ]
 }
