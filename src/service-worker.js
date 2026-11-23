@@ -24,6 +24,83 @@ self.addEventListener('activate',event=>{
   if(antigas.length)for(const client of await self.clients.matchAll({type:'window',includeUncontrolled:true}))client.postMessage({novaVersao:1,versao:C});
  })());
 });
+/*
+ * v893 — Roteamento de dados PÚBLICOS do Mercado para a Cloudflare.
+ * Somente quatro Edge Functions legadas são interceptadas. Auth, operações,
+ * carteiras, notificações, demais funções e dados privados continuam intocados.
+ * A chamada original fica como reserva quando a resposta pública falhar.
+ * Nunca encaminhar apikey, JWT, cookies ou dados pessoais ao Worker público.
+ */
+const MERCADO_CF_BASE='https://diario-trader.lucianosilva43567.workers.dev';
+const MERCADO_SUPABASE_HOST='vdzwydizostutukppcsj.supabase.co';
+const MERCADO_CF_FUNCOES=new Set(['macro','precos','candles','ewz']);
+function mercadoCfValido(funcao,modo,dados){
+ if(!dados||typeof dados!=='object'||dados.error||dados.erro)return false;
+ if(funcao==='precos')return dados.br&&typeof dados.br==='object'&&dados.us&&typeof dados.us==='object'&&
+   (Object.keys(dados.br).length>0||Object.keys(dados.us).length>0);
+ if(funcao==='candles')return Array.isArray(dados.candles)&&typeof dados.simbolo==='string';
+ if(funcao==='ewz')return Number(dados.spot)>0&&Array.isArray(dados.vencs);
+ if(modo==='agenda')return Array.isArray(dados.eventos);
+ if(modo==='painel'||modo==='diag'||modo==='cotacoes')return Array.isArray(dados.itens);
+ if(modo==='balancos')return Array.isArray(dados.proximos);
+ if(modo==='ranking')return Array.isArray(dados.altas);
+ if(modo==='sazonal')return !!dados.mes;
+ if(modo==='setores')return 'us' in dados||'br' in dados;
+ if(modo==='')return !!(dados.mercados||dados.brasil);
+ return true; // outros modos públicos mantêm o contrato JSON do próprio Worker
+}
+function mercadoCfUrl(funcao,dados){
+ const params=new URLSearchParams();
+ if(funcao==='precos'){
+   const br=Array.isArray(dados.br)?dados.br:[];
+   const us=Array.isArray(dados.us)?dados.us:[];
+   // O Worker público limita a 40 símbolos por mercado; jamais cortar uma posição.
+   if(br.length>40||us.length>40||!br.length&&!us.length)return null;
+   params.set('br',br.join(','));params.set('us',us.join(','));
+ }else if(funcao==='macro'){
+   for(const k of ['modo','aba','semana'])if(dados[k]!=null)params.set(k,String(dados[k]));
+ }else if(funcao==='candles'){
+   for(const k of ['ativo','sub','intervalo','de','ate','revista'])if(dados[k]!=null)params.set(k,String(dados[k]));
+   if(!params.has('ativo'))return null;
+ }else if(funcao==='ewz'){
+   if(dados.venc)params.set('venc',String(dados.venc));
+ }else return null;
+ return MERCADO_CF_BASE+'/v1/'+funcao+'?'+params.toString();
+}
+self.addEventListener('fetch',event=>{
+ const req=event.request;
+ if(req.method!=='POST')return;
+ let url;
+ try{url=new URL(req.url)}catch{return}
+ if(url.protocol!=='https:'||url.hostname!==MERCADO_SUPABASE_HOST)return;
+ const prefix='/functions/v1/';
+ if(!url.pathname.startsWith(prefix))return;
+ const funcao=url.pathname.slice(prefix.length);
+ if(!MERCADO_CF_FUNCOES.has(funcao))return;
+ event.respondWith((async()=>{
+   let dados;
+   try{dados=await req.clone().json()}catch{return fetch(req)}
+   if(!dados||typeof dados!=='object'||Array.isArray(dados))return fetch(req);
+   const destino=mercadoCfUrl(funcao,dados);
+   if(!destino)return fetch(req);
+   try{
+     // Request NOVO sem qualquer cabeçalho privado do Supabase.
+     const resposta=await fetch(destino,{
+       method:'GET',credentials:'omit',mode:'cors',redirect:'error',cache:'default',
+       signal:req.signal,headers:{Accept:'application/json'}
+     });
+     if(resposta.ok){
+       const tipo=resposta.headers.get('content-type')||'';
+       if(/application\/json/i.test(tipo)){
+         const payload=await resposta.clone().json();
+         if(mercadoCfValido(funcao,String(dados.modo||''),payload))return resposta;
+       }
+     }
+   }catch(_){/* fallback controlado: não perder funções existentes */}
+   return fetch(req);
+ })());
+});
+
 self.addEventListener('fetch',event=>{
  if(event.request.method!=='GET')return;
  const url=new URL(event.request.url);
