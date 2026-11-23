@@ -21,7 +21,8 @@ jobs:
         with:
           node-version: '24'
       - run: node --check cloudflare/diario-radar/producao-v892.mjs
-      - run: node --test tests/cloudflare-radar-v892.test.cjs
+      - run: node --check cloudflare/diario-radar/agenda-v932.mjs
+      - run: node --test tests/cloudflare-radar-v892.test.cjs tests/cloudflare-agenda-v932.test.cjs
   publish:
     needs: [check]
     if: github.ref == 'refs/heads/main'
