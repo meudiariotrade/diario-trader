@@ -9,7 +9,7 @@ let anterior;
 try { anterior = JSON.parse(git('show', base + ':release.config.json')).version; }
 catch { console.log('A base não tem release.config.json; conferência de versão ignorada.'); process.exit(0); }
 const atual = JSON.parse(fs.readFileSync('release.config.json', 'utf8')).version;
-const naoApp = /^(?:docs\/|tests\/|supabase\/|\.github\/|scripts\/|design\/|LEIA-ME[^/]*$|[^/]+\.md$|LICENSE[^/]*$|arquivos-removidos[^/]*$)/;
+const naoApp = /^(?:docs\/|tests\/|supabase\/|cloudflare\/|\.github\/|scripts\/|design\/|LEIA-ME[^/]*$|[^/]+\.md$|LICENSE[^/]*$|arquivos-removidos[^/]*$)/;
 const alterados = git('diff', '--name-only', '--diff-filter=AM', base, 'HEAD').split('\n').filter(Boolean).filter(f => !naoApp.test(f));
 if (atual < anterior) {
   console.error(`Versão ${atual} é menor que a publicada (${anterior}). Este pacote foi montado sobre uma versão antiga: atualize a partir da main antes de publicar.`);
