@@ -4,6 +4,7 @@ import {resumoAurea} from './aurea-resumao-v904.mjs';
 import {estatisticasV932} from './estatisticas-v932.mjs';
 import {explicarV932} from './explica-v932.mjs';
 import {estudosV932} from './estudos-v932.mjs';
+import {diarioIaV933} from './diario-ia-v933.mjs';
 // Snapshot público e imutável por janela de cache. Nenhum JWT, carteira ou segredo sai do Worker.
 const CACHE_CONTROL='public, max-age=900, s-maxage=1800';
 const CORS={
@@ -53,6 +54,7 @@ export default {
   if(url.pathname==='/v1/ia-estatisticas')return estatisticasV932(request,env);
   if(url.pathname==='/v1/ia-explica')return explicarV932(request,env);
   if(url.pathname==='/v1/ia-estudos')return estudosV932(request,env);
+  if(url.pathname==='/v1/ia-diario')return diarioIaV933(request,env);
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:CORS});
   if(request.method!=='GET')return json({error:'Somente leitura'},405);
   if(url.pathname==='/health')return json({ok:true,servico:'screeners-edge',sem_dados_privados:true});
