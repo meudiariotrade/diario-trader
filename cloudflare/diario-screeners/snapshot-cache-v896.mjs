@@ -1,6 +1,7 @@
 // v896: leituras publicas exclusivamente no KV Cloudflare.
 // Origem legada consultada apenas pelo CRON (ate 4 snapshots/dia).
-const ORIGIN='https://vdzwydizostutukppcsj.supabase.co/functions/v1/screeners-quant';
+// Snapshot público coletado pelo GitHub Actions e versionado em ramo isolado, sem Supabase.
+const ORIGIN='https://raw.githubusercontent.com/meudiariotrade/diario-trader/screeners-dados/dados-publicos/screeners-';
 const FRESH_MS=12*3600000,MAX_STALE_MS=7*86400000,KV_TTL=604800;
 export const SCREENER_CRON='25 2,14 * * *';
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS',
@@ -62,12 +63,12 @@ async function etag(body){
 }
 export async function refreshMarket(market,env,fetcher=fetch){
  if(!valid(market)||!env.SCREENER_CACHE)throw Error('Mercado/KV inválido');
- const res=await fetcher(ORIGIN+'?market='+market+'&snapshot=1&universe=1',{
+ const res=await fetcher(ORIGIN+market+'.json',{
   method:'GET',headers:{Accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(18000)});
  if(!res.ok)throw Error('Origem de '+market+' HTTP '+res.status);
  const body=await res.text();if(body.length>1800000)throw Error('Snapshot acima de 1.8MB');
  let data;try{data=JSON.parse(body)}catch{throw Error('Resposta não JSON')}
- if(data?.ok!==true||data?.market!==market||data?.universe_complete!==true||
+ if(data?.ok!==true||data?.market!==market||data?.universe_complete!==true||data?.pipeline_origin!=='github-actions-public'||
    !Array.isArray(data.universe_rows)||!data.universe_rows.length||!Array.isArray(data.rows)||
    !data.last_update||data.top10!==undefined||data.user_id!==undefined||
    data.owned!==undefined||data.custody!==undefined)
@@ -75,7 +76,7 @@ export async function refreshMarket(market,env,fetcher=fetch){
  const now=Date.now();if(age(data.last_update,now)>MAX_STALE_MS)throw Error('Snapshot origem vencido');
  await env.SCREENER_CACHE.put(key(market),body,{expirationTtl:KV_TTL,
   metadata:{etag:await etag(body),expiresAt:now+FRESH_MS,fetchedAt:now,
-   generatedAt:data.last_update,source:'scheduled-export-v896'}});
+   generatedAt:data.last_update,source:'github-actions-public-v897'}});
  return {market,rows:data.universe_rows.length,bytes:body.length};
 }
 export async function refreshBoth(env,fetcher=fetch){
