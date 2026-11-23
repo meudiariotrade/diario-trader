@@ -46,8 +46,9 @@ test('v939: resposta autenticada preserva contrato do Terminal e não consulta S
 });
 test('v939: rejeita JWT, origem e payload inválidos',async()=>{
  const {centralV939}=await service();
- assert.equal((await centralV939(request({modo:'central',contexto:{foco:'PETR4'}}),'https://evil.example'),env({resumo:'ok'}))).status,403);
- assert.equal((await centralV939(request({modo:'central',contexto:{foco:'PETR4'}},ORIGIN,'bad'),env({resumo:'ok'}))).status,401);
+ const body={modo:'central',contexto:{foco:'PETR4'}};
+ assert.equal((await centralV939(request(body,'https://evil.example'),env({resumo:'ok'}))).status,403);
+ assert.equal((await centralV939(request(body,ORIGIN,'bad'),env({resumo:'ok'}))).status,401);
  assert.equal((await centralV939(request({modo:'central',contexto:null}),env({resumo:'ok'}))).status,400);
 });
 test('v939: não contorna a quota quando Cloudflare retorna 429',()=>{
