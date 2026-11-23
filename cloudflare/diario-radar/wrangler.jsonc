@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "diario-radar",
+  "main": "producao-v892.mjs",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "keep_vars": true,
+  "vars": {
+    "ALLOWED_ORIGINS": "https://meudiariotrade.github.io",
+    "RADAR_CUTOVER_ENABLED": "0"
+  },
+  "services": [
+    {
+      "binding": "SELF",
+      "service": "diario-radar",
+      "environment": "production"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "HISTORICO",
+      "database_name": "diario-mercado-historico",
+      "database_id": "af90d130-db64-40ba-96e3-77a5a0c81ce5"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "7,37 * * * *",
+      "*/15 13-20 * * MON-FRI"
+    ]
+  }
+}
