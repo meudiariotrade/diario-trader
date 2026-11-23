@@ -1,3 +1,4 @@
+import {COLECOES} from './colecoes-v902.mjs';
 /* v900: snapshots privados. Sem dados de mercado, service-role ou cookies. */
 const LIMIT=1400000;
 function out(data,status,origin,env){
@@ -99,6 +100,52 @@ async function arquivos(req,env,uid,url,origin){
  return out({error:'metodo_invalido'},405,origin,env);
 }
 
+
+/* v902: migração paginada, somente leitura do Supabase PostgREST do próprio usuário.
+ * Nunca migra logs ou Analytics; rows são isoladas por owner no D1.
+ */
+const PAGE_SIZE=10;
+async function importarColecao(req,env,uid,url,origin){
+ if(url.pathname==='/v1/migrate/status'&&req.method==='GET'){
+  const records=await env.DB.prepare('SELECT collection,count_rows,next_offset,finished FROM private_migration_progress WHERE owner=?').bind(uid).all();
+  const byName=new Map((records.results||[]).map(x=>[x.collection,x]));
+  return out({collections:Object.keys(COLECOES).map(name=>{
+   const p=byName.get(name);
+   return {name,finished:p?.finished===1,rows:p?.count_rows||0,offset:p?.next_offset||0};
+  })},200,origin,env);
+ }
+ if(url.pathname!=='/v1/migrate/step'||req.method!=='POST')return out({error:'nao_encontrado'},404,origin,env);
+ let payload;try{payload=await req.json()}catch{return out({error:'json_invalido'},400,origin,env);}
+ const collection=payload?.collection,config=COLECOES[collection];
+ if(!Object.prototype.hasOwnProperty.call(COLECOES,collection)||!config)return out({error:'colecao_nao_permitida'},400,origin,env);
+ const previous=await env.DB.prepare('SELECT next_offset,finished FROM private_migration_progress WHERE owner=? AND collection=?').bind(uid,collection).first();
+ if(previous?.finished===1)return out({ok:true,finished:true,offset:previous.next_offset},200,origin,env);
+ const offset=previous?.next_offset||0;
+ const qs=new URLSearchParams({select:'*',order:config.keys.map(key=>key+'.asc').join(','),limit:String(PAGE_SIZE),offset:String(offset)});
+ qs.set(config.owner,'eq.'+uid);
+ const base=new URL(env.SUPABASE_URL);
+ const from=base.origin+'/rest/v1/'+encodeURIComponent(collection)+'?'+qs.toString();
+ const token=/^Bearer\s+(\S+)$/i.exec(req.headers.get('authorization')||'')?.[1]||'';
+ const response=await fetch(from,{method:'GET',headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY,Accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(18000)}).catch(()=>null);
+ if(!response?.ok)return out({error:'origem_indisponivel',code:response?.status||503},424,origin,env);
+ if(Number(response.headers.get('content-length')||0)>1200000)return out({error:'lote_grande'},413,origin,env);
+ const raw=await response.text();
+ if(raw.length>1200000)return out({error:'lote_grande'},413,origin,env);
+ let rows;try{rows=JSON.parse(raw)}catch{return out({error:'origem_invalida'},502,origin,env);}
+ if(!Array.isArray(rows)||rows.length>PAGE_SIZE)return out({error:'formato_invalido'},502,origin,env);
+ if(rows.some(item=>!item||typeof item!=='object'||String(item[config.owner])!==uid||config.keys.some(k=>item[k]===undefined||item[k]===null)))return out({error:'isolamento_ou_chave_invalida'},403,origin,env);
+ if(rows.length){
+  const statements=rows.map(item=>env.DB.prepare("INSERT INTO private_documents(owner,collection,doc_key,payload,updated_at) VALUES (?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(owner,collection,doc_key) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at")
+    .bind(uid,collection,JSON.stringify(config.keys.map(k=>item[k])),JSON.stringify(item)));
+  await env.DB.batch(statements);
+ }
+ const actual=await env.DB.prepare('SELECT count(*) AS n FROM private_documents WHERE owner=? AND collection=?').bind(uid,collection).first();
+ const next=offset+rows.length,finished=rows.length<PAGE_SIZE;
+ await env.DB.prepare("INSERT INTO private_migration_progress(owner,collection,count_rows,next_offset,finished,updated_at) VALUES (?,?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(owner,collection) DO UPDATE SET count_rows=excluded.count_rows,next_offset=excluded.next_offset,finished=excluded.finished,updated_at=excluded.updated_at WHERE private_migration_progress.next_offset=?")
+  .bind(uid,collection,Number(actual?.n)||0,next,finished?1:0,offset).run();
+ return out({ok:true,collection,finished,rows:rows.length,count:Number(actual?.n)||0,offset:next},200,origin,env);
+}
+
 export default {
  async fetch(req,env){
   const origin=req.headers.get('origin');
@@ -112,11 +159,13 @@ export default {
   if(url.pathname==='/health'&&req.method==='GET')return out({ok:!!env.DB,servico:'diario-sync',fase:'espelho'},env.DB?200:503,origin,env);
   const isDiary=url.pathname==='/v1/diario'&&['GET','PUT'].includes(req.method);
   const isFiles=url.pathname.startsWith('/v1/files/');
-  if(!isDiary&&!isFiles)return out({error:'nao_encontrado'},404,origin,env);
+  const isMigration=url.pathname.startsWith('/v1/migrate/');
+  if(!isDiary&&!isFiles&&!isMigration)return out({error:'nao_encontrado'},404,origin,env);
   if(!env.DB)return out({error:'db_indisponivel'},503,origin,env);
   const uid=await owner(req,env);
   if(!uid)return out({error:'login_invalido'},401,origin,env);
   if(isFiles)return arquivos(req,env,uid,url,origin);
+  if(isMigration)return importarColecao(req,env,uid,url,origin);
   if(req.method==='GET'){
    const meta=url.searchParams.get('meta')==='1';
    const found=await row(env.DB,uid,meta);
