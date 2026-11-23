@@ -8,15 +8,20 @@
  // Radar, email, push, corretora e IA ficam fora até migrar seus escritores.
  const DEVICE_TABLES=new Set(['carteira_cfg','estado_diario','fluxo_acoes','fluxo_negocios',
    'limpeza_backup','profit_prints','atalhos_tokens','aulas_glossario_tts']);
- function route(path){
+ const READ_ONLY_D1=new Set(['diario_backup','cotacoes']);
+ function route(path,method='GET',uid=null){
   if(typeof path!=='string'||!path.startsWith('/rest/v1/'))return null;
   const m=/^\/rest\/v1\/([a-z_]+)(\?.*)?$/.exec(path);
-  if(!m||!DEVICE_TABLES.has(m[1]))return null;
+  if(!m)return null;
+  const verb=String(method||'GET').toUpperCase();
+  if(!DEVICE_TABLES.has(m[1])&&!(
+    READ_ONLY_D1.has(m[1])&&verb==='GET'&&uid&&window.DiarioD1Principal?.active(uid)
+  ))return null;
   return ROOT+m[1]+(m[2]||'');
  }
- const can=path=>!!route(path);
- async function request(path,init,token){
-  const url=route(path);
+ const can=(path,options,uid)=>!!route(path,options?.method||'GET',uid);
+ async function request(path,init,token,uid){
+  const url=route(path,init?.method||'GET',uid);
   if(!url)throw Error('Coleção não autorizada no Cloudflare D1.');
   if(!token||token.length<30)throw Error('Entre na sua conta para usar dados privados.');
   const headers=new Headers(init?.headers||{});
@@ -36,5 +41,5 @@
   }
   return res;
  }
- window.DiarioD1Registros=Object.freeze({can,request,tables:[...DEVICE_TABLES],versao:913});
+ window.DiarioD1Registros=Object.freeze({can,request,tables:[...DEVICE_TABLES],readOnly:[...READ_ONLY_D1],versao:914});
 })();

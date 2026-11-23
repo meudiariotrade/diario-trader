@@ -272,8 +272,10 @@ const RECORD_ACTIVE=new Set([
  'atalhos_tokens','aulas','aulas_audio_jobs','aulas_fila','aulas_glossario_tts','aulas_imagens_jobs',
  'carteira_cfg','carteira_relatorios','estado_diario','fluxo_acoes','fluxo_negocios','limpeza_backup',
  'notas_inbox','noticias_urgentes_notificadas','opcoes_grade','operacoes_profit','parceiro',
- 'profit_prints','push_subs','radar_cfg','radar_sinais','resumos','weekly_reports','analises_trabalhos'
+ 'profit_prints','push_subs','radar_cfg','radar_sinais','resumos','weekly_reports','analises_trabalhos',
+ 'diario_backup','cotacoes'
 ]);
+const RECORD_READ_ONLY=new Set(['diario_backup','cotacoes']);
 const recordJson=(row)=>{try{return JSON.parse(row.payload)}catch{return null}};
 const recordKey=(data,config)=>JSON.stringify(config.keys.map(k=>data[k]));
 const recordPath=(field)=>'$.'+field;
@@ -338,6 +340,7 @@ async function privateRecords(req,env,uid,url,origin){
  const name=decodeURIComponent(url.pathname.slice('/v1/records/'.length));
  const config=COLECOES[name];
  if(!RECORD_ACTIVE.has(name)||!config)return out({error:'colecao_nao_permitida'},404,origin,env);
+ if(RECORD_READ_ONLY.has(name)&&req.method!=='GET')return out({error:'colecao_somente_leitura'},405,origin,env);
  const query=recordQuery(url,config,uid);
  if(query.error)return out({error:query.error},400,origin,env);
  if(req.method==='GET'){

@@ -1957,10 +1957,10 @@ function leituraGuardar(path, body) {
 }
 async function rq(e, t = {}, a = !0) {
   const o = syncOwner();
-  if(!window.DIARIO_DEMO&&window.DiarioD1Registros?.can(e)&&o&&SESS?.at){
+  if(!window.DIARIO_DEMO&&window.DiarioD1Registros?.can(e,t,o)&&o&&SESS?.at){
     await tok();
     assertSyncOwner(o);
-    const response=await window.DiarioD1Registros.request(e,t,SESS.at);
+    const response=await window.DiarioD1Registros.request(e,t,SESS.at,o);
     assertSyncOwner(o);
     return response;
   }

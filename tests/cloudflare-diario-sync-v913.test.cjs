@@ -96,7 +96,32 @@ test('v913: fontes do app não enviam dados privados ao Supabase ao usar D1',()=
  const fs=require('node:fs');
  const core=fs.readFileSync('src/domains/core/02-estado-e-persistencia.js','utf8');
  const client=fs.readFileSync('src/shared/diario-registros-v913.js','utf8');
- assert.match(core,/DiarioD1Registros\.request\(e,t,SESS\.at\)/);
+ assert.match(core,/DiarioD1Registros\.request\(e,t,SESS\.at,o\)/);
  assert.match(client,/credentials:'omit'/);
  assert.ok(client.includes('https://diario-sync.lucianosilva43567.workers.dev/v1/records/'));
+});
+
+test('v914: cotações históricas e backup do D1 são estritamente somente leitura',async()=>{
+ await authenticated(async()=>{
+   const DB=memoryDB([
+    {owner:USER,collection:'cotacoes',payload:JSON.stringify({user_id:USER,ticker:'PETR4',ult:40,updated_at:'2026-11-20'})},
+    {owner:USER,collection:'diario_backup',payload:JSON.stringify({user_id:USER,dia:'2026-11-20',data:{mt:99}})}
+   ]);
+   const {default:w}=await worker(),env={...ENV,DB};
+   const x=await w.fetch(request('/v1/records/cotacoes?select=ticker,ult,updated_at'),env);
+   assert.equal(x.status,200);
+   assert.equal((await x.json())[0].ticker,'PETR4');
+   const b=await w.fetch(request('/v1/records/diario_backup?select=dia,data'),env);
+   assert.equal(b.status,200);
+   assert.equal((await b.json())[0].data.mt,99);
+   assert.equal((await w.fetch(request('/v1/records/cotacoes','POST',{ticker:'PETR4',ult:999}),env)).status,405);
+   assert.equal((await w.fetch(request('/v1/records/diario_backup','DELETE'),env)).status,405);
+ });
+});
+test('v914: dados de cotações e cópias só migram para D1 com paridade de sessão confirmada',()=>{
+ const fs=require('node:fs');
+ const src=fs.readFileSync('src/shared/diario-registros-v913.js','utf8');
+ assert.match(src,/READ_ONLY_D1/);
+ assert.match(src,/window\.DiarioD1Principal\?\.active\(uid\)/);
+ assert.ok(src.includes("verb==='GET'"));
 });
