@@ -109,35 +109,15 @@ function erGrava(e, t) {
   };
 }
 async function erEnvia() {
+  // v916: erros são diagnóstico LOCAL; nunca enviar pilhas ou dados do aparelho
+  // ao Supabase. A aba Diagnóstico continua oferecendo leitura/exportação local.
   try {
-    if (typeof SESS > "u" || !SESS || !cfg() || !navigator.onLine) return;
-    const e = erLista(),
-      t = e.filter((a) => !a.env);
-    if (!t.length) return;
-    (await rq("/rest/v1/erros_app", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify(
-        t.map((a) => ({
-          user_id: SESS.uid,
-          em: new Date(a.ts).toISOString(),
-          versao: a.ver,
-          tela: a.tela,
-          msg: a.msg,
-          pilha: a.pilha,
-          vezes: a.n || 1,
-          aparelho: navigator.userAgent.slice(0, 160),
-        })),
-      ),
-    }),
-      t.forEach((a) => (a.env = 1)),
-      erSalva(e),
-      (ERL.err = ""));
-  } catch (e) {
-    ERL.err =
-      e && (e.status === 404 || /erros_app/.test(e.message || ""))
-        ? 'Falta criar a tabela: rode o SQL "erros-app.sql" no Supabase.'
-        : "";
+    const registros = erLista();
+    for (const item of registros) item.env = 1;
+    erSalva(registros);
+    ERL.err = "";
+  } catch (_) {
+    ERL.err = "Não foi possível conservar o diagnóstico local.";
   }
 }
 setTimeout(erEnvia, 15e3);
