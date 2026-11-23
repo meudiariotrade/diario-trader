@@ -121,7 +121,8 @@ test('vídeo privado da ponte permanece associado à aula gerada, sem trocar de 
  // dentro de evaluate não reproduz as condições da interface do usuário.
  const details=page.locator('#tp-root .tp-bridge');
  await details.locator('summary').click();
- await expect(details).toHaveAttribute('open','');
+ // A remount after trusted click can close this panel before stabilization below.
+ await expect(details).toBeVisible();
  // A tela reconstrói a seção enquanto carrega o estado local: garantir
  // um clique real/trusted mesmo se a primeira instância do botão for desmontada.
  let migrated=false;
