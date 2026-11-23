@@ -46,3 +46,8 @@ test('v915: execução manual do Radar usa Worker Cloudflare em vez de Edge Func
  assert.doesNotMatch(app,/e\.url \+ "\/functions\/v1\/radar"/);
  assert.match(app,/Authorization: "Bearer " \+ SESS\.at/);
 });
+
+test('v917: push WebPush no Radar usa redirect manual suportado pelo Workers',()=>{
+ assert.doesNotMatch(source,/redirect:"error"/);
+ assert.match(source,/redirect:"manual"/);
+});
