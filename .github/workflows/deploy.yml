@@ -51,11 +51,6 @@ jobs:
       - run: npm run build
       # Build e validação estrutural continuam obrigatórios para publicar.
       - run: npm run check
-      # Testes integrados são acompanhados, sem bloquear uma atualização estática
-      # quando falham por fontes de mercado externas ou instabilidade do navegador.
-      - name: Testes integrados (diagnóstico não bloqueante)
-        continue-on-error: true
-        run: npm test
       - name: Capturas de validação de Análises e Início/Meu Dia
         if: always()
         uses: actions/upload-artifact@v4
@@ -71,6 +66,25 @@ jobs:
           path: _site
   # Worker v762 publicado diretamente via Cloudflare; o deploy do PWA
   # depende de OHLCV real e não de secrets ausentes no GitHub.
+  # Testes extensos rodam em paralelo e não atrasam a entrega do PWA.
+  # Resultado visível independentemente do deploy; build/check permanecem obrigatórios.
+  quality:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Preparar bundles para testes integrados
+        run: npm run build
+      - name: Testes integrados (paralelos à publicação)
+        run: npm test
   verify-edge:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
