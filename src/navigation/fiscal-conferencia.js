@@ -12,14 +12,14 @@
    const vendas=Math.max(0,Number(apuracao?.rows?.find(x=>x.k==='A')?.vendas||0));
    const restante=Math.max(0,20000-vendas),acima=vendas>20000;
    const percentual=Math.min(100,vendas/20000*100);
-   const cor=acima?'#EF4444':vendas>16000?'#D4A017':'#10B981';
+   const cor=acima?'#EF4444':vendas>16000?'#C9A66B':'#10B981';
    const opcoes=meses.map(m=>{const nome=new Date(m+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'});return '<option value="'+m+'"'+(m===mesIsencao?' selected':'')+'>'+esc(nome)+'</option>'}).join('');
-   return '<section aria-label="Isenção Swing Trade Ações" style="background:#11141B;border:1px solid #1E232E;border-radius:4px;padding:12px;margin:0 0 12px;min-width:0">'
+   return '<section aria-label="Isenção Swing Trade Ações" style="background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:12px;margin:0 0 12px;min-width:0">'
      +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><b style="font-size:13px">Isenção Swing Trade Ações (Teto R$ 20.000/mês)</b>'
      +'<label class="sm" style="display:flex;align-items:center;gap:6px">Mês <select data-ir-isencao-mes style="min-height:40px;max-width:150px;font-variant-numeric:tabular-nums">'+opcoes+'</select></label></div>'
      +'<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;margin:8px 0;font-variant-numeric:tabular-nums;font-size:12px">'
      +'<span>Vendido no mês <b>'+money(vendas)+'</b></span><span>Margem isenta <b>'+money(restante)+'</b></span></div>'
-     +'<div role="progressbar" aria-label="Vendas de ações à vista no mês em relação ao teto de R$ 20 mil" aria-valuemin="0" aria-valuemax="20000" aria-valuenow="'+Math.min(20000,vendas)+'" style="height:7px;background:#1E232E;border-radius:4px;overflow:hidden">'
+     +'<div role="progressbar" aria-label="Vendas de ações à vista no mês em relação ao teto de R$ 20 mil" aria-valuemin="0" aria-valuemax="20000" aria-valuenow="'+Math.min(20000,vendas)+'" style="height:7px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;overflow:hidden">'
      +'<div style="height:100%;width:'+percentual.toFixed(2)+'%;background:'+cor+';border-radius:4px"></div></div>'
      +(acima?'<div class="sm" style="color:#EF4444;margin-top:6px">Teto ultrapassado: mês sem isenção nas vendas de ações à vista.</div>':'')
      +'</section>';

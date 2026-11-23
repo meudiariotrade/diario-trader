@@ -291,6 +291,19 @@ export default {
     await cache.put(key,res.clone());return conditional(request,res,false);
    }catch{return json({error:'Falha ao ler Análises+'},502)}
   }
+  // v896: espelho público de Fundos Imobiliários (FIIs da B3), cache de 4h na borda.
+  if(url.pathname==='/v1/fiis'){
+   const key=new Request(url.origin+'/v1/fiis'),cache=caches.default,hit=await cache.match(key);
+   if(hit)return conditional(request,hit,true);
+   try{
+    const r=await fetch('https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/fiis.json',{signal:AbortSignal.timeout(15000)});
+    if(!r.ok)return json({error:'Arquivo de FIIs indisponível'},503);
+    const txt=await r.text();if(txt.length>3000000)return json({error:'Arquivo de FIIs acima do limite'},502);
+    const d=JSON.parse(txt);if(d?.versao!==1||!Array.isArray(d.rows))return json({error:'Esquema de FIIs inválido'},502);
+    const res=new Response(txt,{headers:{...CORS,'content-type':'application/json; charset=utf-8','cache-control':'public, max-age=14400, s-maxage=14400','X-Snapshot-Source':'fiis-github-b3'}});
+    ctx.waitUntil(cache.put(key,res.clone()));return conditional(request,res,false);
+   }catch{return json({error:'Falha ao ler FIIs'},502)}
+  }
   if(url.pathname==='/v1/cvm-provas'){
    if([...url.searchParams.keys()].length)return json({error:'Rota sem parâmetros'},400);
    const year=new Date().getUTCFullYear(),key=new Request(url.origin+'/v1/cvm-provas?year='+year);
