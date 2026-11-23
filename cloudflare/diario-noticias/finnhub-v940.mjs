@@ -40,3 +40,19 @@ export async function buscarFinnhubV940(fetcher,token,tema,now=Date.now()){
  return out;
 }
 export const FINNHUB_CATEGORIAS_V940=CATS;
+
+/** Concilia fontes sem sobrescrever notícias válidas se a API adicional falhar. */
+export function mesclarFinnhubV940(snapshot,extra){
+ if(!extra?.fontesOk?.length)return snapshot;
+ const exists=new Set(),itens=[];
+ const source=[...(Array.isArray(snapshot?.itens)?snapshot.itens:[]),...(extra.itens||[])];
+ for(const x of source){
+  const k=String(x?.t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  if(!k||exists.has(k))continue;
+  exists.add(k);itens.push(x);
+ }
+ itens.sort((a,b)=>String(b.d||'').localeCompare(String(a.d||'')));
+ return {...snapshot,itens:itens.slice(0,70),
+  fontesOk:[...new Set([...(snapshot.fontesOk||[]),...extra.fontesOk])],
+  fontesIndisponiveis:[...new Set([...(snapshot.fontesIndisponiveis||[]),...(extra.fontesIndisponiveis||[])])]};
+}
