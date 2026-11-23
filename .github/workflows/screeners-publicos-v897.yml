@@ -6,7 +6,7 @@ on:
       - 'scripts/screeners-publicos-v897.cjs'
       - '.github/workflows/screeners-publicos-v897.yml'
   schedule:
-    - cron: '25 0,4,8,12,16,20 * * 1-5'
+    - cron: '25 0,12 * * 1-5'
     - cron: '45 8 * * 6'
   workflow_dispatch:
 permissions:
