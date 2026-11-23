@@ -2,16 +2,36 @@
 const test=require('node:test'), assert=require('node:assert/strict');
 let funcs;
 const ready=async()=>funcs||(funcs=await import('../cloudflare/diario-radar/agenda-preflight-v933.mjs'));
-const environment=()=>{const lock=new Set(),writes=[];return {
- AGENDA_PREFLIGHT_ENABLED:'1',AGENDA_CUTOVER_ENABLED:'0',
- SUPABASE_URL:'https://vdzwydizostutukppcsj.supabase.co',
- SUPABASE_SERVICE_ROLE_KEY:'z'.repeat(55),CRON_SECRET:'k'.repeat(50),
- HISTORICO:{prepare(sql){let vals=[];return{bind(...args){vals=args;return this},
- async run(){if(sql.includes('INSERT OR IGNORE')){const key=vals.join(':');if(lock.has(key))return {meta:{changes:0}};lock.add(key);return{meta:{changes:1}}}
- writes.push({sql,vals});return{meta:{changes:1}}}}}},
- _writes:writes
- }};
-};
+function environment() {
+ const lock = new Set();
+ const writes = [];
+ return {
+  AGENDA_PREFLIGHT_ENABLED: '1',
+  AGENDA_CUTOVER_ENABLED: '0',
+  SUPABASE_URL: 'https://vdzwydizostutukppcsj.supabase.co',
+  SUPABASE_SERVICE_ROLE_KEY: 'z'.repeat(55),
+  CRON_SECRET: 'k'.repeat(50),
+  HISTORICO: {
+   prepare(sql) {
+    let vals = [];
+    return {
+     bind(...args) { vals=args; return this; },
+     async run() {
+      if(sql.includes('INSERT OR IGNORE')) {
+       const key=vals.join(':');
+       if(lock.has(key))return {meta:{changes:0}};
+       lock.add(key);
+       return {meta:{changes:1}};
+      }
+      writes.push({sql,vals});
+      return {meta:{changes:1}};
+     }
+    };
+   }
+  },
+  _writes:writes
+ };
+}
 const moment=Date.parse('2026-11-23T21:30:00.000Z');
 test('v933: preflight avalia apenas horários fixos de 15 minutos UTC',async()=>{
  const env=environment();
