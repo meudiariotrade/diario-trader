@@ -50,3 +50,10 @@ test('antiguidade real é sinalizada, sem falsear atualidade',async()=>{
  assert.equal(r.status,200);assert.equal(r.headers.get('X-Snapshot-Stale'),'1');
  assert.equal(r.headers.get('Cache-Control'),'no-store');
 });
+
+test('v918: leitura de artigos públicos usa redirect manual no Cloudflare Worker',()=>{
+ const fs=require('node:fs');
+ const src=fs.readFileSync('cloudflare/diario-screeners/index.mjs','utf8');
+ assert.doesNotMatch(src,/redirect:'error'/);
+ assert.match(src,/redirect:'manual'/);
+});

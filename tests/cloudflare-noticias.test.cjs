@@ -50,3 +50,8 @@ test('publica manchetes filtradas sem importar materia completa',async()=>{
   assert.equal(p.itens.length,1);
   assert.equal(p.itens[0].fonte,'InfoMoney');
 });
+test('v918: EWZ opções do Worker publicado não usa redirecionamento incompatível',()=>{
+ const src=require('node:fs').readFileSync('cloudflare/diario-noticias/producao-snapshot-v894.mjs','utf8');
+ assert.doesNotMatch(src,/redirect:"error"/);
+ assert.match(src,/redirect:"manual"/);
+});

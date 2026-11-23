@@ -75,7 +75,7 @@ export default {
      if(target.protocol!=='https:'||target.username||target.password||target.port||!allow.includes(host)||/\\/.test(source))return json({erro:'Fonte não autorizada; cole o texto com permissão'},403);
      const cache=caches.default,cacheKey=new Request(url.toString(),{method:'GET'}),hit=await cache.match(cacheKey);
      if(hit)return hit;
-     try{const r=await fetch(target.toString(),{redirect:'error',headers:{Accept:'text/html,text/plain'},signal:AbortSignal.timeout(10000)});
+     try{const r=await fetch(target.toString(),{redirect:'manual',headers:{Accept:'text/html,text/plain'},signal:AbortSignal.timeout(10000)});
        const mime=r.headers.get('content-type')||'',bytes=Number(r.headers.get('content-length')||0);
        if(!r.ok||bytes>600000||!/(text\/html|text\/plain)/i.test(mime))return json({erro:'Artigo público não acessível'},422);
        const html=await r.text();if(html.length>600000)return json({erro:'Artigo acima de 600 KB'},413);
