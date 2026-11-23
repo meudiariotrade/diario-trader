@@ -13,12 +13,25 @@ const cmp=n=>n==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',curre
 const cor=n=>n==null?'':n>=0?'ap-g':'ap-r';
 const logo=tk=>w.DiarioLogos?.html?.(tk,20)||'';
 const ls={get(k,f){try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-const K_EXTRA='ap874-extra',URL_EXTRA='https://diario-trader.lucianosilva43567.workers.dev/v1/analises-plus',K_COLS='ap874-colunas',K_MODE='ap881-colmode',K_ROT='ap873-rotacao',K_TESES='diario-teses-v873',K_FILT='ap873-filtros';
+const K_EXTRA='ap874-extra',URL_EXTRA='https://diario-trader.lucianosilva43567.workers.dev/v1/analises-plus',K_COLS='ap874-colunas',K_MODE='ap881-colmode',K_ROT='ap873-rotacao',K_TESES='diario-teses-v873',K_FILT='ap873-filtros',K_FIIS='ap896-fiis',URL_FIIS='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/fiis';
 
 /* ---------- estado ---------- */
-const st={tab:'rankpro',rows:null,loading:false,erro:'',ref:null,tk:'',sub:'visao',per:'1A',ibov:false,showJusto:false,colMode:ls.get(K_MODE,'essencial'),
+const st={tab:'rankpro',rankTipo:'acoes',rows:null,loading:false,erro:'',ref:null,tk:'',sub:'visao',per:'1A',ibov:false,showJusto:false,colMode:ls.get(K_MODE,'essencial'),
  f:Object.assign({q:'',preset:'',setor:'',porte:'',nota:0,liq:0,sort:'nota',dir:-1,pg:30,page:0},ls.get(K_FILT,{})),
+ fiis:ls.get(K_FIIS,null),fiiLoading:false,fiiErr:'',fiiF:{q:'',tipo:'',preset:'score',liq:500000},fiiSel:'',
  radarPorte:'',radarSetor:'',rot:ls.get(K_ROT,null),rotLoading:false,serie:{},teseEdit:null,excluir:''};
+async function carregarFiis(force){
+ if(st.fiiLoading)return st.fiis;
+ if(!force&&st.fiis?.rows?.length&&Date.now()-(st.fiis._at||0)<4*3600000)return st.fiis;
+ st.fiiLoading=true;st.fiiErr='';render();
+ const urls=[URL_FIIS,'https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/fiis.json'];
+ for(const u of urls){
+  try{const r=await fetch(u,{signal:AbortSignal.timeout(12000)});if(!r.ok)continue;const j=await r.json();
+   if(Array.isArray(j?.rows)&&j.rows.length){st.fiis={...j,_at:Date.now()};ls.set(K_FIIS,st.fiis);st.fiiLoading=false;render();return st.fiis;}}catch(_){}
+ }
+ st.fiiLoading=false;if(!st.fiis?.rows?.length)st.fiiErr='Não foi possível carregar os FIIs agora.';render();return st.fiis;
+}
+w.DiarioFiis=()=>st.fiis;
 const ESSENTIAL_COLS=['nota','preco','justo','pl','dy','roe','div_liq_ebitda','crowded'];
 const COLS=[
  ['nota','Nota Raio-X',1],['setor','Setor',1],['porte','Porte',1],['crowded','Crowded',1],['preco','Preço',1],
@@ -166,14 +179,44 @@ function cardMob(r){
   '<div class="ap-mc-px"><b>'+brl(r.preco)+'</b>'+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'">'+sinal(r.d1,2)+'</small>':u!=null?'<small class="'+cor(u)+'">Justo '+sinal(u,0)+'</small>':'')+'</div></div>'+
   '<div class="ap-mc-met"><span>P/L <b>'+(r.pl==null?'—':fmt(r.pl,1)+'x')+'</b></span><span>DY <b>'+pct(r.dy)+'</b></span><span>ROE <b>'+pct(r.roe)+'</b></span><span>DL/EB <b>'+(r.div_liq_ebitda==null?'—':fmt(r.div_liq_ebitda,1)+'x')+'</b></span></div></article>';
 }
+function viewFiisRank(){
+ const sw='<div class="ap-bar" style="margin-bottom:10px"><div class="ap-seg" role="group" aria-label="Classe de ativos"><button type="button" class="'+(st.rankTipo!=='fiis'?'on':'')+'" data-ap-ranktipo="acoes">Ações BR</button><button type="button" class="'+(st.rankTipo==='fiis'?'on':'')+'" data-ap-ranktipo="fiis">🏢 FIIs (B3)</button></div><button type="button" class="btn s" data-ap-fiirf>↻ Atualizar FIIs</button></div>';
+ if(st.fiiLoading&&!st.fiis?.rows?.length)return sw+'<section class="ap-card ap-vazio"><p class="ap-mut">Carregando Fundos Imobiliários da B3…</p></section>';
+ if(!st.fiis?.rows?.length)return sw+'<section class="ap-card ap-vazio"><p>'+(E(st.fiiErr)||'FIIs ainda não carregados.')+'</p><button type="button" class="btn s" data-ap-fiirf>Carregar FIIs</button></section>';
+ const f=st.fiiF,qTxt=String(f.q||'').trim().toUpperCase(),ntnb=st.fiis.ntnb_ref||6.8;
+ let list=st.fiis.rows.filter(r=>(!f.tipo||r.tipo===f.tipo)&&(!f.liq||(r.liquidez||0)>=f.liq)&&(!qTxt||r.ticker.includes(qTxt)||String(r.segmento||'').toUpperCase().includes(qTxt)));
+ if(f.preset==='pvp')list=list.filter(r=>r.p_vp>0.3).sort((a,b)=>(a.p_vp||99)-(b.p_vp||99));
+ else if(f.preset==='dy')list=list.filter(r=>r.dy>0&&r.dy<=17.5).sort((a,b)=>(b.dy||0)-(a.dy||0));
+ else if(f.preset==='liq')list=list.sort((a,b)=>(b.liquidez||0)-(a.liquidez||0));
+ else list=list.sort((a,b)=>(b.score||0)-(a.score||0)||(b.liquidez||0)-(a.liquidez||0));
+ const top=list.slice(0,60),sel=st.fiiSel?st.fiis.rows.find(x=>x.ticker===st.fiiSel):null;
+ const nMag=r=>{if(!(r?.cotacao>0&&r?.dy>0))return null;const divM=r.cotacao*(r.dy/100)/12;return divM>0?Math.ceil(r.cotacao/divM):null};
+ const ficha=sel?'<section class="ap-card" style="margin-bottom:12px;border-color:rgba(201,166,107,.55)"><header class="ap-bar" style="margin-bottom:8px"><div><h3 style="margin:0">'+logo(sel.ticker)+E(sel.ticker)+' · <small class="ap-mut">'+E(sel.tipo)+' · '+E(sel.segmento)+'</small></h3></div><button type="button" class="btn s" data-ap-fiisel="">Fechar ✕</button></header>'+
+  '<div class="ap-kv"><div><span>Cotação</span><b>'+brl(sel.cotacao)+'</b></div><div><span>P/VP</span><b class="'+(sel.p_vp<1?'ap-g':sel.p_vp>1.05?'ap-r':'')+'">'+fmt(sel.p_vp,2)+'</b></div><div><span>DY 12m</span><b class="'+(sel.dy>17.5?'ap-r':'ap-g')+'">'+pct(sel.dy)+'</b></div><div><span>Spread NTN-B</span><b class="'+cor(sel.spread_ntnb)+'">'+sinal(sel.spread_ntnb,2)+'</b></div><div><span>Vacância</span><b>'+(sel.tipo==='Tijolo'&&sel.vacancia!=null?fmt(sel.vacancia,1)+'%':'—')+'</b></div><div><span>Liquidez/dia</span><b>'+din(sel.liquidez)+'</b></div><div><span>Nota FII</span><b>'+sel.score+'/100</b></div><div><span>❄️ Nº Mágico</span><b>'+(nMag(sel)?nMag(sel)+' cotas':'—')+'</b></div></div>'+
+  ((sel.selos?.length||sel.alertas?.length)?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+(sel.selos||[]).map(x=>'<span class="ap-tag st-ativa">'+E(x)+'</span>').join('')+(sel.alertas||[]).map(x=>'<span class="ap-tag" style="background:rgba(239,68,68,.12);color:#EF4444;border-color:rgba(239,68,68,.35)">⚠ '+E(x)+'</span>').join('')+'</div>':'')+
+  '<div class="ap-bar" style="margin-top:8px"><button type="button" class="btn s ap-btn-acc" data-ap-fii-conselho="'+E(sel.ticker)+'">✦ Parecer Graham + Munger</button><button type="button" class="btn s" data-ap-fiitese="'+E(sel.ticker)+'">+ Salvar Tese</button></div></section>':'';
+ const presets=[['score','🏆 Score FII'],['pvp','🏷️ Menor P/VP'],['dy','💰 Maior DY (s/ armadilha)'],['liq','💧 Maior Liquidez']];
+ const tipos=['','Tijolo','Papel','Híbrido','FOF'];
+ return sw+ficha+'<div class="ap-bar" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">'+
+  '<input type="search" placeholder="Buscar FII (ex.: HGLG11, MXRF11)…" value="'+E(f.q)+'" data-ap-fiif="q" class="ap-busca">'+
+  '<select data-ap-fiif="liq">'+[[0,'Liquidez: qualquer'],[200000,'Liq ≥ R$ 200k'],[500000,'Liq ≥ R$ 500k'],[1000000,'Liq ≥ R$ 1 mi']].map(([v,t])=>'<option value="'+v+'"'+(Number(f.liq)===v?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'+
+  '<div class="ap-mpresets" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+presets.map(([k,t])=>'<button type="button" class="ap-chip'+(f.preset===k?' on':'')+'" data-ap-fiipreset="'+k+'">'+t+'</button>').join('')+'</div>'+
+  '<div class="ap-mpresets" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+tipos.map(t=>'<button type="button" class="ap-chip'+(f.tipo===t?' on':'')+'" data-ap-fiitipo="'+t+'">'+(t||'Todos ('+st.fiis.rows.length+')')+'</button>').join('')+'</div>'+
+  '<p class="ap-mut ap-leg">Score FII (0–100) separa Tijolo vs Papel · Spread sobre NTN-B ('+fmt(ntnb,1)+'%) · Trava anti-Yield Trap (DY &gt; 17,5%) · Toque no FII para abrir ficha e Número Mágico.</p>'+
+  '<div class="ap-mcards">'+(top.length?top.map(r=>'<article class="ap-mcard" data-ap-fiisel="'+E(r.ticker)+'"><div class="ap-mc-top"><span class="ap-nota" style="--p:'+r.score+'">'+r.score+'</span><div class="ap-mc-id"><b>'+logo(r.ticker)+E(r.ticker)+'</b><small>'+E(r.tipo)+' · '+E(r.segmento)+'</small></div><div class="ap-mc-px"><b>'+brl(r.cotacao)+'</b><small class="'+(r.p_vp<1?'ap-g':r.p_vp>1.05?'ap-r':'')+'">P/VP '+fmt(r.p_vp,2)+'</small></div></div><div class="ap-mc-met"><span>DY 12m <b>'+pct(r.dy)+'</b></span><span>Spread <b>'+sinal(r.spread_ntnb,1)+'</b></span><span>Vacância <b>'+(r.tipo==='Tijolo'&&r.vacancia!=null?fmt(r.vacancia,1)+'%':'—')+'</b></span><span>Liq <b>'+din(r.liquidez)+'</b></span></div></article>').join(''):'<p class="ap-card ap-vazio ap-mut">Nenhum FII passa nesses filtros.</p>')+'</div>'+
+  '<div class="ap-scroll"><table class="ap-t"><thead><tr><th class="ap-stk">FII</th><th>Tipo</th><th class="ap-n">Score</th><th class="ap-n">Cotação</th><th class="ap-n">P/VP</th><th class="ap-n">DY 12m</th><th class="ap-n">Spread NTN-B</th><th class="ap-n">Vacância</th><th class="ap-n">Liquidez</th><th>Sinal</th></tr></thead><tbody>'+
+  (top.length?top.map(r=>'<tr data-ap-fiisel="'+E(r.ticker)+'"><td class="ap-stk">'+logo(r.ticker)+'<b>'+E(r.ticker)+'</b><small>'+E(r.segmento)+'</small></td><td>'+E(r.tipo)+'</td><td class="ap-n"><b>'+r.score+'</b></td><td class="ap-n">'+brl(r.cotacao)+'</td><td class="ap-n '+(r.p_vp<1?'ap-g':r.p_vp>1.05?'ap-r':'')+'">'+fmt(r.p_vp,2)+'</td><td class="ap-n '+(r.dy>17.5?'ap-r':'ap-g')+'">'+pct(r.dy)+'</td><td class="ap-n '+cor(r.spread_ntnb)+'">'+sinal(r.spread_ntnb,2)+'</td><td class="ap-n">'+(r.tipo==='Tijolo'&&r.vacancia!=null?fmt(r.vacancia,1)+'%':'—')+'</td><td class="ap-n">'+din(r.liquidez)+'</td><td>'+E((r.alertas?.[0]?'⚠ '+r.alertas[0]:r.selos?.[0])||'—')+'</td></tr>').join(''):'<tr><td colspan="10" class="ap-vazio">Nenhum FII passa nesses filtros.</td></tr>')+'</tbody></table></div>';
+}
 function viewRank(){
+ if(st.rankTipo==='fiis'){if(!st.fiis&&!st.fiiLoading&&!st.fiiErr)setTimeout(()=>carregarFiis(false),0);return viewFiisRank();}
  const f=st.f,l=filtrados(),tot=l.length,pg=f.pg,pages=Math.max(1,Math.ceil(tot/pg));if(f.page>=pages)f.page=0;
  const pag=l.slice(f.page*pg,f.page*pg+pg),setores=Object.keys(st.rows.porSetor).sort(),cols=colsAtivas();
  const nFilt=[f.preset,f.setor,f.porte,f.nota>0,f.liq>0,f.q.trim()].filter(Boolean).length;
  const desk=(w.innerWidth||1024)>=900;
  const TXT=['setor','porte','balanco'],th=(k,t)=>'<th data-ap-sort="'+k+'" class="'+(f.sort===k?'on ':'')+(TXT.includes(k)?'':k==='nota'?'ap-c':'ap-n')+'">'+t+(f.sort===k?(f.dir<0?' ▾':' ▴'):'')+q(k)+'</th>';
  const mobPresets='<div class="ap-mpresets" aria-label="Presets rápidos">'+Object.entries(PRESETS).map(([k,p])=>'<button type="button" class="ap-chip'+(f.preset===k?' on':'')+'" data-ap-preset="'+k+'">'+p.n+'</button>').join('')+'</div>';
- return '<div class="ap-rank"><aside class="ap-filtros"><details'+(desk?' open':'')+'><summary><span class="ap-fsum-l">Filtros'+(nFilt?' <span class="ap-fbadge">'+nFilt+'</span>':'')+'</span>'+(nFilt?'<button type="button" class="ap-link" data-ap-limpar>Limpar</button>':'')+'</summary>'+
+ const sw='<div class="ap-bar" style="margin-bottom:10px"><div class="ap-seg" role="group" aria-label="Classe de ativos"><button type="button" class="on" data-ap-ranktipo="acoes">Ações BR</button><button type="button" data-ap-ranktipo="fiis">🏢 FIIs (B3)</button></div></div>';
+ return sw+'<div class="ap-rank"><aside class="ap-filtros"><details'+(desk?' open':'')+'><summary><span class="ap-fsum-l">Filtros'+(nFilt?' <span class="ap-fbadge">'+nFilt+'</span>':'')+'</span>'+(nFilt?'<button type="button" class="ap-link" data-ap-limpar>Limpar</button>':'')+'</summary>'+
   '<p class="ap-lbl">Screeners por gestor</p>'+Object.entries(PRESETS).map(([k,p])=>'<button type="button" class="ap-preset'+(f.preset===k?' on':'')+'" data-ap-preset="'+k+'"><b>'+p.n+'</b><small>'+p.d+'</small></button>').join('')+
   '<label class="ap-lbl">Setor<select data-ap-f="setor"><option value="">Todos</option>'+setores.map(s=>'<option'+(f.setor===s?' selected':'')+'>'+E(s)+'</option>').join('')+'</select></label>'+
   '<label class="ap-lbl">Porte<select data-ap-f="porte"><option value="">Todos</option>'+['Large','Mid','Small','Micro'].map(s=>'<option'+(f.porte===s?' selected':'')+'>'+s+'</option>').join('')+'</select></label>'+
@@ -225,6 +268,18 @@ async function rotacao(){
  st.rot={at:Date.now(),s:out};ls.set(K_ROT,st.rot);st.rotLoading=false;render();
 }
 function heat(v,max){if(v==null)return '';const a=Math.min(1,Math.abs(v)/(max||1))*.50+.07;return 'background:rgba('+(v>=0?'16,185,129':'239,68,68')+','+a.toFixed(2)+')'}
+function radarFiisHtml(){
+ if(!st.fiis?.rows?.length){if(!st.fiiLoading&&!st.fiiErr)setTimeout(()=>carregarFiis(false),0);return '<section class="ap-card" style="margin-top:12px"><h3 style="margin:0 0 4px">🏢 Radar de FIIs (B3)</h3><p class="ap-mut">Carregando oportunidades em Fundos Imobiliários…</p></section>';}
+ const base=st.fiis.rows.filter(r=>(r.liquidez||0)>=500000);
+ const tijDesc=base.filter(r=>r.tipo==='Tijolo'&&r.p_vp>=0.65&&r.p_vp<=0.93&&(r.vacancia==null||r.vacancia<=10)&&r.dy>=7.5&&r.dy<=16.5).sort((a,b)=>b.score-a.score).slice(0,12);
+ const papBom=base.filter(r=>r.tipo==='Papel'&&r.p_vp>=0.88&&r.p_vp<=1.03&&r.dy>=10&&r.dy<=16.5).sort((a,b)=>b.score-a.score).slice(0,12);
+ const armad=base.filter(r=>(r.dy>17.5)||(r.tipo==='Tijolo'&&r.vacancia>18)).sort((a,b)=>(b.dy||0)-(a.dy||0)).slice(0,12);
+ const chip=(l,met,tone,t,desc)=>'<section class="ap-lista'+(tone?' '+tone:'')+'"><header><h3>'+t+' <span>('+l.length+')</span></h3><p>'+desc+'</p></header>'+(l.length?'<div class="ap-chips">'+l.map(r=>'<button type="button" data-ap-fiiabrir="'+E(r.ticker)+'"><b>'+E(r.ticker)+'</b><small>'+E(r.tipo)+' · P/VP '+fmt(r.p_vp,2)+'</small><em>'+met(r)+'</em></button>').join('')+'</div>':'<p class="ap-mut">Nenhum FII neste critério agora.</p>')+'</section>';
+ return '<h3 class="ap-h" style="margin-top:16px">🏢 Radar de FIIs <small>Tijolo vs Papel · liquidez ≥ R$ 500k/dia</small></h3>'+
+  chip(tijDesc,r=>'DY '+pct(r.dy)+' · Vac '+(r.vacancia!=null?fmt(r.vacancia,0)+'%':'—'),'dest','Tijolo com desconto + vacância baixa','P/VP entre 0,65 e 0,93 com vacância ≤ 10% e rendimento saudável.')+
+  chip(papBom,r=>'DY '+pct(r.dy)+' · Score '+r.score,'','Papel (CRI) perto do VP com bom yield','P/VP entre 0,88 e 1,03 e DY 12m entre 10% e 16,5% (sem ágio excessivo).')+
+  chip(armad,r=>r.dy>17.5?'DY '+pct(r.dy):'Vac '+fmt(r.vacancia,1)+'%','risco','Alertas em FIIs (Yield Trap ou Vacância > 18%)','Exigem leitura do relatório gerencial antes de qualquer aporte.');
+}
 function viewRadar(){
  const R=listasRadar(),rot=st.rot?.s,mx={};
  if(rot)for(const[k]of PER)mx[k]=Math.max(...Object.values(rot).map(o=>Math.abs(o[k]??0)),.1);
@@ -246,6 +301,7 @@ function viewRadar(){
   cardsLista('Riscos elevados','DL/EBITDA > 3,5x, ou momentum < −10% com DL/EBITDA > 2x.',R.ris,r=>'DL/EBITDA '+fmt(r.div_liq_ebitda,1),'risco','ris')+
   '<h3 class="ap-h">Rankings <small>Top 20 por métrica, sem riscos elevados</small></h3><div class="ap-tops">'+R.tops.map(([t,s,l,m])=>'<section class="ap-card"><h4>'+t+'</h4><p class="ap-mut">'+s+'</p><ol>'+
   l.map(r=>'<li data-ap-ativo="'+r.ticker+'"><b>'+r.ticker+'</b><span>'+m(r)+'</span></li>').join('')+'</ol></section>').join('')+'</div>'+
+  radarFiisHtml()+
   '<p class="ap-mut">Filtros estatísticos para investigar, não recomendação de compra ou venda.</p></div>';
 }
 
@@ -372,12 +428,33 @@ function enter(tab){if(tab)st.tab=tab;st._rotTentou=0;if(tab!=='ativo'&&!st._abr
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
-d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie]');
+d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese]');
  if(!t||!t.closest('#ap-root'))return;const ds=t.dataset;
  if('apQ' in ds){ev.preventDefault();ev.stopPropagation();st.q=ds.apQ;render();return}
  if('apGuia' in ds){st.q='';d.querySelector('[data-an-sub="guia"]')?.click();return}
  if('apQx' in ds||t.classList?.contains('ap-qbox')){if(ev.target.closest('.ap-qcard')&&!('apQx' in ds))return;st.q='';render();return}
  if('apIa' in ds){w.DiarioAnalises?.command?.('ANALISE '+ds.apIa,ds.apMembro||'graham');d.querySelector('[data-an-sub="pesquisa"]')?.click();return}
+ if('apRanktipo' in ds){st.rankTipo=ds.apRanktipo;if(st.rankTipo==='fiis')carregarFiis(false);render();return}
+ if('apFiirf' in ds){carregarFiis(true);return}
+ if('apFiipreset' in ds){st.fiiF.preset=ds.apFiipreset;render();return}
+ if('apFiitipo' in ds){st.fiiF.tipo=ds.apFiitipo;render();return}
+ if('apFiisel' in ds){st.fiiSel=ds.apFiisel;render();if(st.fiiSel)d.getElementById('ap-root')?.scrollIntoView({block:'start'});return}
+ if('apFiiabrir' in ds){st.rankTipo='fiis';st.fiiSel=ds.apFiiabrir;st.tab='rankpro';d.querySelector('[data-an-sub="rankpro"]:not(.selected)')?.click();render();d.getElementById('ap-root')?.scrollIntoView({block:'start'});return}
+ if('apFiiConselho' in ds){
+  const fii=st.fiis?.rows?.find(x=>x.ticker===ds.apFiiConselho);
+  const ctx=fii?(fii.ticker+' ('+fii.tipo+' · '+fii.segmento+') — Cotação '+brl(fii.cotacao)+', P/VP '+fmt(fii.p_vp,2)+', DY 12m '+pct(fii.dy)+', Spread NTN-B '+sinal(fii.spread_ntnb,2)+', Vacância '+(fii.vacancia!=null?fmt(fii.vacancia,1)+'%':'—')+', Liquidez '+din(fii.liquidez)+', Nota FII '+fii.score+'/100'+(fii.alertas?.length?' · Alertas: '+fii.alertas.join('; '):'')):ds.apFiiConselho;
+  const prompt='@graham Faça uma avaliação objetiva de FII combinando Graham (P/VP, margem de segurança e spread vs NTN-B) e Munger (qualidade de gestão, vacância, concentração e risco de yield trap) para:\n'+ctx;
+  // Não invocar ecoPergunta: a função encaminha para Supabase /functions/v1/analise.
+  // Prepara o parecer sem transmitir dados a nenhum backend.
+  try{const c=w.navigator?.clipboard?.writeText?.(prompt);if(c?.then)void c.then(()=>w.alert('Prompt do Conselho copiado. Cole na IA de sua preferência; nenhum dado foi enviado ao Supabase.')).catch(()=>w.prompt('Copie o prompt do Conselho:',prompt));else w.prompt('Copie o prompt do Conselho:',prompt);}catch(_){w.prompt('Copie o prompt do Conselho:',prompt);}
+  return;
+ }
+ if('apFiitese' in ds){
+  const fii=st.fiis?.rows?.find(x=>x.ticker===ds.apFiitese);
+  const ex=teses().find(x=>x.tk===ds.apFiitese&&x.status==='ativa');
+  st.teseEdit=ex?{...ex}:{tk:ds.apFiitese,entrada:fii?.cotacao?Math.round(fii.cotacao*100)/100:'',alvo:fii?.cotacao&&fii?.p_vp>0?Math.round((fii.cotacao/fii.p_vp)*100)/100:'',status:'ativa',texto:fii?('FII '+fii.tipo+' ('+fii.segmento+') · P/VP '+fmt(fii.p_vp,2)+' · DY '+pct(fii.dy)):''};
+  st.tk='';st.tab='teses';d.querySelector('[data-an-sub="teses"]:not(.selected)')?.click();render();return;
+ }
  if('apRecarregar' in ds){carregar(true);return}
  if('apSerie' in ds){carregaSerie(ds.apSerie,true);return}
  if('apFaltam' in ds){const R=st.X?.retornos||{},P=pf(),l=st.rows.rows.filter(r=>!R[r.ticker]&&!P[r.ticker]).map(r=>r.ticker);navigator.clipboard?.writeText(l.join('\n'));t.textContent=l.length+' tickers copiados';return}
@@ -406,9 +483,11 @@ d.addEventListener('click',ev=>{const b=ev.target.closest?.('[data-ap-abrir]');i
 d.addEventListener('input',ev=>{const t=ev.target;if(!t.closest?.('#ap-root'))return;
  if(t.dataset.apCalc!=null){calcRun(t.closest('.ap-calcs'));return}
  if(t.dataset.apTf){st.teseEdit[t.dataset.apTf]=t.value;return}
+ if(t.dataset.apFiif==='q'){st.fiiF.q=t.value;clearTimeout(st._fq);st._fq=setTimeout(()=>{const p=t.selectionStart;render();const i=d.querySelector('#ap-root [data-ap-fiif="q"]');if(i){i.focus();i.setSelectionRange(p,p)}},220);return}
  if(t.dataset.apF==='q'){st.f.q=t.value;st.f.page=0;clearTimeout(st._q);st._q=setTimeout(()=>{const p=t.selectionStart;render();const i=d.querySelector('#ap-root [data-ap-f="q"]');if(i){i.focus();i.setSelectionRange(p,p)}},250)}
  else if(t.dataset.apF==='nota'){st.f.nota=Number(t.value);t.previousElementSibling&&(t.previousElementSibling.textContent=fmt(st.f.nota,1))}});
 d.addEventListener('change',ev=>{const t=ev.target;if(!t.closest?.('#ap-root'))return;
+ if(t.dataset.apFiif==='liq'){st.fiiF.liq=Number(t.value)||0;render();return}
  if(t.dataset.apCol){st.colMode='completo';ls.set(K_MODE,'completo');vis=t.checked?[...new Set([...vis,t.dataset.apCol])]:vis.filter(x=>x!==t.dataset.apCol);vis=COLS.map(c=>c[0]).filter(k=>vis.includes(k));ls.set(K_COLS,vis);render();d.querySelector('#ap-root .ap-cols')?.setAttribute('open','');return}
  if(t.dataset.apTf){st.teseEdit[t.dataset.apTf]=t.value;return}
  const k=t.dataset.apF;if(!k||k==='q')return;st.f[k]=k==='setor'||k==='porte'?t.value:Number(t.value);st.f.page=0;salvaF();render()});
