@@ -179,8 +179,39 @@ function cardMob(r){
   '<div class="ap-mc-px"><b>'+brl(r.preco)+'</b>'+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'">'+sinal(r.d1,2)+'</small>':u!=null?'<small class="'+cor(u)+'">Justo '+sinal(u,0)+'</small>':'')+'</div></div>'+
   '<div class="ap-mc-met"><span>P/L <b>'+(r.pl==null?'—':fmt(r.pl,1)+'x')+'</b></span><span>DY <b>'+pct(r.dy)+'</b></span><span>ROE <b>'+pct(r.roe)+'</b></span><span>DL/EB <b>'+(r.div_liq_ebitda==null?'—':fmt(r.div_liq_ebitda,1)+'x')+'</b></span></div></article>';
 }
+const ETFS_B3=[
+ {tk:'IVVB11',nome:'iShares S&P 500 BRL',cat:'EUA · Dólar',tx:'0,23%',quad:'Crescimento ↑ · Dólar',desc:'Replica o S&P 500 com exposição cambial ao dólar.'},
+ {tk:'WRLD11',nome:'Investo FTSE Global (VT)',cat:'Global · Dólar',tx:'0,30%',quad:'Crescimento ↑ · Diversificação',desc:'Mais de 9.000 empresas globais (EUA, Europa, Ásia e emergentes).'},
+ {tk:'NASD11',nome:'Trend Nasdaq 100',cat:'Tech EUA · Dólar',tx:'0,30%',quad:'Crescimento ↑ · Juros ↓',desc:'As 100 maiores não-financeiras da Nasdaq em dólar.'},
+ {tk:'BOVA11',nome:'iShares Ibovespa',cat:'Brasil · Ações',tx:'0,10%',quad:'Crescimento ↑ · Brasil',desc:'Replica o índice Ibovespa com altíssima liquidez na B3.'},
+ {tk:'DIVO11',nome:'It Now IDIV Dividendos',cat:'Brasil · Dividendos',tx:'0,50%',quad:'Estabilidade · Renda',desc:'Empresas pagadoras de dividendos da B3 (reinveste proventos).'},
+ {tk:'SMAL11',nome:'iShares Small Cap',cat:'Brasil · Small Caps',tx:'0,50%',quad:'Juros ↓ · Ciclo Local',desc:'Empresas menores da B3, mais sensíveis à queda da Selic.'},
+ {tk:'GOLD11',nome:'Trend Ouro (IAU)',cat:'Ouro · Proteção',tx:'0,30%',quad:'Inflação ↑ · Crise Geopolítica',desc:'Ouro físico em dólar — proteção clássica do All Weather de Dalio.'},
+ {tk:'B5P211',nome:'It Now IMA-B5 P2',cat:'Renda Fixa · IPCA+',tx:'0,20%',quad:'Inflação ↑ · Curto Prazo',desc:'Tesouro IPCA+ até 5 anos com alíquota fixa de 15% e sem come-cotas.'},
+ {tk:'IMAB11',nome:'It Now IMA-B',cat:'Renda Fixa · IPCA+',tx:'0,25%',quad:'Inflação ↑ · Juros ↓',desc:'Cesta completa de NTN-Bs (Tesouro IPCA+ curto e longo).'},
+ {tk:'HASH11',nome:'Hashdex Nasdaq Crypto',cat:'Cripto · Dólar',tx:'1,30%',quad:'Liquidez Global ↑',desc:'Cesta regulada na B3 liderada por Bitcoin e Ethereum.'}
+];
+function rankSwitcher(){
+ return '<div class="ap-seg ap-seg-vis" role="group" aria-label="Classe de ativos">'+
+  '<button type="button" class="'+(st.rankTipo==='acoes'?'on':'')+'" data-ap-ranktipo="acoes">Ações BR</button>'+
+  '<button type="button" class="'+(st.rankTipo==='fiis'?'on':'')+'" data-ap-ranktipo="fiis">🏢 FIIs (B3)</button>'+
+  '<button type="button" class="'+(st.rankTipo==='etfs'?'on':'')+'" data-ap-ranktipo="etfs">🌐 ETFs</button></div>';
+}
+function viewEtfsRank(){
+ const P=pf();
+ const rows=ETFS_B3.map(e=>{
+  const c=P[e.tk]||(typeof CQ==='object'&&CQ?.d?.[e.tk])||null;
+  const px=N(c?.ult??c?.px),d1=N(c?.var??c?.d1);
+  return {...e,px,d1};
+ });
+ return '<div class="ap-bar" style="margin-bottom:10px">'+rankSwitcher()+'</div>'+
+  '<p class="ap-mut ap-leg">ETFs líquidos da B3 alinhados aos 4 quadrantes do All Weather (Dalio). Toque em Avaliar para consultar Dalio &amp; Markowitz.</p>'+
+  '<div class="ap-mcards">'+rows.map(r=>'<article class="ap-mcard"><div class="ap-mc-top"><div class="ap-mc-id"><b>'+logo(r.tk)+E(r.tk)+'</b><small>'+E(r.nome)+' · '+E(r.cat)+'</small></div><div class="ap-mc-px"><b>'+(r.px?brl(r.px):'—')+'</b>'+(r.d1!=null?'<small class="'+cor(r.d1)+'">'+sinal(r.d1,2)+'</small>':'')+'</div></div><div class="ap-mc-met"><span>Taxa adm <b>'+E(r.tx)+'</b></span><span>Quadrante <b>'+E(r.quad)+'</b></span></div><p class="ap-mut" style="margin:6px 0 8px;font-size:12px">'+E(r.desc)+'</p><button type="button" class="btn s" data-ap-etf-conselho="'+E(r.tk)+'">✦ Avaliar com Dalio &amp; Markowitz</button></article>').join('')+'</div>'+
+  '<div class="ap-scroll ap-fii-desk"><table class="ap-t"><thead><tr><th class="ap-stk">ETF</th><th>Categoria</th><th class="ap-n">Cotação</th><th class="ap-n">Var.</th><th class="ap-n">Taxa</th><th>Quadrante All Weather</th><th>Ação</th></tr></thead><tbody>'+
+  rows.map(r=>'<tr><td class="ap-stk">'+logo(r.tk)+'<b>'+E(r.tk)+'</b><small>'+E(r.nome)+'</small></td><td>'+E(r.cat)+'</td><td class="ap-n">'+(r.px?brl(r.px):'—')+'</td><td class="ap-n '+cor(r.d1)+'">'+(r.d1!=null?sinal(r.d1,2):'—')+'</td><td class="ap-n">'+E(r.tx)+'</td><td>'+E(r.quad)+'</td><td><button type="button" class="btn s" data-ap-etf-conselho="'+E(r.tk)+'">✦ Conselho</button></td></tr>').join('')+'</tbody></table></div>';
+}
 function viewFiisRank(){
- const sw='<div class="ap-bar" style="margin-bottom:10px"><div class="ap-seg ap-seg-vis" role="group" aria-label="Classe de ativos"><button type="button" class="'+(st.rankTipo!=='fiis'?'on':'')+'" data-ap-ranktipo="acoes">Ações BR</button><button type="button" class="'+(st.rankTipo==='fiis'?'on':'')+'" data-ap-ranktipo="fiis">🏢 FIIs (B3)</button></div><button type="button" class="btn s" data-ap-fiirf>↻ Atualizar FIIs</button></div>';
+ const sw='<div class="ap-bar" style="margin-bottom:10px">'+rankSwitcher()+'<button type="button" class="btn s" data-ap-fiirf>↻ Atualizar FIIs</button></div>';
  if(st.fiiLoading&&!st.fiis?.rows?.length)return sw+'<section class="ap-card ap-vazio"><p class="ap-mut">Carregando Fundos Imobiliários da B3…</p></section>';
  if(!st.fiis?.rows?.length)return sw+'<section class="ap-card ap-vazio"><p>'+(E(st.fiiErr)||'FIIs ainda não carregados.')+'</p><button type="button" class="btn s" data-ap-fiirf>Carregar FIIs</button></section>';
  const f=st.fiiF,qTxt=String(f.q||'').trim().toUpperCase(),ntnb=st.fiis.ntnb_ref||6.8;
@@ -189,15 +220,10 @@ function viewFiisRank(){
  else if(f.preset==='dy')list=list.filter(r=>r.dy>0&&r.dy<=17.5).sort((a,b)=>(b.dy||0)-(a.dy||0));
  else if(f.preset==='liq')list=list.sort((a,b)=>(b.liquidez||0)-(a.liquidez||0));
  else list=list.sort((a,b)=>(b.score||0)-(a.score||0)||(b.liquidez||0)-(a.liquidez||0));
- const top=list.slice(0,60),sel=st.fiiSel?st.fiis.rows.find(x=>x.ticker===st.fiiSel):null;
- const nMag=r=>{if(!(r?.cotacao>0&&r?.dy>0))return null;const divM=r.cotacao*(r.dy/100)/12;return divM>0?Math.ceil(r.cotacao/divM):null};
- const ficha=sel?'<section class="ap-card" style="margin-bottom:12px;border-color:rgba(201,166,107,.55)"><header class="ap-bar" style="margin-bottom:8px"><div><h3 style="margin:0">'+logo(sel.ticker)+E(sel.ticker)+' · <small class="ap-mut">'+E(sel.tipo)+' · '+E(sel.segmento)+'</small></h3></div><button type="button" class="btn s" data-ap-fiisel="">Fechar ✕</button></header>'+
-  '<div class="ap-kv"><div><span>Cotação</span><b>'+brl(sel.cotacao)+'</b></div><div><span>P/VP</span><b class="'+(sel.p_vp<1?'ap-g':sel.p_vp>1.05?'ap-r':'')+'">'+fmt(sel.p_vp,2)+'</b></div><div><span>DY 12m</span><b class="'+(sel.dy>17.5?'ap-r':'ap-g')+'">'+pct(sel.dy)+'</b></div><div><span>Spread NTN-B</span><b class="'+cor(sel.spread_ntnb)+'">'+sinal(sel.spread_ntnb,2)+'</b></div><div><span>Vacância</span><b>'+(sel.tipo==='Tijolo'&&sel.vacancia!=null?fmt(sel.vacancia,1)+'%':'—')+'</b></div><div><span>Liquidez/dia</span><b>'+cmp(sel.liquidez)+'</b></div><div><span>Nota FII</span><b>'+sel.score+'/100</b></div><div><span>❄️ Nº Mágico</span><b>'+(nMag(sel)?nMag(sel)+' cotas':'—')+'</b></div></div>'+
-  ((sel.selos?.length||sel.alertas?.length)?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+(sel.selos||[]).map(x=>'<span class="ap-tag st-ativa">'+E(x)+'</span>').join('')+(sel.alertas||[]).map(x=>'<span class="ap-tag" style="background:rgba(239,68,68,.12);color:#EF4444;border-color:rgba(239,68,68,.35)">⚠ '+E(x)+'</span>').join('')+'</div>':'')+
-  '<div class="ap-bar" style="margin-top:8px"><button type="button" class="btn s ap-btn-acc" data-ap-fii-conselho="'+E(sel.ticker)+'">✦ Parecer Graham + Munger</button><button type="button" class="btn s" data-ap-fiitese="'+E(sel.ticker)+'">+ Salvar Tese</button></div></section>':'';
+ const top=list.slice(0,60);
  const presets=[['score','🏆 Score FII'],['pvp','🏷️ Menor P/VP'],['dy','💰 Maior DY (s/ armadilha)'],['liq','💧 Maior Liquidez']];
  const tipos=['','Tijolo','Papel','Híbrido','FOF'];
- return sw+ficha+'<div class="ap-bar" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">'+
+ return sw+'<div class="ap-bar" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">'+
   '<input type="search" placeholder="Buscar FII (ex.: HGLG11, MXRF11)…" value="'+E(f.q)+'" data-ap-fiif="q" class="ap-busca">'+
   '<select data-ap-fiif="liq">'+[[0,'Liquidez: qualquer'],[200000,'Liq ≥ R$ 200k'],[500000,'Liq ≥ R$ 500k'],[1000000,'Liq ≥ R$ 1 mi']].map(([v,t])=>'<option value="'+v+'"'+(Number(f.liq)===v?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'+
   '<div class="ap-mpresets" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+presets.map(([k,t])=>'<button type="button" class="ap-chip'+(f.preset===k?' on':'')+'" data-ap-fiipreset="'+k+'">'+t+'</button>').join('')+'</div>'+
@@ -209,13 +235,14 @@ function viewFiisRank(){
 }
 function viewRank(){
  if(st.rankTipo==='fiis'){if(!st.fiis&&!st.fiiLoading&&!st.fiiErr)setTimeout(()=>carregarFiis(false),0);return viewFiisRank();}
+ if(st.rankTipo==='etfs')return viewEtfsRank();
  const f=st.f,l=filtrados(),tot=l.length,pg=f.pg,pages=Math.max(1,Math.ceil(tot/pg));if(f.page>=pages)f.page=0;
  const pag=l.slice(f.page*pg,f.page*pg+pg),setores=Object.keys(st.rows.porSetor).sort(),cols=colsAtivas();
  const nFilt=[f.preset,f.setor,f.porte,f.nota>0,f.liq>0,f.q.trim()].filter(Boolean).length;
  const desk=(w.innerWidth||1024)>=900;
  const TXT=['setor','porte','balanco'],th=(k,t)=>'<th data-ap-sort="'+k+'" class="'+(f.sort===k?'on ':'')+(TXT.includes(k)?'':k==='nota'?'ap-c':'ap-n')+'">'+t+(f.sort===k?(f.dir<0?' ▾':' ▴'):'')+q(k)+'</th>';
  const mobPresets='<div class="ap-mpresets" aria-label="Presets rápidos">'+Object.entries(PRESETS).map(([k,p])=>'<button type="button" class="ap-chip'+(f.preset===k?' on':'')+'" data-ap-preset="'+k+'">'+p.n+'</button>').join('')+'</div>';
- const sw='<div class="ap-bar" style="margin-bottom:10px"><div class="ap-seg ap-seg-vis" role="group" aria-label="Classe de ativos"><button type="button" class="on" data-ap-ranktipo="acoes">Ações BR</button><button type="button" data-ap-ranktipo="fiis">🏢 FIIs (B3)</button></div></div>';
+ const sw='<div class="ap-bar" style="margin-bottom:10px">'+rankSwitcher()+'</div>';
  return sw+'<div class="ap-rank"><aside class="ap-filtros"><details'+(desk?' open':'')+'><summary><span class="ap-fsum-l">Filtros'+(nFilt?' <span class="ap-fbadge">'+nFilt+'</span>':'')+'</span>'+(nFilt?'<button type="button" class="ap-link" data-ap-limpar>Limpar</button>':'')+'</summary>'+
   '<p class="ap-lbl">Screeners por gestor</p>'+Object.entries(PRESETS).map(([k,p])=>'<button type="button" class="ap-preset'+(f.preset===k?' on':'')+'" data-ap-preset="'+k+'"><b>'+p.n+'</b><small>'+p.d+'</small></button>').join('')+
   '<label class="ap-lbl">Setor<select data-ap-f="setor"><option value="">Todos</option>'+setores.map(s=>'<option'+(f.setor===s?' selected':'')+'>'+E(s)+'</option>').join('')+'</select></label>'+
@@ -360,13 +387,94 @@ function calcs(r){const lucro=r.cap&&r.pl>0?r.cap/r.pl:null,acoes=r.cap&&r.preco
   '<section class="ap-card" data-calc="gordon"><h4>Gordon</h4><p class="ap-mut">DPA × (1+g) ÷ (k − g)</p>'+inp('dpa',r.dpa,'DPA 12m (R$)')+inp('k',10,'Retorno exigido k (%)')+inp('g',4,'Crescimento g (%)')+'<p class="ap-res"></p></section>'+
   '<section class="ap-card" data-calc="novo"><h4>Novo Bazin (seu método)</h4><p class="ap-mut">(lucro projetado × payout ÷ nº de ações) ÷ yield desejado</p>'+inp('l',lucro,'Lucro projetado (R$)')+inp('p',r.payout??50,'Payout (%)')+inp('a',acoes,'Nº de ações')+inp('y',7,'Yield desejado (%)')+'<p class="ap-res"></p></section></div>'+
   '<p class="ap-mut">Valores pré-preenchidos com o snapshot (lucro = valor de mercado ÷ P/L, últimos 12 meses). Edite para simular.</p>'}
-function calcRun(root){if(!root)return;const p=Number(root.dataset.preco);root.querySelectorAll('[data-calc]').forEach(s=>{const g=k=>Number(s.querySelector('[data-ap-calc="'+k+'"]')?.value);let v=null;
+function calcRun(root){if(!root)return;const p=Number(root.dataset.preco);root.querySelectorAll('[data-calc]').forEach(s=>{const g=k=>Number(s.querySelector('[data-ap-calc="'+k+'"]')?.value);let v=null,custom=null;
  switch(s.dataset.calc){case 'graham':v=g('lpa')>0&&g('vpa')>0?Math.sqrt(22.5*g('lpa')*g('vpa')):null;break;case 'bazin':v=g('dpa')>0&&g('y')>0?g('dpa')/(g('y')/100):null;break;
-  case 'gordon':v=g('dpa')>0&&g('k')>g('g')?g('dpa')*(1+g('g')/100)/((g('k')-g('g'))/100):null;break;case 'novo':v=g('l')>0&&g('a')>0&&g('y')>0?g('l')*(g('p')/100)/g('a')/(g('y')/100):null}
- const u=v&&p?(v/p-1)*100:null;s.querySelector('.ap-res').innerHTML=v==null?'<span class="ap-mut">Dados insuficientes</span>':'Preço justo <b>'+brl(v)+'</b> <span class="'+cor(u)+'">'+(u==null?'':(u>=0?'margem ':'acima em ')+fmt(Math.abs(u),1)+'%')+'</span>'})}
+  case 'gordon':v=g('dpa')>0&&g('k')>g('g')?g('dpa')*(1+g('g')/100)/((g('k')-g('g'))/100):null;break;case 'novo':v=g('l')>0&&g('a')>0&&g('y')>0?g('l')*(g('p')/100)/g('a')/(g('y')/100):null;break;
+  case 'fii_bazin':v=g('dpa')>0&&g('y')>0?g('dpa')/(g('y')/100):null;break;
+  case 'fii_spread':v=g('dpa')>0&&(g('ntnb')+g('sp'))>0?g('dpa')/((g('ntnb')+g('sp'))/100):null;break;
+  case 'fii_renda':{const cotas=g('cotas'),divM=g('divm');if(cotas>0&&divM>0&&p>0){const renda=cotas*divM,cap=cotas*p,novas=renda/p;custom='Renda mensal isenta: <b class="ap-g">'+brl(renda)+'</b> · Capital: <b>'+brl(cap)+'</b> · Compra <b>'+fmt(novas,2)+'</b> cota(s)/mês'}else custom='<span class="ap-mut">Informe cotas e dividendo mensal</span>';break}}
+ if(custom!=null){s.querySelector('.ap-res').innerHTML=custom;return}
+ const u=v&&p?(v/p-1)*100:null;s.querySelector('.ap-res').innerHTML=v==null?'<span class="ap-mut">Dados insuficientes</span>':'Preço teto <b>'+brl(v)+'</b> <span class="'+cor(u)+'">'+(u==null?'':(u>=0?'margem ':'acima em ')+fmt(Math.abs(u),1)+'%')+'</span>'})}
 const KQ={'Nota Raio-X':'nota','P/L':'pl','P/VP':'pvp','DY':'dy','ROE':'roe','ROIC':'roic','DL/EBITDA':'div_liq_ebitda','Momentum 12m':'momentum','RSI 14':'rsi','Crowded':'crowded'};
+/* v927: Página completa do FII (4 sub-abas no mesmo padrão das Ações, com métricas nativas de FII). */
+function viewFiiAtivo(fii){
+ const ntnb=st.fiis?.ntnb_ref||6.8;
+ const vpEst=fii.cotacao>0&&fii.p_vp>0?fii.cotacao/fii.p_vp:null;
+ const uVp=vpEst&&fii.cotacao?(vpEst/fii.cotacao-1)*100:null;
+ const dpaEst=fii.cotacao>0&&fii.dy>0?fii.cotacao*(fii.dy/100):null;
+ const divM=dpaEst?dpaEst/12:null;
+ const nMag=divM>0&&fii.cotacao>0?Math.ceil(fii.cotacao/divM):null;
+ const tese=teses().find(t=>t.tk===fii.ticker&&t.status==='ativa');
+ const subs=[['visao','Visão geral'],['raiox','Raio-X & Pares'],['div','Renda & Preço Teto'],['empresa','Fundo']];
+ const allFiis=st.fiis?.rows||[];
+ const paresSeg=allFiis.filter(x=>x.segmento&&x.segmento===fii.segmento);
+ const pares=paresSeg.length>=4?paresSeg:allFiis.filter(x=>x.tipo===fii.tipo);
+ const grupoLbl=paresSeg.length>=4?fii.segmento:fii.tipo;
+ const posFii=(k,hb)=>{
+  const val=fii[k];if(val==null)return '—';
+  const arr=pares.map(x=>x[k]).filter(x=>x!=null&&Number.isFinite(Number(x)));
+  if(arr.length<3)return '—';
+  const melhor=arr.filter(x=>hb?x<val:x>val).length;
+  return Math.round(melhor/(arr.length-1)*100)+'º pct';
+ };
+ const eixosFii={
+  'P/VP':fii.p_vp>0?Math.max(0,Math.min(4,(1.25-fii.p_vp)/0.45*4)):null,
+  'DY':fii.dy>0?Math.max(0,Math.min(4,fii.dy>17.5?1.5:fii.dy/14*4)):null,
+  'Spread':fii.spread_ntnb!=null?Math.max(0,Math.min(4,(fii.spread_ntnb+1)/6*4)):null,
+  'Liquidez':fii.liquidez>0?Math.max(0,Math.min(4,Math.log10(Math.max(1,fii.liquidez))/7*4)):null,
+  'Qualidade':fii.score!=null?Math.max(0,Math.min(4,fii.score/25)):null
+ };
+ let body='';
+ if(st.sub==='visao'){
+  const gObj={ticker:fii.ticker,justo:vpEst};
+  const tagsHtml=(fii.selos?.length||fii.alertas?.length)?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px">'+(fii.selos||[]).map(x=>'<span class="ap-tag st-ativa">'+E(x)+'</span>').join('')+(fii.alertas||[]).map(x=>'<span class="ap-tag" style="background:rgba(239,68,68,.12);color:#EF4444;border-color:rgba(239,68,68,.35)">⚠ '+E(x)+'</span>').join('')+'</div>':'';
+  body='<div class="ap-2 ap-2w"><section class="ap-card"><h3>Cotação (linha dourada = VP estimado)</h3>'+grafico(gObj)+'</section><section class="ap-card"><h3>Resumo do FII</h3>'+tagsHtml+'<div class="ap-kv">'+
+   [['Nota FII',fii.score+'/100'],['P/VP',fmt(fii.p_vp,2)+'x'],['DY 12m',pct(fii.dy)],['Spread NTN-B',sinal(fii.spread_ntnb,2)],
+    ['Vacância',fii.tipo==='Tijolo'&&fii.vacancia!=null?fmt(fii.vacancia,1)+'%':'—'],['Liquidez/dia',cmp(fii.liquidez)],
+    ['VP estimado',vpEst?brl(vpEst):'—'],['Dividendo/mês (~)',divM?brl(divM):'—'],
+    ['❄️ Nº Mágico',nMag?nMag+' cotas':'—'],['Capital p/ Nº Mágico',nMag&&fii.cotacao?brl(nMag*fii.cotacao):'—']].map(([k,v])=>'<div><span>'+k+'</span><b>'+v+'</b></div>').join('')+'</div>'+
+   '<h4>Minha tese</h4>'+(tese?'<p>Alvo <b>'+brl(tese.alvo)+'</b> · '+E(tese.texto).slice(0,160)+'</p>':'<p class="ap-mut">Sem tese salva para '+E(fii.ticker)+'.</p>')+
+   '<button type="button" class="btn s" data-ap-fiitese="'+E(fii.ticker)+'">'+(tese?'Editar tese':'+ Salvar tese')+'</button></section></div>';
+ }else if(st.sub==='raiox'){
+  const M=[['Score FII','score',1,'/100'],['P/VP','p_vp',0,'x'],['DY 12m','dy',1,'%'],['Spread NTN-B','spread_ntnb',1,'%'],['Vacância','vacancia',0,'%'],['Liquidez/dia','liquidez',1,'R$']];
+  body='<div class="ap-2"><section class="ap-card"><h3>Raio-X FII <b class="ap-big">'+fii.score+'</b><small>/ 100</small></h3>'+radarSvg({eixos:eixosFii})+
+   '<p class="ap-mut">Pilares de 0 a 4 combinando desconto no VP, yield sustentável (com trava anti-Yield Trap &gt;17,5%), spread real sobre NTN-B ('+fmt(ntnb,1)+'%) e liquidez.</p></section>'+
+   '<section class="ap-card"><h3>Comparar com pares · '+E(grupoLbl)+' <small>('+pares.length+')</small></h3><div class="ap-scroll"><table class="ap-t"><thead><tr><th>Métrica</th><th>'+E(fii.ticker)+'</th><th>Mediana</th><th>Posição</th></tr></thead><tbody>'+
+   M.map(([t,k,hb,u])=>{
+    const val=fii[k],med=median(pares.map(x=>x[k]).filter(x=>x!=null));
+    const fmtM=v=>v==null?'—':u==='R$'?cmp(v):u==='/100'?Math.round(v)+'/100':fmt(v,u==='x'?2:1)+u;
+    return '<tr><td>'+t+'</td><td class="ap-n"><b>'+fmtM(val)+'</b></td><td class="ap-n">'+fmtM(med)+'</td><td class="ap-n">'+posFii(k,hb===1)+'</td></tr>';
+   }).join('')+'</tbody></table></div></section></div>';
+ }else if(st.sub==='div'){
+  const inp=(k,v,l,s='any')=>'<label>'+l+'<input type="number" step="'+s+'" data-ap-calc="'+k+'" value="'+(v==null?'':Math.round(v*1e4)/1e4)+'"></label>';
+  body='<div class="ap-calcs" data-preco="'+(fii.cotacao||'')+'">'+
+   '<section class="ap-card" data-calc="fii_bazin"><h4>Preço Teto · Bazin FII</h4><p class="ap-mut">Dividendo 12m ÷ DY mínimo desejado</p>'+inp('dpa',dpaEst,'Dividendo 12m/cota (R$)')+inp('y',fii.tipo==='Papel'?11:9,'DY mínimo exigido (%)','0.5')+'<p class="ap-res"></p></section>'+
+   '<section class="ap-card" data-calc="fii_spread"><h4>Preço Teto · Spread NTN-B</h4><p class="ap-mut">Dividendo 12m ÷ (NTN-B + Spread real)</p>'+inp('dpa',dpaEst,'Dividendo 12m/cota (R$)')+inp('ntnb',ntnb,'NTN-B referência (%)','0.1')+inp('sp',fii.tipo==='Papel'?3.5:2.5,'Spread exigido (%)','0.25')+'<p class="ap-res"></p></section>'+
+   '<section class="ap-card" data-calc="fii_renda"><h4>❄️ Bola de Neve &amp; Renda Passiva</h4><p class="ap-mut">Simule sua renda mensal isenta de IR e quantas cotas o dividendo compra por mês</p>'+inp('cotas',nMag||100,'Quantidade de cotas','1')+inp('divm',divM,'Dividendo mensal/cota (R$)','0.01')+'<p class="ap-res"></p></section></div>'+
+   '<p class="ap-mut">Valores pré-preenchidos com a cotação e o DY 12m do snapshot atual. Edite qualquer campo para simular em tempo real.</p>';
+ }else{
+  body='<section class="ap-card"><h3>'+E(fii.ticker)+' · '+E(fii.tipo)+'</h3><div class="ap-kv">'+
+   [['Tipo',fii.tipo||'—'],['Segmento',fii.segmento||'—'],['Cotação atual',brl(fii.cotacao)],['VP estimado / cota',vpEst?brl(vpEst):'—'],
+    ['P/VP',fmt(fii.p_vp,2)+'x'],['DY 12 meses',pct(fii.dy)],['Spread sobre NTN-B ('+fmt(ntnb,1)+'%)',sinal(fii.spread_ntnb,2)],
+    ['Vacância física',fii.tipo==='Tijolo'&&fii.vacancia!=null?fmt(fii.vacancia,1)+'%':'Não aplicável / indisponível'],
+    ['Liquidez média diária',cmp(fii.liquidez)],['Score FII (0–100)',fii.score+'/100'],
+    ['Fonte dos dados','Snapshot público B3 / Cloudflare']].map(([k,v])=>'<div><span>'+k+'</span><b>'+E(v)+'</b></div>').join('')+'</div>'+
+   (fii.selos?.length?'<p class="ap-mut"><b>Pontos fortes:</b> '+E(fii.selos.join(' · '))+'</p>':'')+
+   (fii.alertas?.length?'<p class="ap-mut" style="color:#EF4444"><b>Pontos de atenção:</b> '+E(fii.alertas.join(' · '))+'</p>':'')+'</section>';
+ }
+ return '<div class="ap-ativo"><div class="ap-bc" aria-label="Caminho"><button type="button" class="ap-link" data-ap-voltar>← Rankings (FIIs)</button><span>/</span><b>'+E(fii.ticker)+'</b></div>'+
+  '<header class="ap-hero"><div class="ap-hero-l"><div class="ap-hero-t"><h2>'+logo(fii.ticker)+E(fii.ticker)+'</h2><div class="ap-tags"><span class="ap-tag">'+E(fii.tipo)+'</span><span class="ap-tag">'+E(fii.segmento)+'</span><span class="ap-tag st-ativa">Score '+fii.score+'/100</span></div></div>'+
+  '<div class="ap-hk" style="margin-top:10px"><div><span>Cotação</span><b>'+brl(fii.cotacao)+'</b></div><div><span>VP estimado (P/VP '+fmt(fii.p_vp,2)+')</span><b>'+(vpEst?brl(vpEst)+' <small class="'+cor(uVp)+'">'+sinal(uVp,1)+'</small>':'—')+'</b></div><div><span>DY 12m</span><b class="'+(fii.dy>17.5?'ap-r':'ap-g')+'">'+pct(fii.dy)+'</b></div></div></div>'+
+  '<div class="ap-acoes"><button type="button" class="ui-cta" data-noclaro data-dt815="foco" data-tk="'+E(fii.ticker)+'">Gráfico no Terminal</button><div class="ap-acoes-sec"><button type="button" class="btn s ap-btn-acc" data-ap-fii-conselho="'+E(fii.ticker)+'">✦ Parecer Graham + Munger</button><button type="button" class="btn s" data-ap-fiitese="'+E(fii.ticker)+'">+ Salvar Tese</button></div></div></header>'+
+  '<div class="ap-subs" role="tablist">'+subs.map(([k,t])=>'<button type="button" role="tab" data-ap-sub="'+k+'" class="'+(st.sub===k?'on':'')+'">'+t+'</button>').join('')+'</div>'+body+'</div>';
+}
 function viewAtivo(){
- const r=st.rows.map.get(st.tk);if(!r)return '<p class="ap-mut">Ativo '+E(st.tk)+' fora do universo do Screener. <button type="button" class="ap-link" data-ap-voltar>Voltar</button></p>';
+ const r=st.rows.map.get(st.tk);
+ if(!r){
+  const fii=st.fiis?.rows?.find(x=>x.ticker===st.tk);
+  if(fii)return viewFiiAtivo(fii);
+  return '<p class="ap-mut">Ativo '+E(st.tk)+' fora do universo do Screener. <button type="button" class="ap-link" data-ap-voltar>Voltar</button></p>';
+ }
  const u=r.justo&&r.preco?(r.justo/r.preco-1)*100:null,tese=teses().find(t=>t.tk===r.ticker&&t.status==='ativa');
  const subs=[['visao','Visão geral'],['raiox','Raio-X'],['div','Dividendos e preço justo'],['empresa','Empresa']];
  let body='';
@@ -409,7 +517,29 @@ function viewTeses(){
    (prog!=null?'<div class="ap-prog"><i style="width:'+prog.toFixed(0)+'%"></i></div><p class="ap-mut">'+fmt(prog,0)+'% do caminho até o alvo'+(t.stop&&p&&p<t.stop?' · <b class="ap-r">abaixo do ponto de invalidação</b>':'')+'</p>':'')+
    (t.texto?'<p>'+E(t.texto)+'</p>':'')+(t.criterios?'<ul>'+String(t.criterios).split('\n').filter(Boolean).map(c=>'<li>'+E(c)+'</li>').join('')+'</ul>':'')+(t.riscos?'<p class="ap-mut">Riscos: '+E(t.riscos)+'</p>':'')+
    '<div class="ap-bar ap-tese-actions"><button type="button" class="btn s ap-btn-acc" data-ap-ia="'+E(t.tk)+'" data-ap-membro="munger">Testar com Munger</button><button type="button" class="btn s" data-ap-tedit="'+t.id+'">Editar</button><button type="button" class="btn s ap-del" data-ap-tdel="'+t.id+'">'+(st.excluir===t.id?'Confirmar exclusão':'Excluir')+'</button></div></article>'};
- return '<div class="ap-teses"><header class="ap-bar ap-teses-head"><div><h3>Minhas teses</h3><p class="ap-mut">'+l.length+' tese(s) · salvas neste aparelho (inclua no backup)</p></div>'+(ed?'':'<button type="button" class="ui-cta" data-noclaro data-ap-novatese="">+ Nova tese</button>')+'</header>'+form+
+ const K_AL='dt-alertas-v924';
+ const getAlertas=()=>{try{const a=JSON.parse(localStorage.getItem(K_AL)||'[]');return Array.isArray(a)?a:[]}catch{return []}};
+ const setAlertas=a=>{try{localStorage.setItem(K_AL,JSON.stringify(a))}catch{}};
+ const checkAlerta=a=>{
+  const tk=String(a.tk||'').toUpperCase(),fii=st.fiis?.rows?.find(x=>x.ticker===tk),ac=st.rows?.map.get(tk),P=pf();
+  const px=N(P[tk]?.ult??P[tk]?.px??ac?.preco??fii?.cotacao);
+  const pvp=N(fii?.p_vp??ac?.pvp);
+  const val=a.tipo==='pvp'?pvp:px;
+  if(val==null||!(a.alvo>0))return {val,hit:false};
+  return {val,hit:a.op==='<='?val<=a.alvo:val>=a.alvo};
+ };
+ w.DiarioAlertasDisparados=()=>getAlertas().map(a=>{const r=checkAlerta(a);return r.hit?(a.tk+' ('+(a.tipo==='pvp'?'P/VP ':'R$ ')+fmt(r.val,2)+' '+a.op+' '+fmt(a.alvo,2)+')'):null}).filter(Boolean);
+ const als=getAlertas();
+ const alertasHtml='<details class="ap-card" style="margin-bottom:12px"'+(als.some(a=>checkAlerta(a).hit)?' open':'')+'><summary style="cursor:pointer;font-weight:700;font-size:13.5px">🔔 Alertas Inteligentes de Preço &amp; P/VP <small class="ap-mut">('+als.length+')</small></summary>'+
+  '<div class="ap-bar" style="margin-top:10px;gap:6px;flex-wrap:wrap">'+
+  '<input id="ap-al-tk" placeholder="Ticker (ex: HGLG11, PETR4)" maxlength="10" style="width:140px;text-transform:uppercase">'+
+  '<select id="ap-al-tipo"><option value="preco">Preço (R$)</option><option value="pvp">P/VP (FII/Ação)</option></select>'+
+  '<select id="ap-al-op"><option value="<=">≤ abaixo de</option><option value=">=">≥ acima de</option></select>'+
+  '<input id="ap-al-val" type="number" step="0.01" placeholder="Valor alvo" style="width:105px">'+
+  '<button type="button" class="btn s" data-ap-aladd="1">+ Criar alerta</button></div>'+
+  (als.length?'<div style="display:grid;gap:6px;margin-top:10px">'+als.map(a=>{const r=checkAlerta(a);return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:8px;border:1px solid '+(r.hit?'rgba(16,185,129,.55)':'var(--bd)')+';background:'+(r.hit?'rgba(16,185,129,.10)':'var(--bg)')+';font-size:12.5px"><span><b>'+E(a.tk)+'</b> · '+(a.tipo==='pvp'?'P/VP':'Preço')+' '+E(a.op)+' <b>'+fmt(a.alvo,2)+'</b>'+(r.val!=null?' <small class="ap-mut">(atual: '+fmt(r.val,2)+')</small>':'')+(r.hit?' <b class="ap-g">· DISPARADO!</b>':'')+'</span><button type="button" class="btn s" data-ap-aldel="'+E(a.id)+'">✕</button></div>'}).join('')+'</div>':'<p class="ap-mut" style="margin:8px 0 0;font-size:12px">Ex.: HGLG11 · P/VP ≤ 0,88 ou PETR4 · Preço ≤ 36,00. Conferido automaticamente com Profit e Cloudflare.</p>')+
+  '</details>';
+ return '<div class="ap-teses"><header class="ap-bar ap-teses-head"><div><h3>Minhas teses</h3><p class="ap-mut">'+l.length+' tese(s) · salvas neste aparelho (inclua no backup)</p></div>'+(ed?'':'<button type="button" class="ui-cta" data-noclaro data-ap-novatese="">+ Nova tese</button>')+'</header>'+alertasHtml+form+
   (l.length?'<div class="ap-tgrid">'+l.sort((a,b)=>(a.status==='ativa'?0:1)-(b.status==='ativa'?0:1)).map(card).join('')+'</div>':ed?'':'<section class="ap-card ap-vazio"><h4>Nenhuma tese documentada</h4><p class="ap-mut">Faça o valuation na página do ativo, registre aqui o preço-alvo e os critérios e acompanhe a evolução.</p></section>')+'</div>';
 }
 
@@ -428,8 +558,33 @@ function enter(tab){if(tab)st.tab=tab;st._rotTentou=0;if(tab!=='ativo'&&!st._abr
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
-d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese]');
+d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese],[data-ap-etf-conselho],[data-ap-aladd],[data-ap-aldel]');
  if(!t||!t.closest('#ap-root'))return;const ds=t.dataset;
+ if('apAladd' in ds){
+  const tk=String(d.getElementById('ap-al-tk')?.value||'').trim().toUpperCase();
+  const tipo=d.getElementById('ap-al-tipo')?.value==='pvp'?'pvp':'preco';
+  const op=d.getElementById('ap-al-op')?.value==='>='?'>=':'<=';
+  const alvo=Number(d.getElementById('ap-al-val')?.value);
+  if(tk.length>=4&&alvo>0){
+   let als=[];try{als=JSON.parse(localStorage.getItem('dt-alertas-v924')||'[]')||[]}catch{}
+   als.unshift({id:Date.now().toString(36),tk,tipo,op,alvo});
+   try{localStorage.setItem('dt-alertas-v924',JSON.stringify(als.slice(0,30)))}catch{}
+   render();
+  }
+  return;
+ }
+ if('apAldel' in ds){
+  let als=[];try{als=JSON.parse(localStorage.getItem('dt-alertas-v924')||'[]')||[]}catch{}
+  try{localStorage.setItem('dt-alertas-v924',JSON.stringify(als.filter(x=>x.id!==ds.apAldel)))}catch{}
+  render();return;
+ }
+ if('apEtfConselho' in ds){
+  const e=ETFS_B3.find(x=>x.tk===ds.apEtfConselho);
+  const pr='@dalio Avalie o ETF '+ds.apEtfConselho+(e?' ('+e.nome+' · '+e.cat+' · taxa '+e.tx+' · quadrante '+e.quad+')':'')+' combinando Dalio (papel no ciclo All Weather, câmbio e juros) e Markowitz (diversificação na carteira). Sem recomendação.';
+  if(typeof w.DiarioConselhoIA==='function')w.DiarioConselhoIA('dalio','ETF · '+ds.apEtfConselho,pr);
+  else{w.TraderChat?.open?.();if(typeof ecoPergunta==='function')void ecoPergunta(pr,{pergunta:'✦ ETF · '+ds.apEtfConselho});}
+  return;
+ }
  if('apQ' in ds){ev.preventDefault();ev.stopPropagation();st.q=ds.apQ;render();return}
  if('apGuia' in ds){st.q='';d.querySelector('[data-an-sub="guia"]')?.click();return}
  if('apQx' in ds||t.classList?.contains('ap-qbox')){if(ev.target.closest('.ap-qcard')&&!('apQx' in ds))return;st.q='';render();return}
@@ -438,8 +593,8 @@ d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[
  if('apFiirf' in ds){carregarFiis(true);return}
  if('apFiipreset' in ds){st.fiiF.preset=ds.apFiipreset;render();return}
  if('apFiitipo' in ds){st.fiiF.tipo=ds.apFiitipo;render();return}
- if('apFiisel' in ds){st.fiiSel=ds.apFiisel;render();if(st.fiiSel)d.getElementById('ap-root')?.scrollIntoView({block:'start'});return}
- if('apFiiabrir' in ds){st.rankTipo='fiis';st.fiiSel=ds.apFiiabrir;st.tab='rankpro';d.querySelector('[data-an-sub="rankpro"]:not(.selected)')?.click();render();d.getElementById('ap-root')?.scrollIntoView({block:'start'});return}
+ if('apFiisel' in ds){const tk=String(ds.apFiisel||'').toUpperCase();st.fiiSel=tk;if(tk){st.tk=tk;st.sub='visao';st.showJusto=false;w.DiarioBarraContexto?.definirFoco?.(tk);}render();if(tk)d.getElementById('ap-root')?.scrollIntoView({block:'start'});return}
+ if('apFiiabrir' in ds){const tk=String(ds.apFiiabrir||'').toUpperCase();st.rankTipo='fiis';st.fiiSel=tk;st.tk=tk;st.sub='visao';st.showJusto=false;st.tab='rankpro';d.querySelector('[data-an-sub="rankpro"]:not(.selected)')?.click();if(!st.fiis?.rows?.length)carregarFiis(false);render();d.getElementById('ap-root')?.scrollIntoView({block:'start'});return}
  if('apFiiConselho' in ds){
   const fii=st.fiis?.rows?.find(x=>x.ticker===ds.apFiiConselho);
   const ctx=fii?(fii.ticker+' ('+fii.tipo+' · '+fii.segmento+') — Cotação '+brl(fii.cotacao)+', P/VP '+fmt(fii.p_vp,2)+', DY 12m '+pct(fii.dy)+', Spread NTN-B '+sinal(fii.spread_ntnb,2)+', Vacância '+(fii.vacancia!=null?fmt(fii.vacancia,1)+'%':'—')+', Liquidez '+cmp(fii.liquidez)+', Nota FII '+fii.score+'/100'+(fii.alertas?.length?' · Alertas: '+fii.alertas.join('; '):'')):ds.apFiiConselho;
@@ -663,55 +818,93 @@ function briefing(){
   });
  return {total:rows.length,ref:st.ref,graham:{avaliar,cautela,setoresFortes,setoresFracos},livermore:{alta,alertas:tecAlertas}};
 }
-function avaliarAtivo(tk){
- if(!st.rows)return null;
- aplicaProfit();
- const clean=String(tk||'').trim().toUpperCase();
- const r=st.rows.rows.find(x=>String(x.ticker||'').toUpperCase()===clean);
- if(!r)return null;
- const mg=r.justo&&r.preco?(r.justo/r.preco-1)*100:null;
- // Graham — Fundamentalista
- let gPts=0;const gFatos=[];
- if(r.nota!=null){gFatos.push('Nota '+fmt(r.nota,2)+'/4');gPts+=r.nota>=2.6?2:r.nota>=1.8?1:-1}
- if(r.pl>0){gFatos.push('P/L '+fmt(r.pl,1)+'x');gPts+=r.pl<=12?1:r.pl>25?-1:0}
- if(r.roe!=null){gFatos.push('ROE '+pct(r.roe));gPts+=r.roe>=15?1:r.roe<8?-1:0}
- if(r.dy>0){gFatos.push('DY '+pct(r.dy));if(r.dy>=6)gPts+=1}
- if(mg!=null){gFatos.push((mg>=0?'Margem +':'Acima do justo ')+fmt(Math.abs(mg),0)+'%');gPts+=mg>=10?1:mg<-20?-1:0}
- if(r.div_liq_ebitda!=null){gFatos.push('DL/EBITDA '+fmt(r.div_liq_ebitda,1)+'x');if(r.div_liq_ebitda>3.5)gPts-=2}
+function avaliarFii(f){
+ const nMag=f.cotacao>0&&f.dy>0?Math.ceil(f.cotacao/(f.cotacao*(f.dy/100)/12)):null;
+ const mg=f.p_vp>0?(1/f.p_vp-1)*100:null;
+ // Graham (FII): P/VP, DY, Spread NTN-B, Score FII
+ let gPts=0;const gFatos=['FII '+f.tipo+' · '+f.segmento,'Nota FII '+f.score+'/100'];
+ if(f.p_vp>0){gFatos.push('P/VP '+fmt(f.p_vp,2));gPts+=f.tipo==='Papel'?(f.p_vp<=1.01?2:f.p_vp>1.06?-1:0):(f.p_vp<=0.94?2:f.p_vp<=1.03?1:-1)}
+ if(f.dy>0){gFatos.push('DY 12m '+pct(f.dy));gPts+=f.dy>=9&&f.dy<=16.5?2:f.dy>17.5?-2:0}
+ if(f.spread_ntnb!=null){gFatos.push('Spread NTN-B '+sinal(f.spread_ntnb,2));if(f.spread_ntnb>=2.5&&f.dy<=16.5)gPts+=1}
+ if(nMag)gFatos.push('Nº Mágico '+nMag+' cotas');
  const gVer=gPts>=3?'Favorável':gPts<=0?'Cautela':'Neutro';
- // Livermore — Técnico
- let lPts=0;const lFatos=[];
- if(r.mm200!=null){lFatos.push('MM200 '+sinal(r.mm200,1));lPts+=r.mm200>0&&r.mm200<25?1:r.mm200<=-8||r.mm200>=30?-1:0}
- if(r.momentum!=null){lFatos.push('Momentum '+sinal(r.momentum,1));lPts+=r.momentum>2?1:r.momentum<-10?-1:0}
- if(r.rsi!=null){lFatos.push('RSI '+fmt(r.rsi,0));lPts+=r.rsi>=45&&r.rsi<=68?1:r.rsi>=72||r.rsi<=30?-1:0}
+ // Dalio / Livermore (Ciclo & Liquidez FII)
+ let lPts=0;const lFatos=['Liquidez '+cmp(f.liquidez)];
+ if(f.liquidez>=1e6)lPts+=1;else if(f.liquidez<3e5)lPts-=1;
+ if(f.tipo==='Tijolo'&&f.vacancia!=null){lFatos.push('Vacância '+fmt(f.vacancia,1)+'%');lPts+=f.vacancia<=8?1:f.vacancia>15?-1:0}
+ if(f.tipo==='Papel'){lFatos.push('Sensibilidade: IPCA/CDI (beneficia de juro real alto)');lPts+=1}
+ else lFatos.push('Sensibilidade: fechamento da curva DI favorece Tijolo');
  const lVer=lPts>=2?'Favorável':lPts<=-1?'Cautela':'Neutro';
- // Munger — Riscos ocultos
- const riscos=[];
- if(r.div_liq_ebitda!=null&&r.div_liq_ebitda>3)riscos.push('Alavancagem alta (DL/EBITDA '+fmt(r.div_liq_ebitda,1)+'x) pressiona em juros elevados.');
- if(mg!=null&&mg<-15)riscos.push('Negocia '+fmt(Math.abs(mg),0)+'% acima do justo médio — margem de segurança comprimida.');
- if(r.momentum!=null&&r.momentum<-10)riscos.push('Queda recente ('+sinal(r.momentum,0)+') pode esconder deterioração operacional ("faca caindo").');
- if(r.rsi!=null&&r.rsi>=70)riscos.push('RSI esticado ('+fmt(r.rsi,0)+') aumenta risco de realização no curto prazo.');
- if(r.liquidez!=null&&r.liquidez<5e5)riscos.push('Liquidez diária reduzida pode dificultar saída sem spread.');
- if(r.roe!=null&&r.roe<10)riscos.push('Retorno sobre patrimônio baixo (ROE '+pct(r.roe)+') abaixo do custo de capital.');
- if(!riscos.length)riscos.push('Sem alertas numéricos críticos nos dados carregados — valide governança e fatos relevantes antes de decidir.');
+ // Munger (Riscos FII)
+ const riscos=[...(f.alertas||[])];
+ if(f.tipo==='Tijolo'&&f.qtd_imoveis===1)riscos.push('Fundo mono-ativo: risco concentrado em 1 imóvel.');
+ if(f.liquidez<5e5)riscos.push('Liquidez diária abaixo de R$ 500 mil pode gerar spread na saída.');
+ if(!riscos.length)riscos.push('Sem alertas numéricos críticos — valide relatório gerencial, inadimplência e alavancagem antes de aportar.');
  const mVer=riscos.length>=3?'Cautela':riscos.length===2?'Neutro':'Favorável';
- const votos=[gVer,lVer,mVer];
- const fav=votos.filter(v=>v==='Favorável').length,cau=votos.filter(v=>v==='Cautela').length,neu=votos.filter(v=>v==='Neutro').length;
- const resumo=fav>=2?'Consenso construtivo ('+fav+'/3 favoráveis), mas valide riscos com Munger e fatos relevantes.':cau>=2?'Conselho em modo defensivo ('+cau+'/3 em cautela) — exige margem de segurança extra.':'Visões divididas no Conselho — bom caso para aprofundar antes de alocar.';
- const fearSetting={
-  definir:riscos[0],
-  prevenir:r.mm200!=null&&r.mm200<0?'Aguardar retomada da tendência ou entrar com posição fracionada e stop técnico definido.':'Definir stop/invalidação antes da entrada e limitar o peso na carteira.',
-  reparar:'Se a tese ou suporte quebrar, encerrar sem fazer preço médio para trás e revisar o diário antes do próximo aporte.',
-  inacao:mg!=null&&mg>15?'Custo da inação: ficar paralisado pode fazer perder uma margem de segurança de '+fmt(mg,0)+'% — se o risco é temporário e limitado, teste com mão pequena.':'Evitar negação otimista: só aja com assimetria clara entre ganho provável e perda limitada.'
- };
+ const votos=[gVer,lVer,mVer],fav=votos.filter(v=>v==='Favorável').length,cau=votos.filter(v=>v==='Cautela').length,neu=votos.filter(v=>v==='Neutro').length;
+ const resumo=fav>=2?'Consenso construtivo para o FII ('+fav+'/3 favoráveis) — valide relatório gerencial e composição da carteira.':cau>=2?'Conselho em cautela ('+cau+'/3) — atenção a yield trap, vacância ou ágio no P/VP.':'Visões divididas no Conselho — compare com pares do mesmo segmento antes de alocar.';
  return {
-  ticker:r.ticker,empresa:r.empresa,setor:r.setor,preco:r.preco,nota:r.nota,margem:mg,
+  ticker:f.ticker,empresa:'FII '+f.tipo+' · '+f.segmento,setor:'FII '+f.tipo,preco:f.cotacao,nota:+(f.score/25).toFixed(2),margem:mg,dy:f.dy,
   graham:{veredito:gVer,pts:gPts,fatos:gFatos},
   livermore:{veredito:lVer,pts:lPts,fatos:lFatos},
   munger:{veredito:mVer,riscos:riscos.slice(0,3)},
-  fearSetting,
+  fearSetting:{definir:riscos[0],prevenir:'Limitar exposição por FII (ex.: máx. 5%–10% da carteira) e checar relatório gerencial.',reparar:'Se houver inadimplência recorrente ou perda de fundamentos, realocar em FII multi-ativos do mesmo segmento.',inacao:f.p_vp<0.95?'Deságio no P/VP ('+fmt(f.p_vp,2)+') pode fechar com queda da curva de juros.':'Evitar pagar ágio excessivo em busca de yield mensal.'},
   aurea:{fav,neu,cau,resumo}
  };
+}
+function avaliarAtivo(tk){
+ const clean=String(tk||'').trim().toUpperCase();
+ if(!clean)return null;
+ if(st.rows){
+  aplicaProfit();
+  const r=st.rows.rows.find(x=>String(x.ticker||'').toUpperCase()===clean);
+  if(r){
+   const mg=r.justo&&r.preco?(r.justo/r.preco-1)*100:null;
+   let gPts=0;const gFatos=[];
+   if(r.nota!=null){gFatos.push('Nota '+fmt(r.nota,2)+'/4');gPts+=r.nota>=2.6?2:r.nota>=1.8?1:-1}
+   if(r.pl>0){gFatos.push('P/L '+fmt(r.pl,1)+'x');gPts+=r.pl<=12?1:r.pl>25?-1:0}
+   if(r.roe!=null){gFatos.push('ROE '+pct(r.roe));gPts+=r.roe>=15?1:r.roe<8?-1:0}
+   if(r.dy>0){gFatos.push('DY '+pct(r.dy));if(r.dy>=6)gPts+=1}
+   if(mg!=null){gFatos.push((mg>=0?'Margem +':'Acima do justo ')+fmt(Math.abs(mg),0)+'%');gPts+=mg>=10?1:mg<-20?-1:0}
+   if(r.div_liq_ebitda!=null){gFatos.push('DL/EBITDA '+fmt(r.div_liq_ebitda,1)+'x');if(r.div_liq_ebitda>3.5)gPts-=2}
+   const gVer=gPts>=3?'Favorável':gPts<=0?'Cautela':'Neutro';
+   let lPts=0;const lFatos=[];
+   if(r.mm200!=null){lFatos.push('MM200 '+sinal(r.mm200,1));lPts+=r.mm200>0&&r.mm200<25?1:r.mm200<=-8||r.mm200>=30?-1:0}
+   if(r.momentum!=null){lFatos.push('Momentum '+sinal(r.momentum,1));lPts+=r.momentum>2?1:r.momentum<-10?-1:0}
+   if(r.rsi!=null){lFatos.push('RSI '+fmt(r.rsi,0));lPts+=r.rsi>=45&&r.rsi<=68?1:r.rsi>=72||r.rsi<=30?-1:0}
+   const lVer=lPts>=2?'Favorável':lPts<=-1?'Cautela':'Neutro';
+   const riscos=[];
+   if(r.div_liq_ebitda!=null&&r.div_liq_ebitda>3)riscos.push('Alavancagem alta (DL/EBITDA '+fmt(r.div_liq_ebitda,1)+'x) pressiona em juros elevados.');
+   if(mg!=null&&mg<-15)riscos.push('Negocia '+fmt(Math.abs(mg),0)+'% acima do justo médio — margem de segurança comprimida.');
+   if(r.momentum!=null&&r.momentum<-10)riscos.push('Queda recente ('+sinal(r.momentum,0)+') pode esconder deterioração operacional ("faca caindo").');
+   if(r.rsi!=null&&r.rsi>=70)riscos.push('RSI esticado ('+fmt(r.rsi,0)+') aumenta risco de realização no curto prazo.');
+   if(r.liquidez!=null&&r.liquidez<5e5)riscos.push('Liquidez diária reduzida pode dificultar saída sem spread.');
+   if(r.roe!=null&&r.roe<10)riscos.push('Retorno sobre patrimônio baixo (ROE '+pct(r.roe)+') abaixo do custo de capital.');
+   if(!riscos.length)riscos.push('Sem alertas numéricos críticos nos dados carregados — valide governança e fatos relevantes antes de decidir.');
+   const mVer=riscos.length>=3?'Cautela':riscos.length===2?'Neutro':'Favorável';
+   const votos=[gVer,lVer,mVer];
+   const fav=votos.filter(v=>v==='Favorável').length,cau=votos.filter(v=>v==='Cautela').length,neu=votos.filter(v=>v==='Neutro').length;
+   const resumo=fav>=2?'Consenso construtivo ('+fav+'/3 favoráveis), mas valide riscos com Munger e fatos relevantes.':cau>=2?'Conselho em modo defensivo ('+cau+'/3 em cautela) — exige margem de segurança extra.':'Visões divididas no Conselho — bom caso para aprofundar antes de alocar.';
+   const fearSetting={
+    definir:riscos[0],
+    prevenir:r.mm200!=null&&r.mm200<0?'Aguardar retomada da tendência ou entrar com posição fracionada e stop técnico definido.':'Definir stop/invalidação antes da entrada e limitar o peso na carteira.',
+    reparar:'Se a tese ou suporte quebrar, encerrar sem fazer preço médio para trás e revisar o diário antes do próximo aporte.',
+    inacao:mg!=null&&mg>15?'Custo da inação: ficar paralisado pode fazer perder uma margem de segurança de '+fmt(mg,0)+'% — se o risco é temporário e limitado, teste com mão pequena.':'Evitar negação otimista: só aja com assimetria clara entre ganho provável e perda limitada.'
+   };
+   return {
+    ticker:r.ticker,empresa:r.empresa,setor:r.setor,preco:r.preco,nota:r.nota,margem:mg,dy:r.dy,
+    graham:{veredito:gVer,pts:gPts,fatos:gFatos},
+    livermore:{veredito:lVer,pts:lPts,fatos:lFatos},
+    munger:{veredito:mVer,riscos:riscos.slice(0,3)},
+    fearSetting,
+    aurea:{fav,neu,cau,resumo}
+   };
+  }
+ }
+ const fii=st.fiis?.rows?.find(x=>String(x.ticker||'').toUpperCase()===clean);
+ if(fii)return avaliarFii(fii);
+ if(/^[A-Z]{4}11B?$/.test(clean)&&!st.fiis&&!st.fiiLoading)setTimeout(()=>carregarFiis(false),0);
+ return null;
 }
 function dueloAtivos(t1,t2){
  const a=avaliarAtivo(t1),b=avaliarAtivo(t2);

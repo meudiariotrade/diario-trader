@@ -994,10 +994,10 @@ try {
           "spark",
           'Central de Inteligência <span class="v4-iachip">IA</span>',
           st("Perguntar à IA", 'data-v4ia="1"'),
-          `<div data-intel-content class="sm"></div><p class="v4-sub">Sugestões com base no mercado, no seu plano e no seu histórico. Sem ordens automáticas.</p><div class="v4-ia"><div class="v4-iaart" aria-hidden="true"><span>${p("bars", 30)}<b>IA</b></span></div><div class="v4-ialist">
-    <button type="button" data-dt393-route="term">${p("crosshair", 22)}<span><b>Radar global e oportunidades</b><small>Fluxo, juros, índices e ativos no Terminal.</small></span>${p("right", 16)}</button>
-    <button type="button" data-dt393-route="ops">${p("shield", 22)}<span><b>Revisar operações e risco</b><small>Posições abertas, stops e risco consumido.</small></span>${p("right", 16)}</button>
-    <button type="button" data-dt393-route="stats">${p("up", 22)}<span><b>Avaliar resultados e consistência</b><small>Curva, win rate e pontos de atenção.</small></span>${p("right", 16)}</button></div></div>`,
+          `<div data-intel-content class="sm"></div><details style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px"><summary class="mut sm" style="cursor:pointer;font-weight:600">Atalhos rápidos (Terminal, Risco e Estatísticas)</summary><div class="v4-ia" style="margin-top:8px"><div class="v4-ialist">
+    <button type="button" data-dt393-route="term">${p("crosshair", 20)}<span><b>Radar global e oportunidades</b><small>Fluxo, juros, índices e ativos no Terminal.</small></span>${p("right", 16)}</button>
+    <button type="button" data-dt393-route="ops">${p("shield", 20)}<span><b>Revisar operações e risco</b><small>Posições abertas, stops e risco consumido.</small></span>${p("right", 16)}</button>
+    <button type="button" data-dt393-route="stats">${p("up", 20)}<span><b>Avaliar resultados e consistência</b><small>Curva, win rate e pontos de atenção.</small></span>${p("right", 16)}</button></div></div></details>`,
           "v4-iacard",
         );
       /* v829: Início = mercado. KPIs de mercado no topo; EUA/ADRs, agenda, notícias e alertas no centro;

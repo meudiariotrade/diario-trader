@@ -146,9 +146,27 @@
    ['🛢️ Choque Geopolítico / Petróleo','@dalio Simule um choque geopolítico que eleve o petróleo em +20% (Oriente Médio / tarifas EUA x China). Desenhe o efeito dominó em 4 passos: 1) Inflação e bancos centrais, 2) Juros e câmbio, 3) Microeconomia setorial (ganhadores e perdedores na B3), 4) Como proteger a carteira.'],
    ['🏭 Microeconomia: Setores & FIIs','@dalio Pela ótica microeconômica (custo de capital, crédito, demanda e margens), quais setores da B3 e tipos de FIIs (Tijolo vs Papel) sofrem mais e quais se beneficiam com o juro real atual?']
   ];
+  const ipca=Number(b.ipca_12m?.valor),jReal=Number(b.juro_real_expost),us10=Number(mu.us_10y?.valor);
+  const quadBR=(ipca>4.5)?(jReal>=7?'inf_down':'inf_up'):(jReal>=7?'gro_down':'gro_up');
+  const quadUS=(us10>=4.4)?'inf_up':'gro_up';
+  const quads=[
+   ['gro_up','📈 Crescimento ↑ · Inflação ↓','Ações · FIIs Tijolo · Small Caps · S&P 500 (IVVB11)'],
+   ['inf_up','🔥 Inflação ↑ · Juros Pressionados','FIIs Papel (IPCA+) · Ouro (GOLD11) · Commodities · B5P211'],
+   ['inf_down','⚖️ Inflação Persistente · Juro Real Alto','CDI / Tesouro Selic · FIIs Papel CDI+ · Bancos · Dólar'],
+   ['gro_down','🛡️ Desaceleração · Juros Caindo','Tesouro IPCA+ Longo (IMAB11) · FIIs Tijolo Descontados · Elétricas']
+  ];
+  const allWeatherHtml='<div style="margin:12px 0"><p class="an-kicker" style="margin:0 0 6px">🧭 MATRIZ ALL WEATHER DE DALIO (4 QUADRANTES · CRESCIMENTO × INFLAÇÃO)</p>'+
+   '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">'+
+   quads.map(([k,tit,cls])=>{
+    const brHit=quadBR===k,usHit=quadUS===k,on=brHit||usHit;
+    return '<div style="padding:9px 10px;border-radius:8px;border:1px solid '+(on?'rgba(201,166,107,.7)':'var(--bd)')+';background:'+(on?'rgba(201,166,107,.10)':'var(--bg)')+'">'+
+     '<div style="display:flex;justify-content:space-between;gap:6px;align-items:center;margin-bottom:4px"><b style="font-size:12.5px">'+tit+'</b>'+
+     '<span>'+(brHit?'<span style="font-size:10px;padding:2px 6px;border-radius:99px;background:#C9A66B;color:#111;font-weight:700">BR HOJE</span> ':'')+(usHit?'<span style="font-size:10px;padding:2px 6px;border-radius:99px;border:1px solid #C9A66B;color:#C9A66B;font-weight:700">EUA</span>':'')+'</span></div>'+
+     '<small style="color:var(--mut);font-size:11.5px;line-height:1.4;display:block">'+cls+'</small></div>';
+   }).join('')+'</div></div>';
   return '<section class="an-section an-briefing"><header class="an-br-head"><div><p class="an-kicker">TERMÔMETRO FISCAL &amp; DÍVIDA PÚBLICA · BCB OFICIAL + MUNDO (SEM VIÉS POLÍTICO)</p><h3>Panorama Estrutural de Dalio</h3><p class="mut">Mecânica econômica pura: dívida pública, juro real vs crescimento, geopolítica e microeconomia setorial.</p></div>'+
    '<div class="an-br-acts"><button type="button" class="btn s an-br-cer" data-an-cerebro="dalio"'+(cerebroBusy?' disabled':'')+'>'+(cerebroBusy?'Consultando livros…':'📚 Aplicar seus livros (Dalio / Cérebro)')+'</button></div></header>'+
-   grid+
+   grid+allWeatherHtml+
    '<div style="margin-top:8px"><p class="an-kicker" style="margin:0 0 6px">🔗 SIMULADOR EFEITO DOMINÓ (1 CLIQUE · PROTOCOLO DOIS LADOS DA MOEDA)</p>'+
    '<div class="an-br-acts" style="flex-wrap:wrap;gap:6px">'+cenarios.map(([lab,pr])=>'<button type="button" class="btn s" data-an-aurea-prompt="'+E(pr)+'">'+lab+'</button>').join('')+'</div></div>'+
    (cerebroOut&&cerebroFor==='dalio'?'<div class="an-cerebro-out"><p class="an-kicker">LEITURA DO CÉREBRO (SEUS LIVROS DE RAY DALIO + DADOS FISCAIS ATUAIS)</p><div class="an-report">'+M.markdown(cerebroOut)+'</div></div>':'')+

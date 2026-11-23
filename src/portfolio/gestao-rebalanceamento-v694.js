@@ -310,15 +310,69 @@ function sectionSeven(p){
   '<div style="margin-top:8px"><button type="button" class="btn s" data-rb694-auditoria="'+esc(resumoLista)+'">🏛️ Auditar carteira 360° com O Conselho</button></div>'+
   '</details></section>';
 }
+/* v924: 08 · Calculadora Líquida: Renda Fixa (CDB / LCI / IPCA+) × FIIs isentos de IR usando Selic/IPCA oficiais do BCB. */
+function sectionEight(){
+ const mf=W.DiarioMacroFiscal?.(),selic=Number(mf?.brasil?.selic_meta?.valor)||13.75,ipca=Number(mf?.brasil?.ipca_12m?.valor)||4.63;
+ const cdi=Math.max(0.1,selic-0.1),ir=Number(state.rfIr||15)/100;
+ const cdbP=Number(state.rfCdb||110),lciP=Number(state.rfLci||92),ipcaS=Number(state.rfIpca||6.8),fiiY=Number(state.rfFii||11.5);
+ const liqCdb=cdi*(cdbP/100)*(1-ir);
+ const liqLci=cdi*(lciP/100);
+ const brutoIpca=((1+ipca/100)*(1+ipcaS/100)-1)*100,liqIpca=brutoIpca*(1-ir);
+ const liqFii=fiiY;
+ const itens=[
+  ['CDB '+cdbP+'% CDI (IR '+Math.round(ir*100)+'%)',liqCdb,((Math.pow(1+liqCdb/100,1/12)-1)*100)],
+  ['LCI / LCA '+lciP+'% CDI (isento)',liqLci,((Math.pow(1+liqLci/100,1/12)-1)*100)],
+  ['Tesouro IPCA+ '+ipcaS.toFixed(1).replace('.',',')+'% (IR '+Math.round(ir*100)+'%)',liqIpca,((Math.pow(1+liqIpca/100,1/12)-1)*100)],
+  ['FII / Dividendos (isento)',liqFii,fiiY/12]
+ ].sort((a,b)=>b[1]-a[1]);
+ const best=itens[0][1];
+ const rows=itens.map(([nm,aa,am])=>'<tr><th>'+esc(nm)+(aa===best?' <small style="color:#10B981">★ maior</small>':'')+'</th><td><b>'+percent(aa)+' a.a.</b></td><td>'+percent(am)+'/mês</td></tr>');
+ return '<section class="rb694-section"><details><summary style="padding:0;min-height:32px;font-size:13px">08 · 💵 Comparador Líquido: Renda Fixa × FIIs <small>CDI '+percent(cdi)+' · IPCA '+percent(ipca)+'</small></summary>'+
+  '<div class="rb694-grid" style="margin:8px 0">'+
+  '<label>CDB (% CDI)<input type="number" step="1" value="'+cdbP+'" data-rb694-field="rfCdb"></label>'+
+  '<label>LCI/LCA (% CDI)<input type="number" step="1" value="'+lciP+'" data-rb694-field="rfLci"></label>'+
+  '<label>IPCA+ (taxa %)<input type="number" step="0.1" value="'+ipcaS+'" data-rb694-field="rfIpca"></label>'+
+  '<label>FII DY (% a.a.)<input type="number" step="0.1" value="'+fiiY+'" data-rb694-field="rfFii"></label></div>'+
+  table(['Aplicação (líquido de IR)','Retorno líquido/ano','Equiv. mensal'],rows)+
+  '<p class="rb694-note">Usa Selic ('+percent(selic)+') e IPCA 12m ('+percent(ipca)+') oficiais do BCB. IR padrão 15% (>720 dias). FIIs possuem risco de variação da cota.</p></details></section>';
+}
+/* v924: 09 · Simulador de Independência Financeira + Benchmark da Carteira vs CDI. */
+function sectionNine(p){
+ const mf=W.DiarioMacroFiscal?.(),selic=Number(mf?.brasil?.selic_meta?.valor)||13.75,ipca=Number(mf?.brasil?.ipca_12m?.valor)||4.63;
+ const jReal=Math.max(3,Number(mf?.brasil?.juro_real_expost)||6.5),taxaM=Math.pow(1+jReal/100,1/12)-1;
+ const pat=Math.max(0,Number(p.v||0)),custo=Math.max(500,Number(state.custoVida||6000)),ap=Math.max(0,Number(state.monthly||1500));
+ const metaPat=custo/(taxaM||0.005);
+ const mesesPara=alvo=>{
+  if(pat>=alvo)return 0;
+  let v=pat,m=0;
+  while(v<alvo&&m<600){v=v*(1+taxaM)+ap;m++;}
+  return m>=600?null:m;
+ };
+ const fmtPrazo=m=>m===0?'Já atingido!':m==null?'> 50 anos':(m>=12?Math.floor(m/12)+'a '+(m%12?m%12+'m':''):m+' meses');
+ const marcos=[25,50,75,100].map(pct=>{
+  const alv=metaPat*(pct/100),ms=mesesPara(alv);
+  return '<tr><th>'+pct+'% do custo ('+money(custo*pct/100)+'/mês)</th><td>'+money(alv)+'</td><td><b>'+fmtPrazo(ms)+'</b></td></tr>';
+ });
+ const retCart=Number(p.rPct??(p.c>0?(p.v-p.c)/p.c*100:null));
+ const cdiRef=selic-0.1;
+ const benchHtml=Number.isFinite(retCart)?'<p class="rb694-note" style="margin-top:8px"><b>📈 Benchmark da Carteira:</b> retorno sobre custo <b style="color:'+(retCart>=0?'#10B981':'#F87171')+'">'+(retCart>=0?'+':'')+percent(retCart)+'</b> · Referência CDI anual atual: <b>'+percent(cdiRef)+'</b> · IPCA+6%: <b>'+percent(ipca+6)+'</b>.</p>':'';
+ return '<section class="rb694-section"><details><summary style="padding:0;min-height:32px;font-size:13px">09 · 🏖️ Independência Financeira &amp; Benchmark <small>Meta '+money(custo)+'/mês</small></summary>'+
+  '<div class="rb694-grid" style="margin:8px 0">'+
+  '<label>Custo de vida mensal (R$)<input type="number" step="100" value="'+custo+'" data-rb694-field="custoVida"></label>'+
+  '<label>Aporte mensal (R$)<input type="number" step="100" value="'+ap+'" data-rb694-field="monthly"></label></div>'+
+  table(['Marco de renda passiva','Patrimônio necessário','Prazo estimado'],marcos)+
+  benchHtml+
+  '<p class="rb694-note">Projeção em poder de compra real usando seu patrimônio atual ('+money(pat)+') e juro real de '+percent(jReal)+' a.a. (BCB). Uso educacional.</p></details></section>';
+}
 function body(){
  restore();
  const p=portfolio(),pos=holdings(p);
  return '<div class="rb694-body"><div class="rb694-overline">'+pos.length+' posição(ões) · carteira '+money(p.v||0)+' · parâmetros guardados somente neste navegador</div>'+
  (state.message?'<p class="rb694-notice">'+esc(state.message)+'</p>':'')+
- sectionOne(p)+sectionTwo(p)+sectionThree(p)+sectionFour(p)+sectionFive(p)+sectionSix(p)+sectionSeven(p)+'</div>';
+ sectionOne(p)+sectionTwo(p)+sectionThree(p)+sectionFour(p)+sectionFive(p)+sectionSix(p)+sectionSeven(p)+sectionEight()+sectionNine(p)+'</div>';
 }
 function content(){
- return '<details id="rebalanceamento-carteira-v694" class="rb694"'+(state.open?' open':'')+'><summary>Gestão &amp; Rebalanceamento de Carteira <small>Aporte · Proventos · Concentração · Simulador · Nº Mágico</small></summary>'+
+ return '<details id="rebalanceamento-carteira-v694" class="rb694"'+(state.open?' open':'')+'><summary>Gestão &amp; Rebalanceamento de Carteira <small>Aporte · Proventos · Simulador · Nº Mágico · RF×FII · IF</small></summary>'+
  (state.open?body():'')+'</details>';
 }
 const old=vCarteiras;
@@ -386,9 +440,9 @@ D.addEventListener('change',event=>{
  if(k==='buyTk'){
   state.buyTk=String(el.value||'').trim().toUpperCase().slice(0,10);refreshBody();return;
  }
- if(k&&['contribution','monthly','realRate','years','goal','buyVal'].includes(k)){
+ if(k&&['contribution','monthly','realRate','years','goal','buyVal','rfCdb','rfLci','rfIpca','rfFii','custoVida'].includes(k)){
   const n=asNum(el.value);
-  if(n!==null&&n>= (k==='realRate'?-20:k==='years'||k==='goal'?1:0)&&n<=(k==='realRate'?30:k==='years'?60:100000000)){
+  if(n!==null&&n>= (k==='realRate'?-20:k==='years'||k==='goal'||k==='custoVida'?1:0)&&n<=(k==='realRate'?30:k==='years'?60:100000000)){
    state[k]=n;persist();refreshBody();
   }
  }

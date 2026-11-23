@@ -5,20 +5,42 @@
   const URL_BASE = 'https://diario-trader.lucianosilva43567.workers.dev';
   const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false, extras: null, extrasAt: 0, extrasBusy: false, agenda: null, agendaAt: 0, agendaBusy: false, edicaoManual: '', revisaoBusy: false, revisaoOut: '', resumaoBusy:false, resumaoHtml:'', resumaoEd:'' };
   const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  /* v927: formatação editorial limpa (títulos dourados, negrito real, leitura confortável 14.5px). */
+  function formatarTextoEditorial(raw){
+    const safe=escape(String(raw||'').slice(0,7500)).replace(/\r/g,'').trim();
+    if(!safe)return '';
+    const md=s=>s.replace(/\*\*([^*]{1,120})\*\*/g,'<strong style="color:inherit;font-weight:700">$1</strong>');
+    const paras=safe.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);
+    return paras.map(p=>{
+      const m=/^(\d+\)\s*[^:\n]{2,72})(?::\s*|\n)([\s\S]*)$/.exec(p);
+      if(m){
+        const titulo=m[1].replace(/\*\*/g,'').trim();
+        const corpo=md(m[2].trim()).replace(/\n/g,'<br>');
+        return '<div style="margin:0 0 12px;padding:9px 12px;border-left:2px solid rgba(201,166,107,.65);background:rgba(201,166,107,.05);border-radius:0 8px 8px 0">'+
+          '<div style="font-weight:700;font-size:13.5px;letter-spacing:.01em;color:var(--gold,#C9A66B);margin-bottom:4px">'+titulo+'</div>'+
+          '<div style="font-size:14.5px;line-height:1.65">'+corpo+'</div></div>';
+      }
+      if(/^(?:[-•*]\s+)/m.test(p)){
+        const itens=p.split('\n').map(l=>l.replace(/^[-•*]\s+/,'').trim()).filter(Boolean);
+        return '<ul style="margin:0 0 10px;padding-left:18px;font-size:14.5px;line-height:1.65">'+itens.map(i=>'<li style="margin-bottom:4px">'+md(i)+'</li>').join('')+'</ul>';
+      }
+      return '<p style="margin:0 0 10px;font-size:14.5px;line-height:1.65">'+md(p).replace(/\n/g,'<br>')+'</p>';
+    }).join('');
+  }
   w.DiarioConselhoIA = function (edicao, titulo, prompt) {
     if (document.getElementById('conselho-ia-resposta')) return;
     const dialog = document.createElement('dialog');
     dialog.id = 'conselho-ia-resposta';
     dialog.setAttribute('aria-labelledby','conselho-ia-titulo');
-    dialog.style.cssText = 'width:min(92vw,580px);max-height:80dvh;overflow:auto;background:var(--ui-surface,#141414);color:inherit;border:1px solid #555;border-radius:6px;padding:18px';
-    dialog.innerHTML = '<h2 id="conselho-ia-titulo"></h2><p role="status" style="white-space:pre-wrap"></p><button class="btn s" type="button" hidden>Tentar novamente</button> <button class="btn s" type="button">Fechar</button>';
+    dialog.style.cssText = 'width:min(94vw,600px);max-height:84dvh;overflow:auto;background:var(--ui-surface,#141414);color:inherit;border:1px solid rgba(201,166,107,.45);border-radius:12px;padding:20px';
+    dialog.innerHTML = '<h2 id="conselho-ia-titulo" style="margin:0 0 12px;font-size:16px;letter-spacing:.03em;color:var(--gold,#C9A66B);font-family:Georgia,serif"></h2><div role="status" style="font-size:14.5px;line-height:1.65;margin-bottom:14px"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" type="button" hidden>Tentar novamente</button> <button class="btn s" type="button">Fechar</button></div>';
     const [retry,close] = dialog.querySelectorAll('button');
-    const output = dialog.querySelector('p');
+    const output = dialog.querySelector('[role="status"]');
     dialog.querySelector('h2').textContent = titulo;
     const controller = new AbortController();
     async function consultar() {
       retry.hidden = true;
-      output.textContent = 'Consultando o Conselho…';
+      output.innerHTML = '<p class="mut" style="margin:0;font-size:14px">Consultando o Conselho…</p>';
       const timer = setTimeout(()=>controller.abort(),50000);
       try {
         if(typeof tok==='function') await tok();
@@ -39,7 +61,7 @@
         }
         const data=await res.json();
         if(!res.ok||!data.ok||!data.text) throw Error(data.error||'A IA não respondeu.');
-        output.textContent=data.text;
+        output.innerHTML=formatarTextoEditorial(data.text);
       } catch(error) {
         output.textContent=controller.signal.aborted?'A consulta demorou demais.':error.message;
         retry.hidden=false;
@@ -596,6 +618,77 @@
         '</details>';
     }catch(_){return '';}
   }
+  const PILULAS_CEREBRO=[
+   ['Ray Dalio · Ciclos de Dívida','Quando o juro real supera o crescimento do PIB (r > g), a dívida cresce sozinha — proteja o poder de compra com diversificação entre classes descorrelacionadas.'],
+   ['Jesse Livermore · Tape & Stop','Nunca faça preço médio para trás numa operação perdedora. O mercado nunca está errado; opiniões frequentemente estão.'],
+   ['Charlie Munger · Inversão','Inverta sempre: em vez de perguntar como ganhar mais hoje, pergunte o que faria você devolver o lucro da semana — e elimine esse hábito primeiro.'],
+   ['Benjamin Graham · Margem de Segurança','O preço que você paga determina o seu risco. Comprar um ótimo ativo caro demais transforma qualidade em especulação.'],
+   ['Harry Markowitz · Portfólio','Diversificação real é o único almoço grátis: combine ativos que reagem de formas opostas a juros, dólar e inflação.'],
+   ['Ray Dalio · All Weather','Não tente adivinhar o próximo choque geopolítico — construa uma carteira que sobreviva tanto à inflação alta quanto à desaceleração.'],
+   ['Tim Ferriss · Fear-Setting','Antes de clicar, nomeie o pior cenário e o stop exato. Quem controla o tamanho da perda joga para o longo prazo.']
+  ];
+  function pilulaDia(){
+   const d=Math.floor(Date.now()/86400000);
+   return PILULAS_CEREBRO[d%PILULAS_CEREBRO.length];
+  }
+  function radarBalancosHtml(){
+   const meus=meusAtivos();if(!meus.length)return '';
+   const set=new Set(meus.map(x=>String(x).toUpperCase()));
+   const hits=timeline().filter(e=>/balan[çc]o|resultado|lucro|trimestr|divulg/i.test(String(e.titulo||''))&&(e.relacoes?.diretos||[]).some(t=>set.has(String(t).toUpperCase()))).slice(0,3);
+   if(!hits.length)return '';
+   return '<div style="margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.45);background:rgba(201,166,107,.08);font-size:12.5px"><b>📆 Radar de Balanços (sua Carteira/Teses):</b><ul style="margin:4px 0 0;padding-left:16px">'+
+    hits.map(e=>'<li>'+escape(String(e.titulo||'').slice(0,95))+'</li>').join('')+'</ul></div>';
+  }
+  const TAGS_HABITO=['✅ Segui o plano','✅ Stop respeitado','⚠️ Entrei adiantado','⚠️ Movi o stop','⚠️ Overtrading','⚠️ Operei cansado'];
+  function getTagsMap(){try{return JSON.parse(localStorage.getItem('dt-tags-v924')||'{}')||{}}catch{return {}}}
+  function raioxTraderHtml(){
+   try{
+    const trs=((typeof S!=='undefined'&&Array.isArray(S?.trades))?S.trades:[]).filter(t=>t&&t.status!=='aberta');
+    const comPl=trs.map(t=>{
+     let pl=Number(t.r);
+     if(!Number.isFinite(pl)){try{pl=Number(typeof cBRL==='function'?cBRL(t)?.pl:NaN)}catch(_){}}
+     return {t,pl,id:String(t.id||t.dt||'')};
+    }).filter(x=>Number.isFinite(x.pl));
+    if(comPl.length<3)return '<details style="margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg)"><summary style="cursor:pointer;font-weight:700;font-size:13px">📊 Raio-X Estatístico, Risco de Ruína &amp; Card PNG</summary><p class="mut sm" style="margin:6px 0 0">Registre pelo menos 3 operações encerradas para liberar o Raio-X por horário, dia, turno, Expectativa Matemática e Card PNG.</p></details>';
+    const rec=comPl.slice(-150);
+    const wins=rec.filter(x=>x.pl>0),losses=rec.filter(x=>x.pl<0);
+    const wr=wins.length/rec.length,avgW=wins.length?wins.reduce((a,x)=>a+x.pl,0)/wins.length:0,avgL=losses.length?Math.abs(losses.reduce((a,x)=>a+x.pl,0)/losses.length):0;
+    const payoff=avgL>0?avgW/avgL:0,exp=wr*avgW-(1-wr)*avgL;
+    const kelly=payoff>0?Math.max(0,Math.min(100,((wr-(1-wr)/payoff)*100)*0.25)):0;
+    const fmtBRL=v=>(v>=0?'+':'−')+'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+    const agrupa=(fn)=>{
+     const m=new Map();
+     rec.forEach(x=>{const k=fn(x.t);if(!k)return;const o=m.get(k)||{k,n:0,w:0,s:0};o.n++;if(x.pl>0)o.w++;o.s+=x.pl;m.set(k,o)});
+     return [...m.values()].map(o=>'<tr><td><b>'+escape(o.k)+'</b></td><td>'+o.n+'</td><td>'+Math.round(o.w/o.n*100)+'%</td><td style="color:'+(o.s>=0?'#10B981':'#EF4444')+';font-weight:700">'+fmtBRL(o.s)+'</td></tr>').join('');
+    };
+    const faixaH=t=>{const h=Number(String(t.hr||t.h||String(t.dt||'').slice(11,13)||'').slice(0,2));return Number.isFinite(h)?(h<10?'9h–10h':h<12?'10h–12h':h<15?'12h–15h':'15h–18h'):''};
+    const diaSem=t=>{const dt=String(t.dtx||t.dt||'').slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(dt))return '';return ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][new Date(dt+'T12:00:00Z').getUTCDay()]};
+    const turnoFn=t=>{const dt=String(t.dtx||t.dt||'').slice(0,10);if(!dt||typeof tcod!=='function')return '';const c=tcod(dt);return ({F:'Folga','16':'Turno 16h','0':'Pós-madrug. 0h','8':'Turno 8h'})[c]||''};
+    const tbl=(tit,rows)=>rows?'<p class="sm" style="margin:8px 0 4px"><b>'+tit+'</b></p><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="text-align:left;color:var(--mut)"><th>Faixa</th><th>Qtd</th><th>Acerto</th><th>Saldo</th></tr></thead><tbody>'+rows+'</tbody></table>':'';
+    // Tags de hábitos + custo real dos erros
+    const tmap=getTagsMap(),ult=comPl[comPl.length-1],ultTags=Array.isArray(tmap[ult.id])?tmap[ult.id]:[];
+    const custoTag={};
+    rec.forEach(x=>{(tmap[x.id]||[]).forEach(tg=>{custoTag[tg]=(custoTag[tg]||{n:0,s:0});custoTag[tg].n++;custoTag[tg].s+=x.pl})});
+    const custoRows=Object.entries(custoTag).sort((a,b)=>a[1].s-b[1].s).map(([tg,o])=>'<li>'+escape(tg)+': <b>'+o.n+'x</b> · <b style="color:'+(o.s>=0?'#10B981':'#EF4444')+'">'+fmtBRL(o.s)+'</b></li>').join('');
+    return '<details style="margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg)">'+
+     '<summary style="cursor:pointer;font-weight:700;font-size:13px">📊 Raio-X Estatístico, Risco de Ruína &amp; Card PNG <small class="mut">('+rec.length+' trades)</small></summary>'+
+     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin:8px 0;font-size:12px">'+
+      '<div style="padding:7px;border:1px solid var(--bd);border-radius:6px"><small class="mut" style="display:block">Acerto</small><b>'+Math.round(wr*100)+'%</b></div>'+
+      '<div style="padding:7px;border:1px solid var(--bd);border-radius:6px"><small class="mut" style="display:block">Payoff</small><b>'+payoff.toFixed(2).replace('.',',')+'x</b></div>'+
+      '<div style="padding:7px;border:1px solid var(--bd);border-radius:6px"><small class="mut" style="display:block">Expectativa/trade</small><b style="color:'+(exp>=0?'#10B981':'#EF4444')+'">'+fmtBRL(exp)+'</b></div>'+
+      '<div style="padding:7px;border:1px solid var(--bd);border-radius:6px"><small class="mut" style="display:block">Risco ideal (¼ Kelly)</small><b>'+(kelly>0?kelly.toFixed(1).replace('.',',')+'%':'Conservador 0,5%')+'</b></div>'+
+     '</div>'+
+     '<p class="mut sm" style="margin:2px 0 8px">Risco de Ruína: com risco de 1% por trade, sua conta suporta <b>10 stops seguidos</b> até −10% e <b>20 stops</b> até −20%.</p>'+
+     tbl('Por horário',agrupa(faixaH))+tbl('Por dia da semana',agrupa(diaSem))+tbl('Por turno da escala',agrupa(turnoFn))+
+     '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)">'+
+      '<p class="sm" style="margin:0 0 6px"><b>🏷️ Pós-Trade em 10s (etiquetar último trade: '+escape(String(ult.t.ativo||ult.t.tk||'—').toUpperCase())+')</b></p>'+
+      '<div style="display:flex;gap:5px;flex-wrap:wrap">'+TAGS_HABITO.map(tg=>'<button type="button" class="btn s" data-aurea-tag="'+escape(ult.id)+'|'+escape(tg)+'" style="'+(ultTags.includes(tg)?'border-color:#C9A66B;background:rgba(201,166,107,.18)':'')+'">'+escape(tg)+'</button>').join('')+'</div>'+
+      (custoRows?'<p class="sm" style="margin:8px 0 3px"><b>Custo/ganho real por hábito:</b></p><ul style="margin:0;padding-left:16px;font-size:12px">'+custoRows+'</ul>':'')+
+     '</div>'+
+     '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" data-aurea-cardpng="1">📸 Gerar Card PNG (Modo Privacidade)</button></div>'+
+     '</details>';
+   }catch(_){return '';}
+  }
   function meuDia(){
     const c=w.DiarioSessoes?.context(),manual=w.DiarioSessaoVisual?.manual?.(),
       phase=manual||c?.phase, data=c?.b3?.nextDate;
@@ -605,6 +698,8 @@
       phase==='during'?'Acompanhar riscos, execução e operações abertas sem somá-las ao resultado realizado.':
       'Conciliar operações encerradas, checklist original e plano de amanhã.';
     const st14=analiseTradesRecentes();
+    const pil=pilulaDia();
+    const pilulaHtml='<div style="margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.28);background:rgba(201,166,107,.05);font-size:12.5px"><b>🧠 Pílula do Cérebro · '+escape(pil[0])+'</b><p class="mut sm" style="margin:4px 0 0">'+escape(pil[1])+'</p></div>';
     const padroes=st14?
       '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.28);background:rgba(201,166,107,.06)">'+
       '<p style="margin:0 0 4px"><b>✦ Revisão da Áurea (últimos 14 dias · '+st14.n+' trades)</b></p>'+
@@ -620,7 +715,10 @@
       (state.revisaoOut?'<div class="sm" style="margin-top:8px;line-height:1.5">'+state.revisaoOut+'</div>':'')+
       '</div>':'';
     return '<div class="v810-intel-day"><strong>Orientação da sessão</strong><p>'+escape(task)+'</p>'+
-      semaforoOperarHtml()+padroes+ultimosRegistrosDia()+
+      semaforoOperarHtml()+
+      (state.modoFoco
+        ?'<p class="mut sm" style="margin:6px 0">🎯 Modo Foco Pregão ativo — blocos secundários recolhidos para operar sem ruído.</p>'
+        :pilulaHtml+radarBalancosHtml()+raioxTraderHtml()+padroes+ultimosRegistrosDia())+
       '<small>Próxima sessão B3: '+escape(data?data.split('-').reverse().join('/'):'data não verificada')+
       ' · Fonte: calendário de negociação da B3 / regras do aplicativo</small></div>';
   }
@@ -739,6 +837,11 @@
       }
       if(hits.length)gatilhosLine='<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.55);background:rgba(201,166,107,.11)"><b>🎯 Gatilhos das suas Teses:</b> '+escape(hits.slice(0,3).join(' · '))+'</p>';
     }catch(_){}
+    let alertasLine='';
+    try{
+      const als=typeof w.DiarioAlertasDisparados==='function'?w.DiarioAlertasDisparados():[];
+      if(als.length)alertasLine='<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(16,185,129,.55);background:rgba(16,185,129,.1)"><b>🔔 Alertas Disparados:</b> '+escape(als.slice(0,3).map(a=>a.tk+' ('+a.msg+')').join(' · '))+'</p>';
+    }catch(_){}
     const doisMkts=pulso.texto?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.22);background:rgba(201,166,107,.05)">'+escape(pulso.texto)+'</p>':'';
     const schwartzLine=agEvs.length?'<p class="sm" style="margin:4px 0"><b>S · Schwartz (Agenda BR/EUA):</b> '+escape(agEvs.join(' · '))+'</p>':'';
     const atualizado=Date.parse(state.mercado?.atualizadoEm||'');
@@ -753,21 +856,21 @@
         '<small> · '+escape(data)+' · '+escape(fonte?.nome||'Fonte não informada')+
         ' · efeito nos ativos depende de confirmação.</small></li>';
     }).join('')||'<li>Não há acontecimentos recentes com fontes identificadas.</li>';
-    return '<div class="v810-intel-brief">'+pills+'<h3>'+info.titulo+'</h3>'+relogio+
-      '<p class="mut sm" style="margin:0 0 6px">'+info.foco+'</p>'+riskBar+divLine+gatilhosLine+doisMkts+schwartzLine+
-      '<p><b>'+resumo+'</b></p>'+
-      '<p class="mut sm">Fonte: '+fonte+' · '+(recent?'Atualizado: ':'Último registro (não é tempo real): ')+
-        when(state.mercado?.atualizadoEm)+'</p>'+
+    const vel=state.falaVel||1;
+    return '<div class="v810-intel-brief">'+pills+'<h3 style="margin:2px 0 4px">'+info.titulo+'</h3>'+relogio+
+      riskBar+divLine+gatilhosLine+alertasLine+doisMkts+schwartzLine+
+      '<p class="mut sm" style="margin:6px 0"><b>'+resumo+'</b> · '+fonte+' · '+(recent?'':'último reg. ')+when(state.mercado?.atualizadoEm)+'</p>'+
       (context?.warning?'<p class="mut sm">'+escape(context.warning)+'</p>':'')+
-      '<div style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" data-aurea-resumao="'+ed+'"'+(state.resumaoBusy?' disabled aria-busy="true"':'')+'">'+(state.resumaoBusy?'Gerando resumão…':info.cta)+'</button>'+
-      ('speechSynthesis' in w?'<button type="button" class="btn s" data-aurea-ouvir="'+ed+'">'+(state.falando?'⏹ Parar áudio':'🔊 Ouvir')+'</button>':'')+'</div>'+
-      (state.resumaoEd===ed&&state.resumaoHtml?'<div data-aurea-resumo-gerado style="margin:8px 0;padding:10px 0;border-top:1px solid rgba(255,255,255,.12);white-space:pre-wrap;font-size:13px;line-height:1.5">'+state.resumaoHtml+'</div>':'')+
-      '<details><summary>Fatos publicados, hipóteses e fontes · '+mine.length+' ligados aos seus ativos</summary>'+
+      '<div style="margin:10px 0 8px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" data-aurea-resumao="'+ed+'"'+(state.resumaoBusy?' disabled aria-busy="true"':'')+'>'+(state.resumaoBusy?'Gerando resumão…':info.cta)+'</button>'+
+      ('speechSynthesis' in w?'<button type="button" class="btn s" data-aurea-ouvir="'+ed+'">'+(state.falando?'⏹ Parar Rádio':'🎙️ Rádio do Pregão')+'</button><button type="button" class="btn s" data-aurea-vel="1" title="Velocidade da Rádio">'+vel+'x</button>':'')+
+      '<button type="button" class="btn s" data-aurea-foco="1" style="'+(state.modoFoco?'border-color:#C9A66B;color:#C9A66B;font-weight:700':'')+'">'+(state.modoFoco?'🎯 Foco ON':'🎯 Modo Foco')+'</button></div>'+
+      (state.resumaoEd===ed&&state.resumaoHtml?'<div data-aurea-resumo-gerado style="margin:12px 0 6px;padding-top:12px;border-top:1px solid rgba(201,166,107,.28)">'+state.resumaoHtml+'</div>':'')+
+      (state.modoFoco?'':'<details><summary>Fatos publicados, hipóteses e fontes · '+mine.length+' ligados aos seus ativos</summary>'+
       '<ul class="v810-intel-events">'+top+'</ul>'+
       (hot.length?'<div><b>Hipóteses condicionadas</b></div>'+
         hot.slice(0,2).map(e=>'<p class="mut sm">'+tag('cenario')+escape(transmissao(e))+
         ' — cenário condicionado, não atribuição comprovada de causalidade.</p>').join(''):'')+
-      '<p class="mut sm">'+escape(m.motivo)+'</p></details>'+memoriaPrevisao(context)+'</div>';
+      '<p class="mut sm">'+escape(m.motivo)+'</p></details>'+memoriaPrevisao(context))+'</div>';
   }
   function agenda() {
     const events=timeline().filter(e=>e.tema==='politica_economica'&&importante(e)).slice(0,5);
@@ -914,6 +1017,83 @@
       w.DiarioConselhoIA('antitilt', 'Checklist Anti-Tilt com Munger', prompt);
       return;
     }
+    const velBtn=event.target.closest('[data-aurea-vel]');
+    if(velBtn){
+      const cur=state.falaVel||1;
+      state.falaVel=cur===1?1.25:cur===1.25?1.5:1;
+      repaint();
+      return;
+    }
+    const focoBtn=event.target.closest('[data-aurea-foco]');
+    if(focoBtn){
+      state.modoFoco=!state.modoFoco;
+      repaint();
+      return;
+    }
+    const tagBtn=event.target.closest('[data-aurea-tag]');
+    if(tagBtn){
+      const raw=String(tagBtn.dataset.aureaTag||'');
+      const sep=raw.indexOf('|');
+      if(sep>0){
+        const tid=raw.slice(0,sep),tg=raw.slice(sep+1);
+        const map=getTagsMap();
+        const arr=Array.isArray(map[tid])?map[tid]:[];
+        const idx=arr.indexOf(tg);
+        if(idx>=0)arr.splice(idx,1);else arr.push(tg);
+        map[tid]=arr;
+        try{localStorage.setItem('dt-tags-v924',JSON.stringify(map));}catch(_){}
+        repaint();
+      }
+      return;
+    }
+    const pngBtn=event.target.closest('[data-aurea-cardpng]');
+    if(pngBtn){
+      try{
+        const trs=((typeof S!=='undefined'&&Array.isArray(S?.trades))?S.trades:[]).filter(t=>t&&t.status!=='aberta');
+        const pls=trs.map(t=>{let p=Number(t.r);if(!Number.isFinite(p)){try{p=Number(typeof cBRL==='function'?cBRL(t)?.pl:NaN)}catch(_){}}return p;}).filter(Number.isFinite).slice(-150);
+        const n=pls.length||1,wins=pls.filter(x=>x>0),losses=pls.filter(x=>x<0);
+        const wr=Math.round((wins.length/n)*100);
+        const avgW=wins.length?wins.reduce((a,b)=>a+b,0)/wins.length:0;
+        const avgL=losses.length?Math.abs(losses.reduce((a,b)=>a+b,0)/losses.length):0;
+        const payoff=avgL>0?avgW/avgL:0;
+        const expR=avgL>0?((wins.length/n)*payoff-(1-wins.length/n)):0;
+        const cv=document.createElement('canvas');cv.width=1080;cv.height=1080;
+        const ctx=cv.getContext('2d');
+        const grd=ctx.createLinearGradient(0,0,1080,1080);
+        grd.addColorStop(0,'#0B0D11');grd.addColorStop(1,'#151922');
+        ctx.fillStyle=grd;ctx.fillRect(0,0,1080,1080);
+        ctx.strokeStyle='rgba(201,166,107,0.45)';ctx.lineWidth=4;ctx.strokeRect(48,48,984,984);
+        ctx.fillStyle='#C9A66B';ctx.font='700 32px Georgia, serif';ctx.fillText('DIÁRIO DE TRADER · MODO PRIVACIDADE',96,136);
+        ctx.fillStyle='#9AA3B2';ctx.font='400 24px sans-serif';ctx.fillText('Evolução estatística (valores em R$ ocultos) · '+new Date().toLocaleDateString('pt-BR'),96,178);
+        const cards=[
+          ['TAXA DE ACERTO',wr+'%'],
+          ['PAYOFF MÉDIO',payoff.toFixed(2).replace('.',',')+'x'],
+          ['EXPECTATIVA (EM R)',(expR>=0?'+':'')+expR.toFixed(2).replace('.',',')+'R'],
+          ['OPERAÇÕES ANALISADAS',String(pls.length)]
+        ];
+        cards.forEach((c,i)=>{
+          const col=i%2,row=Math.floor(i/2),x=96+col*460,y=260+row*260;
+          ctx.fillStyle='rgba(255,255,255,0.03)';ctx.fillRect(x,y,428,210);
+          ctx.strokeStyle='rgba(201,166,107,0.28)';ctx.lineWidth=2;ctx.strokeRect(x,y,428,210);
+          ctx.fillStyle='#9AA3B2';ctx.font='600 22px sans-serif';ctx.fillText(c[0],x+32,y+64);
+          ctx.fillStyle='#F4F1EA';ctx.font='700 68px Georgia, serif';ctx.fillText(c[1],x+32,y+154);
+        });
+        const pil=pilulaDia();
+        ctx.fillStyle='#C9A66B';ctx.font='700 24px sans-serif';ctx.fillText('✦ '+pil[0],96,840);
+        ctx.fillStyle='#D4D8E0';ctx.font='400 24px sans-serif';
+        const words=pil[1].split(' ');let line='',ly=884;
+        for(const wd of words){
+          if(ctx.measureText(line+wd).width>880){ctx.fillText(line,96,ly);line=wd+' ';ly+=34;}
+          else line+=wd+' ';
+        }
+        if(line)ctx.fillText(line,96,ly);
+        const a=document.createElement('a');
+        a.download='diario-evolucao-'+new Date().toISOString().slice(0,10)+'.png';
+        a.href=cv.toDataURL('image/png');
+        a.click();
+      }catch(_){}
+      return;
+    }
     const ouvBtn=event.target.closest('[data-aurea-ouvir]');
     if(ouvBtn&&'speechSynthesis' in w){
       if(state.falando){try{w.speechSynthesis.cancel();}catch(_){}state.falando=false;repaint();return;}
@@ -925,17 +1105,25 @@
         meiodia:'Edição do meio-dia, B3 e Estados Unidos em pregão.',
         fechamento:'Edição de fechamento.'
       };
-      const p=pulsoDoisMercados(),m=mercadoPlan();
+      const p=pulsoDoisMercados(),m=mercadoPlan(),pil=pilulaDia();
+      const hojeIso=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+      const agEvs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})>=hojeIso)
+        .slice(0,2).map(e=>new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' '+String(e.t||'').slice(0,45)).join('. ');
+      let alsTxt='';
+      try{const als=typeof w.DiarioAlertasDisparados==='function'?w.DiarioAlertasDisparados():[];if(als.length)alsTxt='Alertas disparados: '+als.slice(0,2).map(a=>a.tk+' '+a.msg).join('. ')+'. ';}catch(_){}
       const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,2).map(e=>tit(e)).join('. ');
-      const fala='Olá, aqui é a Áurea. '+(nomes[ed]||'')+' '+
+      const fala='Rádio do Pregão, com a Áurea. '+(nomes[ed]||'')+' '+
         (p.riskLabel?'Humor global agora: '+p.riskLabel+'. ':'')+
         (p.texto?p.texto.replace(/\|/g,'. ').replace(/·/g,', ')+'. ':'')+
         (m.nome&&!/insuficiente|Sem leitura/i.test(m.nome)?'Leitura atual: '+m.nome+'. ':'')+
-        (topNews?'Destaques nas notícias: '+topNews+'.':'');
+        (agEvs?'Agenda crítica: '+agEvs+'. ':'')+
+        alsTxt+
+        (topNews?'Destaques nas notícias: '+topNews+'. ':'')+
+        'Pílula do Cérebro de hoje, '+pil[0]+': '+pil[1];
       try{
         w.speechSynthesis.cancel();
         const u=new SpeechSynthesisUtterance(fala);
-        u.lang='pt-BR';u.rate=1.02;
+        u.lang='pt-BR';u.rate=state.falaVel||1;
         u.onend=u.onerror=()=>{state.falando=false;repaint();};
         state.falando=true;repaint();
         w.speechSynthesis.speak(u);
@@ -1003,19 +1191,25 @@
         });
         const j=await res.json().catch(()=>({}));
         if(!res.ok||!j.ok||!j.text)throw Error(j.error||'A IA não conseguiu gerar o texto agora.');
-        state.resumaoHtml='<b>✦ Resumão da Áurea · IA gratuita ('+escape(j.model||'Cloudflare')+')</b>\n\n'+
-          escape(String(j.text).slice(0,7500)).replace(/\n{3,}/g,'\n\n');
+        state.resumaoHtml='<div style="margin-bottom:10px;font-size:12.5px;color:var(--gold,#C9A66B);font-weight:700;letter-spacing:.02em">✦ RESUMÃO DA ÁUREA · IA GRATUITA ('+escape(j.model||'Cloudflare')+')</div>'+
+          formatarTextoEditorial(j.text);
       }catch(err){
-        const stale=state.mercado?.atualizadoEm?'Último registro: '+when(state.mercado.atualizadoEm)+'.':'Sem carimbo de atualização confiável.';
+        const stale=state.mercado?.atualizadoEm?'Último registro: '+when(state.mercado.atualizadoEm)+'.':'Sem carimbo de atualização.';
+        const riskExpl=p.riskScore==null?'Sem leitura consolidada de apetite a risco.':
+          p.riskScore>=25?'Ambiente de **Apetite a Risco (Risk-On, +'+p.riskScore+')**: bolsas e ativos de risco tendem a receber fluxo comprador, mas fique atento a realizações em pontos de resistência.':
+          p.riskScore<=-25?'Ambiente de **Aversão a Risco (Risk-Off, '+p.riskScore+')**: capital migra para proteção (dólar/ouro/Treasuries), exigindo mão reduzida em compras no Brasil.':
+          'Ambiente **Neutro/Misto ('+(p.riskScore>0?'+':'')+p.riskScore+')**: mercado sem direção única global — prefira operações seletivas nos seus melhores níveis.';
+        let alsTxt='';
+        try{const als=typeof w.DiarioAlertasDisparados==='function'?w.DiarioAlertasDisparados():[];if(als.length)alsTxt=' **Alertas disparados agora:** '+als.slice(0,3).map(a=>a.tk+' ('+a.msg+')').join(' · ')+'.';}catch(_){}
         const blocos=[
-          '1) Futuros EUA e criptomoedas: '+futUS.label+'. '+(p.riskLabel?'Humor do painel: '+p.riskLabel+'. ':'Sem leitura de humor validada.')+(p.texto?' Referências: '+p.texto+'.':''),
-          '2) Brasil, WIN e WDO: '+(m.nome&&!/insuficiente|Sem leitura/i.test(m.nome)?'Amplitude observada: '+m.nome+'. ':'Sem confirmação de tendência.')+(p.divergencia?' '+p.divergencia:' Observe câmbio, curva DI, commodities e a abertura antes de concluir direção.'),
-          '3) Agenda BR/EUA: '+(agEvs.length?agEvs.join(' · '):'Nenhum evento de alto impacto validado no painel para este momento. Consulte a agenda oficial.'),
-          '4) Plano e riscos: aguarde dados atualizados, confirme a estrutura dos preços e a liquidez de WIN/WDO; não opere com base apenas nesta síntese.'
+          '1) Exterior, Futuros EUA e Cripto\nStatus CME Globex: **'+futUS.label+'**. '+riskExpl+(p.texto?'\nCotações capturadas: '+p.texto+'.':''),
+          '2) Impacto no Brasil (IBOV, WIN, WDO e Juros)\n'+(m.nome&&!/insuficiente|Sem leitura/i.test(m.nome)?'Leitura de amplitude do painel: **'+m.nome+'**. ':'Sem confirmação de tendência no painel. ')+(p.divergencia?'\n'+p.divergencia:'Quando exterior e câmbio andam na mesma direção, o fluxo tende a ser mais limpo; se divergirem, reduza o tamanho da mão até a curva DI definir direção.'),
+          '3) Agenda Crítica BR/EUA\n'+(agEvs.length?agEvs.map(x=>'• '+x).join('\n'):'Nenhum evento de alto impacto nos próximos horários. Acompanhe o fluxo técnico e as manchetes corporativas.'),
+          '4) Plano Prático e Riscos\nEvite abrir posição nos 10 minutos anteriores a dados de alto impacto.'+alsTxt+(meus.length?' Ativos no seu radar: **'+meus.slice(0,6).join(', ')+'**.':'')
         ];
-        state.resumaoHtml='<b>Resumão com dados locais · IA temporariamente indisponível</b>\n'+
-          '<span class="mut sm">'+escape(String(err?.message||'Sem conexão com o provedor').slice(0,160))+' · '+escape(stale)+'</span>\n\n'+
-          blocos.map(x=>escape(x)).join('\n\n');
+        state.resumaoHtml='<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--gold,#C9A66B)">✦ Resumão Local · Leitura Direta dos Dados</div>'+
+          '<div class="mut sm" style="margin-top:2px">'+escape(String(err?.message||'IA indisponível').slice(0,140))+' · '+escape(stale)+'</div></div>'+
+          formatarTextoEditorial(blocos.join('\n\n'));
       }finally{
         state.resumaoBusy=false;
         repaint();
