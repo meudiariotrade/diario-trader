@@ -327,7 +327,7 @@ function sectionEight(){
  ].sort((a,b)=>b[1]-a[1]);
  const best=itens[0][1];
  const rows=itens.map(([nm,aa,am])=>'<tr><th>'+esc(nm)+(aa===best?' <small style="color:#10B981">★ maior</small>':'')+'</th><td><b>'+percent(aa)+' a.a.</b></td><td>'+percent(am)+'/mês</td></tr>');
- return '<section class="rb694-section"><details><summary style="padding:0;min-height:32px;font-size:13px">08 · 💵 Comparador Líquido: Renda Fixa × FIIs <small>CDI '+percent(cdi)+' · IPCA '+percent(ipca)+'</small></summary>'+
+ return '<section class="rb694-extra" style="margin-top:10px;padding:10px 12px;border:1px solid var(--bd);border-radius:10px"><details><summary style="padding:0;min-height:32px;font-size:13px">08 · 💵 Comparador Líquido: Renda Fixa × FIIs <small>CDI '+percent(cdi)+' · IPCA '+percent(ipca)+'</small></summary>'+
   '<div class="rb694-grid" style="margin:8px 0">'+
   '<label>CDB (% CDI)<input type="number" step="1" value="'+cdbP+'" data-rb694-field="rfCdb"></label>'+
   '<label>LCI/LCA (% CDI)<input type="number" step="1" value="'+lciP+'" data-rb694-field="rfLci"></label>'+
@@ -340,7 +340,7 @@ function sectionEight(){
 function sectionNine(p){
  const mf=W.DiarioMacroFiscal?.(),selic=Number(mf?.brasil?.selic_meta?.valor)||13.75,ipca=Number(mf?.brasil?.ipca_12m?.valor)||4.63;
  const jReal=Math.max(3,Number(mf?.brasil?.juro_real_expost)||6.5),taxaM=Math.pow(1+jReal/100,1/12)-1;
- const pat=Math.max(0,Number(p.v||0)),custo=Math.max(500,Number(state.custoVida||6000)),ap=Math.max(0,Number(state.monthly||1500));
+ const pat=Math.max(0,Number(p.v||0)),custo=Math.max(500,Number(state.custoVida||6000)),ap=Math.max(0,Number(state.monthlyFi||state.monthly||1500));
  const metaPat=custo/(taxaM||0.005);
  const mesesPara=alvo=>{
   if(pat>=alvo)return 0;
@@ -356,10 +356,10 @@ function sectionNine(p){
  const retCart=Number(p.rPct??(p.c>0?(p.v-p.c)/p.c*100:null));
  const cdiRef=selic-0.1;
  const benchHtml=Number.isFinite(retCart)?'<p class="rb694-note" style="margin-top:8px"><b>📈 Benchmark da Carteira:</b> retorno sobre custo <b style="color:'+(retCart>=0?'#10B981':'#F87171')+'">'+(retCart>=0?'+':'')+percent(retCart)+'</b> · Referência CDI anual atual: <b>'+percent(cdiRef)+'</b> · IPCA+6%: <b>'+percent(ipca+6)+'</b>.</p>':'';
- return '<section class="rb694-section"><details><summary style="padding:0;min-height:32px;font-size:13px">09 · 🏖️ Independência Financeira &amp; Benchmark <small>Meta '+money(custo)+'/mês</small></summary>'+
+ return '<section class="rb694-extra" style="margin-top:10px;padding:10px 12px;border:1px solid var(--bd);border-radius:10px"><details><summary style="padding:0;min-height:32px;font-size:13px">09 · 🏖️ Independência Financeira &amp; Benchmark <small>Meta '+money(custo)+'/mês</small></summary>'+
   '<div class="rb694-grid" style="margin:8px 0">'+
   '<label>Custo de vida mensal (R$)<input type="number" step="100" value="'+custo+'" data-rb694-field="custoVida"></label>'+
-  '<label>Aporte mensal (R$)<input type="number" step="100" value="'+ap+'" data-rb694-field="monthly"></label></div>'+
+  '<label>Aporte mensal (R$)<input type="number" step="100" value="'+ap+'" data-rb694-field="monthlyFi"></label></div>'+
   table(['Marco de renda passiva','Patrimônio necessário','Prazo estimado'],marcos)+
   benchHtml+
   '<p class="rb694-note">Projeção em poder de compra real usando seu patrimônio atual ('+money(pat)+') e juro real de '+percent(jReal)+' a.a. (BCB). Uso educacional.</p></details></section>';

@@ -29,16 +29,16 @@
   const valido = (registro, coleta, tempo = Date.now()) => {
     const em = stamp(registro?.em || registro?.updated_at || registro?.horarioPreco || registro?.ts);
     const ts = stamp(coleta);
-    // A fonte precisa ter sido carregada nesta sessão; o valor não pode ser muito antigo.
-    if (em !== null && (tempo < em || tempo - em >= MAX_FONTE)) return false;
-    return (ts !== null && ts > 0 && tempo >= ts && tempo - ts < 12 * HORA) ||
-      (em !== null && tempo >= em && tempo - em < MAX_FONTE);
+    // A fonte precisa ter sido carregada nesta sessão; tolera até 60s de diferença de relógio.
+    if (em !== null && (em - tempo > 60000 || tempo - em >= MAX_FONTE)) return false;
+    return (ts !== null && ts > 0 && ts - tempo <= 60000 && tempo - ts < 12 * HORA) ||
+      (em !== null && em - tempo <= 60000 && tempo - em < MAX_FONTE);
   };
   const chave = x => String(x || "").trim().toUpperCase().replace(/^(BMFBOVESPA|TVC|FX_IDC|OANDA|AMEX|NYSE|NASDAQ|CME_MINI|CME|NYMEX|ICE|FOREXCOM):/, "").replace(/_/g, "/");
   const aliases = {
-    ewz: new Set(["EWZ"]),
-    spf: new Set(["ES=F", "ES1!", "ES", "SP500F", "SPFUT", "SP500FUT", "S&P500FUT", "S&P500FUTURO", "ESZ26", "ESH27"]),
-    wti: new Set(["WTI", "USOIL", "CL=F", "CL1!", "CL", "OILWTI"]),
+    ewz: new Set(["EWZ", "EWZ (BRASIL EM NY)"]),
+    spf: new Set(["ES=F", "ES1!", "ES", "SP500F", "SPFUT", "SP500FUT", "S&P500FUT", "S&P500FUTURO", "S&P FUTURO", "S&P 500 FUTURO", "ESZ26", "ESH27"]),
+    wti: new Set(["WTI", "USOIL", "CL=F", "CL1!", "CL", "OILWTI", "PETRÓLEO WTI", "PETROLEO WTI"]),
     dxy: new Set(["DXY", "DX-Y.NYB", "DX=F", "DOLLARINDEX", "USDINDEX"]),
     zar: new Set(["USDZAR", "USD/ZAR"]),
     mxn: new Set(["USDMXN", "USD/MXN"]),
@@ -50,12 +50,12 @@
     return nomes.some(raw => {
       const s = chave(raw);
       if (aliases[tipo].has(s)) return true;
-      if (tipo === "spf") return /^ES[FGHJKMNQUVXZ]\d{2,4}$/.test(s) || /^S&P\s*500\s*(?:FUT|FUTURO)/.test(s);
+      if (tipo === "spf") return /^ES[FGHJKMNQUVXZ]\d{2,4}$/.test(s) || /^S&P(?:\s*500)?\s*(?:FUT|FUTURO)/.test(s);
       if (tipo === "win" || tipo === "wdo") return new RegExp("^" + tipo.toUpperCase() + "[FGHJKMNQUVXZ]\\d{2,4}$").test(s);
       return false;
     });
   }
-  function lista() {
+  function lista(now = Date.now()) {
     const a = [];
     // v925: o termômetro usa EWZ da mesma fonte do Início e da fita.
     try {
@@ -65,6 +65,16 @@
         a.push({item:{s:"EWZ",px:atual,d1:variacao,em:q.dadoEm},
           coleta:ts,grupo:"ewz-canonico"});
     }catch{}
+    // v928: lê /v1/mercado já em memória no DiarioPublico (Cloudflare, zero nova requisição).
+    try {
+      const pub = w.DiarioPublico?.peek?.("/v1/mercado");
+      if (pub?.mercados?.grupos) {
+        const t = stamp(pub.atualizadoEm) || now;
+        for (const grupo of pub.mercados.grupos) {
+          for (const it of grupo?.itens || []) a.push({ item: { ...it, em: it.priceAt || pub.atualizadoEm || now }, coleta: t, grupo: "cf-mercado" });
+        }
+      }
+    } catch {}
     try {
       if (typeof FH !== "undefined" && FH?.q) {
         for (const [k, q] of Object.entries(FH.q)) {
@@ -96,7 +106,7 @@
     try {
       const m6 = (typeof M606 !== "undefined" && M606?.v) ? M606 : (typeof ls !== "undefined" && ls?.get ? ls.get("diario-m606") : null);
       if (m6?.v) {
-        const t = m6.ts || m6.v.em || Date.now();
+        const t = m6.ts || m6.v.em || now;
         for (const it of m6.v.mapa || []) a.push({item:it,coleta:t,grupo:"mapa"});
         for (const it of m6.v.terminal || []) a.push({item:it,coleta:t,grupo:it.g});
         for (const it of m6.v.emergentes?.itens || []) a.push({item:it,coleta:t,grupo:"em"});
@@ -113,7 +123,8 @@
       if (td && typeof td === "object") {
         for (const [k, q] of Object.entries(td)) {
           if (!q || q.px == null) continue;
-          a.push({ item: { s: k, k, px: q.px, d1: q.chg ?? q.d1, em: q.dadoEm || Date.now() }, coleta: q.dadoEm || Date.now(), grupo: "tape" });
+          const t = q.dadoEm || now;
+          a.push({ item: { s: k, k, px: q.px, d1: q.chg ?? q.d1, em: t }, coleta: t, grupo: "tape" });
         }
       }
     } catch {}
@@ -165,7 +176,7 @@
     };
   }
   function capturar() {
-    const now = Date.now(), f = lista();
+    const now = Date.now(), f = lista(now);
     const v = {};
     for (const nome of ["ewz","spf","wti","dxy","zar","mxn"]) v[nome] = variacao(nome,f,now);
     v.winBase = fechamento("win",f,now);
@@ -176,11 +187,14 @@
   const taxa = v => v === null ? "—" : (v>0?"+":"") + nfmt(v,2) + "%";
   const cls = x => x === null ? "" : x > 0 ? "positive" : x < 0 ? "negative" : "neutral";
   function bloco(nome, sigla, value, projetado, base, detalhe, d) {
-    const incompleto = value === null || projetado === null;
-    const complemento = incompleto
+    const semProxies = value === null;
+    const semBase = !semProxies && projetado === null;
+    const complemento = semProxies
       ? '<small class="dt670-pend">Dados insuficientes: '+detalhe+'</small>'
+      : semBase
+      ? '<small class="dt670-pend">Variação teórica calculada · aguardando '+detalhe+'</small>'
       : '<small>Fech. ref. '+nfmt(base, nome==="WIN"?0:2)+' → teórico <b>'+nfmt(projetado,nome==="WIN"?0:2)+'</b> '+(nome==="WIN"?"pts":"pts · futuro")+'</small>';
-    const diferenca = !incompleto && nome === "WIN" ? '<small class="dt670-pt">'+(d>0?"+":"")+nfmt(d,0)+' pontos</small>' : '';
+    const diferenca = !semProxies && !semBase && nome === "WIN" ? '<small class="dt670-pt">'+(d>0?"+":"")+nfmt(d,0)+' pontos</small>' : '';
     return '<div class="dt670-instrument" data-dt670-ativo="'+sigla+'"><div class="dt670-val"><span><b>'+nome+'</b><small>'+sigla+'</small></span><strong class="'+cls(value)+'">'+taxa(value)+'</strong></div>'+diferenca+complemento+'</div>';
   }
   function html(v) {

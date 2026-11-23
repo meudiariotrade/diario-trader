@@ -93,5 +93,5 @@
   };
   novo.__v891=1;w.fetch=novo;
  }
- w.DiarioPublico=Object.freeze({get,remember,read,adrs,inspect:()=>({pending:pending.size,cached:[...memory.keys()]})});
+ w.DiarioPublico=Object.freeze({get,peek:path=>memory.get(path)?.data||null,remember,read,adrs,inspect:()=>({pending:pending.size,cached:[...memory.keys()]})});
 })(typeof window!=='undefined'?window:globalThis);

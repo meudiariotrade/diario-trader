@@ -671,7 +671,7 @@ html body #app #ap-root .ui-cta{background:var(--am)!important;color:#0A0B0F!imp
 html[data-v427-tema=claro] body #app #ap-root .ui-cta{background:#8B6524!important;color:#FFFDF9!important}
 html body #app #ap-root .ap-btn-acc{border-color:var(--am)!important;color:var(--am)!important;background:var(--am-soft)!important}
 html body #app #ap-root .ap-hero h2{margin:0!important;font-size:28px!important;font-weight:800!important;letter-spacing:-.02em!important;text-transform:none!important;display:flex!important;align-items:center!important;gap:8px!important;color:var(--tx)!important}
-html body #app #ap-root .ap-bc{display:flex!important;align-items:center!important;gap:8px!important;font-size:12.5px!important;color:var(--mu)!important;margin-bottom:-4px!important}
+html body #app #ap-root .ap-bc{display:flex!important;align-items:center!important;gap:8px!important;font-size:12.5px!important;color:var(--mu)!important;padding-top:6px!important;margin-bottom:0!important}
 html body #app #ap-root .ap-subs{display:flex!important;gap:6px!important;border-bottom:1px solid var(--ln)!important;overflow-x:auto!important;scrollbar-width:none}
 .ap-rank{display:grid;grid-template-columns:248px minmax(0,1fr);gap:16px}
 .ap-filtros details{background:var(--b);border:1px solid var(--ln);border-radius:6px;padding:12px;position:sticky;top:8px}

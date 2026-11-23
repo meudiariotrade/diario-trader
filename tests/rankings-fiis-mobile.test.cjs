@@ -21,7 +21,8 @@ test('Rankings no celular abre os FIIs, a ficha e volta às ações', async () =
     await expect(fundo).toBeVisible();
     const ticker = await fundo.getAttribute('data-ap-fiisel');
     await fundo.tap();
-    await expect(page.locator('.ap-card h3')).toContainText(ticker);
+    await expect(page.locator('.ap-hero h2')).toContainText(ticker);
+    await page.locator('[data-ap-voltar]').tap();
     await page.locator('[data-ap-ranktipo="acoes"]').tap();
     await expect(page.locator('input[data-ap-f="q"]')).toBeVisible();
   });

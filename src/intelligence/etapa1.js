@@ -41,7 +41,7 @@
     async function consultar() {
       retry.hidden = true;
       output.innerHTML = '<p class="mut" style="margin:0;font-size:14px">Consultando o Conselho…</p>';
-      const timer = setTimeout(()=>controller.abort(),50000);
+      const timer = setTimeout(()=>controller.abort(),65000);
       try {
         if(typeof tok==='function') await tok();
         const sessao=typeof SESS!=='undefined'?SESS:null;
@@ -260,9 +260,12 @@
   function importante(e) { return !!e&&(e.prioridade==='alta'||oficial(e)||(e.prioridade==='media'&&ligar(e).some(l=>l.tipo!=='hipotese'))); }
   function estudo(e) {
     const lig=ligar(e);
-    return '<div class="i833-estudo"><div class="sm"><b>Por que importa:</b> '+escape(transmissao(e))+'.</div>'+
-      (lig.length?'<ul class="i833-lig">'+lig.map(l=>'<li'+(l.tipo==='hipotese'?' class="i852-hip"':'')+'><button type="button" class="btn s" data-intel-ticker="'+escape(l.tk)+'" style="min-height:40px">'+escape(l.tk)+'</button><span>'+escape(l.porque)+'</span></li>').join('')+'</ul>':'')+
-      '<button type="button" class="i833-lab" data-intel-study="'+escape(e.id)+'">Abrir no laboratório</button></div>';
+    const chips=lig.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+lig.map(l=>'<button type="button" class="btn s" data-intel-ticker="'+escape(l.tk)+'" style="min-height:28px;padding:3px 9px;font-size:11.5px">'+escape(l.tk)+'</button>').join('')+'</div>':'';
+    const detalhes=lig.length?'<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--gold,#C9A66B);font-weight:600">Ver impacto nos ativos ('+lig.length+') e laboratório</summary>'+
+      '<ul class="i833-lig" style="margin-top:6px">'+lig.map(l=>'<li'+(l.tipo==='hipotese'?' class="i852-hip"':'')+'><b>'+escape(l.tk)+'</b> <span>'+escape(l.porque)+'</span></li>').join('')+'</ul>'+
+      '<button type="button" class="i833-lab" data-intel-study="'+escape(e.id)+'">Abrir no laboratório</button></details>'
+      :'<button type="button" class="i833-lab" style="margin-top:6px" data-intel-study="'+escape(e.id)+'">Abrir no laboratório</button>';
+    return '<div class="i833-estudo"><div class="sm" style="line-height:1.5"><b>Por que importa:</b> '+escape(transmissao(e))+'.</div>'+chips+detalhes+'</div>';
   }
   function fatosHtml() {
     const lista=timeline().filter(e=>importante(e)||minha(e)).sort((a,b)=>minha(b)-minha(a)).slice(0,5);
