@@ -21,24 +21,12 @@
       "binding": "HISTORICO",
       "database_name": "diario-mercado-historico",
       "database_id": "af90d130-db64-40ba-96e3-77a5a0c81ce5"
-    },
-    {
-      "binding": "PRIVATE_D1",
-      "database_name": "diario-trader-privado",
-      "database_id": "838201cb-dc09-4324-a3e2-149a4ebab89c"
     }
   ],
   "triggers": {
     "crons": [
       "7,37 * * * *",
-      "*/15 13-20 * * MON-FRI",
-      "* * * * *"
+      "*/15 13-20 * * MON-FRI"
     ]
-  },
-  "kv_namespaces": [
-    {
-      "binding": "PRIVATE_FILES_KV",
-      "id": "da31941f771f41df95c98cba6ab98149"
-    }
-  ]
+  }
 }
