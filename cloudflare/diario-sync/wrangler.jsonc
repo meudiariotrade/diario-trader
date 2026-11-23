@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "diario-sync",
+  "main": "index.mjs",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "keep_vars": true,
+  "vars": {
+    "ALLOWED_ORIGIN": "https://meudiariotrade.github.io",
+    "SUPABASE_URL": "https://vdzwydizostutukppcsj.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_LjeuewTU7OjYrNiRzM2nJQ_iAa9UCkC"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "diario-trader-privado",
+      "database_id": "838201cb-dc09-4324-a3e2-149a4ebab89c"
+    }
+  ]
+}

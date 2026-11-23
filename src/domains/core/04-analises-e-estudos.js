@@ -1841,7 +1841,8 @@ async function mkEdgeNoticias(acao) {
   const obj=await resposta.json();
   if(!Array.isArray(obj.itens))throw new Error("Cloudflare: feed de notícias inválido");
   if(acao!=="terminal"&&typeof MKT!=="undefined"){
-    MKT.fontesX=obj.fontesX||{ok:(obj.fontesOk||[]).filter(x=>String(x).startsWith("X · @")),falhas:obj.fontesIndisponiveis||[]};
+    MKT.fontesX = obj.fontesX || null;
+    if(!MKT.fontesX)MKT.fontesX={ok:(obj.fontesOk||[]).filter(x=>String(x).startsWith("X · @")),falhas:obj.fontesIndisponiveis||[]};
     MKT.fontesTs=obj.atualizadoEm||null;
   }
   return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.fonte||n.a||"Fonte não indicada",c:n.tags||n.c||[n.tema].filter(Boolean)})).filter(Boolean);
