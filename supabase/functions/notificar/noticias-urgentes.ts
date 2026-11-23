@@ -208,11 +208,19 @@ export async function coletarNoticias(chave: string, agora = new Date(), fetcher
     ? (cloudOK?[]:RSS_FINANCEIRO.filter((f) => ['InfoMoney', 'Money Times', 'CNBC'].includes(f.nome)))
     : RSS_FINANCEIRO;
   const categorias = modo === 'leve' ? ['general'] : ['general', 'forex', 'crypto'];
+  // v940: Cloudflare já coletou os mesmos perfis do X e agora suporta Finnhub.
+  // Não consultar novamente uma fonte com itens válidos no snapshot; se ausente
+  // ou cache vencido, a fonte antiga continua como fallback independente.
+  const fontesNoSnapshot = new Set(publicas.map((n) => n.fonte));
+  const xPendentes = X_PERFIS.filter((p) =>
+    !cloudOK || !fontesNoSnapshot.has('X · @' + p));
+  const finnhubPendentes = categorias.filter((c) =>
+    !cloudOK || !fontesNoSnapshot.has('Finnhub ' + c));
   const tarefas: { nome: string; executar: () => Promise<NoticiaUrgente[]> }[] = [
-    ...(cloudOK?[{nome:'Cloudflare RSS compartilhado',executar:async()=>publicas}]:[]),
+    ...(cloudOK?[{nome:'Cloudflare RSS e provedores compartilhados',executar:async()=>publicas}]:[]),
     ...fontes.map((f) => ({ nome: f.nome, executar: () => fonteRSS(f, fetcher) })),
-    ...X_PERFIS.map((p) => ({ nome: 'X @' + p, executar: () => fonteX(p, fetcher) })),
-    ...(chave ? categorias.map((c) => ({ nome: 'Finnhub ' + c, executar: () => fonteFinnhub(c, chave, fetcher) })) : []),
+    ...xPendentes.map((p) => ({ nome: 'X @' + p, executar: () => fonteX(p, fetcher) })),
+    ...(chave ? finnhubPendentes.map((c) => ({ nome: 'Finnhub ' + c, executar: () => fonteFinnhub(c, chave, fetcher) })) : []),
   ];
   const respostas = await Promise.allSettled(tarefas.map((t) => t.executar()));
   const falhas = respostas.flatMap((r, i) => r.status === 'rejected' ? [tarefas[i].nome] : []);
