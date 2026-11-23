@@ -8,7 +8,8 @@
  // Radar, email, push, corretora e IA ficam fora até migrar seus escritores.
  const DEVICE_TABLES=new Set(['carteira_cfg','estado_diario','fluxo_acoes','fluxo_negocios',
    'limpeza_backup','profit_prints','atalhos_tokens','aulas_glossario_tts']);
- const READ_ONLY_D1=new Set(['diario_backup','cotacoes']);
+ // Cotacoes tem escritor externo legado: não retornar snapshot D1 como preço atual.
+ const READ_ONLY_D1=new Set(['diario_backup']);
  function route(path,method='GET',uid=null){
   if(typeof path!=='string'||!path.startsWith('/rest/v1/'))return null;
   const m=/^\/rest\/v1\/([a-z_]+)(\?.*)?$/.exec(path);
@@ -41,5 +42,5 @@
   }
   return res;
  }
- window.DiarioD1Registros=Object.freeze({can,request,tables:[...DEVICE_TABLES],readOnly:[...READ_ONLY_D1],versao:914});
+ window.DiarioD1Registros=Object.freeze({can,request,tables:[...DEVICE_TABLES],readOnly:[...READ_ONLY_D1],versao:919});
 })();

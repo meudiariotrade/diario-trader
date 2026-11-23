@@ -118,10 +118,12 @@ test('v914: cotações históricas e backup do D1 são estritamente somente leit
    assert.equal((await w.fetch(request('/v1/records/diario_backup','DELETE'),env)).status,405);
  });
 });
-test('v914: dados de cotações e cópias só migram para D1 com paridade de sessão confirmada',()=>{
+test('v919: somente backup é roteado ao D1 após validação; cotações vivas não',()=>{
  const fs=require('node:fs');
  const src=fs.readFileSync('src/shared/diario-registros-v913.js','utf8');
  assert.match(src,/READ_ONLY_D1/);
+ assert.match(src,/READ_ONLY_D1=new Set\(\[\x27diario_backup\x27\]\)/);
+ assert.doesNotMatch(src,/READ_ONLY_D1=new Set\(\[\x27diario_backup\x27,\x27cotacoes\x27\]\)/);
  assert.match(src,/window\.DiarioD1Principal\?\.active\(uid\)/);
  assert.ok(src.includes("verb==='GET'"));
 });
