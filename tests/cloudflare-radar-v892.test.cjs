@@ -3,7 +3,7 @@ const root='cloudflare/diario-radar/';
 const source=fs.readFileSync(root+'producao-v892.mjs','utf8');
 const config=JSON.parse(fs.readFileSync(root+'wrangler.jsonc','utf8'));
 test('v892 preserva algoritmos, API, push, Crypto e persistencia originais',()=>{
- for(const s of ['/health','radar_sinais','radar_cache','CRIPTO','VAPID_PRIVATE','GEMINI_API_KEY','SUPABASE_SERVICE_ROLE_KEY','HISTORICO','Nn(t)'])assert.ok(source.includes(s),s);
+ for(const s of ['/health','radar_sinais','radar_cache','BTC-USD','VAPID_PRIVATE','GEMINI_API_KEY','SUPABASE_SERVICE_ROLE_KEY','HISTORICO','Nn(t)'])assert.ok(source.includes(s),s);
  assert.match(source,/export\{Nc as default\}/);
 });
 test('v892 Cloudflare executa cron B3 apenas seg-sex e apos cutover explicito',()=>{
