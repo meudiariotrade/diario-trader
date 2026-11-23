@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const script=fs.readFileSync('cloudflare/diario-screeners/index.mjs','utf8');
-const load=async()=>((await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(script))).default);
+const load=async()=>((await import('../cloudflare/diario-screeners/index.mjs?test=v782-1')).default);
 const company=(bad=false)=>{
  const r={accn:'0000320193-26-000010',form:'10-K',start:'2025-09-28',end:'2026-09-26',
   filed:'2026-11-10',fy:2026,fp:'FY',frame:'CY2026',val:150};

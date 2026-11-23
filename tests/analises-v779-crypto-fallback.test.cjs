@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 test('v779 hotfix: OKX com 300 candles não interrompe busca por histórico Kraken diário completo',async()=>{
  const oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
  const source=fs.readFileSync('cloudflare/diario-screeners/index.mjs','utf8');
- const worker=(await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source))).default;
+ const worker=(await import('../cloudflare/diario-screeners/index.mjs?test=v779-1')).default;
  globalThis.caches={default:{match:async()=>null,put:async()=>{}}};
  const urls=[];
  const now=Math.floor(Date.now()/1000);
@@ -35,7 +35,7 @@ test('v779 hotfix: OKX com 300 candles não interrompe busca por histórico Krak
 test('v779 hotfix: não homologar histórico diário menor que 400 quando todas fontes falham',async()=>{
  const oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
  const src=fs.readFileSync('cloudflare/diario-screeners/index.mjs','utf8');
- const worker=(await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(src))).default;
+ const worker=(await import('../cloudflare/diario-screeners/index.mjs?test=v779-2')).default;
  globalThis.caches={default:{match:async()=>null,put:async()=>{}}};
  globalThis.fetch=async url=>{
   if(String(url).includes('okx.com/api/v5/market/history-candles'))return Response.json({code:'0',data:Array.from({length:300},(_,i)=>[

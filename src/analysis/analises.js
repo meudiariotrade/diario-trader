@@ -707,6 +707,9 @@ async function getGlobalSnapshotRaw(m,refresh=false){
     if(data.market&&data.market!==market)throw Error('Mercado incorreto no snapshot');
     const audit=w.DiarioSnapshotContrato?.check(data,{market,etag:response.headers.get('ETag')});
     if(!audit?.valid)throw Error('Contrato do snapshot: '+String(audit?.reason||'validador ausente'));
+    if(response.headers.get('X-Snapshot-Stale')==='1'){
+     data._historical_cache=true;data._snapshot_source='cloudflare-kv';data._offline_cache=false;
+    }
     const record={market,when:Date.now(),etag:response.headers.get('ETag')||'',
      updatedAt:data.last_update||null,data};
     snapshotMemory.set(market,record);void snapshotDB(market,record);
@@ -832,14 +835,7 @@ async function load(m,refresh=false){
   const snapshot=await getGlobalSnapshot(m,refresh);
   const isTop=isGlobalTopQuery(s);
   let data=isTop?snapshot:localScreener(m,s,snapshot);
-  if(!data){
-   await tok();const c=cfg();
-   const response=await fetch(c.url+'/functions/v1/screeners-quant',{method:'POST',
-    headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},
-    body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-   data=await response.json().catch(()=>({}));
-   if(!response.ok||!data.ok)throw Error(data.error||'Falha HTTP '+response.status);
-  }
+  if(!data)throw Error('Snapshot completo da Cloudflare indisponível. Tente novamente mais tarde.');
   if(u!==owner()||req!==reqId)return;
   s.data=data;if(isTop)s.topData=rankedSnapshot(snapshot);
   for(const row of data.rows||[])if(s.selected.includes(row.ticker))s.selectedRows[row.ticker]=row;

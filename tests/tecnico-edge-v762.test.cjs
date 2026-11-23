@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 test('Cloudflare: candles criptográficos sob demanda, TTL intradiário e sem tráfego Supabase',{concurrency:false},async()=>{
  const oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
  const source=fs.readFileSync('cloudflare/diario-screeners/index.mjs','utf8');
- const api=(await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source))).default;
+ const api=(await import('../cloudflare/diario-screeners/index.mjs?test=v762-1')).default;
  const memory=new Map(),calls=[];
  globalThis.caches={default:{
   match:async key=>memory.get(key.url)?.clone()||null,
@@ -44,7 +44,7 @@ test('Cloudflare: candles criptográficos sob demanda, TTL intradiário e sem tr
 test('Cloudflare: quando Binance responde 451, Bybit Spot fornece barras reais ordenadas e sem Supabase',{concurrency:false},async()=>{
  const oldFetch=globalThis.fetch,oldCaches=globalThis.caches,calls=[];
  const source=fs.readFileSync('cloudflare/diario-screeners/index.mjs','utf8');
- const api=(await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source))).default;
+ const api=(await import('../cloudflare/diario-screeners/index.mjs?test=v762-2')).default;
  globalThis.caches={default:{match:async()=>null,put:async()=>{}}};
  globalThis.fetch=async url=>{
   calls.push(String(url));
@@ -74,7 +74,7 @@ test('Cloudflare: quando Binance responde 451, Bybit Spot fornece barras reais o
 test('Cloudflare: B3 usa histórico real da brapi quando Yahoo bloqueia',{concurrency:false},async()=>{
  const oldFetch=globalThis.fetch,oldCaches=globalThis.caches,calls=[];
  const src=fs.readFileSync('cloudflare/diario-screeners/index.mjs','utf8');
- const api=(await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(src))).default;
+ const api=(await import('../cloudflare/diario-screeners/index.mjs?test=v762-3')).default;
  globalThis.caches={default:{match:async()=>null,put:async()=>{}}};
  globalThis.fetch=async url=>{
   calls.push(String(url));
@@ -98,7 +98,7 @@ test('Cloudflare: B3 usa histórico real da brapi quando Yahoo bloqueia',{concur
 test('Cloudflare: ação EUA recorre a histórico Nasdaq EOD sem sintetizar barras intradiárias',{concurrency:false},async()=>{
  const oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
  const src=fs.readFileSync('cloudflare/diario-screeners/index.mjs','utf8');
- const api=(await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(src))).default;
+ const api=(await import('../cloudflare/diario-screeners/index.mjs?test=v762-4')).default;
  globalThis.caches={default:{match:async()=>null,put:async()=>{}}};
  globalThis.fetch=async url=>{
   if(String(url).includes('finance.yahoo.com/'))return new Response('',{status:429});
