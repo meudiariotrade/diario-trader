@@ -9,6 +9,12 @@ on:
       - 'tests/cloudflare-finnhub-v940.test.cjs'
       - 'cloudflare/diario-noticias/wrangler.jsonc'
       - '.github/workflows/cloudflare-noticias.yml'
+  pull_request:
+    paths:
+      - 'cloudflare/diario-noticias/**'
+      - 'supabase/functions/notificar/noticias-urgentes.ts'
+      - 'tests/cloudflare-finnhub-v940.test.cjs'
+      - '.github/workflows/cloudflare-noticias.yml'
   workflow_dispatch:
 permissions:
   contents: read
