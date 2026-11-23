@@ -63,7 +63,7 @@ export async function autenticarUsuario(env, request) {
   const hasAudience = claims?.aud === 'authenticated' ||
     (Array.isArray(claims?.aud) && claims.aud.includes('authenticated'));
   if (claims?.iss !== origin + '/auth/v1' || !hasAudience || claims.role !== 'authenticated' ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(claims.sub || '') ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(claims.sub || '') ||
       !Number.isSafeInteger(claims.exp) || claims.exp <= now ||
       (claims.nbf !== undefined && (!Number.isSafeInteger(claims.nbf) || claims.nbf > now + 30)) ||
       (claims.iat !== undefined && (!Number.isSafeInteger(claims.iat) || claims.iat > now + 30))) return null;
