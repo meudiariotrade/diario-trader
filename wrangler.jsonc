@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/wrangler.json",
   "name": "diario-trader",
-  "main": "cloudflare/diario-noticias/producao-snapshot-v890.mjs",
+  "main": "cloudflare/diario-noticias/producao-snapshot-v894.mjs",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
   "triggers": {

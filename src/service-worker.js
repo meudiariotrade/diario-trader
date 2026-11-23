@@ -1,7 +1,7 @@
 /* Cache de uma publicação completa. Arquivos essenciais nunca são atualizados isoladamente. */
 const C='diario-v__APP_VERSION__-confiabilidade',CDN='diario-cdn-v__APP_VERSION__',CDN_LIMIT=40;
 const APP_VERSION='__APP_VERSION__';
-const CORE=["mercado.css","relatorios-dados.js","fiscal-conferencia.js","dominios.js","runtime-dominios.js","analises-modelo.js","screeners-inteligencia.js","screeners-grafico.js","screeners-top10.js","screeners-relatorio.js","tecnico-engine.js","tecnico-worker.js","institutional-v781.js","xbrl-periodos.js","feed-contract-v787.js","feed-profit-v788.js","binance-stream-v790.js","feed-finnhub-v791.js","source-health-v793.js","historico-qualidade-v794.js","snapshot-contract-v800.js","backtest-gates-v801.js","economatica-fatos-v795.js","corporate-candles-v792.js","tecnico-pdf.js","pesquisa-pdf.js","tecnico-ui.js","analises-plus.js","analises.js","analises.css","organizacao.js","version.js","chunks.js","sync-recovery.js","aulas-recuperacao.js","projeto-2027.js","terminal-bbg.js","modo-simples.js","plano-operacional.js","estudos-mercado-v546.js","mercado-simples-v549.js","melhorias-v550.js","profit-cotacoes-v552.js","tape-live.js","ajustes-v554.js","terminal-comandos.js","terminal-inicio.js","navegacao-simples.js","organizacao-v573.js","index.html","config.js","estudos-modelo.js","tema-claro-v427.css","tema-cedo-v427.js","manifest.webmanifest","icon-192.png","icon-512.png","nucleo-v560.js","camadas-v560.js","validacao-terminal.js","terminal-gestos-seguros.js","terminal-fonte-v533.js","estudos-rolagem-v528.js","acoes-fortes-v529.js","estilo-v560.css","capa-v560.js","relatorio-pdf-v560.js","apple-touch-icon.png","capas-v561.js","jornal-v561.js","mesa-v562.js","ajustes-v564.js","claro-v568.js","mercado-v565.js","cerebro-ia.js","cerebro-estudos.js","historico-fundamentos.js","historico-pdf.js","pdf-logos.js","aula-animada.js","fibo-visual.js","src/shared/sessoes-mercado.js","src/operations/plano-execucao.js","src/shared/memoria-previsao.js","src/shared/barra-contexto.js","src/shared/color-link.js","src/shared/ficha-ativo.js","src/shared/painel-carteira.js","src/studies/estudos-visual.js","src/shared/niveis-plano.js","src/shared/ui-base.js","src/shared/interpretacao-sessao.js","src/shared/cache-publico.js","src/shared/inteligencia-integrada.js","src/shared/leitura-mercado.js","src/intelligence/etapa1.js","src/shared/atalhos-iphone.js","src/shared/inteligencia-etapa2-dados.js","src/intelligence/etapa2.js"];
+const CORE=["mercado.css","relatorios-dados.js","fiscal-conferencia.js","dominios.js","runtime-dominios.js","analises-modelo.js","screeners-inteligencia.js","screeners-grafico.js","screeners-top10.js","screeners-relatorio.js","tecnico-engine.js","tecnico-worker.js","institutional-v781.js","xbrl-periodos.js","feed-contract-v787.js","feed-profit-v788.js","binance-stream-v790.js","feed-finnhub-v791.js","source-health-v793.js","historico-qualidade-v794.js","snapshot-contract-v800.js","backtest-gates-v801.js","economatica-fatos-v795.js","corporate-candles-v792.js","tecnico-pdf.js","pesquisa-pdf.js","tecnico-ui.js","analises-plus.js","analises.js","analises.css","organizacao.js","version.js","chunks.js","sync-recovery.js","aulas-recuperacao.js","projeto-2027.js","terminal-bbg.js","modo-simples.js","plano-operacional.js","estudos-mercado-v546.js","mercado-simples-v549.js","melhorias-v550.js","profit-cotacoes-v552.js","tape-live.js","ajustes-v554.js","terminal-comandos.js","terminal-inicio.js","navegacao-simples.js","organizacao-v573.js","index.html","config.js","estudos-modelo.js","tema-claro-v427.css","tema-cedo-v427.js","manifest.webmanifest","icon-192.png","icon-512.png","nucleo-v560.js","camadas-v560.js","validacao-terminal.js","terminal-gestos-seguros.js","terminal-fonte-v533.js","estudos-rolagem-v528.js","acoes-fortes-v529.js","estilo-v560.css","capa-v560.js","relatorio-pdf-v560.js","apple-touch-icon.png","capas-v561.js","jornal-v561.js","mesa-v562.js","ajustes-v564.js","claro-v568.js","mercado-v565.js","cerebro-ia.js","cerebro-estudos.js","historico-fundamentos.js","historico-pdf.js","pdf-logos.js","aula-animada.js","fibo-visual.js","src/shared/sessoes-mercado.js","src/operations/plano-execucao.js","src/shared/memoria-previsao.js","src/shared/barra-contexto.js","src/shared/color-link.js","src/shared/ficha-ativo.js","src/shared/painel-carteira.js","src/studies/estudos-visual.js","src/shared/niveis-plano.js","src/shared/ui-base.js","src/shared/interpretacao-sessao.js","src/shared/cache-publico.js","src/shared/mercado-cloudflare-v894.js","src/shared/inteligencia-integrada.js","src/shared/leitura-mercado.js","src/intelligence/etapa1.js","src/shared/atalhos-iphone.js","src/shared/inteligencia-etapa2-dados.js","src/intelligence/etapa2.js"];
 const EXTRA=["pdf-documentos.js","pdf-sans.ttf","pdf-sans-bold.ttf","pdf-serif-bold.ttf","pdf-lib.min.js","fontkit.umd.min.js","fontes-pdf.js","arte.js","cnpi.js","estudos.js","ingles.js","card-colecao-sazonal.jpg","card-halloween-touro.jpg","card-mercados-brasil-eua.jpg","card-natal-touro.jpg","editorial-mercado-v379.jpg"];
 const CDN_OK=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)\//;
 self.addEventListener('install',event=>{
@@ -25,10 +25,10 @@ self.addEventListener('activate',event=>{
  })());
 });
 /*
- * v893 — Roteamento de dados PÚBLICOS do Mercado para a Cloudflare.
+ * v894 — Roteamento exclusivo de dados PÚBLICOS pela Cloudflare.
  * Somente quatro Edge Functions legadas são interceptadas. Auth, operações,
  * carteiras, notificações, demais funções e dados privados continuam intocados.
- * A chamada original fica como reserva quando a resposta pública falhar.
+ * Não há fallback para a Edge Function de mercado no Supabase.
  * Nunca encaminhar apikey, JWT, cookies ou dados pessoais ao Worker público.
  */
 const MERCADO_CF_BASE='https://diario-trader.lucianosilva43567.workers.dev';
@@ -79,10 +79,10 @@ self.addEventListener('fetch',event=>{
  if(!MERCADO_CF_FUNCOES.has(funcao))return;
  event.respondWith((async()=>{
    let dados;
-   try{dados=await req.clone().json()}catch{return fetch(req)}
-   if(!dados||typeof dados!=='object'||Array.isArray(dados))return fetch(req);
+   try{dados=await req.clone().json()}catch{return Response.json({error:'Payload de mercado inválido',erro:'Payload de mercado inválido',semFallbackSupabase:true},{status:400})}
+   if(!dados||typeof dados!=='object'||Array.isArray(dados))return Response.json({error:'Payload de mercado inválido',erro:'Payload de mercado inválido',semFallbackSupabase:true},{status:400});
    const destino=mercadoCfUrl(funcao,dados);
-   if(!destino)return fetch(req);
+   if(!destino)return Response.json({error:'Consulta pública inválida; nenhuma requisição enviada ao Supabase',erro:'Consulta pública inválida; nenhuma requisição enviada ao Supabase',semFallbackSupabase:true},{status:400});
    try{
      // Request NOVO sem qualquer cabeçalho privado do Supabase.
      const resposta=await fetch(destino,{
@@ -96,8 +96,8 @@ self.addEventListener('fetch',event=>{
          if(mercadoCfValido(funcao,String(dados.modo||''),payload))return resposta;
        }
      }
-   }catch(_){/* fallback controlado: não perder funções existentes */}
-   return fetch(req);
+   }catch(_){/* Sem fallback ao Supabase para dados de mercado. */}
+   return Response.json({error:'Dados públicos indisponíveis na Cloudflare',erro:'Dados públicos indisponíveis na Cloudflare',semFallbackSupabase:true},{status:503,headers:{'Cache-Control':'no-store'}});
  })());
 });
 
