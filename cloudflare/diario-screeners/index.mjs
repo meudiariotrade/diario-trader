@@ -1,4 +1,5 @@
 import {servePublicSnapshot,refreshBoth,SCREENER_CRON} from './snapshot-cache-v896.mjs';
+import {resumoAurea} from './aurea-resumao-v904.mjs';
 // Snapshot público e imutável por janela de cache. Nenhum JWT, carteira ou segredo sai do Worker.
 const CACHE_CONTROL='public, max-age=900, s-maxage=1800';
 const CORS={
@@ -45,9 +46,10 @@ async function logado(env,req){
 }
 export default {
  async fetch(request,env,ctx){
+  const url=new URL(request.url);
+  if(url.pathname==='/v1/aurea-resumao')return resumoAurea(request,env);
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:CORS});
   if(request.method!=='GET')return json({error:'Somente leitura'},405);
-  const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,servico:'screeners-edge',sem_dados_privados:true});
   if(url.pathname==='/v1/voz'){
    const texto=String(url.searchParams.get('t')||'').replace(/\s+/g,' ').trim(),voz=url.searchParams.get('v')||'Charon';

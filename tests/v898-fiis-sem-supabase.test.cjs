@@ -32,7 +32,6 @@ test('v898: novos botões não invocam a função analise do Supabase', () => {
   const novos = [
     trecho(analises, "if('apFiiConselho' in ds)", "if('apFiitese' in ds)"),
     trecho(aurea, "const antiBtn=event.target.closest('[data-aurea-antitilt]')", "const ouvBtn=event.target.closest('[data-aurea-ouvir]')"),
-    trecho(aurea, "const resBtn=event.target.closest('[data-aurea-resumao]')", "const revBtn=event.target.closest('[data-aurea-revisao]')"),
     trecho(carteira, "const aud=event.target.closest?.('[data-rb694-auditoria]')", "const btn=event.target.closest?.('[data-rb694-munger]')"),
   ];
   for (const s of novos) {
@@ -40,4 +39,11 @@ test('v898: novos botões não invocam a função analise do Supabase', () => {
     assert.doesNotMatch(s, /\bvoid\s+ecoPergunta\s*\(|\bawait\s+ecoPergunta\s*\(/);
     assert.doesNotMatch(s, /fetch\s*\(\s*[^)]*\/functions\/v1\/analise/);
   }
+  // v904: o Resumão foi restaurado dentro do app, mas segue fora das Edge
+  // Functions do Supabase. Apenas a validação de login permanece no Auth.
+  const resumo = trecho(aurea, "const resBtn=event.target.closest('[data-aurea-resumao]')", "const revBtn=event.target.closest('[data-aurea-revisao]')");
+  assert.match(resumo,/workers\.dev\/v1\/aurea-resumao/);
+  assert.match(resumo,/credentials:'omit'/);
+  assert.doesNotMatch(resumo,/\/functions\/v1\/analise|\bawait\s+ecoPergunta\s*\(/);
+  assert.doesNotMatch(resumo,/Resumão da Áurea copiado/);
 });

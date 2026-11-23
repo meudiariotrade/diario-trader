@@ -3,7 +3,7 @@
   'use strict';
   if (w.DiarioInteligenciaEtapa1) return;
   const URL_BASE = 'https://diario-trader.lucianosilva43567.workers.dev';
-  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false, extras: null, extrasAt: 0, extrasBusy: false, agenda: null, agendaAt: 0, agendaBusy: false, edicaoManual: '', revisaoBusy: false, revisaoOut: '' };
+  const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false, extras: null, extrasAt: 0, extrasBusy: false, agenda: null, agendaAt: 0, agendaBusy: false, edicaoManual: '', revisaoBusy: false, revisaoOut: '', resumaoBusy:false, resumaoHtml:'', resumaoEd:'' };
   const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = x => typeof x==='number' && Number.isFinite(x);
   const format = x => number(x) ? x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—';
@@ -712,8 +712,9 @@
       '<p class="mut sm">Fonte: '+fonte+' · '+(recent?'Atualizado: ':'Último registro (não é tempo real): ')+
         when(state.mercado?.atualizadoEm)+'</p>'+
       (context?.warning?'<p class="mut sm">'+escape(context.warning)+'</p>':'')+
-      '<div style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" data-aurea-resumao="'+ed+'">'+info.cta+'</button>'+
+      '<div style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" data-aurea-resumao="'+ed+'"'+(state.resumaoBusy?' disabled aria-busy="true"':'')+'">'+(state.resumaoBusy?'Gerando resumão…':info.cta)+'</button>'+
       ('speechSynthesis' in w?'<button type="button" class="btn s" data-aurea-ouvir="'+ed+'">'+(state.falando?'⏹ Parar áudio':'🔊 Ouvir')+'</button>':'')+'</div>'+
+      (state.resumaoEd===ed&&state.resumaoHtml?'<div data-aurea-resumo-gerado style="margin:8px 0;padding:10px 0;border-top:1px solid rgba(255,255,255,.12);white-space:pre-wrap;font-size:13px;line-height:1.5">'+state.resumaoHtml+'</div>':'')+
       '<details><summary>Fatos publicados, hipóteses e fontes · '+mine.length+' ligados aos seus ativos</summary>'+
       '<ul class="v810-intel-events">'+top+'</ul>'+
       (hot.length?'<div><b>Hipóteses condicionadas</b></div>'+
@@ -903,6 +904,8 @@
     }
     const resBtn=event.target.closest('[data-aurea-resumao]');
     if(resBtn){
+      if(state.resumaoBusy)return;
+      event.preventDefault();
       const ed=resBtn.dataset.aureaResumao||'manha';
       const futUS=futurosEuaStatus();
       const nomes={
@@ -936,8 +939,41 @@
         '2) Reflexo esperado no Brasil (B3, WIN, WDO, dólar, curva de juros e commodities), '+
         '3) Agenda crítica BR/EUA (quais horários e dados podem virar o pregão), '+
         '4) Plano tático & riscos de armadilha (o que observar na abertura, pontos de atenção em WIN/WDO e nos ativos acompanhados).';
-      // Resumão preparado no dispositivo, sem acionar a função analise do Supabase.
-      try{const c=w.navigator?.clipboard?.writeText?.(prompt);if(c?.then)void c.then(()=>w.alert('Resumão da Áurea copiado. Cole na IA de sua preferência; nada foi enviado ao Supabase.')).catch(()=>w.prompt('Copie o resumão da Áurea:',prompt));else w.prompt('Copie o resumão da Áurea:',prompt);}catch(_){w.prompt('Copie o resumão da Áurea:',prompt);}
+      // v904: a resposta volta à tela pela Cloudflare, nunca pela função analise do Supabase.
+      // Indisponibilidade do provedor gratuito apresenta um resumo LOCAL identificado.
+      state.resumaoBusy=true;
+      state.resumaoEd=ed;
+      state.resumaoHtml='';
+      repaint();
+      try{
+        if(typeof tok==='function')await tok(); // Apenas renovação de login, permitida.
+        const jwt=typeof SESS!=='undefined'?String(SESS?.at||''):'';
+        if(jwt.length<40)throw Error('Faça login para usar a IA gratuita.');
+        const res=await w.fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
+          method:'POST',mode:'cors',credentials:'omit',cache:'no-store',redirect:'error',
+          headers:{'Content-Type':'application/json',Accept:'application/json',Authorization:'Bearer '+jwt},
+          body:JSON.stringify({edicao:ed,prompt:prompt.slice(0,6000)}),
+          signal:AbortSignal.timeout(34000)
+        });
+        const j=await res.json().catch(()=>({}));
+        if(!res.ok||!j.ok||!j.text)throw Error(j.error||'A IA não conseguiu gerar o texto agora.');
+        state.resumaoHtml='<b>✦ Resumão da Áurea · IA gratuita ('+escape(j.model||'Cloudflare')+')</b>\n\n'+
+          escape(String(j.text).slice(0,7500)).replace(/\n{3,}/g,'\n\n');
+      }catch(err){
+        const stale=state.mercado?.atualizadoEm?'Último registro: '+when(state.mercado.atualizadoEm)+'.':'Sem carimbo de atualização confiável.';
+        const blocos=[
+          '1) Futuros EUA e criptomoedas: '+futUS.label+'. '+(p.riskLabel?'Humor do painel: '+p.riskLabel+'. ':'Sem leitura de humor validada.')+(p.texto?' Referências: '+p.texto+'.':''),
+          '2) Brasil, WIN e WDO: '+(m.nome&&!/insuficiente|Sem leitura/i.test(m.nome)?'Amplitude observada: '+m.nome+'. ':'Sem confirmação de tendência.')+(p.divergencia?' '+p.divergencia:' Observe câmbio, curva DI, commodities e a abertura antes de concluir direção.'),
+          '3) Agenda BR/EUA: '+(agEvs.length?agEvs.join(' · '):'Nenhum evento de alto impacto validado no painel para este momento. Consulte a agenda oficial.'),
+          '4) Plano e riscos: aguarde dados atualizados, confirme a estrutura dos preços e a liquidez de WIN/WDO; não opere com base apenas nesta síntese.'
+        ];
+        state.resumaoHtml='<b>Resumão com dados locais · IA temporariamente indisponível</b>\n'+
+          '<span class="mut sm">'+escape(String(err?.message||'Sem conexão com o provedor').slice(0,160))+' · '+escape(stale)+'</span>\n\n'+
+          blocos.map(x=>escape(x)).join('\n\n');
+      }finally{
+        state.resumaoBusy=false;
+        repaint();
+      }
       return;
     }
     const revBtn=event.target.closest('[data-aurea-revisao]');
