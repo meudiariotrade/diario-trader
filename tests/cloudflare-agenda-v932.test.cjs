@@ -8,7 +8,8 @@ test('v932: os 16 jobs antigos estão representados e a execução é opt-in',as
  assert.equal(JOBS_V932.length,16);
  assert.equal(new Set(JOBS_V932.map(x=>x.name)).size,16);
  assert.deepEqual(conf.triggers.crons,['7,37 * * * *','*/15 13-20 * * MON-FRI','* * * * *']);
- assert.equal(conf.vars.AGENDA_CUTOVER_ENABLED,'0');
+ assert.equal(conf.vars.AGENDA_CUTOVER_ENABLED,'1');
+ assert.equal(conf.vars.AGENDA_PREFLIGHT_ENABLED,'0');
  assert.equal(conf.keep_vars,true);
 });
 test('v932: preserva UTC e dias úteis dos gatilhos que migraram',async()=>{
