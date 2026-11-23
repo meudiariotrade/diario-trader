@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'cloudflare/diario-screeners/**'
+      - 'tests/v904-aurea-panorama.test.cjs'
+      - 'tests/aurea-jwks.test.cjs'
       - '.github/workflows/cloudflare-tecnico.yml'
   workflow_dispatch:
 permissions:
@@ -25,7 +27,7 @@ jobs:
         with:
           node-version: '24'
       - name: Testar contrato e ausência de fallback para Supabase
-        run: node --test tests/cloudflare-screeners-v896.test.cjs tests/v904-aurea-panorama.test.cjs
+        run: node --test tests/cloudflare-screeners-v896.test.cjs tests/v904-aurea-panorama.test.cjs tests/aurea-jwks.test.cjs
       - name: Verificar pré-requisitos de publicação
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

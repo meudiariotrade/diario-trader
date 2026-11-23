@@ -1,17 +1,24 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
+const {generateKeyPairSync,sign}=require('node:crypto');
 const uid='11111111-1111-4111-8111-111111111111';
 const origin='https://meudiariotrade.github.io';
-const token='a'.repeat(80);
+const authOrigin='https://teste.supabase.co';
+const {privateKey,publicKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
+const jwk={...publicKey.export({format:'jwk'}),alg:'ES256',kid:'v904-test-key',use:'sig'};
+const enc=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
+const payload={iss:authOrigin+'/auth/v1',aud:'authenticated',role:'authenticated',sub:uid,exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000)};
+const msg=enc({typ:'JWT',alg:'ES256',kid:jwk.kid})+'.'+enc(payload);
+const token=msg+'.'+sign('sha256',Buffer.from(msg),{key:privateKey,dsaEncoding:'ieee-p1363'}).toString('base64url');
 const modulePromise=import('../cloudflare/diario-screeners/aurea-resumao-v904.mjs');
-const env=()=>({SUPABASE_URL:'https://teste.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_teste',GEMINI_API_KEY:'secret_key_test',SCREENER_CACHE:{state:new Map(),async get(k){return this.state.get(k)||null},async put(k,v){this.state.set(k,v)}}});
+const env=()=>({SUPABASE_URL:authOrigin,SUPABASE_ANON_KEY:'sb_publishable_teste',GEMINI_API_KEY:'secret_key_test',SCREENER_CACHE:{state:new Map(),async get(k){return this.state.get(k)||null},async put(k,v){this.state.set(k,v)}}});
 function post(o={},body){return new Request('https://screeners.worker.test/v1/aurea-resumao',{method:'POST',headers:{Origin:o.origin||origin,Authorization:o.token===null?'':'Bearer '+(o.token||token),'Content-Type':'application/json'},body:JSON.stringify(body||{edicao:'manha',prompt:'Resumão do mercado financeiro nesta manhã, preparar 4 blocos de análise com dados observados e cenários condicionais. As fontes podem estar atrasadas e não se pode inventar preços.'})});}
 test('v904: Resumão da Áurea entrega texto dentro do app, sem PostgREST, usando Gemini na Cloudflare',async()=>{
  const original=global.fetch,requests=[],e=env();
  global.fetch=async(url,init)=>{
   requests.push({url:String(url),init});
-  if(String(url).endsWith('/auth/v1/user'))return Response.json({id:uid});
+  if(String(url).endsWith('/auth/v1/.well-known/jwks.json'))return Response.json({keys:[jwk]});
   if(String(url).includes('generativelanguage.googleapis.com'))return Response.json({candidates:[{content:{parts:[{text:'1) Futuros EUA: dados atrasados. 2) Brasil: aguardar abertura. 3) Agenda: verificar fontes oficiais. 4) Risco: evitar operar sem confirmação.'}]}}]});
   throw Error('Chamada não permitida');
  };
@@ -23,7 +30,8 @@ test('v904: Resumão da Áurea entrega texto dentro do app, sem PostgREST, usand
   assert.equal(data.ok,true);assert.match(data.text,/Futuros EUA/);
   assert.equal(response.headers.get('cache-control'),'private, no-store');
   assert.equal(requests.filter(x=>x.url.includes('supabase.co')).length,1);
-  assert.ok(requests[0].url.endsWith('/auth/v1/user'));
+  assert.ok(requests[0].url.endsWith('/auth/v1/.well-known/jwks.json'));
+  assert.ok(!requests.some(x=>x.url.endsWith('/auth/v1/user')));
   assert.ok(!requests.some(x=>/\/rest\/v1|\/functions\/v1|\/storage\/v1/.test(x.url)));
   assert.ok(!requests.some(x=>x.url.includes('generativelanguage')&&x.init.headers.Authorization));
  }finally{global.fetch=original;}
@@ -41,7 +49,7 @@ test('v904: origem não autorizada e ausência de login bloqueadas antes de envi
 });
 test('v904: limite gratuito e CORS pré-flight são respeitados',async()=>{
  const {resumoAurea}=await modulePromise,e=env(),old=global.fetch;
- global.fetch=async()=>Response.json({id:uid});
+ global.fetch=async(url)=>String(url).endsWith('/auth/v1/.well-known/jwks.json')?Response.json({keys:[jwk]}):Response.json({id:uid});
  try{
   const day=new Date().toISOString().slice(0,10);
   await e.SCREENER_CACHE.put('aurea:usage:v904:'+uid+':'+day,'14');
@@ -82,7 +90,7 @@ test('Conselho usa a instrução da especialidade e devolve o parecer para cada 
    const prompt='Considere os indicadores e as limitações fornecidas para esta consulta do Conselho no app.';
    const resposta='Resposta de teste do Conselho para validar a entrega da análise solicitada.';
    global.fetch=async(url,init)=>{
-    if(String(url).endsWith('/auth/v1/user'))return Response.json({id:uid});
+    if(String(url).endsWith('/auth/v1/.well-known/jwks.json'))return Response.json({keys:[jwk]});
     const payload=JSON.parse(init.body);
     assert.ok(payload.systemInstruction.parts[0].text.includes(especialidade));
     assert.equal(payload.contents[0].parts[0].text,prompt);
