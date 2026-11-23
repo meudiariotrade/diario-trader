@@ -291,7 +291,7 @@ function viewRadar(){
    '</tbody></table></div><aside class="ap-dest"><p class="ap-lbl">Mais fortes · mês</p>'+forte.map(([s,o])=>'<div><span>'+E(s)+'</span><b class="'+cor(o['1M'])+'">'+sinal(o['1M'])+'</b></div>').join('')+
    '<p class="ap-lbl">Mais fracos · mês</p>'+fraco.map(([s,o])=>'<div><span>'+E(s)+'</span><b class="'+cor(o['1M'])+'">'+sinal(o['1M'])+'</b></div>').join('')+
    '<p class="ap-mut">Atualizado em '+new Date(st.rot.at).toLocaleString('pt-BR')+(st.nProfit?' · 1D ao vivo ('+st.nProfit+' ativos)':'')+'</p>'+'</aside></div>':'<p class="ap-mut">'+(st.rotLoading?'Buscando séries diárias…':'Toque em "Calcular rotação" (usa o cache de cotações do Técnico).')+'</p>')+'</section>'+
-  '<div class="ap-bar"><b>Radar &amp; Distorções</b>'+['','Large','Mid','Small','Micro'].map(p=>'<button type="button" class="ap-chip'+(st.radarPorte===p?' on':'')+'" data-ap-rporte="'+p+'">'+(p||'Todas')+'</button>').join('')+
+  '<div class="ap-bar"><b>Radar &amp; Distorções</b><button type="button" class="btn s" data-ap-faltam>Copiar tickers sem cotação</button>'+['','Large','Mid','Small','Micro'].map(p=>'<button type="button" class="ap-chip'+(st.radarPorte===p?' on':'')+'" data-ap-rporte="'+p+'">'+(p||'Todas')+'</button>').join('')+
   (st.radarSetor?'<button type="button" class="ap-chip on" data-ap-setor="">'+E(st.radarSetor)+' ✕</button>':'')+'</div>'+
   cardsLista('Oportunidades claras','Em Distorções de valuation e em pelo menos mais um radar (Reprecificação, PEG ou Ignoradas), sem risco elevado. Convergência reduz falsos positivos.',R.op,r=>'Nota '+fmt(r.nota,1),'dest','op')+
   cardsLista('Reprecificação (momentum)','Crescimento do lucro > 10% (último exercício CVM), ROIC > 10% e P/L < 20: momentum operacional forte com valuation ainda contido.',R.rep,r=>'Cresc. lucro '+sinal(r.g1,1),'','rep')+
@@ -428,7 +428,7 @@ function enter(tab){if(tab)st.tab=tab;st._rotTentou=0;if(tab!=='ativo'&&!st._abr
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
-d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese]');
+d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese]');
  if(!t||!t.closest('#ap-root'))return;const ds=t.dataset;
  if('apQ' in ds){ev.preventDefault();ev.stopPropagation();st.q=ds.apQ;render();return}
  if('apGuia' in ds){st.q='';d.querySelector('[data-an-sub="guia"]')?.click();return}
@@ -444,9 +444,7 @@ d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-q],[data-a
   const fii=st.fiis?.rows?.find(x=>x.ticker===ds.apFiiConselho);
   const ctx=fii?(fii.ticker+' ('+fii.tipo+' · '+fii.segmento+') — Cotação '+brl(fii.cotacao)+', P/VP '+fmt(fii.p_vp,2)+', DY 12m '+pct(fii.dy)+', Spread NTN-B '+sinal(fii.spread_ntnb,2)+', Vacância '+(fii.vacancia!=null?fmt(fii.vacancia,1)+'%':'—')+', Liquidez '+cmp(fii.liquidez)+', Nota FII '+fii.score+'/100'+(fii.alertas?.length?' · Alertas: '+fii.alertas.join('; '):'')):ds.apFiiConselho;
   const prompt='@graham Faça uma avaliação objetiva de FII combinando Graham (P/VP, margem de segurança e spread vs NTN-B) e Munger (qualidade de gestão, vacância, concentração e risco de yield trap) para:\n'+ctx;
-  // Não invocar ecoPergunta: a função encaminha para Supabase /functions/v1/analise.
-  // Prepara o parecer sem transmitir dados a nenhum backend.
-  try{const c=w.navigator?.clipboard?.writeText?.(prompt);if(c?.then)void c.then(()=>w.alert('Prompt do Conselho copiado. Cole na IA de sua preferência; nenhum dado foi enviado ao Supabase.')).catch(()=>w.prompt('Copie o prompt do Conselho:',prompt));else w.prompt('Copie o prompt do Conselho:',prompt);}catch(_){w.prompt('Copie o prompt do Conselho:',prompt);}
+  w.DiarioConselhoIA('fiis', 'Parecer Graham + Munger', prompt);
   return;
  }
  if('apFiitese' in ds){
@@ -457,7 +455,9 @@ d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-q],[data-a
  }
  if('apRecarregar' in ds){carregar(true);return}
  if('apSerie' in ds){carregaSerie(ds.apSerie,true);return}
- if('apFaltam' in ds){const R=st.X?.retornos||{},P=pf(),l=st.rows.rows.filter(r=>!R[r.ticker]&&!P[r.ticker]).map(r=>r.ticker);navigator.clipboard?.writeText(l.join('\n'));t.textContent=l.length+' tickers copiados';return}
+ if('apFaltam' in ds){const R=st.X?.retornos||{},P=pf(),l=st.rows.rows.filter(r=>!R[r.ticker]&&!P[r.ticker]).map(r=>r.ticker);if(!l.length){t.textContent='Nenhum ticker sem cotação';return}
+  try{await navigator.clipboard.writeText(l.join('\n'));t.textContent=l.length+' tickers copiados'}
+  catch{w.prompt('Copie os tickers sem cotação:',l.join('\n'))}return}
  if('apVoltar' in ds){st.tk='';}
  else if('apAtivo' in ds&&!ev.target.closest('button[data-ap-tedit],button[data-ap-tdel]')){st.tk=ds.apAtivo;st.sub='visao';st.showJusto=false;w.DiarioBarraContexto?.definirFoco?.(ds.apAtivo);d.getElementById('ap-root')?.scrollIntoView({block:'start'})}
  else if('apSort' in ds){const k=ds.apSort;if(st.f.sort===k)st.f.dir*=-1;else{st.f.sort=k;st.f.dir=['ticker','setor','porte','pl','pvp','ev_ebitda','div_liq_ebitda'].includes(k)?1:-1}salvaF()}

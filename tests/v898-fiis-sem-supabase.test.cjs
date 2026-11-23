@@ -35,7 +35,7 @@ test('v898: novos botões não invocam a função analise do Supabase', () => {
     trecho(carteira, "const aud=event.target.closest?.('[data-rb694-auditoria]')", "const btn=event.target.closest?.('[data-rb694-munger]')"),
   ];
   for (const s of novos) {
-    assert.match(s, /clipboard\?\.writeText|clipboard\.writeText/);
+    assert.match(s, /DiarioConselhoIA\(/);
     assert.doesNotMatch(s, /\bvoid\s+ecoPergunta\s*\(|\bawait\s+ecoPergunta\s*\(/);
     assert.doesNotMatch(s, /fetch\s*\(\s*[^)]*\/functions\/v1\/analise/);
   }

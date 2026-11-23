@@ -359,11 +359,9 @@ D.addEventListener('click',event=>{
 D.addEventListener('click',event=>{
  const aud=event.target.closest?.('[data-rb694-auditoria]');
  if(aud){
-  const lista=aud.getAttribute('data-rb694-auditoria')||'minha carteira atual';
+  const lista=aud.getAttribute('data-rb694-auditoria')||'nenhuma posição disponível';
   const prompt='@markowitz Faça uma Auditoria 360° da minha carteira combinando os 4 filtros do Conselho — 1) Markowitz (concentração, correlação e risco), 2) Graham (margem de segurança / onde aportar), 3) Livermore (ativos que podem exigir proteção), 4) Schwartz (exposição a juros e dólar). Posições: '+lista;
-  // Não encaminhar posições privadas ao Supabase: ecoPergunta usaria /functions/v1/analise.
-  // O texto fica somente no dispositivo até o usuário decidir onde analisá-lo.
-  try{const c=W.navigator?.clipboard?.writeText?.(prompt);if(c?.then)void c.then(()=>W.alert('Prompt de Auditoria 360° copiado. Cole na IA de sua preferência; nenhum dado da carteira foi enviado ao Supabase.')).catch(()=>W.prompt('Copie o prompt de Auditoria 360°:',prompt));else W.prompt('Copie o prompt de Auditoria 360°:',prompt);}catch(_){W.prompt('Copie o prompt de Auditoria 360°:',prompt);}
+  W.DiarioConselhoIA('carteira', 'Auditoria 360° da carteira', prompt);
   return;
  }
  const btn=event.target.closest?.('[data-rb694-munger]');

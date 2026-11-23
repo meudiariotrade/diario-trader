@@ -74,3 +74,23 @@ test('v904: Áurea retorna resposta inline, não copia o comando para colar em o
  assert.doesNotMatch(resumo,/clipboard\??\.writeText|Resumão da Áurea copiado/);
  assert.doesNotMatch(resumo,/\/functions\/v1\/analise/);
 });
+test('Conselho usa a instrução da especialidade e devolve o parecer para cada botão', async () => {
+ const {resumoAurea}=await modulePromise;
+ const old=global.fetch;
+ try {
+  for(const [edicao,especialidade] of [['fiis','Graham'],['antitilt','três perguntas'],['carteira','concentração']]){
+   const prompt='Considere os indicadores e as limitações fornecidas para esta consulta do Conselho no app.';
+   const resposta='Resposta de teste do Conselho para validar a entrega da análise solicitada.';
+   global.fetch=async(url,init)=>{
+    if(String(url).endsWith('/auth/v1/user'))return Response.json({id:uid});
+    const payload=JSON.parse(init.body);
+    assert.ok(payload.systemInstruction.parts[0].text.includes(especialidade));
+    assert.equal(payload.contents[0].parts[0].text,prompt);
+    return Response.json({candidates:[{content:{parts:[{text:resposta}]}}]});
+   };
+   const res=await resumoAurea(post({}, {edicao,prompt}),env());
+   assert.equal(res.status,200);
+   assert.equal((await res.json()).text,resposta);
+  }
+ } finally {global.fetch=old;}
+});

@@ -5,6 +5,45 @@
   const URL_BASE = 'https://diario-trader.lucianosilva43567.workers.dev';
   const state = { eventos: null, mercado: null, newsAt: 0, marketAt: 0, loadingNews: false, loadingMarket: false, route: '', abort: null, fluxo: null, flowAt: 0, flowBusy: false, memoria: null, boundary: null, sessionKey: '', analogia: null, analogiaAt: 0, analogiaBusy: false, extras: null, extrasAt: 0, extrasBusy: false, agenda: null, agendaAt: 0, agendaBusy: false, edicaoManual: '', revisaoBusy: false, revisaoOut: '', resumaoBusy:false, resumaoHtml:'', resumaoEd:'' };
   const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  w.DiarioConselhoIA = function (edicao, titulo, prompt) {
+    if (document.getElementById('conselho-ia-resposta')) return;
+    const dialog = document.createElement('dialog');
+    dialog.id = 'conselho-ia-resposta';
+    dialog.setAttribute('aria-labelledby','conselho-ia-titulo');
+    dialog.style.cssText = 'width:min(92vw,580px);max-height:80dvh;overflow:auto;background:var(--ui-surface,#141414);color:inherit;border:1px solid #555;border-radius:6px;padding:18px';
+    dialog.innerHTML = '<h2 id="conselho-ia-titulo"></h2><p role="status" style="white-space:pre-wrap"></p><button class="btn s" type="button" hidden>Tentar novamente</button> <button class="btn s" type="button">Fechar</button>';
+    const [retry,close] = dialog.querySelectorAll('button');
+    const output = dialog.querySelector('p');
+    dialog.querySelector('h2').textContent = titulo;
+    const controller = new AbortController();
+    async function consultar() {
+      retry.hidden = true;
+      output.textContent = 'Consultando o Conselho…';
+      const timer = setTimeout(()=>controller.abort(),50000);
+      try {
+        if(typeof tok==='function') await tok();
+        const jwt=typeof SESS!=='undefined'?SESS?.at:'';
+        if(!jwt) throw Error('Entre na conta para acessar o Conselho.');
+        const res=await w.fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
+          method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal:controller.signal,
+          headers:{'Content-Type':'application/json',Authorization:'Bearer '+jwt},
+          body:JSON.stringify({edicao,prompt})
+        });
+        const data=await res.json();
+        if(!res.ok||!data.ok||!data.text) throw Error(data.error||'A IA não respondeu.');
+        output.textContent=data.text;
+      } catch(error) {
+        output.textContent=controller.signal.aborted?'A consulta demorou demais.':error.message;
+        retry.hidden=false;
+      } finally { clearTimeout(timer); }
+    }
+    close.onclick=()=>dialog.close();
+    retry.onclick=()=>{dialog.close();dialog.remove();w.DiarioConselhoIA(edicao,titulo,prompt)};
+    dialog.addEventListener('close',()=>{controller.abort();dialog.remove()},{once:true});
+    document.body.append(dialog);
+    dialog.showModal();
+    void consultar();
+  };
   const number = x => typeof x==='number' && Number.isFinite(x);
   const format = x => number(x) ? x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—';
   const when = v => { const d=new Date(v);return Number.isFinite(d.getTime()) ? d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}) : 'Horário indisponível'; };
@@ -864,8 +903,7 @@
     const antiBtn=event.target.closest('[data-aurea-antitilt]');
     if(antiBtn){
       const prompt='@munger Ative o protocolo Anti-Tilt de 30 segundos (inversão + Fear-Setting): estou em condição de alerta (cansaço de turno, sequência de stop ou janela de notícia). Me faça 3 perguntas curtas e diretas para eu decidir se reduzo a mão pela metade ou encerro o dia agora.';
-      // Anti-Tilt local: ecoPergunta encaminharia o texto à função analise no Supabase.
-      try{const c=w.navigator?.clipboard?.writeText?.(prompt);if(c?.then)void c.then(()=>w.alert('Perguntas Anti-Tilt copiadas. Cole na IA de sua preferência; nada foi enviado ao Supabase.')).catch(()=>w.prompt('Copie as perguntas Anti-Tilt:',prompt));else w.prompt('Copie as perguntas Anti-Tilt:',prompt);}catch(_){w.prompt('Copie as perguntas Anti-Tilt:',prompt);}
+      w.DiarioConselhoIA('antitilt', 'Checklist Anti-Tilt com Munger', prompt);
       return;
     }
     const ouvBtn=event.target.closest('[data-aurea-ouvir]');
