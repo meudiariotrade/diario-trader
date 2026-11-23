@@ -863,8 +863,15 @@
     const antiBtn=event.target.closest('[data-aurea-antitilt]');
     if(antiBtn){
       const prompt='@munger Ative o protocolo Anti-Tilt de 30 segundos (inversão + Fear-Setting): estou em condição de alerta (cansaço de turno, sequência de stop ou janela de notícia). Me faça 3 perguntas curtas e diretas para eu decidir se reduzo a mão pela metade ou encerro o dia agora.';
-      w.TraderChat?.open?.();
-      if(typeof ecoPergunta==='function')void ecoPergunta(prompt,{pergunta:'✦ Checklist Anti-Tilt · Munger'});
+      // Autoavaliação local: não chamar a IA hospedada no Supabase.
+      const perguntas=[
+        '1/3 — Estou descansado e concentrado para operar?',
+        '2/3 — Estou respeitando o risco e aceitando stops sem tentar recuperar perdas?',
+        '3/3 — Há alguma notícia de alto impacto que exige aguardar?'
+      ];
+      const a=perguntas.map(t=>w.confirm(t));
+      w.alert((!a[0]||!a[1]||a[2])?'Anti-Tilt: reduza a exposição e considere encerrar o dia. Não opere para recuperar perdas.':'Anti-Tilt: sem alerta imediato pelo checklist. Respeite seu plano e limites.');
+
       return;
     }
     const ouvBtn=event.target.closest('[data-aurea-ouvir]');
@@ -918,8 +925,7 @@
       const agAlvo=(ed==='fechamento'||ed==='fimdesemana')&&c?.b3?.nextDate?c.b3.nextDate:hojeIso;
       const agEvs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})>=agAlvo)
         .slice(0,5).map(e=>new Date(e.em).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'America/Sao_Paulo'})+' '+new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' ['+e.p+'] '+String(e.t||'').slice(0,55));
-      const meus=(meusAtivos()||[]).slice(0,8);
-      const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,3).map(e=>tit(e)).join(' | ');
+       const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,3).map(e=>tit(e)).join(' | ');
       const prompt='@schwartz Monte o resumão executivo detalhado da Áurea — '+(nomes[ed]||ed)+
         ' (agora: '+horaSP+' Brasília / '+horaNY+' Nova York). '+
         'Status dos mercados agora: B3='+(c?.b3?.state||'—')+', NYSE/Nasdaq à vista='+(c?.us?.state||'—')+', Futuros EUA (CME Globex: ES/NQ/YM/Ouro/Petróleo)='+futUS.label+'. '+
@@ -929,8 +935,7 @@
         (p.texto?'Cotações no painel: '+p.texto+'. ':'')+
         (m.nome?'Leitura de amplitude: '+m.nome+'. ':'')+
         (agEvs.length?'Agenda alto impacto BR/EUA: '+agEvs.join(' · ')+'. ':'')+
-        (meus.length?'Ativos acompanhados pelo trader: '+meus.join(', ')+'. ':'')+
-        (topNews?'Principais manchetes: '+topNews+'. ':'')+
+         (topNews?'Principais manchetes: '+topNews+'. ':'')+
         'Traga detalhes práticos e objetivos em 4 blocos: '+
         '1) Futuros EUA (CME) & Cripto 24/7 agora (humor de risco, o que está puxando e cuidado com liquidez baixa de domingo/after), '+
         '2) Reflexo esperado no Brasil (B3, WIN, WDO, dólar, curva de juros e commodities), '+
