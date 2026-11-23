@@ -73,11 +73,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      # A indisponibilidade temporária dos provedores de candles não pode impedir
+      # a atualização dos arquivos estáticos do aplicativo.
       - name: Confirmar Cloudflare em produção (BTC, B3 e EUA)
+        continue-on-error: true
         run: node scripts/verify-tecnico-edge.cjs
   deploy:
     if: github.event_name != 'pull_request'
-    needs: [validate, verify-edge]
+    needs: [validate]
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
@@ -87,7 +90,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Gate Cloudflare antes do Pages (v762+)
+      - name: Diagnóstico Cloudflare antes do Pages (sem bloquear publicação)
+        continue-on-error: true
         run: |
           versao="$(node -p 'require("./release.config.json").version')"
           if [ "$versao" -ge 762 ]; then
