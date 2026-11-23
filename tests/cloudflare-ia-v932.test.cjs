@@ -75,3 +75,26 @@ test('v932: roteador prioriza Cloudflare antes da trava GET e o app retém fallb
  assert.match(ui,/e\?\.modo === "explica"/);
  assert.match(ui,/e\?\.modo === "estatisticas"/);
 });
+
+test('v932: tópicos, simulados e inglês retornam seus contratos via Workers AI',async()=>{
+ const {estudosV932}=await import('../cloudflare/diario-screeners/estudos-v932.mjs');
+ const cases=[
+  [{modo:'topicos',materia:'Economia',curso:'Ciências Econômicas'}, {topicos:[{t:'Oferta e demanda',d:1},{t:'Inflação',d:2},{t:'Juros',d:2}]}],
+  [{modo:'quiz',materia:'Economia',topico:'Oferta e demanda',n:3},{questoes:[
+    {q:'Questão 1',o:['a','b','c','d'],c:0,e:'...',r:'manual'},
+    {q:'Questão 2',o:['a','b','c','d'],c:1,e:'...',r:'manual'},
+    {q:'Questão 3',o:['a','b','c','d'],c:2,e:'...',r:'manual'}]}],
+  [{modo:'ingles',cena:'cumprimentos',texto:'hello'}, {resposta:'Hello! How are you?',traducao:'Olá, como você está?',correcao:'',explicacao:'',sugestao:'I am fine.'}]
+ ];
+ const old=global.fetch;global.fetch=async()=>new Response(null,{status:503});
+ try{
+  for(const [payload,answer] of cases){
+   const r=await estudosV932(request('/v1/ia-estudos',payload),env(answer));
+   assert.equal(r.status,200,payload.modo);
+   const body=await r.json();
+   if(payload.modo==='quiz')assert.equal(body.questoes.length,3);
+   if(payload.modo==='topicos')assert.equal(body.topicos.length,3);
+   if(payload.modo==='ingles')assert.equal(body.resposta,'Hello! How are you?');
+  }
+ }finally{global.fetch=old}
+});
