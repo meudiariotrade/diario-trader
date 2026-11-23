@@ -261,6 +261,158 @@ async function profitCandles(req,env,uid,url,origin){
 }
 
 
+
+/* v913: coleções privadas pós-migração em Cloudflare D1.
+ * Sem consulta à origem legada; owner vem exclusivamente do JWT validado.
+ */
+const RECORD_MAX_RETURN=500,RECORD_MAX_WRITE=50,RECORD_MAX_BYTES=650000;
+const RECORD_FIELD=/^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+const RECORD_SELECT_FIELD=/^([A-Za-z_][A-Za-z0-9_]{0,63}):([A-Za-z_][A-Za-z0-9_]{0,63})(?:->>?([A-Za-z_][A-Za-z0-9_]{0,63}))?$/;
+const RECORD_ACTIVE=new Set([
+ 'atalhos_tokens','aulas','aulas_audio_jobs','aulas_fila','aulas_glossario_tts','aulas_imagens_jobs',
+ 'carteira_cfg','carteira_relatorios','estado_diario','fluxo_acoes','fluxo_negocios','limpeza_backup',
+ 'notas_inbox','noticias_urgentes_notificadas','opcoes_grade','operacoes_profit','parceiro',
+ 'profit_prints','push_subs','radar_cfg','radar_sinais','resumos','weekly_reports','analises_trabalhos'
+]);
+const recordJson=(row)=>{try{return JSON.parse(row.payload)}catch{return null}};
+const recordKey=(data,config)=>JSON.stringify(config.keys.map(k=>data[k]));
+const recordPath=(field)=>'$.'+field;
+function recordQuery(url,config,owner){
+ const params=url.searchParams,conditions=[],values=[];
+ let nFilters=0;
+ for(const [field,expr] of params){
+  if(['select','order','limit','offset','on_conflict'].includes(field))continue;
+  if(!RECORD_FIELD.test(field)||typeof expr!=='string'||expr.length>500)
+    return {error:'filtro_invalido'};
+  const match=/^(eq|neq|lt|lte|gt|gte|in|is)\.(.*)$/.exec(expr);
+  if(!match)return {error:'filtro_nao_suportado'};
+  const op=match[1],v=match[2];
+  if(field===config.owner&&op==='eq'&&v!==owner)return {error:'usuario_divergente'};
+  const col="json_extract(payload,'"+recordPath(field)+"')";
+  if(op==='in'){
+   if(!v.startsWith('(')||!v.endsWith(')'))return {error:'lista_invalida'};
+   const items=v.slice(1,-1).split(',').map(x=>x.trim().replace(/^"|"$/g,''));
+   if(!items.length||items.length>40||items.some(x=>x.length>100))return {error:'lista_invalida'};
+   conditions.push(col+' IN ('+items.map(()=>'?').join(',')+')');values.push(...items);
+  }else if(op==='is'&&(v==='null'||v==='true'||v==='false')){
+   if(v==='null')conditions.push(col+' IS NULL');
+   else conditions.push(col+" = "+(v==='true'?'1':'0'));
+  }else if(op==='is')return {error:'tipo_invalido'};
+  else{
+   const sqlOp={eq:'=',neq:'!=',lt:'<',lte:'<=',gt:'>',gte:'>='}[op];
+   if(!sqlOp||v.length>400)return {error:'valor_invalido'};
+   const typed=v==='true'?1:v==='false'?0:/^-?\d+(?:\.\d+)?$/.test(v)?Number(v):v;
+   conditions.push(col+' '+sqlOp+' ?');values.push(typed);
+  }
+  if(field!==config.owner)nFilters++;
+ }
+ const order=params.get('order')||'',sort=[];
+ if(order){
+  const fields=order.split(',');
+  if(fields.length>4)return {error:'ordenacao_excessiva'};
+  for(const spec of fields){
+   const [field,dir]=spec.split('.');
+   if(!RECORD_FIELD.test(field)||!['asc','desc',undefined].includes(dir))
+    return {error:'ordenacao_invalida'};
+   sort.push("json_extract(payload,'"+recordPath(field)+"') "+(dir==='desc'?'DESC':'ASC'));
+  }
+ }
+ const requested=Number(params.get('limit')||100),offset=Number(params.get('offset')||0);
+ if(!Number.isInteger(requested)||requested<1||requested>RECORD_MAX_RETURN||
+    !Number.isInteger(offset)||offset<0||offset>50000)return {error:'paginacao_invalida'};
+ const where='owner=? AND collection=?'+(conditions.length?' AND '+conditions.join(' AND '):'');
+ return {where,values:[...values],nFilters,order:sort.length?' ORDER BY '+sort.join(','):' ORDER BY doc_key ASC',limit:requested,offset};
+}
+function recordProject(data,sel){
+ if(!sel||sel==='*')return data;
+ const out={};
+ for(const field of sel.split(',')){
+  if(RECORD_FIELD.test(field)){out[field]=data[field];continue}
+  const alias=RECORD_SELECT_FIELD.exec(field);
+  if(!alias)return null;
+  out[alias[1]]=alias[3]?data[alias[2]]?.[alias[3]]??null:data[alias[2]];
+ }
+ return out;
+}
+async function privateRecords(req,env,uid,url,origin){
+ const name=decodeURIComponent(url.pathname.slice('/v1/records/'.length));
+ const config=COLECOES[name];
+ if(!RECORD_ACTIVE.has(name)||!config)return out({error:'colecao_nao_permitida'},404,origin,env);
+ const query=recordQuery(url,config,uid);
+ if(query.error)return out({error:query.error},400,origin,env);
+ if(req.method==='GET'){
+  const stmt='SELECT payload FROM private_documents WHERE '+query.where+query.order+' LIMIT ? OFFSET ?';
+  const rows=await env.DB.prepare(stmt).bind(uid,name,...query.values,query.limit,query.offset).all();
+  const select=url.searchParams.get('select')||'*';
+  const items=[];
+  for(const record of rows.results||[]){
+   const value=recordJson(record);
+   if(!value)continue;
+   const row=recordProject(value,select);
+   if(row===null)return out({error:'projecao_invalida'},400,origin,env);
+   items.push(row);
+  }
+  return out(items,200,origin,env);
+ }
+ if(!['POST','PATCH','DELETE'].includes(req.method))
+  return out({error:'metodo_invalido'},405,origin,env);
+ if(req.method!=='POST'&&query.nFilters===0)return out({error:'filtro_obrigatorio'},400,origin,env);
+ if(req.method==='DELETE'||req.method==='PATCH'){
+  const rows=await env.DB.prepare('SELECT doc_key,payload FROM private_documents WHERE '+query.where+' LIMIT 101')
+   .bind(uid,name,...query.values).all();
+  if((rows.results||[]).length>100)return out({error:'operacao_ampla_bloqueada'},413,origin,env);
+  let patch={};
+  if(req.method==='PATCH'){
+   const raw=await req.text();
+   if(new TextEncoder().encode(raw).length>RECORD_MAX_BYTES)return out({error:'lote_grande'},413,origin,env);
+   try{patch=JSON.parse(raw)}catch{return out({error:'json_invalido'},400,origin,env)}
+   if(!patch||typeof patch!=='object'||Array.isArray(patch))return out({error:'patch_invalido'},400,origin,env);
+   if(Object.keys(patch).some(k=>!RECORD_FIELD.test(k)||k===config.owner||config.keys.includes(k)))
+    return out({error:'chave_imutavel'},400,origin,env);
+  }
+  const stmts=(rows.results||[]).map(entry=>{
+   if(req.method==='DELETE')return env.DB.prepare(
+    'DELETE FROM private_documents WHERE owner=? AND collection=? AND doc_key=?'
+   ).bind(uid,name,entry.doc_key);
+   const data=recordJson(entry),updated={...data,...patch};
+   return env.DB.prepare("UPDATE private_documents SET payload=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE owner=? AND collection=? AND doc_key=?")
+     .bind(JSON.stringify(updated),uid,name,entry.doc_key);
+  });
+  if(stmts.length)await env.DB.batch(stmts);
+  return out(req.headers.get('prefer')?.includes('return=representation')?
+   (rows.results||[]).map(e=>recordProject(recordJson(e),url.searchParams.get('select')||'*')):[],200,origin,env);
+ }
+ if(Number(req.headers.get('content-length')||0)>RECORD_MAX_BYTES)
+  return out({error:'lote_grande'},413,origin,env);
+ const raw=await req.text();
+ if(new TextEncoder().encode(raw).length>RECORD_MAX_BYTES)return out({error:'lote_grande'},413,origin,env);
+ let payload;try{payload=JSON.parse(raw)}catch{return out({error:'json_invalido'},400,origin,env)}
+ const items=Array.isArray(payload)?payload:[payload];
+ if(!items.length||items.length>RECORD_MAX_WRITE||items.some(x=>!x||typeof x!=='object'||Array.isArray(x)))
+  return out({error:'registros_invalidos'},400,origin,env);
+ const stmts=[],saved=[],merge=String(req.headers.get('prefer')||'').includes('resolution=merge-duplicates');
+ for(const original of items){
+  if(original[config.owner]!=null&&String(original[config.owner])!==uid)
+   return out({error:'proprietario_invalido'},403,origin,env);
+  const item={...original,[config.owner]:uid};
+  if(config.keys.includes('id')&&!item.id)item.id=crypto.randomUUID();
+  if(config.keys.some(k=>item[k]===undefined||item[k]===null||String(item[k]).length>300)||
+     Object.keys(item).some(k=>!RECORD_FIELD.test(k))||
+     JSON.stringify(item).length>250000)
+   return out({error:'dados_invalidos'},422,origin,env);
+  const key=recordKey(item,config);
+  const sql=merge?
+   "INSERT INTO private_documents(owner,collection,doc_key,payload,updated_at) VALUES (?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(owner,collection,doc_key) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at":
+   "INSERT INTO private_documents(owner,collection,doc_key,payload) VALUES (?,?,?,?)";
+  stmts.push(env.DB.prepare(sql).bind(uid,name,key,JSON.stringify(item)));saved.push(item);
+ }
+ try{await env.DB.batch(stmts)}
+ catch(_){return out({error:'conflito_ou_gravacao_indisponivel'},409,origin,env)}
+ return out(req.headers.get('prefer')?.includes('return=representation')?
+   saved.map(x=>recordProject(x,url.searchParams.get('select')||'*')):[],201,origin,env);
+}
+
+
 export default {
  async fetch(req,env){
   const origin=req.headers.get('origin');
@@ -268,7 +420,7 @@ export default {
   if(origin&&origin!==allowed)return out({error:'origem_negada'},403,origin,env);
   if(req.method==='OPTIONS'){
    if(origin!==allowed)return out({error:'origem_negada'},403,origin,env);
-   return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET,HEAD,PUT,POST,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type','Access-Control-Max-Age':'600','Vary':'Origin'}});
+   return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET,HEAD,PUT,POST,PATCH,DELETE,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type,Prefer,Accept','Access-Control-Max-Age':'600','Vary':'Origin'}});
   }
   const url=new URL(req.url);
   if(url.pathname==='/health'&&req.method==='GET')return out({ok:!!env.DB,servico:'diario-sync',fase:'espelho'},env.DB?200:503,origin,env);
@@ -277,13 +429,15 @@ export default {
   const isMigration=url.pathname.startsWith('/v1/migrate/');
   const isBackup=url.pathname==='/v1/backups'||url.pathname.startsWith('/v1/backups/');
   const isProfit=url.pathname==='/v1/profit-candles';
-  if(!isDiary&&!isFiles&&!isMigration&&!isBackup&&!isProfit)return out({error:'nao_encontrado'},404,origin,env);
+  const isRecords=url.pathname.startsWith('/v1/records/');
+  if(!isDiary&&!isFiles&&!isMigration&&!isBackup&&!isProfit&&!isRecords)return out({error:'nao_encontrado'},404,origin,env);
   if(!env.DB)return out({error:'db_indisponivel'},503,origin,env);
   const uid=await owner(req,env);
   if(!uid)return out({error:'login_invalido'},401,origin,env);
   if(isFiles)return arquivos(req,env,uid,url,origin);
   if(isBackup)return backups(req,env,uid,url,origin);
   if(isProfit)return profitCandles(req,env,uid,url,origin);
+  if(isRecords)return privateRecords(req,env,uid,url,origin);
   if(isMigration)return importarColecao(req,env,uid,url,origin);
   if(req.method==='GET'){
    const meta=url.searchParams.get('meta')==='1';

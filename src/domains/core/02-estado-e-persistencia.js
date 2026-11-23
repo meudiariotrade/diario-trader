@@ -1956,8 +1956,15 @@ function leituraGuardar(path, body) {
   }
 }
 async function rq(e, t = {}, a = !0) {
-  const o = syncOwner(),
-    s = cfg(),
+  const o = syncOwner();
+  if(!window.DIARIO_DEMO&&window.DiarioD1Registros?.can(e)&&o&&SESS?.at){
+    await tok();
+    assertSyncOwner(o);
+    const response=await window.DiarioD1Registros.request(e,t,SESS.at);
+    assertSyncOwner(o);
+    return response;
+  }
+  const s = cfg(),
     somenteLeitura = !t.method || String(t.method).toUpperCase() === 'GET',
     podeCache = somenteLeitura && !t.cacheRefresh &&
       /^\/rest\/v1\/(cotacoes|mercado_cache|radar_cache|analise_cache|opcoes_grade|fluxo_acoes|ewz_serie|radar_sinais|insiders|carteira_cfg)\?/.test(e),
