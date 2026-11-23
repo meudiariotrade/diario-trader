@@ -17,7 +17,7 @@ test('v935: corte contém as 16 tarefas existentes no Worker, sem desativar terc
  assert.match(cut,/encontrado<>16/);assert.match(rollback,/encontrado<>16/);
  assert.match(cut,/cron\.alter_job\(r\.jobid, active=>false\)/);
  assert.match(rollback,/cron\.alter_job\(r\.jobid, active=>true\)/);
- for(const text of [cut,rollback])assert.doesNotMatch(text,/\b(?:DROP|TRUNCATE|DELETE|edge_logs|postgres_logs)\b/i);
+ for(const text of [cut,rollback])assert.doesNotMatch(text.replace(/--[^\n]*/g,''),/\b(?:DROP|TRUNCATE|DELETE|edge_logs|postgres_logs)\b/i);
 });
 test('v935: cron Cloudflare ativo, preflight curto desligado e Auth preservado',()=>{
  assert.equal(config.vars.AGENDA_CUTOVER_ENABLED,'1');
