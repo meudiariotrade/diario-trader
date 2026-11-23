@@ -65,15 +65,15 @@
   const r=await fetch(base+'/v1/adrs?s='+encodeURIComponent(lista.join(',')),{credentials:'omit',mode:'cors',signal:signal||AbortSignal.timeout(2e4)});
   if(!r.ok)throw Error('HTTP '+r.status);return r.json();
  }
- /* v836: funções públicas pela Cloudflare (preços só com as chaves no Worker; candles sem o Replay; macro; EWZ com
-  * pelo menos 20 dias de histórico na borda). Sem resposta válida, segue para o Supabase como antes. */
+ /* v891: Cloudflare absorve os dados publicos; replay autenticado consulta D1, com fallback legado.
+  * Diagnosticos privados e EWZ sem 20 dias de IV mantem as rotas originais. */
  const rotas836={
   precos:b=>({q:'/v1/precos?br='+encodeURIComponent((b.br||[]).join(','))+'&us='+encodeURIComponent((b.us||[]).join(',')),ok:j=>Object.keys(j.br||{}).length||Object.keys(j.us||{}).length}),
-  candles:b=>b.modo==='replay'?null:{q:'/v1/candles?'+['ativo','sub','intervalo','de','ate'].filter(k=>b[k]!=null&&b[k]!=='').map(k=>k+'='+encodeURIComponent(b[k])).join('&'),ok:j=>Array.isArray(j.candles)},
+  candles:b=>b.modo==='replay'?{q:'/v1/replay?'+['ativo','sub','intervalo','pregao'].filter(k=>b[k]!=null&&b[k]!=='').map(k=>k+'='+encodeURIComponent(b[k])).join('&'),auth:true,ok:j=>Array.isArray(j.candles)&&j.candles.length>0}:{q:'/v1/candles?'+['ativo','sub','intervalo','de','ate','revista'].filter(k=>b[k]!=null&&b[k]!=='').map(k=>k+'='+encodeURIComponent(b[k])).join('&'),ok:j=>Array.isArray(j.candles)},
   macro:b=>b.modo==='diag'?null:{q:'/v1/macro?modo='+encodeURIComponent(b.modo||'')+'&aba='+encodeURIComponent(b.aba||'')+'&semana='+encodeURIComponent(b.semana??''),ok:j=>j&&!j.error},
   ewz:b=>b.acao&&b.acao!=='agora'?null:{q:'/v1/ewz?venc='+encodeURIComponent(b.venc||''),ok:j=>j&&j.spot&&j.vol&&j.vol.nHist>=20}
  };
- if(typeof w.fetch==='function'&&!w.fetch.__v836){
+ if(typeof w.fetch==='function'&&!w.fetch.__v891){
   const nativo=w.fetch.bind(w);
   const novo=async function(input,init){
    try{
@@ -81,14 +81,17 @@
     if(m&&String(init?.method||'').toUpperCase()==='POST'&&!w.DIARIO_DEMO){
      const r0=rotas836[m[1]](JSON.parse(init.body||'{}'));
      if(r0){
-      const r=await nativo(base+r0.q,{credentials:'omit',mode:'cors',signal:init.signal||AbortSignal.timeout(20000)});
+      if(r0.auth&&typeof tok==='function')await tok().catch(()=>{});
+      const token=r0.auth&&(typeof SESS!=='undefined'&&SESS?.at);
+      if(r0.auth&&!token)throw Error('sessao_necessaria');
+      const r=await nativo(base+r0.q,{credentials:'omit',mode:'cors',...(r0.auth?{headers:{Authorization:'Bearer '+token}}:{}),signal:init.signal||AbortSignal.timeout(20000)});
       if(r.ok){const j=await r.json();if(r0.ok(j))return new Response(JSON.stringify(j),{status:200,headers:{'Content-Type':'application/json'}});}
      }
     }
    }catch(e){if(e&&e.name==='AbortError'&&init?.signal?.aborted)throw e;}
    return nativo(input,init);
   };
-  novo.__v836=1;w.fetch=novo;
+  novo.__v891=1;w.fetch=novo;
  }
  w.DiarioPublico=Object.freeze({get,remember,read,adrs,inspect:()=>({pending:pending.size,cached:[...memory.keys()]})});
 })(typeof window!=='undefined'?window:globalThis);

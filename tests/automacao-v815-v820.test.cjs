@@ -116,7 +116,7 @@ test('v836: preços e candles na Cloudflare com volta ao Supabase, mais fontes e
   assert.ok(w.indexOf("path==='/v1/candles'")<w.indexOf("if(!['/v1/noticias'"));
   for(const h of ['estadao.com.br','bloomberglinea','investing.com','cnbc.com','federalreserve.gov'])assert.match(w,new RegExp(h.replace('.','\\.')));
   const s=fs.readFileSync('src/shared/cache-publico.js','utf8');
-  assert.match(s,/precos\|candles\|macro\|ewz/);assert.match(s,/b\.modo==='replay'\?null/);assert.match(s,/return nativo\(input,init\)/);
+  assert.match(s,/precos\|candles\|macro\|ewz/);assert.match(s,/b\.modo==='replay'\?\{q:'\/v1\/replay\?/);assert.match(s,/return nativo\(input,init\)/);
   const css=fs.readFileSync('src/app-theme.css','utf8');
   assert.match(css,/m404-internal>\.m404-panel\{flex:999/);assert.match(css,/#cotbox \.m623-term\{display:block!important;column-count:3/);
   assert.match(css,/dt395-native-imposto,[\s\S]*column-count:2/);
