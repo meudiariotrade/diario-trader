@@ -4,7 +4,16 @@ on:
     branches: [main]
     paths:
       - 'cloudflare/diario-noticias/producao-snapshot-v894.mjs'
+      - 'cloudflare/diario-noticias/finnhub-v940.mjs'
+      - 'cloudflare/diario-noticias/index.mjs'
+      - 'tests/cloudflare-finnhub-v940.test.cjs'
       - 'cloudflare/diario-noticias/wrangler.jsonc'
+      - '.github/workflows/cloudflare-noticias.yml'
+  pull_request:
+    paths:
+      - 'cloudflare/diario-noticias/**'
+      - 'supabase/functions/notificar/noticias-urgentes.ts'
+      - 'tests/cloudflare-finnhub-v940.test.cjs'
       - '.github/workflows/cloudflare-noticias.yml'
   workflow_dispatch:
 permissions:
@@ -22,7 +31,11 @@ jobs:
         with:
           node-version: '24'
       - run: node --check cloudflare/diario-noticias/producao-snapshot-v894.mjs
+      - run: node --check cloudflare/diario-noticias/finnhub-v940.mjs
+      - run: node --test tests/cloudflare-finnhub-v940.test.cjs
       - run: node --test tests/cloudflare-noticias.test.cjs
+      - name: Validar bundle Wrangler com o módulo Finnhub
+        run: npx --yes wrangler@4.166.0 deploy --dry-run --config cloudflare/diario-noticias/wrangler.jsonc
       - name: Bloquear redirect incompatível no Worker
         run: |
           if grep -q 'redirect:"error"' cloudflare/diario-noticias/producao-snapshot-v894.mjs; then
