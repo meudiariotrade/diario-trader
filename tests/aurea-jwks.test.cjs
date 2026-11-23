@@ -44,6 +44,15 @@ test('JWT expirado, origem errada e alg=none são negados antes da rede',async()
  assert.equal(await f(ENV,req(unsigned)),null);
  assert.equal(calls.length,0);
 });
+test('Chave pública carregada no Worker valida ES256 offline, sem tocar na rede',async()=>{
+ const f=await fresh(),before=globalThis.fetch;
+ let network=0;globalThis.fetch=async()=>{network++;throw Error('rede indisponível')};
+ try{
+  const localEnv={...ENV,SUPABASE_PUBLIC_JWKS:JSON.stringify({keys:[jwk]})};
+  assert.equal(await f(localEnv,req(jwt())),UID);
+  assert.equal(network,0);
+ }finally{globalThis.fetch=before}
+});
 test('Chave desconhecida não autoriza usuário',async()=>{
  const f=await fresh(),calls=fake();
  assert.equal(await f(ENV,req(jwt(claims(),{alg:'ES256',kid:'wrong-kid'}))),null);

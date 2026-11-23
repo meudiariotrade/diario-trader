@@ -4,6 +4,36 @@
  */
 const jwksCache = new Map();
 const JWKS_TTL_MS = 5 * 60 * 1000;
+/* Chave PUBLICA atual do Auth (JWKS oficial, 23/11/2026).
+ * Guardada no Worker para impedir que uma falha da rede Cloudflare→Auth
+ * derrube todas as IAs. NÃO contém chave privada ou credencial.
+ * Em rotação: consulta o endpoint oficial quando o kid não confere.
+ * SUPABASE_PUBLIC_JWKS permite atualizar a lista sem alterar o código.
+ */
+const PINNED_ORIGIN='https://vdzwydizostutukppcsj.supabase.co';
+const PINNED_JWKS={keys:[{
+  alg:'ES256',crv:'P-256',ext:true,key_ops:['verify'],
+  kid:'bd1ebc61-e9a4-43f6-a347-f57c68862b1d',kty:'EC',use:'sig',
+  x:'1s5iQgypBE3qNBeKmEmq12lKdAjm0y5ERJUW7Sl9g8k',
+  y:'5ZX7mF8vWRyrXfZKH0aVANsaRpYlDkA4FmEQPk4rA1E'
+}]};
+function filtrarChaves(jwks){
+  return Array.isArray(jwks?.keys)&&jwks.keys.length<=20
+    ? jwks.keys.filter(k=>k&&k.kty==='EC'&&k.crv==='P-256'&&k.alg==='ES256'&&
+      /^[A-Za-z0-9_-]{1,128}$/.test(k.kid||'')&&
+      typeof k.x==='string'&&typeof k.y==='string'&&
+      (!k.use||k.use==='sig')&&(!k.key_ops||k.key_ops.includes('verify')))
+    : [];
+}
+function chavesLocais(origin,env){
+  if(env?.SUPABASE_PUBLIC_JWKS){
+    try{const local=filtrarChaves(JSON.parse(env.SUPABASE_PUBLIC_JWKS));
+      if(local.length)return local;
+    }catch{}
+  }
+  return origin===PINNED_ORIGIN?filtrarChaves(PINNED_JWKS):[];
+}
+
 
 function bytes(part) {
   if (!/^[A-Za-z0-9_-]{1,8192}$/.test(part) || part.length % 4 === 1) throw Error('JWT inválido');
@@ -18,10 +48,14 @@ function supabaseOrigin(env) {
   return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
     /^[a-z0-9-]+\.supabase\.co$/i.test(url.hostname) ? url.origin : null;
 }
-async function publicKeys(origin, force = false) {
+async function publicKeys(origin, force = false, env = null) {
   const prev = jwksCache.get(origin);
   if (!force && prev?.keys && prev.until > Date.now()) return prev.keys;
   if (prev?.pending) return prev.pending;
+  if (!force) {
+    const local=chavesLocais(origin,env);
+    if(local.length)return local;
+  }
   const pending = (async () => {
     const response = await fetch(origin + '/auth/v1/.well-known/jwks.json', {
       method: 'GET', redirect: 'error', headers: { Accept: 'application/json' },
@@ -29,17 +63,18 @@ async function publicKeys(origin, force = false) {
     });
     if (!response.ok) throw Error('JWKS indisponível');
     const body = await response.json();
-    if (!Array.isArray(body?.keys) || body.keys.length > 20) throw Error('JWKS inválido');
-    const keys = body.keys.filter(k => k && k.kty === 'EC' && k.crv === 'P-256' &&
-      k.alg === 'ES256' && /^[A-Za-z0-9_-]{1,128}$/.test(k.kid || '') &&
-      typeof k.x === 'string' && typeof k.y === 'string' &&
-      (!k.use || k.use === 'sig') && (!k.key_ops || k.key_ops.includes('verify')));
+    const keys=filtrarChaves(body);
     if (!keys.length) throw Error('Sem chave pública ES256');
     jwksCache.set(origin, { keys, until: Date.now() + JWKS_TTL_MS });
     return keys;
   })();
   jwksCache.set(origin, { ...prev, pending });
   try { return await pending; }
+  catch (err) {
+    const offline=chavesLocais(origin,env);
+    if(offline.length)return offline;
+    throw err;
+  }
   finally {
     const current = jwksCache.get(origin);
     if (current?.pending === pending) jwksCache.set(origin, { ...current, pending: null });
@@ -68,10 +103,10 @@ export async function autenticarUsuario(env, request) {
       (claims.nbf !== undefined && (!Number.isSafeInteger(claims.nbf) || claims.nbf > now + 30)) ||
       (claims.iat !== undefined && (!Number.isSafeInteger(claims.iat) || claims.iat > now + 30))) return null;
 
-  let keys = await publicKeys(origin);
+  let keys = await publicKeys(origin,false,env);
   let candidate = keys.find(k => k.kid === header.kid);
   if (!candidate) {
-    keys = await publicKeys(origin, true);
+    keys = await publicKeys(origin,true,env);
     candidate = keys.find(k => k.kid === header.kid);
   }
   if (!candidate) return null;
