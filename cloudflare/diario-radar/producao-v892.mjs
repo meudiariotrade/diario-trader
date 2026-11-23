@@ -36,7 +36,7 @@ async function migrarStoragePrivadoCron(env){
     const remote=base.origin+'/storage/v1/object/authenticated/'+encodeURIComponent(bucket)+'/'+key.split('/').map(encodeURIComponent).join('/');
     const response=await fetch(remote,{
       method:'GET',headers:{apikey:env.SUPABASE_SERVICE_ROLE_KEY,Authorization:'Bearer '+env.SUPABASE_SERVICE_ROLE_KEY},
-      redirect:'error',signal:AbortSignal.timeout(16000)
+      redirect:'manual',signal:AbortSignal.timeout(16000)
     });
     if(!response.ok){failure='storage_http_'+response.status;throw Error('storage')};
     const bytes=await response.arrayBuffer(),size=Number(file.size_bytes);

@@ -81,3 +81,20 @@ test('v906: backup D1 só acessa documentos do usuário autenticado',async()=>{
    assert.equal((await w.fetch(request('/v1/backups/invalid'),env)).status,400);
  }finally{global.fetch=original}
 });
+
+test('v911: fetch internos do Worker usam redirects manuais e recusam 302 na autenticação',async()=>{
+ const {default:w}=await worker();
+ const old=global.fetch;
+ let calls=0;
+ global.fetch=async(_url,opts)=>{
+   calls++;
+   assert.equal(opts.redirect,'manual');
+   return new Response(null,{status:302,headers:{Location:'https://outro.dominio.test'}});
+ };
+ try{
+   const env={DB:{},ALLOWED_ORIGIN:'https://meudiariotrade.github.io',SUPABASE_URL:'https://sample.supabase.co',SUPABASE_ANON_KEY:'public'};
+   const res=await w.fetch(request('/v1/diario'),env);
+   assert.equal(res.status,401);
+   assert.equal(calls,1);
+ }finally{global.fetch=old}
+});

@@ -12,7 +12,7 @@ async function owner(req,env){
  if(!env.SUPABASE_URL||!env.SUPABASE_ANON_KEY)return null;
  const url=new URL(env.SUPABASE_URL);
  if(url.protocol!=='https:'||!url.hostname.endsWith('.supabase.co'))return null;
- const r=await fetch(url.origin+'/auth/v1/user',{headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY},redirect:'error',signal:AbortSignal.timeout(7000)}).catch(()=>null);
+ const r=await fetch(url.origin+'/auth/v1/user',{headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY},redirect:'manual',signal:AbortSignal.timeout(7000)}).catch(()=>null);
  if(!r?.ok)return null;
  const j=await r.json().catch(()=>null);
  return /^[0-9a-f-]{36}$/i.test(j?.id||'')?j.id:null;
@@ -88,7 +88,7 @@ async function arquivos(req,env,uid,url,origin){
   const token=/^Bearer\s+(\S+)$/i.exec(req.headers.get('authorization')||'')?.[1];
   const remote=await fetch(legacyUrl(env,bucket,key),{
    headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY},
-   redirect:'error',signal:AbortSignal.timeout(20000)
+   redirect:'manual',signal:AbortSignal.timeout(20000)
   }).catch(()=>null);
   if(!remote?.ok)return out({error:'legado_indisponivel',status:remote?.status||503},409,origin,env);
   if(Number(remote.headers.get('content-length')||0)>MAX_ARQUIVO)return out({error:'grande_demais_para_nuvem'},413,origin,env);
@@ -191,7 +191,7 @@ async function importarColecao(req,env,uid,url,origin){
  const base=new URL(env.SUPABASE_URL);
  const from=base.origin+'/rest/v1/'+encodeURIComponent(collection)+'?'+qs.toString();
  const token=/^Bearer\s+(\S+)$/i.exec(req.headers.get('authorization')||'')?.[1]||'';
- const response=await fetch(from,{method:'GET',headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY,Accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(18000)}).catch(()=>null);
+ const response=await fetch(from,{method:'GET',headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY,Accept:'application/json'},redirect:'manual',signal:AbortSignal.timeout(18000)}).catch(()=>null);
  if(!response?.ok)return out({error:'origem_indisponivel',code:response?.status||503},424,origin,env);
  if(Number(response.headers.get('content-length')||0)>1200000)return out({error:'lote_grande'},413,origin,env);
  const raw=await response.text();

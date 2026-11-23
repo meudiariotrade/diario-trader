@@ -51,3 +51,9 @@ test('migração excepcional de 46 arquivos não expõe rota HTTP nem segredo de
  assert.ok(config.d1_databases.some(x=>x.binding==='PRIVATE_D1'));
  assert.equal(config.vars.RADAR_CUTOVER_ENABLED,'0');
 });
+
+test('v911: transferência privada nunca segue redirect inesperado do Storage',()=>{
+ const block=source.slice(source.indexOf('async function migrarStoragePrivadoCron'));
+ assert.ok(block.includes("redirect:'manual'"));
+ assert.ok(!block.includes("redirect:'error'"));
+});
