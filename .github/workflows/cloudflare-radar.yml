@@ -44,7 +44,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: cloudflare/diario-radar
-          command: deploy
+          wranglerVersion: '4.166.0'
+          command: deploy --config wrangler.jsonc
       - name: Confirmar bindings e crons publicados pelo Wrangler
         run: |
           echo "Radar v892 implantado; modo de corte: desativado ate validacao de service role, Gemini e VAPID."
