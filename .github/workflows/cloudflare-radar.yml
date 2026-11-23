@@ -5,6 +5,12 @@ on:
     paths:
       - 'cloudflare/diario-radar/**'
       - '.github/workflows/cloudflare-radar.yml'
+      - 'tests/cloudflare-agenda-preflight-v933.test.cjs'
+  pull_request:
+    paths:
+      - 'cloudflare/diario-radar/**'
+      - 'tests/cloudflare-agenda-preflight-v933.test.cjs'
+      - '.github/workflows/cloudflare-radar.yml'
   workflow_dispatch:
 permissions:
   contents: read
