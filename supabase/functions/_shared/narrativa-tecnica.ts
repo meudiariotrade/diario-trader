@@ -61,7 +61,7 @@ export function cobreMapa(e: any, campo: string, t: string) {
   if (!e?.fatos) return true;
   let obrigatorios: unknown[] = [];
   if (k === 'elliott') obrigatorios = [m.perna?.de, m.perna?.ate, ...referencias(e).map(q => q.v), m.elliott?.ext100, m.elliott?.ext1618];
-  if (k === 'dow') obrigatorios = [d.fechamento, m.dow?.pivo?.v, d.mm10s, d.mm40s];
+  if (k === 'dow') obrigatorios = [d.fechamento, m.dow?.pivo?.v, d.mm10s, d.mm40s, d.mm20s, d.mm50s, d.mm200s];
   if (k === 'pa') obrigatorios = [d.rsi14];
   if (k === 'cenarios') obrigatorios = [m.refAlta?.[1], m.refBaixa?.[1], m.invalidacao?.v];
   if (!obrigatorios.filter(n).every(v => contemValor(t, v))) return false;

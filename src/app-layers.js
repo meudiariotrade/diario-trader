@@ -3624,6 +3624,42 @@ Contexto autorizado:
               : u < P && P < m
                 ? "baixa"
                 : "indefinida";
+      // Compara pivôs confirmados por duas barras de cada lado. A janela é uma
+      // convenção da revista. Um fechamento que volta à faixa reavalia o rompimento.
+      function estrutura(barras) {
+        const serie = barras.slice(-60), k = 2, topos = [], fundos = [];
+        if (serie.length < 12) return { tendencia: "histórico insuficiente", topos, fundos };
+        for (let i = k; i < serie.length - k; i++) {
+          const atual = serie[i], vizinhos = serie.slice(i-k, i+k+1);
+          if (vizinhos.every(b => b[2] <= atual[2]) && atual[2] > serie[i-1][2])
+            topos.push({ v: atual[2], dia: j(atual[0]) });
+          if (vizinhos.every(b => b[3] >= atual[3]) && atual[3] < serie[i-1][3])
+            fundos.push({ v: atual[3], dia: j(atual[0]) });
+        }
+        const preco = serie.at(-1)[4], t = topos.slice(-2), f = fundos.slice(-2);
+        const teto = t.at(-1)?.v, piso = f.at(-1)?.v;
+        let tendencia;
+        if (teto != null && preco > teto && (piso == null || preco > piso)) tendencia = "alta";
+        else if (piso != null && preco < piso && (teto == null || preco < teto)) tendencia = "baixa";
+        else if (t.length === 2 && f.length === 2 && t[1].v > t[0].v && f[1].v > f[0].v) tendencia = "alta";
+        else if (t.length === 2 && f.length === 2 && t[1].v < t[0].v && f[1].v < f[0].v) tendencia = "baixa";
+        else {
+          // Três blocos preservam a direção de movimentos sem fractais internos.
+          const janela = serie.slice(-12);
+          const blocos = [0,4,8].map(i => janela.slice(i,i+4));
+          const extremos = blocos.map(b => [Math.min(...b.map(x=>x[3])), Math.max(...b.map(x=>x[2]))]);
+          const avanca = sinal => [1,2].every(i => [0,1].every(k => sinal*(extremos[i][k]-extremos[i-1][k])>0));
+          const faixa = extremos.every(([min,max]) => min <= Math.min(...extremos.map(x=>x[1])) && max >= Math.max(...extremos.map(x=>x[0])));
+          if (avanca(1)) tendencia = "alta";
+          else if (avanca(-1)) tendencia = "baixa";
+          else if (faixa) tendencia = "lateral";
+          else {
+            const inicial = janela[0][4];
+            tendencia = preco > inicial ? "alta" : preco < inicial ? "baixa" : "lateral";
+          }
+        }
+        return { tendencia, topos:t, fundos:f, teto, piso };
+      }
       function B(u) {
         if (u.length < 15) return null;
         let P = 0,
@@ -3693,10 +3729,10 @@ Contexto autorizado:
                 (pol = { tipo: "suporte próximo", nivel: supA, dist: pct(px, supA), nota: "teste da mínima anterior ainda não perdida" });
         // momentum (RSI 14) e perda de força
         const rsi5 = n > 20 ? B(m.slice(0, -5)) : null, px5 = n > 6 ? m[n - 6][4] : null;
-        let mom = x.rsi == null ? "não avaliado" : x.rsi >= 70 ? "sobrecompra" : x.rsi <= 30 ? "sobrevenda" : "neutro";
+        let mom = x.rsi == null ? "não avaliado" : x.rsi >= 70 ? "sobrecompra" : x.rsi <= 30 ? "sobrevenda" : x.rsi < 50 ? "predomínio de perdas" : x.rsi > 50 ? "predomínio de ganhos" : "ganhos e perdas equilibrados";
         r(rsi5) && r(px5) && r(x.rsi) && (px > px5 && x.rsi < rsi5 - 2 ? (mom += " · perda de momentum (preço sobe com RSI caindo)") : px < px5 && x.rsi > rsi5 + 2 && (mom += " · perda de força vendedora (preço cai com RSI subindo)"));
         // confluências: Fibonacci × médias × polaridade (até 1% de distância)
-        const refs = [["MM20", x.ma20], ["MM50", x.ma50], ["MM200", x.ma200], ["MM10s", x.w10], ["MM40s", x.w40], ...(pol ? [[pol.tipo, pol.nivel]] : [])].filter((q) => r(q[1])),
+        const refs = [["MM20", x.ma20], ["MM50", x.ma50], ["MM200", x.ma200], ["MM20 semanal", x.w20], ["MM50 semanal", x.w50], ["MM200 semanal", x.w200], ...(pol ? [[pol.tipo, pol.nivel]] : [])].filter((q) => r(q[1])),
           conf = niv.map((q) => ({ nivel: (q.f * 100).toFixed(1).replace(".", ",") + "%", valor: q.v, com: refs.filter((z) => Math.abs(pct(z[1], q.v)) <= 1).map((z) => z[0]) })).filter((q) => q.com.length);
         // v619: Teoria de Dow — topos e fundos (swing highs/lows) por fractal; primária (k=5, 200 sessões) e secundária (k=2, 40 sessões)
         const swings = (B0, k) => {
@@ -3727,18 +3763,27 @@ Contexto autorizado:
             : ultT ? { tipo: "topo anterior", v: ultT.v, dia: ultT.dia, nota: "rompimento em fechamento confirma a troca de direção" } : null,
           acima = Z2.filter((q) => q.tipo === "T" && q.v > px).map((q) => q.v), abaixo = Z2.filter((q) => q.tipo === "F" && q.v < px).map((q) => q.v),
           dow = {
-            primaria: P1.tend, secundaria: P2.tend,
-            topos: P1.T.map((q) => ({ v: q.v, dia: q.dia })), fundos: P1.F.map((q) => ({ v: q.v, dia: q.dia })),
+            primaria: (x.semanal || estrutura(c)).tendencia, secundaria: (x.diario || estrutura(m)).tendencia,
+            horizontePrimario: "semanal", horizonteSecundario: "diário",
+            topos: (x.diario || estrutura(m)).topos, fundos: (x.diario || estrutura(m)).fundos,
             pivo, topoImediato: acima.length ? Math.min(...acima) : null, fundoImediato: abaixo.length ? Math.max(...abaixo) : null,
           };
+        if (pivo) {
+          const posteriores = m.filter(b => j(b[0]) > pivo.dia);
+          const cruzou = b => pivo.tipo === "topo anterior" ? b[4] > pivo.v : b[4] < pivo.v;
+          const primeiro = posteriores.find(cruzou);
+          pivo.estado = primeiro ? cruzou(m.at(-1)) ? "rompido" : "retorno à faixa" : "preservado";
+          pivo.evento = primeiro ? j(primeiro[0]) : null;
+          pivo.nota = "Pivô histórico "+pivo.estado+(pivo.evento?" em fechamento desde "+pivo.evento:"");
+        }
         // v619: Ondas de Elliott — impulso x correção pela profundidade da retração; extensões 100% e 161,8%
         const posFim = alta ? iH : iL, depois = L.slice(posFim + 1),
           C0 = depois.length ? (alta ? Math.min(...depois.map((b) => b[3])) : Math.max(...depois.map((b) => b[2]))) : px,
           prof = amp > 0 ? (alta ? (H - C0) / amp : (C0 - Lo) / amp) * 100 : null,
           fase = prof == null ? "não avaliada"
-            : prof < 23.6 ? "perna impulsiva em andamento (sem correção relevante)"
-            : prof < 38.2 ? "correção rasa, típica de pausa dentro do impulso (onda 4 ou B curta)"
-            : prof <= 61.8 ? "correção na zona clássica de Fibonacci (ABC ou onda 2)"
+            : prof < 23.6 ? "retração inferior a 23,6%"
+            : prof < 38.2 ? "correção rasa"
+            : prof <= 61.8 ? "retração entre 38,2% e 61,8%"
             : prof < 100 ? "correção profunda: a leitura de impulso perde força além de 61,8%"
             : "perna devolvida por completo: possível troca de ciclo",
           elliott = {
@@ -3750,7 +3795,7 @@ Contexto autorizado:
             invalida: alta ? Lo : H,
           };
         // referências acionáveis mais próximas do preço (quadro final)
-        const cand = [["MM20", x.ma20], ["Fibonacci 38,2%", niv[0].v], ["Fibonacci 50%", niv[1].v], ["topo imediato", dow.topoImediato], ["fundo imediato", dow.fundoImediato], [alta ? "topo da perna" : "fundo da perna", alta ? H : Lo]].filter((q) => r(q[1])),
+        const cand = [...(pol ? [[pol.tipo, pol.nivel]] : []), ["MM20 diária", x.ma20], ["Fibonacci 38,2%", niv[0].v], ["Fibonacci 50%", niv[1].v], ["topo imediato", dow.topoImediato], ["fundo imediato", dow.fundoImediato], [alta ? "topo da perna" : "fundo da perna", alta ? H : Lo]].filter((q) => r(q[1])),
           refAlta = cand.filter((q) => q[1] > px * 1.0005).sort((a, b) => a[1] - b[1])[0] || null,
           refBaixa = cand.filter((q) => q[1] < px * 0.9995).sort((a, b) => b[1] - a[1])[0] || null;
         const invQ = alta ? [...P1.F].reverse().find((q) => q.v < px) : [...P1.T].reverse().find((q) => q.v > px),
@@ -3758,8 +3803,8 @@ Contexto autorizado:
         return {
           dow, elliott, refAlta, refBaixa, invalidacao,
           perna, fibo: niv, retracao: ret,
-          elastico20: pct(px, x.ma20), elastico10s: pct(px, x.w10), dist50: pct(px, x.ma50), dist200: pct(px, x.ma200),
-          zonaValor: r(x.ma20) && r(x.w10) ? (Math.abs(pct(px, x.ma20)) <= 1.5 ? "na zona de valor diária (até 1,5% da MM20)" : Math.abs(pct(px, x.ma20)) >= 5 ? "esticado longe da MM20 (5% ou mais)" : "fora da zona de valor, sem esticamento extremo") : "não avaliada",
+          elastico20: pct(px, x.ma20), elastico20s: pct(px, x.w20), dist50: pct(px, x.ma50), dist200: pct(px, x.ma200),
+          zonaValor: r(x.ma20) && r(x.w20) ? (Math.abs(pct(px, x.ma20)) <= 1.5 ? "na zona de valor diária (até 1,5% da MM20)" : Math.abs(pct(px, x.ma20)) >= 5 ? "esticado longe da MM20 (5% ou mais)" : "fora da zona de valor, sem esticamento extremo") : "não avaliada",
           pa, inside, seq, pol, rsi5, mom, conf,
         };
       }
@@ -3773,29 +3818,28 @@ Contexto autorizado:
           D = t.dow, E = t.elliott, alta = t.perna.direcao === "alta",
           prim = D.primaria, sec = D.secundaria,
           alinhado = h.weeklyTrend === h.dailyTrend;
-        const dow =
-          (prim === "alta" ? "A sequência de topos e fundos ascendentes mantém a tendência primária de alta"
-            : prim === "baixa" ? "Topos e fundos descendentes sustentam a tendência primária de baixa"
-            : "Os últimos topos e fundos não formam sequência limpa, e a tendência primária está em " + prim) +
-          (prim !== "alta" && prim !== "baixa" ? "; no curto prazo, o movimento secundário está em " + sec + ". "
-            : sec === prim ? ", e o movimento secundário das últimas semanas vai na mesma direção. " : "; no curto prazo, o movimento secundário está em " + sec + ", uma reação contra a primária. ") +
-          (D.pivo ? "O pivô de reversão é o " + D.pivo.tipo + " em " + fmt(D.pivo.v) + " (" + dm(D.pivo.dia) + "): " + D.pivo.nota + ". " : "") +
-          "No gráfico semanal, o preço está " + (h.weeklyTrend === "alta" ? "acima das" : h.weeklyTrend === "baixa" ? "abaixo das" : "entre as") + " MM10s (" + fmt(h.w10) + ") e MM40s (" + fmt(h.w40) + "); no diário, a estrutura das MM20, MM50 e MM200 está em " + h.dailyTrend + ", " +
-          (alinhado ? "em linha com o semanal. " : "sem alinhamento com o semanal. ") +
-          "O fechamento de " + fmt(h.close) + " fica " + sg(t.elastico20) + " da MM20 e " + sg(t.elastico10s) + " da MM10s, " + t.zonaValor + ".";
+        const resumo = (rotulo, est) => {
+          const niveis = valores => valores.map(q => fmt(q.v) + " (" + dm(q.dia) + ")").join(" e ");
+          return rotulo + " · tendência " + (est.tendencia==="lateral"?"lateral":"de "+est.tendencia) + ". " +
+            (est.topos.length ? "Topos em " + niveis(est.topos) + ". " : "") +
+            (est.fundos.length ? "Fundos em " + niveis(est.fundos) + ". " : "");
+        };
+        const posicao = (rotulo, medias) => medias.filter(([,v])=>r(v)).map(([p,v])=>
+          "MM"+p+" "+rotulo+" em "+fmt(v)+" ("+(h.close>v?"abaixo do preço":h.close<v?"acima do preço":"no fechamento")+")").join(", ");
+        const dow = "Fechamento de "+fmt(h.close)+". " + resumo("Diário", h.estruturaDiaria) + resumo("Semanal", h.estruturaSemanal) +
+          posicao("semanal", [[20,h.w20],[50,h.w50],[200,h.w200]]) + "." + (D.pivo ? " O pivô histórico de " + fmt(D.pivo.v) + " está " + D.pivo.estado + (D.pivo.evento ? ", com primeiro cruzamento em fechamento em " + dm(D.pivo.evento) : "") + "." : "");
         const elliott =
           "A perna dominante foi de " + t.perna.direcao + ", de " + fmt(t.perna.de) + " (" + dm(t.perna.inicio) + ") a " + fmt(t.perna.ate) + " (" + dm(t.perna.fim) + "). " +
           (E.profundidade != null ? "Desde então o preço devolveu até " + fmt(E.profundidade, 1) + "% dela, o que se lê como " + E.fase + ". " : "") +
-          "As retrações de Fibonacci ficam em " + fmt(t.fibo[0].v) + " (38,2%), " + fmt(t.fibo[1].v) + " (50%) e " + fmt(t.fibo[2].v) + " (61,8%). " +
+          "A base C da projeção é " + fmt(E.baseC) + ". As retrações de Fibonacci ficam em " + fmt(t.fibo[0].v) + " (38,2%), " + fmt(t.fibo[1].v) + " (50%) e " + fmt(t.fibo[2].v) + " (61,8%). " +
           "Se o " + (alta ? "topo" : "fundo") + " da perna em " + fmt(E.gatilho) + " for " + (alta ? "rompido" : "perdido") + ", as extensões de 100% e 161,8% projetam " + fmt(E.ext100) + " e " + fmt(E.ext1618) + ". " +
           (t.pol ? "Pela polaridade, há " + t.pol.tipo + " em " + fmt(t.pol.nivel) + ": " + t.pol.nota + ". " : "") +
-          (t.conf.length ? "A melhor região de pullback está onde os níveis se encontram: " + t.conf.map((q) => q.nivel + " (" + fmt(q.valor) + ") com " + q.com.join(" e ")).join("; ") + "." : "Não há confluência de até 1% entre Fibonacci, médias e polaridade nesta semana.");
+          (t.conf.length ? "Há referências próximas nas seguintes regiões: " + t.conf.map((q) => q.nivel + " (" + fmt(q.valor) + ") com " + q.com.join(" e ")).join("; ") + "." : "Não há confluência de até 1% entre Fibonacci, médias e polaridade nesta semana.");
         const pa =
           (t.pa.length
-            ? "Nos últimos cinco candles aparecem " + t.pa.map((q) => q.tipo + " (" + dm(q.dia) + ")").join(", ") + ", " + (t.pa.some((q) => /superior/.test(q.tipo)) ? "sinal de venda na máxima" : t.pa.some((q) => /inferior/.test(q.tipo)) ? "sinal de defesa compradora na mínima" : "sinal de compressão antes de uma expansão") + ". "
-            : "Os últimos cinco candles não trazem inside bar nem pavio de rejeição relevante, sem armadilha visível. ") +
-          "Na estrutura de curto prazo, " + t.seq.replace(" nos 5 candles", "") + ". O RSI 14 está em " + fmt(h.rsi, 1) + " (" + t.mom + ")" +
-          (h.rsi >= 70 ? ", o que pede atenção a pullbacks." : h.rsi <= 30 ? ", o que abre espaço para repique técnico." : ", sem excesso de força para nenhum lado.");
+            ? "Nos últimos cinco candles aparecem " + t.pa.map((q) => q.tipo + " (" + dm(q.dia) + ")").join(", ") + ". "
+            : "Os últimos cinco candles não registram inside bar ou pavio longo pela regra da revista. ") +
+          "O IFR(14) diário ficou em " + fmt(h.rsi,1) + " (" + t.mom + "). A confirmação de mudança depende do preço.";
         const ra = t.refAlta, rb = t.refBaixa;
         const cont = alta ? ra : rb, pb = alta ? rb : ra,
           cenarios =
@@ -3805,7 +3849,9 @@ Contexto autorizado:
             "as extensões de 100% e 161,8% ficam em " + fmt(E.ext100) + " e " + fmt(E.ext1618) + ". " +
             "Pullback: " + (pb ? "um " + (alta ? "recuo" : "repique") + " até " + fmt(pb[1]) + " (" + pb[0] + ")" : "um " + (alta ? "recuo" : "repique") + " até a MM20") + " mantém a estrutura se houver reação no nível. " +
             "Invalidação: fechamento " + (alta ? "abaixo" : "acima") + " de " + fmt(t.invalidacao.v) + " (" + t.invalidacao.tipo + ") anula o cenário e a contagem da perna.";
-        return { dow, elliott, pa, cenarios };
+        const faixa = h.estruturaDiaria;
+        const lateral = h.dailyTrend === "lateral" && r(faixa.piso) && r(faixa.teto) && faixa.piso < faixa.teto;
+        return { dow, elliott, pa, cenarios: lateral ? "Faixa diária entre "+fmt(faixa.piso)+" e "+fmt(faixa.teto)+". Fechamento fora da borda e sustentação na sessão seguinte reforçam uma saída. Fechar novamente dentro da faixa enfraquece o rompimento. A referência estrutural da perna anterior é "+fmt(t.invalidacao.v)+"." : cenarios };
       }
       function Y(u, P) {
         const m = F(u.bars, P),
@@ -3828,11 +3874,12 @@ Contexto autorizado:
             asOf: g,
             reason: "Histórico defasado em relação ao corte da edição.",
           };
+        const diario = estrutura(m), semanal = estrutura(c);
         const a = e(m, 20),
           n = e(m, 50),
           f = e(m, 200),
-          h = e(c, 10),
-          Q = e(c, 40),
+          h = e(c, 20),
+          Q = e(c, 50),
           J = Math.min(...H.map((I) => I[3])),
           v = Math.max(...H.map((I) => I[2]));
         return {
@@ -3846,14 +3893,16 @@ Contexto autorizado:
           ma20: a,
           ma50: n,
           ma200: f,
-          w10: h,
-          w40: Q,
+          w20: h,
+          w50: Q,
+          w200: e(c, 200),
+          estruturaDiaria: diario, estruturaSemanal: semanal,
           rsi: B(m),
           support: J,
           resistance: v,
-          dailyTrend: i(q[4], a, n),
-          weeklyTrend: i(q[4], h, Q),
-          tech: (() => { try { return tec(m, c, { ma20: a, ma50: n, ma200: f, w10: h, w40: Q, rsi: B(m) }); } catch { return null; } })(),
+          dailyTrend: diario.tendencia,
+          weeklyTrend: semanal.tendencia,
+          tech: (() => { try { return tec(m, c, { diario, semanal, ma20: a, ma50: n, ma200: f, w20: h, w50: Q, w200: e(c,200), rsi: B(m) }); } catch { return null; } })(),
           weeklyReturn:
             c.length > 1 ? (c.at(-1)[4] / c.at(-2)[4] - 1) * 100 : null,
           scenarios: [
@@ -3968,6 +4017,12 @@ Contexto autorizado:
         try { (window.VencB3?.entre(de, ate) || []).forEach((v) => add(v.d, v.t, "Vencimento")); } catch {}
         COPOM.forEach((d) => add(d, "Decisão do Copom (Selic), após o fechamento", "Banco central", "18:30"));
         FOMC.forEach((d) => add(d, "Decisão do FOMC (juros nos EUA)", "Banco central", "15:00", "US"));
+        add("2026-11-25","PIB dos EUA (2ª estimativa) e lucros corporativos · BEA","Indicador","10:30","US");
+        add("2026-11-25","Renda, gastos pessoais e PCE · BEA","Indicador","10:30","US");
+        add("2026-11-25","Encomendas de bens duráveis · Census Bureau","Indicador","10:30","US");
+        add("2026-11-26","IPCA-15 de novembro · IBGE","Indicador","09:00","BR");
+        add("2026-11-26","Thanksgiving · NYSE fechada","Feriado","","US");
+        add("2026-11-27","Encerramento antecipado das ações na NYSE","Sessão reduzida","15:00","US");
         let ev = Array.isArray(g.agenda) ? g.agenda : null;
         if (!ev) try { ev = [...(AG?.v?.[0]?.eventos || []), ...(AG?.v?.[1]?.eventos || [])]; } catch { ev = []; }
         const vist = new Set();
@@ -3975,16 +4030,105 @@ Contexto autorizado:
           if (!e || e.imp !== 1 || !["BR", "US"].includes(e.p) || /copom|fomc|taxa de juros|interest rate decision/i.test(e.t || "")) continue;
           const d = new Date(e.em).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }), h = new Date(e.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }),
             k = d + e.p + e.t;
+          if (d === "2026-11-25" && e.p === "US" && /PIB|GDP|PCE|gastos pessoais|renda pessoal|bens duráveis|durable goods/i.test(e.t)) continue;
+          if (d === "2026-11-26" && /IPCA.?15/i.test(e.t)) continue;
           if (vist.has(k)) continue;
           (vist.add(k), add(d, e.t, "Alto impacto", h, e.p));
         }
         return L.sort((a, b) => (a.d + a.h).localeCompare(b.d + b.h));
       }
       /** Edições guardadas antes da v618: recalcula o mapa técnico a partir dos candles já salvos. */
+      function planosDaEdicao(edicao) {
+        const planos = [];
+        for (const h of edicao.studies || []) {
+          if (!h.available || !h.tech) continue;
+          const t = h.tech, faixa = h.estruturaDiaria;
+          if (h.dailyTrend === "lateral" && r(faixa?.piso) && r(faixa?.teto) && faixa.teto > faixa.piso) {
+            for (const sinal of [1,-1]) planos.push({ticker:h.ticker,sinal,
+              gatilho:sinal>0?faixa.teto:faixa.piso, invalidacao:sinal>0?faixa.piso:faixa.teto,
+              alvo:null, confirmacoes:2});
+            continue;
+          }
+          const sinal = t.perna.direcao==="alta" ? 1 : -1;
+          const gatilho = (sinal>0?t.refAlta:t.refBaixa)?.[1];
+          if (!r(gatilho)) continue;
+          const alvos = [t.elliott?.gatilho,t.elliott?.ext100].filter(v=>r(v) && sinal*(v-gatilho)>0);
+          planos.push({ticker:h.ticker,sinal,gatilho,alternativo:(sinal>0?t.refBaixa:t.refAlta)?.[1],alvo:alvos[0]??null,invalidacao:t.invalidacao?.v,confirmacoes:1});
+        }
+        for (const plano of planos) {
+          for (const campo of ["gatilho","alvo","invalidacao","alternativo"]) {
+            if (r(plano[campo])) plano[campo] = Number(plano[campo].toFixed(2));
+          }
+        }
+        return {from:edicao.window.from,to:edicao.window.to,planos};
+      }
+      // Transcrição dos mapas das duas edições distribuídas em PDF antes da integração.
+      const arquivoEditorial = {
+        "2026-11-16": {from:"2026-11-16",to:"2026-11-20",planos:[
+          {"ticker": "IBOV", "gatilho": 164447, "sinal": -1, "alvo": 128005, "invalidacao": 209714, "alternativo": 173272},
+          {"ticker": "USDBRL", "gatilho": 5.67, "sinal": 1, "alvo": 6.36, "invalidacao": 4.94, "alternativo": 5.43},
+          {"ticker": "PETR4", "gatilho": 43.23, "sinal": -1, "alvo": 28.88, "invalidacao": 59.79, "alternativo": 49.56},
+          {"ticker": "VALE3", "gatilho": 63.42, "sinal": -1, "alvo": 59.42, "invalidacao": 81.99, "alternativo": 65.34},
+          {"ticker": "ITUB4", "gatilho": 41.51, "sinal": -1, "alvo": 38.11, "invalidacao": 50.85, "alternativo": 42.5},
+        ]},
+        "2026-11-23": {from:"2026-11-23",to:"2026-11-27",planos:[
+          {"ticker": "IBOV", "sinal": -1, "gatilho": 164447, "alternativo": 173272, "alvo": 128005, "invalidacao": 173272, "confirmacoes": 1},
+          {"ticker": "USDBRL", "sinal": 1, "gatilho": 5.95, "alternativo": 5.57, "alvo": 6.94, "invalidacao": 4.94, "confirmacoes": 1},
+          {"ticker": "PETR4", "sinal": -1, "gatilho": 42.41, "alternativo": 43.23, "alvo": 25.29, "invalidacao": 59.79, "confirmacoes": 1},
+          {"ticker": "VALE3", "sinal": -1, "gatilho": 58.25, "alternativo": 59.42, "alvo": 42.46, "invalidacao": 66.3, "confirmacoes": 1},
+          {"ticker": "ITUB4", "sinal": 1, "gatilho": 42.56, "invalidacao": 38.11, "alvo": null, "confirmacoes": 2},
+          {"ticker": "ITUB4", "sinal": -1, "gatilho": 38.11, "invalidacao": 42.56, "alvo": null, "confirmacoes": 2},
+        ]},
+      };
+      function conferirSemana(anterior, atual) {
+        anterior = anterior || arquivoEditorial[O(atual.window.from,-7)];
+        if (!Array.isArray(anterior?.planos) || anterior.from!==O(atual.window.from,-7)) return [];
+        return anterior.planos.map(plano=>{
+          const {ticker,sinal,gatilho,alvo,invalidacao}=plano;
+          const estudo=atual.studies.find(h=>h.ticker===ticker);
+          const barras=(estudo?.bars||[]).filter(b=>j(b[0])>=anterior.from && j(b[0])<=anterior.to);
+          const lado=sinal>0?"acima":"abaixo";
+          const condicao=(plano.confirmacoes===2?"Dois fechamentos ":"Fechamento ")+lado+" de "+fmt(gatilho);
+          const evidencias=[];
+          let situacao=barras.length?"Sem acionamento":"Sem dados", seguidos=0, ativo=false, atingiu=false;
+          const marco=(b,p)=>j(b[0]).slice(8)+"/"+j(b[0]).slice(5,7)+" a "+fmt(p);
+          for (const b of barras) {
+            const fechamento=Number(b[4].toFixed(2));
+            // O gatilho exige fechamento. O extremo da mesma barra antecede essa confirmação.
+            if (ativo && !atingiu && r(alvo) && sinal*(Number((sinal>0?b[2]:b[3]).toFixed(2))-alvo)>=0) {
+              atingiu=true; evidencias.push("Objetivo "+fmt(alvo)+" alcançado em "+j(b[0]).slice(8)+"/"+j(b[0]).slice(5,7)+".");
+            }
+            if (r(invalidacao) && sinal*(fechamento-invalidacao)<0) {
+              situacao="Invalidado"; evidencias.push("Invalidação em fechamento: "+marco(b,fechamento)+"."); break;
+            }
+            const rompeu=sinal*(fechamento-gatilho)>0;
+            if (ativo && !rompeu) {
+              situacao=atingiu?"Objetivo atingido antes do retorno":"Falhou após acionamento"; evidencias.push("Voltou ao nível ou à faixa em "+marco(b,fechamento)+"."); break;
+            }
+            seguidos=rompeu?seguidos+1:0;
+            if (!ativo && seguidos>=(plano.confirmacoes||1)) {
+              ativo=true; situacao="Acionado"; evidencias.push("Gatilho em "+marco(b,fechamento)+".");
+              if (r(alvo) && sinal*(fechamento-alvo)>=0) {atingiu=true;evidencias.push("Fechamento já além do objetivo de "+fmt(alvo)+".");}
+            } else if (ativo) situacao="Confirmado em novo fechamento";
+          }
+          if (barras.length) evidencias.push("Último fechamento: "+marco(barras.at(-1),barras.at(-1)[4])+".");
+          if (ativo && r(alvo) && !atingiu) evidencias.push("Objetivo de "+fmt(alvo)+" não atingido durante o cenário.");
+          if (r(plano.alternativo) && barras.length) {
+            const teste=barras.find(b=>b[3]<=plano.alternativo && b[2]>=plano.alternativo);
+            evidencias.push("Pullback a "+fmt(plano.alternativo)+(teste?" testado em "+j(teste[0]).slice(8)+"/"+j(teste[0]).slice(5,7)+"; o toque isolado não confirma defesa.":" ficou fora das faixas negociadas."));
+          }
+          const prox=estudo?.tech;
+          const mudanca=prox ? "Próximas referências: "+[prox.refBaixa,prox.refAlta].filter(Boolean).map(x=>fmt(x[1])+" ("+x[0]+")").join(" e ")+".":"";
+          return {ticker,condicao,situacao,resultado:evidencias.join(" "),mudanca,acionado:ativo,objetivo:r(alvo)&&ativo?atingiu:null};
+        });
+      }
       function enriquece(p) {
-        for (const h of p?.studies || [])
-          if (h.available && !(h.tech && h.tech.dow) && Array.isArray(h.bars) && h.bars.length >= 30)
-            try { h.tech = tec(h.bars, h.weeks || N(h.bars), { ma20: h.ma20, ma50: h.ma50, ma200: h.ma200, w10: h.w10, w40: h.w40, rsi: h.rsi }); } catch {}
+        for (const h of p?.studies || []) {
+          if (h.available && !h.estruturaSemanal && Array.isArray(h.bars)) {
+            Object.assign(h, Y(h,p.window.cutoff));
+            delete p.ia;
+          }
+        }
         return p;
       }
       s.RevistaModel = {
@@ -4004,6 +4148,7 @@ Contexto autorizado:
         build: M,
         dedupe: E,
         add: O,
+        planosDaEdicao, conferirSemana, estrutura,
         tech: tec,
         blocks: blocos,
       };
@@ -6434,9 +6579,15 @@ de Carteira`,
             { size: 7.5, color: h.C.mut },
           ));
       }
-      function Y(g, R, a, n = 172) {
-        const f = g.p,
-          h = F(R).slice(-50);
+      function Y(g, R, a, n = 172, estudo = null) {
+        const f = g.p, serie = F(R), h = serie.slice(estudo ? -70 : -50);
+        const cores = ["#AA7522","#327987","#705789"];
+        const curvas = estudo ? [20,50,200].map(periodo => h.map((_,i) => {
+          const fim = serie.length-h.length+i+1;
+          if (fim < periodo) return null;
+          return serie.slice(fim-periodo,fim).reduce((s,c)=>s+c.c,0)/periodo;
+        })) : [];
+        const mediasVisiveis = curvas.flat().filter(Number.isFinite);
         if ((f.need(n + 82), g.heading(a), h.length < 5)) {
           g.text(
             "Sem série suficiente para exibir um gráfico. Nenhum traçado ilustrativo foi usado como dado.",
@@ -6450,8 +6601,8 @@ de Carteira`,
           I = 52,
           k = 8,
           L = 25,
-          d = Math.min(...h.map((V) => V.l)),
-          $ = Math.max(...h.map((V) => V.h)),
+          d = Math.min(...h.map((V) => V.l), ...mediasVisiveis),
+          $ = Math.max(...h.map((V) => V.h), ...mediasVisiveis),
           w = $ - d || 1,
           b = (v - I - 8) / h.length,
           y = (V) => J + k + (($ - V) / w) * (n - k - L);
@@ -6476,6 +6627,18 @@ de Carteira`,
               { fill: K },
             ));
         });
+        curvas.forEach((valores,k) => {
+          const cor = f.hex(cores[k]);
+          for (let i=1;i<valores.length;i++) {
+            if (valores[i-1]!=null && valores[i]!=null)
+              f.ln(Q+b*(i-.5),y(valores[i-1]),Q+b*(i+.5),y(valores[i]),{c:cor,w:1});
+          }
+          f.t("MM"+[20,50,200][k], Q+112+k*42,J+n-14,{s:7,c:cor,f:"b"});
+        });
+        for (const nivel of estudo?.niveis || []) {
+          if (Number.isFinite(nivel) && nivel>=d && nivel<=$)
+            f.ln(Q,y(nivel),Q+b*h.length,y(nivel),{c:f.C.mut,w:.55,dash:[3,3]});
+        }
         const C = (V) => new Date(V.t * 1e3).toISOString().slice(0, 10);
         (f.t(C(h[0]), Q, J + n - 14, { s: 7, c: f.C.mut }),
           f.t(C(h.at(-1)), Q + v - I, J + n - 14, {
@@ -6870,9 +7033,14 @@ de Carteira`,
                 g.window.cutoff +
                 ". Cada ativo mostra sua última sessão disponível. Não contém matérias de notícias nem narrativas macro geradas.",
         ),
-          n.heading("Nesta edição"),
+          n.heading(g.tituloEditorial || "Destaque da semana"),
           n.text(
-            "Ibovespa e dólar à vista · contratos futuros · ações de referência · quadro de cenários · plano da próxima sessão.",
+            (() => {
+              const ibov = g.studies.find(h=>h.ticker==="IBOV");
+              const acoes = g.studies.filter(h=>h.available && /[0-9]$/.test(h.ticker) && Number.isFinite(h.weeklyReturn)).sort((a,b)=>a.weeklyReturn-b.weeklyReturn);
+              const destaque = acoes[0];
+              return destaque && Number.isFinite(ibov?.weeklyReturn) ? destaque.ticker+" teve a menor variação entre as "+acoes.length+" ações acompanhadas: "+pc(destaque.weeklyReturn)+" na semana, ante "+pc(ibov.weeklyReturn)+" do Ibovespa." : "Estruturas e níveis de referência dos ativos acompanhados.";
+            })(),
           ),
           n.table(
             [
@@ -6888,13 +7056,28 @@ de Carteira`,
               h.weeklyTrend || "Não avaliada",
             ]),
           ),
-          n.heading("Como usar a revista"),
+          n.heading("O que observar na abertura"),
           n.text(
-            "Leia as estruturas diária e semanal em conjunto. Os cenários são condicionais: descrevem o que acompanhar e quando reavaliar. Não têm probabilidade atribuída, preço-alvo próprio ou promessa de resultado. Aberturas, vencimentos e feriados devem ser conferidos no calendário oficial.",
+            g.aberturaEditorial || "Compare as referências imediatas com o próximo fechamento. A coluna de invalidação acompanha a perna diária e pode ficar distante do nível que enfraquece o cenário de curto prazo.",
           ),
           n.text(
             "Os gráficos à vista não são históricos de WIN ou WDO. Os futuros possuem uma seção própria de snapshot, com os limites de cobertura explícitos. Não se mistura o valor em reais do dólar à vista com os pontos do futuro.",
           ));
+        if (g.retrospectiva?.length) {
+          f.add();
+          n.heading("O que dissemos na semana passada", "Balanço dos cenários publicados · avaliação em fechamento");
+          const casos=g.retrospectiva.filter(x=>x.situacao!=="Sem dados");
+          const alvos=casos.filter(x=>typeof x.objetivo==="boolean");
+          n.text(casos.filter(x=>x.acionado).length+" de "+casos.length+" gatilhos acionados. "+
+            alvos.filter(x=>x.objetivo).length+" de "+alvos.length+" primeiros objetivos atingidos entre os acionados com objetivo definido.");
+          for (const x of g.retrospectiva) {
+            n.heading(x.ticker+" · "+x.situacao);
+            n.text(x.condicao+". "+x.resultado+" "+x.mudanca,{size:9});
+          }
+          n.text("Um gatilho isolado conta como acionado. Outro fechamento favorável confirma sustentação. O objetivo e a invalidação são avaliados separadamente. A comparação usa apenas as barras disponíveis dentro da semana publicada.",{size:8});
+        } else {
+          n.text("Retrospectiva indisponível: a edição anterior precisa ter seus cenários registrados antes do início da semana.");
+        }
         for (const h of g.studies) {
           if (
             ((h.available || f.y > f.BOT - 160) && f.add(),
@@ -6919,8 +7102,8 @@ de Carteira`,
               l(h.weeklyReturn) +
               "%. A quantidade de sessões pode variar por feriados.",
           ),
-            Y(n, h.bars, "Estrutura diária · últimos candles observados", 162),
-            Y(n, h.weeks, "Estrutura semanal · agregação do histórico", 145),
+            Y(n, h.bars, "Diário · 70 pregões", 150, {niveis:[h.tech?.refAlta?.[1],h.tech?.refBaixa?.[1]]}),
+            Y(n, h.weeks, "Semanal · 70 semanas", 145, {niveis:[]}),
             n.table(
               [
                 ["Métrica do histórico", 55],
@@ -6931,9 +7114,10 @@ de Carteira`,
                 ["Média 20 sessões", l(h.ma20)],
                 ["Média 50 sessões", l(h.ma50)],
                 ["Média 200 sessões", l(h.ma200)],
-                ["Média 10 semanas", l(h.w10)],
-                ["Média 40 semanas", l(h.w40)],
-                ["RSI 14 sessões", l(h.rsi)],
+                ["MM20 semanal", l(h.w20)],
+                ["MM50 semanal", l(h.w50)],
+                ["MM200 semanal", h.w200 == null ? "Histórico insuficiente" : l(h.w200)],
+                ["IFR(14) diário", l(h.rsi)],
                 ["Mínima das 20 sessões anteriores", l(h.support)],
                 ["Máxima das 20 sessões anteriores", l(h.resistance)],
               ],
@@ -6942,7 +7126,7 @@ de Carteira`,
               const t = h.tech,
                 DM = (d) => String(d || "").slice(8, 10) + "/" + String(d || "").slice(5, 7);
               if (!t) return;
-              (f.need(200),
+              (f.add(), n.heading(h.ticker+" · Leitura técnica", "Fechamento de "+h.asOf+" · diário "+h.dailyTrend+" / semanal "+h.weeklyTrend),
                 n.table(
                   [
                     ["Mapa técnico", 38],
@@ -6951,9 +7135,9 @@ de Carteira`,
                   [
                     ...(t.dow
                       ? [
-                          ["Dow · primária / secundária", t.dow.primaria + " / " + t.dow.secundaria],
-                          ["Dow · topos e fundos", "topos " + (t.dow.topos.map((q) => l(q.v)).join(" → ") || "n/d") + " · fundos " + (t.dow.fundos.map((q) => l(q.v)).join(" → ") || "n/d")],
-                          ["Pivô de reversão (Dow)", t.dow.pivo ? l(t.dow.pivo.v) + " · " + t.dow.pivo.tipo + " (" + DM(t.dow.pivo.dia) + ")" : "Não definido"],
+                          ["Estrutura diária / semanal", h.dailyTrend + " / " + h.weeklyTrend],
+                          ["Pivôs diários", "topos " + (h.estruturaDiaria.topos.map((q) => l(q.v)).join(" → ") || "n/d") + " · fundos " + (h.estruturaDiaria.fundos.map((q) => l(q.v)).join(" → ") || "n/d")],
+                          ["Pivô histórico observado", t.dow.pivo ? l(t.dow.pivo.v) + " · " + t.dow.pivo.estado + " · " + t.dow.pivo.tipo + " (" + DM(t.dow.pivo.dia) + ")" : "Não definido"],
                         ]
                       : []),
                     ["Perna dominante (" + t.perna.janela + " sessões)", t.perna.direcao + ": " + l(t.perna.de) + " → " + l(t.perna.ate) + " (" + DM(t.perna.inicio) + " a " + DM(t.perna.fim) + ")"],
@@ -6964,27 +7148,27 @@ de Carteira`,
                           ["Extensões 100% · 161,8% (acima/abaixo de " + l(t.elliott.gatilho) + ")", l(t.elliott.ext100) + " · " + l(t.elliott.ext1618)],
                         ]
                       : []),
-                    ["Elástico MM20 · MM10s", pc(t.elastico20) + " · " + pc(t.elastico10s) + " (" + t.zonaValor + ")"],
+                    ["Elástico MM20 · MM20 semanal", pc(t.elastico20) + " · " + pc(t.elastico20s) + " (" + t.zonaValor + ")"],
                     ["Últimos 5 candles", (t.pa.length ? t.pa.map((q) => q.tipo + " " + DM(q.dia)).join(" · ") : "sem inside bar ou pavio de rejeição") + " · " + t.seq.replace(" nos 5 candles", "")],
                     ["Polaridade", t.pol ? t.pol.tipo + " em " + l(t.pol.nivel) + " (" + pc(t.pol.dist) + ")" : "Sem nível rompido próximo"],
-                    ["Momentum (RSI 14)", l(h.rsi, 1) + " · " + t.mom],
+                    ["IFR(14) diário", l(h.rsi, 1) + " · " + t.mom],
                     ["Confluências (até 1%)", t.conf.length ? t.conf.map((q) => q.nivel + " " + l(q.valor) + " + " + q.com.join(", ")).join(" · ") : "Nenhuma"],
                   ],
                   { pad: 3 },
                 ));
-              const IA = g.ia?.versao === 619 && g.ia.ativos?.[h.ticker],
+              const IA = g.ia?.versao === 20261123 && g.ia.ativos?.[h.ticker],
                 B4 = IA && IA.dow ? IA : window.RevistaModel?.blocks?.(h);
               if (!B4) return;
               // v620: os 4 blocos ficam juntos na mesma página — mede a altura e ajusta a fonte (8,7 a 7,8) antes de desenhar.
               const BL = [
-                  ["1. Teoria de Dow e alinhamento multi-timeframe (Dow / Pring / Elder)", B4.dow],
-                  ["2. Ondas de Elliott e Fibonacci (Elliott / Flávio Lemos)", B4.elliott],
-                  ["3. Price action e momentum (Brooks / Volman)", B4.pa],
-                  ["4. Cenários condicionais e invalidação", B4.cenarios],
+                  ["Estrutura e pivôs", B4.dow],
+                  ["Perna de referência e Fibonacci", B4.elliott],
+                  ["Candles e IFR diário", B4.pa],
+                  ["O que muda a leitura", B4.cenarios],
                 ].filter((x) => x[1]),
                 HF = f.F.serif ? "serif" : "b",
                 mede = (sz) => 28 + BL.reduce((a, [, x]) => a + 12.5 + f.wrap(String(x), f.CW, sz, "r").length * sz * 1.36 + 4, 0);
-              let sz = 8.7;
+              let sz = 9.5;
               for (; sz > 7.8 && f.y + mede(sz) > f.BOT; ) sz -= 0.15;
               f.y + mede(sz) > f.BOT && f.add();
               ((f.y += 6), f.t("Leitura técnica da semana", f.M, f.y, { s: 14, f: HF, c: f.C.dk }), (f.y += 22));
@@ -6998,67 +7182,41 @@ de Carteira`,
           f.y + 14 < f.BOT &&
             n.text("Fonte: " + (h.source || "não informada") + " · consulta " + String(h.queried || g.gerado).slice(0, 16).replace("T", " ") + ". Sem preenchimento de sessões nem projeção de candles.", { size: 7.2, color: f.C.mut });
         }
+        f.add();
+        n.heading("Cenários para conferir na próxima edição", "Regras registradas antes da próxima semana · referências em fechamento");
+        n.table([["Ativo",16],["Gatilho",39],["Objetivo observado",23],["Invalidação",22]],
+          R.planosDaEdicao(g).planos.map(p=>[p.ticker,(p.confirmacoes===2?"2 fech. ":"1 fech. ")+(p.sinal>0?"acima de ":"abaixo de ")+l(p.gatilho),p.alvo==null?"Sem objetivo":l(p.alvo),p.invalidacao==null?"Sem nível":(p.sinal>0?"Abaixo de ":"Acima de ")+l(p.invalidacao)]));
+        n.heading("Contratos futuros", "Faixa da última amostra disponível · pontos do contrato contínuo");
+        n.table([["Contrato",24],["Abertura",18,"r"],["Mínima",18,"r"],["Máxima",18,"r"],["Referência",22,"r"]],
+          g.futures.filter(h=>h.available).map(h=>[h.ticker,l(h.open),l(h.low),l(h.high),l(h.price)]));
         for (const h of g.futures) {
-          if (
-            ((h.available || f.y > f.BOT - 180) && f.add(),
-            hLogo(
-              h.ticker,
-              h.ticker + " · " + h.name,
-              "Contrato futuro · snapshot e cenários de cobertura limitada",
-            ),
-            !h.available)
-          ) {
-            n.text(h.reason);
-            continue;
-          }
-          (n.table(
-            [
-              ["Referência informada", 55],
-              ["Valor", 45],
-            ],
-            [
-              ["Símbolo retornado", h.symbol],
-              ["Último preço do snapshot", l(h.price)],
-              ["Máxima do snapshot", l(h.high)],
-              ["Mínima do snapshot", l(h.low)],
-              ["Abertura informada", l(h.open)],
-              ["Consulta", h.queried || "Não informada"],
-              ["Fonte", h.source],
-            ],
-          ),
-            n.text(h.note),
-            n.heading("Condições de acompanhamento"),
-            n.text(
-              "Acima de " +
-                l(h.high) +
-                ": observar sustentação acima da máxima da amostra; reavaliar se retornar à faixa. Abaixo de " +
-                l(h.low) +
-                ": observar continuidade abaixo da mínima; reavaliar se recuperar a faixa. Dentro do intervalo: aguardar definição.",
-            ),
-            n.text(
-              "Estes níveis pertencem ao contrato retornado, não ao gráfico à vista. Sem série histórica real do futuro, não foram calculadas médias, tendência semanal ou variação semanal do contrato. Não se desenha uma série de IBOV como WIN nem USD/BRL como WDO.",
-            ),
-            n.heading("Antes de usar os níveis"),
-            n.text(
-              "Conferir contrato e vencimento, referência de preço na plataforma e horário do dado. Uma troca de contrato pode alterar preços e níveis. Atualizar a leitura após a abertura; o snapshot pode ter atraso.",
-            ));
+          n.heading(h.ticker+" · "+h.name);
+          if (!h.available) { n.text(h.reason); continue; }
+          n.text("Faixa observada de "+l(h.low)+" a "+l(h.high)+". Uma saída em fechamento seguida de retorno à faixa enfraquece a hipótese de continuidade.");
+          const tick = h.ticker==="WIN"?5:0.5;
+          const valido = Math.abs(h.price/tick-Math.round(h.price/tick))<0.000001;
+          n.text("Símbolo "+h.symbol+". Referência do provedor "+l(h.price)+" pontos. "+
+            (valido?"Natureza do campo não confirmada.":"O valor está fora do incremento de negociação de "+l(tick)+" ponto(s).")+
+            " Vencimento e horário do negócio sem confirmação. Fonte: "+h.source+" · consulta "+String(h.queried||"não informada")+".");
         }
+        n.heading("Como ler os dois contratos");
+        n.text("WIN acompanha o índice futuro. WDO usa pontos de dólar futuro. Antes da abertura, conferir no Profit o vencimento vigente, o último negócio e o ajuste da sessão anterior. A faixa acima pertence ao símbolo contínuo retornado pelo provedor.");
         return (
-          f.need(330),
+          f.add(),
           n.heading("Quadro de cenários e invalidação"),
           n.table(
             [
               ["Ativo", 17],
               ["Acima: referência imediata", 28],
               ["Abaixo: referência imediata", 28],
-              ["Invalidação do cenário", 27],
+              ["Invalidação da perna diária", 27],
             ],
             g.studies
               .filter((h) => h.available)
               .map((h) => {
                 const t = h.tech || {}, ra = t.refAlta, rb = t.refBaixa, pv = t.invalidacao;
                 return [
-                  lgCel(h.ticker),
+                  { t:h.ticker,sub:h.dailyTrend+" / "+h.weeklyTrend },
                   ra ? { t: l(ra[1]), sub: ra[0] } : l(h.resistance),
                   rb ? { t: l(rb[1]), sub: rb[0] } : l(h.support),
                   pv ? { t: l(pv.v), sub: pv.tipo } : "Retorno à faixa em fechamento",
@@ -7074,7 +7232,7 @@ de Carteira`,
           (() => {
             const A = window.RevistaModel?.agenda?.(g) || [];
             (f.need(120),
-              n.heading("Agenda da próxima semana", g.window.from.slice(8, 10) + "/" + g.window.from.slice(5, 7) + " a " + g.window.to.slice(8, 10) + "/" + g.window.to.slice(5, 7) + " · vencimentos, bancos centrais e indicadores de alto impacto"),
+              n.heading("Agenda da próxima semana", g.window.from.slice(8, 10) + "/" + g.window.from.slice(5, 7) + " a " + g.window.to.slice(8, 10) + "/" + g.window.to.slice(5, 7) + " · horário de Brasília · vencimentos, bancos centrais e indicadores de alto impacto"),
               A.length
                 ? n.table(
                     [
@@ -7087,11 +7245,11 @@ de Carteira`,
                   )
                 : n.text("Sem vencimentos ou eventos de alto impacto encontrados para a semana. Confira a aba Agenda."));
           })(),
-          n.heading("Roteiro para o diário"),
-          n.text("1. Conferir agenda e vencimentos · 2. Atualizar preços e confirmar o cenário · 3. Registrar cenário, alternativo e invalidação · 4. Dimensionar o risco · 5. Revisar a execução ao encerrar."),
           n.heading("Fontes e método"),
+          n.text("Médias simples de 20, 50 e 200 fechamentos por período. Os tracejados do gráfico diário representam as referências imediatas acima e abaixo. As curvas usam histórico anterior ao trecho exibido. IFR de 14 pregões com suavização de Wilder. A série usa OHLC do provedor, sem troca pelo fechamento ajustado por dividendos."),
+          g.fontesMetodologicas?.length && n.text("Acervo consultado nesta edição: "+g.fontesMetodologicas.join(" · ")),
           n.text(
-            (g.ia?.modelo ? "Leitura técnica redigida por " + g.ia.modelo + " (Roteador Multi-IA)" + (g.ia.refs?.length ? ", consultando o Cérebro da IA: " + g.ia.refs.join(", ") : "") + ". " : "Leitura técnica montada pelo app (nenhuma IA respondeu" + (g.iaErro ? ": " + g.iaErro : "") + "). ") + "Candles das fontes integradas ao app até o corte da edição. Médias, RSI 14 (Wilder), topos e fundos por fractal (Dow), Fibonacci e extensões (Elliott / Flávio Lemos) e padrões de candles são calculados pelo código; a IA só redige a leitura e os números são conferidos. Futuros: snapshot do terminal, sem histórico inventado. Revista original, sem reproduzir outras publicações.",
+            (g.ia?.modelo && g.ia.modelo!=="código" ? "Leitura técnica redigida por " + g.ia.modelo + (g.ia.editorial ? "" : " (Roteador Multi-IA)") + (g.ia.refs?.length ? ", consultando o Cérebro da IA: " + g.ia.refs.join(", ") : "") + ". " : "Leitura técnica montada pelo app (nenhuma IA respondeu" + (g.iaErro ? ": " + g.iaErro : "") + "). ") + "Candles das fontes integradas ao app até o corte da edição. Médias, IFR de Wilder, topos e fundos por fractal (Dow), Fibonacci e extensões (Elliott / Flávio Lemos) e padrões de candles são calculados com as barras observadas. Futuros: snapshot do terminal, sem histórico inventado. Revista original, sem reproduzir outras publicações.",
           ),
           n.finish()
         );
@@ -7926,7 +8084,7 @@ de Carteira`,
       };
       try {
         const n = JSON.parse(APP_STORAGE.getItem(l) || "null");
-        n?.formato === s.VERSION && (O = n);
+        n?.formato === s.VERSION && (O = s.enrich(n));
       } catch {}
       const e = () =>
           [0, 6].includes(new Date(s.spDate() + "T12:00:00Z").getUTCDay()),
@@ -8001,6 +8159,7 @@ de Carteira`,
                                 body: JSON.stringify({
                                   ativo: L.request,
                                   intervalo: "1d",
+                                  revista: true,
                                 }),
                                 signal: AbortSignal.timeout(25e3),
                               }),
@@ -8090,18 +8249,18 @@ de Carteira`,
       }
       /* v618: a IA redige os 4 blocos a partir dos números calculados; sem IA, o PDF usa o texto do código. */
       async function rvIa(n) {
-        if (!n || n.ia?.versao === 619 || window.DIARIO_DEMO || !SESS?.at) return n;
+        if (!n || n.ia?.versao === 20261123 || window.DIARIO_DEMO || !SESS?.at) return n;
         s.enrich(n);
         const ativos = (n.studies || []).filter((h) => h.available && h.tech).map((h) => ({
           ticker: h.ticker, nome: h.name,
-          fatos: { fechamento: h.close, mm20: h.ma20, mm50: h.ma50, mm200: h.ma200, mm10s: h.w10, mm40s: h.w40, rsi14: h.rsi, suporte20: h.support, resistencia20: h.resistance, estrutura_diaria: h.dailyTrend, estrutura_semanal: h.weeklyTrend, variacao_semana: h.weeklyReturn, tecnico: h.tech },
+          fatos: { fechamento: h.close, mm20: h.ma20, mm50: h.ma50, mm200: h.ma200, mm20s: h.w20, mm50s: h.w50, mm200s: h.w200, rsi14: h.rsi, suporte20: h.support, resistencia20: h.resistance, estrutura_diaria: h.dailyTrend, estrutura_semanal: h.weeklyTrend, variacao_semana: h.weeklyReturn, tecnico: h.tech },
           base: s.blocks(h),
         })).filter((a) => a.base);
         if (!ativos.length) return n;
         try {
           const r = await rq("/functions/v1/revista-ia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ corte: n.window.cutoff, ativos }), signal: AbortSignal.timeout(120e3) }),
             j = await r.json().catch(() => ({}));
-          j?.ativos && ((n.ia = { versao: 619, ativos: j.ativos, modelo: j.modelo, gerado: j.gerado, refs: Array.isArray(j.referencias_cerebro) ? j.referencias_cerebro.slice(0, 5).map(String) : [] }), z(n));
+          j?.ativos && ((n.ia = { versao: 20261123, ativos: j.ativos, modelo: j.modelo, gerado: j.gerado, refs: Array.isArray(j.referencias_cerebro) ? j.referencias_cerebro.slice(0, 5).map(String) : [] }), z(n));
           j?.erro && !j?.ativos && (n.iaErro = String(j.erro).slice(0, 200));
         } catch {}
         return n;
@@ -8114,7 +8273,7 @@ de Carteira`,
         if (!n.available)
           return `<section class="rv-study" id="${sid}"><h2>${r(n.ticker)} · ${r(n.name)}</h2><p class="rv-missing">${r(n.reason)}</p></section>`;
         const f = n.bars.map((h) => ({ date: s.date(h[0]), value: h[4] }));
-        return `<section class="rv-study" id="${sid}"><div class="rv-kicker">ESTUDO TÉCNICO · ${r(n.asOf)}</div><h2>${r(n.ticker)} · ${r(n.name)}</h2><p>Estrutura diária: <b>${r(n.dailyTrend)}</b> · semanal: <b>${r(n.weeklyTrend)}</b> · variação da última semana disponível: <b>${j(n.weeklyReturn)}%</b></p>${window.CarteiraExperience?.svgLine(f.slice(-120), n.ticker + " · fechamentos diários") || ""}<p class="rv-source">${r(n.source)} · ${r(n.from)} a ${r(n.asOf)}. O gráfico mostra fechamentos observados.</p><div class="rv-metrics"><span>Fechamento <b>${j(n.close)}</b></span><span>MM20 <b>${j(n.ma20)}</b></span><span>MM50 <b>${j(n.ma50)}</b></span><span>MM200 <b>${j(n.ma200)}</b></span><span>RSI14 <b>${j(n.rsi)}</b></span></div><p>Diário: preço e ordenação das MM20/MM50. Semanal: preço e ordenação das médias de 10/40 semanas. Uma estrutura indefinida pede confirmação; médias descrevem o histórico e podem atrasar reversões.</p>${E(n)}</section>`;
+        return `<section class="rv-study" id="${sid}"><div class="rv-kicker">ESTUDO TÉCNICO · ${r(n.asOf)}</div><h2>${r(n.ticker)} · ${r(n.name)}</h2><p>Estrutura diária: <b>${r(n.dailyTrend)}</b> · semanal: <b>${r(n.weeklyTrend)}</b> · variação da última semana disponível: <b>${j(n.weeklyReturn)}%</b></p>${window.CarteiraExperience?.svgLine(f.slice(-120), n.ticker + " · fechamentos diários") || ""}<p class="rv-source">${r(n.source)} · ${r(n.from)} a ${r(n.asOf)}. O gráfico mostra fechamentos observados.</p><div class="rv-metrics"><span>Fechamento <b>${j(n.close)}</b></span><span>MM20 <b>${j(n.ma20)}</b></span><span>MM50 <b>${j(n.ma50)}</b></span><span>MM200 <b>${j(n.ma200)}</b></span><span>RSI14 <b>${j(n.rsi)}</b></span></div><p>Os pivôs diários e semanais são avaliados separadamente. MM20, MM50 e MM200 usam os fechamentos do respectivo gráfico.</p>${E(n)}</section>`;
       }
       function P(n, idx) {
         return `<section class="rv-study"${idx === 0 ? ' id="rv-sec-futuros"' : ""}>
@@ -8246,7 +8405,21 @@ de Carteira`,
           return rpAbrir(
             "Revista da Semana",
             "revista-semana-" + n.window.from + ".pdf",
-            () => rvIa(n).then((x) => TraderReports.technicalMagazinePdf(x || n)),
+            async () => {
+              const edicao = (await rvIa(n)) || n;
+              const chave = data => "revista-publicada:"+data;
+              let anterior = null;
+              try { anterior = JSON.parse(APP_STORAGE.getItem(chave(s.add(edicao.window.from,-7))) || "null"); } catch {}
+              edicao.retrospectiva = s.conferirSemana(anterior,edicao);
+              const bytes = await TraderReports.technicalMagazinePdf(edicao);
+              if (!edicao.demo && s.spDate()<edicao.window.from) {
+                try {
+                  const destino=chave(edicao.window.from);
+                  if (!APP_STORAGE.getItem(destino)) APP_STORAGE.setItem(destino,JSON.stringify(s.planosDaEdicao(edicao)));
+                } catch {}
+              }
+              return bytes;
+            },
           );
         }
         return R.apply(this, arguments);

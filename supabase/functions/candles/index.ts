@@ -223,14 +223,15 @@ Deno.serve(async (req) => {
     return out(v);
   }
   // gráfico das cotações ao vivo: histórico por intervalo (o candle atual vem do Profit, no app)
-  const g = GRAFICO[String(b.intervalo || '')];
+  const revista = b.revista === true && b.intervalo === '1d';
+  const g = revista ? { intervalo:'1d', range:'5y' } : GRAFICO[String(b.intervalo || '')];
   if (g) {
-    const chave = `g|${m.y}|${g.intervalo}`, c0 = cache.get(chave);
+    const chave = `g|${m.y}|${g.intervalo}|${g.range}`, c0 = cache.get(chave);
     if (c0 && Date.now() - c0.ts < 2 * 60_000) return out(c0.v);
     try {
       const r = await yahooCandles(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(m.y)}?range=${g.range}&interval=${g.intervalo}&includePrePost=false`, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(12_000) });
       if (!r.ok) return out({ error: 'Yahoo ' + r.status }, 502);
-      const v = { simbolo: m.y, intervalo: g.intervalo, proxy: m.proxy, nota: m.nota, fonte: 'Yahoo Finance', consultadoEm: new Date().toISOString(), candles: leYahoo(await r.json(), m.mult, 600) };
+      const v = { simbolo: m.y, intervalo: g.intervalo, proxy: m.proxy, nota: m.nota, fonte: 'Yahoo Finance', consultadoEm: new Date().toISOString(), candles: leYahoo(await r.json(), m.mult, revista ? 1600 : 600) };
       cache.set(chave, { ts: Date.now(), v });
       return out(v);
     } catch (e) { return out({ error: (e as Error).message }, 500); }

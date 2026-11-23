@@ -31,7 +31,7 @@ export function fatosTecnicos(entrada: any) {
   };
   if (revista) {
     adiciona('diario', d.fechamento, [['MM20', d.mm20], ['MM50', d.mm50], ['MM200', d.mm200]]);
-    adiciona('semanal', d.fechamento, [['MM10s', d.mm10s], ['MM40s', d.mm40s]]);
+    adiciona('semanal', d.fechamento, 'mm20s' in d ? [['MM20 semanal', d.mm20s], ['MM50 semanal', d.mm50s], ['MM200 semanal', d.mm200s]] : [['MM10s', d.mm10s], ['MM40s', d.mm40s]]);
   } else {
     for (const tempo of ['mensal', 'semanal', 'diario']) {
       const t = obj(mtf[tempo]);
