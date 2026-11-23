@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test'), assert=require('node:assert/strict');
 let funcs;
-const ready=async()=>funcs||(funcs=await import('../cloudflare/diario-radar/agenda-preflight-v933.mjs')));
+const ready=async()=>funcs||(funcs=await import('../cloudflare/diario-radar/agenda-preflight-v933.mjs'));
 const environment=()=>{const lock=new Set(),writes=[];return {
  AGENDA_PREFLIGHT_ENABLED:'1',AGENDA_CUTOVER_ENABLED:'0',
  SUPABASE_URL:'https://vdzwydizostutukppcsj.supabase.co',
