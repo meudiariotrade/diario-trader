@@ -72,7 +72,10 @@ async function anxCall(e) {
       e?.modo === "estatisticas" ? "/v1/ia-estatisticas" :
       ["topicos", "quiz", "ingles", "jornal_aula"].includes(e?.modo) ? "/v1/ia-estudos" :
       (e?.modo === "diario" && ["chat", "perdas", "debrief"].includes(e?.sub) && !e?.audio)
-        ? "/v1/ia-diario" : "";
+        ? "/v1/ia-diario" :
+      (["coach", "cnpi", "jornal_voce", "jornal_quiz"].includes(e?.modo) &&
+       (e?.modo !== "coach" || JSON.stringify(e?.dados || {}).length <= 110000))
+        ? "/v1/ia-extras" : "";
     const endpointCloudflare = caminhoCloudflare
       ? "https://diario-screeners-quant.lucianosilva43567.workers.dev" + caminhoCloudflare : "";
     const pedir = (destino, cloudflare) => fetch(destino, {
