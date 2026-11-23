@@ -22235,14 +22235,15 @@ async function up(e = null, revision = null) {
   for (let i = 0; i < 3; i++) {
     assertSyncOwner(owner);
     const data = pub();
-    const result = await (
-      await rq("/rest/v1/rpc/diario_salvar_revisao", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(35000),
-        body: JSON.stringify({ expected_revision: revision, new_data: data }),
-      })
-    ).json();
+    // Após conferência do espelho, todas as gravações do Diário usam D1.
+    const result = window.DiarioD1Principal?.active(owner)
+      ? await window.DiarioD1Principal.save(SESS.at,revision,data)
+      : await (await rq("/rest/v1/rpc/diario_salvar_revisao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(35000),
+          body: JSON.stringify({ expected_revision: revision, new_data: data }),
+        })).json();
     assertSyncOwner(owner);
     if (result.saved) {
       RQ_DIARIO_REVISOES.clear();
@@ -22263,10 +22264,25 @@ async function up(e = null, revision = null) {
 async function sync(force) {
   const owner = syncOwner();
   if (!SESS || SY.busy) return;
+  // Sem D1 disponível, manter exatamente o fluxo legado e seu tratamento
+  // de sessão. Com D1, renovar JWT antes de confirmar identidade e paridade.
+  let usandoD1 = false;
+  if(!window.DIARIO_DEMO && window.DiarioD1Principal){
+    try { await tok(); } catch (_) { /* sessão expirada: não usar token antigo */ }
+    if(!SESS?.at || syncOwner()!==owner)return;
+    usandoD1 = await window.DiarioD1Principal.prepare(owner,SESS.at,async()=>{
+      const r=await rq("/rest/v1/diario?select=data,revision&user_id=eq." + owner,
+        {signal:AbortSignal.timeout(20000)});
+      return r.json();
+    });
+    assertSyncOwner(owner);
+  }
+  if(SY.busy)return;
   // Cache de revisão apenas na sessão atual, isolado por usuário.
   // O número de revisão é atualizado pelo RPC de gravação com controle de conflito.
   if (window.DiarioSyncRevision?.owner !== owner) window.DiarioSyncRevision = { owner, revision: null };
   const known = window.DiarioSyncRevision;
+  if(usandoD1 && known.origem!=='d1'){known.revision=null;known.origem='d1';}
   SY.busy = 1;
   SY.msg = "Sincronizando…";
   uiSy();
@@ -22276,11 +22292,11 @@ async function sync(force) {
     // revisão (poucos bytes), em vez de baixar todo o diário JSON outra vez.
     // Escritas locais, sincronização manual e primeiro acesso mantêm a leitura integral.
     if (!force && S.st && S.mt <= S.st && known.revision !== null) {
-      const meta = await (
-        await rq("/rest/v1/diario?select=revision&user_id=eq." + SESS.uid, {
-          signal: AbortSignal.timeout(20000),
-        })
-      ).json();
+      const meta = usandoD1
+        ? await window.DiarioD1Principal.getMetaAsRows(SESS.at)
+        : await (await rq("/rest/v1/diario?select=revision&user_id=eq." + SESS.uid, {
+            signal: AbortSignal.timeout(20000),
+          })).json();
       assertSyncOwner(owner);
       if (Array.isArray(meta) && meta.length === 1 && meta[0].revision != null &&
           String(meta[0].revision) === String(known.revision)) {
@@ -22289,7 +22305,7 @@ async function sync(force) {
         S.lastSyncAt = Date.now();
         persist();
         // Cópia privada D1 após confirmar o sincronismo atual (fase espelho).
-        if(!window.DIARIO_DEMO)window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
+        if(!window.DIARIO_DEMO && !window.DiarioD1Principal?.active(owner))window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
         if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at))
           .then(()=>window.DiarioMigracaoD1?.run(SESS.uid,SESS.at,()=>SESS?.uid===owner))
           .catch(()=>{});
@@ -22299,11 +22315,11 @@ async function sync(force) {
         return;
       }
     }
-    const rows = await (
-      await rq("/rest/v1/diario?select=data,revision&user_id=eq." + SESS.uid, {
-        signal: AbortSignal.timeout(20000),
-      })
-    ).json();
+    const rows = usandoD1
+      ? await window.DiarioD1Principal.getRows(SESS.at)
+      : await (await rq("/rest/v1/diario?select=data,revision&user_id=eq." + SESS.uid, {
+          signal: AbortSignal.timeout(20000),
+        })).json();
     assertSyncOwner(owner);
     const remote = rows[0]?.data,
       revision = rows[0]?.revision ?? null;
@@ -22337,7 +22353,7 @@ async function sync(force) {
     S.lastSyncAt = Date.now();
     persist();
     // Espelha operações e carteira no D1; não interrompe o Supabase nesta fase.
-    if(!window.DIARIO_DEMO)window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
+    if(!window.DIARIO_DEMO && !window.DiarioD1Principal?.active(owner))window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
         if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at))
           .then(()=>window.DiarioMigracaoD1?.run(SESS.uid,SESS.at,()=>SESS?.uid===owner))
           .catch(()=>{});
