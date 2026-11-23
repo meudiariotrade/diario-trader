@@ -37,6 +37,7 @@ test('v933: preflight avalia apenas horários fixos de 15 minutos UTC',async()=>
  const env=environment();
  assert.equal((await ready()).preflightDueV933({cron:'* * * * *',scheduledTime:moment},env),true);
  assert.equal((await ready()).preflightDueV933({cron:'* * * * *',scheduledTime:moment+60000},env),false);
+ assert.equal((await ready()).preflightDueV933({cron:'* * * * *',scheduledTime:moment+60000},{...env,AGENDA_PREFLIGHT_FAST_V934:'1'}),true);
  assert.equal((await ready()).preflightDueV933({cron:'*/15 13-20 * * MON-FRI',scheduledTime:moment},env),false);
  assert.equal((await ready()).preflightDueV933({cron:'* * * * *',scheduledTime:moment},{AGENDA_PREFLIGHT_ENABLED:'0'}),false);
 });
