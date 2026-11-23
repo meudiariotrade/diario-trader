@@ -295,7 +295,7 @@ try {
       const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>f(()=>window.tapeVivo?.(k),null)||tape[k];
       const itens=[["^BVSP","Ibovespa"],["BRL=X","Dólar"],["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["EWZ","EWZ"],["BTC-USD","Bitcoin"]].map(([k,n])=>{
         const v=viva(k);if(!v||!(+v.px>0))return null;const c=v.chg==null||v.chg===""?null:+v.chg;
-        return {rotulo:n,valor:q(v.px),detalhe:c==null?"sem variação":Q(c)+(v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
+        return {rotulo:n,valor:q(v.px),detalhe:c==null?"variação indisponível":Q(c)+(v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
       }).filter(Boolean);
       return '<section class="v4-summary v829-kpis" aria-label="Resumo do mercado">'+(itens.length?U.kpis(itens):'<p class="v4-sub">Cotações carregando na barra superior.</p>')+'</section>';
     }
@@ -319,7 +319,7 @@ try {
       const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>f(()=>window.tapeVivo?.(k),null)||tape[k];
       const idx=[["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["^DJI","Dow"],["EWZ","EWZ"],["CL=F","WTI"]].map(([k,n])=>{
         const v=viva(k);if(!v||!(+v.px>0))return "";const c=v.chg==null||v.chg===""?null:+v.chg;
-        return '<div><span>'+n+'</span><b>'+q(v.px)+'</b><em class="'+L(c)+'">'+(c==null?"":Q(c))+'</em></div>';}).join("");
+        return '<div><span>'+n+'</span><b>'+q(v.px)+'</b><em class="'+L(c)+'">'+(c==null?"—":Q(c))+'</em></div>';}).join("");
       const itens=f(()=>(AD.data?.itens||[]).map(r=>{const w=window.TraderAdr?.view(r)||{};return {s:r.s,px:w.active?.px??r.px,ch:w.change??r.chp,k:w.active?.kind};}).filter(r=>r.ch!=null),[]);
       itens.sort((a,b)=>Math.abs(b.ch)-Math.abs(a.ch));
       const media=itens.length?itens.reduce((a,r)=>a+(+r.ch||0),0)/itens.length:null;

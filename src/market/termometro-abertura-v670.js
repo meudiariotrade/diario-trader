@@ -57,6 +57,14 @@
   }
   function lista() {
     const a = [];
+    // v925: o termômetro usa EWZ da mesma fonte do Início e da fita.
+    try {
+      const q=w.tapeVivo?.("EWZ"), ts=stamp(q?.dadoEm);
+      const atual=num(q?.px), variacao=num(q?.chg);
+      if(atual!==null&&atual>0&&variacao!==null&&ts!==null)
+        a.push({item:{s:"EWZ",px:atual,d1:variacao,em:q.dadoEm},
+          coleta:ts,grupo:"ewz-canonico"});
+    }catch{}
     try {
       if (typeof FH !== "undefined" && FH?.q) {
         for (const [k, q] of Object.entries(FH.q)) {

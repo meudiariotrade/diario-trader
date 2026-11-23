@@ -5131,10 +5131,33 @@ const fhSelo = (itens = null) => {
   const v = Array.isArray(itens) ? vivos > 0 : fhVivo();
   return `<span class="bnc-selo fh-selo${v ? " on" : ""}" title="EUA, ADRs e moedas pela Finnhub; fora do pregão ou sem conexão, TradingView"><i aria-hidden="true"></i>${v ? (FH.modo === "rest" ? "Finnhub · a cada 20 s" : "Finnhub · Tempo real") : "TradingView"}</span>`;
 };
-// Fita superior: USD/BRL e EWZ pela Finnhub (Binance e Profit seguem nos deles).
+// v925: EWZ com fonte de ADR recente, sem requisições novas.
+function fhEwzAdr925() {
+  try {
+    const dados=typeof AD!=="undefined"?AD.data:null;
+    const row=Array.isArray(dados?.itens)?dados.itens.find(x=>x?.s==="EWZ"):null;
+    const visual=row&&window.TraderAdr?.view(row);
+    const cot=visual?.active||visual?.regular;
+    const px=Number(cot?.px),chg=cot?.chp,consultado=Number(dados?.ts);
+    const ts=Date.parse(cot?.at||""),now=Date.now();
+    const fase=window.TraderAdr?.phase?.()||"reg";
+    const limite=(fase==="closed"||fase==="overnight")?96*3600000:
+      fase==="pre"?36*3600000:fase==="post"?8*3600000:90*60000;
+    if(!Number.isFinite(px)||px<=0||typeof chg!=="number"||!Number.isFinite(chg)||
+       !Number.isFinite(ts)||ts>now+60000||now-ts>limite||
+       !Number.isFinite(consultado)||consultado>now+60000||now-consultado>5*60000)return null;
+    return {px,chg,fonte:"EWZ · ADRs Cloudflare",dadoEm:new Date(ts).toISOString(),
+      fechado:fase==="closed",atraso:!!dados.atraso};
+  }catch{return null}
+}
+// Fita superior: EWZ da cotação ADR recente, senão Finnhub/Profit; sem consulta extra.
 {
   const antes = window.tapeVivo;
   window.tapeVivo = (s) => {
+    if (s === "EWZ") {
+      const referencia=fhEwzAdr925();
+      if (referencia) return referencia;
+    }
     if (FH_TAPE[s]) {
       const base = (window.tapeDados && window.tapeDados()[s]) || {};
       const f = fhAplica(FH_TAPE[s], base.px, base.chg);
