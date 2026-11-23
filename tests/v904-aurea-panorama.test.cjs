@@ -31,6 +31,7 @@ test('v904: Resumão da Áurea entrega texto dentro do app, sem PostgREST, usand
   assert.equal(response.headers.get('cache-control'),'private, no-store');
   assert.equal(requests.filter(x=>x.url.includes('supabase.co')).length,1);
   assert.ok(requests[0].url.endsWith('/auth/v1/.well-known/jwks.json'));
+  assert.equal(requests[0].init.redirect,'manual');
   assert.ok(!requests.some(x=>x.url.endsWith('/auth/v1/user')));
   assert.ok(!requests.some(x=>/\/rest\/v1|\/functions\/v1|\/storage\/v1/.test(x.url)));
   assert.ok(!requests.some(x=>x.url.includes('generativelanguage')&&x.init.headers.Authorization));
@@ -86,11 +87,12 @@ test('Conselho usa a instrução da especialidade e devolve o parecer para cada 
  const {resumoAurea}=await modulePromise;
  const old=global.fetch;
  try {
-  for(const [edicao,especialidade] of [['fiis','Graham'],['antitilt','três perguntas'],['carteira','concentração']]){
+  for(const [edicao,especialidade] of [['etfs','Markowitz'],['fiis','Graham'],['antitilt','três perguntas'],['carteira','concentração']]){
    const prompt='Considere os indicadores e as limitações fornecidas para esta consulta do Conselho no app.';
    const resposta='Resposta de teste do Conselho para validar a entrega da análise solicitada.';
    global.fetch=async(url,init)=>{
     if(String(url).endsWith('/auth/v1/.well-known/jwks.json'))return Response.json({keys:[jwk]});
+    assert.equal(init.redirect,'manual','A chamada ao Gemini deve usar redirecionamento manual no Worker');
     const payload=JSON.parse(init.body);
     assert.ok(payload.systemInstruction.parts[0].text.includes(especialidade));
     assert.equal(payload.contents[0].parts[0].text,prompt);

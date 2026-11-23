@@ -58,7 +58,7 @@ async function publicKeys(origin, force = false, env = null) {
   }
   const pending = (async () => {
     const response = await fetch(origin + '/auth/v1/.well-known/jwks.json', {
-      method: 'GET', redirect: 'error', headers: { Accept: 'application/json' },
+      method: 'GET', redirect: 'manual', headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(9000)
     });
     if (!response.ok) throw Error('JWKS indisponível');
