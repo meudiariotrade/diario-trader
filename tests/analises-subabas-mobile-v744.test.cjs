@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {expect}=require('playwright/test');
 const {withApp}=require('./helpers/app.cjs');
-test('iPhone: Análises numa aba só — telas e mercado no topo, O Conselho preservado (v882)',{timeout:90000},async()=>withApp(async(browser,base)=>{
+test('iPhone: Análises numa aba só — telas e mercado no topo, O Conselho inclui Dalio (v920)',{timeout:90000},async()=>withApp(async(browser,base)=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(base+'/?demo=1');
  await page.locator('#splash').waitFor({state:'hidden'});
@@ -15,7 +15,9 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, O Conselho pre
  const pesquisa=nav.locator('[data-an-sub="pesquisa"]');
  await expect(pesquisa).toHaveText('Conselho');
  await expect(pesquisa).toHaveAttribute('aria-label',/O Conselho — especialistas de mercado/);
- await expect(page.locator('#an-root [data-an-membro]')).toHaveCount(6);
+ const membros=page.locator('#an-root [data-an-membro]');
+ await expect(membros).toHaveCount(7);
+ await expect(membros.filter({hasText:'Dalio'})).toHaveAttribute('data-an-membro','dalio');
  await expect(pesquisa).toHaveAttribute('aria-selected','true');
  await expect(nav.locator('[data-an-sub="us"]')).toBeVisible();
  await expect(nav.locator('[data-an-sub="tecnico-br"]')).toHaveCount(1);
