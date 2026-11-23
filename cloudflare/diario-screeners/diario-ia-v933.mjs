@@ -67,7 +67,7 @@ export async function diarioIaV933(req,env){
  const count=kv?Number(await kv.get(key)||0):0;
  if(count>=14)return answer({erro:'Limite diário do Diário com IA atingido.'},429);
  if(kv)await kv.put(key,String(count+1),{expirationTtl:86400});
- const out=await generate(env,prompt,'estudos');
+ const out=await generate(env,prompt,'diario');
  if(out.error)return answer({erro:'Serviço de IA temporariamente indisponível.'},503);
  let result=null;try{result=JSON.parse(out.text)?.resultado}catch{}
  if(!isObj(result))return answer({erro:'A IA retornou formato inválido.'},502);
