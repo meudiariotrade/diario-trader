@@ -28,7 +28,7 @@ test('v930: falhas externas levam a Workers AI, sem consultar PostgREST',async()
   const json=await response.json();
   assert.equal(response.status,200);assert.equal(json.ok,true);assert.match(json.model,/Workers AI/);
   assert.equal(chamados.length,1);assert.equal(chamados[0].model,'@cf/meta/llama-3.1-8b-instruct-fp8-fast');
-  assert.ok(paths.every(x=>!/supabase.co\\/rest\\/v1|supabase.co\\/functions\\/v1/.test(x)));
+  assert.ok(paths.every(x=>!x.includes('/rest/v1')&&!x.includes('/functions/v1')));
   assert.equal(response.headers.get('cache-control'),'private, no-store');
  }finally{global.fetch=prior}
 });
@@ -45,6 +45,6 @@ test('v930: binding gratuito e cotas anteriores preservados',()=>{
  const cfg=JSON.parse(fs.readFileSync('cloudflare/diario-screeners/wrangler.jsonc','utf8'));
  const code=fs.readFileSync('cloudflare/diario-screeners/aurea-resumao-v904.mjs','utf8');
  assert.equal(cfg.ai.binding,'AI');
- assert.match(code,/prazoGemini=Date.now\\(\\)\\+11000/);
+ assert.ok(code.includes('prazoGemini=Date.now()+11000'));
  assert.match(code,/aurea:usage:v904:/);assert.match(code,/cerebro:usage:v924:/);
 });
