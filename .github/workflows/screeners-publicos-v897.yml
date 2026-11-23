@@ -57,7 +57,7 @@ jobs:
           if test -s .screeners-output/catalogo.json; then
             cp .screeners-output/catalogo.json /tmp/screeners-export-v897/catalogo.json
           fi
-          git checkout -B screeners-dados origin/screeners-dados
+          git checkout -B screeners-dados FETCH_HEAD
           cp /tmp/screeners-export-v897/BR.json dados-publicos/screeners-BR.json
           cp /tmp/screeners-export-v897/US.json dados-publicos/screeners-US.json
           cp /tmp/screeners-export-v897/status.json dados-publicos/screeners-status.json
