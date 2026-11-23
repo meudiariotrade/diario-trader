@@ -7,10 +7,10 @@ const CORS={
  'Access-Control-Expose-Headers':'ETag, X-Screeners-Cache, X-Snapshot-Source',
 };
 const json=(value,status=200)=>Response.json(value,{status,headers:{...CORS,'Cache-Control':'no-store'}});
-function conditional(req,response,hit){
+function conditional(req,response,hit,policy=CACHE_CONTROL){
  const headers=new Headers(response.headers);
  for(const [key,value] of Object.entries(CORS))headers.set(key,value);
- headers.set('Cache-Control',CACHE_CONTROL);
+ headers.set('Cache-Control',policy);
  headers.set('X-Screeners-Cache',hit?'HIT':'MISS');
  headers.set('X-Snapshot-Source','cloudflare-edge-public');
  const tag=headers.get('ETag'),cond=req.headers.get('If-None-Match')?.trim();
@@ -535,7 +535,32 @@ export default {
   const key=new Request(url.origin+'/v1/screeners?market='+market+(revision?'&v='+revision:''),{method:'GET'});
   const cache=caches.default;
   const cached=await cache.match(key);
-  if(cached)return conditional(request,cached,true);
+  const sharedKey='universe:v1:'+market;
+  function snapshotResponse(body,etag,expiresAt){
+   const remaining=Math.max(0,Math.floor((expiresAt-Date.now())/1000));
+   return new Response(body,{headers:{
+    'Content-Type':'application/json; charset=utf-8',
+    'Cache-Control':'public, max-age='+Math.min(900,remaining)+', s-maxage='+remaining,
+    'X-Snapshot-Expires':String(expiresAt),ETag:etag,
+   }});
+  }
+  function deliver(response,hit,tier){
+   const fresh=snapshotResponse(response.body,response.headers.get('ETag')||'',Number(response.headers.get('X-Snapshot-Expires')));
+   const out=conditional(request,fresh,hit,fresh.headers.get('Cache-Control'));
+   out.headers.set('X-Snapshot-Tier',tier);
+   return out;
+  }
+  if(cached&&Number(cached.headers.get('X-Snapshot-Expires'))>Date.now())return deliver(cached,true,'pop');
+  if(env.SCREENER_CACHE){
+   try{
+    const {value,metadata}=await env.SCREENER_CACHE.getWithMetadata(sharedKey,'text');
+    if(value&&metadata?.expiresAt>Date.now()){
+     const shared=snapshotResponse(value,metadata.etag,metadata.expiresAt);
+     ctx.waitUntil(cache.put(key,shared.clone()).catch(()=>{}));
+     return deliver(shared,true,'kv');
+    }
+   }catch{/* Falha no KV: a origem continua disponível. */}
+  }
   const origin=String(env.SUPABASE_URL||'').replace(/\/$/,'');
   if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(origin))
    return json({error:'Origem nao configurada'},503);
@@ -546,14 +571,14 @@ export default {
   if(body.length>1800000)return json({error:'Snapshot excedeu limite da borda'},503);
   let payload;try{payload=JSON.parse(body)}catch{return json({error:'Resposta da origem invalida'},503)}
   if(!payload?.ok||payload?.market!==market)return json({error:'Snapshot incorreto'},503);
-  const headers=new Headers({
-   'Content-Type':'application/json; charset=utf-8','Cache-Control':CACHE_CONTROL,
-   'ETag':response.headers.get('ETag')||'',
-   'X-Snapshot-Source':'cloudflare-edge-public',
-  });
-  const sourceResponse=new Response(body,{status:200,headers});
-  // Cache API por POP: hit compartilhado entre usuários nesse POP; não é cache global único.
-  if(payload.universe_complete===true)ctx.waitUntil(cache.put(key,sourceResponse.clone()));
-  return conditional(request,sourceResponse,false);
+  const expiresAt=Date.now()+1800000,etag=response.headers.get('ETag')||'';
+  const sourceResponse=snapshotResponse(body,etag,expiresAt);
+  if(payload.universe_complete===true&&Array.isArray(payload.universe_rows)){
+   ctx.waitUntil(cache.put(key,sourceResponse.clone()).catch(()=>{}));
+   if(env.SCREENER_CACHE)ctx.waitUntil(env.SCREENER_CACHE.put(sharedKey,body,{
+    expirationTtl:1800,metadata:{expiresAt,etag}
+   }).catch(()=>{}));
+  }
+  return deliver(sourceResponse,false,'origin');
  }
 };
