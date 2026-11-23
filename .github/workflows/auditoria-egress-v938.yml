@@ -1,0 +1,38 @@
+name: Auditoria de Egress e Cutover (v938)
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'cloudflare/**'
+      - 'scripts/auditar-egress-v938.cjs'
+      - 'tests/auditar-egress-v938.test.cjs'
+      - '.github/workflows/auditoria-egress-v938.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'cloudflare/**'
+      - 'scripts/auditar-egress-v938.cjs'
+      - 'tests/auditar-egress-v938.test.cjs'
+      - '.github/workflows/auditoria-egress-v938.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auditar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Proibir regressão de rotas públicas, privacidade e estado D1
+        run: node --test tests/auditar-egress-v938.test.cjs
+      - name: Resumir APIs Supabase residuais (sem consultar logs, usuários ou rede)
+        run: node scripts/auditar-egress-v938.cjs --json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-egress-v938
+          path: artifacts/auditoria-egress-v938.json
+          retention-days: 7
