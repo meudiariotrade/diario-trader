@@ -31,14 +31,20 @@ jobs:
       name: cloudflare-workers
     steps:
       - uses: actions/checkout@v4
-      - name: Verificar segredos de publicacao (sem exibir valores)
+      - id: credentials
+        name: Verificar se GitHub tem acesso a Cloudflare (sem exibir valores)
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          test -n "$CF_TOKEN" || { echo "::error::Configure CLOUDFLARE_API_TOKEN no GitHub"; exit 1; }
-          test -n "$CF_ACCOUNT" || { echo "::error::Configure CLOUDFLARE_ACCOUNT_ID no GitHub"; exit 1; }
+          if [ -n "$CF_TOKEN" ] && [ -n "$CF_ACCOUNT" ]; then
+            echo "disponivel=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "disponivel=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Credenciais de CI ausentes; Worker foi publicado pela conexao direta da Cloudflare. Deploy GitHub ignorado."
+          fi
       - name: Publicar somente diario-radar, preservando os bindings
+        if: steps.credentials.outputs.disponivel == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
