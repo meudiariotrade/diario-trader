@@ -6,6 +6,7 @@ on:
       - 'cloudflare/diario-screeners/**'
       - 'tests/cloudflare-ia-v932.test.cjs'
       - 'tests/cloudflare-extras-v936.test.cjs'
+      - 'tests/cloudflare-central-v939.test.cjs'
       - 'tests/cloudflare-agenda-health-v937.test.cjs'
       - '.github/workflows/cloudflare-ia-v932.yml'
   pull_request:
@@ -34,7 +35,8 @@ jobs:
       - run: node --check cloudflare/diario-screeners/estudos-v932.mjs
       - run: node --check cloudflare/diario-screeners/diario-ia-v933.mjs
       - run: node --check cloudflare/diario-screeners/extras-v936.mjs
-      - run: node --test tests/cloudflare-ia-v932.test.cjs tests/cloudflare-diario-ia-v933.test.cjs tests/cloudflare-extras-v936.test.cjs tests/aurea-jwks.test.cjs tests/cloudflare-agenda-health-v937.test.cjs
+      - run: node --check cloudflare/diario-screeners/central-v939.mjs
+      - run: node --test tests/cloudflare-ia-v932.test.cjs tests/cloudflare-diario-ia-v933.test.cjs tests/cloudflare-extras-v936.test.cjs tests/cloudflare-central-v939.test.cjs tests/aurea-jwks.test.cjs tests/cloudflare-agenda-health-v937.test.cjs
   publish:
     needs: [check]
     if: github.ref == 'refs/heads/main'
