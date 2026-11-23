@@ -70,7 +70,7 @@ async function anxCall(e) {
     const caminhoCloudflare =
       e?.modo === "explica" ? "/v1/ia-explica" :
       e?.modo === "estatisticas" ? "/v1/ia-estatisticas" :
-      ["topicos", "quiz", "ingles"].includes(e?.modo) ? "/v1/ia-estudos" : "";
+      ["topicos", "quiz", "ingles", "jornal_aula"].includes(e?.modo) ? "/v1/ia-estudos" : "";
     const endpointCloudflare = caminhoCloudflare
       ? "https://diario-screeners-quant.lucianosilva43567.workers.dev" + caminhoCloudflare : "";
     const pedir = (destino, cloudflare) => fetch(destino, {
