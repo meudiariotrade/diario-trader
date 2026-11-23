@@ -27,11 +27,13 @@ test('sentimento da borda: B3 calculado, EUA da CNN, cripto do alternative.me',a
   assert.equal(s.eua.fonte,'CNN Fear & Greed');assert.equal(s.eua.valor,18);
   assert.equal(s.cripto.valor,40);
 });
-test('cron: coleta uma vez e serve todos pelas rotas públicas, sem Supabase',async()=>{
+test('cron: coleta uma vez e serve todos pelas rotas públicas, sem Supabase',async(t)=>{
+  const scheduledTime=Date.parse('2026-11-23T13:30:00Z');
+  t.mock.method(Date,'now',()=>scheduledTime);
   const {default:worker}=await mod,map=new Map(),log=[];
   const env={NEWS_CACHE:{get:async(k,t)=>{const v=map.get(k);return t==='json'&&v?JSON.parse(v):v??null;},put:async(k,v)=>map.set(k,v)},ALLOWED_ORIGIN:'https://meudiariotrade.github.io'};
   const antigo=global.fetch;global.fetch=fakeFetch(log);const tarefas=[];
-  try{await worker.scheduled({scheduledTime:Date.parse('2026-11-23T13:30:00Z')},env,{waitUntil:p=>tarefas.push(p)});await Promise.all(tarefas);}
+  try{await worker.scheduled({scheduledTime},env,{waitUntil:p=>tarefas.push(p)});await Promise.all(tarefas);}
   finally{global.fetch=antigo;}
   assert.ok(!log.some(u=>/supabase/.test(u)),'nenhuma chamada ao Supabase');
   const r=await worker.fetch(new Request('https://x.workers.dev/v1/agenda?semana=0'),env);assert.equal(r.status,200);
