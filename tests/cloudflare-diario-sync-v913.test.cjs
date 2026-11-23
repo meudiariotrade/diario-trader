@@ -66,7 +66,7 @@ test('v913: bloqueia leitura de coleções não migradas e acesso cruzado',async
  await authenticated(async()=>{
    const {default:w}=await worker();
    const env={...ENV,DB:memoryDB()};
-   assert.equal((await w.fetch(request('/v1/records/cotacoes'),env)).status,404);
+   assert.equal((await w.fetch(request('/v1/records/conhecimento_trading'),env)).status,404);
    assert.equal((await w.fetch(request('/v1/records/carteira_cfg?user_id=eq.'+OTHER),env)).status,400);
    assert.equal((await w.fetch(request('/v1/records/carteira_cfg?order=anything.foo'),env)).status,400);
  });
