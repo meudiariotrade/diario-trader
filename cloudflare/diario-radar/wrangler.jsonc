@@ -8,7 +8,8 @@
   "vars": {
     "ALLOWED_ORIGINS": "https://meudiariotrade.github.io",
     "RADAR_CUTOVER_ENABLED": "0",
-    "AGENDA_CUTOVER_ENABLED": "0"
+    "AGENDA_CUTOVER_ENABLED": "0",
+    "AGENDA_PREFLIGHT_ENABLED": "1"
   },
   "services": [
     {

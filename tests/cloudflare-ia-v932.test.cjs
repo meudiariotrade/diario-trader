@@ -71,7 +71,7 @@ test('v932: roteador prioriza Cloudflare antes da trava GET e o app retém fallb
  assert.match(worker,/url\.pathname==='\/v1\/ia-explica'/);
  assert.match(worker,/url\.pathname==='\/v1\/ia-estatisticas'/);
  assert.match(ui,/endpointCloudflare/);
- assert.match(ui,/\[408, 429, 500, 502, 503, 504\]/);
+ assert.match(ui,/\[408, 500, 502, 503, 504\]/);
  assert.match(ui,/e\?\.modo === "explica"/);
  assert.match(ui,/e\?\.modo === "estatisticas"/);
 });
