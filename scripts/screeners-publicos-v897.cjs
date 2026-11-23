@@ -312,7 +312,7 @@ async function main(){
  const src={BR:br,US:us},metrics={};
  let changedBR=0,changedUS=0;
  if(['rotina','fundamentos','enriquecer','precos'].includes(mode)){
-  const rotate=Math.floor(Date.now()/(4*3600000));
+  const rotate=Math.floor(Date.now()/(12*3600000));
   const b=br.universe_rows;
   const u=us.universe_rows,chunk=120,start=(rotate%Math.ceil(u.length/chunk))*chunk;
   const [rb,ru]=await Promise.all([scanner('BR',b),scanner('US',u.slice(start,start+chunk))]);
