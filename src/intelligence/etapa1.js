@@ -502,6 +502,53 @@
     }).join('');
     return '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.08)"><p style="margin:0 0 4px"><b>Últimos registros</b></p><ul style="list-style:none;margin:0;padding:0;font-size:12.5px">'+rows+'</ul></div>';
   }
+  /* v896: Semáforo 'Posso operar agora?' — cruza Escala de Turno, stops do dia, horário histórico e agenda 30 min. */
+  function semaforoOperarHtml(){
+    try{
+      const hoje=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+      const horaAtual=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',hour12:false}).format(new Date()));
+      let nv='g',titulo='🟢 Liberado · mão normal',motivos=[];
+      const sobe=(x)=>{if(x==='r')nv='r';else if(x==='a'&&nv!=='r')nv='a';};
+      // 1) Escala de turno
+      if(typeof tcod==='function'){
+        const tc=tcod(hoje);
+        if(tc==='8'){sobe('r');motivos.push('Turno 8h–17h hoje: não operar no expediente.');}
+        else if(tc==='0'){sobe('a');motivos.push('Saída da madrugada (turno 0): operar só descansado e com 50% da mão.');}
+        else if(tc==='16'){motivos.push('Turno 16h–00h: janela limpa das 9h às 14h30.');}
+        else if(tc==='F'){motivos.push('Folga na escala: dia livre.');}
+      }
+      // 2) Sequência de stops hoje
+      const trs=(typeof S!=='undefined'&&Array.isArray(S?.trades))?S.trades:[];
+      const trHoje=trs.filter(t=>String(t.dtx||t.dt||'').slice(0,10)===hoje&&t.status!=='aberta');
+      let lossSeq=0;
+      for(let i=trHoje.length-1;i>=0;i--){if(Number(trHoje[i].r||0)<0)lossSeq++;else break;}
+      if(lossSeq>=2){sobe('r');motivos.push(lossSeq+' stops seguidos hoje: pare ou ative o checklist anti-tilt.');}
+      else if(lossSeq===1){sobe('a');motivos.push('1 stop na última operação: respire e reduza a mão antes do próximo clique.');}
+      // 3) Faixa horária histórica (últimos 90 trades)
+      const faixa=h=>h<10?'9h–10h':h<12?'10h–12h':h<15?'12h–15h':'15h–18h';
+      const fAtual=faixa(horaAtual);
+      const naFaixa=trs.slice(-120).filter(t=>{const h=Number(String(t.hr||t.h||String(t.dt||'').slice(11,13)||'').slice(0,2));return Number.isFinite(h)&&faixa(h)===fAtual&&Number.isFinite(Number(t.r));});
+      if(naFaixa.length>=5){
+        const wins=naFaixa.filter(t=>Number(t.r)>0).length,tx=Math.round(wins/naFaixa.length*100);
+        const sal=naFaixa.reduce((a,t)=>a+Number(t.r||0),0);
+        if(sal<0&&tx<45){sobe('a');motivos.push('Faixa '+fAtual+': histórico negativo ('+tx+'% acerto em '+naFaixa.length+' trades) — mão menor.');}
+        else motivos.push('Faixa '+fAtual+': '+tx+'% de acerto no seu histórico ('+naFaixa.length+' trades).');
+      }
+      // 4) Agenda alto impacto nos próximos 30 min
+      const agoraMs=Date.now();
+      const proxEv=(state.agenda?.eventos||[]).find(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&Math.abs(Date.parse(e.em)-agoraMs)<=30*60000);
+      if(proxEv){sobe('a');motivos.push('Evento alto impacto em <30 min: ['+proxEv.p+'] '+String(proxEv.t||'').slice(0,42)+' — aguarde divulgação.');}
+      if(nv==='r')titulo='🔴 Alerta de Proteção · Pare ou aguarde';
+      else if(nv==='a')titulo='🟡 Atenção · Mão reduzida (50%)';
+      const corB=nv==='r'?'rgba(239,68,68,.45)':nv==='a'?'rgba(201,166,107,.55)':'rgba(16,185,129,.4)';
+      const bgB=nv==='r'?'rgba(239,68,68,.09)':nv==='a'?'rgba(201,166,107,.09)':'rgba(16,185,129,.07)';
+      return '<details style="margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid '+corB+';background:'+bgB+'"'+(nv!=='g'?' open':'')+'>'+
+        '<summary style="cursor:pointer;font-weight:700;font-size:13px">🚦 Posso operar agora? · '+titulo+'</summary>'+
+        '<ul style="margin:6px 0 0;padding-left:18px;font-size:12px;line-height:1.5">'+(motivos.length?motivos.map(x=>'<li>'+escape(x)+'</li>').join(''):'<li>Sem restrições de turno, sequência ou agenda neste momento.</li>')+'</ul>'+
+        (nv!=='g'?'<div style="margin-top:8px"><button type="button" class="btn s" data-aurea-antitilt="1">✦ Checklist Anti-Tilt com Munger</button></div>':'')+
+        '</details>';
+    }catch(_){return '';}
+  }
   function meuDia(){
     const c=w.DiarioSessoes?.context(),manual=w.DiarioSessaoVisual?.manual?.(),
       phase=manual||c?.phase, data=c?.b3?.nextDate;
@@ -526,7 +573,7 @@
       (state.revisaoOut?'<div class="sm" style="margin-top:8px;line-height:1.5">'+state.revisaoOut+'</div>':'')+
       '</div>':'';
     return '<div class="v810-intel-day"><strong>Orientação da sessão</strong><p>'+escape(task)+'</p>'+
-      padroes+ultimosRegistrosDia()+
+      semaforoOperarHtml()+padroes+ultimosRegistrosDia()+
       '<small>Próxima sessão B3: '+escape(data?data.split('-').reverse().join('/'):'data não verificada')+
       ' · Fonte: calendário de negociação da B3 / regras do aplicativo</small></div>';
   }
@@ -552,26 +599,67 @@
     if((b3==='regular'||us==='regular')&&hm>=720&&hm<990)return 'meiodia';
     return 'fechamento';
   }
+  /* v896: Status real dos Futuros EUA (CME Globex) em America/New_York (dom 18h ET -> sex 17h ET, pausa 17h-18h ET). */
+  function futurosEuaStatus(){
+    try{
+      const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+      const wd=parts.find(x=>x.type==='weekday')?.value||'';
+      const h=Number(parts.find(x=>x.type==='hour')?.value||0);
+      const m=Number(parts.find(x=>x.type==='minute')?.value||0);
+      const hm=h*60+m;
+      if(wd==='Sat')return {aberto:false,label:'Fechado (reabre dom 18h ET)'};
+      if(wd==='Sun')return hm>=1080?{aberto:true,label:'Aberto (CME Globex)'}:{aberto:false,label:'Abre hoje 18h ET'};
+      if(wd==='Fri')return hm<1020?{aberto:true,label:'Aberto (CME Globex)'}:{aberto:false,label:'Fechado (reabre dom 18h ET)'};
+      return (hm>=1020&&hm<1080)?{aberto:false,label:'Pausa diária (17h–18h ET)'}:{aberto:true,label:'Aberto (CME Globex)'};
+    }catch(_){return {aberto:false,label:'—'};}
+  }
   function pulsoDoisMercados(){
     const groups=state.mercado?.mercados?.grupos;
-    if(!Array.isArray(groups))return {br:[],us:[],texto:''};
-    const all=groups.flatMap(g=>(g.itens||[]).map(x=>({n:String(x.n||''),d1:Number(x.d1)}))).filter(x=>Number.isFinite(x.d1));
+    const all=Array.isArray(groups)?groups.flatMap(g=>(g.itens||[]).map(x=>({n:String(x.n||''),px:Number(x.px),d1:Number(x.d1)}))).filter(x=>Number.isFinite(x.d1)):[];
     const pick=rx=>all.find(x=>rx.test(x.n));
     const fmtP=x=>x?x.n+' '+(x.d1>=0?'+':'')+x.d1.toFixed(2).replace('.',',')+'%':'';
     const br=[pick(/ibov|bvsp/i),pick(/d[oó]lar|usd\/?brl|wdo/i),pick(/di1|juros|ifix/i)].filter(Boolean);
-    const us=[pick(/s&p\s*500|spx/i),pick(/nasdaq|ndx/i),pick(/ouro|gold|brent|petr[oó]leo|btc|bitcoin/i)].filter(Boolean);
-    const texto=[br.length?'Brasil: '+br.map(fmtP).join(' · '):'',us.length?'Exterior: '+us.map(fmtP).join(' · '):''].filter(Boolean).join(' | ');
-    return {br,us,texto};
+    const us=[pick(/s&p\s*500|spx|es1/i),pick(/nasdaq|ndx|nq1/i),pick(/dow|dji|ym1/i),pick(/brent|wti|petr[oó]leo/i),pick(/ouro|gold/i),pick(/\bdxy\b|ewz/i)].filter(Boolean);
+    const cripto=[pick(/\bbtc\b|bitcoin/i),pick(/\beth\b|ethereum/i),pick(/\bsol\b|solana/i)].filter(Boolean);
+    const uniq=L=>{const seen=new Set();return L.filter(x=>{if(!x||seen.has(x.n))return false;seen.add(x.n);return true;});};
+    const brU=uniq(br),usU=uniq(us).slice(0,4),crU=uniq(cripto).slice(0,3);
+    const texto=[
+      brU.length?'Brasil: '+brU.map(fmtP).join(' · '):'',
+      usU.length?'Exterior / Futuros: '+usU.map(fmtP).join(' · '):'',
+      crU.length?'Cripto (24/7): '+crU.map(fmtP).join(' · '):''
+    ].filter(Boolean).join(' | ');
+    /* Termômetro Risk-On / Risk-Off (-100 a +100) + Detector de Divergência Intraday */
+    const sp=pick(/s&p\s*500|spx|es1/i)?.d1,nq=pick(/nasdaq|ndx|nq1/i)?.d1,dxy=pick(/\bdxy\b/i)?.d1,oil=pick(/brent|wti|petr[oó]leo/i)?.d1,btc=pick(/\bbtc\b|bitcoin/i)?.d1;
+    const ibv=pick(/ibov|bvsp/i)?.d1,dol=pick(/d[oó]lar|usd\/?brl|wdo/i)?.d1,di=pick(/di1|juros/i)?.d1;
+    let pts=0,pesos=0;
+    const add=(v,wgt)=>{if(Number.isFinite(v)){pts+=Math.max(-3,Math.min(3,v))*wgt;pesos+=wgt;}};
+    add(sp,30);add(nq,25);add(dxy!=null?-dxy*1.4:null,15);add(oil!=null?oil*0.5:null,10);add(btc!=null?btc*0.35:null,10);add(dol!=null?-dol*1.2:null,10);
+    const riskScore=pesos?Math.max(-100,Math.min(100,Math.round((pts/pesos)*45))):null;
+    const riskLabel=riskScore==null?'':riskScore>=25?'Apetite a Risco (Risk-On)':riskScore<=-25?'Aversão a Risco (Risk-Off)':'Neutro / Misto';
+    let divergencia='';
+    if(Number.isFinite(sp)&&Number.isFinite(dol)){
+      if(sp>=0.45&&dol>=0.45&&(ibv==null||ibv<0.1))divergencia='🔗 Divergência local: exterior positivo (S&P '+sinalNum(sp)+'), mas dólar pressionado ('+sinalNum(dol)+') — fluxo fiscal/local mandando na B3.';
+      else if(sp<=-0.45&&dol<=-0.45&&(ibv==null||ibv>-0.1))divergencia='🔗 Divergência positiva: exterior fraco (S&P '+sinalNum(sp)+'), mas dólar cedendo ('+sinalNum(dol)+') — fluxo gringo/commodities segurando o Brasil.';
+      else if(Number.isFinite(di)&&di>=0.5&&sp>=0.3)divergencia='🔗 Atenção aos juros: S&P sobe lá fora, mas curva de DI abre forte — cuidado com compras esticadas no WIN.';
+    }
+    return {br:brU,us:usU,cripto:crU,texto,riskScore,riskLabel,divergencia};
   }
+  function sinalNum(v){return (v>=0?'+':'')+Number(v).toFixed(2).replace('.',',')+'%';}
   function briefing() {
     const m=mercadoPlan(),context=w.DiarioSessoes?.context(),
       hot=w.DiarioInterpretacao?.prioritize(timeline(),context,Date.now(),context?.anchorAt?Date.parse(context.anchorAt):undefined)||
         timeline().filter(e=>e.prioridade==='alta');
     const mine=relacionados().filter(e=>e.prioridade==='alta');
     const edAuto=edicaoAuto(context),ed=state.edicaoManual||edAuto;
+    const futUS=futurosEuaStatus();
     const META={
-      fimdesemana:{rot:'📅 Fim de semana',titulo:'Edição de Fim de Semana · Preparação da Semana',foco:'B3 e Wall Street fechados. Acompanhe cripto (24/7), o último fechamento e a agenda da próxima semana.',cta:'✦ Preparar a semana com a Áurea'},
-      manha:{rot:'🌅 Manhã',titulo:'Edição da Manhã · Pré-abertura B3 & EUA',foco:'Preparação antes dos pregões: exterior, dólar, agenda macro e ativos da sua carteira.',cta:'✦ Gerar resumão da Manhã com a Áurea'},
+      fimdesemana:{
+        rot:'📅 Fim de semana',
+        titulo:futUS.aberto?'Edição de Fim de Semana · Futuros EUA Abertos':'Edição de Fim de Semana · Preparação da Semana',
+        foco:futUS.aberto?'Futuros americanos (CME Globex) já estão abertos! Acompanhe S&P 500, Nasdaq, commodities e cripto (24/7) como termômetro para a abertura da B3 amanhã.':'B3 e Wall Street fechados. Acompanhe cripto (24/7), o último fechamento e a agenda da próxima semana.',
+        cta:futUS.aberto?'✦ Analisar abertura dos Futuros & semana com a Áurea':'✦ Preparar a semana com a Áurea'
+      },
+      manha:{rot:'🌅 Manhã',titulo:'Edição da Manhã · Pré-abertura B3 & EUA',foco:'Preparação antes dos pregões: exterior, futuros EUA, dólar, agenda macro e ativos da sua carteira.',cta:'✦ Gerar resumão da Manhã com a Áurea'},
       meiodia:{rot:'☀️ Meio-dia',titulo:'Edição do Meio-dia · Pulso B3 & Wall Street',foco:'B3 e EUA em negociação simultânea: direção intraday, fluxo e notícias que estão mexendo.',cta:'✦ Gerar resumão do Meio-dia com a Áurea'},
       fechamento:{rot:'🌙 Fechamento',titulo:'Edição de Fechamento · Balanço B3 & EUA',foco:'Resumo do dia nos dois mercados e o que já entra no radar para a próxima sessão.',cta:'✦ Gerar resumão de Fechamento com a Áurea'}
     };
@@ -582,12 +670,14 @@
     const hojeIso=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
     const agAlvo=(ed==='fechamento'||ed==='fimdesemana')&&context?.b3?.nextDate?context.b3.nextDate:hojeIso;
     const agEvs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})>=agAlvo)
-      .slice(0,3).map(e=>new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' ['+e.p+'] '+String(e.t||'').slice(0,50));
+      .slice(0,4).map(e=>new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' ['+e.p+'] '+String(e.t||'').slice(0,50));
     const keys=edAuto==='fimdesemana'?['fimdesemana','manha','meiodia','fechamento']:['manha','meiodia','fechamento'];
     const pills='<div class="aurea-ed-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px" role="tablist" aria-label="Edições da Áurea">'+
       keys.map(k=>'<button type="button" data-aurea-edicao="'+k+'" style="padding:4px 10px;border-radius:999px;font-size:11.5px;cursor:pointer;border:1px solid '+(ed===k?'rgba(201,166,107,.75)':'rgba(255,255,255,.14)')+';background:'+(ed===k?'rgba(201,166,107,.16)':'transparent')+';color:inherit;font-weight:'+(ed===k?'700':'500')+'">'+META[k].rot+(k===edAuto?' · agora':'')+'</button>').join('')+
       '</div>';
-    const relogio='<p class="mut sm" style="margin:0 0 6px">B3: <b>'+escape(b3St)+'</b> · EUA (NYSE/Nasdaq): <b>'+escape(usSt)+'</b>'+(context?.b3?.nextDate?' · Próxima B3: '+escape(br(context.b3.nextDate)):'')+'</p>';
+    const relogio='<p class="mut sm" style="margin:0 0 6px">B3: <b>'+escape(b3St)+'</b> · NYSE/Nasdaq: <b>'+escape(usSt)+'</b> · Futuros EUA: <b'+(futUS.aberto?' style="color:#10B981"':'')+'>'+escape(futUS.label)+'</b>'+(context?.b3?.nextDate?' · Próxima B3: '+escape(br(context.b3.nextDate)):'')+'</p>';
+    const riskBar=pulso.riskScore!=null?'<div class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>🧭 Humor Global: <b style="color:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'">'+escape(pulso.riskLabel)+'</b></span><span style="display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums"><span style="display:inline-block;width:72px;height:6px;border-radius:99px;background:rgba(128,128,128,.22);overflow:hidden"><i style="display:block;height:100%;width:'+Math.round((pulso.riskScore+100)/2)+'%;background:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'"></i></span><b>'+(pulso.riskScore>0?'+':'')+pulso.riskScore+'</b></span></div>':'';
+    const divLine=pulso.divergencia?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.45);background:rgba(201,166,107,.09)">'+escape(pulso.divergencia)+'</p>':'';
     let gatilhosLine='';
     try{
       const ts=JSON.parse(localStorage.getItem('diario-teses-v873')||'[]');
@@ -617,7 +707,7 @@
         ' · efeito nos ativos depende de confirmação.</small></li>';
     }).join('')||'<li>Não há acontecimentos recentes com fontes identificadas.</li>';
     return '<div class="v810-intel-brief">'+pills+'<h3>'+info.titulo+'</h3>'+relogio+
-      '<p class="mut sm" style="margin:0 0 6px">'+info.foco+'</p>'+gatilhosLine+doisMkts+schwartzLine+
+      '<p class="mut sm" style="margin:0 0 6px">'+info.foco+'</p>'+riskBar+divLine+gatilhosLine+doisMkts+schwartzLine+
       '<p><b>'+resumo+'</b></p>'+
       '<p class="mut sm">Fonte: '+fonte+' · '+(recent?'Atualizado: ':'Último registro (não é tempo real): ')+
         when(state.mercado?.atualizadoEm)+'</p>'+
@@ -770,14 +860,28 @@
     }
   }
   document.addEventListener('click',async event=>{
+    const antiBtn=event.target.closest('[data-aurea-antitilt]');
+    if(antiBtn){
+      const prompt='@munger Ative o protocolo Anti-Tilt de 30 segundos (inversão + Fear-Setting): estou em condição de alerta (cansaço de turno, sequência de stop ou janela de notícia). Me faça 3 perguntas curtas e diretas para eu decidir se reduzo a mão pela metade ou encerro o dia agora.';
+      w.TraderChat?.open?.();
+      if(typeof ecoPergunta==='function')void ecoPergunta(prompt,{pergunta:'✦ Checklist Anti-Tilt · Munger'});
+      return;
+    }
     const ouvBtn=event.target.closest('[data-aurea-ouvir]');
     if(ouvBtn&&'speechSynthesis' in w){
       if(state.falando){try{w.speechSynthesis.cancel();}catch(_){}state.falando=false;repaint();return;}
       const ed=ouvBtn.dataset.aureaOuvir||'manha';
-      const nomes={fimdesemana:'Edição de fim de semana. B3 e Wall Street estão fechados.',manha:'Edição da manhã, pré-abertura.',meiodia:'Edição do meio-dia, B3 e Estados Unidos em pregão.',fechamento:'Edição de fechamento.'};
+      const futUS=futurosEuaStatus();
+      const nomes={
+        fimdesemana:futUS.aberto?'Edição de fim de semana. Os futuros americanos na CME já estão abertos, enquanto a B3 e o mercado à vista de Nova York seguem fechados.':'Edição de fim de semana. B3 e Wall Street estão fechados.',
+        manha:'Edição da manhã, pré-abertura.',
+        meiodia:'Edição do meio-dia, B3 e Estados Unidos em pregão.',
+        fechamento:'Edição de fechamento.'
+      };
       const p=pulsoDoisMercados(),m=mercadoPlan();
       const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,2).map(e=>tit(e)).join('. ');
       const fala='Olá, aqui é a Áurea. '+(nomes[ed]||'')+' '+
+        (p.riskLabel?'Humor global agora: '+p.riskLabel+'. ':'')+
         (p.texto?p.texto.replace(/\|/g,'. ').replace(/·/g,', ')+'. ':'')+
         (m.nome&&!/insuficiente|Sem leitura/i.test(m.nome)?'Leitura atual: '+m.nome+'. ':'')+
         (topNews?'Destaques nas notícias: '+topNews+'.':'');
@@ -800,14 +904,38 @@
     const resBtn=event.target.closest('[data-aurea-resumao]');
     if(resBtn){
       const ed=resBtn.dataset.aureaResumao||'manha';
-      const nomes={fimdesemana:'Edição de Fim de Semana (Preparação da Semana)',manha:'Edição da Manhã (Pré-abertura)',meiodia:'Edição do Meio-dia (Meio do pregão)',fechamento:'Edição de Fechamento (Pós-pregão)'};
+      const futUS=futurosEuaStatus();
+      const nomes={
+        fimdesemana:futUS.aberto?'Edição de Fim de Semana · Futuros EUA (CME) Abertos':'Edição de Fim de Semana (Preparação da Semana)',
+        manha:'Edição da Manhã (Pré-abertura)',
+        meiodia:'Edição do Meio-dia (Meio do pregão)',
+        fechamento:'Edição de Fechamento (Pós-pregão)'
+      };
       const c=w.DiarioSessoes?.context(),p=pulsoDoisMercados(),m=mercadoPlan();
+      const horaSP=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
+      const horaNY=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/New_York'});
+      const hojeIso=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+      const agAlvo=(ed==='fechamento'||ed==='fimdesemana')&&c?.b3?.nextDate?c.b3.nextDate:hojeIso;
+      const agEvs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})>=agAlvo)
+        .slice(0,5).map(e=>new Date(e.em).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'America/Sao_Paulo'})+' '+new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' ['+e.p+'] '+String(e.t||'').slice(0,55));
+      const meus=(meusAtivos()||[]).slice(0,8);
       const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,3).map(e=>tit(e)).join(' | ');
-      const prompt='@schwartz Monte o resumão executivo da Áurea — '+(nomes[ed]||ed)+', englobando Brasil (B3: '+(c?.b3?.state||'—')+') e Exterior (EUA: '+(c?.us?.state||'—')+'). '+
-        (p.texto?'Mercados agora: '+p.texto+'. ':'')+
-        (m.nome?'Leitura atual: '+m.nome+'. ':'')+
+      const prompt='@schwartz Monte o resumão executivo detalhado da Áurea — '+(nomes[ed]||ed)+
+        ' (agora: '+horaSP+' Brasília / '+horaNY+' Nova York). '+
+        'Status dos mercados agora: B3='+(c?.b3?.state||'—')+', NYSE/Nasdaq à vista='+(c?.us?.state||'—')+', Futuros EUA (CME Globex: ES/NQ/YM/Ouro/Petróleo)='+futUS.label+'. '+
+        (futUS.aberto&&ed==='fimdesemana'?'IMPORTANTE: os Futuros EUA na CME Globex JÁ ESTÃO ABERTOS agora — considere a abertura dos futuros americanos e o comportamento de cripto 24/7 como termômetro real para a abertura da B3 amanhã, sem dizer que tudo está fechado. ':'')+
+        (p.riskLabel?'Humor Global: '+p.riskLabel+' ('+p.riskScore+'). ':'')+
+        (p.divergencia?'Divergência detectada: '+p.divergencia+' ':'')+
+        (p.texto?'Cotações no painel: '+p.texto+'. ':'')+
+        (m.nome?'Leitura de amplitude: '+m.nome+'. ':'')+
+        (agEvs.length?'Agenda alto impacto BR/EUA: '+agEvs.join(' · ')+'. ':'')+
+        (meus.length?'Ativos acompanhados pelo trader: '+meus.join(', ')+'. ':'')+
         (topNews?'Principais manchetes: '+topNews+'. ':'')+
-        'Estruture em: 1) Brasil (B3, dólar e juros), 2) Exterior (Wall Street e commodities), 3) O que observar agora.';
+        'Traga detalhes práticos e objetivos em 4 blocos: '+
+        '1) Futuros EUA (CME) & Cripto 24/7 agora (humor de risco, o que está puxando e cuidado com liquidez baixa de domingo/after), '+
+        '2) Reflexo esperado no Brasil (B3, WIN, WDO, dólar, curva de juros e commodities), '+
+        '3) Agenda crítica BR/EUA (quais horários e dados podem virar o pregão), '+
+        '4) Plano tático & riscos de armadilha (o que observar na abertura, pontos de atenção em WIN/WDO e nos ativos acompanhados).';
       w.TraderChat?.open?.();
       if(typeof ecoPergunta==='function')void ecoPergunta(prompt,{pergunta:'✦ Resumão da Áurea · '+(nomes[ed]||ed)});
       return;

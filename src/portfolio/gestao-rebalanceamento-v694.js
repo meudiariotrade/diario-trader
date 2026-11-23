@@ -279,15 +279,46 @@ function sectionSix(p){
   table(['Cenário simulado','Impacto R$','Impacto %'],rows)+
   '<p class="rb694-note">Simulação linear aproximada pelas classes da sua carteira atual (sem correlação dinâmica ou opções). Uso educacional.</p></details></section>';
 }
+/* v896: 07 · Número Mágico (Bola de Neve FIIs & Ações) + Auditoria 360° com O Conselho. */
+function sectionSeven(p){
+ const pos=holdings(p);
+ const fiiMap=new Map((W.DiarioFiis?.()?.rows||[]).map(x=>[x.ticker,x]));
+ const rows=[];let rendaTotalMes=0;
+ pos.forEach(h=>{
+  const tk=String(h.tk||h.ticker||'').toUpperCase();
+  const qtd=Number(h.q||h.qtd||0),val=Number(h.v||h.valor||0),px=qtd>0?val/qtd:Number(h.px||0);
+  if(!(tk&&qtd>0&&px>0))return;
+  const fii=fiiMap.get(tk);
+  let dy=fii?.dy??null;
+  if(dy==null){
+   try{const br=W.DiarioAnalisesPlus?.avaliarAtivo?.(tk);if(br?.dy>0)dy=br.dy;}catch(_){}
+  }
+  if(!(dy>0))return;
+  const divMesCota=px*(dy/100)/12;
+  const rendaMes=divMesCota*qtd;
+  rendaTotalMes+=rendaMes;
+  const nMagico=Math.ceil(px/divMesCota);
+  const prog=Math.min(100,Math.round(qtd/nMagico*100));
+  rows.push('<tr><th><b>'+esc(tk)+'</b>'+(fii?' <small style="color:#C9A66B">FII</small>':'')+'</th><td>'+fmtN(qtd,0)+' / '+fmtN(nMagico,0)+' <small style="color:#9FABBA">('+prog+'%)</small></td><td>'+money(rendaMes)+'/mês</td></tr>');
+ });
+ const resumoLista=pos.slice(0,12).map(h=>{
+  const tk=String(h.tk||h.ticker||'').toUpperCase(),val=Number(h.v||h.valor||0),peso=(p.v>0?(val/p.v*100).toFixed(1):'0')+'%';
+  return tk+' ('+peso+')';
+ }).join(', ');
+ return '<section class="rb694-section"><details><summary style="padding:0;min-height:32px;font-size:13px">07 · ❄️ Número Mágico (Bola de Neve) &amp; Auditoria 360° <small>'+(rendaTotalMes>0?'≈ '+money(rendaTotalMes)+'/mês':'Conselho')+'</small></summary>'+
+  (rows.length?table(['Ativo','Cotas / Nº Mágico','Renda est.'],rows)+'<p class="rb694-note">Renda passiva estimada: <b>'+money(rendaTotalMes)+'/mês</b> (DY 12m público). Número Mágico = cotas para comprar 1 cota nova por mês só com rendimentos.</p>':'<p class="rb694-note">Abra Research → Rankings (Ações BR ou FIIs) para sincronizar o DY 12m dos seus ativos e calcular o Número Mágico.</p>')+
+  '<div style="margin-top:8px"><button type="button" class="btn s" data-rb694-auditoria="'+esc(resumoLista)+'">🏛️ Auditar carteira 360° com O Conselho</button></div>'+
+  '</details></section>';
+}
 function body(){
  restore();
  const p=portfolio(),pos=holdings(p);
  return '<div class="rb694-body"><div class="rb694-overline">'+pos.length+' posição(ões) · carteira '+money(p.v||0)+' · parâmetros guardados somente neste navegador</div>'+
  (state.message?'<p class="rb694-notice">'+esc(state.message)+'</p>':'')+
- sectionOne(p)+sectionTwo(p)+sectionThree(p)+sectionFour(p)+sectionFive(p)+sectionSix(p)+'</div>';
+ sectionOne(p)+sectionTwo(p)+sectionThree(p)+sectionFour(p)+sectionFive(p)+sectionSix(p)+sectionSeven(p)+'</div>';
 }
 function content(){
- return '<details id="rebalanceamento-carteira-v694" class="rb694"'+(state.open?' open':'')+'><summary>Gestão &amp; Rebalanceamento de Carteira <small>Aporte · Proventos · Concentração · Simulador</small></summary>'+
+ return '<details id="rebalanceamento-carteira-v694" class="rb694"'+(state.open?' open':'')+'><summary>Gestão &amp; Rebalanceamento de Carteira <small>Aporte · Proventos · Concentração · Simulador · Nº Mágico</small></summary>'+
  (state.open?body():'')+'</details>';
 }
 const old=vCarteiras;
@@ -315,7 +346,7 @@ function reconcile(el){
 D.addEventListener('toggle',event=>reconcile(event.target),true);
 // Captura a intenção antes de um repaint da tela que possa desmontar o <details>.
 D.addEventListener('click',event=>{
- const summary=event.target.closest?.('#rebalanceamento-carteira-v694 summary');
+ const summary=event.target.closest?.('#rebalanceamento-carteira-v694 > summary');
  if(!summary||typeof tab==='undefined'||tab!=='carteiras')return;
  const root=summary.closest('#rebalanceamento-carteira-v694'),next=!root.open;
  state.open=next;
@@ -326,6 +357,14 @@ D.addEventListener('click',event=>{
  });
 },true);
 D.addEventListener('click',event=>{
+ const aud=event.target.closest?.('[data-rb694-auditoria]');
+ if(aud){
+  const lista=aud.getAttribute('data-rb694-auditoria')||'minha carteira atual';
+  const prompt='@markowitz Faça uma Auditoria 360° da minha carteira combinando os 4 filtros do Conselho — 1) Markowitz (concentração, correlação e risco), 2) Graham (margem de segurança / onde aportar), 3) Livermore (ativos que podem exigir proteção), 4) Schwartz (exposição a juros e dólar). Posições: '+lista;
+  W.TraderChat?.open?.();
+  if(typeof ecoPergunta==='function')void ecoPergunta(prompt,{pergunta:'🏛️ Auditoria 360° da Carteira · O Conselho'});
+  return;
+ }
  const btn=event.target.closest?.('[data-rb694-munger]');
  if(!btn)return;
  const [tk,val,peso,setor]=(btn.getAttribute('data-rb694-munger')||'').split('|');
