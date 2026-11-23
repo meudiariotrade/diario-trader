@@ -44880,12 +44880,29 @@ function imgQ(e) {
   return null;
 }
 async function imgDados() {
-  const e = [];
-  ((!MDO.v || !MDO.v.mercados || Date.now() - (MDO.ts || 0) > 3 * 6e4) &&
-    e.push(mdoCarrega(!0).catch(() => {})),
-    (!AD.data || Date.now() - (AD.data.ts || 0) > 3 * 6e4) &&
-      e.push(adrLoad(!0).catch(() => {})),
-    await Promise.all(e));
+  // v904: atualizar em paralelo, mas NUNCA impedir a imagem por perda de rede.
+  // Em iPhone, o sistema pode interromper o fetch ao alternar de tela/5G.
+  const aguardando=[],agora=Date.now();
+  if((!MDO.v?.mercados || agora-(MDO.ts||0)>3*6e4) && (!MDO.errTs || agora-MDO.errTs>120000))
+    aguardando.push(Promise.resolve().then(()=>mdoCarrega(true)));
+  if(!AD.data?.itens || agora-(Number(AD.data.ts)||0)>3*6e4)
+    aguardando.push(Promise.resolve().then(()=>adrLoad(true)));
+  if(aguardando.length)await Promise.race([
+    Promise.allSettled(aguardando),
+    new Promise(resolve=>setTimeout(resolve,7000))
+  ]);
+  const mercadoOK=!!(MDO.v?.mercados?.grupos?.length);
+  const adrsOK=!!(AD.data?.itens?.length);
+  const mercadoTs=Number(MDO.ts)||0,adrsTs=Number(AD.data?.ts)||0;
+  const valido=Date.now();
+  const antigas=(mercadoOK&&mercadoTs&&valido-mercadoTs>10*60000)||
+    (adrsOK&&adrsTs&&valido-adrsTs>10*60000);
+  const erro=!!(MDO.err&&(!mercadoTs||MDO.errTs>=mercadoTs));
+  const atualizado=Math.max(mercadoTs,adrsTs);
+  const carimbo=atualizado?new Date(atualizado).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'sem horário confirmado';
+  IMG.aviso=!mercadoOK&&!adrsOK?'SEM COTAÇÕES VERIFICADAS · consultas indisponíveis':
+    erro||antigas?'DADOS PARCIAIS / CONSULTA ANTERIOR · '+carimbo+' (BRT)':'';
+  return {mercadoOK,adrsOK,aviso:IMG.aviso};
 }
 function imgDesenha() {
   const e = ((AD.data && AD.data.itens) || [])
@@ -45222,35 +45239,51 @@ function imgDesenha() {
   );
 }
 async function imgGera() {
-  if (!IMG.busy) {
-    ((IMG.busy = 1), window.toast && toast("Montando a imagem…", 1500));
+  if(IMG.busy)return;
+  IMG.busy=1;
+  window.toast?.('Preparando imagem do mercado…',1500);
+  try {
+    // Consulta até 7s, depois usa o último snapshot válido do navegador.
+    await imgDados();
     try {
-      await imgDados();
-      try {
-        // v608: logos oficiais (brapi / TradingView) — 1ª passada lista os ativos, depois carrega e desenha.
-        if (window.DiarioLogos) {
-          try { imgDesenha(); } catch {}
-          await Promise.race([window.DiarioLogos.carregaPendentes(), new Promise((r) => setTimeout(r, 12e3))]);
-        }
-      } catch {}
-      const e = imgDesenha(),
-        t = await new Promise((o) => e.toBlob(o, "image/jpeg", 0.92)),
-        a =
-          "mercado-" +
-          loc().slice(0, 10) +
-          "-" +
-          new Date().toTimeString().slice(0, 5).replace(":", "h") +
-          ".jpg";
-      ((IMG.blob = t),
-        (IMG.nome = a),
-        (IMG.legenda = null),
-        (IMG.titulo = null),
-        imgMostra(URL.createObjectURL(t)));
-    } catch (e) {
-      alert("Não consegui montar a imagem: " + (e.message || e));
+      if(window.DiarioLogos){
+        try{imgDesenha();}catch{}
+        await Promise.race([
+          Promise.resolve().then(()=>window.DiarioLogos.carregaPendentes()),
+          new Promise(resolve=>setTimeout(resolve,4500))
+        ]);
+      }
+    }catch(_){ /* logo opcional; jamais bloquear a imagem */ }
+    let imagem=imgDesenha();
+    if(!imagem?.toBlob)throw Error('Canvas de imagem indisponível.');
+    if(IMG.aviso){
+      // Aviso como rodapé EXTRA: não cobre o layout nem os preços do panorama.
+      const aviso=document.createElement('canvas');
+      aviso.width=imagem.width;aviso.height=imagem.height+80;
+      const c=aviso.getContext('2d');
+      if(c){
+        c.drawImage(imagem,0,0);
+        c.fillStyle='#fff6dc';c.fillRect(0,imagem.height,aviso.width,80);
+        c.fillStyle='#65450d';c.font='700 22px -apple-system,Arial,sans-serif';
+        c.textBaseline='middle';c.textAlign='center';
+        c.fillText(IMG.aviso,imagem.width/2,imagem.height+40,imagem.width-50);
+        imagem=aviso;
+      }
     }
-    IMG.busy = 0;
-  }
+    const blob=await new Promise((resolve,reject)=>{
+      try{imagem.toBlob(resolve,'image/jpeg',0.9)}catch(err){reject(err)}
+    });
+    if(!blob?.size)throw Error('O iPhone não conseguiu converter a imagem.');
+    IMG.blob=blob;
+    IMG.nome='mercado-'+loc().slice(0,10)+'-'+new Date().toTimeString().slice(0,5).replace(':','h')+'.jpg';
+    IMG.legenda=IMG.aviso?'Panorama com último snapshot disponível. '+IMG.aviso:null;
+    IMG.titulo=null;
+    imgMostra(URL.createObjectURL(blob));
+  }catch(err){
+    // Não forçar o usuário a confirmar uma consulta anterior nem mostrar erro bruto do fetch.
+    console.warn('Panorama: falha de renderização local',String(err?.message||err).slice(0,140));
+    window.toast?.('Imagem indisponível neste momento. Cotações salvas foram preservadas.',4500);
+  }finally{IMG.busy=0;}
 }
 function imgMostra(e) {
   const t = document.getElementById("imgov");
