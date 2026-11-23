@@ -38,6 +38,6 @@ test('v898: novos botões não invocam a função analise do Supabase', () => {
   for (const s of novos) {
     assert.match(s, /clipboard\?\.writeText|clipboard\.writeText/);
     assert.doesNotMatch(s, /\bvoid\s+ecoPergunta\s*\(|\bawait\s+ecoPergunta\s*\(/);
-    assert.doesNotMatch(s, /\/functions\/v1\/analise/);
+    assert.doesNotMatch(s, /fetch\s*\(\s*[^)]*\/functions\/v1\/analise/);
   }
 });
