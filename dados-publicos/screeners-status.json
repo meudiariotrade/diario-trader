@@ -1,53 +1,54 @@
 {
-  "processedAt": "2026-11-23T04:30:42.641Z",
+  "processedAt": "2026-11-23T04:57:05.354Z",
   "mode": "rotina",
   "records": {
     "BR": 159,
     "US": 624
   },
   "changed": {
-    "BR": 262,
-    "US": 1076
+    "BR": 0,
+    "US": 395
   },
   "metrics": {
     "scanner": {
       "BR": {
-        "updates": 106,
+        "updates": 0,
         "errors": [],
         "blocked": false
       },
       "US": {
-        "updates": 213,
+        "updates": 191,
         "errors": [],
         "blocked": false
       }
     },
     "cvm": {
-      "updates": 156,
+      "updates": 0,
       "unverified": 0,
       "source": "CVM DRE + cadastro CNPJ",
       "registry": 645,
       "docs": 645
     },
     "cik": {
-      "updates": 622,
+      "updates": 0,
       "available": 10399,
       "source": "SEC company_tickers"
     },
     "sec": {
-      "updates": 239,
+      "updates": 191,
       "companies": 239,
       "asOf": "2026-11-21T17:02:46.856Z"
     },
     "documentos": {
-      "updates": 2,
+      "updates": 1,
       "blocked": false,
       "checked": 12
     },
     "finnhub": {
-      "updates": 0,
-      "enabled": false,
-      "reason": "Sem FINNHUB_TOKEN no GitHub Actions; preserve dados anteriores"
+      "updates": 12,
+      "blocked": false,
+      "attempted": 12,
+      "enabled": true
     }
   },
   "supabase_requests": 0,
