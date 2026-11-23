@@ -30,7 +30,10 @@ export async function generate(env,prompt,edition){
   {nome:'Groq',key:env.GROQ_API_KEY,url:'https://api.groq.com/openai/v1/chat/completions',model:'openai/gpt-oss-20b'},
   {nome:'OpenRouter',key:env.OPENROUTER_API_KEY,url:'https://openrouter.ai/api/v1/chat/completions',model:'openrouter/free'}
  ].filter(r=>r.key);
- reservas.push({nome:'Pollinations',url:'https://text.pollinations.ai/openai',model:'openai'});
+ // v937: dados de Diário, Estudos e carteira nunca saem para IA anônima sem contrato.
+ // A alternativa sem chave é o Workers AI vinculado à própria conta Cloudflare.
+ if(edition==='public'&&env.ALLOW_PUBLIC_AI_FALLBACK==='1')
+  reservas.push({nome:'Pollinations',url:'https://text.pollinations.ai/openai',model:'openai'});
  // Há 34s de timeout no cliente: o Gemini não pode consumir todo o prazo.
  const prazoTotal=Date.now()+31500;
  const prazoGemini=Date.now()+11000;
