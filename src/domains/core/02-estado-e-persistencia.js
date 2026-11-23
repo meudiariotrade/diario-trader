@@ -2423,9 +2423,14 @@ async function sync(force) {
     try { await tok(); } catch (_) { /* sessão expirada: não usar token antigo */ }
     if(!SESS?.at || syncOwner()!==owner)return;
     usandoD1 = await window.DiarioD1Principal.prepare(owner,SESS.at,async()=>{
-      const r=await rq("/rest/v1/diario?select=data,revision&user_id=eq." + owner,
+      // Para conferir paridade, buscar apenas mt; baixar o JSON completo só
+      // no fallback legado, quando realmente precisar. Evita egress pesado.
+      const r=await rq("/rest/v1/diario?select=mt:data->mt&user_id=eq." + owner,
         {signal:AbortSignal.timeout(20000)});
-      return r.json();
+      const rows=await r.json();
+      return Array.isArray(rows)
+        ? rows.map(item=>({data:{mt:item.mt==null?null:Number(item.mt)}}))
+        : [];
     });
     assertSyncOwner(owner);
   }
