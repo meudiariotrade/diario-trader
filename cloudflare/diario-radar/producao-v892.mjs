@@ -23,7 +23,7 @@ async function migrarStoragePrivadoCron(env){
  if(!env.PRIVATE_D1||!env.PRIVATE_FILES_KV||!env.SUPABASE_SERVICE_ROLE_KEY||!env.SUPABASE_URL)return;
  const sql="SELECT f.owner,f.bucket,f.object_key,f.size_bytes,f.content_type FROM private_files f "+
  "LEFT JOIN private_file_transfer_errors e ON e.owner=f.owner AND e.bucket=f.bucket AND e.object_key=f.object_key "+
- "WHERE f.status='pending' AND coalesce(e.attempts,0)<3 ORDER BY coalesce(e.attempts,0),f.bucket,f.object_key LIMIT 8";
+ "WHERE f.status='pending' AND coalesce(e.attempts,0)<3 ORDER BY coalesce(e.attempts,0) DESC,f.bucket,f.object_key LIMIT 8";
  const result=await env.PRIVATE_D1.prepare(sql).all();
  const base=new URL(env.SUPABASE_URL);
  if(base.protocol!=='https:'||!base.hostname.endsWith('.supabase.co'))return;
@@ -59,7 +59,12 @@ async function migrarStoragePrivadoCron(env){
     await env.PRIVATE_D1.prepare(
       "UPDATE private_files SET status='ready',source='legado_admin_verificado',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE owner=? AND bucket=? AND object_key=? AND status='pending'"
     ).bind(owner,bucket,key).run();
-  }catch(_){
+  }catch(err){
+    if(failure==='erro_indefinido'){
+      const kind=String(err?.name||'Erro').replace(/[^A-Za-z]/g,'').slice(0,22);
+      const safe=String(err?.message||'sem_detalhes').replace(/https?:\/\/\S+/g,'url').replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/ig,'id').replace(/[^A-Za-z0-9 _.-]/g,'_').slice(0,90);
+      failure=('runtime_'+kind+'_'+safe).slice(0,125);
+    }
     await env.PRIVATE_D1.prepare(
       "INSERT INTO private_file_transfer_errors(owner,bucket,object_key,error_code,attempts,updated_at) VALUES (?,?,?,?,1,strftime('%Y-%m-%dT%H:%M:%fZ','now')) "+
       "ON CONFLICT(owner,bucket,object_key) DO UPDATE SET error_code=excluded.error_code,attempts=private_file_transfer_errors.attempts+1,updated_at=excluded.updated_at"
