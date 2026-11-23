@@ -23,7 +23,7 @@ export async function buscarFinnhubV940(fetcher,token,tema,now=Date.now()){
   for(const x of data.slice(0,55)){
    const t=trim(x?.headline,200),l=urlOk(x?.url),d=Number(x?.datetime)*1000;
    if(!t||t.length<12||!l||!Number.isFinite(d)||d>now+300000||d<now-86400000)continue;
-   if(/\b(moneyist|dear penny|horoscope|astrology|celebrity|fashion|giveaway|advertorial|sponsored)\b/i.test(t))continue;
+   if(/\b(moneyist|dear penny|horoscope|hor[oó]scopo|astrology|celebrity|fashion|giveaway|advertorial|sponsored)\b/i.test(t))continue;
    const tm=tema(t);
    if(!tm)continue;
    itens.push({t,l,fonte:'Finnhub '+cat,d:new Date(d).toISOString(),tema:tm});
