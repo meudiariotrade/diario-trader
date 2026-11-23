@@ -1,0 +1,21 @@
+name: Checar respostas reais Cloudflare (v892)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-cloudflare-mercado-v892.cjs'
+      - '.github/workflows/cloudflare-mercado-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verificar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Conferir preco B3 e EUA, candles e macro sem consultar Supabase
+        run: node scripts/verify-cloudflare-mercado-v892.cjs
