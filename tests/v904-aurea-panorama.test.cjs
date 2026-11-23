@@ -126,20 +126,22 @@ test('Cérebro usa Groq configurado quando Gemini devolve JSON de estudo inváli
  assert.equal(hosts[0],'generativelanguage.googleapis.com');
 });
 
-test('Pollinations recebe a consulta sem credenciais depois de Gemini e Groq indisponíveis',async t=>{
+test('Conselho da Áurea mantém dados privados fora de IA anônima e usa Workers AI',async t=>{
  const {resumoAurea}=await modulePromise;
- const hosts=[];
+ const hosts=[],texto='Resposta suficientemente longa e didática, baseada apenas nos dados fornecidos pelo usuário. O mercado exige prudência com a gestão de risco.';
  t.mock.method(global,'fetch',async(url,init)=>{
   const host=new URL(url).hostname;
   if(host==='teste.supabase.co')return Response.json({keys:[jwk]});
   hosts.push(host);
   if(host==='api.groq.com')assert.equal(JSON.parse(init.body).model,'openai/gpt-oss-20b');
-  if(host!=='text.pollinations.ai')return Response.json({},{status:429});
-  assert.equal(new Headers(init.headers).has('Authorization'),false);
-  return Response.json({model:'gpt-oss-20b',choices:[{message:{content:'Resposta de teste longa o suficiente para validar a reserva sem chave do Conselho.'}}]});
+  if(host==='text.pollinations.ai')throw Error('Proibido enviar dados privados para IA anônima');
+  return Response.json({},{status:429});
  });
- const res=await resumoAurea(post(),{...env(),GROQ_API_KEY:'teste'});
+ const res=await resumoAurea(post(),{...env(),GROQ_API_KEY:'teste',
+  AI:{async run(model,args){assert.match(model,/llama/);return {response:texto}}}
+ });
  assert.equal(res.status,200);
- assert.deepEqual(hosts.slice(-2),['api.groq.com','text.pollinations.ai']);
- assert.match((await res.json()).model,/Pollinations/);
+ assert.ok(hosts.includes('api.groq.com'));
+ assert.equal(hosts.includes('text.pollinations.ai'),false);
+ assert.match((await res.json()).model,/Cloudflare Workers AI/);
 });
