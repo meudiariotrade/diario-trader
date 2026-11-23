@@ -21956,10 +21956,29 @@ tok = function() {
 };
 async function edgeFetchAutenticado(url, opcoes = {}) {
   const server = cfg(), conta = syncOwner();
-  if (!server || !conta || !SESS?.at) throw Error("Entre na sua conta para consultar os dados.");
+  if (!server) throw Error("Configure o acesso à conta.");
   const destino = new URL(String(url),server.url);
   if (destino.origin !== new URL(server.url).origin || !destino.pathname.startsWith("/functions/v1/"))
     throw Error("Destino de função não autorizado.");
+  // v899: macro é dado de mercado PÚBLICO. Nunca renovar JWT nem enviá-lo ao Cloudflare.
+  if (destino.pathname === "/functions/v1/macro") {
+    let dados = {};
+    try { dados = JSON.parse(String(opcoes.body || "{}")); } catch { throw Error("Consulta macro inválida."); }
+    if (!dados || typeof dados !== "object" || Array.isArray(dados)) throw Error("Consulta macro inválida.");
+    const params = new URLSearchParams();
+    for (const chave of ["modo","aba","semana"]) {
+      if (dados[chave] == null) continue;
+      const valor = String(dados[chave]);
+      if (valor.length > 80) throw Error("Parâmetro macro inválido.");
+      params.set(chave, valor);
+    }
+    const r = await fetch("https://diario-trader.lucianosilva43567.workers.dev/v1/macro?" + params.toString(), {
+      method: "GET", credentials: "omit", mode: "cors", redirect: "error", cache: "default",
+      headers: {Accept: "application/json"}, signal: opcoes.signal
+    });
+    return r;
+  }
+  if (!conta || !SESS?.at) throw Error("Entre na sua conta para consultar os dados.");
   await tok();
   assertSyncOwner(conta);
   const cabecalhos = new Headers(opcoes.headers || {});
@@ -22266,6 +22285,8 @@ async function sync(force) {
         assertSyncOwner(owner);
         S.lastSyncAt = Date.now();
         persist();
+        // Cópia privada D1 após confirmar o sincronismo atual (fase espelho).
+        if(!window.DIARIO_DEMO)window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
         SY_RECOVERY.saved();
         SY.msg = "Sincronizado às " + hm();
         if (count && !typing()) render();
@@ -22309,6 +22330,8 @@ async function sync(force) {
     assertSyncOwner(owner);
     S.lastSyncAt = Date.now();
     persist();
+    // Espelha operações e carteira no D1; não interrompe o Supabase nesta fase.
+    if(!window.DIARIO_DEMO)window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
     SY_RECOVERY.saved();
     SY.msg = "Sincronizado às " + hm();
     if ((count || redraw) && !typing()) render();
@@ -29080,21 +29103,20 @@ async function mkFinnhubNoticias(category) {
   }).filter(Boolean);
 }
 async function mkEdgeNoticias(acao) {
-  const cfgAtual=cfg();
-  if(!cfgAtual || !SESS?.at)throw new Error("Sessão indisponível");
-  await tok();
-  const resposta=await fetch(cfgAtual.url+"/functions/v1/"+(acao==="terminal"?"terminal":"noticias"),{
-    method:"POST",headers:{"Content-Type":"application/json",apikey:cfgAtual.key,Authorization:"Bearer "+SESS.at},
-    body:acao==="terminal"?JSON.stringify({acao:"noticias"}):"{}",signal:AbortSignal.timeout(16000),
+  // v899: fallback editorial independente da sessão; nunca consulta Supabase.
+  const resposta=await fetch("https://diario-trader.lucianosilva43567.workers.dev/v1/noticias",{
+    method:"GET",credentials:"omit",headers:{Accept:"application/json"},
+    signal:AbortSignal.timeout(10000),cache:"default"
   });
-  if(!resposta.ok)throw new Error("Fonte "+acao+" "+resposta.status);
+  if(!resposta.ok)throw new Error("Cloudflare notícias "+resposta.status);
   const obj=await resposta.json();
-  if(!Array.isArray(obj.itens))throw new Error("Resposta inválida "+acao);
-  if(acao!=="terminal") {
+  if(!Array.isArray(obj.itens))throw new Error("Cloudflare: feed de notícias inválido");
+  if(acao!=="terminal"&&typeof MKT!=="undefined"){
     MKT.fontesX = obj.fontesX || null;
-    MKT.fontesTs = obj.atualizadoEm || obj.gerado || null;
+    if(!MKT.fontesX)MKT.fontesX={ok:(obj.fontesOk||[]).filter(x=>String(x).startsWith("X · @")),falhas:obj.fontesIndisponiveis||[]};
+    MKT.fontesTs=obj.atualizadoEm||null;
   }
-  return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.a||"Money Times",c:n.tags||n.c||[]})).filter(Boolean);
+  return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.fonte||n.a||"Fonte não indicada",c:n.tags||n.c||[n.tema].filter(Boolean)})).filter(Boolean);
 }
 
 /* Traducao gratuita em lotes, pelo proxy CORS ja autorizado no aplicativo.
@@ -40072,12 +40094,6 @@ async function mdoCarrega(e) {
     ((MDO.err = "Configure o Supabase na aba Conta."), mdoPaint());
     return;
   }
-  if (typeof SESS === "undefined" || !SESS?.at) {
-    MDO.err = "Entre na sua conta para atualizar o panorama.";
-    MDO.errTs = Date.now();
-    mdoPaint();
-    return;
-  }
   ((MDO.busy = 1), (MDO.err = ""), mdoPaint());
   try {
     const a = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
@@ -41358,7 +41374,6 @@ async function mdoAutoTick() {
       tab !== "mercado" ||
       MKT.tab !== "mu" ||
       MDO.busy ||
-      (typeof SESS === "undefined" || !SESS?.at) ||
       (MDO.ts && Date.now() - MDO.ts < 55e3) ||
       (MDO.errTs && Date.now() - MDO.errTs < 2 * 6e4)
     )
@@ -43555,11 +43570,10 @@ function ecoResp(e) {
   <div class="eco-ac"><span class="sm mut">${esc(new Date(e.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}</span><span><button class="btn s" data-eco="pdf" data-v="${esc(e.id)}">📄 PDF</button> <button class="btn s" data-eco="del" data-v="${esc(e.id)}" aria-label="Apagar">🗑</button></span></div></div>`;
 }
 function macroFetchComSessao(url,options) {
-  if (typeof SESS === "undefined" || !SESS?.at)
-    return Promise.reject(new Error("Entre na sua conta para consultar o macro."));
+  // Macro público na Cloudflare; não exigir autenticação do Supabase.
   return edgeFetchAutenticado(url,options);
 }
-// Consultas macro privadas nunca precisam produzir HTTP 401 em sessão anônima.
+// Dados de mercado públicos não dependem de sessão.
 function vEco(e) {
   return `<div class="card"><div class="top"><b>✦ Áurea</b>${ECO.l.length ? '<button class="btn s" data-eco="limpa">Limpar</button>' : ""}</div>${e}
   <div class="sm mut">Estrategista-chefe que preside O Conselho. Cole uma notícia (texto ou link) ou pergunte sobre macro, empresas, gráficos, carteira ou estudos: ela direciona para Schwartz, Graham, Livermore, Munger, Markowitz ou Dow (ou use @nome).</div>
