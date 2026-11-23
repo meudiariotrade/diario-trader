@@ -1,3 +1,4 @@
+import {servePublicSnapshot,refreshBoth,SCREENER_CRON} from './snapshot-cache-v896.mjs';
 // Snapshot público e imutável por janela de cache. Nenhum JWT, carteira ou segredo sai do Worker.
 const CACHE_CONTROL='public, max-age=900, s-maxage=1800';
 const CORS={
@@ -522,63 +523,11 @@ export default {
    }catch(e){return json({error:String(e.message||e).slice(0,120)},502)}
   }
 
-  if(url.pathname!=='/v1/screeners')return json({error:'Rota nao encontrada'},404);
-  const market=url.searchParams.get('market');
-  if(!['BR','US'].includes(market))return json({error:'Mercado invalido'},400);
-  // O frontend v754 solicita o universo público com estes dois parâmetros fixos.
-  // Aceitar apenas os valores esperados, evitando combinações e caches distintos.
-  if([...url.searchParams.keys()].some(k=>!['market','v','snapshot','universe'].includes(k))||
-     (url.searchParams.has('snapshot')&&url.searchParams.get('snapshot')!=='1')||
-     (url.searchParams.has('universe')&&url.searchParams.get('universe')!=='1'))
-   return json({error:'Parametros nao suportados'},400);
-  const revision=(url.searchParams.get('v')||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,40);
-  const key=new Request(url.origin+'/v1/screeners?market='+market+(revision?'&v='+revision:''),{method:'GET'});
-  const cache=caches.default;
-  const cached=await cache.match(key);
-  const sharedKey='universe:v1:'+market;
-  function snapshotResponse(body,etag,expiresAt){
-   const remaining=Math.max(0,Math.floor((expiresAt-Date.now())/1000));
-   return new Response(body,{headers:{
-    'Content-Type':'application/json; charset=utf-8',
-    'Cache-Control':'public, max-age='+Math.min(900,remaining)+', s-maxage='+remaining,
-    'X-Snapshot-Expires':String(expiresAt),ETag:etag,
-   }});
-  }
-  function deliver(response,hit,tier){
-   const fresh=snapshotResponse(response.body,response.headers.get('ETag')||'',Number(response.headers.get('X-Snapshot-Expires')));
-   const out=conditional(request,fresh,hit,fresh.headers.get('Cache-Control'));
-   out.headers.set('X-Snapshot-Tier',tier);
-   return out;
-  }
-  if(cached&&Number(cached.headers.get('X-Snapshot-Expires'))>Date.now())return deliver(cached,true,'pop');
-  if(env.SCREENER_CACHE){
-   try{
-    const {value,metadata}=await env.SCREENER_CACHE.getWithMetadata(sharedKey,'text');
-    if(value&&metadata?.expiresAt>Date.now()){
-     const shared=snapshotResponse(value,metadata.etag,metadata.expiresAt);
-     ctx.waitUntil(cache.put(key,shared.clone()).catch(()=>{}));
-     return deliver(shared,true,'kv');
-    }
-   }catch{/* Falha no KV: a origem continua disponível. */}
-  }
-  const origin=String(env.SUPABASE_URL||'').replace(/\/$/,'');
-  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(origin))
-   return json({error:'Origem nao configurada'},503);
-  const response=await fetch(origin+'/functions/v1/screeners-quant?market='+market+'&snapshot=1&universe=1',
-   {method:'GET',headers:{Accept:'application/json'},signal:AbortSignal.timeout(18000)});
-  if(!response.ok)return json({error:'Snapshot indisponivel',status:response.status},503);
-  const body=await response.text();
-  if(body.length>1800000)return json({error:'Snapshot excedeu limite da borda'},503);
-  let payload;try{payload=JSON.parse(body)}catch{return json({error:'Resposta da origem invalida'},503)}
-  if(!payload?.ok||payload?.market!==market)return json({error:'Snapshot incorreto'},503);
-  const expiresAt=Date.now()+1800000,etag=response.headers.get('ETag')||'';
-  const sourceResponse=snapshotResponse(body,etag,expiresAt);
-  if(payload.universe_complete===true&&Array.isArray(payload.universe_rows)){
-   ctx.waitUntil(cache.put(key,sourceResponse.clone()).catch(()=>{}));
-   if(env.SCREENER_CACHE)ctx.waitUntil(env.SCREENER_CACHE.put(sharedKey,body,{
-    expirationTtl:1800,metadata:{expiresAt,etag}
-   }).catch(()=>{}));
-  }
-  return deliver(sourceResponse,false,'origin');
+  if(url.pathname==='/v1/screeners')return servePublicSnapshot(request,env,ctx);
+  return json({error:'Rota nao encontrada'},404);
+ },
+ async scheduled(controller,env){
+  if(controller.cron!==SCREENER_CRON)return;
+  await refreshBoth(env);
  }
 };

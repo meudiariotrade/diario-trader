@@ -4,9 +4,19 @@
   "main": "index.mjs",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
-  "kv_namespaces": [{"binding":"SCREENER_CACHE","id":"c45b613114fa42d1bf886eca5c1894de"}],
+  "kv_namespaces": [
+    {
+      "binding": "SCREENER_CACHE",
+      "id": "c45b613114fa42d1bf886eca5c1894de"
+    }
+  ],
   "vars": {
     "SUPABASE_URL": "https://vdzwydizostutukppcsj.supabase.co",
     "SUPABASE_ANON_KEY": "sb_publishable_LjeuewTU7OjYrNiRzM2nJQ_iAa9UCkC"
+  },
+  "triggers": {
+    "crons": [
+      "25 2,14 * * *"
+    ]
   }
 }
