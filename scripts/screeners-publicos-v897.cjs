@@ -48,7 +48,7 @@ async function bootstrap(m){
 function score(m,row){
  const v=I.diagnostics(m,row,Date.now(),null);
  if(!v||v.modelScore==null)return null;
- return {total:v.modelScore,model:v.modelVersion||v.version||null};
+ return {total:v.modelScore,model:v.expectedVersion||v.modelVersion||null};
 }
 function update(row,patch,m,source,date){
  let changed=false;
