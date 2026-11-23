@@ -153,6 +153,59 @@ function cvmEvidence(row,registry){
  // Apenas prova de identidade cadastral: jamais inferir índices a partir de documentos.
  return false;
 }
+function enrichBR(rows){
+ // Paridade documental: ticker->CNPJ oficial do histórico CVM e DRE ITR/DFP do mesmo CNPJ.
+ // Não transformar receita, lucro ou linhagem isolados em TTM/ROE homologados.
+ const hist=readJson('dados-publicos/cvm-historico.json');
+ const reg=readJson('dados-publicos/cvm-emissores-2026.json');
+ const dre=readJson('dados-publicos/cvm-dre-2026.json');
+ if(!hist?.tickers||!Array.isArray(reg?.emissores)||!Array.isArray(dre?.documentos))
+  return {updates:0,source:'CVM sem pacote público consistente'};
+ const ids=new Set(reg.emissores.filter(x=>/^\d{14}$/.test(String(x.cnpj||''))).map(x=>x.cnpj));
+ const docMap=new Map();
+ for(const d of dre.documentos){
+  if(!ids.has(d.cnpj)||!['ITR','DFP'].includes(d.formulario)||
+   !/^\d{4}-\d{2}-\d{2}$/.test(String(d.competencia))||
+   !/^\d{4}-\d{2}-\d{2}$/.test(String(d.publicado_em))||
+   d.competencia>d.publicado_em||d.publicado_em>new Date().toISOString().slice(0,10)||
+   !/^\d{1,18}$/.test(String(d.documento_id||''))||
+   !String(d.documento_url||'').startsWith('https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/'))continue;
+  const prev=docMap.get(d.cnpj);
+  if(!prev||d.competencia>prev.competencia)docMap.set(d.cnpj,d);
+ }
+ let updates=0,unverified=0;
+ for(const row of rows){
+  const cnpj=hist.tickers[row.ticker];if(!ids.has(cnpj))continue;
+  const d=docMap.get(cnpj);if(!d){unverified++;continue}
+  const patch={emissor_cnpj:cnpj,
+   documento_balanco_tipo:d.formulario,documento_balanco_id:String(d.documento_id),
+   documento_balanco_url:d.documento_url,documento_balanco_publicado_em:d.publicado_em,
+   data_competencia_balanco:d.competencia};
+  // Campos originais de DRE preservados apenas como linhagem documental, não como TTM confirmado.
+  if(d.linhagem&&typeof d.linhagem==='object')
+   patch.documento_linhagem_cvm=d.linhagem;
+  if(update(row,patch,'BR','CVM ITR/DFP (GitHub)',null))updates++;
+ }
+ return {updates,unverified,source:'CVM DRE + cadastro CNPJ',registry:reg.emissores.length,docs:docMap.size};
+}
+async function mapCik(rows){
+ try{
+  const r=await request('https://www.sec.gov/files/company_tickers.json',{
+   headers:{Accept:'application/json','User-Agent':'DiarioTraderQuant/1.0 (contato@diariotrader.app)'}},16000);
+  const obj=await r.json();const map=new Map();
+  for(const x of Object.values(obj)){
+   const t=clean(x?.ticker),cik=Number(x?.cik_str);
+   if(/^[A-Z0-9][A-Z0-9.-]{0,19}$/.test(t)&&Number.isInteger(cik)&&cik>0)
+    map.set(t,String(cik).padStart(10,'0'));
+  }
+  if(map.size<2000)throw Error('Mapa SEC incompleto');
+  let updates=0;for(const row of rows){
+   const id=map.get(row.ticker);if(!id)continue;
+   if(update(row,{cik:id},'US','SEC · mapa oficial CIK',null))updates++;
+  }
+  return {updates,available:map.size,source:'SEC company_tickers'};
+ }catch(e){return {updates:0,reason:String(e.message||e).slice(0,100)}}
+}
 async function catalogUS(){
  const sources=[
   ['https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt','NASDAQ','Symbol','Security Name'],
@@ -264,6 +317,12 @@ async function main(){
   const [rb,ru]=await Promise.all([scanner('BR',b),scanner('US',u.slice(start,start+chunk))]);
   metrics.scanner={BR:rb,US:ru};changedBR+=rb.updates;changedUS+=ru.updates;
  }
+ if(['rotina','cvm','documentos','fundamentos'].includes(mode)){
+  const x=enrichBR(br.universe_rows);metrics.cvm=x;changedBR+=x.updates;
+ }
+ if(['rotina','mapear_sec','sec','sec_xbrl','fundamentos'].includes(mode)){
+  const x=await mapCik(us.universe_rows);metrics.cik=x;changedUS+=x.updates;
+ }
  if(['rotina','sec','sec_xbrl','fundamentos','enriquecer'].includes(mode)){
   const q=enrichUS(us.universe_rows);metrics.sec=q;changedUS+=q.updates;
  }
@@ -297,4 +356,4 @@ async function main(){
  console.log(JSON.stringify(status));
 }
 if(require.main===module)main().catch(e=>{console.error('COLETA BLOQUEADA: '+String(e.message||e));process.exitCode=1});
-module.exports={valid,scannerFields,computeSnapshot,secEvidence,score,update};
+module.exports={valid,scannerFields,computeSnapshot,secEvidence,enrichBR,mapCik,score,update};
