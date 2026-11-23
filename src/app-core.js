@@ -27384,7 +27384,8 @@ async function anxCall(e) {
         ? "/v1/ia-diario" :
       (["coach", "cnpi", "jornal_voce", "jornal_quiz"].includes(e?.modo) &&
        (e?.modo !== "coach" || JSON.stringify(e?.dados || {}).length <= 110000))
-        ? "/v1/ia-extras" : "";
+        ? "/v1/ia-extras" :
+      e?.modo === "central" ? "/v1/ia-central" : "";
     const endpointCloudflare = caminhoCloudflare
       ? "https://diario-screeners-quant.lucianosilva43567.workers.dev" + caminhoCloudflare : "";
     const pedir = (destino, cloudflare) => fetch(destino, {
