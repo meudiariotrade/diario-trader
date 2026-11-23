@@ -19,5 +19,8 @@
       "25 2,14 * * *"
     ]
   },
-  "keep_vars": true
+  "keep_vars": true,
+  "ai": {
+    "binding": "AI"
+  }
 }
