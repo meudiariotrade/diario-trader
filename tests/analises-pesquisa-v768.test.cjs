@@ -37,6 +37,9 @@ test('Pesquisa tem ajuste Yahoo adjclose auditável e validador de claims sem n�
  const f=vm.runInNewContext(stripTypeScriptTypes(s,{mode:'transform'})+'\nvalidarNumerosIA',{Math,Number,String,Set});
  assert.equal(f('A ação subiu 3%','Retorno 3,0%').ok,true);
  assert.equal(f('O ROE é 3%','ROE 6,0%').ok,false,'3% não pode ser isento por ser número pequeno');
+ assert.equal(f('Média móvel de 200 períodos','MM200: 32,10').ok,true);
+ assert.equal(f('Preço de 200','MM200: 32,10').ok,false);
+ assert.equal(f('Preço de 25,8','MM20: 32,10').ok,false);
  assert.equal(f('Preço-alvo de 200','Preço de 100').ok,false);
  assert.equal(f('1. Resultados: 15%','15%').ok,true,'Numeração do título não é claim');
 });

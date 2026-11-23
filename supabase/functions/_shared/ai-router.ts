@@ -224,7 +224,7 @@ export type Resposta = { texto: string; provedor: string; modelo: string; rotulo
  * Gera texto com failover entre os provedores ativos.
  * Em 429: 1 nova tentativa rápida no mesmo modelo, depois pausa o provedor e passa ao próximo.
  */
-export async function gerarTexto(system: string, prompt: string, opt: { json?: boolean; temp?: number; ate?: number; env?: Env; fetcher?: typeof fetch; preferir?: string[]; excluir?: string[]; porTentativaMs?: number } = {}): Promise<Resposta> {
+export async function gerarTexto(system: string, prompt: string, opt: { json?: boolean; temp?: number; ate?: number; env?: Env; fetcher?: typeof fetch; preferir?: string[]; excluir?: string[]; porTentativaMs?: number; validar?: (texto:string)=>string|null } = {}): Promise<Resposta> {
   system = especializarSistema(system);
   const fetcher = opt.fetcher || fetch, env = opt.env ? opt.env : await envComVault(ENV0, fetcher), ate = opt.ate || Date.now() + 55_000, temp = opt.temp ?? 0.4, erros: string[] = [];
   // No Jornal o Gemini já foi tentado como principal: não repetir o mesmo
@@ -245,7 +245,7 @@ export async function gerarTexto(system: string, prompt: string, opt: { json?: b
     const i = fila.findIndex((p) => p.id === 'openrouter-reserva');
     if (i > 0) fila.unshift(fila.splice(i, 1)[0]);
   }
-  for (const p of fila) {
+  provedoresAtivos: for (const p of fila) {
     let modelos = p.id === 'openrouter-reserva' ? await openRouterReserva(fetcher) :
       p.id === 'openrouter' ? await openRouterGratis(p.modelos, fetcher) : await modelosAtuais(p, fetcher);
     const bom = OK_MODELO.get(p.id);
@@ -260,6 +260,13 @@ export async function gerarTexto(system: string, prompt: string, opt: { json?: b
         try {
           const ms = Math.min(resta - 1500, opt.porTentativaMs || 30_000);
           const r: any = p.tipo === 'gemini' ? await chamaGemini(p, modelo, system, prompt, !!opt.json, temp, ms, fetcher) : await chamaOpenAI(p, modelo, system, prompt, !!opt.json, temp, ms, fetcher);
+          if (r.texto && opt.validar) {
+            const motivo = opt.validar(r.texto);
+            if (motivo) {
+              erros.push(p.nome + ': ' + motivo);
+              continue provedoresAtivos;
+            }
+          }
           if (r.texto) { PAUSA.delete(p.id); OK_MODELO.set(p.id, modelo); const m = r.real || modelo; return { texto: r.texto, provedor: p.nome, modelo: m, rotulo: `${p.nome} · ${m}`, tentativas: erros }; }
           erros.push(`${p.nome} ${modelo}: ${r.status ? 'HTTP ' + r.status : ''}${r.erro ? (r.status ? ' — ' : '') + limpa(r.erro) : ''}`);
           if (r.status === 429 && tentativa === 0 && p.id !== 'openrouter-reserva') { await espera(1200); continue; } // reserva :free não consome duas tentativas da mesma cota

@@ -208,7 +208,7 @@
    'Como aplicar os conceitos dos meus livros de análise técnica aos destaques de hoje? Tendência saudável: '+br.livermore.alta.map(x=>x.ticker+' ('+x.motivo+')').join('; ')+'. Alertas técnicos: '+br.livermore.alertas.map(x=>x.ticker+' ('+x.motivo+')').join('; ')+'.':
    'Como aplicar os conceitos dos meus livros aos destaques de hoje ('+m.nome+')? Bons para avaliar: '+br.graham.avaliar.map(x=>x.ticker+' ['+x.setor+'] '+x.motivo).join('; ')+'. Sinais de cautela: '+br.graham.cautela.map(x=>x.ticker+' ['+x.setor+'] '+x.motivo).join('; ')+'. Setores fortes 1M: '+br.graham.setoresFortes.map(s=>s.setor+' '+s.m1.toFixed(1)+'%').join(', ')+'.';
   try{
-   const j=await w.DiarioCerebroIA.api({acao:'gerar',modo:'perguntar',tema:m.tema,extra:fatos});
+   const j=await w.DiarioCerebroIA.api({acao:'gerar',modo:'briefing',tema:m.tema,extra:fatos});
    const res=j&&j.resultado&&typeof j.resultado==='object'?j.resultado:null;
    if(res){
     const parts=[];

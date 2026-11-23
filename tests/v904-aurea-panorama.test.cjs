@@ -104,3 +104,24 @@ test('Conselho usa a instrução da especialidade e devolve o parecer para cada 
   }
  } finally {global.fetch=old;}
 });
+
+test('Cérebro usa Groq configurado quando Gemini devolve JSON de estudo inválido',async t=>{
+ const {resumoAurea}=await modulePromise;
+ const resultado={resultado:{resposta:'Aplique o critério do livro aos dados atuais de PETR4.'}};
+ const hosts=[];
+ t.mock.method(global,'fetch',async(url,init)=>{
+  const host=new URL(url).hostname;
+  if(host==='teste.supabase.co')return Response.json({keys:[jwk]});
+  hosts.push(host);
+  if(host==='generativelanguage.googleapis.com')return Response.json({candidates:[{content:{parts:[{text:'{}'}]}}]});
+  assert.equal(host,'api.groq.com');
+  assert.equal(init.redirect,'manual');
+  return Response.json({choices:[{message:{content:JSON.stringify(resultado)}}]});
+ });
+ const res=await resumoAurea(post({},{edicao:'estudos',prompt:'Modo briefing. Aplique a margem de segurança descrita nos trechos de Graham aos dados de PETR4 no campo extra.'}),{...env(),GROQ_API_KEY:'chave-teste'});
+ const body=await res.json();
+ assert.equal(res.status,200);
+ assert.match(body.model,/Groq/);
+ assert.deepEqual(JSON.parse(body.text),resultado);
+ assert.equal(hosts[0],'generativelanguage.googleapis.com');
+});

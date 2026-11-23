@@ -120,3 +120,18 @@ test('mesmo se anúncio disser :free, modelo pago é barrado pela tabela de pre�
   });
   assert.equal(out.modelo, GLM);
 });
+
+test('parecer reprovado pelos dados passa a outro provedor cadastrado',async()=>{
+ const api=await router('validacao-petr4');
+ const env=k=>({GROQ_API_KEY:'teste',MISTRAL_API_KEY:'teste',IA_DESLIGAR:'pollinations'}[k]);
+ const chamados=[];
+ const fetcher=async(url,init)=>{
+  if(!init?.body)return json({data:[]});
+  const host=new URL(url).hostname;
+  chamados.push(host);
+  return json({choices:[{message:{content:host==='api.groq.com'?'Preço de 25,8':'Leitura fundamentada'}}]});
+ };
+ const r=await api.gerarTexto('sistema','PETR4',{env,fetcher,preferir:['groq','mistral'],validar:t=>t.includes('25,8')?'Número sem suporte':null});
+ assert.deepEqual(chamados,['api.groq.com','api.mistral.ai']);
+ assert.equal(r.texto,'Leitura fundamentada');
+});

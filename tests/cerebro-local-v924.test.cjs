@@ -25,3 +25,20 @@ test('v924: sem indexação do Supabase e com aviso de retenção local',()=>{
  assert.match(src,/Nada será enviado ao Supabase/);
  assert.match(src,/edicao:'estudos'/);
 });
+
+test('briefing de Graham busca pelo conceito e envia o mercado como contexto separado',async()=>{
+ const doc={addEventListener(){},querySelector:()=>null,getElementById:()=>null};
+ let prompt;
+ const ctx={document:doc,indexedDB,crypto:webcrypto,AbortController,Date,console,TextEncoder,TextDecoder,
+  SESS:{uid:'teste-briefing',at:'teste'},tok:async()=>{},fetch:async(url,init)=>{
+   prompt=JSON.parse(init.body).prompt;
+   return Response.json({ok:true,text:JSON.stringify({resultado:{resposta:'Leitura'}})});
+  }};
+ ctx.window=ctx;vm.runInNewContext(fs.readFileSync('src/ai/cerebro-ia.js','utf8'),ctx);
+ const brain=ctx.DiarioCerebroIA,txt='A margem de segurança compara preço e valor e protege contra erros de estimativa. '.repeat(5);
+ await brain.importar({name:'Investidor.txt',size:txt.length,text:async()=>txt},{autor:'Benjamin Graham',categoria:'Investimentos'});
+ await brain.api({acao:'gerar',modo:'briefing',tema:'Graham margem de segurança',extra:'PETR4 com margem em revisão'});
+ assert.match(prompt,/livros explicam os critérios/);
+ assert.match(prompt,/"extra":"PETR4/);
+ assert.match(prompt,/"obra":"Investidor"/);
+});

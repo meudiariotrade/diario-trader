@@ -23,12 +23,12 @@
   for(const obra of obras){
    const fonte=Array.isArray(obra.trechosLocais)&&obra.trechosLocais.length?obra.trechosLocais:chunks(obra.texto||'');
    const excluidos=new Set(obra.excluidos||[]);
-   const titulo=normal(obra.titulo||''),peso=termos.filter(t=>titulo.includes(t)).length;
+   const titulo=normal(obra.titulo||''),autor=normal(obra.autor||''),peso=termos.filter(t=>titulo.includes(t)).length,autorRelevante=termos.some(t=>autor.split(/\W+/).includes(t));
    for(const item of fonte){
     const texto=String(item.texto||'');if(texto.length<50||excluidos.has(texto))continue;
     const n=normal(texto),acertos=termos.filter(t=>n.includes(t)).length;
     if(!acertos&&!peso)continue;
-    const score=(acertos+Math.min(2,peso)*0.3)/termos.length;if(score<0.15)continue;
+    const score=(acertos+Math.min(2,peso)*0.3+(autorRelevante?2:0))/termos.length;if(score<0.15)continue;
     encontrados.push({titulo_obra:obra.titulo,conteudo_chunk:texto,similarity:Math.min(1,score),obra_id:obra.id});
    }
   }
@@ -77,9 +77,11 @@
   }
   if(acao!=='gerar')throw Error('Ação da biblioteca não suportada');
   const modo=String(payload.modo||''),tema=String(payload.tema||''),extra=String(payload.extra||'');
-  const trechos=await buscarLocal(tema+' '+extra,6);
+  const briefing=modo==='briefing';
+  const trechos=await buscarLocal(briefing?tema:tema+' '+extra,6);
   if(!trechos.length)throw Error('Não há trecho local relacionado. Importe um livro ou tente outro tema.');
   const formatos={
+   briefing:'{"resultado":{"resposta":"leitura aplicada aos destaques","citacoes":[{"obra":"obra usada","trecho":"excerto literal"}],"lacuna":"dado ou conceito específico ausente, se houver"}}',
    perguntar:'{"resultado":{"resposta":"texto","citacoes":[{"obra":"título","trecho":"citação real"}],"lacuna":"lacuna ou vazio"}}',
    pergunta:'{"resultado":{"pergunta":"?","alternativas":["a","b","c","d","e"],"correta":0,"explicacao":"texto","topico":"tema","fonte":"obra"}}',
    explicar:'{"resultado":{"titulo":"tema","explicacao":"texto","exemplo":"texto"}}',
@@ -94,9 +96,9 @@
   };
   if(!formatos[modo])throw Error('Modo de estudo não disponível');
   const prompt='ESTUDOS DO CÉREBRO: Responda SOMENTE JSON (sem markdown). Modo '+modo+
-   '. Estrutura exigida: '+formatos[modo]+'. Use APENAS os TRECHOS, nunca invente fontes. '+
-   JSON.stringify({tema:tema.slice(0,180),extra:extra.slice(0,500),n:Math.min(5,Math.max(1,Number(payload.n)||5)),
-    trechos:trechos.map(x=>({obra:x.titulo_obra,trecho:x.conteudo_chunk.slice(0,580)}))});
+   '. Estrutura exigida: '+formatos[modo]+(briefing?'. Aplique os conceitos dos trechos aos ativos e fatos do campo extra. Os livros explicam os critérios e não precisam citar os tickers. Se faltar dado para avaliar uma empresa, explique qual e por quê. ':'. Use APENAS os TRECHOS, nunca invente fontes. ')+
+   JSON.stringify({tema:tema.slice(0,180),extra:extra.slice(0,briefing?1400:500),n:Math.min(5,Math.max(1,Number(payload.n)||5)),
+    trechos:trechos.map(x=>({obra:x.titulo_obra,trecho:x.conteudo_chunk.slice(0,briefing?450:580)}))});
   if(typeof tok!=='function'||typeof SESS==='undefined'||!SESS?.at)throw Error('Entre na sua conta para consultar a IA. Os arquivos continuam no aparelho.');
   await tok();const uid=SESS.uid,jwt=SESS.at;
   const enviar=token=>fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
