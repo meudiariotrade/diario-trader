@@ -55137,34 +55137,20 @@ ${t.pNeg > 0.4 ? '<div class="warn sm" style="margin-top:6px">Em mais de 4 de ca
 var FLW = { d: null, busy: 0, err: "", venc: "", ts: 0 };
 async function flwCarrega(e) {
   if (FLW.busy || (!e && Date.now() - FLW.ts < 55e3 && FLW.d)) return;
-  const t = cfg();
-  if (!t || typeof SESS > "u" || !SESS) {
-    ((FLW.err = "Entre na sua conta (Ferramentas → Conta) para ver o fluxo."),
-      flwPinta());
-    return;
-  }
-  ((FLW.busy = 1), flwPinta());
+  ((FLW.busy = 1), (FLW.err = ""), flwPinta());
   try {
-    await tok();
-    const a = await fetch(t.url + "/functions/v1/ewz", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: t.key,
-          Authorization: "Bearer " + SESS.at,
-        },
-        body: JSON.stringify({ acao: "agora", venc: FLW.venc || "" }),
-      }),
-      o = await a.json().catch(() => ({}));
-    if (!a.ok)
-      throw new Error(
-        a.status === 404
-          ? 'A função "ewz" ainda não foi publicada no Supabase.'
-          : o.error || "Erro " + a.status,
-      );
-    ((FLW.d = o), (FLW.venc = o.venc), (FLW.err = ""));
+    const u = new URL("https://diario-trader.lucianosilva43567.workers.dev/v1/ewz");
+    if (FLW.venc) u.searchParams.set("venc", String(FLW.venc).slice(0, 10));
+    // Público: nem Supabase, nem JWT, nem apikey. A Cloudflare responde do cache.
+    const a = await fetch(u.toString(), { method: "GET", credentials: "omit",
+      headers: { Accept: "application/json" }, signal: AbortSignal.timeout(25000) });
+    const o = await a.json().catch(() => ({}));
+    if (!a.ok || !(Number(o.spot) > 0))
+      throw new Error(o.error || o.erro || "Dados públicos do EWZ indisponíveis.");
+    ((FLW.d = o), (FLW.venc = o.venc || FLW.venc || ""), (FLW.err = ""));
   } catch (a) {
-    FLW.err = String(a.message || a);
+    FLW.d = null;
+    FLW.err = "Cloudflare: " + String(a.message || a);
   }
   ((FLW.ts = Date.now()), (FLW.busy = 0), flwPinta());
 }
@@ -55252,6 +55238,14 @@ function flwHtml() {
   const e = FLW.d;
   if ((setTimeout(() => flwCarrega(!1), 0), !e))
     return `<div id="flwbox"><div class="card sm" style="color:var(--mut)">${FLW.err ? esc(FLW.err) : "Carregando o fluxo do EWZ…"}</div>${flwSobre()}</div>`;
+  if (e.status === "sem_feed_opcoes") {
+    const hv = e.vol && e.vol.hv20 != null && Number.isFinite(+e.vol.hv20)
+      ? ((+e.vol.hv20) * 100).toFixed(1).replace(".", ",") + "%"
+      : "—";
+    return `<div id="flwbox"><div class="card"><div class="top"><b>EWZ US$ ${(+e.spot).toFixed(2).replace(".", ",")}</b><span class="chip">COTAÇÃO</span></div>
+      <div class="sm mut">Histórico de volatilidade realizada (20 dias): ${hv}. Fonte: Yahoo Finance, via Cloudflare.</div>
+      <div class="sm mut" style="margin-top:8px">As métricas de opções — IV, prêmio líquido, open interest, gregas e boletas — estão indisponíveis até configurar um feed autorizado. Nenhum número foi estimado ou preenchido artificialmente.</div></div></div>`;
+  }
   const t = e.vol || {},
     a = (n) => (n == null ? "–" : (n * 100).toFixed(1).replace(".", ",") + "%"),
     o = { comprador: "g", vendedor: "r", misto: "am" }[e.vies],
