@@ -804,8 +804,11 @@ async function varre(uid: string, op: { b3?: boolean } = {}) {
       const t = `🎯 Radar: ${r.lado === 'C' ? 'COMPRA' : 'VENDA'} ${r.ticker} · ${r.score}`;
       const nf = (v: number) => v.toFixed(Math.abs(v) < 10 ? 4 : 2);
       const b = `${r.setups[0].nome}. Entrada ${nf(r.entrada)}, stop no pivô ${nf(r.stop)}, alvos Fibo ${r.fib.alvos.map((x) => nf(x.v)).join(' / ')}`;
-      if (await push(uid, t, b, `radar-${dia}-${r.ticker}-${r.lado}`).catch(() => 0)) avisos++;
-      await rest(`radar_sinais?user_id=eq.${uid}&dia=eq.${dia}&ticker=eq.${r.ticker}&lado=eq.${r.lado}`, { method: 'PATCH', body: JSON.stringify({ avisado: true }) }).catch(() => null);
+      const entregues = await push(uid, t, b, `radar-${dia}-${r.ticker}-${r.lado}`).catch(() => 0);
+      if (entregues > 0) {
+        avisos += entregues;
+        await rest(`radar_sinais?user_id=eq.${uid}&dia=eq.${dia}&ticker=eq.${r.ticker}&lado=eq.${r.lado}`, { method: 'PATCH', body: JSON.stringify({ avisado: true }) }).catch(() => null);
+      }
     }
   }
   // placar: atualiza o que aconteceu com os sinais dos últimos 30 dias que ainda não terminaram
