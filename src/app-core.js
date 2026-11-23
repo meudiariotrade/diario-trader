@@ -21804,8 +21804,15 @@ function leituraGuardar(path, body) {
   }
 }
 async function rq(e, t = {}, a = !0) {
-  const o = syncOwner(),
-    s = cfg(),
+  const o = syncOwner();
+  if(!window.DIARIO_DEMO&&window.DiarioD1Registros?.can(e,t,o)&&o&&SESS?.at){
+    await tok();
+    assertSyncOwner(o);
+    const response=await window.DiarioD1Registros.request(e,t,SESS.at,o);
+    assertSyncOwner(o);
+    return response;
+  }
+  const s = cfg(),
     somenteLeitura = !t.method || String(t.method).toUpperCase() === 'GET',
     podeCache = somenteLeitura && !t.cacheRefresh &&
       /^\/rest\/v1\/(cotacoes|mercado_cache|radar_cache|analise_cache|opcoes_grade|fluxo_acoes|ewz_serie|radar_sinais|insiders|carteira_cfg)\?/.test(e),
@@ -37682,14 +37689,19 @@ async function rdAgora() {
   ((RD.run = 1), (RD.msg = ""), rdPaint());
   try {
     await tok();
-    const t = await fetch(e.url + "/functions/v1/radar", {
+    // v915: execução manual diretamente no Radar Cloudflare, sem invocar Edge Function.
+    const t = await fetch("https://diario-radar.lucianosilva43567.workers.dev/", {
       method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "manual",
       headers: {
         "Content-Type": "application/json",
-        apikey: e.key,
         Authorization: "Bearer " + SESS.at,
       },
       body: JSON.stringify({ acao: "agora" }),
+      signal: AbortSignal.timeout(60000),
     });
     let a = {};
     try {
@@ -37698,7 +37710,7 @@ async function rdAgora() {
     if (!t.ok)
       throw new Error(
         t.status === 404
-          ? 'Função "radar" não encontrada: publique-a no Supabase.'
+          ? 'Radar da Cloudflare não encontrado: confira a publicação do Worker.'
           : a.error || "Erro " + t.status,
       );
     !a.ativos_ponte && !a.cripto
@@ -66760,35 +66772,15 @@ function erGrava(e, t) {
   };
 }
 async function erEnvia() {
+  // v916: erros são diagnóstico LOCAL; nunca enviar pilhas ou dados do aparelho
+  // ao Supabase. A aba Diagnóstico continua oferecendo leitura/exportação local.
   try {
-    if (typeof SESS > "u" || !SESS || !cfg() || !navigator.onLine) return;
-    const e = erLista(),
-      t = e.filter((a) => !a.env);
-    if (!t.length) return;
-    (await rq("/rest/v1/erros_app", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify(
-        t.map((a) => ({
-          user_id: SESS.uid,
-          em: new Date(a.ts).toISOString(),
-          versao: a.ver,
-          tela: a.tela,
-          msg: a.msg,
-          pilha: a.pilha,
-          vezes: a.n || 1,
-          aparelho: navigator.userAgent.slice(0, 160),
-        })),
-      ),
-    }),
-      t.forEach((a) => (a.env = 1)),
-      erSalva(e),
-      (ERL.err = ""));
-  } catch (e) {
-    ERL.err =
-      e && (e.status === 404 || /erros_app/.test(e.message || ""))
-        ? 'Falta criar a tabela: rode o SQL "erros-app.sql" no Supabase.'
-        : "";
+    const registros = erLista();
+    for (const item of registros) item.env = 1;
+    erSalva(registros);
+    ERL.err = "";
+  } catch (_) {
+    ERL.err = "Não foi possível conservar o diagnóstico local.";
   }
 }
 setTimeout(erEnvia, 15e3);
