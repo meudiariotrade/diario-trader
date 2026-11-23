@@ -5,7 +5,7 @@ on:
     paths:
       - 'cloudflare/diario-radar/**'
       - '.github/workflows/cloudflare-radar.yml'
-      - 'tests/cloudflare-agenda-preflight-v933.test.cjs'
+      - 'tests/cloudflare-agenda-preflight-v933.test.cjs tests/cloudflare-cron-cutover-v935.test.cjs'
   pull_request:
     paths:
       - 'cloudflare/diario-radar/**'
