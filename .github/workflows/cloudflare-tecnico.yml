@@ -40,6 +40,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: cloudflare/diario-screeners
-          command: deploy
+          # Wrangler 3.90.0 não reconhece wrangler.jsonc; v4 preserva o contrato e a KV.
+          wranglerVersion: '4.166.0'
+          command: deploy --config wrangler.jsonc
       - name: Conferir BTC, B3, EUA, 15M e 1D no endpoint público
         run: node scripts/verify-tecnico-edge.cjs
