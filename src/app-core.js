@@ -22188,44 +22188,47 @@ function mergeIn(e) {
   };
 }
 async function photos() {
-  const e = syncOwner(),
-    t = [
-      ...new Set(
-        S.trades.flatMap((o) =>
-          ["pin", "pout", "pplan"].map((s) => o[s]).filter(Boolean),
-        ),
-      ),
-    ];
-  S.up = S.up || {};
-  let a = 0;
-  for (const o of t) {
-    const s = M[o] || (await idb("img", "get", o)),
-      n = "/storage/v1/object/fotos/" + e + "/" + o + ".jpg";
-    if ((assertSyncOwner(e), s && !S.up[o]))
-      (await rq(n, {
-        method: "POST",
-        headers: { "Content-Type": "image/jpeg", "x-upsert": "true" },
-        body: s,
-      }),
-        assertSyncOwner(e),
-        (S.up[o] = 1));
-    else if (!s)
+  const usuario=syncOwner(), api=window.DiarioArquivos;
+  if(!usuario||!SESS?.at||!api)return 0;
+  const ids=[...new Set((S.trades||[]).flatMap(trade=>['pin','pout','pplan'].map(k=>trade[k]).filter(Boolean)))];
+  if(!S.upCf||typeof S.upCf!=='object')S.upCf={};
+  let recuperadas=0;
+  for(const id of ids){
+    assertSyncOwner(usuario);
+    const caminho=usuario+'/'+id+'.jpg';
+    const local=M[id]||(await idb('img','get',id));
+    if(local){
+      if(S.upCf[id])continue;
       try {
-        const r = await (
-          await rq(n.replace("/object/", "/object/authenticated/"))
-        ).blob();
-        (assertSyncOwner(e),
-          (M[o] = r),
-          await idb("img", "put", r, o),
-          assertSyncOwner(e),
-          (S.up[o] = 1),
-          delete U[o],
-          a++);
-      } catch (r) {
-        if (r.status !== 400 && r.status !== 404) throw r;
+        const arquivo=local instanceof Blob?local:new Blob([local],{type:'image/jpeg'});
+        await api.put('fotos',caminho,arquivo,SESS.at);
+        assertSyncOwner(usuario);
+        S.upCf[id]=1;
+      }catch(_){/* imagem local preservada; nova tentativa na próxima sincronização */}
+      continue;
+    }
+    let remoto=null;
+    try{remoto=await api.get('fotos',caminho,SESS.at);}
+    catch(err){
+      if(err.status===404){
+        try{
+          await api.importOne('fotos',caminho,SESS.at);
+          remoto=await api.get('fotos',caminho,SESS.at);
+        }catch(_){/* o original no Storage legado não será apagado */}
       }
+    }
+    if(remoto&&remoto.size){
+      assertSyncOwner(usuario);
+      M[id]=remoto;
+      await idb('img','put',remoto,id);
+      assertSyncOwner(usuario);
+      S.upCf[id]=1;
+      delete U[id];
+      recuperadas++;
+    }
   }
-  return (persist(), a);
+  persist();
+  return recuperadas;
 }
 async function up(e = null, revision = null) {
   const owner = syncOwner();
@@ -22287,6 +22290,7 @@ async function sync(force) {
         persist();
         // Cópia privada D1 após confirmar o sincronismo atual (fase espelho).
         if(!window.DIARIO_DEMO)window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
+        window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at).catch(()=>{});
         SY_RECOVERY.saved();
         SY.msg = "Sincronizado às " + hm();
         if (count && !typing()) render();
@@ -22332,6 +22336,7 @@ async function sync(force) {
     persist();
     // Espelha operações e carteira no D1; não interrompe o Supabase nesta fase.
     if(!window.DIARIO_DEMO)window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
+        window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at).catch(()=>{});
     SY_RECOVERY.saved();
     SY.msg = "Sincronizado às " + hm();
     if ((count || redraw) && !typing()) render();
