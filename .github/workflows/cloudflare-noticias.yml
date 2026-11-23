@@ -1,0 +1,53 @@
+name: Publicar Cloudflare Noticias e EWZ
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare/diario-noticias/producao-snapshot-v894.mjs'
+      - 'cloudflare/diario-noticias/wrangler.jsonc'
+      - '.github/workflows/cloudflare-noticias.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: publicar-cloudflare-noticias
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --check cloudflare/diario-noticias/producao-snapshot-v894.mjs
+      - run: node --test tests/cloudflare-noticias.test.cjs
+      - name: Bloquear redirect incompatível no Worker
+        run: |
+          if grep -q 'redirect:"error"' cloudflare/diario-noticias/producao-snapshot-v894.mjs; then
+            echo "::error::Worker contém redirect incompatível"
+            exit 1
+          fi
+  publish:
+    needs: [check]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    environment:
+      name: cloudflare-workers
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar segredos sem exibir valores
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CF_TOKEN" && test -n "$CF_ACCOUNT"
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/diario-noticias
+          wranglerVersion: '4.166.0'
+          command: deploy --config wrangler.jsonc
