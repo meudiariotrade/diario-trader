@@ -21,7 +21,8 @@ class DB{
     return {results:[]};
    },
    async run(){
-    if(sql.startsWith('INSERT INTO private_documents')){
+    if(sql.startsWith('INSERT OR IGNORE INTO private_documents')){
+     if(db.docs.has(db.k(p[0],p[1],p[2])))return {meta:{changes:0}};
      db.docs.set(db.k(p[0],p[1],p[2]),{owner:p[0],collection:p[1],key:p[2],payload:p[3]});return {meta:{changes:1}};
     }
     if(sql.startsWith('INSERT INTO private_migration_progress')){
