@@ -2,7 +2,7 @@
 ;(function(w,d){'use strict';
  const esc=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
  const DB='diario-cerebro-local-v805',ST='obras',MAX=12000;
- const categorias=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Gestao_Risco'];
+ const categorias=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Economia','Gestao_Risco'];
  const tipos={pdf:'Livro_PDF',txt:'Livro_PDF',md:'Livro_PDF'};
  let progress='',progressPct=0,items=[],hits=[],busy=false,controller=null,viewer=false,observer=null;
  const owner=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'local';
@@ -14,11 +14,106 @@
  function refresh(){if(typeof tab==='undefined'||tab!=='estudos'||typeof ESV==='undefined'||ESV!=='brain')return;const root=d.querySelector('[data-brain-root]');if(root)root.outerHTML=view()}
  /* v844: progresso atualiza só o texto e a barra; refazer a tela inteira a cada lote fazia ela piscar e apagava o que estava digitado. */
  function status(message,pct){progress=message;progressPct=pct;const root=d.querySelector('[data-brain-root]'),st=root&&root.querySelector('.cb842-st'),pg=root&&root.querySelector('.cb842-pg');if(st&&pg){st.textContent=message;pg.value=pct;return}refresh()}
+ /* v924: arquivos e trechos SEMPRE locais. Consultas de IA somente por comando explícito. */
+ function normal(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
+ function palavras(t){return [...new Set((normal(t).match(/[a-z0-9]{3,}/g)||[]).filter(x=>!['para','como','uma','com','das','dos','por','que','qual','quais','mais','menos','onde','entre','esse','esta','sobre','aqui','meu','meus','seus','mercado'].includes(x)))].slice(0,24)}
+ async function buscarLocal(pergunta,maximo=8){
+  const termos=palavras(pergunta);if(!termos.length)return [];
+  const obras=await all(),encontrados=[];
+  for(const obra of obras){
+   const fonte=Array.isArray(obra.trechosLocais)&&obra.trechosLocais.length?obra.trechosLocais:chunks(obra.texto||'');
+   const excluidos=new Set(obra.excluidos||[]);
+   const titulo=normal(obra.titulo||''),peso=termos.filter(t=>titulo.includes(t)).length;
+   for(const item of fonte){
+    const texto=String(item.texto||'');if(texto.length<50||excluidos.has(texto))continue;
+    const n=normal(texto),acertos=termos.filter(t=>n.includes(t)).length;
+    if(!acertos&&!peso)continue;
+    const score=(acertos+Math.min(2,peso)*0.3)/termos.length;if(score<0.15)continue;
+    encontrados.push({titulo_obra:obra.titulo,conteudo_chunk:texto,similarity:Math.min(1,score),obra_id:obra.id});
+   }
+  }
+  encontrados.sort((a,b)=>b.similarity-a.similarity);
+  return encontrados.slice(0,Math.min(15,Math.max(1,maximo)));
+ }
  async function api(payload,signal){
-  if(typeof cfg!=='function'||typeof tok!=='function'||typeof SESS==='undefined'||!SESS)throw Error('Entre na sua conta para indexar ou consultar.');
-  await tok();const c=cfg();if(!c?.url||!c?.key||!SESS.at)throw Error('Sessão ou Supabase indisponível');
-  const r=await fetch(c.url+'/functions/v1/conhecimento-ia',{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:'Bearer '+SESS.at},body:JSON.stringify(payload),signal});
-  const j=await r.json();if(!r.ok)throw Error(j.erro||'Falha na biblioteca (HTTP '+r.status+')');return j;
+  const acao=String(payload?.acao||'');
+  if(acao==='buscar')return {trechos:await buscarLocal(payload.consulta,10)};
+  if(acao==='cobertura'){
+   const categorias={},obras={};let total=0;
+   for(const obra of await all()){
+    const count=Math.max(0,(obra.trechosLocais?.length||chunks(obra.texto||'').length)-(obra.excluidos||[]).length);
+    total+=count;categorias[obra.categoria]=(categorias[obra.categoria]||0)+count;
+    obras[obra.titulo]=(obras[obra.titulo]||0)+count;
+   }
+   return {total,categorias,obras};
+  }
+  if(acao==='indexar'){
+   const titular=owner(),anterior=(await all()).find(x=>x.id===payload.obra_id);
+   const id=String(payload.obra_id||crypto.randomUUID()),map=new Map((anterior?.trechosLocais||[]).map(x=>[x.indice,x]));
+   for(const chunk of payload.chunks||[]){
+    const indice=Number(chunk.indice),texto=String(chunk.texto||'').slice(0,1390);
+    if(Number.isSafeInteger(indice)&&indice>=0&&indice<MAX&&texto.length>=50)map.set(indice,{indice,texto});
+   }
+   const trechosLocais=[...map.values()].sort((x,y)=>x.indice-y.indice);
+   if(trechosLocais.length>MAX)throw Error('Limite de trechos por obra atingido');
+   if(owner()!==titular)throw Error('Conta mudou durante a gravação');
+   await store({...(anterior||{}),id,titulo:payload.titulo_obra||anterior?.titulo||'Conhecimento',
+    autor:payload.autor||anterior?.autor||'',tipo:payload.tipo_fonte||anterior?.tipo||'Guia_Mercado',
+    categoria:payload.categoria||anterior?.categoria||'Analise_Tecnica',
+    texto:anterior?.texto||'',origem:anterior?.origem||'',blocos:trechosLocais.length,
+    criado:anterior?.criado||new Date().toISOString(),sincronizados:trechosLocais.length,trechosLocais,local:true});
+   return {ok:true,salvos:trechosLocais.length};
+  }
+  if(acao==='remover'){
+   if(!payload.obra_id)throw Error('Obra inválida');
+   await tx('readwrite',s=>s.delete(key(payload.obra_id)));return {ok:true};
+  }
+  if(acao==='remover_trecho'){
+   const found=(await all()).find(o=>o.titulo===payload.titulo_obra&&
+    (o.trechosLocais?.length?o.trechosLocais:chunks(o.texto||'')).some(t=>t.texto===payload.conteudo_chunk));
+   if(!found)throw Error('Trecho não encontrado neste aparelho');
+   await store({...found,excluidos:[...new Set([...(found.excluidos||[]),payload.conteudo_chunk])]});
+   return {ok:true};
+  }
+  if(acao!=='gerar')throw Error('Ação da biblioteca não suportada');
+  const modo=String(payload.modo||''),tema=String(payload.tema||''),extra=String(payload.extra||'');
+  const trechos=await buscarLocal(tema+' '+extra,6);
+  if(!trechos.length)throw Error('Não há trecho local relacionado. Importe um livro ou tente outro tema.');
+  const formatos={
+   perguntar:'{"resultado":{"resposta":"texto","citacoes":[{"obra":"título","trecho":"citação real"}],"lacuna":"lacuna ou vazio"}}',
+   pergunta:'{"resultado":{"pergunta":"?","alternativas":["a","b","c","d","e"],"correta":0,"explicacao":"texto","topico":"tema","fonte":"obra"}}',
+   explicar:'{"resultado":{"titulo":"tema","explicacao":"texto","exemplo":"texto"}}',
+   mapa:'{"resultado":{"centro":"tema","nos":[{"id":"a","rotulo":"conceito"}],"ligacoes":[{"de":"a","para":"b","relacao":"relacao"}]}}',
+   comparar:'{"resultado":{"tema":"tema","visoes":[{"obra":"fonte","resumo":"visão"}],"pontos_comuns":"texto","diferencas":"texto"}}',
+   glossario:'{"resultado":{"termos":[{"en":"termo","pt":"tradução","definicao":"significado"}]}}',
+   resumo:'{"resultado":{"titulo":"tema","topicos":["item"],"para_ouvir":"texto"}}',
+   trade:'{"resultado":{"trecho":"trecho","obra":"obra","por_que":"explicação"}}',
+   aula_erro:'{"resultado":{"titulo":"tema","por_que_acontece":"texto","o_que_fazer":["ação"],"exercicio":"exercício"}}',
+   simulado:'{"resultado":{"questoes":[{"pergunta":"?","alternativas":["a","b","c","d","e"],"correta":0,"explicacao":"texto","topico":"tema","fonte":"obra","trecho":"citação"}]}}',
+   materia:'{"resultado":{"materia":"tema","ligacoes":[{"conceito":"conceito","exemplo_mercado":"exemplo"}]}}'
+  };
+  if(!formatos[modo])throw Error('Modo de estudo não disponível');
+  const prompt='ESTUDOS DO CÉREBRO: Responda SOMENTE JSON (sem markdown). Modo '+modo+
+   '. Estrutura exigida: '+formatos[modo]+'. Use APENAS os TRECHOS, nunca invente fontes. '+
+   JSON.stringify({tema:tema.slice(0,180),extra:extra.slice(0,500),n:Math.min(5,Math.max(1,Number(payload.n)||5)),
+    trechos:trechos.map(x=>({obra:x.titulo_obra,trecho:x.conteudo_chunk.slice(0,580)}))});
+  if(typeof tok!=='function'||typeof SESS==='undefined'||!SESS?.at)throw Error('Entre na sua conta para consultar a IA. Os arquivos continuam no aparelho.');
+  await tok();const uid=SESS.uid,jwt=SESS.at;
+  const enviar=token=>fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
+   method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal,
+   headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+   body:JSON.stringify({edicao:'estudos',prompt})});
+  let res=await enviar(jwt);
+  if(res.status===401&&SESS?.uid===uid&&!signal?.aborted){
+   if(SESS.at===jwt)SESS.exp=0;
+   await tok();if(SESS?.uid!==uid)throw Error('A conta mudou durante a consulta');
+   res=await enviar(SESS.at);
+  }
+  const out=await res.json().catch(()=>({}));
+  if(!res.ok||!out.ok||!out.text)throw Error(out.error||'IA indisponível na Cloudflare');
+  let dados;try{dados=JSON.parse(out.text)}catch{throw Error('IA não devolveu uma resposta de estudos válida')}
+  if(!dados?.resultado||typeof dados.resultado!=='object')throw Error('Resposta sem conteúdo de estudos');
+  return {...dados,fontes:[...new Set(trechos.map(x=>x.titulo_obra))]};
  }
  function chunks(text){
   const paragraphs=String(text||'').replace(/\r/g,'').replace(/[^\S\n]+/g,' ').split(/\n\s*\n|(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚ])/).map(x=>x.trim()).filter(Boolean);
@@ -64,31 +159,16 @@
  async function ingest({titulo,autor,tipo,categoria,texto,url=''},anterior=null,semConfirmar=false){
   if(busy)throw Error('Importação anterior em andamento');
   const blocks=chunks(texto);if(!blocks.length)throw Error('Texto insuficiente para indexar');
-  if(blocks.length>MAX)throw Error('Este arquivo excede 12.000 trechos. Divida o livro em volumes para importar todo o texto.');
-  if(!anterior&&!semConfirmar&&!confirm('Indexar '+blocks.length+' trechos no Supabase? Originais ficam apenas neste dispositivo.'))return;
-  busy=true;controller=new AbortController();const origin=owner();
+  if(blocks.length>MAX)throw Error('Este arquivo excede 12.000 trechos. Divida o livro em volumes.');
+  if(!anterior&&!semConfirmar&&!confirm('Salvar '+blocks.length+' trechos SOMENTE neste dispositivo? Nada será enviado ao Supabase. Faça backup dos estudos.'))return;
+  busy=true;controller=new AbortController();const titular=owner();
   try{
-   let inicio=anterior?.sincronizados||0;
-   if(!anterior&&tipo==='Livro_PDF'){
-    const candidatos=(await all()).filter(x=>x.owner===origin&&x.tipo===tipo&&x.titulo===titulo&&x.autor===autor&&x.categoria===categoria&&x.texto&&texto.startsWith(x.texto));
-    if(candidatos.length===1){
-     anterior=candidatos[0];
-     const antigos=chunks(anterior.texto);
-     while(inicio<anterior.sincronizados&&antigos[inicio]?.texto===blocks[inicio]?.texto)inicio++;
-    }
-   }
-   if(owner()!==origin||!controller||controller.signal.aborted)throw Error('Importação interrompida');
+   if(controller.signal.aborted||owner()!==titular)throw Error('Importação interrompida');
    const id=anterior?.id||crypto.randomUUID(),criado=anterior?.criado||new Date().toISOString();
-   await store({id,titulo,autor,tipo,categoria,texto,origem:url,blocos:blocks.length,criado,sincronizados:inicio});
-   for(let i=inicio;i<blocks.length;i+=6){
-    if(controller.signal.aborted||owner()!==origin)throw Error('Importação interrompida');
-    const group=blocks.slice(i,i+6);
-    await api({acao:'indexar',obra_id:id,titulo_obra:titulo,autor,tipo_fonte:tipo,categoria,chunks:group},controller.signal);
-    if(owner()!==origin)throw Error('Conta alterada durante a importação');
-    status('Indexados '+Math.min(i+6,blocks.length)+' de '+blocks.length+' trechos',35+Math.round((i+6)/blocks.length*65));
-    await store({id,titulo,autor,tipo,categoria,texto,origem:url,blocos:blocks.length,criado,sincronizados:Math.min(i+6,blocks.length)});
-   }
-   status('Biblioteca atualizada: '+titulo,100);
+   // Armazenamento local de todo o livro; a busca separa os trechos no dispositivo.
+   await store({id,titulo,autor,tipo,categoria,texto,origem:url,blocos:blocks.length,criado,
+    sincronizados:blocks.length,local:true,excluidos:anterior?.excluidos||[]});
+   status('Salvos localmente '+blocks.length+' trechos de '+titulo,100);
   }finally{busy=false;controller=null;items=await all();refresh()}
  }
  const manual=[
@@ -154,7 +234,7 @@
    '<div class="cb842-kpi"><div><small>Lições gravadas</small><b>'+(st.total||0)+'</b></div><div><small>Erros no placar</small><b>'+erros+'</b></div></div>'+
    '<button class="btn s" data-brain-licoes="1">Gravar lições agora</button></section>'+
    '<section class="cb842-blk"><h3>Acerto por fonte</h3>'+(fontes.length?'<table class="cb842-tb"><thead><tr><th>Obra</th><th>Leituras</th><th>Acerto</th></tr></thead><tbody>'+fontes.map(f=>'<tr><td>'+esc(f.titulo)+'</td><td>'+f.n+'</td><td><span class="cb842-bar"><i style="width:'+pct(f.taxa)+'" class="'+(f.taxa>=.6?'ok':f.taxa>=.4?'at':'neg')+'"></i></span>'+pct(f.taxa)+'</td></tr>').join('')+'</tbody></table>':'<p class="cb842-mut">Aparece depois que as análises do Jornal usarem obras do Cérebro e o placar conferir o resultado.</p>')+'</section>'+
-   '<section class="cb842-blk"><h3>Como a IA usa</h3><ul class="cb842-mut"><li>Busca por tema: ativo + assunto + lições de erro.</li><li>Só trechos com relevância mínima entram.</li><li>A Pesquisa mostra no relatório quais obras foram usadas.</li><li>Originais ficam neste aparelho; só os trechos vão para a sua conta.</li></ul></section>'+
+   '<section class="cb842-blk"><h3>Como a IA usa</h3><ul class="cb842-mut"><li>Busca por tema: ativo + assunto + lições de erro.</li><li>Só trechos com relevância mínima entram.</li><li>A Pesquisa mostra no relatório quais obras foram usadas.</li><li>Originais e trechos ficam neste dispositivo. Só consultas explícitas de IA enviam pequenos trechos à Cloudflare/Gemini.</li></ul></section>'+
    '</aside></div>'+(w.DiarioCerebroEstudos?w.DiarioCerebroEstudos.html():'')+'</section>';
  }
  async function sync(){items=await all();licoes(false).then(n=>{if(n)sync()}).catch(()=>{});
