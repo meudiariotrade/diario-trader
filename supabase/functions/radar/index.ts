@@ -806,7 +806,7 @@ async function varre(uid: string, op: { b3?: boolean } = {}) {
       const b = `${r.setups[0].nome}. Entrada ${nf(r.entrada)}, stop no pivô ${nf(r.stop)}, alvos Fibo ${r.fib.alvos.map((x) => nf(x.v)).join(' / ')}`;
       const entregues = await push(uid, t, b, `radar-${dia}-${r.ticker}-${r.lado}`).catch(() => 0);
       if (entregues > 0) {
-        avisos += entregues;
+        avisos++;
         await rest(`radar_sinais?user_id=eq.${uid}&dia=eq.${dia}&ticker=eq.${r.ticker}&lado=eq.${r.lado}`, { method: 'PATCH', body: JSON.stringify({ avisado: true }) }).catch(() => null);
       }
     }
