@@ -22290,7 +22290,9 @@ async function sync(force) {
         persist();
         // Cópia privada D1 após confirmar o sincronismo atual (fase espelho).
         if(!window.DIARIO_DEMO)window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
-        window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at).catch(()=>{});
+        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at))
+          .then(()=>window.DiarioMigracaoD1?.run(SESS.uid,SESS.at,()=>SESS?.uid===owner))
+          .catch(()=>{});
         SY_RECOVERY.saved();
         SY.msg = "Sincronizado às " + hm();
         if (count && !typing()) render();
@@ -22336,7 +22338,9 @@ async function sync(force) {
     persist();
     // Espelha operações e carteira no D1; não interrompe o Supabase nesta fase.
     if(!window.DIARIO_DEMO)window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
-        window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at).catch(()=>{});
+        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at))
+          .then(()=>window.DiarioMigracaoD1?.run(SESS.uid,SESS.at,()=>SESS?.uid===owner))
+          .catch(()=>{});
     SY_RECOVERY.saved();
     SY.msg = "Sincronizado às " + hm();
     if ((count || redraw) && !typing()) render();
