@@ -1,21 +1,10 @@
+import {autenticarUsuario} from './auth-jwks-v924.mjs';
 /* Resumão da Áurea (v904) — Gemini gratuito via Cloudflare, autenticado pelo Supabase Auth.
  * Sem PostgREST, Edge Functions, Storage ou dados pessoais em cache público.
  */
 const ORIGIN='https://meudiariotrade.github.io';
 function respond(data,status=200,origin=ORIGIN){
  return Response.json(data,{status,headers:{'Content-Type':'application/json','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Vary':'Origin','Access-Control-Allow-Origin':origin}});
-}
-async function authenticated(env,request){
- const match=/^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization')||'');
- const token=match?.[1]||'';
- if(token.length<40||token.length>4096||!env.SUPABASE_URL||!env.SUPABASE_ANON_KEY)return null;
- const base=new URL(env.SUPABASE_URL);
- if(base.protocol!=='https:'||!base.hostname.endsWith('.supabase.co'))return null;
- const r=await fetch(base.origin+'/auth/v1/user',{headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY},redirect:'error',signal:AbortSignal.timeout(9000)}).catch(()=>null);
- if(!r || (r.status!==401 && r.status!==403 && !r.ok))throw Error('auth_unavailable');
- if(!r.ok)return null;
- const user=await r.json().catch(()=>null);
- return /^[a-f\d-]{36}$/i.test(String(user?.id||''))?user.id:null;
 }
 const MODELS=['gemini-3.8-flash','gemini-3.5-flash-lite'];
 const conselho = new Map([
@@ -51,7 +40,7 @@ export async function resumoAurea(request,env){
  if(!/^application\/json/i.test(request.headers.get('content-type')||''))return respond({error:'Envie JSON'},415);
  if(Number(request.headers.get('content-length')||0)>10000)return respond({error:'Entrada grande demais'},413);
  let user;
- try{user=await authenticated(env,request)}
+ try{user=await autenticarUsuario(env,request)}
  catch{return respond({error:'A validação do login está indisponível. Tente novamente.'},503)}
  if(!user)return respond({error:'Sessão inválida. Entre na conta para usar a Áurea.'},401);
  let body=null;try{body=await request.json()}catch{return respond({error:'JSON inválido'},400)}

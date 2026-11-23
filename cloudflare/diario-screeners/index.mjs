@@ -1,3 +1,4 @@
+import {autenticarUsuario} from './auth-jwks-v924.mjs';
 import {servePublicSnapshot,refreshBoth,SCREENER_CRON} from './snapshot-cache-v896.mjs';
 import {resumoAurea} from './aurea-resumao-v904.mjs';
 // Snapshot público e imutável por janela de cache. Nenhum JWT, carteira ou segredo sai do Worker.
@@ -40,9 +41,7 @@ async function geminiTTS(env,texto,voz){
  return String(d.mimeType||'').includes('wav')?raw:wav(raw,rate);
 }
 async function logado(env,req){
- const tk=(req.headers.get('Authorization')||'').replace(/^Bearer\s+/i,'').trim();if(tk.length<40)return false;
- const r=await fetch((env.SUPABASE_URL||'')+'/auth/v1/user',{headers:{Authorization:'Bearer '+tk,apikey:env.SUPABASE_ANON_KEY||tk},signal:AbortSignal.timeout(8000)}).catch(()=>null);
- return !!r?.ok;
+ try{return Boolean(await autenticarUsuario(env,req))}catch{return false}
 }
 export default {
  async fetch(request,env,ctx){
