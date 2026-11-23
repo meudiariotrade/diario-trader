@@ -49,9 +49,9 @@
    const g=novos.slice(i,i+6);
    await api({acao:'indexar',obra_id:o.id,titulo_obra:nome,autor,tipo_fonte:tipo,categoria,chunks:g.map(t=>({indice:o.n++,texto:t.texto.slice(0,1390)}))});
    g.forEach(t=>{if(t.chave)st.feitos[t.chave]=1});salva(st);
-   msg(k,'Enviados '+Math.min(i+6,novos.length)+' de '+novos.length+' trechos…');
+   msg(k,'Salvos localmente '+Math.min(i+6,novos.length)+' de '+novos.length+' trechos…');
   }
-  cob=null;msg(k,novos.length+' trecho(s) enviado(s) para "'+nome+'".');return novos.length;
+  cob=null;msg(k,novos.length+' trecho(s) salvo(s) no aparelho para "'+nome+'".');return novos.length;
  }
  function textosDe(obj,lim=24000){const acc=[];(function walk(v){if(acc.join(' ').length>lim)return;if(typeof v==='string'){if(v.trim().length>=40)acc.push(v.trim())}else if(Array.isArray(v))v.forEach(walk);else if(v&&typeof v==='object')Object.values(v).forEach(walk)})(obj);return acc.join('\n\n').slice(0,lim)}
  async function rest(path){if(typeof cfg!=='function'||typeof tok!=='function'||typeof SESS==='undefined'||!SESS)throw Error('Entre na sua conta.');await tok();const c=cfg();
@@ -63,7 +63,7 @@
   kendas:{titulo:'Kendas',autor:'Kendas',cat:'Price_Action'},
   louzada:{titulo:'Fábio Louzada',autor:'Fábio Louzada',cat:'Analise_Tecnica'},
   vantharp:{titulo:'Super Trader',autor:'Van K. Tharp',cat:'Gestao_Risco'},
-  faculdade:{titulo:'Faculdade de Ciências Econômicas',autor:'UniFatecie',cat:'Fundamentalista'},
+  faculdade:{titulo:'Faculdade de Ciências Econômicas',autor:'UniFatecie',cat:'Economia'},
   copom:{titulo:'Ata do Copom',autor:'Banco Central do Brasil',cat:'Fatos_Relevantes_Macro',url:'https://www.bcb.gov.br/publicacoes/atascopom'},
   fed:{titulo:'Comunicado do FOMC',autor:'Federal Reserve',cat:'Fatos_Relevantes_Macro',url:'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm'}
  };
@@ -108,7 +108,7 @@
    const j=await api({acao:'gerar',modo:'perguntar',tema:q});const r=j.resultado||{};hora(3);
    return out('perg','<div class="ce845-res"><p>'+esc(r.resposta)+'</p>'+(Array.isArray(r.citacoes)&&r.citacoes.length?'<h4>Trechos citados</h4><ul class="ce845-cit">'+r.citacoes.map(c=>'<li><b>'+esc(c.obra)+'</b><q>'+esc(c.trecho)+'</q></li>').join('')+'</ul>':'')+(r.lacuna?'<p class="cb842-mut">Não coberto pela biblioteca: '+esc(r.lacuna)+'</p>':'')+fontes(j)+'</div>')}
  }
- const CATS=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Gestao_Risco'];
+ const CATS=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Economia','Gestao_Risco'];
  function cobHtml(){if(!cob)return '';const max=Math.max(1,...CATS.map(c=>cob.categorias?.[c]||0));
   const obras=Object.entries(cob.obras||{}).sort((a,b)=>b[1]-a[1]).slice(0,15);
   return '<table class="cb842-tb ce845-cob"><thead><tr><th>Tema</th><th>Trechos</th></tr></thead><tbody>'+CATS.map(c=>{const n=cob.categorias?.[c]||0,p=n/max;
@@ -210,7 +210,7 @@
   let body='';
   if(aba==='alimentar')body=
    '<section class="cb842-blk"><h3>Pergunte ao Cérebro</h3><div class="cb842-row"><input id="ce-q" maxlength="400" placeholder="Ex.: onde colocar o stop num pullback?"><button class="btn s" data-ce="perguntar">Perguntar</button></div><div data-ce-out="perg"></div></section>'+
-   '<section class="cb842-blk"><h3>Seu histórico vira conhecimento</h3><p class="cb842-mut">Envia só o que é novo. Cada fonte vira uma obra própria no Cérebro.</p>'+
+   '<section class="cb842-blk"><h3>Seu histórico vira conhecimento</h3><p class="cb842-mut">Salva só o que é novo no aparelho, sem enviar ao Supabase. Cada fonte vira uma obra própria no Cérebro.</p>'+
    '<div class="ce845-grid"><button class="btn s" data-ce="diario">Erros e acertos do diário</button><button class="btn s" data-ce="regras">Regras e playbook</button><button class="btn s" data-ce="acertos">Acertos do placar</button><button class="btn s" data-ce="aulas-listar">Resumos das videoaulas</button><button class="btn s" data-ce="balancos-listar">Balanços da carteira</button></div>'+
    '<label>Feedback do mentor<textarea id="ce-mentor" rows="3" placeholder="Cole o que o mentor corrigiu nos seus trades"></textarea></label><div class="cb842-row"><input id="ce-mentor-nome" maxlength="80" placeholder="Nome do mentor"><button class="btn s" data-ce="mentor">Enviar feedback</button></div>'+
    '<div data-ce-out="alim"></div></section>'+
