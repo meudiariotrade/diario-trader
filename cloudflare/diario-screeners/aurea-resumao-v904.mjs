@@ -28,7 +28,9 @@ async function generate(env,prompt,edition){
   {nome:'OpenRouter',key:env.OPENROUTER_API_KEY,url:'https://openrouter.ai/api/v1/chat/completions',model:'openrouter/free'}
  ].filter(r=>r.key);
  reservas.push({nome:'Pollinations',url:'https://text.pollinations.ai/openai',model:'openai'});
- const prazoGemini=Date.now()+26500;
+ // Há 34s de timeout no cliente: o Gemini não pode consumir todo o prazo.
+ const prazoTotal=Date.now()+31500;
+ const prazoGemini=Date.now()+11000;
  function aceitar(text,model){
   if(typeof text!=='string')return null;
   if(edition!=='estudos')return text.trim().length>=60?{text:text.trim().slice(0,7500),model}:null;
@@ -39,7 +41,7 @@ async function generate(env,prompt,edition){
    return serialized.length<=10000?{text:serialized,model}:null;
   }catch{return null}
  }
- const chamar=(model,comThinking)=>fetch(base+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},redirect:'manual',signal:AbortSignal.timeout(Math.max(1,Math.min(18000,prazoGemini-Date.now()))),
+ const chamar=(model,comThinking)=>fetch(base+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},redirect:'manual',signal:AbortSignal.timeout(Math.max(1,Math.min(6500,prazoGemini-Date.now()))),
   body:JSON.stringify({systemInstruction:{parts:[{text:instruction}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:edition==='estudos'?2400:1400,temperature:0.3,...(comThinking?{thinkingConfig:{thinkingLevel:/3\.8/i.test(model)?'low':'minimal'}}:{}),...(edition==='estudos'?{responseMimeType:'application/json'}:{})}})});
  for(const model of MODELS){
   if(!env.GEMINI_API_KEY||Date.now()>=prazoGemini)break;
@@ -60,8 +62,11 @@ async function generate(env,prompt,edition){
   error='IA não retornou conteúdo válido';
  }
  for(const reserva of reservas){
+  // Reserva final nativa precisa de tempo para atuar antes do timeout do cliente.
+  const restante=prazoTotal-Date.now()-(env.AI?5000:500);
+  if(restante<500)break;
   try{
-   const res=await fetch(reserva.url,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(9000),
+   const res=await fetch(reserva.url,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(Math.min(4500,restante)),
     headers:{'Content-Type':'application/json',...(reserva.key?{Authorization:'Bearer '+reserva.key}:{})},
     body:JSON.stringify({model:reserva.model,messages:[{role:'system',content:instruction},{role:'user',content:prompt}],
      temperature:0.3,max_tokens:edition==='estudos'?2400:1400,...(edition==='estudos'?{response_format:{type:'json_object'}}:{})})});
@@ -71,6 +76,17 @@ async function generate(env,prompt,edition){
    if(result)return result;
   }catch{ /* tenta a próxima reserva configurada */ }
 
+ }
+ // Ultimo recurso sem chave externa: Cloudflare Workers AI (franquia gratuita sujeita a limite).
+ if(env.AI && typeof env.AI.run==='function' && Date.now()<prazoTotal-1500){
+  try{
+   const output=await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fp8-fast',{
+    messages:[{role:'system',content:instruction},{role:'user',content:prompt}],
+    max_tokens:edition==='estudos'?1200:950,temperature:0.3
+   });
+   const validado=aceitar(typeof output==='string'?output:output?.response,'Cloudflare Workers AI · Llama 3.1 8B');
+   if(validado)return validado;
+  }catch{ /* nenhum resultado inventado; o cliente pode mostrar seu resumo local identificado */ }
  }
  return {error,status:503};
 }
