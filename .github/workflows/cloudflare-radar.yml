@@ -1,0 +1,50 @@
+name: Publicar Cloudflare Radar (v892)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare/diario-radar/**'
+      - '.github/workflows/cloudflare-radar.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deploy-cloudflare-radar
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --check cloudflare/diario-radar/producao-v892.mjs
+      - run: node --test tests/cloudflare-radar-v892.test.cjs
+  publish:
+    needs: [check]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    environment:
+      name: cloudflare-workers
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar segredos de publicacao (sem exibir valores)
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CF_TOKEN" || { echo "::error::Configure CLOUDFLARE_API_TOKEN no GitHub"; exit 1; }
+          test -n "$CF_ACCOUNT" || { echo "::error::Configure CLOUDFLARE_ACCOUNT_ID no GitHub"; exit 1; }
+      - name: Publicar somente diario-radar, preservando os bindings
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/diario-radar
+          command: deploy
+      - name: Confirmar bindings e crons publicados pelo Wrangler
+        run: |
+          echo "Radar v892 implantado; modo de corte: desativado ate validacao de service role, Gemini e VAPID."
