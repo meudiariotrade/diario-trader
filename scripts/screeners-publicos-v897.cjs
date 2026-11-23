@@ -54,16 +54,17 @@ function update(row,patch,m,source,date){
  let changed=false;
  for(const [key,val] of Object.entries(patch)){
   if(val===undefined||val===null||val===''||!Number.isFinite(val)&&typeof val==='number')continue;
-  if(row[key]!==val){row[key]=val;changed=true;}
+  const same=val&&typeof val==='object'?JSON.stringify(row[key])===JSON.stringify(val):row[key]===val;
+  if(!same){row[key]=val;changed=true;}
  }
  if(!changed)return false;
  const sc=score(m,row);if(sc?.total!=null){
   row[m==='BR'?'score_quant_br':'score_quant_us']=sc.total;
   if(sc.model&&typeof sc.model==='string')row.score_model_version=sc.model;
  }
- row.fonte_principal=source;
+ if(date){row.fonte_principal=source;row.tecnicos_em=date;row.fundamentais_em=date}
+ else if(!row.fonte_principal)row.fonte_principal=source;
  row.updated_at=new Date().toISOString();
- if(date){row.tecnicos_em=date;row.fundamentais_em=date}
  return true;
 }
 function scannerFields(m,ticker,item){
