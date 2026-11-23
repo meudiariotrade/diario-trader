@@ -10,6 +10,15 @@ on:
       - 'tests/cloudflare-diario-sync-v913.test.cjs'
       - 'tests/cloudflare-diario-sync-v931.test.cjs'
       - '.github/workflows/cloudflare-diario-sync.yml'
+  pull_request:
+    paths:
+      - 'cloudflare/diario-sync/**'
+      - 'tests/cloudflare-diario-sync-v900.test.cjs'
+      - 'tests/cloudflare-diario-sync-v906.test.cjs'
+      - 'tests/cloudflare-diario-sync-v907.test.cjs'
+      - 'tests/cloudflare-diario-sync-v913.test.cjs'
+      - 'tests/cloudflare-diario-sync-v931.test.cjs'
+      - '.github/workflows/cloudflare-diario-sync.yml'
   workflow_dispatch:
 permissions:
   contents: read
