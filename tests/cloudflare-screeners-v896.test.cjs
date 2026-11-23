@@ -7,7 +7,7 @@ const mod=import(pathToFileURL(path.resolve('cloudflare/diario-screeners/snapsho
 function makeKV(){const entries=new Map();return {entries,
   async put(key,value,opts){entries.set(key,{value,metadata:opts.metadata})},
   async getWithMetadata(key){return entries.get(key)||{value:null,metadata:null}}};}
-function sample(m){return {ok:true,market:m,universe_complete:true,universe_rows:[{ticker:m==='BR'?'PETR4':'AAPL'}],
+function sample(m){return {ok:true,market:m,pipeline_origin:'github-actions-public',universe_complete:true,universe_rows:[{ticker:m==='BR'?'PETR4':'AAPL'}],
  rows:[{ticker:'T'}],last_update:new Date().toISOString(),total:1};}
 test('atualiza BR/US e atende todos os GETs direto do KV',async()=>{
  const a=await mod,kv=makeKV();let calls=0;
