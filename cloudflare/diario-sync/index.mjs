@@ -211,6 +211,56 @@ async function importarColecao(req,env,uid,url,origin){
  return out({ok:true,collection,finished,rows:rows.length,count:Number(actual?.n)||0,offset:next},200,origin,env);
 }
 
+
+/* v907: histórico Profit privado no D1; sem polling ou gravações no Supabase.
+ * Paginação e limites protegem a cota gratuita, proprietário derivado do JWT.
+ */
+const PROFIT_MIN_TS=946684800,PROFIT_MAX_BATCH=100;
+const profitTicker=t=>/^[A-Z0-9._-]{1,24}$/.test(String(t||'').toUpperCase())?String(t).toUpperCase():null;
+async function profitCandles(req,env,uid,url,origin){
+ if(req.method==='GET'){
+   const ticker=profitTicker(url.searchParams.get('ticker'));
+   const from=Number(url.searchParams.get('from')||PROFIT_MIN_TS);
+   const limit=Math.max(1,Math.min(1000,Number(url.searchParams.get('limit'))||1000));
+   const offset=Number(url.searchParams.get('offset')||0);
+   if(!ticker||!Number.isSafeInteger(from)||from<PROFIT_MIN_TS||
+      !Number.isSafeInteger(offset)||offset<0||offset>120000)
+     return out({error:'parametros_invalidos'},400,origin,env);
+   const result=await env.DB.prepare(
+     'SELECT ts AS t,o,h,l,c,v FROM profit_candles_private WHERE owner=? AND ticker=? AND ts>=? ORDER BY ts ASC LIMIT ? OFFSET ?'
+   ).bind(uid,ticker,from,limit,offset).all();
+   return out({candles:result.results||[]},200,origin,env);
+ }
+ if(req.method==='POST'){
+   if(Number(req.headers.get('content-length')||0)>125000)
+     return out({error:'lote_grande'},413,origin,env);
+   const raw=await req.text();
+   if(new TextEncoder().encode(raw).length>125000)
+     return out({error:'lote_grande'},413,origin,env);
+   let parsed;try{parsed=JSON.parse(raw)}catch{return out({error:'json_invalido'},400,origin,env)}
+   const items=parsed?.candles;
+   if(!Array.isArray(items)||!items.length||items.length>PROFIT_MAX_BATCH)
+     return out({error:'limite_lote_100'},400,origin,env);
+   const until=Math.floor(Date.now()/1000)+86400,unique=new Map();
+   for(const x of items){
+     const ticker=profitTicker(x?.ativo),ts=Number(x?.t);
+     const [o,h,l,c,v]=[x?.o,x?.h,x?.l,x?.c,x?.v??0].map(Number);
+     if(!ticker||!Number.isSafeInteger(ts)||ts<PROFIT_MIN_TS||ts>until||
+       ![o,h,l,c,v].every(Number.isFinite)||Math.min(o,h,l,c)<=0||v<0||
+       l>Math.min(o,c)||h<Math.max(o,c)||h<l)
+       return out({error:'candle_invalido',count:items.length},422,origin,env);
+     unique.set(ticker+'|'+ts,[uid,ticker,ts,o,h,l,c,v]);
+   }
+   const statements=[...unique.values()].map(x=>env.DB.prepare(
+     'INSERT INTO profit_candles_private(owner,ticker,ts,o,h,l,c,v) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(owner,ticker,ts) DO UPDATE SET o=excluded.o,h=excluded.h,l=excluded.l,c=excluded.c,v=excluded.v'
+   ).bind(...x));
+   await env.DB.batch(statements);
+   return out({saved:statements.length},200,origin,env);
+ }
+ return out({error:'metodo_invalido'},405,origin,env);
+}
+
+
 export default {
  async fetch(req,env){
   const origin=req.headers.get('origin');
@@ -226,12 +276,14 @@ export default {
   const isFiles=url.pathname.startsWith('/v1/files/');
   const isMigration=url.pathname.startsWith('/v1/migrate/');
   const isBackup=url.pathname==='/v1/backups'||url.pathname.startsWith('/v1/backups/');
-  if(!isDiary&&!isFiles&&!isMigration&&!isBackup)return out({error:'nao_encontrado'},404,origin,env);
+  const isProfit=url.pathname==='/v1/profit-candles';
+  if(!isDiary&&!isFiles&&!isMigration&&!isBackup&&!isProfit)return out({error:'nao_encontrado'},404,origin,env);
   if(!env.DB)return out({error:'db_indisponivel'},503,origin,env);
   const uid=await owner(req,env);
   if(!uid)return out({error:'login_invalido'},401,origin,env);
   if(isFiles)return arquivos(req,env,uid,url,origin);
   if(isBackup)return backups(req,env,uid,url,origin);
+  if(isProfit)return profitCandles(req,env,uid,url,origin);
   if(isMigration)return importarColecao(req,env,uid,url,origin);
   if(req.method==='GET'){
    const meta=url.searchParams.get('meta')==='1';

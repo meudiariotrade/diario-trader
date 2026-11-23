@@ -21002,21 +21002,24 @@ function rpyAgg(tf) {
 
 /* ---------- Profit: histórico 1m (tabela profit_candles) e importação de CSV ---------- */
 function rpySb() {
-  const a = typeof cfg === "function" ? cfg() : null;
-  if (!a || typeof SESS > "u" || !SESS || !SESS.at) return null;
-  return { url: a.url, h: { apikey: a.key, Authorization: "Bearer " + SESS.at, "Content-Type": "application/json" } };
+  if (typeof SESS > "u" || !SESS || !SESS.at) return null;
+  return {
+    url: "https://diario-sync.lucianosilva43567.workers.dev/v1/profit-candles",
+    h: {Authorization: "Bearer " + SESS.at, Accept: "application/json"},
+  };
 }
 async function rpyProfitLe(tk) {
+  if (typeof tok === "function") await tok();
   const sb = rpySb();
   if (!sb) return [];
-  const desde = Math.floor(Date.now() / 1e3) - 120 * 86400,
-    out = [];
-  for (let off = 0; off < 120000; off += 1000) {
-    const r = await fetch(`${sb.url}/rest/v1/profit_candles?ativo=eq.${encodeURIComponent(rpyRaiz(tk))}&t=gte.${desde}&select=t,o,h,l,c,v&order=t.asc&limit=1000&offset=${off}`, { headers: sb.h, signal: AbortSignal.timeout(15e3) });
-    if (!r.ok) break;
-    const L = await r.json();
-    L.forEach((x) => out.push([+x.t, +x.o, +x.h, +x.l, +x.c, +x.v || 0]));
-    if (L.length < 1000) break;
+  const desde = Math.floor(Date.now()/1000)-120*86400, out=[];
+  for(let off=0;off<120000;off+=1000){
+    const params=new URLSearchParams({ticker:rpyRaiz(tk),from:String(desde),limit:"1000",offset:String(off)});
+    const response=await fetch(sb.url+"?"+params,{headers:sb.h,credentials:"omit",mode:"cors",cache:"no-store",signal:AbortSignal.timeout(15000)});
+    if(!response.ok)throw Error("Histórico Profit na Cloudflare HTTP "+response.status);
+    const payload=await response.json(),rows=Array.isArray(payload.candles)?payload.candles:[];
+    rows.forEach(x=>out.push([+x.t,+x.o,+x.h,+x.l,+x.c,+x.v||0]));
+    if(rows.length<1000)break;
   }
   return out;
 }
@@ -21063,27 +21066,34 @@ function rpyCsvLe(txt) {
     const t = Date.UTC(y, mo - 1, d, +hm[1] + 3, +hm[2]) / 1e3,
       [o, h, l, c] = [2, 3, 4, 5].map((k) => num(f[di + k])),
       v = num(f[di + 6] || 0);
-    if ([o, h, l, c].every((x) => isFinite(x) && x > 0)) out.push({ ativo: rpyRaiz(f[0] || RPY.tk), t, o, h, l, c, v: isFinite(v) ? v : 0 });
+    // Não enviar para D1 linhas antigas com ano 1900 ou preços incoerentes.
+    if(Number.isSafeInteger(t)&&t>=946684800&&t<=Date.now()/1000+86400&&
+       [o,h,l,c].every(x=>Number.isFinite(x)&&x>0)&&l<=Math.min(o,c)&&h>=Math.max(o,c)&&h>=l)
+      out.push({ativo:rpyRaiz(f[0]||RPY.tk),t,o,h,l,c,v:Number.isFinite(v)&&v>=0?v:0});
   }
   return out;
 }
-document.addEventListener("change", async (e) => {
-  if (!e.target || e.target.id !== "rpycsv" || !e.target.files || !e.target.files[0]) return;
-  const sb = rpySb();
-  if (!sb) return void toast("Entre na sua conta para importar.");
-  const L = rpyCsvLe(await e.target.files[0].text());
-  if (!L.length) return void toast("Não reconheci o CSV. Exporte do ProfitChart em 1 minuto (separado por ponto e vírgula).");
-  let ok = 0;
-  RPY.csvMsg = `Enviando ${L.length} candles…`;
+document.addEventListener("change", async e => {
+  if(!e.target||e.target.id!=="rpycsv"||!e.target.files?.[0])return;
+  if(!rpySb())return void toast("Entre na sua conta para importar.");
+  const L=rpyCsvLe(await e.target.files[0].text());
+  if(!L.length)return void toast("Não reconheci candles válidos. Confira as datas e os preços do CSV.");
+  if(L.length>10000){RPY.csvMsg="Limite gratuito: 10.000 candles por arquivo. Divida o CSV e preserve o original.";return void render();}
+  let ok=0,erro="";
+  RPY.csvMsg="Enviando "+L.length+" candles para o D1 da Cloudflare…";
   render();
-  for (let i = 0; i < L.length; i += 1000) {
-    const lote = L.slice(i, i + 1000).map((x) => ({ ...x, uid: SESS.uid }));
-    try {
-      const r = await fetch(`${sb.url}/rest/v1/profit_candles?on_conflict=uid,ativo,t`, { method: "POST", headers: { ...sb.h, Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(lote) });
-      r.ok && (ok += lote.length);
-    } catch {}
-  }
-  RPY.csvMsg = `${ok} de ${L.length} candles de ${[...new Set(L.map((x) => x.ativo))].join(", ")} importados.`;
+  try {
+    if(typeof tok==="function")await tok();
+    for(let i=0;i<L.length;i+=100){
+      const sb=rpySb();if(!sb)throw Error("Sessão expirada");
+      const lote=L.slice(i,i+100);
+      const response=await fetch(sb.url,{method:"POST",credentials:"omit",mode:"cors",cache:"no-store",
+        headers:{...sb.h,"Content-Type":"application/json"},body:JSON.stringify({candles:lote}),signal:AbortSignal.timeout(30000)});
+      if(!response.ok){const info=await response.json().catch(()=>({}));throw Error(info.error||"Cloudflare HTTP "+response.status);}
+      const info=await response.json();ok+=Number(info.saved||0);
+    }
+  } catch(err){erro=String(err?.message||err).slice(0,100);}
+  RPY.csvMsg=ok+" de "+L.length+" candles enviados ao D1"+(erro?" · pendência: "+erro:" · sem usar o Supabase")+".";
   render();
 });
 
