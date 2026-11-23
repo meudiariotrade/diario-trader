@@ -98,3 +98,17 @@ test('v932: tópicos, simulados e inglês retornam seus contratos via Workers AI
   }
  }finally{global.fetch=old}
 });
+
+test('v932: Jornal como aula de Economia preserva disciplina e fontes da edição',async()=>{
+ const {estudosV932}=await import('../cloudflare/diario-screeners/estudos-v932.mjs');
+ const answer={itens:[{disc:'Macroeconomia',conceito:'política monetária',materia:'Comunicado do Banco Central',texto:'O texto da edição ilustra a transmissão de juros à economia.'}]};
+ const old=global.fetch;global.fetch=async()=>new Response(null,{status:503});
+ try{
+  const r=await estudosV932(request('/v1/ia-estudos',{modo:'jornal_aula',disciplinas:['Macroeconomia'],edicao:'O Banco Central publicou um comunicado sobre juros.'}),env(answer));
+  assert.equal(r.status,200);
+  const body=await r.json();
+  assert.equal(body.itens.length,1);
+  assert.equal(body.itens[0].disc,'Macroeconomia');
+  assert.equal(body.itens[0].conceito,'política monetária');
+ }finally{global.fetch=old}
+});
