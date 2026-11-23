@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
 
-const SOURCE=fs.readFileSync(path.resolve(__dirname,'../src/service-worker.js'),'utf8').replaceAll('__APP_VERSION__','893');
+const SOURCE=fs.readFileSync(path.resolve(__dirname,'../src/service-worker.js'),'utf8').replaceAll('__APP_VERSION__','894');
 const SUPA='https://vdzwydizostutukppcsj.supabase.co/functions/v1/';
 const CF='https://diario-trader.lucianosilva43567.workers.dev/v1/';
 
@@ -72,27 +72,39 @@ test('candles preserva OHLCV para analises e backtest',async()=>{
  assert.match(c.chamadas[0].url,/\/v1\/candles\?ativo=PETR4&intervalo=1d/);
 });
 
-test('sem feed EWZ na Cloudflare recua para Supabase mantendo fluxo',async()=>{
+test('sem feed EWZ nunca consulta Supabase mesmo em erro 502',async()=>{
  const c=contexto(async()=>({status:502,data:{error:'Feed ainda não configurado'}}));
  const r=await c.executar('ewz',{acao:'agora',venc:'2026-12-18'});
- assert.equal((await r.json()).origem,'supabase');
- assert.equal(c.chamadas.length,2);
+ assert.equal(r.status,503);
+ assert.equal((await r.json()).semFallbackSupabase,true);
+ assert.equal(c.chamadas.length,1);
  assert.match(c.chamadas[0].url,/\/v1\/ewz/);
- assert.match(c.chamadas[1].url,/supabase\.co\/functions\/v1\/ewz/);
 });
 
-test('resposta invalida do Cloudflare cai no fallback sem quebrar a tela',async()=>{
+test('EWZ recebe a cotação pública sem inventar dados de opções',async()=>{
+ const c=contexto(async()=>({data:{spot:32.5,status:'sem_feed_opcoes',vencs:[],vol:{hv20:0.25}}}));
+ const r=await c.executar('ewz',{acao:'agora'});
+ const j=await r.json();
+ assert.equal(r.status,200);
+ assert.equal(j.status,'sem_feed_opcoes');
+ assert.equal(j.spot,32.5);
+ assert.equal(c.chamadas.length,1);
+});
+
+test('resposta publica invalida retorna 503 sem fallback',async()=>{
  const c=contexto(async()=>({data:{erro:'provider sem dados'}}));
  const r=await c.executar('macro',{modo:'painel'});
- assert.equal((await r.json()).origem,'supabase');
- assert.equal(c.chamadas.length,2);
+ assert.equal(r.status,503);
+ assert.equal((await r.json()).semFallbackSupabase,true);
+ assert.equal(c.chamadas.length,1);
 });
 
-test('nunca corta posicoes: lote maior que 40 usa origem intacta',async()=>{
+test('lote maior que 40 nao deixa passar para Supabase',async()=>{
  const c=contexto(async()=>({data:{br:{},us:{}}}));
  const r=await c.executar('precos',{br:Array.from({length:41},(_,i)=>'A'+i),us:[]});
- assert.equal((await r.json()).origem,'supabase');
- assert.equal(c.chamadas.length,1);
+ assert.equal(r.status,400);
+ assert.equal((await r.json()).semFallbackSupabase,true);
+ assert.equal(c.chamadas.length,0);
 });
 
 test('radar, autenticacao e notificacoes ficam fora da interceptacao',async()=>{
