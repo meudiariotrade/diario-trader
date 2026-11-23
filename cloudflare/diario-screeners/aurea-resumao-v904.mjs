@@ -34,7 +34,7 @@ async function generate(env,prompt,edition){
    response=await fetch(base+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},redirect:'error',signal:AbortSignal.timeout(16000),
     body:JSON.stringify({systemInstruction:{parts:[{text:instruction}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1400,temperature:0.3}})});
   }catch(_){error='Timeout do provedor de IA';continue;}
-  if(response.status===429)return {error:'Limite da IA gratuita atingido; use o resumo local.',status:503};
+  if(response.status===429){error='Limite dos modelos de IA gratuita atingido; use o resumo local.';continue;}
   if(!response.ok){error='Provedor de IA HTTP '+response.status;if([404,500,502,503,504].includes(response.status))continue;break;}
   const json=await response.json().catch(()=>({}));
   const text=(json.candidates?.[0]?.content?.parts||[]).map(x=>String(x.text||'')).join('\n').trim();
@@ -60,11 +60,18 @@ export async function resumoAurea(request,env){
  if((!conselho.has(edition)&&!['manha','meiodia','fechamento','fimdesemana'].includes(edition))||prompt.length<80||prompt.length>6000)return respond({error:'Dados de análise inválidos'},400);
  if(!env.GEMINI_API_KEY)return respond({error:'IA gratuita não configurada no Worker'},503);
  // Contador por usuário, não contém prompt ou token. KV gratuito limita abuso em pedidos repetidos.
- const day=new Date().toISOString().slice(0,10),key='aurea:usage:v904:'+user+':'+day;
- const old=Number(await env.SCREENER_CACHE?.get(key)||0);
- if(old>=14)return respond({error:'Limite diário da Áurea atingido; tente novamente amanhã.'},429);
- if(env.SCREENER_CACHE)await env.SCREENER_CACHE.put(key,String(old+1),{expirationTtl:86400});
+ const day=new Date().toISOString().slice(0,10);
+ const usageKey='aurea:usage:v904:'+user+':'+day;
+ const attemptsKey='aurea:attempts:v924:'+user+':'+day;
+ const [used,attempts]=await Promise.all([
+  env.SCREENER_CACHE?.get(usageKey),env.SCREENER_CACHE?.get(attemptsKey)
+ ]);
+ if(Number(used||0)>=14)return respond({error:'Limite diário da Áurea atingido; tente novamente amanhã.'},429);
+ if(Number(attempts||0)>=28)return respond({error:'Muitas tentativas de IA hoje; tente novamente amanhã.'},429);
+ // Bloqueia abuso mesmo se o provedor falhar; uma falha não consome os 14 pareceres bem-sucedidos.
+ if(env.SCREENER_CACHE)await env.SCREENER_CACHE.put(attemptsKey,String(Number(attempts||0)+1),{expirationTtl:86400});
  const result=await generate(env,prompt,edition);
  if(result.error)return respond({error:result.error},result.status||503);
+ if(env.SCREENER_CACHE)await env.SCREENER_CACHE.put(usageKey,String(Number(used||0)+1),{expirationTtl:86400});
  return respond({ok:true,text:result.text,model:result.model,edicao:edition,generatedAt:new Date().toISOString()});
 }
