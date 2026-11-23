@@ -1,0 +1,21 @@
+name: Verificar EWZ real Cloudflare v894
+on:
+  push:
+    branches: [validar-respostas-ewz-v894]
+    paths:
+      - 'scripts/verificar-ewz-v894.cjs'
+      - '.github/workflows/verificar-ewz-v894.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ewz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Conferir cotacao real EWZ e CORS sem Supabase
+        run: node scripts/verificar-ewz-v894.cjs
