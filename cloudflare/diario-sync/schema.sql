@@ -26,3 +26,10 @@ CREATE TABLE IF NOT EXISTS profit_candles_private (
   v REAL NOT NULL DEFAULT 0 CHECK(v >= 0),
   PRIMARY KEY(owner,ticker,ts)
 );
+
+-- Migração excepcional de objetos antigos (até três tentativas por arquivo).
+CREATE TABLE IF NOT EXISTS private_file_transfer_errors (
+owner TEXT NOT NULL,bucket TEXT NOT NULL,object_key TEXT NOT NULL,
+error_code TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,
+updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+PRIMARY KEY(owner,bucket,object_key));
