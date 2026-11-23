@@ -39,3 +39,10 @@ test('v892 Supabase legado preserva a possibilidade de reenviar push nao entregu
  assert.match(old,/if \(entregues > 0\) \{[\s\S]*?avisado: true/);
  assert.doesNotMatch(old,/\)\.catch\(\(\) => 0\)\) avisos\+\+;\s*await rest\(/);
 });
+
+test('v915: execução manual do Radar usa Worker Cloudflare em vez de Edge Function',()=>{
+ const app=fs.readFileSync('src/domains/core/06-risco-e-tecnico.js','utf8');
+ assert.match(app,/https:\/\/diario-radar\.lucianosilva43567\.workers\.dev\//);
+ assert.doesNotMatch(app,/e\.url \+ "\/functions\/v1\/radar"/);
+ assert.match(app,/Authorization: "Bearer " \+ SESS\.at/);
+});

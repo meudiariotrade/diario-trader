@@ -3333,14 +3333,19 @@ async function rdAgora() {
   ((RD.run = 1), (RD.msg = ""), rdPaint());
   try {
     await tok();
-    const t = await fetch(e.url + "/functions/v1/radar", {
+    // v915: execução manual diretamente no Radar Cloudflare, sem invocar Edge Function.
+    const t = await fetch("https://diario-radar.lucianosilva43567.workers.dev/", {
       method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "manual",
       headers: {
         "Content-Type": "application/json",
-        apikey: e.key,
         Authorization: "Bearer " + SESS.at,
       },
       body: JSON.stringify({ acao: "agora" }),
+      signal: AbortSignal.timeout(60000),
     });
     let a = {};
     try {
@@ -3349,7 +3354,7 @@ async function rdAgora() {
     if (!t.ok)
       throw new Error(
         t.status === 404
-          ? 'Função "radar" não encontrada: publique-a no Supabase.'
+          ? 'Radar da Cloudflare não encontrado: confira a publicação do Worker.'
           : a.error || "Erro " + t.status,
       );
     !a.ativos_ponte && !a.cripto
