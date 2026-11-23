@@ -1,4 +1,5 @@
 import {COLECOES} from './colecoes-v902.mjs';
+import {autenticarUsuario} from './auth-jwks-v931.mjs';
 /* v900: snapshots privados. Sem dados de mercado, service-role ou cookies. */
 const LIMIT=1400000;
 function out(data,status,origin,env){
@@ -6,12 +7,26 @@ function out(data,status,origin,env){
  if(origin===env.ALLOWED_ORIGIN)h['Access-Control-Allow-Origin']=origin;
  return new Response(JSON.stringify(data),{status:status||200,headers:h});
 }
+// v931: ES256 validado no Worker em leituras, sem getUser a cada GET.
+// Gravações continuam conferindo a sessão no Supabase Auth para revogação imediata.
+function tokenAlg(token){
+ const p=token.split('.');
+ if(p.length!==3||p[0].length>512)return null;
+ try{return JSON.parse(atob(p[0].replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-p[0].length%4)%4))).alg||null}
+ catch{return null}
+}
 async function owner(req,env){
  const token=/^Bearer\s+(\S+)$/i.exec(req.headers.get('authorization')||'')?.[1];
  if(!token||token.length<30||token.length>4096)return null;
  if(!env.SUPABASE_URL||!env.SUPABASE_ANON_KEY)return null;
  const url=new URL(env.SUPABASE_URL);
  if(url.protocol!=='https:'||!url.hostname.endsWith('.supabase.co'))return null;
+ const alg=tokenAlg(token);
+ if(alg==='ES256'&&(req.method==='GET'||req.method==='HEAD')){
+  // Em falha de JWKS, não liberar acesso nem buscar dados privados.
+  return autenticarUsuario(env,req).catch(()=>null);
+ }
+ if(alg&&alg!=='ES256'&&alg!=='HS256')return null;
  const r=await fetch(url.origin+'/auth/v1/user',{headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY},redirect:'manual',signal:AbortSignal.timeout(7000)}).catch(()=>null);
  if(!r?.ok)return null;
  const j=await r.json().catch(()=>null);
@@ -200,7 +215,7 @@ async function importarColecao(req,env,uid,url,origin){
  if(!Array.isArray(rows)||rows.length>PAGE_SIZE)return out({error:'formato_invalido'},502,origin,env);
  if(rows.some(item=>!item||typeof item!=='object'||String(item[config.owner])!==uid||config.keys.some(k=>item[k]===undefined||item[k]===null)))return out({error:'isolamento_ou_chave_invalida'},403,origin,env);
  if(rows.length){
-  const statements=rows.map(item=>env.DB.prepare("INSERT INTO private_documents(owner,collection,doc_key,payload,updated_at) VALUES (?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(owner,collection,doc_key) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at")
+  const statements=rows.map(item=>env.DB.prepare("INSERT OR IGNORE INTO private_documents(owner,collection,doc_key,payload,updated_at) VALUES (?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
     .bind(uid,collection,JSON.stringify(config.keys.map(k=>item[k])),JSON.stringify(item)));
   await env.DB.batch(statements);
  }
