@@ -29,6 +29,7 @@ jobs:
       - run: node --check cloudflare/diario-screeners/index.mjs
       - run: node --check cloudflare/diario-screeners/estatisticas-v932.mjs
       - run: node --check cloudflare/diario-screeners/explica-v932.mjs
+      - run: node --check cloudflare/diario-screeners/estudos-v932.mjs
       - run: node --test tests/cloudflare-ia-v932.test.cjs tests/aurea-jwks.test.cjs
   publish:
     needs: [check]
