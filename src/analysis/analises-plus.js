@@ -444,8 +444,11 @@ d.addEventListener('click',ev=>{const t=ev.target.closest?.('[data-ap-q],[data-a
   const fii=st.fiis?.rows?.find(x=>x.ticker===ds.apFiiConselho);
   const ctx=fii?(fii.ticker+' ('+fii.tipo+' · '+fii.segmento+') — Cotação '+brl(fii.cotacao)+', P/VP '+fmt(fii.p_vp,2)+', DY 12m '+pct(fii.dy)+', Spread NTN-B '+sinal(fii.spread_ntnb,2)+', Vacância '+(fii.vacancia!=null?fmt(fii.vacancia,1)+'%':'—')+', Liquidez '+din(fii.liquidez)+', Nota FII '+fii.score+'/100'+(fii.alertas?.length?' · Alertas: '+fii.alertas.join('; '):'')):ds.apFiiConselho;
   const prompt='@graham Faça uma avaliação objetiva de FII combinando Graham (P/VP, margem de segurança e spread vs NTN-B) e Munger (qualidade de gestão, vacância, concentração e risco de yield trap) para:\n'+ctx;
-  try{w.TraderChat?.open?.();}catch(_){}
-  if(typeof ecoPergunta==='function')void ecoPergunta(prompt,{pergunta:'✦ Conselho FII · '+ds.apFiiConselho});
+  // Prompt derivado apenas de dados públicos: sem nova chamada ao Supabase.
+  try{const copied=w.navigator?.clipboard?.writeText?.(prompt);
+   if(copied?.then)void copied.then(()=>w.alert('Análise para o Conselho FII copiada. Cole na IA de sua preferência.')).catch(()=>w.prompt('Copie a análise FII:',prompt));
+   else w.prompt('Copie a análise FII:',prompt);
+  }catch(_){w.prompt('Copie a análise FII:',prompt);}
   return;
  }
  if('apFiitese' in ds){
