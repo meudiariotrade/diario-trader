@@ -18,11 +18,12 @@ test('v694: Carteira existente mantém abas, ativos e painel recolhível sem cri
  await expect(page.locator('#rebalanceamento-carteira-v694 .rb694-body')).toHaveCount(0);
  await page.evaluate(()=>document.querySelector('#rebalanceamento-carteira-v694 summary')?.click());
  await expect(page.locator('#rebalanceamento-carteira-v694')).toHaveAttribute('open','');
- await expect(page.locator('#rebalanceamento-carteira-v694 .rb694-section')).toHaveCount(5);
- await expect(page.locator('#rebalanceamento-carteira-v694 .rb694-section').last()).toContainText('Simulador “E se eu comprar?”');
+ await expect(page.locator('#rebalanceamento-carteira-v694 .rb694-section')).toHaveCount(6);
+ await expect(page.locator('#rebalanceamento-carteira-v694 .rb694-section').nth(4)).toContainText('Simulador “E se eu comprar?”');
+ await expect(page.locator('#rebalanceamento-carteira-v694 .rb694-section').last()).toContainText('Número Mágico');
  await page.evaluate(()=>render());
  await expect(page.locator('#app .pftabs')).toHaveCount(1);
- await expect(page.locator('#rebalanceamento-carteira-v694 .rb694-section')).toHaveCount(5);
+ await expect(page.locator('#rebalanceamento-carteira-v694 .rb694-section')).toHaveCount(6);
  await page.evaluate(()=>{tab='estudos';render();});
  await expect(page.locator('#rebalanceamento-carteira-v694')).toHaveCount(0);
  await page.close();
