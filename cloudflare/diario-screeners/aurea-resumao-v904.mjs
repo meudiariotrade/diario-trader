@@ -12,7 +12,8 @@ async function authenticated(env,request){
  const base=new URL(env.SUPABASE_URL);
  if(base.protocol!=='https:'||!base.hostname.endsWith('.supabase.co'))return null;
  const r=await fetch(base.origin+'/auth/v1/user',{headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY},redirect:'error',signal:AbortSignal.timeout(9000)}).catch(()=>null);
- if(!r?.ok)return null;
+ if(!r || (r.status!==401 && r.status!==403 && !r.ok))throw Error('auth_unavailable');
+ if(!r.ok)return null;
  const user=await r.json().catch(()=>null);
  return /^[a-f\d-]{36}$/i.test(String(user?.id||''))?user.id:null;
 }
@@ -49,7 +50,9 @@ export async function resumoAurea(request,env){
  if(request.method!=='POST')return respond({error:'Método não permitido'},405);
  if(!/^application\/json/i.test(request.headers.get('content-type')||''))return respond({error:'Envie JSON'},415);
  if(Number(request.headers.get('content-length')||0)>10000)return respond({error:'Entrada grande demais'},413);
- const user=await authenticated(env,request);
+ let user;
+ try{user=await authenticated(env,request)}
+ catch{return respond({error:'A validação do login está indisponível. Tente novamente.'},503)}
  if(!user)return respond({error:'Sessão inválida. Entre na conta para usar a Áurea.'},401);
  let body=null;try{body=await request.json()}catch{return respond({error:'JSON inválido'},400)}
  const prompt=String(body?.prompt||'');

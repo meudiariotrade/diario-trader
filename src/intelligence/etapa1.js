@@ -22,13 +22,21 @@
       const timer = setTimeout(()=>controller.abort(),50000);
       try {
         if(typeof tok==='function') await tok();
-        const jwt=typeof SESS!=='undefined'?SESS?.at:'';
+        const sessao=typeof SESS!=='undefined'?SESS:null;
+        const jwt=sessao?.at;
         if(!jwt) throw Error('Entre na conta para acessar o Conselho.');
-        const res=await w.fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
+        const enviar=token=>w.fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
           method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal:controller.signal,
-          headers:{'Content-Type':'application/json',Authorization:'Bearer '+jwt},
+          headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
           body:JSON.stringify({edicao,prompt})
         });
+        let res=await enviar(jwt);
+        if(res.status===401 && SESS?.uid===sessao.uid && !controller.signal.aborted){
+          if(SESS.at===jwt) SESS.exp=0;
+          await tok();
+          if(SESS?.uid!==sessao.uid) throw Error('A conta mudou. Abra o Conselho novamente.');
+          res=await enviar(SESS.at);
+        }
         const data=await res.json();
         if(!res.ok||!data.ok||!data.text) throw Error(data.error||'A IA não respondeu.');
         output.textContent=data.text;
