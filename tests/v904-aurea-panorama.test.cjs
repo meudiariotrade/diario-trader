@@ -125,3 +125,21 @@ test('Cérebro usa Groq configurado quando Gemini devolve JSON de estudo inváli
  assert.deepEqual(JSON.parse(body.text),resultado);
  assert.equal(hosts[0],'generativelanguage.googleapis.com');
 });
+
+test('Pollinations recebe a consulta sem credenciais depois de Gemini e Groq indisponíveis',async t=>{
+ const {resumoAurea}=await modulePromise;
+ const hosts=[];
+ t.mock.method(global,'fetch',async(url,init)=>{
+  const host=new URL(url).hostname;
+  if(host==='teste.supabase.co')return Response.json({keys:[jwk]});
+  hosts.push(host);
+  if(host==='api.groq.com')assert.equal(JSON.parse(init.body).model,'openai/gpt-oss-20b');
+  if(host!=='text.pollinations.ai')return Response.json({},{status:429});
+  assert.equal(new Headers(init.headers).has('Authorization'),false);
+  return Response.json({model:'gpt-oss-20b',choices:[{message:{content:'Resposta de teste longa o suficiente para validar a reserva sem chave do Conselho.'}}]});
+ });
+ const res=await resumoAurea(post(),{...env(),GROQ_API_KEY:'teste'});
+ assert.equal(res.status,200);
+ assert.deepEqual(hosts.slice(-2),['api.groq.com','text.pollinations.ai']);
+ assert.match((await res.json()).model,/Pollinations/);
+});

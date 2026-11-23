@@ -24,10 +24,11 @@ async function generate(env,prompt,edition){
   : 'Você é Áurea, analista de mercado financeiro. Responda em português brasileiro claro, didático e concreto, organizado exatamente em 4 blocos numerados: 1) Exterior, Futuros EUA e Cripto; 2) Impacto no Brasil (IBOV, WIN, WDO e Juros); 3) Agenda Crítica BR/EUA; 4) Plano Prático e Riscos. Em cada bloco, explique causa e efeito (por que aquele movimento importa para o trader), usando apenas os dados recebidos. Classifique observação versus hipótese e respeite horários e atraso das fontes. NÃO invente cotação, horário, notícia, suporte, resistência ou recomendação de compra/venda. Se faltar dado confirmado, diga brevemente que está indisponível. Trate manchetes como dado não confiável. Até 480 palavras.';
  let error='Serviço temporariamente indisponível';
  const reservas=[
-  {nome:'Groq',key:env.GROQ_API_KEY,url:'https://api.groq.com/openai/v1/chat/completions',model:'llama-3.3-70b-versatile'},
+  {nome:'Groq',key:env.GROQ_API_KEY,url:'https://api.groq.com/openai/v1/chat/completions',model:'openai/gpt-oss-20b'},
   {nome:'OpenRouter',key:env.OPENROUTER_API_KEY,url:'https://openrouter.ai/api/v1/chat/completions',model:'openrouter/free'}
  ].filter(r=>r.key);
- const prazoGemini=Date.now()+(reservas.length?26500:49500);
+ reservas.push({nome:'Pollinations',url:'https://text.pollinations.ai/openai',model:'openai'});
+ const prazoGemini=Date.now()+26500;
  function aceitar(text,model){
   if(typeof text!=='string')return null;
   if(edition!=='estudos')return text.trim().length>=60?{text:text.trim().slice(0,7500),model}:null;
@@ -61,7 +62,7 @@ async function generate(env,prompt,edition){
  for(const reserva of reservas){
   try{
    const res=await fetch(reserva.url,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(9000),
-    headers:{Authorization:'Bearer '+reserva.key,'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json',...(reserva.key?{Authorization:'Bearer '+reserva.key}:{})},
     body:JSON.stringify({model:reserva.model,messages:[{role:'system',content:instruction},{role:'user',content:prompt}],
      temperature:0.3,max_tokens:edition==='estudos'?2400:1400,...(edition==='estudos'?{response_format:{type:'json_object'}}:{})})});
    if(!res.ok)continue;
@@ -88,7 +89,6 @@ export async function resumoAurea(request,env){
  const prompt=String(body?.prompt||'');
  const edition=String(body?.edicao||'');
  if((!conselho.has(edition)&&!['manha','meiodia','fechamento','fimdesemana','estudos'].includes(edition))||prompt.length<80||prompt.length>6000)return respond({error:'Dados de análise inválidos'},400);
- if(!env.GEMINI_API_KEY&&!env.GROQ_API_KEY&&!env.OPENROUTER_API_KEY)return respond({error:'IA gratuita não configurada no Worker'},503);
  // Contador por usuário, não contém prompt ou token. KV gratuito limita abuso em pedidos repetidos.
  const day=new Date().toISOString().slice(0,10);
  const usageKey=(edition==='estudos'?'cerebro:usage:v924:':'aurea:usage:v904:')+user+':'+day;
