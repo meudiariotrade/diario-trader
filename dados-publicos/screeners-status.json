@@ -1,0 +1,55 @@
+{
+  "processedAt": "2026-11-23T04:30:42.641Z",
+  "mode": "rotina",
+  "records": {
+    "BR": 159,
+    "US": 624
+  },
+  "changed": {
+    "BR": 262,
+    "US": 1076
+  },
+  "metrics": {
+    "scanner": {
+      "BR": {
+        "updates": 106,
+        "errors": [],
+        "blocked": false
+      },
+      "US": {
+        "updates": 213,
+        "errors": [],
+        "blocked": false
+      }
+    },
+    "cvm": {
+      "updates": 156,
+      "unverified": 0,
+      "source": "CVM DRE + cadastro CNPJ",
+      "registry": 645,
+      "docs": 645
+    },
+    "cik": {
+      "updates": 622,
+      "available": 10399,
+      "source": "SEC company_tickers"
+    },
+    "sec": {
+      "updates": 239,
+      "companies": 239,
+      "asOf": "2026-11-21T17:02:46.856Z"
+    },
+    "documentos": {
+      "updates": 2,
+      "blocked": false,
+      "checked": 12
+    },
+    "finnhub": {
+      "updates": 0,
+      "enabled": false,
+      "reason": "Sem FINNHUB_TOKEN no GitHub Actions; preserve dados anteriores"
+    }
+  },
+  "supabase_requests": 0,
+  "cache_source": "GitHub Actions -> Cloudflare KV"
+}
