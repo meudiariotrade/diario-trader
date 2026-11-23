@@ -32,3 +32,10 @@ test('v892 D1 e service binding SELF preservados, sem segredo no Git',()=>{
  assert.equal(config.d1_databases[0].binding,'HISTORICO');
  assert.doesNotMatch(JSON.stringify(config),/sb_secret_|BRAPI_TOKEN\s*:/);
 });
+
+test('v892 Supabase legado preserva a possibilidade de reenviar push nao entregue',()=>{
+ const old=fs.readFileSync('supabase/functions/radar/index.ts','utf8');
+ assert.match(old,/const entregues = await push\(/);
+ assert.match(old,/if \(entregues > 0\) \{[\s\S]*?avisado: true/);
+ assert.doesNotMatch(old,/\)\.catch\(\(\) => 0\)\) avisos\+\+;\s*await rest\(/);
+});
