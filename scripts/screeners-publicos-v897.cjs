@@ -314,7 +314,7 @@ async function main(){
  if(['rotina','fundamentos','enriquecer','precos'].includes(mode)){
   const rotate=Math.floor(Date.now()/(12*3600000));
   const b=br.universe_rows;
-  const u=us.universe_rows,chunk=120,start=(rotate%Math.ceil(u.length/chunk))*chunk;
+  const u=us.universe_rows,chunk=330,start=(rotate%Math.ceil(u.length/chunk))*chunk;
   const [rb,ru]=await Promise.all([scanner('BR',b),scanner('US',u.slice(start,start+chunk))]);
   metrics.scanner={BR:rb,US:ru};changedBR+=rb.updates;changedUS+=ru.updates;
  }
