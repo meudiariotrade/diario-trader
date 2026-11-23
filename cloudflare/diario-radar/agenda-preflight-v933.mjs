@@ -13,7 +13,7 @@ export const PROBES_V933=PROBES;
 export function preflightDueV933(event,env){
  if(env.AGENDA_PREFLIGHT_ENABLED!=='1'||event.cron!=='* * * * *')return false;
  const d=new Date(event.scheduledTime);
- return Number.isFinite(d.getTime())&&d.getUTCMinutes()%15===0;
+ return Number.isFinite(d.getTime())&&(env.AGENDA_PREFLIGHT_FAST_V934==='1'||d.getUTCMinutes()%15===0);
 }
 async function probe(entry,env){
  const url=env.SUPABASE_URL+'/functions/v1/'+entry.functionName;
