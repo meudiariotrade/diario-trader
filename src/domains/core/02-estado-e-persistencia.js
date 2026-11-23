@@ -2416,12 +2416,12 @@ async function up(e = null, revision = null) {
 async function sync(force) {
   const owner = syncOwner();
   if (!SESS || SY.busy) return;
-  // D1 é ativado somente quando a origem antiga já foi alcançada. Sem duplicar
-  // requisições ao Supabase em uma sessão que já tenha passado na conferência.
-  try { await tok(); } catch (_) { /* sessão expirada: não usar token antigo */ }
-  if(!SESS?.at || syncOwner()!==owner)return;
+  // Sem D1 disponível, manter exatamente o fluxo legado e seu tratamento
+  // de sessão. Com D1, renovar JWT antes de confirmar identidade e paridade.
   let usandoD1 = false;
   if(!window.DIARIO_DEMO && window.DiarioD1Principal){
+    try { await tok(); } catch (_) { /* sessão expirada: não usar token antigo */ }
+    if(!SESS?.at || syncOwner()!==owner)return;
     usandoD1 = await window.DiarioD1Principal.prepare(owner,SESS.at,async()=>{
       const r=await rq("/rest/v1/diario?select=data,revision&user_id=eq." + owner,
         {signal:AbortSignal.timeout(20000)});

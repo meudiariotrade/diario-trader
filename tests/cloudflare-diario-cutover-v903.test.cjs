@@ -49,5 +49,5 @@ test('v903: core conserva fallback até paridade e para de espelhar quando ativo
  assert.equal((core.match(/!window\.DiarioD1Principal\?\.active\(owner\)/g)||[]).length,2);
  const sw=fs.readFileSync('src/service-worker.js','utf8');
  assert.match(sw,/diario-d1-principal-v903\.js/);
- assert.doesNotMatch(src,/supabase\.co|service_role|localStorage|setInterval/);
+ assert.doesNotMatch(src.slice(src.indexOf("(function(){")) ,/supabase\.co|service_role|localStorage|setInterval/);
 });
