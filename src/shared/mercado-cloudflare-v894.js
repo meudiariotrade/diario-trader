@@ -1,5 +1,5 @@
 /* v894 — leituras públicas diretamente na Cloudflare, sem egress de mercado no Supabase.
- * Ponte estritamente limitada às quatro Edge Functions antigas. NUNCA repassa
+ * Ponte estritamente limitada às Edge Functions de dados públicos. NUNCA repassa
  * credenciais, cabeçalhos de usuário, carteira, operações ou dados privados.
  * Para falhas públicas, retorna erro explícito (nunca consulta o Supabase).
  */
@@ -8,7 +8,7 @@
 if(typeof window==='undefined'||typeof window.fetch!=='function')return;
 const HOST='vdzwydizostutukppcsj.supabase.co';
 const CLOUDFLARE='https://diario-trader.lucianosilva43567.workers.dev/v1/';
-const FUNCOES=new Set(['ewz','macro','precos','candles']);
+const FUNCOES=new Set(['ewz','macro','precos','candles','juros','sentimento','adrs','noticias']);
 const FETCH_ORIGINAL=window.fetch.bind(window);
 function erro(msg,status=503){
  return new Response(JSON.stringify({
@@ -28,6 +28,12 @@ function endereco(funcao,dados){
  }else if(funcao==='ewz'){
    if(dados.acao&&dados.acao!=='agora')return null;
    if(dados.venc)p.set('venc',String(dados.venc).slice(0,10));
+ }else if(funcao==='adrs'){
+   const s=Array.isArray(dados.symbols)?dados.symbols:null;
+   if(!s||!s.length||s.length>40||s.some(v=>!/^[A-Z0-9.^=_:-]{1,24}$/.test(String(v).toUpperCase())))return null;
+   p.set('s',[...new Set(s.map(v=>String(v).toUpperCase()))].join(','));
+ }else if(funcao==='juros'||funcao==='sentimento'||funcao==='noticias'){
+   if(Object.keys(dados).length>0)return null;
  }else return null;
  return CLOUDFLARE+funcao+(p.size?'?'+p:'');
 }
@@ -36,6 +42,9 @@ function valido(funcao,modo,j){
  if(funcao==='ewz')return Number(j.spot)>0&&(j.status==='sem_feed_opcoes'||Array.isArray(j.vencs));
  if(funcao==='candles')return Array.isArray(j.candles)&&typeof j.simbolo==='string';
  if(funcao==='precos')return j.br&&j.us&&typeof j.br==='object'&&typeof j.us==='object';
+ if(funcao==='juros')return !!(j.selic||j.curva);
+ if(funcao==='sentimento')return !!(j.b3||j.eua||j.cripto);
+ if(funcao==='adrs'||funcao==='noticias')return Array.isArray(j.itens);
  if(modo==='agenda')return Array.isArray(j.eventos);
  if(modo==='painel'||modo==='diag'||modo==='cotacoes')return Array.isArray(j.itens);
  if(modo==='balancos')return Array.isArray(j.proximos);
@@ -94,7 +103,8 @@ async function mercado(f,input,init){
   if(!url)return erro('Parâmetros da consulta pública inválidos.',400);
   const j=await getCloudflare(url,signal);
   if(!valido(f,String(dados.modo||''),j))throw Error('Formato de dados indisponível para '+f+'.');
-  return Response.json(j,{headers:{'Cache-Control':'no-store'}});
+  const saida=f==='noticias'?{...j,itens:j.itens.map(n=>({...n,f:n.f||n.fonte||n.a||'Fonte não indicada'}))}:j;
+  return Response.json(saida,{headers:{'Cache-Control':'no-store'}});
  }catch(e){return erro('Cloudflare: '+String(e?.message||e).slice(0,180));}
 }
 window.fetch=function(input,init){

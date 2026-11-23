@@ -26,20 +26,23 @@ self.addEventListener('activate',event=>{
 });
 /*
  * v894 — Roteamento exclusivo de dados PÚBLICOS pela Cloudflare.
- * Somente quatro Edge Functions legadas são interceptadas. Auth, operações,
+ * Somente Edge Functions de dados públicos são interceptadas. Auth, operações,
  * carteiras, notificações, demais funções e dados privados continuam intocados.
  * Não há fallback para a Edge Function de mercado no Supabase.
  * Nunca encaminhar apikey, JWT, cookies ou dados pessoais ao Worker público.
  */
 const MERCADO_CF_BASE='https://diario-trader.lucianosilva43567.workers.dev';
 const MERCADO_SUPABASE_HOST='vdzwydizostutukppcsj.supabase.co';
-const MERCADO_CF_FUNCOES=new Set(['macro','precos','candles','ewz']);
+const MERCADO_CF_FUNCOES=new Set(['macro','precos','candles','ewz','juros','sentimento','adrs','noticias']);
 function mercadoCfValido(funcao,modo,dados){
  if(!dados||typeof dados!=='object'||dados.error||dados.erro)return false;
  if(funcao==='precos')return dados.br&&typeof dados.br==='object'&&dados.us&&typeof dados.us==='object'&&
    (Object.keys(dados.br).length>0||Object.keys(dados.us).length>0);
  if(funcao==='candles')return Array.isArray(dados.candles)&&typeof dados.simbolo==='string';
- if(funcao==='ewz')return Number(dados.spot)>0&&Array.isArray(dados.vencs);
+ if(funcao==='ewz')return Number(dados.spot)>0&&(dados.status==='sem_feed_opcoes'||Array.isArray(dados.vencs));
+ if(funcao==='juros')return !!(dados.selic||dados.curva);
+ if(funcao==='sentimento')return !!(dados.b3||dados.eua||dados.cripto);
+ if(funcao==='adrs'||funcao==='noticias')return Array.isArray(dados.itens);
  if(modo==='agenda')return Array.isArray(dados.eventos);
  if(modo==='painel'||modo==='diag'||modo==='cotacoes')return Array.isArray(dados.itens);
  if(modo==='balancos')return Array.isArray(dados.proximos);
@@ -63,7 +66,14 @@ function mercadoCfUrl(funcao,dados){
    for(const k of ['ativo','sub','intervalo','de','ate','revista'])if(dados[k]!=null)params.set(k,String(dados[k]));
    if(!params.has('ativo'))return null;
  }else if(funcao==='ewz'){
-   if(dados.venc)params.set('venc',String(dados.venc));
+   if(dados.acao&&dados.acao!=='agora')return null;
+   if(dados.venc)params.set('venc',String(dados.venc).slice(0,10));
+ }else if(funcao==='adrs'){
+   const lista=Array.isArray(dados.symbols)?dados.symbols:null;
+   if(!lista||!lista.length||lista.length>40||lista.some(t=>!/^[A-Z0-9.^=_:-]{1,24}$/.test(String(t).toUpperCase())))return null;
+   params.set('s',[...new Set(lista.map(t=>String(t).toUpperCase()))].join(','));
+ }else if(funcao==='juros'||funcao==='sentimento'||funcao==='noticias'){
+   if(Object.keys(dados).length)return null;
  }else return null;
  return MERCADO_CF_BASE+'/v1/'+funcao+'?'+params.toString();
 }
@@ -93,7 +103,10 @@ self.addEventListener('fetch',event=>{
        const tipo=resposta.headers.get('content-type')||'';
        if(/application\/json/i.test(tipo)){
          const payload=await resposta.clone().json();
-         if(mercadoCfValido(funcao,String(dados.modo||''),payload))return resposta;
+         if(mercadoCfValido(funcao,String(dados.modo||''),payload)){
+           if(funcao==='noticias')return Response.json({...payload,itens:payload.itens.map(n=>({...n,f:n.f||n.fonte||n.a||'Fonte não indicada'}))});
+           return resposta;
+         }
        }
      }
    }catch(_){/* Sem fallback ao Supabase para dados de mercado. */}

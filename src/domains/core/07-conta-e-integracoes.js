@@ -33,12 +33,6 @@ async function mdoCarrega(e) {
     ((MDO.err = "Configure o Supabase na aba Conta."), mdoPaint());
     return;
   }
-  if (typeof SESS === "undefined" || !SESS?.at) {
-    MDO.err = "Entre na sua conta para atualizar o panorama.";
-    MDO.errTs = Date.now();
-    mdoPaint();
-    return;
-  }
   ((MDO.busy = 1), (MDO.err = ""), mdoPaint());
   try {
     const a = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
@@ -1319,7 +1313,6 @@ async function mdoAutoTick() {
       tab !== "mercado" ||
       MKT.tab !== "mu" ||
       MDO.busy ||
-      (typeof SESS === "undefined" || !SESS?.at) ||
       (MDO.ts && Date.now() - MDO.ts < 55e3) ||
       (MDO.errTs && Date.now() - MDO.errTs < 2 * 6e4)
     )

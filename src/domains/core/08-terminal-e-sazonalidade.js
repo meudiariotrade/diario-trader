@@ -1,9 +1,8 @@
 function macroFetchComSessao(url,options) {
-  if (typeof SESS === "undefined" || !SESS?.at)
-    return Promise.reject(new Error("Entre na sua conta para consultar o macro."));
+  // Macro público na Cloudflare; não exigir autenticação do Supabase.
   return edgeFetchAutenticado(url,options);
 }
-// Consultas macro privadas nunca precisam produzir HTTP 401 em sessão anônima.
+// Dados de mercado públicos não dependem de sessão.
 function vEco(e) {
   return `<div class="card"><div class="top"><b>✦ Áurea</b>${ECO.l.length ? '<button class="btn s" data-eco="limpa">Limpar</button>' : ""}</div>${e}
   <div class="sm mut">Estrategista-chefe que preside O Conselho. Cole uma notícia (texto ou link) ou pergunte sobre macro, empresas, gráficos, carteira ou estudos: ela direciona para Schwartz, Graham, Livermore, Munger, Markowitz ou Dow (ou use @nome).</div>

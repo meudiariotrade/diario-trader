@@ -1832,21 +1832,19 @@ async function mkFinnhubNoticias(category) {
   }).filter(Boolean);
 }
 async function mkEdgeNoticias(acao) {
-  const cfgAtual=cfg();
-  if(!cfgAtual || !SESS?.at)throw new Error("Sessão indisponível");
-  await tok();
-  const resposta=await fetch(cfgAtual.url+"/functions/v1/"+(acao==="terminal"?"terminal":"noticias"),{
-    method:"POST",headers:{"Content-Type":"application/json",apikey:cfgAtual.key,Authorization:"Bearer "+SESS.at},
-    body:acao==="terminal"?JSON.stringify({acao:"noticias"}):"{}",signal:AbortSignal.timeout(16000),
+  // v899: fallback editorial independente da sessão; nunca consulta Supabase.
+  const resposta=await fetch("https://diario-trader.lucianosilva43567.workers.dev/v1/noticias",{
+    method:"GET",credentials:"omit",headers:{Accept:"application/json"},
+    signal:AbortSignal.timeout(10000),cache:"default"
   });
-  if(!resposta.ok)throw new Error("Fonte "+acao+" "+resposta.status);
+  if(!resposta.ok)throw new Error("Cloudflare notícias "+resposta.status);
   const obj=await resposta.json();
-  if(!Array.isArray(obj.itens))throw new Error("Resposta inválida "+acao);
-  if(acao!=="terminal") {
-    MKT.fontesX = obj.fontesX || null;
-    MKT.fontesTs = obj.atualizadoEm || obj.gerado || null;
+  if(!Array.isArray(obj.itens))throw new Error("Cloudflare: feed de notícias inválido");
+  if(acao!=="terminal"&&typeof MKT!=="undefined"){
+    MKT.fontesX=obj.fontesX||{ok:(obj.fontesOk||[]).filter(x=>String(x).startsWith("X · @")),falhas:obj.fontesIndisponiveis||[]};
+    MKT.fontesTs=obj.atualizadoEm||null;
   }
-  return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.a||"Money Times",c:n.tags||n.c||[]})).filter(Boolean);
+  return obj.itens.map(n=>mkNoticia({t:n.t,l:n.l,d:n.d,a:n.f||n.fonte||n.a||"Fonte não indicada",c:n.tags||n.c||[n.tema].filter(Boolean)})).filter(Boolean);
 }
 
 /* Traducao gratuita em lotes, pelo proxy CORS ja autorizado no aplicativo.

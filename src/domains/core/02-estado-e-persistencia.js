@@ -2108,10 +2108,29 @@ tok = function() {
 };
 async function edgeFetchAutenticado(url, opcoes = {}) {
   const server = cfg(), conta = syncOwner();
-  if (!server || !conta || !SESS?.at) throw Error("Entre na sua conta para consultar os dados.");
+  if (!server) throw Error("Configure o acesso à conta.");
   const destino = new URL(String(url),server.url);
   if (destino.origin !== new URL(server.url).origin || !destino.pathname.startsWith("/functions/v1/"))
     throw Error("Destino de função não autorizado.");
+  // v899: macro é dado de mercado PÚBLICO. Nunca renovar JWT nem enviá-lo ao Cloudflare.
+  if (destino.pathname === "/functions/v1/macro") {
+    let dados = {};
+    try { dados = JSON.parse(String(opcoes.body || "{}")); } catch { throw Error("Consulta macro inválida."); }
+    if (!dados || typeof dados !== "object" || Array.isArray(dados)) throw Error("Consulta macro inválida.");
+    const params = new URLSearchParams();
+    for (const chave of ["modo","aba","semana"]) {
+      if (dados[chave] == null) continue;
+      const valor = String(dados[chave]);
+      if (valor.length > 80) throw Error("Parâmetro macro inválido.");
+      params.set(chave, valor);
+    }
+    const r = await fetch("https://diario-trader.lucianosilva43567.workers.dev/v1/macro?" + params.toString(), {
+      method: "GET", credentials: "omit", mode: "cors", redirect: "error", cache: "default",
+      headers: {Accept: "application/json"}, signal: opcoes.signal
+    });
+    return r;
+  }
+  if (!conta || !SESS?.at) throw Error("Entre na sua conta para consultar os dados.");
   await tok();
   assertSyncOwner(conta);
   const cabecalhos = new Headers(opcoes.headers || {});
