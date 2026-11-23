@@ -8,7 +8,7 @@ test('v892 preserva algoritmos, API, push, Crypto e persistencia originais',()=>
 });
 test('v892 Cloudflare executa cron B3 apenas seg-sex e apos cutover explicito',()=>{
  assert.deepEqual(config.triggers.crons,['7,37 * * * *','*/15 13-20 * * MON-FRI','* * * * *']);
- assert.equal(config.vars.AGENDA_CUTOVER_ENABLED,'0');
+ assert.equal(config.vars.AGENDA_CUTOVER_ENABLED,'1');
  assert.equal(config.vars.RADAR_CUTOVER_ENABLED,'0');
  assert.match(source,/t\.cron==="\*\/15 13-20 \* \* MON-FRI"/);
  assert.match(source,/e\.RADAR_CUTOVER_ENABLED!=="1"/);
