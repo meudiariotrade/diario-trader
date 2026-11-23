@@ -863,8 +863,8 @@
     const antiBtn=event.target.closest('[data-aurea-antitilt]');
     if(antiBtn){
       const prompt='@munger Ative o protocolo Anti-Tilt de 30 segundos (inversão + Fear-Setting): estou em condição de alerta (cansaço de turno, sequência de stop ou janela de notícia). Me faça 3 perguntas curtas e diretas para eu decidir se reduzo a mão pela metade ou encerro o dia agora.';
-      w.TraderChat?.open?.();
-      if(typeof ecoPergunta==='function')void ecoPergunta(prompt,{pergunta:'✦ Checklist Anti-Tilt · Munger'});
+      // Anti-Tilt local: ecoPergunta encaminharia o texto à função analise no Supabase.
+      try{const c=w.navigator?.clipboard?.writeText?.(prompt);if(c?.then)void c.then(()=>w.alert('Perguntas Anti-Tilt copiadas. Cole na IA de sua preferência; nada foi enviado ao Supabase.')).catch(()=>w.prompt('Copie as perguntas Anti-Tilt:',prompt));else w.prompt('Copie as perguntas Anti-Tilt:',prompt);}catch(_){w.prompt('Copie as perguntas Anti-Tilt:',prompt);}
       return;
     }
     const ouvBtn=event.target.closest('[data-aurea-ouvir]');
@@ -936,8 +936,8 @@
         '2) Reflexo esperado no Brasil (B3, WIN, WDO, dólar, curva de juros e commodities), '+
         '3) Agenda crítica BR/EUA (quais horários e dados podem virar o pregão), '+
         '4) Plano tático & riscos de armadilha (o que observar na abertura, pontos de atenção em WIN/WDO e nos ativos acompanhados).';
-      w.TraderChat?.open?.();
-      if(typeof ecoPergunta==='function')void ecoPergunta(prompt,{pergunta:'✦ Resumão da Áurea · '+(nomes[ed]||ed)});
+      // Resumão preparado no dispositivo, sem acionar a função analise do Supabase.
+      try{const c=w.navigator?.clipboard?.writeText?.(prompt);if(c?.then)void c.then(()=>w.alert('Resumão da Áurea copiado. Cole na IA de sua preferência; nada foi enviado ao Supabase.')).catch(()=>w.prompt('Copie o resumão da Áurea:',prompt));else w.prompt('Copie o resumão da Áurea:',prompt);}catch(_){w.prompt('Copie o resumão da Áurea:',prompt);}
       return;
     }
     const revBtn=event.target.closest('[data-aurea-revisao]');
