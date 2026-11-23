@@ -49,7 +49,7 @@ test('v933: falha de autorização não altera configuração nem dispara açõe
 });
 test('v933: protocolo exige bindings e restringe destino fixo',async()=>{
  const env=environment();env.SUPABASE_URL='https://evil.example';
- await assert.rejects(()=>(await ready()).preflightV933({cron:'* * * * *',scheduledTime:moment},env),/sem bindings/);
+ await assert.rejects(async()=>(await ready()).preflightV933({cron:'* * * * *',scheduledTime:moment},env),/sem bindings/);
 });
 test('v933: endpoints de diagnóstico não têm escrituras nem envio',async()=>{
  for(const p of (await ready()).PROBES_V933)assert.ok(['diagnostico','diagnostico_leve','lista'].includes(p.payload.acao));
