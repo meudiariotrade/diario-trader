@@ -1,0 +1,73 @@
+name: Screeners públicos sem Supabase (v897)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/screeners-publicos-v897.cjs'
+      - '.github/workflows/screeners-publicos-v897.yml'
+  schedule:
+    - cron: '25 0,12 * * 1-5'
+    - cron: '45 8 * * 6'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: screeners-publicos-coleta
+  cancel-in-progress: false
+jobs:
+  atualizar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Conferir contratos e isolamento Supabase
+        run: node --test tests/screeners-v897-autonomos.test.cjs
+      - name: Recuperar última base pública (ramo dedicado, sem CI do app)
+        shell: bash
+        run: |
+          mkdir -p .screeners-import .screeners-output
+          git fetch --depth=1 origin screeners-dados
+          git show FETCH_HEAD:dados-publicos/screeners-BR.json > .screeners-import/BR.json || true
+          git show FETCH_HEAD:dados-publicos/screeners-US.json > .screeners-import/US.json || true
+      - name: Buscar feeds reais e recomputar snapshots públicos
+        env:
+          SCREENERS_INPUT_DIR: .screeners-import
+          SCREENERS_OUTPUT_DIR: .screeners-output
+          FINNHUB_TOKEN: ${{ secrets.FINNHUB_TOKEN }}
+          BRAPI_TOKEN: ${{ secrets.BRAPI_TOKEN }}
+          TRIGGER_CRON: ${{ github.event.schedule }}
+        shell: bash
+        run: |
+          modo=rotina
+          if [ "$TRIGGER_CRON" = '45 8 * * 6' ]; then modo=catalogo; fi
+          SCREENERS_MODE="$modo" node scripts/screeners-publicos-v897.cjs
+      - name: Publicar só os dados públicos no ramo screeners-dados
+        shell: bash
+        run: |
+          mkdir -p /tmp/screeners-export-v897
+          cp .screeners-output/BR.json /tmp/screeners-export-v897/BR.json
+          cp .screeners-output/US.json /tmp/screeners-export-v897/US.json
+          cp .screeners-output/status.json /tmp/screeners-export-v897/status.json
+          if test -s .screeners-output/catalogo.json; then
+            cp .screeners-output/catalogo.json /tmp/screeners-export-v897/catalogo.json
+          fi
+          git checkout -B screeners-dados FETCH_HEAD
+          cp /tmp/screeners-export-v897/BR.json dados-publicos/screeners-BR.json
+          cp /tmp/screeners-export-v897/US.json dados-publicos/screeners-US.json
+          cp /tmp/screeners-export-v897/status.json dados-publicos/screeners-status.json
+          if test -s /tmp/screeners-export-v897/catalogo.json; then
+            cp /tmp/screeners-export-v897/catalogo.json dados-publicos/screeners-catalogo.json
+          fi
+          git add dados-publicos/screeners-BR.json dados-publicos/screeners-US.json dados-publicos/screeners-status.json
+          if test -f dados-publicos/screeners-catalogo.json; then git add dados-publicos/screeners-catalogo.json; fi
+          if git diff --cached --quiet; then echo 'Snapshots públicos sem alterações'; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'dados(screeners): atualização independente do Supabase'
+          git push origin HEAD:screeners-dados

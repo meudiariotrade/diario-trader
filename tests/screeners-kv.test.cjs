@@ -15,7 +15,7 @@ test('v896: cache KV público é compartilhado entre regiões, sem retornar ao S
  assert.equal(before.status,503);
  assert.equal((await before.json()).semFallbackSupabase,true);
  await refreshMarket('BR',env,async()=>Response.json({ok:true,market:'BR',rows:[{ticker:'PETR4'}],
-  universe_complete:true,universe_rows:[{ticker:'PETR4'}],last_update:new Date().toISOString()}));
+  pipeline_origin:'github-actions-public',universe_complete:true,universe_rows:[{ticker:'PETR4'}],last_update:new Date().toISOString()}));
  const first=await worker.fetch(new Request(url),env,{waitUntil:()=>{}});
  assert.equal(first.status,200);
  assert.equal(first.headers.get('X-Snapshot-Tier'),'kv');
