@@ -22306,7 +22306,7 @@ async function sync(force) {
         persist();
         // Cópia privada D1 após confirmar o sincronismo atual (fase espelho).
         if(!window.DIARIO_DEMO && !window.DiarioD1Principal?.active(owner))window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
-        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at))
+        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at,{force:!!force}))
           .then(()=>window.DiarioMigracaoD1?.run(SESS.uid,SESS.at,()=>SESS?.uid===owner))
           .catch(()=>{});
         SY_RECOVERY.saved();
@@ -22354,7 +22354,7 @@ async function sync(force) {
     persist();
     // Espelha operações e carteira no D1; não interrompe o Supabase nesta fase.
     if(!window.DIARIO_DEMO && !window.DiarioD1Principal?.active(owner))window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
-        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at))
+        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at,{force:!!force}))
           .then(()=>window.DiarioMigracaoD1?.run(SESS.uid,SESS.at,()=>SESS?.uid===owner))
           .catch(()=>{});
     SY_RECOVERY.saved();
@@ -22421,10 +22421,11 @@ function vConta() {
     ? RECOV
       ? `<h1>Nova senha</h1><label>Nova senha (mín. 10 caracteres)<input id="np" type="password" autocomplete="new-password"></label><button class="btn" style="margin-top:10px" data-a="newpw">Salvar senha</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>`
       : SESS
-        ? `<h1>Conta</h1><div class="card"><b>${esc(SESS.email)}</b><div class="mut sm" id="sy">${esc(SY.msg || (S.lastSyncAt ? "Última sincronização: " + hm(S.lastSyncAt) : "Ainda não sincronizado"))}</div></div><div class="g2"><button class="btn" data-a="syncnow">Sincronizar agora</button><button class="btn s" data-a="logout">Sair</button></div><p class="mut sm">Seus dados também ficam salvos neste aparelho, então o app funciona offline e sincroniza quando a internet voltar. Apagar um trade em um aparelho apaga nos outros na próxima sincronização.</p>`
+        ? `<h1>Conta</h1><div class="card"><b>${esc(SESS.email)}</b><div class="mut sm" id="sy">${esc(SY.msg || (S.lastSyncAt ? "Última sincronização: " + hm(S.lastSyncAt) : "Ainda não sincronizado"))}</div><div class="mut sm" id="arquivo-sync">${esc(window.DiarioArquivos?.resumo?.() || 'Arquivos privados: verificação pendente')}</div></div><div class="g2"><button class="btn" data-a="syncnow">Sincronizar agora</button><button class="btn s" data-a="logout">Sair</button></div><p class="mut sm">Seus dados também ficam salvos neste aparelho, então o app funciona offline e sincroniza quando a internet voltar. Apagar um trade em um aparelho apaga nos outros na próxima sincronização.</p>`
         : `<h1>Conta</h1><p class="mut sm">Entre para sincronizar operações e fotos em todos os seus aparelhos.</p><div class="g2" style="margin:8px 0"><button class="btn ${AM === "in" ? "" : "s"}" data-a="am" data-id="in">Entrar</button><button class="btn ${AM === "up" ? "" : "s"}" data-a="am" data-id="up">Criar conta</button></div><label>E-mail<input id="ce" type="email" autocomplete="email" value="${esc(SY.email)}"></label><label>${AM === "up" ? "Senha (mín. 10 caracteres)" : "Senha"}<input id="cp" type="password" autocomplete="${AM === "up" ? "new-password" : "current-password"}"></label><button class="btn" style="margin-top:10px;width:100%" data-a="auth">${AM === "in" ? "Entrar" : "Criar conta"}</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>${t ? '<button class="btn s" style="margin-top:12px" data-a="clrcfg">Trocar projeto Supabase</button>' : ""}`
     : `<h1>Conta</h1><p class="mut sm">Cole os dados do seu projeto Supabase (Project Settings → API): a URL e a chave <b>anon public</b>.</p><label>URL do projeto<input id="cu" placeholder="https://xxxx.supabase.co"></label><label>Chave anon<input id="ck"></label><button class="btn" style="margin-top:10px" data-a="savecfg">Salvar</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>`;
 }
+window.addEventListener('diario:arquivos-migracao',()=>{const node=document.getElementById('arquivo-sync');if(node)node.textContent=window.DiarioArquivos?.resumo?.()||'';});
 const EMO = ["😫", "😕", "😐", "🙂", "😄"],
   segs = (e, t, a) =>
     `<div class="chips2">${a.map(([o, s, n]) => `<button class="${t == o ? "on " + (n || "") : ""}" data-seg="${e}" data-v="${o}">${s}</button>`).join("")}</div>`,
@@ -34835,41 +34836,25 @@ document.addEventListener("change", (e) => {
   t && ((S.ax ?? (S.ax = {}))["g.brl.manual"] = t.value ? 1 : 0);
 });
 const BK = { lista: null, err: "", busy: 0 };
+const usaBackupD1=()=>!!(SESS?.uid&&window.DiarioD1Principal?.active(SESS.uid));
 async function bkSnapshot() {
-  if (!SESS || !cfg()) return;
-  const e = loc().slice(0, 10);
-  if (ls.get("diario-snap-dia") !== e + "|" + SESS.uid)
-    try {
-      (await rq("/rest/v1/diario_backup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Prefer: "resolution=merge-duplicates,return=minimal",
-        },
-        body: JSON.stringify({
-          user_id: SESS.uid,
-          dia: e,
-          data: pub(),
-          criado: new Date().toISOString(),
-        }),
-      }),
-        ls.set("diario-snap-dia", e + "|" + SESS.uid),
-        (BK.err = ""));
-      try {
-        await rq(
-          "/rest/v1/diario_backup?user_id=eq." +
-            SESS.uid +
-            "&dia=lt." +
-            diasMais(e, -30),
-          { method: "DELETE" },
-        );
-      } catch {}
-    } catch (t) {
-      BK.err =
-        t.status === 404 || /diario_backup/.test(t.message || "")
-          ? 'Falta criar a tabela de cópias: rode o SQL "seguranca-backup.sql" no Supabase.'
-          : "Não consegui guardar a cópia de hoje: " + (t.message || t);
+  if(!SESS||!cfg())return;
+  const owner=SESS.uid,dia=loc().slice(0,10),emD1=usaBackupD1();
+  const marker=dia+'|'+owner+'|'+(emD1?'d1':'legado');
+  if(ls.get('diario-snap-dia')===marker)return;
+  try{
+    if(emD1){
+      await window.DiarioD1Principal.backupSave(SESS.at,dia,pub());
+    }else{
+      await rq('/rest/v1/diario_backup',{
+        method:'POST',headers:{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify({user_id:owner,dia,data:pub(),criado:new Date().toISOString()})
+      });
     }
+    ls.set('diario-snap-dia',marker);BK.err='';
+  }catch(err){
+    BK.err='Não consegui guardar a cópia de hoje: '+(err?.message||String(err));
+  }
 }
 if (typeof sync == "function") {
   const e = sync;
@@ -34878,27 +34863,16 @@ if (typeof sync == "function") {
       SESS && S.lastSyncAt && Date.now() - S.lastSyncAt < 6e4 && bkSnapshot());
   };
 }
-async function bkListar() {
-  if (SESS) {
-    BK.busy = 1;
-    try {
-      ((BK.lista = await (
-        await rq(
-          "/rest/v1/diario_backup?select=dia,criado&user_id=eq." +
-            SESS.uid +
-            "&order=dia.desc&limit=30",
-        )
-      ).json()),
-        (BK.err = ""));
-    } catch (e) {
-      ((BK.lista = []),
-        (BK.err =
-          e.status === 404
-            ? 'Falta criar a tabela de cópias: rode o SQL "seguranca-backup.sql" no Supabase.'
-            : e.message || String(e)));
-    }
-    ((BK.busy = 0), tab === "conta" && render());
-  }
+async function bkListar(){
+ if(!SESS)return;
+ BK.busy=1;
+ try{
+   BK.lista=usaBackupD1()
+     ? await window.DiarioD1Principal.backupList(SESS.at)
+     : await (await rq('/rest/v1/diario_backup?select=dia,criado&user_id=eq.'+SESS.uid+'&order=dia.desc&limit=30')).json();
+   BK.err='';
+ }catch(err){BK.lista=[];BK.err=err?.message||String(err);}
+ BK.busy=0;if(tab==='conta')render();
 }
 async function bkRestaura(e) {
   if (
@@ -34910,14 +34884,13 @@ async function bkRestaura(e) {
   )
     try {
       (ls.del("diario-snap-dia"), await bkSnapshot());
-      const t = await (
-        await rq(
-          "/rest/v1/diario_backup?select=data&user_id=eq." +
-            SESS.uid +
-            "&dia=eq." +
-            e,
-        )
-      ).json();
+      let t;
+      if(usaBackupD1()){
+        const data=await window.DiarioD1Principal.backupGet(SESS.at,e);
+        t=data?[{data}]:[];
+      }else{
+        t=await (await rq("/rest/v1/diario_backup?select=data&user_id=eq."+SESS.uid+"&dia=eq."+e)).json();
+      }
       if (!t[0] || !t[0].data) throw new Error("Cópia não encontrada.");
       (adopt(t[0].data),
         (S.mt = Date.now()),
@@ -70682,10 +70655,10 @@ async function syConferirEstado() {
   SYQ.busy = 1;
   SYQ.last = Date.now();
   try {
-    const rows = await (await rq(
-      "/rest/v1/diario?select=mt:data->mt&user_id=eq." + SESS.uid
-    )).json();
-    const remote = +(rows && rows[0] && rows[0].mt) || 0;
+    // Nunca fazer polling do Diário no Supabase: apenas leitura mínima do D1 validado.
+    if(!window.DiarioD1Principal?.active?.(SESS.uid))return;
+    const meta=await window.DiarioD1Principal.get(SESS.at,true);
+    const remote=Number(meta?.source_mt)||0;
     if (remote && remote !== +(S.st || 0) && remote > +(S.mt || 0)) await sync();
   } catch {} finally {
     SYQ.busy = 0;
