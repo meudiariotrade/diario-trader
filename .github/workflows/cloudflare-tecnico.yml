@@ -8,6 +8,12 @@ on:
       - 'tests/aurea-jwks.test.cjs'
       - 'tests/v930-reserva-ia-cloudflare.test.cjs'
       - '.github/workflows/cloudflare-tecnico.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cloudflare/diario-screeners/**'
+      - 'tests/v930-reserva-ia-cloudflare.test.cjs'
+      - '.github/workflows/cloudflare-tecnico.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,7 +21,18 @@ concurrency:
   group: publicar-cloudflare-tecnico
   cancel-in-progress: false
 jobs:
+  validar-reserva:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --check cloudflare/diario-screeners/aurea-resumao-v904.mjs
+      - run: node --test tests/v904-aurea-panorama.test.cjs tests/aurea-jwks.test.cjs tests/v930-reserva-ia-cloudflare.test.cjs
   publicar-worker:
+    needs: [validar-reserva]
     # Jamais implantar automaticamente a partir de Pull Request ou branch de experimento.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
