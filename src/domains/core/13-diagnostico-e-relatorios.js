@@ -4009,10 +4009,10 @@ async function syConferirEstado() {
   SYQ.busy = 1;
   SYQ.last = Date.now();
   try {
-    const rows = await (await rq(
-      "/rest/v1/diario?select=mt:data->mt&user_id=eq." + SESS.uid
-    )).json();
-    const remote = +(rows && rows[0] && rows[0].mt) || 0;
+    // Nunca fazer polling do Diário no Supabase: apenas leitura mínima do D1 validado.
+    if(!window.DiarioD1Principal?.active?.(SESS.uid))return;
+    const meta=await window.DiarioD1Principal.get(SESS.at,true);
+    const remote=Number(meta?.source_mt)||0;
     if (remote && remote !== +(S.st || 0) && remote > +(S.mt || 0)) await sync();
   } catch {} finally {
     SYQ.busy = 0;

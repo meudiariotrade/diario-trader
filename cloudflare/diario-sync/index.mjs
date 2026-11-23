@@ -51,6 +51,30 @@ async function arquivos(req,env,uid,url,origin){
   const result=await env.DB.prepare("SELECT bucket,object_key,content_type,size_bytes FROM private_files WHERE owner=? AND status=? ORDER BY bucket,object_key LIMIT ?").bind(uid,status,limit).all();
   return out({items:result.results||[]},200,origin,env);
  }
+ if(url.pathname==='/v1/files/import-batch'&&req.method==='POST'){
+  let body;try{body=await req.json()}catch{return out({error:'json_invalido'},400,origin,env)}
+  const items=body?.items;
+  if(!Array.isArray(items)||!items.length||items.length>4||
+    items.some(x=>!x||!BUCKETS.has(x.bucket)||typeof x.key!=='string'||!x.key||x.key.length>512))
+    return out({error:'lote_invalido'},400,origin,env);
+  const results=[];
+  for(const item of items){
+    try{
+      const r=new Request(url.origin+'/v1/files/import',{
+        method:'POST',headers:{Authorization:req.headers.get('authorization')||'','Content-Type':'application/json'},
+        body:JSON.stringify({bucket:item.bucket,key:item.key})
+      });
+      const answer=await arquivos(r,env,uid,new URL(r.url),origin);
+      const payload=await answer.json().catch(()=>({}));
+      results.push({bucket:item.bucket,ok:answer.ok,http:answer.status,
+        code:answer.ok?'ok':String(payload.error||'falha').slice(0,60),
+        upstream_http:Number(payload.status)||null,size_bytes:Number(payload.size_bytes)||0});
+    }catch(_){
+      results.push({bucket:item.bucket,ok:false,http:503,code:'importacao_indisponivel'});
+    }
+  }
+  return out({results},200,origin,env);
+ }
  if(url.pathname==='/v1/files/import'&&req.method==='POST'){
   let body;try{body=await req.json()}catch{return out({error:'json_invalido'},400,origin,env);}
   const bucket=body?.bucket,key=body?.key;
@@ -71,7 +95,12 @@ async function arquivos(req,env,uid,url,origin){
   const bytes=await remote.arrayBuffer();
   if(!bytes.byteLength||bytes.byteLength>MAX_ARQUIVO)return out({error:'arquivo_invalido_ou_grande'},413,origin,env);
   const mime=safeType(metadata.content_type||remote.headers.get('content-type')||'');
-  await env.FILES_KV.put(kvKey(uid,bucket,key),bytes,{metadata:{mime,bytes:bytes.byteLength}});
+  const checksum=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)))
+    .map(x=>x.toString(16).padStart(2,'0')).join('');
+  await env.FILES_KV.put(kvKey(uid,bucket,key),bytes,{metadata:{mime,bytes:bytes.byteLength,sha256:checksum}});
+  const check=await env.FILES_KV.getWithMetadata(kvKey(uid,bucket,key),'arrayBuffer');
+  if(!check?.value||check.value.byteLength!==bytes.byteLength||check.metadata?.sha256!==checksum)
+    return out({error:'kv_verificacao_pendente'},503,origin,env);
   await atualizaArquivo(env.DB,uid,bucket,key,mime,bytes.byteLength,'legado');
   return out({ok:true,migrated:true,size_bytes:bytes.byteLength},200,origin,env);
  }
@@ -100,6 +129,42 @@ async function arquivos(req,env,uid,url,origin){
  return out({error:'metodo_invalido'},405,origin,env);
 }
 
+
+/* Backups diários privados no D1: o legado não é apagado, todas as rotas exigem JWT. */
+async function backups(req,env,uid,url,origin){
+ const prefix='/v1/backups';
+ if(url.pathname===prefix && req.method==='GET'){
+   const rows=await env.DB.prepare("SELECT payload FROM private_documents WHERE owner=? AND collection='diario_backup' ORDER BY doc_key DESC LIMIT 30").bind(uid).all();
+   const items=(rows.results||[]).map(x=>{try{return JSON.parse(x.payload)}catch{return null}})
+     .filter(x=>x?.user_id===uid&&/^\d{4}-\d{2}-\d{2}$/.test(x.dia||''))
+     .map(x=>({dia:x.dia,criado:x.criado}));
+   return out({items},200,origin,env);
+ }
+ const dia=url.pathname.startsWith(prefix+'/')?url.pathname.slice(prefix.length+1):'';
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(dia)||dia.length!==10)
+   return out({error:'dia_invalido'},400,origin,env);
+ const key=JSON.stringify([uid,dia]);
+ if(req.method==='GET'){
+   const row=await env.DB.prepare("SELECT payload FROM private_documents WHERE owner=? AND collection='diario_backup' AND doc_key=?").bind(uid,key).first();
+   if(!row)return out({error:'copia_nao_encontrada'},404,origin,env);
+   const item=JSON.parse(row.payload);
+   return out({data:item.data,criado:item.criado},200,origin,env);
+ }
+ if(req.method==='PUT'){
+   if(Number(req.headers.get('content-length')||0)>LIMIT)return out({error:'muito_grande'},413,origin,env);
+   const raw=await req.text();
+   if(new TextEncoder().encode(raw).length>LIMIT)return out({error:'muito_grande'},413,origin,env);
+   let value;try{value=JSON.parse(raw)}catch{return out({error:'json_invalido'},400,origin,env)}
+   if(!value?.data||typeof value.data!=='object'||Array.isArray(value.data)||
+     !Number.isSafeInteger(Number(value.data.mt))||Number(value.data.mt)<0)
+     return out({error:'copia_invalida'},400,origin,env);
+   const row=JSON.stringify({user_id:uid,dia,criado:new Date().toISOString(),data:value.data});
+   if(new TextEncoder().encode(row).length>LIMIT)return out({error:'muito_grande'},413,origin,env);
+   await env.DB.prepare("INSERT OR IGNORE INTO private_documents(owner,collection,doc_key,payload) VALUES (?,'diario_backup',?,?)").bind(uid,key,row).run();
+   return out({saved:true,dia},200,origin,env);
+ }
+ return out({error:'metodo_invalido'},405,origin,env);
+}
 
 /* v902: migração paginada, somente leitura do Supabase PostgREST do próprio usuário.
  * Nunca migra logs ou Analytics; rows são isoladas por owner no D1.
@@ -160,11 +225,13 @@ export default {
   const isDiary=url.pathname==='/v1/diario'&&['GET','PUT'].includes(req.method);
   const isFiles=url.pathname.startsWith('/v1/files/');
   const isMigration=url.pathname.startsWith('/v1/migrate/');
-  if(!isDiary&&!isFiles&&!isMigration)return out({error:'nao_encontrado'},404,origin,env);
+  const isBackup=url.pathname==='/v1/backups'||url.pathname.startsWith('/v1/backups/');
+  if(!isDiary&&!isFiles&&!isMigration&&!isBackup)return out({error:'nao_encontrado'},404,origin,env);
   if(!env.DB)return out({error:'db_indisponivel'},503,origin,env);
   const uid=await owner(req,env);
   if(!uid)return out({error:'login_invalido'},401,origin,env);
   if(isFiles)return arquivos(req,env,uid,url,origin);
+  if(isBackup)return backups(req,env,uid,url,origin);
   if(isMigration)return importarColecao(req,env,uid,url,origin);
   if(req.method==='GET'){
    const meta=url.searchParams.get('meta')==='1';

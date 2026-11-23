@@ -492,41 +492,25 @@ document.addEventListener("change", (e) => {
   t && ((S.ax ?? (S.ax = {}))["g.brl.manual"] = t.value ? 1 : 0);
 });
 const BK = { lista: null, err: "", busy: 0 };
+const usaBackupD1=()=>!!(SESS?.uid&&window.DiarioD1Principal?.active(SESS.uid));
 async function bkSnapshot() {
-  if (!SESS || !cfg()) return;
-  const e = loc().slice(0, 10);
-  if (ls.get("diario-snap-dia") !== e + "|" + SESS.uid)
-    try {
-      (await rq("/rest/v1/diario_backup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Prefer: "resolution=merge-duplicates,return=minimal",
-        },
-        body: JSON.stringify({
-          user_id: SESS.uid,
-          dia: e,
-          data: pub(),
-          criado: new Date().toISOString(),
-        }),
-      }),
-        ls.set("diario-snap-dia", e + "|" + SESS.uid),
-        (BK.err = ""));
-      try {
-        await rq(
-          "/rest/v1/diario_backup?user_id=eq." +
-            SESS.uid +
-            "&dia=lt." +
-            diasMais(e, -30),
-          { method: "DELETE" },
-        );
-      } catch {}
-    } catch (t) {
-      BK.err =
-        t.status === 404 || /diario_backup/.test(t.message || "")
-          ? 'Falta criar a tabela de cópias: rode o SQL "seguranca-backup.sql" no Supabase.'
-          : "Não consegui guardar a cópia de hoje: " + (t.message || t);
+  if(!SESS||!cfg())return;
+  const owner=SESS.uid,dia=loc().slice(0,10),emD1=usaBackupD1();
+  const marker=dia+'|'+owner+'|'+(emD1?'d1':'legado');
+  if(ls.get('diario-snap-dia')===marker)return;
+  try{
+    if(emD1){
+      await window.DiarioD1Principal.backupSave(SESS.at,dia,pub());
+    }else{
+      await rq('/rest/v1/diario_backup',{
+        method:'POST',headers:{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify({user_id:owner,dia,data:pub(),criado:new Date().toISOString()})
+      });
     }
+    ls.set('diario-snap-dia',marker);BK.err='';
+  }catch(err){
+    BK.err='Não consegui guardar a cópia de hoje: '+(err?.message||String(err));
+  }
 }
 if (typeof sync == "function") {
   const e = sync;
@@ -535,27 +519,16 @@ if (typeof sync == "function") {
       SESS && S.lastSyncAt && Date.now() - S.lastSyncAt < 6e4 && bkSnapshot());
   };
 }
-async function bkListar() {
-  if (SESS) {
-    BK.busy = 1;
-    try {
-      ((BK.lista = await (
-        await rq(
-          "/rest/v1/diario_backup?select=dia,criado&user_id=eq." +
-            SESS.uid +
-            "&order=dia.desc&limit=30",
-        )
-      ).json()),
-        (BK.err = ""));
-    } catch (e) {
-      ((BK.lista = []),
-        (BK.err =
-          e.status === 404
-            ? 'Falta criar a tabela de cópias: rode o SQL "seguranca-backup.sql" no Supabase.'
-            : e.message || String(e)));
-    }
-    ((BK.busy = 0), tab === "conta" && render());
-  }
+async function bkListar(){
+ if(!SESS)return;
+ BK.busy=1;
+ try{
+   BK.lista=usaBackupD1()
+     ? await window.DiarioD1Principal.backupList(SESS.at)
+     : await (await rq('/rest/v1/diario_backup?select=dia,criado&user_id=eq.'+SESS.uid+'&order=dia.desc&limit=30')).json();
+   BK.err='';
+ }catch(err){BK.lista=[];BK.err=err?.message||String(err);}
+ BK.busy=0;if(tab==='conta')render();
 }
 async function bkRestaura(e) {
   if (
@@ -567,14 +540,13 @@ async function bkRestaura(e) {
   )
     try {
       (ls.del("diario-snap-dia"), await bkSnapshot());
-      const t = await (
-        await rq(
-          "/rest/v1/diario_backup?select=data&user_id=eq." +
-            SESS.uid +
-            "&dia=eq." +
-            e,
-        )
-      ).json();
+      let t;
+      if(usaBackupD1()){
+        const data=await window.DiarioD1Principal.backupGet(SESS.at,e);
+        t=data?[{data}]:[];
+      }else{
+        t=await (await rq("/rest/v1/diario_backup?select=data&user_id=eq."+SESS.uid+"&dia=eq."+e)).json();
+      }
       if (!t[0] || !t[0].data) throw new Error("Cópia não encontrada.");
       (adopt(t[0].data),
         (S.mt = Date.now()),

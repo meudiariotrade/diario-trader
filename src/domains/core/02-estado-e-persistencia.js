@@ -2458,7 +2458,7 @@ async function sync(force) {
         persist();
         // Cópia privada D1 após confirmar o sincronismo atual (fase espelho).
         if(!window.DIARIO_DEMO && !window.DiarioD1Principal?.active(owner))window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
-        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at))
+        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at,{force:!!force}))
           .then(()=>window.DiarioMigracaoD1?.run(SESS.uid,SESS.at,()=>SESS?.uid===owner))
           .catch(()=>{});
         SY_RECOVERY.saved();
@@ -2506,7 +2506,7 @@ async function sync(force) {
     persist();
     // Espelha operações e carteira no D1; não interrompe o Supabase nesta fase.
     if(!window.DIARIO_DEMO && !window.DiarioD1Principal?.active(owner))window.DiarioReplicaD1?.save(SESS.uid,SESS.at,pub()).catch(()=>{});
-        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at))
+        if(!window.DIARIO_DEMO)Promise.resolve(window.DiarioArquivos?.migrateAll(SESS.uid,SESS.at,{force:!!force}))
           .then(()=>window.DiarioMigracaoD1?.run(SESS.uid,SESS.at,()=>SESS?.uid===owner))
           .catch(()=>{});
     SY_RECOVERY.saved();
@@ -2573,10 +2573,11 @@ function vConta() {
     ? RECOV
       ? `<h1>Nova senha</h1><label>Nova senha (mín. 10 caracteres)<input id="np" type="password" autocomplete="new-password"></label><button class="btn" style="margin-top:10px" data-a="newpw">Salvar senha</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>`
       : SESS
-        ? `<h1>Conta</h1><div class="card"><b>${esc(SESS.email)}</b><div class="mut sm" id="sy">${esc(SY.msg || (S.lastSyncAt ? "Última sincronização: " + hm(S.lastSyncAt) : "Ainda não sincronizado"))}</div></div><div class="g2"><button class="btn" data-a="syncnow">Sincronizar agora</button><button class="btn s" data-a="logout">Sair</button></div><p class="mut sm">Seus dados também ficam salvos neste aparelho, então o app funciona offline e sincroniza quando a internet voltar. Apagar um trade em um aparelho apaga nos outros na próxima sincronização.</p>`
+        ? `<h1>Conta</h1><div class="card"><b>${esc(SESS.email)}</b><div class="mut sm" id="sy">${esc(SY.msg || (S.lastSyncAt ? "Última sincronização: " + hm(S.lastSyncAt) : "Ainda não sincronizado"))}</div><div class="mut sm" id="arquivo-sync">${esc(window.DiarioArquivos?.resumo?.() || 'Arquivos privados: verificação pendente')}</div></div><div class="g2"><button class="btn" data-a="syncnow">Sincronizar agora</button><button class="btn s" data-a="logout">Sair</button></div><p class="mut sm">Seus dados também ficam salvos neste aparelho, então o app funciona offline e sincroniza quando a internet voltar. Apagar um trade em um aparelho apaga nos outros na próxima sincronização.</p>`
         : `<h1>Conta</h1><p class="mut sm">Entre para sincronizar operações e fotos em todos os seus aparelhos.</p><div class="g2" style="margin:8px 0"><button class="btn ${AM === "in" ? "" : "s"}" data-a="am" data-id="in">Entrar</button><button class="btn ${AM === "up" ? "" : "s"}" data-a="am" data-id="up">Criar conta</button></div><label>E-mail<input id="ce" type="email" autocomplete="email" value="${esc(SY.email)}"></label><label>${AM === "up" ? "Senha (mín. 10 caracteres)" : "Senha"}<input id="cp" type="password" autocomplete="${AM === "up" ? "new-password" : "current-password"}"></label><button class="btn" style="margin-top:10px;width:100%" data-a="auth">${AM === "in" ? "Entrar" : "Criar conta"}</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>${t ? '<button class="btn s" style="margin-top:12px" data-a="clrcfg">Trocar projeto Supabase</button>' : ""}`
     : `<h1>Conta</h1><p class="mut sm">Cole os dados do seu projeto Supabase (Project Settings → API): a URL e a chave <b>anon public</b>.</p><label>URL do projeto<input id="cu" placeholder="https://xxxx.supabase.co"></label><label>Chave anon<input id="ck"></label><button class="btn" style="margin-top:10px" data-a="savecfg">Salvar</button><div class="r sm" style="margin-top:8px">${esc(SY.msg)}</div>`;
 }
+window.addEventListener('diario:arquivos-migracao',()=>{const node=document.getElementById('arquivo-sync');if(node)node.textContent=window.DiarioArquivos?.resumo?.()||'';});
 const EMO = ["😫", "😕", "😐", "🙂", "😄"],
   segs = (e, t, a) =>
     `<div class="chips2">${a.map(([o, s, n]) => `<button class="${t == o ? "on " + (n || "") : ""}" data-seg="${e}" data-v="${o}">${s}</button>`).join("")}</div>`,

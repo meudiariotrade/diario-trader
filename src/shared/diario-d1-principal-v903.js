@@ -48,6 +48,11 @@
   verificando.set(uid,job);
   return job;
  }
+ const BACKUPS='https://diario-sync.lucianosilva43567.workers.dev/v1/backups';
+ const backupDia=dia=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dia)))throw Error('Dia inválido.');return String(dia);};
+ async function backupList(token){return (await call(token,'GET',BACKUPS)).data.items||[];}
+ async function backupGet(token,dia){return (await call(token,'GET',BACKUPS+'/'+backupDia(dia))).data.data||null;}
+ async function backupSave(token,dia,data){return (await call(token,'PUT',BACKUPS+'/'+backupDia(dia),{data})).data;}
  const active=uid=>ativos.has(uid);
- window.DiarioD1Principal=Object.freeze({active,prepare,get,getRows,getMetaAsRows,save,versao:903});
+ window.DiarioD1Principal=Object.freeze({active,prepare,get,getRows,getMetaAsRows,save,backupList,backupGet,backupSave,versao:906});
 })();
