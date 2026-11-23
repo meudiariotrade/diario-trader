@@ -11,7 +11,7 @@ function sample(m){return {ok:true,market:m,pipeline_origin:'github-actions-publ
  rows:[{ticker:'T'}],last_update:new Date().toISOString(),total:1};}
 test('atualiza BR/US e atende todos os GETs direto do KV',async()=>{
  const a=await mod,kv=makeKV();let calls=0;
- await a.refreshBoth({SCREENER_CACHE:kv},async url=>{calls++;return Response.json(sample(new URL(url).searchParams.get('market')))});
+ await a.refreshBoth({SCREENER_CACHE:kv},async url=>{calls++;return Response.json(sample(new URL(url).pathname.match(/screeners-(BR|US)\.json$/)?.[1]))});
  assert.equal(calls,2);
  const req=new Request('https://edge.example/v1/screeners?market=BR&snapshot=1&universe=1');
  const result=await a.servePublicSnapshot(req,{SCREENER_CACHE:kv},null,null);
