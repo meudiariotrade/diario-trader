@@ -34,6 +34,8 @@ jobs:
       - run: node --check cloudflare/diario-noticias/finnhub-v940.mjs
       - run: node --test tests/cloudflare-finnhub-v940.test.cjs
       - run: node --test tests/cloudflare-noticias.test.cjs
+      - name: Validar bundle Wrangler com o módulo Finnhub
+        run: npx --yes wrangler@4.166.0 deploy --dry-run --config cloudflare/diario-noticias/wrangler.jsonc
       - name: Bloquear redirect incompatível no Worker
         run: |
           if grep -q 'redirect:"error"' cloudflare/diario-noticias/producao-snapshot-v894.mjs; then
