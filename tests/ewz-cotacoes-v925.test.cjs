@@ -30,7 +30,8 @@ test('v925: variação ausente não equivale a zero',()=>{
  assert.equal(quote({change:0}).chg,0);
 });
 test('v925: fontes unificadas e sem tráfego extra ao Supabase',()=>{
- assert.match(core,/if \(s === "EWZ"\) \{\s+const referencia=fhEwzAdr925\(\)/);
+ assert.match(core,/window\.DiarioEwzCotacao = fhEwzAdr925/);
+ assert.match(fs.readFileSync('src/market/tape-live.js','utf8'),/root\.DiarioEwzCotacao\?\.\(\)/);
  assert.match(termo,/grupo:"ewz-canonico"/);
  assert.match(home,/variação indisponível/);
  assert.doesNotMatch(trecho,/fetch\s*\(|supabase|\/rest\/v1\/|setInterval\s*\(/i);

@@ -75,6 +75,17 @@
     return q;
   }
   function consulta(chave, agora = Date.now()) {
+    // v926: este módulo é carregado depois do núcleo e sobrescreve tapeVivo.
+    // Consulta primeiro a referência validada de EWZ exposta pelo núcleo.
+    if (chave === "EWZ") {
+      let adr = null;
+      try { adr = root.DiarioEwzCotacao?.() || null; } catch {}
+      if (adr && Number.isFinite(adr.px) && adr.px > 0 &&
+          typeof adr.chg === "number" && Number.isFinite(adr.chg)) {
+        ultimo.set(chave, adr);
+        return adr;
+      }
+    }
     const q = profit(chave, agora) || cripto(chave, agora) || finnhub(chave, agora);
     if (q) {
       ultimo.set(chave, q);

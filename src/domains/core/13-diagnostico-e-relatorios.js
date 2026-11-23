@@ -5150,6 +5150,7 @@ function fhEwzAdr925() {
       fechado:fase==="closed",atraso:!!dados.atraso};
   }catch{return null}
 }
+window.DiarioEwzCotacao = fhEwzAdr925;
 // Fita superior: EWZ da cotação ADR recente, senão Finnhub/Profit; sem consulta extra.
 {
   const antes = window.tapeVivo;
