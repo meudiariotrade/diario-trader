@@ -65,16 +65,34 @@ async function anxCall(e) {
   const a = new AbortController(),
     o = setTimeout(() => a.abort(), 17e4);
   try {
-    const s = await fetch(t.url + "/functions/v1/analise", {
+    // v932: fluxos puramente interpretativos seguem direto ao Cloudflare.
+    // O Supabase é reserva transitória apenas em falhas temporárias da borda.
+    const caminhoCloudflare =
+      e?.modo === "explica" ? "/v1/ia-explica" :
+      e?.modo === "estatisticas" ? "/v1/ia-estatisticas" : "";
+    const endpointCloudflare = caminhoCloudflare
+      ? "https://diario-screeners-quant.lucianosilva43567.workers.dev" + caminhoCloudflare : "";
+    const pedir = (destino, cloudflare) => fetch(destino, {
       method: "POST",
       signal: a.signal,
+      credentials: "omit",
+      redirect: "manual",
       headers: {
         "Content-Type": "application/json",
-        apikey: t.key,
+        ...(cloudflare ? {} : { apikey: t.key }),
         Authorization: "Bearer " + SESS.at,
       },
       body: JSON.stringify(e),
     });
+    let s;
+    if (endpointCloudflare) {
+      try { s = await pedir(endpointCloudflare, true); }
+      catch (erro) { if (erro?.name === "AbortError") throw erro; }
+      if (!s || [408, 429, 500, 502, 503, 504].includes(s.status)) {
+        try { await s?.body?.cancel(); } catch {}
+        s = await pedir(t.url + "/functions/v1/analise", false);
+      }
+    } else s = await pedir(t.url + "/functions/v1/analise", false);
     if (s.status === 401)
       throw new Error("Entre na sua conta de novo (Mais → Conta).");
     if (s.status === 404)
