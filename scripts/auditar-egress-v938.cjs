@@ -82,7 +82,7 @@ function main(){
   arquivos_src_inspecionados:files.length,
   funcoes_restantes:Object.keys(functions).length,
   tabelas_restantes:Object.keys(tables).length,
-  funcoes:functions,tabelas,
+  funcoes:functions,tabelas:tables,
   protegidas_d1_dispositivo:safe,
   tabelas_bloqueadas_ate_migrar_escritores:serverWritten,
   importante:'Ocorrências estáticas incluem rotas interceptadas no navegador; não medem egress real'};
