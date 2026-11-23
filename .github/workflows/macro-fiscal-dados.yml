@@ -1,0 +1,29 @@
+name: Atualizar Termômetro Fiscal e Dívida Pública (BCB / Global)
+
+on:
+  schedule:
+    - cron: '30 22 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macro-fiscal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Coletar dados oficiais BCB e macro global
+        run: node scripts/atualizar-macro-fiscal.mjs
+      - name: Publicar dados-publicos/macro-fiscal.json se mudou
+        run: |
+          if [ -n "$(git status --porcelain dados-publicos/macro-fiscal.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add dados-publicos/macro-fiscal.json
+            git commit -m "dados: atualiza termômetro fiscal e dívida pública (BCB)"
+            git push
+          fi

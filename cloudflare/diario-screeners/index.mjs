@@ -306,6 +306,19 @@ export default {
     ctx.waitUntil(cache.put(key,res.clone()));return conditional(request,res,false);
    }catch{return json({error:'Falha ao ler FIIs'},502)}
   }
+  // v914: espelho público do Termômetro Fiscal e Dívida Pública (BCB SGS + Global), cache de 6h na borda.
+  if(url.pathname==='/v1/macro-fiscal'){
+   const key=new Request(url.origin+'/v1/macro-fiscal'),cache=caches.default,hit=await cache.match(key);
+   if(hit)return conditional(request,hit,true);
+   try{
+    const r=await fetch('https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/macro-fiscal.json',{signal:AbortSignal.timeout(15000)});
+    if(!r.ok)return json({error:'Arquivo Macro-Fiscal indisponível'},503);
+    const txt=await r.text();if(txt.length>500000)return json({error:'Arquivo Macro-Fiscal acima do limite'},502);
+    const d=JSON.parse(txt);if(d?.versao!==1||!d.brasil)return json({error:'Esquema Macro-Fiscal inválido'},502);
+    const res=new Response(txt,{headers:{...CORS,'content-type':'application/json; charset=utf-8','cache-control':'public, max-age=21600, s-maxage=21600','X-Snapshot-Source':'macro-fiscal-bcb-github'}});
+    ctx.waitUntil(cache.put(key,res.clone()));return conditional(request,res,false);
+   }catch{return json({error:'Falha ao ler Macro-Fiscal'},502)}
+  }
   if(url.pathname==='/v1/cvm-provas'){
    if([...url.searchParams.keys()].length)return json({error:'Rota sem parâmetros'},400);
    const year=new Date().getUTCFullYear(),key=new Request(url.origin+'/v1/cvm-provas?year='+year);

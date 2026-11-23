@@ -31,15 +31,32 @@
   munger:{id:'munger',mono:'M',nome:'Munger',papel:'Crítico de Teses',titulo:'Munger — Advogado do Diabo & Fear-Setting',sub:'Inversão, vieses, negação otimista e Fear-Setting (Pior cenário · Prevenir · Reparar · Custo da inação).',cmd:'ANALISE PETR4',cta:'Testar com Munger',tema:'modelos mentais riscos ocultos margem de segurança crítica de tese Munger fear setting'},
   markowitz:{id:'markowitz',mono:'Mk',nome:'Markowitz',papel:'Gestor de Portfólio',titulo:'Markowitz — Diagnóstico da Carteira',sub:'Risco, correlação, concentração setorial e equilíbrio entre ativos.',cmd:'CARTEIRA',cta:'Consultar Markowitz',tema:'alocação de carteira diversificação risco correlação Markowitz'},
   schwartz:{id:'schwartz',mono:'S',nome:'Schwartz',papel:'Economista Macro',titulo:'Schwartz — Cenário & Agenda',sub:'Juros, inflação, liquidez, câmbio e decisões de bancos centrais.',cmd:'AGENDA',cta:'Consultar Schwartz',tema:'política monetária juros inflação bancos centrais cenário macroeconômico'},
+  dalio:{id:'dalio',mono:'R',nome:'Dalio',papel:'Geopolítica & Dívida',titulo:'Dalio — Geopolítica, Macro/Micro & Dívida Pública',sub:'Grandes ciclos de dívida pública (Brasil e Mundo), geopolítica, microeconomia setorial e efeito dominó — 100% técnico e sem viés político.',cmd:'@dalio Analise a dívida pública do Brasil e dos EUA hoje e o impacto nos juros e setores',cta:'Consultar Dalio',tema:'Ray Dalio ciclos de dívida pública ordem mundial geopolítica macroeconomia microeconomia juros reais inflação'},
   dow:{id:'dow',mono:'D',nome:'Dow',papel:'Mentor de Estudos',titulo:'Dow — Formação & Simulados',sub:'Teoria de mercado, conceitos financeiros e questões no padrão CNPI.',cmd:'MODO PROVA CT1',cta:'Estudar com Dow',tema:'teoria de Dow ciclos de mercado educação financeira fundamentos'}
  };
+ let macroFiscal=null,mfLoading=false;
+ try{macroFiscal=JSON.parse(localStorage.getItem('dt-macro-fiscal-v914')||'null')}catch(_){}
+ async function carregarMacroFiscal(force){
+  if(mfLoading)return macroFiscal;
+  if(!force&&macroFiscal?.brasil&&Date.now()-(macroFiscal._at||0)<6*3600000)return macroFiscal;
+  mfLoading=true;
+  const urls=['https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/macro-fiscal','https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/macro-fiscal.json'];
+  for(const u of urls){
+   try{const r=await fetch(u,{signal:AbortSignal.timeout(10000)});if(!r.ok)continue;const j=await r.json();
+    if(j?.versao===1&&j.brasil){macroFiscal={...j,_at:Date.now()};try{localStorage.setItem('dt-macro-fiscal-v914',JSON.stringify(macroFiscal))}catch(_){}mfLoading=false;update();return macroFiscal}}catch(_){}
+  }
+  mfLoading=false;return macroFiscal;
+ }
+ w.DiarioMacroFiscal=()=>macroFiscal;
+ setTimeout(()=>carregarMacroFiscal(false),1500);
  function detectMember(cmd){
   const t=String(cmd||'').trim().toUpperCase();
+  if(/^@DALIO\b/.test(t))return 'dalio';
   if(/^T[EÉ]CNICO\b/.test(t))return 'livermore';
   if(/^CARTEIRA\b/.test(t))return 'markowitz';
   if(/^AGENDA\b/.test(t))return 'schwartz';
   if(/^(MODO PROVA|EXPLIQUE)\b/.test(t))return 'dow';
-  return conselhoId==='munger'?'munger':'graham';
+  return conselhoId==='munger'?'munger':conselhoId==='dalio'?'dalio':'graham';
  }
  function jobOwner(job){
   const t=String(job?.comando?.texto||'').trim().toUpperCase();
@@ -106,10 +123,42 @@
    '<div class="an-mesa-form"><input id="an-duelo-a" value="'+E(dueloA)+'" placeholder="PETR4" maxlength="10" autocapitalize="characters"><span>×</span><input id="an-duelo-b" value="'+E(dueloB)+'" placeholder="VALE3" maxlength="10" autocapitalize="characters"><button type="button" class="btn s" data-an-duelo-run="1">Duelar</button></div></header>'+body+
    '<p class="an-br-nota">Cruza fundamentos, momento gráfico e diversificação da sua Carteira. Não é recomendação.</p></section>';
  }
+ function dalioBriefingCard(){
+  if(!macroFiscal&&!mfLoading)setTimeout(()=>carregarMacroFiscal(false),0);
+  const mf=macroFiscal,b=mf?.brasil||{},mu=mf?.mundo||{};
+  const f1=(v,suf='%')=>v==null?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+suf;
+  const kpi=(rot,val,sub)=>'<div style="padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg)"><small style="display:block;font-size:11px;color:var(--mut)">'+rot+'</small><b style="font-size:15px;font-variant-numeric:tabular-nums">'+val+'</b>'+(sub?'<small style="display:block;font-size:10.5px;color:var(--mut)">'+sub+'</small>':'')+'</div>';
+  const grid=mf?'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0">'+
+   kpi('Selic Meta (BCB)',f1(b.selic_meta?.valor),b.selic_meta?.data||'')+
+   kpi('IPCA 12m (BCB)',f1(b.ipca_12m?.valor),b.ipca_12m?.data||'')+
+   kpi('Juro Real ex-post',f1(b.juro_real_expost),'Selic vs IPCA')+
+   kpi('Dívida Bruta/PIB BR',f1(b.divida_bruta_pib?.valor),b.divida_bruta_pib?.data||'')+
+   kpi('Dívida Líquida/PIB BR',f1(b.divida_liquida_pib?.valor),b.divida_liquida_pib?.data||'')+
+   kpi('Reservas BR',b.reservas_usd_bi?.valor!=null?'US$ '+b.reservas_usd_bi.valor+' bi':'—',b.reservas_usd_bi?.data||'')+
+   kpi('US Treasury 10Y',f1(mu.us_10y?.valor),'Ref. global')+
+   kpi('DXY (Dólar Global)',mu.dxy?.valor!=null?f1(mu.dxy.valor,''):'—','Índice dólar')+
+   '</div>'+
+   (Array.isArray(mu.divida_pib_ref)?'<p class="mut sm" style="margin:4px 0 10px"><b>Dívida/PIB Mundo (ref. FMI):</b> '+mu.divida_pib_ref.map(x=>E(x.pais)+' '+x.pct+'%').join(' · ')+'</p>':''):
+   '<p class="mut">Carregando Termômetro Fiscal oficial (BCB / Global)…</p>';
+  const cenarios=[
+   ['🏛️ Dívida/PIB BR & Juro Real','@dalio Analise a dinâmica atual da Dívida Bruta/PIB e Dívida Líquida/PIB do Brasil com juro real elevado (relação r > g), sem viés político. Mostre o efeito dominó na curva DI, no dólar, nos bancos, no varejo e nos FIIs, aplicando Dois Lados da Moeda.'],
+   ['🇺🇸 Dívida EUA & Treasury 10Y','@dalio Analise a trajetória da dívida pública dos EUA e o nível do Treasury 10Y. Qual o efeito dominó se o juro longo americano superar 5% sobre o dólar global (DXY), emergentes e B3?'],
+   ['🛢️ Choque Geopolítico / Petróleo','@dalio Simule um choque geopolítico que eleve o petróleo em +20% (Oriente Médio / tarifas EUA x China). Desenhe o efeito dominó em 4 passos: 1) Inflação e bancos centrais, 2) Juros e câmbio, 3) Microeconomia setorial (ganhadores e perdedores na B3), 4) Como proteger a carteira.'],
+   ['🏭 Microeconomia: Setores & FIIs','@dalio Pela ótica microeconômica (custo de capital, crédito, demanda e margens), quais setores da B3 e tipos de FIIs (Tijolo vs Papel) sofrem mais e quais se beneficiam com o juro real atual?']
+  ];
+  return '<section class="an-section an-briefing"><header class="an-br-head"><div><p class="an-kicker">TERMÔMETRO FISCAL &amp; DÍVIDA PÚBLICA · BCB OFICIAL + MUNDO (SEM VIÉS POLÍTICO)</p><h3>Panorama Estrutural de Dalio</h3><p class="mut">Mecânica econômica pura: dívida pública, juro real vs crescimento, geopolítica e microeconomia setorial.</p></div>'+
+   '<div class="an-br-acts"><button type="button" class="btn s an-br-cer" data-an-cerebro="dalio"'+(cerebroBusy?' disabled':'')+'>'+(cerebroBusy?'Consultando livros…':'📚 Aplicar seus livros (Dalio / Cérebro)')+'</button></div></header>'+
+   grid+
+   '<div style="margin-top:8px"><p class="an-kicker" style="margin:0 0 6px">🔗 SIMULADOR EFEITO DOMINÓ (1 CLIQUE · PROTOCOLO DOIS LADOS DA MOEDA)</p>'+
+   '<div class="an-br-acts" style="flex-wrap:wrap;gap:6px">'+cenarios.map(([lab,pr])=>'<button type="button" class="btn s" data-an-aurea-prompt="'+E(pr)+'">'+lab+'</button>').join('')+'</div></div>'+
+   (cerebroOut&&cerebroFor==='dalio'?'<div class="an-cerebro-out"><p class="an-kicker">LEITURA DO CÉREBRO (SEUS LIVROS DE RAY DALIO + DADOS FISCAIS ATUAIS)</p><div class="an-report">'+M.markdown(cerebroOut)+'</div></div>':'')+
+   '<p class="an-br-nota">Fontes públicas: Banco Central do Brasil (SGS), Yahoo Finance (^TNX/DXY) e FMI. Leitura técnica sem viés político; não é recomendação.</p></section>';
+ }
  function briefingCard(){
   if(conselhoModo==='mesa')return mesaRedondaCard();
   if(conselhoModo==='duelo')return dueloCard();
   const id=conselhoId;
+  if(id==='dalio')return dalioBriefingCard();
   if(id!=='graham'&&id!=='livermore'&&id!=='munger')return '';
   const br=w.DiarioAnalisesPlus?.briefing?.();
   if(!br)return '<section class="an-section an-briefing"><p class="mut">Carregando levantamento automático do mercado…</p></section>';
@@ -130,11 +179,14 @@
  }
  async function rodarCerebro(id){
   if(cerebroBusy)return;
-  const br=w.DiarioAnalisesPlus?.briefing?.();if(!br)return;
+  const br=w.DiarioAnalisesPlus?.briefing?.();if(!br&&id!=='dalio')return;
   if(!w.DiarioCerebroIA?.api){cerebroFor=id;cerebroOut='Abra **Estudos → Cérebro** uma vez para ativar seus livros na IA.';update();return}
   cerebroBusy=true;cerebroFor=id;cerebroOut='';update();
   const m=CONSELHO[id]||CONSELHO.graham,isTec=id==='livermore';
-  const fatos=isTec?
+  const mf=macroFiscal,b=mf?.brasil||{},mu=mf?.mundo||{};
+  const fatos=id==='dalio'?
+   'Como aplicar os princípios dos meus livros de Ray Dalio (grandes ciclos de dívida e ordem mundial) ao cenário atual sem viés político? Dados oficiais BCB/Global: Selic '+b.selic_meta?.valor+'%, IPCA 12m '+b.ipca_12m?.valor+'%, Juro Real '+b.juro_real_expost+'%, Dívida Bruta/PIB BR '+b.divida_bruta_pib?.valor+'%, Dívida Líquida/PIB BR '+b.divida_liquida_pib?.valor+'%, US Treasury 10Y '+mu.us_10y?.valor+'%, DXY '+mu.dxy?.valor+'.':
+   isTec?
    'Como aplicar os conceitos dos meus livros de análise técnica aos destaques de hoje? Tendência saudável: '+br.livermore.alta.map(x=>x.ticker+' ('+x.motivo+')').join('; ')+'. Alertas técnicos: '+br.livermore.alertas.map(x=>x.ticker+' ('+x.motivo+')').join('; ')+'.':
    'Como aplicar os conceitos dos meus livros aos destaques de hoje ('+m.nome+')? Bons para avaliar: '+br.graham.avaliar.map(x=>x.ticker+' ['+x.setor+'] '+x.motivo).join('; ')+'. Sinais de cautela: '+br.graham.cautela.map(x=>x.ticker+' ['+x.setor+'] '+x.motivo).join('; ')+'. Setores fortes 1M: '+br.graham.setoresFortes.map(s=>s.setor+' '+s.m1.toFixed(1)+'%').join(', ')+'.';
   try{
@@ -229,7 +281,7 @@
  function afterRender(){const target=d.getElementById('an-search-suggestions'),html=current?.resultado?.sugestoes;if(target&&html){const frame=d.createElement('iframe');frame.title='Sugestões da Pesquisa Google';frame.setAttribute('sandbox','allow-popups allow-popups-to-escape-sandbox');frame.referrerPolicy='no-referrer';frame.srcdoc='<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src https: data:">'+html;frame.className='an-search-frame';target.replaceChildren(frame)}}
  function enter(){syncAccount();afterRender();if(w.DiarioAnalisesPlus?.TABS.includes(screenTab)){w.DiarioAnalisesPlus.enter(screenTab);return}if(screenTab==='pesquisa'){void loadValuationLocal();if(!w.DiarioAnalisesPlus?.briefing?.())w.DiarioAnalisesPlus?.garantirDados?.().then(()=>update())}if(screenTab!=='pesquisa'){if(screenTab.startsWith('tecnico-'))void w.DiarioTecnico?.enter(screenTab==='tecnico-br'?'br':'world');else w.DiarioScreeners?.load(screenTab);return;}if(loadedFor!==owner()&&!loading&&SESS&&!w.DIARIO_DEMO)void history()}
  d.addEventListener('input',e=>{if(e.target.id==='an-command'){input=e.target.value;conselhoId=detectMember(input);context()?.set('analises.comando',input)}if(e.target.dataset.anAssumption){premissas[e.target.dataset.anAssumption]=e.target.value;context()?.set('analises.premissas',premissas)}});
- d.addEventListener('submit',e=>{if(e.target.id==='an-form'){e.preventDefault();if(!w.DIARIO_DEMO)void run()}});
+ d.addEventListener('submit',e=>{if(e.target.id==='an-form'){e.preventDefault();if(w.DIARIO_DEMO)return;if(conselhoId==='dalio'||/^\s*@dalio\b/i.test(input)){const q=String(input||'').trim();if(q.length<3)return;const pr=/^\s*@dalio\b/i.test(q)?q:'@dalio '+q;w.TraderChat?.open?.();if(typeof ecoPergunta==='function')void ecoPergunta(pr,{pergunta:pr});return;}void run()}});
  d.addEventListener('toggle',e=>{if(e.target?.id==='an-history-drawer')histOpen=!!e.target.open},true);
 
  // v888: relatório vetorial local, compatível com o compartilhamento nativo do iPhone/PWA.

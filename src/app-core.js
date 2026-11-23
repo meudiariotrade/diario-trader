@@ -43391,6 +43391,12 @@ const AUREA = {
       lente:
         "mentor de estudos: explique o conceito de forma didática, com exemplo claramente hipotético, armadilhas comuns e como o tema costuma cair na prova CNPI.",
     },
+    dalio: {
+      nome: "Dalio",
+      papel: "Geopolítica, Macro/Micro & Dívida",
+      lente:
+        "análise de geopolítica, macroeconomia estrutural, microeconomia e ciclos de dívida pública no estilo de Ray Dalio (Big Debt Crises / Ordem Mundial em Transformação), 100% técnica e SEM VIÉS POLÍTICO OU PARTIDÁRIO. Nunca julgue governos por ideologia; analise apenas mecânica econômica e números frios: trajetória da Dívida/PIB (Brasil, EUA, Europa, Japão, China), resultado primário vs nominal, juro real (r) vs crescimento do PIB (g), custo de rolagem, prêmio de risco (DI longo, Treasuries 10Y/30Y, CDS), geopolítica (EUA x China, tarifas, energia, cadeias globais) e microeconomia (como juros, câmbio e crédito comprimem ou expandem margens por setor: bancos, varejo, exportadoras, elétricas e FIIs). Aplique sempre o protocolo Dois Lados da Moeda: 1) Fatos numéricos verificáveis, 2) Cenário de estresse/risco, 3) Fator mitigador/construtivo e 4) Qual ativo ou taxa de mercado confirma qual cenário está vencendo.",
+    },
   },
 };
 function aureaRota(texto) {
@@ -43401,13 +43407,16 @@ function aureaRota(texto) {
         (t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|11)\b/g) || []).map((x) => x.toUpperCase()),
       ),
     ].slice(0, 4),
-    forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow)\b/);
+    forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow|dalio)\b/);
   if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você" };
   const conta = (rx) => (n.match(rx) || []).length,
     pontos = {
       schwartz: conta(
-        /\b(juros?|selic|copom|fed|fomc|inflacao|ipca|cpi|payroll|pib|cambio|dolar|wdo|treasur\w*|curva|di1?|bancos? centra\w*|noticia|tesouro|recessao|fiscal|petroleo|minerio|china|eua|guerra|tarifa\w*|eleica\w*)\b/g,
+        /\b(juros?|selic|copom|fed|fomc|inflacao|ipca|cpi|payroll|pib|cambio|dolar|wdo|curva|di1?|bancos? centra\w*|noticia|recessao|petroleo|minerio)\b/g,
       ) + (/https?:\/\//.test(t) ? 3 : 0),
+      dalio: conta(
+        /\b(dalio|geopolitic\w*|divida publica|divida\/?pib|divida bruta|divida liquida|deficit|superavit|arcabouco|fiscal|primario|microeconomia|produtividade|ordem mundial|ciclos? de divida|reservas? internacionais?|treasur\w*|tarifa\w*|guerra|china|europa|japao|efeito domino|cadeias? globais?|sancoes?)\b/g,
+      ),
       graham: conta(
         /\b(valuation|preco (justo|teto)|dividend\w*|proventos?|balanco|lucro|receita|p\/?l|p\/?vp|roe|roic|ebitda|divida|alavancag\w*|fundament\w*|vale a pena|barat[oa]|car[oa]|margem de seguranca|dossie|graham|bazin|dcf|resultado trimestral)\b/g,
       ),
@@ -43436,6 +43445,7 @@ function aureaRota(texto) {
     ? "a pergunta fala de " +
       {
         schwartz: "macro, juros ou notícias",
+        dalio: "geopolítica, dívida pública ou microeconomia",
         graham: "fundamentos e valuation",
         livermore: "gráfico e análise técnica",
         munger: "uma tese a ser testada",
@@ -43449,7 +43459,25 @@ function aureaRota(texto) {
 }
 function aureaTexto(e, rota) {
   const m = rota && AUREA.membros[rota.id];
-  if (!m || !m.lente) return e;
+  let extra = "";
+  try {
+    if (rota && (rota.id === "dalio" || rota.id === "schwartz")) {
+      const mf = window.DiarioMacroFiscal && window.DiarioMacroFiscal();
+      if (mf && mf.brasil) {
+        const b = mf.brasil, mu = mf.mundo || {}, p = [];
+        if (b.selic_meta?.valor != null) p.push("Selic Meta " + b.selic_meta.valor + "% (" + b.selic_meta.data + ")");
+        if (b.ipca_12m?.valor != null) p.push("IPCA 12m " + b.ipca_12m.valor + "%");
+        if (b.juro_real_expost != null) p.push("Juro real ex-post " + b.juro_real_expost + "%");
+        if (b.divida_bruta_pib?.valor != null) p.push("Dívida Bruta/PIB BR " + b.divida_bruta_pib.valor + "% (" + b.divida_bruta_pib.data + ")");
+        if (b.divida_liquida_pib?.valor != null) p.push("Dívida Líquida/PIB BR " + b.divida_liquida_pib.valor + "%");
+        if (b.reservas_usd_bi?.valor != null) p.push("Reservas BR US$ " + b.reservas_usd_bi.valor + " bi");
+        if (mu.us_10y?.valor != null) p.push("US Treasury 10Y " + mu.us_10y.valor + "%");
+        if (mu.dxy?.valor != null) p.push("DXY " + mu.dxy.valor);
+        if (p.length) extra = "\n[Dados oficiais atualizados BCB/Global para usar na resposta: " + p.join(" · ") + ".]";
+      }
+    }
+  } catch {}
+  if (!m || !m.lente) return extra ? extra.slice(1) + "\n\n" + e : e;
   return (
     "[A Áurea encaminhou esta pergunta ao especialista " +
     m.nome +
@@ -43457,7 +43485,9 @@ function aureaTexto(e, rota) {
     m.papel +
     ") do Conselho. Responda sob a ótica de " +
     m.lente +
-    "]\n\n" +
+    "]" +
+    extra +
+    "\n\n" +
     e
   );
 }

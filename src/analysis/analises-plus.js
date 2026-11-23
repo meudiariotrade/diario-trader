@@ -180,7 +180,7 @@ function cardMob(r){
   '<div class="ap-mc-met"><span>P/L <b>'+(r.pl==null?'—':fmt(r.pl,1)+'x')+'</b></span><span>DY <b>'+pct(r.dy)+'</b></span><span>ROE <b>'+pct(r.roe)+'</b></span><span>DL/EB <b>'+(r.div_liq_ebitda==null?'—':fmt(r.div_liq_ebitda,1)+'x')+'</b></span></div></article>';
 }
 function viewFiisRank(){
- const sw='<div class="ap-bar" style="margin-bottom:10px"><div class="ap-seg" role="group" aria-label="Classe de ativos"><button type="button" class="'+(st.rankTipo!=='fiis'?'on':'')+'" data-ap-ranktipo="acoes">Ações BR</button><button type="button" class="'+(st.rankTipo==='fiis'?'on':'')+'" data-ap-ranktipo="fiis">🏢 FIIs (B3)</button></div><button type="button" class="btn s" data-ap-fiirf>↻ Atualizar FIIs</button></div>';
+ const sw='<div class="ap-bar" style="margin-bottom:10px"><div class="ap-seg ap-seg-vis" role="group" aria-label="Classe de ativos"><button type="button" class="'+(st.rankTipo!=='fiis'?'on':'')+'" data-ap-ranktipo="acoes">Ações BR</button><button type="button" class="'+(st.rankTipo==='fiis'?'on':'')+'" data-ap-ranktipo="fiis">🏢 FIIs (B3)</button></div><button type="button" class="btn s" data-ap-fiirf>↻ Atualizar FIIs</button></div>';
  if(st.fiiLoading&&!st.fiis?.rows?.length)return sw+'<section class="ap-card ap-vazio"><p class="ap-mut">Carregando Fundos Imobiliários da B3…</p></section>';
  if(!st.fiis?.rows?.length)return sw+'<section class="ap-card ap-vazio"><p>'+(E(st.fiiErr)||'FIIs ainda não carregados.')+'</p><button type="button" class="btn s" data-ap-fiirf>Carregar FIIs</button></section>';
  const f=st.fiiF,qTxt=String(f.q||'').trim().toUpperCase(),ntnb=st.fiis.ntnb_ref||6.8;
@@ -204,7 +204,7 @@ function viewFiisRank(){
   '<div class="ap-mpresets" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+tipos.map(t=>'<button type="button" class="ap-chip'+(f.tipo===t?' on':'')+'" data-ap-fiitipo="'+t+'">'+(t||'Todos ('+st.fiis.rows.length+')')+'</button>').join('')+'</div>'+
   '<p class="ap-mut ap-leg">Score FII (0–100) separa Tijolo vs Papel · Spread sobre NTN-B ('+fmt(ntnb,1)+'%) · Trava anti-Yield Trap (DY &gt; 17,5%) · Toque no FII para abrir ficha e Número Mágico.</p>'+
   '<div class="ap-mcards">'+(top.length?top.map(r=>'<article class="ap-mcard" data-ap-fiisel="'+E(r.ticker)+'"><div class="ap-mc-top"><span class="ap-nota" style="--p:'+r.score+'">'+r.score+'</span><div class="ap-mc-id"><b>'+logo(r.ticker)+E(r.ticker)+'</b><small>'+E(r.tipo)+' · '+E(r.segmento)+'</small></div><div class="ap-mc-px"><b>'+brl(r.cotacao)+'</b><small class="'+(r.p_vp<1?'ap-g':r.p_vp>1.05?'ap-r':'')+'">P/VP '+fmt(r.p_vp,2)+'</small></div></div><div class="ap-mc-met"><span>DY 12m <b>'+pct(r.dy)+'</b></span><span>Spread <b>'+sinal(r.spread_ntnb,1)+'</b></span><span>Vacância <b>'+(r.tipo==='Tijolo'&&r.vacancia!=null?fmt(r.vacancia,1)+'%':'—')+'</b></span><span>Liq <b>'+din(r.liquidez)+'</b></span></div></article>').join(''):'<p class="ap-card ap-vazio ap-mut">Nenhum FII passa nesses filtros.</p>')+'</div>'+
-  '<div class="ap-scroll"><table class="ap-t"><thead><tr><th class="ap-stk">FII</th><th>Tipo</th><th class="ap-n">Score</th><th class="ap-n">Cotação</th><th class="ap-n">P/VP</th><th class="ap-n">DY 12m</th><th class="ap-n">Spread NTN-B</th><th class="ap-n">Vacância</th><th class="ap-n">Liquidez</th><th>Sinal</th></tr></thead><tbody>'+
+  '<div class="ap-scroll ap-fii-desk"><table class="ap-t"><thead><tr><th class="ap-stk">FII</th><th>Tipo</th><th class="ap-n">Score</th><th class="ap-n">Cotação</th><th class="ap-n">P/VP</th><th class="ap-n">DY 12m</th><th class="ap-n">Spread NTN-B</th><th class="ap-n">Vacância</th><th class="ap-n">Liquidez</th><th>Sinal</th></tr></thead><tbody>'+
   (top.length?top.map(r=>'<tr data-ap-fiisel="'+E(r.ticker)+'"><td class="ap-stk">'+logo(r.ticker)+'<b>'+E(r.ticker)+'</b><small>'+E(r.segmento)+'</small></td><td>'+E(r.tipo)+'</td><td class="ap-n"><b>'+r.score+'</b></td><td class="ap-n">'+brl(r.cotacao)+'</td><td class="ap-n '+(r.p_vp<1?'ap-g':r.p_vp>1.05?'ap-r':'')+'">'+fmt(r.p_vp,2)+'</td><td class="ap-n '+(r.dy>17.5?'ap-r':'ap-g')+'">'+pct(r.dy)+'</td><td class="ap-n '+cor(r.spread_ntnb)+'">'+sinal(r.spread_ntnb,2)+'</td><td class="ap-n">'+(r.tipo==='Tijolo'&&r.vacancia!=null?fmt(r.vacancia,1)+'%':'—')+'</td><td class="ap-n">'+din(r.liquidez)+'</td><td>'+E((r.alertas?.[0]?'⚠ '+r.alertas[0]:r.selos?.[0])||'—')+'</td></tr>').join(''):'<tr><td colspan="10" class="ap-vazio">Nenhum FII passa nesses filtros.</td></tr>')+'</tbody></table></div>';
 }
 function viewRank(){
@@ -215,7 +215,7 @@ function viewRank(){
  const desk=(w.innerWidth||1024)>=900;
  const TXT=['setor','porte','balanco'],th=(k,t)=>'<th data-ap-sort="'+k+'" class="'+(f.sort===k?'on ':'')+(TXT.includes(k)?'':k==='nota'?'ap-c':'ap-n')+'">'+t+(f.sort===k?(f.dir<0?' ▾':' ▴'):'')+q(k)+'</th>';
  const mobPresets='<div class="ap-mpresets" aria-label="Presets rápidos">'+Object.entries(PRESETS).map(([k,p])=>'<button type="button" class="ap-chip'+(f.preset===k?' on':'')+'" data-ap-preset="'+k+'">'+p.n+'</button>').join('')+'</div>';
- const sw='<div class="ap-bar" style="margin-bottom:10px"><div class="ap-seg" role="group" aria-label="Classe de ativos"><button type="button" class="on" data-ap-ranktipo="acoes">Ações BR</button><button type="button" data-ap-ranktipo="fiis">🏢 FIIs (B3)</button></div></div>';
+ const sw='<div class="ap-bar" style="margin-bottom:10px"><div class="ap-seg ap-seg-vis" role="group" aria-label="Classe de ativos"><button type="button" class="on" data-ap-ranktipo="acoes">Ações BR</button><button type="button" data-ap-ranktipo="fiis">🏢 FIIs (B3)</button></div></div>';
  return sw+'<div class="ap-rank"><aside class="ap-filtros"><details'+(desk?' open':'')+'><summary><span class="ap-fsum-l">Filtros'+(nFilt?' <span class="ap-fbadge">'+nFilt+'</span>':'')+'</span>'+(nFilt?'<button type="button" class="ap-link" data-ap-limpar>Limpar</button>':'')+'</summary>'+
   '<p class="ap-lbl">Screeners por gestor</p>'+Object.entries(PRESETS).map(([k,p])=>'<button type="button" class="ap-preset'+(f.preset===k?' on':'')+'" data-ap-preset="'+k+'"><b>'+p.n+'</b><small>'+p.d+'</small></button>').join('')+
   '<label class="ap-lbl">Setor<select data-ap-f="setor"><option value="">Todos</option>'+setores.map(s=>'<option'+(f.setor===s?' selected':'')+'>'+E(s)+'</option>').join('')+'</select></label>'+
@@ -621,7 +621,7 @@ html[data-v427-tema=claro] .ap-del{color:#B91C1C!important;border-color:rgba(185
  #ap-root .ap-t td.ap-stk{min-width:120px}#ap-root .ap-stk small{max-width:120px}#ap-root .ap-t td,#ap-root .ap-t th{padding:6px 8px}
 }
 @media(max-width:767px){
- .ap-mcards{display:flex}.ap-rank .ap-scroll,.ap-seg,.ap-cols{display:none}
+ .ap-mcards{display:flex}.ap-rank .ap-scroll,.ap-fii-desk,.ap-seg:not(.ap-seg-vis),.ap-cols{display:none}
  .ap-hero{padding:14px}.ap-hero h2{font-size:24px}.ap-hk b{font-size:19px}
  .ap-lista-empty{flex-direction:column;align-items:flex-start;gap:4px}
 }
