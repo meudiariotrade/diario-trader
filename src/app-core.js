@@ -20622,6 +20622,10 @@ async function lvPoll() {
   if (LV.busy || document.hidden || !(LVT.includes(tab) || tab === "live")) return;
   LV.busy = 1;
   try {
+    // v945: a tela Live deve solicitar a ponte uma vez ao entrar,
+    // sem depender da aba Mercado e sem polling extra (cqPonte controla o intervalo).
+    if (tab === "live" && SESS?.uid && window.CLOUD_OK && typeof cqPonte === "function")
+      await cqPonte();
     const rows = new Map();
     const add = (ticker, price, em, other = {}) => {
       const tk = String(ticker || "").toUpperCase().replace(/^.*:/, "");
@@ -20649,7 +20653,7 @@ async function lvPoll() {
     LV.all = [...rows.values()];
     LV.px = next;
     LV.ts = Date.now();
-    LV.err = rows.size ? "" : "Ponte local desligada; utilizando apenas fontes diretas disponíveis.";
+    LV.err = rows.size ? "" : "Este aparelho ainda não recebeu cotações da ponte; confira a sessão ou toque em Atualizar Profit.";
     await lvDelayed();
   } catch (e) { LV.err = String(e?.message || e); }
   finally { LV.busy = 0; lvPaint(); lvcPaint(); }
@@ -20806,6 +20810,18 @@ function lvPaint() {
   }
 }
 setInterval(lvPoll, 15000);
+document.addEventListener("diario:tela", () => { if (tab === "live") lvPoll(); });
+document.addEventListener("click", event => {
+  const button = event.target?.closest?.("[data-lvpf-refresh]");
+  if (!button || tab !== "live" || !SESS?.uid || !window.CLOUD_OK) return;
+  button.disabled = true;
+  Promise.resolve().then(() => typeof cqPonte === "function" ? cqPonte(true) : null)
+    .then(() => lvPoll()).catch(() => {})
+    .finally(() => {
+      const current = document.querySelector("[data-lvpf-refresh]");
+      if (current) current.disabled = false;
+    });
+});
 let LVC = { q: "", f: "all" };
 const lvcHoje = () => {
   const e = new Date();
@@ -20869,12 +20885,13 @@ function lvcPaint() {
           " · " +
           n.length +
           " ativos</span>"
-        : '<span class="mut">⚪ Ponte parada. Última cotação às ' +
+        : '<span class="mut">⚪ Última amostra da ponte às ' +
           hm(i) +
           " (" +
           n.length +
-          " ativos).</span>"
-      : '<span class="mut">⚪ Nenhuma cotação ainda. Rode a ponte do Profit (iniciar.bat) com o Profit e o Excel abertos.</span>';
+          ' ativos). Use Atualizar Profit para consultar novamente.</span>'
+      : '<span class="mut">⚪ Nenhuma cotação carregada neste aparelho. Toque em Atualizar Profit.</span>';
+  t.insertAdjacentHTML("beforeend", ' <button type="button" class="btn s" data-lvpf-refresh>↻ Atualizar Profit</button>');
   let l = n.map((d) => ({
     ...d,
     v:
@@ -69976,9 +69993,27 @@ const cqPf = (e, t) => {
     const key = future && (t === 'fut' || /1!$/.test(e.s || '')) ? '@'+future[1] : code;
     if (!future && !['br','idx'].includes(t) && !(e.s || '').startsWith('BMFBOVESPA:')) return null;
     const live = CQ.pf[key];
-    if (live && Number.isFinite(live.px) && (!live.em || Date.now()-Date.parse(live.em)<180000)) return {...live, live:true};
     const saved = CQ.saved[key];
-    if (!cqSessaoAberta() && saved?.px > 0) return {...saved, fechado:true, live:false};
+    const sessao = cqSessaoAberta();
+    // v945: Profit só se sobrepõe ao TradingView com negócio efetivamente recente
+    // e dentro do pregão. O reenvio da ponte não transforma fechamento em preço vivo.
+    const negociadoEm = Date.parse(live?.em || "");
+    if (sessao && live?.px > 0 && Number.isFinite(negociadoEm) &&
+        negociadoEm <= Date.now()+60000 && Date.now()-negociadoEm < 180000)
+      return {...live, live:true};
+    // Fora do pregão, usar a referência TradingView quando disponível.
+    // Exceção: se o horário informado da referência for comprovadamente mais antigo
+    // que o último negócio do Profit, preservar esse fechamento identificado como tal.
+    const referencia = Number(e.px) > 0;
+    const horaReferencia = Date.parse(e.horarioPreco || e.dado_em || "");
+    const ultimo = saved?.px > 0 ? saved : live?.px > 0 ? live : null;
+    const horaProfit = Date.parse(ultimo?.em || "");
+    if (!sessao && ultimo) {
+      if (referencia &&
+          !(Number.isFinite(horaReferencia) && Number.isFinite(horaProfit) &&
+            horaReferencia < horaProfit)) return null;
+      return {...ultimo, fechado:true, live:false};
+    }
     return null;
   },
   cqPx = (e, t) => {
