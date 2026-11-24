@@ -100,3 +100,12 @@ test('v942: cliente reconcilia somente uma vez a cada dia, sem polling e sem seg
  assert.match(legacy,/INSERT OR IGNORE INTO private_documents/);
  assert.doesNotMatch(legacy,/ON CONFLICT\(owner,collection,doc_key\) DO UPDATE SET payload=/);
 });
+
+test('v942: leitura de push_subs exige proprietário autenticado e preserva escrita legada',()=>{
+ const policy=fs.readFileSync('supabase/migrations/20261124010000_push_subs_leitura_propria_v942.sql','utf8');
+ assert.match(policy,/GRANT SELECT \(id, user_id, sub, prefs, criado\)/);
+ assert.match(policy,/TO authenticated/);
+ assert.match(policy,/FOR SELECT TO authenticated/);
+ assert.match(policy,/USING \(\(SELECT auth\.uid\(\)\) = user_id\)/);
+ assert.doesNotMatch(policy,/\bREVOKE\b|\bTRUNCATE\b|\bDROP\b|\bDELETE\s+FROM\b|\bTO anon\b/i);
+});
