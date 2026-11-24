@@ -3,7 +3,7 @@
 // Snapshot público coletado pelo GitHub Actions e versionado em ramo isolado, sem Supabase.
 const ORIGIN='https://raw.githubusercontent.com/meudiariotrade/diario-trader/screeners-dados/dados-publicos/screeners-';
 const FRESH_MS=12*3600000,MAX_STALE_MS=7*86400000,KV_TTL=604800;
-export const SCREENER_CRON='25 2,14 * * *';
+export const SCREENER_CRON='15 1,13 * * *';
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS',
  'Access-Control-Allow-Headers':'if-none-match',
  'Access-Control-Expose-Headers':'ETag, X-Snapshot-Source, X-Snapshot-Tier, X-Snapshot-Stale, X-Snapshot-Expires'};
