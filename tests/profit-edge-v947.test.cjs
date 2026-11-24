@@ -44,3 +44,20 @@ test('roteamento usa sub JWT autenticado, não aceita proprietário arbitrário'
  assert.equal((await profitQuotes(new Request('https://worker.test/v1/profit-quotes?user_id=other',{headers:{Authorization:auth}}),env)).status,400);
  assert.equal(selected,null);
 });
+
+test('PWA prioriza Cloudflare, preserva a reserva e não consulta Supabase em segundos',async()=>{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const source=fs.readFileSync('profit-cotacoes-v552.js','utf8');
+ let tick=Date.parse('2026-11-24T15:00:00Z'),edgeCalls=0,supa=0,healthy=true;
+ class Clock extends Date{constructor(...args){super(...(args.length?args:[tick]))}static now(){return tick}}
+ const doc={hidden:true,body:{},addEventListener(){},querySelector(){return null}};
+ const c={window:null,document:doc,Date:Clock,AbortSignal,AbortController,URL,SESS:{uid:'A',at:'token'},CQ:{pf:{},saved:{},pfTs:0,cloudTs:0},codFut:x=>x+'Z26',cqPonte:async()=>{},cqPinta(){},MutationObserver:class{observe(){}},requestAnimationFrame(){},tab:'live',MKT:{tab:'cq'},
+ fetch:async()=>{edgeCalls++;return {ok:healthy,json:async()=>({ok:true,received_at:new Date(tick).toISOString(),cotacoes:[{...row,updated_at:new Date(tick).toISOString()}]})}},
+ rq:async()=>{supa++;return {json:async()=>[{...row,ult:25,hor:'11:00:00',updated_at:new Date(tick).toISOString()}]}}};
+ c.window=c;vm.createContext(c);vm.runInContext(source,c);
+ await c.cqPonte();assert.equal(c.CQ.pf.PETR4.px,41.30);assert.equal(supa,0);
+ await c.cqPonte();assert.equal(edgeCalls,1);
+ tick+=5000;await c.cqPonte();assert.equal(edgeCalls,2);assert.equal(supa,0);
+ healthy=false;tick+=5000;await c.cqPonte();assert.equal(supa,1);assert.equal(c.CQ.pf.PETR4.px,41.30);
+ tick+=5000;await c.cqPonte();assert.equal(supa,1);assert.equal(edgeCalls,3);
+});

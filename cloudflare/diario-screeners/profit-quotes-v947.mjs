@@ -1,14 +1,14 @@
 import {autenticarUsuario} from './auth-jwks-v924.mjs';
 const LIMIT=160000, MAX=250, TTL=7*86400000;
 const ORIGIN='https://meudiariotrade.github.io';
-const HEAD={'Cache-Control':'private, no-store, max-age=0','Vary':'Origin','Access-Control-Allow-Origin':ORIGIN,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type'};
+const HEAD={'Cache-Control':'private, no-store, max-age=0','Vary':'Origin','Access-Control-Allow-Origin':ORIGIN,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600'};
 const json=(v,status=200)=>Response.json(v,{status,headers:HEAD});
 const ticker=/^[A-Z0-9]{1,20}$/;
 export function negocio(row,now=Date.now()){
  const d=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(row?.dat||'').trim()),h=/^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(row?.hor||'').trim());
  if(!d||!h||+h[1]>23||+h[2]>59||+(h[3]||0)>59)return null;
- const t=Date.parse(d[3]+'-'+d[2]+'-'+d[1]+'T'+h[1]+':'+h[2]+':'+(h[3]||'00')+'-03:00');
- return Number.isFinite(t)&&t<=now+60000&&t>=now-TTL&&new Date(t).toLocaleDateString('en-GB',{timeZone:'America/Sao_Paulo'})===d[0]?t:null;
+ const local=Date.UTC(+d[3],+d[2]-1,+d[1],+h[1],+h[2],+(h[3]||0)),check=new Date(local),t=local+10800000;
+ return check.getUTCFullYear()===+d[3]&&check.getUTCMonth()===+d[2]-1&&check.getUTCDate()===+d[1]&&t<=now+60000&&t>=now-TTL?t:null;
 }
 export function validarLote(body,now=Date.now()){
  if(!body||!Number.isSafeInteger(body.sent_at)||Math.abs(now-body.sent_at)>60000||!Array.isArray(body.cotacoes)||body.cotacoes.length<1||body.cotacoes.length>MAX)return null;
@@ -27,9 +27,9 @@ export function mesclar(old,rows,now=Date.now()){
  for(const r of [...(old||[]),...rows]){
   const t=negocio(r,now);if(t===null)continue;
   const p=map.get(r.ticker);
-  if(!p||t>=negocio(p,now))map.set(r.ticker,r);
+  if(!p||t>=p.t)map.set(r.ticker,{r,t});
  }
- return [...map.values()].sort((a,b)=>negocio(b,now)-negocio(a,now)).slice(0,MAX);
+ return [...map.values()].sort((a,b)=>b.t-a.t).slice(0,MAX).map(x=>x.r);
 }
 async function bounded(request){
  const n=Number(request.headers.get('content-length')||0);

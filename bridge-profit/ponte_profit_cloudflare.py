@@ -18,12 +18,15 @@ def edge_send(self, linhas):
     for r in linhas:
         # Não enviar preço sem data/hora real de negócio.
         try:
-            datetime.datetime.strptime(r["dat"] + " " + r["hor"], "%d/%m/%Y %H:%M:%S")
+            d, h = str(r["dat"]).strip(), str(r["hor"]).strip()
+            stamp = datetime.datetime.strptime(d + " " + h, "%d/%m/%Y %H:%M:%S" if h.count(":")==2 else "%d/%m/%Y %H:%M")
         except (TypeError, ValueError, KeyError):
             continue
         if not isinstance(r.get("ult"), (int,float)) or r["ult"] <= 0:
             continue
-        rows.append({k:r[k] for k in ("ticker","ult","dat","hor","var","abe","max","min","neg","fec") if k in r and r[k] is not None})
+        out = {k:r[k] for k in ("ticker","ult","var","abe","max","min","neg","fec") if k in r and r[k] is not None}
+        out.update(dat=stamp.strftime("%d/%m/%Y"),hor=stamp.strftime("%H:%M:%S"))
+        rows.append(out)
     if not rows:
         return False
     if len(rows)>250:

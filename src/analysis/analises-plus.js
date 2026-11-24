@@ -635,9 +635,15 @@ function enter(tab){
   Promise.resolve().then(()=>cqPonte()).then(render).catch(()=>{});
  render();
 }
-d.addEventListener('diario:profit-cotacoes',()=>{
- if(d.getElementById('ap-root'))render();
-});
+// Preserva o foco e a digitação durante a chegada de novas cotações.
+let profitRenderPendente=false;
+function renderProfit(){
+ if(!d.getElementById('ap-root')){profitRenderPendente=false;return}
+ if(d.activeElement?.matches?.('#ap-root input, #ap-root textarea, #ap-root select, #ap-root [contenteditable="true"]')){profitRenderPendente=true;return}
+ profitRenderPendente=false;render();
+}
+d.addEventListener('diario:profit-cotacoes',renderProfit);
+d.addEventListener('focusout',()=>{if(profitRenderPendente)requestAnimationFrame(renderProfit)});
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
