@@ -45,6 +45,9 @@ test('v930: binding gratuito e cotas anteriores preservados',()=>{
  const cfg=JSON.parse(fs.readFileSync('cloudflare/diario-screeners/wrangler.jsonc','utf8'));
  const code=fs.readFileSync('cloudflare/diario-screeners/aurea-resumao-v904.mjs','utf8');
  assert.equal(cfg.ai.binding,'AI');
- assert.ok(code.includes('prazoGemini=Date.now()+11000'));
+ // v956: janela Gemini de 14s, mantendo a reserva dentro do orçamento global.
+ assert.ok(code.includes('prazoGemini=Date.now()+14000'));
+ assert.ok(code.includes('prazoTotal=Date.now()+31500'));
+ assert.match(code,/prazoTotal-Date\.now\(\)-\(env\.AI\?5000:500\)/);
  assert.match(code,/aurea:usage:v904:/);assert.match(code,/cerebro:usage:v924:/);
 });
