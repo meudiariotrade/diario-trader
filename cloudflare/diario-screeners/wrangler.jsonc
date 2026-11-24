@@ -16,7 +16,7 @@
   },
   "triggers": {
     "crons": [
-      "25 2,14 * * *"
+      "15 1,13 * * *"
     ]
   },
   "keep_vars": true,
