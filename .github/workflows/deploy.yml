@@ -25,6 +25,12 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - name: Validar e reaplicar patch v967 (somente branch de validação)
+        run: |
+          git apply --reverse --check cotacoes_tv3d_completo_v967.patch
+          git apply --reverse cotacoes_tv3d_completo_v967.patch
+          git apply --check cotacoes_tv3d_completo_v967.patch && git apply cotacoes_tv3d_completo_v967.patch
+          git diff --exit-code
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Preparar navegador dos testes
         timeout-minutes: 10
@@ -61,6 +67,10 @@ jobs:
       - run: npm run build
       # Build e validação estrutural continuam obrigatórios para publicar.
       - run: npm run check
+      - name: Sintaxe snapshot e testes rápidos v967
+        run: |
+          node --check cloudflare/diario-noticias/producao-snapshot-v894.mjs
+          node --test --test-concurrency=1 tests/quality-v953.test.cjs tests/cotacoes-v954.test.cjs tests/cloudflare-noticias.test.cjs
       - name: Testar clique real da lupa e atalho de busca v950
         run: node --test tests/busca-global-mobile-v950.test.cjs tests/rebalanceamento-mobile-v951.test.cjs tests/research-v952.test.cjs
       - name: Regressões v956 — Áurea, ADRs e Mistral

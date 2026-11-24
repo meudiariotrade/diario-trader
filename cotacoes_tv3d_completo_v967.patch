@@ -1,0 +1,675 @@
+diff --git a/cloudflare/diario-noticias/index.mjs b/cloudflare/diario-noticias/index.mjs
+index 6e4fb11..dc9fdd5 100644
+--- a/cloudflare/diario-noticias/index.mjs
++++ b/cloudflare/diario-noticias/index.mjs
+@@ -331,7 +331,7 @@ export default {
+     if(path==='/v1/macro'){
+       const u=new URL(request.url),q=u.searchParams,c={modo:q.get('modo')||'',aba:q.get('aba')||'',semana:q.get('semana')||''};
+       const TTL={painel:60,cotacoes:60,setores:300,ranking:600,fluxo:1800,agenda:1800,balancos:21600,sazonal:43200,sazonal_us:43200,'':120};
+-      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana)+'&qv=954');
++      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana)+'&qv=967');
+       if(ttl==null)return json({error:'modo_nao_suportado'},request,env,400);
+       if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
+       const r=await macroResponder(c);
+diff --git a/cloudflare/diario-noticias/macro-gerado.mjs b/cloudflare/diario-noticias/macro-gerado.mjs
+index fbf021a..e502cce 100644
+--- a/cloudflare/diario-noticias/macro-gerado.mjs
++++ b/cloudflare/diario-noticias/macro-gerado.mjs
+@@ -553,10 +553,14 @@ export const ABAS                                                = {
+     { s: 'SSE:000001', n: 'Xangai', c: 'SHCOMP' },
+   ] },
+   br: { nome: 'Ações BR', itens: [
+-    B('PETR4', 'Petrobras PN'), B('VALE3', 'Vale'), B('ITUB4', 'Itaú Unibanco'), B('BBDC4', 'Bradesco PN'), B('BBAS3', 'Banco do Brasil'), B('B3SA3', 'B3'), B('ABEV3', 'Ambev'),
+-    B('WEGE3', 'WEG'), B('PRIO3', 'PRIO'), B('ITSA4', 'Itaúsa'), B('BPAC11', 'BTG Pactual'), B('SUZB3', 'Suzano'), B('ELET3', 'Eletrobras'), B('RENT3', 'Localiza'),
++    B('PETR4', 'Petrobras PN'), B('PETR3', 'Petrobras ON'), B('VALE3', 'Vale'), B('ITUB4', 'Itaú Unibanco'), B('BBDC4', 'Bradesco PN'), B('BBAS3', 'Banco do Brasil'), B('B3SA3', 'B3'), B('ABEV3', 'Ambev'),
++    B('WEGE3', 'WEG'), B('PRIO3', 'PRIO'), B('ITSA4', 'Itaúsa'), B('BPAC11', 'BTG Pactual'), B('SUZB3', 'Suzano'), B('ELET3', 'Eletrobras ON'), B('ELET6', 'Eletrobras PNB'), B('RENT3', 'Localiza'),
+     B('EQTL3', 'Equatorial'), B('RADL3', 'Raia Drogasil'), B('GGBR4', 'Gerdau PN'), B('CSNA3', 'CSN'), B('USIM5', 'Usiminas'), B('EMBR3', 'Embraer'),
+     B('VBBR3', 'Vibra'), B('LREN3', 'Lojas Renner'), B('MGLU3', 'Magazine Luiza'), B('RAIL3', 'Rumo'), B('SBSP3', 'Sabesp'), B('CMIG4', 'Cemig PN'),
++    B('BBSE3', 'BB Seguridade'), B('SANB11', 'Santander Brasil'), B('CPLE6', 'Copel PNB'), B('TAEE11', 'Taesa'), B('EGIE3', 'Engie Brasil'), B('CPFE3', 'CPFL Energia'),
++    B('KLBN11', 'Klabin'), B('RDOR3', 'Rede D\'Or'), B('TOTS3', 'TOTVS'), B('VIVT3', 'Vivo'), B('TIMS3', 'TIM'), B('MULT3', 'Multiplan'),
++    B('CYRE3', 'Cyrela'), B('UGPA3', 'Ultrapar'), B('CSAN3', 'Cosan'), B('JBSS3', 'JBS'), B('HYPE3', 'Hypera'), B('ASAI3', 'Assaí'),
++    B('BRFS3', 'BRF'), B('POMO4', 'Marcopolo'), B('SLCE3', 'SLC Agrícola'), B('CMIN3', 'CSN Mineração'),
+   ] },
+   us: { nome: 'Ações EUA', itens: [
+     U('NASDAQ', 'AAPL', 'Apple'), U('NASDAQ', 'MSFT', 'Microsoft'), U('NASDAQ', 'NVDA', 'Nvidia'), U('NASDAQ', 'AMZN', 'Amazon'), U('NASDAQ', 'GOOGL', 'Alphabet (Google)'),
+@@ -579,6 +583,12 @@ export const ABAS                                                = {
+     U('NASDAQ', 'INTC', 'Intel'),
+     U('NYSE', 'MA', 'Mastercard'),
+     U('NASDAQ', 'QCOM', 'Qualcomm'),
++    U('NYSE', 'ORCL', 'Oracle'), U('NYSE', 'BAC', 'Bank of America'), U('NYSE', 'MS', 'Morgan Stanley'), U('NYSE', 'C', 'Citigroup'),
++    U('NYSE', 'CVX', 'Chevron'), U('NYSE', 'HD', 'Home Depot'), U('NYSE', 'KO', 'Coca-Cola'), U('NASDAQ', 'PEP', 'PepsiCo'),
++    U('NYSE', 'DIS', 'Walt Disney'), U('NYSE', 'NKE', 'Nike'), U('NYSE', 'BA', 'Boeing'), U('NYSE', 'UNH', 'UnitedHealth'),
++    U('NYSE', 'JNJ', 'Johnson & Johnson'), U('NYSE', 'PG', 'Procter & Gamble'), U('NYSE', 'TSM', 'TSMC'), U('NASDAQ', 'ASML', 'ASML'),
++    U('NASDAQ', 'ARM', 'Arm Holdings'), U('NASDAQ', 'MU', 'Micron'), U('NASDAQ', 'COIN', 'Coinbase'), U('NASDAQ', 'MELI', 'Mercado Livre'),
++    U('NYSE', 'BABA', 'Alibaba'), U('NASDAQ', 'PDD', 'PDD Holdings'), U('NASDAQ', 'JD', 'JD.com'), U('NYSE', 'SNOW', 'Snowflake'),
+   ] },
+   adr: { nome: 'ADRs', itens: [
+     U('AMEX', 'EWZ', 'EWZ (Brasil em NY)'), U('NYSE', 'PBR', 'Petrobras'), U('NYSE', 'VALE', 'Vale'), U('NYSE', 'ITUB', 'Itaú'), U('NYSE', 'BBD', 'Bradesco'),
+diff --git a/cloudflare/diario-noticias/producao-snapshot-v894.mjs b/cloudflare/diario-noticias/producao-snapshot-v894.mjs
+index 0da9ed986abee1d1af516c0d8b144e3921300668..370f27c62163b3213e6ba0688fc8073869eb67bb 100644
+GIT binary patch
+delta 1309
+zcmZ8g%Wl&^6jjQuJA?#FMn<Yy6p%_$i&)hjJBbs&$T%sL%3|V7(@`CdHFiQPgu)Is
+zNc;sqfRq($K7lPeB>EHF@uO+7$lU0j$9>HB`_Jt!zqUX9X#72X5LjXVKx=9N%cU4e
+znjwGr=eV)mc#M2c+iQlqn&nvGAyBONmJ@i!@}J&#(pV^hVGv7s7zQG2GLw8v$E?&6
+z-81(00V6cYX)<OK8Bm1BC5!{dQr1|cEJom3rbFGb3ROs1MyoE`c2UGiCY;@x6!me?
+zDj<jsvJxgIyb|>s!z+w>F&*)wbn2UaF>;@c88XkVUL5(ds_TbD4HEj{kd&#RJq%T9
+z$mgOW*=|X)U2U(Z?+%=T<Iduor!lSS;M0ED*0p4D)zF|F=*n&o=aQzhs*7PwDvL!{
+zi@OFXsz5Buc20xBt#h3+S-I(Cq1#HRXBj=avdofd^jn1%Vwnhh*MA8#m&!<_BCaMO
+z4lXPqB7Gv2K_u!<v1^w-5f8Z>mZ}OI!S4Xn?>;tX+3OF9SU$v!-}e^H`L5=j5({eh
+zee9?pX%wqRutE$S17OhP5{Yx9PnqPA8f3+AiE2{F2~7}z=MuB)HC*X2&-p}(S$YRq
+zKzjIAffsBph1&nhv||F$5mUHpmWq50>-kC~BKi!MgDaU%O#Kby11nG`OEZqu##WZ5
+ztr|U{agI!$C2X<Yrq@%8@c8BC{E#&S<H=;rZQykP7$iJr;|>GUi#53Gbph^*izE{X
+z+CkO7yPSm<w1E>y5#{iO?VvWDjyAR*5*H|N;!0VMsS{USSP{x0Z;`%|=yHlWA|6BA
+z*@n~|0PgZ=vD$g9#lGzUhy_nZG^-a;qps!HO3GwJ#{xNgE^A8piVWS*RqdFM=%{`q
+zwK_1>mBLx~^=h-Rt|D~J=aHD+-IGQ<{{#?{i1+6)y=0$nT8-sRYwKxi>+op#=<C+E
+G`~LwG*JrK(
+
+delta 48
+zcmV-00MGx3#|o#t3V^f$=RmgsK>-5+w<AIUBLTNLMFHRght5j@x6VrfC`JM`G`IMX
+G0+11-%n+*p
+
+diff --git a/release.config.json b/release.config.json
+index 84b6c97..6d91ce0 100644
+--- a/release.config.json
++++ b/release.config.json
+@@ -1,5 +1,5 @@
+ {
+-  "version": 966,
++  "version": 967,
+   "coreExtra": [
+     "pdf-lib.min.js",
+     "fontkit.umd.min.js",
+diff --git a/src/app-theme.css b/src/app-theme.css
+index ed14705..8e7660d 100644
+--- a/src/app-theme.css
++++ b/src/app-theme.css
+@@ -4823,3 +4823,270 @@ html:root body.mkt549 #app .cqr[data-dt962-hidden]{display:none!important}
+   background:linear-gradient(180deg,#2b303c,#12141a);border-color:#12141a;color:#ffffff
+  }
+ }
++
++/* v967: Estabilidade zero-tremor nos ticks + 3D Liquid Glass em TODAS as 10 seleções (ADRs, Juros, Moedas, Cripto, Commodities, Mapa e Fontes) — somente celular (<=768px) */
++@media(max-width:768px){
++ /* 1. Zero-tremor nas atualizações ao vivo (altura travada + contain: layout style) */
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr{
++  height:60px!important;min-height:60px!important;max-height:60px!important;
++  box-sizing:border-box!important;overflow:hidden!important;contain:layout style
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqp>small{display:none!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqp>b>small{
++  font-size:11px!important;font-weight:600!important;opacity:.68!important;margin-right:2px!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .bnc-bar{
++  height:22px!important;min-height:22px!important;max-height:22px!important;
++  display:flex!important;align-items:center!important;justify-content:flex-end!important;
++  margin:0 2px 4px!important;overflow:hidden!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-menu-pop button{
++  display:flex!important;align-items:center!important;gap:9px!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-pill-img{
++  border-color:rgba(212,175,105,.45)!important;
++  background:linear-gradient(180deg,rgba(212,175,105,.22),rgba(212,175,105,.1))!important;
++  color:#f7e2b5!important;-webkit-text-fill-color:#f7e2b5!important
++ }
++ /* Logo real da empresa na pílula flutuante */
++ .dt966-dk-av.has-img{
++  background:#ffffff;padding:0;overflow:hidden;
++  box-shadow:0 4px 12px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.5)
++ }
++ .dt966-dk-av.has-img img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
++
++ /* 2. ADRs brasileiras (#adr.market-adrs) — Liquid Glass 3D estilo TradingView iOS */
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs{margin:0 0 14px!important;padding:0!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference{
++  display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:space-between!important;gap:4px 8px!important;
++  padding:8px 12px!important;margin:0 0 10px!important;border-radius:16px!important;
++  background:linear-gradient(180deg,rgba(32,38,52,.84),rgba(18,22,31,.92))!important;
++  border:1px solid rgba(255,255,255,.1)!important;
++  box-shadow:0 6px 18px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.14)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference b{font-size:12.5px!important;font-weight:700!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference span{font-size:11px!important;opacity:.75!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference small{display:none!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top{
++  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin:0 2px 6px!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top button[data-imgger]{display:none!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top b{font-size:15px!important;font-weight:800!important;letter-spacing:-.01em!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top .sm{
++  padding:4px 10px!important;border-radius:999px!important;font-size:11px!important;font-weight:700!important;
++  background:rgba(255,255,255,.07)!important;border:1px solid rgba(255,255,255,.11)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg{
++  display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:4px!important;
++  padding:4px!important;border-radius:999px!important;height:40px!important;box-sizing:border-box!important;
++  background:linear-gradient(180deg,rgba(26,31,42,.92),rgba(16,20,28,.96))!important;
++  border:1px solid rgba(255,255,255,.11)!important;
++  box-shadow:inset 0 2px 6px rgba(0,0,0,.35),0 4px 12px rgba(0,0,0,.22)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg button{
++  height:30px!important;min-height:30px!important;border-radius:999px!important;border:none!important;
++  background:transparent!important;box-shadow:none!important;font-size:12.5px!important;font-weight:600!important;
++  color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important;padding:0 6px!important;margin:0!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg button.on{
++  background:linear-gradient(180deg,#2e3547,#1a1f2c)!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
++  border:1px solid rgba(212,175,105,.52)!important;font-weight:700!important;
++  box-shadow:0 4px 10px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.22)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs button[data-adr="rf"],
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs button[data-adr="ed"]{
++  width:40px!important;min-width:40px!important;max-width:40px!important;height:40px!important;min-height:40px!important;
++  border-radius:999px!important;padding:0!important;margin:0!important;flex:0 0 40px!important;
++  display:inline-flex!important;align-items:center!important;justify-content:center!important;
++  background:linear-gradient(180deg,rgba(44,51,67,.9),rgba(21,25,35,.95))!important;
++  border:1px solid rgba(255,255,255,.14)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
++  box-shadow:0 6px 16px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.18)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote{
++  padding:11px 6px!important;margin:0!important;border:none!important;
++  border-bottom:1px solid rgba(255,255,255,.07)!important;border-radius:0!important;
++  background:transparent!important;box-shadow:none!important;cursor:pointer
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote:active{background:rgba(255,255,255,.04)!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading{
++  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading>div:first-child{
++  display:flex!important;align-items:center!important;gap:11px!important;min-width:0!important;flex:1 1 auto!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading .ta-avatar{
++  width:38px!important;height:38px!important;min-width:38px!important;flex:0 0 38px!important;border-radius:999px!important;
++  box-shadow:0 4px 12px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.22)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading .ta-copy{
++  display:flex!important;flex-direction:column!important;gap:1px!important;min-width:0!important;overflow:hidden!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading>div:first-child b{
++  display:block!important;font-size:15px!important;font-weight:700!important;line-height:1.25!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading>div:first-child small{
++  display:block!important;font-size:12.5px!important;opacity:.68!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-regular{
++  display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:1px!important;text-align:right!important;flex-shrink:0!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-regular b{
++  font-size:15.5px!important;font-weight:700!important;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-variant-numeric:tabular-nums!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-regular>span{
++  font-size:13px!important;font-weight:600!important;font-variant-numeric:tabular-nums!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-regular small,
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-reference{display:none!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-extra{
++  display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:space-between!important;gap:4px 8px!important;
++  margin:7px 0 0 49px!important;padding:6px 10px!important;border-radius:12px!important;font-size:12px!important;
++  background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.09)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-extra small{width:100%;font-size:10.5px!important;opacity:.62!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-ab{
++  margin:14px 0 8px!important;padding:12px!important;border-radius:20px!important;
++  background:linear-gradient(180deg,rgba(32,38,52,.86),rgba(18,22,31,.94))!important;
++  border:1px solid rgba(255,255,255,.11)!important;
++  box-shadow:0 10px 26px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.15)!important
++ }
++
++ /* 3. Juros (DIs Brasil + Fed Watch) & Moedas (Cesta Emergente) — Cartões Liquid Glass 3D */
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-card{
++  border-radius:20px!important;padding:13px 13px 11px!important;margin:0 0 12px!important;
++  background:linear-gradient(180deg,rgba(32,38,52,.88),rgba(18,22,31,.95))!important;
++  border:1px solid rgba(255,255,255,.11)!important;
++  box-shadow:0 10px 26px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.16)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-hd{
++  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin-bottom:10px!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-hd h3{font-size:15px!important;font-weight:800!important;margin:0!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg{
++  display:inline-flex!important;gap:3px!important;padding:3px!important;border-radius:999px!important;
++  background:rgba(12,15,22,.65)!important;border:1px solid rgba(255,255,255,.1)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg button{
++  height:28px!important;min-height:28px!important;padding:0 11px!important;border-radius:999px!important;border:none!important;
++  background:transparent!important;box-shadow:none!important;font-size:12px!important;font-weight:600!important;
++  color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg button.on{
++  background:linear-gradient(180deg,#2e3547,#1a1f2c)!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
++  border:1px solid rgba(212,175,105,.52)!important;box-shadow:0 3px 8px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.2)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-kpis>div{
++  border-radius:14px!important;padding:9px 10px!important;
++  background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.08)!important;
++  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-em{
++  display:flex!important;flex-wrap:wrap!important;gap:6px!important;margin:8px 0!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-em>span{
++  display:inline-flex!important;align-items:center!important;gap:6px!important;padding:6px 10px!important;border-radius:999px!important;
++  background:linear-gradient(180deg,rgba(44,51,67,.85),rgba(23,27,38,.94))!important;
++  border:1px solid rgba(255,255,255,.11)!important;box-shadow:0 4px 10px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.14)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-fw i{border-radius:999px!important}
++
++ /* 4. Cripto (.cq-crypto-periodo) — Seletor 3D Liquid Glass de 4 pílulas (24h · 7d · 30d · Ano) */
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo>div:first-child{
++  padding:4px!important;border-radius:999px!important;gap:4px!important;
++  background:linear-gradient(180deg,rgba(26,31,42,.92),rgba(16,20,28,.96))!important;
++  border:1px solid rgba(255,255,255,.11)!important;
++  box-shadow:inset 0 2px 6px rgba(0,0,0,.35),0 5px 14px rgba(0,0,0,.25)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo button[data-cq-crypto-periodo]{
++  height:36px!important;min-height:36px!important;border-radius:999px!important;border:1px solid transparent!important;
++  background:transparent!important;box-shadow:none!important;font-size:13px!important;font-weight:600!important;
++  color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo button[data-cq-crypto-periodo][aria-pressed="true"]{
++  background:linear-gradient(180deg,#2e3547,#1a1f2c)!important;border-color:rgba(212,175,105,.55)!important;
++  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;font-weight:700!important;
++  box-shadow:0 5px 12px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.22)!important
++ }
++
++ /* 5. Mapa de Calor (.cqmap) & Fontes e ferramentas (details.market-sources) */
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqmap{gap:8px!important;padding:2px 0!important}
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqmap .cqt{
++  border-radius:16px!important;padding:10px!important;
++  border:1px solid rgba(255,255,255,.14)!important;
++  box-shadow:0 6px 16px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.18)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes details.market-sources{
++  margin:14px 0 0!important;padding:11px 13px!important;border-radius:18px!important;
++  background:linear-gradient(180deg,rgba(30,36,49,.82),rgba(17,21,30,.92))!important;
++  border:1px solid rgba(255,255,255,.1)!important;
++  box-shadow:0 6px 18px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.12)!important
++ }
++ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes details.market-sources button{
++  border-radius:999px!important;height:36px!important;min-height:36px!important;padding:0 14px!important;
++  font-size:12.5px!important;font-weight:600!important;
++  background:linear-gradient(180deg,rgba(46,53,70,.9),rgba(23,27,38,.95))!important;
++  border:1px solid rgba(255,255,255,.14)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
++  box-shadow:0 4px 12px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.16)!important
++ }
++
++ /* ===== TEMA CLARO (Branco Luminoso 3D Liquid Glass para ADRs, Juros, Moedas, Cripto, Mapa e Fontes) ===== */
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-pill-img{
++  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;
++  border:1px solid rgba(15,23,42,.1)!important;color:#111827!important;-webkit-text-fill-color:#111827!important;
++  box-shadow:0 6px 16px rgba(15,23,42,.09),0 1px 3px rgba(15,23,42,.05),inset 0 1.5px 0 #ffffff!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-ab,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-card,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes details.market-sources{
++  background:linear-gradient(180deg,#ffffff,#f6f8fc)!important;
++  border:1px solid rgba(15,23,42,.08)!important;color:#0f172a!important;
++  box-shadow:0 8px 24px rgba(15,23,42,.08),0 1px 3px rgba(15,23,42,.04),inset 0 1.5px 0 #ffffff!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top .sm{
++  background:#f1f5f9!important;border-color:rgba(15,23,42,.09)!important;color:#334155!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo>div:first-child{
++  background:linear-gradient(180deg,#eef2f7,#e6ebf3)!important;
++  border:1px solid rgba(15,23,42,.08)!important;
++  box-shadow:inset 0 1px 4px rgba(15,23,42,.08)!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg button,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg button,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo button[data-cq-crypto-periodo]{
++  color:#475569!important;-webkit-text-fill-color:#475569!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg button.on,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg button.on,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo button[data-cq-crypto-periodo][aria-pressed="true"]{
++  background:linear-gradient(180deg,#2c313d,#12141a)!important;border-color:#12141a!important;
++  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
++  box-shadow:0 5px 14px rgba(17,19,24,.22),inset 0 1px 0 rgba(255,255,255,.22)!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs button[data-adr="rf"],
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs button[data-adr="ed"],
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes details.market-sources button{
++  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;
++  border:1px solid rgba(15,23,42,.09)!important;color:#111827!important;-webkit-text-fill-color:#111827!important;
++  box-shadow:0 5px 14px rgba(15,23,42,.09),inset 0 1.5px 0 #ffffff!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote{
++  border-bottom:1px solid rgba(15,23,42,.08)!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading .ta-avatar{
++  box-shadow:0 4px 11px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.7)!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-extra,
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-kpis>div{
++  background:linear-gradient(180deg,#f8fafd,#eef2f8)!important;
++  border:1px solid rgba(15,23,42,.07)!important;color:#0f172a!important;
++  box-shadow:inset 0 1px 0 #ffffff!important
++ }
++ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-em>span{
++  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;
++  border:1px solid rgba(15,23,42,.09)!important;color:#0f172a!important;
++  box-shadow:0 4px 10px rgba(15,23,42,.07),inset 0 1.5px 0 #ffffff!important
++ }
++}
+diff --git a/src/domains/core/13-diagnostico-e-relatorios.js b/src/domains/core/13-diagnostico-e-relatorios.js
+index b5c73b8..02364b3 100644
+--- a/src/domains/core/13-diagnostico-e-relatorios.js
++++ b/src/domains/core/13-diagnostico-e-relatorios.js
+@@ -5560,7 +5560,7 @@ function cqmFilhos(a, b) {
+     for(const el of [...a.children])if(!manter.has(el))el.remove();
+     return;
+   }
+-  const na = [...a.childNodes];
++  const na = [...a.childNodes].filter((x) => !(x.nodeType === 1 && x.hasAttribute("data-dt-keep")));
+   const n = Math.min(na.length, nb.length);
+   for (let i = 0; i < n; i++) cqmMorph(na[i], nb[i]);
+   for (let i = n; i < na.length; i++) na[i].remove();
+diff --git a/src/domains/layers/02-carteira-e-terminal.js b/src/domains/layers/02-carteira-e-terminal.js
+index 22ab9b3..7c91386 100644
+--- a/src/domains/layers/02-carteira-e-terminal.js
++++ b/src/domains/layers/02-carteira-e-terminal.js
+@@ -899,6 +899,31 @@ try {
+           "POMO4",
+           "BOVA11",
+           "SMAL11",
++          "PETR3",
++          "CPLE6",
++          "TAEE11",
++          "EGIE3",
++          "CPFE3",
++          "KLBN11",
++          "RDOR3",
++          "TOTS3",
++          "MULT3",
++          "CYRE3",
++          "UGPA3",
++          "CSAN3",
++          "JBSS3",
++          "HYPE3",
++          "ASAI3",
++          "BRFS3",
++          "SLCE3",
++          "CMIN3",
++          "EMBR3",
++          "PRIO3",
++          "EQTL3",
++          "USIM5",
++          "VBBR3",
++          "LREN3",
++          "CMIG4",
+         ]),
+       ),
+       U = Object.freeze({
+@@ -7416,12 +7441,35 @@ try {
+       node.innerHTML = html;
+       markupCache.set(node, html);
+     };
+-    /* 1. Cotações: Pulso do Pregão + filtro rápido Minha Carteira */
++    /* 1. Cotações: Pulso do Pregão + filtro rápido Minha Carteira (v967: fora de #cotbox p/ zero tremor nos ticks) */
+     const mountCotacoes = (app) => {
+-      const anchor = app.querySelector(".market-categories, .cqtabs");
+-      if (!anchor) return;
++      const catEl = app.querySelector(".market-categories, .cqtabs");
++      if (!catEl) return;
++      const cotbox = app.querySelector("#cotbox");
++      const anchor = cotbox || catEl;
+       let box = d.getElementById("dt962-pulso");
+-      const q = (w.CQ && (w.CQ.q || w.CQ.dados || w.CQ.cache)) || {};
++      const cqRef = (typeof CQ !== "undefined" ? CQ : null) || w.CQ;
++      const mdoRef = (typeof MDO !== "undefined" ? MDO : null) || w.MDO;
++      const q = (cqRef && (cqRef.q || cqRef.dados || cqRef.cache)) || {};
++      const liveMap = new Map();
++      const regItem = (it) => {
++        if (!it || it.d1 == null || !Number.isFinite(Number(it.d1))) return;
++        const val = Number(it.d1);
++        for (const raw of [it.c, it.s, String(it.s || "").includes(":") ? String(it.s).split(":").pop() : ""]) {
++          const k = String(raw || "").trim().toUpperCase();
++          if (k && !liveMap.has(k)) liveMap.set(k, val);
++        }
++      };
++      try {
++        if (cqRef && cqRef.d) {
++          for (const k of ["idx", "fx", "fut", "cmd", "jur"]) {
++            for (const it of (cqRef.d[k]?.itens || [])) regItem(it);
++          }
++        }
++        for (const g of (mdoRef?.v?.mercados?.grupos || [])) {
++          for (const it of (g.itens || [])) regItem(it);
++        }
++      } catch {}
+       const pick = (keys, label) => {
+         for (const k of keys) {
+           const it = q[k];
+@@ -7430,12 +7478,16 @@ try {
+             return { label, pct: Number.isFinite(pct) ? pct : null };
+           }
+         }
++        for (const k of keys) {
++          const hit = liveMap.get(String(k).toUpperCase());
++          if (hit != null) return { label, pct: hit };
++        }
+         return { label, pct: null };
+       };
+       const items = [
+-        pick(["IBOV", "^BVSP", "BMFBOVESPA:IBOV"], "IBOV"),
+-        pick(["USDBRL", "BRL=X", "FX_IDC:USDBRL", "WDOFUT"], "Dólar"),
+-        pick(["SPX", "^GSPC", "TVC:SPX", "ES=F"], "S&P 500"),
++        pick(["IBOV", "^BVSP", "BMFBOVESPA:IBOV", "WIN", "WIN1!", "WINFUT"], "IBOV"),
++        pick(["USDBRL", "USD/BRL", "BRL=X", "FX_IDC:USDBRL", "WDO", "WDO1!", "WDOFUT"], "Dólar"),
++        pick(["SPX", "S&P 500", "^GSPC", "SP:SPX", "TVC:SPX", "ES", "ES1!", "ES=F"], "S&P 500"),
+         pick(["VIX", "^VIX", "TVC:VIX"], "VIX"),
+       ];
+       const ibov = items[0].pct, dol = items[1].pct, spx = items[2].pct;
+@@ -7448,8 +7500,11 @@ try {
+         box = d.createElement("section");
+         box.id = "dt962-pulso";
+         box.className = "dt962-pulso";
++        box.setAttribute("data-dt-keep", "1");
+         box.innerHTML = '<div class="dt962-pulso-row"><span class="dt962-clima"></span><div class="dt962-pills">' + items.map(x => '<span class="dt962-pill"><b>' + esc(x.label) + '</b><span class="dt962-val"></span></span>').join("") + '</div><button type="button" class="dt962-cart-btn" data-dt962-cart="1" title="Filtrar apenas ativos da sua carteira e trades recentes"></button></div>';
+         anchor.before(box);
++      } else if (cotbox && box.parentElement === cotbox) {
++        cotbox.before(box);
+       }
+       // Atualizações de cotação não recriam o botão, nem os indicadores.
+       const setText = (el, value) => { if (el.textContent !== value) el.textContent = value; };
+@@ -7633,13 +7688,14 @@ try {
+ } catch (e) {
+   console.error("[v962] MercadoPro", e);
+ }
+-/* v966: Cotações Mobile Liquid Glass 3D (estilo TradingView iOS) — somente celular (<=768px), desktop 100% intocado. */
++/* v967: Cotações Mobile Liquid Glass 3D (estilo TradingView iOS) — zero tremor nos ticks, todas as 10 listas unificadas, Panorama integrado, somente celular (<=768px). */
+ try {
+   ((w, d) => {
+     const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+     const isMob = () => w.innerWidth <= 768;
+     const getApp = () => d.querySelector("#app:not(.v503-fantasma)") || d.getElementById("app");
+     const svgIco = (p) => `<svg class="dt966-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
++    const CAM_ICO = svgIco('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>');
+     const ICONS = {
+       fav: svgIco('<path d="M12 3.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.4 6.6 20.3l1-6.1-4.4-4.3 6.1-.9z"/>'),
+       fut: svgIco('<path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/>'),
+@@ -7680,10 +7736,21 @@ try {
+       }));
+     };
+     let syncing = false, timer = null;
++    const needsSync = () => {
++      const app = getApp();
++      if (!app || !isCotacoes()) return d.body.classList.contains("dt966-tv-mob") || !!d.getElementById("dt966-tv-head");
++      const bar = d.getElementById("dt966-tv-head");
++      const cotbox = app.querySelector("#cotbox");
++      if (!bar || (cotbox && bar.parentElement === cotbox)) return true;
++      const curCat = cotbox?.getAttribute("data-category") || app.querySelector(".market-categories button.on, .cqtabs button.on")?.getAttribute("data-cqa") || "";
++      if (bar.dataset.cat !== curCat) return true;
++      return false;
++    };
+     const obs = new MutationObserver(() => {
+       if (syncing || !d.body.classList.contains("mkt549")) return;
++      if (!needsSync()) return;
+       if (timer) return;
+-      timer = setTimeout(() => { timer = null; sync(); }, 90);
++      timer = setTimeout(() => { timer = null; sync(); }, 60);
+     });
+     const sync = () => {
+       if (syncing) return;
+@@ -7697,26 +7764,33 @@ try {
+         const items = listItems();
+         if (!items.length) return;
+         d.body.classList.add("dt966-tv-mob");
+-        catWrap.dataset.dt966Hid = "1";
+-        catWrap.style.setProperty("display", "none", "important");
++        if (!catWrap.dataset.dt966Hid) {
++          catWrap.dataset.dt966Hid = "1";
++          catWrap.style.setProperty("display", "none", "important");
++        }
+         const cur = items.find((x) => x.on) || items[0];
+         const quickVal = cur.val === "fav" ? "br" : "fav";
+         const quickItem = items.find((x) => x.val === quickVal) || items.find((x) => x.val !== cur.val);
+-        const searchOpen = d.body.classList.contains("dt966-search-open");
+-        const quickHtml = quickItem ? `<button type="button" class="dt966-pill" data-dt966-pick="${esc(quickItem.val)}"><span class="dt966-badge">${getIco(quickItem.val)}</span><span>${esc(quickItem.label)}</span></button>` : "";
+-        const html = `<div class="dt966-row-top" data-noclaro="1"><button type="button" class="dt966-orb" data-dt966-menu="1" aria-label="Opções da lista" title="Opções"><span>•••</span></button><div class="dt966-chips"><button type="button" class="dt966-pill dt966-pill-main" data-dt966-sheet="1" aria-haspopup="dialog"><span class="dt966-badge">${getIco(cur.val)}</span><span>${esc(cur.label)}</span><span class="dt966-caret">▾</span></button>${quickHtml}</div><button type="button" class="dt966-orb ${searchOpen ? "on" : ""}" data-dt966-search="1" aria-label="Buscar ativo" title="Buscar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button></div>`;
++        const rightPillHtml = cur.val === "adr"
++          ? `<button type="button" class="dt966-pill dt966-pill-img" data-imgger="1" title="Gerar imagem do Panorama"><span class="dt966-badge">${CAM_ICO}</span><span>Panorama</span></button>`
++          : (quickItem ? `<button type="button" class="dt966-pill" data-dt966-pick="${esc(quickItem.val)}"><span class="dt966-badge">${getIco(quickItem.val)}</span><span>${esc(quickItem.label)}</span></button>` : "");
++        const html = `<div class="dt966-row-top" data-noclaro="1"><button type="button" class="dt966-orb" data-dt966-menu="1" aria-label="Opções da lista" title="Opções"><span>•••</span></button><div class="dt966-chips"><button type="button" class="dt966-pill dt966-pill-main" data-dt966-sheet="1" aria-haspopup="dialog"><span class="dt966-badge">${getIco(cur.val)}</span><span>${esc(cur.label)}</span><span class="dt966-caret">▾</span></button>${rightPillHtml}</div><button type="button" class="dt966-orb" data-dt966-search="1" aria-label="Buscar ativo" title="Buscar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button></div>`;
+         let bar = d.getElementById("dt966-tv-head");
+-        const anchor = d.getElementById("dt962-pulso") || catWrap;
++        const cotbox = app.querySelector("#cotbox");
++        const pulso = d.getElementById("dt962-pulso");
++        const anchor = (pulso && (!cotbox || pulso.parentElement !== cotbox)) ? pulso : (cotbox || catWrap);
+         if (!bar) {
+           bar = d.createElement("div");
+           bar.id = "dt966-tv-head";
+           bar.className = "dt966-tv-head";
+           bar.setAttribute("data-noclaro", "1");
++          bar.setAttribute("data-dt-keep", "1");
+           anchor.before(bar);
+         } else if (bar.nextElementSibling !== anchor && anchor.parentElement) {
+           anchor.before(bar);
+         }
+-        const key = `${cur.val}|${cur.label}|${quickItem?.val || ""}|${searchOpen}`;
++        const key = `${cur.val}|${cur.label}|${cur.val === "adr" ? "img" : (quickItem?.val || "")}`;
++        bar.dataset.cat = cur.val;
+         if (bar.dataset.key !== key) {
+           bar.dataset.key = key;
+           bar.innerHTML = html;
+@@ -7745,7 +7819,7 @@ try {
+       pop.id = "dt966-menu-pop";
+       pop.className = "dt966-menu-pop";
+       pop.setAttribute("data-noclaro", "1");
+-      pop.innerHTML = `<button type="button" data-dt966-mact="refresh">↻ Atualizar cotações</button><button type="button" data-dt966-mact="mapa">⊞ Mapa de calor</button><button type="button" data-dt966-mact="search">⇅ Buscar e ordenar</button>`;
++      pop.innerHTML = `<button type="button" data-imgger="1" data-dt966-mact="img">${CAM_ICO}<span>Gerar imagem Panorama</span></button><button type="button" data-dt966-mact="refresh">↻ <span>Atualizar cotações</span></button><button type="button" data-dt966-mact="mapa">⊞ <span>Mapa de calor</span></button><button type="button" data-dt966-mact="search">⇅ <span>Buscar e ordenar</span></button>`;
+       d.getElementById("dt966-tv-head")?.append(pop);
+     };
+     const sparkSvg = (dir) => {
+@@ -7757,15 +7831,23 @@ try {
+     const DOCK_STAR = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.4 6.6 20.3l1-6.1-4.4-4.3 6.1-.9z"/></svg>';
+     const DOCK_BELL = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+     const showDock = (row) => {
++      const isAdr = row.classList.contains("adr-quote");
+       const favBtn = row.querySelector("[data-cqfav]");
+-      const sym = favBtn?.getAttribute("data-cqfav") || row.getAttribute("data-market-symbol") || "";
++      const sym = favBtn?.getAttribute("data-cqfav") || row.getAttribute("data-market-symbol") || row.getAttribute("data-adr-symbol") || "";
+       const isFav = !!favBtn?.classList.contains("on");
+-      const bEl = row.querySelector(".cqn b, b, strong");
++      const bEl = isAdr ? row.querySelector(".adr-quote-heading b") : row.querySelector(".cqn b, b, strong");
+       const nome = (bEl?.childNodes?.[0]?.textContent || bEl?.textContent || sym || "Ativo").trim().split("\n")[0].trim().slice(0, 12);
+-      const px = (row.querySelector(".cqp b")?.textContent || "").trim().slice(0, 14);
+-      const pct = (row.querySelector(".cqv")?.textContent || "").trim() || (String(row.innerText || "").match(/([+\-−]\d+(?:[.,]\d+)?%)/)?.[1] || "");
++      const px = (isAdr ? row.querySelector(".adr-regular b")?.textContent : row.querySelector(".cqp b")?.textContent || "").trim().slice(0, 14);
++      const pctEl = isAdr ? row.querySelector(".adr-regular span") : row.querySelector(".cqv");
++      const pct = (pctEl?.textContent || "").trim() || (String(row.innerText || "").match(/([+\-−]\d+(?:[.,]\d+)?%)/)?.[1] || "");
+       const dir = pct.startsWith("+") ? "up" : pct.startsWith("-") || pct.startsWith("−") ? "dn" : "neu";
+-      const avText = (row.querySelector(".cqi, .ta-avatar, .dl-logo")?.textContent || nome.slice(0, 2)).trim().slice(0, 3).toUpperCase();
++      const logoImg = row.querySelector(".cqi img, .ta-avatar img, .dl-logo img");
++      const logoReady = !!(logoImg && logoImg.complete && logoImg.naturalWidth > 0 && logoImg.getAttribute("src"));
++      const logoSrc = logoReady ? logoImg.getAttribute("src") : "";
++      const avText = (row.querySelector(".cqi, .ta-avatar, .dl-logo")?.textContent || sym || nome).replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase() || nome.slice(0, 2).toUpperCase();
++      const avHtml = logoSrc
++        ? `<span class="dt966-dk-av has-img"><img src="${esc(logoSrc)}" alt="" referrerpolicy="no-referrer"></span>`
++        : `<span class="dt966-dk-av">${esc(avText)}</span>`;
+       let dock = d.getElementById("dt966-tv-dock");
+       if (!dock) {
+         dock = d.createElement("div");
+@@ -7777,7 +7859,10 @@ try {
+       w.__dt966Sym = sym;
+       w.__dt966Nome = nome;
+       const titleLine = px && px !== "—" ? `${esc(nome)} <span class="dt966-dk-dot">·</span> <span class="dt966-dk-px">${esc(px)}</span>` : esc(nome);
+-      dock.innerHTML = `<div class="dt966-dk-l"><span class="dt966-dk-av">${esc(avText)}</span><div class="dt966-dk-txt"><b>${titleLine}</b><span class="${dir}">${pct && pct !== "–" ? esc(pct) + " hoje" : "selecionado"}</span></div></div>${sparkSvg(dir)}<div class="dt966-dk-acts"><button type="button" class="${isFav ? "fav-on" : ""}" data-dt966-dact="fav" title="Favoritar" aria-label="Favoritar">${DOCK_STAR}</button><button type="button" data-dt966-dact="al" title="Alerta" aria-label="Alerta de preço">${DOCK_BELL}</button><button type="button" class="ia" data-dt966-dact="ia" title="Ler com Áurea">✦ IA</button><button type="button" data-dt966-dact="x" aria-label="Fechar">✕</button></div>`;
++      const favActs = favBtn
++        ? `<button type="button" class="${isFav ? "fav-on" : ""}" data-dt966-dact="fav" title="Favoritar" aria-label="Favoritar">${DOCK_STAR}</button><button type="button" data-dt966-dact="al" title="Alerta" aria-label="Alerta de preço">${DOCK_BELL}</button>`
++        : "";
++      dock.innerHTML = `<div class="dt966-dk-l">${avHtml}<div class="dt966-dk-txt"><b>${titleLine}</b><span class="${dir}">${pct && pct !== "–" ? esc(pct) + " hoje" : "selecionado"}</span></div></div>${sparkSvg(dir)}<div class="dt966-dk-acts">${favActs}<button type="button" class="ia" data-dt966-dact="ia" title="Ler com Áurea">✦ IA</button><button type="button" data-dt966-dact="x" aria-label="Fechar">✕</button></div>`;
+     };
+     d.addEventListener("click", (e) => {
+       if (e.target?.closest?.("[data-dt966-sheet]")) { openSheet(); return; }
+@@ -7788,7 +7873,7 @@ try {
+         d.getElementById("dt966-sheet-ov")?.remove();
+         const real = getApp()?.querySelector(`.market-categories button[data-cqa="${val}"], .cqtabs button[data-cqa="${val}"]`);
+         if (real) real.click();
+-        setTimeout(sync, 120);
++        setTimeout(sync, 100);
+         return;
+       }
+       if (e.target?.closest?.("[data-dt966-menu]")) { toggleMenu(); return; }
+@@ -7796,6 +7881,7 @@ try {
+       if (mact) {
+         const a = mact.getAttribute("data-dt966-mact");
+         d.getElementById("dt966-menu-pop")?.remove();
++        if (a === "img") return; // data-imgger="1" aciona imgGera() nativamente
+         if (a === "refresh") getApp()?.querySelector("[data-cqr]")?.click();
+         else if (a === "mapa") getApp()?.querySelector("[data-cqv='mapa'], [data-cqv]")?.click();
+         else if (a === "search") {
+@@ -7827,7 +7913,7 @@ try {
+           return;
+         }
+       }
+-      const row = e.target?.closest?.(".cqr");
++      const row = e.target?.closest?.(".cqr, .adr-quote");
+       if (row && d.body.classList.contains("dt966-tv-mob") && !e.target.closest("button, a, input, select")) {
+         showDock(row);
+       }
+@@ -7839,5 +7925,5 @@ try {
+     else sync();
+   })(window, document);
+ } catch (e) {
+-  console.error("[v966] CotacoesTV3D", e);
++  console.error("[v967] CotacoesTV3D", e);
+ }
+diff --git a/supabase/functions/macro/index.ts b/supabase/functions/macro/index.ts
+index a94aca4..a08db58 100644
+--- a/supabase/functions/macro/index.ts
++++ b/supabase/functions/macro/index.ts
+@@ -420,10 +420,14 @@ export const ABAS: Record<string, { nome: string; itens: Cq[] }> = {
+     { s: 'SSE:000001', n: 'Xangai', c: 'SHCOMP' },
+   ] },
+   br: { nome: 'Ações BR', itens: [
+-    B('PETR4', 'Petrobras PN'), B('VALE3', 'Vale'), B('ITUB4', 'Itaú Unibanco'), B('BBDC4', 'Bradesco PN'), B('BBAS3', 'Banco do Brasil'), B('B3SA3', 'B3'), B('ABEV3', 'Ambev'),
+-    B('WEGE3', 'WEG'), B('PRIO3', 'PRIO'), B('ITSA4', 'Itaúsa'), B('BPAC11', 'BTG Pactual'), B('SUZB3', 'Suzano'), B('ELET3', 'Eletrobras'), B('RENT3', 'Localiza'),
++    B('PETR4', 'Petrobras PN'), B('PETR3', 'Petrobras ON'), B('VALE3', 'Vale'), B('ITUB4', 'Itaú Unibanco'), B('BBDC4', 'Bradesco PN'), B('BBAS3', 'Banco do Brasil'), B('B3SA3', 'B3'), B('ABEV3', 'Ambev'),
++    B('WEGE3', 'WEG'), B('PRIO3', 'PRIO'), B('ITSA4', 'Itaúsa'), B('BPAC11', 'BTG Pactual'), B('SUZB3', 'Suzano'), B('ELET3', 'Eletrobras ON'), B('ELET6', 'Eletrobras PNB'), B('RENT3', 'Localiza'),
+     B('EQTL3', 'Equatorial'), B('RADL3', 'Raia Drogasil'), B('GGBR4', 'Gerdau PN'), B('CSNA3', 'CSN'), B('USIM5', 'Usiminas'), B('EMBR3', 'Embraer'),
+     B('VBBR3', 'Vibra'), B('LREN3', 'Lojas Renner'), B('MGLU3', 'Magazine Luiza'), B('RAIL3', 'Rumo'), B('SBSP3', 'Sabesp'), B('CMIG4', 'Cemig PN'),
++    B('BBSE3', 'BB Seguridade'), B('SANB11', 'Santander Brasil'), B('CPLE6', 'Copel PNB'), B('TAEE11', 'Taesa'), B('EGIE3', 'Engie Brasil'), B('CPFE3', 'CPFL Energia'),
++    B('KLBN11', 'Klabin'), B('RDOR3', 'Rede D\'Or'), B('TOTS3', 'TOTVS'), B('VIVT3', 'Vivo'), B('TIMS3', 'TIM'), B('MULT3', 'Multiplan'),
++    B('CYRE3', 'Cyrela'), B('UGPA3', 'Ultrapar'), B('CSAN3', 'Cosan'), B('JBSS3', 'JBS'), B('HYPE3', 'Hypera'), B('ASAI3', 'Assaí'),
++    B('BRFS3', 'BRF'), B('POMO4', 'Marcopolo'), B('SLCE3', 'SLC Agrícola'), B('CMIN3', 'CSN Mineração'),
+   ] },
+   us: { nome: 'Ações EUA', itens: [
+     U('NASDAQ', 'AAPL', 'Apple'), U('NASDAQ', 'MSFT', 'Microsoft'), U('NASDAQ', 'NVDA', 'Nvidia'), U('NASDAQ', 'AMZN', 'Amazon'), U('NASDAQ', 'GOOGL', 'Alphabet (Google)'),
+@@ -446,6 +450,12 @@ export const ABAS: Record<string, { nome: string; itens: Cq[] }> = {
+     U('NASDAQ', 'INTC', 'Intel'),
+     U('NYSE', 'MA', 'Mastercard'),
+     U('NASDAQ', 'QCOM', 'Qualcomm'),
++    U('NYSE', 'ORCL', 'Oracle'), U('NYSE', 'BAC', 'Bank of America'), U('NYSE', 'MS', 'Morgan Stanley'), U('NYSE', 'C', 'Citigroup'),
++    U('NYSE', 'CVX', 'Chevron'), U('NYSE', 'HD', 'Home Depot'), U('NYSE', 'KO', 'Coca-Cola'), U('NASDAQ', 'PEP', 'PepsiCo'),
++    U('NYSE', 'DIS', 'Walt Disney'), U('NYSE', 'NKE', 'Nike'), U('NYSE', 'BA', 'Boeing'), U('NYSE', 'UNH', 'UnitedHealth'),
++    U('NYSE', 'JNJ', 'Johnson & Johnson'), U('NYSE', 'PG', 'Procter & Gamble'), U('NYSE', 'TSM', 'TSMC'), U('NASDAQ', 'ASML', 'ASML'),
++    U('NASDAQ', 'ARM', 'Arm Holdings'), U('NASDAQ', 'MU', 'Micron'), U('NASDAQ', 'COIN', 'Coinbase'), U('NASDAQ', 'MELI', 'Mercado Livre'),
++    U('NYSE', 'BABA', 'Alibaba'), U('NASDAQ', 'PDD', 'PDD Holdings'), U('NASDAQ', 'JD', 'JD.com'), U('NYSE', 'SNOW', 'Snowflake'),
+   ] },
+   adr: { nome: 'ADRs', itens: [
+     U('AMEX', 'EWZ', 'EWZ (Brasil em NY)'), U('NYSE', 'PBR', 'Petrobras'), U('NYSE', 'VALE', 'Vale'), U('NYSE', 'ITUB', 'Itaú'), U('NYSE', 'BBD', 'Bradesco'),
