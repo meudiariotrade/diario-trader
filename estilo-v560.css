@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 e9028a75036be3d12c6049ac18637c8a2f7d1b3a377eb8a4ce72308343f53c8e */
+/* Gerado de src/app-theme.css · SHA256 3e546d2646c13a7024a428bb805b4275d396cd403a6a9059fa6c8a85d9f8ff9f */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -4475,3 +4475,352 @@ html[data-v427-tema="claro"] body.mkt549 #app .card button.btn.on{
  html:root body.mkt549 #app :is(.cqbar input,.market-search input,.cq388-searchbar input,.m403-searchbar input,input[placeholder*="Buscar ativo"],input[placeholder*="Buscar ticker"]){font-size:16px!important;min-height:40px!important}
 }
 html:root body.mkt549 #app .cqr[data-dt962-hidden]{display:none!important}
+
+/* v966: Cotações Mobile Liquid Glass 3D (estilo TradingView iOS) — 100% restrito ao celular (<=768px) */
+@media(max-width:768px){
+ /* Barra superior 3D Liquid Glass (botões circulares + pílula seletora de lista) */
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head{position:relative;margin:2px 0 10px!important;padding:0!important;z-index:20;background:transparent!important;border:none!important;box-shadow:none!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-row-top{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-chips{display:flex!important;align-items:center!important;gap:8px!important;flex:1 1 auto!important;min-width:0!important;overflow-x:auto!important;scrollbar-width:none;padding:4px 2px!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-chips::-webkit-scrollbar{display:none}
+ .dt966-svg{display:block;flex:0 0 auto}
+ .dt966-tag{display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;letter-spacing:.03em;padding:2px 5px;border-radius:6px;background:rgba(255,255,255,.14);color:currentColor;line-height:1.1}
+ /* Orbs circulares e pílulas 3D — Tema Escuro (Obsidiana Liquid Glass 3D) */
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-orb{
+  width:40px!important;min-width:40px!important;max-width:40px!important;height:40px!important;min-height:40px!important;
+  border-radius:999px!important;padding:0!important;margin:0!important;flex:0 0 40px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important;
+  background:linear-gradient(180deg,rgba(46,53,70,.92),rgba(22,26,36,.96))!important;
+  border:1px solid rgba(255,255,255,.16)!important;color:#edf2f7!important;-webkit-text-fill-color:#edf2f7!important;
+  font-size:12px!important;letter-spacing:1.2px!important;line-height:1!important;
+  box-shadow:0 8px 20px rgba(0,0,0,.48),0 1px 3px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.22)!important;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  transition:transform .16s ease,box-shadow .16s ease
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-orb:active{transform:scale(.93)}
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-orb.on{
+  background:linear-gradient(180deg,#e0be80,#b78e46)!important;color:#111318!important;-webkit-text-fill-color:#111318!important;
+  border:1px solid rgba(255,244,218,.65)!important;
+  box-shadow:0 8px 20px rgba(201,166,107,.35),inset 0 1px 0 rgba(255,255,255,.5)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-pill{
+  width:auto!important;height:38px!important;min-height:38px!important;padding:0 15px!important;margin:0!important;
+  border-radius:999px!important;white-space:nowrap!important;flex:0 0 auto!important;
+  display:inline-flex!important;align-items:center!important;gap:7px!important;cursor:pointer!important;
+  font-size:13.5px!important;font-weight:600!important;line-height:1!important;
+  background:linear-gradient(180deg,rgba(44,51,67,.9),rgba(21,25,35,.95))!important;
+  border:1px solid rgba(255,255,255,.15)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
+  box-shadow:0 7px 18px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.2)!important;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  transition:transform .16s ease
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-pill:active{transform:scale(.96)}
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-pill-main{
+  background:linear-gradient(180deg,#2c3344,#161a24)!important;
+  border:1px solid rgba(212,175,105,.55)!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  font-weight:700!important;
+  box-shadow:0 8px 20px rgba(0,0,0,.52),0 0 0 1px rgba(212,175,105,.18),inset 0 1px 0 rgba(255,255,255,.26)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-badge{display:inline-flex!important;align-items:center!important;justify-content:center!important;line-height:1!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-caret{font-size:11px!important;opacity:.82!important;margin-left:1px!important}
+ /* Oculta as 10 sub-abas antigas (substituídas pela seletora 3D + Bottom Sheet) e estiliza Busca + Atualizar + Ordem em cápsula 3D de 1 linha */
+ html:root body.mkt549.dt966-tv-mob #app#app .market-categories,
+ html:root body.mkt549.dt966-tv-mob #app#app .cqtabs{display:none!important}
+ html:root body.mkt549.dt966-tv-mob #app#app .market-tools{
+  display:grid!important;grid-template-columns:minmax(0,1fr) 40px minmax(0,134px)!important;
+  gap:6px!important;align-items:center!important;margin:0 0 8px!important;padding:0!important;width:100%!important;box-sizing:border-box!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app .market-tools [data-cqv]{display:none!important}
+ html:root body.mkt549.dt966-tv-mob #app#app .market-tools .market-search,
+ html:root body.mkt549.dt966-tv-mob #app#app .market-tools .market-order{
+  grid-column:auto!important;grid-row:1!important;
+  margin:0!important;padding:0!important;min-width:0!important;width:100%!important;display:block!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app .market-tools input[data-market-search]{
+  width:100%!important;min-width:0!important;box-sizing:border-box!important;
+  height:40px!important;min-height:40px!important;padding:0 14px!important;border-radius:999px!important;
+  font-size:16px!important;font-weight:400!important;line-height:38px!important;
+  background:linear-gradient(180deg,rgba(34,40,54,.88),rgba(20,24,33,.94))!important;
+  border:1px solid rgba(255,255,255,.13)!important;color:#f1f5f9!important;-webkit-text-fill-color:#f1f5f9!important;
+  box-shadow:0 5px 14px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.14)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app .market-tools input[data-market-search]::placeholder{color:rgba(203,213,225,.55)!important;-webkit-text-fill-color:rgba(203,213,225,.55)!important;font-weight:400!important}
+ html:root body.mkt549.dt966-tv-mob #app#app .market-tools input[data-market-search]:focus{
+  border-color:rgba(212,175,105,.62)!important;box-shadow:0 0 0 2px rgba(212,175,105,.22),inset 0 1px 0 rgba(255,255,255,.18)!important;outline:none!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app .market-tools button[data-cqr]{
+  grid-column:auto!important;grid-row:1!important;
+  width:40px!important;min-width:40px!important;max-width:40px!important;height:40px!important;min-height:40px!important;
+  padding:0!important;margin:0!important;border-radius:999px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:16px!important;
+  background:linear-gradient(180deg,rgba(44,51,67,.9),rgba(21,25,35,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
+  box-shadow:0 6px 16px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.18)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app .market-tools select[data-market-order]{
+  width:100%!important;min-width:0!important;box-sizing:border-box!important;
+  height:40px!important;min-height:40px!important;padding:0 12px!important;border-radius:999px!important;
+  font-size:12px!important;font-weight:600!important;line-height:38px!important;
+  background:linear-gradient(180deg,rgba(44,51,67,.9),rgba(21,25,35,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
+  box-shadow:0 6px 16px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.18)!important
+ }
+ /* Pulso do pregão compacto em vidro 3D (mantém ★ Carteira visível acima dos pills para compatibilidade total) */
+ html:root body.mkt549.dt966-tv-mob #app#app .dt962-pulso{
+  border-radius:20px!important;padding:8px 11px!important;margin:0 0 10px!important;gap:7px!important;
+  background:linear-gradient(180deg,rgba(32,38,52,.86),rgba(18,22,31,.94))!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.15)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app .dt962-pulso-top{gap:8px!important;min-height:28px!important}
+ html:root body.mkt549.dt966-tv-mob #app#app .dt962-clima{
+  height:26px!important;padding:0 10px!important;border-radius:999px!important;font-size:11px!important;font-weight:800!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app .dt962-cart-btn{
+  height:28px!important;min-height:28px!important;padding:0 12px!important;border-radius:999px!important;
+  font-size:12px!important;font-weight:700!important;line-height:1!important;
+  background:linear-gradient(180deg,rgba(48,56,74,.9),rgba(26,31,42,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
+  box-shadow:0 4px 10px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.16)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app .dt962-cart-btn.on{
+  background:linear-gradient(180deg,#e0be80,#b78e46)!important;border-color:rgba(255,244,218,.6)!important;
+  color:#111318!important;-webkit-text-fill-color:#111318!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app .dt962-pills{gap:6px!important}
+ html:root body.mkt549.dt966-tv-mob #app#app .dt962-pill{
+  padding:5px 4px!important;border-radius:12px!important;
+  background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.08)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes{padding-bottom:88px!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .market-summary{
+  font-size:11.5px!important;opacity:.68!important;margin:0 4px 6px!important;padding:0!important
+ }
+ /* Linhas de cotação estilo TradingView iOS: 3 colunas (esfera 38px + nome + preço/variação alinhados à direita) */
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr{
+  grid-template-columns:38px minmax(0,1fr) auto!important;
+  column-gap:11px!important;row-gap:1px!important;align-items:center!important;
+  padding:10px 4px!important;min-height:54px!important;margin:0!important;
+  border:none!important;border-bottom:1px solid rgba(255,255,255,.07)!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;
+  transition:transform .14s ease,background .14s ease
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr:active{transform:scale(.99);background:rgba(255,255,255,.04)!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr details,
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr .cqac,
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr .cqb,
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr .market-quote-time{display:none!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqi,
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.ta-avatar.cqi{
+  --ta-size:38px;width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;
+  max-width:38px!important;max-height:38px!important;border-radius:999px!important;
+  font-size:10.5px!important;font-weight:800!important;letter-spacing:-.03em!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqn>b{font-size:15px!important;font-weight:700!important;line-height:1.25!important;letter-spacing:-.01em!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqn>small{font-size:12.5px!important;line-height:1.25!important;opacity:.68!important;margin-top:1px!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqp,
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqv{
+  min-width:0!important;text-align:right!important;justify-self:end!important;
+  background:transparent!important;border:none!important;padding:0!important;box-shadow:none!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqp>b{font-size:15.5px!important;font-weight:700!important;line-height:1.25!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqv{font-size:13px!important;font-weight:600!important;line-height:1.25!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqv.up{color:#10b981!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqv.dn{color:#f87171!important}
+ /* Menu popover ⋯ */
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-menu-pop{
+  position:absolute!important;left:0!important;top:46px!important;z-index:40!important;min-width:205px!important;
+  padding:6px!important;border-radius:18px!important;display:flex!important;flex-direction:column!important;gap:3px!important;
+  background:rgba(22,26,36,.97)!important;border:1px solid rgba(255,255,255,.15)!important;
+  box-shadow:0 18px 40px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.18)!important;
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-menu-pop button{
+  height:38px!important;min-height:38px!important;padding:0 12px!important;border-radius:12px!important;
+  border:none!important;background:transparent!important;box-shadow:none!important;
+  color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;font-size:13.5px!important;font-weight:600!important;text-align:left!important;cursor:pointer!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-menu-pop button:active{background:rgba(255,255,255,.08)!important}
+ /* Bottom Sheet iOS Liquid Glass 3D (Seletora de Listas) */
+ .dt966-sheet-ov{
+  position:fixed;inset:0;z-index:9998;display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(5,7,12,.58);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)
+ }
+ .dt966-sheet{
+  width:100%;max-width:480px;padding:10px 16px calc(22px + env(safe-area-inset-bottom,0px));
+  border-radius:28px 28px 0 0;
+  background:linear-gradient(180deg,rgba(30,35,48,.98),rgba(16,19,27,.99));
+  border-top:1px solid rgba(255,255,255,.22);
+  box-shadow:0 -18px 48px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.24);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)
+ }
+ .dt966-handle{width:38px;height:4px;border-radius:99px;background:rgba(255,255,255,.26);margin:0 auto 12px}
+ .dt966-sh-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+ .dt966-sh-head b{font-size:16px;font-weight:800;color:#fff}
+ .dt966-sh-x{
+  width:32px;height:32px;border-radius:999px;border:1px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.09);color:#e2e8f0;font-size:14px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center
+ }
+ .dt966-sh-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+ .dt966-sh-card{
+  position:relative;display:flex;align-items:center;gap:10px;height:48px;padding:0 13px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(44,50,66,.86),rgba(25,29,39,.95));
+  border:1px solid rgba(255,255,255,.12);color:#e2e8f0;font-size:13.5px;font-weight:600;cursor:pointer;
+  box-shadow:0 5px 14px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.16)
+ }
+ .dt966-sh-card.on{
+  background:linear-gradient(180deg,rgba(201,166,107,.3),rgba(201,166,107,.15));
+  border-color:rgba(201,166,107,.68);color:#fff;font-weight:700;
+  box-shadow:0 6px 18px rgba(201,166,107,.24),inset 0 1px 0 rgba(255,244,218,.38)
+ }
+ .dt966-sh-ico{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex:0 0 22px;opacity:.92}
+ .dt966-sh-chk{margin-left:auto;color:#f5dca8;font-weight:800}
+ /* Pílula Flutuante Liquid Glass 3D (igual ao dock do BAC no TradingView iOS) */
+ .dt966-tv-dock{
+  position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:9990;
+  width:min(420px,calc(100vw - 16px));
+  display:flex;align-items:center;justify-content:space-between;gap:5px;
+  padding:7px 8px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(28,33,46,.97),rgba(15,18,26,.98));
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 16px 38px rgba(0,0,0,.64),inset 0 1px 0 rgba(255,255,255,.26);
+  backdrop-filter:blur(24px) saturate(170%);-webkit-backdrop-filter:blur(24px) saturate(170%)
+ }
+ .dt966-dk-l{display:flex;align-items:center;gap:7px;min-width:0;flex:1 1 auto}
+ .dt966-dk-av{
+  width:30px;min-width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,#3b82f6,#1d4ed8);color:#fff;font-size:10px;font-weight:800;letter-spacing:-.03em;
+  box-shadow:0 4px 12px rgba(37,99,235,.42),inset 0 1px 0 rgba(255,255,255,.4)
+ }
+ .dt966-dk-txt{display:flex;flex-direction:column;min-width:0;line-height:1.22}
+ .dt966-dk-txt b{font-size:12.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+ .dt966-dk-dot{opacity:.5;margin:0 1px}
+ .dt966-dk-px{font-weight:600;opacity:.92}
+ .dt966-dk-txt span{font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums}
+ .dt966-dk-txt span.up{color:#34d399}.dt966-dk-txt span.dn{color:#f87171}.dt966-dk-txt span.neu{color:#cbd5e1}
+ .dt966-spark{flex:0 0 auto}
+ .dt966-dk-acts{display:flex;align-items:center;gap:3px;flex:0 0 auto}
+ .dt966-dk-acts button{
+  height:28px;min-width:28px;padding:0 6px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#f1f5f9;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18)
+ }
+ .dt966-dk-acts button.fav-on{color:#fbbf24;border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.14)}
+ .dt966-dk-acts button.ia{
+  background:linear-gradient(180deg,#e0be80,#b78e46);border-color:rgba(255,244,218,.55);color:#111318;padding:0 8px
+ }
+
+ /* ===== TEMA CLARO (Branco Luminoso 3D Liquid Glass — idêntico ao TradingView iOS claro) ===== */
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-orb{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;
+  border:1px solid rgba(15,23,42,.09)!important;color:#111827!important;-webkit-text-fill-color:#111827!important;
+  box-shadow:0 6px 18px rgba(15,23,42,.10),0 1px 3px rgba(15,23,42,.06),inset 0 1.5px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-orb.on{
+  background:linear-gradient(180deg,#2b303c,#12141a)!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  border:1px solid #12141a!important;
+  box-shadow:0 7px 18px rgba(17,19,24,.24),inset 0 1px 0 rgba(255,255,255,.24)!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-pill{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;
+  border:1px solid rgba(15,23,42,.09)!important;color:#1f2937!important;-webkit-text-fill-color:#1f2937!important;
+  box-shadow:0 6px 16px rgba(15,23,42,.09),0 1px 3px rgba(15,23,42,.05),inset 0 1.5px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-pill-main{
+  background:linear-gradient(180deg,#2c313d,#12141a)!important;
+  border:1px solid #12141a!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  box-shadow:0 8px 20px rgba(17,19,24,.24),inset 0 1px 0 rgba(255,255,255,.24)!important
+ }
+ html[data-v427-tema="claro"] .dt966-tag{background:rgba(15,23,42,.08)}
+ html[data-v427-tema="claro"] .dt966-pill-main .dt966-tag,
+ html[data-v427-tema="claro"] .dt966-sh-card.on .dt966-tag{background:rgba(255,255,255,.18)}
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app .market-tools input[data-market-search],
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app .market-tools button[data-cqr],
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app .market-tools select[data-market-order]{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;
+  border:1px solid rgba(15,23,42,.09)!important;color:#111827!important;-webkit-text-fill-color:#111827!important;
+  box-shadow:0 5px 14px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.05),inset 0 1.5px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app .market-tools input[data-market-search]::placeholder{
+  color:rgba(71,85,105,.62)!important;-webkit-text-fill-color:rgba(71,85,105,.62)!important;font-weight:400!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app .dt962-pulso{
+  background:linear-gradient(180deg,#ffffff,#f6f8fc)!important;
+  border:1px solid rgba(15,23,42,.08)!important;
+  box-shadow:0 8px 24px rgba(15,23,42,.08),0 1px 3px rgba(15,23,42,.04),inset 0 1.5px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app .dt962-cart-btn{
+  background:linear-gradient(180deg,#ffffff,#f1f4f9)!important;
+  border:1px solid rgba(15,23,42,.1)!important;color:#111827!important;-webkit-text-fill-color:#111827!important;
+  box-shadow:0 4px 10px rgba(15,23,42,.08),inset 0 1px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app .dt962-cart-btn.on{
+  background:linear-gradient(180deg,#2b303c,#12141a)!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;border-color:#12141a!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app .dt962-pill{
+  background:linear-gradient(180deg,#f8fafd,#eef2f8)!important;border:1px solid rgba(15,23,42,.06)!important;color:#1e293b!important;
+  box-shadow:inset 0 1px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app .dt962-clima.neu{
+  background:#fef3c7!important;color:#92400e!important;border-color:#fcd34d!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr{
+  border-bottom:1px solid rgba(15,23,42,.08)!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>span.cqi:not(.ta-avatar){
+  background:linear-gradient(145deg,#ffffff,#e6ecf5)!important;
+  border:1px solid rgba(15,23,42,.1)!important;
+  color:#1e293b!important;-webkit-text-fill-color:#1e293b!important;
+  box-shadow:0 4px 11px rgba(15,23,42,.10),inset 0 1.5px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.ta-avatar.cqi{
+  box-shadow:0 4px 11px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.65)!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqv.up{color:#089981!important}
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqv.dn{color:#e12d39!important}
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-menu-pop{
+  background:rgba(255,255,255,.98)!important;border:1px solid rgba(15,23,42,.1)!important;
+  box-shadow:0 16px 38px rgba(15,23,42,.16),inset 0 1px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-menu-pop button{
+  color:#111827!important;-webkit-text-fill-color:#111827!important
+ }
+ html[data-v427-tema="claro"] .dt966-sheet{
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,247,252,.99));
+  border-top:1px solid rgba(255,255,255,.96);
+  box-shadow:0 -14px 40px rgba(15,23,42,.15),inset 0 1.5px 0 #ffffff
+ }
+ html[data-v427-tema="claro"] .dt966-handle{background:rgba(15,23,42,.18)}
+ html[data-v427-tema="claro"] .dt966-sh-head b{color:#111827}
+ html[data-v427-tema="claro"] .dt966-sh-x{background:#f1f5f9;border-color:rgba(15,23,42,.08);color:#111827}
+ html[data-v427-tema="claro"] .dt966-sh-card{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9);
+  border:1px solid rgba(15,23,42,.08);color:#1f2937;
+  box-shadow:0 4px 12px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff
+ }
+ html[data-v427-tema="claro"] .dt966-sh-card.on{
+  background:linear-gradient(180deg,#2b303c,#12141a);border-color:#12141a;color:#ffffff;
+  box-shadow:0 8px 20px rgba(17,19,24,.24),inset 0 1px 0 rgba(255,255,255,.22)
+ }
+ html[data-v427-tema="claro"] .dt966-tv-dock{
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,247,252,.99));
+  border:1px solid rgba(15,23,42,.08);
+  box-shadow:0 12px 34px rgba(15,23,42,.16),0 2px 6px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff
+ }
+ html[data-v427-tema="claro"] .dt966-dk-txt b{color:#0f172a}
+ html[data-v427-tema="claro"] .dt966-dk-txt span.up{color:#089981}
+ html[data-v427-tema="claro"] .dt966-dk-txt span.dn{color:#e12d39}
+ html[data-v427-tema="claro"] .dt966-dk-txt span.neu{color:#475569}
+ html[data-v427-tema="claro"] .dt966-dk-acts button{
+  background:linear-gradient(180deg,#ffffff,#eef2f7);border:1px solid rgba(15,23,42,.1);color:#0f172a;
+  box-shadow:0 2px 6px rgba(15,23,42,.08),inset 0 1px 0 #ffffff
+ }
+ html[data-v427-tema="claro"] .dt966-dk-acts button.fav-on{color:#d97706;border-color:rgba(217,119,6,.35);background:#fffbeb}
+ html[data-v427-tema="claro"] .dt966-dk-acts button.ia{
+  background:linear-gradient(180deg,#2b303c,#12141a);border-color:#12141a;color:#ffffff
+ }
+}
