@@ -1,0 +1,19 @@
+const {test}=require('node:test');
+const {expect}=require('playwright/test');
+const {withApp}=require('./helpers/app.cjs');
+test('v950: lupa abre busca global, menu abre apenas gaveta, atalho preserva consulta', {timeout:90000},async()=>withApp(async(browser,base)=>{
+ const p=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
+ const lupa=p.locator('.dt393-topbar [data-dt393-action="search"]:visible').first();
+ const menu=p.locator('[data-dt393-action="menu"]:visible').first();
+ const dlg=p.locator('#dt949-busca'),drawer=p.locator('#dt394-drawer');
+ await lupa.tap();await expect(dlg).toBeVisible();await expect(drawer).toBeHidden();
+ await dlg.locator('#dt949-q').fill('PETR4');await expect(dlg.locator('[data-b949-go="PETR4"]').first()).toBeVisible();
+ await p.keyboard.press('Control+k');await expect(dlg.locator('#dt949-q')).toHaveValue('PETR4');
+ await dlg.locator('[data-b949-x]').tap();await expect(dlg).toBeHidden();
+ await menu.tap();await expect(drawer).toBeVisible();await expect(dlg).toBeHidden();
+ await p.keyboard.press('Control+k');await expect(dlg).toBeVisible();await expect(drawer).toBeHidden();
+ await dlg.locator('[data-b949-x]').tap();await expect(dlg).toBeHidden();
+ await p.keyboard.press('Meta+k');await expect(dlg).toBeVisible();await expect(drawer).toBeHidden();
+ await p.close();
+}));
