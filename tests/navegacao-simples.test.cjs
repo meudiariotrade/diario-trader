@@ -54,9 +54,14 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  await app.locator('.simple-calendar>summary').click();
  await expect(app.locator('#mkcal')).toBeVisible();
  await p.getByRole('button',{name:'Início',exact:true}).last().click();
- // v829: agenda, notícias e alertas ficam no centro do Início (painel nativo).
- await expect(app.locator('.v829-home .v4-pano')).toHaveCount(1);
- await app.locator('.v829-home .v4-pano [data-v4mkt="ag"]').first().click();
+ // v957: agenda própria, sem o panorama redundante; Áurea fica antes de EUA.
+ const home=app.locator('.v829-home');
+ await expect(home.locator('.v4-pano')).toHaveCount(0);
+ await expect(home.locator('.v829-split>.ui-main .v4-iacard')).toHaveCount(1);
+ const agenda=home.locator('.v829-split>.ui-main [data-v4mkt="ag"]');
+ await expect(agenda).toHaveCount(1);
+ await expect(agenda).toHaveText('Ver agenda completa');
+ await agenda.click();
  await expect(app.locator('.dt395-native-mercado')).toHaveAttribute('data-m403-sub','ag');
  await p.getByRole('button',{name:'Início',exact:true}).last().click();
  await app.getByRole('button',{name:'Perguntar à IA',exact:true}).click();
