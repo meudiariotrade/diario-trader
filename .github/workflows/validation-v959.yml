@@ -1,7 +1,7 @@
 name: Validacao v959
 on:
-  push:
-    branches: ['validation/v959-build-check']
+  pull_request:
+    branches: ['release/v959-disciplina-rotina']
 permissions:
   contents: read
 jobs:
