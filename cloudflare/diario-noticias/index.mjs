@@ -331,7 +331,7 @@ export default {
     if(path==='/v1/macro'){
       const u=new URL(request.url),q=u.searchParams,c={modo:q.get('modo')||'',aba:q.get('aba')||'',semana:q.get('semana')||''};
       const TTL={painel:60,cotacoes:60,setores:300,ranking:600,fluxo:1800,agenda:1800,balancos:21600,sazonal:43200,sazonal_us:43200,'':120};
-      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana)+'&qv=954');
+      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana)+'&qv=967');
       if(ttl==null)return json({error:'modo_nao_suportado'},request,env,400);
       if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
       const r=await macroResponder(c);

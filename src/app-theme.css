@@ -4823,3 +4823,270 @@ html:root body.mkt549 #app .cqr[data-dt962-hidden]{display:none!important}
   background:linear-gradient(180deg,#2b303c,#12141a);border-color:#12141a;color:#ffffff
  }
 }
+
+/* v967: Estabilidade zero-tremor nos ticks + 3D Liquid Glass em TODAS as 10 seleções (ADRs, Juros, Moedas, Cripto, Commodities, Mapa e Fontes) — somente celular (<=768px) */
+@media(max-width:768px){
+ /* 1. Zero-tremor nas atualizações ao vivo (altura travada + contain: layout style) */
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr{
+  height:60px!important;min-height:60px!important;max-height:60px!important;
+  box-sizing:border-box!important;overflow:hidden!important;contain:layout style
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqp>small{display:none!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqr>.cqp>b>small{
+  font-size:11px!important;font-weight:600!important;opacity:.68!important;margin-right:2px!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .bnc-bar{
+  height:22px!important;min-height:22px!important;max-height:22px!important;
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;
+  margin:0 2px 4px!important;overflow:hidden!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head .dt966-menu-pop button{
+  display:flex!important;align-items:center!important;gap:9px!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-pill-img{
+  border-color:rgba(212,175,105,.45)!important;
+  background:linear-gradient(180deg,rgba(212,175,105,.22),rgba(212,175,105,.1))!important;
+  color:#f7e2b5!important;-webkit-text-fill-color:#f7e2b5!important
+ }
+ /* Logo real da empresa na pílula flutuante */
+ .dt966-dk-av.has-img{
+  background:#ffffff;padding:0;overflow:hidden;
+  box-shadow:0 4px 12px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.5)
+ }
+ .dt966-dk-av.has-img img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+
+ /* 2. ADRs brasileiras (#adr.market-adrs) — Liquid Glass 3D estilo TradingView iOS */
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs{margin:0 0 14px!important;padding:0!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference{
+  display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:space-between!important;gap:4px 8px!important;
+  padding:8px 12px!important;margin:0 0 10px!important;border-radius:16px!important;
+  background:linear-gradient(180deg,rgba(32,38,52,.84),rgba(18,22,31,.92))!important;
+  border:1px solid rgba(255,255,255,.1)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.14)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference b{font-size:12.5px!important;font-weight:700!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference span{font-size:11px!important;opacity:.75!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference small{display:none!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin:0 2px 6px!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top button[data-imgger]{display:none!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top b{font-size:15px!important;font-weight:800!important;letter-spacing:-.01em!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top .sm{
+  padding:4px 10px!important;border-radius:999px!important;font-size:11px!important;font-weight:700!important;
+  background:rgba(255,255,255,.07)!important;border:1px solid rgba(255,255,255,.11)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg{
+  display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:4px!important;
+  padding:4px!important;border-radius:999px!important;height:40px!important;box-sizing:border-box!important;
+  background:linear-gradient(180deg,rgba(26,31,42,.92),rgba(16,20,28,.96))!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.35),0 4px 12px rgba(0,0,0,.22)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg button{
+  height:30px!important;min-height:30px!important;border-radius:999px!important;border:none!important;
+  background:transparent!important;box-shadow:none!important;font-size:12.5px!important;font-weight:600!important;
+  color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important;padding:0 6px!important;margin:0!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg button.on{
+  background:linear-gradient(180deg,#2e3547,#1a1f2c)!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  border:1px solid rgba(212,175,105,.52)!important;font-weight:700!important;
+  box-shadow:0 4px 10px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs button[data-adr="rf"],
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs button[data-adr="ed"]{
+  width:40px!important;min-width:40px!important;max-width:40px!important;height:40px!important;min-height:40px!important;
+  border-radius:999px!important;padding:0!important;margin:0!important;flex:0 0 40px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  background:linear-gradient(180deg,rgba(44,51,67,.9),rgba(21,25,35,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
+  box-shadow:0 6px 16px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.18)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote{
+  padding:11px 6px!important;margin:0!important;border:none!important;
+  border-bottom:1px solid rgba(255,255,255,.07)!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;cursor:pointer
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote:active{background:rgba(255,255,255,.04)!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading>div:first-child{
+  display:flex!important;align-items:center!important;gap:11px!important;min-width:0!important;flex:1 1 auto!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading .ta-avatar{
+  width:38px!important;height:38px!important;min-width:38px!important;flex:0 0 38px!important;border-radius:999px!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading .ta-copy{
+  display:flex!important;flex-direction:column!important;gap:1px!important;min-width:0!important;overflow:hidden!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading>div:first-child b{
+  display:block!important;font-size:15px!important;font-weight:700!important;line-height:1.25!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading>div:first-child small{
+  display:block!important;font-size:12.5px!important;opacity:.68!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-regular{
+  display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:1px!important;text-align:right!important;flex-shrink:0!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-regular b{
+  font-size:15.5px!important;font-weight:700!important;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-variant-numeric:tabular-nums!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-regular>span{
+  font-size:13px!important;font-weight:600!important;font-variant-numeric:tabular-nums!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-regular small,
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-reference{display:none!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-extra{
+  display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:space-between!important;gap:4px 8px!important;
+  margin:7px 0 0 49px!important;padding:6px 10px!important;border-radius:12px!important;font-size:12px!important;
+  background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.09)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-extra small{width:100%;font-size:10.5px!important;opacity:.62!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-ab{
+  margin:14px 0 8px!important;padding:12px!important;border-radius:20px!important;
+  background:linear-gradient(180deg,rgba(32,38,52,.86),rgba(18,22,31,.94))!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.15)!important
+ }
+
+ /* 3. Juros (DIs Brasil + Fed Watch) & Moedas (Cesta Emergente) — Cartões Liquid Glass 3D */
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-card{
+  border-radius:20px!important;padding:13px 13px 11px!important;margin:0 0 12px!important;
+  background:linear-gradient(180deg,rgba(32,38,52,.88),rgba(18,22,31,.95))!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.16)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-hd{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin-bottom:10px!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-hd h3{font-size:15px!important;font-weight:800!important;margin:0!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg{
+  display:inline-flex!important;gap:3px!important;padding:3px!important;border-radius:999px!important;
+  background:rgba(12,15,22,.65)!important;border:1px solid rgba(255,255,255,.1)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg button{
+  height:28px!important;min-height:28px!important;padding:0 11px!important;border-radius:999px!important;border:none!important;
+  background:transparent!important;box-shadow:none!important;font-size:12px!important;font-weight:600!important;
+  color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg button.on{
+  background:linear-gradient(180deg,#2e3547,#1a1f2c)!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  border:1px solid rgba(212,175,105,.52)!important;box-shadow:0 3px 8px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.2)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-kpis>div{
+  border-radius:14px!important;padding:9px 10px!important;
+  background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.08)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-em{
+  display:flex!important;flex-wrap:wrap!important;gap:6px!important;margin:8px 0!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-em>span{
+  display:inline-flex!important;align-items:center!important;gap:6px!important;padding:6px 10px!important;border-radius:999px!important;
+  background:linear-gradient(180deg,rgba(44,51,67,.85),rgba(23,27,38,.94))!important;
+  border:1px solid rgba(255,255,255,.11)!important;box-shadow:0 4px 10px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.14)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-fw i{border-radius:999px!important}
+
+ /* 4. Cripto (.cq-crypto-periodo) — Seletor 3D Liquid Glass de 4 pílulas (24h · 7d · 30d · Ano) */
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo>div:first-child{
+  padding:4px!important;border-radius:999px!important;gap:4px!important;
+  background:linear-gradient(180deg,rgba(26,31,42,.92),rgba(16,20,28,.96))!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.35),0 5px 14px rgba(0,0,0,.25)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo button[data-cq-crypto-periodo]{
+  height:36px!important;min-height:36px!important;border-radius:999px!important;border:1px solid transparent!important;
+  background:transparent!important;box-shadow:none!important;font-size:13px!important;font-weight:600!important;
+  color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo button[data-cq-crypto-periodo][aria-pressed="true"]{
+  background:linear-gradient(180deg,#2e3547,#1a1f2c)!important;border-color:rgba(212,175,105,.55)!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;font-weight:700!important;
+  box-shadow:0 5px 12px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+
+ /* 5. Mapa de Calor (.cqmap) & Fontes e ferramentas (details.market-sources) */
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqmap{gap:8px!important;padding:2px 0!important}
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cqmap .cqt{
+  border-radius:16px!important;padding:10px!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  box-shadow:0 6px 16px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.18)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes details.market-sources{
+  margin:14px 0 0!important;padding:11px 13px!important;border-radius:18px!important;
+  background:linear-gradient(180deg,rgba(30,36,49,.82),rgba(17,21,30,.92))!important;
+  border:1px solid rgba(255,255,255,.1)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.12)!important
+ }
+ html:root body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes details.market-sources button{
+  border-radius:999px!important;height:36px!important;min-height:36px!important;padding:0 14px!important;
+  font-size:12.5px!important;font-weight:600!important;
+  background:linear-gradient(180deg,rgba(46,53,70,.9),rgba(23,27,38,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.16)!important
+ }
+
+ /* ===== TEMA CLARO (Branco Luminoso 3D Liquid Glass para ADRs, Juros, Moedas, Cripto, Mapa e Fontes) ===== */
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #dt966-tv-head button.dt966-pill-img{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;
+  border:1px solid rgba(15,23,42,.1)!important;color:#111827!important;-webkit-text-fill-color:#111827!important;
+  box-shadow:0 6px 16px rgba(15,23,42,.09),0 1px 3px rgba(15,23,42,.05),inset 0 1.5px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .monitor-reference,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-ab,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-card,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes details.market-sources{
+  background:linear-gradient(180deg,#ffffff,#f6f8fc)!important;
+  border:1px solid rgba(15,23,42,.08)!important;color:#0f172a!important;
+  box-shadow:0 8px 24px rgba(15,23,42,.08),0 1px 3px rgba(15,23,42,.04),inset 0 1.5px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .top .sm{
+  background:#f1f5f9!important;border-color:rgba(15,23,42,.09)!important;color:#334155!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo>div:first-child{
+  background:linear-gradient(180deg,#eef2f7,#e6ebf3)!important;
+  border:1px solid rgba(15,23,42,.08)!important;
+  box-shadow:inset 0 1px 4px rgba(15,23,42,.08)!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg button,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg button,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo button[data-cq-crypto-periodo]{
+  color:#475569!important;-webkit-text-fill-color:#475569!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .seg button.on,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-seg button.on,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .cq-crypto-periodo button[data-cq-crypto-periodo][aria-pressed="true"]{
+  background:linear-gradient(180deg,#2c313d,#12141a)!important;border-color:#12141a!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  box-shadow:0 5px 14px rgba(17,19,24,.22),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs button[data-adr="rf"],
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs button[data-adr="ed"],
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes details.market-sources button{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;
+  border:1px solid rgba(15,23,42,.09)!important;color:#111827!important;-webkit-text-fill-color:#111827!important;
+  box-shadow:0 5px 14px rgba(15,23,42,.09),inset 0 1.5px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote{
+  border-bottom:1px solid rgba(15,23,42,.08)!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-quote-heading .ta-avatar{
+  box-shadow:0 4px 11px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.7)!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #adr.market-adrs .adr-extra,
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-kpis>div{
+  background:linear-gradient(180deg,#f8fafd,#eef2f8)!important;
+  border:1px solid rgba(15,23,42,.07)!important;color:#0f172a!important;
+  box-shadow:inset 0 1px 0 #ffffff!important
+ }
+ html[data-v427-tema="claro"] body.mkt549.dt966-tv-mob #app#app #cotbox.market-quotes .m606-em>span{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;
+  border:1px solid rgba(15,23,42,.09)!important;color:#0f172a!important;
+  box-shadow:0 4px 10px rgba(15,23,42,.07),inset 0 1.5px 0 #ffffff!important
+ }
+}

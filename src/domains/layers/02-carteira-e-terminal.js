@@ -899,6 +899,31 @@ try {
           "POMO4",
           "BOVA11",
           "SMAL11",
+          "PETR3",
+          "CPLE6",
+          "TAEE11",
+          "EGIE3",
+          "CPFE3",
+          "KLBN11",
+          "RDOR3",
+          "TOTS3",
+          "MULT3",
+          "CYRE3",
+          "UGPA3",
+          "CSAN3",
+          "JBSS3",
+          "HYPE3",
+          "ASAI3",
+          "BRFS3",
+          "SLCE3",
+          "CMIN3",
+          "EMBR3",
+          "PRIO3",
+          "EQTL3",
+          "USIM5",
+          "VBBR3",
+          "LREN3",
+          "CMIG4",
         ]),
       ),
       U = Object.freeze({
@@ -7416,12 +7441,35 @@ try {
       node.innerHTML = html;
       markupCache.set(node, html);
     };
-    /* 1. Cotações: Pulso do Pregão + filtro rápido Minha Carteira */
+    /* 1. Cotações: Pulso do Pregão + filtro rápido Minha Carteira (v967: fora de #cotbox p/ zero tremor nos ticks) */
     const mountCotacoes = (app) => {
-      const anchor = app.querySelector(".market-categories, .cqtabs");
-      if (!anchor) return;
+      const catEl = app.querySelector(".market-categories, .cqtabs");
+      if (!catEl) return;
+      const cotbox = app.querySelector("#cotbox");
+      const anchor = cotbox || catEl;
       let box = d.getElementById("dt962-pulso");
-      const q = (w.CQ && (w.CQ.q || w.CQ.dados || w.CQ.cache)) || {};
+      const cqRef = (typeof CQ !== "undefined" ? CQ : null) || w.CQ;
+      const mdoRef = (typeof MDO !== "undefined" ? MDO : null) || w.MDO;
+      const q = (cqRef && (cqRef.q || cqRef.dados || cqRef.cache)) || {};
+      const liveMap = new Map();
+      const regItem = (it) => {
+        if (!it || it.d1 == null || !Number.isFinite(Number(it.d1))) return;
+        const val = Number(it.d1);
+        for (const raw of [it.c, it.s, String(it.s || "").includes(":") ? String(it.s).split(":").pop() : ""]) {
+          const k = String(raw || "").trim().toUpperCase();
+          if (k && !liveMap.has(k)) liveMap.set(k, val);
+        }
+      };
+      try {
+        if (cqRef && cqRef.d) {
+          for (const k of ["idx", "fx", "fut", "cmd", "jur"]) {
+            for (const it of (cqRef.d[k]?.itens || [])) regItem(it);
+          }
+        }
+        for (const g of (mdoRef?.v?.mercados?.grupos || [])) {
+          for (const it of (g.itens || [])) regItem(it);
+        }
+      } catch {}
       const pick = (keys, label) => {
         for (const k of keys) {
           const it = q[k];
@@ -7430,12 +7478,16 @@ try {
             return { label, pct: Number.isFinite(pct) ? pct : null };
           }
         }
+        for (const k of keys) {
+          const hit = liveMap.get(String(k).toUpperCase());
+          if (hit != null) return { label, pct: hit };
+        }
         return { label, pct: null };
       };
       const items = [
-        pick(["IBOV", "^BVSP", "BMFBOVESPA:IBOV"], "IBOV"),
-        pick(["USDBRL", "BRL=X", "FX_IDC:USDBRL", "WDOFUT"], "Dólar"),
-        pick(["SPX", "^GSPC", "TVC:SPX", "ES=F"], "S&P 500"),
+        pick(["IBOV", "^BVSP", "BMFBOVESPA:IBOV", "WIN", "WIN1!", "WINFUT"], "IBOV"),
+        pick(["USDBRL", "USD/BRL", "BRL=X", "FX_IDC:USDBRL", "WDO", "WDO1!", "WDOFUT"], "Dólar"),
+        pick(["SPX", "S&P 500", "^GSPC", "SP:SPX", "TVC:SPX", "ES", "ES1!", "ES=F"], "S&P 500"),
         pick(["VIX", "^VIX", "TVC:VIX"], "VIX"),
       ];
       const ibov = items[0].pct, dol = items[1].pct, spx = items[2].pct;
@@ -7448,8 +7500,11 @@ try {
         box = d.createElement("section");
         box.id = "dt962-pulso";
         box.className = "dt962-pulso";
+        box.setAttribute("data-dt-keep", "1");
         box.innerHTML = '<div class="dt962-pulso-row"><span class="dt962-clima"></span><div class="dt962-pills">' + items.map(x => '<span class="dt962-pill"><b>' + esc(x.label) + '</b><span class="dt962-val"></span></span>').join("") + '</div><button type="button" class="dt962-cart-btn" data-dt962-cart="1" title="Filtrar apenas ativos da sua carteira e trades recentes"></button></div>';
         anchor.before(box);
+      } else if (cotbox && box.parentElement === cotbox) {
+        cotbox.before(box);
       }
       // Atualizações de cotação não recriam o botão, nem os indicadores.
       const setText = (el, value) => { if (el.textContent !== value) el.textContent = value; };
@@ -7633,13 +7688,14 @@ try {
 } catch (e) {
   console.error("[v962] MercadoPro", e);
 }
-/* v966: Cotações Mobile Liquid Glass 3D (estilo TradingView iOS) — somente celular (<=768px), desktop 100% intocado. */
+/* v967: Cotações Mobile Liquid Glass 3D (estilo TradingView iOS) — zero tremor nos ticks, todas as 10 listas unificadas, Panorama integrado, somente celular (<=768px). */
 try {
   ((w, d) => {
     const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
     const isMob = () => w.innerWidth <= 768;
     const getApp = () => d.querySelector("#app:not(.v503-fantasma)") || d.getElementById("app");
     const svgIco = (p) => `<svg class="dt966-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+    const CAM_ICO = svgIco('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>');
     const ICONS = {
       fav: svgIco('<path d="M12 3.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.4 6.6 20.3l1-6.1-4.4-4.3 6.1-.9z"/>'),
       fut: svgIco('<path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/>'),
@@ -7680,10 +7736,21 @@ try {
       }));
     };
     let syncing = false, timer = null;
+    const needsSync = () => {
+      const app = getApp();
+      if (!app || !isCotacoes()) return d.body.classList.contains("dt966-tv-mob") || !!d.getElementById("dt966-tv-head");
+      const bar = d.getElementById("dt966-tv-head");
+      const cotbox = app.querySelector("#cotbox");
+      if (!bar || (cotbox && bar.parentElement === cotbox)) return true;
+      const curCat = cotbox?.getAttribute("data-category") || app.querySelector(".market-categories button.on, .cqtabs button.on")?.getAttribute("data-cqa") || "";
+      if (bar.dataset.cat !== curCat) return true;
+      return false;
+    };
     const obs = new MutationObserver(() => {
       if (syncing || !d.body.classList.contains("mkt549")) return;
+      if (!needsSync()) return;
       if (timer) return;
-      timer = setTimeout(() => { timer = null; sync(); }, 90);
+      timer = setTimeout(() => { timer = null; sync(); }, 60);
     });
     const sync = () => {
       if (syncing) return;
@@ -7697,26 +7764,33 @@ try {
         const items = listItems();
         if (!items.length) return;
         d.body.classList.add("dt966-tv-mob");
-        catWrap.dataset.dt966Hid = "1";
-        catWrap.style.setProperty("display", "none", "important");
+        if (!catWrap.dataset.dt966Hid) {
+          catWrap.dataset.dt966Hid = "1";
+          catWrap.style.setProperty("display", "none", "important");
+        }
         const cur = items.find((x) => x.on) || items[0];
         const quickVal = cur.val === "fav" ? "br" : "fav";
         const quickItem = items.find((x) => x.val === quickVal) || items.find((x) => x.val !== cur.val);
-        const searchOpen = d.body.classList.contains("dt966-search-open");
-        const quickHtml = quickItem ? `<button type="button" class="dt966-pill" data-dt966-pick="${esc(quickItem.val)}"><span class="dt966-badge">${getIco(quickItem.val)}</span><span>${esc(quickItem.label)}</span></button>` : "";
-        const html = `<div class="dt966-row-top" data-noclaro="1"><button type="button" class="dt966-orb" data-dt966-menu="1" aria-label="Opções da lista" title="Opções"><span>•••</span></button><div class="dt966-chips"><button type="button" class="dt966-pill dt966-pill-main" data-dt966-sheet="1" aria-haspopup="dialog"><span class="dt966-badge">${getIco(cur.val)}</span><span>${esc(cur.label)}</span><span class="dt966-caret">▾</span></button>${quickHtml}</div><button type="button" class="dt966-orb ${searchOpen ? "on" : ""}" data-dt966-search="1" aria-label="Buscar ativo" title="Buscar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button></div>`;
+        const rightPillHtml = cur.val === "adr"
+          ? `<button type="button" class="dt966-pill dt966-pill-img" data-imgger="1" title="Gerar imagem do Panorama"><span class="dt966-badge">${CAM_ICO}</span><span>Panorama</span></button>`
+          : (quickItem ? `<button type="button" class="dt966-pill" data-dt966-pick="${esc(quickItem.val)}"><span class="dt966-badge">${getIco(quickItem.val)}</span><span>${esc(quickItem.label)}</span></button>` : "");
+        const html = `<div class="dt966-row-top" data-noclaro="1"><button type="button" class="dt966-orb" data-dt966-menu="1" aria-label="Opções da lista" title="Opções"><span>•••</span></button><div class="dt966-chips"><button type="button" class="dt966-pill dt966-pill-main" data-dt966-sheet="1" aria-haspopup="dialog"><span class="dt966-badge">${getIco(cur.val)}</span><span>${esc(cur.label)}</span><span class="dt966-caret">▾</span></button>${rightPillHtml}</div><button type="button" class="dt966-orb" data-dt966-search="1" aria-label="Buscar ativo" title="Buscar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button></div>`;
         let bar = d.getElementById("dt966-tv-head");
-        const anchor = d.getElementById("dt962-pulso") || catWrap;
+        const cotbox = app.querySelector("#cotbox");
+        const pulso = d.getElementById("dt962-pulso");
+        const anchor = (pulso && (!cotbox || pulso.parentElement !== cotbox)) ? pulso : (cotbox || catWrap);
         if (!bar) {
           bar = d.createElement("div");
           bar.id = "dt966-tv-head";
           bar.className = "dt966-tv-head";
           bar.setAttribute("data-noclaro", "1");
+          bar.setAttribute("data-dt-keep", "1");
           anchor.before(bar);
         } else if (bar.nextElementSibling !== anchor && anchor.parentElement) {
           anchor.before(bar);
         }
-        const key = `${cur.val}|${cur.label}|${quickItem?.val || ""}|${searchOpen}`;
+        const key = `${cur.val}|${cur.label}|${cur.val === "adr" ? "img" : (quickItem?.val || "")}`;
+        bar.dataset.cat = cur.val;
         if (bar.dataset.key !== key) {
           bar.dataset.key = key;
           bar.innerHTML = html;
@@ -7745,7 +7819,7 @@ try {
       pop.id = "dt966-menu-pop";
       pop.className = "dt966-menu-pop";
       pop.setAttribute("data-noclaro", "1");
-      pop.innerHTML = `<button type="button" data-dt966-mact="refresh">↻ Atualizar cotações</button><button type="button" data-dt966-mact="mapa">⊞ Mapa de calor</button><button type="button" data-dt966-mact="search">⇅ Buscar e ordenar</button>`;
+      pop.innerHTML = `<button type="button" data-imgger="1" data-dt966-mact="img">${CAM_ICO}<span>Gerar imagem Panorama</span></button><button type="button" data-dt966-mact="refresh">↻ <span>Atualizar cotações</span></button><button type="button" data-dt966-mact="mapa">⊞ <span>Mapa de calor</span></button><button type="button" data-dt966-mact="search">⇅ <span>Buscar e ordenar</span></button>`;
       d.getElementById("dt966-tv-head")?.append(pop);
     };
     const sparkSvg = (dir) => {
@@ -7757,15 +7831,23 @@ try {
     const DOCK_STAR = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.4 6.6 20.3l1-6.1-4.4-4.3 6.1-.9z"/></svg>';
     const DOCK_BELL = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
     const showDock = (row) => {
+      const isAdr = row.classList.contains("adr-quote");
       const favBtn = row.querySelector("[data-cqfav]");
-      const sym = favBtn?.getAttribute("data-cqfav") || row.getAttribute("data-market-symbol") || "";
+      const sym = favBtn?.getAttribute("data-cqfav") || row.getAttribute("data-market-symbol") || row.getAttribute("data-adr-symbol") || "";
       const isFav = !!favBtn?.classList.contains("on");
-      const bEl = row.querySelector(".cqn b, b, strong");
+      const bEl = isAdr ? row.querySelector(".adr-quote-heading b") : row.querySelector(".cqn b, b, strong");
       const nome = (bEl?.childNodes?.[0]?.textContent || bEl?.textContent || sym || "Ativo").trim().split("\n")[0].trim().slice(0, 12);
-      const px = (row.querySelector(".cqp b")?.textContent || "").trim().slice(0, 14);
-      const pct = (row.querySelector(".cqv")?.textContent || "").trim() || (String(row.innerText || "").match(/([+\-−]\d+(?:[.,]\d+)?%)/)?.[1] || "");
+      const px = (isAdr ? row.querySelector(".adr-regular b")?.textContent : row.querySelector(".cqp b")?.textContent || "").trim().slice(0, 14);
+      const pctEl = isAdr ? row.querySelector(".adr-regular span") : row.querySelector(".cqv");
+      const pct = (pctEl?.textContent || "").trim() || (String(row.innerText || "").match(/([+\-−]\d+(?:[.,]\d+)?%)/)?.[1] || "");
       const dir = pct.startsWith("+") ? "up" : pct.startsWith("-") || pct.startsWith("−") ? "dn" : "neu";
-      const avText = (row.querySelector(".cqi, .ta-avatar, .dl-logo")?.textContent || nome.slice(0, 2)).trim().slice(0, 3).toUpperCase();
+      const logoImg = row.querySelector(".cqi img, .ta-avatar img, .dl-logo img");
+      const logoReady = !!(logoImg && logoImg.complete && logoImg.naturalWidth > 0 && logoImg.getAttribute("src"));
+      const logoSrc = logoReady ? logoImg.getAttribute("src") : "";
+      const avText = (row.querySelector(".cqi, .ta-avatar, .dl-logo")?.textContent || sym || nome).replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase() || nome.slice(0, 2).toUpperCase();
+      const avHtml = logoSrc
+        ? `<span class="dt966-dk-av has-img"><img src="${esc(logoSrc)}" alt="" referrerpolicy="no-referrer"></span>`
+        : `<span class="dt966-dk-av">${esc(avText)}</span>`;
       let dock = d.getElementById("dt966-tv-dock");
       if (!dock) {
         dock = d.createElement("div");
@@ -7777,7 +7859,10 @@ try {
       w.__dt966Sym = sym;
       w.__dt966Nome = nome;
       const titleLine = px && px !== "—" ? `${esc(nome)} <span class="dt966-dk-dot">·</span> <span class="dt966-dk-px">${esc(px)}</span>` : esc(nome);
-      dock.innerHTML = `<div class="dt966-dk-l"><span class="dt966-dk-av">${esc(avText)}</span><div class="dt966-dk-txt"><b>${titleLine}</b><span class="${dir}">${pct && pct !== "–" ? esc(pct) + " hoje" : "selecionado"}</span></div></div>${sparkSvg(dir)}<div class="dt966-dk-acts"><button type="button" class="${isFav ? "fav-on" : ""}" data-dt966-dact="fav" title="Favoritar" aria-label="Favoritar">${DOCK_STAR}</button><button type="button" data-dt966-dact="al" title="Alerta" aria-label="Alerta de preço">${DOCK_BELL}</button><button type="button" class="ia" data-dt966-dact="ia" title="Ler com Áurea">✦ IA</button><button type="button" data-dt966-dact="x" aria-label="Fechar">✕</button></div>`;
+      const favActs = favBtn
+        ? `<button type="button" class="${isFav ? "fav-on" : ""}" data-dt966-dact="fav" title="Favoritar" aria-label="Favoritar">${DOCK_STAR}</button><button type="button" data-dt966-dact="al" title="Alerta" aria-label="Alerta de preço">${DOCK_BELL}</button>`
+        : "";
+      dock.innerHTML = `<div class="dt966-dk-l">${avHtml}<div class="dt966-dk-txt"><b>${titleLine}</b><span class="${dir}">${pct && pct !== "–" ? esc(pct) + " hoje" : "selecionado"}</span></div></div>${sparkSvg(dir)}<div class="dt966-dk-acts">${favActs}<button type="button" class="ia" data-dt966-dact="ia" title="Ler com Áurea">✦ IA</button><button type="button" data-dt966-dact="x" aria-label="Fechar">✕</button></div>`;
     };
     d.addEventListener("click", (e) => {
       if (e.target?.closest?.("[data-dt966-sheet]")) { openSheet(); return; }
@@ -7788,7 +7873,7 @@ try {
         d.getElementById("dt966-sheet-ov")?.remove();
         const real = getApp()?.querySelector(`.market-categories button[data-cqa="${val}"], .cqtabs button[data-cqa="${val}"]`);
         if (real) real.click();
-        setTimeout(sync, 120);
+        setTimeout(sync, 100);
         return;
       }
       if (e.target?.closest?.("[data-dt966-menu]")) { toggleMenu(); return; }
@@ -7796,6 +7881,7 @@ try {
       if (mact) {
         const a = mact.getAttribute("data-dt966-mact");
         d.getElementById("dt966-menu-pop")?.remove();
+        if (a === "img") return; // data-imgger="1" aciona imgGera() nativamente
         if (a === "refresh") getApp()?.querySelector("[data-cqr]")?.click();
         else if (a === "mapa") getApp()?.querySelector("[data-cqv='mapa'], [data-cqv]")?.click();
         else if (a === "search") {
@@ -7827,7 +7913,7 @@ try {
           return;
         }
       }
-      const row = e.target?.closest?.(".cqr");
+      const row = e.target?.closest?.(".cqr, .adr-quote");
       if (row && d.body.classList.contains("dt966-tv-mob") && !e.target.closest("button, a, input, select")) {
         showDock(row);
       }
@@ -7839,5 +7925,5 @@ try {
     else sync();
   })(window, document);
 } catch (e) {
-  console.error("[v966] CotacoesTV3D", e);
+  console.error("[v967] CotacoesTV3D", e);
 }
