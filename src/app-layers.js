@@ -38865,23 +38865,29 @@ html[data-v508-semmesa] [data-dt414-go="mesa"]{display:none!important}
     let y = !1,
       A = 0;
     function R() {
-      const t = d(() => GATE_D(), h()),
-        a = d(() => S.days[t], {}) || {},
+      const t = d(() => GATE_D(), h());
+      if (typeof autoPosPregao958 === "function") autoPosPregao958(t);
+      if (typeof aplicarUltimoPlano958 === "function") aplicarUltimoPlano958(t);
+      const a = d(() => S.days[t], {}) || {},
         e = a.cl || {};
-      return a.ckok
-        ? null
-        : {
-            tipo: "manha",
-            falta: [
+      if (a.ckok) return null;
+      const falta =
+        typeof preparacaoPendente789 === "function"
+          ? preparacaoPendente789(a)
+          : [
               ...(a.estado ? [] : ["estado"]),
               ...d(() => GATE_PLANO, ["p_limite", "p_meta", "p_stop"]).filter(
                 (r) => !e[r],
               ),
-            ],
-            dia: a,
-            c: a.chk || {},
-            cl: e,
-          };
+            ];
+      return {
+        tipo: "manha",
+        falta,
+        pronto: falta.length === 0,
+        dia: a,
+        c: a.chk || {},
+        cl: e,
+      };
     }
     function P() {
       if (typeof l.gateEstado != "function" || l.gateEstado.__v508) return;
