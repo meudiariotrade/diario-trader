@@ -72091,7 +72091,12 @@ document.addEventListener("click", (e) => {
   if (!t || !t.closest) return;
   if (t.closest("[data-m624-fecha]")) return void m624FechaGrafico();
   if (t.closest("[data-m624-mon]")) return void m624Monitor(!M624.mon);
-  if (t.closest("[data-m624-k]")) return void m624Paleta();
+  if (t.closest("[data-m624-k]")) {
+    if (typeof tab !== "undefined" && tab !== "term" && window.DiarioBuscaGlobal?.abrir) {
+      m624FechaPaleta(); return void window.DiarioBuscaGlobal.abrir();
+    }
+    return void m624Paleta();
+  }
   if (t.closest("#m624-pal .m624-pbk")) return void m624FechaPaleta();
   const op = t.closest("[data-m624-op]");
   if (op) return void m624Executa(+op.dataset.m624Op);
@@ -72203,6 +72208,10 @@ window.addEventListener(
     if ((e.ctrlKey || e.metaKey) && !e.altKey && String(e.key).toLowerCase() === "k") {
       if (typeof tab < "u" && tab === "term" && !document.getElementById("m624-pal")) return;
       (e.preventDefault(), e.stopImmediatePropagation());
+      if (typeof tab !== "undefined" && tab !== "term" && window.DiarioBuscaGlobal?.abrir) {
+        m624FechaPaleta();
+        return void window.DiarioBuscaGlobal.abrir();
+      }
       return void (m624FechaPaleta() || m624Paleta());
     }
     if (e.key !== "Escape") return;
