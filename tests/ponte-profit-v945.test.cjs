@@ -26,7 +26,7 @@ function app(){
   requestAnimationFrame:fn=>fn(),
   rq:async(url)=>{
    requests++;
-   assert.match(url,/^\/rest\/v1\/cotacoes\?select=ticker,ult,var,updated_at&limit=250&user_id=eq\.usuario-privado$/);
+   assert.match(url,/^\/rest\/v1\/cotacoes\?select=ticker,ult,var,updated_at,dat,hor&limit=250&user_id=eq\.usuario-privado$/);
    return {ok:true,json:async()=>[{ticker:'WINFUT',ult:155000+requests,var:0.25,updated_at:now},
      {ticker:'PETR4',ult:45.6,var:-0.3,updated_at:now}]};
   }
@@ -69,4 +69,42 @@ test('v945: a tela Live busca snapshot na entrada e tem atualizar manual sem pol
  assert.doesNotMatch(live,/⚪ Ponte parada\. Última cotação às/);
  assert.match(bridge,/event\.target\?\.closest\?\.\('\[data-cqr\]'\)/);
  assert.match(html,/profit-cotacoes-v552\.js\?v=__APP_VERSION__/);
+});
+
+test('v945: para preços da ponte, negócio tem prioridade sobre reenvio do snapshot',async()=>{
+ const {context:c}=app();
+ const ontem=new Date(Date.now()-86400000);
+ const dia=ontem.toLocaleDateString('en-GB',{timeZone:'America/Sao_Paulo'});
+ const hora='14:30:00';
+ const negocio=new Date(dia.split('/').reverse().join('-')+'T'+hora+'-03:00');
+ c.rq=async()=>({ok:true,json:async()=>[
+   {ticker:'WINFUT',ult:155000,var:0,updated_at:new Date().toISOString(),dat:dia,hor:hora}
+ ]});
+ await c.cqPonte();
+ assert.equal(c.CQ.pf['@WIN'],undefined,'não classificar negócio de ontem como ao vivo');
+ assert.equal(c.CQ.saved['@WIN'].em,negocio.toISOString());
+ assert.ok(c.CQ.saved['@WIN'].recebidoEm,'hora de sincronização guardada separadamente');
+});
+test('v945: TradingView é usado se Profit estiver indisponível ou antigo, inclusive após fechamento',()=>{
+ const start=live.indexOf('const cqPf = (e, t) => {');
+ const end=live.indexOf(',\n  cqPx = (e, t) => {',start);
+ assert.ok(start>0 && end>start);
+ const code=live.slice(start,end)+';\nglobalThis.cqEscolha = cqPf;';
+ const dayBefore=new Date(Date.now()-86400000).toISOString();
+ const recent=new Date(Date.now()-60000).toISOString();
+ const saved={px:100,tk:'PETR4',em:dayBefore,d1:1};
+ const c={CQ:{owner:'user-1',pf:{},saved:{PETR4:saved}},SESS:{uid:'user-1'},
+   cqSessaoAberta:()=>false,Date};
+ vm.createContext(c);vm.runInContext(code,c);
+ const quote={c:'PETR4',s:'BMFBOVESPA:PETR4',px:101,d1:2,horarioPreco:recent};
+ assert.equal(c.cqEscolha(quote,'br'),null,'TradingView mais novo deve prevalecer');
+ assert.equal(c.cqEscolha({...quote,px:null},'br').fechado,true,'Profit salvo só como fechamento');
+ c.cqSessaoAberta=()=>true;
+ assert.equal(c.cqEscolha(quote,'br'),null,'durante pregão não exibir Profit antigo');
+ c.CQ.pf.PETR4={px:102,d1:1.5,em:recent};
+ assert.equal(c.cqEscolha(quote,'br').px,102,'Profit recente tem prioridade durante pregão');
+ c.cqSessaoAberta=()=>false;
+ assert.equal(c.cqEscolha(quote,'br'),null,'Profit mesmo recente não mascara TradingView após fechamento');
+ c.CQ.saved.PETR4={...saved,em:new Date(Date.now()+20000).toISOString()};
+ assert.equal(c.cqEscolha(quote,'br').fechado,true,'preservar fechamento se TV comprovadamente mais antigo');
 });
