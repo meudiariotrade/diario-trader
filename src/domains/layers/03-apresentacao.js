@@ -7917,7 +7917,7 @@ try {
           const encontrados=hits.filter(t=>t.tipo===tipo).slice(0,5);
           if(encontrados.length)out.push('<div class="b-grp">'+titulo+'</div>'+encontrados.map(t=>'<button type="button" class="b-it" data-b949-tipo="'+tipo+'" data-b949-go="'+esc(t.id)+'"><b>'+esc(t.tk)+'</b><small>'+esc(t.desc)+'</small></button>').join(""));
         }
-        if (/^[a-z]{4}\\d{1,2}$/i.test(q) && !hits.some(t=>t.tipo!=="tese"&&t.tk===q.toUpperCase())) {
+        if (/^[a-z]{4}\d{1,2}$/i.test(q) && !hits.some(t=>t.tipo!=="tese"&&t.tk===q.toUpperCase())) {
           const tk=q.toUpperCase();
           out.push('<div class="b-grp">Research</div><button type="button" class="b-it" data-b949-tipo="ativo" data-b949-go="'+tk+'"><b>'+tk+'</b><small>Consultar no universo B3 ›</small></button>');
         }

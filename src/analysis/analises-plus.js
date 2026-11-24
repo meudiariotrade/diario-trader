@@ -1044,7 +1044,7 @@ function buscarLocal949(raw){
 function prepararBusca949(tipo,id){
  st.q='';st.sub='visao';st.showJusto=false;
  if(tipo==='tese'){const t=teses().find(x=>String(x.id)===String(id));if(!t)return false;st.tk='';st.teseEdit={...t};st.tab='teses';return true}
- const tk=String(id||'').toUpperCase();if(!/^[A-Z]{4}\\d{1,2}$/.test(tk))return false;
+ const tk=String(id||'').toUpperCase();if(!/^[A-Z]{4}\d{1,2}$/.test(tk))return false;
  abrir(tk);st.tab='rankpro';st.rankTipo=tipo==='fii'?'fiis':'acoes';st.fiiSel=tipo==='fii'?tk:'';
  if((tipo==='fii'||tipo==='ativo')&&!st.fiis?.rows?.length)void carregarFiis(false);
  return true;
