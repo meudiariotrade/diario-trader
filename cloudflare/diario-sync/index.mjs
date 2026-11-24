@@ -431,6 +431,64 @@ async function privateRecords(req,env,uid,url,origin){
 }
 
 
+/* v942: reconciliação pontual de dois espelhos com escritores legados.
+ * Nunca altera o Supabase, não permite outras coleções e não habilita envio de push no D1.
+ * POST requer sessão validada; a origem filtra por dono e o D1 confirma cada owner.
+ */
+const RECONCILE_MIRRORS_V942=new Set(['push_subs','noticias_urgentes_notificadas']);
+const RECONCILE_PAGE_V942=20;
+async function reconciliarEspelhoV942(req,env,uid,origin){
+ if(req.method!=='POST')return out({error:'metodo_invalido'},405,origin,env);
+ if(Number(req.headers.get('content-length')||0)>500)return out({error:'json_grande'},413,origin,env);
+ const raw=await req.text();
+ if(raw.length>500)return out({error:'json_grande'},413,origin,env);
+ let payload;try{payload=JSON.parse(raw)}catch{return out({error:'json_invalido'},400,origin,env)}
+ const collection=payload?.collection,offset=payload?.offset??0;
+ if(!RECONCILE_MIRRORS_V942.has(collection)||!Number.isSafeInteger(offset)||offset<0||offset>5000)
+  return out({error:'reconciliacao_nao_permitida'},400,origin,env);
+ const config=COLECOES[collection];
+ const qs=new URLSearchParams({
+  select:'*',order:config.keys.map(k=>k+'.asc').join(','),
+  limit:String(RECONCILE_PAGE_V942),offset:String(offset)
+ });
+ qs.set(config.owner,'eq.'+uid);
+ const token=/^Bearer\s+(\S+)$/i.exec(req.headers.get('authorization')||'')?.[1]||'';
+ const base=new URL(env.SUPABASE_URL);
+ const response=await fetch(base.origin+'/rest/v1/'+encodeURIComponent(collection)+'?'+qs.toString(),{
+  method:'GET',headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY,Accept:'application/json'},
+  redirect:'manual',signal:AbortSignal.timeout(15000)
+ }).catch(()=>null);
+ if(!response?.ok)return out({error:'origem_indisponivel',code:response?.status||503},424,origin,env);
+ if(Number(response.headers.get('content-length')||0)>1200000)return out({error:'lote_grande'},413,origin,env);
+ const body=await response.text();
+ if(new TextEncoder().encode(body).length>1200000)return out({error:'lote_grande'},413,origin,env);
+ let rows;try{rows=JSON.parse(body)}catch{return out({error:'origem_invalida'},502,origin,env)}
+ if(!Array.isArray(rows)||rows.length>RECONCILE_PAGE_V942)return out({error:'formato_invalido'},502,origin,env);
+ if(rows.some(x=>!x||typeof x!=='object'||String(x[config.owner])!==uid||
+    config.keys.some(k=>x[k]===undefined||x[k]===null)))
+  return out({error:'isolamento_ou_chave_invalida'},403,origin,env);
+ if(rows.length){
+  await env.DB.batch(rows.map(x=>env.DB.prepare(
+   "INSERT INTO private_documents(owner,collection,doc_key,payload,updated_at) "+
+   "VALUES (?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now')) "+
+   "ON CONFLICT(owner,collection,doc_key) DO UPDATE SET "+
+   "payload=excluded.payload,updated_at=excluded.updated_at"
+  ).bind(uid,collection,JSON.stringify(config.keys.map(k=>x[k])),JSON.stringify(x))));
+ }
+ const count=await env.DB.prepare(
+  'SELECT count(*) AS n FROM private_documents WHERE owner=? AND collection=?'
+ ).bind(uid,collection).first();
+ const next=offset+rows.length;
+ await env.DB.prepare(
+  "UPDATE private_migration_progress SET count_rows=?, "+
+  "next_offset=CASE WHEN next_offset<? THEN ? ELSE next_offset END, "+
+  "updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE owner=? AND collection=?"
+ ).bind(Number(count?.n)||0,next,next,uid,collection).run();
+ return out({ok:true,collection,rows:rows.length,stored:Number(count?.n)||0,
+  next_offset:next,finished:rows.length<RECONCILE_PAGE_V942,
+  destino:'espelho_sem_cutover'},200,origin,env);
+}
+
 export default {
  async fetch(req,env){
   const origin=req.headers.get('origin');
@@ -456,7 +514,8 @@ export default {
   if(isBackup)return backups(req,env,uid,url,origin);
   if(isProfit)return profitCandles(req,env,uid,url,origin);
   if(isRecords)return privateRecords(req,env,uid,url,origin);
-  if(isMigration)return importarColecao(req,env,uid,url,origin);
+  if(isMigration)return url.pathname==='/v1/migrate/reconcile'?
+   reconciliarEspelhoV942(req,env,uid,origin):importarColecao(req,env,uid,url,origin);
   if(req.method==='GET'){
    const meta=url.searchParams.get('meta')==='1';
    const found=await row(env.DB,uid,meta);
