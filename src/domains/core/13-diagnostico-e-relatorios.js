@@ -3536,11 +3536,99 @@ function cqLogoAcompanha(root){
  }
 }
 
+/* v960 — Período de variação de Cripto somente no layout de celular.
+ * A fita, o desktop, favoritos e alertas continuam usando a variação original.
+ * Histórico público da Binance consultado apenas por ação explícita, sem Supabase. */
+const CQ_CRYPTO_PERIODOS = Object.freeze([["24h","24h"],["7d","7 dias"],["30d","30 dias"],["ytd","Ano"]]);
+const CQ_CRYPTO_MQ = window.matchMedia ? window.matchMedia("(max-width: 767px)") : null;
+const CQ_CRYPTO_HIST = {periodo:"24h",base:0,refs:{},cache:new Map(),controller:null,busy:false};
+function cqCryptoMobile(category) {
+  return category === "cri" && CQ.aba === "cri" && !!CQ_CRYPTO_MQ?.matches;
+}
+function cqCryptoBase(periodo, now = Date.now()) {
+  if (periodo === "ytd") return Date.UTC(new Date(now).getUTCFullYear(),0,1);
+  const days = periodo === "7d" ? 7 : periodo === "30d" ? 30 : 0;
+  return Math.floor((now-days*86400000)/60000)*60000;
+}
+function cqCryptoVariacao(item, category, quote) {
+  const original = quote ? quote.d1 : item.d1;
+  if (!cqCryptoMobile(category) || CQ_CRYPTO_HIST.periodo === "24h") return original;
+  const ref = CQ_CRYPTO_HIST.refs[String(item.c || "").toUpperCase()];
+  return quote?.bnc && Number.isFinite(quote.px) && quote.px > 0 && Number.isFinite(ref) && ref > 0
+    ? (quote.px/ref-1)*100 : null;
+}
+function cqCryptoCancelar(reset = false) {
+  const state = CQ_CRYPTO_HIST;
+  state.controller?.abort(); state.controller = null; state.busy = false;
+  if (reset) { state.periodo = "24h"; state.base = 0; state.refs = {}; }
+}
+function cqCryptoAtivo() {
+  return typeof tab !== "undefined" && tab === "mercado" && MKT.tab === "cq" && cqCryptoMobile("cri") && !document.hidden;
+}
+function cqCryptoPeriodoHtml(category) {
+  if (!cqCryptoMobile(category)) return "";
+  const state = CQ_CRYPTO_HIST, n = Object.keys(state.refs).length;
+  const label = state.periodo === "24h" ? "24h corridas na Binance · referência da fonte se desconectada"
+    : state.busy ? "Consultando histórico público da Binance…"
+    : (state.base ? "Base "+new Date(state.base).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})+" BRT · " : "")+
+      (n ? "Toque no período para atualizar. — indica referência indisponível." : "Histórico indisponível. Toque para tentar novamente.");
+  return '<div class="cq-crypto-periodo" style="margin:8px 0 10px" role="group" aria-label="Período da variação das criptomoedas"><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px">'+
+    CQ_CRYPTO_PERIODOS.map(([key,name])=>'<button type="button" class="btn s" style="min-height:44px;min-width:0;padding:6px 2px;font-size:13px;font-weight:600;'+(state.periodo===key?'color:var(--ui-accent,#F59E0B);border-color:var(--ui-accent,#F59E0B);':'')+'" data-cq-crypto-periodo="'+key+'" aria-pressed="'+(state.periodo===key)+'">'+name+'</button>').join("")+
+    '</div><div class="sm mut" style="margin-top:6px" role="status">'+esc(label)+'</div></div>';
+}
+async function cqCryptoSeleciona(periodo) {
+  if (!cqCryptoAtivo() || !CQ_CRYPTO_PERIODOS.some(([key])=>key===periodo)) return;
+  cqCryptoCancelar();
+  const state = CQ_CRYPTO_HIST; state.periodo=periodo; state.refs={}; state.base=0;
+  if (periodo === "24h" || window.DIARIO_DEMO) { cqPinta(); return; }
+  const base = cqCryptoBase(periodo), key = periodo+":"+base, cached = state.cache.get(key);
+  state.base = base;
+  if (cached) { state.refs=cached; cqPinta(); return; }
+  const controller = new AbortController(); state.controller=controller; state.busy=true; cqPinta();
+  const timeout = setTimeout(()=>controller.abort(),25000);
+  const pairs = Object.entries(BNC_PARES), refs = {}, queue = pairs.slice();
+  let limited = false;
+  try {
+    await Promise.all(Array.from({length:4},async()=>{
+      while (queue.length && !controller.signal.aborted && !limited) {
+        const [code,pair] = queue.shift();
+        try {
+          const params = new URLSearchParams({symbol:pair.toUpperCase(),interval:"1m",startTime:String(base),limit:"1"});
+          const response = await fetch("https://data-api.binance.vision/api/v3/klines?"+params.toString(),{signal:controller.signal,credentials:"omit",referrerPolicy:"no-referrer"});
+          if (response.status===418 || response.status===429) { limited=true; break; }
+          if (!response.ok) continue;
+          const candle=(await response.json())?.[0], value=Number(candle?.[1]);
+          if (Number(candle?.[0])===base && Number.isFinite(value) && value>0) refs[code]=value;
+        } catch {}
+      }
+    }));
+  } finally {
+    clearTimeout(timeout);
+    if (state.controller===controller) {
+      state.controller=null; state.busy=false; state.refs=refs;
+      if (Object.keys(refs).length===pairs.length) {
+        state.cache.set(key,refs);
+        while(state.cache.size>6) state.cache.delete(state.cache.keys().next().value);
+      }
+      if (cqCryptoAtivo()) cqPinta();
+    }
+  }
+}
+document.addEventListener("click",event=>{
+  const target=event.target?.closest?.("[data-cq-crypto-periodo]");
+  if (target) { event.preventDefault(); cqCryptoSeleciona(target.dataset.cqCryptoPeriodo); return; }
+  const category=event.target?.closest?.("[data-cqa]");
+  if(category && category.dataset.cqa!=="cri") cqCryptoCancelar(true);
+},true);
+document.addEventListener("diario:tela",()=>{if(!cqCryptoAtivo())cqCryptoCancelar(true);});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)cqCryptoCancelar(true);else if(cqCryptoAtivo())cqPinta();});
+CQ_CRYPTO_MQ?.addEventListener?.("change",()=>{if(!CQ_CRYPTO_MQ.matches)cqCryptoCancelar(true);if(typeof tab!=="undefined"&&tab==="mercado"&&MKT.tab==="cq")cqPinta();});
+
 cqLinha = function (e, t) {
   t = e._aba || t;
   const a = cqPf(e, t),
     o = a ? a.px : e.px,
-    s = a ? a.d1 : e.d1,
+    s = cqCryptoVariacao(e,t,a),
     n = CQ_COR[t] || "var(--ac)",
     r = String(e.c || "")
       .replace(/[^A-Z0-9/]/gi, "")
@@ -3558,7 +3646,7 @@ function cqMapa(e, t) {
       const o = a._aba || t,
         s = cqPf(a, o),
         n = s ? s.px : a.px,
-        r = s ? s.d1 : a.d1,
+        r = cqCryptoVariacao(a,o,s),
         i = r == null ? 0 : Math.min(1, Math.abs(r) / 3);
       return `<div class="cqt" style="background:${r == null ? "var(--card2)" : `color-mix(in srgb,${r >= 0 ? "var(--g)" : "var(--r)"} ${Math.round(18 + i * 62)}%,var(--card))`}" title="${esc(a.n || "")}"><b>${esc(a.c || "")}</b><span>${r == null ? "–" : (r > 0 ? "+" : "") + cqNum(r, 2) + "%"}</span><small>${n == null ? "" : cqNum(n, a.dp)}</small></div>`;
     })
@@ -3639,7 +3727,7 @@ function cqItens(category) {
   const category = CQ.aba, data = CQ.d[category];
   if (["fut","fx","us","adr","fav"].includes(category) && !CQ_EXT.busy && Date.now() - CQ_EXT.ts >= 3e4) setTimeout(cqExtrasCarrega, 0);
   const items = cqItens(category);
-  const change = item => { const quote = cqPf(item,item._aba || category); return quote ? quote.d1 : item.d1; };
+  const change = item => { const quote = cqPf(item,item._aba || category); return cqCryptoVariacao(item,item._aba || category,quote); };
   if (CQ.ord === 'alta') items.sort((a,b)=>(change(b) ?? -Infinity)-(change(a) ?? -Infinity));
   if (CQ.ord === 'baixa') items.sort((a,b)=>(change(a) ?? Infinity)-(change(b) ?? Infinity));
   const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -3673,6 +3761,7 @@ function cqItens(category) {
   return `<div id="cotbox" class="market-quotes${term623 ? ' m624-t' : ''}" data-category="${esc(category)}">
     <div class="market-categories" role="group" aria-label="Categorias de ativos">${CQ_ABAS.map(([key,label])=>`<button type="button" data-cqa="${key}" class="${!mapa606 && category===key?'on':''}" aria-pressed="${!mapa606 && category===key}">${esc(label.replace('★ ',''))}</button>`).join('')}</div>
     <div class="market-tools"><label class="market-search"><span class="market-sr">Buscar ativo</span><input type="search" data-market-search placeholder="Buscar ativo" value="${esc(CQ.search || '')}" autocomplete="off"></label><button type="button" data-cqr="1" aria-label="Atualizar preços" ${busy?'disabled':''}>↻</button><label class="market-order"><span class="market-sr">Ordenar ativos</span><select data-market-order>${[['lista','Ordem padrão'],['alta','Maiores altas'],['baixa','Maiores quedas']].map(([key,label])=>`<option value="${key}" ${CQ.ord===key?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-cqv="${CQ.vis==='mapa'?'lista':'mapa'}" aria-label="${CQ.vis==='mapa'?'Ver lista':'Ver mapa de calor'}">${CQ.vis==='mapa'?'Lista':'Mapa'}</button>${desk624 ? `<button type="button" class="m624-b" data-imgger="1" title="Gerar a imagem Panorama do mercado">Panorama</button>${term623 ? '<button type="button" class="m624-b" data-m624-mon aria-pressed="false" title="Tela limpa só com a grade (Esc para sair)">Modo Monitor</button>' : ''}` : ''}</div>
+    ${cqCryptoPeriodoHtml(category)}
     ${term623 ? m623Html() : `<div class="market-summary" role="status">${summary606}${!mapa606 && data?.em ? ' · Consulta '+esc(new Date(data.em).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}))+' BRT' : ''}</div>
     ${error ? `<p class="market-error" role="status">${esc(error)}${items.length?' Mantendo a consulta anterior.':''}</p>` : ''}
     <div class="market-results" aria-busy="${busy && !total}">${content}</div>`}
