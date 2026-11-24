@@ -62,7 +62,7 @@ jobs:
       # Build e validação estrutural continuam obrigatórios para publicar.
       - run: npm run check
       - name: Testar clique real da lupa e atalho de busca v950
-        run: node --test tests/busca-global-mobile-v950.test.cjs
+        run: node --test tests/busca-global-mobile-v950.test.cjs tests/rebalanceamento-mobile-v951.test.cjs
       - name: Capturas de validação de Análises e Início/Meu Dia
         if: always()
         uses: actions/upload-artifact@v4

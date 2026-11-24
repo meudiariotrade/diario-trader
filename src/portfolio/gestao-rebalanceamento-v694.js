@@ -242,7 +242,7 @@ function sectionFive(p){
  const alertas=[];
  if(pesoAtivo>20)alertas.push('Markowitz: '+tk+' passaria a '+percent(pesoAtivo)+' da carteira (acima do limite saudável de 20%).');
  if(setor!=='Não classificado'&&pesoSetor>35)alertas.push('Markowitz: setor '+setor+' chegaria a '+percent(pesoSetor)+' (acima do limite de 35%).');
- const mungerHtml=av?
+ const mungerHtml=Array.isArray(av?.munger?.riscos)?
   '<div class="rb694-note" style="margin-top:8px"><b>M · Munger — Riscos antes de comprar '+esc(tk)+':</b><ul style="margin:4px 0 0;padding-left:16px">'+av.munger.riscos.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':
   '<p class="rb694-note">Dica: abra a aba <b>Análises</b> uma vez para carregar os alertas automáticos de Munger para '+esc(tk||'este ativo')+', ou clique abaixo para consultar a Áurea.</p>';
  return '<section class="rb694-section"><h3>05 · Simulador “E se eu comprar?” (Markowitz + Munger)</h3>'+
@@ -262,7 +262,7 @@ function sectionFive(p){
 function sectionSix(p){
  const pos=holdings(p),total=Math.max(0,+p.v||0);
  if(!total||!pos.length)return '';
- const sumCls=ks=>sum(pos.filter(x=>ks.includes(cls(x))).map(x=>Math.max(0,+x.v||0)));
+ const sumCls=ks=>sum(pos.filter(x=>ks.includes(x.group)).map(x=>Math.max(0,+x.v||0)));
  const vBR=sumCls(['br']),vFII=sumCls(['fii']),vEXT=sumCls(['ext']),vCRP=sumCls(['crypto']);
  const cenarios=[
   {nome:'Dólar +10%',delta:vEXT*0.10+vCRP*0.10,nota:'Valoriza exterior/ETFs e cripto em R$'},
@@ -299,7 +299,7 @@ function sectionSeven(p){
   rendaTotalMes+=rendaMes;
   const nMagico=Math.ceil(px/divMesCota);
   const prog=Math.min(100,Math.round(qtd/nMagico*100));
-  rows.push('<tr><th><b>'+esc(tk)+'</b>'+(fii?' <small style="color:#C9A66B">FII</small>':'')+'</th><td>'+fmtN(qtd,0)+' / '+fmtN(nMagico,0)+' <small style="color:#9FABBA">('+prog+'%)</small></td><td>'+money(rendaMes)+'/mês</td></tr>');
+  rows.push('<tr><th><b>'+esc(tk)+'</b>'+(fii?' <small style="color:#C9A66B">FII</small>':'')+'</th><td>'+num(qtd,0)+' / '+num(nMagico,0)+' <small style="color:#9FABBA">('+prog+'%)</small></td><td>'+money(rendaMes)+'/mês</td></tr>');
  });
  const resumoLista=pos.slice(0,12).map(h=>{
   const tk=String(h.tk||h.ticker||'').toUpperCase(),val=Number(h.v||h.valor||0),peso=(p.v>0?(val/p.v*100).toFixed(1):'0')+'%';
@@ -391,24 +391,27 @@ function refreshBody(){
  if(root&&root.open){const oldBody=root.querySelector('.rb694-body');if(oldBody)oldBody.outerHTML=body();else root.insertAdjacentHTML('beforeend',body());}
 }
 function reconcile(el){
- if(el?.id!=='rebalanceamento-carteira-v694'||typeof tab==='undefined'||tab!=='carteiras'||!el.isConnected)return;
- state.open=el.open;
+ if(el?.id!=='rebalanceamento-carteira-v694'||typeof tab==='undefined'||tab!=='carteiras'||!el.isConnected||el.closest('.v503-fantasma'))return;
  const panel=el.querySelector('.rb694-body');
  if(el.open&&!panel)el.insertAdjacentHTML('beforeend',body());
  if(!el.open&&panel)panel.remove();
 }
-D.addEventListener('toggle',event=>reconcile(event.target),true);
-// Captura a intenção antes de um repaint da tela que possa desmontar o <details>.
-D.addEventListener('click',event=>{
+// v951: controlador único. Evita corrida com toggle nativo, microtasks e restauração genérica.
+W.addEventListener('click',event=>{
  const summary=event.target.closest?.('#rebalanceamento-carteira-v694 > summary');
- if(!summary||typeof tab==='undefined'||tab!=='carteiras')return;
- const root=summary.closest('#rebalanceamento-carteira-v694'),next=!root.open;
- state.open=next;
- queueMicrotask(()=>{
-  if(!root.isConnected)return;
-  if(root.open!==next)root.open=next;
-  reconcile(root);
- });
+ if(!summary||summary.closest('.v503-fantasma')||typeof tab==='undefined'||tab!=='carteiras')return;
+ event.preventDefault();event.stopImmediatePropagation();
+ const root=summary.parentElement;
+ state.open=!root.open;
+ root.open=state.open;
+ reconcile(root);
+},true);
+D.addEventListener('toggle',event=>{
+ const el=event.target;
+ if(el?.id!=='rebalanceamento-carteira-v694'||!el.isConnected||el.closest('.v503-fantasma')||typeof tab==='undefined'||tab!=='carteiras')return;
+ // Eventos tardios de instâncias desmontadas não podem sobrescrever a intenção.
+ if(el.open!==state.open){el.open=state.open;return}
+ reconcile(el);
 },true);
 D.addEventListener('click',event=>{
  const aud=event.target.closest?.('[data-rb694-auditoria]');
