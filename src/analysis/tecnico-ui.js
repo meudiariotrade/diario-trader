@@ -383,14 +383,21 @@ d.addEventListener('click',async e=>{
   const r=markHoldings(s.rows).find(x=>x.ticker===tk);
   if(r&&typeof w.DiarioConselhoIA==='function'){
    const [dir,x]=side(r,s);if(!x?.valid)return;const pl=x.plan||{};
+   const px=Number(r.price||r.close||pl.entry);
+   const sma200=Number(x.metrics.sma200),sma50=Number(x.metrics.sma50),rsi=Number(x.metrics.rsi14);
+   const tendTxt=(Number.isFinite(px)&&Number.isFinite(sma200)?(px>=sma200?'preço ACIMA da SMA200':'preço ABAIXO da SMA200'):'SMA200 indisponível')+
+    (Number.isFinite(px)&&Number.isFinite(sma50)?(px>=sma50?' e ACIMA da SMA50':' e ABAIXO da SMA50'):'');
+   const rsiTxt=Number.isFinite(rsi)?fmt(rsi,1)+(rsi>=70?' (sobrecomprado)':rsi<=30?' (sobrevendido)':' (zona neutra)'):'N/D';
+   const regraMkt=m==='br'?'Mercado BR (B3, BRL, referência Selic/DI).':'Mercado EUA/Global (USD, referência Fed Funds/Treasury 10Y — NÃO citar Selic).';
    const ctx=['ATIVO TÉCNICO: '+r.ticker+' ('+(m==='br'?'Brasil':'EUA/Cripto')+' · '+s.tf+') · Fonte '+String(r.source||'N/D')+' · Dados '+String(r.updatedAt||'N/D')+' · Direção: '+(dir==='buy'?'Compra':'Venda/Short')+' · Nota: '+fmt(x.score,2)+'/10',
-    'SMA20='+fmt(x.metrics.sma20,2)+' · SMA50='+fmt(x.metrics.sma50,2)+' · SMA150='+fmt(x.metrics.sma150,2)+' · SMA200='+fmt(x.metrics.sma200,2)+' · ATR14='+fmt(x.metrics.atr14,2),
-    'RS='+fmt(x.metrics.rs,0)+' · IFR14='+fmt(x.metrics.rsi14,1)+' · RVOL='+fmt(x.metrics.rvol,2)+'x · Minervini='+(x.minervini.score??'N/D')+'/8',
+    regraMkt,
+    'Regime técnico: '+tendTxt+' · SMA20='+fmt(x.metrics.sma20,2)+' · SMA50='+fmt(x.metrics.sma50,2)+' · SMA150='+fmt(x.metrics.sma150,2)+' · SMA200='+fmt(x.metrics.sma200,2)+' · ATR14='+fmt(x.metrics.atr14,2),
+    'RS='+fmt(x.metrics.rs,0)+' · IFR14='+rsiTxt+' · RVOL='+fmt(x.metrics.rvol,2)+'x · Minervini='+(x.minervini.score??'N/D')+'/8',
     'Plano condicional: Gatilho '+fmt(pl.entry,2)+' · Stop '+fmt(pl.stop,2)+' · Alvo 1 '+fmt(pl.target1,2)+' · Alvo 2 '+fmt(pl.target2,2)+' · R/R '+fmt(pl.rr,2)+' (líquido '+fmt(pl.rrNet,2)+')',
     'Estrutura: Fib '+(x.fib.zone?'em zona':'fora da zona')+(x.fib.cluster?' + cluster':'')+' · RMC '+(x.turn.confirmed?'OK':'pendente')+' · CISD '+(x.turn.cisd?'OK':'não')+' · Elliott: '+(x.elliott.label||'—'),
     r.backtest?'Backtest: '+resultadoBacktest(r):''].filter(Boolean).join('\n');
    const titulo=ed==='munger'?'Munger (Crítico) · '+r.ticker:'Parecer Técnico · '+r.ticker;
-   const pr=(ed==='munger'?'Ataque este setup técnico no modo crítico/inversão (o que invalida, risco de armadilha, qualidade do R/R e volume) sem citar livros:\n':'Faça um parecer técnico direto deste setup (força da tendência, qualidade do ponto de entrada/stop/R-R e riscos de execução) sem citar livros:\n')+ctx;
+   const pr=(ed==='munger'?'Ataque este setup técnico no modo crítico/inversão (o que invalida, risco de violinada/armadilha, qualidade do R/R e volume) sem citar livros e sem usar asteriscos de itálico:\n':'Faça um parecer técnico direto deste setup (força real da tendência, qualidade do ponto de entrada/stop/R-R, volume e riscos de execução) sem citar livros e sem usar asteriscos de itálico:\n')+ctx;
    w.DiarioConselhoIA(ed,titulo,pr);
   }
   return;
