@@ -4050,18 +4050,22 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
       if (c(() => tab, "") !== "home" || r.getElementById("v518-mov")) return;
       const alvo = r.querySelector("#app:not(.v503-fantasma) .v829-home .v829-split>.ui-main");
       if (!alvo) return;
-      const t = r.getElementById("i833-fatos") || null;
+      const anchor =
+        r.getElementById("i835-sinais") ||
+        alvo.querySelector(".v827-eua") ||
+        alvo.querySelector(".v4-iacard") ||
+        null;
       const e = r.createElement("details");
       ((e.id = "v518-mov"),
         (e.className = "v518-mov"),
-        (e.open = !0),
+        (e.open = !1),
         (e.innerHTML =
-          '<summary class="v518-h">Movimentos fortes <span class="mut">carregando…</span></summary>'),
-        t && t.parentElement === alvo ? t.after(e) : alvo.prepend(e));
+          '<summary class="v518-h" style="cursor:pointer">Movimentos fortes <span class="mut">carregando…</span></summary>'),
+        anchor && anchor.parentElement === alvo ? anchor.after(e) : alvo.append(e));
       const a = await v().catch(() => null);
       if (!e.isConnected) return;
       if (!a) {
-        e.innerHTML = '<summary class="v518-h">Movimentos fortes</summary><p class="mut">' + (c(() => SESS && SESS.uid, null) ? 'Não foi possível consultar os movimentos agora.' : 'Entre na sua conta para consultar os movimentos.') + '</p><button type="button" data-v518-refresh>Atualizar movimentos</button>';
+        e.innerHTML = '<summary class="v518-h" style="cursor:pointer">Movimentos fortes <span class="mut">toque para abrir</span></summary><p class="mut">' + (c(() => SESS && SESS.uid, null) ? 'Não foi possível consultar os movimentos agora.' : 'Entre na sua conta para consultar os movimentos.') + '</p><button type="button" data-v518-refresh>Atualizar movimentos</button>';
         e.dataset.v518Ready = "1";
         p.DIARIO_V519?.insCartao?.();
         p.DIARIO_V520?.cartao?.();
@@ -4074,7 +4078,7 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
         ),
         s = o.length ? o : a.slice(0, 3);
       e.innerHTML =
-        `<summary class="v518-h">Movimentos fortes <span class="mut">${o.length ? "hoje" : "últimos dias"}</span></summary>` +
+        `<summary class="v518-h" style="cursor:pointer">Movimentos fortes <span class="mut">${s.length ? s.length + " · " + (o.length ? "hoje" : "últimos dias") : "sem alertas"} · toque para abrir</span></summary>` +
         (s.length
           ? s
               .map((i) => {

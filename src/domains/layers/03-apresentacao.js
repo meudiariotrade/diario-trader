@@ -982,13 +982,10 @@ try {
             ).join("")
           : '<li class="v4-none">Sem movimentos fortes nas cotações recebidas.</li>',
         K = C(
-          "bars",
-          "Panorama do dia",
-          st("Ver mais", 'data-dt393-route="mercado"'),
-          `<div class="v4-pano">
-    <div><h3>${p("cal", 18)} ${B ? "Agenda (próximos)" : "Agenda (hoje)"}</h3><ul class="v4-list">${ot}</ul>${st("Ver agenda", 'data-v4mkt="ag"')}</div>
-    <div><h3>${p("news", 18)} Notícias-chave</h3><ul class="v4-list">${F}</ul>${st("Ver notícias", 'data-v4mkt="nt"')}</div>
-    <div><h3 class="v4-gold">${p("alert", 18)} Alertas macro</h3><ul class="v4-list v4-alerts">${rt}</ul>${st("Abrir radar", 'data-dt393-route="term"')}</div></div>`,
+          "cal",
+          B ? "Agenda · próximos eventos" : "Agenda do dia",
+          st("Ver agenda completa", 'data-v4mkt="ag"'),
+          `<ul class="v4-list">${ot}</ul>`,
         ),
         $t = C(
           "spark",
@@ -1000,14 +997,12 @@ try {
     <button type="button" data-dt393-route="stats">${p("up", 20)}<span><b>Avaliar resultados e consistência</b><small>Curva, win rate e pontos de atenção.</small></span>${p("right", 16)}</button></div></div></details>`,
           "v4-iacard",
         );
-      /* v829: Início = mercado. KPIs de mercado no topo; EUA/ADRs, agenda, notícias e alertas no centro;
-         níveis do plano e IA na coluna da direita. O resumo pessoal do dia foi para o Meu dia. */
-      const b3Aberta829=f(()=>window.DiarioSessoes.session("B3").state==="regular",!1);
+      /* v957: Início organizado por prioridade sem misturar cotações e notícias:
+         Topo = KPIs principais + Central da Áurea; Meio = Mercado/EUA/Movimentos; Base = Notícias + Agenda; Lateral/rodapé = Complementares. */
       return `<div class="v4-page v4-home v810-home v829-home" data-v810-phase="${u}">
     ${v810Seletor($)}
-    ${v810Faixa("home",u,u==="pre"?"Referências internacionais, agenda e preparação para a próxima abertura.":u==="pregao"?"Acompanhe acontecimentos, preços disponíveis e riscos; confira a atualização de cada dado.":"Compare o fechamento com a preparação e acompanhe os riscos para a próxima sessão.")}
     ${v829MercadoKpis()}
-    <div class="ui-split v829-split"><div class="ui-main">${b3Aberta829?K+v827Eua():v827Eua()+K}</div><aside class="ui-aside">${u!=="pos"?v825Niveis():""}${$t}</aside></div>
+    <div class="ui-split v829-split"><div class="ui-main">${$t}${v827Eua()}${K}</div><aside class="ui-aside">${u!=="pos"?v825Niveis():""}</aside></div>
     </div>`;
     }
     let qt = null;

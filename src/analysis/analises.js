@@ -496,9 +496,9 @@ function riscosExplicados(row,meta,valuation,m,s){
  const mg=valuation?.margins?.proprio;if(mg!=null&&mg<0)R.push(['Acima do seu preço teto','Pela sua fórmula o preço está '+fmt(Math.abs(mg),1)+'% acima do teto'+(valuation?.estimados?.proprio?' (teto estimado pelo snapshot; confirme lucro projetado e payout)':'')+'.']);
  return R.slice(0,7);
 }
-const iaChave=(tk,m)=>'scr952-ia|'+owner()+'|'+m+'|'+tk+'|'+new Date().toISOString().slice(0,10);
+const iaChave=(tk,m)=>'scr957-ia|'+owner()+'|'+m+'|'+tk+'|'+new Date().toISOString().slice(0,10);
 function iaHtml(r){
- if(r?.texto)return '<div class="scr852-res" style="font-size:14px;line-height:1.6">'+String(r.texto).split(/\n{2,}/).map(p=>'<p style="margin:0 0 8px">'+E(p).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>')+'</p>').join('')+'<p class="scr-hint">Análise direta gerada pela IA com os números desta ficha. Não é recomendação.</p></div>';
+ if(r?.texto)return '<div class="scr852-res" style="font-size:14px;line-height:1.6">'+String(r.texto).split(/\n{2,}/).map(p=>'<p style="margin:0 0 8px">'+E(p).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s.,;:!?])/g,'$1<em>$2</em>').replace(/^\*+|\*+$/gm,'').replace(/\n/g,'<br>')+'</p>').join('')+'<p class="scr-hint">Análise direta gerada pela IA com os números desta ficha. Não é recomendação.</p></div>';
  const v=r?.resultado||{};return '<div class="scr852-res"><p><b>Tendência:</b> '+E(v.tendencia)+'</p><p><b>Por que está nesse cenário:</b> '+E(v.cenario)+'</p>'+
   (Array.isArray(v.riscos)&&v.riscos.length?'<b>Riscos</b><ul>'+v.riscos.map(x=>'<li><b>'+E(x.risco)+':</b> '+E(x.por_que)+'</li>').join('')+'</ul>':'')+
   (Array.isArray(v.o_que_observar)&&v.o_que_observar.length?'<b>O que observar</b><ul>'+v.o_que_observar.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul>':'')+
@@ -506,10 +506,18 @@ function iaHtml(r){
 }
 function fatosFicha950(tk,m,s,row){
  const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row),v=m==='br'?vBR(row,s):null,num=k=>row[k]==null?'sem dado':fmt(Number(row[k]),2);
+ const mmVal=row.dist_mm200_pct==null?null:Number(row.dist_mm200_pct);
+ const mmTxt=mmVal==null||!Number.isFinite(mmVal)?'sem dado':fmt(mmVal,2)+'% ('+(mmVal>=0?'preço ACIMA da MM200':'preço ABAIXO da MM200')+')';
+ const tsy=row.total_shareholder_yield??row.totalYield;
+ const usExtras=m==='us'?' · Total Shareholder Yield (dividendos+recompras): '+(tsy==null?'sem dado':fmt(Number(tsy),2)+'%')+(row.fcf_yield!=null?' · FCF yield: '+fmt(Number(row.fcf_yield),2)+'%':''):'';
+ const regraMkt=m==='us'
+  ?'REGRAS DO MERCADO EUA: empresa listada nos EUA (USD, NYSE/Nasdaq). Juro de referência = Fed Funds / Treasury 10Y (NUNCA citar Selic nem B3 como risco da empresa). Avaliar retorno ao acionista por ROIC, FCF, margens e recompras (Total Shareholder Yield) — NÃO cobrar dividendo alto ou payout de empresas americanas de tecnologia/semicondutores/crescimento (dividendos EUA têm 30% de IR na fonte).'
+  :'REGRAS DO MERCADO BR: empresa listada na B3 (BRL). Juro de referência = Selic / curva DI.';
  return ['ATIVO: '+tk+' ('+(m==='us'?'EUA':'BR')+') · '+(row.empresa||row.company_name||'')+' · setor '+(row.setor||row.sector||'não informado'),
+  regraMkt,
   'Preço de referência: '+num('preco_referencia')+(m==='us'?' USD':' BRL')+' · snapshot: '+(s.data?.last_update||s.topData?.last_update||'data não informada'),
-  'Distância MM200: '+num('dist_mm200_pct')+'% · Momentum 12-1: '+num('momentum_12_1')+'% · RSI 14: '+num('rsi_14'),
-  'ROE: '+num('roe')+'% · ROIC: '+num('roic')+'% · P/L: '+num('pl')+' · P/VP: '+num('pvp')+' · DY: '+num('dividend_yield')+'% · Payout: '+num('payout_implicito')+'% · Dívida/EBITDA: '+num(m==='us'?'net_debt_ebitda':'div_liq_ebitda'),
+  'Posição vs MM200: '+mmTxt+' · Momentum 12-1: '+num('momentum_12_1')+'% · RSI 14: '+num('rsi_14'),
+  'ROE: '+num('roe')+'% · ROIC: '+num('roic')+'% · P/L: '+num('pl')+' · P/VP: '+num('pvp')+' · DY: '+num('dividend_yield')+'% · Payout: '+num('payout_implicito')+'%'+usExtras+' · Dívida/EBITDA: '+num(m==='us'?'net_debt_ebitda':'div_liq_ebitda'),
   meta?'Nota '+(meta.score==null?'sem dado':fmt(meta.score/10,1)+'/10')+' · pilares: '+meta.parts.map(p=>p.name+' '+(p.points==null?'—':fmt(p.points/10,1)+'/'+fmt(p.weight/10,1))).join('; '):'',
   v?'Preço teto: '+(v.methods.proprio==null?'sem dado':fmt(v.methods.proprio,2))+' · margem '+(v.margins.proprio==null?'—':fmt(v.margins.proprio,1)+'%')+' · Graham '+(v.methods.graham==null?'—':fmt(v.methods.graham,2))+' · Bazin '+(v.methods.bazin==null?'—':fmt(v.methods.bazin,2)):'',
   (()=>{const full=medianasMercado(m),md=full||s.data?.medians||{};return (full?'Medianas do mercado inteiro'+(md.n?' ('+md.n+' ações)':''):'Medianas da amostra disponível')+': ROE '+(md.roe==null?'—':fmt(md.roe,1)+'%')+' · DY '+(md.dy==null?'—':fmt(md.dy,1)+'%')+(m==='us'?' · Total shareholder yield '+((md.total_yield??md.totalYield)==null?'—':fmt(md.total_yield??md.totalYield,1)+'%'):'')})()].filter(Boolean).join('\n');
@@ -523,7 +531,7 @@ async function explicarIA(tk,m,s,box){
  box.innerHTML='<p class="scr-hint">Analisando os números desta ficha…</p>';
  try{
  const fatos=fatosFicha950(tk,m,s,row);
- const prompt='Explique de forma objetiva o cenário atual deste ativo em 3 pontos curtos (Tendência/Momentum, Qualidade/Valuation e Principais Riscos + o que mudaria o quadro), usando apenas estes números e sem citar livros:\n'+fatos;
+ const prompt='Explique de forma objetiva o cenário atual deste ativo em 3 pontos curtos (Tendência/Momentum, Qualidade/Valuation e Principais Riscos + o que mudaria o quadro), usando apenas estes números, respeitando estritamente o mercado do ativo (EUA vs BR), sem citar livros e sem usar asteriscos de itálico:\n'+fatos;
   if(typeof tok==='function')await tok();
   if(uid!==owner())return;
   const jwt=typeof SESS!=='undefined'?SESS?.at:'';

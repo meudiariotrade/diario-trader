@@ -511,17 +511,32 @@
   }
   function cardsInicio(app) {
     const home=app.querySelector('.v829-home');if(!home)return;
-    const kp=home.querySelector(':scope>.v829-kpis');
-    let an=home.querySelector('#i833-analogia');const ah=analogiaHtml();
-    if(ah){if(!an){an=document.createElement('section');an.id='i833-analogia';an.className='ui-card i833-card';(kp||home.firstElementChild)?.after(an);}if(an.innerHTML!==ah)an.innerHTML=ah;}else an?.remove();
+    const main=home.querySelector('.v829-split>.ui-main');
+    const aside=home.querySelector('.v829-split>.ui-aside');
+    if(!main)return;
+    /* Bloco de Mercado: Sinais/Paridade ADRs logo após EUA/ADRs (antes de Movimentos fortes) */
+    const mktAnchor=main.querySelector('.v827-eua')||main.querySelector('.v4-iacard');
     let si=home.querySelector('#i835-sinais');const sh=sinaisHtml();
-    if(sh){if(!si){si=document.createElement('section');si.id='i835-sinais';si.className='ui-card i833-card';(home.querySelector('#i833-analogia')||kp||home.firstElementChild)?.after(si);}if(si.innerHTML!==sh)si.innerHTML=sh;}else si?.remove();
-    let po=home.querySelector('#i838-pontos');const ph=pontosHtml();
-    if(ph){if(!po){po=document.createElement('section');po.id='i838-pontos';po.className='ui-card i833-card';(kp||home.firstElementChild)?.after(po);}if(po.innerHTML!==ph)po.innerHTML=ph;}else po?.remove();
-    const main=home.querySelector('.v829-split>.ui-main');if(!main)return;
-    let f=home.querySelector('#i833-fatos');if(!f){f=document.createElement('section');f.id='i833-fatos';f.className='ui-card i833-card';main.prepend(f);}
+    if(sh){if(!si){si=document.createElement('section');si.id='i835-sinais';si.className='ui-card i833-card';(mktAnchor?mktAnchor.after(si):main.append(si));}if(si.innerHTML!==sh)si.innerHTML=sh;}else si?.remove();
+    /* Bloco de Notícias: Fatos priorizados sempre DEPOIS dos blocos de mercado/movimentos */
+    const newsAnchor=main.querySelector('#v520-fa')||main.querySelector('#v519-ins')||main.querySelector('#v518-mov')||si||mktAnchor;
+    let f=home.querySelector('#i833-fatos');if(!f){f=document.createElement('section');f.id='i833-fatos';f.className='ui-card i833-card';(newsAnchor?newsAnchor.after(f):main.append(f));}
     const fh=fatosHtml();if(f.innerHTML!==fh)f.innerHTML=fh;
     traduzirTitulos(timeline().slice(0,40),()=>{const h=fatosHtml();if(f.isConnected&&f.innerHTML!==h)f.innerHTML=h;});
+    /* Bloco Complementar (menor prioridade): Pontos e Analogia recolhidos embaixo/lateral */
+    const extraHost=aside||main;
+    let po=home.querySelector('#i838-pontos');const ph=pontosHtml();
+    if(ph){
+      if(!po){po=document.createElement('details');po.id='i838-pontos';po.className='ui-card i833-card';extraHost.append(po);}
+      const wrap='<summary style="cursor:pointer;font-weight:700;font-size:14px">Pontos de atenção da abertura <span class="mut sm" style="font-weight:400">· toque para abrir</span></summary><div style="margin-top:8px">'+ph+'</div>';
+      if(po.innerHTML!==wrap)po.innerHTML=wrap;
+    }else po?.remove();
+    let an=home.querySelector('#i833-analogia');const ah=analogiaHtml();
+    if(ah){
+      if(!an){an=document.createElement('details');an.id='i833-analogia';an.className='ui-card i833-card';extraHost.append(an);}
+      const wrap='<summary style="cursor:pointer;font-weight:700;font-size:14px">Analogia histórica do pregão <span class="mut sm" style="font-weight:400">· toque para abrir</span></summary><div style="margin-top:8px">'+ah+'</div>';
+      if(an.innerHTML!==wrap)an.innerHTML=wrap;
+    }else an?.remove();
   }
   function riscoTerminal() {
     if(typeof S==='undefined'||!S)return '<p class="mut sm">Diário não carregado para esta sessão.</p>';
