@@ -3258,9 +3258,27 @@ const cqPf = (e, t) => {
     const key = future && (t === 'fut' || /1!$/.test(e.s || '')) ? '@'+future[1] : code;
     if (!future && !['br','idx'].includes(t) && !(e.s || '').startsWith('BMFBOVESPA:')) return null;
     const live = CQ.pf[key];
-    if (live && Number.isFinite(live.px) && (!live.em || Date.now()-Date.parse(live.em)<180000)) return {...live, live:true};
     const saved = CQ.saved[key];
-    if (!cqSessaoAberta() && saved?.px > 0) return {...saved, fechado:true, live:false};
+    const sessao = cqSessaoAberta();
+    // v945: Profit só se sobrepõe ao TradingView com negócio efetivamente recente
+    // e dentro do pregão. O reenvio da ponte não transforma fechamento em preço vivo.
+    const negociadoEm = Date.parse(live?.em || "");
+    if (sessao && live?.px > 0 && Number.isFinite(negociadoEm) &&
+        negociadoEm <= Date.now()+60000 && Date.now()-negociadoEm < 180000)
+      return {...live, live:true};
+    // Fora do pregão, usar a referência TradingView quando disponível.
+    // Exceção: se o horário informado da referência for comprovadamente mais antigo
+    // que o último negócio do Profit, preservar esse fechamento identificado como tal.
+    const referencia = Number(e.px) > 0;
+    const horaReferencia = Date.parse(e.horarioPreco || e.dado_em || "");
+    const ultimo = saved?.px > 0 ? saved : live?.px > 0 ? live : null;
+    const horaProfit = Date.parse(ultimo?.em || "");
+    if (!sessao && ultimo) {
+      if (referencia &&
+          !(Number.isFinite(horaReferencia) && Number.isFinite(horaProfit) &&
+            horaReferencia < horaProfit)) return null;
+      return {...ultimo, fechado:true, live:false};
+    }
     return null;
   },
   cqPx = (e, t) => {

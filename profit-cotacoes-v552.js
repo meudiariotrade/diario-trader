@@ -5,14 +5,31 @@
   if (root.ProfitCotacoes552 || typeof cqPonte !== 'function') return;
   const FUT = /^(WIN|WDO|IND|DOL)(?:FUT|[FGHJKMNQUVXZ]\d\d|\$N?)$/;
   const g = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch { return d; } };
+  // v945: a data de atualização da ponte não substitui a hora do último negócio.
+  // O Profit pode republicar o fechamento horas depois sem novo trade.
+  const horarioNegocio = row => {
+    const data = String(row?.dat || '').trim();
+    const hora = String(row?.hor || '').trim();
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(data);
+    const hm = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(hora);
+    if (!match || !hm) return null;
+    const [,dia,mes,ano] = match;
+    const time = ano+'-'+mes+'-'+dia+'T'+hm[1]+':'+hm[2]+':'+(hm[3] || '00')+'-03:00';
+    const n = Date.parse(time);
+    return Number.isFinite(n) && n <= Date.now()+60000 &&
+      new Date(n).toLocaleDateString('en-GB',{timeZone:'America/Sao_Paulo'}) ===
+      dia+'/'+mes+'/'+ano ? new Date(n).toISOString() : null;
+  };
   // O wrapper nunca volta ao polling antigo do Supabase após falha local.
-  cqPonte = async function () {
+  cqPonte = async function (force = false) {
     try {
       if (typeof SESS === 'undefined' || !SESS?.uid) { CQ.pf={}; CQ.saved={}; CQ.owner=null; return; }
       if (CQ.owner !== SESS.uid) { CQ.pf={}; CQ.saved={}; CQ.pfTs=0; CQ.cloudTs=0; CQ.owner=SESS.uid; }
       const configured = root.DIARIO_PONTE_LOCAL?.cotacoesUrl || '';
-      // Ponte local direta pode atualizar em 15s; Supabase no máximo a cada 15min.
-      if (Date.now() - (CQ.pfTs || 0) < (configured ? 15e3 : 15 * 6e4)) return;
+      // v945: consultas automáticas ao Supabase seguem a cada 15min.
+      // Ação explícita de Atualizar pode revalidar antes, limitada a uma vez a cada 15s.
+      const manual = force === true;
+      if (Date.now() - (CQ.pfTs || 0) < (manual || configured ? 15e3 : 15 * 6e4)) return;
       const owner = SESS.uid;
       CQ.pfTs = Date.now();
       let linhas = null;
@@ -27,16 +44,18 @@
       }
       // Apenas snapshot de reserva: no máximo uma consulta a cada 15 minutos, nunca por segundo.
       if (!Array.isArray(linhas)) {
-        if (Date.now() - (CQ.cloudTs || 0) < 15 * 6e4) return;
+        if (Date.now() - (CQ.cloudTs || 0) < (manual ? 15e3 : 15 * 6e4)) return;
         CQ.cloudTs = Date.now();
-        linhas = await (await rq('/rest/v1/cotacoes?select=ticker,ult,var,updated_at&limit=250&user_id=eq.' + SESS.uid,{signal:AbortSignal.timeout(4000)})).json();
+        linhas = await (await rq('/rest/v1/cotacoes?select=ticker,ult,var,updated_at,dat,hor&limit=250&user_id=eq.' + SESS.uid,{signal:AbortSignal.timeout(4000)})).json();
       }
       if (SESS?.uid !== owner || !Array.isArray(linhas)) return;
       const t = {}, saved = {}, vig = { WIN: codFut('WIN'), WDO: codFut('WDO'), IND: codFut('IND'), DOL: codFut('DOL') };
       (linhas || []).forEach(o => {
         const s = String(o.ticker || '').toUpperCase();
         if (!(+o.ult > 0) || !Number.isFinite(Date.parse(o.updated_at)) || Date.parse(o.updated_at) > Date.now()+60000) return;
-        const n = { px: +o.ult, d1: o.var != null && isFinite(+o.var) ? +o.var : null, tk: s, em: o.updated_at };
+        const negociadoEm = horarioNegocio(o) || o.updated_at;
+        const n = { px: +o.ult, d1: o.var != null && isFinite(+o.var) ? +o.var : null,
+          tk: s, em: negociadoEm, recebidoEm: o.updated_at };
         const older = saved[s];
         if (!older || Date.parse(n.em) > Date.parse(older.em)) saved[s] = n;
         const stale = Date.now() - Date.parse(n.em) > 3 * 6e4;
@@ -56,6 +75,11 @@
       CQ.pf = t; CQ.saved = saved;
     } catch { return; /* falha da ponte não religa consultas rápidas do legado */ }
   };
+  // Ação humana no botão Atualizar, sem criar polling rápido no Supabase.
+  doc.addEventListener('click', event => {
+    if (!event.target?.closest?.('[data-cqr]')) return;
+    Promise.resolve().then(() => cqPonte(true)).then(() => cqPinta()).catch(() => {});
+  });
   // Mantém os preços atualizados enquanto a aba Cotações está aberta (sem atrapalhar a digitação na busca).
   setInterval(async () => {
     if (doc.hidden || g(() => tab, '') !== 'mercado' || g(() => MKT.tab, '') !== 'cq') return;
