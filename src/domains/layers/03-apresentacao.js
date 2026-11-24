@@ -7853,6 +7853,11 @@ try {
 
     function abreBusca() {
       fechaPop();
+      // Todos os pontos de entrada, inclusive o atalho capturado no núcleo, fecham a gaveta anterior.
+      const drawer=d.getElementById("dt394-drawer");
+      if(drawer){drawer.hidden=true;drawer.dataset.v563Aberto="";}
+      d.body.classList.remove("dt394-menu-open","dt394-drawer-open");
+      d.querySelectorAll('[data-dt393-action="menu"]').forEach(b=>b.setAttribute("aria-expanded","false"));
       let dlg = d.getElementById("dt949-busca");
       if (!dlg) {
         dlg = d.createElement("dialog");
