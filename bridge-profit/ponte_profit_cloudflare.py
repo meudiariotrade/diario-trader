@@ -3,7 +3,7 @@
 Coloque este arquivo ao lado da sua ponte_profit.py. Não substitui o arquivo antigo.
 Não envia senha, refresh_token, ordens ou dados de conta à Cloudflare.
 """
-import datetime, importlib.util, json, pathlib, sys, time, urllib.request, urllib.error
+import datetime, importlib.util, json, math, pathlib, sys, time, urllib.request, urllib.error
 URL = "https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/profit-quotes"
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -22,9 +22,12 @@ def edge_send(self, linhas):
             stamp = datetime.datetime.strptime(d + " " + h, "%d/%m/%Y %H:%M:%S" if h.count(":")==2 else "%d/%m/%Y %H:%M")
         except (TypeError, ValueError, KeyError):
             continue
-        if not isinstance(r.get("ult"), (int,float)) or r["ult"] <= 0:
+        if not isinstance(r.get("ult"), (int,float)) or not math.isfinite(r["ult"]) or r["ult"] <= 0:
             continue
-        out = {k:r[k] for k in ("ticker","ult","var","abe","max","min","neg","fec") if k in r and r[k] is not None}
+        out = {"ticker":str(r.get("ticker","")).upper(),"ult":r["ult"]}
+        for k in ("var","abe","max","min","neg","fec"):
+            if isinstance(r.get(k),(int,float)) and math.isfinite(r[k]):
+                out[k] = r[k]
         out.update(dat=stamp.strftime("%d/%m/%Y"),hor=stamp.strftime("%H:%M:%S"))
         rows.append(out)
     if not rows:

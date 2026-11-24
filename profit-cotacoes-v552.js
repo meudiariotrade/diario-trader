@@ -98,12 +98,13 @@
       if(!edge&&CQ.edgeOwner===owner){
         for(const [s,n] of Object.entries(CQ.saved||{})){
           if(Date.parse(n.em)>(Date.parse(saved[s]?.em)||0)){
-            saved[s]=n;if(Date.now()-Date.parse(n.em)<=3*6e4)t[s]=n;else delete t[s];
+            saved[s]=n;delete t[s];
           }
         }
       }
       if(edge)CQ.edgeOwner=owner;
-      const mudou=JSON.stringify(CQ.pf||{})!==JSON.stringify(t)||JSON.stringify(Object.entries(CQ.saved||{}).map(([k,v])=>[k,v.px,v.d1,v.em]))!==JSON.stringify(Object.entries(saved).map(([k,v])=>[k,v.px,v.d1,v.em]));
+      const sig=o=>JSON.stringify(Object.entries(o||{}).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,v.px,v.d1,v.em]));
+      const mudou=sig(CQ.pf)!==sig(t)||sig(CQ.saved)!==sig(saved);
       CQ.pf = t; CQ.saved = saved;
       // v946: notifica consumidores em memória (Research/Terminal) apenas após
       // snapshot válido; sem criar novas consultas, polling ou divulgar preços.
@@ -128,7 +129,7 @@
     try{
       const antes=g(()=>CQ.pfTs,0);await cqPonte();
       if(!active()||!market()||g(()=>CQ.pfTs,0)===antes||doc.activeElement?.matches?.('#cotbox input, #cqbox input'))return;
-      cqPinta();
+      if(typeof cqMorph==='function')cqMorph();else cqPinta();
     }catch{}finally{tickBusy=false}
   }
   function ciclo(){

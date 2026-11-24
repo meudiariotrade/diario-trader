@@ -58,6 +58,6 @@ test('PWA prioriza Cloudflare, preserva a reserva e não consulta Supabase em se
  await c.cqPonte();assert.equal(c.CQ.pf.PETR4.px,41.30);assert.equal(supa,0);
  await c.cqPonte();assert.equal(edgeCalls,1);
  tick+=5000;await c.cqPonte();assert.equal(edgeCalls,2);assert.equal(supa,0);
- healthy=false;tick+=5000;await c.cqPonte();assert.equal(supa,1);assert.equal(c.CQ.pf.PETR4.px,41.30);
+ healthy=false;tick+=5000;await c.cqPonte();assert.equal(supa,1);assert.equal(c.CQ.saved.PETR4.px,41.30);assert.equal(c.CQ.pf.PETR4,undefined);
  tick+=5000;await c.cqPonte();assert.equal(supa,1);assert.equal(edgeCalls,3);
 });
