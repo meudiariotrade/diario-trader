@@ -1,23 +1,23 @@
 {
-  "processedAt": "2026-11-23T04:57:05.354Z",
+  "processedAt": "2026-11-24T00:06:41.554Z",
   "mode": "rotina",
   "records": {
     "BR": 159,
     "US": 624
   },
   "changed": {
-    "BR": 0,
-    "US": 395
+    "BR": 159,
+    "US": 533
   },
   "metrics": {
     "scanner": {
       "BR": {
-        "updates": 0,
+        "updates": 159,
         "errors": [],
         "blocked": false
       },
       "US": {
-        "updates": 191,
+        "updates": 330,
         "errors": [],
         "blocked": false
       }
@@ -40,7 +40,7 @@
       "asOf": "2026-11-21T17:02:46.856Z"
     },
     "documentos": {
-      "updates": 1,
+      "updates": 0,
       "blocked": false,
       "checked": 12
     },
