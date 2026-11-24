@@ -1,0 +1,28 @@
+name: Validar economia de egress — Movimentos v941
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/movimentos/**'
+      - 'supabase/migrations/20261123210000_movimentos_ativos_v941.sql'
+      - 'tests/movimentos-egress-v941.test.cjs'
+      - '.github/workflows/movimentos-egress-v941.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/movimentos/**'
+      - 'supabase/migrations/20261123210000_movimentos_ativos_v941.sql'
+      - 'tests/movimentos-egress-v941.test.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Rodar testes de preservação da lógica, permissão e transferência mínima
+        run: node --test tests/movimentos-egress-v941.test.cjs

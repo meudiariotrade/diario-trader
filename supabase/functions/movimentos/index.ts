@@ -157,8 +157,30 @@ Deno.serve(async (req) => {
     const r = await fetch('https://scanner.tradingview.com/brazil/scan', { method: 'POST', signal: AbortSignal.timeout(10_000), body: JSON.stringify({ filter: [{ left: 'Value.Traded', operation: 'greater', right: 30_000_000 }, { left: 'change', operation: 'not_in_range', right: [-3, 3] }, { left: 'type', operation: 'equal', right: 'stock' }], columns: ['name', 'description', 'close', 'change', 'Value.Traded'], sort: { sortBy: 'change', sortOrder: 'desc' }, range: [0, 60] }) });
     const A = ((await r.json())?.data || []).map((x: any) => ({ tk: String(x.d[0]), nome: String(x.d[1] || '').replace(/\s+(S\.?A\.?|SA|Pfd|Participacoes.*|Holding.*)$/i, '').trim(), p: +x.d[2], v: +x.d[3] })).filter((a: any) => !['PETR4', 'VALE3'].includes(a.tk));
     if (A.length) {
-      const D = (await db('diario?select=user_id,data').catch(() => [])) || [];
-      const meus: Record<string, Set<string>> = {}; for (const d of D) { const S = new Set<string>(); for (const t of (d.data?.trades || []).slice(-400)) S.add(String(t.ativo || '').toUpperCase().replace(/F$/, '')); for (const o of d.data?.olho || []) S.add(String(o.a || '').toUpperCase()); meus[d.user_id] = S; }
+      // v941: somente os símbolos são necessários aqui. A RPC executa no banco,
+      // com privilégios service_role; nunca transfere o Diário inteiro para Edge.
+      const ativosRPC = await db('rpc/movimentos_ativos_v941', { method: 'POST', body: '{}' }).catch(() => null);
+      const meus: Record<string, Set<string>> = {};
+      if (Array.isArray(ativosRPC)) {
+        for (const row of ativosRPC) {
+          const uid = String(row.user_id || '');
+          if (!/^[a-f0-9-]{36}$/i.test(uid)) continue;
+          meus[uid] = new Set((Array.isArray(row.ativos) ? row.ativos : [])
+            .map((tk: any) => String(tk || '').trim().toUpperCase()).filter(Boolean));
+        }
+      } else {
+        // Reserva compatível se a migration não estiver aplicada.
+        // Não inventar watchlist nem interromper alertas em caso de falha da RPC.
+        const D = (await db('diario?select=user_id,data').catch(() => [])) || [];
+        for (const d of D) {
+          const S = new Set<string>();
+          for (const t of (d.data?.trades || []).slice(-400))
+            S.add(String(t.ativo || '').toUpperCase().replace(/F$/, ''));
+          for (const o of d.data?.olho || [])
+            S.add(String(o.a || '').toUpperCase());
+          meus[d.user_id] = S;
+        }
+      }
       const cache: Record<string, { M: any[]; m: string }> = {}; let enviados = 0;
       for (const a of A) {
         if (enviados >= 6) break;
