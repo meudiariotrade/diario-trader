@@ -58,8 +58,8 @@ test('v932: com corte ativo, lock D1 impede envios duplicados no mesmo minuto',a
  try{
   const e={cron:'* * * * *',scheduledTime:ms('2026-11-22T03:50:00Z')};
   const a=await runAgendaV932(e,env),b=await runAgendaV932(e,env);
-  assert.equal(a.results.length,3);assert.equal(b.results.filter(x=>x.skipped).length,3);
-  assert.equal(calls.length,3);assert.equal(updates.length,3);
+  assert.equal(a.results.length,2);assert.equal(b.results.filter(x=>x.skipped).length,2);
+  assert.equal(calls.length,2);assert.equal(updates.length,2);
   assert.ok(calls.some(x=>x.url.includes('/rest/v1/movimentos?dia=lt.')));
   assert.ok(calls.every(x=>x.init.method==='DELETE'||x.init.method==='POST'));
  }finally{global.fetch=old}
@@ -68,4 +68,18 @@ test('v932: recusa base indevida ou ausência de segredos e não tenta conexão 
  const {validateAgendaV932,runAgendaV932}=await importAgenda();
  assert.equal(validateAgendaV932({SUPABASE_URL:'https://evil.example',CRON_SECRET:'x'.repeat(30),SUPABASE_SERVICE_ROLE_KEY:'s'.repeat(50),HISTORICO:{}}),false);
  await assert.rejects(()=>runAgendaV932({cron:'* * * * *',scheduledTime:ms('2026-11-23T12:00:00Z')},{AGENDA_CUTOVER_ENABLED:'1'}),/sem credenciais/);
+});
+
+test('v943: notícias são 5min na janela BRT e 15min à noite e aos fins de semana',async()=>{
+ const {jobsAtV932}=await importAgenda();
+ const due=(iso,name)=>jobsAtV932(ms(iso)).some(j=>j.name===name);
+ const news='noticias-urgentes-leve-v727',leves='notificar-leve-v724';
+ assert.equal(due('2026-11-23T12:05:00Z',news),true); // segunda 09h05 BRT
+ assert.equal(due('2026-11-23T20:10:00Z',news),true); // segunda 17h10 BRT
+ assert.equal(due('2026-11-23T21:05:00Z',news),false); // segunda 18h05 BRT
+ assert.equal(due('2026-11-23T21:15:00Z',news),true);
+ assert.equal(due('2026-11-22T12:05:00Z',news),false); // domingo
+ assert.equal(due('2026-11-22T12:15:00Z',news),true);
+ assert.equal(due('2026-11-22T12:05:00Z',leves),true); // alerta de horário preservado
+ assert.equal(due('2026-11-23T21:05:00Z',leves),true);
 });
