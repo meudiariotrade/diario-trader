@@ -10,6 +10,7 @@ Contagens observadas antes da correção (23/11/2026, somente tabelas operaciona
 ## Mudanças
 - Novo `POST /v1/migrate/reconcile` no Worker `diario-sync`, exclusivamente para as duas coleções acima.
 - Somente JWT válido; identidade do dono obtida no servidor. Cada consulta PostgREST tem filtro `owner=uid` e os registros recebidos são validados individualmente antes da escrita.
+- Política aditiva de RLS para `push_subs`: papel `authenticated` recebe apenas SELECT das colunas existentes e a policy exige `(select auth.uid())=user_id`. Sem leitura anônima e sem novos privilégios de escrita.
 - Paginação de até 20 registros por chamada, offsets limitados, body até 500 caracteres e resposta de origem até 1,2 MB.
 - Upsert idempotente no D1, sem exclusão. A tabela progressiva recebe a contagem recente.
 - A PWA reconcilia uma única vez ao sincronizar, no máximo uma vez a cada 24 horas por conta; não há polling, timers ou cron adicional.
