@@ -1,3 +1,4 @@
+import {cronSentimento} from './sentimento-v964.mjs';
 import {scanMercadoV954,cotacaoMetaV954,agendarDiagnosticoFinnhubV954} from './cotacoes-v954.mjs';
 // Motor de notícias públicas. Não consulta Supabase, dados financeiros privados nem IA.
 import '../../src/shared/sessoes-mercado.js';
@@ -200,6 +201,7 @@ function json(v,req,env,status=200){
 }
 export default {
   async scheduled(event,env,ctx){
+    if(cronSentimento(event,env,ctx))return;
     ctx.waitUntil(agendarDiagnosticoFinnhubV954(event,env).catch(()=>{}));
     // Coleta diária limitada, inclusive quando B3 estiver fechada; conserva snapshot em falha.
     const b=globalThis.DiarioSessoes.local(event.scheduledTime,'America/Sao_Paulo');
@@ -210,9 +212,7 @@ export default {
     if(env.NEWS_CACHE&&agendaAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
       for(const s of [0,1])try{await env.NEWS_CACHE.put(AGENDA_KEY(s),JSON.stringify(await coletarAgenda(fetch,event.scheduledTime,s)));}catch(_){/* conserva a última agenda */}
     })());
-    if(env.NEWS_CACHE&&sentimentoAgora(new Date(event.scheduledTime)))ctx.waitUntil((async()=>{
-      try{await env.NEWS_CACHE.put(SENT_KEY,JSON.stringify(await coletarSentimento(fetch,event.scheduledTime)));}catch(_){/* conserva o último índice */}
-    })());
+    // Sentimento tem cron exclusivo v964.
     const ex835=extrasAgora(new Date(event.scheduledTime));
     if(env.NEWS_CACHE&&ex835.coleta)ctx.waitUntil((async()=>{
       try{const x=await coletarExtras();if(x&&x.pares)await env.NEWS_CACHE.put('diario:extras:v1',JSON.stringify(x));}catch(_){/* mantém o último */}
