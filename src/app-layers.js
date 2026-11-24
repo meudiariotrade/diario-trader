@@ -20470,13 +20470,18 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
           childList: !0,
           subtree: !1,
         }),
-        setInterval(() => {
-          O.enabled &&
-            l.querySelector(".trbar") &&
+        // v944: Radar Proativo consulta fontes apenas por interação do usuário.
+        // Nenhuma Edge Function é consultada por timer com o diálogo fechado.
+        l.addEventListener("visibilitychange", () => {
+          const painel = l.getElementById("radar332-dialog");
+          if (
+            !l.hidden &&
+            painel?.open &&
+            O.enabled &&
             o()?.at &&
-            Date.now() - O.updated > 5 * 6e4 &&
-            h();
-        }, 6e4),
+            Date.now() - O.updated > 5 * 6e4
+          ) h();
+        }),
         I());
     })(window, document),
     (() => {
