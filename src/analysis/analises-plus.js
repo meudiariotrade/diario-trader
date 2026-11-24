@@ -81,20 +81,89 @@ function enrich(raw,X){const CR=X?.crescimento||{};
 async function extra(){const c=ls.get(K_EXTRA,null);if(c&&Date.now()-c.at<12*3600000)return c.d;
  try{const r=await fetch(URL_EXTRA);if(!r.ok)throw 0;const j=await r.json();ls.set(K_EXTRA,{at:Date.now(),d:j});return j}catch{return c?.d||null}}
 /* v875: cotações ao vivo da ponte do Profit (mesmo CQ.pf do app: {px,d1,em}); só leitura, sem rede extra. */
-function pf(){try{return typeof CQ!=='undefined'&&CQ?.pf?CQ.pf:{}}catch{return {}}}
-function aplicaProfit(){if(!st.rows)return 0;const P=pf();let n=0;for(const r of st.rows.rows){const q=P[r.ticker];if(q&&q.px>0){r.preco=q.px;r.d1=q.d1;r.profit=1;n++}else r.profit=0}
- st.nProfit=n;if(st.X){const ra=rotacaoArquivo(st.rows,st.X);if(ra)st.rot=ra}return n}
+/* v946 — Screener é base fundamentalista, Profit é fonte de preço negociado.
+ * Um upload repetido não é negócio novo; sobreposições nunca ficam persistidas.
+ */
+function ponteCache(tipo){
+ try{
+  if(typeof CQ==='undefined'||!CQ)return {};
+  if(CQ.owner && (typeof SESS==='undefined'||CQ.owner!==SESS?.uid))return {};
+  return tipo==='live'?(CQ.pf||{}):(CQ.saved||{});
+ }catch{return {}}
+}
+function validoNegocio(q,now,age){
+ const ts=Date.parse(q?.em||'');
+ return q&&Number(q.px)>0&&Number.isFinite(ts)&&
+  ts<=now+60000&&now-ts>=-60000&&now-ts<age;
+}
+function pregaoB3(now){
+ const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{
+  timeZone:'America/Sao_Paulo',weekday:'short',hour:'2-digit',
+  minute:'2-digit',hourCycle:'h23'
+ }).formatToParts(new Date(now)).map(x=>[x.type,x.value]));
+ const minutos=Number(p.hour)*60+Number(p.minute);
+ return !['Sat','Sun'].includes(p.weekday)&&minutos>=540&&minutos<1110;
+}
+function aplicaProfit(){
+ if(!st.rows)return 0;
+ const P=ponteCache('live'),F=ponteCache('saved'),now=Date.now(),aberto=pregaoB3(now);
+ let vivos=0,fechados=0;
+ for(const r of st.rows.rows){
+  // Restaurar sempre o preço do snapshot em vez de perpetuar um overlay antigo.
+  r.preco=N(r.raw?.preco_referencia);
+  r.d1=null;r.profit=0;r.profitFechado=0;r.precoEm=null;r.precoFonte='Screener';
+  const vivo=P[r.ticker],ultimo=F[r.ticker]||vivo;
+  if(aberto&&validoNegocio(vivo,now,180000)){
+   r.preco=Number(vivo.px);r.d1=N(vivo.d1);
+   r.profit=1;r.precoEm=vivo.em;r.precoFonte='Profit';vivos++;
+  }else if(validoNegocio(ultimo,now,6*86400000)){
+   r.preco=Number(ultimo.px);r.d1=N(ultimo.d1);
+   r.profitFechado=1;r.precoEm=ultimo.em;r.precoFonte='Profit · FECHADO';fechados++;
+  }
+ }
+ st.nProfit=vivos;st.nProfitFechado=fechados;
+ if(st.X){const ra=rotacaoArquivo(st.rows,st.X);if(ra)st.rot=ra}
+ return vivos;
+}
 function rotacaoArquivo(D,X){const R=X?.retornos;if(!R||!Object.keys(R).length)return null;const s={};let data='';
  for(const[setor,l]of Object.entries(D.porSetor)){const v=l.filter(r=>r.cap&&R[r.ticker]);if(!v.length)continue;const o={n:l.length};
   const val=(r,k)=>k==='1D'&&r.profit&&r.d1!=null?r.d1:R[r.ticker]?.[k];for(const[k]of PER){const q=v.filter(r=>val(r,k)!=null),tw=q.reduce((a,r)=>a+r.cap,0);o[k]=tw?q.reduce((a,r)=>a+r.cap*val(r,k),0)/tw:null}
   v.forEach(r=>{if(R[r.ticker].data>data)data=R[r.ticker].data});s[setor]=o}
  return {at:Date.parse(X.gerado_em)||Date.now(),s,arquivo:1,data}}
+const URL_SCREENER_BR='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/screeners?market=BR&snapshot=1&universe=1';
+async function screenerCloudflare(){
+ // Revalida em nova entrada após 30 min ou toque do usuário, sem timer nem Supabase.
+ const url=URL_SCREENER_BR+'&v=v946-'+Math.floor(Date.now()/(30*60000));
+ const res=await fetch(url,{method:'GET',mode:'cors',credentials:'omit',
+  cache:'no-store',signal:AbortSignal.timeout(16000)});
+ if(!res.ok)throw Error('Screener público indisponível (HTTP '+res.status+')');
+ const j=await res.json();
+ if(j?.ok!==true||j.market!=='BR'||j.universe_complete!==true||
+  !Array.isArray(j.universe_rows)||j.universe_rows.length<150||
+  j.pipeline_origin!=='github-actions-public'||!j.last_update||j.user_id!==undefined)
+  throw Error('Snapshot público inválido ou incompleto');
+ return {rows:j.universe_rows,reference:j.last_update,last_update:j.last_update};
+}
 async function carregar(force){
- if(st.rows&&!force)return;if(st.loading)return;st.loading=true;st.erro='';render();
- try{const fn=w.DiarioScreeners?.universo;if(!fn)throw Error('Screener ainda carregando');
-  const res=await fn('br');if(!res?.rows?.length)throw Error('Snapshot do Screener indisponível');
-  st.ref=res.reference;const X=await extra();st.X=X;st.rows=enrich(res.rows,X);const ra=rotacaoArquivo(st.rows,X);if(ra)st.rot=ra;
- }catch(e){st.erro=e.message||String(e)}st.loading=false;render();
+ if(st.rows&&!force&&Date.now()-(st.loadedAt||0)<30*60000)return;
+ if(st.loading)return;
+ st.loading=true;st.erro='';render();
+ try{
+  let res;
+  try{res=await screenerCloudflare()}
+  catch(edgeError){
+   const fn=w.DiarioScreeners?.universo;
+   if(!fn)throw edgeError;
+   res=await fn('br'); // contingência já existente, sem fallback ao Supabase
+  }
+  if(!res?.rows?.length)throw Error('Snapshot do Screener indisponível');
+  st.ref=res.reference||res.last_update||null;
+  st.snapshotEm=res.last_update||(typeof st.ref==='string'?st.ref:null);
+  const X=await extra();st.X=X;st.rows=enrich(res.rows,X);
+  st.loadedAt=Date.now();
+  const ra=rotacaoArquivo(st.rows,X);if(ra)st.rot=ra;
+ }catch(e){st.erro=e.message||String(e)}
+ st.loading=false;render();
 }
 
 /* v879: Entenda os dados — "?" em cada métrica abre um cartão explicando o que é, como calcula e como ler. */
@@ -554,7 +623,20 @@ function view(tab){if(tab)st.tab=tab;css();return '<div id="ap-root" class="ap">
 function render(){const el=d.getElementById('ap-root');if(!el)return;aplicaProfit();const sc=el.querySelector('.ap-scroll')?.scrollLeft;el.innerHTML=corpo()+(st.q?cartaoQ(st.q):'');if(sc)el.querySelector('.ap-scroll')&&(el.querySelector('.ap-scroll').scrollLeft=sc);
  calcRun(el.querySelector('.ap-calcs'));if(st.tk&&st.sub==='visao'){carregaSerie(st.tk);if(st.ibov)carregaSerie('BOVA11')}
  if(st.tab==='radar'&&st.rows&&!st.rotLoading&&!st.tk&&!st.rot?.arquivo&&(!st.rot||Date.now()-st.rot.at>12*3600000)&&!st._rotTentou){st._rotTentou=1;rotacao()}}
-function enter(tab){if(tab)st.tab=tab;st._rotTentou=0;if(tab!=='ativo'&&!st._abrindo)st.tk='';st._abrindo=0;carregar().then(render);render()}
+function enter(tab){
+ if(tab)st.tab=tab;
+ st._rotTentou=0;
+ if(tab!=='ativo'&&!st._abrindo)st.tk='';
+ st._abrindo=0;
+ carregar().then(render);
+ // Na entrada, reaproveita o limitador da ponte; evento atualiza a tela sem polling.
+ if(typeof cqPonte==='function'&&typeof SESS!=='undefined'&&SESS?.uid)
+  Promise.resolve().then(()=>cqPonte()).then(render).catch(()=>{});
+ render();
+}
+d.addEventListener('diario:profit-cotacoes',()=>{
+ if(d.getElementById('ap-root'))render();
+});
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
