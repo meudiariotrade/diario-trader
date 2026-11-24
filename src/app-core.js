@@ -70008,10 +70008,14 @@ const cqPf = (e, t) => {
     const horaReferencia = Date.parse(e.horarioPreco || e.dado_em || "");
     const ultimo = saved?.px > 0 ? saved : live?.px > 0 ? live : null;
     const horaProfit = Date.parse(ultimo?.em || "");
-    if (!sessao && ultimo) {
-      if (referencia &&
-          !(Number.isFinite(horaReferencia) && Number.isFinite(horaProfit) &&
-            horaReferencia < horaProfit)) return null;
+    if (!sessao && ultimo && Number.isFinite(horaProfit) &&
+        horaProfit <= Date.now() + 60000 &&
+        Date.now() - horaProfit < 6 * 86400000) {
+      // v946: preservar o último negócio real do Profit como FECHADO quando a
+      // referência TradingView não informa um horário de mercado confiável.
+      // Se a referência possui horário comprovadamente mais recente, ela prevalece.
+      if (referencia && Number.isFinite(horaReferencia) &&
+          horaReferencia > horaProfit + 60000) return null;
       return {...ultimo, fechado:true, live:false};
     }
     return null;
