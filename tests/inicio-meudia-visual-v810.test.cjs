@@ -40,13 +40,19 @@ test('v810 E2E: duas telas, três fases, override/auto, CLS, overflow e captura 
   }
   await page.clock.setFixedTime(new Date('2026-11-19T13:40:00Z'));
   await page.evaluate(()=>{tab='dia';render();});
-  await page.locator('#app .v810-day details.v810-more > summary').click();
+  const phasePanel=page.locator('#app .v810-day details.v810-more').filter({has:page.locator('[data-v4phase="pos"]')});
+  const openPhasePanel=async()=>{
+    await expect(phasePanel).toHaveCount(1);
+    if(!(await phasePanel.evaluate(el=>el.open))) await phasePanel.locator(':scope > summary').click();
+    await expect(phasePanel).toHaveAttribute('open','');
+  };
+  await openPhasePanel();
   await page.locator('#app .v810-day [data-v4phase="pos"]').click();
   await expect(page.locator('#app .v810-day')).toHaveAttribute('data-v810-phase','pos');
-  await page.locator('#app .v810-day details.v810-more > summary').click();
+  await openPhasePanel();
   await page.locator('#app .v810-day [data-v4auto]').click();
   await expect(page.locator('#app .v810-day')).toHaveAttribute('data-v810-phase','pregao');
-  await page.locator('#app .v810-day details.v810-more > summary').click();
+  await openPhasePanel();
   await expect(page.locator('#app .v810-day [data-v4auto]')).toHaveClass(/on/);
   await page.evaluate(()=>{
     window.__v810qa={mutations:0,removed:0,cls:0,shifts:[]};
