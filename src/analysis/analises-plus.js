@@ -91,6 +91,7 @@ function ponteCache(tipo){
   return tipo==='live'?(CQ.pf||{}):(CQ.saved||{});
  }catch{return {}}
 }
+function pf(){return ponteCache('live')}
 function validoNegocio(q,now,age){
  const ts=Date.parse(q?.em||'');
  return q&&Number(q.px)>0&&Number.isFinite(ts)&&
@@ -234,7 +235,7 @@ function notaCel(n){if(n==null)return '<td>—</td>';const p=Math.round(n/4*100)
 function cel(r,k){
  switch(k){case 'nota':return notaCel(r.nota).replace('<td>','<td class="ap-c">');case 'setor':return '<td class="ap-up">'+E(r.setor)+'</td>';case 'porte':return '<td>'+E(r.porte||'—')+'</td>';
   case 'crowded':return '<td class="ap-n"><span class="ap-pill'+(r.crowded>150?' hot':'')+'">'+(r.crowded==null?'—':fmt(r.crowded,0)+'%')+'</span></td>';
-  case 'preco':return '<td class="ap-n">'+brl(r.preco)+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'"> '+sinal(r.d1,2)+'</small>':'')+'</td>';case 'graham':case 'bazin':case 'gordon':case 'justo':case 'proprio':return justoCel(r[k],r.preco);
+  case 'preco':return '<td class="ap-n">'+brl(r.preco)+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'"> '+sinal(r.d1,2)+'</small>':r.profitFechado?'<small class="ap-mut">Profit · FECHADO</small>':'')+'</td>';case 'graham':case 'bazin':case 'gordon':case 'justo':case 'proprio':return justoCel(r[k],r.preco);
   case 'pl':case 'pvp':case 'ev_ebitda':case 'div_liq_ebitda':return '<td class="ap-n">'+(r[k]==null?'—':fmt(r[k],1)+'x')+'</td>';
   case 'g1':case 'cagr3':return '<td class="ap-n '+cor(r[k])+'">'+sinal(r[k])+'</td>';case 'pegC':return '<td class="ap-n">'+fmt(r.pegC,2)+'</td>';case 'dy':case 'payout':case 'roe':case 'roic':case 'margem_liquida':case 'fcf_yield':return '<td class="ap-n">'+pct(r[k])+'</td>';
   case 'momentum':case 'mm200':return '<td class="ap-n '+cor(r[k])+'">'+sinal(r[k])+'</td>';case 'rsi':return '<td class="ap-n">'+fmt(r.rsi,0)+'</td>';
@@ -245,7 +246,7 @@ function cardMob(r){
  return '<article class="ap-mcard" data-ap-ativo="'+r.ticker+'">'+
   '<div class="ap-mc-top"><span class="ap-nota" style="--p:'+p+'">'+(r.nota==null?'—':fmt(r.nota,1))+'</span>'+
   '<div class="ap-mc-id"><b>'+logo(r.ticker)+r.ticker+'</b><small>'+E(r.empresa||r.setor)+'</small></div>'+
-  '<div class="ap-mc-px"><b>'+brl(r.preco)+'</b>'+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'">'+sinal(r.d1,2)+'</small>':u!=null?'<small class="'+cor(u)+'">Justo '+sinal(u,0)+'</small>':'')+'</div></div>'+
+  '<div class="ap-mc-px"><b>'+brl(r.preco)+'</b>'+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'">'+sinal(r.d1,2)+'</small>':r.profitFechado?'<small class="ap-mut">Profit · FECHADO</small>':u!=null?'<small class="'+cor(u)+'">Justo '+sinal(u,0)+'</small>':'')+'</div></div>'+
   '<div class="ap-mc-met"><span>P/L <b>'+(r.pl==null?'—':fmt(r.pl,1)+'x')+'</b></span><span>DY <b>'+pct(r.dy)+'</b></span><span>ROE <b>'+pct(r.roe)+'</b></span><span>DL/EB <b>'+(r.div_liq_ebitda==null?'—':fmt(r.div_liq_ebitda,1)+'x')+'</b></span></div></article>';
 }
 const ETFS_B3=[
@@ -322,7 +323,7 @@ function viewRank(){
   '<div class="ap-seg" role="group" aria-label="Modo de colunas"><button type="button" class="'+(st.colMode==='essencial'?'on':'')+'" data-ap-colmode="essencial">Essencial</button><button type="button" class="'+(st.colMode!=='essencial'?'on':'')+'" data-ap-colmode="completo">Completo</button></div>'+
   '<details class="ap-cols"><summary class="btn s">Colunas</summary><div>'+COLS.map(c=>'<label><input type="checkbox" data-ap-col="'+c[0]+'"'+(vis.includes(c[0])?' checked':'')+'> '+c[1]+'</label>').join('')+'</div></details>'+
   '<select data-ap-f="pg">'+[30,50,100].map(n=>'<option value="'+n+'"'+(pg===n?' selected':'')+'>'+n+'/pág</option>').join('')+'</select>'+
-  (st.nProfit?'<span class="ap-tag st-ativa">Profit ao vivo · '+st.nProfit+'</span>':'')+'<button type="button" class="btn s" data-an-sub="br" title="Gráfico de dispersão e PDF comparativo B3">Screener / PDF</button><button type="button" class="btn s ap-desk-only" data-ap-csv>CSV</button><span class="ap-mut ap-pag-info">'+(tot?f.page*pg+1:0)+'–'+Math.min(tot,f.page*pg+pg)+' de '+tot+'</span>'+
+  (st.nProfit?'<span class="ap-tag st-ativa">Profit ao vivo · '+st.nProfit+'</span>':'')+(st.nProfitFechado?'<span class="ap-tag">Profit · FECHADO · '+st.nProfitFechado+'</span>':'')+'<button type="button" class="btn s" data-ap-profit-refresh title="Revalidar cotações Profit e base do Research">↻ Preços</button>'+(st.snapshotEm?'<small class="ap-mut">Base '+E(new Date(st.snapshotEm).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small>':'')+'<button type="button" class="btn s" data-an-sub="br" title="Gráfico de dispersão e PDF comparativo B3">Screener / PDF</button><button type="button" class="btn s ap-desk-only" data-ap-csv>CSV</button><span class="ap-mut ap-pag-info">'+(tot?f.page*pg+1:0)+'–'+Math.min(tot,f.page*pg+pg)+' de '+tot+'</span>'+
   '<button type="button" class="btn s" data-ap-page="-1"'+(f.page?'':' disabled')+'>‹</button><button type="button" class="btn s" data-ap-page="1"'+(f.page<pages-1?'':' disabled')+'>›</button></div>'+
   mobPresets+
   '<p class="ap-mut ap-leg">~ = estimado no aparelho (Graham · Bazin · Gordon) · Nota Raio-X 0–4 por percentis do mercado · Crowded = giro ÷ mediana</p>'+
@@ -547,7 +548,7 @@ function viewAtivo(){
  const u=r.justo&&r.preco?(r.justo/r.preco-1)*100:null,tese=teses().find(t=>t.tk===r.ticker&&t.status==='ativa');
  const subs=[['visao','Visão geral'],['raiox','Raio-X'],['div','Dividendos e preço justo'],['empresa','Empresa']];
  let body='';
- if(st.sub==='visao')body='<div class="ap-2 ap-2w"><section class="ap-card"><h3>Cotação</h3>'+grafico(r)+'</section><section class="ap-card"><h3>Resumo</h3><div class="ap-kv">'+
+ if(st.sub==='visao')body='<div class="ap-2 ap-2w"><section class="ap-card"><h3>Cotação</h3>'+(r.profitFechado?'<small class="ap-mut">Profit · FECHADO · '+E(new Date(r.precoEm).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small>':r.profit?'<small class="ap-mut">Profit ao vivo</small>':'<small class="ap-mut">Screener · referência</small>')+grafico(r)+'</section><section class="ap-card"><h3>Resumo</h3><div class="ap-kv">'+
   [['Nota Raio-X',r.nota==null?'—':fmt(r.nota,2)+' / 4'],['P/L',r.pl==null?'—':fmt(r.pl,1)+'x'],['P/VP',r.pvp==null?'—':fmt(r.pvp,2)+'x'],['DY',pct(r.dy)],['ROE',pct(r.roe)],['ROIC',pct(r.roic)],
    ['DL/EBITDA',r.div_liq_ebitda==null?'—':fmt(r.div_liq_ebitda,1)+'x'],['Momentum 12m',sinal(r.momentum)],['RSI 14',fmt(r.rsi,0)],['Crowded',r.crowded==null?'—':fmt(r.crowded,0)+'%']].map(([k,v])=>'<div><span>'+k+(KQ[k]?q(KQ[k]):'')+'</span><b>'+v+'</b></div>').join('')+'</div>'+
   '<h4>Preço justo'+q('justo')+'</h4><div class="ap-kv">'+[['Graham',r.graham],['Bazin',r.bazin],['Gordon',r.gordon],['Teto próprio',r.proprio]].map(([k,v])=>'<div><span>'+k+'</span><b>'+(v==null?'—':'~'+fmt(v)+' <small class="'+cor(r.preco?(v/r.preco-1):null)+'">'+sinal(r.preco?(v/r.preco-1)*100:null,0)+'</small>')+'</b></div>').join('')+'</div>'+
@@ -640,7 +641,7 @@ d.addEventListener('diario:profit-cotacoes',()=>{
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
-d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese],[data-ap-etf-conselho],[data-ap-aladd],[data-ap-aldel]');
+d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-profit-refresh],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese],[data-ap-etf-conselho],[data-ap-aladd],[data-ap-aldel]');
  if(!t||!t.closest('#ap-root'))return;const ds=t.dataset;
  if('apAladd' in ds){
   const tk=String(d.getElementById('ap-al-tk')?.value||'').trim().toUpperCase();
@@ -689,6 +690,13 @@ d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[
   const ex=teses().find(x=>x.tk===ds.apFiitese&&x.status==='ativa');
   st.teseEdit=ex?{...ex}:{tk:ds.apFiitese,entrada:fii?.cotacao?Math.round(fii.cotacao*100)/100:'',alvo:fii?.cotacao&&fii?.p_vp>0?Math.round((fii.cotacao/fii.p_vp)*100)/100:'',status:'ativa',texto:fii?('FII '+fii.tipo+' ('+fii.segmento+') · P/VP '+fmt(fii.p_vp,2)+' · DY '+pct(fii.dy)):''};
   st.tk='';st.tab='teses';d.querySelector('[data-an-sub="teses"]:not(.selected)')?.click();render();return;
+ }
+ if('apProfitRefresh' in ds){
+  await Promise.allSettled([
+   typeof cqPonte==='function'?cqPonte(true):Promise.resolve(),
+   carregar(true)
+  ]);
+  render();return;
  }
  if('apRecarregar' in ds){carregar(true);return}
  if('apSerie' in ds){carregaSerie(ds.apSerie,true);return}
