@@ -7633,3 +7633,211 @@ try {
 } catch (e) {
   console.error("[v962] MercadoPro", e);
 }
+/* v966: Cotações Mobile Liquid Glass 3D (estilo TradingView iOS) — somente celular (<=768px), desktop 100% intocado. */
+try {
+  ((w, d) => {
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    const isMob = () => w.innerWidth <= 768;
+    const getApp = () => d.querySelector("#app:not(.v503-fantasma)") || d.getElementById("app");
+    const svgIco = (p) => `<svg class="dt966-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+    const ICONS = {
+      fav: svgIco('<path d="M12 3.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.4 6.6 20.3l1-6.1-4.4-4.3 6.1-.9z"/>'),
+      fut: svgIco('<path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/>'),
+      idx: svgIco('<circle cx="12" cy="12" r="9"/><path d="M3.5 9.5h17M3.5 14.5h17M12 3a13 13 0 0 1 0 18M12 3a13 13 0 0 0 0 18"/>'),
+      br: '<span class="dt966-tag">BR</span>',
+      us: '<span class="dt966-tag">US</span>',
+      adr: svgIco('<circle cx="12" cy="12" r="9"/><path d="M8 12h8M13 9l3 3-3 3"/>'),
+      fx: svgIco('<path d="M12 3v18M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 3 4.5 3 4.5 1.3 4.5 3-2 3-4.5 3-4.5-1.3-4.5-3"/>'),
+      cmd: svgIco('<path d="M12 3s6 6.2 6 11a6 6 0 1 1-12 0c0-4.8 6-11 6-11z"/>'),
+      cri: svgIco('<path d="M8 4h6a3.5 3.5 0 0 1 0 7H8V4zm0 7h7a3.5 3.5 0 0 1 0 7H8v-7zm2-9v2m4-2v2m-4 14v2m4-2v2"/>'),
+      jur: svgIco('<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>'),
+    };
+    const getIco = (k) => ICONS[k] || svgIco('<rect x="4" y="4" width="16" height="16" rx="3"/>');
+    const isCotacoes = () => {
+      if (!isMob() || !d.body.classList.contains("mkt549")) return false;
+      const app = getApp();
+      const on = app?.querySelector(".m403-primary-tabs button.on");
+      const sub = (on?.getAttribute("data-navroute") || "").split(":")[1] || (w.MKT && w.MKT.tab) || "cq";
+      return sub === "cq" || sub === "cot";
+    };
+    const cleanup = () => {
+      d.body.classList.remove("dt966-tv-mob", "dt966-search-open");
+      const cw = getApp()?.querySelector(".market-categories, .cqtabs");
+      if (cw && cw.dataset.dt966Hid) { cw.style.removeProperty("display"); delete cw.dataset.dt966Hid; }
+      d.getElementById("dt966-tv-head")?.remove();
+      d.getElementById("dt966-tv-dock")?.remove();
+      d.getElementById("dt966-sheet-ov")?.remove();
+      d.getElementById("dt966-menu-pop")?.remove();
+    };
+    const listItems = () => {
+      const app = getApp();
+      const wrap = app?.querySelector(".market-categories, .cqtabs");
+      if (!wrap) return [];
+      return [...wrap.querySelectorAll("button[data-cqa]")].map((b) => ({
+        val: b.getAttribute("data-cqa") || "",
+        label: b.textContent.trim(),
+        on: b.classList.contains("on"),
+      }));
+    };
+    let syncing = false, timer = null;
+    const obs = new MutationObserver(() => {
+      if (syncing || !d.body.classList.contains("mkt549")) return;
+      if (timer) return;
+      timer = setTimeout(() => { timer = null; sync(); }, 90);
+    });
+    const sync = () => {
+      if (syncing) return;
+      syncing = true;
+      obs.disconnect();
+      const app = getApp();
+      try {
+        if (!app || !isCotacoes()) { cleanup(); return; }
+        const catWrap = app.querySelector(".market-categories, .cqtabs");
+        if (!catWrap) return;
+        const items = listItems();
+        if (!items.length) return;
+        d.body.classList.add("dt966-tv-mob");
+        catWrap.dataset.dt966Hid = "1";
+        catWrap.style.setProperty("display", "none", "important");
+        const cur = items.find((x) => x.on) || items[0];
+        const quickVal = cur.val === "fav" ? "br" : "fav";
+        const quickItem = items.find((x) => x.val === quickVal) || items.find((x) => x.val !== cur.val);
+        const searchOpen = d.body.classList.contains("dt966-search-open");
+        const quickHtml = quickItem ? `<button type="button" class="dt966-pill" data-dt966-pick="${esc(quickItem.val)}"><span class="dt966-badge">${getIco(quickItem.val)}</span><span>${esc(quickItem.label)}</span></button>` : "";
+        const html = `<div class="dt966-row-top" data-noclaro="1"><button type="button" class="dt966-orb" data-dt966-menu="1" aria-label="Opções da lista" title="Opções"><span>•••</span></button><div class="dt966-chips"><button type="button" class="dt966-pill dt966-pill-main" data-dt966-sheet="1" aria-haspopup="dialog"><span class="dt966-badge">${getIco(cur.val)}</span><span>${esc(cur.label)}</span><span class="dt966-caret">▾</span></button>${quickHtml}</div><button type="button" class="dt966-orb ${searchOpen ? "on" : ""}" data-dt966-search="1" aria-label="Buscar ativo" title="Buscar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button></div>`;
+        let bar = d.getElementById("dt966-tv-head");
+        const anchor = d.getElementById("dt962-pulso") || catWrap;
+        if (!bar) {
+          bar = d.createElement("div");
+          bar.id = "dt966-tv-head";
+          bar.className = "dt966-tv-head";
+          bar.setAttribute("data-noclaro", "1");
+          anchor.before(bar);
+        } else if (bar.nextElementSibling !== anchor && anchor.parentElement) {
+          anchor.before(bar);
+        }
+        const key = `${cur.val}|${cur.label}|${quickItem?.val || ""}|${searchOpen}`;
+        if (bar.dataset.key !== key) {
+          bar.dataset.key = key;
+          bar.innerHTML = html;
+        }
+      } finally {
+        syncing = false;
+        if (app && d.body.classList.contains("mkt549")) obs.observe(app, { childList: true, subtree: true });
+      }
+    };
+    const openSheet = () => {
+      d.getElementById("dt966-sheet-ov")?.remove();
+      d.getElementById("dt966-menu-pop")?.remove();
+      const items = listItems();
+      if (!items.length) return;
+      const ov = d.createElement("div");
+      ov.id = "dt966-sheet-ov";
+      ov.className = "dt966-sheet-ov";
+      ov.setAttribute("data-noclaro", "1");
+      ov.innerHTML = `<div class="dt966-sheet" role="dialog" aria-label="Escolher lista de cotações" data-noclaro="1"><div class="dt966-handle"></div><div class="dt966-sh-head"><b>Listas de Mercado</b><button type="button" class="dt966-sh-x" data-dt966-close-sheet="1" aria-label="Fechar">✕</button></div><div class="dt966-sh-grid">${items.map((it) => `<button type="button" class="dt966-sh-card ${it.on ? "on" : ""}" data-dt966-pick="${esc(it.val)}"><span class="dt966-sh-ico">${getIco(it.val)}</span><span class="dt966-sh-lbl">${esc(it.label)}</span>${it.on ? '<span class="dt966-sh-chk">✓</span>' : ""}</button>`).join("")}</div></div>`;
+      d.body.append(ov);
+    };
+    const toggleMenu = () => {
+      const ex = d.getElementById("dt966-menu-pop");
+      if (ex) { ex.remove(); return; }
+      const pop = d.createElement("div");
+      pop.id = "dt966-menu-pop";
+      pop.className = "dt966-menu-pop";
+      pop.setAttribute("data-noclaro", "1");
+      pop.innerHTML = `<button type="button" data-dt966-mact="refresh">↻ Atualizar cotações</button><button type="button" data-dt966-mact="mapa">⊞ Mapa de calor</button><button type="button" data-dt966-mact="search">⇅ Buscar e ordenar</button>`;
+      d.getElementById("dt966-tv-head")?.append(pop);
+    };
+    const sparkSvg = (dir) => {
+      const color = dir === "up" ? "#089981" : dir === "dn" ? "#F23645" : "#C9A66B";
+      const pts = dir === "up" ? "2,18 9,15 15,17 22,11 29,13 36,7 41,9 46,4" : dir === "dn" ? "2,5 9,8 15,6 22,12 29,10 36,15 41,14 46,19" : "2,12 10,10 18,13 26,11 35,12 46,11";
+      const fillPts = `${pts} 46,22 2,22`;
+      return `<svg class="dt966-spark" viewBox="0 0 48 22" width="44" height="22" aria-hidden="true"><defs><linearGradient id="dt966g_${dir}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".28"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><polygon points="${fillPts}" fill="url(#dt966g_${dir})"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="46" cy="${dir === "up" ? 4 : dir === "dn" ? 19 : 11}" r="2.4" fill="${color}"/></svg>`;
+    };
+    const DOCK_STAR = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.4 6.6 20.3l1-6.1-4.4-4.3 6.1-.9z"/></svg>';
+    const DOCK_BELL = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+    const showDock = (row) => {
+      const favBtn = row.querySelector("[data-cqfav]");
+      const sym = favBtn?.getAttribute("data-cqfav") || row.getAttribute("data-market-symbol") || "";
+      const isFav = !!favBtn?.classList.contains("on");
+      const bEl = row.querySelector(".cqn b, b, strong");
+      const nome = (bEl?.childNodes?.[0]?.textContent || bEl?.textContent || sym || "Ativo").trim().split("\n")[0].trim().slice(0, 12);
+      const px = (row.querySelector(".cqp b")?.textContent || "").trim().slice(0, 14);
+      const pct = (row.querySelector(".cqv")?.textContent || "").trim() || (String(row.innerText || "").match(/([+\-−]\d+(?:[.,]\d+)?%)/)?.[1] || "");
+      const dir = pct.startsWith("+") ? "up" : pct.startsWith("-") || pct.startsWith("−") ? "dn" : "neu";
+      const avText = (row.querySelector(".cqi, .ta-avatar, .dl-logo")?.textContent || nome.slice(0, 2)).trim().slice(0, 3).toUpperCase();
+      let dock = d.getElementById("dt966-tv-dock");
+      if (!dock) {
+        dock = d.createElement("div");
+        dock.id = "dt966-tv-dock";
+        dock.className = "dt966-tv-dock";
+        dock.setAttribute("data-noclaro", "1");
+        d.body.append(dock);
+      }
+      w.__dt966Sym = sym;
+      w.__dt966Nome = nome;
+      const titleLine = px && px !== "—" ? `${esc(nome)} <span class="dt966-dk-dot">·</span> <span class="dt966-dk-px">${esc(px)}</span>` : esc(nome);
+      dock.innerHTML = `<div class="dt966-dk-l"><span class="dt966-dk-av">${esc(avText)}</span><div class="dt966-dk-txt"><b>${titleLine}</b><span class="${dir}">${pct && pct !== "–" ? esc(pct) + " hoje" : "selecionado"}</span></div></div>${sparkSvg(dir)}<div class="dt966-dk-acts"><button type="button" class="${isFav ? "fav-on" : ""}" data-dt966-dact="fav" title="Favoritar" aria-label="Favoritar">${DOCK_STAR}</button><button type="button" data-dt966-dact="al" title="Alerta" aria-label="Alerta de preço">${DOCK_BELL}</button><button type="button" class="ia" data-dt966-dact="ia" title="Ler com Áurea">✦ IA</button><button type="button" data-dt966-dact="x" aria-label="Fechar">✕</button></div>`;
+    };
+    d.addEventListener("click", (e) => {
+      if (e.target?.closest?.("[data-dt966-sheet]")) { openSheet(); return; }
+      if (e.target?.closest?.("[data-dt966-close-sheet]") || e.target?.id === "dt966-sheet-ov") { d.getElementById("dt966-sheet-ov")?.remove(); return; }
+      const pick = e.target?.closest?.("[data-dt966-pick]");
+      if (pick) {
+        const val = pick.getAttribute("data-dt966-pick");
+        d.getElementById("dt966-sheet-ov")?.remove();
+        const real = getApp()?.querySelector(`.market-categories button[data-cqa="${val}"], .cqtabs button[data-cqa="${val}"]`);
+        if (real) real.click();
+        setTimeout(sync, 120);
+        return;
+      }
+      if (e.target?.closest?.("[data-dt966-menu]")) { toggleMenu(); return; }
+      const mact = e.target?.closest?.("[data-dt966-mact]");
+      if (mact) {
+        const a = mact.getAttribute("data-dt966-mact");
+        d.getElementById("dt966-menu-pop")?.remove();
+        if (a === "refresh") getApp()?.querySelector("[data-cqr]")?.click();
+        else if (a === "mapa") getApp()?.querySelector("[data-cqv='mapa'], [data-cqv]")?.click();
+        else if (a === "search") {
+          const inp = getApp()?.querySelector('[data-market-search], input[placeholder*="Buscar"]');
+          if (inp) { inp.scrollIntoView({ block: "nearest", behavior: "smooth" }); inp.focus(); }
+        }
+        return;
+      }
+      if (!e.target?.closest?.("#dt966-menu-pop")) d.getElementById("dt966-menu-pop")?.remove();
+      if (e.target?.closest?.("[data-dt966-search]")) {
+        const inp = getApp()?.querySelector('[data-market-search], input[placeholder*="Buscar"]');
+        if (inp) { inp.scrollIntoView({ block: "nearest", behavior: "smooth" }); inp.focus(); }
+        return;
+      }
+      const dact = e.target?.closest?.("[data-dt966-dact]");
+      if (dact) {
+        const a = dact.getAttribute("data-dt966-dact");
+        const sym = w.__dt966Sym || "", nome = w.__dt966Nome || sym;
+        if (a === "x") { d.getElementById("dt966-tv-dock")?.remove(); return; }
+        if (a === "fav" && sym) {
+          getApp()?.querySelector(`[data-cqfav="${CSS.escape(sym)}"]`)?.click();
+          dact.classList.toggle("fav-on");
+          return;
+        }
+        if (a === "al" && sym) { getApp()?.querySelector(`[data-cqal="${CSS.escape(sym)}"]`)?.click(); return; }
+        if (a === "ia") {
+          const prompt = `Faça uma leitura rápida e direta de ${nome} (${sym || nome}) em 3 pontos curtos: 1) Momento atual e tendência · 2) Principal risco ou gatilho hoje · 3) Pontos de atenção para o pregão.`;
+          w.DiarioConselhoIA && w.DiarioConselhoIA("ativo", `Análise · ${nome}`, prompt);
+          return;
+        }
+      }
+      const row = e.target?.closest?.(".cqr");
+      if (row && d.body.classList.contains("dt966-tv-mob") && !e.target.closest("button, a, input, select")) {
+        showDock(row);
+      }
+    });
+    w.addEventListener("resize", sync);
+    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v966-tv3d", { after: sync });
+    w.addEventListener("diario:render", sync);
+    if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", sync, { once: true });
+    else sync();
+  })(window, document);
+} catch (e) {
+  console.error("[v966] CotacoesTV3D", e);
+}
