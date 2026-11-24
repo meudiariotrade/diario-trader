@@ -24434,6 +24434,7 @@ try {
       </section>`
           : "";
       return `<div class="dt393-page dt397-studies dt399-studies dt-est-interno" data-vista="${c(w)}" aria-label="Central de Estudos">
+      <details class="v4-card" style="margin:0 0 12px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🎬 Tour Guiado do App no PC (Vídeo com Áudio)</summary><div style="margin-top:10px"><video controls playsinline preload="metadata" style="width:100%;max-height:460px;border-radius:10px;background:#000" src="assets/tour-pc.mp4"></video><p class="sm mut" style="margin:8px 0 0">Guia completo narrado em português mostrando cada tela, checklist, lançamento de operações, Research, Conselho de IA e Carteira.</p></div></details>
       <div class="dt401-category-shell v596-shell">
         <nav class="dt397-category" aria-label="Seções de Estudos">${wt()}</nav>
       </div>
@@ -30942,6 +30943,7 @@ try {
           `<p class="v4-sub">Registre os pontos principais desta sessão.</p><div class="v4-actions">
     ${U ? `<button type="button" data-a="edit" data-id="${b(U.id)}">${p("image", 20)} Adicionar print ao último trade</button>` : `<button type="button" data-dt393-action="newtrade">${p("image", 20)} Registrar trade com print</button>`}
     <button type="button" data-qkn="1">${p("bolt", 20)} Registro rápido</button>
+    <button type="button" data-rotina-preparo>${p("check", 20)} Ver checklist do dia</button>
     ${U ? `<button type="button" data-a="edit" data-id="${b(U.id)}">${p("warn", 20)} Marcar erro emocional</button>` : ""}
     <button type="button" class="v4-primarybtn" data-v4deb="1">${p("book", 20)} Registrar aprendizado no diário</button></div>`,
         ),
