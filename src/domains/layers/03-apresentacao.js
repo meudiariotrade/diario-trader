@@ -7803,7 +7803,7 @@ try {
     function montaAvatar() {
       const info = perfilInfo();
       d.querySelectorAll(".dt393-topbar .dt393-topactions").forEach((bar) => {
-        if(bar.closest(".v503-fantasma") || (typeof tab!=="undefined"&&tab==="term")) return;
+        if(bar.closest(".v503-fantasma") || (typeof tab!=="undefined"&&tab==="term")){bar.querySelector(".dt949-av")?.remove();return;}
         let btn = bar.querySelector(".dt949-av");
         if (!btn) {
           btn = d.createElement("button");
@@ -7940,7 +7940,7 @@ try {
       }
       if (!ev.target.closest?.("#dt949-pop")) fechaPop();
       const sBtn = ev.target.closest?.('[data-dt393-action="search"]');
-      if (sBtn) { ev.preventDefault(); ev.stopImmediatePropagation(); abreBusca(); }
+      if (sBtn && !(typeof tab!=="undefined"&&tab==="term")) { ev.preventDefault(); ev.stopImmediatePropagation(); abreBusca(); }
     }, true);
 
     d.addEventListener("keydown", (ev) => {
@@ -7952,7 +7952,9 @@ try {
       }
     });
 
-    const aposRender=()=>{fechaPop();const dlg=d.getElementById("dt949-busca");if(dlg?.open)dlg.close();requestAnimationFrame(montaAvatar)};
+    const contexto949=()=>String(typeof SESS!=="undefined"?SESS?.uid||"local":"local")+"|"+String(typeof tab!=="undefined"?tab:"");
+    let contextoAnterior949=contexto949();
+    const aposRender=()=>{const atual=contexto949();if(atual!==contextoAnterior949){contextoAnterior949=atual;fechaPop();const dlg=d.getElementById("dt949-busca");if(dlg?.open)dlg.close()}requestAnimationFrame(montaAvatar)};
     d.addEventListener("diario:render", aposRender);
     w.addEventListener("diario:render", aposRender);
     if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", montaAvatar, { once: true });
