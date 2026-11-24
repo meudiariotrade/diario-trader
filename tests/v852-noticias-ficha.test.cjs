@@ -11,9 +11,10 @@ test('v852: Início não diz "cita diretamente" para hipótese, traduz manchete 
  assert.match(e,/O título cita '\+tk\+' diretamente/);assert.match(e,/tipo:'hipotese'/);assert.match(e,/l\.tipo!=='hipotese'/);assert.match(e,/mkTraduzLote/);assert.match(e,/noticiasDo/);
  assert.doesNotMatch(e,/'A notícia cita '\+tk\+' diretamente\.'/);
 });
-test('v852: ficha explica a tendência, riscos com porquê, IA pelo Cérebro e logos',()=>{
+test('v852: ficha explica a tendência, riscos com porquê, IA pelo Worker autenticado e logos',()=>{
  const a=fs.readFileSync('src/analysis/analises.js','utf8');
- for(const r of [/Média de 200 dias:/,/O que mudaria o quadro/,/function riscosExplicados/,/Controle estatal/,/modo:'ficha'/,/DiarioLogos\?\.html/])assert.match(a,r);
+ for(const r of [/Média de 200 dias:/,/O que mudaria o quadro/,/function riscosExplicados/,/Controle estatal/,/edicao:'ativo'/,/DiarioLogos\?\.html/])assert.match(a,r);
  assert.match(fs.readFileSync('src/analysis/tecnico-ui.js','utf8'),/DiarioLogos\?\.html/);
- assert.match(fs.readFileSync('supabase/functions/conhecimento-ia/index.ts','utf8'),/ficha:'Os DADOS do ativo/);
+ const fn=a.slice(a.indexOf('async function explicarIA('),a.indexOf('/* v852: logotipo'));
+ assert.match(fn,/\/v1\/aurea-resumao/);assert.match(fn,/Authorization:'Bearer '\+token/);assert.match(fn,/cache:'no-store'/);assert.doesNotMatch(fn,/\/functions\/v1\/|modo:'ficha'/);
 });

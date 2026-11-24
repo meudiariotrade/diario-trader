@@ -483,7 +483,7 @@ function avisoValuation(row,valuation){
  return A.length?'<div class="scr853-aviso"><b>Cuidado com o valor justo</b><ul>'+A.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul></div>':'';
 }
 function riscosExplicados(row,meta,valuation,m,s){
- const R=[],n=k=>{const v=Number(row[k]);return Number.isFinite(v)?v:null},med=medianasMercado(m)||s.data?.medians||{},banco=/banc|financ|segur|bank|insur/i.test(String(row.setor||row.sector||''));
+ const R=[],n=k=>{const raw=row[k],v=Number(raw);return raw!=null&&raw!==''&&Number.isFinite(v)?v:null},med=medianasMercado(m)||s.data?.medians||{},banco=/banc|financ|segur|bank|insur/i.test(String(row.setor||row.sector||''));
  const roe=n('roe'),pvp=n('pvp'),pl=n('pl'),dy=n('dividend_yield'),pay=n('payout_implicito'),dv=n(m==='us'?'net_debt_ebitda':'div_liq_ebitda'),mom=n('momentum_12_1'),mm=n('dist_mm200_pct');
  if(roe!=null&&med.roe!=null&&roe<med.roe)R.push(['Rentabilidade abaixo dos pares','ROE de '+fmt(roe,1)+'% contra mediana de '+fmt(med.roe,1)+'%: a empresa gera menos lucro para cada real de patrimônio. Quando o ROE cai, o mercado costuma pagar menos pela ação.']);
  if(pvp!=null&&pvp>0&&pvp<0.7)R.push(['Mercado desconfia do patrimônio','P/VP de '+fmt(pvp,2)+'x: a ação vale menos que o patrimônio contábil. Isso costuma refletir medo de lucro em queda'+(banco?', de inadimplência e de mais provisões para calote':' ou de ativos que valem menos do que o balanço mostra')+'. Barato por P/VP pode continuar barato se o lucro não voltar.']);
@@ -512,7 +512,7 @@ function fatosFicha950(tk,m,s,row){
   'ROE: '+num('roe')+'% · ROIC: '+num('roic')+'% · P/L: '+num('pl')+' · P/VP: '+num('pvp')+' · DY: '+num('dividend_yield')+'% · Payout: '+num('payout_implicito')+'% · Dívida/EBITDA: '+num(m==='us'?'net_debt_ebitda':'div_liq_ebitda'),
   meta?'Nota '+(meta.score==null?'sem dado':fmt(meta.score/10,1)+'/10')+' · pilares: '+meta.parts.map(p=>p.name+' '+(p.points==null?'—':fmt(p.points/10,1)+'/'+fmt(p.weight/10,1))).join('; '):'',
   v?'Preço teto: '+(v.methods.proprio==null?'sem dado':fmt(v.methods.proprio,2))+' · margem '+(v.margins.proprio==null?'—':fmt(v.margins.proprio,1)+'%')+' · Graham '+(v.methods.graham==null?'—':fmt(v.methods.graham,2))+' · Bazin '+(v.methods.bazin==null?'—':fmt(v.methods.bazin,2)):'',
-  (()=>{const md=medianasMercado(m)||s.data?.medians||{};return 'Medianas do mercado'+(md.n?' ('+md.n+' ações)':'')+': ROE '+(md.roe==null?'—':fmt(md.roe,1)+'%')+' · DY '+(md.dy==null?'—':fmt(md.dy,1)+'%')})()].filter(Boolean).join('\n');
+  (()=>{const full=medianasMercado(m),md=full||s.data?.medians||{};return (full?'Medianas do mercado inteiro'+(md.n?' ('+md.n+' ações)':''):'Medianas da amostra disponível')+': ROE '+(md.roe==null?'—':fmt(md.roe,1)+'%')+' · DY '+(md.dy==null?'—':fmt(md.dy,1)+'%')+(m==='us'?' · Total shareholder yield '+((md.total_yield??md.totalYield)==null?'—':fmt(md.total_yield??md.totalYield,1)+'%'):'')})()].filter(Boolean).join('\n');
 }
 async function explicarIA(tk,m,s,box){
  const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk]||(s.data?.universe_rows||[]).find(x=>x.ticker===tk);if(!row||!box)return;
@@ -841,12 +841,13 @@ function rankings(m){
  rankMemo.set(uni,out);return out;
 }
 /* v853: medianas do mercado inteiro (não da lista filtrada), para comparar ROE e DY. */
+function mediana953(rows,k){const v=rows.map(r=>r?.[k]).filter(x=>x!=null&&x!==''&&typeof x!=='boolean').map(Number).filter(Number.isFinite).sort((a,b)=>a-b);return v.length?(v[Math.floor((v.length-1)/2)]+v[Math.floor(v.length/2)])/2:null}
 const medMemo=new WeakMap();
 function medianasMercado(m){
- const snap=snapshotMemory.get(m.toUpperCase())?.data,uni=Array.isArray(snap?.universe_rows)?snap.universe_rows:null;if(!uni)return null;
+ const snap=snapshotMemory.get(m.toUpperCase())?.data,uni=snap?.universe_complete===true&&Array.isArray(snap.universe_rows)?snap.universe_rows:null;if(!uni?.length)return null;
  if(medMemo.has(uni))return medMemo.get(uni);
- const md=k=>{const v=uni.map(r=>Number(r[k])).filter(Number.isFinite).sort((a,b)=>a-b);return v.length?v[Math.floor((v.length-1)/2)]:null};
- const o={roe:md('roe'),dy:md(m==='us'?'total_shareholder_yield':'dividend_yield'),roic:md('roic'),n:uni.length};medMemo.set(uni,o);return o;
+ const md=k=>mediana953(uni,k);
+ const o={roe:md('roe'),dy:md('dividend_yield'),total_yield:md('total_shareholder_yield'),roic:md('roic'),n:uni.length};medMemo.set(uni,o);return o;
 }
 function localScreener(m,s,global){
  if(!global?.universe_complete||!Array.isArray(global.universe_rows))return null;
@@ -892,7 +893,7 @@ function localScreener(m,s,global){
   if(av!==null&&bv!==null&&av!==bv)return asc?av-bv:bv-av;
   return (v(b[score])??-1)-(v(a[score])??-1)||String(a.ticker).localeCompare(String(b.ticker));
  });
- const median=k=>{const nums=rows.map(r=>v(r[k])).filter(x=>x!==null).sort((a,b)=>a-b);return nums.length?nums[Math.floor((nums.length-1)/2)]:null};
+ const median=k=>mediana953(rows,k);
  const summary={
   com_score:rows.filter(r=>v(r[score])!==null).length,
   com_roic:rows.filter(r=>v(r.roic)!==null).length,
