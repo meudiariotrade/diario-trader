@@ -40286,7 +40286,7 @@ function cotacaoReferencia(e) {
   return `<details class="quote-reference"><summary>${esc(e.fonte || "Fonte")} · ${esc(e.simboloFonte)}</summary><div>${esc(t)} · ${esc(o)}<br>${esc(e.baseVariacao || "Base da variação não informada")}${e.fechamentoAnterior > 0 ? " · anterior " + esc(e.fechamentoAnterior.toLocaleString("pt-BR", { maximumFractionDigits: 4 })) : ""}<br>Consulta nova não garante negócio novo. Em futuros contínuos, a rolagem pode mudar o contrato de referência.</div></details>`;
 }
 function mdoTile(e) {
-  const t = e.juro ? e.d1bp : e.d1,
+  const t = e.juro ? e.d1bp : e.s==="BZ=F"&&!/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(e.simboloFonte||"") ? null : e.d1,
     a = Math.min(1, Math.abs(t || 0) / (e.juro ? 10 : 2)),
     o =
       t == null
@@ -45025,7 +45025,10 @@ const IMG = { busy: 0 };
 function imgQ(e) {
   const t = MDO.v && MDO.v.mercados && MDO.v.mercados.grupos;
   if (!t) return null;
-  for (const a of t) for (const o of a.itens) if (o.s === e) return o;
+  for (const a of t) for (const o of a.itens) if (o.s === e) {
+    const brentSemContrato=e==="BZ=F"&&!/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(o.simboloFonte||"");
+    return brentSemContrato||o.suspeito||o.quoteStatus==="divergente"?{...o,d1:null}:o;
+  }
   return null;
 }
 async function imgDados() {
@@ -45051,6 +45054,12 @@ async function imgDados() {
   const carimbo=atualizado?new Date(atualizado).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'sem horário confirmado';
   IMG.aviso=!mercadoOK&&!adrsOK?'SEM COTAÇÕES VERIFICADAS · consultas indisponíveis':
     erro||antigas?'DADOS PARCIAIS / CONSULTA ANTERIOR · '+carimbo+' (BRT)':'';
+  const commodities=['BZ=F','CL=F','TIO=F','DCE:I','GC=F'];
+  const semHora=commodities.some(s=>{const q=imgQ(s);return q&&(!q.horarioPreco&&!q.priceAt||q.quoteStatus==='referencia_anterior'||q.quoteStatus==='divergente');});
+  const brent=imgQ('BZ=F');
+  const semContrato=brent&&!/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(brent.simboloFonte||'');
+  const nota=semContrato?'BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO':semHora?'COMMODITIES: HORÁRIO DA FONTE NÃO CONFIRMADO OU REFERÊNCIA ANTERIOR':'';
+  if(nota)IMG.aviso=[IMG.aviso,nota].filter(Boolean).join(' · ');
   return {mercadoOK,adrsOK,aviso:IMG.aviso};
 }
 function imgDesenha() {
