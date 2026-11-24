@@ -1277,7 +1277,23 @@ function olAdx(e, t = 14) {
   };
 }
 const IMG = { busy: 0 };
+// v955: o snapshot público já tem o Brent com vencimento e ajuste do mesmo instrumento.
+// Não atualizar MDO (dados de outras telas) nem recarregar o Supabase.
+function imgBrent955(snapshot, agora=Date.now()) {
+  if(!snapshot||snapshot.cacheOffline||snapshot.desatualizado)return null;
+  const q=(snapshot.mercados?.grupos||[]).flatMap(g=>g.itens||[]).find(q=>q.s==='ICEEUR:BRN1!'&&/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||''));
+  if(!q||q.quoteStatus!=='coerente'||!Number.isFinite(q.px)||q.px<=0||!Number.isFinite(q.d1)||!Number.isFinite(q.fechamentoAnterior)||q.fechamentoAnterior<=0)return null;
+  const ts=Date.parse(q.horarioPreco||q.priceAt),consulta=Date.parse(snapshot.atualizadoEm);
+  if(!Number.isFinite(ts)||!Number.isFinite(consulta)||ts>agora+60000||consulta>agora+60000||agora-ts>30*60000||agora-consulta>15*60000)return null;
+  if(Math.abs((q.px/q.fechamentoAnterior-1)*100-q.d1)>0.08)return null;
+  return {...q,s:'BZ=F',fonte:q.source||'TradingView'};
+}
 function imgQ(e) {
+  if(e==='BZ=F'&&IMG.brent955){
+    const rows=(MDO.v?.mercados?.grupos||[]).flatMap(g=>g.itens||[]),m=rows.find(q=>q.s===e);
+    const valid=/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(m?.simboloFonte||'')&&Number.isFinite(m?.d1)&&!m.suspeito&&m.quoteStatus!=='divergente';
+    if(!valid||!(Date.parse(m.horarioPreco||m.priceAt)>Date.parse(IMG.brent955.horarioPreco||IMG.brent955.priceAt)))return IMG.brent955;
+  }
   const t = MDO.v && MDO.v.mercados && MDO.v.mercados.grupos;
   if (!t) return null;
   for (const a of t) for (const o of a.itens) if (o.s === e) {
@@ -1290,6 +1306,9 @@ async function imgDados() {
   // v904: atualizar em paralelo, mas NUNCA impedir a imagem por perda de rede.
   // Em iPhone, o sistema pode interromper o fetch ao alternar de tela/5G.
   const aguardando=[],agora=Date.now();
+  let mercadoPublico955=null;
+  IMG.brent955=null;
+  if(window.DiarioPublico?.get)aguardando.push(Promise.resolve().then(()=>window.DiarioPublico.get('/v1/mercado',{ttl:60000})).then(j=>{mercadoPublico955=j;}).catch(()=>{}));
   if((!MDO.v?.mercados || agora-(MDO.ts||0)>3*6e4) && (!MDO.errTs || agora-MDO.errTs>120000))
     aguardando.push(Promise.resolve().then(()=>mdoCarrega(true)));
   if(!AD.data?.itens || agora-(Number(AD.data.ts)||0)>3*6e4)
@@ -1298,6 +1317,7 @@ async function imgDados() {
     Promise.allSettled(aguardando),
     new Promise(resolve=>setTimeout(resolve,7000))
   ]);
+  IMG.brent955=imgBrent955(mercadoPublico955);
   const mercadoOK=!!(MDO.v?.mercados?.grupos?.length);
   const adrsOK=!!(AD.data?.itens?.length);
   const mercadoTs=Number(MDO.ts)||0,adrsTs=Number(AD.data?.ts)||0;

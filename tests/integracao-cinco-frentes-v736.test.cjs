@@ -2,17 +2,20 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const worker=import('../cloudflare/diario-noticias/index.mjs');
 test('Worker publica snapshot só com cotações verificadas, sem Supabase',async()=>{
   const {coletarMercado}=await worker;
+  const agora=Date.parse('2026-11-24T09:44:00Z'), ts=agora/1000;
   const r=await coletarMercado(async(url,init)=>({
     ok:true,json:async()=>({data:[
       {s:'SP:SPX',d:[6900,0.6]},{s:'AMEX:EWZ',d:[35.7,1.3]},
       {s:'NYSE:PBR',d:[13.1,-0.2]},{s:'CME_MINI:ES1!',d:[6930,0.2]},
-      {s:'ICEEUR:BRN1!',d:[73.2,0.8]},{s:'TVC:DXY',d:[99.5,-0.3]},
+      {s:'ICEEUR:BRNF2027',d:[73.2,0.8,73.2-73.2/1.008,ts,'delayed_streaming_900']},{s:'TVC:DXY',d:[99.5,-0.3]},
       {s:'NYSE:VALE',d:[-1,1]},{s:'INVALID:TEST',d:[12,2]}
     ]})
-  }),Date.now());
+  }),agora);
   assert.equal(r.total,6);
   assert.equal(r.adrs.length,1);
   assert.equal(r.mercados.grupos.find(x=>x.g==='Commodities').itens[0].n,'Petróleo Brent');
+  assert.equal(r.mercados.grupos.find(x=>x.g==='Commodities').itens[0].simboloFonte,'ICEEUR:BRNF2027');
+  assert.equal(r.mercados.grupos.find(x=>x.g==='Commodities').itens[0].priceAt,new Date(agora).toISOString());
   assert.equal(r.fonte,'TradingView (atrasado)');
 });
 test('Mercado roda só em janelas abertas e não coleta todo minuto',async()=>{

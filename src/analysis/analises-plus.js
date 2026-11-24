@@ -27,7 +27,7 @@ async function carregarFiis(force){
  const urls=[URL_FIIS,'https://raw.githubusercontent.com/meudiariotrade/diario-trader/main/dados-publicos/fiis.json'];
  for(const u of urls){
   try{const r=await fetch(u,{signal:AbortSignal.timeout(12000)});if(!r.ok)continue;const j=await r.json();
-   if(Array.isArray(j?.rows)&&j.rows.length){st.fiis={...j,_at:Date.now()};ls.set(K_FIIS,st.fiis);st.fiiLoading=false;render();return st.fiis;}}catch(_){}
+   if(Array.isArray(j?.rows)&&j.rows.length){st.fiis={...j,_at:Date.now()};ls.set(K_FIIS,st.fiis);st.fiiLoading=false;render();try{d.dispatchEvent(new CustomEvent('diario:busca-pronta'))}catch(_){}return st.fiis;}}catch(_){}
  }
  st.fiiLoading=false;if(!st.fiis?.rows?.length)st.fiiErr='Não foi possível carregar os FIIs agora.';render();return st.fiis;
 }
@@ -165,6 +165,7 @@ async function carregar(force){
   const ra=rotacaoArquivo(st.rows,X);if(ra)st.rot=ra;
  }catch(e){st.erro=e.message||String(e)}
  st.loading=false;render();
+ try{if(st.rows?.rows?.length)d.dispatchEvent(new CustomEvent('diario:busca-pronta'))}catch(_){}
 }
 
 /* v879: Entenda os dados — "?" em cada métrica abre um cartão explicando o que é, como calcula e como ler. */
@@ -1052,5 +1053,7 @@ function prepararBusca949(tipo,id){
  if((tipo==='fii'||tipo==='ativo')&&!st.fiis?.rows?.length)void carregarFiis(false);
  return true;
 }
-w.DiarioAnalisesPlus={view,enter,abrir,briefing,avaliarAtivo,dueloAtivos,garantirDados,buscarLocal949,prepararBusca949,TABS:['rankpro','radar','teses','guia','ativo']};
+function garantirFiis(){return carregarFiis(false)}
+function temDadosBusca(){return !!(st.rows?.rows?.length)}
+w.DiarioAnalisesPlus={view,enter,abrir,briefing,avaliarAtivo,dueloAtivos,garantirDados,garantirFiis,temDadosBusca,buscarLocal949,prepararBusca949,TABS:['rankpro','radar','teses','guia','ativo']};
 })(window,document);

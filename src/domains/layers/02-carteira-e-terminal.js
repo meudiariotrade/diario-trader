@@ -2106,7 +2106,7 @@ try {
           rev: "Revisão",
           mais: "Configurações",
         }[tab] || "Diário de Trader";
-      return `<header class="dt393-topbar"><button class="dt393-menubtn" type="button" aria-label="Abrir menu do aplicativo" data-dt393-action="menu">${a("layers", 23)}</button><div class="dt393-brand"><span class="dt393-brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>Diário de Trader</span></div><span class="dt393-title">${c(t)}</span><div class="dt393-topactions"><button aria-label="Buscar no aplicativo" type="button" data-dt393-action="search">${a("search", 23)}</button><button aria-label="Abrir notificações" type="button" data-dt393-route="mais">${a("bell", 23)}</button></div></header>`;
+      return `<header class="dt393-topbar"><button class="dt393-menubtn" type="button" aria-label="Abrir menu do aplicativo" data-dt393-action="menu">${a("layers", 23)}</button><div class="dt393-brand"><span class="dt393-brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>Diário de Trader</span></div><span class="dt393-title">${c(t)}</span><button class="dt954-search-pill" aria-label="Buscar no aplicativo" type="button" data-dt393-action="search">${a("search", 15)}<span>Buscar…</span></button><div class="dt393-topactions"><button aria-label="Abrir notificações" type="button" data-dt393-route="mais">${a("bell", 20)}</button></div></header>`;
     }
     const ht = ["IBOV", "S&P 500", "NASDAQ", "DXY", "USD/BRL", "PETR4"];
     function gt(t) {
