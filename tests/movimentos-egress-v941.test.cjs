@@ -28,6 +28,6 @@ test('v941: Movimentos usa apenas tickers com fallback de compatibilidade e não
  assert.match(edge,/s\.prefs\?\.on\?\.acs !== false/);
 });
 test('v941: read-only melhoria não altera versão do contrato de notificações de outros serviços',()=>{
- assert.match(edge,//\* sem ponte \*\//);
+ assert.ok(edge.includes('/* sem ponte */'));
  assert.match(edge,/push_subs\?select=id,user_id,sub,prefs/);
 });
