@@ -1,18 +1,18 @@
 {
-  "processedAt": "2026-11-24T00:06:41.554Z",
+  "processedAt": "2026-11-24T10:08:08.368Z",
   "mode": "rotina",
   "records": {
     "BR": 159,
     "US": 624
   },
   "changed": {
-    "BR": 159,
+    "BR": 145,
     "US": 533
   },
   "metrics": {
     "scanner": {
       "BR": {
-        "updates": 159,
+        "updates": 145,
         "errors": [],
         "blocked": false
       },
