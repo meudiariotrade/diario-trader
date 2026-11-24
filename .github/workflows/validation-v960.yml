@@ -11,9 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 3433ac1018d871d0573f71d285d21a468755601a
+          ref: 7831eea9b2b35b16ef910b7855dc3b6405ce7b8e
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: npm ci
       - run: npm run build && npm run check
+      - run: node --test tests/cripto-periodo-mobile-v960.test.cjs
