@@ -1036,5 +1036,18 @@ function dueloAtivos(t1,t2){
 }
 async function garantirDados(){await carregar();return briefing()}
 
-w.DiarioAnalisesPlus={view,enter,abrir,briefing,avaliarAtivo,dueloAtivos,garantirDados,TABS:['rankpro','radar','teses','guia','ativo']};
+function buscarLocal949(raw){
+ const norm=x=>String(x??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),q=norm(raw).trim();if(q.length<2)return [];
+ const matches=(rows,tipo)=>rows.filter(r=>norm([r.ticker,r.empresa,r.nome,r.tipo,r.segmento,r.setor].join(' ')).includes(q)).slice(0,5).map(r=>({tipo,id:r.ticker,tk:r.ticker,desc:r.empresa||r.nome||r.segmento||r.tipo||'Ficha Research'}));
+ const ts=teses();return [...(Array.isArray(ts)?ts:[]).filter(t=>norm([t.tk,t.texto,t.criterios,t.riscos].join(' ')).includes(q)).slice(0,5).map(t=>({tipo:'tese',id:String(t.id),tk:t.tk,desc:t.status||'ativa'})),...matches(st.rows?.rows||[],'acao'),...matches(st.fiis?.rows||[],'fii')];
+}
+function prepararBusca949(tipo,id){
+ st.q='';st.sub='visao';st.showJusto=false;
+ if(tipo==='tese'){const t=teses().find(x=>String(x.id)===String(id));if(!t)return false;st.tk='';st.teseEdit={...t};st.tab='teses';return true}
+ const tk=String(id||'').toUpperCase();if(!/^[A-Z]{4}\d{1,2}$/.test(tk))return false;
+ abrir(tk);st.tab='rankpro';st.rankTipo=tipo==='fii'?'fiis':'acoes';st.fiiSel=tipo==='fii'?tk:'';
+ if((tipo==='fii'||tipo==='ativo')&&!st.fiis?.rows?.length)void carregarFiis(false);
+ return true;
+}
+w.DiarioAnalisesPlus={view,enter,abrir,briefing,avaliarAtivo,dueloAtivos,garantirDados,buscarLocal949,prepararBusca949,TABS:['rankpro','radar','teses','guia','ativo']};
 })(window,document);
