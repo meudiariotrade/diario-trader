@@ -5,6 +5,21 @@
   if (root.ProfitCotacoes552 || typeof cqPonte !== 'function') return;
   const FUT = /^(WIN|WDO|IND|DOL)(?:FUT|[FGHJKMNQUVXZ]\d\d|\$N?)$/;
   const g = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch { return d; } };
+  // v945: a data de atualização da ponte não substitui a hora do último negócio.
+  // O Profit pode republicar o fechamento horas depois sem novo trade.
+  const horarioNegocio = row => {
+    const data = String(row?.dat || '').trim();
+    const hora = String(row?.hor || '').trim();
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(data);
+    const hm = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(hora);
+    if (!match || !hm) return null;
+    const [,dia,mes,ano] = match;
+    const time = ano+'-'+mes+'-'+dia+'T'+hm[1]+':'+hm[2]+':'+(hm[3] || '00')+'-03:00';
+    const n = Date.parse(time);
+    return Number.isFinite(n) && n <= Date.now()+60000 &&
+      new Date(n).toLocaleDateString('en-GB',{timeZone:'America/Sao_Paulo'}) ===
+      dia+'/'+mes+'/'+ano ? new Date(n).toISOString() : null;
+  };
   // O wrapper nunca volta ao polling antigo do Supabase após falha local.
   cqPonte = async function (force = false) {
     try {
@@ -31,14 +46,16 @@
       if (!Array.isArray(linhas)) {
         if (Date.now() - (CQ.cloudTs || 0) < (manual ? 15e3 : 15 * 6e4)) return;
         CQ.cloudTs = Date.now();
-        linhas = await (await rq('/rest/v1/cotacoes?select=ticker,ult,var,updated_at&limit=250&user_id=eq.' + SESS.uid,{signal:AbortSignal.timeout(4000)})).json();
+        linhas = await (await rq('/rest/v1/cotacoes?select=ticker,ult,var,updated_at,dat,hor&limit=250&user_id=eq.' + SESS.uid,{signal:AbortSignal.timeout(4000)})).json();
       }
       if (SESS?.uid !== owner || !Array.isArray(linhas)) return;
       const t = {}, saved = {}, vig = { WIN: codFut('WIN'), WDO: codFut('WDO'), IND: codFut('IND'), DOL: codFut('DOL') };
       (linhas || []).forEach(o => {
         const s = String(o.ticker || '').toUpperCase();
         if (!(+o.ult > 0) || !Number.isFinite(Date.parse(o.updated_at)) || Date.parse(o.updated_at) > Date.now()+60000) return;
-        const n = { px: +o.ult, d1: o.var != null && isFinite(+o.var) ? +o.var : null, tk: s, em: o.updated_at };
+        const negociadoEm = horarioNegocio(o) || o.updated_at;
+        const n = { px: +o.ult, d1: o.var != null && isFinite(+o.var) ? +o.var : null,
+          tk: s, em: negociadoEm, recebidoEm: o.updated_at };
         const older = saved[s];
         if (!older || Date.parse(n.em) > Date.parse(older.em)) saved[s] = n;
         const stale = Date.now() - Date.parse(n.em) > 3 * 6e4;
