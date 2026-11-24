@@ -48,6 +48,8 @@ jobs:
             git fetch --no-tags --depth=1 origin "$BASE_SHA"
           fi
           node scripts/check-versao.cjs
+      - name: Testar Radar Proativo sem polling
+        run: node --test tests/radar-proativo-v944.test.cjs
       - run: npm run build
       # Build e validação estrutural continuam obrigatórios para publicar.
       - run: npm run check
