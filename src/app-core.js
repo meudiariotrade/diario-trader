@@ -24017,6 +24017,29 @@ function persistNow() {
     svUi();
   });
 }
+/* v949: apenas caches públicos reconstruíveis, com nomes exatos. Nunca remover sessão, diário, carteira, teses, alertas ou configurações. */
+const CHAVES_CACHE_DESCARTAVEL_949 = Object.freeze(["ap873-rotacao","dt-macro-fiscal-v914","ap874-extra","ap896-fiis"]);
+function quota949(e){return !!e && (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED" || e.code === 22 || e.code === 1014);}
+try {
+  if (typeof Storage !== "undefined" && !Storage.prototype._dt949Set) {
+    const origSet = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(k,v) {
+      try { return origSet.call(this,k,v); }
+      catch(err) {
+        let local;
+        try { local = window.localStorage; } catch { throw err; }
+        if (this !== local || !quota949(err)) throw err;
+        for (const cache of CHAVES_CACHE_DESCARTAVEL_949) {
+          if (cache === String(k)) continue;
+          try { if (local.getItem(cache) === null) continue; local.removeItem(cache); } catch { continue; }
+          try { return origSet.call(this,k,v); } catch(e) { if (!quota949(e)) throw e; err=e; }
+        }
+        throw err;
+      }
+    };
+    Object.defineProperty(Storage.prototype,"_dt949Set",{value:true,configurable:true});
+  }
+} catch {}
 function localSaveFailed(e, t) {
   if (t !== LOCAL_SAVE.revision) return;
   const a =
