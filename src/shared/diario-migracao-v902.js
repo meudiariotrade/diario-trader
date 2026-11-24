@@ -12,6 +12,41 @@
   if(!res.ok){const body=await res.json().catch(()=>({}));const err=new Error(body.error||'Migração HTTP '+res.status);err.status=res.status;throw err;}
   return res.json();
  }
+ /* v942: espelhos de serviços ainda escritos no Supabase; só ao sincronizar e no máximo
+  * uma vez a cada 24 horas por usuário. Não substitui o cutover desses escritores. */
+ const ESPELHOS_V942=['push_subs','noticias_urgentes_notificadas'];
+ const ESPELHO_TTL_V942=24*60*60*1000;
+ async function reconcileV942(uid,token,active){
+  const key='diario-d1-espelhos-v942:'+uid;
+  try{
+   const previous=Number(localStorage.getItem(key)||0);
+   if(previous>0&&Date.now()-previous>=0&&Date.now()-previous<ESPELHO_TTL_V942)
+    return {done:true,skipped:true};
+  }catch(_){}
+  const result={done:false,rows:0,collections:[]};
+  for(const collection of ESPELHOS_V942){
+   let offset=0,finished=false;
+   for(let page=0;page<50;page++){
+    if(!active()||document.hidden||!navigator.onLine)return result;
+    const data=await request('/reconcile',token,{
+     method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({collection,offset})
+    });
+    if(!data?.ok||data.collection!==collection)throw Error('Reconciliação inválida.');
+    result.rows+=Number(data.rows)||0;
+    if(data.finished){finished=true;break;}
+    if(!Number.isSafeInteger(data.next_offset)||data.next_offset<=offset)
+     throw Error('Paginação de espelho inválida.');
+    offset=data.next_offset;
+   }
+   if(!finished)return result;
+   result.collections.push(collection);
+  }
+  result.done=true;
+  try{localStorage.setItem(key,String(Date.now()))}catch(_){}
+  return result;
+ }
+
  const status=token=>request('/status',token);
  const step=(collection,token)=>request('/step',token,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({collection})});
  async function run(uid,token,active=()=>true){
@@ -36,9 +71,19 @@
     if(steps>=budget||document.hidden||!navigator.onLine||!active())break;
    }
    const after=await status(token).catch(()=>null);
-   if(after?.collections?.every(x=>x.finished))completed.add(uid);
-   return {steps,stored,blocked:blocked.map(x=>x.name),done:completed.has(uid),collections:after?.collections||[]};
+   let espelhos=null;
+   if(after?.collections?.every(x=>x.finished)){
+    try{
+     espelhos=await reconcileV942(uid,token,active);
+     if(espelhos.done)completed.add(uid);
+     else blocked.push({name:'espelhos_v942',reason:'sessão interrompida'});
+    }catch(err){
+     blocked.push({name:'espelhos_v942',reason:String(err.message||err).slice(0,60)});
+    }
+   }
+   return {steps,stored,blocked:blocked.map(x=>x.name),done:completed.has(uid),
+    espelhos,collections:after?.collections||[]};
   }finally{running=false;}
  }
- window.DiarioMigracaoD1=Object.freeze({status,step,run,versao:902});
+ window.DiarioMigracaoD1=Object.freeze({status,step,run,versao:942});
 })();
