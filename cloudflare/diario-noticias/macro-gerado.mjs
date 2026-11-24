@@ -1,3 +1,4 @@
+import {scanMercadoV954,cotacaoMetaV954} from './cotacoes-v954.mjs';
 /* GERADO por scripts/gerar-worker-macro.cjs a partir de supabase/functions/macro — não edite aqui. */
 // Estudos históricos em índices dos EUA. Não usa dados pessoais nem produz sinais.
                                                
@@ -185,7 +186,7 @@ export function lerTV(j     )                                                   
     const [px, d1, dabs, p30, mes, quoteTime, updateMode] = Array.isArray(x?.d) ? x.d : [];
     const okN = (v         ) => typeof v === 'number' && isFinite(v), m1 = okN(mes) ? mes : okN(p30) ? p30 : null, m1tipo                = okN(mes) ? 'mes' : '30d';
     if (typeof x?.s === 'string' && typeof px === 'number' && px > 0 && typeof d1 === 'number' && isFinite(d1))
-      out[x.s] = { simboloFonte:x.s, fonte:'TradingView', horarioPreco:typeof quoteTime === 'number' && quoteTime>0 && quoteTime<=Date.now()/1000+60 ? new Date(quoteTime*1000).toISOString():null, modoAtualizacao:updateMode || null, fechamentoAnterior:typeof dabs === 'number' && px-dabs>0 ? px-dabs : d1>-100 ? px/(1+d1/100):null, baseVariacao:'Referência diária do provedor (fechamento/ajuste anterior)', px, d1, dabs: typeof dabs === 'number' ? dabs : null, m1, m1tipo };
+      out[x.s] = { ...cotacaoMetaV954(x,TV_COLS), simboloFonte:x.simboloFonte||x.s, fonte:'TradingView', horarioPreco:typeof quoteTime === 'number' && quoteTime>0 && quoteTime<=Date.now()/1000+60 ? new Date(quoteTime*1000).toISOString():null, modoAtualizacao:updateMode || null, fechamentoAnterior:typeof dabs === 'number' && px-dabs>0 ? px-dabs : d1>-100 ? px/(1+d1/100):null, baseVariacao:'Referência diária do provedor (fechamento/ajuste anterior)', px, d1, dabs: typeof dabs === 'number' ? dabs : null, m1, m1tipo };
   }
   return out;
 }
@@ -212,7 +213,8 @@ export function junta(a       , tv                                              
     : { px: r(t.px, t.px > 1000 ? 0 : t.px > 10 ? 2 : 4), d1: r(t.d1), m1: t.m1 != null ? r(t.m1) : y?.m1 ?? null, m1tipo: t.m1 != null ? (t.m1tipo || '30d') : '30d', spark: y?.spark || [], fonte: 'TradingView' };
   else if (y && !['BZ=F','CL=F'].includes(a.s)) it = { ...y, m1tipo: '30d', fonte: 'Yahoo', simboloFonte:a.s, baseVariacao:'Últimos dois fechamentos disponíveis no histórico' };
   if (!it) return null;
-  if(t)Object.assign(it,{simboloFonte:(t       ).simboloFonte,horarioPreco:(t       ).horarioPreco,modoAtualizacao:(t       ).modoAtualizacao,fechamentoAnterior:(t       ).fechamentoAnterior,baseVariacao:(t       ).baseVariacao});
+  if(t)Object.assign(it,{simboloFonte:(t       ).simboloFonte,horarioPreco:(t       ).horarioPreco,modoAtualizacao:(t       ).modoAtualizacao,fechamentoAnterior:(t       ).fechamentoAnterior,baseVariacao:t.baseVariacao,quoteStatus:t.quoteStatus,priceAt:t.priceAt});
+  if(a.s==='BZ=F'){it.spark=[];it.m1=t?.m1??null;}
   if (!juro && it.d1 != null && Math.abs(it.d1) > limiteDia(a.s)) { it.d1 = null; it.m1 = null; it.suspeito = true; }
   if (juro && it.d1bp != null && Math.abs(it.d1bp) > 60) { it.d1bp = null; it.suspeito = true; }
   return it;
@@ -1278,7 +1280,7 @@ async function fechamentos(sym        )                           {
 }
 async function scan(mercado        , tickers          ) {
   try {
-    const r = await fetch(`https://scanner.tradingview.com/${mercado}/scan`, {
+    const r = await scanMercadoV954(fetch, `https://scanner.tradingview.com/${mercado}/scan`, {
       method: 'POST', signal: AbortSignal.timeout(10_000),
       headers: { 'Content-Type': 'application/json', 'User-Agent': UA, Origin: 'https://www.tradingview.com', Referer: 'https://www.tradingview.com/' },
       body: JSON.stringify({ symbols: { tickers, query: { types: [] } }, columns: TV_COLS }),

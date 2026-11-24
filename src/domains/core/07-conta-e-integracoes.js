@@ -81,7 +81,7 @@ function cotacaoReferencia(e) {
   return `<details class="quote-reference"><summary>${esc(e.fonte || "Fonte")} · ${esc(e.simboloFonte)}</summary><div>${esc(t)} · ${esc(o)}<br>${esc(e.baseVariacao || "Base da variação não informada")}${e.fechamentoAnterior > 0 ? " · anterior " + esc(e.fechamentoAnterior.toLocaleString("pt-BR", { maximumFractionDigits: 4 })) : ""}<br>Consulta nova não garante negócio novo. Em futuros contínuos, a rolagem pode mudar o contrato de referência.</div></details>`;
 }
 function mdoTile(e) {
-  const t = e.juro ? e.d1bp : e.d1,
+  const t = e.juro ? e.d1bp : e.s==="BZ=F"&&!/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(e.simboloFonte||"") ? null : e.d1,
     a = Math.min(1, Math.abs(t || 0) / (e.juro ? 10 : 2)),
     o =
       t == null

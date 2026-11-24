@@ -1,3 +1,4 @@
+import {scanMercadoV954,cotacaoMetaV954,agendarDiagnosticoFinnhubV954} from './cotacoes-v954.mjs';
 // Motor de notícias públicas. Não consulta Supabase, dados financeiros privados nem IA.
 import '../../src/shared/sessoes-mercado.js';
 import {buscarFinnhubV940,mesclarFinnhubV940} from './finnhub-v940.mjs';
@@ -163,11 +164,11 @@ export function coletarMercadoAgora(date=new Date()){
   return !['Sat','Sun'].includes(p.weekday)&&+p.hour>=6&&+p.hour<21&&+p.minute%10===0;
 }
 export async function coletarMercado(fetcher=fetch,agora=Date.now()){
-  const r=await fetcher('https://scanner.tradingview.com/global/scan',{
+  const r=await scanMercadoV954(fetcher,'https://scanner.tradingview.com/global/scan',{
     method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
-    body:JSON.stringify({symbols:{tickers:MARKET_SYMBOLS.map(x=>x[0])},columns:['close','change']}),
+    body:JSON.stringify({symbols:{tickers:MARKET_SYMBOLS.map(x=>x[0])},columns:['close','change','change_abs','update_time','update_mode']}),
     signal:AbortSignal.timeout(7000)
-  });
+  },agora);
   if(!r.ok)throw Error('Mercado HTTP '+r.status);
   const resposta=await r.json();
   const nomes=new Map(MARKET_SYMBOLS.map(x=>[x[0],x])),seen=new Set(),grupos=new Map(),adrs=[];
@@ -177,9 +178,9 @@ export async function coletarMercado(fetcher=fetch,agora=Date.now()){
     const px=item?.d?.[0],chp=item?.d?.[1];
     if(!Number.isFinite(px)||px<=0||!Number.isFinite(chp)||Math.abs(chp)>60)continue;
     seen.add(item.s);
-    if(x[1]==='ADR')adrs.push({s:x[2],px,chp,state:'referencia',priceAt:null,source:'TradingView (atrasado)'});
+    if(x[1]==='ADR')adrs.push({s:x[2],px,chp,state:'referencia',...cotacaoMetaV954(item,['close','change','change_abs','update_time','update_mode'],agora),source:'TradingView (atrasado)'});
     else { if(!grupos.has(x[1]))grupos.set(x[1],[]);
-      grupos.get(x[1]).push({n:x[2],px,d1:chp,priceAt:null,source:'TradingView (atrasado)'}); }
+      grupos.get(x[1]).push({s:x[0],n:x[2],px,d1:chp,...cotacaoMetaV954(item,['close','change','change_abs','update_time','update_mode'],agora),source:'TradingView (atrasado)'}); }
   }
   if(seen.size<4)throw Error('Mercado sem dados suficientes');
   return {atualizadoEm:new Date(agora).toISOString(),fonte:'TradingView (atrasado)',total:seen.size,
@@ -199,6 +200,7 @@ function json(v,req,env,status=200){
 }
 export default {
   async scheduled(event,env,ctx){
+    ctx.waitUntil(agendarDiagnosticoFinnhubV954(event,env).catch(()=>{}));
     // Coleta diária limitada, inclusive quando B3 estiver fechada; conserva snapshot em falha.
     const b=globalThis.DiarioSessoes.local(event.scheduledTime,'America/Sao_Paulo');
     if(env.NEWS_CACHE&&!b.weekend&&[660,1020].includes(b.minute))ctx.waitUntil((async()=>{try{
@@ -329,7 +331,7 @@ export default {
     if(path==='/v1/macro'){
       const u=new URL(request.url),q=u.searchParams,c={modo:q.get('modo')||'',aba:q.get('aba')||'',semana:q.get('semana')||''};
       const TTL={painel:60,cotacoes:60,setores:300,ranking:600,fluxo:1800,agenda:1800,balancos:21600,sazonal:43200,sazonal_us:43200,'':120};
-      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana));
+      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana)+'&qv=954');
       if(ttl==null)return json({error:'modo_nao_suportado'},request,env,400);
       if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
       const r=await macroResponder(c);
