@@ -19,7 +19,9 @@ test('egress: ponte local preferida e leitura remota limitada a 15 minutos',()=>
  assert.match(src,/CQ\.cloudTs/);
  assert.match(src,/15 \* 6e4/);
  assert.doesNotMatch(src,/original\.apply\(this/);
- assert.match(src,/select=ticker,ult,var,updated_at&limit=250/);
+ assert.match(src,/select=ticker,ult,var,updated_at,dat,hor&limit=250&user_id=eq\./);
+ assert.match(src,/\/v1\/profit-quotes/);assert.match(src,/CQ\.cloudTs \|\| 0/);
+ assert.match(src,/manual \? 15e3 : 15 \* 6e4/);
  const conn=read('src/domains/layers/01-navegacao-e-fluxos.js');
  assert.match(conn,/trFinnhub/);assert.match(conn,/trBinance/);
 });

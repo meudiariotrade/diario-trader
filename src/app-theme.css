@@ -4205,3 +4205,15 @@ html body :is(.card, .an-section, .scr-panel, .m623-sec, .m606-card, .dt393-card
 }
 
 
+
+/* v953: telas muito estreitas — o título ocupa a linha própria sem reduzir a área de toque. Terminal intocado. */
+@media(max-width:760px){
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topactions .m624-kbtn.m624-kbtn{display:none!important}
+}
+@media(max-width:374px){
+ html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt393-topbar{flex-wrap:wrap!important;gap:4px!important;padding:6px 8px!important;height:auto!important}
+ html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt393-topbar .dt393-title.dt393-title{order:2!important;flex:0 0 100%!important;width:100%!important;max-width:100%!important;min-width:0!important;font-size:16px!important;padding:0!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.25!important}
+ html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt393-topactions{gap:2px!important;flex-wrap:nowrap!important;flex:0 0 auto!important}
+ html:root body:not([data-v4route=term]).dt393-active #dt393-global-head :is(.dt393-menubtn,.dt393-topactions button){width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important;padding:0!important}
+ html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt949-av{margin-left:0!important}
+}
