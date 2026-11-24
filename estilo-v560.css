@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 fa2b5962a1317c770dc016fa1891c6e8362121883e5a365e9f1ee37e77fb2c28 */
+/* Gerado de src/app-theme.css · SHA256 cf7a626ed2f5efa6d6133c701df7befe5c57c18d21bd28d7ee1386179bc45eb9 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -4207,14 +4207,46 @@ html body :is(.card, .an-section, .scr-panel, .m623-sec, .m606-card, .dt393-card
 
 
 
-/* v953: telas muito estreitas — o título ocupa a linha própria sem reduzir a área de toque. Terminal intocado. */
+/* v953/v954: barra de busca aberta no meio do cabeçalho, ícones compactos e telas muito estreitas sem corte. Terminal intocado. */
+html:root body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill{
+ order:1!important;flex:0 1 240px!important;min-width:120px!important;max-width:260px!important;
+ height:34px!important;min-height:34px!important;padding:0 12px!important;margin:0 auto 0 12px!important;
+ display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important;
+ border-radius:999px!important;border:1px solid rgba(255,255,255,.13)!important;
+ background:rgba(255,255,255,.045)!important;color:var(--mut,#9b9a95)!important;
+ font:500 12.5px/1 system-ui,-apple-system,sans-serif!important;white-space:nowrap!important;overflow:hidden!important;cursor:pointer!important;
+ transition:border-color .15s ease,background .15s ease!important
+}
+html:root body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill:hover,
+html:root body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill:focus-visible{
+ border-color:rgba(201,166,107,.55)!important;color:var(--tx,#eae9e6)!important;background:rgba(201,166,107,.08)!important
+}
+html:root body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill svg{flex:none!important;width:15px!important;height:15px!important;opacity:.85}
+html:root body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill span{overflow:hidden;text-overflow:ellipsis}
+html[data-v427-tema="claro"] body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill{
+ background:rgba(26,27,30,.045)!important;border-color:rgba(26,27,30,.15)!important;color:#5f5b52!important
+}
+html[data-v427-tema="claro"] body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill:hover{
+ border-color:#8B6524!important;color:#1A1B1E!important
+}
+html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topactions{order:2!important}
 @media(max-width:760px){
  html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topactions .m624-kbtn.m624-kbtn{display:none!important}
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topbar{gap:6px!important;padding-left:8px!important;padding-right:8px!important}
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topbar .dt393-title.dt393-title{order:0!important;flex:0 1 auto!important;min-width:0!important;padding-left:2px!important;font-size:16px!important;font-weight:700!important}
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill{flex:1 1 82px!important;min-width:72px!important;max-width:210px!important;margin:0!important;padding:0 9px!important;height:32px!important;min-height:32px!important;font-size:12px!important;gap:5px!important}
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill svg{width:14px!important;height:14px!important}
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-menubtn{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important}
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topactions{gap:2px!important;margin-left:0!important}
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topactions button:not(.dt949-av){width:31px!important;min-width:31px!important;height:34px!important;min-height:34px!important;padding:0!important}
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topactions button:not(.dt949-av) svg{width:18px!important;height:18px!important}
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt949-av{width:28px!important;min-width:28px!important;height:28px!important;min-height:28px!important;font-size:12px!important;margin-left:2px!important}
 }
 @media(max-width:374px){
  html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt393-topbar{flex-wrap:wrap!important;gap:4px!important;padding:6px 8px!important;height:auto!important}
- html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt393-topbar .dt393-title.dt393-title{order:2!important;flex:0 0 100%!important;width:100%!important;max-width:100%!important;min-width:0!important;font-size:16px!important;padding:0!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.25!important}
- html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt393-topactions{gap:2px!important;flex-wrap:nowrap!important;flex:0 0 auto!important}
+ html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt393-topbar .dt393-title.dt393-title{order:3!important;flex:0 0 100%!important;width:100%!important;max-width:100%!important;min-width:0!important;font-size:16px!important;padding:0!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.25!important}
+ html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt954-search-pill{order:1!important;flex:1 1 56px!important;min-width:56px!important;height:40px!important;min-height:40px!important;padding:0 8px!important}
+ html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt393-topactions{order:2!important;gap:2px!important;flex-wrap:nowrap!important;flex:0 0 auto!important}
  html:root body:not([data-v4route=term]).dt393-active #dt393-global-head :is(.dt393-menubtn,.dt393-topactions button){width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important;padding:0!important}
  html:root body:not([data-v4route=term]).dt393-active #dt393-global-head .dt949-av{margin-left:0!important}
 }

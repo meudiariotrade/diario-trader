@@ -3507,7 +3507,7 @@ Contexto autorizado:
           b.setAttribute("aria-expanded", String(!!l));
           b.innerHTML = iaIcone;
           b.addEventListener("click", () => B(!l));
-          const lupa = bar.querySelector('[data-dt393-action="search"]');
+          const lupa = bar.querySelector('[data-dt393-action="search"],[data-dt393-route="mais"]');
           lupa ? bar.insertBefore(b, lupa) : bar.append(b);
         }
         for (const b of document.querySelectorAll("[data-ia-topo]")) b.setAttribute("aria-expanded", String(!!l));
@@ -23910,7 +23910,7 @@ try {
           rev: "Revisão",
           mais: "Configurações",
         }[tab] || "Diário de Trader";
-      return `<header class="dt393-topbar"><button class="dt393-menubtn" type="button" aria-label="Abrir menu do aplicativo" data-dt393-action="menu">${a("layers", 23)}</button><div class="dt393-brand"><span class="dt393-brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>Diário de Trader</span></div><span class="dt393-title">${c(t)}</span><div class="dt393-topactions"><button aria-label="Buscar no aplicativo" type="button" data-dt393-action="search">${a("search", 23)}</button><button aria-label="Abrir notificações" type="button" data-dt393-route="mais">${a("bell", 23)}</button></div></header>`;
+      return `<header class="dt393-topbar"><button class="dt393-menubtn" type="button" aria-label="Abrir menu do aplicativo" data-dt393-action="menu">${a("layers", 23)}</button><div class="dt393-brand"><span class="dt393-brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>Diário de Trader</span></div><span class="dt393-title">${c(t)}</span><button class="dt954-search-pill" aria-label="Buscar no aplicativo" type="button" data-dt393-action="search">${a("search", 15)}<span>Buscar…</span></button><div class="dt393-topactions"><button aria-label="Abrir notificações" type="button" data-dt393-route="mais">${a("bell", 20)}</button></div></header>`;
     }
     const ht = ["IBOV", "S&P 500", "NASDAQ", "DXY", "USD/BRL", "PETR4"];
     function gt(t) {
@@ -37087,6 +37087,11 @@ try {
         dlg.addEventListener("close",()=>d.querySelector('.dt393-topbar [data-dt393-action="search"]')?.focus());
       }
       const inp = dlg.querySelector("#dt949-q");
+      const recarregarBusca = () => { if (dlg.open) desenhaBusca(inp.value); };
+      if (!w.DiarioAnalisesPlus?.temDadosBusca?.()) {
+        try { Promise.resolve(w.DiarioAnalisesPlus?.garantirDados?.()).then(recarregarBusca); } catch {}
+      }
+      try { Promise.resolve(w.DiarioAnalisesPlus?.garantirFiis?.()).then(recarregarBusca); } catch {}
       if (dlg.open) { inp.focus(); return true; }
       inp.value = "";
       desenhaBusca("");
@@ -37094,6 +37099,10 @@ try {
       inp.focus();
       return true;
     }
+    d.addEventListener("diario:busca-pronta", () => {
+      const dlg = d.getElementById("dt949-busca");
+      if (dlg?.open) desenhaBusca(dlg.querySelector("#dt949-q")?.value || "");
+    });
     w.DiarioBuscaGlobal=Object.freeze({abrir:abreBusca});
 
     function desenhaBusca(raw) {
@@ -37102,19 +37111,10 @@ try {
       const norm=v=>String(v??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
       const q = norm(raw).trim();
       const out = [];
-      const telas = TELAS_949.filter(([n, desc, r]) => !q || norm(n).includes(q) || norm(desc).includes(q) || r.includes(q)).slice(0, q ? 6 : 8);
-      if (telas.length) {
-        out.push(`<div class="b-grp">Telas &amp; Ferramentas</div>` + telas.map(([n, desc, r]) => `<button type="button" class="b-it" data-b949-tipo="rota" data-b949-go="${r}"><b>${esc(n)}</b><small>${esc(desc)}</small></button>`).join(""));
-      }
+      const telas = TELAS_949.filter(([n, desc, r]) => !q || norm(n).includes(q) || norm(desc).includes(q) || r.includes(q)).slice(0, q ? 5 : 8);
       if (q.length >= 2) {
-        const trades = (typeof S !== "undefined" && Array.isArray(S?.trades) ? S.trades : [])
-          .filter((t) => norm([t.ativo,t.setup,t.dt,t.tipo].join(" ")).includes(q))
-          .slice(0, 5);
-        if (trades.length) {
-          out.push(`<div class="b-grp">Seus Trades</div>` + trades.map((t) => `<button type="button" class="b-it" data-b949-tipo="trade" data-b949-go="${esc(t.id)}"><b>${esc(t.ativo)}</b><small>${esc(String(t.dt || "").slice(0, 10))}${t.setup ? " · " + esc(t.setup) : ""}</small></button>`).join(""));
-        }
         const hits=w.DiarioAnalisesPlus?.buscarLocal949?.(q)||[];
-        for (const [tipo,titulo] of [["tese","Teses deste aparelho"],["acao","Ações"],["fii","FIIs"]]) {
+        for (const [tipo,titulo] of [["acao","Ações"],["fii","FIIs"],["tese","Teses deste aparelho"]]) {
           const encontrados=hits.filter(t=>t.tipo===tipo).slice(0,5);
           if(encontrados.length)out.push('<div class="b-grp">'+titulo+'</div>'+encontrados.map(t=>'<button type="button" class="b-it" data-b949-tipo="'+tipo+'" data-b949-go="'+esc(t.id)+'"><b>'+esc(t.tk)+'</b><small>'+esc(t.desc)+'</small></button>').join(""));
         }
@@ -37122,6 +37122,18 @@ try {
           const tk=q.toUpperCase();
           out.push('<div class="b-grp">Research</div><button type="button" class="b-it" data-b949-tipo="ativo" data-b949-go="'+tk+'"><b>'+tk+'</b><small>Consultar no universo B3 ›</small></button>');
         }
+        if (!w.DiarioAnalisesPlus?.temDadosBusca?.() && !hits.some(t=>t.tipo==="acao")) {
+          out.push('<p class="mut sm" style="padding:8px 10px;margin:0">Carregando base de ações e FIIs…</p>');
+        }
+        const trades = (typeof S !== "undefined" && Array.isArray(S?.trades) ? S.trades : [])
+          .filter((t) => norm([t.ativo,t.setup,t.dt,t.tipo].join(" ")).includes(q))
+          .slice(0, 5);
+        if (trades.length) {
+          out.push(`<div class="b-grp">Seus Trades</div>` + trades.map((t) => `<button type="button" class="b-it" data-b949-tipo="trade" data-b949-go="${esc(t.id)}"><b>${esc(t.ativo)}</b><small>${esc(String(t.dt || "").slice(0, 10))}${t.setup ? " · " + esc(t.setup) : ""}</small></button>`).join(""));
+        }
+      }
+      if (telas.length) {
+        out.push(`<div class="b-grp">Telas &amp; Ferramentas</div>` + telas.map(([n, desc, r]) => `<button type="button" class="b-it" data-b949-tipo="rota" data-b949-go="${r}"><b>${esc(n)}</b><small>${esc(desc)}</small></button>`).join(""));
       }
       box.innerHTML = out.length ? out.join("") : `<p class="mut sm" style="padding:16px;text-align:center">Nenhum resultado para "${esc(raw)}".</p>`;
     }
