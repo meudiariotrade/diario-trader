@@ -20,3 +20,15 @@ test('v955: abrir a busca aciona bases, atualiza resultados e prioriza ações e
  await p.evaluate(()=>document.dispatchEvent(new CustomEvent('diario:busca-pronta')));
  await expect(dlg.locator('#dt949-q')).toHaveValue('PETR');await p.close();
 }));
+
+test('v955: Panorama usa o Brent confirmado no snapshot mesmo com Macro antigo',()=>{
+ const vm=require('node:vm'),src=fs.readFileSync('src/domains/core/08-terminal-e-sazonalidade.js','utf8');
+ const agora=Date.parse('2026-11-24T10:22:00Z'),ts='2026-11-24T10:20:49.000Z';
+ const q={s:'ICEEUR:BRN1!',simboloFonte:'ICEEUR:BRNF2027',px:89.15,d1:-0.24616761776882495,fechamentoAnterior:89.37,horarioPreco:ts,quoteStatus:'coerente'};
+ const snapshot={atualizadoEm:'2026-11-24T10:20:56.842Z',mercados:{grupos:[{itens:[q]}]}};
+ const ctx={MDO:{v:{mercados:{grupos:[{itens:[{s:'BZ=F',px:86.4,d1:-3.32}]}]}}}};
+ vm.runInNewContext(src.slice(src.indexOf('const IMG = { busy: 0 }'),src.indexOf('async function imgDados()'))+';this.IMG=IMG;',ctx);
+ ctx.IMG.brent955=ctx.imgBrent955(snapshot,agora);assert.equal(ctx.imgQ('BZ=F').px,89.15);assert.equal(ctx.imgQ('BZ=F').d1,q.d1);
+ assert.equal(ctx.imgBrent955({...snapshot,cacheOffline:true},agora),null);assert.equal(ctx.imgBrent955(snapshot,agora+3600000),null);
+ assert.equal(ctx.imgBrent955({...snapshot,mercados:{grupos:[{itens:[{...q,d1:-3.32}]}]}},agora),null);
+});
