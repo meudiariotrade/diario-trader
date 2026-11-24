@@ -9,6 +9,7 @@ on:
       - 'tests/cloudflare-diario-sync-v907.test.cjs'
       - 'tests/cloudflare-diario-sync-v913.test.cjs'
       - 'tests/cloudflare-diario-sync-v931.test.cjs'
+      - 'tests/cloudflare-diario-sync-v942.test.cjs'
       - '.github/workflows/cloudflare-diario-sync.yml'
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - 'tests/cloudflare-diario-sync-v907.test.cjs'
       - 'tests/cloudflare-diario-sync-v913.test.cjs'
       - 'tests/cloudflare-diario-sync-v931.test.cjs'
+      - 'tests/cloudflare-diario-sync-v942.test.cjs'
       - '.github/workflows/cloudflare-diario-sync.yml'
   workflow_dispatch:
 permissions:
@@ -34,7 +36,7 @@ jobs:
         with:
           node-version: '24'
       - run: node --check cloudflare/diario-sync/index.mjs
-      - run: node --test tests/cloudflare-diario-sync-v900.test.cjs tests/cloudflare-diario-sync-v906.test.cjs tests/cloudflare-diario-sync-v907.test.cjs tests/cloudflare-diario-sync-v913.test.cjs tests/cloudflare-diario-sync-v931.test.cjs
+      - run: node --test tests/cloudflare-diario-sync-v900.test.cjs tests/cloudflare-diario-sync-v906.test.cjs tests/cloudflare-diario-sync-v907.test.cjs tests/cloudflare-diario-sync-v913.test.cjs tests/cloudflare-diario-sync-v931.test.cjs tests/cloudflare-diario-sync-v942.test.cjs
   publish:
     needs: [check]
     if: github.ref == 'refs/heads/main'
