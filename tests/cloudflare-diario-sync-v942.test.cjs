@@ -14,6 +14,7 @@ const db=()=>({
  prepare(sql){
   const self=this;let args=[];
   return{
+   sql,get args(){return args},
    bind(...items){args=items;return this},
    async first(){return {n:self.inserts.length}},
    async run(){self.progress.push({sql,args});return {meta:{changes:1}}}
