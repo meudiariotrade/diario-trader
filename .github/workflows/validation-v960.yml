@@ -1,0 +1,19 @@
+name: Validacao v960
+on:
+  pull_request:
+    branches: ['release/v960-tour-checklist']
+permissions:
+  contents: read
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3433ac1018d871d0573f71d285d21a468755601a
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build && npm run check
