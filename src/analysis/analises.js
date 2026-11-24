@@ -363,7 +363,7 @@
  d.addEventListener('click',function(ev){const b=ev.target.closest('[data-an830-ia]');if(!b)return;const isTec=screenTab.startsWith('tecnico-');w.DiarioAnalises?.command((isTec?'TÉCNICO ':'ANALISE ')+b.dataset.an830Ia,isTec?'livermore':'graham')});
  w.DiarioInteligencia?.subscribe('ativo:selecionado',function(){if(typeof tab==='undefined'||tab!=='analises')return;const a=d.getElementById('an830-ficha');if(a)a.outerHTML=ficha()});
  d.addEventListener('click',function(ev){const b=ev.target.closest('[data-an-sub]');if(!b)return;ev.preventDefault();if(!['pesquisa','br','us','tecnico-br','tecnico-world','rankpro','radar','teses','guia'].includes(b.dataset.anSub)||screenTab===b.dataset.anSub)return;if(screenTab.startsWith('tecnico-'))w.DiarioTecnico?.leave();screenTab=b.dataset.anSub;update();if(screenTab.startsWith('tecnico-'))void w.DiarioTecnico?.enter(screenTab==='tecnico-br'?'br':'world');else if(w.DiarioAnalisesPlus?.TABS.includes(screenTab))w.DiarioAnalisesPlus.enter(screenTab);else if(screenTab==='pesquisa'){if(!w.DiarioAnalisesPlus?.briefing?.())w.DiarioAnalisesPlus?.garantirDados?.().then(()=>update())}else w.DiarioScreeners?.load(screenTab)});
- w.DiarioAnalises={view,enter,syncAccount,history,abrirBusca949(tipo,id){if(!w.DiarioAnalisesPlus?.prepararBusca949(tipo,id))return false;if(screenTab.startsWith('tecnico-'))w.DiarioTecnico?.leave();screenTab=tipo==='tese'?'teses':'rankpro';update();w.DiarioAnalisesPlus.enter(screenTab);return true},command:function(value,membro){input=String(value||'');conselhoId=membro&&CONSELHO[membro]?membro:detectMember(input);screenTab='pesquisa';context()?.set('analises.comando',input);update();d.getElementById('an-command')?.focus()}};
+ w.DiarioAnalises={view,enter,syncAccount,history,abrirBusca949(tipo,id){if(!w.DiarioAnalisesPlus?.prepararBusca949(tipo,id))return false;if(screenTab.startsWith('tecnico-'))w.DiarioTecnico?.leave();screenTab=tipo==='tese'?'teses':'rankpro';if(typeof tab!=='undefined'&&tab==='analises'){update();w.DiarioAnalisesPlus.enter(screenTab)}return true},command:function(value,membro){input=String(value||'');conselhoId=membro&&CONSELHO[membro]?membro:detectMember(input);screenTab='pesquisa';context()?.set('analises.comando',input);update();d.getElementById('an-command')?.focus()}};
 })(window,document);
 
 /* Screeners Quant BR/EUA: componente isolado na aba Análises. Carteira é apenas leitura. */
@@ -450,26 +450,27 @@ function graficoPosicao(row,meta,s){
   '<div class="scr846-li"><span>'+E(x.label)+' <small>'+fmt(x.valor,1)+(x.unit==='%'?'%':x.unit==='x'?'x':'')+'</small></span><span class="scr846-bar" title="Melhor que '+Math.round(x.p)+'% dos ativos listados"><i style="width:'+Math.round(x.p)+'%" class="'+(x.p>=66?'ok':x.p>=33?'at':'neg')+'"></i></span><b>'+Math.round(x.p)+'</b></div>').join('')+
   '</div><p class="scr-hint">0 a 100: quanto maior, melhor o ativo neste indicador em relação aos '+base.length+' ativos '+E(ref)+' carregados (P/L, P/VP e dívida contam ao contrário).</p></figure>';
 }
-function tecnicoFicha(row){
- const mm=Number(row.dist_mm200_pct),mom=Number(row.momentum_12_1),rsi=Number(row.rsi_14),preco=Number(row.preco_referencia);
+function tecnicoFicha(row,m){
+ const n=k=>row[k]==null||row[k]===''?NaN:Number(row[k]);
+ const mm=n('dist_mm200_pct'),mom=n('momentum_12_1'),rsi=n('rsi_14'),preco=n('preco_referencia'),moeda=m==='us'?'US$':'R$';
  if(![mm,mom,rsi].some(Number.isFinite))return '';
  const alta=Number.isFinite(mm)&&mm>=0,tend=Number.isFinite(mm)?(alta?['Alta','ok']:['Baixa','neg']):['Sem dado',''];
  const mm200=Number.isFinite(mm)&&preco>0?preco/(1+mm/100):null,abs=Math.abs(mm);
  const L=[];
  /* v852: explicação em linguagem simples, montada no aparelho a partir dos números da ficha. */
- if(Number.isFinite(mm))L.push('<b>Média de 200 dias:</b> é o preço médio de quase um ano'+(mm200?' (≈ R$ '+fmt(mm200,2)+')':'')+'. O preço está '+fmt(abs,1)+'% '+(alta?'acima':'abaixo')+' dela. '+
+ if(Number.isFinite(mm))L.push('<b>Média de 200 dias:</b> é o preço médio de quase um ano'+(mm200?' (≈ '+moeda+' '+fmt(mm200,2)+')':'')+'. O preço está '+fmt(abs,1)+'% '+(alta?'acima':'abaixo')+' dela. '+
   (alta?'Em média, quem comprou no último ano está no lucro, e a média costuma funcionar como suporte nas correções.':'Em média, quem comprou no último ano está no prejuízo; quando o preço volta perto da média, muita gente vende para sair no zero a zero, e ela vira resistência.')+
   ' '+(abs>=20?'Distância grande: o movimento é forte e longo.':abs>=5?'Distância moderada: tendência definida, sem exagero.':'Perto da média: a tendência ainda está indefinida.'));
  if(Number.isFinite(mom))L.push('<b>Momentum 12-1:</b> retorno de 12 meses sem contar o último mês ('+(mom>0?'+':'')+fmt(mom,1)+'%). '+
   (mom>15?'Ano forte.':mom>3?'Ano levemente positivo.':mom>=-3?'Ano praticamente de lado.':mom>=-15?'Ano levemente negativo.':'Ano fraco.')+
   (Number.isFinite(mm)&&mm<0&&mom>0?' Como o ano ainda está positivo e o preço está abaixo da média, a queda aconteceu nos últimos meses e foi rápida.':Number.isFinite(mm)&&mm>0&&mom<0?' O preço já recuperou a média, mas o ano ainda está negativo: recuperação recente.':''));
  if(Number.isFinite(rsi))L.push('<b>RSI '+fmt(rsi,0)+':</b> '+(rsi<=30?'sobrevendido. A queda recente foi forte e pode haver um repique, mas em tendência de baixa o RSI pode ficar abaixo de 30 por semanas; sozinho não é sinal de compra.':rsi>=70?'sobrecomprado. A alta recente foi forte; correções são comuns, mas em tendência de alta ele pode ficar acima de 70 por um tempo.':'neutro: nem euforia nem pânico no curto prazo.'));
- const virar=alta?'A tendência de alta perde força se o preço fechar abaixo da média de 200'+(mm200?' (≈ R$ '+fmt(mm200,2)+')':'')+' e fizer topos mais baixos.':
-  'Para a tendência virar para alta, o preço precisa voltar e fechar acima da média de 200'+(mm200?' (≈ R$ '+fmt(mm200,2)+')':'')+', fazer um fundo mais alto que o anterior e o RSI passar de 50.';
+ const virar=alta?'A tendência de alta perde força se o preço fechar abaixo da média de 200'+(mm200?' (≈ '+moeda+' '+fmt(mm200,2)+')':'')+' e fizer topos mais baixos.':
+  'Para a tendência virar para alta, o preço precisa voltar e fechar acima da média de 200'+(mm200?' (≈ '+moeda+' '+fmt(mm200,2)+')':'')+', fazer um fundo mais alto que o anterior e o RSI passar de 50.';
  return '<div class="scr847-tec"><b>Momento técnico</b><span class="'+tend[1]+'">Tendência de '+tend[0]+'</span>'+
   '<ul class="scr852-exp">'+L.map(x=>'<li>'+x+'</li>').join('')+'<li><b>O que mudaria o quadro:</b> '+virar+'</li></ul>'+
   '<small class="mut">'+(tend[1]==='ok'?'Valuation barato com tendência de alta é a combinação mais favorável.':'Preço barato em tendência de baixa pode ficar mais barato: espere o gráfico confirmar.')+'</small>'+
-  '<div class="scr852-ia" data-scr852-ia="'+E(row.ticker)+'">'+(()=>{let c=null;try{c=JSON.parse(sessionStorage.getItem(iaChave(row.ticker))||'null')}catch{}return c?iaHtml(c):'<button type="button" class="btn s" data-scr-ia="'+E(row.ticker)+'">Explicar o cenário com a IA (usa seu Cérebro)</button>'})()+'</div></div>';
+  '<div class="scr852-ia" data-scr852-ia="'+E(row.ticker)+'">'+(()=>{let c=null;try{c=JSON.parse(sessionStorage.getItem(iaChave(row.ticker,m))||'null')}catch{}return c?iaHtml(c):'<button type="button" class="btn s" data-scr-ia="'+E(row.ticker)+'">✦ Explicar cenário com a IA</button>'})()+'</div></div>';
 }
 /* v852: riscos com o porquê, a partir dos números da ficha (sem IA). */
 const ESTATAIS=new Set(['BBAS3','PETR3','PETR4','CMIG3','CMIG4','CSMG3','SAPR3','SAPR4','SAPR11','BRSR3','BRSR5','BRSR6','BAZA3','BNBR3','CEEB3','CEEB5','CEBR3','CEBR5','CEBR6','CASN3','CASN4','BEES3','BEES4','BGIP3','BGIP4','BMEB3','BMEB4']);
@@ -495,30 +496,51 @@ function riscosExplicados(row,meta,valuation,m,s){
  const mg=valuation?.margins?.proprio;if(mg!=null&&mg<0)R.push(['Acima do seu preço teto','Pela sua fórmula o preço está '+fmt(Math.abs(mg),1)+'% acima do teto'+(valuation?.estimados?.proprio?' (teto estimado pelo snapshot; confirme lucro projetado e payout)':'')+'.']);
  return R.slice(0,7);
 }
-const iaChave=tk=>'scr852-ia|'+tk+'|'+new Date().toISOString().slice(0,10);
-function iaHtml(r){const v=r?.resultado||{};return '<div class="scr852-res"><p><b>Tendência:</b> '+E(v.tendencia)+'</p><p><b>Por que está nesse cenário:</b> '+E(v.cenario)+'</p>'+
+const iaChave=(tk,m)=>'scr952-ia|'+owner()+'|'+m+'|'+tk+'|'+new Date().toISOString().slice(0,10);
+function iaHtml(r){
+ if(r?.texto)return '<div class="scr852-res" style="font-size:14px;line-height:1.6">'+String(r.texto).split(/\n{2,}/).map(p=>'<p style="margin:0 0 8px">'+E(p).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>')+'</p>').join('')+'<p class="scr-hint">Análise direta gerada pela IA com os números desta ficha. Não é recomendação.</p></div>';
+ const v=r?.resultado||{};return '<div class="scr852-res"><p><b>Tendência:</b> '+E(v.tendencia)+'</p><p><b>Por que está nesse cenário:</b> '+E(v.cenario)+'</p>'+
   (Array.isArray(v.riscos)&&v.riscos.length?'<b>Riscos</b><ul>'+v.riscos.map(x=>'<li><b>'+E(x.risco)+':</b> '+E(x.por_que)+'</li>').join('')+'</ul>':'')+
   (Array.isArray(v.o_que_observar)&&v.o_que_observar.length?'<b>O que observar</b><ul>'+v.o_que_observar.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul>':'')+
-  '<p class="scr-hint">Escrito pela IA com os números desta ficha e os trechos do seu Cérebro'+(r?.fontes?.length?' ('+r.fontes.map(E).join(', ')+')':'')+'. Não é recomendação.</p></div>'}
-async function explicarIA(tk,m,s,box){
- const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk];if(!row||!box)return;
- const chave=iaChave(tk);
- let r=null;try{r=JSON.parse(sessionStorage.getItem(chave)||'null')}catch{}
- const desenha=r=>{box.innerHTML=iaHtml(r)};
-
- if(r)return desenha(r);
- if(!w.DiarioCerebroIA?.api){box.innerHTML='<p class="scr-hint">Abra Estudos → Cérebro uma vez para ativar a IA.</p>';return}
- box.innerHTML='<p class="scr-hint">A IA está lendo os números e o seu Cérebro…</p>';
+  '<p class="scr-hint">Análise gerada pela IA com os números desta ficha. Não é recomendação.</p></div>';
+}
+function fatosFicha950(tk,m,s,row){
  const meta=w.DiarioScreenersInteligencia?.diagnostics(m.toUpperCase(),row),v=m==='br'?vBR(row,s):null,num=k=>row[k]==null?'sem dado':fmt(Number(row[k]),2);
- const fatos=['ATIVO: '+tk+' · '+(row.empresa||row.company_name||'')+' · setor '+(row.setor||row.sector||'não informado'),'Preço: '+num('preco_referencia'),
-  'Distância da média de 200 dias: '+num('dist_mm200_pct')+'% · Momentum 12-1: '+num('momentum_12_1')+'% · RSI 14: '+num('rsi_14'),
+ return ['ATIVO: '+tk+' ('+(m==='us'?'EUA':'BR')+') · '+(row.empresa||row.company_name||'')+' · setor '+(row.setor||row.sector||'não informado'),
+  'Preço de referência: '+num('preco_referencia')+(m==='us'?' USD':' BRL')+' · snapshot: '+(s.data?.last_update||s.topData?.last_update||'data não informada'),
+  'Distância MM200: '+num('dist_mm200_pct')+'% · Momentum 12-1: '+num('momentum_12_1')+'% · RSI 14: '+num('rsi_14'),
   'ROE: '+num('roe')+'% · ROIC: '+num('roic')+'% · P/L: '+num('pl')+' · P/VP: '+num('pvp')+' · DY: '+num('dividend_yield')+'% · Payout: '+num('payout_implicito')+'% · Dívida/EBITDA: '+num(m==='us'?'net_debt_ebitda':'div_liq_ebitda'),
-  meta?'Nota '+fmt(meta.score/10,1)+'/10 · pilares: '+meta.parts.map(p=>p.name+' '+(p.points==null?'—':fmt(p.points/10,1)+'/'+fmt(p.weight/10,1))).join('; '):'',
-  v?'Preço teto (fórmula do usuário): '+(v.methods.proprio==null?'sem dado':fmt(v.methods.proprio,2))+' · margem '+(v.margins.proprio==null?'—':fmt(v.margins.proprio,1)+'%')+' · Graham '+(v.methods.graham==null?'—':fmt(v.methods.graham,2))+' · Bazin '+(v.methods.bazin==null?'—':fmt(v.methods.bazin,2)):'',
-  (()=>{const md=medianasMercado(m)||s.data?.medians||{};return 'Medianas do mercado inteiro'+(md.n?' ('+md.n+' ações)':'')+': ROE '+(md.roe==null?'—':fmt(md.roe,1)+'%')+' · DY '+(md.dy==null?'—':fmt(md.dy,1)+'%')})(),
-  'Notícias recentes ligadas ao ativo: '+((w.DiarioInteligenciaEtapa1?.noticiasDo?.(tk)||[]).join(' | ')||'nenhuma carregada')].filter(Boolean).join('\n');
- try{const j=await w.DiarioCerebroIA.api({acao:'gerar',modo:'ficha',tema:'tendência média móvel 200 RSI momentum valuation risco '+(row.setor||''),extra:fatos});
-  try{sessionStorage.setItem(chave,JSON.stringify(j))}catch{}desenha(j);
+  meta?'Nota '+(meta.score==null?'sem dado':fmt(meta.score/10,1)+'/10')+' · pilares: '+meta.parts.map(p=>p.name+' '+(p.points==null?'—':fmt(p.points/10,1)+'/'+fmt(p.weight/10,1))).join('; '):'',
+  v?'Preço teto: '+(v.methods.proprio==null?'sem dado':fmt(v.methods.proprio,2))+' · margem '+(v.margins.proprio==null?'—':fmt(v.margins.proprio,1)+'%')+' · Graham '+(v.methods.graham==null?'—':fmt(v.methods.graham,2))+' · Bazin '+(v.methods.bazin==null?'—':fmt(v.methods.bazin,2)):'',
+  (()=>{const md=medianasMercado(m)||s.data?.medians||{};return 'Medianas do mercado'+(md.n?' ('+md.n+' ações)':'')+': ROE '+(md.roe==null?'—':fmt(md.roe,1)+'%')+' · DY '+(md.dy==null?'—':fmt(md.dy,1)+'%')})()].filter(Boolean).join('\n');
+}
+async function explicarIA(tk,m,s,box){
+ const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk]||(s.data?.universe_rows||[]).find(x=>x.ticker===tk);if(!row||!box)return;
+ const chave=iaChave(tk,m),uid=owner();
+ let r=null;try{r=JSON.parse(sessionStorage.getItem(chave)||'null')}catch{}
+ const desenha=r=>{if(uid!==owner())return;const alvo=box.isConnected?box:[...d.querySelectorAll('#an-root [data-scr852-ia]')].find(e=>e.dataset.scr852Ia===tk);if(alvo)alvo.innerHTML=iaHtml(r)};
+ if(r)return desenha(r);
+ box.innerHTML='<p class="scr-hint">Analisando os números desta ficha…</p>';
+ try{
+ const fatos=fatosFicha950(tk,m,s,row);
+ const prompt='Explique de forma objetiva o cenário atual deste ativo em 3 pontos curtos (Tendência/Momentum, Qualidade/Valuation e Principais Riscos + o que mudaria o quadro), usando apenas estes números e sem citar livros:\n'+fatos;
+  if(typeof tok==='function')await tok();
+  if(uid!==owner())return;
+  const jwt=typeof SESS!=='undefined'?SESS?.at:'';
+  if(!jwt)throw Error('Entre na conta para usar a IA.');
+  const enviar=token=>w.fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
+   method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal:AbortSignal.timeout(45000),
+   headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+   body:JSON.stringify({edicao:'ativo',prompt:prompt.slice(0,5800)})
+  });
+  let res=await enviar(jwt);
+  if(res.status===401&&uid===owner()&&typeof tok==='function'){if(SESS.at===jwt)SESS.exp=0;await tok();if(uid!==owner()||!SESS?.at)return;res=await enviar(SESS.at)}
+  const data=await res.json().catch(()=>({}));
+  if(uid!==owner())return;
+  if(!res.ok||!data.ok||!data.text)throw Error(data.error||'A IA não respondeu.');
+  const j={texto:data.text};
+  try{sessionStorage.setItem(chave,JSON.stringify(j))}catch{}
+  desenha(j);
  }catch(e){box.innerHTML='<p class="scr-hint">Não foi possível explicar agora: '+E(String(e.message||e).slice(0,140))+'</p><button type="button" class="btn s" data-scr-ia="'+E(tk)+'">Tentar de novo</button>'}
 }
 /* v852: logotipo do ativo (mesmo componente de Mercado). */
@@ -568,7 +590,7 @@ function detail(m,s){
  '<span class="'+(meta.validated?'is-ok':'is-review')+'">'+E(meta.level)+'</span>'+
  '<span>'+fmt(meta.coverage,0)+'% dos critérios disponíveis</span></div>'+
  '<div class="sm" data-fundamental-history="'+E(tk)+'">'+(w.DiarioInteligenciaEtapa2?.fundamental?.(tk)||'')+'</div>'+
-'<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+tecnicoFicha(row)+'<div class="scr846-graficos">'+graficoValuation(row,valuation)+graficoPosicao(row,meta,s)+'</div>'+valuationHTML+avisoValuation(row,valuation)+calcHTML+
+'<p class="scr-detail-note">'+E(meta.interpretation)+'</p>'+tecnicoFicha(row,m)+'<div class="scr846-graficos">'+graficoValuation(row,valuation)+graficoPosicao(row,meta,s)+'</div>'+valuationHTML+avisoValuation(row,valuation)+calcHTML+
  '<div class="scr-detail-groups">'+meta.parts.map(p=>
  '<div class="scr-detail-group"><div><b>'+E(p.name)+'</b><span>'+(p.points==null?'Não calculado':fmt(p.points/10,1)+' / '+fmt(p.weight/10,1)+' pontos')+'</span></div>'+
  '<div class="scr-meter"><i style="width:'+(p.points==null?0:p.points/p.weight*100)+'%"></i></div>'+
@@ -582,7 +604,7 @@ function detail(m,s){
  ' · Técnico: '+E(meta.technical_at||'sem data')+' · Snapshot: '+E(meta.updated_at||'sem data')+
  (owned?' · Carteira: '+pct(owned.pct):'')+'</p>'+
  '<div class="scr853-print-head"><b>Ficha educativa · '+E(row.ticker)+' · '+E(meta.company)+'</b><span>Gerada em '+new Date().toLocaleString('pt-BR')+' pelo Diário de Trader. Material para estudo entre amigos: não é recomendação de compra ou venda. Fontes e datas no rodapé da ficha.</span></div>'+
- '<div class="scr-detail-footer"><button type="button" data-fa-abrir="'+E(row.ticker)+'">Ficha completa</button><button type="button" data-scr-pdf-ficha="1">Salvar ficha em PDF</button>'+'<button type="button" data-hf-abrir="'+E(row.ticker)+'" data-hf-market="'+(m==='us'?'US':'BR')+'">Avaliação histórica (10 anos)</button>'+'<button type="button" data-scr-analyze="'+E(row.ticker)+'">Abrir pesquisa completa</button>'+
+ '<div class="scr-detail-footer"><button type="button" data-scr-conselho="ativo" data-scr-tk="'+E(row.ticker)+'">✦ Parecer da Mesa</button><button type="button" data-scr-conselho="munger" data-scr-tk="'+E(row.ticker)+'">Testar com Munger</button><button type="button" data-fa-abrir="'+E(row.ticker)+'">Ficha completa</button><button type="button" data-scr-pdf-ficha="1">Salvar ficha em PDF</button>'+'<button type="button" data-hf-abrir="'+E(row.ticker)+'" data-hf-market="'+(m==='us'?'US':'BR')+'">Avaliação histórica (10 anos)</button>'+'<button type="button" data-scr-analyze="'+E(row.ticker)+'">Abrir pesquisa completa</button>'+
  '<button type="button" data-scr-detail-close="1">Voltar ao ranking</button></div>'+
  '</section>';
 }
@@ -951,7 +973,7 @@ d.addEventListener('change',ev=>{
  }
 });
 d.addEventListener('click',async ev=>{
- const b=ev.target.closest('[data-scr-pdf-ficha],[data-scr-ia],[data-scr-sort],[data-scr-obs],[data-scr-teto-save],[data-scr-teto-clear],[data-scr-top-refresh],[data-scr-top-pdf],[data-scr-top-detail],[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
+ const b=ev.target.closest('[data-scr-pdf-ficha],[data-scr-ia],[data-scr-conselho],[data-scr-sort],[data-scr-obs],[data-scr-teto-save],[data-scr-teto-clear],[data-scr-top-refresh],[data-scr-top-pdf],[data-scr-top-detail],[data-scr-analyze],[data-scr-add],[data-scr-page],[data-scr-refresh],[data-scr-bulk],[data-scr-compare],[data-scr-point],[data-scr-detail],[data-scr-detail-close],[data-scr-remove],[data-scr-pdf],[data-scr-zoom],[data-scr-pan],[data-scr-reset]');
  if(!b||!b.closest('#an-root'))return;
  ev.preventDefault();const [m,s]=field(b);if(!m)return;
  if(b.dataset.scrTetoSave||b.dataset.scrTetoClear){const tk=b.dataset.scrTetoSave||b.dataset.scrTetoClear,all=tetos();
@@ -992,6 +1014,17 @@ d.addEventListener('click',async ev=>{
   finally{b.disabled=false}
   return}
  if(b.dataset.scrIa){void explicarIA(b.dataset.scrIa,m,s,b.closest('[data-scr852-ia]'));return}
+ if(b.dataset.scrConselho){
+  const tk=b.dataset.scrTk||s.detailTicker,ed=b.dataset.scrConselho;
+  const row=(s.data?.rows||[]).find(x=>x.ticker===tk)||(s.topData?.rows||[]).find(x=>x.ticker===tk)||s.selectedRows[tk]||(s.data?.universe_rows||[]).find(x=>x.ticker===tk);
+  if(row&&typeof w.DiarioConselhoIA==='function'){
+   const fatos=fatosFicha950(tk,m,s,row);
+   const titulo=ed==='munger'?'Munger (Crítico) · '+tk:'Parecer da Mesa · '+tk;
+   const pr=(ed==='munger'?'Ataque esta tese no modo crítico/inversão (o que mata a tese, 3 riscos reais nos números, fatos vs lacunas e gatilho de invalidação) sem citar livros:\n':'Faça um parecer direto de mesa (valuation, qualidade operacional, momentum e principais riscos) sem citar livros:\n')+fatos;
+   w.DiarioConselhoIA(ed,titulo,pr);
+  }
+  return;
+ }
  if(b.dataset.scrSort){changeFilter(m,s,'order',b.dataset.scrSort);return}
  if(b.dataset.scrObs){ev.preventDefault();ev.stopPropagation();alternaObs(b.dataset.scrObs);if(s.custody==='observados')void load(m,true);else render();return}
  if(b.hasAttribute('data-scr-refresh')){void load(m,true);return}

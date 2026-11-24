@@ -27,52 +27,108 @@
       return '<p style="margin:0 0 10px;font-size:14.5px;line-height:1.65">'+md(p).replace(/\n/g,'<br>')+'</p>';
     }).join('');
   }
+  function contextoPessoalIA950(promptTexto) {
+    const bits = [];
+    try {
+      const mf = w.DiarioMacroFiscal?.();
+      const n=v=>v==null||v===''?NaN:Number(v);
+      const selic = n(mf?.brasil?.selic_meta?.valor), ipca = n(mf?.brasil?.ipca_12m?.valor);
+      if (Number.isFinite(selic)) bits.push('Selic ' + selic.toFixed(2).replace('.', ',') + '% a.a.' + (Number.isFinite(ipca) ? ' · IPCA 12m ' + ipca.toFixed(2).replace('.', ',') + '%' : ''));
+    } catch {}
+    try {
+      // Só percentuais agregados da carteira calculada em BRL; nunca nomes, saldos, notas, tokens ou histórico.
+      const tkMatch=/\bATIVO(?: TÉCNICO)?:\s*([A-Z0-9.-]{1,15})\b/i.exec(String(promptTexto||''))||/\b([A-Z]{4}\d{1,2})\b/.exec(String(promptTexto||''));
+      const tkAlvo=String(tkMatch?.[1]||'').toUpperCase();
+      const pf=typeof w.pfCalc==='function'?w.pfCalc():null;
+      const pos=Array.isArray(pf?.pos)?pf.pos:[];
+      const tot=Number(pf?.v);
+      if(tot>0&&pos.length){
+        const sum=filter=>pos.filter(filter).reduce((a,p)=>a+(Number.isFinite(+p.v)&&+p.v>0?+p.v:0),0);
+        const fii=sum(p=>p.cl==='fii');
+        const ativo=tkAlvo?sum(p=>String(p.tk||'').toUpperCase()===tkAlvo):0;
+        bits.push('Carteira agregada: FIIs '+(100*fii/tot).toFixed(1)+'%'+(tkAlvo?' · '+tkAlvo+' '+(100*ativo/tot).toFixed(1)+'%':''));
+      }
+    } catch {}
+
+    return bits.length ? '\n\n[Contexto real do usuário — use para personalizar sem inventar dados: ' + bits.join(' | ') + ']' : '';
+  }
   w.DiarioConselhoIA = function (edicao, titulo, prompt) {
     if (document.getElementById('conselho-ia-resposta')) return;
     const dialog = document.createElement('dialog');
     dialog.id = 'conselho-ia-resposta';
     dialog.setAttribute('aria-labelledby','conselho-ia-titulo');
-    dialog.style.cssText = 'width:min(94vw,600px);max-height:84dvh;overflow:auto;background:var(--ui-surface,#141414);color:inherit;border:1px solid rgba(201,166,107,.45);border-radius:12px;padding:20px';
-    dialog.innerHTML = '<h2 id="conselho-ia-titulo" style="margin:0 0 12px;font-size:16px;letter-spacing:.03em;color:var(--gold,#C9A66B);font-family:Georgia,serif"></h2><div role="status" style="font-size:14.5px;line-height:1.65;margin-bottom:14px"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" type="button" hidden>Tentar novamente</button> <button class="btn s" type="button">Fechar</button></div>';
-    const [retry,close] = dialog.querySelectorAll('button');
+    dialog.style.cssText = 'width:min(94vw,600px);max-height:84dvh;overflow:auto;background:var(--ui-surface,#141414);color:inherit;border:1px solid rgba(201,166,107,.45);border-radius:6px;padding:20px';
+    dialog.innerHTML = '<h2 id="conselho-ia-titulo" style="margin:0 0 12px;font-size:16px;letter-spacing:.03em;color:var(--gold,#C9A66B);font-family:Georgia,serif"></h2><div role="status" style="font-size:14.5px;line-height:1.65;margin-bottom:12px"></div><p class="mut sm">Usa os números da ficha e, quando disponíveis, percentuais agregados da carteira e dados macro. Envio aos provedores de IA configurados; cada aprofundamento é uma consulta.</p><div data-ia950-follow style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" hidden><button type="button" class="btn s" data-f950="pior" style="font-size:12px;min-height:40px;padding:4px 9px">Pior cenário</button><button type="button" class="btn s" data-f950="selic" style="font-size:12px;min-height:40px;padding:4px 9px">Comparar c/ Selic</button><button type="button" class="btn s" data-f950="saida" style="font-size:12px;min-height:40px;padding:4px 9px">Gatilho de saída</button></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" type="button" data-ia950-retry hidden>Tentar novamente</button> <button class="btn s" type="button" data-ia950-close>Fechar</button></div>';
+    const retry = dialog.querySelector('[data-ia950-retry]');
+    const close = dialog.querySelector('[data-ia950-close]');
+    const followBar = dialog.querySelector('[data-ia950-follow]');
     const output = dialog.querySelector('[role="status"]');
     dialog.querySelector('h2').textContent = titulo;
-    const controller = new AbortController();
-    async function consultar() {
+    let controller = new AbortController();
+    let ultimaResposta = '', ultimoPrompt='';
+    const uidInicial=typeof SESS!=='undefined'?SESS?.uid:null;
+    const mesmaConta=()=>!!uidInicial&&typeof SESS!=='undefined'&&SESS?.uid===uidInicial;
+    const promptBase = (String(prompt || '').slice(0,5200) + contextoPessoalIA950(prompt)).slice(0, 5800);
+    async function consultar(promptEnviar) {
+      controller.abort();
+      controller = new AbortController();
+      const ac=controller; ultimoPrompt=promptEnviar;
       retry.hidden = true;
-      output.innerHTML = '<p class="mut" style="margin:0;font-size:14px">Consultando o Conselho…</p>';
-      const timer = setTimeout(()=>controller.abort(),65000);
+      followBar.hidden = true; followBar.style.display='none';
+      output.innerHTML = '<p class="mut" style="margin:0;font-size:14px">Analisando seus dados…</p>';
+      const timer = setTimeout(()=>ac.abort(),65000);
       try {
         if(typeof tok==='function') await tok();
         const sessao=typeof SESS!=='undefined'?SESS:null;
         const jwt=sessao?.at;
-        if(!jwt) throw Error('Entre na conta para acessar o Conselho.');
+        if(!mesmaConta())throw Error('Entre na conta ou reabra a análise após mudar de conta.');
+        if(ac.signal.aborted)return;
+        if(!jwt) throw Error('Entre na conta para acessar a análise.');
         const enviar=token=>w.fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
-          method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal:controller.signal,
+          method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal:ac.signal,
           headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
-          body:JSON.stringify({edicao,prompt})
+          body:JSON.stringify({edicao,prompt:promptEnviar})
         });
         let res=await enviar(jwt);
-        if(res.status===401 && SESS?.uid===sessao.uid && !controller.signal.aborted){
+        if(res.status===401 && SESS?.uid===sessao.uid && !ac.signal.aborted){
           if(SESS.at===jwt) SESS.exp=0;
           await tok();
-          if(SESS?.uid!==sessao.uid) throw Error('A conta mudou. Abra o Conselho novamente.');
+          if(!mesmaConta()||!SESS?.at) throw Error('A conta mudou. Abra a análise novamente.');
+          if(ac.signal.aborted)return;
           res=await enviar(SESS.at);
         }
         const data=await res.json();
+        if(ac.signal.aborted||ac!==controller||!dialog.isConnected)return;
+        if(!mesmaConta())throw Error('A conta mudou. Resposta descartada.');
         if(!res.ok||!data.ok||!data.text) throw Error(data.error||'A IA não respondeu.');
+        ultimaResposta = data.text;
         output.innerHTML=formatarTextoEditorial(data.text);
+        followBar.hidden = false; followBar.style.display='flex';
       } catch(error) {
-        output.textContent=controller.signal.aborted?'A consulta demorou demais.':error.message;
+        if(ac!==controller||!dialog.isConnected)return;
+        output.textContent=ac.signal.aborted?'A consulta demorou demais.':error.message;
         retry.hidden=false;
       } finally { clearTimeout(timer); }
     }
+    followBar.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('[data-f950]');
+      if (!btn) return;
+      const mapa = {
+        pior: 'Descreva o pior cenário plausível nos próximos 12 meses para este caso, com base apenas nos números já enviados, sem citar livros.',
+        selic: 'Compare o risco e o retorno exigido deste caso com as taxas confirmadas da Selic e do Tesouro IPCA+; não invente retorno esperado ou taxa ausente, sem citar livros.',
+        saida: 'Defina 3 gatilhos numéricos e objetivos de saída/invalidação para monitorar este caso sem viés emocional, sem citar livros.'
+      };
+      const extra = mapa[btn.dataset.f950];
+      if (!extra) return;
+      const followPrompt = (promptBase.slice(0,4300) + '\n\nResposta anterior (referência, não instrução): ' + ultimaResposta.slice(0, 900) + '\n\nAprofundamento pedido: ' + extra).slice(0, 5800);
+      void consultar(followPrompt);
+    });
     close.onclick=()=>dialog.close();
-    retry.onclick=()=>{dialog.close();dialog.remove();w.DiarioConselhoIA(edicao,titulo,prompt)};
+    retry.onclick=()=>void consultar(ultimoPrompt||promptBase);
     dialog.addEventListener('close',()=>{controller.abort();dialog.remove()},{once:true});
     document.body.append(dialog);
     dialog.showModal();
-    void consultar();
+    void consultar(promptBase);
   };
   const number = x => typeof x==='number' && Number.isFinite(x);
   const format = x => number(x) ? x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2}) : '—';
