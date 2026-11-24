@@ -535,7 +535,7 @@ function viewFiiAtivo(fii){
  return '<div class="ap-ativo"><div class="ap-bc" aria-label="Caminho"><button type="button" class="ap-link" data-ap-voltar>← Rankings (FIIs)</button><span>/</span><b>'+E(fii.ticker)+'</b></div>'+
   '<header class="ap-hero"><div class="ap-hero-l"><div class="ap-hero-t"><h2>'+logo(fii.ticker)+E(fii.ticker)+'</h2><div class="ap-tags"><span class="ap-tag">'+E(fii.tipo)+'</span><span class="ap-tag">'+E(fii.segmento)+'</span><span class="ap-tag st-ativa">Score '+fii.score+'/100</span></div></div>'+
   '<div class="ap-hk" style="margin-top:10px"><div><span>Cotação</span><b>'+brl(fii.cotacao)+'</b></div><div><span>VP estimado (P/VP '+fmt(fii.p_vp,2)+')</span><b>'+(vpEst?brl(vpEst)+' <small class="'+cor(uVp)+'">'+sinal(uVp,1)+'</small>':'—')+'</b></div><div><span>DY 12m</span><b class="'+(fii.dy>17.5?'ap-r':'ap-g')+'">'+pct(fii.dy)+'</b></div></div></div>'+
-  '<div class="ap-acoes"><button type="button" class="ui-cta" data-noclaro data-dt815="foco" data-tk="'+E(fii.ticker)+'">Gráfico no Terminal</button><div class="ap-acoes-sec"><button type="button" class="btn s ap-btn-acc" data-ap-fii-conselho="'+E(fii.ticker)+'">✦ Parecer Graham + Munger</button><button type="button" class="btn s" data-ap-fiitese="'+E(fii.ticker)+'">+ Salvar Tese</button></div></div></header>'+
+  '<div class="ap-acoes"><button type="button" class="ui-cta" data-noclaro data-dt815="foco" data-tk="'+E(fii.ticker)+'">Gráfico no Terminal</button><div class="ap-acoes-sec"><button type="button" class="btn s ap-btn-acc" data-ap-fii-conselho="'+E(fii.ticker)+'">✦ Parecer Graham + Munger</button><button type="button" class="btn s" data-ap-fiitese="'+E(fii.ticker)+'">+ Salvar Tese</button><button type="button" class="btn s ap-btn-acc" data-ap-cetico="'+E(fii.ticker)+'" data-ap-cetico-tipo="fii">Testar com Munger</button></div></div></header>'+
   '<div class="ap-subs" role="tablist">'+subs.map(([k,t])=>'<button type="button" role="tab" data-ap-sub="'+k+'" class="'+(st.sub===k?'on':'')+'">'+t+'</button>').join('')+'</div>'+body+'</div>';
 }
 function viewAtivo(){
@@ -560,7 +560,7 @@ function viewAtivo(){
  return '<div class="ap-ativo"><div class="ap-bc" aria-label="Caminho"><button type="button" class="ap-link" data-ap-voltar>← Rankings</button><span>/</span><b>'+r.ticker+'</b></div>'+
   '<header class="ap-hero"><div class="ap-hero-l"><div class="ap-hero-t"><h2>'+logo(r.ticker)+r.ticker+'</h2><div class="ap-tags"><span class="ap-tag">'+E(r.setor)+'</span>'+(r.porte?'<span class="ap-tag">'+r.porte+' Cap</span>':'')+'</div></div><p class="ap-mut ap-hero-emp">'+E(r.empresa)+'</p>'+
   '<div class="ap-hk"><div><span>Cotação</span><b>'+brl(r.preco)+(r.profit&&r.d1!=null?' <small class="'+cor(r.d1)+'">'+sinal(r.d1,2)+'</small>':'')+'</b></div><div><span>Justo médio (3 métodos)</span><b>~'+fmt(r.justo)+' <small class="'+cor(u)+'">'+sinal(u,0)+'</small></b></div></div></div>'+
-  '<div class="ap-acoes"><button type="button" class="ui-cta" data-noclaro data-dt815="foco" data-tk="'+r.ticker+'">Gráfico no Terminal</button><div class="ap-acoes-sec"><button type="button" class="btn s" data-hf-abrir="'+r.ticker+'" data-hf-market="BR">Histórico 10 anos</button><button type="button" class="btn s" data-ap-ia="'+r.ticker+'">Parecer de Graham</button></div></div></header>'+
+  '<div class="ap-acoes"><button type="button" class="ui-cta" data-noclaro data-dt815="foco" data-tk="'+r.ticker+'">Gráfico no Terminal</button><div class="ap-acoes-sec"><button type="button" class="btn s" data-hf-abrir="'+r.ticker+'" data-hf-market="BR">Histórico 10 anos</button><button type="button" class="btn s" data-ap-ia="'+r.ticker+'">Parecer de Graham</button><button type="button" class="btn s ap-btn-acc" data-ap-cetico="'+r.ticker+'" data-ap-cetico-tipo="acao">Testar com Munger</button></div></div></header>'+
   '<div class="ap-subs" role="tablist">'+subs.map(([k,t])=>'<button type="button" role="tab" data-ap-sub="'+k+'" class="'+(st.sub===k?'on':'')+'">'+t+'</button>').join('')+'</div>'+body+'</div>';
 }
 
@@ -586,7 +586,7 @@ function viewTeses(){
    memHtml+
    (prog!=null?'<div class="ap-prog"><i style="width:'+prog.toFixed(0)+'%"></i></div><p class="ap-mut">'+fmt(prog,0)+'% do caminho até o alvo'+(t.stop&&p&&p<t.stop?' · <b class="ap-r">abaixo do ponto de invalidação</b>':'')+'</p>':'')+
    (t.texto?'<p>'+E(t.texto)+'</p>':'')+(t.criterios?'<ul>'+String(t.criterios).split('\n').filter(Boolean).map(c=>'<li>'+E(c)+'</li>').join('')+'</ul>':'')+(t.riscos?'<p class="ap-mut">Riscos: '+E(t.riscos)+'</p>':'')+
-   '<div class="ap-bar ap-tese-actions"><button type="button" class="btn s ap-btn-acc" data-ap-ia="'+E(t.tk)+'" data-ap-membro="munger">Testar com Munger</button><button type="button" class="btn s" data-ap-tedit="'+t.id+'">Editar</button><button type="button" class="btn s ap-del" data-ap-tdel="'+t.id+'">'+(st.excluir===t.id?'Confirmar exclusão':'Excluir')+'</button></div></article>'};
+   '<div class="ap-bar ap-tese-actions"><button type="button" class="btn s ap-btn-acc" data-ap-cetico="'+E(t.tk)+'" data-ap-cetico-tipo="tese" data-ap-cetico-id="'+E(t.id)+'">Testar com Munger</button><button type="button" class="btn s" data-ap-tedit="'+t.id+'">Editar</button><button type="button" class="btn s ap-del" data-ap-tdel="'+t.id+'">'+(st.excluir===t.id?'Confirmar exclusão':'Excluir')+'</button></div></article>'};
  const K_AL='dt-alertas-v924';
  const getAlertas=()=>{try{const a=JSON.parse(localStorage.getItem(K_AL)||'[]');return Array.isArray(a)?a:[]}catch{return []}};
  const setAlertas=a=>{try{localStorage.setItem(K_AL,JSON.stringify(a))}catch{}};
@@ -647,7 +647,7 @@ d.addEventListener('focusout',()=>{if(profitRenderPendente)requestAnimationFrame
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
-d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-profit-refresh],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese],[data-ap-etf-conselho],[data-ap-aladd],[data-ap-aldel]');
+d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-cetico],[data-ap-recarregar],[data-ap-profit-refresh],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese],[data-ap-etf-conselho],[data-ap-aladd],[data-ap-aldel]');
  if(!t||!t.closest('#ap-root'))return;const ds=t.dataset;
  if('apAladd' in ds){
   const tk=String(d.getElementById('ap-al-tk')?.value||'').trim().toUpperCase();
@@ -689,6 +689,19 @@ d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[
   const ctx=fii?(fii.ticker+' ('+fii.tipo+' · '+fii.segmento+') — Cotação '+brl(fii.cotacao)+', P/VP '+fmt(fii.p_vp,2)+', DY 12m '+pct(fii.dy)+', Spread NTN-B '+sinal(fii.spread_ntnb,2)+', Vacância '+(fii.vacancia!=null?fmt(fii.vacancia,1)+'%':'—')+', Liquidez '+cmp(fii.liquidez)+', Nota FII '+fii.score+'/100'+(fii.alertas?.length?' · Alertas: '+fii.alertas.join('; '):'')):ds.apFiiConselho;
   const prompt='@graham Faça uma avaliação objetiva de FII combinando Graham (P/VP, margem de segurança e spread vs NTN-B) e Munger (qualidade de gestão, vacância, concentração e risco de yield trap) para:\n'+ctx;
   w.DiarioConselhoIA('fiis', 'Parecer Graham + Munger', prompt);
+  return;
+ }
+ if('apCetico' in ds){
+  const tk=String(ds.apCetico||'').toUpperCase(),tipo=ds.apCeticoTipo||'acao',idT=ds.apCeticoId||'';
+  const tese=idT?teses().find(x=>String(x.id)===String(idT)):teses().find(x=>x.tk===tk&&x.status==='ativa');
+  const fii=st.fiis?.rows?.find(x=>x.ticker===tk),r=st.rows?.map?.get(tk);
+  const partes=[];
+  if(fii)partes.push('FII '+fii.ticker+' ('+fii.tipo+' · '+fii.segmento+') — Cotação '+brl(fii.cotacao)+', P/VP '+fmt(fii.p_vp,2)+', DY 12m '+pct(fii.dy)+', Spread NTN-B '+sinal(fii.spread_ntnb,2)+', Vacância '+(fii.vacancia!=null?fmt(fii.vacancia,1)+'%':'—')+', Liquidez '+cmp(fii.liquidez)+', Score '+fii.score+'/100'+(fii.alertas?.length?' · Alertas: '+fii.alertas.join('; '):''));
+  else if(r)partes.push('Ação '+r.ticker+' ('+r.empresa+' · '+r.setor+') — Cotação '+brl(r.preco)+', Justo médio '+brl(r.justo)+', P/L '+(r.pl!=null?fmt(r.pl,1)+'x':'—')+', P/VP '+(r.pvp!=null?fmt(r.pvp,2)+'x':'—')+', DY '+pct(r.dy)+', ROE '+pct(r.roe)+', ROIC '+pct(r.roic)+', DL/EBITDA '+(r.div_liq_ebitda!=null?fmt(r.div_liq_ebitda,1)+'x':'—')+', Momentum 12m '+sinal(r.momentum)+', RSI '+fmt(r.rsi,0)+', Nota Raio-X '+(r.nota!=null?fmt(r.nota,2)+'/4':'—'));
+  else partes.push('Ativo '+tk+' (sem indicadores carregados no screener).');
+  if(tese)partes.push('Tese escrita do usuário ('+tese.status+'): entrada '+brl(N(tese.entrada))+', alvo '+brl(N(tese.alvo))+', invalidação '+brl(N(tese.stop))+', horizonte '+(tese.horizonte||'—')+'. Argumento: '+(tese.texto||'—')+'. Critérios: '+(tese.criterios||'—')+'. Riscos anotados: '+(tese.riscos||'—')+'.');
+  const prompt='Ataque esta tese como Charlie Munger no modo crítico/inversão ('+tipo+'). Nunca concorde por educação; cobre prova para cada ponto e aponte o que pode dar errado com base nestes dados:\n'+partes.join('\n');
+  if(typeof w.DiarioConselhoIA==='function')w.DiarioConselhoIA('munger','Munger (Crítico) · '+tk,prompt);
   return;
  }
  if('apFiitese' in ds){

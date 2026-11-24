@@ -35,7 +35,7 @@ test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e
  }
  assert.equal(await p.evaluate(()=>JSON.stringify(TRM.TS().wss)),layouts);
  // Os cartões não acompanham o usuário para Notícias, Agenda, Análises ou Jornal.
- await p.getByRole('button',{name:'Mercado',exact:true}).last().click();
+ await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="mercado"]').first().click());
  for(const page of ['nt','ag','lab','jr']){
   await p.evaluate(()=>{for(const id of ['v518-mov','v519-ins','v520-fa']){const n=document.createElement('details');n.id=id;document.querySelector('#app:not(.v503-fantasma) .dt395-native-mercado').append(n)}});
   await p.evaluate(page=>{MKT.tab=page;render()},page); // v549: Análises e Jornal ficam no menu Mais

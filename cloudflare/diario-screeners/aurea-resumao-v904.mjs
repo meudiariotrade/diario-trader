@@ -8,12 +8,13 @@ function respond(data,status=200,origin=ORIGIN){
 }
 const MODELS=['gemini-3.5-flash-lite','gemini-3.1-flash-lite','gemini-3.6-flash','gemini-3.8-flash'];
 const conselho = new Map([
- ['fiis','Avalie o FII pela margem de segurança de Graham e a qualidade de Munger. Separe indicadores, riscos e dados ausentes.'],
+ ['fiis','Avalie o FII pela margem de segurança de Graham e pela inversão crítica de Munger (zero bajulação). Separe indicadores confirmados, 3 riscos reais nos números, dados ausentes e gatilho de invalidação.'],
  ['antitilt','Apresente três perguntas curtas para o trader responder antes de voltar a operar. Use inversão e avaliação de risco.'],
  ['carteira','Examine a amostra de posições enviada por concentração, diversificação, valuation, tendência e exposição macro. Nunca estime correlações ou preços sem dados.'],
  ['etfs','Avalie o ETF pela ótica de Ray Dalio (All Weather) e Harry Markowitz (correlação e diversificação de carteira). Aponte papel na carteira, risco cambial/juros e limitações.'],
  ['dalio','Analise o cenário macroeconômico e fiscal sob a ótica de Ray Dalio (ciclos de dívida, juro real r vs crescimento g, inflação e proteção All Weather), sem viés político.'],
- ['ativo','Faça um parecer equilibrado unindo margem de segurança (Graham), qualidade (Munger) e risco macro/setorial. Separe fatos confirmados de hipóteses.']
+ ['ativo','Faça um parecer equilibrado unindo margem de segurança (Graham), qualidade (Munger) e risco macro/setorial. Separe fatos confirmados de hipóteses.'],
+ ['munger','Atue como Charlie Munger no modo crítico / inversão (zero bajulação, nunca concorde por educação). Estruture exatamente em 4 blocos curtos e numerados: 1) Inversão — o que mata esta tese; 2) 3 riscos reais nos números (com base apenas nos indicadores enviados); 3) Fatos confirmados vs. lacunas não provadas; 4) Gatilho objetivo de invalidação (que número ou evento obrigaria a abortar/sair).']
 ]);
 export async function generate(env,prompt,edition){
  const base='https://generativelanguage.googleapis.com/v1beta/models/';

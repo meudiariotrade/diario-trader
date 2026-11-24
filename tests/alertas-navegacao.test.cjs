@@ -33,7 +33,7 @@ test('Alertas isolados: Configurações, atalhos, atualização e retorno em cel
  // Persistir e recarregar não depende de o usuário clicar de novo em Alertas.
  await p.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
  await p.reload();await p.locator('#splash').waitFor({state:'hidden'});await check();
- await p.getByRole('button',{name:'Mercado',exact:true}).last().click();
+ await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="mercado"]').first().click());
  await expect(app.locator('.m403-primary-tabs')).toBeVisible();
  await expect.poll(()=>p.evaluate(()=>MKT.tab)).toBe('cq');
  assert.deepEqual(errors,[]);

@@ -1214,6 +1214,153 @@ try {
       }
     }, true);
 
+    /* v932: Checklist operacional profissional (Go/No-Go, críticas, carimbo de hora, organização inline e modelos). */
+    let chkOrg932 = false;
+    const CHK_MOD932 = {
+      win: {
+        nome: "Day Trade (WIN/WDO)",
+        itens: [
+          ["pre", 1, "Agenda econômica BR/EUA e horários de dados conferidos"],
+          ["pre", 1, "Limite de perda diária e nº máximo de trades definidos"],
+          ["pre", 1, "Estado emocional e sono avaliados (sem pressa ou euforia)"],
+          ["pre", 0, "Regiões de ajuste, máxima/mínima anterior e VWAP marcadas"],
+          ["during", 1, "Entrar apenas em setup escrito com stop técnico no book"],
+          ["during", 1, "Parar imediatamente ao atingir limite de perda ou 2 stops seguidos"],
+          ["post", 1, "Registrar todas as operações e quebras de regra antes de fechar o Profit"],
+        ],
+      },
+      swing: {
+        nome: "Swing Trade (Ações)",
+        itens: [
+          ["pre", 1, "Tendência do IBOV/setor e volume confirmados no diário"],
+          ["pre", 1, "Tamanho da posição calculado pelo risco máximo em R$ (stop definido)"],
+          ["pre", 0, "Data de balanço e ex-dividendos conferidos para evitar gap surpresa"],
+          ["during", 1, "Respeitar stop técnico e parciais sem mover stop contra a operação"],
+          ["post", 0, "Revisar stops móveis das posições abertas após o fechamento"],
+        ],
+      },
+      opcoes: {
+        nome: "Opções",
+        itens: [
+          ["pre", 1, "Liquidez do strike (spread bid/ask) e dias até o vencimento conferidos"],
+          ["pre", 1, "Perda máxima da estrutura travada e margem garantida"],
+          ["pre", 0, "Volatilidade implícita (IV) e agenda de balanço do ativo-objeto checadas"],
+          ["during", 1, "Não dobrar mão em opção OTM perto do vencimento"],
+          ["post", 0, "Acompanhar delta/theta e ponto de rolagem ou encerramento"],
+        ],
+      },
+      fiis: {
+        nome: "FIIs & Aporte Mensal",
+        itens: [
+          ["pre", 1, "P/VP, DY sustentável e spread sobre NTN-B conferidos"],
+          ["pre", 1, "Vacância, alavancagem e concentração de inquilinos/CRIs revisados"],
+          ["during", 0, "Aportar conforme meta de alocação (sem concentrar > 15% em 1 fundo)"],
+          ["post", 0, "Atualizar tese ou alerta de preço-teto se houve fato relevante"],
+        ],
+      },
+    };
+    function horaBrt932() {
+      try {
+        return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+      } catch {
+        return new Date().toTimeString().slice(0, 5);
+      }
+    }
+    function listaRegras932() {
+      if (Tt()) {
+        if (!Array.isArray(S.rulesUS)) S.rulesUS = Array.isArray(S.rules) ? S.rules.map((x) => ({ ...x })) : [];
+        return S.rulesUS;
+      }
+      if (!Array.isArray(S.rules)) S.rules = [];
+      return S.rules;
+    }
+    f(() =>
+      document.addEventListener("click", (ev) => {
+        const el = ev.target.closest?.("[data-chk932-org],[data-chk932-add],[data-chk932-crit],[data-chk932-del],[data-chk932-mod]");
+        if (!el || el.closest(".v503-fantasma")) return;
+        ev.preventDefault();
+        const ds = el.dataset;
+        if ("chk932Org" in ds) {
+          chkOrg932 = !chkOrg932;
+          f(() => render());
+          return;
+        }
+        const regras = listaRegras932();
+        if ("chk932Add" in ds) {
+          const box = el.closest(".v932-add");
+          const inp = box?.querySelector("[data-chk932-txt]");
+          const crit = !!box?.querySelector("[data-chk932-ncrit]")?.checked;
+          const texto = String(inp?.value || "").trim();
+          if (!texto) { inp?.focus(); return; }
+          const fase = ds.chk932Add || "pre";
+          const cat = fase === "pre" ? 0 : fase === "during" ? 1 : 3;
+          regras.push({ id: typeof uid === "function" ? uid() : "r" + Date.now(), cat, t: texto, phase: fase, crit: crit ? 1 : 0, u: Date.now() });
+          if (inp) inp.value = "";
+          f(() => save());
+          f(() => render());
+          return;
+        }
+        if ("chk932Crit" in ds) {
+          const item = regras.find((x) => String(x.id) === String(ds.chk932Crit));
+          if (item) {
+            item.crit = item.crit ? 0 : 1;
+            item.u = Date.now();
+            f(() => save());
+            f(() => render());
+          }
+          return;
+        }
+        if ("chk932Del" in ds) {
+          const idx = regras.findIndex((x) => String(x.id) === String(ds.chk932Del));
+          if (idx >= 0) {
+            regras.splice(idx, 1);
+            f(() => save());
+            f(() => render());
+          }
+          return;
+        }
+        if ("chk932Mod" in ds) {
+          const mod = CHK_MOD932[ds.chk932Mod];
+          if (!mod) return;
+          const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+          const ex = new Set(regras.map((x) => norm(x.t)));
+          let nAdd = 0;
+          for (const [fase, crit, texto] of mod.itens) {
+            if (ex.has(norm(texto))) continue;
+            ex.add(norm(texto));
+            const cat = fase === "pre" ? 0 : fase === "during" ? 1 : 3;
+            regras.push({ id: (typeof uid === "function" ? uid() : "r" + Date.now()) + nAdd, cat, t: texto, phase: fase, crit, u: Date.now() });
+            nAdd++;
+          }
+          if (nAdd) f(() => save());
+          f(() => render());
+        }
+      }),
+    );
+    f(() =>
+      document.addEventListener("change", (ev) => {
+        const inp = ev.target?.closest?.("input[data-chk]");
+        if (!inp || inp.closest(".v503-fantasma")) return;
+        setTimeout(() => {
+          try {
+            const dia = ft(), regs = Et(), dObj = S.days?.[dia];
+            if (!dObj) return;
+            const chk = (Tt() ? dObj.us?.chk : dObj.chk) || {};
+            const target = Tt() ? (dObj.us = dObj.us || {}) : dObj;
+            target.chkAt = target.chkAt || {};
+            let mudou = false;
+            for (const ph of ["pre", "during", "post"]) {
+              const itens = regs.filter((g) => at(g) === ph);
+              const completo = itens.length > 0 && itens.every((g) => chk[g.id]);
+              if (completo && !target.chkAt[ph]) { target.chkAt[ph] = horaBrt932(); mudou = true; }
+              else if (!completo && target.chkAt[ph]) { delete target.chkAt[ph]; mudou = true; }
+            }
+            if (mudou) { f(() => save()); f(() => render()); }
+          } catch {}
+        }, 0);
+      }),
+    );
+
     function ie() {
       const t = ft(),
         e = ut(t),
@@ -1290,15 +1437,90 @@ try {
             : `<div class="v598-trava" role="note"><b>${b(nomeE)}:</b> considere reduzir o risco máximo de hoje em 50%${lim ? ` (de ${G(lim)} para ${G(lim / 2)})` : ""}.${lim ? ` <button type="button" data-v598-reduz="${t}">Reduzir hoje</button>` : ""}</div>`;
         }, ""),
         emo589 = `<section class="v4-emo" aria-label="Estado emocional agora"><div class="v4-emo-head"><b>Como você está agora?</b>${abre589 ? `<span class="v4-countdown" data-v589-abertura="${abre589}" role="timer" aria-label="Tempo até a abertura do pregão">Abertura em <b>${cont589(abre589)}</b></span>` : ""}</div><div class="v4-emo-row" role="radiogroup" aria-label="Estado emocional">${EMO589.map(([g, N]) => `<button type="button" role="radio" aria-checked="${dRaiz.emocao === g}" class="${dRaiz.emocao === g ? "on" : ""}" data-v589-emo="${g}" data-v589-dia="${t}">${N}</button>`).join("")}</div>${trava598}${hist589}</section>`,
-        Y = P.map(
-          (g) =>
-            `<div class="dt393-checkitem v4-check" data-rule-phase="${at(g)}" ${at(g) !== H ? "hidden" : ""}><label><input type="checkbox" data-chk="${b(g.id)}" ${A[g.id] ? "checked" : ""}/><span>${b(g.t)}</span></label><select data-dt393-rule-phase="${b(g.id)}" aria-label="Fase da regra"><option value="pre" ${at(g) === "pre" ? "selected" : ""}>Pré</option><option value="during" ${at(g) === "during" ? "selected" : ""}>Durante</option><option value="post" ${at(g) === "post" ? "selected" : ""}>Pós</option></select></div>`,
-        ).join(""),
+        critPre = preL.filter((g) => g.crit),
+        critPend = critPre.filter((g) => !A[g.id]).length,
+        emoAlerta = ["ansioso", "cansado"].includes(dRaiz.emocao),
+        chkAt = (e && e.chkAt) || {},
+        semaforo = (() => {
+          if (!preL.length) return { cls: "am", txt: "SEM REGRAS", sub: "Adicione ou escolha um modelo em Organizar" };
+          if (critPre.length ? critPend > 0 : !preOk)
+            return {
+              cls: critPend > 0 || emoAlerta ? "no" : "am",
+              txt: critPend > 0 ? "BLOQUEADO" : "ATENÇÃO",
+              sub: critPend > 0
+                ? `${critPend} regra(s) crítica(s) pendente(s) no Pré`
+                : `Faltam ${preL.length - preL.filter((g) => A[g.id]).length} item(ns) no Pré`,
+            };
+          if (!preOk || emoAlerta)
+            return {
+              cls: "am",
+              txt: "ATENÇÃO",
+              sub: emoAlerta ? "Críticas OK, mas estado emocional pede mão reduzida" : "Críticas OK · conclua os itens opcionais do Pré",
+            };
+          return {
+            cls: "ok",
+            txt: "LIBERADO",
+            sub: chkAt.pre ? `Pré 100% concluído às ${chkAt.pre}` : "Pré-mercado 100% concluído",
+          };
+        })(),
+        statsChk932 = f(() => {
+          if (!preL.length) return "";
+          const dias = Object.keys(S.days || {}).sort().reverse();
+          let streak = 0, sQuebrou = false;
+          const okRes = [], incRes = [];
+          for (const dt of dias) {
+            const dObj = Tt() ? S.days[dt]?.us : S.days[dt];
+            const ck = dObj?.chk || {};
+            const full = preL.every((g) => ck[g.id]);
+            if (!sQuebrou) {
+              if (full) streak++;
+              else if (dt !== t) sQuebrou = true;
+            }
+            const trs = pt(dt).filter((g) => !Gt(g));
+            if (trs.length) {
+              const res = lt(trs, R);
+              (full ? okRes : incRes).push(res);
+            }
+          }
+          const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+          const partes = [];
+          if (streak > 0) partes.push(`🔥 <b>${streak}</b> dia${streak > 1 ? "s" : ""} seguido${streak > 1 ? "s" : ""}`);
+          if (okRes.length >= 2 && incRes.length >= 2) {
+            const mOk = avg(okRes), mInc = avg(incRes);
+            partes.push(`Pré 100%: <b class="${L(mOk)}">${j(mOk)}</b>/dia · Incompleto: <b class="${L(mInc)}">${j(mInc)}</b>/dia`);
+          } else if (okRes.length + incRes.length > 0) {
+            partes.push(`${okRes.length} pregão(ões) com Pré 100% registrado`);
+          }
+          return partes.length ? `<div class="sm mut" style="margin:6px 0 8px;font-size:12px;line-height:1.45">${partes.join(" · ")}</div>` : "";
+        }, ""),
+        Y = P.map((g) => {
+          const isC = !!g.crit;
+          const controls = chkOrg932
+            ? `<div style="display:flex;align-items:center;gap:4px;flex-shrink:0"><button type="button" data-chk932-crit="${b(g.id)}" title="Marcar como crítica (trava)" style="min-height:40px;padding:2px 7px;border-radius:6px;border:1px solid ${isC ? "rgba(201,166,107,.65)" : "var(--bd)"};background:${isC ? "rgba(201,166,107,.16)" : "transparent"};color:${isC ? "var(--gold,#C9A66B)" : "var(--mut)"};font-size:12px;cursor:pointer">★</button><select data-dt393-rule-phase="${b(g.id)}" aria-label="Fase da regra" style="min-height:28px;font-size:11.5px"><option value="pre" ${at(g) === "pre" ? "selected" : ""}>Pré</option><option value="during" ${at(g) === "during" ? "selected" : ""}>Durante</option><option value="post" ${at(g) === "post" ? "selected" : ""}>Pós</option></select><button type="button" data-chk932-del="${b(g.id)}" aria-label="Apagar regra" style="min-height:28px;padding:2px 7px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--mut);font-size:12px;cursor:pointer">✕</button></div>`
+            : (isC ? `<span title="Regra crítica (trava)" style="color:var(--gold,#C9A66B);font-size:12px;flex-shrink:0">★</span>` : "");
+          return `<div class="dt393-checkitem v4-check" data-rule-phase="${at(g)}" ${at(g) !== H ? "hidden" : ""} style="gap:8px"><label style="flex:1"><input type="checkbox" data-chk="${b(g.id)}" ${A[g.id] ? "checked" : ""}/><span>${b(g.t)}</span></label>${controls}</div>`;
+        }).join(""),
+        orgBar932 = chkOrg932
+          ? `<div class="v932-add" style="margin-top:10px;padding:10px;border:1px solid var(--bd);border-radius:6px;background:rgba(201,166,107,.04)">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                <input type="text" data-chk932-txt placeholder="Nova regra em ${z[H]}…" style="flex:1;min-width:160px;margin:0;min-height:40px;font-size:16px">
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;margin:0;cursor:pointer"><input type="checkbox" data-chk932-ncrit> ★ Crítica</label>
+                <button type="button" class="btn s" data-chk932-add="${H}" style="min-height:36px">+ Adicionar</button>
+              </div>
+              <details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--gold,#C9A66B);font-weight:600">Modelos prontos por estilo (1 clique)</summary>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${Object.entries(CHK_MOD932).map(([k, m]) => `<button type="button" class="btn s" data-chk932-mod="${k}" style="min-height:40px;font-size:12px">+ ${b(m.nome)}</button>`).join("")}</div>
+                <p class="sm mut" style="margin:6px 0 0;font-size:11.5px">Adiciona apenas itens que você ainda não tem (não apaga suas regras atuais).</p>
+              </details>
+            </div>`
+          : "",
+        corSem = semaforo.cls === "ok" ? "#10B981" : semaforo.cls === "no" ? "#EF4444" : "#C9A66B",
+        bgSem = semaforo.cls === "ok" ? "rgba(16,185,129,.12)" : semaforo.cls === "no" ? "rgba(239,68,68,.12)" : "rgba(201,166,107,.13)",
+        bannerSem = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:6px;border:1px solid ${corSem};background:${bgSem};margin-bottom:8px"><div><b style="color:${corSem};font-size:12px;letter-spacing:.04em">● ${semaforo.txt}</b><div class="sm" style="margin-top:2px;font-size:12px">${b(semaforo.sub)}${chkAt[H] && H !== "pre" ? ` · ${z[H]} concluído às ${chkAt[H]}` : ""}</div></div><button type="button" class="btn s" data-chk932-org="1" style="min-height:40px;padding:4px 10px;font-size:12px">${chkOrg932 ? "✓ Concluir" : "⚙ Organizar"}</button></div>`,
         U = C(
           "list",
           "Checklist operacional",
           `<button type="button" class="v4-progress" data-dt393-route="regras" aria-label="Editar regras"><span><b>${z[H]}</b> · ${fH} de ${nH.length}</span><i><b style="width:${pH}%"></b></i>${p("right", 16)}</button>`,
-          `<div class="dt393-phase dt393-phase-inner v4-cphase">${B}</div><div class="dt393-checklist v4-checklist">${Y || '<p class="v4-empty">Cadastre suas regras no Checklist.</p>'}<div class="dt393-phase-empty v4-empty" ${P.some((g) => at(g) === H) ? "hidden" : ""}>Nenhuma regra nesta fase.</div></div>`,
+          `${bannerSem}${statsChk932}<div class="dt393-phase dt393-phase-inner v4-cphase">${B}</div><div class="dt393-checklist v4-checklist">${Y || '<p class="v4-empty">Nenhuma regra cadastrada. Toque em <b>Organizar</b> para criar ou importar um modelo.</p>'}<div class="dt393-phase-empty v4-empty" ${P.some((g) => at(g) === H) ? "hidden" : ""}>Nenhuma regra nesta fase.</div></div>${orgBar932}`,
         ),
         ot = f(() => pHoje(), null),
         x = f(() => pCore(ot.hj, ot.P), null),
@@ -1570,8 +1792,53 @@ try {
         '<span class="v4-ctx">Contexto: suas operações</span>',
         `<p class="v4-sub">Calculadas a partir dos seus trades de hoje.</p><ul class="v4-tips">${x.length ? x.map((d) => `<li>${p("check", 18)}<span>${d}</span></li>`).join("") : '<li class="v4-none">Registre trades para receber sugestões.</li>'}</ul>${st("Perguntar à IA", 'data-v4ia="1"')}`,
       );
+      const rx940 = (() => {
+        const todos = pt().filter((d) => !Gt(d) && R(d) != null);
+        if (todos.length < 3) return "";
+        const faixas = [
+          { k: "09h–11h", a: 9, b: 11, n: 0, w: 0, pl: 0 },
+          { k: "11h–14h", a: 11, b: 14, n: 0, w: 0, pl: 0 },
+          { k: "14h–18h", a: 14, b: 18, n: 0, w: 0, pl: 0 },
+        ];
+        const porDia = {};
+        let plTotal = 0, plErros = 0, nErros = 0;
+        for (const d of todos) {
+          const val = R(d) || 0;
+          plTotal += val;
+          const dtStr = String(d.dt || "");
+          const hm = /T(\d{2}):/.exec(dtStr);
+          if (hm) {
+            const h = +hm[1];
+            const fx = faixas.find((x) => h >= x.a && h < x.b);
+            if (fx) { fx.n++; if (val > 0) fx.w++; fx.pl += val; }
+          }
+          const dia = dtStr.slice(0, 10);
+          (porDia[dia] = porDia[dia] || []).push(d);
+          if ((d.err && d.err !== "Nenhum") || d.rules === "n") { nErros++; plErros += val; }
+        }
+        const ordens = [
+          { k: "1º–2º trade do dia", n: 0, w: 0, pl: 0 },
+          { k: "3º trade do dia", n: 0, w: 0, pl: 0 },
+          { k: "4º+ trades (overtrading)", n: 0, w: 0, pl: 0 },
+        ];
+        for (const lista of Object.values(porDia)) {
+          lista.sort((x, y) => String(x.dt || "").localeCompare(String(y.dt || "")));
+          lista.forEach((d, idx) => {
+            const val = R(d) || 0;
+            const slot = idx < 2 ? ordens[0] : idx === 2 ? ordens[1] : ordens[2];
+            slot.n++; if (val > 0) slot.w++; slot.pl += val;
+          });
+        }
+        const fxAtivas = faixas.filter((x) => x.n > 0);
+        const ordAtivas = ordens.filter((x) => x.n > 0);
+        const piorFx = fxAtivas.slice().sort((x, y) => x.pl - y.pl)[0];
+        const linhaTab = (x) => `<tr><td>${x.k}</td><td>${x.n}</td><td>${Math.round((x.w / x.n) * 100)}%</td><td class="${L(x.pl)}"><b>${j(x.pl)}</b></td></tr>`;
+        const alertaFx = piorFx && piorFx.pl < 0 ? `<div style="padding:8px 10px;border-radius:8px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);margin-bottom:8px;font-size:12.5px"><b>Maior vazamento:</b> faixa <b>${piorFx.k}</b> (<b class="v-neg">${j(piorFx.pl)}</b> em ${piorFx.n} trades · ${Math.round((piorFx.w / piorFx.n) * 100)}% acerto).</div>` : "";
+        const custoErro = nErros > 0 ? `<div style="padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.4);background:rgba(201,166,107,.08);margin-top:8px;font-size:12.5px"><b>Custo de erros / fora da regra:</b> <b class="${L(plErros)}">${j(plErros)}</b> em ${nErros} trade(s). Sem eles, seu resultado seria <b class="${L(plTotal - plErros)}">${j(plTotal - plErros)}</b>.</div>` : "";
+        return `<details class="v4-card" style="margin-top:12px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🩸 Raio-X de Sangramento (${todos.length} trades)</summary><div style="margin-top:10px">${alertaFx}${fxAtivas.length ? `<div class="sm mut" style="margin-bottom:4px">Por faixa de horário</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Horário</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${fxAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${ordAtivas.length ? `<div class="sm mut" style="margin:10px 0 4px">Por ordem no dia (overtrading)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Sequência</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${ordAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${custoErro}</div></details>`;
+      })();
       /* v829: Operações em tela dividida — KPIs no topo, posições e trades no centro, revisão e sugestões à direita. */
-      return `<div class="v4-page v4-ops v829-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${$}${Y}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
+      return `<div class="v4-page v4-ops v829-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${$}${Y}${rx940}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
     }
     let mt = "3M",
       kt = !1;
@@ -1727,10 +1994,10 @@ try {
     }
     const me = [
         ["home", "Início", "home"],
-        ["dia", "Meu dia", "cal"],
-        ["ops", "Operações", "trade"],
-        ["mercado", "Mercado", "bars"],
-        ["estudos", "Estudos", "grad"],
+        ["dia", "Rotina", "cal"],
+        ["ops", "Trades", "trade"],
+        ["analises", "Research", "spark"],
+        ["carteiras", "Carteira", "wallet"],
       ],
       Vt = {
         home: "home",
@@ -1747,12 +2014,14 @@ try {
         opcart: "ops",
         swbt: "ops",
         dtrpy: "ops",
-        mercado: "mercado",
-        juros: "mercado",
-        live: "mercado",
-        graf: "mercado",
-        estudos: "estudos",
-        livro: "estudos",
+        analises: "analises",
+        carteiras: "carteiras",
+        mercado: "home",
+        juros: "home",
+        live: "home",
+        graf: "home",
+        estudos: "analises",
+        livro: "analises",
       };
     function ve() {
       let t = v.getElementById("v4-bnav");
@@ -1778,45 +2047,46 @@ try {
           "Principal",
           [
             ["r", "home", "Início", "home"],
-            ["r", "dia", "Meu dia", "cal"],
-            ["r", "ops", "Operações", "trade"],
-            ["r", "stats", "Diário", "book"],
+            ["r", "dia", "Rotina", "cal"],
+            ["r", "ops", "Trades", "trade"],
+            ["r", "analises", "Research", "spark"],
+            ["r", "carteiras", "Carteira", "wallet"],
+          ],
+        ],
+        [
+          "Macro & Gráficos",
+          [
             ["r", "mercado", "Mercado", "bars"],
-            ["r", "estudos", "Estudos", "grad"],
-          ],
-        ],
-        [
-          "Rotina e disciplina",
-          [
-            ["h", "hoje", "Posso operar?", "shield"],
-            ["r", "regras", "Checklist e regras", "checksq"],
-            ["h", "escala", "Escala de turno", "cal"],
-            ["h", "cal", "Calendário", "cal"],
-            ["r", "rev", "Revisão da semana", "list"],
-            ["q", "1", "Registro rápido de trade", "bolt"],
-          ],
-        ],
-        [
-          "Mercado ao vivo",
-          [
             ["r", "term", "Terminal", "monitor"],
             ["r", "graf", "Gráficos TradingView", "up"],
             ["r", "juros", "Juros e DI", "coins"],
           ],
         ],
         [
-          "Patrimônio e risco",
+          "Performance & Disciplina",
           [
-            ["r", "carteiras", "Carteira", "wallet"],
-            ["h", "pat", "Patrimônio", "up"],
-            ["g", "painel", "Capital, risco e backup", "shield"],
-            ["g", "contratos", "Calculadora de contratos", "list"],
+            ["r", "stats", "Desempenho", "book"],
+            ["h", "hoje", "Posso operar?", "shield"],
+            ["r", "regras", "Checklist e regras", "checksq"],
+            ["h", "cal", "Calendário", "cal"],
+            ["r", "rev", "Revisão da semana", "list"],
+            ["h", "escala", "Escala de turno", "cal"],
+            ["q", "1", "Registro rápido de trade", "bolt"],
+          ],
+        ],
+        [
+          "Gestão & Fiscal",
+          [
+            ["h", "pat", "Evolução patrimonial", "up"],
+            ["g", "painel", "Capital e risco", "shield"],
+            ["g", "contratos", "Calculadora de lotes", "list"],
             ["g", "imposto", "Imposto de renda", "doc"],
           ],
         ],
         [
-          "Estudos e evolução",
+          "Conhecimento",
           [
+            ["r", "estudos", "Estudos", "grad"],
             ["h", "ingles", "Inglês do dia", "grad"],
             ["g", "carreira", "Plano de transição", "arrow"],
           ],
