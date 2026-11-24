@@ -1990,6 +1990,11 @@ try {
         ));
     }
     function H(t) {
+      // v950: a lupa e Ctrl/Cmd+K usam o mesmo caminho; menu mantém a gaveta.
+      if (t === "search" && window.DiarioBuscaGlobal?.abrir && (typeof tab === "undefined" || tab !== "term")) {
+        O(!1);
+        if (window.DiarioBuscaGlobal.abrir()) return;
+      }
       at();
       const e = r.getElementById("dt394-drawer");
       ((e.hidden = !1), r.body.classList.add("dt394-drawer-open"));

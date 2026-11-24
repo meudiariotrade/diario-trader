@@ -7889,11 +7889,14 @@ try {
         dlg.addEventListener("close",()=>d.querySelector('.dt393-topbar [data-dt393-action="search"]')?.focus());
       }
       const inp = dlg.querySelector("#dt949-q");
+      if (dlg.open) { inp.focus(); return true; }
       inp.value = "";
       desenhaBusca("");
-      if (!dlg.open) dlg.showModal ? dlg.showModal() : dlg.setAttribute("open", "");
+      dlg.showModal ? dlg.showModal() : dlg.setAttribute("open", "");
       inp.focus();
+      return true;
     }
+    w.DiarioBuscaGlobal=Object.freeze({abrir:abreBusca});
 
     function desenhaBusca(raw) {
       const box = d.getElementById("dt949-res");
@@ -7939,17 +7942,10 @@ try {
         return;
       }
       if (!ev.target.closest?.("#dt949-pop")) fechaPop();
-      const sBtn = ev.target.closest?.('[data-dt393-action="search"]');
-      if (sBtn && !(typeof tab!=="undefined"&&tab==="term")) { ev.preventDefault(); ev.stopImmediatePropagation(); abreBusca(); }
     }, true);
 
     d.addEventListener("keydown", (ev) => {
-      if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "k" && !(typeof tab!=="undefined"&&tab==="term")) {
-        ev.preventDefault();
-        abreBusca();
-      } else if (ev.key === "Escape") {
-        fechaPop();
-      }
+      if (ev.key === "Escape") fechaPop();
     });
 
     const contexto949=()=>String(typeof SESS!=="undefined"?SESS?.uid||"local":"local")+"|"+String(typeof tab!=="undefined"?tab:"");
