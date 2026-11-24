@@ -15,5 +15,11 @@ test('v950: lupa abre busca global, menu abre apenas gaveta, atalho preserva con
  await p.keyboard.press('Control+k');await expect(dlg).toBeVisible();await expect(drawer).toBeHidden();
  await dlg.locator('[data-b949-x]').tap();await expect(dlg).toBeHidden();
  await p.keyboard.press('Meta+k');await expect(dlg).toBeVisible();await expect(drawer).toBeHidden();
+ await expect(dlg).toBeVisible();
+ const bounds=await dlg.boundingBox();expect(bounds.y).toBeLessThan(100);
+ await dlg.locator('#dt949-q').fill('PETR4');
+ await dlg.locator('[data-b949-go="PETR4"][data-b949-tipo="ativo"], [data-b949-go="PETR4"][data-b949-tipo="acao"]').first().tap();
+ await expect(dlg).toBeHidden();await expect(p.locator('#ap-root')).toBeVisible();
+ await expect(p.locator('#an-root [data-an-sub="rankpro"]')).toHaveAttribute('aria-selected','true');
  await p.close();
 }));

@@ -1835,7 +1835,15 @@ try {
         const linhaTab = (x) => `<tr><td>${x.k}</td><td>${x.n}</td><td>${Math.round((x.w / x.n) * 100)}%</td><td class="${L(x.pl)}"><b>${j(x.pl)}</b></td></tr>`;
         const alertaFx = piorFx && piorFx.pl < 0 ? `<div style="padding:8px 10px;border-radius:8px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);margin-bottom:8px;font-size:12.5px"><b>Maior vazamento:</b> faixa <b>${piorFx.k}</b> (<b class="v-neg">${j(piorFx.pl)}</b> em ${piorFx.n} trades · ${Math.round((piorFx.w / piorFx.n) * 100)}% acerto).</div>` : "";
         const custoErro = nErros > 0 ? `<div style="padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.4);background:rgba(201,166,107,.08);margin-top:8px;font-size:12.5px"><b>Custo de erros / fora da regra:</b> <b class="${L(plErros)}">${j(plErros)}</b> em ${nErros} trade(s). Sem eles, seu resultado seria <b class="${L(plTotal - plErros)}">${j(plTotal - plErros)}</b>.</div>` : "";
-        return `<details class="v4-card" style="margin-top:12px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🩸 Raio-X de Sangramento (${todos.length} trades)</summary><div style="margin-top:10px">${alertaFx}${fxAtivas.length ? `<div class="sm mut" style="margin-bottom:4px">Por faixa de horário</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Horário</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${fxAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${ordAtivas.length ? `<div class="sm mut" style="margin:10px 0 4px">Por ordem no dia (overtrading)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Sequência</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${ordAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${custoErro}</div></details>`;
+        const resumoIA950 = [
+          `Total analisado: ${todos.length} trades · P&L líquido: ${j(plTotal)}`,
+          fxAtivas.length ? "Por horário: " + fxAtivas.map((x) => `${x.k}=${j(x.pl)} (${x.n} trades, ${Math.round((x.w / x.n) * 100)}% acerto)`).join("; ") : "",
+          ordAtivas.length ? "Por sequência no dia: " + ordAtivas.map((x) => `${x.k}=${j(x.pl)} (${x.n} trades, ${Math.round((x.w / x.n) * 100)}% acerto)`).join("; ") : "",
+          nErros > 0 ? `Trades com erro/fora da regra: ${nErros} (${j(plErros)}); sem eles P&L seria ${j(plTotal - plErros)}` : "Sem erros marcados."
+        ].filter(Boolean).join("\n");
+        window.__dt950RxPrompt = "Analise este Raio-X de execução de trades no Profit, aponte exatamente onde o dinheiro está vazando e proponha 3 regras curtas e objetivas para colocar no Checklist (sem citar livros nem clichês):\n" + resumoIA950;
+        const btnIA = `<div style="margin-top:10px"><button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('munger','Diagnóstico de Execução',window.__dt950RxPrompt)" style="font-size:12.5px;min-height:40px">✦ Diagnosticar sangramento com Munger</button></div>`;
+        return `<details class="v4-card" style="margin-top:12px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🩸 Raio-X de Sangramento (${todos.length} trades)</summary><div style="margin-top:10px">${alertaFx}${fxAtivas.length ? `<div class="sm mut" style="margin-bottom:4px">Por faixa de horário</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Horário</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${fxAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${ordAtivas.length ? `<div class="sm mut" style="margin:10px 0 4px">Por ordem no dia (overtrading)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Sequência</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${ordAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${custoErro}${btnIA}</div></details>`;
       })();
       /* v829: Operações em tela dividida — KPIs no topo, posições e trades no centro, revisão e sugestões à direita. */
       return `<div class="v4-page v4-ops v829-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${$}${Y}${rx940}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
@@ -7750,12 +7758,12 @@ try {
       #dt949-pop .p-btn:hover{background:rgba(201,166,107,.12)}
       #dt949-pop .p-sep{height:1px;background:var(--bd,rgba(255,255,255,.1));margin:6px 0}
       #dt949-pop .p-sair{color:#EF4444}
-      #dt949-busca{width:min(94vw,540px);max-height:82dvh;padding:0;border:1px solid rgba(201,166,107,.45);border-radius:6px;background:var(--ui-surface,#141416);color:var(--tx,#eae9e6);overflow:hidden;}
+      #dt949-busca{position:fixed;inset:0 0 auto;width:min(94vw,540px);margin:max(12px,env(safe-area-inset-top)) auto auto!important;max-height:min(52dvh,430px);padding:0;border:1px solid rgba(201,166,107,.45);border-radius:6px;background:var(--ui-surface,#141416);color:var(--tx,#eae9e6);overflow:hidden}
       html[data-v427-tema=claro] #dt949-busca{background:#fffdf9;color:#1b1a17}
       #dt949-busca::backdrop{background:rgba(0,0,0,.62);backdrop-filter:blur(4px)}
-      #dt949-busca .b-top{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--bd,rgba(255,255,255,.1))}
+      #dt949-busca .b-top{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--bd,rgba(255,255,255,.1))}
       #dt949-busca input{flex:1;border:0;outline:0;background:transparent;color:inherit;font-size:16px;min-width:0;min-height:40px;margin:0;padding:4px 0}
-      #dt949-busca .b-res{max-height:64dvh;overflow:auto;padding:8px}
+      #dt949-busca .b-res{max-height:min(40dvh,330px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 8px 10px}
       #dt949-busca .b-grp{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold,#C9A66B);padding:8px 10px 4px;font-weight:700}
       #dt949-busca .b-it{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;min-height:44px;border:0;border-radius:4px;background:transparent;color:inherit;text-align:left;cursor:pointer;font-size:13.5px}
       #dt949-busca .b-it:hover{background:rgba(201,166,107,.12)}
@@ -7873,8 +7881,7 @@ try {
           dlg.close();
           if (tipo === "rota") { irRota(val); return; }
           if (tipo === "acao" || tipo === "fii" || tipo === "tese" || tipo === "ativo") {
-            irRota("analises");
-            w.DiarioAnalises?.abrirBusca949?.(tipo,val);
+            if(w.DiarioAnalises?.abrirBusca949?.(tipo,val)&&typeof tab!=="undefined"&&tab!=="analises")irRota("analises");
             return;
           }
           if (tipo === "trade") {
@@ -7890,7 +7897,7 @@ try {
           }
         });
         dlg.querySelector("#dt949-q").addEventListener("input", (ev) => desenhaBusca(ev.target.value));
-        dlg.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.id==="dt949-q"){ev.preventDefault();dlg.querySelector("[data-b949-go]")?.click()}});
+        dlg.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.id==="dt949-q"){ev.preventDefault();(Array.from(dlg.querySelectorAll("[data-b949-go]")).find(b=>["acao","fii","ativo"].includes(b.dataset.b949Tipo)&&b.dataset.b949Go===ev.target.value.trim().toUpperCase())||dlg.querySelector("[data-b949-go]"))?.click()}});
         dlg.addEventListener("close",()=>d.querySelector('.dt393-topbar [data-dt393-action="search"]')?.focus());
       }
       const inp = dlg.querySelector("#dt949-q");

@@ -237,7 +237,8 @@ function detail(s,rows){
  '<p>Fibonaccing: '+(x.fib.zone?'zona de mitigação':'fora da zona')+' · '+(x.fib.cluster?'cluster presente':'sem cluster')+' · '+(x.fib.fibogap?'Fibogap na defesa '+(x.fib.gapZone||[]).map(v=>fmt(v,2)).join('–'):'sem Fibogap aberto')+' · RMC: '+(x.turn.confirmed?'confirmado':'aguardando')+' · CISD: '+(x.turn.cisd?'confirmado':'não confirmado')+'</p>'+
  '<p>Elliott: '+E(x.elliott.label)+' — '+E(x.elliott.reason)+'</p>'+
  '<button class="btn s" type="button" data-niv822="'+E(r.ticker)+'" data-e="'+(plan.entry??'')+'" data-s="'+(plan.stop??'')+'" data-a="'+[plan.target1,plan.target2a,plan.target2].filter(v=>v!=null).join('|')+'" data-o="tecnico">Levar para o plano</button> '+
- '<button class="btn s" type="button" data-tech-ai="'+E(r.ticker)+'">Abrir pesquisa técnica com IA existente</button></section>';
+ '<button class="btn s" type="button" data-tech-conselho="ativo" data-tech-tk="'+E(r.ticker)+'">✦ Parecer Técnico</button> '+
+ '<button class="btn s" type="button" data-tech-conselho="munger" data-tech-tk="'+E(r.ticker)+'">Testar com Munger</button></section>';
 }
 function view(m){
  const s=states[m],title=m==='br'?'Técnico Brasil':'Técnico EUA & Cripto',rows=selectedRows(s),top=autoTop(s);
@@ -370,13 +371,30 @@ d.addEventListener('input',e=>{if(!e.target?.matches?.('[data-tech-search]')||!a
  if(e.target.value.length===0||e.target.value.length>=2){const sel=e.target.selectionStart;render();const field=d.querySelector('[data-tech-search]');if(field){field.focus();field.setSelectionRange(sel,sel)}}
 });
 d.addEventListener('click',async e=>{
- const el=e.target.closest('[data-tech-preset],[data-tech-reload],[data-tech-more],[data-tech-detail],[data-tech-point],[data-tech-close],[data-tech-pdf],[data-tech-ai]');
+ const el=e.target.closest('[data-tech-preset],[data-tech-reload],[data-tech-more],[data-tech-detail],[data-tech-point],[data-tech-close],[data-tech-pdf],[data-tech-ai],[data-tech-conselho]');
  if(!el||!active())return;e.preventDefault();const m=current,s=states[m];
  if(el.dataset.techPreset){s.preset=el.dataset.techPreset;s.detail='';render();return}
  if(el.hasAttribute('data-tech-reload')){void load(m);return}
  if(el.hasAttribute('data-tech-more')){void load(m,true);return}
  if(el.dataset.techDetail||el.dataset.techPoint){s.detail=el.dataset.techDetail||el.dataset.techPoint;render();void historicoNoDetalhe(m,s.detail);d.getElementById('tech-detail')?.scrollIntoView({block:'start',behavior:'smooth'});return}
  if(el.hasAttribute('data-tech-close')){s.detail='';render();return}
+ if(el.dataset.techConselho){
+  const tk=el.dataset.techTk||s.detail,ed=el.dataset.techConselho;
+  const r=markHoldings(s.rows).find(x=>x.ticker===tk);
+  if(r&&typeof w.DiarioConselhoIA==='function'){
+   const [dir,x]=side(r,s);if(!x?.valid)return;const pl=x.plan||{};
+   const ctx=['ATIVO TÉCNICO: '+r.ticker+' ('+(m==='br'?'Brasil':'EUA/Cripto')+' · '+s.tf+') · Fonte '+String(r.source||'N/D')+' · Dados '+String(r.updatedAt||'N/D')+' · Direção: '+(dir==='buy'?'Compra':'Venda/Short')+' · Nota: '+fmt(x.score,2)+'/10',
+    'SMA20='+fmt(x.metrics.sma20,2)+' · SMA50='+fmt(x.metrics.sma50,2)+' · SMA150='+fmt(x.metrics.sma150,2)+' · SMA200='+fmt(x.metrics.sma200,2)+' · ATR14='+fmt(x.metrics.atr14,2),
+    'RS='+fmt(x.metrics.rs,0)+' · IFR14='+fmt(x.metrics.rsi14,1)+' · RVOL='+fmt(x.metrics.rvol,2)+'x · Minervini='+(x.minervini.score??'N/D')+'/8',
+    'Plano condicional: Gatilho '+fmt(pl.entry,2)+' · Stop '+fmt(pl.stop,2)+' · Alvo 1 '+fmt(pl.target1,2)+' · Alvo 2 '+fmt(pl.target2,2)+' · R/R '+fmt(pl.rr,2)+' (líquido '+fmt(pl.rrNet,2)+')',
+    'Estrutura: Fib '+(x.fib.zone?'em zona':'fora da zona')+(x.fib.cluster?' + cluster':'')+' · RMC '+(x.turn.confirmed?'OK':'pendente')+' · CISD '+(x.turn.cisd?'OK':'não')+' · Elliott: '+(x.elliott.label||'—'),
+    r.backtest?'Backtest: '+resultadoBacktest(r):''].filter(Boolean).join('\n');
+   const titulo=ed==='munger'?'Munger (Crítico) · '+r.ticker:'Parecer Técnico · '+r.ticker;
+   const pr=(ed==='munger'?'Ataque este setup técnico no modo crítico/inversão (o que invalida, risco de armadilha, qualidade do R/R e volume) sem citar livros:\n':'Faça um parecer técnico direto deste setup (força da tendência, qualidade do ponto de entrada/stop/R-R e riscos de execução) sem citar livros:\n')+ctx;
+   w.DiarioConselhoIA(ed,titulo,pr);
+  }
+  return;
+ }
  if(el.dataset.techAi){w.DiarioAnalises?.command?.('TECNICO '+el.dataset.techAi);return}
  if(el.hasAttribute('data-tech-pdf')&&!s.busyPDF){
   const rows=autoTop(s);

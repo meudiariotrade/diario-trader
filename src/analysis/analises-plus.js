@@ -541,6 +541,7 @@ function viewFiiAtivo(fii){
 function viewAtivo(){
  const r=st.rows.map.get(st.tk);
  if(!r){
+  if(st.fiiLoading)return '<p class="ap-mut">Consultando ficha de '+E(st.tk)+'…</p>';
   const fii=st.fiis?.rows?.find(x=>x.ticker===st.tk);
   if(fii)return viewFiiAtivo(fii);
   return '<p class="ap-mut">Ativo '+E(st.tk)+' fora do universo do Screener. <button type="button" class="ap-link" data-ap-voltar>Voltar</button></p>';
@@ -615,6 +616,7 @@ function viewTeses(){
 
 /* ---------- render ---------- */
 function corpo(){
+ if(st.tk&&st.rankTipo==='fiis'){const fii=st.fiis?.rows?.find(x=>x.ticker===st.tk);if(fii)return viewFiiAtivo(fii);if(st.fiiLoading)return '<p class="ap-mut">Carregando ficha de '+E(st.tk)+'…</p>';}
  if(st.erro&&!st.rows)return '<section class="ap-card ap-vazio"><p>'+E(st.erro)+'</p><button type="button" class="btn s" data-ap-recarregar>Tentar de novo</button></section>';
  if(!st.rows)return '<section class="ap-card ap-vazio"><p class="ap-mut">Carregando universo do Screener Brasil…</p></section>';
  if(st.tk&&st.tab!=='guia')return viewAtivo();
@@ -627,7 +629,8 @@ function render(){const el=d.getElementById('ap-root');if(!el)return;aplicaProfi
 function enter(tab){
  if(tab)st.tab=tab;
  st._rotTentou=0;
- if(tab!=='ativo'&&!st._abrindo)st.tk='';
+ if(tab!=='ativo'&&st._ultimaEntrada!==tab&&!st._abrindo)st.tk='';
+ st._ultimaEntrada=tab;
  st._abrindo=0;
  carregar().then(render);
  // Na entrada, reaproveita o limitador da ponte; evento atualiza a tela sem polling.
