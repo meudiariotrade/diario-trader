@@ -7388,7 +7388,7 @@ try {
     const meusTickers = () => {
       const set = new Set();
       try {
-        const s = w.S || {};
+        const s = (typeof S === "object" && S) || w.S || {};
         const add = (tk) => {
           const clean = String(tk || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
           if (clean.length >= 3 && clean.length <= 7) set.add(clean);
@@ -7404,9 +7404,17 @@ try {
       return set;
     };
     const subAtiva = () => {
+      if (typeof MKT === "object" && MKT?.tab) return MKT.tab;
       const on = d.querySelector("#app .m403-primary-tabs button.on");
       const nr = on?.getAttribute("data-navroute") || "";
       return nr.split(":")[1] || (w.MKT && w.MKT.tab) || "cq";
+    };
+    // v963: comparar a marcação original, não a serialização normalizada pelo navegador.
+    const markupCache = new WeakMap();
+    const setMarkup = (node, html) => {
+      if (!node || markupCache.get(node) === html) return;
+      node.innerHTML = html;
+      markupCache.set(node, html);
     };
     /* 1. Cotações: Pulso do Pregão + filtro rápido Minha Carteira */
     const mountCotacoes = (app) => {
@@ -7436,27 +7444,34 @@ try {
       else if ((ibov != null && ibov <= -0.4) || (spx != null && spx <= -0.4) || (dol != null && dol >= 0.7)) { clima = "Risk-Off"; climaCls = "dn"; }
       const meus = meusTickers();
       const ativoFiltro = !!w.__dt962SoCarteira;
-      const pills = items.map((x) => {
-        const cls = x.pct == null ? "neu" : x.pct > 0 ? "up" : x.pct < 0 ? "dn" : "neu";
-        const val = x.pct == null ? "—" : (x.pct > 0 ? "+" : "") + x.pct.toFixed(2).replace(".", ",") + "%";
-        return `<span class="dt962-pill ${cls}"><b>${x.label}</b> ${val}</span>`;
-      }).join("");
-      const html = `<div class="dt962-pulso-row"><span class="dt962-clima ${climaCls}">${clima}</span><div class="dt962-pills">${pills}</div><button type="button" class="dt962-cart-btn ${ativoFiltro ? "on" : ""}" data-dt962-cart="1" title="Filtrar apenas ativos da sua carteira e trades recentes">★ Carteira (${meus.size})</button></div>`;
       if (!box) {
         box = d.createElement("section");
         box.id = "dt962-pulso";
         box.className = "dt962-pulso";
+        box.innerHTML = '<div class="dt962-pulso-row"><span class="dt962-clima"></span><div class="dt962-pills">' + items.map(x => '<span class="dt962-pill"><b>' + esc(x.label) + '</b><span class="dt962-val"></span></span>').join("") + '</div><button type="button" class="dt962-cart-btn" data-dt962-cart="1" title="Filtrar apenas ativos da sua carteira e trades recentes"></button></div>';
         anchor.before(box);
       }
-      if (box.innerHTML !== html) box.innerHTML = html;
-      if (ativoFiltro && meus.size > 0) {
-        for (const row of app.querySelectorAll(".cqr")) {
-          const txt = String(row.textContent || "").toUpperCase();
-          const hit = [...meus].some((tk) => txt.includes(tk));
-          row.style.display = hit ? "" : "none";
-        }
-      } else {
-        for (const row of app.querySelectorAll(".cqr")) if (row.style.display === "none") row.style.display = "";
+      // Atualizações de cotação não recriam o botão, nem os indicadores.
+      const setText = (el, value) => { if (el.textContent !== value) el.textContent = value; };
+      const setClass = (el, value) => { if (el.className !== value) el.className = value; };
+      const climate = box.querySelector(".dt962-clima");
+      setClass(climate, "dt962-clima " + climaCls);
+      setText(climate, clima);
+      box.querySelectorAll(".dt962-pill").forEach((el, i) => {
+        const x = items[i];
+        if (!x) return;
+        const cls = x.pct == null ? "neu" : x.pct > 0 ? "up" : x.pct < 0 ? "dn" : "neu";
+        setClass(el, "dt962-pill " + cls);
+        setText(el.querySelector(".dt962-val"), x.pct == null ? "—" : (x.pct > 0 ? "+" : "") + x.pct.toFixed(2).replace(".", ",") + "%");
+      });
+      const cart = box.querySelector(".dt962-cart-btn");
+      setClass(cart, "dt962-cart-btn" + (ativoFiltro ? " on" : ""));
+      setText(cart, "Carteira (" + meus.size + ")");
+      if (cart.getAttribute("aria-pressed") !== String(ativoFiltro)) cart.setAttribute("aria-pressed", String(ativoFiltro));
+      for (const row of app.querySelectorAll(".cqr")) {
+        const txt = String(row.textContent || "").toUpperCase();
+        const hide = ativoFiltro && meus.size > 0 && ![...meus].some(tk => txt.includes(tk));
+        if (row.hasAttribute("data-dt962-hidden") !== hide) row.toggleAttribute("data-dt962-hidden", hide);
       }
     };
     /* 2. Notícias: Botão Resumo em 3 pontos com a Áurea + selo ★ Na sua carteira */
@@ -7516,7 +7531,8 @@ try {
         box.className = "dt962-ag-cd" + (alerta ? " alerta" : "");
         card.prepend(box);
       }
-      if (box.innerHTML !== html) box.innerHTML = html;
+      box.classList.toggle("alerta", alerta);
+      setMarkup(box, html);
     };
     /* 4. Análises: Mini-cards com semáforo visual nos indicadores */
     const mountAnalises = (app) => {
@@ -7537,9 +7553,10 @@ try {
     };
     /* 5. Long & Short: Régua visual de Z-Score (-2σ ← 0 → +2σ) */
     const mountLongShort = (app) => {
-      const txt = String(app.innerText || "");
+      const oldGauge = app.querySelector("#dt962-ls-gauge");
+      const txt = String(app.innerText || "").replace(oldGauge?.innerText || "\u0000", "");
       const m = txt.match(/z-?score[^0-9+\-−]*([+\-−]?\d+(?:[.,]\d+)?)/i);
-      if (!m) return;
+      if (!m) { oldGauge?.remove(); return; }
       const z = parseFloat(m[1].replace("−", "-").replace(",", "."));
       if (!Number.isFinite(z)) return;
       const clamped = Math.max(-3, Math.min(3, z));
@@ -7557,21 +7574,32 @@ try {
         const anchor = app.querySelector("button[id*='v512'], .v512-grid")?.closest("div, form, section") || app.firstElementChild;
         if (anchor) anchor.after(box);
       }
-      if (box && box.innerHTML !== html) box.innerHTML = html;
+      setMarkup(box, html);
     };
-    let timer = null;
+    // v963: montar no mesmo ciclo de render e ignorar as próprias mutações.
+    // Sem atraso de 180ms, sem polling e sem observador ativo fora do Mercado.
+    const active = () => d.body && (typeof tab !== "undefined" ? tab === "mercado" : d.body.classList.contains("mkt549"));
+    let syncing = false;
+    const obs = new MutationObserver(() => sync());
     const sync = () => {
-      if (!d.body.classList.contains("mkt549")) return;
+      if (syncing) return;
+      obs.disconnect();
+      if (!active()) return;
       const app = d.getElementById("app");
       if (!app) return;
-      const sub = subAtiva();
-      if (sub === "cq" || sub === "cot") mountCotacoes(app);
-      else if (sub === "nt" || sub === "jr") mountNoticias(app);
-      else if (sub === "ag") mountAgenda(app);
-      else if (sub === "lab" || sub === "sazus") mountAnalises(app);
-      else if (sub === "ls") mountLongShort(app);
+      syncing = true;
+      try {
+        const sub = subAtiva();
+        if (sub === "cq" || sub === "cot") mountCotacoes(app);
+        else if (sub === "nt" || sub === "jr") mountNoticias(app);
+        else if (sub === "ag") mountAgenda(app);
+        else if (sub === "lab" || sub === "sazus") mountAnalises(app);
+        else if (sub === "ls") mountLongShort(app);
+      } finally {
+        syncing = false;
+        if (active()) obs.observe(app, { childList: true, subtree: true });
+      }
     };
-    const schedule = () => { clearTimeout(timer); timer = setTimeout(sync, 180); };
     d.addEventListener("click", (e) => {
       const btnCart = e.target?.closest?.("[data-dt962-cart]");
       if (btnCart) {
@@ -7596,16 +7624,11 @@ try {
         w.DiarioConselhoIA && w.DiarioConselhoIA("dalio", "Agenda Macro · WIN/WDO", w.__dt962AgPrompt || "Explique o impacto dos principais eventos econômicos de hoje no WIN e WDO.");
         return;
       }
-      if (d.body.classList.contains("mkt549")) schedule();
     });
-    const obs = new MutationObserver(() => { if (d.body.classList.contains("mkt549")) schedule(); });
-    const boot = () => {
-      const app = d.getElementById("app");
-      if (app) obs.observe(app, { childList: true, subtree: true });
-      sync();
-    };
-    if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", boot, { once: true });
-    else setTimeout(boot, 600);
+    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v963-pulso", { after: sync });
+    w.addEventListener("diario:render", sync);
+    if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", sync, { once: true });
+    else sync();
   })(window, document);
 } catch (e) {
   console.error("[v962] MercadoPro", e);
