@@ -30168,13 +30168,10 @@ try {
             ).join("")
           : '<li class="v4-none">Sem movimentos fortes nas cotações recebidas.</li>',
         K = C(
-          "bars",
-          "Panorama do dia",
-          st("Ver mais", 'data-dt393-route="mercado"'),
-          `<div class="v4-pano">
-    <div><h3>${p("cal", 18)} ${B ? "Agenda (próximos)" : "Agenda (hoje)"}</h3><ul class="v4-list">${ot}</ul>${st("Ver agenda", 'data-v4mkt="ag"')}</div>
-    <div><h3>${p("news", 18)} Notícias-chave</h3><ul class="v4-list">${F}</ul>${st("Ver notícias", 'data-v4mkt="nt"')}</div>
-    <div><h3 class="v4-gold">${p("alert", 18)} Alertas macro</h3><ul class="v4-list v4-alerts">${rt}</ul>${st("Abrir radar", 'data-dt393-route="term"')}</div></div>`,
+          "cal",
+          B ? "Agenda · próximos eventos" : "Agenda do dia",
+          st("Ver agenda completa", 'data-v4mkt="ag"'),
+          `<ul class="v4-list">${ot}</ul>`,
         ),
         $t = C(
           "spark",
@@ -30186,14 +30183,12 @@ try {
     <button type="button" data-dt393-route="stats">${p("up", 20)}<span><b>Avaliar resultados e consistência</b><small>Curva, win rate e pontos de atenção.</small></span>${p("right", 16)}</button></div></div></details>`,
           "v4-iacard",
         );
-      /* v829: Início = mercado. KPIs de mercado no topo; EUA/ADRs, agenda, notícias e alertas no centro;
-         níveis do plano e IA na coluna da direita. O resumo pessoal do dia foi para o Meu dia. */
-      const b3Aberta829=f(()=>window.DiarioSessoes.session("B3").state==="regular",!1);
+      /* v957: Início organizado por prioridade sem misturar cotações e notícias:
+         Topo = KPIs principais + Central da Áurea; Meio = Mercado/EUA/Movimentos; Base = Notícias + Agenda; Lateral/rodapé = Complementares. */
       return `<div class="v4-page v4-home v810-home v829-home" data-v810-phase="${u}">
     ${v810Seletor($)}
-    ${v810Faixa("home",u,u==="pre"?"Referências internacionais, agenda e preparação para a próxima abertura.":u==="pregao"?"Acompanhe acontecimentos, preços disponíveis e riscos; confira a atualização de cada dado.":"Compare o fechamento com a preparação e acompanhe os riscos para a próxima sessão.")}
     ${v829MercadoKpis()}
-    <div class="ui-split v829-split"><div class="ui-main">${b3Aberta829?K+v827Eua():v827Eua()+K}</div><aside class="ui-aside">${u!=="pos"?v825Niveis():""}${$t}</aside></div>
+    <div class="ui-split v829-split"><div class="ui-main">${$t}${v827Eua()}${K}</div><aside class="ui-aside">${u!=="pos"?v825Niveis():""}</aside></div>
     </div>`;
     }
     let qt = null;
@@ -41222,18 +41217,22 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
       if (c(() => tab, "") !== "home" || r.getElementById("v518-mov")) return;
       const alvo = r.querySelector("#app:not(.v503-fantasma) .v829-home .v829-split>.ui-main");
       if (!alvo) return;
-      const t = r.getElementById("i833-fatos") || null;
+      const anchor =
+        r.getElementById("i835-sinais") ||
+        alvo.querySelector(".v827-eua") ||
+        alvo.querySelector(".v4-iacard") ||
+        null;
       const e = r.createElement("details");
       ((e.id = "v518-mov"),
         (e.className = "v518-mov"),
-        (e.open = !0),
+        (e.open = !1),
         (e.innerHTML =
-          '<summary class="v518-h">Movimentos fortes <span class="mut">carregando…</span></summary>'),
-        t && t.parentElement === alvo ? t.after(e) : alvo.prepend(e));
+          '<summary class="v518-h" style="cursor:pointer">Movimentos fortes <span class="mut">carregando…</span></summary>'),
+        anchor && anchor.parentElement === alvo ? anchor.after(e) : alvo.append(e));
       const a = await v().catch(() => null);
       if (!e.isConnected) return;
       if (!a) {
-        e.innerHTML = '<summary class="v518-h">Movimentos fortes</summary><p class="mut">' + (c(() => SESS && SESS.uid, null) ? 'Não foi possível consultar os movimentos agora.' : 'Entre na sua conta para consultar os movimentos.') + '</p><button type="button" data-v518-refresh>Atualizar movimentos</button>';
+        e.innerHTML = '<summary class="v518-h" style="cursor:pointer">Movimentos fortes <span class="mut">toque para abrir</span></summary><p class="mut">' + (c(() => SESS && SESS.uid, null) ? 'Não foi possível consultar os movimentos agora.' : 'Entre na sua conta para consultar os movimentos.') + '</p><button type="button" data-v518-refresh>Atualizar movimentos</button>';
         e.dataset.v518Ready = "1";
         p.DIARIO_V519?.insCartao?.();
         p.DIARIO_V520?.cartao?.();
@@ -41246,7 +41245,7 @@ ${e("div", "Divergência: petróleo × PETR4, minério × VALE3, S&P × Ibovespa
         ),
         s = o.length ? o : a.slice(0, 3);
       e.innerHTML =
-        `<summary class="v518-h">Movimentos fortes <span class="mut">${o.length ? "hoje" : "últimos dias"}</span></summary>` +
+        `<summary class="v518-h" style="cursor:pointer">Movimentos fortes <span class="mut">${s.length ? s.length + " · " + (o.length ? "hoje" : "últimos dias") : "sem alertas"} · toque para abrir</span></summary>` +
         (s.length
           ? s
               .map((i) => {
