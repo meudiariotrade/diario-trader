@@ -33,7 +33,7 @@ test('cron: coleta uma vez e serve todos pelas rotas públicas, sem Supabase',as
   const {default:worker}=await mod,map=new Map(),log=[];
   const env={NEWS_CACHE:{get:async(k,t)=>{const v=map.get(k);return t==='json'&&v?JSON.parse(v):v??null;},put:async(k,v)=>map.set(k,v)},ALLOWED_ORIGIN:'https://meudiariotrade.github.io'};
   const antigo=global.fetch;global.fetch=fakeFetch(log);const tarefas=[];
-  try{await worker.scheduled({scheduledTime},env,{waitUntil:p=>tarefas.push(p)});await worker.scheduled({scheduledTime:scheduledTime+3*60000,cron:'3,33 * * * *'},env,{waitUntil:p=>tarefas.push(p)});await Promise.all(tarefas);}
+  try{await worker.scheduled({scheduledTime},env,{waitUntil:p=>tarefas.push(p)});await worker.scheduled({scheduledTime:scheduledTime+2*60000,cron:'*/2 * * * *'},env,{waitUntil:p=>tarefas.push(p)});await Promise.all(tarefas);}
   finally{global.fetch=antigo;}
   assert.ok(!log.some(u=>/supabase/.test(u)),'nenhuma chamada ao Supabase');
   const r=await worker.fetch(new Request('https://x.workers.dev/v1/agenda?semana=0'),env);assert.equal(r.status,200);
@@ -57,7 +57,15 @@ test('v964: produção usa cron exclusivo, coleta oficial primeiro e preserva ú
  const map=new Map([['diario:sentimento:v1',JSON.stringify(prior)]]),log=[],tasks=[];
  const env={NEWS_CACHE:{get:async k=>map.get(k)||null,put:async(k,v)=>map.set(k,v)}};
  const old=global.fetch;global.fetch=fakeFetch(log);
- try{await worker.scheduled({scheduledTime:Date.parse('2026-11-24T21:03:00Z'),cron:'3,33 * * * *'},env,{waitUntil:p=>tasks.push(p)});await Promise.all(tasks);}finally{global.fetch=old;}
+ try{await worker.scheduled({scheduledTime:Date.parse('2026-11-24T21:02:00Z'),cron:'*/2 * * * *'},env,{waitUntil:p=>tasks.push(p)});await Promise.all(tasks);}finally{global.fetch=old;}
  assert.equal(tasks.length,1);assert.equal(log.length,4);assert.match(log[0],/alternative.me/);assert.match(log[1],/cnn.io/);
  const result=JSON.parse(map.get('diario:sentimento:v1'));assert.ok(result.b3);assert.ok(result.eua);assert.equal(result.cripto.valor,0,'não aceita fonte com data anterior');
+});
+
+test('v965: mantém um único cron e reserva somente a janela do sentimento',async()=>{
+ const {cronSentimento,CRON_SENTIMENTO}=await import('../cloudflare/diario-noticias/sentimento-v964.mjs');
+ const cfg=JSON.parse(require('node:fs').readFileSync('cloudflare/diario-noticias/wrangler.jsonc','utf8'));
+ assert.deepEqual(cfg.triggers.crons,[CRON_SENTIMENTO]);
+ const check=iso=>cronSentimento({cron:CRON_SENTIMENTO,scheduledTime:Date.parse(iso)},{},{waitUntil(){throw Error('sem cache');}});
+ assert.equal(check('2026-11-24T13:32:00Z'),true);assert.equal(check('2026-11-24T13:30:00Z'),false);assert.equal(check('2026-11-24T13:34:00Z'),false);assert.equal(check('2026-11-21T13:32:00Z'),false);assert.equal(check('2026-11-21T15:02:00Z'),true);
 });

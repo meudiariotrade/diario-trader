@@ -1,5 +1,5 @@
 import {coletarSentimento,sentimentoAgora} from './dados-publicos.mjs';
-export const CRON_SENTIMENTO='3,33 * * * *';
+export const CRON_SENTIMENTO='*/2 * * * *';
 export const SENT_KEY_V964='diario:sentimento:v1';
 const mercados=['b3','eua','cripto'];
 const valido=x=>x&&typeof x.valor==='number'&&Number.isFinite(x.valor)&&x.valor>=0&&x.valor<=100;
@@ -22,7 +22,9 @@ export async function atualizarSentimento(env,agora,fetcher=fetch){
  return out;
 }
 export function cronSentimento(event,env,ctx){
- if(event.cron!==CRON_SENTIMENTO)return false;
- if(env.NEWS_CACHE&&sentimentoAgora(new Date(event.scheduledTime-3*60000)))ctx.waitUntil(atualizarSentimento(env,event.scheduledTime).catch(()=>null));
+ // v965: usa o cron existente; reserva somente os minutos 02/32 quando a coleta é devida.
+ if(event.cron&&event.cron!==CRON_SENTIMENTO)return false;
+ if(![2,32].includes(new Date(event.scheduledTime).getUTCMinutes())||!sentimentoAgora(new Date(event.scheduledTime-2*60000)))return false;
+ if(env.NEWS_CACHE)ctx.waitUntil(atualizarSentimento(env,event.scheduledTime).catch(()=>null));
  return true;
 }

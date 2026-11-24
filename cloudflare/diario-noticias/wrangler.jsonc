@@ -6,8 +6,7 @@
   "workers_dev": true,
   "triggers": {
     "crons": [
-      "*/2 * * * *",
-      "3,33 * * * *"
+      "*/2 * * * *"
     ]
   },
   "vars": {
