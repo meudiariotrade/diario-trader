@@ -7,6 +7,8 @@ import {estudosV932} from './estudos-v932.mjs';
 import {diarioIaV933} from './diario-ia-v933.mjs';
 import {extrasV936} from './extras-v936.mjs';
 import {centralV939} from './central-v939.mjs';
+import {profitQuotes,ProfitQuotesV947} from './profit-quotes-v947.mjs';
+export {ProfitQuotesV947};
 // Snapshot público e imutável por janela de cache. Nenhum JWT, carteira ou segredo sai do Worker.
 const CACHE_CONTROL='public, max-age=900, s-maxage=1800';
 const CORS={
@@ -52,6 +54,7 @@ async function logado(env,req){
 export default {
  async fetch(request,env,ctx){
   const url=new URL(request.url);
+  if(url.pathname==='/v1/profit-quotes')return profitQuotes(request,env);
   if(url.pathname==='/v1/aurea-resumao')return resumoAurea(request,env);
   if(url.pathname==='/v1/ia-estatisticas')return estatisticasV932(request,env);
   if(url.pathname==='/v1/ia-explica')return explicarV932(request,env);

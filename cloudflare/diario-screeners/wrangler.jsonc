@@ -22,5 +22,21 @@
   "keep_vars": true,
   "ai": {
     "binding": "AI"
-  }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PROFIT_QUOTES",
+        "class_name": "ProfitQuotesV947"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "profit-v947",
+      "new_sqlite_classes": [
+        "ProfitQuotesV947"
+      ]
+    }
+  ]
 }

@@ -20,20 +20,39 @@
       new Date(n).toLocaleDateString('en-GB',{timeZone:'America/Sao_Paulo'}) ===
       dia+'/'+mes+'/'+ano ? new Date(n).toISOString() : null;
   };
+  const EDGE='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/profit-quotes';
+  let edgePending=null;
   // O wrapper nunca volta ao polling antigo do Supabase após falha local.
   cqPonte = async function (force = false) {
     try {
       if (typeof SESS === 'undefined' || !SESS?.uid) { CQ.pf={}; CQ.saved={}; CQ.owner=null; return; }
-      if (CQ.owner !== SESS.uid) { CQ.pf={}; CQ.saved={}; CQ.pfTs=0; CQ.cloudTs=0; CQ.owner=SESS.uid; }
+      if (CQ.owner !== SESS.uid) { CQ.pf={}; CQ.saved={}; CQ.pfTs=0; CQ.cloudTs=0; CQ.edgeTs=0; CQ.edgeOk=false; CQ.edgeOwner=null; CQ.owner=SESS.uid; }
       const configured = root.DIARIO_PONTE_LOCAL?.cotacoesUrl || '';
       // v945: consultas automáticas ao Supabase seguem a cada 15min.
       // Ação explícita de Atualizar pode revalidar antes, limitada a uma vez a cada 15s.
       const manual = force === true;
-      if (Date.now() - (CQ.pfTs || 0) < (manual || configured ? 15e3 : 15 * 6e4)) return;
       const owner = SESS.uid;
+      let linhas = null, edge=false;
+      // Apenas o canal privado Cloudflare é consultado em segundos. A sessão já existente é reutilizada.
+      if (SESS.at && !root.DIARIO_DEMO && Date.now()-(CQ.edgeTs||0)>=(CQ.edgeOk?5000:30000)) {
+        if(edgePending) return;
+        const controller=new AbortController();edgePending=controller;CQ.edgeTs=Date.now();
+        try {
+          if(typeof tok==='function'&&Number(SESS.exp)-Date.now()<60000)await tok();
+          if(SESS?.uid!==owner||controller.signal.aborted)return;
+          const response=await fetch(EDGE,{headers:{Authorization:'Bearer '+SESS.at},credentials:'omit',cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(3500)])});
+          if(response.ok){
+            const result=await response.json(), age=Date.now()-Date.parse(result.received_at);
+            if(result.ok===true&&Array.isArray(result.cotacoes)&&result.cotacoes.length&&age>=-60000&&age<=45000){linhas=result.cotacoes;edge=true}
+          }
+          if(SESS?.uid===owner)CQ.edgeOk=edge;
+        }catch{if(controller.signal.aborted)return;if(SESS?.uid===owner)CQ.edgeOk=false}
+        finally{if(edgePending===controller)edgePending=null}
+      }
+      if(SESS?.uid!==owner)return;
+      if(!edge && Date.now() - (CQ.pfTs || 0) < (manual || configured ? 15e3 : 15 * 6e4)) return;
       CQ.pfTs = Date.now();
-      let linhas = null;
-      if (configured) {
+      if (!edge && configured) {
         try {
           const url = new URL(configured);
           if (url.protocol === 'http:' && ['localhost','127.0.0.1','[::1]'].includes(url.hostname)) {
@@ -53,7 +72,9 @@
       (linhas || []).forEach(o => {
         const s = String(o.ticker || '').toUpperCase();
         if (!(+o.ult > 0) || !Number.isFinite(Date.parse(o.updated_at)) || Date.parse(o.updated_at) > Date.now()+60000) return;
-        const negociadoEm = horarioNegocio(o) || o.updated_at;
+        const real=horarioNegocio(o);
+        if(edge&&!real)return;
+        const negociadoEm = real || o.updated_at;
         const n = { px: +o.ult, d1: o.var != null && isFinite(+o.var) ? +o.var : null,
           tk: s, em: negociadoEm, recebidoEm: o.updated_at };
         const older = saved[s];
@@ -72,6 +93,15 @@
           }
         }
       });
+      // A reserva nunca apaga um negócio do canal de borda comprovadamente mais novo.
+      if(!edge&&CQ.edgeOwner===owner){
+        for(const [s,n] of Object.entries(CQ.saved||{})){
+          if(Date.parse(n.em)>(Date.parse(saved[s]?.em)||0)){
+            saved[s]=n;if(Date.now()-Date.parse(n.em)<=3*6e4)t[s]=n;else delete t[s];
+          }
+        }
+      }
+      if(edge)CQ.edgeOwner=owner;
       CQ.pf = t; CQ.saved = saved;
       // v946: notifica consumidores em memória (Research/Terminal) apenas após
       // snapshot válido; sem criar novas consultas, polling ou divulgar preços.
@@ -86,16 +116,29 @@
     if (!event.target?.closest?.('[data-cqr]')) return;
     Promise.resolve().then(() => cqPonte(true)).then(() => cqPinta()).catch(() => {});
   });
-  // Mantém os preços atualizados enquanto a aba Cotações está aberta (sem atrapalhar a digitação na busca).
-  setInterval(async () => {
-    if (doc.hidden || g(() => tab, '') !== 'mercado' || g(() => MKT.tab, '') !== 'cq') return;
-    const antes = g(() => CQ.pfTs, 0);
-    await cqPonte();
-    if (g(() => CQ.pfTs, 0) === antes) return;
-    const foco = doc.activeElement;
-    if (foco && foco.matches?.('#cotbox input, #cqbox input')) return;
-    try { cqPinta(); } catch {}
-  }, 15e3);
+  // Ciclo de vida: timer só com uma tela consumidora visível, encerrado na saída.
+  let tickerTimer=null,tickBusy=false;
+  const market=()=>g(()=>tab,'')==='mercado'&&g(()=>MKT.tab,'')==='cq';
+  const active=()=>!doc.hidden&&!!g(()=>SESS?.uid,null)&&(market()||g(()=>tab,'')==='live'||g(()=>tab,'')==='terminal'||!!doc.getElementById?.('ap-root'));
+  async function tick(){
+    if(tickBusy||!active())return;
+    tickBusy=true;
+    try{
+      const antes=g(()=>CQ.pfTs,0);await cqPonte();
+      if(!active()||!market()||g(()=>CQ.pfTs,0)===antes||doc.activeElement?.matches?.('#cotbox input, #cqbox input'))return;
+      cqPinta();
+    }catch{}finally{tickBusy=false}
+  }
+  function ciclo(){
+    if(!active()){
+      if(tickerTimer!==null){clearInterval(tickerTimer);tickerTimer=null}
+      if(edgePending)edgePending.abort();
+      return;
+    }
+    if(tickerTimer===null){tickerTimer=setInterval(tick,5000);void tick()}
+  }
+  doc.addEventListener('visibilitychange',ciclo);
+  doc.addEventListener('diario:tela',()=>requestAnimationFrame(ciclo));
   // Linha de fonte curta no lugar do parágrafo longo.
   function fonte() {
     const box = doc.querySelector('#app:not(.v503-fantasma) #cotbox'); if (!box || box.classList.contains('market-quotes')) return;
@@ -107,6 +150,7 @@
     if (p.textContent !== txt) p.textContent = txt;
   }
   let q = false;
-  new MutationObserver(() => { if (!q) { q = true; requestAnimationFrame(() => { q = false; fonte(); }); } }).observe(doc.body, { childList: true, subtree: true });
+  new MutationObserver(() => { if (!q) { q = true; requestAnimationFrame(() => { q = false; fonte(); ciclo(); }); } }).observe(doc.body, { childList: true, subtree: true });
   root.ProfitCotacoes552 = Object.freeze({ FUT });
+  ciclo();
 })(window, document);

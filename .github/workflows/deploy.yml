@@ -52,6 +52,8 @@ jobs:
         run: node --test tests/ponte-profit-v945.test.cjs
       - name: Testar preços Profit e Research v946
         run: node --test tests/profit-research-v946.test.cjs
+      - name: Testar isolamento do canal Profit na Cloudflare
+        run: node --test tests/profit-edge-v947.test.cjs
       - name: Testar Radar Proativo sem polling
         run: node --test tests/radar-proativo-v944.test.cjs
       - run: npm run build

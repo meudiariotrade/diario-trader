@@ -30,6 +30,7 @@ jobs:
         with:
           node-version: '24'
       - run: node --check cloudflare/diario-screeners/index.mjs
+      - run: node --test tests/profit-edge-v947.test.cjs
       - run: node --check cloudflare/diario-screeners/estatisticas-v932.mjs
       - run: node --check cloudflare/diario-screeners/explica-v932.mjs
       - run: node --check cloudflare/diario-screeners/estudos-v932.mjs
