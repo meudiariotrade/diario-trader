@@ -381,7 +381,102 @@ function ajusta160() {
   };
 }
 
-/* v789 — preparo único, sem marcar regras como cumpridas por inferência. */
+/* v789/v958 — preparo único inteligente: pré-preenche último plano, alerta emocional e auto-marca pós-pregão. */
+function ultimoPlano958(hoje) {
+  const days = S && S.days ? Object.keys(S.days).filter((k) => k < hoje).sort().reverse() : [];
+  for (const k of days) {
+    const x = S.days[k];
+    if (!x) continue;
+    const tem = Number(x.metaDia) > 0 || Number(x.maxP) > 0 || Number(x.pl2?.max) > 0 || (Array.isArray(x.pl2?.mods) && x.pl2.mods.length);
+    if (tem) {
+      const m = String(k).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return {
+        origem: m ? m[3] + "/" + m[2] : k,
+        metaDia: Number(x.metaDia) > 0 ? Number(x.metaDia) : "",
+        maxP: Number(x.maxP) > 0 ? Number(x.maxP) : "",
+        max: Number.isInteger(Number(x.pl2?.max)) && Number(x.pl2?.max) > 0 ? Number(x.pl2.max) : "",
+        mods: Array.isArray(x.pl2?.mods) ? x.pl2.mods.slice() : [],
+        vies: x.pl2?.vies || "",
+      };
+    }
+  }
+  const c = (S && S.cfg) || {};
+  if (Number(c.metaDia) > 0 || Number(c.limP) > 0 || Number(c.maxT) > 0) {
+    return {
+      origem: "Capital e Risco",
+      metaDia: Number(c.metaDia) > 0 ? Number(c.metaDia) : "",
+      maxP: Number(c.limP) > 0 ? Number(c.limP) : "",
+      max: Number.isInteger(Number(c.maxT)) && Number(c.maxT) > 0 ? Number(c.maxT) : "",
+      mods: ["dt"],
+      vies: "",
+    };
+  }
+  return null;
+}
+function aplicarUltimoPlano958(hoje) {
+  if (!S || !S.days) return;
+  const d = S.days[hoje] ?? (S.days[hoje] = { chk: {} });
+  if (d.ckok || d._auto958 || Number(d.metaDia) > 0 || Number(d.maxP) > 0) return;
+  const prev = ultimoPlano958(hoje);
+  if (!prev) return;
+  if (prev.metaDia) d.metaDia = prev.metaDia;
+  if (prev.maxP) d.maxP = prev.maxP;
+  d.pl2 ??= {};
+  if (prev.max && !d.pl2.max) d.pl2.max = prev.max;
+  if (prev.mods.length && (!Array.isArray(d.pl2.mods) || !d.pl2.mods.length)) d.pl2.mods = prev.mods.slice();
+  if (prev.vies && !d.pl2.vies) d.pl2.vies = prev.vies;
+  d.cl ??= {};
+  if (Number(d.maxP) > 0) d.cl.p_limite = true;
+  if (Number(d.metaDia) > 0) d.cl.p_meta = true;
+  d._auto958 = prev.origem;
+  d.u = Date.now();
+  try { save(); } catch {}
+}
+function errosRecentes958() {
+  try {
+    const trades = Array.isArray(S?.trades) ? S.trades : [];
+    const lim = Date.now() - 30 * 86400000;
+    const map = new Map();
+    for (const t of trades) {
+      if (!t || !t.err || t.err === "Nenhum" || t.exit == null) continue;
+      const dt = Date.parse(String(t.dtx || t.dt || "").slice(0, 10));
+      if (!Number.isFinite(dt) || dt < lim) continue;
+      const r = typeof cBRL === "function" ? cBRL(t) : null;
+      const pl = Number(r?.pl);
+      if (!Number.isFinite(pl) || pl >= 0) continue;
+      const cur = map.get(t.err) || { err: t.err, n: 0, perda: 0 };
+      cur.n += 1;
+      cur.perda += Math.abs(pl);
+      map.set(t.err, cur);
+    }
+    return [...map.values()].sort((a, b) => b.perda - a.perda).slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+function autoPosPregao958(hoje) {
+  try {
+    if (!S || !S.days) return;
+    const trades = typeof gateHoje === "function" ? gateHoje(hoje) : [];
+    if (!trades.length) return;
+    const d = S.days[hoje] ?? (S.days[hoje] = { chk: {} });
+    d.chk ??= {};
+    const regras = typeof regrasUnicas === "function" ? regrasUnicas() : [];
+    const todosPrint = trades.every((t) => t.pin && (numN(t.exit) == null || t.pout));
+    const todosClass = trades.every((t) => t.rules === "s" || t.rules === "n");
+    const todosFech = trades.every((t) => numN(t.exit) != null);
+    let mudou = false;
+    for (const r of regras) {
+      if (d.chk[r.id]) continue;
+      const tx = String(r.t || "");
+      if (/importei.*opera|profit.*di[aá]rio/i.test(tx)) { d.chk[r.id] = true; mudou = true; }
+      else if (todosPrint && /print.*trade|foto.*gr[aá]fico/i.test(tx)) { d.chk[r.id] = true; mudou = true; }
+      else if (todosClass && /classifiquei.*trade|segui o plano/i.test(tx)) { d.chk[r.id] = true; mudou = true; }
+      else if ((d.posop || todosFech) && /conferi o resultado|em R\$ e em vezes/i.test(tx)) { d.chk[r.id] = true; mudou = true; }
+    }
+    if (mudou) { d.u = Date.now(); save(); }
+  } catch {}
+}
 function preparacaoPendente789(d) {
   const pend = [];
   if (!(Number(d.estado) >= 1 && Number(d.estado) <= 5)) pend.push("estado emocional");
@@ -399,7 +494,10 @@ function planoPreparacao789(e) {
     '" value="' + esc(val ?? "") + '" style="width:100%;font-size:16px;min-height:44px"></label>';
   const modes = [["dt","Day trade"],["sw","Swing"],["op","Opções"],["ex","EUA/Forex"]];
   const vies = [["","Escolha"],["compra","Compra"],["venda","Venda"],["neutro","Neutro"]];
-  return '<div class="g2">' + field("metaDia","Meta diária (R$)",d.metaDia) +
+  const autoTag = d._auto958 && d._auto958 !== "limpo"
+    ? '<div class="sm" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 8px;padding:6px 10px;border-radius:6px;background:rgba(201,166,107,.1);border:1px solid rgba(201,166,107,.35)"><span>⚡ Puxado do último pregão (<b>' + esc(d._auto958) + '</b>) — ajuste só se mudar hoje</span><button type="button" class="btn s" data-gate-limpa="1" style="min-height:30px;padding:2px 8px;font-size:11.5px">Limpar</button></div>'
+    : '';
+  return autoTag + '<div class="g2">' + field("metaDia","Meta diária (R$)",d.metaDia) +
     field("maxP","Perda máxima diária (R$)",d.maxP) +
     field("max","Máximo de trades",p.max) +
     '<label class="sm">Viés<select data-prep789="vies" style="font-size:16px;min-height:44px">' +
@@ -426,6 +524,34 @@ document.addEventListener("change", (ev) => {
   d.u = Date.now(); save(); gateAtualiza();
 });
 document.addEventListener("click", (ev) => {
+  const cut = ev.target.closest?.("#gateov [data-gate-cut50]");
+  if (cut) {
+    ev.preventDefault();
+    const day = GATE_D(), d = S.days[day] ?? (S.days[day] = {chk:{}});
+    if (Number(d.maxP) > 0) d.maxP = Math.max(1, Math.round(Number(d.maxP) / 2));
+    if (Number(d.pl2?.max) > 1) d.pl2.max = Math.max(1, Math.floor(Number(d.pl2.max) / 2));
+    d._riscoCortado = 1; d.u = Date.now(); save(); gateAtualiza();
+    try { toast("Risco máximo e limite de trades reduzidos em 50% para hoje."); } catch {}
+    return;
+  }
+  const tilt = ev.target.closest?.("#gateov [data-gate-antitilt]");
+  if (tilt) {
+    ev.preventDefault();
+    if (typeof window.DiarioConselhoIA === "function") {
+      const day = GATE_D(), d = S.days[day] || {};
+      window.DiarioConselhoIA("antitilt", "Anti-Tilt da Áurea", "O trader marcou estado emocional baixo (" + (d.estado || 2) + "/5) no checklist pré-pregão. Meta diária: R$ " + (d.metaDia || "—") + ", Perda máxima: R$ " + (d.maxP || "—") + ". Faça 3 perguntas curtas e diretas para proteger o capital hoje.");
+    }
+    return;
+  }
+  const limpa = ev.target.closest?.("#gateov [data-gate-limpa]");
+  if (limpa) {
+    ev.preventDefault();
+    const day = GATE_D(), d = S.days[day] ?? (S.days[day] = {chk:{}});
+    d.metaDia = ""; d.maxP = ""; d.pl2 = { max: 0, mods: [], vies: "" };
+    if (d.cl) { d.cl.p_meta = false; d.cl.p_limite = false; }
+    d._auto958 = "limpo"; d._riscoCortado = 0; d.u = Date.now(); save(); gateAtualiza();
+    return;
+  }
   const el = ev.target.closest?.("#gateov [data-prep789-mod]");
   if (!el) return;
   ev.preventDefault();
@@ -438,8 +564,11 @@ document.addEventListener("click", (ev) => {
 function gateEstado() {
   const now = new Date(), weekday = now.getDay(), hour = now.getHours();
   if (weekday === 0 || weekday === 6) return null;
+  const hoje = GATE_D();
+  autoPosPregao958(hoje);
   if (hour >= 8 && hour < 17) {
-    const d = S.days[GATE_D()] || {};
+    aplicarUltimoPlano958(hoje);
+    const d = S.days[hoje] || {};
     if (d.ckok) return null;
     const falta = preparacaoPendente789(d);
     return {tipo:"manha",falta,pronto:falta.length===0,dia:d,c:d.chk||{},cl:d.cl||{}};
@@ -514,16 +643,26 @@ function gateManhaHtml(e) {
       .join(""),
     i = (d, c, p) =>
       `<label class="gchk"><input type="checkbox" ${d}="${c}"${(d === "data-gcl" ? a[c] : t[c]) ? " checked" : ""}><span>${esc(p)}</span></label>`,
-    l = regrasUnicas();
+    l = regrasUnicas(),
+    lOk = l.filter((d) => t[d.id]).length,
+    emoAlerta =
+      o === 1 || o === 2
+        ? `<div class="sm" style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(239,68,68,.45);background:rgba(239,68,68,.09)"><b>⚠ Estado emocional em alerta (${o}/5):</b> reduza exposição antes da abertura.<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${e.dia?._riscoCortado ? '<span style="color:#10B981;font-weight:700">✓ Risco reduzido em 50% hoje</span>' : '<button type="button" class="btn s" data-gate-cut50="1" style="min-height:36px">Cortar risco em 50% hoje</button>'}<button type="button" class="btn s" data-gate-antitilt="1" style="min-height:36px">✦ Anti-Tilt da Áurea</button></div></div>`
+        : "",
+    topErr = typeof errosRecentes958 === "function" ? errosRecentes958() : [],
+    errBox = topErr.length
+      ? `<div class="gsec" style="border-left:2px solid rgba(201,166,107,.65);padding-left:10px"><b>🎯 Evite hoje (seu Raio-X · últimos 30 dias)</b>${topErr.map((x) => `<div class="sm" style="margin-top:4px">• <b>${esc(x.err)}</b> <span class="mut">(${x.n}× · -R$ ${x.perda.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })})</span></div>`).join("")}</div>`
+      : "";
   return `<div class="gc"><div class="sm mut">☀️ Antes de operar</div><h2>Checklist de hoje</h2>
-<p class="sm">O preparo obrigatório é exigido ao iniciar um registro operacional. Consultas continuam disponíveis. Regras pessoais e mentalidade são opcionais.</p>
-<div class="gsec"><b>1. Como estou agora? <span class="sm mut">(obrigatório)</span></b><div class="gest-l">${r}</div></div>
+<p class="sm">Preencha apenas os passos <b>1</b> e <b>2</b> (obrigatórios) para liberar o botão de concluir. Regras pessoais e mentalidade são opcionais.</p>
+<div class="gsec"><b>1. Como estou agora? <span class="sm mut">(obrigatório)</span></b><div class="gest-l">${r}</div>${emoAlerta}</div>
 <div class="gsec"><b>2. Plano de hoje <span class="sm mut">(obrigatório)</span></b>
 ${planoPreparacao789(e)}</div>
-${l.length ? `<div class="gsec"><b>3. Minhas regras <span class="sm mut">(opcional)</span></b>${l.map((d) => i("data-gate-chk", d.id, d.t)).join("")}</div>` : ""}
-<div class="gsec"><b>4. Mentalidade <span class="sm mut">(opcional)</span></b>${GATE_MENT.map(([d, c]) => i("data-gcl", d, c)).join("")}</div>
+${errBox}
+${l.length ? `<details class="gsec"><summary style="cursor:pointer;min-height:44px"><b>3. Minhas regras pessoais</b> <span class="sm mut">(opcional · ${lOk}/${l.length} · toque para abrir)</span></summary><div style="margin-top:8px">${l.map((d) => i("data-gate-chk", d.id, d.t)).join("")}</div></details>` : ""}
+<details class="gsec"><summary style="cursor:pointer;min-height:44px"><b>4. Mentalidade</b> <span class="sm mut">(opcional · toque para abrir)</span></summary><div style="margin-top:8px">${GATE_MENT.map(([d, c]) => i("data-gcl", d, c)).join("")}</div></details>
 <div class="gdica sm">“${esc(s)}” <span class="mut">Psicologia Financeira, Celso Sant'Ana</span></div>
-${e.falta.length ? `<div class="sm mut" style="margin-top:8px">Falta: ${e.falta.map((d) => esc(GATE_NOME[d] || d)).join(", ")}</div>` : ""}</div>`;
+${e.falta.length ? `<div class="sm" style="margin-top:10px;padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.5);background:rgba(201,166,107,.1);color:var(--gold,#C9A66B)"><b>Falta preencher (obrigatório):</b> ${e.falta.map((d) => esc(GATE_NOME[d] || d)).join(" · ")}</div>` : ""}</div>`;
 }
 {
   const e = gateHtml;
@@ -1837,7 +1976,9 @@ ${a ? `<div class="epres ${a.cls}">Termômetro: <b>${a.n} de 70</b> · ${a.txt}$
     let a = e.apply(this, arguments);
     const o = a.indexOf('<div class="gdica');
     o > 0 && (a = a.slice(0, o) + epeetHtml(t.dia || {}) + a.slice(o));
-    const s = `<button type="button" class="btn gfim" data-gate-fim="1"${t.pronto ? "" : " disabled"}>${t.pronto ? "Concluir checklist e começar o dia" : "Preencha o obrigatório para concluir"}</button>`;
+    const pronto = t.pronto !== undefined ? !!t.pronto : !(t.falta && t.falta.length);
+    const nFalta = Array.isArray(t.falta) ? t.falta.length : 0;
+    const s = `<button type="button" class="btn gfim" data-gate-fim="1"${pronto ? "" : " disabled"}>${pronto ? "✓ Concluir checklist e começar o dia" : nFalta ? `Falta preencher ${nFalta} ${nFalta === 1 ? "item obrigatório" : "itens obrigatórios"} acima` : "Preencha o obrigatório para concluir"}</button>`;
     return a.replace(/<\/div>\s*$/, s + "</div>");
   };
 }
