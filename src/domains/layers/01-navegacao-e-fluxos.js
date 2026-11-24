@@ -3452,7 +3452,7 @@ Contexto autorizado:
           b.setAttribute("aria-expanded", String(!!l));
           b.innerHTML = iaIcone;
           b.addEventListener("click", () => B(!l));
-          const lupa = bar.querySelector('[data-dt393-action="search"]');
+          const lupa = bar.querySelector('[data-dt393-action="search"],[data-dt393-route="mais"]');
           lupa ? bar.insertBefore(b, lupa) : bar.append(b);
         }
         for (const b of document.querySelectorAll("[data-ia-topo]")) b.setAttribute("aria-expanded", String(!!l));

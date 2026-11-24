@@ -97,22 +97,28 @@ html body #app[data-tela=carteiras] .dt395-native-carteiras>.pro-subtabs{display
 .org-pfextra button.on{border-color:#d4a85a!important;color:#d4a85a!important}
 html body #app[data-tela=carteiras] .pftabs{flex-wrap:wrap!important;overflow:visible!important}
 
-/* v578 — Economista IA: conversa ocupa a tela, sugestões compactas e somem depois da 1ª pergunta */
-html body #wf-chat-panel.wf-chat-panel:not([hidden]){display:flex!important;flex-direction:column!important}
+/* v578/v954 — Áurea chat: tela cheia limpa no celular, rolagem única na conversa e compositor fixo sem sobreposição */
+html body #wf-chat-panel.wf-chat-panel:not([hidden]){display:flex!important;flex-direction:column!important;overflow:hidden!important}
 html body #wf-chat-panel[hidden]{display:none!important}
-html body #wf-chat-panel .wf-chat-history{flex:1 1 auto!important;min-height:120px!important;overflow-y:auto!important}
-html body #wf-chat-panel .simple-questions{display:flex!important;gap:8px!important;overflow-x:auto!important;flex-wrap:nowrap!important;padding:8px 16px!important;margin:0!important;flex:none!important}
+html body #wf-chat-panel>header{flex:0 0 auto!important;z-index:2}
+html body #wf-chat-panel .wf-chat-history{flex:1 1 0%!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;padding:14px 16px 20px!important;overscroll-behavior:contain}
+html body #wf-chat-panel .simple-questions{display:flex!important;gap:8px!important;overflow-x:auto!important;flex-wrap:nowrap!important;padding:8px 16px!important;margin:0!important;flex:0 0 auto!important}
 html body #wf-chat-panel .simple-questions>b{display:none!important}
 html body #wf-chat-panel .simple-questions button{flex:none!important;white-space:nowrap!important;width:auto!important;min-height:32px!important;height:32px!important;padding:0 12px!important;border-radius:999px!important;font-size:13px!important;margin:0!important}
 html body #wf-chat-panel:has(.wf-chat-history>:not(.wf-chat-empty)) .simple-questions{display:none!important}
 html body #wf-chat-panel:has(.wf-chat-history>:not(.wf-chat-empty)) .wf-chat-empty{display:none!important}
-html body #wf-chat-panel form{flex:none!important}
-html body #wf-chat-panel .wf-chat-input-label{font-size:0!important}
-html body #wf-chat-panel .wf-chat-input-label textarea{font-size:16px!important;min-height:56px!important;height:56px!important;margin-top:4px!important}
-html body #wf-chat-panel .wf-chat-context-label{font-size:12px!important}
+html body #wf-chat-panel form{flex:0 0 auto!important;max-height:none!important;overflow:visible!important;background:var(--dt-s1,#141416)!important;border-top:1px solid var(--dt-line,rgba(255,255,255,.1))!important;padding:8px 12px calc(env(safe-area-inset-bottom,0px) + 10px)!important;position:relative;z-index:2}
+html[data-v427-tema="claro"] body #wf-chat-panel form{background:#FAF8F4!important;border-top-color:#DDD8CC!important}
+html body #wf-chat-panel .wf-chat-input-label{display:block!important;font-size:0!important;margin:0!important}
+html body #wf-chat-panel .wf-chat-input-label textarea{font-size:16px!important;min-height:44px!important;height:44px!important;max-height:92px!important;padding:10px 12px!important;margin:0!important;line-height:1.35!important;width:100%!important;box-sizing:border-box!important;resize:none}
+html body #wf-chat-panel .wf-chat-context-label{display:flex!important;align-items:center!important;gap:6px!important;font-size:11.5px!important;line-height:1.25!important;margin:0 0 6px!important;opacity:.85}
+html body #wf-chat-panel .wf-chat-context-label input{margin-top:0!important}
+html body #wf-chat-panel .wf-chat-actions{margin:6px 0 0!important;gap:8px!important}
+html body #wf-chat-panel .wf-chat-actions button{min-height:38px!important;padding:6px 14px!important}
 html body #wf-chat-panel form>small{display:none!important}
 @media (max-width:760px){
- html body #wf-chat-panel.wf-chat-panel:not([hidden]){position:fixed!important;left:8px!important;right:8px!important;top:calc(env(safe-area-inset-top,0px) + 8px)!important;bottom:calc(env(safe-area-inset-bottom,0px) + 8px)!important;max-height:none!important;height:auto!important;width:auto!important;z-index:1000!important}
+ html body #wf-chat-panel.wf-chat-panel:not([hidden]){position:fixed!important;inset:0!important;left:0!important;right:0!important;top:0!important;bottom:0!important;max-height:100dvh!important;height:100dvh!important;width:100%!important;border-radius:0!important;border:0!important;z-index:1000!important}
+ html body #wf-chat-panel>header{padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px!important}
 }
 html body #economista-flutuante:has(#wf-chat-panel:not([hidden])) .wf-chat-launcher{display:none!important}
 

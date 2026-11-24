@@ -63,6 +63,8 @@ jobs:
       - run: npm run check
       - name: Testar clique real da lupa e atalho de busca v950
         run: node --test tests/busca-global-mobile-v950.test.cjs tests/rebalanceamento-mobile-v951.test.cjs tests/research-v952.test.cjs
+      - name: Regressões v955 — busca, cabeçalho e chat
+        run: node --test tests/chat-busca-v955.test.cjs
       - name: Regressões de qualidade v953 (egress, cabeçalho, Profit e Research)
         run: node --test --test-concurrency=1 tests/egress-v706.test.cjs tests/interface.test.cjs tests/ponte-cotacoes-v552.test.cjs tests/profit-cotacoes-v552.test.cjs tests/v852-noticias-ficha.test.cjs tests/v853-confiavel.test.cjs tests/quality-v953.test.cjs
       - name: Capturas de validação de Análises e Início/Meu Dia
