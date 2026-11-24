@@ -81,20 +81,90 @@ function enrich(raw,X){const CR=X?.crescimento||{};
 async function extra(){const c=ls.get(K_EXTRA,null);if(c&&Date.now()-c.at<12*3600000)return c.d;
  try{const r=await fetch(URL_EXTRA);if(!r.ok)throw 0;const j=await r.json();ls.set(K_EXTRA,{at:Date.now(),d:j});return j}catch{return c?.d||null}}
 /* v875: cotações ao vivo da ponte do Profit (mesmo CQ.pf do app: {px,d1,em}); só leitura, sem rede extra. */
-function pf(){try{return typeof CQ!=='undefined'&&CQ?.pf?CQ.pf:{}}catch{return {}}}
-function aplicaProfit(){if(!st.rows)return 0;const P=pf();let n=0;for(const r of st.rows.rows){const q=P[r.ticker];if(q&&q.px>0){r.preco=q.px;r.d1=q.d1;r.profit=1;n++}else r.profit=0}
- st.nProfit=n;if(st.X){const ra=rotacaoArquivo(st.rows,st.X);if(ra)st.rot=ra}return n}
+/* v946 — Screener é base fundamentalista, Profit é fonte de preço negociado.
+ * Um upload repetido não é negócio novo; sobreposições nunca ficam persistidas.
+ */
+function ponteCache(tipo){
+ try{
+  if(typeof CQ==='undefined'||!CQ)return {};
+  if(CQ.owner && (typeof SESS==='undefined'||CQ.owner!==SESS?.uid))return {};
+  return tipo==='live'?(CQ.pf||{}):(CQ.saved||{});
+ }catch{return {}}
+}
+function pf(){return ponteCache('live')}
+function validoNegocio(q,now,age){
+ const ts=Date.parse(q?.em||'');
+ return q&&Number(q.px)>0&&Number.isFinite(ts)&&
+  ts<=now+60000&&now-ts>=-60000&&now-ts<age;
+}
+function pregaoB3(now){
+ const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{
+  timeZone:'America/Sao_Paulo',weekday:'short',hour:'2-digit',
+  minute:'2-digit',hourCycle:'h23'
+ }).formatToParts(new Date(now)).map(x=>[x.type,x.value]));
+ const minutos=Number(p.hour)*60+Number(p.minute);
+ return !['Sat','Sun'].includes(p.weekday)&&minutos>=540&&minutos<1110;
+}
+function aplicaProfit(){
+ if(!st.rows)return 0;
+ const P=ponteCache('live'),F=ponteCache('saved'),now=Date.now(),aberto=pregaoB3(now);
+ let vivos=0,fechados=0;
+ for(const r of st.rows.rows){
+  // Restaurar sempre o preço do snapshot em vez de perpetuar um overlay antigo.
+  r.preco=N(r.raw?.preco_referencia);
+  r.d1=null;r.profit=0;r.profitFechado=0;r.precoEm=null;r.precoFonte='Screener';
+  const vivo=P[r.ticker],ultimo=F[r.ticker]||vivo;
+  if(aberto&&validoNegocio(vivo,now,180000)){
+   r.preco=Number(vivo.px);r.d1=N(vivo.d1);
+   r.profit=1;r.precoEm=vivo.em;r.precoFonte='Profit';vivos++;
+  }else if(validoNegocio(ultimo,now,6*86400000)){
+   r.preco=Number(ultimo.px);r.d1=N(ultimo.d1);
+   r.profitFechado=1;r.precoEm=ultimo.em;r.precoFonte='Profit · FECHADO';fechados++;
+  }
+ }
+ st.nProfit=vivos;st.nProfitFechado=fechados;
+ if(st.X){const ra=rotacaoArquivo(st.rows,st.X);if(ra)st.rot=ra}
+ return vivos;
+}
 function rotacaoArquivo(D,X){const R=X?.retornos;if(!R||!Object.keys(R).length)return null;const s={};let data='';
  for(const[setor,l]of Object.entries(D.porSetor)){const v=l.filter(r=>r.cap&&R[r.ticker]);if(!v.length)continue;const o={n:l.length};
   const val=(r,k)=>k==='1D'&&r.profit&&r.d1!=null?r.d1:R[r.ticker]?.[k];for(const[k]of PER){const q=v.filter(r=>val(r,k)!=null),tw=q.reduce((a,r)=>a+r.cap,0);o[k]=tw?q.reduce((a,r)=>a+r.cap*val(r,k),0)/tw:null}
   v.forEach(r=>{if(R[r.ticker].data>data)data=R[r.ticker].data});s[setor]=o}
  return {at:Date.parse(X.gerado_em)||Date.now(),s,arquivo:1,data}}
+const URL_SCREENER_BR='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/screeners?market=BR&snapshot=1&universe=1';
+async function screenerCloudflare(){
+ // Revalida em nova entrada após 30 min ou toque do usuário, sem timer nem Supabase.
+ const url=URL_SCREENER_BR+'&v=v946-'+Math.floor(Date.now()/(30*60000));
+ const res=await fetch(url,{method:'GET',mode:'cors',credentials:'omit',
+  cache:'no-store',signal:AbortSignal.timeout(16000)});
+ if(!res.ok)throw Error('Screener público indisponível (HTTP '+res.status+')');
+ const j=await res.json();
+ if(j?.ok!==true||j.market!=='BR'||j.universe_complete!==true||
+  !Array.isArray(j.universe_rows)||j.universe_rows.length<150||
+  j.pipeline_origin!=='github-actions-public'||!j.last_update||j.user_id!==undefined)
+  throw Error('Snapshot público inválido ou incompleto');
+ return {rows:j.universe_rows,reference:j.last_update,last_update:j.last_update};
+}
 async function carregar(force){
- if(st.rows&&!force)return;if(st.loading)return;st.loading=true;st.erro='';render();
- try{const fn=w.DiarioScreeners?.universo;if(!fn)throw Error('Screener ainda carregando');
-  const res=await fn('br');if(!res?.rows?.length)throw Error('Snapshot do Screener indisponível');
-  st.ref=res.reference;const X=await extra();st.X=X;st.rows=enrich(res.rows,X);const ra=rotacaoArquivo(st.rows,X);if(ra)st.rot=ra;
- }catch(e){st.erro=e.message||String(e)}st.loading=false;render();
+ if(st.rows&&!force&&Date.now()-(st.loadedAt||0)<30*60000)return;
+ if(st.loading)return;
+ st.loading=true;st.erro='';render();
+ try{
+  let res;
+  try{res=await screenerCloudflare()}
+  catch(edgeError){
+   const fn=w.DiarioScreeners?.universo;
+   if(!fn)throw edgeError;
+   res=await fn('br'); // contingência já existente, sem fallback ao Supabase
+  }
+  if(!res?.rows?.length)throw Error('Snapshot do Screener indisponível');
+  st.ref=res.reference||res.last_update||null;
+  st.snapshotEm=res.last_update||(typeof st.ref==='string'?st.ref:null);
+  const X=await extra();st.X=X;st.rows=enrich(res.rows,X);
+  st.loadedAt=Date.now();
+  const ra=rotacaoArquivo(st.rows,X);if(ra)st.rot=ra;
+ }catch(e){st.erro=e.message||String(e)}
+ st.loading=false;render();
 }
 
 /* v879: Entenda os dados — "?" em cada métrica abre um cartão explicando o que é, como calcula e como ler. */
@@ -165,7 +235,7 @@ function notaCel(n){if(n==null)return '<td>—</td>';const p=Math.round(n/4*100)
 function cel(r,k){
  switch(k){case 'nota':return notaCel(r.nota).replace('<td>','<td class="ap-c">');case 'setor':return '<td class="ap-up">'+E(r.setor)+'</td>';case 'porte':return '<td>'+E(r.porte||'—')+'</td>';
   case 'crowded':return '<td class="ap-n"><span class="ap-pill'+(r.crowded>150?' hot':'')+'">'+(r.crowded==null?'—':fmt(r.crowded,0)+'%')+'</span></td>';
-  case 'preco':return '<td class="ap-n">'+brl(r.preco)+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'"> '+sinal(r.d1,2)+'</small>':'')+'</td>';case 'graham':case 'bazin':case 'gordon':case 'justo':case 'proprio':return justoCel(r[k],r.preco);
+  case 'preco':return '<td class="ap-n">'+brl(r.preco)+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'"> '+sinal(r.d1,2)+'</small>':r.profitFechado?'<small class="ap-mut">Profit · FECHADO</small>':'')+'</td>';case 'graham':case 'bazin':case 'gordon':case 'justo':case 'proprio':return justoCel(r[k],r.preco);
   case 'pl':case 'pvp':case 'ev_ebitda':case 'div_liq_ebitda':return '<td class="ap-n">'+(r[k]==null?'—':fmt(r[k],1)+'x')+'</td>';
   case 'g1':case 'cagr3':return '<td class="ap-n '+cor(r[k])+'">'+sinal(r[k])+'</td>';case 'pegC':return '<td class="ap-n">'+fmt(r.pegC,2)+'</td>';case 'dy':case 'payout':case 'roe':case 'roic':case 'margem_liquida':case 'fcf_yield':return '<td class="ap-n">'+pct(r[k])+'</td>';
   case 'momentum':case 'mm200':return '<td class="ap-n '+cor(r[k])+'">'+sinal(r[k])+'</td>';case 'rsi':return '<td class="ap-n">'+fmt(r.rsi,0)+'</td>';
@@ -176,7 +246,7 @@ function cardMob(r){
  return '<article class="ap-mcard" data-ap-ativo="'+r.ticker+'">'+
   '<div class="ap-mc-top"><span class="ap-nota" style="--p:'+p+'">'+(r.nota==null?'—':fmt(r.nota,1))+'</span>'+
   '<div class="ap-mc-id"><b>'+logo(r.ticker)+r.ticker+'</b><small>'+E(r.empresa||r.setor)+'</small></div>'+
-  '<div class="ap-mc-px"><b>'+brl(r.preco)+'</b>'+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'">'+sinal(r.d1,2)+'</small>':u!=null?'<small class="'+cor(u)+'">Justo '+sinal(u,0)+'</small>':'')+'</div></div>'+
+  '<div class="ap-mc-px"><b>'+brl(r.preco)+'</b>'+(r.profit&&r.d1!=null?'<small class="'+cor(r.d1)+'">'+sinal(r.d1,2)+'</small>':r.profitFechado?'<small class="ap-mut">Profit · FECHADO</small>':u!=null?'<small class="'+cor(u)+'">Justo '+sinal(u,0)+'</small>':'')+'</div></div>'+
   '<div class="ap-mc-met"><span>P/L <b>'+(r.pl==null?'—':fmt(r.pl,1)+'x')+'</b></span><span>DY <b>'+pct(r.dy)+'</b></span><span>ROE <b>'+pct(r.roe)+'</b></span><span>DL/EB <b>'+(r.div_liq_ebitda==null?'—':fmt(r.div_liq_ebitda,1)+'x')+'</b></span></div></article>';
 }
 const ETFS_B3=[
@@ -253,7 +323,7 @@ function viewRank(){
   '<div class="ap-seg" role="group" aria-label="Modo de colunas"><button type="button" class="'+(st.colMode==='essencial'?'on':'')+'" data-ap-colmode="essencial">Essencial</button><button type="button" class="'+(st.colMode!=='essencial'?'on':'')+'" data-ap-colmode="completo">Completo</button></div>'+
   '<details class="ap-cols"><summary class="btn s">Colunas</summary><div>'+COLS.map(c=>'<label><input type="checkbox" data-ap-col="'+c[0]+'"'+(vis.includes(c[0])?' checked':'')+'> '+c[1]+'</label>').join('')+'</div></details>'+
   '<select data-ap-f="pg">'+[30,50,100].map(n=>'<option value="'+n+'"'+(pg===n?' selected':'')+'>'+n+'/pág</option>').join('')+'</select>'+
-  (st.nProfit?'<span class="ap-tag st-ativa">Profit ao vivo · '+st.nProfit+'</span>':'')+'<button type="button" class="btn s" data-an-sub="br" title="Gráfico de dispersão e PDF comparativo B3">Screener / PDF</button><button type="button" class="btn s ap-desk-only" data-ap-csv>CSV</button><span class="ap-mut ap-pag-info">'+(tot?f.page*pg+1:0)+'–'+Math.min(tot,f.page*pg+pg)+' de '+tot+'</span>'+
+  (st.nProfit?'<span class="ap-tag st-ativa">Profit ao vivo · '+st.nProfit+'</span>':'')+(st.nProfitFechado?'<span class="ap-tag">Profit · FECHADO · '+st.nProfitFechado+'</span>':'')+'<button type="button" class="btn s" data-ap-profit-refresh title="Revalidar cotações Profit e base do Research">↻ Preços</button>'+(st.snapshotEm?'<small class="ap-mut">Base '+E(new Date(st.snapshotEm).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small>':'')+'<button type="button" class="btn s" data-an-sub="br" title="Gráfico de dispersão e PDF comparativo B3">Screener / PDF</button><button type="button" class="btn s ap-desk-only" data-ap-csv>CSV</button><span class="ap-mut ap-pag-info">'+(tot?f.page*pg+1:0)+'–'+Math.min(tot,f.page*pg+pg)+' de '+tot+'</span>'+
   '<button type="button" class="btn s" data-ap-page="-1"'+(f.page?'':' disabled')+'>‹</button><button type="button" class="btn s" data-ap-page="1"'+(f.page<pages-1?'':' disabled')+'>›</button></div>'+
   mobPresets+
   '<p class="ap-mut ap-leg">~ = estimado no aparelho (Graham · Bazin · Gordon) · Nota Raio-X 0–4 por percentis do mercado · Crowded = giro ÷ mediana</p>'+
@@ -478,7 +548,7 @@ function viewAtivo(){
  const u=r.justo&&r.preco?(r.justo/r.preco-1)*100:null,tese=teses().find(t=>t.tk===r.ticker&&t.status==='ativa');
  const subs=[['visao','Visão geral'],['raiox','Raio-X'],['div','Dividendos e preço justo'],['empresa','Empresa']];
  let body='';
- if(st.sub==='visao')body='<div class="ap-2 ap-2w"><section class="ap-card"><h3>Cotação</h3>'+grafico(r)+'</section><section class="ap-card"><h3>Resumo</h3><div class="ap-kv">'+
+ if(st.sub==='visao')body='<div class="ap-2 ap-2w"><section class="ap-card"><h3>Cotação</h3>'+(r.profitFechado?'<small class="ap-mut">Profit · FECHADO · '+E(new Date(r.precoEm).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small>':r.profit?'<small class="ap-mut">Profit ao vivo</small>':'<small class="ap-mut">Screener · referência</small>')+grafico(r)+'</section><section class="ap-card"><h3>Resumo</h3><div class="ap-kv">'+
   [['Nota Raio-X',r.nota==null?'—':fmt(r.nota,2)+' / 4'],['P/L',r.pl==null?'—':fmt(r.pl,1)+'x'],['P/VP',r.pvp==null?'—':fmt(r.pvp,2)+'x'],['DY',pct(r.dy)],['ROE',pct(r.roe)],['ROIC',pct(r.roic)],
    ['DL/EBITDA',r.div_liq_ebitda==null?'—':fmt(r.div_liq_ebitda,1)+'x'],['Momentum 12m',sinal(r.momentum)],['RSI 14',fmt(r.rsi,0)],['Crowded',r.crowded==null?'—':fmt(r.crowded,0)+'%']].map(([k,v])=>'<div><span>'+k+(KQ[k]?q(KQ[k]):'')+'</span><b>'+v+'</b></div>').join('')+'</div>'+
   '<h4>Preço justo'+q('justo')+'</h4><div class="ap-kv">'+[['Graham',r.graham],['Bazin',r.bazin],['Gordon',r.gordon],['Teto próprio',r.proprio]].map(([k,v])=>'<div><span>'+k+'</span><b>'+(v==null?'—':'~'+fmt(v)+' <small class="'+cor(r.preco?(v/r.preco-1):null)+'">'+sinal(r.preco?(v/r.preco-1)*100:null,0)+'</small>')+'</b></div>').join('')+'</div>'+
@@ -554,11 +624,24 @@ function view(tab){if(tab)st.tab=tab;css();return '<div id="ap-root" class="ap">
 function render(){const el=d.getElementById('ap-root');if(!el)return;aplicaProfit();const sc=el.querySelector('.ap-scroll')?.scrollLeft;el.innerHTML=corpo()+(st.q?cartaoQ(st.q):'');if(sc)el.querySelector('.ap-scroll')&&(el.querySelector('.ap-scroll').scrollLeft=sc);
  calcRun(el.querySelector('.ap-calcs'));if(st.tk&&st.sub==='visao'){carregaSerie(st.tk);if(st.ibov)carregaSerie('BOVA11')}
  if(st.tab==='radar'&&st.rows&&!st.rotLoading&&!st.tk&&!st.rot?.arquivo&&(!st.rot||Date.now()-st.rot.at>12*3600000)&&!st._rotTentou){st._rotTentou=1;rotacao()}}
-function enter(tab){if(tab)st.tab=tab;st._rotTentou=0;if(tab!=='ativo'&&!st._abrindo)st.tk='';st._abrindo=0;carregar().then(render);render()}
+function enter(tab){
+ if(tab)st.tab=tab;
+ st._rotTentou=0;
+ if(tab!=='ativo'&&!st._abrindo)st.tk='';
+ st._abrindo=0;
+ carregar().then(render);
+ // Na entrada, reaproveita o limitador da ponte; evento atualiza a tela sem polling.
+ if(typeof cqPonte==='function'&&typeof SESS!=='undefined'&&SESS?.uid)
+  Promise.resolve().then(()=>cqPonte()).then(render).catch(()=>{});
+ render();
+}
+d.addEventListener('diario:profit-cotacoes',()=>{
+ if(d.getElementById('ap-root'))render();
+});
 function abrir(tk){st.tk=String(tk||'').toUpperCase();st.sub='visao';st._abrindo=1}
 const salvaF=()=>ls.set(K_FILT,{...st.f,q:'',page:0});
 
-d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese],[data-ap-etf-conselho],[data-ap-aladd],[data-ap-aldel]');
+d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[data-ap-qx],[data-ap-guia],.ap-qbox,[data-ap-voltar],[data-ap-ativo],[data-ap-sort],[data-ap-preset],[data-ap-limpar],[data-ap-page],[data-ap-csv],[data-ap-rot],[data-ap-rporte],[data-ap-setor],[data-ap-sub],[data-ap-per],[data-ap-ibov],[data-ap-justo],[data-ap-colmode],[data-ap-novatese],[data-ap-tsalvar],[data-ap-tcancel],[data-ap-tedit],[data-ap-tdel],[data-ap-ia],[data-ap-recarregar],[data-ap-profit-refresh],[data-ap-faltam],[data-ap-serie],[data-ap-ranktipo],[data-ap-fiirf],[data-ap-fiipreset],[data-ap-fiitipo],[data-ap-fiisel],[data-ap-fiiabrir],[data-ap-fii-conselho],[data-ap-fiitese],[data-ap-etf-conselho],[data-ap-aladd],[data-ap-aldel]');
  if(!t||!t.closest('#ap-root'))return;const ds=t.dataset;
  if('apAladd' in ds){
   const tk=String(d.getElementById('ap-al-tk')?.value||'').trim().toUpperCase();
@@ -607,6 +690,13 @@ d.addEventListener('click',async ev=>{const t=ev.target.closest?.('[data-ap-q],[
   const ex=teses().find(x=>x.tk===ds.apFiitese&&x.status==='ativa');
   st.teseEdit=ex?{...ex}:{tk:ds.apFiitese,entrada:fii?.cotacao?Math.round(fii.cotacao*100)/100:'',alvo:fii?.cotacao&&fii?.p_vp>0?Math.round((fii.cotacao/fii.p_vp)*100)/100:'',status:'ativa',texto:fii?('FII '+fii.tipo+' ('+fii.segmento+') · P/VP '+fmt(fii.p_vp,2)+' · DY '+pct(fii.dy)):''};
   st.tk='';st.tab='teses';d.querySelector('[data-an-sub="teses"]:not(.selected)')?.click();render();return;
+ }
+ if('apProfitRefresh' in ds){
+  await Promise.allSettled([
+   typeof cqPonte==='function'?cqPonte(true):Promise.resolve(),
+   carregar(true)
+  ]);
+  render();return;
  }
  if('apRecarregar' in ds){carregar(true);return}
  if('apSerie' in ds){carregaSerie(ds.apSerie,true);return}

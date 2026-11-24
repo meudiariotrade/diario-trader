@@ -73,6 +73,12 @@
         }
       });
       CQ.pf = t; CQ.saved = saved;
+      // v946: notifica consumidores em memória (Research/Terminal) apenas após
+      // snapshot válido; sem criar novas consultas, polling ou divulgar preços.
+      if (typeof doc.dispatchEvent === 'function' && typeof root.CustomEvent === 'function')
+        doc.dispatchEvent(new root.CustomEvent('diario:profit-cotacoes',{
+          detail:{uid:owner,aoVivo:Object.keys(t).length,fechamento:Object.keys(saved).length}
+        }));
     } catch { return; /* falha da ponte não religa consultas rápidas do legado */ }
   };
   // Ação humana no botão Atualizar, sem criar polling rápido no Supabase.
