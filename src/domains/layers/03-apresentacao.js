@@ -1756,6 +1756,7 @@ try {
           `<p class="v4-sub">Registre os pontos principais desta sessão.</p><div class="v4-actions">
     ${U ? `<button type="button" data-a="edit" data-id="${b(U.id)}">${p("image", 20)} Adicionar print ao último trade</button>` : `<button type="button" data-dt393-action="newtrade">${p("image", 20)} Registrar trade com print</button>`}
     <button type="button" data-qkn="1">${p("bolt", 20)} Registro rápido</button>
+    <button type="button" data-rotina-preparo>${p("check", 20)} Ver checklist do dia</button>
     ${U ? `<button type="button" data-a="edit" data-id="${b(U.id)}">${p("warn", 20)} Marcar erro emocional</button>` : ""}
     <button type="button" class="v4-primarybtn" data-v4deb="1">${p("book", 20)} Registrar aprendizado no diário</button></div>`,
         ),
