@@ -10,6 +10,7 @@ on:
       - 'tests/cloudflare-diario-sync-v913.test.cjs'
       - 'tests/cloudflare-diario-sync-v931.test.cjs'
       - 'tests/cloudflare-diario-sync-v942.test.cjs'
+      - 'supabase/migrations/20261124010000_push_subs_leitura_propria_v942.sql'
       - '.github/workflows/cloudflare-diario-sync.yml'
   pull_request:
     paths:
@@ -20,6 +21,7 @@ on:
       - 'tests/cloudflare-diario-sync-v913.test.cjs'
       - 'tests/cloudflare-diario-sync-v931.test.cjs'
       - 'tests/cloudflare-diario-sync-v942.test.cjs'
+      - 'supabase/migrations/20261124010000_push_subs_leitura_propria_v942.sql'
       - '.github/workflows/cloudflare-diario-sync.yml'
   workflow_dispatch:
 permissions:
