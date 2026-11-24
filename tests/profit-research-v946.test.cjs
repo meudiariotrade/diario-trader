@@ -82,7 +82,8 @@ test('v946: usuário atualiza preços sem polling Supabase e mantém botão Prof
  assert.match(plus,/cqPonte\(\)/);
  assert.match(bridge,/doc\.dispatchEvent\(new root\.CustomEvent\('diario:profit-cotacoes'/);
  assert.doesNotMatch(plus,/setInterval\([^]*?cqPonte/);
- assert.match(market,/Profit · FECHADO/);
+ assert.match(market,/fechado:true, live:false/);
+ assert.match(plus,/Profit · FECHADO/);
 });
 test('v946: atualização do Screener Cloudflare vem depois da publicação GitHub',()=>{
  const conf=JSON.parse(fs.readFileSync('cloudflare/diario-screeners/wrangler.jsonc','utf8'));
