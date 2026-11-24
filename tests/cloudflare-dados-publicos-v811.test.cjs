@@ -33,7 +33,7 @@ test('cron: coleta uma vez e serve todos pelas rotas públicas, sem Supabase',as
   const {default:worker}=await mod,map=new Map(),log=[];
   const env={NEWS_CACHE:{get:async(k,t)=>{const v=map.get(k);return t==='json'&&v?JSON.parse(v):v??null;},put:async(k,v)=>map.set(k,v)},ALLOWED_ORIGIN:'https://meudiariotrade.github.io'};
   const antigo=global.fetch;global.fetch=fakeFetch(log);const tarefas=[];
-  try{await worker.scheduled({scheduledTime},env,{waitUntil:p=>tarefas.push(p)});await Promise.all(tarefas);}
+  try{await worker.scheduled({scheduledTime},env,{waitUntil:p=>tarefas.push(p)});await worker.scheduled({scheduledTime:scheduledTime+3*60000,cron:'3,33 * * * *'},env,{waitUntil:p=>tarefas.push(p)});await Promise.all(tarefas);}
   finally{global.fetch=antigo;}
   assert.ok(!log.some(u=>/supabase/.test(u)),'nenhuma chamada ao Supabase');
   const r=await worker.fetch(new Request('https://x.workers.dev/v1/agenda?semana=0'),env);assert.equal(r.status,200);
@@ -46,4 +46,18 @@ test('frequência da coleta: 30 min em horário útil, espaçada fora dele',asyn
   assert.equal(agendaAgora(new Date('2026-11-23T13:32:00Z')),false);
   assert.equal(sentimentoAgora(new Date('2026-11-21T13:30:00Z')),false,'sábado: só a cada 6 h');
   assert.equal(sentimentoAgora(new Date('2026-11-21T15:00:00Z')),true);
+});
+
+test('v964: produção usa cron exclusivo, coleta oficial primeiro e preserva último dado válido',async()=>{
+ const {default:worker}=await import('../cloudflare/diario-noticias/producao-snapshot-v894.mjs');
+ const {mesclarSentimento}=await import('../cloudflare/diario-noticias/sentimento-v964.mjs');
+ const prior={gerado:'2026-11-23T21:00:00Z',cripto:{valor:0,data:'2026-11-23',fonte:'alternative.me'}};
+ const merged=mesclarSentimento({gerado:'2026-11-24T21:03:00Z',cripto:null,eua:{valor:22,data:'2026-11-24'}},prior);
+ assert.equal(merged.cripto.valor,0);assert.equal(merged.cripto.desatualizado,true);assert.equal(merged.cripto.atualizadoEm,prior.gerado);
+ const map=new Map([['diario:sentimento:v1',JSON.stringify(prior)]]),log=[],tasks=[];
+ const env={NEWS_CACHE:{get:async k=>map.get(k)||null,put:async(k,v)=>map.set(k,v)}};
+ const old=global.fetch;global.fetch=fakeFetch(log);
+ try{await worker.scheduled({scheduledTime:Date.parse('2026-11-24T21:03:00Z'),cron:'3,33 * * * *'},env,{waitUntil:p=>tasks.push(p)});await Promise.all(tasks);}finally{global.fetch=old;}
+ assert.equal(tasks.length,1);assert.equal(log.length,4);assert.match(log[0],/alternative.me/);assert.match(log[1],/cnn.io/);
+ const result=JSON.parse(map.get('diario:sentimento:v1'));assert.ok(result.b3);assert.ok(result.eua);assert.equal(result.cripto.valor,0,'não aceita fonte com data anterior');
 });

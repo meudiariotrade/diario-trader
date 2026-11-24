@@ -268,16 +268,19 @@ async function getJson(fetcher,url,headers={}){
 }
 export async function coletarSentimento(fetcher=fetch,agora=Date.now()){
   const erros=[];
-  const [ibov,usd,spx,vix,tlt,hyg,ief]=await Promise.all(['^BVSP','BRL=X','^GSPC','^VIX','TLT','HYG','IEF'].map(s=>yahooSerie(fetcher,s)));
+  // Prioriza os índices oficiais antes do fallback Yahoo.
+  const criptoTask=(async()=>{try{const c=lerCripto(await getJson(fetcher,'https://api.alternative.me/fng/?limit=31'));if(c)return {...c,fonte:'alternative.me'};throw Error('resposta vazia');}catch(e){erros.push('Cripto: '+e.message);return null;}})();
+  const cnnTask=(async()=>{try{const de=new Date(agora-40*864e5).toISOString().slice(0,10);
+    const c=lerCNN(await getJson(fetcher,`https://production.dataviz.cnn.io/index/fearandgreed/graphdata/${de}`,{Referer:'https://edition.cnn.com/',Origin:'https://edition.cnn.com'}));
+    if(c)return {...c,fonte:'CNN Fear & Greed'};throw Error('resposta vazia');}catch(e){erros.push('CNN: '+e.message);return null;}})();
+  const brTask=Promise.all(['^BVSP','BRL=X'].map(s=>yahooSerie(fetcher,s)));
+  const [cripto,cnn,[ibov,usd]]=await Promise.all([criptoTask,cnnTask,brTask]);
   const b3=ibov?{...indiceB3(ibov,usd),fonte:'Cálculo do app (Ibovespa e dólar, Yahoo Finance)'}:null;
   if(!b3)erros.push('B3: Yahoo sem dados');
-  let eua=null;
-  try{const de=new Date(agora-40*864e5).toISOString().slice(0,10);
-    const c=lerCNN(await getJson(fetcher,`https://production.dataviz.cnn.io/index/fearandgreed/graphdata/${de}`,{Referer:'https://edition.cnn.com/',Origin:'https://edition.cnn.com'}));
-    if(c)eua={...c,fonte:'CNN Fear & Greed'};}catch(e){erros.push('CNN: '+e.message);}
-  if(!eua&&spx)eua={...indiceEUA(spx,vix,tlt,hyg,ief),fonte:'Cálculo do app (S&P 500, VIX, Treasuries e high yield; a CNN não respondeu)'};
-  let cripto=null;
-  try{const c=lerCripto(await getJson(fetcher,'https://api.alternative.me/fng/?limit=31'));if(c)cripto={...c,fonte:'alternative.me'};}catch(e){erros.push('Cripto: '+e.message);}
+  let eua=cnn;
+  if(!eua){const [spx,vix,tlt,hyg,ief]=await Promise.all(['^GSPC','^VIX','TLT','HYG','IEF'].map(s=>yahooSerie(fetcher,s)));
+    if(spx)eua={...indiceEUA(spx,vix,tlt,hyg,ief),fonte:'Cálculo do app (S&P 500, VIX, Treasuries e high yield; a CNN não respondeu)'};
+  }
   if(!b3&&!eua&&!cripto)throw Error('Sentimento sem fontes: '+erros.join('; '));
   return {b3,eua,cripto,gerado:new Date(agora).toISOString(),erros,borda:true};
 }
