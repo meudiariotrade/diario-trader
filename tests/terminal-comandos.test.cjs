@@ -25,6 +25,6 @@ test('Terminal não oferece nem executa atalhos para telas externas, inclusive F
  await expect(app.locator('.trm [data-trtela]:visible,.trm [data-terminal-window]:visible,.trm [data-tr="pop"]:visible')).toHaveCount(0);
  await app.locator('#trcmd').fill('ECO');await app.locator('#trcmd').press('Enter');await expect(app.locator('#trgrid')).toBeVisible();assert.equal(await p.evaluate(()=>tab),'term');
  await app.locator('#trcmd').fill('EWZ');await app.locator('#trcmd').press('Enter');assert.equal(await p.evaluate(()=>tab),'term');assert.equal(await p.locator('dialog[open]').count(),0);
- await p.getByRole('button',{name:'Mercado',exact:true}).last().click();await p.evaluate(()=>TerminalResearch.open('fluxo'));await expect(p.locator('dialog[open]')).toHaveCount(1);
+ await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="mercado"]').first().click());await p.evaluate(()=>TerminalResearch.open('fluxo'));await expect(p.locator('dialog[open]')).toHaveCount(1);
  assert.deepEqual(errors,[]);
 }));

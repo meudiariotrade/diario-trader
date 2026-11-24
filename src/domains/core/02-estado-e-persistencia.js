@@ -1785,19 +1785,83 @@ function vRev() {
     p("plano", "Foco para o próximo período")
   );
 }
+let OPC_SORT940 = "venc";
+function opcPx940(tk) {
+  const k = String(tk || "").toUpperCase();
+  try {
+    const p = typeof CQ !== "undefined" && CQ?.pf?.[k];
+    if (p && +p.px > 0) return { px: +p.px, d1: p.d1 != null ? +p.d1 : null };
+    const lv = typeof window !== "undefined" && window.tapeVivo?.(k);
+    if (lv && +lv.px > 0) return { px: +lv.px, d1: lv.chg != null ? +lv.chg : null };
+  } catch {}
+  return null;
+}
+function opcCard940(e) {
+  const ent = +e.entry || 0, q = +e.qty || 0, side = e.side === "V" ? -1 : 1;
+  const vivo = opcPx940(e.ativo);
+  const pxAt = vivo ? vivo.px : null;
+  const posVal = (pxAt != null ? pxAt : ent) * q;
+  const resAb = pxAt != null && ent > 0 && q > 0 ? (pxAt - ent) * q * side : null;
+  const resPct = resAb != null && ent * q > 0 ? (resAb / (ent * q)) * 100 : null;
+  const hoje = loc().slice(0, 10);
+  const dte = e.venc ? Math.round((new Date(e.venc + "T12:00") - new Date(hoje + "T12:00")) / 864e5) : null;
+  const dteCor = dte != null && dte <= 3 ? "#EF4444" : dte != null && dte <= 7 ? "#F59E0B" : "var(--tx)";
+  const dteTxt = dte == null ? "—" : dte < 0 ? "Vencida há " + -dte + "d" : dte === 0 ? "Vence hoje" : dte + " dia" + (dte === 1 ? "" : "s");
+  const vencBr = e.venc ? e.venc.split("-").reverse().join("/") : "—";
+  const tipoLbl = e.ot === "P" ? "Put" : "Call";
+  const qtyLbl = (q ? q.toLocaleString("pt-BR") : "0") + (e.side === "V" ? "V" : "C");
+  const precoLine = pxAt != null ? `R$ ${f2(ent)} → <b>R$ ${f2(pxAt)}</b>` : `Entrada R$ ${f2(ent)}${e.strike ? " · Strike " + esc(e.strike) : ""}`;
+  return `<div class="card" data-a="edit" data-id="${e.id}" style="position:relative;border-left:3px solid var(--gold,#C9A66B);padding:12px 14px;cursor:pointer">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px">
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><b style="font-size:15px;letter-spacing:.02em">${esc(e.ativo) || "⚠ sem ativo"}</b>${e.estr ? `<span class="mut sm">${esc(e.estr)}</span>` : ""}</div>
+        <div class="sm mut" style="margin-top:3px">${precoLine}</div>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
+        <span style="padding:2px 8px;border-radius:6px;font-size:11.5px;border:1px solid var(--bd);color:var(--mut)">${tipoLbl}</span>
+        <span style="padding:2px 8px;border-radius:6px;font-size:11.5px;border:1px solid rgba(201,166,107,.55);background:rgba(201,166,107,.14);color:var(--gold,#C9A66B);font-weight:700">${qtyLbl}</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto;row-gap:6px;font-size:13px;padding-top:8px;border-top:1px solid var(--bd)">
+      <span class="mut">${pxAt != null ? "Posição" : "Custo de entrada (sem cotação)"}</span><b style="text-align:right">R$ ${f2(posVal)}</b>
+      ${resAb != null ? `<span class="mut">Res. Aberto</span><span class="${cls(resAb)}" style="text-align:right"><b>${resAb >= 0 ? "+" : ""}R$ ${f2(resAb)}</b> <small>(${resPct >= 0 ? "▲ +" : "▼ "}${f2(resPct)}%)</small></span>` : ""}
+      <span class="mut">Vencimento</span><span style="text-align:right;color:${dteCor}"><b>${dteTxt}</b> <small class="mut">· ${vencBr}</small></span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)">
+      <span class="sm mut">${e.side === "V" ? "Lançada (crédito)" : "Comprada (débito)"}${e.strike ? " · K " + esc(e.strike) : ""}</span>
+      <button class="btn s" data-a="enc" data-id="${e.id}" style="min-height:40px;padding:4px 10px;font-size:12px">Encerrar</button>
+    </div>
+  </div>`;
+}
+document.addEventListener("change", (ev) => {
+  const sel = ev.target?.closest?.("[data-opc-sort]");
+  if (!sel) return;
+  OPC_SORT940 = sel.value || "venc";
+  if (typeof render === "function") render();
+});
 function vTrades(e = "D") {
   if (e === "D") return vList(e);
   if (XV[e] === "an") return xtHead(e) + xtSw(e) + analise(e);
   const t = VW[e] || "ab",
-    a = S.trades.filter((s) => s.tipo === e && inPer(s.dt)),
-    o = a.filter(isOpen).sort((s, n) => n.dt.localeCompare(s.dt));
+    a = S.trades.filter((s) => s.tipo === e && inPer(s.dt));
+  let o = a.filter(isOpen).sort((s, n) => n.dt.localeCompare(s.dt));
+  if (e === "O" && o.length) {
+    o = o.slice().sort((x, y) => {
+      if (OPC_SORT940 === "pos") return (+y.entry * +y.qty || 0) - (+x.entry * +x.qty || 0);
+      if (OPC_SORT940 === "dt") return String(y.dt || "").localeCompare(String(x.dt || ""));
+      return String(x.venc || "9999").localeCompare(String(y.venc || "9999"));
+    });
+  }
+  const sortBarOpc = e === "O" && t === "ab" && o.length > 1
+    ? `<div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0"><b class="sm">Posições (${o.length})</b><label class="sm mut" style="display:flex;align-items:center;gap:6px;margin:0">Ordenar<select data-opc-sort style="margin:0;min-height:40px;font-size:16px;width:auto"><option value="venc"${OPC_SORT940 === "venc" ? " selected" : ""}>Vencimento</option><option value="pos"${OPC_SORT940 === "pos" ? " selected" : ""}>Maior posição</option><option value="dt"${OPC_SORT940 === "dt" ? " selected" : ""}>Mais recente</option></select></label></div>`
+    : "";
   return (
-    `<div class="top"><h1>${e === "O" ? "Opções" : "Swing trade"}</h1><button class="btn" data-a="new" data-tp="${e}">+ Novo trade</button></div>${xtSw(e)}${capCard(e)}${extrato(e)}<div class="${e === "S" ? "g3" : "g2"}" style="margin:8px 0"><button class="btn ${t === "ab" ? "" : "s"}" data-a="vw" data-tp="${e}" data-id="ab">Abertas (${o.length})</button><button class="btn ${t === "pf" ? "" : "s"}" data-a="vw" data-tp="${e}" data-id="pf">Performance</button>${e === "S" ? `<button class="btn ${t === "sc" ? "" : "s"}" data-a="vw" data-tp="S" data-id="sc">Scanner</button>` : ""}</div>${t === "sc" ? "" : perSel()}${t === "pf" ? filtBar() : ""}` +
+    `<div class="top"><h1>${e === "O" ? "Opções" : "Swing trade"}</h1><button class="btn" data-a="new" data-tp="${e}">+ Novo trade</button></div>${xtSw(e)}${capCard(e)}${extrato(e)}<div class="${e === "S" ? "g3" : "g2"}" style="margin:8px 0"><button class="btn ${t === "ab" ? "" : "s"}" data-a="vw" data-tp="${e}" data-id="ab">Abertas (${o.length})</button><button class="btn ${t === "pf" ? "" : "s"}" data-a="vw" data-tp="${e}" data-id="pf">Performance</button>${e === "S" ? `<button class="btn ${t === "sc" ? "" : "s"}" data-a="vw" data-tp="S" data-id="sc">Scanner</button>` : ""}</div>${t === "sc" ? "" : perSel()}${t === "pf" ? filtBar() : ""}${sortBarOpc}` +
     (t === "sc" && e === "S"
       ? vScan()
       : t === "ab"
         ? o.length
-          ? o.map(card).join("")
+          ? o.map(e === "O" ? opcCard940 : card).join("")
           : `<p class="mut">Nenhuma posição aberta. ${e === "O" ? "Registre a montagem com strike, vencimento e prêmio de entrada." : "Registre a entrada com o planejamento (entrada, stop e alvos)."} Depois use o botão Encerrar quando sair.</p>`
         : perfView(a))
   );

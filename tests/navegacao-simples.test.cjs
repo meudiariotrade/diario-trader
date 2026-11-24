@@ -37,7 +37,7 @@ test('navegação simples: seis caminhos preservam ações, gráfico salvo e ace
  await p.evaluate(()=>document.querySelector('#app:not(.v503-fantasma) [data-tf415-nav="NEWSBR"]').click());
  await expect(app.locator('#tf413')).toHaveClass(/t428-p-NEWSBR/);
  // Mercado começa nas cotações; Agenda continua sendo uma ação direta.
- await p.getByRole('button',{name:'Mercado',exact:true}).last().click();
+ await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="mercado"]').first().click());
  await expect(app.locator('.dt395-native-mercado')).toHaveAttribute('data-m403-sub','cq');
  await expect(app.locator('.market-sources')).toHaveCount(1);
  await expect(app.locator('.m408-workspace')).toHaveCount(0);

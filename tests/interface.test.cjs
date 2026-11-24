@@ -18,7 +18,7 @@ test('interface real: fotos obrigatórias, navegação e cabeçalho em telas peq
     const title = await page.locator('.dt393-title').evaluate(el => ({ text: el.textContent, width: el.clientWidth, full: el.scrollWidth }));
     assert.equal(title.text, 'Operações');
     assert.ok(title.full <= title.width + 1, 'Título de Operações não pode ficar cortado.');
-    await page.getByRole('button', { name: 'Meu dia', exact: true }).last().click();
+    await page.getByRole('button', { name: 'Rotina', exact: true }).last().click();
     await page.getByText('Plano do dia', { exact: true }).waitFor();
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 });

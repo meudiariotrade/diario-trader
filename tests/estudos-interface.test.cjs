@@ -22,7 +22,7 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   await page.evaluate(() => localStorage.setItem('v514-meta-est', '420'));
   await page.reload();
   await page.locator('#splash').waitFor({ state: 'hidden' });
-  await page.getByRole('button', { name: 'Estudos', exact: true }).last().click();
+  await page.locator('[data-dt393-action="menu"]').first().click().then(()=>page.locator('#dt394-drawer [data-dt393-route="estudos"]').first().click());
   // v596/v628: 5 sub-abas (Hoje, Aulas, Biblioteca, Treino & Progresso, Replay), sem menu "+ Mais"; abre em Hoje.
   assert.equal(await app.locator('.dt397-category [data-dt397-view]').count(), 5);
   assert.equal(await app.locator('.dt397-category [data-dt397-view="rpy"]').count(), 1);
@@ -83,7 +83,7 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   assert.equal(await app.locator('#v514-meta').isVisible(), false);
   await page.reload();
   await page.locator('#splash').waitFor({ state: 'hidden' });
-  await page.getByRole('button', { name: 'Estudos', exact: true }).last().click();
+  await page.locator('[data-dt393-action="menu"]').first().click().then(()=>page.locator('#dt394-drawer [data-dt393-route="estudos"]').first().click());
   await app.locator('.dt397-category [data-dt397-view="est"]').click();
   await app.locator('#v514-meta summary').waitFor();
   await expect(app.locator('#v514-meta summary'), 'Meta e tempo vinculado devem persistir ao reabrir.').toContainText('15 / 300');

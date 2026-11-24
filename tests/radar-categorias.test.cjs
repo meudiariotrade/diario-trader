@@ -1,7 +1,7 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const{expect}=require('playwright/test');const{withApp}=require('./helpers/app.cjs');
 test('radar sem menu duplicado: referências exclusivas nas categorias, fontes e curva DI preservadas',{timeout:120000},async()=>withApp(async(browser,base)=>{
  const p=await browser.newPage({viewport:{width:390,height:844}}),errors=[];p.on('pageerror',e=>errors.push(e.message));const app=p.locator('#app:not(.v503-fantasma)');
- await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.getByRole('button',{name:'Mercado',exact:true}).last().click();
+ await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="mercado"]').first().click());
  // Dados fictícios apenas no banco demonstrativo; não escreve em contas ou fontes reais.
  await p.evaluate(()=>{const codes=['^BVSP','^GSPC','^IXIC','DXY','EWZ','PBR','VALE','ES=F','NQ=F','YM=F','BRL=X','BRENT','WTI','IRON','GOLD','SELIC','DI1F27','US10Y'];MDO.v={em:'2026-11-09T14:30:00Z',mercados:{em:'2026-11-09T14:30:00Z',fontes:{tv:18,yahoo:0},grupos:[{g:'Fixture demonstrativa',itens:codes.map(s=>({s,n:s,px:100,d1:1,fonte:'Fonte da fixture',horarioPreco:'2026-11-09T14:30:00Z'}))}]}};for(const cat of ['idx','fx','adr','fut','cmd','jur']){CQ.d[cat]={itens:[],em:new Date().toISOString()};CQ.ts[cat]=Date.now()}AD.data=null;CQ.aba='idx';render()});
  await expect(app.locator('.market-quotes')).toBeVisible();
