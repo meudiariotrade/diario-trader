@@ -1,20 +1,49 @@
-name: Validacao v960
+name: Validacao v960 com video
 on:
   pull_request:
     branches: ['release/v960-tour-checklist']
 permissions:
-  contents: read
+  contents: write
 jobs:
   build-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 7831eea9b2b35b16ef910b7855dc3b6405ce7b8e
+          ref: ba33ce45477e30ebcf79749e06886f437fb45873
+      - name: Converter MOV para MP4 compativel com iPhone e PC
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v ffmpeg >/dev/null || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+          ffprobe -v error -show_entries stream=codec_type,codec_name -show_entries format=duration -of json assets/tour-pc.mov
+          video=$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 assets/tour-pc.mov)
+          audio=$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 assets/tour-pc.mov)
+          test -n "$audio"
+          if [ "$video" = h264 ] && [ "$audio" = aac ]; then
+            ffmpeg -nostdin -v error -i assets/tour-pc.mov -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart assets/tour-pc.mp4
+          else
+            ffmpeg -nostdin -v error -i assets/tour-pc.mov -map 0:v:0 -map 0:a:0 -c:v libx264 -preset fast -crf 21 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart assets/tour-pc.mp4
+          fi
+          ffprobe -v error -show_entries stream=codec_type,codec_name -show_entries format=duration -of json assets/tour-pc.mp4
+          test -s assets/tour-pc.mp4
+          test "$(stat -c%s assets/tour-pc.mp4)" -lt 100000000
+          git rm assets/tour-pc.mov
+          git add assets/tour-pc.mp4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: npm ci
       - run: npm run build && npm run check
       - run: node --test tests/cripto-periodo-mobile-v960.test.cjs
+      - name: Conferir video no pacote publicado
+        run: cmp assets/tour-pc.mp4 _site/assets/tour-pc.mp4
+      - name: Registrar apenas a conversao na branch de release
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'v960: converte tour enviado pelo iPhone para MP4'
+          git push origin HEAD:refs/heads/release/v960-tour-checklist
