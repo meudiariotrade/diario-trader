@@ -29185,6 +29185,235 @@ try {
 } catch (e) {
   console.error("[v608] DiarioLogos", e);
 }
+/* v962: Mercado Pro — 5 melhorias profissionais nas sub-abas de Mercado (Cotações, Notícias, Agenda, Análises e Long & Short). */
+try {
+  ((w, d) => {
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    const meusTickers = () => {
+      const set = new Set();
+      try {
+        const s = w.S || {};
+        const add = (tk) => {
+          const clean = String(tk || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+          if (clean.length >= 3 && clean.length <= 7) set.add(clean);
+        };
+        (Array.isArray(s.carteira) ? s.carteira : []).forEach((x) => add(x?.ativo || x?.ticker || x?.t));
+        (Array.isArray(s.pos) ? s.pos : []).forEach((x) => add(x?.ativo || x?.ticker || x?.t));
+        const lim30 = Date.now() - 30 * 86400000;
+        (Array.isArray(s.trades) ? s.trades : []).forEach((t) => {
+          const ts = Date.parse(String(t?.dtx || t?.dt || "").slice(0, 10));
+          if (!Number.isFinite(ts) || ts >= lim30) add(t?.ativo);
+        });
+      } catch {}
+      return set;
+    };
+    const subAtiva = () => {
+      const on = d.querySelector("#app .m403-primary-tabs button.on");
+      const nr = on?.getAttribute("data-navroute") || "";
+      return nr.split(":")[1] || (w.MKT && w.MKT.tab) || "cq";
+    };
+    /* 1. Cotações: Pulso do Pregão + filtro rápido Minha Carteira */
+    const mountCotacoes = (app) => {
+      const anchor = app.querySelector(".market-categories, .cqtabs");
+      if (!anchor) return;
+      let box = d.getElementById("dt962-pulso");
+      const q = (w.CQ && (w.CQ.q || w.CQ.dados || w.CQ.cache)) || {};
+      const pick = (keys, label) => {
+        for (const k of keys) {
+          const it = q[k];
+          if (it && (it.p != null || it.c != null || it.pct != null)) {
+            const pct = Number(it.pct ?? it.dp ?? it.var ?? 0);
+            return { label, pct: Number.isFinite(pct) ? pct : null };
+          }
+        }
+        return { label, pct: null };
+      };
+      const items = [
+        pick(["IBOV", "^BVSP", "BMFBOVESPA:IBOV"], "IBOV"),
+        pick(["USDBRL", "BRL=X", "FX_IDC:USDBRL", "WDOFUT"], "Dólar"),
+        pick(["SPX", "^GSPC", "TVC:SPX", "ES=F"], "S&P 500"),
+        pick(["VIX", "^VIX", "TVC:VIX"], "VIX"),
+      ];
+      const ibov = items[0].pct, dol = items[1].pct, spx = items[2].pct;
+      let clima = "Neutro", climaCls = "neu";
+      if ((ibov != null && ibov >= 0.4) || (spx != null && spx >= 0.4 && (dol == null || dol <= 0.2))) { clima = "Risk-On"; climaCls = "up"; }
+      else if ((ibov != null && ibov <= -0.4) || (spx != null && spx <= -0.4) || (dol != null && dol >= 0.7)) { clima = "Risk-Off"; climaCls = "dn"; }
+      const meus = meusTickers();
+      const ativoFiltro = !!w.__dt962SoCarteira;
+      const pills = items.map((x) => {
+        const cls = x.pct == null ? "neu" : x.pct > 0 ? "up" : x.pct < 0 ? "dn" : "neu";
+        const val = x.pct == null ? "—" : (x.pct > 0 ? "+" : "") + x.pct.toFixed(2).replace(".", ",") + "%";
+        return `<span class="dt962-pill ${cls}"><b>${x.label}</b> ${val}</span>`;
+      }).join("");
+      const html = `<div class="dt962-pulso-row"><span class="dt962-clima ${climaCls}">${clima}</span><div class="dt962-pills">${pills}</div><button type="button" class="dt962-cart-btn ${ativoFiltro ? "on" : ""}" data-dt962-cart="1" title="Filtrar apenas ativos da sua carteira e trades recentes">★ Carteira (${meus.size})</button></div>`;
+      if (!box) {
+        box = d.createElement("section");
+        box.id = "dt962-pulso";
+        box.className = "dt962-pulso";
+        anchor.before(box);
+      }
+      if (box.innerHTML !== html) box.innerHTML = html;
+      if (ativoFiltro && meus.size > 0) {
+        for (const row of app.querySelectorAll(".cqr")) {
+          const txt = String(row.textContent || "").toUpperCase();
+          const hit = [...meus].some((tk) => txt.includes(tk));
+          row.style.display = hit ? "" : "none";
+        }
+      } else {
+        for (const row of app.querySelectorAll(".cqr")) if (row.style.display === "none") row.style.display = "";
+      }
+    };
+    /* 2. Notícias: Botão Resumo em 3 pontos com a Áurea + selo ★ Na sua carteira */
+    const mountNoticias = (app) => {
+      const card = app.querySelector(".card, .v4-card");
+      if (!card) return;
+      if (!d.getElementById("dt962-nt-bar")) {
+        const bar = d.createElement("div");
+        bar.id = "dt962-nt-bar";
+        bar.className = "dt962-bar";
+        bar.innerHTML = `<button type="button" class="btn s dt962-ia-btn" data-dt962-nt-ia="1">✦ Resumo em 3 pontos com a Áurea</button><span class="sm mut">Filtra ruído e destaca impacto em WIN, WDO, juros e ações</span>`;
+        card.prepend(bar);
+      }
+      const meus = meusTickers();
+      if (meus.size) {
+        for (const el of app.querySelectorAll("a, .nt-item, .news-item, li")) {
+          if (el.dataset.dt962Tag || el.closest("#dt962-nt-bar, .m403-primary-tabs, .m406-switch-tabs")) continue;
+          const txt = String(el.textContent || "").toUpperCase();
+          if (txt.length < 18 || txt.length > 260) continue;
+          const hit = [...meus].find((tk) => new RegExp("\\b" + tk + "\\b").test(txt));
+          if (hit) {
+            el.dataset.dt962Tag = "1";
+            el.insertAdjacentHTML("afterbegin", `<span class="dt962-tag-cart">★ ${esc(hit)} · Carteira</span> `);
+          }
+        }
+      }
+    };
+    /* 3. Agenda: Contador regressivo próximo evento alto impacto + botão Áurea WIN/WDO */
+    const mountAgenda = (app) => {
+      const card = app.querySelector(".card, .v4-card");
+      if (!card) return;
+      let box = d.getElementById("dt962-ag-cd");
+      const now = Date.now();
+      let prox = null;
+      try {
+        const lista = (w.MKT && (w.MKT.ag || w.MKT.agenda || w.MKT.events)) || [];
+        for (const ev of Array.isArray(lista) ? lista : []) {
+          const imp = String(ev.imp || ev.impact || ev.importancia || "").toLowerCase();
+          const forte = imp.includes("alt") || imp.includes("high") || imp === "3" || Number(ev.stars) >= 3;
+          const ts = Date.parse(ev.iso || ev.dt || ev.time || "");
+          if (forte && Number.isFinite(ts) && ts > now && (!prox || ts < prox.ts)) {
+            prox = { nome: ev.title || ev.evento || ev.name || "Evento macro", pais: ev.country || ev.pais || "", ts };
+          }
+        }
+      } catch {}
+      const diffMin = prox ? Math.max(1, Math.round((prox.ts - now) / 60000)) : null;
+      const hrs = diffMin != null ? Math.floor(diffMin / 60) : 0;
+      const mins = diffMin != null ? diffMin % 60 : 0;
+      const tempo = diffMin == null ? "Sem evento 3★ pendente hoje" : (hrs ? `${hrs}h ${String(mins).padStart(2, "0")}m` : `${mins} min`);
+      const alerta = diffMin != null && diffMin <= 90;
+      const titulo = prox ? `${prox.pais ? prox.pais + " · " : ""}${prox.nome}` : "Agenda Macro (BR & EUA)";
+      w.__dt962AgPrompt = `Explique em 3 bullets curtos e práticos como o evento "${titulo}" (e a agenda macro de hoje BR/EUA) tende a impactar WIN (Índice), WDO (Dólar) e juros futuros (DI) caso venha acima ou abaixo do consenso. Sem rodeios.`;
+      const html = `<div class="dt962-ag-top"><div><div class="dt962-ag-k">${alerta ? "⚠️ ATENÇÃO · EVITE ABRIR POSIÇÃO 15 MIN ANTES" : "⏱ PRÓXIMO EVENTO ALTO IMPACTO"}</div><div class="dt962-ag-v"><b>${esc(titulo)}</b> · <span>${esc(tempo)}</span></div></div><button type="button" class="btn s dt962-ia-btn" data-dt962-ag-ia="1">✦ Impacto no WIN/WDO</button></div>`;
+      if (!box) {
+        box = d.createElement("section");
+        box.id = "dt962-ag-cd";
+        box.className = "dt962-ag-cd" + (alerta ? " alerta" : "");
+        card.prepend(box);
+      }
+      if (box.innerHTML !== html) box.innerHTML = html;
+    };
+    /* 4. Análises: Mini-cards com semáforo visual nos indicadores */
+    const mountAnalises = (app) => {
+      for (const el of app.querySelectorAll(".card > div, section > div")) {
+        const kids = [...el.children];
+        if (kids.length >= 4 && kids.length <= 8 && kids.some((k) => /SENTIMENTO|MEDO|VOLATILIDADE|CORRELA/i.test(k.textContent || ""))) {
+          el.classList.add("dt962-kpi-grid");
+          for (const k of kids) {
+            k.classList.add("dt962-kpi-card");
+            const txt = String(k.textContent || "").toLowerCase();
+            k.classList.remove("sig-up", "sig-dn", "sig-warn");
+            if (/otimis|gan[aâ]ncia|alta|risk-on|positivo/.test(txt)) k.classList.add("sig-up");
+            else if (/medo|p[aâ]nico|queda|risk-off|estresse|alto risco/.test(txt)) k.classList.add("sig-dn");
+            else if (/neutro|cautela|moderad/.test(txt)) k.classList.add("sig-warn");
+          }
+        }
+      }
+    };
+    /* 5. Long & Short: Régua visual de Z-Score (-2σ ← 0 → +2σ) */
+    const mountLongShort = (app) => {
+      const txt = String(app.innerText || "");
+      const m = txt.match(/z-?score[^0-9+\-−]*([+\-−]?\d+(?:[.,]\d+)?)/i);
+      if (!m) return;
+      const z = parseFloat(m[1].replace("−", "-").replace(",", "."));
+      if (!Number.isFinite(z)) return;
+      const clamped = Math.max(-3, Math.min(3, z));
+      const pct = Math.round(((clamped + 3) / 6) * 100);
+      let status = "Neutro · Aguardar distorção", cls = "neu";
+      if (z <= -2) { status = "Zona de Entrada (≤ −2σ) · A barato vs. B"; cls = "up"; }
+      else if (z >= 2) { status = "Zona de Entrada (≥ +2σ) · A caro vs. B"; cls = "dn"; }
+      else if (Math.abs(z) >= 1.5) { status = "Esticado · Atenção perto da banda"; cls = "warn"; }
+      let box = d.getElementById("dt962-ls-gauge");
+      const html = `<div class="dt962-ls-head"><span>RÉGUA Z-SCORE</span><b class="${cls}">${z > 0 ? "+" : ""}${z.toFixed(2).replace(".", ",")}σ · ${status}</b></div><div class="dt962-ls-track"><span class="dt962-ls-pin" style="left:${pct}%"></span></div><div class="dt962-ls-scale"><span>−3σ</span><span>−2σ</span><span>0</span><span>+2σ</span><span>+3σ</span></div>`;
+      if (!box) {
+        box = d.createElement("section");
+        box.id = "dt962-ls-gauge";
+        box.className = "dt962-ls-gauge";
+        const anchor = app.querySelector("button[id*='v512'], .v512-grid")?.closest("div, form, section") || app.firstElementChild;
+        if (anchor) anchor.after(box);
+      }
+      if (box && box.innerHTML !== html) box.innerHTML = html;
+    };
+    let timer = null;
+    const sync = () => {
+      if (!d.body.classList.contains("mkt549")) return;
+      const app = d.getElementById("app");
+      if (!app) return;
+      const sub = subAtiva();
+      if (sub === "cq" || sub === "cot") mountCotacoes(app);
+      else if (sub === "nt" || sub === "jr") mountNoticias(app);
+      else if (sub === "ag") mountAgenda(app);
+      else if (sub === "lab" || sub === "sazus") mountAnalises(app);
+      else if (sub === "ls") mountLongShort(app);
+    };
+    const schedule = () => { clearTimeout(timer); timer = setTimeout(sync, 180); };
+    d.addEventListener("click", (e) => {
+      const btnCart = e.target?.closest?.("[data-dt962-cart]");
+      if (btnCart) {
+        w.__dt962SoCarteira = !w.__dt962SoCarteira;
+        sync();
+        return;
+      }
+      const btnNt = e.target?.closest?.("[data-dt962-nt-ia]");
+      if (btnNt) {
+        const titles = [...d.querySelectorAll("#app a, #app h3, #app h4, #app .nt-title")]
+          .map((x) => x.textContent.trim().replace(/\s+/g, " "))
+          .filter((t) => t.length >= 22 && t.length <= 180)
+          .slice(0, 10);
+        const prompt = titles.length
+          ? "Resuma em exatamente 3 bullets curtos e objetivos o que realmente importa agora para WIN, WDO, juros (DI) e ações a partir destas manchetes:\n- " + titles.join("\n- ")
+          : "Faça um resumo executivo em 3 bullets curtos dos principais vetores macro (Brasil e EUA) que mais impactam WIN, WDO e juros hoje.";
+        w.DiarioConselhoIA && w.DiarioConselhoIA("dalio", "Resumo de Notícias · Áurea", prompt);
+        return;
+      }
+      const btnAg = e.target?.closest?.("[data-dt962-ag-ia]");
+      if (btnAg) {
+        w.DiarioConselhoIA && w.DiarioConselhoIA("dalio", "Agenda Macro · WIN/WDO", w.__dt962AgPrompt || "Explique o impacto dos principais eventos econômicos de hoje no WIN e WDO.");
+        return;
+      }
+      if (d.body.classList.contains("mkt549")) schedule();
+    });
+    const obs = new MutationObserver(() => { if (d.body.classList.contains("mkt549")) schedule(); });
+    const boot = () => {
+      const app = d.getElementById("app");
+      if (app) obs.observe(app, { childList: true, subtree: true });
+      sync();
+    };
+    if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", boot, { once: true });
+    else setTimeout(boot, 600);
+  })(window, document);
+} catch (e) {
+  console.error("[v962] MercadoPro", e);
+}
 try {
   (function () {
     "use strict";
