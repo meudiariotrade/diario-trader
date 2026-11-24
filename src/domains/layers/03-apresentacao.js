@@ -7720,3 +7720,245 @@ try {
 } catch (e) {
   console.error("[v598] calculadora de posição", e);
 }
+
+/* v949: Bolinha de Perfil no topo direito + Busca Global Inteligente na lupa (Cmd+K). */
+try {
+  (function (w, d) {
+    "use strict";
+    if (w.__dt949TopUI) return;
+    w.__dt949TopUI = 1;
+    const esc = (s) =>
+      String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const css = d.createElement("style");
+    css.id = "dt949-style";
+    css.textContent = `
+      .dt949-av{position:relative;width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;border-radius:50%!important;padding:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border:1.5px solid var(--gold,#C9A66B)!important;background:var(--ui-surface,#12151E)!important;color:var(--gold,#C9A66B)!important;font-weight:800!important;font-size:13px!important;letter-spacing:.02em;cursor:pointer;margin-left:4px!important;flex-shrink:0}
+      .dt949-av i{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;border:1.5px solid var(--bg,#0b0b0c);background:#10B981}
+      .dt949-av i.off{background:#C9A66B}
+      #dt949-pop{position:fixed;top:calc(60px + env(safe-area-inset-top));right:12px;z-index:9999;width:min(90vw,270px);background:var(--ui-surface,#141416);color:var(--tx,#eae9e6);border:1px solid rgba(201,166,107,.4);border-radius:6px;padding:12px;font-family:inherit}
+      html[data-v427-tema=claro] #dt949-pop{background:#fffdf9;color:#1b1a17;}
+      #dt949-pop .p-hd{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--bd,rgba(255,255,255,.1));margin-bottom:8px}
+      #dt949-pop .p-hd .p-ic{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--gold,#C9A66B);background:rgba(201,166,107,.16);color:var(--gold,#C9A66B);font-weight:800;font-size:15px;flex-shrink:0}
+      #dt949-pop .p-hd b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+      #dt949-pop .p-hd small{display:block;font-size:11.5px;color:var(--mut,#9b9a95)}
+      #dt949-pop .p-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;min-height:44px;border:0;border-radius:4px;background:transparent;color:inherit;font-size:13px;text-align:left;cursor:pointer}
+      #dt949-pop .p-btn:hover{background:rgba(201,166,107,.12)}
+      #dt949-pop .p-sep{height:1px;background:var(--bd,rgba(255,255,255,.1));margin:6px 0}
+      #dt949-pop .p-sair{color:#EF4444}
+      #dt949-busca{width:min(94vw,540px);max-height:82dvh;padding:0;border:1px solid rgba(201,166,107,.45);border-radius:6px;background:var(--ui-surface,#141416);color:var(--tx,#eae9e6);overflow:hidden;}
+      html[data-v427-tema=claro] #dt949-busca{background:#fffdf9;color:#1b1a17}
+      #dt949-busca::backdrop{background:rgba(0,0,0,.62);backdrop-filter:blur(4px)}
+      #dt949-busca .b-top{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--bd,rgba(255,255,255,.1))}
+      #dt949-busca input{flex:1;border:0;outline:0;background:transparent;color:inherit;font-size:16px;min-width:0;min-height:40px;margin:0;padding:4px 0}
+      #dt949-busca .b-res{max-height:64dvh;overflow:auto;padding:8px}
+      #dt949-busca .b-grp{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold,#C9A66B);padding:8px 10px 4px;font-weight:700}
+      #dt949-busca .b-it{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;min-height:44px;border:0;border-radius:4px;background:transparent;color:inherit;text-align:left;cursor:pointer;font-size:13.5px}
+      #dt949-busca .b-it:hover{background:rgba(201,166,107,.12)}
+      #dt949-busca .b-it small{color:var(--mut,#9b9a95);font-size:12px}
+    `;
+    d.head?.appendChild(css);
+
+    function perfilInfo() {
+      const email = (typeof SESS !== "undefined" && SESS?.email) || "";
+      const nome = String((typeof S !== "undefined" && S?.cfg?.nome) || (email ? email.split("@")[0] : "Trader"));
+      const inicial = (nome.trim()[0] || email.trim()[0] || "T").toUpperCase();
+      const logado = !!(typeof SESS !== "undefined" && SESS?.at);
+      return { nome, email, inicial, logado };
+    }
+
+    function fechaPop() {
+      d.getElementById("dt949-pop")?.remove();
+      d.querySelectorAll("[data-dt949-avatar]").forEach(b=>b.setAttribute("aria-expanded","false"));
+    }
+
+    function abrePop() {
+      if (d.getElementById("dt949-pop")) { fechaPop(); return; }
+      const info = perfilInfo();
+      const pop = d.createElement("div");
+      pop.id = "dt949-pop";
+      pop.setAttribute("role", "region"); pop.setAttribute("aria-label","Atalhos da conta");
+      pop.innerHTML = `
+        <div class="p-hd">
+          <div class="p-ic">${esc(info.inicial)}</div>
+          <div><b>${esc(info.nome)}</b><small>${esc(info.email || (info.logado ? "Conta conectada" : "Modo local no aparelho"))}</small></div>
+        </div>
+        <button type="button" class="p-btn" data-p949-go="conta"><span>Conta &amp; Backup</span><span>›</span></button>
+        <button type="button" class="p-btn" data-p949-go="painel"><span>Capital e Risco</span><span>›</span></button>
+        <button type="button" class="p-btn" data-p949-go="import"><span>Importar do Profit</span><span>›</span></button>
+        <button type="button" class="p-btn" data-p949-go="mais"><span>Aparência &amp; Config.</span><span>›</span></button>
+        <button type="button" class="p-btn" data-p949-go="status"><span>Status do Sistema</span><span>›</span></button>
+        <div class="p-sep"></div>
+        <button type="button" class="p-btn ${info.logado ? "p-sair" : ""}" data-p949-auth="${info.logado ? "out" : "in"}"><span>${info.logado ? "Sair da conta" : "Entrar na conta"}</span><span>${info.logado ? "↗" : "›"}</span></button>
+      `;
+      d.body.appendChild(pop);
+      d.querySelectorAll("[data-dt949-avatar]").forEach(b=>b.setAttribute("aria-expanded","true"));
+      pop.querySelector("button")?.focus();
+    }
+
+    function montaAvatar() {
+      const info = perfilInfo();
+      d.querySelectorAll(".dt393-topbar .dt393-topactions").forEach((bar) => {
+        if(bar.closest(".v503-fantasma") || (typeof tab!=="undefined"&&tab==="term")) return;
+        let btn = bar.querySelector(".dt949-av");
+        if (!btn) {
+          btn = d.createElement("button");
+          btn.type = "button";
+          btn.className = "dt949-av";
+          btn.setAttribute("aria-label", "Perfil e conta");
+          btn.setAttribute("data-dt949-avatar", "1");
+          btn.setAttribute("aria-expanded","false"); btn.setAttribute("aria-controls","dt949-pop");
+          bar.appendChild(btn);
+        }
+        const html = `${esc(info.inicial)}<i class="${info.logado ? "" : "off"}" aria-hidden="true"></i>`;
+        if (btn.innerHTML !== html) btn.innerHTML = html;
+      });
+    }
+
+    const TELAS_949 = [
+      ["Início", "Panorama, Termômetro WIN/WDO e Fatos", "home"],
+      ["Rotina", "Emocional, Semáforo Go/No-Go e Checklist", "dia"],
+      ["Trades", "Day trade, posições e Raio-X de Sangramento", "ops"],
+      ["Research", "Rankings Ações/FIIs/ETFs, Teses e Munger", "analises"],
+      ["Carteira", "Patrimônio, Rebalanceamento e Proventos", "carteiras"],
+      ["Opções", "Posições abertas, vencimentos e performance", "opc"],
+      ["Swing Trade", "Posições de swing e scanner", "swing"],
+      ["Mercado", "Agenda econômica, cotações e notícias", "mercado"],
+      ["Macro & Gráficos", "Indicadores macroeconômicos e comparação de séries", "graf"],
+      ["Terminal", "Gráficos avançados e comandos", "term"],
+      ["Juros e DI", "Selic, curva de juros e DI futuro", "juros"],
+      ["Desempenho", "Estatísticas, curva de capital e revisão", "stats"],
+      ["Importar do Profit", "Subir relatório CSV de operações", "import"],
+      ["Imposto de Renda", "Apuração mensal, custos e DARF", "imposto"],
+      ["Calculadora de Lotes", "Risco por operação e contratos", "contratos"],
+      ["Estudos", "Cérebro de Livros e padrões de candles", "estudos"],
+      ["Conta & Backup", "Sincronização e exportação de dados", "conta"],
+      ["Configurações", "Aparência, alertas e preferências", "mais"],
+      ["Capital e Risco", "Limites, metas e capital operacional", "painel"],
+      ["Status do Sistema", "Fontes e diagnóstico", "status"],
+    ];
+
+    function irRota(r) {
+      try {
+        if (w.DiarioRotas?.navigate) { w.DiarioRotas.navigate(r); return; }
+        const b = d.querySelector(`[data-dt393-route="${r}"]`);
+        if (b) { b.click(); return; }
+        if (typeof tab !== "undefined") { tab = r; if (typeof render === "function") render(); }
+      } catch {}
+    }
+
+    function abreBusca() {
+      fechaPop();
+      let dlg = d.getElementById("dt949-busca");
+      if (!dlg) {
+        dlg = d.createElement("dialog");
+        dlg.id = "dt949-busca";
+        dlg.setAttribute("aria-label", "Busca global");
+        dlg.innerHTML = `<div class="b-top"><span aria-hidden="true">⌕</span><input type="search" id="dt949-q" placeholder="Buscar ação, FII, trade, tese ou tela…" autocomplete="off"><button type="button" class="btn s" data-b949-x style="min-height:40px;padding:2px 8px">✕</button></div><div class="b-res" id="dt949-res"></div>`;
+        d.body.appendChild(dlg);
+        dlg.addEventListener("click", (ev) => {
+          if (ev.target === dlg || ev.target.closest("[data-b949-x]")) { dlg.close(); return; }
+          const it = ev.target.closest("[data-b949-go]");
+          if (!it) return;
+          const tipo = it.dataset.b949Tipo, val = it.dataset.b949Go;
+          dlg.close();
+          if (tipo === "rota") { irRota(val); return; }
+          if (tipo === "acao" || tipo === "fii" || tipo === "tese" || tipo === "ativo") {
+            irRota("analises");
+            w.DiarioAnalises?.abrirBusca949?.(tipo,val);
+            return;
+          }
+          if (tipo === "trade") {
+            const item=typeof S!=="undefined"&&S.trades?.find(t=>String(t.id)===val);
+            if(!item)return;
+            irRota(item.tipo==="O"?"opc":item.tipo==="S"?"swing":"trades");
+            const btn=[...d.querySelectorAll('#app:not(.v503-fantasma) [data-a="edit"][data-id]')].find(b=>b.dataset.id===val);
+            if(btn){btn.click();return}
+            // Reutiliza o editor original, inclusive para trades fora da paginação atual.
+            const proxy=d.createElement("button");
+            proxy.hidden=true;proxy.dataset.a="edit";proxy.dataset.id=val;
+            d.body.appendChild(proxy);try{proxy.click()}finally{proxy.remove()}
+          }
+        });
+        dlg.querySelector("#dt949-q").addEventListener("input", (ev) => desenhaBusca(ev.target.value));
+        dlg.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.id==="dt949-q"){ev.preventDefault();dlg.querySelector("[data-b949-go]")?.click()}});
+        dlg.addEventListener("close",()=>d.querySelector('.dt393-topbar [data-dt393-action="search"]')?.focus());
+      }
+      const inp = dlg.querySelector("#dt949-q");
+      inp.value = "";
+      desenhaBusca("");
+      if (!dlg.open) dlg.showModal ? dlg.showModal() : dlg.setAttribute("open", "");
+      inp.focus();
+    }
+
+    function desenhaBusca(raw) {
+      const box = d.getElementById("dt949-res");
+      if (!box) return;
+      const norm=v=>String(v??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+      const q = norm(raw).trim();
+      const out = [];
+      const telas = TELAS_949.filter(([n, desc, r]) => !q || norm(n).includes(q) || norm(desc).includes(q) || r.includes(q)).slice(0, q ? 6 : 8);
+      if (telas.length) {
+        out.push(`<div class="b-grp">Telas &amp; Ferramentas</div>` + telas.map(([n, desc, r]) => `<button type="button" class="b-it" data-b949-tipo="rota" data-b949-go="${r}"><b>${esc(n)}</b><small>${esc(desc)}</small></button>`).join(""));
+      }
+      if (q.length >= 2) {
+        const trades = (typeof S !== "undefined" && Array.isArray(S?.trades) ? S.trades : [])
+          .filter((t) => norm([t.ativo,t.setup,t.dt,t.tipo].join(" ")).includes(q))
+          .slice(0, 5);
+        if (trades.length) {
+          out.push(`<div class="b-grp">Seus Trades</div>` + trades.map((t) => `<button type="button" class="b-it" data-b949-tipo="trade" data-b949-go="${esc(t.id)}"><b>${esc(t.ativo)}</b><small>${esc(String(t.dt || "").slice(0, 10))}${t.setup ? " · " + esc(t.setup) : ""}</small></button>`).join(""));
+        }
+        const hits=w.DiarioAnalisesPlus?.buscarLocal949?.(q)||[];
+        for (const [tipo,titulo] of [["tese","Teses deste aparelho"],["acao","Ações"],["fii","FIIs"]]) {
+          const encontrados=hits.filter(t=>t.tipo===tipo).slice(0,5);
+          if(encontrados.length)out.push('<div class="b-grp">'+titulo+'</div>'+encontrados.map(t=>'<button type="button" class="b-it" data-b949-tipo="'+tipo+'" data-b949-go="'+esc(t.id)+'"><b>'+esc(t.tk)+'</b><small>'+esc(t.desc)+'</small></button>').join(""));
+        }
+        if (/^[a-z]{4}\\d{1,2}$/i.test(q) && !hits.some(t=>t.tipo!=="tese"&&t.tk===q.toUpperCase())) {
+          const tk=q.toUpperCase();
+          out.push('<div class="b-grp">Research</div><button type="button" class="b-it" data-b949-tipo="ativo" data-b949-go="'+tk+'"><b>'+tk+'</b><small>Consultar no universo B3 ›</small></button>');
+        }
+      }
+      box.innerHTML = out.length ? out.join("") : `<p class="mut sm" style="padding:16px;text-align:center">Nenhum resultado para "${esc(raw)}".</p>`;
+    }
+
+    d.addEventListener("click", (ev) => {
+      const av = ev.target.closest?.("[data-dt949-avatar]");
+      if (av) { ev.preventDefault(); ev.stopPropagation(); abrePop(); return; }
+      const pGo = ev.target.closest?.("[data-p949-go]");
+      if (pGo) { ev.preventDefault(); fechaPop(); irRota(pGo.dataset.p949Go); return; }
+      const pAuth = ev.target.closest?.("[data-p949-auth]");
+      if (pAuth) {
+        ev.preventDefault();
+        fechaPop();
+        irRota("conta");
+        if(pAuth.dataset.p949Auth === "out")d.querySelector('#app:not(.v503-fantasma) [data-a="logout"]')?.click();
+        return;
+      }
+      if (!ev.target.closest?.("#dt949-pop")) fechaPop();
+      const sBtn = ev.target.closest?.('[data-dt393-action="search"]');
+      if (sBtn) { ev.preventDefault(); ev.stopImmediatePropagation(); abreBusca(); }
+    }, true);
+
+    d.addEventListener("keydown", (ev) => {
+      if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "k" && !(typeof tab!=="undefined"&&tab==="term")) {
+        ev.preventDefault();
+        abreBusca();
+      } else if (ev.key === "Escape") {
+        fechaPop();
+      }
+    });
+
+    const aposRender=()=>{fechaPop();const dlg=d.getElementById("dt949-busca");if(dlg?.open)dlg.close();requestAnimationFrame(montaAvatar)};
+    d.addEventListener("diario:render", aposRender);
+    w.addEventListener("diario:render", aposRender);
+    if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", montaAvatar, { once: true });
+    else montaAvatar();
+    setTimeout(montaAvatar, 400);
+  })(window, document);
+} catch (e) {
+  console.error("[v949] perfil e busca global", e);
+}

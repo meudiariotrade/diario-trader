@@ -1,5 +1,5 @@
 {
-  "version": 948,
+  "version": 949,
   "coreExtra": [
     "pdf-lib.min.js",
     "fontkit.umd.min.js",
@@ -24,7 +24,7 @@
     "LICENSE-fontkit.txt"
   ],
   "debug": [],
-  "base": "afd4f499e6dec9c87d1af146fbfe320b105fa5ee",
+  "base": "b08420cccb254f43ff0c35b5c8a22cd0f486c779",
   "bundles": {
     "nucleo-v560.js": "src/app-core.js",
     "camadas-v560.js": "src/app-layers.js",
