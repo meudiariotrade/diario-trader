@@ -1,0 +1,19 @@
+name: Validacao v959
+on:
+  push:
+    branches: ['validation/v959-build-check']
+permissions:
+  contents: read
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ffdf1102217bd48f8b996bd424ec88e09019a8b6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build && npm run check
