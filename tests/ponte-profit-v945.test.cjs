@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const bridge=fs.readFileSync('profit-cotacoes-v552.js','utf8');
 const live=fs.readFileSync('src/domains/core/02-estado-e-persistencia.js','utf8');
+const quotes=fs.readFileSync('src/domains/core/13-diagnostico-e-relatorios.js','utf8');
 const html=fs.readFileSync('src/index.html','utf8');
 function app(){
  const listeners={};
@@ -86,10 +87,10 @@ test('v945: para preços da ponte, negócio tem prioridade sobre reenvio do snap
  assert.ok(c.CQ.saved['@WIN'].recebidoEm,'hora de sincronização guardada separadamente');
 });
 test('v945: TradingView é usado se Profit estiver indisponível ou antigo, inclusive após fechamento',()=>{
- const start=live.indexOf('const cqPf = (e, t) => {');
- const end=live.indexOf(',\n  cqPx = (e, t) => {',start);
+ const start=quotes.indexOf('const cqPf = (e, t) => {');
+ const end=quotes.indexOf(',\n  cqPx = (e, t) => {',start);
  assert.ok(start>0 && end>start);
- const code=live.slice(start,end)+';\nglobalThis.cqEscolha = cqPf;';
+ const code=quotes.slice(start,end)+';\nglobalThis.cqEscolha = cqPf;';
  const dayBefore=new Date(Date.now()-86400000).toISOString();
  const recent=new Date(Date.now()-60000).toISOString();
  const saved={px:100,tk:'PETR4',em:dayBefore,d1:1};
