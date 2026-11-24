@@ -1628,7 +1628,8 @@ try {
         contexto='<section class="v810-day-context" data-intel-content-wrapper="1"><div data-intel-content class="sm">Aguardando contexto verificável do mercado.</div></section>',
         operacoes=v810Operacoes(t,a),
         niveis825=v825Niveis(),
-        base=v810Seletor(seletor)+v810Faixa("dia",sessao,chamada)+turno593+contexto;
+        faseNome959={pre:"Pré-mercado",pregao:"Pregão",pos:"Pós-mercado"}[sessao]||"Automático",
+        base='<details class="v810-more" style="margin-bottom:8px"><summary>Fase da sessão: <b>'+faseNome959+'</b> <span class="mut sm">· ajustar</span></summary><div style="margin-top:6px">'+v810Seletor(seletor)+'</div></details>'+turno593+contexto;
       /* v829: Meu dia = você. KPIs do dia no topo; checklist, operações e plano no centro;
          capital, plano detalhado e anotações na coluna da direita. Agenda e cenário de mercado foram para o Início. */
       const kpis829=v829DiaKpis(r,l,s,u.length),
@@ -1840,8 +1841,70 @@ try {
         const btnIA = `<div style="margin-top:10px"><button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('munger','Diagnóstico de Execução',window.__dt950RxPrompt)" style="font-size:12.5px;min-height:40px">✦ Diagnosticar sangramento com Munger</button></div>`;
         return `<details class="v4-card" style="margin-top:12px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🩸 Raio-X de Sangramento (${todos.length} trades)</summary><div style="margin-top:10px">${alertaFx}${fxAtivas.length ? `<div class="sm mut" style="margin-bottom:4px">Por faixa de horário</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Horário</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${fxAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${ordAtivas.length ? `<div class="sm mut" style="margin:10px 0 4px">Por ordem no dia (overtrading)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Sequência</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${ordAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${custoErro}${btnIA}</div></details>`;
       })();
+      /* v959: Matriz Humor × Dinheiro + Placar de Disciplina (Seguir Plano vs Quebrar Regra) + Revisão Semanal com a Áurea. */
+      const psico959 = (() => {
+        const todos = pt();
+        if (todos.length < 2) return "";
+        const daysObj = f(() => S.days, {}) || {};
+        const humorMap = [
+          { k: "1–2 · Em alerta", n: 0, w: 0, pl: 0, dias: new Set() },
+          { k: "3 · Neutro", n: 0, w: 0, pl: 0, dias: new Set() },
+          { k: "4–5 · Focado / Bem", n: 0, w: 0, pl: 0, dias: new Set() },
+        ];
+        const disc = {
+          s: { k: "✓ Seguiu o plano", n: 0, w: 0, pl: 0 },
+          n: { k: "✕ Quebrou regra", n: 0, w: 0, pl: 0 },
+        };
+        const setups = new Map();
+        const lim7 = Date.now() - 7 * 86400000;
+        const sem = { n: 0, w: 0, pl: 0, manha: 0, tarde: 0, quebras: 0, ativos: new Map(), setups: new Map() };
+        for (const d of todos) {
+          const val = R(d) || 0;
+          const dtStr = String(d.dtx || d.dt || "");
+          const dia = dtStr.slice(0, 10);
+          const est = Number(daysObj[dia]?.estado || 0);
+          if (est >= 1 && est <= 5) {
+            const slot = est <= 2 ? humorMap[0] : est === 3 ? humorMap[1] : humorMap[2];
+            slot.n++; if (val > 0) slot.w++; slot.pl += val; slot.dias.add(dia);
+          }
+          if (d.rules === "s" || d.rules === "n") {
+            const ds = disc[d.rules];
+            ds.n++; if (val > 0) ds.w++; ds.pl += val;
+          }
+          const stp = String(d.setup || "").trim();
+          if (stp) {
+            const cur = setups.get(stp) || { k: stp, n: 0, w: 0, pl: 0 };
+            cur.n++; if (val > 0) cur.w++; cur.pl += val;
+            setups.set(stp, cur);
+          }
+          const ts = Date.parse(dia);
+          if (Number.isFinite(ts) && ts >= lim7) {
+            sem.n++; if (val > 0) sem.w++; sem.pl += val;
+            const hr = +((dtStr.match(/T(\d{2}):/) || [])[1] || 10);
+            if (hr < 12) sem.manha += val; else sem.tarde += val;
+            if (d.rules === "n") sem.quebras++;
+            const tk = String(d.ativo || "—");
+            sem.ativos.set(tk, (sem.ativos.get(tk) || 0) + val);
+            if (stp) sem.setups.set(stp, (sem.setups.get(stp) || 0) + val);
+          }
+        }
+        const hAtivos = humorMap.filter((x) => x.n > 0);
+        const dAtivos = [disc.s, disc.n].filter((x) => x.n > 0);
+        const topSetups = [...setups.values()].sort((a, b) => Math.abs(b.pl) - Math.abs(a.pl)).slice(0, 4);
+        const ln = (x) => `<tr><td>${b(x.k)}</td><td>${x.n}</td><td>${Math.round((x.w / x.n) * 100)}%</td><td class="${L(x.pl)}"><b>${j(x.pl)}</b></td></tr>`;
+        const resumoSem = [
+          `Últimos 7 dias: ${sem.n} trades · Acerto ${sem.n ? Math.round((sem.w / sem.n) * 100) : 0}% · P&L líquido ${j(sem.pl)}`,
+          `Por turno (7d): Manhã (<12h) ${j(sem.manha)} · Tarde (>=12h) ${j(sem.tarde)} · Quebras de regra: ${sem.quebras}`,
+          hAtivos.length ? "Humor do checklist × P&L (histórico): " + hAtivos.map((x) => `${x.k}: ${j(x.pl)} (${x.n} trades, ${Math.round((x.w / x.n) * 100)}% acerto)`).join(" | ") : "Sem histórico de humor no checklist ainda.",
+          dAtivos.length ? "Disciplina: " + dAtivos.map((x) => `${x.k}: ${j(x.pl)} (${x.n} trades)`).join(" | ") : "",
+          topSetups.length ? "Principais setups: " + topSetups.map((x) => `${x.k}: ${j(x.pl)} (${x.n} trades, ${Math.round((x.w / x.n) * 100)}% acerto)`).join(" | ") : "",
+        ].filter(Boolean).join("\n");
+        window.__dt959SemPrompt = "Faça o fechamento semanal executivo deste trader em 4 blocos curtos e diretos (1. Onde ganhou dinheiro · 2. Onde sangrou · 3. Impacto real do emocional e da disciplina · 4. 1 regra prática de ouro para segunda-feira), usando apenas estes números, sem citar livros nem frases genéricas:\n" + resumoSem;
+        const btnSem = `<div style="margin-top:10px"><button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('carteira','Revisão Semanal · Áurea',window.__dt959SemPrompt)" style="font-size:12.5px;min-height:40px">✦ Fechar Semana com a Áurea (${sem.n} trades / 7d)</button></div>`;
+        return `<details class="v4-card" style="margin-top:10px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🧠 Disciplina, Humor × Dinheiro &amp; Revisão Semanal</summary><div style="margin-top:10px">${hAtivos.length ? `<div class="sm mut" style="margin-bottom:4px">Humor do Checklist × Resultado (R$)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Estado emocional</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${hAtivos.map(ln).join("")}</tbody></table></div>` : '<p class="sm mut" style="margin:0 0 8px">Conclua o checklist matinal com sua nota emocional (1–5) para cruzar seu humor com o resultado financeiro.</p>'}${dAtivos.length ? `<div class="sm mut" style="margin:10px 0 4px">Seguir o Plano × Quebrar Regra</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Disciplina</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${dAtivos.map(ln).join("")}</tbody></table></div>` : ""}${topSetups.length ? `<div class="sm mut" style="margin:10px 0 4px">Placar por Setup (Playbook)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Setup</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${topSetups.map(ln).join("")}</tbody></table></div>` : ""}${btnSem}</div></details>`;
+      })();
       /* v829: Operações em tela dividida — KPIs no topo, posições e trades no centro, revisão e sugestões à direita. */
-      return `<div class="v4-page v4-ops v829-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${$}${Y}${rx940}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
+      return `<div class="v4-page v4-ops v829-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${$}${Y}${rx940}${psico959}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
     }
     let mt = "3M",
       kt = !1;
