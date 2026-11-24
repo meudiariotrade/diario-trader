@@ -9,6 +9,17 @@ const iso=ms=>new Date(ms).toISOString();
 const every=(m,n)=>m%n===0;
 const days=d=>d>=1&&d<=5;
 const job=(name,due,fn,body,cleanup)=>({name,due,fn,body,cleanup});
+/* v943: notícia urgente a cada 5 min na janela de pregão BR (9h–18h BRT,
+ * dias úteis), e a cada 15 min fora dela. Cron dos alertas operacionais é preservado. */
+const NEWS_BRT_V943=new Intl.DateTimeFormat('en-US',{
+ timeZone:'America/Sao_Paulo',weekday:'short',hour:'2-digit',hourCycle:'h23'
+});
+function janelaNoticiaRapidaV943(ms){
+ const parts=NEWS_BRT_V943.formatToParts(new Date(ms));
+ const weekday=parts.find(x=>x.type==='weekday')?.value;
+ const hour=Number(parts.find(x=>x.type==='hour')?.value);
+ return ['Mon','Tue','Wed','Thu','Fri'].includes(weekday)&&hour>=9&&hour<18;
+}
 export const JOBS_V932=Object.freeze([
  job('calendario-push-v724',x=>x.m===17&&every(x.h,2),'notificar',{acao:'atualizar_calendario'}),
  job('email-semana',x=>x.d===1&&x.h===0&&x.m===0,'email-semana',{acao:'rotina_semanal'}),
@@ -18,7 +29,7 @@ export const JOBS_V932=Object.freeze([
  job('jornal-mesa-retentativa-2',x=>days(x.d)&&x.m===0&&(x.h===11||x.h===22),'rotina-cron',{acao:'jornal_agendado'}),
  job('movimentos',x=>days(x.d)&&x.h>=12&&x.h<=21&&every(x.m,5),'movimentos',{}),
  job('movimentos-limpa',x=>x.h===3&&x.m===50,null,null,'movimentos'),
- job('noticias-urgentes-leve-v727',x=>every(x.m,5),'notificar',{acao:'noticias_urgentes'}),
+ job('noticias-urgentes-leve-v727',x=>every(x.m,x.noticiasRapidas?5:15),'notificar',{acao:'noticias_urgentes'}),
  job('notificar-leve-v724',x=>every(x.m,5),'notificar',{acao:'tick_leve'}),
  job('push-log-limpa',x=>x.h===3&&x.m===0,null,null,'push_log'),
  job('resumo-tick',x=>days(x.d)&&x.m===0&&[12,16,20].includes(x.h),'resumo',{acao:'tick'}),
@@ -30,7 +41,7 @@ export const JOBS_V932=Object.freeze([
 export function jobsAtV932(ms){
  if(!Number.isSafeInteger(ms)||ms<0)return [];
  const d=new Date(ms);
- const x={m:d.getUTCMinutes(),h:d.getUTCHours(),d:d.getUTCDay()};
+ const x={m:d.getUTCMinutes(),h:d.getUTCHours(),d:d.getUTCDay(),noticiasRapidas:janelaNoticiaRapidaV943(ms)};
  return JOBS_V932.filter(j=>j.due(x));
 }
 export function validateAgendaV932(env){
