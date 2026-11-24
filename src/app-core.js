@@ -72411,7 +72411,7 @@ function cqmFilhos(a, b) {
     for(const el of [...a.children])if(!manter.has(el))el.remove();
     return;
   }
-  const na = [...a.childNodes];
+  const na = [...a.childNodes].filter((x) => !(x.nodeType === 1 && x.hasAttribute("data-dt-keep")));
   const n = Math.min(na.length, nb.length);
   for (let i = 0; i < n; i++) cqmMorph(na[i], nb[i]);
   for (let i = n; i < na.length; i++) na[i].remove();
