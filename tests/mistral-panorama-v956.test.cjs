@@ -40,3 +40,10 @@ test('v956: Resumão inclui EWZ, paridade da cesta de ADRs e cripto',()=>{
  vm.runInNewContext(s.slice(a,b),ctx);const out=ctx.resumoParidadeAdrs();assert.match(out,/Ibovespa teórico/);assert.match(out,/EWZ: \+2,00%/);assert.match(out,/\+3,02% em R\$/);for(const r of regras)assert.ok(out.includes(r.s+'→'+r.tk));
  assert.match(s,/Termômetro externo de Brasil/);assert.match(s,/pickApp\('BTC'/);assert.match(s,/pickApp\('ETH'/);assert.match(s,/b3Fechada/);
 });
+
+test('v956: dia real e sessão prevalecem sobre edição manual; terça não é domingo',()=>{
+ const s=fs.readFileSync('src/intelligence/etapa1.js','utf8');const i=s.indexOf('function contextoResumao956('),j=s.indexOf('function resumoParidadeAdrs()',i);const ctx={};vm.runInNewContext(s.slice(i,j),ctx);
+ const ter=new Date('2026-11-24T10:52:00Z'),dom=new Date('2026-11-22T22:00:00Z');
+ assert.equal(ctx.contextoResumao956({b3:{state:'pre'}},ter).domingo,false);assert.equal(ctx.contextoResumao956({b3:{state:'pre'}},ter).b3Fechada,true);assert.equal(ctx.contextoResumao956({b3:{state:'regular'}},ter).b3Fechada,false);assert.equal(ctx.contextoResumao956({b3:{state:'fechado'}},dom).domingo,true);
+ assert.doesNotMatch(s,/ed==='fimdesemana'\?' e cuidado com liquidez baixa de domingo/);
+});

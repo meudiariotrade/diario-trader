@@ -817,6 +817,11 @@
       return (hm>=1020&&hm<1080)?{aberto:false,label:'Pausa diária (17h–18h ET)'}:{aberto:true,label:'Aberto (CME Globex)'};
     }catch(_){return {aberto:false,label:'—'};}
   }
+  function contextoResumao956(c,agora=new Date()){
+    const dia=new Intl.DateTimeFormat('en-US',{weekday:'short',timeZone:'America/Sao_Paulo'}).format(agora);
+    const b3Fechada=['pre','fechado','post'].includes(c?.b3?.state);
+    return {domingo:dia==='Sun',fimdesemana:dia==='Sun'||dia==='Sat',b3Fechada};
+  }
   function resumoParidadeAdrs(){
     const m=state.mercado;if(!m||!Array.isArray(m.adrs)||!m.adrs.length)return '';
     const itens=(m.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
@@ -825,14 +830,15 @@
     const ewzObj=itens.find(i=>/^EWZ\b/i.test(String(i.n||'')));
     const fx=Number(fxApp?.px||fxObj?.px),fxD1=Number(fxApp?.d1!=null&&Number.isFinite(fxApp.d1)?fxApp.d1:fxObj?.d1);
     if(!Number.isFinite(fx)||fx<=0)return '';
-    const fxPct=Number.isFinite(fxD1)?fxD1:0;
+    const fxRaw=fxApp?.d1!=null&&Number.isFinite(fxApp.d1)?fxApp.d1:fxObj?.d1;
+    const fxPct=fxRaw!=null&&fxRaw!==''&&Number.isFinite(fxD1)?fxD1:null;
     const pct=v=>(v>=0?'+':'')+v.toFixed(2).replace('.',',')+'%';
     const ibovRef=cotacaoApp('IBOV');
     let somaPond=0,somaPeso=0;const itensTxt=[];
     for(const reg of ADR_REGRAS){
       const a=m.adrs.find(x=>String(x.s||'').toUpperCase()===reg.s);
       if(!a||!Number.isFinite(Number(a.px))||Number(a.px)<=0)continue;
-      const pxUsd=Number(a.px),chpUsd=Number.isFinite(Number(a.chp))?Number(a.chp):0;
+      const pxUsd=Number(a.px),chpUsd=a.chp!=null&&a.chp!==''&&Number.isFinite(Number(a.chp))?Number(a.chp):null;
       const teoricoBase=(pxUsd/reg.razao)*fx;
       const b3Ref=cotacaoApp(reg.tk);
       const fechB3=b3Ref&&b3Ref.px>0?b3Ref.px:null;
@@ -841,24 +847,25 @@
         const onRef=cotacaoApp(reg.on);
         if(fechB3&&onRef&&onRef.px>0)gapPct=((teoricoBase/onRef.px)-1)*100;
       }
-      if(gapPct==null)gapPct=fechB3?((teoricoBase/fechB3)-1)*100:((1+chpUsd/100)*(1+fxPct/100)-1)*100;
+      if(gapPct==null)gapPct=fechB3&&!reg.on?((teoricoBase/fechB3)-1)*100:chpUsd!=null&&fxPct!=null?((1+chpUsd/100)*(1+fxPct/100)-1)*100:null;
+      if(!Number.isFinite(gapPct))continue;
       somaPond+=gapPct*reg.peso;somaPeso+=reg.peso;
       itensTxt.push(reg.s+'→'+reg.tk+' '+pct(gapPct));
     }
     if(!itensTxt.length&&!ewzObj)return '';
     const ibovVar=somaPeso>0?somaPond/somaPeso:null;
     const ibovPts=ibovVar!=null&&ibovRef&&ibovRef.px>0?Math.round(ibovRef.px*(1+ibovVar/100)):null;
-    const ewzUsd=ewzObj&&Number.isFinite(Number(ewzObj.d1))?Number(ewzObj.d1):null;
-    const ewzBrl=ewzUsd!=null?((1+ewzUsd/100)*(1+fxPct/100)-1)*100:null;
+    const ewzUsd=ewzObj&&ewzObj.d1!=null&&ewzObj.d1!==''&&Number.isFinite(Number(ewzObj.d1))?Number(ewzObj.d1):null;
+    const ewzBrl=ewzUsd!=null&&fxPct!=null?((1+ewzUsd/100)*(1+fxPct/100)-1)*100:null;
     return [
-      ibovVar!=null?'Ibovespa teórico (Cesta de ADRs): '+pct(ibovVar)+(ibovPts?' (~'+ibovPts.toLocaleString('pt-BR')+' pts)':''):'',
+      ibovVar!=null?'Ibovespa teórico (Cesta parcial de ADRs, estimativa, não leilão): '+pct(ibovVar)+(ibovPts?' (~'+ibovPts.toLocaleString('pt-BR')+' pts)':''):'',
       ewzUsd!=null?'EWZ: '+pct(ewzUsd)+' em USD'+(ewzBrl!=null?' ('+pct(ewzBrl)+' em R$)':''):'',
       itensTxt.length?'ADRs brasileiras: '+itensTxt.slice(0,5).join(', '):''
     ].filter(Boolean).join(' · ');
   }
   function pulsoDoisMercados(){
     const groups=state.mercado?.mercados?.grupos;
-    const all=Array.isArray(groups)?groups.flatMap(g=>(g.itens||[]).map(x=>({n:String(x.n||''),px:Number(x.px),d1:Number(x.d1)}))).filter(x=>Number.isFinite(x.d1)):[];
+    const all=Array.isArray(groups)?groups.flatMap(g=>(g.itens||[]).map(x=>({n:String(x.n||''),px:Number(x.px),d1:x.d1==null||x.d1===''?null:Number(x.d1)}))).filter(x=>Number.isFinite(x.d1)):[];
     const pick=rx=>all.find(x=>rx.test(x.n));
     const pickApp=(label,tks)=>{for(const t of tks){const c=cotacaoApp(t);if(c&&Number.isFinite(c.d1))return {n:label,px:c.px,d1:c.d1};}return null;};
     const fmtP=x=>x?x.n+' '+(x.d1>=0?'+':'')+x.d1.toFixed(2).replace('.',',')+'%':'';
@@ -866,7 +873,7 @@
     const us=[pick(/s&p\s*500|spx|es1/i),pick(/nasdaq|ndx|nq1/i),pick(/dow|dji|ym1/i),pick(/brent|wti|petr[oó]leo/i),pick(/ouro|gold/i),pick(/\bdxy\b/i)||pickApp('DXY',['DXY']),pick(/^ewz\b/i)||pickApp('EWZ',['EWZ'])].filter(Boolean);
     const cripto=[pick(/\bbtc\b|bitcoin/i)||pickApp('BTC',['BTC','BTCUSD','BTCUSDT']),pick(/\beth\b|ethereum/i)||pickApp('ETH',['ETH','ETHUSD','ETHUSDT']),pick(/\bsol\b|solana/i)||pickApp('SOL',['SOL','SOLUSD'])].filter(Boolean);
     const uniq=L=>{const seen=new Set();return L.filter(x=>{if(!x||seen.has(x.n))return false;seen.add(x.n);return true;});};
-    const brU=uniq(br),usU=uniq(us).slice(0,6),crU=uniq(cripto).slice(0,3);
+    const brU=uniq(br),usU=uniq(us).slice(0,7),crU=uniq(cripto).slice(0,3);
     const texto=[
       brU.length?'Brasil: '+brU.map(fmtP).join(' · '):'',
       usU.length?'Exterior / Futuros: '+usU.map(fmtP).join(' · '):'',
@@ -1248,7 +1255,7 @@
         fechamento:'Edição de Fechamento (Pós-pregão)'
       };
       const c=w.DiarioSessoes?.context(),p=pulsoDoisMercados(),m=mercadoPlan(),adrTxt=resumoParidadeAdrs();
-      const b3Fechada=ed==='manha'||ed==='fimdesemana'||/fechad|pr[eé]/i.test(String(c?.b3?.state||''));
+      const {domingo,fimdesemana,b3Fechada}=contextoResumao956(c);
       const horaSP=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
       const horaNY=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/New_York'});
       const hojeIso=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
@@ -1258,10 +1265,10 @@
       const meus=(meusAtivos()||[]).slice(0,8);
       const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,3).map(e=>tit(e)).join(' | ');
       const prompt='@schwartz Monte o resumão executivo detalhado da Áurea — '+(nomes[ed]||ed)+
-        ' (agora: '+horaSP+' Brasília / '+horaNY+' Nova York). '+
+        ' (data: '+hojeIso+'; agora: '+horaSP+' Brasília / '+horaNY+' Nova York). '+
         'Status dos mercados agora: B3='+(c?.b3?.state||'—')+', NYSE/Nasdaq à vista='+(c?.us?.state||'—')+', Futuros EUA (CME Globex: ES/NQ/YM/Ouro/Petróleo)='+futUS.label+'. '+
-        (b3Fechada?'IMPORTANTE: a B3 está fechada agora (WIN/WDO abrem às 09:00 e à vista às 10:00 Brasília). NÃO diga que IBOV/WIN estão "com dados indisponíveis": explique que o pregão local está fechado e use o EWZ, as ADRs brasileiras (PBR, VALE, ITUB, BBD) e o USD/BRL abaixo para projetar uma possível abertura aqui. ':'')+
-        (futUS.aberto&&ed==='fimdesemana'?'IMPORTANTE: os Futuros EUA na CME Globex JÁ ESTÃO ABERTOS agora — considere a abertura dos futuros americanos e cripto 24/7 como termômetro para amanhã, lembrando da liquidez menor de domingo. ':'')+
+        (b3Fechada?'IMPORTANTE: o mercado à vista da B3 está fechado agora; em dias de pregão, WIN/WDO normalmente abrem às 09:00 e à vista às 10:00 Brasília. Respeite a fase atual dos futuros locais. NÃO diga que IBOV/WIN estão "com dados indisponíveis": explique que o pregão local está fechado e use o EWZ, as ADRs brasileiras (PBR, VALE, ITUB, BBD) e o USD/BRL abaixo para projetar uma possível abertura aqui. ':'')+
+        (futUS.aberto&&domingo?'IMPORTANTE: os Futuros EUA na CME Globex já estão abertos; considere os futuros e cripto 24/7, com atenção à liquidez menor da sessão de domingo. ':'')+
         (p.riskLabel?'Humor Global: '+p.riskLabel+' ('+p.riskScore+'). ':'')+
         (p.divergencia?'Divergência detectada: '+p.divergencia+' ':'')+
         (p.texto?'Cotações no painel: '+p.texto+'. ':'')+
@@ -1271,7 +1278,7 @@
         (meus.length?'Ativos acompanhados pelo trader: '+meus.join(', ')+'. ':'')+
         (topNews?'Principais manchetes: '+topNews+'. ':'')+
         'Traga detalhes práticos e objetivos em 4 blocos: '+
-        '1) Exterior, Futuros EUA e Cripto (humor de risco, principais vetores em índices/commodities/cripto'+(ed==='fimdesemana'?' e cuidado com liquidez baixa de domingo':'')+'), '+
+        '1) Exterior, Futuros EUA e Cripto (humor de risco, principais vetores em índices/commodities/cripto'+(domingo?' e cuidado com liquidez baixa de domingo':'')+'), '+
         '2) Impacto no Brasil (IBOV, WIN, WDO e Juros — se B3 fechada, cite EWZ e ADRs como PBR/VALE/ITUB/BBD para estimar a direção provável da abertura), '+
         '3) Agenda Crítica BR/EUA (quais horários e dados podem virar o pregão), '+
         '4) Plano Prático e Riscos (o que observar na abertura, pontos de atenção em WIN/WDO e nos ativos acompanhados).';
@@ -1305,7 +1312,7 @@
         try{const als=typeof w.DiarioAlertasDisparados==='function'?w.DiarioAlertasDisparados():[];if(als.length)alsTxt=' **Alertas disparados agora:** '+als.slice(0,3).map(a=>a.tk+' ('+a.msg+')').join(' · ')+'.';}catch(_){}
         const blocos=[
           '1) Exterior, Futuros EUA e Cripto\nStatus CME Globex: **'+futUS.label+'**. '+riskExpl+(p.texto?'\nCotações capturadas: '+p.texto+'.':''),
-          '2) Impacto no Brasil (IBOV, WIN, WDO e Juros)\n'+(b3Fechada?'B3 ainda fechada (WIN/WDO às 09:00, à vista às 10:00). ':'')+(adrTxt?'Termômetro por EWZ e ADRs: **'+adrTxt+'**. ':'')+(m.nome&&!/insuficiente|Sem leitura/i.test(m.nome)?'Amplitude: **'+m.nome+'**. ':'')+(p.divergencia?'\n'+p.divergencia:'Quando exterior, ADRs e câmbio apontam na mesma direção, o fluxo tende a ser mais limpo na abertura.'),
+          '2) Impacto no Brasil (IBOV, WIN, WDO e Juros)\n'+(b3Fechada?'Mercado à vista da B3 fechado neste horário. Em dias de pregão, WIN/WDO normalmente às 09:00 e à vista às 10:00. ':'')+(adrTxt?'Termômetro por EWZ e ADRs: **'+adrTxt+'**. ':'')+(m.nome&&!/insuficiente|Sem leitura/i.test(m.nome)?'Amplitude: **'+m.nome+'**. ':'')+(p.divergencia?'\n'+p.divergencia:'Quando exterior, ADRs e câmbio apontam na mesma direção, o fluxo tende a ser mais limpo na abertura.'),
           '3) Agenda Crítica BR/EUA\n'+(agEvs.length?agEvs.map(x=>'• '+x).join('\n'):'Nenhum evento de alto impacto nos próximos horários. Acompanhe o fluxo técnico e as manchetes corporativas.'),
           '4) Plano Prático e Riscos\nEvite abrir posição nos 10 minutos anteriores a dados de alto impacto.'+alsTxt+(meus.length?' Ativos no seu radar: **'+meus.slice(0,6).join(', ')+'**.':'')
         ];
