@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 47ae9c19cc9fc1d6bdd4c6e7ee9d41157d918e8d4402314b600f5d5338de9b81 */
+/* Gerado de src/app-theme.css · SHA256 e9028a75036be3d12c6049ac18637c8a2f7d1b3a377eb8a4ce72308343f53c8e */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -4461,3 +4461,17 @@ html[data-v427-tema="claro"] body.mkt549 #app .card button.btn.on{
  background:#f7e2b5;border:2px solid #0b0e14;box-shadow:0 0 0 2px rgba(201,166,107,.55)
 }
 .dt962-ls-scale{display:flex;justify-content:space-between;margin-top:5px;font-size:10.5px;color:#9aa4b2;font-variant-numeric:tabular-nums}
+
+/* v963: Mercado mobile — Pulso sem sobreposição, sem salto e sem zoom de foco no iOS. */
+@media(max-width:768px){
+ html:root body.mkt549 #app{animation:none!important}
+ html:root body.mkt549 #app .dt962-pulso{box-sizing:border-box;width:100%;min-width:0;max-width:100%;overflow-anchor:none}
+ html:root body.mkt549 #app .dt962-pulso-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"clima carteira" "pills pills";gap:6px 8px;overflow:visible;min-width:0}
+ html:root body.mkt549 #app .dt962-clima{grid-area:clima;justify-self:start;max-width:100%;box-sizing:border-box}
+ html:root body.mkt549 #app .dt962-cart-btn{grid-area:carteira;position:static!important;min-width:0;min-height:40px!important;height:40px!important;max-width:100%;margin:0!important;box-sizing:border-box;white-space:nowrap}
+ html:root body.mkt549 #app .dt962-pills{grid-area:pills;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;min-width:0;width:100%;overflow:hidden}
+ html:root body.mkt549 #app .dt962-pill{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;min-width:0;box-sizing:border-box;white-space:nowrap;font-size:11px;line-height:1.2;min-height:34px}
+ html:root body.mkt549 #app .dt962-pill b{font-size:10px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+ html:root body.mkt549 #app :is(.cqbar input,.market-search input,.cq388-searchbar input,.m403-searchbar input,input[placeholder*="Buscar ativo"],input[placeholder*="Buscar ticker"]){font-size:16px!important;min-height:40px!important}
+}
+html:root body.mkt549 #app .cqr[data-dt962-hidden]{display:none!important}
