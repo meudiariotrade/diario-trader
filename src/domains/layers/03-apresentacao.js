@@ -1635,12 +1635,37 @@ try {
       const kpis829=v829DiaKpis(r,l,s,u.length),
         lado829='<details class="v810-more"><summary>Plano detalhado, emoção e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>',
         ladoPos829='<details class="v810-more"><summary>Limites e revisão detalhada</summary><div class="v810-more-inner">'+planoIntegrado789(t, e)+emo589+dt+'</div></details>';
+      const fech60 = (() => {
+        if (sessao !== "pos") return "";
+        const nTr = Array.isArray(a) ? a.length : 0;
+        const wTr = Array.isArray(a) ? a.filter((x) => Number(x.pl || 0) > 0).length : 0;
+        const wr = nTr ? Math.round((wTr / nTr) * 100) + "%" : "—";
+        const plTxt = (r >= 0 ? "+" : "") + "R$ " + Number(r || 0).toFixed(2).replace(".", ",");
+        const emoN = Number(e?.estado || 0);
+        const emoTxt = emoN ? emoN + "/5" : "não marcada";
+        const jrnMan = f(() => JRN?.v?.manchete?.titulo || "", "");
+        const jrnWin = f(() => JRN?.v?.radar_mesa?.win || "", "");
+        const prompt60 = `@munger Faça o Fechamento do Dia (60s) cruzando minha execução com o contexto do pregão de hoje (${t}): ` +
+          `Trades: ${nTr} (${wTr} ganhos, acerto ${wr}), P&L líquido: ${plTxt}, Estado emocional no checklist: ${emoTxt}. ` +
+          (jrnMan ? `Manchete do Jornal do Pregão: "${jrnMan}". ` : "") +
+          (jrnWin ? `Radar da Mesa (WIN): "${jrnWin}". ` : "") +
+          `Me dê em 3 blocos curtos: 1) O que eu executei bem, 2) Principal ponto de atenção/disciplina para amanhã, 3) Uma regra prática de proteção para a próxima abertura.`;
+        window.__dt974Fech60Prompt = prompt60;
+        return `<section class="v4-card dt974-fech60" aria-label="Fechamento do Dia 60s">
+          <div class="dt974-fech60-top"><span>✦ FECHAMENTO INTELIGENTE · 60S</span><b>${plTxt}</b></div>
+          <p class="sm mut" style="margin:4px 0 8px">${nTr} trade(s) · acerto ${wr} · emocional ${emoTxt}${jrnMan ? ` · Jornal: “${b(jrnMan.slice(0, 68))}${jrnMan.length > 68 ? "…" : ""}”` : ""}</p>
+          <div class="dt974-fech60-acts">
+            <button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('munger','Fechamento 60s · Munger',window.__dt974Fech60Prompt)">✦ Diagnóstico 60s (Áurea)</button>
+            <button type="button" class="btn s" onclick="window.DiarioCapas561?.abrir?.(4)">🖼️ Card Meu Fechamento</button>
+          </div>
+        </section>`;
+      })();
       return '<div class="v4-page v4-day v810-day v829-day" data-v810-phase="'+sessao+'">'+base+kpis829+
         (sessao==="pre"
           ? '<div class="ui-split v829-split"><div class="ui-main">'+U+y+niveis825+'</div><aside class="ui-aside">'+m+lado829+'</aside></div>'
           : sessao==="pregao"
           ? '<div class="ui-split v829-split"><div class="ui-main">'+operacoes+U+niveis825+'</div><aside class="ui-aside">'+m+y+lado829+'</aside></div>'
-          : '<div class="ui-split v829-split"><div class="ui-main">'+operacoes+v811PlanoExecucao(t,e)+U+'</div><aside class="ui-aside">'+m+
+          : '<div class="ui-split v829-split"><div class="ui-main">'+fech60+operacoes+v811PlanoExecucao(t,e)+U+'</div><aside class="ui-aside">'+m+
             '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+y+it+ladoPos829+'</aside></div>')+
         '</div>';
     }
@@ -2191,14 +2216,14 @@ try {
           ],
         ],
         [
-          ["r", "dia", "Meu dia", "cal"],
+          ["r", "dia", "Rotina", "cal"],
           [
             ["r", "regras", "Checklist e regras"],
             ["q", "1", "Registro rápido"],
           ],
         ],
         [
-          ["r", "ops", "Operações", "trade"],
+          ["r", "ops", "Trades", "trade"],
           [["r", "import", "Importar do Profit"]],
         ],
         [
@@ -3185,7 +3210,7 @@ function hook(){
 }
 hook();
 // o painel do Terminal é montado de forma assíncrona; confere só enquanto a aba Terminal estiver aberta
-setInterval(()=>{if(doc.hidden)return;if(g(()=>tab,'')==='term'||g(()=>root.V428_gpHost&&root.V428_gpHost(),null)){if(!root.render0?.__v421)hook();mount()}},1200);
+setInterval(()=>{if(doc.hidden)return;if(g(()=>tab,'')==='term'||g(()=>root.V428_gpHost&&root.V428_gpHost(),null)){if(!root.render0?.__v421)hook();mount()}},2500);
 // atualiza o preço do cabeçalho e o gráfico sem redesenhar a página
 setInterval(()=>{if(!doc.hidden&&g(()=>tab,'')==='term'&&doc.getElementById('v421-gp'))load(false)},60000);
 root.DIARIO_GP421={paint,load,state:()=>st,view:()=>({...gpView}),reset:navReset};
