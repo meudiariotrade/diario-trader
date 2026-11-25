@@ -16,7 +16,7 @@ test('iPhone: Análises numa aba só — telas e mercado no topo, O Conselho inc
  await expect(pesquisa).toHaveText('Conselho');
  await expect(pesquisa).toHaveAttribute('aria-label',/O Conselho — especialistas de mercado/);
  const membros=page.locator('#an-root [data-an-membro]');
- await expect(membros).toHaveCount(7);
+ await expect(membros).toHaveCount(8);
  await expect(membros.filter({hasText:'Dalio'})).toHaveAttribute('data-an-membro','dalio');
  await expect(pesquisa).toHaveAttribute('aria-selected','true');
  await expect(nav.locator('[data-an-sub="us"]')).toBeVisible();

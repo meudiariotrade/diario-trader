@@ -8449,8 +8449,8 @@ de Carteira`,
       let l = 0;
       const r = {
           home: "Início",
-          dia: "Meu dia",
-          ops: "Operações",
+          dia: "Rotina",
+          ops: "Trades",
           trades: "Trades",
           stats: "Estatísticas",
           mercado: "Mercado",
