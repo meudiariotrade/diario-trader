@@ -32024,8 +32024,23 @@ try {
           "v4-iacard dt975-iacard",
         );
       window.__dt975Brief30Prompt = brief30Prompt;
+      /* v981: Lembrete discreto de Backup JSON 1 toque se houver trades e > 14 dias sem backup. */
+      const bkp981 = (() => {
+        try {
+          const nTr = typeof S !== "undefined" && Array.isArray(S?.trades) ? S.trades.length : 0;
+          if (!nTr || sessionStorage.getItem("dt981-bkp-hide") === "1") return "";
+          const last = Number(localStorage.getItem("dt981-last-backup") || 0);
+          const dias = last ? Math.floor((Date.now() - last) / 86400000) : 999;
+          if (dias < 14) return "";
+          const msg = last ? `Último backup há ${dias} dias` : `${nTr} trade(s) sem backup local`;
+          return `<div class="dt981-bkp"><span>💾 <b>Backup de segurança</b> · ${b(msg)}</span><div class="dt981-bkp-acts"><button type="button" class="dt975-btn-gold" data-dt981-bkp="1">Baixar JSON</button><button type="button" class="dt981-bkp-x" data-dt981-bkp="hide" aria-label="Dispensar aviso">✕</button></div></div>`;
+        } catch {
+          return "";
+        }
+      })();
       /* v975: Início Liquid Glass 3D — fase compacta, KPIs 3D, Termômetro Hero, Central Áurea IA (Briefing 30s + Radar), EUA/ADRs e Agenda. */
       return `<div class="v4-page v4-home v810-home v829-home dt975-home" data-v810-phase="${u}">
+    ${bkp981}
     ${v810Seletor($)}
     ${v829MercadoKpis()}
     <div class="ui-split v829-split"><div class="ui-main">${$t}${v827Eua()}${K}</div><aside class="ui-aside">${u!=="pos"?v825Niveis():""}</aside></div>
@@ -33559,6 +33574,34 @@ try {
           itens.splice(idx, 1);
           try { localStorage.setItem("dt978-gatilhos", JSON.stringify(itens)); } catch {}
           xt();
+        }
+        return;
+      }
+      const bkpBtn = ev.target.closest?.("[data-dt981-bkp]");
+      if (bkpBtn) {
+        ev.preventDefault();
+        const act = bkpBtn.dataset.dt981Bkp;
+        if (act === "hide") {
+          try { sessionStorage.setItem("dt981-bkp-hide", "1"); } catch {}
+          bkpBtn.closest?.(".dt981-bkp")?.remove();
+          return;
+        }
+        try {
+          const payload = typeof S !== "undefined" ? JSON.stringify(S, null, 2) : "{}";
+          const blob = new Blob([payload], { type: "application/json;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a0 = v.createElement("a");
+          a0.href = url;
+          a0.download = `diario-trader-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          v.body.appendChild(a0);
+          a0.click();
+          a0.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+          localStorage.setItem("dt981-last-backup", String(Date.now()));
+          f(() => toast?.("Backup JSON baixado com sucesso!"));
+          bkpBtn.closest?.(".dt981-bkp")?.remove();
+        } catch {
+          f(() => toast?.("Não foi possível gerar o backup JSON."));
         }
         return;
       }

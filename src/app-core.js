@@ -211,6 +211,77 @@
   root.DiarioJornalQualidade=Object.freeze({VERSION,freeze,clone,url,phase,quote,price,change,sources,fed,levels,chart,snapshot,inspect,prepare,profit});
 })(globalThis);
 /* Diário de Trader v560 — núcleo (paleta Terminal Grafite). Gerado a partir de: recursos.js, inicio.js, terminal-chart-mode-v415.js, app.js */
+/* v981 — coalescing seguro de MutationObservers amplos (#app/body) para aliviar CPU e bateria no iPhone. */
+try {
+  if (
+    typeof window !== "undefined" &&
+    typeof window.MutationObserver === "function" &&
+    typeof window.requestAnimationFrame === "function" &&
+    !/jsdom/i.test(String(window.navigator?.userAgent || "")) &&
+    !window.__dt981MoWrapped
+  ) {
+    window.__dt981MoWrapped = true;
+    const NativeMO = window.MutationObserver;
+    window.MutationObserver = function DT981MutationObserver(cb) {
+      let pending = [];
+      let timer = 0;
+      let raf = 0;
+      let broad = false;
+      const flush = (obs) => {
+        timer = 0;
+        raf = 0;
+        if (!pending.length) return;
+        const batch = pending;
+        pending = [];
+        try {
+          cb(batch, obs);
+        } catch (err) {
+          console.error("[v981] observer", err);
+        }
+      };
+      const inner = new NativeMO((records, obs) => {
+        if (!broad) {
+          cb(records, obs);
+          return;
+        }
+        for (let i = 0; i < records.length; i++) pending.push(records[i]);
+        if (timer || raf) return;
+        timer = window.setTimeout(() => {
+          timer = 0;
+          raf = window.requestAnimationFrame(() => flush(obs));
+        }, 48);
+      });
+      return {
+        observe(target, opts) {
+          const isRoot =
+            target === document.body ||
+            target === document.documentElement ||
+            (target && target.id === "app");
+          if (isRoot && opts && (opts.subtree || opts.childList)) broad = true;
+          return inner.observe(target, opts);
+        },
+        disconnect() {
+          if (timer) {
+            window.clearTimeout(timer);
+            timer = 0;
+          }
+          if (raf) {
+            window.cancelAnimationFrame(raf);
+            raf = 0;
+          }
+          pending = [];
+          return inner.disconnect();
+        },
+        takeRecords() {
+          const out = pending.concat(inner.takeRecords());
+          pending = [];
+          return out;
+        },
+      };
+    };
+    window.MutationObserver.prototype = NativeMO.prototype;
+  }
+} catch {}
 /* v594 — registro de ações do Terminal: cada recurso registra sua função; o Início do Terminal e a barra de Painéis
    executam a mesma função, sem precisar da barra antiga montada (CLAUDE.md, tela única). */
 window.TerminalAcoes =
