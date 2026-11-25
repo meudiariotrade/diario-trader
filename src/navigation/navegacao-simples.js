@@ -83,7 +83,7 @@
    const rates=panel.querySelector('[data-m405-action="rates"]');const show=count>0||!!rates&&category==='jur';if(panel.hidden===show)panel.hidden=!show;
    if(show)visible++;
    if(panel.id==='m405-global'){text(panel.querySelector('h3'),category==='fx'?'Referências de câmbio':'Referências de índices');text(panel.querySelector('.m405-card-titles>small'),'Dados complementares quando não estão na lista principal')}
-   for(const note of panel.querySelectorAll('.m405-empty-note'))note.hidden=true;
+   for(const note of panel.querySelectorAll('.m405-empty-note'))if(!note.hidden)note.hidden=true;
    if(rates)text(rates,'Ver curva DI no Terminal');
   }
   if(dashboard.hidden===(visible>0))dashboard.hidden=visible===0;
@@ -93,7 +93,7 @@
   const m=app.querySelector('.dt395-native-mercado');if(!m)return;
   // v618: sem o "Sobre esta tela" (abria e fechava ao trocar de aba); a descrição fica oculta
   for(const d of m.querySelectorAll('.simple-market-about')){const o=d.querySelector('.m404-overview');if(o)d.before(o);d.remove()}
-  for(const n of m.querySelectorAll('.m404-overview'))n.hidden=true;
+  for(const n of m.querySelectorAll('.m404-overview'))if(!n.hidden)n.hidden=true;
   const calendar=m.querySelector('#mkcal');if(calendar?.querySelector('.tradingview-widget-container')){
    const foot=calendar.nextElementSibling,d=wrap(calendar,'Ver calendário econômico','simple-calendar');
    if(d&&foot?.classList.contains('mut'))d.append(foot);
