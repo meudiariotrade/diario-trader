@@ -1056,6 +1056,18 @@ function cdiAno() {
       ? +e.selic.v - 0.1
       : null;
 }
+let _cdiAuto979 = 0;
+async function cdiAutoCarrega979() {
+  if (_cdiAuto979 || cdiAno() != null || !window.DiarioPublico) return;
+  _cdiAuto979 = 1;
+  try {
+    const j0 = await window.DiarioPublico.get("/v1/juros", { ttl: 3600000 });
+    if (j0 && typeof JR < "u") {
+      JR.data = Object.assign({}, JR.data || {}, j0);
+      if (typeof render === "function") render();
+    }
+  } catch {}
+}
 function bmHtml() {
   const e = +capRef() || 0,
     t = hjD(),
@@ -1063,6 +1075,7 @@ function bmHtml() {
     o = cdiAno(),
     s = ls.get("diario-ibov");
   !s && !IBV.busy && setTimeout(ibvCarrega, 0);
+  o == null && !_cdiAuto979 && setTimeout(cdiAutoCarrega979, 0);
   const n = [
       ["Este ano", t.slice(0, 4) + "-01-01"],
       ["Últimos 12 meses", diasMais(t, -364)],
@@ -1105,7 +1118,7 @@ ${n
 ${e && l.cdiP != null ? `<div class="sm" style="margin-top:6px">${l.res >= e * l.cdiP ? `<b class="g">Você venceu o CDI</b> por ${money(l.res - e * l.cdiP)}.` : `<b class="r">O CDI teria rendido ${money(e * l.cdiP)}</b> com o mesmo capital, sem tela e sem risco (você fez ${money(l.res)}).`}</div>` : ""}</div>`,
   )
   .join("")}
-<div class="sm mut">CDI ${o != null ? dshN(o, 2) + "% ao ano (Banco Central)" : "indisponível: abra Mercado → Juros uma vez"} · Ibovespa ${s ? "pelo Yahoo, fechamento diário" : IBV.busy ? "carregando…" : IBV.err ? "indisponível (" + esc(IBV.err) + ")" : "carregando…"} · Seu trading = resultado ÷ capital (${e ? money(e) : "não definido"}).</div></div>`;
+<div class="sm mut">CDI ${o != null ? dshN(o, 2) + "% ao ano (Banco Central)" : "carregando taxa do Banco Central…"} · Ibovespa ${s ? "pelo Yahoo, fechamento diário" : IBV.busy ? "carregando…" : IBV.err ? "indisponível (" + esc(IBV.err) + ")" : "carregando…"} · Seu trading = resultado ÷ capital (${e ? money(e) : "não definido"}).</div></div>`;
 }
 function salHtml() {
   const e = crCfg(),
