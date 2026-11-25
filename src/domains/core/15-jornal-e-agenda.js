@@ -3358,11 +3358,15 @@ const JR_PNOME = {
   (JRN.atu = null),
   (JRN.pst = {}),
   (jrCarrega = async function (e) {
+    if (JRN.busy && e && Date.now() - (JRN.t0 || 0) > 15e3) {
+      JRN.busy = 0;
+    }
     if (
       JRN.busy ||
       (!e && JRN.v && !JRN.v.antiga && JRN.v.dia + JRN.v.edicao === jrAgoraK())
     )
       return;
+    const seq978 = (JRN.seq = (JRN.seq || 0) + 1);
     ((JRN.busy = 1),
       (JRN.err = ""),
       (JRN.motivo = ""),
@@ -3374,6 +3378,13 @@ const JR_PNOME = {
       (JRN.atu = null),
       (JRN.plist = ["A", "B1", "B2", "C"]),
       jrPinta());
+    const wd978 = setTimeout(() => {
+      if (JRN.seq === seq978 && JRN.busy) {
+        JRN.busy = 0;
+        JRN.err = "A conexão demorou para responder. Toque em ↻ Atualizar para tentar de novo.";
+        jrPinta();
+      }
+    }, 95e3);
     const t = setInterval(() => {
       const a = document.querySelector("#jrbox .jrvaz[data-esp]");
       a && (a.innerHTML = jrEsperaTx());
@@ -3485,9 +3496,21 @@ const JR_PNOME = {
           : JRN.auto &&
             (JRN.err += " Toque em ↻ Atualizar para tentar de novo."));
     } finally {
-      (clearInterval(t), (JRN.busy = 0), jrPinta());
+      (clearTimeout(wd978), clearInterval(t), JRN.seq === seq978 && (JRN.busy = 0), jrPinta());
     }
   }));
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && typeof tab !== "undefined" && tab === "mercado" && MKT?.tab === "jr") {
+    if (JRN.busy && Date.now() - (JRN.t0 || 0) > 25e3) {
+      JRN.busy = 0;
+    }
+    const kNow = typeof jrAgoraK === "function" ? jrAgoraK() : "";
+    if (kNow && JRN.v && JRN.v.dia + JRN.v.edicao !== kNow && !JRN.busy) {
+      delete JRN.tent[kNow];
+      jrCarrega(!1);
+    }
+  }
+});
 function jrPartesLinha() {
   return (JRN.plist || ["A", "B1", "B2", "C"])
     .map(

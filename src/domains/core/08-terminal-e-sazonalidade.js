@@ -2073,18 +2073,23 @@ const FE = {
   busy: 0,
   err: "",
 };
-async function feCarrega() {
-  if (FE.busy || Date.now()-FE.ts<3600000 || !document.getElementById('febox') || document.hidden || window.DIARIO_DEMO) return;
+async function feCarrega(force) {
+  if (FE.busy || (!force && Date.now()-FE.ts<600000) || !document.getElementById('febox') || document.hidden || window.DIARIO_DEMO) return;
   if (!window.DiarioPublico) return;
   FE.busy=1;FE.abort?.abort();const controller=new AbortController();FE.abort=controller;
   try {
-    const data=await window.DiarioPublico.get('/v1/fluxo',{signal:controller.signal,ttl:3600000});
+    const data=await window.DiarioPublico.get('/v1/fluxo',{signal:controller.signal,ttl:force?0:600000,force:!!force});
     if(controller.signal.aborted)return;
     if(!data.ultimo||!Array.isArray(data.linhas))throw Error('Fluxo público sem dados verificáveis.');
     FE.v=data;FE.err=data.desatualizado?'Snapshot de fluxo atrasado; confira a data efetiva.':'';
     try{ls.set('diario-fluxo',data);}catch(_){}
-    /* v811: fluxo × Ibovespa — BOVA11 (ETF que replica o índice) como referencial de fechamento. */
-    try{const s=await window.DiarioTecnico?.serie?.('BOVA11','br');if(s&&!controller.signal.aborted)FE.ibov=s;}catch(_){FE.ibov=null;}
+    /* v978: fluxo × Ibovespa — tenta BOVA11 e cai para IBOV/^BVSP caso BOVA11 não esteja no cache. */
+    try{
+      let s=await window.DiarioTecnico?.serie?.('BOVA11','br');
+      if(!s?.closes?.length) s=await window.DiarioTecnico?.serie?.('IBOV','br');
+      if(!s?.closes?.length) s=await window.DiarioTecnico?.serie?.('^BVSP','br');
+      if(s&&!controller.signal.aborted)FE.ibov=s;
+    }catch(_){FE.ibov=null;}
   }catch(e){if(e.name!=='AbortError')FE.err=String(e.message||e);}
   finally{FE.busy=0;if(!controller.signal.aborted){FE.ts=Date.now();const el=document.getElementById('febox');if(el)el.outerHTML=feHtml();}}
 }
@@ -2108,7 +2113,7 @@ const feMi = (e) => {
 function feHtml() {
   const e = FE.v;
   if (!e)
-    return `<div class="card" id="febox" style="margin-bottom:10px"><b>🌎 Fluxo estrangeiro na B3</b><div class="sm ${FE.err ? "am" : "mut"}" style="margin-top:4px">${esc(FE.err || "Carregando…")}</div></div>`;
+    return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><button type="button" class="btn s" data-fe-rf="1" style="padding:2px 8px">${FE.busy ? "…" : "↻"}</button></div><div class="sm ${FE.err ? "am" : "mut"}" style="margin-top:4px">${esc(FE.err || "Carregando…")}</div></div>`;
   const interpretation=window.DiarioInterpretacao?.flow(e.linhas||[]);
   const t = e.ultimo,
     a = (n) => (n > 0 ? "g" : n < 0 ? "r" : "mut"),
@@ -2121,15 +2126,24 @@ function feHtml() {
           `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="height:44px;width:100%;display:flex;flex-direction:column;justify-content:${n.est >= 0 ? "flex-end" : "flex-start"}"><div style="height:${Math.max(2, Math.round((22 * Math.abs(n.est)) / o))}px;background:${n.est >= 0 ? "var(--g,#2e8b5d)" : "var(--r,#dc3e26)"};border-radius:2px;${n.est >= 0 ? "margin-bottom:22px" : "margin-top:22px"}"></div></div><span style="font-size:9.5px" class="mut">${feDia(n.d)}</span></div>`,
       )
       .join("");
-  return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><span class="sm mut">${feDia(t.d)}</span></div>
+  return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><span style="display:flex;align-items:center;gap:6px"><span class="sm mut">${feDia(t.d)}</span><button type="button" class="btn s" data-fe-rf="1" style="padding:2px 8px" aria-label="Atualizar fluxo estrangeiro">${FE.busy ? "…" : "↻"}</button></span></div>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:6px 0"><div><div class="sm mut">No dia</div><b class="${a(t.est)}" style="font-size:18px">${feMi(t.est)}</b></div><div><div class="sm mut">No mês (${e.dias_no_mes} pregões)</div><b class="${a(e.mes)}" style="font-size:18px">${feMi(e.mes)}</b></div><div><div class="sm mut">Sequência</div><b>${e.dias_seguidos} dia(s) de ${esc(e.sentido)}</b></div></div>
 <div style="display:flex;gap:3px;align-items:stretch;margin:6px 0 2px">${s}</div>
 <div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div>${(()=>{const dv=FE.ibov&&window.DiarioInterpretacao?.flowDivergence?.(e.linhas||[],FE.ibov.closes,'BOVA11');if(!dv)return '<p class="sm mut">Fluxo × Ibovespa: referencial do índice indisponível no momento.</p>';const w=dv.windows.map(x=>x.k+' pregões: fluxo '+feMi(x.flow)+' · índice '+(x.ret>0?'+':'')+x.ret.toLocaleString('pt-BR',{maximumFractionDigits:2})+'%').join(' · ');return '<p class="sm"><b>Fluxo × Ibovespa</b> (BOVA11 como referencial, mesmas datas). '+esc(dv.text)+'</p>'+(w?'<p class="sm mut">'+esc(w)+'</p>':'');})()}<p class="sm">${esc(interpretation?.text||"Histórico insuficiente para interpretar tendência.")}</p><div class="sm mut">5 / 10 / 20 pregões: ${[5,10,20].map(n=>interpretation?.windows[n]==null?"N/D":feMi(interpretation.windows[n])).join(" · ")} · ${esc(FE.err||"")}</div></div>`;
 }
+document.addEventListener("click", (ev) => {
+  if (ev.target.closest?.("[data-fe-rf]")) {
+    ev.preventDefault();
+    feCarrega(true);
+  }
+});
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && document.getElementById("febox")) feCarrega(false);
+});
 {
   const e = vPainelMk;
   vPainelMk = function () {
-    return (setTimeout(feCarrega, 0), feHtml() + e.apply(this, arguments));
+    return (setTimeout(() => feCarrega(false), 0), feHtml() + e.apply(this, arguments));
   };
 }
 {

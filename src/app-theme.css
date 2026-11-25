@@ -7171,3 +7171,62 @@ html:root:root:root[data-v427-tema="claro"] .dt976-q15-seg button.on{
 html:root:root:root[data-v427-tema="claro"] .dt976-q15-card input{
  background:#ffffff;border-color:rgba(15,23,42,.18);color:#0f172a
 }
+
+/* === v978: Mapa por Dia da Semana 3D + Radar de Gatilhos em Trades (Escuro e Claro) === */
+.dt978-dow,.dt978-radar{
+ border-radius:22px;padding:15px;position:relative;overflow:hidden;
+ background:linear-gradient(155deg,rgba(255,255,255,.075),rgba(16,24,38,.9) 55%,rgba(10,16,28,.96));
+ border:1px solid rgba(255,255,255,.11);font-variant-numeric:tabular-nums;
+ box-shadow:0 16px 34px rgba(0,0,0,.42),inset 0 1.5px 0 rgba(255,255,255,.16)
+}
+.dt978-dow-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:10px}
+.dt978-dow-c{
+ border-radius:14px;padding:9px 5px;text-align:center;
+ background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(11,17,28,.86));
+ border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;gap:3px
+}
+.dt978-dow-c.best{border-color:rgba(52,211,153,.52);background:linear-gradient(160deg,rgba(16,185,129,.2),rgba(6,78,59,.45))}
+.dt978-dow-c.worst{border-color:rgba(251,113,133,.5);background:linear-gradient(160deg,rgba(244,63,94,.18),rgba(136,19,55,.42))}
+.dt978-dow-c span{font-size:.68rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#94a3b8}
+.dt978-dow-c b{font-size:.78rem;font-weight:800;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dt978-dow-c b.v-pos{color:#34d399}
+.dt978-dow-c b.v-neg{color:#fb7185}
+.dt978-dow-c small{font-size:.62rem;color:#94a3b8}
+.dt978-radar > summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dt978-radar > summary::-webkit-details-marker{display:none}
+.dt978-radar-form{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;margin-top:10px}
+.dt978-radar-form input,.dt978-radar-form select{
+ width:100%;border-radius:11px;padding:8px 9px;font-size:.82rem;font-weight:700;
+ background:rgba(8,13,22,.84);border:1px solid rgba(255,255,255,.14);color:#f8fafc
+}
+.dt978-radar-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.dt978-radar-row{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:13px;
+ background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09)
+}
+.dt978-radar-row b{font-size:.86rem;color:#f8fafc}
+.dt978-radar-row small{display:block;font-size:.7rem;color:#94a3b8}
+.dt978-radar-del{
+ width:28px;height:28px;border-radius:9px;border:1px solid rgba(255,255,255,.12);
+ background:rgba(255,255,255,.06);color:#cbd5e1;cursor:pointer;flex-shrink:0
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-dow,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar{
+ background:linear-gradient(155deg,#ffffff,#f4f7fc 58%,#ebf1fa);
+ border-color:rgba(15,23,42,.11);color:#0f172a;
+ box-shadow:0 12px 26px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-dow-c{background:#f8fafc;border-color:rgba(15,23,42,.1)}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-dow-c.best{background:#d1fae5;border-color:#34d399}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-dow-c.worst{background:#ffe4e6;border-color:#fb7185}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-dow-c b,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-row b{color:#0f172a}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-dow-c b.v-pos{color:#047857}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-dow-c b.v-neg{color:#be123c}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-dow-c span,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-dow-c small,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-row small{color:#475569}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-form input,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-form select{background:#ffffff;border-color:rgba(15,23,42,.16);color:#0f172a}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-row{background:#f8fafc;border-color:rgba(15,23,42,.1)}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-del{background:#f1f5f9;border-color:rgba(15,23,42,.14);color:#334155}

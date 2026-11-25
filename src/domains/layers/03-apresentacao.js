@@ -1008,7 +1008,7 @@ try {
           'Central Áurea <span class="v4-iachip">IA</span>',
           st("Perguntar à IA", 'data-v4ia="1"'),
           `<div class="dt975-ia-acts">
-            <button type="button" class="dt975-pill-gold" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('schwartz','Briefing 30s · Áurea',window.__dt975Brief30Prompt)">✦ Briefing 30s</button>
+            <button type="button" class="dt975-pill-gold" data-dt978-ia="brief30">✦ Briefing 30s</button>
             <button type="button" class="dt975-pill-glass" data-v4mkt="jr">📰 Radar da Mesa</button>
           </div>
           <div data-intel-content class="sm"></div><details style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px"><summary class="mut sm" style="cursor:pointer;font-weight:600">Atalhos rápidos (Terminal, Risco e Estatísticas)</summary><div class="v4-ia" style="margin-top:8px"><div class="v4-ialist">
@@ -1685,8 +1685,8 @@ try {
           <div class="dt974-fech60-top"><span>✦ FECHAMENTO INTELIGENTE · 60S</span><b>${plTxt}</b></div>
           <p class="sm mut" style="margin:4px 0 8px">${nTr} trade(s) · acerto ${wr} · emocional ${emoTxt}${jrnMan ? ` · Jornal: “${b(jrnMan.slice(0, 68))}${jrnMan.length > 68 ? "…" : ""}”` : ""}</p>
           <div class="dt974-fech60-acts">
-            <button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('munger','Fechamento 60s · Munger',window.__dt974Fech60Prompt)">✦ Diagnóstico 60s (Áurea)</button>
-            <button type="button" class="btn s" onclick="window.DiarioCapas561?.abrir?.(4)">🖼️ Card Meu Fechamento</button>
+            <button type="button" class="btn s" data-dt978-ia="fech60">✦ Diagnóstico 60s (Áurea)</button>
+            <button type="button" class="btn s" data-dt978-capa="4">🖼️ Card Meu Fechamento</button>
           </div>
         </section>`;
       })();
@@ -1923,7 +1923,7 @@ try {
           nErros > 0 ? `Trades com erro/fora da regra: ${nErros} (${j(plErros)}); sem eles P&L seria ${j(plTotal - plErros)}` : "Sem erros marcados."
         ].filter(Boolean).join("\n");
         window.__dt950RxPrompt = "Analise este Raio-X de execução de trades no Profit, aponte exatamente onde o dinheiro está vazando e proponha 3 regras curtas e objetivas para colocar no Checklist (sem citar livros nem clichês):\n" + resumoIA950;
-        const btnIA = `<div style="margin-top:10px"><button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('munger','Diagnóstico de Execução',window.__dt950RxPrompt)" style="font-size:12.5px;min-height:40px">✦ Diagnosticar sangramento com Munger</button></div>`;
+        const btnIA = `<div style="margin-top:10px"><button type="button" class="btn s" data-dt978-ia="rx" style="font-size:12.5px;min-height:40px">✦ Diagnosticar sangramento com Munger</button></div>`;
         return `<details class="v4-card" style="margin-top:12px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🩸 Raio-X de Sangramento (${todos.length} trades)</summary><div style="margin-top:10px">${alertaFx}${fxAtivas.length ? `<div class="sm mut" style="margin-bottom:4px">Por faixa de horário</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Horário</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${fxAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${ordAtivas.length ? `<div class="sm mut" style="margin:10px 0 4px">Por ordem no dia (overtrading)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Sequência</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${ordAtivas.map(linhaTab).join("")}</tbody></table></div>` : ""}${custoErro}${btnIA}</div></details>`;
       })();
       /* v959: Matriz Humor × Dinheiro + Placar de Disciplina (Seguir Plano vs Quebrar Regra) + Revisão Semanal com a Áurea. */
@@ -1985,11 +1985,40 @@ try {
           topSetups.length ? "Principais setups: " + topSetups.map((x) => `${x.k}: ${j(x.pl)} (${x.n} trades, ${Math.round((x.w / x.n) * 100)}% acerto)`).join(" | ") : "",
         ].filter(Boolean).join("\n");
         window.__dt959SemPrompt = "Faça o fechamento semanal executivo deste trader em 4 blocos curtos e diretos (1. Onde ganhou dinheiro · 2. Onde sangrou · 3. Impacto real do emocional e da disciplina · 4. 1 regra prática de ouro para segunda-feira), usando apenas estes números, sem citar livros nem frases genéricas:\n" + resumoSem;
-        const btnSem = `<div style="margin-top:10px"><button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('carteira','Revisão Semanal · Áurea',window.__dt959SemPrompt)" style="font-size:12.5px;min-height:40px">✦ Fechar Semana com a Áurea (${sem.n} trades / 7d)</button></div>`;
+        const btnSem = `<div style="margin-top:10px"><button type="button" class="btn s" data-dt978-ia="sem" style="font-size:12.5px;min-height:40px">✦ Fechar Semana com a Áurea (${sem.n} trades / 7d)</button></div>`;
         return `<details class="v4-card" style="margin-top:10px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🧠 Disciplina, Humor × Dinheiro &amp; Revisão Semanal</summary><div style="margin-top:10px">${hAtivos.length ? `<div class="sm mut" style="margin-bottom:4px">Humor do Checklist × Resultado (R$)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Estado emocional</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${hAtivos.map(ln).join("")}</tbody></table></div>` : '<p class="sm mut" style="margin:0 0 8px">Conclua o checklist matinal com sua nota emocional (1–5) para cruzar seu humor com o resultado financeiro.</p>'}${dAtivos.length ? `<div class="sm mut" style="margin:10px 0 4px">Seguir o Plano × Quebrar Regra</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Disciplina</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${dAtivos.map(ln).join("")}</tbody></table></div>` : ""}${topSetups.length ? `<div class="sm mut" style="margin:10px 0 4px">Placar por Setup (Playbook)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Setup</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${topSetups.map(ln).join("")}</tbody></table></div>` : ""}${btnSem}</div></details>`;
       })();
-      /* v975: Trades Liquid Glass 3D — Hero P&L + Guardião no topo, Trades de hoje em destaque, posições abertas, Raio-X e Revisão. */
-      return `<div class="v4-page v4-ops v829-ops dt975-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${e.length ? $ + Y : Y + $}${rx940}${psico959}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
+      /* v978: Radar de Gatilhos / Níveis do Dia (distância ao vivo para níveis planejados). */
+      const radar978 = (() => {
+        let itens = [];
+        try { itens = JSON.parse(localStorage.getItem("dt978-gatilhos") || "[]"); } catch {}
+        if (!Array.isArray(itens)) itens = [];
+        const rows = itens.map((g0, idx) => {
+          const px = Wt(g0.tk);
+          const alvo = Number(g0.px);
+          let distTxt = "Sem cotação ao vivo";
+          let tom = "mut";
+          if (px != null && Number.isFinite(alvo) && alvo > 0) {
+            const dif = alvo - px;
+            const pct = (dif / px) * 100;
+            const perto = Math.abs(pct) <= 0.35;
+            tom = perto ? "v-pos" : dif > 0 ? "v-pos" : "v-neg";
+            distTxt = `${perto ? "⚡ NA ZONA · " : ""}Atual ${q(px)} · ${dif >= 0 ? "+" : ""}${Math.abs(alvo) >= 1000 ? Math.round(dif) + " pts" : _(dif, 2)} (${pct >= 0 ? "+" : ""}${_(pct, 2)}%)`;
+          }
+          return `<div class="dt978-radar-row"><div><b>${b(g0.tk)} · ${q(alvo)} <span class="sm mut">(${b(g0.tipo || "Nível")})</span></b><small class="${tom}">${distTxt}</small></div><button type="button" class="dt978-radar-del" data-dt978-rdel="${idx}" aria-label="Remover nível">✕</button></div>`;
+        }).join("");
+        return `<details class="v4-card dt978-radar" style="margin-top:10px"${itens.length ? " open" : ""}>
+          <summary><span class="dt975-kicker">🎯 RADAR DE GATILHOS DO DIA</span><span class="sm mut">${itens.length} nível(is)</span></summary>
+          <div class="dt978-radar-form">
+            <input type="text" id="dt978-rtk" placeholder="Ativo (WIN, PETR4)" autocapitalize="characters">
+            <input type="number" step="any" inputmode="decimal" id="dt978-rpx" placeholder="Preço-alvo">
+            <button type="button" class="dt975-btn-gold" style="padding:8px 12px" data-dt978-radd="1">+ Nível</button>
+          </div>
+          ${rows ? `<div class="dt978-radar-list">${rows}</div>` : '<p class="sm mut" style="margin:8px 0 0">Anote até 6 suportes, resistências ou gatilhos do pregão para acompanhar a distância em tempo real.</p>'}
+        </details>`;
+      })();
+      /* v975/v978: Trades Liquid Glass 3D — Hero P&L + Guardião no topo, Trades de hoje em destaque, Radar de Gatilhos, posições abertas, Raio-X e Revisão. */
+      return `<div class="v4-page v4-ops v829-ops dt975-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${e.length ? $ + Y : Y + $}${radar978}${rx940}${psico959}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
     }
     let mt = "3M",
       kt = !1;
@@ -2271,7 +2300,40 @@ try {
             </div>
           </details>`;
         })();
-      return `<div class="v4-page v4-journal dt976-stats">${perfHero976}${cal976}${y}${play976}${sim976}${h}${Z}${H}<div class="v4-two">${ot}${x}</div><button type="button" class="v4-cta" data-v4deb="1">${p("book", 22)} Registrar revisão</button></div>`;
+        dow978 = (() => {
+          const dias = [
+            { idx: 1, k: "Seg", n: 0, w: 0, pl: 0 },
+            { idx: 2, k: "Ter", n: 0, w: 0, pl: 0 },
+            { idx: 3, k: "Qua", n: 0, w: 0, pl: 0 },
+            { idx: 4, k: "Qui", n: 0, w: 0, pl: 0 },
+            { idx: 5, k: "Sex", n: 0, w: 0, pl: 0 },
+          ];
+          todosP.forEach((m) => {
+            const dStr = nt(m);
+            if (!dStr) return;
+            const dw = new Date(dStr + "T12:00:00").getDay();
+            const sl = dias.find((x0) => x0.idx === dw);
+            if (!sl) return;
+            const v0 = R(m) || 0;
+            sl.n++;
+            if (v0 > 0) sl.w++;
+            sl.pl += v0;
+          });
+          const comDados = dias.filter((x0) => x0.n > 0);
+          if (!comDados.length) return "";
+          const best = comDados.slice().sort((a0, b0) => b0.pl - a0.pl)[0];
+          const worst = comDados.slice().sort((a0, b0) => a0.pl - b0.pl)[0];
+          const curtV = (v0) => (v0 === 0 ? "R$ 0" : (v0 > 0 ? "+" : "−") + (Math.abs(v0) >= 1000 ? (Math.abs(v0) / 1000).toFixed(1) + "k" : Math.round(Math.abs(v0))));
+          return `<section class="v4-card dt978-dow" aria-label="Desempenho por dia da semana">
+            <div class="dt975-ops-top"><span class="dt975-kicker">MAPA POR DIA DA SEMANA</span><span class="sm mut">${best && best.pl > 0 ? `★ ${best.k}` : ""}${worst && worst.pl < 0 ? ` · ⚠ ${worst.k}` : ""}</span></div>
+            <div class="dt978-dow-grid">${dias.map((d0) => {
+              const cls = d0 === best && d0.pl > 0 ? " best" : d0 === worst && d0.pl < 0 ? " worst" : "";
+              const wr0 = d0.n ? Math.round((d0.w / d0.n) * 100) + "%" : "—";
+              return `<div class="dt978-dow-c${cls}"><span>${d0.k}</span><b class="${d0.n ? L(d0.pl) : ""}">${d0.n ? curtV(d0.pl) : "—"}</b><small>${d0.n}t · ${wr0}</small></div>`;
+            }).join("")}</div>
+          </section>`;
+        })();
+      return `<div class="v4-page v4-journal dt976-stats">${perfHero976}${cal976}${y}${play976}${dow978}${sim976}${h}${Z}${H}<div class="v4-two">${ot}${x}</div><button type="button" class="v4-cta" data-v4deb="1">${p("book", 22)} Registrar revisão</button></div>`;
     }
     /* v976: Handlers leves de Mapa de Calor, Simulador de Capital Próprio e Registro 15s (zero polling, zero MutationObserver). */
     function dt976CalcSim(rootSim) {
@@ -2420,6 +2482,61 @@ try {
         ev.preventDefault();
         if (typeof window.DiarioConselhoIA === "function") {
           window.DiarioConselhoIA("munger", "Auditoria 30 dias · Munger", window.__dt976Aud30Prompt || "");
+        }
+        return;
+      }
+      const ia978 = ev.target.closest?.("[data-dt978-ia]");
+      if (ia978) {
+        ev.preventDefault();
+        const k = ia978.dataset.dt978Ia;
+        const mapIa = {
+          brief30: ["schwartz", "Briefing 30s · Áurea", window.__dt975Brief30Prompt],
+          fech60: ["munger", "Fechamento 60s · Munger", window.__dt974Fech60Prompt],
+          rx: ["munger", "Diagnóstico de Execução", window.__dt950RxPrompt],
+          sem: ["carteira", "Revisão Semanal · Áurea", window.__dt959SemPrompt],
+        };
+        const cfgIa = mapIa[k];
+        if (cfgIa && typeof window.DiarioConselhoIA === "function") {
+          window.DiarioConselhoIA(cfgIa[0], cfgIa[1], cfgIa[2] || "");
+        }
+        return;
+      }
+      const capa978 = ev.target.closest?.("[data-dt978-capa]");
+      if (capa978) {
+        ev.preventDefault();
+        window.DiarioCapas561?.abrir?.(Number(capa978.dataset.dt978Capa || 4));
+        return;
+      }
+      if (ev.target.closest?.("[data-tr-inst]")) {
+        ev.preventDefault();
+        if (typeof window.trInstalar === "function") window.trInstalar();
+        return;
+      }
+      if (ev.target.closest?.("[data-dt978-radd]")) {
+        ev.preventDefault();
+        const tk = String(v.getElementById("dt978-rtk")?.value || "").trim().toUpperCase();
+        const px = Number(String(v.getElementById("dt978-rpx")?.value || "").replace(",", ".").trim());
+        if (!tk || !Number.isFinite(px) || px <= 0) { f(() => toast?.("Informe ativo e preço-alvo válidos.")); return; }
+        let itens = [];
+        try { itens = JSON.parse(localStorage.getItem("dt978-gatilhos") || "[]"); } catch {}
+        if (!Array.isArray(itens)) itens = [];
+        const pxNow = Wt(tk);
+        const tipo = pxNow != null ? (px > pxNow ? "Resistência" : "Suporte") : "Gatilho";
+        itens = [{ tk, px, tipo }, ...itens.filter((x0) => !(x0.tk === tk && Number(x0.px) === px))].slice(0, 6);
+        try { localStorage.setItem("dt978-gatilhos", JSON.stringify(itens)); } catch {}
+        xt();
+        return;
+      }
+      const rDel = ev.target.closest?.("[data-dt978-rdel]");
+      if (rDel) {
+        ev.preventDefault();
+        const idx = Number(rDel.dataset.dt978Rdel);
+        let itens = [];
+        try { itens = JSON.parse(localStorage.getItem("dt978-gatilhos") || "[]"); } catch {}
+        if (Array.isArray(itens) && idx >= 0 && idx < itens.length) {
+          itens.splice(idx, 1);
+          try { localStorage.setItem("dt978-gatilhos", JSON.stringify(itens)); } catch {}
+          xt();
         }
         return;
       }
