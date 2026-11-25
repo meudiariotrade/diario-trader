@@ -1156,13 +1156,13 @@ try {
           },
           {
             id: "diario",
-            name: "Meu dia",
+            name: "Rotina",
             icon: "book",
-            description: "Preparação, registro e revisão",
+            description: "Preparação, checklist e revisão",
             items: [
-              ["dia:ed", "Meu dia e checklist"],
-              ["ops:historico", "Histórico de operações"],
-              ["regras", "Minhas regras"],
+              ["dia:ed", "Rotina e checklist"],
+              ["ops:historico", "Histórico de trades"],
+              ["regras", "Minhas regras e trava"],
             ],
           },
           {
@@ -1174,11 +1174,11 @@ try {
           },
           {
             id: "operacoes",
-            name: "Operações",
+            name: "Trades",
             icon: "chart",
-            description: "Modalidades e desempenho",
+            description: "Modalidades, registro e desempenho",
             items: [
-              ["ops", "Todas as modalidades"],
+              ["ops", "Todos os trades"],
               ["ops:desempenho", "Desempenho"],
               ["rev", "Revisão da semana"],
             ],
