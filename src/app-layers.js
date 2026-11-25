@@ -47285,15 +47285,7 @@ s.textContent += `
   }
   function lista(now = Date.now()) {
     const a = [];
-    // v925: o termômetro usa EWZ da mesma fonte do Início e da fita.
-    try {
-      const q=w.tapeVivo?.("EWZ"), ts=stamp(q?.dadoEm);
-      const atual=num(q?.px), variacao=num(q?.chg);
-      if(atual!==null&&atual>0&&variacao!==null&&ts!==null)
-        a.push({item:{s:"EWZ",px:atual,d1:variacao,em:q.dadoEm},
-          coleta:ts,grupo:"ewz-canonico"});
-    }catch{}
-    // v928: lê /v1/mercado já em memória no DiarioPublico (Cloudflare, zero nova requisição).
+    // v984: prioriza /v1/mercado (mesmo snapshot unificado do Fechamento) antes do tape avulso para não misturar fontes.
     try {
       const pub = w.DiarioPublico?.peek?.("/v1/mercado");
       if (pub?.mercados?.grupos) {
@@ -47303,6 +47295,14 @@ s.textContent += `
         }
       }
     } catch {}
+    // Fallback EWZ da fita caso /v1/mercado ainda não tenha carregado.
+    try {
+      const q=w.tapeVivo?.("EWZ"), ts=stamp(q?.dadoEm);
+      const atual=num(q?.px), variacao=num(q?.chg);
+      if(atual!==null&&atual>0&&variacao!==null&&ts!==null)
+        a.push({item:{s:"EWZ",px:atual,d1:variacao,em:q.dadoEm},
+          coleta:ts,grupo:"ewz-canonico"});
+    }catch{}
     try {
       if (typeof FH !== "undefined" && FH?.q) {
         for (const [k, q] of Object.entries(FH.q)) {
@@ -47369,6 +47369,15 @@ s.textContent += `
   const diaBrt = date => new Intl.DateTimeFormat("en-CA", {timeZone:"America/Sao_Paulo", year:"numeric",month:"2-digit",day:"2-digit"}).format(date);
   const horaBrt = date => Number(new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",hourCycle:"h23"}).format(date));
   function fechamento(tipo, fontes, now) {
+    const hBrt = horaBrt(new Date(now));
+    // v984: após o fechamento da B3 (18h BRT), o fechamento de referência para o próximo pregão é o próprio px de hoje.
+    if (hBrt >= 18) {
+      for (const f of fontes) {
+        if (!combina(tipo, f.item) || !valido(f.item, f.coleta, now)) continue;
+        const px = num(f.item.px ?? f.item.ult ?? f.item.preco);
+        if (px !== null && px > 0) return px;
+      }
+    }
     // O fechamento informado pela fonte tem prioridade; senão, reconstituir só de
     // cotação com percentual diário verificável ou de último preço pré-abertura.
     for (const f of fontes) {
@@ -47388,7 +47397,7 @@ s.textContent += `
       if (item.fechado === true) return px;
       const d = pct(item);
       // Com cotação do dia e variação relativa ao fechamento anterior.
-      if (d !== null && 1 + d / 100 > 0 && (em === null || diaBrt(new Date(em)) === diaBrt(new Date(now))) && horaBrt(new Date(now)) >= 9) return px / (1 + d / 100);
+      if (d !== null && 1 + d / 100 > 0 && (em === null || diaBrt(new Date(em)) === diaBrt(new Date(now))) && hBrt >= 9) return px / (1 + d / 100);
     }
     return null;
   }
