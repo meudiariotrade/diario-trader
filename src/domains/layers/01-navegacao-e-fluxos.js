@@ -16289,12 +16289,23 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
             d.best?.t?.ativo &&
             q(
               b,
-              "Melhor operação: " + d.best.t.ativo,
+              "Melhor operação: " + d.best.t.ativo + (d.best?.t?.setup ? " · " + d.best.t.setup : ""),
               56,
               1158,
               23,
               r.mut,
               500,
+            ),
+          B(d.M?.pf) &&
+            d.M.pf > 0 &&
+            q(
+              b,
+              "Profit Factor: " + (d.M.pf >= 99 ? "∞" : Y(d.M.pf, 2)) + (B(d.M?.payoff) && d.M.payoff > 0 ? " · Payoff " + Y(d.M.payoff, 2) + "×" : ""),
+              56,
+              1198,
+              22,
+              r.tx,
+              600,
             ),
           f(b, "Resultado calculado com os registros e o capital informados."),
           w
@@ -16304,7 +16315,7 @@ html.au-aberto,html.au-aberto body{overflow:hidden}
   const oldOpen=shrAbre,oldClose=shrFecha;
   shrFecha=function(){generation++;current=null;if(SHR.url){URL.revokeObjectURL(SHR.url);SHR.url=null}SHR.blob=null;return oldClose.apply(this,arguments)};
   shrAbre=async function(id){
-    if(String(id).startsWith('per:')){await oldOpen.apply(this,arguments);const sh=document.querySelector('#shrov .sh');if(sh&&!sh.querySelector('.season-picker')){sh.classList.add('share-season-modal');const picker=document.createElement('section');picker.className='season-picker';picker.innerHTML='<b>Estilo do card</b><div class="season-buttons">'+M.themes.map(([v,name])=>'<button type="button" data-shrtheme="'+v+'" aria-pressed="'+(choice===v)+'">'+name+'</button>').join('')+'</div><small>'+escText(M.badge(choice,new Date(),events()))+'</small>';sh.querySelector('img')?.before(picker);picker.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{setTheme(b.dataset.shrtheme);shrAbre(id)}))}return;}
+    if(String(id).startsWith('per:')){await oldOpen.apply(this,arguments);const sh=document.querySelector('#shrov .sh');if(sh&&!sh.querySelector('.season-picker')){sh.classList.add('share-season-modal');const picker=document.createElement('section');picker.className='season-picker';picker.innerHTML='<b>Estilo do card</b><div class="season-buttons">'+M.themes.map(([v,name])=>'<button type="button" data-shrtheme="'+v+'" aria-pressed="'+(choice===v)+'">'+name+'</button>').join('')+'</div><small>'+escText(M.badge(choice,new Date(),events()))+'</small><div class="seg share-ratio" role="group" aria-label="Proporção da imagem" style="margin-top:8px">'+[['4:5','Padrão (4:5)'],['9:16','Stories (9:16)']].map(([v,name])=>'<button type="button" data-shrratio="'+v+'" class="'+(SHR.ratio===v?'on':'')+'" aria-pressed="'+(SHR.ratio===v)+'">'+name+'</button>').join('')+'</div>';sh.querySelector('img')?.before(picker);picker.querySelectorAll('[data-shrtheme]').forEach(b=>b.addEventListener('click',()=>{setTheme(b.dataset.shrtheme);shrAbre(id)}));picker.querySelectorAll('[data-shrratio]').forEach(b=>b.addEventListener('click',()=>{SHR.ratio=b.dataset.shrratio;save('diario-share-ratio',SHR.ratio);shrAbre(id)}))}return;}
     const t=shrAcha(id);if(!t)return;if(SHR.id!==id)SHR.scope='operation';SHR.id=id;current=t;
     const token=++generation;let overlay=document.getElementById('shrov');if(!overlay){overlay=document.createElement('div');overlay.id='shrov';overlay.className='ov';document.body.append(overlay)}
     document.body.style.overflow='hidden';SHR.blob=null;overlay.innerHTML='<div class="sh share-season-modal"><div class="top"><b>Imagem para compartilhar</b><button class="x" data-shrx="1" aria-label="Fechar">✕</button></div><p role="status">Gerando imagem…</p></div>';
