@@ -31314,7 +31314,7 @@ try {
       const U=window.DiarioUI;if(!U)return "";
       const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>f(()=>window.tapeVivo?.(k),null)||tape[k];
       const itens=[["^BVSP","Ibovespa"],["BRL=X","Dólar"],["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["EWZ","EWZ"],["BTC-USD","Bitcoin"]].map(([k,n])=>{
-        const v=viva(k);if(!v||!(+v.px>0))return null;const c=v.chg==null||v.chg===""?null:+v.chg;
+        const v=viva(k);if(!v||!(+v.px>0))return {rotulo:n,valor:"—",detalhe:"Cotação indisponível",tom:""};const c=v.chg==null||v.chg===""?null:+v.chg;
         return {rotulo:n,valor:q(v.px),detalhe:c==null?"variação indisponível":Q(c)+(v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
       }).filter(Boolean);
       return '<section class="v4-summary v829-kpis" aria-label="Resumo do mercado">'+(itens.length?U.kpis(itens):'<p class="v4-sub">Cotações carregando na barra superior.</p>')+'</section>';
@@ -33594,6 +33594,8 @@ try {
       if (ia978) {
         ev.preventDefault();
         const k = ia978.dataset.dt978Ia;
+        // Briefing usa o endpoint textual da própria Áurea, não a ficha de ativos do Conselho.
+        if(k==="brief30")return;
         const mapIa = {
           brief30: ["schwartz", "Briefing 30s · Áurea", window.__dt975Brief30Prompt],
           fech60: ["munger", "Fechamento 60s · Munger", window.__dt974Fech60Prompt],
