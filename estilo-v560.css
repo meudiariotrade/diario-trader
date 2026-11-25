@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 f7deb480b8a496e365404b6736339ff721e15bb6071646b1b7977c72c5dd8afa */
+/* Gerado de src/app-theme.css · SHA256 35542619e2f062e6a2e53fbd3c86ca3fd4f1622f7348087b39fec33e623eb000 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7231,3 +7231,54 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-form input,
 html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-form select{background:#ffffff;border-color:rgba(15,23,42,.16);color:#0f172a}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-row{background:#f8fafc;border-color:rgba(15,23,42,.1)}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt978-radar-del{background:#f1f5f9;border-color:rgba(15,23,42,.14);color:#334155}
+/* v980: Visual 100% uniforme Liquid Glass 3D (Escuro & Claro) nas telas secundárias e legadas */
+#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) :is(.card,.bx,.box,.tbw,.tblw,.setcard,.cnt-card,.cr-card,.al-card,.lab-card,details.card){
+ border-radius:20px;
+ background:linear-gradient(155deg,rgba(255,255,255,.07),rgba(15,23,37,.9) 55%,rgba(10,16,28,.96));
+ border:1px solid rgba(255,255,255,.11);
+ box-shadow:0 14px 30px rgba(0,0,0,.38),inset 0 1.5px 0 rgba(255,255,255,.16);
+ animation:none!important
+}
+#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) :is(.k,.kpi,.st,.srow){
+ border-radius:15px;
+ background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(15,23,42,.74));
+ border:1px solid rgba(255,255,255,.09);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+ font-variant-numeric:tabular-nums
+}
+#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) :is(table,.num,.v,strong,b){
+ font-variant-numeric:tabular-nums
+}
+#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea){
+ border-radius:12px;
+ background:rgba(8,13,22,.84);
+ border:1px solid rgba(255,255,255,.14);
+ color:#f8fafc
+}
+#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) :is(.btn,.bt,button.p,button.pri){
+ border-radius:13px;min-height:40px;font-weight:700
+}
+#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) :is(.btn.pri,.btn.p,button.pri,button.p){
+ background:linear-gradient(135deg,#e5c57f,#b8863a);color:#141008;border:none;
+ box-shadow:0 8px 18px rgba(184,134,58,.28),inset 0 1px 0 rgba(255,255,255,.5)
+}
+#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) .tbc{
+ border-radius:16px;padding:4px;background:rgba(15,23,42,.72);
+ border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
+}
+html:root:root:root[data-v427-tema="claro"] #app#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) :is(.card,.bx,.box,.tbw,.tblw,.setcard,.cnt-card,.cr-card,.al-card,.lab-card,details.card){
+ background:linear-gradient(155deg,#ffffff,#f4f7fc 58%,#ebf1fa);
+ border-color:rgba(15,23,42,.11);color:#0f172a;
+ box-shadow:0 12px 26px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff
+}
+html:root:root:root[data-v427-tema="claro"] #app#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) :is(.k,.kpi,.st,.srow){
+ background:linear-gradient(160deg,#ffffff,#f1f5f9);
+ border-color:rgba(15,23,42,.1);color:#0f172a;
+ box-shadow:0 6px 14px rgba(15,23,42,.06),inset 0 1px 0 #ffffff
+}
+html:root:root:root[data-v427-tema="claro"] #app#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea){
+ background:#ffffff;border-color:rgba(15,23,42,.16);color:#0f172a
+}
+html:root:root:root[data-v427-tema="claro"] #app#app:is([data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="mais"],[data-tela="status"],[data-tela="opgrade"],[data-tela="swbt"],[data-tela="dtrpy"],[data-tela="al"],[data-tela="lab"]) .tbc{
+ background:#e2e8f0;border-color:rgba(15,23,42,.1)
+}
