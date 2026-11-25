@@ -6445,3 +6445,15 @@ html:root:root:root[data-v427-tema="claro"] #app#app #jrbox .jr971-dir.up{backgr
 html:root:root:root[data-v427-tema="claro"] #app#app #jrbox .jr971-dir.dn{background:#fee2e2!important;border-color:#fca5a5!important;color:#991b1b!important}
 html:root:root:root[data-v427-tema="claro"] #app#app #jrbox .jr971-dir.neu{background:#f1f5f9!important;border-color:#cbd5e1!important;color:#334155!important}
 html:root:root:root[data-v427-tema="claro"] #app#app #jrbox .jr971-tk{background:#f1f5f9!important;border-color:rgba(15,23,42,.1)!important;color:#334155!important}
+
+/* v972: Zero repique (frame-0) nas trocas de abas dentro de Mercado no mobile */
+@media(max-width:768px){
+ body.mkt549[data-mkt-sub="cq"] #app .cqtabs,
+ body.mkt549[data-mkt-sub="cq"] #app .market-categories,
+ body.mkt549[data-mkt-sub="nt"] #app .m406-bar,
+ body.mkt549[data-mkt-sub="jr"] #app .jr561-arte,
+ body.mkt549[data-mkt-sub="lab"] #app select[data-usasset],
+ body.mkt549[data-mkt-sub="lab"] #app select[data-usview-select]{
+  display:none!important
+ }
+}

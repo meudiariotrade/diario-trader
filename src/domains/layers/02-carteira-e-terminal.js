@@ -7742,8 +7742,13 @@ try {
     const isCotacoes = () => {
       if (!isMob() || !d.body.classList.contains("mkt549")) return false;
       const app = getApp();
-      const on = app?.querySelector(".m403-primary-tabs button.on");
-      const sub = (on?.getAttribute("data-navroute") || "").split(":")[1] || (w.MKT && w.MKT.tab) || "cq";
+      let sub = "";
+      if (typeof MKT === "object" && MKT?.tab) sub = MKT.tab;
+      else if (w.MKT?.tab) sub = w.MKT.tab;
+      else {
+        const on = app?.querySelector(".m403-primary-tabs button.on");
+        sub = (on?.getAttribute("data-navroute") || "").split(":")[1] || "cq";
+      }
       return sub === "cq" || sub === "cot";
     };
     const cleanup = () => {
@@ -8650,14 +8655,14 @@ try {
         return;
       }
       if (e.target?.closest?.("[data-m406-select], [data-m550-jornal], [data-m550-nt]")) {
-        sched(70);
+        queueMicrotask(sync);
       }
     });
 
     w.addEventListener("resize", () => sched(40));
-    d.addEventListener("diario:noticias", () => sched(40));
-    w.addEventListener("diario:render", () => sched(40));
-    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v968-nt3d", { after: () => sched(30) });
+    d.addEventListener("diario:noticias", sync);
+    w.addEventListener("diario:render", sync);
+    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v968-nt3d", { after: sync });
     if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", sync, { once: true });
     else sync();
   })(window, document);
@@ -8849,7 +8854,7 @@ try {
         if (sel && val != null) {
           sel.value = val;
           sel.dispatchEvent(new Event("change", { bubbles: true }));
-          sched(60);
+          queueMicrotask(sync);
         }
         return;
       }
@@ -8859,12 +8864,12 @@ try {
         else if (typeof w.m606Carrega === "function") w.m606Carrega(true);
         return;
       }
-      if (e.target?.closest?.("[data-usarea]")) sched(60);
+      if (e.target?.closest?.("[data-usarea]")) queueMicrotask(sync);
     });
 
     w.addEventListener("resize", () => sched(40));
-    w.addEventListener("diario:render", () => sched(40));
-    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v969-lab3d", { after: () => sched(30) });
+    w.addEventListener("diario:render", sync);
+    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v969-lab3d", { after: sync });
     if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", sync, { once: true });
     else sync();
   })(window, document);
@@ -9151,15 +9156,15 @@ try {
           b.value = tmp;
           a.dispatchEvent(new Event("input", { bubbles: true }));
           b.dispatchEvent(new Event("input", { bubbles: true }));
-          sched(40);
+          queueMicrotask(sync);
         }
         return;
       }
     });
 
     w.addEventListener("resize", () => sched(40));
-    w.addEventListener("diario:render", () => sched(40));
-    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v970-agls3d", { after: () => sched(30) });
+    w.addEventListener("diario:render", sync);
+    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v970-agls3d", { after: sync });
     if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", sync, { once: true });
     else sync();
   })(window, document);
