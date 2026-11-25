@@ -1,307 +1,896 @@
-/* v561 — Capas inteligentes do Jornal do Pregão (identidade Terminal Grafite).
- * Lê a edição do dia (manchete + matérias) e as cotações do app, escolhe o tema de cada notícia
- * (petróleo, juros, dólar, minério/aço, balanços, cripto, EUA, bolsa) e monta uma composição própria
- * com um objeto 3D desenhado em metal escovado e vidro fumê — mesma câmera e mesma luz em todos.
- * Formatos recompostos (não esticados): 4:5 (feed), 1:1 e 9:16 (stories). Opção de ocultar valores
- * pessoais em "Meu fechamento". Os dados financeiros nunca são desenhados em perspectiva.
+/* v971 — Capas Cinematográficas Inteligentes do Jornal do Pregão.
+ * Motor editorial que cruza 4 sinais reais (clima_capa da IA, impacto.direcao, semântica ponderada
+ * da manchete e cotações reais do pregão) para escolher automaticamente entre 10 cenas fotográficas
+ * cinematográficas (WebP offline no PWA) e compor capas editoriais de revista (4:5, 1:1 e 9:16).
  */
 (function (root, d) {
   'use strict';
   if (root.DiarioCapas561) return;
+
   const g = (f, v) => { try { const x = f(); return x === undefined ? v : x; } catch { return v; } };
   const FMT = { feed: [1080, 1350, '4:5'], quad: [1080, 1080, '1:1'], story: [1080, 1920, '9:16'] };
-  const C = { bg0: '#0b0c0e', bg1: '#141619', tx: '#ede9e1', tx2: '#a9a59c', tx3: '#7d7a73', amb: '#c9a15b', ambHi: '#e8cd92', up: '#3fb97c', dn: '#e8634f', line: 'rgba(255,255,255,.10)' };
+  const SANS = '"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+  const COND = '"Barlow Condensed","Arial Narrow","Helvetica Neue",system-ui,-apple-system,sans-serif';
   const SERIF = '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"DejaVu Serif",serif';
-  const SANS = 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
   const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace';
+
   const nf = (v, c) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c });
-  const pct = v => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v), 2) + '%';
-  const hoje = () => new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+  const pct = (v) => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v), 2) + '%';
+  const dataCurta = (dia) => {
+    try {
+      const dt = dia ? new Date(dia + 'T12:00:00') : new Date();
+      return dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Sao_Paulo' }).replace(/\./g, '').toUpperCase();
+    } catch { return ''; }
+  };
 
-  /* ---------------- dados ---------------- */
-  const ATIVOS = [['^BVSP', 'Ibovespa', 0], ['BRL=X', 'Dólar', 4], ['BZ=F', 'Petróleo Brent', 2], ['CL=F', 'Petróleo WTI', 2], ['TIO=F', 'Minério', 2], ['GC=F', 'Ouro', 0],
-    ['^GSPC', 'S&P 500', 0], ['^IXIC', 'Nasdaq', 0], ['ES=F', 'S&P futuro', 0], ['NQ=F', 'Nasdaq futuro', 0], ['DX-Y.NYB', 'DXY', 2], ['BTC-USD', 'Bitcoin', 0], ['^N225', 'Nikkei', 0], ['^GDAXI', 'DAX', 0]];
-  const cot = () => ATIVOS.map(([s, n, c]) => { const q = g(() => root.imgQ ? root.imgQ(s) : null, null); return q && isFinite(+q.px) ? { s, n, c, px: +q.px, d1: isFinite(+q.d1) ? +q.d1 : null } : null; }).filter(Boolean);
-  const edicao = () => g(() => root.jrVer && root.jrVer(), null) || g(() => JRN.v, null);
-  const noticias = ed => g(() => [ed.manchete, ...(ed.materias || [])].filter(x => x && x.titulo), []);
-  const TEMAS = [
-    ['petroleo', /petr[oó]le|petrobras|\bpbr\b|brent|\bwti\b|opep|combust|gasolina|diesel|prio|petr4/i, ['BZ=F', 'CL=F']],
-    ['juros', /juro|selic|copom|\bfed\b|fomc|infla[cç]|ipca|\bdi\b|treasur|t[ií]tulo|banco central|powell|galípolo/i, ['^BVSP']],
-    ['dolar', /d[oó]lar|c[aâ]mbio|real\b|\bdxy\b|moeda/i, ['BRL=X', 'DX-Y.NYB']],
-    ['aco', /min[eé]rio|vale\b|vale3|sider|a[cç]o\b|gerdau|usiminas|\bcsn\b|ggb|china|dalian/i, ['TIO=F']],
-    ['balanco', /balan[cç]o|lucro|receita|ebitda|resultado|\b[1-4]t\d{2}\b|trimestre|dividend|proventos/i, ['^BVSP']],
-    ['cripto', /bitcoin|cripto|ethereum|\bbtc\b|blockchain/i, ['BTC-USD']],
-    ['eua', /\beua\b|wall street|nasdaq|s&p|dow jones|trump|nova york|big tech|nvidia|apple/i, ['^GSPC', '^IXIC', 'ES=F', 'NQ=F']],
-    ['bolsa', /./, ['^BVSP']],
+  /* ---------------- catálogo de 10 cenas cinematográficas ---------------- */
+  const CENAS = {
+    'bolsa-alta':    { url: 'assets/capas/bolsa-alta.webp',    rotulo: 'Touro · Ritmo comprador',    focusY: 0.24, syms: ['^BVSP', 'BRL=X', '^GSPC'] },
+    'bolsa-baixa':   { url: 'assets/capas/bolsa-baixa.webp',   rotulo: 'Urso · Pressão vendedora',   focusY: 0.22, syms: ['^BVSP', 'BRL=X', '^GSPC'] },
+    'bolsa-cautela': { url: 'assets/capas/bolsa-cautela.webp', rotulo: 'Faria Lima · Cautela',       focusY: 0.28, syms: ['^BVSP', 'BRL=X', '^GSPC'] },
+    'juros':         { url: 'assets/capas/juros.webp',         rotulo: 'Juros & Política Monetária', focusY: 0.26, syms: ['^BVSP', 'BRL=X', '^GSPC'] },
+    'dolar':         { url: 'assets/capas/dolar.webp',         rotulo: 'Dólar & Fluxo Cambial',      focusY: 0.34, syms: ['BRL=X', 'DX-Y.NYB', '^BVSP'] },
+    'petroleo':      { url: 'assets/capas/petroleo.webp',      rotulo: 'Petróleo & Energia',         focusY: 0.24, syms: ['BZ=F', 'CL=F', '^BVSP'] },
+    'minerio':       { url: 'assets/capas/minerio.webp',       rotulo: 'Minério, Aço & China',       focusY: 0.28, syms: ['TIO=F', '^BVSP', 'BRL=X'] },
+    'eua':           { url: 'assets/capas/eua.webp',           rotulo: 'Wall Street & EUA',          focusY: 0.25, syms: ['^GSPC', '^IXIC', 'BRL=X'] },
+    'balancos':      { url: 'assets/capas/balancos.webp',      rotulo: 'Balanços & Corporativo B3',  focusY: 0.26, syms: ['^BVSP', 'BRL=X', '^GSPC'] },
+    'cripto':        { url: 'assets/capas/cripto.webp',        rotulo: 'Cripto & Ativos Digitais',   focusY: 0.22, syms: ['BTC-USD', '^IXIC', 'BRL=X'] },
+  };
+
+  const PALETA = {
+    baixa:   { accent: '#e03a3e', accentSoft: '#ff6b6f', glow: 'rgba(198,28,38,.34)',  tag: 'PRESSÃO VENDEDORA', bg0: '#160709', bg1: '#090608' },
+    alta:    { accent: '#dfba69', accentSoft: '#f6dc9c', glow: 'rgba(212,175,105,.28)', tag: 'RITMO COMPRADOR',  bg0: '#141109', bg1: '#08090c' },
+    cautela: { accent: '#d99b38', accentSoft: '#f2c777', glow: 'rgba(217,155,56,.24)', tag: 'MERCADO EM CAUTELA', bg0: '#11131a', bg1: '#08090c' },
+  };
+
+  /* ---------------- cache e pré-carregamento das imagens ---------------- */
+  const imgCache = new Map();
+  const imgPend = new Map();
+  function carregaCena(key) {
+    const info = CENAS[key] || CENAS['bolsa-cautela'];
+    if (imgCache.has(key)) return Promise.resolve(imgCache.get(key));
+    if (imgPend.has(key)) return imgPend.get(key);
+    const p = new Promise((resolve) => {
+      const im = new Image();
+      im.decoding = 'async';
+      im.onload = () => { imgCache.set(key, im); imgPend.delete(key); resolve(im); };
+      im.onerror = () => { imgPend.delete(key); resolve(null); };
+      im.src = info.url;
+    });
+    imgPend.set(key, p);
+    return p;
+  }
+  const imgSync = (key) => imgCache.get(key) || null;
+  function preload(keys) {
+    const list = Array.isArray(keys) && keys.length ? keys : Object.keys(CENAS);
+    return Promise.all(list.map(carregaCena));
+  }
+
+  /* ---------------- leitura de dados do Jornal e Cotações ---------------- */
+  const ATIVOS = [
+    ['^BVSP', 'Ibovespa', 0], ['BRL=X', 'Dólar', 4], ['BZ=F', 'Brent', 2], ['CL=F', 'WTI', 2],
+    ['TIO=F', 'Minério', 2], ['GC=F', 'Ouro', 0], ['^GSPC', 'S&P 500', 0], ['^IXIC', 'Nasdaq', 0],
+    ['ES=F', 'S&P Fut', 0], ['NQ=F', 'Nasdaq Fut', 0], ['DX-Y.NYB', 'DXY', 2], ['BTC-USD', 'Bitcoin', 0],
   ];
-  const tema = n => { const t = ((n && (n.titulo + ' ' + (n.editoria || '') + ' ' + (n.linha_fina || ''))) || ''); return TEMAS.find(([, re]) => re.test(t)) || TEMAS[TEMAS.length - 1]; };
+  const K_MAP = {
+    ibov: ['^BVSP', 'Ibovespa', 0], win: ['^BVSP', 'WIN', 0],
+    dolar: ['BRL=X', 'Dólar', 4], wdo: ['BRL=X', 'WDO', 2],
+    brent: ['BZ=F', 'Brent', 2], wti: ['CL=F', 'WTI', 2],
+    minerio: ['TIO=F', 'Minério', 2], ouro: ['GC=F', 'Ouro', 0],
+    sp500: ['^GSPC', 'S&P 500', 0], spx: ['^GSPC', 'S&P 500', 0],
+    nasdaq: ['^IXIC', 'Nasdaq', 0], dxy: ['DX-Y.NYB', 'DXY', 2], btc: ['BTC-USD', 'Bitcoin', 0],
+  };
 
-  /* ---------------- desenho base ---------------- */
-  function fundo(c, W, H) {
-    const gr = c.createRadialGradient(W * .72, H * .3, 20, W * .6, H * .4, Math.max(W, H) * .9);
-    gr.addColorStop(0, '#22252a'); gr.addColorStop(.5, C.bg1); gr.addColorStop(1, C.bg0);
-    c.fillStyle = gr; c.fillRect(0, 0, W, H);
-    // grão fino (identidade "papel de couro"), determinístico
-    c.save(); c.globalAlpha = .035; let s = 7;
-    for (let i = 0; i < 2400; i++) { s = (s * 16807) % 2147483647; const x = s % W; s = (s * 16807) % 2147483647; const y = s % H; c.fillStyle = i % 2 ? '#fff' : '#000'; c.fillRect(x, y, 1.4, 1.4); }
+  const edicao = () => g(() => root.jrVer && root.jrVer(), null) || g(() => JRN.v, null);
+  const noticias = (ed) => g(() => [ed.manchete, ...(ed.materias || [])].filter((x) => x && x.titulo), []);
+
+  function cot(ed) {
+    const out = [], seen = new Set();
+    const push = (s, n, c, px, d1) => {
+      if (!isFinite(+px) || seen.has(s)) return;
+      seen.add(s);
+      out.push({ s, n, c, px: +px, d1: isFinite(+d1) ? +d1 : null });
+    };
+    const e = ed || edicao();
+    const edCots = e?.snapshot?.cotacoes || e?.cotacoes || [];
+    for (const q of Array.isArray(edCots) ? edCots : []) {
+      const k = String(q.k || '').toLowerCase();
+      const hit = K_MAP[k];
+      if (hit) push(hit[0], q.n || hit[1], hit[2], q.px, q.d1);
+    }
+    for (const [s, n, c] of ATIVOS) {
+      const q = g(() => root.imgQ ? root.imgQ(s) : null, null);
+      if (q && isFinite(+q.px)) push(s, n, c, q.px, q.d1);
+    }
+    return out;
+  }
+
+  /* ---------------- motor inteligente de classificação (Tema + Clima + Direção) ---------------- */
+  const RE_BAIXA = /press[aã]o vendedora|tombo|despenca|derrete|\bcai\b|recua|queda|perde\b|suporte [aà] prova|avers[aã]o|estresse|risco fiscal|rombo|fuga|p[aâ]nico|sell[- ]?off|\bbaixa\b|pressiona|temor|alerta|crise|desaba|corrige|recess[aã]o|infla[cç][aã]o acelera|dispara juros|afunda|enfraquece|rompe suporte/i;
+  const RE_ALTA = /\brali\b|avan[cç]a|\bsobe\b|\balta\b|recorde|rompe topo|otimism|al[ií]vio|impulsiona|valoriza|supera expectativas|(?:lucro|receita|ebitda|balan[cç]o|resultado)[^.]{0,35}acima do esperado|lucro salta|corte de juros|corte na selic|apetite|recupera|ganhos|dispara(?!.*(?:juro|d[oó]lar|risco|infla))/i;
+  const RE_CAUTELA = /cautela|espera|aguarda|impasse|indefini|lateral|est[aá]vel|dividid|observa|decis[aã]o|antes do|v[eé]spera|volatilidade|incerteza|equil[ií]brio|misto|compasso/i;
+
+  const RE_BOLSA_FOCO = /ibovespa|\bibov\b|\bbolsa\b|\bb3\b|\bwin\b|mini [ií]ndice|press[aã]o vendedora|suporte [aà] prova|rali na bolsa|preg[aã]o brasileiro/i;
+  const RE_TEMAS = [
+    ['petroleo', /petr[oó]le|petrobras|\bpetr[34]\b|\bpbr\b|brent|\bwti\b|opep|opec|combust[ií]vel|gasolina|diesel|\bprio3?\b|brava energia/i, 'BZ=F'],
+    ['minerio',  /min[eé]rio|\bvale\b|\bvale3\b|sider[uú]rg|\ba[cç]o\b|gerdau|\bggbr4?\b|usiminas|\bcsn\b|csna3|dalian|ferro\b/i, 'TIO=F'],
+    ['cripto',   /bitcoin|cripto|ethereum|\bbtc\b|\beth\b|blockchain|solana/i, 'BTC-USD'],
+    ['balancos', /balan[cç]o|lucro l[ií]quido|ebitda|resultado(?:s)? do [1-4]t|\b[1-4]t2\d\b|trimestre|dividendo|jcp|provento|temporada de resultados/i, '^BVSP'],
+    ['juros',    /selic|copom|\bfed\b|fomc|juro(?:s)?|ipca|infla[cç][aã]o|\bdi\b|curva de juros|treasur|banco central|powell|gal[ií]polo|pol[ií]tica monet[aá]ria|fiscal|arcabou[cç]o|contas p[uú]blicas/i, '^BVSP'],
+    ['dolar',    /d[oó]lar|c[aâ]mbio|\bptax\b|\bwdo\b|\bdxy\b|moeda americana/i, 'BRL=X'],
+    ['eua',      /\beua\b|wall street|nasdaq|s&p\s*500|dow jones|nova york|big tech|nvidia|apple|microsoft|payroll|\bcpi\b|tarifa/i, '^GSPC'],
+  ];
+
+  function classificar(n, ed, qts) {
+    const e = ed || edicao();
+    const qs = qts || cot(e);
+    const tit = String(n?.titulo || '');
+    const edtr = String(n?.editoria || '');
+    const fina = String(n?.linha_fina || n?.por_que_importa || '');
+    const full = `${tit} ${edtr} ${fina}`;
+    const isManchete = !!(e && n && e.manchete && e.manchete.titulo === n.titulo);
+
+    // 1. Detecta o tema com pontuação ponderada (Título > Editoria > Linha-fina)
+    let temaKey = 'bolsa', anchorSym = '^BVSP', bestScore = 0;
+    const bolsaNoTitulo = RE_BOLSA_FOCO.test(tit);
+    for (const [k, re, sym] of RE_TEMAS) {
+      let sc = 0;
+      if (re.test(tit)) sc += 5;
+      if (re.test(edtr)) sc += 3;
+      if (re.test(fina)) sc += 1.5;
+      // Se o título é explicitamente sobre Ibovespa/Bolsa/Suporte/Pressão, dá preferência às cenas icônicas Touro/Urso
+      if (bolsaNoTitulo && (k === 'juros' || k === 'eua' || k === 'dolar') && sc < 6) sc *= 0.45;
+      if (sc > bestScore) { bestScore = sc; temaKey = k; anchorSym = sym; }
+    }
+    if (bestScore < 2.5) { temaKey = 'bolsa'; anchorSym = '^BVSP'; }
+
+    // 2. Detecta o clima/direção cruzando 4 sinais reais
+    let clima = '';
+    const bearTit = RE_BAIXA.test(tit), bullTit = RE_ALTA.test(tit), cautTit = RE_CAUTELA.test(tit);
+    if (temaKey === 'dolar') {
+      if (bullTit && !bearTit) clima = 'baixa';
+      else if (bearTit && !bullTit) clima = 'alta';
+    }
+    if (!clima) {
+      if (bearTit && !bullTit) clima = 'baixa';
+      else if (bullTit && !bearTit) clima = 'alta';
+      else if (cautTit && !bearTit && !bullTit) clima = 'cautela';
+    }
+
+    if (!clima && isManchete && ['alta', 'baixa', 'cautela'].includes(String(e?.clima_capa || '').toLowerCase())) {
+      clima = String(e.clima_capa).toLowerCase();
+    }
+    if (!clima) {
+      const dir = String(n?.impacto?.direcao || '').toLowerCase();
+      if (dir === 'baixa') clima = 'baixa';
+      else if (dir === 'alta') clima = 'alta';
+      else if (dir === 'misto') clima = 'cautela';
+    }
+    if (!clima) {
+      const bearFull = RE_BAIXA.test(full), bullFull = RE_ALTA.test(full);
+      if (bearFull && !bullFull) clima = 'baixa';
+      else if (bullFull && !bearFull) clima = 'alta';
+    }
+    if (!clima) {
+      const qRef = qs.find((q) => q.s === anchorSym) || qs.find((q) => q.s === '^BVSP') || qs[0];
+      if (qRef && qRef.d1 != null) {
+        if (qRef.s === 'BRL=X') clima = qRef.d1 >= 0.6 ? 'baixa' : qRef.d1 <= -0.6 ? 'alta' : 'cautela';
+        else clima = qRef.d1 <= -0.55 ? 'baixa' : qRef.d1 >= 0.55 ? 'alta' : 'cautela';
+      } else {
+        clima = 'cautela';
+      }
+    }
+
+    // 3. Mapeia para a cena WebP exata
+    const cena = temaKey === 'bolsa'
+      ? (clima === 'baixa' ? 'bolsa-baixa' : clima === 'alta' ? 'bolsa-alta' : 'bolsa-cautela')
+      : temaKey;
+
+    const info = CENAS[cena] || CENAS['bolsa-cautela'];
+    const pal = PALETA[clima] || PALETA.cautela;
+    return { cena, tema: temaKey, clima, pal, rotulo: info.rotulo, url: info.url, focusY: info.focusY, syms: info.syms };
+  }
+
+  const tema = (n) => {
+    const r = classificar(n);
+    return [r.tema, /./, r.syms, r];
+  };
+
+  /* ---------------- utilitários gráficos de revista ---------------- */
+  function roundRectPath(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.lineTo(x + w - r, y);
+    c.quadraticCurveTo(x + w, y, x + w, y + r);
+    c.lineTo(x + w, y + h - r);
+    c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    c.lineTo(x + r, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - r);
+    c.lineTo(x, y + r);
+    c.quadraticCurveTo(x, y, x + r, y);
+    c.closePath();
+  }
+
+  function drawCoverImage(c, im, x, y, w, h, focusY = 0.25) {
+    if (!im || !im.naturalWidth) return false;
+    const ir = im.naturalWidth / im.naturalHeight;
+    const tr = w / h;
+    let sw, sh, sx, sy;
+    if (ir > tr) {
+      sh = im.naturalHeight;
+      sw = sh * tr;
+      sx = (im.naturalWidth - sw) * 0.58; // favorece o sujeito no lado direito
+      sy = 0;
+    } else {
+      sw = im.naturalWidth;
+      sh = sw / tr;
+      sx = 0;
+      sy = Math.max(0, Math.min(im.naturalHeight - sh, (im.naturalHeight - sh) * focusY));
+    }
+    c.drawImage(im, sx, sy, sw, sh, x, y, w, h);
+    return true;
+  }
+
+  function fundoCena(c, W, H, cenaKey, pal, opts = {}) {
+    const info = CENAS[cenaKey] || CENAS['bolsa-cautela'];
+    const im = imgSync(cenaKey);
+    // Base dark fallback
+    const bg = c.createRadialGradient(W * 0.72, H * 0.25, 20, W * 0.5, H * 0.5, Math.max(W, H));
+    bg.addColorStop(0, pal.bg0);
+    bg.addColorStop(1, pal.bg1);
+    c.fillStyle = bg;
+    c.fillRect(0, 0, W, H);
+
+    if (im) {
+      drawCoverImage(c, im, 0, 0, W, H, opts.focusY ?? info.focusY);
+    }
+
+    // Vinheta cinematográfica superior esquerda para destacar o masthead (sem linha de corte)
+    const topL = c.createRadialGradient(W * 0.16, H * 0.12, 10, W * 0.22, H * 0.14, W * 0.78);
+    topL.addColorStop(0, 'rgba(6,8,12,.72)');
+    topL.addColorStop(0.55, 'rgba(6,8,12,.34)');
+    topL.addColorStop(1, 'rgba(6,8,12,0)');
+    c.fillStyle = topL;
+    c.fillRect(0, 0, W, H);
+
+    // Leve banho de cor emocional (crimson na baixa, ouro na alta)
+    const tint = c.createLinearGradient(0, 0, W, H * 0.65);
+    tint.addColorStop(0, pal.glow);
+    tint.addColorStop(0.55, 'rgba(0,0,0,0)');
+    c.fillStyle = tint;
+    c.fillRect(0, 0, W, H);
+
+    // Vinheta profunda na metade inferior (integração natural da manchete na cena)
+    const cutStart = opts.cutStart ?? 0.38;
+    const bot = c.createLinearGradient(0, H * cutStart, 0, H);
+    bot.addColorStop(0, 'rgba(6,8,12,0)');
+    bot.addColorStop(0.36, 'rgba(6,8,12,.56)');
+    bot.addColorStop(0.68, 'rgba(6,8,12,.88)');
+    bot.addColorStop(1, 'rgba(5,7,10,.97)');
+    c.fillStyle = bot;
+    c.fillRect(0, H * cutStart, W, H * (1 - cutStart));
+
+    // Grão cinematográfico sutil
+    c.save();
+    c.globalAlpha = 0.025;
+    let seed = 17;
+    for (let i = 0; i < 1800; i++) {
+      seed = (seed * 16807) % 2147483647;
+      const gx = seed % W;
+      seed = (seed * 16807) % 2147483647;
+      const gy = seed % H;
+      c.fillStyle = i % 2 ? '#fff' : '#000';
+      c.fillRect(gx, gy, 1.4, 1.4);
+    }
     c.restore();
   }
-  function marca(c, W, H, M, fonte) {
-    c.save(); c.translate(M + 14, M + 14); c.rotate(Math.PI / 4); c.strokeStyle = C.amb; c.lineWidth = 2.4; c.strokeRect(-12, -12, 24, 24); c.restore();
-    c.fillStyle = C.tx; c.font = `500 30px ${SERIF}`; c.textBaseline = 'middle'; c.fillText('Jornal do Pregão', M + 48, M + 15);
-    c.textAlign = 'right'; c.fillStyle = C.tx3; c.font = `400 22px ${MONO}`; c.fillText(hoje(), W - M, M + 15); c.textAlign = 'left';
-    c.textBaseline = 'alphabetic';
-    c.fillStyle = C.line; c.fillRect(M, H - M - 44, W - 2 * M, 1.5);
-    c.fillStyle = C.tx3; c.font = `400 19px ${SANS}`; c.fillText(fonte || 'Diário Trader · cotações do app com atraso · não é recomendação de investimento', M, H - M - 8);
+
+  function faseLabel(ed) {
+    const f = String(ed?.edicao || '').toLowerCase();
+    if (f === 'manha') return 'EDIÇÃO DA MANHÃ · PRÉ-PREGÃO';
+    if (f === 'meio') return 'EDIÇÃO DA TARDE · PREGÃO AO VIVO';
+    if (f === 'tarde') return 'FECHAMENTO DO PREGÃO';
+    if (f === 'fds') return 'EDIÇÃO ESPECIAL · FIM DE SEMANA';
+    return 'ANÁLISE DIÁRIA DO MERCADO';
   }
+
+  function masthead(c, W, M, pal, ed, editoria) {
+    const topY = M + 48;
+    c.save();
+    c.textAlign = 'left';
+    c.textBaseline = 'alphabetic';
+    c.shadowColor = 'rgba(0,0,0,.68)';
+    c.shadowBlur = 18;
+    c.shadowOffsetY = 3;
+
+    // Título editorial estilo revista (inspirado na estética condensada de capa)
+    c.fillStyle = '#f8fafc';
+    c.font = `900 58px ${COND}`;
+    c.fillText('JORNAL DO PREGÃO', M, topY);
+
+    c.shadowBlur = 10;
+    c.fillStyle = '#e2e8f0';
+    c.font = `500 22px ${SANS}`;
+    c.fillText(faseLabel(ed), M, topY + 32);
+
+    // Barra vertical de acento + 2 linhas de contexto editorial
+    const barY = topY + 52;
+    c.shadowBlur = 0;
+    c.fillStyle = pal.accent;
+    c.fillRect(M, barY, 4.5, 42);
+
+    c.fillStyle = '#f1f5f9';
+    c.font = `700 18px ${SANS}`;
+    c.fillText(`DIÁRIO TRADER · ${dataCurta(ed?.dia)}`, M + 16, barY + 17);
+    c.fillStyle = pal.accentSoft;
+    c.font = `700 17px ${MONO}`;
+    c.fillText(String(editoria || pal.tag).toUpperCase().slice(0, 34), M + 16, barY + 39);
+    c.restore();
+  }
+
   function quebra(c, txt, w, max) {
-    const ps = String(txt || '').split(/\s+/), ls = []; let l = '';
-    for (const p of ps) { const t = l ? l + ' ' + p : p; if (c.measureText(t).width > w && l) { ls.push(l); l = p; } else l = t; }
+    const ps = String(txt || '').trim().split(/\s+/).filter(Boolean), ls = [];
+    let l = '';
+    for (const p of ps) {
+      const t = l ? l + ' ' + p : p;
+      if (c.measureText(t).width > w && l) { ls.push(l); l = p; }
+      else l = t;
+    }
     if (l) ls.push(l);
     if (ls.length > max) { ls.length = max; ls[max - 1] = ls[max - 1].replace(/\s+\S*$/, '') + '…'; }
     return ls;
   }
-  function bloco(c, txt, x, y, w, size, max, cor, fam, peso = 500, lh = 1.12) {
-    let s = size, ls;
-    do { c.font = `${peso} ${s}px ${fam}`; ls = quebra(c, txt, w, 99); if (ls.length <= max) break; s -= 4; } while (s > size * .55);
-    ls = quebra(c, txt, w, max); c.fillStyle = cor;
-    ls.forEach((l, i) => c.fillText(l, x, y + i * s * lh));
-    return y + ls.length * s * lh;
+
+  function drawHeadline(c, txt, cx, bottomY, maxW, maxSize, minSize, maxLines, align = 'center') {
+    const clean = String(txt || '').trim().toUpperCase();
+    let s = maxSize, ls = [];
+    do {
+      c.font = `800 ${s}px ${COND}`;
+      ls = quebra(c, clean, maxW, 99);
+      if (ls.length <= maxLines) break;
+      s -= 3;
+    } while (s > minSize);
+    ls = quebra(c, clean, maxW, maxLines);
+    const lh = Math.round(s * 1.12);
+    const totalH = ls.length * lh;
+    const startY = bottomY - totalH + s;
+
+    c.save();
+    c.textAlign = align;
+    c.textBaseline = 'alphabetic';
+    const gr = c.createLinearGradient(0, startY - s, 0, bottomY + 10);
+    gr.addColorStop(0, '#ffffff');
+    gr.addColorStop(0.65, '#e5e9f0');
+    gr.addColorStop(1, '#bcc4d0');
+    c.fillStyle = gr;
+    c.shadowColor = 'rgba(0,0,0,.85)';
+    c.shadowBlur = 22;
+    c.shadowOffsetY = 4;
+    ls.forEach((line, i) => c.fillText(line, cx, startY + i * lh));
+    c.restore();
+    return { topY: startY - s, bottomY, lines: ls.length, fontSize: s };
   }
 
-  /* ---------------- objetos 3D (mesma câmera: 3/4, luz alta à esquerda) ---------------- */
-  function metal(c, x0, y0, x1, y1, tom = 0) {
-    const gr = c.createLinearGradient(x0, y0, x1, y1);
-    const a = tom ? ['#6e5326', '#e8cd92', '#9d7a3a', '#f1dca9', '#8d6c33'] : ['#2a2c31', '#8d9097', '#3d4046', '#b9bcc2', '#2f3237'];
-    a.forEach((cor, i) => gr.addColorStop(i / (a.length - 1), cor)); return gr;
-  }
-  function escovado(c, x, y, w, h, n = 60) { c.save(); c.globalAlpha = .07; c.strokeStyle = '#fff'; c.lineWidth = 1; for (let i = 0; i < n; i++) { const yy = y + (i / n) * h; c.beginPath(); c.moveTo(x, yy); c.lineTo(x + w, yy + 0.5); c.stroke(); } c.restore(); }
-  function sombra(c, cx, cy, rx, ry) { const gr = c.createRadialGradient(cx, cy, 0, cx, cy, rx); gr.addColorStop(0, 'rgba(0,0,0,.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.save(); c.scale(1, ry / rx); c.fillStyle = gr; c.beginPath(); c.arc(cx, cy * rx / ry, rx, 0, 7); c.fill(); c.restore(); }
-  // caixa isométrica (barra/lingote/monólito)
-  function caixa(c, cx, cy, w, h, dp, tomTopo = 0, tomFrente = 0, rotulo = '') {
-    const dx = dp * .75, dy = dp * .42;
-    sombra(c, cx + dx / 2, cy + h / 2 + 18, w * .9, w * .18);
-    // frente
-    c.fillStyle = metal(c, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, tomFrente); c.fillRect(cx - w / 2, cy - h / 2, w, h); escovado(c, cx - w / 2, cy - h / 2, w, h);
-    // lado
-    c.beginPath(); c.moveTo(cx + w / 2, cy - h / 2); c.lineTo(cx + w / 2 + dx, cy - h / 2 - dy); c.lineTo(cx + w / 2 + dx, cy + h / 2 - dy); c.lineTo(cx + w / 2, cy + h / 2); c.closePath();
-    const gl = c.createLinearGradient(cx + w / 2, 0, cx + w / 2 + dx, 0); gl.addColorStop(0, tomFrente ? '#5d4520' : '#1c1d21'); gl.addColorStop(1, tomFrente ? '#3a2b14' : '#0f1012'); c.fillStyle = gl; c.fill();
-    // topo
-    c.beginPath(); c.moveTo(cx - w / 2, cy - h / 2); c.lineTo(cx - w / 2 + dx, cy - h / 2 - dy); c.lineTo(cx + w / 2 + dx, cy - h / 2 - dy); c.lineTo(cx + w / 2, cy - h / 2); c.closePath();
-    c.fillStyle = metal(c, cx - w / 2, cy - h / 2 - dy, cx + w / 2 + dx, cy - h / 2, tomTopo); c.fill();
-    c.strokeStyle = 'rgba(255,255,255,.18)'; c.lineWidth = 1.2; c.stroke();
-    if (rotulo) { c.save(); c.fillStyle = tomFrente ? '#2a1f0d' : 'rgba(232,205,146,.92)'; c.font = `600 ${Math.round(Math.min(w, h) * .2)}px ${SERIF}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(rotulo, cx, cy); c.restore(); }
-  }
-  function cilindro(c, cx, cy, r, h, tom = 0, aneis = 3) {
-    const ry = r * .3;
-    sombra(c, cx + 20, cy + h / 2 + 16, r * 1.3, r * .3);
-    const corpo = c.createLinearGradient(cx - r, 0, cx + r, 0);
-    (tom ? ['#4a3818', '#c9a15b', '#f1dca9', '#9d7a3a', '#3a2b14'] : ['#16171a', '#55585f', '#a7aab0', '#44474d', '#141518']).forEach((k, i, a) => corpo.addColorStop(i / (a.length - 1), k));
-    c.fillStyle = corpo; c.beginPath(); c.moveTo(cx - r, cy - h / 2); c.lineTo(cx - r, cy + h / 2); c.ellipse(cx, cy + h / 2, r, ry, 0, Math.PI, 0, true); c.lineTo(cx + r, cy - h / 2); c.closePath(); c.fill();
-    for (let i = 1; i <= aneis; i++) { const yy = cy - h / 2 + (h / (aneis + 1)) * i; c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 6; c.beginPath(); c.ellipse(cx, yy, r, ry, 0, 0, Math.PI); c.stroke(); c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 2; c.beginPath(); c.ellipse(cx, yy - 4, r, ry, 0, 0, Math.PI); c.stroke(); }
-    const topo = c.createLinearGradient(cx - r, cy - h / 2 - ry, cx + r, cy - h / 2 + ry); topo.addColorStop(0, tom ? '#f1dca9' : '#c9ccd2'); topo.addColorStop(1, tom ? '#6e5326' : '#3a3d42');
-    c.fillStyle = topo; c.beginPath(); c.ellipse(cx, cy - h / 2, r, ry, 0, 0, 7); c.fill();
-    c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 3; c.beginPath(); c.ellipse(cx, cy - h / 2, r * .82, ry * .82, 0, 0, 7); c.stroke();
-  }
-  function vidro(c, cx, cy, w, h, dp) { // bloco de vidro fumê
-    const dx = dp * .75, dy = dp * .42;
-    sombra(c, cx + dx / 2, cy + h / 2 + 18, w * .8, w * .16);
-    c.save(); c.globalAlpha = .9;
-    const fr = c.createLinearGradient(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2); fr.addColorStop(0, 'rgba(120,130,140,.38)'); fr.addColorStop(.5, 'rgba(40,44,50,.55)'); fr.addColorStop(1, 'rgba(20,22,26,.7)');
-    c.fillStyle = fr; c.fillRect(cx - w / 2, cy - h / 2, w, h);
-    c.beginPath(); c.moveTo(cx + w / 2, cy - h / 2); c.lineTo(cx + w / 2 + dx, cy - h / 2 - dy); c.lineTo(cx + w / 2 + dx, cy + h / 2 - dy); c.lineTo(cx + w / 2, cy + h / 2); c.closePath(); c.fillStyle = 'rgba(15,16,19,.7)'; c.fill();
-    c.beginPath(); c.moveTo(cx - w / 2, cy - h / 2); c.lineTo(cx - w / 2 + dx, cy - h / 2 - dy); c.lineTo(cx + w / 2 + dx, cy - h / 2 - dy); c.lineTo(cx + w / 2, cy - h / 2); c.closePath(); c.fillStyle = 'rgba(200,205,212,.28)'; c.fill();
-    c.restore();
-    c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineWidth = 1.4; c.strokeRect(cx - w / 2, cy - h / 2, w, h);
-    const br = c.createLinearGradient(cx - w / 2, cy - h / 2, cx, cy); br.addColorStop(0, 'rgba(255,255,255,.22)'); br.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = br; c.fillRect(cx - w / 2, cy - h / 2, w * .5, h * .5);
-  }
-  function prisma(c, cx, cy, r, h) { // prisma hexagonal (cripto)
-    const pts = Array.from({ length: 6 }, (_, i) => [cx + r * Math.cos(Math.PI / 3 * i + Math.PI / 6), cy + r * .42 * Math.sin(Math.PI / 3 * i + Math.PI / 6)]);
-    sombra(c, cx + 16, cy + h + 20, r * 1.2, r * .26);
-    for (let i = 0; i < 6; i++) {
-      const [a, b] = [pts[i], pts[(i + 1) % 6]]; if (b[1] < cy - 1 && a[1] < cy - 1) continue;
-      c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(b[0], b[1] + h); c.lineTo(a[0], a[1] + h); c.closePath();
-      const lum = .25 + .5 * Math.max(0, Math.cos(Math.PI / 3 * i - 2.2)); c.fillStyle = `rgba(${Math.round(201 * lum + 30)},${Math.round(161 * lum + 25)},${Math.round(91 * lum + 18)},1)`; c.fill();
-      c.strokeStyle = 'rgba(255,255,255,.15)'; c.stroke();
+  function drawGlassQuotes(c, qs, M, y, W, pal) {
+    const list = (qs || []).slice(0, 3);
+    const boxW = W - 2 * M, boxH = 112;
+    c.save();
+    roundRectPath(c, M, y, boxW, boxH, 20);
+    c.fillStyle = 'rgba(11,14,20,.78)';
+    c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.14)';
+    c.lineWidth = 1.4;
+    c.stroke();
+    // filete superior luminoso
+    const hi = c.createLinearGradient(M, y, M + boxW, y);
+    hi.addColorStop(0, 'rgba(255,255,255,0)');
+    hi.addColorStop(0.5, pal.accent);
+    hi.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = hi;
+    c.fillRect(M + 24, y, boxW - 48, 2);
+
+    if (!list.length) {
+      c.fillStyle = '#94a3b8';
+      c.font = `500 22px ${SANS}`;
+      c.textAlign = 'center';
+      c.fillText('Edição Diária · Diário Trader', W / 2, y + 64);
+      c.restore();
+      return;
     }
-    c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); c.fillStyle = metal(c, cx - r, cy - r, cx + r, cy + r, 1); c.fill();
-  }
-  function mostrador(c, cx, cy, r, v) { // juros: mostrador em metal com ponteiro
-    sombra(c, cx + 14, cy + r + 24, r * 1.1, r * .22);
-    cilindro(c, cx, cy + r * .2, r, r * .42, 0, 0);
-    c.save(); c.translate(cx, cy + r * .2 - r * .21); c.scale(1, .3);
-    c.strokeStyle = 'rgba(232,205,146,.85)'; c.lineWidth = 6; c.beginPath(); c.arc(0, 0, r * .78, Math.PI * .85, Math.PI * 2.15); c.stroke();
-    for (let i = 0; i <= 10; i++) { const a = Math.PI * .85 + (Math.PI * 1.3) * i / 10; c.beginPath(); c.moveTo(Math.cos(a) * r * .66, Math.sin(a) * r * .66); c.lineTo(Math.cos(a) * r * .76, Math.sin(a) * r * .76); c.lineWidth = 4; c.stroke(); }
-    const a = Math.PI * .85 + Math.PI * 1.3 * Math.max(0, Math.min(1, v)); c.strokeStyle = C.amb; c.lineWidth = 10; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * r * .62, Math.sin(a) * r * .62); c.stroke();
+
+    const colW = boxW / list.length;
+    list.forEach((a, i) => {
+      const cx = M + colW * i + colW / 2;
+      if (i) {
+        c.fillStyle = 'rgba(255,255,255,.1)';
+        c.fillRect(M + colW * i, y + 20, 1.2, boxH - 40);
+      }
+      c.textAlign = 'center';
+      c.fillStyle = '#94a3b8';
+      c.font = `700 18px ${SANS}`;
+      c.fillText(String(a.n || a.s).toUpperCase().slice(0, 14), cx, y + 32);
+
+      c.fillStyle = '#f8fafc';
+      c.font = `700 30px ${MONO}`;
+      c.fillText(nf(a.px, a.c), cx, y + 68);
+
+      const up = a.d1 > 0, dn = a.d1 < 0;
+      c.fillStyle = up ? '#4ade80' : dn ? '#f87171' : '#94a3b8';
+      c.font = `700 21px ${MONO}`;
+      c.fillText((up ? '▲ ' : dn ? '▼ ' : '') + pct(a.d1), cx, y + 97);
+    });
     c.restore();
   }
-  function objeto(c, nome, cx, cy, k) {
-    const s = k; // escala
-    if (nome === 'petroleo') { cilindro(c, cx - 70 * s, cy + 30 * s, 120 * s, 300 * s, 0, 2); cilindro(c, cx + 120 * s, cy + 70 * s, 100 * s, 240 * s, 1, 2); }
-    else if (nome === 'aco') { caixa(c, cx - 40 * s, cy + 90 * s, 380 * s, 110 * s, 120 * s, 0, 0); caixa(c, cx + 10 * s, cy - 40 * s, 340 * s, 100 * s, 110 * s, 1, 1, ''); }
-    else if (nome === 'juros') mostrador(c, cx, cy, 230 * s, .62);
-    else if (nome === 'dolar') { vidro(c, cx - 30 * s, cy, 360 * s, 300 * s, 120 * s); c.save(); c.fillStyle = 'rgba(232,205,146,.95)'; c.font = `600 ${120 * s}px ${SERIF}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('US$', cx - 30 * s, cy + 6 * s); c.restore(); }
-    else if (nome === 'balanco') { caixa(c, cx - 140 * s, cy + 80 * s, 120 * s, 200 * s, 90 * s, 0, 0); caixa(c, cx, cy + 30 * s, 120 * s, 300 * s, 90 * s, 0, 0); caixa(c, cx + 140 * s, cy - 20 * s, 120 * s, 400 * s, 90 * s, 1, 1); }
-    else if (nome === 'cripto') prisma(c, cx, cy - 120 * s, 190 * s, 300 * s);
-    else if (nome === 'eua') { vidro(c, cx - 90 * s, cy + 40 * s, 170 * s, 420 * s, 90 * s); caixa(c, cx + 110 * s, cy + 90 * s, 150 * s, 320 * s, 90 * s, 1, 1); }
-    else { caixa(c, cx, cy, 200 * s, 520 * s, 120 * s, 1, 0); c.fillStyle = C.amb; c.fillRect(cx - 100 * s, cy - 40 * s, 200 * s, 6 * s); }
+
+  function rodape(c, W, H, M, texto) {
+    c.save();
+    c.textAlign = 'center';
+    c.fillStyle = 'rgba(203,213,225,.66)';
+    c.font = `500 17px ${SANS}`;
+    c.fillText(texto || 'diario-trader · edição de mercado · dados com atraso · não é recomendação', W / 2, H - M + 18);
+    c.restore();
   }
 
-  /* ---------------- modelos ---------------- */
-  function linhaCot(c, q, x, y, w) {
-    if (!q.length) { c.fillStyle = C.tx3; c.font = `400 24px ${SANS}`; c.fillText('Cotações indisponíveis no momento', x, y); return; }
-    const col = Math.min(q.length, 3), cw = w / col;
-    q.slice(0, col).forEach((a, i) => {
-      const xx = x + i * cw; if (i) { c.fillStyle = C.line; c.fillRect(xx - 16, y - 46, 1.5, 70); }
-      c.fillStyle = C.tx3; c.font = `500 22px ${SANS}`; c.fillText(a.n.toUpperCase(), xx, y - 22);
-      c.fillStyle = C.tx; c.font = `500 34px ${MONO}`; c.fillText(nf(a.px, a.c), xx, y + 18);
-      c.fillStyle = a.d1 > 0 ? C.up : a.d1 < 0 ? C.dn : C.tx2; c.font = `500 26px ${MONO}`; c.fillText(pct(a.d1), xx + c.measureText(nf(a.px, a.c)).width * 0 + 0, y + 54);
-    });
-  }
+  /* ---------------- modelos de capa (5 modelos cinematográficos) ---------------- */
   function mManchete(c, W, H, ctx) {
     const n = ctx.noticia; if (!n) return false;
-    const [nomeTema, , syms] = tema(n), M = 72, story = H / W > 1.6, quad = H === W;
-    fundo(c, W, H); marca(c, W, H, M);
-    // objeto 3D: área de identidade
-    const oy = story ? H * .27 : quad ? H * .36 : H * .27, ox = quad ? W * .72 : W * .6;
-    c.save(); c.globalAlpha = quad ? .95 : 1; objeto(c, nomeTema, ox, oy, story ? 1.3 : quad ? .62 : .8); c.restore();
-    let y = story ? H * .52 : quad ? H * .58 : H * .5;
-    c.fillStyle = C.amb; c.font = `600 22px ${MONO}`; c.fillText(String(n.editoria || 'Manchete do dia').toUpperCase(), M, y - 30);
-    y = bloco(c, n.titulo, M, y + (story ? 92 : 34), W - 2 * M, story ? 96 : quad ? 54 : 66, story ? 5 : quad ? 3 : 4, C.tx, SERIF, 500, 1.1);
-    const fina = n.linha_fina || n.por_que_importa;
-    if (fina && !quad) y = bloco(c, fina, M, y + 28, W - 2 * M, story ? 38 : 28, story ? 4 : 2, C.tx2, SANS, 400, 1.35);
-    const qs = cot().filter(a => syms.includes(a.s)).concat(cot().filter(a => a.s === '^BVSP' || a.s === 'BRL=X')).filter((a, i, arr) => arr.findIndex(b => b.s === a.s) === i);
-    linhaCot(c, qs, M, H - M - 120, W - 2 * M);
+    const ed = ctx.ed || edicao();
+    const qsAll = cot(ed);
+    const info = classificar(n, ed, qsAll);
+    const M = 68, story = H / W > 1.6, quad = H === W;
+
+    fundoCena(c, W, H, info.cena, info.pal, { cutStart: story ? 0.34 : 0.38 });
+    masthead(c, W, M, info.pal, ed, n.editoria || info.pal.tag);
+
+    // Barra de cotações no rodapé
+    const barH = 112;
+    const barY = H - M - barH - 22;
+    const pick = info.syms.map((sym) => qsAll.find((q) => q.s === sym)).filter(Boolean);
+    for (const q of qsAll) if (pick.length < 3 && !pick.some((x) => x.s === q.s)) pick.push(q);
+    drawGlassQuotes(c, pick, M, barY, W, info.pal);
+
+    // Subtítulo opcional (linha fina) acima da barra de cotações
+    const fina = !quad ? String(n.linha_fina || n.por_que_importa || '').trim() : '';
+    let headBottom = barY - 38;
+    if (fina) {
+      c.save();
+      c.font = `500 ${story ? 28 : 23}px ${SANS}`;
+      const fls = quebra(c, fina, W - 2 * M - 36, 2);
+      const flh = story ? 36 : 30;
+      const fy0 = barY - 34 - (fls.length - 1) * flh;
+      c.textAlign = 'center';
+      c.fillStyle = 'rgba(226,232,240,.84)';
+      c.shadowColor = 'rgba(0,0,0,.75)';
+      c.shadowBlur = 10;
+      fls.forEach((ln, idx) => c.fillText(ln, W / 2, fy0 + idx * flh));
+      c.restore();
+      headBottom = fy0 - (story ? 44 : 34);
+    }
+
+    // Manchete forte de capa centralizada na zona escura inferior (estilo Revista Timing)
+    drawHeadline(
+      c,
+      n.titulo,
+      W / 2,
+      headBottom,
+      W - 2 * M - 24,
+      story ? 74 : quad ? 54 : 62,
+      story ? 46 : quad ? 36 : 40,
+      story ? 4 : quad ? 3 : 4,
+      'center',
+    );
+
+    rodape(c, W, H, M);
+    ctx.meta = info;
     return true;
   }
-  function mNumero(c, W, H) {
-    const mov = cot().filter(a => a.d1 != null).sort((a, b) => Math.abs(b.d1) - Math.abs(a.d1))[0]; if (!mov) return false;
-    const M = 72; fundo(c, W, H); marca(c, W, H, M);
-    const cor = mov.d1 >= 0 ? C.up : C.dn, txt = pct(mov.d1), cx = W / 2, cy = H * (H / W > 1.6 ? .4 : .42);
-    c.fillStyle = C.amb; c.font = `600 24px ${MONO}`; c.textAlign = 'center'; c.fillText('O NÚMERO DO DIA', cx, cy - 250);
-    // número extrudado em metal (identidade), mantendo a leitura plana do valor
-    let s = 230; c.font = `600 ${s}px ${SERIF}`; while (c.measureText(txt).width > W - 2 * M - 40 && s > 100) { s -= 10; c.font = `600 ${s}px ${SERIF}`; }
-    for (let i = 18; i > 0; i--) { c.fillStyle = `rgba(${mov.d1 >= 0 ? '22,70,48' : '84,32,26'},${.5 + i / 40})`; c.fillText(txt, cx + i * 1.4, cy + i); }
-    const gr = c.createLinearGradient(0, cy - s, 0, cy); gr.addColorStop(0, '#f4efe4'); gr.addColorStop(1, cor); c.fillStyle = gr; c.fillText(txt, cx, cy);
-    c.fillStyle = C.tx; c.font = `500 64px ${SANS}`; c.fillText(mov.n, cx, cy + 120);
-    c.fillStyle = C.tx2; c.font = `500 40px ${MONO}`; c.fillText(nf(mov.px, mov.c), cx, cy + 180);
-    c.textAlign = 'left';
-    const resto = cot().filter(a => a.s !== mov.s && a.d1 != null).sort((a, b) => Math.abs(b.d1) - Math.abs(a.d1)).slice(0, 3);
-    linhaCot(c, resto, M, H - M - 120, W - 2 * M);
+
+  function mNumero(c, W, H, ctx) {
+    const ed = ctx.ed || edicao();
+    const qsAll = cot(ed);
+    const mov = qsAll.filter((a) => a.d1 != null).sort((a, b) => Math.abs(b.d1) - Math.abs(a.d1))[0];
+    if (!mov) return false;
+    const clima = mov.d1 >= 0 ? 'alta' : 'baixa';
+    const cena = mov.s === 'BZ=F' || mov.s === 'CL=F' ? 'petroleo'
+      : mov.s === 'TIO=F' ? 'minerio'
+      : mov.s === 'BRL=X' || mov.s === 'DX-Y.NYB' ? 'dolar'
+      : mov.s === 'BTC-USD' ? 'cripto'
+      : mov.s === '^GSPC' || mov.s === '^IXIC' ? 'eua'
+      : clima === 'baixa' ? 'bolsa-baixa' : 'bolsa-alta';
+    const pal = PALETA[clima];
+    const M = 68, story = H / W > 1.6;
+
+    fundoCena(c, W, H, cena, pal, { cutStart: 0.28 });
+    masthead(c, W, M, pal, ed, 'O NÚMERO DO DIA');
+
+    const cy = H * (story ? 0.56 : 0.57);
+    const txt = pct(mov.d1);
+    c.save();
+    c.textAlign = 'center';
+    let s = story ? 220 : 196;
+    c.font = `900 ${s}px ${COND}`;
+    while (c.measureText(txt).width > W - 2 * M && s > 100) { s -= 8; c.font = `900 ${s}px ${COND}`; }
+    c.shadowColor = 'rgba(0,0,0,.85)';
+    c.shadowBlur = 28;
+    c.shadowOffsetY = 8;
+    const gr = c.createLinearGradient(0, cy - s, 0, cy + 10);
+    gr.addColorStop(0, '#ffffff');
+    gr.addColorStop(0.6, mov.d1 >= 0 ? '#6ee7b7' : '#fca5a5');
+    gr.addColorStop(1, mov.d1 >= 0 ? '#22c55e' : '#ef4444');
+    c.fillStyle = gr;
+    c.fillText(txt, W / 2, cy);
+
+    c.shadowBlur = 12;
+    c.fillStyle = '#f8fafc';
+    c.font = `800 52px ${COND}`;
+    c.fillText(String(mov.n || mov.s).toUpperCase(), W / 2, cy + 68);
+    c.fillStyle = '#cbd5e1';
+    c.font = `600 32px ${MONO}`;
+    c.fillText(nf(mov.px, mov.c), W / 2, cy + 112);
+    c.restore();
+
+    const resto = qsAll.filter((a) => a.s !== mov.s).slice(0, 3);
+    drawGlassQuotes(c, resto, M, H - M - 134, W, pal);
+    rodape(c, W, H, M);
+    ctx.meta = { cena, clima, rotulo: `Número do dia · ${mov.n}` };
     return true;
   }
+
   function mPontos(c, W, H, ctx) {
-    const ns = ctx.lista.slice(0, H === W ? 2 : 3); if (ns.length < 2) return false;
-    const M = 72; fundo(c, W, H); marca(c, W, H, M);
-    c.save(); c.globalAlpha = .9; objeto(c, tema(ns[0])[0], W * .76, H * .2, .48); c.restore();
-    c.fillStyle = C.amb; c.font = `600 24px ${MONO}`; c.fillText('O QUE MOVE O PREGÃO', M, H * .14);
-    c.fillStyle = C.tx; c.font = `500 64px ${SERIF}`; c.fillText('Três pontos', M, H * .14 + 76);
-    let y = H * .34; const gap = (H - M - 170 - y) / ns.length;
+    const ed = ctx.ed || edicao();
+    const ns = (ctx.lista || []).slice(0, H === W ? 2 : 3);
+    if (ns.length < 2) return false;
+    const info = classificar(ns[0], ed);
+    const M = 68, story = H / W > 1.6;
+
+    fundoCena(c, W, H, info.cena, info.pal, { cutStart: 0.22 });
+    masthead(c, W, M, info.pal, ed, 'TRÊS PONTOS DO PREGÃO');
+
+    let y = story ? H * 0.36 : H === W ? H * 0.35 : H * 0.34;
+    const availH = H - M - 60 - y;
+    const cardH = Math.min(story ? 260 : 196, (availH - (ns.length - 1) * 18) / ns.length);
+
     ns.forEach((n, i) => {
-      c.fillStyle = C.line; c.fillRect(M, y - 50, W - 2 * M, 1.5);
-      c.fillStyle = C.amb; c.font = `500 72px ${SERIF}`; c.fillText(String(i + 1), M, y + 22);
-      c.fillStyle = C.tx3; c.font = `600 20px ${MONO}`; c.fillText(String(n.editoria || '').toUpperCase(), M + 90, y - 12);
-      bloco(c, n.titulo, M + 90, y + 30, W - 2 * M - 90, 40, 3, C.tx, SERIF, 500, 1.15);
-      y += gap;
+      c.save();
+      roundRectPath(c, M, y, W - 2 * M, cardH, 22);
+      c.fillStyle = 'rgba(11,14,20,.78)';
+      c.fill();
+      c.strokeStyle = i === 0 ? info.pal.accent : 'rgba(255,255,255,.14)';
+      c.lineWidth = i === 0 ? 2 : 1.3;
+      c.stroke();
+
+      c.fillStyle = info.pal.accentSoft;
+      c.font = `900 58px ${COND}`;
+      c.fillText(String(i + 1), M + 28, y + 66);
+
+      c.fillStyle = '#94a3b8';
+      c.font = `700 17px ${MONO}`;
+      c.fillText(String(n.editoria || 'MERCADOS').toUpperCase(), M + 86, y + 38);
+
+      c.fillStyle = '#f8fafc';
+      c.font = `700 ${story ? 36 : 30}px ${SANS}`;
+      const ls = quebra(c, n.titulo, W - 2 * M - 114, 3);
+      ls.forEach((ln, k) => c.fillText(ln, M + 86, y + 76 + k * (story ? 44 : 38)));
+      c.restore();
+      y += cardH + 18;
     });
+
+    rodape(c, W, H, M);
+    ctx.meta = info;
     return true;
   }
-  function mVersus(c, W, H) {
-    const q = cot(); const a = q.find(x => x.s === '^BVSP'), b = q.find(x => x.s === '^GSPC') || q.find(x => x.s === 'BRL=X'); if (!a || !b) return false;
-    const M = 72; fundo(c, W, H); marca(c, W, H, M);
-    c.fillStyle = C.amb; c.font = `600 24px ${MONO}`; c.textAlign = 'center'; c.fillText('BRASIL × MUNDO', W / 2, H * .14);
-    const cy = H * .45;
-    caixa(c, W * .3, cy, 170, 420, 100, 1, 0); vidro(c, W * .7, cy, 170, 420, 100);
-    [[a, W * .3], [b, W * .7]].forEach(([x, px]) => {
-      c.fillStyle = C.tx; c.font = `500 46px ${SANS}`; c.fillText(x.n, px, cy + 330);
-      c.font = `500 40px ${MONO}`; c.fillStyle = C.tx2; c.fillText(nf(x.px, x.c), px, cy + 388);
-      c.fillStyle = x.d1 >= 0 ? C.up : C.dn; c.font = `600 52px ${MONO}`; c.fillText(pct(x.d1), px, cy + 452);
+
+  function mVersus(c, W, H, ctx) {
+    const ed = ctx.ed || edicao();
+    const qsAll = cot(ed);
+    const a = qsAll.find((x) => x.s === '^BVSP');
+    const b = qsAll.find((x) => x.s === '^GSPC') || qsAll.find((x) => x.s === 'BRL=X');
+    if (!a || !b) return false;
+    const M = 68;
+    const cenaBR = (a.d1 != null && a.d1 < -0.3) ? 'bolsa-baixa' : 'bolsa-alta';
+    const pal = PALETA[(a.d1 != null && a.d1 < -0.3) ? 'baixa' : 'alta'];
+
+    // Split cinema: Brasil à esquerda, EUA à direita
+    c.save();
+    c.beginPath(); c.rect(0, 0, W / 2, H); c.clip();
+    const imL = imgSync(cenaBR);
+    if (imL) drawCoverImage(c, imL, 0, 0, W / 2, H, 0.25);
+    else { c.fillStyle = '#14110b'; c.fillRect(0, 0, W / 2, H); }
+    c.restore();
+
+    c.save();
+    c.beginPath(); c.rect(W / 2, 0, W / 2, H); c.clip();
+    const imR = imgSync('eua');
+    if (imR) drawCoverImage(c, imR, W / 2, 0, W / 2, H, 0.25);
+    else { c.fillStyle = '#0c111b'; c.fillRect(W / 2, 0, W / 2, H); }
+    c.restore();
+
+    // Vinheta + linha divisória dourada
+    const ov = c.createLinearGradient(0, 0, 0, H);
+    ov.addColorStop(0, 'rgba(6,8,12,.72)');
+    ov.addColorStop(0.35, 'rgba(6,8,12,.22)');
+    ov.addColorStop(0.62, 'rgba(6,8,12,.78)');
+    ov.addColorStop(1, 'rgba(5,7,10,.96)');
+    c.fillStyle = ov;
+    c.fillRect(0, 0, W, H);
+
+    c.fillStyle = 'rgba(212,175,105,.55)';
+    c.fillRect(W / 2 - 1, H * 0.24, 2, H * 0.62);
+
+    masthead(c, W, M, pal, ed, 'PLACAR · BRASIL × MUNDO');
+
+    const cardY = H - M - 270, cardH = 220, halfW = (W - 2 * M - 24) / 2;
+    [[a, M, 'BRASIL'], [b, M + halfW + 24, 'EXTERIOR']].forEach(([q, x, tag]) => {
+      c.save();
+      roundRectPath(c, x, cardY, halfW, cardH, 22);
+      c.fillStyle = 'rgba(11,14,20,.82)';
+      c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.15)';
+      c.lineWidth = 1.4;
+      c.stroke();
+
+      const cx = x + halfW / 2;
+      c.textAlign = 'center';
+      c.fillStyle = '#dfba69';
+      c.font = `700 18px ${MONO}`;
+      c.fillText(tag, cx, cardY + 38);
+      c.fillStyle = '#f8fafc';
+      c.font = `800 40px ${COND}`;
+      c.fillText(String(q.n).toUpperCase(), cx, cardY + 86);
+      c.fillStyle = '#cbd5e1';
+      c.font = `600 30px ${MONO}`;
+      c.fillText(nf(q.px, q.c), cx, cardY + 132);
+      c.fillStyle = q.d1 > 0 ? '#4ade80' : q.d1 < 0 ? '#f87171' : '#94a3b8';
+      c.font = `800 42px ${MONO}`;
+      c.fillText((q.d1 > 0 ? '▲ ' : q.d1 < 0 ? '▼ ' : '') + pct(q.d1), cx, cardY + 188);
+      c.restore();
     });
-    c.fillStyle = C.tx3; c.font = `400 22px ${SANS}`; c.fillText('Altura dos objetos é ilustrativa; os números estão abaixo.', W / 2, H - M - 70);
-    c.textAlign = 'left'; return true;
+
+    rodape(c, W, H, M);
+    ctx.meta = { cena: cenaBR, clima: pal === PALETA.baixa ? 'baixa' : 'alta', rotulo: 'Placar Brasil × Mundo' };
+    return true;
   }
+
   function mFechamento(c, W, H, ctx) {
     const dia = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
-    const ts = g(() => S.trades, []).map(t => ({ t, k: g(() => calc(t), null) })).filter(x => x.k && x.k.pl != null && String(x.t.dtx || x.t.dt || '').slice(0, 10) === dia);
+    const ts = g(() => S.trades, []).map((t) => ({ t, k: g(() => calc(t), null) }))
+      .filter((x) => x.k && x.k.pl != null && String(x.t.dtx || x.t.dt || '').slice(0, 10) === dia);
     if (!ts.length) return false;
-    const soma = ts.reduce((s, x) => s + x.k.pl, 0), rs = ts.filter(x => x.k.r != null).map(x => x.k.r), somaR = rs.length ? rs.reduce((a, b) => a + b, 0) : null;
-    const acerto = ts.filter(x => x.k.pl > 0).length / ts.length * 100, regras = ts.filter(x => x.t.rules === 's').length;
-    const M = 72; fundo(c, W, H); marca(c, W, H, M, 'Diário Trader · fechamento pessoal · não é recomendação de investimento');
-    c.save(); c.globalAlpha = .95; caixa(c, W * .74, H * .25, 160, 300, 100, 1, 1); c.restore();
-    c.fillStyle = C.amb; c.font = `600 24px ${MONO}`; c.fillText('MEU FECHAMENTO · ' + hoje(), M, H * .16);
-    const big = ctx.ocultar ? (somaR != null ? (somaR > 0 ? '+' : somaR < 0 ? '−' : '') + nf(Math.abs(somaR), 2) + '×' : (soma >= 0 ? 'Dia positivo' : 'Dia negativo')) : (soma > 0 ? '+' : soma < 0 ? '−' : '') + 'R$ ' + nf(Math.abs(soma), 2);
-    c.fillStyle = soma >= 0 ? C.up : C.dn; c.font = `600 ${big.length > 12 ? 110 : 140}px ${SERIF}`; c.fillText(big, M, H * .48);
-    c.fillStyle = C.tx2; c.font = `400 34px ${SANS}`; c.fillText(ctx.ocultar ? 'vezes o risco que eu corri, somado no dia' : (somaR != null ? nf(somaR, 2) + '× o risco somado no dia' : 'resultado do dia'), M, H * .48 + 64);
-    const fs = [['Trades', String(ts.length)], ['Acerto', nf(acerto, 0) + '%'], ['Nas regras', regras + ' de ' + ts.length]];
-    const cw = (W - 2 * M) / 3, y = H * .68; c.fillStyle = C.line; c.fillRect(M, y - 70, W - 2 * M, 1.5);
-    fs.forEach(([l, v], i) => { c.fillStyle = C.tx3; c.font = `500 24px ${SANS}`; c.fillText(l, M + i * cw, y - 20); c.fillStyle = C.tx; c.font = `500 64px ${MONO}`; c.fillText(v, M + i * cw, y + 50); });
+    const soma = ts.reduce((s, x) => s + x.k.pl, 0);
+    const rs = ts.filter((x) => x.k.r != null).map((x) => x.k.r);
+    const somaR = rs.length ? rs.reduce((a, b) => a + b, 0) : null;
+    const acerto = ts.filter((x) => x.k.pl > 0).length / ts.length * 100;
+    const regras = ts.filter((x) => x.t.rules === 's').length;
+
+    const clima = soma >= 0 ? 'alta' : 'baixa';
+    const cena = soma >= 0 ? 'bolsa-alta' : 'bolsa-baixa';
+    const pal = PALETA[clima];
+    const M = 68;
+
+    fundoCena(c, W, H, cena, pal, { cutStart: 0.34 });
+    masthead(c, W, M, pal, { dia }, 'MEU FECHAMENTO PESSOAL');
+
+    const big = ctx.ocultar
+      ? (somaR != null ? (somaR > 0 ? '+' : somaR < 0 ? '−' : '') + nf(Math.abs(somaR), 2) + 'R' : (soma >= 0 ? 'DIA POSITIVO' : 'DIA NEGATIVO'))
+      : (soma > 0 ? '+' : soma < 0 ? '−' : '') + 'R$ ' + nf(Math.abs(soma), 2);
+
+    const cy = H - M - 260;
+    c.save();
+    c.textAlign = 'center';
+    c.shadowColor = 'rgba(0,0,0,.85)';
+    c.shadowBlur = 24;
+    c.fillStyle = soma >= 0 ? '#4ade80' : '#f87171';
+    c.font = `900 ${big.length > 11 ? 116 : 148}px ${COND}`;
+    c.fillText(big, W / 2, cy);
+    c.fillStyle = '#e2e8f0';
+    c.font = `500 28px ${SANS}`;
+    c.fillText(ctx.ocultar ? 'Múltiplo de risco somado no pregão' : (somaR != null ? nf(somaR, 2) + 'R somados no pregão' : 'Resultado líquido do pregão'), W / 2, cy + 46);
+    c.restore();
+
+    // 3 KPIs em vidro
+    const kpiY = H - M - 150, kpiH = 110;
+    roundRectPath(c, M, kpiY, W - 2 * M, kpiH, 20);
+    c.fillStyle = 'rgba(11,14,20,.8)';
+    c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.15)';
+    c.lineWidth = 1.4;
+    c.stroke();
+    const fs = [['TRADES', String(ts.length)], ['ACERTO', nf(acerto, 0) + '%'], ['NAS REGRAS', `${regras}/${ts.length}`]];
+    const cw = (W - 2 * M) / 3;
+    fs.forEach(([l, v], i) => {
+      const cx = M + cw * i + cw / 2;
+      c.save();
+      c.textAlign = 'center';
+      c.fillStyle = '#94a3b8'; c.font = `700 18px ${SANS}`; c.fillText(l, cx, kpiY + 34);
+      c.fillStyle = '#f8fafc'; c.font = `700 42px ${MONO}`; c.fillText(v, cx, kpiY + 84);
+      c.restore();
+    });
+
+    rodape(c, W, H, M, 'diario-trader · fechamento pessoal · não é recomendação de investimento');
+    ctx.meta = { cena, clima, rotulo: 'Meu fechamento' };
     return true;
   }
+
   const MODELOS = [['manchete', mManchete], ['numero', mNumero], ['pontos', mPontos], ['versus', mVersus]];
 
-  /* ---------------- geração ---------------- */
-  const est = { fmt: 'feed', i: 0, ocultar: true, canvas: null, modelo: '' };
-  function gerar(tipo) {
-    const [W, H] = FMT[est.fmt]; const cv = d.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); if (!c) return null;
-    if (tipo === 'dia') { if (mFechamento(c, W, H, { ocultar: est.ocultar })) { est.modelo = 'dia'; return cv; } return null; }
-    const lista = noticias(edicao());
-    // sequência inteligente: manchete → número do dia → três pontos → matéria 2 → versus → matéria 3 …
+  /* ---------------- geração síncrona + assíncrona (aguarda WebP) ---------------- */
+  const est = { fmt: 'feed', i: 0, ocultar: true, canvas: null, modelo: '', meta: null };
+
+  function buildFila(ed) {
+    const lista = noticias(ed);
     const fila = [];
-    lista.forEach((n, i) => { fila.push(['manchete', { noticia: n, lista }]); if (i === 0) { fila.push(['numero', {}]); fila.push(['pontos', { lista }]); } if (i === 1) fila.push(['versus', {}]); });
-    if (!lista.length) fila.push(['numero', {}], ['versus', {}]);
+    lista.forEach((n, i) => {
+      fila.push(['manchete', { noticia: n, lista, ed }]);
+      if (i === 0) { fila.push(['numero', { ed }]); fila.push(['pontos', { lista, ed }]); }
+      if (i === 1) fila.push(['versus', { ed }]);
+    });
+    if (!lista.length) fila.push(['numero', { ed }], ['versus', { ed }]);
+    return fila;
+  }
+
+  function cenasNecessarias(tipo, ed, idx) {
+    if (tipo === 'dia') return ['bolsa-alta', 'bolsa-baixa'];
+    const fila = buildFila(ed);
+    const [nome, ctx] = fila[idx % fila.length] || [];
+    if (nome === 'versus') return ['bolsa-alta', 'bolsa-baixa', 'eua'];
+    if (nome === 'manchete' && ctx?.noticia) return [classificar(ctx.noticia, ed).cena];
+    if (nome === 'pontos' && ctx?.lista?.[0]) return [classificar(ctx.lista[0], ed).cena];
+    return ['bolsa-alta', 'bolsa-baixa', 'bolsa-cautela', 'eua', 'dolar', 'petroleo', 'minerio', 'cripto'];
+  }
+
+  function gerar(tipo) {
+    const ed = edicao();
+    const [W, H] = FMT[est.fmt] || FMT.feed;
+    const cv = d.createElement('canvas'); cv.width = W; cv.height = H;
+    const c = cv.getContext('2d'); if (!c) return null;
+    if (tipo === 'dia') {
+      const ctx = { ocultar: est.ocultar };
+      if (mFechamento(c, W, H, ctx)) { est.modelo = 'dia'; est.meta = ctx.meta; cv.__folga = 1; return cv; }
+      return null;
+    }
+    const fila = buildFila(ed);
     for (let k = 0; k < fila.length; k++) {
-      const [nome, ctx] = fila[(est.i + k) % fila.length]; c.clearRect(0, 0, W, H);
-      try { if (MODELOS.find(m => m[0] === nome)[1](c, W, H, ctx)) { est.i = (est.i + k) % fila.length; est.modelo = nome; return cv; } } catch (e) { console.warn('[capas v561]', nome, e); }
+      const [nome, ctx] = fila[(est.i + k) % fila.length];
+      c.clearRect(0, 0, W, H);
+      try {
+        const fn = MODELOS.find((m) => m[0] === nome)?.[1];
+        if (fn && fn(c, W, H, ctx)) {
+          est.i = (est.i + k) % fila.length;
+          est.modelo = nome;
+          est.meta = ctx.meta || null;
+          cv.__folga = 1;
+          return cv;
+        }
+      } catch (e) { console.warn('[capas v971]', nome, e); }
     }
     return null;
   }
 
-  /* ---------------- visor ---------------- */
-  function aviso(m) { try { toast(m, 3500); } catch { } }
-  function abre(tipo) {
-    if (tipo !== 'mesmo') est.canvas = gerar(tipo === 'dia' ? 'dia' : null);
-    if (!est.canvas) { aviso(tipo === 'dia' ? 'Registre ao menos um trade encerrado hoje para montar a capa do seu fechamento.' : 'Abra o Jornal do Pregão e aguarde a edição e as cotações para gerar a capa.'); return; }
+  async function gerarAsync(fmt = 'feed', idx = 0, tipo = null) {
+    const prevFmt = est.fmt, prevI = est.i;
+    est.fmt = FMT[fmt] ? fmt : 'feed';
+    if (typeof idx === 'number') est.i = idx;
+    const ed = edicao();
+    await preload(cenasNecessarias(tipo, ed, est.i));
+    const cv = gerar(tipo);
+    est.fmt = prevFmt;
+    est.i = prevI;
+    return cv;
+  }
+
+  /* ---------------- visor / estúdio de capas (#c561) ---------------- */
+  function aviso(m) { try { toast(m, 3500); } catch {} }
+
+  async function abre(tipo) {
+    const ed = edicao();
+    const isDia = tipo === 'dia';
+    await preload(cenasNecessarias(isDia ? 'dia' : null, ed, est.i));
+    if (tipo !== 'mesmo') est.canvas = gerar(isDia ? 'dia' : null);
+    if (!est.canvas) {
+      aviso(isDia ? 'Registre ao menos um trade encerrado hoje para montar a capa do seu fechamento.' : 'Abra o Jornal do Pregão e aguarde a edição e as cotações para gerar a capa.');
+      return;
+    }
     let el = d.getElementById('c561');
-    if (!el) { el = d.createElement('div'); el.id = 'c561'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Capa do Jornal do Pregão'); d.body.append(el); }
+    if (!el) {
+      el = d.createElement('div');
+      el.id = 'c561';
+      el.setAttribute('role', 'dialog');
+      el.setAttribute('aria-modal', 'true');
+      el.setAttribute('aria-label', 'Capa do Jornal do Pregão');
+      d.body.append(el);
+    }
     const f = Object.entries(FMT).map(([k, v]) => `<button type="button" data-c561-fmt="${k}" aria-pressed="${k === est.fmt}">${v[2]}</button>`).join('');
+    const badge = est.meta?.rotulo ? `<span class="c561-cena">${est.meta.rotulo}</span>` : '';
     el.innerHTML = `<div class="c561-bar"><button type="button" data-c561="x">Voltar</button><button type="button" data-c561="nova">Outra capa</button><button type="button" data-c561="dia">Meu fechamento</button></div>
-      <div class="c561-opc"><div class="c561-seg" role="group" aria-label="Formato">${f}</div>${est.modelo === 'dia' ? `<label class="c561-chk"><input type="checkbox" data-c561-ocultar ${est.ocultar ? 'checked' : ''}> Ocultar valores em R$</label>` : ''}</div>
+      <div class="c561-opc"><div class="c561-seg" role="group" aria-label="Formato">${f}</div>${badge}${est.modelo === 'dia' ? `<label class="c561-chk"><input type="checkbox" data-c561-ocultar ${est.ocultar ? 'checked' : ''}> Ocultar valores em R$</label>` : ''}</div>
       <div class="c561-img"><img alt="Capa gerada (${est.modelo})" src="${est.canvas.toDataURL('image/png')}"></div>
       <button type="button" class="c561-pri" data-c561="s">Compartilhar / salvar</button>
-      <p class="c561-nota">${est.modelo === 'dia' ? 'Seu fechamento de hoje. Confira antes de compartilhar.' : 'Montada com a edição de hoje e as cotações do app. “Outra capa” passa para a próxima notícia ou modelo.'}</p>`;
-    el.hidden = false; d.body.classList.add('c561-open');
+      <p class="c561-nota">${est.modelo === 'dia' ? 'Seu fechamento de hoje. Confira antes de compartilhar.' : 'Cena escolhida automaticamente pelo tema e humor do pregão. “Outra capa” alterna entre notícias e modelos.'}</p>`;
+    el.hidden = false;
+    d.body.classList.add('c561-open');
     (el.querySelector('[data-c561="nova"]') || el).focus({ preventScroll: true });
   }
-  function fecha() { const el = d.getElementById('c561'); if (el) el.hidden = true; d.body.classList.remove('c561-open'); }
+
+  function fecha() {
+    const el = d.getElementById('c561');
+    if (el) el.hidden = true;
+    d.body.classList.remove('c561-open');
+  }
+
   async function salva() {
     if (!est.canvas) return;
-    const blob = await new Promise(r => est.canvas.toBlob(r, 'image/png')); if (!blob) { aviso('Não consegui gerar a imagem.'); return; }
+    const blob = await new Promise((r) => est.canvas.toBlob(r, 'image/png'));
+    if (!blob) { aviso('Não consegui gerar a imagem.'); return; }
     const nome = 'capa-jornal-' + (est.modelo || 'dia') + '-' + est.fmt + '-' + new Date().toISOString().slice(0, 10) + '.png';
-    try { const file = new File([blob], nome, { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Jornal do Pregão' }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
-    try { await saveFile(nome, blob, 'image/png'); aviso('Imagem salva.'); } catch { aviso('Não foi possível salvar. Toque e segure a imagem.'); }
+    try {
+      const file = new File([blob], nome, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Jornal do Pregão' });
+        return;
+      }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await saveFile(nome, blob, 'image/png'); aviso('Imagem salva.'); }
+    catch { aviso('Não foi possível salvar. Toque e segure a imagem.'); }
   }
-  // Os botões antigos (Capa do dia, miniatura, Outra capa, Meu fechamento) passam a abrir as capas v561.
-  d.addEventListener('click', e => {
-    const t = e.target.closest?.('[data-c561],[data-c561-fmt],[data-v429-capa],[data-v430-thumb],[data-v429]'); if (!t) return;
-    if (t.dataset.c561Fmt) { est.fmt = t.dataset.c561Fmt; abre(est.modelo === 'dia' ? 'dia' : 'mesmo-novo'); return; }
-    e.preventDefault(); e.stopImmediatePropagation();
+
+  d.addEventListener('click', (e) => {
+    const t = e.target.closest?.('[data-c561],[data-c561-fmt],[data-v429-capa],[data-v430-thumb],[data-v429],[data-jr971-capa]');
+    if (!t) return;
+    if (t.dataset.c561Fmt) { est.fmt = t.dataset.c561Fmt; void abre(est.modelo === 'dia' ? 'dia' : 'mesmo-novo'); return; }
+    e.preventDefault();
+    e.stopImmediatePropagation();
     const a = t.dataset.c561 || t.dataset.v429 || 'nova';
     if (a === 'x') fecha();
-    else if (a === 'dia') abre('dia');
-    else if (a === 's') salva();
-    else if (a === 'nova' && d.body.classList.contains('c561-open')) { est.i++; abre(); }
-    else abre();
+    else if (a === 'dia') void abre('dia');
+    else if (a === 's') void salva();
+    else if (a === 'nova' && d.body.classList.contains('c561-open')) { est.i++; void abre(); }
+    else { est.i = 0; void abre(); }
   }, true);
-  d.addEventListener('change', e => { if (e.target.matches?.('[data-c561-ocultar]')) { est.ocultar = e.target.checked; abre('dia'); } });
-  d.addEventListener('keydown', e => { if (e.key === 'Escape' && d.body.classList.contains('c561-open')) fecha(); });
-  // Miniatura da capa no Jornal passa a mostrar o novo modelo.
-  let ultimaEd = '';
-  setInterval(() => {
-    const img = d.querySelector('[data-v430-thumb] img'); const ed = edicao(); if (!img || !ed) return;
-    const k = g(() => ed.manchete.titulo, '') + est.fmt; if (k === ultimaEd && img.dataset.c561) return;
-    const fmt = est.fmt; est.fmt = 'feed'; const i = est.i; est.i = 0; const cv = gerar(); est.fmt = fmt; est.i = i;
-    if (cv) { img.src = cv.toDataURL('image/jpeg', .85); img.dataset.c561 = '1'; ultimaEd = k; }
-  }, 2500);
-  const arte = (n, w = 960, h = 420) => { const cv = d.createElement('canvas'); cv.width = w; cv.height = h; const c = cv.getContext('2d'); if (!c) return null; fundo(c, w, h); objeto(c, tema(n)[0], w * .5, h * .56, Math.min(w / 1080, h / 520) * 1.05); return cv; };
-  root.DiarioCapas561 = { _desenho: { fundo, objeto, caixa, vidro, cilindro }, arte, gerar: (fmt = 'feed', i = 0, tipo) => { const f = est.fmt, j = est.i; est.fmt = fmt; est.i = i; const cv = gerar(tipo); est.fmt = f; est.i = j; return cv; }, tema, abre };
+
+  d.addEventListener('change', (e) => {
+    if (e.target.matches?.('[data-c561-ocultar]')) { est.ocultar = e.target.checked; void abre('dia'); }
+  });
+  d.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && d.body.classList.contains('c561-open')) fecha();
+  });
+
+  // Atualiza miniatura antiga (se presente) apenas em renderizações (sem polling 2.5s)
+  let ultimaThumb = '';
+  const syncThumb = async () => {
+    const img = d.querySelector('[data-v430-thumb] img');
+    const ed = edicao();
+    if (!img || !ed?.manchete) return;
+    const k = String(ed.manchete.titulo || '') + '|' + String(ed.clima_capa || '');
+    if (k === ultimaThumb && img.dataset.c561 === 'v971') return;
+    ultimaThumb = k;
+    const cv = await gerarAsync('feed', 0);
+    if (cv && img.isConnected) { img.src = cv.toDataURL('image/jpeg', 0.86); img.dataset.c561 = 'v971'; }
+  };
+  root.addEventListener('diario:render', () => { void syncThumb(); });
+
+  const arte = (n, w = 1200, h = 520) => {
+    const info = classificar(n);
+    const cv = d.createElement('canvas'); cv.width = w; cv.height = h;
+    const c = cv.getContext('2d'); if (!c) return null;
+    fundoCena(c, w, h, info.cena, info.pal, { cutStart: 0.35 });
+    return cv;
+  };
+
+  root.DiarioCapas561 = {
+    cenas: CENAS,
+    classificar,
+    preload,
+    arte,
+    gerar: (fmt = 'feed', i = 0, tipo) => {
+      const f = est.fmt, j = est.i;
+      est.fmt = FMT[fmt] ? fmt : 'feed';
+      est.i = i;
+      const cv = gerar(tipo);
+      est.fmt = f; est.i = j;
+      return cv;
+    },
+    gerarAsync,
+    tema,
+    abre,
+  };
 })(window, document);

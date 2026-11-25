@@ -2700,11 +2700,13 @@ PROTOCOLO EDITORIAL OBRIGATÓRIO:
 `;
 export const SYS_JORNAL = REGRA_EDITORIAL_JORNAL + `Você é o editor-chefe de um jornal econômico brasileiro de referência, escrevendo para investidores, traders e estudantes de economia. Padrão de redação: precisão, números com fonte, mecanismos econômicos explicados e nenhum viés político-partidário.
 Escreva em português do Brasil uma EDIÇÃO do jornal, com texto 100% ORIGINAL (nunca copie frases de outros veículos; as manchetes recebidas são só pistas do que pesquisar). Pesquise na internet os fatos do dia antes de escrever.
-CADA MATÉRIA tem: "editoria" (Mercados, Macroeconomia, Juros e política monetária, Contas públicas, Empresas, Internacional, Commodities, Eleições e economia, Câmbio), "chapeu" (2 a 4 palavras, como nos jornais), "titulo" (informativo, com o fato e o número principal, até 110 caracteres), "linha_fina" (o desdobramento em uma frase, até 200 caracteres), "texto" (2 a 4 parágrafos separados por linha em branco; o 1º responde o quê, quem, quanto e por quê; os seguintes explicam o MECANISMO econômico, como o canal de transmissão dos juros, o efeito no câmbio, nos termos de troca, no fiscal, na inflação, no crédito e no fluxo estrangeiro, e trazem contexto histórico e comparações), "por_que_importa" (1 a 2 frases: o efeito prático no mercado, nos ativos ou no bolso), "numeros" (2 a 4 pares rótulo/valor com os números-chave da matéria) e "impacto" ({"ativos": até 5 códigos de ativos afetados, como PETR4, VALE3, ITUB4, WIN, WDO, DI, IBOV, S&P 500, Brent; "setores": até 3 setores da bolsa afetados, como Bancos, Petróleo, Mineração, Varejo, Construção, Elétricas, Exportadoras; "direcao": "alta", "baixa" ou "misto", o efeito provável da notícia sobre esses ativos}). Só coloque no impacto o que o texto sustenta; se não houver efeito claro, deixe as listas vazias.
+CADA MATÉRIA tem: "editoria" (Mercados, Macroeconomia, Juros e política monetária, Contas públicas, Empresas, Internacional, Commodities, Eleições e economia, Câmbio), "chapeu" (2 a 4 palavras, como nos jornais), "titulo" (informativo, incisivo e direto, com o fato e o número principal, idealmente até 88 caracteres e máximo 110), "linha_fina" (o desdobramento em uma frase, até 180 caracteres), "texto" (2 a 4 parágrafos separados por linha em branco; o 1º responde o quê, quem, quanto e por quê; os seguintes explicam o MECANISMO econômico, como o canal de transmissão dos juros, o efeito no câmbio, nos termos de troca, no fiscal, na inflação, no crédito e no fluxo estrangeiro, e trazem contexto histórico e comparações), "por_que_importa" (1 a 2 frases: o efeito prático no mercado, nos ativos ou no bolso), "numeros" (2 a 4 pares rótulo/valor com os números-chave da matéria) e "impacto" ({"ativos": até 5 códigos de ativos afetados, como PETR4, VALE3, ITUB4, WIN, WDO, DI, IBOV, S&P 500, Brent; "setores": até 3 setores da bolsa afetados, como Bancos, Petróleo, Mineração, Varejo, Construção, Elétricas, Exportadoras; "direcao": "alta", "baixa" ou "misto", o efeito provável da notícia sobre esses ativos}). Só coloque no impacto o que o texto sustenta; se não houver efeito claro, deixe as listas vazias.
 ESTRUTURA DA EDIÇÃO:
-- "manchete": a matéria mais importante do dia, com 3 a 4 parágrafos.
-- "materias": 5 matérias de editorias DIFERENTES entre si e da manchete, escolhidas pela relevância do dia.
-- "em_poucas_linhas": 4 a 6 notas curtas (uma frase cada) com fatos que não couberam nas matérias.
+- "clima_capa": "alta", "baixa" ou "cautela" — o humor real dominante do mercado nesta edição com base nos dados (ex.: pressão vendedora/queda forte = "baixa"; rali/otimismo = "alta"; espera por decisão/lateralidade = "cautela").
+- "radar_mesa": {"win":"","wdo":"","di":""} — leitura seca de 1 frase (até 140 caracteres cada) para quem opera: principal driver factual e ponto de atenção no Índice (WIN), Dólar (WDO) e Juros (DI), sem recomendação nem previsão garantida.
+- "manchete": a matéria mais importante do dia, com 3 a 4 parágrafos e título forte de capa.
+- "materias": 5 matérias de editorias DIFERENTES entre si e da manchete, escolhidas pela relevância do dia, sem repetir o tema principal.
+- "em_poucas_linhas": 4 a 6 notas curtas (uma frase cada) com fatos NOVOS que não apareceram na manchete nem nas matérias.
 - "agenda": 3 a 6 itens {"quando","evento","por_que"} do que vem a seguir (indicadores, Copom/Fed, balanços, leilões, votações).
 - "analise": {"titulo","texto"}: um artigo de análise da redação, em 2 parágrafos, com uma tese clara e fundamentada nos dados (é análise técnica, não opinião política nem recomendação de investimento).
 - "fontes": até 8 {"titulo","url"} das fontes que você usou.
@@ -2712,19 +2714,27 @@ EDIÇÕES: "manha" = o que aconteceu desde o fechamento de ontem, exterior de ma
 REGRAS:
 1) Use EXATAMENTE os números dos blocos "Cotações" e "Leitura técnica"; número que não estiver lá só entra se você achar na pesquisa, citando a fonte no texto ("segundo o IBGE…", "dados do Banco Central…").
 2) Eleições: cobertura factual (pesquisas, resultados, propostas econômicas e reação dos preços), sem tomar partido, sem adjetivar candidatos e sem prever quem vence.
-3) Nada de recomendação de compra ou venda. Sem emojis. Sem clichês ("aversão ao risco" repetido, "no radar dos investidores", "sob a ótica"). Varie a construção das frases.
+3) Nada de recomendação de compra ou venda. Sem emojis. Sem clichês ("aversão ao risco" repetido, "no radar dos investidores", "sob a ótica"). Varie a construção das frases e nunca repita fatos entre "em_poucas_linhas" e "materias".
 4) Se faltar informação confirmada sobre um assunto, não invente: troque de assunto.
-Responda SOMENTE JSON: {"manchete":{"editoria":"","chapeu":"","titulo":"","linha_fina":"","texto":"","por_que_importa":"","numeros":[{"rotulo":"","valor":""}],"impacto":{"ativos":[""],"setores":[""],"direcao":""}},"materias":[{"editoria":"","chapeu":"","titulo":"","linha_fina":"","texto":"","por_que_importa":"","numeros":[{"rotulo":"","valor":""}],"impacto":{"ativos":[""],"setores":[""],"direcao":""}}],"em_poucas_linhas":[""],"agenda":[{"quando":"","evento":"","por_que":""}],"analise":{"titulo":"","texto":""},"fontes":[{"titulo":"","url":""}]}`;
+Responda SOMENTE JSON: {"clima_capa":"alta|baixa|cautela","radar_mesa":{"win":"","wdo":"","di":""},"manchete":{"editoria":"","chapeu":"","titulo":"","linha_fina":"","texto":"","por_que_importa":"","numeros":[{"rotulo":"","valor":""}],"impacto":{"ativos":[""],"setores":[""],"direcao":""}},"materias":[{"editoria":"","chapeu":"","titulo":"","linha_fina":"","texto":"","por_que_importa":"","numeros":[{"rotulo":"","valor":""}],"impacto":{"ativos":[""],"setores":[""],"direcao":""}}],"em_poucas_linhas":[""],"agenda":[{"quando":"","evento":"","por_que":""}],"analise":{"titulo":"","texto":""},"fontes":[{"titulo":"","url":""}]}`;
 
 const s = (x: unknown, n: number) => String(x ?? '').replace(/[ \t]+/g, ' ').trim().slice(0, n);
 const par = (x: unknown, n: number) => String(x ?? '').split(/\n\s*\n/).map((p) => s(p.replace(/\s+/g, ' '), 1800)).filter(Boolean).join('\n\n').slice(0, n);
 const nums = (L: unknown) => (Array.isArray(L) ? L : []).map((x: any) => ({ rotulo: s(x?.rotulo, 60), valor: s(x?.valor, 40) })).filter((x) => x.rotulo && x.valor).slice(0, 6);
 const mat = (m: any, n = 4500) => ({ evidencia_trecho: s(m?.evidencia_trecho, 240), conferencia_fonte: m?.conferencia_fonte && typeof m.conferencia_fonte === 'object' ? {estado:s(m.conferencia_fonte.estado,40),motivo:s(m.conferencia_fonte.motivo,240),consultado_em:s(m.conferencia_fonte.consultado_em,40)} : null, revisao: s(m?.revisao, 300), fato: par(m?.fato, 1200), interpretacao: par(m?.interpretacao, 1200), cenario: par(m?.cenario, 1000), fonte_url: JORNAL_Q.url(m?.fonte_url), publicado_em: s(m?.publicado_em, 40), periodo: s(m?.periodo, 100), consenso_valor: s(m?.consenso_valor, 60), consenso_fonte: JORNAL_Q.url(m?.consenso_fonte), editoria: s(m?.editoria, 40) || 'Mercados', chapeu: s(m?.chapeu, 50), titulo: s(m?.titulo, 160), linha_fina: s(m?.linha_fina, 260), texto: par(m?.texto, n), por_que_importa: s(m?.por_que_importa, 400), numeros: nums(m?.numeros), impacto: imp(m?.impacto), placar: (['acima', 'em linha', 'abaixo'].includes(s(m?.placar, 12).toLowerCase()) ? s(m?.placar, 12).toLowerCase() : ''), consenso: s(m?.consenso, 300) });
 function imp(x: any) { const L = (a: unknown, n: number, k: number) => (Array.isArray(a) ? a : []).map((v) => s(v, k)).filter(Boolean).slice(0, n); const d = s(x?.direcao, 10).toLowerCase(); return { ativos: L(x?.ativos, 5, 16), setores: L(x?.setores, 3, 40), direcao: ['alta', 'baixa', 'misto'].includes(d) ? d : '' }; }
+function radarNormaliza(x: any) {
+  if (!x || typeof x !== 'object') return null;
+  const win = s(x.win, 180), wdo = s(x.wdo, 180), di = s(x.di, 180);
+  return win || wdo || di ? { win, wdo, di } : null;
+}
 export function jrNormaliza(r: any) {
   const manchete = mat(r?.manchete, 6000);
   if (!manchete.titulo || !manchete.texto) throw new Error('A IA não devolveu a manchete da edição.');
+  const cc = s(r?.clima_capa, 16).toLowerCase();
   return {
+    clima_capa: ['alta', 'baixa', 'cautela'].includes(cc) ? cc : '',
+    radar_mesa: radarNormaliza(r?.radar_mesa),
     manchete,
     materias: (Array.isArray(r?.materias) ? r.materias : []).map((m: any) => mat(m)).filter((m: any) => m.titulo && m.texto).slice(0, 10),
     em_poucas_linhas: (Array.isArray(r?.em_poucas_linhas) ? r.em_poucas_linhas : []).map((x: unknown) => s(x, 280)).filter(Boolean).slice(0, 8),
@@ -2776,21 +2786,22 @@ export function quizNormaliza(r: any) {
 }
 
 // ---------- a edição é escrita por duas "redações" em paralelo (metade do texto cada = metade do tempo) ----------
-export const PARTE_A = `\n\nPARTE 1 DE 4 — outras equipes escrevem o resto ao mesmo tempo. Escreva SOMENTE "manchete" (o assunto MAIS importante do dia, texto de 3 parágrafos), "analise" (2 a 3 parágrafos) e "fontes" (e "conferencia" ou "aula", se pedidas). Deixe "materias", "em_poucas_linhas" e "agenda" como listas vazias. Seja direto: pesquise só o necessário.`;
+export const PARTE_A = `\n\nPARTE 1 DE 4 — outras equipes escrevem o resto ao mesmo tempo. Escreva SOMENTE "clima_capa" ("alta", "baixa" ou "cautela" conforme o humor dominante dos dados), "manchete" (o assunto MAIS importante do dia, título forte de capa até 88 caracteres e texto de 3 parágrafos), "analise" (2 a 3 parágrafos) e "fontes" (e "conferencia" ou "aula", se pedidas). Deixe "materias", "em_poucas_linhas" e "agenda" como listas vazias. Seja direto: pesquise só o necessário.`;
 export const PARTE_B1 = `\n\nPARTE 2 DE 4 — outras equipes escrevem a manchete (o assunto MAIS importante do dia) e as outras matérias. Escreva SOMENTE "materias" com 3 matérias sobre o 2º, o 3º e o 4º assuntos mais importantes do dia (de editorias diferentes, texto de 2 a 3 parágrafos curtos cada, com o número que mexeu com o mercado) e "fontes". Responda {"materias":[...],"fontes":[...]}. Seja direto: pesquise só o necessário.`;
 export const PARTE_B2 = `\n\nPARTE 3 DE 4 — outras equipes escrevem a manchete e as matérias dos assuntos mais importantes. Escreva SOMENTE "materias" com 3 matérias sobre o 5º, o 6º e o 7º assuntos mais importantes do dia (de preferência Empresas, Commodities, Internacional ou Contas públicas; texto de 2 a 3 parágrafos curtos cada, com o número que mexeu com o mercado) e "fontes". Responda {"materias":[...],"fontes":[...]}. Seja direto: pesquise só o necessário.`;
 export const PARTE_C = `\n\nPARTE 4 DE 4 — outras equipes escrevem as matérias. Escreva SOMENTE estes campos:
+"radar_mesa": {"win":"1 frase seca (até 140 caracteres) sobre o principal driver factual e ponto de atenção no Índice (WIN)","wdo":"1 frase seca sobre o Dólar (WDO)","di":"1 frase seca sobre a Curva de Juros (DI)"}, baseado apenas nos dados recebidos, sem recomendação.
 "cinco_coisas": até 3 itens com riscos e mudanças para a fase desta edição, sem repetir a manchete: cada um com "titulo" (até 80 caracteres, com o fato e o número) e "texto" (1 frase dizendo o efeito no mercado brasileiro). Não repita a mesma notícia.
-"em_poucas_linhas": até 4 notas curtas de assuntos variados do dia, cada uma com o fato e o número.
+"em_poucas_linhas": até 4 notas curtas de assuntos variados do dia, cada uma com o fato e o número, sem repetir os títulos das matérias.
 "agenda": os indicadores, decisões de juros, leilões e votações que vêm por aí (NÃO coloque balanços de empresas, que o sistema acrescenta com as datas oficiais). Cada item com "quando" (dia e hora), "pais" (Brasil, EUA, Zona do Euro, China...), "evento", "por_que", "impacto" ("alto", "medio" ou "baixo"), "consenso" e "anterior". Preencha "consenso" e "anterior" SOMENTE com números que estejam nos dados recebidos neste pedido; se não estiverem, deixe "" (nunca invente número).
 "fechamento_texto": 1 frase com a referência temporal dos dados, sem assumir fechamento não confirmado, explicando o Ibovespa, o dólar, os juros futuros e Nova York no último pregão, usando só as cotações recebidas neste pedido.
 "grafico_do_dia": null quando não houver série gráfica recebida; nunca descreva rompimentos a partir apenas da cotação. Se houver série, {"ativo": "win" (mini índice), "wdo" (dólar futuro) ou "di" (curva de juros), o gráfico que melhor conta a história do dia; "titulo": até 70 caracteres; "texto": 1 a 2 frases explicando o que o gráfico mostra}.
 "mesa": {"titulo": "...", "texto": 2 parágrafos curtos de opinião da redação, no estilo de coluna de mercado: o que importa para quem opera hoje, os riscos e o que pode mudar o humor do pregão}. Não atribua falas a pessoas reais nem invente citações.
 "fontes".
-Responda {"cinco_coisas":[...],"em_poucas_linhas":[...],"agenda":[...],"fechamento_texto":"","grafico_do_dia":{},"mesa":{},"fontes":[...]}. Seja direto.`;
+Responda {"radar_mesa":{"win":"","wdo":"","di":""},"cinco_coisas":[...],"em_poucas_linhas":[...],"agenda":[...],"fechamento_texto":"","grafico_do_dia":{},"mesa":{},"fontes":[...]}. Seja direto.`;
 /** Partes escritas sem pesquisa na internet (bem mais rápidas): só com os blocos recebidos. */
 export const SEM_BUSCA_JR = `\n\nNESTA PARTE VOCÊ NÃO TEM PESQUISA NA INTERNET: escreva SÓ com os fatos dos blocos recebidos (cotações, leitura técnica, contexto, balanços e as manchetes com os resumos oficiais). Não invente números, declarações nem fatos; o que não estiver nos blocos fica de fora. Em "fontes", liste só os veículos das manchetes usadas, sem link.`;
-export const PARTE_CURTA = `\n\nEDIÇÃO CURTA: escreva a "manchete" (2 parágrafos) e 3 "materias" curtas (1 a 2 parágrafos), "em_poucas_linhas" e "analise" (1 parágrafo), usando SÓ as cotações, o contexto e as manchetes recebidas acima como base dos fatos.`;
+export const PARTE_CURTA = `\n\nEDIÇÃO CURTA: escreva "clima_capa", "radar_mesa" (win, wdo, di), a "manchete" (2 parágrafos) e 3 "materias" curtas (1 a 2 parágrafos), "em_poucas_linhas" e "analise" (1 parágrafo), usando SÓ as cotações, o contexto e as manchetes recebidas acima como base dos fatos.`;
 const palavras = (t: string) => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter((w) => w.length > 3));
 /** Junta as duas partes; se a parte da manchete falhar, a primeira matéria vira manchete. Tira matéria repetida. */
 export function jrJunta(a: any, ...resto: any[]) {
@@ -2798,7 +2809,7 @@ export function jrJunta(a: any, ...resto: any[]) {
   const ms = lista('materias');
   raw.fontes = lista('fontes');
   for (const k of ['em_poucas_linhas', 'agenda', 'cinco_coisas']) if (!(Array.isArray(raw[k]) && raw[k].length)) raw[k] = lista(k);
-  for (const k of ['fechamento_texto', 'grafico_do_dia', 'mesa']) if (!raw[k]) { const x = todas.find((t: any) => t && t[k]); if (x) raw[k] = x[k]; }
+  for (const k of ['clima_capa', 'radar_mesa', 'fechamento_texto', 'grafico_do_dia', 'mesa']) if (!raw[k]) { const x = todas.find((t: any) => t && t[k]); if (x) raw[k] = x[k]; }
   if (!raw.manchete?.titulo && ms.length) raw.manchete = ms.shift();
   const vistos = [palavras(raw.manchete?.titulo)];
   raw.materias = ms.filter((m: any) => { const p = palavras(m?.titulo); const rep = vistos.some((v) => { let c = 0; p.forEach((w) => v.has(w) && c++); return p.size && c >= 2 && c / p.size >= 0.6; }); if (!rep) vistos.push(p); return !rep; });
@@ -2815,7 +2826,7 @@ export function aulaNormaliza(a: any) {
 
 // ---------- partes do jornal: aceita a resposta da IA mesmo quando ela vem "embrulhada" ou com nomes de campo diferentes ----------
 const kN = (k: string) => String(k || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[\s-]+/g, '_');
-const JR_CAMPOS: Record<string, string> = { manchete: 'manchete', manchete_principal: 'manchete', materia_principal: 'manchete', materias: 'materias', noticias: 'materias', em_poucas_linhas: 'em_poucas_linhas', poucas_linhas: 'em_poucas_linhas', notas: 'em_poucas_linhas', agenda: 'agenda', analise: 'analise', fontes: 'fontes', conferencia: 'conferencia', aula: 'aula', cinco_coisas: 'cinco_coisas', cinco: 'cinco_coisas', fechamento_texto: 'fechamento_texto', fechamento: 'fechamento_texto', grafico_do_dia: 'grafico_do_dia', grafico: 'grafico_do_dia', mesa: 'mesa', coluna: 'mesa', coluna_da_mesa: 'mesa' };
+const JR_CAMPOS: Record<string, string> = { clima_capa: 'clima_capa', clima: 'clima_capa', radar_mesa: 'radar_mesa', radar: 'radar_mesa', manchete: 'manchete', manchete_principal: 'manchete', materia_principal: 'manchete', materias: 'materias', noticias: 'materias', em_poucas_linhas: 'em_poucas_linhas', poucas_linhas: 'em_poucas_linhas', notas: 'em_poucas_linhas', agenda: 'agenda', analise: 'analise', fontes: 'fontes', conferencia: 'conferencia', aula: 'aula', cinco_coisas: 'cinco_coisas', cinco: 'cinco_coisas', fechamento_texto: 'fechamento_texto', fechamento: 'fechamento_texto', grafico_do_dia: 'grafico_do_dia', grafico: 'grafico_do_dia', mesa: 'mesa', coluna: 'mesa', coluna_da_mesa: 'mesa' };
 const temCampo = (o: any) => o && typeof o === 'object' && Object.keys(o).some((k) => JR_CAMPOS[kN(k)]);
 /** Tira embrulhos ({"edicao":{...}}, [ {...} ], texto com JSON dentro) e padroniza os nomes dos campos. */
 export function jrDesembrulha(r: any, parseTexto: (t: string) => any = () => null): any {

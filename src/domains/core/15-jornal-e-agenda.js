@@ -2387,7 +2387,10 @@ function jrImagem() {
   );
 }
 async function jrImgShare() {
-  const e = jrImagem();
+  const e =
+    (window.DiarioCapas561 && typeof window.DiarioCapas561.gerarAsync === "function"
+      ? await window.DiarioCapas561.gerarAsync("feed", 0)
+      : null) || jrImagem();
   if (!e) return;
   const t = await new Promise((s) => e.toBlob(s, "image/png"));
   if (!t) return toast("Não consegui gerar a imagem.");
