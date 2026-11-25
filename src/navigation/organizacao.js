@@ -12,7 +12,7 @@
  function saveContext(){const route=current();C.set('rota',route);C.set('filtros',{periodo:PER,modalidade:LT,mercado:MKT.tab,dia:DV});if(lastRoute&&lastRoute!==route)lastRoute=route}
  function dayLabels(){if(!['home','dia'].includes(tab))return;const a=d.querySelector('#app:not(.v503-fantasma)');if(!a)return;const day=S.days?.[loc().slice(0,10)]||{},state=M.dayState(day,S.rules||[]);let banner=d.getElementById('rotina-estado');
   /* v829: o estado do preparo é do Meu dia; o Início é a tela do mercado. */
-  if(tab==='home'){banner?.remove();return}if(!banner){banner=d.createElement('section');banner.id='rotina-estado';banner.className='card';banner.setAttribute('aria-label','Estado do dia');a.prepend(banner)}const html=`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="sm"><b>${E(state.preparo.rotulo)}</b> · ${E(state.regras.rotulo)}</div><button type="button" class="btn s" data-rotina-preparo style="min-height:36px;padding:4px 10px">Checklist do dia</button></div>`;if(banner.innerHTML!==html)banner.innerHTML=html;for(const node of a.querySelectorAll('.v508-grupo,.checklist-progress,.simple-day-summary'))for(const text of [...node.childNodes])if(text.nodeType===3&&/Checklist\s+\d/.test(text.textContent))text.textContent=text.textContent.replace(/Checklist(?=\s+\d)/,'Regras opcionais')}
+  if(tab==='home'||a.querySelector('.dt975-rot-hero')){banner?.remove();return}if(!banner){banner=d.createElement('section');banner.id='rotina-estado';banner.className='card';banner.setAttribute('aria-label','Estado do dia');a.prepend(banner)}const html=`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="sm"><b>${E(state.preparo.rotulo)}</b> · ${E(state.regras.rotulo)}</div><button type="button" class="btn s" data-rotina-preparo style="min-height:36px;padding:4px 10px">Checklist do dia</button></div>`;if(banner.innerHTML!==html)banner.innerHTML=html;for(const node of a.querySelectorAll('.v508-grupo,.checklist-progress,.simple-day-summary'))for(const text of [...node.childNodes])if(text.nodeType===3&&/Checklist\s+\d/.test(text.textContent))text.textContent=text.textContent.replace(/Checklist(?=\s+\d)/,'Regras opcionais')}
  function statusPanel(){if(tab!=='status'&&tab!=='mais')return;const a=d.querySelector('#app:not(.v503-fantasma)');if(!a||a.querySelector('#diagnostico-contexto'))return;const box=d.createElement('details');box.id='diagnostico-contexto';box.className='card';box.innerHTML=`<summary>Diagnóstico de fontes e processamento</summary><p class="sm mut">Incidentes deste aparelho e desta conta. Cancelamentos esperados não são registrados. A recuperação atualiza o incidente.</p>${w.DiarioDiagnostico.list().slice(0,30).map(x=>`<div class="card sm"><b>${E(x.estado)} · ${E(x.ativo||x.endpoint||x.tela)}</b><p>${E(x.mensagem)}</p><small>${new Date(x.ultimo).toLocaleString('pt-BR')} · v${E(x.versao)} · ${x.vezes} ocorrência(s) · tentativa ${x.tentativa}</small></div>`).join('')||'<p>Sem incidentes registrados neste aparelho.</p>'}<p class="sm">Recursos de tela ativos: ${w.DiarioCiclos.stats.escopos.reduce((sum,s)=>sum+s.recursos,0)}</p>`;a.append(box)}
  function disclosures(){const a=d.querySelector('#app:not(.v503-fantasma)');if(!a)return;for(const item of a.querySelectorAll('details[id]:not(#rebalanceamento-carteira-v694)')){const value=C.get('details:'+current()+':'+item.id);if(value!==null)item.open=value}}
  // Mini-calculadora exclusivamente visual da rota Operações. Nenhum dado é gravado.
@@ -170,7 +170,8 @@
   };
   refresh();
 
-  raiz.prepend(painel);
+  const slot=raiz.querySelector('.dt975-calc-slot');
+  if(slot)slot.append(painel);else raiz.prepend(painel);
   posicaoAtualiza(painel);
  }
  function posicaoCampoAlterado(evento){
@@ -185,6 +186,13 @@
  d.addEventListener('input',posicaoCampoAlterado);
  d.addEventListener('change',posicaoCampoAlterado);
  d.addEventListener('click',evento=>{
+  const tog=evento.target.closest?.('[data-dt975-calc-toggle]');
+  if(tog){
+   evento.preventDefault();
+   const p=d.querySelector('#app:not(.v503-fantasma) [data-posicao-painel]');
+   if(p){p.open=!p.open;posicaoTrade.aberto=p.open;if(p.open)p.scrollIntoView({behavior:'smooth',block:'nearest'});}
+   return;
+  }
   const btn=evento.target.closest?.('[data-posicao-aba],[data-posicao-modo]');
   const painel=btn?.closest('[data-posicao-painel]');
   if(!painel)return;
