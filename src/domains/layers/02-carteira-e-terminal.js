@@ -1897,15 +1897,15 @@ try {
         ["home", "Início", "home", "resumo painel principal"],
         [
           "dia",
-          "Meu dia",
+          "Rotina",
           "calendar",
-          "planejamento notas pré-mercado checklist",
+          "meu dia rotina planejamento notas pré-mercado checklist",
         ],
         [
           "ops",
-          "Operações",
+          "Trades",
           "trade",
-          "day trade swing trade opções forex trades",
+          "operações day trade swing trade opções forex trades",
         ],
         [
           "mercado",
@@ -2113,9 +2113,9 @@ try {
       const t =
         {
           home: "Início",
-          dia: "Meu dia",
+          dia: "Rotina",
           regras: "Checklist",
-          ops: "Operações",
+          ops: "Trades",
           trades: "Day trade",
           swing: "Swing trade",
           opc: "Opções",
@@ -6093,8 +6093,8 @@ try {
     "use strict";
     const l = {
         home: "Início",
-        dia: "Meu dia",
-        ops: "Operações",
+        dia: "Rotina",
+        ops: "Trades",
         trades: "Day trade",
         swing: "Swing trade",
         opc: "Opções",

@@ -3924,7 +3924,7 @@ try {
           '<h3>Planilha e relatório da semana por e-mail</h3><div class="mut">Toda sexta depois das 18h (ou no fim de semana, quando abrir o app) a planilha de operações da semana, com as fotos, e o Relatório de desempenho em PDF vão para o seu e-mail.</div><div class="v512-seg"><button type="button" data-v517em>Enviar agora</button></div>'),
         t.after(e));
     }
-    (setInterval(w, 1500),
+    (setInterval(() => { o.hidden || w(); }, 5000),
       o.addEventListener(
         "click",
         async (t) => {

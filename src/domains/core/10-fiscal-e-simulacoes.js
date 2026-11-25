@@ -2526,12 +2526,47 @@ function flwHtml() {
   if ((setTimeout(() => flwCarrega(!1), 0), !e))
     return `<div id="flwbox"><div class="card sm" style="color:var(--mut)">${FLW.err ? esc(FLW.err) : "Carregando o fluxo do EWZ…"}</div>${flwSobre()}</div>`;
   if (e.status === "sem_feed_opcoes") {
-    const hv = e.vol && e.vol.hv20 != null && Number.isFinite(+e.vol.hv20)
-      ? ((+e.vol.hv20) * 100).toFixed(1).replace(".", ",") + "%"
-      : "—";
-    return `<div id="flwbox"><div class="card"><div class="top"><b>EWZ US$ ${(+e.spot).toFixed(2).replace(".", ",")}</b><span class="chip">COTAÇÃO</span></div>
-      <div class="sm mut">Histórico de volatilidade realizada (20 dias): ${hv}. Fonte: Yahoo Finance, via Cloudflare.</div>
-      <div class="sm mut" style="margin-top:8px">As métricas de opções — IV, prêmio líquido, open interest, gregas e boletas — estão indisponíveis até configurar um feed autorizado. Nenhum número foi estimado ou preenchido artificialmente.</div></div></div>`;
+    const spot = Number(e.spot || 0);
+    const hvNum = e.vol && e.vol.hv20 != null && Number.isFinite(+e.vol.hv20) ? +e.vol.hv20 : null;
+    const hv = hvNum != null ? (hvNum * 100).toFixed(1).replace(".", ",") + "%" : "—";
+    const sd1 = hvNum != null && spot > 0 ? spot * (hvNum / Math.sqrt(252)) : null;
+    const sd20 = hvNum != null && spot > 0 ? spot * (hvNum * Math.sqrt(20 / 252)) : null;
+    const sd1Pct = hvNum != null ? (hvNum / Math.sqrt(252) * 100).toFixed(2).replace(".", ",") + "%" : "—";
+    const sd20Pct = hvNum != null ? (hvNum * Math.sqrt(20 / 252) * 100).toFixed(1).replace(".", ",") + "%" : "—";
+    let ewzExt = null, adrs = [];
+    try {
+      const adList = (typeof AD !== "undefined" && AD?.data?.itens) || [];
+      for (const it of adList) {
+        const s0 = String(it?.s || it?.c || "").toUpperCase();
+        if (s0 === "EWZ") ewzExt = it;
+        if (["EWZ", "PBR", "VALE", "ITUB", "BBD"].includes(s0) && Number.isFinite(Number(it?.px))) adrs.push(it);
+      }
+      if (!ewzExt && typeof mdoExt === "function") ewzExt = mdoExt();
+    } catch {}
+    const d1 = ewzExt && Number.isFinite(Number(ewzExt.d1 ?? ewzExt.pct)) ? Number(ewzExt.d1 ?? ewzExt.pct) : null;
+    const d1Html = d1 != null ? `<span class="chip ${d1 > 0 ? "g" : d1 < 0 ? "r" : ""}">${d1 > 0 ? "▲ +" : d1 < 0 ? "▼ " : ""}${d1.toFixed(2).replace(".", ",")}%</span>` : '<span class="chip">COTAÇÃO</span>';
+    const extHtml = ewzExt?.ext && Number.isFinite(Number(ewzExt.ext.px))
+      ? `<div class="sm" style="margin-top:6px"><b>Sessão estendida (${esc(ewzExt.ext.tipo || "NY")}):</b> US$ ${Number(ewzExt.ext.px).toFixed(2).replace(".", ",")} <b class="${Number(ewzExt.ext.pct) > 0 ? "g" : Number(ewzExt.ext.pct) < 0 ? "r" : "mut"}">(${Number(ewzExt.ext.pct) > 0 ? "+" : ""}${Number(ewzExt.ext.pct).toFixed(2).replace(".", ",")}%)</b></div>`
+      : "";
+    const adrsHtml = adrs.length
+      ? `<div class="sm" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><b>ADRs brasileiras em NY</b><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${adrs.map((it) => {
+          const p = Number(it.d1 ?? it.pct);
+          const cl = Number.isFinite(p) ? (p > 0 ? "g" : p < 0 ? "r" : "mut") : "mut";
+          return `<span class="chip">${esc(it.s || it.c)} <b>US$ ${Number(it.px).toFixed(2).replace(".", ",")}</b>${Number.isFinite(p) ? ` <i class="${cl}" style="font-style:normal">${p > 0 ? "+" : ""}${p.toFixed(2).replace(".", ",")}%</i>` : ""}</span>`;
+        }).join("")}</div></div>`
+      : "";
+    const pr = `Analise o cenário do EWZ hoje (US$ ${spot.toFixed(2)}, volatilidade realizada 20d ${hv}${d1 != null ? `, variação ${d1.toFixed(2)}%` : ""}) e o que isso sinaliza para a abertura do Ibovespa / WIN e fluxo estrangeiro.`;
+    return `<div id="flwbox"><div class="card"><div class="top"><b>EWZ US$ ${spot.toFixed(2).replace(".", ",")}</b>${d1Html}</div>
+      ${extHtml}
+      <div class="rrdg" style="margin-top:8px">
+        <div><small>Vol. realizada (20d)</small><b class="mono">${hv}</b><i>anualizada · Yahoo/CF</i></div>
+        <div><small>Faixa 1σ diária</small><b class="mono">${sd1 != null ? "±" + sd1Pct : "—"}</b><i>${sd1 != null ? `US$ ${(spot - sd1).toFixed(2).replace(".", ",")} – ${(spot + sd1).toFixed(2).replace(".", ",")}` : "calculada da HV20"}</i></div>
+        <div><small>Faixa 1σ (20 pregões)</small><b class="mono">${sd20 != null ? "±" + sd20Pct : "—"}</b><i>${sd20 != null ? `US$ ${(spot - sd20).toFixed(2).replace(".", ",")} – ${(spot + sd20).toFixed(2).replace(".", ",")}` : "estimativa estatística"}</i></div>
+        <div><small>Feed de opções CBOE</small><b class="mono">Pausado</b><i>sem cadeia pública ao vivo</i></div>
+      </div>
+      ${adrsHtml}
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"><button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('schwartz','Leitura EWZ · Áurea',${JSON.stringify(pr)})">✦ Analisar EWZ com Áurea</button></div>
+      <div class="sm mut" style="margin-top:8px">Cadeia de opções (IV, prêmio líquido, open interest, gregas e boletas) requer feed autorizado da CBOE. Os dados acima usam apenas cotação e volatilidade realizada verificáveis.</div></div></div>`;
   }
   const t = e.vol || {},
     a = (n) => (n == null ? "–" : (n * 100).toFixed(1).replace(".", ",") + "%"),
