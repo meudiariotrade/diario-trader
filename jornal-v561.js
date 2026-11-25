@@ -212,9 +212,10 @@
   };
   const obs = new MutationObserver(sched);
   obs.observe(d.documentElement, { childList: true, subtree: true });
-  w.addEventListener('diario:render', sched);
-  if (d.readyState !== 'loading') sched();
-  else d.addEventListener('DOMContentLoaded', sched, { once: true });
+  w.addEventListener('diario:render', aplica);
+  if (w.TraderUI?.onRender) w.TraderUI.onRender('jornal-v971', { after: aplica });
+  if (d.readyState !== 'loading') aplica();
+  else d.addEventListener('DOMContentLoaded', aplica, { once: true });
 
   w.DiarioJornal561 = { aplica };
 })(window, document);
