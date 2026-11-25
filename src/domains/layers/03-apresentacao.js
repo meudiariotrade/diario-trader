@@ -1757,6 +1757,22 @@ try {
             <button type="button" class="dt975-btn-glass" data-dt976-q15-open="1">⚡ 15s</button>
             <button type="button" class="dt975-btn-glass" data-dt975-calc-toggle="1">Calculadora</button>
           </div>
+          ${(() => {
+            const tv = f(() => typeof travaAvalia === "function" ? travaAvalia() : null, null);
+            const tc = f(() => (typeof S !== "undefined" && S?.ax?.trava) || {}, {});
+            const txtTv = tv?.duro?.length
+              ? `🔒 Travado: ${b(tv.duro[0])}`
+              : tv?.pausaAte
+                ? `⏸️ Pausa pós-stop ativa`
+                : tc.on
+                  ? `🛡️ Trava: máx ${tc.maxTr || 3}t · ${tc.maxStops || 2} stops · ${tc.pausaMin || 15}m`
+                  : "🛡️ Configurar Trava & Limites";
+            const clsTv = tv?.duro?.length ? "no" : tv?.pausaAte ? "am" : tc.on ? "ok" : "";
+            return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center;justify-content:space-between">
+              <button type="button" class="dt975-badge ${clsTv}" data-v4tab="regras" style="cursor:pointer;border:1px solid currentColor">${txtTv}</button>
+              <button type="button" class="dt975-badge" data-v4tab="contratos" style="cursor:pointer">⚖️ Contratos</button>
+            </div>`;
+          })()}
         </section><div class="dt975-calc-slot"></div>`,
         A = e
           .map((d) => {
@@ -8384,6 +8400,11 @@ try {
             if(w.DiarioAnalises?.abrirBusca949?.(tipo,val)&&typeof tab!=="undefined"&&tab!=="analises")irRota("analises");
             return;
           }
+          if (tipo === "diario") {
+            try { if (typeof dayD !== "undefined" && val) dayD = val; } catch {}
+            irRota("dia");
+            return;
+          }
           if (tipo === "trade") {
             const item=typeof S!=="undefined"&&S.trades?.find(t=>String(t.id)===val);
             if(!item)return;
@@ -8440,10 +8461,25 @@ try {
           out.push('<p class="mut sm" style="padding:8px 10px;margin:0">Carregando base de ações e FIIs…</p>');
         }
         const trades = (typeof S !== "undefined" && Array.isArray(S?.trades) ? S.trades : [])
-          .filter((t) => norm([t.ativo,t.setup,t.dt,t.tipo].join(" ")).includes(q))
-          .slice(0, 5);
+          .filter((t) => norm([t.ativo,t.setup,t.dt,t.tipo,t.err,t.nota,t.emot].join(" ")).includes(q))
+          .slice(0, 6);
         if (trades.length) {
-          out.push(`<div class="b-grp">Seus Trades</div>` + trades.map((t) => `<button type="button" class="b-it" data-b949-tipo="trade" data-b949-go="${esc(t.id)}"><b>${esc(t.ativo)}</b><small>${esc(String(t.dt || "").slice(0, 10))}${t.setup ? " · " + esc(t.setup) : ""}</small></button>`).join(""));
+          out.push(`<div class="b-grp">Seus Trades</div>` + trades.map((t) => {
+            const v = typeof tL === "function" ? tL(t) : Number(t.res || 0);
+            const vTxt = Number.isFinite(v) && v !== 0 ? ` · ${v > 0 ? "+" : ""}${typeof R === "function" ? R(v) : v.toFixed(0)}` : "";
+            const extra = t.err ? ` · ${t.err}` : (t.setup ? ` · ${t.setup}` : "");
+            return `<button type="button" class="b-it" data-b949-tipo="trade" data-b949-go="${esc(t.id)}"><b>${esc(t.ativo)}</b><small>${esc(String(t.dt || "").slice(0, 10))}${esc(extra)}${esc(vTxt)}</small></button>`;
+          }).join(""));
+        }
+        const dias = (typeof S !== "undefined" && S?.days && typeof S.days === "object" ? Object.entries(S.days) : [])
+          .filter(([dt, dv]) => dv && norm([dt, dv.plano, dv.pos, dv.nota, dv.obs, dv.erros].join(" ")).includes(q))
+          .sort((a, b) => b[0].localeCompare(a[0]))
+          .slice(0, 4);
+        if (dias.length) {
+          out.push(`<div class="b-grp">Diário de Pregão</div>` + dias.map(([dt, dv]) => {
+            const trecho = String(dv.plano || dv.pos || dv.nota || dv.obs || dv.erros || "").trim().slice(0, 56);
+            return `<button type="button" class="b-it" data-b949-tipo="diario" data-b949-go="${esc(dt)}"><b>${esc(dt)}</b><small>${esc(trecho || "Abrir rotina do dia")}</small></button>`;
+          }).join(""));
         }
       }
       if (telas.length) {
