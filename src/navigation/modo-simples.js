@@ -39,7 +39,7 @@
  const passoDaHora=()=>{const h=new Date().getHours();return h<10?'1':h<18?'2':'3'};
  function meuDia(a){
   const dia=a.querySelector('.v4-page.v4-day'),velho=a.querySelector('#ms-passos');
-  if(!simples()||!dia){velho?.remove();for(const n of a.querySelectorAll('[data-ms-passo]'))delete n.dataset.msPasso;delete a.dataset.msPassoAtual;return}
+  if(!simples()||!dia||dia.querySelector('.dt975-rot-step')){velho?.remove();for(const n of a.querySelectorAll('[data-ms-passo]'))delete n.dataset.msPasso;delete a.dataset.msPassoAtual;return}
   const filhos=[...dia.children],duplas=filhos.filter(n=>n.classList.contains('v4-two'));
   const marca=(n,p)=>{if(n&&n.dataset.msPasso!==p)n.dataset.msPasso=p};
   marca(dia.querySelector(':scope>.v4-plan'),'1');
@@ -70,7 +70,7 @@
      passa a abrir o Meu dia, junto do resumo pessoal. */
   a.querySelector('#ms-tudo')?.remove();for(const n of a.querySelectorAll('[data-ms-extra-inicio]'))delete n.dataset.msExtraInicio;delete a.dataset.msInicioTudo;
   const d=a.querySelector('.v4-page.v4-day'),velho=a.querySelector('#ms-proximo');
-  if(!simples()||!d){velho?.remove();return}
+  if(!simples()||!d||d.querySelector('.dt975-rot-hero')){velho?.remove();return}
   const p=proximo(a);let card=velho;
   if(!card||!d.contains(card)){card?.remove();card=el('section',null,'v4-card ms-proximo');card.id='ms-proximo';card.append(el('small','Próximo passo'),el('h2',''),el('p',''),el('button','','ms-acao'));card.querySelector('button').type='button';const kp=d.querySelector(':scope>.v829-kpis');kp?kp.after(card):d.prepend(card)}
   const [,titulo,sub,botao]=card.children;if(titulo.textContent!==p.t)titulo.textContent=p.t;if(sub.textContent!==p.s)sub.textContent=p.s;if(botao.textContent!==p.t)botao.textContent=p.t;botao.onclick=p.f;
