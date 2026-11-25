@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 004abf1977aa785baaa87a6cc2f65f10d6a43abfbe1c061699b3a996f3f9eebf */
+/* Gerado de src/app-theme.css · SHA256 5acc0b30d66b6925f7e623a4103fc899b09d6988ac4e3f5dea26fa9184be4780 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7305,4 +7305,71 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt981-bkp{
 html:root:root:root[data-v427-tema="claro"] #app#app .dt981-bkp b{color:#8a5e14}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt981-bkp-x{
  background:#ffffff;border-color:rgba(15,23,42,.14);color:#334155
+}
+/* v982: Estudos Liquid Glass 3D + Polimento Desempenho (CSV/PDF) + Blindagem Modo Privacidade */
+#app[data-tela="estudos"] .dt397-category{
+ display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:6px;
+ border-radius:18px;background:rgba(15,23,42,.72);border:1px solid rgba(255,255,255,.1);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
+}
+#app[data-tela="estudos"] .dt397-category .dt397-chip{
+ border-radius:13px;padding:8px 4px;min-height:54px;font-size:.72rem;
+ flex-direction:column;justify-content:center;gap:4px;min-width:0
+}
+#app[data-tela="estudos"] .dt397-category .dt397-chip.on{
+ background:linear-gradient(135deg,#e5c57f,#b8863a)!important;color:#141008!important;border:none!important;
+ box-shadow:0 8px 18px rgba(184,134,58,.32),inset 0 1px 0 rgba(255,255,255,.55)!important
+}
+#app[data-tela="estudos"] :is(.dt397-panel,.v598-rec,.dt982-est-hero,.v4-card){
+ border-radius:20px!important;
+ background:linear-gradient(155deg,rgba(255,255,255,.07),rgba(15,23,37,.9) 55%,rgba(10,16,28,.96))!important;
+ border:1px solid rgba(255,255,255,.11)!important;
+ box-shadow:0 14px 30px rgba(0,0,0,.38),inset 0 1.5px 0 rgba(255,255,255,.16)!important;
+ animation:none!important
+}
+#app[data-tela="estudos"] .v598-rec{
+ border-color:rgba(212,175,106,.38)!important;
+ background:linear-gradient(155deg,rgba(212,175,106,.16),rgba(15,23,37,.94) 58%,rgba(10,16,28,.98))!important
+}
+#app[data-tela="estudos"] .dt982-est-hero{padding:16px;margin-bottom:12px}
+#app[data-tela="estudos"] .dt982-est-acts{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px}
+#app[data-tela="estudos"] .dt982-est-acts button{border-radius:13px;min-height:42px;font-weight:800;font-size:.82rem;cursor:pointer}
+#app[data-tela="estudos"] .v596-foco{display:none!important}
+#app[data-tela="estudos"] #v514-meta{padding:12px 14px!important}
+#app[data-tela="estudos"] .dt982-tour-foot{margin-top:14px;opacity:.88}
+html:root:root:root[data-v427-tema="claro"] #app#app[data-tela="estudos"] .dt397-category{
+ background:#e2e8f0;border-color:rgba(15,23,42,.1)
+}
+html:root:root:root[data-v427-tema="claro"] #app#app[data-tela="estudos"] :is(.dt397-panel,.v598-rec,.dt982-est-hero,.v4-card){
+ background:linear-gradient(155deg,#ffffff,#f4f7fc 58%,#ebf1fa)!important;
+ border-color:rgba(15,23,42,.11)!important;color:#0f172a!important;
+ box-shadow:0 12px 26px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app[data-tela="estudos"] .v598-rec{
+ background:linear-gradient(155deg,#fffbeb,#fef3c7)!important;border-color:rgba(180,126,38,.36)!important
+}
+/* Polimento Desempenho: botões CSV/PDF simétricos + cards legados Liquid Glass 3D */
+#app[data-tela="stats"] .top:has(#csvb){
+ display:flex!important;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px
+}
+#app[data-tela="stats"] .g2:has([data-modpdf]){
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 12px!important
+}
+#app[data-tela="stats"] [data-modpdf],#app[data-tela="stats"] #csvb{
+ border-radius:13px;min-height:42px;font-size:.8rem;font-weight:700;white-space:nowrap
+}
+#app[data-tela="stats"] :is(.card,details.card){
+ border-radius:20px;
+ background:linear-gradient(155deg,rgba(255,255,255,.07),rgba(15,23,37,.9) 55%,rgba(10,16,28,.96));
+ border:1px solid rgba(255,255,255,.11);
+ box-shadow:0 14px 30px rgba(0,0,0,.38),inset 0 1.5px 0 rgba(255,255,255,.16)
+}
+html:root:root:root[data-v427-tema="claro"] #app#app[data-tela="stats"] :is(.card,details.card){
+ background:linear-gradient(155deg,#ffffff,#f4f7fc 58%,#ebf1fa);
+ border-color:rgba(15,23,42,.11);color:#0f172a;
+ box-shadow:0 12px 26px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff
+}
+/* Blindagem total Modo Privacidade nos cards 3D v975-v982 */
+:is(html.priv,body.priv,body:has(.v427-eye[aria-pressed="true"])) #app :is(.dt975-hero-val,.dt976-perf-grid strong,.dt976-cd small,.dt976-play-card b,.dt978-dow-c b,.dt976-sim-out b,.dt983-whatif b){
+ filter:blur(7px)!important;user-select:none!important;transition:filter .18s ease
 }

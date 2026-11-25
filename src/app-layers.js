@@ -24173,7 +24173,7 @@ try {
         ["est", "Hoje", "clock"],
         ["aul", "Aulas", "play"],
         ["liv", "Biblioteca", "book"],
-        ["desemp", "Treino & Progresso", "chart"],
+        ["desemp", "Treino", "chart"],
         /* v628: Replay de mercado (pregão passado candle a candle) virou sub-aba de Estudos. */
         ["rpy", "Replay", "replay"],
       ],
@@ -24185,7 +24185,7 @@ try {
         rpy: ["rpy"],
       },
       SUB596 = {
-        est: [["est", "Hoje"], ["foco", "Modo foco"], ["reg", "Registrar estudo"], ["ciclo", "Ciclo"]],
+        est: [["est", "← Hoje"], ["foco", "Modo foco"], ["reg", "Registrar estudo"], ["ciclo", "Ciclo"]],
         liv: [["liv", "Livros"], ["pl", "Planos de leitura"], ["pr", "Prompts"], ["eco", "Laboratório"]],
         /* v597: Inglês (trilha estilo Duolingo) separado do treino técnico de mercado. */
         desemp: [["desemp", "Progresso"], ["sim", "Simulado CNPI-T"], ["treino", "Treino de mercado"], ["ing", "Inglês"]],
@@ -24214,8 +24214,9 @@ try {
         .join("");
     }
     function sub596() {
-      const lista = SUB596[grupo596(w)];
-      return lista
+      const g = grupo596(w);
+      const lista = (SUB596[g] || []).filter(([id]) => !(g === "est" && w === "est" && id === "est"));
+      return lista.length
         ? `<div class="v596-sub" role="navigation" aria-label="Atalhos da aba">${lista.map(([id, label]) => `<button type="button" class="${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}">${c(label)}</button>`).join("")}</div>`
         : "";
     }
@@ -24472,14 +24473,26 @@ try {
       const acaoDestaque = destaque
         ? 'data-auopen="' + c(destaque.id) + '"'
         : 'data-dt397-view="liv"';
-      /* Hoje (v596): meta semanal (núcleo), modo foco, continuar último estudo e sugestões. */
+      /* v982: Hoje em Estudos — Hero 3D com Continuar + Modo Foco, Recomendado pelo Pregão em destaque e Tour PC no rodapé. */
+      const rec982 = recomenda598();
       const hoje596 =
         w === "est"
-          ? `<section class="v596-hoje" aria-label="Atalhos de hoje">${recomenda598()}
-        <button type="button" class="v596-foco" data-dt397-view="foco">${a("eye", 18)}<span><b>Modo foco</b><small>Cronômetro com matéria e registro automático</small></span>${a("right", 15)}</button>
+          ? `<section class="v596-hoje" aria-label="Atalhos de hoje">
+        ${rec982}
+        <section class="dt982-est-hero">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+            <span class="dt975-kicker">📚 CONTINUAR ESTUDO</span>
+            <span class="sm mut">${c(g)} · ${c($)}</span>
+          </div>
+          <div style="font-size:1rem;font-weight:800;line-height:1.3">${c(titulo)}</div>
+          ${destaque ? `<div style="margin-top:8px">${m}</div>` : ""}
+          <div class="dt982-est-acts">
+            <button type="button" class="dt975-btn-gold" ${acaoDestaque}>▶ ${destaque ? (T(destaque) === 100 ? "Rever agora" : T(destaque) > 0 ? "Retomar agora" : "Começar agora") : "Explorar Biblioteca"}</button>
+            <button type="button" class="dt975-btn-glass" data-dt397-view="foco">⏱️ Foco</button>
+          </div>
+        </section>
         <section class="dt397-panel v596-continuar">
-          <div class="dt397-panel-head"><h2>${a("clock", 20)} Continuar último estudo</h2><button type="button" data-dt397-view="${p ? "aul" : "liv"}">Ver tudo ${a("right", 15)}</button></div>
-          ${destaque ? `<button type="button" class="v596-destaque" ${acaoDestaque}><span><b>${c(titulo)}</b><small>Progresso ${$} · ${g}</small></span><span class="v596-cta">${T(destaque) === 100 ? "Rever" : T(destaque) > 0 ? "Retomar" : "Começar"} ${a("right", 14)}</span></button>${m}` : ""}
+          <div class="dt397-panel-head"><h2>${a("clock", 20)} Próximas aulas e leituras</h2><button type="button" data-dt397-view="${p ? "aul" : "liv"}">Ver tudo ${a("right", 15)}</button></div>
           <div class="dt397-lesson-list">${u}</div>
         </section>
         ${proximas.length ? `<section class="dt397-panel dt397-suggestions"><div class="dt397-panel-head"><div><h2>${a("spark", 21)} Sugestões de estudos</h2><p>Próximas ações a partir das suas revisões, do ciclo e do desempenho.</p></div></div>
@@ -24487,13 +24500,14 @@ try {
         </section>` : ""}
       </section>`
           : "";
+      const h2Est = w === "est" ? "" : `<header><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", rpy: "Replay de mercado", eco: "Laboratório de Economia", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>`;
       return `<div class="dt393-page dt397-studies dt399-studies dt-est-interno" data-vista="${c(w)}" aria-label="Central de Estudos">
-      <details class="v4-card" style="margin:0 0 12px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🎬 Tour Guiado do App no PC (Vídeo com Áudio)</summary><div style="margin-top:10px"><video controls playsinline preload="metadata" style="width:100%;max-height:460px;border-radius:10px;background:#000" src="assets/tour-pc.mp4"></video><p class="sm mut" style="margin:8px 0 0">Guia completo narrado em português mostrando cada tela, checklist, lançamento de operações, Research, Conselho de IA e Carteira.</p></div></details>
       <div class="dt401-category-shell v596-shell">
         <nav class="dt397-category" aria-label="Seções de Estudos">${wt()}</nav>
       </div>
       ${sub596()}
-      <section class="dt397-native-mount" aria-label="Ferramentas de estudo"><header><h2>${c({ liv: "Livros", ing: "Inglês", cnpi: "CNPI-T", aul: "Vídeo aulas", resumos: "Resumos", playlists: "Playlists", pl: "Planos", sim: "Simulados", juros: "Juros", foco: "Foco", treino: "Treino", est: "Hoje", pr: "Prompts", fac: "Faculdade", desemp: "Progresso", rpy: "Replay de mercado", eco: "Laboratório de Economia", ciclo: "Ciclo", reg: "Registrar estudo", edital: "Edital", conq: "Conquistas" }[w] || "Minha biblioteca")}</h2></header>${["liv", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}${hoje596}</section>
+      <section class="dt397-native-mount" aria-label="Ferramentas de estudo">${h2Est}${["liv", "cnpi", "fac"].includes(w) ? `<div class="dt397-filtros" role="group" aria-label="Filtrar Biblioteca" style="display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;position:static">${[["liv", "Tudo"], ["cnpi", "CNPI-T"], ["fac", "Faculdade"]].map(([id, label]) => `<button type="button" class="dt397-chip ${w === id ? "on" : ""}" data-dt397-view="${id}" aria-pressed="${w === id}"><span>${label}</span></button>`).join("")}</div>` : ""}${hoje596}</section>
+      <details class="v4-card dt982-tour-foot" style="padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--gold,#C9A66B)">🎬 Tour Guiado do App no PC (Vídeo com Áudio)</summary><div style="margin-top:10px"><video controls playsinline preload="metadata" style="width:100%;max-height:460px;border-radius:10px;background:#000" src="assets/tour-pc.mp4"></video><p class="sm mut" style="margin:8px 0 0">Guia completo narrado em português mostrando cada tela, checklist, lançamento de operações, Research, Conselho de IA e Carteira.</p></div></details>
     </div>`;
     }
     function Ct() {
