@@ -28,7 +28,10 @@ test('Estudos: meta única, sessões vinculadas, navegação, biblioteca e contr
   assert.equal(await app.locator('.dt397-category [data-dt397-view="rpy"]').count(), 1);
   await page.locator('.v503-fantasma').waitFor({ state: 'detached' });
   assert.equal(await app.locator('[data-dt401-more-toggle]').count(), 0);
-  await expect(app.locator('.v596-hoje .v596-foco')).toBeVisible();
+  const foco = app.locator('.dt982-est-hero [data-dt397-view="foco"]');
+  await expect(foco).toBeVisible();
+  await foco.click();
+  await expect(app.locator('.dt397-studies')).toHaveAttribute('data-vista', 'foco');
   await app.locator('.dt397-category [data-dt397-view="est"]').click();
   await app.locator('[data-est-meta-legado="420"]').waitFor();
   assert.ok((await app.locator('#v514-meta').innerText()).includes('180 min sugeridos'), 'A meta global antiga não é atribuída automaticamente à conta.');

@@ -98,7 +98,10 @@ test('v691: painel faz simulação local e mantém as tabelas de Operações int
   }));
   render();
  });
- await page.evaluate(()=>document.querySelector('#ops-audit-691 summary')?.click());
+ // Aguarda a montagem real antes de clicar: não descarta silenciosamente o clique.
+ await expect(page.locator('#ops-audit-691 summary')).toBeVisible();
+ await page.evaluate(()=>document.querySelector('#ops-audit-691 summary').click());
+ await expect(page.locator('#ops-audit-691')).toHaveAttribute('open','');
  await expect(page.locator('.a691-section')).toHaveCount(4);
  await expect(page.locator('.a691-table')).toHaveCount(2);
  // O hub repinta os inputs com dados do Profit. Preencher e acionar no mesmo ciclo
