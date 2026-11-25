@@ -40,20 +40,16 @@ test('v810 E2E: duas telas, três fases, override/auto, CLS, overflow e captura 
   }
   await page.clock.setFixedTime(new Date('2026-11-19T13:40:00Z'));
   await page.evaluate(()=>{tab='dia';render();});
-  const phasePanel=page.locator('#app .v810-day details.v810-more').filter({has:page.locator('[data-v4phase="pos"]')});
-  const openPhasePanel=async()=>{
-    await expect(phasePanel).toHaveCount(1);
-    if(!(await phasePanel.evaluate(el=>el.open))) await phasePanel.locator(':scope > summary').click();
-    await expect(phasePanel).toHaveAttribute('open','');
-  };
-  await openPhasePanel();
-  await page.locator('#app .v810-day [data-v4phase="pos"]').click();
+  const phasePanel=page.locator('#app .v810-day .dt975-rot-step');
+  await expect(phasePanel).toHaveCount(1);
+  await expect(phasePanel.locator('[data-v4phase]')).toHaveCount(3);
+  await phasePanel.locator('[data-v4phase="pos"]').click();
   await expect(page.locator('#app .v810-day')).toHaveAttribute('data-v810-phase','pos');
-  await openPhasePanel();
-  await page.locator('#app .v810-day [data-v4auto]').click();
+  await expect(phasePanel.locator('[data-v4phase="pos"]')).toHaveAttribute('aria-pressed','true');
+  await phasePanel.locator('[data-v4auto]').click();
   await expect(page.locator('#app .v810-day')).toHaveAttribute('data-v810-phase','pregao');
-  await openPhasePanel();
-  await expect(page.locator('#app .v810-day [data-v4auto]')).toHaveClass(/on/);
+  await expect(phasePanel.locator('[data-v4phase="pregao"]')).toHaveAttribute('aria-pressed','true');
+  await expect(phasePanel.locator('[data-v4auto]')).toHaveCount(0);
   await page.evaluate(()=>{
     window.__v810qa={mutations:0,removed:0,cls:0,shifts:[]};
     const target=document.querySelector('#app .v810-day');
