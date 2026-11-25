@@ -890,22 +890,24 @@
       const ts=epoch(q.dadoEm??q.priceAt??q.horarioPreco??q.ts??q.em??q.regularMarketTime);
       if(!(px>0)||!Number.isFinite(d1)||!Number.isFinite(ts)||ts>now+60000)return null;
       const source=String(q.fonte||q.source||'');
+      if(q.quoteStatus==='divergente'||q.suspeito)return null;
       const ttl=/binance/i.test(source)?45000:/profit|finnhub/i.test(source)?90000:1200000;
-      const last=closed&&q.fechado===true&&now-ts<=96*3600000;
+      const last=closed&&(q.fechado===true||(/TradingView/i.test(source)&&q.quoteStatus==='referencia_anterior'&&!!q.simboloFonte))&&now-ts<=96*3600000;
       if(now-ts>ttl&&!last)return null;
       return {n:label,px,d1,ts,last:last&&now-ts>ttl,source};
     };
     let td={};try{td=w.tapeDados?.()||{};}catch(_){}
     const pickLive=(label,tks,rx,closed=false)=>{
+      const match=q=>{const k=String(q.s||q.ticker||'').toUpperCase();return k?tks.includes(k):rx.test(String(q.n||''));};
       for(const k of tks){
         let live=null;try{live=w.tapeVivo?.(k);}catch(_){}
         for(const q of [live,td[k]]){const v=quote(q,label,closed);if(v&&!v.last)return v;}
       }
-      for(const q of all){if(rx.test(String(q.n||'')+' '+String(q.s||q.ticker||''))){const v=quote(q,label,closed);if(v&&!v.last)return v;}}
+      for(const q of all){if(match(q)){const v=quote(q,label,closed);if(v&&!v.last)return v;}}
       // Último fechamento só quando a sessão está fechada e a fonte o identifica explicitamente.
       if(closed){
         for(const k of tks){let live=null;try{live=w.tapeVivo?.(k);}catch(_){}for(const q of [live,td[k]]){const v=quote(q,label,true);if(v)return v;}}
-        for(const q of all){if(rx.test(String(q.n||'')+' '+String(q.s||q.ticker||''))){const v=quote(q,label,true);if(v)return v;}}
+        for(const q of all){if(match(q)){const v=quote(q,label,true);if(v)return v;}}
       }
       return null;
     };
@@ -1106,11 +1108,24 @@
     if(!response.ok)throw new Error('HTTP '+response.status);
     return response.json();
   }
+  // v990: os seis cards e a Áurea usam exatamente a mesma seleção de cotações.
+  function atualizarKpis990(app){
+    const host=app.querySelector('.v829-home .v829-kpis .ui-kpis'),U=w.DiarioUI;
+    if(!host||!U)return;
+    const p=pulsoDoisMercados(),all=[...p.br,...p.us,...p.cripto];
+    const itens=[['IBOV','Ibovespa'],['USD/BRL','Dólar'],['S&P 500','S&P 500'],['Nasdaq','Nasdaq'],['EWZ','EWZ'],['BTC','Bitcoin']].map(([k,n])=>{
+      const v=all.find(x=>x.n===k);
+      if(!v)return {rotulo:n,valor:'—',detalhe:'Cotação indisponível',tom:''};
+      return {rotulo:n,valor:v.px.toLocaleString('pt-BR',{minimumFractionDigits:k==='USD/BRL'?4:v.px>=100000?0:2,maximumFractionDigits:k==='USD/BRL'?4:v.px>=100000?0:2}),detalhe:sinalNum(v.d1)+(v.last?' · última referência':'') ,tom:v.d1>=0?'g':'r'};
+    });
+    const html=itens.map(U.kpi).join('');
+    if(host.innerHTML!==html)host.innerHTML=html;
+  }
   function repaint() {
     if(!state.route)return;
     const el=document.querySelector('#app [data-intel-etapa1] [data-intel-content]');
     if(el){const html=({home:briefing,dia:meuDia,agenda,noticias,term:terminal}[state.route])();if(el.innerHTML!==html)el.innerHTML=html;}
-    if(state.route==='home'){const app=document.getElementById('app');if(app)cardsInicio(app);}
+    if(state.route==='home'){const app=document.getElementById('app');if(app){cardsInicio(app);atualizarKpis990(app);}}
   }
   function refresh() {
     const signal=state.abort?.signal;if(!signal || signal.aborted)return;

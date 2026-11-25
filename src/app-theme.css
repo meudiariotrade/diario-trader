@@ -7531,3 +7531,9 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.neg b{color:#be
  html:root:root body #app#app .v829-home .v829-split>.ui-aside:empty{display:none!important}
  html:root:root body #app#app .v829-home .v829-kpis .ui-kpis{width:100%!important;grid-template-columns:repeat(6,minmax(0,1fr))!important}
 }
+
+/* v990: no pós, não reservar meia tela para detalhes auxiliares recolhidos. */
+@media(min-width:1024px){
+ html:root:root body #app#app .v829-home[data-v810-phase="pos"] .v829-split{grid-template-columns:minmax(0,1fr)!important}
+ html:root:root body #app#app .v829-home[data-v810-phase="pos"] .v829-split>.ui-aside{position:static!important}
+}

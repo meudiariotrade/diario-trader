@@ -86,3 +86,20 @@ test('v987: distingue os instrumentos e preserva Dow, WTI, Brent, dólar e futur
  for(const n of ['USD/BRL','WDO'])assert.ok(p.br.some(x=>x.n===n),n);
  for(const n of ['S&P 500','S&P fut.','Nasdaq','Nasdaq fut.','Dow','Dow fut.','Brent','WTI'])assert.ok(p.us.some(x=>x.n===n),n);
 });
+
+test('v990: snapshot TradingView alimenta os seis KPIs e o pulso com a mesma referência',()=>{
+ const p=pulso987({b3:'post',us:'post',items:[
+ {s:'^BVSP',n:'Ibovespa',px:166685,d1:1.58,fonte:'TradingView',horarioPreco:at987(7200000),quoteStatus:'referencia_anterior',simboloFonte:'BMFBOVESPA:IBOV'},
+ {s:'BRL=X',n:'USD/BRL',px:5.82,d1:-1.77,fonte:'TradingView',priceAt:at987(1000)},
+ {s:'^GSPC',n:'S&P 500',px:7182,d1:-.25,fonte:'TradingView',priceAt:at987(1000)},
+ {s:'^IXIC',n:'Nasdaq',px:23585,d1:-.62,fonte:'TradingView',priceAt:at987(1000)},
+ {s:'EWZ',n:'EWZ',px:30.4,d1:.8,fonte:'TradingView',priceAt:at987(1000)},
+ {s:'BTC-USD',n:'Bitcoin',px:60023,d1:.02,fonte:'TradingView',priceAt:at987(1000)}]});
+ assert.equal(p.br.find(x=>x.n==='IBOV').last,true);
+ assert.equal(p.cripto.find(x=>x.n==='BTC').px,60023);
+ const src=fs.readFileSync('src/intelligence/etapa1.js','utf8'),a=src.indexOf('function atualizarKpis990('),b=src.indexOf('function repaint()',a);
+ const host={innerHTML:''},ctx={w:{DiarioUI:{kpi:x=>x.rotulo+':'+x.valor+';'}},pulsoDoisMercados:()=>p,sinalNum:String};
+ vm.runInNewContext(src.slice(a,b),ctx);ctx.atualizarKpis990({querySelector:()=>host});
+ for(const n of ['Ibovespa','Dólar','S&P 500','Nasdaq','EWZ','Bitcoin'])assert.ok(host.innerHTML.includes(n+':'),n);
+ assert.ok(!host.innerHTML.includes('—'));
+});
