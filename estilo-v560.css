@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 1dfc087d3ac0df16ffc5c43f7f33a48879629ae137d464c0c59a2d7f0ec558ad */
+/* Gerado de src/app-theme.css · SHA256 f4e5c52468a67d60a89ecad85d33caa90b86c54f18183a917b465e41c380e58b */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -6458,3 +6458,100 @@ html:root:root:root[data-v427-tema="claro"] #app#app #jrbox .jr971-tk{background
   display:none!important
  }
 }
+
+/* v974: Research & Carteira Liquid Glass 3D + Fechamento 60s (Escuro & Claro, 100% CSS puro, zero sobreposição e zero tremor) */
+#app #an-root .an830-seg{
+ background:linear-gradient(180deg,rgba(28,34,46,.88),rgba(14,18,26,.95))!important;
+ border:1px solid rgba(255,255,255,.11)!important;border-radius:16px!important;padding:4px!important;
+ box-shadow:0 8px 22px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.12)!important
+}
+#app #an-root .an830-seg button.selected{
+ background:linear-gradient(180deg,rgba(212,175,105,.32),rgba(166,128,58,.18))!important;
+ border:1px solid rgba(212,175,105,.52)!important;border-radius:12px!important;
+ box-shadow:0 4px 12px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.22)!important
+}
+#app #an-root .an-c-pill{
+ background:linear-gradient(180deg,rgba(30,36,49,.86),rgba(16,20,29,.95))!important;
+ border:1px solid rgba(255,255,255,.1)!important;border-radius:16px!important;
+ box-shadow:0 6px 18px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.12)!important
+}
+#app #an-root .an-c-pill.on{
+ background:linear-gradient(180deg,rgba(62,48,22,.92),rgba(32,25,14,.96))!important;
+ border-color:rgba(212,175,105,.62)!important;
+ box-shadow:0 8px 22px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,232,175,.28)!important
+}
+#app #an-root .an-conselho-hero,
+#app #an-root .an-section,
+#app #an-root .an830-ficha{
+ background:linear-gradient(180deg,rgba(25,31,43,.88),rgba(14,18,26,.96))!important;
+ border:1px solid rgba(255,255,255,.1)!important;border-radius:18px!important;
+ box-shadow:0 10px 26px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.13)!important
+}
+#app #an-root .an-mesa-col,
+#app #an-root .an-br-item{
+ background:rgba(255,255,255,.035)!important;border:1px solid rgba(255,255,255,.09)!important;
+ border-radius:14px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important
+}
+#app .pf .pftabs{
+ background:linear-gradient(180deg,rgba(28,34,46,.86),rgba(14,18,26,.95))!important;
+ border:1px solid rgba(255,255,255,.1)!important;border-radius:16px!important;padding:4px!important;
+ box-shadow:0 8px 20px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.12)!important
+}
+#app .pf .pftabs button.on{
+ background:linear-gradient(180deg,rgba(212,175,105,.32),rgba(166,128,58,.18))!important;
+ border:1px solid rgba(212,175,105,.52)!important;border-radius:12px!important;
+ box-shadow:0 4px 12px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.22)!important
+}
+#app .pf .pfk,
+#app .pf .pfc,
+#app .pf .rb694-section{
+ background:linear-gradient(180deg,rgba(26,32,44,.88),rgba(14,18,26,.96))!important;
+ border:1px solid rgba(255,255,255,.1)!important;border-radius:16px!important;
+ box-shadow:0 8px 22px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.13)!important
+}
+#app .dt974-fech60{
+ margin:0 0 12px;padding:13px 14px;border-radius:18px!important;
+ background:linear-gradient(180deg,rgba(36,30,20,.92),rgba(17,20,29,.96))!important;
+ border:1px solid rgba(212,175,105,.42)!important;
+ box-shadow:0 10px 24px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,232,175,.2)!important
+}
+#app .dt974-fech60-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#app .dt974-fech60-top span{font-size:11px;font-weight:800;letter-spacing:.06em;color:#f5d996}
+#app .dt974-fech60-top b{font-size:14px;font-variant-numeric:tabular-nums;color:#f8fafc}
+#app .dt974-fech60-acts{display:flex;flex-wrap:wrap;gap:8px}
+
+/* Tema Claro — Research, Carteira & Fechamento 60s Liquid Glass 3D */
+html:root:root:root[data-v427-tema="claro"] #app#app #an-root .an830-seg,
+html:root:root:root[data-v427-tema="claro"] #app#app .pf .pftabs{
+ background:linear-gradient(180deg,#ffffff,#eef2f7)!important;border:1px solid rgba(15,23,42,.1)!important;
+ box-shadow:0 6px 18px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app #an-root .an830-seg button.selected,
+html:root:root:root[data-v427-tema="claro"] #app#app .pf .pftabs button.on{
+ background:linear-gradient(180deg,#fffaf0,#f7ebd2)!important;border-color:rgba(180,126,38,.45)!important;
+ box-shadow:0 4px 10px rgba(138,94,20,.14),inset 0 1px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app #an-root .an-c-pill,
+html:root:root:root[data-v427-tema="claro"] #app#app #an-root .an-conselho-hero,
+html:root:root:root[data-v427-tema="claro"] #app#app #an-root .an-section,
+html:root:root:root[data-v427-tema="claro"] #app#app #an-root .an830-ficha,
+html:root:root:root[data-v427-tema="claro"] #app#app .pf .pfk,
+html:root:root:root[data-v427-tema="claro"] #app#app .pf .pfc,
+html:root:root:root[data-v427-tema="claro"] #app#app .pf .rb694-section{
+ background:linear-gradient(180deg,#ffffff,#f5f7fb)!important;border:1px solid rgba(15,23,42,.1)!important;
+ box-shadow:0 8px 22px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app #an-root .an-c-pill.on{
+ background:linear-gradient(180deg,#fffaf0,#f6ead0)!important;border-color:rgba(180,126,38,.52)!important;
+ box-shadow:0 8px 20px rgba(138,94,20,.14),inset 0 1.5px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app #an-root .an-mesa-col,
+html:root:root:root[data-v427-tema="claro"] #app#app #an-root .an-br-item{
+ background:#f8fafd!important;border-color:rgba(15,23,42,.08)!important;box-shadow:none!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt974-fech60{
+ background:linear-gradient(180deg,#fffdf8,#f7f1e3)!important;border-color:rgba(180,126,38,.4)!important;
+ box-shadow:0 8px 20px rgba(138,94,20,.12),inset 0 1.5px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt974-fech60-top span{color:#8a5e14!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt974-fech60-top b{color:#0f172a!important}
