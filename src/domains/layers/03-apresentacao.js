@@ -295,10 +295,17 @@ try {
       const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>f(()=>window.tapeVivo?.(k),null)||tape[k];
       const itens=[["^BVSP","Ibovespa"],["BRL=X","Dólar"],["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["EWZ","EWZ"],["BTC-USD","Bitcoin"]].map(([k,n])=>{
         const v=viva(k);if(!v||!(+v.px>0))return null;const c=v.chg==null||v.chg===""?null:+v.chg;
-        return {rotulo:n,valor:q(v.px),detalhe:c==null?"variação indisponível":Q(c)+(v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
+        return {rotulo:n,valor:q(v.px),detalhe:c==null?"variação indisponível":Q(c)+(v.referencia?" · referência":v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
       }).filter(Boolean);
       return '<section class="v4-summary v829-kpis" aria-label="Resumo do mercado">'+(itens.length?U.kpis(itens):'<p class="v4-sub">Cotações carregando na barra superior.</p>')+'</section>';
     }
+    window.DiarioAtualizaKpis992=()=>{
+      const host=document.querySelector("#app .v829-home .v829-kpis");
+      if(!host)return;
+      const tmp=document.createElement("div");tmp.innerHTML=v829MercadoKpis();
+      const html=tmp.firstElementChild?.innerHTML;
+      if(html!=null&&host.innerHTML!==html)host.innerHTML=html;
+    };
     /* v829: KPIs pessoais no topo do Meu dia (resultado, limites, risco disponível, trades). */
     function v829DiaKpis(resultado,meta,perdaMax,trades) {
       const U=window.DiarioUI;if(!U)return "";

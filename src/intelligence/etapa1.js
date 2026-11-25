@@ -1079,7 +1079,7 @@
     if(!state.route)return;
     const el=document.querySelector('#app [data-intel-etapa1] [data-intel-content]');
     if(el){const html=({home:briefing,dia:meuDia,agenda,noticias,term:terminal}[state.route])();if(el.innerHTML!==html)el.innerHTML=html;}
-    if(state.route==='home'){const app=document.getElementById('app');if(app)cardsInicio(app);}
+    if(state.route==='home'){const app=document.getElementById('app');if(app){cardsInicio(app);w.DiarioAtualizaKpis992?.();}}
   }
   function refresh() {
     const signal=state.abort?.signal;if(!signal || signal.aborted)return;

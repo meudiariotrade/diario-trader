@@ -60,3 +60,22 @@ test("módulo não faz polling de tabelas Supabase nem lê iframes TradingView",
   assert.doesNotMatch(source, /contentDocument|iframe\.|postMessage\(/);
   assert.match(source, /setInterval\(desenha, 2000\)/);
 });
+
+test("v992: snapshot público conserva preço, variação, fonte e horário, distingue referência antiga",()=>{
+ const core=fs.readFileSync(path.join(__dirname,"../src/domains/core/02-estado-e-persistencia.js"),"utf8");
+ const a=core.indexOf("function tapeSnapshot992("),b=core.indexOf("window.tapeDados = ",a);
+ assert.ok(a>=0&&b>a);
+ const ctx={};vm.runInNewContext(core.slice(a,b),ctx);
+ const now=Date.parse("2026-11-25T20:00:00Z");
+ const symbols=["^BVSP","BRL=X","^GSPC","^IXIC","EWZ","BTC-USD"];
+ const snapshot={mercados:{grupos:[{itens:symbols.map((s,i)=>({s,px:100+i,d1:1.2,fonte:"TradingView",priceAt:new Date(now-60000).toISOString()}))}]}};
+ const r=ctx.tapeSnapshot992(snapshot,now);
+ assert.equal(Object.keys(r).length,6);assert.equal(r["^BVSP"].chg,1.2);assert.equal(r["BTC-USD"].referencia,false);
+ snapshot.mercados.grupos[0].itens[0].priceAt=new Date(now-3600000).toISOString();
+ assert.equal(ctx.tapeSnapshot992(snapshot,now)["^BVSP"].referencia,true);
+ snapshot.mercados.grupos[0].itens[0].quoteStatus="divergente";
+ assert.equal(ctx.tapeSnapshot992(snapshot,now)["^BVSP"],undefined);
+ const i=core.indexOf("window.tapeDados = ",a),j=core.indexOf("window.tapeRedraw = l;",i);
+ assert.match(core.slice(i,j),/DiarioPublico.get/);
+ assert.doesNotMatch(core.slice(i,j),/scFetch\(/);
+});
