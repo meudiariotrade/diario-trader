@@ -1752,8 +1752,9 @@ try {
               ${E(r) != null ? `<span>${Q(E(r))} do cap.</span>` : ""}
             </div>
           </div>
-          <div class="dt975-ops-acts">
-            <button type="button" class="dt975-btn-gold" data-dt393-action="newtrade">+ Registrar Trade</button>
+          <div class="dt975-ops-acts dt976-ops-acts3">
+            <button type="button" class="dt975-btn-gold" data-dt393-action="newtrade">+ Registrar</button>
+            <button type="button" class="dt975-btn-glass" data-dt976-q15-open="1">⚡ 15s</button>
             <button type="button" class="dt975-btn-glass" data-dt975-calc-toggle="1">Calculadora</button>
           </div>
         </section><div class="dt975-calc-slot"></div>`,
@@ -2140,8 +2141,301 @@ try {
             ? `<ul class="v4-bar">${U.join("")}</ul>`
             : gt("Nenhum erro marcado nesta semana."),
         );
-      return `<div class="v4-page v4-journal">${h}${y}${Z}${H}<div class="v4-two">${ot}${x}</div><button type="button" class="v4-cta" data-v4deb="1">${p("book", 22)} Registrar revisão</button></div>`;
+      /* v976: Desempenho 3D — Hero Performance + Auditoria 30d + Mapa de Calor Mensal + Playbook de Setups + Simulador de Capital Próprio (sem mesa proprietária). */
+      const todosP = pt(),
+        lim30 = f(() => diasMais(V(), -30), "0000"),
+        perDias = { "1M": 30, "3M": 91, "6M": 182, "1A": 365 }[mt],
+        limPer = mt === "YTD" ? V().slice(0, 4) + "-01-01" : mt === "Máx" ? "0000" : perDias ? f(() => diasMais(V(), -perDias), "0000") : "0000",
+        trPer = todosP.filter((m) => nt(m) >= limPer),
+        plsPer = trPer.map(R).filter((v0) => v0 != null),
+        plPer = plsPer.reduce((ac, v0) => ac + v0, 0),
+        winsPer = plsPer.filter((v0) => v0 > 0),
+        lossPer = plsPer.filter((v0) => v0 < 0),
+        wrPer = plsPer.length ? (winsPer.length / plsPer.length) * 100 : null,
+        sumW = winsPer.reduce((ac, v0) => ac + v0, 0),
+        sumL = Math.abs(lossPer.reduce((ac, v0) => ac + v0, 0)),
+        pfPer = sumL > 0 ? sumW / sumL : sumW > 0 ? 9.99 : null,
+        avgW = winsPer.length ? sumW / winsPer.length : 0,
+        avgL = lossPer.length ? sumL / lossPer.length : 0,
+        payoffPer = avgL > 0 ? avgW / avgL : null,
+        ddMax = (() => {
+          let pk = 0, ac = 0, dd = 0;
+          for (const d0 of ce()) { ac = d0.acc; if (ac > pk) pk = ac; if (pk - ac > dd) dd = pk - ac; }
+          return dd;
+        })(),
+        aud30Prompt = (() => {
+          const t30 = todosP.filter((m) => nt(m) >= lim30);
+          const pl30 = lt(t30, R), w30 = t30.filter((m) => R(m) > 0).length;
+          const q30 = t30.filter((m) => m.rules === "n" || (m.err && m.err !== "Nenhum")).length;
+          const stpMap = {};
+          t30.forEach((m) => { const k0 = String(m.setup || "Sem setup").trim(); stpMap[k0] = (stpMap[k0] || 0) + (R(m) || 0); });
+          const topS = Object.entries(stpMap).sort((a0, b0) => b0[1] - a0[1]).slice(0, 4).map(([k0, v0]) => `${k0}: ${j(v0)}`).join(", ");
+          return `@munger Faça minha Auditoria Executiva de 30 dias usando apenas estes números reais: ` +
+            `Trades (30d): ${t30.length}, Acerto: ${t30.length ? Math.round((w30 / t30.length) * 100) + "%" : "—"}, P&L 30d: ${j(pl30)}, ` +
+            `Profit Factor (${mt}): ${pfPer != null ? _(pfPer, 2) : "—"}, Payoff: ${payoffPer != null ? _(payoffPer, 2) + "×" : "—"}, Drawdown máx: ${G(ddMax)}, ` +
+            `Quebras/erros (30d): ${q30}. Setups 30d: ${topS || "nenhum"}. ` +
+            `Responda em 3 blocos curtos: 1) Onde está meu edge real, 2) Maior vazamento de dinheiro/disciplina, 3) 2 ajustes concretos para os próximos 30 dias.`;
+        })(),
+        perfHero976 = (() => {
+          window.__dt976Aud30Prompt = aud30Prompt;
+          return `<section class="v4-card dt976-perf-hero" aria-label="Resumo de performance">
+            <div class="dt975-ops-top">
+              <span class="dt975-kicker">DESEMPENHO · ${b(mt)}</span>
+              <span class="dt975-badge ${plPer >= 0 ? "ok" : "no"}">${plsPer.length} trade(s)</span>
+            </div>
+            <strong class="dt975-ops-pl ${L(plPer)}">${j(plPer)}</strong>
+            <div class="dt976-perf-grid">
+              <div><small>Profit Factor</small><b>${pfPer != null ? (pfPer >= 9.99 ? "∞" : _(pfPer, 2)) : "—"}</b></div>
+              <div><small>Payoff</small><b>${payoffPer != null ? _(payoffPer, 2) + "×" : "—"}</b></div>
+              <div><small>Acerto</small><b>${wrPer != null ? _(wrPer, 1) + "%" : "—"}</b></div>
+              <div><small>Drawdown máx</small><b class="${ddMax > 0 ? "v-neg" : ""}">${ddMax > 0 ? "−" + G(ddMax) : G(0)}</b></div>
+            </div>
+            <button type="button" class="dt975-btn-gold" style="width:100%;margin-top:10px" data-dt976-aud30="1">✦ Auditoria 30 dias (Áurea)</button>
+          </section>`;
+        })(),
+        cal976 = (() => {
+          const ym = window.__dt976CalYm || V().slice(0, 7);
+          const [ano, mes] = ym.split("-").map(Number);
+          const d0 = new Date(ano, mes - 1, 1);
+          const nomeMes = d0.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).replace(/^./, (c0) => c0.toUpperCase());
+          const firstDow = d0.getDay(), lastDay = new Date(ano, mes, 0).getDate();
+          const porDia = {};
+          todosP.forEach((m) => { const dStr = nt(m); if (dStr.startsWith(ym + "-")) porDia[dStr] = (porDia[dStr] || 0) + (R(m) || 0); });
+          const maxAbs = Math.max(1, ...Object.values(porDia).map((v0) => Math.abs(v0)));
+          let posD = 0, negD = 0, totM = 0;
+          Object.values(porDia).forEach((v0) => { totM += v0; if (v0 > 0) posD++; else if (v0 < 0) negD++; });
+          const cells = [];
+          for (let i0 = 0; i0 < firstDow; i0++) cells.push('<span class="dt976-cd em"></span>');
+          for (let dNum = 1; dNum <= lastDay; dNum++) {
+            const iso = `${ym}-${String(dNum).padStart(2, "0")}`;
+            const val = porDia[iso];
+            const has = val != null;
+            const lv = has ? Math.min(3, Math.max(1, Math.ceil((Math.abs(val) / maxAbs) * 3))) : 0;
+            const clsD = !has ? "" : val > 0 ? `pos lv${lv}` : val < 0 ? `neg lv${lv}` : "neu";
+            const curt = !has ? "" : (val > 0 ? "+" : "−") + (Math.abs(val) >= 1000 ? (Math.abs(val) / 1000).toFixed(1) + "k" : Math.round(Math.abs(val)));
+            cells.push(`<button type="button" class="dt976-cd ${clsD}${iso === t ? " sel" : ""}" data-dt976-calday="${iso}" title="${wt(iso)}${has ? ": " + j(val) : ""}"><b>${dNum}</b><i>${curt}</i></button>`);
+          }
+          return `<section class="v4-card dt976-cal" aria-label="Mapa de calor mensal">
+            <div class="dt976-cal-head">
+              <div><span class="dt975-kicker">MAPA DE CALOR MENSAL</span><h3>${b(nomeMes)}</h3></div>
+              <div class="dt975-date">
+                <button type="button" data-dt976-calnav="-1" aria-label="Mês anterior">‹</button>
+                <button type="button" data-dt976-calnav="0" style="font-size:11px;padding:0 6px">Atual</button>
+                <button type="button" data-dt976-calnav="1" aria-label="Próximo mês">›</button>
+              </div>
+            </div>
+            <div class="dt976-cal-dow"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+            <div class="dt976-cal-grid">${cells.join("")}</div>
+            <div class="dt975-pmeta" style="margin-top:8px"><span><b class="v-pos">${posD}</b> positivo(s) · <b class="v-neg">${negD}</b> negativo(s)</span><b class="${L(totM)}">${j(totM)}</b></div>
+          </section>`;
+        })(),
+        play976 = (() => {
+          const mapa = new Map();
+          todosP.forEach((m) => {
+            const st = String(m.setup || "").trim();
+            if (!st) return;
+            const v0 = R(m) || 0;
+            const cur = mapa.get(st) || { k: st, n: 0, w: 0, pl: 0, manha: 0, tarde: 0 };
+            cur.n++; if (v0 > 0) cur.w++; cur.pl += v0;
+            const hr = +((String(m.dt || "").match(/T(\d{2}):/) || [])[1] || 10);
+            if (hr < 12) cur.manha += v0; else cur.tarde += v0;
+            mapa.set(st, cur);
+          });
+          const lista = [...mapa.values()].sort((a0, b0) => b0.pl - a0.pl).slice(0, 6);
+          return `<section class="v4-card dt976-play" aria-label="Playbook de setups">
+            <div class="dt975-ops-top" style="margin-bottom:8px"><span class="dt975-kicker">PLAYBOOK DE SETUPS</span><span class="sm mut">${lista.length} setup(s)</span></div>
+            ${lista.length ? `<div class="dt976-play-grid">${lista.map((s0) => {
+              const wr0 = Math.round((s0.w / s0.n) * 100);
+              const tag = s0.pl > 0 && s0.n >= 2 ? '<span class="dt975-badge ok">★ Campeão</span>' : s0.pl < 0 ? '<span class="dt975-badge no">⚠ Drenando</span>' : '<span class="dt975-badge am">● Em teste</span>';
+              const turno = s0.manha >= s0.tarde ? "Manhã" : "Tarde";
+              return `<div class="dt976-play-card"><div class="dt976-play-top"><b>${b(s0.k)}</b>${tag}</div><strong class="${L(s0.pl)}">${j(s0.pl)}</strong><small>${s0.n} trade(s) · ${wr0}% acerto · melhor: ${turno}</small></div>`;
+            }).join("")}</div>` : gt("Informe o campo Setup ao registrar trades para montar seu placar de Playbook.")}
+          </section>`;
+        })(),
+        sim976 = (() => {
+          const capDef = Math.round(yt() || 10000);
+          const wrDef = wrPer != null ? Math.round(wrPer) : 52;
+          const payDef = payoffPer != null ? Number(payoffPer.toFixed(2)) : 1.4;
+          return `<details class="v4-card dt976-sim" data-dt976-sim="1">
+            <summary><span class="dt975-kicker">SIMULADOR DE CAPITAL PRÓPRIO &amp; RISCO</span><span class="sm mut">Juros compostos + Monte Carlo</span></summary>
+            <div class="dt976-sim-body">
+              <div class="dt976-sim-grid">
+                <label>Capital inicial (R$)<input type="number" min="500" step="500" data-sim-f="cap" value="${capDef}"></label>
+                <label>Risco por trade (%)<input type="number" min="0.2" max="10" step="0.1" data-sim-f="rk" value="1.0"></label>
+                <label>Taxa de acerto (%)<input type="number" min="10" max="90" step="1" data-sim-f="wr" value="${wrDef}"></label>
+                <label>Payoff (Ganho/Perda)<input type="number" min="0.3" max="5" step="0.1" data-sim-f="pay" value="${payDef}"></label>
+                <label>Trades por semana<input type="number" min="1" max="50" step="1" data-sim-f="trw" value="10"></label>
+                <label>Meta mensal (R$)<input type="number" min="100" step="100" data-sim-f="meta" value="${Math.round(capDef * 0.08)}"></label>
+              </div>
+              <div class="dt976-sim-out" data-sim-out></div>
+            </div>
+          </details>`;
+        })();
+      return `<div class="v4-page v4-journal dt976-stats">${perfHero976}${cal976}${y}${play976}${sim976}${h}${Z}${H}<div class="v4-two">${ot}${x}</div><button type="button" class="v4-cta" data-v4deb="1">${p("book", 22)} Registrar revisão</button></div>`;
     }
+    /* v976: Handlers leves de Mapa de Calor, Simulador de Capital Próprio e Registro 15s (zero polling, zero MutationObserver). */
+    function dt976CalcSim(rootSim) {
+      if (!rootSim) return;
+      const gN = (k, d0) => { const el0 = rootSim.querySelector(`[data-sim-f="${k}"]`); const n0 = Number(el0?.value); return Number.isFinite(n0) && n0 > 0 ? n0 : d0; };
+      const cap = gN("cap", 10000), rk = gN("rk", 1) / 100, wr = Math.min(95, Math.max(5, gN("wr", 50))) / 100,
+        pay = gN("pay", 1.4), trw = Math.min(60, Math.max(1, Math.round(gN("trw", 10)))), meta = gN("meta", 800);
+      const expR = wr * pay - (1 - wr);
+      const expBrl = cap * rk * expR;
+      const trMes = trw * 4;
+      const retMes = Math.max(-0.5, Math.min(2, expR * rk * trMes));
+      const p3 = cap * Math.pow(1 + retMes, 3), p6 = cap * Math.pow(1 + retMes, 6), p12 = cap * Math.pow(1 + retMes, 12);
+      let bateu = 0, dd20 = 0;
+      const NRUN = 300;
+      for (let s0 = 0; s0 < NRUN; s0++) {
+        let eq = cap, pk = cap, hitDd = false;
+        for (let k0 = 0; k0 < trMes; k0++) {
+          const risco = eq * rk;
+          eq += Math.random() < wr ? risco * pay : -risco;
+          if (eq > pk) pk = eq;
+          if ((pk - eq) / pk >= 0.2) hitDd = true;
+        }
+        if (eq - cap >= meta) bateu++;
+        if (hitDd) dd20++;
+      }
+      const pMeta = Math.round((bateu / NRUN) * 100), pDd = Math.round((dd20 / NRUN) * 100);
+      const out = rootSim.querySelector("[data-sim-out]");
+      if (out) {
+        out.innerHTML = `<div class="dt976-perf-grid">
+          <div><small>Expectativa / trade</small><b class="${expR >= 0 ? "v-pos" : "v-neg"}">${expR >= 0 ? "+" : ""}${expR.toFixed(2)}R (${j(expBrl)})</b></div>
+          <div><small>Chance meta/mês</small><b class="${pMeta >= 50 ? "v-pos" : ""}">${pMeta}%</b></div>
+          <div><small>Risco DD ≥ 20%</small><b class="${pDd >= 20 ? "v-neg" : "v-pos"}">${pDd}%</b></div>
+          <div><small>Projeção 6 meses</small><b class="${p6 >= cap ? "v-pos" : "v-neg"}">${G(p6)}</b></div>
+        </div>
+        <p class="sm mut" style="margin:8px 0 0">Juros compostos (3m / 12m): <b>${G(p3)}</b> · <b>${G(p12)}</b> · ${expR <= 0 ? "Expectativa negativa: ajuste Payoff ou filtro de entradas antes de aumentar mão." : pDd >= 20 ? "Risco de drawdown elevado: considere reduzir o risco por trade para 0,5%–1%." : "Parâmetros saudáveis para crescimento consistente de capital próprio."}</p>`;
+      }
+    }
+    function dt976AbreQ15() {
+      let dlg = v.getElementById("dt976-q15");
+      if (dlg) dlg.remove();
+      const setupsUniq = [...new Set(ct().map((x) => String(x.setup || "").trim()).filter(Boolean))].slice(0, 6);
+      dlg = v.createElement("div");
+      dlg.id = "dt976-q15";
+      dlg.className = "dt976-q15-ov";
+      dlg.innerHTML = `<div class="dt976-q15-card" role="dialog" aria-modal="true" aria-label="Registro rápido de trade em 15 segundos">
+        <div class="dt975-ops-top"><b>⚡ Registro Ultra-Rápido (15s)</b><button type="button" class="dt976-q15-x" data-dt976-q15-close="1" aria-label="Fechar">✕</button></div>
+        <div class="dt976-q15-chips">${["WIN", "WDO", "PETR4", "VALE3"].map((tk) => `<button type="button" data-q15-tk="${tk}">${tk}</button>`).join("")}</div>
+        <label>Ativo<input type="text" id="q15-ativo" value="WIN" placeholder="Ex.: WINJ26, PETR4" autocapitalize="characters"></label>
+        <div class="dt976-q15-seg" role="group" aria-label="Lado">
+          <button type="button" class="on" data-q15-side="C">Compra</button>
+          <button type="button" data-q15-side="V">Venda</button>
+        </div>
+        <label>Resultado líquido (R$, use − para perda)<input type="number" step="any" inputmode="decimal" id="q15-pl" placeholder="Ex.: 240 ou -160"></label>
+        <label>Setup<input type="text" id="q15-setup" placeholder="Ex.: Abertura VWAP" list="q15-setups-list"></label>
+        <datalist id="q15-setups-list">${setupsUniq.map((s0) => `<option value="${b(s0)}"></option>`).join("")}</datalist>
+        <div class="dt976-q15-seg" role="group" aria-label="Disciplina">
+          <button type="button" class="on" data-q15-rule="s">✓ Seguiu o plano</button>
+          <button type="button" data-q15-rule="n">✕ Fora do plano</button>
+        </div>
+        <button type="button" class="dt975-btn-gold" style="width:100%;margin-top:10px" data-dt976-q15-save="1">Salvar Trade (15s)</button>
+      </div>`;
+      v.body.appendChild(dlg);
+      setTimeout(() => dlg.querySelector("#q15-pl")?.focus(), 40);
+    }
+    v.addEventListener("click", (ev) => {
+      const calNav = ev.target.closest?.("[data-dt976-calnav]");
+      if (calNav) {
+        ev.preventDefault();
+        const dir = Number(calNav.dataset.dt976Calnav || 0);
+        if (dir === 0) window.__dt976CalYm = V().slice(0, 7);
+        else {
+          const cur = (window.__dt976CalYm || V().slice(0, 7)).split("-").map(Number);
+          const nd = new Date(cur[0], cur[1] - 1 + dir, 1);
+          window.__dt976CalYm = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, "0")}`;
+        }
+        xt();
+        return;
+      }
+      const calDay = ev.target.closest?.("[data-dt976-calday]");
+      if (calDay) {
+        ev.preventDefault();
+        f(() => { if (typeof D !== "undefined") D = calDay.dataset.dt976Calday; render(); });
+        return;
+      }
+      if (ev.target.closest?.("[data-dt976-q15-open]")) { ev.preventDefault(); dt976AbreQ15(); return; }
+      if (ev.target.closest?.("[data-dt976-q15-close]") || ev.target.id === "dt976-q15") {
+        v.getElementById("dt976-q15")?.remove();
+        return;
+      }
+      const qTk = ev.target.closest?.("[data-q15-tk]");
+      if (qTk) { const inp = v.getElementById("q15-ativo"); if (inp) inp.value = qTk.dataset.q15Tk; return; }
+      const qSide = ev.target.closest?.("[data-q15-side]");
+      if (qSide) { qSide.parentElement.querySelectorAll("button").forEach((b0) => b0.classList.toggle("on", b0 === qSide)); return; }
+      const qRule = ev.target.closest?.("[data-q15-rule]");
+      if (qRule) { qRule.parentElement.querySelectorAll("button").forEach((b0) => b0.classList.toggle("on", b0 === qRule)); return; }
+      if (ev.target.closest?.("[data-dt976-q15-save]")) {
+        const dlg = v.getElementById("dt976-q15");
+        if (!dlg) return;
+        const ativo = String(dlg.querySelector("#q15-ativo")?.value || "").trim().toUpperCase();
+        const plRaw = String(dlg.querySelector("#q15-pl")?.value || "").replace(",", ".").trim();
+        const pl = Number(plRaw);
+        if (!ativo || !Number.isFinite(pl)) { f(() => toast("Informe ativo e resultado em R$.")); return; }
+        const side = dlg.querySelector("[data-q15-side].on")?.dataset.q15Side || "C";
+        const rules = dlg.querySelector("[data-q15-rule].on")?.dataset.q15Rule || "s";
+        const setup = String(dlg.querySelector("#q15-setup")?.value || "").trim();
+        const agora = new Date();
+        const hhmm = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Sao_Paulo" });
+        const dtIso = V() + "T" + hhmm + ":00";
+        f(() => {
+          S.trades = Array.isArray(S.trades) ? S.trades : [];
+          S.trades.push({
+            id: "q15_" + Date.now(),
+            dt: dtIso,
+            dtx: dtIso,
+            ativo,
+            side,
+            qty: 1,
+            pv: 1,
+            cost: 0,
+            entry: 0,
+            exit: side === "C" ? pl : -pl,
+            pl,
+            setup,
+            tipo: "D",
+            rules,
+            err: rules === "n" ? "Fora do plano" : "Nenhum",
+            quick: true,
+          });
+          save?.();
+          dlg.remove();
+          render?.();
+          toast?.(`Trade ${ativo} (${j(pl)}) salvo em 15s!`);
+        });
+        return;
+      }
+      const irCopyBtn = ev.target.closest?.("[data-dt976-ir-copy]");
+      if (irCopyBtn) {
+        ev.preventDefault();
+        const txt = String(window.__dt976IrCopy || "");
+        if (txt && navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(txt).then(() => f(() => toast?.("Resumo de IR copiado!"))).catch(() => {});
+        }
+        return;
+      }
+      if (ev.target.closest?.("[data-dt976-aud30]")) {
+        ev.preventDefault();
+        if (typeof window.DiarioConselhoIA === "function") {
+          window.DiarioConselhoIA("munger", "Auditoria 30 dias · Munger", window.__dt976Aud30Prompt || "");
+        }
+        return;
+      }
+      const simSum = ev.target.closest?.("[data-dt976-sim] > summary");
+      if (simSum) {
+        const simEl = simSum.parentElement;
+        setTimeout(() => { if (simEl?.open) dt976CalcSim(simEl); }, 0);
+      }
+    });
+    v.addEventListener("input", (ev) => {
+      const sim = ev.target.closest?.("[data-dt976-sim]");
+      if (sim) dt976CalcSim(sim);
+    });
+    v.addEventListener("toggle", (ev) => {
+      if (ev.target?.matches?.("[data-dt976-sim]") && ev.target.open) dt976CalcSim(ev.target);
+    }, true);
     const me = [
         ["home", "Início", "home"],
         ["dia", "Rotina", "cal"],
