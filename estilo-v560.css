@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 18af5b97db8ce957cbb5f7e09d07456b590b82ad99f63a0d6e63b48f52c86f2b */
+/* Gerado de src/app-theme.css · SHA256 4db740d907c692f93439c1aa4964cbebb789f89b71a4f77679c80c0c93951c78 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7065,7 +7065,12 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt975-calc-slot [data-posi
  box-shadow:0 14px 30px rgba(0,0,0,.38),inset 0 1.5px 0 rgba(255,255,255,.16)
 }
 #app[data-tela="estudos"] .au-dashboard{padding:16px;border-color:rgba(212,175,106,.24)}
-#app[data-tela="estudos"] .au-study-filters{padding:10px 12px}
+#app[data-tela="estudos"] .au-study-filters{padding:10px 12px;box-sizing:border-box;max-width:100%;min-width:0;flex-wrap:wrap;overflow-x:visible}
+ /* v977: os filtros preservam a largura intrínseca do rótulo, mesmo com o padding 3D. */
+ #app[data-tela="estudos"] .dt397-studies .au-study-filters [data-austfilter]{flex:1 0 auto;min-width:max-content!important;width:auto;max-width:100%;box-sizing:border-box;white-space:nowrap!important;min-height:44px}
+ @media(max-width:649px){
+  #app[data-tela="estudos"] .dt397-studies .au-study-filters [data-austfilter]{flex:1 0 calc(50% - 4px);min-width:max-content!important;padding-inline:8px}
+ }
 #app[data-tela="estudos"] .au-item{padding:14px;margin-bottom:10px}
 .dt976-est-tip{
  margin-top:10px;border-radius:13px;padding:10px 12px;font-size:.78rem;line-height:1.45;color:#e2e8f0;
