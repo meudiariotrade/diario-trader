@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 585234f912ce507d8baab10a028445030920988935ac4ba075cdb8819fdb5470 */
+/* Gerado de src/app-theme.css · SHA256 2005e9de4f9901f432466b442b55413119ba0514e5972e5f4542bd2ae01192d1 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7531,4 +7531,10 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.neg b{color:#be
  html:root:root body #app#app .v829-home .v829-split:has(>.ui-aside:empty){grid-template-columns:minmax(0,1fr)!important}
  html:root:root body #app#app .v829-home .v829-split>.ui-aside:empty{display:none!important}
  html:root:root body #app#app .v829-home .v829-kpis .ui-kpis{width:100%!important;grid-template-columns:repeat(6,minmax(0,1fr))!important}
+}
+
+/* v990: no pós, não reservar meia tela para detalhes auxiliares recolhidos. */
+@media(min-width:1024px){
+ html:root:root body #app#app .v829-home[data-v810-phase="pos"] .v829-split{grid-template-columns:minmax(0,1fr)!important}
+ html:root:root body #app#app .v829-home[data-v810-phase="pos"] .v829-split>.ui-aside{position:static!important}
 }
