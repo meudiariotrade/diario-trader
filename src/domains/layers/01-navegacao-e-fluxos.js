@@ -1408,13 +1408,13 @@ try {
             ? ((u.section = "us"), (y = "mercado:lab"))
             : y === "mercado:lab" && (u.section = "br"));
         const [_, K] = y.split(":");
-        if (_ === "dia") ((DV = K || "ed"), (tab = "dia"));
+        if (_ === "dia") ((DV = K || "ed"), (tab = "dia"), delete document.body.dataset.mktSub);
         else if (_ === "mercado") {
-          ((tab = "mercado"), (MKT.tab = K || "cq"));
+          ((tab = "mercado"), (MKT.tab = K || "cq"), (document.body.dataset.mktSub = MKT.tab));
           try {
             ls.set("diario-mkt-tab", MKT.tab);
           } catch {}
-        } else ((tab = _), ["trades", "swing", "opc"].includes(_) && (LT = _));
+        } else ((tab = _), delete document.body.dataset.mktSub, ["trades", "swing", "opc"].includes(_) && (LT = _));
         (document.getElementById("mdr2")?.remove(),
           document.getElementById("mdr")?.remove(),
           (document.body.style.overflow = ""),
@@ -3256,6 +3256,8 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           btn = `<button type="button" data-aurea-go="conselho:dow:${s("EXPLIQUE " + String(M.q || "").replace(/^\s*@\w+\s*/, "").slice(0, 60))}" style="border:1px solid rgba(201,166,107,.45);background:transparent;color:inherit;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer">Estudar com Dow →</button>`;
         else if (por === "schwartz")
           btn = `<button type="button" data-aurea-go="conselho:schwartz:AGENDA" style="border:1px solid rgba(201,166,107,.45);background:transparent;color:inherit;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer">Ver Agenda com Schwartz →</button>`;
+        else if (por === "helmer")
+          btn = `<button type="button" data-aurea-go="conselho:helmer:${s(tk ? "@helmer Analise os 7 Powers de " + tk : "@helmer Analise os 7 Powers de WEGE3")}" style="border:1px solid rgba(201,166,107,.45);background:transparent;color:inherit;border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer">7 Powers com Helmer →</button>`;
         return chip + btn + "</div>";
       }
       function e(M) {
@@ -3291,7 +3293,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           P = O.querySelector('[type="submit"]'),
           m = ECO.l.length
             ? ECO.l.map(e).join("")
-            : '<p class="wf-chat-empty">Pergunte sobre notícias, empresas, gráficos, carteira ou estudos. A <b>Áurea</b> direciona automaticamente para <b>Schwartz, Graham, Livermore, Munger, Markowitz ou Dow</b> (ou digite <code>@nome</code>).</p>';
+            : '<p class="wf-chat-empty">Pergunte sobre notícias, empresas, fosso competitivo (7 Powers), gráficos, carteira ou estudos. A <b>Áurea</b> direciona automaticamente para <b>Schwartz, Graham, Helmer, Livermore, Munger, Markowitz, Dalio ou Dow</b> (ou digite <code>@nome</code>).</p>';
         if (m !== o) {
           const q = M.scrollTop,
             H = M.scrollHeight - M.clientHeight - q < 40;
@@ -3329,7 +3331,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           (r.innerHTML = `<button type="button" class="wf-chat-launcher" aria-label="Abrir Áurea" aria-expanded="false" aria-controls="wf-chat-panel"><span aria-hidden="true">✦</span></button>
       <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Áurea" hidden><header><div><b>✦ Áurea</b><small>Estrategista-chefe · preside O Conselho</small></div><button type="button" data-chat-close aria-label="Minimizar conversa">−</button></header>
       <div class="wf-chat-history" aria-label="Histórico da conversa"></div><div class="wf-chat-status" role="status" aria-live="polite"></div>
-      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Anexar tela, ativo e indicadores públicos, sem saldos ou textos do diário</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-input-label">Sua pergunta<textarea rows="2" maxlength="6000" placeholder="Pergunte sobre macro, ativos, gráficos, carteira ou estudos… (ou @graham, @livermore)"></textarea></label><div class="wf-chat-actions"><button type="button" data-chat-clear>Limpar conversa</button><button type="submit">Enviar</button></div><small>Áurea direciona cada pergunta ao especialista certo do Conselho. Respostas podem conter erros; confirme fontes e datas.</small></form></aside>`),
+      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Anexar tela, ativo e indicadores públicos, sem saldos ou textos do diário</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-input-label">Sua pergunta<textarea rows="2" maxlength="6000" placeholder="Pergunte sobre macro, ativos, 7 Powers, gráficos ou carteira… (ou @helmer, @graham, @munger)"></textarea></label><div class="wf-chat-actions"><button type="button" data-chat-clear>Limpar conversa</button><button type="submit">Enviar</button></div><small>Áurea direciona cada pergunta ao especialista certo do Conselho. Respostas podem conter erros; confirme fontes e datas.</small></form></aside>`),
           document.body.append(r),
           (j = r.querySelector(".wf-chat-launcher")),
           (O = r.querySelector("aside")),
