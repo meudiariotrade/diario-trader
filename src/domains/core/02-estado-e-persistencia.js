@@ -4134,40 +4134,43 @@ const typing = () => {
     e.closest("#app")
   );
 };
-function persistNow() {
+async function persistNow() {
   // Chamadores que confirmam recebimento remoto precisam esperar o commit local.
   // Resolve false em falhas: os outros salvamentos automáticos não precisam capturar rejeições.
-  return new Promise((resolve) => {
-    clearTimeout(st);
-    const e = LOCAL_SAVE.revision;
-    LOCAL_SAVE.pending = !0;
-    try {
-      if (!db) throw new Error("Armazenamento do aparelho indisponível.");
+  clearTimeout(st);
+  const e = LOCAL_SAVE.revision;
+  LOCAL_SAVE.pending = !0;
+  svUi();
+  const grava = () =>
+    new Promise((resolve, reject) => {
+      if (!db) return reject(new Error("Armazenamento do aparelho indisponível."));
       const t = JSON.parse(JSON.stringify(S)),
         a = db.transaction("kv", "readwrite");
-      (a.objectStore("kv").put(t, "s"),
-        (a.oncomplete = () => {
-          (e === LOCAL_SAVE.revision &&
-            ((LOCAL_SAVE.committed = e),
-            (LOCAL_SAVE.pending = !1),
-            (LOCAL_SAVE.error = "")),
-            svUi());
-          resolve(true);
-        }),
-        (a.onabort = () => {
-          localSaveFailed(a.error, e);
-          resolve(false);
-        }),
-        (a.onerror = () => {
-          localSaveFailed(a.error, e);
-          resolve(false);
-        }));
-    } catch (t) {
-      localSaveFailed(t, e);
-      resolve(false);
+      a.objectStore("kv").put(t, "s");
+      a.oncomplete = () => resolve(true);
+      a.onabort = () => reject(a.error || new Error("Transação abortada."));
+      a.onerror = () => reject(a.error || new Error("Erro ao gravar no aparelho."));
+    });
+  try {
+    try {
+      await grava();
+    } catch (err1) {
+      if (err1 && err1.name === "QuotaExceededError") throw err1;
+      db = null;
+      await open();
+      await grava();
+    }
+    if (e === LOCAL_SAVE.revision) {
+      LOCAL_SAVE.committed = e;
+      LOCAL_SAVE.pending = !1;
+      LOCAL_SAVE.error = "";
     }
     svUi();
-  });
+    return true;
+  } catch (t) {
+    localSaveFailed(t, e);
+    return false;
+  }
 }
 /* v949: apenas caches públicos reconstruíveis, com nomes exatos. Nunca remover sessão, diário, carteira, teses, alertas ou configurações. */
 const CHAVES_CACHE_DESCARTAVEL_949 = Object.freeze(["ap873-rotacao","dt-macro-fiscal-v914","ap874-extra","ap896-fiis"]);
