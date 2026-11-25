@@ -8504,8 +8504,8 @@ de Carteira`,
       let l = 0;
       const r = {
           home: "Início",
-          dia: "Meu dia",
-          ops: "Operações",
+          dia: "Rotina",
+          ops: "Trades",
           trades: "Trades",
           stats: "Estatísticas",
           mercado: "Mercado",
@@ -31862,14 +31862,14 @@ try {
         P = o
           ? `<button type="button" class="v4-gate v4-gate-${o.st}" data-v4tool="hoje" data-v4route="home" data-v4scroll="1">${p(o.st === "g" ? "shield" : "alert", 18)}<b>${o.label}</b><span>${b(o.why)}</span>${p("right", 16)}</button>`
           : "",
-        $ = `<div class="v4-phase" role="group" aria-label="Fase do dia">${[
-          ["pre", "Pré-mercado"],
+        $ = `<div class="v4-phase dt975-phase" role="group" aria-label="Fase do dia">${[
+          ["pre", "Pré"],
           ["pregao", "Pregão"],
-          ["pos", "Pós-mercado"],
+          ["pos", "Pós"],
         ]
           .map(
             ([c, w]) =>
-              `<button type="button" data-v4phase="${c}" class="${u === c ? "on" : ""}" ${u === c ? 'aria-current="true"' : ""}><i></i>${w}${u === c && c === "pregao" && !v810Manual ? " <small>(aberto)</small>" : ""}</button>`,
+              `<button type="button" data-v4phase="${c}" class="${u === c ? "on" : ""}" ${u === c ? 'aria-current="true"' : ""}><i></i>${w}</button>`,
           )
           .join("")}</div>`,
         H = f(() => {
@@ -31966,19 +31966,39 @@ try {
           st("Ver agenda completa", 'data-v4mkt="ag"'),
           `<ul class="v4-list">${ot}</ul>`,
         ),
+        brief30Prompt = (() => {
+          const term = f(() => window.TermometroAbertura670?.capturar?.(), null);
+          const jrnTit = f(() => JRN?.v?.manchete?.titulo || "", "");
+          const jrnWin = f(() => JRN?.v?.radar_mesa?.win || "", "");
+          const jrnWdo = f(() => JRN?.v?.radar_mesa?.wdo || "", "");
+          const dHoje = f(() => S.days?.[t] || {}, {});
+          const emo = dHoje.emocao || "não informado";
+          const movs = X.map(([c, w]) => `${c} ${Q(w.d1)}`).join(", ");
+          return `Faça meu Briefing 30s da sessão (${M}, ${t}) em 3 bullets curtos e diretos (1. Viés macro e abertura WIN/WDO · 2. Gatilhos/agenda crítica de hoje · 3. Regra de disciplina para meu estado atual): ` +
+            (term && term.winPct != null ? `Termômetro WIN ${term.winPct >= 0 ? "+" : ""}${term.winPct.toFixed(2)}%${term.wdoPct != null ? `, WDO ${term.wdoPct >= 0 ? "+" : ""}${term.wdoPct.toFixed(2)}%` : ""}. ` : "") +
+            (jrnTit ? `Jornal do Pregão: "${jrnTit}". ` : "") +
+            (jrnWin ? `Radar WIN: "${jrnWin}". ` : "") +
+            (jrnWdo ? `Radar WDO: "${jrnWdo}". ` : "") +
+            (movs ? `Movimentos fortes: ${movs}. ` : "") +
+            `Meu estado emocional: ${emo}. P&L do dia: ${j(a)} (${e.length} trades). Sem clichês.`;
+        })(),
         $t = C(
           "spark",
-          'Central de Inteligência <span class="v4-iachip">IA</span>',
+          'Central Áurea <span class="v4-iachip">IA</span>',
           st("Perguntar à IA", 'data-v4ia="1"'),
-          `<div data-intel-content class="sm"></div><details style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px"><summary class="mut sm" style="cursor:pointer;font-weight:600">Atalhos rápidos (Terminal, Risco e Estatísticas)</summary><div class="v4-ia" style="margin-top:8px"><div class="v4-ialist">
+          `<div class="dt975-ia-acts">
+            <button type="button" class="dt975-pill-gold" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('schwartz','Briefing 30s · Áurea',window.__dt975Brief30Prompt)">✦ Briefing 30s</button>
+            <button type="button" class="dt975-pill-glass" data-v4mkt="jr">📰 Radar da Mesa</button>
+          </div>
+          <div data-intel-content class="sm"></div><details style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px"><summary class="mut sm" style="cursor:pointer;font-weight:600">Atalhos rápidos (Terminal, Risco e Estatísticas)</summary><div class="v4-ia" style="margin-top:8px"><div class="v4-ialist">
     <button type="button" data-dt393-route="term">${p("crosshair", 20)}<span><b>Radar global e oportunidades</b><small>Fluxo, juros, índices e ativos no Terminal.</small></span>${p("right", 16)}</button>
-    <button type="button" data-dt393-route="ops">${p("shield", 20)}<span><b>Revisar operações e risco</b><small>Posições abertas, stops e risco consumido.</small></span>${p("right", 16)}</button>
+    <button type="button" data-dt393-route="ops">${p("shield", 20)}<span><b>Revisar trades e risco</b><small>Posições abertas, stops e risco consumido.</small></span>${p("right", 16)}</button>
     <button type="button" data-dt393-route="stats">${p("up", 20)}<span><b>Avaliar resultados e consistência</b><small>Curva, win rate e pontos de atenção.</small></span>${p("right", 16)}</button></div></div></details>`,
-          "v4-iacard",
+          "v4-iacard dt975-iacard",
         );
-      /* v957: Início organizado por prioridade sem misturar cotações e notícias:
-         Topo = KPIs principais + Central da Áurea; Meio = Mercado/EUA/Movimentos; Base = Notícias + Agenda; Lateral/rodapé = Complementares. */
-      return `<div class="v4-page v4-home v810-home v829-home" data-v810-phase="${u}">
+      window.__dt975Brief30Prompt = brief30Prompt;
+      /* v975: Início Liquid Glass 3D — fase compacta, KPIs 3D, Termômetro Hero, Central Áurea IA (Briefing 30s + Radar), EUA/ADRs e Agenda. */
+      return `<div class="v4-page v4-home v810-home v829-home dt975-home" data-v810-phase="${u}">
     ${v810Seletor($)}
     ${v829MercadoKpis()}
     <div class="ui-split v829-split"><div class="ui-main">${$t}${v827Eua()}${K}</div><aside class="ui-aside">${u!=="pos"?v825Niveis():""}</aside></div>
@@ -32056,26 +32076,18 @@ try {
           f(() => render()));
       }),
     ),
-      f(() => {
-        const g = () => {
-          const N = document.querySelector("#app:not(.v503-fantasma)"),
-            O = N && (N.querySelector(".v4-day > .v4-emo") || N.querySelector(":scope > .v4-emo"));
-          if (!O) return;
-          N.querySelectorAll(":scope > .v4-emo").forEach((vt) => vt !== O && vt.remove());
-          const tt = N.querySelector(":scope > .v4-subnav");
-          tt ? tt.nextElementSibling !== O && tt.after(O) : N.firstElementChild !== O && N.prepend(O);
-        };
-        (document.addEventListener("diario:render", () => requestAnimationFrame(() => requestAnimationFrame(g))),
-          new MutationObserver(() => {
-            const N = document.querySelector("#app:not(.v503-fantasma)");
-            N && N.querySelector(".v4-emo") && requestAnimationFrame(g);
-          }).observe(document.getElementById("app") || document.body, { childList: !0 }));
-      }),
+      /* v975: .v4-emo agora renderiza nativamente no fluxo da Rotina, sem MutationObserver pós-paint nem salto de layout. */
       f(() =>
         setInterval(() => {
+          if (document.hidden) return;
           for (const g of document.querySelectorAll("#app:not(.v503-fantasma) [data-v589-abertura]")) {
             const N = +g.dataset.v589Abertura;
-            N - Date.now() <= 0 ? f(() => render()) : (g.querySelector("b").textContent = cont589(N));
+            if (N - Date.now() <= 0) {
+              if (!g.dataset.done) { g.dataset.done = "1"; f(() => render()); }
+            } else {
+              const elB = g.querySelector("b");
+              if (elB) elB.textContent = cont589(N);
+            }
           }
         }, 1e3),
       ));
@@ -32600,20 +32612,38 @@ try {
         chamada=sessao==="pre"?(textoPlano||"Plano ainda não preenchido. Confira cenário, regras e limites antes de operar."):
           sessao==="pregao"?"Acompanhe os stops, o checklist e as operações — sem tratar P&L aberto como realizado.":
           (resumoDia||"Revisão ainda não registrada. Compare o plano com a execução antes de encerrar o dia."),
-        seletor='<div class="v4-phase" role="group" aria-label="Fase de Meu Dia">'+
-          [["pre","Pré-mercado"],["pregao","Pregão"],["pos","Pós-mercado"]].map(([fase,nome])=>
-            '<button type="button" data-v4phase="'+fase+'" class="'+(sessao===fase?'on':'')+'" aria-pressed="'+(sessao===fase)+'"><i></i>'+nome+'</button>'
-          ).join('')+'</div>',
-        contexto='<section class="v810-day-context" data-intel-content-wrapper="1"><div data-intel-content class="sm">Aguardando contexto verificável do mercado.</div></section>',
+        contexto='<section class="v810-day-context dt975-card" data-intel-content-wrapper="1"><div data-intel-content class="sm">Aguardando contexto verificável do mercado.</div></section>',
         operacoes=v810Operacoes(t,a),
         niveis825=v825Niveis(),
-        faseNome959={pre:"Pré-mercado",pregao:"Pregão",pos:"Pós-mercado"}[sessao]||"Automático",
-        base='<details class="v810-more" style="margin-bottom:8px"><summary>Fase da sessão: <b>'+faseNome959+'</b> <span class="mut sm">· ajustar</span></summary><div style="margin-top:6px">'+v810Seletor(seletor)+'</div></details>'+turno593+contexto;
-      /* v829: Meu dia = você. KPIs do dia no topo; checklist, operações e plano no centro;
-         capital, plano detalhado e anotações na coluna da direita. Agenda e cenário de mercado foram para o Início. */
+        rotHero=`<section class="v4-card dt975-rot-hero" aria-label="Status e preparo do pregão">
+          <div class="dt975-rot-top">
+            <span class="dt975-badge ${semaforo.cls}">● ${semaforo.txt}${semaforo.cls === "ok" ? " · Mão Normal" : ""}</span>
+            <div class="dt975-date">
+              <button type="button" data-a="dprev" aria-label="Dia anterior">‹</button>
+              <label><input type="date" data-v4date value="${t}" aria-label="Data da rotina"><span>${t === V() ? "Hoje" : wt(t)}</span></label>
+              <button type="button" data-a="dnext" aria-label="Próximo dia">›</button>
+            </div>
+          </div>
+          <h2 class="dt975-rot-title">Preparo do Pregão</h2>
+          <p class="dt975-rot-sub">${b(semaforo.sub)}</p>
+          <div class="dt975-pbar ${semaforo.cls}" role="progressbar" aria-label="Progresso do checklist" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${I}"><i style="width:${I}%"></i></div>
+          <div class="dt975-pmeta"><span><b>${$}/${P.length}</b> regras concluídas</span><span>${I}%</span></div>
+          <div class="dt975-rot-acts">
+            <button type="button" class="dt975-btn-gold" data-rotina-preparo>Abrir Checklist</button>
+            <button type="button" class="dt975-btn-glass" data-chk932-org="1">${chkOrg932 ? "✓ Concluir" : "⚙ Organizar"}</button>
+          </div>
+        </section>`,
+        rotStep=`<div class="dt975-rot-step" role="group" aria-label="Etapas da sessão">
+          ${[["pre", "1", "Antes"], ["pregao", "2", "Durante"], ["pos", "3", "Depois"]].map(([fase, num, nome]) =>
+            `<button type="button" data-v4phase="${fase}" class="${sessao === fase ? "on" : ""}" aria-pressed="${sessao === fase}"><i>${num}</i><span>${nome}</span></button>`
+          ).join("")}
+          ${v810Manual ? '<button type="button" class="dt975-step-auto" data-v4auto="1" title="Voltar à fase automática pelo horário">Auto</button>' : ""}
+        </div>`,
+        base=rotHero+rotStep+turno593+emo589;
+      /* v975: Rotina unificada — Hero 3D + Stepper 1-2-3 + Emoção 1 toque in-flow + KPIs 3D + blocos da fase sem sobreposição. */
       const kpis829=v829DiaKpis(r,l,s,u.length),
-        lado829='<details class="v810-more"><summary>Plano detalhado, emoção e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+emo589+it+dt+'</div></details>',
-        ladoPos829='<details class="v810-more"><summary>Limites e revisão detalhada</summary><div class="v810-more-inner">'+planoIntegrado789(t, e)+emo589+dt+'</div></details>';
+        lado829='<details class="v810-more"><summary>Plano detalhado e anotações</summary><div class="v810-more-inner">'+planoIntegrado789(t,e)+it+dt+'</div></details>',
+        ladoPos829='<details class="v810-more"><summary>Limites e revisão detalhada</summary><div class="v810-more-inner">'+planoIntegrado789(t, e)+dt+'</div></details>';
       const fech60 = (() => {
         if (sessao !== "pos") return "";
         const nTr = Array.isArray(a) ? a.length : 0;
@@ -32639,13 +32669,13 @@ try {
           </div>
         </section>`;
       })();
-      return '<div class="v4-page v4-day v810-day v829-day" data-v810-phase="'+sessao+'">'+base+kpis829+
+      return '<div class="v4-page v4-day v810-day v829-day dt975-day" data-v810-phase="'+sessao+'">'+base+kpis829+
         (sessao==="pre"
-          ? '<div class="ui-split v829-split"><div class="ui-main">'+U+y+niveis825+'</div><aside class="ui-aside">'+m+lado829+'</aside></div>'
+          ? '<div class="ui-split v829-split"><div class="ui-main">'+U+contexto+y+niveis825+'</div><aside class="ui-aside">'+m+lado829+'</aside></div>'
           : sessao==="pregao"
-          ? '<div class="ui-split v829-split"><div class="ui-main">'+operacoes+U+niveis825+'</div><aside class="ui-aside">'+m+y+lado829+'</aside></div>'
-          : '<div class="ui-split v829-split"><div class="ui-main">'+fech60+operacoes+v811PlanoExecucao(t,e)+U+'</div><aside class="ui-aside">'+m+
-            '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de operações</button>'+y+it+ladoPos829+'</aside></div>')+
+          ? '<div class="ui-split v829-split"><div class="ui-main">'+operacoes+U+contexto+niveis825+'</div><aside class="ui-aside">'+m+y+lado829+'</aside></div>'
+          : '<div class="ui-split v829-split"><div class="ui-main">'+fech60+operacoes+v811PlanoExecucao(t,e)+contexto+U+'</div><aside class="ui-aside">'+m+
+            '<button type="button" class="v4-cta" data-dt393-route="stats">'+p("book",20)+' Ver diário de trades</button>'+y+it+ladoPos829+'</aside></div>')+
         '</div>';
     }
     let At = "risk",
@@ -32670,22 +32700,42 @@ try {
               .filter(Boolean),
           ),
         ],
-        y = (d, c, w, k, it = "", extra = "") =>
-          `<div class="v4-stat">${p(d, 24)}<span>${c}</span><strong class="${it}">${w}</strong><small>${k}</small>${extra}</div>`,
-        /* v595: barra fina do risco consumido em relação ao limite (CLAUDE.md: verde ≤ 50%, âmbar 51–80%, vermelho > 80%). */
-        barra595 =
-          u != null && h != null && h > 0
-            ? (() => {
-                const pct = Math.max(0, Math.min(100, (u / h) * 100)),
-                  cls = pct > 80 ? "alto" : pct > 50 ? "medio" : "ok";
-                return `<i class="v595-riscobar ${cls}" role="progressbar" aria-label="Risco consumido do limite" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><em style="width:${pct.toFixed(1)}%"></em></i>`;
-              })()
-            : "",
-        P = `<div class="v4-stats">
-    ${y("folder", "Operações abertas", String(e.length), `(${l} compradas / ${s} vendidas)`)}
-    ${y("bars", "Resultado do dia", j(r), E(r) != null ? Q(E(r)) : a.length + " encerrada(s)", L(r))}
-    ${y("shield", "Risco consumido", u != null ? _(u) + "%" : G(o), h != null ? `(limite: ${_(h)}%)` : "pelos stops abertos", "", barra595 + '<button type="button" class="v598-calc-btn" data-v598-calc aria-label="Calcular tamanho da posição">Calcular posição</button>')}
-    ${y("crosshair", "Setups ativos", String(M.length), M.length ? "(" + b(M.slice(0, 3).join(", ")) + ")" : "nenhum hoje")}</div>`,
+        gWin = a.filter((d) => R(d) > 0).length,
+        wrTxt = a.length ? Math.round((gWin / a.length) * 100) + "%" : "—",
+        limDia = i || f(() => pCore(pHoje().hj, pHoje().P)?.lim, 0) || 0,
+        riscoUsado = Math.max(0, -(window.vivoDia ? vivoDia(r) : r) || 0) + (o || 0),
+        riscoPct = limDia > 0 ? Math.round((riscoUsado / limDia) * 100) : (u != null ? Math.round(u) : 0),
+        seqLoss = (() => {
+          let k = 0;
+          const ord = a.slice().sort((x, y) => String(x.dtx || x.dt || "").localeCompare(String(y.dtx || y.dt || "")));
+          for (let idx = ord.length - 1; idx >= 0 && R(ord[idx]) < 0; idx--) k++;
+          return k;
+        })(),
+        guard = limDia > 0 && riscoPct >= 100
+          ? { cls: "no", txt: "🛑 Limite atingido" }
+          : (limDia > 0 && riscoPct >= 70) || seqLoss >= 2
+            ? { cls: "am", txt: seqLoss >= 2 ? `⚠ ${seqLoss} stops seguidos · Reduzir mão` : "⚠ Atenção · Reduzir mão" }
+            : { cls: "ok", txt: "● Risco sob controle" },
+        barCls = riscoPct >= 100 ? "no" : riscoPct >= 70 ? "am" : "ok",
+        P = `<section class="v4-card dt975-ops-hero" aria-label="Resumo e controle de trades do dia">
+          <div class="dt975-ops-top">
+            <span class="dt975-kicker">RESULTADO DO DIA</span>
+            <span class="dt975-badge ${guard.cls}">${guard.txt}</span>
+          </div>
+          <strong class="dt975-ops-pl ${L(r)}">${j(r)}</strong>
+          <p class="dt975-ops-sub">${a.length} trade(s) · acerto ${wrTxt} · ${e.length} aberta(s)${e.length ? ` (${l}C/${s}V)` : ""}${M.length ? ` · ${M.length} setup(s)` : ""}</p>
+          <div class="dt975-rwrap">
+            <div class="dt975-pbar ${barCls}" role="progressbar" aria-label="Risco consumido do limite" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, Math.max(0, riscoPct))}"><i style="width:${Math.min(100, Math.max(0, riscoPct))}%"></i></div>
+            <div class="dt975-pmeta">
+              <span>Risco consumido: <b>${limDia > 0 ? riscoPct + "%" : G(riscoUsado)}</b>${limDia > 0 ? ` de ${G(limDia)}` : " · stops abertos"}</span>
+              ${E(r) != null ? `<span>${Q(E(r))} do cap.</span>` : ""}
+            </div>
+          </div>
+          <div class="dt975-ops-acts">
+            <button type="button" class="dt975-btn-gold" data-dt393-action="newtrade">+ Registrar Trade</button>
+            <button type="button" class="dt975-btn-glass" data-dt975-calc-toggle="1">Calculadora</button>
+          </div>
+        </section><div class="dt975-calc-slot"></div>`,
         A = e
           .map((d) => {
             const c = Wt(d.ativo),
@@ -32740,12 +32790,20 @@ try {
         }),
         B = (d, c) =>
           `<th><button type="button" data-v4sort="${d}" class="${I === d ? "on" : ""}">${c} ${I === d ? (Z > 0 ? "▲" : "▼") : "⇅"}</button></th>`,
+        trMobileRows = z.map((d) => {
+          const lado = d.side === "V" ? "Venda" : "Compra";
+          const pl = R(d);
+          const discBadge = d.rules === "n" || (d.err && d.err !== "Nenhum")
+            ? '<span class="dt975-tr-disc no">✕ Fora</span>'
+            : '<span class="dt975-tr-disc ok">✓ Plano</span>';
+          return `<button type="button" class="dt975-tr-row ${pl >= 0 ? "pos" : "neg"}" data-a="edit" data-id="${b(d.id)}"><span class="dt975-tr-l"><b>${b(d.ativo || "—")}</b><small>${lado}${d.setup ? " · " + b(d.setup) : ""}</small></span><span class="dt975-tr-r"><strong class="${L(pl)}">${j(pl)}</strong>${discBadge}</span></button>`;
+        }).join(""),
         Y = C(
           "trade",
-          "Trades do dia",
+          "Trades de hoje",
           `<span class="v4-muted">${a.length} trade(s)</span>`,
           a.length
-            ? `<div class="v4-tablewrap"><table class="v4-table"><thead><tr>${B("ativo", "Ativo")}${B("setup", "Setup")}${B("entry", "Entrada")}${B("exit", "Saída")}${B("pl", "Resultado")}${B("r", "× risco")}<th></th></tr></thead><tbody>${z.map((d) => `<tr class="${R(d) >= 0 ? "b-buy" : "b-sell"}"><td><b>${b(d.ativo || "—")}</b></td><td>${b(d.setup || "—")}</td><td>${q(d.entry)}</td><td>${q(d.exit)}</td><td class="${L(R(d))}">${j(R(d))}</td><td class="${L(T(d))}">${T(d) != null ? (T(d) > 0 ? "+" : "") + _(T(d)) + "×" : "—"}</td><td><button type="button" class="v4-icon" data-a="edit" data-id="${b(d.id)}" aria-label="Abrir trade">${p("doc", 18)}</button></td></tr>`).join("")}</tbody></table></div>`
+            ? `<div class="dt975-trlist">${trMobileRows}</div><div class="v4-tablewrap dt975-trdesk"><table class="v4-table"><thead><tr>${B("ativo", "Ativo")}${B("setup", "Setup")}${B("entry", "Entrada")}${B("exit", "Saída")}${B("pl", "Resultado")}${B("r", "× risco")}<th></th></tr></thead><tbody>${z.map((d) => `<tr class="${R(d) >= 0 ? "b-buy" : "b-sell"}"><td><b>${b(d.ativo || "—")}</b></td><td>${b(d.setup || "—")}</td><td>${q(d.entry)}</td><td>${q(d.exit)}</td><td class="${L(R(d))}">${j(R(d))}</td><td class="${L(T(d))}">${T(d) != null ? (T(d) > 0 ? "+" : "") + _(T(d)) + "×" : "—"}</td><td><button type="button" class="v4-icon" data-a="edit" data-id="${b(d.id)}" aria-label="Abrir trade">${p("doc", 18)}</button></td></tr>`).join("")}</tbody></table></div>`
             : gt("Nenhum trade encerrado hoje."),
         ),
         U = a
@@ -32908,8 +32966,8 @@ try {
         const btnSem = `<div style="margin-top:10px"><button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('carteira','Revisão Semanal · Áurea',window.__dt959SemPrompt)" style="font-size:12.5px;min-height:40px">✦ Fechar Semana com a Áurea (${sem.n} trades / 7d)</button></div>`;
         return `<details class="v4-card" style="margin-top:10px;padding:12px 14px"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gold,#C9A66B)">🧠 Disciplina, Humor × Dinheiro &amp; Revisão Semanal</summary><div style="margin-top:10px">${hAtivos.length ? `<div class="sm mut" style="margin-bottom:4px">Humor do Checklist × Resultado (R$)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Estado emocional</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${hAtivos.map(ln).join("")}</tbody></table></div>` : '<p class="sm mut" style="margin:0 0 8px">Conclua o checklist matinal com sua nota emocional (1–5) para cruzar seu humor com o resultado financeiro.</p>'}${dAtivos.length ? `<div class="sm mut" style="margin:10px 0 4px">Seguir o Plano × Quebrar Regra</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Disciplina</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${dAtivos.map(ln).join("")}</tbody></table></div>` : ""}${topSetups.length ? `<div class="sm mut" style="margin:10px 0 4px">Placar por Setup (Playbook)</div><div class="v4-tablewrap"><table class="v4-table"><thead><tr><th>Setup</th><th>Trades</th><th>Acerto</th><th>P&amp;L</th></tr></thead><tbody>${topSetups.map(ln).join("")}</tbody></table></div>` : ""}${btnSem}</div></details>`;
       })();
-      /* v829: Operações em tela dividida — KPIs no topo, posições e trades no centro, revisão e sugestões à direita. */
-      return `<div class="v4-page v4-ops v829-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${$}${Y}${rx940}${psico959}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
+      /* v975: Trades Liquid Glass 3D — Hero P&L + Guardião no topo, Trades de hoje em destaque, posições abertas, Raio-X e Revisão. */
+      return `<div class="v4-page v4-ops v829-ops dt975-ops">${P}<div class="ui-split v829-split"><div class="ui-main">${e.length ? $ + Y : Y + $}${rx940}${psico959}</div><aside class="ui-aside">${ot}${$t}</aside></div></div>`;
     }
     let mt = "3M",
       kt = !1;
@@ -35211,7 +35269,7 @@ try {
         try {
           (b() === "term" || h()) && A();
         } catch {}
-    }, 1500),
+    }, 3500),
       (i.DIARIO_V428 = {
         get page() {
           return s;
@@ -35995,7 +36053,7 @@ try {
         try {
           (H(), z());
         } catch {}
-    }, 3e3),
+    }, 6e3),
       (A.DIARIO_V429 = { gerar: F, abrir: w, diaStats: X }));
   })(window);
 } catch (e) {
@@ -36540,7 +36598,7 @@ try {
     }, 600);
     (setInterval(() => {
       a.hidden || u();
-    }, 1500),
+    }, 4e3),
       (c.DIARIO_V430T = { tudo: u, celular: y }));
   })(window);
 } catch (e) {
@@ -36646,7 +36704,7 @@ try {
           try {
             u();
           } catch {}
-      }, 1500),
+      }, 4e3),
       (i.DIARIO_V431 = { abrir: c }));
   })(window);
 } catch (e) {
@@ -37192,7 +37250,7 @@ try {
         e && L(e));
     }
     (new MutationObserver(() => h()).observe(o.body, { childList: !0 }),
-      setInterval(h, 1500),
+      setInterval(() => { o.hidden || h(); }, 4e3),
       (l.DIARIO_V433 = { liga: h, aplicaFormato: m }));
   })(window);
 } catch (e) {
