@@ -7419,3 +7419,84 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid > div{ba
 html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid b{color:#0f172a}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid span,
 html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid small{color:#475569}
+/* v986: PC Widescreen Trading Desk Pro (100% restrito a desktop >= 1024px, zero impacto no mobile) */
+@media (min-width:1024px){
+ html:root body #app,
+ html:root body #app.journal-view,
+ html:root body #app.ui-standard-screen,
+ html:root body.studio-design #app.home-view{
+  max-width:min(1640px,calc(100vw - 36px))!important;
+  width:100%!important;
+  padding-left:24px!important;
+  padding-right:24px!important
+ }
+ html:root body #app :is(.v4-page,.dt393-page,.dt393-workspace,.dt397-studies,.us-seasonality,.dfase){
+  max-width:100%!important;
+  width:100%!important
+ }
+ /* Início & Trades: grade widescreen 2 colunas equilibradas */
+ #app .v829-home .v829-kpis .v4-kpis,
+ #app .v829-home .v829-kpis .ui-kpis{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important
+ }
+ #app .v829-split{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.42fr) minmax(360px,1fr)!important;
+  gap:18px!important;
+  align-items:start
+ }
+ #app .v4-ops .v829-split{
+  grid-template-columns:minmax(0,1.3fr) minmax(380px,1fr)!important
+ }
+ /* Desempenho: Dashboard analítico widescreen em 2 colunas */
+ #app .dt976-stats{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:16px!important;
+  align-items:start
+ }
+ #app .dt976-stats > :is(.dt976-perf-hero,.v4-two,.v4-cta){
+  grid-column:1 / -1
+ }
+ #app .dt976-stats .dt976-perf-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important
+ }
+ #app .dt976-stats > :is(.dt976-cal,.dt976-play,.dt978-dow,.dt983-whatif,.dt976-sim){
+  margin-top:0!important;height:100%
+ }
+ /* Estudos: 2 colunas widescreen (Hero + Recomendado à esquerda · Aulas + Sugestões à direita) */
+ #app[data-tela="estudos"] .v596-hoje{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)!important;
+  gap:16px!important;
+  align-items:start
+ }
+ #app[data-tela="estudos"] .v596-hoje > .v598-rec{
+  grid-column:1 / -1
+ }
+ #app[data-tela="estudos"] .dt397-category{
+  max-width:760px;margin-inline:auto
+ }
+ #app[data-tela="estudos"] .dt397-library-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important
+ }
+ /* Rotina, Regras, Contratos, Imposto e Telas Secundárias ocupando a tela toda */
+ #app:is([data-tela="dia"],[data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="imposto"]) .v4-two,
+ #app:is([data-tela="dia"],[data-tela="regras"],[data-tela="painel"],[data-tela="contratos"],[data-tela="carreira"],[data-tela="conta"],[data-tela="import"],[data-tela="imposto"]) .g2{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:16px!important
+ }
+ #app[data-tela="imposto"] .ir599-grid,
+ #app[data-tela="imposto"] .g3{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:14px!important
+ }
+}
+@media (min-width:1360px){
+ #app .dt976-stats .dt976-perf-grid{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important
+ }
+ #app[data-tela="estudos"] .dt397-library-grid{
+  grid-template-columns:repeat(5,minmax(0,1fr))!important
+ }
+}
