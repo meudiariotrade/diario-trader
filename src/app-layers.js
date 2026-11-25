@@ -33595,7 +33595,15 @@ try {
         ev.preventDefault();
         const k = ia978.dataset.dt978Ia;
         // Briefing usa o endpoint textual da própria Áurea, não a ficha de ativos do Conselho.
-        if(k==="brief30")return;
+        if(k==="brief30"){
+          const api=window.DiarioInteligenciaEtapa1;
+          if(typeof api?.briefing30!=="function"){f(()=>toast?.("Áurea ainda está carregando. Tente novamente."));return;}
+          ia978.disabled=true;
+          const oldLabel=ia978.textContent;
+          ia978.textContent="Gerando Briefing…";
+          Promise.resolve().then(()=>api.briefing30()).catch(()=>f(()=>toast?.("Não foi possível gerar o Briefing. Tente novamente."))).finally(()=>{ia978.disabled=false;ia978.textContent=oldLabel;});
+          return;
+        }
         const mapIa = {
           brief30: ["schwartz", "Briefing 30s · Áurea", window.__dt975Brief30Prompt],
           fech60: ["munger", "Fechamento 60s · Munger", window.__dt974Fech60Prompt],
