@@ -76,7 +76,13 @@ test('v904: Panorama no iPhone apresenta aviso na imagem se o dado estiver antig
 });
 test('v904: Áurea retorna resposta inline, não copia o comando para colar em outra IA',()=>{
  const s=fs.readFileSync('src/intelligence/etapa1.js','utf8');
- const resumo=s.slice(s.indexOf("const resBtn=event.target.closest('[data-aurea-resumao]')"),s.indexOf("const revBtn=event.target.closest('[data-aurea-revisao]')"));
+ const start=s.indexOf("const resBtn=event.target.closest("),end=s.indexOf("const revBtn=event.target.closest('[data-aurea-revisao]')",start);
+ assert.ok(start>=0&&end>start,'handler da Áurea presente');
+ const resumo=s.slice(start,end);
+ assert.match(resumo,/data-aurea-resumao/);
+ assert.match(resumo,/data-dt978-ia="brief30"/);
+ assert.match(resumo,/shortBrief/);
+ assert.match(resumo,/exatamente 3 tópicos/);
  assert.match(s,/data-aurea-resumo-gerado/);
  assert.match(resumo,/\/v1\/aurea-resumao/);
  assert.match(resumo,/state\.resumaoHtml/);
@@ -144,4 +150,15 @@ test('Conselho da Áurea mantém dados privados fora de IA anônima e usa Worker
  assert.ok(hosts.includes('api.groq.com'));
  assert.equal(hosts.includes('text.pollinations.ai'),false);
  assert.match((await res.json()).model,/Cloudflare Workers AI/);
+});
+
+test('v988: Briefing usa o handler textual da Áurea e não a ficha genérica do Conselho',()=>{
+ const layer=fs.readFileSync('src/domains/layers/03-apresentacao.js','utf8');
+ const a=layer.indexOf('const ia978 ='),b=layer.indexOf('const capa978 =',a);
+ assert.ok(a>=0&&b>a);
+ const h=layer.slice(a,b);
+ assert.ok(h.indexOf('if(k==="brief30")return;')>=0&&h.indexOf('if(k==="brief30")return;')<h.indexOf('window.DiarioConselhoIA('));
+ const src=fs.readFileSync('src/intelligence/etapa1.js','utf8');
+ assert.match(src,/data-dt978-ia="brief30"/);
+ assert.match(src,/state\.resumaoHtml/);
 });
