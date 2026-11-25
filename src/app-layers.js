@@ -29406,14 +29406,16 @@ try {
       for (const el of app.querySelectorAll(".card > div, section > div")) {
         const kids = [...el.children];
         if (kids.length >= 4 && kids.length <= 8 && kids.some((k) => /SENTIMENTO|MEDO|VOLATILIDADE|CORRELA/i.test(k.textContent || ""))) {
-          el.classList.add("dt962-kpi-grid");
+          if (!el.classList.contains("dt962-kpi-grid")) el.classList.add("dt962-kpi-grid");
           for (const k of kids) {
-            k.classList.add("dt962-kpi-card");
+            if (!k.classList.contains("dt962-kpi-card")) k.classList.add("dt962-kpi-card");
             const txt = String(k.textContent || "").toLowerCase();
-            k.classList.remove("sig-up", "sig-dn", "sig-warn");
-            if (/otimis|gan[aâ]ncia|alta|risk-on|positivo/.test(txt)) k.classList.add("sig-up");
-            else if (/medo|p[aâ]nico|queda|risk-off|estresse|alto risco/.test(txt)) k.classList.add("sig-dn");
-            else if (/neutro|cautela|moderad/.test(txt)) k.classList.add("sig-warn");
+            const isUp = /otimis|gan[aâ]ncia|alta|risk-on|positivo/.test(txt);
+            const isDn = !isUp && /medo|p[aâ]nico|queda|risk-off|estresse|alto risco/.test(txt);
+            const isWarn = !isUp && !isDn && /neutro|cautela|moderad/.test(txt);
+            if (k.classList.contains("sig-up") !== isUp) k.classList.toggle("sig-up", isUp);
+            if (k.classList.contains("sig-dn") !== isDn) k.classList.toggle("sig-dn", isDn);
+            if (k.classList.contains("sig-warn") !== isWarn) k.classList.toggle("sig-warn", isWarn);
           }
         }
       }
@@ -29766,11 +29768,14 @@ try {
       cripto: svg('<path d="M8 4h6a3.5 3.5 0 0 1 0 7H8V4zm0 7h7a3.5 3.5 0 0 1 0 7H8v-7zm2-9v2m4-2v2m-4 14v2m4-2v2"/>'),
     };
     const SPARK_ICO = svg('<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/>', 14);
+    const BOLT_ICO = svg('<path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/>', 13);
     const AUDIO_ICO = svg('<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>', 16);
     const getIco = (k) => CAT_ICONS[k] || CAT_ICONS.all;
 
     let searchOpen = false, searchQ = "", onlyCart = false, balFilter = "all";
     let syncing = false, timer = null;
+    const impactMap = new WeakMap();
+    let activeWhyCard = null;
 
     const meusTickers = () => {
       const set = new Set();
@@ -29812,6 +29817,8 @@ try {
       d.getElementById("dt968-nt-sheet-ov")?.remove();
       d.getElementById("dt968-nt-menu-pop")?.remove();
       d.getElementById("dt968-bal-bar")?.remove();
+      d.getElementById("dt969-why-ov")?.remove();
+      activeWhyCard = null;
       for (const el of d.querySelectorAll("[data-dt968-hid]")) el.removeAttribute("data-dt968-hid");
     };
 
@@ -29867,6 +29874,100 @@ try {
       return null;
     };
 
+    /* v969: classificador seletivo de impacto por ativo (zero ruído: filtra loterias e indicadores regionais menores fora do eixo EUA/Brasil) */
+    const NOISE_RE = /\b(?:dia de sorte|mega-?sena|lotofacil|lotomania|quina|dupla sena|timemania|super sete|concurso\s+\d+|sorteio|horoscopo|novela|bbb|futebol|campeonato)\b/;
+    const MINOR_FOREIGN_RE = /\b(?:australi\w*|nova zelandi\w*|new zealand|canad\w*|suic\w*|swiss|reino unido|britanic\w*|\buk\b|boe\b|japao|japan|\bboj\b|coreia|korea|india|turquia|argentina|mexico|zona do euro|eurozone|\bbce\b|\becb\b|alemanha|franca|italia|espanha|suecia|noruega)\b/;
+    const CORE_ANCHOR_RE = /\b(?:eua|\busa?\b|\bfed\b|\bfomc\b|powell|treasur|brasil|ibovespa|ibov|copom|selic|ipca|petrobras|petr[34]|vale3|brent|opep|opec|nvidia|nvda|amazon|amzn|apple|aapl|microsoft|msft|tesla|tsla)\b/;
+    const DIRECT_ASSETS = [
+      [/\b(?:petrobras|petr[34])\b/, "PETR4", "Evento direto na Petrobras impacta expectativas de caixa, dividendos e o peso da estatal no Ibovespa."],
+      [/\b(?:petroleo|brent|wti|opep|opec)\b/, "PETR4", "Oscilação forte do barril de petróleo (Brent/OPEP+) mexe direto na receita das petroleiras da B3."],
+      [/\b(?:prio3?|petrorio)\b/, "PRIO3", "Notícia direta sobre a PRIO afeta projeções de produção e margens."],
+      [/\b(?:vale3?|vale\s+s\.?a|minerio de ferro|iron ore|dalian)\b/, "VALE3", "Preço do minério de ferro e demanda chinesa mexem diretamente no resultado da Vale."],
+      [/\b(?:gerdau|ggbr4)\b/, "GGBR4", "Notícia direta sobre a Gerdau e margens do setor siderúrgico."],
+      [/\b(?:itau|itub4)\b/, "ITUB4", "Evento direto sobre o Itaú Unibanco, maior peso bancário do Ibovespa."],
+      [/\b(?:bradesco|bbdc4)\b/, "BBDC4", "Evento corporativo direto sobre o Bradesco."],
+      [/\b(?:banco do brasil|bbas3)\b/, "BBAS3", "Evento corporativo direto sobre o Banco do Brasil."],
+      [/\b(?:btg\s+pactual|bpac11)\b/, "BPAC11", "Notícia direta sobre o BTG Pactual."],
+      [/\b(?:weg|wege3)\b/, "WEGE3", "Notícia direta sobre a WEG (receita industrial e exposição cambial)."],
+      [/\b(?:ambev|abev3)\b/, "ABEV3", "Notícia direta sobre a Ambev."],
+      [/\b(?:eletrobras|elet3)\b/, "ELET3", "Notícia direta sobre a Eletrobras."],
+      [/\b(?:suzano|suzb3)\b/, "SUZB3", "Notícia direta sobre a Suzano (exportadora de celulose sensível ao dólar)."],
+      [/\b(?:embraer|embr3)\b/, "EMBR3", "Notícia direta sobre a Embraer (carteira de pedidos e entregas)."],
+      [/\b(?:sabesp|sbsp3)\b/, "SBSP3", "Notícia direta sobre a Sabesp."],
+      [/\b(?:b3sa3)\b/, "B3SA3", "Notícia direta sobre a B3."],
+      [/\b(?:nvidia|nvda)\b/, "NVDA", "Notícia direta sobre a Nvidia, líder em semicondutores de IA e grande peso no Nasdaq/S&P 500."],
+      [/\b(?:amazon|amzn)\b/, "AMZN", "Movimento corporativo relevante na Amazon, big tech de peso relevante nos índices americanos."],
+      [/\b(?:apple|aapl)\b/, "AAPL", "Notícia direta sobre a Apple, um dos maiores pesos do S&P 500."],
+      [/\b(?:microsoft|msft)\b/, "MSFT", "Notícia direta sobre a Microsoft (nuvem e IA nos EUA)."],
+      [/\b(?:tesla|tsla)\b/, "TSLA", "Notícia direta sobre a Tesla."],
+      [/\b(?:alphabet|google|googl?)\b/, "GOOGL", "Notícia direta sobre a Alphabet/Google."],
+      [/\b(?:meta\s+platforms|zuckerberg)\b/, "META", "Notícia direta sobre a Meta Platforms."],
+      [/\b(?:bitcoin|btc)\b/, "BTC", "Movimento direto no Bitcoin, termômetro 24/7 de liquidez e apetite a risco."],
+      [/\b(?:ethereum|eth)\b/, "ETH", "Notícia direta sobre o Ethereum."],
+    ];
+
+    const analyzeNewsImpact = (title) => {
+      const n = norm(title);
+      if (!n || NOISE_RE.test(n)) return null;
+      if (MINOR_FOREIGN_RE.test(n) && !CORE_ANCHOR_RE.test(n)) return null;
+
+      const items = [];
+      const seen = new Set();
+      const add = (tk, why) => {
+        if (seen.has(tk) || items.length >= 2) return;
+        seen.add(tk);
+        items.push({ tk, why });
+      };
+
+      for (const [re, tk, why] of DIRECT_ASSETS) {
+        if (re.test(n)) add(tk, why);
+      }
+
+      let chain = "";
+      const isUsMacro = /\b(?:fed|fomc|powell|treasur\w*|payroll|jolts)\b/.test(n)
+        || /\b(?:us|eua)\s+(?:cpi|pce|gdp|pib)\b/.test(n)
+        || /\b(?:cpi|pce|inflacao)\s+(?:dos\s+eua|eua|american[ao])\b/.test(n)
+        || /\btarifa[s]?\s+(?:de\s+trump|dos\s+eua|americanas)\b/.test(n)
+        || (/\btrump\b/.test(n) && /\b(?:tarifa|juros|fed|china|guerra|sancao|sancoes|petroleo)\b/.test(n));
+
+      const isBrMacro = /\b(?:copom|selic|banco central do brasil|galipolo|ipca|arcabouco|meta fiscal|pacote fiscal|gasto[s]?\s+publico|divida publica|ibovespa)\b/.test(n)
+        || (/\bhaddad\b/.test(n) && /\b(?:fiscal|juros|dolar|imposto|gasto|orcamento)\b/.test(n))
+        || (/\bdolar\b/.test(n) && /\b(?:sobe|cai|recua|avanca|fecha|abre|dispara|opera|real|brl|bc)\b/.test(n));
+
+      const isGeoHigh = /\b(?:guerra|missil|misseis|estreito de ormuz)\b/.test(n)
+        || (/\bataque\b/.test(n) && /\b(?:ira|israel|petroleo|ormuz|ucrania|russia|eua)\b/.test(n));
+
+      if (isBrMacro) {
+        chain = "Macro Brasil (Copom, fiscal ou câmbio) mexe direto na curva DI, no dólar futuro (WDO) e no Ibovespa (WIN).";
+        if (/\b(?:copom|selic|ipca|fiscal|arcabouco|gasto|divida|galipolo)\b/.test(n)) {
+          add("DI", "Expectativa de Selic e risco fiscal precificam primeiro na curva de juros futuros (DI).");
+          add("WDO", "Prêmio de risco e diferencial de juros no Brasil refletem direto no dólar futuro (WDO).");
+        } else if (/\bdolar\b/.test(n)) {
+          add("WDO", "Fluxo cambial e formação do USD/BRL movem diretamente o contrato de dólar futuro (WDO).");
+          add("WIN", "Câmbio forte ou fraco altera o apetite estrangeiro e a precificação do índice futuro (WIN).");
+        } else {
+          add("WIN", "Fluxo local e macro doméstico direcionam diretamente o índice futuro (WIN).");
+          add("WDO", "Movimentos de risco no Brasil tendem a repercutir no dólar futuro (WDO).");
+        }
+      } else if (isUsMacro) {
+        chain = "Macro EUA de 1ª linha move os Treasuries e o dólar global (DXY), impactando WDO e o apetite por emergentes (WIN).";
+        add("WDO", "Juros americanos e Treasuries alteram o dólar global (DXY) e o fluxo de câmbio no WDO.");
+        add("WIN", "Custo de capital global e apetite a risco nos EUA impactam o fluxo para a bolsa brasileira (WIN).");
+      } else if (isGeoHigh) {
+        chain = "Escalada geopolítica relevante eleva aversão a risco global, fortalecendo o dólar (WDO) e pressionando bolsa (WIN).";
+        add("WDO", "Em choques geopolíticos o capital busca proteção em dólar, pressionando o WDO.");
+        add("WIN", "Aversão a risco global reduz apetite por ativos emergentes como o Ibovespa (WIN).");
+      }
+
+      if (!items.length) return null;
+      if (!chain) {
+        chain = items.length === 1
+          ? `Impacto direto concentrado em ${items[0].tk} — acompanhe reação de preço e volume no ativo.`
+          : `Impacto concentrado em ${items.map((x) => x.tk).join(" e ")} com reflexo setorial.`;
+      }
+      return { chain, items };
+    };
+
     const sentimentOf = (txt) => {
       const n = norm(txt);
       const dn = /\b(?:queda|cai|recua|tomba|despenca|alerta|crise|risco|cautela|guerra|tarifa|tensao|prejuizo|urgente|pressao|derrete)\b/.test(n);
@@ -29908,18 +30009,22 @@ try {
           const metaDiv = a.querySelector(".sm.mut, .mut.sm");
           const cartTag = a.querySelector(".dt962-tag-cart");
           const rawMeta = (metaDiv?.childNodes?.[0]?.textContent || metaDiv?.textContent || "").trim();
-          const isUrg = !!titleDiv?.querySelector("span") || /^URGENTE\b/i.test(titleDiv?.textContent || "");
+          const rawHeadTxt = titleDiv?.textContent || "";
+          const isUrg = !!titleDiv?.querySelector("span") || /^(?:URGENTE|QUEBRANDO|BREAKING)\b/i.test(rawHeadTxt);
           const isX = /X\s*·\s*@/i.test(rawMeta);
 
           if (titleDiv) {
             titleDiv.classList.add("dt968-title");
             const urgSpan = titleDiv.querySelector("span");
             if (urgSpan && /urgente/i.test(urgSpan.textContent || "")) urgSpan.remove();
-            titleDiv.textContent = titleDiv.textContent.replace(/^\s*URGENTE\s*[:\-–—]?\s*/i, "").trim();
+            titleDiv.textContent = titleDiv.textContent.replace(/^\s*(?:URGENTE|QUEBRANDO|BREAKING)\s*[:\-–—]?\s*/i, "").trim();
           }
 
           const titleText = titleDiv?.textContent || "";
           const topic = detectTopic(titleText);
+          const impact = analyzeNewsImpact(titleText);
+          if (impact) impactMap.set(a, { title: titleText, meta: rawMeta, href: a.getAttribute("href") || "", ...impact });
+
           const badges = d.createElement("div");
           badges.className = "dt968-badges";
           let bHtml = "";
@@ -29927,12 +30032,23 @@ try {
           if (isX) bHtml += '<span class="dt968-bdg dt968-bx">X · BREAKING</span>';
           if (topic) bHtml += `<span class="dt968-bdg tp-${topic[1]}">${topic[0]}</span>`;
           badges.innerHTML = bHtml;
+
+          let cartTk = "";
           if (cartTag) {
+            const mTk = String(cartTag.textContent || "").match(/[A-Z]{4}\d{1,2}|[A-Z]{2,5}/);
+            cartTk = mTk ? mTk[0] : "";
             badges.append(cartTag);
           } else if (meus.size) {
             const hitTk = [...meus].find((tk) => new RegExp("\\b" + tk + "\\b").test(titleText.toUpperCase()));
             if (hitTk) {
+              cartTk = hitTk;
               badges.insertAdjacentHTML("beforeend", `<span class="dt962-tag-cart">★ ${esc(hitTk)} · Carteira</span>`);
+            }
+          }
+          if (impact) {
+            for (const it of impact.items) {
+              if (cartTk && it.tk === cartTk) continue;
+              badges.insertAdjacentHTML("beforeend", `<span class="dt969-tk">${esc(it.tk)}</span>`);
             }
           }
           if (badges.childElementCount) a.prepend(badges);
@@ -29943,6 +30059,25 @@ try {
             ecoBtn.classList.add("dt968-ia-chip");
             ecoBtn.textContent = "✦ IA";
           }
+          if (metaDiv && (impact || ecoBtn)) {
+            let acts = metaDiv.querySelector(".dt969-acts");
+            if (!acts) {
+              acts = d.createElement("span");
+              acts.className = "dt969-acts";
+              metaDiv.append(acts);
+            }
+            if (impact && !acts.querySelector("[data-dt969-why]")) {
+              const whyBtn = d.createElement("button");
+              whyBtn.type = "button";
+              whyBtn.className = "dt969-why-btn";
+              whyBtn.setAttribute("data-dt969-why", "1");
+              whyBtn.setAttribute("aria-label", "Por que importa");
+              whyBtn.setAttribute("title", "Por que importa");
+              whyBtn.innerHTML = BOLT_ICO;
+              acts.append(whyBtn);
+            }
+            if (ecoBtn && ecoBtn.parentElement !== acts) acts.append(ecoBtn);
+          }
           a.dataset.dt968Txt = norm(titleText + " " + rawMeta);
           a.dataset.dt968Up = (titleText + " " + rawMeta).toUpperCase();
           a.dataset.dt968Bucket = timeBucket(rawMeta);
@@ -29952,6 +30087,8 @@ try {
         if (ecoBtn && ecoBtn.textContent.trim() === "Explicar") {
           ecoBtn.classList.add("dt968-ia-chip");
           ecoBtn.textContent = "✦ IA";
+          const acts = a.querySelector(".dt969-acts");
+          if (acts && ecoBtn.parentElement !== acts) acts.append(ecoBtn);
         }
 
         const txtNorm = a.dataset.dt968Txt || norm(a.textContent || "");
@@ -30189,7 +30326,51 @@ try {
       }
     });
 
+    const openWhyModal = (card) => {
+      const info = impactMap.get(card);
+      if (!info) return;
+      activeWhyCard = card;
+      d.getElementById("dt969-why-ov")?.remove();
+      const ov = d.createElement("div");
+      ov.id = "dt969-why-ov";
+      ov.className = "dt966-sheet-ov dt969-why-ov";
+      ov.setAttribute("data-noclaro", "1");
+      const safeHref = /^https?:\/\//i.test(info.href || "") ? info.href : "";
+      ov.innerHTML = `<div class="dt966-sheet dt969-why-sheet" role="dialog" aria-label="Por que importa" data-noclaro="1">` +
+        `<div class="dt966-handle"></div>` +
+        `<div class="dt966-sh-head"><b class="dt969-why-hd">${BOLT_ICO}<span>Por que importa</span></b><button type="button" class="dt966-sh-x" data-dt969-close-why="1" aria-label="Fechar">✕</button></div>` +
+        `<div class="dt969-why-ttl">${esc(info.title)}</div>` +
+        `<div class="dt969-why-box"><span class="dt969-why-lbl">TRANSMISSÃO NO MERCADO</span><p>${esc(info.chain)}</p></div>` +
+        `<div class="dt969-why-list">${info.items.map((it) => `<div class="dt969-why-row"><span class="dt969-tk dt969-tk-lg">${esc(it.tk)}</span><p>${esc(it.why)}</p></div>`).join("")}</div>` +
+        `<div class="dt969-why-foot"><button type="button" class="dt969-why-ia" data-dt969-why-ia="1">${SPARK_ICO}<span>Aprofundar com a Áurea</span></button>${safeHref ? `<a class="dt969-why-link" href="${esc(safeHref)}" target="_blank" rel="noopener noreferrer">Ler matéria ↗</a>` : ""}</div>` +
+        `</div>`;
+      d.body.append(ov);
+    };
+
     d.addEventListener("click", (e) => {
+      const whyBtn = e.target?.closest?.("[data-dt969-why]");
+      if (whyBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const card = whyBtn.closest("a.card");
+        if (card) openWhyModal(card);
+        return;
+      }
+    }, true);
+
+    d.addEventListener("click", (e) => {
+      if (e.target?.closest?.("[data-dt969-close-why]") || e.target?.id === "dt969-why-ov") {
+        d.getElementById("dt969-why-ov")?.remove();
+        activeWhyCard = null;
+        return;
+      }
+      if (e.target?.closest?.("[data-dt969-why-ia]")) {
+        const refCard = activeWhyCard;
+        d.getElementById("dt969-why-ov")?.remove();
+        activeWhyCard = null;
+        refCard?.querySelector('[data-eco="news"]')?.click();
+        return;
+      }
       if (e.target?.closest?.("[data-dt968-sheet]")) { openSheet(); return; }
       if (e.target?.closest?.("[data-dt968-close-sheet]") || e.target?.id === "dt968-nt-sheet-ov") { d.getElementById("dt968-nt-sheet-ov")?.remove(); return; }
       const pick = e.target?.closest?.("[data-dt968-pick]");
@@ -30268,6 +30449,214 @@ try {
 } catch (e) {
   console.error("[v968] NoticiasTV3D", e);
 }
+
+/* v969: Mercado > Análises (Brasil · Sentimento e EUA · Sazonalidade) — Mobile Liquid Glass 3D + Zero-Tremor (somente <=768px, desktop intocado). */
+try {
+  ((w, d) => {
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    const isMob = () => w.innerWidth <= 768;
+    const getApp = () => d.querySelector("#app:not(.v503-fantasma)") || d.getElementById("app");
+    const getMkt = () => (typeof MKT !== "undefined" ? MKT : null) || w.MKT;
+    const svg = (p, sz = 15) => `<svg class="dt968-svg" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+
+    const VIEW_ICO = {
+      mensal: svg('<rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
+      semanas: svg('<path d="M3 17l5-5 4 4 9-9"/><path d="M16 7h5v5"/>'),
+      eventos: svg('<path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/>'),
+      cenarios: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+      brasil: '<span class="dt966-tag">BR</span>',
+      calendar: svg('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>'),
+      ciclo: svg('<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>'),
+      midterms: svg('<path d="M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M2 18h20M12 3l9 5H3l9-5z"/>'),
+    };
+    const REFRESH_ICO = svg('<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>', 16);
+
+    let syncing = false, timer = null;
+
+    const getLabMode = (app) => {
+      if (!isMob() || !d.body.classList.contains("mkt549") || !app) return "";
+      const mkt = getMkt();
+      const wrap = app.querySelector(".dt395-native-mercado");
+      const sub = mkt?.tab || wrap?.dataset.m403Sub || "";
+      if (sub === "lab" || sub === "saz" || sub === "se" || sub === "sazus" || app.querySelector(".sw9, .us-seasonality")) {
+        if (app.querySelector(".us-seasonality")) return "us";
+        if (app.querySelector(".sw9")) return "br";
+      }
+      return "";
+    };
+
+    const cleanup = () => {
+      d.body.classList.remove("dt969-mkt-lab", "dt969-lab-br", "dt969-lab-us");
+      d.getElementById("dt969-us-bar")?.remove();
+      d.getElementById("dt969-us-sheet-ov")?.remove();
+      for (const el of d.querySelectorAll(".dt969-us-native-sel")) el.classList.remove("dt969-us-native-sel");
+    };
+
+    const enhanceBr = (app) => {
+      for (const k of app.querySelectorAll(".sw9ks > .sw9k")) {
+        const b = k.querySelector("b");
+        const sm = k.querySelector("small");
+        const valTxt = String((b?.textContent || "") + " " + (sm?.textContent || "")).toLowerCase();
+        const isUp = !!(b?.classList.contains("tg")) || (!b?.classList.contains("tr") && !b?.classList.contains("am") && /\b(?:risk-on|gan[aâ]ncia|otimis|positivo)\b/.test(valTxt));
+        const isDn = !isUp && (!!(b?.classList.contains("tr")) || (!b?.classList.contains("am") && /\b(?:risk-off|medo extremo|p[aâ]nico|estresse)\b/.test(valTxt)));
+        const isWarn = !isUp && !isDn && (!!(b?.classList.contains("am")) || /\b(?:medo|neutro|cautela|moderad)\b/.test(valTxt));
+        if (k.classList.contains("dt969-k-up") !== isUp) k.classList.toggle("dt969-k-up", isUp);
+        if (k.classList.contains("dt969-k-dn") !== isDn) k.classList.toggle("dt969-k-dn", isDn);
+        if (k.classList.contains("dt969-k-warn") !== isWarn) k.classList.toggle("dt969-k-warn", isWarn);
+      }
+    };
+
+    const fixBarLogos = (app) => {
+      for (const img of app.querySelectorAll(".m606-bar .m606-mxc img")) {
+        if (img.complete && img.naturalWidth === 0) {
+          img.closest(".dl-logo")?.classList.add("cqm-img-failed");
+        }
+      }
+    };
+
+    const mountUsBar = (app) => {
+      const sec = app.querySelector(".us-seasonality");
+      if (!sec) return;
+      const selAsset = sec.querySelector("select[data-usasset]");
+      const selView = sec.querySelector("select[data-usview-select]");
+      if (selAsset?.parentElement && !selAsset.parentElement.classList.contains("dt969-us-native-sel")) {
+        selAsset.parentElement.classList.add("dt969-us-native-sel");
+      }
+      if (selView?.parentElement && !selView.parentElement.classList.contains("dt969-us-native-sel")) {
+        selView.parentElement.classList.add("dt969-us-native-sel");
+      }
+
+      const reg = sec.querySelector(".pro-region");
+      const anchor = reg || sec.firstElementChild;
+      if (!anchor) return;
+
+      let bar = d.getElementById("dt969-us-bar");
+      if (!bar) {
+        bar = d.createElement("div");
+        bar.id = "dt969-us-bar";
+        bar.className = "dt966-tv-head dt969-us-bar";
+        bar.setAttribute("data-noclaro", "1");
+        anchor.after(bar);
+      } else if (anchor.nextElementSibling !== bar) {
+        anchor.after(bar);
+      }
+
+      const assetVal = selAsset?.value || "";
+      const assetLbl = selAsset?.selectedOptions?.[0]?.textContent?.trim() || "S&P 500";
+      const viewVal = selView?.value || "mensal";
+      const viewLbl = selView?.selectedOptions?.[0]?.textContent?.trim() || "Meses e movimento";
+      const hasAsset = !!selAsset;
+      const key = `${hasAsset}|${assetVal}|${assetLbl}|${viewVal}|${viewLbl}`;
+      if (bar.dataset.key !== key) {
+        bar.dataset.key = key;
+        bar.innerHTML = `<div class="dt966-row-top" data-noclaro="1"><div class="dt966-chips">` +
+          (hasAsset ? `<button type="button" class="dt966-pill dt966-pill-main" data-dt969-us-sheet="asset" aria-haspopup="dialog"><span class="dt966-badge"><span class="dt966-tag">US</span></span><span>${esc(assetLbl)}</span><span class="dt966-caret">▾</span></button>` : "") +
+          `<button type="button" class="dt966-pill${hasAsset ? "" : " dt966-pill-main"}" data-dt969-us-sheet="view" aria-haspopup="dialog"><span class="dt966-badge">${VIEW_ICO[viewVal] || VIEW_ICO.mensal}</span><span>${esc(viewLbl)}</span><span class="dt966-caret">▾</span></button>` +
+          `</div><button type="button" class="dt966-orb" data-dt969-us-rf="1" aria-label="Atualizar dados EUA" title="Atualizar">${REFRESH_ICO}</button></div>`;
+      }
+    };
+
+    const openUsSheet = (kind) => {
+      d.getElementById("dt969-us-sheet-ov")?.remove();
+      const app = getApp();
+      const sel = app?.querySelector(kind === "asset" ? "select[data-usasset]" : "select[data-usview-select]");
+      if (!sel) return;
+      const opts = [...sel.options].map((o) => ({ val: o.value, label: o.textContent.trim(), on: o.value === sel.value }));
+      const title = kind === "asset" ? "Escolher Índice EUA" : "Tipo de Análise EUA";
+      const ov = d.createElement("div");
+      ov.id = "dt969-us-sheet-ov";
+      ov.className = "dt966-sheet-ov";
+      ov.setAttribute("data-noclaro", "1");
+      ov.innerHTML = `<div class="dt966-sheet dt969-us-sheet" role="dialog" aria-label="${esc(title)}" data-noclaro="1">` +
+        `<div class="dt966-handle"></div>` +
+        `<div class="dt966-sh-head"><b>${esc(title)}</b><button type="button" class="dt966-sh-x" data-dt969-close-us="1" aria-label="Fechar">✕</button></div>` +
+        `<div class="dt966-sh-grid">${opts.map((o) => `<button type="button" class="dt966-sh-card${o.on ? " on" : ""}" data-dt969-us-pick="${esc(kind)}:${esc(o.val)}"><span class="dt966-sh-ico">${kind === "asset" ? '<span class="dt966-tag">US</span>' : (VIEW_ICO[o.val] || VIEW_ICO.mensal)}</span><span class="dt966-sh-lbl">${esc(o.label)}</span>${o.on ? '<span class="dt966-sh-chk">✓</span>' : ""}</button>`).join("")}</div>` +
+        `</div>`;
+      d.body.append(ov);
+    };
+
+    const sync = () => {
+      if (syncing) return;
+      syncing = true;
+      obs.disconnect();
+      const app = getApp();
+      try {
+        const mode = getLabMode(app);
+        if (!mode) { cleanup(); return; }
+        if (!d.body.classList.contains("dt969-mkt-lab")) d.body.classList.add("dt969-mkt-lab");
+        if (d.body.classList.contains("dt969-lab-br") !== (mode === "br")) d.body.classList.toggle("dt969-lab-br", mode === "br");
+        if (d.body.classList.contains("dt969-lab-us") !== (mode === "us")) d.body.classList.toggle("dt969-lab-us", mode === "us");
+        if (mode === "br") {
+          d.getElementById("dt969-us-bar")?.remove();
+          d.getElementById("dt969-us-sheet-ov")?.remove();
+          enhanceBr(app);
+        } else {
+          mountUsBar(app);
+          fixBarLogos(app);
+        }
+      } finally {
+        syncing = false;
+        if (app && d.body.classList.contains("mkt549")) {
+          obs.observe(app, { childList: true, subtree: true });
+        }
+      }
+    };
+
+    d.addEventListener("error", (e) => {
+      const img = e.target;
+      if (img?.tagName === "IMG" && img.closest?.(".m606-bar .m606-mxc")) {
+        img.closest(".dl-logo")?.classList.add("cqm-img-failed");
+      }
+    }, true);
+
+    const sched = (ms = 50) => {
+      if (timer) return;
+      timer = setTimeout(() => { timer = null; sync(); }, ms);
+    };
+
+    const obs = new MutationObserver(() => {
+      if (syncing || !d.body.classList.contains("mkt549")) return;
+      sched(70);
+    });
+
+    d.addEventListener("click", (e) => {
+      const shBtn = e.target?.closest?.("[data-dt969-us-sheet]");
+      if (shBtn) { openUsSheet(shBtn.getAttribute("data-dt969-us-sheet")); return; }
+      if (e.target?.closest?.("[data-dt969-close-us]") || e.target?.id === "dt969-us-sheet-ov") {
+        d.getElementById("dt969-us-sheet-ov")?.remove();
+        return;
+      }
+      const pick = e.target?.closest?.("[data-dt969-us-pick]");
+      if (pick) {
+        const [kind, val] = String(pick.getAttribute("data-dt969-us-pick") || "").split(":");
+        d.getElementById("dt969-us-sheet-ov")?.remove();
+        const sel = getApp()?.querySelector(kind === "asset" ? "select[data-usasset]" : "select[data-usview-select]");
+        if (sel && val != null) {
+          sel.value = val;
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+          sched(60);
+        }
+        return;
+      }
+      if (e.target?.closest?.("[data-dt969-us-rf]")) {
+        const rf = getApp()?.querySelector("[data-usrefresh]");
+        if (rf && !rf.disabled) rf.click();
+        else if (typeof w.m606Carrega === "function") w.m606Carrega(true);
+        return;
+      }
+      if (e.target?.closest?.("[data-usarea]")) sched(60);
+    });
+
+    w.addEventListener("resize", () => sched(40));
+    w.addEventListener("diario:render", () => sched(40));
+    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v969-lab3d", { after: () => sched(30) });
+    if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", sync, { once: true });
+    else sync();
+  })(window, document);
+} catch (e) {
+  console.error("[v969] AnalisesTV3D", e);
+}
+
 
 try {
   (function () {

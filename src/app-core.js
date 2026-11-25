@@ -71404,7 +71404,21 @@ async function m606Carrega(forca) {
 function m606Repinta() {
   try {
     if (typeof tab > "u" || tab !== "mercado") return;
-    MKT.tab === "cq" ? (typeof cqMorph === "function" ? cqMorph() : cqPinta()) : MKT.tab === "lab" && render(); // v626: no lugar, sem recriar logos
+    if (MKT.tab === "cq") { typeof cqMorph === "function" ? cqMorph() : cqPinta(); return; }
+    if (MKT.tab === "lab") {
+      // v969: atualiza o US Market Barometer no lugar (zero tremor, sem perder rolagem nem fechar blocos)
+      const bar = document.querySelector("#app:not(.v503-fantasma) .m606-bar") || document.querySelector("#app .m606-bar");
+      if (bar && typeof m606BarHtml === "function") {
+        const tmp = document.createElement("div");
+        tmp.innerHTML = m606BarHtml();
+        const nxt = tmp.firstElementChild;
+        if (nxt && bar.outerHTML !== nxt.outerHTML) bar.replaceWith(nxt);
+        return;
+      }
+      const sy = window.scrollY;
+      render();
+      if (sy > 0) requestAnimationFrame(() => window.scrollTo(0, sy));
+    }
   } catch {}
 }
 function m606Hora(d) {
@@ -102041,7 +102055,18 @@ Validação do app: atenção a ` +
     ${ie.at.length > 1 ? `<path d="${ie.at.map((fe, Fe) => (Fe ? "L" : "M") + be(Fe).toFixed(1) + "," + X(fe).toFixed(1)).join("")}L${be(ie.at.length - 1)},${X(z)}L${be(0)},${X(z)}Z" fill="url(#sw9a)"/>` : ""}
     ${xe(ie.med, "#c9c5bc", 1.6, 1)}${ie.at.length > 1 ? xe(ie.at, "#86abcb", 2.4) : ""}</svg><div class="sw9leg"><i style="background:#86abcb"></i>Ibovespa em ${new Date().getFullYear()} <i style="background:#c9c5bc"></i>média de ${ie.anos.length} anos (${ie.anos[0]}–${ie.anos[ie.anos.length - 1]})</div>`;
     }
-    const K = { b: 0, c: 0, s: 0 };
+    const K = { b: 0, c: 0, s: 0, rt: 0 };
+    function labRepinta() {
+      clearTimeout(K.rt);
+      K.rt = setTimeout(() => {
+        try {
+          if (tab !== "mercado" || MKT.tab !== "lab") return;
+          const sy = window.scrollY;
+          render();
+          if (sy > 0) requestAnimationFrame(() => window.scrollTo(0, sy));
+        } catch {}
+      }, 220);
+    }
     function pe() {
       setTimeout(() => {
         try {
@@ -102051,7 +102076,7 @@ Validação do app: atenção a ` +
             ((K.b = 1),
             k().then(
               () => {
-                ((K.b = 0), N() && A() && render());
+                ((K.b = 0), N() && A() && labRepinta());
               },
               () => {
                 K.b = 0;
@@ -102066,7 +102091,7 @@ Validação do app: atenção a ` +
               (K.ct = Date.now()),
               Ge().then(
                 () => {
-                  ((K.c = 0), N() && render());
+                  ((K.c = 0), N() && labRepinta());
                 },
                 () => {
                   K.c = 0;
@@ -102087,7 +102112,7 @@ Validação do app: atenção a ` +
               .then(() => {
                 N() &&
                   JSON.stringify([SNT.ts, SZ.v && SZ.v.gerado]) !== Te &&
-                  render();
+                  labRepinta();
               }),
               setTimeout(() => {
                 K.s = 0;
