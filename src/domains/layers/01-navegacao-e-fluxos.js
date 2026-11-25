@@ -10804,7 +10804,23 @@ Energia;30">${j(
           A = t
             .filter((W) => f(W).em && !f(W).fim)
             .sort((W, Z) => String(f(Z).em).localeCompare(String(f(W).em)))[0];
-        return `<section class="card au-dashboard"><div class="au-dash-label">SEU ESPAÇO DE APRENDIZADO</div><h2>Uma aula de cada vez.</h2><div class="au-dash-stats"><span><b>${t.length}</b> aulas</span><span><b>${x}</b> concluídas</span><span><b>${t.filter((W) => p.fav?.[W.id]).length}</b> favoritas</span></div>${A ? `<button class="btn" data-auopen="${i(A.id)}">Continuar · ${i(A.titulo)} <small>${k(A)}%</small></button>` : '<div class="sm mut">Escolha uma aula para começar. Seu progresso fica salvo.</div>'}<p class="sm mut">Favoritos e anotações ficam neste aparelho, separados por conta.</p></section>
+        const pctEst = t.length ? Math.round((x / t.length) * 100) : 0;
+        const tipEst = (() => {
+          try {
+            const lim = Date.now() - 7 * 86400000;
+            const errs = {};
+            for (const tr of (typeof S !== "undefined" && Array.isArray(S.trades) ? S.trades : [])) {
+              const ts = Date.parse(String(tr.dtx || tr.dt || "").slice(0, 10));
+              if (Number.isFinite(ts) && ts >= lim && tr.err && tr.err !== "Nenhum") {
+                errs[tr.err] = (errs[tr.err] || 0) + 1;
+              }
+            }
+            const top = Object.entries(errs).sort((a, b) => b[1] - a[1])[0];
+            if (top) return `<div class="dt976-est-tip"><b>✦ Foco sugerido pela sua semana:</b> "${i(top[0])}" apareceu ${top[1]}× nos últimos 7 dias — priorize aulas de risco e disciplina.</div>`;
+          } catch {}
+          return "";
+        })();
+        return `<section class="card au-dashboard"><div class="au-dash-label">SEU ESPAÇO DE APRENDIZADO · ${pctEst}%</div><h2>Uma aula de cada vez.</h2><div class="dt975-pbar ok" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pctEst}"><i style="width:${pctEst}%"></i></div><div class="au-dash-stats"><span><b>${t.length}</b> aulas</span><span><b>${x}</b> concluídas</span><span><b>${t.filter((W) => p.fav?.[W.id]).length}</b> favoritas</span></div>${tipEst}${A ? `<button class="btn" data-auopen="${i(A.id)}">Continuar · ${i(A.titulo)} <small>${k(A)}%</small></button>` : '<div class="sm mut">Escolha uma aula para começar. Seu progresso fica salvo.</div>'}<p class="sm mut">Favoritos e anotações ficam neste aparelho, separados por conta.</p></section>
  <div class="au-study-tools"><label for="au-search" class="sm mut">Buscar por livro, título ou capítulo</label><input id="au-search" type="search" placeholder="Encontre sua próxima aula…" value="${i(h.query)}"><div class="au-study-filters" role="group" aria-label="Filtrar aulas">${[
    ["all", "Todas"],
    ["progress", "Em andamento"],
