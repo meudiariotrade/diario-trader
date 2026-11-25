@@ -7531,7 +7531,13 @@ try {
     };
     /* 2. Notícias: Botão Resumo em 3 pontos com a Áurea + selo ★ Na sua carteira */
     const mountNoticias = (app) => {
-      const card = app.querySelector(".card, .v4-card");
+      const mktRef = (typeof MKT !== "undefined" ? MKT : null) || w.MKT;
+      if (mktRef && mktRef.tab === "jr") {
+        d.getElementById("dt962-nt-bar")?.remove();
+        return;
+      }
+      const mknews = app.querySelector("#mknews");
+      const card = mknews?.closest(".card, .v4-card");
       if (!card) return;
       if (!d.getElementById("dt962-nt-bar")) {
         const bar = d.createElement("div");
@@ -7542,14 +7548,16 @@ try {
       }
       const meus = meusTickers();
       if (meus.size) {
-        for (const el of app.querySelectorAll("a, .nt-item, .news-item, li")) {
-          if (el.dataset.dt962Tag || el.closest("#dt962-nt-bar, .m403-primary-tabs, .m406-switch-tabs")) continue;
+        for (const el of mknews.querySelectorAll("a.card")) {
+          if (el.dataset.dt962Tag) continue;
           const txt = String(el.textContent || "").toUpperCase();
-          if (txt.length < 18 || txt.length > 260) continue;
+          if (txt.length < 18 || txt.length > 320) continue;
           const hit = [...meus].find((tk) => new RegExp("\\b" + tk + "\\b").test(txt));
           if (hit) {
-            el.dataset.dt962Tag = "1";
-            el.insertAdjacentHTML("afterbegin", `<span class="dt962-tag-cart">★ ${esc(hit)} · Carteira</span> `);
+            el.dataset.dt962Tag = hit;
+            if (!el.querySelector(".dt962-tag-cart")) {
+              el.insertAdjacentHTML("afterbegin", `<span class="dt962-tag-cart">★ ${esc(hit)} · Carteira</span> `);
+            }
           }
         }
       }
@@ -7646,7 +7654,7 @@ try {
       try {
         const sub = subAtiva();
         if (sub === "cq" || sub === "cot") mountCotacoes(app);
-        else if (sub === "nt" || sub === "jr") mountNoticias(app);
+        else if (sub === "nt") mountNoticias(app);
         else if (sub === "ag") mountAgenda(app);
         else if (sub === "lab" || sub === "sazus") mountAnalises(app);
         else if (sub === "ls") mountLongShort(app);
@@ -7664,9 +7672,11 @@ try {
       }
       const btnNt = e.target?.closest?.("[data-dt962-nt-ia]");
       if (btnNt) {
-        const titles = [...d.querySelectorAll("#app a, #app h3, #app h4, #app .nt-title")]
-          .map((x) => x.textContent.trim().replace(/\s+/g, " "))
-          .filter((t) => t.length >= 22 && t.length <= 180)
+        const newsLinks = [...d.querySelectorAll("#mknews a.card:not([data-dt968-hid])")];
+        const titles = (newsLinks.length
+          ? newsLinks.map((x) => (x.querySelector("[data-eco='news']")?.dataset.t || x.querySelector(".dt968-title, div")?.textContent || "").trim().replace(/\s+/g, " "))
+          : [...d.querySelectorAll("#app a, #app h3, #app h4, #app .nt-title")].map((x) => x.textContent.trim().replace(/\s+/g, " ")))
+          .filter((t) => t.length >= 18 && t.length <= 220)
           .slice(0, 10);
         const prompt = titles.length
           ? "Resuma em exatamente 3 bullets curtos e objetivos o que realmente importa agora para WIN, WDO, juros (DI) e ações a partir destas manchetes:\n- " + titles.join("\n- ")
@@ -7927,3 +7937,531 @@ try {
 } catch (e) {
   console.error("[v967] CotacoesTV3D", e);
 }
+/* v968: Notícias, Balanços da B3 e Jornal do Pregão Mobile Liquid Glass 3D (somente celular <=768px, desktop 100% intocado). */
+try {
+  ((w, d) => {
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const isMob = () => w.innerWidth <= 768;
+    const getApp = () => d.querySelector("#app:not(.v503-fantasma)") || d.getElementById("app");
+    const getMkt = () => (typeof MKT !== "undefined" ? MKT : null) || w.MKT;
+    const svg = (p, sz = 15) => `<svg class="dt968-svg" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+    const CAT_ICONS = {
+      all: svg('<path d="M4 6h16M4 12h16M4 18h10"/>'),
+      carteira: svg('<path d="M12 3.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.4 6.6 20.3l1-6.1-4.4-4.3 6.1-.9z"/>'),
+      urgente: svg('<path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/>'),
+      ibovespa: '<span class="dt966-tag">BR</span>',
+      dolar: svg('<path d="M12 3v18M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 3 4.5 3 4.5 1.3 4.5 3-2 3-4.5 3-4.5-1.3-4.5-3"/>'),
+      juros: svg('<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>'),
+      x: svg('<path d="M4 4l16 16M20 4L4 20"/>'),
+      prioritaria: svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>'),
+      petroleo: svg('<path d="M12 3s6 6.2 6 11a6 6 0 1 1-12 0c0-4.8 6-11 6-11z"/>'),
+      minerio: svg('<polygon points="12 3 21 9 18 20 6 20 3 9 12 3"/>'),
+      acoes: svg('<rect x="3" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="17" rx="1"/>'),
+      politica: svg('<path d="M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M2 18h20M12 3l9 5H3l9-5z"/>'),
+      cripto: svg('<path d="M8 4h6a3.5 3.5 0 0 1 0 7H8V4zm0 7h7a3.5 3.5 0 0 1 0 7H8v-7zm2-9v2m4-2v2m-4 14v2m4-2v2"/>'),
+    };
+    const SPARK_ICO = svg('<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/>', 14);
+    const AUDIO_ICO = svg('<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>', 16);
+    const getIco = (k) => CAT_ICONS[k] || CAT_ICONS.all;
+
+    let searchOpen = false, searchQ = "", onlyCart = false, balFilter = "all";
+    let syncing = false, timer = null;
+
+    const meusTickers = () => {
+      const set = new Set();
+      try {
+        const cart = w.CARTEIRA || (typeof CARTEIRA !== "undefined" ? CARTEIRA : null) || JSON.parse(localStorage.getItem("diario-carteira") || "null");
+        const arr = Array.isArray(cart) ? cart : (cart?.itens || cart?.posicoes || cart?.ativos || []);
+        for (const it of arr) {
+          const tk = String(it?.ticker || it?.ativo || it?.t || it?.symbol || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+          if (tk.length >= 3 && tk.length <= 7) set.add(tk);
+        }
+        const trs = w.TR || (typeof TR !== "undefined" ? TR : null) || JSON.parse(localStorage.getItem("diario-trades") || "[]");
+        for (const t of (Array.isArray(trs) ? trs : []).slice(-25)) {
+          const tk = String(t?.ativo || t?.ticker || t?.par || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+          if (tk.length >= 3 && tk.length <= 7) set.add(tk);
+        }
+      } catch {}
+      return set;
+    };
+
+    const getMode = (app) => {
+      if (!isMob() || !d.body.classList.contains("mkt549") || !app) return "";
+      const mkt = getMkt();
+      const wrap = app.querySelector(".dt395-native-mercado");
+      const sub = mkt?.tab || wrap?.dataset.m403Sub || "";
+      if (sub === "jr" || app.querySelector(".jrcard")) return "jr";
+      if (sub === "nt" || app.querySelector("#mknews, #balbox")) {
+        const host = wrap?.querySelector(":scope > .m406-content-host");
+        if (wrap?.dataset.m406View === "balancos" || (host && !host.hidden && host.querySelector("#balbox"))) return "bal";
+        return "nt";
+      }
+      return "";
+    };
+
+    const cleanup = () => {
+      d.body.classList.remove("dt968-mkt-news", "dt968-view-nt", "dt968-view-bal", "dt968-view-jr");
+      d.getElementById("dt968-nt-head")?.remove();
+      d.getElementById("dt968-nt-search")?.remove();
+      d.getElementById("dt968-nt-pulse")?.remove();
+      d.getElementById("dt968-nt-sheet-ov")?.remove();
+      d.getElementById("dt968-nt-menu-pop")?.remove();
+      d.getElementById("dt968-bal-bar")?.remove();
+      for (const el of d.querySelectorAll("[data-dt968-hid]")) el.removeAttribute("data-dt968-hid");
+    };
+
+    const matchCat = (item, val, meus) => {
+      if (!item) return false;
+      if (val === "all") return true;
+      if (val === "carteira") {
+        if (!meus.size) return false;
+        const up = String(item.t || "").toUpperCase();
+        return [...meus].some((tk) => new RegExp("\\b" + tk + "\\b").test(up));
+      }
+      return (item.c || []).some((c) => {
+        const l = norm(c);
+        return val === "juros" ? l.includes("juros") || l.includes("selic")
+          : val === "x" ? l === "x" || l.includes("breaking")
+          : val === "cripto" ? l.includes("cripto")
+          : l.includes(val);
+      });
+    };
+
+    const listCats = (app) => {
+      const mkt = getMkt();
+      const items = Array.isArray(mkt?.items) ? mkt.items : [];
+      const meus = meusTickers();
+      const nativeBtns = [...app.querySelectorAll('button[data-mk="nf"]')];
+      const native = nativeBtns.map((b) => {
+        const val = b.getAttribute("data-v") || "all";
+        return {
+          val,
+          label: b.textContent.trim(),
+          on: !onlyCart && !b.classList.contains("s"),
+          count: items.filter((it) => matchCat(it, val, meus)).length,
+        };
+      });
+      if (!native.length) return [];
+      const cartCount = items.filter((it) => matchCat(it, "carteira", meus)).length;
+      return [
+        native[0],
+        { val: "carteira", label: "Minha Carteira", on: onlyCart, count: cartCount },
+        ...native.slice(1),
+      ];
+    };
+
+    const detectTopic = (txt) => {
+      const n = norm(txt);
+      if (/\b(?:petroleo|brent|wti|opep|opec|petr[34]|petrobras)\b/.test(n)) return ["PETRÓLEO", "pet"];
+      if (/\b(?:minerio|iron|vale3|siderurg|cmin3)\b/.test(n)) return ["MINÉRIO", "min"];
+      if (/\b(?:juros|selic|copom|fed|fomc|treasury|di1|ipca|inflac)\b/.test(n)) return ["JUROS", "jur"];
+      if (/\b(?:dolar|usd|brl|cambio|dxy|forex)\b/.test(n)) return ["DÓLAR", "fx"];
+      if (/\b(?:bitcoin|btc|ethereum|eth|cripto|crypto|solana)\b/.test(n)) return ["CRIPTO", "cri"];
+      if (/\b(?:ibovespa|ibov|b3|nasdaq|s&p|acoes|balanco|lucro|dividend)\b/.test(n)) return ["AÇÕES", "eq"];
+      if (/\b(?:governo|congresso|fiscal|tarif|trump|guerra|sanc)\b/.test(n)) return ["MACRO", "pol"];
+      return null;
+    };
+
+    const sentimentOf = (txt) => {
+      const n = norm(txt);
+      const dn = /\b(?:queda|cai|recua|tomba|despenca|alerta|crise|risco|cautela|guerra|tarifa|tensao|prejuizo|urgente|pressao|derrete)\b/.test(n);
+      const up = /\b(?:alta|sobe|avanca|supera|recorde|dispara|lucro|alivia|otimism|positivo|valoriza|impulsiona|sustenta|folego|forte)\b/.test(n);
+      if (up && !dn) return "up";
+      if (dn && !up) return "dn";
+      return "neu";
+    };
+
+    const timeBucket = (metaText) => {
+      const s = norm(metaText);
+      if (/\bagora\b|\bmin\b/.test(s)) return "agora";
+      if (/\bh\b|\bhora/.test(s)) return "hoje";
+      return "ant";
+    };
+
+    const enhanceFeed = (app) => {
+      const mknews = app.querySelector("#mknews");
+      if (!mknews) return;
+      const card = mknews.closest(".card, .v4-card");
+      if (card) {
+        card.classList.add("dt968-nt-card");
+        const filtBtn = card.querySelector('button[data-mk="nf"]');
+        if (filtBtn?.parentElement) filtBtn.parentElement.classList.add("dt968-old-filters");
+      }
+
+      const meus = meusTickers();
+      const qNorm = norm(searchQ.trim());
+      const links = [...mknews.querySelectorAll("a.card")];
+      mknews.querySelectorAll(".dt968-tdiv, .dt968-empty").forEach((n) => n.remove());
+
+      let visCount = 0, upN = 0, neuN = 0, dnN = 0;
+      let lastBucket = "";
+
+      for (const a of links) {
+        if (!a.dataset.dt968Done) {
+          a.dataset.dt968Done = "1";
+          const titleDiv = [...a.children].find((ch) => ch.tagName === "DIV" && !ch.classList.contains("sm") && !ch.classList.contains("dt968-badges"));
+          const metaDiv = a.querySelector(".sm.mut, .mut.sm");
+          const cartTag = a.querySelector(".dt962-tag-cart");
+          const rawMeta = (metaDiv?.childNodes?.[0]?.textContent || metaDiv?.textContent || "").trim();
+          const isUrg = !!titleDiv?.querySelector("span") || /^URGENTE\b/i.test(titleDiv?.textContent || "");
+          const isX = /X\s*·\s*@/i.test(rawMeta);
+
+          if (titleDiv) {
+            titleDiv.classList.add("dt968-title");
+            const urgSpan = titleDiv.querySelector("span");
+            if (urgSpan && /urgente/i.test(urgSpan.textContent || "")) urgSpan.remove();
+            titleDiv.textContent = titleDiv.textContent.replace(/^\s*URGENTE\s*[:\-–—]?\s*/i, "").trim();
+          }
+
+          const titleText = titleDiv?.textContent || "";
+          const topic = detectTopic(titleText);
+          const badges = d.createElement("div");
+          badges.className = "dt968-badges";
+          let bHtml = "";
+          if (isUrg) bHtml += '<span class="dt968-bdg urg">URGENTE</span>';
+          if (isX) bHtml += '<span class="dt968-bdg dt968-bx">X · BREAKING</span>';
+          if (topic) bHtml += `<span class="dt968-bdg tp-${topic[1]}">${topic[0]}</span>`;
+          badges.innerHTML = bHtml;
+          if (cartTag) {
+            badges.append(cartTag);
+          } else if (meus.size) {
+            const hitTk = [...meus].find((tk) => new RegExp("\\b" + tk + "\\b").test(titleText.toUpperCase()));
+            if (hitTk) {
+              badges.insertAdjacentHTML("beforeend", `<span class="dt962-tag-cart">★ ${esc(hitTk)} · Carteira</span>`);
+            }
+          }
+          if (badges.childElementCount) a.prepend(badges);
+
+          if (isUrg) a.classList.add("dt968-urg");
+          const ecoBtn = a.querySelector('[data-eco="news"]');
+          if (ecoBtn) {
+            ecoBtn.classList.add("dt968-ia-chip");
+            ecoBtn.textContent = "✦ IA";
+          }
+          a.dataset.dt968Txt = norm(titleText + " " + rawMeta);
+          a.dataset.dt968Up = (titleText + " " + rawMeta).toUpperCase();
+          a.dataset.dt968Bucket = timeBucket(rawMeta);
+        }
+
+        const ecoBtn = a.querySelector('[data-eco="news"]');
+        if (ecoBtn && ecoBtn.textContent.trim() === "Explicar") {
+          ecoBtn.classList.add("dt968-ia-chip");
+          ecoBtn.textContent = "✦ IA";
+        }
+
+        const txtNorm = a.dataset.dt968Txt || norm(a.textContent || "");
+        const txtUp = a.dataset.dt968Up || String(a.textContent || "").toUpperCase();
+        const hitSearch = !qNorm || txtNorm.includes(qNorm);
+        const hitCart = !onlyCart || (meus.size > 0 && [...meus].some((tk) => new RegExp("\\b" + tk + "\\b").test(txtUp)));
+        const show = hitSearch && hitCart;
+
+        a.classList.remove("dt968-hero");
+        if (a.hasAttribute("data-dt968-hid") === show) a.toggleAttribute("data-dt968-hid", !show);
+
+        if (show) {
+          visCount++;
+          const sent = sentimentOf(txtNorm);
+          if (sent === "up") upN++;
+          else if (sent === "dn") dnN++;
+          else neuN++;
+          const bkt = a.dataset.dt968Bucket || "hoje";
+          if (bkt !== lastBucket) {
+            lastBucket = bkt;
+            const lbl = bkt === "agora" ? "AGORA · ÚLTIMA HORA" : bkt === "hoje" ? "HOJE" : "ANTERIORES";
+            const div = d.createElement("div");
+            div.className = "dt968-tdiv";
+            div.textContent = lbl;
+            a.before(div);
+          }
+          if (visCount === 1) a.classList.add("dt968-hero");
+        }
+      }
+
+      if (links.length && visCount === 0) {
+        const empty = d.createElement("div");
+        empty.className = "dt968-empty";
+        empty.innerHTML = `<p>${onlyCart && !meus.size ? "Adicione ativos na Carteira ou registre um trade para filtrar por seus papéis." : "Nenhuma manchete encontrada neste filtro."}</p><button type="button" class="dt968-clear-btn" data-dt968-reset="1">Mostrar todas</button>`;
+        mknews.append(empty);
+      }
+
+      // Pulse strip (1 linha compacta acima do feed)
+      let pulse = d.getElementById("dt968-nt-pulse");
+      if (!pulse) {
+        pulse = d.createElement("div");
+        pulse.id = "dt968-nt-pulse";
+        pulse.className = "dt968-nt-pulse";
+        pulse.setAttribute("data-noclaro", "1");
+        mknews.before(pulse);
+      } else if (pulse.nextElementSibling !== mknews) {
+        mknews.before(pulse);
+      }
+      const mkt = getMkt();
+      const tsStr = mkt?.ts ? new Date(mkt.ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }) : "";
+      const pHtml = `<span class="dt968-p-cnt"><b>${visCount}</b> ${visCount === 1 ? "manchete" : "manchetes"}</span><span class="dt968-p-sent"><i class="up">▲ ${upN}</i><i class="neu">● ${neuN}</i><i class="dn">▼ ${dnN}</i></span>${tsStr ? `<span class="dt968-p-ts">${esc(tsStr)}</span>` : ""}`;
+      if (pulse.dataset.key !== pHtml) {
+        pulse.dataset.key = pHtml;
+        pulse.innerHTML = pHtml;
+      }
+    };
+
+    const enhanceBalancos = (app) => {
+      const box = app.querySelector("#balbox");
+      if (!box) return;
+      const meus = meusTickers();
+      let bar = d.getElementById("dt968-bal-bar");
+      const btns = [
+        ["all", "Todos"],
+        ["today", "Hoje"],
+        ["cvm", "✓ Saíram"],
+        ["mine", "★ Carteira"],
+      ];
+      const bKey = balFilter;
+      if (!bar) {
+        bar = d.createElement("div");
+        bar.id = "dt968-bal-bar";
+        bar.className = "dt968-bal-bar";
+        bar.setAttribute("data-noclaro", "1");
+        const top = box.querySelector(".top");
+        if (top) top.after(bar);
+        else box.prepend(bar);
+      }
+      if (bar.dataset.key !== bKey) {
+        bar.dataset.key = bKey;
+        bar.innerHTML = btns.map(([k, lbl]) => `<button type="button" class="dt968-bal-pill${balFilter === k ? " on" : ""}" data-dt968-bal="${k}">${lbl}</button>`).join("");
+      }
+
+      const grps = [...box.children].filter((el) => el.tagName === "DIV" && !el.classList.contains("top") && !el.classList.contains("sm") && el.id !== "dt968-bal-bar");
+      for (const grp of grps) {
+        grp.classList.add("dt968-bal-grp");
+        const headText = norm(grp.querySelector(".sm.mut")?.textContent || "");
+        const isToday = headText === "hoje";
+        grp.classList.toggle("is-today", isToday);
+        const chips = [...grp.querySelectorAll("a, span[title]")];
+        let anyVis = false;
+        for (const ch of chips) {
+          ch.classList.add("dt968-bal-chip");
+          const html = ch.innerHTML;
+          const isCvm = html.includes("✓") || /entregue à CVM/i.test(ch.title || "");
+          const isCom = !isCvm && (html.includes("●") || /confirmada/i.test(ch.title || ""));
+          ch.classList.toggle("is-cvm", isCvm);
+          ch.classList.toggle("is-com", isCom);
+          ch.classList.toggle("is-est", !isCvm && !isCom);
+          const tkMatch = String(ch.textContent || "").match(/\b([A-Z]{4}\d{1,2})\b/);
+          const isMine = !!(tkMatch && meus.has(tkMatch[1]));
+          ch.classList.toggle("is-mine", isMine);
+          const ok = balFilter === "all"
+            || (balFilter === "today" && isToday)
+            || (balFilter === "cvm" && isCvm)
+            || (balFilter === "mine" && isMine);
+          ch.hidden = !ok;
+          if (ok) anyVis = true;
+        }
+        grp.hidden = chips.length > 0 && !anyVis;
+      }
+    };
+
+    const enhanceJornal = (app) => {
+      for (const btn of app.querySelectorAll('[data-revista="open"]')) {
+        btn.closest(".card")?.classList.add("dt968-jr-rev");
+      }
+      const ouv = d.getElementById("v519-ouv");
+      if (ouv) {
+        ouv.classList.add("dt968-jr-audio");
+        if (!ouv.querySelector(".dt968-svg")) {
+          ouv.insertAdjacentHTML("afterbegin", AUDIO_ICO + " ");
+        }
+      }
+    };
+
+    const mountHead = (app) => {
+      const cats = listCats(app);
+      const cur = cats.find((x) => x.on) || cats[0] || { val: "all", label: "Todas", count: 0 };
+      const mkCard = app.querySelector("#mknews")?.closest(".card, .v4-card");
+      if (!mkCard) return;
+
+      let head = d.getElementById("dt968-nt-head");
+      if (!head) {
+        head = d.createElement("div");
+        head.id = "dt968-nt-head";
+        head.className = "dt966-tv-head dt968-nt-head";
+        head.setAttribute("data-noclaro", "1");
+        mkCard.before(head);
+      } else if (head.nextElementSibling !== mkCard && head.nextElementSibling?.id !== "dt968-nt-search") {
+        mkCard.before(head);
+      }
+
+      const key = `${cur.val}|${cur.label}|${cur.count}|${searchOpen || !!searchQ}`;
+      if (head.dataset.key !== key) {
+        head.dataset.key = key;
+        head.innerHTML = `<div class="dt966-row-top" data-noclaro="1"><button type="button" class="dt966-orb" data-dt968-menu="1" aria-label="Opções de notícias" title="Opções"><span>•••</span></button><div class="dt966-chips"><button type="button" class="dt966-pill dt966-pill-main" data-dt968-sheet="1" aria-haspopup="dialog"><span class="dt966-badge">${getIco(cur.val)}</span><span>${esc(cur.label)}</span><span class="dt966-caret">▾</span></button><button type="button" class="dt966-pill dt966-pill-img" data-dt962-nt-ia="1" title="Resumo em 3 pontos com a Áurea"><span class="dt966-badge">${SPARK_ICO}</span><span>Resumo IA</span></button></div><button type="button" class="dt966-orb${searchOpen || searchQ ? " on" : ""}" data-dt968-search="1" aria-label="Buscar notícia" title="Buscar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button></div>`;
+      }
+
+      let sbox = d.getElementById("dt968-nt-search");
+      if (searchOpen || searchQ) {
+        if (!sbox) {
+          sbox = d.createElement("div");
+          sbox.id = "dt968-nt-search";
+          sbox.className = "dt968-nt-search";
+          sbox.setAttribute("data-noclaro", "1");
+          sbox.innerHTML = `<input type="search" id="dt968-nt-inp" placeholder="Buscar manchete, PETR4, Copom, Fed…" autocomplete="off" value="${esc(searchQ)}"><button type="button" class="dt968-sx" data-dt968-clear-s="1" aria-label="Fechar busca">✕</button>`;
+          head.after(sbox);
+        }
+      } else if (sbox) {
+        sbox.remove();
+      }
+    };
+
+    const openSheet = () => {
+      d.getElementById("dt968-nt-sheet-ov")?.remove();
+      d.getElementById("dt968-nt-menu-pop")?.remove();
+      const app = getApp();
+      const cats = app ? listCats(app) : [];
+      if (!cats.length) return;
+      const ov = d.createElement("div");
+      ov.id = "dt968-nt-sheet-ov";
+      ov.className = "dt966-sheet-ov";
+      ov.setAttribute("data-noclaro", "1");
+      ov.innerHTML = `<div class="dt966-sheet dt968-sheet" role="dialog" aria-label="Filtrar notícias" data-noclaro="1"><div class="dt966-handle"></div><div class="dt966-sh-head"><b>Filtros de Notícias</b><button type="button" class="dt966-sh-x" data-dt968-close-sheet="1" aria-label="Fechar">✕</button></div><div class="dt966-sh-grid">${cats.map((c) => `<button type="button" class="dt966-sh-card${c.on ? " on" : ""}" data-dt968-pick="${esc(c.val)}"><span class="dt966-sh-ico">${getIco(c.val)}</span><span class="dt966-sh-lbl">${esc(c.label)}</span>${c.count ? `<span class="dt968-sh-cnt">${c.count}</span>` : ""}${c.on ? '<span class="dt966-sh-chk">✓</span>' : ""}</button>`).join("")}</div></div>`;
+      d.body.append(ov);
+    };
+
+    const toggleMenu = () => {
+      const ex = d.getElementById("dt968-nt-menu-pop");
+      if (ex) { ex.remove(); return; }
+      const pop = d.createElement("div");
+      pop.id = "dt968-nt-menu-pop";
+      pop.className = "dt966-menu-pop dt968-menu-pop";
+      pop.setAttribute("data-noclaro", "1");
+      pop.innerHTML = `<button type="button" data-dt968-mact="imp">${CAT_ICONS.prioritaria}<span>Somente Alto Impacto</span></button><button type="button" data-dt968-mact="cart">${CAT_ICONS.carteira}<span>${onlyCart ? "Mostrar todas as notícias" : "Só Minha Carteira"}</span></button><button type="button" data-dt968-mact="rf">↻ <span>Atualizar notícias</span></button><button type="button" data-dt962-nt-ia="1" data-dt968-mact="ia">${SPARK_ICO}<span>Resumo 3 pontos (Áurea)</span></button>`;
+      d.getElementById("dt968-nt-head")?.append(pop);
+    };
+
+    const sync = () => {
+      if (syncing) return;
+      syncing = true;
+      obs.disconnect();
+      const app = getApp();
+      try {
+        const mode = getMode(app);
+        if (!mode) { cleanup(); return; }
+        d.body.classList.add("dt968-mkt-news");
+        d.body.classList.toggle("dt968-view-nt", mode === "nt");
+        d.body.classList.toggle("dt968-view-bal", mode === "bal");
+        d.body.classList.toggle("dt968-view-jr", mode === "jr");
+        if (mode === "nt") {
+          d.getElementById("dt968-bal-bar")?.remove();
+          mountHead(app);
+          enhanceFeed(app);
+        } else {
+          d.getElementById("dt968-nt-head")?.remove();
+          d.getElementById("dt968-nt-search")?.remove();
+          d.getElementById("dt968-nt-pulse")?.remove();
+          d.getElementById("dt968-nt-menu-pop")?.remove();
+          if (mode === "bal") enhanceBalancos(app);
+          else if (mode === "jr") enhanceJornal(app);
+        }
+      } finally {
+        syncing = false;
+        if (app && d.body.classList.contains("mkt549")) obs.observe(app, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-m406-view", "hidden"] });
+      }
+    };
+
+    const sched = (ms = 50) => {
+      if (timer) return;
+      timer = setTimeout(() => { timer = null; sync(); }, ms);
+    };
+
+    const obs = new MutationObserver(() => {
+      if (syncing || !d.body.classList.contains("mkt549")) return;
+      sched(60);
+    });
+
+    d.addEventListener("input", (e) => {
+      if (e.target?.id === "dt968-nt-inp") {
+        searchQ = e.target.value || "";
+        const app = getApp();
+        if (app) enhanceFeed(app);
+      }
+    });
+
+    d.addEventListener("click", (e) => {
+      if (e.target?.closest?.("[data-dt968-sheet]")) { openSheet(); return; }
+      if (e.target?.closest?.("[data-dt968-close-sheet]") || e.target?.id === "dt968-nt-sheet-ov") { d.getElementById("dt968-nt-sheet-ov")?.remove(); return; }
+      const pick = e.target?.closest?.("[data-dt968-pick]");
+      if (pick) {
+        const val = pick.getAttribute("data-dt968-pick");
+        d.getElementById("dt968-nt-sheet-ov")?.remove();
+        if (val === "carteira") {
+          onlyCart = true;
+          const allBtn = getApp()?.querySelector('button[data-mk="nf"][data-v="all"]');
+          if (allBtn && allBtn.classList.contains("s")) allBtn.click();
+          else sync();
+        } else {
+          onlyCart = false;
+          getApp()?.querySelector(`button[data-mk="nf"][data-v="${val}"]`)?.click();
+        }
+        sched(80);
+        return;
+      }
+      if (e.target?.closest?.("[data-dt968-menu]")) { toggleMenu(); return; }
+      const mact = e.target?.closest?.("[data-dt968-mact]");
+      if (mact) {
+        const a = mact.getAttribute("data-dt968-mact");
+        d.getElementById("dt968-nt-menu-pop")?.remove();
+        if (a === "ia") return; // data-dt962-nt-ia="1" aciona Áurea nativamente
+        if (a === "rf") getApp()?.querySelector('[data-mk="rf"]')?.click();
+        else if (a === "imp") { onlyCart = false; getApp()?.querySelector('button[data-mk="nf"][data-v="prioritaria"]')?.click(); }
+        else if (a === "cart") {
+          onlyCart = !onlyCart;
+          if (onlyCart) {
+            const allBtn = getApp()?.querySelector('button[data-mk="nf"][data-v="all"]');
+            if (allBtn && allBtn.classList.contains("s")) allBtn.click();
+          }
+          sync();
+        }
+        return;
+      }
+      if (!e.target?.closest?.("#dt968-nt-menu-pop")) d.getElementById("dt968-nt-menu-pop")?.remove();
+      if (e.target?.closest?.("[data-dt968-search]")) {
+        searchOpen = !searchOpen;
+        if (!searchOpen) searchQ = "";
+        sync();
+        if (searchOpen) setTimeout(() => d.getElementById("dt968-nt-inp")?.focus(), 40);
+        return;
+      }
+      if (e.target?.closest?.("[data-dt968-clear-s]")) {
+        searchOpen = false; searchQ = "";
+        sync();
+        return;
+      }
+      if (e.target?.closest?.("[data-dt968-reset]")) {
+        onlyCart = false; searchQ = ""; searchOpen = false;
+        const allBtn = getApp()?.querySelector('button[data-mk="nf"][data-v="all"]');
+        if (allBtn && allBtn.classList.contains("s")) allBtn.click();
+        else sync();
+        return;
+      }
+      const bbtn = e.target?.closest?.("[data-dt968-bal]");
+      if (bbtn) {
+        balFilter = bbtn.getAttribute("data-dt968-bal") || "all";
+        const app = getApp();
+        if (app) enhanceBalancos(app);
+        return;
+      }
+      if (e.target?.closest?.("[data-m406-select], [data-m550-jornal], [data-m550-nt]")) {
+        sched(70);
+      }
+    });
+
+    w.addEventListener("resize", () => sched(40));
+    d.addEventListener("diario:noticias", () => sched(40));
+    w.addEventListener("diario:render", () => sched(40));
+    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v968-nt3d", { after: () => sched(30) });
+    if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", sync, { once: true });
+    else sync();
+  })(window, document);
+} catch (e) {
+  console.error("[v968] NoticiasTV3D", e);
+}
+
