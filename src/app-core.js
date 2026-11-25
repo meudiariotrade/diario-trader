@@ -43526,6 +43526,12 @@ const AUREA = {
       lente:
         "análise de geopolítica, macroeconomia estrutural, microeconomia e ciclos de dívida pública no estilo de Ray Dalio (Big Debt Crises / Ordem Mundial em Transformação), 100% técnica e SEM VIÉS POLÍTICO OU PARTIDÁRIO. Nunca julgue governos por ideologia; analise apenas mecânica econômica e números frios: trajetória da Dívida/PIB (Brasil, EUA, Europa, Japão, China), resultado primário vs nominal, juro real (r) vs crescimento do PIB (g), custo de rolagem, prêmio de risco (DI longo, Treasuries 10Y/30Y, CDS), geopolítica (EUA x China, tarifas, energia, cadeias globais) e microeconomia (como juros, câmbio e crédito comprimem ou expandem margens por setor: bancos, varejo, exportadoras, elétricas e FIIs). Aplique sempre o protocolo Dois Lados da Moeda: 1) Fatos numéricos verificáveis, 2) Cenário de estresse/risco, 3) Fator mitigador/construtivo e 4) Qual ativo ou taxa de mercado confirma qual cenário está vencendo.",
     },
+    helmer: {
+      nome: "Helmer",
+      papel: "7 Powers · Estratégia & Fosso",
+      lente:
+        "estratégia competitiva de longo prazo baseada no framework 7 Powers de Hamilton Helmer (The Foundations of Business Strategy). Nunca diga genericamente que uma empresa 'tem fosso'; avalie objetivamente os 7 Poderes — 1) Economias de Escala (Scale Economies), 2) Efeito de Rede (Network Economies), 3) Contraposicionamento (Counter-Positioning), 4) Custos de Troca (Switching Costs), 5) Marca (Branding), 6) Recurso Exclusivo (Cornered Resource) e 7) Poder de Processo (Process Power). Para cada poder que existir de fato (classifique como Presente, Parcial ou Ausente), exija e explique os dois pilares obrigatórios de Helmer: (a) BENEFÍCIO (poder de preço ou custo unitário menor que melhora margens/ROIC) e (b) BARREIRA (o que impede racionalmente os concorrentes de copiar). Conclua sempre com: 1) Mapa resumido dos 7 Poderes, 2) Estágio do negócio (Originação, Decolagem ou Estabilidade), 3) Principal ameaça de erosão do fosso em 3–5 anos e 4) Qual indicador operacional/financeiro (margem bruta, ROIC, churn, market share) comprova se o poder está fortalecendo ou enfraquecendo. Não recomende compra nem venda.",
+    },
   },
 };
 function aureaRota(texto) {
@@ -43536,7 +43542,7 @@ function aureaRota(texto) {
         (t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|11)\b/g) || []).map((x) => x.toUpperCase()),
       ),
     ].slice(0, 4),
-    forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow|dalio)\b/);
+    forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow|dalio|helmer)\b/);
   if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você" };
   const conta = (rx) => (n.match(rx) || []).length,
     pontos = {
@@ -43545,6 +43551,9 @@ function aureaRota(texto) {
       ) + (/https?:\/\//.test(t) ? 3 : 0),
       dalio: conta(
         /\b(dalio|geopolitic\w*|divida publica|divida\/?pib|divida bruta|divida liquida|deficit|superavit|arcabouco|fiscal|primario|microeconomia|produtividade|ordem mundial|ciclos? de divida|reservas? internacionais?|treasur\w*|tarifa\w*|guerra|china|europa|japao|efeito domino|cadeias? globais?|sancoes?)\b/g,
+      ),
+      helmer: conta(
+        /\b(helmer|7 ?powers?|sete poderes|fosso|moat|vantagem competitiva|vantagens competitivas|efeito de rede|network econom\w*|economias? de escala|scale econom\w*|contraposicionamento|counter-?positioning|custos? de troca|switching costs?|poder de marca|branding|recurso exclusivo|cornered resource|poder de processo|process power|barreira de entrada|barreiras? competitivas?|poder de preco|pricing power|concorrencia)\b/g,
       ),
       graham: conta(
         /\b(valuation|preco (justo|teto)|dividend\w*|proventos?|balanco|lucro|receita|p\/?l|p\/?vp|roe|roic|ebitda|divida|alavancag\w*|fundament\w*|vale a pena|barat[oa]|car[oa]|margem de seguranca|dossie|graham|bazin|dcf|resultado trimestral)\b/g,
@@ -43563,18 +43572,19 @@ function aureaRota(texto) {
       ),
     };
   if (tickers.length) {
-    pontos.graham += 1;
     pontos.dow = Math.max(0, pontos.dow - 1);
   }
   let id = "schwartz",
     max = 0;
   for (const [k, v] of Object.entries(pontos)) if (v > max) ((max = v), (id = k));
-  if (tickers.length && id === "schwartz" && pontos.schwartz < 2) id = "graham";
+  if (tickers.length && max === 0) id = "graham";
+  else if (tickers.length && id === "schwartz" && pontos.schwartz < 2) id = "graham";
   const motivo = max
     ? "a pergunta fala de " +
       {
         schwartz: "macro, juros ou notícias",
         dalio: "geopolítica, dívida pública ou microeconomia",
+        helmer: "vantagem competitiva e fosso (7 Powers)",
         graham: "fundamentos e valuation",
         livermore: "gráfico e análise técnica",
         munger: "uma tese a ser testada",

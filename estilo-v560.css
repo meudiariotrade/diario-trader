@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 ee2a87ee9e4d2fdbcf1605332fcc423e0ec0e3bae5260f00e8c912f3263bdcbd */
+/* Gerado de src/app-theme.css · SHA256 1dfc087d3ac0df16ffc5c43f7f33a48879629ae137d464c0c59a2d7f0ec558ad */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -6446,3 +6446,15 @@ html:root:root:root[data-v427-tema="claro"] #app#app #jrbox .jr971-dir.up{backgr
 html:root:root:root[data-v427-tema="claro"] #app#app #jrbox .jr971-dir.dn{background:#fee2e2!important;border-color:#fca5a5!important;color:#991b1b!important}
 html:root:root:root[data-v427-tema="claro"] #app#app #jrbox .jr971-dir.neu{background:#f1f5f9!important;border-color:#cbd5e1!important;color:#334155!important}
 html:root:root:root[data-v427-tema="claro"] #app#app #jrbox .jr971-tk{background:#f1f5f9!important;border-color:rgba(15,23,42,.1)!important;color:#334155!important}
+
+/* v972: Zero repique (frame-0) nas trocas de abas dentro de Mercado no mobile */
+@media(max-width:768px){
+ body.mkt549[data-mkt-sub="cq"] #app .cqtabs,
+ body.mkt549[data-mkt-sub="cq"] #app .market-categories,
+ body.mkt549[data-mkt-sub="nt"] #app .m406-bar,
+ body.mkt549[data-mkt-sub="jr"] #app .jr561-arte,
+ body.mkt549[data-mkt-sub="lab"] #app select[data-usasset],
+ body.mkt549[data-mkt-sub="lab"] #app select[data-usview-select]{
+  display:none!important
+ }
+}
