@@ -69,6 +69,27 @@ try {
     };
     window.MutationObserver.prototype = NativeMO.prototype;
   }
+  /* v983 — pausa segura de setInterval de polling (>= 500ms) quando o Safari/app está em segundo plano. */
+  if (
+    typeof window !== "undefined" &&
+    typeof window.setInterval === "function" &&
+    typeof document !== "undefined" &&
+    !/jsdom/i.test(String(window.navigator?.userAgent || "")) &&
+    !window.__dt983SiWrapped
+  ) {
+    window.__dt983SiWrapped = true;
+    const nativeSI = window.setInterval.bind(window);
+    window.setInterval = function dt983SetInterval(fn, ms, ...args) {
+      const delay = Number(ms) || 0;
+      if (typeof fn !== "function" || delay < 500) {
+        return nativeSI(fn, ms, ...args);
+      }
+      return nativeSI(() => {
+        if (document.hidden) return;
+        return fn(...args);
+      }, delay);
+    };
+  }
 } catch {}
 /* v594 — registro de ações do Terminal: cada recurso registra sua função; o Início do Terminal e a barra de Painéis
    executam a mesma função, sem precisar da barra antiga montada (CLAUDE.md, tela única). */
