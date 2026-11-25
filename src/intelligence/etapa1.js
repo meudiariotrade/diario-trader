@@ -880,56 +880,24 @@
     ].filter(Boolean).join(' · ');
   }
   function pulsoDoisMercados(){
-    const now=Date.now(),groups=state.mercado?.mercados?.grupos;
-    const all=Array.isArray(groups)?groups.flatMap(g=>g.itens||[]):[];
-    const session=w.DiarioSessoes?.context();
-    const epoch=v=>typeof v==='number'?(v<1e12?v*1000:v):Date.parse(v||'');
-    const quote=(q,label,closed=false)=>{
-      if(!q)return null;
-      const raw=q.chg??q.d1??q.var, d1=raw==null||raw===''?NaN:Number(raw), px=Number(q.px??q.ult);
-      const ts=epoch(q.dadoEm??q.priceAt??q.horarioPreco??q.ts??q.em??q.regularMarketTime);
-      if(!(px>0)||!Number.isFinite(d1)||!Number.isFinite(ts)||ts>now+60000)return null;
-      const source=String(q.fonte||q.source||'');
-      if(q.quoteStatus==='divergente'||q.suspeito)return null;
-      const ttl=/binance/i.test(source)?45000:/profit|finnhub/i.test(source)?90000:1200000;
-      const last=closed&&(q.fechado===true||(/TradingView/i.test(source)&&q.quoteStatus==='referencia_anterior'&&!!q.simboloFonte))&&now-ts<=96*3600000;
-      if(now-ts>ttl&&!last)return null;
-      return {n:label,px,d1,ts,last:last&&now-ts>ttl,source};
-    };
-    let td={};try{td=w.tapeDados?.()||{};}catch(_){}
-    const pickLive=(label,tks,rx,closed=false)=>{
-      const match=q=>{const k=String(q.s||q.ticker||'').toUpperCase();return k?tks.includes(k):rx.test(String(q.n||''));};
-      for(const k of tks){
-        let live=null;try{live=w.tapeVivo?.(k);}catch(_){}
-        for(const q of [live,td[k]]){const v=quote(q,label,closed);if(v&&!v.last)return v;}
-      }
-      for(const q of all){if(match(q)){const v=quote(q,label,closed);if(v&&!v.last)return v;}}
-      // Último fechamento só quando a sessão está fechada e a fonte o identifica explicitamente.
-      if(closed){
-        for(const k of tks){let live=null;try{live=w.tapeVivo?.(k);}catch(_){}for(const q of [live,td[k]]){const v=quote(q,label,true);if(v)return v;}}
-        for(const q of all){if(match(q)){const v=quote(q,label,true);if(v)return v;}}
-      }
-      return null;
-    };
-    const isClosed=s=>['fechado','post','pre'].includes(s?.state);
-    const bClosed=isClosed(session?.b3),uClosed=isClosed(session?.us);
-    const ib=pickLive('IBOV',['^BVSP','IBOV'],/ibov|bvsp/i,bClosed);
-    const fx=pickLive('USD/BRL',['BRL=X','USDBRL'],/usd\/?brl|d[oó]lar\s*[àa]\s*vista/i,bClosed);
-    const wd=pickLive('WDO',['WDO'],/\bwdo\b/i,isClosed(session?.wdo||session?.b3));
-    const diQ=pickLive('DI / Juros',['DI1'],/di1|juros/i,bClosed);
-    const ifix=pickLive('IFIX',['IFIX'],/\bifix\b/i,bClosed);
-    const spQ=pickLive('S&P 500',['^GSPC'],/s&p\s*500(?!.*fut)|\bspx\b/i,uClosed),spF=pickLive('S&P fut.',['ES=F'],/s&p.*fut|\bes1\b/i);
-    const nqQ=pickLive('Nasdaq',['^IXIC'],/nasdaq(?!.*fut)|\bndx\b/i,uClosed),nqF=pickLive('Nasdaq fut.',['NQ=F'],/nasdaq.*fut|\bnq1\b/i);
-    const dow=pickLive('Dow',['^DJI'],/dow(?!.*fut)|\bdji\b/i,uClosed),dowF=pickLive('Dow fut.',['YM=F'],/dow.*fut|\bym1\b/i);
-    const brent=pickLive('Brent',['BZ=F'],/brent/i),wti=pickLive('WTI',['CL=F'],/\bwti\b/i);
-    const gold=pickLive('Ouro',['GC=F'],/ouro|gold/i),dx=pickLive('DXY',['DX-Y.NYB','DXY'],/\bdxy\b/i),ewz=pickLive('EWZ',['EWZ'],/^ewz\b/i,uClosed);
-    const bt=pickLive('BTC',['BTC-USD','BTCUSDT'],/\bbtc\b|bitcoin/i),eth=pickLive('ETH',['ETH-USD','ETHUSDT'],/\beth\b|ethereum/i),sol=pickLive('SOL',['SOL-USD','SOLUSDT'],/\bsol\b|solana/i);
-    const brU=[ib,fx,wd,diQ,ifix].filter(Boolean),usU=[spQ,spF,nqQ,nqF,dow,dowF,brent,wti,gold,dx,ewz].filter(Boolean),crU=[bt,eth,sol].filter(Boolean);
-    const fmtP=x=>x.n+' '+sinalNum(x.d1)+(x.last?' (último fechamento)':'');
-    const texto=[brU.length?'Brasil: '+brU.map(fmtP).join(' · '):'',usU.length?'Exterior / Futuros: '+usU.map(fmtP).join(' · '):'',crU.length?'Cripto (24/7): '+crU.map(fmtP).join(' · '):''].filter(Boolean).join(' | ')||'Sem cotação atualizada';
-    const current=q=>q&&!q.last?q.d1:null;
-    const sp=current(spF)??current(spQ),nq=current(nqF)??current(nqQ),dxy=current(dx),oil=current(brent)??current(wti),btc=current(bt);
-    const ibv=current(ib),dol=current(fx)??current(wd),di=current(diQ);
+    const groups=state.mercado?.mercados?.grupos;
+    const all=Array.isArray(groups)?groups.flatMap(g=>(g.itens||[]).map(x=>({n:String(x.n||''),px:Number(x.px),d1:x.d1==null||x.d1===''?null:Number(x.d1)}))).filter(x=>Number.isFinite(x.d1)):[];
+    const pick=rx=>all.find(x=>rx.test(x.n));
+    const pickApp=(label,tks)=>{for(const t of tks){const c=cotacaoApp(t);if(c&&Number.isFinite(c.d1))return {n:label,px:c.px,d1:c.d1};}return null;};
+    const fmtP=x=>x?x.n+' '+(x.d1>=0?'+':'')+x.d1.toFixed(2).replace('.',',')+'%':'';
+    const br=[pick(/ibov|bvsp/i)||pickApp('IBOV',['IBOV']),pick(/d[oó]lar|usd\/?brl|wdo/i)||pickApp('USD/BRL',['USDBRL','WDO']),pick(/di1|juros|ifix/i)].filter(Boolean);
+    const us=[pick(/s&p\s*500|spx|es1/i),pick(/nasdaq|ndx|nq1/i),pick(/dow|dji|ym1/i),pick(/brent|wti|petr[oó]leo/i),pick(/ouro|gold/i),pick(/\bdxy\b/i)||pickApp('DXY',['DXY']),pick(/^ewz\b/i)||pickApp('EWZ',['EWZ'])].filter(Boolean);
+    const cripto=[pick(/\bbtc\b|bitcoin/i)||pickApp('BTC',['BTC','BTCUSD','BTCUSDT']),pick(/\beth\b|ethereum/i)||pickApp('ETH',['ETH','ETHUSD','ETHUSDT']),pick(/\bsol\b|solana/i)||pickApp('SOL',['SOL','SOLUSD'])].filter(Boolean);
+    const uniq=L=>{const seen=new Set();return L.filter(x=>{if(!x||seen.has(x.n))return false;seen.add(x.n);return true;});};
+    const brU=uniq(br),usU=uniq(us).slice(0,7),crU=uniq(cripto).slice(0,3);
+    const texto=[
+      brU.length?'Brasil: '+brU.map(fmtP).join(' · '):'',
+      usU.length?'Exterior / Futuros: '+usU.map(fmtP).join(' · '):'',
+      crU.length?'Cripto (24/7): '+crU.map(fmtP).join(' · '):''
+    ].filter(Boolean).join(' | ');
+    /* Termômetro Risk-On / Risk-Off (-100 a +100) + Detector de Divergência Intraday */
+    const sp=pick(/s&p\s*500|spx|es1/i)?.d1,nq=pick(/nasdaq|ndx|nq1/i)?.d1,dxy=(pick(/\bdxy\b/i)||pickApp('DXY',['DXY']))?.d1,oil=pick(/brent|wti|petr[oó]leo/i)?.d1,btc=(pick(/\bbtc\b|bitcoin/i)||pickApp('BTC',['BTC','BTCUSD','BTCUSDT']))?.d1;
+    const ibv=(pick(/ibov|bvsp/i)||pickApp('IBOV',['IBOV']))?.d1,dol=(pick(/d[oó]lar|usd\/?brl|wdo/i)||pickApp('USD/BRL',['USDBRL','WDO']))?.d1,di=pick(/di1|juros/i)?.d1;
     let pts=0,pesos=0;
     const add=(v,wgt)=>{if(Number.isFinite(v)){pts+=Math.max(-3,Math.min(3,v))*wgt;pesos+=wgt;}};
     add(sp,30);add(nq,25);add(dxy!=null?-dxy*1.4:null,15);add(oil!=null?oil*0.5:null,10);add(btc!=null?btc*0.35:null,10);add(dol!=null?-dol*1.2:null,10);
@@ -975,7 +943,7 @@
       keys.map(k=>'<button type="button" data-aurea-edicao="'+k+'" style="padding:4px 10px;border-radius:999px;font-size:11.5px;cursor:pointer;border:1px solid '+(ed===k?'rgba(201,166,107,.75)':'rgba(255,255,255,.14)')+';background:'+(ed===k?'rgba(201,166,107,.16)':'transparent')+';color:inherit;font-weight:'+(ed===k?'700':'500')+'">'+META[k].rot+(k===edAuto?' · agora':'')+'</button>').join('')+
       '</div>';
     const relogio='<p class="mut sm" style="margin:0 0 6px">B3: <b>'+escape(b3St)+'</b> · NYSE/Nasdaq: <b>'+escape(usSt)+'</b> · Futuros EUA: <b'+(futUS.aberto?' style="color:#10B981"':'')+'>'+escape(futUS.label)+'</b>'+(context?.b3?.nextDate?' · Próxima B3: '+escape(br(context.b3.nextDate)):'')+'</p>';
-    const riskBar=pulso.riskScore!=null?'<div class="sm dt987-risk"><span>🧭 Humor Global: <b style="color:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'">'+escape(pulso.riskLabel)+'</b></span><span style="display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums"><span style="display:inline-block;width:72px;height:6px;border-radius:99px;background:rgba(128,128,128,.22);overflow:hidden"><i style="display:block;height:100%;width:'+Math.round((pulso.riskScore+100)/2)+'%;background:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'"></i></span><b>'+(pulso.riskScore>0?'+':'')+pulso.riskScore+'</b></span></div>':'';
+    const riskBar=pulso.riskScore!=null?'<div class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>🧭 Humor Global: <b style="color:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'">'+escape(pulso.riskLabel)+'</b></span><span style="display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums"><span style="display:inline-block;width:72px;height:6px;border-radius:99px;background:rgba(128,128,128,.22);overflow:hidden"><i style="display:block;height:100%;width:'+Math.round((pulso.riskScore+100)/2)+'%;background:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'"></i></span><b>'+(pulso.riskScore>0?'+':'')+pulso.riskScore+'</b></span></div>':'';
     const divLine=pulso.divergencia?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.45);background:rgba(201,166,107,.09)">'+escape(pulso.divergencia)+'</p>':'';
     let gatilhosLine='';
     try{
@@ -996,8 +964,7 @@
       const als=typeof w.DiarioAlertasDisparados==='function'?w.DiarioAlertasDisparados():[];
       if(als.length)alertasLine='<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(16,185,129,.55);background:rgba(16,185,129,.1)"><b>🔔 Alertas Disparados:</b> '+escape(als.slice(0,3).map(a=>a.tk+' ('+a.msg+')').join(' · '))+'</p>';
     }catch(_){}
-    const mkGrp=(tit,arr)=>'<div class="dt987-grp"><span class="dt987-gtit">'+tit+'</span><div class="dt987-chips">'+(arr.length?arr.map(x=>'<span class="dt987-pill '+(x.d1>0?'pos':x.d1<0?'neg':'')+'" title="'+escape(new Date(x.ts).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+' · '+(x.source||'fonte de mercado'))+'"><span>'+escape(x.n)+(x.last?' · fechamento':'')+'</span><b>'+sinalNum(x.d1)+'</b></span>').join(''):'<span class="mut sm">Sem cotação atualizada</span>')+'</div></div>';
-    const doisMkts='<div class="dt987-pulso">'+mkGrp('Brasil',pulso.br)+mkGrp('Exterior',pulso.us)+mkGrp('Cripto 24/7',pulso.cripto)+'</div>';
+    const doisMkts=pulso.texto?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.22);background:rgba(201,166,107,.05)">'+escape(pulso.texto)+'</p>':'';
     const schwartzLine=agEvs.length?'<p class="sm" style="margin:4px 0"><b>S · Schwartz (Agenda BR/EUA):</b> '+escape(agEvs.join(' · '))+'</p>':'';
     const atualizado=Date.parse(state.mercado?.atualizadoEm||'');
     const recent=Number.isFinite(atualizado)&&Date.now()-atualizado<20*60000&&atualizado<=Date.now()+60000;
@@ -1108,24 +1075,11 @@
     if(!response.ok)throw new Error('HTTP '+response.status);
     return response.json();
   }
-  // v990: os seis cards e a Áurea usam exatamente a mesma seleção de cotações.
-  function atualizarKpis990(app){
-    const host=app.querySelector('.v829-home .v829-kpis .ui-kpis'),U=w.DiarioUI;
-    if(!host||!U)return;
-    const p=pulsoDoisMercados(),all=[...p.br,...p.us,...p.cripto];
-    const itens=[['IBOV','Ibovespa'],['USD/BRL','Dólar'],['S&P 500','S&P 500'],['Nasdaq','Nasdaq'],['EWZ','EWZ'],['BTC','Bitcoin']].map(([k,n])=>{
-      const v=all.find(x=>x.n===k);
-      if(!v)return {rotulo:n,valor:'—',detalhe:'Cotação indisponível',tom:''};
-      return {rotulo:n,valor:v.px.toLocaleString('pt-BR',{minimumFractionDigits:k==='USD/BRL'?4:v.px>=100000?0:2,maximumFractionDigits:k==='USD/BRL'?4:v.px>=100000?0:2}),detalhe:sinalNum(v.d1)+(v.last?' · última referência':'') ,tom:v.d1>=0?'g':'r'};
-    });
-    const html=itens.map(U.kpi).join('');
-    if(host.innerHTML!==html)host.innerHTML=html;
-  }
   function repaint() {
     if(!state.route)return;
     const el=document.querySelector('#app [data-intel-etapa1] [data-intel-content]');
     if(el){const html=({home:briefing,dia:meuDia,agenda,noticias,term:terminal}[state.route])();if(el.innerHTML!==html)el.innerHTML=html;}
-    if(state.route==='home'){const app=document.getElementById('app');if(app){cardsInicio(app);atualizarKpis990(app);}}
+    if(state.route==='home'){const app=document.getElementById('app');if(app)cardsInicio(app);}
   }
   function refresh() {
     const signal=state.abort?.signal;if(!signal || signal.aborted)return;
