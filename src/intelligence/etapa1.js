@@ -887,7 +887,7 @@
     const quote=(q,label,closed=false)=>{
       if(!q)return null;
       const raw=q.chg??q.d1??q.var, d1=raw==null||raw===''?NaN:Number(raw), px=Number(q.px??q.ult);
-      const ts=epoch(q.dadoEm??q.priceAt??q.horarioPreco??q.ts??q.em);
+      const ts=epoch(q.dadoEm??q.priceAt??q.horarioPreco??q.ts??q.em??q.regularMarketTime);
       if(!(px>0)||!Number.isFinite(d1)||!Number.isFinite(ts)||ts>now+60000)return null;
       const source=String(q.fonte||q.source||'');
       const ttl=/binance/i.test(source)?45000:/profit|finnhub/i.test(source)?90000:1200000;
@@ -909,10 +909,11 @@
       }
       return null;
     };
-    const bClosed=session?.b3?.state==='fechado',uClosed=session?.us?.state==='fechado';
+    const isClosed=s=>['fechado','post','pre'].includes(s?.state);
+    const bClosed=isClosed(session?.b3),uClosed=isClosed(session?.us);
     const ib=pickLive('IBOV',['^BVSP','IBOV'],/ibov|bvsp/i,bClosed);
-    const fx=pickLive('USD/BRL',['BRL=X','USDBRL'],/usd\/?brl|d[oó]lar\s*[àa]\s*vista/i);
-    const wd=pickLive('WDO',['WDO'],/\bwdo\b/i,bClosed);
+    const fx=pickLive('USD/BRL',['BRL=X','USDBRL'],/usd\/?brl|d[oó]lar\s*[àa]\s*vista/i,bClosed);
+    const wd=pickLive('WDO',['WDO'],/\bwdo\b/i,isClosed(session?.wdo||session?.b3));
     const diQ=pickLive('DI / Juros',['DI1'],/di1|juros/i,bClosed);
     const ifix=pickLive('IFIX',['IFIX'],/\bifix\b/i,bClosed);
     const spQ=pickLive('S&P 500',['^GSPC'],/s&p\s*500(?!.*fut)|\bspx\b/i,uClosed),spF=pickLive('S&P fut.',['ES=F'],/s&p.*fut|\bes1\b/i);
@@ -1288,11 +1289,12 @@
       repaint();
       return;
     }
-    const resBtn=event.target.closest('[data-aurea-resumao]');
+    const resBtn=event.target.closest('[data-aurea-resumao], [data-dt978-ia="brief30"]');
     if(resBtn){
       if(state.resumaoBusy)return;
       event.preventDefault();
-      const ed=resBtn.dataset.aureaResumao||'manha';
+      const shortBrief=resBtn.dataset.dt978Ia==='brief30';
+      const ed=resBtn.dataset.aureaResumao||state.edicaoManual||edicaoAuto(w.DiarioSessoes?.context());
       const futUS=futurosEuaStatus();
       const nomes={
         fimdesemana:futUS.aberto?'Edição de Fim de Semana · Futuros EUA (CME) Abertos':'Edição de Fim de Semana (Preparação da Semana)',
@@ -1310,7 +1312,7 @@
         .slice(0,5).map(e=>new Date(e.em).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'America/Sao_Paulo'})+' '+new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' ['+e.p+'] '+String(e.t||'').slice(0,55));
       const meus=(meusAtivos()||[]).slice(0,8);
       const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,3).map(e=>tit(e)).join(' | ');
-      const prompt='@schwartz Monte o resumão executivo detalhado da Áurea — '+(nomes[ed]||ed)+
+      const promptBase='@schwartz Monte o resumão executivo detalhado da Áurea — '+(nomes[ed]||ed)+
         ' (data: '+hojeIso+'; agora: '+horaSP+' Brasília / '+horaNY+' Nova York). '+
         'Status dos mercados agora: B3='+(c?.b3?.state||'—')+', NYSE/Nasdaq à vista='+(c?.us?.state||'—')+', Futuros EUA (CME Globex: ES/NQ/YM/Ouro/Petróleo)='+futUS.label+'. '+
         (b3Fechada?'IMPORTANTE: o mercado à vista da B3 está fechado agora; em dias de pregão, WIN/WDO normalmente abrem às 09:00 e à vista às 10:00 Brasília. Respeite a fase atual dos futuros locais. NÃO diga que IBOV/WIN estão "com dados indisponíveis": explique que o pregão local está fechado e use o EWZ, as ADRs brasileiras (PBR, VALE, ITUB, BBD) e o USD/BRL abaixo para projetar uma possível abertura aqui. ':'')+
@@ -1330,6 +1332,7 @@
         '4) Plano Prático e Riscos (o que observar na abertura, pontos de atenção em WIN/WDO e nos ativos acompanhados).';
       // v904: a resposta volta à tela pela Cloudflare, nunca pela função analise do Supabase.
       // Indisponibilidade do provedor gratuito apresenta um resumo LOCAL identificado.
+      const prompt=shortBrief?'Briefing 30s: responda em exatamente 3 tópicos concisos, máximo 100 palavras: 1. Viés macro e WIN/WDO; 2. Agenda e gatilhos; 3. Disciplina e risco. Não invente dados. '+promptBase.split('Traga detalhes práticos')[0]:promptBase;
       state.resumaoBusy=true;
       state.resumaoEd=ed;
       state.resumaoHtml='';
@@ -1346,7 +1349,7 @@
         });
         const j=await res.json().catch(()=>({}));
         if(!res.ok||!j.ok||!j.text)throw Error(j.error||'A IA não conseguiu gerar o texto agora.');
-        state.resumaoHtml='<div style="margin-bottom:10px;font-size:12.5px;color:var(--gold,#C9A66B);font-weight:700;letter-spacing:.02em">✦ RESUMÃO DA ÁUREA · IA GRATUITA ('+escape(j.model||'Cloudflare')+')</div>'+
+        state.resumaoHtml='<div style="margin-bottom:10px;font-size:12.5px;color:var(--gold,#C9A66B);font-weight:700;letter-spacing:.02em">✦ '+(shortBrief?'BRIEFING 30S':'RESUMÃO DA ÁUREA')+' · IA GRATUITA ('+escape(j.model||'Cloudflare')+')</div>'+
           formatarTextoEditorial(j.text);
       }catch(err){
         const stale=state.mercado?.atualizadoEm?'Último registro: '+when(state.mercado.atualizadoEm)+'.':'Sem carimbo de atualização.';
@@ -1364,7 +1367,7 @@
         ];
         state.resumaoHtml='<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--gold,#C9A66B)">✦ Resumão Local · Leitura Direta dos Dados</div>'+
           '<div class="mut sm" style="margin-top:2px">'+escape(String(err?.message||'IA indisponível').slice(0,140))+' · '+escape(stale)+'</div></div>'+
-          formatarTextoEditorial(blocos.join('\n\n'));
+          formatarTextoEditorial(shortBrief?[blocos[0],blocos[2],blocos[3]].join('\n\n'):blocos.join('\n\n'));
       }finally{
         state.resumaoBusy=false;
         repaint();

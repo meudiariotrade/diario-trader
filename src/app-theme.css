@@ -7520,3 +7520,14 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.pos{background:
 html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.pos b{color:#047857}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.neg{background:#ffe4e6;border-color:#fda4af}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.neg b{color:#be123c}
+
+/* v988: largura útil desktop, preserva grades e estilos da v986. */
+@media(min-width:1024px){
+ html:root:root body:not([data-v4route="term"]) #app#app{width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box!important}
+ html:root:root body:not([data-v4route="term"]) #app#app :is(.v4-page,.dt393-page,#dt393-workspace,.dt393-native,.dt397-studies,.dt395-native-home,.dt395-native-dia,#an-root,.an-page,.an-section,.an-briefing,#ap-root){width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box!important}
+ html:root:root body #app#app .v829-split>.ui-aside{max-width:none!important;width:100%!important;min-width:0!important}
+ html:root:root body #app#app .v829-split>.ui-main{max-width:none!important;width:100%!important;min-width:0!important}
+ html:root:root body #app#app .v829-home .v829-split:has(>.ui-aside:empty){grid-template-columns:minmax(0,1fr)!important}
+ html:root:root body #app#app .v829-home .v829-split>.ui-aside:empty{display:none!important}
+ html:root:root body #app#app .v829-home .v829-kpis .ui-kpis{width:100%!important;grid-template-columns:repeat(6,minmax(0,1fr))!important}
+}
