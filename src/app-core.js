@@ -23982,40 +23982,43 @@ const typing = () => {
     e.closest("#app")
   );
 };
-function persistNow() {
+async function persistNow() {
   // Chamadores que confirmam recebimento remoto precisam esperar o commit local.
   // Resolve false em falhas: os outros salvamentos automáticos não precisam capturar rejeições.
-  return new Promise((resolve) => {
-    clearTimeout(st);
-    const e = LOCAL_SAVE.revision;
-    LOCAL_SAVE.pending = !0;
-    try {
-      if (!db) throw new Error("Armazenamento do aparelho indisponível.");
+  clearTimeout(st);
+  const e = LOCAL_SAVE.revision;
+  LOCAL_SAVE.pending = !0;
+  svUi();
+  const grava = () =>
+    new Promise((resolve, reject) => {
+      if (!db) return reject(new Error("Armazenamento do aparelho indisponível."));
       const t = JSON.parse(JSON.stringify(S)),
         a = db.transaction("kv", "readwrite");
-      (a.objectStore("kv").put(t, "s"),
-        (a.oncomplete = () => {
-          (e === LOCAL_SAVE.revision &&
-            ((LOCAL_SAVE.committed = e),
-            (LOCAL_SAVE.pending = !1),
-            (LOCAL_SAVE.error = "")),
-            svUi());
-          resolve(true);
-        }),
-        (a.onabort = () => {
-          localSaveFailed(a.error, e);
-          resolve(false);
-        }),
-        (a.onerror = () => {
-          localSaveFailed(a.error, e);
-          resolve(false);
-        }));
-    } catch (t) {
-      localSaveFailed(t, e);
-      resolve(false);
+      a.objectStore("kv").put(t, "s");
+      a.oncomplete = () => resolve(true);
+      a.onabort = () => reject(a.error || new Error("Transação abortada."));
+      a.onerror = () => reject(a.error || new Error("Erro ao gravar no aparelho."));
+    });
+  try {
+    try {
+      await grava();
+    } catch (err1) {
+      if (err1 && err1.name === "QuotaExceededError") throw err1;
+      db = null;
+      await open();
+      await grava();
+    }
+    if (e === LOCAL_SAVE.revision) {
+      LOCAL_SAVE.committed = e;
+      LOCAL_SAVE.pending = !1;
+      LOCAL_SAVE.error = "";
     }
     svUi();
-  });
+    return true;
+  } catch (t) {
+    localSaveFailed(t, e);
+    return false;
+  }
 }
 /* v949: apenas caches públicos reconstruíveis, com nomes exatos. Nunca remover sessão, diário, carteira, teses, alertas ou configurações. */
 const CHAVES_CACHE_DESCARTAVEL_949 = Object.freeze(["ap873-rotacao","dt-macro-fiscal-v914","ap874-extra","ap896-fiis"]);
@@ -45849,18 +45852,23 @@ const FE = {
   busy: 0,
   err: "",
 };
-async function feCarrega() {
-  if (FE.busy || Date.now()-FE.ts<3600000 || !document.getElementById('febox') || document.hidden || window.DIARIO_DEMO) return;
+async function feCarrega(force) {
+  if (FE.busy || (!force && Date.now()-FE.ts<600000) || !document.getElementById('febox') || document.hidden || window.DIARIO_DEMO) return;
   if (!window.DiarioPublico) return;
   FE.busy=1;FE.abort?.abort();const controller=new AbortController();FE.abort=controller;
   try {
-    const data=await window.DiarioPublico.get('/v1/fluxo',{signal:controller.signal,ttl:3600000});
+    const data=await window.DiarioPublico.get('/v1/fluxo',{signal:controller.signal,ttl:force?0:600000,force:!!force});
     if(controller.signal.aborted)return;
     if(!data.ultimo||!Array.isArray(data.linhas))throw Error('Fluxo público sem dados verificáveis.');
     FE.v=data;FE.err=data.desatualizado?'Snapshot de fluxo atrasado; confira a data efetiva.':'';
     try{ls.set('diario-fluxo',data);}catch(_){}
-    /* v811: fluxo × Ibovespa — BOVA11 (ETF que replica o índice) como referencial de fechamento. */
-    try{const s=await window.DiarioTecnico?.serie?.('BOVA11','br');if(s&&!controller.signal.aborted)FE.ibov=s;}catch(_){FE.ibov=null;}
+    /* v978: fluxo × Ibovespa — tenta BOVA11 e cai para IBOV/^BVSP caso BOVA11 não esteja no cache. */
+    try{
+      let s=await window.DiarioTecnico?.serie?.('BOVA11','br');
+      if(!s?.closes?.length) s=await window.DiarioTecnico?.serie?.('IBOV','br');
+      if(!s?.closes?.length) s=await window.DiarioTecnico?.serie?.('^BVSP','br');
+      if(s&&!controller.signal.aborted)FE.ibov=s;
+    }catch(_){FE.ibov=null;}
   }catch(e){if(e.name!=='AbortError')FE.err=String(e.message||e);}
   finally{FE.busy=0;if(!controller.signal.aborted){FE.ts=Date.now();const el=document.getElementById('febox');if(el)el.outerHTML=feHtml();}}
 }
@@ -45884,7 +45892,7 @@ const feMi = (e) => {
 function feHtml() {
   const e = FE.v;
   if (!e)
-    return `<div class="card" id="febox" style="margin-bottom:10px"><b>🌎 Fluxo estrangeiro na B3</b><div class="sm ${FE.err ? "am" : "mut"}" style="margin-top:4px">${esc(FE.err || "Carregando…")}</div></div>`;
+    return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><button type="button" class="btn s" data-fe-rf="1" style="padding:2px 8px">${FE.busy ? "…" : "↻"}</button></div><div class="sm ${FE.err ? "am" : "mut"}" style="margin-top:4px">${esc(FE.err || "Carregando…")}</div></div>`;
   const interpretation=window.DiarioInterpretacao?.flow(e.linhas||[]);
   const t = e.ultimo,
     a = (n) => (n > 0 ? "g" : n < 0 ? "r" : "mut"),
@@ -45897,15 +45905,24 @@ function feHtml() {
           `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="height:44px;width:100%;display:flex;flex-direction:column;justify-content:${n.est >= 0 ? "flex-end" : "flex-start"}"><div style="height:${Math.max(2, Math.round((22 * Math.abs(n.est)) / o))}px;background:${n.est >= 0 ? "var(--g,#2e8b5d)" : "var(--r,#dc3e26)"};border-radius:2px;${n.est >= 0 ? "margin-bottom:22px" : "margin-top:22px"}"></div></div><span style="font-size:9.5px" class="mut">${feDia(n.d)}</span></div>`,
       )
       .join("");
-  return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><span class="sm mut">${feDia(t.d)}</span></div>
+  return `<div class="card" id="febox" style="margin-bottom:10px"><div class="top"><b>🌎 Fluxo estrangeiro na B3</b><span style="display:flex;align-items:center;gap:6px"><span class="sm mut">${feDia(t.d)}</span><button type="button" class="btn s" data-fe-rf="1" style="padding:2px 8px" aria-label="Atualizar fluxo estrangeiro">${FE.busy ? "…" : "↻"}</button></span></div>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:6px 0"><div><div class="sm mut">No dia</div><b class="${a(t.est)}" style="font-size:18px">${feMi(t.est)}</b></div><div><div class="sm mut">No mês (${e.dias_no_mes} pregões)</div><b class="${a(e.mes)}" style="font-size:18px">${feMi(e.mes)}</b></div><div><div class="sm mut">Sequência</div><b>${e.dias_seguidos} dia(s) de ${esc(e.sentido)}</b></div></div>
 <div style="display:flex;gap:3px;align-items:stretch;margin:6px 0 2px">${s}</div>
 <div class="sm mut">Institucional ${feMi(t.inst)} · Pessoa física ${feMi(t.pf)} · Inst. financeira ${feMi(t.ifin)}. ${esc(e.obs || "")} Fonte: ${esc(e.fonte || "B3")}.</div>${(()=>{const dv=FE.ibov&&window.DiarioInterpretacao?.flowDivergence?.(e.linhas||[],FE.ibov.closes,'BOVA11');if(!dv)return '<p class="sm mut">Fluxo × Ibovespa: referencial do índice indisponível no momento.</p>';const w=dv.windows.map(x=>x.k+' pregões: fluxo '+feMi(x.flow)+' · índice '+(x.ret>0?'+':'')+x.ret.toLocaleString('pt-BR',{maximumFractionDigits:2})+'%').join(' · ');return '<p class="sm"><b>Fluxo × Ibovespa</b> (BOVA11 como referencial, mesmas datas). '+esc(dv.text)+'</p>'+(w?'<p class="sm mut">'+esc(w)+'</p>':'');})()}<p class="sm">${esc(interpretation?.text||"Histórico insuficiente para interpretar tendência.")}</p><div class="sm mut">5 / 10 / 20 pregões: ${[5,10,20].map(n=>interpretation?.windows[n]==null?"N/D":feMi(interpretation.windows[n])).join(" · ")} · ${esc(FE.err||"")}</div></div>`;
 }
+document.addEventListener("click", (ev) => {
+  if (ev.target.closest?.("[data-fe-rf]")) {
+    ev.preventDefault();
+    feCarrega(true);
+  }
+});
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && document.getElementById("febox")) feCarrega(false);
+});
 {
   const e = vPainelMk;
   vPainelMk = function () {
-    return (setTimeout(feCarrega, 0), feHtml() + e.apply(this, arguments));
+    return (setTimeout(() => feCarrega(false), 0), feHtml() + e.apply(this, arguments));
   };
 }
 {
@@ -55415,19 +55432,29 @@ ${t.pNeg > 0.4 ? '<div class="warn sm" style="margin-top:6px">Em mais de 4 de ca
     }
   };
 }
-var FLW = { d: null, busy: 0, err: "", venc: "", ts: 0 };
+var FLW = { d: null, adrs: [], busy: 0, err: "", venc: "", ts: 0 };
+const FLW_ADR_LIST = "EWZ,PBR,VALE,ITUB,BBD,ABEV,GGB,SID,SUZ,WEGZY,BBSEY,BDORY";
+const FLW_ADR_B3 = { PBR: "PETR4", VALE: "VALE3", ITUB: "ITUB4", BBD: "BBDC4", ABEV: "ABEV3", GGB: "GGBR4", SID: "CSNA3", SUZ: "SUZB3", WEGZY: "WEGE3", BBSEY: "BBAS3", BDORY: "BBDC3" };
+const FLW_ADR_PESO = { VALE: 14, PBR: 13, ITUB: 10, BBD: 6, BBSEY: 5, WEGZY: 4, ABEV: 4, SUZ: 3, GGB: 3, SID: 2, BDORY: 2 };
 async function flwCarrega(e) {
   if (FLW.busy || (!e && Date.now() - FLW.ts < 55e3 && FLW.d)) return;
   ((FLW.busy = 1), (FLW.err = ""), flwPinta());
   try {
     const u = new URL("https://diario-trader.lucianosilva43567.workers.dev/v1/ewz");
     if (FLW.venc) u.searchParams.set("venc", String(FLW.venc).slice(0, 10));
+    const uAdr = "https://diario-trader.lucianosilva43567.workers.dev/v1/adrs?s=" + FLW_ADR_LIST;
     // Público: nem Supabase, nem JWT, nem apikey. A Cloudflare responde do cache.
-    const a = await fetch(u.toString(), { method: "GET", credentials: "omit",
-      headers: { Accept: "application/json" }, signal: AbortSignal.timeout(25000) });
+    const [a, rAdr] = await Promise.all([
+      fetch(u.toString(), { method: "GET", credentials: "omit", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(25000) }),
+      fetch(uAdr, { method: "GET", credentials: "omit", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15000) }).catch(() => null),
+    ]);
     const o = await a.json().catch(() => ({}));
     if (!a.ok || !(Number(o.spot) > 0))
       throw new Error(o.error || o.erro || "Dados públicos do EWZ indisponíveis.");
+    if (rAdr && rAdr.ok) {
+      const ja = await rAdr.json().catch(() => null);
+      if (ja && Array.isArray(ja.itens) && ja.itens.length) FLW.adrs = ja.itens;
+    }
     ((FLW.d = o), (FLW.venc = o.venc || FLW.venc || ""), (FLW.err = ""));
   } catch (a) {
     FLW.d = null;
@@ -55529,29 +55556,69 @@ function flwHtml() {
     const sd20Pct = hvNum != null ? (hvNum * Math.sqrt(20 / 252) * 100).toFixed(1).replace(".", ",") + "%" : "—";
     let ewzExt = null, adrs = [];
     try {
-      const adList = (typeof AD !== "undefined" && AD?.data?.itens) || [];
+      const adList = (Array.isArray(FLW.adrs) && FLW.adrs.length) ? FLW.adrs : ((typeof AD !== "undefined" && AD?.data?.itens) || []);
       for (const it of adList) {
         const s0 = String(it?.s || it?.c || "").toUpperCase();
         if (s0 === "EWZ") ewzExt = it;
-        if (["EWZ", "PBR", "VALE", "ITUB", "BBD"].includes(s0) && Number.isFinite(Number(it?.px))) adrs.push(it);
+        if (s0 && s0 !== "EWZ" && Number.isFinite(Number(it?.px))) adrs.push(it);
       }
       if (!ewzExt && typeof mdoExt === "function") ewzExt = mdoExt();
     } catch {}
-    const d1 = ewzExt && Number.isFinite(Number(ewzExt.d1 ?? ewzExt.pct)) ? Number(ewzExt.d1 ?? ewzExt.pct) : null;
+    const d1 = ewzExt && Number.isFinite(Number(ewzExt.chp ?? ewzExt.d1 ?? ewzExt.pct)) ? Number(ewzExt.chp ?? ewzExt.d1 ?? ewzExt.pct) : null;
     const d1Html = d1 != null ? `<span class="chip ${d1 > 0 ? "g" : d1 < 0 ? "r" : ""}">${d1 > 0 ? "▲ +" : d1 < 0 ? "▼ " : ""}${d1.toFixed(2).replace(".", ",")}%</span>` : '<span class="chip">COTAÇÃO</span>';
-    const extHtml = ewzExt?.ext && Number.isFinite(Number(ewzExt.ext.px))
-      ? `<div class="sm" style="margin-top:6px"><b>Sessão estendida (${esc(ewzExt.ext.tipo || "NY")}):</b> US$ ${Number(ewzExt.ext.px).toFixed(2).replace(".", ",")} <b class="${Number(ewzExt.ext.pct) > 0 ? "g" : Number(ewzExt.ext.pct) < 0 ? "r" : "mut"}">(${Number(ewzExt.ext.pct) > 0 ? "+" : ""}${Number(ewzExt.ext.pct).toFixed(2).replace(".", ",")}%)</b></div>`
+    const extObj = ewzExt?.pos || ewzExt?.pre || ewzExt?.ext || null;
+    const extPx = extObj && Number.isFinite(Number(extObj.px)) ? Number(extObj.px) : null;
+    const extPct = extObj && Number.isFinite(Number(extObj.chp ?? extObj.pct)) ? Number(extObj.chp ?? extObj.pct) : null;
+    const extLbl = ewzExt?.pos?.px ? "Pós-mercado NY" : ewzExt?.pre?.px ? "Pré-mercado NY" : (extObj?.tipo || "NY");
+    const extHtml = extPx != null
+      ? `<div class="sm" style="margin-top:6px"><b>${esc(extLbl)}:</b> US$ ${extPx.toFixed(2).replace(".", ",")}${extPct != null ? ` <b class="${extPct > 0 ? "g" : extPct < 0 ? "r" : "mut"}">(${extPct > 0 ? "+" : ""}${extPct.toFixed(2).replace(".", ",")}%)</b>` : ""}</div>`
       : "";
+    /* v978: Termômetro de Pressão NY → IBOV/WIN ponderado pelas ADRs brasileiras (Commodities vs. Bancos). */
+    const pressHtml = (() => {
+      if (!adrs.length) return "";
+      let sw = 0, sp = 0, cw = 0, cp = 0, bw = 0, bp = 0, altas = 0, baixas = 0;
+      const comm = new Set(["VALE", "PBR", "GGB", "SID", "SUZ"]);
+      const banc = new Set(["ITUB", "BBD", "BBSEY", "BDORY"]);
+      for (const it of adrs) {
+        const tk = String(it.s || it.c || "").toUpperCase();
+        const ch = Number(it.chp ?? it.d1 ?? it.pct);
+        if (!Number.isFinite(ch)) continue;
+        const w = FLW_ADR_PESO[tk] || 2;
+        sw += w; sp += ch * w;
+        if (ch > 0.05) altas++; else if (ch < -0.05) baixas++;
+        if (comm.has(tk)) { cw += w; cp += ch * w; }
+        if (banc.has(tk)) { bw += w; bp += ch * w; }
+      }
+      if (!sw) return "";
+      const tot = sp / sw, vC = cw ? cp / cw : null, vB = bw ? bp / bw : null;
+      const pctBar = Math.max(6, Math.min(94, 50 + tot * 16));
+      const tom = tot > 0.15 ? "g" : tot < -0.15 ? "r" : "mut";
+      const lbl = tot > 0.35 ? "Pressão compradora" : tot < -0.35 ? "Pressão vendedora" : "Equilibrado";
+      const fP = (v) => (v == null ? "—" : (v > 0 ? "+" : "") + v.toFixed(2).replace(".", ",") + "%");
+      return `<div class="dt978-nybar" style="margin-top:10px;padding:10px 12px;border-radius:14px;background:var(--card2,rgba(255,255,255,.04));border:1px solid var(--bd,rgba(255,255,255,.09))">
+        <div class="top"><b>Pressão NY → IBOV / WIN</b><b class="${tom} mono">${fP(tot)} · ${lbl}</b></div>
+        <div style="height:7px;border-radius:999px;background:rgba(244,63,94,.28);overflow:hidden;margin:7px 0"><div style="width:${pctBar.toFixed(0)}%;height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:999px"></div></div>
+        <div class="sm mut" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between">
+          <span>Commodities: <b class="${vC > 0 ? "g" : vC < 0 ? "r" : "mut"}">${fP(vC)}</b></span>
+          <span>Bancos: <b class="${vB > 0 ? "g" : vB < 0 ? "r" : "mut"}">${fP(vB)}</b></span>
+          <span>${altas} alta · ${baixas} baixa</span>
+        </div>
+      </div>`;
+    })();
     const adrsHtml = adrs.length
-      ? `<div class="sm" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><b>ADRs brasileiras em NY</b><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${adrs.map((it) => {
-          const p = Number(it.d1 ?? it.pct);
+      ? `<div class="sm" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--bd)"><div class="top" style="margin-bottom:6px"><b>Ações brasileiras em NY (ADRs do EWZ)</b><span class="mut">${adrs.length} papéis</span></div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">${adrs.map((it) => {
+          const tk = String(it.s || it.c || "").toUpperCase();
+          const b3 = FLW_ADR_B3[tk] || "";
+          const p = Number(it.chp ?? it.d1 ?? it.pct);
           const cl = Number.isFinite(p) ? (p > 0 ? "g" : p < 0 ? "r" : "mut") : "mut";
-          return `<span class="chip">${esc(it.s || it.c)} <b>US$ ${Number(it.px).toFixed(2).replace(".", ",")}</b>${Number.isFinite(p) ? ` <i class="${cl}" style="font-style:normal">${p > 0 ? "+" : ""}${p.toFixed(2).replace(".", ",")}%</i>` : ""}</span>`;
+          return `<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 9px;border-radius:10px;background:var(--card2,rgba(255,255,255,.04));border:1px solid var(--bd,rgba(255,255,255,.08))"><div><b>${esc(tk)}</b>${b3 ? `<div class="mut" style="font-size:10px">${b3}</div>` : ""}</div><div style="text-align:right;font-variant-numeric:tabular-nums"><b class="mono">US$ ${Number(it.px).toFixed(2).replace(".", ",")}</b>${Number.isFinite(p) ? `<div class="${cl}" style="font-size:11px;font-weight:700">${p > 0 ? "+" : ""}${p.toFixed(2).replace(".", ",")}%</div>` : ""}</div></div>`;
         }).join("")}</div></div>`
-      : "";
+      : '<div class="sm mut" style="margin-top:10px">Carregando ADRs brasileiras em NY…</div>';
     const pr = `Analise o cenário do EWZ hoje (US$ ${spot.toFixed(2)}, volatilidade realizada 20d ${hv}${d1 != null ? `, variação ${d1.toFixed(2)}%` : ""}) e o que isso sinaliza para a abertura do Ibovespa / WIN e fluxo estrangeiro.`;
-    return `<div id="flwbox"><div class="card"><div class="top"><b>EWZ US$ ${spot.toFixed(2).replace(".", ",")}</b>${d1Html}</div>
+    if (typeof window !== "undefined") window.__dt976EwzPrompt = pr;
+    return `<div id="flwbox"><div class="card"><div class="top"><b>EWZ US$ ${spot.toFixed(2).replace(".", ",")}</b><span style="display:flex;align-items:center;gap:6px">${d1Html}<button type="button" class="btn s" data-flw-rf="1" style="padding:3px 8px" aria-label="Atualizar EWZ e ADRs">${FLW.busy ? "…" : "↻"}</button></span></div>
       ${extHtml}
+      ${pressHtml}
       <div class="rrdg" style="margin-top:8px">
         <div><small>Vol. realizada (20d)</small><b class="mono">${hv}</b><i>anualizada · Yahoo/CF</i></div>
         <div><small>Faixa 1σ diária</small><b class="mono">${sd1 != null ? "±" + sd1Pct : "—"}</b><i>${sd1 != null ? `US$ ${(spot - sd1).toFixed(2).replace(".", ",")} – ${(spot + sd1).toFixed(2).replace(".", ",")}` : "calculada da HV20"}</i></div>
@@ -55559,8 +55626,8 @@ function flwHtml() {
         <div><small>Feed de opções CBOE</small><b class="mono">Pausado</b><i>sem cadeia pública ao vivo</i></div>
       </div>
       ${adrsHtml}
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"><button type="button" class="btn s" onclick="window.DiarioConselhoIA&&window.DiarioConselhoIA('schwartz','Leitura EWZ · Áurea',${JSON.stringify(pr)})">✦ Analisar EWZ com Áurea</button></div>
-      <div class="sm mut" style="margin-top:8px">Cadeia de opções (IV, prêmio líquido, open interest, gregas e boletas) requer feed autorizado da CBOE. Os dados acima usam apenas cotação e volatilidade realizada verificáveis.</div></div></div>`;
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"><button type="button" class="btn s" data-flw-aurea="1">✦ Analisar EWZ com Áurea</button></div>
+      <div class="sm mut" style="margin-top:8px">Cadeia de opções (IV, prêmio líquido, open interest, gregas e boletas) requer feed autorizado da CBOE. Os dados acima usam cotação, volatilidade realizada e ADRs em NY verificáveis.</div></div></div>`;
   }
   const t = e.vol || {},
     a = (n) => (n == null ? "–" : (n * 100).toFixed(1).replace(".", ",") + "%"),
@@ -55618,6 +55685,18 @@ function flwSobre() {
   const t = e.target.closest("[data-flv]");
   if (t) {
     ((FLW.venc = t.dataset.flv), flwCarrega(!0));
+    return;
+  }
+  if (e.target.closest("[data-flw-rf]")) {
+    e.preventDefault();
+    flwCarrega(!0);
+    return;
+  }
+  if (e.target.closest("[data-flw-aurea]")) {
+    e.preventDefault();
+    if (typeof window.DiarioConselhoIA === "function") {
+      window.DiarioConselhoIA("schwartz", "Leitura EWZ · Áurea", window.__dt976EwzPrompt || "");
+    }
     return;
   }
 }),
@@ -79970,11 +80049,15 @@ const JR_PNOME = {
   (JRN.atu = null),
   (JRN.pst = {}),
   (jrCarrega = async function (e) {
+    if (JRN.busy && e && Date.now() - (JRN.t0 || 0) > 15e3) {
+      JRN.busy = 0;
+    }
     if (
       JRN.busy ||
       (!e && JRN.v && !JRN.v.antiga && JRN.v.dia + JRN.v.edicao === jrAgoraK())
     )
       return;
+    const seq978 = (JRN.seq = (JRN.seq || 0) + 1);
     ((JRN.busy = 1),
       (JRN.err = ""),
       (JRN.motivo = ""),
@@ -79986,6 +80069,13 @@ const JR_PNOME = {
       (JRN.atu = null),
       (JRN.plist = ["A", "B1", "B2", "C"]),
       jrPinta());
+    const wd978 = setTimeout(() => {
+      if (JRN.seq === seq978 && JRN.busy) {
+        JRN.busy = 0;
+        JRN.err = "A conexão demorou para responder. Toque em ↻ Atualizar para tentar de novo.";
+        jrPinta();
+      }
+    }, 95e3);
     const t = setInterval(() => {
       const a = document.querySelector("#jrbox .jrvaz[data-esp]");
       a && (a.innerHTML = jrEsperaTx());
@@ -80097,9 +80187,21 @@ const JR_PNOME = {
           : JRN.auto &&
             (JRN.err += " Toque em ↻ Atualizar para tentar de novo."));
     } finally {
-      (clearInterval(t), (JRN.busy = 0), jrPinta());
+      (clearTimeout(wd978), clearInterval(t), JRN.seq === seq978 && (JRN.busy = 0), jrPinta());
     }
   }));
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && typeof tab !== "undefined" && tab === "mercado" && MKT?.tab === "jr") {
+    if (JRN.busy && Date.now() - (JRN.t0 || 0) > 25e3) {
+      JRN.busy = 0;
+    }
+    const kNow = typeof jrAgoraK === "function" ? jrAgoraK() : "";
+    if (kNow && JRN.v && JRN.v.dia + JRN.v.edicao !== kNow && !JRN.busy) {
+      delete JRN.tent[kNow];
+      jrCarrega(!1);
+    }
+  }
+});
 function jrPartesLinha() {
   return (JRN.plist || ["A", "B1", "B2", "C"])
     .map(
@@ -99328,7 +99430,7 @@ Depois ele abre em janela própria, sem a barra do navegador, com ícone na áre
               !document.querySelector(".trinst") &&
               r.insertAdjacentHTML(
                 "beforebegin",
-                '<button class="trbtn trinst" onclick="trInstalar()" title="Instalar o Diário de Trader como aplicativo no computador">⬇ Instalar no PC</button>',
+                '<button class="trbtn trinst" data-tr-inst="1" title="Instalar o Diário de Trader como aplicativo no computador">⬇ Instalar no PC</button>',
               );
           }
         } catch {}
