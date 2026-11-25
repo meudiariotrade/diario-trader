@@ -7064,7 +7064,12 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt975-calc-slot [data-posi
  box-shadow:0 14px 30px rgba(0,0,0,.38),inset 0 1.5px 0 rgba(255,255,255,.16)
 }
 #app[data-tela="estudos"] .au-dashboard{padding:16px;border-color:rgba(212,175,106,.24)}
-#app[data-tela="estudos"] .au-study-filters{padding:10px 12px}
+#app[data-tela="estudos"] .au-study-filters{padding:10px 12px;box-sizing:border-box;max-width:100%;min-width:0;flex-wrap:wrap;overflow-x:visible}
+ /* v977: os filtros preservam a largura intrínseca do rótulo, mesmo com o padding 3D. */
+ #app[data-tela="estudos"] .dt397-studies .au-study-filters [data-austfilter]{flex:1 0 auto;min-width:max-content!important;width:auto;max-width:100%;box-sizing:border-box;white-space:nowrap!important;min-height:44px}
+ @media(max-width:649px){
+  #app[data-tela="estudos"] .dt397-studies .au-study-filters [data-austfilter]{flex:1 0 calc(50% - 4px);min-width:max-content!important;padding-inline:8px}
+ }
 #app[data-tela="estudos"] .au-item{padding:14px;margin-bottom:10px}
 .dt976-est-tip{
  margin-top:10px;border-radius:13px;padding:10px 12px;font-size:.78rem;line-height:1.45;color:#e2e8f0;
