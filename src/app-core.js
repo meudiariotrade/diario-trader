@@ -40233,32 +40233,44 @@ function macroAuthHeaders(config) {
 }
 async function mdoCarrega(e) {
   if (MDO.busy || (!e && ((MDO.v && Date.now() - MDO.ts < 5 * 6e4) || (MDO.errTs && Date.now() - MDO.errTs < 2 * 6e4)))) return;
-  const t = cfg();
-  if (!t) {
-    ((MDO.err = "Configure o Supabase na aba Conta."), mdoPaint());
-    return;
-  }
   ((MDO.busy = 1), (MDO.err = ""), mdoPaint());
   try {
-    const a = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
-        method: "POST",
-        headers: macroAuthHeaders(t),
-        body: "{}",
-      }),
-      o = await a.json();
-    if (!a.ok)
-      throw new Error(
-        a.status === 404
-          ? 'Função "macro" não encontrada: publique-a no Supabase.'
-          : o.error || "Erro " + a.status,
-      );
+    let o = null;
+    if (window.DiarioPublico?.get) {
+      try {
+        const pub = await window.DiarioPublico.get("/v1/mercado", { ttl: e ? 15e3 : 3e5 });
+        if (pub && typeof pub === "object" && (pub.mercados || pub.brasil)) o = pub;
+      } catch {}
+    }
+    if (!o) {
+      const t = cfg();
+      if (!t) throw new Error("Configure o Supabase na aba Conta.");
+      const a = await edgeFetchAutenticado(t.url + "/functions/v1/macro", {
+          method: "POST",
+          headers: macroAuthHeaders(t),
+          body: "{}",
+        }),
+        j = await a.json();
+      if (!a.ok)
+        throw new Error(
+          a.status === 404
+            ? 'Função "macro" não encontrada: publique-a no Supabase.'
+            : j.error || "Erro " + a.status,
+        );
+      o = j;
+    }
     ((MDO.v = o), (MDO.ts = Date.now()), (MDO.errTs = 0));
     try {
       ls.set("diario-mdo", o);
     } catch {}
   } catch (a) {
-    MDO.err = String(a.message || a);
-    MDO.errTs = Date.now();
+    const cached = window.DiarioPublico?.peek?.("/v1/mercado");
+    if (cached && (cached.mercados || cached.brasil)) {
+      ((MDO.v = cached), (MDO.ts = Date.now()), (MDO.err = ""), (MDO.errTs = 0));
+    } else {
+      MDO.err = String(a.message || a);
+      MDO.errTs = Date.now();
+    }
   }
   ((MDO.busy = 0), mdoPaint());
 }
