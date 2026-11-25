@@ -542,7 +542,7 @@ function hook(){
 }
 hook();
 // o painel do Terminal é montado de forma assíncrona; confere só enquanto a aba Terminal estiver aberta
-setInterval(()=>{if(doc.hidden)return;if(g(()=>tab,'')==='term'||g(()=>root.V428_gpHost&&root.V428_gpHost(),null)){if(!root.render0?.__v421)hook();mount()}},1200);
+setInterval(()=>{if(doc.hidden)return;if(g(()=>tab,'')==='term'||g(()=>root.V428_gpHost&&root.V428_gpHost(),null)){if(!root.render0?.__v421)hook();mount()}},2500);
 // atualiza o preço do cabeçalho e o gráfico sem redesenhar a página
 setInterval(()=>{if(!doc.hidden&&g(()=>tab,'')==='term'&&doc.getElementById('v421-gp'))load(false)},60000);
 root.DIARIO_GP421={paint,load,state:()=>st,view:()=>({...gpView}),reset:navReset};
