@@ -6732,62 +6732,9 @@ try {
     "use strict";
     const i = e.document;
     if (!i) return;
-    const f = 12;
-    function a() {
-      const n = i.getElementById("app");
-      if (!n) return;
-      const o = n.querySelectorAll(
-        "*:not(svg):not(svg *):not(canvas):not([data-v502fs])",
-      );
-      let s = 0;
-      for (const t of o) {
-        if (s > 4e3) break;
-        if (
-          (s++,
-          !t.firstChild ||
-            (t.firstChild.nodeType !== 3 && !t.childNodes.length))
-        )
-          continue;
-        let u = !1;
-        for (const p of t.childNodes)
-          if (p.nodeType === 3 && p.nodeValue.trim()) {
-            u = !0;
-            break;
-          }
-        if (!u) continue;
-        const c = parseFloat(getComputedStyle(t).fontSize);
-        c &&
-          c < f - 0.2 &&
-          (t.style.setProperty("font-size", f + "px", "important"),
-          t.setAttribute("data-v502fs", String(c)));
-      }
-    }
-    let l = 0;
-    const r = () => {
-      (clearTimeout(l),
-        (l = setTimeout(() => {
-          try {
-            a();
-          } catch {}
-        }, 120)));
-    };
-    function v() {
-      if (typeof e.render0 != "function" || e.render0.__v502) return;
-      const n = e.render0,
-        o = function () {
-          const s = n.apply(this, arguments);
-          return (r(), s);
-        };
-      ((o.__v502 = 1), (e.render0 = o));
-    }
-    let d = 0;
-    const y = setInterval(() => {
-      (d++, v(), r(), d > 20 && clearInterval(y));
-    }, 700);
-    (setInterval(() => {
-      i.hidden || r();
-    }, 3e3),
-      (e.DIARIO_V502 = { ajusta: a }));
+    /* v973: desativa loop legado v502 (getComputedStyle + font-size:12px !important em até 4.000 nós a cada render/700ms/3s)
+       que causava tremor e letras aumentando/diminuindo em várias telas; a tipografia é controlada direto no CSS. */
+    e.DIARIO_V502 = { ajusta: () => {} };
   })(window);
 } catch (e) {
   console.error("[v522] falha em design-v502.js", e);
