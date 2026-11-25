@@ -1,0 +1,25 @@
+name: Validacao especifica v975
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  testes:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Preparar navegador
+        run: |
+          diario_browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$diario_browser" ]; then
+            printf 'CHROMIUM_PATH=%s\n' "$diario_browser" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - run: npm run build && npm run check
+      - run: node --test tests/build.test.cjs tests/publicacao.test.cjs tests/jornal-subabas.test.cjs tests/inicio-meudia-contextual-v810.test.cjs tests/inicio-meudia-operacoes-v810.test.cjs tests/termometro-abertura-v670.test.cjs tests/calculadora-card-real-v673.test.cjs tests/v846-ajustes.test.cjs tests/auditar-egress-v938.test.cjs
