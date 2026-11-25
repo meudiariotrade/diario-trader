@@ -6554,3 +6554,360 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt974-fech60{
 }
 html:root:root:root[data-v427-tema="claro"] #app#app .dt974-fech60-top span{color:#8a5e14!important}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt974-fech60-top b{color:#0f172a!important}
+
+/* ==========================================================================
+   v975: Início, Rotina & Trades — Novas Telas Liquid Glass 3D (Escuro & Claro)
+   100% CSS puro · Zero tremor · Zero salto de fonte · Zero sobreposição
+   ========================================================================== */
+html,body{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important}
+#app[data-tela="home"],#app[data-tela="dia"],#app[data-tela="ops"]{animation:none!important}
+#app :is(.dt975-home,.dt975-day,.dt975-ops){
+ font-variant-numeric:tabular-nums
+}
+
+/* Botões e Badges 3D reutilizáveis (Início, Rotina, Trades) */
+#app .dt975-btn-gold,
+#app .dt975-pill-gold{
+ min-height:44px;padding:10px 14px;border-radius:14px!important;cursor:pointer;
+ font-weight:800;font-size:13.5px;letter-spacing:.01em;color:#111318!important;
+ background:linear-gradient(180deg,#e8c67e 0%,#c79a44 100%)!important;
+ border:1px solid rgba(255,236,184,.58)!important;
+ box-shadow:0 8px 20px rgba(199,154,68,.26),inset 0 1px 0 rgba(255,248,225,.65)!important;
+ display:inline-flex;align-items:center;justify-content:center;gap:6px
+}
+#app .dt975-btn-glass,
+#app .dt975-pill-glass{
+ min-height:44px;padding:10px 14px;border-radius:14px!important;cursor:pointer;
+ font-weight:700;font-size:13.5px;color:#e8edf5!important;
+ background:linear-gradient(180deg,rgba(34,42,58,.9),rgba(18,22,32,.96))!important;
+ border:1px solid rgba(255,255,255,.14)!important;
+ box-shadow:0 6px 16px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.14)!important;
+ display:inline-flex;align-items:center;justify-content:center;gap:6px
+}
+#app .dt975-pill-gold,#app .dt975-pill-glass{min-height:38px;padding:7px 13px;border-radius:999px!important;font-size:12.5px}
+#app .dt975-badge{
+ display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;
+ font-size:11px;font-weight:800;letter-spacing:.03em;white-space:nowrap
+}
+#app .dt975-badge.ok{color:#4ade80;background:rgba(34,197,94,.14);border:1px solid rgba(74,222,128,.4);box-shadow:0 0 16px rgba(34,197,94,.16)}
+#app .dt975-badge.am{color:#f5d07a;background:rgba(212,175,105,.15);border:1px solid rgba(212,175,105,.45)}
+#app .dt975-badge.no{color:#f87171;background:rgba(239,68,68,.15);border:1px solid rgba(248,113,113,.45)}
+#app .dt975-pbar{
+ height:8px;border-radius:999px;overflow:hidden;margin:10px 0 6px;
+ background:rgba(255,255,255,.08);box-shadow:inset 0 1px 3px rgba(0,0,0,.45)
+}
+#app .dt975-pbar>i{
+ display:block;height:100%;border-radius:999px;
+ background:linear-gradient(90deg,#c5973f,#f0d48f);
+ box-shadow:0 0 10px rgba(212,175,105,.45)
+}
+#app .dt975-pbar.ok>i{background:linear-gradient(90deg,#16a34a,#4ade80);box-shadow:0 0 10px rgba(74,222,128,.4)}
+#app .dt975-pbar.no>i{background:linear-gradient(90deg,#dc2626,#f87171);box-shadow:0 0 10px rgba(248,113,113,.4)}
+#app .dt975-pmeta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:#9aa4b6}
+#app .dt975-pmeta b{color:#f1f5f9}
+
+/* Superfícies Liquid Glass 3D (Escuro) para Início, Rotina e Trades */
+#app :is(.dt975-home,.dt975-day,.dt975-ops) :is(.v4-card,.ui-card,.dt670-opening,.v810-day-context,details.v810-more,details.v4-card){
+ background:linear-gradient(180deg,rgba(26,32,45,.9),rgba(13,17,25,.97))!important;
+ border:1px solid rgba(255,255,255,.11)!important;border-radius:18px!important;
+ box-shadow:0 12px 28px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.14)!important
+}
+
+/* ---- TELA 1: INÍCIO 3D ---- */
+#app .dt975-home .v810-modebar{
+ display:flex!important;align-items:center!important;gap:8px!important;margin:0 0 12px!important;
+ padding:4px!important;border-radius:16px!important;
+ background:linear-gradient(180deg,rgba(28,34,46,.88),rgba(14,18,26,.96))!important;
+ border:1px solid rgba(255,255,255,.11)!important;
+ box-shadow:0 8px 20px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.12)!important
+}
+#app .dt975-home .dt975-phase{
+ flex:1 1 auto!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:4px!important;margin:0!important;padding:0!important;background:none!important;border:0!important
+}
+#app .dt975-home .dt975-phase button{
+ min-height:36px!important;height:36px!important;padding:0 8px!important;border-radius:12px!important;
+ border:1px solid transparent!important;background:transparent!important;color:#9aa4b6!important;
+ font-size:13px!important;font-weight:700!important;justify-content:center!important;white-space:nowrap!important
+}
+#app .dt975-home .dt975-phase button i{display:none!important}
+#app .dt975-home .dt975-phase button.on{
+ background:linear-gradient(180deg,#e6c37a,#be923f)!important;color:#111318!important;
+ border-color:rgba(255,238,190,.55)!important;
+ box-shadow:0 4px 12px rgba(190,146,63,.35),inset 0 1px 0 rgba(255,248,225,.65)!important
+}
+#app .dt975-home .v810-modebar .v810-auto{
+ flex:0 0 auto!important;width:auto!important;min-height:36px!important;height:36px!important;
+ padding:0 11px!important;border-radius:12px!important;font-size:12px!important;font-weight:700!important;
+ border:1px solid rgba(255,255,255,.12)!important;background:rgba(255,255,255,.04)!important;color:#cbd5e1!important
+}
+#app .dt975-home .v810-modebar .v810-auto.on{
+ border-color:rgba(212,175,105,.45)!important;color:#f3d48c!important;background:rgba(212,175,105,.12)!important
+}
+#app .dt975-home .v829-kpis{margin:0 0 12px!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important}
+#app .dt975-home .v829-kpis .ui-kpis{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important
+}
+@media(min-width:900px){#app .dt975-home .v829-kpis .ui-kpis{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+#app .dt975-home .v829-kpis .ui-kpi,
+#app .dt975-day .v829-kpis .ui-kpi{
+ background:linear-gradient(180deg,rgba(30,37,52,.9),rgba(15,19,28,.97))!important;
+ border:1px solid rgba(255,255,255,.11)!important;border-radius:15px!important;padding:10px 10px!important;
+ box-shadow:0 8px 18px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.13)!important
+}
+#app .dt975-home .dt670-opening{
+ margin:0 0 12px!important;padding:14px 15px!important;
+ border-color:rgba(212,175,105,.32)!important
+}
+#app .dt975-home .dt670-opening .dt670-instrument{
+ background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02))!important;
+ border:1px solid rgba(255,255,255,.09)!important;border-radius:14px!important;padding:11px 12px!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.09)!important
+}
+#app .dt975-home .dt975-iacard{
+ border-color:rgba(212,175,105,.4)!important;
+ box-shadow:0 12px 28px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,232,175,.24)!important
+}
+#app .dt975-ia-acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:2px 0 12px}
+
+/* ---- TELA 2: ROTINA 3D ---- */
+#app .dt975-rot-hero{
+ margin:0 0 12px!important;padding:15px!important;
+ border-color:rgba(212,175,105,.36)!important;
+ box-shadow:0 14px 30px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,232,175,.22)!important
+}
+#app .dt975-rot-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+#app .dt975-date{
+ display:inline-flex;align-items:center;gap:4px;padding:3px 6px;border-radius:999px;
+ background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.11)
+}
+#app .dt975-date button{
+ min-width:28px;min-height:28px;border:0;border-radius:999px;background:transparent;color:#cbd5e1;font-size:15px;font-weight:700;cursor:pointer
+}
+#app .dt975-date label{position:relative;display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:#e2e8f0;padding:0 4px;cursor:pointer}
+#app .dt975-date input[type="date"]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+html body #app#app .dt975-rot-title{margin:0!important;font-size:20px!important;font-weight:800!important;color:#f8fafc!important;line-height:1.2!important}
+#app .dt975-rot-sub{margin:4px 0 0;font-size:12.5px;color:#9aa4b6;line-height:1.35}
+#app .dt975-rot-acts{display:grid;grid-template-columns:1.4fr 1fr;gap:8px;margin-top:12px}
+
+html body #app#app .dt975-rot-step{
+ position:static!important;display:flex!important;align-items:center!important;gap:6px!important;
+ margin:0 0 12px!important;padding:6px!important;border-radius:16px!important;
+ background:linear-gradient(180deg,rgba(28,34,46,.9),rgba(14,18,26,.97))!important;
+ border:1px solid rgba(255,255,255,.11)!important;
+ box-shadow:0 8px 20px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.12)!important
+}
+html body #app#app .dt975-rot-step>button[data-v4phase]{
+ flex:1 1 0!important;min-width:0!important;min-height:44px!important;padding:6px 6px!important;border-radius:12px!important;border:1px solid transparent!important;
+ background:transparent!important;color:#9aa4b6!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;
+ font-size:13px!important;font-weight:700!important;cursor:pointer
+}
+html body #app#app .dt975-rot-step>button[data-v4phase] i{
+ width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+ font-style:normal;font-size:11.5px;font-weight:800;background:rgba(255,255,255,.08);color:#cbd5e1;flex-shrink:0
+}
+html body #app#app .dt975-rot-step>button[data-v4phase].on{
+ background:linear-gradient(180deg,rgba(212,175,105,.24),rgba(166,128,58,.12))!important;
+ border-color:rgba(212,175,105,.52)!important;color:#f8fafc!important;
+ box-shadow:0 4px 12px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,232,175,.28)!important
+}
+html body #app#app .dt975-rot-step>button[data-v4phase].on i{
+ background:linear-gradient(180deg,#e8c67e,#c4963f);color:#111318
+}
+#app .dt975-step-auto{
+ flex:0 0 auto;min-height:36px;padding:0 9px;border-radius:10px;border:1px solid rgba(212,175,105,.45);
+ background:rgba(212,175,105,.12);color:#f3d48c;font-size:11.5px;font-weight:700;cursor:pointer
+}
+html body #app#app .dt975-day .v4-emo{
+ margin:0 0 12px!important;padding:13px 14px!important;border-radius:18px!important;overflow:visible!important;
+ background:linear-gradient(180deg,rgba(26,32,45,.9),rgba(13,17,25,.97))!important;
+ border:1px solid rgba(255,255,255,.11)!important;
+ box-shadow:0 10px 24px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.13)!important
+}
+html body #app#app .dt975-day .v4-emo .v4-emo-row{
+ display:flex!important;flex-wrap:wrap!important;grid-template-columns:none!important;overflow:visible!important;
+ gap:7px!important;margin-top:9px!important
+}
+html body #app#app .dt975-day .v4-emo .v4-emo-row button{
+ flex:1 1 calc(33.33% - 7px)!important;min-width:86px!important;min-height:38px!important;padding:6px 10px!important;border-radius:999px!important;
+ background:linear-gradient(180deg,rgba(36,44,60,.88),rgba(19,24,35,.95))!important;
+ border:1px solid rgba(255,255,255,.12)!important;color:#cbd5e1!important;font-weight:700!important;font-size:12.5px!important;
+ box-shadow:0 4px 10px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.12)!important
+}
+html body #app#app .dt975-day .v4-emo .v4-emo-row button.on{
+ background:linear-gradient(180deg,#e8c67e,#c4963f)!important;color:#111318!important;
+ border-color:rgba(255,236,184,.6)!important;
+ box-shadow:0 6px 16px rgba(196,150,63,.35),inset 0 1px 0 rgba(255,248,225,.65)!important
+}
+#app .dt975-day .v829-kpis{margin:0 0 12px!important}
+#app .dt975-day .v829-kpis .ui-kpis{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+@media(min-width:900px){#app .dt975-day .v829-kpis .ui-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+
+/* ---- TELA 3: TRADES 3D ---- */
+#app .org-opsnav{
+ padding:4px!important;border-radius:16px!important;gap:4px!important;margin:0 0 12px!important;
+ background:linear-gradient(180deg,rgba(28,34,46,.9),rgba(14,18,26,.96))!important;
+ border:1px solid rgba(255,255,255,.11)!important;
+ box-shadow:0 8px 20px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.12)!important
+}
+#app .org-opsnav button{
+ height:38px!important;border-radius:12px!important;border:1px solid transparent!important;
+ background:transparent!important;color:#9aa4b6!important;font-weight:700!important;font-size:13px!important
+}
+#app .org-opsnav button.on{
+ background:linear-gradient(180deg,#e8c67e,#c4963f)!important;color:#111318!important;
+ border-color:rgba(255,236,184,.58)!important;
+ box-shadow:0 4px 12px rgba(196,150,63,.35),inset 0 1px 0 rgba(255,248,225,.65)!important
+}
+#app .dt975-ops-hero{
+ margin:0 0 12px!important;padding:16px 15px!important;
+ border-color:rgba(212,175,105,.38)!important;
+ box-shadow:0 14px 32px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,232,175,.24)!important
+}
+#app .dt975-ops-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#app .dt975-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;color:#9aa4b6}
+#app .dt975-ops-pl{
+ display:block;margin:8px 0 4px;font-size:32px;line-height:1.1;font-weight:800;letter-spacing:-.02em;
+ font-variant-numeric:tabular-nums;color:#f8fafc
+}
+#app .dt975-ops-pl.v-pos{color:#4ade80}
+#app .dt975-ops-pl.v-neg{color:#f87171}
+#app .dt975-ops-sub{margin:0 0 8px;font-size:12.5px;color:#9aa4b6}
+#app .dt975-rwrap{margin:4px 0 14px}
+#app .dt975-ops-acts{display:grid;grid-template-columns:1.35fr 1fr;gap:8px}
+#app .dt975-calc-slot{margin:0 0 12px}
+#app .dt975-calc-slot:empty,#app .dt975-calc-slot:has([data-posicao-painel]:not([open])){display:none!important}
+#app .dt975-calc-slot [data-posicao-painel]:not([open]){display:none!important}
+#app .dt975-calc-slot [data-posicao-painel]{
+ background:linear-gradient(180deg,rgba(26,32,45,.9),rgba(13,17,25,.97))!important;
+ border:1px solid rgba(255,255,255,.11)!important;border-radius:16px!important;
+ box-shadow:0 10px 24px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.12)!important;
+ padding:0 14px!important;margin:0!important
+}
+
+/* Linhas 3D de Trades de hoje no mobile; tabela completa no desktop */
+#app .dt975-trlist{display:flex;flex-direction:column;gap:8px}
+#app .dt975-tr-row{
+ position:relative;overflow:hidden;
+ width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+ padding:11px 13px 11px 16px;border-radius:14px;text-align:left;cursor:pointer;
+ background:linear-gradient(180deg,rgba(32,39,54,.88),rgba(16,20,30,.96));
+ border:1px solid rgba(255,255,255,.1);
+ box-shadow:0 6px 16px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.12);
+ color:#f1f5f9
+}
+#app .dt975-tr-row::before{
+ content:"";position:absolute;left:5px;top:9px;bottom:9px;width:3px;border-radius:999px;background:#64748b
+}
+#app .dt975-tr-row.pos::before{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.45)}
+#app .dt975-tr-row.neg::before{background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,.45)}
+#app .dt975-tr-l{display:flex;flex-direction:column;gap:2px;min-width:0}
+#app .dt975-tr-l b{font-size:14.5px;font-weight:800;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#app .dt975-tr-l small{font-size:12px;color:#9aa4b6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#app .dt975-tr-r{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#app .dt975-tr-r strong{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums}
+#app .dt975-tr-disc{
+ font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap
+}
+#app .dt975-tr-disc.ok{background:rgba(212,175,105,.15);border:1px solid rgba(212,175,105,.4);color:#f3d48c}
+#app .dt975-tr-disc.no{background:rgba(239,68,68,.16);border:1px solid rgba(248,113,113,.45);color:#fca5a5}
+#app .dt975-trdesk{display:none}
+@media(min-width:761px){
+ #app .dt975-trlist{display:none}
+ #app .dt975-trdesk{display:block}
+}
+
+/* ---- TEMA CLARO (Porcelana Liquid Glass 3D — Início, Rotina & Trades) ---- */
+html:root:root:root[data-v427-tema="claro"] #app#app :is(.dt975-home,.dt975-day,.dt975-ops) :is(.v4-card,.ui-card,.dt670-opening,.v810-day-context,details.v810-more,details.v4-card,.v4-emo){
+ background:linear-gradient(180deg,#ffffff,#f3f6fb)!important;
+ border:1px solid rgba(15,23,42,.1)!important;
+ box-shadow:0 10px 26px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-home .v810-modebar,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-rot-step,
+html:root:root:root[data-v427-tema="claro"] #app#app .org-opsnav{
+ background:linear-gradient(180deg,#ffffff,#edf1f7)!important;
+ border:1px solid rgba(15,23,42,.1)!important;
+ box-shadow:0 6px 18px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-home .dt975-phase button,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-rot-step>button[data-v4phase],
+html:root:root:root[data-v427-tema="claro"] #app#app .org-opsnav button{color:#475569!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-home .dt975-phase button.on,
+html:root:root:root[data-v427-tema="claro"] #app#app .org-opsnav button.on{
+ background:linear-gradient(180deg,#e8c67e,#c7983e)!important;color:#111318!important;border-color:rgba(154,107,26,.45)!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-rot-step>button[data-v4phase].on{
+ background:linear-gradient(180deg,#fffaf0,#f6e8ca)!important;border-color:rgba(180,126,38,.5)!important;color:#0f172a!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-rot-step>button[data-v4phase] i{background:#e2e8f0;color:#334155}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-rot-step>button[data-v4phase].on i{background:linear-gradient(180deg,#d8ad56,#b07d24);color:#ffffff}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-home .v810-modebar .v810-auto{
+ background:#ffffff!important;border-color:rgba(15,23,42,.12)!important;color:#334155!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-home .v810-modebar .v810-auto.on{
+ background:#fef7e6!important;border-color:rgba(180,126,38,.45)!important;color:#8a5e14!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-home .v829-kpis .ui-kpi,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-day .v829-kpis .ui-kpi{
+ background:linear-gradient(180deg,#ffffff,#f4f7fc)!important;border:1px solid rgba(15,23,42,.1)!important;
+ box-shadow:0 6px 16px rgba(15,23,42,.07),inset 0 1.5px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-home .dt670-opening .dt670-instrument{
+ background:#f8fafd!important;border-color:rgba(15,23,42,.09)!important;box-shadow:none!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-rot-hero,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-ops-hero,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-home .dt975-iacard{
+ border-color:rgba(180,126,38,.36)!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-rot-title,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-ops-pl,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-pmeta b,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-date label,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-tr-l b{color:#0f172a!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-ops-pl.v-pos{color:#15803d!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-ops-pl.v-neg{color:#dc2626!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-rot-sub,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-ops-sub,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-pmeta,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-kicker,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-tr-l small{color:#475569!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-btn-gold,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-pill-gold{
+ background:linear-gradient(180deg,#e8c67e 0%,#c79a44 100%)!important;color:#111318!important;
+ border:1px solid rgba(154,107,26,.48)!important;
+ box-shadow:0 8px 18px rgba(154,107,26,.22),inset 0 1px 0 rgba(255,248,225,.7)!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-btn-glass,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-pill-glass,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-day .v4-emo .v4-emo-row button{
+ background:linear-gradient(180deg,#ffffff,#eef2f7)!important;color:#0f172a!important;
+ border:1px solid rgba(15,23,42,.13)!important;
+ box-shadow:0 4px 12px rgba(15,23,42,.08),inset 0 1px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-day .v4-emo .v4-emo-row button.on{
+ background:linear-gradient(180deg,#e8c67e,#c7983e)!important;color:#111318!important;border-color:rgba(154,107,26,.45)!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-date{background:#f1f5f9;border-color:rgba(15,23,42,.12)}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-date button{color:#334155}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-pbar{background:rgba(15,23,42,.09);box-shadow:inset 0 1px 2px rgba(15,23,42,.12)}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-badge.ok{color:#15803d;background:#dcfce7;border-color:#86efac;box-shadow:none}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-badge.am{color:#92400e;background:#fef3c7;border-color:#fcd34d}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-badge.no{color:#b91c1c;background:#fee2e2;border-color:#fca5a5}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-tr-row{
+ background:linear-gradient(180deg,#ffffff,#f4f7fc);border-color:rgba(15,23,42,.1);
+ box-shadow:0 6px 16px rgba(15,23,42,.07),inset 0 1px 0 #ffffff;color:#0f172a
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-tr-disc.ok{background:#fef3c7;border-color:#e5c068;color:#8a5e14}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-tr-disc.no{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-calc-slot [data-posicao-painel]{
+ background:linear-gradient(180deg,#ffffff,#f4f7fc)!important;border-color:rgba(15,23,42,.1)!important;
+ box-shadow:0 8px 20px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff!important
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-calc-slot [data-posicao-painel] summary{color:#8a5e14!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-calc-slot [data-posicao-painel] :is(label,span,small,output){color:#334155!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-calc-slot [data-posicao-painel] :is(input,select){background:#ffffff!important;color:#0f172a!important;border-color:rgba(15,23,42,.16)!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-calc-slot [data-posicao-painel] .p673-tabs button{background:#f1f5f9!important;color:#334155!important;border-color:rgba(15,23,42,.12)!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-calc-slot [data-posicao-painel] .p673-tabs button[aria-selected="true"],
+html:root:root:root[data-v427-tema="claro"] #app#app .dt975-calc-slot [data-posicao-painel] .p673-tabs button[aria-pressed="true"]{background:#fef7e6!important;color:#8a5e14!important;border-color:rgba(180,126,38,.5)!important}
