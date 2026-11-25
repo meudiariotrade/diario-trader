@@ -16,8 +16,8 @@ test('interface real: fotos obrigatórias, navegação e cabeçalho em telas peq
     await page.getByText(/Antes de registrar trade novo, coloque as fotos/).waitFor();
     assert.equal(await page.locator('#sh input[name="entry"]').count(), 0);
     const title = await page.locator('.dt393-title').evaluate(el => ({ text: el.textContent, width: el.clientWidth, full: el.scrollWidth }));
-    assert.equal(title.text, 'Operações');
-    assert.ok(title.full <= title.width + 1, 'Título de Operações não pode ficar cortado.');
+    assert.equal(title.text, 'Trades');
+    assert.ok(title.full <= title.width + 1, 'Título de Trades não pode ficar cortado.');
     await page.getByRole('button', { name: 'Rotina', exact: true }).last().click();
     await page.getByText('Plano do dia', { exact: true }).waitFor();
     for (const width of [320, 360, 390, 1440]) {
