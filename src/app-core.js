@@ -25602,7 +25602,16 @@ function irPainelHtml() {
       ["C", "Compensa só em lucros futuros de Swing: ações (vendas > R$ 20 mil), opções, ETFs e futuros"],
       ["F", "Compensa só em lucros futuros de Fundos Imobiliários"],
     ];
-  return `<section class="ir599-painel" aria-label="Prejuízos a compensar"><div class="ir599-ph"><h2>Prejuízos a compensar</h2><small>${sd.base ? "Saldo até " + new Date(sd.ate + "-15T12:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }) + " · " + sd.base : "Sem apuração ainda"}</small></div><div class="ir599-cx">${cx
+  const txtCopia = [
+    "RESUMO IR · DIÁRIO DE TRADER",
+    sd.base ? `Base: ${sd.base} (até ${sd.ate})` : "Sem apuração registrada",
+    `Prejuízo a compensar Day Trade (20%): ${money(+(sd.prej || {}).D || 0)}`,
+    `Prejuízo a compensar Swing/Comum (15%): ${money(+(sd.prej || {}).C || 0)}`,
+    `Prejuízo a compensar FIIs (20%): ${money(+(sd.prej || {}).F || 0)}`,
+    "Código DARF Renda Variável: 6015",
+  ].join("\n");
+  if (typeof window !== "undefined") window.__dt976IrCopy = txtCopia;
+  return `<section class="ir599-painel" aria-label="Prejuízos a compensar"><div class="ir599-ph"><div><h2>Prejuízos a compensar</h2><small>${sd.base ? "Saldo até " + new Date(sd.ate + "-15T12:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }) + " · " + sd.base : "Sem apuração ainda"}</small></div><button type="button" class="btn s dt976-ir-copy" data-dt976-ir-copy="1">📋 Copiar resumo IR</button></div><div class="ir599-cx">${cx
     .map(([q, d]) => {
       const v = +(sd.prej || {})[q] || 0,
         [nm, al] = IR_POOL_NOME[q];
