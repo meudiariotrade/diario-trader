@@ -27,6 +27,7 @@
  let conselhoId='graham',cerebroBusy=false,cerebroOut='',cerebroFor='',conselhoModo='especialistas',mesaTk='PETR4',dueloA='PETR4',dueloB='VALE3',histOpen=false,histOnlyMember=true;
  const CONSELHO={
   graham:{id:'graham',mono:'G',nome:'Graham',papel:'Analista Fundamentalista',titulo:'Graham — Dossiê de Empresas',sub:'Balanços, valuation e margem de segurança. Fontes e datas auditáveis em cada parecer.',cmd:'ANALISE PETR4',cta:'Consultar Graham',tema:'valuation margem de segurança balanço dividendos preço justo Graham'},
+  helmer:{id:'helmer',mono:'H',nome:'Helmer',papel:'Estratégia · 7 Powers',titulo:'Helmer — 7 Powers & Vantagem Competitiva',sub:'Framework 7 Powers de Hamilton Helmer: identifica quais dos 7 poderes protegem o lucro (Benefício + Barreira) e o risco de erosão.',cmd:'@helmer Analise os 7 Powers (benefício, barreira e risco de erosão) de WEGE3',cta:'Consultar Helmer',tema:'Hamilton Helmer 7 Powers vantagem competitiva fosso moat economias de escala efeito de rede custos de troca contraposicionamento marca recurso exclusivo poder de processo'},
   livermore:{id:'livermore',mono:'L',nome:'Livermore',papel:'Estrategista Técnico',titulo:'Livermore — Leitura Técnica & Fear-Setting',sub:'Tendência, médias móveis, RSI, suportes, resistências e gestão de risco com Fear-Setting (Definir · Prevenir · Reparar).',cmd:'TÉCNICO PETR4',cta:'Consultar Livermore',tema:'análise técnica tendência média móvel 200 RSI momentum rompimento suporte resistência stop gestão de risco'},
   munger:{id:'munger',mono:'M',nome:'Munger',papel:'Crítico de Teses',titulo:'Munger — Advogado do Diabo & Fear-Setting',sub:'Inversão, vieses, negação otimista e Fear-Setting (Pior cenário · Prevenir · Reparar · Custo da inação).',cmd:'ANALISE PETR4',cta:'Testar com Munger',tema:'modelos mentais riscos ocultos margem de segurança crítica de tese Munger fear setting'},
   markowitz:{id:'markowitz',mono:'Mk',nome:'Markowitz',papel:'Gestor de Portfólio',titulo:'Markowitz — Diagnóstico da Carteira',sub:'Risco, correlação, concentração setorial e equilíbrio entre ativos.',cmd:'CARTEIRA',cta:'Consultar Markowitz',tema:'alocação de carteira diversificação risco correlação Markowitz'},
@@ -52,11 +53,12 @@
  function detectMember(cmd){
   const t=String(cmd||'').trim().toUpperCase();
   if(/^@DALIO\b/.test(t))return 'dalio';
+  if(/^@HELMER\b/.test(t))return 'helmer';
   if(/^T[EÉ]CNICO\b/.test(t))return 'livermore';
   if(/^CARTEIRA\b/.test(t))return 'markowitz';
   if(/^AGENDA\b/.test(t))return 'schwartz';
   if(/^(MODO PROVA|EXPLIQUE)\b/.test(t))return 'dow';
-  return conselhoId==='munger'?'munger':conselhoId==='dalio'?'dalio':'graham';
+  return conselhoId==='munger'?'munger':conselhoId==='dalio'?'dalio':conselhoId==='helmer'?'helmer':'graham';
  }
  function jobOwner(job){
   const t=String(job?.comando?.texto||'').trim().toUpperCase();
@@ -98,7 +100,7 @@
    !av?'<p class="mut">Ativo <b>'+E(mesaTk)+'</b> não encontrado na base B3 carregada. Tente um ticker como PETR4, VALE3, ITUB4 ou WEGE3.</p>':
    '<div class="an-mesa-head"><div><h3>'+logos([av.ticker],22)+'<span>'+E(av.ticker)+'</span> <small>'+E(av.empresa||'')+' · '+E(av.setor||'')+' · R$ '+Number(av.preco||0).toFixed(2).replace('.',',')+'</small></h3>'+
    '<p class="an-mesa-consenso">✦ <b>Placar Áurea:</b> '+av.aurea.fav+' Favorável · '+av.aurea.neu+' Neutro · '+av.aurea.cau+' Cautela — '+E(av.aurea.resumo)+'</p></div>'+
-   '<div class="an-br-acts"><button type="button" class="btn s" data-an-br-cmd="ANALISE '+E(av.ticker)+'">Dossiê completo</button><button type="button" class="btn s" data-an-aurea-prompt="@munger Faça o Fear-Setting completo (Definir 1-10, Prevenir, Reparar e Custo da Inação) para '+E(av.ticker)+' considerando '+E(av.graham.fatos.join(', '))+'; '+E(av.livermore.fatos.join(', '))+'.">Fear-Setting com Áurea</button><button type="button" class="btn s" data-an-mesa-pdf="'+E(av.ticker)+'">PDF</button></div></div>'+
+   '<div class="an-br-acts"><button type="button" class="btn s" data-an-br-cmd="ANALISE '+E(av.ticker)+'">Dossiê completo</button><button type="button" class="btn s" data-an-aurea-prompt="@helmer Analise os 7 Powers (Hamilton Helmer) de '+E(av.ticker)+' ('+E(av.empresa||av.setor||'')+'): classifique cada um dos 7 poderes (Presente/Parcial/Ausente), explique Benefício + Barreira e o principal risco de erosão nos próximos 3 a 5 anos.">7 Powers (Helmer)</button><button type="button" class="btn s" data-an-aurea-prompt="@munger Faça o Fear-Setting completo (Definir 1-10, Prevenir, Reparar e Custo da Inação) para '+E(av.ticker)+' considerando '+E(av.graham.fatos.join(', '))+'; '+E(av.livermore.fatos.join(', '))+'.">Fear-Setting (Munger)</button><button type="button" class="btn s" data-an-mesa-pdf="'+E(av.ticker)+'">PDF</button></div></div>'+
    '<div class="an-mesa-grid">'+
     '<article class="an-mesa-col"><header><b>G · Graham</b>'+badge(av.graham.veredito)+'</header><ul>'+(av.graham.fatos.map(f=>'<li>'+E(f)+'</li>').join('')||'<li>Sem múltiplos carregados.</li>')+'</ul></article>'+
     '<article class="an-mesa-col"><header><b>L · Livermore</b>'+badge(av.livermore.veredito)+'</header><ul>'+(av.livermore.fatos.map(f=>'<li>'+E(f)+'</li>').join('')||'<li>Sem indicadores técnicos carregados.</li>')+'</ul></article>'+
@@ -172,11 +174,37 @@
    (cerebroOut&&cerebroFor==='dalio'?'<div class="an-cerebro-out"><p class="an-kicker">LEITURA DO CÉREBRO (SEUS LIVROS DE RAY DALIO + DADOS FISCAIS ATUAIS)</p><div class="an-report">'+M.markdown(cerebroOut)+'</div></div>':'')+
    '<p class="an-br-nota">Fontes públicas: Banco Central do Brasil (SGS), Yahoo Finance (^TNX/DXY) e FMI. Leitura técnica sem viés político; não é recomendação.</p></section>';
  }
+ function helmerBriefingCard(){
+  const poderes=[
+   ['1. Economias de Escala','Scale Economies','Custo unitário cai com volume; concorrente menor sangra para igualar preço.'],
+   ['2. Efeito de Rede','Network Economies','Cada novo usuário aumenta o valor para todos; barreira de migração coletiva.'],
+   ['3. Contraposicionamento','Counter-Positioning','Modelo novo superior que o incumbente não copia sem canibalizar o próprio lucro.'],
+   ['4. Custos de Troca','Switching Costs','Migrar gera perda financeira, operacional ou risco; garante retenção e pricing power.'],
+   ['5. Marca (Branding)','Branding','Histórico acumulado permite cobrar prêmio por produto equivalente com menor incerteza.'],
+   ['6. Recurso Exclusivo','Cornered Resource','Acesso preferencial a ativo cobiçado (patente, mina, licença, talento ou rede única).'],
+   ['7. Poder de Processo','Process Power','Cultura e organização complexas que reduzem custo/elevam qualidade e levam anos para replicar.']
+  ];
+  const br=w.DiarioAnalisesPlus?.briefing?.();
+  const topTks=(br?.graham?.avaliar||[]).slice(0,3).map(x=>x.ticker);
+  const picks=[...new Set([...topTks,'WEGE3','ITUB4','PETR4','NVDA'])].slice(0,5);
+  const grid='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin:10px 0 12px">'+
+   poderes.map(([tit,en,desc])=>'<div style="padding:9px 10px;border-radius:10px;border:1px solid var(--bd);background:var(--bg)">'+
+    '<div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline;margin-bottom:3px"><b style="font-size:12.5px">'+tit+'</b><small style="font-size:10px;color:var(--gold,#C9A66B);font-weight:700">'+en+'</small></div>'+
+    '<small style="color:var(--mut);font-size:11.5px;line-height:1.4;display:block">'+desc+'</small></div>').join('')+'</div>';
+  const btns=picks.map(tk=>'<button type="button" class="btn s" data-an-aurea-prompt="@helmer Faça o diagnóstico completo dos 7 Powers (Hamilton Helmer) para '+E(tk)+': classifique cada um dos 7 poderes (Presente/Parcial/Ausente), detalhe Benefício + Barreira, estágio (Originação/Decolagem/Estabilidade), maior risco de erosão em 3–5 anos e qual indicador financeiro comprova o fosso.">7 Powers · '+E(tk)+'</button>').join('');
+  return '<section class="an-section an-briefing"><header class="an-br-head"><div><p class="an-kicker">ESTRATÉGIA COMPETITIVA · HAMILTON HELMER (7 POWERS)</p><h3>Mapa de Fosso &amp; Vantagem Durável</h3><p class="mut">Poder real = <b>Benefício</b> (margem/ROIC superior) + <b>Barreira</b> (por que concorrentes não conseguem copiar).</p></div>'+
+   '<div class="an-br-acts"><button type="button" class="btn s an-br-cer" data-an-cerebro="helmer"'+(cerebroBusy?' disabled':'')+'>'+(cerebroBusy?'Consultando livros…':'Aplicar livros do Cérebro')+'</button></div></header>'+
+   grid+
+   '<div style="margin-top:6px"><p class="an-kicker" style="margin:0 0 6px">DIAGNÓSTICO 7 POWERS EM 1 CLIQUE</p><div class="an-br-acts" style="flex-wrap:wrap;gap:6px">'+btns+'</div></div>'+
+   (cerebroOut&&cerebroFor==='helmer'?'<div class="an-cerebro-out"><p class="an-kicker">LEITURA DO CÉREBRO (SEUS LIVROS + 7 POWERS)</p><div class="an-report">'+M.markdown(cerebroOut)+'</div></div>':'')+
+   '<p class="an-br-nota">Complementa Graham (preço justo) e Munger (inversão e Fear-Setting) com a lente estrutural de vantagem competitiva. Não é recomendação.</p></section>';
+ }
  function briefingCard(){
   if(conselhoModo==='mesa')return mesaRedondaCard();
   if(conselhoModo==='duelo')return dueloCard();
   const id=conselhoId;
   if(id==='dalio')return dalioBriefingCard();
+  if(id==='helmer')return helmerBriefingCard();
   if(id!=='graham'&&id!=='livermore'&&id!=='munger')return '';
   const br=w.DiarioAnalisesPlus?.briefing?.();
   if(!br)return '<section class="an-section an-briefing"><p class="mut">Carregando levantamento automático do mercado…</p></section>';
@@ -197,13 +225,15 @@
  }
  async function rodarCerebro(id){
   if(cerebroBusy)return;
-  const br=w.DiarioAnalisesPlus?.briefing?.();if(!br&&id!=='dalio')return;
+  const br=w.DiarioAnalisesPlus?.briefing?.();if(!br&&id!=='dalio'&&id!=='helmer')return;
   if(!w.DiarioCerebroIA?.api){cerebroFor=id;cerebroOut='Abra **Estudos → Cérebro** uma vez para ativar seus livros na IA.';update();return}
   cerebroBusy=true;cerebroFor=id;cerebroOut='';update();
   const m=CONSELHO[id]||CONSELHO.graham,isTec=id==='livermore';
   const mf=macroFiscal,b=mf?.brasil||{},mu=mf?.mundo||{};
   const fatos=id==='dalio'?
    'Como aplicar os princípios dos meus livros de Ray Dalio (grandes ciclos de dívida e ordem mundial) ao cenário atual sem viés político? Dados oficiais BCB/Global: Selic '+b.selic_meta?.valor+'%, IPCA 12m '+b.ipca_12m?.valor+'%, Juro Real '+b.juro_real_expost+'%, Dívida Bruta/PIB BR '+b.divida_bruta_pib?.valor+'%, Dívida Líquida/PIB BR '+b.divida_liquida_pib?.valor+'%, US Treasury 10Y '+mu.us_10y?.valor+'%, DXY '+mu.dxy?.valor+'.':
+   id==='helmer'?
+   'Como aplicar os 7 Powers de Hamilton Helmer (Economias de Escala, Efeito de Rede, Contraposicionamento, Custos de Troca, Marca, Recurso Exclusivo e Poder de Processo) combinados aos meus livros do Cérebro nos destaques de hoje? '+(br?'Bons para avaliar: '+br.graham.avaliar.map(x=>x.ticker+' ['+x.setor+']').join(', ')+'.':'Use exemplos práticos da B3 e EUA.'):
    isTec?
    'Como aplicar os conceitos dos meus livros de análise técnica aos destaques de hoje? Tendência saudável: '+br.livermore.alta.map(x=>x.ticker+' ('+x.motivo+')').join('; ')+'. Alertas técnicos: '+br.livermore.alertas.map(x=>x.ticker+' ('+x.motivo+')').join('; ')+'.':
    'Como aplicar os conceitos dos meus livros aos destaques de hoje ('+m.nome+')? Bons para avaliar: '+br.graham.avaliar.map(x=>x.ticker+' ['+x.setor+'] '+x.motivo).join('; ')+'. Sinais de cautela: '+br.graham.cautela.map(x=>x.ticker+' ['+x.setor+'] '+x.motivo).join('; ')+'. Setores fortes 1M: '+br.graham.setoresFortes.map(s=>s.setor+' '+s.m1.toFixed(1)+'%').join(', ')+'.';
@@ -299,7 +329,7 @@
  function afterRender(){const target=d.getElementById('an-search-suggestions'),html=current?.resultado?.sugestoes;if(target&&html){const frame=d.createElement('iframe');frame.title='Sugestões da Pesquisa Google';frame.setAttribute('sandbox','allow-popups allow-popups-to-escape-sandbox');frame.referrerPolicy='no-referrer';frame.srcdoc='<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src https: data:">'+html;frame.className='an-search-frame';target.replaceChildren(frame)}}
  function enter(){syncAccount();afterRender();if(w.DiarioAnalisesPlus?.TABS.includes(screenTab)){w.DiarioAnalisesPlus.enter(screenTab);return}if(screenTab==='pesquisa'){void loadValuationLocal();if(!w.DiarioAnalisesPlus?.briefing?.())w.DiarioAnalisesPlus?.garantirDados?.().then(()=>update())}if(screenTab!=='pesquisa'){if(screenTab.startsWith('tecnico-'))void w.DiarioTecnico?.enter(screenTab==='tecnico-br'?'br':'world');else w.DiarioScreeners?.load(screenTab);return;}if(loadedFor!==owner()&&!loading&&SESS&&!w.DIARIO_DEMO)void history()}
  d.addEventListener('input',e=>{if(e.target.id==='an-command'){input=e.target.value;conselhoId=detectMember(input);context()?.set('analises.comando',input)}if(e.target.dataset.anAssumption){premissas[e.target.dataset.anAssumption]=e.target.value;context()?.set('analises.premissas',premissas)}});
- d.addEventListener('submit',e=>{if(e.target.id==='an-form'){e.preventDefault();if(w.DIARIO_DEMO)return;if(conselhoId==='dalio'||/^\s*@dalio\b/i.test(input)){const q=String(input||'').trim();if(q.length<3)return;const pr=/^\s*@dalio\b/i.test(q)?q:'@dalio '+q;w.TraderChat?.open?.();if(typeof ecoPergunta==='function')void ecoPergunta(pr,{pergunta:pr});return;}void run()}});
+ d.addEventListener('submit',e=>{if(e.target.id==='an-form'){e.preventDefault();if(w.DIARIO_DEMO)return;if(conselhoId==='dalio'||/^\s*@dalio\b/i.test(input)){const q=String(input||'').trim();if(q.length<3)return;const pr=/^\s*@dalio\b/i.test(q)?q:'@dalio '+q;w.TraderChat?.open?.();if(typeof ecoPergunta==='function')void ecoPergunta(pr,{pergunta:pr});return;}if(conselhoId==='helmer'||/^\s*@helmer\b/i.test(input)){const q=String(input||'').trim();if(q.length<3)return;const pr=/^\s*@helmer\b/i.test(q)?q:'@helmer '+q;w.TraderChat?.open?.();if(typeof ecoPergunta==='function')void ecoPergunta(pr,{pergunta:pr});return;}void run()}});
  d.addEventListener('toggle',e=>{if(e.target?.id==='an-history-drawer')histOpen=!!e.target.open},true);
 
  // v888: relatório vetorial local, compatível com o compartilhamento nativo do iPhone/PWA.
