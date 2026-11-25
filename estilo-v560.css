@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 5acc0b30d66b6925f7e623a4103fc899b09d6988ac4e3f5dea26fa9184be4780 */
+/* Gerado de src/app-theme.css · SHA256 7113a1000ec2e500c775cb22a59588c60d858b1837881313fa1d3353b872d64b */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7373,3 +7373,50 @@ html:root:root:root[data-v427-tema="claro"] #app#app[data-tela="stats"] :is(.car
 :is(html.priv,body.priv,body:has(.v427-eye[aria-pressed="true"])) #app :is(.dt975-hero-val,.dt976-perf-grid strong,.dt976-cd small,.dt976-play-card b,.dt978-dow-c b,.dt976-sim-out b,.dt983-whatif b){
  filter:blur(7px)!important;user-select:none!important;transition:filter .18s ease
 }
+/* v983: Relógio de Candle, Evitei um Trade, Simulador E-se e Alerta Global do Radar */
+.dt983-candle{
+ display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px;
+ padding:7px 10px;border-radius:12px;font-size:.73rem;font-variant-numeric:tabular-nums;
+ background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);color:#cbd5e1
+}
+.dt983-candle b{color:#f4dfa8}
+.dt983-evit-pop{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.dt983-evit-pop button{
+ border-radius:10px;padding:6px 10px;font-size:.73rem;font-weight:700;cursor:pointer;
+ background:rgba(212,175,106,.14);border:1px solid rgba(212,175,106,.34);color:#f4dfa8
+}
+.dt983-whatif{
+ border-radius:20px;padding:15px;margin-top:12px;
+ background:linear-gradient(155deg,rgba(255,255,255,.07),rgba(15,23,37,.92) 56%,rgba(10,16,28,.96));
+ border:1px solid rgba(212,175,106,.24);
+ box-shadow:0 14px 30px rgba(0,0,0,.38),inset 0 1.5px 0 rgba(255,255,255,.16)
+}
+.dt983-whatif-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.dt983-whatif-grid > div{
+ border-radius:14px;padding:10px 8px;text-align:center;
+ background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);font-variant-numeric:tabular-nums
+}
+.dt983-whatif-grid span{display:block;font-size:.66rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em}
+.dt983-whatif-grid b{display:block;font-size:.9rem;margin:3px 0;color:#f8fafc}
+.dt983-whatif-grid small{display:block;font-size:.66rem;color:#94a3b8}
+.dt983-alert{
+ position:fixed;left:12px;right:12px;top:64px;z-index:94;max-width:520px;margin:0 auto;
+ display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;
+ border-radius:16px;font-size:.78rem;color:#f8fafc;
+ background:linear-gradient(135deg,rgba(16,185,129,.22),rgba(15,23,37,.96));
+ border:1px solid rgba(52,211,153,.45);
+ box-shadow:0 14px 32px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.2)
+}
+.dt983-alert button{border-radius:10px;padding:5px 9px;font-size:.74rem;font-weight:800;cursor:pointer;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.1);color:#fff}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt983-candle{background:#f1f5f9;border-color:rgba(15,23,42,.1);color:#334155}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt983-candle b{color:#8a5e14}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt983-evit-pop button{background:#fef3c7;border-color:rgba(180,126,38,.36);color:#8a5e14}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif{
+ background:linear-gradient(155deg,#ffffff,#f4f7fc 58%,#ebf1fa);
+ border-color:rgba(15,23,42,.11);color:#0f172a;
+ box-shadow:0 12px 26px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff
+}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid > div{background:#f8fafc;border-color:rgba(15,23,42,.1)}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid b{color:#0f172a}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid span,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid small{color:#475569}

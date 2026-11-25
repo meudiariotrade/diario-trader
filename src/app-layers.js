@@ -32803,10 +32803,34 @@ try {
                   ? `🛡️ Trava: máx ${tc.maxTr || 3}t · ${tc.maxStops || 2} stops · ${tc.pausaMin || 15}m`
                   : "🛡️ Configurar Trava & Limites";
             const clsTv = tv?.duro?.length ? "no" : tv?.pausaAte ? "am" : tc.on ? "ok" : "";
+            const evMes = (() => {
+              try {
+                const arr = JSON.parse(localStorage.getItem("dt983-evitados") || "[]");
+                const ym = V().slice(0, 7);
+                return Array.isArray(arr) ? arr.filter((x0) => String(x0?.dt || "").startsWith(ym)).length : 0;
+              } catch { return 0; }
+            })();
+            const fmtC = (min) => {
+              const sNow = Math.floor(Date.now() / 1000);
+              const rem = min * 60 - (sNow % (min * 60));
+              const mm = String(Math.floor(rem / 60)).padStart(2, "0");
+              const ss = String(rem % 60).padStart(2, "0");
+              return `${mm}:${ss}`;
+            };
             return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center;justify-content:space-between">
               <button type="button" class="dt975-badge ${clsTv}" data-v4tab="regras" style="cursor:pointer;border:1px solid currentColor">${txtTv}</button>
-              <button type="button" class="dt975-badge" data-v4tab="contratos" style="cursor:pointer">⚖️ Contratos</button>
-            </div>`;
+              <div style="display:flex;gap:6px;align-items:center">
+                <button type="button" class="dt975-badge" data-dt983-evit-tog="1" style="cursor:pointer">✋ Evitei${evMes ? ` (${evMes})` : ""}</button>
+                <button type="button" class="dt975-badge" data-v4tab="contratos" style="cursor:pointer">⚖️ Contratos</button>
+              </div>
+            </div>
+            <div class="dt983-evit-pop" data-dt983-evit-box hidden>
+              <button type="button" data-dt983-evit="FOMO">FOMO</button>
+              <button type="button" data-dt983-evit="Sem setup">Sem setup</button>
+              <button type="button" data-dt983-evit="Lateral">Mercado lateral</button>
+              <button type="button" data-dt983-evit="Fora do horário">Fora do horário</button>
+            </div>
+            <div class="dt983-candle" data-dt983-candle="1"><span>⏱️ Fechamento de vela</span><span>5m <b data-c="5">${fmtC(5)}</b> · 15m <b data-c="15">${fmtC(15)}</b> · 60m <b data-c="60">${fmtC(60)}</b></span></div>`;
           })()}
         </section><div class="dt975-calc-slot"></div>`,
         A = e
@@ -33384,7 +33408,37 @@ try {
             }).join("")}</div>
           </section>`;
         })();
-      return `<div class="v4-page v4-journal dt976-stats">${perfHero976}${cal976}${y}${play976}${dow978}${sim976}${h}${Z}${H}<div class="v4-two">${ot}${x}</div><button type="button" class="v4-cta" data-v4deb="1">${p("book", 22)} Registrar revisão</button></div>`;
+      /* v983: Simulador "E se eu tivesse parado no 2º stop / 3º trade?" com trades reais. */
+      const whatIf983 = (() => {
+        const list = pt().slice().sort((a0, b0) => String(a0.dt || "").localeCompare(String(b0.dt || "")));
+        if (list.length < 4) return "";
+        const byDay = {};
+        list.forEach((tr) => {
+          const dk = nt(tr);
+          if (!dk) return;
+          (byDay[dk] = byDay[dk] || []).push(R(tr) || 0);
+        });
+        let realPl = 0, stop2Pl = 0, tr3Pl = 0, cutS2 = 0, cutT3 = 0;
+        Object.values(byDay).forEach((vals) => {
+          let stops = 0;
+          vals.forEach((v0, idx) => {
+            realPl += v0;
+            if (stops < 2) { stop2Pl += v0; if (v0 < 0) stops++; } else cutS2++;
+            if (idx < 3) tr3Pl += v0; else cutT3++;
+          });
+        });
+        const difS2 = stop2Pl - realPl, difT3 = tr3Pl - realPl;
+        const fmtD = (d0) => d0 === 0 ? "igual" : (d0 > 0 ? `+${j(d0)} melhor` : `${j(d0)}`);
+        return `<section class="v4-card dt983-whatif" aria-label="Simulador de disciplina diária">
+          <div class="dt975-ops-top"><span class="dt975-kicker">🛑 E SE VOCÊ TIVESSE PARADO?</span><span class="sm mut">${list.length} trades reais</span></div>
+          <div class="dt983-whatif-grid">
+            <div><span>Real</span><b class="${L(realPl)}">${j(realPl)}</b><small>Histórico atual</small></div>
+            <div><span>Parar no 2º stop</span><b class="${L(stop2Pl)}">${j(stop2Pl)}</b><small class="${difS2 > 0 ? "v-pos" : ""}">${cutS2 ? fmtD(difS2) : "Sem corte"}</small></div>
+            <div><span>Máx. 3 trades/dia</span><b class="${L(tr3Pl)}">${j(tr3Pl)}</b><small class="${difT3 > 0 ? "v-pos" : ""}">${cutT3 ? fmtD(difT3) : "Sem corte"}</small></div>
+          </div>
+        </section>`;
+      })();
+      return `<div class="v4-page v4-journal dt976-stats">${perfHero976}${cal976}${y}${play976}${dow978}${whatIf983}${sim976}${h}${Z}${H}<div class="v4-two">${ot}${x}</div><button type="button" class="v4-cta" data-v4deb="1">${p("book", 22)} Registrar revisão</button></div>`;
     }
     /* v976: Handlers leves de Mapa de Calor, Simulador de Capital Próprio e Registro 15s (zero polling, zero MutationObserver). */
     function dt976CalcSim(rootSim) {
@@ -33619,6 +33673,39 @@ try {
         }
         return;
       }
+      if (ev.target.closest?.("[data-dt983-evit-tog]")) {
+        ev.preventDefault();
+        const box = v.querySelector("[data-dt983-evit-box]");
+        if (box) box.hidden = !box.hidden;
+        return;
+      }
+      const evitBtn = ev.target.closest?.("[data-dt983-evit]");
+      if (evitBtn) {
+        ev.preventDefault();
+        const mot = evitBtn.dataset.dt983Evit || "Disciplina";
+        try {
+          let arr = JSON.parse(localStorage.getItem("dt983-evitados") || "[]");
+          if (!Array.isArray(arr)) arr = [];
+          arr.unshift({ dt: V(), mot, ts: Date.now() });
+          localStorage.setItem("dt983-evitados", JSON.stringify(arr.slice(0, 200)));
+          f(() => toast?.(`✋ Disciplina registrada: evitei (${mot})`));
+        } catch {}
+        xt();
+        return;
+      }
+      if (ev.target.closest?.("[data-dt983-alert-x]")) {
+        ev.preventDefault();
+        const al = ev.target.closest(".dt983-alert");
+        try { if (al?.dataset?.key) sessionStorage.setItem("dt983-al-" + al.dataset.key, "1"); } catch {}
+        al?.remove();
+        return;
+      }
+      if (ev.target.closest?.("[data-dt983-alert-go]")) {
+        ev.preventDefault();
+        ev.target.closest(".dt983-alert")?.remove();
+        f(() => typeof ir === "function" && ir("ops"));
+        return;
+      }
       const simSum = ev.target.closest?.("[data-dt976-sim] > summary");
       if (simSum) {
         const simEl = simSum.parentElement;
@@ -33632,6 +33719,48 @@ try {
     v.addEventListener("toggle", (ev) => {
       if (ev.target?.matches?.("[data-dt976-sim]") && ev.target.open) dt976CalcSim(ev.target);
     }, true);
+    /* v983: Tick leve de fechamento de vela + alerta global do Radar de Gatilhos + auto-sync silencioso de cotações. */
+    if (!/jsdom/i.test(String(navigator?.userAgent || "")) && !window.__dt983Loop) {
+      window.__dt983Loop = 1;
+      let _radSync = 0;
+      const fmtC983 = (min) => {
+        const rem = min * 60 - (Math.floor(Date.now() / 1000) % (min * 60));
+        return `${String(Math.floor(rem / 60)).padStart(2, "0")}:${String(rem % 60).padStart(2, "0")}`;
+      };
+      setInterval(() => {
+        const el = v.querySelector("[data-dt983-candle]");
+        if (!el) return;
+        [5, 15, 60].forEach((m0) => {
+          const b0 = el.querySelector(`[data-c="${m0}"]`);
+          if (b0) b0.textContent = fmtC983(m0);
+        });
+      }, 1000);
+      setInterval(() => {
+        try {
+          const itens = JSON.parse(localStorage.getItem("dt978-gatilhos") || "[]");
+          if (!Array.isArray(itens) || !itens.length) return;
+          const semPx = itens.filter((g0) => g0?.tk && Wt(g0.tk) == null).map((g0) => g0.tk);
+          if (semPx.length && !_radSync && window.DiarioPublico) {
+            _radSync = 1;
+            window.DiarioPublico.get(`/v1/precos?simbolos=${encodeURIComponent(semPx.slice(0, 6).join(","))}`, { ttl: 60000 }).catch(() => {});
+          }
+          const hit = itens.find((g0) => {
+            const px = Wt(g0?.tk), alvo = Number(g0?.px);
+            if (!(px > 0 && alvo > 0)) return false;
+            return Math.abs(((alvo - px) / px) * 100) <= 0.35;
+          });
+          if (!hit) return;
+          const key = `${hit.tk}_${hit.px}`;
+          if (sessionStorage.getItem("dt983-al-" + key) === "1" || v.querySelector(".dt983-alert")) return;
+          const px = Wt(hit.tk), pct = ((Number(hit.px) - px) / px) * 100;
+          const bar = v.createElement("div");
+          bar.className = "dt983-alert";
+          bar.dataset.key = key;
+          bar.innerHTML = `<span>⚡ <b>${b(hit.tk)}</b> na zona (${q(Number(hit.px))} · ${pct >= 0 ? "+" : ""}${_(pct, 2)}%)</span><span style="display:flex;gap:5px"><button type="button" data-dt983-alert-go="1">Trades</button><button type="button" data-dt983-alert-x="1" aria-label="Fechar">✕</button></span>`;
+          v.body.appendChild(bar);
+        } catch {}
+      }, 12000);
+    }
     const me = [
         ["home", "Início", "home"],
         ["dia", "Rotina", "cal"],
