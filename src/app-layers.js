@@ -29368,26 +29368,39 @@ try {
     };
     /* 3. Agenda: Contador regressivo próximo evento alto impacto + botão Áurea WIN/WDO */
     const mountAgenda = (app) => {
-      const card = app.querySelector(".card, .v4-card");
+      const card = app.querySelector("#agbox, #mkcal")?.closest(".card, .v4-card") || app.querySelector(".card, .v4-card");
       if (!card) return;
       let box = d.getElementById("dt962-ag-cd");
       const now = Date.now();
       let prox = null;
       try {
-        const lista = (w.MKT && (w.MKT.ag || w.MKT.agenda || w.MKT.events)) || [];
-        for (const ev of Array.isArray(lista) ? lista : []) {
-          const imp = String(ev.imp || ev.impact || ev.importancia || "").toLowerCase();
-          const forte = imp.includes("alt") || imp.includes("high") || imp === "3" || Number(ev.stars) >= 3;
-          const ts = Date.parse(ev.iso || ev.dt || ev.time || "");
-          if (forte && Number.isFinite(ts) && ts > now && (!prox || ts < prox.ts)) {
-            prox = { nome: ev.title || ev.evento || ev.name || "Evento macro", pais: ev.country || ev.pais || "", ts };
+        const agRef = (typeof AG !== "undefined" ? AG : null) || w.AG;
+        const agEvs = agRef?.v?.[agRef.sem || 0]?.eventos || agRef?.v?.[0]?.eventos || agRef?.v?.[agRef.sem || 0]?.ev || [];
+        const agNm = (typeof AG_NM !== "undefined" ? AG_NM : null) || w.AG_NM || {};
+        for (const ev of Array.isArray(agEvs) ? agEvs : []) {
+          if (ev.imp !== 1) continue;
+          const ts = Date.parse(ev.em || "");
+          if (Number.isFinite(ts) && ts > now && (!prox || ts < prox.ts)) {
+            prox = { nome: ev.t || "Evento macro", pais: agNm[ev.p] || ev.p || "", ts };
+          }
+        }
+        if (!prox) {
+          const lista = (w.MKT && (w.MKT.ag || w.MKT.agenda || w.MKT.events)) || [];
+          for (const ev of Array.isArray(lista) ? lista : []) {
+            const imp = String(ev.imp || ev.impact || ev.importancia || "").toLowerCase();
+            const forte = imp.includes("alt") || imp.includes("high") || imp === "3" || Number(ev.stars) >= 3;
+            const ts = Date.parse(ev.iso || ev.dt || ev.time || "");
+            if (forte && Number.isFinite(ts) && ts > now && (!prox || ts < prox.ts)) {
+              prox = { nome: ev.title || ev.evento || ev.name || "Evento macro", pais: ev.country || ev.pais || "", ts };
+            }
           }
         }
       } catch {}
       const diffMin = prox ? Math.max(1, Math.round((prox.ts - now) / 60000)) : null;
-      const hrs = diffMin != null ? Math.floor(diffMin / 60) : 0;
+      const days = diffMin != null ? Math.floor(diffMin / 1440) : 0;
+      const hrs = diffMin != null ? Math.floor((diffMin % 1440) / 60) : 0;
       const mins = diffMin != null ? diffMin % 60 : 0;
-      const tempo = diffMin == null ? "Sem evento 3★ pendente hoje" : (hrs ? `${hrs}h ${String(mins).padStart(2, "0")}m` : `${mins} min`);
+      const tempo = diffMin == null ? "Sem evento 3★ pendente" : days ? `em ${days}d ${hrs}h` : hrs ? `em ${hrs}h ${String(mins).padStart(2, "0")}m` : `em ${mins} min`;
       const alerta = diffMin != null && diffMin <= 90;
       const titulo = prox ? `${prox.pais ? prox.pais + " · " : ""}${prox.nome}` : "Agenda Macro (BR & EUA)";
       w.__dt962AgPrompt = `Explique em 3 bullets curtos e práticos como o evento "${titulo}" (e a agenda macro de hoje BR/EUA) tende a impactar WIN (Índice), WDO (Dólar) e juros futuros (DI) caso venha acima ou abaixo do consenso. Sem rodeios.`;
@@ -29398,7 +29411,7 @@ try {
         box.className = "dt962-ag-cd" + (alerta ? " alerta" : "");
         card.prepend(box);
       }
-      box.classList.toggle("alerta", alerta);
+      if (box.classList.contains("alerta") !== alerta) box.classList.toggle("alerta", alerta);
       setMarkup(box, html);
     };
     /* 4. Análises: Mini-cards com semáforo visual nos indicadores */
@@ -29422,9 +29435,10 @@ try {
     };
     /* 5. Long & Short: Régua visual de Z-Score (-2σ ← 0 → +2σ) */
     const mountLongShort = (app) => {
-      const oldGauge = app.querySelector("#dt962-ls-gauge");
-      const txt = String(app.innerText || "").replace(oldGauge?.innerText || "\u0000", "");
-      const m = txt.match(/z-?score[^0-9+\-−]*([+\-−]?\d+(?:[.,]\d+)?)/i);
+      const ls = d.getElementById("v512-ls") || app;
+      const oldGauge = ls.querySelector("#dt962-ls-gauge");
+      const txt = String(ls.innerText || "").replace(oldGauge?.innerText || "\u0000", "");
+      const m = txt.match(/(?:z-?score|desvio atual)[^0-9+\-−]*([+\-−]?\d+(?:[.,]\d+)?)/i);
       if (!m) { oldGauge?.remove(); return; }
       const z = parseFloat(m[1].replace("−", "-").replace(",", "."));
       if (!Number.isFinite(z)) return;
@@ -29440,8 +29454,12 @@ try {
         box = d.createElement("section");
         box.id = "dt962-ls-gauge";
         box.className = "dt962-ls-gauge";
-        const anchor = app.querySelector("button[id*='v512'], .v512-grid")?.closest("div, form, section") || app.firstElementChild;
-        if (anchor) anchor.after(box);
+        const firstCard = ls.querySelector(".v512-card");
+        if (firstCard) firstCard.before(box);
+        else {
+          const anchor = ls.querySelector(".v512-cta, .v512-grid")?.closest("div, form, section") || ls.firstElementChild;
+          if (anchor) anchor.after(box);
+        }
       }
       setMarkup(box, html);
     };
@@ -29796,10 +29814,11 @@ try {
     };
 
     const getMode = (app) => {
-      if (!isMob() || !d.body.classList.contains("mkt549") || !app) return "";
+      if (!isMob() || !d.body.classList.contains("mkt549") || d.body.classList.contains("v512-lsv") || !app) return "";
       const mkt = getMkt();
       const wrap = app.querySelector(".dt395-native-mercado");
       const sub = mkt?.tab || wrap?.dataset.m403Sub || "";
+      if (sub === "ls" || sub === "ag" || sub === "lab") return "";
       if (sub === "jr" || app.querySelector(".jrcard")) return "jr";
       if (sub === "nt" || app.querySelector("#mknews, #balbox")) {
         const host = wrap?.querySelector(":scope > .m406-content-host");
@@ -30657,7 +30676,300 @@ try {
   console.error("[v969] AnalisesTV3D", e);
 }
 
+/* v970: Mercado > Agenda & Long & Short — Mobile Liquid Glass 3D + Zero-Tremor (somente celular <=768px, desktop 100% intocado). */
+try {
+  ((w, d) => {
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    const isMob = () => w.innerWidth <= 768;
+    const getApp = () => d.querySelector("#app:not(.v503-fantasma)") || d.getElementById("app");
+    const getMkt = () => (typeof MKT !== "undefined" ? MKT : null) || w.MKT;
+    const svg = (p, sz = 15) => `<svg class="dt968-svg" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 
+    const GLOBE_ICO = svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>', 14);
+    const BOLT_ICO = svg('<path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/>', 14);
+    const SPARK_ICO = svg('<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/>', 14);
+    const REFRESH_ICO = svg('<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>', 15);
+    const SWAP_ICO = svg('<path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>', 14);
+
+    const CT_ICO = {
+      "br,us": '<span class="dt966-tag">BR·US</span>',
+      br: '<span class="dt966-tag">BR</span>',
+      us: '<span class="dt966-tag">US</span>',
+    };
+    const CT_SHORT = { "br,us": "BR + EUA", br: "Brasil", us: "EUA" };
+    const IM_SHORT = { "0,1": "Médio+", "1": "Só alto", "-1,0,1": "Todos" };
+    const QUICK_PAIRS = [
+      ["PETR4", "PETR3"],
+      ["ITUB4", "BBDC4"],
+      ["VALE3", "CMIN3"],
+      ["ITSA4", "ITUB4"],
+      ["GGBR4", "GOAU4"],
+      ["BBAS3", "ITUB4"],
+      ["SUZB3", "KLBN11"],
+    ];
+
+    let syncing = false, timer = null;
+
+    const getMode = (app) => {
+      if (!isMob() || !d.body.classList.contains("mkt549") || !app) return "";
+      const mkt = getMkt();
+      const wrap = app.querySelector(".dt395-native-mercado");
+      const sub = mkt?.tab || wrap?.dataset.m403Sub || "";
+      if (d.body.classList.contains("v512-lsv") || sub === "ls" || d.getElementById("v512-ls")) return "ls";
+      if (sub === "ag" || app.querySelector("#agbox")) return "ag";
+      return "";
+    };
+
+    const cleanup = () => {
+      d.body.classList.remove("dt970-view-ag", "dt970-view-ls");
+      d.getElementById("dt970-ag-week")?.remove();
+      d.getElementById("dt970-ag-bar")?.remove();
+      d.getElementById("dt970-ag-next")?.remove();
+      d.getElementById("dt970-ag-sheet-ov")?.remove();
+      d.getElementById("dt970-ls-swap")?.remove();
+      d.getElementById("dt970-ls-quick")?.remove();
+      for (const el of d.querySelectorAll(".dt970-ag-old")) el.classList.remove("dt970-ag-old");
+      for (const el of d.querySelectorAll(".dt970-ag-card")) el.classList.remove("dt970-ag-card");
+    };
+
+    const mountAgenda3D = (app) => {
+      const card = app.querySelector("#agbox, #mkcal")?.closest(".card, .v4-card") || app.querySelector('button[data-ag="sem"]')?.closest(".card, .v4-card");
+      if (!card) return;
+      if (!card.classList.contains("dt970-ag-card")) card.classList.add("dt970-ag-card");
+
+      // Marca linhas antigas de filtros para ocultar no mobile preservando botões nativos no DOM
+      for (const sel of ['button[data-ag="sem"]', 'button[data-mk="ct"]', 'button[data-mk="im"]']) {
+        const b = card.querySelector(sel);
+        if (b?.parentElement && !b.parentElement.classList.contains("dt970-ag-old")) {
+          b.parentElement.classList.add("dt970-ag-old");
+        }
+      }
+      for (const ch of card.children) {
+        if (ch.classList.contains("sm") && ch.classList.contains("mut") && /^(?:Pa[ií]s|Import[aâ]ncia)$/i.test(ch.textContent.trim())) {
+          if (!ch.classList.contains("dt970-ag-old")) ch.classList.add("dt970-ag-old");
+        }
+      }
+
+      const semBtns = [...card.querySelectorAll('button[data-ag="sem"]')];
+      const ctBtns = [...card.querySelectorAll('button[data-mk="ct"]')];
+      const imBtns = [...card.querySelectorAll('button[data-mk="im"]')];
+      const activeSem = semBtns.find((b) => !b.classList.contains("s"))?.dataset.v || "0";
+      const curCtBtn = ctBtns.find((b) => !b.classList.contains("s")) || ctBtns[0];
+      const curImBtn = imBtns.find((b) => !b.classList.contains("s")) || imBtns[0];
+      const ctVal = curCtBtn?.dataset.v || "br,us";
+      const ctLbl = CT_SHORT[ctVal] || curCtBtn?.textContent?.trim() || "BR + EUA";
+      const imVal = curImBtn?.dataset.v || "0,1";
+      const imLbl = IM_SHORT[imVal] || curImBtn?.textContent?.trim() || "Médio+";
+
+      // 1. Cápsula segmentada 3D: Esta semana | Próxima semana
+      let week = d.getElementById("dt970-ag-week");
+      if (!week) {
+        week = d.createElement("div");
+        week.id = "dt970-ag-week";
+        week.className = "dt970-ag-week";
+        week.setAttribute("data-noclaro", "1");
+        card.before(week);
+      } else if (week.nextElementSibling !== d.getElementById("dt970-ag-bar") && week.nextElementSibling !== card) {
+        card.before(week);
+      }
+      if (week.dataset.key !== activeSem) {
+        week.dataset.key = activeSem;
+        week.innerHTML = `<button type="button" class="${activeSem === "0" ? "on" : ""}" data-dt970-sem="0">Esta semana</button><button type="button" class="${activeSem === "1" ? "on" : ""}" data-dt970-sem="1">Próxima semana</button>`;
+      }
+
+      // 2. Barra TradingView 3D: [ País ▾ ] [ Importância ▾ ] [ ✦ IA ] [ ↻ ]
+      let bar = d.getElementById("dt970-ag-bar");
+      if (!bar) {
+        bar = d.createElement("div");
+        bar.id = "dt970-ag-bar";
+        bar.className = "dt966-tv-head dt970-ag-bar";
+        bar.setAttribute("data-noclaro", "1");
+        week.after(bar);
+      } else if (week.nextElementSibling !== bar) {
+        week.after(bar);
+      }
+      const bKey = `${ctVal}|${ctLbl}|${imVal}|${imLbl}`;
+      if (bar.dataset.key !== bKey) {
+        bar.dataset.key = bKey;
+        bar.innerHTML = `<div class="dt966-row-top" data-noclaro="1"><div class="dt966-chips">` +
+          `<button type="button" class="dt966-pill dt966-pill-main" data-dt970-ag-sheet="ct" aria-haspopup="dialog"><span class="dt966-badge">${GLOBE_ICO}</span><span>${esc(ctLbl)}</span><span class="dt966-caret">▾</span></button>` +
+          `<button type="button" class="dt966-pill" data-dt970-ag-sheet="im" aria-haspopup="dialog"><span class="dt966-badge">${BOLT_ICO}</span><span>${esc(imLbl)}</span><span class="dt966-caret">▾</span></button>` +
+          `<button type="button" class="dt966-pill dt966-pill-img" data-dt962-ag-ia="1" title="Impacto no WIN/WDO com a Áurea"><span class="dt966-badge">${SPARK_ICO}</span><span>IA</span></button>` +
+          `</div><button type="button" class="dt966-orb" data-dt970-ag-rf="1" aria-label="Atualizar agenda" title="Atualizar">${REFRESH_ICO}</button></div>`;
+      }
+
+      // 3. Faixa compacta 1 linha do próximo evento de alto impacto
+      let nxt = d.getElementById("dt970-ag-next");
+      if (!nxt) {
+        nxt = d.createElement("div");
+        nxt.id = "dt970-ag-next";
+        nxt.className = "dt970-ag-next";
+        nxt.setAttribute("data-noclaro", "1");
+        bar.after(nxt);
+      } else if (bar.nextElementSibling !== nxt) {
+        bar.after(nxt);
+      }
+      const cd = d.getElementById("dt962-ag-cd");
+      const isAl = !!cd?.classList.contains("alerta");
+      const cdTitle = cd?.querySelector(".dt962-ag-v b")?.textContent?.trim() || "Agenda Macro (BR & EUA)";
+      const cdTime = cd?.querySelector(".dt962-ag-v span")?.textContent?.trim() || "Sem evento 3★ pendente";
+      const nKey = `${isAl}|${cdTitle}|${cdTime}`;
+      if (nxt.dataset.key !== nKey) {
+        nxt.dataset.key = nKey;
+        nxt.classList.toggle("alerta", isAl);
+        nxt.innerHTML = `<span class="dt970-nxt-dot"></span><span class="dt970-nxt-txt"><b>${esc(cdTitle)}</b></span><span class="dt970-nxt-tm">${esc(cdTime)}</span>`;
+      }
+    };
+
+    const openAgSheet = (kind) => {
+      d.getElementById("dt970-ag-sheet-ov")?.remove();
+      const app = getApp();
+      const btns = [...(app?.querySelectorAll(kind === "ct" ? 'button[data-mk="ct"]' : 'button[data-mk="im"]') || [])];
+      if (!btns.length) return;
+      const title = kind === "ct" ? "Filtrar por País" : "Nível de Importância";
+      const ov = d.createElement("div");
+      ov.id = "dt970-ag-sheet-ov";
+      ov.className = "dt966-sheet-ov";
+      ov.setAttribute("data-noclaro", "1");
+      ov.innerHTML = `<div class="dt966-sheet" role="dialog" aria-label="${esc(title)}" data-noclaro="1">` +
+        `<div class="dt966-handle"></div>` +
+        `<div class="dt966-sh-head"><b>${esc(title)}</b><button type="button" class="dt966-sh-x" data-dt970-close-ag="1" aria-label="Fechar">✕</button></div>` +
+        `<div class="dt966-sh-grid">${btns.map((b) => {
+          const val = b.dataset.v || "";
+          const on = !b.classList.contains("s");
+          const ico = kind === "ct" ? (CT_ICO[val] || GLOBE_ICO) : BOLT_ICO;
+          return `<button type="button" class="dt966-sh-card${on ? " on" : ""}" data-dt970-ag-pick="${esc(kind)}:${esc(val)}"><span class="dt966-sh-ico">${ico}</span><span class="dt966-sh-lbl">${esc(b.textContent.trim())}</span>${on ? '<span class="dt966-sh-chk">✓</span>' : ""}</button>`;
+        }).join("")}</div></div>`;
+      d.body.append(ov);
+    };
+
+    const mountLongShort3D = () => {
+      const ls = d.getElementById("v512-ls");
+      if (!ls) return;
+
+      // Botão rápido ⇄ Inverter A × B no cabeçalho do formulário
+      const tit = ls.querySelector(".v592-ls-tit");
+      if (tit && !d.getElementById("dt970-ls-swap")) {
+        const sw = d.createElement("button");
+        sw.type = "button";
+        sw.id = "dt970-ls-swap";
+        sw.className = "dt970-ls-swap";
+        sw.setAttribute("data-dt970-swap", "1");
+        sw.setAttribute("aria-label", "Inverter Ativo A e Ativo B");
+        sw.innerHTML = `${SWAP_ICO}<span>Inverter</span>`;
+        tit.append(sw);
+      }
+
+      // Carrossel horizontal 1-toque de pares populares logo abaixo de "Analisar par"
+      const cta = ls.querySelector(".v512-cta");
+      if (cta) {
+        let quick = d.getElementById("dt970-ls-quick");
+        const curA = (d.getElementById("v512-a")?.value || "").trim().toUpperCase();
+        const curB = (d.getElementById("v512-b")?.value || "").trim().toUpperCase();
+        const qKey = `${curA}|${curB}`;
+        if (!quick) {
+          quick = d.createElement("div");
+          quick.id = "dt970-ls-quick";
+          quick.className = "dt970-ls-quick";
+          quick.setAttribute("data-noclaro", "1");
+          cta.after(quick);
+        } else if (cta.nextElementSibling !== quick) {
+          cta.after(quick);
+        }
+        if (quick.dataset.key !== qKey) {
+          quick.dataset.key = qKey;
+          quick.innerHTML = QUICK_PAIRS.map(([a, b]) => `<button type="button" class="dt970-ls-chip${curA === a && curB === b ? " on" : ""}" data-v512par="${a}|${b}">${a} × ${b}</button>`).join("");
+        }
+      }
+    };
+
+    const sync = () => {
+      if (syncing) return;
+      syncing = true;
+      obs.disconnect();
+      const app = getApp();
+      try {
+        const mode = getMode(app);
+        if (!mode) { cleanup(); return; }
+        if (d.body.classList.contains("dt970-view-ag") !== (mode === "ag")) d.body.classList.toggle("dt970-view-ag", mode === "ag");
+        if (d.body.classList.contains("dt970-view-ls") !== (mode === "ls")) d.body.classList.toggle("dt970-view-ls", mode === "ls");
+        if (mode === "ag") {
+          d.getElementById("dt970-ls-swap")?.remove();
+          d.getElementById("dt970-ls-quick")?.remove();
+          mountAgenda3D(app);
+        } else {
+          d.getElementById("dt970-ag-week")?.remove();
+          d.getElementById("dt970-ag-bar")?.remove();
+          d.getElementById("dt970-ag-next")?.remove();
+          d.getElementById("dt970-ag-sheet-ov")?.remove();
+          mountLongShort3D();
+        }
+      } finally {
+        syncing = false;
+        if (app && d.body.classList.contains("mkt549")) obs.observe(app, { childList: true, subtree: true });
+      }
+    };
+
+    const sched = (ms = 50) => {
+      if (timer) return;
+      timer = setTimeout(() => { timer = null; sync(); }, ms);
+    };
+
+    const obs = new MutationObserver(() => {
+      if (syncing || !d.body.classList.contains("mkt549")) return;
+      sched(70);
+    });
+
+    d.addEventListener("click", (e) => {
+      const sem = e.target?.closest?.("[data-dt970-sem]");
+      if (sem) {
+        const v = sem.getAttribute("data-dt970-sem");
+        getApp()?.querySelector(`button[data-ag="sem"][data-v="${v}"]`)?.click();
+        sched(80);
+        return;
+      }
+      const agSh = e.target?.closest?.("[data-dt970-ag-sheet]");
+      if (agSh) { openAgSheet(agSh.getAttribute("data-dt970-ag-sheet")); return; }
+      if (e.target?.closest?.("[data-dt970-close-ag]") || e.target?.id === "dt970-ag-sheet-ov") {
+        d.getElementById("dt970-ag-sheet-ov")?.remove();
+        return;
+      }
+      const agPick = e.target?.closest?.("[data-dt970-ag-pick]");
+      if (agPick) {
+        const [kind, val] = String(agPick.getAttribute("data-dt970-ag-pick") || "").split(":");
+        d.getElementById("dt970-ag-sheet-ov")?.remove();
+        getApp()?.querySelector(`button[data-mk="${kind}"][data-v="${val}"]`)?.click();
+        sched(80);
+        return;
+      }
+      if (e.target?.closest?.("[data-dt970-ag-rf]")) {
+        getApp()?.querySelector('button[data-ag="rf"]')?.click();
+        return;
+      }
+      if (e.target?.closest?.("[data-dt970-swap]")) {
+        const a = d.getElementById("v512-a");
+        const b = d.getElementById("v512-b");
+        if (a && b) {
+          const tmp = a.value;
+          a.value = b.value;
+          b.value = tmp;
+          a.dispatchEvent(new Event("input", { bubbles: true }));
+          b.dispatchEvent(new Event("input", { bubbles: true }));
+          sched(40);
+        }
+        return;
+      }
+    });
+
+    w.addEventListener("resize", () => sched(40));
+    w.addEventListener("diario:render", () => sched(40));
+    if (w.TraderUI?.onRender) w.TraderUI.onRender("mercado-v970-agls3d", { after: () => sched(30) });
+    if (d.readyState === "loading") d.addEventListener("DOMContentLoaded", sync, { once: true });
+    else sync();
+  })(window, document);
+} catch (e) {
+  console.error("[v970] AgendaLongShortTV3D", e);
+}
 try {
   (function () {
     "use strict";

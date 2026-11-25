@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 22fcd8924c688814ed4c19ca1fc20d14fb30c0ed9c7f7c1c837692717207d344 */
+/* Gerado de src/app-theme.css · SHA256 53b080dfc314ba3d719a662698354ac3cdc54ce33266b27c67169f5c15e6ef55 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -4356,18 +4356,18 @@ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topactions{ord
   color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important
  }
  /* Transforma grupos com muitos chips de filtro (Notícias / Agenda / Análises) em carrossel horizontal compacto */
- html:root body.mkt549 #app .card > div:has(> button + button + button),
- html:root body.mkt549 #app .v4-card > div:has(> button + button + button),
- html:root body.mkt549 #app section > div:has(> button + button + button){
+ html:root body.mkt549 #app .card > div:has(> button + button + button):not(.us-rank-grid):not(.us-bars):not(.dt970-ls-quick),
+ html:root body.mkt549 #app .v4-card > div:has(> button + button + button):not(.us-rank-grid):not(.us-bars):not(.dt970-ls-quick),
+ html:root body.mkt549 #app section:not(.us-rank):not(.us-study) > div:has(> button + button + button):not(.us-rank-grid):not(.us-bars):not(.dt970-ls-quick){
   display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;
   gap:6px!important;padding:2px 0 6px!important;scrollbar-width:none;-webkit-overflow-scrolling:touch
  }
- html:root body.mkt549 #app .card > div:has(> button + button + button)::-webkit-scrollbar,
- html:root body.mkt549 #app .v4-card > div:has(> button + button + button)::-webkit-scrollbar,
- html:root body.mkt549 #app section > div:has(> button + button + button)::-webkit-scrollbar{display:none}
- html:root body.mkt549 #app .card > div:has(> button + button + button) > button,
- html:root body.mkt549 #app .v4-card > div:has(> button + button + button) > button,
- html:root body.mkt549 #app section > div:has(> button + button + button) > button{
+ html:root body.mkt549 #app .card > div:has(> button + button + button):not(.us-rank-grid)::-webkit-scrollbar,
+ html:root body.mkt549 #app .v4-card > div:has(> button + button + button):not(.us-rank-grid)::-webkit-scrollbar,
+ html:root body.mkt549 #app section:not(.us-rank):not(.us-study) > div:has(> button + button + button):not(.us-rank-grid)::-webkit-scrollbar{display:none}
+ html:root body.mkt549 #app .card > div:has(> button + button + button):not(.us-rank-grid):not(.us-bars):not(.dt970-ls-quick) > button,
+ html:root body.mkt549 #app .v4-card > div:has(> button + button + button):not(.us-rank-grid):not(.us-bars):not(.dt970-ls-quick) > button,
+ html:root body.mkt549 #app section:not(.us-rank):not(.us-study) > div:has(> button + button + button):not(.us-rank-grid):not(.us-bars):not(.dt970-ls-quick) > button{
   flex:0 0 auto!important;white-space:nowrap!important;min-height:32px!important;height:32px!important;
   padding:0 11px!important;font-size:12px!important;border-radius:999px!important
  }
@@ -5881,4 +5881,405 @@ html:root body.mkt549 #app .cqr[data-dt962-hidden]{display:none!important}
  html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-extra-kpis>div{
   background:#f8fafd!important;border-color:rgba(15,23,42,.08)!important;color:#0f172a!important
  }
+}
+
+/* v970: Fix Ranking EUA (us-rank-grid) + Agenda & Long & Short — Mobile Liquid Glass 3D (Escuro & Claro, somente <=768px) */
+@media(max-width:768px){
+ /* 1. Fix Análises > EUA: "Meses com maior movimentação histórica" (cards completos 3D, sem corte nem esmagamento) */
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank{
+  padding:12px!important;margin:10px 0!important;border-radius:18px!important;
+  background:rgba(255,255,255,.03)!important;border:1px solid rgba(255,255,255,.09)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-grid{
+  display:grid!important;grid-template-columns:1fr!important;gap:8px!important;
+  overflow:visible!important;flex-wrap:wrap!important;margin:10px 0!important;padding:0!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-grid>button.us-rank-item{
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:6px!important;
+  width:100%!important;height:auto!important;min-height:0!important;padding:10px 12px!important;margin:0!important;
+  border-radius:15px!important;text-align:left!important;white-space:normal!important;overflow:visible!important;
+  background:linear-gradient(180deg,rgba(36,42,58,.86),rgba(19,23,34,.95))!important;
+  border:1px solid rgba(255,255,255,.1)!important;color:#f1f5f9!important;-webkit-text-fill-color:#f1f5f9!important;
+  box-shadow:0 5px 14px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.14)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-grid>button.us-rank-item.selected{
+  border-color:rgba(212,175,105,.58)!important;
+  background:linear-gradient(180deg,rgba(48,54,72,.92),rgba(23,27,40,.97))!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-label{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;width:100%!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-label b{font-size:13.5px!important;font-weight:700!important;color:#f8fafc!important}
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-label strong{font-size:13.5px!important;font-weight:800!important;color:#f7d894!important;font-variant-numeric:tabular-nums}
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-bar{
+  display:block!important;width:100%!important;height:6px!important;border-radius:999px!important;
+  background:rgba(255,255,255,.08)!important;overflow:hidden!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-bar i{
+  display:block!important;height:100%!important;border-radius:999px!important;
+  background:linear-gradient(90deg,#c9a259,#f4d48c)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-item small{
+  display:block!important;font-size:11.5px!important;line-height:1.35!important;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important
+ }
+
+ /* 2. Mercado > Agenda — Limpeza + Cápsula 3D Semana + Barra TradingView 3D + Cards de Eventos 3D */
+ html:root:root:root body.mkt549.dt970-view-ag #app#app [data-intel-etapa1][data-route="agenda"]{display:none!important}
+ html:root:root:root body.mkt549.dt970-view-ag #app#app .dt970-ag-card{
+  background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important;margin:0!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app .dt970-ag-card::before{display:none!important;content:none!important}
+ html:root:root:root body.mkt549.dt970-view-ag #app#app .dt970-ag-card>.top,
+ html:root:root:root body.mkt549.dt970-view-ag #app#app .dt970-ag-card>#dt962-ag-cd,
+ html:root:root:root body.mkt549.dt970-view-ag #app#app .dt970-ag-card>.dt970-ag-old,
+ html:root:root:root body.mkt549.dt970-view-ag #app#app .dt970-ag-card #agbox>.agr,
+ html:root:root:root body.mkt549.dt970-view-ag #app#app .dt970-ag-card>.agr{display:none!important}
+
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-week{
+  display:grid!important;grid-template-columns:1fr 1fr!important;gap:4px!important;
+  padding:4px!important;margin:0 0 10px!important;border-radius:999px!important;height:44px!important;box-sizing:border-box!important;
+  background:linear-gradient(180deg,rgba(26,31,42,.92),rgba(15,19,27,.96))!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.38),0 6px 18px rgba(0,0,0,.28)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-week>button{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  height:34px!important;min-height:34px!important;padding:0 8px!important;margin:0!important;
+  border-radius:999px!important;border:1px solid transparent!important;background:transparent!important;box-shadow:none!important;
+  font-size:12.5px!important;font-weight:600!important;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-week>button.on{
+  background:linear-gradient(180deg,#2e3547,#191e2a)!important;border-color:rgba(212,175,105,.52)!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;font-weight:700!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar{margin:0 0 8px!important}
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar .dt966-row-top{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;gap:6px!important;width:100%!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar .dt966-chips{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;gap:6px!important;
+  flex:1 1 auto!important;min-width:0!important;overflow-x:auto!important;scrollbar-width:none;padding:2px 0!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar .dt966-chips::-webkit-scrollbar{display:none}
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar button.dt966-orb{
+  width:38px!important;min-width:38px!important;max-width:38px!important;height:38px!important;min-height:38px!important;
+  border-radius:999px!important;padding:0!important;margin:0!important;flex:0 0 38px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  background:linear-gradient(180deg,rgba(46,53,70,.9),rgba(22,26,36,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#f1f5f9!important;-webkit-text-fill-color:#f1f5f9!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.2)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar button.dt966-pill{
+  height:38px!important;min-height:38px!important;border-radius:999px!important;padding:0 10px 0 8px!important;margin:0!important;
+  display:inline-flex!important;align-items:center!important;gap:5px!important;flex:0 0 auto!important;white-space:nowrap!important;
+  font-size:12px!important;font-weight:700!important;
+  background:linear-gradient(180deg,rgba(46,53,70,.9),rgba(22,26,36,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#f1f5f9!important;-webkit-text-fill-color:#f1f5f9!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.2)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar button.dt966-pill-main{
+  background:linear-gradient(180deg,#2c3345,#161a25)!important;border-color:rgba(212,175,105,.52)!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar button.dt966-pill-img{
+  border-color:rgba(212,175,105,.46)!important;background:linear-gradient(180deg,rgba(212,175,105,.24),rgba(212,175,105,.1))!important;
+  color:#f7e2b5!important;-webkit-text-fill-color:#f7e2b5!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar .dt966-badge{display:inline-flex!important;align-items:center!important}
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-bar .dt966-caret{font-size:11px;opacity:.75}
+
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-next{
+  display:flex!important;align-items:center!important;gap:8px!important;padding:8px 12px!important;margin:0 0 10px!important;
+  border-radius:15px!important;font-size:12px!important;
+  background:linear-gradient(180deg,rgba(30,36,49,.86),rgba(17,21,30,.94))!important;
+  border:1px solid rgba(255,255,255,.1)!important;color:#cbd5e1!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.12)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-next.alerta{
+  border-color:rgba(245,158,11,.55)!important;background:linear-gradient(180deg,rgba(245,158,11,.2),rgba(245,158,11,.08))!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-next .dt970-nxt-dot{
+  width:8px;height:8px;border-radius:999px;background:#d4af69;flex:0 0 8px
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-next.alerta .dt970-nxt-dot{background:#f59e0b}
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-next .dt970-nxt-txt{
+  flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f8fafc
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #dt970-ag-next .dt970-nxt-tm{
+  flex:0 0 auto;font-size:11.5px;font-weight:700;color:#f7d894;font-variant-numeric:tabular-nums
+ }
+
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox{border:none!important;background:transparent!important;box-shadow:none!important;padding:0!important}
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-dest{
+  margin:0 0 10px!important;padding:10px 12px!important;border-radius:18px!important;
+  background:linear-gradient(180deg,rgba(30,36,49,.82),rgba(16,20,29,.92))!important;
+  border:1px solid rgba(255,255,255,.09)!important;box-shadow:0 6px 18px rgba(0,0,0,.28)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-dest>div:last-child{
+  display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:6px!important;padding:4px 0 2px!important;scrollbar-width:none
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-dest>div:last-child::-webkit-scrollbar{display:none}
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-chip{
+  flex:0 0 auto!important;white-space:nowrap!important;padding:5px 10px!important;border-radius:999px!important;
+  background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.11)!important;font-size:11.5px!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-dia{
+  margin:0 0 10px!important;padding:11px 12px!important;border-radius:19px!important;
+  background:linear-gradient(180deg,rgba(30,36,49,.88),rgba(16,20,29,.95))!important;
+  border:1px solid rgba(255,255,255,.1)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.14)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-dia.hoje{
+  border-color:rgba(212,175,105,.42)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-dh{
+  font-size:12px!important;font-weight:800!important;letter-spacing:.04em!important;padding-bottom:6px!important;margin-bottom:6px!important;
+  border-bottom:1px solid rgba(255,255,255,.08)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-ev{
+  padding:8px 8px!important;border-radius:12px!important;border-top:none!important;margin-bottom:5px!important;
+  background:rgba(255,255,255,.035)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-ev.prox{
+  background:rgba(212,175,105,.12)!important;border:1px solid rgba(212,175,105,.38)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ag #app#app #agbox .ag-h{
+  font-variant-numeric:tabular-nums!important;font-weight:700!important;font-size:12px!important;color:#f7d894!important
+ }
+
+ /* 3. Mercado > Long & Short (#v512-ls) — Simulador 3D + Botão ⇄ + Carrossel Pares 1-toque + Régua Z-Score 3D */
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls{padding:2px 0 24px!important}
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls .v592-ls-tit{
+  display:flex!important;align-items:center!important;gap:8px!important;margin:4px 0 10px!important;
+  font-size:16px!important;font-weight:800!important;color:#f8fafc!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls .v592-ajuda{
+  width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;border-radius:999px!important;padding:0!important;flex:0 0 32px!important;
+  background:linear-gradient(180deg,rgba(46,53,70,.9),rgba(22,26,36,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#f1f5f9!important;-webkit-text-fill-color:#f1f5f9!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.18)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls button.dt970-ls-swap{
+  margin-left:auto!important;width:auto!important;min-width:auto!important;flex:0 0 auto!important;white-space:nowrap!important;
+  height:34px!important;min-height:34px!important;padding:0 12px!important;border-radius:999px!important;
+  display:inline-flex!important;align-items:center!important;gap:6px!important;font-size:12px!important;font-weight:700!important;cursor:pointer;
+  background:linear-gradient(180deg,rgba(46,53,70,.9),rgba(22,26,36,.95))!important;
+  border:1px solid rgba(212,175,105,.42)!important;color:#f7e2b5!important;-webkit-text-fill-color:#f7e2b5!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.18)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls button.dt970-ls-swap svg{
+  width:14px!important;height:14px!important;min-width:14px!important;max-width:14px!important;flex:0 0 14px!important;display:block!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls .v512-grid{
+  display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin-bottom:8px!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls .v512-fld>span{
+  display:block!important;font-size:11px!important;font-weight:700!important;letter-spacing:.03em!important;
+  color:#94a3b8!important;margin-bottom:4px!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls input,
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls select{
+  height:44px!important;min-height:44px!important;border-radius:15px!important;font-size:16px!important;font-weight:700!important;
+  padding:0 13px!important;background:linear-gradient(180deg,rgba(28,34,47,.94),rgba(17,21,30,.98))!important;
+  border:1px solid rgba(255,255,255,.13)!important;color:#f8fafc!important;-webkit-text-fill-color:#f8fafc!important;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.35),0 4px 12px rgba(0,0,0,.22)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls button.v512-cta{
+  height:46px!important;min-height:46px!important;border-radius:999px!important;margin:4px 0 10px!important;
+  font-size:14.5px!important;font-weight:800!important;letter-spacing:-.01em!important;
+  background:linear-gradient(180deg,#e4c47f,#b88c3b)!important;border:1px solid rgba(255,240,196,.5)!important;
+  color:#111318!important;-webkit-text-fill-color:#111318!important;
+  box-shadow:0 8px 22px rgba(184,140,59,.34),inset 0 1.5px 0 rgba(255,255,255,.45)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #dt970-ls-quick{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:6px!important;
+  overflow-x:auto!important;scrollbar-width:none;padding:2px 0 10px!important;margin:0!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #dt970-ls-quick::-webkit-scrollbar{display:none}
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #dt970-ls-quick button.dt970-ls-chip{
+  flex:0 0 auto!important;white-space:nowrap!important;height:34px!important;min-height:34px!important;
+  padding:0 12px!important;margin:0!important;border-radius:999px!important;font-size:12px!important;font-weight:700!important;cursor:pointer;
+  background:linear-gradient(180deg,rgba(40,47,63,.88),rgba(20,24,35,.95))!important;
+  border:1px solid rgba(255,255,255,.12)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.16)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #dt970-ls-quick button.dt970-ls-chip.on{
+  border-color:rgba(212,175,105,.62)!important;color:#fde68a!important;-webkit-text-fill-color:#fde68a!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls .v512-card,
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls #dt962-ls-gauge{
+  border-radius:19px!important;padding:13px!important;margin:0 0 10px!important;overflow:hidden!important;
+  background:linear-gradient(180deg,rgba(30,36,49,.88),rgba(16,20,29,.95))!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.15)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls table.v512-tab{
+  width:100%!important;max-width:100%!important;table-layout:auto!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls table.v512-tab td,
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls table.v512-tab th{
+  max-width:none!important;overflow-wrap:break-word!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls .v512-kpis{
+  display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin:10px 0!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls .v512-kpis>div{
+  padding:10px 11px!important;border-radius:15px!important;
+  background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.09)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula{
+  border-radius:16px!important;padding:9px 13px!important;margin:0 0 8px!important;
+  background:linear-gradient(180deg,rgba(30,36,49,.84),rgba(17,21,30,.93))!important;
+  border:1px solid rgba(255,255,255,.1)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.13)!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula>summary{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;
+  margin:0!important;padding:0!important;min-height:28px!important;height:auto!important;line-height:1.3!important;
+  font-size:13.5px!important;font-weight:700!important;color:#f1f5f9!important;cursor:pointer;list-style:none!important
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula>summary::-webkit-details-marker,
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula>summary::before{display:none!important;content:none!important}
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula>summary::after{
+  content:"▾";font-size:13px;opacity:.68;flex:0 0 auto;transition:transform .18s ease
+ }
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula[open]>summary{margin-bottom:8px!important}
+ html:root:root:root body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula[open]>summary::after{transform:rotate(180deg)}
+
+ /* ===== TEMA CLARO (Branco Luminoso 3D Liquid Glass — especificidade tripla :root) ===== */
+ /* Tema Claro — Fix Ranking EUA */
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-rank{
+  background:#f8fafd!important;border-color:rgba(15,23,42,.08)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-grid>button.us-rank-item{
+  background:linear-gradient(180deg,#ffffff,#f4f6fa)!important;border:1px solid rgba(15,23,42,.1)!important;
+  color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  box-shadow:0 4px 12px rgba(15,23,42,.07),inset 0 1.5px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-grid>button.us-rank-item.selected{
+  border-color:#0f172a!important;background:linear-gradient(180deg,#ffffff,#eef2f7)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-label b{color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-label strong{color:#9a6b16!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-bar{background:rgba(15,23,42,.08)!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-rank .us-rank-item small{color:#64748b!important;-webkit-text-fill-color:#64748b!important}
+
+ /* Tema Claro — Agenda (100% contraste nítido, zero botões apagados) */
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app .dt970-ag-card{
+  background:transparent!important;border:none!important;box-shadow:none!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-week{
+  background:linear-gradient(180deg,#eef2f7,#e5ebf3)!important;border-color:rgba(15,23,42,.08)!important;
+  box-shadow:inset 0 1.5px 4px rgba(15,23,42,.08)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-week>button{
+  color:#475569!important;-webkit-text-fill-color:#475569!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-week>button.on{
+  background:linear-gradient(180deg,#2c313d,#12141a)!important;border-color:#12141a!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  box-shadow:0 5px 14px rgba(17,19,24,.22),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-bar button.dt966-orb,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-bar button.dt966-pill{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;border:1px solid rgba(15,23,42,.1)!important;
+  color:#111827!important;-webkit-text-fill-color:#111827!important;
+  box-shadow:0 6px 16px rgba(15,23,42,.09),inset 0 1.5px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-bar button.dt966-pill-main{
+  background:linear-gradient(180deg,#2c313d,#12141a)!important;border-color:#12141a!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-bar button.dt966-pill-img{
+  background:linear-gradient(180deg,#fffdf7,#f8edd6)!important;border-color:rgba(181,139,61,.45)!important;
+  color:#8a5e14!important;-webkit-text-fill-color:#8a5e14!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox{
+  border:none!important;background:transparent!important;box-shadow:none!important;padding:0!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-next,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-dest,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-dia{
+  background:linear-gradient(180deg,#ffffff,#f6f8fc)!important;border:1px solid rgba(15,23,42,.09)!important;
+  color:#0f172a!important;box-shadow:0 8px 22px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-next.alerta{
+  background:linear-gradient(180deg,#fffbeb,#fef3c7)!important;border-color:rgba(217,119,6,.45)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-next .dt970-nxt-txt{color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #dt970-ag-next .dt970-nxt-tm{color:#9a6b16!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-chip{
+  background:#f1f5f9!important;border-color:rgba(15,23,42,.12)!important;color:#0f172a!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-dh{border-bottom-color:rgba(15,23,42,.08)!important;color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-ev{background:#f8fafd!important;color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-ev.prox{background:#fefce8!important;border:1px solid rgba(202,138,4,.35)!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-h{color:#9a6b16!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-imp i{background:#cbd5e1!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-imp.i1 i:nth-child(1),
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-imp.i2 i:nth-child(-n+2){background:#d97706!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ag #app#app #agbox .ag-imp.i3 i{background:#dc2626!important}
+
+ /* Tema Claro — Long & Short (CTA obsidian nítido + inputs 3D + accordions limpos) */
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v592-ls-tit{color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v592-ajuda,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls button.dt970-ls-swap,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #dt970-ls-quick button.dt970-ls-chip{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;border:1px solid rgba(15,23,42,.12)!important;
+  color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  box-shadow:0 4px 12px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #dt970-ls-quick button.dt970-ls-chip.on{
+  background:linear-gradient(180deg,#2c313d,#12141a)!important;border-color:#12141a!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v512-fld>span{color:#475569!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls input,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls select{
+  background:linear-gradient(180deg,#ffffff,#f4f6fa)!important;border:1px solid rgba(15,23,42,.14)!important;
+  color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  box-shadow:inset 0 1px 3px rgba(15,23,42,.06),0 3px 8px rgba(15,23,42,.05)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls button.v512-cta{
+  background:linear-gradient(180deg,#2c313d,#12141a)!important;border-color:#12141a!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  box-shadow:0 8px 20px rgba(17,19,24,.24),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v512-card,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls #dt962-ls-gauge,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula{
+  background:linear-gradient(180deg,#ffffff,#f6f8fc)!important;border:1px solid rgba(15,23,42,.09)!important;
+  color:#0f172a!important;box-shadow:0 8px 22px rgba(15,23,42,.08),inset 0 1.5px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula>summary{color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula p,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula li{color:#334155!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls details.v512-aula b,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v512-card h3,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v512-card .sig,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v512-q,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v512-tab td,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v512-tab th{color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v512-kpis>div{
+  background:#f8fafd!important;border-color:rgba(15,23,42,.08)!important;color:#0f172a!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v512-kpis small,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .mut,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls #dt962-ls-gauge .dt962-ls-head span,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls #dt962-ls-gauge .dt962-ls-scale{color:#475569!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls #dt962-ls-gauge .dt962-ls-head b.up{color:#15803d!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls #dt962-ls-gauge .dt962-ls-head b.dn{color:#dc2626!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls #dt962-ls-gauge .dt962-ls-head b.warn{color:#b45309!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls #dt962-ls-gauge .dt962-ls-head b.neu{color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .chips button{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;border:1px solid rgba(15,23,42,.12)!important;
+  color:#0f172a!important;-webkit-text-fill-color:#0f172a!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v592-pop{
+  background:#ffffff!important;border:1px solid rgba(15,23,42,.12)!important;color:#0f172a!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v592-pop p,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt970-view-ls #app#app #v512-ls .v592-pop li{color:#334155!important}
 }
