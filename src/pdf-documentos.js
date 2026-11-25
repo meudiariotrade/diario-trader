@@ -656,6 +656,93 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
     ),
     vt = rt.filter((qe) => !dt.includes(qe));
   (k(!0), (o.y = u + 6));
+  let v972CapaOk = !1;
+  {
+    // v972: Capa cinematográfica inteligente (WebP da cena + clima da edição) na Página 1
+    const Le = e.manchete;
+    const info =
+      typeof window !== "undefined" && window.DiarioCapas561?.classificar
+        ? window.DiarioCapas561.classificar(Le, e)
+        : {
+            cena: "bolsa-cautela",
+            clima: e.clima_capa || "cautela",
+            url: "assets/capas/bolsa-cautela.webp",
+            rotulo: "Edição do dia",
+          };
+    const climaCor =
+      info.clima === "baixa"
+        ? d.dn
+        : info.clima === "alta"
+          ? d.gr
+          : o.hex("#c98a2e");
+    const climaLbl =
+      info.clima === "baixa"
+        ? "PRESSÃO VENDEDORA"
+        : info.clima === "alta"
+          ? "RITMO COMPRADOR"
+          : "MERCADO EM CAUTELA";
+    const ze = b(Le.titulo, p - 36, 22, "s").slice(0, 4),
+      Ue = Le.linha_fina ? b(Le.linha_fina, p - 36, 9.6).slice(0, 2) : [],
+      We = Math.max(308, 175 + ze.length * 26 + Ue.length * 13),
+      Re = o.y;
+    let capaImg = null;
+    try {
+      if (typeof document !== "undefined" && typeof Image !== "undefined") {
+        const im = await new Promise((res) => {
+          const el = new Image();
+          el.crossOrigin = "anonymous";
+          el.onload = () => res(el);
+          el.onerror = () => res(null);
+          el.src = info.url;
+        });
+        if (im && im.naturalWidth > 0) {
+          const cw = 1120,
+            ch = Math.round((We / p) * cw);
+          const cv = document.createElement("canvas");
+          cv.width = cw;
+          cv.height = ch;
+          const cx = cv.getContext("2d");
+          const sc = Math.max(cw / im.naturalWidth, ch / im.naturalHeight);
+          const dw = im.naturalWidth * sc,
+            dh = im.naturalHeight * sc;
+          cx.drawImage(im, (cw - dw) / 2, (ch - dh) * 0.2, dw, dh);
+          const gTop = cx.createLinearGradient(0, 0, 0, ch * 0.42);
+          gTop.addColorStop(0, "rgba(7,9,14,0.72)");
+          gTop.addColorStop(1, "rgba(7,9,14,0.06)");
+          cx.fillStyle = gTop;
+          cx.fillRect(0, 0, cw, ch * 0.42);
+          const gBot = cx.createLinearGradient(0, ch * 0.34, 0, ch);
+          gBot.addColorStop(0, "rgba(7,9,14,0.04)");
+          gBot.addColorStop(0.54, "rgba(7,9,14,0.76)");
+          gBot.addColorStop(1, "rgba(7,9,14,0.96)");
+          cx.fillStyle = gBot;
+          cx.fillRect(0, ch * 0.34, cw, ch * 0.66);
+          const b64 = cv.toDataURL("image/jpeg", 0.88).split(",")[1];
+          const bin = atob(b64);
+          const u8 = new Uint8Array(bin.length);
+          for (let ii = 0; ii < bin.length; ii++) u8[ii] = bin.charCodeAt(ii);
+          capaImg = await o.doc.embedJpg(u8);
+        }
+      }
+    } catch {}
+    if (capaImg) {
+      o.rr(c, Re, p, We, { fill: d.nv, r: 8 });
+      try {
+        o.pg.drawImage(capaImg, { x: c, y: o.H - Re - We, width: p, height: We });
+      } catch {}
+      o.rect(c, Re, p, 3.5, { fill: climaCor });
+      o.pill(String(Le.editoria || "Mercados").toUpperCase(), c + 16, Re + 16, { s: 7.2, bg: d.gr, c: d.wh });
+      const pwClima = Math.min(148, o.wd(climaLbl, 7.2, "b") + 18);
+      o.pill(climaLbl, c + p - 16 - pwClima, Re + 16, { s: 7.2, bg: climaCor, c: d.wh });
+      const txtH = ze.length * 26 + (Ue.length ? Ue.length * 13 + 6 : 0);
+      let ty = Re + We - txtH - 16;
+      ze.forEach((pe) => { h(pe, c + 18, ty, { s: 22, f: "s", c: d.wh }); ty += 26; });
+      if (Ue.length) { ty += 4; Ue.forEach((pe) => { h(pe, c + 18, ty, { s: 9.6, c: d.li }); ty += 13; }); }
+      o.y = Re + We + f;
+      v972CapaOk = !0;
+    }
+  }
+  if (!v972CapaOk)
   {
     const qe = await x(
         await jvFotoBytes(
@@ -707,7 +794,47 @@ DiarioChunks.functions.jvPdfBytes = async function jvPdfBytes(e) {
       ),
       (o.y = Re + We + f));
   }
-  (Ve(vt.slice(0, 8), !1), he("Por que importa", e.manchete.por_que_importa));
+  // Faixa de Cotações da Edição (até 8 ativos em 4x2) + Radar da Mesa (30s) na Página 1
+  Ve(rt.slice(0, 8), !1);
+  {
+    const cots = e.snapshot?.cotacoes || e.cotacoes || [];
+    const findQ = (rx) => cots.find((q) => rx.test(String(q?.k || "") + " " + String(q?.n || "")));
+    const qWin = findQ(/\b(win|ibov)\b|ibovespa/i);
+    const qWdo = findQ(/\b(wdo|dolar|usd)\b|d[oó]lar/i);
+    const qDi = findQ(/\bdi\d|di\s*jan|juros/i);
+    const fmtRef = (q, fb) => {
+      if (!q || !isFinite(+q.px)) return fb;
+      const dec = q.px > 1000 ? 0 : q.px < 10 ? 4 : 2;
+      const px = Number(q.px).toLocaleString("pt-BR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      const d1 = isFinite(+q.d1) ? ` (${q.d1 > 0 ? "+" : ""}${Number(q.d1).toFixed(2).replace(".", ",")}%)` : "";
+      return `${q.n || fb} em ${px}${d1}.`;
+    };
+    const rm = e.radar_mesa || null;
+    const cards = [
+      { k: "WIN · ÍNDICE", txt: rm?.win || fmtRef(qWin, "Acompanhe abertura do Índice e curva externa."), q: qWin },
+      { k: "WDO · DÓLAR", txt: rm?.wdo || fmtRef(qWdo, "Acompanhe fluxo cambial, DXY e Treasuries."), q: qWdo },
+      { k: "DI · JUROS", txt: rm?.di || fmtRef(qDi, "Acompanhe juros futuros, fiscal e agenda macro."), q: qDi },
+    ];
+    if (rm || qWin || qWdo || qDi) {
+      J(106);
+      Me("Radar da Mesa · 30s", c, o.y);
+      o.y += 20;
+      const gap = 8, cw = (p - gap * 2) / 3, ch = 78;
+      cards.forEach((cd, idx) => {
+        const x0 = c + idx * (cw + gap);
+        o.rr(x0, o.y, cw, ch, { fill: d.pa, stroke: d.bd, r: 6, w: 0.6 });
+        h(cd.k, x0 + 9, o.y + 8, { s: 7.8, f: "b", c: d.gr });
+        if (cd.q && isFinite(+cd.q.d1)) {
+          const dv = (cd.q.d1 >= 0 ? "+" : "") + Number(cd.q.d1).toFixed(2).replace(".", ",") + "%";
+          h(dv, x0 + cw - 9, o.y + 8, { s: 7.8, f: "b", c: cd.q.d1 > 0 ? d.up : cd.q.d1 < 0 ? d.dn : d.mu, al: "r" });
+        }
+        let ly = o.y + 22;
+        b(cd.txt, cw - 18, 8.4).slice(0, 4).forEach((ln) => { h(ln, x0 + 9, ly, { s: 8.4, c: d.tx }); ly += 11.2; });
+      });
+      o.y += ch + f;
+    }
+  }
+  he("Por que importa", e.manchete.por_que_importa);
   {
     const qe = e.manchete;
     fonteDoArtigo(qe,u+6,200);
