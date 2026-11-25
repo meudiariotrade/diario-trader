@@ -24,9 +24,10 @@
         if (i === 0 && !abertos.size) abertos.add(chave);
       }
       const aberto = abertos.has(chave);
-      bloco.classList.toggle('m550-aberto', aberto);
-      tit.setAttribute('aria-expanded', String(aberto));
-      tit.dataset.m550Chave = chave;
+      if (bloco.classList.contains('m550-aberto') !== aberto) bloco.classList.toggle('m550-aberto', aberto);
+      const exp = String(aberto);
+      if (tit.getAttribute('aria-expanded') !== exp) tit.setAttribute('aria-expanded', exp);
+      if (tit.dataset.m550Chave !== chave) tit.dataset.m550Chave = chave;
     });
   }
   function alternaBloco(tit) {

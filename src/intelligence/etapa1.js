@@ -257,8 +257,9 @@
     const titulo=String(e?.titulo||'').toLowerCase();
     if(e?.tema==='petroleo')return 'Petróleo → Petrobras e setor de energia → Ibovespa/WIN';
     if(e?.tema==='minerio')return 'Minério de ferro → Vale e siderurgia → Ibovespa/WIN';
+    const cpiNaoEua=/\b(austr[aá]li\w*|nova zel[aâ]ndi\w*|new zealand|reino unido|\buk\b|brit[aâ]nic\w*|jap[aã]o|japan|canad[aá]|canadian|su[ií][cç]a|swiss|zona do euro|eurozone|alemanha|fran[cç]a|it[aá]lia|[ií]ndia|turquia|argentina|m[eé]xico|coreia|korea)\b/i.test(titulo)&&!/\b(eua|\busa?\b|fed\b|fomc|powell|treasur|brasil|ipca|copom|selic)\b/i.test(titulo);
     if(e?.tema==='politica_economica'){
-      if(/cpi|payroll|fed|fomc|treasur/.test(titulo))return 'Indicador EUA → Treasuries → dólar global → USD/BRL/WDO e Ibovespa/WIN';
+      if(!cpiNaoEua&&/cpi|payroll|fed|fomc|treasur/.test(titulo))return 'Indicador EUA → Treasuries → dólar global → USD/BRL/WDO e Ibovespa/WIN';
       if(/ipca|copom|selic/.test(titulo))return 'Indicador Brasil → curva DI → câmbio → empresas e WIN/WDO';
     }
     return 'Evento → expectativas e prêmio de risco → preços de mercado (hipótese sem causalidade demonstrada)';
@@ -269,9 +270,9 @@
     [/min[eé]rio|iron ore|vale\b|vale3|vale s\.?a/i,'VALE3','A Vale vive da venda de minério de ferro: preço e demanda do minério mexem direto no resultado dela.'],
     [/petr[oó]leo|brent|wti|\bopep|\bopec|petrobras|petr4|\boil\b|crude/i,'PETR4','A Petrobras vende petróleo e derivados: o preço do barril e decisões da empresa mudam receita e dividendos.'],
     [/sider|a[cç]o\b|steel|gerdau/i,'GGBR4','Gerdau é siderúrgica: preço do aço, minério e tarifas de importação afetam a margem.'],
-    [/selic|copom|juros futuros|\bdi\b|ipca|infla[cç][aã]o/i,'ITUB4','Bancos e varejo reagem a juros: Selic e inflação mudam crédito, inadimplência e custo de capital.'],
+    [/selic|copom|juros futuros|\bdi\b|ipca|infla[cç][aã]o brasileira/i,'ITUB4','Bancos e varejo reagem a juros: Selic e inflação mudam crédito, inadimplência e custo de capital.'],
     [/d[oó]lar|c[aâ]mbio|usd\/?brl|real brasileiro/i,'SUZB3','Suzano exporta celulose em dólar: câmbio mais alto aumenta a receita em reais.'],
-    [/fed\b|fomc|powell|warsh|treasur|payroll|\bcpi\b/i,'WIN','Juros americanos mexem no dólar global e no apetite por emergentes, e isso chega ao índice futuro (WIN) e ao dólar (WDO).'],
+    [/\bfed\b|\bfomc\b|powell|warsh|treasur|payroll|\b(?:us|eua)\s+cpi\b|\bcpi\s+(?:dos\s+eua|eua|americano)\b/i,'WIN','Juros americanos mexem no dólar global e no apetite por emergentes, e isso chega ao índice futuro (WIN) e ao dólar (WDO).'],
     [/banco do brasil|bbas3/i,'BBAS3','Notícia sobre o Banco do Brasil afeta diretamente a ação.'],
     [/ita[uú]|itub4/i,'ITUB4','Notícia sobre o Itaú afeta diretamente a ação.'],
     [/eletrobras|elet3/i,'ELET3','Notícia sobre a Eletrobras afeta diretamente a ação.'],

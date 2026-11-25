@@ -5539,3 +5539,347 @@ html:root body.mkt549 #app .cqr[data-dt962-hidden]{display:none!important}
  }
 }
 
+/* v969: Notícias (Ativos seletivos + Por que importa micro-tela) & Análises (Brasil/EUA Liquid Glass 3D + Zero-Tremor) — somente celular <=768px */
+@media(max-width:768px){
+ /* 1. Notícias: remove seção duplicada "Notícias por acontecimento e por ativo" no celular */
+ html:root:root:root body.mkt549.dt968-view-nt #app#app [data-intel-etapa1][data-route="noticias"]{display:none!important}
+
+ /* Badges seletivos de ativos ao lado de MACRO/JUROS + botãozinho ⚡ compacto ao lado de ✦ IA */
+ html:root:root:root body.mkt549.dt968-view-nt #app#app #mknews .dt969-tk{
+  display:inline-flex!important;align-items:center!important;width:auto!important;height:auto!important;
+  padding:2px 8px!important;border-radius:999px!important;font-size:10px!important;font-weight:800!important;
+  letter-spacing:.04em!important;line-height:1.4!important;white-space:nowrap!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.06))!important;
+  border:1px solid rgba(255,255,255,.2)!important;color:#f8fafc!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16)!important
+ }
+ html:root:root:root body.mkt549.dt968-view-nt #app#app #mknews .dt969-acts{
+  display:inline-flex!important;align-items:center!important;gap:6px!important;flex:0 0 auto!important;margin-left:auto!important
+ }
+ html:root:root:root body.mkt549.dt968-view-nt #app#app #mknews button.dt969-why-btn{
+  width:28px!important;min-width:28px!important;max-width:28px!important;height:28px!important;min-height:28px!important;
+  padding:0!important;margin:0!important;border-radius:999px!important;flex:0 0 28px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;cursor:pointer;
+  background:linear-gradient(180deg,rgba(56,189,248,.26),rgba(56,189,248,.12))!important;
+  border:1px solid rgba(56,189,248,.46)!important;color:#7dd3fc!important;-webkit-text-fill-color:#7dd3fc!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2)!important
+ }
+
+ /* Micro-tela 3D Liquid Glass "Por que importa" */
+ .dt969-why-sheet{max-height:78dvh;overflow-y:auto;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))!important}
+ .dt969-why-hd{display:inline-flex;align-items:center;gap:6px;color:#7dd3fc}
+ .dt969-why-ttl{font-size:14.5px;font-weight:700;line-height:1.38;color:#f8fafc;margin:2px 0 12px}
+ .dt969-why-box{
+  padding:11px 12px;border-radius:16px;margin-bottom:10px;
+  background:linear-gradient(180deg,rgba(56,189,248,.14),rgba(56,189,248,.05));
+  border:1px solid rgba(56,189,248,.28)
+ }
+ .dt969-why-lbl{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;color:#7dd3fc;margin-bottom:4px}
+ .dt969-why-box p{margin:0;font-size:13px;line-height:1.45;color:#e2e8f0}
+ .dt969-why-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+ .dt969-why-row{
+  display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:15px;
+  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09)
+ }
+ .dt969-why-row p{margin:0;font-size:12.5px;line-height:1.42;color:#cbd5e1;flex:1 1 auto}
+ .dt969-why-row .dt969-tk-lg{
+  flex:0 0 auto;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.04em;
+  background:linear-gradient(180deg,rgba(212,175,105,.26),rgba(212,175,105,.12));
+  border:1px solid rgba(212,175,105,.48);color:#fde68a
+ }
+ .dt969-why-foot{display:flex;gap:8px;align-items:center}
+ .dt969-why-ia{
+  flex:1 1 auto;height:42px;border-radius:999px;border:1px solid rgba(212,175,105,.52);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:700;
+  background:linear-gradient(180deg,rgba(212,175,105,.28),rgba(180,140,70,.16));color:#fde68a;
+  box-shadow:0 6px 18px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.22)
+ }
+ .dt969-why-link{
+  flex:0 0 auto;height:42px;padding:0 14px;border-radius:999px;text-decoration:none;
+  display:inline-flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#e2e8f0
+ }
+
+ /* 2. Mercado > Análises — Cápsula segmentada 3D unificada (Brasil · Sentimento | EUA · Sazonalidade) */
+ html:root:root:root body.mkt549.dt969-mkt-lab #app#app .pro-region{
+  display:grid!important;grid-template-columns:1fr 1fr!important;gap:4px!important;
+  padding:4px!important;margin:0 0 10px!important;border-radius:999px!important;height:44px!important;box-sizing:border-box!important;
+  background:linear-gradient(180deg,rgba(26,31,42,.92),rgba(15,19,27,.96))!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.38),0 6px 18px rgba(0,0,0,.28)!important
+ }
+ html:root:root:root body.mkt549.dt969-mkt-lab #app#app .pro-region>button{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  height:34px!important;min-height:34px!important;padding:0 8px!important;margin:0!important;
+  border-radius:999px!important;border:1px solid transparent!important;background:transparent!important;box-shadow:none!important;
+  font-size:12px!important;font-weight:600!important;letter-spacing:-.01em!important;white-space:nowrap!important;
+  color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important
+ }
+ html:root:root:root body.mkt549.dt969-mkt-lab #app#app .pro-region>button.on,
+ html:root:root:root body.mkt549.dt969-mkt-lab #app#app .pro-region>button[aria-pressed="true"]{
+  background:linear-gradient(180deg,#2e3547,#191e2a)!important;border-color:rgba(212,175,105,.52)!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;font-weight:700!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.44),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+
+ /* 3. Análises > Brasil · Sentimento (.sw9) — Limpeza + 4 pílulas em 1 linha + Grid 2x3 KPIs 3D + Cards 3D */
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9{
+  background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important;margin:0!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9sub,
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ft{display:none!important}
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9hd{
+  display:flex!important;flex-direction:column!important;gap:8px!important;margin:0 0 10px!important;padding:0!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9brand{
+  font-size:15px!important;font-weight:800!important;letter-spacing:-.01em!important;padding:0 2px!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9tabs{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;
+  width:100%!important;overflow:visible!important;padding:0!important;margin:0!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9tabs>button{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  height:36px!important;min-height:36px!important;padding:0 4px!important;margin:0!important;min-width:0!important;
+  border-radius:999px!important;font-size:11.5px!important;font-weight:700!important;white-space:nowrap!important;
+  background:linear-gradient(180deg,rgba(42,49,66,.88),rgba(20,24,35,.95))!important;
+  border:1px solid rgba(255,255,255,.12)!important;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;
+  box-shadow:0 5px 14px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.18)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:0 0 10px!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k{
+  display:flex!important;flex-direction:column!important;gap:3px!important;
+  padding:11px 12px!important;margin:0!important;border-radius:17px!important;min-width:0!important;
+  background:linear-gradient(180deg,rgba(32,38,52,.88),rgba(17,21,31,.95))!important;
+  border:1px solid rgba(255,255,255,.1)!important;border-left:3px solid rgba(148,163,184,.38)!important;
+  box-shadow:0 8px 20px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.14)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k.dt969-k-up{border-left-color:#10b981!important}
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k.dt969-k-dn{border-left-color:#f43f5e!important}
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k.dt969-k-warn{border-left-color:#f59e0b!important}
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k span{
+  font-size:10px!important;font-weight:800!important;letter-spacing:.05em!important;color:#94a3b8!important;line-height:1.25!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k b{
+  font-size:20px!important;font-weight:800!important;line-height:1.18!important;color:#f8fafc!important;letter-spacing:-.01em!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k b.tg{color:#34d399!important}
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k b.tr{color:#fb7185!important}
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k b.am{color:#fbbf24!important}
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k small{
+  font-size:11px!important;color:#94a3b8!important;line-height:1.25!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9grid{
+  display:flex!important;flex-direction:column!important;gap:8px!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9grid>div{
+  border-radius:19px!important;padding:10px 13px!important;margin:0!important;
+  background:linear-gradient(180deg,rgba(30,36,49,.88),rgba(16,20,29,.95))!important;
+  border:1px solid rgba(255,255,255,.1)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.14)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9t{
+  font-size:12px!important;font-weight:800!important;letter-spacing:.03em!important;color:#f1f5f9!important;
+  min-height:38px!important;gap:8px!important;flex-wrap:wrap!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9t span{
+  font-size:11px!important;font-weight:500!important;color:#94a3b8!important;letter-spacing:0!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9lk,
+ html:root:root:root body.mkt549.dt969-lab-br #app#app .sw9 .sw9cb{
+  border-radius:999px!important;padding:6px 12px!important;font-size:12px!important;font-weight:700!important;
+  background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.12)!important;color:#f1f5f9!important
+ }
+
+ /* 4. Análises > EUA · Sazonalidade (.us-seasonality) — Barra 3D TradingView + Barometer 3D + KPIs 3D */
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-seasonality{
+  background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important;margin:0!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-seasonality>.us-intro,
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-seasonality>.us-footnote,
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .dt969-us-native-sel{display:none!important}
+
+ html:root:root:root body.mkt549.dt969-lab-us #app#app #dt969-us-bar{margin:0 0 10px!important}
+ html:root:root:root body.mkt549.dt969-lab-us #app#app #dt969-us-bar .dt966-row-top{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;width:100%!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app #dt969-us-bar .dt966-chips{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;
+  flex:1 1 auto!important;min-width:0!important;overflow-x:auto!important;scrollbar-width:none;padding:2px 0!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app #dt969-us-bar .dt966-chips::-webkit-scrollbar{display:none}
+ html:root:root:root body.mkt549.dt969-lab-us #app#app #dt969-us-bar button.dt966-orb{
+  width:42px!important;min-width:42px!important;max-width:42px!important;height:42px!important;min-height:42px!important;
+  border-radius:999px!important;padding:0!important;margin:0!important;flex:0 0 42px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  background:linear-gradient(180deg,rgba(46,53,70,.9),rgba(22,26,36,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#f1f5f9!important;-webkit-text-fill-color:#f1f5f9!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.2)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app #dt969-us-bar button.dt966-pill{
+  height:42px!important;min-height:42px!important;border-radius:999px!important;padding:0 13px 0 11px!important;margin:0!important;
+  display:inline-flex!important;align-items:center!important;gap:7px!important;flex:0 0 auto!important;white-space:nowrap!important;
+  font-size:13px!important;font-weight:700!important;letter-spacing:-.01em!important;
+  background:linear-gradient(180deg,rgba(46,53,70,.9),rgba(22,26,36,.95))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#f1f5f9!important;-webkit-text-fill-color:#f1f5f9!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.2)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app #dt969-us-bar button.dt966-pill-main{
+  background:linear-gradient(180deg,#2c3345,#161a25)!important;border-color:rgba(212,175,105,.52)!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.24)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app #dt969-us-bar .dt966-badge{display:inline-flex!important;align-items:center!important}
+ html:root:root:root body.mkt549.dt969-lab-us #app#app #dt969-us-bar .dt966-caret{font-size:11px;opacity:.75;margin-left:1px}
+
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .m606-bar,
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-study,
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-election-context{
+  border-radius:20px!important;padding:13px!important;margin:0 0 10px!important;
+  background:linear-gradient(180deg,rgba(30,36,49,.88),rgba(16,20,29,.95))!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.15)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .m606-bar .m606-hd{margin-bottom:8px!important}
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .m606-bar .m606-hd h3{font-size:14.5px!important;font-weight:800!important}
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .m606-bar .m606-seg{
+  display:inline-flex!important;gap:3px!important;padding:3px!important;border-radius:999px!important;
+  background:rgba(12,15,22,.72)!important;border:1px solid rgba(255,255,255,.1)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .m606-bar .m606-seg>button{
+  height:28px!important;min-height:28px!important;padding:0 10px!important;border-radius:999px!important;
+  border:none!important;background:transparent!important;font-size:11.5px!important;font-weight:600!important;color:#94a3b8!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .m606-bar .m606-seg>button.on{
+  background:linear-gradient(180deg,#2e3547,#1a1f2c)!important;color:#fff!important;font-weight:700!important;
+  box-shadow:0 3px 8px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.2)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .m606-bar .m606-mxc{
+  border-radius:12px!important;border:1px solid rgba(255,255,255,.12)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16)!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .m606-bar .m606-mxc .dl-logo.cqm-img-failed{display:none!important}
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-study select{
+  height:40px!important;border-radius:13px!important;font-size:16px!important;padding:0 12px!important;
+  background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.13)!important;color:#f8fafc!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-kpis,
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-extra-kpis{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:10px 0!important
+ }
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-kpis>div,
+ html:root:root:root body.mkt549.dt969-lab-us #app#app .us-extra-kpis>div{
+  padding:10px 11px!important;border-radius:15px!important;
+  background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.09)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12)!important
+ }
+
+ /* ===== TEMA CLARO (Branco Luminoso 3D Liquid Glass — especificidade tripla :root) ===== */
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt968-view-nt #app#app #mknews .dt969-tk{
+  background:linear-gradient(180deg,#f1f5f9,#e2e8f0)!important;border-color:rgba(15,23,42,.16)!important;color:#0f172a!important;
+  box-shadow:inset 0 1px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt968-view-nt #app#app #mknews button.dt969-why-btn{
+  background:linear-gradient(180deg,#e0f2fe,#bae6fd)!important;border-color:#7dd3fc!important;
+  color:#0369a1!important;-webkit-text-fill-color:#0369a1!important;
+  box-shadow:0 3px 8px rgba(15,23,42,.08),inset 0 1px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-hd{color:#0369a1}
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-ttl{color:#0f172a}
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-box{background:linear-gradient(180deg,#f0f9ff,#e0f2fe);border-color:#7dd3fc}
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-lbl{color:#0369a1}
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-box p{color:#0f172a}
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-row{background:#f8fafd;border-color:rgba(15,23,42,.09)}
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-row p{color:#334155}
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-row .dt969-tk-lg{background:#fef3c7;border-color:#f59e0b;color:#92400e}
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-ia{
+  background:linear-gradient(180deg,#2c313d,#12141a);border-color:#12141a;color:#ffffff;
+  box-shadow:0 6px 16px rgba(17,19,24,.22),inset 0 1px 0 rgba(255,255,255,.2)
+ }
+ html:root:root:root[data-v427-tema="claro"] .dt969-why-link{background:#f1f5f9;border-color:rgba(15,23,42,.14);color:#0f172a}
+
+ /* Tema Claro — Análises (Cápsula + Brasil + EUA) */
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-mkt-lab #app#app .pro-region{
+  background:linear-gradient(180deg,#eef2f7,#e5ebf3)!important;border:1px solid rgba(15,23,42,.08)!important;
+  box-shadow:inset 0 1.5px 4px rgba(15,23,42,.08)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-mkt-lab #app#app .pro-region>button{
+  background:transparent!important;border-color:transparent!important;color:#475569!important;-webkit-text-fill-color:#475569!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-mkt-lab #app#app .pro-region>button.on,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-mkt-lab #app#app .pro-region>button[aria-pressed="true"]{
+  background:linear-gradient(180deg,#2c313d,#12141a)!important;border-color:#12141a!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  box-shadow:0 5px 14px rgba(17,19,24,.22),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .dt395-native-mercado .sw9{
+  background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9brand{color:#0f172a!important;-webkit-text-fill-color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9tabs>button{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;border:1px solid rgba(15,23,42,.1)!important;
+  color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;
+  box-shadow:0 4px 12px rgba(15,23,42,.07),inset 0 1.5px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9grid>div,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .m606-bar,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-study,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-election-context{
+  background:linear-gradient(180deg,#ffffff,#f6f8fc)!important;border:1px solid rgba(15,23,42,.09)!important;
+  color:#0f172a!important;box-shadow:0 8px 22px rgba(15,23,42,.08),0 1px 3px rgba(15,23,42,.04),inset 0 1.5px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k{border-left:3px solid rgba(15,23,42,.2)!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k.dt969-k-up{border-left-color:#059669!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k.dt969-k-dn{border-left-color:#e11d48!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k.dt969-k-warn{border-left-color:#d97706!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k span,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k small,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9t span{color:#64748b!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k b,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9t{color:#0f172a!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k b.tg{color:#059669!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k b.tr{color:#e11d48!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9ks>.sw9k b.am{color:#b45309!important}
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9lk,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-br #app#app .sw9 .sw9cb{
+  background:#f1f5f9!important;border-color:rgba(15,23,42,.12)!important;color:#0f172a!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app #dt969-us-bar button.dt966-orb,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app #dt969-us-bar button.dt966-pill{
+  background:linear-gradient(180deg,#ffffff,#f3f5f9)!important;border:1px solid rgba(15,23,42,.1)!important;
+  color:#111827!important;-webkit-text-fill-color:#111827!important;
+  box-shadow:0 6px 16px rgba(15,23,42,.09),inset 0 1.5px 0 #ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app #dt969-us-bar button.dt966-pill-main{
+  background:linear-gradient(180deg,#2c313d,#12141a)!important;border-color:#12141a!important;
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;
+  box-shadow:0 7px 18px rgba(17,19,24,.24),inset 0 1px 0 rgba(255,255,255,.22)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .m606-bar .m606-seg{
+  background:#eef2f7!important;border-color:rgba(15,23,42,.08)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .m606-bar .m606-seg>button{
+  color:#475569!important;-webkit-text-fill-color:#475569!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .m606-bar .m606-seg>button.on{
+  background:linear-gradient(180deg,#2c313d,#12141a)!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .m606-bar .m606-mxc small{
+  color:rgba(255,255,255,.9)!important;-webkit-text-fill-color:rgba(255,255,255,.9)!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .m606-bar .m606-mxc b{
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-study select{
+  background:#f8fafd!important;border-color:rgba(15,23,42,.14)!important;color:#0f172a!important
+ }
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-kpis>div,
+ html:root:root:root[data-v427-tema="claro"] body.mkt549.dt969-lab-us #app#app .us-extra-kpis>div{
+  background:#f8fafd!important;border-color:rgba(15,23,42,.08)!important;color:#0f172a!important
+ }
+}
+
+

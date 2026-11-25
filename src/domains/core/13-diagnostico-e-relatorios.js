@@ -4553,7 +4553,21 @@ async function m606Carrega(forca) {
 function m606Repinta() {
   try {
     if (typeof tab > "u" || tab !== "mercado") return;
-    MKT.tab === "cq" ? (typeof cqMorph === "function" ? cqMorph() : cqPinta()) : MKT.tab === "lab" && render(); // v626: no lugar, sem recriar logos
+    if (MKT.tab === "cq") { typeof cqMorph === "function" ? cqMorph() : cqPinta(); return; }
+    if (MKT.tab === "lab") {
+      // v969: atualiza o US Market Barometer no lugar (zero tremor, sem perder rolagem nem fechar blocos)
+      const bar = document.querySelector("#app:not(.v503-fantasma) .m606-bar") || document.querySelector("#app .m606-bar");
+      if (bar && typeof m606BarHtml === "function") {
+        const tmp = document.createElement("div");
+        tmp.innerHTML = m606BarHtml();
+        const nxt = tmp.firstElementChild;
+        if (nxt && bar.outerHTML !== nxt.outerHTML) bar.replaceWith(nxt);
+        return;
+      }
+      const sy = window.scrollY;
+      render();
+      if (sy > 0) requestAnimationFrame(() => window.scrollTo(0, sy));
+    }
   } catch {}
 }
 function m606Hora(d) {
