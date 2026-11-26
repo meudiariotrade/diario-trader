@@ -50,3 +50,23 @@ test('capital regulatório e AFFO não são marcados como irrelevantes',async()=
  const p=perfilGrahamV1014({ticker:'JPM',market:'US'},{market:'US',universe_complete:true,last_update:now,universe_rows:[r]});
  assert.equal(p.dados.find(x=>x.id==='cet1').aplicavel,true);assert.equal(p.dados.find(x=>x.id==='ev_fcf').aplicavel,false);
 });
+
+test('FII é reconhecido na base pública, não por sufixo; papel não recebe vacância de tijolo',async()=>{
+ const {perfilFiiGrahamV1014,carregarGrahamV1014}=await mod;
+ const row={ticker:'KNCR11',tipo:'Papel',segmento:'CRI',cotacao:100,p_vp:1.1,dy:12,ffo_yield:10,qtd_imoveis:0,vacancia:0,cap_rate:0,spread_ntnb:5.2};
+ const fiis={versao:1,gerado_em:now,rows:[row]};
+ let reads=0,stockReads=0;
+ const result=await carregarGrahamV1014({}, {},'KNCR11',async()=>{stockReads++;return Response.json(snap)},async()=>{reads++;return Response.json(fiis)});
+ assert.equal(reads,1);assert.equal(stockReads,0);assert.equal(result[0].classe,'FII');assert.equal(result[0].subtipo_fii,'Papel');
+ assert.equal(result[0].metricas.vacancia,undefined);assert.equal(result[0].metricas.spread_ntnb,undefined);
+ assert.match(result[0].lacunas.join(' '),/LTV/);assert.equal(perfilFiiGrahamV1014({ticker:'KLBN11',market:'BR'},fiis),null);
+});
+test('FII de tijolo preserva vacância zero observada; não mistura segmentos ou aplica preço de ação',async()=>{
+ const {perfilFiiGrahamV1014}=await mod;
+ const row={ticker:'HGLG11',tipo:'Tijolo',segmento:'Logística',cotacao:90,p_vp:.9,dy:9,qtd_imoveis:5,vacancia:0};
+ const f={versao:1,gerado_em:now,rows:[row,{...row,ticker:'HGRU11',segmento:'Renda urbana'},{...row,ticker:'XPLG11'},{...row,ticker:'BTLG11'},{...row,ticker:'VILG11'}]};
+ const p=perfilFiiGrahamV1014({ticker:'HGLG11',market:'BR'},f);assert.equal(p.metricas.vacancia,0);assert.equal(p.pares.length,3);
+ const src=fs.readFileSync('src/domains/core/07-conta-e-integracoes.js','utf8'),part=src.slice(src.indexOf('// v1014 — reutiliza'),src.indexOf('async function ecoPergunta'));
+ const c={window:{DiarioScreenersInteligencia:require('../src/analysis/screeners-inteligencia.js')}};vm.createContext(c);vm.runInContext(part,c);
+ const [r]=c.aureaCalcularGrahamV1014([p]);assert.equal(r.valuation,null);assert.ok(Math.abs(r.derived.find(x=>x.id==='desconto_vp').valor-10)<1e-9);assert.equal(r.derived.find(x=>x.id==='vp_implicito').valor,100);
+});

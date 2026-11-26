@@ -62,7 +62,7 @@ export async function debateV1013(request,env,deps={}){
  const key='aurea-debate:v1013:'+id+':'+new Date().toISOString().slice(0,10);
  try{const n=Number(await env.SCREENER_CACHE.get(key)||0);if(n>=12)return json({erro:'Limite diário de rodadas do debate atingido'},429);await env.SCREENER_CACHE.put(key,String(n+1),{expirationTtl:86400})}catch{return json({erro:'Controle de uso indisponível'},503)}
  const biblioteca=(Array.isArray(b.biblioteca)?b.biblioteca:[]).slice(0,2).map(x=>({obra:txt(x?.obra,90),trecho:txt(x?.trecho,320)})).filter(x=>x.obra&&x.trecho);
- const perfis=await carregarGrahamV1014(env,deps.ctx,pergunta,deps.snapshot);
+ const perfis=await carregarGrahamV1014(env,deps.ctx,pergunta,deps.snapshot,deps.fiis);
  const contexto={pergunta,perfis,contexto_publico:txt(b.contexto_publico,5000),biblioteca,...(rodada?{rodada,relatorio_visual:txt(b.relatorio_visual,7000)}:{})};
  if(request.signal.aborted)return json({erro:'Consulta cancelada'},499);
  let gen;try{gen=await (deps.generate||generate)(env,SYS+PROTOCOLO_GRAHAM_V1014+' '+(fase==='graham'?'Responda com resultado {"resumo":"tese própria qualitativa","explicacao":["qualidade, caixa, dívida, crescimento, valuation condicional"],"o_que_observar":["catalisador, risco, invalidação"],"lacunas":["dados faltantes"]}. Não inclua números no texto; os indicadores são exibidos pelo aplicativo.':fase==='pareceres'?PRIMEIRA:SEGUNDA)+'\nDados:\n'+JSON.stringify(contexto),'central')}catch{return json({erro:'Rodada indisponível'},503)}

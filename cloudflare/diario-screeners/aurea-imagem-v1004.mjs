@@ -26,8 +26,8 @@ export function tickerExplicito(q){
  if(br.length+us.length!==1)return null;
  return br.length?{ticker:br[0],market:'BR'}:{ticker:us[0],market:'US'};
 }
-async function fundamentos(env,ctx,pergunta,load=servePublicSnapshot){
- const perfis=await carregarGrahamV1014(env,ctx,pergunta,load);
+async function fundamentos(env,ctx,pergunta,load=servePublicSnapshot,loadFiis){
+ const perfis=await carregarGrahamV1014(env,ctx,pergunta,load,loadFiis);
  if(perfis.length===1)return perfis[0];
  return perfis.length?{perfis}:null;
 }
@@ -141,7 +141,7 @@ export async function aureaImagem(request,env,ctx,deps={}){
  const key='aurea-vision:v1004:'+user+':'+new Date().toISOString().slice(0,10);
  try{const count=Number(await env.SCREENER_CACHE.get(key)||0);if(count+imgs.length>14)return json({erro:'Limite diário de análise de imagens atingido'},429);
  await env.SCREENER_CACHE.put(key,String(count+imgs.length),{expirationTtl:86400});}catch{return json({erro:'Controle de uso indisponível'},503)}
- const fund=await fundamentos(env,ctx,txt(b.pergunta_original,6000)||q,deps.snapshot||servePublicSnapshot);
+ const fund=await fundamentos(env,ctx,txt(b.pergunta_original,6000)||q,deps.snapshot||servePublicSnapshot,deps.fiis);
  const biblioteca=(Array.isArray(b.biblioteca)?b.biblioteca:[]).slice(0,2).map(x=>({obra:txt(x?.obra,90),trecho:txt(x?.trecho,320)})).filter(x=>x.obra&&x.trecho);
  const result=await vision(env,q,imgs,fund,request,deps.fetcher||fetch,biblioteca,b.debate===true);
  return result?.resposta?json({ok:true,...result}):json({erro:'A análise visual não foi concluída. Sua imagem foi preservada para tentar novamente.',diagnostico:result?.diagnostico||[]},503);

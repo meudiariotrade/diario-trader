@@ -53,13 +53,13 @@ async function geminiTTS(env,texto,voz){
 async function logado(env,req){
  try{return Boolean(await autenticarUsuario(env,req))}catch{return false}
 }
-export default {
+const screenersWorker={
  async fetch(request,env,ctx){
   const url=new URL(request.url);
   if(url.pathname==='/v1/profit-quotes')return profitQuotes(request,env);
   if(url.pathname==='/v1/aurea-resumao')return resumoAurea(request,env);
-  if(url.pathname==='/v1/aurea-imagem')return aureaImagem(request,env,ctx);
-  if(url.pathname==='/v1/aurea-debate')return debateV1013(request,env,{ctx});
+  if(url.pathname==='/v1/aurea-imagem')return aureaImagem(request,env,ctx,{fiis:()=>screenersWorker.fetch(new Request(url.origin+'/v1/fiis'),env,ctx)});
+  if(url.pathname==='/v1/aurea-debate')return debateV1013(request,env,{ctx,fiis:()=>screenersWorker.fetch(new Request(url.origin+'/v1/fiis'),env,ctx)});
   if(url.pathname==='/v1/ia-estatisticas')return estatisticasV932(request,env);
   if(url.pathname==='/v1/ia-explica')return explicarV932(request,env);
   if(url.pathname==='/v1/ia-estudos')return estudosV932(request,env);
@@ -577,3 +577,5 @@ export default {
   await refreshBoth(env);
  }
 };
+
+export default screenersWorker;

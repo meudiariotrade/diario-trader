@@ -3355,7 +3355,7 @@ function aureaRota(texto) {
     n = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
     tickers = [
       ...new Set(
-        [...(t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|7|8|11)\b/g) || []),...Array.from(t.matchAll(/\b(?:ticker|NASDAQ|NYSE|AMEX)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi),x=>x[1])].map((x) => x.toUpperCase()),
+        [...(t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|7|8|11B?)\b/g) || []),...Array.from(t.matchAll(/\b(?:ticker|NASDAQ|NYSE|AMEX)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi),x=>x[1])].map((x) => x.toUpperCase()),
       ),
     ].slice(0, 4),
     forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow|dalio|helmer)\b/);
@@ -3639,7 +3639,7 @@ function aureaCalcularGrahamV1014(perfis){
     }
     const input=p.valuationInput||{},api=window.DiarioScreenersInteligencia;
     let valuation=null;
-    if(p.market==="BR"&&!["banco","seguradora","imobiliario","financeiro_indefinido","software","tecnologia","semicondutores"].includes(p.modelo?.tipo)&&!p.defasado&&p.referencia_indicadores&&Number.isFinite(input.preco_referencia)&&input.preco_referencia>0&&api?.valuationBR){
+    if(p.market==="BR"&&!["banco","seguradora","imobiliario","financeiro_indefinido","software","tecnologia","semicondutores","fii"].includes(p.modelo?.tipo)&&!p.defasado&&p.referencia_indicadores&&Number.isFinite(input.preco_referencia)&&input.preco_referencia>0&&api?.valuationBR){
       const r=api.valuationBR(input);
       const methods=["graham","bazin"].flatMap(id=>Number.isFinite(r.methods?.[id])?[{id,valor:r.methods[id],margem:r.margins[id],inferido:!!r.estimados?.[id]}]:[]);
       if(methods.length)valuation={preco:input.preco_referencia,methods,nota:"Triagem matemática exploratória; insumos do snapshot não são certificação documental. Não é preço-alvo."};
@@ -3654,6 +3654,11 @@ function aureaCalcularGrahamV1014(perfis){
         if(positive("forward_pe"))derived.push({id:"earnings_yield_forward",valor:100/m.forward_pe,formula:"100 ÷ Forward P/E; rendimento de lucro projetado"});
         if(Number.isFinite(m.fcf_yield))derived.push({id:"fcf_equity_yield",valor:m.fcf_yield,formula:"FCF yield informado pelo provedor"});
       }
+    }
+    if(p.classe==="FII"&&!p.defasado&&positive("pvp")){
+      derived.push({id:"desconto_vp",valor:(1-m.pvp)*100,formula:"Desconto patrimonial (1 − P/VP) × 100; negativo indica ágio, não margem intrínseca"});
+      if(positive("preco_referencia"))derived.push({id:"vp_implicito",valor:m.preco_referencia/m.pvp,formula:"VP por cota implícito (preço ÷ P/VP); BRL, não preço justo"});
+      for(const k of ["pvp","dividend_yield","ffo_yield"]){const c=comparacao[k];if(positive(k)&&c?.n>=3&&c.mediana>0)relative.push({id:k,valor:m[k],mediana:c.mediana,n:c.n,diferenca_pct:(m[k]/c.mediana-1)*100});}
     }
     return {...p,comparacao,valuation,relative,derived};
   });

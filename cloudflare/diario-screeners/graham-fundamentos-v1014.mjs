@@ -6,7 +6,7 @@ const FIELDS=['roe','roic','pl','pvp','p_l','p_vp','ev_ebitda','fcf_yield','marg
 const PEERS=['roe','roic','pl','pvp','ev_ebitda','fcf_yield','fcf_margin','forward_pe','ev_fcf','div_liq_ebitda','net_debt_ebitda','peg_ratio','price_sales','price_ffo','price_affo','total_shareholder_yield'];
 const metrics=row=>Object.fromEntries(FIELDS.flatMap(k=>num(row?.[k])===null?[]:[[k,row[k]]]));
 export function tickersGrahamV1014(q){
- const s=String(q||''),br=[...new Set((s.match(/\b[A-Za-z]{4}(?:3|4|5|6|7|8|11)\b/g)||[]).map(x=>x.toUpperCase()))],us=[...new Set([...s.matchAll(/\b(?:ticker|NASDAQ|NYSE|AMEX)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi)].map(x=>x[1].toUpperCase()))];
+ const s=String(q||''),br=[...new Set((s.match(/\b[A-Za-z]{4}(?:3|4|5|6|7|8|11B?)\b/g)||[]).map(x=>x.toUpperCase()))],us=[...new Set([...s.matchAll(/\b(?:ticker|NASDAQ|NYSE|AMEX)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi)].map(x=>x[1].toUpperCase()))];
  const standalone=s.trim().match(/^(?:@graham\s+)?\$?([A-Z]{1,5}(?:\.[A-Z])?)$/),tagged=[...s.matchAll(/(?:^|\s)\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g)].map(x=>x[1]);
  const excluded=new Set(['BR','EUA','US','USD','BRL','ROE','ROIC','FCF','DCF','PEG','CET','DY','ETF','FII','PIB','FED','SELIC','IBOV']);
  for(const x of [...tagged,...(standalone?[standalone[1]]:[])])if(!excluded.has(x)&&!us.includes(x))us.push(x);
@@ -86,10 +86,58 @@ export function perfilGrahamV1014(t,snapshot,{stale=false,now=Date.now()}={}){
  const valuationInput={};for(const k of ['preco_referencia','lpa','vpa','dpa_12m','pl','pvp','dividend_yield'])if(Object.hasOwn(metricas,k))valuationInput[k]=metricas[k];
  return {...t,empresa,setor,modelo,data:new Date(ts).toISOString(),fonte:'Research público · Cloudflare/GitHub',metricas,dados,pares,documento,defasado:stale||!ref||Date.parse(ref+'T00:00:00Z')>now||now-Date.parse(ref+'T00:00:00Z')>7*86400000,lacunas,valuationInput,referencia_indicadores:ref||null};
 }
-export async function carregarGrahamV1014(env,ctx,q,load=servePublicSnapshot){
+// FII é uma categoria de ativo distinta de ações/REITs. Nunca inferir pelo sufixo 11.
+const FII_FIELDS={cotacao:'preco_referencia',p_vp:'pvp',dy:'dividend_yield',ffo_yield:'ffo_yield',valor_mercado:'valor_mercado_brl',liquidez:'liquidez',qtd_imoveis:'qtd_imoveis',preco_m2:'preco_m2',aluguel_m2:'aluguel_m2',cap_rate:'cap_rate',vacancia:'vacancia'};
+function fiiMetrics(r){
+ const tijolo=r.tipo==='Tijolo';
+ return Object.fromEntries(Object.entries(FII_FIELDS).flatMap(([k,id])=>{
+  const v=num(r[k]);if(v===null||v<0||(['cotacao','p_vp'].includes(k)&&v<=0))return [];
+  if(!tijolo&&['qtd_imoveis','preco_m2','aluguel_m2','cap_rate','vacancia'].includes(k))return [];
+  if(['preco_m2','aluguel_m2','cap_rate','qtd_imoveis'].includes(k)&&v===0)return [];
+  if(k==='vacancia'&&(v>100||!(r.qtd_imoveis>0)))return [];
+  return [[id,v]];
+ }));
+}
+export function perfilFiiGrahamV1014(t,snapshot,{now=Date.now()}={}){
+ if(t.market!=='BR'||snapshot?.versao!==1||!Array.isArray(snapshot.rows))return null;
+ const ts=Date.parse(snapshot.gerado_em||'');if(!Number.isFinite(ts)||ts>now+300000||now-ts>7*86400000)return null;
+ const row=snapshot.rows.find(x=>x.ticker===t.ticker);
+ if(!row||!['Tijolo','Papel','Híbrido','FOF'].includes(row.tipo))return null;
+ const metricas=fiiMetrics(row);if(!Object.keys(metricas).length)return null;
+ const tipo=row.tipo,ref=new Date(ts).toISOString().slice(0,10),segmento=txt(row.segmento,100),defasado=now-ts>3*86400000;
+ const check={
+  Tijolo:['Ocupação física e financeira, localização e qualidade dos imóveis','WAULT, reajustes, revisões, concentração de inquilinos e vencimentos','Capex, dívida, NOI recorrente e cobertura dos rendimentos','P/VP, cap rate e risco de reavaliação patrimonial'],
+  Papel:['Qualidade dos CRIs, devedores, garantias, LTV e inadimplência','Indexadores CDI/IPCA, duration, spread e concentração','Receita recorrente versus amortizações e eventos extraordinários','P/VP, marcação a mercado, risco de crédito e liquidez'],
+  'Híbrido':['Composição tijolo/papel e exposição por segmento','Vacância e contratos da parcela imobiliária','Crédito, garantias e indexadores da parcela de recebíveis','Resultado recorrente, alavancagem e liquidez'],
+  FOF:['Carteira de FIIs, concentração e sobreposição','Desconto patrimonial dos fundos investidos e do próprio FOF','Taxas em duplicidade, giro e liquidez','Rendimento recorrente versus ganho de capital e reservas']
+ }[tipo];
+ const fonte='Fundamentus · snapshot público de FIIs via GitHub/Cloudflare';
+ const dados=Object.entries(metricas).map(([id,valor])=>({id,valor,data:ref,fonte,periodo:'coleta do snapshot; competência não informada',aplicavel:true,utilizavel:true}));
+ const pares=[];
+ if(!defasado&&segmento&&segmento!=='Outros'){
+  for(const p of snapshot.rows){
+   if(p.ticker===t.ticker||p.tipo!==tipo||p.segmento!==segmento||pares.some(x=>x.ticker===p.ticker))continue;
+   const m=fiiMetrics(p),metricas=Object.fromEntries(['pvp','dividend_yield','ffo_yield','cap_rate','vacancia'].filter(k=>Object.hasOwn(m,k)).map(k=>[k,m[k]]));
+   if(Object.keys(metricas).length)pares.push({ticker:txt(p.ticker,12),metricas});if(pares.length===12)break;
+  }
+ }
+ const lacunas=['Classificação e valores do provedor; competência dos relatórios gerenciais não confirmada','Rendimento histórico não comprova recorrência, distribuição futura ou valor justo','Não calcular spread DY nominal menos NTN-B real: taxa de referência do arquivo não certificada e bases incompatíveis','Dívida, vencimentos, cobertura de distribuições e emissões exigem relatório gerencial'];
+ if(tipo==='Tijolo')lacunas.push('WAULT, concentração de locatários, vacância financeira e capex não comprovados');
+ if(tipo==='Papel')lacunas.push('LTV, garantias, devedores, inadimplência, indexadores e duration não comprovados');
+ if(tipo==='Híbrido'||tipo==='FOF')lacunas.push('Composição da carteira, concentração, taxas e resultado por estratégia não comprovados');
+ if(pares.length<3)lacunas.push('Amostra de fundos do mesmo tipo e segmento insuficiente');
+ return {...t,classe:'FII',empresa:t.ticker,setor:segmento,subtipo_fii:tipo,modelo:{tipo:'fii',moeda:'BRL',juros:'Selic, CDI, IPCA e NTN-B; comparar rendimentos em bases equivalentes, sem taxa atual presumida',check,metodo:'Renda recorrente, patrimônio, qualidade dos ativos, riscos e liquidez. P/VP não equivale a valor intrínseco; sem Graham/Bazin de ações ou DCF sem insumos.'},data:new Date(ts).toISOString(),fonte,metricas,dados,pares,documento:null,defasado,lacunas,valuationInput:{},referencia_indicadores:ref};
+}
+
+export async function carregarGrahamV1014(env,ctx,q,load=servePublicSnapshot,loadFiis){
  const targets=tickersGrahamV1014(q),cache=new Map();
+ const fiis=loadFiis&&targets.some(t=>t.market==='BR'&&/11B?$/.test(t.ticker))?Promise.resolve().then(()=>loadFiis()).then(r=>r.ok?r.json():null).catch(()=>null):Promise.resolve(null);
  return (await Promise.all(targets.map(async t=>{
   try{
+   if(t.market==='BR'&&/11B?$/.test(t.ticker)){
+    const f=await fiis;
+    if(f?.rows?.some(x=>x.ticker===t.ticker))return perfilFiiGrahamV1014(t,f);
+   }
    if(!cache.has(t.market))cache.set(t.market,(async()=>{
     const r=await load(new Request('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/screeners?market='+t.market+'&snapshot=1&universe=1'),env,ctx);
     return r.ok?{snapshot:await r.json(),stale:r.headers.get('X-Snapshot-Stale')==='1'}:null;
@@ -99,4 +147,4 @@ export async function carregarGrahamV1014(env,ctx,q,load=servePublicSnapshot){
   }catch{return null}
  }))).filter(Boolean);
 }
-export const PROTOCOLO_GRAHAM_V1014='Graham deve formar tese própria e condicional sobre qualidade, vantagem competitiva, margens, rentabilidade, caixa, dívida e valuation. Use SOMENTE indicadores dos perfis fornecidos, distinguindo data do snapshot, referência do indicador e competência documental; não associe documento CVM a métrica sem linhagem comprovada. Não invente histórico, preço atual, múltiplo, preço justo, WACC, margem de segurança ou projeção. Não trate múltiplo projetado como realizado. Indicadores de bancos/seguradoras exigem ROE, capital e qualidade de crédito; não aplicar EV/EBITDA como regra universal. Para EUA use USD, Fed/Treasuries, crescimento, FCF e retorno total ao acionista; Brasil BRL, Selic/DI. Compare apenas mesmo mercado/setor e base; pares são amostra não representativa. Descreva números apenas quando presentes e sem cálculos de valuation: o cliente calcula com fórmulas existentes. Se dados faltarem, declare quais; informe catalisador, risco e invalidação. Não dê ordem de compra ou venda. Use o modelo setorial de cada perfil: bancos (CET1, crédito, ROE/P/VP), seguradoras (índice combinado, solvência), REITs (FFO/AFFO, cobertura e ocupação), software (receita recorrente, retenção, SBC e diluição), semicondutores (estoques, capex e ciclo), cíclicas (lucro/caixa normalizado). Nos EUA priorize crescimento sustentável, ROIC, FCF, Forward P/E, PEG e EV/FCF quando aplicáveis; remuneração em ações, dividendos e recompras líquidas, nunca penalize automaticamente DY baixo. FCF/EV não é FCF yield sobre capital próprio. Diferencie desconto relativo de margem intrínseca, preço em USD de retorno convertido em BRL; não use Bazin ou número de Graham automaticamente nos EUA. Nunca suponha WACC, taxa Treasury, crescimento ou diluição. Em empresa sem lucro/FCF positivo não use múltiplos negativos como sinal de oportunidade. Para cada ativo: tese, evidências, qualidade, riscos, valuation, cenário alternativo, catalisador e invalidação.';
+export const PROTOCOLO_GRAHAM_V1014='Graham deve formar tese própria e condicional sobre qualidade, vantagem competitiva, margens, rentabilidade, caixa, dívida e valuation. Use SOMENTE indicadores dos perfis fornecidos, distinguindo data do snapshot, referência do indicador e competência documental; não associe documento CVM a métrica sem linhagem comprovada. Não invente histórico, preço atual, múltiplo, preço justo, WACC, margem de segurança ou projeção. Não trate múltiplo projetado como realizado. Indicadores de bancos/seguradoras exigem ROE, capital e qualidade de crédito; não aplicar EV/EBITDA como regra universal. Para EUA use USD, Fed/Treasuries, crescimento, FCF e retorno total ao acionista; Brasil BRL, Selic/DI. Compare apenas mesmo mercado/setor e base; pares são amostra não representativa. Descreva números apenas quando presentes e sem cálculos de valuation: o cliente calcula com fórmulas existentes. Se dados faltarem, declare quais; informe catalisador, risco e invalidação. Não dê ordem de compra ou venda. Use o modelo setorial de cada perfil: bancos (CET1, crédito, ROE/P/VP), seguradoras (índice combinado, solvência), REITs (FFO/AFFO, cobertura e ocupação), software (receita recorrente, retenção, SBC e diluição), semicondutores (estoques, capex e ciclo), cíclicas (lucro/caixa normalizado). Nos EUA priorize crescimento sustentável, ROIC, FCF, Forward P/E, PEG e EV/FCF quando aplicáveis; remuneração em ações, dividendos e recompras líquidas, nunca penalize automaticamente DY baixo. FCF/EV não é FCF yield sobre capital próprio. Diferencie desconto relativo de margem intrínseca, preço em USD de retorno convertido em BRL; não use Bazin ou número de Graham automaticamente nos EUA. Nunca suponha WACC, taxa Treasury, crescimento ou diluição. Em empresa sem lucro/FCF positivo não use múltiplos negativos como sinal de oportunidade. Para FIIs brasileiros identificados na base própria, diferencie tijolo, papel, híbridos e FOF. Não use P/L, ROIC ou número de Graham como critério padrão de FII. Não atribua vacância zero a fundo de papel, não invente WAULT, LTV, crédito ou cobertura. DY alto pode ser não recorrente; P/VP baixo não é margem intrínseca; não subtraia DY nominal de juro real NTN-B. Para cada ativo: tese, evidências, qualidade, riscos, valuation, cenário alternativo, catalisador e invalidação.';
