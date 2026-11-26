@@ -224,12 +224,13 @@ export type Resposta = { texto: string; provedor: string; modelo: string; rotulo
  * Gera texto com failover entre os provedores ativos.
  * Em 429: 1 nova tentativa rápida no mesmo modelo, depois pausa o provedor e passa ao próximo.
  */
-export async function gerarTexto(system: string, prompt: string, opt: { json?: boolean; temp?: number; ate?: number; env?: Env; fetcher?: typeof fetch; preferir?: string[]; excluir?: string[]; porTentativaMs?: number; validar?: (texto:string)=>string|null } = {}): Promise<Resposta> {
+export async function gerarTexto(system: string, prompt: string, opt: { json?: boolean; temp?: number; ate?: number; env?: Env; fetcher?: typeof fetch; preferir?: string[]; excluir?: string[]; porTentativaMs?: number; validar?: (texto:string)=>string|null; geminiModelos?: string[]; umModeloPorProvedor?: boolean } = {}): Promise<Resposta> {
   system = especializarSistema(system);
   const fetcher = opt.fetcher || fetch, env = opt.env ? opt.env : await envComVault(ENV0, fetcher), ate = opt.ate || Date.now() + 55_000, temp = opt.temp ?? 0.4, erros: string[] = [];
   // No Jornal o Gemini já foi tentado como principal: não repetir o mesmo
   // provedor no fallback. Outras abas preservam a fila original.
   const fila = ordem(provedores(env), env, opt.preferir || []).filter(p => !(opt.excluir || []).includes(p.id));
+  if(opt.geminiModelos?.length){const g=fila.find(p=>p.id==='gemini');if(g)g.modelos=[...new Set(opt.geminiModelos)];}
   const desativados = new Set(lista(env('IA_DESLIGAR')).map((x) => x.toLowerCase()));
   const chaveReserva = env('OPENROUTER_API_KEY');
   if (chaveReserva && !desativados.has('openrouter') && !desativados.has('openrouter-reserva')) {
@@ -251,6 +252,7 @@ export async function gerarTexto(system: string, prompt: string, opt: { json?: b
     const bom = OK_MODELO.get(p.id);
     if (bom && modelos.includes(bom)) modelos = [bom, ...modelos.filter((m) => m !== bom)];
     let reservaAtualizada = false;
+    if(opt.umModeloPorProvedor&&p.id!=='gemini')modelos=modelos.slice(0,1);
     for (let i = 0; i < modelos.length; i++) {
       const modelo = modelos[i];
       let proximo = false;

@@ -155,3 +155,53 @@ export async function candles(tk: string, fetcher: typeof fetch = fetch) {
  }
  return out;
 }
+
+// v998: histórico do Livermore EUA pela rota pública já usada pelo Técnico.
+// Nunca usa cotação pontual como candle e nunca certifica ajuste exploratório do Worker.
+const EDGE_TECNICO = 'https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/tecnico-candles';
+export function validarCandlesEdge(rows: any, agora = Date.now()) {
+ if(!Array.isArray(rows)||rows.length<200||rows.some((q:any,i:number)=>!Array.isArray(q)||q.length!==6||
+  !q.every((n:any)=>typeof n==='number'&&Number.isFinite(n))||q[0]<=0||q[1]<=0||q[3]<=0||q[4]<=0||
+  q[2]<Math.max(q[1],q[4])||q[3]>Math.min(q[1],q[4])||q[5]<0||
+  (i>0&&(q[0]<=rows[i-1][0]||q[0]-rows[i-1][0]>14*86400))))return false;
+ const last=rows.at(-1)[0]*1000;
+ return last<=agora&&agora-last<=7*86400000;
+}
+export function semanasDeDiario(rows: number[][]) {
+ const groups=new Map<number,number[][]>();
+ for(const row of rows){
+  const day=new Date(row[0]*1000), monday=Math.floor(Date.UTC(day.getUTCFullYear(),day.getUTCMonth(),day.getUTCDate())/1000)-((day.getUTCDay()+6)%7)*86400;
+  const g=groups.get(monday)||[];g.push(row);groups.set(monday,g);
+ }
+ // Retira a primeira semana possivelmente truncada; a última pode estar em formação.
+ return [...groups.values()].slice(1).map(g=>[g[0][0],g[0][1],Math.max(...g.map(x=>x[2])),Math.min(...g.map(x=>x[3])),g.at(-1)![4],g.reduce((n,x)=>n+x[5],0)]);
+}
+export async function candlesLivermoreEUA(tk: string, fetcher: typeof fetch = fetch) {
+ const ticker=tk.replace('-','.');
+ let edge:any=null;
+ if(/^[A-Z]{1,5}(?:\.[A-Z])?$/.test(ticker)){
+  try{
+   const url=EDGE_TECNICO+'?market=US&ticker='+encodeURIComponent(ticker)+'&tf=1d';
+   const r=await fetcher(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(18000)});
+   if(!r.ok)throw Error('HTTP '+r.status);
+   const p=await r.json();
+   if(p.ok!==true||p.ticker!==ticker||p.market!=='US'||p.tf!=='1d'||!validarCandlesEdge(p.candles))throw Error('Histórico da borda não validado');
+   const raw:number[][]=p.candles,a=p.adjustedCandles;
+   const aligned=validarCandlesEdge(a)&&a.length===raw.length&&a.every((x:number[],i:number)=>x[0]===raw[i][0]&&x[5]===raw[i][5]&&
+     [1,2,3].every(k=>Math.abs(x[k]/raw[i][k]-x[4]/raw[i][4])<=1e-6));
+   const lastRatio=aligned?a.at(-1)[4]/raw.at(-1)![4]:1;
+   const diario:number[][]=aligned?a.map((x:number[])=>[x[0],x[1]/lastRatio,x[2]/lastRatio,x[3]/lastRatio,x[4]/lastRatio,x[5]]):raw;
+   const metodologia=aligned?'Yahoo adjclose via Cloudflare, normalizado à última sessão; ajuste '+(p.adjustedVerified===true?'verificado':'exploratório, não certificado'):'OHLCV nominal via Cloudflare; ajuste corporativo não confirmado';
+   const meta={fonte:String(p.source||'Cloudflare histórico diário').slice(0,120),ajustado:aligned&&p.adjustedVerified===true,metodologia,barras:diario.length,ultimo:new Date(diario.at(-1)![0]*1000).toISOString(),intervalo:'1d'};
+   edge={diario,semanal:semanasDeDiario(diario),_meta:{diario:meta,semanal:{...meta,intervalo:'1wk',metodologia:metodologia+'; semanas agregadas do diário de 2 anos'}}};
+   if(meta.ajustado)return edge;
+  }catch{/* Reserva direta existente; não fabrica barras. */}
+ }
+ const direto=await candles(tk,fetcher);
+ if(direto.diario?.length>=200&&validarCandlesEdge(direto.diario)&&(!edge||direto._meta.diario.ajustado===true)){
+  if(direto.semanal?.length<40){direto.semanal=semanasDeDiario(direto.diario);direto._meta.semanal={...direto._meta.diario,intervalo:'1wk',metodologia:'Semanas agregadas dos candles diários reais'};}
+  return direto;
+ }
+ // Quando a fonte direta não comprova o ajuste, a série da borda fica explicitamente exploratória; o PDF continua bloqueado.
+ return edge||{...direto,diario:[],semanal:[]};
+}

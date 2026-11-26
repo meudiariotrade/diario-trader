@@ -145,6 +145,7 @@ export function ativoMd(modo: string, f: any, calc: any) {
   const partes = [cab];
   if (modo !== 'TECNICO') partes.push('### Fundamentos e valuation\n' + (f.etf ? etfMd(f, calc) : fundamentosMd(f, v)));
   if (modo !== 'RESULTADO') partes.push('### Análise técnica (Dow, Elliott, Fibonacci, price action)\n' + tecnicoMd(f.ticker, e, f.moeda));
+  if(modo==='TECNICO'&&calc?.historico?.metodologia)partes.push('_Histórico: '+calc.historico.metodologia+' · '+String(calc.historico.fonte||'')+'_');
   if (f.mercado === 'EUA' && !f.etf && modo !== 'TECNICO') partes.push('**Nota tributária:** ' + NOTA_FISCAL.EUA);
   if (f.avisos?.length) partes.push('_Avisos de coleta: ' + f.avisos.join(' · ').slice(0, 300) + '_');
   return partes.join('\n\n');
