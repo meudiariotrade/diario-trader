@@ -3351,6 +3351,15 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const pivos=Array.isArray(E.pivos)?E.pivos:[];
         return '<section class="wf-chat-parecer">'+blocos.filter(v=>v[1]).map(([k,v])=>'<p><b>'+s(k)+':</b> '+s(v)+'</p>').join("")+(st.evidencias?.length?'<b>Evidências</b><ul>'+st.evidencias.map(v=>'<li>'+s(v)+'</li>').join("")+'</ul>':"")+(pivos.length?'<b>Topos e fundos relevantes</b><ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.validacao!=="estrutura_ohlc"?"?":"")+(p.preco?" · "+p.preco:""))+'</b> — '+s(p.validacao==='estrutura_ohlc'?'conferido no OHLC':'estimativa visual da IA')+': '+s(p.motivo)+'</li>').join("")+'</ul>':"")+'</section>';
       }
+      function rendaFixaAureaV1016(E){
+        const r=E.renda_fixa_v1016;if(!r)return "";
+        const p=r.simulacao||{},c=p.calculo,fmt=n=>Number.isFinite(n)?n.toLocaleString("pt-BR",{maximumFractionDigits:2}):"N/D",money=n=>Number.isFinite(n)?(c.moeda==="USD"?"US$ ":"R$ ")+fmt(n):"N/D",pct=n=>Number.isFinite(n)?fmt(n)+"%":"N/D";
+        const fields=c?[["Principal",money(c.principal)],["Prazo (dias)",fmt(c.dias)],["Taxa bruta a.a.",pct(c.taxa_bruta_aa)],["Valor bruto no vencimento",money(c.valor_bruto)],["IR simulado",pct(c.ir_pct)],["Valor líquido no vencimento",money(c.valor_liquido)],["Taxa líquida a.a.",pct(c.taxa_liquida_aa)],["Retorno real a.a.",pct(c.retorno_real_aa)],["CDB prefixado equivalente a.a.",pct(c.cdb_equivalente_aa)]]:[];
+        return '<section class="wf-chat-parecer"><b>Renda fixa · '+s(p.produto||"Avaliação de caixa")+' · '+s(p.moeda||"")+'</b><p>Vencimento: '+s(p.vencimento||"não confirmado")+' · Taxa: '+(Number.isFinite(p.taxa)?fmt(p.taxa)+'% '+s(p.indexador||""):"não confirmada")+'</p>'+
+          (fields.length?'<table style="width:100%;font-variant-numeric:tabular-nums">'+fields.map(x=>'<tr><td>'+s(x[0])+'</td><td style="text-align:right">'+s(x[1])+'</td></tr>').join("")+'</table>':'<p>Retorno numérico inconclusivo; informe os dados da proposta.</p>')+
+          N("Dados que faltam",p.missing)+N("Premissas e limites",p.notas)+
+          '<p><b>Referências de juros · '+(r.defasado?"quadro antigo":"quadro indicativo")+'</b></p>'+((r.referencias||[]).map(x=>'<p style="font-variant-numeric:tabular-nums">'+s(x.id)+' · '+pct(x.valor)+' · '+s(x.data)+'<small style="display:block">'+s(x.fonte)+' · '+s(x.tipo)+'</small></p>').join("")||'<p>Referências públicas não confirmadas.</p>')+'<small>'+s(r.lacuna||"")+'</small></section>';
+      }
       function commoditiesAureaV1015(E){
         const arr=E.commodities_v1015;if(!Array.isArray(arr)||!arr.length)return "";
         return '<section class="wf-chat-parecer"><b>Referências de commodities</b>'+arr.map(p=>{
@@ -3401,7 +3410,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         "Glossário",
         E.glossario?.map((u) => `${u.termo}: ${u.significado}`),
       )}
-      ${commoditiesAureaV1015(E)}${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
+      ${rendaFixaAureaV1016(E)}${commoditiesAureaV1015(E)}${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
       }
       function i() {
         if (!O) return;

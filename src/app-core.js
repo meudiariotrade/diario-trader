@@ -43602,6 +43602,65 @@ const AUREA = {
     },
   },
 };
+// v1016 — simulação local de renda fixa, sem persistência e sem taxas presumidas como ofertas.
+function aureaRendaFixaTemaV1016(texto){
+ const n=String(texto||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+ return /\b(lca|lci|cdb|rdb|cri|cra|debentur\w*|tesouro (?:selic|ipca|prefixado|direto)|renda fixa|treasur(?:y|ies)|t[- ]?(?:bill|note|bond)s?|tips|corporate bonds?|money market|certificate of deposit|caixa remunerado|dinheiro parado|grana parada|reserva de emergencia|letra financeira)\b/.test(n);
+}
+function aureaRendaFixaLocalV1016(texto,now=Date.now()){
+ const text=String(texto||""),n=text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(),num=s=>{if(!s)return null;const v=Number(s.replace(",", "."));return Number.isFinite(v)?v:null;};
+ const products=[["LCA",/\blca\b/],["LCI",/\blci\b/],["CDB",/\bcdb\b/],["RDB",/\brdb\b/],["Tesouro Selic",/\btesouro selic\b/],["Tesouro IPCA+",/\btesouro ipca/],["Tesouro Prefixado",/\btesouro prefixado\b/],["CRI",/\bcri\b/],["CRA",/\bcra\b/],["Debênture",/\bdebentur\w*/],["TIPS",/\btips\b/],["Treasury",/\btreasur(?:y|ies)\b|\bt[- ]?(?:bill|note|bond)s?\b/],["Corporate bond",/\bcorporate bonds?\b/],["Money market",/\bmoney market\b/],["CD EUA",/\bcertificate of deposit\b/]];
+ const found=products.filter(p=>p[1].test(n)).map(p=>p[0]),produto=found.length===1?found[0]:null,us=["Treasury","TIPS","Corporate bond","Money market","CD EUA"].includes(produto),moeda=us?"USD":"BRL";
+ const missing=[],notes=["Simulação ilustrativa com capitalização anual equivalente; não é oferta nem promessa de retorno.","Tributação e regras consideradas apenas para cenário de pessoa física residente no Brasil, sujeitas a mudança e à confirmação na contratação."];
+ if(found.length>1)missing.push("Mais de um produto: enviar uma proposta por vez para simulação comparável; parecer qualitativo pode comparar.");
+ if(!produto)missing.push("Produto específico (ex.: LCA, CDB, Treasury).");
+ const iso=n.match(/\b(?:venc(?:imento)?\s*[:=]?\s*)?(\d{4}-\d{2}-\d{2})\b/),br=n.match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/);
+ const rawDate=iso?iso[1]:br?br[3]+"-"+br[2]+"-"+br[1]:null;
+ const expiry=rawDate?Date.parse(rawDate+"T00:00:00Z"):NaN;
+ const today=new Date(now).toISOString().slice(0,10),day0=Date.parse(today+"T00:00:00Z");
+ const days=Number.isFinite(expiry)&&new Date(expiry).toISOString().slice(0,10)===rawDate&&expiry>day0?Math.round((expiry-day0)/86400000):null;
+ if(!days)missing.push("Data exata de vencimento (DD/MM/AAAA); somente o ano não basta.");
+ const y=days===null?null:days/365.25;
+ const cdi=n.match(/\b(\d{1,3}(?:[,.]\d{1,4})?)\s*%\s*(?:d[oe]\s+)?cdi\b/),ipca=n.match(/\bipca\s*\+\s*(\d{1,2}(?:[,.]\d{1,4})?)\s*%/),prefix=n.match(/\b(?:prefixad[oa]\s*(?:de|:|=)?\s*|taxa\s*[:=]\s*|yield\s+efetivo\s*[:=]\s*)(\d{1,2}(?:[,.]\d{1,4})?)\s*%/);
+ const aa=n.match(/\b(\d{1,2}(?:[,.]\d{1,4})?)\s*%\s*(?:a\.?\s*a\.?|ao ano)\b/);
+ const index=cdi?"CDI":ipca?"IPCA":prefix||aa?"PREFIXADO":null,rate=num(cdi?.[1]||ipca?.[1]||prefix?.[1]||aa?.[1]);
+ if(!index||rate===null||rate<=0||rate>(index==="CDI"?250:60))missing.push("Taxa contratada explícita (ex.: 95% do CDI, IPCA + 6%, taxa: 12% a.a.).");
+ const cdiBase=num(n.match(/\bcdi\s+(?:medio|cenario)\s*[:=]\s*(\d{1,2}(?:[,.]\d{1,4})?)\s*%/)?.[1]);
+ const inflation=num(n.match(/\b(?:inflacao|ipca)\s+(?:media|medio|cenario)\s*[:=]\s*(\d{1,2}(?:[,.]\d{1,4})?)\s*%/)?.[1]);
+ if(index==="CDI"&&(cdiBase===null||cdiBase>50))missing.push("CDI médio anual hipotético para o prazo (ex.: CDI cenário: 10%).");
+ if(index==="IPCA"&&(inflation===null||inflation>50))missing.push("Inflação anual hipotética para o prazo (ex.: inflação cenário: 4%).");
+ const amountRaw=n.match(/\b(?:aporte|valor|principal)\s*[:=]\s*(?:r\$|us\$|\$)?\s*(\d+(?:[,.]\d{1,2})?)\b/)?.[1];
+ const amount=num(amountRaw),principal=amount!==null&&amount>0&&amount<=1e9?amount:100;
+ if(amount===null)notes.push("Sem aporte explícito: resultados por 100 unidades monetárias, não saldo pessoal.");
+ if(!/\b(?:emissor|banco|instituicao)\s*[:=]\s*\S/.test(n)&&!["Tesouro Selic","Tesouro IPCA+","Tesouro Prefixado","Treasury","TIPS"].includes(produto))missing.push("Emissor e conglomerado, rating e risco de crédito.");
+ if(!/\b(?:liquidez|carencia|resgate)\s*[:=]\s*\S/.test(n))missing.push("Liquidez, carência e condição de resgate antecipado.");
+ if(!/\b(?:objetivo|uso|finalidade)\s*[:=]\s*\S/.test(n))missing.push("Finalidade do dinheiro e data em que poderá precisar dele.");
+ if(!/\b(?:taxa de custodia|custos|taxas)\s*[:=]\s*\S/.test(n))notes.push("Taxas/custos não deduzidos; confirmar custódia, spread, IOF e corretagem quando aplicáveis.");
+ const isExempt=["LCA","LCI","CRI","CRA"].includes(produto),taxable=["CDB","RDB","Tesouro Prefixado","Tesouro Selic","Tesouro IPCA+"].includes(produto);
+ const ir=days===null?null:days<=180?.225:days<=360?.20:days<=720?.175:.15;
+ const fgc=["LCA","LCI","CDB","RDB"].includes(produto);
+ if(fgc)notes.push("FGC potencial: até R$ 250 mil por CPF e conglomerado, incluindo principal e rendimentos, teto agregado de R$ 1 milhão em quatro anos; verificar emissor elegível e exposição total, não presumir cobertura.");
+ if(us)notes.push("EUA: analisar yield até vencimento versus cupom, preço, duration, risco de crédito, reinvestimento e câmbio. Treasuries não têm FGC; CD elegível pode ter FDIC, sob regras próprias. IR brasileiro sobre aplicações no exterior depende da realização, câmbio e compensações; não presumir retorno líquido em BRL.");
+ let calc=null;
+ // Só calcula produto de pagamento único no vencimento; títulos públicos com cupom e debêntures ficam condicionais.
+ const explicitTerminal=/\b(?:sem cupons?|pagamento unico|juros no vencimento|zero coupon|zero-coupon)\b/.test(n);
+ const single=produto&&(["LCA","LCI","CDB","RDB"].includes(produto)&&!/\b(?:cupom|cupons|pagamento mensal|juros mensais)\b/.test(n)||explicitTerminal);
+ const compatible=produto==="Tesouro Selic"?false:produto==="Tesouro IPCA+"?index==="IPCA":produto==="Tesouro Prefixado"?index==="PREFIXADO":produto==="TIPS"?false:us?index==="PREFIXADO"&&/\byield efetivo\b/.test(n):true;
+ const baseOk=index==="CDI"?cdiBase!==null&&cdiBase<=50:index==="IPCA"?inflation!==null&&inflation<=50:index==="PREFIXADO";
+ if(single&&compatible&&days&&days>=30&&baseOk&&rate!==null&&rate>0&&rate<=(index==="CDI"?250:60)){
+  const annual=index==="CDI"?Math.pow(1+((Math.pow(1+cdiBase/100,1/252)-1)*rate/100),252)-1:index==="IPCA"?(1+inflation/100)*(1+rate/100)-1:rate/100;
+  const gross=principal*Math.pow(1+annual,y),gain=gross-principal,aliq=isExempt?0:taxable?ir:null;
+  const net=aliq===null?null:principal+gain*(1-aliq),netRate=net===null?null:Math.pow(net/principal,1/y)-1;
+  const equivalent=isExempt?Math.pow(1+(gross/principal-1)/(1-ir),1/y)-1:null;
+  calc={principal,moeda,dias:days,anos:y,taxa_bruta_aa:annual*100,valor_bruto:gross,ir_pct:aliq===null?null:aliq*100,valor_liquido:net,taxa_liquida_aa:netRate===null?null:netRate*100,retorno_real_aa:netRate!==null&&inflation!==null&&inflation<=50?((1+netRate)/(1+inflation/100)-1)*100:null,cdb_equivalente_aa:equivalent===null?null:equivalent*100};
+  if(index==="CDI")notes.push("CDI constante por cenário, composição diária em base 252 aproximada; dias úteis efetivos e trajetória real não foram fornecidos.");
+  if(isExempt)notes.push("CDB equivalente: taxa prefixada bruta anual de mesmo prazo para igualar valor final líquido, não percentual do CDI.");
+ }else if(produto&&!single)missing.push("Fluxos e cupons, preço de compra e reinvestimento; simulação de pagamento único não aplicável.");
+ if(days&&days<30)missing.push("Prazo inferior a 30 dias: verificar IOF e condições; cálculo líquido omitido.");
+ return {produto,moeda,mercado:us?"US":"BR",vencimento:days?rawDate:null,indexador:index,taxa:rate,calculo:calc,fgc_potencial:fgc,missing:[...new Set(missing)],notas:notes};
+}
+// fim v1016
+
 function aureaRota(texto) {
   const t = String(texto || ""),
     n = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
@@ -43614,7 +43673,8 @@ function aureaRota(texto) {
   const usStandalone=t.trim().match(/^(?:@graham\s+)?\$?([A-Z]{1,5}(?:\.[A-Z])?)$/),usTagged=Array.from(t.matchAll(/(?:^|\s)\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g),x=>x[1]);
   const blocked=new Set(["BR","EUA","US","USD","BRL","ROE","ROIC","FCF","DCF","PEG","CET","DY","ETF","FII","PIB","FED","SELIC","IBOV"]);
   for(const x of [...usTagged,...(usStandalone?[usStandalone[1]]:[])])if(!blocked.has(x)&&!tickers.includes(x)&&tickers.length<4)tickers.push(x);
-  if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você" };
+  if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você",...((typeof aureaRendaFixaTemaV1016==="function"&&aureaRendaFixaTemaV1016(t))?{tema:"renda_fixa"}:{}) };
+  if((typeof aureaRendaFixaTemaV1016==="function"&&aureaRendaFixaTemaV1016(t))&&!/\b(o que e|como funciona|explique o conceito)\b/.test(n))return {id:"markowitz",tickers:[],motivo:"renda fixa e gestão de caixa",tema:"renda_fixa"};
   const commodity=/\b(commodit\w*|brent|wti|petroleo|ouro|gold|xauusd|prata|silver|cobre|copper|minerio|dalian|soja|milho|trigo|cafe|acucar|algodao|boi gordo|boi vivo|gas natural)\b/.test(n);
   if(commodity&&!tickers.some(x=>/^[A-Z]{4}\d/.test(x))&&!/\b(o que e|como funciona|explique o conceito)\b/.test(n)){
     const id=/\b(grafico|tecnic\w*|pivo\w*|suporte|resistencia|rompimento)\b/.test(n)?"livermore":/\b(geopolitic\w*|ciclo estrutural|china|guerra|protecao patrimonial)\b/.test(n)?"dalio":"schwartz";
@@ -43677,8 +43737,8 @@ const AUREA_METODO_V1007 = Object.freeze({
   "helmer": "Mapeie os sete poderes (escala, rede, contraposicionamento, custos de troca, marca, recurso exclusivo, processo), classificando presente, parcial, ausente ou não comprovado; para cada poder relevante, separe benefício econômico e barreira à imitação com evidência. Identifique estágio, concorrente ou mudança que ameaça o fosso em 3–5 anos e métrica observável de erosão. Não confunda bom produto, crescimento ou tamanho com fosso.",
   "livermore": "Faça leitura própria antes de considerar a tese do usuário. Identifique período, preço de referência, tendência primária e secundária, sequência de topos/fundos relevantes HH/HL/LH/LL, extremos locais versus pivôs estruturais confirmados pelo rompimento do extremo oposto. Explique Dow, Elliott com contagem alternativa, Fibonacci com âncoras, polaridade, efeito elástico, candles, médias, OBV e RSI apenas se houver dados. Mapa de níveis, cenário principal/alternativo, gatilho de confirmação, alvo condicional e invalidação; explique o que faria aguardar. Fear-Setting: pior cenário, prevenção, reparação e assimetria. Nunca invente níveis ou sinais. Commodities: analise oferta/demanda, estoques, produção, curva e sazonalidade apenas com dados; diferencie contrato, praça, moeda e unidade, preço spot e futuro. Schwartz lidera macro; Dalio trata China, geopolítica, dólar e juros reais; Livermore usa OHLC ou gráfico para níveis, sem inventar. Traga cenário alternativo, confirmação e invalidação e impacto condicional BR/EUA.",
   "munger": "Faça inversão independente da tese, não concorde por cortesia. Identifique a premissa mais frágil, até três riscos materiais com mecanismo causal e evidência, vieses possíveis sem diagnosticar a pessoa, fatos versus expectativas, contraponto mais forte e evento ou nível que derruba a tese. Fear-Setting: pior cenário, prevenção, reparação e custo de inação, com horizonte e condição explícitos.",
-  "markowitz": "Diagnostique concentração por ativo, classe, setor e moeda, exposição comum a fatores e choques, liquidez e horizonte; use pesos e correlações somente quando fornecidos ou calculáveis com séries alinhadas. Explique trade-offs de risco/retorno, prioridades de ajuste e condições de rebalanceamento; não invente carteira, covariância, retorno esperado ou alocação ideal. Compare ao objetivo informado e declare lacunas.",
-  "schwartz": "Faça tese macro de curto prazo: regime monetário, inflação, atividade, emprego, câmbio, juros, liquidez e eventos da agenda. Distinguir dado divulgado, consenso, surpresa e horário/data quando disponíveis; explique transmissão aos mercados e setores, cenário base e alternativo e evento que muda a leitura. Não confunda mercado fechado com queda ou dado indisponível. Commodities: analise oferta/demanda, estoques, produção, curva e sazonalidade apenas com dados; diferencie contrato, praça, moeda e unidade, preço spot e futuro. Schwartz lidera macro; Dalio trata China, geopolítica, dólar e juros reais; Livermore usa OHLC ou gráfico para níveis, sem inventar. Traga cenário alternativo, confirmação e invalidação e impacto condicional BR/EUA.",
+  "markowitz": "Diagnostique concentração por ativo, classe, setor e moeda, exposição comum a fatores e choques, liquidez e horizonte; use pesos e correlações somente quando fornecidos ou calculáveis com séries alinhadas. Explique trade-offs de risco/retorno, prioridades de ajuste e condições de rebalanceamento; não invente carteira, covariância, retorno esperado ou alocação ideal. Compare ao objetivo informado e declare lacunas. Renda fixa BR/EUA: Markowitz lidera adequação ao objetivo, liquidez, vencimento, retorno líquido/real e risco de emissor; Schwartz analisa Selic/CDI/IPCA/DI e Fed/Treasuries, curva, inflação, duration e reinvestimento; compare CDB/LCI/LCA/Tesouro/CRI/CRA/debêntures e T-bills/notes/bonds/TIPS/CD/corporate bonds/money market. Nunca suponha taxa contratada, prazo exato, garantia ou imposto; diferencie cupom, yield, taxa anual e spread; dinheiro de curto prazo exige liquidez e baixa oscilação. Não extrapole juros atuais até vencimento.",
+  "schwartz": "Faça tese macro de curto prazo: regime monetário, inflação, atividade, emprego, câmbio, juros, liquidez e eventos da agenda. Distinguir dado divulgado, consenso, surpresa e horário/data quando disponíveis; explique transmissão aos mercados e setores, cenário base e alternativo e evento que muda a leitura. Não confunda mercado fechado com queda ou dado indisponível. Commodities: analise oferta/demanda, estoques, produção, curva e sazonalidade apenas com dados; diferencie contrato, praça, moeda e unidade, preço spot e futuro. Schwartz lidera macro; Dalio trata China, geopolítica, dólar e juros reais; Livermore usa OHLC ou gráfico para níveis, sem inventar. Traga cenário alternativo, confirmação e invalidação e impacto condicional BR/EUA. Renda fixa BR/EUA: Markowitz lidera adequação ao objetivo, liquidez, vencimento, retorno líquido/real e risco de emissor; Schwartz analisa Selic/CDI/IPCA/DI e Fed/Treasuries, curva, inflação, duration e reinvestimento; compare CDB/LCI/LCA/Tesouro/CRI/CRA/debêntures e T-bills/notes/bonds/TIPS/CD/corporate bonds/money market. Nunca suponha taxa contratada, prazo exato, garantia ou imposto; diferencie cupom, yield, taxa anual e spread; dinheiro de curto prazo exige liquidez e baixa oscilação. Não extrapole juros atuais até vencimento.",
   "dalio": "Faça tese macro estrutural e de geopolítica sem viés partidário: ciclo de dívida, dívida/PIB, primário versus nominal, juro real versus crescimento, rolagem, moeda, liquidez e transmissão setorial. Compare países apenas com métricas e datas compatíveis. Separe cenário de estresse, fator mitigador, risco de cauda e indicador que confirma mudança de regime. Commodities: analise oferta/demanda, estoques, produção, curva e sazonalidade apenas com dados; diferencie contrato, praça, moeda e unidade, preço spot e futuro. Schwartz lidera macro; Dalio trata China, geopolítica, dólar e juros reais; Livermore usa OHLC ou gráfico para níveis, sem inventar. Traga cenário alternativo, confirmação e invalidação e impacto condicional BR/EUA.",
   "dow": "Explique o conceito com método, exemplo explicitamente hipotético, aplicação prática, erro comum e critério de verificação. Use trechos da biblioteca quando disponíveis; não invente citação, autoria nem dado de mercado."
 });
@@ -43850,19 +43910,20 @@ async function aureaDebateCallV1013(dados,signal,titular){
   return j;
 }
 async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titular){
-  const dados={pergunta:String(pergunta).slice(0,6000),contexto_publico:String(contexto||"").slice(0,5000),biblioteca:livros};
+  const rf=aureaRendaFixaTemaV1016(pergunta)?aureaRendaFixaLocalV1016(pergunta):null;
+  const dados={pergunta:String(pergunta).slice(0,6000),contexto_publico:String(contexto||"").slice(0,5000),biblioteca:livros,...(rf?{simulacao_rf:rf}:{})};
   let rodada,modeloInicial;
   if(resposta){rodada=aureaRodadaVisualV1013(resposta);modeloInicial=resposta.modelo||"";}
   else{
     const j=await aureaDebateCallV1013({...dados,fase:"pareceres"},AbortSignal.any([signal,AbortSignal.timeout(38000)]),titular);
     rodada=j.resultado;modeloInicial=j.modelo||"";
-    resposta={titulo:"Parecer inicial do Conselho",resumo:rodada.resumo,visoes:rodada.pareceres.map(p=>({escola:p.escola,argumento:p.argumento+" — Base: "+p.base})),modelo:modeloInicial,fundamentos_v1014:j.fundamentos_v1014||[],commodities_v1015:j.commodities_v1015||[]};
+    resposta={titulo:"Parecer inicial do Conselho",resumo:rodada.resumo,visoes:rodada.pareceres.map(p=>({escola:p.escola,argumento:p.argumento+" — Base: "+p.base})),modelo:modeloInicial,fundamentos_v1014:j.fundamentos_v1014||[],commodities_v1015:j.commodities_v1015||[],renda_fixa_v1016:j.renda_fixa_v1016||null};
   }
   if(signal.aborted||syncOwner()!==titular)return resposta;
   const visual=resposta.tipo_imagem?JSON.stringify({estrutura:resposta.estrutura,validacao_ohlc:resposta.validacao_ohlc,pivos:resposta.pivos,graficos:resposta.graficos,fatos:resposta.fatos,comparacao:resposta.comparacao}).slice(0,7000):"";
   try{
     const j=await aureaDebateCallV1013({...dados,fase:"debate",rodada,relatorio_visual:visual},AbortSignal.any([signal,AbortSignal.timeout(38000)]),titular);
-    return {...resposta,commodities_v1015:j.commodities_v1015?.length?j.commodities_v1015:resposta.commodities_v1015,debate:{...j.resultado,modelo_inicial:modeloInicial,modelo_sintese:j.modelo||"",status:"concluido"}};
+    return {...resposta,renda_fixa_v1016:j.renda_fixa_v1016||resposta.renda_fixa_v1016,commodities_v1015:j.commodities_v1015?.length?j.commodities_v1015:resposta.commodities_v1015,debate:{...j.resultado,modelo_inicial:modeloInicial,modelo_sintese:j.modelo||"",status:"concluido"}};
   }catch{
     return {...resposta,debate:{status:"parcial",motivo:"A segunda rodada não foi concluída. Os pareceres iniciais foram preservados; não há síntese de debate."}};
   }
@@ -43942,6 +44003,11 @@ async function ecoPergunta(e, opt) {
     const bloco=window.DiarioCerebroIA?.blocoConselho?.(livros)||"";
     if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q,debate);
     else if(debate)resposta=await aureaDeliberarV1013(null,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
+    else if(rota.tema==="renda_fixa"&&!opt.dadosPrivados&&!a){
+      const rf=aureaRendaFixaLocalV1016(q);
+      const j=await aureaDebateCallV1013({fase:"renda_fixa",lente:rota.id,pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros,simulacao_rf:rf},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
+      resposta={...j.resultado,modelo:j.modelo||"",renda_fixa_v1016:j.renda_fixa_v1016||null};
+    }
     else if(rota.tema==="commodities"&&!opt.dadosPrivados&&!a){
       const j=await aureaDebateCallV1013({fase:"commodities",lente:rota.id,pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
       resposta={...j.resultado,modelo:j.modelo||"",commodities_v1015:j.commodities_v1015||[]};
@@ -43966,6 +44032,7 @@ async function ecoPergunta(e, opt) {
     if(debate&&opt.imagem)resposta=await aureaDeliberarV1013(resposta,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
     if(!ativo())return;
     if(resposta.fundamentos_v1014?.length)resposta.fundamentos_v1014=aureaCalcularGrahamV1014(resposta.fundamentos_v1014);
+    if(aureaRendaFixaTemaV1016(q))resposta.renda_fixa_v1016={...(resposta.renda_fixa_v1016||{}),simulacao:aureaRendaFixaLocalV1016(q)};
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
       motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagens:(Array.isArray(opt.imagem)?opt.imagem:[opt.imagem]).map(x=>x.url)}:{})});
     ECO.l=ECO.l.slice(-20);
