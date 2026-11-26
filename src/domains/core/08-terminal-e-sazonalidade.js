@@ -1316,6 +1316,10 @@ function imgQ(e) {
   // A lista usada pelo usuário é a fonte primária; macro legado somente reserva local.
   const q=rows.find(r=>aliases.includes(r.s)&&imgValidaV1025(r)) ||
     macro.find(r=>(r.s===e||aliases.includes(r.s))&&imgValidaV1025(r));
+  if(e==="BZ=F"&&IMG.brent955&&imgValidaV1025(IMG.brent955)){
+    const newer=q&&/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||"")&&q.quoteStatus==="coerente"&&Number.isFinite(q.d1)&&q.fechamentoAnterior>0&&Math.abs((q.px/q.fechamentoAnterior-1)*100-q.d1)<=0.08&&Date.parse(q.horarioPreco||q.priceAt)>Date.parse(IMG.brent955.horarioPreco||IMG.brent955.priceAt);
+    if(!newer)return IMG.brent955;
+  }
   if(!q)return null;
   if(e==="BZ=F"){
     // Nunca misturar ajuste ou variação de contratos diferentes de Brent.
@@ -1355,7 +1359,8 @@ async function imgDados() {
   if(window.DIARIO_DEMO)throw Error("A captura de mercado exige dados reais.");
   if(!SESS?.at)throw Error("Entre na conta para gerar a imagem.");
   IMG.cotacoesPublicas=[]; IMG.brent955=null; IMG.aviso="";
-  const [listas,adrs]=await Promise.allSettled([imgListasV1025(),adrLoad(true)]);
+  const [listas,adrs,snapshot]=await Promise.allSettled([imgListasV1025(),adrLoad(true),Promise.resolve().then(()=>window.DiarioPublico?.get?.("/v1/mercado",{ttl:60000}))]);
+  if(snapshot.status==="fulfilled")IMG.brent955=imgBrent955(snapshot.value);
   const dados=listas.status==="fulfilled"?listas.value:{rows:[],reserva:imgAbasV1025};
   IMG.cotacoesPublicas=dados.rows;
   const ausentes=Object.keys(imgSimbolosPublicos).filter(s=>!imgQ(s));
