@@ -5472,8 +5472,11 @@ const IC = (e) =>
   function tapeSnapshot992(snapshot, now=Date.now()) {
     const rows=(snapshot?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
     const result={};
+    // O snapshot /v1/mercado usa os símbolos de bolsa TradingView, não os aliases do ticker.
+    const aliases={"BMFBOVESPA:IBOV":"^BVSP","FX_IDC:USDBRL":"BRL=X","SP:SPX":"^GSPC","NASDAQ:IXIC":"^IXIC","DJ:DJI":"^DJI","AMEX:EWZ":"EWZ","TVC:DXY":"DX-Y.NYB","NYMEX:CL1!":"CL=F","TVC:GOLD":"GC=F","BITSTAMP:BTCUSD":"BTC-USD","COINBASE:BTCUSD":"BTC-USD","BITSTAMP:ETHUSD":"ETH-USD","COINBASE:ETHUSD":"ETH-USD","COINBASE:SOLUSD":"SOL-USD","BITSTAMP:XRPUSD":"XRP-USD"};
     for(const q of rows){
-      const key=String(q.s||q.ticker||"");
+      const symbol=String(q.s||q.ticker||"");
+      const key=aliases[symbol]||symbol;
       if(!key||!(Number(q.px)>0)||q.suspeito||q.quoteStatus==="divergente")continue;
       const chg=q.d1??q.chg;
       const at=q.priceAt||q.horarioPreco||q.dadoEm;
@@ -5546,6 +5549,7 @@ const IC = (e) =>
       const resposta=await window.DiarioPublico.get("/v1/mercado",{ttl:300000});
       n=tapeSnapshot992(resposta);
       l();
+      window.DiarioAtualizaKpis992?.();
     } catch {ultimaConsulta=0;}
   }
   window.tapeRedraw = l;
