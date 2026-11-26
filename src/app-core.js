@@ -43664,6 +43664,17 @@ function aureaRota(texto) {
       : "pergunta geral de mercado";
   return { id, tickers, motivo };
 }
+const AUREA_METODO_V1007 = Object.freeze({
+  "graham": "Forme tese própria de investimento: qualidade do negócio e ciclo, ROIC versus custo de capital quando ambos existirem, margens, conversão do lucro em caixa, dívida e vencimentos, retorno ao acionista, valuation histórico e pares comparáveis. Distinga preço de valor; preço justo apenas com método, premissas e dados, margem de segurança e sensibilidade; sem dados suficientes declare valuation inconclusivo. Cite períodos e evidências, catalisador e evento que invalida a tese.",
+  "helmer": "Mapeie os sete poderes (escala, rede, contraposicionamento, custos de troca, marca, recurso exclusivo, processo), classificando presente, parcial, ausente ou não comprovado; para cada poder relevante, separe benefício econômico e barreira à imitação com evidência. Identifique estágio, concorrente ou mudança que ameaça o fosso em 3–5 anos e métrica observável de erosão. Não confunda bom produto, crescimento ou tamanho com fosso.",
+  "livermore": "Faça leitura própria antes de considerar a tese do usuário. Identifique período, preço de referência, tendência primária e secundária, sequência de topos/fundos relevantes HH/HL/LH/LL, extremos locais versus pivôs estruturais confirmados pelo rompimento do extremo oposto. Explique Dow, Elliott com contagem alternativa, Fibonacci com âncoras, polaridade, efeito elástico, candles, médias, OBV e RSI apenas se houver dados. Mapa de níveis, cenário principal/alternativo, gatilho de confirmação, alvo condicional e invalidação; explique o que faria aguardar. Fear-Setting: pior cenário, prevenção, reparação e assimetria. Nunca invente níveis ou sinais.",
+  "munger": "Faça inversão independente da tese, não concorde por cortesia. Identifique a premissa mais frágil, até três riscos materiais com mecanismo causal e evidência, vieses possíveis sem diagnosticar a pessoa, fatos versus expectativas, contraponto mais forte e evento ou nível que derruba a tese. Fear-Setting: pior cenário, prevenção, reparação e custo de inação, com horizonte e condição explícitos.",
+  "markowitz": "Diagnostique concentração por ativo, classe, setor e moeda, exposição comum a fatores e choques, liquidez e horizonte; use pesos e correlações somente quando fornecidos ou calculáveis com séries alinhadas. Explique trade-offs de risco/retorno, prioridades de ajuste e condições de rebalanceamento; não invente carteira, covariância, retorno esperado ou alocação ideal. Compare ao objetivo informado e declare lacunas.",
+  "schwartz": "Faça tese macro de curto prazo: regime monetário, inflação, atividade, emprego, câmbio, juros, liquidez e eventos da agenda. Distinguir dado divulgado, consenso, surpresa e horário/data quando disponíveis; explique transmissão aos mercados e setores, cenário base e alternativo e evento que muda a leitura. Não confunda mercado fechado com queda ou dado indisponível.",
+  "dalio": "Faça tese macro estrutural e de geopolítica sem viés partidário: ciclo de dívida, dívida/PIB, primário versus nominal, juro real versus crescimento, rolagem, moeda, liquidez e transmissão setorial. Compare países apenas com métricas e datas compatíveis. Separe cenário de estresse, fator mitigador, risco de cauda e indicador que confirma mudança de regime.",
+  "dow": "Explique o conceito com método, exemplo explicitamente hipotético, aplicação prática, erro comum e critério de verificação. Use trechos da biblioteca quando disponíveis; não invente citação, autoria nem dado de mercado."
+});
+const AUREA_QUALIDADE_V1007 = "Apresente tese própria explícita, evidências concretas e a relação causal entre elas, cenário alternativo, confirmação/invalidação e próximos dados a observar. Não repita indicadores sem explicar seu efeito. Diferencie observação, estimativa e hipótese; se faltarem dados, declare exatamente quais, sem preencher com memória. Não invente preço, probabilidade, fonte, data ou informação privada. Use parágrafos curtos com títulos claros, sem aula genérica. Apoie decisão condicional e preserve a decisão final do usuário; não dê ordens.";
 function aureaTexto(e, rota) {
   const m = rota && AUREA.membros[rota.id];
   let extra = "";
@@ -43684,14 +43695,14 @@ function aureaTexto(e, rota) {
       }
     }
   } catch {}
-  if (!m || !m.lente) return extra ? extra.slice(1) + "\n\n" + e : e;
+  if (!m) return extra ? extra.slice(1) + "\n\n" + e : e;
   return (
     "[A Áurea encaminhou esta pergunta ao especialista " +
     m.nome +
     " (" +
     m.papel +
     ") do Conselho. Responda sob a ótica de " +
-    m.lente +
+    m.lente + " " + (AUREA_METODO_V1007[rota.id] || "") + " " + AUREA_QUALIDADE_V1007 +
     "]" +
     extra +
     "\n\n" +
