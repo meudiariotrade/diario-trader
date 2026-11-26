@@ -112,3 +112,14 @@ test('v1020: identifica truncamento real sem expor resposta bruta',async()=>{
  const {aureaImagem}=await mod;
  for(const valid of [true,false]){let calls=0;const raw={...result,tipo:'comparacao',pivos:[],comparacao:'Comparação visual sem inferir correlação entre ativos.',graficos:[{indice:1,tipo:'grafico_parcial',ativo:'Não identificado',periodo:'Não identificado',leitura:'Linha com estrutura ascendente e escala não legível.',pivos:[]},{indice:valid?2:1,tipo:'grafico_parcial',ativo:'Não identificado',periodo:'Não identificado',leitura:'Linha com estrutura descendente e escala não legível.',pivos:[]}]};const e={...env(),AI:{run:async()=>{if(++calls===1)return {choices:[{message:{content:JSON.stringify(raw)}}]};throw Error('sem síntese')}}};const r=await aureaImagem(req({pergunta:'Compare os gráficos',imagens:[{mime:'image/jpeg',data:image},{mime:'image/jpeg',data:image}]}),e,{},{auth:async()=>'u',fetcher:async()=>new Response('',{status:503})});assert.equal(r.status,valid?200:503);if(valid){const j=await r.json();assert.equal(j.resposta.tipo_imagem,'grafico_parcial');assert.equal(j.resposta.graficos.length,2)}else assert.equal(calls,1);}
  });
+
+test('v1022 conta sucesso separado de tentativa; falha não consome franquia concluída',async()=>{
+ const {aureaImagem}=await mod,store=new Map();let fail=true,calls=0;
+ const e={...env(),SCREENER_CACHE:{get:async k=>store.get(k)||null,put:async(k,v)=>store.set(k,v)}};
+ const deps={auth:async()=>'limite-teste',snapshot:async()=>new Response('',{status:503}),fetcher:async()=>{calls++;return fail?new Response('',{status:429}):Response.json({candidates:[{content:{parts:[{text:JSON.stringify(result)}]}}]})}};
+ assert.equal((await aureaImagem(req(),e,{},deps)).status,503);
+ assert.equal([...store].find(([k])=>k.endsWith(':tentativas'))[1],'1');assert.ok(![...store].some(([k])=>k.endsWith(':concluidas')));
+ fail=false;const ok=await aureaImagem(req(),e,{},deps);assert.equal(ok.status,200);assert.equal((await ok.json()).uso.restantes,99);assert.equal([...store].find(([k])=>k.endsWith(':concluidas'))[1],'1');
+ const k=[...store.keys()].find(k=>k.endsWith(':concluidas'));store.set(k,'100');const antes=calls;const limited=await aureaImagem(req(),e,{},deps);assert.equal(limited.status,429);assert.equal((await limited.json()).codigo,'limite_imagens');assert.equal(calls,antes);
+ store.set(k,'2');store.set([...store.keys()].find(k=>k.endsWith(':tentativas')),'150');const attempt=await aureaImagem(req(),e,{},deps);assert.equal(attempt.status,429);assert.equal((await attempt.json()).codigo,'limite_tentativas');assert.equal(calls,antes);
+});

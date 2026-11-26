@@ -201,6 +201,10 @@ async function vision(env,pergunta,imgs,fund,req,fetcher,biblioteca=[],debate=fa
  return {diagnostico};
 }
 
+// v1022: franquia diária de imagens concluídas; tentativas têm teto separado.
+// KV é eventual: proteção operacional, não trava atômica global.
+export const AUREA_LIMITES_V1022=Object.freeze({concluidas:100,tentativas:150});
+const aureaEmCursoV1022=new Set();
 export async function aureaImagem(request,env,ctx,deps={}){
  if(request.headers.get('Origin')!==ORIGIN)return json({erro:'Origem não autorizada'},403);
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...CORS,'Access-Control-Max-Age':'600'}});
@@ -213,11 +217,26 @@ export async function aureaImagem(request,env,ctx,deps={}){
  if(q.length<3||!Array.isArray(anexos)||!anexos.length||anexos.length>3||(b.imagens!==undefined&&b.imagem!==undefined)||anexos.some(a=>{const img=a?.data;return a?.mime!=='image/jpeg'||typeof img!=='string'||img.length>1200000||img.length%4!==0||!img.startsWith('/9j/')||!/^[A-Za-z0-9+/]+={0,2}$/.test(img)}))return json({erro:'Envie de 1 a 3 imagens JPEG válidas e uma pergunta'},400);
  const imgs=anexos.map(a=>a.data);
  if(!env.SCREENER_CACHE)return json({erro:'Controle de uso indisponível'},503);
- const key='aurea-vision:v1004:'+user+':'+new Date().toISOString().slice(0,10);
- try{const count=Number(await env.SCREENER_CACHE.get(key)||0);if(count+imgs.length>14)return json({erro:'Limite diário de análise de imagens atingido'},429);
- await env.SCREENER_CACHE.put(key,String(count+imgs.length),{expirationTtl:86400});}catch{return json({erro:'Controle de uso indisponível'},503)}
- const fund=await fundamentos(env,ctx,txt(b.pergunta_original,6000)||q,deps.snapshot||servePublicSnapshot,deps.fiis);
- const biblioteca=(Array.isArray(b.biblioteca)?b.biblioteca:[]).slice(0,2).map(x=>({obra:txt(x?.obra,90),trecho:txt(x?.trecho,320)})).filter(x=>x.obra&&x.trecho);
- const result=await vision(env,q,imgs,fund,request,deps.fetcher||fetch,biblioteca,b.debate===true,b.grade_opcoes?txt(JSON.stringify(b.grade_opcoes),6500):'');
- return result?.resposta?json({ok:true,...result}):json({erro:'A análise visual não foi concluída. Sua imagem foi preservada para tentar novamente.',diagnostico:result?.diagnostico||[]},503);
+ const dia=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+ const key='aurea-vision:v1022:'+user+':'+dia,attemptKey=key+':tentativas',successKey=key+':concluidas';
+ if(aureaEmCursoV1022.has(user))return json({erro:'Uma análise de imagem já está em andamento.',codigo:'analise_em_andamento'},429);
+ aureaEmCursoV1022.add(user);
+ try{
+  let tentativas,concluidas;
+  try{
+   [tentativas,concluidas]=await Promise.all([env.SCREENER_CACHE.get(attemptKey),env.SCREENER_CACHE.get(successKey)]).then(a=>a.map(x=>Number(x||0)));
+   if(![tentativas,concluidas].every(n=>Number.isSafeInteger(n)&&n>=0))throw Error('contador');
+   if(concluidas+imgs.length>AUREA_LIMITES_V1022.concluidas)return json({erro:'Limite diário de 100 imagens concluídas atingido. Renova à meia-noite de Brasília.',codigo:'limite_imagens',limite:AUREA_LIMITES_V1022.concluidas,restantes:Math.max(0,AUREA_LIMITES_V1022.concluidas-concluidas)},429);
+   if(tentativas+imgs.length>AUREA_LIMITES_V1022.tentativas)return json({erro:'Limite de segurança de 150 imagens tentadas hoje atingido. Renova à meia-noite de Brasília.',codigo:'limite_tentativas'},429);
+   await env.SCREENER_CACHE.put(attemptKey,String(tentativas+imgs.length),{expirationTtl:172800});
+  }catch{return json({erro:'Controle de uso indisponível'},503)}
+  const fund=await fundamentos(env,ctx,txt(b.pergunta_original,6000)||q,deps.snapshot||servePublicSnapshot,deps.fiis);
+  const biblioteca=(Array.isArray(b.biblioteca)?b.biblioteca:[]).slice(0,2).map(x=>({obra:txt(x?.obra,90),trecho:txt(x?.trecho,320)})).filter(x=>x.obra&&x.trecho);
+  const result=await vision(env,q,imgs,fund,request,deps.fetcher||fetch,biblioteca,b.debate===true,b.grade_opcoes?txt(JSON.stringify(b.grade_opcoes),6500):'');
+  if(!result?.resposta)return json({erro:'A análise visual não foi concluída. Sua imagem foi preservada para tentar novamente.',diagnostico:result?.diagnostico||[],codigo:'provedores_indisponiveis'},503);
+  try{await env.SCREENER_CACHE.put(successKey,String(concluidas+imgs.length),{expirationTtl:172800});}catch{
+   return json({ok:true,...result,uso:{contabilizado:false}});
+  }
+  return json({ok:true,...result,uso:{limite:AUREA_LIMITES_V1022.concluidas,restantes:AUREA_LIMITES_V1022.concluidas-concluidas-imgs.length}});
+ }finally{aureaEmCursoV1022.delete(user)}
 }

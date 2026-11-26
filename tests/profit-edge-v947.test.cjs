@@ -57,7 +57,19 @@ test('PWA prioriza Cloudflare, preserva a reserva e não consulta Supabase em se
  c.window=c;vm.createContext(c);vm.runInContext(source,c);
  await c.cqPonte();assert.equal(c.CQ.pf.PETR4.px,41.30);assert.equal(supa,0);
  await c.cqPonte();assert.equal(edgeCalls,1);
- tick+=5000;await c.cqPonte();assert.equal(edgeCalls,2);assert.equal(supa,0);
- healthy=false;tick+=5000;await c.cqPonte();assert.equal(supa,1);assert.equal(c.CQ.saved.PETR4.px,41.30);assert.equal(c.CQ.pf.PETR4,undefined);
+ tick+=2000;await c.cqPonte();assert.equal(edgeCalls,2);assert.equal(supa,0);
+ healthy=false;tick+=2000;await c.cqPonte();assert.equal(supa,1);assert.equal(c.CQ.saved.PETR4.px,41.30);assert.equal(c.CQ.pf.PETR4,undefined);
  tick+=5000;await c.cqPonte();assert.equal(supa,1);assert.equal(edgeCalls,3);
+});
+
+test('v1022 lista pública usa GET Cloudflare sem auth e nunca reserva Supabase',async()=>{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const all=fs.readFileSync('src/domains/core/13-diagnostico-e-relatorios.js','utf8');
+ const s=all.slice(all.indexOf('const CQ_EDGE_V1022='),all.indexOf('var cqPonte, cqPinta;'));
+ let calls=0,fail=false,paints=0;
+ const c={window:{},CQ_ABAS:[['br','Brasil']],CQ:{aba:'br',loading:{},d:{},errors:{},ts:{}},Date,AbortController,AbortSignal,URLSearchParams,Map,tab:'mercado',MKT:{tab:'cq'},cqPinta:()=>paints++,fetch:async(url,o)=>{calls++;assert.match(url,/^https:\/\/diario-trader\..*workers\.dev\/v1\/macro\?modo=cotacoes&aba=br$/);assert.equal(o.credentials,'omit');assert.equal(o.method,'GET');assert.equal(o.headers.Authorization,undefined);return fail?new Response('{}',{status:503}):Response.json({itens:[{c:'PETR4',px:30}]})}};
+ vm.createContext(c);vm.runInContext(s,c);
+ await c.cqCarrega('br');assert.equal(calls,1);assert.equal(c.CQ.d.br.itens[0].px,30);await c.cqCarrega('br');assert.equal(calls,1);
+ fail=true;await c.cqCarrega('br',true);assert.equal(calls,2);assert.equal(c.CQ.d.br.itens[0].px,30);assert.ok(c.CQ.errors.br);
+ await c.cqCarrega('br');assert.equal(calls,2);
 });

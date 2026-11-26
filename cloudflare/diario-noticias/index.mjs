@@ -194,11 +194,18 @@ function cabecalhos(req,env){
     'Vary':'Origin',
     ...(o&&o===env.ALLOWED_ORIGIN?{'Access-Control-Allow-Origin':o}:{})};
 }
-function json(v,req,env,status=200){
+function json(v,req,env,status=200,cacheControl=null){
   const body=JSON.stringify(v);let hash=2166136261;for(let i=0;i<body.length;i++)hash=Math.imul(hash^body.charCodeAt(i),16777619);
-  const etag='W/"'+(hash>>>0).toString(16)+'"',headers={...cabecalhos(req,env),ETag:etag};
+  const etag='W/"'+(hash>>>0).toString(16)+'"',headers={...cabecalhos(req,env),ETag:etag,...(cacheControl?{'Cache-Control':cacheControl}:{})};
   return req.headers.get('if-none-match')===etag&&status===200?new Response(null,{status:304,headers}):new Response(body,{status,headers});
 }
+// v1022 — apenas as listas de cotações mudam TTL. Sessões mistas conservam atualização regular.
+export function ttlCotacoesV1022(aba,now=Date.now()){
+ const bolsa=aba==='br'?'B3':aba==='us'||aba==='adr'?'NYSE':null;
+ if(bolsa){const s=globalThis.DiarioSessoes.session(bolsa,now);if(s.verified&&['fechado','post'].includes(s.state))return 300;}
+ return 30;
+}
+const cotacoesPendentesV1022=new Map();
 export default {
   async scheduled(event,env,ctx){
     if(cronSentimento(event,env,ctx))return;
@@ -330,13 +337,22 @@ export default {
     /* v836: painéis do Macro (dados públicos) com cache de borda por modo; o app volta ao Supabase se falhar. */
     if(path==='/v1/macro'){
       const u=new URL(request.url),q=u.searchParams,c={modo:q.get('modo')||'',aba:q.get('aba')||'',semana:q.get('semana')||''};
-      const TTL={painel:60,cotacoes:60,setores:300,ranking:600,fluxo:1800,agenda:1800,balancos:21600,sazonal:43200,sazonal_us:43200,'':120};
-      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana)+'&qv=967');
+      const TTL={painel:60,cotacoes:ttlCotacoesV1022(c.aba),setores:300,ranking:600,fluxo:1800,agenda:1800,balancos:21600,sazonal:43200,sazonal_us:43200,'':120};
+      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana)+'&qv='+(c.modo==='cotacoes'?'1022':'967'));
       if(ttl==null)return json({error:'modo_nao_suportado'},request,env,400);
-      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env);}
-      const r=await macroResponder(c);
-      if(r.status===200&&cache)await cache.put(chave,new Response(JSON.stringify(r.body),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age='+ttl}}));
-      return json(r.body,request,env,r.status);
+      const cot=c.modo==='cotacoes',cacheControl=cot?'public, max-age='+Math.min(ttl,30)+', must-revalidate':null;
+      if(cot&&!['fut','idx','br','us','adr','fx','cmd','cri','jur'].includes(c.aba))return json({error:'categoria_nao_suportada'},request,env,400,'no-store');
+      if(cache){const hit=await cache.match(chave);if(hit)return json(await hit.json(),request,env,200,cacheControl);}
+      const load=async()=>{const r=await macroResponder(c);
+        if(r.status===200&&cache&&(!cot||Array.isArray(r.body?.itens)&&r.body.itens.length))await cache.put(chave,new Response(JSON.stringify(r.body),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age='+ttl}}));
+        return r;};
+      let r;
+      if(cot){
+        const k=chave.url;
+        if(!cotacoesPendentesV1022.has(k))cotacoesPendentesV1022.set(k,load().finally(()=>cotacoesPendentesV1022.delete(k)));
+        r=await cotacoesPendentesV1022.get(k);
+      }else r=await load();
+      return json(r.body,request,env,r.status,r.status===200?cacheControl:cot?'no-store':null);
     }
     /* v836: fluxo de opções do EWZ (coletado no cron do Worker e guardado no KV). */
     if(path==='/v1/ewz'){

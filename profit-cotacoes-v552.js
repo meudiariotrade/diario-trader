@@ -21,9 +21,11 @@
       dia+'/'+mes+'/'+ano ? new Date(n).toISOString() : null;
   };
   const EDGE='https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/profit-quotes';
-  let edgePending=null;
+  let edgePending=null,ponteBusy=false;
+  const edgeInterval=()=>{try{const s=root.DiarioSessoes?.session?.('WIN');return s?.verified&&!s.tradable?30000:2000;}catch{return 2000}};
   // O wrapper nunca volta ao polling antigo do Supabase após falha local.
   cqPonte = async function (force = false) {
+    if(ponteBusy)return;ponteBusy=true;
     try {
       if (typeof SESS === 'undefined' || !SESS?.uid) { CQ.pf={}; CQ.saved={}; CQ.owner=null; return; }
       if (CQ.owner !== SESS.uid) { if(edgePending)edgePending.abort(); CQ.pf={}; CQ.saved={}; CQ.pfTs=0; CQ.cloudTs=0; CQ.edgeTs=0; CQ.legacyTs=0; CQ.edgeOk=false; CQ.edgeOwner=null; CQ.owner=SESS.uid; }
@@ -34,8 +36,8 @@
       const owner = SESS.uid;
       let linhas = null, edge=false;
       // Apenas o canal privado Cloudflare é consultado em segundos. A sessão já existente é reutilizada.
-      if (SESS.at && !root.DIARIO_DEMO && CQ.edgeOk && Date.now()-(CQ.edgeTs||0)<5000)return;
-      if (SESS.at && !root.DIARIO_DEMO && Date.now()-(CQ.edgeTs||0)>=(CQ.edgeOk?5000:30000)) {
+      if (SESS.at && !root.DIARIO_DEMO && CQ.edgeOk && Date.now()-(CQ.edgeTs||0)<edgeInterval())return;
+      if (SESS.at && !root.DIARIO_DEMO && Date.now()-(CQ.edgeTs||0)>=(CQ.edgeOk?edgeInterval():30000)) {
         if(edgePending) return;
         const controller=new AbortController();edgePending=controller;CQ.edgeTs=Date.now();
         try {
@@ -51,7 +53,7 @@
         finally{if(edgePending===controller)edgePending=null}
       }
       if(SESS?.uid!==owner)return;
-      if(!edge && Date.now() - ((CQ.edgeOwner===owner?CQ.legacyTs:CQ.pfTs) || 0) < (manual || configured ? 15e3 : 15 * 6e4)) return;
+      if(!edge && Date.now() - ((CQ.edgeOwner===owner?CQ.legacyTs:CQ.pfTs) || 0) < (configured ? 2000 : manual ? 15e3 : 15 * 6e4)) return;
       CQ.pfTs = Date.now();if(!edge)CQ.legacyTs=CQ.pfTs;
       if (!edge && configured) {
         try {
@@ -105,14 +107,14 @@
       if(edge)CQ.edgeOwner=owner;
       const sig=o=>JSON.stringify(Object.entries(o||{}).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,v.px,v.d1,v.em]));
       const mudou=sig(CQ.pf)!==sig(t)||sig(CQ.saved)!==sig(saved);
-      CQ.pf = t; CQ.saved = saved;
+      CQ.pf = t; CQ.saved = saved;if(mudou)CQ.profitRevision1022=(CQ.profitRevision1022||0)+1;
       // v946: notifica consumidores em memória (Research/Terminal) apenas após
       // snapshot válido; sem criar novas consultas, polling ou divulgar preços.
       if (mudou && typeof doc.dispatchEvent === 'function' && typeof root.CustomEvent === 'function')
         doc.dispatchEvent(new root.CustomEvent('diario:profit-cotacoes',{
           detail:{uid:owner,aoVivo:Object.keys(t).length,fechamento:Object.keys(saved).length}
         }));
-    } catch { return; /* falha da ponte não religa consultas rápidas do legado */ }
+    } catch { return; /* falha da ponte não religa consultas rápidas do legado */ } finally{ponteBusy=false}
   };
   // Ação humana no botão Atualizar, sem criar polling rápido no Supabase.
   doc.addEventListener('click', event => {
@@ -122,13 +124,13 @@
   // Ciclo de vida: timer só com uma tela consumidora visível, encerrado na saída.
   let tickerTimer=null,tickBusy=false;
   const market=()=>g(()=>tab,'')==='mercado'&&g(()=>MKT.tab,'')==='cq';
-  const active=()=>!doc.hidden&&!!g(()=>SESS?.uid&&SESS?.at,null)&&(market()||g(()=>tab,'')==='live'||g(()=>tab,'')==='terminal'||!!doc.getElementById?.('ap-root'));
+  const active=()=>!doc.hidden&&!!g(()=>SESS?.uid&&SESS?.at,null)&&(market()||g(()=>tab,'')==='live'||g(()=>tab,'')==='terminal'||g(()=>tab,'')==='term'||!!doc.getElementById?.('ap-root'));
   async function tick(){
     if(tickBusy||!active())return;
     tickBusy=true;
     try{
-      const antes=g(()=>CQ.pfTs,0);await cqPonte();
-      if(!active()||!market()||g(()=>CQ.pfTs,0)===antes||doc.activeElement?.matches?.('#cotbox input, #cqbox input'))return;
+      const antes=g(()=>CQ.profitRevision1022,0);await cqPonte();
+      if(!active()||!market()||g(()=>CQ.profitRevision1022,0)===antes||doc.activeElement?.matches?.('#cotbox input, #cqbox input'))return;
       if(typeof cqMorph==='function')cqMorph();else cqPinta();
     }catch{}finally{tickBusy=false}
   }
@@ -138,7 +140,7 @@
       if(edgePending)edgePending.abort();
       return;
     }
-    if(tickerTimer===null){tickerTimer=setInterval(tick,5000);void tick()}
+    if(tickerTimer===null){tickerTimer=setInterval(tick,2000);void tick()}
   }
   doc.addEventListener('visibilitychange',ciclo);
   doc.addEventListener('diario:tela',()=>requestAnimationFrame(ciclo));
