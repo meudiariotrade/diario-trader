@@ -1,5 +1,6 @@
 import {autenticarUsuario} from './auth-jwks-v924.mjs';
 import {generate} from './aurea-resumao-v904.mjs';
+import {carregarCommoditiesV1015,PROTOCOLO_COMMODITIES_V1015} from './aurea-commodities-v1015.mjs';
 import {carregarGrahamV1014,PROTOCOLO_GRAHAM_V1014} from './graham-fundamentos-v1014.mjs';
 const ORIGIN='https://meudiariotrade.github.io',MAX=28000;
 const CORS={'Access-Control-Allow-Origin':ORIGIN,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'authorization,content-type','Vary':'Origin'};
@@ -38,6 +39,12 @@ export function normalizarGrahamV1014(raw,perfis){
  const arr=x=>(Array.isArray(x)?x:[]).slice(0,8).map(safe).filter(Boolean);
  return {titulo:'Graham · tese fundamentalista',resumo:perfis.length?safe(raw.resumo):'Fundamentos públicos insuficientes para confirmar a tese. A leitura seguinte é conceitual e condicional.',explicacao:arr(raw.explicacao),o_que_observar:arr(raw.o_que_observar),lacunas:arr(raw.lacunas)};
 }
+export function normalizarCommoditiesParecerV1015(raw,perfis){
+ if(!obj(raw)||txt(raw.resumo,1500).length<15)return null;
+ const safe=x=>{const s=txt(x,1000);return /\d/.test(s)?'Referência numérica não validada; consulte a tabela de dados.':s;};
+ const arr=x=>(Array.isArray(x)?x:[]).slice(0,8).map(safe).filter(Boolean);
+ return {titulo:'Parecer de commodities',resumo:perfis.some(p=>p.cotacao)?safe(raw.resumo):'Sem cotação datada confirmada; leitura conceitual e condicional. '+safe(raw.resumo),explicacao:arr(raw.explicacao),o_que_observar:arr(raw.o_que_observar),lacunas:arr(raw.lacunas)};
+}
 async function bounded(req){
  if(Number(req.headers.get('Content-Length')||0)>MAX)throw Error('size');
  const reader=req.body?.getReader();if(!reader)throw Error('json');
@@ -53,7 +60,7 @@ export async function debateV1013(request,env,deps={}){
  if(!user)return json({erro:'Entre na sua conta novamente'},401);
  let b;try{b=await bounded(request)}catch(e){return json({erro:'Corpo inválido ou grande demais'},e.message==='size'?413:400)}
  const pergunta=txt(b?.pergunta,6000),fase=b?.fase;
- if(pergunta.length<3||!['pareceres','debate','graham'].includes(fase))return json({erro:'Consulta inválida'},400);
+ if(pergunta.length<3||!['pareceres','debate','graham','commodities'].includes(fase))return json({erro:'Consulta inválida'},400);
  const rodada=fase==='debate'?normalizarRodadaV1013(b.rodada):null;
  if(fase==='debate'&&!rodada)return json({erro:'Pareceres iniciais inválidos'},400);
  if(!env.SCREENER_CACHE)return json({erro:'Controle de uso indisponível'},503);
@@ -63,13 +70,15 @@ export async function debateV1013(request,env,deps={}){
  try{const n=Number(await env.SCREENER_CACHE.get(key)||0);if(n>=12)return json({erro:'Limite diário de rodadas do debate atingido'},429);await env.SCREENER_CACHE.put(key,String(n+1),{expirationTtl:86400})}catch{return json({erro:'Controle de uso indisponível'},503)}
  const biblioteca=(Array.isArray(b.biblioteca)?b.biblioteca:[]).slice(0,2).map(x=>({obra:txt(x?.obra,90),trecho:txt(x?.trecho,320)})).filter(x=>x.obra&&x.trecho);
  const perfis=await carregarGrahamV1014(env,deps.ctx,pergunta,deps.snapshot,deps.fiis);
- const contexto={pergunta,perfis,contexto_publico:txt(b.contexto_publico,5000),biblioteca,...(rodada?{rodada,relatorio_visual:txt(b.relatorio_visual,7000)}:{})};
+ const commodities=await carregarCommoditiesV1015(pergunta,deps.commoditiesFetch||fetch);
+ const lente=['schwartz','dalio','livermore'].includes(b.lente)?b.lente:'schwartz';
+ const contexto={pergunta,perfis,commodities,lente,contexto_publico:txt(b.contexto_publico,5000),biblioteca,...(rodada?{rodada,relatorio_visual:txt(b.relatorio_visual,7000)}:{})};
  if(request.signal.aborted)return json({erro:'Consulta cancelada'},499);
- let gen;try{gen=await (deps.generate||generate)(env,SYS+PROTOCOLO_GRAHAM_V1014+' '+(fase==='graham'?'Responda com resultado {"resumo":"tese própria qualitativa","explicacao":["qualidade, caixa, dívida, crescimento, valuation condicional"],"o_que_observar":["catalisador, risco, invalidação"],"lacunas":["dados faltantes"]}. Não inclua números no texto; os indicadores são exibidos pelo aplicativo.':fase==='pareceres'?PRIMEIRA:SEGUNDA)+'\nDados:\n'+JSON.stringify(contexto),'central')}catch{return json({erro:'Rodada indisponível'},503)}
+ let gen;try{gen=await (deps.generate||generate)(env,SYS+PROTOCOLO_GRAHAM_V1014+' '+PROTOCOLO_COMMODITIES_V1015+' '+(fase==='commodities'?'Responda pela lente indicada, com resultado {"resumo":"tese condicional","explicacao":["vetores, oferta e demanda, impacto, cenários"],"o_que_observar":["gatilho, invalidação e dados a buscar"],"lacunas":["evidência ausente"]}. Não inclua números no texto; as referências ficam em tabela separada.':fase==='graham'?'Responda com resultado {"resumo":"tese própria qualitativa","explicacao":["qualidade, caixa, dívida, crescimento, valuation condicional"],"o_que_observar":["catalisador, risco, invalidação"],"lacunas":["dados faltantes"]}. Não inclua números no texto; os indicadores são exibidos pelo aplicativo.':fase==='pareceres'?PRIMEIRA:SEGUNDA)+'\nDados:\n'+JSON.stringify(contexto),'central')}catch{return json({erro:'Rodada indisponível'},503)}
  if(request.signal.aborted)return json({erro:'Consulta cancelada'},499);
  if(gen?.error)return json({erro:'Rodada indisponível'},503);
  let raw;try{raw=JSON.parse(gen.text)?.resultado}catch{}
- const resultado=fase==='graham'?normalizarGrahamV1014(raw,perfis):fase==='pareceres'?normalizarRodadaV1013(raw):normalizarDebateV1013(raw,rodada);
+ const resultado=fase==='commodities'?normalizarCommoditiesParecerV1015(raw,commodities):fase==='graham'?normalizarGrahamV1014(raw,perfis):fase==='pareceres'?normalizarRodadaV1013(raw):normalizarDebateV1013(raw,rodada);
  if(!resultado)return json({erro:'Resposta da rodada incompatível'},502);
- return json({ok:true,resultado,modelo:txt(gen.model,100),fundamentos_v1014:perfis});
+ return json({ok:true,resultado,modelo:txt(gen.model,100),fundamentos_v1014:perfis,commodities_v1015:commodities});
 }
