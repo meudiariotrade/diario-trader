@@ -70493,45 +70493,47 @@ try {
   const t = MGRP.find((a) => a[0] === "Hoje");
   t && !t[1].includes("mercado:cq") && t[1].unshift("mercado:cq");
 } catch {}
-async function cqCarrega(e, t) {
-  if (
-    ((e = e || CQ.aba),
-    CQ.loading[e] || (!t && CQ.d[e] && Date.now() - (CQ.ts[e] || 0) < 25e3))
-  )
-    return;
-  const a = cfg();
-  if (!a) {
-    ((CQ.err = "Configure o Supabase em Conta para ver as cotações."),
-      cqPinta());
-    return;
+// v1022 — listas públicas direto na borda. Sem sessão, token ou Edge Supabase.
+const CQ_EDGE_V1022="https://diario-trader.lucianosilva43567.workers.dev/v1/macro";
+function cqIntervaloV1022(aba,agora=Date.now()){
+  const sess=window.DiarioSessoes;
+  if(!sess?.session)return 30000;
+  const bolsa=aba==="br"?"B3":aba==="us"||aba==="adr"?"NYSE":null;
+  if(bolsa){
+    const s=sess.session(bolsa,agora);
+    if(s.verified&&["fechado","post"].includes(s.state))return 300000;
   }
-  ((CQ.busy = e), (CQ.loading[e] = true), (CQ.errors[e] = ""), cqPinta());
-  try {
-    const o = { "Content-Type": "application/json", apikey: a.key };
-    try {
-      typeof SESS < "u" &&
-        SESS &&
-        SESS.at &&
-        (o.Authorization = "Bearer " + SESS.at);
-    } catch {}
-    const s = await edgeFetchAutenticado(a.url + "/functions/v1/macro", {
-        method: "POST",
-        headers: o,
-        body: JSON.stringify({ modo: "cotacoes", aba: e }),
-        signal: AbortSignal.timeout(25000),
-      }),
-      n = await s.json().catch(() => ({}));
-    if (!s.ok) throw new Error(n.error || "Erro " + s.status);
-    if (!Array.isArray(n.itens))
-      throw new Error(
-        'Para ver as cotações, publique a função "macro" nova (v194) no Supabase.',
-      );
-    ((CQ.d[e] = n), (CQ.ts[e] = Date.now()), (CQ.err = ""), (CQ.errors[e] = ""));
-  } catch (o) {
-    ((CQ.err = String(o.message || o)), (CQ.errors[e] = CQ.err), (CQ.ts[e] = Date.now()));
-  }
-  ((CQ.loading[e] = false), CQ.busy === e && (CQ.busy = ""), e === "fut" && (await cqPonte()), cqPinta());
+  return 30000;
 }
+const cqControllersV1022=new Map();
+function cqCancelarV1022(){
+  for(const ctl of cqControllersV1022.values())ctl.abort();
+}
+async function cqCarrega(e, t) {
+  e=e||CQ.aba;
+  if(!CQ_ABAS.some(a=>a[0]===e)||e==="fav"||CQ.loading[e])return;
+  const intervalo=CQ.errors[e]?120000:cqIntervaloV1022(e);
+  if(!t&&CQ.ts[e]&&Date.now()-CQ.ts[e]<intervalo)return;
+  const inicial=!CQ.d[e]?.itens?.length,ctl=new AbortController();
+  cqControllersV1022.set(e,ctl);
+  CQ.loading[e]=true;if(inicial){CQ.busy=e;CQ.errors[e]="";cqPinta();}
+  try {
+    const url=CQ_EDGE_V1022+"?"+new URLSearchParams({modo:"cotacoes",aba:e});
+    const r=await fetch(url,{method:"GET",credentials:"omit",redirect:"error",cache:"default",headers:{Accept:"application/json"},signal:AbortSignal.any([ctl.signal,AbortSignal.timeout(25000)])});
+    const n=await r.json().catch(()=>({}));
+    if(ctl.signal.aborted)return;
+    if(!r.ok||!Array.isArray(n.itens)||(!n.itens.length&&CQ.d[e]?.itens?.length))throw new Error(n.error||n.erro||"Cloudflare: cotação indisponível ("+r.status+")");
+    CQ.d[e]=n;CQ.ts[e]=Date.now();CQ.err="";CQ.errors[e]="";
+  }catch(o){
+    if(!ctl.signal.aborted){CQ.errors[e]=CQ.err=String(o.message||o);CQ.ts[e]=Date.now();}
+  }finally{
+    if(cqControllersV1022.get(e)===ctl)cqControllersV1022.delete(e);
+    CQ.loading[e]=false;if(CQ.busy===e)CQ.busy="";
+    if(!ctl.signal.aborted&&tab==="mercado"&&MKT.tab==="cq"&&(CQ.aba===e||CQ.aba==="fav"))cqPinta();
+  }
+  if(e==="fut"&&!ctl.signal.aborted&&tab==="mercado"&&MKT.tab==="cq")await cqPonte();
+}
+
 var cqPonte, cqPinta;
 const CQ_COR = {
   fut: "#c2943e",
@@ -70595,13 +70597,15 @@ var cotHtml;
     return;
   }
   if (e.target.closest("[data-cqr]")) { cqCarrega(CQ.aba, !0); try { Promise.resolve(mdoCarrega(true)).then(cqPinta).catch(()=>{}); } catch {} }
-}),
-  setInterval(() => {
-    !document.hidden &&
-      tab === "mercado" &&
-      MKT.tab === "cq" &&
-      cqCarrega(CQ.aba);
-  }, 3e4));
+}));
+let cqTimerV1022=null;
+function cqCicloV1022(){
+  const ativo=!document.hidden&&tab==="mercado"&&MKT.tab==="cq";
+  if(!ativo){if(cqTimerV1022!==null)clearInterval(cqTimerV1022);cqTimerV1022=null;cqCancelarV1022();return;}
+  if(cqTimerV1022===null){cqTimerV1022=setInterval(()=>{if(!document.hidden&&tab==="mercado"&&MKT.tab==="cq")cqCarrega(CQ.aba);else cqCicloV1022();},30000);cqCarrega(CQ.aba);}
+}
+document.addEventListener("visibilitychange",cqCicloV1022);
+document.addEventListener("diario:tela",()=>requestAnimationFrame(cqCicloV1022));
 const AG_MEXE =
   /payroll|CPI|infla\xe7\xe3o ao consumidor|n\xfacleo da infla\xe7\xe3o|PCE|decis\xe3o de juros|FOMC|Copom|IPCA|PIB|vendas no varejo|ISM|aux\xedlio-desemprego|discurso.*(Powell|Gal\xedpolo)|Powell|Gal\xedpolo|PMI industrial|IBC-Br/i;
 function agNum(e) {
@@ -71330,7 +71334,7 @@ function cqItens(category) {
   const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const query = normalize(CQ.search).trim();
   const visible = items.filter(item=>normalize(item.c+' '+item.n).includes(query));
-  const busy = category === 'adr' ? !!AD.busy : !!CQ.loading[category] || CQ.busy === category;
+  const busy = category === 'adr' ? !!AD.busy&&!AD.data?.itens?.length : (!data?.itens?.length&&(!!CQ.loading[category] || CQ.busy === category));
   const error = CQ.errors[category] || (!data && !busy ? CQ.err : '');
   let content;
   // v626: no celular o Mapa mostra o heatmap da sub-aba; o panorama geral (12 termômetros) fica em Favoritos e no desktop.
@@ -72111,7 +72115,7 @@ function cqCacheSalva606(aba) {
   cqCarrega = async function (t) {
     const r = await e.apply(this, arguments);
     const aba = t || CQ.aba;
-    CQ.errors[aba] || cqCacheSalva606(aba);
+    if(!CQ.errors[aba]&&CQ.ts[aba]&&(!CQ.persist1022?.[aba]||Date.now()-CQ.persist1022[aba]>=120000)){cqCacheSalva606(aba);(CQ.persist1022??={})[aba]=Date.now();}
     return r;
   };
 }
