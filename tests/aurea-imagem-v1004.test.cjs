@@ -2,7 +2,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const mod=import('../cloudflare/diario-screeners/aurea-imagem-v1004.mjs');
 const image='/9j/AA==',question='Analise VALE3: acho que está rompendo resistência.';
 const req=(b={pergunta:question,imagem:{mime:'image/jpeg',data:image}},origin='https://meudiariotrade.github.io')=>new Request('https://worker.workers.dev/v1/aurea-imagem',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Authorization:'Bearer dummy'},body:JSON.stringify(b)});
-const result={resumo:'A tese precisa de confirmação.',tecnico:'Observar estrutura e volume.',fundamentalista:'Conferir margem de segurança.',critico:'Avaliar invalidação.',observar:['Volume']};
+const result={tipo:'grafico',resumo:'A tese precisa de confirmação.',tecnico:'A região de resistência mostra rejeição; o fundo recente ainda precisa de rompimento do topo para confirmar reação. Volume deve ser conferido.',fundamentalista:'Conferir margem de segurança.',critico:'Avaliar invalidação.',observar:['Volume'],estrutura:{periodo:'Diário',tendencia:'Reação em estrutura de baixa',evidencias:['Topo anterior acima da resistência','Fundo recente ainda não confirmado'],principal:'Continuação da correção se romper suporte',alternativo:'Recuperação se superar resistência',confirmacao:'Fechamento abaixo do fundo observado',invalidacao:'Retomada do topo anterior com fechamento'},pivos:[{tipo:'topo',estado:'confirmado',x:.42,y:.25,preco:'~65,00',motivo:'Rompimento subsequente do fundo anterior'},{tipo:'fundo',estado:'potencial',x:.6,y:.72,preco:'58,12',motivo:'Reação sem romper o topo anterior'}]};
 const env=()=>({GEMINI_API_KEY:'fake',MISTRAL_API_KEY:'fake',SCREENER_CACHE:{get:async()=>null,put:async()=>{}}});
 test('nega origem, autenticação e imagens inválidas antes do provedor',async()=>{
  const {aureaImagem}=await mod;let calls=0;const deps={auth:async()=>null,fetcher:async()=>{calls++;throw Error('não chamar')}};
@@ -52,4 +52,19 @@ test('v1005: esgotamento dos modelos retorna diagnóstico limitado, não inventa
  const {aureaImagem}=await mod,e={...env(),AI:{run:async()=>{throw Error('secret never expose')}}};
  const r=await aureaImagem(req(),e,{},{auth:async()=>'u',snapshot:async()=>new Response('',{status:503}),fetcher:async()=>new Response('secret never expose',{status:429})});
  assert.equal(r.status,503);const j=await r.json();assert.ok(j.diagnostico.some(s=>s.includes('HTTP 429')));assert.ok(j.diagnostico.some(s=>s.includes('Gemma 4')));assert.ok(!JSON.stringify(j).includes('secret'));assert.equal(j.resposta,undefined);
+});
+
+test('v1007: rejeita resposta genérica e coordenadas inválidas sem inventar pivôs',async()=>{
+ const {parecer,normalizarPivosV1007}=await mod;
+ assert.equal(parecer(JSON.stringify({resumo:'Olhe o gráfico',tecnico:'Observe volume',fundamentalista:'Confira dados',critico:'Cuidado'}),null),null);
+ assert.equal(parecer(JSON.stringify({...result,pivos:[{tipo:'topo',estado:'confirmado',x:2,y:.2,motivo:'fora da imagem original'}]}),null),null);
+ const good=parecer(JSON.stringify(result),null);assert.equal(good.pivos.length,2);assert.equal(good.pivos[1].estado,'potencial');assert.match(good.estrutura.invalidacao,/topo/);
+ assert.deepEqual(normalizarPivosV1007([{tipo:'fundo',estado:'potencial',x:'0.5',y:.2,motivo:'Coordenada do modelo inválida'}]),[]);
+ const partial=parecer(JSON.stringify({...result,tipo:'grafico_parcial',pivos:[],estrutura:{lacuna:'Não é possível distinguir os pavios'}}),null);assert.deepEqual(partial.pivos,[]);
+});
+test('v1007: sete especialidades mantêm método próprio, com Dow como mentor',async()=>{
+ const {metodoConselhoV1007}=await import('../cloudflare/diario-screeners/aurea-resumao-v904.mjs');
+ const casos={graham:'ROIC',helmer:'barreira',livermore:'pivôs',munger:'inversão',markowitz:'concentração',schwartz:'agenda',dalio:'dívida',dow:'conceito'};
+ for(const [id,termo] of Object.entries(casos))assert.ok(metodoConselhoV1007(id,'').includes(termo),id);
+ assert.match(metodoConselhoV1007('ativo','ATIVO TÉCNICO: PRIO3'),/pivôs/);
 });

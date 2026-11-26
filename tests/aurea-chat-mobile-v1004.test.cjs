@@ -21,3 +21,15 @@ test('Áurea mobile mantém compositor visível com resposta longa e limpa ao fe
  await expect(panel.locator('.wf-chat-empty')).toBeVisible();
  await p.close();
 }));
+
+test('v1007: marca pivôs sobre a imagem original e mostra cenário e invalidação',{timeout:90000},async()=>withApp(async(browser,base)=>{
+ const p=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.evaluate(()=>window.TraderChat.open());
+ const url=await p.evaluate(()=>{const c=document.createElement('canvas');c.width=200;c.height=400;return c.toDataURL('image/png')});
+ await p.evaluate(url=>{ECO.l=[{id:'pivos',q:'Analise o gráfico',em:new Date().toISOString(),por:'conselho',imagem:url,r:{resumo:'Correção em andamento',estrutura:{periodo:'Diário',confirmacao:'Perda do fundo',invalidacao:'Superação do topo'},pivos:[{tipo:'topo',estado:'confirmado',x:.4,y:.2,preco:'65,00',motivo:'Rompimento do fundo anterior'},{tipo:'fundo',estado:'potencial',x:.6,y:.7,preco:'58,00',motivo:'Reação em confirmação'}]}}];ecoPaint();},url);
+ const panel=p.locator('#wf-chat-panel');
+ await expect(panel.locator('[data-aurea-pivo]')).toHaveCount(2);
+ await expect(panel.locator('.wf-chat-sent-image img')).toHaveAttribute('src',url);
+ await expect(panel.locator('.wf-chat-history')).toContainText('Superação do topo');
+ await panel.locator('[data-chat-close]').click();await p.close();
+}));
