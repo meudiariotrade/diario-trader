@@ -3627,38 +3627,41 @@ const wl = () => (S.wl && S.wl.length ? S.wl : WL0),
     "https://finance.yahoo.com/quote/" +
     encodeURIComponent(scB3(e) ? e + ".SA" : e) +
     "/chart";
-async function scFetch(e, t) {
-  const a = cfg();
-  if (!a) throw new Error("Configure o Supabase na aba Conta.");
-  // Screener exige sessão: não consumir banda enviando chamadas que retornariam 401.
-  const token = (typeof SESS !== "undefined" && SESS?.at) || "";
-  if (!token) throw new Error("Entre na sua conta para consultar o screener.");
-  let o;
-  try {
-    o = await edgeFetchAutenticado(a.url + "/functions/v1/screener", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: a.key, Authorization: "Bearer " + token },
-      body: JSON.stringify({ symbols: e, detail: !!t }),
-    });
-  } catch {
-    throw new Error(
-      'Não consegui falar com a função "screener": confira se ela foi publicada, se a verificação de JWT está desligada e se há internet.',
-    );
-  }
-  if (!o.ok) {
-    let s = "";
-    try {
-      s = (await o.json()).error || "";
-    } catch {}
-    throw new Error(
-      o.status === 401
-        ? 'A função exige login: desligue "Verify JWT" nas configurações dela no Supabase.'
-        : o.status === 404
-          ? 'Função "screener" não encontrada: publique-a no Supabase.'
-          : s || "Erro " + o.status,
-    );
-  }
-  return o.json();
+// v1001: histórico público na Cloudflare; médias e alinhamento calculados no dispositivo.
+function scCalcular(s, closes, detail, meta={}) {
+  if (closes.length < 201) return {s,ok:false};
+  const sma=n=>{let sum=0;return closes.map((p,i)=>{sum+=p;if(i>=n)sum-=closes[i-n];return i>=n-1?sum/n:null})};
+  const m20=sma(20),m50=sma(50),m150=sma(150),m200=sma(200);
+  const stateAt=i=>{const p=closes[i],a=m20[i],b=m50[i],c=m150[i],d=m200[i];
+    if([a,b,c,d].some(v=>v==null))return "neutro";
+    return p>a&&a>b&&b>c&&c>d?"alta":p<a&&a<b&&b<c&&c<d?"queda":"neutro";
+  };
+  const i=closes.length-1,state=stateAt(i);let days=0;
+  if(state!=="neutro")for(let j=i;j>=0&&stateAt(j)===state;j--)days++;
+  const result={s,ok:true,state,days,px:closes[i],chg:(closes[i]/closes[i-1]-1)*100,dist20:(closes[i]/m20[i]-1)*100,
+    ma:{20:m20[i],50:m50[i],150:m150[i],200:m200[i]},...meta};
+  if(detail)result.series={c:closes.slice(-120),m20:m20.slice(-120),m50:m50.slice(-120),m150:m150.slice(-120),m200:m200.slice(-120)};
+  return result;
+}
+async function scFetch(e,t) {
+  const symbols=[...new Set(e.slice(0,30).map(s=>String(s).trim().toUpperCase()))].filter(s=>/^\^?[A-Z0-9][A-Z0-9.\-=]{0,14}$/.test(s));
+  const data=[];
+  const base="https://diario-trader.lucianosilva43567.workers.dev/v1/diario";
+  const one=async s=>{
+    try{
+      const symbol=scB3(s)?s+".SA":s;
+      const r=await fetch(base+"?"+new URLSearchParams({t:symbol,range:"2y"}),{method:"GET",credentials:"omit",headers:{Accept:"application/json"},signal:AbortSignal.timeout(20000)});
+      if(!r.ok)throw Error("HTTP "+r.status);
+      const j=await r.json(),q=j?.chart?.result?.[0],m=q?.meta||{};
+      if(String(m.symbol||"").toUpperCase()!==symbol.toUpperCase())throw Error("Símbolo divergente");
+      const c=(q?.indicators?.quote?.[0]?.close||[]).filter(v=>typeof v==="number"&&Number.isFinite(v)&&v>0);
+      if(c.length&&Number.isFinite(m.regularMarketPrice)&&m.regularMarketPrice>0)c[c.length-1]=m.regularMarketPrice;
+      return scCalcular(s,c,!!t,{fonte:"Yahoo Finance · Cloudflare",...(Number.isFinite(m.regularMarketTime)&&m.regularMarketTime>0?{dadoEm:m.regularMarketTime*1000}:{})});
+    }catch{return {s,ok:false}}
+  };
+  // Lotes limitados para não abrir 25 pedidos simultâneos nem enviar tokens.
+  for(let i=0;i<symbols.length;i+=4)data.push(...await Promise.all(symbols.slice(i,i+4).map(one)));
+  return {data};
 }
 function scUi() {
   const e = $("#scm");

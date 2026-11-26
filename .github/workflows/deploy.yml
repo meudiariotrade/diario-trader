@@ -58,6 +58,8 @@ jobs:
         run: node --test tests/perfil-busca-quota-v949.test.cjs
       - name: Testar Radar Proativo sem polling
         run: node --test tests/radar-proativo-v944.test.cjs
+      - name: Validar corte do scanner legado
+        run: node --test tests/cutover-screeners-v1001.test.cjs
       - run: npm run build
       # Build e validação estrutural continuam obrigatórios para publicar.
       - run: npm run check

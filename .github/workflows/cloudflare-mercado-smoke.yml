@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/verify-cloudflare-mercado-v892.cjs'
+      - 'scripts/verify-cutover-screeners-v1001.cjs'
       - '.github/workflows/cloudflare-mercado-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -19,3 +20,6 @@ jobs:
           node-version: '24'
       - name: Conferir preco B3 e EUA, candles e macro sem consultar Supabase
         run: node scripts/verify-cloudflare-mercado-v892.cjs
+
+      - name: Conferir Screeners, logos, séries e documentos em produção
+        run: node scripts/verify-cutover-screeners-v1001.cjs
