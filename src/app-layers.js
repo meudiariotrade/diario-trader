@@ -2282,15 +2282,8 @@ try {
           O)
         );
       }),
-        (imgDados = async function () {
-          if (window.DIARIO_DEMO)
-            throw Error(
-              "A captura de mercado exige dados reais; consultas externas estão desativadas na demonstração.",
-            );
-          if (!SESS?.at)
-            throw Error(
-              "Entre na conta para atualizar o panorama e a lista de ADRs antes de gerar a imagem.",
-            );
+        // v1025: preservar o carregador canônico do core; não substituir suas consultas.
+        (imgDados = ((carregar) => async function () {
           const P = async () => {
               const H = [];
               try {
@@ -2321,44 +2314,10 @@ try {
                 }
               } catch {}
               await Promise.allSettled(H);
-            },
-            m = await Promise.allSettled([mdoCarrega(!0), adrLoad(!0), P()]),
-            c = !MDO.ts || Date.now() - MDO.ts > 3e5,
-            q = [];
-          if (
-            ((m[0].status === "rejected" || MDO.err || c) &&
-              q.push(
-                "Panorama: " +
-                  (MDO.err ||
-                    "não foi possível confirmar uma consulta recente."),
-              ),
-            (m[1].status === "rejected" ||
-              m[1].value !== !0 ||
-              AD.err ||
-              o()) &&
-              q.push(
-                "EWZ/ADRs: " +
-                  (AD.err ||
-                    "não foi possível confirmar uma consulta recente."),
-              ),
-            (IMG.marketReference = {
-              macro: MDO.ts || null,
-              adrs: AD.data?.ts || null,
-              warning: q.join(" "),
-            }),
-            q.length &&
-              !confirm(
-                q.join(`
-`) +
-                  `
-
-Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na imagem?`,
-              ))
-          )
-            throw Error(
-              "Captura cancelada; atualize as fontes e tente novamente.",
-            );
-        }));
+            };
+          const [resultado] = await Promise.all([carregar.apply(this, arguments), P()]);
+          return resultado;
+        })(imgDados)));
       const z = imgDesenha;
       imgDesenha = function () {
         const P = z.apply(this, arguments);

@@ -45693,108 +45693,91 @@ function imgBrent955(snapshot, agora=Date.now()) {
   if(Math.abs((q.px/q.fechamentoAnterior-1)*100-q.d1)>0.08)return null;
   return {...q,s:'BZ=F',fonte:q.source||'TradingView'};
 }
+// v1025: exatamente os símbolos e categorias da lista Mercado/Cotações.
 const imgSimbolosPublicos = {
-  "TIO=F": [
-    "SGX:FEF1!",
-    "COMEX:TIO1!"
-  ],
-  "DCE:I": [
-    "DCE:I1!"
-  ],
-  "CL=F": [
-    "NYMEX:CL1!"
-  ],
-  "ES=F": [
-    "CME_MINI:ES1!"
-  ],
-  "NQ=F": [
-    "CME_MINI:NQ1!"
-  ],
-  "BRL=X": [
-    "FX_IDC:USDBRL"
-  ],
-  "DX-Y.NYB": [
-    "TVC:DXY"
-  ],
-  "^BVSP": [
-    "BMFBOVESPA:IBOV"
-  ],
-  "^N225": [
-    "TVC:NI225"
-  ],
-  "^GDAXI": [
-    "XETR:DAX"
-  ],
-  "GC=F": [
-    "TVC:GOLD"
-  ],
-  "BTC-USD": [
-    "BITSTAMP:BTCUSD",
-    "COINBASE:BTCUSD"
-  ],
-  "ETH-USD": [
-    "BITSTAMP:ETHUSD",
-    "COINBASE:ETHUSD"
-  ]
+  "TIO=F": ["SGX:FEF1!"],
+  "DCE:I": ["DCE:I1!"],
+  "BZ=F": ["ICEEUR:BRN1!"],
+  "CL=F": ["NYMEX:CL1!"],
+  "ES=F": ["CME_MINI:ES1!"],
+  "NQ=F": ["CME_MINI:NQ1!"],
+  "BRL=X": ["FX_IDC:USDBRL"],
+  "DX-Y.NYB": ["TVC:DXY"],
+  "^BVSP": ["BMFBOVESPA:IBOV"],
+  "^N225": ["TVC:NI225"],
+  "^GDAXI": ["XETR:DAX"],
+  "GC=F": ["TVC:GOLD"],
+  "BTC-USD": ["BITSTAMP:BTCUSD"],
+  "ETH-USD": ["BITSTAMP:ETHUSD"]
 };
+const imgAbasV1025 = ["cmd","fut","fx","idx","cri"];
+function imgValidaV1025(q) {
+  return !!q && Number.isFinite(q.px) && q.px > 0 && !q.suspeito && q.quoteStatus !== "divergente";
+}
 function imgQ(e) {
-  if(e==='BZ=F'&&IMG.brent955){
-    const rows=(MDO.v?.mercados?.grupos||[]).flatMap(g=>g.itens||[]),m=rows.find(q=>q.s===e);
-    const valid=/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(m?.simboloFonte||'')&&Number.isFinite(m?.d1)&&!m.suspeito&&m.quoteStatus!=='divergente';
-    if(!valid||!(Date.parse(m.horarioPreco||m.priceAt)>Date.parse(IMG.brent955.horarioPreco||IMG.brent955.priceAt)))return IMG.brent955;
+  const aliases=imgSimbolosPublicos[e]||[];
+  const rows=IMG.cotacoesPublicas||[];
+  const macro=(MDO.v?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
+  // A lista usada pelo usuário é a fonte primária; macro legado somente reserva local.
+  const q=rows.find(r=>aliases.includes(r.s)&&imgValidaV1025(r)) ||
+    macro.find(r=>(r.s===e||aliases.includes(r.s))&&imgValidaV1025(r));
+  if(e==="BZ=F"&&IMG.brent955&&imgValidaV1025(IMG.brent955)){
+    const newer=q&&/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||"")&&q.quoteStatus==="coerente"&&Number.isFinite(q.d1)&&q.fechamentoAnterior>0&&Math.abs((q.px/q.fechamentoAnterior-1)*100-q.d1)<=0.08&&Date.parse(q.horarioPreco||q.priceAt)>Date.parse(IMG.brent955.horarioPreco||IMG.brent955.priceAt);
+    if(!newer)return IMG.brent955;
   }
-  const t = MDO.v && MDO.v.mercados && MDO.v.mercados.grupos;
-  const publico = IMG.cotacoesPublicas?.find(q =>
-    (q.s === e || imgSimbolosPublicos[e]?.includes(q.s)) &&
-    Number.isFinite(q.px) && q.px > 0 && !q.suspeito && q.quoteStatus !== "divergente"
-  );
-  for (const a of t || []) for (const o of a.itens || []) if (o.s === e) {
-    if (publico && e !== "BZ=F" && (!Number.isFinite(o.px) || o.px <= 0 || o.suspeito || o.quoteStatus === "divergente" ||
-      Date.parse(publico.horarioPreco || publico.priceAt) > Date.parse(o.horarioPreco || o.priceAt))) return publico;
-    const brentSemContrato=e==="BZ=F"&&!/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(o.simboloFonte||"");
-    return brentSemContrato||o.suspeito||o.quoteStatus==="divergente"?{...o,d1:null}:o;
+  if(!q)return null;
+  if(e==="BZ=F"){
+    // Nunca misturar ajuste ou variação de contratos diferentes de Brent.
+    const contrato=/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||"");
+    const base=Number.isFinite(q.fechamentoAnterior)&&q.fechamentoAnterior>0;
+    const coerente=contrato&&base&&q.quoteStatus==="coerente"&&Number.isFinite(q.d1)&&
+      Math.abs((q.px/q.fechamentoAnterior-1)*100-q.d1)<=0.08;
+    return {...q,d1:coerente?q.d1:null};
   }
-  return e === "BZ=F" ? null : publico || null;
+  return {...q,d1:Number.isFinite(q.d1)?q.d1:null};
+}
+async function imgListasV1025(fetcher=fetch, estado=CQ) {
+  const resultados=await Promise.allSettled(imgAbasV1025.map(async aba=>{
+    const url=CQ_EDGE_V1022+"?"+new URLSearchParams({modo:"cotacoes",aba});
+    const ctl=new AbortController();
+    const timer=setTimeout(()=>ctl.abort(),12000);
+    try{
+      const r=await fetcher(url,{method:"GET",credentials:"omit",cache:"default",headers:{Accept:"application/json"},signal:ctl.signal});
+      const j=await r.json();
+      if(!r.ok||!Array.isArray(j.itens)||!j.itens.some(imgValidaV1025))throw Error("Lista indisponível: "+aba);
+      return {aba,rows:j.itens};
+    }finally{clearTimeout(timer);}
+  }));
+  const rows=[],reserva=[];
+  resultados.forEach((r,i)=>{
+    const aba=imgAbasV1025[i],fresh=r.status==="fulfilled"?r.value.rows:[];
+    const cached=estado.d?.[aba]?.itens||[];
+    rows.push(...fresh.filter(imgValidaV1025));
+    // Somente completar símbolos ausentes com o cache já existente no dispositivo.
+    const faltantes=cached.filter(q=>imgValidaV1025(q)&&!fresh.some(f=>f.s===q.s&&imgValidaV1025(f)));
+    if(!fresh.length||faltantes.length)reserva.push(aba);
+    rows.push(...faltantes);
+  });
+  return {rows,reserva};
 }
 async function imgDados() {
-  // v904: atualizar em paralelo, mas NUNCA impedir a imagem por perda de rede.
-  // Em iPhone, o sistema pode interromper o fetch ao alternar de tela/5G.
-  const aguardando=[],agora=Date.now();
-  let mercadoPublico955=null;
-  IMG.brent955=null;
-  if(window.DiarioPublico?.get)aguardando.push(Promise.resolve().then(()=>window.DiarioPublico.get('/v1/mercado',{ttl:60000})).then(j=>{mercadoPublico955=j;}).catch(()=>{}));
-  if((!MDO.v?.mercados || agora-(MDO.ts||0)>3*6e4) && (!MDO.errTs || agora-MDO.errTs>120000))
-    aguardando.push(Promise.resolve().then(()=>mdoCarrega(true)));
-  if(!AD.data?.itens || agora-(Number(AD.data.ts)||0)>3*6e4)
-    aguardando.push(Promise.resolve().then(()=>adrLoad(true)));
-  if(aguardando.length)await Promise.race([
-    Promise.allSettled(aguardando),
-    new Promise(resolve=>setTimeout(resolve,7000))
-  ]);
-  IMG.cotacoesPublicas = mercadoPublico955 && !mercadoPublico955.desatualizado && !mercadoPublico955.cacheOffline
-    ? (mercadoPublico955.mercados?.grupos || []).flatMap(g => g.itens || []) : [];
-  IMG.brent955=imgBrent955(mercadoPublico955);
-  const mercadoOK=!!(MDO.v?.mercados?.grupos?.length);
-  const adrsOK=!!(AD.data?.itens?.length);
-  const mercadoTs=Number(MDO.ts)||0,adrsTs=Number(AD.data?.ts)||0;
-  const valido=Date.now();
-  const antigas=(mercadoOK&&mercadoTs&&valido-mercadoTs>10*60000)||
-    (adrsOK&&adrsTs&&valido-adrsTs>10*60000);
-  const erro=!!(MDO.err&&(!mercadoTs||MDO.errTs>=mercadoTs));
-  const atualizado=Math.max(mercadoTs,adrsTs);
-  const carimbo=atualizado?new Date(atualizado).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'sem horário confirmado';
-  IMG.aviso=!mercadoOK&&!adrsOK?'SEM COTAÇÕES VERIFICADAS · consultas indisponíveis':
-    erro||antigas?'DADOS PARCIAIS / CONSULTA ANTERIOR · '+carimbo+' (BRT)':'';
-  const commodities=['BZ=F','CL=F','TIO=F','DCE:I','GC=F'];
-  const semHora=commodities.some(s=>{const q=imgQ(s);return q&&(!q.horarioPreco&&!q.priceAt||q.quoteStatus==='referencia_anterior'||q.quoteStatus==='divergente');});
-  const brent=imgQ('BZ=F');
-  const semContrato=brent&&!/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(brent.simboloFonte||'');
-  const nota=semContrato?'BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO':semHora?'COMMODITIES: HORÁRIO DA FONTE NÃO CONFIRMADO OU REFERÊNCIA ANTERIOR':'';
-  if ([...Object.keys(imgSimbolosPublicos), "BZ=F"].some(s => !Number.isFinite(imgQ(s)?.px))) {
-    IMG.aviso = [IMG.aviso, "COTAÇÕES PARCIAIS · ATIVOS SEM PREÇO DISPONÍVEL"].filter(Boolean).join(" · ");
-  }
-  if(nota)IMG.aviso=[IMG.aviso,nota].filter(Boolean).join(' · ');
-  return {mercadoOK,adrsOK,aviso:IMG.aviso};
+  if(window.DIARIO_DEMO)throw Error("A captura de mercado exige dados reais.");
+  if(!SESS?.at)throw Error("Entre na conta para gerar a imagem.");
+  IMG.cotacoesPublicas=[]; IMG.brent955=null; IMG.aviso="";
+  const [listas,adrs,snapshot]=await Promise.allSettled([imgListasV1025(),adrLoad(true),Promise.resolve().then(()=>window.DiarioPublico?.get?.("/v1/mercado",{ttl:60000}))]);
+  if(snapshot.status==="fulfilled")IMG.brent955=imgBrent955(snapshot.value);
+  const dados=listas.status==="fulfilled"?listas.value:{rows:[],reserva:imgAbasV1025};
+  IMG.cotacoesPublicas=dados.rows;
+  const ausentes=Object.keys(imgSimbolosPublicos).filter(s=>!imgQ(s));
+  const macroReserva=Object.keys(imgSimbolosPublicos).some(s=>imgQ(s)&&!dados.rows.some(q=>imgSimbolosPublicos[s].includes(q.s)&&imgValidaV1025(q)));
+  const brent=imgQ("BZ=F");
+  IMG.aviso=[
+    dados.reserva.length||macroReserva?"DADOS PARCIAIS / CONSULTA ANTERIOR":"",
+    ausentes.length?"COTAÇÕES PARCIAIS · "+ausentes.length+" ATIVOS SEM PREÇO DISPONÍVEL":"",
+    adrs.status==="rejected"||adrs.value!==true||AD.err?"EWZ/ADRs: consulta anterior ou parcial":"",
+    brent&&brent.d1===null?"BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO":""
+  ].filter(Boolean).join(" · ");
+  return {mercadoOK:ausentes.length<14,adrsOK:!!AD.data?.itens?.length,aviso:IMG.aviso};
 }
 function imgDesenha() {
   const e = ((AD.data && AD.data.itens) || [])
