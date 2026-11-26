@@ -43629,13 +43629,21 @@ function aureaRendaFixaLocalV1016(texto,now=Date.now()){
  const inflation=num(n.match(/\b(?:inflacao|ipca)\s+(?:media|medio|cenario)\s*[:=]\s*(\d{1,2}(?:[,.]\d{1,4})?)\s*%/)?.[1]);
  if(index==="CDI"&&(cdiBase===null||cdiBase>50))missing.push("CDI médio anual hipotético para o prazo (ex.: CDI cenário: 10%).");
  if(index==="IPCA"&&(inflation===null||inflation>50))missing.push("Inflação anual hipotética para o prazo (ex.: inflação cenário: 4%).");
- const amountRaw=n.match(/\b(?:aporte|valor|principal)\s*[:=]\s*(?:r\$|us\$|\$)?\s*(\d+(?:[,.]\d{1,2})?)\b/)?.[1];
- const amount=num(amountRaw),principal=amount!==null&&amount>0&&amount<=1e9?amount:100;
- if(amount===null)notes.push("Sem aporte explícito: resultados por 100 unidades monetárias, não saldo pessoal.");
+ const amountField=n.match(/\b(?:aporte|valor|principal)\s*[:=]\s*(?:(r\$|us\$|\$)\s*)?([^\s;]+)/);
+ const amountRaw=amountField?.[2]?.replace(/;$/,""),moneyNum=s=>{
+  if(!s)return null;
+  if(/^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(s))return Number(s.replace(/\./g,"").replace(",","."));
+  if(/^\d+(?:[,.]\d{1,2})?$/.test(s))return Number(s.replace(",","."));
+  return null;
+ };
+ const amount=moneyNum(amountRaw),amountOk=!amountField||(Number.isFinite(amount)&&amount>0&&amount<=1e9&&!(us&&amountField[1]==="r$")&&!(!us&&["us$","$"].includes(amountField[1])));
+ const principal=amountOk&&amount!==null?amount:100;
+ if(!amountField)notes.push("Sem aporte explícito: resultados por 100 unidades monetárias, não saldo pessoal.");
+ if(!amountOk)missing.push("Aporte inválido ou em moeda incompatível; informe o valor completo e a moeda (ex.: aporte: R$ 10.000,00).");
  if(!/\b(?:emissor|banco|instituicao)\s*[:=]\s*\S/.test(n)&&!["Tesouro Selic","Tesouro IPCA+","Tesouro Prefixado","Treasury","TIPS"].includes(produto))missing.push("Emissor e conglomerado, rating e risco de crédito.");
  if(!/\b(?:liquidez|carencia|resgate)\s*[:=]\s*\S/.test(n))missing.push("Liquidez, carência e condição de resgate antecipado.");
  if(!/\b(?:objetivo|uso|finalidade)\s*[:=]\s*\S/.test(n))missing.push("Finalidade do dinheiro e data em que poderá precisar dele.");
- if(!/\b(?:taxa de custodia|custos|taxas)\s*[:=]\s*\S/.test(n))notes.push("Taxas/custos não deduzidos; confirmar custódia, spread, IOF e corretagem quando aplicáveis.");
+ notes.push("Taxas/custos não deduzidos nesta simulação, mesmo se mencionados; confirmar custódia, spread, IOF e corretagem quando aplicáveis.");
  const isExempt=["LCA","LCI","CRI","CRA"].includes(produto),taxable=["CDB","RDB","Tesouro Prefixado","Tesouro Selic","Tesouro IPCA+"].includes(produto);
  const ir=days===null?null:days<=180?.225:days<=360?.20:days<=720?.175:.15;
  const fgc=["LCA","LCI","CDB","RDB"].includes(produto);
@@ -43647,7 +43655,7 @@ function aureaRendaFixaLocalV1016(texto,now=Date.now()){
  const single=produto&&(["LCA","LCI","CDB","RDB"].includes(produto)&&!/\b(?:cupom|cupons|pagamento mensal|juros mensais)\b/.test(n)||explicitTerminal);
  const compatible=produto==="Tesouro Selic"?false:produto==="Tesouro IPCA+"?index==="IPCA":produto==="Tesouro Prefixado"?index==="PREFIXADO":produto==="TIPS"?false:us?index==="PREFIXADO"&&/\byield efetivo\b/.test(n):true;
  const baseOk=index==="CDI"?cdiBase!==null&&cdiBase<=50:index==="IPCA"?inflation!==null&&inflation<=50:index==="PREFIXADO";
- if(single&&compatible&&days&&days>=30&&baseOk&&rate!==null&&rate>0&&rate<=(index==="CDI"?250:60)){
+ if(amountOk&&single&&compatible&&days&&days>=30&&baseOk&&rate!==null&&rate>0&&rate<=(index==="CDI"?250:60)){
   const annual=index==="CDI"?Math.pow(1+((Math.pow(1+cdiBase/100,1/252)-1)*rate/100),252)-1:index==="IPCA"?(1+inflation/100)*(1+rate/100)-1:rate/100;
   const gross=principal*Math.pow(1+annual,y),gain=gross-principal,aliq=isExempt?0:taxable?ir:null;
   const net=aliq===null?null:principal+gain*(1-aliq),netRate=net===null?null:Math.pow(net/principal,1/y)-1;
@@ -43781,8 +43789,10 @@ function aureaRota(texto) {
   const blocked=new Set(["BR","EUA","US","USD","BRL","ROE","ROIC","FCF","DCF","PEG","CET","DY","ETF","FII","PIB","FED","SELIC","IBOV"]);
   for(const x of [...usTagged,...(usStandalone?[usStandalone[1]]:[])])if(!blocked.has(x)&&!tickers.includes(x)&&tickers.length<4)tickers.push(x);
   const opcoes=typeof aureaTemaOpcoesV1017==="function"&&aureaTemaOpcoesV1017(t);
+  const educational=/\b(o que e|como funciona|explique o conceito|me ensina)\b/.test(n);
+  if(educational&&!forcado&&!tickers.length)return {id:"dow",tickers,motivo:"conceito para estudar"};
   if(opcoes&&(!forcado||["livermore","markowitz","munger"].includes(forcado[1])))return {id:forcado?forcado[1]:"livermore",tickers,motivo:"análise técnica e estratégias com opções",tema:"opcoes"};
-  if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você",...((typeof aureaRendaFixaTemaV1016==="function"&&aureaRendaFixaTemaV1016(t))?{tema:"renda_fixa"}:{}) };
+  if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você",...((["markowitz","schwartz","munger"].includes(forcado[1])&&typeof aureaRendaFixaTemaV1016==="function"&&aureaRendaFixaTemaV1016(t))?{tema:"renda_fixa"}:(!tickers.length&&["schwartz","dalio","livermore"].includes(forcado[1])&&/\b(commodit\w*|brent|wti|petroleo|ouro|gold|prata|cobre|minerio|dalian|soja|milho|trigo|cafe|acucar|algodao|boi gordo|boi vivo|gas natural)\b/.test(n))?{tema:"commodities"}:{}) };
   if((typeof aureaRendaFixaTemaV1016==="function"&&aureaRendaFixaTemaV1016(t))&&!/\b(o que e|como funciona|explique o conceito)\b/.test(n))return {id:"markowitz",tickers:[],motivo:"renda fixa e gestão de caixa",tema:"renda_fixa"};
   const commodity=/\b(commodit\w*|brent|wti|petroleo|ouro|gold|xauusd|prata|silver|cobre|copper|minerio|dalian|soja|milho|trigo|cafe|acucar|algodao|boi gordo|boi vivo|gas natural)\b/.test(n);
   if(commodity&&!tickers.some(x=>/^[A-Z]{4}\d/.test(x))&&!/\b(o que e|como funciona|explique o conceito)\b/.test(n)){
