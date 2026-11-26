@@ -43733,14 +43733,14 @@ async function aureaCerebro(e, signal) {
     return null;
   }
 }
-async function aureaImagemCall(pergunta, imagem, signal, titular) {
+async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[]) {
   if (!SESS) throw new Error("Entre na sua conta para analisar imagens.");
   await tok();
   if (signal.aborted || syncOwner() !== titular) throw new Error("Consulta cancelada.");
   const r = await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-imagem",{
     method:"POST",credentials:"omit",redirect:"error",cache:"no-store",
     headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},
-    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),imagem:{mime:"image/jpeg",data:imagem.b64}})
+    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),imagem:{mime:"image/jpeg",data:imagem.b64},biblioteca:livros})
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.resposta)throw new Error(j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.");
@@ -43758,15 +43758,20 @@ async function ecoPergunta(e, opt) {
   ECO.busy=1;ECO.err="";ECO.rascunho="";ECO.rota=rota;ecoPaint();
   const timer=opt.imagem?setTimeout(()=>controller.abort(),62000):null;
   try {
-    let resposta=null;
-    if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular);
+    let resposta=null,livros=[];
+    if(opt.livros===true){
+      try{livros=await window.DiarioCerebroIA?.contextoConselho?.(rota.id,q,true,controller.signal)||[];}catch{}
+    }
+    if(!ativo())return;
+    const bloco=window.DiarioCerebroIA?.blocoConselho?.(livros)||"";
+    if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros);
     else {
       const agregado=opt.dadosPrivados?window.DiarioContextoConselhoV1008?.(rota.id)||"":"";
-      if(rota.id==="dow")resposta=await aureaCerebro(q,controller.signal);
+      // Dow também respeita o consentimento e o mesmo limite de trechos das demais lentes.
       if(!ativo())return;
       if(!resposta){
-        const o=await anxCall({modo:"economista",texto:aureaTexto(agregado?e.slice(0,Math.max(500,3200-agregado.length))+agregado:e,rota),link:a,
-          hist:ECO.l.filter(s=>!s.privado||opt.dadosPrivados).slice(-4).map(s=>({p:s.q,r:[s.r.resumo,...(s.r.explicacao||[]).slice(0,2),...(s.por==="conselho"?(s.r.visoes||[]).map(v=>v.escola+": "+v.argumento):[])].join(" ").slice(0,3500)}))
+        const o=await anxCall({modo:"economista",texto:aureaTexto(agregado||bloco?e.slice(0,Math.max(500,4500-agregado.length-bloco.length))+agregado+bloco:e,rota),link:a,
+          hist:ECO.l.filter(s=>(!s.privado||opt.dadosPrivados)&&(!s.livros||opt.livros)).slice(-4).map(s=>({p:s.q,r:[s.r.resumo,...(s.r.explicacao||[]).slice(0,2),...(s.por==="conselho"?(s.r.visoes||[]).map(v=>v.escola+": "+v.argumento):[])].join(" ").slice(0,3500)}))
         },{signal:controller.signal});
         if(!o?.resposta)throw new Error(o?.erro||"A Áurea está temporariamente indisponível.");
         resposta=o.resposta;
@@ -43774,7 +43779,7 @@ async function ecoPergunta(e, opt) {
     }
     if(!ativo())return;
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
-      motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,...(opt.imagem?{imagem:opt.imagem.url}:{})});
+      motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagem:opt.imagem.url}:{})});
     ECO.l=ECO.l.slice(-20);
     let imagens=0;
     for(let i=ECO.l.length-1;i>=0;i--)if(ECO.l[i].imagem&&++imagens>4)delete ECO.l[i].imagem;
