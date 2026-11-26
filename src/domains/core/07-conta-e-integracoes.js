@@ -3456,6 +3456,64 @@ function aureaOpcoesLocalV1017(texto,now=Date.now()){
  }else if(legs.length===2)missing.push("Trava vertical exige uma compra e uma venda do mesmo tipo, strikes distintos e mesma data/ativo; validar pernas.");
  return {ticker,mercado:market,moeda,vencimento:validDate?iso:null,legs,calculo:calc,missing:[...new Set(missing)],notas};
 }
+// v1017 — adaptador estrito da grade já carregada. Nunca consulta rede, nunca envia a grade inteira.
+function aureaGradeCandidatasV1017(q,rows,now=Date.now()){
+ const n=String(q||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(),tickers=[...new Set((n.match(/\b[a-z]{4}(?:3|4|5|6|7|8|11)\b/g)||[]).map(x=>x.toUpperCase()))];
+ const alta=/\b(trava de alta|cenario de alta|tese de alta)\b/.test(n),baixa=/\b(trava de baixa|cenario de baixa|tese de baixa)\b/.test(n),direction=alta&&!baixa?"alta":baixa&&!alta?"baixa":null;
+ const target=Number((n.match(/\b(?:alvo|preco alvo)\s*[:=]\s*(\d+(?:[,.]\d+)?)/)?.[1]||"").replace(",","."));
+ const reqDate=n.match(/\bvenc(?:imento)?\s*[:=]?\s*(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/)?.[1],date=reqDate?.includes("/")?reqDate.split("/").reverse().join("-"):reqDate;
+ const result={ticker:tickers.length===1?tickers[0]:null,direcao:direction,alvo:target>0?target:null,updated_at:null,spot:null,candidatas:[],lacuna:""};
+ if(!result.ticker){result.lacuna="Informe um único ticker B3 da Grade ao Vivo.";return result;}
+ const row=(Array.isArray(rows)?rows:[]).find(r=>r?.ativo===result.ticker),ts=Date.parse(row?.updated_at||"");
+ if(!row||!Number.isFinite(ts)||ts>now||now-ts>120000||!(Number.isFinite(+row.spot)&&+row.spot>0)){result.lacuna="Grade do ativo ausente ou antiga (limite de 2 minutos para estudo). Abra Grade ao Vivo e atualize pela ponte; nenhum preço foi presumido.";return result;}
+ result.updated_at=new Date(ts).toISOString();result.spot=+row.spot;
+ const today=new Date(now).toISOString().slice(0,10);
+ const validDate=x=>typeof x==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&Number.isFinite(Date.parse(x+"T00:00:00Z"))&&new Date(Date.parse(x+"T00:00:00Z")).toISOString().slice(0,10)===x&&x>today;
+ const num=x=>typeof x==="number"&&Number.isFinite(x);
+ const series=(Array.isArray(row.series)?row.series:[]).filter(r=>r&&/^[A-Z]{4}[A-Z]\d{1,5}[A-Z0-9]?$/.test(String(r.c||""))&&r.c.slice(0,4)===result.ticker.slice(0,4)&&["C","P"].includes(r.t)&&validDate(r.v)&&(!date||r.v===date)&&num(r.k)&&r.k>0&&(r.ke===false||r.ke===0)&&num(r.b)&&num(r.a)&&r.b>0&&r.a>=r.b&&(r.a-r.b)/((r.a+r.b)/2)<=0.25).slice(0,400);
+ const make=(buy,sell,dir)=>{
+  if(buy.c===sell.c||buy.v!==sell.v||buy.t!==sell.t||buy.k===sell.k)return null;
+  const text="trava de "+dir+" "+result.ticker+" B3 vencimento: "+buy.v+" compra "+(buy.t==="C"?"call":"put")+" strike "+buy.k+" premio "+buy.a+" venda "+(sell.t==="C"?"call":"put")+" strike "+sell.k+" premio "+sell.b;
+  const c=aureaOpcoesLocalV1017(text,now).calculo;if(!c)return null;
+  const pnl=spot=>Math.max(0,buy.t==="C"?spot-buy.k:buy.k-spot)-Math.max(0,sell.t==="C"?spot-sell.k:sell.k-spot)-buy.a+sell.b;
+  const legs=[{codigo:buy.c,lado:"C",tipo:buy.t,strike:buy.k,premio:buy.a,bid:buy.b,ask:buy.a,iv:typeof opgIVp==="function"?opgIVp(buy.ivp):null},{codigo:sell.c,lado:"V",tipo:sell.t,strike:sell.k,premio:sell.b,bid:sell.b,ask:sell.a,iv:typeof opgIVp==="function"?opgIVp(sell.ivp):null}];
+  return {direcao:dir,tipo:buy.t,fluxo:c.fluxo,vencimento:buy.v,legs,perda_unitaria:c.perda_unitaria,ganho_unitario:c.ganho_unitario,premio_liquido:c.premio_liquido,breakeven:c.breakeven_sem_custos,alvo:result.alvo,payoff_alvo:result.alvo?pnl(result.alvo):null,payoff_spot:pnl(result.spot),spread_relativo:(buy.a-buy.b)/((buy.a+buy.b)/2)+(sell.a-sell.b)/((sell.a+sell.b)/2)};
+ };
+ const dirs=direction?[direction]:["alta","baixa"],groups=new Map(),candidates=[];
+ for(const r of series){const k=r.v+"|"+r.t;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);}
+ for(const arr of groups.values()){
+  arr.sort((a,b)=>Math.abs(a.k-result.spot)-Math.abs(b.k-result.spot));const limited=arr.slice(0,24);
+  for(const dir of dirs)for(const buy of limited)for(const sell of limited){
+   if(dir==="alta"?buy.k>=sell.k:buy.k<=sell.k)continue;
+   if(Math.abs(buy.k-result.spot)/result.spot>0.15||Math.abs(sell.k-result.spot)/result.spot>0.25)continue;
+   const c=make(buy,sell,dir);if(c)candidates.push(c);
+  }
+ }
+ for(const dir of dirs)for(const type of ["C","P"]){
+  const list=candidates.filter(c=>c.direcao===dir&&c.tipo===type).sort((a,b)=>result.alvo?b.payoff_alvo/b.perda_unitaria-a.payoff_alvo/a.perda_unitaria||a.spread_relativo-b.spread_relativo:a.spread_relativo-b.spread_relativo||Math.abs(a.breakeven-result.spot)-Math.abs(b.breakeven-result.spot));
+  if(list[0])result.candidatas.push(list[0]);
+ }
+ result.lacuna=result.candidatas.length?"Preços indicativos de coleta, não confirmação de execução. Sem multiplicador, custos, lote e exercício confirmados; valores por unidade, sem recomendação.":"Nenhuma combinação com duas ofertas válidas, strike explicitamente não estimado e vencimento confirmado; sem substituir por último negócio.";
+ return result;
+}
+function aureaGradeAtualV1017(q,now=Date.now()){
+ try{if(typeof OPG!=="undefined"&&typeof SESS!=="undefined"&&SESS&&OPG.owner===String(SESS.uid))return aureaGradeCandidatasV1017(q,OPG.rows,now);}catch{}
+ return aureaGradeCandidatasV1017(q,[],now);
+}
+function aureaAbrirGradeV1017(ticker){
+ if(!/^[A-Z]{4}(?:3|4|5|6|7|8|11)$/.test(String(ticker||"")))return;
+ if(typeof OPG!=="undefined"){OPG.a=ticker;OPG.m="";}
+ if(typeof GXV!=="undefined")GXV.vw="grade";
+ if(typeof irPara==="function")irPara("opgrade");
+}
+function aureaAbrirSimuladorV1017(q,c,quantity,now=Date.now()){
+ if(!Number.isSafeInteger(quantity)||quantity<=0||quantity>1e6||!c||typeof showSheet!=="function")return false;
+ const grade=aureaGradeAtualV1017(q,now),fresh=grade.candidatas.find(x=>x.vencimento===c.vencimento&&x.legs.every((l,i)=>l.codigo===c.legs[i]?.codigo&&l.premio===c.legs[i]?.premio&&l.strike===c.legs[i]?.strike));
+ if(!fresh)return false;
+ const legs=fresh.legs.map((l,i)=>({id:"l"+Date.now().toString(36)+i,tp:l.tipo,lado:l.lado,k:l.strike,venc:fresh.vencimento,pr:l.premio,q:quantity,...(l.iv?{iv:l.iv*100}:{})}));
+ AUTO=0;isNew=1;QM=0;T={id:Date.now().toString(36),tipo:"O",dt:loc().slice(0,16),ativo:fresh.legs[0].codigo,sub:grade.ticker,side:fresh.fluxo==="crédito"?"V":"C",ot:fresh.tipo,strike:String(legs[0].k),venc:fresh.vencimento,spot:String(grade.spot),entry:String(fresh.premio_liquido),stop:"",target:"",exit:"",qty:String(quantity),pv:"1",rules:"",err:"Nenhum",estr:"Trava de "+fresh.direcao,legs,aureaSimulacao:true};orig={};showSheet();return true;
+}
+
 // fim v1017
 
 function aureaRota(texto) {
@@ -3803,7 +3861,8 @@ async function ecoPergunta(e, opt) {
     if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q,debate);
     else if(debate)resposta=await aureaDeliberarV1013(null,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
     else if(rota.tema==="opcoes"&&!opt.dadosPrivados&&!a){
-      const j=await aureaDebateCallV1013({fase:"opcoes",lente:rota.id,pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros,simulacao_opcoes:aureaOpcoesLocalV1017(q)},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
+      const g=aureaGradeAtualV1017(q);
+      const j=await aureaDebateCallV1013({fase:"opcoes",lente:rota.id,pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros,simulacao_opcoes:aureaOpcoesLocalV1017(q),grade_opcoes:opt.contextoPublico?g:null},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
       resposta={...j.resultado,modelo:j.modelo||""};
     }
     else if(rota.tema==="renda_fixa"&&!opt.dadosPrivados&&!a){
@@ -3835,7 +3894,7 @@ async function ecoPergunta(e, opt) {
     if(debate&&opt.imagem)resposta=await aureaDeliberarV1013(resposta,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
     if(!ativo())return;
     if(resposta.fundamentos_v1014?.length)resposta.fundamentos_v1014=aureaCalcularGrahamV1014(resposta.fundamentos_v1014);
-    if(aureaTemaOpcoesV1017(q))resposta.opcoes_v1017=aureaOpcoesLocalV1017(q);
+    if(aureaTemaOpcoesV1017(q))resposta.opcoes_v1017={...aureaOpcoesLocalV1017(q),grade:aureaGradeAtualV1017(q)};
     if(aureaRendaFixaTemaV1016(q))resposta.renda_fixa_v1016={...(resposta.renda_fixa_v1016||{}),simulacao:aureaRendaFixaLocalV1016(q)};
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
       motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagens:(Array.isArray(opt.imagem)?opt.imagem:[opt.imagem]).map(x=>x.url)}:{})});

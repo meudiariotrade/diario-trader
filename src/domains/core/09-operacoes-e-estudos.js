@@ -1797,6 +1797,7 @@ function opStatsHtml() {
 }
 const OPG = {
   rows: null,
+  owner: null,
   ts: 0,
   busy: 0,
   err: "",
@@ -1817,6 +1818,8 @@ try {
   t && !t[1].includes("mercado:opc") && t[1].push("mercado:opc");
 } catch {}
 async function opgCarrega(e) {
+  const owner=typeof SESS!=='undefined'&&SESS?String(SESS.uid):null;
+  if(OPG.owner!==owner){OPG.rows=null;OPG.ts=0;OPG.owner=owner;}
   if (!(OPG.busy || (!e && Date.now() - OPG.ts < 55e3))) {
     if (!cfg() || typeof SESS > "u" || !SESS) {
       ((OPG.err =
@@ -1830,7 +1833,8 @@ async function opgCarrega(e) {
         "/rest/v1/opcoes_grade?select=ativo,spot,series,updated_at&user_id=eq." +
           SESS.uid,
       );
-      ((OPG.rows = await t.json()), (OPG.err = ""), opgHist());
+      const rows=await t.json();
+      if(typeof SESS!=='undefined'&&SESS&&String(SESS.uid)===owner&&OPG.owner===owner){OPG.rows=Array.isArray(rows)?rows:[];OPG.err="";opgHist();}
     } catch (t) {
       OPG.err =
         t.status === 404
