@@ -3265,18 +3265,25 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         if(!M.imagem)return "";
         const pts=(Array.isArray(E.pivos)?E.pivos:[]).filter(p=>["topo","fundo"].includes(p?.tipo)&&["confirmado","potencial"].includes(p?.estado)&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1).slice(0,10);
         const marks=pts.map((p,i)=>{
-          const cor=p.estado==="potencial"?"#a16207":p.tipo==="topo"?"#b91c1c":"#067647",x=p.x*100,y=p.y*100,align=x>70?"translate(-100%,-50%)":"translate(0,-50%)";
-          const label=(p.tipo==="topo"?"T":"F")+(i+1)+(p.estado==="potencial"?"?":"")+(p.preco?" · "+p.preco:"");
+          const cor=p.validacao!=="estrutura_ohlc"?"#a16207":p.tipo==="topo"?"#b91c1c":"#067647",x=p.x*100,y=p.y*100,align=x>70?"translate(-100%,-50%)":"translate(0,-50%)";
+          const label=(p.tipo==="topo"?"T":"F")+(i+1)+(p.validacao!=="estrutura_ohlc"?"?":"")+(p.preco?" · "+p.preco:"");
           return `<span data-aurea-pivo="${i+1}" style="position:absolute;left:${x}%;top:${y}%;width:10px;height:10px;border:2px solid ${cor};background:#fff;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none"></span><span style="position:absolute;left:${x}%;top:${y}%;transform:${align};margin-top:${i%2?16:-16}px;max-width:45%;padding:2px 4px;background:${cor};color:white;border-radius:4px;font-size:10px;font-weight:700;line-height:1.2;pointer-events:none">${s(label)}</span>`;
         }).join("");
-        return `<figure class="wf-chat-sent-image" style="margin:8px 0"><div style="position:relative;width:100%;line-height:0"><img src="${s(M.imagem)}" alt="Imagem original anexada à pergunta" style="display:block;width:100%;height:auto;max-height:none;object-fit:contain">${marks}</div>${pts.length?'<figcaption style="font-size:11px;line-height:1.4;margin-top:6px">T: topo · F: fundo · ?: potencial. Marcações visuais aproximadas, não conferidas com OHLC.</figcaption>':""}</figure>`;
+        return `<figure class="wf-chat-sent-image" style="margin:8px 0"><div style="position:relative;width:100%;line-height:0"><img src="${s(M.imagem)}" alt="Imagem original anexada à pergunta" style="display:block;width:100%;height:auto;max-height:none;object-fit:contain">${marks}</div>${pts.length?'<figcaption style="font-size:11px;line-height:1.4;margin-top:6px">T: topo · F: fundo · ?: estrutura não confirmada por OHLC. As coordenadas na imagem são sempre aproximadas.</figcaption>':""}</figure>`;
       }
       function graficosAureaV1011(M,E){
         const imgs=M.imagens||(M.imagem?[M.imagem]:[]);
         return imgs.map((url,i)=>{
           const g=E.graficos?.find(x=>x.indice===i+1);
-          return (imgs.length>1?'<p><b>Gráfico '+(i+1)+'</b></p>':'')+graficoAureaV1007({imagem:url},g|| (imgs.length===1?E:{}));
+          return (imgs.length>1?'<p><b>Gráfico '+(i+1)+'</b></p>':'')+graficoAureaV1007({imagem:url},g|| (imgs.length===1?E:{}))+validacaoAureaV1012(g||(imgs.length===1?E:{}));
         }).join("");
+      }
+      function validacaoAureaV1012(g){
+        if(!g.pivos?.length)return "";
+        const v=g.validacao_ohlc||{},status={visual:"Estimativa visual",divergente:"Divergente",preco_ohlc:"Preço compatível",extremo_ohlc:"Extremo local conferido",estrutura_ohlc:"Estrutura conferida por OHLC"};
+        return '<section class="wf-chat-parecer"><b>Conferência estrutural dos pivôs</b><p>'+s(v.motivo||"Sem conferência histórica; marcações apenas visuais.")+'</p>'+
+          (v.status==="conferido"?'<p><b>'+s(v.ticker)+' · '+s(v.tf)+'</b> · '+s(v.source)+' · recorte '+s(v.desde)+' a '+s(v.ate)+'</p>':"")+
+          '<ul>'+g.pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+' · '+(status[p.validacao]||"Estimativa visual"))+'</b> — '+s(p.verificacao||"Sem conferência histórica.")+(p.validacao==="estrutura_ohlc"?' Nível rompido: '+s(p.nivel_rompido)+' · '+s(p.data_rompimento):"")+'</li>').join("")+'</ul></section>';
       }
       function comparacaoAureaV1011(E){
         if(!E.graficos?.length)return "";
@@ -3287,7 +3294,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const st=E.estrutura;if(!st)return "";
         const blocos=[["Período",st.periodo],["Estrutura e tendência",st.tendencia],["Cenário principal",st.principal],["Cenário alternativo",st.alternativo],["Confirmação",st.confirmacao],["Invalidação",st.invalidacao],["Limitações",st.lacuna]];
         const pivos=Array.isArray(E.pivos)?E.pivos:[];
-        return '<section class="wf-chat-parecer">'+blocos.filter(v=>v[1]).map(([k,v])=>'<p><b>'+s(k)+':</b> '+s(v)+'</p>').join("")+(st.evidencias?.length?'<b>Evidências</b><ul>'+st.evidencias.map(v=>'<li>'+s(v)+'</li>').join("")+'</ul>':"")+(pivos.length?'<b>Topos e fundos relevantes</b><ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.estado==="potencial"?"?":"")+(p.preco?" · "+p.preco:""))+'</b> — '+s(p.estado)+': '+s(p.motivo)+'</li>').join("")+'</ul>':"")+'</section>';
+        return '<section class="wf-chat-parecer">'+blocos.filter(v=>v[1]).map(([k,v])=>'<p><b>'+s(k)+':</b> '+s(v)+'</p>').join("")+(st.evidencias?.length?'<b>Evidências</b><ul>'+st.evidencias.map(v=>'<li>'+s(v)+'</li>').join("")+'</ul>':"")+(pivos.length?'<b>Topos e fundos relevantes</b><ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.validacao!=="estrutura_ohlc"?"?":"")+(p.preco?" · "+p.preco:""))+'</b> — '+s(p.validacao==='estrutura_ohlc'?'conferido no OHLC':'estimativa visual da IA')+': '+s(p.motivo)+'</li>').join("")+'</ul>':"")+'</section>';
       }
       function e(M) {
         const E = M.r || {};
