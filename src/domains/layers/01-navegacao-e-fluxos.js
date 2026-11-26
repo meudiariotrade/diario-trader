@@ -3296,6 +3296,14 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const pivos=Array.isArray(E.pivos)?E.pivos:[];
         return '<section class="wf-chat-parecer">'+blocos.filter(v=>v[1]).map(([k,v])=>'<p><b>'+s(k)+':</b> '+s(v)+'</p>').join("")+(st.evidencias?.length?'<b>Evidências</b><ul>'+st.evidencias.map(v=>'<li>'+s(v)+'</li>').join("")+'</ul>':"")+(pivos.length?'<b>Topos e fundos relevantes</b><ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.validacao!=="estrutura_ohlc"?"?":"")+(p.preco?" · "+p.preco:""))+'</b> — '+s(p.validacao==='estrutura_ohlc'?'conferido no OHLC':'estimativa visual da IA')+': '+s(p.motivo)+'</li>').join("")+'</ul>':"")+'</section>';
       }
+      function opcoesAureaV1017(E){
+        const p=E.opcoes_v1017;if(!p)return "";
+        const c=p.calculo,fmt=n=>Number.isFinite(n)?n.toLocaleString("pt-BR",{maximumFractionDigits:4}):"N/D",money=n=>Number.isFinite(n)?(p.moeda==="USD"?"US$ ":"R$ ")+fmt(n):"N/D";
+        const fields=c?[["Prêmio líquido por unidade",money(c.premio_liquido)],["Ganho máximo por unidade, sem custos",money(c.ganho_unitario)],["Perda máxima por unidade, sem custos",money(c.perda_unitaria)],["Breakeven sem custos",money(c.breakeven_sem_custos)],["Breakeven com custos",money(c.breakeven_com_custos)],["Ganho máximo total",money(c.ganho_maximo)],["Perda máxima total",money(c.perda_maxima)],["Retorno/risco",fmt(c.retorno_risco)],["Dentro do limite informado",c.dentro_limite===null?"N/D":c.dentro_limite?"Sim":"Não"]]:[];
+        return '<section class="wf-chat-parecer"><b>Estratégia com opções · '+s(p.ticker||"Ativo não confirmado")+'</b><p>'+s(p.vencimento||"Vencimento não confirmado")+' · '+s(p.moeda||"Moeda não confirmada")+'</p>'+
+        (p.legs||[]).map(l=>'<p style="font-variant-numeric:tabular-nums">'+s(l.lado+' '+l.tipo)+' · strike '+fmt(l.strike)+' · prêmio '+fmt(l.premio)+'</p>').join("")+
+        (c?'<p><b>Trava de '+s(c.direcao)+' · '+s(c.tipo)+' · '+s(c.fluxo)+'</b></p><table style="width:100%;font-variant-numeric:tabular-nums">'+fields.map(x=>'<tr><td>'+s(x[0])+'</td><td style="text-align:right">'+s(x[1])+'</td></tr>').join("")+'</table>':'<p>Estrutura conceitual: payoff numérico depende das pernas, prêmios e vencimento.</p>')+N("Dados que faltam",p.missing)+N("Premissas e riscos",p.notas)+'</section>';
+      }
       function rendaFixaAureaV1016(E){
         const r=E.renda_fixa_v1016;if(!r)return "";
         const p=r.simulacao||{},c=p.calculo,fmt=n=>Number.isFinite(n)?n.toLocaleString("pt-BR",{maximumFractionDigits:2}):"N/D",money=n=>Number.isFinite(n)?(c.moeda==="USD"?"US$ ":"R$ ")+fmt(n):"N/D",pct=n=>Number.isFinite(n)?fmt(n)+"%":"N/D";
@@ -3355,7 +3363,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         "Glossário",
         E.glossario?.map((u) => `${u.termo}: ${u.significado}`),
       )}
-      ${rendaFixaAureaV1016(E)}${commoditiesAureaV1015(E)}${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
+      ${opcoesAureaV1017(E)}${rendaFixaAureaV1016(E)}${commoditiesAureaV1015(E)}${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
       }
       function i() {
         if (!O) return;

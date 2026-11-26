@@ -68,7 +68,7 @@ jobs:
       - name: Regressões v956 — Áurea, ADRs e Mistral
         run: node --test tests/mistral-panorama-v956.test.cjs tests/v904-aurea-panorama.test.cjs
       - name: Áurea v1004 — imagens, privacidade e compositor mobile
-        run: node --test tests/aurea-imagem-v1004.test.cjs tests/aurea-chat-mobile-v1004.test.cjs tests/aurea-multigraficos-v1011.test.cjs tests/aurea-pivos-v1012.test.cjs tests/aurea-debate-v1013.test.cjs tests/graham-fundamentos-v1014.test.cjs tests/aurea-commodities-v1015.test.cjs tests/aurea-renda-fixa-v1016.test.cjs
+        run: node --test tests/aurea-imagem-v1004.test.cjs tests/aurea-chat-mobile-v1004.test.cjs tests/aurea-multigraficos-v1011.test.cjs tests/aurea-pivos-v1012.test.cjs tests/aurea-debate-v1013.test.cjs tests/graham-fundamentos-v1014.test.cjs tests/aurea-commodities-v1015.test.cjs tests/aurea-renda-fixa-v1016.test.cjs tests/aurea-opcoes-v1017.test.cjs
       - name: Regressões v955 — busca, cabeçalho e chat
         run: node --test tests/chat-busca-v955.test.cjs tests/integracao-cinco-frentes-v736.test.cjs
       - name: Regressões de qualidade v953 (egress, cabeçalho, Profit e Research)

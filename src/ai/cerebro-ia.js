@@ -2,7 +2,7 @@
 ;(function(w,d){'use strict';
  const esc=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
  const DB='diario-cerebro-local-v805',ST='obras',MAX=12000;
- const categorias=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Economia','Gestao_Risco'];
+ const categorias=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Economia','Gestao_Risco','Opcoes'];
  const tipos={pdf:'Livro_PDF',txt:'Livro_PDF',md:'Livro_PDF'};
  let progress='',progressPct=0,items=[],hits=[],busy=false,controller=null,viewer=false,observer=null;
  const owner=()=>typeof SESS!=='undefined'&&SESS?.uid?String(SESS.uid):'local';
@@ -17,10 +17,11 @@
  /* v924: arquivos e trechos SEMPRE locais. Consultas de IA somente por comando explícito. */
  function normal(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
  function palavras(t){return [...new Set((normal(t).match(/[a-z0-9]{3,}/g)||[]).filter(x=>!['para','como','uma','com','das','dos','por','que','qual','quais','mais','menos','onde','entre','esse','esta','sobre','aqui','meu','meus','seus','mercado'].includes(x)))].slice(0,24)}
- async function buscarLocal(pergunta,maximo=8){
+ async function buscarLocal(pergunta,maximo=8,categoria=null){
   const termos=palavras(pergunta);if(!termos.length)return [];
   const obras=await all(),encontrados=[];
   for(const obra of obras){
+   if(categoria&&obra.categoria!==categoria)continue;
    const fonte=Array.isArray(obra.trechosLocais)&&obra.trechosLocais.length?obra.trechosLocais:chunks(obra.texto||'');
    const excluidos=new Set(obra.excluidos||[]);
    const titulo=normal(obra.titulo||''),autor=normal(obra.autor||''),peso=termos.filter(t=>titulo.includes(t)).length,autorRelevante=termos.some(t=>autor.split(/\W+/).includes(t));
@@ -52,8 +53,9 @@
  });
  async function contextoConselho(id,pergunta,autorizado,signal){
   if(autorizado!==true||signal?.aborted||!Object.hasOwn(lentesConselho,id))return [];
-  const titular=owner(),tema=lentesConselho[id],q=String(pergunta||'').slice(0,240);
-  const hits=await buscarLocal(tema+' '+q,10);
+  const titular=owner(),q=String(pergunta||'').slice(0,240),opcoes=['livermore','conselho','markowitz','munger','dow'].includes(id)&&/\b(trava de (?:alta|baixa)|opcoes (?:sobre|de (?:acoes|compra|venda)|financeiras)|mercado de opcoes|call|put|straddle|strangle|condor|borboleta|spread vertical|gregas|strike|premio|volatilidade implicita|lancamento coberto|put protetora)\b/.test(normal(q));
+  const tema=opcoes?'opções call put strike prêmio trava vertical volatilidade implícita vencimento exercício risco':lentesConselho[id];
+  const hits=await buscarLocal(tema+' '+q,10,opcoes?'Opcoes':null);
   if(signal?.aborted||titular!==owner())return [];
   const out=[],seen=new Set(),termos=palavras(tema);
   for(const h of hits){
@@ -254,7 +256,7 @@
    '<div class="cb842-split"><div class="cb842-main">'+
    '<section class="cb842-blk"><h3>Adicionar conhecimento</h3>'+
    '<div class="cb842-row"><label>Título<input id="brain-title" maxlength="200" placeholder="Nome da obra ou aula"></label><label>Autor<input id="brain-author" maxlength="120" placeholder="Autor ou fonte"></label>'+
-   '<label>Categoria<select id="brain-cat">'+categorias.map(x=>'<option value="'+x+'">'+x.replace(/_/g,' ')+'</option>').join('')+'</select></label></div>'+
+   '<label>Categoria<select id="brain-cat">'+categorias.map(x=>'<option value="'+x+'">'+(x==='Opcoes'?'Opções':x.replace(/_/g,' '))+'</option>').join('')+'</select></label></div>'+
    '<div class="cb842-row"><input type="file" id="brain-file" accept=".pdf,.txt,.md"><button class="btn s" data-brain-import-file="1">Importar arquivo</button></div>'+
    '<label>Link HTTPS de vídeo do YouTube ou artigo<input id="brain-url" inputmode="url" placeholder="https://..."></label>'+
    '<label>Transcrição ou texto autorizado<textarea id="brain-text" rows="3" placeholder="Cole a transcrição do vídeo ou o texto do artigo"></textarea></label>'+
@@ -263,7 +265,7 @@
    '<section class="cb842-blk"><h3>Buscar na base</h3><div class="cb842-row"><input id="brain-query" maxlength="480" placeholder="Ex.: impacto do Copom no DI e Fibonaccing"><button class="btn s" data-brain-search="1">Buscar trechos</button></div>'+
    (hits.length?'<ol class="cb842-hits">'+hits.map((x,i)=>'<li><b>'+esc(x.titulo_obra)+'</b> <span class="cb842-sim">relevância '+Number(x.similarity||0).toFixed(2).replace('.',',')+'</span><p>'+esc(x.conteudo_chunk)+'</p><button class="btn s" data-brain-del-hit="'+i+'">Excluir este trecho</button></li>').join('')+'</ol>':'')+'</section>'+
    '<section class="cb842-blk"><div class="cb842-h2"><h3>Obras indexadas</h3><button class="btn s" data-brain-refresh="1">Atualizar lista</button></div>'+
-   (local.length?local.map(x=>'<div class="cb842-obra"><div><b>'+esc(x.titulo)+'</b><small>'+x.sincronizados+' de '+x.blocos+' trechos · '+esc(String(x.categoria).replace(/_/g,' '))+'</small></div><div class="cb842-row">'+(x.sincronizados<x.blocos&&x.texto?'<button class="btn s" data-brain-resume="'+esc(x.id)+'">Continuar</button>':'')+'<button class="btn s" data-brain-remove="'+esc(x.id)+'">Excluir</button></div></div>').join(''):'<p class="cb842-mut">Nenhuma obra neste aparelho.</p>')+'</section>'+
+   (local.length?local.map(x=>'<div class="cb842-obra"><div><b>'+esc(x.titulo)+'</b><small>'+x.sincronizados+' de '+x.blocos+' trechos · '+esc(x.categoria==='Opcoes'?'Opções':String(x.categoria).replace(/_/g,' '))+'</small></div><div class="cb842-row">'+(x.sincronizados<x.blocos&&x.texto?'<button class="btn s" data-brain-resume="'+esc(x.id)+'">Continuar</button>':'')+'<button class="btn s" data-brain-remove="'+esc(x.id)+'">Excluir</button></div></div>').join(''):'<p class="cb842-mut">Nenhuma obra neste aparelho.</p>')+'</section>'+
    '</div><aside class="cb842-side">'+
    '<section class="cb842-blk"><h3>Lições automáticas</h3><p class="cb842-mut">Toda leitura do placar que errou vira uma lição. Nas próximas análises do mesmo ativo, a IA lê o erro antes de escrever.</p>'+
    '<div class="cb842-kpi"><div><small>Lições gravadas</small><b>'+(st.total||0)+'</b></div><div><small>Erros no placar</small><b>'+erros+'</b></div></div>'+
