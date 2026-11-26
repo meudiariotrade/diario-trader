@@ -7,6 +7,9 @@ const PEERS=['roe','roic','pl','pvp','ev_ebitda','fcf_yield','fcf_margin','forwa
 const metrics=row=>Object.fromEntries(FIELDS.flatMap(k=>num(row?.[k])===null?[]:[[k,row[k]]]));
 export function tickersGrahamV1014(q){
  const s=String(q||''),br=[...new Set((s.match(/\b[A-Za-z]{4}(?:3|4|5|6|7|8|11)\b/g)||[]).map(x=>x.toUpperCase()))],us=[...new Set([...s.matchAll(/\b(?:ticker|NASDAQ|NYSE|AMEX)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi)].map(x=>x[1].toUpperCase()))];
+ const standalone=s.trim().match(/^(?:@graham\s+)?\$?([A-Z]{1,5}(?:\.[A-Z])?)$/),tagged=[...s.matchAll(/(?:^|\s)\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g)].map(x=>x[1]);
+ const excluded=new Set(['BR','EUA','US','USD','BRL','ROE','ROIC','FCF','DCF','PEG','CET','DY','ETF','FII','PIB','FED','SELIC','IBOV']);
+ for(const x of [...tagged,...(standalone?[standalone[1]]:[])])if(!excluded.has(x)&&!us.includes(x))us.push(x);
  const all=[...br.map(ticker=>({ticker,market:'BR'})),...us.map(ticker=>({ticker,market:'US'}))];
  return all.length<=3?all:[];
 }
@@ -31,7 +34,7 @@ export function modeloGrahamV1014(row,market){
 }
 const restricted=new Set(['banco','seguradora','imobiliario','financeiro_indefinido']);
 const multiples=new Set(['pl','pvp','ev_ebitda','forward_pe','ev_fcf','peg_ratio','price_sales','price_ffo','price_affo']);
-const applicable=(tipo,k)=>!restricted.has(tipo)|| (tipo==='imobiliario'?['price_ffo','price_affo','pvp','dividend_yield'].includes(k):['roe','pl','pvp','forward_pe','dividend_yield','total_shareholder_yield'].includes(k));
+const applicable=(tipo,k)=>!restricted.has(tipo)|| (tipo==='imobiliario'?['price_ffo','price_affo','ffo','affo','pvp','dividend_yield','interest_coverage','debt_equity','net_debt_ebitda','div_liq_ebitda','market_cap_usd','valor_mercado_brl','preco_referencia'].includes(k):['roe','pl','pvp','forward_pe','dividend_yield','total_shareholder_yield','cet1','net_interest_margin','combined_ratio','payout','payout_implicito','market_cap_usd','valor_mercado_brl','preco_referencia','lpa','vpa','dpa_12m'].includes(k));
 // A existência de uma data SEC global não prova origem de cada valor. Exigir linhagem individual.
 const secProof=(r,k)=>{
  const p=r?.linhagem_indicadores?.[k];

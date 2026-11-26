@@ -3359,6 +3359,9 @@ function aureaRota(texto) {
       ),
     ].slice(0, 4),
     forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow|dalio|helmer)\b/);
+  const usStandalone=t.trim().match(/^(?:@graham\s+)?\$?([A-Z]{1,5}(?:\.[A-Z])?)$/),usTagged=Array.from(t.matchAll(/(?:^|\s)\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g),x=>x[1]);
+  const blocked=new Set(["BR","EUA","US","USD","BRL","ROE","ROIC","FCF","DCF","PEG","CET","DY","ETF","FII","PIB","FED","SELIC","IBOV"]);
+  for(const x of [...usTagged,...(usStandalone?[usStandalone[1]]:[])])if(!blocked.has(x)&&!tickers.includes(x)&&tickers.length<4)tickers.push(x);
   if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você" };
   const conta = (rx) => (n.match(rx) || []).length,
     pontos = {
