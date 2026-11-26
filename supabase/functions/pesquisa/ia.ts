@@ -4,10 +4,23 @@ import { gerarTexto, envComVault } from '../_shared/ai-router.ts';
 type Env = (key: string) => string | undefined;
 
 /** v622: Roteador Multi-IA compartilhado (supabase/functions/_shared/ai-router.ts). */
-export async function gerarIA(system: string, prompt: string, env: Env, opt: { json?: boolean; ate?: number; validar?: (texto:string)=>string|null; fetcher?: typeof fetch; livermoreEUA?: boolean } = {}) {
-  const edge=env('PESQUISA_CLOUDFLARE')==='1';
-  const r = await gerarTexto(system, prompt, { json: opt.json, ate: opt.ate || Date.now() + 50_000, env: await envComVault(env, opt.fetcher || fetch), fetcher: opt.fetcher, validar: opt.validar, porTentativaMs: (opt.livermoreEUA||edge) ? 7500 : opt.validar ? 15000 : 30000, ...((opt.livermoreEUA||edge)?{geminiModelos:['gemini-3.8-flash','gemini-3.5-flash-lite','gemini-3.6-flash'],preferir:['gemini','groq','mistral','cerebras','openrouter'],umModeloPorProvedor:true}:{}) });
-  return { texto: r.texto, modelo: r.rotulo };
+export type ReservaPesquisaIA=(system:string,prompt:string,json:boolean)=>Promise<string>;
+export async function gerarIA(system: string, prompt: string, env: Env, opt: { json?: boolean; ate?: number; validar?: (texto:string)=>string|null; fetcher?: typeof fetch; livermoreEUA?: boolean; reservaIA?: ReservaPesquisaIA } = {}) {
+  const edge=env('PESQUISA_CLOUDFLARE')==='1', modern=edge||opt.livermoreEUA, fim=opt.ate||Date.now()+50000;
+  try{
+   const r=await gerarTexto(system,prompt,{json:opt.json,ate:opt.reservaIA?Math.min(fim-12000,Date.now()+28000):fim,
+    env:await envComVault(env,opt.fetcher||fetch),fetcher:opt.fetcher,validar:opt.validar,
+    porTentativaMs:modern?6500:opt.validar?15000:30000,
+    // O provedor anônimo não recebe conteúdo privado da biblioteca nem da carteira.
+    excluir:['pollinations'],
+    ...(modern?{geminiModelos:['gemini-3.8-flash','gemini-3.5-flash-lite','gemini-3.6-flash'],preferir:['gemini','groq','mistral','cerebras','openrouter'],umModeloPorProvedor:true}:{})});
+   return {texto:r.texto,modelo:r.rotulo};
+  }catch(e){
+   if(!opt.reservaIA||Date.now()>=fim-1000)throw e;
+   const texto=await opt.reservaIA(system,prompt,!!opt.json);
+   if(!texto?.trim()||opt.validar?.(texto))throw Error('Leitura de reserva não passou na validação.');
+   return {texto,modelo:'Cloudflare Workers AI · Llama'};
+  }
 }
 
 export const jsonDe = (t: string) => { const x = String(t).replace(/```json|```/g, ''); return JSON.parse(x.slice(x.indexOf('{'), x.lastIndexOf('}') + 1)); };

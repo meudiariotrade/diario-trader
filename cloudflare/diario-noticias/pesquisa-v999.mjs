@@ -52,7 +52,13 @@ export async function pesquisaCloudflare(req,env,macroResponder,fetcher=fetch){
  };
  // Restrict legacy diagnostic endpoints: only actual user session can enter this route.
  const get=k=>k==='PESQUISA_CLOUDFLARE'?'1':k==='CRON_SECRET'?undefined:env[k];
- const r=await criarPesquisaHandler(get,adapt,true).handler(req);
+ const reservaIA=env.AI&&typeof env.AI.run==='function'?async(system,prompt,json)=>{
+  let timer;try{
+   const result=await Promise.race([env.AI.run('@cf/meta/llama-3.1-8b-instruct-fp8-fast',{messages:[{role:'system',content:system+(json?' Responda apenas JSON válido.':'')},{role:'user',content:prompt}],max_tokens:1400,temperature:0.15}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Tempo de reserva esgotado')),10000)})]);
+   return typeof result==='string'?result:typeof result?.response==='string'?result.response:'';
+  }finally{clearTimeout(timer)}
+ }:undefined;
+ const r=await criarPesquisaHandler(get,adapt,true,reservaIA).handler(req);
  const h=new Headers(r.headers);for(const [k,v] of Object.entries(headers))h.set(k,v);
  return new Response(r.body,{status:r.status,headers:h});
 }

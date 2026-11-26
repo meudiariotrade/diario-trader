@@ -8,6 +8,7 @@ on:
       - 'supabase/functions/pesquisa/**'
       - 'supabase/functions/_shared/ai-router.ts'
       - 'tests/pesquisa-cloudflare-v999.test.cjs'
+      - 'tests/pesquisa-ia-v1000.test.cjs'
       - 'cloudflare/diario-noticias/finnhub-v940.mjs'
       - 'cloudflare/diario-noticias/cotacoes-v954.mjs'
       - 'tests/cotacoes-v954.test.cjs'
@@ -42,7 +43,7 @@ jobs:
       - run: node --check cloudflare/diario-noticias/producao-snapshot-v894.mjs
       - run: node --check cloudflare/diario-noticias/finnhub-v940.mjs
       - run: node --check cloudflare/diario-noticias/cotacoes-v954.mjs
-      - run: node --test tests/pesquisa.test.cjs tests/livermore-eua-v998.test.cjs tests/pesquisa-cloudflare-v999.test.cjs
+      - run: node --test tests/pesquisa.test.cjs tests/livermore-eua-v998.test.cjs tests/pesquisa-cloudflare-v999.test.cjs tests/pesquisa-ia-v1000.test.cjs
       - run: node --test tests/cotacoes-v954.test.cjs
       - run: node --test tests/cloudflare-finnhub-v940.test.cjs
       - run: node --test tests/cloudflare-noticias.test.cjs tests/cloudflare-dados-publicos-v811.test.cjs
