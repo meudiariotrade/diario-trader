@@ -66,7 +66,7 @@
     dialog.id = 'conselho-ia-resposta';
     dialog.setAttribute('aria-labelledby','conselho-ia-titulo');
     dialog.style.cssText = 'width:min(94vw,600px);max-height:84dvh;overflow:auto;background:var(--ui-surface,#141414);color:inherit;border:1px solid rgba(201,166,107,.45);border-radius:6px;padding:20px';
-    dialog.innerHTML = '<h2 id="conselho-ia-titulo" style="margin:0 0 12px;font-size:16px;letter-spacing:.03em;color:var(--gold,#C9A66B);font-family:Georgia,serif"></h2><div role="status" style="font-size:14.5px;line-height:1.65;margin-bottom:12px"></div><p class="mut sm">Usa os números da ficha e, quando disponíveis, percentuais agregados da carteira e dados macro. Auditoria de carteira e Anti-Tilt usam também resumo agregado local de metas ou histórico operacional (30 dias), sem notas ou fotos. Envio aos provedores de IA configurados; cada aprofundamento é uma consulta.</p><div data-ia950-follow style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" hidden><button type="button" class="btn s" data-f950="pior" style="font-size:12px;min-height:40px;padding:4px 9px">Pior cenário</button><button type="button" class="btn s" data-f950="selic" style="font-size:12px;min-height:40px;padding:4px 9px">Comparar c/ Selic</button><button type="button" class="btn s" data-f950="saida" style="font-size:12px;min-height:40px;padding:4px 9px">Gatilho de saída</button></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" type="button" data-ia950-retry hidden>Tentar novamente</button> <button class="btn s" type="button" data-ia950-close>Fechar</button></div>';
+    dialog.innerHTML = '<h2 id="conselho-ia-titulo" style="margin:0 0 12px;font-size:16px;letter-spacing:.03em;color:var(--gold,#C9A66B);font-family:Georgia,serif"></h2><div role="status" style="font-size:14.5px;line-height:1.65;margin-bottom:12px"></div><p class="mut sm">Usa os números da ficha e, quando disponíveis, percentuais agregados da carteira e dados macro. Auditoria de carteira e Anti-Tilt usam também resumo agregado local de metas ou histórico operacional (30 dias), sem notas ou fotos. Envio aos provedores de IA configurados; cada aprofundamento é uma consulta.</p><div data-ia950-follow style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" hidden><button type="button" class="btn s" data-f950="pior" style="font-size:12px;min-height:40px;padding:4px 9px">Pior cenário</button><button type="button" class="btn s" data-f950="selic" style="font-size:12px;min-height:40px;padding:4px 9px">Comparar c/ Selic</button><button type="button" class="btn s" data-f950="saida" style="font-size:12px;min-height:40px;padding:4px 9px">Gatilho de saída</button></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" type="button" data-ia1010-books>Aplicar livros (enviar até 2 trechos à IA)</button><button class="btn s" type="button" data-ia950-retry hidden>Tentar novamente</button> <button class="btn s" type="button" data-ia950-close>Fechar</button></div>';
     const retry = dialog.querySelector('[data-ia950-retry]');
     const close = dialog.querySelector('[data-ia950-close]');
     const followBar = dialog.querySelector('[data-ia950-follow]');
@@ -78,10 +78,12 @@
     const mesmaConta=()=>!!uidInicial&&typeof SESS!=='undefined'&&SESS?.uid===uidInicial;
     const agregado=['carteira','markowitz','antitilt'].includes(edicao)?w.DiarioContextoConselhoV1008(edicao):'';
     const promptBase = (String(prompt || '').slice(0,Math.max(800,5400-agregado.length)) + agregado + contextoPessoalIA950(prompt)).slice(0, 5800);
+    let livrosAtivos=false;
     async function consultar(promptEnviar) {
       controller.abort();
       controller = new AbortController();
       const ac=controller; ultimoPrompt=promptEnviar;
+      const livrosBtn=dialog.querySelector('[data-ia1010-books]');livrosBtn.disabled=true;
       retry.hidden = true;
       followBar.hidden = true; followBar.style.display='none';
       output.innerHTML = '<p class="mut" style="margin:0;font-size:14px">Analisando seus dados…</p>';
@@ -93,10 +95,19 @@
         if(!mesmaConta())throw Error('Entre na conta ou reabra a análise após mudar de conta.');
         if(ac.signal.aborted)return;
         if(!jwt) throw Error('Entre na conta para acessar a análise.');
+        let promptFinal=promptEnviar;
+        if(livrosAtivos){
+          const id=edicao==='ativo'?(/ATIVO TÉCNICO|parecer técnico|setup técnico/i.test(prompt)?'livermore':'graham'):edicao==='carteira'?'markowitz':edicao;
+          let refs=[];try{refs=await w.DiarioCerebroIA?.contextoConselho?.(id,String(prompt||''),true,ac.signal)||[]}catch{}
+          if(ac.signal.aborted||!mesmaConta()||!dialog.isConnected)return;
+          const bloco=w.DiarioCerebroIA?.blocoConselho?.(refs)||'';
+          if(bloco)promptFinal=promptEnviar.slice(0,5800-bloco.length)+bloco;
+          livrosBtn.textContent=refs.length?'Livros aplicados · '+refs.length+' trechos':'Sem trechos relevantes neste aparelho';
+        }
         const enviar=token=>w.fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
           method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal:ac.signal,
           headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
-          body:JSON.stringify({edicao,prompt:promptEnviar})
+          body:JSON.stringify({edicao,prompt:promptFinal})
         });
         let res=await enviar(jwt);
         if(res.status===401 && SESS?.uid===sessao.uid && !ac.signal.aborted){
@@ -117,8 +128,9 @@
         if(ac!==controller||!dialog.isConnected)return;
         output.textContent=ac.signal.aborted?'A consulta demorou demais.':error.message;
         retry.hidden=false;
-      } finally { clearTimeout(timer); }
+      } finally { clearTimeout(timer); if(ac===controller&&dialog.isConnected)livrosBtn.disabled=false; }
     }
+    dialog.querySelector('[data-ia1010-books]').onclick=()=>{livrosAtivos=true;void consultar(promptBase)};
     followBar.addEventListener('click', (ev) => {
       const btn = ev.target.closest('[data-f950]');
       if (!btn) return;

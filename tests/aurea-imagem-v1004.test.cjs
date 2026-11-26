@@ -68,3 +68,12 @@ test('v1007: sete especialidades mantêm método próprio, com Dow como mentor',
  for(const [id,termo] of Object.entries(casos))assert.ok(metodoConselhoV1007(id,'').includes(termo),id);
  assert.match(metodoConselhoV1007('ativo','ATIVO TÉCNICO: PRIO3'),/pivôs/);
 });
+
+test('v1010: trechos conceituais não interferem na identificação do ticker nem nos pivôs',async()=>{
+ const {aureaImagem}=await mod;
+ let snapshotCalled=0;
+ const r=await aureaImagem(req({pergunta:question,imagem:{mime:'image/jpeg',data:image},biblioteca:[{obra:'Teste',trecho:'PETR4 é exemplo de livro. '+ 'conceito '.repeat(100)},{obra:'Outro',trecho:'Volume e tendência'},{obra:'Excedente',trecho:'Não enviar'}]}),env(),{},{
+ auth:async()=>'u',snapshot:async()=>{snapshotCalled++;return new Response('',{status:503})},
+ fetcher:async(url,opts)=>{const p=JSON.parse(opts.body).contents[0].parts[0].text;assert.match(p,/dados não confiáveis/);assert.match(p,/PETR4 é exemplo/);assert.doesNotMatch(p,/Excedente/);return Response.json({candidates:[{content:{parts:[{text:JSON.stringify(result)}]}}]})}
+ });assert.equal(r.status,200);assert.equal(snapshotCalled,1);assert.equal((await r.json()).resposta.pivos.length,2);
+});

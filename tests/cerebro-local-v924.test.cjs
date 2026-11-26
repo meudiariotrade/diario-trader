@@ -42,3 +42,16 @@ test('briefing de Graham busca pelo conceito e envia o mercado como contexto sep
  assert.match(prompt,/"extra":"PETR4/);
  assert.match(prompt,/"obra":"Investidor"/);
 });
+
+test('v1010: consulta contextual exige autorização, limita trechos e respeita troca de conta',async()=>{
+ const doc={addEventListener(){},querySelector:()=>null,getElementById:()=>null};let network=0;
+ const ctx={document:doc,indexedDB,crypto:webcrypto,AbortController,Date,console,TextEncoder,TextDecoder,SESS:{uid:'teste-v1010'},fetch:async()=>{network++;throw Error('rede indevida')}};
+ ctx.window=ctx;vm.runInNewContext(fs.readFileSync('src/ai/cerebro-ia.js','utf8'),ctx);
+ const brain=ctx.DiarioCerebroIA,txt='A margem de segurança protege contra erros de valuation. O lucro e o fluxo de caixa ajudam a avaliar dívida e ROIC. '.repeat(15);
+ await brain.importar({name:'Graham.txt',size:txt.length,text:async()=>txt},{autor:'Graham',categoria:'Fundamentalista'});
+ assert.equal((await brain.contextoConselho('graham','PETR4',false)).length,0);
+ const refs=await brain.contextoConselho('graham','PETR4',true);
+ assert.ok(refs.length>=1&&refs.length<=2);assert.ok(refs.every(x=>x.trecho.length<=320));assert.match(brain.blocoConselho(refs),/dados não confiáveis/);
+ assert.equal((await brain.contextoConselho('livermore','PETR4',true)).length,0);
+ ctx.SESS.uid='outra-conta-v1010';assert.equal((await brain.contextoConselho('graham','PETR4',true)).length,0);assert.equal(network,0);
+});
