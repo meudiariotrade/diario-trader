@@ -295,17 +295,10 @@ try {
       const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>f(()=>window.tapeVivo?.(k),null)||tape[k];
       const itens=[["^BVSP","Ibovespa"],["BRL=X","Dólar"],["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["EWZ","EWZ"],["BTC-USD","Bitcoin"]].map(([k,n])=>{
         const v=viva(k);if(!v||!(+v.px>0))return null;const c=v.chg==null||v.chg===""?null:+v.chg;
-        return {rotulo:n,valor:q(v.px),detalhe:c==null?"variação indisponível":Q(c)+(v.referencia?" · referência":v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
+        return {rotulo:n,valor:q(v.px),detalhe:c==null?"variação indisponível":Q(c)+(v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
       }).filter(Boolean);
       return '<section class="v4-summary v829-kpis" aria-label="Resumo do mercado">'+(itens.length?U.kpis(itens):'<p class="v4-sub">Cotações carregando na barra superior.</p>')+'</section>';
     }
-    window.DiarioAtualizaKpis992=()=>{
-      const host=document.querySelector("#app .v829-home .v829-kpis");
-      if(!host)return;
-      const tmp=document.createElement("div");tmp.innerHTML=v829MercadoKpis();
-      const html=tmp.firstElementChild?.innerHTML;
-      if(html!=null&&host.innerHTML!==html)host.innerHTML=html;
-    };
     /* v829: KPIs pessoais no topo do Meu dia (resultado, limites, risco disponível, trades). */
     function v829DiaKpis(resultado,meta,perdaMax,trades) {
       const U=window.DiarioUI;if(!U)return "";
@@ -2581,16 +2574,6 @@ try {
       if (ia978) {
         ev.preventDefault();
         const k = ia978.dataset.dt978Ia;
-        // Briefing usa o endpoint textual da própria Áurea, não a ficha de ativos do Conselho.
-        if(k==="brief30"){
-          const api=window.DiarioInteligenciaEtapa1;
-          if(typeof api?.briefing30!=="function"){f(()=>toast?.("Áurea ainda está carregando. Tente novamente."));return;}
-          ia978.disabled=true;
-          const oldLabel=ia978.textContent;
-          ia978.textContent="Gerando Briefing…";
-          Promise.resolve().then(()=>api.briefing30()).catch(()=>f(()=>toast?.("Não foi possível gerar o Briefing. Tente novamente."))).finally(()=>{ia978.disabled=false;ia978.textContent=oldLabel;});
-          return;
-        }
         const mapIa = {
           brief30: ["schwartz", "Briefing 30s · Áurea", window.__dt975Brief30Prompt],
           fech60: ["munger", "Fechamento 60s · Munger", window.__dt974Fech60Prompt],

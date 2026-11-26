@@ -76,13 +76,7 @@ test('v904: Panorama no iPhone apresenta aviso na imagem se o dado estiver antig
 });
 test('v904: Áurea retorna resposta inline, não copia o comando para colar em outra IA',()=>{
  const s=fs.readFileSync('src/intelligence/etapa1.js','utf8');
- const start=s.indexOf("async function gerarResumao("),end=s.indexOf("document.addEventListener('click',async event=>{",start);
- assert.ok(start>=0&&end>start,'handler da Áurea presente');
- const resumo=s.slice(start,end);
- assert.match(s,/data-aurea-resumao/);
- assert.match(s,/briefing30:\(\)=>gerarResumao\(null,true\)/);
- assert.match(resumo,/shortBrief/);
- assert.match(resumo,/exatamente 3 tópicos/);
+ const resumo=s.slice(s.indexOf("const resBtn=event.target.closest('[data-aurea-resumao]')"),s.indexOf("const revBtn=event.target.closest('[data-aurea-revisao]')"));
  assert.match(s,/data-aurea-resumo-gerado/);
  assert.match(resumo,/\/v1\/aurea-resumao/);
  assert.match(resumo,/state\.resumaoHtml/);
@@ -150,26 +144,4 @@ test('Conselho da Áurea mantém dados privados fora de IA anônima e usa Worker
  assert.ok(hosts.includes('api.groq.com'));
  assert.equal(hosts.includes('text.pollinations.ai'),false);
  assert.match((await res.json()).model,/Cloudflare Workers AI/);
-});
-
-test('v988: Briefing usa o handler textual da Áurea e não a ficha genérica do Conselho',()=>{
- const layer=fs.readFileSync('src/domains/layers/03-apresentacao.js','utf8');
- const a=layer.indexOf('const ia978 ='),b=layer.indexOf('const capa978 =',a);
- assert.ok(a>=0&&b>a);
- const h=layer.slice(a,b);
- assert.ok(h.indexOf('if(k==="brief30"){')>=0&&h.indexOf('api.briefing30()')>=0&&h.indexOf('api.briefing30()')<h.indexOf('window.DiarioConselhoIA('));
- const src=fs.readFileSync('src/intelligence/etapa1.js','utf8');
- assert.match(src,/briefing30:\(\)=>gerarResumao\(null,true\)/);
- assert.match(src,/state\.resumaoHtml/);
-});
-
-test('v989: clique Briefing aciona diretamente a API e restaura o botão',async()=>{
- const vm=require('node:vm'),layer=fs.readFileSync('src/domains/layers/03-apresentacao.js','utf8');
- const a=layer.indexOf('const ia978 ='),b=layer.indexOf('const capa978 =',a);
- const button={dataset:{dt978Ia:'brief30'},textContent:'Briefing 30s',disabled:false};
- let calls=0,prevented=false;
- const ctx={ev:{target:{closest:()=>button},preventDefault(){prevented=true;}},window:{DiarioInteligenciaEtapa1:{async briefing30(){calls++;}},DiarioConselhoIA(){throw Error('rota incorreta');}},f:fn=>fn()};
- vm.runInNewContext('(function(){'+layer.slice(a,b)+'})()',ctx);
- await new Promise(resolve=>setImmediate(resolve));
- assert.equal(calls,1);assert.equal(prevented,true);assert.equal(button.disabled,false);assert.equal(button.textContent,'Briefing 30s');
 });

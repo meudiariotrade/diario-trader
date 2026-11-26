@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 2005e9de4f9901f432466b442b55413119ba0514e5972e5f4542bd2ae01192d1 */
+/* Gerado de src/app-theme.css · SHA256 807339ef68e5e1e9324501d119cbcc6e7bcbfa047b68ca11b0e0f7c9716149a3 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7500,41 +7500,4 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid small{co
  #app[data-tela="estudos"] .dt397-library-grid{
   grid-template-columns:repeat(5,minmax(0,1fr))!important
  }
-}
-/* v987: Central Áurea — Chips 3D coloridos do Pulso Global & Barra Humor Global */
-.dt987-risk{margin:8px 0;padding:9px 12px;border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:linear-gradient(155deg,rgba(255,255,255,.06),rgba(15,23,37,.88));border:1px solid rgba(255,255,255,.1)}
-.dt987-pulso{display:flex;flex-direction:column;gap:8px;margin:8px 0 10px;padding:11px 12px;border-radius:16px;background:linear-gradient(155deg,rgba(255,255,255,.055),rgba(11,17,29,.92));border:1px solid rgba(212,175,106,.22)}
-.dt987-grp{display:flex;flex-direction:column;gap:5px}
-.dt987-gtit{font-size:.63rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8}
-.dt987-chips{display:flex;flex-wrap:wrap;gap:6px}
-.dt987-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:11px;font-size:.74rem;font-variant-numeric:tabular-nums;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#cbd5e1}
-.dt987-pill b{font-weight:800;color:#f8fafc}
-.dt987-pill.pos{background:rgba(16,185,129,.12);border-color:rgba(52,211,153,.3)}
-.dt987-pill.pos b{color:#34d399}
-.dt987-pill.neg{background:rgba(244,63,94,.12);border-color:rgba(251,113,133,.3)}
-.dt987-pill.neg b{color:#fb7185}
-html:root:root:root[data-v427-tema="claro"] #app#app .dt987-risk,html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pulso{background:linear-gradient(155deg,#ffffff,#f4f7fc);border-color:rgba(15,23,42,.11);color:#0f172a}
-html:root:root:root[data-v427-tema="claro"] #app#app .dt987-gtit{color:#64748b}
-html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill{background:#f8fafc;border-color:rgba(15,23,42,.1);color:#334155}
-html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill b{color:#0f172a}
-html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.pos{background:#d1fae5;border-color:#6ee7b7}
-html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.pos b{color:#047857}
-html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.neg{background:#ffe4e6;border-color:#fda4af}
-html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.neg b{color:#be123c}
-
-/* v988: largura útil desktop, preserva grades e estilos da v986. */
-@media(min-width:1024px){
- html:root:root body:not([data-v4route="term"]) #app#app{width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box!important}
- html:root:root body:not([data-v4route="term"]) #app#app :is(.v4-page,.dt393-page,#dt393-workspace,.dt393-native,.dt397-studies,.dt395-native-home,.dt395-native-dia,#an-root,.an-page,.an-section,.an-briefing,#ap-root){width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box!important}
- html:root:root body #app#app .v829-split>.ui-aside{max-width:none!important;width:100%!important;min-width:0!important}
- html:root:root body #app#app .v829-split>.ui-main{max-width:none!important;width:100%!important;min-width:0!important}
- html:root:root body #app#app .v829-home .v829-split:has(>.ui-aside:empty){grid-template-columns:minmax(0,1fr)!important}
- html:root:root body #app#app .v829-home .v829-split>.ui-aside:empty{display:none!important}
- html:root:root body #app#app .v829-home .v829-kpis .ui-kpis{width:100%!important;grid-template-columns:repeat(6,minmax(0,1fr))!important}
-}
-
-/* v990: no pós, não reservar meia tela para detalhes auxiliares recolhidos. */
-@media(min-width:1024px){
- html:root:root body #app#app .v829-home[data-v810-phase="pos"] .v829-split{grid-template-columns:minmax(0,1fr)!important}
- html:root:root body #app#app .v829-home[data-v810-phase="pos"] .v829-split>.ui-aside{position:static!important}
 }

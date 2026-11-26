@@ -5468,31 +5468,10 @@ const IC = (e) =>
   ];
   let n = {},
     r = 0;
-  // v992: snapshot público compartilhado com a Áurea; sem dependência do screener autenticado.
-  function tapeSnapshot992(snapshot, now=Date.now()) {
-    const rows=(snapshot?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
-    const result={};
-    // O snapshot /v1/mercado usa os símbolos de bolsa TradingView, não os aliases do ticker.
-    const aliases={"BMFBOVESPA:IBOV":"^BVSP","FX_IDC:USDBRL":"BRL=X","SP:SPX":"^GSPC","NASDAQ:IXIC":"^IXIC","DJ:DJI":"^DJI","AMEX:EWZ":"EWZ","TVC:DXY":"DX-Y.NYB","NYMEX:CL1!":"CL=F","TVC:GOLD":"GC=F","BITSTAMP:BTCUSD":"BTC-USD","COINBASE:BTCUSD":"BTC-USD","BITSTAMP:ETHUSD":"ETH-USD","COINBASE:ETHUSD":"ETH-USD","COINBASE:SOLUSD":"SOL-USD","BITSTAMP:XRPUSD":"XRP-USD"};
-    for(const q of rows){
-      const symbol=String(q.s||q.ticker||"");
-      const key=aliases[symbol]||symbol;
-      if(!key||!(Number(q.px)>0)||q.suspeito||q.quoteStatus==="divergente")continue;
-      const chg=q.d1??q.chg;
-      const at=q.priceAt||q.horarioPreco||q.dadoEm;
-      const ts=typeof at==="number"?(at<1e12?at*1000:at):Date.parse(at||"");
-      const valid=Number.isFinite(ts)&&ts<=now+60000;
-      if(Number.isFinite(ts)&&(!valid||now-ts>96*3600000))continue;
-      const recent=valid&&now-ts<=1200000&&!snapshot.desatualizado;
-      result[key]={px:Number(q.px),chg:chg==null||chg===""||!Number.isFinite(Number(chg))?null:Number(chg),fonte:q.fonte||q.source||"Snapshot público",dadoEm:valid?new Date(ts).toISOString():null,referencia:!recent,fechado:false};
-    }
-    return result;
-  }
-  window.tapeDados = () => ({...n,...tapeSnapshot992(window.DiarioPublico?.peek?.("/v1/mercado"))});
-  window.tapeSnapshot992=tapeSnapshot992;
+  window.tapeDados = () => n;
   const ativo = (key) => {
     const live = typeof window.tapeVivo === "function" ? window.tapeVivo(key) : null;
-    const v = live || window.tapeDados()[key];
+    const v = live || n[key];
     return v && Number.isFinite(+v.px) && +v.px > 0 ? v : null;
   };
   const i = ([key, nome]) => {
@@ -5526,7 +5505,7 @@ const IC = (e) =>
         if (novoHtml && item.innerHTML !== novoHtml) item.innerHTML = novoHtml;
         const fonte = q.fonte || "Última referência disponível";
         const momento = q.dadoEm ? new Date(q.dadoEm).toLocaleTimeString("pt-BR") : "";
-        item.title = fonte + (momento ? " · " + momento : "") + (q.referencia ? " · ÚLTIMA REFERÊNCIA (não ao vivo)" : q.fechado ? " · FECHADO" : "");
+        item.title = fonte + (momento ? " · " + momento : "") + (q.fechado ? " · FECHADO" : "");
       });
       return;
     }
@@ -5545,12 +5524,12 @@ const IC = (e) =>
     if (document.hidden || navigator.onLine === false || Date.now() - ultimaConsulta < 15 * 6e4) return;
     ultimaConsulta = Date.now();
     try {
-      if(!window.DiarioPublico?.get){ultimaConsulta=0;return;}
-      const resposta=await window.DiarioPublico.get("/v1/mercado",{ttl:300000});
-      n=tapeSnapshot992(resposta);
+      const resposta = await scFetch(s.map(([key]) => key));
+      (resposta.data || []).forEach((item) => {
+        if (item?.ok && Number(item.px) > 0 && s.some(([key]) => key === item.s)) n[item.s] = item;
+      });
       l();
-      window.DiarioAtualizaKpis992?.();
-    } catch {ultimaConsulta=0;}
+    } catch {}
   }
   window.tapeRedraw = l;
   setTimeout(d, 1200);

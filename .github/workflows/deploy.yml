@@ -70,7 +70,7 @@ jobs:
       - name: Regressões de qualidade v953 (egress, cabeçalho, Profit e Research)
         run: node --test --test-concurrency=1 tests/egress-v706.test.cjs tests/interface.test.cjs tests/ponte-cotacoes-v552.test.cjs tests/profit-cotacoes-v552.test.cjs tests/v852-noticias-ficha.test.cjs tests/v853-confiavel.test.cjs tests/quality-v953.test.cjs
       - name: Testes obrigatórios de Mercado e Egress
-        run: node --test --test-concurrency=1 tests/mercado-simples-v549.test.cjs tests/auditar-egress-v938.test.cjs tests/tape-live.test.cjs
+        run: node --test --test-concurrency=1 tests/mercado-simples-v549.test.cjs tests/auditar-egress-v938.test.cjs
       - name: Capturas de validação de Análises e Início/Meu Dia
         if: always()
         uses: actions/upload-artifact@v4
@@ -148,18 +148,6 @@ jobs:
       - name: Diagnosticar cache público do Worker (sem bloquear o app)
         continue-on-error: true
         run: node scripts/diagnostico-screeners-cloudflare.mjs
-      - name: Conferir símbolos efetivamente recebidos pelo Início
-        continue-on-error: true
-        run: |
-          node --input-type=module - <<'NODE'
-          const r=await fetch('https://diario-trader.lucianosilva43567.workers.dev/v1/mercado',{signal:AbortSignal.timeout(15000)});
-          const j=await r.json();
-          const rows=(j.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
-          for(const key of ['BMFBOVESPA:IBOV','FX_IDC:USDBRL','SP:SPX','NASDAQ:IXIC','AMEX:EWZ','BITSTAMP:BTCUSD']){
-            const q=rows.find(x=>x.s===key);
-            console.log(key,JSON.stringify(q?{px:q.px,d1:q.d1,source:q.source,priceAt:q.priceAt,status:q.quoteStatus}:{ausente:true,http:r.status}));
-          }
-          NODE
 
   sync-bundles:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
