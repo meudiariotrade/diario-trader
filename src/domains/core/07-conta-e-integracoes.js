@@ -3808,16 +3808,49 @@ function aureaExtremosHistoricosV1021(g,series){
  return aureaConferePivosV1012({...g,pivos:all},series);
 }
 
+// v1021 — confluências calculadas exclusivamente na série fechada e recorte homologado.
+function aureaIndicadoresHistoricosV1021(g,series){
+ const m=g.referencia_ohlc||{},start=aureaDataPivoV1012(m.desde,m.tf),end=aureaDataPivoV1012(m.ate,m.tf);
+ if(start===null||end===null||end<=start||!Array.isArray(series))return null;
+ const key=t=>m.tf==="1d"?Date.parse(new Date(t).toISOString().slice(0,10)+"T00:00:00Z"):t;
+ const rows=series.filter(c=>key(c.t)<=end),first=rows.findIndex(c=>key(c.t)===start),last=rows.length-1;
+ if(first<0||last-first<4||key(rows[last].t)!==end)return null;
+ const avg=(n,i)=>i+1<n?null:rows.slice(i-n+1,i+1).reduce((a,c)=>a+c.c,0)/n;
+ const medias=[20,50,200].flatMap(n=>{const atual=avg(n,last),anterior=avg(n,last-5);return atual===null?[]:[{n,valor:atual,inclinacao:anterior===null?"indefinida":atual>anterior?"ascendente":atual<anterior?"descendente":"estável"}];});
+ let sinais=[];
+ if(rows.every(c=>Number.isFinite(c.v)&&c.v>=0)&&rows.some(c=>c.v>0)){
+  const obv=[0];for(let i=1;i<rows.length;i++)obv[i]=obv[i-1]+Math.sign(rows[i].c-rows[i-1].c)*rows[i].v;
+  const extremos=g.extremos_ohlc||[];
+  for(const tipo of ["topo","fundo"]){
+   const p=[...extremos].reverse().find(x=>x.tipo===tipo);if(!p)continue;
+   const d=aureaDataPivoV1012(p.data,m.tf),i=rows.findIndex(c=>key(c.t)===d);
+   if(i<first+2||i+2>last)continue;
+   const level=Number(p.preco),isTopo=tipo==="topo",broke=(a,b)=>isTopo?a>b:a<b;
+   const obvLevel=(isTopo?Math.max:Math.min)(...obv.slice(i-2,i+3));
+   const priceAt=rows.findIndex((c,j)=>j>i+2&&broke(c.c,level));
+   const obvAt=obv.findIndex((o,j)=>j>i+2&&broke(o,obvLevel));
+   const status=priceAt<0&&obvAt<0?"Sem rompimento":obvAt>=0&&(priceAt<0||obvAt<priceAt)?"OBV antes do preço: possível antecipação":priceAt>=0&&obvAt===priceAt?"Rompimento conjunto: confirmação":priceAt>=0&&obvAt<0?"Preço sem confirmação pelo OBV":"OBV confirmou depois do preço";
+   sinais.push({tipo,data:p.data,preco:level,status,data_preco:priceAt<0?null:new Date(rows[priceAt].t).toISOString(),data_obv:obvAt<0?null:new Date(rows[obvAt].t).toISOString()});
+  }
+ }
+ return {medias,sinais,nota:"Médias simples da série nominal; OBV relativo, iniciado na série disponível, com extremos correspondentes na janela de ±2 barras. Não corresponde necessariamente às configurações ou escala do Profit. Rompimentos após a janela de referência; não garantem continuidade."};
+}
+
 async function aureaValidarHistoricoV1012(resposta,pergunta,signal){
   const graficos=Array.isArray(resposta.graficos)?resposta.graficos:[resposta],cache=new Map();
-  const contrato=window.DiarioFeedContrato,auditoria=window.DiarioHistoricoQualidade;
+  const feed=window.DiarioFeedContrato,auditoria=window.DiarioHistoricoQualidade;
+  // IBOV é permitido pelo endpoint de candles, mas não pelo ticker genérico de ações.
+  const contrato=feed?{...feed,ticker:(t,m)=>m==='BR'&&t==='IBOV'?'IBOV':feed.ticker(t,m)}:null;
   const limite=AbortSignal.any([signal,AbortSignal.timeout(6500)]);
   const explicit=String(pergunta||"").toUpperCase();
   await Promise.all(graficos.map(async g=>{
-    if(!Array.isArray(g.pivos)||!g.pivos.length)return;
+    if(!Array.isArray(g.pivos))g.pivos=[];
+    if(!g.pivos.length&&!g.referencia_ohlc)return;
     const m=g.referencia_ohlc||{},tk=m.ticker,market=m.market,tf=m.tf;
     const base={status:"visual",motivo:"Sem identificação compatível, recorte exato ou escala nominal legível; nenhuma confirmação histórica."};
-    const id=g.identificacao_visual;const idVisivel=id?.ticker===tk&&id?.market===market&&["marca_dagua","cabecalho","ambos"].includes(id?.origem);
+    const id=g.identificacao_visual,periodo=String(id?.periodo||"").toLowerCase().trim();
+    const tfVisivel=/^(1d|d|diário|diario)$/.test(periodo)?"1d":/^(1h|60m|60 min)$/.test(periodo)?"1h":/^(15m|15 min)$/.test(periodo)?"15m":null;
+    const idVisivel=id?.ticker===tk&&id?.market===market&&tfVisivel===tf&&["marca_dagua","cabecalho","ambos"].includes(id?.origem);
     const conflito=(explicit.match(/\b(?:[A-Z]{4}\d{1,2}|IBOV)\b/g)||[]).some(t=>t!==tk);
     g.pivos=aureaConferePivosV1012(g,null);g.validacao_ohlc=base;
     const desde=aureaDataPivoV1012(m.desde,tf),ate=aureaDataPivoV1012(m.ate,tf);
@@ -3840,6 +3873,7 @@ async function aureaValidarHistoricoV1012(resposta,pergunta,signal){
       if(limite.aborted)return;
       g.pivos=aureaConferePivosV1012(g,h.candles).map((p,i)=>({...p,estado_visual:g.pivos[i].estado_visual}));
       g.extremos_ohlc=aureaExtremosHistoricosV1021(g,h.candles);
+      g.indicadores_ohlc=aureaIndicadoresHistoricosV1021(g,h.candles);
       g.validacao_ohlc={status:"conferido",ticker:tk,market,tf,desde:m.desde,ate:m.ate,source:h.source,as_of:h.as_of,motivo:"Conferência do preço/data e da estrutura na série nominal. Identificação do gráfico e coordenadas continuam estimativas visuais."};
     }catch{g.validacao_ohlc={status:"visual",motivo:"Histórico indisponível ou não homologado. A análise visual foi preservada."};}
   }));

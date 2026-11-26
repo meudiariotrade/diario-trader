@@ -64,3 +64,19 @@ test('v1021 contrato conserva identificação, confluências e geometria separad
  const r=parecer(JSON.stringify({tipo:'grafico_parcial',resumo:'Tese',tecnico:'Leitura',fundamentalista:'Lacuna',critico:'Contraponto',estrutura:{lacuna:'Dados insuficientes'},identificacao_visual:{ticker:'IBOV',market:'BR',periodo:'1D',origem:'marca_dagua'},confluencias_visuais:{obv:'Rompimento antes do preço é antecipação possível'},geometria_preco:{x0:.02,y0:.15,x1:.85,y1:.65,candles:'preto_fundo_claro',eixos:[{y:.2,preco:100},{y:.4,preco:80},{y:.6,preco:60}]},pivos:[]}),null);
  assert.equal(r.identificacao_visual.ticker,'IBOV');assert.match(r.confluencias_visuais.obv,/antecipação/);assert.equal(r.geometria_preco.eixos.length,3);
 });
+
+test('v1021 IBOV visual permite histórico exato sem ticker digitado, sem alterar contrato global',async()=>{
+ const feed={ticker:t=>t==='IBOV'?null:t,series:()=>({valid:true,candles:rows})};let calls=0;
+ ctx.window={DiarioFeedContrato:feed,DiarioHistoricoQualidade:{audit:(p,o)=>({valid:o.contract.ticker('IBOV','BR')==='IBOV',source:'fixture'})}};
+ ctx.fetch=async url=>{calls++;assert.match(url,/ticker=IBOV/);return {ok:true,json:async()=>({candles:rows,as_of:date(11)})}};
+ const x={...g,pivos:[],referencia_ohlc:{...g.referencia_ohlc,ticker:'IBOV',market:'BR',base:'nominal'},identificacao_visual:{ticker:'IBOV',market:'BR',periodo:'1D',origem:'ambos'}};
+ const r=await ctx.aureaValidarHistoricoV1012(x,'Analise este gráfico',new AbortController().signal);assert.equal(calls,1);assert.equal(r.validacao_ohlc.status,'conferido');assert.ok(r.extremos_ohlc.length);assert.equal(feed.ticker('IBOV','BR'),null);
+ const y={...x,pivos:[],referencia_ohlc:{...x.referencia_ohlc},identificacao_visual:{...x.identificacao_visual,periodo:'15m'}};
+ await ctx.aureaValidarHistoricoV1012(y,'Analise este gráfico',new AbortController().signal);assert.equal(calls,1);
+});
+test('v1021 cálculo independente de médias e OBV não usa barras posteriores ao recorte',()=>{
+ const history=Array.from({length:220},(_,i)=>({t:Date.UTC(2025,0,i+1),o:100+i,h:101+i,l:99+i,c:100+i,v:10}));
+ const d=i=>new Date(history[i].t).toISOString().slice(0,10);
+ const r=ctx.aureaIndicadoresHistoricosV1021({referencia_ohlc:{tf:'1d',desde:d(190),ate:d(209)},extremos_ohlc:[]},history);
+ assert.deepEqual(Array.from(r.medias,x=>x.n),[20,50,200]);assert.equal(r.medias[0].valor,299.5);assert.equal(r.medias[2].inclinacao,'ascendente');
+});

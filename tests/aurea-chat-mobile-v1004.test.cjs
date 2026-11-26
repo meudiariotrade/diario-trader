@@ -32,6 +32,8 @@ test('v1021: não desenha coordenadas não conferidas e mantém cenário e inval
  await expect(panel.locator('.wf-chat-history')).toContainText('Sem marcação');
  await expect(panel.locator('.wf-chat-sent-image img')).toHaveAttribute('src',url);
  await expect(panel.locator('.wf-chat-history')).toContainText('Superação do topo');
+ await p.evaluate(()=>{ECO.l[0].r.pivos[0].ancoragem_visual='pixel_compativel';ecoPaint();});
+ await expect(panel.locator('[data-aurea-pivo]')).toHaveCount(1);
  await panel.locator('[data-chat-close]').click();await p.close();
 }));
 
