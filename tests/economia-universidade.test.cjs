@@ -43,7 +43,9 @@ test('Fichar texto local, gerar cards, revisar e preservar histórico JSON em na
  await p.evaluate(()=>render());
  await expect(p.locator('[data-eco-tool="flash"]')).toHaveClass(/\bon\b/);
  await expect(p.locator('.uni-flash')).toBeVisible();
+ await expect(p.locator('.eco-nav')).toHaveCSS('position','static');
  await p.locator('[data-eco-btn="uniFlip"]').click();
+ // O clique deve ser real, sem force ou dispatchEvent: detecta barras que interceptam o toque.
  await p.locator('[data-eco-btn="uniAcerto"]').click();
  const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('diario-laboratorio-universitario-v1')));
  assert.ok(saved.fichas.some(x=>x.titulo==='Resumo de aula Keynes'));
