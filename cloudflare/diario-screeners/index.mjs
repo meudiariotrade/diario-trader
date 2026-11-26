@@ -59,7 +59,7 @@ export default {
   if(url.pathname==='/v1/profit-quotes')return profitQuotes(request,env);
   if(url.pathname==='/v1/aurea-resumao')return resumoAurea(request,env);
   if(url.pathname==='/v1/aurea-imagem')return aureaImagem(request,env,ctx);
-  if(url.pathname==='/v1/aurea-debate')return debateV1013(request,env);
+  if(url.pathname==='/v1/aurea-debate')return debateV1013(request,env,{ctx});
   if(url.pathname==='/v1/ia-estatisticas')return estatisticasV932(request,env);
   if(url.pathname==='/v1/ia-explica')return explicarV932(request,env);
   if(url.pathname==='/v1/ia-estudos')return estudosV932(request,env);

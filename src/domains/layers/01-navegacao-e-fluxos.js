@@ -3296,6 +3296,16 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const pivos=Array.isArray(E.pivos)?E.pivos:[];
         return '<section class="wf-chat-parecer">'+blocos.filter(v=>v[1]).map(([k,v])=>'<p><b>'+s(k)+':</b> '+s(v)+'</p>').join("")+(st.evidencias?.length?'<b>Evidências</b><ul>'+st.evidencias.map(v=>'<li>'+s(v)+'</li>').join("")+'</ul>':"")+(pivos.length?'<b>Topos e fundos relevantes</b><ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.validacao!=="estrutura_ohlc"?"?":"")+(p.preco?" · "+p.preco:""))+'</b> — '+s(p.validacao==='estrutura_ohlc'?'conferido no OHLC':'estimativa visual da IA')+': '+s(p.motivo)+'</li>').join("")+'</ul>':"")+'</section>';
       }
+      function fundamentosAureaV1014(E){
+        const perfis=E.fundamentos_v1014;if(!Array.isArray(perfis)||!perfis.length)return "";
+        const fmt=n=>Number.isFinite(n)?n.toLocaleString("pt-BR",{maximumFractionDigits:2}):"N/D";
+        const label={roe:"ROE (%)",roic:"ROIC (%)",pl:"P/L (x)",pvp:"P/VP (x)",fcf_yield:"FCF Yield (%)",fcf_margin:"Margem FCF (%)",div_liq_ebitda:"Dívida líquida/EBITDA (x)",net_debt_ebitda:"Dívida líquida/EBITDA (x)",forward_pe:"P/L projetado (x)",dividend_yield:"DY (%)",preco_referencia:"Preço de referência",lpa:"LPA",vpa:"VPA",dpa_12m:"DPA 12m",margem_liquida:"Margem líquida (%)",revenue_growth_yoy:"Crescimento receita (%)",eps_growth_yoy:"Crescimento LPA (%)",total_shareholder_yield:"Retorno total ao acionista (%)"};
+        return perfis.map(p=>'<section class="wf-chat-parecer"><b>Base fundamentalista · '+s(p.ticker)+' · '+s(p.market)+'</b><p>'+s(p.empresa||"")+' · '+s(p.setor||"Setor não identificado")+'</p><small>Snapshot '+s(p.data)+' · '+(p.defasado?"referência antiga ou data não informada":"referência do provedor "+s(p.referencia_indicadores))+'</small>'+
+          '<div style="overflow-x:auto"><table style="width:100%;font-variant-numeric:tabular-nums;font-size:12px"><thead><tr><th>Indicador</th><th style="text-align:right">Valor</th><th style="text-align:right">Amostra setorial</th></tr></thead><tbody>'+p.dados.map(d=>'<tr><td>'+s(label[d.id]||d.id)+'<small style="display:block">'+s(d.data||"data N/D")+' · '+s(d.fonte)+'</small></td><td style="text-align:right">'+fmt(d.valor)+'</td><td style="text-align:right">'+(p.comparacao?.[d.id]?fmt(p.comparacao[d.id].mediana)+' (n='+p.comparacao[d.id].n+')':"N/D")+'</td></tr>').join("")+'</tbody></table></div>'+
+          (p.documento?'<p><b>Documento CVM:</b> '+s(p.documento.tipo)+' · '+s(p.documento.competencia)+' (referência documental, não certifica os indicadores acima)</p>':"")+
+          (p.valuation?'<p><b>Valuation exploratório (BRL)</b> · referência '+fmt(p.valuation.preco)+'</p>'+p.valuation.methods.map(v=>'<p>'+s(v.id==="graham"?"Número de Graham":"Bazin (yield de 6%)")+' · R$ '+fmt(v.valor)+' · margem '+fmt(v.margem)+'%'+(v.inferido?' · insumos inferidos por múltiplos/preço':' · insumos diretos, não certificados')+'</p>').join("")+'<small>'+s(p.valuation.nota)+'</small>':'<p>Valuation numérico inconclusivo: faltam insumos ou referência temporal compatível.</p>')+
+          '<small>Mediana de até 12 emissores do mesmo setor, mercado e data de referência; amostra não representativa.</small>'+N("Lacunas da base",p.lacunas)+'</section>').join("");
+      }
       function debateAureaV1013(E){
         const d=E.debate;if(!d)return "";
         if(d.status!=="concluido")return '<section class="wf-chat-parecer"><b>Debate parcial</b><p>'+s(d.motivo||"Segunda rodada indisponível.")+'</p></section>';
@@ -3326,7 +3336,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         "Glossário",
         E.glossario?.map((u) => `${u.termo}: ${u.significado}`),
       )}
-      ${debateAureaV1013(E)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
+      ${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
       }
       function i() {
         if (!O) return;
