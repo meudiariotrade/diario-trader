@@ -36,3 +36,47 @@ test('sem ticker explícito, nenhuma consulta externa e imagem permanece visual'
  const r=await ctx.aureaValidarHistoricoV1012({...g,referencia_ohlc:{...g.referencia_ohlc,ticker:'VALE3',market:'BR',base:'nominal'}},'Analise este gráfico',new AbortController().signal);
  assert.equal(calls,0);assert.equal(r.pivos[0].validacao,'visual');
 });
+
+test('v1021 calibração de eixo linear e log por três marcas; rejeita escala incompatível',()=>{
+ const f=ctx.aureaCalibrarEixoV1021;
+ const a=f({eixos:[{y:.2,preco:100},{y:.4,preco:80},{y:.6,preco:60}]});assert.equal(a.modo,'linear');assert.ok(Math.abs(a.y(90)-.3)<1e-8);
+ const b=f({eixos:[{y:.2,preco:100},{y:.4,preco:50},{y:.6,preco:25}]});assert.equal(b.modo,'log');assert.ok(Math.abs(b.y(50)-.4)<1e-8);
+ assert.equal(f({eixos:[{y:.2,preco:100},{y:.4,preco:99},{y:.6,preco:25}]}),null);
+});
+test('v1021 pixels: candle preto aceito; OBV, linha horizontal, média colorida e vazio não ganham marcador',()=>{
+ const w=400,h=800,d=new Uint8ClampedArray(w*h*4).fill(255);
+ const set=(x,y,r=0,g=0,b=0)=>{const i=(y*w+x)*4;d[i]=r;d[i+1]=g;d[i+2]=b;};
+ for(let y=240;y<=290;y++){set(160,y);if(y>=253&&y<=275){set(159,y);set(161,y);}}
+ for(let x=205;x<310;x++)set(x,320);
+ for(let y=340;y<380;y++)set(230,y,220,20,20);
+ for(let y=620;y<670;y++){set(170,y);set(169,y);set(171,y);}
+ const geom={x0:.02,y0:.15,x1:.85,y1:.65,candles:'preto_fundo_claro',eixos:[{y:.2,preco:100},{y:.4,preco:80},{y:.6,preco:60}]};
+ const p=(x,y,preco,tipo='topo')=>({tipo,x:x/w,y:y/h,preco:String(preco)});
+ const g={geometria_preco:geom,pivos:[p(160,240,90),p(160,290,83.75,'fundo'),p(250,320,80),p(230,340,77.5),p(170,620,42.5),p(300,280,85)]};
+ const out=ctx.aureaAncorarPivosV1021(g,d,w,h);assert.deepEqual(Array.from(out,x=>x.ancoragem_visual),['pixel_compativel','pixel_compativel','nao_conferida','nao_conferida','nao_conferida','nao_conferida']);
+ assert.equal(ctx.aureaAncorarPivosV1021({...g,geometria_preco:null},d,w,h)[0].ancoragem_visual,'nao_conferida');
+});
+test('v1021 calcula extremos do recorte a partir do OHLC sem coordenadas inventadas',()=>{
+ const out=ctx.aureaExtremosHistoricosV1021(g,rows);assert.ok(out.some(x=>x.tipo==='topo'&&x.preco==='15'&&x.validacao==='estrutura_ohlc'));assert.ok(out.every(x=>x.x===undefined&&x.y===undefined));assert.equal(ctx.aureaExtremosHistoricosV1021(g,rows.slice(1)).length,0);
+});
+test('v1021 contrato conserva identificação, confluências e geometria separada',async()=>{
+ const {parecer}=await import('../cloudflare/diario-screeners/aurea-imagem-v1004.mjs');
+ const r=parecer(JSON.stringify({tipo:'grafico_parcial',resumo:'Tese',tecnico:'Leitura',fundamentalista:'Lacuna',critico:'Contraponto',estrutura:{lacuna:'Dados insuficientes'},identificacao_visual:{ticker:'IBOV',market:'BR',periodo:'1D',origem:'marca_dagua'},confluencias_visuais:{obv:'Rompimento antes do preço é antecipação possível'},geometria_preco:{x0:.02,y0:.15,x1:.85,y1:.65,candles:'preto_fundo_claro',eixos:[{y:.2,preco:100},{y:.4,preco:80},{y:.6,preco:60}]},pivos:[]}),null);
+ assert.equal(r.identificacao_visual.ticker,'IBOV');assert.match(r.confluencias_visuais.obv,/antecipação/);assert.equal(r.geometria_preco.eixos.length,3);
+});
+
+test('v1021 IBOV visual permite histórico exato sem ticker digitado, sem alterar contrato global',async()=>{
+ const feed={ticker:t=>t==='IBOV'?null:t,series:()=>({valid:true,candles:rows})};let calls=0;
+ ctx.window={DiarioFeedContrato:feed,DiarioHistoricoQualidade:{audit:(p,o)=>({valid:o.contract.ticker('IBOV','BR')==='IBOV',source:'fixture'})}};
+ ctx.fetch=async url=>{calls++;assert.match(url,/ticker=IBOV/);return {ok:true,json:async()=>({candles:rows,as_of:date(11)})}};
+ const x={...g,pivos:[],referencia_ohlc:{...g.referencia_ohlc,ticker:'IBOV',market:'BR',base:'nominal'},identificacao_visual:{ticker:'IBOV',market:'BR',periodo:'1D',origem:'ambos'}};
+ const r=await ctx.aureaValidarHistoricoV1012(x,'Analise este gráfico',new AbortController().signal);assert.equal(calls,1);assert.equal(r.validacao_ohlc.status,'conferido');assert.ok(r.extremos_ohlc.length);assert.equal(feed.ticker('IBOV','BR'),null);
+ const y={...x,pivos:[],referencia_ohlc:{...x.referencia_ohlc},identificacao_visual:{...x.identificacao_visual,periodo:'15m'}};
+ await ctx.aureaValidarHistoricoV1012(y,'Analise este gráfico',new AbortController().signal);assert.equal(calls,1);
+});
+test('v1021 cálculo independente de médias e OBV não usa barras posteriores ao recorte',()=>{
+ const history=Array.from({length:220},(_,i)=>({t:Date.UTC(2025,0,i+1),o:100+i,h:101+i,l:99+i,c:100+i,v:10}));
+ const d=i=>new Date(history[i].t).toISOString().slice(0,10);
+ const r=ctx.aureaIndicadoresHistoricosV1021({referencia_ohlc:{tf:'1d',desde:d(190),ate:d(209)},extremos_ohlc:[]},history);
+ assert.deepEqual(Array.from(r.medias,x=>x.n),[20,50,200]);assert.equal(r.medias[0].valor,299.5);assert.equal(r.medias[2].inclinacao,'ascendente');
+});

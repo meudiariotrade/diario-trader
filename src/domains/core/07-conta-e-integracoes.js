@@ -3721,20 +3721,142 @@ function aureaConferePivosV1012(g,series){
     return local;
   });
 }
+// v1021 — Coordenadas sugeridas pela IA são apenas candidatas. Verificar pixels no dispositivo.
+function aureaCalibrarEixoV1021(g){
+ const a=g?.eixos;if(!Array.isArray(a)||a.length!==3)return null;
+ if(!a.every(x=>Number.isFinite(x?.y)&&Number.isFinite(x?.preco)&&x.preco>0))return null;
+ const [u,m,l]=a;if(!(u.y<m.y&&m.y<l.y&&u.preco>m.preco&&m.preco>l.preco))return null;
+ const fit=log=>{const f=x=>log?Math.log(x):x, inv=x=>log?Math.exp(x):x;
+  const slope=(f(l.preco)-f(u.preco))/(l.y-u.y);
+  const y=p=>u.y+(f(p)-f(u.preco))/slope,preco=y=>inv(f(u.preco)+(y-u.y)*slope);
+  return {y,preco,erro:Math.abs(y(m.preco)-m.y),modo:log?"log":"linear"};
+ };
+ const fits=[fit(false),fit(true)].sort((a,b)=>a.erro-b.erro);
+ return fits[0].erro<=.008?fits[0]:null;
+}
+function aureaPrecoVisualV1021(p){
+ const t=String(p||"").trim().replace(/^~\s*/,"");
+ if(!/^\d+(?:[.,]\d+)?$/.test(t))return null;
+ const n=Number(t.replace(",","."));return Number.isFinite(n)&&n>0?n:null;
+}
+function aureaAncorarPivosV1021(g,data,w,h){
+ const pts=Array.isArray(g.pivos)?g.pivos:[],r=g.geometria_preco,axis=aureaCalibrarEixoV1021(r);
+ const omit=p=>({...p,ancoragem_visual:"nao_conferida"});
+ if(!r||r.candles!=="preto_fundo_claro"||!axis||!data||!Number.isInteger(w)||!Number.isInteger(h)||w<180||h<180||data.length!==w*h*4)return pts.map(omit);
+ if(![r.x0,r.y0,r.x1,r.y1].every(x=>Number.isFinite(x)&&x>=0&&x<=1)||r.x1-r.x0<.25||r.y1-r.y0<.15)return pts.map(omit);
+ const left=Math.max(2,Math.ceil(r.x0*w)),right=Math.min(w-3,Math.floor(r.x1*w)),top=Math.max(2,Math.ceil(r.y0*h)),bottom=Math.min(h-3,Math.floor(r.y1*h));
+ const dark=(x,y)=>{if(x<left||x>right||y<top||y>bottom)return false;const i=(y*w+x)*4,a=data[i],b=data[i+1],c=data[i+2];return data[i+3]>220&&Math.max(a,b,c)<120&&Math.max(a,b,c)-Math.min(a,b,c)<28;};
+ const rx=Math.max(2,Math.round(w*.012)),ry=Math.max(3,Math.round(h*.013)),runMin=Math.max(4,Math.round(w*.007)),used=[];
+ return pts.map(p=>{
+  const no=omit(p),price=aureaPrecoVisualV1021(p.preco);
+  if(!price||p.validacao==="divergente"||!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<=r.x0||p.x>=r.x1||p.y<=r.y0||p.y>=r.y1||!["topo","fundo"].includes(p.tipo))return no;
+  const expected=axis.y(price),px=Math.round(p.x*w),py=Math.round(p.y*h),ey=expected*h;
+  if(!Number.isFinite(ey)||Math.abs(ey-py)>ry*1.5||ey<top||ey>bottom)return no;
+  const direction=p.tipo==="topo"?1:-1, candidates=[];
+  for(let x=Math.max(left+1,px-rx);x<=Math.min(right-1,px+rx);x++){
+   for(let y=Math.max(top+2,Math.floor(Math.max(py-ry,ey-ry)));y<=Math.min(bottom-2,Math.ceil(Math.min(py+ry,ey+ry)));y++){
+    if(!dark(x,y)||dark(x,y-direction)||dark(x,y-2*direction))continue;
+    let length=0;while(length<Math.max(32,Math.round(h*.06))&&dark(x,y+direction*length))length++;
+    if(length<runMin)continue;
+    let body=false;
+    for(let j=1;j<length;j++)if(dark(x-1,y+direction*j)&&dark(x+1,y+direction*j)){body=true;break;}
+    if(!body)continue;
+    // Rejeitar se há traço do mesmo grupo mais externo do que o ponto.
+    if([-1,0,1].some(dx=>dark(x+dx,y-direction)||dark(x+dx,y-2*direction)))continue;
+    const score=Math.abs(x-px)/rx+Math.abs(y-py)/ry+Math.abs(y-ey)/ry;
+    candidates.push({x,y,score});
+   }
+  }
+  candidates.sort((a,b)=>a.score-b.score);const best=candidates[0];
+  if(!best||candidates.some(q=>q.score<best.score+.25&&Math.abs(q.x-best.x)>Math.max(3,Math.round(w*.006)))||used.some(q=>Math.abs(q.x-best.x)<=2&&Math.abs(q.y-best.y)<=3))return no;
+  used.push(best);return {...p,x:best.x/w,y:best.y/h,ancoragem_visual:"pixel_compativel",preco_eixo_aprox:axis.preco(best.y/h)};
+ });
+}
+async function aureaValidarImagemV1021(resposta,imagens,signal){
+ const gs=Array.isArray(resposta.graficos)?resposta.graficos:[resposta];
+ await Promise.all(gs.map(async (g,i)=>{
+  const url=imagens[(g.indice||i+1)-1]?.url;
+  g.pivos=(g.pivos||[]).map(p=>({...p,ancoragem_visual:"nao_conferida"}));
+  if(!url||!g.geometria_preco||signal.aborted)return;
+  try{
+   const img=new Image();img.src=url;await img.decode();if(signal.aborted)return;
+   const scale=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight)),canvas=document.createElement("canvas");
+   canvas.width=Math.round(img.naturalWidth*scale);canvas.height=Math.round(img.naturalHeight*scale);
+   const x=canvas.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,canvas.width,canvas.height);
+   g.pivos=aureaAncorarPivosV1021(g,x.getImageData(0,0,canvas.width,canvas.height).data,canvas.width,canvas.height);
+   canvas.width=canvas.height=0;
+  }catch{}
+ }));
+ return resposta;
+}
+// v1021 — lista independente de extremos OHLC locais no recorte homologado, sem projetar pixels.
+function aureaExtremosHistoricosV1021(g,series){
+ const m=g.referencia_ohlc||{},start=aureaDataPivoV1012(m.desde,m.tf),end=aureaDataPivoV1012(m.ate,m.tf);
+ if(start===null||end===null||end<=start||!Array.isArray(series))return [];
+ const key=t=>m.tf==="1d"?Date.parse(new Date(t).toISOString().slice(0,10)+"T00:00:00Z"):t;
+ const rows=series.filter(c=>key(c.t)>=start&&key(c.t)<=end);
+ if(rows.length<5||key(rows[0].t)!==start||key(rows[rows.length-1].t)!==end)return [];
+ const all=[];
+ for(let i=2;i<rows.length-2;i++)for(const tipo of ["topo","fundo"]){
+  const k=tipo==="topo"?"h":"l",p=rows[i][k];if(!Number.isFinite(p)||p<=0)continue;
+  if([i-2,i-1,i+1,i+2].every(j=>tipo==="topo"?p>rows[j][k]:p<rows[j][k])){
+   const data=m.tf==="1d"?new Date(rows[i].t).toISOString().slice(0,10):new Date(rows[i].t).toISOString().replace(/\.\d{3}Z$/,"Z");
+   const preco=String(Number(p.toFixed(8)));
+   all.push({tipo,estado:"potencial",data,preco,motivo:"Extremo de duas barras de cada lado"});
+  }
+ }
+ return aureaConferePivosV1012({...g,pivos:all},series);
+}
+
+// v1021 — confluências calculadas exclusivamente na série fechada e recorte homologado.
+function aureaIndicadoresHistoricosV1021(g,series){
+ const m=g.referencia_ohlc||{},start=aureaDataPivoV1012(m.desde,m.tf),end=aureaDataPivoV1012(m.ate,m.tf);
+ if(start===null||end===null||end<=start||!Array.isArray(series))return null;
+ const key=t=>m.tf==="1d"?Date.parse(new Date(t).toISOString().slice(0,10)+"T00:00:00Z"):t;
+ const rows=series.filter(c=>key(c.t)<=end),first=rows.findIndex(c=>key(c.t)===start),last=rows.length-1;
+ if(first<0||last-first<4||key(rows[last].t)!==end)return null;
+ const avg=(n,i)=>i+1<n?null:rows.slice(i-n+1,i+1).reduce((a,c)=>a+c.c,0)/n;
+ const medias=[20,50,200].flatMap(n=>{const atual=avg(n,last),anterior=avg(n,last-5);return atual===null?[]:[{n,valor:atual,inclinacao:anterior===null?"indefinida":atual>anterior?"ascendente":atual<anterior?"descendente":"estável"}];});
+ let sinais=[];
+ if(rows.every(c=>Number.isFinite(c.v)&&c.v>=0)&&rows.some(c=>c.v>0)){
+  const obv=[0];for(let i=1;i<rows.length;i++)obv[i]=obv[i-1]+Math.sign(rows[i].c-rows[i-1].c)*rows[i].v;
+  const extremos=g.extremos_ohlc||[];
+  for(const tipo of ["topo","fundo"]){
+   const p=[...extremos].reverse().find(x=>x.tipo===tipo);if(!p)continue;
+   const d=aureaDataPivoV1012(p.data,m.tf),i=rows.findIndex(c=>key(c.t)===d);
+   if(i<first+2||i+2>last)continue;
+   const level=Number(p.preco),isTopo=tipo==="topo",broke=(a,b)=>isTopo?a>b:a<b;
+   const obvLevel=(isTopo?Math.max:Math.min)(...obv.slice(i-2,i+3));
+   const priceAt=rows.findIndex((c,j)=>j>i+2&&broke(c.c,level));
+   const obvAt=obv.findIndex((o,j)=>j>i+2&&broke(o,obvLevel));
+   const status=priceAt<0&&obvAt<0?"Sem rompimento":obvAt>=0&&(priceAt<0||obvAt<priceAt)?"OBV antes do preço: possível antecipação":priceAt>=0&&obvAt===priceAt?"Rompimento conjunto: confirmação":priceAt>=0&&obvAt<0?"Preço sem confirmação pelo OBV":"OBV confirmou depois do preço";
+   sinais.push({tipo,data:p.data,preco:level,status,data_preco:priceAt<0?null:new Date(rows[priceAt].t).toISOString(),data_obv:obvAt<0?null:new Date(rows[obvAt].t).toISOString()});
+  }
+ }
+ return {medias,sinais,nota:"Médias simples da série nominal; OBV relativo, iniciado na série disponível, com extremos correspondentes na janela de ±2 barras. Não corresponde necessariamente às configurações ou escala do Profit. Rompimentos após a janela de referência; não garantem continuidade."};
+}
+
 async function aureaValidarHistoricoV1012(resposta,pergunta,signal){
   const graficos=Array.isArray(resposta.graficos)?resposta.graficos:[resposta],cache=new Map();
-  const contrato=window.DiarioFeedContrato,auditoria=window.DiarioHistoricoQualidade;
+  const feed=window.DiarioFeedContrato,auditoria=window.DiarioHistoricoQualidade;
+  // IBOV é permitido pelo endpoint de candles, mas não pelo ticker genérico de ações.
+  const contrato=feed?{...feed,ticker:(t,m)=>m==='BR'&&t==='IBOV'?'IBOV':feed.ticker(t,m)}:null;
   const limite=AbortSignal.any([signal,AbortSignal.timeout(6500)]);
   const explicit=String(pergunta||"").toUpperCase();
   await Promise.all(graficos.map(async g=>{
-    if(!Array.isArray(g.pivos)||!g.pivos.length)return;
+    if(!Array.isArray(g.pivos))g.pivos=[];
+    if(!g.pivos.length&&!g.referencia_ohlc)return;
     const m=g.referencia_ohlc||{},tk=m.ticker,market=m.market,tf=m.tf;
-    const base={status:"visual",motivo:"Sem identificação explícita do ativo na pergunta, período, recorte e escala nominal legíveis; nenhuma confirmação histórica."};
+    const base={status:"visual",motivo:"Sem identificação compatível, recorte exato ou escala nominal legível; nenhuma confirmação histórica."};
+    const id=g.identificacao_visual,periodo=String(id?.periodo||"").toLowerCase().trim();
+    const tfVisivel=/^(1d|d|diário|diario)$/.test(periodo)?"1d":/^(1h|60m|60 min)$/.test(periodo)?"1h":/^(15m|15 min)$/.test(periodo)?"15m":null;
+    const idVisivel=id?.ticker===tk&&id?.market===market&&tfVisivel===tf&&["marca_dagua","cabecalho","ambos"].includes(id?.origem);
+    const conflito=(explicit.match(/\b(?:[A-Z]{4}\d{1,2}|IBOV)\b/g)||[]).some(t=>t!==tk);
     g.pivos=aureaConferePivosV1012(g,null);g.validacao_ohlc=base;
     const desde=aureaDataPivoV1012(m.desde,tf),ate=aureaDataPivoV1012(m.ate,tf);
-    if(!contrato||!auditoria||typeof tk!=="string"||!/^[A-Z0-9.]{2,12}$/.test(tk)||contrato.ticker(tk,market)!==tk||!["1d","1h","15m"].includes(tf)||m.base!=="nominal"||desde===null||ate===null||desde>=ate||ate>Date.now()||!explicit.match(new RegExp("(?:^|[^A-Z0-9.])"+tk.replace(/\./g,"\\.")+"(?:$|[^A-Z0-9.])")))return;
-    if(market==="BR"&&!/^[A-Z]{4}\d{1,2}$/.test(tk)||market==="CRYPTO"&&!/^[A-Z0-9]+USDT$/.test(tk))return;
-    if(!g.pivos.some(p=>aureaDataPivoV1012(p.data,tf)!==null&&aureaPrecoPivoV1012(p.preco)))return;
+    if(!contrato||!auditoria||typeof tk!=="string"||!/^[A-Z0-9.]{2,12}$/.test(tk)||contrato.ticker(tk,market)!==tk||!["1d","1h","15m"].includes(tf)||m.base!=="nominal"||desde===null||ate===null||desde>=ate||ate>Date.now()||(!explicit.match(new RegExp("(?:^|[^A-Z0-9.])"+tk.replace(/\./g,"\\.")+"(?:$|[^A-Z0-9.])"))&&(!idVisivel||conflito)))return;
+    if(market==="BR"&&tk!=="IBOV"&&!/^[A-Z]{4}\d{1,2}$/.test(tk)||market==="CRYPTO"&&!/^[A-Z0-9]+USDT$/.test(tk))return;
+    if(!idVisivel&&!g.pivos.some(p=>aureaDataPivoV1012(p.data,tf)!==null&&aureaPrecoPivoV1012(p.preco)))return;
     const key=market+"|"+tk+"|"+tf;
     if(!cache.has(key))cache.set(key,(async()=>{
       const url="https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/tecnico-candles?"+new URLSearchParams({market,ticker:tk,tf});
@@ -3750,6 +3872,8 @@ async function aureaValidarHistoricoV1012(resposta,pergunta,signal){
       const h=await cache.get(key);
       if(limite.aborted)return;
       g.pivos=aureaConferePivosV1012(g,h.candles).map((p,i)=>({...p,estado_visual:g.pivos[i].estado_visual}));
+      g.extremos_ohlc=aureaExtremosHistoricosV1021(g,h.candles);
+      g.indicadores_ohlc=aureaIndicadoresHistoricosV1021(g,h.candles);
       g.validacao_ohlc={status:"conferido",ticker:tk,market,tf,desde:m.desde,ate:m.ate,source:h.source,as_of:h.as_of,motivo:"Conferência do preço/data e da estrutura na série nominal. Identificação do gráfico e coordenadas continuam estimativas visuais."};
     }catch{g.validacao_ohlc={status:"visual",motivo:"Histórico indisponível ou não homologado. A análise visual foi preservada."};}
   }));
@@ -3820,7 +3944,8 @@ async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perg
     }).filter(Boolean))];
     throw new Error((j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.")+(reasons.length?" Motivo: "+reasons.join(", ")+".":""));
   }
-  return await aureaValidarHistoricoV1012({...j.resposta,modelo:j.modelo||""},perguntaOriginal,signal);
+  const resposta=await aureaValidarHistoricoV1012({...j.resposta,modelo:j.modelo||""},perguntaOriginal,signal);
+  return await aureaValidarImagemV1021(resposta,imagens,signal);
 }
 // v1014 — reutiliza valuationBR existente sem alterar fórmula ou score.
 function aureaCalcularGrahamV1014(perfis){
