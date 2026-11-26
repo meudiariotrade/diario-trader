@@ -55,3 +55,11 @@ test('v918: EWZ opções do Worker publicado não usa redirecionamento incompat�
  assert.doesNotMatch(src,/redirect:"error"/);
  assert.match(src,/redirect:"manual"/);
 });
+
+test('v1022 cache de cotações é 30s no pregão e 5min com bolsa fechada, não altera cripto',async()=>{
+ const {ttlCotacoesV1022}=await mod;
+ assert.equal(ttlCotacoesV1022('br',Date.parse('2026-11-24T15:00:00Z')),30);
+ assert.equal(ttlCotacoesV1022('br',Date.parse('2026-11-22T15:00:00Z')),300);
+ assert.equal(ttlCotacoesV1022('us',Date.parse('2026-11-22T15:00:00Z')),300);
+ assert.equal(ttlCotacoesV1022('cri',Date.parse('2026-11-22T15:00:00Z')),30);
+});
