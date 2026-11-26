@@ -3421,8 +3421,8 @@ function aureaRota(texto) {
   const usStandalone=t.trim().match(/^(?:@graham\s+)?\$?([A-Z]{1,5}(?:\.[A-Z])?)$/),usTagged=Array.from(t.matchAll(/(?:^|\s)\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g),x=>x[1]);
   const blocked=new Set(["BR","EUA","US","USD","BRL","ROE","ROIC","FCF","DCF","PEG","CET","DY","ETF","FII","PIB","FED","SELIC","IBOV"]);
   for(const x of [...usTagged,...(usStandalone?[usStandalone[1]]:[])])if(!blocked.has(x)&&!tickers.includes(x)&&tickers.length<4)tickers.push(x);
-  if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você",...(aureaRendaFixaTemaV1016(t)?{tema:"renda_fixa"}:{}) };
-  if(aureaRendaFixaTemaV1016(t)&&!/\b(o que e|como funciona|explique o conceito)\b/.test(n))return {id:"markowitz",tickers:[],motivo:"renda fixa e gestão de caixa",tema:"renda_fixa"};
+  if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você",...((typeof aureaRendaFixaTemaV1016==="function"&&aureaRendaFixaTemaV1016(t))?{tema:"renda_fixa"}:{}) };
+  if((typeof aureaRendaFixaTemaV1016==="function"&&aureaRendaFixaTemaV1016(t))&&!/\b(o que e|como funciona|explique o conceito)\b/.test(n))return {id:"markowitz",tickers:[],motivo:"renda fixa e gestão de caixa",tema:"renda_fixa"};
   const commodity=/\b(commodit\w*|brent|wti|petroleo|ouro|gold|xauusd|prata|silver|cobre|copper|minerio|dalian|soja|milho|trigo|cafe|acucar|algodao|boi gordo|boi vivo|gas natural)\b/.test(n);
   if(commodity&&!tickers.some(x=>/^[A-Z]{4}\d/.test(x))&&!/\b(o que e|como funciona|explique o conceito)\b/.test(n)){
     const id=/\b(grafico|tecnic\w*|pivo\w*|suporte|resistencia|rompimento)\b/.test(n)?"livermore":/\b(geopolitic\w*|ciclo estrutural|china|guerra|protecao patrimonial)\b/.test(n)?"dalio":"schwartz";
