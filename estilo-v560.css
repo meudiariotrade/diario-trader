@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 78f14d2d1c02bb757cc646acd752b4e12e056d99caac1d874c14fb792ebcd69a */
+/* Gerado de src/app-theme.css · SHA256 7a69bf383687cf8d874290223f0314f538e59a3f1a70eac7ef24db05ba0556fe */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7521,3 +7521,26 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.pos{background:
 html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.pos b{color:#047857}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.neg{background:#ffe4e6;border-color:#fda4af}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt987-pill.neg b{color:#be123c}
+
+/* v1019 — Áurea: permissões recolhidas, anexos em linha, compositor preservado. */
+html:root body #wf-chat-panel .wf-chat-options{margin:0 0 4px;border:0;min-width:0}
+html:root body #wf-chat-panel .wf-chat-options>summary{display:flex;align-items:center;gap:7px;min-height:44px;cursor:pointer;list-style:none;font-size:12px;color:var(--tx);padding:0 4px;box-sizing:border-box}
+html:root body #wf-chat-panel .wf-chat-options>summary::-webkit-details-marker{display:none}
+html:root body #wf-chat-panel .wf-chat-options>summary>small{margin-left:auto;color:var(--mut);font-size:11px;white-space:nowrap}
+html:root body #wf-chat-panel .wf-chat-options[open] .wf-chat-options-chevron{transform:rotate(180deg)}
+html:root body #wf-chat-panel .wf-chat-options:not([open])>.wf-chat-options-body{display:none!important}
+html:root body #wf-chat-panel .wf-chat-options-body{max-height:min(32vh,240px);overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--bd);padding:4px}
+html:root body #wf-chat-panel .wf-chat-options-body label{min-height:44px;align-items:center;font-size:12px;line-height:1.35;padding:4px 0;box-sizing:border-box}
+html:root body #wf-chat-panel .wf-chat-options-body input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;margin:0}
+html:root body #wf-chat-panel .wf-chat-attachment:not([hidden]){display:block!important;padding:4px 6px;margin:0 0 4px;max-height:none;min-height:0;overflow:hidden}
+html:root body #wf-chat-panel .wf-chat-attachment-row{display:flex;align-items:center;gap:8px;min-width:0}
+html:root body #wf-chat-panel [data-chat-count]{font-size:11px;white-space:nowrap;flex:none}
+html:root body #wf-chat-panel [data-chat-previews]{display:flex;align-items:center;gap:6px;overflow-x:auto;min-width:0;max-height:50px}
+html:root body #wf-chat-panel .wf-chat-preview-item{display:flex;align-items:center;gap:3px;flex:none;min-width:0}
+html:root body #wf-chat-panel .wf-chat-preview-item img{width:30px;height:42px;object-fit:contain;flex:none}
+html:root body #wf-chat-panel .wf-chat-preview-item button{width:44px;height:44px;min-width:44px;min-height:44px;padding:0;flex:none}
+html:root body #wf-chat-panel .wf-chat-preview-name{display:none}
+@media(max-width:760px){
+ html:root body #wf-chat-panel form{max-height:62%;padding:4px 10px 8px}
+ html:root body #wf-chat-panel form textarea{font-size:16px;line-height:1.35;min-height:44px;height:var(--wf-input-h,44px);max-height:92px}
+}
