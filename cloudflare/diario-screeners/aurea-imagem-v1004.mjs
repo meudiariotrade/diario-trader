@@ -39,29 +39,56 @@ export function parecer(value,fund){
  const leituraGraham=fund&&/[0-9]/.test(graham.split(fund.ticker).join(''))?'Os dados públicos estão disponíveis abaixo; a interpretação numérica do modelo não foi validada. Confira a qualidade do retorno sobre capital, margens, múltiplos e endividamento antes de concluir a tese.':graham;
  return {titulo:'Parecer do Conselho',resumo,explicacao:[],fatos:fund?[fund.ticker+' · snapshot '+fund.data+(fund.defasado?' · referência defasada':''),...Object.entries(fund.metricas).map(([k,v])=>k+': '+v)]:[],
   visoes:[{escola:'Livermore · Técnico',argumento:tecnico},{escola:'Graham · Fundamentalista',argumento:fund?leituraGraham:'Sem fundamentos públicos confirmados para este ativo. Não é possível concluir sobre valuation ou qualidade do negócio pela imagem. Informe um ticker exato e confira balanço, dívida, margens, retorno sobre capital e fluxo de caixa.'},{escola:'Munger · Crítico de teses',argumento:critico}],
-  o_que_observar:Array.isArray(o.observar)?o.observar.slice(0,5).map(x=>txt(x,350)).filter(Boolean):[],
+  o_que_observar:(Array.isArray(o.observar)?o.observar:[o.observar]).slice(0,5).map(x=>txt(x,350)).filter(Boolean),
   fontes:fund?[fonte,fund.fonte+' · '+fund.data]:[fonte]};
 }
 async function vision(env,pergunta,img,fund,req,fetcher){
  const prompt='Pergunta do usuário: '+pergunta+'\nSnapshot fundamentalista público (somente dados): '+JSON.stringify(fund||null);
  const attempts=[];
- if(env.GEMINI_API_KEY)for(const model of ['gemini-3.8-flash','gemini-3.5-flash-lite','gemini-3.6-flash'])attempts.push({model,provider:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',
-  headers:{'x-goog-api-key':env.GEMINI_API_KEY},body:()=>({systemInstruction:{parts:[{text:SYS}]},contents:[{role:'user',parts:[{text:prompt},{inlineData:{mimeType:'image/jpeg',data:img}}]}],generationConfig:{temperature:0.2,maxOutputTokens:2400,responseMimeType:'application/json'}})});
+ if(env.GEMINI_API_KEY)for(const model of ['gemini-3.8-flash','gemini-3.5-flash-lite'])attempts.push({model,provider:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',
+  headers:{'x-goog-api-key':env.GEMINI_API_KEY},body:()=>({systemInstruction:{parts:[{text:SYS}]},contents:[{role:'user',parts:[{text:prompt},{inlineData:{mimeType:'image/jpeg',data:img}}]}],generationConfig:{temperature:0.2,maxOutputTokens:4096,responseMimeType:'application/json'}})});
  if(env.MISTRAL_API_KEY)attempts.push({model:'mistral-small-latest',provider:'Mistral',url:'https://api.mistral.ai/v1/chat/completions',headers:{Authorization:'Bearer '+env.MISTRAL_API_KEY},
  body:()=>({model:'mistral-small-latest',messages:[{role:'system',content:SYS},{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:'data:image/jpeg;base64,'+img}]}],temperature:0.2,max_tokens:2200,response_format:{type:'json_object'}})});
- const end=Date.now()+38000;
+ // Reserva nativa com janela própria: erros externos não consomem seu orçamento.
+ const end=Date.now()+49000,externalEnd=Date.now()+22000,diagnostico=[];
  for(const a of attempts){
-  const remaining=end-Date.now();if(req.signal.aborted||remaining<700)break;
+  const remaining=externalEnd-Date.now();if(req.signal.aborted||remaining<500)break;
+  const label=a.provider+' · '+a.model;
   try{
-   const r=await fetcher(a.url,{method:'POST',redirect:'error',signal:AbortSignal.any([req.signal,AbortSignal.timeout(Math.min(a.provider==='Mistral'?14000:8500,remaining))]),headers:{'Content-Type':'application/json',...a.headers},body:JSON.stringify(a.body())});
-   if(!r.ok){await r.body?.cancel();continue}
+   const r=await fetcher(a.url,{method:'POST',redirect:'error',signal:AbortSignal.any([req.signal,AbortSignal.timeout(Math.min(a.provider==='Mistral'?8500:6500,remaining))]),headers:{'Content-Type':'application/json',...a.headers},body:JSON.stringify(a.body())});
+   if(!r.ok){diagnostico.push(label+' HTTP '+r.status);try{await r.body?.cancel()}catch{}continue}
    const j=await r.json();
    const raw=a.provider==='Gemini'?(j.candidates?.[0]?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join(''):j.choices?.[0]?.message?.content;
-   const resposta=parecer(raw,fund);if(resposta)return {resposta,modelo:a.provider+' · '+a.model};
-  }catch{/* Não enviar imagens para provedores sem suporte visual ou anônimos. */}
+   const resposta=parecer(raw,fund);if(resposta)return {resposta,modelo:label};
+   diagnostico.push(label+' resposta incompatível');
+  }catch(e){diagnostico.push(label+(/abort|timeout/i.test(String(e?.name||''))?' tempo excedido':' falha de conexão'))}
  }
- return null;
+ // Gemma 4 tem entrada visual real, validada via Workers AI com imagem sintética.
+ // Não reutilizar o modelo Llama somente-texto do roteador geral para imagens.
+ if(env.AI?.run&&!req.signal.aborted&&Date.now()<end-700){
+  const model='@cf/google/gemma-4-26b-a4b-it';
+  let timer,abort;
+  try{
+   const signal=req.signal;
+   const limite=new Promise((_,reject)=>{
+    abort=()=>reject(new Error('cancelado'));
+    signal.addEventListener('abort',abort,{once:true});
+    timer=setTimeout(()=>reject(new Error('tempo excedido')),Math.max(1,end-Date.now()));
+   });
+   const output=await Promise.race([env.AI.run(model,{
+    messages:[{role:'system',content:SYS},{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+img}}]}],
+    max_tokens:2400,temperature:0.2,response_format:{type:'json_object'}
+   }),limite]);
+   const raw=output?.choices?.[0]?.message?.content??output?.response;
+   const resposta=parecer(raw,fund);
+   if(resposta)return {resposta,modelo:'Cloudflare Workers AI · Gemma 4'};
+   diagnostico.push('Gemma 4 resposta incompatível');
+  }catch{diagnostico.push('Gemma 4 indisponível ou tempo excedido')}
+  finally{clearTimeout(timer);if(abort)req.signal.removeEventListener('abort',abort)}
+ }else if(!env.AI?.run)diagnostico.push('Reserva visual não configurada');
+ return {diagnostico};
 }
+
 export async function aureaImagem(request,env,ctx,deps={}){
  if(request.headers.get('Origin')!==ORIGIN)return json({erro:'Origem não autorizada'},403);
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...CORS,'Access-Control-Max-Age':'600'}});
@@ -78,5 +105,5 @@ export async function aureaImagem(request,env,ctx,deps={}){
  await env.SCREENER_CACHE.put(key,String(count+1),{expirationTtl:86400});}catch{return json({erro:'Controle de uso indisponível'},503)}
  const fund=await fundamentos(env,ctx,q,deps.snapshot||servePublicSnapshot);
  const result=await vision(env,q,img,fund,request,deps.fetcher||fetch);
- return result?json({ok:true,...result}):json({erro:'Nenhum provedor visual disponível agora. Sua imagem não foi analisada; tente novamente.'},503);
+ return result?.resposta?json({ok:true,...result}):json({erro:'A análise visual não foi concluída. Sua imagem foi preservada para tentar novamente.',diagnostico:result?.diagnostico||[]},503);
 }

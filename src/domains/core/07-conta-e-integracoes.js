@@ -3493,7 +3493,7 @@ async function ecoPergunta(e, opt) {
     ativo=()=>ECO.geracao===geracao&&syncOwner()===titular&&!controller.signal.aborted;
   ECO.controller=controller;
   ECO.busy=1;ECO.err="";ECO.rascunho="";ECO.rota=rota;ecoPaint();
-  const timer=opt.imagem?setTimeout(()=>controller.abort(),50000):null;
+  const timer=opt.imagem?setTimeout(()=>controller.abort(),62000):null;
   try {
     let resposta=null;
     if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular);

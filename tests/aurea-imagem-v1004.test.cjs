@@ -39,3 +39,17 @@ test('chat efêmero: armazenamento antigo removido, fechamento invalida e cancel
  assert.match(layer,/if\(estava\)\{G="";limparChat\(\);\}/);
  assert.match(layer,/geracao!==ECO\.geracao/);assert.match(layer,/data-chat-photo/);assert.match(layer,/visualViewport\?\.addEventListener/);
 });
+
+test('v1005: falhas reais dos provedores externos acionam Gemma multimodal, sem modelo textual',async()=>{
+ const {aureaImagem}=await mod,calls=[];
+ const e={...env(),AI:{run:async(model,body)=>{calls.push({model,body});return {choices:[{message:{content:JSON.stringify({...result,observar:'Acompanhar volume'})}}]}}}};
+ const r=await aureaImagem(req(),e,{},{auth:async()=>'u',snapshot:async()=>new Response('',{status:503}),fetcher:async(url)=>new Response('',{status:url.includes('googleapis')?503:429})});
+ assert.equal(r.status,200);const j=await r.json();assert.equal(calls.length,1);assert.equal(calls[0].model,'@cf/google/gemma-4-26b-a4b-it');
+ assert.equal(calls[0].body.messages[1].content[1].image_url.url,'data:image/jpeg;base64,'+image);
+ assert.equal(calls[0].body.response_format.type,'json_object');assert.match(j.modelo,/Gemma 4/);assert.equal(j.resposta.visoes.length,3);assert.deepEqual(j.resposta.o_que_observar,['Acompanhar volume']);
+});
+test('v1005: esgotamento dos modelos retorna diagnóstico limitado, não inventa análise nem vaza resposta do provedor',async()=>{
+ const {aureaImagem}=await mod,e={...env(),AI:{run:async()=>{throw Error('secret never expose')}}};
+ const r=await aureaImagem(req(),e,{},{auth:async()=>'u',snapshot:async()=>new Response('',{status:503}),fetcher:async()=>new Response('secret never expose',{status:429})});
+ assert.equal(r.status,503);const j=await r.json();assert.ok(j.diagnostico.some(s=>s.includes('HTTP 429')));assert.ok(j.diagnostico.some(s=>s.includes('Gemma 4')));assert.ok(!JSON.stringify(j).includes('secret'));assert.equal(j.resposta,undefined);
+});
