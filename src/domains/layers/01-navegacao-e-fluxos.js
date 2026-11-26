@@ -3271,6 +3271,18 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         }).join("");
         return `<figure class="wf-chat-sent-image" style="margin:8px 0"><div style="position:relative;width:100%;line-height:0"><img src="${s(M.imagem)}" alt="Imagem original anexada à pergunta" style="display:block;width:100%;height:auto;max-height:none;object-fit:contain">${marks}</div>${pts.length?'<figcaption style="font-size:11px;line-height:1.4;margin-top:6px">T: topo · F: fundo · ?: potencial. Marcações visuais aproximadas, não conferidas com OHLC.</figcaption>':""}</figure>`;
       }
+      function graficosAureaV1011(M,E){
+        const imgs=M.imagens||(M.imagem?[M.imagem]:[]);
+        return imgs.map((url,i)=>{
+          const g=E.graficos?.find(x=>x.indice===i+1);
+          return (imgs.length>1?'<p><b>Gráfico '+(i+1)+'</b></p>':'')+graficoAureaV1007({imagem:url},g|| (imgs.length===1?E:{}));
+        }).join("");
+      }
+      function comparacaoAureaV1011(E){
+        if(!E.graficos?.length)return "";
+        return '<section class="wf-chat-parecer"><b>Comparação dos gráficos</b><p>'+s(E.comparacao||"")+'</p>'+
+          E.graficos.map(g=>'<p><b>Gráfico '+g.indice+' · '+s(g.ativo||"Ativo não identificado")+' · '+s(g.periodo||"Período não identificado")+'</b></p><p>'+s(g.leitura)+'</p>').join("")+'</section>';
+      }
       function estruturaAureaV1007(E){
         const st=E.estrutura;if(!st)return "";
         const blocos=[["Período",st.periodo],["Estrutura e tendência",st.tendencia],["Cenário principal",st.principal],["Cenário alternativo",st.alternativo],["Confirmação",st.confirmacao],["Invalidação",st.invalidacao],["Limitações",st.lacuna]];
@@ -3279,7 +3291,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       }
       function e(M) {
         const E = M.r || {};
-        return `<article class="wf-chat-message"><p class="wf-chat-question">${s(M.q)}</p>${graficoAureaV1007(M,E)}${aureaAcao(M)}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}${estruturaAureaV1007(E)}
+        return `<article class="wf-chat-message"><p class="wf-chat-question">${s(M.q)}</p>${graficosAureaV1011(M,E)}${aureaAcao(M)}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}${estruturaAureaV1007(E)}${comparacaoAureaV1011(E)}
       ${N("Fatos apresentados pelo modelo — confira as fontes", E.fatos)}
       ${N(
         "Impactos descritos",
@@ -3308,7 +3320,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           P = O.querySelector('[type="submit"]'),
           m = ECO.l.length
             ? ECO.l.map(e).join("")
-            : '<div class="wf-chat-empty"><b>O que vamos analisar hoje?</b><p>Envie uma pergunta, uma tese ou um gráfico. A Áurea organiza os pareceres do Conselho; para fundamentos, indique o ticker (ex.: VALE3 ou ticker: AAPL).</p><p>O histórico é apagado ao fechar esta conversa.</p></div>';
+            : '<div class="wf-chat-empty"><b>O que vamos analisar hoje?</b><p>Envie uma pergunta, uma tese ou até três gráficos. A Áurea organiza os pareceres do Conselho; para fundamentos, indique o ticker (ex.: VALE3 ou ticker: AAPL).</p><p>O histórico é apagado ao fechar esta conversa.</p></div>';
         if (m !== o) {
           const q = M.scrollTop,
             H = M.scrollHeight - M.clientHeight - q < 40;
@@ -3341,8 +3353,9 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const box=O.querySelector(".wf-chat-attachment");
         if(!box)return;
         box.hidden=!imagemChat;
-        const img=box.querySelector("img");
-        if(imagemChat)img.src=imagemChat.url;else img.removeAttribute("src");
+        const list=box.querySelector("[data-chat-previews]");
+        list.innerHTML=(imagemChat||[]).map((a,i)=>'<div style="display:flex;align-items:center;gap:8px;min-width:0"><img src="'+s(a.url)+'" alt="Gráfico '+(i+1)+'"><span>Gráfico '+(i+1)+'</span><button type="button" data-chat-remove="'+i+'" aria-label="Remover gráfico '+(i+1)+'"'+(ECO.busy||carregandoImagem?' disabled':'')+'>×</button></div>').join("");
+        box.querySelector("[data-chat-count]").textContent=(imagemChat?.length||0)+"/3 gráficos";
       }
       function limparChat(){
         ecoLimpa();imagemChat=null;carregandoImagem=false;
@@ -3356,16 +3369,21 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         }
       }
       async function escolherImagem(input){
-        const file=input.files?.[0];input.value="";
-        if(!file||!l||ECO.busy)return;
-        if(!file.type.startsWith("image/")||file.size>15*1024*1024){ECO.err="Escolha uma imagem de até 15 MB.";i();return;}
+        const files=Array.from(input.files||[]);input.value="";
+        if(!files.length||!l||ECO.busy||carregandoImagem)return;
+        if(files.length+(imagemChat?.length||0)>3){ECO.err="Anexe até 3 gráficos por consulta.";i();return;}
+        if(files.some(file=>!file.type.startsWith("image/")||file.size>15*1024*1024)){ECO.err="Escolha imagens de até 15 MB cada.";i();return;}
         const geracao=ECO.geracao,titular=syncOwner();
-        carregandoImagem=true;ECO.err="";i();
+        carregandoImagem=true;ECO.err="";atualizarAnexo();i();
         try{
-          const anexo=await anxShrink(file);
-          if(!l||ECO.geracao!==geracao||syncOwner()!==titular)return;
-          if(!anexo?.b64||anexo.b64.length>1200000)throw Error("Imagem grande demais. Recorte o gráfico e tente novamente.");
-          imagemChat=anexo;
+          const novos=[];
+          for(const file of files){
+            const anexo=await anxShrink(file);
+            if(!l||ECO.geracao!==geracao||syncOwner()!==titular)return;
+            if(!anexo?.b64||anexo.b64.length>1200000)throw Error("Imagem grande demais. Recorte o gráfico e tente novamente.");
+            novos.push(anexo);
+          }
+          imagemChat=[...(imagemChat||[]),...novos];
         }catch(err){
           if(ECO.geracao===geracao&&syncOwner()===titular)ECO.err=err.message==="img"?"Não consegui abrir a imagem. Use JPG ou PNG.":String(err.message||err);
         }finally{
@@ -3402,8 +3420,8 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Áurea" hidden><header><div><b>✦ Áurea</b><small>Estrategista-chefe · O Conselho</small></div><div class="wf-chat-head-actions"><button type="button" data-chat-clear aria-label="Limpar conversa" title="Limpar conversa"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button><button type="button" data-chat-close aria-label="Fechar conversa">×</button></div></header>
       <div class="wf-chat-history" aria-label="Histórico da conversa"></div><div class="wf-chat-status" role="status" aria-live="polite"></div>
       <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Incluir contexto público da tela</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-context-label"><input type="checkbox" name="privateContext"> Autorizar resumo da carteira ou histórico operacional ao conselheiro (sem notas/fotos)</label><label class="wf-chat-context-label"><input type="checkbox" name="bookContext"> Aplicar livros (até 2 trechos curtos relevantes enviados à IA; arquivos ficam no aparelho)</label>
-      <div class="wf-chat-attachment" hidden><img alt="Prévia do gráfico"><div><b>Imagem anexada</b><small>Gemini, Mistral ou Cloudflare AI ao enviar. Evite dados sensíveis.</small></div><button type="button" data-chat-remove aria-label="Remover imagem">×</button></div>
-      <input type="file" name="photo" accept="image/*" hidden><input type="file" name="camera" accept="image/*" capture="environment" hidden>
+      <div class="wf-chat-attachment" hidden><div style="min-width:0;width:100%"><b data-chat-count>0/3 gráficos</b><div data-chat-previews style="display:flex;flex-wrap:wrap;gap:8px;max-height:100px;overflow-y:auto"></div><small>Gemini, Mistral ou Cloudflare AI ao enviar. Evite dados sensíveis.</small></div></div>
+      <input type="file" name="photo" accept="image/*" multiple hidden><input type="file" name="camera" accept="image/*" capture="environment" hidden>
       <div class="wf-chat-composer"><button type="button" data-chat-photo aria-label="Anexar foto ou gráfico" title="Anexar foto ou gráfico"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><label class="wf-chat-input-label">Sua pergunta<textarea rows="1" maxlength="6000" placeholder="Pergunte à Áurea…"></textarea></label><button type="button" data-chat-camera aria-label="Tirar foto" title="Tirar foto"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg></button><button type="submit" aria-label="Enviar pergunta" title="Enviar"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div>
       <small>Imagens são processadas pelos provedores de IA; não envie dados sensíveis. O histórico do app é apagado ao fechar.</small></form></aside>`),
           document.body.append(r),
@@ -3438,13 +3456,13 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           (O.querySelector("[data-chat-photo]").onclick=()=>O.querySelector('[name="photo"]').click()),
           (O.querySelector("[data-chat-camera]").onclick=()=>O.querySelector('[name="camera"]').click()),
           O.querySelectorAll('input[type="file"]').forEach(f=>f.addEventListener("change",()=>escolherImagem(f))),
-          (O.querySelector("[data-chat-remove]").onclick=()=>{imagemChat=null;atualizarAnexo();i();}),
+          (O.querySelector("[data-chat-previews]").onclick=(ev)=>{const b=ev.target.closest("[data-chat-remove]");if(!b||ECO.busy||carregandoImagem)return;imagemChat=(imagemChat||[]).filter((_,i)=>i!==Number(b.dataset.chatRemove));if(!imagemChat.length)imagemChat=null;atualizarAnexo();i();}),
           (O.querySelector("form").onsubmit = async (E) => {
             E.preventDefault();
             const u=O.querySelector("textarea"),P=u.value.trim(),anexo=imagemChat,geracao=ECO.geracao;
             if((P.length<3&&!anexo)||ECO.busy||carregandoImagem)return;
             if(window.DIARIO_DEMO){ECO.err="Demonstração: a consulta externa está desativada.";i();return;}
-            const pergunta=P||"Analise esta imagem com o Conselho.";
+            const pergunta=P||(anexo.length>1?"Compare os gráficos anexados com o Conselho.":"Analise esta imagem com o Conselho.");
             const m=pergunta+(O.querySelector('[name="context"]').checked?"\n\nContexto autorizado:\n"+F():"");
             u.value="";u.style.removeProperty("--wf-input-h");
             await ecoPergunta(m,{pergunta,imagem:anexo,dadosPrivados:!anexo&&O.querySelector('[name="privateContext"]').checked,livros:O.querySelector('[name="bookContext"]').checked});

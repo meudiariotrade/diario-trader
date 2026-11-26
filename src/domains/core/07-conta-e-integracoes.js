@@ -3482,13 +3482,16 @@ async function aureaCerebro(e, signal) {
   }
 }
 async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[]) {
+  const imagens=Array.isArray(imagem)?imagem:[imagem];
+  if(!imagens.length||imagens.length>3)throw new Error("Anexe de 1 a 3 gráficos.");
+  const payload=imagens.map(x=>({mime:"image/jpeg",data:x.b64}));
   if (!SESS) throw new Error("Entre na sua conta para analisar imagens.");
   await tok();
   if (signal.aborted || syncOwner() !== titular) throw new Error("Consulta cancelada.");
   const r = await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-imagem",{
     method:"POST",credentials:"omit",redirect:"error",cache:"no-store",
     headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},
-    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),imagem:{mime:"image/jpeg",data:imagem.b64},biblioteca:livros})
+    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros})
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.resposta)throw new Error(j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.");
@@ -3498,7 +3501,7 @@ async function ecoPergunta(e, opt) {
   e=String(e||"").trim();opt=opt||{};
   if(ECO.owner!==syncOwner())ecoLimpa();
   if(e.length<3||ECO.busy)return;
-  const rota=opt.imagem?{id:"conselho",tickers:aureaRota(opt.pergunta||e).tickers,motivo:"imagem anexada"}:(opt.rota||aureaRota(opt.pergunta||e)),
+  const rota=opt.imagem?{id:"conselho",tickers:aureaRota(opt.pergunta||e).tickers,motivo:"análise visual anexada"}:(opt.rota||aureaRota(opt.pergunta||e)),
     q=opt.pergunta||e,t=e.match(/https?:\/\/\S+/),a=t?t[0]:"",
     geracao=ECO.geracao,titular=syncOwner(),controller=new AbortController(),
     ativo=()=>ECO.geracao===geracao&&syncOwner()===titular&&!controller.signal.aborted;
@@ -3527,10 +3530,10 @@ async function ecoPergunta(e, opt) {
     }
     if(!ativo())return;
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
-      motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagem:opt.imagem.url}:{})});
+      motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagens:(Array.isArray(opt.imagem)?opt.imagem:[opt.imagem]).map(x=>x.url)}:{})});
     ECO.l=ECO.l.slice(-20);
     let imagens=0;
-    for(let i=ECO.l.length-1;i>=0;i--)if(ECO.l[i].imagem&&++imagens>4)delete ECO.l[i].imagem;
+    for(let i=ECO.l.length-1;i>=0;i--){const m=ECO.l[i],n=m.imagens?.length||(m.imagem?1:0);if(n&&(imagens+=n)>6){delete m.imagens;delete m.imagem;}}
   }catch(o){
     if(ECO.geracao===geracao&&syncOwner()===titular){
       ECO.err=controller.signal.aborted?"A análise demorou demais. Tente novamente.":String(o.message||o);
