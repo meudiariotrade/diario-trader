@@ -43761,11 +43761,12 @@ async function ecoPergunta(e, opt) {
     let resposta=null;
     if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular);
     else {
+      const agregado=opt.dadosPrivados?window.DiarioContextoConselhoV1008?.(rota.id)||"":"";
       if(rota.id==="dow")resposta=await aureaCerebro(q,controller.signal);
       if(!ativo())return;
       if(!resposta){
-        const o=await anxCall({modo:"economista",texto:aureaTexto(e,rota),link:a,
-          hist:ECO.l.slice(-4).map(s=>({p:s.q,r:[s.r.resumo,...(s.r.explicacao||[]).slice(0,2),...(s.por==="conselho"?(s.r.visoes||[]).map(v=>v.escola+": "+v.argumento):[])].join(" ").slice(0,3500)}))
+        const o=await anxCall({modo:"economista",texto:aureaTexto(agregado?e.slice(0,Math.max(500,3200-agregado.length))+agregado:e,rota),link:a,
+          hist:ECO.l.filter(s=>!s.privado||opt.dadosPrivados).slice(-4).map(s=>({p:s.q,r:[s.r.resumo,...(s.r.explicacao||[]).slice(0,2),...(s.por==="conselho"?(s.r.visoes||[]).map(v=>v.escola+": "+v.argumento):[])].join(" ").slice(0,3500)}))
         },{signal:controller.signal});
         if(!o?.resposta)throw new Error(o?.erro||"A Áurea está temporariamente indisponível.");
         resposta=o.resposta;
@@ -43773,7 +43774,7 @@ async function ecoPergunta(e, opt) {
     }
     if(!ativo())return;
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
-      motivo:rota.motivo,tickers:rota.tickers,...(opt.imagem?{imagem:opt.imagem.url}:{})});
+      motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,...(opt.imagem?{imagem:opt.imagem.url}:{})});
     ECO.l=ECO.l.slice(-20);
     let imagens=0;
     for(let i=ECO.l.length-1;i>=0;i--)if(ECO.l[i].imagem&&++imagens>4)delete ECO.l[i].imagem;

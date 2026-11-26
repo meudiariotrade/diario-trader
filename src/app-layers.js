@@ -3356,7 +3356,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       }
       function i() {
         if (!O) return;
-        if(ECO.owner!==syncOwner()){ecoLimpa();imagemChat=null;carregandoImagem=false;O.querySelector("textarea").value="";atualizarAnexo();}
+        if(ECO.owner!==syncOwner()){ecoLimpa();imagemChat=null;carregandoImagem=false;O.querySelector("textarea").value="";O.querySelector('[name="privateContext"]').checked=false;atualizarAnexo();}
         const M = O.querySelector(".wf-chat-history"),
           E = O.querySelector("textarea"),
           u = O.querySelector('[role="status"]'),
@@ -3403,7 +3403,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         ecoLimpa();imagemChat=null;carregandoImagem=false;
         if(O){
           O.querySelector("textarea").value="";
-          O.querySelector('[name="context"]').checked=false;
+          O.querySelector('[name="context"]').checked=false;O.querySelector('[name="privateContext"]').checked=false;
           O.querySelectorAll('input[type="file"]').forEach(f=>f.value="");
           O.querySelector(".wf-chat-history").scrollTop=0;
           O.querySelector("textarea").style.removeProperty("--wf-input-h");
@@ -3456,7 +3456,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           (r.innerHTML = `<button type="button" class="wf-chat-launcher" aria-label="Abrir Áurea" aria-expanded="false" aria-controls="wf-chat-panel"><span aria-hidden="true">✦</span></button>
       <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Áurea" hidden><header><div><b>✦ Áurea</b><small>Estrategista-chefe · O Conselho</small></div><div class="wf-chat-head-actions"><button type="button" data-chat-clear aria-label="Limpar conversa" title="Limpar conversa"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button><button type="button" data-chat-close aria-label="Fechar conversa">×</button></div></header>
       <div class="wf-chat-history" aria-label="Histórico da conversa"></div><div class="wf-chat-status" role="status" aria-live="polite"></div>
-      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Incluir contexto público da tela</label><pre class="wf-chat-context" hidden></pre>
+      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Incluir contexto público da tela</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-context-label"><input type="checkbox" name="privateContext"> Autorizar resumo da carteira ou histórico operacional ao conselheiro (sem notas/fotos)</label>
       <div class="wf-chat-attachment" hidden><img alt="Prévia do gráfico"><div><b>Imagem anexada</b><small>Gemini, Mistral ou Cloudflare AI ao enviar. Evite dados sensíveis.</small></div><button type="button" data-chat-remove aria-label="Remover imagem">×</button></div>
       <input type="file" name="photo" accept="image/*" hidden><input type="file" name="camera" accept="image/*" capture="environment" hidden>
       <div class="wf-chat-composer"><button type="button" data-chat-photo aria-label="Anexar foto ou gráfico" title="Anexar foto ou gráfico"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><label class="wf-chat-input-label">Sua pergunta<textarea rows="1" maxlength="6000" placeholder="Pergunte à Áurea…"></textarea></label><button type="button" data-chat-camera aria-label="Tirar foto" title="Tirar foto"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg></button><button type="submit" aria-label="Enviar pergunta" title="Enviar"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div>
@@ -3502,7 +3502,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
             const pergunta=P||"Analise esta imagem com o Conselho.";
             const m=pergunta+(O.querySelector('[name="context"]').checked?"\n\nContexto autorizado:\n"+F():"");
             u.value="";u.style.removeProperty("--wf-input-h");
-            await ecoPergunta(m,{pergunta,imagem:anexo});
+            await ecoPergunta(m,{pergunta,imagem:anexo,dadosPrivados:!anexo&&O.querySelector('[name="privateContext"]').checked});
             if(!l||geracao!==ECO.geracao)return;
             if(ECO.err)u.value=P;else{imagemChat=null;atualizarAnexo();}
             i();O.querySelector(".wf-chat-history").scrollTop=1e9;
@@ -44562,6 +44562,21 @@ function disciplineSummary(rows){
  return {plan:summary(plan),noSetup:summary(noSetup),outside:summary(outside),
   other:summary(noSetup.concat(outside)),difference:plan.length&&noSetup.length+outside.length?summary(plan).ev-summary(noSetup.concat(outside)).ev:null};
 }
+// v1008: operações encerradas, sem IDs, notas, fotos ou texto livre.
+function contextoAntiTilt(rows){
+ const clean=rows.filter(r=>Number.isFinite(r.pl));
+ const d=disciplineSummary(clean),s=summary(clean);
+ const compact=x=>({n:x.n,resultadoBRL:Math.round(x.net*100)/100,evBRL:x.ev===null?null:Math.round(x.ev*100)/100});
+ let aposLoss=0,aposLossFora=0;
+ for(let i=1;i<clean.length;i++)if(clean[i-1].pl<0&&clean[i-1].exitDate===clean[i].exitDate){aposLoss++;if(discipline(clean[i])==='outside')aposLossFora++;}
+ return {n:s.n,porDisciplina:{plano:compact(d.plan),semSetup:compact(d.noSetup),foraPlano:compact(d.outside)},resultadoBRL:compact(s).resultadoBRL,maiorSequenciaPerdas:s.maxLoss,drawdownBRL:Math.round(s.maxDD*100)/100,aposPerdaMesmoDia:aposLoss,aposPerdaForaPlano:aposLossFora,observacao:'Classificação da auditoria; falta de setup não prova impulsividade. Sequência por encerramento, não prova causalidade.'};
+}
+function contextoAntiTiltAtual(){
+ const rows=scope(records(),'30','all'),out=contextoAntiTilt(rows),hoje=cut(0),dia=typeof S!=='undefined'?S.days?.[hoje]:null;
+ const num=x=>x!==null&&x!==undefined&&x!==''&&Number.isFinite(Number(x))?Number(x):null;
+ const limite=num(dia?.maxP),atual=summary(rows.filter(r=>r.exitDate===hoje));
+ return {...out,janela:'Últimos 30 dias',hoje:{estadoDeclarado:num(dia?.estado),limitePerdaBRL:limite>0?limite:null,resultadoBRL:Math.round(atual.net*100)/100,perdaLiquidaPctLimite:limite>0?Math.round(Math.max(0,-atual.net)/limite*100):null,operacoesEncerradas:atual.n}};
+}
 function monteCarlo(options,count=500,horizon=100,rng=Math.random){
  const {winRate,avgWin,avgLoss,limit}=options;
  if(![winRate,avgWin,avgLoss,limit].every(Number.isFinite)||winRate<0||winRate>100||!(avgWin>0&&avgLoss>0&&limit>0))return null;
@@ -44803,7 +44818,7 @@ const styles=[
 '@media(max-width:550px){#ops-audit-691 .a691-panel{padding:2px 10px 12px}#ops-audit-691 .a691-discipline{grid-template-columns:minmax(85px,1.7fr) repeat(3,minmax(55px,1fr));gap:5px;font-size:10px}#ops-audit-691 .a691-discipline b{font-size:10px}#ops-audit-691 .a691-kpi b{font-size:15px}}'
 ].join('\n');
 const style=d.createElement('style');style.id='ops-audit-style-v691';style.textContent=styles;d.head.appendChild(style);
-w.OperacoesAuditoria691=Object.freeze({brazilStamp,scope,records,summary,groups,discipline,disciplineSummary,monteCarlo,timeslot,weekday,render:mainPanel});
+w.OperacoesAuditoria691=Object.freeze({brazilStamp,scope,records,summary,groups,discipline,disciplineSummary,contextoAntiTilt,contextoAntiTiltAtual,monteCarlo,timeslot,weekday,render:mainPanel});
 })();/* v657 · Laboratório de Economia, apenas Estudos. */
 ;(function(){
 'use strict';
@@ -47739,6 +47754,25 @@ function concentration(snapshot){
   foreignPct:total?foreign/total*100:null,usdPct:total?usd/total*100:null,
   sectors:[...sectors.entries()].sort((a,b)=>b[1]-a[1])};
 }
+// v1008: agregados locais sem alterar metas.
+function contextoConselho(snapshot,saved=null,risk=null){
+ const total=asNum(snapshot?.v),pos=holdings(snapshot||{}).filter(p=>p.v>0);
+ if(!(total>0)||!pos.length)return {lacuna:'Carteira sem posições avaliadas'};
+ const round=n=>Math.round(n*100)/100,weight=v=>round(v/total*100);
+ const c=concentration(snapshot),top=pos.slice().sort((a,b)=>b.v-a.v).slice(0,8);
+ const out={coberturaPct:weight(sum(pos.map(p=>p.v))),classes:groups(snapshot,'class').map(g=>[g.key,round(g.weight)]),maiores:top.map(p=>[p.tk,weight(p.v)]),
+ setores:c.sectors.slice(0,6).map(([k,v])=>[k.slice(0,50),weight(v)]),exteriorPct:round(c.foreignPct),listadoUSPct:round(c.usdPct),cambioAusente:c.missingFx,riscoHistorico:risk||null,metas:null};
+ const mode=saved?.mode==='asset'?'asset':'class',target=saved?.target?.[mode],arr=groups(snapshot,mode);
+ if(target&&arr.length&&arr.every(g=>asNum(target[g.key])!==null&&target[g.key]>=0&&target[g.key]<=100)&&Math.abs(sum(arr.map(g=>+target[g.key]))-100)<=.06){
+  const contrib=asNum(saved.contribution),sim=contrib!==null&&contrib>=0?allocation(arr,target,total,contrib):null;
+  out.metas={origem:'Parâmetros salvos do simulador; confirmar objetivos atuais',modo:mode,desvios:arr.map(g=>({grupo:g.key,peso:round(g.weight),meta:round(+target[g.key]),desvio:round(g.weight-target[g.key]),pesoPosAporte:sim?round(sim.rows.find(r=>r.key===g.key).newWeight):null})).sort((a,b)=>Math.abs(b.desvio)-Math.abs(a.desvio)).slice(0,8),aportePct:contrib!==null&&contrib>=0?weight(contrib):null,horizonteAnos:asNum(saved.years),aporteMensalPct:asNum(saved.monthly)!==null?weight(+saved.monthly):null,rendaMetaMensalPct:asNum(saved.goal)!==null?weight(+saved.goal):null};
+ }
+ return out;
+}
+function contextoAtualConselho(){
+ let saved=null;try{saved=JSON.parse(localStorage.getItem(storageId())||'null')}catch{}
+ return contextoConselho(portfolio(),saved,W.DiarioPainelCarteira?.riscoConselho?.()||null);
+}
 function compound(initial,monthly,annualReal,years){
  if(![initial,monthly,annualReal,years].every(Number.isFinite)||initial<0||monthly<0||annualReal<=-100||years<1||years>60)return null;
  const r=Math.pow(1+annualReal/100,1/12)-1,months=Math.round(years*12);
@@ -48080,7 +48114,7 @@ const css=[
 '@media(max-width:480px){#rebalanceamento-carteira-v694 .rb694-body{padding:0 9px 12px}#rebalanceamento-carteira-v694 .rb694-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#rebalanceamento-carteira-v694 .rb694-metric b{font-size:14px}}'
 ].join('\n');
 const style=D.createElement('style');style.id='rebalanceamento-carteira-style-v694';style.textContent=css;D.head.appendChild(style);
-W.CarteiraGestao694=Object.freeze({groupOf,holdings,groups,allocation,rebalance,yieldMetrics,concentration,compound,content});
+W.CarteiraGestao694=Object.freeze({groupOf,holdings,groups,allocation,rebalance,yieldMetrics,concentration,compound,content,contextoConselho,contextoAtualConselho});
 })();
 /* v697 — Engenharia reversa do Plano de Transição; mantém 5 critérios e divisão 50/30/20. */
 ;(function(){
