@@ -19,6 +19,7 @@ const conselho = new Map([
 export async function generate(env,prompt,edition){
  const base='https://generativelanguage.googleapis.com/v1beta/models/';
  const estruturado=edition==='estudos'||edition==='diario'||edition==='central';
+ // Contrato v996: somente prioridades enumeradas; manter regressões de paridade legada e do snapshot separadas.
  const modoFatos=['manha','meiodia','fechamento','fimdesemana'].includes(edition)&&prompt.startsWith('@aurea-fatos-v996 ');
  const opcoesFatos={exterior:['futuros','commodities','cripto','liquidez'],brasil:['cambio','adrs','futuros','cautela'],riscos:['agenda','liquidez','confirmacao','defasagem']};
  const instruction=modoFatos

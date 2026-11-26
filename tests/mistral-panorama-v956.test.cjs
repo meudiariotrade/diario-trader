@@ -33,7 +33,7 @@ test('v956: sem chave Mistral não chama o provedor e mantém Workers AI',async 
 });
 test('v956: Resumão inclui EWZ, paridade da cesta de ADRs e cripto',()=>{
  const s=fs.readFileSync('src/intelligence/etapa1.js','utf8');
- const a=s.indexOf('function resumoParidadeAdrs()'),b=s.indexOf('function pulsoDoisMercados()',a);
+ const a=s.indexOf('function resumoParidadeAdrs()'),b=s.indexOf('function pulsoDoisMercados(',a);
  assert.ok(a>=0&&b>a);
  const regras=[{s:'PBR',tk:'PETR4',on:'PETR3',razao:2,peso:12},{s:'VALE',tk:'VALE3',razao:1,peso:11.5},{s:'ITUB',tk:'ITUB4',razao:1,peso:7.5},{s:'BBD',tk:'BBDC4',razao:1,peso:3.5},{s:'ABEV',tk:'ABEV3',razao:1,peso:2.8}];
  const ctx={ADR_REGRAS:regras,cotacaoApp:tk=>({USDBRL:{px:5,d1:1},IBOV:{px:160000},PETR3:{px:40},PETR4:{px:36},VALE3:{px:50},ITUB4:{px:30},BBDC4:{px:10},ABEV3:{px:15}}[tk]),state:{mercado:{adrs:[{s:'PBR',px:16,chp:1},{s:'VALE',px:10,chp:1},{s:'ITUB',px:6,chp:1},{s:'BBD',px:2,chp:1},{s:'ABEV',px:3,chp:1}],mercados:{grupos:[{itens:[{n:'EWZ',d1:2,px:30}]}]}}}};
