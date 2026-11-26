@@ -47,3 +47,33 @@ test('v956: dia real e sessão prevalecem sobre edição manual; terça não é 
  assert.equal(ctx.contextoResumao956({b3:{state:'pre'}},ter).domingo,false);assert.equal(ctx.contextoResumao956({b3:{state:'pre'}},ter).b3Fechada,true);assert.equal(ctx.contextoResumao956({b3:{state:'regular'}},ter).b3Fechada,false);assert.equal(ctx.contextoResumao956({b3:{state:'fechado'}},dom).domingo,true);
  assert.doesNotMatch(s,/ed==='fimdesemana'\?' e cuidado com liquidez baixa de domingo/);
 });
+
+
+test('v996: snapshot do Resumão separa futuros, fechamento, cripto, ADR e agenda; IA não escreve fatos',()=>{
+ const s=fs.readFileSync('src/intelligence/etapa1.js','utf8');
+ const start=s.indexOf('function aureaFatos996('),end=s.indexOf('function briefing()',start);
+ assert.ok(start>=0&&end>start);
+ const now=new Date('2026-11-26T00:25:00Z');
+ const c={b3:{state:'post',nextDate:'2026-11-26'},us:{state:'post',nextDate:'2026-11-27'},win:{state:'post'},wdo:{state:'post'},es:{state:'desconhecido'},nq:{state:'desconhecido'},crypto:{state:'regular'}};
+ const q={px:100,chg:2.27,dadoEm:'2026-11-25T21:00:00Z',fonte:'TradingView'};
+ const ctx={w:{tapeDados:()=>({EWZ:q,'BTC-USD':{px:100,chg:2.84,dadoEm:now.toISOString(),fonte:'Binance'}}),DiarioSessoes:{context:()=>c,session:()=>({state:'desconhecido'}),tradingDay:()=>true},TraderAdr:{view:a=>({regular:a.regular,active:null})}},state:{mercado:{mercados:{grupos:[{itens:[{n:'Ouro',px:3603,d1:1.17}]}]},adrs:[{s:'PBR',regular:{px:12,chp:-1,at:'2026-11-25T21:00:00Z'}}]},agenda:{eventos:[{p:'BR',imp:2,t:'Evento confirmado',em:'2026-11-26T13:00:00Z'},{p:'US',imp:2,t:'Outro dia',em:'2026-11-27T13:00:00Z'}]}},sinalNum:v=>String(v)+'%',escape:String};
+ vm.createContext(ctx);vm.runInContext(s.slice(start,end),ctx);
+ const f=ctx.aureaFatos996(now,c);
+ assert.equal(f.all.find(x=>x.id==='EWZ').d,2.27);
+ assert.equal(f.all.find(x=>x.id==='BTC').d,2.84);
+ assert.equal(f.all.find(x=>x.id==='GC').d,null);
+ assert.equal(f.all.find(x=>x.id==='GOLD').d,1.17);
+ assert.equal(f.adrs[0].nome,'PETR3');assert.equal(f.adrs[0].regular.d,-1);
+ assert.equal(f.ewzBrl,null);assert.equal(f.agenda.length,1);
+ assert.equal(ctx.aureaEscolhas996('{"exterior":"futuros","brasil":"adrs","riscos":"agenda","cotacao":123}'),null);
+ assert.ok(ctx.aureaEscolhas996('{"exterior":"futuros","brasil":"adrs","riscos":"agenda"}'));
+ const html=ctx.aureaRender996(f,null,'local');assert.match(html,/Evento confirmado/);assert.doesNotMatch(html,/Outro dia/);assert.match(html,/Agenda da próxima sessão/);
+});
+test('v996: Workers AI rejeita fatos livres no modo protegido, preservando os demais modos',async()=>{
+ const {generate}=await load();
+ const prompt='@aurea-fatos-v996 Escolha prioridades a partir dos dados, sem adicionar valores ou horários novos.';
+ const invalid=await generate({AI:{run:async()=>({response:'O petróleo subiu 3,00% e teremos inflação às 17h, dados que não foram enviados.'})}},prompt,'fechamento');
+ assert.equal(invalid.status,503);
+ const ok=await generate({AI:{run:async()=>({response:'{"exterior":"futuros","brasil":"adrs","riscos":"confirmacao"}'})}},prompt,'fechamento');
+ assert.equal(JSON.parse(ok.text).brasil,'adrs');
+});
