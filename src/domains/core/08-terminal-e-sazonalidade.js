@@ -1288,6 +1288,50 @@ function imgBrent955(snapshot, agora=Date.now()) {
   if(Math.abs((q.px/q.fechamentoAnterior-1)*100-q.d1)>0.08)return null;
   return {...q,s:'BZ=F',fonte:q.source||'TradingView'};
 }
+const imgSimbolosPublicos = {
+  "TIO=F": [
+    "SGX:FEF1!",
+    "COMEX:TIO1!"
+  ],
+  "DCE:I": [
+    "DCE:I1!"
+  ],
+  "CL=F": [
+    "NYMEX:CL1!"
+  ],
+  "ES=F": [
+    "CME_MINI:ES1!"
+  ],
+  "NQ=F": [
+    "CME_MINI:NQ1!"
+  ],
+  "BRL=X": [
+    "FX_IDC:USDBRL"
+  ],
+  "DX-Y.NYB": [
+    "TVC:DXY"
+  ],
+  "^BVSP": [
+    "BMFBOVESPA:IBOV"
+  ],
+  "^N225": [
+    "TVC:NI225"
+  ],
+  "^GDAXI": [
+    "XETR:DAX"
+  ],
+  "GC=F": [
+    "TVC:GOLD"
+  ],
+  "BTC-USD": [
+    "BITSTAMP:BTCUSD",
+    "COINBASE:BTCUSD"
+  ],
+  "ETH-USD": [
+    "BITSTAMP:ETHUSD",
+    "COINBASE:ETHUSD"
+  ]
+};
 function imgQ(e) {
   if(e==='BZ=F'&&IMG.brent955){
     const rows=(MDO.v?.mercados?.grupos||[]).flatMap(g=>g.itens||[]),m=rows.find(q=>q.s===e);
@@ -1295,12 +1339,17 @@ function imgQ(e) {
     if(!valid||!(Date.parse(m.horarioPreco||m.priceAt)>Date.parse(IMG.brent955.horarioPreco||IMG.brent955.priceAt)))return IMG.brent955;
   }
   const t = MDO.v && MDO.v.mercados && MDO.v.mercados.grupos;
-  if (!t) return null;
-  for (const a of t) for (const o of a.itens) if (o.s === e) {
+  const publico = IMG.cotacoesPublicas?.find(q =>
+    (q.s === e || imgSimbolosPublicos[e]?.includes(q.s)) &&
+    Number.isFinite(q.px) && q.px > 0 && !q.suspeito && q.quoteStatus !== "divergente"
+  );
+  for (const a of t || []) for (const o of a.itens || []) if (o.s === e) {
+    if (publico && e !== "BZ=F" && (!Number.isFinite(o.px) || o.px <= 0 || o.suspeito || o.quoteStatus === "divergente" ||
+      Date.parse(publico.horarioPreco || publico.priceAt) > Date.parse(o.horarioPreco || o.priceAt))) return publico;
     const brentSemContrato=e==="BZ=F"&&!/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(o.simboloFonte||"");
     return brentSemContrato||o.suspeito||o.quoteStatus==="divergente"?{...o,d1:null}:o;
   }
-  return null;
+  return e === "BZ=F" ? null : publico || null;
 }
 async function imgDados() {
   // v904: atualizar em paralelo, mas NUNCA impedir a imagem por perda de rede.
@@ -1317,6 +1366,8 @@ async function imgDados() {
     Promise.allSettled(aguardando),
     new Promise(resolve=>setTimeout(resolve,7000))
   ]);
+  IMG.cotacoesPublicas = mercadoPublico955 && !mercadoPublico955.desatualizado && !mercadoPublico955.cacheOffline
+    ? (mercadoPublico955.mercados?.grupos || []).flatMap(g => g.itens || []) : [];
   IMG.brent955=imgBrent955(mercadoPublico955);
   const mercadoOK=!!(MDO.v?.mercados?.grupos?.length);
   const adrsOK=!!(AD.data?.itens?.length);
@@ -1334,6 +1385,9 @@ async function imgDados() {
   const brent=imgQ('BZ=F');
   const semContrato=brent&&!/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(brent.simboloFonte||'');
   const nota=semContrato?'BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO':semHora?'COMMODITIES: HORÁRIO DA FONTE NÃO CONFIRMADO OU REFERÊNCIA ANTERIOR':'';
+  if ([...Object.keys(imgSimbolosPublicos), "BZ=F"].some(s => !Number.isFinite(imgQ(s)?.px))) {
+    IMG.aviso = [IMG.aviso, "COTAÇÕES PARCIAIS · ATIVOS SEM PREÇO DISPONÍVEL"].filter(Boolean).join(" · ");
+  }
   if(nota)IMG.aviso=[IMG.aviso,nota].filter(Boolean).join(' · ');
   return {mercadoOK,adrsOK,aviso:IMG.aviso};
 }
