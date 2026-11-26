@@ -33,7 +33,7 @@ test('EUA: desconto relativo não é margem intrínseca; múltiplos negativos e 
 });
 test('roteamento direto ticker americano e protocolos BR/EUA em todas as lentes Graham',()=>{
  const s=fs.readFileSync('src/domains/core/07-conta-e-integracoes.js','utf8'),r=fs.readFileSync('cloudflare/diario-screeners/aurea-resumao-v904.mjs','utf8');
- const part=s.slice(s.indexOf('function aureaRota('),s.indexOf('const AUREA_METODO_V1007'));
+ const part=s.slice(s.indexOf('// v1016 — simulação'),s.indexOf('const AUREA_METODO_V1007'));
  const c={};vm.createContext(c);vm.runInContext(part,c);assert.equal(c.aureaRota('Analise ticker: AAPL').id,'graham');assert.match(r,/FFO\/AFFO/);assert.match(s,/recompras líquidas/);
 });
 
@@ -42,7 +42,7 @@ test('ticker americano isolado e cashtag não exigem prefixo; sigla não vira a�
  assert.deepEqual(tickersGrahamV1014('AAPL'),[{ticker:'AAPL',market:'US'}]);
  assert.deepEqual(tickersGrahamV1014('Compare $NVDA e VALE3'),[{ticker:'VALE3',market:'BR'},{ticker:'NVDA',market:'US'}]);
  assert.deepEqual(tickersGrahamV1014('ROIC'),[]);
- const s=fs.readFileSync('src/domains/core/07-conta-e-integracoes.js','utf8'),part=s.slice(s.indexOf('function aureaRota('),s.indexOf('const AUREA_METODO_V1007'));const c={};vm.createContext(c);vm.runInContext(part,c);assert.equal(c.aureaRota('AAPL').id,'graham');
+ const s=fs.readFileSync('src/domains/core/07-conta-e-integracoes.js','utf8'),part=s.slice(s.indexOf('// v1016 — simulação'),s.indexOf('const AUREA_METODO_V1007'));const c={};vm.createContext(c);vm.runInContext(part,c);assert.equal(c.aureaRota('AAPL').id,'graham');
 });
 test('capital regulatório e AFFO não são marcados como irrelevantes',async()=>{
  const {perfilGrahamV1014}=await mod;
