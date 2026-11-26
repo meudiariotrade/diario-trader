@@ -1184,12 +1184,16 @@ ${e.be.map((f) => `<line x1="${l(f)}" x2="${l(f)}" y1="10" y2="168" stroke="var(
 <path d="${c(s)}" fill="none" stroke="var(--ac)" stroke-width="1.6" stroke-dasharray="5 3"/><path d="${c(o)}" fill="none" stroke="var(--tx)" stroke-width="2"/>
 ${t && t.x != null && t.pl != null ? `<circle cx="${l(t.x)}" cy="${d(t.pl)}" r="5" fill="#ffffff" stroke="var(--ac)" stroke-width="3"/>` : ""}
 ${m.map((f, x) => `<text x="${l(f)}" y="184" font-size="10" fill="var(--mut)" text-anchor="${x === 0 ? "start" : x === m.length - 1 ? "end" : "middle"}">${opN(f, 2)}</text>`).join("")}</svg>
-<div class="sm mut" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:2px"><span><b style="color:var(--tx)">━</b> no vencimento</span><span><b style="color:var(--ac)">┅</b> hoje</span><span><b style="color:var(--ac)">┆</b> preço do ativo</span>${e.be.length ? "<span>┆ cinza = breakeven</span>" : ""}</div>`;
+<div class="sm mut" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:2px"><span><b style="color:var(--tx)">━</b> no vencimento</span>${s.length?'<span><b style="color:var(--ac)">┅</b> hoje</span>':""}<span><b style="color:var(--ac)">┆</b> preço do ativo</span>${e.be.length ? "<span>┆ cinza = breakeven</span>" : ""}</div>`;
 }
 const OPSIM = {};
 function opPainel(e, t) {
   const a = opResumo(e);
   if (!a) return "";
+  if(e.aureaSimulacao===true){
+    const expiry={...a,agora:[]};
+    return `<div class="idt opp" data-opid="${esc(t)}"><div class="sm mut">Estrutura importada da Grade ao Vivo para conferência. Payoff no vencimento, sem custos; a coleta não garante execução. Volatilidade e juro não foram presumidos nesta visualização.</div><div class="opch">${opGrafico(expiry,null)}</div><div class="ln"><span>Ganho máximo estimado</span><b>${a.ilimG?"ilimitado":opM(a.mx)}</b></div><div class="ln"><span>Perda máxima estimada</span><b>${a.ilimP?"ilimitada":opM(a.mn)}</b></div><div class="ln"><span>Equilíbrio estimado</span><b>${a.be.map(x=>opN(x)).join(" · ")||"–"}</b></div><p class="sm mut">Confira lote, exercício, margem, custos e ofertas. Nenhuma operação registrada automaticamente; cálculos antes do vencimento não estão disponíveis neste rascunho.</p></div>`;
+  }
   const o = OPSIM[t] || { p: 0, d: 0, v: 0 },
     s = Math.max(0, a.dte),
     n = a.S * (1 + o.p / 100),

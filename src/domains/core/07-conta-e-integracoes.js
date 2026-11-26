@@ -3766,9 +3766,9 @@ async function aureaDebateCallV1013(dados,signal,titular){
   if(!r.ok||!j.resultado)throw Error(j.erro||"Rodada do Conselho indisponível.");
   return j;
 }
-async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titular){
+async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titular,gradeOpcoes=null){
   const rf=aureaRendaFixaTemaV1016(pergunta)?aureaRendaFixaLocalV1016(pergunta):null;
-  const dados={pergunta:String(pergunta).slice(0,6000),contexto_publico:String(contexto||"").slice(0,5000),biblioteca:livros,...(rf?{simulacao_rf:rf}:{})};
+  const dados={pergunta:String(pergunta).slice(0,6000),contexto_publico:String(contexto||"").slice(0,5000),biblioteca:livros,...(rf?{simulacao_rf:rf}:{}),...(gradeOpcoes?{grade_opcoes:gradeOpcoes}:{})};
   let rodada,modeloInicial;
   if(resposta){rodada=aureaRodadaVisualV1013(resposta);modeloInicial=resposta.modelo||"";}
   else{
@@ -3787,7 +3787,7 @@ async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titu
 }
 // fim v1013
 
-async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perguntaOriginal=pergunta,debate=false) {
+async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perguntaOriginal=pergunta,debate=false,gradeOpcoes=null) {
   const imagens=Array.isArray(imagem)?imagem:[imagem];
   if(!imagens.length||imagens.length>3)throw new Error("Anexe de 1 a 3 gráficos.");
   const payload=imagens.map(x=>({mime:"image/jpeg",data:x.b64}));
@@ -3797,7 +3797,7 @@ async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perg
   const r = await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-imagem",{
     method:"POST",credentials:"omit",redirect:"error",cache:"no-store",
     headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},
-    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,pergunta_original:String(perguntaOriginal||pergunta).slice(0,6000),debate:debate===true})
+    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,pergunta_original:String(perguntaOriginal||pergunta).slice(0,6000),debate:debate===true,...(gradeOpcoes?{grade_opcoes:gradeOpcoes}:{})})
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.resposta)throw new Error(j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.");
@@ -3853,16 +3853,17 @@ async function ecoPergunta(e, opt) {
   const timer=opt.imagem||debate?setTimeout(()=>controller.abort(),debate?110000:62000):null;
   try {
     let resposta=null,livros=[];
+    const gradeOpcoes=aureaTemaOpcoesV1017(q)?aureaGradeAtualV1017(q):null;
+    const gradeAutorizada=opt.contextoPublico===true?gradeOpcoes:null;
     if(opt.livros===true){
       try{livros=await window.DiarioCerebroIA?.contextoConselho?.(rota.id,q,true,controller.signal)||[];}catch{}
     }
     if(!ativo())return;
     const bloco=window.DiarioCerebroIA?.blocoConselho?.(livros)||"";
-    if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q,debate);
-    else if(debate)resposta=await aureaDeliberarV1013(null,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
+    if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q,debate,gradeAutorizada);
+    else if(debate)resposta=await aureaDeliberarV1013(null,q,e===q?"":e.slice(q.length),livros,controller.signal,titular,gradeAutorizada);
     else if(rota.tema==="opcoes"&&!opt.dadosPrivados&&!a){
-      const g=aureaGradeAtualV1017(q);
-      const j=await aureaDebateCallV1013({fase:"opcoes",lente:rota.id,pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros,simulacao_opcoes:aureaOpcoesLocalV1017(q),grade_opcoes:opt.contextoPublico?g:null},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
+      const j=await aureaDebateCallV1013({fase:"opcoes",lente:rota.id,pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros,simulacao_opcoes:aureaOpcoesLocalV1017(q),grade_opcoes:gradeAutorizada},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
       resposta={...j.resultado,modelo:j.modelo||""};
     }
     else if(rota.tema==="renda_fixa"&&!opt.dadosPrivados&&!a){
@@ -3891,10 +3892,10 @@ async function ecoPergunta(e, opt) {
       }
     }
     if(!ativo())return;
-    if(debate&&opt.imagem)resposta=await aureaDeliberarV1013(resposta,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
+    if(debate&&opt.imagem)resposta=await aureaDeliberarV1013(resposta,q,e===q?"":e.slice(q.length),livros,controller.signal,titular,gradeAutorizada);
     if(!ativo())return;
     if(resposta.fundamentos_v1014?.length)resposta.fundamentos_v1014=aureaCalcularGrahamV1014(resposta.fundamentos_v1014);
-    if(aureaTemaOpcoesV1017(q))resposta.opcoes_v1017={...aureaOpcoesLocalV1017(q),grade:aureaGradeAtualV1017(q)};
+    if(aureaTemaOpcoesV1017(q))resposta.opcoes_v1017={...aureaOpcoesLocalV1017(q),grade:gradeOpcoes};
     if(aureaRendaFixaTemaV1016(q))resposta.renda_fixa_v1016={...(resposta.renda_fixa_v1016||{}),simulacao:aureaRendaFixaLocalV1016(q)};
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
       motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagens:(Array.isArray(opt.imagem)?opt.imagem:[opt.imagem]).map(x=>x.url)}:{})});

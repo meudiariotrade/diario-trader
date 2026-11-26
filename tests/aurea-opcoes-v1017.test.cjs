@@ -14,3 +14,10 @@ test('Grade: combina duas ofertas reais, sem último negócio, strike estimado, 
  const g=c.aureaGradeCandidatasV1017('trava de alta PETR4 alvo: 35',[row],now);assert.equal(g.candidatas.length,1);assert.equal(g.candidatas[0].legs[0].codigo,'PETRA300');assert.equal(g.candidatas[0].legs[1].codigo,'PETRA350');assert.equal(g.candidatas[0].perda_unitaria,1);assert.equal(g.candidatas[0].payoff_alvo,4);assert.equal(c.aureaGradeCandidatasV1017('trava de alta PETR4',[{...row,updated_at:new Date(now-121000).toISOString()}],now).candidatas.length,0);
 });
 test('Grade não cruza conta nem consulta Supabase no adaptador',()=>{const code=src.slice(src.indexOf('// v1017 — adaptador'),src.indexOf('// fim v1017'));assert.match(code,/OPG.owner===String\(SESS.uid\)/);assert.doesNotMatch(code,/\bfetch\(|\brq\(/);assert.match(code,/showSheet\(\)/);assert.match(code,/l.premio===c.legs\[i\]/)});
+
+test('grade autorizada acompanha gráfico e debate; draft usa payoff no vencimento sem hoje/IV presumida',()=>{
+ assert.match(src,/gradeAutorizada=opt.contextoPublico===true\?gradeOpcoes:null/);
+ assert.match(src,/livros,q,debate,gradeAutorizada/);
+ assert.match(src,/titular,gradeAutorizada/);
+ const grade=fs.readFileSync('src/domains/core/09-operacoes-e-estudos.js','utf8');assert.match(grade,/e.aureaSimulacao===true/);assert.match(grade,/expiry=\{\.\.\.a,agora:\[\]\}/);assert.match(grade,/Nenhuma operação registrada automaticamente/);
+});
