@@ -77,3 +77,13 @@ test('v1010: trechos conceituais não interferem na identificação do ticker ne
  fetcher:async(url,opts)=>{const p=JSON.parse(opts.body).contents[0].parts[0].text;assert.match(p,/dados não confiáveis/);assert.match(p,/PETR4 é exemplo/);assert.doesNotMatch(p,/Excedente/);return Response.json({candidates:[{content:{parts:[{text:JSON.stringify(result)}]}}]})}
  });assert.equal(r.status,200);assert.equal(snapshotCalled,1);assert.equal((await r.json()).resposta.pivos.length,2);
 });
+
+test('v1019 gráfico técnico simples não carrega protocolos de commodities, opções e valuation sem pertinência',async()=>{
+ const {aureaImagem}=await mod;
+ const r=await aureaImagem(req({pergunta:'Interprete o cenário técnico de Ibovespa',imagem:{mime:'image/jpeg',data:image}}),env(),{},{auth:async()=>'u',fetcher:async(url,opt)=>{
+ const instruction=JSON.parse(opt.body).systemInstruction.parts[0].text;
+ assert.doesNotMatch(instruction,/OPEP|Trava de alta com calls|DCF somente/);assert.match(instruction,/grafico_parcial/);
+ return Response.json({candidates:[{content:{parts:[{text:JSON.stringify(result)}]}}]});
+ }});
+ assert.equal(r.status,200);
+});
