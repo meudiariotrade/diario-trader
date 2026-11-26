@@ -22,7 +22,7 @@ test('Gemini e reserva Mistral recebem os dois JPEGs na mesma consulta',async()=
 test('rejeita excesso, mistura de contratos e JPEG inválido antes da IA; limite conta imagens',async()=>{
  const {aureaImagem}=await mod;const deps={auth:async()=>'u',fetcher:async()=>{throw Error('Não chamar IA')}};
  for(const b of [{imagens:[a(img),a(img),a(img),a(img)]},{imagens:[a(img)],imagem:a(img)},{imagens:[a(img),a('bad')]}])assert.equal((await aureaImagem(req(b),env,{},deps)).status,400);
- assert.equal((await aureaImagem(req({imagens:[a(img),a(other)]}),{...env,SCREENER_CACHE:{get:async()=>13,put:async()=>{throw Error('Não gravar')}}},{},deps)).status,429);
+ assert.equal((await aureaImagem(req({imagens:[a(img),a(other)]}),{...env,SCREENER_CACHE:{get:async k=>k.endsWith(':concluidas')?99:0,put:async()=>{throw Error('Não gravar')}}},{},deps)).status,429);
 });
 test('interface permite seleção múltipla, remoção individual e envio em memória',()=>{
  const ui=fs.readFileSync('src/domains/layers/01-navegacao-e-fluxos.js','utf8'),core=fs.readFileSync('src/domains/core/07-conta-e-integracoes.js','utf8');
