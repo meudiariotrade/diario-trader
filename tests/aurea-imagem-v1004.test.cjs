@@ -44,9 +44,9 @@ test('v1005: falhas reais dos provedores externos acionam Gemma multimodal, sem 
  const {aureaImagem}=await mod,calls=[];
  const e={...env(),AI:{run:async(model,body)=>{calls.push({model,body});return {choices:[{message:{content:JSON.stringify({...result,observar:'Acompanhar volume'})}}]}}}};
  const r=await aureaImagem(req(),e,{},{auth:async()=>'u',snapshot:async()=>new Response('',{status:503}),fetcher:async(url)=>new Response('',{status:url.includes('googleapis')?503:429})});
- assert.equal(r.status,200);const j=await r.json();assert.equal(calls.length,1);assert.equal(calls[0].model,'@cf/google/gemma-4-26b-a4b-it');
+ assert.equal(r.status,200);const j=await r.json();assert.equal(calls.length,2);assert.equal(calls[0].model,'@cf/google/gemma-4-26b-a4b-it');
  assert.equal(calls[0].body.messages[1].content[1].image_url.url,'data:image/jpeg;base64,'+image);
- assert.equal(calls[0].body.response_format.type,'json_object');assert.match(j.modelo,/Gemma 4/);assert.equal(j.resposta.visoes.length,3);assert.deepEqual(j.resposta.o_que_observar,['Acompanhar volume']);
+ assert.equal(calls[0].body.response_format.type,'json_object');assert.equal(calls[0].body.chat_template_kwargs.enable_thinking,false);assert.equal(typeof calls[1].body.messages[1].content,'string');assert.equal(calls[1].body.chat_template_kwargs.enable_thinking,false);assert.match(j.modelo,/Gemma 4/);assert.equal(j.resposta.visoes.length,3);assert.deepEqual(j.resposta.o_que_observar,['Acompanhar volume']);
 });
 test('v1005: esgotamento dos modelos retorna diagnóstico limitado, não inventa análise nem vaza resposta do provedor',async()=>{
  const {aureaImagem}=await mod,e={...env(),AI:{run:async()=>{throw Error('secret never expose')}}};
@@ -86,4 +86,13 @@ test('v1019 gráfico técnico simples não carrega protocolos de commodities, op
  return Response.json({candidates:[{content:{parts:[{text:JSON.stringify(result)}]}}]});
  }});
  assert.equal(r.status,200);
+});
+
+
+test('v1020: preserva leitura e pivôs se aprofundamento falhar; sem reenviar pixels',async()=>{
+ const {aureaImagem}=await mod;let calls=0;const e={...env(),AI:{run:async(model,body)=>{calls++;if(calls===1)return {choices:[{message:{content:JSON.stringify(result)}}]};assert.equal(typeof body.messages[1].content,'string');assert.ok(!body.messages[1].content.includes('data:image/jpeg'));throw Error('falha');}}};
+ const r=await aureaImagem(req(),e,{},{auth:async()=>'u',snapshot:async()=>new Response('',{status:503}),fetcher:async()=>new Response('',{status:503})});assert.equal(r.status,200);const j=await r.json();assert.equal(calls,2);assert.equal(j.resposta.pivos.length,2);assert.match(j.resposta.explicacao[0],/Leitura visual preservada/);
+});
+test('v1020: identifica truncamento real sem expor resposta bruta',async()=>{
+ const {aureaImagem}=await mod;const e={...env(),AI:{run:async()=>({choices:[{finish_reason:'length',message:{content:'SEGREDO'}}]})}};const r=await aureaImagem(req(),e,{},{auth:async()=>'u',snapshot:async()=>new Response('',{status:503}),fetcher:async()=>new Response('',{status:503})});assert.equal(r.status,503);const j=await r.json();assert.ok(j.diagnostico.includes('Gemma 4 resposta truncada'));assert.doesNotMatch(JSON.stringify(j),/SEGREDO/);
 });
