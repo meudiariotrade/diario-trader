@@ -3272,7 +3272,7 @@ Gerar usando os dados disponíveis, com o aviso de falha/consulta anterior na im
         j,
         O,
         G = "",
-        o = "";
+        o = "", imagemChat=null, carregandoImagem=false;
       function F() {
         const M = [`Tela aberta: ${tab}.`];
         return (
@@ -3296,6 +3296,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const por = M.por || "",
           tk = Array.isArray(M.tickers) && M.tickers.length ? M.tickers[0] : "",
           m = typeof AUREA < "u" && AUREA.membros[por];
+        if (por === "conselho") return `<div class="wf-aurea-route"><b>Áurea · O Conselho</b> · análise da imagem</div>`;
         if (!m) return "";
         const chip = `<div class="wf-aurea-route" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:6px 0 8px;padding:6px 10px;border-radius:10px;border:1px solid rgba(201,166,107,.28);background:rgba(201,166,107,.07);font-size:12px"><span>✦ <b>Áurea → ${s(m.nome)}</b> · ${s(m.papel)}</span>`;
         let btn = "";
@@ -3317,7 +3318,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       }
       function e(M) {
         const E = M.r || {};
-        return `<article class="wf-chat-message"><p class="wf-chat-question">${s(M.q)}</p>${aureaAcao(M)}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}
+        return `<article class="wf-chat-message"><p class="wf-chat-question">${s(M.q)}</p>${M.imagem ? `<figure class="wf-chat-sent-image"><img src="${s(M.imagem)}" alt="Imagem anexada à pergunta"></figure>` : ""}${aureaAcao(M)}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}
       ${N("Fatos apresentados pelo modelo — confira as fontes", E.fatos)}
       ${N(
         "Impactos descritos",
@@ -3331,24 +3332,22 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         ),
       )}
       ${N("O que observar", E.o_que_observar)}${E.contraponto ? `<p><b>Contraponto:</b> ${s(E.contraponto)}</p>` : ""}
-      ${N(
-        "Visões",
-        E.visoes?.map((u) => `${u.escola}: ${u.argumento}`),
-      )}${N(
+      ${M.por === "conselho" ? (E.visoes || []).map(v=>`<section class="wf-chat-parecer"><b>${s(v.escola)}</b><p>${s(v.argumento)}</p></section>`).join("") : N("Visões", E.visoes?.map((u) => `${u.escola}: ${u.argumento}`))}${N(
         "Glossário",
         E.glossario?.map((u) => `${u.termo}: ${u.significado}`),
       )}
-      ${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA</small></article>`;
+      ${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
       }
       function i() {
         if (!O) return;
+        if(ECO.owner!==syncOwner()){ecoLimpa();imagemChat=null;carregandoImagem=false;O.querySelector("textarea").value="";atualizarAnexo();}
         const M = O.querySelector(".wf-chat-history"),
           E = O.querySelector("textarea"),
           u = O.querySelector('[role="status"]'),
           P = O.querySelector('[type="submit"]'),
           m = ECO.l.length
             ? ECO.l.map(e).join("")
-            : '<p class="wf-chat-empty">Pergunte sobre notícias, empresas, fosso competitivo (7 Powers), gráficos, carteira ou estudos. A <b>Áurea</b> direciona automaticamente para <b>Schwartz, Graham, Helmer, Livermore, Munger, Markowitz, Dalio ou Dow</b> (ou digite <code>@nome</code>).</p>';
+            : '<div class="wf-chat-empty"><b>O que vamos analisar hoje?</b><p>Envie uma pergunta, uma tese ou um gráfico. A Áurea organiza os pareceres do Conselho; para fundamentos, indique o ticker (ex.: VALE3 ou ticker: AAPL).</p><p>O histórico é apagado ao fechar esta conversa.</p></div>';
         if (m !== o) {
           const q = M.scrollTop,
             H = M.scrollHeight - M.clientHeight - q < 40;
@@ -3361,32 +3360,91 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         ((u.textContent = ECO.busy
           ? rotaNome
             ? `Áurea encaminhou para ${rotaNome}… preparando resposta`
-            : "Áurea está preparando a resposta…"
+            : ECO.rota?.id==="conselho" ? "Áurea está consultando o Conselho…" : "Áurea está preparando a resposta…"
           : ECO.err || ""),
-          (P.disabled = !!ECO.busy),
+          (P.disabled = !!ECO.busy || carregandoImagem),
           (E.disabled = !!ECO.busy));
+        O.querySelectorAll("[data-chat-photo],[data-chat-camera]").forEach(b=>b.disabled=!!ECO.busy||carregandoImagem);
         const c = O.querySelector(".wf-chat-context");
         ((c.textContent = F()),
           (c.hidden = !O.querySelector('[name="context"]').checked));
       }
+      function ajustarViewport(){
+        if(!l||!O)return;
+        const v=window.visualViewport;
+        O.style.setProperty("--wf-chat-vh",Math.round(v?.height||innerHeight)+"px");
+        O.style.setProperty("--wf-chat-top",Math.max(0,Math.round(v?.offsetTop||0))+"px");
+      }
+      function atualizarAnexo(){
+        if(!O)return;
+        const box=O.querySelector(".wf-chat-attachment");
+        if(!box)return;
+        box.hidden=!imagemChat;
+        const img=box.querySelector("img");
+        if(imagemChat)img.src=imagemChat.url;else img.removeAttribute("src");
+      }
+      function limparChat(){
+        ecoLimpa();imagemChat=null;carregandoImagem=false;
+        if(O){
+          O.querySelector("textarea").value="";
+          O.querySelector('[name="context"]').checked=false;
+          O.querySelectorAll('input[type="file"]').forEach(f=>f.value="");
+          O.querySelector(".wf-chat-history").scrollTop=0;
+          O.querySelector("textarea").style.removeProperty("--wf-input-h");
+          o="";atualizarAnexo();i();
+        }
+      }
+      async function escolherImagem(input){
+        const file=input.files?.[0];input.value="";
+        if(!file||!l||ECO.busy)return;
+        if(!file.type.startsWith("image/")||file.size>15*1024*1024){ECO.err="Escolha uma imagem de até 15 MB.";i();return;}
+        const geracao=ECO.geracao,titular=syncOwner();
+        carregandoImagem=true;ECO.err="";i();
+        try{
+          const anexo=await anxShrink(file);
+          if(!l||ECO.geracao!==geracao||syncOwner()!==titular)return;
+          if(!anexo?.b64||anexo.b64.length>1200000)throw Error("Imagem grande demais. Recorte o gráfico e tente novamente.");
+          imagemChat=anexo;
+        }catch(err){
+          if(ECO.geracao===geracao&&syncOwner()===titular)ECO.err=err.message==="img"?"Não consegui abrir a imagem. Use JPG ou PNG.":String(err.message||err);
+        }finally{
+          if(l&&ECO.geracao===geracao&&syncOwner()===titular){carregandoImagem=false;atualizarAnexo();i();}
+        }
+      }
       function B(M) {
-        ((l = M),
-          (O.hidden = !M),
-          j.setAttribute("aria-expanded", String(M)),
-          window.TraderUI.refreshScroll(),
-          M
-            ? (i(), O.querySelector("textarea").focus({ preventScroll: !0 }))
-            : (document.querySelector("#dt393-global-head [data-ia-topo]") || j).focus({ preventScroll: !0 }),
-          document.querySelectorAll("[data-ia-topo]").forEach((b) => b.setAttribute("aria-expanded", String(M))));
+        const estava=l;
+        l=M;O.hidden=!M;
+        if(M){
+          if(!estava){
+            window.visualViewport?.addEventListener("resize",ajustarViewport);
+            window.visualViewport?.addEventListener("scroll",ajustarViewport);
+            window.addEventListener("resize",ajustarViewport);
+          }
+          ajustarViewport();i();
+          if(!matchMedia("(max-width:760px)").matches)O.querySelector("textarea").focus({preventScroll:true});
+        }else{
+          window.visualViewport?.removeEventListener("resize",ajustarViewport);
+          window.visualViewport?.removeEventListener("scroll",ajustarViewport);
+          window.removeEventListener("resize",ajustarViewport);
+          if(estava){G="";limparChat();}
+          (document.querySelector("#dt393-global-head [data-ia-topo]")||j).focus({preventScroll:true});
+        }
+        j.setAttribute("aria-expanded",String(M));
+        window.TraderUI.refreshScroll();
+        document.querySelectorAll("[data-ia-topo]").forEach(b=>b.setAttribute("aria-expanded",String(M)));
       }
       function Y() {
         if (r) return;
         ((r = document.createElement("div")),
           (r.id = "economista-flutuante"),
           (r.innerHTML = `<button type="button" class="wf-chat-launcher" aria-label="Abrir Áurea" aria-expanded="false" aria-controls="wf-chat-panel"><span aria-hidden="true">✦</span></button>
-      <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Áurea" hidden><header><div><b>✦ Áurea</b><small>Estrategista-chefe · preside O Conselho</small></div><button type="button" data-chat-close aria-label="Minimizar conversa">−</button></header>
+      <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Áurea" hidden><header><div><b>✦ Áurea</b><small>Estrategista-chefe · O Conselho</small></div><div class="wf-chat-head-actions"><button type="button" data-chat-clear aria-label="Limpar conversa" title="Limpar conversa"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button><button type="button" data-chat-close aria-label="Fechar conversa">×</button></div></header>
       <div class="wf-chat-history" aria-label="Histórico da conversa"></div><div class="wf-chat-status" role="status" aria-live="polite"></div>
-      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Anexar tela, ativo e indicadores públicos, sem saldos ou textos do diário</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-input-label">Sua pergunta<textarea rows="2" maxlength="6000" placeholder="Pergunte sobre macro, ativos, 7 Powers, gráficos ou carteira… (ou @helmer, @graham, @munger)"></textarea></label><div class="wf-chat-actions"><button type="button" data-chat-clear>Limpar conversa</button><button type="submit">Enviar</button></div><small>Áurea direciona cada pergunta ao especialista certo do Conselho. Respostas podem conter erros; confirme fontes e datas.</small></form></aside>`),
+      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Incluir contexto público da tela</label><pre class="wf-chat-context" hidden></pre>
+      <div class="wf-chat-attachment" hidden><img alt="Prévia do gráfico"><div><b>Imagem anexada</b><small>Gemini/Mistral ao enviar. Evite dados sensíveis.</small></div><button type="button" data-chat-remove aria-label="Remover imagem">×</button></div>
+      <input type="file" name="photo" accept="image/*" hidden><input type="file" name="camera" accept="image/*" capture="environment" hidden>
+      <div class="wf-chat-composer"><button type="button" data-chat-photo aria-label="Anexar foto ou gráfico" title="Anexar foto ou gráfico"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><label class="wf-chat-input-label">Sua pergunta<textarea rows="1" maxlength="6000" placeholder="Pergunte à Áurea…"></textarea></label><button type="button" data-chat-camera aria-label="Tirar foto" title="Tirar foto"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg></button><button type="submit" aria-label="Enviar pergunta" title="Enviar"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div>
+      <small>Imagens são processadas pelos provedores de IA; não envie dados sensíveis. O histórico do app é apagado ao fechar.</small></form></aside>`),
           document.body.append(r),
           (j = r.querySelector(".wf-chat-launcher")),
           (O = r.querySelector("aside")),
@@ -3415,37 +3473,25 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           }),
           (O.querySelector("[data-chat-close]").onclick = () => B(!1)),
           (O.querySelector('[name="context"]').onchange = i),
-          (O.querySelector("[data-chat-clear]").onclick = () => {
-            ECO.busy ||
-              !confirm(
-                "Limpar apenas o histórico da Áurea neste aparelho?",
-              ) ||
-              ((ECO.l = []), (ECO.err = ""), ecoSalva(), i());
-          }),
+          (O.querySelector("[data-chat-clear]").onclick = () => limparChat()),
+          (O.querySelector("[data-chat-photo]").onclick=()=>O.querySelector('[name="photo"]').click()),
+          (O.querySelector("[data-chat-camera]").onclick=()=>O.querySelector('[name="camera"]').click()),
+          O.querySelectorAll('input[type="file"]').forEach(f=>f.addEventListener("change",()=>escolherImagem(f))),
+          (O.querySelector("[data-chat-remove]").onclick=()=>{imagemChat=null;atualizarAnexo();i();}),
           (O.querySelector("form").onsubmit = async (E) => {
             E.preventDefault();
-            const u = O.querySelector("textarea"),
-              P = u.value.trim();
-            if (P.length < 3 || ECO.busy) return;
-            if (window.DIARIO_DEMO) {
-              ((ECO.err = "Demonstração: a consulta externa está desativada."),
-                i());
-              return;
-            }
-            const m =
-              P +
-              (O.querySelector('[name="context"]').checked
-                ? `
-
-Contexto autorizado:
-` + F()
-                : "");
-            ((u.value = ""),
-              await ecoPergunta(m, { pergunta: P }),
-              ECO.err && (u.value = P),
-              i(),
-              (O.querySelector(".wf-chat-history").scrollTop = 1e9));
+            const u=O.querySelector("textarea"),P=u.value.trim(),anexo=imagemChat,geracao=ECO.geracao;
+            if((P.length<3&&!anexo)||ECO.busy||carregandoImagem)return;
+            if(window.DIARIO_DEMO){ECO.err="Demonstração: a consulta externa está desativada.";i();return;}
+            const pergunta=P||"Analise esta imagem com o Conselho.";
+            const m=pergunta+(O.querySelector('[name="context"]').checked?"\n\nContexto autorizado:\n"+F():"");
+            u.value="";u.style.removeProperty("--wf-input-h");
+            await ecoPergunta(m,{pergunta,imagem:anexo});
+            if(!l||geracao!==ECO.geracao)return;
+            if(ECO.err)u.value=P;else{imagemChat=null;atualizarAnexo();}
+            i();O.querySelector(".wf-chat-history").scrollTop=1e9;
           }),
+          O.querySelector("textarea").addEventListener("input",()=>{const u=O.querySelector("textarea");u.style.setProperty("--wf-input-h","44px");u.style.setProperty("--wf-input-h",Math.min(92,Math.max(44,u.scrollHeight))+"px");}),
           O.querySelector("textarea").addEventListener("keydown", (E) => {
             E.key === "Enter" &&
               (E.ctrlKey || E.metaKey) &&
