@@ -3570,7 +3570,46 @@ async function aureaValidarHistoricoV1012(resposta,pergunta,signal){
 }
 // fim v1012
 
-async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perguntaOriginal=pergunta) {
+// v1013 — Rodadas explícitas, não agentes independentes. Nenhuma chamada em segundo plano.
+const AUREA_LENTES_V1013={livermore:"Livermore · Técnico",graham:"Graham · Fundamentalista",munger:"Munger · Crítico de teses",markowitz:"Markowitz · Carteira",schwartz:"Schwartz · Macro e agenda",dalio:"Dalio · Geopolítica e dívida",helmer:"Helmer · Estratégia",dow:"Dow · Estudos"};
+function aureaRodadaVisualV1013(r){
+  const visoes=Array.isArray(r.visoes)?r.visoes:[];
+  return {resumo:String(r.resumo||"Leitura visual inicial").slice(0,1500),pareceres:Object.entries(AUREA_LENTES_V1013).map(([id,escola])=>{
+    const v=visoes.find(x=>String(x.escola||"").toLowerCase().startsWith(id)),argumento=String(v?.argumento||"Parecer específico indisponível").slice(0,900);
+    const lacuna=!v||/^(Sem fundamentos|Parecer específico não fornecido|Parecer específico indisponível)/i.test(argumento);
+    return {id,escola,status:lacuna?"lacuna":"parecer",argumento,base:lacuna?"Dados específicos insuficientes":"Parecer visual da IA; não equivale a evidência independente"};
+  })};
+}
+async function aureaDebateCallV1013(dados,signal,titular){
+  if(!SESS)throw Error("Entre na sua conta para consultar o Conselho.");
+  await tok();
+  if(signal.aborted||syncOwner()!==titular)throw Error("Consulta cancelada.");
+  const r=await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-debate",{method:"POST",credentials:"omit",redirect:"error",cache:"no-store",signal,headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},body:JSON.stringify(dados)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.resultado)throw Error(j.erro||"Rodada do Conselho indisponível.");
+  return j;
+}
+async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titular){
+  const dados={pergunta:String(pergunta).slice(0,6000),contexto_publico:String(contexto||"").slice(0,5000),biblioteca:livros};
+  let rodada,modeloInicial;
+  if(resposta){rodada=aureaRodadaVisualV1013(resposta);modeloInicial=resposta.modelo||"";}
+  else{
+    const j=await aureaDebateCallV1013({...dados,fase:"pareceres"},AbortSignal.any([signal,AbortSignal.timeout(38000)]),titular);
+    rodada=j.resultado;modeloInicial=j.modelo||"";
+    resposta={titulo:"Parecer inicial do Conselho",resumo:rodada.resumo,visoes:rodada.pareceres.map(p=>({escola:p.escola,argumento:p.argumento+" — Base: "+p.base})),modelo:modeloInicial};
+  }
+  if(signal.aborted||syncOwner()!==titular)return resposta;
+  const visual=resposta.tipo_imagem?JSON.stringify({estrutura:resposta.estrutura,validacao_ohlc:resposta.validacao_ohlc,pivos:resposta.pivos,graficos:resposta.graficos,fatos:resposta.fatos,comparacao:resposta.comparacao}).slice(0,7000):"";
+  try{
+    const j=await aureaDebateCallV1013({...dados,fase:"debate",rodada,relatorio_visual:visual},AbortSignal.any([signal,AbortSignal.timeout(38000)]),titular);
+    return {...resposta,debate:{...j.resultado,modelo_inicial:modeloInicial,modelo_sintese:j.modelo||"",status:"concluido"}};
+  }catch{
+    return {...resposta,debate:{status:"parcial",motivo:"A segunda rodada não foi concluída. Os pareceres iniciais foram preservados; não há síntese de debate."}};
+  }
+}
+// fim v1013
+
+async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perguntaOriginal=pergunta,debate=false) {
   const imagens=Array.isArray(imagem)?imagem:[imagem];
   if(!imagens.length||imagens.length>3)throw new Error("Anexe de 1 a 3 gráficos.");
   const payload=imagens.map(x=>({mime:"image/jpeg",data:x.b64}));
@@ -3580,7 +3619,7 @@ async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perg
   const r = await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-imagem",{
     method:"POST",credentials:"omit",redirect:"error",cache:"no-store",
     headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},
-    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros})
+    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,debate:debate===true})
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.resposta)throw new Error(j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.");
@@ -3590,13 +3629,14 @@ async function ecoPergunta(e, opt) {
   e=String(e||"").trim();opt=opt||{};
   if(ECO.owner!==syncOwner())ecoLimpa();
   if(e.length<3||ECO.busy)return;
-  const rota=opt.imagem?{id:"conselho",tickers:aureaRota(opt.pergunta||e).tickers,motivo:"análise visual anexada"}:(opt.rota||aureaRota(opt.pergunta||e)),
+  const debate=opt.debate===true&&!opt.dadosPrivados;
+  const rota=opt.imagem||debate?{id:"conselho",tickers:aureaRota(opt.pergunta||e).tickers,motivo:debate?"debate solicitado":"análise visual anexada"}:(opt.rota||aureaRota(opt.pergunta||e)),
     q=opt.pergunta||e,t=e.match(/https?:\/\/\S+/),a=t?t[0]:"",
     geracao=ECO.geracao,titular=syncOwner(),controller=new AbortController(),
     ativo=()=>ECO.geracao===geracao&&syncOwner()===titular&&!controller.signal.aborted;
   ECO.controller=controller;
   ECO.busy=1;ECO.err="";ECO.rascunho="";ECO.rota=rota;ecoPaint();
-  const timer=opt.imagem?setTimeout(()=>controller.abort(),62000):null;
+  const timer=opt.imagem||debate?setTimeout(()=>controller.abort(),debate?110000:62000):null;
   try {
     let resposta=null,livros=[];
     if(opt.livros===true){
@@ -3604,7 +3644,8 @@ async function ecoPergunta(e, opt) {
     }
     if(!ativo())return;
     const bloco=window.DiarioCerebroIA?.blocoConselho?.(livros)||"";
-    if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q);
+    if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q,debate);
+    else if(debate)resposta=await aureaDeliberarV1013(null,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
     else {
       const agregado=opt.dadosPrivados?window.DiarioContextoConselhoV1008?.(rota.id)||"":"";
       // Dow também respeita o consentimento e o mesmo limite de trechos das demais lentes.
@@ -3617,6 +3658,8 @@ async function ecoPergunta(e, opt) {
         resposta=o.resposta;
       }
     }
+    if(!ativo())return;
+    if(debate&&opt.imagem)resposta=await aureaDeliberarV1013(resposta,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
     if(!ativo())return;
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
       motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagens:(Array.isArray(opt.imagem)?opt.imagem:[opt.imagem]).map(x=>x.url)}:{})});
