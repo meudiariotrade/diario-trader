@@ -108,11 +108,11 @@
    const j=await api({acao:'gerar',modo:'perguntar',tema:q});const r=j.resultado||{};hora(3);
    return out('perg','<div class="ce845-res"><p>'+esc(r.resposta)+'</p>'+(Array.isArray(r.citacoes)&&r.citacoes.length?'<h4>Trechos citados</h4><ul class="ce845-cit">'+r.citacoes.map(c=>'<li><b>'+esc(c.obra)+'</b><q>'+esc(c.trecho)+'</q></li>').join('')+'</ul>':'')+(r.lacuna?'<p class="cb842-mut">Não coberto pela biblioteca: '+esc(r.lacuna)+'</p>':'')+fontes(j)+'</div>')}
  }
- const CATS=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Economia','Gestao_Risco'];
+ const CATS=['Analise_Tecnica','Fibonaccing','Price_Action','Fundamentalista','Fatos_Relevantes_Macro','Economia','Gestao_Risco','Opcoes'];
  function cobHtml(){if(!cob)return '';const max=Math.max(1,...CATS.map(c=>cob.categorias?.[c]||0));
   const obras=Object.entries(cob.obras||{}).sort((a,b)=>b[1]-a[1]).slice(0,15);
   return '<table class="cb842-tb ce845-cob"><thead><tr><th>Tema</th><th>Trechos</th></tr></thead><tbody>'+CATS.map(c=>{const n=cob.categorias?.[c]||0,p=n/max;
-   return '<tr><td>'+c.replace(/_/g,' ')+'</td><td><span class="cb842-bar"><i style="width:'+Math.round(p*100)+'%" class="'+(n>=60?'ok':n>=15?'at':'neg')+'"></i></span>'+n+'</td></tr>'}).join('')+'</tbody></table>'+
+   return '<tr><td>'+(c==='Opcoes'?'Opções':c.replace(/_/g,' '))+'</td><td><span class="cb842-bar"><i style="width:'+Math.round(p*100)+'%" class="'+(n>=60?'ok':n>=15?'at':'neg')+'"></i></span>'+n+'</td></tr>'}).join('')+'</tbody></table>'+
    '<p class="cb842-mut">'+(cob.total||0)+' trechos no total. Temas com barra vermelha têm pouco material: a IA erra mais neles.</p>'+
    (obras.length?'<details><summary>Trechos por obra</summary><table class="cb842-tb"><tbody>'+obras.map(([t,n])=>'<tr><td>'+esc(t)+'</td><td class="ce845-num">'+n+'</td></tr>').join('')+'</tbody></table></details>':'');}
  const fontes=j=>Array.isArray(j.fontes)&&j.fontes.length?'<p class="ce845-fonte">Fontes: '+j.fontes.map(esc).join(', ')+'</p>':'';

@@ -1,5 +1,6 @@
 import {autenticarUsuario} from './auth-jwks-v924.mjs';
 import {generate} from './aurea-resumao-v904.mjs';
+import {PROTOCOLO_OPCOES_V1017} from './aurea-opcoes-v1017.mjs';
 import {carregarRendaFixaV1016,PROTOCOLO_RF_V1016} from './aurea-renda-fixa-v1016.mjs';
 import {carregarCommoditiesV1015,PROTOCOLO_COMMODITIES_V1015} from './aurea-commodities-v1015.mjs';
 import {carregarGrahamV1014,PROTOCOLO_GRAHAM_V1014} from './graham-fundamentos-v1014.mjs';
@@ -52,6 +53,12 @@ export function normalizarRendaFixaParecerV1016(raw){
  const arr=x=>(Array.isArray(x)?x:[]).slice(0,10).map(safe).filter(Boolean);
  return {titulo:'Markowitz · Renda fixa e gestão de caixa',resumo:safe(raw.resumo),explicacao:arr(raw.explicacao),o_que_observar:arr(raw.o_que_observar),lacunas:arr(raw.lacunas)};
 }
+export function normalizarOpcoesParecerV1017(raw,lente){
+ if(!obj(raw)||txt(raw.resumo,1500).length<15)return null;
+ const safe=x=>{const s=txt(x,1000);return /\d/.test(s)?'Referência numérica não validada; confira os insumos e a simulação local.':s;};
+ const arr=x=>(Array.isArray(x)?x:[]).slice(0,10).map(safe).filter(Boolean);
+ return {titulo:(LENTES[lente]||'Livermore · Técnico')+' · Estratégias com opções',resumo:safe(raw.resumo),explicacao:arr(raw.explicacao),o_que_observar:arr(raw.o_que_observar),lacunas:arr(raw.lacunas)};
+}
 async function bounded(req){
  if(Number(req.headers.get('Content-Length')||0)>MAX)throw Error('size');
  const reader=req.body?.getReader();if(!reader)throw Error('json');
@@ -67,7 +74,7 @@ export async function debateV1013(request,env,deps={}){
  if(!user)return json({erro:'Entre na sua conta novamente'},401);
  let b;try{b=await bounded(request)}catch(e){return json({erro:'Corpo inválido ou grande demais'},e.message==='size'?413:400)}
  const pergunta=txt(b?.pergunta,6000),fase=b?.fase;
- if(pergunta.length<3||!['pareceres','debate','graham','commodities','renda_fixa'].includes(fase))return json({erro:'Consulta inválida'},400);
+ if(pergunta.length<3||!['pareceres','debate','graham','commodities','renda_fixa','opcoes'].includes(fase))return json({erro:'Consulta inválida'},400);
  const rodada=fase==='debate'?normalizarRodadaV1013(b.rodada):null;
  if(fase==='debate'&&!rodada)return json({erro:'Pareceres iniciais inválidos'},400);
  if(!env.SCREENER_CACHE)return json({erro:'Controle de uso indisponível'},503);
@@ -80,13 +87,13 @@ export async function debateV1013(request,env,deps={}){
  const commodities=await carregarCommoditiesV1015(pergunta,deps.commoditiesFetch||fetch);
  const rf=await carregarRendaFixaV1016(pergunta,deps.jurosFetch||fetch);
  const lente=['schwartz','dalio','livermore','markowitz','munger'].includes(b.lente)?b.lente:fase==='renda_fixa'?'markowitz':'schwartz';
- const contexto={pergunta,perfis,commodities,lente,renda_fixa:rf,simulacao_rf:rf?txt(JSON.stringify(b.simulacao_rf||{}),5000):'',contexto_publico:txt(b.contexto_publico,5000),biblioteca,...(rodada?{rodada,relatorio_visual:txt(b.relatorio_visual,7000)}:{})};
+ const contexto={pergunta,perfis,commodities,lente,simulacao_opcoes:fase==='opcoes'?txt(JSON.stringify(b.simulacao_opcoes||{}),5000):'',grade_opcoes:['opcoes','pareceres','debate'].includes(fase)&&b.grade_opcoes?txt(JSON.stringify(b.grade_opcoes),6500):'',renda_fixa:rf,simulacao_rf:rf?txt(JSON.stringify(b.simulacao_rf||{}),5000):'',contexto_publico:txt(b.contexto_publico,5000),biblioteca,...(rodada?{rodada,relatorio_visual:txt(b.relatorio_visual,7000)}:{})};
  if(request.signal.aborted)return json({erro:'Consulta cancelada'},499);
- let gen;try{gen=await (deps.generate||generate)(env,SYS+PROTOCOLO_GRAHAM_V1014+' '+PROTOCOLO_COMMODITIES_V1015+' '+PROTOCOLO_RF_V1016+' '+(fase==='renda_fixa'?'Responda pela lente indicada em resultado {"resumo":"veredito condicionado aos dados","explicacao":["objetivo, liquidez, risco, retorno, tributação, alternativas BR/EUA"],"o_que_observar":["cenários de juros, condições para adequação e invalidação"],"lacunas":["dados da proposta faltantes"]}. Sem números na prosa; o cliente exibe dados e cálculos.':fase==='commodities'?'Responda pela lente indicada, com resultado {"resumo":"tese condicional","explicacao":["vetores, oferta e demanda, impacto, cenários"],"o_que_observar":["gatilho, invalidação e dados a buscar"],"lacunas":["evidência ausente"]}. Não inclua números no texto; as referências ficam em tabela separada.':fase==='graham'?'Responda com resultado {"resumo":"tese própria qualitativa","explicacao":["qualidade, caixa, dívida, crescimento, valuation condicional"],"o_que_observar":["catalisador, risco, invalidação"],"lacunas":["dados faltantes"]}. Não inclua números no texto; os indicadores são exibidos pelo aplicativo.':fase==='pareceres'?PRIMEIRA:SEGUNDA)+'\nDados:\n'+JSON.stringify(contexto),'central')}catch{return json({erro:'Rodada indisponível'},503)}
+ let gen;try{gen=await (deps.generate||generate)(env,SYS+PROTOCOLO_GRAHAM_V1014+' '+PROTOCOLO_COMMODITIES_V1015+' '+PROTOCOLO_RF_V1016+' '+PROTOCOLO_OPCOES_V1017+' '+(fase==='opcoes'?'Responda pela lente indicada em resultado {"resumo":"tese condicional","explicacao":["cenário, estrutura conceitual, pernas, alternativas e riscos"],"o_que_observar":["gatilho, invalidação, saída, exercício e eventos"],"lacunas":["dados faltantes"]}. Sem números na prosa; use a tabela local para valores.':fase==='renda_fixa'?'Responda pela lente indicada em resultado {"resumo":"veredito condicionado aos dados","explicacao":["objetivo, liquidez, risco, retorno, tributação, alternativas BR/EUA"],"o_que_observar":["cenários de juros, condições para adequação e invalidação"],"lacunas":["dados da proposta faltantes"]}. Sem números na prosa; o cliente exibe dados e cálculos.':fase==='commodities'?'Responda pela lente indicada, com resultado {"resumo":"tese condicional","explicacao":["vetores, oferta e demanda, impacto, cenários"],"o_que_observar":["gatilho, invalidação e dados a buscar"],"lacunas":["evidência ausente"]}. Não inclua números no texto; as referências ficam em tabela separada.':fase==='graham'?'Responda com resultado {"resumo":"tese própria qualitativa","explicacao":["qualidade, caixa, dívida, crescimento, valuation condicional"],"o_que_observar":["catalisador, risco, invalidação"],"lacunas":["dados faltantes"]}. Não inclua números no texto; os indicadores são exibidos pelo aplicativo.':fase==='pareceres'?PRIMEIRA:SEGUNDA)+'\nDados:\n'+JSON.stringify(contexto),'central')}catch{return json({erro:'Rodada indisponível'},503)}
  if(request.signal.aborted)return json({erro:'Consulta cancelada'},499);
  if(gen?.error)return json({erro:'Rodada indisponível'},503);
  let raw;try{raw=JSON.parse(gen.text)?.resultado}catch{}
- const resultado=fase==='renda_fixa'?normalizarRendaFixaParecerV1016(raw):fase==='commodities'?normalizarCommoditiesParecerV1015(raw,commodities):fase==='graham'?normalizarGrahamV1014(raw,perfis):fase==='pareceres'?normalizarRodadaV1013(raw):normalizarDebateV1013(raw,rodada);
+ const resultado=fase==='opcoes'?normalizarOpcoesParecerV1017(raw,lente):fase==='renda_fixa'?normalizarRendaFixaParecerV1016(raw):fase==='commodities'?normalizarCommoditiesParecerV1015(raw,commodities):fase==='graham'?normalizarGrahamV1014(raw,perfis):fase==='pareceres'?normalizarRodadaV1013(raw):normalizarDebateV1013(raw,rodada);
  if(!resultado)return json({erro:'Resposta da rodada incompatível'},502);
  return json({ok:true,resultado,modelo:txt(gen.model,100),fundamentos_v1014:perfis,commodities_v1015:commodities,renda_fixa_v1016:rf});
 }
