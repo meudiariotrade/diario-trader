@@ -140,6 +140,25 @@ function concentration(snapshot){
   foreignPct:total?foreign/total*100:null,usdPct:total?usd/total*100:null,
   sectors:[...sectors.entries()].sort((a,b)=>b[1]-a[1])};
 }
+// v1008: agregados locais sem alterar metas.
+function contextoConselho(snapshot,saved=null,risk=null){
+ const total=asNum(snapshot?.v),pos=holdings(snapshot||{}).filter(p=>p.v>0);
+ if(!(total>0)||!pos.length)return {lacuna:'Carteira sem posições avaliadas'};
+ const round=n=>Math.round(n*100)/100,weight=v=>round(v/total*100);
+ const c=concentration(snapshot),top=pos.slice().sort((a,b)=>b.v-a.v).slice(0,8);
+ const out={coberturaPct:weight(sum(pos.map(p=>p.v))),classes:groups(snapshot,'class').map(g=>[g.key,round(g.weight)]),maiores:top.map(p=>[p.tk,weight(p.v)]),
+ setores:c.sectors.slice(0,6).map(([k,v])=>[k.slice(0,50),weight(v)]),exteriorPct:round(c.foreignPct),listadoUSPct:round(c.usdPct),cambioAusente:c.missingFx,riscoHistorico:risk||null,metas:null};
+ const mode=saved?.mode==='asset'?'asset':'class',target=saved?.target?.[mode],arr=groups(snapshot,mode);
+ if(target&&arr.length&&arr.every(g=>asNum(target[g.key])!==null&&target[g.key]>=0&&target[g.key]<=100)&&Math.abs(sum(arr.map(g=>+target[g.key]))-100)<=.06){
+  const contrib=asNum(saved.contribution),sim=contrib!==null&&contrib>=0?allocation(arr,target,total,contrib):null;
+  out.metas={origem:'Parâmetros salvos do simulador; confirmar objetivos atuais',modo:mode,desvios:arr.map(g=>({grupo:g.key,peso:round(g.weight),meta:round(+target[g.key]),desvio:round(g.weight-target[g.key]),pesoPosAporte:sim?round(sim.rows.find(r=>r.key===g.key).newWeight):null})).sort((a,b)=>Math.abs(b.desvio)-Math.abs(a.desvio)).slice(0,8),aportePct:contrib!==null&&contrib>=0?weight(contrib):null,horizonteAnos:asNum(saved.years),aporteMensalPct:asNum(saved.monthly)!==null?weight(+saved.monthly):null,rendaMetaMensalPct:asNum(saved.goal)!==null?weight(+saved.goal):null};
+ }
+ return out;
+}
+function contextoAtualConselho(){
+ let saved=null;try{saved=JSON.parse(localStorage.getItem(storageId())||'null')}catch{}
+ return contextoConselho(portfolio(),saved,W.DiarioPainelCarteira?.riscoConselho?.()||null);
+}
 function compound(initial,monthly,annualReal,years){
  if(![initial,monthly,annualReal,years].every(Number.isFinite)||initial<0||monthly<0||annualReal<=-100||years<1||years>60)return null;
  const r=Math.pow(1+annualReal/100,1/12)-1,months=Math.round(years*12);
@@ -481,5 +500,5 @@ const css=[
 '@media(max-width:480px){#rebalanceamento-carteira-v694 .rb694-body{padding:0 9px 12px}#rebalanceamento-carteira-v694 .rb694-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#rebalanceamento-carteira-v694 .rb694-metric b{font-size:14px}}'
 ].join('\n');
 const style=D.createElement('style');style.id='rebalanceamento-carteira-style-v694';style.textContent=css;D.head.appendChild(style);
-W.CarteiraGestao694=Object.freeze({groupOf,holdings,groups,allocation,rebalance,yieldMetrics,concentration,compound,content});
+W.CarteiraGestao694=Object.freeze({groupOf,holdings,groups,allocation,rebalance,yieldMetrics,concentration,compound,content,contextoConselho,contextoAtualConselho});
 })();

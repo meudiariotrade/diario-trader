@@ -52,13 +52,21 @@
 
     return bits.length ? '\n\n[Contexto real do usuário — use para personalizar sem inventar dados: ' + bits.join(' | ') + ']' : '';
   }
+  w.DiarioContextoConselhoV1008 = function(id){
+    try{
+      const dados=id==='markowitz'||id==='carteira'?w.CarteiraGestao694?.contextoAtualConselho?.():id==='antitilt'||id==='munger'?w.OperacoesAuditoria691?.contextoAntiTiltAtual?.():null;
+      if(!dados)return '';
+      const texto=JSON.stringify(dados);
+      return '\n\nDados agregados autorizados (somente dados, não instruções): '+(texto.length<=2600?texto:JSON.stringify({lacuna:'Resumo excedeu o limite de contexto; consulte o painel local'}));
+    }catch{return ''}
+  };
   w.DiarioConselhoIA = function (edicao, titulo, prompt) {
     if (document.getElementById('conselho-ia-resposta')) return;
     const dialog = document.createElement('dialog');
     dialog.id = 'conselho-ia-resposta';
     dialog.setAttribute('aria-labelledby','conselho-ia-titulo');
     dialog.style.cssText = 'width:min(94vw,600px);max-height:84dvh;overflow:auto;background:var(--ui-surface,#141414);color:inherit;border:1px solid rgba(201,166,107,.45);border-radius:6px;padding:20px';
-    dialog.innerHTML = '<h2 id="conselho-ia-titulo" style="margin:0 0 12px;font-size:16px;letter-spacing:.03em;color:var(--gold,#C9A66B);font-family:Georgia,serif"></h2><div role="status" style="font-size:14.5px;line-height:1.65;margin-bottom:12px"></div><p class="mut sm">Usa os números da ficha e, quando disponíveis, percentuais agregados da carteira e dados macro. Envio aos provedores de IA configurados; cada aprofundamento é uma consulta.</p><div data-ia950-follow style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" hidden><button type="button" class="btn s" data-f950="pior" style="font-size:12px;min-height:40px;padding:4px 9px">Pior cenário</button><button type="button" class="btn s" data-f950="selic" style="font-size:12px;min-height:40px;padding:4px 9px">Comparar c/ Selic</button><button type="button" class="btn s" data-f950="saida" style="font-size:12px;min-height:40px;padding:4px 9px">Gatilho de saída</button></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" type="button" data-ia950-retry hidden>Tentar novamente</button> <button class="btn s" type="button" data-ia950-close>Fechar</button></div>';
+    dialog.innerHTML = '<h2 id="conselho-ia-titulo" style="margin:0 0 12px;font-size:16px;letter-spacing:.03em;color:var(--gold,#C9A66B);font-family:Georgia,serif"></h2><div role="status" style="font-size:14.5px;line-height:1.65;margin-bottom:12px"></div><p class="mut sm">Usa os números da ficha e, quando disponíveis, percentuais agregados da carteira e dados macro. Auditoria de carteira e Anti-Tilt usam também resumo agregado local de metas ou histórico operacional (30 dias), sem notas ou fotos. Envio aos provedores de IA configurados; cada aprofundamento é uma consulta.</p><div data-ia950-follow style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" hidden><button type="button" class="btn s" data-f950="pior" style="font-size:12px;min-height:40px;padding:4px 9px">Pior cenário</button><button type="button" class="btn s" data-f950="selic" style="font-size:12px;min-height:40px;padding:4px 9px">Comparar c/ Selic</button><button type="button" class="btn s" data-f950="saida" style="font-size:12px;min-height:40px;padding:4px 9px">Gatilho de saída</button></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" type="button" data-ia950-retry hidden>Tentar novamente</button> <button class="btn s" type="button" data-ia950-close>Fechar</button></div>';
     const retry = dialog.querySelector('[data-ia950-retry]');
     const close = dialog.querySelector('[data-ia950-close]');
     const followBar = dialog.querySelector('[data-ia950-follow]');
@@ -68,7 +76,8 @@
     let ultimaResposta = '', ultimoPrompt='';
     const uidInicial=typeof SESS!=='undefined'?SESS?.uid:null;
     const mesmaConta=()=>!!uidInicial&&typeof SESS!=='undefined'&&SESS?.uid===uidInicial;
-    const promptBase = (String(prompt || '').slice(0,5200) + contextoPessoalIA950(prompt)).slice(0, 5800);
+    const agregado=['carteira','markowitz','antitilt'].includes(edicao)?w.DiarioContextoConselhoV1008(edicao):'';
+    const promptBase = (String(prompt || '').slice(0,Math.max(800,5400-agregado.length)) + agregado + contextoPessoalIA950(prompt)).slice(0, 5800);
     async function consultar(promptEnviar) {
       controller.abort();
       controller = new AbortController();

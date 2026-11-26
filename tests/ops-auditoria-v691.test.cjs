@@ -125,3 +125,5 @@ test('v691: painel faz simulação local e mantém as tabelas de Operações int
  await expect(page.locator('#app .modg')).toBeVisible();
  await page.close();
 }));
+
+test('v1008: Anti-Tilt usa agregados, separa falta de setup de violação explícita',{timeout:90000},async()=>withApp(async(browser,base)=>{const page=await open(browser,base);const got=await page.evaluate(()=>OperacoesAuditoria691.contextoAntiTilt([{pl:-50,exitDate:'2026-11-10',setup:'Rompimento',rules:'s',error:'Nenhum',raw:{nota:'privado'}},{pl:-30,exitDate:'2026-11-10',setup:'',rules:'n',error:'Fora do plano'},{pl:20,exitDate:'2026-11-10',setup:'',rules:'',error:'Nenhum'}]));assert.equal(got.n,3);assert.equal(got.porDisciplina.foraPlano.n,1);assert.equal(got.porDisciplina.semSetup.n,1);assert.equal(got.aposPerdaForaPlano,1);assert.ok(!JSON.stringify(got).includes('privado'));await page.close()}));

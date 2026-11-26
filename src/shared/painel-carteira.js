@@ -9,7 +9,9 @@ const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
 const N=(v,c=2)=>v==null||!Number.isFinite(+v)?'—':(+v).toLocaleString('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c});
 const P=(v,c=1)=>v==null||!Number.isFinite(+v)?'—':((v>0?'+':'')+N(v,c))+'%';
 const ehBR=tk=>/^[A-Z]{4}\d{1,2}$/.test(tk);
-let risco=null,calculando=false;
+let risco=null,calculando=false,riscoIdentidade=null;
+const riscoKey=()=>JSON.stringify([typeof SESS!=='undefined'?SESS?.uid||'local':'local',pos().map(p=>[p.tk,p.mk,p.v]).sort()]);
+function riscoConselho(){return risco&&!risco.erro&&riscoIdentidade===riscoKey()&&Date.now()-risco.em<86400000?{pares:risco.pares,n:risco.n,amostra:risco.amostra,ate:risco.ate,base:'Retornos diários em moeda de cotação; não ajustados por câmbio',coberturaPct:risco.coberturaPct}:null;}
 const px=tk=>{try{const q=w.TRM?.melhorPx?.(tk);return q&&q.px>0?q:null}catch{return null}};
 function pos(){try{return (w.pfCalc?.().pos||[]).filter(p=>+p.q>0&&+p.v>0).map(p=>({tk:String(p.tk||'').toUpperCase().replace(/\.SA$/,''),v:+p.v,peso:+p.peso||0,setor:p.setor||'Sem setor',mk:p.mk}))}catch{return []}}
 const cor=pct=>pct<=50?'#10B981':pct<=80?'#F59E0B':'#EF4444';
@@ -42,6 +44,7 @@ function concentracao(L){
   '<div class="pc-set">'+st.map(([k,v])=>barra(k,v,40)).join('')+'</div>';
 }
 function riscoHtml(){
+ if(riscoIdentidade!==riscoKey())risco=null;
  if(calculando)return '<p class="pc-mut">Calculando com candles diários…</p>';
  if(!risco)return '<button type="button" class="pc-btn" data-pc-risco="1">Calcular correlação e perda provável</button><p class="pc-mut">Usa 1 ano de fechamentos diários das suas maiores posições.</p>';
  if(risco.erro)return '<p class="pc-mut">'+E(risco.erro)+'</p><button type="button" class="pc-btn" data-pc-risco="1">Tentar de novo</button>';
@@ -50,19 +53,21 @@ function riscoHtml(){
   '<small class="pc-mut">Perda provável: em 95% dos dias do último ano, a carteira de hoje teria perdido menos que isso. Não é garantia.</small>';
 }
 async function calcularRisco(){
- const L=pos().sort((a,b)=>b.v-a.v).slice(0,10);if(L.length<2){risco={erro:'Precisa de pelo menos 2 posições.'};return}
+ const identidade=riscoKey(),todos=pos(),L=todos.slice().sort((a,b)=>b.v-a.v).slice(0,10);riscoIdentidade=identidade;if(L.length<2){risco={erro:'Precisa de pelo menos 2 posições.'};return}
  const S=await Promise.all(L.map(p=>w.DiarioTecnico?.serie?.(p.tk,ehBR(p.tk)?'br':'us').catch(()=>null)));
- const ok=L.map((p,i)=>({p,s:S[i]?.closes||[]})).filter(x=>x.s.length>60);
+ if(identidade!==riscoKey())return;
+ const ok=L.map((p,i)=>({p,s:(S[i]?.closes||[]).filter(c=>Number.isFinite(+c.c)&&+c.c>0&&c.d)})).filter(x=>x.s.length>60);
  if(ok.length<2){risco={erro:'Não consegui os fechamentos diários agora. Tente de novo em instantes.'};return}
  const datas=ok.map(x=>new Map(x.s.map(c=>[c.d,c.c])));
  const comuns=[...datas[0].keys()].filter(k=>datas.every(m=>m.has(k))).sort().slice(-253);
+ if(comuns.length<61){risco={erro:'Amostra comum insuficiente: pelo menos 60 retornos alinhados.'};return}
  const ret=ok.map((x,i)=>comuns.slice(1).map((k,j)=>datas[i].get(k)/datas[i].get(comuns[j])-1));
  const tot=ok.reduce((s,x)=>s+x.p.v,0),pesos=ok.map(x=>x.p.v/tot);
  const port=ret[0].map((_,t)=>ret.reduce((s,r,i)=>s+r[t]*pesos[i],0)).sort((a,b)=>a-b);
  const q=port[Math.floor(port.length*.05)]||0;
  const corr=(a,b)=>{const ma=a.reduce((s,x)=>s+x,0)/a.length,mb=b.reduce((s,x)=>s+x,0)/b.length;let c=0,va=0,vb=0;for(let i=0;i<a.length;i++){c+=(a[i]-ma)*(b[i]-mb);va+=(a[i]-ma)**2;vb+=(b[i]-mb)**2}return c/Math.sqrt(va*vb||1)};
  const pares=[];for(let i=0;i<ret.length;i++)for(let j=i+1;j<ret.length;j++){const c=corr(ret[i],ret[j]);if(c>=.7)pares.push([ok[i].p.tk,ok[j].p.tk,c])}
- risco={var:Math.abs(q)*tot,varPct:Math.abs(q)*100,n:ok.length,pares:pares.sort((a,b)=>b[2]-a[2]).slice(0,4)};
+ risco={var:Math.abs(q)*tot,varPct:Math.abs(q)*100,n:ok.length,pares:pares.sort((a,b)=>b[2]-a[2]).slice(0,4),amostra:comuns.length-1,ate:comuns.at(-1),em:Date.now(),coberturaPct:Math.round(10000*tot/todos.reduce((s,p)=>s+p.v,0))/100};
 }
 function html(){
  const L=pos(),h=new Date().getHours();
@@ -93,5 +98,5 @@ const css=d.createElement('style');css.textContent=`
 .pc-set{margin-top:6px}.pc-kvs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}.pc-kvs span{display:block;color:#64748B;font-size:12px}.pc-kvs b{font-size:16px}
 .pc868 .pc-btn{min-height:44px;padding:8px 14px;border-radius:4px;border:1px solid #F59E0B;background:transparent;color:#F59E0B;margin-top:8px}`;
 d.head.appendChild(css);
-w.DiarioPainelCarteira=Object.freeze({montar});
+w.DiarioPainelCarteira=Object.freeze({montar,riscoConselho});
 })(typeof window!=='undefined'?window:globalThis,typeof document!=='undefined'?document:null);

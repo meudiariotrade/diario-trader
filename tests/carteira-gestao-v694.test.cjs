@@ -96,3 +96,5 @@ test('v694: alteração de metas e simuladores persiste somente no localStorage'
  await expect(page.locator('[data-rb694-field="monthly"]')).toHaveValue('1200');
  await page.close();
 }));
+
+test('v1008: contexto Markowitz agrega pesos e desvio de meta sem mutar carteira',{timeout:90000},async()=>withApp(async(browser,base)=>{const page=await pageFor(browser,base);const got=await page.evaluate(()=>{const p={v:10000,fx:5,pos:[{tk:'ITUB4',mk:'BR',cl:'acao',q:10,v:6000,setor:'Financeiro'},{tk:'HGLG11',mk:'BR',cl:'fii',q:10,v:4000,setor:'Imóveis'}]};const saved={mode:'class',target:{class:{br:40,fii:60,rf:0,ext:0,crypto:0,other:0}},contribution:1000};return CarteiraGestao694.contextoConselho(p,saved,null)});assert.equal(got.maiores[0][1],60);assert.equal(got.metas.desvios[0].desvio,20);assert.equal(got.riscoHistorico,null);assert.equal(got.coberturaPct,100);await page.close()}));

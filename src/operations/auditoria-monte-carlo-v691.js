@@ -109,6 +109,21 @@ function disciplineSummary(rows){
  return {plan:summary(plan),noSetup:summary(noSetup),outside:summary(outside),
   other:summary(noSetup.concat(outside)),difference:plan.length&&noSetup.length+outside.length?summary(plan).ev-summary(noSetup.concat(outside)).ev:null};
 }
+// v1008: operações encerradas, sem IDs, notas, fotos ou texto livre.
+function contextoAntiTilt(rows){
+ const clean=rows.filter(r=>Number.isFinite(r.pl));
+ const d=disciplineSummary(clean),s=summary(clean);
+ const compact=x=>({n:x.n,resultadoBRL:Math.round(x.net*100)/100,evBRL:x.ev===null?null:Math.round(x.ev*100)/100});
+ let aposLoss=0,aposLossFora=0;
+ for(let i=1;i<clean.length;i++)if(clean[i-1].pl<0&&clean[i-1].exitDate===clean[i].exitDate){aposLoss++;if(discipline(clean[i])==='outside')aposLossFora++;}
+ return {n:s.n,porDisciplina:{plano:compact(d.plan),semSetup:compact(d.noSetup),foraPlano:compact(d.outside)},resultadoBRL:compact(s).resultadoBRL,maiorSequenciaPerdas:s.maxLoss,drawdownBRL:Math.round(s.maxDD*100)/100,aposPerdaMesmoDia:aposLoss,aposPerdaForaPlano:aposLossFora,observacao:'Classificação da auditoria; falta de setup não prova impulsividade. Sequência por encerramento, não prova causalidade.'};
+}
+function contextoAntiTiltAtual(){
+ const rows=scope(records(),'30','all'),out=contextoAntiTilt(rows),hoje=cut(0),dia=typeof S!=='undefined'?S.days?.[hoje]:null;
+ const num=x=>x!==null&&x!==undefined&&x!==''&&Number.isFinite(Number(x))?Number(x):null;
+ const limite=num(dia?.maxP),atual=summary(rows.filter(r=>r.exitDate===hoje));
+ return {...out,janela:'Últimos 30 dias',hoje:{estadoDeclarado:num(dia?.estado),limitePerdaBRL:limite>0?limite:null,resultadoBRL:Math.round(atual.net*100)/100,perdaLiquidaPctLimite:limite>0?Math.round(Math.max(0,-atual.net)/limite*100):null,operacoesEncerradas:atual.n}};
+}
 function monteCarlo(options,count=500,horizon=100,rng=Math.random){
  const {winRate,avgWin,avgLoss,limit}=options;
  if(![winRate,avgWin,avgLoss,limit].every(Number.isFinite)||winRate<0||winRate>100||!(avgWin>0&&avgLoss>0&&limit>0))return null;
@@ -350,5 +365,5 @@ const styles=[
 '@media(max-width:550px){#ops-audit-691 .a691-panel{padding:2px 10px 12px}#ops-audit-691 .a691-discipline{grid-template-columns:minmax(85px,1.7fr) repeat(3,minmax(55px,1fr));gap:5px;font-size:10px}#ops-audit-691 .a691-discipline b{font-size:10px}#ops-audit-691 .a691-kpi b{font-size:15px}}'
 ].join('\n');
 const style=d.createElement('style');style.id='ops-audit-style-v691';style.textContent=styles;d.head.appendChild(style);
-w.OperacoesAuditoria691=Object.freeze({brazilStamp,scope,records,summary,groups,discipline,disciplineSummary,monteCarlo,timeslot,weekday,render:mainPanel});
+w.OperacoesAuditoria691=Object.freeze({brazilStamp,scope,records,summary,groups,discipline,disciplineSummary,contextoAntiTilt,contextoAntiTiltAtual,monteCarlo,timeslot,weekday,render:mainPanel});
 })();
