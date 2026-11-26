@@ -122,6 +122,37 @@ html body #wf-chat-panel form>small{display:none!important}
 }
 html body #economista-flutuante:has(#wf-chat-panel:not([hidden])) .wf-chat-launcher{display:none!important}
 
+/* v1004 — Áurea: um único histórico rolável, compositor compacto fora da rolagem. */
+html:root body #wf-chat-panel.wf-chat-panel:not([hidden]){display:flex!important;flex-direction:column!important;box-sizing:border-box!important;overflow:hidden!important;min-height:0!important}
+html:root body #wf-chat-panel.wf-chat-panel:not([hidden])>header{flex:0 0 auto!important;position:relative!important}
+html:root body #wf-chat-panel.wf-chat-panel:not([hidden]) .wf-chat-history{flex:1 1 0%!important;height:0!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;touch-action:pan-y}
+html:root body #wf-chat-panel.wf-chat-panel:not([hidden]) .wf-chat-status{flex:0 0 auto!important;max-height:60px!important;overflow-wrap:anywhere;font-size:12px}
+html:root body #wf-chat-panel.wf-chat-panel:not([hidden]) form{flex:0 0 auto!important;max-height:none!important;min-height:0!important;overflow:hidden!important;margin:0!important;position:relative!important;padding:7px 10px calc(env(safe-area-inset-bottom,0px) + 8px)!important}
+html:root body #wf-chat-panel .wf-chat-head-actions{display:flex!important;align-items:center;gap:6px;flex:none}
+html:root body #wf-chat-panel .wf-chat-head-actions button{display:grid!important;place-items:center;width:44px!important;min-width:44px!important;height:44px!important;padding:0!important}
+html:root body #wf-chat-panel .wf-chat-composer{display:flex;gap:6px;align-items:flex-end;min-width:0}
+html:root body #wf-chat-panel .wf-chat-input-label{flex:1 1 0%;min-width:0!important;margin:0!important}
+html:root body #wf-chat-panel .wf-chat-input-label textarea{font-size:16px!important;height:var(--wf-input-h,44px)!important;min-height:44px!important;max-height:92px!important;border-radius:22px!important;line-height:1.3!important;padding:10px 12px!important;display:block!important;overflow-y:auto!important}
+html:root body #wf-chat-panel .wf-chat-composer button{flex:0 0 44px!important;width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;display:grid!important;place-items:center;padding:0!important;border-radius:50%!important;background:transparent!important;border:0!important}
+html:root body #wf-chat-panel .wf-chat-composer button[type=submit]{background:#c6a56b!important;color:#141414!important}
+html:root body #wf-chat-panel .wf-chat-context-label{font-size:11px!important;margin:0 0 5px!important;min-height:24px!important}
+html:root body #wf-chat-panel .wf-chat-context{max-height:48px!important;overflow:auto!important;margin:0 0 4px!important;font-size:11px!important}
+html:root body #wf-chat-panel .wf-chat-attachment[hidden],html:root body #wf-chat-panel input[type=file][hidden]{display:none!important}
+html:root body #wf-chat-panel .wf-chat-attachment{display:flex;align-items:center;gap:8px;border:1px solid var(--bd);border-radius:6px;padding:6px;margin:0 0 6px;max-height:76px;overflow:hidden}
+html:root body #wf-chat-panel .wf-chat-attachment img{width:58px;height:58px;object-fit:contain;border-radius:4px}
+html:root body #wf-chat-panel .wf-chat-attachment div{min-width:0;flex:1;font-size:12px}
+html:root body #wf-chat-panel .wf-chat-attachment small{display:block;font-size:10px;color:var(--mut)}
+html:root body #wf-chat-panel .wf-chat-attachment button{flex:none;width:44px;min-width:44px;height:44px;padding:0}
+html:root body #wf-chat-panel .wf-chat-sent-image{margin:5px 0;max-width:100%}
+html:root body #wf-chat-panel .wf-chat-sent-image img{display:block;max-width:100%;max-height:260px;object-fit:contain;border:1px solid var(--bd);border-radius:6px}
+html:root body #wf-chat-panel .wf-chat-parecer{padding:10px 0;border-top:1px solid var(--bd);overflow-wrap:anywhere}
+html:root body #wf-chat-panel .wf-chat-parecer>b{color:#c6a56b}
+html:root[data-v427-tema="claro"] body #wf-chat-panel .wf-chat-parecer>b{color:#856326}
+@media(max-width:760px){
+ html:root body.dt414-chat-open #wf-chat-panel.wf-chat-panel:not([hidden]),html:root body #wf-chat-panel.wf-chat-panel:not([hidden]){position:fixed!important;inset:auto!important;top:var(--wf-chat-top,0px)!important;left:0!important;right:0!important;bottom:auto!important;width:100%!important;height:var(--wf-chat-vh,100dvh)!important;max-height:var(--wf-chat-vh,100dvh)!important;border:0!important;border-radius:0!important}
+ html:root body.dt414-chat-open #wf-chat-panel.wf-chat-panel:not([hidden])>header,html:root body #wf-chat-panel.wf-chat-panel:not([hidden])>header{padding:calc(env(safe-area-inset-top,0px) + 6px) 10px 6px!important}
+}
+
 /* v579 — Mercado: Análises abre direto; Movimentos fortes só em Cotações; abas de Por modalidade sem cortar */
 html body #app[data-tela=mercado] :has(>[data-mkt549-ir]){display:none!important}
 html body #app[data-tela=mercado]:not(:has([data-navroute="mercado:cq"].on)) #v518-mov,html body #app[data-tela=mercado]:has([data-mkt549="mais"].mkt549-on) #v518-mov{display:none!important}

@@ -57,13 +57,16 @@ const anxLoad = async () => {
     `<div class="sm" style="margin-top:8px">${esc(e)} · ${anxN(t, 1)}%</div><div class="anxb"><i style="width:${Math.min(100, Math.abs(+t) || 0)}%;background:${a || (t < 0 ? "var(--r)" : "var(--ac)")}"></i></div>`,
   anxArr = (e) => (Array.isArray(e) ? e : []);
 var anxItens;
-async function anxCall(e) {
+async function anxCall(e, opt = {}) {
   const t = cfg();
   if (!t) throw new Error("Configure o Supabase em config.js.");
   if (!SESS) throw new Error("Entre na sua conta (Mais → Conta).");
+  if (opt.signal?.aborted) throw new Error("Consulta cancelada.");
   await tok();
+  if (opt.signal?.aborted) throw new Error("Consulta cancelada.");
   const a = new AbortController(),
-    o = setTimeout(() => a.abort(), 17e4);
+    o = setTimeout(() => a.abort(), 17e4), cancelar = () => a.abort();
+  opt.signal?.addEventListener("abort", cancelar, {once:true});
   try {
     // v932: fluxos puramente interpretativos seguem direto ao Cloudflare.
     // O Supabase é reserva transitória apenas em falhas temporárias da borda.
@@ -119,6 +122,7 @@ async function anxCall(e) {
       : s;
   } finally {
     clearTimeout(o);
+    opt.signal?.removeEventListener("abort", cancelar);
   }
 }
 async function anxRun(e) {

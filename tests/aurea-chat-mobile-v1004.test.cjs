@@ -1,0 +1,23 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {withApp}=require('./helpers/app.cjs'),{expect}=require('playwright/test');
+test('Áurea mobile mantém compositor visível com resposta longa e limpa ao fechar',{timeout:90000},async()=>withApp(async(browser,base)=>{
+ const p=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});
+ await p.evaluate(()=>window.TraderChat.open());
+ const panel=p.locator('#wf-chat-panel');await expect(panel).toBeVisible();
+ const composer=panel.locator('.wf-chat-composer'),history=panel.locator('.wf-chat-history');
+ await expect(composer).toBeVisible();
+ await p.evaluate(()=>{const h=document.querySelector('#wf-chat-panel .wf-chat-history');h.innerHTML='<article>'+('Resposta extensa. '.repeat(1000))+'</article>';});
+ const bounds=await p.evaluate(()=>{const f=document.querySelector('#wf-chat-panel form').getBoundingClientRect(),h=document.querySelector('#wf-chat-panel .wf-chat-history'),r=h.getBoundingClientRect();return {formBottom:f.bottom,historyBottom:r.bottom,view:window.visualViewport?.height||innerHeight,scroll:h.scrollHeight,client:h.clientHeight}});
+ assert.ok(bounds.formBottom<=bounds.view+2);assert.ok(bounds.historyBottom<=bounds.formBottom);assert.ok(bounds.scroll>bounds.client);
+ const png=await p.evaluate(()=>{const c=document.createElement('canvas');c.width=120;c.height=80;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,120,80);return c.toDataURL('image/png').split(',')[1]});
+ await panel.locator('[name="photo"]').setInputFiles({name:'grafico.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
+ await expect(panel.locator('.wf-chat-attachment')).toBeVisible();
+ await panel.locator('textarea').fill('Minha tese sobre VALE3');
+ await panel.locator('[data-chat-close]').click();await expect(panel).toBeHidden();
+ await p.evaluate(()=>window.TraderChat.open());
+ await expect(panel.locator('textarea')).toHaveValue('');
+ await expect(panel.locator('.wf-chat-attachment')).toBeHidden();
+ await expect(panel.locator('.wf-chat-empty')).toBeVisible();
+ await p.close();
+}));

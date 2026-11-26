@@ -1357,7 +1357,7 @@ function mdoAutoCiclo() {
 
 {
   const e = anxCall;
-  anxCall = async function (t) {
+  anxCall = async function (t, opt) {
     const a = Date.now();
     let o = !1;
     const s = () => {
@@ -1365,7 +1365,7 @@ function mdoAutoCiclo() {
     };
     document.addEventListener("visibilitychange", s);
     try {
-      return await e(t);
+      return await e(t, opt);
     } catch (n) {
       const r = String((n && n.message) || n);
       throw o &&
@@ -3266,17 +3266,15 @@ document.addEventListener("click", (e) => {
       : t;
   };
 }
+// v1004 — Áurea: conversa efêmera; nunca guardar prompts, imagens ou pareceres no armazenamento do app.
 const ECO = {
-    l: (() => {
-      try {
-        return ls.get("diario-eco") || [];
-      } catch {
-        return [];
-      }
-    })(),
+    l: [],
     busy: 0,
     err: "",
     rascunho: "",
+    geracao: 0,
+    controller: null,
+    owner: syncOwner(),
   },
   ECO_SUG = [
     "O que o próximo Copom pode fazer com os juros futuros (DI)?",
@@ -3285,9 +3283,20 @@ const ECO = {
     "O que significa curva de juros inclinando?",
   ];
 function ecoSalva() {
-  try {
-    ls.set("diario-eco", ECO.l.slice(-20));
-  } catch {}
+  try { ls.del("diario-eco"); } catch {}
+}
+ecoSalva();
+function ecoLimpa() {
+  ECO.geracao++;
+  ECO.controller?.abort();
+  ECO.controller = null;
+  ECO.l = [];
+  ECO.busy = 0;
+  ECO.err = "";
+  ECO.rascunho = "";
+  ECO.rota = null;
+  ECO.owner = syncOwner();
+  ecoSalva();
 }
 /* v883 — Áurea: IA principal do app. Ela lê a pergunta, escolhe o especialista do Conselho
    (Schwartz, Graham, Livermore, Munger, Markowitz ou Dow) e responde com a ótica certa.
@@ -3437,7 +3446,7 @@ function aureaTexto(e, rota) {
     e
   );
 }
-async function aureaCerebro(e) {
+async function aureaCerebro(e, signal) {
   const api = window.DiarioCerebroIA && window.DiarioCerebroIA.api;
   if (!api) return null;
   try {
@@ -3445,7 +3454,7 @@ async function aureaCerebro(e) {
       acao: "gerar",
       modo: "perguntar",
       tema: e.replace(/^\s*@\w+\s*/, "").slice(0, 400),
-    });
+    }, signal);
     const r = (j && j.resultado) || {};
     if (!r.resposta) return null;
     return {
@@ -3461,58 +3470,62 @@ async function aureaCerebro(e) {
     return null;
   }
 }
+async function aureaImagemCall(pergunta, imagem, signal, titular) {
+  if (!SESS) throw new Error("Entre na sua conta para analisar imagens.");
+  await tok();
+  if (signal.aborted || syncOwner() !== titular) throw new Error("Consulta cancelada.");
+  const r = await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-imagem",{
+    method:"POST",credentials:"omit",redirect:"error",cache:"no-store",
+    headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},
+    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),imagem:{mime:"image/jpeg",data:imagem.b64}})
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.resposta)throw new Error(j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.");
+  return {...j.resposta,modelo:j.modelo||""};
+}
 async function ecoPergunta(e, opt) {
-  if (((e = String(e || "").trim()), e.length < 3 || ECO.busy)) return;
-  opt = opt || {};
-  const rota = opt.rota || aureaRota(opt.pergunta || e),
-    q = opt.pergunta || e,
-    t = e.match(/https?:\/\/\S+/),
-    a = t ? t[0] : "";
-  ((ECO.busy = 1), (ECO.err = ""), (ECO.rascunho = ""), (ECO.rota = rota), ecoPaint());
+  e=String(e||"").trim();opt=opt||{};
+  if(ECO.owner!==syncOwner())ecoLimpa();
+  if(e.length<3||ECO.busy)return;
+  const rota=opt.imagem?{id:"conselho",tickers:aureaRota(opt.pergunta||e).tickers,motivo:"imagem anexada"}:(opt.rota||aureaRota(opt.pergunta||e)),
+    q=opt.pergunta||e,t=e.match(/https?:\/\/\S+/),a=t?t[0]:"",
+    geracao=ECO.geracao,titular=syncOwner(),controller=new AbortController(),
+    ativo=()=>ECO.geracao===geracao&&syncOwner()===titular&&!controller.signal.aborted;
+  ECO.controller=controller;
+  ECO.busy=1;ECO.err="";ECO.rascunho="";ECO.rota=rota;ecoPaint();
+  const timer=opt.imagem?setTimeout(()=>controller.abort(),50000):null;
   try {
-    let resposta = null;
-    if (rota.id === "dow") resposta = await aureaCerebro(q);
-    if (!resposta) {
-      const o = await anxCall({
-        modo: "economista",
-        texto: aureaTexto(e, rota),
-        link: a,
-        hist: ECO.l
-          .slice(-4)
-          .map((s) => ({
-            p: s.q,
-            r: [s.r.resumo, ...(s.r.explicacao || []).slice(0, 2)].join(" "),
-          })),
-      });
-      if (!o || !o.resposta)
-        throw new Error(
-          o && o.erro
-            ? o.erro
-            : 'Para usar a Áurea, publique a nova versão da função "analise" no Supabase.',
-        );
-      resposta = o.resposta;
+    let resposta=null;
+    if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular);
+    else {
+      if(rota.id==="dow")resposta=await aureaCerebro(q,controller.signal);
+      if(!ativo())return;
+      if(!resposta){
+        const o=await anxCall({modo:"economista",texto:aureaTexto(e,rota),link:a,
+          hist:ECO.l.slice(-4).map(s=>({p:s.q,r:[s.r.resumo,...(s.r.explicacao||[]).slice(0,2),...(s.por==="conselho"?(s.r.visoes||[]).map(v=>v.escola+": "+v.argumento):[])].join(" ").slice(0,3500)}))
+        },{signal:controller.signal});
+        if(!o?.resposta)throw new Error(o?.erro||"A Áurea está temporariamente indisponível.");
+        resposta=o.resposta;
+      }
     }
-    (ECO.l.push({
-      id: Date.now().toString(36),
-      q,
-      em: new Date().toISOString(),
-      r: resposta,
-      por: rota.id,
-      motivo: rota.motivo,
-      tickers: rota.tickers,
-    }),
-      ecoSalva());
-  } catch (o) {
-    ((ECO.err = String(o.message || o)), (ECO.rascunho = q));
+    if(!ativo())return;
+    ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
+      motivo:rota.motivo,tickers:rota.tickers,...(opt.imagem?{imagem:opt.imagem.url}:{})});
+    ECO.l=ECO.l.slice(-20);
+    let imagens=0;
+    for(let i=ECO.l.length-1;i>=0;i--)if(ECO.l[i].imagem&&++imagens>4)delete ECO.l[i].imagem;
+  }catch(o){
+    if(ECO.geracao===geracao&&syncOwner()===titular){
+      ECO.err=controller.signal.aborted?"A análise demorou demais. Tente novamente.":String(o.message||o);
+      ECO.rascunho=q;
+    }
+  }finally{
+    if(timer)clearTimeout(timer);
+    if(ECO.geracao===geracao&&syncOwner()===titular){
+      ECO.busy=0;ECO.rota=null;ECO.controller=null;ecoPaint();
+      if(!ECO.err)setTimeout(()=>{if(ECO.geracao===geracao)document.querySelector(".eco-it")?.scrollIntoView({behavior:"smooth",block:"start"})},60);
+    }
   }
-  ((ECO.busy = 0),
-    (ECO.rota = null),
-    ecoPaint(),
-    ECO.err ||
-      setTimeout(() => {
-        const o = document.querySelector(".eco-it");
-        o && o.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 60));
 }
 function ecoPaint() {
   if (tab !== "mercado" || MKT.tab !== "eco") return;

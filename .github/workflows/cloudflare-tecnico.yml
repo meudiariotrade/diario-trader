@@ -30,6 +30,7 @@ jobs:
         with:
           node-version: '24'
       - run: node --check cloudflare/diario-screeners/aurea-resumao-v904.mjs
+      - run: node --test tests/aurea-imagem-v1004.test.cjs
       - run: node --test tests/cloudflare-screeners-v896.test.cjs
       - run: node --test tests/v904-aurea-panorama.test.cjs tests/aurea-jwks.test.cjs tests/v930-reserva-ia-cloudflare.test.cjs
   publicar-worker:
