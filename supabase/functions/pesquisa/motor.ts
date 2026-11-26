@@ -17,12 +17,12 @@ export function vencimentos(de:string,ate:string){const L:any[]=[];VENC_ACOES.fo
 async function emLotes<T,R>(xs:T[],n:number,fn:(x:T)=>Promise<R>){const out:PromiseSettledResult<R>[]=[];for(let i=0;i<xs.length;i+=n)out.push(...await Promise.allSettled(xs.slice(i,i+n).map(fn)));return out}
 
 /** Etapa 1: coleta direta (sem IA). */
-export async function pesquisar(cmd:any,env:Env,fetcher=fetch,jwtUsuario=''){
+export async function pesquisar(cmd:any,env:Env,fetcher=fetch,jwtUsuario='',permitirParcial=false){
  const em=new Date().toISOString(),fontes:any[]=[],dados:Record<string,any>={},falhas:string[]=[];
  if(cmd.tickers?.length){
   const rs=await emLotes(cmd.tickers,4,(t:string)=>coletaAtivo(t,env,fetcher));
   rs.forEach((r,i)=>{const t=cmd.tickers[i];if(r.status==='fulfilled'){dados[t]=r.value;r.value.fontes.forEach((f:any)=>fontes.push(f))}else falhas.push(t+': '+String((r.reason as Error)?.message||r.reason).slice(0,240))});
-  if(!Object.keys(dados).length)throw Error('Não foi possível coletar dados de '+cmd.tickers.join(', ')+'. Detalhe: '+falhas.join(' | '));
+  if(!permitirParcial&&!Object.keys(dados).length)throw Error('Não foi possível coletar dados de '+cmd.tickers.join(', ')+'. Detalhe: '+falhas.join(' | '));
  }
  if(cmd.modo==='AGENDA'){
   // fim de semana: mostra a próxima semana (segunda a domingo); em dia útil, a semana corrente.

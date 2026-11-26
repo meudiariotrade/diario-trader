@@ -4,6 +4,10 @@ on:
     branches: [main]
     paths:
       - 'cloudflare/diario-noticias/producao-snapshot-v894.mjs'
+      - 'cloudflare/diario-noticias/pesquisa-v999.mjs'
+      - 'supabase/functions/pesquisa/**'
+      - 'supabase/functions/_shared/ai-router.ts'
+      - 'tests/pesquisa-cloudflare-v999.test.cjs'
       - 'cloudflare/diario-noticias/finnhub-v940.mjs'
       - 'cloudflare/diario-noticias/cotacoes-v954.mjs'
       - 'tests/cotacoes-v954.test.cjs'
@@ -38,6 +42,7 @@ jobs:
       - run: node --check cloudflare/diario-noticias/producao-snapshot-v894.mjs
       - run: node --check cloudflare/diario-noticias/finnhub-v940.mjs
       - run: node --check cloudflare/diario-noticias/cotacoes-v954.mjs
+      - run: node --test tests/pesquisa.test.cjs tests/livermore-eua-v998.test.cjs tests/pesquisa-cloudflare-v999.test.cjs
       - run: node --test tests/cotacoes-v954.test.cjs
       - run: node --test tests/cloudflare-finnhub-v940.test.cjs
       - run: node --test tests/cloudflare-noticias.test.cjs tests/cloudflare-dados-publicos-v811.test.cjs
@@ -71,3 +76,6 @@ jobs:
           workingDirectory: cloudflare/diario-noticias
           wranglerVersion: '4.166.0'
           command: deploy --config wrangler.jsonc
+      - name: Validar rota Pesquisa em produção sem sessão
+        run: |
+          node -e "(async()=>{const base='https://diario-trader.lucianosilva43567.workers.dev/v1/pesquisa';const r=await fetch(base+'/health');const j=await r.json();if(!r.ok||j.ok!==true||j.servico!=='pesquisa-cloudflare'||j.contrato!==1)throw Error('health da pesquisa indisponível');const p=await fetch(base,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});if(p.status!==401||!p.headers.get('cache-control')?.includes('no-store'))throw Error('proteção da rota inválida');console.log('Pesquisa Cloudflare publicada e protegida')})().catch(e=>{console.error(e.message);process.exitCode=1})"
