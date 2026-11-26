@@ -32,7 +32,7 @@ export function metodoConselhoV1007(edition,prompt){
  const id=edition==='ativo'?(/ATIVO TÉCNICO|parecer técnico|setup técnico/i.test(prompt)?'livermore':'graham'):edition==='carteira'?'markowitz':edition;
  return (metodoV1007.get(id)||'')+' '+qualidadeV1007;
 }
-export async function generate(env,prompt,edition){
+export async function generate(env,prompt,edition,validarResultado=null){
  const base='https://generativelanguage.googleapis.com/v1beta/models/';
  const estruturado=edition==='estudos'||edition==='diario'||edition==='central';
  const instruction=edition==='central'
@@ -64,6 +64,7 @@ export async function generate(env,prompt,edition){
   try{
    const obj=JSON.parse(text.trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,''));
    if(!obj?.resultado||typeof obj.resultado!=='object'||Array.isArray(obj.resultado)||!Object.keys(obj.resultado).length)return null;
+   if(typeof validarResultado==='function'&&!validarResultado(obj.resultado))return null;
    const serialized=JSON.stringify(obj);
    return serialized.length<=10000?{text:serialized,model}:null;
   }catch{return null}
