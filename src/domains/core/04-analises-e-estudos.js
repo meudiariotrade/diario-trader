@@ -198,19 +198,22 @@ async function anxRun(e) {
   }
   ((ANX.busy = ""), render());
 }
-const anxShrink = (e) =>
+const anxShrink = (e, giros = 0) =>
   new Promise((t, a) => {
     const o = new Image(),
       s = URL.createObjectURL(e);
     ((o.onload = () => {
       const n = Math.min(1, 1600 / Math.max(o.width, o.height)),
         r = document.createElement("canvas");
-      ((r.width = Math.round(o.width * n)),
-        (r.height = Math.round(o.height * n)));
+      const largura = Math.round(o.width * n), altura = Math.round(o.height * n);
+      r.width = giros % 2 ? altura : largura;
+      r.height = giros % 2 ? largura : altura;
       const i = r.getContext("2d");
-      ((i.fillStyle = "#fff"),
-        i.fillRect(0, 0, r.width, r.height),
-        i.drawImage(o, 0, 0, r.width, r.height));
+      i.fillStyle = "#fff";
+      i.fillRect(0, 0, r.width, r.height);
+      i.translate(r.width / 2, r.height / 2);
+      i.rotate(-giros * Math.PI / 2);
+      i.drawImage(o, -largura / 2, -altura / 2, largura, altura);
       const l = r.toDataURL("image/jpeg", 0.82);
       (URL.revokeObjectURL(s), t({ b64: l.split(",")[1], url: l }));
     }),

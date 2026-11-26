@@ -27654,19 +27654,22 @@ async function anxRun(e) {
   }
   ((ANX.busy = ""), render());
 }
-const anxShrink = (e) =>
+const anxShrink = (e, giros = 0) =>
   new Promise((t, a) => {
     const o = new Image(),
       s = URL.createObjectURL(e);
     ((o.onload = () => {
       const n = Math.min(1, 1600 / Math.max(o.width, o.height)),
         r = document.createElement("canvas");
-      ((r.width = Math.round(o.width * n)),
-        (r.height = Math.round(o.height * n)));
+      const largura = Math.round(o.width * n), altura = Math.round(o.height * n);
+      r.width = giros % 2 ? altura : largura;
+      r.height = giros % 2 ? largura : altura;
       const i = r.getContext("2d");
-      ((i.fillStyle = "#fff"),
-        i.fillRect(0, 0, r.width, r.height),
-        i.drawImage(o, 0, 0, r.width, r.height));
+      i.fillStyle = "#fff";
+      i.fillRect(0, 0, r.width, r.height);
+      i.translate(r.width / 2, r.height / 2);
+      i.rotate(-giros * Math.PI / 2);
+      i.drawImage(o, -largura / 2, -altura / 2, largura, altura);
       const l = r.toDataURL("image/jpeg", 0.82);
       (URL.revokeObjectURL(s), t({ b64: l.split(",")[1], url: l }));
     }),
@@ -43991,19 +43994,62 @@ function aureaPrecoVisualV1021(p){
  if(!/^\d+(?:[.,]\d+)?$/.test(t))return null;
  const n=Number(t.replace(",","."));return Number.isFinite(n)&&n>0?n:null;
 }
+// Fotos de tela podem manter o pavio legível mesmo quando o eixo está ilegível ou inclinado.
+function aureaExtremoPorContrasteV1023(data,w,h,p,limites){
+ const {left,right,top,bottom}=limites;
+ const px=Math.round(p.x*w),py=Math.round(p.y*h),direcao=p.tipo==="topo"?1:-1;
+ const raioX=Math.max(3,Math.round(w*.015)),raioY=Math.max(4,Math.round(h*.024));
+ const contraste=(x,y)=>{
+  if(x<left+4||x>right-4||y<top||y>bottom)return 0;
+  const i=(y*w+x)*4,r=data[i],g=data[i+1],b=data[i+2];
+  if(data[i+3]<220||Math.max(r,g,b)-Math.min(r,g,b)>30)return 0;
+  let fundo=0;
+  for(const offset of [-4,-3,3,4]){
+   const j=i+4*offset;
+   fundo+=data[j]+data[j+1]+data[j+2];
+  }
+  return fundo/12-(r+g+b)/3;
+ };
+ const candidatos=[];
+ for(let x=Math.max(left+4,px-raioX);x<=Math.min(right-4,px+raioX);x++){
+  for(let y=Math.max(top+2,py-raioY);y<=Math.min(bottom-2,py+raioY);y++){
+   if(contraste(x,y)<13||contraste(x,y-direcao)>=13||contraste(x,y-2*direcao)>=13)continue;
+   let corpo=0;
+   for(let j=1;j<=7;j++)if(contraste(x,y+j*direcao)>=13)corpo++;
+   if(corpo<5)continue;
+   // Linhas horizontais têm continuidade para os dois lados do ponto.
+   if([-2,-1,1,2].filter(dx=>contraste(x+dx,y)>=13).length>=3)continue;
+   const score=Math.abs(x-px)/raioX+Math.abs(y-py)/raioY-corpo*.055;
+   candidatos.push({x,y,score});
+  }
+ }
+ candidatos.sort((a,b)=>a.score-b.score);
+ const melhor=candidatos[0];
+ if(!melhor||candidatos.some(c=>c.score<melhor.score+.12&&Math.abs(c.y-melhor.y)>Math.max(4,h*.008)))return null;
+ return melhor;
+}
 function aureaAncorarPivosV1021(g,data,w,h){
  const pts=Array.isArray(g.pivos)?g.pivos:[],r=g.geometria_preco,axis=aureaCalibrarEixoV1021(r);
  const omit=p=>({...p,ancoragem_visual:"nao_conferida"});
- if(!r||r.candles!=="preto_fundo_claro"||!axis||!data||!Number.isInteger(w)||!Number.isInteger(h)||w<180||h<180||data.length!==w*h*4)return pts.map(omit);
+ if(!r||r.candles!=="preto_fundo_claro"||!data||!Number.isInteger(w)||!Number.isInteger(h)||w<180||h<180||data.length!==w*h*4)return pts.map(omit);
  if(![r.x0,r.y0,r.x1,r.y1].every(x=>Number.isFinite(x)&&x>=0&&x<=1)||r.x1-r.x0<.25||r.y1-r.y0<.15)return pts.map(omit);
  const left=Math.max(2,Math.ceil(r.x0*w)),right=Math.min(w-3,Math.floor(r.x1*w)),top=Math.max(2,Math.ceil(r.y0*h)),bottom=Math.min(h-3,Math.floor(r.y1*h));
  const dark=(x,y)=>{if(x<left||x>right||y<top||y>bottom)return false;const i=(y*w+x)*4,a=data[i],b=data[i+1],c=data[i+2];return data[i+3]>220&&Math.max(a,b,c)<120&&Math.max(a,b,c)-Math.min(a,b,c)<28;};
  const rx=Math.max(2,Math.round(w*.012)),ry=Math.max(3,Math.round(h*.013)),runMin=Math.max(4,Math.round(w*.007)),used=[];
+ const marcar=(p,point,calibrado)=>{
+  if(!point||used.some(q=>Math.abs(q.x-point.x)<=2&&Math.abs(q.y-point.y)<=3))return omit(p);
+  used.push(point);
+  const y=point.y/h;
+  return {...p,x:point.x/w,y,ancoragem_visual:calibrado?"pixel_compativel":"pavio_visual",
+   ...(calibrado?{preco_eixo_aprox:axis.preco(y)}:{preco:p.validacao==="visual"?"":p.preco})};
+ };
  return pts.map(p=>{
   const no=omit(p),price=aureaPrecoVisualV1021(p.preco);
-  if(!price||p.validacao==="divergente"||!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<=r.x0||p.x>=r.x1||p.y<=r.y0||p.y>=r.y1||!["topo","fundo"].includes(p.tipo))return no;
+  if(p.validacao==="divergente"||!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<=r.x0||p.x>=r.x1||p.y<=r.y0||p.y>=r.y1||!["topo","fundo"].includes(p.tipo))return no;
+  const visual=()=>marcar(p,aureaExtremoPorContrasteV1023(data,w,h,p,{left,right,top,bottom}),false);
+  if(!axis||!price)return visual();
   const expected=axis.y(price),px=Math.round(p.x*w),py=Math.round(p.y*h),ey=expected*h;
-  if(!Number.isFinite(ey)||Math.abs(ey-py)>ry*1.5||ey<top||ey>bottom)return no;
+  if(!Number.isFinite(ey)||Math.abs(ey-py)>ry*1.5||ey<top||ey>bottom)return visual();
   const direction=p.tipo==="topo"?1:-1, candidates=[];
   for(let x=Math.max(left+1,px-rx);x<=Math.min(right-1,px+rx);x++){
    for(let y=Math.max(top+2,Math.floor(Math.max(py-ry,ey-ry)));y<=Math.min(bottom-2,Math.ceil(Math.min(py+ry,ey+ry)));y++){
@@ -44020,8 +44066,8 @@ function aureaAncorarPivosV1021(g,data,w,h){
    }
   }
   candidates.sort((a,b)=>a.score-b.score);const best=candidates[0];
-  if(!best||candidates.some(q=>q.score<best.score+.25&&Math.abs(q.x-best.x)>Math.max(3,Math.round(w*.006)))||used.some(q=>Math.abs(q.x-best.x)<=2&&Math.abs(q.y-best.y)<=3))return no;
-  used.push(best);return {...p,x:best.x/w,y:best.y/h,ancoragem_visual:"pixel_compativel",preco_eixo_aprox:axis.preco(best.y/h)};
+  if(!best||candidates.some(q=>q.score<best.score+.25&&Math.abs(q.x-best.x)>Math.max(3,Math.round(w*.006))))return no;
+  return marcar(p,best,true);
  });
 }
 async function aureaValidarImagemV1021(resposta,imagens,signal){
