@@ -8,7 +8,7 @@ const checks=[
  ['Snapshot EUA',quant+'/v1/screeners?market=US&snapshot=1&universe=1',j=>j.ok===true&&j.market==='US'&&j.universe_complete===true&&j.universe_rows?.length>=624],
  ['Fundamentos SEC',quant+'/v1/sec-fundamentos',j=>Object.keys(j.tickers||{}).length>0],
  ['Documentos CVM',quant+'/v1/cvm-provas',j=>j.ok===true&&j.emissores?.length>=100&&j.documentos?.length>=100],
- ['Documentos SEC',quant+'/v1/sec-documento?cik=0000320193',j=>j.ok===true&&Object.values(j).some(v=>Array.isArray(v)&&v.length>0)]
+ ['Documentos SEC',quant+'/v1/sec-documento?cik=0000320193',j=>j.ok===true&&j.cik==='0000320193'&&/^[0-9]{10}-[0-9]{2}-[0-9]{6}$/.test(j.accessionNumber||'')&&/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(j.reportDate||'')&&String(j.documentUrl||'').startsWith('https://www.sec.gov/Archives/edgar/data/320193/')]
 ];
 (async()=>{const results=await Promise.allSettled(checks.map(async([name,url,valid])=>{const r=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(45000)});const j=await r.json();if(!r.ok||!valid(j))throw Error(name+' HTTP '+r.status+' contrato não validado');return name+' HTTP '+r.status+' OK'}));
 for(const r of results)console.log(r.status==='fulfilled'?r.value:String(r.reason));if(results.some(r=>r.status==='rejected'))process.exitCode=1})().catch(e=>{console.error(e.message);process.exitCode=1});
