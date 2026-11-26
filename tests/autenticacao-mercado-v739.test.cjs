@@ -12,12 +12,15 @@ test('Macro público vai Cloudflare sem renovar sessão; mantém as cinco chamad
  assert.match(comum,/function macroAuthHeaders\(config\)/);
  assert.match(comum,/h\.Authorization = "Bearer " \+ SESS\.at/);
 });
-test('Screener não envia solicitações que seriam 401 sem login',()=>{
+test('Screener público consulta Cloudflare sem login, sem credenciais e sem fallback Supabase',()=>{
  const src=fs.readFileSync('src/domains/core/02-estado-e-persistencia.js','utf8');
  const begin=src.indexOf('async function scFetch(');
- const stop=src.indexOf('return o.json();',begin);
+ const stop=src.indexOf('function scUi()',begin);
+ assert.ok(begin>=0&&stop>begin,'Delimitação da função do Scanner');
  const area=src.slice(begin,stop);
- assert.match(area,/if \(!token\) throw new Error\("Entre na sua conta/);
- assert.match(area,/Authorization: "Bearer " \+ token/);
- assert.match(area,/\/functions\/v1\/screener/);
+ assert.match(area,/https:\/\/diario-trader\.lucianosilva43567\.workers\.dev\/v1\/diario/);
+ assert.match(area,/method:\s*"GET"/);
+ assert.match(area,/credentials:\s*"omit"/);
+ assert.match(area,/range:\s*"2y"/);
+ assert.doesNotMatch(area,/\/functions\/v1\/|supabase\.co|edgeFetchAutenticado|Authorization|apikey|\bSESS\b|\btok\s*\(|\bcfg\s*\(/i);
 });
