@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: '24'
       - run: node --check cloudflare/diario-screeners/index.mjs
-      - run: node --test tests/aurea-imagem-v1004.test.cjs tests/aurea-multigraficos-v1011.test.cjs tests/aurea-pivos-v1012.test.cjs
+      - run: node --test tests/aurea-imagem-v1004.test.cjs tests/aurea-multigraficos-v1011.test.cjs tests/aurea-pivos-v1012.test.cjs tests/aurea-debate-v1013.test.cjs
       - run: node --check cloudflare/diario-screeners/aurea-resumao-v904.mjs
       - run: node --test tests/v904-aurea-panorama.test.cjs tests/mistral-panorama-v956.test.cjs
       - run: node --test tests/profit-edge-v947.test.cjs
