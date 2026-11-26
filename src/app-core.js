@@ -26939,7 +26939,10 @@ function render0() {
   if (typeof mdoAutoCiclo === "function") mdoAutoCiclo();
   (fixS(), window.DiarioDados?.observe(diarioDaysCanonical()));
   const e = $("#app");
-  ((e.style.animation = "none"),
+  // Laboratório é local: não desmontar formulários/controles durante repinturas
+  // globais de cotações ou sincronização. Ao trocar de aba/sub-aba, desmontar normalmente.
+  const keepEco = tab === "estudos" && typeof ESV !== "undefined" && ESV === "eco" && !!e.querySelector(".eco-root");
+  if (!keepEco) ((e.style.animation = "none"),
     e.offsetWidth,
     (e.style.animation = ""),
     (e.innerHTML = {
@@ -26998,7 +27001,9 @@ function render0() {
     }[tab] || "mais";
   (document
     .querySelectorAll("nav button")
-    .forEach((a) => a.classList.toggle("on", a.dataset.tab === t)),
+    .forEach((a) => {
+      if (!a.hasAttribute("data-eco-tool")) a.classList.toggle("on", a.dataset.tab === t);
+    }),
     fillImgs(),
     cnt(),
     ppOut(),
@@ -27008,7 +27013,7 @@ function render0() {
     applyQ(),
     svUi(),
     opPrev(),
-    db ||
+    (db || keepEco) ||
       $("#app").insertAdjacentHTML(
         "afterbegin",
         '<div class="warn" style="margin-bottom:8px">Armazenamento do navegador indisponível: os dados não serão salvos ao fechar.</div>',
