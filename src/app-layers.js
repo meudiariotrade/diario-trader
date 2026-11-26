@@ -3351,6 +3351,13 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const pivos=Array.isArray(E.pivos)?E.pivos:[];
         return '<section class="wf-chat-parecer">'+blocos.filter(v=>v[1]).map(([k,v])=>'<p><b>'+s(k)+':</b> '+s(v)+'</p>').join("")+(st.evidencias?.length?'<b>Evidências</b><ul>'+st.evidencias.map(v=>'<li>'+s(v)+'</li>').join("")+'</ul>':"")+(pivos.length?'<b>Topos e fundos relevantes</b><ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.validacao!=="estrutura_ohlc"?"?":"")+(p.preco?" · "+p.preco:""))+'</b> — '+s(p.validacao==='estrutura_ohlc'?'conferido no OHLC':'estimativa visual da IA')+': '+s(p.motivo)+'</li>').join("")+'</ul>':"")+'</section>';
       }
+      function commoditiesAureaV1015(E){
+        const arr=E.commodities_v1015;if(!Array.isArray(arr)||!arr.length)return "";
+        return '<section class="wf-chat-parecer"><b>Referências de commodities</b>'+arr.map(p=>{
+          const c=p.cotacao;
+          return '<div style="border-top:1px solid var(--bd);padding:6px 0"><b>'+s(p.nome)+'</b><p style="font-variant-numeric:tabular-nums">'+(c?s(c.preco.toLocaleString("pt-BR",{maximumFractionDigits:4}))+' '+s(c.unidade)+' · '+s(c.contrato)+' · '+s(c.fonte)+' · '+s(c.data)+' · '+(c.defasada?"Referência antiga":"Referência indicativa"):"Sem cotação datada confirmada")+'</p>'+N("Fatores a verificar",p.criterios)+N("Lacunas",p.lacunas)+'</div>';
+        }).join("")+'</section>';
+      }
       function fundamentosAureaV1014(E){
         const perfis=E.fundamentos_v1014;if(!Array.isArray(perfis)||!perfis.length)return "";
         const fmt=n=>Number.isFinite(n)?n.toLocaleString("pt-BR",{maximumFractionDigits:2}):"N/D";
@@ -3394,7 +3401,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         "Glossário",
         E.glossario?.map((u) => `${u.termo}: ${u.significado}`),
       )}
-      ${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
+      ${commoditiesAureaV1015(E)}${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
       }
       function i() {
         if (!O) return;
