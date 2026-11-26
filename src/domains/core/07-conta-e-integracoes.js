@@ -3812,7 +3812,12 @@ async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perg
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.resposta){
     const d=Array.isArray(j.diagnostico)?j.diagnostico.filter(x=>typeof x==="string"):[];
-    const reasons=[...new Set(d.map(x=>/HTTP 429/.test(x)?"limite do provedor":/tempo excedido/.test(x)?"tempo de resposta":/resposta incompatível/.test(x)?"formato de análise inválido":/HTTP [45]\d\d|indisponível|falha de conexão/.test(x)?"provedor indisponível":null).filter(Boolean))];
+    const reasons=[...new Set(d.slice(0,6).map(x=>{
+      const p=/^Gemini\b/.test(x)?"Gemini":/^Mistral\b/.test(x)?"Mistral":/^Gemma 4\b/.test(x)?"Gemma 4":null;
+      const m=x.match(/HTTP ([45]\d\d)/);
+      const reason=m?(m[1]==="429"?"limite do provedor":"HTTP "+m[1]):/tempo excedido/.test(x)?"tempo de resposta":/truncada/.test(x)?"resposta incompleta":/resposta incompatível/.test(x)?"formato inválido":/não configurado/.test(x)?"não configurado":/indisponível|falha de conexão/.test(x)?"indisponível":null;
+      return p&&reason?p+": "+reason:null;
+    }).filter(Boolean))];
     throw new Error((j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.")+(reasons.length?" Motivo: "+reasons.join(", ")+".":""));
   }
   return await aureaValidarHistoricoV1012({...j.resposta,modelo:j.modelo||""},perguntaOriginal,signal);
@@ -3864,7 +3869,7 @@ async function ecoPergunta(e, opt) {
     ativo=()=>ECO.geracao===geracao&&syncOwner()===titular&&!controller.signal.aborted;
   ECO.controller=controller;
   ECO.busy=1;ECO.err="";ECO.rascunho="";ECO.rota=rota;ecoPaint();
-  const timer=opt.imagem||debate?setTimeout(()=>controller.abort(),debate?125000:78000):null;
+  const timer=opt.imagem||debate?setTimeout(()=>controller.abort(),debate?(opt.imagem?170000:125000):115000):null;
   try {
     let resposta=null,livros=[];
     const gradeOpcoes=aureaTemaOpcoesV1017(q)?aureaGradeAtualV1017(q):null;
