@@ -33,3 +33,18 @@ test('v1007: marca pivôs sobre a imagem original e mostra cenário e invalidaç
  await expect(panel.locator('.wf-chat-history')).toContainText('Superação do topo');
  await panel.locator('[data-chat-close]').click();await p.close();
 }));
+
+test('v1019 opções recolhidas, consentimento individual e anexos compactos',{timeout:90000},async()=>withApp(async(browser,base)=>{
+ const p=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.evaluate(()=>window.TraderChat.open());
+ const panel=p.locator('#wf-chat-panel'),opts=panel.locator('.wf-chat-options');
+ await expect(opts.locator('[name="bookContext"]')).toBeHidden();await expect(opts.locator('[data-chat-option-count]')).toHaveText('Nenhuma ativa');
+ const compact=await panel.locator('form').evaluate(el=>el.getBoundingClientRect().height);
+ await opts.locator('summary').click();await opts.locator('[name="bookContext"]').check();await opts.locator('[name="privateContext"]').check();
+ await expect(opts.locator('[data-chat-option-count]')).toHaveText('2 ativas');
+ await opts.locator('[name="debateContext"]').check();await expect(opts.locator('[name="privateContext"]')).not.toBeChecked();
+ await opts.locator('summary').click();await expect(opts.locator('[name="bookContext"]')).toBeHidden();await expect(opts.locator('[data-chat-option-count]')).toHaveText('2 ativas');
+ assert.ok(compact<180,'compositor recolhido não deve ocupar metade da tela');
+ await panel.locator('[data-chat-close]').click();await p.evaluate(()=>window.TraderChat.open());await expect(opts.locator('[data-chat-option-count]')).toHaveText('Nenhuma ativa');
+ await p.close();
+}));

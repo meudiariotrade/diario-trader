@@ -3368,7 +3368,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       }
       function i() {
         if (!O) return;
-        if(ECO.owner!==syncOwner()){ecoLimpa();imagemChat=null;carregandoImagem=false;O.querySelector("textarea").value="";O.querySelector('[name="privateContext"]').checked=false;O.querySelector('[name="bookContext"]').checked=false;O.querySelector('[name="debateContext"]').checked=false;O.querySelector('[name="privateContext"]').disabled=false;atualizarAnexo();}
+        if(ECO.owner!==syncOwner()){ecoLimpa();imagemChat=null;carregandoImagem=false;O.querySelector("textarea").value="";O.querySelector('[name="context"]').checked=false;O.querySelector(".wf-chat-options").open=false;O.querySelector('[name="privateContext"]').checked=false;O.querySelector('[name="bookContext"]').checked=false;O.querySelector('[name="debateContext"]').checked=false;O.querySelector('[name="privateContext"]').disabled=false;atualizarAnexo();}
         const M = O.querySelector(".wf-chat-history"),
           E = O.querySelector("textarea"),
           u = O.querySelector('[role="status"]'),
@@ -3392,6 +3392,10 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           : ECO.err || ""),
           (P.disabled = !!ECO.busy || carregandoImagem),
           (E.disabled = !!ECO.busy));
+        const opts=O.querySelector(".wf-chat-options");
+        const count=[...opts.querySelectorAll('input[type="checkbox"]:checked')].length;
+        opts.querySelector("[data-chat-option-count]").textContent=count?count+" ativa"+(count===1?"":"s"):"Nenhuma ativa";
+        opts.querySelectorAll('input[type="checkbox"]').forEach(b=>b.disabled=!!ECO.busy);
         O.querySelector('[name="debateContext"]').disabled=!!ECO.busy;
         O.querySelector('[name="privateContext"]').disabled=!!ECO.busy||O.querySelector('[name="debateContext"]').checked;
         O.querySelectorAll("[data-chat-photo],[data-chat-camera]").forEach(b=>b.disabled=!!ECO.busy||carregandoImagem);
@@ -3411,13 +3415,14 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         if(!box)return;
         box.hidden=!imagemChat;
         const list=box.querySelector("[data-chat-previews]");
-        list.innerHTML=(imagemChat||[]).map((a,i)=>'<div style="display:flex;align-items:center;gap:8px;min-width:0"><img src="'+s(a.url)+'" alt="Gráfico '+(i+1)+'"><span>Gráfico '+(i+1)+'</span><button type="button" data-chat-remove="'+i+'" aria-label="Remover gráfico '+(i+1)+'"'+(ECO.busy||carregandoImagem?' disabled':'')+'>×</button></div>').join("");
+        list.innerHTML=(imagemChat||[]).map((a,i)=>'<div class="wf-chat-preview-item"><img src="'+s(a.url)+'" alt="Gráfico '+(i+1)+'"><span class="wf-chat-preview-name">Gráfico '+(i+1)+'</span><button type="button" data-chat-remove="'+i+'" aria-label="Remover gráfico '+(i+1)+'"'+(ECO.busy||carregandoImagem?' disabled':'')+'>×</button></div>').join("");
         box.querySelector("[data-chat-count]").textContent=(imagemChat?.length||0)+"/3 gráficos";
       }
       function limparChat(){
         ecoLimpa();imagemChat=null;carregandoImagem=false;
         if(O){
           O.querySelector("textarea").value="";
+          O.querySelector(".wf-chat-options").open=false;
           O.querySelector('[name="context"]').checked=false;O.querySelector('[name="privateContext"]').checked=false;O.querySelector('[name="bookContext"]').checked=false;O.querySelector('[name="debateContext"]').checked=false;O.querySelector('[name="privateContext"]').disabled=false;
           O.querySelectorAll('input[type="file"]').forEach(f=>f.value="");
           O.querySelector(".wf-chat-history").scrollTop=0;
@@ -3476,11 +3481,11 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           (r.innerHTML = `<button type="button" class="wf-chat-launcher" aria-label="Abrir Áurea" aria-expanded="false" aria-controls="wf-chat-panel"><span aria-hidden="true">✦</span></button>
       <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Áurea" hidden><header><div><b>✦ Áurea</b><small>Estrategista-chefe · O Conselho</small></div><div class="wf-chat-head-actions"><button type="button" data-chat-clear aria-label="Limpar conversa" title="Limpar conversa"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button><button type="button" data-chat-close aria-label="Fechar conversa">×</button></div></header>
       <div class="wf-chat-history" aria-label="Histórico da conversa"></div><div class="wf-chat-status" role="status" aria-live="polite"></div>
-      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Incluir contexto público da tela (inclui referências da grade de opções, quando disponíveis)</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-context-label"><input type="checkbox" name="privateContext"> Autorizar resumo da carteira ou histórico operacional ao conselheiro (sem notas/fotos)</label><label class="wf-chat-context-label"><input type="checkbox" name="bookContext"> Aplicar livros (até 2 trechos curtos relevantes enviados à IA; arquivos ficam no aparelho)</label><label class="wf-chat-context-label"><input type="checkbox" name="debateContext"> Debate do Conselho (duas rodadas de IA; sem carteira ou histórico privado)</label>
-      <div class="wf-chat-attachment" hidden><div style="min-width:0;width:100%"><b data-chat-count>0/3 gráficos</b><div data-chat-previews style="display:flex;flex-wrap:wrap;gap:8px;max-height:100px;overflow-y:auto"></div><small>Gemini, Mistral ou Cloudflare AI ao enviar. Evite dados sensíveis.</small></div></div>
+      <form><details class="wf-chat-options"><summary aria-label="Opções da análise"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--bg)"/><circle cx="15" cy="17" r="2" fill="var(--bg)"/></svg><span>Opções da análise</span><small data-chat-option-count>Nenhuma ativa</small><svg class="wf-chat-options-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 9 6 6 6-6"/></svg></summary><div class="wf-chat-options-body"><label class="wf-chat-context-label"><input type="checkbox" name="context"> Incluir contexto público da tela (inclui referências da grade de opções, quando disponíveis)</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-context-label"><input type="checkbox" name="privateContext"> Autorizar resumo da carteira ou histórico operacional ao conselheiro (sem notas/fotos)</label><label class="wf-chat-context-label"><input type="checkbox" name="bookContext"> Aplicar livros (até 2 trechos curtos relevantes enviados à IA; arquivos ficam no aparelho)</label><label class="wf-chat-context-label"><input type="checkbox" name="debateContext"> Debate do Conselho (duas rodadas de IA; sem carteira ou histórico privado)</label><small>Imagens são processadas pelos provedores de IA; não envie dados sensíveis. O histórico é apagado ao fechar.</small></div></details>
+      <div class="wf-chat-attachment" hidden><div class="wf-chat-attachment-row"><b data-chat-count>0/3 gráficos</b><div data-chat-previews></div></div></div>
       <input type="file" name="photo" accept="image/*" multiple hidden><input type="file" name="camera" accept="image/*" capture="environment" hidden>
       <div class="wf-chat-composer"><button type="button" data-chat-photo aria-label="Anexar foto ou gráfico" title="Anexar foto ou gráfico"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><label class="wf-chat-input-label">Sua pergunta<textarea rows="1" maxlength="6000" placeholder="Pergunte à Áurea…"></textarea></label><button type="button" data-chat-camera aria-label="Tirar foto" title="Tirar foto"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg></button><button type="submit" aria-label="Enviar pergunta" title="Enviar"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div>
-      <small>Imagens são processadas pelos provedores de IA; não envie dados sensíveis. O histórico do app é apagado ao fechar.</small></form></aside>`),
+      </form></aside>`),
           document.body.append(r),
           (j = r.querySelector(".wf-chat-launcher")),
           (O = r.querySelector("aside")),
@@ -3512,6 +3517,8 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           }),
           (O.querySelector("[data-chat-close]").onclick = () => B(!1)),
           (O.querySelector('[name="context"]').onchange = i),
+          (O.querySelector('[name="privateContext"]').onchange = i),
+          (O.querySelector('[name="bookContext"]').onchange = i),
           (O.querySelector('[name="debateContext"]').onchange = ()=>{const d=O.querySelector('[name="debateContext"]'),p=O.querySelector('[name="privateContext"]');if(d.checked)p.checked=false;p.disabled=d.checked||!!ECO.busy;i();}),
           (O.querySelector("[data-chat-clear]").onclick = () => limparChat()),
           (O.querySelector("[data-chat-photo]").onclick=()=>O.querySelector('[name="photo"]').click()),
@@ -3525,6 +3532,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
             if(window.DIARIO_DEMO){ECO.err="Demonstração: a consulta externa está desativada.";i();return;}
             const pergunta=P||(anexo.length>1?"Compare os gráficos anexados com o Conselho.":"Analise esta imagem com o Conselho.");
             const m=pergunta+(O.querySelector('[name="context"]').checked?"\n\nContexto autorizado:\n"+F():"");
+            O.querySelector(".wf-chat-options").open=false;
             u.value="";u.style.removeProperty("--wf-input-h");
             await ecoPergunta(m,{pergunta,imagem:anexo,contextoPublico:O.querySelector('[name="context"]').checked,dadosPrivados:!anexo&&O.querySelector('[name="privateContext"]').checked,livros:O.querySelector('[name="bookContext"]').checked,debate:O.querySelector('[name="debateContext"]').checked});
             if(!l||geracao!==ECO.geracao)return;

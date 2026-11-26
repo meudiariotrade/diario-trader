@@ -3810,7 +3810,11 @@ async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perg
     signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,pergunta_original:String(perguntaOriginal||pergunta).slice(0,6000),debate:debate===true,...(gradeOpcoes?{grade_opcoes:gradeOpcoes}:{})})
   });
   const j=await r.json().catch(()=>({}));
-  if(!r.ok||!j.resposta)throw new Error(j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.");
+  if(!r.ok||!j.resposta){
+    const d=Array.isArray(j.diagnostico)?j.diagnostico.filter(x=>typeof x==="string"):[];
+    const reasons=[...new Set(d.map(x=>/HTTP 429/.test(x)?"limite do provedor":/tempo excedido/.test(x)?"tempo de resposta":/resposta incompatível/.test(x)?"formato de análise inválido":/HTTP [45]\d\d|indisponível|falha de conexão/.test(x)?"provedor indisponível":null).filter(Boolean))];
+    throw new Error((j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.")+(reasons.length?" Motivo: "+reasons.join(", ")+".":""));
+  }
   return await aureaValidarHistoricoV1012({...j.resposta,modelo:j.modelo||""},perguntaOriginal,signal);
 }
 // v1014 — reutiliza valuationBR existente sem alterar fórmula ou score.
@@ -3860,7 +3864,7 @@ async function ecoPergunta(e, opt) {
     ativo=()=>ECO.geracao===geracao&&syncOwner()===titular&&!controller.signal.aborted;
   ECO.controller=controller;
   ECO.busy=1;ECO.err="";ECO.rascunho="";ECO.rota=rota;ecoPaint();
-  const timer=opt.imagem||debate?setTimeout(()=>controller.abort(),debate?110000:62000):null;
+  const timer=opt.imagem||debate?setTimeout(()=>controller.abort(),debate?125000:78000):null;
   try {
     let resposta=null,livros=[];
     const gradeOpcoes=aureaTemaOpcoesV1017(q)?aureaGradeAtualV1017(q):null;
