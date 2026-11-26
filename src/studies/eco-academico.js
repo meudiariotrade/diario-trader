@@ -192,7 +192,6 @@ L.events.uniDeck=el=>{
  const f=db.fichas.find(x=>x.id===el.dataset.id);if(!f)return;
  const add=cardsFromFicha(f);if(!add.length){S.uniStatus='Fichamento sem conteúdo suficiente para cartões.';refresh();return;}
  db.cards.push(...add);db.cards=db.cards.slice(-500);persist();S.uniFlashDisc=f.disc;S.uniCard=null;S.uniFlip=false;S.tool='flash';
- document.querySelectorAll('.eco-nav [data-eco-tool]').forEach(btn=>btn.classList.toggle('on',btn.dataset.ecoTool==='flash'));
  L.paint();
 };
 const due=c=>Date.parse(c.due||'')<=Date.now();

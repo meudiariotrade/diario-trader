@@ -33,10 +33,15 @@ test('Fichar texto local, gerar cards, revisar e preservar histórico JSON em na
  await p.locator('[data-eco-tool="ficha"]').click();
  await p.locator('[data-uni-title]').fill('Resumo de aula Keynes');
  await p.locator('[data-uni-text]').fill('O princípio da demanda efetiva considera que o nível de atividade pode permanecer abaixo do pleno emprego. O consumo aumenta com a renda, mas em proporção menor. O investimento depende de expectativas sobre a rentabilidade marginal do capital e da taxa de juros. A economia pode permanecer com desemprego involuntário. A escola keynesiana discute o papel de políticas fiscais.');
+ // Reproduz render global enquanto o usuário preenche a ficha.
+ await p.evaluate(()=>{const root=document.querySelector('.eco-root');render();if(root!==document.querySelector('.eco-root'))throw Error('Laboratório remontado durante edição');});
+ await expect(p.locator('[data-uni-title]')).toHaveValue('Resumo de aula Keynes');
  await p.locator('[data-eco-btn="uniLocal"]').click();
  await expect(p.locator('.uni-ficha')).toContainText('Resumo de aula Keynes');
  await p.locator('[data-eco-btn="uniDeck"]').click();
- await expect(p.locator('[data-eco-tool="flash"]')).toHaveClass(/on/);
+ await expect(p.locator('[data-eco-tool="flash"]')).toHaveClass(/\bon\b/);
+ await p.evaluate(()=>render());
+ await expect(p.locator('[data-eco-tool="flash"]')).toHaveClass(/\bon\b/);
  await expect(p.locator('.uni-flash')).toBeVisible();
  await p.locator('[data-eco-btn="uniFlip"]').click();
  await p.locator('[data-eco-btn="uniAcerto"]').click();
