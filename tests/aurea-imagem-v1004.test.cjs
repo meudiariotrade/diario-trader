@@ -96,3 +96,9 @@ test('v1020: preserva leitura e pivôs se aprofundamento falhar; sem reenviar pi
 test('v1020: identifica truncamento real sem expor resposta bruta',async()=>{
  const {aureaImagem}=await mod;const e={...env(),AI:{run:async()=>({choices:[{finish_reason:'length',message:{content:'SEGREDO'}}]})}};const r=await aureaImagem(req(),e,{},{auth:async()=>'u',snapshot:async()=>new Response('',{status:503}),fetcher:async()=>new Response('',{status:503})});assert.equal(r.status,503);const j=await r.json();assert.ok(j.diagnostico.includes('Gemma 4 resposta truncada'));assert.doesNotMatch(JSON.stringify(j),/SEGREDO/);
 });
+
+ test('v1020: fallback multimodal preserva a ordem de 2 e 3 imagens e não reenvia pixels na síntese',async()=>{
+ const {aureaImagem}=await mod;
+ for(const n of [2,3]){let calls=0;const raw={...result,pivos:[],comparacao:'Comparação condicional, sem misturar ativos nem períodos diferentes.',graficos:Array.from({length:n},(_,i)=>({indice:i+1,tipo:'grafico_parcial',ativo:'Não identificado',periodo:'Não identificado',leitura:'Estrutura visual parcial; escala e período não identificados.',pivos:[]}))};const e={...env(),AI:{run:async(model,body)=>{calls++;if(calls===1){assert.equal(body.messages[1].content.filter(x=>x.type==='image_url').length,n);return {choices:[{message:{content:JSON.stringify(raw)}}]}}assert.equal(typeof body.messages[1].content,'string');return {choices:[{message:{content:JSON.stringify({tecnico:result.tecnico,critico:result.critico,especialistas:[]})}}]}}}};
+ const r=await aureaImagem(req({pergunta:'Compare os gráficos',imagens:Array.from({length:n},()=>({mime:'image/jpeg',data:image}))}),e,{},{auth:async()=>'u',fetcher:async()=>new Response('',{status:503})});assert.equal(r.status,200);const j=await r.json();assert.equal(calls,2);assert.deepEqual(j.resposta.graficos.map(g=>g.indice),Array.from({length:n},(_,i)=>i+1));}
+ });
