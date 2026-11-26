@@ -2,35 +2,67 @@ import {servePublicSnapshot} from './snapshot-cache-v896.mjs';
 const txt=(x,n)=>typeof x==='string'?x.trim().slice(0,n):'';
 const num=x=>typeof x==='number'&&Number.isFinite(x)?x:null;
 const date=x=>typeof x==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&Number.isFinite(Date.parse(x+'T00:00:00Z'))&&new Date(x+'T00:00:00Z').toISOString().slice(0,10)===x?x:null;
-const FIELDS=['roe','roic','pl','pvp','p_l','p_vp','ev_ebitda','fcf_yield','margem_liquida','div_liq_ebitda','net_debt_ebitda','dividend_yield','payout_implicito','fcf_margin','revenue_growth_yoy','eps_growth_yoy','forward_pe','peg_ratio','ev_fcf','price_sales','total_shareholder_yield','buyback_yield','preco_referencia','lpa','vpa','dpa_12m'];
-const PEERS=['roe','roic','pl','pvp','ev_ebitda','fcf_yield','fcf_margin','forward_pe','ev_fcf','div_liq_ebitda','net_debt_ebitda'];
+const FIELDS=['roe','roic','pl','pvp','p_l','p_vp','ev_ebitda','fcf_yield','margem_liquida','div_liq_ebitda','net_debt_ebitda','dividend_yield','payout_implicito','fcf_margin','revenue_growth_yoy','eps_growth_yoy','forward_pe','peg_ratio','ev_fcf','price_sales','total_shareholder_yield','buyback_yield','preco_referencia','lpa','vpa','dpa_12m','market_cap_usd','valor_mercado_brl','payout','margem_ebitda','net_margin','gross_margin','operating_margin','interest_coverage','current_ratio','debt_equity','ffo','affo','price_ffo','price_affo','cet1','net_interest_margin','combined_ratio','stock_based_compensation','diluted_shares','free_cash_flow','free_cash_flow_ttm'];
+const PEERS=['roe','roic','pl','pvp','ev_ebitda','fcf_yield','fcf_margin','forward_pe','ev_fcf','div_liq_ebitda','net_debt_ebitda','peg_ratio','price_sales','price_ffo','price_affo','total_shareholder_yield'];
 const metrics=row=>Object.fromEntries(FIELDS.flatMap(k=>num(row?.[k])===null?[]:[[k,row[k]]]));
 export function tickersGrahamV1014(q){
  const s=String(q||''),br=[...new Set((s.match(/\b[A-Za-z]{4}(?:3|4|5|6|7|8|11)\b/g)||[]).map(x=>x.toUpperCase()))],us=[...new Set([...s.matchAll(/\b(?:ticker|NASDAQ|NYSE|AMEX)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi)].map(x=>x[1].toUpperCase()))];
  const all=[...br.map(ticker=>({ticker,market:'BR'})),...us.map(ticker=>({ticker,market:'US'}))];
  return all.length<=3?all:[];
 }
+// Modelos separados por mercado e atividade. Ausência de classificação não é prova de atividade.
+export function modeloGrahamV1014(row,market){
+ const s=String(row?.setor||row?.sector||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),d=String(row?.segmento||row?.industry||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),n=String(row?.empresa||row?.company_name||'').toLowerCase();
+ const all=s+' '+d+' '+n;
+ const tipo=/\b(?:reit|real estate investment trust|fundo imobiliario|fii)\b/.test(all)?'imobiliario':/\b(?:bank|banks|banking|banco|bancos|unibanco|bancorp|bradesco|jpmorgan|citigroup|wells fargo|goldman sachs|morgan stanley)\b/.test(all)?'banco':/\b(?:insurance|insurer|insurers|seguros|seguradora|seguradoras|chubb|allstate)\b/.test(all)?'seguradora':/semiconductor|semicondutor|chipmaker/.test(all)?'semicondutores':/software|saas|cloud computing/.test(s+' '+d)?'software':/technology|tecnologia|electronic technology/.test(s)?'tecnologia':/oil|gas|petroleo|mining|mineracao|commodity|commodities|steel|siderurgia/.test(s+' '+d)?'ciclico':/finance|financial|financeir/.test(s)?'financeiro_indefinido':'geral';
+ const moeda=market==='US'?'USD':'BRL',juros=market==='US'?'Fed Funds e Treasury; sem taxa atual presumida':'Selic e curva DI; sem taxa atual presumida';
+ const check={
+ banco:['ROE e P/VP associados a retorno sustentável','Capital regulatório CET1, inadimplência e provisões','Margem financeira, depósitos e liquidez','P/L e distribuição de capital'],
+ seguradora:['ROE e P/VP','Índice combinado, reservas técnicas e solvência','Resultado de subscrição versus resultado financeiro','Capital e distribuição'],
+ imobiliario:['FFO/AFFO por ação e preço/FFO ou preço/AFFO','Ocupação, contratos, dívida e vencimentos','Distribuição coberta por AFFO','NAV e cap rates quando documentados'],
+ semicondutores:['ROIC, margem bruta e FCF','Ciclo de estoques, capacidade, capex e clientes','Crescimento normalizado e concentração','Forward P/E, EV/FCF e diluição'],
+ software:['Crescimento e margem de FCF','Receita recorrente, retenção e unit economics quando divulgados','SBC, diluição líquida e recompras','EV/FCF, Forward P/E e PEG com crescimento positivo'],
+ tecnologia:['ROIC e margem de FCF','Crescimento, reinvestimento, capex e concorrência','SBC, diluição e retorno total','Forward P/E, PEG e EV/FCF quando aplicáveis'],
+ ciclico:['Lucro e FCF normalizados ao longo do ciclo','Custo de produção, sensibilidade a preços e capex','Dívida e vencimentos no cenário adverso','Múltiplos normalizados, nunca julgar barato pelo pico do ciclo'],
+ financeiro_indefinido:['Identificar primeiro a atividade financeira','ROE e estrutura de capital','Qualidade dos ativos e liquidez','Evitar múltiplos industriais até identificar atividade'],
+ geral:['ROIC versus custo de capital quando comprovado','Margens, conversão de caixa e crescimento','Dívida, liquidez, vencimentos e governança','Valuation relativo e absoluto conforme dados']
+ }[tipo];
+ return {tipo,moeda,juros,check,metodo:market==='US'?'Qualidade + crescimento + caixa + retorno líquido ao acionista; múltiplos adequados ao setor; DCF somente com fluxo, reinvestimento, desconto e premissas explícitas.':'Qualidade + caixa + ciclo + endividamento; dividendos recorrentes e Graham/Bazin somente quando aplicáveis; DCF com premissas explícitas.'};
+}
+const restricted=new Set(['banco','seguradora','imobiliario','financeiro_indefinido']);
+const multiples=new Set(['pl','pvp','ev_ebitda','forward_pe','ev_fcf','peg_ratio','price_sales','price_ffo','price_affo']);
+const applicable=(tipo,k)=>!restricted.has(tipo)|| (tipo==='imobiliario'?['price_ffo','price_affo','pvp','dividend_yield'].includes(k):['roe','pl','pvp','forward_pe','dividend_yield','total_shareholder_yield'].includes(k));
+// A existência de uma data SEC global não prova origem de cada valor. Exigir linhagem individual.
+const secProof=(r,k)=>{
+ const p=r?.linhagem_indicadores?.[k];
+ if(!Array.isArray(p)||!p.length||!p.every(x=>/^\d{10}-\d{2}-\d{6}$/.test(String(x?.documento_id||''))&&date(x?.competencia)&&date(x?.publicado_em)&&x.competencia<=x.publicado_em&&typeof x.valor_reportado==='number'&&Number.isFinite(x.valor_reportado)))return null;
+ const latest=[...p].sort((a,b)=>b.competencia.localeCompare(a.competencia))[0];
+ return {competencia:latest.competencia,publicado_em:latest.publicado_em,documento_id:latest.documento_id};
+};
+
 const sector=r=>txt(r?.setor||r?.sector,100),issuer=r=>txt(r?.emissor_cnpj||r?.cik||r?.empresa||r?.company_name,180).toLowerCase();
-const dateFor=(r,k)=>date(['revenue_growth_yoy','eps_growth_yoy','fcf_margin','buyback_yield','total_shareholder_yield'].includes(k)&&r.sec_facts_at?r.sec_facts_at:r.fundamentais_em);
+const dateFor=(r,k)=>secProof(r,k)?.competencia||date(r.fundamentais_em);
 export function perfilGrahamV1014(t,snapshot,{stale=false,now=Date.now()}={}){
  if(snapshot?.market!==t.market||snapshot.universe_complete!==true||!Array.isArray(snapshot.universe_rows))return null;
  const ts=Date.parse(snapshot.last_update||'');
  if(!Number.isFinite(ts)||ts>now+300000||now-ts>7*86400000)return null;
  const row=snapshot.universe_rows.find(x=>x.ticker===t.ticker);if(!row)return null;
  const metricas=metrics(row);if(!Object.keys(metricas).length)return null;
+ const modelo=modeloGrahamV1014(row,t.market);
  const hoje=new Date(now).toISOString().slice(0,10),fonte=txt(row.fonte_principal,150)||'Research público · Cloudflare/GitHub';
  const dados=Object.entries(metricas).map(([id,valor])=>{
-  const ref=dateFor(row,id),sec=['revenue_growth_yoy','eps_growth_yoy','fcf_margin','buyback_yield','total_shareholder_yield'].includes(id)&&date(row.sec_facts_at);
+  const ref=dateFor(row,id),proof=secProof(row,id),sec=proof&&proof.publicado_em<=hoje;
   const data=ref&&ref<=hoje?ref:null;
-  return {id,valor,data,fonte:sec?'SEC EDGAR XBRL · referência do exercício (sem recálculo)':fonte,periodo:id==='forward_pe'?'projetado':id==='pl'?'TTM conforme provedor':id==='pvp'?'patrimônio conforme provedor':'não confirmado'};
+  return {id,valor,data,fonte:sec?'SEC EDGAR XBRL · linhagem informada (sem recálculo)':'Snapshot Research · origem individual não certificada',periodo:id==='forward_pe'?'projetado':id==='pl'?'TTM conforme provedor':id==='pvp'?'patrimônio conforme provedor':'não confirmado',...(sec?{documento:proof}:{}),aplicavel:applicable(modelo.tipo,id),utilizavel:!!data&&(!multiples.has(id)||valor>0)};
  });
  const setor=sector(row),empresa=txt(row.empresa||row.company_name,180),ref=date(row.fundamentais_em),identity=issuer(row);
  const seen=new Set(identity?[identity]:[]),pares=[];
  // Somente universo de mesmo mercado, setor e data de referência; uma linha por emissor.
  if(setor&&identity&&ref&&ref<=hoje&&!stale){
   for(const p of snapshot.universe_rows){
-   if(p.ticker===t.ticker||sector(p)!==setor||date(p.fundamentais_em)!==ref||!issuer(p)||seen.has(issuer(p)))continue;
-   const m=Object.fromEntries(PEERS.flatMap(k=>num(p[k])===null||dateFor(p,k)!==dateFor(row,k)?[]:[[k,p[k]]]));
+   if(p.ticker===t.ticker||sector(p)!==setor||date(p.fundamentais_em)!==ref||!issuer(p)||seen.has(issuer(p))||modeloGrahamV1014(p,t.market).tipo!==modelo.tipo)continue;
+   const ind=txt(row.segmento||row.industry,100),indP=txt(p.segmento||p.industry,100);if(ind&&ind!==indP)continue;
+   const m=Object.fromEntries(PEERS.flatMap(k=>num(p[k])===null||!applicable(modelo.tipo,k)||(multiples.has(k)&&(p[k]<=0||!(row[k]>0)))||dateFor(p,k)!==dateFor(row,k)||Boolean(secProof(p,k))!==Boolean(secProof(row,k))?[]:[[k,p[k]]]));
    if(!Object.keys(m).length)continue;
    seen.add(issuer(p));pares.push({ticker:txt(p.ticker,12),metricas:m});if(pares.length===12)break;
   }
@@ -43,8 +75,13 @@ export function perfilGrahamV1014(t,snapshot,{stale=false,now=Date.now()}={}){
  if(!documento&&!row.sec_facts_at)lacunas.push('Competência documental não identificada');
  if(pares.length<3)lacunas.push('Amostra setorial comparável insuficiente');
  lacunas.push('Série histórica não incluída; não inferir tendência de longo prazo de um snapshot');
+ if(t.market==='US')lacunas.push('DCF e margem de segurança intrínseca exigem fluxo normalizado, reinvestimento, custo de capital e premissas; não inferir de múltiplos.');
+ if(modelo.tipo==='banco'&&!Object.hasOwn(metricas,'cet1'))lacunas.push('CET1 e qualidade de crédito não comprovados');
+ if(modelo.tipo==='seguradora'&&!Object.hasOwn(metricas,'combined_ratio'))lacunas.push('Índice combinado e solvência não comprovados');
+ if(modelo.tipo==='imobiliario'&&!Object.hasOwn(metricas,'affo'))lacunas.push('AFFO e cobertura de distribuição não comprovados');
+ if(['software','tecnologia','semicondutores'].includes(modelo.tipo)&&!Object.hasOwn(metricas,'stock_based_compensation'))lacunas.push('Remuneração em ações e diluição líquida não comprovadas');
  const valuationInput={};for(const k of ['preco_referencia','lpa','vpa','dpa_12m','pl','pvp','dividend_yield'])if(Object.hasOwn(metricas,k))valuationInput[k]=metricas[k];
- return {...t,empresa,setor,data:new Date(ts).toISOString(),fonte:'Research público · Cloudflare/GitHub',metricas,dados,pares,documento,defasado:stale||!ref||Date.parse(ref+'T00:00:00Z')>now||now-Date.parse(ref+'T00:00:00Z')>7*86400000,lacunas,valuationInput,referencia_indicadores:ref||null};
+ return {...t,empresa,setor,modelo,data:new Date(ts).toISOString(),fonte:'Research público · Cloudflare/GitHub',metricas,dados,pares,documento,defasado:stale||!ref||Date.parse(ref+'T00:00:00Z')>now||now-Date.parse(ref+'T00:00:00Z')>7*86400000,lacunas,valuationInput,referencia_indicadores:ref||null};
 }
 export async function carregarGrahamV1014(env,ctx,q,load=servePublicSnapshot){
  const targets=tickersGrahamV1014(q),cache=new Map();
@@ -59,4 +96,4 @@ export async function carregarGrahamV1014(env,ctx,q,load=servePublicSnapshot){
   }catch{return null}
  }))).filter(Boolean);
 }
-export const PROTOCOLO_GRAHAM_V1014='Graham deve formar tese própria e condicional sobre qualidade, vantagem competitiva, margens, rentabilidade, caixa, dívida e valuation. Use SOMENTE indicadores dos perfis fornecidos, distinguindo data do snapshot, referência do indicador e competência documental; não associe documento CVM a métrica sem linhagem comprovada. Não invente histórico, preço atual, múltiplo, preço justo, WACC, margem de segurança ou projeção. Não trate múltiplo projetado como realizado. Indicadores de bancos/seguradoras exigem ROE, capital e qualidade de crédito; não aplicar EV/EBITDA como regra universal. Para EUA use USD, Fed/Treasuries, crescimento, FCF e retorno total ao acionista; Brasil BRL, Selic/DI. Compare apenas mesmo mercado/setor e base; pares são amostra não representativa. Descreva números apenas quando presentes e sem cálculos de valuation: o cliente calcula com fórmulas existentes. Se dados faltarem, declare quais; informe catalisador, risco e invalidação. Não dê ordem de compra ou venda.';
+export const PROTOCOLO_GRAHAM_V1014='Graham deve formar tese própria e condicional sobre qualidade, vantagem competitiva, margens, rentabilidade, caixa, dívida e valuation. Use SOMENTE indicadores dos perfis fornecidos, distinguindo data do snapshot, referência do indicador e competência documental; não associe documento CVM a métrica sem linhagem comprovada. Não invente histórico, preço atual, múltiplo, preço justo, WACC, margem de segurança ou projeção. Não trate múltiplo projetado como realizado. Indicadores de bancos/seguradoras exigem ROE, capital e qualidade de crédito; não aplicar EV/EBITDA como regra universal. Para EUA use USD, Fed/Treasuries, crescimento, FCF e retorno total ao acionista; Brasil BRL, Selic/DI. Compare apenas mesmo mercado/setor e base; pares são amostra não representativa. Descreva números apenas quando presentes e sem cálculos de valuation: o cliente calcula com fórmulas existentes. Se dados faltarem, declare quais; informe catalisador, risco e invalidação. Não dê ordem de compra ou venda. Use o modelo setorial de cada perfil: bancos (CET1, crédito, ROE/P/VP), seguradoras (índice combinado, solvência), REITs (FFO/AFFO, cobertura e ocupação), software (receita recorrente, retenção, SBC e diluição), semicondutores (estoques, capex e ciclo), cíclicas (lucro/caixa normalizado). Nos EUA priorize crescimento sustentável, ROIC, FCF, Forward P/E, PEG e EV/FCF quando aplicáveis; remuneração em ações, dividendos e recompras líquidas, nunca penalize automaticamente DY baixo. FCF/EV não é FCF yield sobre capital próprio. Diferencie desconto relativo de margem intrínseca, preço em USD de retorno convertido em BRL; não use Bazin ou número de Graham automaticamente nos EUA. Nunca suponha WACC, taxa Treasury, crescimento ou diluição. Em empresa sem lucro/FCF positivo não use múltiplos negativos como sinal de oportunidade. Para cada ativo: tese, evidências, qualidade, riscos, valuation, cenário alternativo, catalisador e invalidação.';

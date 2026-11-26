@@ -3355,7 +3355,7 @@ function aureaRota(texto) {
     n = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
     tickers = [
       ...new Set(
-        (t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|11)\b/g) || []).map((x) => x.toUpperCase()),
+        [...(t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|7|8|11)\b/g) || []),...Array.from(t.matchAll(/\b(?:ticker|NASDAQ|NYSE|AMEX)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi),x=>x[1])].map((x) => x.toUpperCase()),
       ),
     ].slice(0, 4),
     forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow|dalio|helmer)\b/);
@@ -3413,7 +3413,7 @@ function aureaRota(texto) {
   return { id, tickers, motivo };
 }
 const AUREA_METODO_V1007 = Object.freeze({
-  "graham": "Forme tese própria de investimento: qualidade do negócio e ciclo, ROIC versus custo de capital quando ambos existirem, margens, conversão do lucro em caixa, dívida e vencimentos, retorno ao acionista, valuation histórico e pares comparáveis. Distinga preço de valor; preço justo apenas com método, premissas e dados, margem de segurança e sensibilidade; sem dados suficientes declare valuation inconclusivo. Cite períodos e evidências, catalisador e evento que invalida a tese.",
+  "graham": "Forme tese própria de investimento: qualidade do negócio e ciclo, ROIC versus custo de capital quando ambos existirem, margens, conversão do lucro em caixa, dívida e vencimentos, retorno ao acionista, valuation histórico e pares comparáveis. Distinga preço de valor; preço justo apenas com método, premissas e dados, margem de segurança e sensibilidade; sem dados suficientes declare valuation inconclusivo. Cite períodos e evidências, catalisador e evento que invalida a tese. Para EUA: USD, Fed/Treasuries, ROIC, FCF, crescimento sustentável, Forward P/E, PEG e EV/FCF quando válidos, remuneração em ações, diluição e recompras líquidas; DY baixo não implica empresa ruim. Para BR: BRL, Selic/DI, qualidade, ciclo, dividendos recorrentes e métodos adequados. Bancos/seguradoras: ROE, P/VP, capital, risco de crédito ou subscrição; REITs: FFO/AFFO e cobertura, não P/L isolado; tecnologia: margens, SBC, reinvestimento; cíclicas: lucro normalizado. Desconto a pares não é margem de segurança intrínseca. DCF só com premissas documentadas. Não invente indicadores.",
   "helmer": "Mapeie os sete poderes (escala, rede, contraposicionamento, custos de troca, marca, recurso exclusivo, processo), classificando presente, parcial, ausente ou não comprovado; para cada poder relevante, separe benefício econômico e barreira à imitação com evidência. Identifique estágio, concorrente ou mudança que ameaça o fosso em 3–5 anos e métrica observável de erosão. Não confunda bom produto, crescimento ou tamanho com fosso.",
   "livermore": "Faça leitura própria antes de considerar a tese do usuário. Identifique período, preço de referência, tendência primária e secundária, sequência de topos/fundos relevantes HH/HL/LH/LL, extremos locais versus pivôs estruturais confirmados pelo rompimento do extremo oposto. Explique Dow, Elliott com contagem alternativa, Fibonacci com âncoras, polaridade, efeito elástico, candles, médias, OBV e RSI apenas se houver dados. Mapa de níveis, cenário principal/alternativo, gatilho de confirmação, alvo condicional e invalidação; explique o que faria aguardar. Fear-Setting: pior cenário, prevenção, reparação e assimetria. Nunca invente níveis ou sinais.",
   "munger": "Faça inversão independente da tese, não concorde por cortesia. Identifique a premissa mais frágil, até três riscos materiais com mecanismo causal e evidência, vieses possíveis sem diagnosticar a pessoa, fatos versus expectativas, contraponto mais forte e evento ou nível que derruba a tese. Fear-Setting: pior cenário, prevenção, reparação e custo de inação, com horizonte e condição explícitos.",
@@ -3636,12 +3636,23 @@ function aureaCalcularGrahamV1014(perfis){
     }
     const input=p.valuationInput||{},api=window.DiarioScreenersInteligencia;
     let valuation=null;
-    if(p.market==="BR"&&!p.defasado&&p.referencia_indicadores&&Number.isFinite(input.preco_referencia)&&input.preco_referencia>0&&api?.valuationBR){
+    if(p.market==="BR"&&!["banco","seguradora","imobiliario","financeiro_indefinido","software","tecnologia","semicondutores"].includes(p.modelo?.tipo)&&!p.defasado&&p.referencia_indicadores&&Number.isFinite(input.preco_referencia)&&input.preco_referencia>0&&api?.valuationBR){
       const r=api.valuationBR(input);
       const methods=["graham","bazin"].flatMap(id=>Number.isFinite(r.methods?.[id])?[{id,valor:r.methods[id],margem:r.margins[id],inferido:!!r.estimados?.[id]}]:[]);
       if(methods.length)valuation={preco:input.preco_referencia,methods,nota:"Triagem matemática exploratória; insumos do snapshot não são certificação documental. Não é preço-alvo."};
     }
-    return {...p,comparacao,valuation};
+    const m=p.metricas||{},relative=[],derived=[];
+    const positive=k=>Number.isFinite(m[k])&&m[k]>0;
+    const allowed=p.modelo?.tipo==="imobiliario"?["price_ffo","price_affo"]:["banco","seguradora","financeiro_indefinido"].includes(p.modelo?.tipo)?["pvp","pl","forward_pe"]:["forward_pe","ev_fcf","peg_ratio","price_sales"];
+    if(p.market==="US"&&!p.defasado){
+      for(const k of allowed){const c=comparacao[k];if(positive(k)&&c?.n>=3&&c.mediana>0)relative.push({id:k,valor:m[k],mediana:c.mediana,n:c.n,diferenca_pct:(m[k]/c.mediana-1)*100});}
+      if(!["banco","seguradora","imobiliario","financeiro_indefinido"].includes(p.modelo?.tipo)){
+        if(positive("ev_fcf"))derived.push({id:"fcf_ev",valor:100/m.ev_fcf,formula:"100 ÷ EV/FCF; rendimento sobre EV, não sobre capital próprio"});
+        if(positive("forward_pe"))derived.push({id:"earnings_yield_forward",valor:100/m.forward_pe,formula:"100 ÷ Forward P/E; rendimento de lucro projetado"});
+        if(Number.isFinite(m.fcf_yield))derived.push({id:"fcf_equity_yield",valor:m.fcf_yield,formula:"FCF yield informado pelo provedor"});
+      }
+    }
+    return {...p,comparacao,valuation,relative,derived};
   });
 }
 
