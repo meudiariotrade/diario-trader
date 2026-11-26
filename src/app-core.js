@@ -43566,7 +43566,7 @@ const AUREA = {
     },
     livermore: {
       nome: "Livermore",
-      papel: "Técnico · Fear-Setting",
+      papel: "Técnico · Opções · Fear-Setting",
       lente:
         "análise técnica no estilo de Jesse Livermore combinada com Fear-Setting (Tim Ferriss): leia tendência primária, médias móveis, suportes/resistências, volume e sempre estruture o risco operacional em 4 passos: 1) Definir o pior cenário (invalidação técnica e impacto 1–10 no capital), 2) Prevenir (stop técnico e tamanho de posição), 3) Reparar (plano imediato se estopar, sem fazer preço médio para trás), 4) Assimetria (risco temporário vs retorno provável). Não recomende compra nem venda.",
     },
@@ -43661,6 +43661,113 @@ function aureaRendaFixaLocalV1016(texto,now=Date.now()){
 }
 // fim v1016
 
+// v1017 — cálculo local de estruturas de risco definido. Sem cadeia inventada.
+function aureaTemaOpcoesV1017(texto){
+ const n=String(texto||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+ return /\b(trava de (?:alta|baixa)|opcoes (?:sobre|de (?:acoes|compra|venda)|financeiras)|mercado de opcoes|call|put|straddle|strangle|iron condor|condor|borboleta|spread vertical|gregas|strike|volatilidade implicita|lancamento coberto|put protetora|collar)\b/.test(n)||/\bopcoes\b/.test(n)&&/\b(petr4|vale3|ativo|acao|acoes|estrategia|vencimento|premio|hedge)\b/.test(n);
+}
+function aureaOpcoesLocalV1017(texto,now=Date.now()){
+ const n=String(texto||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(),missing=[],notas=["Simulação de payoff no vencimento com dados digitados, não cotação executável.","Premissas: mesmo ativo, moeda, vencimento, multiplicador e quantidade nas duas pernas; liquidação simultânea. Antes do vencimento o resultado depende de volatilidade, tempo, liquidez e exercício.","Sem cadeia confirmada, não indicar contratos reais nem estimar gregas, chance de lucro ou preços."];
+ const direction=/\btrava de alta\b/.test(n)?"alta":/\btrava de baixa\b/.test(n)?"baixa":null;
+ const matches=[...n.matchAll(/\b(compra|comprar|compro|venda|vender|vendo)\s+(call|put)\s+strike\s*[:=]?\s*(\d+(?:[,.]\d+)?)\s+premio\s*[:=]?\s*(\d+(?:[,.]\d+)?)\b/g)];
+ const num=s=>Number(String(s).replace(",",".")),legs=matches.map(m=>({lado:/^compr/.test(m[1])?"compra":"venda",tipo:m[2].toUpperCase(),strike:num(m[3]),premio:num(m[4])}));
+ const market=/\b(?:eua|usd|us\$|nasdaq|nyse)\b/.test(n)?"US":/\b(?:brasil|b3|brl|r\$|[a-z]{4}(?:3|4|5|6|11))\b/.test(n)?"BR":null,moeda=market==="BR"?"BRL":market==="US"?"USD":null;
+ const m=n.match(/\bvenc(?:imento)?\s*[:=]?\s*(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/),raw=m?.[1],iso=raw?.includes("/")?raw.split("/").reverse().join("-"):raw;
+ const dt=iso?Date.parse(iso+"T00:00:00Z"):NaN,validDate=Number.isFinite(dt)&&new Date(dt).toISOString().slice(0,10)===iso&&dt>=Date.parse(new Date(now).toISOString().slice(0,10)+"T00:00:00Z");
+ const quantity=num(n.match(/\b(?:quantidade|contratos)\s*[:=]\s*(\d+)\b/)?.[1]),mult=num(n.match(/\bmultiplicador\s*[:=]\s*(\d+)\b/)?.[1]),cost=num(n.match(/\b(?:custos totais|custos)\s*[:=]\s*(\d+(?:[,.]\d+)?)/)?.[1]),budget=num(n.match(/\b(?:risco maximo|limite de risco)\s*[:=]\s*(\d+(?:[,.]\d+)?)/)?.[1]);
+ const allTickers=[...new Set([...(String(texto||"").match(/\b[A-Za-z]{4}(?:3|4|5|6|11)\b/g)||[]),...Array.from(String(texto||"").matchAll(/\b(?:ticker|NASDAQ|NYSE)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi),m=>m[1])].map(x=>x.toUpperCase()))];
+ const ticker=allTickers.length===1?allTickers[0]:null;
+ const dates=[...new Set(Array.from(n.matchAll(/\b(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/g),x=>x[1].includes("/")?x[1].split("/").reverse().join("-"):x[1]))];
+ if(allTickers.length>1||dates.length>1)missing.push("Mais de um ativo ou vencimento: não combinar pernas de bases diferentes.");
+ if(!ticker)missing.push("Ticker do ativo-objeto.");
+ if(!validDate)missing.push("Vencimento exato comum às duas pernas.");
+ if(!moeda)missing.push("Mercado e moeda (B3/BRL ou EUA/USD).");
+ if(legs.length!==2)missing.push("Duas pernas explícitas: compra call strike 30 prêmio 2; venda call strike 35 prêmio 1 (formato ilustrativo).");
+ if(!Number.isSafeInteger(quantity)||quantity<1||quantity>1e6)missing.push("Quantidade de contratos por perna.");
+ if(!Number.isSafeInteger(mult)||mult<1||mult>1e5)missing.push("Multiplicador confirmado do contrato (não presumir B3/EUA).");
+ if(!Number.isFinite(cost)||cost<0)missing.push("Custos totais da estrutura (informar 0 apenas para cenário sem custos).");
+ if(!Number.isFinite(budget)||budget<=0)missing.push("Limite de risco autorizado, na moeda da operação.");
+ let calc=null;
+ if(legs.length===2&&validDate&&dates.length===1&&ticker&&moeda&&legs.every(l=>Number.isFinite(l.strike)&&l.strike>0&&Number.isFinite(l.premio)&&l.premio>=0&&l.premio<1e7)&&legs[0].tipo===legs[1].tipo&&legs[0].lado!==legs[1].lado&&legs[0].strike!==legs[1].strike){
+  const buy=legs.find(l=>l.lado==="compra"),sell=legs.find(l=>l.lado==="venda"),low=Math.min(buy.strike,sell.strike),high=Math.max(buy.strike,sell.strike),width=high-low,net=buy.premio-sell.premio;
+  const bull=buy.strike<sell.strike;
+  const dir=bull?"alta":"baixa",debit=bull&&buy.tipo==="CALL"||!bull&&buy.tipo==="PUT";
+  const premium=debit?net:-net;
+  if(direction&&direction!==dir)missing.push("Direção declarada incompatível com as pernas.");
+  else if(!(premium>0&&premium<width))missing.push("Prêmio líquido incompatível com a largura e o tipo de trava; conferir bid/ask e preços executáveis.");
+  else{
+   const loss=debit?premium:width-premium,gain=debit?width-premium:premium;
+   const units=Number.isSafeInteger(quantity)&&quantity>0&&quantity<=1e6&&Number.isSafeInteger(mult)&&mult>0&&mult<=1e5?quantity*mult:null;
+   const totalCost=Number.isFinite(cost)&&cost>=0?cost:null;
+   const perCost=units&&totalCost!==null?totalCost/units:null;
+   const be=bull?low+(debit?premium:width-premium):high-(debit?premium:width-premium);
+   const maxLoss=units&&totalCost!==null?loss*units+totalCost:null,maxGain=units&&totalCost!==null?gain*units-totalCost:null;
+   calc={direcao:dir,tipo:buy.tipo,fluxo:debit?"débito":"crédito",largura:width,premio_liquido:premium,ganho_unitario:gain,perda_unitaria:loss,breakeven_sem_custos:be,breakeven_com_custos:perCost!==null&&perCost<gain?be+(bull?perCost:-perCost):null,unidades:units,ganho_maximo:maxGain,perda_maxima:maxLoss,retorno_risco:maxGain!==null&&maxGain>0&&maxLoss>0?maxGain/maxLoss:null,dentro_limite:maxLoss!==null&&Number.isFinite(budget)&&budget>0?maxLoss<=budget:null};
+   if(maxGain!==null&&maxGain<=0)missing.push("Custos eliminam o ganho máximo; não há payoff positivo nesta simulação.");
+  }
+ }else if(legs.length===2)missing.push("Trava vertical exige uma compra e uma venda do mesmo tipo, strikes distintos e mesma data/ativo; validar pernas.");
+ return {ticker,mercado:market,moeda,vencimento:validDate?iso:null,legs,calculo:calc,missing:[...new Set(missing)],notas};
+}
+// v1017 — adaptador estrito da grade já carregada. Nunca consulta rede, nunca envia a grade inteira.
+function aureaGradeCandidatasV1017(q,rows,now=Date.now()){
+ const n=String(q||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(),tickers=[...new Set((n.match(/\b[a-z]{4}(?:3|4|5|6|7|8|11)\b/g)||[]).map(x=>x.toUpperCase()))];
+ const alta=/\b(trava de alta|cenario de alta|tese de alta)\b/.test(n),baixa=/\b(trava de baixa|cenario de baixa|tese de baixa)\b/.test(n),direction=alta&&!baixa?"alta":baixa&&!alta?"baixa":null;
+ const target=Number((n.match(/\b(?:alvo|preco alvo)\s*[:=]\s*(\d+(?:[,.]\d+)?)/)?.[1]||"").replace(",","."));
+ const reqDate=n.match(/\bvenc(?:imento)?\s*[:=]?\s*(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/)?.[1],date=reqDate?.includes("/")?reqDate.split("/").reverse().join("-"):reqDate;
+ const result={ticker:tickers.length===1?tickers[0]:null,direcao:direction,alvo:target>0?target:null,updated_at:null,spot:null,candidatas:[],lacuna:""};
+ if(!result.ticker){result.lacuna="Informe um único ticker B3 da Grade ao Vivo.";return result;}
+ const row=(Array.isArray(rows)?rows:[]).find(r=>r?.ativo===result.ticker),ts=Date.parse(row?.updated_at||"");
+ if(!row||!Number.isFinite(ts)||ts>now||now-ts>120000||!(Number.isFinite(+row.spot)&&+row.spot>0)){result.lacuna="Grade do ativo ausente ou antiga (limite de 2 minutos para estudo). Abra Grade ao Vivo e atualize pela ponte; nenhum preço foi presumido.";return result;}
+ result.updated_at=new Date(ts).toISOString();result.spot=+row.spot;
+ const today=new Date(now).toISOString().slice(0,10);
+ const validDate=x=>typeof x==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&Number.isFinite(Date.parse(x+"T00:00:00Z"))&&new Date(Date.parse(x+"T00:00:00Z")).toISOString().slice(0,10)===x&&x>today;
+ const num=x=>typeof x==="number"&&Number.isFinite(x);
+ const series=(Array.isArray(row.series)?row.series:[]).filter(r=>r&&/^[A-Z]{4}[A-Z]\d{1,5}[A-Z0-9]?$/.test(String(r.c||""))&&r.c.slice(0,4)===result.ticker.slice(0,4)&&["C","P"].includes(r.t)&&validDate(r.v)&&(!date||r.v===date)&&num(r.k)&&r.k>0&&(r.ke===false||r.ke===0)&&num(r.b)&&num(r.a)&&r.b>0&&r.a>=r.b&&(r.a-r.b)/((r.a+r.b)/2)<=0.25).slice(0,400);
+ const make=(buy,sell,dir)=>{
+  if(buy.c===sell.c||buy.v!==sell.v||buy.t!==sell.t||buy.k===sell.k)return null;
+  const text="trava de "+dir+" "+result.ticker+" B3 vencimento: "+buy.v+" compra "+(buy.t==="C"?"call":"put")+" strike "+buy.k+" premio "+buy.a+" venda "+(sell.t==="C"?"call":"put")+" strike "+sell.k+" premio "+sell.b;
+  const c=aureaOpcoesLocalV1017(text,now).calculo;if(!c)return null;
+  const pnl=spot=>Math.max(0,buy.t==="C"?spot-buy.k:buy.k-spot)-Math.max(0,sell.t==="C"?spot-sell.k:sell.k-spot)-buy.a+sell.b;
+  const legs=[{codigo:buy.c,lado:"C",tipo:buy.t,strike:buy.k,premio:buy.a,bid:buy.b,ask:buy.a,iv:typeof opgIVp==="function"?opgIVp(buy.ivp):null},{codigo:sell.c,lado:"V",tipo:sell.t,strike:sell.k,premio:sell.b,bid:sell.b,ask:sell.a,iv:typeof opgIVp==="function"?opgIVp(sell.ivp):null}];
+  return {direcao:dir,tipo:buy.t,fluxo:c.fluxo,vencimento:buy.v,legs,perda_unitaria:c.perda_unitaria,ganho_unitario:c.ganho_unitario,premio_liquido:c.premio_liquido,breakeven:c.breakeven_sem_custos,alvo:result.alvo,payoff_alvo:result.alvo?pnl(result.alvo):null,payoff_spot:pnl(result.spot),spread_relativo:(buy.a-buy.b)/((buy.a+buy.b)/2)+(sell.a-sell.b)/((sell.a+sell.b)/2)};
+ };
+ const dirs=direction?[direction]:["alta","baixa"],groups=new Map(),candidates=[];
+ for(const r of series){const k=r.v+"|"+r.t;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);}
+ for(const arr of groups.values()){
+  arr.sort((a,b)=>Math.abs(a.k-result.spot)-Math.abs(b.k-result.spot));const limited=arr.slice(0,24);
+  for(const dir of dirs)for(const buy of limited)for(const sell of limited){
+   if(dir==="alta"?buy.k>=sell.k:buy.k<=sell.k)continue;
+   if(Math.abs(buy.k-result.spot)/result.spot>0.15||Math.abs(sell.k-result.spot)/result.spot>0.25)continue;
+   const c=make(buy,sell,dir);if(c)candidates.push(c);
+  }
+ }
+ for(const dir of dirs)for(const type of ["C","P"]){
+  const list=candidates.filter(c=>c.direcao===dir&&c.tipo===type).sort((a,b)=>result.alvo?b.payoff_alvo/b.perda_unitaria-a.payoff_alvo/a.perda_unitaria||a.spread_relativo-b.spread_relativo:a.spread_relativo-b.spread_relativo||Math.abs(a.breakeven-result.spot)-Math.abs(b.breakeven-result.spot));
+  if(list[0])result.candidatas.push(list[0]);
+ }
+ result.lacuna=result.candidatas.length?"Preços indicativos de coleta, não confirmação de execução. Sem multiplicador, custos, lote e exercício confirmados; valores por unidade, sem recomendação.":"Nenhuma combinação com duas ofertas válidas, strike explicitamente não estimado e vencimento confirmado; sem substituir por último negócio.";
+ return result;
+}
+function aureaGradeAtualV1017(q,now=Date.now()){
+ try{if(typeof OPG!=="undefined"&&typeof SESS!=="undefined"&&SESS&&OPG.owner===String(SESS.uid))return aureaGradeCandidatasV1017(q,OPG.rows,now);}catch{}
+ return aureaGradeCandidatasV1017(q,[],now);
+}
+function aureaAbrirGradeV1017(ticker){
+ if(!/^[A-Z]{4}(?:3|4|5|6|7|8|11)$/.test(String(ticker||"")))return;
+ if(typeof OPG!=="undefined"){OPG.a=ticker;OPG.m="";}
+ if(typeof GXV!=="undefined")GXV.vw="grade";
+ if(typeof irPara==="function")irPara("opgrade");
+}
+function aureaAbrirSimuladorV1017(q,c,quantity,now=Date.now()){
+ if(!Number.isSafeInteger(quantity)||quantity<=0||quantity>1e6||!c||typeof showSheet!=="function")return false;
+ const grade=aureaGradeAtualV1017(q,now),fresh=grade.candidatas.find(x=>x.vencimento===c.vencimento&&x.legs.every((l,i)=>l.codigo===c.legs[i]?.codigo&&l.premio===c.legs[i]?.premio&&l.strike===c.legs[i]?.strike));
+ if(!fresh)return false;
+ const legs=fresh.legs.map((l,i)=>({id:"l"+Date.now().toString(36)+i,tp:l.tipo,lado:l.lado,k:l.strike,venc:fresh.vencimento,pr:l.premio,q:quantity,...(l.iv?{iv:l.iv*100}:{})}));
+ AUTO=0;isNew=1;QM=0;T={id:Date.now().toString(36),tipo:"O",dt:loc().slice(0,16),ativo:fresh.legs[0].codigo,sub:grade.ticker,side:fresh.fluxo==="crédito"?"V":"C",ot:fresh.tipo,strike:String(legs[0].k),venc:fresh.vencimento,spot:String(grade.spot),entry:String(fresh.premio_liquido),stop:"",target:"",exit:"",qty:String(quantity),pv:"1",rules:"",err:"Nenhum",estr:"Trava de "+fresh.direcao,legs,aureaSimulacao:true};orig={};showSheet();return true;
+}
+
+// fim v1017
+
 function aureaRota(texto) {
   const t = String(texto || ""),
     n = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
@@ -43673,6 +43780,8 @@ function aureaRota(texto) {
   const usStandalone=t.trim().match(/^(?:@graham\s+)?\$?([A-Z]{1,5}(?:\.[A-Z])?)$/),usTagged=Array.from(t.matchAll(/(?:^|\s)\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g),x=>x[1]);
   const blocked=new Set(["BR","EUA","US","USD","BRL","ROE","ROIC","FCF","DCF","PEG","CET","DY","ETF","FII","PIB","FED","SELIC","IBOV"]);
   for(const x of [...usTagged,...(usStandalone?[usStandalone[1]]:[])])if(!blocked.has(x)&&!tickers.includes(x)&&tickers.length<4)tickers.push(x);
+  const opcoes=typeof aureaTemaOpcoesV1017==="function"&&aureaTemaOpcoesV1017(t);
+  if(opcoes&&(!forcado||["livermore","markowitz","munger"].includes(forcado[1])))return {id:forcado?forcado[1]:"livermore",tickers,motivo:"análise técnica e estratégias com opções",tema:"opcoes"};
   if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você",...((typeof aureaRendaFixaTemaV1016==="function"&&aureaRendaFixaTemaV1016(t))?{tema:"renda_fixa"}:{}) };
   if((typeof aureaRendaFixaTemaV1016==="function"&&aureaRendaFixaTemaV1016(t))&&!/\b(o que e|como funciona|explique o conceito)\b/.test(n))return {id:"markowitz",tickers:[],motivo:"renda fixa e gestão de caixa",tema:"renda_fixa"};
   const commodity=/\b(commodit\w*|brent|wti|petroleo|ouro|gold|xauusd|prata|silver|cobre|copper|minerio|dalian|soja|milho|trigo|cafe|acucar|algodao|boi gordo|boi vivo|gas natural)\b/.test(n);
@@ -43735,9 +43844,9 @@ function aureaRota(texto) {
 const AUREA_METODO_V1007 = Object.freeze({
   "graham": "Forme tese própria de investimento: qualidade do negócio e ciclo, ROIC versus custo de capital quando ambos existirem, margens, conversão do lucro em caixa, dívida e vencimentos, retorno ao acionista, valuation histórico e pares comparáveis. Distinga preço de valor; preço justo apenas com método, premissas e dados, margem de segurança e sensibilidade; sem dados suficientes declare valuation inconclusivo. Cite períodos e evidências, catalisador e evento que invalida a tese. Para EUA: USD, Fed/Treasuries, ROIC, FCF, crescimento sustentável, Forward P/E, PEG e EV/FCF quando válidos, remuneração em ações, diluição e recompras líquidas; DY baixo não implica empresa ruim. Para BR: BRL, Selic/DI, qualidade, ciclo, dividendos recorrentes e métodos adequados. Bancos/seguradoras: ROE, P/VP, capital, risco de crédito ou subscrição; REITs: FFO/AFFO e cobertura, não P/L isolado; tecnologia: margens, SBC, reinvestimento; cíclicas: lucro normalizado. Desconto a pares não é margem de segurança intrínseca. DCF só com premissas documentadas. Não invente indicadores.",
   "helmer": "Mapeie os sete poderes (escala, rede, contraposicionamento, custos de troca, marca, recurso exclusivo, processo), classificando presente, parcial, ausente ou não comprovado; para cada poder relevante, separe benefício econômico e barreira à imitação com evidência. Identifique estágio, concorrente ou mudança que ameaça o fosso em 3–5 anos e métrica observável de erosão. Não confunda bom produto, crescimento ou tamanho com fosso.",
-  "livermore": "Faça leitura própria antes de considerar a tese do usuário. Identifique período, preço de referência, tendência primária e secundária, sequência de topos/fundos relevantes HH/HL/LH/LL, extremos locais versus pivôs estruturais confirmados pelo rompimento do extremo oposto. Explique Dow, Elliott com contagem alternativa, Fibonacci com âncoras, polaridade, efeito elástico, candles, médias, OBV e RSI apenas se houver dados. Mapa de níveis, cenário principal/alternativo, gatilho de confirmação, alvo condicional e invalidação; explique o que faria aguardar. Fear-Setting: pior cenário, prevenção, reparação e assimetria. Nunca invente níveis ou sinais. Commodities: analise oferta/demanda, estoques, produção, curva e sazonalidade apenas com dados; diferencie contrato, praça, moeda e unidade, preço spot e futuro. Schwartz lidera macro; Dalio trata China, geopolítica, dólar e juros reais; Livermore usa OHLC ou gráfico para níveis, sem inventar. Traga cenário alternativo, confirmação e invalidação e impacto condicional BR/EUA.",
-  "munger": "Faça inversão independente da tese, não concorde por cortesia. Identifique a premissa mais frágil, até três riscos materiais com mecanismo causal e evidência, vieses possíveis sem diagnosticar a pessoa, fatos versus expectativas, contraponto mais forte e evento ou nível que derruba a tese. Fear-Setting: pior cenário, prevenção, reparação e custo de inação, com horizonte e condição explícitos.",
-  "markowitz": "Diagnostique concentração por ativo, classe, setor e moeda, exposição comum a fatores e choques, liquidez e horizonte; use pesos e correlações somente quando fornecidos ou calculáveis com séries alinhadas. Explique trade-offs de risco/retorno, prioridades de ajuste e condições de rebalanceamento; não invente carteira, covariância, retorno esperado ou alocação ideal. Compare ao objetivo informado e declare lacunas. Renda fixa BR/EUA: Markowitz lidera adequação ao objetivo, liquidez, vencimento, retorno líquido/real e risco de emissor; Schwartz analisa Selic/CDI/IPCA/DI e Fed/Treasuries, curva, inflação, duration e reinvestimento; compare CDB/LCI/LCA/Tesouro/CRI/CRA/debêntures e T-bills/notes/bonds/TIPS/CD/corporate bonds/money market. Nunca suponha taxa contratada, prazo exato, garantia ou imposto; diferencie cupom, yield, taxa anual e spread; dinheiro de curto prazo exige liquidez e baixa oscilação. Não extrapole juros atuais até vencimento.",
+  "livermore": "Faça leitura própria antes de considerar a tese do usuário. Identifique período, preço de referência, tendência primária e secundária, sequência de topos/fundos relevantes HH/HL/LH/LL, extremos locais versus pivôs estruturais confirmados pelo rompimento do extremo oposto. Explique Dow, Elliott com contagem alternativa, Fibonacci com âncoras, polaridade, efeito elástico, candles, médias, OBV e RSI apenas se houver dados. Mapa de níveis, cenário principal/alternativo, gatilho de confirmação, alvo condicional e invalidação; explique o que faria aguardar. Fear-Setting: pior cenário, prevenção, reparação e assimetria. Nunca invente níveis ou sinais. Commodities: analise oferta/demanda, estoques, produção, curva e sazonalidade apenas com dados; diferencie contrato, praça, moeda e unidade, preço spot e futuro. Schwartz lidera macro; Dalio trata China, geopolítica, dólar e juros reais; Livermore usa OHLC ou gráfico para níveis, sem inventar. Traga cenário alternativo, confirmação e invalidação e impacto condicional BR/EUA. Opções BR/EUA: preserve análise técnica; associe cenário direcional/lateral, horizonte e volatilidade a estruturas de risco definido. Trava de alta/baixa com calls ou puts, proteção e alternativas; explique pernas, débito/crédito, ganho/perda, breakeven, exercício, liquidez, spread bid/ask, eventos, theta/vega/delta e risco de exercício antecipado/assignment, quando aplicável. Sem cadeia datada e multiplicador confirmado, não inventar séries, strikes, prêmios ou gregas; use estrutura conceitual e cálculos locais com insumos explícitos. Não indicar venda descoberta, nem executar ordens. Markowitz dimensiona risco; Munger questiona premissas.",
+  "munger": "Faça inversão independente da tese, não concorde por cortesia. Identifique a premissa mais frágil, até três riscos materiais com mecanismo causal e evidência, vieses possíveis sem diagnosticar a pessoa, fatos versus expectativas, contraponto mais forte e evento ou nível que derruba a tese. Fear-Setting: pior cenário, prevenção, reparação e custo de inação, com horizonte e condição explícitos. Opções BR/EUA: preserve análise técnica; associe cenário direcional/lateral, horizonte e volatilidade a estruturas de risco definido. Trava de alta/baixa com calls ou puts, proteção e alternativas; explique pernas, débito/crédito, ganho/perda, breakeven, exercício, liquidez, spread bid/ask, eventos, theta/vega/delta e risco de exercício antecipado/assignment, quando aplicável. Sem cadeia datada e multiplicador confirmado, não inventar séries, strikes, prêmios ou gregas; use estrutura conceitual e cálculos locais com insumos explícitos. Não indicar venda descoberta, nem executar ordens. Markowitz dimensiona risco; Munger questiona premissas.",
+  "markowitz": "Diagnostique concentração por ativo, classe, setor e moeda, exposição comum a fatores e choques, liquidez e horizonte; use pesos e correlações somente quando fornecidos ou calculáveis com séries alinhadas. Explique trade-offs de risco/retorno, prioridades de ajuste e condições de rebalanceamento; não invente carteira, covariância, retorno esperado ou alocação ideal. Compare ao objetivo informado e declare lacunas. Renda fixa BR/EUA: Markowitz lidera adequação ao objetivo, liquidez, vencimento, retorno líquido/real e risco de emissor; Schwartz analisa Selic/CDI/IPCA/DI e Fed/Treasuries, curva, inflação, duration e reinvestimento; compare CDB/LCI/LCA/Tesouro/CRI/CRA/debêntures e T-bills/notes/bonds/TIPS/CD/corporate bonds/money market. Nunca suponha taxa contratada, prazo exato, garantia ou imposto; diferencie cupom, yield, taxa anual e spread; dinheiro de curto prazo exige liquidez e baixa oscilação. Não extrapole juros atuais até vencimento. Opções BR/EUA: preserve análise técnica; associe cenário direcional/lateral, horizonte e volatilidade a estruturas de risco definido. Trava de alta/baixa com calls ou puts, proteção e alternativas; explique pernas, débito/crédito, ganho/perda, breakeven, exercício, liquidez, spread bid/ask, eventos, theta/vega/delta e risco de exercício antecipado/assignment, quando aplicável. Sem cadeia datada e multiplicador confirmado, não inventar séries, strikes, prêmios ou gregas; use estrutura conceitual e cálculos locais com insumos explícitos. Não indicar venda descoberta, nem executar ordens. Markowitz dimensiona risco; Munger questiona premissas.",
   "schwartz": "Faça tese macro de curto prazo: regime monetário, inflação, atividade, emprego, câmbio, juros, liquidez e eventos da agenda. Distinguir dado divulgado, consenso, surpresa e horário/data quando disponíveis; explique transmissão aos mercados e setores, cenário base e alternativo e evento que muda a leitura. Não confunda mercado fechado com queda ou dado indisponível. Commodities: analise oferta/demanda, estoques, produção, curva e sazonalidade apenas com dados; diferencie contrato, praça, moeda e unidade, preço spot e futuro. Schwartz lidera macro; Dalio trata China, geopolítica, dólar e juros reais; Livermore usa OHLC ou gráfico para níveis, sem inventar. Traga cenário alternativo, confirmação e invalidação e impacto condicional BR/EUA. Renda fixa BR/EUA: Markowitz lidera adequação ao objetivo, liquidez, vencimento, retorno líquido/real e risco de emissor; Schwartz analisa Selic/CDI/IPCA/DI e Fed/Treasuries, curva, inflação, duration e reinvestimento; compare CDB/LCI/LCA/Tesouro/CRI/CRA/debêntures e T-bills/notes/bonds/TIPS/CD/corporate bonds/money market. Nunca suponha taxa contratada, prazo exato, garantia ou imposto; diferencie cupom, yield, taxa anual e spread; dinheiro de curto prazo exige liquidez e baixa oscilação. Não extrapole juros atuais até vencimento.",
   "dalio": "Faça tese macro estrutural e de geopolítica sem viés partidário: ciclo de dívida, dívida/PIB, primário versus nominal, juro real versus crescimento, rolagem, moeda, liquidez e transmissão setorial. Compare países apenas com métricas e datas compatíveis. Separe cenário de estresse, fator mitigador, risco de cauda e indicador que confirma mudança de regime. Commodities: analise oferta/demanda, estoques, produção, curva e sazonalidade apenas com dados; diferencie contrato, praça, moeda e unidade, preço spot e futuro. Schwartz lidera macro; Dalio trata China, geopolítica, dólar e juros reais; Livermore usa OHLC ou gráfico para níveis, sem inventar. Traga cenário alternativo, confirmação e invalidação e impacto condicional BR/EUA.",
   "dow": "Explique o conceito com método, exemplo explicitamente hipotético, aplicação prática, erro comum e critério de verificação. Use trechos da biblioteca quando disponíveis; não invente citação, autoria nem dado de mercado."
@@ -43909,9 +44018,9 @@ async function aureaDebateCallV1013(dados,signal,titular){
   if(!r.ok||!j.resultado)throw Error(j.erro||"Rodada do Conselho indisponível.");
   return j;
 }
-async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titular){
+async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titular,gradeOpcoes=null){
   const rf=aureaRendaFixaTemaV1016(pergunta)?aureaRendaFixaLocalV1016(pergunta):null;
-  const dados={pergunta:String(pergunta).slice(0,6000),contexto_publico:String(contexto||"").slice(0,5000),biblioteca:livros,...(rf?{simulacao_rf:rf}:{})};
+  const dados={pergunta:String(pergunta).slice(0,6000),contexto_publico:String(contexto||"").slice(0,5000),biblioteca:livros,...(rf?{simulacao_rf:rf}:{}),...(gradeOpcoes?{grade_opcoes:gradeOpcoes}:{})};
   let rodada,modeloInicial;
   if(resposta){rodada=aureaRodadaVisualV1013(resposta);modeloInicial=resposta.modelo||"";}
   else{
@@ -43930,7 +44039,7 @@ async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titu
 }
 // fim v1013
 
-async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perguntaOriginal=pergunta,debate=false) {
+async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perguntaOriginal=pergunta,debate=false,gradeOpcoes=null) {
   const imagens=Array.isArray(imagem)?imagem:[imagem];
   if(!imagens.length||imagens.length>3)throw new Error("Anexe de 1 a 3 gráficos.");
   const payload=imagens.map(x=>({mime:"image/jpeg",data:x.b64}));
@@ -43940,7 +44049,7 @@ async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perg
   const r = await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-imagem",{
     method:"POST",credentials:"omit",redirect:"error",cache:"no-store",
     headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},
-    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,pergunta_original:String(perguntaOriginal||pergunta).slice(0,6000),debate:debate===true})
+    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,pergunta_original:String(perguntaOriginal||pergunta).slice(0,6000),debate:debate===true,...(gradeOpcoes?{grade_opcoes:gradeOpcoes}:{})})
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.resposta)throw new Error(j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.");
@@ -43996,13 +44105,19 @@ async function ecoPergunta(e, opt) {
   const timer=opt.imagem||debate?setTimeout(()=>controller.abort(),debate?110000:62000):null;
   try {
     let resposta=null,livros=[];
+    const gradeOpcoes=aureaTemaOpcoesV1017(q)?aureaGradeAtualV1017(q):null;
+    const gradeAutorizada=opt.contextoPublico===true?gradeOpcoes:null;
     if(opt.livros===true){
       try{livros=await window.DiarioCerebroIA?.contextoConselho?.(rota.id,q,true,controller.signal)||[];}catch{}
     }
     if(!ativo())return;
     const bloco=window.DiarioCerebroIA?.blocoConselho?.(livros)||"";
-    if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q,debate);
-    else if(debate)resposta=await aureaDeliberarV1013(null,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
+    if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q,debate,gradeAutorizada);
+    else if(debate)resposta=await aureaDeliberarV1013(null,q,e===q?"":e.slice(q.length),livros,controller.signal,titular,gradeAutorizada);
+    else if(rota.tema==="opcoes"&&!opt.dadosPrivados&&!a){
+      const j=await aureaDebateCallV1013({fase:"opcoes",lente:rota.id,pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros,simulacao_opcoes:aureaOpcoesLocalV1017(q),grade_opcoes:gradeAutorizada},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
+      resposta={...j.resultado,modelo:j.modelo||""};
+    }
     else if(rota.tema==="renda_fixa"&&!opt.dadosPrivados&&!a){
       const rf=aureaRendaFixaLocalV1016(q);
       const j=await aureaDebateCallV1013({fase:"renda_fixa",lente:rota.id,pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros,simulacao_rf:rf},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
@@ -44029,9 +44144,10 @@ async function ecoPergunta(e, opt) {
       }
     }
     if(!ativo())return;
-    if(debate&&opt.imagem)resposta=await aureaDeliberarV1013(resposta,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
+    if(debate&&opt.imagem)resposta=await aureaDeliberarV1013(resposta,q,e===q?"":e.slice(q.length),livros,controller.signal,titular,gradeAutorizada);
     if(!ativo())return;
     if(resposta.fundamentos_v1014?.length)resposta.fundamentos_v1014=aureaCalcularGrahamV1014(resposta.fundamentos_v1014);
+    if(aureaTemaOpcoesV1017(q))resposta.opcoes_v1017={...aureaOpcoesLocalV1017(q),grade:gradeOpcoes};
     if(aureaRendaFixaTemaV1016(q))resposta.renda_fixa_v1016={...(resposta.renda_fixa_v1016||{}),simulacao:aureaRendaFixaLocalV1016(q)};
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
       motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagens:(Array.isArray(opt.imagem)?opt.imagem:[opt.imagem]).map(x=>x.url)}:{})});
@@ -49495,12 +49611,16 @@ ${e.be.map((f) => `<line x1="${l(f)}" x2="${l(f)}" y1="10" y2="168" stroke="var(
 <path d="${c(s)}" fill="none" stroke="var(--ac)" stroke-width="1.6" stroke-dasharray="5 3"/><path d="${c(o)}" fill="none" stroke="var(--tx)" stroke-width="2"/>
 ${t && t.x != null && t.pl != null ? `<circle cx="${l(t.x)}" cy="${d(t.pl)}" r="5" fill="#ffffff" stroke="var(--ac)" stroke-width="3"/>` : ""}
 ${m.map((f, x) => `<text x="${l(f)}" y="184" font-size="10" fill="var(--mut)" text-anchor="${x === 0 ? "start" : x === m.length - 1 ? "end" : "middle"}">${opN(f, 2)}</text>`).join("")}</svg>
-<div class="sm mut" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:2px"><span><b style="color:var(--tx)">━</b> no vencimento</span><span><b style="color:var(--ac)">┅</b> hoje</span><span><b style="color:var(--ac)">┆</b> preço do ativo</span>${e.be.length ? "<span>┆ cinza = breakeven</span>" : ""}</div>`;
+<div class="sm mut" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:2px"><span><b style="color:var(--tx)">━</b> no vencimento</span>${s.length?'<span><b style="color:var(--ac)">┅</b> hoje</span>':""}<span><b style="color:var(--ac)">┆</b> preço do ativo</span>${e.be.length ? "<span>┆ cinza = breakeven</span>" : ""}</div>`;
 }
 const OPSIM = {};
 function opPainel(e, t) {
   const a = opResumo(e);
   if (!a) return "";
+  if(e.aureaSimulacao===true){
+    const expiry={...a,agora:[]};
+    return `<div class="idt opp" data-opid="${esc(t)}"><div class="sm mut">Estrutura importada da Grade ao Vivo para conferência. Payoff no vencimento, sem custos; a coleta não garante execução. Volatilidade e juro não foram presumidos nesta visualização.</div><div class="opch">${opGrafico(expiry,null)}</div><div class="ln"><span>Ganho máximo estimado</span><b>${a.ilimG?"ilimitado":opM(a.mx)}</b></div><div class="ln"><span>Perda máxima estimada</span><b>${a.ilimP?"ilimitada":opM(a.mn)}</b></div><div class="ln"><span>Equilíbrio estimado</span><b>${a.be.map(x=>opN(x)).join(" · ")||"–"}</b></div><p class="sm mut">Confira lote, exercício, margem, custos e ofertas. Nenhuma operação registrada automaticamente; cálculos antes do vencimento não estão disponíveis neste rascunho.</p></div>`;
+  }
   const o = OPSIM[t] || { p: 0, d: 0, v: 0 },
     s = Math.max(0, a.dte),
     n = a.S * (1 + o.p / 100),
@@ -50108,6 +50228,7 @@ function opStatsHtml() {
 }
 const OPG = {
   rows: null,
+  owner: null,
   ts: 0,
   busy: 0,
   err: "",
@@ -50128,6 +50249,8 @@ try {
   t && !t[1].includes("mercado:opc") && t[1].push("mercado:opc");
 } catch {}
 async function opgCarrega(e) {
+  const owner=typeof SESS!=='undefined'&&SESS?String(SESS.uid):null;
+  if(OPG.owner!==owner){OPG.rows=null;OPG.ts=0;OPG.owner=owner;}
   if (!(OPG.busy || (!e && Date.now() - OPG.ts < 55e3))) {
     if (!cfg() || typeof SESS > "u" || !SESS) {
       ((OPG.err =
@@ -50141,7 +50264,8 @@ async function opgCarrega(e) {
         "/rest/v1/opcoes_grade?select=ativo,spot,series,updated_at&user_id=eq." +
           SESS.uid,
       );
-      ((OPG.rows = await t.json()), (OPG.err = ""), opgHist());
+      const rows=await t.json();
+      if(typeof SESS!=='undefined'&&SESS&&String(SESS.uid)===owner&&OPG.owner===owner){OPG.rows=Array.isArray(rows)?rows:[];OPG.err="";opgHist();}
     } catch (t) {
       OPG.err =
         t.status === 404

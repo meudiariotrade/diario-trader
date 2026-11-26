@@ -3351,6 +3351,15 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const pivos=Array.isArray(E.pivos)?E.pivos:[];
         return '<section class="wf-chat-parecer">'+blocos.filter(v=>v[1]).map(([k,v])=>'<p><b>'+s(k)+':</b> '+s(v)+'</p>').join("")+(st.evidencias?.length?'<b>Evidências</b><ul>'+st.evidencias.map(v=>'<li>'+s(v)+'</li>').join("")+'</ul>':"")+(pivos.length?'<b>Topos e fundos relevantes</b><ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.validacao!=="estrutura_ohlc"?"?":"")+(p.preco?" · "+p.preco:""))+'</b> — '+s(p.validacao==='estrutura_ohlc'?'conferido no OHLC':'estimativa visual da IA')+': '+s(p.motivo)+'</li>').join("")+'</ul>':"")+'</section>';
       }
+      function opcoesAureaV1017(E){
+        const p=E.opcoes_v1017;if(!p)return "";
+        const c=p.calculo,fmt=n=>Number.isFinite(n)?n.toLocaleString("pt-BR",{maximumFractionDigits:4}):"N/D",money=n=>Number.isFinite(n)?(p.moeda==="USD"?"US$ ":"R$ ")+fmt(n):"N/D";
+        const fields=c?[["Prêmio líquido por unidade",money(c.premio_liquido)],["Ganho máximo por unidade, sem custos",money(c.ganho_unitario)],["Perda máxima por unidade, sem custos",money(c.perda_unitaria)],["Breakeven sem custos",money(c.breakeven_sem_custos)],["Breakeven com custos",money(c.breakeven_com_custos)],["Ganho máximo total",money(c.ganho_maximo)],["Perda máxima total",money(c.perda_maxima)],["Retorno/risco",fmt(c.retorno_risco)],["Dentro do limite informado",c.dentro_limite===null?"N/D":c.dentro_limite?"Sim":"Não"]]:[];
+        const g=p.grade,gradeHtml=g?'<h4>Grade ao Vivo · Profit</h4><p>'+s(g.lacuna||"")+'</p>'+(g.updated_at?'<p>Coleta: '+s(new Date(g.updated_at).toLocaleString("pt-BR"))+' · Spot: '+money(g.spot)+'</p>':"")+(g.candidatas||[]).map((x,i)=>'<div style="border-top:1px solid var(--bd);padding:8px 0"><b>Trava de '+s(x.direcao)+' · '+s(x.tipo==="C"?"CALL":"PUT")+' · '+s(x.fluxo)+'</b><p>'+s(x.vencimento)+'</p>'+x.legs.map(l=>'<p>'+s(l.lado==="C"?"Compra":"Venda")+' '+s(l.codigo)+' · strike '+money(l.strike)+' · prêmio '+money(l.premio)+' · IV Profit '+(l.iv?fmt(l.iv*100)+"%":"N/D")+'</p>').join("")+'<p>Perda máx./un. '+money(x.perda_unitaria)+' · Ganho máx./un. '+money(x.ganho_unitario)+' · Equilíbrio '+money(x.breakeven)+'</p>'+(x.alvo?'<p>Payoff no alvo informado: '+money(x.payoff_alvo)+'/un.</p>':"")+'<label>Unidades por perna (confirme lote)<input type="number" min="1" step="1" inputmode="numeric" data-aurea-opqty="'+i+'" placeholder="Quantidade"></label><button type="button" class="btn s" data-aurea-opsim="'+i+'">Simular estratégia</button></div>').join("")+(g.ticker?'<button type="button" class="btn s" data-aurea-go="opgrade:'+s(g.ticker)+'">Abrir Grade ao Vivo</button>':""):"";
+        return '<section class="wf-chat-parecer"><b>Estratégia com opções · '+s(p.ticker||"Ativo não confirmado")+'</b><p>'+s(p.vencimento||"Vencimento não confirmado")+' · '+s(p.moeda||"Moeda não confirmada")+'</p>'+
+        (p.legs||[]).map(l=>'<p style="font-variant-numeric:tabular-nums">'+s(l.lado+' '+l.tipo)+' · strike '+fmt(l.strike)+' · prêmio '+fmt(l.premio)+'</p>').join("")+
+        (c?'<p><b>Trava de '+s(c.direcao)+' · '+s(c.tipo)+' · '+s(c.fluxo)+'</b></p><table style="width:100%;font-variant-numeric:tabular-nums">'+fields.map(x=>'<tr><td>'+s(x[0])+'</td><td style="text-align:right">'+s(x[1])+'</td></tr>').join("")+'</table>':'<p>Estrutura conceitual: payoff numérico depende das pernas, prêmios e vencimento.</p>')+N("Dados que faltam",p.missing)+N("Premissas e riscos",p.notas)+gradeHtml+'</section>';
+      }
       function rendaFixaAureaV1016(E){
         const r=E.renda_fixa_v1016;if(!r)return "";
         const p=r.simulacao||{},c=p.calculo,fmt=n=>Number.isFinite(n)?n.toLocaleString("pt-BR",{maximumFractionDigits:2}):"N/D",money=n=>Number.isFinite(n)?(c.moeda==="USD"?"US$ ":"R$ ")+fmt(n):"N/D",pct=n=>Number.isFinite(n)?fmt(n)+"%":"N/D";
@@ -3392,7 +3401,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       }
       function e(M) {
         const E = M.r || {};
-        return `<article class="wf-chat-message"><p class="wf-chat-question">${s(M.q)}</p>${graficosAureaV1011(M,E)}${aureaAcao(M)}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}${estruturaAureaV1007(E)}${comparacaoAureaV1011(E)}
+        return `<article class="wf-chat-message" data-aurea-message="${s(String(M.id||""))}"><p class="wf-chat-question">${s(M.q)}</p>${graficosAureaV1011(M,E)}${aureaAcao(M)}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}${estruturaAureaV1007(E)}${comparacaoAureaV1011(E)}
       ${N("Fatos apresentados pelo modelo — confira as fontes", E.fatos)}
       ${N(
         "Impactos descritos",
@@ -3410,7 +3419,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         "Glossário",
         E.glossario?.map((u) => `${u.termo}: ${u.significado}`),
       )}
-      ${rendaFixaAureaV1016(E)}${commoditiesAureaV1015(E)}${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
+      ${opcoesAureaV1017(E)}${rendaFixaAureaV1016(E)}${commoditiesAureaV1015(E)}${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
       }
       function i() {
         if (!O) return;
@@ -3522,7 +3531,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           (r.innerHTML = `<button type="button" class="wf-chat-launcher" aria-label="Abrir Áurea" aria-expanded="false" aria-controls="wf-chat-panel"><span aria-hidden="true">✦</span></button>
       <aside id="wf-chat-panel" class="wf-chat-panel" aria-label="Conversa com a Áurea" hidden><header><div><b>✦ Áurea</b><small>Estrategista-chefe · O Conselho</small></div><div class="wf-chat-head-actions"><button type="button" data-chat-clear aria-label="Limpar conversa" title="Limpar conversa"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button><button type="button" data-chat-close aria-label="Fechar conversa">×</button></div></header>
       <div class="wf-chat-history" aria-label="Histórico da conversa"></div><div class="wf-chat-status" role="status" aria-live="polite"></div>
-      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Incluir contexto público da tela</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-context-label"><input type="checkbox" name="privateContext"> Autorizar resumo da carteira ou histórico operacional ao conselheiro (sem notas/fotos)</label><label class="wf-chat-context-label"><input type="checkbox" name="bookContext"> Aplicar livros (até 2 trechos curtos relevantes enviados à IA; arquivos ficam no aparelho)</label><label class="wf-chat-context-label"><input type="checkbox" name="debateContext"> Debate do Conselho (duas rodadas de IA; sem carteira ou histórico privado)</label>
+      <form><label class="wf-chat-context-label"><input type="checkbox" name="context"> Incluir contexto público da tela (inclui referências da grade de opções, quando disponíveis)</label><pre class="wf-chat-context" hidden></pre><label class="wf-chat-context-label"><input type="checkbox" name="privateContext"> Autorizar resumo da carteira ou histórico operacional ao conselheiro (sem notas/fotos)</label><label class="wf-chat-context-label"><input type="checkbox" name="bookContext"> Aplicar livros (até 2 trechos curtos relevantes enviados à IA; arquivos ficam no aparelho)</label><label class="wf-chat-context-label"><input type="checkbox" name="debateContext"> Debate do Conselho (duas rodadas de IA; sem carteira ou histórico privado)</label>
       <div class="wf-chat-attachment" hidden><div style="min-width:0;width:100%"><b data-chat-count>0/3 gráficos</b><div data-chat-previews style="display:flex;flex-wrap:wrap;gap:8px;max-height:100px;overflow-y:auto"></div><small>Gemini, Mistral ou Cloudflare AI ao enviar. Evite dados sensíveis.</small></div></div>
       <input type="file" name="photo" accept="image/*" multiple hidden><input type="file" name="camera" accept="image/*" capture="environment" hidden>
       <div class="wf-chat-composer"><button type="button" data-chat-photo aria-label="Anexar foto ou gráfico" title="Anexar foto ou gráfico"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><label class="wf-chat-input-label">Sua pergunta<textarea rows="1" maxlength="6000" placeholder="Pergunte à Áurea…"></textarea></label><button type="button" data-chat-camera aria-label="Tirar foto" title="Tirar foto"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg></button><button type="submit" aria-label="Enviar pergunta" title="Enviar"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div>
@@ -3531,6 +3540,8 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           (j = r.querySelector(".wf-chat-launcher")),
           (O = r.querySelector("aside")),
           O.addEventListener("click", (E) => {
+            const sim=E.target.closest("[data-aurea-opsim]");
+            if(sim){const message=ECO.l.find(m=>String(m.id)===String(sim.closest("[data-aurea-message]")?.dataset.aureaMessage));const item=message?.r?.opcoes_v1017?.grade?.candidatas?.[Number(sim.dataset.aureaOpsim)];const qty=Number(sim.parentElement.querySelector("[data-aurea-opqty]")?.value);if(!item||!Number.isSafeInteger(qty)||qty<=0){alert("Informe as unidades por perna.");return;}if(!aureaAbrirSimuladorV1017(message.q,item,qty)){alert("Grade mudou ou ficou antiga. Atualize e consulte novamente.");return;}B(!1);return;}
             const btn = E.target.closest("[data-aurea-go]");
             if (!btn) return;
             const raw = btn.dataset.aureaGo || "";
@@ -3541,6 +3552,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
               return;
             }
             const parts = raw.split(":");
+            if(parts[0]==="opgrade"){aureaAbrirGradeV1017(parts[1]);return;}
             if (parts[0] === "conselho") {
               const membro = parts[1] || "graham",
                 cmd = parts.slice(2).join(":");
@@ -3569,7 +3581,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
             const pergunta=P||(anexo.length>1?"Compare os gráficos anexados com o Conselho.":"Analise esta imagem com o Conselho.");
             const m=pergunta+(O.querySelector('[name="context"]').checked?"\n\nContexto autorizado:\n"+F():"");
             u.value="";u.style.removeProperty("--wf-input-h");
-            await ecoPergunta(m,{pergunta,imagem:anexo,dadosPrivados:!anexo&&O.querySelector('[name="privateContext"]').checked,livros:O.querySelector('[name="bookContext"]').checked,debate:O.querySelector('[name="debateContext"]').checked});
+            await ecoPergunta(m,{pergunta,imagem:anexo,contextoPublico:O.querySelector('[name="context"]').checked,dadosPrivados:!anexo&&O.querySelector('[name="privateContext"]').checked,livros:O.querySelector('[name="bookContext"]').checked,debate:O.querySelector('[name="debateContext"]').checked});
             if(!l||geracao!==ECO.geracao)return;
             if(ECO.err)u.value=P;else{imagemChat=null;atualizarAnexo();}
             i();O.querySelector(".wf-chat-history").scrollTop=1e9;
