@@ -3747,7 +3747,13 @@ function aureaExtremoPorContrasteV1023(data,w,h,p,limites){
  const contraste=(x,y)=>{
   if(x<left+4||x>right-4||y<top||y>bottom)return 0;
   const i=(y*w+x)*4,r=data[i],g=data[i+1],b=data[i+2];
-  if(data[i+3]<220||Math.max(r,g,b)-Math.min(r,g,b)>30)return 0;
+  if(data[i+3]<220)return 0;
+  if(limites.estilo==="coloridos"||limites.estilo==="claro_fundo_escuro"){
+   // Contraste bilateral: um pavio estreito tem fundo dos dois lados.
+   const dist=offset=>Math.max(Math.abs(r-data[i+offset]),Math.abs(g-data[i+offset+1]),Math.abs(b-data[i+offset+2]));
+   return Math.min(dist(-16),dist(16));
+  }
+  if(Math.max(r,g,b)-Math.min(r,g,b)>30)return 0;
   let fundo=0;
   for(const offset of [-4,-3,3,4]){
    const j=i+4*offset;
@@ -3762,6 +3768,10 @@ function aureaExtremoPorContrasteV1023(data,w,h,p,limites){
    let corpo=0;
    for(let j=1;j<=7;j++)if(contraste(x,y+j*direcao)>=13)corpo++;
    if(corpo<5)continue;
+   if(limites.estilo==="coloridos"||limites.estilo==="claro_fundo_escuro"){
+    const temCorpo=[1,2,3,4,5,6,7].some(j=>contraste(x-1,y+j*direcao)>=20&&contraste(x+1,y+j*direcao)>=20);
+    if(!temCorpo)continue;
+   }
    // Linhas horizontais têm continuidade para os dois lados do ponto.
    if([-2,-1,1,2].filter(dx=>contraste(x+dx,y)>=13).length>=3)continue;
    const score=Math.abs(x-px)/raioX+Math.abs(y-py)/raioY-corpo*.055;
@@ -3776,7 +3786,7 @@ function aureaExtremoPorContrasteV1023(data,w,h,p,limites){
 function aureaAncorarPivosV1021(g,data,w,h){
  const pts=Array.isArray(g.pivos)?g.pivos:[],r=g.geometria_preco,axis=aureaCalibrarEixoV1021(r);
  const omit=p=>({...p,ancoragem_visual:"nao_conferida"});
- if(!r||r.candles!=="preto_fundo_claro"||!data||!Number.isInteger(w)||!Number.isInteger(h)||w<180||h<180||data.length!==w*h*4)return pts.map(omit);
+ if(!r||!["preto_fundo_claro","claro_fundo_escuro","coloridos"].includes(r.candles)||!data||!Number.isInteger(w)||!Number.isInteger(h)||w<180||h<180||data.length!==w*h*4)return pts.map(omit);
  if(![r.x0,r.y0,r.x1,r.y1].every(x=>Number.isFinite(x)&&x>=0&&x<=1)||r.x1-r.x0<.25||r.y1-r.y0<.15)return pts.map(omit);
  const left=Math.max(2,Math.ceil(r.x0*w)),right=Math.min(w-3,Math.floor(r.x1*w)),top=Math.max(2,Math.ceil(r.y0*h)),bottom=Math.min(h-3,Math.floor(r.y1*h));
  const dark=(x,y)=>{if(x<left||x>right||y<top||y>bottom)return false;const i=(y*w+x)*4,a=data[i],b=data[i+1],c=data[i+2];return data[i+3]>220&&Math.max(a,b,c)<120&&Math.max(a,b,c)-Math.min(a,b,c)<28;};
@@ -3791,8 +3801,8 @@ function aureaAncorarPivosV1021(g,data,w,h){
  return pts.map(p=>{
   const no=omit(p),price=aureaPrecoVisualV1021(p.preco);
   if(p.validacao==="divergente"||!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<=r.x0||p.x>=r.x1||p.y<=r.y0||p.y>=r.y1||!["topo","fundo"].includes(p.tipo))return no;
-  const visual=()=>marcar(p,aureaExtremoPorContrasteV1023(data,w,h,p,{left,right,top,bottom}),false);
-  if(!axis||!price)return visual();
+  const visual=()=>marcar(p,aureaExtremoPorContrasteV1023(data,w,h,p,{left,right,top,bottom,estilo:r.candles}),false);
+  if(!axis||!price||r.candles!=="preto_fundo_claro")return visual();
   const expected=axis.y(price),px=Math.round(p.x*w),py=Math.round(p.y*h),ey=expected*h;
   if(!Number.isFinite(ey)||Math.abs(ey-py)>ry*1.5||ey<top||ey>bottom)return visual();
   const direction=p.tipo==="topo"?1:-1, candidates=[];
@@ -3974,7 +3984,7 @@ async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perg
   const r = await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-imagem",{
     method:"POST",credentials:"omit",redirect:"error",cache:"no-store",
     headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},
-    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,pergunta_original:String(perguntaOriginal||pergunta).slice(0,6000),debate:debate===true,...(gradeOpcoes?{grade_opcoes:gradeOpcoes}:{})})
+    signal,body:JSON.stringify({modo_visual:"livermore",pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,pergunta_original:String(perguntaOriginal||pergunta).slice(0,6000),debate:debate===true,...(gradeOpcoes?{grade_opcoes:gradeOpcoes}:{})})
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.resposta){
@@ -4030,7 +4040,7 @@ async function ecoPergunta(e, opt) {
   e=String(e||"").trim();opt=opt||{};
   if(ECO.owner!==syncOwner())ecoLimpa();
   if(e.length<3||ECO.busy)return;
-  const debate=opt.debate===true&&!opt.dadosPrivados;
+  const debate=opt.debate===true&&!opt.dadosPrivados&&!opt.imagem;
   const rota=opt.imagem||debate?{id:"conselho",tickers:aureaRota(opt.pergunta||e).tickers,motivo:debate?"debate solicitado":"análise visual anexada"}:(opt.rota||aureaRota(opt.pergunta||e)),
     q=opt.pergunta||e,t=e.match(/https?:\/\/\S+/),a=t?t[0]:"",
     geracao=ECO.geracao,titular=syncOwner(),controller=new AbortController(),
@@ -4043,7 +4053,7 @@ async function ecoPergunta(e, opt) {
     const gradeOpcoes=aureaTemaOpcoesV1017(q)?aureaGradeAtualV1017(q):null;
     const gradeAutorizada=opt.contextoPublico===true?gradeOpcoes:null;
     if(opt.livros===true){
-      try{livros=await window.DiarioCerebroIA?.contextoConselho?.(rota.id,q,true,controller.signal)||[];}catch{}
+      try{livros=await window.DiarioCerebroIA?.contextoConselho?.(opt.imagem?"livermore":rota.id,q,true,controller.signal)||[];}catch{}
     }
     if(!ativo())return;
     const bloco=window.DiarioCerebroIA?.blocoConselho?.(livros)||"";
@@ -4082,8 +4092,8 @@ async function ecoPergunta(e, opt) {
     if(debate&&opt.imagem)resposta=await aureaDeliberarV1013(resposta,q,e===q?"":e.slice(q.length),livros,controller.signal,titular,gradeAutorizada);
     if(!ativo())return;
     if(resposta.fundamentos_v1014?.length)resposta.fundamentos_v1014=aureaCalcularGrahamV1014(resposta.fundamentos_v1014);
-    if(aureaTemaOpcoesV1017(q))resposta.opcoes_v1017={...aureaOpcoesLocalV1017(q),grade:gradeOpcoes};
-    if(aureaRendaFixaTemaV1016(q))resposta.renda_fixa_v1016={...(resposta.renda_fixa_v1016||{}),simulacao:aureaRendaFixaLocalV1016(q)};
+    if(!opt.imagem&&aureaTemaOpcoesV1017(q))resposta.opcoes_v1017={...aureaOpcoesLocalV1017(q),grade:gradeOpcoes};
+    if(!opt.imagem&&aureaRendaFixaTemaV1016(q))resposta.renda_fixa_v1016={...(resposta.renda_fixa_v1016||{}),simulacao:aureaRendaFixaLocalV1016(q)};
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
       motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagens:(Array.isArray(opt.imagem)?opt.imagem:[opt.imagem]).map(x=>x.url)}:{})});
     ECO.l=ECO.l.slice(-20);
