@@ -1,6 +1,6 @@
 {
   "versao": 1,
-  "gerado_em": "2026-11-25T04:59:13.282Z",
+  "gerado_em": "2026-11-26T04:18:11.108Z",
   "fonte": "Banco Central do Brasil (SGS oficial) · Yahoo Finance (^TNX / DXY) · Referência FMI (WEO)",
   "brasil": {
     "selic_meta": {
@@ -31,12 +31,12 @@
   },
   "mundo": {
     "us_10y": {
-      "valor": 4.9,
-      "var_pct": -3.2
+      "valor": 4.85,
+      "var_pct": -4.04
     },
     "dxy": {
-      "valor": 103.99,
-      "var_pct": 0.08
+      "valor": 103.81,
+      "var_pct": 0
     },
     "divida_pib_ref": [
       {
