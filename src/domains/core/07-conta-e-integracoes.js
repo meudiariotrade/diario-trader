@@ -3423,7 +3423,10 @@ function aureaOpcoesLocalV1017(texto,now=Date.now()){
  const m=n.match(/\bvenc(?:imento)?\s*[:=]?\s*(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/),raw=m?.[1],iso=raw?.includes("/")?raw.split("/").reverse().join("-"):raw;
  const dt=iso?Date.parse(iso+"T00:00:00Z"):NaN,validDate=Number.isFinite(dt)&&new Date(dt).toISOString().slice(0,10)===iso&&dt>=Date.parse(new Date(now).toISOString().slice(0,10)+"T00:00:00Z");
  const quantity=num(n.match(/\b(?:quantidade|contratos)\s*[:=]\s*(\d+)\b/)?.[1]),mult=num(n.match(/\bmultiplicador\s*[:=]\s*(\d+)\b/)?.[1]),cost=num(n.match(/\b(?:custos totais|custos)\s*[:=]\s*(\d+(?:[,.]\d+)?)/)?.[1]),budget=num(n.match(/\b(?:risco maximo|limite de risco)\s*[:=]\s*(\d+(?:[,.]\d+)?)/)?.[1]);
- const ticker=String(texto||"").match(/\b[A-Za-z]{4}(?:3|4|5|6|11)\b/)?.[0]?.toUpperCase()||String(texto||"").match(/\b(?:ticker|NASDAQ|NYSE)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/i)?.[1]?.toUpperCase()||null;
+ const allTickers=[...new Set([...(String(texto||"").match(/\b[A-Za-z]{4}(?:3|4|5|6|11)\b/g)||[]),...Array.from(String(texto||"").matchAll(/\b(?:ticker|NASDAQ|NYSE)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi),m=>m[1])].map(x=>x.toUpperCase()))];
+ const ticker=allTickers.length===1?allTickers[0]:null;
+ const dates=[...new Set(Array.from(n.matchAll(/\b(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/g),x=>x[1].includes("/")?x[1].split("/").reverse().join("-"):x[1]))];
+ if(allTickers.length>1||dates.length>1)missing.push("Mais de um ativo ou vencimento: não combinar pernas de bases diferentes.");
  if(!ticker)missing.push("Ticker do ativo-objeto.");
  if(!validDate)missing.push("Vencimento exato comum às duas pernas.");
  if(!moeda)missing.push("Mercado e moeda (B3/BRL ou EUA/USD).");
@@ -3433,9 +3436,9 @@ function aureaOpcoesLocalV1017(texto,now=Date.now()){
  if(!Number.isFinite(cost)||cost<0)missing.push("Custos totais da estrutura (informar 0 apenas para cenário sem custos).");
  if(!Number.isFinite(budget)||budget<=0)missing.push("Limite de risco autorizado, na moeda da operação.");
  let calc=null;
- if(legs.length===2&&validDate&&ticker&&moeda&&legs.every(l=>Number.isFinite(l.strike)&&l.strike>0&&Number.isFinite(l.premio)&&l.premio>=0&&l.premio<1e7)&&legs[0].tipo===legs[1].tipo&&legs[0].lado!==legs[1].lado&&legs[0].strike!==legs[1].strike){
+ if(legs.length===2&&validDate&&dates.length===1&&ticker&&moeda&&legs.every(l=>Number.isFinite(l.strike)&&l.strike>0&&Number.isFinite(l.premio)&&l.premio>=0&&l.premio<1e7)&&legs[0].tipo===legs[1].tipo&&legs[0].lado!==legs[1].lado&&legs[0].strike!==legs[1].strike){
   const buy=legs.find(l=>l.lado==="compra"),sell=legs.find(l=>l.lado==="venda"),low=Math.min(buy.strike,sell.strike),high=Math.max(buy.strike,sell.strike),width=high-low,net=buy.premio-sell.premio;
-  const bull=buy.tipo==="CALL"?buy.strike<sell.strike:buy.strike<sell.strike;
+  const bull=buy.strike<sell.strike;
   const dir=bull?"alta":"baixa",debit=bull&&buy.tipo==="CALL"||!bull&&buy.tipo==="PUT";
   const premium=debit?net:-net;
   if(direction&&direction!==dir)missing.push("Direção declarada incompatível com as pernas.");
@@ -3447,7 +3450,7 @@ function aureaOpcoesLocalV1017(texto,now=Date.now()){
    const perCost=units&&totalCost!==null?totalCost/units:null;
    const be=bull?low+(debit?premium:width-premium):high-(debit?premium:width-premium);
    const maxLoss=units&&totalCost!==null?loss*units+totalCost:null,maxGain=units&&totalCost!==null?gain*units-totalCost:null;
-   calc={direcao:dir,tipo:buy.tipo,fluxo:debit?"débito":"crédito",largura:width,premio_liquido:premium,ganho_unitario:gain,perda_unitaria:loss,breakeven_sem_custos:be,breakeven_com_custos:perCost!==null&&perCost<gain?be+(bull?perCost:-perCost):null,unidades:units,ganho_maximo:maxGain,perda_maxima:maxLoss,retorno_risco:maxGain!==null&&maxGain>0&&maxLoss>0?maxGain/maxLoss:null,dentro_limite:maxLoss!==null&&Number.isFinite(budget)&&budget>0?maxLoss<=budget:null,max_contratos:Number.isFinite(budget)&&budget>0&&Number.isSafeInteger(mult)&&mult>0&&totalCost!==null?Math.max(0,Math.floor((budget-totalCost)/(loss*mult))):null};
+   calc={direcao:dir,tipo:buy.tipo,fluxo:debit?"débito":"crédito",largura:width,premio_liquido:premium,ganho_unitario:gain,perda_unitaria:loss,breakeven_sem_custos:be,breakeven_com_custos:perCost!==null&&perCost<gain?be+(bull?perCost:-perCost):null,unidades:units,ganho_maximo:maxGain,perda_maxima:maxLoss,retorno_risco:maxGain!==null&&maxGain>0&&maxLoss>0?maxGain/maxLoss:null,dentro_limite:maxLoss!==null&&Number.isFinite(budget)&&budget>0?maxLoss<=budget:null};
    if(maxGain!==null&&maxGain<=0)missing.push("Custos eliminam o ganho máximo; não há payoff positivo nesta simulação.");
   }
  }else if(legs.length===2)missing.push("Trava vertical exige uma compra e uma venda do mesmo tipo, strikes distintos e mesma data/ativo; validar pernas.");

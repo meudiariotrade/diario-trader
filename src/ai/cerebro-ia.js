@@ -53,7 +53,7 @@
  });
  async function contextoConselho(id,pergunta,autorizado,signal){
   if(autorizado!==true||signal?.aborted||!Object.hasOwn(lentesConselho,id))return [];
-  const titular=owner(),q=String(pergunta||'').slice(0,240),opcoes=['livermore','conselho','markowitz','munger','dow'].includes(id)&&/\b(trava de (?:alta|baixa)|opcoes (?:sobre|de (?:acoes|compra|venda)|financeiras)|mercado de opcoes|call|put|straddle|strangle|condor|borboleta|spread vertical|gregas|strike|premio|volatilidade implicita|lancamento coberto|put protetora)\b/.test(normal(q));
+  const titular=owner(),q=String(pergunta||'').slice(0,240),opcoes=['livermore','conselho','markowitz','munger','dow'].includes(id)&&/\b(trava de (?:alta|baixa)|opcoes (?:sobre|de (?:acoes|compra|venda)|financeiras)|mercado de opcoes|call|put|straddle|strangle|condor|borboleta|spread vertical|gregas|strike|premio|volatilidade implicita|lancamento coberto|put protetora)\b/.test(normal(q)+' '+(/\bopcoes\b/.test(normal(q))&&/\b(ativo|acao|acoes|estrategia|vencimento|[a-z]{4}\d{1,2})\b/.test(normal(q))?'mercado de opcoes':''));
   const tema=opcoes?'opções call put strike prêmio trava vertical volatilidade implícita vencimento exercício risco':lentesConselho[id];
   const hits=await buscarLocal(tema+' '+q,10,opcoes?'Opcoes':null);
   if(signal?.aborted||titular!==owner())return [];
