@@ -33,7 +33,7 @@ test('v956: sem chave Mistral não chama o provedor e mantém Workers AI',async 
 });
 test('v956: Resumão inclui EWZ, paridade da cesta de ADRs e cripto',()=>{
  const s=fs.readFileSync('src/intelligence/etapa1.js','utf8');
- const a=s.indexOf('function resumoParidadeAdrs()'),b=s.indexOf('function pulsoDoisMercados(',a);
+ const a=s.indexOf('function resumoParidadeAdrs()'),b=s.indexOf('function pulsoDoisMercados()',a);
  assert.ok(a>=0&&b>a);
  const regras=[{s:'PBR',tk:'PETR4',on:'PETR3',razao:2,peso:12},{s:'VALE',tk:'VALE3',razao:1,peso:11.5},{s:'ITUB',tk:'ITUB4',razao:1,peso:7.5},{s:'BBD',tk:'BBDC4',razao:1,peso:3.5},{s:'ABEV',tk:'ABEV3',razao:1,peso:2.8}];
  const ctx={ADR_REGRAS:regras,cotacaoApp:tk=>({USDBRL:{px:5,d1:1},IBOV:{px:160000},PETR3:{px:40},PETR4:{px:36},VALE3:{px:50},ITUB4:{px:30},BBDC4:{px:10},ABEV3:{px:15}}[tk]),state:{mercado:{adrs:[{s:'PBR',px:16,chp:1},{s:'VALE',px:10,chp:1},{s:'ITUB',px:6,chp:1},{s:'BBD',px:2,chp:1},{s:'ABEV',px:3,chp:1}],mercados:{grupos:[{itens:[{n:'EWZ',d1:2,px:30}]}]}}}};
@@ -46,34 +46,4 @@ test('v956: dia real e sessão prevalecem sobre edição manual; terça não é 
  const ter=new Date('2026-11-24T10:52:00Z'),dom=new Date('2026-11-22T22:00:00Z');
  assert.equal(ctx.contextoResumao956({b3:{state:'pre'}},ter).domingo,false);assert.equal(ctx.contextoResumao956({b3:{state:'pre'}},ter).b3Fechada,true);assert.equal(ctx.contextoResumao956({b3:{state:'regular'}},ter).b3Fechada,false);assert.equal(ctx.contextoResumao956({b3:{state:'fechado'}},dom).domingo,true);
  assert.doesNotMatch(s,/ed==='fimdesemana'\?' e cuidado com liquidez baixa de domingo/);
-});
-
-
-test('v996: snapshot do Resumão separa futuros, fechamento, cripto, ADR e agenda; IA não escreve fatos',()=>{
- const s=fs.readFileSync('src/intelligence/etapa1.js','utf8');
- const start=s.indexOf('function aureaFatos996('),end=s.indexOf('function briefing()',start);
- assert.ok(start>=0&&end>start);
- const now=new Date('2026-11-26T00:25:00Z');
- const c={b3:{state:'post',nextDate:'2026-11-26'},us:{state:'post',nextDate:'2026-11-27'},win:{state:'post'},wdo:{state:'post'},es:{state:'desconhecido'},nq:{state:'desconhecido'},crypto:{state:'regular'}};
- const q={px:100,chg:2.27,dadoEm:'2026-11-25T21:00:00Z',fonte:'TradingView'};
- const ctx={w:{tapeDados:()=>({EWZ:q,'BTC-USD':{px:100,chg:2.84,dadoEm:now.toISOString(),fonte:'Binance'}}),DiarioSessoes:{context:()=>c,session:()=>({state:'desconhecido'}),tradingDay:()=>true},TraderAdr:{view:a=>({regular:a.regular,active:null})}},state:{mercado:{mercados:{grupos:[{itens:[{n:'Ouro',px:3603,d1:1.17}]}]},adrs:[{s:'PBR',regular:{px:12,chp:-1,at:'2026-11-25T21:00:00Z'}}]},agenda:{eventos:[{p:'BR',imp:2,t:'Evento confirmado',em:'2026-11-26T13:00:00Z'},{p:'US',imp:2,t:'Outro dia',em:'2026-11-27T13:00:00Z'}]}},sinalNum:v=>String(v)+'%',escape:String};
- vm.createContext(ctx);vm.runInContext(s.slice(start,end),ctx);
- const f=ctx.aureaFatos996(now,c);
- assert.equal(f.all.find(x=>x.id==='EWZ').d,2.27);
- assert.equal(f.all.find(x=>x.id==='BTC').d,2.84);
- assert.equal(f.all.find(x=>x.id==='GC').d,null);
- assert.equal(f.all.find(x=>x.id==='GOLD').d,1.17);
- assert.equal(f.adrs[0].nome,'PETR3');assert.equal(f.adrs[0].regular.d,-1);
- assert.equal(f.ewzBrl,null);assert.equal(f.agenda.length,1);
- assert.equal(ctx.aureaEscolhas996('{"exterior":"futuros","brasil":"adrs","riscos":"agenda","cotacao":123}'),null);
- assert.ok(ctx.aureaEscolhas996('{"exterior":"futuros","brasil":"adrs","riscos":"agenda"}'));
- const html=ctx.aureaRender996(f,null,'local');assert.match(html,/Evento confirmado/);assert.doesNotMatch(html,/Outro dia/);assert.match(html,/Agenda da próxima sessão/);
-});
-test('v996: Workers AI rejeita fatos livres no modo protegido, preservando os demais modos',async()=>{
- const {generate}=await load();
- const prompt='@aurea-fatos-v996 Escolha prioridades a partir dos dados, sem adicionar valores ou horários novos.';
- const invalid=await generate({AI:{run:async()=>({response:'O petróleo subiu 3,00% e teremos inflação às 17h, dados que não foram enviados.'})}},prompt,'fechamento');
- assert.equal(invalid.status,503);
- const ok=await generate({AI:{run:async()=>({response:'{"exterior":"futuros","brasil":"adrs","riscos":"confirmacao"}'})}},prompt,'fechamento');
- assert.equal(JSON.parse(ok.text).brasil,'adrs');
 });

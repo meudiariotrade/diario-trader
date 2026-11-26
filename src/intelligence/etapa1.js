@@ -879,7 +879,7 @@
       itensTxt.length?'ADRs brasileiras: '+itensTxt.slice(0,5).join(', '):''
     ].filter(Boolean).join(' · ');
   }
-  function pulsoDoisMercados(fatos){
+  function pulsoDoisMercados(){
     const groups=state.mercado?.mercados?.grupos;
     const all=Array.isArray(groups)?groups.flatMap(g=>(g.itens||[]).map(x=>({n:String(x.n||''),px:Number(x.px),d1:x.d1==null||x.d1===''?null:Number(x.d1)}))).filter(x=>Number.isFinite(x.d1)):[];
     const pick=rx=>all.find(x=>rx.test(x.n));
@@ -890,13 +890,7 @@
     const us=[pickLive('S&P 500',['^GSPC'],/s&p\s*500(?!.*fut)|\bspx\b/i)||pickLive('S&P fut.',['ES=F'],/s&p.*fut|\bes1\b/i),pickLive('Nasdaq',['^IXIC'],/nasdaq(?!.*fut)|\bndx\b/i)||pickLive('Nasdaq fut.',['NQ=F'],/nasdaq.*fut|\bnq1\b/i),pickLive('Dow',['^DJI'],/dow(?!.*fut)|\bdji\b/i)||pickLive('Dow fut.',['YM=F'],/dow.*fut|\bym1\b/i),pickLive('Brent',['BZ=F'],/brent/i)||pickLive('WTI',['CL=F'],/\bwti\b/i),pickLive('Ouro',['GC=F'],/ouro|gold/i),pickLive('DXY',['DX-Y.NYB','DXY'],/\bdxy\b/i,['DXY']),pickLive('EWZ',['EWZ'],/^ewz\b/i,['EWZ'])].filter(Boolean);
     const cripto=[pickLive('BTC',['BTC-USD','BTCUSDT'],/\bbtc\b|bitcoin/i,['BTC','BTCUSD','BTCUSDT']),pickLive('ETH',['ETH-USD','ETHUSDT'],/\beth\b|ethereum/i,['ETH','ETHUSD','ETHUSDT']),pickLive('SOL',['SOL-USD','SOLUSDT'],/\bsol\b|solana/i,['SOL','SOLUSD'])].filter(Boolean);
     const uniq=L=>{const seen=new Set();return L.filter(x=>{if(!x||seen.has(x.n))return false;seen.add(x.n);return true;});};
-    let brU=uniq(br),usU=uniq(us).slice(0,7),crU=uniq(cripto).slice(0,3);
-    if(fatos){
-      const item=(id,n)=>{const q=fatos.all.find(x=>x.id===id);return q&&q.d!=null?{n,px:q.px,d1:q.d}:null;};
-      brU=[item('IBOV','IBOV'),item('USD','USD/BRL'),item('WIN','WIN'),item('WDO','WDO')].filter(Boolean);
-      usU=[item('SPX','S&P 500'),item('NASDAQ','Nasdaq'),item('DOW','Dow'),item('BZ','Brent fut.')||item('BRENT','Brent')||item('CL','WTI fut.')||item('WTI','WTI'),item('GC','Ouro fut.')||item('GOLD','Ouro'),item('DXY','DXY'),item('EWZ','EWZ')].filter(Boolean);
-      crU=[item('BTC','BTC'),item('ETH','ETH'),item('SOL','SOL')].filter(Boolean);
-    }
+    const brU=uniq(br),usU=uniq(us).slice(0,7),crU=uniq(cripto).slice(0,3);
     const texto=[
       brU.length?'Brasil: '+brU.map(fmtP).join(' · '):'',
       usU.length?'Exterior: '+usU.map(fmtP).join(' · '):'',
@@ -919,157 +913,6 @@
     return {br:brU,us:usU,cripto:crU,texto,riskScore,riskLabel,divergencia};
   }
   function sinalNum(v){return (v>=0?'+':'')+Number(v).toFixed(2).replace('.',',')+'%';}
-
-  /* v996 — Resumão: fatos imutáveis da leitura local; IA escolhe apenas prioridades editoriais. */
-  function aureaFatos996(agora=new Date(),c=w.DiarioSessoes?.context(+agora)){
-    const num=v=>v==null||v===''||!Number.isFinite(Number(v))?null:Number(v);
-    const stamp=v=>{const n=typeof v==='number'?(v<1e12?v*1000:v):Date.parse(v||'');return Number.isFinite(n)&&n>0&&n<=+agora+60000?n:null;};
-    const data=(v,zone='America/Sao_Paulo')=>new Date(v).toLocaleDateString('sv-SE',{timeZone:zone});
-    const whenBR=v=>v==null?'horário do preço não informado':new Date(v).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const groups=(state.mercado?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
-    const td=typeof w.tapeDados==='function'?w.tapeDados()||{}:{};
-    const all=[],cqRows=new Map();
-    let cqProfit=null;
-    try{if(typeof CQ!=='undefined'){cqProfit=CQ?.pf;for(const g of Object.values(CQ?.d||{}))for(const r of g?.itens||[]){const k=String(r.ticker||r.c||r.s||'').toUpperCase().replace(/^.*:/,'');if(k&&!cqRows.has(k))cqRows.set(k,r);}}}catch(_){}
-    function quote(id,n,keys,rx,session,category,ttl=120000){
-      const candidates=[];
-      function add(q,source,at,priority,variation){
-        if(!q||!(num(q.px??q.ult)>0))return;
-        const ts=stamp(at??q.dadoEm??q.at??q.ts??q.horarioPreco);
-        const d=num(variation??q.chg??q.d1??q.var);
-        candidates.push({id,n,category,px:num(q.px??q.ult),d,at:ts,source:String(q.fonte||q.source||source||'fonte não informada'),priority,delay:String(q.delay||q.natureza||'')+(q.atraso===true||q.delayed===true||/atras|delay/i.test(String(source))?' atrasado':''),closed:q.fechado===true});
-      }
-      for(const k of keys){
-        try{add(w.tapeVivo?.(k),'Cache ao vivo',null,4)}catch(_){}
-        add(td[k],'Cache de cotações',null,3);
-      }
-      for(const q of groups){
-        const sym=String(q.s||q.ticker||q.c||q.symbol||'').toUpperCase().replace(/^.*:/,'');
-        if(keys.includes(sym)||(rx&&rx.test(String(q.n||''))&&!(category==='macro'&&/^(GC|CL|BZ)(=F|1!)?$/.test(sym))))add(q,state.mercado?.fonte||'Snapshot de mercado',null,1);
-      }
-      for(const k of keys){add(cqProfit?.[k],'Profit',null,4);add(cqRows.get(k),'TradingView',null,2);}
-      candidates.sort((a,b)=>{
-        const fresh=x=>x.at!=null&&+agora-x.at<=ttl&&!x.closed&&!/delay|atras/i.test(x.source+' '+x.delay);
-        return Number(fresh(b))-Number(fresh(a))||(b.at??0)-(a.at??0)||b.priority-a.priority;
-      });
-      const q=candidates[0],st=session?.state||'desconhecido';
-      const regular=st==='regular'||st==='leilao';
-      const confirmed=q&&q.at!=null&&+agora-q.at<=ttl&&!q.closed&&!/delay|atras/i.test(q.source+' '+q.delay);
-      const status=regular?(confirmed?'cotação recente':'sessão aberta · última referência; tempo real não confirmado'):
-        st==='desconhecido'?(confirmed?'cotação recente · sessão do contrato não confirmada':'sessão do instrumento não confirmada · última referência'):
-        st==='intervalo'?'intervalo · última referência':st==='pre'?'antes da sessão regular · última referência':st==='post'?'sessão regular encerrada · última referência':'mercado fechado · última referência';
-      all.push(q?{...q,status,st,regular,ref:whenBR(q.at)}:{id,n,category,px:null,d:null,at:null,source:'',status:'cotação não confirmada',st,regular,ref:''});
-    }
-    const session=id=>w.DiarioSessoes?.session?.(id,+agora);
-    const unknown={state:'desconhecido'};
-    quote('IBOV','Ibovespa',['^BVSP','IBOV'],/^(ibov(espa)?|bvsp)$/i,c?.b3,'br');
-    quote('WIN','WIN',['WIN','WINFUT','WIN1!'],/^(win|mini índice)( futuro)?$/i,c?.win,'br');
-    quote('WDO','WDO',['WDO','WDOFUT','WDO1!'],/^(wdo|mini dólar)( futuro)?$/i,c?.wdo,'br');
-    quote('USD','USD/BRL',['BRL=X','USDBRL'],/^usd\/?brl$/i,unknown,'br');
-    quote('SPX','S&P 500 à vista',['^GSPC','SPX'],/^(s&p 500|spx)$/i,c?.us,'us');
-    quote('NASDAQ','Nasdaq à vista',['^IXIC','IXIC'],/^(nasdaq|nasdaq composite)$/i,c?.us,'us');
-    quote('DOW','Dow Jones à vista',['^DJI','DJI'],/^(dow|dow jones|dji)$/i,c?.us,'us');
-    quote('ES','S&P 500 futuro (ES)',['ES=F','ES1!','ES'],/^(s&p( 500)? (futuro|fut\.?)|es(1!)?)$/i,c?.es,'fut');
-    quote('NQ','Nasdaq futuro (NQ)',['NQ=F','NQ1!','NQ'],/^(nasdaq (futuro|fut\.?)|nq(1!)?)$/i,c?.nq,'fut');
-    quote('YM','Dow futuro (YM)',['YM=F','YM1!','YM'],/^(dow( jones)? (futuro|fut\.?)|ym(1!)?)$/i,c?.es||session('YM'),'fut');
-    quote('GC','Ouro futuro (GC)',['GC=F','GC1!','GC'],/^(ouro futuro|gc(1!)?)$/i,session('GC'),'fut');
-    quote('CL','Petróleo WTI futuro (CL)',['CL=F','CL1!','CL'],/^(wti futuro|cl(1!)?)$/i,session('CL'),'fut');
-    quote('BZ','Brent futuro (BZ)',['BZ=F','BZ1!','BZ'],/^(brent futuro|bz(1!)?)$/i,session('BZ'),'fut');
-    quote('GOLD','Ouro (referência do painel)',['XAUUSD'],/^(ouro|gold)$/i,unknown,'macro');
-    quote('BRENT','Brent (referência do painel)',['UKOIL'],/^brent$/i,unknown,'macro');
-    quote('WTI','WTI (referência do painel)',['USOIL'],/^wti$/i,unknown,'macro');
-    quote('DXY','DXY',['DX-Y.NYB','DXY'],/^dxy$/i,unknown,'macro');
-    quote('EWZ','EWZ',['EWZ'],/^ewz$/i,c?.us,'us');
-    quote('BTC','BTC',['BTC-USD','BTCUSDT'],/^(btc|bitcoin)$/i,c?.crypto,'crypto',90000);
-    quote('ETH','ETH',['ETH-USD','ETHUSDT'],/^(eth|ethereum)$/i,c?.crypto,'crypto',90000);
-    quote('SOL','SOL',['SOL-USD','SOLUSDT'],/^(sol|solana)$/i,c?.crypto,'crypto',90000);
-    const adrs=[];
-    const ny=data(agora,'America/New_York');
-    const holiday=w.DiarioSessoes?.tradingDay?.('US',ny)===false;
-    for(const a of state.mercado?.adrs||[]){
-      const id=String(a.s||'').toUpperCase();
-      if(!['PBR','PBR.A','PBR/A','PBR-A','VALE','ITUB','BBD','ABEV','GGB','EWZ'].includes(id))continue;
-      let view;try{view=w.TraderAdr?.view?.(a,agora)}catch(_){}
-      const r=view?.regular||a.regular||{};
-      const rt=stamp(r.at);
-      const active=view?.active;
-      const at=stamp(active?.at);
-      // Não transformar fechamento, negócios antigos ou horário teórico em negociação estendida ativa.
-      const live=active&&at!=null&&+agora-at<=15*60000&&(!holiday||active.kind==='overnight')&&
-        !/delay|atras/i.test(String(active.delay||''));
-      const last=view?.extra;
-      const lt=stamp(last?.at);
-      const extra=live?active:last&&lt!=null?last:null;
-      const nome={PBR:'PETR3','PBR.A':'PETR4','PBR/A':'PETR4','PBR-A':'PETR4',VALE:'VALE3',ITUB:'ITUB4',BBD:'BBDC4',ABEV:'ABEV3',GGB:'GGBR4',EWZ:'ETF Brasil'}[id];
-      adrs.push({id,nome,regular:{px:num(r.px),d:num(r.chp),ref:whenBR(rt),at:rt,source:String(r.fonte||a.fonte||'fonte não informada'),recent:rt!=null&&+agora-rt<=120000&&!/delay|atras/i.test(String(r.delay||''))},
-        extra:extra?{kind:extra.kind,px:num(extra.px),d:num(extra.chp),ref:whenBR(stamp(extra.at)),source:String(extra.fonte||'fonte não informada'),at:stamp(extra.at),active:!!live}:null});
-    }
-    // EWZ e câmbio: cálculo só para variações regulares com mesma data conhecida e mesma base diária.
-    const ewz=all.find(x=>x.id==='EWZ'),fx=all.find(x=>x.id==='USD');
-    const ewzBrl=ewz?.d!=null&&fx?.d!=null&&ewz.at!=null&&fx.at!=null&&data(ewz.at)===data(fx.at)&&
-      Math.abs(ewz.at-fx.at)<=20*60000&&!/24h|overnight|pré|pós/i.test(ewz.delay+' '+fx.delay)?
-      ((1+ewz.d/100)*(1+fx.d/100)-1)*100:null;
-    // Proxy de direção externa, não uma previsão de abertura do Ibovespa: somente negócios estendidos
-    // confirmados, na mesma fase e com carimbos próximos; pesos fixos da cesta já existente.
-    const pesos={PBR:12,'PBR.A':12,'PBR/A':12,'PBR-A':12,VALE:11.5,ITUB:7.5,BBD:3.5,ABEV:2.8,GGB:1.3};
-    const used=new Set(),basket=[];
-    for(const a of adrs){
-      const k=a.id.startsWith('PBR')?'PBR':a.id;
-      if(!pesos[a.id]||used.has(k)||!a.extra?.active||a.extra.d==null||a.extra.at==null)continue;
-      if(basket.length&&(a.extra.kind!==basket[0].extra.kind||Math.abs(a.extra.at-basket[0].extra.at)>10*60000))continue;
-      used.add(k);basket.push(a);
-    }
-    const proxy=basket.length>=3?{d:basket.reduce((sum,a)=>sum+a.extra.d*pesos[a.id],0)/basket.reduce((sum,a)=>sum+pesos[a.id],0),n:basket.length,kind:basket[0].extra.kind}:null;
-    const localOpen=[c?.b3,c?.win,c?.wdo].some(x=>x?.tradable===true);
-    const target=localOpen||c?.win?.phase==='pre'||c?.b3?.phase==='pre'?data(agora):(c?.b3?.nextDate||null);
-    const agenda=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.t&&stampAgenda(e.em)!=null)
-      .map(e=>({at:stampAgenda(e.em),country:e.p,title:String(e.t).slice(0,160)}))
-      .filter(e=>target&&data(e.at)===target&&e.at>=+agora)
-      .sort((a,b)=>a.at-b.at).filter((e,i,a)=>i===0||e.at!==a[i-1].at||e.title!==a[i-1].title).slice(0,8)
-      .map(e=>({...e,ref:whenBR(e.at)}));
-    function stampAgenda(v){const n=Date.parse(v||'');return Number.isFinite(n)?n:null;}
-    return {at:agora.toISOString(),ref:whenBR(+agora),session:{b3:c?.b3?.state||'desconhecido',us:c?.us?.state||'desconhecido',es:c?.es?.state||'desconhecido',nextB3:c?.b3?.nextDate||null,nextUS:c?.us?.nextDate||null},localOpen,target,all,adrs,ewzBrl,proxy,agenda,agendaLoaded:Array.isArray(state.agenda?.eventos)};
-  }
-  const aureaOpcoes996=Object.freeze({
-    exterior:{futuros:'Acompanhe os contratos futuros identificados, distinguindo a sessão corrente do fechamento à vista. Uma mudança de direção pode alterar o cenário.',commodities:'Observe se os movimentos de energia e metais persistem na próxima leitura. A transmissão para os ativos brasileiros depende também do câmbio.',cripto:'Use as criptomoedas como referência complementar de apetite a risco, sem extrapolar automaticamente seu desempenho para as bolsas.',liquidez:'Considere a liquidez de cada sessão e a qualidade da cotação antes de atribuir significado operacional aos movimentos.'},
-    brasil:{cambio:'Compare o comportamento do câmbio com os índices e as referências externas; convergência ou divergência muda a leitura de risco.',adrs:'Compare a negociação estendida das ADRs, quando confirmada, com o fechamento regular e a referência brasileira. Sem essa confirmação, não projete um percentual de abertura.',futuros:'Observe a confirmação no mercado futuro brasileiro quando estiver em negociação; a referência externa não substitui o preço local.',cautela:'Não extrapole o último fechamento para a próxima sessão sem confirmação de novos negócios e referências externas.'},
-    riscos:{agenda:'Considere apenas os eventos confirmados abaixo. Reavalie o risco quando houver divulgação e evite presumir horários não fornecidos.',liquidez:'Confirme liquidez e spreads antes de interpretar movimentos fora do pregão regular.',confirmacao:'Exija confirmação do movimento nos instrumentos negociados antes de ajustar o cenário.',defasagem:'Se a referência estiver atrasada ou sem horário, trate-a como contexto e não como sinal operacional.'}
-  });
-  function aureaEscolhas996(raw){
-    try{const a=JSON.parse(String(raw||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));const ks=Object.keys(aureaOpcoes996);
-      if(!a||Object.keys(a).length!==ks.length||!ks.every(k=>typeof a[k]==='string'&&Object.prototype.hasOwnProperty.call(aureaOpcoes996[k],a[k])))return null;return a;
-    }catch(_){return null;}
-  }
-  function aureaRender996(f,choices,model){
-    const sel=choices||{exterior:'liquidez',brasil:'cautela',riscos:'defasagem'};
-    const pct=v=>v==null?'variação não confirmada':sinalNum(v);
-    const small=t=>'<small class="mut" style="font-size:.85em">'+escape(t)+'</small>';
-    const rows=cat=>f.all.filter(q=>q.category===cat).map(q=>'<div style="margin:3px 0"><b>'+escape(q.n)+'</b> · '+escape(q.px==null?'cotação não confirmada':pct(q.d))+
-      (q.px==null?'':' · '+small(q.status+' · '+q.ref+' · '+q.source))+'</div>').join('');
-    const block=(title,body)=>'<section style="margin:0 0 14px"><h4 style="margin:0 0 5px">'+escape(title)+'</h4>'+body+'</section>';
-    const phase={pre:'Pré-market',post:'After-market',overnight:'Overnight'};
-    const adrs=f.adrs.filter(a=>a.id!=='EWZ'||a.extra).map(a=>'<div style="margin:5px 0"><b>'+escape(a.id+' · '+a.nome)+'</b> · '+escape(pct(a.regular.d))+' '+small((f.session.us==='regular'?(a.regular.recent?'Sessão regular · cotação recente':'Sessão regular · última referência, tempo real não confirmado'):'Última referência regular')+' · '+a.regular.ref+' · '+a.regular.source)+
-      (a.extra?'<div>'+escape((a.extra.active?'':'Último registro de ')+(phase[a.extra.kind]||'Sessão estendida')+' · '+pct(a.extra.d))+' '+small('vs. fechamento regular · '+a.extra.ref+' · '+a.extra.source)+'</div>':'')+'</div>').join('');
-    const agenda=f.agenda.map(e=>'<div style="margin:4px 0">'+small(e.ref+' · '+e.country)+' — '+escape(e.title)+'</div>').join('');
-    return '<div style="font-size:12.5px;color:var(--gold,#C9A66B);font-weight:700;margin-bottom:6px">RESUMÃO DA ÁUREA · '+escape(model||'Leitura local validada')+'</div>'+
-      '<p class="mut sm">Fotografia das cotações: '+escape(f.ref)+' · Brasília. Valores preservados no momento da geração.</p>'+
-      block('1. Exterior, futuros e cripto',
-        '<b>'+(f.session.us==='regular'?'Índices à vista em negociação':'Índices à vista · últimas referências da sessão regular')+'</b>'+rows('us')+
-        '<b>Futuros internacionais · sessão por contrato</b>'+rows('fut')+
-        '<b>Commodities e câmbio</b>'+rows('macro')+
-        '<b>Criptomoedas · mercado 24/7</b>'+rows('crypto')+'<p>'+escape(aureaOpcoes996.exterior[sel.exterior])+'</p>')+
-      block('2. Brasil e ADRs',
-        '<b>'+(f.localOpen?'Pregão local em andamento':'Pregão local encerrado ou ainda não iniciado')+'</b>'+rows('br')+
-        (adrs||'<p>Negociação de ADRs não confirmada nesta leitura.</p>')+
-        (f.ewzBrl==null?'<p>EWZ em reais: bases ou horários não comparáveis.</p>':'<p>EWZ em reais: '+escape(pct(f.ewzBrl))+' (variações de referência sincronizadas).</p>')+
-        '<p>'+escape(aureaOpcoes996.brasil[sel.brasil])+'</p>'+(f.proxy&&!f.localOpen?'<p>Cesta parcial de ADRs · '+escape(phase[f.proxy.kind]||'sessão estendida')+': <b>'+escape(pct(f.proxy.d))+'</b> '+small(f.proxy.n+' ADRs confirmadas · viés externo '+(f.proxy.d>0.15?'positivo':f.proxy.d<-.15?'negativo':'neutro')+' em USD, não projeção do Ibovespa')+'</p>':'')+'<p>Estimativa percentual do Ibovespa: não publicada sem fechamento, câmbio e paridade comparáveis.</p>')+
-      block('3. '+(f.localOpen?'Agenda restante do pregão':'Agenda da próxima sessão local'),
-        (f.target?'<p>'+small('Data de referência: '+f.target.split('-').reverse().join('/')+' · Brasília')+'</p>':'')+
-        (agenda||'<p>'+(f.agendaLoaded?'Nenhum evento confirmado na agenda disponível para este período.':'Agenda indisponível nesta leitura; não é possível confirmar eventos.')+'</p>'))+
-      block('4. '+(f.localOpen?'Plano e riscos para o restante da sessão':'Plano e riscos para a próxima sessão'),
-        '<p>'+escape(aureaOpcoes996.riscos[sel.riscos])+'</p>');
-  }
-
   function briefing() {
     const m=mercadoPlan(),context=w.DiarioSessoes?.context(),
       hot=w.DiarioInterpretacao?.prioritize(timeline(),context,Date.now(),context?.anchorAt?Date.parse(context.anchorAt):undefined)||
@@ -1091,7 +934,7 @@
     const info=META[ed]||META.manha;
     const stNome=x=>({regular:'Aberto',pre:'Pré-mercado',post:'Pós-mercado',fechado:'Fechado',leilao:'Leilão'}[x]||'—');
     const b3St=stNome(context?.b3?.state),usSt=stNome(context?.us?.state);
-    const pulso=pulsoDoisMercados(aureaFatos996(new Date(),context));
+    const pulso=pulsoDoisMercados();
     const hojeIso=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
     const agAlvo=(ed==='fechamento'||ed==='fimdesemana')&&context?.b3?.nextDate?context.b3.nextDate:hojeIso;
     const agEvs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})>=agAlvo)
@@ -1422,30 +1265,78 @@
       if(state.resumaoBusy)return;
       event.preventDefault();
       const ed=resBtn.dataset.aureaResumao||'manha';
-      const fatos=aureaFatos996();
-      // Termômetro externo de Brasil: os fatos abaixo são capturados uma vez e nunca reescritos pela IA.
-      const prompt='@aurea-fatos-v996 Escolha apenas uma prioridade editorial por bloco, sem escrever fatos novos. '+
-        'Retorne JSON com exterior (futuros|commodities|cripto|liquidez), brasil (cambio|adrs|futuros|cautela), riscos (agenda|liquidez|confirmacao|defasagem). '+
-        'Fotografia validada: '+JSON.stringify({sessao:fatos.session,cotacoes:fatos.all.map(q=>[q.id,q.d,q.st,q.at,q.status]),adrs:fatos.adrs.map(a=>[a.id,a.regular.d,a.extra?.kind,a.extra?.d,a.extra?.active]),agenda:fatos.agenda.map(e=>[e.ref,e.country,e.title]),alvo:fatos.target});
+      const futUS=futurosEuaStatus();
+      const nomes={
+        fimdesemana:futUS.aberto?'Edição de Fim de Semana · Futuros EUA (CME) Abertos':'Edição de Fim de Semana (Preparação da Semana)',
+        manha:'Edição da Manhã (Pré-abertura)',
+        meiodia:'Edição do Meio-dia (Meio do pregão)',
+        fechamento:'Edição de Fechamento (Pós-pregão)'
+      };
+      const c=w.DiarioSessoes?.context(),p=pulsoDoisMercados(),m=mercadoPlan(),adrTxt=resumoParidadeAdrs();
+      const {domingo,fimdesemana,b3Fechada}=contextoResumao956(c);
+      const horaSP=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
+      const horaNY=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/New_York'});
+      const hojeIso=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
+      const agAlvo=(ed==='fechamento'||ed==='fimdesemana')&&c?.b3?.nextDate?c.b3.nextDate:hojeIso;
+      const agEvs=(state.agenda?.eventos||[]).filter(e=>e&&e.imp>=1&&/^(BR|US)$/.test(e.p)&&e.em&&new Date(e.em).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})>=agAlvo)
+        .slice(0,5).map(e=>new Date(e.em).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'America/Sao_Paulo'})+' '+new Date(e.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})+' ['+e.p+'] '+String(e.t||'').slice(0,55));
+      const meus=(meusAtivos()||[]).slice(0,8);
+      const topNews=timeline().filter(e=>e.prioridade==='alta').slice(0,3).map(e=>tit(e)).join(' | ');
+      const prompt='@schwartz Monte o resumão executivo detalhado da Áurea — '+(nomes[ed]||ed)+
+        ' (data: '+hojeIso+'; agora: '+horaSP+' Brasília / '+horaNY+' Nova York). '+
+        'Status dos mercados agora: B3='+(c?.b3?.state||'—')+', NYSE/Nasdaq à vista='+(c?.us?.state||'—')+', Futuros EUA (CME Globex: ES/NQ/YM/Ouro/Petróleo)='+futUS.label+'. '+
+        (b3Fechada?'IMPORTANTE: o mercado à vista da B3 está fechado agora; em dias de pregão, WIN/WDO normalmente abrem às 09:00 e à vista às 10:00 Brasília. Respeite a fase atual dos futuros locais. NÃO diga que IBOV/WIN estão "com dados indisponíveis": explique que o pregão local está fechado e use o EWZ, as ADRs brasileiras (PBR, VALE, ITUB, BBD) e o USD/BRL abaixo para projetar uma possível abertura aqui. ':'')+
+        (futUS.aberto&&domingo?'IMPORTANTE: os Futuros EUA na CME Globex já estão abertos; considere os futuros e cripto 24/7, com atenção à liquidez menor da sessão de domingo. ':'')+
+        (p.riskLabel?'Humor Global: '+p.riskLabel+' ('+p.riskScore+'). ':'')+
+        (p.divergencia?'Divergência detectada: '+p.divergencia+' ':'')+
+        (p.texto?'Cotações no painel: '+p.texto+'. ':'')+
+        (adrTxt?'Termômetro externo de Brasil (EWZ e Paridade de ADRs): '+adrTxt+'. ':'')+
+        (m.nome?'Leitura de amplitude: '+m.nome+'. ':'')+
+        (agEvs.length?'Agenda alto impacto BR/EUA: '+agEvs.join(' · ')+'. ':'')+
+        (meus.length?'Ativos acompanhados pelo trader: '+meus.join(', ')+'. ':'')+
+        (topNews?'Principais manchetes: '+topNews+'. ':'')+
+        'Traga detalhes práticos e objetivos em 4 blocos: '+
+        '1) Exterior, Futuros EUA e Cripto (humor de risco, principais vetores em índices/commodities/cripto'+(domingo?' e cuidado com liquidez baixa de domingo':'')+'), '+
+        '2) Impacto no Brasil (IBOV, WIN, WDO e Juros — se B3 fechada, cite EWZ e ADRs como PBR/VALE/ITUB/BBD para estimar a direção provável da abertura), '+
+        '3) Agenda Crítica BR/EUA (quais horários e dados podem virar o pregão), '+
+        '4) Plano Prático e Riscos (o que observar na abertura, pontos de atenção em WIN/WDO e nos ativos acompanhados).';
+      // v904: a resposta volta à tela pela Cloudflare, nunca pela função analise do Supabase.
+      // Indisponibilidade do provedor gratuito apresenta um resumo LOCAL identificado.
       state.resumaoBusy=true;
       state.resumaoEd=ed;
       state.resumaoHtml='';
       repaint();
       try{
-        if(typeof tok==='function')await tok();
+        if(typeof tok==='function')await tok(); // Apenas renovação de login, permitida.
         const jwt=typeof SESS!=='undefined'?String(SESS?.at||''):'';
         if(jwt.length<40)throw Error('Faça login para usar a IA gratuita.');
         const res=await w.fetch('https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-resumao',{
           method:'POST',mode:'cors',credentials:'omit',cache:'no-store',redirect:'error',
           headers:{'Content-Type':'application/json',Accept:'application/json',Authorization:'Bearer '+jwt},
-          body:JSON.stringify({edicao:ed,prompt:prompt.slice(0,6000)}),signal:AbortSignal.timeout(34000)
+          body:JSON.stringify({edicao:ed,prompt:prompt.slice(0,6000)}),
+          signal:AbortSignal.timeout(34000)
         });
         const j=await res.json().catch(()=>({}));
-        const choices=aureaEscolhas996(j.text);
-        if(!res.ok||!j.ok||!choices)throw Error(j.error||'Resposta editorial fora do contrato');
-        state.resumaoHtml=aureaRender996(fatos,choices,'IA · '+String(j.model||'Cloudflare'));
-      }catch(_){
-        state.resumaoHtml=aureaRender996(fatos,null,'Leitura local validada · IA indisponível ou fora do contrato');
+        if(!res.ok||!j.ok||!j.text)throw Error(j.error||'A IA não conseguiu gerar o texto agora.');
+        state.resumaoHtml='<div style="margin-bottom:10px;font-size:12.5px;color:var(--gold,#C9A66B);font-weight:700;letter-spacing:.02em">✦ RESUMÃO DA ÁUREA · IA GRATUITA ('+escape(j.model||'Cloudflare')+')</div>'+
+          formatarTextoEditorial(j.text);
+      }catch(err){
+        const stale=state.mercado?.atualizadoEm?'Último registro: '+when(state.mercado.atualizadoEm)+'.':'Sem carimbo de atualização.';
+        const riskExpl=p.riskScore==null?'Sem leitura consolidada de apetite a risco.':
+          p.riskScore>=25?'Ambiente de **Apetite a Risco (Risk-On, +'+p.riskScore+')**: bolsas e ativos de risco tendem a receber fluxo comprador, mas fique atento a realizações em pontos de resistência.':
+          p.riskScore<=-25?'Ambiente de **Aversão a Risco (Risk-Off, '+p.riskScore+')**: capital migra para proteção (dólar/ouro/Treasuries), exigindo mão reduzida em compras no Brasil.':
+          'Ambiente **Neutro/Misto ('+(p.riskScore>0?'+':'')+p.riskScore+')**: mercado sem direção única global — prefira operações seletivas nos seus melhores níveis.';
+        let alsTxt='';
+        try{const als=typeof w.DiarioAlertasDisparados==='function'?w.DiarioAlertasDisparados():[];if(als.length)alsTxt=' **Alertas disparados agora:** '+als.slice(0,3).map(a=>a.tk+' ('+a.msg+')').join(' · ')+'.';}catch(_){}
+        const blocos=[
+          '1) Exterior, Futuros EUA e Cripto\nStatus CME Globex: **'+futUS.label+'**. '+riskExpl+(p.texto?'\nCotações capturadas: '+p.texto+'.':''),
+          '2) Impacto no Brasil (IBOV, WIN, WDO e Juros)\n'+(b3Fechada?'Mercado à vista da B3 fechado neste horário. Em dias de pregão, WIN/WDO normalmente às 09:00 e à vista às 10:00. ':'')+(adrTxt?'Termômetro por EWZ e ADRs: **'+adrTxt+'**. ':'')+(m.nome&&!/insuficiente|Sem leitura/i.test(m.nome)?'Amplitude: **'+m.nome+'**. ':'')+(p.divergencia?'\n'+p.divergencia:'Quando exterior, ADRs e câmbio apontam na mesma direção, o fluxo tende a ser mais limpo na abertura.'),
+          '3) Agenda Crítica BR/EUA\n'+(agEvs.length?agEvs.map(x=>'• '+x).join('\n'):'Nenhum evento de alto impacto nos próximos horários. Acompanhe o fluxo técnico e as manchetes corporativas.'),
+          '4) Plano Prático e Riscos\nEvite abrir posição nos 10 minutos anteriores a dados de alto impacto.'+alsTxt+(meus.length?' Ativos no seu radar: **'+meus.slice(0,6).join(', ')+'**.':'')
+        ];
+        state.resumaoHtml='<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--gold,#C9A66B)">✦ Resumão Local · Leitura Direta dos Dados</div>'+
+          '<div class="mut sm" style="margin-top:2px">'+escape(String(err?.message||'IA indisponível').slice(0,140))+' · '+escape(stale)+'</div></div>'+
+          formatarTextoEditorial(blocos.join('\n\n'));
       }finally{
         state.resumaoBusy=false;
         repaint();
