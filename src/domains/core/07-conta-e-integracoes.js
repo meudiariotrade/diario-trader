@@ -3355,10 +3355,13 @@ function aureaRota(texto) {
     n = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
     tickers = [
       ...new Set(
-        (t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|11)\b/g) || []).map((x) => x.toUpperCase()),
+        [...(t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|7|8|11B?)\b/g) || []),...Array.from(t.matchAll(/\b(?:ticker|NASDAQ|NYSE|AMEX)\s*:\s*([A-Za-z]{1,5}(?:\.[A-Za-z])?)\b/gi),x=>x[1])].map((x) => x.toUpperCase()),
       ),
     ].slice(0, 4),
     forcado = n.match(/^\s*@(schwartz|graham|livermore|munger|markowitz|dow|dalio|helmer)\b/);
+  const usStandalone=t.trim().match(/^(?:@graham\s+)?\$?([A-Z]{1,5}(?:\.[A-Z])?)$/),usTagged=Array.from(t.matchAll(/(?:^|\s)\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g),x=>x[1]);
+  const blocked=new Set(["BR","EUA","US","USD","BRL","ROE","ROIC","FCF","DCF","PEG","CET","DY","ETF","FII","PIB","FED","SELIC","IBOV"]);
+  for(const x of [...usTagged,...(usStandalone?[usStandalone[1]]:[])])if(!blocked.has(x)&&!tickers.includes(x)&&tickers.length<4)tickers.push(x);
   if (forcado) return { id: forcado[1], tickers, motivo: "escolhido por você" };
   const conta = (rx) => (n.match(rx) || []).length,
     pontos = {
@@ -3413,7 +3416,7 @@ function aureaRota(texto) {
   return { id, tickers, motivo };
 }
 const AUREA_METODO_V1007 = Object.freeze({
-  "graham": "Forme tese própria de investimento: qualidade do negócio e ciclo, ROIC versus custo de capital quando ambos existirem, margens, conversão do lucro em caixa, dívida e vencimentos, retorno ao acionista, valuation histórico e pares comparáveis. Distinga preço de valor; preço justo apenas com método, premissas e dados, margem de segurança e sensibilidade; sem dados suficientes declare valuation inconclusivo. Cite períodos e evidências, catalisador e evento que invalida a tese.",
+  "graham": "Forme tese própria de investimento: qualidade do negócio e ciclo, ROIC versus custo de capital quando ambos existirem, margens, conversão do lucro em caixa, dívida e vencimentos, retorno ao acionista, valuation histórico e pares comparáveis. Distinga preço de valor; preço justo apenas com método, premissas e dados, margem de segurança e sensibilidade; sem dados suficientes declare valuation inconclusivo. Cite períodos e evidências, catalisador e evento que invalida a tese. Para EUA: USD, Fed/Treasuries, ROIC, FCF, crescimento sustentável, Forward P/E, PEG e EV/FCF quando válidos, remuneração em ações, diluição e recompras líquidas; DY baixo não implica empresa ruim. Para BR: BRL, Selic/DI, qualidade, ciclo, dividendos recorrentes e métodos adequados. Bancos/seguradoras: ROE, P/VP, capital, risco de crédito ou subscrição; REITs: FFO/AFFO e cobertura, não P/L isolado; tecnologia: margens, SBC, reinvestimento; cíclicas: lucro normalizado. Desconto a pares não é margem de segurança intrínseca. DCF só com premissas documentadas. Não invente indicadores.",
   "helmer": "Mapeie os sete poderes (escala, rede, contraposicionamento, custos de troca, marca, recurso exclusivo, processo), classificando presente, parcial, ausente ou não comprovado; para cada poder relevante, separe benefício econômico e barreira à imitação com evidência. Identifique estágio, concorrente ou mudança que ameaça o fosso em 3–5 anos e métrica observável de erosão. Não confunda bom produto, crescimento ou tamanho com fosso.",
   "livermore": "Faça leitura própria antes de considerar a tese do usuário. Identifique período, preço de referência, tendência primária e secundária, sequência de topos/fundos relevantes HH/HL/LH/LL, extremos locais versus pivôs estruturais confirmados pelo rompimento do extremo oposto. Explique Dow, Elliott com contagem alternativa, Fibonacci com âncoras, polaridade, efeito elástico, candles, médias, OBV e RSI apenas se houver dados. Mapa de níveis, cenário principal/alternativo, gatilho de confirmação, alvo condicional e invalidação; explique o que faria aguardar. Fear-Setting: pior cenário, prevenção, reparação e assimetria. Nunca invente níveis ou sinais.",
   "munger": "Faça inversão independente da tese, não concorde por cortesia. Identifique a premissa mais frágil, até três riscos materiais com mecanismo causal e evidência, vieses possíveis sem diagnosticar a pessoa, fatos versus expectativas, contraponto mais forte e evento ou nível que derruba a tese. Fear-Setting: pior cenário, prevenção, reparação e custo de inação, com horizonte e condição explícitos.",
@@ -3596,7 +3599,7 @@ async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titu
   else{
     const j=await aureaDebateCallV1013({...dados,fase:"pareceres"},AbortSignal.any([signal,AbortSignal.timeout(38000)]),titular);
     rodada=j.resultado;modeloInicial=j.modelo||"";
-    resposta={titulo:"Parecer inicial do Conselho",resumo:rodada.resumo,visoes:rodada.pareceres.map(p=>({escola:p.escola,argumento:p.argumento+" — Base: "+p.base})),modelo:modeloInicial};
+    resposta={titulo:"Parecer inicial do Conselho",resumo:rodada.resumo,visoes:rodada.pareceres.map(p=>({escola:p.escola,argumento:p.argumento+" — Base: "+p.base})),modelo:modeloInicial,fundamentos_v1014:j.fundamentos_v1014||[]};
   }
   if(signal.aborted||syncOwner()!==titular)return resposta;
   const visual=resposta.tipo_imagem?JSON.stringify({estrutura:resposta.estrutura,validacao_ohlc:resposta.validacao_ohlc,pivos:resposta.pivos,graficos:resposta.graficos,fatos:resposta.fatos,comparacao:resposta.comparacao}).slice(0,7000):"";
@@ -3619,12 +3622,48 @@ async function aureaImagemCall(pergunta, imagem, signal, titular, livros=[],perg
   const r = await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-imagem",{
     method:"POST",credentials:"omit",redirect:"error",cache:"no-store",
     headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},
-    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,debate:debate===true})
+    signal,body:JSON.stringify({pergunta:pergunta.slice(0,6000),...(payload.length===1?{imagem:payload[0]}:{imagens:payload}),biblioteca:livros,pergunta_original:String(perguntaOriginal||pergunta).slice(0,6000),debate:debate===true})
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.resposta)throw new Error(j.erro||"A leitura de imagem está temporariamente indisponível. Tente novamente.");
   return await aureaValidarHistoricoV1012({...j.resposta,modelo:j.modelo||""},perguntaOriginal,signal);
 }
+// v1014 — reutiliza valuationBR existente sem alterar fórmula ou score.
+function aureaCalcularGrahamV1014(perfis){
+  const median=a=>{const v=a.filter(Number.isFinite).sort((a,b)=>a-b);return v.length>=3?(v[Math.floor((v.length-1)/2)]+v[Math.floor(v.length/2)])/2:null;};
+  return perfis.slice(0,3).map(p=>{
+    const comparacao={};
+    for(const k of Object.keys(p.metricas||{})){
+      const a=(p.pares||[]).map(x=>x.metricas?.[k]).filter(Number.isFinite);
+      const m=median(a);if(m!==null)comparacao[k]={mediana:m,n:a.length};
+    }
+    const input=p.valuationInput||{},api=window.DiarioScreenersInteligencia;
+    let valuation=null;
+    if(p.market==="BR"&&!["banco","seguradora","imobiliario","financeiro_indefinido","software","tecnologia","semicondutores","fii"].includes(p.modelo?.tipo)&&!p.defasado&&p.referencia_indicadores&&Number.isFinite(input.preco_referencia)&&input.preco_referencia>0&&api?.valuationBR){
+      const r=api.valuationBR(input);
+      const methods=["graham","bazin"].flatMap(id=>Number.isFinite(r.methods?.[id])?[{id,valor:r.methods[id],margem:r.margins[id],inferido:!!r.estimados?.[id]}]:[]);
+      if(methods.length)valuation={preco:input.preco_referencia,methods,nota:"Triagem matemática exploratória; insumos do snapshot não são certificação documental. Não é preço-alvo."};
+    }
+    const m=p.metricas||{},relative=[],derived=[];
+    const positive=k=>Number.isFinite(m[k])&&m[k]>0;
+    const allowed=p.modelo?.tipo==="imobiliario"?["price_ffo","price_affo"]:["banco","seguradora","financeiro_indefinido"].includes(p.modelo?.tipo)?["pvp","pl","forward_pe"]:["forward_pe","ev_fcf","peg_ratio","price_sales"];
+    if(p.market==="US"&&!p.defasado){
+      for(const k of allowed){const c=comparacao[k];if(positive(k)&&c?.n>=3&&c.mediana>0)relative.push({id:k,valor:m[k],mediana:c.mediana,n:c.n,diferenca_pct:(m[k]/c.mediana-1)*100});}
+      if(!["banco","seguradora","imobiliario","financeiro_indefinido"].includes(p.modelo?.tipo)){
+        if(positive("ev_fcf"))derived.push({id:"fcf_ev",valor:100/m.ev_fcf,formula:"100 ÷ EV/FCF; rendimento sobre EV, não sobre capital próprio"});
+        if(positive("forward_pe"))derived.push({id:"earnings_yield_forward",valor:100/m.forward_pe,formula:"100 ÷ Forward P/E; rendimento de lucro projetado"});
+        if(Number.isFinite(m.fcf_yield))derived.push({id:"fcf_equity_yield",valor:m.fcf_yield,formula:"FCF yield informado pelo provedor"});
+      }
+    }
+    if(p.classe==="FII"&&!p.defasado&&positive("pvp")){
+      derived.push({id:"desconto_vp",valor:(1-m.pvp)*100,formula:"Desconto patrimonial (1 − P/VP) × 100; negativo indica ágio, não margem intrínseca"});
+      if(positive("preco_referencia"))derived.push({id:"vp_implicito",valor:m.preco_referencia/m.pvp,formula:"VP por cota implícito (preço ÷ P/VP); BRL, não preço justo"});
+      for(const k of ["pvp","dividend_yield","ffo_yield"]){const c=comparacao[k];if(positive(k)&&c?.n>=3&&c.mediana>0)relative.push({id:k,valor:m[k],mediana:c.mediana,n:c.n,diferenca_pct:(m[k]/c.mediana-1)*100});}
+    }
+    return {...p,comparacao,valuation,relative,derived};
+  });
+}
+
 async function ecoPergunta(e, opt) {
   e=String(e||"").trim();opt=opt||{};
   if(ECO.owner!==syncOwner())ecoLimpa();
@@ -3646,6 +3685,10 @@ async function ecoPergunta(e, opt) {
     const bloco=window.DiarioCerebroIA?.blocoConselho?.(livros)||"";
     if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q,debate);
     else if(debate)resposta=await aureaDeliberarV1013(null,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
+    else if(rota.id==="graham"&&!opt.dadosPrivados&&!a){
+      const j=await aureaDebateCallV1013({fase:"graham",pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros},AbortSignal.any([controller.signal,AbortSignal.timeout(38000)]),titular);
+      resposta={...j.resultado,modelo:j.modelo||"",fundamentos_v1014:j.fundamentos_v1014||[]};
+    }
     else {
       const agregado=opt.dadosPrivados?window.DiarioContextoConselhoV1008?.(rota.id)||"":"";
       // Dow também respeita o consentimento e o mesmo limite de trechos das demais lentes.
@@ -3661,6 +3704,7 @@ async function ecoPergunta(e, opt) {
     if(!ativo())return;
     if(debate&&opt.imagem)resposta=await aureaDeliberarV1013(resposta,q,e===q?"":e.slice(q.length),livros,controller.signal,titular);
     if(!ativo())return;
+    if(resposta.fundamentos_v1014?.length)resposta.fundamentos_v1014=aureaCalcularGrahamV1014(resposta.fundamentos_v1014);
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
       motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagens:(Array.isArray(opt.imagem)?opt.imagem:[opt.imagem]).map(x=>x.url)}:{})});
     ECO.l=ECO.l.slice(-20);

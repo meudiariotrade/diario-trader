@@ -1,5 +1,6 @@
 import {autenticarUsuario} from './auth-jwks-v924.mjs';
 import {generate} from './aurea-resumao-v904.mjs';
+import {carregarGrahamV1014,PROTOCOLO_GRAHAM_V1014} from './graham-fundamentos-v1014.mjs';
 const ORIGIN='https://meudiariotrade.github.io',MAX=28000;
 const CORS={'Access-Control-Allow-Origin':ORIGIN,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'authorization,content-type','Vary':'Origin'};
 const json=(x,status=200)=>Response.json(x,{status,headers:{...CORS,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
@@ -31,6 +32,12 @@ export function normalizarDebateV1013(raw,rodada){
  const divergencias=(Array.isArray(raw.divergencias)?raw.divergencias:[]).slice(0,6).flatMap(x=>idsValid([x?.a,x?.b])&&['tese_a','tese_b','replica'].every(k=>txt(x[k],600).length>=15)?[{a:x.a,b:x.b,tese_a:txt(x.tese_a,600),tese_b:txt(x.tese_b,600),replica:txt(x.replica,600)}]:[]);
  return {sintese:txt(raw.sintese,1800),convergencias,divergencias,alternativo:txt(raw.alternativo,800),confirmacao:txt(raw.confirmacao,800),invalidacao:txt(raw.invalidacao,800),lacunas:(Array.isArray(raw.lacunas)?raw.lacunas:[]).slice(0,8).map(x=>txt(x,350)).filter(Boolean)};
 }
+export function normalizarGrahamV1014(raw,perfis){
+ if(!obj(raw)||txt(raw.resumo,1500).length<15)return null;
+ const safe=x=>{const s=txt(x,1000);return /\d/.test(s)?'Interpretação numérica não validada; consulte os indicadores e cálculos exibidos separadamente.':s;};
+ const arr=x=>(Array.isArray(x)?x:[]).slice(0,8).map(safe).filter(Boolean);
+ return {titulo:'Graham · tese fundamentalista',resumo:perfis.length?safe(raw.resumo):'Fundamentos públicos insuficientes para confirmar a tese. A leitura seguinte é conceitual e condicional.',explicacao:arr(raw.explicacao),o_que_observar:arr(raw.o_que_observar),lacunas:arr(raw.lacunas)};
+}
 async function bounded(req){
  if(Number(req.headers.get('Content-Length')||0)>MAX)throw Error('size');
  const reader=req.body?.getReader();if(!reader)throw Error('json');
@@ -46,7 +53,7 @@ export async function debateV1013(request,env,deps={}){
  if(!user)return json({erro:'Entre na sua conta novamente'},401);
  let b;try{b=await bounded(request)}catch(e){return json({erro:'Corpo inválido ou grande demais'},e.message==='size'?413:400)}
  const pergunta=txt(b?.pergunta,6000),fase=b?.fase;
- if(pergunta.length<3||!['pareceres','debate'].includes(fase))return json({erro:'Consulta inválida'},400);
+ if(pergunta.length<3||!['pareceres','debate','graham'].includes(fase))return json({erro:'Consulta inválida'},400);
  const rodada=fase==='debate'?normalizarRodadaV1013(b.rodada):null;
  if(fase==='debate'&&!rodada)return json({erro:'Pareceres iniciais inválidos'},400);
  if(!env.SCREENER_CACHE)return json({erro:'Controle de uso indisponível'},503);
@@ -55,13 +62,14 @@ export async function debateV1013(request,env,deps={}){
  const key='aurea-debate:v1013:'+id+':'+new Date().toISOString().slice(0,10);
  try{const n=Number(await env.SCREENER_CACHE.get(key)||0);if(n>=12)return json({erro:'Limite diário de rodadas do debate atingido'},429);await env.SCREENER_CACHE.put(key,String(n+1),{expirationTtl:86400})}catch{return json({erro:'Controle de uso indisponível'},503)}
  const biblioteca=(Array.isArray(b.biblioteca)?b.biblioteca:[]).slice(0,2).map(x=>({obra:txt(x?.obra,90),trecho:txt(x?.trecho,320)})).filter(x=>x.obra&&x.trecho);
- const contexto={pergunta,contexto_publico:txt(b.contexto_publico,5000),biblioteca,...(rodada?{rodada,relatorio_visual:txt(b.relatorio_visual,7000)}:{})};
+ const perfis=await carregarGrahamV1014(env,deps.ctx,pergunta,deps.snapshot,deps.fiis);
+ const contexto={pergunta,perfis,contexto_publico:txt(b.contexto_publico,5000),biblioteca,...(rodada?{rodada,relatorio_visual:txt(b.relatorio_visual,7000)}:{})};
  if(request.signal.aborted)return json({erro:'Consulta cancelada'},499);
- let gen;try{gen=await (deps.generate||generate)(env,SYS+(fase==='pareceres'?PRIMEIRA:SEGUNDA)+'\nDados:\n'+JSON.stringify(contexto),'central')}catch{return json({erro:'Rodada indisponível'},503)}
+ let gen;try{gen=await (deps.generate||generate)(env,SYS+PROTOCOLO_GRAHAM_V1014+' '+(fase==='graham'?'Responda com resultado {"resumo":"tese própria qualitativa","explicacao":["qualidade, caixa, dívida, crescimento, valuation condicional"],"o_que_observar":["catalisador, risco, invalidação"],"lacunas":["dados faltantes"]}. Não inclua números no texto; os indicadores são exibidos pelo aplicativo.':fase==='pareceres'?PRIMEIRA:SEGUNDA)+'\nDados:\n'+JSON.stringify(contexto),'central')}catch{return json({erro:'Rodada indisponível'},503)}
  if(request.signal.aborted)return json({erro:'Consulta cancelada'},499);
  if(gen?.error)return json({erro:'Rodada indisponível'},503);
  let raw;try{raw=JSON.parse(gen.text)?.resultado}catch{}
- const resultado=fase==='pareceres'?normalizarRodadaV1013(raw):normalizarDebateV1013(raw,rodada);
+ const resultado=fase==='graham'?normalizarGrahamV1014(raw,perfis):fase==='pareceres'?normalizarRodadaV1013(raw):normalizarDebateV1013(raw,rodada);
  if(!resultado)return json({erro:'Resposta da rodada incompatível'},502);
- return json({ok:true,resultado,modelo:txt(gen.model,100)});
+ return json({ok:true,resultado,modelo:txt(gen.model,100),fundamentos_v1014:perfis});
 }
