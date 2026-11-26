@@ -3318,13 +3318,13 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       }
       function graficoAureaV1007(M,E){
         if(!M.imagem)return "";
-        const pts=(Array.isArray(E.pivos)?E.pivos:[]).map((p,i)=>({...p,ordem:i+1})).filter(p=>p.ancoragem_visual==="pixel_compativel"&&p.validacao!=="divergente"&&["topo","fundo"].includes(p?.tipo)&&["confirmado","potencial"].includes(p?.estado)&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1).slice(0,40);
+        const pts=(Array.isArray(E.pivos)?E.pivos:[]).map((p,i)=>({...p,ordem:i+1})).filter(p=>["pixel_compativel","pavio_visual"].includes(p.ancoragem_visual)&&p.validacao!=="divergente"&&["topo","fundo"].includes(p?.tipo)&&["confirmado","potencial"].includes(p?.estado)&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1).slice(0,40);
         const marks=pts.map((p,i)=>{
           const cor=p.tipo==="topo"?"#b91c1c":"#067647",x=p.x*100,y=p.y*100,align=x>70?"translate(-100%,-50%)":"translate(0,-50%)";
           const label=(p.tipo==="topo"?"T":"F")+p.ordem+(p.validacao!=="estrutura_ohlc"?"?":"");
           return `<span data-aurea-pivo="${p.ordem}" style="position:absolute;left:${x}%;top:${y}%;width:10px;height:10px;border:2px solid ${cor};background:#fff;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none"></span><span style="position:absolute;left:${x}%;top:${y}%;transform:${align};margin-top:${i%2?16:-16}px;max-width:45%;padding:2px 4px;background:${cor};color:white;border-radius:4px;font-size:10px;font-weight:700;line-height:1.2;pointer-events:none">${s(label)}</span>`;
         }).join("");
-        return `<figure class="wf-chat-sent-image" style="margin:8px 0"><div style="position:relative;width:100%;line-height:0"><img src="${s(M.imagem)}" alt="Imagem original anexada à pergunta" style="display:block;width:100%;height:auto;max-height:none;object-fit:contain">${marks}</div>${pts.length?'<figcaption style="font-size:11px;line-height:1.4;margin-top:6px">T: topo · F: fundo · ?: estrutura sem confirmação OHLC. Marcas têm pixels compatíveis, não são certificação da coordenada.</figcaption>':(E.pivos?.length?'<figcaption style="font-size:11px">Sem marcação: não foi possível conferir a posição dos extremos no painel de preço.</figcaption>':"")}</figure>`;
+        return `<figure class="wf-chat-sent-image" style="margin:8px 0"><div style="position:relative;width:100%;line-height:0"><img src="${s(M.imagem)}" alt="Imagem original anexada à pergunta" style="display:block;width:100%;height:auto;max-height:none;object-fit:contain">${marks}</div>${pts.length?'<figcaption style="font-size:11px;line-height:1.4;margin-top:6px">T: topo · F: fundo · ?: estrutura sem confirmação OHLC. Marcadores sobre os pavios visíveis.'+(pts.some(p=>p.ancoragem_visual==="pavio_visual")?' Parte das posições é aproximada, com eixo de preço não calibrado.':'')+'</figcaption>':(E.pivos?.length?'<figcaption style="font-size:11px">Sem marcação: não foi possível conferir a posição dos extremos no painel de preço.</figcaption>':"")}</figure>`;
       }
       function graficosAureaV1011(M,E){
         const imgs=M.imagens||(M.imagem?[M.imagem]:[]);
@@ -3340,7 +3340,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const historico=calc?'<details><summary>Confluências calculadas no histórico público</summary>'+calc.medias.map(m=>'<p>MM simples '+m.n+' · '+s(m.valor.toLocaleString("pt-BR",{maximumFractionDigits:4}))+' · '+s(m.inclinacao)+'</p>').join("")+calc.sinais.map(x=>'<p><b>'+s(x.tipo)+' · '+s(x.preco)+' ('+s(x.data)+')</b> — '+s(x.status)+'</p>').join("")+'<small>'+s(calc.nota)+'</small></details>':"";
         return '<section class="wf-chat-parecer"><b>Conferência estrutural dos pivôs</b>'+(id?'<p><b>Identificação visual:</b> '+s(id.ticker)+' · '+s(id.periodo)+' (não é homologação do histórico)</p>':"")+'<p>'+s(v.motivo||"Sem conferência histórica; marcações apenas visuais.")+'</p>'+
           (v.status==="conferido"?'<p><b>'+s(v.ticker)+' · '+s(v.tf)+'</b> · '+s(v.source)+' · recorte '+s(v.desde)+' a '+s(v.ate)+'</p>':"")+
-          '<ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.preco?" · "+p.preco:"")+' · '+(status[p.validacao]||"Estimativa visual"))+'</b> — ' +s(p.verificacao||"Sem conferência histórica.")+' · '+(p.ancoragem_visual==='pixel_compativel'?'pixel compatível':'posição não conferida; sem marcador')+(p.validacao==="estrutura_ohlc"?' Nível rompido: '+s(p.nivel_rompido)+' · '+s(p.data_rompimento):"")+'</li>').join("")+'</ul>'+(ohlc.length?'<details><summary>Extremos locais calculados no OHLC ('+ohlc.length+')</summary><ul>'+ohlc.map(p=>'<li>'+s(p.tipo)+' · '+s(p.data)+' · '+s(p.preco)+' — '+s(p.verificacao)+'</li>').join("")+'</ul></details>':"")+historico+(cv?'<h4>Confluências visuais</h4>'+Object.entries({obv:'OBV',medias:'Médias móveis',polaridade:'Polaridade',elastico:'Efeito elástico'}).filter(([k])=>cv[k]).map(([k,t])=>'<p><b>'+t+':</b> '+s(cv[k])+'</p>').join(""):"")+'</section>';
+          '<ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.preco?" · "+p.preco:"")+' · '+(status[p.validacao]||"Estimativa visual"))+'</b> — ' +s(p.verificacao||"Sem conferência histórica.")+' · '+(p.ancoragem_visual==='pixel_compativel'?'pixel compatível':p.ancoragem_visual==='pavio_visual'?'pavio localizado visualmente':'posição não conferida; sem marcador')+(p.validacao==="estrutura_ohlc"?' Nível rompido: '+s(p.nivel_rompido)+' · '+s(p.data_rompimento):"")+'</li>').join("")+'</ul>'+(ohlc.length?'<details><summary>Extremos locais calculados no OHLC ('+ohlc.length+')</summary><ul>'+ohlc.map(p=>'<li>'+s(p.tipo)+' · '+s(p.data)+' · '+s(p.preco)+' — '+s(p.verificacao)+'</li>').join("")+'</ul></details>':"")+historico+(cv?'<h4>Confluências visuais</h4>'+Object.entries({obv:'OBV',medias:'Médias móveis',polaridade:'Polaridade',elastico:'Efeito elástico'}).filter(([k])=>cv[k]).map(([k,t])=>'<p><b>'+t+':</b> '+s(cv[k])+'</p>').join(""):"")+'</section>';
       }
       function comparacaoAureaV1011(E){
         if(!E.graficos?.length)return "";
@@ -3472,7 +3472,8 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         if(!box)return;
         box.hidden=!imagemChat;
         const list=box.querySelector("[data-chat-previews]");
-        list.innerHTML=(imagemChat||[]).map((a,i)=>'<div class="wf-chat-preview-item"><img src="'+s(a.url)+'" alt="Gráfico '+(i+1)+'"><span class="wf-chat-preview-name">Gráfico '+(i+1)+'</span><button type="button" data-chat-remove="'+i+'" aria-label="Remover gráfico '+(i+1)+'"'+(ECO.busy||carregandoImagem?' disabled':'')+'>×</button></div>').join("");
+        const disabled=ECO.busy||carregandoImagem?" disabled":"";
+        list.innerHTML=(imagemChat||[]).map((a,i)=>`<div class="wf-chat-preview-item"><img src="${s(a.url)}" alt="Gráfico ${i+1}"><span class="wf-chat-preview-name">Gráfico ${i+1}</span><button type="button" data-chat-rotate="${i}" aria-label="Girar gráfico ${i+1} para a esquerda" title="Girar para a esquerda"${disabled}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 3 7M3 5v6h6"/></svg></button><button type="button" data-chat-remove="${i}" aria-label="Remover gráfico ${i+1}"${disabled}>×</button></div>`).join("");
         box.querySelector("[data-chat-count]").textContent=(imagemChat?.length||0)+"/3 gráficos";
       }
       function limparChat(){
@@ -3500,13 +3501,32 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
             const anexo=await anxShrink(file);
             if(!l||ECO.geracao!==geracao||syncOwner()!==titular)return;
             if(!anexo?.b64||anexo.b64.length>1200000)throw Error("Imagem grande demais. Recorte o gráfico e tente novamente.");
-            novos.push(anexo);
+            novos.push({...anexo,file,giros:0});
           }
           imagemChat=[...(imagemChat||[]),...novos];
         }catch(err){
           if(ECO.geracao===geracao&&syncOwner()===titular)ECO.err=err.message==="img"?"Não consegui abrir a imagem. Use JPG ou PNG.":String(err.message||err);
         }finally{
           if(l&&ECO.geracao===geracao&&syncOwner()===titular){carregandoImagem=false;atualizarAnexo();i();}
+        }
+      }
+      async function girarImagem(index){
+        const anexo=imagemChat?.[index];
+        if(!anexo||ECO.busy||carregandoImagem)return;
+        const geracao=ECO.geracao,titular=syncOwner(),giros=(anexo.giros+1)%4;
+        carregandoImagem=true;ECO.err="";atualizarAnexo();i();
+        try{
+          const girado=await anxShrink(anexo.file,giros);
+          if(!l||ECO.geracao!==geracao||syncOwner()!==titular)return;
+          if(girado.b64.length>1200000)throw Error("Imagem grande demais. Recorte o gráfico e tente novamente.");
+          imagemChat[index]={...anexo,...girado,giros};
+        }catch(err){
+          if(ECO.geracao===geracao&&syncOwner()===titular)ECO.err=err.message==="img"?"Não consegui girar a imagem.":String(err.message||err);
+        }finally{
+          if(l&&ECO.geracao===geracao&&syncOwner()===titular){
+            carregandoImagem=false;atualizarAnexo();i();
+            O.querySelector(`[data-chat-rotate="${index}"]`)?.focus({preventScroll:true});
+          }
         }
       }
       function B(M) {
@@ -3581,7 +3601,15 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           (O.querySelector("[data-chat-photo]").onclick=()=>O.querySelector('[name="photo"]').click()),
           (O.querySelector("[data-chat-camera]").onclick=()=>O.querySelector('[name="camera"]').click()),
           O.querySelectorAll('input[type="file"]').forEach(f=>f.addEventListener("change",()=>escolherImagem(f))),
-          (O.querySelector("[data-chat-previews]").onclick=(ev)=>{const b=ev.target.closest("[data-chat-remove]");if(!b||ECO.busy||carregandoImagem)return;imagemChat=(imagemChat||[]).filter((_,i)=>i!==Number(b.dataset.chatRemove));if(!imagemChat.length)imagemChat=null;atualizarAnexo();i();}),
+          (O.querySelector("[data-chat-previews]").onclick=(ev)=>{
+            const rotate=ev.target.closest("[data-chat-rotate]");
+            if(rotate){girarImagem(Number(rotate.dataset.chatRotate));return;}
+            const remove=ev.target.closest("[data-chat-remove]");
+            if(!remove||ECO.busy||carregandoImagem)return;
+            imagemChat=(imagemChat||[]).filter((_,i)=>i!==Number(remove.dataset.chatRemove));
+            if(!imagemChat.length)imagemChat=null;
+            atualizarAnexo();i();
+          }),
           (O.querySelector("form").onsubmit = async (E) => {
             E.preventDefault();
             const u=O.querySelector("textarea"),P=u.value.trim(),anexo=imagemChat,geracao=ECO.geracao;

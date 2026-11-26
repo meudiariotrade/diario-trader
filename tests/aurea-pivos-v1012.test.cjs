@@ -80,3 +80,33 @@ test('v1021 cálculo independente de médias e OBV não usa barras posteriores a
  const r=ctx.aureaIndicadoresHistoricosV1021({referencia_ohlc:{tf:'1d',desde:d(190),ate:d(209)},extremos_ohlc:[]},history);
  assert.deepEqual(Array.from(r.medias,x=>x.n),[20,50,200]);assert.equal(r.medias[0].valor,299.5);assert.equal(r.medias[2].inclinacao,'ascendente');
 });
+
+test('v1023 mantém a geometria do painel sem graduações utilizáveis',async()=>{
+ const {geometriaAureaV1021}=await import('../cloudflare/diario-screeners/aurea-imagem-v1004.mjs');
+ const painel={x0:.02,y0:.15,x1:.85,y1:.65,candles:'preto_fundo_claro'};
+ assert.deepEqual(geometriaAureaV1021(painel),{...painel,eixos:[]});
+ assert.deepEqual(geometriaAureaV1021({...painel,eixos:[{y:.2,preco:10},{y:.4,preco:50},{y:.6,preco:20}]}).eixos,[]);
+ assert.equal(geometriaAureaV1021({...painel,y1:.2}),null);
+});
+
+test('v1023 encontra pavios cinza sem eixo e não promove preço ou estrutura',()=>{
+ const w=400,h=600,pixels=new Uint8ClampedArray(w*h*4);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  const i=(y*w+x)*4,fundo=210-Math.floor(x/30);
+  pixels.set([fundo,fundo,fundo,255],i);
+ }
+ const riscar=(x,y,cor)=>pixels.set([...cor,255],(y*w+x)*4);
+ for(let y=200;y<=228;y++)riscar(120,y,[163,161,158]);
+ for(let y=250;y<=280;y++)riscar(165,y,[158,157,155]);
+ for(let x=190;x<240;x++)riscar(x,235,[140,140,140]);
+ for(let y=230;y<260;y++)riscar(260,y,[210,95,90]);
+ for(let y=460;y<490;y++)riscar(170,y,[100,100,100]);
+ const geometria_preco={x0:.03,y0:.1,x1:.85,y1:.68,candles:'preto_fundo_claro',eixos:[]};
+ const pivo=(x,y,tipo='topo',validacao='visual')=>({tipo,x:x/w,y:y/h,validacao,estado:'potencial',preco:'~184412'});
+ const piv=[pivo(121,202),pivo(164,278,'fundo'),pivo(215,235),pivo(260,230),pivo(170,460),pivo(121,202,'topo','divergente'),pivo(121,202)];
+ const out=ctx.aureaAncorarPivosV1021({geometria_preco,pivos:piv},pixels,w,h);
+ assert.deepEqual(Array.from(out,x=>x.ancoragem_visual),['pavio_visual','pavio_visual','nao_conferida','nao_conferida','nao_conferida','nao_conferida','nao_conferida']);
+ assert.equal(out[0].x,120/w);assert.equal(out[0].y,200/h);assert.equal(out[1].y,280/h);
+ assert.equal(out[0].preco,'');assert.equal(out[0].preco_eixo_aprox,undefined);
+ assert.equal(out[0].validacao,'visual');assert.equal(out[0].estado,'potencial');
+});

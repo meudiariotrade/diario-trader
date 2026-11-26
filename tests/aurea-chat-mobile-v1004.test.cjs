@@ -13,6 +13,9 @@ test('Áurea mobile mantém compositor visível com resposta longa e limpa ao fe
  const png=await p.evaluate(()=>{const c=document.createElement('canvas');c.width=120;c.height=80;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,120,80);return c.toDataURL('image/png').split(',')[1]});
  await panel.locator('[name="photo"]').setInputFiles({name:'grafico.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
  await expect(panel.locator('.wf-chat-attachment')).toBeVisible();
+ const thumb=panel.locator('.wf-chat-preview-item img');
+ await panel.getByRole('button',{name:'Girar gráfico 1 para a esquerda'}).click();
+ await expect.poll(()=>thumb.evaluate(image=>image.decode().then(()=>[image.naturalWidth,image.naturalHeight]))).toEqual([80,120]);
  await panel.locator('textarea').fill('Minha tese sobre VALE3');
  await panel.locator('[data-chat-close]').click();await expect(panel).toBeHidden();
  await p.evaluate(()=>window.TraderChat.open());
@@ -34,6 +37,9 @@ test('v1021: não desenha coordenadas não conferidas e mantém cenário e inval
  await expect(panel.locator('.wf-chat-history')).toContainText('Superação do topo');
  await p.evaluate(()=>{ECO.l[0].r.pivos[0].ancoragem_visual='pixel_compativel';ecoPaint();});
  await expect(panel.locator('[data-aurea-pivo]')).toHaveCount(1);
+ await p.evaluate(()=>{ECO.l[0].r.pivos[1].ancoragem_visual='pavio_visual';ecoPaint();});
+ await expect(panel.locator('[data-aurea-pivo]')).toHaveCount(2);
+ await expect(panel.locator('.wf-chat-sent-image figcaption')).toContainText('eixo de preço não calibrado');
  await panel.locator('[data-chat-close]').click();await p.close();
 }));
 
