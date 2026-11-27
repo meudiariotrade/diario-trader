@@ -50492,12 +50492,19 @@ async function opgCarrega(e) {
     }
     OPG.busy = 1;
     try {
+      // v1040: depois da 1ª carga, pede só as grades alteradas (updated_at > a mais nova vista); recarga completa a cada 30 min.
+      const completa=!Array.isArray(OPG.rows)||!OPG.marca||Date.now()-(OPG.cheia||0)>30*6e4;
       const t = await rq(
         "/rest/v1/opcoes_grade?select=ativo,spot,series,updated_at&user_id=eq." +
-          SESS.uid,
+          SESS.uid+(completa?"":"&updated_at=gt."+encodeURIComponent(OPG.marca)),
       );
       const rows=await t.json();
-      if(typeof SESS!=='undefined'&&SESS&&String(SESS.uid)===owner&&OPG.owner===owner){OPG.rows=Array.isArray(rows)?rows:[];OPG.err="";opgHist();}
+      if(typeof SESS!=='undefined'&&SESS&&String(SESS.uid)===owner&&OPG.owner===owner){
+        const novas=Array.isArray(rows)?rows:[];
+        if(completa){OPG.rows=novas;OPG.cheia=Date.now();}
+        else{const m=new Map((OPG.rows||[]).map(r=>[r.ativo,r]));novas.forEach(r=>m.set(r.ativo,r));OPG.rows=[...m.values()];}
+        OPG.marca=(OPG.rows||[]).reduce((x,r)=>r&&r.updated_at&&String(r.updated_at)>x?String(r.updated_at):x,"");
+        OPG.err="";opgHist();}
     } catch (t) {
       OPG.err =
         t.status === 404
@@ -94057,15 +94064,18 @@ Dados do terminal agora:
     const P = "om|" + E;
     if (!(e.dados[P] && Date.now() - e.dados[P].ts < 3e4))
       try {
-        const B = await (
+        // v1040: com a grade já em memória, pede só se ela mudou (updated_at > a última vista).
+        const velho = e.dados[P] && e.dados[P].v,
+          B = await (
           await rq(
             "/rest/v1/opcoes_grade?select=ativo,spot,series,updated_at&ativo=eq." +
               encodeURIComponent(E) +
               "&user_id=eq." +
-              SESS.uid,
+              SESS.uid +
+              (velho && velho.updated_at ? "&updated_at=gt." + encodeURIComponent(velho.updated_at) : ""),
           )
         ).json();
-        ((e.dados[P] = { ts: Date.now(), v: (B && B[0]) || null }),
+        ((e.dados[P] = { ts: Date.now(), v: (B && B[0]) || velho || null }),
           delete e.err[P]);
       } catch (B) {
         e.err[P] = String(B.message || B);
