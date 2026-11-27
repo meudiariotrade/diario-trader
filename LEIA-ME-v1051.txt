@@ -1,0 +1,5 @@
+v1051 — Áurea: topos e fundos da estrutura + OBV confirmando o pivô
+
+- Pivôs agora são os da estrutura (zigue-zague): só vale topo/fundo com reversão de pelo menos 2 ATR ou 5%. Saem os extremos pequenos; entram os relevantes, inclusive o último fundo/topo ainda em formação.
+- OBV × pivô: para cada topo/fundo, diz se o rompimento veio com o OBV também rompendo o OBV daquele mesmo pivô (força) ou não (rompimento fraco), e se o OBV já antecipa o rompimento.
+- Raio-x mostra a leitura do OBV no topo acima e no fundo abaixo do preço; Livermore usa isso na leitura com histórico real.
