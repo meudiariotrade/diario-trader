@@ -44134,8 +44134,18 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
    canvas.width=Math.round(img.naturalWidth*scale);canvas.height=Math.round(img.naturalHeight*scale);
    const x=canvas.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,canvas.width,canvas.height);
    const px1044=x.getImageData(0,0,canvas.width,canvas.height).data;
+   const projetados=g.pivos.some(p=>p.passo_x>0);
+   const originais=g.pivos;
    if(g.geometria_preco)g.pivos=aureaAncorarPivosV1021(g,px1044,canvas.width,canvas.height);
-   g.pivos=aureaEncaixarPivosV1044(g,px1044,canvas.width,canvas.height);
+   if(projetados){
+    g.pivos=g.pivos.map((p,i)=>{
+     const alvo=originais[i];
+     if(p.ancoragem_visual==="pixel_compativel"&&Math.abs(p.x-alvo.x)<alvo.passo_x*.48&&Math.abs(p.y-alvo.y)*canvas.height<=4)return p;
+     return {...alvo,ancoragem_visual:"nao_conferida"};
+    });
+   }else g.pivos=aureaEncaixarPivosV1044(g,px1044,canvas.width,canvas.height);
+   // Uma estimativa de preço não pode virar rótulo numérico em pavio sem escala conferida.
+   g.pivos=g.pivos.map(p=>p.ancoragem_visual==="pavio_visual"&&p.validacao==="visual"?{...p,preco:""}:p);
    aureaPosicionarNiveisV1044(g);
    canvas.width=canvas.height=0;
   }catch{}
@@ -44189,6 +44199,72 @@ function aureaIndicadoresHistoricosV1021(g,series){
  return {medias,sinais,nota:"Médias simples da série nominal; OBV relativo, iniciado na série disponível, com extremos correspondentes na janela de ±2 barras. Não corresponde necessariamente às configurações ou escala do Profit. Rompimentos após a janela de referência; não garantem continuidade."};
 }
 
+// Cruza as marcas de tempo do print com as barras reais do histórico HP.
+async function aureaHistoricoTerminal(g,signal){
+ const id=g.identificacao_visual,terminal=window.TRM;
+ if(!terminal?.trCandles||id?.market!=="BR"||!/^[A-Z]{4}\d{1,2}$/.test(id.ticker)||
+    !["cabecalho","marca_dagua","ambos"].includes(id.origem))return false;
+ const mensal=/^(1M|mensal|1 mês)$/i.test(id.periodo)&&id.periodo!=="1m";
+ if(!mensal&&!/^(1d|d|diário|diario)$/i.test(id.periodo))return false;
+ const geom=g.geometria_preco,axis=aureaCalibrarEixoV1021(geom);
+ const key="cd|"+id.ticker+"|1d",snapshot=()=>terminal.TR?.dados?.[key]?.v;
+ if(!snapshot()?.candles?.length){
+  let abort;
+  try{
+   if(signal.aborted)return false;
+   await Promise.race([terminal.trCandles(id.ticker,"1d"),new Promise(resolve=>{
+    abort=resolve;signal.addEventListener("abort",resolve,{once:true});
+   })]);
+  }finally{if(abort)signal.removeEventListener("abort",abort);}
+ }
+ const payload=snapshot(),rows=payload?.candles;
+ if(signal.aborted||!Array.isArray(rows)||rows.length<5)return false;
+ const today=new Date().toISOString().slice(0,10),bars=[];
+ let previous="";
+ for(const row of rows){
+  if(!Array.isArray(row))return false;
+  const [ts,o,h,l,c]=row;
+  if(![ts,o,h,l,c].every(Number.isFinite)||ts<=0||ts>1e11||l<=0||l>Math.min(o,c)||h<Math.max(o,c))return false;
+  const date=new Date(ts*1000).toISOString().slice(0,10);
+  if(date<=previous)return false;
+  previous=date;
+  if(date>=today)continue;
+  const bucket=mensal?date.slice(0,7):date;
+  if(mensal&&bucket===today.slice(0,7))continue;
+  const last=bars[bars.length-1];
+  if(last?.date===bucket){last.h=Math.max(last.h,h);last.l=Math.min(last.l,l);}
+  else bars.push({date:bucket,h,l});
+ }
+ // A primeira agregação pode começar no meio do mês.
+ if(mensal)bars.shift();
+ if(!axis||!Array.isArray(geom.tempo)||bars.length<5)return false;
+ const anchors=geom.tempo.map(a=>({x:a.x,i:bars.findIndex(b=>mensal?b.date===a.data.slice(0,7):b.date.startsWith(a.data))})).filter(a=>a.i>=0).sort((a,b)=>a.x-b.x);
+ if(anchors.length<2)return false;
+ const first=anchors[0],last=anchors[anchors.length-1],step=(last.x-first.x)/(last.i-first.i);
+ if(!(step>0)||last.i-first.i<4||last.x-first.x<.12||anchors.some((a,j)=>j&&a.i<=anchors[j-1].i||Math.abs(first.x+(a.i-first.i)*step-a.x)>step*.48))return false;
+ const pontos=[];
+ for(let i=first.i+2;i<=last.i-2;i++){
+  const bar=bars[i],x=first.x+(i-first.i)*step;
+  for(const tipo of ["topo","fundo"]){
+   const top=tipo==="topo",field=top?"h":"l",price=bar[field],y=axis.y(price);
+   if(y<=geom.y0||y>=geom.y1)continue;
+   const neighbors=[bars[i-2],bars[i-1],bars[i+1],bars[i+2]];
+   if(!neighbors.every(b=>top?price>b.h:price<b.l))continue;
+   const swing=side=>top?price-Math.min(...side.map(b=>b.l)):Math.max(...side.map(b=>b.h))-price;
+   const prominence=Math.min(swing(neighbors.slice(0,2)),swing(neighbors.slice(2)))/price;
+   pontos.push({tipo,x,y,data:bar.date,preco:String(price),estado:"potencial",validacao:"extremo_ohlc",verificacao:"Pavio extremo entre duas barras fechadas de cada lado.",prominence,passo_x:step});
+  }
+ }
+ const selected=[];
+ for(const p of pontos.sort((a,b)=>b.prominence-a.prominence)){
+  if(!selected.some(q=>q.tipo===p.tipo&&Math.abs(q.x-p.x)<Math.max(step*3,.035)))selected.push(p);
+  if(selected.length===12)break;
+ }
+ g.pivos=selected.sort((a,b)=>a.x-b.x);
+ g.validacao_ohlc={status:"conferido",ticker:id.ticker,tf:mensal?"1M":"1D",source:"Terminal HP"+(payload.fonte?" · "+payload.fonte:""),desde:bars[first.i].date,ate:bars[last.i].date,motivo:"Extremos calculados no histórico do Terminal entre as datas identificadas no eixo. A posição de cada marcador é conferida no pavio da imagem."};
+ return true;
+}
+
 async function aureaValidarHistoricoV1012(resposta,pergunta,signal){
   const graficos=Array.isArray(resposta.graficos)?resposta.graficos:[resposta],cache=new Map();
   const feed=window.DiarioFeedContrato,auditoria=window.DiarioHistoricoQualidade;
@@ -44198,6 +44274,7 @@ async function aureaValidarHistoricoV1012(resposta,pergunta,signal){
   const explicit=String(pergunta||"").toUpperCase();
   await Promise.all(graficos.map(async g=>{
     if(!Array.isArray(g.pivos))g.pivos=[];
+    try{if(await aureaHistoricoTerminal(g,limite))return;}catch{/* Reutilizar a conferência existente quando a fonte do Terminal falhar. */}
     if(!g.pivos.length&&!g.referencia_ohlc)return;
     const m=g.referencia_ohlc||{},tk=m.ticker,market=m.market,tf=m.tf;
     const base={status:"visual",motivo:"Sem identificação compatível, recorte exato ou escala nominal legível; nenhuma confirmação histórica."};
