@@ -114,3 +114,13 @@ test("v675/v846: nas páginas atuais V4, só o Início recebe o card, sem duplic
  assert.equal(app.querySelectorAll(".v4-day > .dt670-opening").length,0);
  w.close();
 });
+
+test('v1028: referência da sessão rejeita fonte sem horário e não retrocede para negócio mais antigo',()=>{
+ const w=page(),now=Date.parse('2026-11-26T23:30:00Z');
+ w.DiarioSessoes={session:()=>({verified:true,state:'post',date:'2026-11-26',previousDate:'2026-11-25',close:1105})};
+ const fn=w.TermometroAbertura670.fechamentoCanonico;
+ assert.equal(fn('win',{s:'WIN',px:178728},now),null);
+ assert.equal(fn('win',{s:'WIN',px:178960,priceAt:'2026-11-26T21:24:00Z'},now),178960);
+ assert.equal(fn('win',{s:'WIN',px:178728,priceAt:'2026-11-26T21:20:00Z'},now),178960);
+ w.close();
+});

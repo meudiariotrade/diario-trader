@@ -3706,10 +3706,10 @@ function cqLinhasExtras(aba) {
 // duplicar ativos válidos da lista principal. Nunca misturar setores EUA em BR.
 function cqItens(category) {
   const native = (CQ.d[category]?.itens || []).slice();
-  if(category==='cmd'&&window.DiarioMarketData){const q=window.DiarioMarketData.get('BZ=F'),i=native.findIndex(x=>x.s==='ICEEUR:BRN1!');if(q&&i>=0)native[i]={...native[i],...q};}
+  if(category==='cmd'){for(let i=native.length-1;i>=0;i--)if(native[i].s==='SGX:FEF1!')native.splice(i,1);const q=window.DiarioMarketData?.get('BZ=F'),i=native.findIndex(x=>x.s==='ICEEUR:BRN1!');if(q&&i>=0)native[i]={...native[i],...q};}
   const aliases = {'^BVSP':'IBOV','^GSPC':'SPX','^IXIC':'NASDAQ','BRL=X':'USDBRL'};
   const key = symbol => { const code = String(symbol || '').split(':').pop().toUpperCase(); return aliases[code] || code; };
-  const symbols = {adr: (typeof AD !== 'undefined' ? AD.list : []),idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','DX-Y.NYB','BRL=X'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','IRON','GOLD','BZ=F','CL=F','GC=F','FE=F'],jur:['SELIC','DI1F27','US10Y','^TNX']};
+  const symbols = {adr: (typeof AD !== 'undefined' ? AD.list : []),idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','DX-Y.NYB','BRL=X'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','GOLD','BZ=F','CL=F','GC=F'],jur:['SELIC','DI1F27','US10Y','^TNX']};
   const present = new Set(native.filter(item=>cqPx(item,item._aba || category)>0).map(item=>key(item.s)));
   if (category === 'adr') {
     for (const item of AD.data?.itens || []) {

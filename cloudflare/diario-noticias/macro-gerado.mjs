@@ -162,7 +162,7 @@ export const TV                           = {
   'ES=F': ['CME_MINI:ES1!'], 'NQ=F': ['CME_MINI:NQ1!'], EWZ: ['AMEX:EWZ'],
   'BRL=X': ['FX_IDC:USDBRL'], 'DX-Y.NYB': ['TVC:DXY'], 'EURUSD=X': ['FX:EURUSD'], 'JPY=X': ['FX:USDJPY'], 'GBPUSD=X': ['FX:GBPUSD'], 'AUDUSD=X': ['FX:AUDUSD'],
   'CNY=X': ['FX_IDC:USDCNY'], 'MXN=X': ['FX:USDMXN'],
-  'BZ=F': ['ICEEUR:BRN1!'], 'CL=F': ['NYMEX:CL1!'], 'TIO=F': ['SGX:FEF1!', 'COMEX:TIO1!'], 'DCE:I': ['DCE:I1!'], 'GC=F': ['TVC:GOLD'], 'SI=F': ['TVC:SILVER'], 'HG=F': ['COMEX:HG1!'],
+  'BZ=F': ['ICEEUR:BRN1!'], 'CL=F': ['NYMEX:CL1!'], 'TIO=F': ['SGX:FEF2!'], 'DCE:I': ['DCE:I1!'], 'GC=F': ['TVC:GOLD'], 'SI=F': ['TVC:SILVER'], 'HG=F': ['COMEX:HG1!'],
   'ZS=F': ['CBOT:ZS1!'], 'ZC=F': ['CBOT:ZC1!'], 'KC=F': ['ICEUS:KC1!'],
   '^TNX': ['TVC:US10Y'], '^FVX': ['TVC:US05Y'], 'BTC-USD': ['BITSTAMP:BTCUSD', 'COINBASE:BTCUSD'], 'ETH-USD': ['BITSTAMP:ETHUSD', 'COINBASE:ETHUSD'],
   'SOL-USD': ['COINBASE:SOLUSD', 'BINANCE:SOLUSDT'], 'XRP-USD': ['BITSTAMP:XRPUSD', 'BINANCE:XRPUSDT'], 'BNB-USD': ['BINANCE:BNBUSDT', 'BINANCE:BNBUSD'],
@@ -622,7 +622,7 @@ export const ABAS                                                = {
   ] },
   cmd: { nome: 'Commodities', itens: [
     { s: 'ICEEUR:BRN1!', n: 'Petróleo Brent', un: 'US$', c: 'BRENT' }, { s: 'NYMEX:CL1!', n: 'Petróleo WTI', un: 'US$', c: 'WTI' }, { s: 'NYMEX:NG1!', n: 'Gás natural', un: 'US$', dp: 3, c: 'NG' },
-    { s: 'SGX:FEF1!', n: 'Minério de ferro (Singapura)', un: 'US$/t', c: 'FEF' }, { s: 'DCE:I1!', n: 'Minério de ferro (Dalian)', un: 'yuan/t', dp: 1, c: 'DCE' },
+    { s: 'SGX:FEF2!', n: 'Minério de ferro (SGX FEF2!)', un: 'US$/t', c: 'FEF' }, { s: 'DCE:I1!', n: 'Minério de ferro (Dalian)', un: 'yuan/t', dp: 1, c: 'DCE' },
     { s: 'TVC:GOLD', n: 'Ouro', un: 'US$/oz', c: 'OURO' }, { s: 'TVC:SILVER', n: 'Prata', un: 'US$/oz', dp: 3, c: 'PRATA' }, { s: 'COMEX:HG1!', n: 'Cobre', un: 'US$/lb', dp: 4, c: 'COBRE' },
     { s: 'CBOT:ZS1!', n: 'Soja (Chicago)', un: '¢/bu', c: 'SOJA' }, { s: 'CBOT:ZC1!', n: 'Milho (Chicago)', un: '¢/bu', c: 'MILHO' }, { s: 'CBOT:ZW1!', n: 'Trigo (Chicago)', un: '¢/bu', c: 'TRIGO' },
     { s: 'ICEUS:KC1!', n: 'Café (NY)', un: '¢/lb', c: 'CAFÉ' }, { s: 'ICEUS:SB1!', n: 'Açúcar (NY)', un: '¢/lb', c: 'AÇÚCAR' }, { s: 'ICEUS:CT1!', n: 'Algodão (NY)', un: '¢/lb', c: 'ALGODÃO' },
