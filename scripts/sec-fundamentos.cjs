@@ -81,17 +81,25 @@ async function fatos(cik,estado){
 }
 (async()=>{
  const snap=await fetch(SNAP,{signal:AbortSignal.timeout(30000)}).then(r=>r.json());
- const rows=(snap.universe_rows||snap.rows||[]).filter(x=>x?.ticker&&/CIK(\d{10})/.test(String(x.sec_source_url||'')));
+ // v1053: usa o CIK da própria linha (100% preenchido) quando a URL da SEC não veio no snapshot.
+ const cikDe=x=>(String(x?.sec_source_url||'').match(/CIK(\d{10})/)||[])[1]||(/^\d{1,10}$/.test(String(x?.cik||''))?String(x.cik).padStart(10,'0'):null);
+ const rows=(snap.universe_rows||snap.rows||[]).filter(x=>x?.ticker&&cikDe(x));
  const estado={borda:false},tickers={};let ok=0,falhas=0;
  for(const row of rows){
-  const cik=String(row.sec_source_url).match(/CIK(\d{10})/)[1];
+  const cik=cikDe(row);
   try{
    const f=await fatos(cik,estado);if(!f){falhas++;continue}
    const cap=Number(row.market_cap_usd);
    const rec=crescimento(primeiro(f,REV),'USD'),eps=crescimento(primeiro(f,['EarningsPerShareDiluted'],'USD/shares'),'USD/shares'),
     fcf=margemFcf(f),ret=retorno(f,cap);
-   if(!rec&&!eps&&!fcf&&!ret){falhas++;continue}
+   // v1053: remuneração em ações (% da receita, mesmo exercício) e série anual de receita (até 6 anos).
+   const revS=primeiro(f,REV),sbcX=anuais(f,'ShareBasedCompensation')[0],revSbc=sbcX&&revS?.rows.find(x=>x.end===sbcX.end&&x.val>0);
+   const sbc=sbcX&&revSbc?{valor:r4(sbcX.val/revSbc.val*100),prova:[prova(sbcX,'ShareBasedCompensation','USD'),prova(revSbc,revS.tag,'USD')]}:null;
+   const serieRec=revS?revS.rows.slice(0,6).map(x=>({fim:x.end,valor:x.val,documento_id:x.accn})):[];
+   const c3=serieRec.length>=4&&serieRec[3].valor>0&&serieRec[0].valor>0?r4((Math.pow(serieRec[0].valor/serieRec[3].valor,1/3)-1)*100):null;
+   if(!rec&&!eps&&!fcf&&!ret&&!sbc){falhas++;continue}
    const o={cik};
+   if(sbc)o.stock_based_compensation=sbc.valor;if(serieRec.length>=3)o.serie_receita=serieRec;if(c3!==null)o.cagr_receita_3a=c3;
    if(rec)o.revenue_growth_yoy=rec.valor;if(eps)o.eps_growth_yoy=eps.valor;if(fcf)o.fcf_margin=fcf.valor;
    if(ret)Object.assign(o,{buyback_yield:ret.buyback_yield,total_shareholder_yield:ret.total_shareholder_yield,
     dividendos_pagos_yield:ret.dividendos_pagos_yield,retorno_exercicio:ret.exercicio,
@@ -101,6 +109,7 @@ async function fatos(cik,estado){
    if(eps)o.linhagem_indicadores.eps_growth_yoy=eps.prova;
    if(fcf)o.linhagem_indicadores.fcf_margin=fcf.prova;
    if(ret)o.linhagem_indicadores.total_shareholder_yield=ret.prova;
+   if(sbc)o.linhagem_indicadores.stock_based_compensation=sbc.prova;
    tickers[row.ticker]=o;ok++;
   }catch(e){falhas++}
   await sleep(estado.borda?150:130); // abaixo de 10 req/s exigidos pela SEC
