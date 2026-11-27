@@ -438,14 +438,17 @@ function grafico(r){
   '<text x="'+P+'" y="'+(H-6)+'" class="ap-ax">'+E(c[0].d)+'</text><text x="'+(W-10)+'" y="'+(H-6)+'" text-anchor="end" class="ap-ax">'+E(c[c.length-1].d)+'</text></svg><div class="ap-tt" style="display:none"></div></div>'+
   (ib?'<p class="ap-mut"><span class="ap-k1"></span>'+r.ticker+' <span class="ap-k2"></span>BOVA11 · retorno acumulado no período</p>':'')+'</div>';
 }
-function radarSvg(r){const ks=Object.keys(r.eixos),C=130,R0=100,pt=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/ks.length;return[C+Math.cos(a)*R0*v,C+Math.sin(a)*R0*v]};
+// v1035: com pares do setor, desenha a mediana do setor tracejada por baixo da área do ativo.
+function radarSvg(r,pares){const ks=Object.keys(r.eixos),C=130,med=(pares||[]).length>=3?Object.fromEntries(Object.keys(r.eixos).map(k=>{const v=pares.map(p=>p.eixos&&p.eixos[k]).filter(x=>x!=null).sort((a,b)=>a-b);return[k,v.length?v[Math.floor(v.length/2)]:null]})):null,R0=100,pt=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/ks.length;return[C+Math.cos(a)*R0*v,C+Math.sin(a)*R0*v]};
  const poly=v=>ks.map((k,i)=>pt(i,v(k)).map(x=>x.toFixed(1)).join(',')).join(' ');
  return '<svg viewBox="0 0 260 260" class="ap-radarsvg">'+[.25,.5,.75,1].map(t=>'<polygon points="'+poly(()=>t)+'" class="ap-grid"/>').join('')+
+  (med?'<polygon points="'+poly(k=>(med[k]??0)/4)+'" fill="none" stroke="#64748B" stroke-width="1.2" stroke-dasharray="4 3"/>':'')+
   '<polygon points="'+poly(k=>(r.eixos[k]??0)/4)+'" class="ap-area"/>'+ks.map((k,i)=>{const[x,y]=pt(i,1.16);return '<text x="'+x.toFixed(0)+'" y="'+y.toFixed(0)+'" text-anchor="middle" class="ap-ax">'+k+' '+(r.eixos[k]==null?'—':fmt(r.eixos[k],1))+'</text>'}).join('')+'</svg>'}
 function raiox(r){const pares=st.rows.porSetor[r.setor]||[],M=[['P/L','pl',0,'x'],['P/VP','pvp',0,'x'],['EV/EBITDA','ev_ebitda',0,'x'],['DY','dy',1,'%'],['Payout','payout',null,'%'],['ROE','roe',1,'%'],['ROIC','roic',1,'%'],
   ['Margem líquida','margem_liquida',1,'%'],['FCF yield','fcf_yield',1,'%'],['DL/EBITDA','div_liq_ebitda',0,'x'],['Momentum 12m','momentum',1,'%'],['Dist. MM200','mm200',null,'%'],['RSI 14','rsi',null,'']];
  const pos=(k,hb)=>{if(hb==null||r[k]==null)return '—';const v=pares.map(p=>p[k]).filter(x=>x!=null&&(k!=='pl'||x>0));if(v.length<3)return '—';const melhor=v.filter(x=>hb?x<r[k]:x>r[k]).length;return Math.round(melhor/(v.length-1)*100)+'º pct'};
- return '<div class="ap-2"><section class="ap-card"><h3>Nota Raio-X'+q('eixos')+' <b class="ap-big">'+(r.nota==null?'—':fmt(r.nota,2))+'</b><small>/ 4</small></h3>'+radarSvg(r)+
+ return '<div class="ap-2"><section class="ap-card"><h3>Nota Raio-X'+q('eixos')+' <b class="ap-big">'+(r.nota==null?'—':fmt(r.nota,2))+'</b><small>/ 4</small></h3>'+radarSvg(r,pares)+
+  ((pares||[]).length>=3?'<p class="ap-mut"><span style="display:inline-block;width:14px;border-top:1.5px dashed #64748B;vertical-align:middle;margin-right:6px"></span>Mediana do setor '+E(r.setor)+'</p>':'')+
   '<p class="ap-mut">Cada eixo = percentil do ativo no mercado (0–4). Cálculo próprio do app com o snapshot do Screener; não é recomendação.</p></section>'+
   '<section class="ap-card"><h3>Comparar com pares · '+E(r.setor)+' <small>('+pares.length+')</small></h3><div class="ap-scroll"><table class="ap-t"><thead><tr><th>Métrica</th><th>'+r.ticker+'</th><th>Mediana setor</th><th>Posição'+q('pos')+'</th></tr></thead><tbody>'+
   M.map(([t,k,hb,u])=>'<tr><td>'+t+'</td><td class="ap-n">'+(r[k]==null?'—':fmt(r[k],u==='x'?1:1)+u)+'</td><td class="ap-n">'+(()=>{const m=median(pares.map(p=>k==='pl'&&!(p.pl>0)?null:p[k]));return m==null?'—':fmt(m,1)+u})()+'</td><td class="ap-n">'+pos(k,hb===0?true:hb===1?false:null)+'</td></tr>').join('')+

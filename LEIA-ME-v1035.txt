@@ -1,0 +1,5 @@
+v1035 — Etapa 3: gráficos
+- Curva de resultados (Desempenho): passar o mouse/dedo mostra trade, data, acumulado e resultado do trade; arrastar seleciona um trecho (período, nº de trades e variação); "Ampliar trecho" dá zoom e "Ver tudo" volta.
+- Plano do pregão WIN/WDO: régua S2–S1–Pivô–R1–R2 com a faixa mínima–máxima e o fechamento do pregão de referência.
+- Research → Nota Raio-X: radar ganha a mediana do setor tracejada para comparar com os pares.
+Arquivos: src/shared/ui-graficos.js (novo), src/domains/layers/02-carteira-e-terminal.js, src/domains/core/16-rotina-e-disciplina.js, src/analysis/analises-plus.js, src/index.html, src/service-worker.js, release.config.json

@@ -2301,7 +2301,7 @@ try {
           )
           .join(" "),
         p = (180 - ((0 - i) / l) * 155).toFixed(1);
-      return `<svg class="dt393-perf-svg" role="img" aria-label="Curva acumulada de resultados de ${e.length} trades encerrados" viewBox="0 0 600 210" preserveAspectRatio="none"><g class="dt393-gridlines">${[25, 65, 105, 145, 185].map((u) => `<path d="M0 ${u}H600"/>`).join("")}</g><path class="dt393-zero" d="M0 ${p}H600"/><polyline points="${n}" fill="none" stroke="#f6f5f4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><text x="592" y="15" text-anchor="end">P&L acumulado · ${f(s)}</text></svg>`;
+      return `<svg class="dt393-perf-svg" role="img" aria-label="Curva acumulada de resultados de ${e.length} trades encerrados" data-uim-vals="${o.map((u) => u.toFixed(2)).join(",")}" data-uim-datas="${e.map((u) => String(L(u)).slice(0, 10)).join(",")}" data-uim-x0="5" data-uim-xw="590" data-uim-y0="180" data-uim-yh="155" data-uim-min="${i}" data-uim-rng="${l}" viewBox="0 0 600 210" preserveAspectRatio="none"><g class="dt393-gridlines">${[25, 65, 105, 145, 185].map((u) => `<path d="M0 ${u}H600"/>`).join("")}</g><path class="dt393-zero" d="M0 ${p}H600"/><polyline points="${n}" fill="none" stroke="#f6f5f4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><text x="592" y="15" text-anchor="end">P&L acumulado · ${f(s)}</text></svg>`;
     }
     function $t() {
       const t = V(),
