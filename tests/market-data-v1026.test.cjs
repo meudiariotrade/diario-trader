@@ -27,3 +27,8 @@ test('overlay ao vivo vencido não sobrescreve a referência pública',()=>{
  const c=env({cri:{itens:[{s:'BITSTAMP:BTCUSD',px:60000,d1:1}]}},()=>({px:60496,d1:.45,bnc:true,live:true,em:Date.now()-600000}));
  assert.equal(c.get('BTC-USD').px,60000);
 });
+
+test('Nasdaq Composite e Nasdaq 100 não são intercambiáveis; ações BR usam a lista',()=>{
+ const c=env({idx:{itens:[{s:'NASDAQ:NDX',px:26000,d1:.5}]},br:{itens:[{s:'BMFBOVESPA:PETR4',px:37,d1:-.5}]}});
+ assert.equal(c.get('^IXIC'),null);assert.equal(c.get('^NDX').d1,.5);assert.equal(c.get('PETR4').px,37);
+});

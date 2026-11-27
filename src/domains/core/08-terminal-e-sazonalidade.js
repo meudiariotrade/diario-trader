@@ -1364,6 +1364,7 @@ async function imgDados() {
   const [listas,adrs,snapshot]=await Promise.allSettled([imgListasV1025(),adrLoad(true),Promise.resolve().then(()=>window.DiarioPublico?.get?.("/v1/mercado",{ttl:60000}))]);
   if(!IMG.central1026&&snapshot.status==="fulfilled")IMG.brent955=imgBrent955(snapshot.value);
   const dados=listas.status==="fulfilled"?listas.value:{rows:[],reserva:imgAbasV1025};
+  if(IMG.central1026){const snap=window.DiarioMarketData.snapshot(Object.keys(imgSimbolosPublicos));IMG.snapshot1026=snap.id;dados.rows=Object.values(snap.rows);}
   IMG.cotacoesPublicas=dados.rows;
   const ausentes=Object.keys(imgSimbolosPublicos).filter(s=>!imgQ(s));
   const macroReserva=Object.keys(imgSimbolosPublicos).some(s=>imgQ(s)&&!dados.rows.some(q=>imgSimbolosPublicos[s].includes(q.s)&&imgValidaV1025(q)));

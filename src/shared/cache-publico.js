@@ -107,6 +107,7 @@
   'BRL=X':['fx','FX_IDC:USDBRL','USDBRL'],
   '^GSPC':['idx','SP:SPX','SPX'],
   '^IXIC':['idx','NASDAQ:IXIC','IXIC'],
+  '^NDX':['idx','NASDAQ:NDX','NDX'],
   '^DJI':['idx','DJ:DJI','DJI'],
   '^N225':['idx','TVC:NI225','NI225'],
   '^GDAXI':['idx','XETR:DAX','DAX'],
@@ -132,7 +133,8 @@
  const aliases=new Map();
  for(const [k,arr] of Object.entries(specs)){aliases.set(k,k);for(const a of arr.slice(1))aliases.set(a,k);}
  aliases.set('USD/BRL','BRL=X');aliases.set('USD/ZAR','USDZAR');aliases.set('USD/MXN','USDMXN');
- const key=s=>aliases.get(String(s||'').trim().toUpperCase())||null;
+ const key=s=>{const k=String(s||'').trim().toUpperCase();return aliases.get(k)||(/^(?:BMFBOVESPA:)?[A-Z]{4}\d{1,2}$/.test(k)?k.replace(/^BMFBOVESPA:/,''):null);};
+ const spec=k=>specs[k]||['br','BMFBOVESPA:'+k,k];
  const num=x=>x===null||x===undefined||x===''||typeof x==='boolean'?null:Number.isFinite(Number(x))?Number(x):null;
  const valid=q=>q&&num(q.px)>0&&!q.suspeito&&q.quoteStatus!=='divergente';
  const date=x=>{if(!x)return null;const t=typeof x==='number'?(x<1e11?x*1000:x):Date.parse(x);return Number.isFinite(t)&&t>0&&t<=Date.now()+60000?new Date(t).toISOString():null;};
@@ -155,12 +157,12 @@
   if(prev>0&&d!==null&&basis!=='24h'&&Math.abs((num(q.px)/prev-1)*100-d)>0.08)d=null;
   const at=date(q.horarioPreco||q.priceAt||q.dadoEm||q.em||q.ts);
   if(q.live===true&&(!at||Date.now()-Date.parse(at)>180000))return overlay&&q===overlay?normal(k,row):null;
-  return Object.freeze({...row,...q,s:specs[k]?.[1]||row?.s||k,simboloFonte:instrument,px:num(q.px),d1:d,chg:d,fonte,source:fonte,baseVariacao:basis,fechamentoAnterior:prev,horarioPreco:at,priceAt:at,dadoEm:at,fechado:q.fechado===true,live:q.live===true&&!!at,quoteStatus:q.quoteStatus||(!at?'horario_nao_confirmado':null)});
+  return Object.freeze({...row,...q,s:spec(k)[1]||row?.s||k,simboloFonte:instrument,px:num(q.px),d1:d,chg:d,fonte,source:fonte,baseVariacao:basis,fechamentoAnterior:prev,horarioPreco:at,priceAt:at,dadoEm:at,fechado:q.fechado===true,live:q.live===true&&!!at,quoteStatus:q.quoteStatus||(!at?'horario_nao_confirmado':null)});
  }
  function get(s){
   const k=key(s);if(!k||w.DIARIO_DEMO)return null;
   if(k==='EWZ'){try{const e=w.DiarioEwzCotacao?.();if(valid(e))return normal(k,{s:'AMEX:EWZ',...e});}catch{}}
-  const [group,...symbols]=specs[k];
+  const [group,...symbols]=spec(k);
   try{
    const rows=typeof CQ!=='undefined'?CQ.d?.[group]?.itens||[]:[];
    const row=symbols.map(sym=>rows.find(r=>r.s===sym&&valid(r))).find(Boolean);
@@ -169,8 +171,10 @@
     return normal(k,row,overlay);
    }
   }catch{}
+  // Sem linha pública (inicialização), reutilizar também o overlay Profit do Research.
+  if(group==='br'||k==='^BVSP'||k==='WIN'||k==='WDO'){try{const row={s:spec(k)[1],c:k==='^BVSP'?'IBOV':k};const overlay=typeof cqPf==='function'?cqPf(row,group):null;if(valid(overlay))return normal(k,row,overlay);}catch{}}
   // Binance já conectado pode preencher o par mesmo antes da primeira lista pública.
-  if(group==='cri'){try{const c=k.split('-')[0],b=typeof bncQ==='function'?bncQ(c):null;if(b&&num(b.px)>0)return normal(k,{s:specs[k][1],px:b.px},{px:b.px,d1:b.d1,bnc:true,live:true,em:b.em});}catch{}}
+  if(group==='cri'){try{const c=k.split('-')[0],b=typeof bncQ==='function'?bncQ(c):null;if(b&&num(b.px)>0)return normal(k,{s:spec(k)[1],px:b.px},{px:b.px,d1:b.d1,bnc:true,live:true,em:b.em});}catch{}}
   // Reserva pública: apenas o símbolo explicitamente identificado, sem casar por nome.
   try{
    const snapshot=w.DiarioPublico?.peek?.('/v1/mercado');
@@ -181,7 +185,7 @@
   // O ticker já possui referência pública própria durante a inicialização. Não usar
   // como substituto de contratos/cripto com base ou par desconhecidos.
   if(!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD','WIN','WDO'].includes(k)){
-   try{const q=w.tapeDados?.()?.[k];if(valid(q))return normal(k,{s:specs[k][1],...q});}catch{}
+   try{const q=w.tapeDados?.()?.[k];if(valid(q))return normal(k,{s:spec(k)[1],...q});}catch{}
   }
   return null;
  }
@@ -189,7 +193,7 @@
  function refresh(){
   if(w.DIARIO_DEMO||typeof cqCarrega!=='function'||w.document?.hidden)return Promise.resolve([]);
   if(pending)return pending;
-  pending=Promise.allSettled(['idx','fx','fut','cmd','cri'].map(g=>cqCarrega(g,false))).finally(()=>{pending=null;});
+  pending=Promise.allSettled(['idx','fx','fut','cmd','cri','br'].map(g=>cqCarrega(g,false))).finally(()=>{pending=null;});
   return pending;
  }
  function snapshot(keys=Object.keys(specs)){
