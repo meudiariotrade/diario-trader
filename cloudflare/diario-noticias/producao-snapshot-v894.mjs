@@ -13,7 +13,7 @@ var Qs={async scheduled(e,t,o){if(cronSentimento(e,t,o))return;o.waitUntil(agend
  const cot=c.modo==="cotacoes";if(cot&&!c.aba)c.aba="fut";
  if(cot&&!["fut","idx","br","us","adr","fx","cmd","cri","jur"].includes(c.aba))return E({error:"categoria_nao_suportada"},e,t,400,"no-store");
  if(cot)c.semana="";
- let l={diag:300,painel:60,cotacoes:ttlCotacoesV1022(c.aba),setores:300,ranking:600,fluxo:1800,agenda:1800,balancos:21600,sazonal:43200,sazonal_us:43200,"":120},u=Object.hasOwn(l,c.modo)?l[c.modo]:null,d=globalThis.caches?.default,p=new Request(r.origin+"/v1/macro?modo="+encodeURIComponent(c.modo)+"&aba="+encodeURIComponent(c.aba)+"&semana="+encodeURIComponent(c.semana)+"&qv="+(cot?"1028":"1028"));
+ let l={diag:300,painel:60,cotacoes:ttlCotacoesV1022(c.aba),setores:300,ranking:600,fluxo:1800,agenda:1800,balancos:21600,sazonal:43200,sazonal_us:43200,"":120},u=Object.hasOwn(l,c.modo)?l[c.modo]:null,d=globalThis.caches?.default,p=new Request(r.origin+"/v1/macro?modo="+encodeURIComponent(c.modo)+"&aba="+encodeURIComponent(c.aba)+"&semana="+encodeURIComponent(c.semana)+"&qv="+(cot?"1029":"1029"));
  if(u==null)return E({error:"modo_nao_suportado"},e,t,400);
  const cc=cot?"public, max-age="+Math.min(u,30)+", must-revalidate":null;
  if(d){let f=await d.match(p);if(f)return E(await f.json(),e,t,200,cc);}

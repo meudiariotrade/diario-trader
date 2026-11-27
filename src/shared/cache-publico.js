@@ -168,13 +168,17 @@
    else if(q.fh){fonte='Finnhub';basis='fechamento anterior';}
    else if(!q.fonte&&!q.source){fonte='Profit';instrument=q.tk||instrument;basis='fechamento/ajuste anterior';}
   }
-  if(k==='TIO=F'&&instrument!=='SGX:FEF2!')return null;
+  if(k==='TIO=F'&&instrument!=='SGX:FEF2!'){
+   const at=date(q.horarioPreco||q.priceAt||q.dadoEm),p=num(q.fechamentoAnterior);
+   if(!['SGX:FEF2!','TIO=F'].includes(row?.s)||!/^SGX:FEF[FGHJKMNQUVXZ]\d{4}$/.test(instrument)||!at||Date.now()-Date.parse(at)>96*3600000||p===null||p<=0||d===null||Math.abs((num(q.px)/p-1)*100-d)>0.08)return null;
+   fonte='TradingView · '+instrument.replace('SGX:','')+' (ref. mensal)';
+  }
   if(k==='BZ=F')d=brent(q,d);
   const prev=num(q.fechamentoAnterior??q.previousClose??q.pc??q.fec);
   if(prev>0&&d!==null&&basis!=='24h'&&Math.abs((num(q.px)/prev-1)*100-d)>0.08)d=null;
   const at=date(q.horarioPreco||q.priceAt||q.dadoEm||q.em||q.ts);
   if(q.live===true&&(!at||Date.now()-Date.parse(at)>180000))return overlay&&q===overlay?normal(k,row):null;
-  return Object.freeze({...row,...q,s:spec(k)[1]||row?.s||k,simboloFonte:instrument,px:num(q.px),d1:d,chg:d,fonte,source:fonte,baseVariacao:basis,fechamentoAnterior:prev,horarioPreco:at,priceAt:at,dadoEm:at,fechado:q.fechado===true,live:q.live===true&&!!at,quoteStatus:q.quoteStatus||(!at?'horario_nao_confirmado':null)});
+  return Object.freeze({...row,...q,s:spec(k)[1]||row?.s||k,simboloFonte:instrument,px:num(q.px),d1:d,chg:d,fonte,source:fonte,baseVariacao:basis,fechamentoAnterior:prev,horarioPreco:at,priceAt:at,dadoEm:at,fechado:q.fechado===true,live:q.live===true&&!!at,quoteStatus:k==='TIO=F'&&instrument!=='SGX:FEF2!'?'referencia_mensal':q.quoteStatus||(!at?'horario_nao_confirmado':null)});
  }
  function get(s){
   const k=key(s);if(!k||w.DIARIO_DEMO)return null;
@@ -199,8 +203,8 @@
   try{
    const snapshot=w.DiarioPublico?.peek?.('/v1/mercado');
    const rows=(snapshot?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
-   const row=rows.find(r=>valid(r)&&(symbols.includes(r.s)||symbols.includes(r.simboloFonte)||(r.s===k&&!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD','TIO=F'].includes(k))));
-   if(row)return normal(k,row);
+   const row=rows.find(r=>valid(r)&&(symbols.includes(r.s)||symbols.includes(r.simboloFonte)||(r.s===k&&(k==='TIO=F'||!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD'].includes(k)))));
+   if(row){const q=normal(k,row);if(q)return q;}
   }catch{}
   // O ticker já possui referência pública própria durante a inicialização. Não usar
   // como substituto de contratos/cripto com base ou par desconhecidos.

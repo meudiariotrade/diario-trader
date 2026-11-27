@@ -3,12 +3,12 @@ test('radar sem menu duplicado: referências exclusivas nas categorias, fontes e
  const p=await browser.newPage({viewport:{width:390,height:844}}),errors=[];p.on('pageerror',e=>errors.push(e.message));const app=p.locator('#app:not(.v503-fantasma)');
  await p.goto(base+'/?demo=1');await p.locator('#splash').waitFor({state:'hidden'});await p.locator('[data-dt393-action="menu"]').first().click().then(()=>p.locator('#dt394-drawer [data-dt393-route="mercado"]').first().click());
  // Dados fictícios apenas no banco demonstrativo; não escreve em contas ou fontes reais.
- await p.evaluate(()=>{const codes=['^BVSP','^GSPC','^IXIC','DXY','EWZ','PBR','VALE','ES=F','NQ=F','YM=F','BRL=X','BRENT','WTI','IRON','GOLD','SELIC','DI1F27','US10Y'];MDO.v={em:'2026-11-09T14:30:00Z',mercados:{em:'2026-11-09T14:30:00Z',fontes:{tv:18,yahoo:0},grupos:[{g:'Fixture demonstrativa',itens:codes.map(s=>({s,n:s,px:100,d1:1,fonte:'Fonte da fixture',horarioPreco:'2026-11-09T14:30:00Z'}))}]}};for(const cat of ['idx','fx','adr','fut','cmd','jur']){CQ.d[cat]={itens:[],em:new Date().toISOString()};CQ.ts[cat]=Date.now()}AD.data=null;CQ.aba='idx';render()});
+ await p.evaluate(()=>{const codes=['^BVSP','^GSPC','^IXIC','DXY','EWZ','PBR','VALE','ES=F','NQ=F','YM=F','BRL=X','BRENT','WTI','SGX:FEF2!','GOLD','SELIC','DI1F27','US10Y'];MDO.v={em:'2026-11-09T14:30:00Z',mercados:{em:'2026-11-09T14:30:00Z',fontes:{tv:18,yahoo:0},grupos:[{g:'Fixture demonstrativa',itens:codes.map(s=>({s,n:s,px:100,d1:1,fonte:'Fonte da fixture',horarioPreco:'2026-11-09T14:30:00Z'}))}]}};for(const cat of ['idx','fx','adr','fut','cmd','jur']){CQ.d[cat]={itens:[],em:new Date().toISOString()};CQ.ts[cat]=Date.now()}AD.data=null;CQ.aba='idx';render()});
  await expect(app.locator('.market-quotes')).toBeVisible();
  await expect(app.locator('.m406-radar-details')).toHaveCount(0);
  await expect(app.locator('.m405-section-nav')).toHaveCount(0);
  await expect(app.locator('[data-m408-radar]')).toHaveCount(0);
- const expected={idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','BRL=X'],adr:['EWZ','PBR','VALE'],fut:['ES=F','NQ=F','YM=F','TVC:NI225','INDEX:DEU40'],cmd:['BRENT','WTI','IRON','GOLD'],jur:['SELIC','DI1F27','US10Y']};
+ const expected={idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','BRL=X'],adr:['EWZ','PBR','VALE'],fut:['ES=F','NQ=F','YM=F','TVC:NI225','INDEX:DEU40'],cmd:['BRENT','WTI','SGX:FEF2!','GOLD'],jur:['SELIC','DI1F27','US10Y']};
  for(const [category,codes]of Object.entries(expected)){
   await app.locator('.market-categories [data-cqa="'+category+'"]').evaluate(b=>b.click()); // v549: categorias extras ficam em "Outros"
   const rows=app.locator('.market-quotes .cqr');
