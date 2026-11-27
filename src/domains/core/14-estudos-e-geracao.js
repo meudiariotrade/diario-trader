@@ -238,9 +238,10 @@ async function hojeVivoPoll() {
   ) {
     HLV.busy = 1;
     try {
-      const e = await (
+      // v1039: cache único e incremental da ponte (antes: tabela inteira a cada 3 s).
+      const e = (window.DiarioCotacoesPonte ? await window.DiarioCotacoesPonte.ler() : await (
           await rq("/rest/v1/cotacoes?select=*&user_id=eq." + SESS.uid)
-        ).json(),
+        ).json()),
         t = {};
       (e.forEach(
         (a) =>
