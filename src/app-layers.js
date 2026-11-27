@@ -47523,9 +47523,28 @@ s.textContent += `
   }
   const diaBrt = date => new Intl.DateTimeFormat("en-CA", {timeZone:"America/Sao_Paulo", year:"numeric",month:"2-digit",day:"2-digit"}).format(date);
   const horaBrt = date => Number(new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",hourCycle:"h23"}).format(date));
+  const basesConfirmadasV1028=new Map();
+  function fechamentoCanonicoV1028(tipo,q,now){
+    const s=w.DiarioSessoes?.session?.(tipo.toUpperCase(),now);
+    if(!s?.verified)return undefined;
+    const dia=s.state==='post'&&s.close?s.date:s.previousDate;
+    if(!dia)return null;
+    const key=tipo+':'+dia,old=basesConfirmadasV1028.get(key);
+    const ts=stamp(q?.priceAt||q?.horarioPreco||q?.dadoEm),px=num(q?.px);
+    const contract=chave(q?.simboloFonte||q?.s);
+    const exact=aliases[tipo].has(contract)||new RegExp('^'+tipo.toUpperCase()+'[FGHJKMNQUVXZ]\\d{2,4}$').test(contract);
+    const sess=w.DiarioSessoes.session(tipo.toUpperCase(),Date.parse(dia+'T15:00:00Z'));
+    const end=sess?.verified&&sess.close?Date.parse(dia+'T03:00:00Z')+sess.close*60000:null;
+    // Referência do último negócio datado próximo ao encerramento; não é ajuste oficial.
+    if(exact&&px>0&&ts!==null&&end!==null&&ts<=now+60000&&ts>=end-15*60000&&ts<=end+5*60000){
+      if(!old||ts>old.ts){for(const k of basesConfirmadasV1028.keys())if(k.startsWith(tipo+':')&&k!==key)basesConfirmadasV1028.delete(k);basesConfirmadasV1028.set(key,{px,ts});}
+    }
+    return basesConfirmadasV1028.get(key)?.px??null;
+  }
   function fechamento(tipo, fontes, now) {
     const hBrt = horaBrt(new Date(now));
     const canon=tipo==='win'?'WIN':tipo==='wdo'?'WDO':null,q=canon&&w.DiarioMarketData?.get(canon);
+    if(w.DiarioMarketData){const base=fechamentoCanonicoV1028(tipo,q,now);if(base!==undefined)return base;}
     if(q)fontes=[{item:{...q,s:canon,em:q.priceAt},coleta:q.priceAt},...fontes.filter(f=>!combina(tipo,f.item))];
     // v984: após o fechamento da B3 (18h BRT), o fechamento de referência para o próximo pregão é o próprio px de hoje.
     if (hBrt >= 18) {
@@ -47587,7 +47606,7 @@ s.textContent += `
       ? '<small class="dt670-pend">Dados insuficientes: '+detalhe+'</small>'
       : semBase
       ? '<small class="dt670-pend">Variação teórica calculada · aguardando '+detalhe+'</small>'
-      : '<small>Fech. ref. '+nfmt(base, nome==="WIN"?0:2)+' → teórico <b>'+nfmt(projetado,nome==="WIN"?0:2)+'</b> '+(nome==="WIN"?"pts":"pts · futuro")+'</small>';
+      : '<small>Ref. sessão '+nfmt(base, nome==="WIN"?0:2)+' → teórico <b>'+nfmt(projetado,nome==="WIN"?0:2)+'</b> '+(nome==="WIN"?"pts":"pts · futuro")+'</small>';
     const diferenca = !semProxies && !semBase && nome === "WIN" ? '<small class="dt670-pt">'+(d>0?"+":"")+nfmt(d,0)+' pontos</small>' : '';
     return '<div class="dt670-instrument" data-dt670-ativo="'+sigla+'"><div class="dt670-val"><span><b>'+nome+'</b><small>'+sigla+'</small></span><strong class="'+cls(value)+'">'+taxa(value)+'</strong></div>'+diferenca+complemento+'</div>';
   }
@@ -47663,7 +47682,7 @@ s.textContent += `
     const hm = new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(now));
     return {win: variacao("win",f,now), wdo: variacao("wdo",f,now), em: diaBrt(new Date(now)) + "T" + hm + "-03:00"};
   }
-  w.TermometroAbertura670 = Object.freeze({calcular,capturar,montar,observado});
+  w.TermometroAbertura670 = Object.freeze({calcular,capturar,montar,observado,fechamentoCanonico:fechamentoCanonicoV1028});
   w.TraderUI?.onRender?.("termometro-abertura-teorica-v670",()=>w.setTimeout(montar,0));
   // A tela V4 troca seu conteúdo depois do render principal. Reposicionar
   // após o evento de render final preserva o termômetro nas duas rotas.

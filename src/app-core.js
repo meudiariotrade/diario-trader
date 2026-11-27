@@ -45695,7 +45695,7 @@ function imgBrent955(snapshot, agora=Date.now()) {
 }
 // v1025: exatamente os símbolos e categorias da lista Mercado/Cotações.
 const imgSimbolosPublicos = {
-  "TIO=F": ["SGX:FEF1!"],
+  "TIO=F": ["SGX:FEF2!"],
   "DCE:I": ["DCE:I1!"],
   "BZ=F": ["ICEEUR:BRN1!"],
   "CL=F": ["NYMEX:CL1!"],
@@ -45720,7 +45720,7 @@ function imgQ(e) {
   const macro=(MDO.v?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
   // A lista usada pelo usuário é a fonte primária; macro legado somente reserva local.
   const q=rows.find(r=>aliases.includes(r.s)&&imgValidaV1025(r)) ||
-    (!IMG.central1026&&macro.find(r=>(r.s===e||aliases.includes(r.s))&&imgValidaV1025(r)));
+    (!IMG.central1026&&macro.find(r=>(aliases.includes(r.s)||(r.s===e&&(e!=="TIO=F"||r.simboloFonte==="SGX:FEF2!")))&&imgValidaV1025(r)));
   if(e==="BZ=F"&&IMG.brent955&&imgValidaV1025(IMG.brent955)){
     const newer=q&&/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||"")&&q.quoteStatus==="coerente"&&Number.isFinite(q.d1)&&q.fechamentoAnterior>0&&Math.abs((q.px/q.fechamentoAnterior-1)*100-q.d1)<=0.08&&Date.parse(q.horarioPreco||q.priceAt)>Date.parse(IMG.brent955.horarioPreco||IMG.brent955.priceAt);
     if(!newer)return IMG.brent955;
@@ -46029,7 +46029,7 @@ function imgDesenha() {
     (Be(
       "Commodities",
       [
-        ["Minério SGX", imgQ("TIO=F"), 2],
+        ["SGX FEF2!", imgQ("TIO=F"), 2],
         ["Minério Dalian", imgQ("DCE:I"), 1],
         ["Petróleo Brent", imgQ("BZ=F"), 2],
         ["Petróleo WTI", imgQ("CL=F"), 2],
@@ -71390,10 +71390,10 @@ function cqLinhasExtras(aba) {
 // duplicar ativos válidos da lista principal. Nunca misturar setores EUA em BR.
 function cqItens(category) {
   const native = (CQ.d[category]?.itens || []).slice();
-  if(category==='cmd'&&window.DiarioMarketData){const q=window.DiarioMarketData.get('BZ=F'),i=native.findIndex(x=>x.s==='ICEEUR:BRN1!');if(q&&i>=0)native[i]={...native[i],...q};}
+  if(category==='cmd'){for(let i=native.length-1;i>=0;i--)if(native[i].s==='SGX:FEF1!')native.splice(i,1);const q=window.DiarioMarketData?.get('BZ=F'),i=native.findIndex(x=>x.s==='ICEEUR:BRN1!');if(q&&i>=0)native[i]={...native[i],...q};}
   const aliases = {'^BVSP':'IBOV','^GSPC':'SPX','^IXIC':'NASDAQ','BRL=X':'USDBRL'};
   const key = symbol => { const code = String(symbol || '').split(':').pop().toUpperCase(); return aliases[code] || code; };
-  const symbols = {adr: (typeof AD !== 'undefined' ? AD.list : []),idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','DX-Y.NYB','BRL=X'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','IRON','GOLD','BZ=F','CL=F','GC=F','FE=F'],jur:['SELIC','DI1F27','US10Y','^TNX']};
+  const symbols = {adr: (typeof AD !== 'undefined' ? AD.list : []),idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','DX-Y.NYB','BRL=X'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','GOLD','BZ=F','CL=F','GC=F'],jur:['SELIC','DI1F27','US10Y','^TNX']};
   const present = new Set(native.filter(item=>cqPx(item,item._aba || category)>0).map(item=>key(item.s)));
   if (category === 'adr') {
     for (const item of AD.data?.itens || []) {

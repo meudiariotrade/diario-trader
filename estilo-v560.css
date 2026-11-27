@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 7a69bf383687cf8d874290223f0314f538e59a3f1a70eac7ef24db05ba0556fe */
+/* Gerado de src/app-theme.css · SHA256 56bd58705bea7b08afdb4ca939b373020d7876562585d4dffe2ab32d00499321 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7544,3 +7544,12 @@ html:root body #wf-chat-panel .wf-chat-preview-name{display:none}
  html:root body #wf-chat-panel form{max-height:62%;padding:4px 10px 8px}
  html:root body #wf-chat-panel form textarea{font-size:16px;line-height:1.35;min-height:44px;height:var(--wf-input-h,44px);max-height:92px}
 }
+
+/* v1028 — contraste do Termômetro apenas no tema claro. */
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-val>span>b,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-instrument>small b,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-val>strong.neutral{color:#14181f!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-val>span>small,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-instrument>small:not(.dt670-pt),
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-note{color:#475569!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-instrument>small.dt670-pt{color:#916500!important}
