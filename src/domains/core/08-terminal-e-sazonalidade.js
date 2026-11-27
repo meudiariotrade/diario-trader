@@ -1321,6 +1321,7 @@ function imgQ(e) {
     if(!newer)return IMG.brent955;
   }
   if(!q)return null;
+  if(e==="BZ=F"&&IMG.central1026)return {...q,d1:Number.isFinite(q.d1)?q.d1:null};
   if(e==="BZ=F"){
     // Nunca misturar ajuste ou variação de contratos diferentes de Brent.
     const contrato=/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||"");
@@ -1373,7 +1374,7 @@ async function imgDados() {
     dados.reserva.length||macroReserva?"DADOS PARCIAIS / CONSULTA ANTERIOR":"",
     ausentes.length?"COTAÇÕES PARCIAIS · "+ausentes.length+" ATIVOS SEM PREÇO DISPONÍVEL":"",
     adrs.status==="rejected"||adrs.value!==true||AD.err?"EWZ/ADRs: consulta anterior ou parcial":"",
-    brent&&brent.d1===null?"BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO":""
+    brent&&brent.d1===null?"BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO":brent?.quoteStatus==='referencia_anterior'?"BRENT: ÚLTIMA REFERÊNCIA CONFIRMADA":""
   ].filter(Boolean).join(" · ");
   return {mercadoOK:ausentes.length<14,adrsOK:!!AD.data?.itens?.length,aviso:IMG.aviso};
 }

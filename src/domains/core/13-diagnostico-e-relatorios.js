@@ -3706,6 +3706,7 @@ function cqLinhasExtras(aba) {
 // duplicar ativos válidos da lista principal. Nunca misturar setores EUA em BR.
 function cqItens(category) {
   const native = (CQ.d[category]?.itens || []).slice();
+  if(category==='cmd'&&window.DiarioMarketData){const q=window.DiarioMarketData.get('BZ=F'),i=native.findIndex(x=>x.s==='ICEEUR:BRN1!');if(q&&i>=0)native[i]={...native[i],...q};}
   const aliases = {'^BVSP':'IBOV','^GSPC':'SPX','^IXIC':'NASDAQ','BRL=X':'USDBRL'};
   const key = symbol => { const code = String(symbol || '').split(':').pop().toUpperCase(); return aliases[code] || code; };
   const symbols = {adr: (typeof AD !== 'undefined' ? AD.list : []),idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','DX-Y.NYB','BRL=X'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','IRON','GOLD','BZ=F','CL=F','GC=F','FE=F'],jur:['SELIC','DI1F27','US10Y','^TNX']};

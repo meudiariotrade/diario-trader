@@ -908,7 +908,7 @@
     const all=Array.isArray(groups)?groups.flatMap(g=>(g.itens||[]).map(x=>({n:String(x.n||''),px:Number(x.px),d1:x.d1==null||x.d1===''?null:Number(x.d1)}))).filter(x=>Number.isFinite(x.d1)):[];
     const pick=rx=>all.find(x=>rx.test(x.n));
     const pickApp=(label,tks)=>{for(const t of tks){const c=cotacaoApp(t);if(c&&Number.isFinite(c.d1))return {n:label,px:c.px,d1:c.d1};}return null;};
-    const pickLive=(label,tks,rx,app)=>{const central=w.DiarioMarketData;if(central&&tks.some(k=>central.has(k))){const q=tks.map(k=>central.get(k)).find(Boolean);return q&&Number.isFinite(q.d1)&&Math.abs(q.d1)<=35?{n:label,px:q.px,d1:q.d1,fonte:q.fonte,baseVariacao:q.baseVariacao}:null;}try{const now=Date.now(),td=typeof w.tapeDados==='function'?w.tapeDados()||{}:{};for(const k of tks){const q=(typeof w.tapeVivo==='function'&&w.tapeVivo(k))||td[k],c=q&&q.chg!=null&&q.chg!==''?Number(q.chg):null;const ts=q?.dadoEm?Date.parse(q.dadoEm):null;const fresh=ts==null||(Number.isFinite(ts)&&ts<=now+60000&&now-ts<12*3600000);if(q&&Number(q.px)>0&&Number.isFinite(c)&&Math.abs(c)<=35&&fresh)return {n:label,px:Number(q.px),d1:c};}}catch(_){}const p=rx?pick(rx):null;return p&&Math.abs(p.d1)<=35?{n:label,px:p.px,d1:p.d1}:(app?pickApp(label,app):null);};
+    const pickLive=(label,tks,rx,app)=>{const central=w.DiarioMarketData;if(central&&tks.some(k=>central.has(k))){const q=tks.map(k=>central.get(k)).find(Boolean);return q&&Number.isFinite(q.d1)&&Math.abs(q.d1)<=35?{n:label,px:q.px,d1:q.d1,fonte:q.fonte,baseVariacao:q.baseVariacao,priceAt:q.priceAt,quoteStatus:q.quoteStatus}:null;}try{const now=Date.now(),td=typeof w.tapeDados==='function'?w.tapeDados()||{}:{};for(const k of tks){const q=(typeof w.tapeVivo==='function'&&w.tapeVivo(k))||td[k],c=q&&q.chg!=null&&q.chg!==''?Number(q.chg):null;const ts=q?.dadoEm?Date.parse(q.dadoEm):null;const fresh=ts==null||(Number.isFinite(ts)&&ts<=now+60000&&now-ts<12*3600000);if(q&&Number(q.px)>0&&Number.isFinite(c)&&Math.abs(c)<=35&&fresh)return {n:label,px:Number(q.px),d1:c};}}catch(_){}const p=rx?pick(rx):null;return p&&Math.abs(p.d1)<=35?{n:label,px:p.px,d1:p.d1}:(app?pickApp(label,app):null);};
     const fmtP=x=>x?x.n+' '+(x.d1>=0?'+':'')+x.d1.toFixed(2).replace('.',',')+'%':'';
     const br=[pickLive('IBOV',['^BVSP','IBOV'],/ibov|bvsp/i,['IBOV']),pickLive('USD/BRL',['BRL=X','USDBRL'],/usd\/?brl|d[oó]lar\s*[àa]\s*vista/i,['USDBRL']),pick(/di1|juros|ifix/i)].filter(Boolean);
     const us=[pickLive('S&P 500',['^GSPC'],/s&p\s*500(?!.*fut)|\bspx\b/i)||pickLive('S&P fut.',['ES=F'],/s&p.*fut|\bes1\b/i),pickLive('Nasdaq Composite',['^IXIC'],/nasdaq(?!.*fut)|\bndx\b/i)||pickLive('Nasdaq fut.',['NQ=F'],/nasdaq.*fut|\bnq1\b/i),pickLive('Dow',['^DJI'],/dow(?!.*fut)|\bdji\b/i)||pickLive('Dow fut.',['YM=F'],/dow.*fut|\bym1\b/i),pickLive('Brent',['BZ=F'],/brent/i)||pickLive('WTI',['CL=F'],/\bwti\b/i),pickLive('Ouro',['GC=F'],/ouro|gold/i),pickLive('DXY',['DX-Y.NYB','DXY'],/\bdxy\b/i,['DXY']),pickLive('EWZ',['EWZ'],/^ewz\b/i,['EWZ'])].filter(Boolean);
@@ -937,6 +937,27 @@
     return {br:brU,us:usU,cripto:crU,texto,riskScore,riskLabel,divergencia};
   }
   function sinalNum(v){return (v>=0?'+':'')+Number(v).toFixed(2).replace('.',',')+'%';}
+  function aureaPulsoV1027(pulso,m){
+    const riskBar=pulso.riskScore!=null?'<div class="sm dt987-risk"><span>🧭 Humor Global: <b style="color:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'">'+escape(pulso.riskLabel)+'</b></span><span style="display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums"><span style="display:inline-block;width:72px;height:6px;border-radius:99px;background:rgba(128,128,128,.22);overflow:hidden"><i style="display:block;height:100%;width:'+Math.round((pulso.riskScore+100)/2)+'%;background:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'"></i></span><b>'+(pulso.riskScore>0?'+':'')+pulso.riskScore+'</b></span></div>':'';
+    const divLine=pulso.divergencia?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.45);background:rgba(201,166,107,.09)">'+escape(pulso.divergencia)+'</p>':'';
+    const mkGrp=(tit,arr)=>arr.length?'<div class="dt987-grp"><span class="dt987-gtit">'+tit+'</span><div class="dt987-chips">'+arr.map(x=>'<span class="dt987-pill '+(x.d1>0?'pos':x.d1<0?'neg':'')+'"><span>'+escape(x.n)+'</span><b>'+sinalNum(x.d1)+'</b></span>').join('')+'</div></div>':'';
+    const doisMkts=(pulso.br.length||pulso.us.length||pulso.cripto.length)?'<div class="dt987-pulso">'+mkGrp('Brasil',pulso.br)+mkGrp('Exterior',pulso.us)+mkGrp('Cripto 24/7',pulso.cripto)+'</div>':'';
+    const timestamps=[...pulso.br,...pulso.us,...pulso.cripto].map(q=>Date.parse(q.priceAt||'')).filter(t=>Number.isFinite(t)&&t<=Date.now()+60000);
+    const atualizado=timestamps.length?Math.max(...timestamps):null;
+    
+    const fontesPulso=[...new Set([...pulso.br,...pulso.us,...pulso.cripto].map(q=>q.fonte).filter(Boolean))];
+    const fonte=escape(fontesPulso.length?fontesPulso.join(' · '):state.mercado?.fonte||'não verificada');
+    const semLeitura=(m.nome==='Sem leitura validada'||m.nome==='Amostra insuficiente');
+    const resumo=semLeitura?tag('indisponivel')+'Dados insuficientes para caracterizar o mercado nesta sessão.':
+      tag('interpretacao')+'Variações disponíveis indicam: '+escape(m.nome)+'. A classificação não prevê preços.';
+    return {risk:riskBar+divLine,chips:doisMkts,summary:'<b>'+resumo+'</b> · '+fonte+(atualizado!==null?' · última cotação '+when(atualizado):' · horário da cotação não confirmado')};
+  }
+  function atualizarPulsoV1027(){
+    if(document.hidden||state.route!=='home'||eligibleRoute()!=='home')return;
+    const el=document.querySelector('#app [data-intel-etapa1] [data-intel-content]');if(!el)return;
+    const parts=aureaPulsoV1027(pulsoDoisMercados(),mercadoPlan());
+    for(const k of ['risk','chips','summary']){const node=el.querySelector('[data-aurea-live="'+k+'"]');if(node&&node.innerHTML!==parts[k])node.innerHTML=parts[k];}
+  }
   function briefing() {
     const m=mercadoPlan(),context=w.DiarioSessoes?.context(),
       hot=w.DiarioInterpretacao?.prioritize(timeline(),context,Date.now(),context?.anchorAt?Date.parse(context.anchorAt):undefined)||
@@ -968,8 +989,7 @@
       keys.map(k=>'<button type="button" data-aurea-edicao="'+k+'" style="padding:4px 10px;border-radius:999px;font-size:11.5px;cursor:pointer;border:1px solid '+(ed===k?'rgba(201,166,107,.75)':'rgba(255,255,255,.14)')+';background:'+(ed===k?'rgba(201,166,107,.16)':'transparent')+';color:inherit;font-weight:'+(ed===k?'700':'500')+'">'+META[k].rot+(k===edAuto?' · agora':'')+'</button>').join('')+
       '</div>';
     const relogio='<p class="mut sm" style="margin:0 0 6px">B3: <b>'+escape(b3St)+'</b> · NYSE/Nasdaq: <b>'+escape(usSt)+'</b> · Futuros EUA: <b'+(futUS.aberto?' style="color:#10B981"':'')+'>'+escape(futUS.label)+'</b>'+(context?.b3?.nextDate?' · Próxima B3: '+escape(br(context.b3.nextDate)):'')+'</p>';
-    const riskBar=pulso.riskScore!=null?'<div class="sm dt987-risk"><span>🧭 Humor Global: <b style="color:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'">'+escape(pulso.riskLabel)+'</b></span><span style="display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums"><span style="display:inline-block;width:72px;height:6px;border-radius:99px;background:rgba(128,128,128,.22);overflow:hidden"><i style="display:block;height:100%;width:'+Math.round((pulso.riskScore+100)/2)+'%;background:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'"></i></span><b>'+(pulso.riskScore>0?'+':'')+pulso.riskScore+'</b></span></div>':'';
-    const divLine=pulso.divergencia?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.45);background:rgba(201,166,107,.09)">'+escape(pulso.divergencia)+'</p>':'';
+    const liveParts=aureaPulsoV1027(pulso,m);
     let gatilhosLine='';
     try{
       const ts=JSON.parse(localStorage.getItem('diario-teses-v873')||'[]');
@@ -989,16 +1009,7 @@
       const als=typeof w.DiarioAlertasDisparados==='function'?w.DiarioAlertasDisparados():[];
       if(als.length)alertasLine='<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(16,185,129,.55);background:rgba(16,185,129,.1)"><b>🔔 Alertas Disparados:</b> '+escape(als.slice(0,3).map(a=>a.tk+' ('+a.msg+')').join(' · '))+'</p>';
     }catch(_){}
-    const mkGrp=(tit,arr)=>arr.length?'<div class="dt987-grp"><span class="dt987-gtit">'+tit+'</span><div class="dt987-chips">'+arr.map(x=>'<span class="dt987-pill '+(x.d1>0?'pos':x.d1<0?'neg':'')+'"><span>'+escape(x.n)+'</span><b>'+sinalNum(x.d1)+'</b></span>').join('')+'</div></div>':'';
-    const doisMkts=(pulso.br.length||pulso.us.length||pulso.cripto.length)?'<div class="dt987-pulso">'+mkGrp('Brasil',pulso.br)+mkGrp('Exterior',pulso.us)+mkGrp('Cripto 24/7',pulso.cripto)+'</div>':'';
     const schwartzLine=agEvs.length?'<p class="sm" style="margin:4px 0"><b>S · Schwartz (Agenda BR/EUA):</b> '+escape(agEvs.join(' · '))+'</p>':'';
-    const atualizado=Date.parse(state.mercado?.atualizadoEm||'');
-    const recent=Number.isFinite(atualizado)&&Date.now()-atualizado<20*60000&&atualizado<=Date.now()+60000;
-    const fontesPulso=[...new Set([...pulso.br,...pulso.us,...pulso.cripto].map(q=>q.fonte).filter(Boolean))];
-    const fonte=escape(fontesPulso.length?fontesPulso.join(' · '):state.mercado?.fonte||'não verificada');
-    const semLeitura=(m.nome==='Sem leitura validada'||m.nome==='Amostra insuficiente');
-    const resumo=semLeitura?tag('indisponivel')+'Dados insuficientes para caracterizar o mercado nesta sessão.':
-      tag('interpretacao')+'Variações disponíveis indicam: '+escape(m.nome)+'. A classificação não prevê preços.';
     const top=hot.slice(0,3).map(e=>{
       const data=when(e.ultimaAtualizacao),fonte=e.fontes?.find(f=>/^https:\/\/|^http:\/\//.test(f?.url));
       return '<li>'+tag(oficial(e)?'fato':'publicada')+'<b>'+escape(e.titulo||'Acontecimento publicado')+'</b>'+
@@ -1007,8 +1018,8 @@
     }).join('')||'<li>Não há acontecimentos recentes com fontes identificadas.</li>';
     const vel=state.falaVel||1;
     return '<div class="v810-intel-brief">'+pills+'<h3 style="margin:2px 0 4px">'+info.titulo+'</h3>'+relogio+
-      riskBar+divLine+gatilhosLine+alertasLine+doisMkts+schwartzLine+
-      '<p class="mut sm" style="margin:6px 0"><b>'+resumo+'</b> · '+fonte+' · '+(recent?'':'último reg. ')+when(state.mercado?.atualizadoEm)+'</p>'+
+      '<div data-aurea-live="risk" style="display:contents">'+liveParts.risk+'</div>'+gatilhosLine+alertasLine+'<div data-aurea-live="chips" style="display:contents">'+liveParts.chips+'</div>'+schwartzLine+
+      '<p class="mut sm" data-aurea-live="summary" style="margin:6px 0">'+liveParts.summary+'</p>'+
       (context?.warning?'<p class="mut sm">'+escape(context.warning)+'</p>':'')+
       '<div style="margin:10px 0 8px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn s" data-aurea-resumao="'+ed+'"'+(state.resumaoBusy?' disabled aria-busy="true"':'')+'>'+(state.resumaoBusy?'Gerando resumão…':info.cta)+'</button>'+
       ('speechSynthesis' in w?'<button type="button" class="btn s" data-aurea-ouvir="'+ed+'">'+(state.falando?'⏹ Parar Rádio':'🎙️ Rádio do Pregão')+'</button><button type="button" class="btn s" data-aurea-vel="1" title="Velocidade da Rádio">'+vel+'x</button>':'')+
@@ -1431,6 +1442,6 @@
   if(w.TraderUI?.onRender)w.TraderUI.onRender('inteligencia-integrada-v807',mount);
   /* v852: manchetes recentes ligadas a um ativo (texto puro, para a explicação da IA na ficha). */
   function noticiasDo(tk){const t=String(tk||'').toUpperCase(),base=t.replace(/\d+$/,'');return timeline().filter(e=>(e.relacoes?.diretos||[]).includes(t)||ligar(e).some(l=>l.tk===t&&l.tipo!=='hipotese')||new RegExp('\\b'+base,'i').test(String(e.titulo||''))).slice(0,6).map(e=>when(e.ultimaAtualizacao)+' · '+tit(e))}
-  w.DiarioInteligenciaEtapa1=Object.freeze({montar:mount,porQue,noticiasDo,sentimento,minha,pontosDoDia,meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
+  w.DiarioInteligenciaEtapa1=Object.freeze({montar:mount,porQue,noticiasDo,sentimento,minha,pontosDoDia,meusAtivos,mercadoPlan,relacionados,todosEventos:timeline,refresh,atualizarPulso:atualizarPulsoV1027,inspect:()=>({route:state.route,newsAt:state.newsAt,marketAt:state.marketAt})});
   mount();
 })(window);

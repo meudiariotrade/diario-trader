@@ -138,7 +138,23 @@
  const num=x=>x===null||x===undefined||x===''||typeof x==='boolean'?null:Number.isFinite(Number(x))?Number(x):null;
  const valid=q=>q&&num(q.px)>0&&!q.suspeito&&q.quoteStatus!=='divergente';
  const date=x=>{if(!x)return null;const t=typeof x==='number'?(x<1e11?x*1000:x):Date.parse(x);return Number.isFinite(t)&&t>0&&t<=Date.now()+60000?new Date(t).toISOString():null;};
- const brent=(q,d)=>{const p=num(q.fechamentoAnterior);return /^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||'')&&q.quoteStatus==='coerente'&&p>0&&d!==null&&Math.abs((Number(q.px)/p-1)*100-d)<=0.08?d:null;};
+ const brent=(q,d)=>{
+  const p=num(q.fechamentoAnterior),at=date(q.horarioPreco||q.priceAt||q.dadoEm);
+  const ref=q.quoteStatus==='referencia_anterior'&&at&&Date.now()-Date.parse(at)<=96*3600000;
+  return /^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||'')&&(q.quoteStatus==='coerente'||ref)&&p>0&&d!==null&&Math.abs((Number(q.px)/p-1)*100-d)<=0.08?d:null;
+ };
+ // Um preço e seu percentual são sempre selecionados juntos, nunca em feeds distintos.
+ function brentReserva(row){
+  const snap=w.DiarioPublico?.peek?.('/v1/mercado');
+  if(!snap||snap.desatualizado||snap.cacheOffline)return null;
+  const rows=(snap.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
+  const candidates=rows.filter(r=>valid(r)&&(r.s==='BZ=F'||r.s==='ICEEUR:BRN1!')&&/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(r.simboloFonte||'')).map(r=>normal('BZ=F',r)).filter(q=>q&&q.d1!==null&&q.priceAt&&Date.now()-Date.parse(q.priceAt)<=96*3600000);
+  const q=candidates.sort((a,b)=>Date.parse(b.priceAt)-Date.parse(a.priceAt))[0];
+  if(!q)return null;
+  // Se a lista já confirmou outro vencimento, não recuar para contrato diferente.
+  if(/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(row?.simboloFonte||'')&&row.simboloFonte!==q.simboloFonte)return null;
+  return q;
+ }
  function normal(k,row,overlay=null){
   if(!valid(row)&&!valid(overlay))return null;
   if(row?.suspeito||row?.quoteStatus==='divergente')return null;
@@ -168,9 +184,12 @@
    const row=symbols.map(sym=>rows.find(r=>r.s===sym&&valid(r))).find(Boolean);
    if(row){
     let overlay=null;try{if(typeof cqPf==='function')overlay=cqPf(row,group);}catch{}
-    return normal(k,row,overlay);
+    const q=normal(k,row,overlay);
+    if(k==='BZ=F'&&q?.d1==null)return brentReserva(q||row)||q;
+    return q;
    }
   }catch{}
+  if(k==='BZ=F'){const q=brentReserva(null);if(q)return q;}
   // Sem linha pública (inicialização), reutilizar também o overlay Profit do Research.
   if(group==='br'||k==='^BVSP'||k==='WIN'||k==='WDO'){try{const row={s:spec(k)[1],c:k==='^BVSP'?'IBOV':k};const overlay=typeof cqPf==='function'?cqPf(row,group):null;if(valid(overlay))return normal(k,row,overlay);}catch{}}
   // Binance já conectado pode preencher o par mesmo antes da primeira lista pública.
