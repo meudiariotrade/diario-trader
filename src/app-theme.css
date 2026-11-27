@@ -7598,3 +7598,66 @@ html body #app button.dt975-badge:hover,html body #app button.dt975-badge:focus-
 /* Aviso de sincronização pendente: no celular saía cortado ("toque para envi…") e cobria o conteúdo. */
 html body #filap{max-width:calc(100vw - 24px)!important;white-space:normal!important;text-align:center!important;line-height:1.3!important}
 @media (max-width:767px){html body #filap{left:12px!important;right:12px!important;transform:none!important;width:auto!important;font-size:13px!important;padding:8px 12px!important;bottom:calc(var(--nav,64px) + 10px + env(safe-area-inset-bottom,0px))!important}}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   Etapa 4 (v1054) — LIQUID GLASS 3D · sistema único
+   Escuro, todas as abas menos o Terminal. Tokens --lg-*; o tema claro não muda.
+   Níveis: ambiente (fundo) → L1 vidro (cartão principal) → L2 véu (sub-cartão)
+   → controles. Nunca vidro dentro de vidro: dentro de L1 tudo vira L2.
+   ═════════════════════════════════════════════════════════════════════════ */
+:root{
+ --lg-amb-1:rgba(245,158,11,.10);--lg-amb-2:rgba(99,102,241,.10);--lg-amb-3:rgba(16,185,129,.05);
+ --lg-l1:rgba(20,24,36,.56);--lg-l1-solid:#141824;--lg-l2:rgba(255,255,255,.035);--lg-l2-hover:rgba(255,255,255,.06);
+ --lg-chrome:rgba(9,11,17,.86);
+ --lg-stroke:rgba(255,255,255,.075);--lg-stroke-hi:rgba(255,255,255,.16);--lg-stroke-2:rgba(255,255,255,.06);
+ --lg-blur:saturate(160%) blur(18px);--lg-blur-chrome:saturate(180%) blur(24px);
+ --lg-depth:inset 0 1px 0 rgba(255,255,255,.06),0 14px 34px -18px rgba(0,0,0,.75),0 2px 6px -2px rgba(0,0,0,.35);
+ --lg-r1:16px;--lg-r2:12px;--lg-r-ctl:10px;
+ --lg-amber:#F59E0B;--lg-amber-hi:#FBBF24;--lg-amber-ink:#1B1204
+}
+/* Ambiente: luz difusa fixa atrás do conteúdo (sem imagem, sem custo de rede). */
+html:not([data-v427-tema=claro]):root:has(body:not([data-v4route=term])){background:var(--ui-bg,#08090D)!important}
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]):not(#lg){background:transparent!important}
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]):not(#lg) #app#app{background:transparent!important}
+html:not([data-v427-tema=claro]) body:not([data-v4route=term])::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+ background:radial-gradient(60vmax 45vmax at 8% -6%,var(--lg-amb-1),transparent 62%),radial-gradient(55vmax 50vmax at 108% 18%,var(--lg-amb-2),transparent 60%),radial-gradient(50vmax 40vmax at 50% 112%,var(--lg-amb-3),transparent 60%)}
+/* L1 — cartões principais em vidro. */
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.card,.ui-card,.v4-card,.pfc,.m623-sec,.an-section,.an-conselho-hero,.dt670-opening,.dt987-pulso,.v4-emo,.dt962-pulso,.m606-card,.org-opsnav,.dt397-panel,[data-intel-etapa2]):not(#lg){
+ background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,0) 42%) var(--lg-l1)!important;-webkit-backdrop-filter:var(--lg-blur)!important;backdrop-filter:var(--lg-blur)!important;
+ border:1px solid var(--lg-stroke)!important;border-top-color:var(--lg-stroke-hi)!important;border-radius:var(--lg-r1)!important;box-shadow:var(--lg-depth)!important}
+/* L2 — dentro de um L1: véu claro, sem desfoque nem sombra (sem "cartão dentro de cartão"). */
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.card,.ui-card,.v4-card,.pfc,.m623-sec,.an-section,.dt670-opening,.dt987-pulso,.v4-emo,.dt962-pulso,.m606-card,.dt397-panel,[data-intel-etapa2]) :is(.card,.ui-card,.v4-card,.pfc,.m623-sec,.an-section,.ui-kpi,.pfk,.an-br-item,.dt670-instrument,.ir599-box,.dt975-rot-step,.v505-modelo,details):not(#lg),
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.ui-kpi,.pfk,.an-br-item,.dt670-instrument,.ir599-box,.dt975-rot-step):not(#lg){
+ background:var(--lg-l2)!important;background-image:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+ border:1px solid var(--lg-stroke-2)!important;border-radius:var(--lg-r2)!important;box-shadow:none!important}
+/* Barras do app (ticker, cabeçalho, barra inferior, menu) em vidro denso. */
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) :is(#tape,#dt393-global-head,.dt393-topbar,#v4-bnav,#dt815-ctx):not(#lg){
+ background:var(--lg-chrome)!important;background-image:none!important;-webkit-backdrop-filter:var(--lg-blur-chrome)!important;backdrop-filter:var(--lg-blur-chrome)!important;border-color:var(--lg-stroke)!important;box-shadow:none!important}
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #dt394-drawer .dt394-panel{background:rgba(12,14,22,.82)!important;-webkit-backdrop-filter:var(--lg-blur-chrome)!important;backdrop-filter:var(--lg-blur-chrome)!important;border-right:1px solid var(--lg-stroke)!important}
+/* Sem suporte a desfoque ou com "Reduzir transparência" no iPhone: superfícies sólidas. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+ html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.card,.ui-card,.v4-card,.pfc,.m623-sec,.an-section,.an-conselho-hero,.dt670-opening,.dt987-pulso,.v4-emo,.dt962-pulso,.m606-card,.org-opsnav,.dt397-panel,[data-intel-etapa2]):not(#lg){background:var(--lg-l1-solid)!important}
+}
+@media (prefers-reduced-transparency:reduce){
+ html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.card,.ui-card,.v4-card,.pfc,.m623-sec,.an-section,.an-conselho-hero,.dt670-opening,.dt987-pulso,.v4-emo,.dt962-pulso,.m606-card,.org-opsnav,.dt397-panel,[data-intel-etapa2]):not(#lg){background:var(--lg-l1-solid)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+ html:not([data-v427-tema=claro]) body:not([data-v4route=term])::before{display:none}
+}
+/* .v4-panel e .dt393-workspace são contêineres de página (envolvem os cartões): sem superfície própria. */
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.v4-panel,.dt393-workspace):not(#lg){background:transparent!important;background-image:none!important;border-color:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+/* Âmbar líquido único para a ação principal (antes: #C9A66B, #AE853A, #B0873B e degradês diferentes). */
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.v4-cta,.v4-primarybtn,.an-conselho-cta,.ui-cta,.dt975-btn-gold,[data-m550-passo],[data-v505modelo],button.btn:not(.s):not(.sm):not([disabled]),button.pri):not(#lg){
+ background:linear-gradient(180deg,var(--lg-amber-hi) 0%,var(--lg-amber) 58%,#E08A06 100%)!important;color:var(--lg-amber-ink)!important;
+ border:1px solid rgba(255,214,120,.55)!important;border-radius:var(--lg-r-ctl)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(120,60,0,.25),0 8px 18px -10px rgba(245,158,11,.65)!important;font-weight:700!important;text-shadow:none!important}
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.v4-cta,.v4-primarybtn,.an-conselho-cta,.ui-cta,.dt975-btn-gold,[data-m550-passo],[data-v505modelo],button.btn:not(.s):not(.sm):not([disabled]),button.pri):not(#lg):hover{filter:brightness(1.06)}
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.v4-cta,.v4-primarybtn,.an-conselho-cta,.ui-cta,.dt975-btn-gold,[data-m550-passo],[data-v505modelo],button.btn:not(.s):not(.sm):not([disabled]),button.pri):not(#lg):active{transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 10px -8px rgba(245,158,11,.6)!important}
+/* Estados "selecionado" em véu âmbar (não competem com a ação principal). */
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(.selected,.pfch.on,.v810-auto.on,[data-dt983-evit],[data-aurea-edicao]):not(#lg){background:rgba(245,158,11,.13)!important;border-color:rgba(245,158,11,.38)!important;color:#FCD34D!important}
+/* Botões secundários em vidro de controle. */
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(button.btn.s,button.btn.sm,.dt975-btn-glass,[data-v589-emo]):not(#lg){background:rgba(255,255,255,.045)!important;border:1px solid var(--lg-stroke)!important;border-top-color:var(--lg-stroke-hi)!important;border-radius:var(--lg-r-ctl)!important;color:var(--ui-title,#E2E8F0)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important}
+/* Segmento/aba selecionado: véu âmbar com reflexo (antes 3 degradês dourados diferentes). */
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(button.on,button.active,[role=tab][aria-selected=true]):not(.dt975-btn-gold):not(#lg){
+ background:linear-gradient(180deg,rgba(251,191,36,.22),rgba(245,158,11,.12))!important;border:1px solid rgba(245,158,11,.45)!important;color:#FDE68A!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 16px -12px rgba(245,158,11,.7)!important;text-shadow:none!important}
+/* Barra lateral do desktop no mesmo vidro das outras barras do app. */
+html:not([data-v427-tema=claro]) body:not([data-v4route=term]) nav#org-side:not(#lg){background:var(--lg-chrome)!important;background-image:none!important;-webkit-backdrop-filter:var(--lg-blur-chrome)!important;backdrop-filter:var(--lg-blur-chrome)!important;border-right:1px solid var(--lg-stroke)!important;box-shadow:none!important}
