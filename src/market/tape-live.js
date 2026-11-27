@@ -118,8 +118,10 @@
   function desenha() {
     if(doc.hidden)return;
     root.tapeRedraw?.();
-    if(typeof tab==='undefined'||!['home','dia'].includes(tab))return;
-    root.DiarioInteligenciaEtapa1?.atualizarPulso?.();
+    if(typeof tab==='undefined')return;
+    const painel=['home','dia'].includes(tab);
+    if(painel)root.DiarioInteligenciaEtapa1?.atualizarPulso?.();
+    if(!painel&&tab!=='mercado')return;
     if(root.DIARIO_DEMO||typeof navigator!=='undefined'&&navigator.onLine===false)return;
     if(Date.now()-ultimaBordaV1027<30000)return;
     ultimaBordaV1027=Date.now();
@@ -129,7 +131,8 @@
   setInterval(conexoes, 60000);
   setInterval(ponte, 15000); // Apenas leitura da ponte local configurada; sem rede Supabase por segundo.
   setInterval(desenha, 2000); // Atualiza DOM a partir dos caches locais, nunca uma API.
-  doc.addEventListener("visibilitychange", () => { if (!doc.hidden) { conexoes(); ponte(); desenha(); } });
-  root.addEventListener?.("online", () => { conexoes(); ponte(); });
+  doc.addEventListener("visibilitychange", () => { if (!doc.hidden) { ultimaBordaV1027=0; conexoes(); ponte(); desenha(); } });
+  doc.addEventListener("diario:tela",()=>{if(!doc.hidden&&typeof tab!=='undefined'&&['home','dia'].includes(tab)){ultimaBordaV1027=0;desenha();}});
+  root.addEventListener?.("online", () => { ultimaBordaV1027=0; conexoes(); ponte(); desenha(); });
   root.TapeLiveQuote = Object.freeze({ consulta, monta, instante, fonte: "Profit/Finnhub/Binance" });
 })(window, document);

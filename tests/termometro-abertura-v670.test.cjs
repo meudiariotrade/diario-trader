@@ -124,3 +124,23 @@ test('v1028: referência da sessão rejeita fonte sem horário e não retrocede 
  assert.equal(fn('win',{s:'WIN',px:178728,priceAt:'2026-11-26T21:20:00Z'},now),178960);
  w.close();
 });
+
+test('v1030: Termômetro usa apenas WIN/WDO selecionados no Mercado, nunca IND/DOL',()=>{
+ const w=page(),now=Date.parse('2026-11-26T23:30:00Z');w.Date.now=()=>now;
+ w.DiarioSessoes={session:()=>({verified:true,state:'post',date:'2026-11-26',previousDate:'2026-11-25',open:540,close:1105})};
+ const priceAt='2026-11-26T21:24:00Z';
+ w.CQ={d:{fut:{itens:[{s:'BMFBOVESPA:IND1!',c:'WIN',px:178728,priceAt},{s:'BMFBOVESPA:DOL1!',c:'WDO',px:5746.5,priceAt}]}},ts:{fut:now}};
+ const quotes={WIN:{s:'BMFBOVESPA:WIN1!',simboloFonte:'WINFUT',px:178960,priceAt,fechado:true},WDO:{s:'BMFBOVESPA:WDO1!',simboloFonte:'WDOFUT',px:5656,priceAt,fechado:true}};
+ w.DiarioMarketData={get:k=>quotes[k]||null};
+ let x=w.TermometroAbertura670.capturar();assert.equal(x.winBase,178960);assert.equal(x.wdoBase,5656);
+ w.close();
+});
+test('v1030: último negócio fechado do mini é aceito na sessão correta, mas não de outro dia ou contrato cheio',()=>{
+ const w=page(),now=Date.parse('2026-11-26T23:30:00Z');
+ w.DiarioSessoes={session:()=>({verified:true,state:'post',date:'2026-11-26',previousDate:'2026-11-25',open:540,close:1105})};
+ const fn=w.TermometroAbertura670.fechamentoCanonico;
+ assert.equal(fn('win',{s:'BMFBOVESPA:WIN1!',tk:'INDZ26',px:178728,priceAt:'2026-11-26T21:24:00Z',fechado:true},now),null);
+ assert.equal(fn('win',{s:'WINFUT',px:178960,priceAt:'2026-11-25T21:24:00Z',fechado:true},now),null);
+ assert.equal(fn('win',{s:'WINFUT',px:178960,priceAt:'2026-11-26T20:50:00Z',fechado:true},now),178960);
+ w.close();
+});

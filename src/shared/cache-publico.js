@@ -180,8 +180,31 @@
   if(q.live===true&&(!at||Date.now()-Date.parse(at)>180000))return overlay&&q===overlay?normal(k,row):null;
   return Object.freeze({...row,...q,s:spec(k)[1]||row?.s||k,simboloFonte:instrument,px:num(q.px),d1:d,chg:d,fonte,source:fonte,baseVariacao:basis,fechamentoAnterior:prev,horarioPreco:at,priceAt:at,dadoEm:at,fechado:q.fechado===true,live:q.live===true&&!!at,quoteStatus:k==='TIO=F'&&instrument!=='SGX:FEF2!'?'referencia_mensal':q.quoteStatus||(!at?'horario_nao_confirmado':null)});
  }
+ // Mesma seleção de preço de cqLinha/cqPx em Futuros; a identidade do
+ // negócio deve ser do mini, nunca inferida do rótulo de outro contrato.
+ function miniIdentidade(k,s){
+  const code=String(s||'').toUpperCase().replace(/^BMFBOVESPA:/,'');
+  return code===k||code===k+'1!'||code===k+'FUT'||new RegExp('^'+k+'[FGHJKMNQUVXZ]\\d{2,4}$').test(code);
+ }
+ function miniMercado(k){
+  const [group,symbol]=spec(k);
+  let row=null,overlay=null;
+  try{
+   row=(typeof CQ!=='undefined'?CQ.d?.fut?.itens||[]:[]).find(r=>r.s===symbol||(!r.s&&miniIdentidade(k,r.c)))||null;
+   const template=row||{s:symbol,c:k};
+   if(typeof cqPf==='function')overlay=cqPf(template,group);
+   if(valid(overlay)&&!overlay.fh&&!overlay.bnc&&miniIdentidade(k,overlay.tk||overlay.simboloFonte||overlay.s)){
+    // Não herdar horário, ajuste ou preço do TradingView ao selecionar Profit.
+    const selected={...overlay,s:symbol,simboloFonte:overlay.tk||overlay.simboloFonte||overlay.s,fonte:'Profit',source:'Profit'};
+    return normal(k,selected);
+   }
+   if(valid(row)&&miniIdentidade(k,row.simboloFonte||row.s))return normal(k,row);
+  }catch{}
+  return null;
+ }
  function get(s){
   const k=key(s);if(!k||w.DIARIO_DEMO)return null;
+  if(k==='WIN'||k==='WDO')return miniMercado(k);
   if(k==='EWZ'){try{const e=w.DiarioEwzCotacao?.();if(valid(e))return normal(k,{s:'AMEX:EWZ',...e});}catch{}}
   const [group,...symbols]=spec(k);
   try{
@@ -190,8 +213,9 @@
    if(row){
     let overlay=null;try{if(typeof cqPf==='function'&&k!=='TIO=F'&&k!=='BZ=F')overlay=cqPf(row,group);}catch{}
     const q=normal(k,row,overlay);
-    if(k==='BZ=F'){const r=brentReserva(q||row);if(r&&(q?.d1==null||Date.parse(r.priceAt)>Date.parse(q.priceAt)))return r;}
-    return q;
+    if(k==='TIO=F'&&!q){/* segue para a reserva pública identificada */}
+    else if(k==='BZ=F'){const r=brentReserva(q||row);if(r&&(q?.d1==null||Date.parse(r.priceAt)>Date.parse(q.priceAt)))return r;return q;}
+    else if(q)return q;
    }
   }catch{}
   if(k==='BZ=F'){const q=brentReserva(null);if(q)return q;}
@@ -217,7 +241,8 @@
  function refresh(){
   if(w.DIARIO_DEMO||typeof cqCarrega!=='function'||w.document?.hidden)return Promise.resolve([]);
   if(pending)return pending;
-  pending=Promise.allSettled(['idx','fx','fut','cmd','cri','br'].map(g=>cqCarrega(g,false))).finally(()=>{pending=null;});
+  // Cada lista tem seu próprio TTL. Compartilha inclusive a consulta em voo do botão manual.
+  pending=Promise.allSettled(['cmd','idx','fx','fut','cri','br'].map(g=>Promise.resolve().then(()=>cqCarrega(g,false)))).finally(()=>{pending=null;});
   return pending;
  }
  function snapshot(keys=Object.keys(specs)){
