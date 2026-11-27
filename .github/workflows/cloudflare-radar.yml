@@ -32,7 +32,8 @@ jobs:
       - run: node --check cloudflare/diario-radar/agenda-v932.mjs
       - run: node --check cloudflare/diario-radar/agenda-preflight-v933.mjs
       - run: node --check cloudflare/diario-radar/agenda-health-v937.mjs
-      - run: node --test tests/cloudflare-radar-v892.test.cjs tests/cloudflare-agenda-v932.test.cjs tests/cloudflare-agenda-preflight-v933.test.cjs tests/cloudflare-cron-cutover-v935.test.cjs tests/cloudflare-agenda-health-v937.test.cjs
+      - run: node --check cloudflare/diario-radar/segredos-v1041.mjs
+      - run: node --test tests/cloudflare-radar-v892.test.cjs tests/cloudflare-agenda-v932.test.cjs tests/cloudflare-agenda-preflight-v933.test.cjs tests/cloudflare-cron-cutover-v935.test.cjs tests/cloudflare-agenda-health-v937.test.cjs tests/cloudflare-segredos-v1041.test.cjs
   publish:
     needs: [check]
     if: github.ref == 'refs/heads/main'
