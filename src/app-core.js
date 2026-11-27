@@ -45779,7 +45779,8 @@ async function imgDados() {
     dados.reserva.length||macroReserva?"DADOS PARCIAIS / CONSULTA ANTERIOR":"",
     ausentes.length?"COTAÇÕES PARCIAIS · "+ausentes.length+" ATIVOS SEM PREÇO DISPONÍVEL":"",
     adrs.status==="rejected"||adrs.value!==true||AD.err?"EWZ/ADRs: consulta anterior ou parcial":"",
-    brent&&brent.d1===null?"BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO":brent?.quoteStatus==='referencia_anterior'?"BRENT: ÚLTIMA REFERÊNCIA CONFIRMADA":""
+    brent&&brent.d1===null?"BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO":brent?.quoteStatus==='referencia_anterior'?"BRENT: ÚLTIMA REFERÊNCIA CONFIRMADA":"",
+    imgQ("TIO=F")?.quoteStatus==="referencia_mensal"?"SGX: REFERÊNCIA "+imgQ("TIO=F").simboloFonte:""
   ].filter(Boolean).join(" · ");
   return {mercadoOK:ausentes.length<14,adrsOK:!!AD.data?.itens?.length,aviso:IMG.aviso};
 }
@@ -46029,7 +46030,7 @@ function imgDesenha() {
     (Be(
       "Commodities",
       [
-        ["SGX FEF2!", imgQ("TIO=F"), 2],
+        [imgQ("TIO=F")?.quoteStatus==="referencia_mensal"?"SGX FEF2! (ref.)":"SGX FEF2!", imgQ("TIO=F"), 2],
         ["Minério Dalian", imgQ("DCE:I"), 1],
         ["Petróleo Brent", imgQ("BZ=F"), 2],
         ["Petróleo WTI", imgQ("CL=F"), 2],
@@ -71390,10 +71391,17 @@ function cqLinhasExtras(aba) {
 // duplicar ativos válidos da lista principal. Nunca misturar setores EUA em BR.
 function cqItens(category) {
   const native = (CQ.d[category]?.itens || []).slice();
-  if(category==='cmd'){for(let i=native.length-1;i>=0;i--)if(native[i].s==='SGX:FEF1!')native.splice(i,1);const q=window.DiarioMarketData?.get('BZ=F'),i=native.findIndex(x=>x.s==='ICEEUR:BRN1!');if(q&&i>=0)native[i]={...native[i],...q};}
+  if(category==='cmd'){
+    for(let i=native.length-1;i>=0;i--)if(native[i].s==='SGX:FEF1!')native.splice(i,1);
+    for(const [k,s] of [['BZ=F','ICEEUR:BRN1!'],['TIO=F','SGX:FEF2!']]){
+      const q=window.DiarioMarketData?.get(k),i=native.findIndex(x=>x.s===s);
+      if(q&&i>=0)native[i]={...native[i],...q};
+      else if(q&&k==='TIO=F')native.push({...q,c:'FEF',n:'Minério de ferro (SGX FEF2!)',dp:2,un:'US$/t'});
+    }
+  }
   const aliases = {'^BVSP':'IBOV','^GSPC':'SPX','^IXIC':'NASDAQ','BRL=X':'USDBRL'};
   const key = symbol => { const code = String(symbol || '').split(':').pop().toUpperCase(); return aliases[code] || code; };
-  const symbols = {adr: (typeof AD !== 'undefined' ? AD.list : []),idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','DX-Y.NYB','BRL=X'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','GOLD','BZ=F','CL=F','GC=F'],jur:['SELIC','DI1F27','US10Y','^TNX']};
+  const symbols = {adr: (typeof AD !== 'undefined' ? AD.list : []),idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','DX-Y.NYB','BRL=X'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','GOLD','BZ=F','CL=F','GC=F','SGX:FEF2!'],jur:['SELIC','DI1F27','US10Y','^TNX']};
   const present = new Set(native.filter(item=>cqPx(item,item._aba || category)>0).map(item=>key(item.s)));
   if (category === 'adr') {
     for (const item of AD.data?.itens || []) {
@@ -71403,6 +71411,7 @@ function cqItens(category) {
   let groups = []; try { groups = MDO.v?.mercados?.grupos || []; } catch {}
   for (const item of groups.flatMap(group=>group.itens || [])) {
     if (!(item.px>0) || item.suspeito || !(symbols[category] || []).includes(item.s) || present.has(key(item.s))) continue;
+    if(item.s==='SGX:FEF2!'&&item.simboloFonte&&item.simboloFonte!=='SGX:FEF2!'&&!/^SGX:FEF[FGHJKMNQUVXZ]\d{4}$/.test(item.simboloFonte))continue;
     const existing = native.findIndex(row=>key(row.s)===key(item.s));
     const resolved = {...item,c:item.c || key(item.s),dp:item.dp ?? 2,simboloFonte:item.simboloFonte || item.s,horarioPreco:item.horarioPreco || item.em};
     if (existing>=0) native[existing]=resolved; else native.push(resolved);

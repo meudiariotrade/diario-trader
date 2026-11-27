@@ -47544,7 +47544,18 @@ s.textContent += `
   function fechamento(tipo, fontes, now) {
     const hBrt = horaBrt(new Date(now));
     const canon=tipo==='win'?'WIN':tipo==='wdo'?'WDO':null,q=canon&&w.DiarioMarketData?.get(canon);
-    if(w.DiarioMarketData){const base=fechamentoCanonicoV1028(tipo,q,now);if(base!==undefined)return base;}
+    if(w.DiarioMarketData){
+      let base=fechamentoCanonicoV1028(tipo,q,now);
+      // Verifica outras fontes datadas do mesmo instrumento sem usar horário de coleta.
+      for(const f of fontes){const it=f.item;if(!combina(tipo,it)||!(it.priceAt||it.horarioPreco||it.dadoEm))continue;
+        const b=fechamentoCanonicoV1028(tipo,it,now);if(b!==undefined)base=b;}
+      try{if(typeof CQ!=='undefined'&&(!CQ.owner||(typeof SESS!=='undefined'&&CQ.owner===SESS?.uid))){
+        for(const it of [CQ.saved?.['@'+canon],CQ.pf?.['@'+canon]])if(it?.em){
+          const b=fechamentoCanonicoV1028(tipo,{...it,s:it.tk||canon,priceAt:it.em},now);if(b!==undefined)base=b;
+        }
+      }}catch{}
+      if(base!==undefined)return base;
+    }
     if(q)fontes=[{item:{...q,s:canon,em:q.priceAt},coleta:q.priceAt},...fontes.filter(f=>!combina(tipo,f.item))];
     // v984: após o fechamento da B3 (18h BRT), o fechamento de referência para o próximo pregão é o próprio px de hoje.
     if (hBrt >= 18) {
