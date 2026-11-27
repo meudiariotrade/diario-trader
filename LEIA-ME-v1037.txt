@@ -1,0 +1,13 @@
+v1037 — Etapa 5: Áurea
+- Etapas visíveis enquanto ela trabalha: pergunta recebida, gráficos enviados, dados do diário, contexto, encaminhamento (membro do Conselho) e "Resposta pronta em X s" ou o motivo de não concluir.
+- Resposta aparece bloco a bloco (o Worker ainda devolve tudo de uma vez; streaming real exige mudar o Worker).
+- Fontes numeradas [1], [2]…, links clicáveis e atalho "Fontes (n) ↓" no topo da resposta.
+- Tickers (PETR4, WINZ26, IBOV…) clicáveis: abrem a busca do app; variações % em verde/vermelho.
+- Tabelas em texto "| a | b |" viram tabela compacta com números à direita.
+- Sugestões da caixa "Você pode começar por aqui" mudam com o horário (pré, pregão, pós).
+- @trade, @hoje e @plano: inserem o último trade, o resumo do dia e o plano na pergunta (também nas sugestões).
+- Ditado por voz (microfone ao lado da câmera; no celular some enquanto há texto digitado).
+- Botão "↓ Ir para o fim" quando a conversa está rolada para cima.
+- "Bastidores da análise": membro, gráficos, dados do diário, contexto, nº de fontes e tempo de resposta.
+Já existiam: anexar até 3 gráficos/câmera, horário e modelo em cada resposta, seções longas recolhidas.
+Arquivos: src/shared/ui-aurea.js (novo), src/index.html, src/service-worker.js, release.config.json
