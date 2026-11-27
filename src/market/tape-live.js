@@ -100,7 +100,7 @@
   function conexoes() {
     if (doc.hidden || typeof navigator !== "undefined" && navigator.onLine === false || root.DIARIO_DEMO) return;
     try {
-      if(typeof tab!=='undefined'&&['home','dia'].includes(tab))root.DiarioMarketData?.refresh?.().then(()=>{root.tapeRedraw?.();root.DiarioInteligenciaEtapa1?.refresh?.();}).catch(()=>{});
+      if(typeof tab!=='undefined'&&['home','dia'].includes(tab))root.DiarioInteligenciaEtapa1?.refresh?.();
       // Reaproveita o WS já gerenciado pela camada de cotações, sem conexão duplicada.
       root.QuoteConnection?.sockets?.();
       if (typeof SESS !== "undefined" && SESS?.at)
@@ -114,7 +114,17 @@
       root.tapeRedraw?.();
     } catch {}
   }
-  function desenha() { if (!doc.hidden) root.tapeRedraw?.(); }
+  let ultimaBordaV1027=0;
+  function desenha() {
+    if(doc.hidden)return;
+    root.tapeRedraw?.();
+    if(typeof tab==='undefined'||!['home','dia'].includes(tab))return;
+    root.DiarioInteligenciaEtapa1?.atualizarPulso?.();
+    if(root.DIARIO_DEMO||typeof navigator!=='undefined'&&navigator.onLine===false)return;
+    if(Date.now()-ultimaBordaV1027<30000)return;
+    ultimaBordaV1027=Date.now();
+    root.DiarioMarketData?.refresh?.().then(()=>{if(!doc.hidden){root.tapeRedraw?.();root.DiarioInteligenciaEtapa1?.atualizarPulso?.();}}).catch(()=>{});
+  }
   setTimeout(conexoes, 700);
   setInterval(conexoes, 60000);
   setInterval(ponte, 15000); // Apenas leitura da ponte local configurada; sem rede Supabase por segundo.
