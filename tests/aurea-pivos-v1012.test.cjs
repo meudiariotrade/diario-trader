@@ -136,3 +136,28 @@ test('Terminal HP: o mensal usa o pavio mais alto do mês e preserva o período'
  assert.equal(await ctx.aureaHistoricoTerminal(g,new AbortController().signal),true);
  assert.equal(g.validacao_ohlc.tf,'1M');assert.equal(g.pivos.find(p=>p.data===dates[5]).preco,'19');
 });
+
+test('foto diária sem escala e datas: gráfico do Terminal e imagem chegam a topos e fundos por OHLC',async()=>{
+ const w=420,h=420,px=new Uint8ClampedArray(w*h*4).fill(255),history=[];
+ for(let i=0;i<36;i++){
+  const low=38+i*.27+5*Math.sin(i*.83)+2*Math.cos(i*.37),high=low+2+(i*7%9)*.3;
+  history.push([Date.UTC(2025,0,i+1)/1000,low+.5,high,low,high-.5]);
+  const x=42+i*9,u=Math.round(710-11*high),l=Math.round(710-11*low);
+  for(let y=u;y<=l;y++)for(let col=x-(y>u+4&&y<l-4?2:0);col<=x+(y>u+4&&y<l-4?2:0);col++){
+   const k=4*(y*w+col);px[k]=px[k+1]=px[k+2]=15;
+  }
+ }
+ const g={identificacao_visual:{ticker:'PRIO3',periodo:'1D',market:'BR',origem:'marca_dagua'},
+  geometria_preco:{x0:.05,y0:.09,x1:.94,y1:.93,candles:'preto_fundo_claro',eixos:[],tempo:[]},pivos:[]};
+ let reads=0;
+ ctx.window={TRM:{tec:{velas:(tk,tf)=>{reads++;assert.equal(tk,'PRIO3');assert.equal(tf,'1d');return {L:history}}}}};
+ ctx.Image=class{naturalWidth=w;naturalHeight=h;async decode(){}};
+ ctx.document={createElement:()=>({getContext:()=>({drawImage(){},getImageData:()=>({data:px})})})};
+ const signal=new AbortController().signal;
+ const resposta=await ctx.aureaValidarHistoricoV1012(g,'Analise',signal);
+ await ctx.aureaValidarImagemV1021(resposta,[{url:'fixture'}],signal);
+ assert.ok(reads>0);assert.equal(g.validacao_ohlc.source,'Terminal · gráfico');assert.equal(g.validacao_ohlc.status,'conferido');
+ for(const tipo of ['topo','fundo'])assert.ok(g.pivos.some(p=>p.tipo===tipo&&p.ancoragem_visual==='pixel_compativel'&&history.some(v=>v[tipo==='topo'?2:3]===Number(p.preco))));
+ const bars=history.map(v=>({h:v[2],l:v[3]}));
+ assert.equal(ctx.aureaAlinharPavios(g,[...bars,...bars],px,w,h),null);
+});
