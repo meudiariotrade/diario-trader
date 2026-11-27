@@ -3555,7 +3555,8 @@ function cqCryptoBase(periodo, now = Date.now()) {
   return Math.floor((now-days*86400000)/60000)*60000;
 }
 function cqCryptoVariacao(item, category, quote) {
-  const original = quote ? quote.d1 : item.d1;
+  let original = quote ? quote.d1 : item.d1;
+  if(item.s==='ICEEUR:BRN1!'&&window.DiarioMarketData){original=window.DiarioMarketData.normal('BZ=F',item,quote)?.d1??null;}
   if (!cqCryptoMobile(category) || CQ_CRYPTO_HIST.periodo === "24h") return original;
   const ref = CQ_CRYPTO_HIST.refs[String(item.c || "").toUpperCase()];
   return quote?.bnc && Number.isFinite(quote.px) && quote.px > 0 && Number.isFinite(ref) && ref > 0
