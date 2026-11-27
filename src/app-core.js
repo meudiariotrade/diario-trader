@@ -73659,9 +73659,10 @@ async function hojeVivoPoll() {
   ) {
     HLV.busy = 1;
     try {
-      const e = await (
+      // v1039: cache único e incremental da ponte (antes: tabela inteira a cada 3 s).
+      const e = (window.DiarioCotacoesPonte ? await window.DiarioCotacoesPonte.ler() : await (
           await rq("/rest/v1/cotacoes?select=*&user_id=eq." + SESS.uid)
-        ).json(),
+        ).json()),
         t = {};
       (e.forEach(
         (a) =>
@@ -92284,9 +92285,10 @@ function net188() {
     e.pTs = Date.now();
     const E = performance.now();
     try {
-      const P = await (
+      // v1039: cache único e incremental da ponte (antes: tabela inteira a cada 2,5 s).
+      const P = (window.DiarioCotacoesPonte ? await window.DiarioCotacoesPonte.ler() : await (
         await rq("/rest/v1/cotacoes?select=*&user_id=eq." + SESS.uid)
-      ).json();
+      ).json());
       e.pf.todas = (P || []).map((_) => ({
         tk: String(_.ticker).toUpperCase(),
         up: Date.parse(_.updated_at) || 0,

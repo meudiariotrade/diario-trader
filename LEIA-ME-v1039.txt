@@ -1,0 +1,5 @@
+v1039 — Egress: cotações da ponte do Profit
+- Início (posições ao vivo, a cada 3 s) e Terminal (a cada 2,5 s) liam a tabela cotacoes inteira no Supabase, todas as colunas (~50 kB por leitura ≈ 120 MB/h com as telas abertas).
+- Agora as duas usam um cache único (src/shared/cotacoes-ponte.js): só as 11 colunas usadas; depois da 1ª carga pede só as linhas alteradas (updated_at > última vista); no máximo 1 leitura a cada 15 s no pregão (seg–sex 09:00–18:30) e a cada 10 min fora dele; aba escondida não consulta; pedidos simultâneos viram um só; recarga completa a cada 30 min.
+- Mercado/Live já usava o canal Cloudflare (v552/v947) e não mudou.
+Arquivos: src/shared/cotacoes-ponte.js (novo), src/domains/core/14-estudos-e-geracao.js, src/domains/core/17-fontes-e-balancos.js, src/app-core.js, src/index.html, src/service-worker.js, release.config.json
