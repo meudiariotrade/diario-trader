@@ -28,7 +28,17 @@ jobs:
             }catch(e){console.log(JSON.stringify({label,error:e.message}));}
           }
           const body=JSON.stringify({symbols:{tickers:ids,query:{types:[]}},columns:cols});
+          async function sina(){
+            try {
+              const r=await fetch('https://hq.sinajs.cn/list=nf_I0',{headers:{'User-Agent':'Mozilla/5.0',Referer:'https://finance.sina.com.cn/'},signal:AbortSignal.timeout(10000)});
+              const body=new TextDecoder('gbk').decode(await r.arrayBuffer());
+              const fields=body.match(/"([^"]*)"/)?.[1]?.split(',')||[];
+              console.log(JSON.stringify({label:'Sina I0',http:r.status,fields:fields.slice(0,16),date:fields.find(x=>/^\d{4}-\d{2}-\d{2}$/.test(x))}));
+            }catch(e){console.log(JSON.stringify({label:'Sina I0',error:e.message}));}
+          }
           await Promise.all([
+            sina(),
+            request('Worker macro legado',base+'/v1/macro'),
             request('Worker cmd',base+'/v1/macro?modo=cotacoes&aba=cmd'),
             request('Worker snapshot',base+'/v1/mercado'),
             ...['futures','global'].map(m=>request('TradingView '+m,'https://scanner.tradingview.com/'+m+'/scan',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body}))
