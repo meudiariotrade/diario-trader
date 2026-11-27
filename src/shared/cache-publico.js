@@ -95,3 +95,110 @@
  }
  w.DiarioPublico=Object.freeze({get,peek:path=>memory.get(path)?.data||null,remember,read,adrs,inspect:()=>({pending:pending.size,cached:[...memory.keys()]})});
 })(typeof window!=='undefined'?window:globalThis);
+
+
+/* v1026 — leitura canônica dos ativos do painel. Reutiliza CQ/cqPf e a Cloudflare;
+ * não cria conexões, timers, consultas Supabase ou preços sintéticos. */
+(function(w){
+ 'use strict';
+ if(w.DiarioMarketData)return;
+ const specs=Object.freeze({
+  '^BVSP':['idx','BMFBOVESPA:IBOV','IBOV'],
+  'BRL=X':['fx','FX_IDC:USDBRL','USDBRL'],
+  '^GSPC':['idx','SP:SPX','SPX'],
+  '^IXIC':['idx','NASDAQ:IXIC','IXIC'],
+  '^NDX':['idx','NASDAQ:NDX','NDX'],
+  '^DJI':['idx','DJ:DJI','DJI'],
+  '^N225':['idx','TVC:NI225','NI225'],
+  '^GDAXI':['idx','XETR:DAX','DAX'],
+  'DX-Y.NYB':['fx','TVC:DXY','DXY'],
+  'ES=F':['fut','CME_MINI:ES1!','ES1!'],
+  'NQ=F':['fut','CME_MINI:NQ1!','NQ1!'],
+  'YM=F':['fut','CBOT_MINI:YM1!','YM1!'],
+  'CL=F':['cmd','NYMEX:CL1!','CL1!'],
+  'BZ=F':['cmd','ICEEUR:BRN1!','BRN1!'],
+  'GC=F':['cmd','TVC:GOLD','GOLD'],
+  'TIO=F':['cmd','SGX:FEF1!','FEF1!'],
+  'DCE:I':['cmd','DCE:I1!','I1!'],
+  'BTC-USD':['cri','BITSTAMP:BTCUSD','COINBASE:BTCUSD','BINANCE:BTCUSDT','BTCUSDT','BTCUSD'],
+  'ETH-USD':['cri','BITSTAMP:ETHUSD','COINBASE:ETHUSD','BINANCE:ETHUSDT','ETHUSDT','ETHUSD'],
+  'SOL-USD':['cri','COINBASE:SOLUSD','BINANCE:SOLUSDT','SOLUSDT','SOLUSD'],
+  'XRP-USD':['cri','BITSTAMP:XRPUSD','BINANCE:XRPUSDT','XRPUSDT','XRPUSD'],
+  'EWZ':['adr','AMEX:EWZ','EWZ'],
+  'WIN':['fut','BMFBOVESPA:WIN1!','WIN1!','WINFUT'],
+  'WDO':['fut','BMFBOVESPA:WDO1!','WDO1!','WDOFUT'],
+  'USDZAR':['fx','FX:USDZAR','FX_IDC:USDZAR','USDZAR'],
+  'USDMXN':['fx','FX:USDMXN','FX_IDC:USDMXN','USDMXN','MXN=X']
+ });
+ const aliases=new Map();
+ for(const [k,arr] of Object.entries(specs)){aliases.set(k,k);for(const a of arr.slice(1))aliases.set(a,k);}
+ aliases.set('USD/BRL','BRL=X');aliases.set('USD/ZAR','USDZAR');aliases.set('USD/MXN','USDMXN');
+ const key=s=>{const k=String(s||'').trim().toUpperCase();return aliases.get(k)||(/^(?:BMFBOVESPA:)?[A-Z]{4}\d{1,2}$/.test(k)?k.replace(/^BMFBOVESPA:/,''):null);};
+ const spec=k=>specs[k]||['br','BMFBOVESPA:'+k,k];
+ const num=x=>x===null||x===undefined||x===''||typeof x==='boolean'?null:Number.isFinite(Number(x))?Number(x):null;
+ const valid=q=>q&&num(q.px)>0&&!q.suspeito&&q.quoteStatus!=='divergente';
+ const date=x=>{if(!x)return null;const t=typeof x==='number'?(x<1e11?x*1000:x):Date.parse(x);return Number.isFinite(t)&&t>0&&t<=Date.now()+60000?new Date(t).toISOString():null;};
+ const brent=(q,d)=>{const p=num(q.fechamentoAnterior);return /^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||'')&&q.quoteStatus==='coerente'&&p>0&&d!==null&&Math.abs((Number(q.px)/p-1)*100-d)<=0.08?d:null;};
+ function normal(k,row,overlay=null){
+  if(!valid(row)&&!valid(overlay))return null;
+  if(row?.suspeito||row?.quoteStatus==='divergente')return null;
+  const q=overlay&&valid(overlay)?overlay:row;
+  if(!valid(q))return null;
+  let d=num(q.d1??q.chg??q.chp), instrument=String(q.simboloFonte||row?.simboloFonte||row?.s||k);
+  let fonte=q.fonte||q.source||row?.source||row?.fonte||'Referência pública';
+  let basis=q.baseVariacao||null;
+  if(overlay&&q===overlay){
+   if(q.bnc){instrument='BINANCE:'+k.split('-')[0]+'USDT';fonte='Binance';basis='24h';}
+   else if(q.fh){fonte='Finnhub';basis='fechamento anterior';}
+   else if(!q.fonte&&!q.source){fonte='Profit';instrument=q.tk||instrument;basis='fechamento/ajuste anterior';}
+  }
+  if(k==='BZ=F')d=brent(q,d);
+  const prev=num(q.fechamentoAnterior??q.previousClose??q.pc??q.fec);
+  if(prev>0&&d!==null&&basis!=='24h'&&Math.abs((num(q.px)/prev-1)*100-d)>0.08)d=null;
+  const at=date(q.horarioPreco||q.priceAt||q.dadoEm||q.em||q.ts);
+  if(q.live===true&&(!at||Date.now()-Date.parse(at)>180000))return overlay&&q===overlay?normal(k,row):null;
+  return Object.freeze({...row,...q,s:spec(k)[1]||row?.s||k,simboloFonte:instrument,px:num(q.px),d1:d,chg:d,fonte,source:fonte,baseVariacao:basis,fechamentoAnterior:prev,horarioPreco:at,priceAt:at,dadoEm:at,fechado:q.fechado===true,live:q.live===true&&!!at,quoteStatus:q.quoteStatus||(!at?'horario_nao_confirmado':null)});
+ }
+ function get(s){
+  const k=key(s);if(!k||w.DIARIO_DEMO)return null;
+  if(k==='EWZ'){try{const e=w.DiarioEwzCotacao?.();if(valid(e))return normal(k,{s:'AMEX:EWZ',...e});}catch{}}
+  const [group,...symbols]=spec(k);
+  try{
+   const rows=typeof CQ!=='undefined'?CQ.d?.[group]?.itens||[]:[];
+   const row=symbols.map(sym=>rows.find(r=>r.s===sym&&valid(r))).find(Boolean);
+   if(row){
+    let overlay=null;try{if(typeof cqPf==='function')overlay=cqPf(row,group);}catch{}
+    return normal(k,row,overlay);
+   }
+  }catch{}
+  // Sem linha pública (inicialização), reutilizar também o overlay Profit do Research.
+  if(group==='br'||k==='^BVSP'||k==='WIN'||k==='WDO'){try{const row={s:spec(k)[1],c:k==='^BVSP'?'IBOV':k};const overlay=typeof cqPf==='function'?cqPf(row,group):null;if(valid(overlay))return normal(k,row,overlay);}catch{}}
+  // Binance já conectado pode preencher o par mesmo antes da primeira lista pública.
+  if(group==='cri'){try{const c=k.split('-')[0],b=typeof bncQ==='function'?bncQ(c):null;if(b&&num(b.px)>0)return normal(k,{s:spec(k)[1],px:b.px},{px:b.px,d1:b.d1,bnc:true,live:true,em:b.em});}catch{}}
+  // Reserva pública: apenas o símbolo explicitamente identificado, sem casar por nome.
+  try{
+   const snapshot=w.DiarioPublico?.peek?.('/v1/mercado');
+   const rows=(snapshot?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
+   const row=rows.find(r=>valid(r)&&(symbols.includes(r.s)||symbols.includes(r.simboloFonte)||(r.s===k&&!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD'].includes(k))));
+   if(row)return normal(k,row);
+  }catch{}
+  // O ticker já possui referência pública própria durante a inicialização. Não usar
+  // como substituto de contratos/cripto com base ou par desconhecidos.
+  if(!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD','WIN','WDO'].includes(k)){
+   try{const q=w.tapeDados?.()?.[k];if(valid(q))return normal(k,{s:spec(k)[1],...q});}catch{}
+  }
+  return null;
+ }
+ let pending=null;
+ function refresh(){
+  if(w.DIARIO_DEMO||typeof cqCarrega!=='function'||w.document?.hidden)return Promise.resolve([]);
+  if(pending)return pending;
+  pending=Promise.allSettled(['idx','fx','fut','cmd','cri','br'].map(g=>cqCarrega(g,false))).finally(()=>{pending=null;});
+  return pending;
+ }
+ function snapshot(keys=Object.keys(specs)){
+  const rows={};for(const k of keys){const q=get(k);if(q)rows[k]=q;}
+  return Object.freeze({id:new Date().toISOString(),rows:Object.freeze(rows)});
+ }
+ w.DiarioMarketData=Object.freeze({get,has:s=>!!key(s),key,normal,refresh,snapshot});
+})(typeof window!=='undefined'?window:globalThis);

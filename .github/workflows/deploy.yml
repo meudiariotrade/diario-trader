@@ -61,6 +61,8 @@ jobs:
       - name: Validar corte do scanner legado
         run: node --test tests/cutover-screeners-v1001.test.cjs
       - run: npm run build
+      - name: Validar central de cotações v1026
+        run: node --test tests/market-data-v1026.test.cjs tests/panorama-cotacoes-v1025.test.cjs tests/tape-live.test.cjs
       # Build e validação estrutural continuam obrigatórios para publicar.
       - run: npm run check
       - name: Testar clique real da lupa e atalho de busca v950

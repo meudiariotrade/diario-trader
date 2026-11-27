@@ -4,7 +4,7 @@ const vm=require('node:vm');
 const fs=require('node:fs');
 const src=fs.readFileSync('src/domains/core/08-terminal-e-sazonalidade.js','utf8');
 const layer=fs.readFileSync('src/domains/layers/01-navegacao-e-fluxos.js','utf8');
-const section=src.slice(src.indexOf('const imgSimbolosPublicos ='),src.indexOf('function imgDesenha()'));
+const section=src.slice(src.indexOf('function imgBrent955('),src.indexOf('function imgDesenha()'));
 const groups={
  cmd:['SGX:FEF1!','DCE:I1!','ICEEUR:BRN1!','NYMEX:CL1!','TVC:GOLD'],
  fut:['CME_MINI:ES1!','CME_MINI:NQ1!'],
@@ -12,7 +12,7 @@ const groups={
  idx:['BMFBOVESPA:IBOV','TVC:NI225','XETR:DAX'],
  cri:['BITSTAMP:BTCUSD','BITSTAMP:ETHUSD']
 };
-const make=(fail=[])=>{
+const make=(fail=[],window={})=>{
  const calls=[],CQ={d:{}},IMG={},MDO={v:null};
  const fetch=async url=>{
   const u=new URL(url),aba=u.searchParams.get('aba');
@@ -21,7 +21,7 @@ const make=(fail=[])=>{
   if(fail.includes(aba))throw Error('offline');
   return {ok:true,json:async()=>({itens:groups[aba].map(s=>({s,px:100,d1:1, ...(s==='ICEEUR:BRN1!'?{simboloFonte:'ICEEUR:BRNF2027',fechamentoAnterior:100/1.01,quoteStatus:'coerente'}:{})}))})};
  };
- const ctx=vm.createContext({IMG,MDO,CQ,fetch,URLSearchParams,AbortController,setTimeout,clearTimeout,window:{},SESS:{at:'mock'},AD:{data:{itens:[{}]},err:''},adrLoad:async()=>true,CQ_EDGE_V1022:'https://worker.test/v1/macro'});
+ const ctx=vm.createContext({IMG,MDO,CQ,fetch,URLSearchParams,AbortController,setTimeout,clearTimeout,window,SESS:{at:'mock'},AD:{data:{itens:[{}]},err:''},adrLoad:async()=>true,CQ_EDGE_V1022:'https://worker.test/v1/macro'});
  vm.runInContext(section+'\nthis.api={imgQ,imgDados,imgListasV1025,imgSimbolosPublicos}',ctx);
  return {calls,CQ,IMG,api:ctx.api,MDO};
 };
@@ -49,4 +49,14 @@ test('v1025 camada legada executa carregador do core em vez de sobrescrever seu 
  assert.match(layer,/imgDados = \(\(carregar\) => async function/);
  assert.match(layer,/carregar\.apply\(this, arguments\)/);
  assert.doesNotMatch(layer,/m = await Promise\.allSettled\(\[mdoCarrega\(!0\), adrLoad\(!0\), P\(\)\]\)/);
+});
+
+test('v1026 Panorama congela a mesma cotação da central e não volta a consultar as cinco listas',async()=>{
+ const row={s:'BITSTAMP:BTCUSD',px:60496,d1:.45,simboloFonte:'BINANCE:BTCUSDT',baseVariacao:'24h',fonte:'Binance'};
+ let refreshes=0,current=row;
+ const central={refresh:async()=>{refreshes++},snapshot:()=>({id:'snapshot',rows:{'BTC-USD':current}})};
+ const {api,calls,IMG}=make([],{DiarioMarketData:central});
+ await api.imgDados();current={...row,px:60373,d1:-.02};
+ assert.equal(refreshes,1);assert.equal(calls.length,0);assert.equal(IMG.snapshot1026,'snapshot');
+ assert.equal(api.imgQ('BTC-USD').px,60496);assert.equal(api.imgQ('BTC-USD').d1,.45);
 });

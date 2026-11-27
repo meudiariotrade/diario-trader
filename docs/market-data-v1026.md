@@ -1,0 +1,3 @@
+# v1026 — Central de cotações (etapa de integração)
+
+A central lê o mesmo cache CQ e overlay cqPf usados por Research, prioriza a referência EWZ existente e usa reservas públicas explicitamente mapeadas. Início/Resumão, ticker, Termômetro e Panorama consomem a central. O Panorama congela uma cópia dos ativos na geração. Cripto preserva a distinção entre par USDT/24h e referência USD; não atribui variação a Brent sem contrato e ajuste coerentes. Ausência não é 0%. Sem novas conexões nem consultas Supabase. Ainda requer homologação de cobertura dos símbolos e sessão em produção; ADRs, gráficos históricos e dados privados permanecem nas rotas específicas existentes. Não altera pesos nem layout.

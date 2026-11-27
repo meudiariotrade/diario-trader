@@ -75,6 +75,7 @@
     return q;
   }
   function consulta(chave, agora = Date.now()) {
+    const central=root.DiarioMarketData;if(central?.has(chave)&&!root.DIARIO_DEMO)return central.get(chave);
     // v926: este módulo é carregado depois do núcleo e sobrescreve tapeVivo.
     // Consulta primeiro a referência validada de EWZ exposta pelo núcleo.
     if (chave === "EWZ") {
@@ -99,6 +100,7 @@
   function conexoes() {
     if (doc.hidden || typeof navigator !== "undefined" && navigator.onLine === false || root.DIARIO_DEMO) return;
     try {
+      if(typeof tab!=='undefined'&&['home','dia'].includes(tab))root.DiarioMarketData?.refresh?.().then(()=>{root.tapeRedraw?.();root.DiarioInteligenciaEtapa1?.refresh?.();}).catch(()=>{});
       // Reaproveita o WS já gerenciado pela camada de cotações, sem conexão duplicada.
       root.QuoteConnection?.sockets?.();
       if (typeof SESS !== "undefined" && SESS?.at)

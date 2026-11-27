@@ -5474,7 +5474,7 @@ const IC = (e) =>
   window.tapeDados = () => n;
   const ativo = (key) => {
     const live = typeof window.tapeVivo === "function" ? window.tapeVivo(key) : null;
-    const v = live || n[key];
+    const v = window.DiarioMarketData?.has(key)&&!window.DIARIO_DEMO ? live : live || n[key];
     return v && Number.isFinite(+v.px) && +v.px > 0 ? v : null;
   };
   const i = ([key, nome]) => {
