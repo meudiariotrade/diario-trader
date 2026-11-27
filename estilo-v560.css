@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 f314f2acfe9e5bfaf8dac7be65c7d85fb9f2cfc3b1a4cc29e17e5c638e8f2e7b */
+/* Gerado de src/app-theme.css · SHA256 30f2e7d9cc66be3df961c4324ec9a2d4fe53933ebe26b8c6209cda948518ff9d */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7560,3 +7560,42 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-val>s
 html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-instrument>small:not(.dt670-pt),
 html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-note{color:#475569!important}
 html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-instrument>small.dt670-pt{color:#916500!important}
+
+/* ===== Etapa 3 (v1054) — correções de celular ===== */
+/* Barra inferior com 6 destinos: o 6º ("Mais") abre o menu e acende fora das 5 telas fixas. */
+html body #v4-bnav{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+html body #v4-bnav > button{min-width:0!important}
+html body #v4-bnav > button span{white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+@media (max-width:360px){html body #v4-bnav > button span{font-size:10px!important;letter-spacing:-.01em}}
+/* Terminal no celular: "Indicadores ▾" era sticky numa barra com rolagem e cobria "Candles".
+   Quebra em linhas; nada fica escondido embaixo de outro botão. */
+@media (max-width:767px){
+ html body.trmon #app #trgrid .g9bar:not(#v432a):not(#v1054),html body .g9bar:not(#v1054){flex-wrap:wrap!important;overflow-x:visible!important;row-gap:6px!important}
+ html body.trmon #app #trgrid .g9bar:not(#v432a):not(#v1054) > .v432-ind,html body .g9bar:not(#v1054) > .v432-ind{position:static!important;margin-left:auto!important}
+}
+/* "Buscar…" no Terminal ficava com o cinza padrão do navegador (#6B6B6B).
+   Usa a paleta própria do Terminal (#11141B / #1E232E / #D4A017). */
+html:root body[data-v4route=term] .dt954-search-pill{
+ display:inline-flex!important;align-items:center!important;gap:6px!important;height:34px!important;min-height:34px!important;
+ padding:0 12px!important;border-radius:6px!important;border:1px solid #1E232E!important;background:#11141B!important;
+ color:#9AA3B2!important;font:500 12.5px/1 system-ui,-apple-system,sans-serif!important;white-space:nowrap!important;cursor:pointer!important;box-shadow:none!important
+}
+html:root body[data-v4route=term] .dt954-search-pill:hover,html:root body[data-v4route=term] .dt954-search-pill:focus-visible{border-color:#D4A017!important;color:#E2E8F0!important}
+@media (max-width:767px){html:root body[data-v4route=term] .dt954-search-pill{max-width:150px!important;font-size:13px!important}}
+/* Carteira: o título "Carteira" já está no cabeçalho do app; some o título repetido
+   (e o slogan genérico). Os botões Atualizar / Movimentação / Markowitz continuam. */
+html body #app .pf .pfhd .pftit{display:none!important}
+/* Research: sub-abas numa faixa única (antes "Conselho" caía sozinha na 2ª linha). */
+html body #app .an-subs .an830-seg{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch;gap:2px!important}
+html body #app .an-subs .an830-seg::-webkit-scrollbar{display:none}
+html body #app .an-subs .an830-seg > button{flex:0 0 auto!important;white-space:nowrap!important}
+@media (max-width:767px){html body #app .an-subs .an830-seg > button{padding-left:10px!important;padding-right:10px!important;min-height:40px!important}}
+/* Trades: chips de "Evitei" quebram linha (antes "Fora do horário" saía cortado sem aviso). */
+html:root body #app#app .dt983-evit-pop.dt983-evit-pop:not(#v1054){flex-wrap:wrap!important;overflow-x:visible!important;row-gap:6px!important}
+/* Botões "Configurar Trava & Limites", "Evitei" e "Contratos" estavam com o cinza padrão do navegador. */
+html body #app button.dt975-badge{background:var(--ui-sub,#181C28)!important;border:1px solid var(--ui-card-line,rgba(255,255,255,.06))!important;color:var(--ui-title,#E2E8F0)!important;border-radius:6px!important;box-shadow:none!important;font-weight:600!important}
+html body #app button.dt975-badge:hover,html body #app button.dt975-badge:focus-visible{border-color:rgba(245,158,11,.55)!important}
+@media (max-width:767px){html body #app button.dt975-badge{min-height:40px!important;padding:0 12px!important}}
+/* Aviso de sincronização pendente: no celular saía cortado ("toque para envi…") e cobria o conteúdo. */
+html body #filap{max-width:calc(100vw - 24px)!important;white-space:normal!important;text-align:center!important;line-height:1.3!important}
+@media (max-width:767px){html body #filap{left:12px!important;right:12px!important;transform:none!important;width:auto!important;font-size:13px!important;padding:8px 12px!important;bottom:calc(var(--nav,64px) + 10px + env(safe-area-inset-bottom,0px))!important}}

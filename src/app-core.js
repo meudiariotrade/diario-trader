@@ -26933,6 +26933,14 @@ function irExteriorHtml(ano, num) {
     : `<p class="mut sm">Nenhuma venda de ativo no exterior em ${ano}. Se vender, o ganho entra aqui: 15% na declaração anual, sem a isenção de R$ 20 mil.</p>`;
   return h;
 }
+/* v1054: Enter no e-mail ou na senha envia o login/cadastro (antes só o clique funcionava). */
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || e.isComposing) return;
+  const t = e.target;
+  if (!t || (t.id !== "ce" && t.id !== "cp")) return;
+  const b = document.querySelector('[data-a="auth"]');
+  if (b) { e.preventDefault(); b.click(); }
+});
 function render0() {
   window.DiarioCiclos?.enter(tab);
   if (typeof SCA !== "undefined" && SCA && (tab !== "swing" || VW.S !== "sc")) {
