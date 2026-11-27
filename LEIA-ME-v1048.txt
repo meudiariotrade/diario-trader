@@ -1,0 +1,11 @@
+v1048 — Áurea e conselheiras: análises com dados reais e veredito
+
+- Ativo reconhecido por apelido ("put de petr" → PETR4, "vale" sem confundir "vale a pena").
+- Raio-x do ativo calculado no aparelho a partir do histórico diário: preço, variações, MM20/50/200, IFR14, ATR, volatilidade 20d, máx/mín 52 semanas, pivôs, suportes e resistências. Vai junto para Livermore, Graham, opções e debate.
+- Veredito no topo (favorável / desfavorável / aguardar) com gatilho e invalidação em R$.
+- Pareceres mantêm os números conferidos com os dados; só o número sem lastro é trocado por "(nº não conferido)" — antes o parágrafo inteiro era apagado.
+- Opções: analisa primeiro o ativo e depois se a estrutura faz sentido (prazo, theta, volatilidade, strike frente aos suportes).
+- Níveis do print: suporte/resistência precisa coincidir com um extremo real (não com a régua do eixo); sem eixo calibrado usa a escala dos pivôs conferidos.
+- Placar da Áurea no aparelho: confere depois se o preço bateu primeiro o gatilho ou a invalidação.
+- Debate mostra só as conselheiras com dados.
+- Reenvio de imagem espera a análise anterior terminar em vez de falhar com "já está em andamento".
