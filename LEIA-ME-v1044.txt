@@ -1,0 +1,5 @@
+v1044 — Áurea marca topos e fundos no print
+
+- Encaixe dos pivôs no pavio real da imagem mesmo sem eixo calibrado (busca no dispositivo, sem custo de servidor).
+- Linhas de resistência/suporte/invalidação reposicionadas pela escala preço↔altura dos próprios pivôs (ou do eixo, se calibrado).
+- Rótulos T/F com preço em formato brasileiro: topo acima, fundo abaixo.

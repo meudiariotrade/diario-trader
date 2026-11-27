@@ -3815,18 +3815,73 @@ function aureaAncorarPivosV1021(g,data,w,h){
   return marcar(p,best,true);
  });
 }
+// v1044 — encaixe tolerante: procura o pavio real (preto/cinza) perto do ponto sugerido e
+// calibra preço↔altura pelos próprios pivôs, para marcar topos/fundos e níveis no lugar certo.
+function aureaEncaixarPivosV1044(g,data,w,h){
+ const pts=Array.isArray(g.pivos)?g.pivos:[];
+ if(!data||!Number.isInteger(w)||!Number.isInteger(h)||w<120||h<120||data.length!==w*h*4)return pts;
+ const r=g.geometria_preco,ok=r&&[r.x0,r.y0,r.x1,r.y1].every(v=>Number.isFinite(v)&&v>=0&&v<=1)&&r.x1-r.x0>.2&&r.y1-r.y0>.15;
+ const cand=pts.filter(p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1);
+ if(!cand.length)return pts;
+ const bx0=ok?r.x0:Math.max(0,Math.min(...cand.map(p=>p.x))-.05),bx1=ok?r.x1:Math.min(1,Math.max(...cand.map(p=>p.x))+.05);
+ const by0=ok?r.y0:Math.max(0,Math.min(...cand.map(p=>p.y))-.12),by1=ok?r.y1:Math.min(1,Math.max(...cand.map(p=>p.y))+.12);
+ const L=Math.max(1,Math.ceil(bx0*w)),R=Math.min(w-2,Math.floor(bx1*w)),T=Math.max(1,Math.ceil(by0*h)),B=Math.min(h-2,Math.floor(by1*h));
+ const dark=(x,y)=>{if(x<L||x>R||y<T||y>B)return false;const i=(y*w+x)*4,a=data[i],b=data[i+1],c=data[i+2];return data[i+3]>200&&Math.max(a,b,c)<115&&Math.max(a,b,c)-Math.min(a,b,c)<30;};
+ const rx=Math.max(4,Math.round(w*.03)),ry=Math.max(8,Math.round(h*.09)),run=Math.max(4,Math.round(h*.006));
+ const usados=[];
+ return pts.map(p=>{
+  if(["pixel_compativel","pavio_visual"].includes(p?.ancoragem_visual)||p?.validacao==="divergente"||!["topo","fundo"].includes(p?.tipo)||!cand.includes(p))return p;
+  const dir=p.tipo==="topo"?1:-1,px=Math.round(p.x*w),py=Math.round(p.y*h);
+  let best=null;
+  for(let x=Math.max(L,px-rx);x<=Math.min(R,px+rx);x++){
+   // Linhas horizontais (grade, suporte desenhado) não contam como pavio.
+   const ys=dir===1?[Math.max(T,py-ry),Math.min(B,py+ry),1]:[Math.min(B,py+ry),Math.max(T,py-ry),-1];
+   for(let y=ys[0];dir===1?y<=ys[1]:y>=ys[1];y+=ys[2]){
+    if(!dark(x,y))continue;
+    let k=0;while(k<run&&dark(x,y+dir*k))k++;
+    if(k<run)continue;
+    if([-3,-2,2,3].filter(dx=>dark(x+dx,y)).length>=3)continue;
+    const melhor=!best||(dir===1?y<best.y:y>best.y)||(y===best.y&&Math.abs(x-px)<Math.abs(best.x-px));
+    if(melhor)best={x,y};
+    break;
+   }
+  }
+  if(!best||usados.some(q=>Math.abs(q.x-best.x)<=3&&Math.abs(q.y-best.y)<=3))return p;
+  usados.push(best);
+  return {...p,x:best.x/w,y:best.y/h,ancoragem_visual:"pavio_visual",verificacao:p.verificacao||"Pavio localizado na imagem."};
+ });
+}
+// v1044 — escala preço→y: eixo calibrado; senão, regressão pelos pivôs encaixados (preço lido × altura do pavio).
+function aureaEscalaV1044(g){
+ const eixo=aureaCalibrarEixoV1021(g?.geometria_preco);
+ if(eixo)return p=>eixo.y(p);
+ const pares=(g?.pivos||[]).filter(p=>p.ancoragem_visual==="pixel_compativel"||p.ancoragem_visual==="pavio_visual").map(p=>({y:p.y,v:aureaPrecoVisualV1021(p.preco)})).filter(q=>q.v);
+ const ajuste=l=>{const n=l.length,mv=l.reduce((a,q)=>a+q.v,0)/n,my=l.reduce((a,q)=>a+q.y,0)/n;let sxy=0,sxx=0;for(const q of l){sxy+=(q.v-mv)*(q.y-my);sxx+=(q.v-mv)**2;}if(!sxx)return null;const b=sxy/sxx,a=my-b*mv;return {a,b,erro:Math.max(...l.map(q=>Math.abs(a+b*q.v-q.y)))};};
+ let l=pares,f=l.length>=2?ajuste(l):null;
+ while(f&&f.erro>.025&&l.length>3){const pior=l.reduce((m,q)=>Math.abs(f.a+f.b*q.v-q.y)>Math.abs(f.a+f.b*m.v-m.y)?q:m);l=l.filter(q=>q!==pior);f=ajuste(l);}
+ if(!f||f.b>=0||f.erro>.04)return null;
+ return p=>f.a+f.b*p;
+}
+function aureaPosicionarNiveisV1044(g){
+ const esc=aureaEscalaV1044(g);
+ if(!esc||!Array.isArray(g.niveis))return;
+ g.niveis=g.niveis.map(n=>{const v=Number(n?.preco),y=v>0?esc(v):NaN;return Number.isFinite(y)&&y>=0&&y<=1?{...n,y}:n;});
+}
 async function aureaValidarImagemV1021(resposta,imagens,signal){
  const gs=Array.isArray(resposta.graficos)?resposta.graficos:[resposta];
  await Promise.all(gs.map(async (g,i)=>{
   const url=imagens[(g.indice||i+1)-1]?.url;
   g.pivos=(g.pivos||[]).map(p=>({...p,ancoragem_visual:"nao_conferida"}));
-  if(!url||!g.geometria_preco||signal.aborted)return;
+  if(!url||signal.aborted)return;
   try{
    const img=new Image();img.src=url;await img.decode();if(signal.aborted)return;
    const scale=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight)),canvas=document.createElement("canvas");
    canvas.width=Math.round(img.naturalWidth*scale);canvas.height=Math.round(img.naturalHeight*scale);
    const x=canvas.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,canvas.width,canvas.height);
-   g.pivos=aureaAncorarPivosV1021(g,x.getImageData(0,0,canvas.width,canvas.height).data,canvas.width,canvas.height);
+   const px1044=x.getImageData(0,0,canvas.width,canvas.height).data;
+   if(g.geometria_preco)g.pivos=aureaAncorarPivosV1021(g,px1044,canvas.width,canvas.height);
+   g.pivos=aureaEncaixarPivosV1044(g,px1044,canvas.width,canvas.height);
+   aureaPosicionarNiveisV1044(g);
    canvas.width=canvas.height=0;
   }catch{}
  }));
