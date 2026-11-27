@@ -9772,7 +9772,7 @@ Dados do terminal agora:
       ["IBOV", "BMFBOVESPA:IBOV", 0, "IBOV"],
       ["Dólar", "FX_IDC:USDBRL", 4, "USDBRL"],
       ["S&P 500", "SP:SPX", 2, "SPX"],
-      ["Nasdaq", "NASDAQ:NDX", 2, "NDX"],
+      ["Nasdaq 100", "NASDAQ:NDX", 2, "NDX"],
       ["Bitcoin", "BINANCE:BTCUSDT", 0, "BTCUSD"],
       ["Brent", "TVC:UKOIL", 2, ""],
       ["DXY", "TVC:DXY", 2, ""],

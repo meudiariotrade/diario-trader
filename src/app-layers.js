@@ -31513,9 +31513,12 @@ try {
     function v829MercadoKpis() {
       const U=window.DiarioUI;if(!U)return "";
       const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>window.DiarioMarketData?.has(k)&&!window.DIARIO_DEMO?window.DiarioMarketData.get(k):f(()=>window.tapeVivo?.(k),null)||tape[k];
-      const itens=[["^BVSP","Ibovespa"],["BRL=X","Dólar"],["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["EWZ","EWZ"],["BTC-USD","Bitcoin"]].map(([k,n])=>{
-        const v=viva(k);if(!v||!(+v.px>0))return null;const c=v.chg==null||v.chg===""?null:+v.chg;
-        return {rotulo:n,valor:q(v.px),detalhe:c==null?"variação indisponível":Q(c)+(v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
+      /* Etapa 1: quando a NYSE ficou fechada num pregão da B3 (ex.: Ação de Graças),
+         a variação dos ativos dos EUA compara com um fechamento mais antigo. */
+      const baseEua=f(()=>{const S=window.DiarioSessoes,u=S.session("NYSE").previousDate,b=S.session("B3").previousDate;return u&&b&&u<b?" · vs "+u.slice(8,10)+"/"+u.slice(5,7):"";},"");
+      const itens=[["^BVSP","Ibovespa"],["BRL=X","Dólar"],["^GSPC","S&P 500"],["^IXIC","Nasdaq Comp."],["EWZ","EWZ"],["BTC-USD","Bitcoin"]].map(([k,n])=>{
+        const v=viva(k);if(!v||!(+v.px>0))return null;const c=v.chg==null||v.chg===""?null:+v.chg;const eua=/^(\^GSPC|\^IXIC|EWZ)$/.test(k)&&+v.fechamentoAnterior>0?baseEua:"";
+        return {rotulo:n,valor:q(v.px),detalhe:c==null?"variação indisponível":Q(c)+eua+(v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
       }).filter(Boolean);
       return '<section class="v4-summary v829-kpis" aria-label="Resumo do mercado">'+(itens.length?U.kpis(itens):'<p class="v4-sub">Cotações carregando na barra superior.</p>')+'</section>';
     }
@@ -31537,7 +31540,7 @@ try {
       if(!us||us.state==="fechado"&&!f(()=>(AD.data?.itens||[]).length,0))return "";
       f(()=>typeof adrLoad==="function"&&adrLoad(),null);
       const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>window.DiarioMarketData?.has(k)&&!window.DIARIO_DEMO?window.DiarioMarketData.get(k):f(()=>window.tapeVivo?.(k),null)||tape[k];
-      const idx=[["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["^DJI","Dow"],["EWZ","EWZ"],["CL=F","WTI"]].map(([k,n])=>{
+      const idx=[["^GSPC","S&P 500"],["^IXIC","Nasdaq Comp."],["^DJI","Dow"],["EWZ","EWZ"],["CL=F","WTI"]].map(([k,n])=>{
         const v=viva(k);if(!v||!(+v.px>0))return "";const c=v.chg==null||v.chg===""?null:+v.chg;
         return '<div><span>'+n+'</span><b>'+q(v.px)+'</b><em class="'+L(c)+'">'+(c==null?"—":Q(c))+'</em></div>';}).join("");
       const itens=f(()=>(AD.data?.itens||[]).map(r=>{const w=window.TraderAdr?.view(r)||{};return {s:r.s,px:w.active?.px??r.px,ch:w.change??r.chp,k:w.active?.kind};}).filter(r=>r.ch!=null),[]);

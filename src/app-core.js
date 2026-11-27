@@ -25348,6 +25348,8 @@ const IC = (e) =>
     const v = window.DiarioMarketData?.has(key)&&!window.DIARIO_DEMO ? live : live || n[key];
     return v && Number.isFinite(+v.px) && +v.px > 0 ? v : null;
   };
+  /* Etapa 1: preços do ticker com separador de milhar (59.719,91), igual aos cards. */
+  const pxTape = (x) => Number(x).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const i = ([key, nome]) => {
     const v = ativo(key);
     if (!v) return "";
@@ -25357,7 +25359,7 @@ const IC = (e) =>
     const classe = positivo ? "up" : "dn";
     const seta = m == null ? "" : positivo ? "▲" : "▼";
     const percentual = m == null ? "—" : (positivo ? "+" : "") + f2(m) + "%";
-    return `<span>${nome} <span class="${classe}">${seta}</span></span><span class="${classe}">${f2(v.px)} <b>${percentual}</b></span>`;
+    return `<span>${nome} <span class="${classe}">${seta}</span></span><span class="${classe}">${pxTape(v.px)} <b>${percentual}</b></span>`;
   };
   function l() {
     if (document.hidden) return;
@@ -71231,6 +71233,20 @@ function cqIntervaloV1022(aba,agora=Date.now()){
   return 30000;
 }
 const cqControllersV1022=new Map(),cqPedidosV1030=new Map();
+/* Etapa 1 (v1054): na rolagem, o contínuo do TradingView (WDO1!, WIN1!…) mede a
+   variação contra o ajuste de OUTRO vencimento (ex.: WDO −4% com dólar à vista −2,35%).
+   Se o futuro diverge do ativo à vista em mais de 1 p.p., o preço fica e a variação
+   vira "—" com status "rolagem", em vez de exibir um número falso. */
+const CQ_ROLAGEM_V1054={WDO:"BRL=X",DOL:"BRL=X",WIN:"^BVSP",IND:"^BVSP"};
+function cqRolagemV1054(n){
+  for(const it of n?.itens||[]){
+    const ref=CQ_ROLAGEM_V1054[it?.c];if(!ref||!Number.isFinite(+it.d1)||it.d1===null)continue;
+    let base=null;try{base=window.DiarioMarketData?.get(ref)?.d1;}catch(_){}
+    if(!Number.isFinite(+base)||base===null)continue;
+    if(Math.abs(+it.d1-+base)>1){it.d1=null;it.dabs=null;it.quoteStatus="rolagem";it.baseVariacao="Variação omitida: ajuste anterior de outro vencimento (rolagem do contrato contínuo)";}
+  }
+  return n;
+}
 function cqCancelarV1022(){
   for(const ctl of cqControllersV1022.values())ctl.abort();
 }
@@ -71254,6 +71270,7 @@ function cqCarrega(e,t){
       const n=await r.json().catch(()=>({}));
       if(ctl.signal.aborted)return;
       if(!r.ok||!Array.isArray(n.itens)||(!n.itens.length&&CQ.d[e]?.itens?.length))throw new Error(n.error||n.erro||"Cloudflare: cotação indisponível ("+r.status+")");
+      cqRolagemV1054(n);
       CQ.d[e]=n;CQ.ts[e]=Date.now();CQ.err="";CQ.errors[e]="";
       return n;
     }catch(o){
@@ -98091,7 +98108,7 @@ Dados do terminal agora:
       ["IBOV", "BMFBOVESPA:IBOV", 0, "IBOV"],
       ["Dólar", "FX_IDC:USDBRL", 4, "USDBRL"],
       ["S&P 500", "SP:SPX", 2, "SPX"],
-      ["Nasdaq", "NASDAQ:NDX", 2, "NDX"],
+      ["Nasdaq 100", "NASDAQ:NDX", 2, "NDX"],
       ["Bitcoin", "BINANCE:BTCUSDT", 0, "BTCUSD"],
       ["Brent", "TVC:UKOIL", 2, ""],
       ["DXY", "TVC:DXY", 2, ""],
