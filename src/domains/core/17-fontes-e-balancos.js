@@ -6375,15 +6375,18 @@ Dados do terminal agora:
     const P = "om|" + E;
     if (!(e.dados[P] && Date.now() - e.dados[P].ts < 3e4))
       try {
-        const B = await (
+        // v1040: com a grade já em memória, pede só se ela mudou (updated_at > a última vista).
+        const velho = e.dados[P] && e.dados[P].v,
+          B = await (
           await rq(
             "/rest/v1/opcoes_grade?select=ativo,spot,series,updated_at&ativo=eq." +
               encodeURIComponent(E) +
               "&user_id=eq." +
-              SESS.uid,
+              SESS.uid +
+              (velho && velho.updated_at ? "&updated_at=gt." + encodeURIComponent(velho.updated_at) : ""),
           )
         ).json();
-        ((e.dados[P] = { ts: Date.now(), v: (B && B[0]) || null }),
+        ((e.dados[P] = { ts: Date.now(), v: (B && B[0]) || velho || null }),
           delete e.err[P]);
       } catch (B) {
         e.err[P] = String(B.message || B);

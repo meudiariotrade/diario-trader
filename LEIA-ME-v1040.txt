@@ -1,0 +1,4 @@
+v1040 — Egress: grade de opções
+- Mercado → Opções (a cada 55 s, todas as grades ≈ 394 kB) e Terminal (a cada 30 s por ativo ≈ 56 kB) liam a grade inteira mesmo sem mudança.
+- Agora, depois da 1ª carga, só pedem as grades alteradas (updated_at > a última vista); sem mudança, a resposta vem vazia. Recarga completa a cada 30 min.
+Arquivos: src/domains/core/09-operacoes-e-estudos.js, src/domains/core/17-fontes-e-balancos.js, src/app-core.js, release.config.json
