@@ -3224,20 +3224,40 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         if(!M.imagem)return "";
         const cont={topo:0,fundo:0},semRecorte=E.validacao_ohlc?.historico_disponivel&&E.validacao_ohlc?.recorte_homologado!==true;
         const pts=(!semRecorte&&Array.isArray(E.pivos)?E.pivos:[]).map(p=>({...p,ordem:++cont[p.tipo]})).filter(p=>["pixel_compativel","pavio_visual"].includes(p.ancoragem_visual)&&p.validacao!=="divergente"&&["topo","fundo"].includes(p?.tipo)&&["confirmado","potencial"].includes(p?.estado)&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1).slice(0,40);
-        const marks=pts.map((p,i)=>{
-          // v1044: topo com rótulo acima, fundo abaixo; preço em formato brasileiro.
-          const cor=p.tipo==="topo"?"#b91c1c":"#067647",x=p.x*100,y=p.y*100,topo=p.tipo==="topo";
-          const hx=x>75?"-100%":x<25?"0":"-50%",tr=`translate(${hx},${topo?"-100%":"0"})`;
+        // v1050: no gráfico só os extremos mais relevantes (máximo e mínimo sempre), para os rótulos não se encavalarem.
+        if(pts.length>7){
+          const ext=[pts.reduce((a,b)=>a.y<b.y?a:b),pts.reduce((a,b)=>a.y>b.y?a:b)],rel=p=>Number(p.relevancia)||Math.abs(p.y-.5);
+          const keep=new Set([...ext,...[...pts].sort((a,b)=>rel(b)-rel(a))].filter((p,i,a)=>a.indexOf(p)===i).slice(0,7));
+          for(let i=pts.length-1;i>=0;i--)if(!keep.has(pts[i]))pts.splice(i,1);
+          const c2={topo:0,fundo:0};pts.sort((a,b)=>a.x-b.x).forEach(p=>p.ordem=++c2[p.tipo]);
+        }
+        // v1050: posiciona cada rótulo (em % do print, tamanho estimado para ~360px de largura) no primeiro
+        // lugar livre: acima, abaixo, à esquerda ou à direita do marcador. Sem lugar, fica só o número.
+        const AR=E.imagem_proporcao_v1050||1.6,cw=l=>(l*6.2+8)/360*100,ch=15/(360*AR)*100,ocup=[];
+        const livre=b=>b.x>=0&&b.x+b.w<=100&&b.y>=0&&b.y+b.h<=100&&!ocup.some(o=>b.x<o.x+o.w&&o.x<b.x+b.w&&b.y<o.y+o.h&&o.y<b.y+b.h);
+        for(const p of pts)ocup.push({x:p.x*100-1.6,y:p.y*100-1,w:3.2,h:2});
+        for(const n of (Array.isArray(E.niveis)?E.niveis:[]))if(Number.isFinite(n.y))ocup.push({x:0,y:n.y*100-ch*1.1,w:cw(28),h:ch});
+        const ordemRel=[...pts].sort((a,b)=>(Number(b.relevancia)||0)-(Number(a.relevancia)||0));
+        for(const p of ordemRel){
           const pr=String(p.preco||"").replace(/^~\s*/,"~").replace(".",",");
-          const label=(topo?"T":"F")+p.ordem+(pr?" "+pr:"")+(p.rotulo?" · "+p.rotulo:"");
-          return `<span data-aurea-pivo="${p.ordem}" style="position:absolute;left:${x}%;top:${y}%;width:10px;height:10px;border:2px solid ${cor};background:#fff;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none"></span><span style="position:absolute;left:${x}%;top:${y}%;transform:${tr};margin-top:${topo?-8:8}px;white-space:nowrap;padding:1px 4px;background:${cor};color:white;border-radius:4px;font-size:10px;font-weight:700;line-height:1.3;pointer-events:none;font-variant-numeric:tabular-nums">${s(label)}</span>`;
+          p._txt=(p.tipo==="topo"?"T":"F")+p.ordem+(pr?" "+pr:"");
+          const w=cw(p._txt.length),x=p.x*100,y=p.y*100,cima=p.tipo==="topo",g=1.8;
+          const opc=[[x-w/2,cima?y-ch-g:y+g],[x-w/2,cima?y+g:y-ch-g],[x-w-g,y-ch/2],[x+g,y-ch/2],[x-w/2,cima?y-2*ch-g:y+ch+g]];
+          const b=opc.map(([bx,by])=>({x:bx,y:by,w,h:ch})).find(livre);
+          if(b){ocup.push(b);p._box=b;}else{p._txt=(p.tipo==="topo"?"T":"F")+p.ordem;const w2=cw(p._txt.length);const b2=[[x-w2/2,cima?y-ch-g:y+g],[x+g,y-ch/2],[x-w2-g,y-ch/2]].map(([bx,by])=>({x:bx,y:by,w:w2,h:ch})).find(livre);if(b2){ocup.push(b2);p._box=b2;}}
+        }
+        const marks=pts.map(p=>{
+          const cor=p.tipo==="topo"?"#b91c1c":"#067647",x=p.x*100,y=p.y*100,b=p._box;
+          return `<span data-aurea-pivo="${p.ordem}" style="position:absolute;left:${x}%;top:${y}%;width:10px;height:10px;border:2px solid ${cor};background:#fff;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none"></span>`+(b?`<span style="position:absolute;left:${b.x}%;top:${b.y}%;white-space:nowrap;padding:1px 4px;background:${cor};color:white;border-radius:4px;font-size:10px;font-weight:700;line-height:1.3;pointer-events:none;font-variant-numeric:tabular-nums">${s(p._txt)}</span>`:"");
         }).join("");
         // v1043: linhas horizontais (resistência, suporte, pescoço, alvo, invalidação) e resumo do padrão gráfico.
         const COR1043={resistencia:"#b91c1c",suporte:"#067647",pescoco:"#d97706",alvo:"#1d4ed8",invalidacao:"#475569"};
         const NOME1043={resistencia:"Resistência",suporte:"Suporte",pescoco:"Pescoço",alvo:"Alvo",invalidacao:"Invalida"};
         const fmt1043=v=>Number(v).toLocaleString("pt-BR",{maximumFractionDigits:Number(v)<100?2:0});
-        const niveis=(!semRecorte&&Array.isArray(E.niveis)?E.niveis:[]).filter(n=>COR1043[n?.tipo]&&Number.isFinite(n.y)&&n.y>=0&&n.y<=1&&Number(n.preco)>0).slice(0,8);
-        const linhas=niveis.map(n=>`<span style="position:absolute;left:${(E.geometria_preco?.x0||0)*100}%;right:${(1-(E.geometria_preco?.x1||1))*100}%;top:${n.y*100}%;border-top:2px dashed ${COR1043[n.tipo]};pointer-events:none"></span><span style="position:absolute;left:4px;top:${n.y*100}%;transform:translateY(-110%);padding:1px 4px;background:rgba(255,255,255,.92);color:${COR1043[n.tipo]};border:1px solid ${COR1043[n.tipo]};border-radius:4px;font-size:10px;font-weight:700;line-height:1.3;pointer-events:none;font-variant-numeric:tabular-nums">${s(NOME1043[n.tipo]+" "+fmt1043(n.preco)+(n.rotulo?" · "+n.rotulo:""))}</span>`).join("");
+        const niveis=(!semRecorte&&Array.isArray(E.niveis)?E.niveis:[]).filter(n=>COR1043[n?.tipo]&&Number.isFinite(n.y)&&n.y>=0&&n.y<=1&&Number(n.preco)>0).filter((n,i,a)=>!a.slice(0,i).some(q=>Math.abs(Number(q.preco)-Number(n.preco))<=Number(n.preco)*.012)).slice(0,6);
+        // Rótulos de linhas muito próximas vão um acima e outro abaixo da linha.
+        const ladoN=niveis.map((n,i)=>niveis.slice(0,i).some(q=>Math.abs(q.y-n.y)<.03));
+        const linhas=niveis.map(n=>`<span style="position:absolute;left:${(E.geometria_preco?.x0||0)*100}%;right:${(1-(E.geometria_preco?.x1||1))*100}%;top:${n.y*100}%;border-top:2px dashed ${COR1043[n.tipo]};pointer-events:none"></span><span style="position:absolute;left:4px;top:${n.y*100}%;transform:translateY(${ladoN[niveis.indexOf(n)]?"10%":"-110%"});padding:1px 4px;background:rgba(255,255,255,.92);color:${COR1043[n.tipo]};border:1px solid ${COR1043[n.tipo]};border-radius:4px;font-size:10px;font-weight:700;line-height:1.3;pointer-events:none;font-variant-numeric:tabular-nums">${s(NOME1043[n.tipo]+" "+fmt1043(n.preco)+(n.rotulo?" · "+n.rotulo:""))}</span>`).join("");
         const pd=E.padrao_grafico;
         const padrao=pd&&pd.nome?'<figcaption style="font-size:12px;line-height:1.45;margin-top:6px;font-variant-numeric:tabular-nums"><b>Padrão:</b> '+s(pd.nome)+(pd.pescoco?' · pescoço '+fmt1043(pd.pescoco):'')+(pd.alvo?' · alvo medido '+fmt1043(pd.alvo):'')+(pd.invalidacao?' · invalida em '+fmt1043(pd.invalidacao):'')+(pd.confirmacao?'<br>'+s(pd.confirmacao):'')+'</figcaption>':"";
         return `<figure class="wf-chat-sent-image" style="margin:8px 0"><div style="position:relative;width:100%;line-height:0"><img src="${s(M.imagem)}" alt="Imagem original anexada à pergunta" style="display:block;width:100%;height:auto;max-height:none;object-fit:contain">${linhas}${marks}</div>${padrao}${pts.length?'<figcaption style="font-size:11px;line-height:1.4;margin-top:6px">T: topo · F: fundo. Marcadores sobre os pavios visíveis.'+(pts.some(p=>p.ancoragem_visual==="pavio_visual")?' Parte das posições é aproximada, com eixo de preço não calibrado.':'')+'</figcaption>':(E.pivos?.length?'<figcaption style="font-size:11px">Sem marcação: não foi possível conferir a posição dos extremos no painel de preço.</figcaption>':"")}</figure>`;
@@ -3268,7 +3288,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         const st=E.estrutura;if(!st)return "";
         const blocos=[["Período",st.periodo],["Estrutura e tendência",st.tendencia],["Cenário principal",st.principal],["Cenário alternativo",st.alternativo],["Confirmação",st.confirmacao],["Invalidação",st.invalidacao],["Limitações",st.lacuna]];
         const pivos=Array.isArray(E.pivos)?E.pivos:[];
-        return '<section class="wf-chat-parecer">'+blocos.filter(v=>v[1]).map(([k,v])=>'<p><b>'+s(k)+':</b> '+s(v)+'</p>').join("")+(st.evidencias?.length?'<b>Evidências</b><ul>'+st.evidencias.map(v=>'<li>'+s(v)+'</li>').join("")+'</ul>':"")+(pivos.length?'<b>Topos e fundos relevantes</b><ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.validacao!=="estrutura_ohlc"?"?":"")+(p.preco?" · "+p.preco:""))+'</b> — '+s(p.validacao==='estrutura_ohlc'?'conferido no OHLC':'estimativa visual da IA')+': '+s(p.motivo)+'</li>').join("")+'</ul>':"")+'</section>';
+        return '<section class="wf-chat-parecer">'+blocos.filter(v=>v[1]).map(([k,v])=>'<p><b>'+s(k)+':</b> '+s(v)+'</p>').join("")+(st.evidencias?.length?'<b>Evidências</b><ul>'+st.evidencias.map(v=>'<li>'+s(v)+'</li>').join("")+'</ul>':"")+(pivos.length&&!E.validacao_ohlc?.recorte_homologado&&E.validacao_ohlc?.status!=="conferido"?'<b>Topos e fundos relevantes</b><ul>'+pivos.map((p,i)=>'<li><b>'+s((p.tipo==="topo"?"T":"F")+(i+1)+(p.validacao!=="estrutura_ohlc"?"?":"")+(p.preco?" · "+p.preco:""))+'</b> — '+s(p.validacao==='estrutura_ohlc'?'conferido no OHLC':'estimativa visual da IA')+(p.motivo?': '+s(p.motivo):'')+'</li>').join("")+'</ul>':"")+'</section>';
       }
       function opcoesAureaV1017(E){
         const p=E.opcoes_v1017;if(!p)return "";
@@ -3319,6 +3339,12 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           N("Lacunas",d.lacunas)+'<small>Modelo inicial: '+s(d.modelo_inicial||"não informado")+' · Síntese: '+s(d.modelo_sintese||"não informado")+'</small></section>';
       }
       // v1048: veredito no topo e raio-x do ativo calculado no aparelho.
+      // v1050: leitura de Livermore refeita com o histórico real (números conferidos).
+      function revisaoAureaV1050(E){
+        const r=E.revisao_v1050;if(!r||!r.resumo)return "";
+        const li=l=>Array.isArray(l)&&l.length?'<ul>'+l.map(x=>'<li>'+s(x)+'</li>').join("")+'</ul>':"";
+        return '<section class="wf-chat-parecer" data-aurea-revisao><b>'+s(r.titulo||"Livermore · Técnico com histórico real")+'</b><p>'+s(r.resumo)+'</p>'+li(r.explicacao)+(r.o_que_observar?.length?'<b>O que observar</b>'+li(r.o_que_observar):"")+'</section>';
+      }
       function vereditoAureaV1048(E,M){
         const v=E.veredito;if(!v||!v.texto)return "";
         const pl=window.DiarioPlacarAurea?.resumo?.(M?.por),plTxt=pl&&pl.acertos+pl.erros>0?' · Placar desta lente: '+pl.acertos+' acerto(s), '+pl.erros+' erro(s)'+(pl.abertos?', '+pl.abertos+' em aberto':''):'';
@@ -3334,7 +3360,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       }
       function e(M) {
         const E = M.r || {};
-        return `<article class="wf-chat-message" data-aurea-message="${s(String(M.id||""))}"><p class="wf-chat-question">${s(M.q)}</p>${graficosAureaV1011(M,E)}${aureaAcao(M)}${vereditoAureaV1048(E,M)}${dossieAureaV1048(E)}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}${estruturaAureaV1007(E)}${comparacaoAureaV1011(E)}
+        return `<article class="wf-chat-message" data-aurea-message="${s(String(M.id||""))}"><p class="wf-chat-question">${s(M.q)}</p>${graficosAureaV1011(M,E)}${aureaAcao(M)}${vereditoAureaV1048(E,M)}${revisaoAureaV1050(E)}${dossieAureaV1048(E)}${E.revisao_v1050?'<details class="wf-chat-parecer"><summary>Leitura visual inicial (antes de conferir com o histórico; pode citar números da régua do eixo)</summary>':''}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}${estruturaAureaV1007(E)}${M.por === "conselho"&&E.revisao_v1050 ? (E.visoes || []).map(v=>`<section class="wf-chat-parecer"><b>${s(v.escola)}</b><p style="white-space:pre-line">${s(v.argumento)}</p></section>`).join("")+'</details>' : ""}${comparacaoAureaV1011(E)}
       ${N("Fatos apresentados pelo modelo — confira as fontes", E.fatos)}
       ${N(
         "Impactos descritos",
@@ -3348,7 +3374,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         ),
       )}
       ${N("O que observar", E.o_que_observar)}${E.contraponto ? `<p><b>Contraponto:</b> ${s(E.contraponto)}</p>` : ""}
-      ${M.por === "conselho" ? (E.visoes || []).map(v=>`<section class="wf-chat-parecer"><b>${s(v.escola)}</b><p style="white-space:pre-line">${s(v.argumento)}</p></section>`).join("") : N("Visões", E.visoes?.map((u) => `${u.escola}: ${u.argumento}`))}${N(
+      ${M.por === "conselho" ? (E.revisao_v1050?[]:E.visoes || []).map(v=>`<section class="wf-chat-parecer"><b>${s(v.escola)}</b><p style="white-space:pre-line">${s(v.argumento)}</p></section>`).join("") : N("Visões", E.visoes?.map((u) => `${u.escola}: ${u.argumento}`))}${N(
         "Glossário",
         E.glossario?.map((u) => `${u.termo}: ${u.significado}`),
       )}
