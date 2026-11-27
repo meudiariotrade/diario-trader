@@ -33690,11 +33690,17 @@ function vStats() {
     );
   let f = "";
   if (ST.aba === "geral") {
+    /* v1054: "Onde você ganha e onde perde" com os trades do período/tipo escolhidos. */
+    let og1054 = "";
+    try {
+      if (window.DiarioOndeGanho && typeof dshRegistro === "function")
+        og1054 = window.DiarioOndeGanho.html(n.rows.map(dshRegistro).filter(Boolean));
+    } catch {}
     const x = n.dias.slice(-20);
     let v = -1 / 0;
     const g = n.curvaPL.map((b) => ((v = Math.max(v, b)), b - v)),
       h = n.rows.slice(-30);
-    f = `<h2>Evolução do resultado</h2>${lineChart("eq", n.curvaPL, m, (b) => s(b))}<h2>Recuos da conta</h2>${lineChart("dd", g, m, (b) => o(b))}<div class="sm mut">Quanto o resultado acumulado caiu em relação ao melhor momento anterior.</div><h2>Resultado por dia</h2>${barChart(
+    f = og1054 + `<h2>Evolução do resultado</h2>${lineChart("eq", n.curvaPL, m, (b) => s(b))}<h2>Recuos da conta</h2>${lineChart("dd", g, m, (b) => o(b))}<div class="sm mut">Quanto o resultado acumulado caiu em relação ao melhor momento anterior.</div><h2>Resultado por dia</h2>${barChart(
       "dia",
       x.map((b) => b.pl),
       x.map((b) => b.k.slice(8) + "/" + b.k.slice(5, 7)),
@@ -60842,26 +60848,31 @@ const dshN = (e, t = 2) =>
           : dshN(t, 0))
     );
   };
+/* v1054: um trade → registro do Dashboard (usado também por "Onde você ganha e onde perde"). */
+function dshRegistro(t) {
+  const a = calc(t);
+  if (a.pl == null) return null;
+  const o = String(t.dt || ""),
+    s = String(t.dtx || t.dt).slice(0, 10);
+  return {
+    d: s,
+    de: o.slice(0, 10) || s,
+    h: /T\d\d/.test(o) ? +o.slice(11, 13) : null,
+    v: emBRL(a.pl, moedaT(t)),
+    r: a.r != null && isFinite(a.r) ? a.r : null,
+    setup: String(t.setup || "").trim() || "Sem setup",
+    at: String(raizAtivo(t.ativo) || t.ativo || "?").toUpperCase(),
+    us: ehUS(t),
+    emo: t.emo2 || "",
+    ok: t.rules === "s",
+    err: t.err && t.err !== "Nenhum" ? t.err : "",
+  };
+}
 function dshTodas() {
   const e = [];
   S.trades.forEach((t) => {
-    const a = calc(t);
-    if (a.pl == null) return;
-    const o = String(t.dt || ""),
-      s = String(t.dtx || t.dt).slice(0, 10);
-    e.push({
-      d: s,
-      de: o.slice(0, 10) || s,
-      h: /T\d\d/.test(o) ? +o.slice(11, 13) : null,
-      v: emBRL(a.pl, moedaT(t)),
-      r: a.r != null && isFinite(a.r) ? a.r : null,
-      setup: String(t.setup || "").trim() || "Sem setup",
-      at: String(raizAtivo(t.ativo) || t.ativo || "?").toUpperCase(),
-      us: ehUS(t),
-      emo: t.emo2 || "",
-      ok: t.rules === "s",
-      err: t.err && t.err !== "Nenhum" ? t.err : "",
-    });
+    const r = dshRegistro(t);
+    r && e.push(r);
   });
   try {
     lcItems().forEach((t) => {
@@ -61478,6 +61489,7 @@ function vDash() {
     p = typeof mmDash == "function" ? mmDash() : "";
   return `<div id="dshw"><div class="top" style="align-items:center;gap:8px"><h1 style="margin:0">Dashboard</h1><div class="dshx"><button class="btn s" data-dshx="img">Imagem</button><button class="btn s" data-dshx="pdf">PDF</button></div></div>
 <div class="sm mut" style="margin:4px 0 10px">${a.nome}${DSH.m !== "all" ? " · " + (DSH.m === "us" ? "EUA" : "Brasil") : ""}${DSH.s ? " · setup " + esc(DSH.s) : ""}${DSH.a ? " · " + esc(DSH.a) : ""} · em R$ (US$ convertido)${a.cmp && n && n.n ? " · as setas comparam com " + a.cmp : ""}</div>
+${window.DiarioOndeGanho ? window.DiarioOndeGanho.html(o) : ""}
 <div class="dshf">${l("p", [
     ["30", "30 dias"],
     ["90", "90 dias"],

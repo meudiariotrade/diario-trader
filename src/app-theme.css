@@ -7670,3 +7670,19 @@ html:not([data-v427-tema=claro]) body:not([data-v4route=term]) nav#org-side:not(
 /* Painéis do Mercado: falha explicada com ação, em vez de "Consultando…" infinito. */
 html body #app .market-state-err{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:18px 12px;text-align:center;color:var(--ui-text-2,#94A3B8)}
 html body #app .market-state-err .btn{min-height:40px}
+/* Etapa 7 — "Onde você ganha e onde perde" (Dashboard). */
+html body #app .og1054 header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:10px}
+html body #app .og1054 h2{margin:0;font-size:16px;color:var(--ui-title,#E2E8F0)}
+html body #app .og1054 header small{color:var(--ui-label,#64748B)}
+html body #app .og1054 .og-cols{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:768px){html body #app .og1054 .og-cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+html body #app .og1054 h3{margin:0 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+html body #app .og1054 h3.g{color:var(--ui-gain,#10B981)}html body #app .og1054 h3.r{color:var(--ui-loss,#EF4444)}
+html body #app .og1054 ol{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+html body #app .og1054 li{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"t v" "n v" "s v";column-gap:10px;padding:8px 10px;border-radius:var(--lg-r2,12px);background:var(--lg-l2,rgba(255,255,255,.035));border:1px solid var(--lg-stroke-2,rgba(255,255,255,.06))}
+html body #app .og1054 li .og-tipo{grid-area:t;font-size:11px;color:var(--ui-label,#64748B)}
+html body #app .og1054 li b{grid-area:n;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ui-title,#E2E8F0)}
+html body #app .og1054 li small{grid-area:s;color:var(--ui-text-2,#94A3B8);font-variant-numeric:tabular-nums}
+html body #app .og1054 li em{grid-area:v;align-self:center;font-style:normal;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+html body #app .og1054 li em.g{color:var(--ui-gain,#10B981)}html body #app .og1054 li em.r{color:var(--ui-loss,#EF4444)}
+html body #app .og1054 li.og-vazio{display:block;color:var(--ui-label,#64748B);font-size:13px}
