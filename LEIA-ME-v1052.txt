@@ -1,0 +1,5 @@
+v1052 — Áurea nunca mais devolve o gráfico sem marcação
+
+- Casamento print × histórico mais tolerante: ajuste robusto (ignora até 12% de pontos fora), degrau de provento (gráfico ajustado numa fonte e não na outra), feriados que o Yahoo devolve como barra parada são ignorados e o bloco de candles é achado na imagem inteira.
+- Se ainda assim não casar, marca os topos e fundos da leitura visual no pavio real (preço aproximado ~), em vez de não marcar nada.
+- A leitura com histórico real (Livermore) roda sempre que o ativo é reconhecido, usando os pivôs da estrutura do histórico, mesmo sem casar o recorte.

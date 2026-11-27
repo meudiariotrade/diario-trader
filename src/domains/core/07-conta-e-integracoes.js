@@ -3941,6 +3941,12 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
     g.validacao_ohlc={...g.validacao_ohlc,status:"historico_sem_recorte",imagem_correspondida:false};
     g.pivos=[];
     aureaMarcarHistoricoV1046(g,px1044,canvas.width,canvas.height);
+    // v1052: se o recorte não casou com o histórico, marca os topos/fundos da leitura visual no pavio real
+    // (preço aproximado com "~"), em vez de deixar o gráfico sem nada.
+    if(!g.validacao_ohlc?.imagem_correspondida&&g._pivosModelo1052?.length){
+     const pv=aureaEncaixarPivosV1044({...g,pivos:g._pivosModelo1052.map(p=>({...p,ancoragem_visual:"nao_conferida"}))},px1044,canvas.width,canvas.height).filter(p=>p.ancoragem_visual==="pavio_visual");
+     if(pv.length>=2){g.pivos=pv.map(p=>({...p,validacao:"visual",preco:p.preco?"~"+String(p.preco).replace(/^~\s*/,""):""}));g.validacao_ohlc.visual_fallback=true;}
+    }
     aureaFinalizarRecorteV1047(g);
     canvas.width=canvas.height=0;return;
    }
@@ -4054,6 +4060,7 @@ function aureaPivosIndependentesV1046(bars){return aureaZigZagV1051(bars).slice(
 function aureaRegistrarHistoricoV1046(g,bars,source,tf,ticker){
  if(bars.length<5)return false;
  Object.defineProperty(g,"_ohlc1046",{value:bars,writable:true,configurable:true,enumerable:false});
+ if(!g._pivosModelo1052)Object.defineProperty(g,"_pivosModelo1052",{value:(g.pivos||[]).slice(),writable:true,configurable:true,enumerable:false});
  g.extremos_ohlc=aureaPivosIndependentesV1046(bars).map(({i,...p})=>p);
  g.pivos=[];
  g.validacao_ohlc={status:"historico_sem_recorte",ticker,tf,source,desde:bars[0].date,ate:bars[bars.length-1].date,historico_disponivel:true,pivos_calculados:true,imagem_correspondida:false,marcadores_validados:0,motivo:"Histórico disponível e pivôs calculados; recorte da imagem ainda não identificado. A lista refere-se à série disponível, não necessariamente ao print."};
@@ -4233,9 +4240,9 @@ function aureaFinalizarRecorteV1047(g){
  if(v?.historico_disponivel){
   v.recorte_homologado=v.status==="conferido"&&v.imagem_correspondida===true;
   if(!v.recorte_homologado){
-   g.extremos_ohlc=[];g.pivos=[];g.indicadores_ohlc=null;g.niveis=[];
+   g.extremos_ohlc=[];if(!v.visual_fallback)g.pivos=[];g.indicadores_ohlc=null;g.niveis=[];
    v.status="historico_sem_recorte";v.marcadores_validados=0;
-   v.motivo="Histórico OHLC encontrado e calculado, mas o recorte visível ainda não foi homologado. Nenhuma marcação ou extremo de fora do gráfico foi exibido.";
+   v.motivo=v.visual_fallback?"Histórico encontrado, mas o desenho do print não casou com ele candle a candle. Topos e fundos marcados pela leitura visual no pavio real (preço aproximado ~); os preços exatos estão no Raio-x e na leitura com histórico.":"Histórico OHLC encontrado e calculado, mas o recorte visível ainda não foi homologado. Nenhuma marcação ou extremo de fora do gráfico foi exibido.";
   }else{
    g.extremos_ohlc=(g.extremos_ohlc||[]).filter(p=>p.data>=v.desde&&p.data<=v.ate);
    const r=g.geometria_preco;
@@ -4257,7 +4264,8 @@ function aureaEnvelopeV1049(g,data,w,h,bars){
  const ink=(x,y)=>{const j=(y*w+x)*4;return data[j+3]>200&&Math.max(data[j],data[j+1],data[j+2])<140&&Math.max(data[j],data[j+1],data[j+2])-Math.min(data[j],data[j+1],data[j+2])<35;};
  // Limites sugeridos pela IA são só ponto de partida: o painel real é o maior bloco contínuo de tinta
  // (separa cabeçalho, rótulo do preço no eixo, textos do OBV e do volume).
- let L=Math.max(1,Math.floor((r.x0-.04)*w)),R=Math.min(w-2,Math.ceil((r.x1+.04)*w)),T=Math.max(1,Math.floor((r.y0-.04)*h)),B=Math.min(h-2,Math.ceil((r.y1+.04)*h));
+ // v1052: a área sugerida pela IA pode cortar o topo/fundo; o bloco de candles é achado na imagem inteira.
+ let L=1,R=w-2,T=1,B=h-2;void r;
  const bloco=(cont,gap)=>{let melhor=null,ini=-1,soma=0,vazio=0;for(let i=0;i<=cont.length;i++){const v=i<cont.length?cont[i]:0;if(v>0){if(ini<0){ini=i;soma=0;}soma+=v;vazio=0;}else if(ini>=0&&++vazio>gap||i===cont.length&&ini>=0){const fim=i-vazio;if(!melhor||soma>melhor.soma)melhor={ini,fim,soma};ini=-1;vazio=0;}}return melhor;};
  const linhas=[];for(let y=T;y<=B;y++){let c=0;for(let x=L;x<=R;x++)if(ink(x,y))c++;linhas.push(c);}
  const by=bloco(linhas,Math.max(6,Math.round(h*.012)));if(!by)return null;B=T+by.fim;T=T+by.ini;
@@ -4284,11 +4292,16 @@ function aureaEnvelopeV1049(g,data,w,h,bars){
   if(faltam>vis*.15||P.length<20)return [];
   const out=[];
   for(const log of logs){
-   const f=log?Math.log:v=>v;let mx=0,my=0;for(const [p,y] of P){mx+=f(p);my+=y;}mx/=P.length;my/=P.length;
-   let sxx=0,sxy=0;for(const [p,y] of P){sxx+=(f(p)-mx)**2;sxy+=(f(p)-mx)*(y-my);}
-   const b=sxy/sxx;if(!(b<0))continue;const a=my-b*mx;
-   const errs=P.map(([p,y])=>Math.abs(a+b*f(p)-y)),rms=Math.sqrt(errs.reduce((s,v)=>s+v*v,0)/errs.length);
-   out.push({n,extra,first,step,a,b,log,rms,xl,boas:errs.filter(e=>e<=Math.max(3,span*.02)).length/errs.length});
+   const f=log?Math.log:v=>v;
+   const reta=Q=>{let mx=0,my=0;for(const [p,y] of Q){mx+=f(p);my+=y;}mx/=Q.length;my/=Q.length;let sxx=0,sxy=0;for(const [p,y] of Q){sxx+=(f(p)-mx)**2;sxy+=(f(p)-mx)*(y-my);}const b=sxy/sxx;return {a:my-b*mx,b};};
+   let {a,b}=reta(P);if(!(b<0))continue;
+   // v1052: ajuste robusto — descarta até 12% dos pontos mais distantes (pavio fora do lugar, feriado,
+   // provento ajustado em uma das fontes) e refaz a reta com o resto.
+   const e0=P.map(([p,y])=>Math.abs(a+b*f(p)-y)),corte=[...e0].sort((x,y)=>x-y)[Math.floor(e0.length*.88)];
+   const Q=P.filter((_,k)=>e0[k]<=Math.max(corte,2));if(Q.length>=20){const r2=reta(Q);if(r2.b<0){a=r2.a;b=r2.b;}}
+   const errs=P.map(([p,y])=>Math.abs(a+b*f(p)-y)),bons=errs.filter(e=>e<=Math.max(3,span*.02));
+   const ord=[...errs].sort((x,y)=>x-y),nucleo=ord.slice(0,Math.ceil(ord.length*.88)),rms=Math.sqrt(nucleo.reduce((s,v)=>s+v*v,0)/nucleo.length);
+   out.push({n,extra,first,step,a,b,log,rms,xl,boas:bons.length/errs.length});
   }
   return out;
  };
@@ -4299,11 +4312,42 @@ function aureaEnvelopeV1049(g,data,w,h,bars){
  etapa1.sort((p,q)=>p.rms-q.rms);
  const cand=[];for(const f of etapa1){if(!cand.some(c=>c.n===f.n&&c.extra===f.extra))cand.push(f);if(cand.length===12)break;}
  for(const c of cand)for(let dl=0;dl<=4;dl++)for(let dr=0;dr<=4;dr++)fits.push(...ajustar(c0+dl,c1-dr,c.n,c.extra,[false,true]));
- fits.sort((p,q)=>p.rms-q.rms);const best=fits[0];
- if(!best||best.rms>Math.max(2.2,span*.016)||best.boas<.85)return null;
+ fits.sort((p,q)=>p.rms-q.rms);let best=fits[0];
+ // v1052: provento ajustado só numa das fontes cria um degrau de preço antes da data-ex.
+ // Se a reta única não serve, testa uma reta com um degrau (mesma inclinação, deslocamento antes de um pregão).
+ const limite=Math.max(2.2,span*.016);
+ if(!best||best.rms>limite||best.boas<.8){
+  const seg=[];
+  for(const c of cand.slice(0,4))for(const dl of [1,3])for(const dr of [1,3]){
+   const xl=c0+dl,xr=c1-dr,vis=c.n-c.extra,first=bars.length-vis;if(first<0)continue;
+   const step=(xr-xl)/(c.n-1),P=[];
+   for(let k=0;k<vis;k++){const e=env(xl+k*step);if(!e)continue;const b=bars[first+k];P.push([b.h,e[0],k],[b.l,e[1],k]);}
+   if(P.length<40)continue;
+   for(const log of [false,true]){const f=log?Math.log:v=>v;
+    for(let kb=8;kb<vis-8;kb+=3){
+     // mínimos quadrados com 3 parâmetros: y = a + b·f(p) + d·[k<kb]
+     let S=[0,0,0,0,0,0,0,0,0],T=[0,0,0];
+     for(const [p,y,k] of P){const v=[1,f(p),k<kb?1:0];for(let i=0;i<3;i++){T[i]+=v[i]*y;for(let j=0;j<3;j++)S[i*3+j]+=v[i]*v[j];}}
+     const det=(m)=>m[0]*(m[4]*m[8]-m[5]*m[7])-m[1]*(m[3]*m[8]-m[5]*m[6])+m[2]*(m[3]*m[7]-m[4]*m[6]);
+     const D=det(S);if(Math.abs(D)<1e-9)continue;
+     const sol=[0,1,2].map(i=>{const m=S.slice();for(let r=0;r<3;r++)m[r*3+i]=T[r];return det(m)/D;});
+     const [a,b,dd]=sol;if(!(b<0))continue;
+     const errs=P.map(([p,y,k])=>Math.abs(a+b*f(p)+(k<kb?dd:0)-y)),ord=[...errs].sort((x,y)=>x-y),nuc=ord.slice(0,Math.ceil(ord.length*.88));
+     const rms=Math.sqrt(nuc.reduce((s,v)=>s+v*v,0)/nuc.length),boas=errs.filter(e=>e<=Math.max(3,span*.02)).length/errs.length;
+     seg.push({n:c.n,extra:c.extra,first,step,a,b,log,rms,xl,boas,degrau:{kb:first+kb,d:dd}});
+    }
+   }
+  }
+  seg.sort((p,q)=>p.rms-q.rms);
+  const sb=seg[0];
+  if(!sb||sb.rms>limite||sb.boas<.8)return null;
+  if(seg.some(q=>Math.abs(q.n-sb.n)>2&&q.rms<sb.rms*1.35))return null;
+  best=sb;
+ }
  if(fits.some(q=>Math.abs(q.n-best.n)>2&&q.rms<best.rms*1.35))return null;
  const f=best.log?Math.log:v=>v;
- return {...best,y:p=>(best.a+best.b*f(p))/h,x:i=>(best.xl+(i-best.first)*best.step)/w,env,top,bot};
+ // Com degrau, a escala de preço→altura vale para o trecho depois do degrau (o mais recente, onde estão os níveis atuais).
+ return {...best,y:p=>(best.a+best.b*f(p))/h,yi:(p,i)=>(best.a+best.b*f(p)+(best.degrau&&i<best.degrau.kb?best.degrau.d:0))/h,x:i=>(best.xl+(i-best.first)*best.step)/w,env,top,bot};
 }
 function aureaMarcarHistoricoV1046(g,data,w,h){
  const bars=g._ohlc1046;
@@ -4326,7 +4370,7 @@ function aureaMarcarHistoricoV1046(g,data,w,h){
   }
   g.pivos=pv.flatMap(({i,...p})=>{
    const x=ev.x(ev.first+i),e=ev.env(x*w);if(!e)return [];
-   const yPx=p.tipo==="topo"?e[0]:e[1],yFit=ev.y(Number(p.preco))*h;
+   const yPx=p.tipo==="topo"?e[0]:e[1],yFit=ev.yi(Number(p.preco),ev.first+i)*h;
    if(Math.abs(yPx-yFit)>Math.max(4,h*.006))return [];
    return [{...p,...g.extremos_ohlc.find(q=>q.data===p.data&&q.tipo===p.tipo),x,y:yPx/h,ancoragem_visual:"pixel_compativel"}];
   });
@@ -4382,6 +4426,8 @@ async function aureaHistoricoTerminal(g,signal){
   if(date<=previous)return false;
   previous=date;
   if(date>=today)continue;
+  // v1052: feriado que o Yahoo devolve como barra parada (sem volume) não existe no gráfico da corretora.
+  if(!mensal&&(!v||v<=0)&&h===l)continue;
   const bucket=mensal?date.slice(0,7):date;
   if(mensal&&bucket===today.slice(0,7))continue;
   const last=bars[bars.length-1];
@@ -4659,9 +4705,9 @@ async function ecoPergunta(e, opt) {
     if(tkImg&&/^[A-Z]{4}\d{1,2}$/.test(tkImg)){const di=await aureaDossieV1048(tkImg,controller.signal);if(di&&ativo()){resposta.dossie_v1048=di;
       // v1050: com o histórico real em mãos, Livermore reescreve a leitura e o veredito só com números conferidos.
       const g0=resposta.graficos?.length===1?resposta.graficos[0]:resposta,vo=g0.validacao_ohlc;
-      if(vo?.recorte_homologado||vo?.status==="conferido"){
-        const piv=(g0.pivos?.length?g0.pivos:g0.extremos_ohlc||[]).map(p=>p.tipo+" "+String(p.preco).replace(".",",")+" em "+String(p.data).slice(0,10)+(p.obv_txt?" (OBV: "+p.obv_txt+")":"")).join("; ");
-        const ctx1050=aureaDossieTextoV1048(di)+"\n[PIVÔS CONFERIDOS NO HISTÓRICO · recorte "+vo.desde+" a "+vo.ate+"] "+piv+"\n[LEITURA VISUAL ANTERIOR, sem números] "+String(resposta.resumo||"").replace(/~?\d+(?:[.,]\d+)?/g,"").slice(0,500);
+      {const homolog=vo?.recorte_homologado||vo?.status==="conferido";
+        const piv=(homolog&&g0.pivos?.length?g0.pivos:homolog?g0.extremos_ohlc||[]:(di.ultimos_pivos||[]).map(p=>({...p,obv_txt:p.obv}))).map(p=>p.tipo+" "+String(p.preco).replace(".",",")+" em "+String(p.data).slice(0,10)+(p.obv_txt?" (OBV: "+p.obv_txt+")":"")).join("; ");
+        const ctx1050=aureaDossieTextoV1048(di)+"\n[PIVÔS DA ESTRUTURA NO HISTÓRICO"+(homolog?" · recorte "+vo.desde+" a "+vo.ate:"")+"] "+piv+"\n[LEITURA VISUAL ANTERIOR, sem números] "+String(resposta.resumo||"").replace(/~?\d+(?:[.,]\d+)?/g,"").slice(0,500);
         try{const rv=await aureaDebateCallV1013({fase:"grafico",lente:"livermore",pergunta:(q||"Análise técnica do gráfico enviado").slice(0,1500),contexto_publico:ctx1050.slice(0,5000)},controller.signal,titular);
           if(rv?.resultado&&ativo()){resposta.revisao_v1050=rv.resultado;if(rv.resultado.veredito)resposta.veredito=rv.resultado.veredito;}}catch{}
       }
