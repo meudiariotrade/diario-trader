@@ -1,0 +1,4 @@
+v1043 — Áurea desenha a análise técnica no print
+- Protocolo novo (Livermore/técnico) no Worker da Áurea: marca todos os topos e fundos relevantes com preço e rótulo, entrega linhas de resistência, suporte, pescoço, alvo medido (pescoço ± altura) e invalidação, nomeia o padrão (fundo/topo duplo, OCO etc.) e escreve a análise em ordem: tendência, pivôs, padrão e confirmação, alvo, invalidação, volume/OBV e cenários. Sem notação R.
+- No chat, o print volta com as linhas tracejadas coloridas e os rótulos com preço, e embaixo o resumo do padrão.
+Arquivos: cloudflare/diario-screeners/aurea-imagem-v1004.mjs, src/domains/layers/01-navegacao-e-fluxos.js, src/app-layers.js, tests/aurea-desenho-v1043.test.cjs (novo), .github/workflows/cloudflare-ia-v932.yml, release.config.json
