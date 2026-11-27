@@ -1290,7 +1290,7 @@ function imgBrent955(snapshot, agora=Date.now()) {
 }
 // v1025: exatamente os símbolos e categorias da lista Mercado/Cotações.
 const imgSimbolosPublicos = {
-  "TIO=F": ["SGX:FEF1!"],
+  "TIO=F": ["SGX:FEF2!"],
   "DCE:I": ["DCE:I1!"],
   "BZ=F": ["ICEEUR:BRN1!"],
   "CL=F": ["NYMEX:CL1!"],
@@ -1315,7 +1315,7 @@ function imgQ(e) {
   const macro=(MDO.v?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
   // A lista usada pelo usuário é a fonte primária; macro legado somente reserva local.
   const q=rows.find(r=>aliases.includes(r.s)&&imgValidaV1025(r)) ||
-    (!IMG.central1026&&macro.find(r=>(r.s===e||aliases.includes(r.s))&&imgValidaV1025(r)));
+    (!IMG.central1026&&macro.find(r=>(aliases.includes(r.s)||(r.s===e&&(e!=="TIO=F"||r.simboloFonte==="SGX:FEF2!")))&&imgValidaV1025(r)));
   if(e==="BZ=F"&&IMG.brent955&&imgValidaV1025(IMG.brent955)){
     const newer=q&&/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||"")&&q.quoteStatus==="coerente"&&Number.isFinite(q.d1)&&q.fechamentoAnterior>0&&Math.abs((q.px/q.fechamentoAnterior-1)*100-q.d1)<=0.08&&Date.parse(q.horarioPreco||q.priceAt)>Date.parse(IMG.brent955.horarioPreco||IMG.brent955.priceAt);
     if(!newer)return IMG.brent955;
@@ -1624,7 +1624,7 @@ function imgDesenha() {
     (Be(
       "Commodities",
       [
-        ["Minério SGX", imgQ("TIO=F"), 2],
+        ["SGX FEF2!", imgQ("TIO=F"), 2],
         ["Minério Dalian", imgQ("DCE:I"), 1],
         ["Petróleo Brent", imgQ("BZ=F"), 2],
         ["Petróleo WTI", imgQ("CL=F"), 2],

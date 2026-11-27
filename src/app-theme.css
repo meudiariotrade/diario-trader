@@ -7543,3 +7543,12 @@ html:root body #wf-chat-panel .wf-chat-preview-name{display:none}
  html:root body #wf-chat-panel form{max-height:62%;padding:4px 10px 8px}
  html:root body #wf-chat-panel form textarea{font-size:16px;line-height:1.35;min-height:44px;height:var(--wf-input-h,44px);max-height:92px}
 }
+
+/* v1028 — contraste do Termômetro apenas no tema claro. */
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-val>span>b,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-instrument>small b,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-val>strong.neutral{color:#14181f!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-val>span>small,
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-instrument>small:not(.dt670-pt),
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-note{color:#475569!important}
+html:root:root:root[data-v427-tema="claro"] #app#app .dt670-opening .dt670-instrument>small.dt670-pt{color:#916500!important}

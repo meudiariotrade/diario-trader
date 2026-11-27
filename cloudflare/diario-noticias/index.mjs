@@ -155,7 +155,7 @@ const MARKET_SYMBOLS=[
   ['TVC:DXY','Moedas','DXY'],['TVC:US10Y','Juros dos EUA','Treasury 10 anos'],
   ['ICEEUR:BRN1!','Commodities','Petróleo Brent'],
   ['NYMEX:CL1!','Commodities','Petróleo WTI'],
-  ['SGX:FEF1!','Commodities','Minério de ferro'],
+  ['SGX:FEF2!','Commodities','Minério SGX FEF2!'],
   ['TVC:GOLD','Commodities','Ouro'],
   ['SP:SPX','Bolsas','S&P 500'],['NASDAQ:IXIC','Bolsas','Nasdaq']
 ];
@@ -338,7 +338,7 @@ export default {
     if(path==='/v1/macro'){
       const u=new URL(request.url),q=u.searchParams,c={modo:q.get('modo')||'',aba:q.get('aba')||'',semana:q.get('semana')||''};
       const TTL={painel:60,cotacoes:ttlCotacoesV1022(c.aba),setores:300,ranking:600,fluxo:1800,agenda:1800,balancos:21600,sazonal:43200,sazonal_us:43200,'':120};
-      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana)+'&qv='+(c.modo==='cotacoes'?'1022':'967'));
+      const ttl=TTL[c.modo],cache=globalThis.caches?.default,chave=new Request(u.origin+'/v1/macro?modo='+encodeURIComponent(c.modo)+'&aba='+encodeURIComponent(c.aba)+'&semana='+encodeURIComponent(c.semana)+'&qv='+(c.modo==='cotacoes'?'1028':'1028'));
       if(ttl==null)return json({error:'modo_nao_suportado'},request,env,400);
       const cot=c.modo==='cotacoes',cacheControl=cot?'public, max-age='+Math.min(ttl,30)+', must-revalidate':null;
       if(cot&&!['fut','idx','br','us','adr','fx','cmd','cri','jur'].includes(c.aba))return json({error:'categoria_nao_suportada'},request,env,400,'no-store');

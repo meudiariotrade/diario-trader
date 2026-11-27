@@ -143,6 +143,195 @@
   }
   const diaBrt = date => new Intl.DateTimeFormat("en-CA", {timeZone:"America/Sao_Paulo", year:"numeric",month:"2-digit",day:"2-digit"}).format(date);
   const horaBrt = date => Number(new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",hourCycle:"h23"}).format(date));
+  const basesConfirmadasV1028=new Map();
+  function fechamentoCanonicoV1028(tipo,q,now){
+    const s=w.DiarioSessoes?.session?.(tipo.toUpperCase(),now);
+    if(!s?.verified)return undefined;
+    const dia=s.state==='post'&&s.close?s.date:s.previousDate;
+    if(!dia)return null;
+    const key=tipo+':'+dia,old=basesConfirmadasV1028.get(key);
+    const ts=stamp(q?.priceAt||q?.horarioPreco||q?.dadoEm),px=num(q?.px);
+    const contract=chave(q?.simboloFonte||q?.s);
+    const exact=aliases[tipo].has(contract)||new RegExp('^'+tipo.toUpperCase()+'[FGHJKMNQUVXZ]\\d{2,4}
+    const hBrt = horaBrt(new Date(now));
+    const canon=tipo==='win'?'WIN':tipo==='wdo'?'WDO':null,q=canon&&w.DiarioMarketData?.get(canon);
+    if(w.DiarioMarketData){const base=fechamentoCanonicoV1028(tipo,q,now);if(base!==undefined)return base;}
+    if(q)fontes=[{item:{...q,s:canon,em:q.priceAt},coleta:q.priceAt},...fontes.filter(f=>!combina(tipo,f.item))];
+    // v984: após o fechamento da B3 (18h BRT), o fechamento de referência para o próximo pregão é o próprio px de hoje.
+    if (hBrt >= 18) {
+      for (const f of fontes) {
+        if (!combina(tipo, f.item) || !valido(f.item, f.coleta, now)) continue;
+        const px = num(f.item.px ?? f.item.ult ?? f.item.preco);
+        if (px !== null && px > 0) return px;
+      }
+    }
+    // O fechamento informado pela fonte tem prioridade; senão, reconstituir só de
+    // cotação com percentual diário verificável ou de último preço pré-abertura.
+    for (const f of fontes) {
+      if (!combina(tipo, f.item) || !valido(f.item, f.coleta, now)) continue;
+      const item = f.item;
+      const base = [item.fechamentoAnterior, item.previousClose, item.prevClose, item.pc, item.ultimoFechamento].map(num).find(x=>x !== null && x > 0);
+      if (base) return base;
+    }
+    for (const f of fontes) {
+      if (!combina(tipo, f.item) || !valido(f.item, f.coleta, now)) continue;
+      const item = f.item, px = num(item.px ?? item.ult ?? item.preco);
+      if (px === null || px <= 0) continue;
+      const em = stamp(item.em || item.horarioPreco || item.updated_at);
+      // Antes das 09:00, última cotação datada de pregão anterior é a referência
+      // carregada. Sem data, não presumir que seja o fechamento de ontem.
+      if (em !== null && diaBrt(new Date(em)) < diaBrt(new Date(now))) return px;
+      if (item.fechado === true) return px;
+      const d = pct(item);
+      // Com cotação do dia e variação relativa ao fechamento anterior.
+      if (d !== null && 1 + d / 100 > 0 && (em === null || diaBrt(new Date(em)) === diaBrt(new Date(now))) && hBrt >= 9) return px / (1 + d / 100);
+    }
+    return null;
+  }
+  function calcular(v) {
+    const ok = x => typeof x === "number" && Number.isFinite(x);
+    const winPct = ["ewz","spf","wti"].every(k => ok(v[k])) ? 0.50*v.ewz + 0.35*v.spf + 0.15*v.wti : null;
+    const wdoPct = ["dxy","zar","mxn","ewz"].every(k => ok(v[k])) ? 0.45*v.dxy + 0.35*((v.zar+v.mxn)/2) - 0.20*v.ewz : null;
+    return {
+      winPct, wdoPct,
+      winDelta: ok(winPct) && ok(v.winBase) ? v.winBase*winPct/100 : null,
+      winProjetado: ok(winPct) && ok(v.winBase) ? v.winBase*(1+winPct/100) : null,
+      wdoProjetado: ok(wdoPct) && ok(v.wdoBase) ? v.wdoBase*(1+wdoPct/100) : null
+    };
+  }
+  function capturar() {
+    const now = Date.now(), f = lista(now);
+    const v = {};
+    for (const nome of ["ewz","spf","wti","dxy","zar","mxn"]) v[nome] = variacao(nome,f,now);
+    v.winBase = fechamento("win",f,now);
+    v.wdoBase = fechamento("wdo",f,now);
+    return {...v,...calcular(v)};
+  }
+  const nfmt = (value, digits=2) => Number(value).toLocaleString("pt-BR",{minimumFractionDigits:digits,maximumFractionDigits:digits});
+  const taxa = v => v === null ? "—" : (v>0?"+":"") + nfmt(v,2) + "%";
+  const cls = x => x === null ? "" : x > 0 ? "positive" : x < 0 ? "negative" : "neutral";
+  function bloco(nome, sigla, value, projetado, base, detalhe, d) {
+    const semProxies = value === null;
+    const semBase = !semProxies && projetado === null;
+    const complemento = semProxies
+      ? '<small class="dt670-pend">Dados insuficientes: '+detalhe+'</small>'
+      : semBase
+      ? '<small class="dt670-pend">Variação teórica calculada · aguardando '+detalhe+'</small>'
+      : '<small>Ref. sessão '+nfmt(base, nome==="WIN"?0:2)+' → teórico <b>'+nfmt(projetado,nome==="WIN"?0:2)+'</b> '+(nome==="WIN"?"pts":"pts · futuro")+'</small>';
+    const diferenca = !semProxies && !semBase && nome === "WIN" ? '<small class="dt670-pt">'+(d>0?"+":"")+nfmt(d,0)+' pontos</small>' : '';
+    return '<div class="dt670-instrument" data-dt670-ativo="'+sigla+'"><div class="dt670-val"><span><b>'+nome+'</b><small>'+sigla+'</small></span><strong class="'+cls(value)+'">'+taxa(value)+'</strong></div>'+diferenca+complemento+'</div>';
+  }
+  function html(v) {
+    const pendWin = [["EWZ","ewz"],["S&P futuro","spf"],["WTI","wti"],["fechamento WIN","winBase"]].filter(([_,k])=>v[k]===null).map(([n])=>n);
+    const pendWdo = [["DXY","dxy"],["USD/ZAR","zar"],["USD/MXN","mxn"],["EWZ","ewz"],["fechamento WDO","wdoBase"]].filter(([_,k])=>v[k]===null).map(([n])=>n);
+    return '<header class="dt670-head"><div><small>INTELIGÊNCIA DE PRÉ-MERCADO</small><h2>Termômetro de Abertura Teórica <span>WIN &amp; WDO</span></h2></div><span class="dt670-selo">Proxies globais</span></header>'+
+      '<div class="dt670-duo">'+
+      bloco("WIN","ÍNDICE · 50% EWZ + 35% S&P fut. + 15% WTI",v.winPct,v.winProjetado,v.winBase,pendWin.join(", ")||"referência pendente",v.winDelta)+
+      bloco("WDO","DÓLAR · 45% DXY + 35% EM (ZAR/MXN) − 20% EWZ",v.wdoPct,v.wdoProjetado,v.wdoBase,pendWdo.join(", ")||"referência pendente",null)+
+      '</div><p class="dt670-note">Estimativa pré-abertura baseada em proxies globais · Atualize às 09:00 com o leilão da B3. Não é preço oficial de abertura.</p>';
+  }
+  function alvo() {
+    let t;
+    try { t = typeof tab !== "undefined" ? tab : null; } catch { t = null; }
+    const app = d.getElementById("app");
+    if (!app) return null;
+    // v675: Início/Meu dia usam a página V4; a versão v670 buscava apenas
+    // .dt393-page, substituída pelo renderizador atual (v4-panel).
+    const activeRoute = d.body?.dataset?.v4route;
+    const homeV4 = app.querySelector(".v4-panel .v4-page.v4-home");
+    // V4 mantém a rota atual no body e desmonta os painéis ao navegar.
+    if (homeV4 && (activeRoute === "home" || t === "home")) return {root:homeV4,route:"home"};
+    if (t === "home") return {root:app.querySelector(".dt393-page.dt393-home"),route:t};
+    return null;
+  }
+  // v679: preserva os nós do card nos ticks; apenas o texto numérico muda.
+  // Assim o Safari não desmonta a seção nem reinicia seu layout a cada cotação.
+  function mesmaEstrutura(a,b) {
+    if(a.nodeType!==b.nodeType || a.nodeName!==b.nodeName || a.childNodes.length!==b.childNodes.length)return false;
+    for(let i=0;i<a.childNodes.length;i++)if(!mesmaEstrutura(a.childNodes[i],b.childNodes[i]))return false;
+    return true;
+  }
+  function sincronizar(a,b) {
+    if(a.nodeType===3){if(a.nodeValue!==b.nodeValue)a.nodeValue=b.nodeValue;return;}
+    if(a.nodeType!==1)return;
+    for(const attr of [...a.attributes])if(!b.hasAttribute(attr.name))a.removeAttribute(attr.name);
+    for(const attr of [...b.attributes])if(a.getAttribute(attr.name)!==attr.value)a.setAttribute(attr.name,attr.value);
+    for(let i=0;i<a.childNodes.length;i++)sincronizar(a.childNodes[i],b.childNodes[i]);
+  }
+  function atualizarCard(card,conteudo) {
+    if(card.dataset.view===conteudo)return;
+    const tmp=d.createElement("template");
+    tmp.innerHTML=conteudo;
+    const antigos=[...card.childNodes],novos=[...tmp.content.childNodes];
+    if(antigos.length===novos.length && antigos.every((n,i)=>mesmaEstrutura(n,novos[i])))
+      antigos.forEach((n,i)=>sincronizar(n,novos[i]));
+    else card.replaceChildren(tmp.content);
+    card.dataset.view=conteudo;
+  }
+  function montar() {
+    // v846: o termômetro fica só no Início; o Meu dia não mostra mais o card.
+    d.querySelectorAll(".v4-page.v4-day > .dt670-opening, .dt393-page.dt393-day > .dt670-opening").forEach(n=>n.remove());
+    const dest = alvo();
+    if (!dest?.root) return;
+    let card = dest.root.querySelector(":scope > .dt670-opening");
+    if (!card) {
+      card = d.createElement("section");
+      card.className = "dt670-opening";
+      card.setAttribute("aria-label","Termômetro de Abertura Teórica WIN e WDO");
+    }
+    if (dest.route === "home") {
+      const resumo = dest.root.querySelector(":scope > .v4-summary, :scope > .dt393-summary");
+      if (resumo) { if (card.previousElementSibling !== resumo) resumo.after(card); }
+      else if (dest.root.firstElementChild !== card) dest.root.prepend(card);
+    } else if (dest.root.firstElementChild !== card) dest.root.prepend(card);
+    const conteudo = html(capturar());
+    atualizarCard(card,conteudo);
+  }
+  /* v811: variação observada de WIN/WDO no dia (mesmas fontes e validade), para a memória previsto × ocorrido. */
+  function observado() {
+    const now = Date.now(), f = lista();
+    const hm = new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(now));
+    return {win: variacao("win",f,now), wdo: variacao("wdo",f,now), em: diaBrt(new Date(now)) + "T" + hm + "-03:00"};
+  }
+  w.TermometroAbertura670 = Object.freeze({calcular,capturar,montar,observado,fechamentoCanonico:fechamentoCanonicoV1028});
+  w.TraderUI?.onRender?.("termometro-abertura-teorica-v670",()=>w.setTimeout(montar,0));
+  // A tela V4 troca seu conteúdo depois do render principal. Reposicionar
+  // após o evento de render final preserva o termômetro nas duas rotas.
+  d.addEventListener("diario:render",()=>w.requestAnimationFrame(()=>w.requestAnimationFrame(montar)));
+  // Também observa a troca do painel V4. Filtra apenas novos nós de página,
+  // evitando fazer trabalho extra quando preços ou campos recebem atualizações.
+  function observarMontagem() {
+    const app = d.getElementById("app");
+    if (!app || !w.MutationObserver) return;
+    const observador = new w.MutationObserver(registros => {
+      for (const registro of registros) for (const n of registro.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.matches?.(".v4-page.v4-home,.v4-page.v4-day") ||
+            n.querySelector?.(".v4-page.v4-home,.v4-page.v4-day")) {
+          montar();
+          return;
+        }
+      }
+    });
+    observador.observe(app,{childList:true,subtree:true});
+  }
+  if(d.readyState==="loading")d.addEventListener("DOMContentLoaded",observarMontagem,{once:true});
+  else observarMontagem();
+  w.addEventListener("focus",montar);
+  // v811: o intervalo só trabalha onde o termômetro aparece (Início e Meu dia).
+  w.setInterval(()=>{try{if(!d.hidden&&(tab==="home"||tab==="dia"))montar();}catch{}},5000);
+  if (d.readyState === "loading") d.addEventListener("DOMContentLoaded",()=>w.setTimeout(montar,0),{once:true});
+  else w.setTimeout(montar,0);
+})(window, document);
+).test(contract);
+    const sess=w.DiarioSessoes.session(tipo.toUpperCase(),Date.parse(dia+'T15:00:00Z'));
+    const end=sess?.verified&&sess.close?Date.parse(dia+'T03:00:00Z')+sess.close*60000:null;
+    // Referência do último negócio datado próximo ao encerramento; não é ajuste oficial.
+    if(exact&&px>0&&ts!==null&&end!==null&&ts<=now+60000&&ts>=end-15*60000&&ts<=end+5*60000){
+      if(!old||ts>old.ts){for(const k of basesConfirmadasV1028.keys())if(k.startsWith(tipo+':')&&k!==key)basesConfirmadasV1028.delete(k);basesConfirmadasV1028.set(key,{px,ts});}
+    }
+    return basesConfirmadasV1028.get(key)?.px??null;
+  }
   function fechamento(tipo, fontes, now) {
     const hBrt = horaBrt(new Date(now));
     const canon=tipo==='win'?'WIN':tipo==='wdo'?'WDO':null,q=canon&&w.DiarioMarketData?.get(canon);

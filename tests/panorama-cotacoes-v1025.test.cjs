@@ -6,7 +6,7 @@ const src=fs.readFileSync('src/domains/core/08-terminal-e-sazonalidade.js','utf8
 const layer=fs.readFileSync('src/domains/layers/01-navegacao-e-fluxos.js','utf8');
 const section=src.slice(src.indexOf('function imgBrent955('),src.indexOf('function imgDesenha()'));
 const groups={
- cmd:['SGX:FEF1!','DCE:I1!','ICEEUR:BRN1!','NYMEX:CL1!','TVC:GOLD'],
+ cmd:['SGX:FEF2!','DCE:I1!','ICEEUR:BRN1!','NYMEX:CL1!','TVC:GOLD'],
  fut:['CME_MINI:ES1!','CME_MINI:NQ1!'],
  fx:['FX_IDC:USDBRL','TVC:DXY'],
  idx:['BMFBOVESPA:IBOV','TVC:NI225','XETR:DAX'],

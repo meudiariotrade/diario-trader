@@ -911,17 +911,20 @@
     const pickLive=(label,tks,rx,app)=>{const central=w.DiarioMarketData;if(central&&tks.some(k=>central.has(k))){const q=tks.map(k=>central.get(k)).find(Boolean);return q&&Number.isFinite(q.d1)&&Math.abs(q.d1)<=35?{n:label,px:q.px,d1:q.d1,fonte:q.fonte,baseVariacao:q.baseVariacao,priceAt:q.priceAt,quoteStatus:q.quoteStatus}:null;}try{const now=Date.now(),td=typeof w.tapeDados==='function'?w.tapeDados()||{}:{};for(const k of tks){const q=(typeof w.tapeVivo==='function'&&w.tapeVivo(k))||td[k],c=q&&q.chg!=null&&q.chg!==''?Number(q.chg):null;const ts=q?.dadoEm?Date.parse(q.dadoEm):null;const fresh=ts==null||(Number.isFinite(ts)&&ts<=now+60000&&now-ts<12*3600000);if(q&&Number(q.px)>0&&Number.isFinite(c)&&Math.abs(c)<=35&&fresh)return {n:label,px:Number(q.px),d1:c};}}catch(_){}const p=rx?pick(rx):null;return p&&Math.abs(p.d1)<=35?{n:label,px:p.px,d1:p.d1}:(app?pickApp(label,app):null);};
     const fmtP=x=>x?x.n+' '+(x.d1>=0?'+':'')+x.d1.toFixed(2).replace('.',',')+'%':'';
     const br=[pickLive('IBOV',['^BVSP','IBOV'],/ibov|bvsp/i,['IBOV']),pickLive('USD/BRL',['BRL=X','USDBRL'],/usd\/?brl|d[oó]lar\s*[àa]\s*vista/i,['USDBRL']),pick(/di1|juros|ifix/i)].filter(Boolean);
-    const us=[pickLive('S&P 500',['^GSPC'],/s&p\s*500(?!.*fut)|\bspx\b/i)||pickLive('S&P fut.',['ES=F'],/s&p.*fut|\bes1\b/i),pickLive('Nasdaq Composite',['^IXIC'],/nasdaq(?!.*fut)|\bndx\b/i)||pickLive('Nasdaq fut.',['NQ=F'],/nasdaq.*fut|\bnq1\b/i),pickLive('Dow',['^DJI'],/dow(?!.*fut)|\bdji\b/i)||pickLive('Dow fut.',['YM=F'],/dow.*fut|\bym1\b/i),pickLive('Brent',['BZ=F'],/brent/i)||pickLive('WTI',['CL=F'],/\bwti\b/i),pickLive('Ouro',['GC=F'],/ouro|gold/i),pickLive('DXY',['DX-Y.NYB','DXY'],/\bdxy\b/i,['DXY']),pickLive('EWZ',['EWZ'],/^ewz\b/i,['EWZ'])].filter(Boolean);
+    const us=[pickLive('S&P 500',['^GSPC'],/s&p\s*500(?!.*fut)|\bspx\b/i),pickLive('Nasdaq Composite',['^IXIC'],/nasdaq(?!.*fut)/i),pickLive('Dow',['^DJI'],/dow(?!.*fut)|\bdji\b/i),pickLive('Brent',['BZ=F'],/brent/i),pickLive('WTI',['CL=F'],/\bwti\b/i),pickLive('Ouro',['GC=F'],/ouro|gold/i),pickLive('DXY',['DX-Y.NYB','DXY'],/\bdxy\b/i,['DXY']),pickLive('EWZ',['EWZ'],/^ewz\b/i,['EWZ']),pickLive('SGX FEF2!',['TIO=F'],/FEF2!/i)].filter(Boolean);
+    const futuros=[pickLive('S&P fut.',['ES=F'],/s&p.*fut|\bes1\b/i),pickLive('Nasdaq fut.',['NQ=F'],/nasdaq.*fut|\bnq1\b/i),pickLive('Dow fut.',['YM=F'],/dow.*fut|\bym1\b/i)].filter(Boolean);
     const cripto=[pickLive('BTC',['BTC-USD','BTCUSDT'],/\bbtc\b|bitcoin/i,['BTC','BTCUSD','BTCUSDT']),pickLive('ETH',['ETH-USD','ETHUSDT'],/\beth\b|ethereum/i,['ETH','ETHUSD','ETHUSDT']),pickLive('SOL',['SOL-USD','SOLUSDT'],/\bsol\b|solana/i,['SOL','SOLUSD'])].filter(Boolean);
     const uniq=L=>{const seen=new Set();return L.filter(x=>{if(!x||seen.has(x.n))return false;seen.add(x.n);return true;});};
-    const brU=uniq(br),usU=uniq(us).slice(0,7),crU=uniq(cripto).slice(0,3);
+    const brU=uniq(br),usU=uniq(us),futU=uniq(futuros),crU=uniq(cripto).slice(0,3);
     const texto=[
       brU.length?'Brasil: '+brU.map(fmtP).join(' · '):'',
       usU.length?'Exterior: '+usU.map(fmtP).join(' · '):'',
+      futU.length?'Futuros: '+futU.map(fmtP).join(' · '):'',
       crU.length?'Cripto: '+crU.map(fmtP).join(' · '):''
     ].filter(Boolean).join(' | ');
     /* Termômetro Risk-On / Risk-Off (-100 a +100) + Detector de Divergência Intraday */
-    const sp=usU.find(x=>/^S&P/.test(x.n))?.d1,nq=usU.find(x=>/^Nasdaq/.test(x.n))?.d1,dxy=usU.find(x=>x.n==='DXY')?.d1,oil=usU.find(x=>/^(Brent|WTI)$/.test(x.n))?.d1,btc=crU.find(x=>x.n==='BTC')?.d1;
+    const usClosed=['post','fechado'].includes(w.DiarioSessoes?.context()?.us?.state);
+    const sp=(usClosed?futU.find(x=>/^S&P/.test(x.n)):null)?.d1??usU.find(x=>/^S&P/.test(x.n))?.d1??futU.find(x=>/^S&P/.test(x.n))?.d1,nq=(usClosed?futU.find(x=>/^Nasdaq/.test(x.n)):null)?.d1??usU.find(x=>/^Nasdaq/.test(x.n))?.d1??futU.find(x=>/^Nasdaq/.test(x.n))?.d1,dxy=usU.find(x=>x.n==='DXY')?.d1,oil=usU.find(x=>/^(Brent|WTI)$/.test(x.n))?.d1,btc=crU.find(x=>x.n==='BTC')?.d1;
     const ibv=brU.find(x=>x.n==='IBOV')?.d1,dol=brU.find(x=>/^(USD\/BRL|WDO)$/.test(x.n))?.d1,di=pick(/di1|juros/i)?.d1;
     let pts=0,pesos=0;
     const add=(v,wgt)=>{if(Number.isFinite(v)){pts+=Math.max(-3,Math.min(3,v))*wgt;pesos+=wgt;}};
@@ -934,18 +937,18 @@
       else if(sp<=-0.45&&dol<=-0.45&&(ibv==null||ibv>-0.1))divergencia='🔗 Divergência positiva: exterior fraco (S&P '+sinalNum(sp)+'), mas dólar cedendo ('+sinalNum(dol)+') — fluxo gringo/commodities segurando o Brasil.';
       else if(Number.isFinite(di)&&di>=0.5&&sp>=0.3)divergencia='🔗 Atenção aos juros: S&P sobe lá fora, mas curva de DI abre forte — cuidado com compras esticadas no WIN.';
     }
-    return {br:brU,us:usU,cripto:crU,texto,riskScore,riskLabel,divergencia};
+    return {br:brU,us:usU,futuros:futU,cripto:crU,texto,riskScore,riskLabel,divergencia};
   }
   function sinalNum(v){return (v>=0?'+':'')+Number(v).toFixed(2).replace('.',',')+'%';}
   function aureaPulsoV1027(pulso,m){
     const riskBar=pulso.riskScore!=null?'<div class="sm dt987-risk"><span>🧭 Humor Global: <b style="color:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'">'+escape(pulso.riskLabel)+'</b></span><span style="display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums"><span style="display:inline-block;width:72px;height:6px;border-radius:99px;background:rgba(128,128,128,.22);overflow:hidden"><i style="display:block;height:100%;width:'+Math.round((pulso.riskScore+100)/2)+'%;background:'+(pulso.riskScore>=25?'#10B981':pulso.riskScore<=-25?'#EF4444':'#C9A66B')+'"></i></span><b>'+(pulso.riskScore>0?'+':'')+pulso.riskScore+'</b></span></div>':'';
     const divLine=pulso.divergencia?'<p class="sm" style="margin:6px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(201,166,107,.45);background:rgba(201,166,107,.09)">'+escape(pulso.divergencia)+'</p>':'';
-    const mkGrp=(tit,arr)=>arr.length?'<div class="dt987-grp"><span class="dt987-gtit">'+tit+'</span><div class="dt987-chips">'+arr.map(x=>'<span class="dt987-pill '+(x.d1>0?'pos':x.d1<0?'neg':'')+'"><span>'+escape(x.n)+'</span><b>'+sinalNum(x.d1)+'</b></span>').join('')+'</div></div>':'';
-    const doisMkts=(pulso.br.length||pulso.us.length||pulso.cripto.length)?'<div class="dt987-pulso">'+mkGrp('Brasil',pulso.br)+mkGrp('Exterior',pulso.us)+mkGrp('Cripto 24/7',pulso.cripto)+'</div>':'';
-    const timestamps=[...pulso.br,...pulso.us,...pulso.cripto].map(q=>Date.parse(q.priceAt||'')).filter(t=>Number.isFinite(t)&&t<=Date.now()+60000);
+    const mkGrp=(tit,arr)=>arr.length?'<div class="dt987-grp"><span class="dt987-gtit">'+tit+'</span><div class="dt987-chips">'+arr.map(x=>'<span class="dt987-pill '+(x.d1>0?'pos':x.d1<0?'neg':'')+'"><span>'+escape(x.n)+(x.n==='Brent'&&x.quoteStatus==='referencia_anterior'?' (ref.)':'')+'</span><b>'+sinalNum(x.d1)+'</b></span>').join('')+'</div></div>':'';
+    const doisMkts=(pulso.br.length||pulso.us.length||pulso.futuros?.length||pulso.cripto.length)?'<div class="dt987-pulso">'+mkGrp('Brasil',pulso.br)+mkGrp('Exterior',pulso.us)+mkGrp('Futuros EUA',pulso.futuros||[])+mkGrp('Cripto 24/7',pulso.cripto)+'</div>':'';
+    const timestamps=[...pulso.br,...pulso.us,...(pulso.futuros||[]),...pulso.cripto].map(q=>Date.parse(q.priceAt||'')).filter(t=>Number.isFinite(t)&&t<=Date.now()+60000);
     const atualizado=timestamps.length?Math.max(...timestamps):null;
     
-    const fontesPulso=[...new Set([...pulso.br,...pulso.us,...pulso.cripto].map(q=>q.fonte).filter(Boolean))];
+    const fontesPulso=[...new Set([...pulso.br,...pulso.us,...(pulso.futuros||[]),...pulso.cripto].map(q=>q.fonte).filter(Boolean))];
     const fonte=escape(fontesPulso.length?fontesPulso.join(' · '):state.mercado?.fonte||'não verificada');
     const semLeitura=(m.nome==='Sem leitura validada'||m.nome==='Amostra insuficiente');
     const resumo=semLeitura?tag('indisponivel')+'Dados insuficientes para caracterizar o mercado nesta sessão.':

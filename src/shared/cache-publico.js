@@ -118,7 +118,7 @@
   'CL=F':['cmd','NYMEX:CL1!','CL1!'],
   'BZ=F':['cmd','ICEEUR:BRN1!','BRN1!'],
   'GC=F':['cmd','TVC:GOLD','GOLD'],
-  'TIO=F':['cmd','SGX:FEF1!','FEF1!'],
+  'TIO=F':['cmd','SGX:FEF2!','FEF2!'],
   'DCE:I':['cmd','DCE:I1!','I1!'],
   'BTC-USD':['cri','BITSTAMP:BTCUSD','COINBASE:BTCUSD','BINANCE:BTCUSDT','BTCUSDT','BTCUSD'],
   'ETH-USD':['cri','BITSTAMP:ETHUSD','COINBASE:ETHUSD','BINANCE:ETHUSDT','ETHUSDT','ETHUSD'],
@@ -168,6 +168,7 @@
    else if(q.fh){fonte='Finnhub';basis='fechamento anterior';}
    else if(!q.fonte&&!q.source){fonte='Profit';instrument=q.tk||instrument;basis='fechamento/ajuste anterior';}
   }
+  if(k==='TIO=F'&&instrument!=='SGX:FEF2!')return null;
   if(k==='BZ=F')d=brent(q,d);
   const prev=num(q.fechamentoAnterior??q.previousClose??q.pc??q.fec);
   if(prev>0&&d!==null&&basis!=='24h'&&Math.abs((num(q.px)/prev-1)*100-d)>0.08)d=null;
@@ -183,9 +184,9 @@
    const rows=typeof CQ!=='undefined'?CQ.d?.[group]?.itens||[]:[];
    const row=symbols.map(sym=>rows.find(r=>r.s===sym&&valid(r))).find(Boolean);
    if(row){
-    let overlay=null;try{if(typeof cqPf==='function')overlay=cqPf(row,group);}catch{}
+    let overlay=null;try{if(typeof cqPf==='function'&&k!=='TIO=F'&&k!=='BZ=F')overlay=cqPf(row,group);}catch{}
     const q=normal(k,row,overlay);
-    if(k==='BZ=F'&&q?.d1==null)return brentReserva(q||row)||q;
+    if(k==='BZ=F'){const r=brentReserva(q||row);if(r&&(q?.d1==null||Date.parse(r.priceAt)>Date.parse(q.priceAt)))return r;}
     return q;
    }
   }catch{}
@@ -198,12 +199,12 @@
   try{
    const snapshot=w.DiarioPublico?.peek?.('/v1/mercado');
    const rows=(snapshot?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
-   const row=rows.find(r=>valid(r)&&(symbols.includes(r.s)||symbols.includes(r.simboloFonte)||(r.s===k&&!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD'].includes(k))));
+   const row=rows.find(r=>valid(r)&&(symbols.includes(r.s)||symbols.includes(r.simboloFonte)||(r.s===k&&!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD','TIO=F'].includes(k))));
    if(row)return normal(k,row);
   }catch{}
   // O ticker já possui referência pública própria durante a inicialização. Não usar
   // como substituto de contratos/cripto com base ou par desconhecidos.
-  if(!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD','WIN','WDO'].includes(k)){
+  if(!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD','WIN','WDO','TIO=F'].includes(k)){
    try{const q=w.tapeDados?.()?.[k];if(valid(q))return normal(k,{s:spec(k)[1],...q});}catch{}
   }
   return null;
