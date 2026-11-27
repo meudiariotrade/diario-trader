@@ -25345,7 +25345,7 @@ const IC = (e) =>
   window.tapeDados = () => n;
   const ativo = (key) => {
     const live = typeof window.tapeVivo === "function" ? window.tapeVivo(key) : null;
-    const v = live || n[key];
+    const v = window.DiarioMarketData?.has(key)&&!window.DIARIO_DEMO ? live : live || n[key];
     return v && Number.isFinite(+v.px) && +v.px > 0 ? v : null;
   };
   const i = ([key, nome]) => {
@@ -45720,7 +45720,7 @@ function imgQ(e) {
   const macro=(MDO.v?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
   // A lista usada pelo usuário é a fonte primária; macro legado somente reserva local.
   const q=rows.find(r=>aliases.includes(r.s)&&imgValidaV1025(r)) ||
-    macro.find(r=>(r.s===e||aliases.includes(r.s))&&imgValidaV1025(r));
+    (!IMG.central1026&&macro.find(r=>(r.s===e||aliases.includes(r.s))&&imgValidaV1025(r)));
   if(e==="BZ=F"&&IMG.brent955&&imgValidaV1025(IMG.brent955)){
     const newer=q&&/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||"")&&q.quoteStatus==="coerente"&&Number.isFinite(q.d1)&&q.fechamentoAnterior>0&&Math.abs((q.px/q.fechamentoAnterior-1)*100-q.d1)<=0.08&&Date.parse(q.horarioPreco||q.priceAt)>Date.parse(IMG.brent955.horarioPreco||IMG.brent955.priceAt);
     if(!newer)return IMG.brent955;
@@ -45737,6 +45737,8 @@ function imgQ(e) {
   return {...q,d1:Number.isFinite(q.d1)?q.d1:null};
 }
 async function imgListasV1025(fetcher=fetch, estado=CQ) {
+  const central=window.DiarioMarketData;
+  if(central){IMG.central1026=true;await central.refresh();const snap=central.snapshot(Object.keys(imgSimbolosPublicos));IMG.snapshot1026=snap.id;return {rows:Object.values(snap.rows),reserva:imgAbasV1025.filter(g=>!estado.ts?.[g]||estado.errors?.[g])};}
   const resultados=await Promise.allSettled(imgAbasV1025.map(async aba=>{
     const url=CQ_EDGE_V1022+"?"+new URLSearchParams({modo:"cotacoes",aba});
     const ctl=new AbortController();
@@ -45763,10 +45765,11 @@ async function imgListasV1025(fetcher=fetch, estado=CQ) {
 async function imgDados() {
   if(window.DIARIO_DEMO)throw Error("A captura de mercado exige dados reais.");
   if(!SESS?.at)throw Error("Entre na conta para gerar a imagem.");
-  IMG.cotacoesPublicas=[]; IMG.brent955=null; IMG.aviso="";
+  IMG.cotacoesPublicas=[]; IMG.brent955=null; IMG.aviso="";IMG.central1026=false;IMG.snapshot1026=null;
   const [listas,adrs,snapshot]=await Promise.allSettled([imgListasV1025(),adrLoad(true),Promise.resolve().then(()=>window.DiarioPublico?.get?.("/v1/mercado",{ttl:60000}))]);
-  if(snapshot.status==="fulfilled")IMG.brent955=imgBrent955(snapshot.value);
+  if(!IMG.central1026&&snapshot.status==="fulfilled")IMG.brent955=imgBrent955(snapshot.value);
   const dados=listas.status==="fulfilled"?listas.value:{rows:[],reserva:imgAbasV1025};
+  if(IMG.central1026){const snap=window.DiarioMarketData.snapshot(Object.keys(imgSimbolosPublicos));IMG.snapshot1026=snap.id;dados.rows=Object.values(snap.rows);}
   IMG.cotacoesPublicas=dados.rows;
   const ausentes=Object.keys(imgSimbolosPublicos).filter(s=>!imgQ(s));
   const macroReserva=Object.keys(imgSimbolosPublicos).some(s=>imgQ(s)&&!dados.rows.some(q=>imgSimbolosPublicos[s].includes(q.s)&&imgValidaV1025(q)));
@@ -46097,7 +46100,7 @@ function imgDesenha() {
     (r.fillStyle = m),
     r.fillRect(48, s - 84, o - 96, 2),
     g(
-      "Fontes: TradingView, Yahoo Finance e Sina (Dalian), com atraso.",
+      IMG.central1026 ? "Fontes: "+[...new Set((IMG.cotacoesPublicas||[]).map(q=>q.fonte||q.source).filter(Boolean))].join(" · ").slice(0,110)+"; ADRs: fonte própria." : "Fontes: TradingView, Yahoo Finance e Sina (Dalian), com atraso.",
       o / 2,
       s - 50,
       { s: 21, c: d, al: "center" },
@@ -71235,7 +71238,8 @@ function cqCryptoBase(periodo, now = Date.now()) {
   return Math.floor((now-days*86400000)/60000)*60000;
 }
 function cqCryptoVariacao(item, category, quote) {
-  const original = quote ? quote.d1 : item.d1;
+  let original = quote ? quote.d1 : item.d1;
+  if(item.s==='ICEEUR:BRN1!'&&window.DiarioMarketData){original=window.DiarioMarketData.normal('BZ=F',item,quote)?.d1??null;}
   if (!cqCryptoMobile(category) || CQ_CRYPTO_HIST.periodo === "24h") return original;
   const ref = CQ_CRYPTO_HIST.refs[String(item.c || "").toUpperCase()];
   return quote?.bnc && Number.isFinite(quote.px) && quote.px > 0 && Number.isFinite(ref) && ref > 0

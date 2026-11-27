@@ -31450,7 +31450,7 @@ try {
     /* v829: KPIs de mercado no topo do Início (barra superior já carregada; sem rede nova). */
     function v829MercadoKpis() {
       const U=window.DiarioUI;if(!U)return "";
-      const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>f(()=>window.tapeVivo?.(k),null)||tape[k];
+      const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>window.DiarioMarketData?.has(k)&&!window.DIARIO_DEMO?window.DiarioMarketData.get(k):f(()=>window.tapeVivo?.(k),null)||tape[k];
       const itens=[["^BVSP","Ibovespa"],["BRL=X","Dólar"],["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["EWZ","EWZ"],["BTC-USD","Bitcoin"]].map(([k,n])=>{
         const v=viva(k);if(!v||!(+v.px>0))return null;const c=v.chg==null||v.chg===""?null:+v.chg;
         return {rotulo:n,valor:q(v.px),detalhe:c==null?"variação indisponível":Q(c)+(v.fechado?" · fechado":""),tom:c==null?"":c>=0?"g":"r"};
@@ -31474,7 +31474,7 @@ try {
       const S=window.DiarioSessoes, us=f(()=>S.session("NYSE"),null);
       if(!us||us.state==="fechado"&&!f(()=>(AD.data?.itens||[]).length,0))return "";
       f(()=>typeof adrLoad==="function"&&adrLoad(),null);
-      const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>f(()=>window.tapeVivo?.(k),null)||tape[k];
+      const tape=f(()=>window.tapeDados?.()||{},{}),viva=k=>window.DiarioMarketData?.has(k)&&!window.DIARIO_DEMO?window.DiarioMarketData.get(k):f(()=>window.tapeVivo?.(k),null)||tape[k];
       const idx=[["^GSPC","S&P 500"],["^IXIC","Nasdaq"],["^DJI","Dow"],["EWZ","EWZ"],["CL=F","WTI"]].map(([k,n])=>{
         const v=viva(k);if(!v||!(+v.px>0))return "";const c=v.chg==null||v.chg===""?null:+v.chg;
         return '<div><span>'+n+'</span><b>'+q(v.px)+'</b><em class="'+L(c)+'">'+(c==null?"—":Q(c))+'</em></div>';}).join("");
@@ -47511,6 +47511,9 @@ s.textContent += `
     return a;
   }
   function variacao(tipo, fontes, now) {
+    const canon={ewz:'EWZ',spf:'ES=F',wti:'CL=F',dxy:'DX-Y.NYB',zar:'USDZAR',mxn:'USDMXN',win:'WIN',wdo:'WDO'}[tipo];
+    const q=w.DiarioMarketData?.get(canon);
+    if(q)return valido(q,q.priceAt,now)?pct(q):null;
     for (const f of fontes) {
       if (!combina(tipo, f.item) || !valido(f.item, f.coleta, now)) continue;
       const n = pct(f.item);
@@ -47522,6 +47525,8 @@ s.textContent += `
   const horaBrt = date => Number(new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",hourCycle:"h23"}).format(date));
   function fechamento(tipo, fontes, now) {
     const hBrt = horaBrt(new Date(now));
+    const canon=tipo==='win'?'WIN':tipo==='wdo'?'WDO':null,q=canon&&w.DiarioMarketData?.get(canon);
+    if(q)fontes=[{item:{...q,s:canon,em:q.priceAt},coleta:q.priceAt},...fontes.filter(f=>!combina(tipo,f.item))];
     // v984: após o fechamento da B3 (18h BRT), o fechamento de referência para o próximo pregão é o próprio px de hoje.
     if (hBrt >= 18) {
       for (const f of fontes) {
