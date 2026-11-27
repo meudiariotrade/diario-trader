@@ -3466,7 +3466,7 @@ function aureaOpcoesLocalV1017(texto,now=Date.now()){
 }
 // v1017 — adaptador estrito da grade já carregada. Nunca consulta rede, nunca envia a grade inteira.
 function aureaGradeCandidatasV1017(q,rows,now=Date.now()){
- const n=String(q||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(),tickers=[...new Set((n.match(/\b[a-z]{4}(?:3|4|5|6|7|8|11)\b/g)||[]).map(x=>x.toUpperCase()))];
+ const n=String(q||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(),tickers=(()=>{const d=[...new Set((n.match(/\b[a-z]{4}(?:3|4|5|6|7|8|11)\b/g)||[]).map(x=>x.toUpperCase()))];return d.length?d:aureaTickersV1048(q);})();
  const alta=/\b(trava de alta|cenario de alta|tese de alta)\b/.test(n),baixa=/\b(trava de baixa|cenario de baixa|tese de baixa)\b/.test(n),direction=alta&&!baixa?"alta":baixa&&!alta?"baixa":null;
  const target=Number((n.match(/\b(?:alvo|preco alvo)\s*[:=]\s*(\d+(?:[,.]\d+)?)/)?.[1]||"").replace(",","."));
  const reqDate=n.match(/\bvenc(?:imento)?\s*[:=]?\s*(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/)?.[1],date=reqDate?.includes("/")?reqDate.split("/").reverse().join("-"):reqDate;
@@ -3524,6 +3524,65 @@ function aureaAbrirSimuladorV1017(q,c,quantity,now=Date.now()){
 
 // fim v1017
 
+// v1048 — apelidos de ativos da B3 ("petr", "petrobras", "put de vale") viram ticker.
+const AUREA_APELIDOS_V1048=Object.freeze({petr:"PETR4",petrobras:"PETR4",petro:"PETR4",vale:"VALE3",itub:"ITUB4",itau:"ITUB4",bbdc:"BBDC4",bradesco:"BBDC4",bbas:"BBAS3","banco do brasil":"BBAS3",abev:"ABEV3",ambev:"ABEV3",wege:"WEGE3",weg:"WEGE3",prio:"PRIO3",prio3:"PRIO3",petrorio:"PRIO3",mglu:"MGLU3",magalu:"MGLU3",b3sa:"B3SA3",suzb:"SUZB3",suzano:"SUZB3",ggbr:"GGBR4",gerdau:"GGBR4",goau:"GOAU4",csna:"CSNA3",usim:"USIM5",usiminas:"USIM5",elet:"ELET3",eletrobras:"ELET3",rent:"RENT3",localiza:"RENT3",lren:"LREN3",embj:"EMBJ3",embraer:"EMBJ3",bova:"BOVA11",cmig:"CMIG4",cemig:"CMIG4",sbsp:"SBSP3",sabesp:"SBSP3",rail:"RAIL3",rumo:"RAIL3",rdor:"RDOR3",hapv:"HAPV3",cogn:"COGN3",azul:"AZUL4",gol:"GOLL4",brkm:"BRKM5",braskem:"BRKM5",csan:"CSAN3",cosan:"CSAN3",vbbr:"VBBR3",vibra:"VBBR3",bpac:"BPAC11",btg:"BPAC11",sanb:"SANB11",santander:"SANB11",radl:"RADL3",raia:"RADL3",jbss:"JBSS3",jbs:"JBSS3",beef:"BEEF3",minerva:"BEEF3",mrfg:"MRFG3",brfs:"BRFS3",ntco:"NTCO3",natura:"NTCO3",taee:"TAEE11",taesa:"TAEE11",egie:"EGIE3",engie:"EGIE3",klbn:"KLBN11",klabin:"KLBN11",cple:"CPLE6",copel:"CPLE6",petz:"PETZ3",viva:"VIVA3",cyre:"CYRE3",cyrela:"CYRE3",mrve:"MRVE3",mrv:"MRVE3",tots:"TOTS3",totvs:"TOTS3",hype:"HYPE3",flry:"FLRY3",fleury:"FLRY3",enev:"ENEV3",eneva:"ENEV3",recv:"RECV3",brap:"BRAP4",cpfe:"CPFE3",sapr:"SAPR11",sanepar:"SAPR11",bbse:"BBSE3",irbr:"IRBR3",yduq:"YDUQ3",ccro:"MOTV3",motiva:"MOTV3",asai:"ASAI3",assai:"ASAI3",crfb:"CRFB3",carrefour:"CRFB3"});
+function aureaTickersV1048(texto){
+ const t=String(texto||""),n=t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+ const diretos=(t.match(/\b[a-zA-Z]{4}(?:3|4|5|6|7|8|11)\b/g)||[]).map(x=>x.toUpperCase());
+ if(diretos.length)return [...new Set(diretos)];
+ const achados=[];
+ for(const [k,v] of Object.entries(AUREA_APELIDOS_V1048)){
+  const rx=k==="vale"?/\b(?:de|da|na|em|sobre|put|puts|call|calls|opcao|opcoes|acao|acoes|papel|comprar|vender|compra|venda)\s+(?:a\s+|as\s+)?vale\b(?!\s+(?:a\s+pena|o\s+risco|mais|menos))/:k==="gol"||k==="rent"||k==="viva"||k==="azul"||k==="raia"||k==="recv"||k==="hype"||k==="rail"?new RegExp("\\b(?:de|da|na|em|sobre|put|call|opcoes|acao|acoes|papel)\\s+(?:a\\s+)?"+k+"\\b"):new RegExp("\\b"+k.replace(/ /g,"\\s+")+"\\b");
+  if(rx.test(n)&&!achados.includes(v))achados.push(v);
+ }
+ return achados.slice(0,4);
+}
+// v1048 — dossiê técnico calculado no aparelho a partir do histórico diário (sem cálculo no servidor).
+function aureaDossieCalcV1048(ticker,rows,fonte=""){
+ const bars=(Array.isArray(rows)?rows:[]).filter(r=>Array.isArray(r)&&[r[0],r[2],r[3],r[4]].every(Number.isFinite)&&r[4]>0).map(r=>({t:r[0]*1000,o:r[1],h:r[2],l:r[3],c:r[4],v:Number.isFinite(r[5])?r[5]:0}));
+ if(bars.length<30)return null;
+ const n=bars.length,last=bars[n-1],c=bars.map(b=>b.c),r2=x=>Math.round(x*100)/100;
+ const sma=(k,i=n-1)=>i+1<k?null:c.slice(i-k+1,i+1).reduce((a,b)=>a+b,0)/k;
+ const medias=[20,50,200].map(k=>{const a=sma(k),b=sma(k,n-6);return a===null?null:{n:k,valor:r2(a),inclinacao:b===null?"indefinida":a>b*1.002?"subindo":a<b*.998?"caindo":"lateral",preco_acima:last.c>a};}).filter(Boolean);
+ let g=0,l=0;for(let i=n-14;i<n;i++){const d=c[i]-c[i-1];if(d>0)g+=d;else l-=d;}
+ const ifr=l===0?100:r2(100-100/(1+g/l));
+ let tr=0;for(let i=n-14;i<n;i++)tr+=Math.max(bars[i].h-bars[i].l,Math.abs(bars[i].h-c[i-1]),Math.abs(bars[i].l-c[i-1]));
+ const atr=tr/14;
+ const ret=[];for(let i=n-20;i<n;i++)ret.push(Math.log(c[i]/c[i-1]));
+ const mr=ret.reduce((a,b)=>a+b,0)/ret.length,vol=Math.sqrt(ret.reduce((a,b)=>a+(b-mr)**2,0)/(ret.length-1))*Math.sqrt(252)*100;
+ const ano=bars.slice(-252),max52=Math.max(...ano.map(b=>b.h)),min52=Math.min(...ano.map(b=>b.l));
+ const varp=k=>n>k?r2((last.c/c[n-1-k]-1)*100):null;
+ // Pivôs de swing: extremo entre 3 barras de cada lado, com variação mínima de 1 ATR desde o pivô oposto.
+ const piv=[];
+ for(let i=n-160<3?3:n-160;i<n-3;i++){
+  const b=bars[i],viz=[...bars.slice(i-3,i),...bars.slice(i+1,i+4)];
+  if(viz.every(x=>b.h>x.h))piv.push({tipo:"topo",preco:b.h,data:new Date(b.t).toISOString().slice(0,10)});
+  if(viz.every(x=>b.l<x.l))piv.push({tipo:"fundo",preco:b.l,data:new Date(b.t).toISOString().slice(0,10)});
+ }
+ const swing=[];for(const p of piv){const u=swing[swing.length-1];if(u&&u.tipo===p.tipo){if(p.tipo==="topo"?p.preco>u.preco:p.preco<u.preco)swing[swing.length-1]=p;}else if(!u||Math.abs(p.preco-u.preco)>=atr)swing.push(p);}
+ const topos=swing.filter(p=>p.tipo==="topo"),fundos=swing.filter(p=>p.tipo==="fundo");
+ const seq=(a)=>a.length<2?"indefinida":a[a.length-1].preco>a[a.length-2].preco?"ascendente":"descendente";
+ const res=[...new Set(topos.map(p=>r2(p.preco)).filter(x=>x>last.c))].sort((a,b)=>a-b).slice(0,3);
+ const sup=[...new Set(fundos.map(p=>r2(p.preco)).filter(x=>x<last.c))].sort((a,b)=>b-a).slice(0,3);
+ if(!res.length&&max52>last.c)res.push(r2(max52));if(!sup.length&&min52<last.c)sup.push(r2(min52));
+ const m200=medias.find(m=>m.n===200),m50=medias.find(m=>m.n===50),m20=medias.find(m=>m.n===20);
+ const primaria=m200?(last.c>m200.valor&&m200.inclinacao!=="caindo"?"alta":last.c<m200.valor&&m200.inclinacao!=="subindo"?"baixa":"indefinida"):"indefinida";
+ const secundaria=m20&&m50?(last.c>m20.valor&&m20.valor>m50.valor?"alta":last.c<m20.valor&&m20.valor<m50.valor?"baixa":"lateral"):"indefinida";
+ return {ticker,fonte,data:new Date(last.t).toISOString().slice(0,10),fechamento:r2(last.c),var_dia:varp(1),var_1m:varp(21),var_3m:varp(63),var_12m:varp(252),medias,ifr14:ifr,atr14:r2(atr),atr_pct:r2(atr/last.c*100),vol_hist_20d_aa:r2(vol),max_52s:r2(max52),min_52s:r2(min52),dist_max_52s_pct:r2((last.c/max52-1)*100),tendencia_primaria:primaria,tendencia_secundaria:secundaria,seq_topos:seq(topos),seq_fundos:seq(fundos),ultimos_pivos:swing.slice(-6).map(p=>({...p,preco:r2(p.preco)})),resistencias:res,suportes:sup};
+}
+async function aureaDossieV1048(ticker,signal){
+ const T=window.TRM;if(!T?.trCandles||!/^[A-Z]{4}\d{1,2}$/.test(ticker||""))return null;
+ try{
+  const v=await Promise.race([T.trCandles(ticker,"1d"),new Promise(r=>setTimeout(()=>r(null),12000)),new Promise(r=>signal?.addEventListener("abort",()=>r(null),{once:true}))]);
+  if(signal?.aborted)return null;
+  return aureaDossieCalcV1048(ticker,v?.candles,typeof v?.fonte==="string"?v.fonte:"");
+ }catch{return null;}
+}
+function aureaDossieTextoV1048(d){
+ if(!d)return "";
+ const f=x=>x==null?"N/D":String(x).replace(".",",");
+ return "[DOSSIÊ TÉCNICO CALCULADO NO APARELHO · "+d.ticker+" · diário · fechamento de "+d.data+(d.fonte?" · fonte "+d.fonte:"")+"] Fechamento R$ "+f(d.fechamento)+" ("+f(d.var_dia)+"% no dia; 1 mês "+f(d.var_1m)+"%; 3 meses "+f(d.var_3m)+"%; 12 meses "+f(d.var_12m)+"%). Médias simples: "+d.medias.map(m=>"MM"+m.n+" "+f(m.valor)+" ("+m.inclinacao+", preço "+(m.preco_acima?"acima":"abaixo")+")").join("; ")+". IFR14 "+f(d.ifr14)+". ATR14 R$ "+f(d.atr14)+" ("+f(d.atr_pct)+"% do preço). Volatilidade histórica 20d anualizada "+f(d.vol_hist_20d_aa)+"%. Máx/mín 52 semanas "+f(d.max_52s)+" / "+f(d.min_52s)+" (preço "+f(d.dist_max_52s_pct)+"% do topo). Tendência primária "+d.tendencia_primaria+", secundária "+d.tendencia_secundaria+"; topos "+d.seq_topos+", fundos "+d.seq_fundos+". Últimos pivôs: "+d.ultimos_pivos.map(p=>p.tipo+" "+f(p.preco)+" em "+p.data).join("; ")+". Resistências acima: "+(d.resistencias.map(f).join(", ")||"nenhuma")+". Suportes abaixo: "+(d.suportes.map(f).join(", ")||"nenhum")+". Use estes números como fatos; não invente outros.";
+}
 function aureaRota(texto) {
   const t = String(texto || ""),
     n = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
@@ -3536,6 +3595,7 @@ function aureaRota(texto) {
   const usStandalone=t.trim().match(/^(?:@graham\s+)?\$?([A-Z]{1,5}(?:\.[A-Z])?)$/),usTagged=Array.from(t.matchAll(/(?:^|\s)\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g),x=>x[1]);
   const blocked=new Set(["BR","EUA","US","USD","BRL","ROE","ROIC","FCF","DCF","PEG","CET","DY","ETF","FII","PIB","FED","SELIC","IBOV"]);
   for(const x of [...usTagged,...(usStandalone?[usStandalone[1]]:[])])if(!blocked.has(x)&&!tickers.includes(x)&&tickers.length<4)tickers.push(x);
+  if(!tickers.length)for(const x of aureaTickersV1048(t))tickers.push(x);
   const opcoes=typeof aureaTemaOpcoesV1017==="function"&&aureaTemaOpcoesV1017(t);
   const educational=/\b(o que e|como funciona|explique o conceito|me ensina)\b/.test(n);
   if(educational&&!forcado&&!tickers.length)return {id:"dow",tickers,motivo:"conceito para estudar"};
@@ -3609,7 +3669,7 @@ const AUREA_METODO_V1007 = Object.freeze({
   "dalio": "Faça tese macro estrutural e de geopolítica sem viés partidário: ciclo de dívida, dívida/PIB, primário versus nominal, juro real versus crescimento, rolagem, moeda, liquidez e transmissão setorial. Compare países apenas com métricas e datas compatíveis. Separe cenário de estresse, fator mitigador, risco de cauda e indicador que confirma mudança de regime. Commodities: analise oferta/demanda, estoques, produção, curva e sazonalidade apenas com dados; diferencie contrato, praça, moeda e unidade, preço spot e futuro. Schwartz lidera macro; Dalio trata China, geopolítica, dólar e juros reais; Livermore usa OHLC ou gráfico para níveis, sem inventar. Traga cenário alternativo, confirmação e invalidação e impacto condicional BR/EUA.",
   "dow": "Explique o conceito com método, exemplo explicitamente hipotético, aplicação prática, erro comum e critério de verificação. Use trechos da biblioteca quando disponíveis; não invente citação, autoria nem dado de mercado."
 });
-const AUREA_QUALIDADE_V1007 = "Apresente tese própria explícita, evidências concretas e a relação causal entre elas, cenário alternativo, confirmação/invalidação e próximos dados a observar. Não repita indicadores sem explicar seu efeito. Diferencie observação, estimativa e hipótese; se faltarem dados, declare exatamente quais, sem preencher com memória. Não invente preço, probabilidade, fonte, data ou informação privada. Use parágrafos curtos com títulos claros, sem aula genérica. Apoie decisão condicional e preserve a decisão final do usuário; não dê ordens.";
+const AUREA_QUALIDADE_V1007 = "Apresente tese própria explícita, evidências concretas e a relação causal entre elas, cenário alternativo, confirmação/invalidação e próximos dados a observar. Não repita indicadores sem explicar seu efeito. Diferencie observação, estimativa e hipótese; se faltarem dados, declare exatamente quais, sem preencher com memória. Não invente preço, probabilidade, fonte, data ou informação privada. Use parágrafos curtos com títulos claros, sem aula genérica. Apoie decisão condicional e preserve a decisão final do usuário; não dê ordens. Abra o resumo com o veredito direto à pergunta em até 2 frases (vale ou não, agora ou aguardar, e por quê). Se houver DOSSIÊ TÉCNICO, cite os números dele (preço, médias, IFR, suportes e resistências) como fatos; não invente outros. Nunca use notação R.";
 function aureaTexto(e, rota) {
   const m = rota && AUREA.membros[rota.id];
   let extra = "";
@@ -4113,11 +4173,15 @@ function aureaCasarGradeV1047(bars,grid,g,w,h){
  return best;
 }
 function aureaNiveisSegurosV1047(g){
- const axis=aureaCalibrarEixoV1021(g.geometria_preco),r=g.geometria_preco;
- // Nunca preservar coordenadas de níveis sugeridas pela IA quando não há escala calibrada.
+ const axis=aureaCalibrarEixoV1021(g.geometria_preco),r=g.geometria_preco||{y0:0,y1:1};
+ // v1048: sem eixo calibrado, usa a escala dos pivôs conferidos (preço do OHLC × altura do pavio).
+ const esc=axis?(p=>axis.y(p)):aureaEscalaV1044(g);
+ // v1048: suporte/resistência precisa coincidir com um extremo real (OHLC ou pivô), não com a régua do eixo.
+ const ref=[...(g.extremos_ohlc||[]),...(g.pivos||[])].map(p=>Number(String(p.preco||"").replace(/^~/,"").replace(",","."))).filter(x=>x>0);
  g.niveis=(g.niveis||[]).flatMap(n=>{
-  const price=Number(n.preco),y=axis&&price>0?axis.y(price):NaN;
-  return Number.isFinite(y)&&y>=r.y0&&y<=r.y1?[{...n,y}]:[];
+  const price=Number(n.preco),y=esc&&price>0?esc(price):NaN;
+  if(ref.length>=2&&["suporte","resistencia"].includes(n.tipo)&&!ref.some(x=>Math.abs(x-price)<=x*.015))return [];
+  return Number.isFinite(y)&&y>=(r.y0??0)&&y<=(r.y1??1)?[{...n,y}]:[];
  });
 }
 function aureaFinalizarRecorteV1047(g){
@@ -4328,7 +4392,7 @@ async function aureaDeliberarV1013(resposta,pergunta,contexto,livros,signal,titu
   else{
     const j=await aureaDebateCallV1013({...dados,fase:"pareceres"},AbortSignal.any([signal,AbortSignal.timeout(38000)]),titular);
     rodada=j.resultado;modeloInicial=j.modelo||"";
-    resposta={titulo:"Parecer inicial do Conselho",resumo:rodada.resumo,visoes:rodada.pareceres.map(p=>({escola:p.escola,argumento:p.argumento+" — Base: "+p.base})),modelo:modeloInicial,fundamentos_v1014:j.fundamentos_v1014||[],commodities_v1015:j.commodities_v1015||[],renda_fixa_v1016:j.renda_fixa_v1016||null};
+    resposta={titulo:"Parecer inicial do Conselho",resumo:rodada.resumo,visoes:rodada.pareceres.filter(p=>p.status!=="lacuna").map(p=>({escola:p.escola,argumento:p.argumento+" — Base: "+p.base})),modelo:modeloInicial,fundamentos_v1014:j.fundamentos_v1014||[],commodities_v1015:j.commodities_v1015||[],renda_fixa_v1016:j.renda_fixa_v1016||null};
   }
   if(signal.aborted||syncOwner()!==titular)return resposta;
   const visual=resposta.tipo_imagem?JSON.stringify({estrutura:resposta.estrutura,validacao_ohlc:resposta.validacao_ohlc,pivos:resposta.pivos,extremos_ohlc:resposta.extremos_ohlc,indicadores_ohlc:resposta.indicadores_ohlc,graficos:resposta.graficos,fatos:resposta.fatos,comparacao:resposta.comparacao}).slice(0,7000):"";
@@ -4419,15 +4483,22 @@ async function ecoPergunta(e, opt) {
     let resposta=null,livros=[];
     const gradeOpcoes=aureaTemaOpcoesV1017(q)?aureaGradeAtualV1017(q):null;
     const gradeAutorizada=opt.contextoPublico===true?gradeOpcoes:null;
+    // v1048: dados reais do ativo citado (histórico diário do Terminal), calculados no aparelho.
+    const tk1048=opt.imagem?null:(rota.tickers||[]).find(x=>/^[A-Z]{4}\d{1,2}$/.test(x));
+    const dossie=tk1048?await aureaDossieV1048(tk1048,controller.signal):null;
+    if(dossie)try{window.DiarioPlacarAurea?.avaliar?.(tk1048,window.TRM?.TR?.dados?.["cd|"+tk1048+"|1d"]?.v?.candles);}catch{}
+    const dossieTxt=aureaDossieTextoV1048(dossie);
+    const ctxPub=((e===q?"":e.slice(q.length))+(dossieTxt?"\n"+dossieTxt:"")).trim();
+    if(!ativo())return;
     if(opt.livros===true){
       try{livros=await window.DiarioCerebroIA?.contextoConselho?.(rota.id,q,true,controller.signal)||[];}catch{}
     }
     if(!ativo())return;
     const bloco=window.DiarioCerebroIA?.blocoConselho?.(livros)||"";
     if(opt.imagem)resposta=await aureaImagemCall(e,opt.imagem,controller.signal,titular,livros,q,debate,gradeAutorizada);
-    else if(debate)resposta=await aureaDeliberarV1013(null,q,e===q?"":e.slice(q.length),livros,controller.signal,titular,gradeAutorizada);
+    else if(debate)resposta=await aureaDeliberarV1013(null,q,ctxPub,livros,controller.signal,titular,gradeAutorizada);
     else if(rota.tema==="opcoes"&&!opt.dadosPrivados&&!a){
-      const j=await aureaDebateCallV1013({fase:"opcoes",lente:rota.id,pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros,simulacao_opcoes:aureaOpcoesLocalV1017(q),grade_opcoes:gradeAutorizada},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
+      const j=await aureaDebateCallV1013({fase:"opcoes",lente:rota.id,pergunta:q,contexto_publico:ctxPub,biblioteca:livros,simulacao_opcoes:aureaOpcoesLocalV1017(q),grade_opcoes:gradeAutorizada},AbortSignal.any([controller.signal,AbortSignal.timeout(50000)]),titular);
       resposta={...j.resultado,modelo:j.modelo||""};
     }
     else if(rota.tema==="renda_fixa"&&!opt.dadosPrivados&&!a){
@@ -4440,7 +4511,7 @@ async function ecoPergunta(e, opt) {
       resposta={...j.resultado,modelo:j.modelo||"",commodities_v1015:j.commodities_v1015||[]};
     }
     else if(rota.id==="graham"&&!opt.dadosPrivados&&!a){
-      const j=await aureaDebateCallV1013({fase:"graham",pergunta:q,contexto_publico:e===q?"":e.slice(q.length),biblioteca:livros},AbortSignal.any([controller.signal,AbortSignal.timeout(38000)]),titular);
+      const j=await aureaDebateCallV1013({fase:"graham",pergunta:q,contexto_publico:ctxPub,biblioteca:livros},AbortSignal.any([controller.signal,AbortSignal.timeout(38000)]),titular);
       resposta={...j.resultado,modelo:j.modelo||"",fundamentos_v1014:j.fundamentos_v1014||[]};
     }
     else {
@@ -4448,7 +4519,8 @@ async function ecoPergunta(e, opt) {
       // Dow também respeita o consentimento e o mesmo limite de trechos das demais lentes.
       if(!ativo())return;
       if(!resposta){
-        const o=await anxCall({modo:"economista",texto:aureaTexto(agregado||bloco?e.slice(0,Math.max(500,4500-agregado.length-bloco.length))+agregado+bloco:e,rota),link:a,
+        const e1048=dossieTxt?e.slice(0,Math.max(600,4300-dossieTxt.length))+"\n"+dossieTxt:e;
+        const o=await anxCall({modo:"economista",texto:aureaTexto(agregado||bloco?e1048.slice(0,Math.max(500,4500-agregado.length-bloco.length))+agregado+bloco:e1048,rota),link:a,
           hist:ECO.l.filter(s=>(!s.privado||opt.dadosPrivados)&&(!s.livros||opt.livros)).slice(-4).map(s=>({p:s.q,r:[s.r.resumo,...(s.r.explicacao||[]).slice(0,2),...(s.por==="conselho"?(s.r.visoes||[]).map(v=>v.escola+": "+v.argumento):[])].join(" ").slice(0,3500)}))
         },{signal:controller.signal});
         if(!o?.resposta)throw new Error(o?.erro||"A Áurea está temporariamente indisponível.");
@@ -4460,6 +4532,7 @@ async function ecoPergunta(e, opt) {
     if(!ativo())return;
     if(resposta.fundamentos_v1014?.length)resposta.fundamentos_v1014=aureaCalcularGrahamV1014(resposta.fundamentos_v1014);
     if(aureaTemaOpcoesV1017(q))resposta.opcoes_v1017={...aureaOpcoesLocalV1017(q),grade:gradeOpcoes};
+    if(dossie){resposta.dossie_v1048=dossie;try{window.DiarioPlacarAurea?.registrar?.(resposta,rota.id,dossie);}catch{}}
     if(aureaRendaFixaTemaV1016(q))resposta.renda_fixa_v1016={...(resposta.renda_fixa_v1016||{}),simulacao:aureaRendaFixaLocalV1016(q)};
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
       motivo:rota.motivo,tickers:rota.tickers,privado:!!opt.dadosPrivados,livros:livros.length>0,...(opt.imagem?{imagens:(Array.isArray(opt.imagem)?opt.imagem:[opt.imagem]).map(x=>x.url)}:{})});
