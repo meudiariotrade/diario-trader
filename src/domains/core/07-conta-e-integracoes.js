@@ -3879,6 +3879,27 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
    canvas.width=Math.round(img.naturalWidth*scale);canvas.height=Math.round(img.naturalHeight*scale);
    const x=canvas.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,canvas.width,canvas.height);
    const px1044=x.getImageData(0,0,canvas.width,canvas.height).data;
+   const historico=aureaSeriesDaFoto.get(g);
+   if(historico&&!historico.bars&&g.validacao_ohlc?.status!=="conferido"){
+    g.validacao_ohlc={status:"visual",motivo:historico.motivo};canvas.width=canvas.height=0;return;
+   }
+   if(historico?.bars&&g.validacao_ohlc?.status!=="conferido"){
+    const {bars,source,mensal}=historico,w=canvas.width,h=canvas.height;
+    const fit=await aureaAlinharFotoAsync(g,bars,px1044,w,h,signal);
+    if(signal.aborted)return;
+    if(fit){
+     const first={i:fit.k,x:fit.group[0].x/w},last={i:fit.k+fit.n-1};
+     g.pivos=aureaPivosDoRecorte(bars,first,last,fit.step/w,{y:v=>(fit.offset+fit.slope*(fit.log?Math.log(v):v))/h},fit.geom).map(p=>{
+      const o=fit.group[bars.findIndex(b=>b.date===p.data)-fit.k],y=(p.tipo==="topo"?o.u:o.l)/h;
+      const compativel=Math.abs(y-p.y)*h<=fit.tol;
+      return {...p,y:compativel?y:p.y,ancoragem_visual:compativel?"pixel_compativel":"nao_conferida"};
+     });
+     g.validacao_ohlc={status:"conferido",ticker:g.identificacao_visual.ticker,tf:mensal?"1M":"1D",source,desde:bars[first.i].date,ate:bars[last.i].date,motivo:"Sequência de "+fit.n+" candles alinhada pelas máximas e mínimas do histórico. Marcadores nos pavios compatíveis."};
+     aureaPosicionarNiveisV1044(g);canvas.width=canvas.height=0;return;
+    }
+    g.validacao_ohlc={status:"visual",motivo:source+" forneceu "+bars.length+" barras fechadas. Não foi possível associar este recorte a uma única sequência de candles."};
+    canvas.width=canvas.height=0;return;
+   }
    const projetados=g.pivos.some(p=>p.passo_x>0);
    const originais=g.pivos;
    if(g.geometria_preco)g.pivos=aureaAncorarPivosV1021(g,px1044,canvas.width,canvas.height);
@@ -3945,24 +3966,168 @@ function aureaIndicadoresHistoricosV1021(g,series){
 }
 
 // Cruza as marcas de tempo do print com as barras reais do histórico HP.
+// Encontra uma sequência única pela forma dos pavios, quando as datas do eixo estão cortadas.
+const aureaSeriesDaFoto=new WeakMap();
+function aureaAlinharPavios(g,bars,pixels,w,h){
+ let r=g.geometria_preco;
+ if(!r){
+  const pontos=(g.pivos||[]).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>0&&p.x<1&&p.y>0&&p.y<1);
+  if(pontos.length<2)return null;
+  const ys=pontos.map(p=>p.y),min=Math.min(...ys),max=Math.max(...ys);
+  if(max-min<.08)return null;
+  r={x0:.015,x1:.89,y0:Math.max(.01,min-.03),y1:Math.min(.99,max+.04),eixos:[]};
+ }
+ if(!pixels||bars.length<14)return null;
+ const left=Math.ceil(r.x0*w),right=Math.floor(r.x1*w),top=Math.ceil(r.y0*h),bottom=Math.floor(r.y1*h);
+ if(left<0||right>=w||top<0||bottom>=h||right-left<60||bottom-top<40)return null;
+ const hi=new Int32Array(w).fill(h),lo=new Int32Array(w).fill(-1);
+ for(let x=left;x<=right;x++)for(let y=top;y<=bottom;y++){
+  const i=4*(y*w+x),max=Math.max(pixels[i],pixels[i+1],pixels[i+2]);
+  if(max>125||max-Math.min(pixels[i],pixels[i+1],pixels[i+2])>25||pixels[i+3]<220)continue;
+  hi[x]=Math.min(hi[x],y);lo[x]=y;
+ }
+ // Os pavios centrais avançam além do corpo em intervalos regulares.
+ const tips=[];
+ for(let x=left+3;x<right-3;x++){
+  if(lo[x]-hi[x]<4)continue;
+  const upper=Math.min(hi[x-3],hi[x+3])-hi[x],lower=lo[x]-Math.max(lo[x-3],lo[x+3]);
+  if(Math.max(upper,lower)<2)continue;
+  const prev=tips[tips.length-1];
+  if(prev&&x-prev.end<=1){prev.end=x;prev.x=(prev.start+x)/2;}else tips.push({x,start:x,end:x});
+ }
+ if(tips.length<10)return null;
+ const grids=[];
+ const strip=r.faixa;
+ if(strip){const step=(strip.ultimo-strip.primeiro)*w/(strip.n-1);if(step>=3&&step<=60)grids.push({step,origin:strip.primeiro*w});}
+ const periods=[];
+ for(let bin=140;bin<=1440;bin++){
+  const step=bin/40;let a=0,b=0;
+  for(const p of tips){const theta=2*Math.PI*p.x/step;a+=Math.cos(theta);b+=Math.sin(theta);}
+  const coherence=Math.hypot(a,b)/tips.length;
+  if(coherence>.36)periods.push({step,origin:Math.atan2(b,a)*step/(2*Math.PI),coherence});
+ }
+ for(const p of periods.sort((a,b)=>b.coherence-a.coherence)){
+  if(!grids.some(q=>Math.abs(q.step-p.step)<.14))grids.push(p);
+  if(grids.length>=5)break;
+ }
+ const candidates=[];
+ for(const {step,origin} of grids){
+  const start=origin+Math.ceil((left-origin)/step)*step,obs=[];
+  for(let x=start;x<=right;x+=step){
+   let u=h,l=-1;const radius=Math.min(2,Math.max(1,Math.floor(step*.19)));
+   for(let col=Math.max(left,Math.round(x)-radius);col<=Math.min(right,Math.round(x)+radius);col++){
+    u=Math.min(u,hi[col]);l=Math.max(l,lo[col]);
+   }
+   obs.push(l-u>=2?{x,u,l}:null);
+  }
+  // Uma barra muito curta ou encoberta deixa uma lacuna na grade, mas mantém seu índice.
+  for(let j=1;j+1<obs.length;j++)if(!obs[j]&&obs[j-1]&&obs[j+1])obs[j]={x:start+j*step,oculta:true};
+  let i=0;
+  while(i<obs.length){
+   while(i<obs.length&&!obs[i])i++;
+   const begin=i;while(i<obs.length&&obs[i])i++;
+   const group=obs.slice(begin,i);if(group.length<14)continue;
+   // Inclui a barra parcial da ponta somente na foto, nunca na confirmação.
+   for(const skip of [0,1]){
+    const n=group.length-skip;
+    for(let k=0;k+n<=bars.length;k++){
+     for(const log of [false,true]){
+      const price=v=>log?Math.log(v):v;
+      let sp=0,sy=0,spp=0,spy=0,observadas=0;
+      for(let j=0;j<n;j++){
+       const bar=bars[k+j],o=group[j],ph=price(bar.h),pl=price(bar.l);
+       if(o.oculta)continue;observadas++;
+       sp+=ph+pl;sy+=o.u+o.l;spp+=ph*ph+pl*pl;spy+=ph*o.u+pl*o.l;
+      }
+      let slope=(spy-sp*sy/(2*observadas))/(spp-sp*sp/(2*observadas)),offset=(sy-slope*sp)/(2*observadas);
+      if(!Number.isFinite(slope)||slope>=0)continue;
+      // Rótulos sobrepostos podem esconder um pavio. Refaz o ajuste com os pares próximos.
+      const tolerance=Math.max(3,h*.0035);
+      sp=sy=spp=spy=0;let retained=0;
+      for(let j=0;j<n;j++){
+       const bar=bars[k+j],o=group[j];
+       if(o.oculta)continue;
+       for(const [v,py] of [[bar.h,o.u],[bar.l,o.l]]){
+        const px=price(v);if(Math.abs(offset+slope*px-py)>tolerance*2.5)continue;
+        sp+=px;sy+=py;spp+=px*px;spy+=px*py;retained++;
+       }
+      }
+      if(retained<n*1.55)continue;
+      slope=(spy-sp*sy/retained)/(spp-sp*sp/retained);offset=(sy-slope*sp)/retained;
+      if(!Number.isFinite(slope)||slope>=0)continue;
+      const y=v=>offset+slope*price(v);
+      let hits=0,error=0,min=h,max=0;
+      const tol=Math.max(3,h*.0035);
+      for(let j=0;j<n;j++){
+       const bar=bars[k+j],o=group[j],du=Math.abs(y(bar.h)-o.u),dl=Math.abs(y(bar.l)-o.l);
+       if(o.oculta)continue;
+       if(du<=tol&&dl<=tol)hits++;
+       error+=Math.min(du+dl,6*tol);min=Math.min(min,o.u);max=Math.max(max,o.l);
+      }
+      if(hits<Math.max(12,n*(n>=55?.68:.84))||max-min<tol*8||error/(2*n)>tol*.78)continue;
+      if(r.eixos?.length===3&&r.eixos.some(a=>Math.abs(a.y*h-y(a.preco))>2*tol))continue;
+      candidates.push({k,n,group,step,slope,offset,log,geom:r,score:hits-error/(2*n*tol),tol});
+     }
+    }
+   }
+  }
+ }
+ candidates.sort((a,b)=>b.score-a.score);
+ const best=candidates[0];if(!best)return null;
+ if(candidates.some(c=>c!==best&&c.score>=best.score*.90&&Math.abs((c.group[0].x+(best.k-c.k)*c.step)-best.group[0].x)>best.step*.49))return null;
+ return best;
+}
+
+async function aureaAlinharFotoAsync(g,bars,pixels,w,h,signal){
+ const args=[{geometria_preco:g.geometria_preco,pivos:g.pivos},bars,pixels,w,h];
+ if(signal.aborted)return null;
+ if(typeof Worker==="undefined")return aureaAlinharPavios(...args);
+ const code="const alinhar="+aureaAlinharPavios.toString()+";onmessage=e=>postMessage(alinhar(...e.data));";
+ const url=URL.createObjectURL(new Blob([code],{type:"text/javascript"}));
+ let worker,abort;
+ try{
+  worker=new Worker(url);
+  return await new Promise((resolve,reject)=>{
+   abort=()=>resolve(null);
+   signal.addEventListener("abort",abort,{once:true});
+   worker.onmessage=e=>resolve(e.data);
+   worker.onerror=reject;
+   worker.postMessage(args,[pixels.buffer]);
+  });
+ }finally{if(abort)signal.removeEventListener("abort",abort);worker?.terminate();URL.revokeObjectURL(url);}
+}
 async function aureaHistoricoTerminal(g,signal){
  const id=g.identificacao_visual,terminal=window.TRM;
- if(!terminal?.trCandles||id?.market!=="BR"||!/^[A-Z]{4}\d{1,2}$/.test(id.ticker)||
+ if(id?.market!=="BR"||!/^[A-Z]{4}\d{1,2}$/.test(id.ticker)||
     !["cabecalho","marca_dagua","ambos"].includes(id.origem))return false;
  const mensal=/^(1M|mensal|1 mês)$/i.test(id.periodo)&&id.periodo!=="1m";
  if(!mensal&&!/^(1d|d|diário|diario)$/i.test(id.periodo))return false;
  const geom=g.geometria_preco,axis=aureaCalibrarEixoV1021(geom);
- const key="cd|"+id.ticker+"|1d",snapshot=()=>terminal.TR?.dados?.[key]?.v;
- if(!snapshot()?.candles?.length){
-  let abort;
-  try{
-   if(signal.aborted)return false;
-   await Promise.race([terminal.trCandles(id.ticker,"1d"),new Promise(resolve=>{
-    abort=resolve;signal.addEventListener("abort",resolve,{once:true});
-   })]);
-  }finally{if(abort)signal.removeEventListener("abort",abort);}
+ aureaSeriesDaFoto.set(g,{motivo:"O gráfico foi identificado, mas as fontes não entregaram uma série diária válida para conferir os pavios."});
+ const key="cd|"+id.ticker+"|1d";
+ const graph=()=>terminal?.tec?.velas?.(id.ticker,"1d")?.L;
+ const hp=()=>terminal?.TR?.dados?.[key]?.v?.candles;
+ let rows=graph(),source="Terminal · gráfico";
+ if(!rows?.length){rows=hp();source="Terminal HP";}
+ if(!rows?.length){
+  const load=terminal?.tec?.pegaVelas?()=>terminal.tec.pegaVelas(id.ticker,"1d"):terminal?.trCandles?()=>terminal.trCandles(id.ticker,"1d"):null;
+  if(load&&!signal.aborted){
+   let abort;
+   const stop=AbortSignal.any([signal,AbortSignal.timeout(3500)]);
+   try{await Promise.race([load(),new Promise(resolve=>{abort=resolve;stop.addEventListener("abort",resolve,{once:true});})]);}catch{}finally{if(abort)stop.removeEventListener("abort",abort);}
+   rows=graph();source="Terminal · gráfico";
+   if(!rows?.length){rows=hp();source="Terminal HP";}
+  }
  }
- const payload=snapshot(),rows=payload?.candles;
+ if(!rows?.length&&!signal.aborted){
+  const contract=window.DiarioFeedContrato,audit=window.DiarioHistoricoQualidade;
+  if(contract?.series&&audit?.audit){
+   const r=await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/tecnico-candles?market=BR&tf=1d&ticker="+encodeURIComponent(id.ticker),{signal,credentials:"omit"});
+   if(r.ok){const p=await r.json(),q=audit.audit(p,{ticker:id.ticker,market:"BR",tf:"1d",contract});
+    if(q.valid){const series=contract.series(p.candles,{tf:"1d"});if(series.valid){rows=series.candles.map(c=>[c.t/1000,c.o,c.h,c.l,c.c]);source=q.source||"Histórico técnico";}}
+   }
+  }
+ }
  if(signal.aborted||!Array.isArray(rows)||rows.length<5)return false;
  const today=new Date().toISOString().slice(0,10),bars=[];
  let previous="";
@@ -3982,11 +4147,19 @@ async function aureaHistoricoTerminal(g,signal){
  }
  // A primeira agregação pode começar no meio do mês.
  if(mensal)bars.shift();
- if(!axis||!Array.isArray(geom.tempo)||bars.length<5)return false;
+ if(bars.length<5)return false;
+ aureaSeriesDaFoto.set(g,{bars,source,mensal});
+ if(!axis||!Array.isArray(geom?.tempo))return false;
  const anchors=geom.tempo.map(a=>({x:a.x,i:bars.findIndex(b=>mensal?b.date===a.data.slice(0,7):b.date.startsWith(a.data))})).filter(a=>a.i>=0).sort((a,b)=>a.x-b.x);
  if(anchors.length<2)return false;
  const first=anchors[0],last=anchors[anchors.length-1],step=(last.x-first.x)/(last.i-first.i);
  if(!(step>0)||last.i-first.i<4||last.x-first.x<.12||anchors.some((a,j)=>j&&a.i<=anchors[j-1].i||Math.abs(first.x+(a.i-first.i)*step-a.x)>step*.48))return false;
+ g.pivos=aureaPivosDoRecorte(bars,first,last,step,axis,geom);
+ g.validacao_ohlc={status:"conferido",ticker:id.ticker,tf:mensal?"1M":"1D",source,desde:bars[first.i].date,ate:bars[last.i].date,motivo:"Extremos calculados no histórico do Terminal entre as datas identificadas no eixo. A posição de cada marcador é conferida no pavio da imagem."};
+ return true;
+}
+
+function aureaPivosDoRecorte(bars,first,last,step,axis,geom){
  const pontos=[];
  for(let i=first.i+2;i<=last.i-2;i++){
   const bar=bars[i],x=first.x+(i-first.i)*step;
@@ -4005,11 +4178,8 @@ async function aureaHistoricoTerminal(g,signal){
   if(!selected.some(q=>q.tipo===p.tipo&&Math.abs(q.x-p.x)<Math.max(step*3,.035)))selected.push(p);
   if(selected.length===12)break;
  }
- g.pivos=selected.sort((a,b)=>a.x-b.x);
- g.validacao_ohlc={status:"conferido",ticker:id.ticker,tf:mensal?"1M":"1D",source:"Terminal HP"+(payload.fonte?" · "+payload.fonte:""),desde:bars[first.i].date,ate:bars[last.i].date,motivo:"Extremos calculados no histórico do Terminal entre as datas identificadas no eixo. A posição de cada marcador é conferida no pavio da imagem."};
- return true;
+ return selected.sort((a,b)=>a.x-b.x);
 }
-
 async function aureaValidarHistoricoV1012(resposta,pergunta,signal){
   const graficos=Array.isArray(resposta.graficos)?resposta.graficos:[resposta],cache=new Map();
   const feed=window.DiarioFeedContrato,auditoria=window.DiarioHistoricoQualidade;
