@@ -33,3 +33,52 @@ test('central usa a mesma seleção Profit de Mercado para mini, inclusive linha
  overlay.WIN={tk:'INDZ26',px:178728,em:at,fechado:true};assert.equal(w.DiarioMarketData.get('WIN'),null);
  overlay.WDO={tk:'DOLZ26',px:5746.5,em:at,fechado:true};assert.equal(w.DiarioMarketData.get('WDO').px,5700);
 });
+
+
+// v1032: fixture simulada, sem dependência de rede ou de dados em produção.
+const sinaFixture=(px='657.5',ant='661.5',date='2026-11-27',time='100000')=>{
+ const f=['Iron',time,'660','665','650','661','657','658',px,'0',ant,'1','1','100','100','DCE','I',date];
+ return 'var hq_str_nf_I0="'+f.join(',')+'";';
+};
+test('SINA I0: usa último preço e ajuste anterior do mesmo instrumento, mantém yuan e horário da China',async()=>{
+ const m=await import('../cloudflare/diario-noticias/producao-snapshot-v894.mjs');
+ const now=Date.parse('2026-11-27T02:01:00Z'),q=m.parseSinaDalianV1032(sinaFixture(),now);
+ assert.equal(q.px,657.5);assert.equal(q.fechamentoAnterior,661.5);
+ assert.equal(q.simboloFonte,'SINA:I0');assert.equal(q.fonte,'Sina');
+ assert.ok(Math.abs(q.d1-(657.5/661.5-1)*100)<1e-9);
+ assert.equal(q.priceAt,'2026-11-27T02:00:00.000Z');
+ assert.equal(m.parseSinaDalianV1032(sinaFixture('0'),now),null);
+ assert.equal(m.parseSinaDalianV1032(sinaFixture('657.5','0'),now),null);
+ assert.equal(m.parseSinaDalianV1032(sinaFixture().replace('nf_I0','nf_I2701'),now),null);
+ assert.equal(m.parseSinaDalianV1032(sinaFixture('657.5','661.5','2026-11-28'),now).priceAt,null);
+});
+test('snapshot central inclui Dalian SINA sem abrir Commodities e sem confundir FEF2',async()=>{
+ const m=await import('../cloudflare/diario-noticias/producao-snapshot-v894.mjs');
+ const now=Date.parse('2026-11-27T02:01:00Z');
+ const fetcher=async(url,opt)=>{
+  if(String(url).includes('sinajs.cn'))return new Response(sinaFixture());
+  const b=JSON.parse(opt.body),rows=b.symbols.tickers.filter(s=>s!=='DCE:I1!').map(s=>({s,d:b.columns.map(k=>({close:88.75,change:0,change_abs:0,update_time:now/1000,update_mode:'delayed'}[k]??null))}));
+  return Response.json({data:rows});
+ };
+ const snap=await m.coletarMercado(fetcher,now),cmd=snap.mercados.grupos.find(g=>g.g==='Commodities').itens;
+ assert.equal(cmd.filter(r=>r.s==='DCE:I1!').length,1);
+ assert.equal(cmd.find(r=>r.s==='DCE:I1!').px,657.5);
+ assert.equal(cmd.find(r=>r.s==='DCE:I1!').source,'Sina');
+ assert.equal(cmd.find(r=>r.s==='SGX:FEF2!').px,88.75);
+ const noSina=await m.coletarMercado(async(u,o)=>String(u).includes('sinajs.cn')?new Response('',{status:503}):fetcher(u,o),now);
+ assert.equal(noSina.mercados.grupos.find(g=>g.g==='Commodities').itens.some(r=>r.s==='DCE:I1!'),false);
+});
+test('lista de commodities usa SINA sem depender de TradingView DCE',async()=>{
+ const m=await import('../cloudflare/diario-noticias/producao-snapshot-v894.mjs');
+ const original=global.fetch;
+ try{
+  global.fetch=async(url,opt)=>{
+   if(String(url).includes('sinajs.cn'))return new Response(sinaFixture('657.5','661.5',new Date().toISOString().slice(0,10),'000000'));
+   return Response.json({data:[]});
+  };
+  const response=await m.default.fetch(new Request('https://example.com/v1/macro?modo=cotacoes&aba=cmd'),{});
+  assert.equal(response.status,200);
+  const j=await response.json(),q=j.itens.find(r=>r.s==='DCE:I1!');
+  assert.equal(q.px,657.5);assert.equal(q.fonte,'Sina');assert.equal(q.simboloFonte,'SINA:I0');
+ }finally{global.fetch=original}
+});

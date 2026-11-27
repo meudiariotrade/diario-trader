@@ -1024,7 +1024,7 @@ function jrCotHtml() {
       const i = n.startsWith("ust"),
         l =
           n === "dce"
-            ? "DCE · yuan por tonelada"
+            ? (r.fonte === "Sina" ? "Sina I0" : "DCE") + " · yuan por tonelada"
             : n.startsWith("fef")
               ? r.alt >= 2
                 ? "COMEX " + r.s.split(":")[1] + " · SGX indisponível"
@@ -1036,7 +1036,7 @@ function jrCotHtml() {
       `<tr><td colspan="3" class="mut" style="padding:10px 2px 2px;font-weight:700;letter-spacing:.04em;font-size:11px">${n}</td></tr>` +
       r.map(o).join("");
   return `<table class="sm" style="width:100%;border-collapse:collapse">${s("PETRÓLEO E MINÉRIO", ["wti", "brent", "fef1", "fef2"].concat(t.dce ? ["dce"] : []))}${s("JUROS E DÓLAR LÁ FORA", ["ust2", "ust10", "ust30", "dxy"])}</table>
-<div class="sm mut" style="margin-top:6px">TradingView, ~15 min de atraso. Minério: contrato FEF da SGX (Singapura); quando a SGX não libera a cotação, mostra o contrato TIO da COMEX, que é o mesmo minério 62% Fe em US$/t. Dalian (DCE) é o minério negociado na China, em yuan; negocia na madrugada do Brasil.</div>`;
+<div class="sm mut" style="margin-top:6px">TradingView, ~15 min de atraso; Dalian: Sina quando disponível. Minério: contrato FEF da SGX (Singapura); quando a SGX não libera a cotação, mostra o contrato TIO da COMEX, que é o mesmo minério 62% Fe em US$/t. Dalian (DCE) é o minério negociado na China, em yuan; negocia na madrugada do Brasil.</div>`;
 }
 ((jrPaint = function () {
   const e = document.getElementById("jrp");
