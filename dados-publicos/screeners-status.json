@@ -1,23 +1,23 @@
 {
-  "processedAt": "2026-11-26T21:45:15.163Z",
+  "processedAt": "2026-11-27T08:50:07.250Z",
   "mode": "rotina",
   "records": {
     "BR": 159,
     "US": 624
   },
   "changed": {
-    "BR": 159,
-    "US": 367
+    "BR": 91,
+    "US": 535
   },
   "metrics": {
     "scanner": {
       "BR": {
-        "updates": 159,
+        "updates": 91,
         "errors": [],
         "blocked": false
       },
       "US": {
-        "updates": 294,
+        "updates": 328,
         "errors": [],
         "blocked": false
       }
@@ -35,12 +35,12 @@
       "source": "SEC company_tickers"
     },
     "sec": {
-      "updates": 61,
+      "updates": 194,
       "companies": 246,
       "asOf": "2026-11-26T17:17:16.730Z"
     },
     "documentos": {
-      "updates": 0,
+      "updates": 1,
       "blocked": false,
       "checked": 12
     },
