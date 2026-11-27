@@ -1,0 +1,7 @@
+v1053 — Análises fundamentalistas completas (Graham/Áurea)
+
+1. Base sempre atualizada: se o snapshot do Cloudflare estiver vencido, a Áurea lê o snapshot público direto do GitHub (cache de borda 30 min).
+2. Amostra setorial: pares com até 7 dias de diferença de data; setor pequeno usa a mediana do mercado (mesmo modelo). BR: 98 → 157 de 159 com amostra; EUA: 621 de 624.
+3. Histórico oficial CVM (DFP 2016–2025) ligado às ações BR: LPA, VPA, DPA, dividendos de 5 anos, payout médio, crescimento de receita e lucro em 3 anos, dívida líquida/patrimônio, ROE e série anual. Graham/Bazin passam a ter insumos oficiais (155 de 159).
+4. EUA: o extrator da SEC usa o CIK de todas as empresas (antes só 246 de 624) e passa a trazer remuneração em ações (% da receita) e série anual de receita; tudo com linhagem por documento.
+5. Tela: nomes traduzidos (EV/EBITDA, Payout…), valor de mercado em bi/mi, preço/LPA/VPA/DPA em R$, histórico CVM e receita SEC em seções recolhíveis.
