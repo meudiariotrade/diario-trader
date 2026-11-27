@@ -24,7 +24,7 @@
   let edgePending=null,ponteBusy=false;
   const edgeInterval=()=>{try{const s=root.DiarioSessoes?.session?.('WIN');return s?.verified&&!s.tradable?30000:2000;}catch{return 2000}};
   // O wrapper nunca volta ao polling antigo do Supabase após falha local.
-  cqPonte = async function (force = false) {
+  cqPonte = async function (force = false, edgeOnly = false) {
     if(ponteBusy)return;ponteBusy=true;
     try {
       if (typeof SESS === 'undefined' || !SESS?.uid) { CQ.pf={}; CQ.saved={}; CQ.owner=null; return; }
@@ -53,6 +53,8 @@
         finally{if(edgePending===controller)edgePending=null}
       }
       if(SESS?.uid!==owner)return;
+      // Início: somente Cloudflare/ponte local existente. Não iniciar reserva Supabase.
+      if(edgeOnly&&!edge&&!configured)return;
       if(!edge && Date.now() - ((CQ.edgeOwner===owner?CQ.legacyTs:CQ.pfTs) || 0) < (configured ? 2000 : manual ? 15e3 : 15 * 6e4)) return;
       CQ.pfTs = Date.now();if(!edge)CQ.legacyTs=CQ.pfTs;
       if (!edge && configured) {
@@ -66,6 +68,7 @@
       }
       // Apenas snapshot de reserva: no máximo uma consulta a cada 15 minutos, nunca por segundo.
       if (!Array.isArray(linhas)) {
+        if(edgeOnly)return;
         if (Date.now() - (CQ.cloudTs || 0) < (manual ? 15e3 : 15 * 6e4)) return;
         CQ.cloudTs = Date.now();
         linhas = await (await rq('/rest/v1/cotacoes?select=ticker,ult,var,updated_at,dat,hor&limit=250&user_id=eq.' + SESS.uid,{signal:AbortSignal.timeout(4000)})).json();
@@ -124,12 +127,13 @@
   // Ciclo de vida: timer só com uma tela consumidora visível, encerrado na saída.
   let tickerTimer=null,tickBusy=false;
   const market=()=>g(()=>tab,'')==='mercado'&&g(()=>MKT.tab,'')==='cq';
-  const active=()=>!doc.hidden&&!!g(()=>SESS?.uid&&SESS?.at,null)&&(market()||g(()=>tab,'')==='live'||g(()=>tab,'')==='terminal'||g(()=>tab,'')==='term'||!!doc.getElementById?.('ap-root'));
+  const home=()=>g(()=>tab,'')==='home';
+  const active=()=>!doc.hidden&&!!g(()=>SESS?.uid&&SESS?.at,null)&&(home()||market()||g(()=>tab,'')==='live'||g(()=>tab,'')==='terminal'||g(()=>tab,'')==='term'||!!doc.getElementById?.('ap-root'));
   async function tick(){
     if(tickBusy||!active())return;
     tickBusy=true;
     try{
-      const antes=g(()=>CQ.profitRevision1022,0);await cqPonte();
+      const antes=g(()=>CQ.profitRevision1022,0);await cqPonte(false,home());
       if(!active()||!market()||g(()=>CQ.profitRevision1022,0)===antes||doc.activeElement?.matches?.('#cotbox input, #cqbox input'))return;
       if(typeof cqMorph==='function')cqMorph();else cqPinta();
     }catch{}finally{tickBusy=false}

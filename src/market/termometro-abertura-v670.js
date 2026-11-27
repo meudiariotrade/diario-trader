@@ -144,7 +144,10 @@
   const diaBrt = date => new Intl.DateTimeFormat("en-CA", {timeZone:"America/Sao_Paulo", year:"numeric",month:"2-digit",day:"2-digit"}).format(date);
   const horaBrt = date => Number(new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",hourCycle:"h23"}).format(date));
   const basesConfirmadasV1028=new Map();
+  let donoBaseV1031=null;
   function fechamentoCanonicoV1028(tipo,q,now){
+    const dono=typeof SESS!=='undefined'?SESS?.uid||null:null;
+    if(dono!==donoBaseV1031){basesConfirmadasV1028.clear();donoBaseV1031=dono;}
     const s=w.DiarioSessoes?.session?.(tipo.toUpperCase(),now);
     if(!s?.verified)return undefined;
     const dia=s.state==='post'&&s.close?s.date:s.previousDate;
@@ -156,11 +159,19 @@
     const sess=w.DiarioSessoes.session(tipo.toUpperCase(),Date.parse(dia+'T15:00:00Z'));
     const end=sess?.verified&&sess.close?Date.parse(dia+'T03:00:00Z')+sess.close*60000:null;
     const start=sess?.verified&&Number.isFinite(sess.open)?Date.parse(dia+'T03:00:00Z')+sess.open*60000:end===null?null:end-10*HORA;
-    // Referência do último negócio datado próximo ao encerramento; não é ajuste oficial.
-    if(exact&&px>0&&ts!==null&&end!==null&&ts<=now+60000&&ts>=((q?.fechado===true&&start!==null)?start:end-15*60000)&&ts<=end+5*60000){
+    // A ponte pode registrar o último negócio fechado depois da janela nominal.
+    // Aceita a referência fechada do Profit da própria sessão, nunca uma
+    // cotação de outro dia nem o horário de coleta como substituto.
+    const fechadoProfit=q?.fechado===true&&q?.live!==true&&String(q?.fonte||q?.source||'').startsWith('Profit');
+    const mesmaSessao=ts!==null&&diaBrt(new Date(ts))===dia;
+    const janela=ts!==null&&end!==null&&ts>=((q?.fechado===true&&start!==null)?start:end-15*60000)&&ts<=end+5*60000;
+    const fechadoNaSessao=fechadoProfit&&mesmaSessao&&start!==null&&ts>=start&&now>=end;
+    if(exact&&px>0&&ts!==null&&end!==null&&mesmaSessao&&ts<=now+60000&&(janela||fechadoNaSessao)){
       if(!old||old.contract!==contract||ts>=old.ts){for(const k of basesConfirmadasV1028.keys())if(k.startsWith(tipo+':')&&k!==key)basesConfirmadasV1028.delete(k);basesConfirmadasV1028.set(key,{px,ts,contract});}
     }
-    return basesConfirmadasV1028.get(key)?.px??null;
+    const ref=basesConfirmadasV1028.get(key);
+    // Ao trocar o contrato selecionado, não reutilizar preço do vencimento anterior.
+    return ref&&(!q||!exact||ref.contract===contract)?ref.px:null;
   }
   function fechamento(tipo, fontes, now) {
     const hBrt = horaBrt(new Date(now));
