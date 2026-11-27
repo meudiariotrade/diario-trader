@@ -3277,7 +3277,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       }
       function graficoAureaV1007(M,E){
         if(!M.imagem)return "";
-        const cont={topo:0,fundo:0},semRecorte=E.validacao_ohlc?.historico_disponivel&&E.validacao_ohlc?.recorte_homologado!==true;
+        const cont={topo:0,fundo:0},semRecorte=E.validacao_ohlc?.historico_disponivel&&E.validacao_ohlc?.recorte_homologado!==true&&!E.validacao_ohlc?.visual_fallback;
         const pts=(!semRecorte&&Array.isArray(E.pivos)?E.pivos:[]).map(p=>({...p,ordem:++cont[p.tipo]})).filter(p=>["pixel_compativel","pavio_visual"].includes(p.ancoragem_visual)&&p.validacao!=="divergente"&&["topo","fundo"].includes(p?.tipo)&&["confirmado","potencial"].includes(p?.estado)&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1).slice(0,40);
         // v1050: no gráfico só os extremos mais relevantes (máximo e mínimo sempre), para os rótulos não se encavalarem.
         if(pts.length>7){
@@ -3327,7 +3327,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       function validacaoAureaV1012(g){
         if(!g.pivos?.length&&!g.extremos_ohlc?.length&&!g.identificacao_visual&&!g.confluencias_visuais)return "";
         const v=g.validacao_ohlc||{},status={visual:"Estimativa visual",divergente:"Divergente",preco_ohlc:"Preço compatível",extremo_ohlc:"Extremo local conferido",estrutura_ohlc:"Estrutura conferida por OHLC"};
-        const semRecorte=v.historico_disponivel&&v.recorte_homologado!==true;
+        const semRecorte=v.historico_disponivel&&v.recorte_homologado!==true&&!v.visual_fallback;
         const id=g.identificacao_visual,cv=g.confluencias_visuais,ohlc=semRecorte?[]:g.extremos_ohlc||[],pivos=semRecorte?[]:g.pivos||[],calc=semRecorte?null:g.indicadores_ohlc,ordem={topo:0,fundo:0};
         const historico=calc?'<details><summary>Confluências calculadas no histórico público</summary>'+calc.medias.map(m=>'<p>MM simples '+m.n+' · '+s(m.valor.toLocaleString("pt-BR",{maximumFractionDigits:4}))+' · '+s(m.inclinacao)+'</p>').join("")+calc.sinais.map(x=>'<p><b>'+s(x.tipo)+' · '+s(x.preco)+' ('+s(x.data)+')</b> — '+s(x.status)+'</p>').join("")+'<small>'+s(calc.nota)+'</small></details>':"";
         return '<section class="wf-chat-parecer"><b>Conferência estrutural dos pivôs</b>'+(id?'<p><b>Identificação visual:</b> '+s(id.ticker)+' · '+s(id.periodo)+' (não é homologação do histórico)</p>':"")+'<p>'+s(v.motivo||"Sem conferência histórica; marcações apenas visuais.")+'</p>'+
