@@ -1374,7 +1374,8 @@ async function imgDados() {
     dados.reserva.length||macroReserva?"DADOS PARCIAIS / CONSULTA ANTERIOR":"",
     ausentes.length?"COTAÇÕES PARCIAIS · "+ausentes.length+" ATIVOS SEM PREÇO DISPONÍVEL":"",
     adrs.status==="rejected"||adrs.value!==true||AD.err?"EWZ/ADRs: consulta anterior ou parcial":"",
-    brent&&brent.d1===null?"BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO":brent?.quoteStatus==='referencia_anterior'?"BRENT: ÚLTIMA REFERÊNCIA CONFIRMADA":""
+    brent&&brent.d1===null?"BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO":brent?.quoteStatus==='referencia_anterior'?"BRENT: ÚLTIMA REFERÊNCIA CONFIRMADA":"",
+    imgQ("TIO=F")?.quoteStatus==="referencia_mensal"?"SGX: REFERÊNCIA "+imgQ("TIO=F").simboloFonte:""
   ].filter(Boolean).join(" · ");
   return {mercadoOK:ausentes.length<14,adrsOK:!!AD.data?.itens?.length,aviso:IMG.aviso};
 }
@@ -1624,7 +1625,7 @@ function imgDesenha() {
     (Be(
       "Commodities",
       [
-        ["SGX FEF2!", imgQ("TIO=F"), 2],
+        [imgQ("TIO=F")?.quoteStatus==="referencia_mensal"?"SGX FEF2! (ref.)":"SGX FEF2!", imgQ("TIO=F"), 2],
         ["Minério Dalian", imgQ("DCE:I"), 1],
         ["Petróleo Brent", imgQ("BZ=F"), 2],
         ["Petróleo WTI", imgQ("CL=F"), 2],

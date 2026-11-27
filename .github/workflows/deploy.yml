@@ -62,7 +62,9 @@ jobs:
         run: node --test tests/cutover-screeners-v1001.test.cjs
       - run: npm run build
       - name: Validar central de cotações v1026
-        run: node --test tests/market-data-v1026.test.cjs tests/panorama-cotacoes-v1025.test.cjs tests/tape-live.test.cjs tests/aurea-brent-v1027.test.cjs tests/fef2-aurea-v1028.test.cjs tests/termometro-abertura-v670.test.cjs
+        run: node --test tests/market-data-v1026.test.cjs tests/panorama-cotacoes-v1025.test.cjs tests/tape-live.test.cjs tests/aurea-brent-v1027.test.cjs tests/fef2-aurea-v1028.test.cjs tests/termometro-abertura-v670.test.cjs tests/fef2-v1029.test.cjs
+      - name: Regressões da v1028 (gerador e Radar)
+        run: node --test --test-concurrency=1 tests/automacao-v815-v820.test.cjs tests/radar-categorias.test.cjs
       # Build e validação estrutural continuam obrigatórios para publicar.
       - run: npm run check
       - name: Testar clique real da lupa e atalho de busca v950

@@ -21,7 +21,7 @@ export function cotacaoMetaV954(row,cols,now=Date.now()){
  const at=finite(ts)&&ts>0&&ts*1000<=now+60000?new Date(ts*1000).toISOString():null;
  return {simboloFonte:row?.simboloFonte||row?.s||null,horarioPreco:at,priceAt:at,modoAtualizacao:mode||null,fechamentoAnterior:ant,baseVariacao:'Fechamento/ajuste anterior do mesmo instrumento (fonte)',quoteStatus:calc!==null&&(!finite(d1)||Math.abs(calc-d1)>0.08)?'divergente':!at?'horario_nao_confirmado':now-Date.parse(at)>1800000?'referencia_anterior':'coerente'};
 }
-export async function scanMercadoV954(fetcher,url,options,now=Date.now()){
+async function scanBrentV954(fetcher,url,options,now=Date.now()){
  const b=JSON.parse(options.body||'{}'),tickers=b.symbols?.tickers;
  if(!Array.isArray(tickers)||!tickers.includes(BRENT))return fetcher(url,options);
  const contrato=contratoBrentV954(now),cols=b.columns||[],all=[...new Set([...cols,'close','change','change_abs','update_time','update_mode'])];
@@ -63,4 +63,37 @@ export async function agendarDiagnosticoFinnhubV954(event,env){
  const old=await env.NEWS_CACHE.get(k,'json').catch(()=>null);if(old?.dia===dia)return;
  const out=await diagnosticarFinnhubV954(env.FINNHUB_API_KEY,fetch,event.scheduledTime);
  await env.NEWS_CACHE.put(k,JSON.stringify({...out,dia}),{expirationTtl:7*86400});
+}
+
+// v1029 — tentativa reduzida somente para o FEF2. Se o contínuo não vier,
+// o segundo mês do calendário é uma referência explícita, não cotação do contínuo.
+const FEF2='SGX:FEF2!', FEF_FIELDS=['close','change','change_abs','update_time','update_mode'];
+export function segundoMesSGXV1029(now=Date.now()){
+ const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Singapore',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(new Date(now)).map(x=>[x.type,x.value]));
+ const v=new Date(Date.UTC(+p.year,+p.month,1));
+ return 'SGX:FEF'+MONTHS[v.getUTCMonth()]+v.getUTCFullYear();
+}
+export async function scanMercadoV954(fetcher,url,options,now=Date.now()){
+ const b=JSON.parse(options.body||'{}'),tickers=b.symbols?.tickers||[];
+ if(!tickers.includes(FEF2))return scanBrentV954(fetcher,url,options,now);
+ const original=await scanBrentV954(fetcher,url,options,now);
+ if(!original.ok)return original;
+ const j=await original.json(),cols=b.columns||[];
+ const usable=(r,fields,strict=false)=>{
+  const px=r?.d?.[fields.indexOf('close')],d=r?.d?.[fields.indexOf('change')];
+  const m=cotacaoMetaV954(r,fields,now);
+  return Number.isFinite(px)&&px>0&&Number.isFinite(d)&&Math.abs(d)<=35&&m.quoteStatus!=='divergente'&&(!strict||(m.priceAt&&now-Date.parse(m.priceAt)<=96*3600000&&m.fechamentoAnterior>0));
+ };
+ const rows=Array.isArray(j?.data)?j.data:[];
+ if(rows.some(r=>r.s===FEF2&&usable(r,cols)))return Response.json(j,{status:original.status});
+ try{
+  const contrato=segundoMesSGXV1029(now);
+  const res=await fetcher('https://scanner.tradingview.com/global/scan',{...options,signal:AbortSignal.timeout(4500),body:JSON.stringify({...b,columns:FEF_FIELDS,symbols:{...b.symbols,tickers:[FEF2,contrato]}})});
+  if(res.ok){
+   const data=(await res.json())?.data||[];
+   const direct=data.find(r=>r.s===FEF2&&usable(r,FEF_FIELDS)),ref=data.find(r=>r.s===contrato&&usable(r,FEF_FIELDS,true)),q=direct||ref;
+   if(q){const row={...q,s:FEF2,simboloFonte:q.s,d:cols.map(k=>q.d[FEF_FIELDS.indexOf(k)]??null)};return Response.json({...j,data:[...rows.filter(r=>r.s!==FEF2),row]},{status:original.status});}
+  }
+ }catch{}
+ return Response.json(j,{status:original.status});
 }
