@@ -1,0 +1,6 @@
+v1049 — Áurea marca o print pelo histórico real
+
+- Novo casamento do print com o histórico diário: mede o contorno dos pavios coluna a coluna e descobre quantos pregões aparecem (com ou sem o candle de hoje). Não depende de ler o eixo nem os corpos.
+- Topos e fundos marcados com preço do histórico; suporte e resistência saem desses extremos (não da régua do eixo).
+- Veredito avisa quando citou preço que não é topo/fundo real e mostra os níveis corretos.
+- Raio-x do ativo também nas análises de print (ativo reconhecido na imagem).

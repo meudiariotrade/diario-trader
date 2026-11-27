@@ -4175,7 +4175,7 @@ function aureaCasarGradeV1047(bars,grid,g,w,h){
 function aureaNiveisSegurosV1047(g){
  const axis=aureaCalibrarEixoV1021(g.geometria_preco),r=g.geometria_preco||{y0:0,y1:1};
  // v1048: sem eixo calibrado, usa a escala dos pivôs conferidos (preço do OHLC × altura do pavio).
- const esc=axis?(p=>axis.y(p)):aureaEscalaV1044(g);
+ const esc=axis?(p=>axis.y(p)):typeof g._escala1049==="function"?g._escala1049:aureaEscalaV1044(g);
  // v1048: suporte/resistência precisa coincidir com um extremo real (OHLC ou pivô), não com a régua do eixo.
  const ref=[...(g.extremos_ohlc||[]),...(g.pivos||[])].map(p=>Number(String(p.preco||"").replace(/^~/,"").replace(",","."))).filter(x=>x>0);
  g.niveis=(g.niveis||[]).flatMap(n=>{
@@ -4183,6 +4183,30 @@ function aureaNiveisSegurosV1047(g){
   if(ref.length>=2&&["suporte","resistencia"].includes(n.tipo)&&!ref.some(x=>Math.abs(x-price)<=x*.015))return [];
   return Number.isFinite(y)&&y>=(r.y0??0)&&y<=(r.y1??1)?[{...n,y}]:[];
  });
+}
+// v1049 — quando o recorte é conferido, suporte e resistência saem dos topos/fundos reais do histórico,
+// e o veredito avisa se citou preço que não é extremo (ex.: número da régua do eixo).
+function aureaNiveisHistoricoV1049(g){
+ const bars=g._ohlc1046,ult=bars?.[bars.length-1]?.c,ext=(g.extremos_ohlc||[]).map(p=>({tipo:p.tipo,v:Number(p.preco)})).filter(p=>p.v>0);
+ if(!(ult>0)||!ext.length)return;
+ const esc=g._escala1049||(()=>{const a=aureaCalibrarEixoV1021(g.geometria_preco);return a?(p=>a.y(p)):aureaEscalaV1044(g);})();
+ const res=[...new Set(ext.filter(p=>p.tipo==="topo"&&p.v>ult).map(p=>p.v))].sort((a,b)=>a-b).slice(0,2);
+ const sup=[...new Set(ext.filter(p=>p.tipo==="fundo"&&p.v<ult).map(p=>p.v))].sort((a,b)=>b-a).slice(0,2);
+ const r=g.geometria_preco||{y0:0,y1:1},atuais=g.niveis||[];
+ if(esc)for(const [tipo,lista,rot] of [["resistencia",res,"topo do histórico"],["suporte",sup,"fundo do histórico"]])for(const v of lista){
+  if(atuais.some(n=>Math.abs(Number(n.preco)-v)<=v*.01))continue;
+  const y=esc(v);if(Number.isFinite(y)&&y>=(r.y0??0)&&y<=(r.y1??1))atuais.push({tipo,preco:v,y,rotulo:rot});
+ }
+ g.niveis=atuais.slice(0,8);
+ const vd=g.veredito;
+ if(vd){
+  const ok=x=>!(x>0)||ext.some(p=>Math.abs(p.v-x)<=p.v*.015)||Math.abs(ult-x)<=ult*.005;
+  if(!ok(vd.gatilho_preco)||!ok(vd.invalidacao_preco)){
+   const f=x=>Number(x).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+   vd.aviso="Preço citado não coincide com topo/fundo do histórico. Níveis reais: "+(res.length?"resistência R$ "+res.map(f).join(" e "):"sem resistência acima")+" · "+(sup.length?"suporte R$ "+sup.map(f).join(" e "):"sem suporte abaixo")+".";
+   if(!ok(vd.gatilho_preco))vd.gatilho_preco=null;if(!ok(vd.invalidacao_preco))vd.invalidacao_preco=null;
+  }
+ }
 }
 function aureaFinalizarRecorteV1047(g){
  const v=g.validacao_ohlc;
@@ -4198,11 +4222,69 @@ function aureaFinalizarRecorteV1047(g){
    g.pivos=(g.pivos||[]).filter(p=>p.data>=v.desde&&p.data<=v.ate&&p.ancoragem_visual==="pixel_compativel"&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=r?.x0&&p.x<=r?.x1&&p.y>=r?.y0&&p.y<=r?.y1);
    v.marcadores_validados=g.pivos.length;
    aureaNiveisSegurosV1047(g);
+   aureaNiveisHistoricoV1049(g);
   }
  }else aureaNiveisSegurosV1047(g);
- delete g._ohlc1046;
+ delete g._ohlc1046;delete g._escala1049;
 }
 
+// v1049 — casamento por envelope: para cada coluna do painel mede o pavio mais alto e o mais baixo
+// e procura quantas barras do histórico cabem no recorte (com ou sem o candle de hoje à direita),
+// ajustando preço→altura por mínimos quadrados. Não depende de ler corpos nem o eixo.
+function aureaEnvelopeV1049(g,data,w,h,bars){
+ const r=g.geometria_preco||{x0:0,y0:0,x1:1,y1:1};
+ if(!data||data.length!==w*h*4||!Array.isArray(bars)||bars.length<15)return null;
+ const ink=(x,y)=>{const j=(y*w+x)*4;return data[j+3]>200&&Math.max(data[j],data[j+1],data[j+2])<140&&Math.max(data[j],data[j+1],data[j+2])-Math.min(data[j],data[j+1],data[j+2])<35;};
+ // Limites sugeridos pela IA são só ponto de partida: o painel real é o maior bloco contínuo de tinta
+ // (separa cabeçalho, rótulo do preço no eixo, textos do OBV e do volume).
+ let L=Math.max(1,Math.floor((r.x0-.04)*w)),R=Math.min(w-2,Math.ceil((r.x1+.04)*w)),T=Math.max(1,Math.floor((r.y0-.04)*h)),B=Math.min(h-2,Math.ceil((r.y1+.04)*h));
+ const bloco=(cont,gap)=>{let melhor=null,ini=-1,soma=0,vazio=0;for(let i=0;i<=cont.length;i++){const v=i<cont.length?cont[i]:0;if(v>0){if(ini<0){ini=i;soma=0;}soma+=v;vazio=0;}else if(ini>=0&&++vazio>gap||i===cont.length&&ini>=0){const fim=i-vazio;if(!melhor||soma>melhor.soma)melhor={ini,fim,soma};ini=-1;vazio=0;}}return melhor;};
+ const linhas=[];for(let y=T;y<=B;y++){let c=0;for(let x=L;x<=R;x++)if(ink(x,y))c++;linhas.push(c);}
+ const by=bloco(linhas,Math.max(6,Math.round(h*.012)));if(!by)return null;B=T+by.fim;T=T+by.ini;
+ const colunas=[];for(let x=L;x<=R;x++){let c=0;for(let y=T;y<=B;y++)if(ink(x,y))c++;colunas.push(c);}
+ const bx=bloco(colunas,Math.max(8,Math.round(w*.03)));if(!bx)return null;R=L+bx.fim;L=L+bx.ini;
+ if(!(R-L>w*.2&&B-T>h*.12))return null;
+ const top=new Array(w).fill(-1),bot=new Array(w).fill(-1);
+ for(let x=L;x<=R;x++){
+  // Ignora traço horizontal isolado (linha de preço/grade): exige continuidade vertical de 2px.
+  for(let y=T;y<B;y++)if(ink(x,y)&&ink(x,y+1)){top[x]=y;break;}
+  for(let y=B;y>T;y--)if(ink(x,y)&&ink(x,y-1)){bot[x]=y;break;}
+ }
+ const cols=[];for(let x=L;x<=R;x++)if(top[x]>=0)cols.push(x);
+ if(cols.length<20)return null;
+ const env=x=>{let t=Infinity,b=-Infinity;for(let d=-1;d<=1;d++){const k=Math.round(x)+d;if(k>=L&&k<=R&&top[k]>=0){t=Math.min(t,top[k]);b=Math.max(b,bot[k]);}}return Number.isFinite(t)?[t,b]:null;};
+ const span=Math.max(...cols.map(x=>bot[x]))-Math.min(...cols.map(x=>top[x]));
+ if(span<40)return null;
+ const fits=[],c0=cols[0],c1=cols[cols.length-1];
+ const maxN=Math.min(bars.length+1,Math.floor((c1-c0)/2.2)+1);
+ const ajustar=(xl,xr,n,extra,logs)=>{
+  const vis=n-extra,first=bars.length-vis;if(first<0)return [];
+  const step=(xr-xl)/(n-1),P=[];let faltam=0;
+  for(let k=0;k<vis;k++){const e=env(xl+k*step);if(!e){faltam++;continue;}const b=bars[first+k];P.push([b.h,e[0]],[b.l,e[1]]);}
+  if(faltam>vis*.15||P.length<20)return [];
+  const out=[];
+  for(const log of logs){
+   const f=log?Math.log:v=>v;let mx=0,my=0;for(const [p,y] of P){mx+=f(p);my+=y;}mx/=P.length;my/=P.length;
+   let sxx=0,sxy=0;for(const [p,y] of P){sxx+=(f(p)-mx)**2;sxy+=(f(p)-mx)*(y-my);}
+   const b=sxy/sxx;if(!(b<0))continue;const a=my-b*mx;
+   const errs=P.map(([p,y])=>Math.abs(a+b*f(p)-y)),rms=Math.sqrt(errs.reduce((s,v)=>s+v*v,0)/errs.length);
+   out.push({n,extra,first,step,a,b,log,rms,xl,boas:errs.filter(e=>e<=Math.max(3,span*.02)).length/errs.length});
+  }
+  return out;
+ };
+ // 1ª etapa: pontas aproximadas, todas as quantidades de barras. 2ª: as melhores, com as pontas finas
+ // (a ponta pode ser a borda do corpo, não o pavio) e escala linear e logarítmica.
+ const etapa1=[];
+ for(let n=15;n<=maxN;n++)for(const extra of [0,1])for(const [dl,dr] of [[1,1],[3,3]])etapa1.push(...ajustar(c0+dl,c1-dr,n,extra,[false]));
+ etapa1.sort((p,q)=>p.rms-q.rms);
+ const cand=[];for(const f of etapa1){if(!cand.some(c=>c.n===f.n&&c.extra===f.extra))cand.push(f);if(cand.length===12)break;}
+ for(const c of cand)for(let dl=0;dl<=4;dl++)for(let dr=0;dr<=4;dr++)fits.push(...ajustar(c0+dl,c1-dr,c.n,c.extra,[false,true]));
+ fits.sort((p,q)=>p.rms-q.rms);const best=fits[0];
+ if(!best||best.rms>Math.max(2.2,span*.016)||best.boas<.85)return null;
+ if(fits.some(q=>Math.abs(q.n-best.n)>2&&q.rms<best.rms*1.35))return null;
+ const f=best.log?Math.log:v=>v;
+ return {...best,y:p=>(best.a+best.b*f(p))/h,x:i=>(best.xl+(i-best.first)*best.step)/w,env,top,bot};
+}
 function aureaMarcarHistoricoV1046(g,data,w,h){
  const bars=g._ohlc1046;
  let pixels=aureaLerCandlesV1046(g,data,w,h),match=aureaCorresponderCandlesV1046(bars,pixels,g,w,h);
@@ -4212,7 +4294,27 @@ function aureaMarcarHistoricoV1046(g,data,w,h){
   match=aureaCasarGradeV1047(bars,grid,g,w,h);
   if(match){pixels=grid.points;size=grid.size;const verified=new Set(match.validSlots);bySlot=new Map(pixels.filter(p=>verified.has(p.slot)).map(p=>[p.slot,p]));}
  }
- if(!match){g.validacao_ohlc.motivo="Histórico e pivôs disponíveis; sequência visual insuficiente, divergente ou ambígua. Nenhum marcador confirmado foi desenhado.";return;}
+ if(!match){
+  const ev=aureaEnvelopeV1049(g,data,w,h,bars);
+  if(!ev){g.validacao_ohlc.motivo="Histórico e pivôs disponíveis; sequência visual insuficiente, divergente ou ambígua. Nenhum marcador confirmado foi desenhado.";return;}
+  const vis=ev.n-ev.extra,slice=bars.slice(ev.first,ev.first+vis),pv=aureaPivosIndependentesV1046(slice);
+  g.extremos_ohlc=pv.map(({i,...p})=>p);
+  if(g.validacao_ohlc.tf==="1D"){
+   const rec={referencia_ohlc:{tf:"1d",desde:slice[0].date,ate:slice[slice.length-1].date},pivos:g.extremos_ohlc};
+   g.extremos_ohlc=aureaConferePivosV1012(rec,bars);
+   g.indicadores_ohlc=aureaIndicadoresHistoricosV1021({...rec,extremos_ohlc:g.extremos_ohlc},bars);
+  }
+  g.pivos=pv.flatMap(({i,...p})=>{
+   const x=ev.x(ev.first+i),e=ev.env(x*w);if(!e)return [];
+   const yPx=p.tipo==="topo"?e[0]:e[1],yFit=ev.y(Number(p.preco))*h;
+   if(Math.abs(yPx-yFit)>Math.max(4,h*.006))return [];
+   return [{...p,...g.extremos_ohlc.find(q=>q.data===p.data&&q.tipo===p.tipo),x,y:yPx/h,ancoragem_visual:"pixel_compativel"}];
+  });
+  // Escala do próprio ajuste, para desenhar níveis mesmo sem eixo legível.
+  g._escala1049=ev.y;
+  g.validacao_ohlc={...g.validacao_ohlc,status:"conferido",desde:slice[0].date,ate:slice[slice.length-1].date,imagem_correspondida:g.pivos.length>=2,marcadores_validados:g.pivos.length,motivo:"Recorte identificado pelo contorno dos pavios contra "+vis+" pregões do histórico"+(ev.extra?" (o candle de hoje ainda aberto ficou de fora)":"")+"; topos e fundos com preço do histórico."};
+  return;
+ }
  const slice=bars.slice(match.start,match.start+size),pivos=aureaPivosIndependentesV1046(slice);
  g.extremos_ohlc=pivos.map(({i,...p})=>p);
  if(g.validacao_ohlc.tf==="1D"){
@@ -4532,6 +4634,9 @@ async function ecoPergunta(e, opt) {
     if(!ativo())return;
     if(resposta.fundamentos_v1014?.length)resposta.fundamentos_v1014=aureaCalcularGrahamV1014(resposta.fundamentos_v1014);
     if(aureaTemaOpcoesV1017(q))resposta.opcoes_v1017={...aureaOpcoesLocalV1017(q),grade:gradeOpcoes};
+    // v1049: no print, o raio-x usa o ativo reconhecido na imagem (histórico já carregado pelo Terminal).
+    const tkImg=opt.imagem&&!dossie?(resposta.identificacao_visual||resposta.graficos?.[0]?.identificacao_visual)?.ticker:null;
+    if(tkImg&&/^[A-Z]{4}\d{1,2}$/.test(tkImg)){const di=await aureaDossieV1048(tkImg,controller.signal);if(di&&ativo()){resposta.dossie_v1048=di;try{window.DiarioPlacarAurea?.registrar?.(resposta,"conselho",di);}catch{}}}
     if(dossie){resposta.dossie_v1048=dossie;try{window.DiarioPlacarAurea?.registrar?.(resposta,rota.id,dossie);}catch{}}
     if(aureaRendaFixaTemaV1016(q))resposta.renda_fixa_v1016={...(resposta.renda_fixa_v1016||{}),simulacao:aureaRendaFixaLocalV1016(q)};
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
