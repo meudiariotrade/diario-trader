@@ -24235,7 +24235,7 @@ try {
         s = Y(t),
         o = t.side === "C" ? "Compra" : "Venda",
         i = c(t.ativo || "Ativo");
-      return `<button type="button" class="dt393-oprow" data-a="edit" data-id="${c(t.id)}"><span class="dt393-op-symbol ${o === "Compra" ? "buy" : "sell"}"><b>${i}</b><small>${c(t.setup || "Sem setup")}</small></span><span class="dt393-op-side ${o === "Compra" ? "buy" : "sell"}">${o}</span><span class="dt393-op-values"><strong class="${E(e)}">${e == null ? "Aberta" : (e > 0 ? "+" : "") + f(e)}</strong><small>${s == null ? "R não calculado" : (s > 0 ? "+" : "") + s.toFixed(2).replace(".", ",") + " R"}</small></span>${a("right", 16)}</button>`;
+      return `<button type="button" class="dt393-oprow" data-a="edit" data-id="${c(t.id)}"><span class="dt393-op-symbol ${o === "Compra" ? "buy" : "sell"}"><b>${i}</b><small>${c(t.setup || "Sem setup")}</small></span><span class="dt393-op-side ${o === "Compra" ? "buy" : "sell"}">${o}</span><span class="dt393-op-values"><strong class="${E(e)}">${e == null ? "Aberta" : (e > 0 ? "+" : "") + f(e)}</strong><small>${s == null ? "risco não definido" : (s > 0 ? "+" : "") + s.toFixed(2).replace(".", ",") + "× o risco"}</small></span>${a("right", 16)}</button>`;
     }
     function nt() {
       const t = it(),
@@ -24272,14 +24272,14 @@ try {
           )
           .join(" "),
         p = (180 - ((0 - i) / l) * 155).toFixed(1);
-      return `<svg class="dt393-perf-svg" role="img" aria-label="Curva acumulada de resultados de ${e.length} trades encerrados" viewBox="0 0 600 210" preserveAspectRatio="none"><g class="dt393-gridlines">${[25, 65, 105, 145, 185].map((u) => `<path d="M0 ${u}H600"/>`).join("")}</g><path class="dt393-zero" d="M0 ${p}H600"/><polyline points="${n}" fill="none" stroke="#f6f5f4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><text x="592" y="15" text-anchor="end">P&L acumulado · ${f(s)}</text></svg>`;
+      return `<svg class="dt393-perf-svg" role="img" aria-label="Curva acumulada de resultados de ${e.length} trades encerrados" data-uim-vals="${o.map((u) => u.toFixed(2)).join(",")}" data-uim-datas="${e.map((u) => String(L(u)).slice(0, 10)).join(",")}" data-uim-x0="5" data-uim-xw="590" data-uim-y0="180" data-uim-yh="155" data-uim-min="${i}" data-uim-rng="${l}" viewBox="0 0 600 210" preserveAspectRatio="none"><g class="dt393-gridlines">${[25, 65, 105, 145, 185].map((u) => `<path d="M0 ${u}H600"/>`).join("")}</g><path class="dt393-zero" d="M0 ${p}H600"/><polyline points="${n}" fill="none" stroke="#f6f5f4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><text x="592" y="15" text-anchor="end">P&L acumulado · ${f(s)}</text></svg>`;
     }
     function $t() {
       const t = V(),
         e = x(t),
         s = t.filter((i) => C(i) > 0),
         o = t.length ? (s.length / t.length) * 100 : null;
-      return `<div class="dt393-page dt393-journal">${v("book", "Resumo do dia", `<span class="dt393-datechip">${c(R().split("-").reverse().join("/"))}</span>`)}<div class="dt393-kpis"><div><small>Resultado</small><strong class="${E(e)}">${e > 0 ? "+" : ""}${f(e)}</strong></div><div><small>Win rate</small><strong>${o == null ? "—" : K(o)}</strong></div><div><small>R acumulado</small><strong class="${E(J(t))}">${J(t).toFixed(2).replace(".", ",")} R</strong></div><div><small>Nº de trades</small><strong>${t.length}</strong></div></div>${b}
+      return `<div class="dt393-page dt393-journal">${v("book", "Resumo do dia", `<span class="dt393-datechip">${c(R().split("-").reverse().join("/"))}</span>`)}<div class="dt393-kpis"><div><small>Resultado</small><strong class="${E(e)}">${e > 0 ? "+" : ""}${f(e)}</strong></div><div><small>Win rate</small><strong>${o == null ? "—" : K(o)}</strong></div><div><small>Resultado × risco</small><strong class="${E(J(t))}">${J(t).toFixed(2).replace(".", ",")}× o risco</strong></div><div><small>Nº de trades</small><strong>${t.length}</strong></div></div>${b}
       ${v("chart", "Performance do Diário")}<div class="dt393-chart-toolbar"><span>Resultado acumulado dos últimos trades fechados</span><button data-dt393-route="stats">Análise completa ${a("right", 14)}</button></div>${ft()}<small class="dt393-muted">Dados do seu diário. Comparação com o IBOV exige série histórica validada e não é simulada.</small>${b}
       ${v("check", "Checklist e cenário", P("Abrir plano", "dia"))}<p class="dt393-notes">${c(y().plano || "Plano não preenchido para esta data.")}</p>${b}
       ${v("trade", "Operações de hoje", P("Ver operações", "ops"))}<div class="dt393-oplist">${t.slice(0, 10).map(rt).join("") || '<p class="dt393-muted">Ainda não há trades encerrados neste dia.</p>'}</div>${b}
@@ -39642,7 +39642,6 @@ try {
           <div><b>${esc(info.nome)}</b><small>${esc(info.email || (info.logado ? "Conta conectada" : "Modo local no aparelho"))}</small></div>
         </div>
         <button type="button" class="p-btn" data-p949-go="conta"><span>Conta &amp; Backup</span><span>›</span></button>
-        <button type="button" class="p-btn" data-p949-go="painel"><span>Capital e Risco</span><span>›</span></button>
         <button type="button" class="p-btn" data-p949-go="import"><span>Importar do Profit</span><span>›</span></button>
         <button type="button" class="p-btn" data-p949-go="mais"><span>Aparência &amp; Config.</span><span>›</span></button>
         <button type="button" class="p-btn" data-p949-go="status"><span>Status do Sistema</span><span>›</span></button>
@@ -39688,11 +39687,9 @@ try {
       ["Desempenho", "Estatísticas, curva de capital e revisão", "stats"],
       ["Importar do Profit", "Subir relatório CSV de operações", "import"],
       ["Imposto de Renda", "Apuração mensal, custos e DARF", "imposto"],
-      ["Calculadora de Lotes", "Risco por operação e contratos", "contratos"],
       ["Estudos", "Cérebro de Livros e padrões de candles", "estudos"],
       ["Conta & Backup", "Sincronização e exportação de dados", "conta"],
       ["Configurações", "Aparência, alertas e preferências", "mais"],
-      ["Capital e Risco", "Limites, metas e capital operacional", "painel"],
       ["Status do Sistema", "Fontes e diagnóstico", "status"],
     ];
 

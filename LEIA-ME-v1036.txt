@@ -1,0 +1,6 @@
+v1036 — Etapa 4: Meu dia, Estudos e Inglês
+- "Máx. de trades" (Plano do dia e Limites): botão giratório com cliques ao lado do campo — girar, rolar o mouse ou usar as setas muda de 1 em 1; o campo continua editável.
+- Sliders de 0 a 10 (ex.: Nota do dia): régua com marcas, escala 0/5/10 e vibração a cada ponto no celular.
+- Barras de progresso de estudo, aulas e checklist sobem da base ao abrir e ganham borda viva.
+- Comparação lado a lado: já existe (Diário completo → "Plano × execução" e Desempenho → "Entrada planejada × executada"); mantida.
+Arquivos: src/shared/ui-rotina.js (novo), src/index.html, src/service-worker.js, release.config.json

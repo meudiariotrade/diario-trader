@@ -2331,6 +2331,7 @@ jrTecHtml = function () {
       n = o.tend === "Alta" ? "up" : o.tend === "Baixa" ? "dn" : "eq";
     return `<div class="jrtc"><div class="jrtc-h"><b>${esc(o.tk)}</b><span class="jrtag ${n}">${o.tend}</span></div>
 <div class="jrniv"><div class="dn"><small>R2</small><b>${s(o.R2)}</b></div><div class="dn"><small>R1</small><b>${s(o.R1)}</b></div><div><small>Pivô</small><b>${s(o.P)}</b></div><div class="up"><small>S1</small><b>${s(o.S1)}</b></div><div class="up"><small>S2</small><b>${s(o.S2)}</b></div></div>
+${window.DiarioGraficos ? window.DiarioGraficos.faixa(o, s) : ""}
 <div class="jrcen"><p><b class="g">Alta:</b> acima de ${s(o.R1)}, o próximo alvo é ${s(o.R2)}. Perder o pivô (${s(o.P)}) enfraquece a alta.</p><p><b class="r">Baixa:</b> abaixo de ${s(o.S1)}, o próximo alvo é ${s(o.S2)}. Voltar acima do pivô enfraquece a queda.</p></div>
 <div class="sm mut">${o.hoje ? "Níveis do pregão de hoje (ainda em andamento)." : "Calculado com a máxima, a mínima e o fechamento do pregão de " + jrDM(o.dia) + "."}</div></div>`;
   };

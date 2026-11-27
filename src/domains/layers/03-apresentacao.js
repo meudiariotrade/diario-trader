@@ -8484,7 +8484,6 @@ try {
           <div><b>${esc(info.nome)}</b><small>${esc(info.email || (info.logado ? "Conta conectada" : "Modo local no aparelho"))}</small></div>
         </div>
         <button type="button" class="p-btn" data-p949-go="conta"><span>Conta &amp; Backup</span><span>›</span></button>
-        <button type="button" class="p-btn" data-p949-go="painel"><span>Capital e Risco</span><span>›</span></button>
         <button type="button" class="p-btn" data-p949-go="import"><span>Importar do Profit</span><span>›</span></button>
         <button type="button" class="p-btn" data-p949-go="mais"><span>Aparência &amp; Config.</span><span>›</span></button>
         <button type="button" class="p-btn" data-p949-go="status"><span>Status do Sistema</span><span>›</span></button>
@@ -8530,11 +8529,9 @@ try {
       ["Desempenho", "Estatísticas, curva de capital e revisão", "stats"],
       ["Importar do Profit", "Subir relatório CSV de operações", "import"],
       ["Imposto de Renda", "Apuração mensal, custos e DARF", "imposto"],
-      ["Calculadora de Lotes", "Risco por operação e contratos", "contratos"],
       ["Estudos", "Cérebro de Livros e padrões de candles", "estudos"],
       ["Conta & Backup", "Sincronização e exportação de dados", "conta"],
       ["Configurações", "Aparência, alertas e preferências", "mais"],
-      ["Capital e Risco", "Limites, metas e capital operacional", "painel"],
       ["Status do Sistema", "Fontes e diagnóstico", "status"],
     ];
 

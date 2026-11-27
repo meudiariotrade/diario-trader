@@ -65712,7 +65712,7 @@ ${
         o,
       )
     : ""
-}${n.length > 1 ? `<div class="sm" style="margin-top:6px">Onde o seu processo rende mais por trade: <b>${r.l}</b>${r.mr != null ? ` (${dshN(r.mr)} R por trade)` : ""}. Toque numa modalidade para ver os números dela.</div>` : ""}</div>`;
+}${n.length > 1 ? `<div class="sm" style="margin-top:6px">Onde o seu processo rende mais por trade: <b>${r.l}</b>${r.mr != null ? ` (${dshN(r.mr)}× o risco por trade)` : ""}. Toque numa modalidade para ver os números dela.</div>` : ""}</div>`;
 }
 function modExtra(e, t) {
   const a = dshCor(),
@@ -71474,7 +71474,7 @@ function cqItens(category) {
     <div class="market-tools"><label class="market-search"><span class="market-sr">Buscar ativo</span><input type="search" data-market-search placeholder="Buscar ativo" value="${esc(CQ.search || '')}" autocomplete="off"></label><button type="button" data-cqr="1" aria-label="Atualizar preços" ${busy?'disabled':''}>↻</button><label class="market-order"><span class="market-sr">Ordenar ativos</span><select data-market-order>${[['lista','Ordem padrão'],['alta','Maiores altas'],['baixa','Maiores quedas']].map(([key,label])=>`<option value="${key}" ${CQ.ord===key?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-cqv="${CQ.vis==='mapa'?'lista':'mapa'}" aria-label="${CQ.vis==='mapa'?'Ver lista':'Ver mapa de calor'}">${CQ.vis==='mapa'?'Lista':'Mapa'}</button>${desk624 ? `<button type="button" class="m624-b" data-imgger="1" title="Gerar a imagem Panorama do mercado">Panorama</button>${term623 ? '<button type="button" class="m624-b" data-m624-mon aria-pressed="false" title="Tela limpa só com a grade (Esc para sair)">Modo Monitor</button>' : ''}` : ''}</div>
     ${cqCryptoPeriodoHtml(category)}
     ${term623 ? m623Html() : `<div class="market-summary" role="status">${summary606}${!mapa606 && data?.em ? ' · Consulta '+esc(new Date(data.em).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}))+' BRT' : ''}</div>
-    ${error ? `<p class="market-error" role="status">${esc(error)}${items.length?' Mantendo a consulta anterior.':''}</p>` : ''}
+    ${error ? `<p class="market-error" role="status">${esc(/Failed to fetch|NetworkError|Load failed|network/i.test(String(error))?'Sem conexão com a fonte agora.':error)}${items.length?' Mantendo a consulta anterior.':''}</p>` : ''}
     <div class="market-results" aria-busy="${busy && !total}">${content}</div>`}
     <details class="market-sources"><summary>Fontes e ferramentas</summary><p>Profit para ativos da B3 quando a ponte está conectada. Após o pregão, o último registro salvo aparece como FECHADO, com contrato e horário. As demais fontes e seus atrasos aparecem em cada ativo.</p><button type="button" data-navroute="term">Abrir gráficos e comparação no Terminal</button><button type="button" data-market-longshort>Long &amp; Short</button>${cqAlertasHtml()}${category==='jur'?'<button type="button" data-market-di>Ver curva DI no Terminal</button>'+cqJurosExtra():''}</details>
   </div>`;
@@ -85374,6 +85374,7 @@ jrTecHtml = function () {
       n = o.tend === "Alta" ? "up" : o.tend === "Baixa" ? "dn" : "eq";
     return `<div class="jrtc"><div class="jrtc-h"><b>${esc(o.tk)}</b><span class="jrtag ${n}">${o.tend}</span></div>
 <div class="jrniv"><div class="dn"><small>R2</small><b>${s(o.R2)}</b></div><div class="dn"><small>R1</small><b>${s(o.R1)}</b></div><div><small>Pivô</small><b>${s(o.P)}</b></div><div class="up"><small>S1</small><b>${s(o.S1)}</b></div><div class="up"><small>S2</small><b>${s(o.S2)}</b></div></div>
+${window.DiarioGraficos ? window.DiarioGraficos.faixa(o, s) : ""}
 <div class="jrcen"><p><b class="g">Alta:</b> acima de ${s(o.R1)}, o próximo alvo é ${s(o.R2)}. Perder o pivô (${s(o.P)}) enfraquece a alta.</p><p><b class="r">Baixa:</b> abaixo de ${s(o.S1)}, o próximo alvo é ${s(o.S2)}. Voltar acima do pivô enfraquece a queda.</p></div>
 <div class="sm mut">${o.hoje ? "Níveis do pregão de hoje (ainda em andamento)." : "Calculado com a máxima, a mínima e o fechamento do pregão de " + jrDM(o.dia) + "."}</div></div>`;
   };
