@@ -45726,6 +45726,7 @@ function imgQ(e) {
     if(!newer)return IMG.brent955;
   }
   if(!q)return null;
+  if(e==="BZ=F"&&IMG.central1026)return {...q,d1:Number.isFinite(q.d1)?q.d1:null};
   if(e==="BZ=F"){
     // Nunca misturar ajuste ou variação de contratos diferentes de Brent.
     const contrato=/^ICEEUR:BRN[FGHJKMNQUVXZ]\d{4}$/.test(q.simboloFonte||"");
@@ -45778,7 +45779,7 @@ async function imgDados() {
     dados.reserva.length||macroReserva?"DADOS PARCIAIS / CONSULTA ANTERIOR":"",
     ausentes.length?"COTAÇÕES PARCIAIS · "+ausentes.length+" ATIVOS SEM PREÇO DISPONÍVEL":"",
     adrs.status==="rejected"||adrs.value!==true||AD.err?"EWZ/ADRs: consulta anterior ou parcial":"",
-    brent&&brent.d1===null?"BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO":""
+    brent&&brent.d1===null?"BRENT: VARIAÇÃO SEM VENCIMENTO CONFIRMADO":brent?.quoteStatus==='referencia_anterior'?"BRENT: ÚLTIMA REFERÊNCIA CONFIRMADA":""
   ].filter(Boolean).join(" · ");
   return {mercadoOK:ausentes.length<14,adrsOK:!!AD.data?.itens?.length,aviso:IMG.aviso};
 }
@@ -71389,6 +71390,7 @@ function cqLinhasExtras(aba) {
 // duplicar ativos válidos da lista principal. Nunca misturar setores EUA em BR.
 function cqItens(category) {
   const native = (CQ.d[category]?.itens || []).slice();
+  if(category==='cmd'&&window.DiarioMarketData){const q=window.DiarioMarketData.get('BZ=F'),i=native.findIndex(x=>x.s==='ICEEUR:BRN1!');if(q&&i>=0)native[i]={...native[i],...q};}
   const aliases = {'^BVSP':'IBOV','^GSPC':'SPX','^IXIC':'NASDAQ','BRL=X':'USDBRL'};
   const key = symbol => { const code = String(symbol || '').split(':').pop().toUpperCase(); return aliases[code] || code; };
   const symbols = {adr: (typeof AD !== 'undefined' ? AD.list : []),idx:['^BVSP','^GSPC','^IXIC'],fx:['DXY','DX-Y.NYB','BRL=X'],fut:['ES=F','NQ=F','YM=F'],cmd:['BRENT','WTI','IRON','GOLD','BZ=F','CL=F','GC=F','FE=F'],jur:['SELIC','DI1F27','US10Y','^TNX']};
