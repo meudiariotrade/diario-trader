@@ -1,4 +1,4 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// v1042: import só de tipos removido (o mesmo código roda no Worker da Cloudflare).
 type P={d:string,v:number};
 type Stat={n:number,media:number|null,mediana:number|null,positivas:number|null,absmedia:number|null,desvio:number|null,melhor:number|null,pior:number|null};
 const SYMBOLS:Record<string,string>={spx:"^GSPC",ndx:"^NDX",dji:"^DJI",rut:"^RUT"};
