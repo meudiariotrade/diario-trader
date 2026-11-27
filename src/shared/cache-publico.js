@@ -190,8 +190,9 @@
    if(row){
     let overlay=null;try{if(typeof cqPf==='function'&&k!=='TIO=F'&&k!=='BZ=F')overlay=cqPf(row,group);}catch{}
     const q=normal(k,row,overlay);
-    if(k==='BZ=F'){const r=brentReserva(q||row);if(r&&(q?.d1==null||Date.parse(r.priceAt)>Date.parse(q.priceAt)))return r;}
-    return q;
+    if(k==='TIO=F'&&!q){/* segue para a reserva pública identificada */}
+    else if(k==='BZ=F'){const r=brentReserva(q||row);if(r&&(q?.d1==null||Date.parse(r.priceAt)>Date.parse(q.priceAt)))return r;return q;}
+    else if(q)return q;
    }
   }catch{}
   if(k==='BZ=F'){const q=brentReserva(null);if(q)return q;}
@@ -217,7 +218,8 @@
  function refresh(){
   if(w.DIARIO_DEMO||typeof cqCarrega!=='function'||w.document?.hidden)return Promise.resolve([]);
   if(pending)return pending;
-  pending=Promise.allSettled(['idx','fx','fut','cmd','cri','br'].map(g=>cqCarrega(g,false))).finally(()=>{pending=null;});
+  // Cada lista tem seu próprio TTL. Compartilha inclusive a consulta em voo do botão manual.
+  pending=Promise.allSettled(['cmd','idx','fx','fut','cri','br'].map(g=>Promise.resolve().then(()=>cqCarrega(g,false)))).finally(()=>{pending=null;});
   return pending;
  }
  function snapshot(keys=Object.keys(specs)){
