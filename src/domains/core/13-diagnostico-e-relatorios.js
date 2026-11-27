@@ -2914,7 +2914,7 @@ function cqCancelarV1022(){
 }
 function cqCarrega(e,t){
   e=e||CQ.aba;
-  if(!CQ_ABAS.some(a=>a[0]===e)||e==="fav"||window.DIARIO_DEMO||document.hidden)return Promise.resolve();
+  if(!CQ_ABAS.some(a=>a[0]===e)||e==="fav"||window.DIARIO_DEMO||(typeof document!=="undefined"&&document.hidden))return Promise.resolve();
   const anterior=cqPedidosV1030.get(e);
   if(anterior&&!cqControllersV1022.get(e)?.signal.aborted)return anterior;
   const intervalo=CQ.errors[e]?120000:cqIntervaloV1022(e);
