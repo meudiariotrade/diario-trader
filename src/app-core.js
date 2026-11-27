@@ -43794,7 +43794,7 @@ function aureaTickersV1048(texto){
 }
 // v1048 — dossiê técnico calculado no aparelho a partir do histórico diário (sem cálculo no servidor).
 function aureaDossieCalcV1048(ticker,rows,fonte=""){
- const bars=(Array.isArray(rows)?rows:[]).filter(r=>Array.isArray(r)&&[r[0],r[2],r[3],r[4]].every(Number.isFinite)&&r[4]>0).map(r=>({t:r[0]*1000,o:r[1],h:r[2],l:r[3],c:r[4],v:Number.isFinite(r[5])?r[5]:0}));
+ const bars=(Array.isArray(rows)?rows:[]).filter(r=>Array.isArray(r)&&[r[0],r[2],r[3],r[4]].every(Number.isFinite)&&r[4]>0).map(r=>({t:r[0]*1000,date:new Date(r[0]*1000).toISOString().slice(0,10),o:r[1],h:r[2],l:r[3],c:r[4],v:Number.isFinite(r[5])?r[5]:0}));
  if(bars.length<30)return null;
  const n=bars.length,last=bars[n-1],c=bars.map(b=>b.c),r2=x=>Math.round(x*100)/100;
  const sma=(k,i=n-1)=>i+1<k?null:c.slice(i-k+1,i+1).reduce((a,b)=>a+b,0)/k;
@@ -43807,14 +43807,9 @@ function aureaDossieCalcV1048(ticker,rows,fonte=""){
  const mr=ret.reduce((a,b)=>a+b,0)/ret.length,vol=Math.sqrt(ret.reduce((a,b)=>a+(b-mr)**2,0)/(ret.length-1))*Math.sqrt(252)*100;
  const ano=bars.slice(-252),max52=Math.max(...ano.map(b=>b.h)),min52=Math.min(...ano.map(b=>b.l));
  const varp=k=>n>k?r2((last.c/c[n-1-k]-1)*100):null;
- // Pivôs de swing: extremo entre 3 barras de cada lado, com variação mínima de 1 ATR desde o pivô oposto.
- const piv=[];
- for(let i=n-160<3?3:n-160;i<n-3;i++){
-  const b=bars[i],viz=[...bars.slice(i-3,i),...bars.slice(i+1,i+4)];
-  if(viz.every(x=>b.h>x.h))piv.push({tipo:"topo",preco:b.h,data:new Date(b.t).toISOString().slice(0,10)});
-  if(viz.every(x=>b.l<x.l))piv.push({tipo:"fundo",preco:b.l,data:new Date(b.t).toISOString().slice(0,10)});
- }
- const swing=[];for(const p of piv){const u=swing[swing.length-1];if(u&&u.tipo===p.tipo){if(p.tipo==="topo"?p.preco>u.preco:p.preco<u.preco)swing[swing.length-1]=p;}else if(!u||Math.abs(p.preco-u.preco)>=atr)swing.push(p);}
+ // v1051: pivôs da estrutura (zigue-zague) nos últimos ~160 pregões, com leitura do OBV.
+ const zz=aureaZigZagV1051(bars.slice(-160));
+ const swing=zz.map(p=>({tipo:p.tipo,preco:Number(p.preco),data:p.data,formacao:p.estado==="potencial",obv:p.obv_txt}));
  const topos=swing.filter(p=>p.tipo==="topo"),fundos=swing.filter(p=>p.tipo==="fundo");
  const seq=(a)=>a.length<2?"indefinida":a[a.length-1].preco>a[a.length-2].preco?"ascendente":"descendente";
  // v1050: níveis a menos de 1 ATR um do outro são a mesma zona; fica o mais extremo da zona.
@@ -43825,7 +43820,7 @@ function aureaDossieCalcV1048(ticker,rows,fonte=""){
  const m200=medias.find(m=>m.n===200),m50=medias.find(m=>m.n===50),m20=medias.find(m=>m.n===20);
  const primaria=m200?(last.c>m200.valor&&m200.inclinacao!=="caindo"?"alta":last.c<m200.valor&&m200.inclinacao!=="subindo"?"baixa":"indefinida"):"indefinida";
  const secundaria=m20&&m50?(last.c>m20.valor&&m20.valor>m50.valor?"alta":last.c<m20.valor&&m20.valor<m50.valor?"baixa":"lateral"):"indefinida";
- return {ticker,fonte,data:new Date(last.t).toISOString().slice(0,10),fechamento:r2(last.c),var_dia:varp(1),var_1m:varp(21),var_3m:varp(63),var_12m:varp(252),medias,ifr14:ifr,atr14:r2(atr),atr_pct:r2(atr/last.c*100),vol_hist_20d_aa:r2(vol),max_52s:r2(max52),min_52s:r2(min52),dist_max_52s_pct:r2((last.c/max52-1)*100),tendencia_primaria:primaria,tendencia_secundaria:secundaria,seq_topos:seq(topos),seq_fundos:seq(fundos),ultimos_pivos:swing.slice(-6).map(p=>({...p,preco:r2(p.preco)})),resistencias:res,suportes:sup};
+ return {ticker,fonte,data:new Date(last.t).toISOString().slice(0,10),fechamento:r2(last.c),var_dia:varp(1),var_1m:varp(21),var_3m:varp(63),var_12m:varp(252),medias,ifr14:ifr,atr14:r2(atr),atr_pct:r2(atr/last.c*100),vol_hist_20d_aa:r2(vol),max_52s:r2(max52),min_52s:r2(min52),dist_max_52s_pct:r2((last.c/max52-1)*100),tendencia_primaria:primaria,tendencia_secundaria:secundaria,seq_topos:seq(topos),seq_fundos:seq(fundos),ultimos_pivos:swing.slice(-6).map(p=>({...p,preco:r2(p.preco)})),resistencias:res,suportes:sup,obv_leitura:(()=>{const t=[...zz].reverse().find(p=>p.tipo==="topo"&&!p.obv_rompimento&&Number(p.preco)>last.c),f=[...zz].reverse().find(p=>p.tipo==="fundo"&&Number(p.preco)<last.c);const out=[];if(t)out.push("Topo "+String(t.preco).replace(".",",")+" ("+t.data+"): "+t.obv_txt);if(f)out.push("Fundo "+String(f.preco).replace(".",",")+" ("+f.data+"): "+f.obv_txt);return out;})()};
 }
 async function aureaDossieV1048(ticker,signal){
  const T=window.TRM;if(!T?.trCandles||!/^[A-Z]{4}\d{1,2}$/.test(ticker||""))return null;
@@ -43838,7 +43833,7 @@ async function aureaDossieV1048(ticker,signal){
 function aureaDossieTextoV1048(d){
  if(!d)return "";
  const f=x=>x==null?"N/D":String(x).replace(".",",");
- return "[DOSSIÊ TÉCNICO CALCULADO NO APARELHO · "+d.ticker+" · diário · fechamento de "+d.data+(d.fonte?" · fonte "+d.fonte:"")+"] Fechamento R$ "+f(d.fechamento)+" ("+f(d.var_dia)+"% no dia; 1 mês "+f(d.var_1m)+"%; 3 meses "+f(d.var_3m)+"%; 12 meses "+f(d.var_12m)+"%). Médias simples: "+d.medias.map(m=>"MM"+m.n+" "+f(m.valor)+" ("+m.inclinacao+", preço "+(m.preco_acima?"acima":"abaixo")+")").join("; ")+". IFR14 "+f(d.ifr14)+". ATR14 R$ "+f(d.atr14)+" ("+f(d.atr_pct)+"% do preço). Volatilidade histórica 20d anualizada "+f(d.vol_hist_20d_aa)+"%. Máx/mín 52 semanas "+f(d.max_52s)+" / "+f(d.min_52s)+" (preço "+f(d.dist_max_52s_pct)+"% do topo). Tendência primária "+d.tendencia_primaria+", secundária "+d.tendencia_secundaria+"; topos "+d.seq_topos+", fundos "+d.seq_fundos+". Últimos pivôs: "+d.ultimos_pivos.map(p=>p.tipo+" "+f(p.preco)+" em "+p.data).join("; ")+". Resistências acima: "+(d.resistencias.map(f).join(", ")||"nenhuma")+". Suportes abaixo: "+(d.suportes.map(f).join(", ")||"nenhum")+". Use estes números como fatos; não invente outros.";
+ return "[DOSSIÊ TÉCNICO CALCULADO NO APARELHO · "+d.ticker+" · diário · fechamento de "+d.data+(d.fonte?" · fonte "+d.fonte:"")+"] Fechamento R$ "+f(d.fechamento)+" ("+f(d.var_dia)+"% no dia; 1 mês "+f(d.var_1m)+"%; 3 meses "+f(d.var_3m)+"%; 12 meses "+f(d.var_12m)+"%). Médias simples: "+d.medias.map(m=>"MM"+m.n+" "+f(m.valor)+" ("+m.inclinacao+", preço "+(m.preco_acima?"acima":"abaixo")+")").join("; ")+". IFR14 "+f(d.ifr14)+". ATR14 R$ "+f(d.atr14)+" ("+f(d.atr_pct)+"% do preço). Volatilidade histórica 20d anualizada "+f(d.vol_hist_20d_aa)+"%. Máx/mín 52 semanas "+f(d.max_52s)+" / "+f(d.min_52s)+" (preço "+f(d.dist_max_52s_pct)+"% do topo). Tendência primária "+d.tendencia_primaria+", secundária "+d.tendencia_secundaria+"; topos "+d.seq_topos+", fundos "+d.seq_fundos+". Pivôs da estrutura (reversões de pelo menos 2 ATR ou 5%): "+d.ultimos_pivos.map(p=>p.tipo+" "+f(p.preco)+" em "+p.data+(p.formacao?" (em formação)":"")).join("; ")+(d.obv_leitura?.length?". OBV × pivôs: "+d.obv_leitura.join(" | "):"")+". Resistências acima: "+(d.resistencias.map(f).join(", ")||"nenhuma")+". Suportes abaixo: "+(d.suportes.map(f).join(", ")||"nenhum")+". Use estes números como fatos; não invente outros.";
 }
 function aureaRota(texto) {
   const t = String(texto || ""),
@@ -44271,25 +44266,46 @@ function aureaIndicadoresHistoricosV1021(g,series){
 }
 
 // v1046 — calcula pivôs mesmo quando não existe data ou escala legível na imagem.
-function aureaPivosIndependentesV1046(bars){
+// v1051 — pivôs da ESTRUTURA (zigue-zague), não extremos locais: um topo/fundo só vale quando o preço
+// anda pelo menos max(2×ATR, 5%) contra ele. O último extremo entra como "em formação".
+// Cada pivô leva o OBV do dia; o rompimento posterior diz se o OBV também rompeu (força) ou não.
+function aureaObvV1051(bars){let o=0;return bars.map((b,i)=>{if(i){const v=Number(b.v)||0;if(b.c>bars[i-1].c)o+=v;else if(b.c<bars[i-1].c)o-=v;}return o;});}
+function aureaZigZagV1051(bars){
+ const n=bars.length;if(n<10)return [];
  const tr=bars.map((b,i)=>Math.max(b.h-b.l,i?Math.abs(b.h-bars[i-1].c):0,i?Math.abs(b.l-bars[i-1].c):0));
- const points=[];
- for(let i=2;i<bars.length-2;i++)for(const tipo of ["topo","fundo"]){
-  const b=bars[i],top=tipo==="topo",price=top?b.h:b.l,n=bars.slice(i-2,i+3).filter((_,j)=>j!==2);
-  if(!n.every(c=>top?price>c.h:price<c.l))continue;
-  const swing=a=>top?price-Math.min(...a.map(c=>c.l)):Math.max(...a.map(c=>c.h))-price;
-  const amplitude=Math.min(swing(n.slice(0,2)),swing(n.slice(2)));
-  const ts=tr.slice(Math.max(0,i-13),i+1),atr=ts.reduce((a,v)=>a+v,0)/ts.length;
-  if(!(atr>0)||amplitude<atr*.65)continue;
-  points.push({i,tipo,data:b.date,preco:String(price),estado:"potencial",validacao:"extremo_ohlc",amplitude,atr,relevancia:amplitude/atr,verificacao:"Extremo local de candles fechados; relevância medida em ATR."});
+ const atr=i=>{const a=tr.slice(Math.max(0,i-13),i+1);return a.reduce((x,y)=>x+y,0)/a.length;};
+ const th=i=>Math.max(2*atr(i),bars[i].c*.05);
+ const out=[];let dir=0,hi={i:0,v:bars[0].h},lo={i:0,v:bars[0].l},ext=null;
+ for(let i=1;i<n;i++){
+  const b=bars[i];
+  if(dir===0){
+   if(b.h>hi.v)hi={i,v:b.h};if(b.l<lo.v)lo={i,v:b.l};
+   if(hi.i>lo.i&&hi.v-b.l>=th(i)&&hi.i<i){out.push({i:hi.i,tipo:"topo",v:hi.v});dir=-1;ext={i,v:b.l};}
+   else if(lo.i>hi.i&&b.h-lo.v>=th(i)&&lo.i<i){out.push({i:lo.i,tipo:"fundo",v:lo.v});dir=1;ext={i,v:b.h};}
+   else if(hi.v-lo.v>=th(i)){if(hi.i<lo.i){out.push({i:hi.i,tipo:"topo",v:hi.v});dir=-1;ext={...lo};}else{out.push({i:lo.i,tipo:"fundo",v:lo.v});dir=1;ext={...hi};}}
+  }else if(dir===1){
+   if(b.h>=ext.v)ext={i,v:b.h};else if(ext.v-b.l>=th(i)){out.push({i:ext.i,tipo:"topo",v:ext.v});dir=-1;ext={i,v:b.l};}
+  }else{
+   if(b.l<=ext.v)ext={i,v:b.l};else if(b.h-ext.v>=th(i)){out.push({i:ext.i,tipo:"fundo",v:ext.v});dir=1;ext={i,v:b.h};}
+  }
  }
- const selected=[];
- for(const p of points.sort((a,b)=>b.relevancia-a.relevancia)){
-  if(!selected.some(q=>q.tipo===p.tipo&&Math.abs(q.i-p.i)<3))selected.push(p);
-  if(selected.length===12)break;
- }
- return selected.sort((a,b)=>a.i-b.i);
+ const ultimo=out[out.length-1];
+ if(ext&&ultimo&&ext.i>ultimo.i&&Math.abs(ext.v-ultimo.v)>=th(ext.i)*.5)out.push({i:ext.i,tipo:dir===1?"topo":"fundo",v:ext.v,formacao:true});
+ const obv=aureaObvV1051(bars);
+ return out.map((p,k)=>{
+  const ant=out[k-1],dep=out[k+1],a=atr(p.i);
+  const amplitude=Math.max(ant?Math.abs(p.v-ant.v):0,dep?Math.abs(p.v-dep.v):0);
+  // Rompimento: primeiro fechamento além do pivô depois dele; OBV confirma se também passou do OBV do pivô.
+  let rompe=null;
+  for(let j=p.i+1;j<n;j++){if(p.tipo==="topo"?bars[j].c>p.v:bars[j].c<p.v){rompe=j;break;}}
+  const obvOk=rompe===null?null:p.tipo==="topo"?obv[rompe]>obv[p.i]:obv[rompe]<obv[p.i];
+  const obvAgora=p.tipo==="topo"?obv[n-1]>obv[p.i]:obv[n-1]<obv[p.i];
+  const obvTxt=rompe!==null?(obvOk?"rompido em "+(bars[rompe].date||"")+" com o OBV também rompendo o OBV do pivô (força)":"rompido em "+(bars[rompe].date||"")+" sem o OBV romper o OBV do pivô (rompimento fraco)"):(obvAgora?"ainda não rompido, mas o OBV já passou do OBV deste pivô (fluxo antecipa o rompimento)":"ainda não rompido; OBV também não rompeu o OBV deste pivô");
+  return {i:p.i,tipo:p.tipo,data:bars[p.i].date,preco:String(Math.round(p.v*100)/100),estado:p.formacao?"potencial":"confirmado",validacao:"extremo_ohlc",amplitude,atr:a,relevancia:a>0?amplitude/a:0,obv:obv[p.i],obv_rompimento:rompe===null?null:obvOk,obv_agora_alem:obvAgora,obv_txt:obvTxt,verificacao:(p.formacao?"Extremo em formação (ainda sem reversão completa). ":"Pivô da estrutura (reversão de pelo menos 2 ATR ou 5%). ")+"OBV: "+obvTxt+"."};
+ });
 }
+function aureaPivosIndependentesV1046(bars){return aureaZigZagV1051(bars).slice(-12);}
+
 function aureaRegistrarHistoricoV1046(g,bars,source,tf,ticker){
  if(bars.length<5)return false;
  Object.defineProperty(g,"_ohlc1046",{value:bars,writable:true,configurable:true,enumerable:false});
@@ -44899,7 +44915,7 @@ async function ecoPergunta(e, opt) {
       // v1050: com o histórico real em mãos, Livermore reescreve a leitura e o veredito só com números conferidos.
       const g0=resposta.graficos?.length===1?resposta.graficos[0]:resposta,vo=g0.validacao_ohlc;
       if(vo?.recorte_homologado||vo?.status==="conferido"){
-        const piv=(g0.extremos_ohlc||[]).map(p=>p.tipo+" "+String(p.preco).replace(".",",")+" em "+String(p.data).slice(0,10)).join("; ");
+        const piv=(g0.pivos?.length?g0.pivos:g0.extremos_ohlc||[]).map(p=>p.tipo+" "+String(p.preco).replace(".",",")+" em "+String(p.data).slice(0,10)+(p.obv_txt?" (OBV: "+p.obv_txt+")":"")).join("; ");
         const ctx1050=aureaDossieTextoV1048(di)+"\n[PIVÔS CONFERIDOS NO HISTÓRICO · recorte "+vo.desde+" a "+vo.ate+"] "+piv+"\n[LEITURA VISUAL ANTERIOR, sem números] "+String(resposta.resumo||"").replace(/~?\d+(?:[.,]\d+)?/g,"").slice(0,500);
         try{const rv=await aureaDebateCallV1013({fase:"grafico",lente:"livermore",pergunta:(q||"Análise técnica do gráfico enviado").slice(0,1500),contexto_publico:ctx1050.slice(0,5000)},controller.signal,titular);
           if(rv?.resultado&&ativo()){resposta.revisao_v1050=rv.resultado;if(rv.resultado.veredito)resposta.veredito=rv.resultado.veredito;}}catch{}
