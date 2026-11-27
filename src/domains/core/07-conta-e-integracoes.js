@@ -3879,7 +3879,9 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
    canvas.width=Math.round(img.naturalWidth*scale);canvas.height=Math.round(img.naturalHeight*scale);
    const x=canvas.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,canvas.width,canvas.height);
    const px1044=x.getImageData(0,0,canvas.width,canvas.height).data;
-   if(g._ohlc1046&&g.validacao_ohlc?.status==="historico_sem_recorte"){
+   if(g._ohlc1046){
+    g.validacao_ohlc={...g.validacao_ohlc,status:"historico_sem_recorte",imagem_correspondida:false};
+    g.pivos=[];
     aureaMarcarHistoricoV1046(g,px1044,canvas.width,canvas.height);
     aureaFinalizarRecorteV1047(g);
     canvas.width=canvas.height=0;return;
@@ -4047,9 +4049,9 @@ function aureaGradeVisivelV1047(points){
  if(points.length<10||points.length>220)return null;
  const sorted=[...points].sort((a,b)=>a.x-b.x),span=sorted[sorted.length-1].x-sorted[0].x;
  const candidates=new Set();
- for(let i=1;i<sorted.length;i++){
-  const d=sorted[i].x-sorted[i-1].x;
-  for(let k=1;k<=4;k++)if(d/k>=3&&d/k<=40)candidates.add(Math.round(d/k*10)/10);
+ for(let i=1;i<sorted.length;i++)for(let lag=1;lag<=Math.min(i,8);lag++){
+  const d=sorted[i].x-sorted[i-lag].x;
+  for(let k=lag;k<=lag+3;k++)if(d/k>=3&&d/k<=40)candidates.add(Math.round(d/k*20)/20);
  }
  const fits=[];
  for(const step0 of candidates){
@@ -4228,7 +4230,7 @@ async function aureaHistoricoTerminal(g,signal){
  }
  g.pivos=selected.sort((a,b)=>a.x-b.x);
  g.extremos_ohlc=aureaPivosIndependentesV1046(bars.slice(first.i,last.i+1)).map(({i,...p})=>p);
- delete g._ohlc1046;
+ // Manter a série privada até a imagem ser conferida; as âncoras isoladas não homologam todo o recorte.
  g.validacao_ohlc={status:"conferido",historico_disponivel:true,pivos_calculados:true,imagem_correspondida:false,marcadores_validados:0,ticker:id.ticker,tf:mensal?"1M":"1D",source:"Terminal HP"+(payload.fonte?" · "+payload.fonte:""),desde:bars[first.i].date,ate:bars[last.i].date,motivo:"Extremos calculados no histórico do Terminal entre as datas identificadas no eixo. A posição de cada marcador é conferida no pavio da imagem."};
  return true;
 }

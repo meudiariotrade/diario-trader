@@ -33,3 +33,9 @@ test('v1047 não marca candle individual que diverge da grade aceita',()=>{
  const match=ctx.aureaCasarGradeV1047(bars,grid,{geometria_preco:{eixos:[],tempo:[]}},360,200);
  assert.equal(match.start,5);assert.ok(!match.validSlots.includes(4));
 });
+
+test('v1047 grade com espaçamento fracionário, arredondado pelos pixels',()=>{
+ const points=pixels.map((p,i)=>({...p,x:Math.round(17+i*5.5)})).filter((p,i)=>i!==4&&i!==9);
+ const grid=ctx.aureaGradeVisivelV1047(points);
+ assert.ok(grid);assert.equal(grid.size,14);assert.ok(Math.abs(grid.step-5.5)<.1);
+});
