@@ -1,0 +1,8 @@
+v1034 — Etapa 2: navegação e operações
+- Ctrl+K (busca global): novo grupo "Ações" (novo day/swing/opção, perguntar à Áurea, checklist, importar do Profit) e navegação com ↑/↓ + Enter.
+- Celular: painel de baixo (formulários) ganha alça e fecha arrastando para baixo.
+- Celular: trade novo é registrado arrastando "Arraste para registrar →" (validação continua a mesma).
+- Tabelas: tocar no cabeçalho ordena (números em R$/% entendidos); 1ª coluna fica fixa quando a tabela rola de lado.
+- Resultado do dia em Trades também rola os números.
+Seletor de período: já existe em Desempenho (Este mês, 90 dias, Tudo e lista Hoje/Semana); mantido.
+Arquivos: src/shared/ui-navegacao.js (novo), src/shared/ui-momentos.js, src/index.html, src/service-worker.js, release.config.json

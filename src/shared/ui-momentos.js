@@ -132,7 +132,7 @@
   }
 
   /* ---------- 2. Números rolando ---------- */
-  var SEL_ODO = '.ui-kpi>b,[data-odo]';
+  var SEL_ODO = '.ui-kpi>b,.dt975-ops-pl,[data-odo]';
   var ultimos = new Map(), animando = new WeakSet();
   function limparOdo(el) {
     var final = el.getAttribute('data-uim-final');
@@ -140,6 +140,7 @@
   }
   function chaveOdo(el) {
     if (el.dataset.odo) return 'o:' + el.dataset.odo;
+    if (el.classList.contains('dt975-ops-pl')) return 'c:ops-pl';
     var k = el.closest('.ui-kpi');
     var r = k && k.querySelector('span');
     return r ? 'k:' + (window.tab || '') + ':' + r.textContent.trim() : null;
