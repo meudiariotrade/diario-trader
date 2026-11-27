@@ -4100,8 +4100,9 @@ function aureaCasarGradeV1047(bars,grid,g,w,h){
    const predicted=axis?raw.map(v=>axis.y(v)*h):values.map(v=>mean+slope*(v-avg));
    const errors=predicted.map((v,i)=>Math.abs(v-target[i]));
    const rms=Math.sqrt(errors.reduce((s,v)=>s+v*v,0)/errors.length);
-   const good=pixels.filter((p,i)=>Math.max(...errors.slice(i*4,i*4+4))<=Math.max(3,span*.035)).length;
-   if(Number.isFinite(rms))scores.push({start,mode,rms,good});
+   const validSlots=pixels.filter((p,i)=>Math.max(...errors.slice(i*4,i*4+4))<=Math.max(2.5,span*.022)).map(p=>p.slot);
+   const good=validSlots.length;
+   if(Number.isFinite(rms))scores.push({start,mode,rms,good,validSlots});
   }
  }
  scores.sort((a,b)=>a.rms-b.rms);const best=scores[0];
@@ -4127,7 +4128,8 @@ function aureaFinalizarRecorteV1047(g){
    v.motivo="Histórico OHLC encontrado e calculado, mas o recorte visível ainda não foi homologado. Nenhuma marcação ou extremo de fora do gráfico foi exibido.";
   }else{
    g.extremos_ohlc=(g.extremos_ohlc||[]).filter(p=>p.data>=v.desde&&p.data<=v.ate);
-   g.pivos=(g.pivos||[]).filter(p=>p.data>=v.desde&&p.data<=v.ate&&p.ancoragem_visual==="pixel_compativel");
+   const r=g.geometria_preco;
+   g.pivos=(g.pivos||[]).filter(p=>p.data>=v.desde&&p.data<=v.ate&&p.ancoragem_visual==="pixel_compativel"&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=r?.x0&&p.x<=r?.x1&&p.y>=r?.y0&&p.y<=r?.y1);
    v.marcadores_validados=g.pivos.length;
    aureaNiveisSegurosV1047(g);
   }
@@ -4142,7 +4144,7 @@ function aureaMarcarHistoricoV1046(g,data,w,h){
  if(!match){
   const grid=aureaGradeVisivelV1047(aureaLerCandlesV1046(g,data,w,h,true));
   match=aureaCasarGradeV1047(bars,grid,g,w,h);
-  if(match){pixels=grid.points;size=grid.size;bySlot=new Map(pixels.map(p=>[p.slot,p]));}
+  if(match){pixels=grid.points;size=grid.size;const verified=new Set(match.validSlots);bySlot=new Map(pixels.filter(p=>verified.has(p.slot)).map(p=>[p.slot,p]));}
  }
  if(!match){g.validacao_ohlc.motivo="Histórico e pivôs disponíveis; sequência visual insuficiente, divergente ou ambígua. Nenhum marcador confirmado foi desenhado.";return;}
  const slice=bars.slice(match.start,match.start+size),pivos=aureaPivosIndependentesV1046(slice);

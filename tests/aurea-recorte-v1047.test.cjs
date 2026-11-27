@@ -21,8 +21,15 @@ test('v1047 não exibe extremos globais nem níveis sem recorte confirmado',()=>
  assert.equal(g.validacao_ohlc.recorte_homologado,false);
 });
 test('v1047 recorte limita datas e marcadores, nível exige escala real',()=>{
- const g={geometria_preco:{x0:.05,x1:.9,y0:.05,y1:.9,eixos:[{y:.2,preco:50},{y:.4,preco:40},{y:.6,preco:30}]},validacao_ohlc:{historico_disponivel:true,status:'conferido',imagem_correspondida:true,desde:bars[5].date,ate:bars[18].date},extremos_ohlc:[{data:bars[2].date},{data:bars[7].date}],pivos:[{data:bars[7].date,ancoragem_visual:'pixel_compativel'},{data:bars[2].date,ancoragem_visual:'pixel_compativel'}],niveis:[{preco:40,y:.8},{preco:100,y:.1}]};
+ const g={geometria_preco:{x0:.05,x1:.9,y0:.05,y1:.9,eixos:[{y:.2,preco:50},{y:.4,preco:40},{y:.6,preco:30}]},validacao_ohlc:{historico_disponivel:true,status:'conferido',imagem_correspondida:true,desde:bars[5].date,ate:bars[18].date},extremos_ohlc:[{data:bars[2].date},{data:bars[7].date}],pivos:[{data:bars[7].date,x:.3,y:.4,ancoragem_visual:'pixel_compativel'},{data:bars[2].date,x:.3,y:.4,ancoragem_visual:'pixel_compativel'},{data:bars[8].date,x:.4,y:.97,ancoragem_visual:'pixel_compativel'}],niveis:[{preco:40,y:.8},{preco:100,y:.1}]};
  ctx.aureaFinalizarRecorteV1047(g);
  assert.equal(g.extremos_ohlc.length,1);assert.equal(g.pivos.length,1);assert.equal(g.validacao_ohlc.recorte_homologado,true);
  assert.equal(g.niveis.length,1);assert.ok(Math.abs(g.niveis[0].y-.4)<1e-8);
+});
+
+test('v1047 não marca candle individual que diverge da grade aceita',()=>{
+ const points=pixels.map((p,i)=>i===4?{...p,hi:p.hi-4,lo:p.lo-4,bodyTop:p.bodyTop-4,bodyBottom:p.bodyBottom-4}:p);
+ const grid=ctx.aureaGradeVisivelV1047(points);
+ const match=ctx.aureaCasarGradeV1047(bars,grid,{geometria_preco:{eixos:[],tempo:[]}},360,200);
+ assert.equal(match.start,5);assert.ok(!match.validSlots.includes(4));
 });
