@@ -18,6 +18,11 @@ on:
       - 'tests/cloudflare-dados-publicos-v811.test.cjs'
       - 'tests/cloudflare-finnhub-v940.test.cjs'
       - 'cloudflare/diario-noticias/wrangler.jsonc'
+      - 'cloudflare/diario-noticias/funcoes-v1042.mjs'
+      - 'supabase/functions/terminal/**'
+      - 'supabase/functions/mesa-macro/**'
+      - 'supabase/functions/sazonal-extras/**'
+      - 'supabase/functions/finnhub-token/**'
       - '.github/workflows/cloudflare-noticias.yml'
   pull_request:
     paths:
@@ -46,6 +51,7 @@ jobs:
       - run: node --test tests/pesquisa.test.cjs tests/livermore-eua-v998.test.cjs tests/pesquisa-cloudflare-v999.test.cjs tests/pesquisa-ia-v1000.test.cjs
       - run: node --test tests/cotacoes-v954.test.cjs tests/fef2-v1029.test.cjs tests/cotacoes-auto-v1030.test.cjs
       - run: node --test tests/cloudflare-finnhub-v940.test.cjs
+      - run: node --test tests/cloudflare-funcoes-v1042.test.cjs
       - run: node --test tests/cloudflare-noticias.test.cjs tests/cloudflare-dados-publicos-v811.test.cjs
       - name: Validar bundle Wrangler com o módulo Finnhub
         run: npx --yes wrangler@4.166.0 deploy --dry-run --config cloudflare/diario-noticias/wrangler.jsonc

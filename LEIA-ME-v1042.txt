@@ -1,0 +1,6 @@
+v1042 — Saída do Supabase, Fase A (funções de dados públicos)
+- terminal, mesa-macro, sazonal-extras e finnhub-token passam a rodar no Worker da Cloudflare (diario-trader, rota /v1/fn/<nome>), com o mesmo código de supabase/functions (um "Deno" mínimo no Worker).
+- O app redireciona essas chamadas para a Cloudflare (src/shared/funcoes-cloudflare-v1042.js); só se o Worker falhar (rede, 404 ou 5xx) usa a função antiga do Supabase.
+- O login continua no Supabase Auth (a função confere o usuário lá) — o básico que fica no Supabase.
+- sazonal-extras: removido um import só de tipos (jsr:), sem efeito em tempo de execução.
+Arquivos: cloudflare/diario-noticias/funcoes-v1042.mjs (novo), cloudflare/diario-noticias/producao-snapshot-v894.mjs, src/shared/funcoes-cloudflare-v1042.js (novo), supabase/functions/sazonal-extras/index.ts, tests/cloudflare-funcoes-v1042.test.cjs (novo), .github/workflows/cloudflare-noticias.yml, src/index.html, src/service-worker.js, release.config.json
