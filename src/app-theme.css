@@ -7667,3 +7667,6 @@ html:not([data-v427-tema=claro]) body:not([data-v4route=term]) nav#org-side:not(
 @media (min-width:1024px){html body #app .an-layout:not(:has(> :nth-child(2))){grid-template-columns:minmax(0,1fr)!important}}
 /* Coluna lateral (ui-aside) preenche a sua faixa da grade; antes parava em 440px e deixava sobra à direita. */
 @media (min-width:1024px){html body #app .ui-split > .ui-aside{max-width:none!important;width:auto!important;min-width:0!important}}
+/* Painéis do Mercado: falha explicada com ação, em vez de "Consultando…" infinito. */
+html body #app .market-state-err{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:18px 12px;text-align:center;color:var(--ui-text-2,#94A3B8)}
+html body #app .market-state-err .btn{min-height:40px}
