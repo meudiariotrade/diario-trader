@@ -1,0 +1,8 @@
+v1050 — Áurea: leitura refeita com o histórico real e gráfico limpo
+
+- Quando o print casa com o histórico, Livermore reescreve a leitura e o veredito só com números conferidos (dossiê + topos/fundos reais). A leitura visual inicial fica recolhida.
+- No gráfico: no máximo 7 topos/fundos (os mais relevantes, máximo e mínimo sempre), rótulos sem sobreposição.
+- Linhas de suporte/resistência duplicadas viram uma só; rótulos próximos não se encavalam.
+- Raio-x: suportes e resistências a menos de 1 ATR viram uma zona só.
+- Lista "Topos e fundos relevantes" da IA some quando o histórico já conferiu os pivôs.
+- Tempo limite da análise de print aumentado para caber a conferência.
