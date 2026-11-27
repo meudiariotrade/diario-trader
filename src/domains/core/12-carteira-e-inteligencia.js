@@ -2878,7 +2878,7 @@ ${
         o,
       )
     : ""
-}${n.length > 1 ? `<div class="sm" style="margin-top:6px">Onde o seu processo rende mais por trade: <b>${r.l}</b>${r.mr != null ? ` (${dshN(r.mr)} R por trade)` : ""}. Toque numa modalidade para ver os números dela.</div>` : ""}</div>`;
+}${n.length > 1 ? `<div class="sm" style="margin-top:6px">Onde o seu processo rende mais por trade: <b>${r.l}</b>${r.mr != null ? ` (${dshN(r.mr)}× o risco por trade)` : ""}. Toque numa modalidade para ver os números dela.</div>` : ""}</div>`;
 }
 function modExtra(e, t) {
   const a = dshCor(),

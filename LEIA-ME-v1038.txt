@@ -1,0 +1,9 @@
+v1038 — Etapa 6: auditoria PC (1440px) e iPhone (390px), 21 telas
+Corrigido:
+- Estudos (PC): cards da aba Hoje espremidos em colunas fantasmas; agora 2 colunas + Sugestões na largura toda.
+- Notação R removida onde sobrava: "R acumulado" (Desempenho) → "Resultado × risco"; lista de trades "+0,75 R" → "+0,75× o risco"; "R por trade" (modalidades) → "× o risco por trade".
+- Swing/Opções → Auditoria: valores em R$ com 1 casa ("R$ 30,0") → 2 casas.
+- Mercado: erro técnico em inglês ("Failed to fetch") → "Sem conexão com a fonte agora."
+- Termômetro fiscal: a reserva no GitHub era bloqueada pela política de segurança (CSP); liberado só o repositório do app.
+- Busca (Ctrl+K) e menu do avatar: removidos "Calculadora de Lotes" e "Capital e Risco", telas já excluídas que caíam em Day trade.
+Arquivos: src/app-theme.css, src/index.html, src/intelligence/etapa2.js, src/domains/core/12-carteira-e-inteligencia.js, src/domains/core/13-diagnostico-e-relatorios.js, src/domains/layers/02-carteira-e-terminal.js, src/domains/layers/03-apresentacao.js, src/app-core.js, src/app-layers.js, release.config.json

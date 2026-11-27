@@ -7474,6 +7474,13 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid small{co
  #app[data-tela="estudos"] .v596-hoje > .v598-rec{
   grid-column:1 / -1
  }
+ /* v1038: "suggestions" vinha com grid-area nomeada sem template e criava colunas fantasmas (cards estreitos). */
+ #app[data-tela="estudos"] .v596-hoje > *{
+  grid-area:auto!important
+ }
+ #app[data-tela="estudos"] .v596-hoje > .dt397-suggestions{
+  grid-column:1 / -1!important
+ }
  #app[data-tela="estudos"] .dt397-category{
   max-width:760px;margin-inline:auto
  }

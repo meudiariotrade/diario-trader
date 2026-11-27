@@ -93,7 +93,7 @@
    if(!rows.length)return aviso('Nenhuma pendência identificada nos registros fechados disponíveis.');
    return rows.map(t=>'<div class="sm" style="padding:8px 0;border-bottom:1px solid var(--bd)">'+
      '<b>'+esc(t.ativo||'Ativo não identificado')+'</b> · '+esc(t.dia)+' · '+esc(t.setup)+
-     ' · '+(ok(t.resultado)?'Resultado R$ '+num(t.resultado):'resultado não calculável')+
+     ' · '+(ok(t.resultado)?'Resultado R$ '+t.resultado.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'resultado não calculável')+
      '<div>'+t.falhas.map(f=>'<div class="'+(f.tipo==='risco'?'r':'mut')+'">'+esc(f.texto)+'</div>').join('')+'</div></div>').join('');
  }
  function performance(a){
