@@ -43817,8 +43817,10 @@ function aureaDossieCalcV1048(ticker,rows,fonte=""){
  const swing=[];for(const p of piv){const u=swing[swing.length-1];if(u&&u.tipo===p.tipo){if(p.tipo==="topo"?p.preco>u.preco:p.preco<u.preco)swing[swing.length-1]=p;}else if(!u||Math.abs(p.preco-u.preco)>=atr)swing.push(p);}
  const topos=swing.filter(p=>p.tipo==="topo"),fundos=swing.filter(p=>p.tipo==="fundo");
  const seq=(a)=>a.length<2?"indefinida":a[a.length-1].preco>a[a.length-2].preco?"ascendente":"descendente";
- const res=[...new Set(topos.map(p=>r2(p.preco)).filter(x=>x>last.c))].sort((a,b)=>a-b).slice(0,3);
- const sup=[...new Set(fundos.map(p=>r2(p.preco)).filter(x=>x<last.c))].sort((a,b)=>b-a).slice(0,3);
+ // v1050: níveis a menos de 1 ATR um do outro são a mesma zona; fica o mais extremo da zona.
+ const zonas=(l,cresc)=>{const o=[];for(const v of l.sort((a,b)=>cresc?a-b:b-a)){const u=o[o.length-1];if(u!==undefined&&Math.abs(v-u)<atr){if(cresc?v>u:v<u)o[o.length-1]=v;}else o.push(v);}return o;};
+ const res=zonas([...new Set(topos.map(p=>r2(p.preco)).filter(x=>x>last.c))],true).slice(0,3);
+ const sup=zonas([...new Set(fundos.map(p=>r2(p.preco)).filter(x=>x<last.c))],false).slice(0,3);
  if(!res.length&&max52>last.c)res.push(r2(max52));if(!sup.length&&min52<last.c)sup.push(r2(min52));
  const m200=medias.find(m=>m.n===200),m50=medias.find(m=>m.n===50),m20=medias.find(m=>m.n===20);
  const primaria=m200?(last.c>m200.valor&&m200.inclinacao!=="caindo"?"alta":last.c<m200.valor&&m200.inclinacao!=="subindo"?"baixa":"indefinida"):"indefinida";
@@ -44194,6 +44196,7 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
    canvas.width=Math.round(img.naturalWidth*scale);canvas.height=Math.round(img.naturalHeight*scale);
    const x=canvas.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,canvas.width,canvas.height);
    const px1044=x.getImageData(0,0,canvas.width,canvas.height).data;
+   g.imagem_proporcao_v1050=canvas.height/canvas.width;
    if(g._ohlc1046){
     g.validacao_ohlc={...g.validacao_ohlc,status:"historico_sem_recorte",imagem_correspondida:false};
     g.pivos=[];
@@ -44445,8 +44448,9 @@ function aureaNiveisHistoricoV1049(g){
  const bars=g._ohlc1046,ult=bars?.[bars.length-1]?.c,ext=(g.extremos_ohlc||[]).map(p=>({tipo:p.tipo,v:Number(p.preco)})).filter(p=>p.v>0);
  if(!(ult>0)||!ext.length)return;
  const esc=g._escala1049||(()=>{const a=aureaCalibrarEixoV1021(g.geometria_preco);return a?(p=>a.y(p)):aureaEscalaV1044(g);})();
- const res=[...new Set(ext.filter(p=>p.tipo==="topo"&&p.v>ult).map(p=>p.v))].sort((a,b)=>a-b).slice(0,2);
- const sup=[...new Set(ext.filter(p=>p.tipo==="fundo"&&p.v<ult).map(p=>p.v))].sort((a,b)=>b-a).slice(0,2);
+ const zona=(l,cresc)=>{const o=[];for(const v of l.sort((a,b)=>cresc?a-b:b-a)){const u=o[o.length-1];if(u!==undefined&&Math.abs(v-u)<=u*.025){if(cresc?v>u:v<u)o[o.length-1]=v;}else o.push(v);}return o;};
+ const res=zona([...new Set(ext.filter(p=>p.tipo==="topo"&&p.v>ult).map(p=>p.v))],true).slice(0,2);
+ const sup=zona([...new Set(ext.filter(p=>p.tipo==="fundo"&&p.v<ult).map(p=>p.v))],false).slice(0,2);
  const r=g.geometria_preco||{y0:0,y1:1},atuais=g.niveis||[];
  if(esc)for(const [tipo,lista,rot] of [["resistencia",res,"topo do histórico"],["suporte",sup,"fundo do histórico"]])for(const v of lista){
   if(atuais.some(n=>Math.abs(Number(n.preco)-v)<=v*.01))continue;
@@ -44835,7 +44839,7 @@ async function ecoPergunta(e, opt) {
     ativo=()=>ECO.geracao===geracao&&syncOwner()===titular&&!controller.signal.aborted;
   ECO.controller=controller;
   ECO.busy=1;ECO.err="";ECO.rascunho="";ECO.rota=rota;ecoPaint();
-  const timer=opt.imagem||debate?setTimeout(()=>controller.abort(),debate?(opt.imagem?170000:125000):115000):null;
+  const timer=opt.imagem||debate?setTimeout(()=>controller.abort(),debate?(opt.imagem?170000:125000):opt.imagem?150000:115000):null;
   try {
     let resposta=null,livros=[];
     const gradeOpcoes=aureaTemaOpcoesV1017(q)?aureaGradeAtualV1017(q):null;
@@ -44891,7 +44895,16 @@ async function ecoPergunta(e, opt) {
     if(aureaTemaOpcoesV1017(q))resposta.opcoes_v1017={...aureaOpcoesLocalV1017(q),grade:gradeOpcoes};
     // v1049: no print, o raio-x usa o ativo reconhecido na imagem (histórico já carregado pelo Terminal).
     const tkImg=opt.imagem&&!dossie?(resposta.identificacao_visual||resposta.graficos?.[0]?.identificacao_visual)?.ticker:null;
-    if(tkImg&&/^[A-Z]{4}\d{1,2}$/.test(tkImg)){const di=await aureaDossieV1048(tkImg,controller.signal);if(di&&ativo()){resposta.dossie_v1048=di;try{window.DiarioPlacarAurea?.registrar?.(resposta,"conselho",di);}catch{}}}
+    if(tkImg&&/^[A-Z]{4}\d{1,2}$/.test(tkImg)){const di=await aureaDossieV1048(tkImg,controller.signal);if(di&&ativo()){resposta.dossie_v1048=di;
+      // v1050: com o histórico real em mãos, Livermore reescreve a leitura e o veredito só com números conferidos.
+      const g0=resposta.graficos?.length===1?resposta.graficos[0]:resposta,vo=g0.validacao_ohlc;
+      if(vo?.recorte_homologado||vo?.status==="conferido"){
+        const piv=(g0.extremos_ohlc||[]).map(p=>p.tipo+" "+String(p.preco).replace(".",",")+" em "+String(p.data).slice(0,10)).join("; ");
+        const ctx1050=aureaDossieTextoV1048(di)+"\n[PIVÔS CONFERIDOS NO HISTÓRICO · recorte "+vo.desde+" a "+vo.ate+"] "+piv+"\n[LEITURA VISUAL ANTERIOR, sem números] "+String(resposta.resumo||"").replace(/~?\d+(?:[.,]\d+)?/g,"").slice(0,500);
+        try{const rv=await aureaDebateCallV1013({fase:"grafico",lente:"livermore",pergunta:(q||"Análise técnica do gráfico enviado").slice(0,1500),contexto_publico:ctx1050.slice(0,5000)},controller.signal,titular);
+          if(rv?.resultado&&ativo()){resposta.revisao_v1050=rv.resultado;if(rv.resultado.veredito)resposta.veredito=rv.resultado.veredito;}}catch{}
+      }
+      try{window.DiarioPlacarAurea?.registrar?.(resposta,"conselho",di);}catch{}}}
     if(dossie){resposta.dossie_v1048=dossie;try{window.DiarioPlacarAurea?.registrar?.(resposta,rota.id,dossie);}catch{}}
     if(aureaRendaFixaTemaV1016(q))resposta.renda_fixa_v1016={...(resposta.renda_fixa_v1016||{}),simulacao:aureaRendaFixaLocalV1016(q)};
     ECO.l.push({id:Date.now().toString(36),q,em:new Date().toISOString(),r:resposta,por:rota.id,
