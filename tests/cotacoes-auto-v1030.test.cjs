@@ -22,3 +22,14 @@ test('coleta Cloudflare 24h com intervalo de dez minutos, sem depender da sessã
  for(const iso of ['2026-11-27T01:10:00Z','2026-11-27T05:20:00Z','2026-11-28T03:00:00Z'])assert.equal(m.coletarMercadoAgora(new Date(iso)),true);
  assert.equal(m.coletarMercadoAgora(new Date('2026-11-27T01:12:00Z')),false);
 });
+
+test('central usa a mesma seleção Profit de Mercado para mini, inclusive linha pública sem preço',()=>{
+ const w={document:{hidden:false},DiarioPublico:{peek:()=>null}};
+ const at=new Date().toISOString(),CQ={d:{fut:{itens:[{s:'BMFBOVESPA:WIN1!',c:'WIN',px:null},{s:'BMFBOVESPA:WDO1!',c:'WDO',px:5700},{s:'BMFBOVESPA:IND1!',c:'IND',px:178728},{s:'BMFBOVESPA:DOL1!',c:'DOL',px:5746.5}]}}};
+ const overlay={WIN:{tk:'WINFUT',px:178960,em:at,fechado:true},WDO:{tk:'WDOFUT',px:5656,em:at,fechado:true}};
+ vm.runInNewContext(read('src/shared/cache-publico.js'),{window:w,CQ,cqPf:r=>overlay[r.c],Date,Promise});
+ assert.equal(w.DiarioMarketData.get('WIN').px,178960);assert.equal(w.DiarioMarketData.get('WDO').px,5656);
+ assert.equal(w.DiarioMarketData.get('WIN').priceAt,at);
+ overlay.WIN={tk:'INDZ26',px:178728,em:at,fechado:true};assert.equal(w.DiarioMarketData.get('WIN'),null);
+ overlay.WDO={tk:'DOLZ26',px:5746.5,em:at,fechado:true};assert.equal(w.DiarioMarketData.get('WDO').px,5700);
+});
