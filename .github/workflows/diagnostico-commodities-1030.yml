@@ -1,0 +1,36 @@
+name: Diagnóstico público de commodities
+on:
+  push:
+    branches: [diagnostico-cotacoes-1030]
+permissions:
+  contents: read
+jobs:
+  diagnostico:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Consultar preços públicos sem credenciais
+        run: |
+          node --input-type=module <<'EOF'
+          const base='https://diario-trader.lucianosilva43567.workers.dev';
+          const ids=['SGX:FEF2!','SGX:FEFZ2026','SGX:FEFF2027','SGX:FEF1!','ICEEUR:BRN1!','ICEEUR:BRNF2027','ICEEUR:BRNG2027','DCE:I1!','NYMEX:CL1!'];
+          const cols=['close','change','change_abs','update_time','update_mode'];
+          async function request(label,url,opts={}){
+            try {
+              const r=await fetch(url,{...opts,signal:AbortSignal.timeout(12000)});
+              const j=await r.json();
+              const rows=j.itens||j.mercados?.grupos?.flatMap(g=>g.itens||[])||j.data||[];
+              console.log(JSON.stringify({label,http:r.status,em:j.em||j.atualizadoEm,error:j.erro||j.error,rows:rows.filter(q=>ids.includes(q.s)||ids.includes(q.simboloFonte)).map(q=>({s:q.s,simboloFonte:q.simboloFonte,px:q.px,d1:q.d1,priceAt:q.priceAt,quoteStatus:q.quoteStatus,d:q.d}))}));
+            }catch(e){console.log(JSON.stringify({label,error:e.message}));}
+          }
+          const body=JSON.stringify({symbols:{tickers:ids,query:{types:[]}},columns:cols});
+          await Promise.all([
+            request('Worker cmd',base+'/v1/macro?modo=cotacoes&aba=cmd'),
+            request('Worker snapshot',base+'/v1/mercado'),
+            ...['futures','global'].map(m=>request('TradingView '+m,'https://scanner.tradingview.com/'+m+'/scan',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body}))
+          ]);
+          EOF
