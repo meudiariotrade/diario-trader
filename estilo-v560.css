@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 56bd58705bea7b08afdb4ca939b373020d7876562585d4dffe2ab32d00499321 */
+/* Gerado de src/app-theme.css · SHA256 f314f2acfe9e5bfaf8dac7be65c7d85fb9f2cfc3b1a4cc29e17e5c638e8f2e7b */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7474,6 +7474,13 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid small{co
  }
  #app[data-tela="estudos"] .v596-hoje > .v598-rec{
   grid-column:1 / -1
+ }
+ /* v1038: "suggestions" vinha com grid-area nomeada sem template e criava colunas fantasmas (cards estreitos). */
+ #app[data-tela="estudos"] .v596-hoje > *{
+  grid-area:auto!important
+ }
+ #app[data-tela="estudos"] .v596-hoje > .dt397-suggestions{
+  grid-column:1 / -1!important
  }
  #app[data-tela="estudos"] .dt397-category{
   max-width:760px;margin-inline:auto
