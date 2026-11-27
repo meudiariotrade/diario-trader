@@ -408,9 +408,9 @@
     const fxApp=cotacaoApp('USDBRL');
     const fxObj=typeof w!=='undefined'&&w.DiarioMarketData?w.DiarioMarketData.get('BRL=X'):itens.find(i=>/USD\/?BRL/i.test(String(i.n||'')));
     const ewzObj=typeof w!=='undefined'&&w.DiarioMarketData?w.DiarioMarketData.get('EWZ'):itens.find(i=>/^EWZ\b/i.test(String(i.n||'')));
-    const fx=Number(fxApp?.px||fxObj?.px),fxD1=Number(fxApp?.d1!=null&&Number.isFinite(fxApp.d1)?fxApp.d1:fxObj?.d1);
+    const fx=Number(fxApp?.px||fxObj?.px),fxRaw=fxApp?.d1!=null&&Number.isFinite(fxApp.d1)?fxApp.d1:fxObj?.d1;
     if(!Number.isFinite(fx)||fx<=0)return '';
-    const fxPct=Number.isFinite(fxD1)?fxD1:0;
+    const fxPct=fxRaw!=null&&fxRaw!==''&&Number.isFinite(Number(fxRaw))?Number(fxRaw):null;
     const pct=v=>(v>=0?'+':'')+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
     const brl=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     const ibovRef=cotacaoApp('IBOV');
@@ -420,7 +420,7 @@
     for(const reg of ADR_REGRAS){
       const a=m.adrs.find(x=>String(x.s||'').toUpperCase()===reg.s);
       if(!a||!Number.isFinite(Number(a.px))||Number(a.px)<=0)continue;
-      const pxUsd=Number(a.px),chpUsd=Number.isFinite(Number(a.chp))?Number(a.chp):0;
+      const pxUsd=Number(a.px),chpUsd=a.chp!=null&&a.chp!==''&&Number.isFinite(Number(a.chp))?Number(a.chp):null;
       const teoricoBase=(pxUsd/reg.razao)*fx;
       const b3Ref=cotacaoApp(reg.tk);
       const fechB3=b3Ref&&b3Ref.px>0?b3Ref.px:null;
@@ -432,7 +432,8 @@
           gapPct=((teoricoBase/onRef.px)-1)*100;
         }
       }
-      if(gapPct==null)gapPct=fechB3?((teorico/fechB3)-1)*100:((1+chpUsd/100)*(1+fxPct/100)-1)*100;
+      if(gapPct==null)gapPct=fechB3?((teorico/fechB3)-1)*100:chpUsd!==null&&fxPct!==null?((1+chpUsd/100)*(1+fxPct/100)-1)*100:null;
+      if(!Number.isFinite(gapPct))continue;
       if(fechB3)comB3++;
       somaPond+=gapPct*reg.peso;somaPeso+=reg.peso;
       linhas.push({tk:reg.tk,adr:reg.s,razao:reg.razao,pxUsd,fechB3,teorico,gapPct});
@@ -441,7 +442,7 @@
     const ibovVar=somaPeso>0?somaPond/somaPeso:0;
     const ibovPts=ibovRef&&ibovRef.px>0?Math.round(ibovRef.px*(1+ibovVar/100)):null;
     const winPts=winRef&&winRef.px>0?Math.round((winRef.px*(1+ibovVar/100))/5)*5:null;
-    const ewzBrl=ewzObj&&Number.isFinite(Number(ewzObj.d1))?((1+Number(ewzObj.d1)/100)*(1+fxPct/100)-1)*100:null;
+    const ewzBrl=ewzObj&&ewzObj.d1!=null&&ewzObj.d1!==''&&fxPct!==null&&Number.isFinite(Number(ewzObj.d1))?((1+Number(ewzObj.d1)/100)*(1+fxPct/100)-1)*100:null;
     const cor=v=>v>0.15?'ui-g':v<-0.15?'ui-r':'';
     const trs=linhas.map(l=>'<tr><td style="padding:4px 6px"><b>'+l.tk+'</b> <span class="mut">('+l.adr+(l.razao>1?' ÷'+l.razao:'')+')</span></td><td style="padding:4px 6px;text-align:right">'+(l.fechB3?brl(l.fechB3):'—')+'</td><td style="padding:4px 6px;text-align:right"><b>'+brl(l.teorico)+'</b></td><td style="padding:4px 6px;text-align:right"><b class="'+cor(l.gapPct)+'">'+pct(l.gapPct)+'</b></td></tr>').join('');
     return '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(201,166,107,.24);background:rgba(201,166,107,.05)">'+
@@ -993,7 +994,8 @@
     const schwartzLine=agEvs.length?'<p class="sm" style="margin:4px 0"><b>S · Schwartz (Agenda BR/EUA):</b> '+escape(agEvs.join(' · '))+'</p>':'';
     const atualizado=Date.parse(state.mercado?.atualizadoEm||'');
     const recent=Number.isFinite(atualizado)&&Date.now()-atualizado<20*60000&&atualizado<=Date.now()+60000;
-    const fonte=escape(state.mercado?.fonte||'não verificada');
+    const fontesPulso=[...new Set([...pulso.br,...pulso.us,...pulso.cripto].map(q=>q.fonte).filter(Boolean))];
+    const fonte=escape(fontesPulso.length?fontesPulso.join(' · '):state.mercado?.fonte||'não verificada');
     const semLeitura=(m.nome==='Sem leitura validada'||m.nome==='Amostra insuficiente');
     const resumo=semLeitura?tag('indisponivel')+'Dados insuficientes para caracterizar o mercado nesta sessão.':
       tag('interpretacao')+'Variações disponíveis indicam: '+escape(m.nome)+'. A classificação não prevê preços.';
