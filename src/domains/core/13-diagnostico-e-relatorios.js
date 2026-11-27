@@ -2914,18 +2914,19 @@ function cqCancelarV1022(){
 }
 function cqCarrega(e,t){
   e=e||CQ.aba;
-  if(!CQ_ABAS.some(a=>a[0]===e)||e==="fav"||window.DIARIO_DEMO||(typeof document!=="undefined"&&document.hidden))return Promise.resolve();
+  if(!CQ_ABAS.some(a=>a[0]===e)||e==="fav"||(window.DIARIO_DEMO&&!t)||(typeof document!=="undefined"&&document.hidden))return Promise.resolve();
   const anterior=cqPedidosV1030.get(e);
   if(anterior&&!cqControllersV1022.get(e)?.signal.aborted)return anterior;
   const intervalo=CQ.errors[e]?120000:cqIntervaloV1022(e);
   if(!t&&CQ.ts[e]&&Date.now()-CQ.ts[e]<intervalo)return Promise.resolve(CQ.d[e]);
   const ctl=new AbortController();
   cqControllersV1022.set(e,ctl);
+  const inicial=!CQ.d[e]?.itens?.length;
+  CQ.loading[e]=true;
+  if(inicial){CQ.busy=e;CQ.errors[e]="";}
   const job=Promise.resolve().then(async()=>{
-    const inicial=!CQ.d[e]?.itens?.length;
-    CQ.loading[e]=true;
     try {
-      if(inicial){CQ.busy=e;CQ.errors[e]="";if(tab==="mercado"&&MKT.tab==="cq")cqPinta();}
+      if(inicial&&tab==="mercado"&&MKT.tab==="cq"&&(CQ.aba===e||CQ.aba==="fav"))cqPinta();
       const url=CQ_EDGE_V1022+"?"+new URLSearchParams({modo:"cotacoes",aba:e});
       const r=await fetch(url,{method:"GET",credentials:"omit",redirect:"error",cache:"no-cache",headers:{Accept:"application/json"},signal:AbortSignal.any([ctl.signal,AbortSignal.timeout(25000)])});
       const n=await r.json().catch(()=>({}));

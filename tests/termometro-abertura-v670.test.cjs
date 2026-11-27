@@ -144,3 +144,15 @@ test('v1030: último negócio fechado do mini é aceito na sessão correta, mas 
  assert.equal(fn('win',{s:'WINFUT',px:178960,priceAt:'2026-11-26T20:50:00Z',fechado:true},now),178960);
  w.close();
 });
+
+test('v1031: aceita referência WINFUT fechada da mesma sessão mesmo após janela nominal, sem aceitar IND',()=>{
+ const w=page(),now=Date.parse('2026-11-27T01:39:00Z');
+ w.DiarioSessoes={session:()=>({verified:true,state:'post',date:'2026-11-26',previousDate:'2026-11-25',open:540,close:1105})};
+ const fn=w.TermometroAbertura670.fechamentoCanonico;
+ const q={s:'BMFBOVESPA:WIN1!',tk:'WINFUT',fonte:'Profit',fechado:true,live:false,px:178960,priceAt:'2026-11-26T21:31:00Z'};
+ assert.equal(fn('win',{...q,tk:'INDFUT'},now),null);
+ assert.equal(fn('win',{...q,priceAt:'2026-11-25T21:31:00Z'},now),null);
+ assert.equal(fn('win',q,now),178960);
+ w.SESS={uid:'other'};assert.equal(fn('win',null,now),null);
+ w.close();
+});
