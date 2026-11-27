@@ -3872,7 +3872,7 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
  await Promise.all(gs.map(async (g,i)=>{
   const url=imagens[(g.indice||i+1)-1]?.url;
   g.pivos=(g.pivos||[]).map(p=>({...p,ancoragem_visual:"nao_conferida"}));
-  if(!url||signal.aborted)return;
+  if(!url||signal.aborted){aureaFinalizarRecorteV1047(g);return;}
   try{
    const img=new Image();img.src=url;await img.decode();if(signal.aborted)return;
    const scale=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight)),canvas=document.createElement("canvas");
@@ -3881,7 +3881,7 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
    const px1044=x.getImageData(0,0,canvas.width,canvas.height).data;
    if(g._ohlc1046&&g.validacao_ohlc?.status==="historico_sem_recorte"){
     aureaMarcarHistoricoV1046(g,px1044,canvas.width,canvas.height);
-    delete g._ohlc1046;
+    aureaFinalizarRecorteV1047(g);
     canvas.width=canvas.height=0;return;
    }
    const projetados=g.pivos.some(p=>p.passo_x>0);
@@ -3897,9 +3897,9 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
    // Uma estimativa de preço não pode virar rótulo numérico em pavio sem escala conferida.
    g.pivos=g.pivos.map(p=>p.ancoragem_visual==="pavio_visual"&&p.validacao==="visual"?{...p,preco:""}:p);
    aureaPosicionarNiveisV1044(g);
-   if(g.validacao_ohlc?.historico_disponivel){g.validacao_ohlc.marcadores_validados=g.pivos.filter(p=>p.ancoragem_visual==="pixel_compativel").length;g.validacao_ohlc.imagem_correspondida=g.validacao_ohlc.marcadores_validados>0;}
+   if(g.validacao_ohlc?.historico_disponivel){g.validacao_ohlc.marcadores_validados=g.pivos.filter(p=>p.ancoragem_visual==="pixel_compativel").length;g.validacao_ohlc.imagem_correspondida=g.validacao_ohlc.marcadores_validados>=2;}
    canvas.width=canvas.height=0;
-  }catch{}
+  }catch{}finally{aureaFinalizarRecorteV1047(g);}
  }));
  return resposta;
 }
@@ -3979,7 +3979,7 @@ function aureaRegistrarHistoricoV1046(g,bars,source,tf,ticker){
  return true;
 }
 // Identificação conservadora de corpos e pavios pretos em fundo claro.
-function aureaLerCandlesV1046(g,data,w,h){
+function aureaLerCandlesV1046(g,data,w,h,parcial=false){
  const r=g.geometria_preco;
  if(!r||r.candles!=="preto_fundo_claro"||!data||w<180||h<180||data.length!==w*h*4)return [];
  const L=Math.max(2,Math.ceil(r.x0*w)),R=Math.min(w-3,Math.floor(r.x1*w)),T=Math.max(2,Math.ceil(r.y0*h)),B=Math.min(h-3,Math.floor(r.y1*h));
@@ -3989,7 +3989,7 @@ function aureaLerCandlesV1046(g,data,w,h){
  for(let y=T;y<=B;y++)for(let x=L;x<=R;){
    if(!ink(x,y)){x++;continue;}
    const a=x;while(x<=R&&ink(x,y))x++;
-   const len=x-a;if(len<3||len>maxWidth)continue;
+   const len=x-a;if(len<(parcial?2:3)||len>maxWidth)continue;
    const center=Math.round((a+x-1)/2);
    if(!votes.has(center))votes.set(center,[]);
    votes.get(center).push({y,len});
@@ -4008,6 +4008,7 @@ function aureaLerCandlesV1046(g,data,w,h){
   if(hi<=T+1||lo>=B-1||lo-hi<3)continue;
   out.push({x,hi,lo,bodyTop,bodyBottom});
  }
+ if(parcial)return out;
  if(out.length<10||out.length>180)return [];
  const gaps=out.slice(1).map((p,i)=>p.x-out[i].x).sort((a,b)=>a-b),step=gaps[Math.floor(gaps.length/2)];
  if(step<4||gaps.some(v=>Math.abs(v-step)>Math.max(1.5,step*.18)))return [];
@@ -4041,17 +4042,123 @@ function aureaCorresponderCandlesV1046(bars,pixels,g,w,h){
  if(scores.some(q=>q.start!==best.start&&q.rms<best.rms+Math.max(2,span*.018)))return null;
  return best;
 }
+// v1047 — grade dos candles independente da área vazia à direita e de candles ocultos.
+function aureaGradeVisivelV1047(points){
+ if(points.length<10||points.length>220)return null;
+ const sorted=[...points].sort((a,b)=>a.x-b.x),span=sorted[sorted.length-1].x-sorted[0].x;
+ const candidates=new Set();
+ for(let i=1;i<sorted.length;i++){
+  const d=sorted[i].x-sorted[i-1].x;
+  for(let k=1;k<=4;k++)if(d/k>=3&&d/k<=40)candidates.add(Math.round(d/k*10)/10);
+ }
+ const fits=[];
+ for(const step0 of candidates){
+  if(span/step0>220)continue;
+  for(const origin of sorted.slice(0,4)){
+   let slots=new Map();
+   for(const p of sorted){
+    const k=Math.round((p.x-origin.x)/step0),err=Math.abs(p.x-origin.x-k*step0);
+    if(err>Math.min(1.5,step0*.23))continue;
+    const old=slots.get(k);if(!old||old.err>err)slots.set(k,{...p,k,err});
+   }
+   const a=[...slots.values()].sort((p,q)=>p.k-q.k);
+   if(a.length<10||a.length<sorted.length*.72)continue;
+   const size=a[a.length-1].k-a[0].k+1;
+   if(size>180||a.length/size<.66)continue;
+   const mx=a.reduce((s,p)=>s+p.x,0)/a.length,mk=a.reduce((s,p)=>s+p.k,0)/a.length;
+   const step=a.reduce((s,p)=>s+(p.k-mk)*(p.x-mx),0)/a.reduce((s,p)=>s+(p.k-mk)**2,0);
+   if(!(step>=3&&step<=40))continue;
+   const zero=mx-step*mk,err=Math.sqrt(a.reduce((s,p)=>s+(p.x-zero-step*p.k)**2,0)/a.length);
+   if(err>Math.min(1.1,step*.16))continue;
+   fits.push({step,points:a.map(p=>({...p,slot:p.k-a[0].k})),size,score:a.length-2*(size-a.length)-err});
+  }
+ }
+ fits.sort((a,b)=>b.score-a.score);const best=fits[0];
+ if(!best||fits.some(f=>Math.abs(f.step-best.step)>best.step*.08&&f.score>best.score-2))return null;
+ return best;
+}
+function aureaCasarGradeV1047(bars,grid,g,w,h){
+ if(!grid||bars.length<grid.size)return null;
+ const pixels=grid.points,axis=aureaCalibrarEixoV1021(g.geometria_preco);
+ const anchors=(g.geometria_preco?.tempo||[]).filter(a=>a.x*w>=pixels[0].x-grid.step&&a.x*w<=pixels[pixels.length-1].x+grid.step);
+ const span=Math.max(...pixels.map(p=>p.lo))-Math.min(...pixels.map(p=>p.hi));
+ if(span<25)return null;
+ const target=pixels.flatMap(p=>[p.hi,p.lo,p.bodyTop,p.bodyBottom]),mean=target.reduce((s,v)=>s+v,0)/target.length;
+ const scores=[];
+ for(let start=0;start<=bars.length-grid.size;start++){
+  // Rótulos mensais são evidência de mês, não necessariamente do primeiro pregão.
+  if(anchors.some(a=>{
+   const at=start+Math.round((a.x*w-pixels[0].x)/grid.step);
+   if(a.data.length===7)return !bars.slice(Math.max(0,at-3),at+4).some(b=>b.date.startsWith(a.data));
+   return !bars.slice(Math.max(0,at-1),at+2).some(b=>b.date===a.data);
+  }))continue;
+  const raw=pixels.flatMap(p=>{const b=bars[start+p.slot];return [b.h,b.l,Math.max(b.o,b.c),Math.min(b.o,b.c)];});
+  for(const mode of axis?[axis.modo]:["linear","log"]){
+   const values=raw.map(mode==="log"?Math.log:x=>x),avg=values.reduce((s,v)=>s+v,0)/values.length;
+   let xx=0,xy=0;for(let i=0;i<values.length;i++){xx+=(values[i]-avg)**2;xy+=(values[i]-avg)*(target[i]-mean);}
+   const slope=xy/xx;if(!(slope<0))continue;
+   const predicted=axis?raw.map(v=>axis.y(v)*h):values.map(v=>mean+slope*(v-avg));
+   const errors=predicted.map((v,i)=>Math.abs(v-target[i]));
+   const rms=Math.sqrt(errors.reduce((s,v)=>s+v*v,0)/errors.length);
+   const good=pixels.filter((p,i)=>Math.max(...errors.slice(i*4,i*4+4))<=Math.max(3,span*.035)).length;
+   if(Number.isFinite(rms))scores.push({start,mode,rms,good});
+  }
+ }
+ scores.sort((a,b)=>a.rms-b.rms);const best=scores[0];
+ if(!best||best.good<pixels.length*.85||best.rms>Math.max(2.5,span*.022))return null;
+ if(scores.some(q=>q.start!==best.start&&q.rms<best.rms+Math.max(1.8,span*.015)))return null;
+ return best;
+}
+function aureaNiveisSegurosV1047(g){
+ const axis=aureaCalibrarEixoV1021(g.geometria_preco),r=g.geometria_preco;
+ // Nunca preservar coordenadas de níveis sugeridas pela IA quando não há escala calibrada.
+ g.niveis=(g.niveis||[]).flatMap(n=>{
+  const price=Number(n.preco),y=axis&&price>0?axis.y(price):NaN;
+  return Number.isFinite(y)&&y>=r.y0&&y<=r.y1?[{...n,y}]:[];
+ });
+}
+function aureaFinalizarRecorteV1047(g){
+ const v=g.validacao_ohlc;
+ if(v?.historico_disponivel){
+  v.recorte_homologado=v.status==="conferido"&&v.imagem_correspondida===true;
+  if(!v.recorte_homologado){
+   g.extremos_ohlc=[];g.pivos=[];g.indicadores_ohlc=null;g.niveis=[];
+   v.status="historico_sem_recorte";v.marcadores_validados=0;
+   v.motivo="Histórico OHLC encontrado e calculado, mas o recorte visível ainda não foi homologado. Nenhuma marcação ou extremo de fora do gráfico foi exibido.";
+  }else{
+   g.extremos_ohlc=(g.extremos_ohlc||[]).filter(p=>p.data>=v.desde&&p.data<=v.ate);
+   g.pivos=(g.pivos||[]).filter(p=>p.data>=v.desde&&p.data<=v.ate&&p.ancoragem_visual==="pixel_compativel");
+   v.marcadores_validados=g.pivos.length;
+   aureaNiveisSegurosV1047(g);
+  }
+ }else aureaNiveisSegurosV1047(g);
+ delete g._ohlc1046;
+}
+
 function aureaMarcarHistoricoV1046(g,data,w,h){
- const bars=g._ohlc1046,pixels=aureaLerCandlesV1046(g,data,w,h),match=aureaCorresponderCandlesV1046(bars,pixels,g,w,h);
+ const bars=g._ohlc1046;
+ let pixels=aureaLerCandlesV1046(g,data,w,h),match=aureaCorresponderCandlesV1046(bars,pixels,g,w,h);
+ let size=pixels.length,bySlot=new Map(pixels.map((p,i)=>[i,p]));
+ if(!match){
+  const grid=aureaGradeVisivelV1047(aureaLerCandlesV1046(g,data,w,h,true));
+  match=aureaCasarGradeV1047(bars,grid,g,w,h);
+  if(match){pixels=grid.points;size=grid.size;bySlot=new Map(pixels.map(p=>[p.slot,p]));}
+ }
  if(!match){g.validacao_ohlc.motivo="Histórico e pivôs disponíveis; sequência visual insuficiente, divergente ou ambígua. Nenhum marcador confirmado foi desenhado.";return;}
- const slice=bars.slice(match.start,match.start+pixels.length),pivos=aureaPivosIndependentesV1046(slice);
+ const slice=bars.slice(match.start,match.start+size),pivos=aureaPivosIndependentesV1046(slice);
  g.extremos_ohlc=pivos.map(({i,...p})=>p);
  if(g.validacao_ohlc.tf==="1D"){
   const rec={referencia_ohlc:{tf:"1d",desde:slice[0].date,ate:slice[slice.length-1].date},pivos:g.extremos_ohlc};
   g.extremos_ohlc=aureaConferePivosV1012(rec,bars);
   g.indicadores_ohlc=aureaIndicadoresHistoricosV1021({...rec,extremos_ohlc:g.extremos_ohlc},bars);
  }
- g.pivos=pivos.map(({i,...p})=>({...p,...g.extremos_ohlc.find(q=>q.data===p.data&&q.tipo===p.tipo),x:pixels[i].x/w,y:(p.tipo==="topo"?pixels[i].hi:pixels[i].lo)/h,ancoragem_visual:"pixel_compativel"}));
+ const axis=aureaCalibrarEixoV1021(g.geometria_preco);
+ g.pivos=pivos.flatMap(({i,...p})=>{
+  const px=bySlot.get(i);if(!px)return [];
+  const y=(p.tipo==="topo"?px.hi:px.lo)/h;
+  if(axis&&Math.abs(axis.y(Number(p.preco))-y)*h>3)return [];
+  return [{...p,...g.extremos_ohlc.find(q=>q.data===p.data&&q.tipo===p.tipo),x:px.x/w,y,ancoragem_visual:"pixel_compativel"}];
+ });
  g.validacao_ohlc={...g.validacao_ohlc,status:"conferido",desde:slice[0].date,ate:slice[slice.length-1].date,imagem_correspondida:true,marcadores_validados:g.pivos.length,motivo:"Recorte identificado pela sequência de corpos e pavios. Preços da série indicada; sem eixo legível, a escala nominal do print não foi certificada."};
 }
 
