@@ -2,7 +2,7 @@ const test=require('node:test');const assert=require('node:assert');const fs=req
 const src=fs.readFileSync(__dirname+'/../src/domains/core/07-conta-e-integracoes.js','utf8');
 const pick=n=>{const i=src.indexOf('function '+n+'(');let d=0,j=src.indexOf('{',i);for(;j<src.length;j++){if(src[j]=='{')d++;else if(src[j]=='}'){d--;if(!d)break;}}return src.slice(i,j+1);};
 const ap=src.slice(src.indexOf('const AUREA_APELIDOS_V1048'),src.indexOf('\n',src.indexOf('const AUREA_APELIDOS_V1048')));
-const ctx={};vm.createContext(ctx);vm.runInContext(ap.replace('const ','var ')+'\n'+['aureaTickersV1048','aureaDossieCalcV1048','aureaDossieTextoV1048'].map(pick).join('\n'),ctx);
+const ctx={};vm.createContext(ctx);vm.runInContext(ap.replace('const ','var ')+'\n'+['aureaObvV1051','aureaZigZagV1051','aureaTickersV1048','aureaDossieCalcV1048','aureaDossieTextoV1048'].map(pick).join('\n'),ctx);
 test('apelidos viram ticker sem confundir "vale a pena"',()=>{
  assert.deepEqual([...ctx.aureaTickersV1048('Estou pensando em comprar uma put de petr')],['PETR4']);
  assert.deepEqual([...ctx.aureaTickersV1048('Vale a pena comprar call agora?')],[]);
