@@ -216,7 +216,8 @@
   function mercadoPlan() {
     const p=state.mercado;
     if (!p || !p.mercados || !Array.isArray(p.mercados.grupos)) return {nome:'Sem leitura validada',confianca:null,motivo:'Fonte pública ainda sem snapshot verificável.',divergencias:[],entries:[]};
-    const entries=p.mercados.grupos.flatMap(g=>(g.itens||[]).map(x=>({name:String(x.n||''),change:x.d1==null||x.d1===''?null:Number(x.d1),fonte:p.fonte})))
+    const central=w.DiarioMarketData;
+    const entries=p.mercados.grupos.flatMap(g=>(g.itens||[]).map(x=>{const key=central?.key(x.s)||central?.key(x.simboloFonte);const q=key?central.get(key):x;return {name:String(x.n||''),change:q?.d1==null||q.d1===''?null:Number(q.d1),fonte:q?.fonte||q?.source||p.fonte};}))
       .concat((p.adrs||[]).map(x=>({name:String(x.s||''),change:x.chp==null||x.chp===''?null:Number(x.chp),fonte:p.fonte})))
       .filter(x=>number(x.change)&&Math.abs(x.change)<=60);
     const relevant=entries.filter(x=>!/ouro/i.test(x.name));
@@ -405,8 +406,8 @@
     const m=state.mercado;if(!m||!Array.isArray(m.adrs)||!m.adrs.length)return '';
     const itens=(m.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
     const fxApp=cotacaoApp('USDBRL');
-    const fxObj=itens.find(i=>/USD\/?BRL/i.test(String(i.n||'')));
-    const ewzObj=itens.find(i=>/^EWZ\b/i.test(String(i.n||'')));
+    const fxObj=typeof w!=='undefined'&&w.DiarioMarketData?w.DiarioMarketData.get('BRL=X'):itens.find(i=>/USD\/?BRL/i.test(String(i.n||'')));
+    const ewzObj=typeof w!=='undefined'&&w.DiarioMarketData?w.DiarioMarketData.get('EWZ'):itens.find(i=>/^EWZ\b/i.test(String(i.n||'')));
     const fx=Number(fxApp?.px||fxObj?.px),fxD1=Number(fxApp?.d1!=null&&Number.isFinite(fxApp.d1)?fxApp.d1:fxObj?.d1);
     if(!Number.isFinite(fx)||fx<=0)return '';
     const fxPct=Number.isFinite(fxD1)?fxD1:0;
@@ -864,8 +865,8 @@
     const m=state.mercado;if(!m||!Array.isArray(m.adrs)||!m.adrs.length)return '';
     const itens=(m.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
     const fxApp=cotacaoApp('USDBRL');
-    const fxObj=itens.find(i=>/USD\/?BRL/i.test(String(i.n||'')));
-    const ewzObj=itens.find(i=>/^EWZ\b/i.test(String(i.n||'')));
+    const fxObj=typeof w!=='undefined'&&w.DiarioMarketData?w.DiarioMarketData.get('BRL=X'):itens.find(i=>/USD\/?BRL/i.test(String(i.n||'')));
+    const ewzObj=typeof w!=='undefined'&&w.DiarioMarketData?w.DiarioMarketData.get('EWZ'):itens.find(i=>/^EWZ\b/i.test(String(i.n||'')));
     const fx=Number(fxApp?.px||fxObj?.px),fxD1=Number(fxApp?.d1!=null&&Number.isFinite(fxApp.d1)?fxApp.d1:fxObj?.d1);
     if(!Number.isFinite(fx)||fx<=0)return '';
     const fxRaw=fxApp?.d1!=null&&Number.isFinite(fxApp.d1)?fxApp.d1:fxObj?.d1;

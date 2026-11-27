@@ -75,7 +75,7 @@
     return q;
   }
   function consulta(chave, agora = Date.now()) {
-    const central=root.DiarioMarketData;if(central?.has(chave)){const q=central.get(chave);if(q)return q;}
+    const central=root.DiarioMarketData;if(central?.has(chave)&&!root.DIARIO_DEMO)return central.get(chave);
     // v926: este módulo é carregado depois do núcleo e sobrescreve tapeVivo.
     // Consulta primeiro a referência validada de EWZ exposta pelo núcleo.
     if (chave === "EWZ") {

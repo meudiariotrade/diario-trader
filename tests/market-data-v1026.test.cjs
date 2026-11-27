@@ -22,3 +22,8 @@ test('índice Nasdaq não é Nasdaq futuro',()=>{
  const c=env({idx:{itens:[{s:'NASDAQ:IXIC',px:23000,d1:-.6}]},fut:{itens:[{s:'CME_MINI:NQ1!',px:26000,d1:.5}]}});
  assert.equal(c.get('^IXIC').d1,-.6);assert.equal(c.get('NQ=F').d1,.5);
 });
+
+test('overlay ao vivo vencido não sobrescreve a referência pública',()=>{
+ const c=env({cri:{itens:[{s:'BITSTAMP:BTCUSD',px:60000,d1:1}]}},()=>({px:60496,d1:.45,bnc:true,live:true,em:Date.now()-600000}));
+ assert.equal(c.get('BTC-USD').px,60000);
+});

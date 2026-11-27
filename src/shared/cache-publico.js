@@ -154,6 +154,7 @@
   const prev=num(q.fechamentoAnterior??q.previousClose??q.pc??q.fec);
   if(prev>0&&d!==null&&basis!=='24h'&&Math.abs((num(q.px)/prev-1)*100-d)>0.08)d=null;
   const at=date(q.horarioPreco||q.priceAt||q.dadoEm||q.em||q.ts);
+  if(q.live===true&&(!at||Date.now()-Date.parse(at)>180000))return overlay&&q===overlay?normal(k,row):null;
   return Object.freeze({...row,...q,s:specs[k]?.[1]||row?.s||k,simboloFonte:instrument,px:num(q.px),d1:d,chg:d,fonte,source:fonte,baseVariacao:basis,fechamentoAnterior:prev,horarioPreco:at,priceAt:at,dadoEm:at,fechado:q.fechado===true,live:q.live===true&&!!at,quoteStatus:q.quoteStatus||(!at?'horario_nao_confirmado':null)});
  }
  function get(s){
@@ -168,11 +169,13 @@
     return normal(k,row,overlay);
    }
   }catch{}
+  // Binance já conectado pode preencher o par mesmo antes da primeira lista pública.
+  if(group==='cri'){try{const c=k.split('-')[0],b=typeof bncQ==='function'?bncQ(c):null;if(b&&num(b.px)>0)return normal(k,{s:specs[k][1],px:b.px},{px:b.px,d1:b.d1,bnc:true,live:true,em:b.em});}catch{}}
   // Reserva pública: apenas o símbolo explicitamente identificado, sem casar por nome.
   try{
    const snapshot=w.DiarioPublico?.peek?.('/v1/mercado');
    const rows=(snapshot?.mercados?.grupos||[]).flatMap(g=>g.itens||[]);
-   const row=rows.find(r=>valid(r)&&(symbols.includes(r.s)||symbols.includes(r.simboloFonte)||(r.s===k&&!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F'].includes(k))));
+   const row=rows.find(r=>valid(r)&&(symbols.includes(r.s)||symbols.includes(r.simboloFonte)||(r.s===k&&!['BZ=F','CL=F','GC=F','ES=F','NQ=F','YM=F','BTC-USD','ETH-USD','SOL-USD','XRP-USD'].includes(k))));
    if(row)return normal(k,row);
   }catch{}
   // O ticker já possui referência pública própria durante a inicialização. Não usar

@@ -1333,7 +1333,7 @@ function imgQ(e) {
 }
 async function imgListasV1025(fetcher=fetch, estado=CQ) {
   const central=window.DiarioMarketData;
-  if(central){await central.refresh();const snap=central.snapshot(Object.keys(imgSimbolosPublicos));IMG.central1026=true;IMG.snapshot1026=snap.id;return {rows:Object.values(snap.rows),reserva:imgAbasV1025.filter(g=>!estado.ts?.[g]||estado.errors?.[g])};}
+  if(central){IMG.central1026=true;await central.refresh();const snap=central.snapshot(Object.keys(imgSimbolosPublicos));IMG.snapshot1026=snap.id;return {rows:Object.values(snap.rows),reserva:imgAbasV1025.filter(g=>!estado.ts?.[g]||estado.errors?.[g])};}
   const resultados=await Promise.allSettled(imgAbasV1025.map(async aba=>{
     const url=CQ_EDGE_V1022+"?"+new URLSearchParams({modo:"cotacoes",aba});
     const ctl=new AbortController();
