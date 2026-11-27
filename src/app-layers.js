@@ -47531,13 +47531,14 @@ s.textContent += `
     if(!dia)return null;
     const key=tipo+':'+dia,old=basesConfirmadasV1028.get(key);
     const ts=stamp(q?.priceAt||q?.horarioPreco||q?.dadoEm),px=num(q?.px);
-    const contract=chave(q?.simboloFonte||q?.s);
+    const contract=chave(q?.tk||q?.simboloFonte||q?.s);
     const exact=aliases[tipo].has(contract)||new RegExp('^'+tipo.toUpperCase()+'[FGHJKMNQUVXZ]\\d{2,4}$').test(contract);
     const sess=w.DiarioSessoes.session(tipo.toUpperCase(),Date.parse(dia+'T15:00:00Z'));
     const end=sess?.verified&&sess.close?Date.parse(dia+'T03:00:00Z')+sess.close*60000:null;
+    const start=sess?.verified&&Number.isFinite(sess.open)?Date.parse(dia+'T03:00:00Z')+sess.open*60000:end===null?null:end-10*HORA;
     // Referência do último negócio datado próximo ao encerramento; não é ajuste oficial.
-    if(exact&&px>0&&ts!==null&&end!==null&&ts<=now+60000&&ts>=end-15*60000&&ts<=end+5*60000){
-      if(!old||ts>old.ts){for(const k of basesConfirmadasV1028.keys())if(k.startsWith(tipo+':')&&k!==key)basesConfirmadasV1028.delete(k);basesConfirmadasV1028.set(key,{px,ts});}
+    if(exact&&px>0&&ts!==null&&end!==null&&ts<=now+60000&&ts>=((q?.fechado===true&&start!==null)?start:end-15*60000)&&ts<=end+5*60000){
+      if(!old||old.contract!==contract||ts>=old.ts){for(const k of basesConfirmadasV1028.keys())if(k.startsWith(tipo+':')&&k!==key)basesConfirmadasV1028.delete(k);basesConfirmadasV1028.set(key,{px,ts,contract});}
     }
     return basesConfirmadasV1028.get(key)?.px??null;
   }
@@ -47545,16 +47546,10 @@ s.textContent += `
     const hBrt = horaBrt(new Date(now));
     const canon=tipo==='win'?'WIN':tipo==='wdo'?'WDO':null,q=canon&&w.DiarioMarketData?.get(canon);
     if(w.DiarioMarketData){
-      let base=fechamentoCanonicoV1028(tipo,q,now);
-      // Verifica outras fontes datadas do mesmo instrumento sem usar horário de coleta.
-      for(const f of fontes){const it=f.item;if(!combina(tipo,it)||!(it.priceAt||it.horarioPreco||it.dadoEm))continue;
-        const b=fechamentoCanonicoV1028(tipo,it,now);if(b!==undefined)base=b;}
-      try{if(typeof CQ!=='undefined'&&(!CQ.owner||(typeof SESS!=='undefined'&&CQ.owner===SESS?.uid))){
-        for(const it of [CQ.saved?.['@'+canon],CQ.pf?.['@'+canon]])if(it?.em){
-          const b=fechamentoCanonicoV1028(tipo,{...it,s:it.tk||canon,priceAt:it.em},now);if(b!==undefined)base=b;
-        }
-      }}catch{}
-      if(base!==undefined)return base;
+      // Não procurar outros contratos ou preços em listas avulsas: a central
+      // seleciona exatamente WIN/WDO como a aba Futuros. Sem data válida, não projetar.
+      const base=fechamentoCanonicoV1028(tipo,q,now);
+      return base===undefined?null:base;
     }
     if(q)fontes=[{item:{...q,s:canon,em:q.priceAt},coleta:q.priceAt},...fontes.filter(f=>!combina(tipo,f.item))];
     // v984: após o fechamento da B3 (18h BRT), o fechamento de referência para o próximo pregão é o próprio px de hoje.

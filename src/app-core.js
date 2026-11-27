@@ -70593,33 +70593,42 @@ function cqIntervaloV1022(aba,agora=Date.now()){
   }
   return 30000;
 }
-const cqControllersV1022=new Map();
+const cqControllersV1022=new Map(),cqPedidosV1030=new Map();
 function cqCancelarV1022(){
   for(const ctl of cqControllersV1022.values())ctl.abort();
 }
-async function cqCarrega(e, t) {
+function cqCarrega(e,t){
   e=e||CQ.aba;
-  if(!CQ_ABAS.some(a=>a[0]===e)||e==="fav"||CQ.loading[e])return;
+  if(!CQ_ABAS.some(a=>a[0]===e)||e==="fav"||window.DIARIO_DEMO||(typeof document!=="undefined"&&document.hidden))return Promise.resolve();
+  const anterior=cqPedidosV1030.get(e);
+  if(anterior&&!cqControllersV1022.get(e)?.signal.aborted)return anterior;
   const intervalo=CQ.errors[e]?120000:cqIntervaloV1022(e);
-  if(!t&&CQ.ts[e]&&Date.now()-CQ.ts[e]<intervalo)return;
-  const inicial=!CQ.d[e]?.itens?.length,ctl=new AbortController();
+  if(!t&&CQ.ts[e]&&Date.now()-CQ.ts[e]<intervalo)return Promise.resolve(CQ.d[e]);
+  const ctl=new AbortController();
   cqControllersV1022.set(e,ctl);
-  CQ.loading[e]=true;if(inicial){CQ.busy=e;CQ.errors[e]="";cqPinta();}
-  try {
-    const url=CQ_EDGE_V1022+"?"+new URLSearchParams({modo:"cotacoes",aba:e});
-    const r=await fetch(url,{method:"GET",credentials:"omit",redirect:"error",cache:"default",headers:{Accept:"application/json"},signal:AbortSignal.any([ctl.signal,AbortSignal.timeout(25000)])});
-    const n=await r.json().catch(()=>({}));
-    if(ctl.signal.aborted)return;
-    if(!r.ok||!Array.isArray(n.itens)||(!n.itens.length&&CQ.d[e]?.itens?.length))throw new Error(n.error||n.erro||"Cloudflare: cotação indisponível ("+r.status+")");
-    CQ.d[e]=n;CQ.ts[e]=Date.now();CQ.err="";CQ.errors[e]="";
-  }catch(o){
-    if(!ctl.signal.aborted){CQ.errors[e]=CQ.err=String(o.message||o);CQ.ts[e]=Date.now();}
-  }finally{
-    if(cqControllersV1022.get(e)===ctl)cqControllersV1022.delete(e);
-    CQ.loading[e]=false;if(CQ.busy===e)CQ.busy="";
-    if(!ctl.signal.aborted&&tab==="mercado"&&MKT.tab==="cq"&&(CQ.aba===e||CQ.aba==="fav"))cqPinta();
-  }
-  if(e==="fut"&&!ctl.signal.aborted&&tab==="mercado"&&MKT.tab==="cq")await cqPonte();
+  const job=Promise.resolve().then(async()=>{
+    const inicial=!CQ.d[e]?.itens?.length;
+    CQ.loading[e]=true;
+    try {
+      if(inicial){CQ.busy=e;CQ.errors[e]="";if(tab==="mercado"&&MKT.tab==="cq")cqPinta();}
+      const url=CQ_EDGE_V1022+"?"+new URLSearchParams({modo:"cotacoes",aba:e});
+      const r=await fetch(url,{method:"GET",credentials:"omit",redirect:"error",cache:"no-cache",headers:{Accept:"application/json"},signal:AbortSignal.any([ctl.signal,AbortSignal.timeout(25000)])});
+      const n=await r.json().catch(()=>({}));
+      if(ctl.signal.aborted)return;
+      if(!r.ok||!Array.isArray(n.itens)||(!n.itens.length&&CQ.d[e]?.itens?.length))throw new Error(n.error||n.erro||"Cloudflare: cotação indisponível ("+r.status+")");
+      CQ.d[e]=n;CQ.ts[e]=Date.now();CQ.err="";CQ.errors[e]="";
+      return n;
+    }catch(o){
+      if(!ctl.signal.aborted){CQ.errors[e]=CQ.err=String(o.message||o);CQ.ts[e]=Date.now();}
+    }finally{
+      if(cqControllersV1022.get(e)===ctl){
+        cqControllersV1022.delete(e);cqPedidosV1030.delete(e);
+        CQ.loading[e]=false;if(CQ.busy===e)CQ.busy="";
+        if(!ctl.signal.aborted&&tab==="mercado"&&MKT.tab==="cq"&&(CQ.aba===e||CQ.aba==="fav"))cqPinta();
+      }
+    }
+  }).then(async n=>{if(e==="fut"&&!ctl.signal.aborted&&tab==="mercado"&&MKT.tab==="cq")await cqPonte();return n;});
+  cqPedidosV1030.set(e,job);return job;
 }
 
 var cqPonte, cqPinta;
@@ -70689,7 +70698,9 @@ var cotHtml;
 let cqTimerV1022=null;
 function cqCicloV1022(){
   const ativo=!document.hidden&&tab==="mercado"&&MKT.tab==="cq";
-  if(!ativo){if(cqTimerV1022!==null)clearInterval(cqTimerV1022);cqTimerV1022=null;cqCancelarV1022();return;}
+  if(!ativo){const saiu=cqTimerV1022!==null;if(saiu)clearInterval(cqTimerV1022);cqTimerV1022=null;
+    // As requisições compartilhadas não pertencem à tela Mercado. Início/Meu Dia e Panorama podem estar aguardando.
+    if(document.hidden)cqCancelarV1022();return;}
   if(cqTimerV1022===null){cqTimerV1022=setInterval(()=>{if(!document.hidden&&tab==="mercado"&&MKT.tab==="cq")cqCarrega(CQ.aba);else cqCicloV1022();},30000);cqCarrega(CQ.aba);}
 }
 document.addEventListener("visibilitychange",cqCicloV1022);
