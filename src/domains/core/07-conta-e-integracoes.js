@@ -3881,6 +3881,7 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
    const px1044=x.getImageData(0,0,canvas.width,canvas.height).data;
    if(g._ohlc1046&&g.validacao_ohlc?.status==="historico_sem_recorte"){
     aureaMarcarHistoricoV1046(g,px1044,canvas.width,canvas.height);
+    delete g._ohlc1046;
     canvas.width=canvas.height=0;return;
    }
    const projetados=g.pivos.some(p=>p.passo_x>0);
@@ -3896,6 +3897,7 @@ async function aureaValidarImagemV1021(resposta,imagens,signal){
    // Uma estimativa de preço não pode virar rótulo numérico em pavio sem escala conferida.
    g.pivos=g.pivos.map(p=>p.ancoragem_visual==="pavio_visual"&&p.validacao==="visual"?{...p,preco:""}:p);
    aureaPosicionarNiveisV1044(g);
+   if(g.validacao_ohlc?.historico_disponivel){g.validacao_ohlc.marcadores_validados=g.pivos.filter(p=>p.ancoragem_visual==="pixel_compativel").length;g.validacao_ohlc.imagem_correspondida=g.validacao_ohlc.marcadores_validados>0;}
    canvas.width=canvas.height=0;
   }catch{}
  }));
@@ -4117,7 +4119,8 @@ async function aureaHistoricoTerminal(g,signal){
  }
  g.pivos=selected.sort((a,b)=>a.x-b.x);
  g.extremos_ohlc=aureaPivosIndependentesV1046(bars.slice(first.i,last.i+1)).map(({i,...p})=>p);
- g.validacao_ohlc={status:"conferido",ticker:id.ticker,tf:mensal?"1M":"1D",source:"Terminal HP"+(payload.fonte?" · "+payload.fonte:""),desde:bars[first.i].date,ate:bars[last.i].date,motivo:"Extremos calculados no histórico do Terminal entre as datas identificadas no eixo. A posição de cada marcador é conferida no pavio da imagem."};
+ delete g._ohlc1046;
+ g.validacao_ohlc={status:"conferido",historico_disponivel:true,pivos_calculados:true,imagem_correspondida:false,marcadores_validados:0,ticker:id.ticker,tf:mensal?"1M":"1D",source:"Terminal HP"+(payload.fonte?" · "+payload.fonte:""),desde:bars[first.i].date,ate:bars[last.i].date,motivo:"Extremos calculados no histórico do Terminal entre as datas identificadas no eixo. A posição de cada marcador é conferida no pavio da imagem."};
  return true;
 }
 
@@ -4130,8 +4133,28 @@ async function aureaValidarHistoricoV1012(resposta,pergunta,signal){
   const explicit=String(pergunta||"").toUpperCase();
   await Promise.all(graficos.map(async g=>{
     if(!Array.isArray(g.pivos))g.pivos=[];
-    try{if(await aureaHistoricoTerminal(g,limite)||g._ohlc1046)return;}catch{/* Reutilizar a conferência existente quando a fonte do Terminal falhar. */}
-    if(!g.pivos.length&&!g.referencia_ohlc)return;
+    const ident=g.identificacao_visual;
+    const conflito1046=ident?.ticker&&(explicit.match(/\b[A-Z]{4}\d{1,2}\b/g)||[]).some(t=>t!==ident.ticker);
+    if(!conflito1046){
+      const terminalLimite=AbortSignal.any([limite,AbortSignal.timeout(7500)]);
+      try{if(await aureaHistoricoTerminal(g,terminalLimite)||g._ohlc1046)return;}catch{}
+    }
+    if(!conflito1046&&!limite.aborted&&ident?.market==="BR"&&/^[A-Z]{4}\d{1,2}$/.test(ident.ticker)&&/^(1d|d|diário|diario)$/i.test(ident.periodo)&&["cabecalho","marca_dagua","ambos"].includes(ident.origem)&&contrato&&auditoria&&contrato.ticker(ident.ticker,"BR")===ident.ticker){
+      const key="v1046|"+ident.ticker;
+      if(!cache.has(key))cache.set(key,(async()=>{
+        const url="https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/tecnico-candles?"+new URLSearchParams({market:"BR",ticker:ident.ticker,tf:"1d"});
+        const r=await fetch(url,{signal:limite,cache:"force-cache",credentials:"omit",redirect:"error"});
+        if(!r.ok)throw Error("HTTP "+r.status);
+        const payload=await r.json(),q=auditoria.audit(payload,{ticker:ident.ticker,market:"BR",tf:"1d",contract:contrato});
+        const parsed=contrato.series(payload.candles,{tf:"1d"});
+        if(!q.valid||!parsed.valid)throw Error("Série não homologada");
+        const today=new Date().toISOString().slice(0,10);
+        return {source:q.source,bars:parsed.candles.map(c=>({...c,date:new Date(c.t).toISOString().slice(0,10)})).filter(c=>c.date<today)};
+      })());
+      try{const h=await cache.get(key);if(!limite.aborted&&aureaRegistrarHistoricoV1046(g,h.bars,"Cloudflare · "+h.source,"1D",ident.ticker))return;}catch{}
+    }
+    if(conflito1046){g.pivos=aureaConferePivosV1012(g,null);g.validacao_ohlc={status:"visual",motivo:"Ativo indicado na pergunta diverge da identificação visual; histórico não consultado."};return;}
+    if(!g.pivos.length&&!g.referencia_ohlc){g.validacao_ohlc={status:"visual",motivo:limite.aborted?"Tempo limite da consulta histórica atingido.":"Histórico não disponível ou identificação insuficiente."};return;}
     const m=g.referencia_ohlc||{},tk=m.ticker,market=m.market,tf=m.tf;
     const base={status:"visual",motivo:"Sem identificação compatível, recorte exato ou escala nominal legível; nenhuma confirmação histórica."};
     const id=g.identificacao_visual,periodo=String(id?.periodo||"").toLowerCase().trim();
