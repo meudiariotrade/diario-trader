@@ -64,13 +64,15 @@
 
   /* ---------- 1. Segurar para confirmar ---------- */
   var HOLD_MS = 650;
-  var SEL_HOLD = '[data-a="enc"],[data-fx="encerrar"],[data-a="deltrade"],[data-a="delrule"],[data-a="delw"],[data-a="delbook"],[data-a="delnote"],[data-hold]';
+  var SEL_HOLD = '[data-a="enc"],[data-fx="encerrar"],[data-a="deltrade"],[data-a="delw"],[data-a="delbook"],[data-a="delnote"],[data-hold]';
+  /* Excluir regra já tem "Desfazer" (v554): segurar ali só atrapalharia. */
+  var SEM_HOLD = '[data-a="delrule"],[data-no-hold],[data-no-hold] *';
   var RE_HOLD = /^(Excluir|Apagar|Encerrar)(\s|$)/i;
   var passando = false, silencioAte = 0, ativo = null;
 
   function alvoHold(el) {
     var b = el && el.closest ? el.closest('button,[role="button"]') : null;
-    if (!b || b.disabled || b.closest('[data-no-hold]')) return null;
+    if (!b || b.disabled || b.matches(SEM_HOLD)) return null;
     if (b.matches(SEL_HOLD)) return b;
     if (b.closest('#app,#sh') && RE_HOLD.test((b.textContent || '').trim())) return b;
     return null;

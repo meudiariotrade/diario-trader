@@ -7,3 +7,4 @@ Corrigido:
 - Termômetro fiscal: a reserva no GitHub era bloqueada pela política de segurança (CSP); liberado só o repositório do app.
 - Busca (Ctrl+K) e menu do avatar: removidos "Calculadora de Lotes" e "Capital e Risco", telas já excluídas que caíam em Day trade.
 Arquivos: src/app-theme.css, src/index.html, src/intelligence/etapa2.js, src/domains/core/12-carteira-e-inteligencia.js, src/domains/core/13-diagnostico-e-relatorios.js, src/domains/layers/02-carteira-e-terminal.js, src/domains/layers/03-apresentacao.js, src/app-core.js, src/app-layers.js, release.config.json
+- Excluir regra volta a funcionar com 1 toque + "Desfazer" (o segurar-para-confirmar da v1033 bloqueava o fluxo de desfazer; teste ajustes-v554).
