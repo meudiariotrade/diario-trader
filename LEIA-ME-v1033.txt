@@ -1,0 +1,8 @@
+v1033 — Microinterações (Etapa 1, inspiradas no UI Moments/MIT):
+- Segurar para confirmar em Encerrar e Excluir (trade, regra, livro, nota); toque rápido mostra "Segure para confirmar"; Excluir trade passa a ser 1 gesto.
+- Números rolando nos KPIs do Meu dia quando o valor muda.
+- Checklist: item marcado é riscado.
+- Celular: puxar a tela para baixo no topo aciona o "Atualizar" da tela.
+- Exportações mostram anel de progresso no botão.
+- Textos "Carregando…/Buscando…/Áurea está…" ganham loader discreto em âmbar.
+Arquivos: src/shared/ui-momentos.js (novo), src/index.html, src/service-worker.js, release.config.json
