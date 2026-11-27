@@ -90,9 +90,10 @@
   /* ---------- 6. Sugestões por horário ---------- */
   function sugestoes() {
     var h = new Date().getHours();
-    if (h < 9) return ['Plano do pregão WIN e WDO hoje', 'O que mexe no mercado hoje?', 'Riscos do dia para o meu plano @plano'];
-    if (h < 17) return ['Como está meu dia? @hoje', 'Analise meu último trade @trade', 'WIN agora: suportes e resistências'];
-    return ['Revise meus trades de hoje @hoje', 'O que aprendi com meu último trade? @trade', 'Plano para amanhã'];
+    /* A 1ª pergunta sempre parte da agenda econômica (compromisso do navegacao-simples). */
+    if (h < 9) return ['Como interpretar a agenda econômica de hoje?', 'Plano do pregão WIN e WDO hoje', 'Riscos do dia para o meu plano @plano'];
+    if (h < 17) return ['O que da agenda econômica ainda pode mexer no pregão?', 'Como está meu dia? @hoje', 'Analise meu último trade @trade'];
+    return ['O que a agenda econômica de amanhã pode trazer?', 'Revise meus trades de hoje @hoje', 'O que aprendi com meu último trade? @trade'];
   }
   /* Usa a caixa "Você pode começar por aqui" que já existe (navegacao-simples) e troca as perguntas
    * fixas pelas do horário, sem criar uma segunda fileira. */
