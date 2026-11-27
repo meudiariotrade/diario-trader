@@ -110,3 +110,29 @@ test('v1023 encontra pavios cinza sem eixo e não promove preço ou estrutura',(
  assert.equal(out[0].preco,'');assert.equal(out[0].preco_eixo_aprox,undefined);
  assert.equal(out[0].validacao,'visual');assert.equal(out[0].estado,'potencial');
 });
+
+test('Terminal HP: marca a máxima diária no pavio usando somente o histórico do ativo identificado',async()=>{
+ const g={identificacao_visual:{ticker:'PRIO3',market:'BR',periodo:'1D',origem:'ambos'},
+  geometria_preco:{x0:.05,x1:.95,y0:.1,y1:.8,candles:'preto_fundo_claro',eixos:[{y:.2,preco:20},{y:.4,preco:15},{y:.6,preco:10}],tempo:[{x:.2,data:date(0)},{x:.75,data:date(11)}]}};
+ const payload={candles:rows.map(b=>[b.t/1000,b.o,b.h,b.l,b.c]),fonte:'fixture'};
+ let calls=0;
+ const terminal={TR:{dados:{}},async trCandles(t,tf){calls++;assert.equal(t,'PRIO3');assert.equal(tf,'1d');this.TR.dados['cd|PRIO3|1d']={v:payload}}};
+ ctx.window={TRM:terminal};
+ assert.equal(await ctx.aureaHistoricoTerminal(g,new AbortController().signal),true);
+ const p=g.pivos.find(p=>p.tipo==='topo'&&p.data===date(5));
+ assert.equal(p.preco,'15');assert.ok(Math.abs(p.x-.45)<1e-8);assert.equal(p.y,.4);
+ const w=400,h=800,pixels=new Uint8ClampedArray(w*h*4).fill(255);
+ for(let y=320;y<350;y++)for(let x=y<328?180:179;x<=(y<328?180:181);x++)pixels.fill(0,(y*w+x)*4,(y*w+x)*4+3);
+ assert.equal(ctx.aureaAncorarPivosV1021(g,pixels,w,h).find(p=>p.data===date(5)).ancoragem_visual,'pixel_compativel');
+ g.geometria_preco.tempo=[{x:.2,data:date(0)}];
+ assert.equal(await ctx.aureaHistoricoTerminal(g,new AbortController().signal),false);assert.equal(calls,1);
+});
+
+test('Terminal HP: o mensal usa o pavio mais alto do mês e preserva o período',async()=>{
+ const dates=Array.from({length:12},(_,i)=>'2025-'+String(i+1).padStart(2,'0'));
+ const candles=dates.flatMap((month,i)=>[1,2].map(day=>[Date.parse(month+'-0'+day+'T12:00:00Z')/1000,10,day===1?12:i===5?19:14,8,11]));
+ ctx.window={TRM:{trCandles(){throw Error('cache esperado')},TR:{dados:{'cd|PRIO3|1d':{v:{candles}}}}}};
+ const g={identificacao_visual:{ticker:'PRIO3',market:'BR',periodo:'1M',origem:'cabecalho'},geometria_preco:{x0:.05,x1:.95,y0:.1,y1:.8,candles:'preto_fundo_claro',eixos:[{y:.2,preco:20},{y:.4,preco:15},{y:.6,preco:10}],tempo:[{x:.2,data:dates[1]},{x:.8,data:dates[10]}]}};
+ assert.equal(await ctx.aureaHistoricoTerminal(g,new AbortController().signal),true);
+ assert.equal(g.validacao_ohlc.tf,'1M');assert.equal(g.pivos.find(p=>p.data===dates[5]).preco,'19');
+});
