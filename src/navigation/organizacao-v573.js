@@ -44,6 +44,7 @@ html body .dt394-nav-list.org-buscando .org-grp{display:none}
  html body nav#org-side button.org-colapsa:hover{color:#D4A017;background:#181C26}
  html body nav#org-side{transition:width .18s ease}
  html body.org-side-on.org-side-mini nav#org-side{width:64px;padding:16px 8px;overflow-x:hidden}
+ html body.org-side-term nav#org-side button.org-colapsa{display:none!important}
  html body.org-side-on.org-side-mini{padding-left:64px!important}
  html body.org-side-mini #org-side .org-brand{justify-content:center;padding:4px 0 8px}
  html body.org-side-mini #org-side .org-brand>span{display:none}
@@ -192,7 +193,13 @@ html body #app[data-tela=import] .dt395-native-import>h1{font-size:20px!importan
    for(const [nome,itens] of GRUPOS){side.append(el('div','org-grp',nome));for(const [r,t] of itens){const b=el('button');b.type='button';b.dataset.orgRota=r;if(r==='mais')b.dataset.dt414Go='mais';else b.dataset.dt393Route=r;b.innerHTML=ico(r)+'<span></span>';b.lastChild.textContent=t;b.title=t;b.setAttribute('aria-label',t);side.append(b)}}
    doc.body.append(side);
   }
-  doc.body.classList.toggle('org-side-on',root.innerWidth>=1100&&app()?.dataset.tela!=='term');
+  /* v1054 (CLAUDE.md §7): o Terminal também tem a barra lateral no desktop, sempre recolhida
+     (64px, só ícones) para não roubar área dos painéis. A preferência salva vale fora dele. */
+  const largo=root.innerWidth>=1100,noTerm=app()?.dataset.tela==='term';
+  doc.body.classList.toggle('org-side-on',largo);
+  doc.body.classList.toggle('org-side-term',largo&&noTerm);
+  if(largo&&noTerm)doc.body.classList.add('org-side-mini');
+  else{try{doc.body.classList.toggle('org-side-mini',root.localStorage.getItem('diario-org-side-mini')==='1')}catch{}}
   const tape=$('#tape');const topo=tape&&getComputedStyle(tape).display!=='none'?Math.max(0,tape.getBoundingClientRect().bottom):0;
   side.style.setProperty('--org-top',topo+'px');
   const a=app(),tela=a?.dataset.tela||'';

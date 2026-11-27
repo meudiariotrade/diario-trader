@@ -17,7 +17,7 @@ test('Terminal anterior: conteúdo exclusivo por modo, menu em uma linha no PC e
   await expect(app.locator('.tf413-layout')).toBeHidden();
   const menu=await app.locator('.tf415-nav').evaluate(n=>({tops:[...n.querySelectorAll('button')].filter(b=>b.getBoundingClientRect().height>0).map(b=>b.getBoundingClientRect().top),gap:parseFloat(getComputedStyle(n).gap),height:n.getBoundingClientRect().height}));
   assert.ok(Math.max(...menu.tops)-Math.min(...menu.tops)<2);assert.ok(menu.gap<=4);assert.ok(menu.height<64);
-  await expect.poll(()=>app.locator('.trm').evaluate(n=>{const r=n.getBoundingClientRect();return r.left<=5&&r.right>=innerWidth-5}),{message:'Terminal deve usar toda a largura, inclusive após redimensionar'}).toBe(true);
+  await expect.poll(()=>app.locator('.trm').evaluate(n=>{const r=n.getBoundingClientRect();const lado=document.body.classList.contains('org-side-term')?(document.getElementById('org-side')?.getBoundingClientRect().width||0):0;return r.left<=lado+5&&r.right>=innerWidth-5}),{message:'Terminal deve usar toda a largura (descontada a barra lateral recolhida de 64px no PC, v1054), inclusive após redimensionar'}).toBe(true);
   const bar=await app.locator('.trm>.trbar').evaluate(n=>({height:n.getBoundingClientRect().height,width:n.getBoundingClientRect().width,scroll:n.scrollWidth}));
   assert.ok(bar.height<=56,'Barra de comandos deve ficar em uma linha: '+width+' '+JSON.stringify(bar));assert.ok(bar.scroll<=bar.width+1);
   await app.locator('[data-tr341-menu]').click();

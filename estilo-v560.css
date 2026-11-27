@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 013a280759675fcb315a387086278e636ac74a4ecd2cfd8635476b7f43e3ebc0 */
+/* Gerado de src/app-theme.css · SHA256 1d096c8a96551556e9698543771d51f6a68530199c7fddcc842f1e057b60e650 */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7662,3 +7662,9 @@ html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(butt
  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 16px -12px rgba(245,158,11,.7)!important;text-shadow:none!important}
 /* Barra lateral do desktop no mesmo vidro das outras barras do app. */
 html:not([data-v427-tema=claro]) body:not([data-v4route=term]) nav#org-side:not(#lg){background:var(--lg-chrome)!important;background-image:none!important;-webkit-backdrop-filter:var(--lg-blur-chrome)!important;backdrop-filter:var(--lg-blur-chrome)!important;border-right:1px solid var(--lg-stroke)!important;box-shadow:none!important}
+
+/* ===== Etapa 5 (v1054) — desktop organizado ===== */
+/* Research: a coluna lateral de 280px só existe quando há conteúdo nela (antes ficava vazia à direita). */
+@media (min-width:1024px){html body #app .an-layout:not(:has(> :nth-child(2))){grid-template-columns:minmax(0,1fr)!important}}
+/* Coluna lateral (ui-aside) preenche a sua faixa da grade; antes parava em 440px e deixava sobra à direita. */
+@media (min-width:1024px){html body #app .ui-split > .ui-aside{max-width:none!important;width:auto!important;min-width:0!important}}

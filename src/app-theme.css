@@ -7661,3 +7661,9 @@ html:not([data-v427-tema=claro]) body:not([data-v4route=term]) #app#app :is(butt
  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 16px -12px rgba(245,158,11,.7)!important;text-shadow:none!important}
 /* Barra lateral do desktop no mesmo vidro das outras barras do app. */
 html:not([data-v427-tema=claro]) body:not([data-v4route=term]) nav#org-side:not(#lg){background:var(--lg-chrome)!important;background-image:none!important;-webkit-backdrop-filter:var(--lg-blur-chrome)!important;backdrop-filter:var(--lg-blur-chrome)!important;border-right:1px solid var(--lg-stroke)!important;box-shadow:none!important}
+
+/* ===== Etapa 5 (v1054) — desktop organizado ===== */
+/* Research: a coluna lateral de 280px só existe quando há conteúdo nela (antes ficava vazia à direita). */
+@media (min-width:1024px){html body #app .an-layout:not(:has(> :nth-child(2))){grid-template-columns:minmax(0,1fr)!important}}
+/* Coluna lateral (ui-aside) preenche a sua faixa da grade; antes parava em 440px e deixava sobra à direita. */
+@media (min-width:1024px){html body #app .ui-split > .ui-aside{max-width:none!important;width:auto!important;min-width:0!important}}
