@@ -3893,7 +3893,7 @@ function verVelhas() {
     e.apply(this, arguments);
     try {
       if (tab !== "home") return;
-      setTimeout(() => verChecar(!1), 1500);
+      /* v1054 (Etapa 2): checagem de versão das funções no Supabase só sob demanda. */
       const t = verVelhas(),
         a = document.getElementById("app");
       if (!t.length || !a || a.querySelector("#verav")) return;

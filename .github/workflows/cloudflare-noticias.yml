@@ -23,6 +23,16 @@ on:
       - 'supabase/functions/mesa-macro/**'
       - 'supabase/functions/sazonal-extras/**'
       - 'supabase/functions/finnhub-token/**'
+      - 'supabase/functions/analise/**'
+      - 'supabase/functions/resumo/**'
+      - 'supabase/functions/revista-ia/**'
+      - 'supabase/functions/conhecimento-ia/**'
+      - 'supabase/functions/aulas/**'
+      - 'supabase/functions/mesa/**'
+      - 'supabase/functions/logos/**'
+      - 'supabase/functions/series/**'
+      - 'supabase/functions/screener/**'
+      - 'supabase/functions/_shared/**'
       - '.github/workflows/cloudflare-noticias.yml'
   pull_request:
     paths:

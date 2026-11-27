@@ -41348,16 +41348,11 @@ function mtAviso() {
   };
 }
 const FN_VERSAO = "v90",
+  /* v1054: cotações, notícias, ADRs, juros, candles e sentimento já rodam na Cloudflare. */
   FN_LISTA = [
-    ["precos", "Cotações das posições abertas"],
     ["screener", "Faixa de preços do topo e Screener"],
-    ["noticias", "Notícias"],
     ["notificar", "Notificações"],
-    ["adrs", "ADRs no Início"],
-    ["juros", "Juros"],
-    ["candles", "Gráficos dos trades e Ao vivo"],
     ["macro", "Mundo"],
-    ["sentimento", "Sentimento"],
     ["radar", "Radar"],
     ["analise", "Análise com IA"],
     ["resumo", "Resumo de livros"],
@@ -41391,10 +41386,9 @@ document.addEventListener("click", (e) => {
   vConta = function () {
     let t = e();
     if (!window.CLOUD_OK || !cfg() || RECOV) return t;
-    SESS &&
-      !SYS.busy &&
-      Date.now() - SYS.em > 6 * 36e5 &&
-      setTimeout(() => sysTesta(!0), 50);
+    /* v1054 (Etapa 2): sem teste automático das ~14 Edge Functions ao abrir a Conta.
+       Eram chamadas ao Supabase a cada 6 h por aparelho (6 delas davam 404).
+       O teste continua no botão "Status do sistema". */
     const a = sysProblemas().length,
       o = `<button class="btn s" style="margin-top:8px;width:100%" data-a="gotab" data-id="status">🩺 Status do sistema${a ? ` · <span class="am">${a} com problema</span>` : ""}</button>`;
     return t.replace(
@@ -81954,7 +81948,7 @@ function verVelhas() {
     e.apply(this, arguments);
     try {
       if (tab !== "home") return;
-      setTimeout(() => verChecar(!1), 1500);
+      /* v1054 (Etapa 2): checagem de versão das funções no Supabase só sob demanda. */
       const t = verVelhas(),
         a = document.getElementById("app");
       if (!t.length || !a || a.querySelector("#verav")) return;

@@ -10,7 +10,32 @@ const FUNCOES = Object.freeze({
   'mesa-macro': () => import('../../supabase/functions/mesa-macro/index.ts'),
   'sazonal-extras': () => import('../../supabase/functions/sazonal-extras/index.ts'),
   'finnhub-token': () => import('../../supabase/functions/finnhub-token/index.ts'),
+  // Fase B (v1054): funções chamadas pelo app. Mesma fonte; o Supabase fica só com Auth e tabelas.
+  'analise': () => import('../../supabase/functions/analise/index.ts'),
+  'resumo': () => import('../../supabase/functions/resumo/index.ts'),
+  'revista-ia': () => import('../../supabase/functions/revista-ia/index.ts'),
+  'conhecimento-ia': () => import('../../supabase/functions/conhecimento-ia/index.ts'),
+  'aulas': () => import('../../supabase/functions/aulas/index.ts'),
+  'mesa': () => import('../../supabase/functions/mesa/index.ts'),
+  'logos': () => import('../../supabase/functions/logos/index.ts'),
+  'series': () => import('../../supabase/functions/series/index.ts'),
+  'screener': () => import('../../supabase/functions/screener/index.ts'),
 });
+/* Fase B: só roda no Worker quando as chaves essenciais já estão cadastradas nele.
+ * Sem elas, responde 503 e o app volta para a função antiga do Supabase (sem quebrar).
+ * Ao cadastrar as chaves na Cloudflare, a função passa a rodar no Worker sozinha. */
+const SB = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
+const REQUISITOS = Object.freeze({
+  'analise': [...SB, 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY'],
+  'resumo': [...SB, 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY'],
+  'revista-ia': SB,
+  'conhecimento-ia': SB,
+  'aulas': SB,
+  'mesa': [...SB, 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY'],
+});
+export function faltamSegredosV1054(nome, env) {
+  return (REQUISITOS[nome] || []).filter((k) => typeof env?.[k] !== 'string' || !env[k]).length;
+}
 export const FUNCOES_V1042 = Object.freeze(Object.keys(FUNCOES));
 
 const handlers = new Map();
@@ -50,14 +75,18 @@ async function handlerDe(nome) {
 }
 
 /** Rota /v1/fn/<nome>: devolve null quando a rota não é desta camada. */
-export async function funcaoV1042(request, env) {
+export async function funcaoV1042(request, env, ctx) {
   const url = new URL(request.url);
   const m = /^\/v1\/fn\/([a-z0-9-]+)$/.exec(url.pathname);
   if (!m) return null;
   const nome = m[1];
   if (!Object.prototype.hasOwnProperty.call(FUNCOES, nome))
     return Response.json({ error: 'Função não migrada.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
+  if (faltamSegredosV1054(nome, env))
+    return Response.json({ error: 'Função ainda sem chaves no Cloudflare; usando a origem anterior.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   envAtual = env || {};
+  // aulas e resumo continuam o processamento em segundo plano (EdgeRuntime.waitUntil no Supabase).
+  globalThis.EdgeRuntime = { waitUntil: (p) => { try { ctx?.waitUntil?.(Promise.resolve(p).catch(() => {})); } catch (_) { /* sem ctx em teste */ } } };
   try {
     const h = await handlerDe(nome);
     const resp = await h(request);
