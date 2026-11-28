@@ -280,11 +280,16 @@
   const lo=Math.max(0.0001,minP-pad),hi=maxP+pad;
   const py=v=>mapY(v,T,chartBottom,lo,hi);
 
+  // v1061: escala de preços. Na tendência sempre; nos outros gráficos só quando não houver etiquetas
+  // de níveis (Fibonacci/pivôs ainda não confirmados) — antes esses gráficos ficavam sem nenhum preço.
+  const eixo=[];
   for(let z=0;z<=5;z++){
    const val=lo+(hi-lo)*(5-z)/5,y=py(val);
    trace([[L,y],[right,y]],pal.grid,1);
+   eixo.push([val,y]);
    if(metaDef.kind==='trend')text(fmt(val),right+12,y+5,15,pal.muted);
   }
+  const eixoSeVazio=()=>{if(metaDef.kind!=='trend'&&!labelQueue.length)for(const [val,y] of eixo)text(fmt(val),right+12,y+5,15,pal.muted);};
   trace([[right,T],[right,chartBottom]],pal.axis,1.2);
 
   for(let i=0;i<view.length;i++){
@@ -405,6 +410,7 @@
   }
 
   drawPriceLabels();
+  eixoSeVazio();
   for(const i of [0,Math.floor(view.length/3),Math.floor(view.length*2/3),view.length-1]){
    if(!view[i])continue;
    const lbl=new Date(view[i].t).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});

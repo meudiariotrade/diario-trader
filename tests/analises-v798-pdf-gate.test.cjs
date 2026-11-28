@@ -11,7 +11,9 @@ test('v798: relatório automático no app exige homologação antes de desenhar'
 test('v798: revisão de metadados do PDF não altera geometria editorial',()=>{
  assert.match(pdf,/doc\.setSubject\('Rastreabilidade do snapshot: SHA-256 '/);
  assert.match(pdf,/doc\.setKeywords/);
- assert.match(pdf,/Fórmula quant_v2_score \/ app v798/);
+ // v1056: o rodapé visível não expõe mais SHA-256/fórmula; a rastreabilidade fica nos metadados do PDF.
+ assert.match(pdf,/doc\.setKeywords\(\['quant_v2_score','sha256:'\+hash,'v798'/);
+ assert.doesNotMatch(pdf,/drawText\('SHA-256 /);
  assert.match(pdf,/const W=595\.28,H=841\.89,M=43/);
  assert.doesNotMatch(pdf,/\bfetch\('https?:\/\/[^']+supabase/);
 });
