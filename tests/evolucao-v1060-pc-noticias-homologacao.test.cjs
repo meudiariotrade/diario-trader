@@ -18,8 +18,9 @@ test('v1060 PC Notícias: visual limpo do celular habilitado no PC com botão da
 
 test('v1060 Etapa 09 Homologação: zero exposição de fontes/modelos/OHLC/SHA-256 nos módulos novos e versionamento 1060 coerente',()=>{
  const rel=JSON.parse(read('release.config.json'));
- assert.equal(rel.version,1060);
- assert.equal(JSON.parse(read('package.json')).version,'1060.0.0');
+ // Versão coerente (release.config = package.json) e nunca anterior à 1060; versões novas não quebram o teste.
+ assert.ok(rel.version>=1060,'versão '+rel.version);
+ assert.equal(JSON.parse(read('package.json')).version,rel.version+'.0.0');
 
  // Verifica que nenhum módulo novo da série v1057-v1060 usa inline onclick= ou expõe provedores em strings visíveis
  const liv=read('src/analysis/livermore-graficos.js');

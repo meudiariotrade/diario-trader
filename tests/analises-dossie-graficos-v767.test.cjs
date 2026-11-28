@@ -69,10 +69,19 @@ test('Pesquisa: gráfico com 90 candles reais e níveis positivos; ausência de 
   const withChart=await window.DiarioPesquisaPDF.build({...baseResult,resultado:{...baseResult.resultado,graficos_pdf:[item]}});
   const unverified=await window.DiarioPesquisaPDF.build({...baseResult,resultado:{...baseResult.resultado,
    graficos_pdf:[{...item,ajustado:false}]}});
+  // v1059: os gráficos vêm do DiarioLivermoreGraficos (4 gráficos, 1 por página) quando disponível.
+  const lv=window.DiarioLivermoreGraficos?.renderAll?window.DiarioLivermoreGraficos.renderAll({ticker:'PETR4',candles,tf:'1d',theme:'light'}).charts:null;
   return {plain:plain.pages,charts:withChart.pages,unverified:unverified.pages,
-   bytes:withChart.blob.size,header:await withChart.blob.slice(0,7).text()};
+   bytes:withChart.blob.size,header:await withChart.blob.slice(0,7).text(),motor:!!window.DiarioTecnicoEngine,
+   livermore:lv?lv.map(c=>({title:c.title,png:c.png?c.png.length||c.png.byteLength||0:0,leitura:String(c.reading||'').length})):null};
  });
- assert.equal(data.charts,data.plain+2,'Três gráficos novos substituem página de falta de prova');
+ assert.equal(data.motor,true,'v1061: o PDF carrega o motor técnico; sem ele os gráficos saíam sem Fibonacci/topos/fundos');
+ const esperados=data.livermore?data.livermore.filter(c=>c.png>0).length:3;
+ if(data.livermore){
+  assert.equal(data.livermore.length,4,'Livermore: tendência, retração, projeção e topos/fundos');
+  for(const c of data.livermore){assert.ok(c.png>5000,'gráfico desenhado de verdade: '+c.title);assert.ok(c.leitura>20,'leitura técnica: '+c.title)}
+ }
+ assert.equal(data.charts,data.plain-1+esperados,'Os gráficos substituem a página de falta de prova (1 página por gráfico)');
  assert.equal(data.unverified,data.plain,'Sem adjclose comprovado nenhum gráfico é inventado');
  assert.ok(data.bytes>15000);
  assert.match(data.header,/%PDF-/);

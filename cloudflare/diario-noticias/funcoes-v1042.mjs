@@ -22,6 +22,8 @@ const FUNCOES = Object.freeze({
   'logos': () => import('../../supabase/functions/logos/index.ts'),
   'series': () => import('../../supabase/functions/series/index.ts'),
   'screener': () => import('../../supabase/functions/screener/index.ts'),
+  // Fase C (v1061): excluir conta (Supabase Auth + Storage + tabelas legadas + diário/arquivos na Cloudflare).
+  'conta': () => import('../../supabase/functions/conta/index.ts'),
 });
 /* Fase B: só roda no Worker quando as chaves essenciais estão disponíveis.
  * - URL e chave pública do Supabase: as do Worker; se faltarem, os valores públicos do app (config.js).
@@ -40,6 +42,7 @@ const REQUISITOS = Object.freeze({
   'conhecimento-ia': SB,
   'aulas': SB,
   'mesa': [...SB, 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY'],
+  'conta': [...SB, 'SUPABASE_SERVICE_ROLE_KEY'],
 });
 const USA_VAULT = new Set(['analise', 'resumo', 'mesa']);
 const base = (env) => (k) => (typeof env?.[k] === 'string' && env[k] ? env[k] : PUBLICO[k]);

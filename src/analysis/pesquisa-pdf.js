@@ -1,5 +1,14 @@
 /* Pesquisa: exportação PDF local, sem alterar os relatórios editoriais existentes. */
 (function(w){'use strict'
+/* v1061: o motor técnico só roda no Web Worker da aba Técnico. Sem ele na página, os 4 gráficos
+   do Livermore saíam sem análise (sem Fibonacci, topos/fundos e Elliott). Carrega uma vez, sob demanda. */
+let motorTecnico=null;
+function garantirMotorTecnico(){
+ if(w.DiarioTecnicoEngine)return Promise.resolve(true);
+ if(!motorTecnico)motorTecnico=(w.DiarioChunks?.load?w.DiarioChunks.load('tecnico-engine.js'):new Promise((ok,no)=>{const el=document.createElement('script');el.src='tecnico-engine.js';el.onload=ok;el.onerror=no;document.head.appendChild(el)}))
+  .then(()=>!!w.DiarioTecnicoEngine).catch(()=>{motorTecnico=null;return false});
+ return motorTecnico;
+}
 async function hashSnapshot(input){
  if(!globalThis.crypto?.subtle)throw Error('SHA-256 indisponível: PDF sem rastreabilidade não é emitido');
  const stable=x=>Array.isArray(x)?'['+x.map(stable).join(',')+']':
@@ -185,6 +194,7 @@ async function build(job){
  }
  // Gráficos oficiais (1 página por gráfico): usa DiarioLivermoreGraficos (4 gráficos) quando disponível.
  const charts=Array.isArray(r.graficos_pdf)?r.graficos_pdf.slice(0,5):[];
+ if(charts.length&&w.DiarioLivermoreGraficos?.renderAll)await garantirMotorTecnico();
  let chartCount=0;
  for(const chart of charts){
   if(!candlesConferidos(chart))continue;
@@ -362,6 +372,7 @@ async function buildDossie18(ativo,opts={}){
  for(const cap of capitulos)para(cap,false);
 
  const textos=ativo?.capitulos||{};
+ if(!ativo?.tecnico?.valid&&Array.isArray(ativo?.candles)&&ativo.candles.length>=20)await garantirMotorTecnico();
  const livBundle=w.DiarioLivermoreGraficos?.renderAll&&Array.isArray(ativo?.candles)&&ativo.candles.length>=20
   ?w.DiarioLivermoreGraficos.renderAll({ticker:tk,analysis:ativo.tecnico,candles:ativo.candles,tf:opts.tf||'1d',theme:'light'}):null;
 
