@@ -41,14 +41,22 @@ Se mesmo assim faltar alguma chave, o Worker responde 503 e o app usa a função
 Observação: segredos de outros Workers (ex.: `diario-screeners-quant`) não são visíveis para o
 `diario-trader` — a Cloudflare isola segredos por Worker.
 
-## Fase C — próxima (precisa de adaptação de código)
+## Fase C (v1061) — concluída
 
-| Item | Por que não entrou na fase B |
+| Item | Situação |
 |---|---|
-| `notificar`, `radar` | Push usa `npm:web-push` (APIs do Node). Reescrever com Web Crypto (VAPID) no Worker. |
-| Rotinas agendadas: `rotina-cron`, `check-morning-status`, `email-semana`, `movimentos`, `insiders`, `screeners-*`, `daily-panorama`, `inbound-btg-note` | Hoje disparadas pelo agendador do Supabase. Mover para `triggers.crons` dos Workers. |
-| `aulas-voz`, `aulas-visuais`, `daily-panorama`, `inbound-btg-note`, `insiders`, `adrs` (legado) | Dependem de pacotes `npm:` (supabase-js, resvg-wasm, unpdf, fflate, ws). |
-| `conta` (excluir conta) | Opera Auth admin + Storage; migrar por último, com teste em conta descartável. |
+| Rotinas agendadas (`rotina-cron`, `check-morning-status`, `email-semana`, `movimentos`, `insiders`, `screeners-*`, `daily-panorama`…) | Rodam nos `triggers.crons` dos Workers `diario-radar`, `diario-trader` e `diario-screeners-quant`. Os 36 jobs do agendador do Supabase estão inativos. |
+| Push de notícias/alertas | Envio feito pelo Worker `diario-radar` (VAPID com Web Crypto). |
+| `conta` (excluir conta) | No Worker. Antes de apagar o login, `diario-sync` (`POST /v1/conta/excluir`) apaga diário, arquivos e KV do usuário na Cloudflare; se falhar, o login é mantido. |
+| `notificar` (inscrever/cancelar/testar push) | Continua no Supabase por escolha: poucas chamadas, só por ação manual. |
+| `aulas-voz`, `aulas-visuais`, `inbound-btg-note`, `adrs` (legado) | Dependem de pacotes `npm:` (resvg-wasm, unpdf, fflate, ws); ficam no Supabase até haver necessidade. |
+
+## Publicação dos Workers
+
+Quem publica os Workers é o **GitHub Actions** (`.github/workflows/cloudflare-*.yml`).
+A integração Git da Cloudflare (Workers Builds) do `diario-trader` fica **desligada**
+(produção e branches de preview): ela rodava `npm run build`, que não é o build do Worker,
+e gerava o aviso de falha "Workers Builds: diario-trader" em cada PR.
 
 Depois que cada função tiver rodado no Worker por alguns dias sem cair para o
 Supabase, a função antiga pode ser desligada no painel do Supabase.
