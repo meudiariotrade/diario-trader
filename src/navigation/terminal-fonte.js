@@ -55,11 +55,10 @@ function render(){
  bar.dataset.health=data.error?'error':!data.latest?'empty':data.stale?'stale':'ok';
  let message='';
  if(data.error){
-  message=(data.code?'⚠ Yahoo 404':'⚠ Fonte com falha')+' · '+data.symbol+' · '+data.error;
-  if(data.latest)message+=' · Último dado recebido: '+fmt(data.latest);
- }else if(!data.latest)message='Sem cotação recebida · '+data.symbol+' · Fonte: Yahoo Finance · Não é preço em tempo real';
- else message=(data.stale?'⚠ Último dado antigo':'Último dado disponível')+' · '+data.symbol+' · '+fmt(data.latest)+' · '+data.count+' registros · '+(data.interval==='1d'?'diário':'intradiário')+' · Yahoo Finance (com atraso)';
- if(data.catalogo?.yahoo)message+=' · símbolo consultado: '+data.catalogo.yahoo;
+  message='🔴 Indisponível · '+data.symbol;
+  if(data.latest)message+=' · último registro: '+fmt(data.latest);
+ }else if(!data.latest)message='🔴 Indisponível · '+data.symbol;
+ else message=(data.stale?'🟠 Atrasada':'Último registro')+' · '+data.symbol+' · '+fmt(data.latest)+' · '+(data.interval==='1d'?'diário':'intradiário');
  if(data.error)root.DiarioDiagnostico?.incident({endpoint:'Yahoo',ativo:data.symbol,mensagem:data.error,tentativa:pending?2:1,estado:'falhou'});else if(data.latest)root.DiarioDiagnostico?.recover({endpoint:'Yahoo',ativo:data.symbol});
  if(label.textContent!==message)label.textContent=message;
  button.disabled=pending;button.textContent=pending?'Atualizando…':'↻ Tentar novamente';

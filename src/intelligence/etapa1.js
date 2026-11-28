@@ -366,10 +366,10 @@
         'Naquele dia: '+Object.entries(u.dia||{}).map(([k,v])=>escape(nomes[k]||k)+' '+pct(v)).join(' · ')+'.</p>'+
         '<p class="sm">Nos 5 pregões seguintes: S&amp;P '+pct(u.depois5?.spx)+' · Ibovespa '+pct(u.depois5?.ibov)+'. '+escape(a.vezes||0)+' dia(s) parecido(s) desde '+escape(a.desde||'')+'.</p>'
         :'<p class="mut sm">Nenhum dia parecido nos últimos anos de histórico.</p>')+
-      '<p class="mut sm">Histórico diário (Yahoo Finance). Comparação de direção, não previsão.</p>';
+      '<p class="mut sm">Comparação direcional sobre o histórico diário.</p>';
   }
 
-  /* v886/v888: Paridade de ADRs (cesta de ADRs + USD/BRL) comparada ao fechamento B3 real (Profit / TradingView), com PETR4 e WIN teórico. */
+  /* v886/v888: Paridade de ADRs (cesta de ADRs + USD/BRL) comparada ao fechamento B3 real, com PETR4 e WIN teórico. */
   const ADR_REGRAS=[
     {s:'PBR',tk:'PETR4',on:'PETR3',razao:2,peso:12.0},
     {s:'VALE',tk:'VALE3',razao:1,peso:11.5},
@@ -384,17 +384,17 @@
     try{
       if(typeof CQ!=='undefined'&&CQ){
         const p=CQ.pf&&CQ.pf[k];
-        if(p&&Number(p.px)>0)return {px:Number(p.px),d1:p.d1==null||p.d1===''?null:Number(p.d1),fonte:'Profit'};
+        if(p&&Number(p.px)>0)return {px:Number(p.px),d1:p.d1==null||p.d1===''?null:Number(p.d1),fonte:'B3'};
         for(const g of Object.values(CQ.d||{})){
           for(const r of (g?.itens||[])){
             const sym=String(r?.ticker||r?.c||r?.s||'').toUpperCase().replace(/^.*:/,'');
-            if(sym===k&&Number(r?.px)>0)return {px:Number(r.px),d1:r.d1==null||r.d1===''?null:Number(r.d1),fonte:'TradingView'};
+            if(sym===k&&Number(r?.px)>0)return {px:Number(r.px),d1:r.d1==null||r.d1===''?null:Number(r.d1),fonte:'Mercado'};
           }
         }
       }
     }catch(_){}
     try{
-      if(typeof LV!=='undefined'&&LV?.px&&LV.px[k]?.ult>0)return {px:Number(LV.px[k].ult),d1:null,fonte:'Profit'};
+      if(typeof LV!=='undefined'&&LV?.px&&LV.px[k]?.ult>0)return {px:Number(LV.px[k].ult),d1:null,fonte:'B3'};
     }catch(_){}
     try{
       const av=w.DiarioAnalisesPlus?.avaliarAtivo?.(k);
@@ -452,7 +452,7 @@
       ' · Dólar: <b>'+brl(fx)+'</b></p>'+
       '<details style="margin-top:6px"><summary class="sm" style="cursor:pointer;color:var(--accent,#C9A66B)">Ver preço teórico das ações (Paridade de ADRs · '+linhas.length+' ativos)</summary>'+
       '<div style="overflow-x:auto;margin-top:6px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.1)"><th style="text-align:left;padding:4px 6px">Ação (ADR)</th><th style="text-align:right;padding:4px 6px">Fech. B3</th><th style="text-align:right;padding:4px 6px">Teórico</th><th style="text-align:right;padding:4px 6px">Gap</th></tr></thead><tbody>'+trs+'</tbody></table></div>'+
-      '<p class="mut sm" style="margin:6px 0 0">Fórmula: <b>(ADR em US$ ÷ equivalência) × USD/BRL</b> vs fechamento B3 ('+(comB3?'Profit/TradingView':'variação ADR+dólar')+'). PETR4 ajustada pelo spread real PETR4/PETR3 sobre PBR. Referência teórica, não preço de leilão.</p></details></div>';
+      '<p class="mut sm" style="margin:6px 0 0">Cálculo: <b>(ADR em US$ ÷ equivalência) × USD/BRL</b> vs fechamento B3 ('+(comB3?'fechamento oficial':'variação ADR+dólar')+'). PETR4 ajustada pelo spread PETR4/PETR3 sobre PBR.</p></details></div>';
   }
   /* v835: sinais entre mercados — expectativa de abertura do Ibovespa (B3) e pares que se separaram hoje. */
   function sinaisHtml() {
@@ -1357,7 +1357,7 @@
         });
         const j=await res.json().catch(()=>({}));
         if(!res.ok||!j.ok||!j.text)throw Error(j.error||'A IA não conseguiu gerar o texto agora.');
-        state.resumaoHtml='<div style="margin-bottom:10px;font-size:12.5px;color:var(--gold,#C9A66B);font-weight:700;letter-spacing:.02em">✦ RESUMÃO DA ÁUREA · IA GRATUITA ('+escape(j.model||'Cloudflare')+')</div>'+
+        state.resumaoHtml='<div style="margin-bottom:10px;font-size:12.5px;color:var(--gold,#C9A66B);font-weight:700;letter-spacing:.02em">✦ RESUMÃO DA ÁUREA</div>'+
           formatarTextoEditorial(j.text);
       }catch(err){
         const stale=state.mercado?.atualizadoEm?'Último registro: '+when(state.mercado.atualizadoEm)+'.':'Sem carimbo de atualização.';

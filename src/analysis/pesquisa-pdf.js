@@ -196,32 +196,17 @@ async function build(job){
    const width=W-2*M,height=width*720/1320;
    page.drawImage(picture,{x:M,y:y-height-6,width,height});
    y-=height+26;
-   line('LEITURA OBJETIVA DO ESTUDO',true);
+   line('LEITURA TÉCNICA',true);
    line(visual.explanation);
-   line('Fonte OHLCV: '+String(chart.fonte||'não confirmada'));
-   line('Ajuste corporativo: '+String(chart.ajuste||'não confirmado'));
-   line('Última barra: '+String(chart.as_of||'não confirmada'));
+   if(chart.as_of)line('Última barra: '+String(chart.as_of));
   }
  }
  if(!chartCount){add();line('GRÁFICOS NÃO DISPONÍVEIS PARA ESTE ESTUDO',true);
-  line('Esta pesquisa não contém 250+ candles ajustados, com fonte e período comprovados.');
-  line('Não foram desenhados candles, médias, alvos ou ondas artificiais.');
-  line('Para anexar gráficos, gere uma nova pesquisa com histórico diário confirmado.');
+  line('Este estudo ainda não possui histórico diário suficiente para desenhar os gráficos técnicos.');
  }
- line('PROVENIÊNCIA E REPRODUTIBILIDADE',true);
- line('Versão do método: pesquisa/relatorio v768; SHA-256 do snapshot impresso no rodapé.');
- line('Documentos oficiais por indicador: somente quando identificados no relatório. Fonte genérica de catálogo não comprova demonstração financeira.');
- for(const item of charts)if(item?.fonte&&item?.ticker){
-  line('OHLCV '+String(item.ticker)+': '+String(item.fonte));
-  line('Ajuste: '+String(item.ajuste||'não confirmado')+' · última barra: '+String(item.as_of||'n/d'));
- }
-  line('FONTES CONSULTADAS',true);
- for(const source of (r.fontes||[]).slice(0,24))line(String(source.titulo||'Fonte')+' — '+String(source.url||''));
- line('Consulta: '+String(r.consultado_em||'Não confirmado / Não calculável'));
  if(w.DiarioFiboVisual?.appendPDF)await w.DiarioFiboVisual.appendPDF({doc,P,tickers:job?.comando?.tickers||[]});
  for(const pg of doc.getPages()){
-  pg.drawText('Snapshot SHA-256: '+hash+' · Fórmula Pesquisa v768',{
-   x:M,y:24,font:normal,size:6,color:P.rgb(.38,.42,.46)});
+  pg.drawText('Diário de Trader',{x:M,y:24,font:normal,size:6.5,color:P.rgb(.38,.42,.46)});
  }
   doc.setTitle('Pesquisa B3 e EUA — Diário de Trader');doc.setAuthor('Diário de Trader');
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Pesquisa-'+String(job.id||'analise').slice(0,8)+'.pdf',pages:doc.getPageCount()};

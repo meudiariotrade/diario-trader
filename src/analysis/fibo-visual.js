@@ -75,7 +75,7 @@ async function load(file,scope){
   visionObserver.observe(d.body,{childList:true,subtree:true});
  }
  const s=state[scope],data=await compress(file);
- s.status='Analisando imagem em Gemini Vision…';rerender(scope);
+ s.status='Analisando imagem técnica…';rerender(scope);
  try{const extracted=await visionApi(data,signal);if(signal.aborted||uid()!==account)return;
  const calculated=calculate(extracted);const ticker=safeTicker(extracted.ticker);
  if(!ticker)throw Error('Ticker ilegível. Faça novo print com o cabeçalho do ativo visível.');

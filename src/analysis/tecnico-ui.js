@@ -99,7 +99,7 @@ async function candles(asset,tf,signal){
  const quality=w.DiarioHistoricoQualidade?.audit(payload,{ticker:asset.ticker,market:asset.market,tf,now:Date.now(),contract:w.DiarioFeedContrato});
  if(!quality?.valid)throw Error('Histórico não homologado: '+String(quality?.reason||'sem módulo de auditoria').slice(0,120));
   if(!barrasRecentes(payload.candles,asset,tf)||(tf==='1d'&&payload.candles.length<400))
-  throw Error('Não confirmado / Não calculável — OHLCV diário incompleto, mínimo 400 barras');
+  throw Error('Não confirmado / Não calculável — histórico diário incompleto, mínimo 400 candles');
  const adjusted=quality.adjustedVerified&&Array.isArray(quality.adjustedCandles)?quality.adjustedCandles:null;
  const result={candles:payload.candles,adjustedCandles:adjusted,source:payload.source,fetchedAt:payload.fetchedAt};
  void store(key,result);return result;
@@ -160,7 +160,7 @@ function autoTop(s){
 }
 function avisoPdfInsuficiente(s,quantidade){
  const message='Encontrados '+quantidade+' de 10 ativos validados no cenário atual. '+
-  'Por rigor metodológico, o dossiê completo exige 10 ativos com histórico OHLCV válido, '+
+  'O dossiê completo exige 10 ativos com histórico de candles válido, '+
   'OBV e força relativa confirmados, risco/retorno >= 1,5, preços positivos e sem sinais esticados. '+
   (s.loading?'Aguarde a carga de candles.':'Atualize os candles ou amplie o cenário e carregue mais ativos.');
  s.error=message;render();if(typeof w.alert==='function')w.alert(message);
@@ -230,10 +230,10 @@ function detail(s,rows){
  const [direction,x]=side(r,s);if(!x?.valid)return '';
  const number=v=>fmt(v,2),plan=x.plan||{};
  return '<section class="scr-panel tech-detail" id="tech-detail"><div class="scr-head"><h3>'+(w.DiarioLogos?.html?.(String(r.ticker).replace(/USDT$/,''),22)||'')+E(r.ticker)+' · '+(direction==='buy'?'Compra':'Venda/Short')+'</h3><button type="button" data-fa-abrir="'+E(r.ticker)+'">Ficha completa</button><button type="button" data-tech-close="1" aria-label="Fechar detalhes">Fechar</button></div>'+
- '<div class="tech-tags">'+badges(r,x)+'</div><p>Heurística de estudo (VCP, Elliott, RMC/CISD e Fibonaccing) · validação condicional.</p><p>Fonte: '+E(r.source)+' · barras: '+x.barCount+' · dados: '+E(r.updatedAt||'não informada')+'</p>'+
+ '<div class="tech-tags">'+badges(r,x)+'</div><p>Leitura estrutural (VCP, Elliott, RMC/CISD e Fibonaccing) · validação condicional.</p><p>Candles analisados: '+x.barCount+' · atualização: '+E(r.updatedAt||'recente')+'</p>'+
  '<div class="tech-metrics">'+[['SMA 20',x.metrics.sma20],['SMA 50',x.metrics.sma50],['SMA 150',x.metrics.sma150],['SMA 200',x.metrics.sma200],['ATR 14',x.metrics.atr14],['RS Rating',x.metrics.rs],['IFR 14',x.metrics.rsi14],['Volume relativo',x.metrics.rvol],['HV Semanal %',x.metrics.hvWeek],['Minervini',x.minervini.score==null?'N/D':x.minervini.score+'/8']].map(a=>'<div><span>'+a[0]+'</span><b>'+E(String(a[1]??'N/D'))+'</b></div>').join('')+'</div>'+
  '<h4>Contribuição dos quatro pilares (0 a 10)</h4>'+x.pillars.map(p=>'<div class="tech-pillar"><span>'+E(p.name)+' ('+p.weight+'%)</span><b>'+fmt(p.score*p.weight/10,2)+'</b><i><em style="width:'+Math.round(p.score*100)+'%"></em></i></div>').join('')+
- '<div class="tech-trade-plan"><h4>Plano técnico condicional</h4><div>Gatilho <b>'+number(plan.entry)+'</b> · Stop <b>'+number(plan.stop)+'</b> · Alvo 1 (111%) <b>'+number(plan.target1)+'</b> · Alvo 2 (127,2%) <b>'+number(plan.target2a)+'</b> · Alvo 3 (141,4%) <b>'+number(plan.target2)+'</b> · Final (161,8%) <b>'+number(plan.targetFinal)+'</b> · R/R <b>'+number(plan.rr)+'</b> · R/R líquido estimado <b>'+number(plan.rrNet)+'</b></div><small>Custos ilustrativos de ida+volta: '+number(plan.costEstimateBps)+' bps; não são cotações do book nem incluem impacto/impostos. Confirme execução apenas no Profit. '+resultadoBacktest(r)+'</small></div>'+
+ '<div class="tech-trade-plan"><h4>Plano técnico condicional</h4><div>Gatilho <b>'+number(plan.entry)+'</b> · Stop <b>'+number(plan.stop)+'</b> · Alvo 1 (111%) <b>'+number(plan.target1)+'</b> · Alvo 2 (127,2%) <b>'+number(plan.target2a)+'</b> · Alvo 3 (141,4%) <b>'+number(plan.target2)+'</b> · Final (161,8%) <b>'+number(plan.targetFinal)+'</b> · R/R <b>'+number(plan.rr)+'</b> · R/R líquido estimado <b>'+number(plan.rrNet)+'</b></div><small>Custos estimados de ida+volta: '+number(plan.costEstimateBps)+' bps. '+resultadoBacktest(r)+'</small></div>'+
  '<p>Fibonaccing: '+(x.fib.zone?'zona de mitigação':'fora da zona')+' · '+(x.fib.cluster?'cluster presente':'sem cluster')+' · '+(x.fib.fibogap?'Fibogap na defesa '+(x.fib.gapZone||[]).map(v=>fmt(v,2)).join('–'):'sem Fibogap aberto')+' · RMC: '+(x.turn.confirmed?'confirmado':'aguardando')+' · CISD: '+(x.turn.cisd?'confirmado':'não confirmado')+'</p>'+
  '<p>Elliott: '+E(x.elliott.label)+' — '+E(x.elliott.reason)+'</p>'+
  '<button class="btn s" type="button" data-niv822="'+E(r.ticker)+'" data-e="'+(plan.entry??'')+'" data-s="'+(plan.stop??'')+'" data-a="'+[plan.target1,plan.target2a,plan.target2].filter(v=>v!=null).join('|')+'" data-o="tecnico">Levar para o plano</button> '+
@@ -244,20 +244,20 @@ function view(m){
  const s=states[m],title=m==='br'?'Técnico Brasil':'Técnico EUA & Cripto',rows=selectedRows(s),top=autoTop(s);
  const option=(v,label,sel)=>'<option value="'+v+'"'+(sel===v?' selected':'')+'>'+E(label)+'</option>';
  const choice=(name,opts,val)=>'<select data-tech-change="'+name+'">'+opts.map(x=>option(x[0],x[1],val)).join('')+'</select>';
- return '<div data-tech-root="'+m+'" data-cl-src="tec-'+m+'"><header class="an-header"><div><p class="an-kicker">SCREENING TÉCNICO · CLIENT-SIDE</p><h1 id="an-title" class="cl-head">'+(w.DiarioColorLink?.chip('tec-'+m)||'')+title+'</h1><p>Fibonaccing / Pisani / Minervini / Elliott · cálculos por candle · não constitui recomendação</p></div><span class="an-badge">'+s.rows.length+' analisados</span></header>'+
+ return '<div data-tech-root="'+m+'" data-cl-src="tec-'+m+'"><header class="an-header"><div><p class="an-kicker">SCREENING TÉCNICO</p><h1 id="an-title" class="cl-head">'+(w.DiarioColorLink?.chip('tec-'+m)||'')+title+'</h1><p>Fibonaccing · Pisani · Minervini · Elliott · validação por candles fechados</p></div><span class="an-badge">'+s.rows.length+' analisados</span></header>'+
  (w.DiarioFiboVisual?.view(m)||'')+'<div class="tech-controls"><label>Direção '+choice('dir',[['buy','Compra · Alta'],['sell','Venda / Short · Baixa'],['both','Ambos']],s.dir)+'</label>'+
  '<label>Timeframe '+choice('tf',[['1d','Diário (1D)'],['1h','60 minutos (1H)'],['15m','15 minutos (15M)']],s.tf)+'</label>'+
- (m==='world'?'<label>Mercado '+choice('filter',[['all','Todos'],['us','Ações EUA'],['crypto','Cripto Binance']],s.filter)+'</label>':'')+
+ (m==='world'?'<label>Mercado '+choice('filter',[['all','Todos'],['us','Ações EUA'],['crypto','Cripto']],s.filter)+'</label>':'')+
  '<label>Busca <input data-tech-search type="search" value="'+E(s.search)+'" placeholder="Ticker / nome" autocomplete="off"></label></div>'+
  '<div class="tech-presets" role="group" aria-label="Cenários técnicos">'+presets.map(x=>'<button type="button" data-tech-preset="'+x[0]+'" class="'+(s.preset===x[0]?'selected':'')+'">'+E(x[1])+'</button>').join('')+'</div>'+
  '<div class="scr-top"><span role="status" aria-live="polite">'+(s.loading?'Coletando candles sob demanda: '+s.progress+' ativo(s)…':s.error?E(s.error):E(s.info||'Snapshot local com prazo de validade.'))+'</span><div class="tech-action-grid"><button class="btn s" type="button" data-tech-reload="1" '+(s.loading?'disabled':'')+'>Atualizar</button> <button class="btn s" type="button" data-tech-more="1" '+(s.loading||s.next>=s.universe.length?'disabled':'')+'>Carregar mais</button> <button class="btn s" type="button" data-tech-pdf="1" '+(s.busyPDF||top.length<10?'disabled':'')+' title="'+(top.length<10?'Rode a varredura: o dossiê precisa de 10 ativos validados ('+top.length+' agora).':'Gerar o Dossiê PDF com os 10 melhores')+'">'+(top.length<10?'Dossiê PDF · rode a varredura':'Dossiê PDF Top 10')+'</button></div></div>'+
- '<p class="tech-note">Cobertura: '+s.rows.length+' de '+s.universe.length+' ativos candidatos · filtragem mínima B3 R$ 1 milhão/dia; EUA US$ 2 milhões/dia. RS usa o universo fixo inicial (até 60 BR, 60 EUA e 20 cripto), com benchmark e data; sem cobertura total o RS é Não confirmado. Nunca há varredura ou polling de banco em segundo plano.</p>'+
+ '<p class="tech-note">Cobertura: '+s.rows.length+' de '+s.universe.length+' ativos candidatos · filtragem mínima B3 R$ 1 milhão/dia; EUA US$ 2 milhões/dia. RS usa o universo fixo inicial (até 60 BR, 60 EUA e 20 cripto), com benchmark e data; sem cobertura total o RS é Não confirmado.</p>'+
  '<section class="scr-panel tech-panel"><div class="scr-head"><h3>Ranking · '+rows.length+' no cenário</h3><span class="scr-hint">Nota de 0 a 10 · top automático exige confirmação e não estar esticado</span></div>'+
  '<div class="scr-table-wrap"><table class="tech-table"><thead><tr><th>Ativo</th><th>Direção</th><th>Nota / 10</th><th>RS</th><th>Vol. relativo</th><th>Fibo / OBV</th><th>Estado</th><th>Detalhe</th></tr></thead><tbody>'+
  rows.slice(0,60).map(r=>{const [key,x]=side(r,s);return '<tr data-tk="'+E(r.ticker)+'"><th>'+(w.DiarioLogos?.html?.(String(r.ticker).replace(/USDT$/,''),18)||'')+E(r.ticker)+(r.bdr?' <small>BDR '+E(r.bdr)+'</small>':'')+(r.holding?' <small>CARTEIRA</small>':'')+'</th><td><span class="tech821-dir '+(key==='buy'?'up':'dn')+'">'+(key==='buy'?'COMPRA':'SHORT')+'</span></td><td class="tech-num">'+techScore(x.score)+'</td><td class="tech-num">'+fmt(x.metrics.rs,0)+'</td><td class="tech-num">'+fmt(x.metrics.rvol,2)+'x</td><td>'+ (x.fib.cluster?'CLUSTER · ':'')+(x.metrics.obvConfirmed?'OBV ✓':'OBV pendente')+'</td><td>'+E(x.flags.join(', ')|| (x.eligible?'Elegível':'Em avaliação'))+'</td><td><button type="button" data-tech-detail="'+E(r.ticker)+'">Ver plano</button> <button type="button" data-dt815="foco" data-tk="'+E(r.ticker)+'">Terminal</button></td></tr>'}).join('')+
- '</tbody></table></div>'+(rows.length?'':'<p class="scr-empty">Nenhum setup com candles e critérios confirmados para este filtro. Não foram simuladas cotações.</p>')+'</section>'+
+ '</tbody></table></div>'+(rows.length?'':'<p class="scr-empty">Nenhum setup com candles e critérios confirmados para este filtro.</p>')+'</section>'+
  kpis(s)+graph(rows,s)+
- detail(s,rows)+'<p class="an-disclaimer">Estruturas de Fibonaccing, RMC/CISD, VCP e Elliott são heurísticas codificadas conforme os critérios deste projeto, não certificação dos autores. A classificação só se confirma com dados históricos suficientes.</p></div>';
+ detail(s,rows)+'</div>';
 }
 /* v821: nota técnica com barra na célula. */
 function techScore(v){const n=Number(v);if(!isFinite(n))return fmt(v);const c=n>=7?'ok':n>=5?'at':'';return '<span class="scr821-score '+c+'"><i style="width:'+Math.max(0,Math.min(100,n*10)).toFixed(0)+'%"></i></span>'+fmt(n)}
@@ -355,7 +355,7 @@ async function load(m,more=false){
    const replaced=new Set(merged.map(x=>x.ticker));s.rows=markHoldings(s.rows.filter(x=>!replaced.has(x.ticker)).concat(merged));
    s.updatedAt=new Date().toLocaleString('pt-BR');s.info='Cálculo local · '+s.updatedAt+' · '+failures.length+' indisponível(is)';
    void store('snapshot|'+m+'|'+s.tf,{rows:s.rows.map(x=>({...x,holding:false})),universe:s.universe,next:s.next,updatedAt:s.updatedAt,rsUniversoFixo:'v779'});
-  }else s.error='Nenhum candle histórico válido nesta amostra. '+failures.slice(0,2).join('; ')+'. Confira a publicação da rota /v1/tecnico-candles no Cloudflare Worker.';
+  }else s.error='Nenhum candle histórico válido nesta amostra. '+failures.slice(0,2).join('; ')+'. Tente atualizar novamente em alguns instantes.';
  }catch(e){if(!ac.signal.aborted&&token===s.token)s.error=String(e.message||e).slice(0,240)}
  finally{if(token===s.token){s.loading=false;s.abort=null;render()}}
 }
@@ -389,7 +389,7 @@ d.addEventListener('click',async e=>{
     (Number.isFinite(px)&&Number.isFinite(sma50)?(px>=sma50?' e ACIMA da SMA50':' e ABAIXO da SMA50'):'');
    const rsiTxt=Number.isFinite(rsi)?fmt(rsi,1)+(rsi>=70?' (sobrecomprado)':rsi<=30?' (sobrevendido)':' (zona neutra)'):'N/D';
    const regraMkt=m==='br'?'Mercado BR (B3, BRL, referência Selic/DI).':'Mercado EUA/Global (USD, referência Fed Funds/Treasury 10Y — NÃO citar Selic).';
-   const ctx=['ATIVO TÉCNICO: '+r.ticker+' ('+(m==='br'?'Brasil':'EUA/Cripto')+' · '+s.tf+') · Fonte '+String(r.source||'N/D')+' · Dados '+String(r.updatedAt||'N/D')+' · Direção: '+(dir==='buy'?'Compra':'Venda/Short')+' · Nota: '+fmt(x.score,2)+'/10',
+   const ctx=['ATIVO TÉCNICO: '+r.ticker+' ('+(m==='br'?'Brasil':'EUA/Cripto')+' · '+s.tf+') · Dados '+String(r.updatedAt||'N/D')+' · Direção: '+(dir==='buy'?'Compra':'Venda/Short')+' · Nota: '+fmt(x.score,2)+'/10',
     regraMkt,
     'Regime técnico: '+tendTxt+' · SMA20='+fmt(x.metrics.sma20,2)+' · SMA50='+fmt(x.metrics.sma50,2)+' · SMA150='+fmt(x.metrics.sma150,2)+' · SMA200='+fmt(x.metrics.sma200,2)+' · ATR14='+fmt(x.metrics.atr14,2),
     'RS='+fmt(x.metrics.rs,0)+' · IFR14='+rsiTxt+' · RVOL='+fmt(x.metrics.rvol,2)+'x · Minervini='+(x.minervini.score??'N/D')+'/8',
@@ -415,7 +415,7 @@ d.addEventListener('click',async e=>{
     const key='candles|'+r.market+'|'+r.ticker+'|'+s.tf;
     const saved=await read(key,s.tf==='1d'?6*3600000:10*60000);
     if(!barrasRecentes(saved?.candles,r,s.tf))
-     throw Error('Histórico OHLCV de '+r.ticker+' vencido ou ausente: atualize os candles antes do PDF.');
+     throw Error('Histórico de candles de '+r.ticker+' vencido ou ausente: atualize antes do PDF.');
     const history=s.tf==='1d'?saved:await read('candles|'+r.market+'|'+r.ticker+'|1d',6*3600000);
     const backtest=r.backtest||await backtestFor(s,r,history?.candles,'1d');
     reportRows.push({...r,chartCandles:saved.candles,chartTimeframe:s.tf,chartSource:saved.source||r.source,backtest});

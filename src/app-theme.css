@@ -7445,6 +7445,10 @@ html:root:root:root[data-v427-tema="claro"] #app#app .dt983-whatif-grid small{co
   gap:18px!important;
   align-items:start
  }
+ #app .v829-split:has(> .ui-aside:empty){
+  grid-template-columns:minmax(0,1fr)!important
+ }
+ #app .v829-split > .ui-aside:empty{display:none!important}
  #app .v4-ops .v829-split{
   grid-template-columns:minmax(0,1.3fr) minmax(380px,1fr)!important
  }
