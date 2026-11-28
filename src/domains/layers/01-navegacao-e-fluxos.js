@@ -3636,7 +3636,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
             M = null;
           }),
           document.addEventListener("keydown", (E) => {
-            E.key === "Escape" && l && B(!1);
+            E.key === "Escape" && l && !document.getElementById("liv-lightbox") && B(!1);
           }),
           window.addEventListener("resize", () => {
             ((j.style.left = ""),

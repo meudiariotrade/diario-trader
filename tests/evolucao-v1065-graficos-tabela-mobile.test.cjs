@@ -77,12 +77,16 @@ test('v1065: Base fundamentalista nao quebra VALOR/numeros, oculta Amostra setor
  assert.ok(!/insumos diretos, não certificados/.test(fn),'Nao deve exibir jargao burocratico no valuation');
 });
 
-test('v1067: 4 graficos do Livermore abrem ampliados ao clicar/tocar com zoom e navegacao (sem inline onclick)',()=>{
+test('v1067/v1068: 4 graficos do Livermore abrem ampliados e fecham sem fechar o chat da Aurea (sem inline onclick)',()=>{
  const src=read('src/analysis/livermore-graficos.js');
+ const layers=read('src/domains/layers/01-navegacao-e-fluxos.js');
  assert.match(src,/data-liv-zoom="1"/);
  assert.match(src,/data-liv-zoom-btn="1"/);
  assert.match(src,/id='liv-lightbox'/);
  assert.match(src,/data-liv-lb-act="in"/);
  assert.match(src,/data-liv-lb-act="next"/);
+ assert.match(src,/stopImmediatePropagation/);
+ assert.match(src,/closedAt/);
+ assert.match(layers,/!document\.getElementById\("liv-lightbox"\)/);
  assert.ok(!/onclick=/i.test(src),'Nao pode usar inline onclick (CSP)');
 });
