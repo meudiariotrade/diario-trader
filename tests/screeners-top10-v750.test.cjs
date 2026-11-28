@@ -4,12 +4,14 @@ const fs=require('node:fs');
 const ranking=require('../src/analysis/screeners-top10.js');
 const intel=require('../src/analysis/screeners-inteligencia.js');
 const read=path=>fs.readFileSync(path,'utf8');
+// Dados "de ontem": datas fixas viravam dado velho com o passar do calendário (falhou em 28/11/2026).
+const ONTEM=new Date(Date.now()-864e5).toISOString().slice(0,10);
 const app=read('src/analysis/analises.js'),pdf=read('src/analysis/screeners-relatorio.js'),html=read('src/index.html');
 function br(ticker,index){
  const row={ticker,empresa:'Companhia '+ticker,roe:20-index/2,roic:17-index/3,pl:7+index/3,
   ev_ebitda:6+index/4,fcf_yield:7-index/5,dividend_yield:8-index/6,liquidez_diaria_brl:12000000,
-  payout_implicito:45,momentum_12_1:22-index,updated_at:'2026-11-17',
-  fundamentais_em:'2026-11-17',tecnicos_em:'2026-11-17',score_model_version:'v2.0',ativo_elegivel:true,
+  payout_implicito:45,momentum_12_1:22-index,updated_at:ONTEM,
+  fundamentais_em:ONTEM,tecnicos_em:ONTEM,score_model_version:'v2.0',ativo_elegivel:true,
   data_competencia_balanco:'2026-09-30',documento_balanco_tipo:'ITR',documento_balanco_id:'123456789',
   documento_balanco_url:'https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/',documento_balanco_publicado_em:'2026-11-14'};
  const weights=intel.weights.BR;
@@ -48,7 +50,7 @@ test('Top 10 rejeita liquidez inferior a R$ 1 milhão e DY extremo sem inventar 
 });
 test('EUA sem scores reais: ranking vazio, nunca inventa as dez melhores',()=>{
  const sample=[{ticker:'AAPL',company_name:'Empresa de exemplo',roic:22,forward_pe:18,
-  eps_growth_yoy:12,updated_at:'2026-11-17',fundamentais_em:'2026-11-17'}];
+  eps_growth_yoy:12,updated_at:ONTEM,fundamentais_em:ONTEM}];
  const out=ranking.generate('US',sample,intel);
  assert.equal(out.entries.length,0);
  assert.equal(out.excluded,1);

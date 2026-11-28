@@ -21,30 +21,25 @@ estiverem cadastradas no Worker `diario-trader`.
 Cotações, notícias, ADRs, juros, candles, EWZ, macro e sentimento já tinham
 implementação própria na Cloudflare.
 
-## Fase B (v1054) — pronta, depende das chaves
+## Fase B (v1054) — aproveita as chaves que já existem
 
-| Função | Chaves obrigatórias no Worker |
+Nada precisa ser cadastrado de novo. O Worker `diario-trader` resolve as chaves assim:
+
+1. **Variáveis do próprio Worker** (as que já estão no painel da Cloudflare);
+2. **URL e chave pública do Supabase**: se faltarem no Worker, usa os valores públicos que o app
+   já publica em `config.js` (não são segredos);
+3. **Chaves de IA** (`GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`…): se faltarem no Worker,
+   busca no **Vault do Supabase** (`rpc ia_chaves`) com a `SUPABASE_SERVICE_ROLE_KEY` que o Worker já
+   tem — o mesmo caminho que a Pesquisa usa em produção. As chaves nunca saem do servidor.
+
+| Função | Precisa |
 |---|---|
-| `analise` | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY` |
-| `resumo` | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY` |
-| `mesa` | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY` |
-| `revista-ia`, `conhecimento-ia`, `aulas` | `SUPABASE_URL`, `SUPABASE_ANON_KEY` |
-| `logos`, `series`, `screener` | nenhuma |
+| `analise`, `resumo`, `mesa` | `SUPABASE_SERVICE_ROLE_KEY` no Worker + chave Gemini no Worker **ou** no Vault |
+| `revista-ia`, `conhecimento-ia`, `aulas`, `logos`, `series`, `screener` | nada além do que já existe |
 
-Chaves opcionais que essas funções também leem (se existirem no Supabase,
-copie com o mesmo nome): `GROQ_API_KEY`, `OPENROUTER_API_KEY`,
-`OPENROUTER_MODELS`, `GEMINI_MODEL*`, `GEMINI_THINKING`, `BRAPI_TOKEN`,
-`TWELVE_API_KEY`, `LIMITE_DIARIO`, `LIMITE_OUTROS`, `LIMITE_RESUMOS`,
-`CARTEIRA_MAX_DIA`, `ANALISE_PRAZO_S`, `DONO_EMAIL`, `CRON_SECRET`.
-
-### Como cadastrar (uma vez)
-Painel da Cloudflare → Workers & Pages → `diario-trader` → Settings →
-Variables and Secrets → **Add** → tipo *Secret*, mesmo nome e valor usados no
-Supabase (Supabase → Project Settings → Edge Functions → Secrets).
-O `wrangler.jsonc` usa `keep_vars: true`, então os deploys não apagam essas
-chaves.
-
-**Nunca** coloque valores de chaves no repositório.
+Se mesmo assim faltar alguma chave, o Worker responde 503 e o app usa a função antiga do Supabase.
+Observação: segredos de outros Workers (ex.: `diario-screeners-quant`) não são visíveis para o
+`diario-trader` — a Cloudflare isola segredos por Worker.
 
 ## Fase C — próxima (precisa de adaptação de código)
 

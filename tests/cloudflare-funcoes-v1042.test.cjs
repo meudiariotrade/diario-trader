@@ -46,3 +46,9 @@ test('finnhub-token sem login não entrega a chave',async()=>{
   assert.doesNotMatch(await r.text(),/segredo-finnhub/);
  }finally{global.fetch=orig}
 });
+test('v1054: URL e chave pública do Supabase usam os valores públicos do app quando faltam no Worker',async()=>{
+ const {faltamSegredosV1054}=await mod();
+ assert.equal(faltamSegredosV1054('revista-ia',{}),0);
+ assert.equal(faltamSegredosV1054('aulas',{}),0);
+ assert.equal(faltamSegredosV1054('analise',{}),2,'sem service role e sem Gemini continua bloqueado');
+});

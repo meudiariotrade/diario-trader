@@ -5,6 +5,8 @@
  * O login continua no Supabase Auth (as funções validam o usuário em /auth/v1/user, que é o básico).
  * Nada de Logs/Analytics; nenhum dado privado em cache público.
  */
+import { envComVault } from '../../supabase/functions/_shared/ai-router.ts';
+
 const FUNCOES = Object.freeze({
   'terminal': () => import('../../supabase/functions/terminal/index.ts'),
   'mesa-macro': () => import('../../supabase/functions/mesa-macro/index.ts'),
@@ -21,9 +23,15 @@ const FUNCOES = Object.freeze({
   'series': () => import('../../supabase/functions/series/index.ts'),
   'screener': () => import('../../supabase/functions/screener/index.ts'),
 });
-/* Fase B: só roda no Worker quando as chaves essenciais já estão cadastradas nele.
- * Sem elas, responde 503 e o app volta para a função antiga do Supabase (sem quebrar).
- * Ao cadastrar as chaves na Cloudflare, a função passa a rodar no Worker sozinha. */
+/* Fase B: só roda no Worker quando as chaves essenciais estão disponíveis.
+ * - URL e chave pública do Supabase: as do Worker; se faltarem, os valores públicos do app (config.js).
+ * - Chaves de IA (GEMINI_API_KEY…): as do Worker ou, como a Pesquisa já faz, as do Vault do Supabase
+ *   (rpc ia_chaves com a SUPABASE_SERVICE_ROLE_KEY que o Worker já tem). Nada é copiado ou exposto.
+ * Se ainda faltar algo, responde 503 e o app volta para a função antiga do Supabase (sem quebrar). */
+const PUBLICO = Object.freeze({
+  SUPABASE_URL: 'https://vdzwydizostutukppcsj.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_LjeuewTU7OjYrNiRzM2nJQ_iAa9UCkC',
+});
 const SB = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
 const REQUISITOS = Object.freeze({
   'analise': [...SB, 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY'],
@@ -33,13 +41,17 @@ const REQUISITOS = Object.freeze({
   'aulas': SB,
   'mesa': [...SB, 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY'],
 });
-export function faltamSegredosV1054(nome, env) {
-  return (REQUISITOS[nome] || []).filter((k) => typeof env?.[k] !== 'string' || !env[k]).length;
+const USA_VAULT = new Set(['analise', 'resumo', 'mesa']);
+const base = (env) => (k) => (typeof env?.[k] === 'string' && env[k] ? env[k] : PUBLICO[k]);
+/** Quantas chaves essenciais faltam. `ler` é a função de leitura (Worker + públicas + Vault). */
+export function faltamSegredosV1054(nome, env, ler = base(env)) {
+  return (REQUISITOS[nome] || []).filter((k) => { const v = ler(k); return typeof v !== 'string' || !v; }).length;
 }
 export const FUNCOES_V1042 = Object.freeze(Object.keys(FUNCOES));
 
 const handlers = new Map();
 let envAtual = {};
+let lerAtual = () => undefined;
 let registrando = null;
 
 function instalarDeno() {
@@ -51,7 +63,7 @@ function instalarDeno() {
         const e = envAtual || {};
         if (nome === 'ALLOWED_ORIGINS') return e.ALLOWED_ORIGINS || e.ALLOWED_ORIGIN || 'https://meudiariotrade.github.io';
         if (nome === 'TWELVE_KEY' || nome === 'TWELVE_API_KEY' || nome === 'TWELVEDATA_KEY') return e[nome] || e.TWELVE_KEY || e.TWELVE_API_KEY || e.TWELVEDATA_KEY;
-        const v = e[nome];
+        const v = lerAtual(nome);
         return typeof v === 'string' ? v : undefined;
       },
       toObject() { return { ...envAtual }; },
@@ -82,9 +94,12 @@ export async function funcaoV1042(request, env, ctx) {
   const nome = m[1];
   if (!Object.prototype.hasOwnProperty.call(FUNCOES, nome))
     return Response.json({ error: 'Função não migrada.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
-  if (faltamSegredosV1054(nome, env))
+  let ler = base(env);
+  if (USA_VAULT.has(nome)) { try { ler = await envComVault(ler); } catch (_) { /* sem Vault: segue só com o Worker */ } }
+  if (faltamSegredosV1054(nome, env, ler))
     return Response.json({ error: 'Função ainda sem chaves no Cloudflare; usando a origem anterior.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   envAtual = env || {};
+  lerAtual = ler;
   // aulas e resumo continuam o processamento em segundo plano (EdgeRuntime.waitUntil no Supabase).
   globalThis.EdgeRuntime = { waitUntil: (p) => { try { ctx?.waitUntil?.(Promise.resolve(p).catch(() => {})); } catch (_) { /* sem ctx em teste */ } } };
   try {
