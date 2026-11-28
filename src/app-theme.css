@@ -7686,3 +7686,9 @@ html body #app .og1054 li small{grid-area:s;color:var(--ui-text-2,#94A3B8);font-
 html body #app .og1054 li em{grid-area:v;align-self:center;font-style:normal;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 html body #app .og1054 li em.g{color:var(--ui-gain,#10B981)}html body #app .og1054 li em.r{color:var(--ui-loss,#EF4444)}
 html body #app .og1054 li.og-vazio{display:block;color:var(--ui-label,#64748B);font-size:13px}
+/* v1054 — cabeçalho no celular: busca vira só a lupa e o título aparece inteiro ("Status do sistema"). */
+@media (max-width:767px){
+ html:root body #dt393-global-head .dt954-search-pill:not(#lg){flex:0 0 40px!important;width:40px!important;min-width:40px!important;max-width:40px!important;height:40px!important;min-height:40px!important;padding:0!important;justify-content:center!important;margin-left:auto!important}
+ html:root body #dt393-global-head .dt954-search-pill:not(#lg) span{display:none!important}
+ html:root body #dt393-global-head .dt393-topbar .dt393-title.dt393-title:not(#lg),html:root body #dt393-global-head .dt393-title:not(#lg){min-width:0!important;max-width:none!important;flex:1 1 auto!important;overflow:hidden!important;text-overflow:clip!important;white-space:nowrap!important;font-size:clamp(15px,4.4vw,24px)!important;letter-spacing:-.015em}
+}

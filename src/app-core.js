@@ -45843,8 +45843,10 @@ sysTesta = async function (e) {
           } catch {}
           if (n.ok && r && r.versao) {
             const i = (l) => +String(l).replace(/\D/g, "") || 0;
+            /* v1054: onde a função rodou (marcado pela ponte da Cloudflare; sem marca = Supabase). */
+            const onde = (n.headers.get("x-diario-origem") || "supabase") === "cloudflare" ? " · Cloudflare" : " · Supabase";
             return i(r.versao) >= i(s)
-              ? { f: a, l: o, st: "ok", msg: "Atualizada (" + r.versao + ")." }
+              ? { f: a, l: o, st: "ok", msg: "Atualizada (" + r.versao + ")" + onde + "." }
               : {
                   f: a,
                   l: o,
