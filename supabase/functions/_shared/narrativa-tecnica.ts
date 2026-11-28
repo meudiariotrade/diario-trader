@@ -1,5 +1,6 @@
 /** Reserva editorial determinística: usa os valores já calculados, sem reconstruir indicadores. */
 import type { FatosTecnicos } from './consistencia-tecnica.ts';
+export const PROTOCOLO_EDITORIAL_V1057 = 'Comunicação editorial obrigatória: conduza toda análise no fluxo Fato relevante → interpretação → consequência → condição de confirmação ou invalidação, sem rótulos mecânicos repetitivos. Nunca mencione nomes de provedores/fontes de cotação, modelos de IA, OHLC/OHLCV, SHA-256, versões de fórmula, mesa proprietária ou disclaimers burocráticos.';
 const n = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const obj = (v: any) => v && typeof v === 'object' ? v : {};
 const lista = (v: any): any[] => Array.isArray(v) ? v : [];

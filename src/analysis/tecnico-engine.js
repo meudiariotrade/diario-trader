@@ -1,4 +1,4 @@
-/* Motor quant técnico v762 — OHLCV validado, sem rede, sem credenciais e sem timers. */
+/* Motor quant técnico — validação por candles fechados, sem rede, sem credenciais e sem timers. */
 (function(root,factory){
  const api=factory();
  if(typeof module==='object'&&module.exports)module.exports=api;
@@ -6,24 +6,31 @@
 })(typeof self!=='undefined'?self:globalThis,function(){
  'use strict';
  const VERSION='tecnico-787.1';
- const FIB_RET=[0,.236,.382,.5,.618,.764,1],FIB_EXT=[1.11,1.272,1.414,1.618];
+ const ENGINE_EDITION='v1057';
+ const FIB_RET=[0,.236,.382,.5,.618,.764,.786,1],FIB_RET_LEVELS=[.236,.382,.5,.618,.764,.786];
+ const FIB_EXT=[1.11,1.272,1.414,1.618],FIB_PROJ=[1,1.272,1.414,1.618];
  const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
  const mean=v=>v.length?v.reduce((a,b)=>a+b,0)/v.length:null;
  const round=(v,n=4)=>Number.isFinite(v)?Number(v.toFixed(n)):null;
  const valid=n=>typeof n==='number'&&Number.isFinite(n);
- function normalize(input){
+ function normalize(input,opts={}){
   if(!Array.isArray(input))return [];
+  const onlyClosed=opts?.closedOnly===true;
   const seen=new Map();
   for(const c of input.slice(-5000)){
    const row=Array.isArray(c)?{t:c[0],o:c[1],h:c[2],l:c[3],c:c[4],v:c[5]}:c;
    if(!row)continue;
+   if(onlyClosed&&(row.closed===false||row.isClosed===false||row.forming===true))continue;
    let t=Number(row.t??row.time??row.timestamp),o=Number(row.o??row.open),h=Number(row.h??row.high),l=Number(row.l??row.low),p=Number(row.c??row.close),v=Number(row.v??row.volume);
    if(t<1e11)t*=1000;
    if(![t,o,h,l,p,v].every(valid)||t<=0||o<=0||p<=0||h<Math.max(o,p,l)||l<=0||l>Math.min(o,p,h)||v<0)continue;
    seen.set(t,{t,o,h,l,c:p,v});
   }
-  return [...seen.values()].sort((a,b)=>a.t-b.t).slice(-1500);
+  const out=[...seen.values()].sort((a,b)=>a.t-b.t).slice(-1500);
+  if(opts?.dropLastForming===true&&out.length>1)out.pop();
+  return out;
  }
+ function closedOnly(input,opts={}){return normalize(input,{...opts,closedOnly:true})}
  function sma(c,n,i=c.length-1,k='c'){if(i+1<n)return null;let sum=0;for(let j=i-n+1;j<=i;j++)sum+=c[j][k];return sum/n}
  function ema(values,n){let value=null,k=2/(n+1);return values.map((x,i)=>{if(!valid(x))return null;if(i===n-1)value=mean(values.slice(0,n));else if(i>=n&&value!==null)value=x*k+value*(1-k);return value})}
  function atr(c,n=14){if(c.length<n+1)return null;const a=c.slice(1).map((v,i)=>Math.max(v.h-v.l,Math.abs(v.h-c[i].c),Math.abs(v.l-c[i].c)));return mean(a.slice(-n))}
@@ -33,7 +40,25 @@
  function std(v){if(v.length<2)return null;const m=mean(v);return Math.sqrt(mean(v.map(x=>(x-m)**2)))}
  function hvWeek(c,tf){const perWeek=tf==='15m'?130:tf==='1h'?33:5;const sample=c.slice(-Math.max(20,perWeek*3));if(sample.length<Math.min(20,perWeek*2))return null;const rets=sample.slice(1).map((x,i)=>Math.log(x.c/sample[i].c));return std(rets)*Math.sqrt(perWeek)*100}
  function pivot(c,i,d){if(i<2||i>c.length-3)return false;const k=d>0?'h':'l',val=c[i][k];return d>0?[i-2,i-1,i+1,i+2].every(j=>val>c[j][k]):[i-2,i-1,i+1,i+2].every(j=>val<c[j][k])}
- function swings(c){const s=[];for(let i=2;i<c.length-2;i++){if(pivot(c,i,1))s.push({i,p:c[i].h,d:1});if(pivot(c,i,-1))s.push({i,p:c[i].l,d:-1})}s.sort((a,b)=>a.i-b.i);const out=[];for(const x of s){const last=out.at(-1);if(last?.d===x.d){if((x.d===1&&x.p>last.p)||(x.d===-1&&x.p<last.p))out[out.length-1]=x}else out.push(x)}return out}
+ function swings(c){const s=[];for(let i=2;i<c.length-2;i++){if(pivot(c,i,1))s.push({i,p:c[i].h,d:1,t:c[i].t,type:'H'});if(pivot(c,i,-1))s.push({i,p:c[i].l,d:-1,t:c[i].t,type:'L'})}s.sort((a,b)=>a.i-b.i);const out=[];for(const x of s){const last=out.at(-1);if(last?.d===x.d){if((x.d===1&&x.p>last.p)||(x.d===-1&&x.p<last.p))out[out.length-1]=x}else out.push(x)}return out}
+ function zigzag(c,opts={}){
+  const bars=Array.isArray(c)&&c.length&&valid(c[0]?.h)?c:normalize(c);
+  if(bars.length<7)return [];
+  const raw=swings(bars);
+  const atrVal=atr(bars,14)||0,lastClose=bars.at(-1).c;
+  const minMove=Math.max(atrVal*(opts.minAtrMult??1.2),lastClose*(opts.minPct??0.015));
+  const out=[];
+  for(const pt of raw){
+   if(!out.length){out.push(pt);continue}
+   const prev=out.at(-1);
+   if(prev.d===pt.d){
+    if((pt.d===1&&pt.p>prev.p)||(pt.d===-1&&pt.p<prev.p))out[out.length-1]=pt;
+    continue;
+   }
+   if(Math.abs(pt.p-prev.p)>=minMove)out.push(pt);
+  }
+  return out;
+ }
  function fibogaps(c,dir){
   // Gap não preenchido: considera somente barras observadas e um limiar superior a ruído de spread.
   const threshold=Math.max((atr(c)||0)*.5,c.at(-1).c*.004),result=[];
@@ -50,9 +75,9 @@
   return result.slice(-12);
  }
  function fibo(c,dir,sw){
-  // v787: ancoragem em ZigZag MACRO confirmado (2 candles posteriores observados).
-  // O eixo segue 0%=início da perna, 100%=fim da perna; negativos são espelhamentos.
-  // Só pivôs passados (máximo 250 candles) entram no cálculo; micro é gatilho RMC/CISD.
+  // Ancoragem em ZigZag MACRO confirmado nos pavios reais (2 candles fechados posteriores observados).
+  // Eixo da grade macro: 0%=início da perna (A), 100%=fim da perna (B); negativos são espelhamentos.
+  // Retração (A→B→C) e Projeção simétrica (A–B projetado a partir de C) ficam separadas em objetos próprios.
   const window=Math.min(c.length,250),minIndex=c.length-window;
   const macroTurns=sw.filter(x=>x.i>=minIndex&&x.i<=c.length-3);
   const threshold=Math.max((atr(c)||0)*2,c.at(-1).c*.025);
@@ -68,6 +93,7 @@
   const best=candidates[0];
   if(!best)return {zone:false,cluster:false,segments:[null,null],levels:[],
    exhausted:false,defense:null,macroConfirmed:false,
+   retracement:null,projection:null,
    reason:'Sem par ZigZag macro confirmado com amplitude mínima (250 candles)'};
   const a=best.from,b=best.to,length=best.length,floor=.01;
   const normalized=r=>({r,price:round(Math.max(floor,a.p+dir*length*r)),anchor:'macro',macroFrom:a.i,macroTo:b.i});
@@ -81,25 +107,62 @@
     role:'gatilho RMC/CISD — não redesenha grade macro'}:null;
   const segment={from:a.p,to:b.p,age:best.age,length,ret,ext,neg:negatives,
    anchorFromIndex:a.i,anchorToIndex:b.i,macroConfirmed:true};
-  // Retração de 61,8–76,4% é medida a partir da extremidade 100% da perna:
-  // na grade 0%=fundo / 100%=topo corresponde aos níveis 38,2%–23,6%.
+  // Retração de 61,8–76,4% (grade macro legada) e 61,8–78,6% (objeto dedicado de retração):
   const retreat=[ret.find(z=>z.r===.382).price,ret.find(z=>z.r===.236).price];
   const defense=[Math.min(...retreat),Math.max(...retreat)];
   const min=Math.min(...defense),max=Math.max(...defense),price=c.at(-1).c;
   const gaps=fibogaps(c,dir),relevantGap=gaps.slice().reverse().find(x=>x.low<=max&&x.high>=min)||null;
   const gapZone=relevantGap?[round(Math.max(min,relevantGap.low)),round(Math.min(max,relevantGap.high))]:null;
   const expansion=(price-a.p)*dir/length;
+  // Ponto C real nos pavios fechados posteriores a B (correção da perna A→B):
+  let cIdx=-1,cPrice=null;
+  for(let i=b.i+1;i<c.length;i++){
+   const wick=dir===1?c[i].l:c[i].h;
+   if(dir===1?(wick<b.p&&(cPrice===null||wick<cPrice)):(wick>b.p&&(cPrice===null||wick>cPrice))){
+    cPrice=wick;cIdx=i;
+   }
+  }
+  const anchorA={index:a.i,time:c[a.i]?.t??null,price:round(a.p),wick:dir===1?'low':'high'};
+  const anchorB={index:b.i,time:c[b.i]?.t??null,price:round(b.p),wick:dir===1?'high':'low'};
+  const anchorC=cIdx>=0?{index:cIdx,time:c[cIdx]?.t??null,price:round(cPrice),wick:dir===1?'low':'high'}:null;
+  const retLevels=FIB_RET_LEVELS.map(ratio=>({
+   ratio,label:(ratio*100).toFixed(1).replace('.',',')+'%',
+   price:round(Math.max(floor,b.p-dir*length*ratio))
+  }));
+  const p618=retLevels.find(x=>x.ratio===.618)?.price;
+  const p786=retLevels.find(x=>x.ratio===.786)?.price;
+  const defZone786=valid(p618)&&valid(p786)?[Math.min(p618,p786),Math.max(p618,p786)]:[min,max];
+  const depthPct=anchorC?round(((b.p-anchorC.price)*dir/length)*100,1):null;
+  const retracement={
+   direction:dir===1?'alta':'baixa',
+   anchors:{A:anchorA,B:anchorB,C:anchorC},
+   levels:retLevels,
+   defenseZone:defZone786,
+   inDefenseZone:price>=defZone786[0]&&price<=defZone786[1],
+   depthPct
+  };
+  const projLevels=anchorC?FIB_PROJ.map(ratio=>({
+   ratio,label:(ratio*100).toFixed(1).replace(',0','').replace('.',',')+'%',
+   price:round(Math.max(floor,anchorC.price+dir*length*ratio))
+  })):[];
+  const projection={
+   ready:!!anchorC,
+   direction:dir===1?'alta':'baixa',
+   anchors:{A:anchorA,B:anchorB,C:anchorC},
+   legAmplitude:round(length),
+   levels:projLevels
+  };
   return {zone:price>=min&&price<=max,cluster:false,clusters:[],
    fibogap:relevantGap!==null,gapZone,segments:[segment,micro],levels,
    macroConfirmed:true,macroSpan:window,anchor:{from:a.p,to:b.p,fromIndex:a.i,toIndex:b.i},
    expansion:round(expansion,3),exhausted:expansion>=1.414&&expansion<=1.618,
    defense:[min,max],defenseRetracement:[.618,.764],negativeBase:negatives,stopTolerance:negatives.find(z=>z.r===-.118)?.price,
-   files:defense.map(z=>round(z))};
+   files:defense.map(z=>round(z)),retracement,projection};
  }
 
  function turn4(c,dir,zone){
   if(c.length<8)return {armed:false,confirmed:false,cisd:false};
-  // Candidato central + duas barras posteriores: nenhum pivô futuro é presumido.
+  // Candidato central + duas barras posteriores fechadas: nenhum pivô futuro é presumido.
   const i=c.length-3,ref=c[i],left=c[i-1],right=c[i+1],last=c.at(-1);
   const local=dir===1?ref.l<left.l&&ref.l<=right.l:ref.h>left.h&&ref.h>=right.h;
   const reference=dir===1?Math.max(ref.h,right.h):Math.min(ref.l,right.l);
@@ -107,21 +170,158 @@
   const previous=c.slice(-9,-3),internal=dir===1?Math.max(...previous.map(x=>x.h)):Math.min(...previous.map(x=>x.l));
   return {armed:!!(local&&zone),confirmed,cisd:confirmed&&(dir===1?last.c>internal:last.c<internal),reference:round(reference)};
  }
+ function analyzeDow(c,sw){
+  const turns=Array.isArray(sw)&&sw.length?sw:swings(c);
+  const annotated=[];
+  let prevH=null,prevL=null;
+  for(const pt of turns){
+   let tag=null;
+   if(pt.d===1){
+    tag=prevH===null?'H':pt.p>prevH.p?'HH':'LH';
+    prevH=pt;
+   }else{
+    tag=prevL===null?'L':pt.p>prevL.p?'HL':'LL';
+    prevL=pt;
+   }
+   annotated.push({i:pt.i,t:pt.t??c[pt.i]?.t??null,p:round(pt.p),d:pt.d,tag});
+  }
+  const highs=annotated.filter(x=>x.d===1),lows=annotated.filter(x=>x.d===-1);
+  const lastH=highs.at(-1)||null,prevHigh=highs.at(-2)||null;
+  const lastL=lows.at(-1)||null,prevLow=lows.at(-2)||null;
+  let primaryTrend='indefinida';
+  if(lastH&&prevHigh&&lastL&&prevLow){
+   if(lastH.p>prevHigh.p&&lastL.p>prevLow.p)primaryTrend='alta';
+   else if(lastH.p<prevHigh.p&&lastL.p<prevLow.p)primaryTrend='baixa';
+   else primaryTrend='lateral';
+  }
+  const recent4=annotated.slice(-4);
+  const rHighs=recent4.filter(x=>x.d===1),rLows=recent4.filter(x=>x.d===-1);
+  let secondaryTrend=primaryTrend;
+  if(rHighs.length>=2&&rLows.length>=2){
+   if(rHighs[1].p>rHighs[0].p&&rLows[1].p>rLows[0].p)secondaryTrend='alta';
+   else if(rHighs[1].p<rHighs[0].p&&rLows[1].p<rLows[0].p)secondaryTrend='baixa';
+   else secondaryTrend='lateral';
+  }
+  const close=c.at(-1)?.c??null;
+  const reversalPivot=primaryTrend==='alta'?lastL:primaryTrend==='baixa'?lastH:null;
+  const brokenByClose=!!(reversalPivot&&valid(close)&&(primaryTrend==='alta'?close<reversalPivot.p:close>reversalPivot.p));
+  return {
+   primaryTrend,secondaryTrend,
+   lastHigh:lastH,lastLow:lastL,
+   reversalPivot:reversalPivot?{price:reversalPivot.p,index:reversalPivot.i,time:reversalPivot.t,tag:reversalPivot.tag}:null,
+   brokenByClose,
+   sequence:annotated.slice(-6)
+  };
+ }
+ function classifyLeg(c,fromIdx,toIdx,atr14){
+  if(!Array.isArray(c)||fromIdx<0||toIdx<=fromIdx||toIdx>=c.length)return {kind:'indefinido',bars:0,amplitude:null,amplitudeAtr:null,netDisplacement:null,efficiency:null,overlapRatio:null,direction:0};
+  const slice=c.slice(fromIdx,toIdx+1);
+  const start=slice[0],end=slice.at(-1);
+  const direction=end.c>=start.c?1:-1;
+  const hi=Math.max(...slice.map(x=>x.h)),lo=Math.min(...slice.map(x=>x.l));
+  const amplitude=hi-lo;
+  const amplitudeAtr=valid(atr14)&&atr14>0?amplitude/atr14:null;
+  const netDisplacement=Math.abs(end.c-start.c);
+  let path=0,overlaps=0;
+  for(let i=1;i<slice.length;i++){
+   path+=Math.abs(slice[i].c-slice[i-1].c);
+   if(Math.min(slice[i].h,slice[i-1].h)>=Math.max(slice[i].l,slice[i-1].l))overlaps++;
+  }
+  const efficiency=path>0?netDisplacement/path:0;
+  const overlapRatio=slice.length>1?overlaps/(slice.length-1):1;
+  let kind='indefinido';
+  if(valid(amplitudeAtr)&&amplitudeAtr>=2.0&&efficiency>=0.45&&overlapRatio<=0.65)kind='impulso';
+  else if(efficiency<0.45||overlapRatio>0.65||(valid(amplitudeAtr)&&amplitudeAtr<1.5))kind='correcao';
+  return {
+   kind,direction,bars:slice.length,
+   fromIndex:fromIdx,toIndex:toIdx,
+   amplitude:round(amplitude),amplitudeAtr:round(amplitudeAtr,2),
+   netDisplacement:round(netDisplacement),
+   efficiency:round(efficiency,3),
+   overlapRatio:round(overlapRatio,3)
+  };
+ }
+ function analyzeImpulseCorrection(c,sw,dir,atr14,fibObj){
+  const anchorA=fibObj?.retracement?.anchors?.A,anchorB=fibObj?.retracement?.anchors?.B,anchorC=fibObj?.retracement?.anchors?.C;
+  const dominantLeg=anchorA&&anchorB?classifyLeg(c,anchorA.index,anchorB.index,atr14):{kind:'indefinido',bars:0};
+  const currentStart=anchorB?anchorB.index:Math.max(0,c.length-15);
+  const currentLeg=classifyLeg(c,currentStart,c.length-1,atr14);
+  const last=c.at(-1);
+  // Retomada por fechamento: fechamento além do pivô de correção na direção da perna dominante.
+  let refPrice=null,confirmed=false;
+  if(anchorB&&anchorC&&anchorC.index<c.length-1){
+   const postC=c.slice(anchorC.index,c.length-1);
+   if(postC.length){
+    refPrice=dir===1?Math.max(...postC.map(x=>x.h)):Math.min(...postC.map(x=>x.l));
+    confirmed=valid(last?.c)&&(dir===1?last.c>refPrice:last.c<refPrice);
+   }
+  }else if(c.length>=5){
+   const prevBars=c.slice(-5,-1);
+   refPrice=dir===1?Math.max(...prevBars.map(x=>x.h)):Math.min(...prevBars.map(x=>x.l));
+   confirmed=valid(last?.c)&&(dir===1?last.c>refPrice:last.c<refPrice);
+  }
+  const phase=confirmed?'retomada':currentLeg.kind!=='indefinido'?currentLeg.kind:dominantLeg.kind;
+  return {
+   dominantLeg,currentLeg,phase,
+   resumption:{
+    confirmed,
+    direction:dir===1?'alta':'baixa',
+    referencePrice:round(refPrice),
+    closePrice:round(last?.c),
+    status:confirmed?'Retomada confirmada por fechamento':'Aguardando fechamento de confirmação'
+   }
+  };
+ }
  function elliott(sw,dir){
-  // Contagem conservadora: hipótese, nunca conclusão de ciclo certo.
+  // Contagem conservadora: sempre hipótese com alternativa explícita ou indefinição.
   const s=sw.filter(x=>x.d===dir||x.d===-dir).slice(-9);
   if(s.length>=4){
    const q=s.slice(-4),p=q.map(x=>x.p),d=q.map(x=>x.d);
    const abc=dir===1?
     d[0]===1&&d[1]===-1&&d[2]===1&&d[3]===-1&&p[2]<p[0]&&p[3]<p[1]:
     d[0]===-1&&d[1]===1&&d[2]===-1&&d[3]===1&&p[2]>p[0]&&p[3]>p[1];
-   if(abc)return {label:'Possível correção A-B-C',valid:false,correction:true,reason:'Três movimentos corretivos alternados; rompimento ainda exige confirmação'};
+   if(abc)return {
+    label:'Possível correção A-B-C',valid:false,correction:true,indefinido:false,
+    reason:'Três movimentos corretivos alternados; rompimento ainda exige confirmação',
+    hipotesePrincipal:'Estrutura corretiva A-B-C em desenvolvimento ou conclusão',
+    hipoteseAlternativa:'Início de nova perna contra a direção anterior se perder a zona de defesa',
+    invalidacao:round(p[0]),
+    ondas:q.map((x,idx)=>({onda:['0','A','B','C'][idx],i:x.i,p:round(x.p),d:x.d}))
+   };
   }
-  if(s.length<6)return {label:'Indeterminada',valid:false,reason:'Pivôs insuficientes'};
-  const a=s.slice(-6);if(a.some((p,i)=>i>0&&p.d===a[i-1].d))return {label:'Indeterminada',valid:false,reason:'Alternância ausente'};
+  if(s.length<6)return {
+   label:'Indeterminada',valid:false,indefinido:true,reason:'Pivôs insuficientes',
+   hipotesePrincipal:'Indefinida — sequência insuficiente de pivôs confirmados',
+   hipoteseAlternativa:'Aguardar formação de novos pivôs fechados',
+   invalidacao:null,ondas:[]
+  };
+  const a=s.slice(-6);
+  if(a.some((p,i)=>i>0&&p.d===a[i-1].d))return {
+   label:'Indeterminada',valid:false,indefinido:true,reason:'Alternância ausente',
+   hipotesePrincipal:'Indefinida — sem alternância clara de topos e fundos',
+   hipoteseAlternativa:'Estrutura lateral complexa',
+   invalidacao:null,ondas:[]
+  };
   const p=a.map(x=>x.p),sign=dir,one=Math.abs(p[1]-p[0]),three=Math.abs(p[3]-p[2]),five=Math.abs(p[5]-p[4]);
   const rule2=(p[2]-p[0])*sign>0,rule3=three>=Math.min(one,five),rule4=(p[4]-p[1])*sign>0;
-  return rule2&&rule3&&rule4?{label:'Possível impulso 1-2-3-4-5',valid:true,reason:'Regras clássicas mínimas verificadas; contagem alternativa possível'}:{label:'Contagem invalidada',valid:false,reason:'Onda 2, onda 3 ou sobreposição da onda 4'};
+  const ondas=a.map((x,idx)=>({onda:['0','1','2','3','4','5'][idx],i:x.i,p:round(x.p),d:x.d}));
+  const regras={onda2Valida:rule2,onda3NaoMenor:rule3,onda4SemSobreposicao:rule4};
+  if(rule2&&rule3&&rule4){
+   return {
+    label:'Possível impulso 1-2-3-4-5',valid:true,indefinido:false,
+    reason:'Regras clássicas mínimas verificadas; contagem alternativa possível',
+    hipotesePrincipal:'Ciclo impulsivo 1-2-3-4-5 na direção dominante',
+    hipoteseAlternativa:'Movimento corretivo estendido (A-B-C) caso a onda 5 falhe em sustentar rompimento',
+    regras,invalidacao:round(p[4]),ondas
+   };
+  }
+  return {
+   label:'Contagem invalidada',valid:false,indefinido:true,
+   reason:'Onda 2, onda 3 ou sobreposição da onda 4',
+   hipotesePrincipal:'Indefinida — regras de impulso invalidadas (sobreposição ou proporção)',
+   hipoteseAlternativa:'Estrutura corretiva complexa ou diagonal; aguardar definição de pivô',
+   regras,invalidacao:round(p[0]),ondas
+  };
  }
  function vcp(c){if(c.length<60)return false;const blocks=[c.slice(-60,-40),c.slice(-40,-20),c.slice(-20)];const widths=blocks.map(x=>(Math.max(...x.map(v=>v.h))-Math.min(...x.map(v=>v.l)))/Math.max(.01,mean(x.map(v=>v.c))));const vols=blocks.map(x=>mean(x.map(v=>v.v)));return widths[0]>widths[1]&&widths[1]>widths[2]&&vols[0]>vols[1]&&vols[1]>vols[2]}
  function boll(c){if(c.length<60)return {squeeze:false,breakout:false};const band=n=>{const closes=c.slice(-n).map(x=>x.c);return std(closes)/mean(closes)};const recent=band(20),prev=std(c.slice(-60,-40).map(x=>x.c))/mean(c.slice(-60,-40).map(x=>x.c));return {squeeze:recent<prev*.65,breakout:recent<prev*.65&&Math.abs(c.at(-1).c-sma(c,20))>std(c.slice(-20).map(x=>x.c))*2}}
@@ -129,6 +329,59 @@
   const buckets=new Map();
   for(const x of normalize(daily)){const dt=new Date(x.t),day=dt.getUTCDay(),date=new Date(x.t-(day+6)%7*86400000).toISOString().slice(0,10);const prev=buckets.get(date);if(!prev)buckets.set(date,{...x});else{prev.h=Math.max(prev.h,x.h);prev.l=Math.min(prev.l,x.l);prev.c=x.c;prev.t=x.t;prev.v+=x.v}}
   return [...buckets.values()];
+ }
+ function aggregateMonthly(daily){
+  const buckets=new Map();
+  for(const x of normalize(daily)){const ym=new Date(x.t).toISOString().slice(0,7);const prev=buckets.get(ym);if(!prev)buckets.set(ym,{...x});else{prev.h=Math.max(prev.h,x.h);prev.l=Math.min(prev.l,x.l);prev.c=x.c;prev.t=x.t;prev.v+=x.v}}
+  return [...buckets.values()];
+ }
+ function frameSummary(bars,fastN,slowN,extraN){
+  if(!bars||bars.length<fastN)return {available:false,bars:bars?.length||0,close:null,trend:'indefinida',medias:{},dow:null};
+  const close=bars.at(-1).c,fast=sma(bars,fastN),slow=bars.length>=slowN?sma(bars,slowN):null,extra=extraN&&bars.length>=extraN?sma(bars,extraN):null;
+  const dow=analyzeDow(bars,swings(bars));
+  let trend=dow.primaryTrend;
+  if(trend==='indefinida'||trend==='lateral'){
+   if(valid(fast)&&valid(slow)){
+    if(close>fast&&fast>slow)trend='alta';
+    else if(close<fast&&fast<slow)trend='baixa';
+    else trend='lateral';
+   }else if(valid(fast)){
+    trend=close>fast?'alta':close<fast?'baixa':'lateral';
+   }
+  }
+  const medias={};
+  medias['mm'+fastN]=round(fast);
+  if(valid(slow))medias['mm'+slowN]=round(slow);
+  if(extraN&&valid(extra))medias['mm'+extraN]=round(extra);
+  return {
+   available:true,bars:bars.length,close:round(close),trend,
+   aboveFast:valid(fast)?close>fast:null,
+   aboveSlow:valid(slow)?close>slow:null,
+   medias,dow:{primaryTrend:dow.primaryTrend,secondaryTrend:dow.secondaryTrend,reversalPivot:dow.reversalPivot}
+  };
+ }
+ function fractality(dailyInput,opts={}){
+  const daily=normalize(dailyInput);
+  const weekly=opts.weekly?normalize(opts.weekly):aggregateWeekly(daily);
+  const monthly=opts.monthly?normalize(opts.monthly):aggregateMonthly(daily);
+  const diario=frameSummary(daily,20,50,200);
+  const semanal=frameSummary(weekly,10,40,null);
+  const mensal=frameSummary(monthly,10,20,null);
+  const frames=[mensal,semanal,diario].filter(f=>f.available);
+  const up=frames.filter(f=>f.trend==='alta').length;
+  const down=frames.filter(f=>f.trend==='baixa').length;
+  let alignment='insuficiente';
+  if(frames.length>=2){
+   if(up===frames.length)alignment='alinhado_alta';
+   else if(down===frames.length)alignment='alinhado_baixa';
+   else alignment='misto';
+  }
+  const alignedCount=Math.max(up,down);
+  const summary=alignment==='alinhado_alta'?'Mensal, semanal e diário alinhados em alta':
+   alignment==='alinhado_baixa'?'Mensal, semanal e diário alinhados em baixa':
+   alignment==='misto'?`Fractalidade mista (Mensal: ${mensal.trend}, Semanal: ${semanal.trend}, Diário: ${diario.trend})`:
+   'Histórico insuficiente para fractalidade completa';
+  return {mensal,semanal,diario,alignment,alignedCount,totalAvailable:frames.length,summary};
  }
  function passTemplate(c,dir,rs,vcpPass){
   if(c.length<252)return {score:null,checks:[],missing:['Histórico de 252 barras diárias']};
@@ -138,7 +391,7 @@
   return {score:checks.filter(Boolean).length,checks,missing:rs===null?['RS Rating cross-sectional não validado']:[],
    vcpConfirmado:vcpPass===true,nota:'Trend Template 8/8 independente do VCP; RS é percentil proxy do universo fixo'};
  }
- // Cenário de custos exclusivamente ilustrativo. Sem book/Profit, NÃO é spread executável.
+ // Cenário de custos exclusivamente ilustrativo. Sem book, NÃO é spread executável.
  // Valores por ida+volta em bps; não simula impostos nem impacto real.
  function costScenario(market){
   const m=String(market||'').toUpperCase();
@@ -243,8 +496,8 @@
    costs,holdBars:hold,setups:stats};
  }
  function one(c0,dir=1,opts={}){
-  const c=normalize(c0),last=c.at(-1);
-  if(!last||c.length<210||c.filter(x=>x.v>0).length<100)return {valid:false,score:null,reason:'Histórico OHLCV insuficiente (mín. 210 barras, 100 com volume)'};
+  const c=normalize(c0,{closedOnly:opts.closedOnly!==false,dropLastForming:opts.dropLastForming===true}),last=c.at(-1);
+  if(!last||c.length<210||c.filter(x=>x.v>0).length<100)return {valid:false,score:null,reason:'Histórico de candles fechados insuficiente (mín. 210 barras, 100 com volume)'};
   const p=last.c,s20=sma(c,20),s50=sma(c,50),s150=sma(c,150),s200=sma(c,200),v20=sma(c,20,c.length-2,'v'),rvol=v20?last.v/v20:null,atr14=atr(c),rsi14=rsi(c),m=macd(c),vol=hvWeek(c,opts.tf||'1d'),o=obv(c);
   const prior=o.slice(-26,-1),macroOBV=dir===1?o.at(-1)>Math.max(...prior):o.at(-1)<Math.min(...prior);
   const sw=swings(c);
@@ -262,14 +515,19 @@
   const obvConfirmed=macroOBV||localOBV,obvSignal=macroOBV?'OBV ROMPIDO (MACRO)':
    localOBV?'OBV CONFIRMADO (PIVÔ LOCAL)':'OBV NÃO CONFIRMADO',
    fib=fibo(c,dir,sw),turn=turn4(c,dir,fib.zone),vcpPass=vcp(c);
-  const high=opts.higher?normalize(opts.higher):null,mtfn=opts.tf==='1d'?20:200,mtf=high?.length>=mtfn?dir*(high.at(-1).c-sma(high,mtfn))>0:null;
+  const dailyBase=opts.daily?normalize(opts.daily,{closedOnly:opts.closedOnly!==false}):c;
+  const high=opts.higher?normalize(opts.higher,{closedOnly:opts.closedOnly!==false}):null;
+  const weeklySeries=high&&(opts.tf||'1d')==='1d'?high:aggregateWeekly(dailyBase);
+  const sma10w=weeklySeries.length>=10?sma(weeklySeries,10):null;
+  const sma40w=weeklySeries.length>=40?sma(weeklySeries,40):null;
+  const mtfn=opts.tf==='1d'?20:200,mtf=high?.length>=mtfn?dir*(high.at(-1).c-sma(high,mtfn))>0:null;
   const recent=c.slice(-9,-1),pullback=recent.length>0&&recent.some((x,j)=>{const avg=sma(c,20,c.length-9+j);return Math.abs(x.l-avg)<atr14*1.2||Math.abs(x.h-avg)<atr14*1.2})&&recent.every((x,j)=>{const avg=sma(c,20,c.length-9+j);return dir===1?x.c>=avg:x.c<=avg});
   const pivot=dir===1?Math.max(...recent.map(x=>x.h)):Math.min(...recent.map(x=>x.l));
   const breakout=dir===1?p>pivot:p<pivot,trend=dir===1?p>s20&&p>s200:p<s20&&p<s200;
   const dry=mean(recent.slice(-5).map(x=>x.v))<v20*.85;
   const away=Math.abs(p-s20)/atr14,stretched=away>2.5&&!vcpPass;
   const trap=fib.exhausted?'Esticado':stretched?'Esticado':rvol<=1?'Sem Volume':!obvConfirmed?'OBV Não Confirmou':null;
-  const rs=Number.isInteger(opts.rs)?opts.rs:null,template=passTemplate(opts.daily?normalize(opts.daily):c,dir,rs,vcpPass);
+  const rs=Number.isInteger(opts.rs)?opts.rs:null,template=passTemplate(dailyBase,dir,rs,vcpPass);
   const momentum=(dir===1?rsi14>52:rsi14<48)&&dir*m.hist>0;
   const pillars=[
    {id:'tendencia',name:'Tendência & Estrutura',weight:30,score:mean([trend?1:0,dir*(s50-s150)>0&&dir*(s150-s200)>0?1:0,pullback?1:0,mtf===null?0:mtf?1:0])},
@@ -286,14 +544,19 @@
   const net=riskNet({entry,stop,target2a:t2a},dir,opts.market);
   const active=trend&&breakout&&obvConfirmed&&rvol>1&&vol>3&&stop!==null;
   const bollinger=boll(c);
+  const dow=analyzeDow(c,sw);
+  const impulseCorrection=analyzeImpulseCorrection(c,sw,dir,atr14,fib);
+  const fractal=fractality(dailyBase,{weekly:weeklySeries});
   return {valid:true,dir,price:round(p),score,pillars,coverage:round((rs!==null?1:0)+(mtf!==null?1:0)+(template.score!==null?1:0),0),
-   timestamp:last.t,barCount:c.length,metrics:{sma20:round(s20),sma50:round(s50),sma150:round(s150),sma200:round(s200),obv:round(o.at(-1),0),obvConfirmed,obvSignal,obvPivotLocal:priorLocal.length>=10?round(dir===1?Math.max(...priorLocal):Math.min(...priorLocal),0):null,obvEma9:round(fastOBV.at(-1),0),obvEma21:round(slowOBV.at(-1),0),rvol:round(rvol,2),hvWeek:round(vol,2),rsi14:round(rsi14,1),macd:round(m.value),atr14:round(atr14),rs,mtf},
-   fib,turn,pisani:{breakout:active,power:active&&rvol>=1.5&&turn.cisd,away:away>=2.5,pullback},minervini:template,vcp:vcpPass,elliott:elliott(sw,dir),bollinger:{...bollinger,breakout:bollinger.breakout&&rvol>1.5},
+   timestamp:last.t,barCount:c.length,closedValidated:true,
+   metrics:{sma20:round(s20),sma50:round(s50),sma150:round(s150),sma200:round(s200),sma10w:round(sma10w),sma40w:round(sma40w),obv:round(o.at(-1),0),obvConfirmed,obvSignal,obvPivotLocal:priorLocal.length>=10?round(dir===1?Math.max(...priorLocal):Math.min(...priorLocal),0):null,obvEma9:round(fastOBV.at(-1),0),obvEma21:round(slowOBV.at(-1),0),rvol:round(rvol,2),hvWeek:round(vol,2),rsi14:round(rsi14,1),macd:round(m.value),atr14:round(atr14),rs,mtf},
+   fib,turn,structure:{dow,impulseCorrection,resumption:impulseCorrection.resumption,fractality:fractal},
+   pisani:{breakout:active,power:active&&rvol>=1.5&&turn.cisd,away:away>=2.5,pullback},minervini:template,vcp:vcpPass,elliott:elliott(sw,dir),bollinger:{...bollinger,breakout:bollinger.breakout&&rvol>1.5},
    flags:trap?[trap]:[],eligible:active&&!trap&&mtf!==false,
    plan:{entry:round(entry),stop:round(stop),target1:round(t1),target2a:round(t2a),target2:round(t2),targetFinal:round(t3),
     rr:round(rr,2),rrAlvo3:round(rrAlvo3,2),rrNet:net?.rrNet??null,
     costEstimateBps:net?.roundTripBps??null,costsVerified:false}};
  }
  function examine(c,opts={}){return {buy:one(c,1,opts),sell:one(c,-1,opts)}}
- return Object.freeze({VERSION,normalize,sma,ema,atr,rsi,macd,obv,hvWeek,swings,fibo,turn4,elliott,vcp,boll,aggregateWeekly,passTemplate,one,examine,costScenario,riskNet,walkForward});
+ return Object.freeze({VERSION,ENGINE_EDITION,normalize,closedOnly,sma,ema,atr,rsi,macd,obv,hvWeek,swings,zigzag,fibo,turn4,analyzeDow,classifyLeg,analyzeImpulseCorrection,elliott,vcp,boll,aggregateWeekly,aggregateMonthly,fractality,passTemplate,one,examine,costScenario,riskNet,walkForward});
 });

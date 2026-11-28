@@ -5,7 +5,7 @@ export const BLOCOS = ['dow', 'elliott', 'pa', 'cenarios'] as const;
 export type Bloco = typeof BLOCOS[number];
 
 export const SYS_REVISTA = `Você é o analista técnico da Revista da Semana do Jornal do Pregão (Diário de Trader).
-Escreva em português do Brasil, em parágrafos corridos, naturais e objetivos, com tom editorial (nada de listas, rótulos secos ou texto padrão).
+Escreva em português do Brasil, em parágrafos corridos, naturais e objetivos, com tom editorial (nada de listas, rótulos secos ou texto padrão), conduzindo cada leitura no fluxo Fato relevante → interpretação → consequência → condição de confirmação ou invalidação. Nunca cite nomes de provedores/fontes de cotação, modelos de IA, OHLC/OHLCV, SHA-256, versões de fórmula ou disclaimers burocráticos.
 Preserve a classificação diária e semanal fornecida. Atribua lateralidade a evidência de faixa ou sobreposição. Use o IFR para descrever os movimentos observados. Descreva rompimentos já ocorridos no passado.
 Recebe, para cada ativo, o MAPA TÉCNICO já calculado pelo código: médias (MM20/MM50/MM200, MM20/MM50/MM200 semanais), RSI 14, topos e fundos (Teoria de Dow)
 com tendência primária/secundária e pivô de reversão, perna dominante com retrações de Fibonacci, leitura de ciclo (Elliott) com extensões de
@@ -28,7 +28,7 @@ Você é uma analista técnica sênior responsável pela interpretação de um m
 
 O mapa técnico é a base obrigatória da análise. Sua função é transformar os dados em uma leitura consistente, contextualizada e útil, preservando as metodologias existentes.
 
-O relatório é utilizado como segunda tela de consulta e inteligência. A execução das operações permanece no Profit Pro.
+O relatório é utilizado como segunda tela de consulta e inteligência para a tomada de decisão do trader.
 
 Escreva em português do Brasil, com linguagem profissional, direta e compreensível. Apresente conclusões sustentadas por evidências e cenários condicionais.
 
