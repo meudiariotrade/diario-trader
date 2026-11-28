@@ -7723,3 +7723,67 @@ html body #app .og1054 li.og-vazio{display:block;color:var(--ui-label,#64748B);f
  html:root:root body.mkt549.dt1060-pc-news #app#app #mknews .dt968-title{font-size:15px!important;font-weight:600!important;line-height:1.4!important;color:#f1f5f9!important}
 }
 
+/* v1064 — Varredura Desktop: busca ampla centralizada no cabeçalho + aproveitamento total da largura útil e zero colunas/cards vazios (somente PC >=769px; iPhone e Terminal intocados) */
+@media (min-width:769px){
+ /* 1. Cabeçalho global no PC: barra de busca maior ocupando o centro do espaço */
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topbar{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;
+  padding-left:16px!important;padding-right:16px!important
+ }
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topbar .dt393-title.dt393-title{
+  order:0!important;flex:0 1 auto!important;min-width:0!important;max-width:280px!important;
+  padding-left:4px!important;margin:0!important
+ }
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill{
+  order:1!important;flex:1 1 480px!important;min-width:280px!important;max-width:680px!important;
+  height:38px!important;min-height:38px!important;padding:0 16px!important;margin:0 auto!important;
+  font-size:13.5px!important;gap:9px!important
+ }
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt954-search-pill svg{
+  width:16px!important;height:16px!important
+ }
+ html:root body:not([data-v4route=term]) #dt393-global-head .dt393-topactions{
+  order:2!important;flex:0 0 auto!important;margin-left:0!important
+ }
+
+ /* 2. Largura útil total no Desktop (remove travas estreitas de 720px/880px/1080px/1200px que criavam bordas vazias) */
+ html:root body:not([data-v4route=term]) #app#app{
+  width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box
+ }
+ html:root body:not([data-v4route=term]) #app#app :is(.dt397-studies,#mkt549-mais,.jrcard,.ti539-search,.ti539-foot){
+  max-width:none!important;width:100%!important
+ }
+ html:root body.mkt565:not([data-v4route=term]) #app#app .dt395-native-mercado:is([data-m403-sub="nt"],[data-m403-sub="ag"],[data-m403-sub="jr"])>:is(.card,.simple-details,.m406-section-switch,#mkt565-ctx){
+  max-width:none!important;width:100%!important
+ }
+
+ /* 3. Elimina espaços em branco e colunas/asides fantasmas vazias em todas as abas */
+ html:root body:not([data-v4route=term]) #app#app :is(.ui-aside,.v829-aside,[data-intel-etapa1]):empty{
+  display:none!important
+ }
+ html:root body:not([data-v4route=term]) #app#app .ui-split:has(>.ui-aside:empty)>.ui-main,
+ html:root body:not([data-v4route=term]) #app#app .v829-split:has(>.ui-aside:empty)>.ui-main{
+  flex:1 1 100%!important;max-width:none!important
+ }
+ html:root body:not([data-v4route=term]) #app#app .dt395-native-carteiras:not(:has(>section.card:first-child)),
+ html:root body:not([data-v4route=term]) #app#app .dt395-native-carteiras:has(>section.card:first-child:empty){
+  grid-template-columns:minmax(0,1fr)!important
+ }
+ html:root body:not([data-v4route=term]) #app#app .dt395-native-carteiras:has(>section.card:first-child:empty)>section.card:first-child{
+  display:none!important
+ }
+ html:root body:not([data-v4route=term]) #app#app #v512-ls.v512-pg:not(:has(>details)){
+  grid-template-columns:repeat(2,minmax(0,1fr))!important
+ }
+ html:root body:not([data-v4route=term]) #app#app #v512-ls.v512-pg:not(:has(>details))>*{
+  grid-column:1/-1!important
+ }
+ html:root body:not([data-v4route=term]) #app#app :is(.card,.v4-card,.ui-card,.dt393-card):empty{
+  display:none!important
+ }
+ html:root body:not([data-v4route=term]) #app#app :is(.v4-panel,.v4-page,.dt393-workspace,#an-root){
+  width:100%!important;max-width:none!important;min-width:0!important
+ }
+}
+
+
