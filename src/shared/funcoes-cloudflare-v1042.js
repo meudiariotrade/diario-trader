@@ -29,12 +29,18 @@
     var original = input instanceof Request ? input.clone() : null;
     var destino = WORKER + a.nome + a.busca;
     var pedido = input instanceof Request ? new Request(destino, input) : new Request(destino, Object.assign({}, init || {}, { credentials: 'omit' }));
+    // v1054: marca a origem da resposta (só no aparelho; não vai para a rede) para o Status do sistema.
+    function marca(r, origem) {
+      try { var h = new Headers(r.headers); h.set('x-diario-origem', origem); return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h }); }
+      catch (e) { return r; }
+    }
+    function reserva() { return anterior(original || input, init).then(function (r) { return marca(r, 'supabase'); }); }
     return anterior(pedido).then(function (r) {
-      if (r.status === 404 || r.status >= 500) return anterior(original || input, init);
-      return r;
+      if (r.status === 404 || r.status >= 500) return reserva();
+      return marca(r, 'cloudflare');
     }, function (erro) {
       if (erro && erro.name === 'AbortError') throw erro;
-      return anterior(original || input, init);
+      return reserva();
     });
   };
   window.DiarioFuncoesCloudflare = Object.freeze({ migradas: Array.from(MIGRADAS), versao: 1054 });
