@@ -30062,22 +30062,22 @@ try {
     };
 
     const getMode = (app) => {
-      if (!isMob() || !d.body.classList.contains("mkt549") || d.body.classList.contains("v512-lsv") || !app) return "";
+      if (!d.body.classList.contains("mkt549") || d.body.classList.contains("v512-lsv") || !app) return "";
       const mkt = getMkt();
       const wrap = app.querySelector(".dt395-native-mercado");
       const sub = mkt?.tab || wrap?.dataset.m403Sub || "";
       if (sub === "ls" || sub === "ag" || sub === "lab") return "";
-      if (sub === "jr" || app.querySelector(".jrcard")) return "jr";
+      if (sub === "jr" || app.querySelector(".jrcard")) return isMob() ? "jr" : "";
       if (sub === "nt" || app.querySelector("#mknews, #balbox")) {
         const host = wrap?.querySelector(":scope > .m406-content-host");
-        if (wrap?.dataset.m406View === "balancos" || (host && !host.hidden && host.querySelector("#balbox"))) return "bal";
+        if (wrap?.dataset.m406View === "balancos" || (host && !host.hidden && host.querySelector("#balbox"))) return isMob() ? "bal" : "";
         return "nt";
       }
       return "";
     };
 
     const cleanup = () => {
-      d.body.classList.remove("dt968-mkt-news", "dt968-view-nt", "dt968-view-bal", "dt968-view-jr");
+      d.body.classList.remove("dt968-mkt-news", "dt968-view-nt", "dt968-view-bal", "dt968-view-jr", "dt1060-pc-news");
       d.getElementById("dt968-nt-head")?.remove();
       d.getElementById("dt968-nt-search")?.remove();
       d.getElementById("dt968-nt-pulse")?.remove();
@@ -30499,10 +30499,11 @@ try {
         mkCard.before(head);
       }
 
-      const key = `${cur.val}|${cur.label}|${cur.count}|${searchOpen || !!searchQ}`;
+      const pcCorner = !isMob();
+      const key = `${cur.val}|${cur.label}|${cur.count}|${searchOpen || !!searchQ}|${pcCorner ? "pc" : "mob"}`;
       if (head.dataset.key !== key) {
         head.dataset.key = key;
-        head.innerHTML = `<div class="dt966-row-top" data-noclaro="1"><button type="button" class="dt966-orb" data-dt968-menu="1" aria-label="Opções de notícias" title="Opções"><span>•••</span></button><div class="dt966-chips"><button type="button" class="dt966-pill dt966-pill-main" data-dt968-sheet="1" aria-haspopup="dialog"><span class="dt966-badge">${getIco(cur.val)}</span><span>${esc(cur.label)}</span><span class="dt966-caret">▾</span></button><button type="button" class="dt966-pill dt966-pill-img" data-dt962-nt-ia="1" title="Resumo em 3 pontos com a Áurea"><span class="dt966-badge">${SPARK_ICO}</span><span>Resumo IA</span></button></div><button type="button" class="dt966-orb${searchOpen || searchQ ? " on" : ""}" data-dt968-search="1" aria-label="Buscar notícia" title="Buscar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button></div>`;
+        head.innerHTML = `<div class="dt966-row-top" data-noclaro="1"><button type="button" class="dt966-orb" data-dt968-menu="1" aria-label="Opções de notícias" title="Opções"><span>•••</span></button><div class="dt966-chips"><button type="button" class="dt966-pill dt966-pill-main" data-dt968-sheet="1" aria-haspopup="dialog"><span class="dt966-badge">${getIco(cur.val)}</span><span>${esc(cur.label)}</span><span class="dt966-caret">▾</span></button><button type="button" class="dt966-pill dt966-pill-img" data-dt962-nt-ia="1" title="Resumo em 3 pontos com a Áurea"><span class="dt966-badge">${SPARK_ICO}</span><span>Resumo IA</span></button></div><div class="dt1060-right-actions"><button type="button" class="dt966-orb${searchOpen || searchQ ? " on" : ""}" data-dt968-search="1" aria-label="Buscar notícia" title="Buscar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>${pcCorner ? `<button type="button" class="dt966-pill dt966-pill-img dt1060-ia-corner" data-dt1060-ia-search="1" aria-label="Pesquisar com IA" title="Pesquisar com IA"><span class="dt966-badge">${SPARK_ICO}</span><span>Pesquisar IA</span></button>` : ""}</div></div>`;
       }
 
       let sbox = d.getElementById("dt968-nt-search");
@@ -30555,6 +30556,7 @@ try {
         if (!mode) { cleanup(); return; }
         d.body.classList.add("dt968-mkt-news");
         d.body.classList.toggle("dt968-view-nt", mode === "nt");
+        d.body.classList.toggle("dt1060-pc-news", !isMob() && mode === "nt");
         d.body.classList.toggle("dt968-view-bal", mode === "bal");
         d.body.classList.toggle("dt968-view-jr", mode === "jr");
         if (mode === "nt") {
@@ -30675,6 +30677,11 @@ try {
         return;
       }
       if (!e.target?.closest?.("#dt968-nt-menu-pop")) d.getElementById("dt968-nt-menu-pop")?.remove();
+      if (e.target?.closest?.("[data-dt1060-ia-search]")) {
+        if (w.DiarioBuscaGlobal?.abrir) { w.DiarioBuscaGlobal.abrir(); return; }
+        d.querySelector('#dt968-nt-head [data-dt962-nt-ia="1"]')?.click();
+        return;
+      }
       if (e.target?.closest?.("[data-dt968-search]")) {
         searchOpen = !searchOpen;
         if (!searchOpen) searchQ = "";

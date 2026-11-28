@@ -7696,3 +7696,30 @@ html body #app .og1054 li.og-vazio{display:block;color:var(--ui-label,#64748B);f
  html:root body #dt393-global-head .dt954-search-pill:not(#lg) span{display:none!important}
  html:root body #dt393-global-head .dt393-topbar .dt393-title.dt393-title:not(#lg),html:root body #dt393-global-head .dt393-title:not(#lg){min-width:0!important;max-width:none!important;flex:1 1 auto!important;overflow:hidden!important;text-overflow:clip!important;white-space:nowrap!important;font-size:clamp(15px,4.4vw,24px)!important;letter-spacing:-.015em}
 }
+/* v1060 — Notícias no PC com o visual limpo do celular e botão da IA no canto direito para pesquisar */
+@media (min-width:769px){
+ html:root:root body.mkt549.dt1060-pc-news #app#app .dt968-nt-card{background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important;margin:0!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app .dt968-nt-card::before{display:none!important;content:none!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app .dt968-nt-card>#dt962-nt-bar,
+ html:root:root body.mkt549.dt1060-pc-news #app#app .dt968-nt-card>.top,
+ html:root:root body.mkt549.dt1060-pc-news #app#app .dt968-nt-card>.mk-seg,
+ html:root:root body.mkt549.dt1060-pc-news #app#app .dt968-nt-card>.dt968-old-filters,
+ html:root:root body.mkt549.dt1060-pc-news #app#app .dt968-nt-card>.m404-section-kicker{display:none!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #dt968-nt-head{margin:0 0 12px!important;position:relative;z-index:20}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #dt968-nt-head .dt966-row-top{display:flex!important;align-items:center!important;gap:10px!important;width:100%!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #dt968-nt-head .dt966-chips{display:flex!important;align-items:center!important;gap:8px!important;flex:1 1 auto!important;min-width:0!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #dt968-nt-head .dt1060-right-actions{display:inline-flex!important;align-items:center!important;gap:8px!important;margin-left:auto!important;flex:0 0 auto!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #dt968-nt-head button.dt966-orb{width:40px!important;height:40px!important;border-radius:999px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;background:var(--lg-l1,rgba(20,24,36,.56))!important;border:1px solid var(--lg-stroke,rgba(255,255,255,.12))!important;color:#f1f5f9!important;cursor:pointer}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #dt968-nt-head button.dt966-pill{height:40px!important;border-radius:999px!important;padding:0 14px!important;display:inline-flex!important;align-items:center!important;gap:7px!important;font-size:13px!important;font-weight:600!important;white-space:nowrap!important;background:var(--lg-l1,rgba(20,24,36,.56))!important;border:1px solid var(--lg-stroke,rgba(255,255,255,.12))!important;color:#f1f5f9!important;cursor:pointer}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #dt968-nt-head button.dt1060-ia-corner{background:linear-gradient(180deg,#FBBF24,#F59E0B)!important;border-color:rgba(251,191,36,.7)!important;color:#1B1204!important;-webkit-text-fill-color:#1B1204!important;font-weight:700!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #dt968-nt-search{display:flex!important;align-items:center!important;gap:8px!important;margin:0 0 12px!important;padding:6px 12px!important;border-radius:12px!important;background:var(--lg-l1,rgba(20,24,36,.56))!important;border:1px solid var(--lg-stroke,rgba(255,255,255,.12))!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #dt968-nt-search input{flex:1 1 auto!important;background:transparent!important;border:0!important;color:#f8fafc!important;font-size:14px!important;outline:none!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews{display:flex!important;flex-direction:column!important;gap:10px!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews a.card[data-dt968-hid]{display:none!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews a.card{display:block!important;padding:14px 16px!important;border-radius:16px!important;background:var(--lg-l1,rgba(20,24,36,.56))!important;border:1px solid var(--lg-stroke,rgba(255,255,255,.1))!important;text-decoration:none!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews .dt968-badges{display:flex!important;flex-wrap:wrap!important;gap:6px!important;margin-bottom:6px!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews .dt968-bdg{font-size:11px!important;font-weight:700!important;padding:2px 8px!important;border-radius:999px!important;background:rgba(255,255,255,.07)!important;color:#cbd5e1!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews .dt968-bdg.urg{background:rgba(244,63,94,.2)!important;color:#fda4af!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews .dt968-title{font-size:15px!important;font-weight:600!important;line-height:1.4!important;color:#f1f5f9!important}
+}
+
