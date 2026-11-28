@@ -1081,7 +1081,14 @@
     if(!app)return;
     try{
       if(typeof tab!=='undefined'&&tab==='mercado'&&typeof MKT!=='undefined'&&['mu','pn','cq'].includes(MKT.tab)){
-        if(!app.querySelector('#febox')&&typeof feHtml==='function'){const host=app.querySelector('.dt393-native')||app;host.insertAdjacentHTML('beforeend',feHtml());}
+        const m623Col=window.innerWidth>=1100?app.querySelector('#cotbox .m623-term .m623-col:last-child'):null;
+        if(m623Col){
+          app.querySelectorAll('#febox').forEach(el=>{if(!m623Col.contains(el))el.remove();});
+          if(!m623Col.querySelector('#febox')&&typeof feHtml==='function')m623Col.insertAdjacentHTML('beforeend',feHtml());
+        }else if(!app.querySelector('#febox')&&typeof feHtml==='function'){
+          const host=app.querySelector('.dt393-native')||app;
+          host.insertAdjacentHTML('beforeend',feHtml());
+        }
         if(typeof feCarrega==='function')void feCarrega();
       }
     }catch(_){}

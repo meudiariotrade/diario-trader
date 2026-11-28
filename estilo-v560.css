@@ -1,4 +1,4 @@
-/* Gerado de src/app-theme.css · SHA256 63db0f24b647253a2e6b56c736e95539ae597fab5ed619d2001ed8b495982b2b */
+/* Gerado de src/app-theme.css · SHA256 70c9399b686dbd23e962d1fb05f53eb66bc8de7334d79a419f7c10166d5a7fff */
 :root{--ui-bg:#08090D;--ui-chrome:#0C0E14;--ui-card:#12151E;--ui-card-line:rgba(255,255,255,.06);--ui-sub:#181C28;--ui-accent:#F59E0B;--ui-num:#FFFFFF;--ui-title:#E2E8F0;--ui-label:#64748B;--ui-text-2:#94A3B8;--ui-gain:#10B981;--ui-loss:#EF4444}
 :root[data-v427-tema=claro],html[data-v427-tema=claro]{--ui-bg:#F3F0E8;--ui-chrome:#F3F0E8;--ui-card:#FBFAF6;--ui-card-line:#DDD8CC;--ui-sub:#EFEBE1;--ui-accent:#B45309;--ui-num:#14151A;--ui-title:#1A1B1E;--ui-label:#5B5649;--ui-text-2:#45413A;--ui-gain:#047857;--ui-loss:#B91C1C}
 html[data-v427-tema=claro] .ui-cta{color:#FFFFFF}
@@ -7722,6 +7722,24 @@ html body #app .og1054 li.og-vazio{display:block;color:var(--ui-label,#64748B);f
  html:root:root body.mkt549.dt1060-pc-news #app#app #mknews .dt968-bdg{font-size:11px!important;font-weight:700!important;padding:2px 8px!important;border-radius:999px!important;background:rgba(255,255,255,.07)!important;color:#cbd5e1!important}
  html:root:root body.mkt549.dt1060-pc-news #app#app #mknews .dt968-bdg.urg{background:rgba(244,63,94,.2)!important;color:#fda4af!important}
  html:root:root body.mkt549.dt1060-pc-news #app#app #mknews .dt968-title{font-size:15px!important;font-weight:600!important;line-height:1.4!important;color:#f1f5f9!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews a.card .sm.mut{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;width:100%!important;margin-top:8px!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews a.card .dt969-acts{display:inline-flex!important;align-items:center!important;gap:6px!important;margin-left:auto!important;flex:0 0 auto!important}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews a.card button.dt968-ia-chip{height:26px!important;min-height:26px!important;padding:0 10px!important;border-radius:999px!important;font-size:11.5px!important;font-weight:700!important;white-space:nowrap!important;cursor:pointer}
+ html:root:root body.mkt549.dt1060-pc-news #app#app #mknews a.card button.dt969-why-btn{height:26px!important;min-height:26px!important;padding:0 7px!important;border-radius:999px!important;cursor:pointer}
+}
+
+/* v1066 — Fluxo estrangeiro na B3 compacto dentro da coluna lateral de Mercado no PC */
+@media (min-width:1100px){
+ html:root body #app #cotbox .m623-term #febox{
+  break-inside:avoid!important;display:block!important;width:100%!important;
+  margin:0 0 12px!important;padding:10px 12px!important;border-radius:6px!important;
+  font-size:12px!important;box-sizing:border-box!important
+ }
+ html:root body #app #cotbox .m623-term #febox .top{gap:6px!important}
+ html:root body #app #cotbox .m623-term #febox .top b{font-size:13px!important}
+ html:root body #app #cotbox .m623-term #febox b[style*="font-size:18px"]{font-size:15px!important}
+ html:root body #app #cotbox .m623-term #febox p,
+ html:root body #app #cotbox .m623-term #febox .sm{font-size:11.5px!important;line-height:1.4!important}
 }
 
 /* v1064 — Varredura Desktop: busca ampla centralizada no cabeçalho + aproveitamento total da largura útil e zero colunas/cards vazios (somente PC >=769px; iPhone e Terminal intocados) */

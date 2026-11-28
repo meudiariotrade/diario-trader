@@ -5021,7 +5021,7 @@ function m623Html() {
   return `<div class="m623-term${M624.mon ? " m624-on" : ""}" role="region" aria-label="Terminal de mercado">${monBar}
 <div class="m623-col">${m623Bloco("Índices Europa e Ásia", g("idx"))}${m606DiHtml()}${m623Noticias()}${bar}</div>
 <div class="m623-col">${m623Bloco("Moedas", moedas, fhSelo(moedas))}${m623Bloco("Emergentes", g("em"), fhSelo(g("em")))}</div>
-<div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", futuros, fhSelo(futuros))}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", typeof bncTop20 === "function" ? bncTop20(g("cri")) : g("cri"), bncSelo())}</div>
+<div class="m623-col">${m623Bloco("Commodities", g("cmd"))}${m623Bloco("Futuros", futuros, fhSelo(futuros))}${m623Bloco("Treasuries e juros globais", g("tsy"))}${m623Bloco("Cripto ao vivo", typeof bncTop20 === "function" ? bncTop20(g("cri")) : g("cri"), bncSelo())}${typeof feHtml === "function" ? feHtml() : ""}</div>
 </div><p class="m623-src">TradingView (screener público; B3 com ~15 min de atraso) · WIN e WDO pelo Profit quando a ponte está ligada · EUA, ADRs e moedas pela Finnhub ao vivo (TradingView fora do pregão) · Cripto pela Binance em tempo real · clique num ativo para abrir o gráfico · <i class="m623-dot on"></i> aberto · <i class="m623-dot"></i> fechado${M606.v && M606.v.em ? ' · ' + esc(m606Consulta()) : ''}</p>`;
 }
 document.addEventListener(
