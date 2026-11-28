@@ -222,7 +222,7 @@ function vMundo(e) {
           })
           .join(
             "",
-          )}<div class="sm mut" style="margin-top:8px">Toque em qualquer quadro para ver o que é, o peso no seu mercado e o que acontece se subir ou cair. <b>mês</b> = variação desde o fechamento do mês passado (candle mensal do TradingView); <b>30d</b> = últimos 30 dias, quando o mês não vem. Atualiza sozinho a cada minuto com a aba aberta. ● ● ● = peso alto, ● ● = médio, ● = baixo. Fonte: ${a.fontes ? `TradingView em ${a.fontes.tv} de ${a.fontes.tv + a.fontes.yahoo} ativos${a.fontes.yahoo ? `, Yahoo nos outros ${a.fontes.yahoo}` : ""}` : "Yahoo Finance"}, com atraso. ${a.fontes && a.fontes.suspeitos && a.fontes.suspeitos.length ? `Sem variação confiável hoje: ${esc(a.fontes.suspeitos.join(", "))} (a fonte mandou um número absurdo e o app descartou). ` : ""}Juros em pontos-base (pb).</div></div>`
+          )}<div class="sm mut" style="margin-top:8px">Toque em qualquer quadro para ver o que é, o peso no seu mercado e o que acontece se subir ou cair. <b>mês</b> = variação desde o fechamento do mês passado; <b>30d</b> = últimos 30 dias. Atualiza a cada minuto com a aba aberta. ● ● ● = peso alto, ● ● = médio, ● = baixo. ${a.fontes && a.fontes.suspeitos && a.fontes.suspeitos.length ? `Sem variação confiável hoje: ${esc(a.fontes.suspeitos.join(", "))}. ` : ""}Juros em pontos-base (pb).</div></div>`
       : MDO.busy
         ? '<div class="card sm mut">Carregando…</div>'
         : ""

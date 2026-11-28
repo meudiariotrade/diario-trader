@@ -114,7 +114,7 @@
    '<div class="hf-grid hf-g6"><div class="hf-card hf-span2"><h4>Lucro líquido ('+MO.trim()+')</h4>'+linha(c.serie.map(x=>({x:x.ano,y:x.luc})),{fmtY:bi,barras:true})+'</div>'+
    cagrCard('CAGR de lucros',cr.lucros)+cagrCard('CAGR do valor de mercado',cr.valorMercado)+cagrCard('CAGR do valor intrínseco',cr.intrinseco)+cagrCard('Retorno total (com dividendos)',cr.totalReturn,'tr')+'</div>'+
    '<div class="hf-grid hf-g2">'+dividendosHtml(c,pos)+'</div>'+
-   '<p class="hf-fonte">Fontes: '+(meta.cik?'SEC EDGAR (XBRL dos relatórios anuais 10-K/20-F, '+E((meta.exercicios||[]).join('–'))+')':'CVM (DFP: DRE, balanço, DFC e composição do capital, '+E((meta.exercicios||[]).join('–'))+')')+', Yahoo Finance (preço mensal e dividendos). Retorno total acumulado: '+pct(cr.totalReturnAcum,0)+'. Dados atualizados semanalmente. Não é recomendação.</p>';
+   '<p class="hf-fonte">Demonstrativos anuais '+(meta.exercicios?.length?'('+E(meta.exercicios.join('–'))+') ':'')+'e histórico ajustado de preços e proventos. Retorno total acumulado: '+pct(cr.totalReturnAcum,0)+'.</p>';
  }
 
  /* ---------- carga (Cloudflare + cache local) ---------- */

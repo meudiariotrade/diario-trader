@@ -69,9 +69,8 @@ async function build(m,rows,tf='1d'){
  }
  function footer(){
   rect(M,791,W-2*M,.7,col.line);
-  write('Estudo educacional · Dados de mercado sujeitos a atraso · Sem recomendação',M,802,7,reg,col.muted);
+  write('Diário de Trader · Estudo técnico',M,802,7,reg,col.muted);
   write(String(pageCount).padStart(2,'0'),W-M,802,8,reg,col.muted,true);
-  write('SHA-256 '+hash+' · Fórmula tec-762 / app v768',M,818,6,reg,col.muted);
  }
  function comp(r){
   const x=r.pdfSide==='sell'?r.sell:r.buy;
@@ -83,7 +82,7 @@ async function build(m,rows,tf='1d'){
   const calc=x.pillars.reduce((a,p)=>a+p.score*p.weight/10,0);
   return weights===100&&Math.abs(calc-x.score)<=.11&&x.barCount>=210;
  }
- const region=m==='br'?'BRASIL / B3':'EUA & CRIPTO / NYSE · NASDAQ · BINANCE';
+ const region=m==='br'?'BRASIL / B3':'EUA & CRIPTO';
  newPage(region,region+' · '+rows.length+' ativos · '+tf,true);
  write('RANKING TÉCNICO  |  0 A 10',M,y,10,bold,col.gold);y+=31;
  y=wrap('Os ativos são ordenados pelos quatro pilares calculados sobre candles reais. Um número elevado não substitui a confirmação do preço, volume e risco. O Top automático exclui sinais esticados e sem confirmação de OBV.',M,y,W-2*M,10,15)+24;
@@ -95,15 +94,15 @@ async function build(m,rows,tf='1d'){
   write(String(i+1).padStart(2,'0'),M+10,y+10,9,bold);
   logo(r.ticker,M+44,y+8,14);write(r.ticker,M+62,y+10,9,bold);write(s.side,M+178,y+10,8);
   write(n(x.score,1)+'/10',M+327,y+10,9,bold);
-  write(verified(x)?'CÁLCULO CONFERE':'REVISAR BASE',M+395,y+10,7.4,bold,verified(x)?col.green:col.red);
+  write(verified(x)?'CONFERIDO':'REVISAR',M+395,y+10,7.4,bold,verified(x)?col.green:col.red);
   y+=33;
  }
- y+=29;y=wrap('Snapshot local: '+new Date().toLocaleString('pt-BR')+' · Período: '+tf+'. Fontes de preços informadas individualmente. RS Rating usa percentis da amostra se houver benchmark e pares suficientes; não é a classificação proprietária de terceiros.',M,y,W-2*M,8,12,reg,col.muted,6);footer();
+ y+=29;y=wrap('Atualizado em '+new Date().toLocaleString('pt-BR')+' · Período: '+tf+'.',M,y,W-2*M,8,12,reg,col.muted,4);footer();
  for(let i=0;i<rows.length;i++){
-  const r=rows[i],{x,side}=comp(r);newPage(String(i+1).padStart(2,'0')+' / '+String(rows.length).padStart(2,'0')+'   '+r.ticker+'   '+side,'OHLCV '+tf+' · '+(r.source||'fonte não informada')+' · '+(r.updatedAt||'data indisponível'));
+  const r=rows[i],{x,side}=comp(r);newPage(String(i+1).padStart(2,'0')+' / '+String(rows.length).padStart(2,'0')+'   '+r.ticker+'   '+side,'Período '+tf+' · '+(r.updatedAt||'data indisponível'));
   logo(r.ticker,W-M-34,80,34);write('NOTA TÉCNICA',M,y,10,bold,col.gold);
   write(n(x.score,1)+' / 10',M,y+18,23,serif);
-  write(verified(x)?'CÁLCULO CONFERE':'EXIGE CONFERÊNCIA',W-M,y+28,9,bold,verified(x)?col.green:col.red,true);y+=76;
+  write(verified(x)?'CONFERIDO':'EXIGE CONFERÊNCIA',W-M,y+28,9,bold,verified(x)?col.green:col.red,true);y+=76;
   rect(M,y,W-2*M,60,color(P,'#F2F3F4'));
   y=wrap('Tendência '+(x.metrics?.mtf===true?'MTF alinhada':x.metrics?.mtf===null?'MTF não verificável':'MTF divergente')+'. OBV '+(x.metrics?.obvSignal||'não confirmado')+'. Volume relativo '+n(x.metrics?.rvol,2)+'x. HV semanal '+n(x.metrics?.hvWeek)+'%.',M+11,y+10,W-2*M-22,9,13,reg,col.ink,3)+22;
   write('COMPOSIÇÃO DA NOTA',M,y,10,bold,col.gold);y+=28;
@@ -121,13 +120,12 @@ async function build(m,rows,tf='1d'){
   const hist=Object.entries(names).map(([k,label])=>{
    const v=bt[k];return label+': '+(v?.winRate==null?'amostra insuficiente':n(v.winRate,1)+'% acerto; E='+n(v.expectancyR,2)+'R');
   }).join(' · ');
-  y=wrap('Walk-forward exploratório (custos estimados '+n(pl.costEstimateBps,0)+' bps, sem execução no Profit): '+hist+'.',M,y+8,W-2*M,8,12,reg,col.muted,3);
+  y=wrap('Histórico exploratório (custos estimados '+n(pl.costEstimateBps,0)+' bps): '+hist+'.',M,y+8,W-2*M,8,12,reg,col.muted,3);
   footer();
   for(const [kind,label] of [['trend','Tendência · Médias · OBV'],['fibo','Fibonaccing · Plano de Trade'],['elliott','Elliott · ZigZag e Pivôs']]){
    const graph=desenharGrafico(r,x,kind,tf,samples[i]);
    newPage(String(i+1).padStart(2,'0')+' / 10   '+r.ticker+'   '+label,
-    'OHLCV do ativo · '+tf+' · '+(r.chartSource||r.source||'fonte não informada')+
-    ' · Último candle: '+new Date(samples[i].at(-1).t).toLocaleString('pt-BR'));
+    'Período '+tf+' · Último candle: '+new Date(samples[i].at(-1).t).toLocaleString('pt-BR'));
    const png=await doc.embedPng(graph.png);
    const wChart=W-2*M,hChart=wChart*graph.height/graph.width;
    page.drawImage(png,{x:M,y:H-y-hChart,width:wChart,height:hChart});

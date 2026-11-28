@@ -207,7 +207,7 @@ async function build(m,rows,opts={}){
   L.footer();
  }
  for(const pg of doc.getPages()){
-  pg.drawText('SHA-256 '+hash+' · Fórmula quant_v2_score / app v798',{
+  pg.drawText('Diário de Trader · Dossiê Quantitativo',{
    x:43,y:20,font:loaded[0],size:6,color:P.rgb(.38,.42,.46)});
  }
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:(opts.automatic?'Top10-Quantitativo-':'Dossie-')+m+'-'+new Date().toISOString().slice(0,10)+'-'+rows.length+'-acoes.pdf',pages:doc.getPageCount()};

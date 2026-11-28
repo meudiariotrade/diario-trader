@@ -64,7 +64,7 @@ L.views.eco=()=>{
  '<label>Amostra<select data-eco-select="periodo">'+[60,126,252].map(n=>'<option value="'+n+'"'+(S.periodo===n?' selected':'')+'>'+n+' pregões</option>').join('')+'</select></label>'+
  '<button data-eco-btn="series" class="eco-action" type="button"'+(S.busca?' disabled':'')+'>'+(S.busca?'Consultando…':'Atualizar históricos')+'</button>';
  const d=economia();
- const status=L.note(S.busca?'Consultando histórico diário dos ativos…':S.erroSerie?L.esc(S.erroSerie):'Fonte: endpoint Candles existente (Yahoo Finance, intervalo diário, até 2 anos).');
+ const status=L.note(S.busca?'Consultando histórico diário dos ativos…':S.erroSerie?L.esc(S.erroSerie):'Série histórica diária (até 2 anos).');
  const juros=L.slider('rf','Taxa livre de risco anual · referência CAPM',0,25,.25,'%');
  if(!d)return L.card('Séries do aplicativo · MQO, regressão e CAPM','<div class="eco-controls">'+opts+'</div>'+juros+status+
  L.note('Sem amostra suficiente: são necessários pelo menos 20 retornos coincidentes. Nenhum retorno ou resultado é preenchido artificialmente.'));

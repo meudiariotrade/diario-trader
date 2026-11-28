@@ -175,7 +175,7 @@
    '<div style="margin-top:8px"><p class="an-kicker" style="margin:0 0 6px">🔗 SIMULADOR EFEITO DOMINÓ (1 CLIQUE · PROTOCOLO DOIS LADOS DA MOEDA)</p>'+
    '<div class="an-br-acts" style="flex-wrap:wrap;gap:6px">'+cenarios.map(([lab,pr])=>'<button type="button" class="btn s" data-an-aurea-prompt="'+E(pr)+'">'+lab+'</button>').join('')+'</div></div>'+
    (cerebroOut&&cerebroFor==='dalio'?'<div class="an-cerebro-out"><p class="an-kicker">LEITURA DO CÉREBRO (SEUS LIVROS DE RAY DALIO + DADOS FISCAIS ATUAIS)</p><div class="an-report">'+M.markdown(cerebroOut)+'</div></div>':'')+
-   '<p class="an-br-nota">Fontes públicas: Banco Central do Brasil (SGS), Yahoo Finance (^TNX/DXY) e FMI. Leitura técnica sem viés político; não é recomendação.</p></section>';
+   '<p class="an-br-nota">Leitura macro estrutural consolidada sobre indicadores oficiais e mercado global.</p></section>';
  }
  function helmerBriefingCard(){
   const poderes=[

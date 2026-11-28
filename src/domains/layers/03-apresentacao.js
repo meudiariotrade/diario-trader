@@ -1803,10 +1803,10 @@ try {
               return `${mm}:${ss}`;
             };
             return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center;justify-content:space-between">
-              <button type="button" class="dt975-badge ${clsTv}" data-v4tab="regras" style="cursor:pointer;border:1px solid currentColor">${txtTv}</button>
+              <button type="button" class="dt975-badge ${clsTv}" data-dt393-route="regras" style="cursor:pointer;border:1px solid currentColor">${txtTv}</button>
               <div style="display:flex;gap:6px;align-items:center">
                 <button type="button" class="dt975-badge" data-dt983-evit-tog="1" style="cursor:pointer">✋ Evitei${evMes ? ` (${evMes})` : ""}</button>
-                <button type="button" class="dt975-badge" data-v4tab="contratos" style="cursor:pointer">⚖️ Contratos</button>
+                <button type="button" class="dt975-badge" data-dt393-route="contratos" style="cursor:pointer">⚖️ Contratos</button>
               </div>
             </div>
             <div class="dt983-evit-pop" data-dt983-evit-box hidden>
@@ -1815,7 +1815,7 @@ try {
               <button type="button" data-dt983-evit="Lateral">Mercado lateral</button>
               <button type="button" data-dt983-evit="Fora do horário">Fora do horário</button>
             </div>
-            <div class="dt983-candle" data-dt983-candle="1"><span>⏱️ Fechamento de vela</span><span>5m <b data-c="5">${fmtC(5)}</b> · 15m <b data-c="15">${fmtC(15)}</b> · 60m <b data-c="60">${fmtC(60)}</b></span></div>`;
+            <div class="dt983-candle" data-dt983-candle="1" title="Tempo restante para fechar a barra atual nos gráficos de 5, 15 e 60 minutos"><span>⏱️ Próximo fechamento de candle</span><span>5m <b data-c="5">${fmtC(5)}</b> · 15m <b data-c="15">${fmtC(15)}</b> · 60m <b data-c="60">${fmtC(60)}</b></span></div>`;
           })()}
         </section><div class="dt975-calc-slot"></div>`,
         A = e

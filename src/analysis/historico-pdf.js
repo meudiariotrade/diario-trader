@@ -38,7 +38,7 @@ async function gerar(tk,c,meta={},pos=null){
   txt(tk+' · '+(meta.nome||''),M+(lw?lw+6:0),y+3,{bold:true,size:14,max:CW-150});
   txt('Avaliação histórica · '+(meta.exercicios||[]).join('–'),W-M,y+6,{size:8,color:C.mut,align:'right'});
   y+=30;lin(M,y,W-M,y);y+=10};
- const rodape=()=>{txt('Fontes: '+(us?'SEC EDGAR XBRL (10-K/20-F)':'CVM (DFP)')+' e Yahoo Finance (preço mensal e dividendos). Cálculo no aparelho. Material educativo, não é recomendação.',M,H-26,{size:6.6,color:C.mut,max:CW});
+ const rodape=()=>{txt('Demonstrativos anuais consolidados e histórico ajustado de preços e proventos.',M,H-26,{size:6.6,color:C.mut,max:CW});
   txt('Gerado em '+new Date().toLocaleString('pt-BR')+' · Diário de Trader',W-M,H-16,{size:6.6,color:C.mut,align:'right'})};
  const sec=t=>{if(y>H-120){rodape();nova()}txt(t,M,y,{bold:true,size:10.5});y+=18};
  // Velocímetro vetorial (mesmas zonas da tela)

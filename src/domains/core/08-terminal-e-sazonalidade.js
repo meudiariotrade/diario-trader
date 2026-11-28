@@ -359,7 +359,7 @@ function vPainelMk() {
   return `<div class="card"><div class="top"><b>📈 Visão geral do mercado</b><button class="btn s" data-pnlb="rf">${PNL.busy ? "…" : "↻ Atualizar"}</button></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${[13, 26, 52, 104].map((t) => `<button class="btn${PNL.sem === t ? "" : " s"}" data-pnlb="sem" data-v="${t}">${t === 104 ? "2 anos" : t === 52 ? "52 semanas" : t + " sem."}</button>`).join("")}</div>
   ${PNL.err ? `<div class="sm am">${esc(PNL.err)}</div>` : ""}<div class="sm mut">Verde ou vermelho pela variação do dia. Toque num gráfico para ampliar.</div></div>
-  ${e ? `<div class="pnl-g">${e.itens.map(pnlTile).join("")}</div><div class="sm mut" style="margin:8px 2px">Cotação e variação do dia: ${e.fonte && /TradingView/.test(e.fonte) ? "TradingView (como no Mapa do mercado)" : "Yahoo Finance"}; gráfico com fechamentos diários do Yahoo; minério de Dalian: Sina. Com atraso${e.em ? "; atualizado às " + hm(Date.parse(e.em)) : ""}. Treasury 10 anos em % ao ano.</div>` : PNL.busy ? '<div class="card sm mut">Carregando os gráficos…</div>' : ""}`;
+  ${e ? `<div class="pnl-g">${e.itens.map(pnlTile).join("")}</div><div class="sm mut" style="margin:8px 2px">Cotações com atraso${e.em ? "; atualizado às " + hm(Date.parse(e.em)) : ""}. Treasury 10 anos em % ao ano.</div>` : PNL.busy ? '<div class="card sm mut">Carregando os gráficos…</div>' : ""}`;
 }
 {
   const e = HUB_M.findIndex((t) => t[0] === "mercado:mu");
