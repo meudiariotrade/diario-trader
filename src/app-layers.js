@@ -33023,10 +33023,10 @@ try {
               return `${mm}:${ss}`;
             };
             return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center;justify-content:space-between">
-              <button type="button" class="dt975-badge ${clsTv}" data-v4tab="regras" style="cursor:pointer;border:1px solid currentColor">${txtTv}</button>
+              <button type="button" class="dt975-badge ${clsTv}" data-dt393-route="regras" style="cursor:pointer;border:1px solid currentColor">${txtTv}</button>
               <div style="display:flex;gap:6px;align-items:center">
                 <button type="button" class="dt975-badge" data-dt983-evit-tog="1" style="cursor:pointer">✋ Evitei${evMes ? ` (${evMes})` : ""}</button>
-                <button type="button" class="dt975-badge" data-v4tab="contratos" style="cursor:pointer">⚖️ Contratos</button>
+                <button type="button" class="dt975-badge" data-dt393-route="contratos" style="cursor:pointer">⚖️ Contratos</button>
               </div>
             </div>
             <div class="dt983-evit-pop" data-dt983-evit-box hidden>
@@ -33035,7 +33035,7 @@ try {
               <button type="button" data-dt983-evit="Lateral">Mercado lateral</button>
               <button type="button" data-dt983-evit="Fora do horário">Fora do horário</button>
             </div>
-            <div class="dt983-candle" data-dt983-candle="1"><span>⏱️ Fechamento de vela</span><span>5m <b data-c="5">${fmtC(5)}</b> · 15m <b data-c="15">${fmtC(15)}</b> · 60m <b data-c="60">${fmtC(60)}</b></span></div>`;
+            <div class="dt983-candle" data-dt983-candle="1" title="Tempo restante para fechar a barra atual nos gráficos de 5, 15 e 60 minutos"><span>⏱️ Próximo fechamento de candle</span><span>5m <b data-c="5">${fmtC(5)}</b> · 15m <b data-c="15">${fmtC(15)}</b> · 60m <b data-c="60">${fmtC(60)}</b></span></div>`;
           })()}
         </section><div class="dt975-calc-slot"></div>`,
         A = e
@@ -45182,7 +45182,7 @@ L.views.eco=()=>{
  '<label>Amostra<select data-eco-select="periodo">'+[60,126,252].map(n=>'<option value="'+n+'"'+(S.periodo===n?' selected':'')+'>'+n+' pregões</option>').join('')+'</select></label>'+
  '<button data-eco-btn="series" class="eco-action" type="button"'+(S.busca?' disabled':'')+'>'+(S.busca?'Consultando…':'Atualizar históricos')+'</button>';
  const d=economia();
- const status=L.note(S.busca?'Consultando histórico diário dos ativos…':S.erroSerie?L.esc(S.erroSerie):'Fonte: endpoint Candles existente (Yahoo Finance, intervalo diário, até 2 anos).');
+ const status=L.note(S.busca?'Consultando histórico diário dos ativos…':S.erroSerie?L.esc(S.erroSerie):'Série histórica diária (até 2 anos).');
  const juros=L.slider('rf','Taxa livre de risco anual · referência CAPM',0,25,.25,'%');
  if(!d)return L.card('Séries do aplicativo · MQO, regressão e CAPM','<div class="eco-controls">'+opts+'</div>'+juros+status+
  L.note('Sem amostra suficiente: são necessários pelo menos 20 retornos coincidentes. Nenhum retorno ou resultado é preenchido artificialmente.'));
