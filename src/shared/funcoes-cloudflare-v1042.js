@@ -11,7 +11,7 @@
   // Fase B (v1054): o Worker responde 503 enquanto faltar alguma chave; aí o app usa a função antiga.
   var MIGRADAS = new Set(['terminal', 'mesa-macro', 'sazonal-extras', 'finnhub-token',
     'analise', 'resumo', 'revista-ia', 'conhecimento-ia', 'aulas', 'mesa',
-    'logos', 'series', 'screener']);
+    'logos', 'series', 'screener', 'conta']);
   var anterior = window.fetch.bind(window);
 
   function alvo(input) {

@@ -5,7 +5,7 @@ const env={ALLOWED_ORIGIN:'https://meudiariotrade.github.io',SUPABASE_URL:'https
 const req=(nome,init={})=>new Request('https://worker.test/v1/fn/'+nome,{headers:{Origin:'https://meudiariotrade.github.io',...(init.headers||{})},...init});
 test('lista as funções das fases A e B (v1054)',async()=>{
  const {FUNCOES_V1042}=await mod();
- assert.deepEqual([...FUNCOES_V1042].sort(),['analise','aulas','conhecimento-ia','finnhub-token','logos','mesa','mesa-macro','resumo','revista-ia','sazonal-extras','screener','series','terminal']);
+ assert.deepEqual([...FUNCOES_V1042].sort(),['analise','aulas','conhecimento-ia','conta','finnhub-token','logos','mesa','mesa-macro','resumo','revista-ia','sazonal-extras','screener','series','terminal']);
 });
 test('fase B: sem as chaves no Worker responde 503 para o app voltar à origem anterior',async()=>{
  const {funcaoV1042,faltamSegredosV1054}=await mod();

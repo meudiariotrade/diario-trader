@@ -25,7 +25,7 @@ export function dentroDoLimite(chave: string, max: number, janelaMs = 60_000, ag
 }
 
 /** Versão das funções: o app compara com a dele na tela "Status do sistema". */
-export const VERSAO_FN = 'v90';
+export const VERSAO_FN = 'v91';
 /** ALLOWED_ORIGINS aceita o endereço escrito com caminho ou barra no final ("https://x.github.io/diario-trader/" vira "https://x.github.io"). */
 export const origemLimpa = (x: string) => { const s = String(x || '').trim(); if (!s) return ''; try { return new URL(s).origin; } catch { return s.replace(/\/+$/, ''); } };
 /** GET ?versao=1: responde só o nome e a versão da função (nenhum dado de ninguém), para o diagnóstico do app. */
@@ -40,6 +40,8 @@ export function versaoResp(req: Request, nome: string, cors: Record<string, stri
 // Exige login + a senha de novo + a palavra EXCLUIR. Publicar com "Verify JWT" desligado, como as outras funções.
 
 const SB = Deno.env.get('SUPABASE_URL') || '', ANON = Deno.env.get('SUPABASE_ANON_KEY') || '', SVC = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+/** v1061: diário (D1) e arquivos (KV) da Cloudflare também são apagados, pelo Worker diario-sync. */
+const SYNC = (Deno.env.get('DIARIO_SYNC_URL') || 'https://diario-sync.lucianosilva43567.workers.dev').replace(/\/+$/, '');
 const ORIGENS = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(origemLimpa).filter(Boolean);
 const corsFor = (req: Request) => {
   const h: Record<string, string> = { 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', Vary: 'Origin' };
@@ -97,6 +99,13 @@ Deno.serve(async (req) => {
       if (r.status === 404 || (r.status === 400 && /column|does not exist|42703/i.test(txt))) feito[t] = 'não existe'; // tabela ou coluna que este projeto não tem
       else throw new Error(`Não consegui apagar ${t}: ${r.status} ${txt.slice(0, 120)}`);
     }
+    // v1061: dados na Cloudflare (diário no D1, arquivos no KV). Mesmo login + senha + EXCLUIR.
+    // Se falhar, NÃO remove o login: a pessoa repete e a limpeza continua de onde parou.
+    const tk = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+    const cf = await fetch(SYNC + '/v1/conta/excluir', { method: 'POST', headers: { Authorization: 'Bearer ' + tk, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senha: b.senha, confirma: 'EXCLUIR' }), signal: AbortSignal.timeout(60_000) }).catch(() => null);
+    if (!cf || !cf.ok) throw new Error('Não consegui apagar seus dados na Cloudflare (' + (cf ? cf.status : 'sem resposta') + ').');
+    feito.cloudflare = 'ok';
     // As demais tabelas pessoais usam ON DELETE CASCADE; não duplicar sua limpeza aqui.
     const a = await fetch(`${SB}/auth/v1/admin/users/${u.id}`, { method: 'DELETE', headers: svc() });
     if (!a.ok) throw new Error('Os dados foram apagados, mas não consegui remover o login: ' + a.status);

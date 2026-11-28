@@ -181,6 +181,54 @@ async function backups(req,env,uid,url,origin){
  return out({error:'metodo_invalido'},405,origin,env);
 }
 
+/* v1061 (LGPD): exclusão de conta também na Cloudflare. Desde a v901/v903 o diário (D1) e os
+ * arquivos (KV) moram aqui; antes, excluir a conta removia o login mas deixava estes dados.
+ * Exige o mesmo que a função "conta": login válido + senha conferida de novo + "EXCLUIR".
+ * Apaga SOMENTE o que pertence ao UID autenticado (KV por prefixo "uid:" e D1 com WHERE owner=?).
+ */
+const EXCLUSAO_USO=new Map();
+const TABELAS_CONTA=[['diario_snapshots','user_id'],['private_files','owner'],['private_documents','owner'],
+ ['private_migration_progress','owner'],['profit_candles_private','owner'],['private_file_transfer_errors','owner']];
+function exclusaoPermitida(uid,agora=Date.now()){
+ const lista=(EXCLUSAO_USO.get(uid)||[]).filter(t=>agora-t<3600000);
+ if(lista.length>=5){EXCLUSAO_USO.set(uid,lista);return false}
+ lista.push(agora);EXCLUSAO_USO.set(uid,lista);if(EXCLUSAO_USO.size>2000)EXCLUSAO_USO.clear();return true;
+}
+async function excluirContaV1061(req,env,uid,origin){
+ if(req.method!=='POST')return out({error:'metodo_invalido'},405,origin,env);
+ if(!exclusaoPermitida(uid))return out({error:'muitas_tentativas'},429,origin,env);
+ let body;try{body=await req.json()}catch{return out({error:'json_invalido'},400,origin,env)}
+ if(String(body?.confirma||'').trim().toUpperCase()!=='EXCLUIR')return out({error:'confirmacao_ausente'},400,origin,env);
+ const senha=body?.senha;
+ if(typeof senha!=='string'||!senha||senha.length>200)return out({error:'senha_incorreta'},403,origin,env);
+ const token=(req.headers.get('authorization')||'').replace(/^Bearer\s+/i,'').trim();
+ const base=new URL(env.SUPABASE_URL).origin;
+ const quem=await fetch(base+'/auth/v1/user',{headers:{Authorization:'Bearer '+token,apikey:env.SUPABASE_ANON_KEY},redirect:'manual',signal:AbortSignal.timeout(7000)}).catch(()=>null);
+ const usuario=quem?.ok?await quem.json().catch(()=>null):null;
+ if(usuario?.id!==uid||typeof usuario?.email!=='string')return out({error:'login_invalido'},401,origin,env);
+ const conf=await fetch(base+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:env.SUPABASE_ANON_KEY,'Content-Type':'application/json'},
+  body:JSON.stringify({email:usuario.email,password:senha}),redirect:'manual',signal:AbortSignal.timeout(8000)}).catch(()=>null);
+ const confJ=conf?.ok?await conf.json().catch(()=>null):null;
+ if(confJ?.user?.id!==uid)return out({error:'senha_incorreta'},403,origin,env);
+ const apagado={kv:0};
+ if(env.FILES_KV){
+  const prefix=uid+':';let cursor,voltas=0;
+  do{
+   if(++voltas>50)return out({error:'limpeza_pendente',apagado},409,origin,env);
+   const page=await env.FILES_KV.list({prefix,cursor,limit:1000});
+   const keys=(page.keys||[]).map(k=>k.name).filter(n=>typeof n==='string'&&n.startsWith(prefix));
+   for(let i=0;i<keys.length;i+=50)await Promise.all(keys.slice(i,i+50).map(k=>env.FILES_KV.delete(k)));
+   apagado.kv+=keys.length;
+   cursor=page.list_complete?undefined:page.cursor;
+  }while(cursor);
+ }
+ for(const [tabela,coluna] of TABELAS_CONTA){
+  try{const r=await env.DB.prepare('DELETE FROM '+tabela+' WHERE '+coluna+'=?').bind(uid).run();apagado[tabela]=Number(r?.meta?.changes)||0}
+  catch(e){if(/no such table/i.test(String(e?.message||e)))apagado[tabela]='nao_existe';else throw e}
+ }
+ return out({ok:true,apagado},200,origin,env);
+}
+
 /* v902: migração paginada, somente leitura do Supabase PostgREST do próprio usuário.
  * Nunca migra logs ou Analytics; rows são isoladas por owner no D1.
  */
@@ -506,10 +554,12 @@ export default {
   const isBackup=url.pathname==='/v1/backups'||url.pathname.startsWith('/v1/backups/');
   const isProfit=url.pathname==='/v1/profit-candles';
   const isRecords=url.pathname.startsWith('/v1/records/');
-  if(!isDiary&&!isFiles&&!isMigration&&!isBackup&&!isProfit&&!isRecords)return out({error:'nao_encontrado'},404,origin,env);
+  const isConta=url.pathname==='/v1/conta/excluir';
+  if(!isDiary&&!isFiles&&!isMigration&&!isBackup&&!isProfit&&!isRecords&&!isConta)return out({error:'nao_encontrado'},404,origin,env);
   if(!env.DB)return out({error:'db_indisponivel'},503,origin,env);
   const uid=await owner(req,env);
   if(!uid)return out({error:'login_invalido'},401,origin,env);
+  if(isConta)return excluirContaV1061(req,env,uid,origin);
   if(isFiles)return arquivos(req,env,uid,url,origin);
   if(isBackup)return backups(req,env,uid,url,origin);
   if(isProfit)return profitCandles(req,env,uid,url,origin);
