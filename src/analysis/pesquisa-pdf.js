@@ -183,22 +183,37 @@ async function build(job){
   const heading=/^#{1,4}\s/.test(text),plain=text.replace(/^#{1,4}\s*/,'').replace(/^[>*-]\s*/,'').replace(/\*\*|[_\`]/g,'').replace(/\|/g,'   ');
   if(plain.trim())line(plain,heading);else y-=5;
  }
- // Gráficos só existem quando o serviço forneceu séries verificáveis; sem gráfico fabricado.
+ // Gráficos oficiais (1 página por gráfico): usa DiarioLivermoreGraficos (4 gráficos) quando disponível.
  const charts=Array.isArray(r.graficos_pdf)?r.graficos_pdf.slice(0,5):[];
  let chartCount=0;
  for(const chart of charts){
   if(!candlesConferidos(chart))continue;
-  for(const kind of ['trend','fibo','elliott']){
-   const visual=graficoPDF(chart,kind);if(!visual)continue;
-   const picture=await doc.embedPng(visual.png);
-   add();chartCount++;
-   line(String(chart.ticker||'')+' · '+visual.title,true);
-   const width=W-2*M,height=width*720/1320;
-   page.drawImage(picture,{x:M,y:y-height-6,width,height});
-   y-=height+26;
-   line('LEITURA TÉCNICA',true);
-   line(visual.explanation);
-   if(chart.as_of)line('Última barra: '+String(chart.as_of));
+  if(w.DiarioLivermoreGraficos?.renderAll){
+   const bundle=w.DiarioLivermoreGraficos.renderAll({ticker:chart.ticker||'ATIVO',candles:chart.candles,tf:'1d',theme:'light'});
+   for(const ch of bundle.charts){
+    if(!ch.png)continue;
+    const picture=await doc.embedPng(ch.png);
+    add();chartCount++;
+    line(String(chart.ticker||'')+' · '+ch.title,true);
+    const width=W-2*M,height=width*ch.height/ch.width;
+    page.drawImage(picture,{x:M,y:y-height-6,width,height});
+    y-=height+26;
+    line('LEITURA TÉCNICA',true);
+    line(ch.reading);
+   }
+  }else{
+   for(const kind of ['trend','fibo','elliott']){
+    const visual=graficoPDF(chart,kind);if(!visual)continue;
+    const picture=await doc.embedPng(visual.png);
+    add();chartCount++;
+    line(String(chart.ticker||'')+' · '+visual.title,true);
+    const width=W-2*M,height=width*720/1320;
+    page.drawImage(picture,{x:M,y:y-height-6,width,height});
+    y-=height+26;
+    line('LEITURA TÉCNICA',true);
+    line(visual.explanation);
+    if(chart.as_of)line('Última barra: '+String(chart.as_of));
+   }
   }
  }
  if(!chartCount){add();line('GRÁFICOS NÃO DISPONÍVEIS PARA ESTE ESTUDO',true);
@@ -211,9 +226,195 @@ async function build(job){
   doc.setTitle('Pesquisa B3 e EUA — Diário de Trader');doc.setAuthor('Diário de Trader');
  return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Pesquisa-'+String(job.id||'analise').slice(0,8)+'.pdf',pages:doc.getPageCount()};
 }
+
+function DOSSIE_18_CAPITULOS(tipo='acao_br'){
+ const t=String(tipo||'acao_br').toLowerCase();
+ const macro=t==='acao_us'?'Ciclo Macro EUA (Fed, Treasuries e Dólar)':t==='cripto'?'Ciclo de Liquidez Global e Adoção':'Ciclo Macro Brasil (Selic, Curva DI e Câmbio)';
+ const qualidade=t==='fii'?'Qualidade do Portfólio Imobiliário (Vacância, WAULT e Inquilinos)':t==='etf'?'Composição do Índice, Concentração e Tracking':t==='cripto'?'Tokenomics, Oferta e Segurança da Rede':'Qualidade Operacional, Margens e ROIC';
+ const balanco=t==='fii'?'Estrutura de Alavancagem, CRI/LTV e Caixa':t==='etf'?'Taxa de Administração, Liquidez e Eficiência Fiscal':t==='cripto'?'Atividade On-Chain e Liquidez de Mercado':'Balanço, Liquidez, Dívida e Conversão em Caixa';
+ const val=t==='fii'?'Valuation Imobiliário (P/VP, Spread sobre NTN-B e Cap Rate)':t==='etf'?'Custo-Benefício, Correlação e Papel na Carteira':t==='cripto'?'Métricas Relativas de Valor e Assimetria':'Valuation Condicional e Margem de Segurança (Graham)';
+ const proventos=t==='fii'?'Distribuição Recorrente vs. Não Recorrente':t==='acao_us'?'Retorno ao Acionista (Recompras, FCF e Dividendos)':t==='etf'?'Política de Acumulação / Distribuição':'Dividendos, Payout e Sustentabilidade';
+ return [
+  '01 · Resumo Executivo e Veredito Condicional',
+  '02 · Modelo de Negócio e Fontes de Receita',
+  '03 · Vantagens Competitivas e Barreiras (Helmer)',
+  '04 · '+macro+' (Schwartz e Dalio)',
+  '05 · '+qualidade,
+  '06 · '+balanco,
+  '07 · '+val,
+  '08 · '+proventos,
+  '09 · Governança, Alocação de Capital e Catalisadores',
+  '10 · Crítica de Inversão e Riscos Materiais (Munger)',
+  '11 · Gráfico 01 · Tendência, Médias e OBV (Livermore)',
+  '12 · Gráfico 02 · Retração de Fibonacci (Livermore)',
+  '13 · Gráfico 03 · Projeção de Fibonacci (Livermore)',
+  '14 · Gráfico 04 · Topos, Fundos, Dow, Elliott e Polaridade',
+  '15 · Mapa de Confluências e Cenários Condicionais',
+  '16 · Debate do Conselho (Convergências e Divergências)',
+  '17 · Papel na Carteira e Gestão de Risco (Markowitz)',
+  '18 · Condições de Confirmação, Invalidação e Acompanhamento'
+ ];
+}
+
+async function createEditorialDoc(){
+ const load=f=>w.DiarioChunks?.load?w.DiarioChunks.load(f):new Promise((ok,no)=>{const el=document.createElement('script');el.src=f;el.onload=ok;el.onerror=()=>no(Error(f+' indisponível'));document.head.appendChild(el)});
+ if(!w.PDFLib)await load('pdf-lib.min.js');
+ if(!w.fontkit)await load('fontkit.umd.min.js');
+ if(!w.PDFLib||!w.fontkit)throw Error('Motor PDF indisponível.');
+ const P=w.PDFLib,doc=await P.PDFDocument.create();doc.registerFontkit(w.fontkit);
+ const font=async f=>{const resp=await fetch(f,{cache:'force-cache'});if(!resp.ok)throw Error('Fonte PDF indisponível');return doc.embedFont(new Uint8Array(await resp.arrayBuffer()),{subset:true})};
+ const [normal,bold,serif]=await Promise.all([font('pdf-sans.ttf'),font('pdf-sans-bold.ttf'),font('pdf-serif-bold.ttf')]);
+ return {P,doc,normal,bold,serif};
+}
+
+async function buildGraham(ativo,opts={}){
+ const tk=String(ativo?.ticker||opts.ticker||'ATIVO').toUpperCase();
+ const {P,doc,normal,bold,serif}=await createEditorialDoc();
+ const W=595.28,H=841.89,M=43,dark=P.rgb(.067,.078,.106),gold=P.rgb(.83,.63,.09),ink=P.rgb(.09,.10,.13),muted=P.rgb(.39,.44,.50),paper=P.rgb(1,1,1);
+ let page,y,pageNo=0;
+ function newPage(title,sub,cover=false){
+  page=doc.addPage([W,H]);pageNo++;
+  page.drawRectangle({x:0,y:H-(cover?195:66),width:W,height:cover?195:66,color:dark});
+  page.drawText('DIÁRIO DE TRADER',{x:M,y:H-26,font:bold,size:9,color:gold});
+  page.drawText('GRAHAM · FUNDAMENTALISTA',{x:W-M-135,y:H-26,font:normal,size:8,color:paper});
+  page.drawRectangle({x:M,y:H-(cover?184:63),width:56,height:2,color:gold});
+  if(cover){
+   page.drawText(tk,{x:M,y:H-98,font:serif,size:30,color:paper});
+   page.drawText(title,{x:M,y:H-128,font:bold,size:13,color:gold});
+   page.drawText(sub,{x:M,y:H-150,font:normal,size:9.5,color:paper});
+   y=H-225;
+  }else{
+   page.drawText(title,{x:M,y:H-94,font:serif,size:15,color:ink});
+   y=H-120;
+  }
+ }
+ function para(txt,isHead=false){
+  const f=isHead?bold:normal,sz=isHead?10:9.5,step=isHead?17:14;
+  const words=String(txt||'Sem dado confirmado para esta seção.').replace(/\s+/g,' ').trim().split(' ');
+  let line='';
+  for(const wd of words){
+   const nxt=line?line+' '+wd:wd;
+   if(f.widthOfTextAtSize(nxt,sz)>W-2*M&&line){
+    if(y<68)newPage('Graham · '+tk,'');
+    page.drawText(line,{x:M,y,font:f,size:sz,color:isHead?gold:ink});y-=step;line=wd;
+   }else line=nxt;
+  }
+  if(line){if(y<68)newPage('Graham · '+tk,'');page.drawText(line,{x:M,y,font:f,size:sz,color:isHead?gold:ink});y-=step}
+  y-=isHead?2:8;
+ }
+ newPage('Relatório Fundamentalista · Margem de Segurança','Gerado em '+new Date().toLocaleDateString('pt-BR'),true);
+ const secs=Array.isArray(ativo?.secoes)&&ativo.secoes.length?ativo.secoes:[
+  ['TESE E VEREDITO CONDICIONAL',ativo?.resumo||'Tese fundamentalista condicional baseada nos demonstrativos e indicadores disponíveis.'],
+  ['QUALIDADE, MARGENS E ROIC',ativo?.qualidade||'Avaliação de retorno sobre capital, margens operacionais e consistência de geração de caixa.'],
+  ['BALANÇO, CAIXA E DÍVIDA',ativo?.balanco||'Estrutura de capital, liquidez e perfil de vencimentos da dívida.'],
+  ['VALUATION E MARGEM DE SEGURANÇA',ativo?.valuation||'Comparação entre preço de mercado, múltiplos históricos e métodos intrínsecos quando os insumos são válidos.'],
+  ['RISCOS E CONDIÇÃO DE INVALIDAÇÃO',ativo?.invalidacao||'Fatores que derrubam a tese e gatilhos objetivos para reavaliação.']
+ ];
+ for(const [h,body] of secs){para(h,true);para(body,false)}
+ for(let i=0;i<doc.getPageCount();i++){
+  const pg=doc.getPages()[i];
+  pg.drawText('Diário de Trader · Graham · '+tk,{x:M,y:24,font:normal,size:7,color:muted});
+  pg.drawText(String(i+1).padStart(2,'0'),{x:W-M-12,y:24,font:normal,size:7.5,color:muted});
+ }
+ doc.setTitle('Graham Fundamentalista '+tk+' · Diário de Trader');doc.setAuthor('Diário de Trader');
+ return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Graham-Fundamentalista-'+tk+'-'+new Date().toISOString().slice(0,10)+'.pdf',pages:doc.getPageCount()};
+}
+
+async function buildDossie18(ativo,opts={}){
+ const tk=String(ativo?.ticker||opts.ticker||'ATIVO').toUpperCase();
+ const tipo=opts.tipo||ativo?.tipo||'acao_br';
+ const capitulos=DOSSIE_18_CAPITULOS(tipo);
+ const {P,doc,normal,bold,serif}=await createEditorialDoc();
+ const W=595.28,H=841.89,M=43,dark=P.rgb(.067,.078,.106),gold=P.rgb(.83,.63,.09),ink=P.rgb(.09,.10,.13),muted=P.rgb(.39,.44,.50),paper=P.rgb(1,1,1);
+ let page,y;
+ function newPage(title,sub,cover=false){
+  page=doc.addPage([W,H]);
+  page.drawRectangle({x:0,y:H-(cover?205:66),width:W,height:cover?205:66,color:dark});
+  page.drawText('DIÁRIO DE TRADER',{x:M,y:H-26,font:bold,size:9,color:gold});
+  page.drawText('DOSSIÊ COMPLETO · 18 CAPÍTULOS',{x:W-M-165,y:H-26,font:normal,size:8,color:paper});
+  page.drawRectangle({x:M,y:H-(cover?194:63),width:56,height:2,color:gold});
+  if(cover){
+   page.drawText(tk,{x:M,y:H-98,font:serif,size:30,color:paper});
+   page.drawText(title,{x:M,y:H-128,font:bold,size:13,color:gold});
+   page.drawText(sub,{x:M,y:H-150,font:normal,size:9.5,color:paper});
+   y=H-235;
+  }else{
+   page.drawText(title,{x:M,y:H-92,font:serif,size:14.5,color:ink});
+   y=H-118;
+  }
+ }
+ function para(txt,isHead=false){
+  const f=isHead?bold:normal,sz=isHead?9.5:9,step=isHead?16:13.5;
+  const words=String(txt||'').replace(/\s+/g,' ').trim().split(' ');
+  let line='';
+  for(const wd of words){
+   const nxt=line?line+' '+wd:wd;
+   if(f.widthOfTextAtSize(nxt,sz)>W-2*M&&line){
+    if(y<65)newPage('Dossiê Completo · '+tk,'');
+    page.drawText(line,{x:M,y,font:f,size:sz,color:isHead?gold:ink});y-=step;line=wd;
+   }else line=nxt;
+  }
+  if(line){if(y<65)newPage('Dossiê Completo · '+tk,'');page.drawText(line,{x:M,y,font:f,size:sz,color:isHead?gold:ink});y-=step}
+  y-=isHead?2:7;
+ }
+ newPage('Dossiê Completo Integrado · Áurea, Livermore e Conselho','Classe: '+tipo.toUpperCase()+' · Gerado em '+new Date().toLocaleDateString('pt-BR'),true);
+ para('SUMÁRIO DOS 18 CAPÍTULOS',true);
+ for(const cap of capitulos)para(cap,false);
+
+ const textos=ativo?.capitulos||{};
+ const livBundle=w.DiarioLivermoreGraficos?.renderAll&&Array.isArray(ativo?.candles)&&ativo.candles.length>=20
+  ?w.DiarioLivermoreGraficos.renderAll({ticker:tk,analysis:ativo.tecnico,candles:ativo.candles,tf:opts.tf||'1d',theme:'light'}):null;
+
+ newPage('Fundamentos, Macro e Crítica · '+tk,'Capítulos 01 a 10');
+ for(let i=0;i<10;i++){
+  para(capitulos[i],true);
+  para(textos[i+1]||textos[String(i+1)]||'Leitura estruturada conforme evidências disponíveis para '+tk+' nesta revisão.',false);
+ }
+
+ // Capítulos 11 a 14: 1 página exclusiva por gráfico oficial do Livermore
+ for(let g=0;g<4;g++){
+  const ch=livBundle?.charts?.[g]||null;
+  newPage(capitulos[10+g],ch?.subtitle||'Análise gráfica condicional');
+  if(ch?.png){
+   const pic=await doc.embedPng(ch.png);
+   const wChart=W-2*M,hChart=wChart*ch.height/ch.width;
+   page.drawImage(pic,{x:M,y:y-hChart,width:wChart,height:hChart});
+   y-=hChart+22;
+  }
+  para('LEITURA TÉCNICA',true);
+  para(ch?.reading||textos[11+g]||'Histórico insuficiente para plotagem completa deste gráfico.',false);
+ }
+
+ newPage('Síntese Operacional, Conselho e Risco · '+tk,'Capítulos 15 a 18');
+ para(capitulos[14],true);
+ para(livBundle?.synthesis?.fechamento||textos[15]||'Confluências e cenários condicionais Comprador, Neutro e Vendedor.',false);
+ para(capitulos[15],true);
+ para(textos[16]||ativo?.debate||'Convergências e divergências materiais entre as lentes do Conselho, com réplica específica.',false);
+ para(capitulos[16],true);
+ para(textos[17]||'Adequação de peso, correlação e proteção de capital conforme perfil de risco.',false);
+ para(capitulos[17],true);
+ para(textos[18]||'Condições objetivas de confirmação por fechamento, invalidação estrutural e agenda de acompanhamento.',false);
+
+ for(let i=0;i<doc.getPageCount();i++){
+  const pg=doc.getPages()[i];
+  pg.drawText('Diário de Trader · Dossiê Completo · '+tk,{x:M,y:24,font:normal,size:7,color:muted});
+  pg.drawText(String(i+1).padStart(2,'0'),{x:W-M-12,y:24,font:normal,size:7.5,color:muted});
+ }
+ doc.setTitle('Dossiê Completo '+tk+' · Diário de Trader');doc.setAuthor('Diário de Trader');
+ return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Dossie-Completo-18Cap-'+tk+'-'+new Date().toISOString().slice(0,10)+'.pdf',pages:doc.getPageCount(),capitulos};
+}
+
 async function share(job,ticket=null){
  try{return await w.DiarioPDFiOS.deliver(await build(job),'Pesquisa B3 e EUA — Diário de Trader',ticket)}
  catch(e){ticket?.close?.();throw e}
 }
-w.DiarioPesquisaPDF={build,share};
+async function shareGraham(ativo,opts={},ticket=null){
+ try{return await w.DiarioPDFiOS.deliver(await buildGraham(ativo,opts),'Graham Fundamentalista — Diário de Trader',ticket)}
+ catch(e){ticket?.close?.();throw e}
+}
+async function shareDossie18(ativo,opts={},ticket=null){
+ try{return await w.DiarioPDFiOS.deliver(await buildDossie18(ativo,opts),'Dossiê Completo 18 Capítulos — Diário de Trader',ticket)}
+ catch(e){ticket?.close?.();throw e}
+}
+w.DiarioPesquisaPDF={build,share,DOSSIE_18_CAPITULOS,buildGraham,shareGraham,buildDossie18,shareDossie18};
 })(window);

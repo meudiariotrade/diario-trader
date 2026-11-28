@@ -308,11 +308,39 @@
     var bar = doc.createElement('div'); bar.className = 'uim-chatbar';
     bar.innerHTML = '<button type="button" hidden>↓ Ir para o fim</button>';
     st.parentNode.insertBefore(bar, st);
-    var b = bar.querySelector('button');
+    var seg = doc.createElement('div');
+    seg.className = 'uim-modo-conselho';
+    seg.style.cssText = 'display:inline-flex;gap:4px;margin-right:auto;align-items:center';
+    var atual = modoConselho();
+    seg.innerHTML = '<button type="button" data-uim-modo="objetivo" aria-pressed="' + (atual === 'objetivo') + '" style="min-height:30px;padding:0 10px;border-radius:999px;font-size:11.5px;border:1px solid rgba(255,255,255,.12);background:' + (atual === 'objetivo' ? 'rgba(245,158,11,.18);color:#FBBF24' : 'transparent;color:#94A3B8') + '">Objetivo</button>' +
+      '<button type="button" data-uim-modo="completo" aria-pressed="' + (atual === 'completo') + '" style="min-height:30px;padding:0 10px;border-radius:999px;font-size:11.5px;border:1px solid rgba(255,255,255,.12);background:' + (atual === 'completo' ? 'rgba(245,158,11,.18);color:#FBBF24' : 'transparent;color:#94A3B8') + '">Completo</button>';
+    bar.insertBefore(seg, bar.firstChild);
+    seg.addEventListener('click', function (ev) {
+      var btn = ev.target.closest('[data-uim-modo]'); if (!btn) return;
+      var m = btn.dataset.uimModo === 'completo' ? 'completo' : 'objetivo';
+      try { localStorage.setItem('diario_conselho_modo', m); } catch (e) {}
+      seg.querySelectorAll('[data-uim-modo]').forEach(function (x) {
+        var on = x.dataset.uimModo === m;
+        x.setAttribute('aria-pressed', String(on));
+        x.style.background = on ? 'rgba(245,158,11,.18)' : 'transparent';
+        x.style.color = on ? '#FBBF24' : '#94A3B8';
+      });
+    });
+    var b = bar.querySelector('button:not([data-uim-modo])');
     var ver = function () { b.hidden = hist.scrollHeight - hist.clientHeight - hist.scrollTop < 80; };
     hist.addEventListener('scroll', ver, { passive: true });
     b.addEventListener('click', function () { hist.scrollTo({ top: hist.scrollHeight, behavior: reduz ? 'auto' : 'smooth' }); });
     new MutationObserver(ver).observe(hist, { childList: true });
+  }
+  function modoConselho() {
+    try { return localStorage.getItem('diario_conselho_modo') === 'completo' ? 'completo' : 'objetivo'; } catch (e) { return 'objetivo'; }
+  }
+  function anexarGraficosLivermore(host, opts) {
+    if (!host || !window.DiarioLivermoreGraficos || !opts || !opts.candles) return false;
+    var box = doc.createElement('div');
+    box.innerHTML = window.DiarioLivermoreGraficos.renderHtmlPanel({ ticker: opts.ticker, analysis: opts.analysis, candles: opts.candles, tf: opts.tf || '1d', theme: 'dark', dir: opts.dir });
+    host.appendChild(box);
+    return true;
   }
 
   /* ---------- ligação com o painel ---------- */
@@ -373,6 +401,6 @@
     }).observe(doc.body, { childList: true });
     var p = painel(); if (p) ligar(p);
   }
-  window.DiarioAureaUI = Object.freeze({ expandir: expandir, versao: 1 });
+  window.DiarioAureaUI = Object.freeze({ expandir: expandir, modoConselho: modoConselho, anexarGraficosLivermore: anexarGraficosLivermore, versao: 2 });
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', iniciar); else iniciar();
 })();

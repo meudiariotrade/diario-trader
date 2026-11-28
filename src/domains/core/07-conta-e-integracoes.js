@@ -4541,7 +4541,8 @@ async function aureaDebateCallV1013(dados,signal,titular){
   if(!SESS)throw Error("Entre na sua conta para consultar o Conselho.");
   await tok();
   if(signal.aborted||syncOwner()!==titular)throw Error("Consulta cancelada.");
-  const r=await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-debate",{method:"POST",credentials:"omit",redirect:"error",cache:"no-store",signal,headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},body:JSON.stringify(dados)});
+  const payload=dados&&typeof dados==="object"&&!dados.modo?{...dados,modo:window.DiarioAureaUI?.modoConselho?.()||"objetivo"}:dados;
+  const r=await fetch("https://diario-screeners-quant.lucianosilva43567.workers.dev/v1/aurea-debate",{method:"POST",credentials:"omit",redirect:"error",cache:"no-store",signal,headers:{"Content-Type":"application/json",Authorization:"Bearer "+SESS.at},body:JSON.stringify(payload)});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.resultado)throw Error(j.erro||"Rodada do Conselho indisponível.");
   return j;
