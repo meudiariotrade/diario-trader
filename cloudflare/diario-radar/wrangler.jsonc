@@ -17,8 +17,16 @@
       "binding": "SELF",
       "service": "diario-radar",
       "environment": "production"
+    },
+    {
+      "binding": "NOTICIAS",
+      "service": "diario-trader"
     }
   ],
+  "alias": {
+    "npm:web-push@3.6.7": "./webpush-v1062.mjs",
+    "npm:@supabase/supabase-js@2": "@supabase/supabase-js"
+  },
   "d1_databases": [
     {
       "binding": "HISTORICO",
