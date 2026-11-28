@@ -556,7 +556,7 @@
   const chartsHtml=bundle.charts.map(c=>
    '<article class="liv-chart-card" data-liv-chart="'+esc(c.id)+'" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:12px">'+
    '<header style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px"><b style="color:#F59E0B;font-size:13px">'+esc(c.title)+'</b><small style="color:#94A3B8;font-size:11px">'+esc(c.subtitle)+'</small></header>'+
-   (c.png?'<img src="'+c.png+'" alt="'+esc(c.title)+'" style="width:100%;height:auto;border-radius:8px;display:block;border:1px solid rgba(255,255,255,.08)">':'<p style="color:#94A3B8;font-size:12px">Gráfico disponível com histórico mínimo de 20 candles fechados.</p>')+
+   (c.png?'<div style="position:relative"><img src="'+c.png+'" alt="'+esc(c.title)+'" data-liv-zoom="1" data-liv-title="'+esc(c.title)+'" title="Toque ou clique para ampliar" style="width:100%;height:auto;border-radius:8px;display:block;border:1px solid rgba(255,255,255,.08);cursor:zoom-in"><button type="button" data-liv-zoom-btn="1" aria-label="Ampliar '+esc(c.title)+'" style="position:absolute;right:8px;bottom:8px;height:26px;padding:0 10px;border-radius:999px;border:1px solid rgba(245,158,11,.55);background:rgba(13,17,23,.82);color:#FDE68A;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(6px)">Ampliar</button></div>':'<p style="color:#94A3B8;font-size:12px">Gráfico disponível com histórico mínimo de 20 candles fechados.</p>')+
    '<p style="margin:10px 0 0;font-size:12.5px;line-height:1.5;color:#E2E8F0">'+esc(c.reading)+'</p>'+
    '</article>'
   ).join('');
@@ -591,6 +591,90 @@
    '<p style="margin:0;font-size:12.5px;line-height:1.55;color:#E2E8F0">'+esc(s.fechamento)+'</p>'+
    '</div></section>';
  }
+
+ function bindLightbox(){
+  if(typeof document==='undefined'||document.__livLightboxBound)return;
+  document.__livLightboxBound=true;
+  let overlay=null,items=[],idx=0,scale=1;
+  const close=()=>{if(overlay){overlay.remove();overlay=null;}};
+  const apply=()=>{
+   if(!overlay)return;
+   const item=items[idx]||items[0];
+   if(!item)return;
+   const img=overlay.querySelector('[data-liv-lb-img]');
+   const ttl=overlay.querySelector('[data-liv-lb-title]');
+   const pct=overlay.querySelector('[data-liv-lb-pct]');
+   const nav=overlay.querySelector('[data-liv-lb-nav]');
+   if(img){img.src=item.src;img.alt=item.title;img.style.width=(scale*100)+'%';}
+   if(ttl)ttl.textContent=item.title+(items.length>1?` (${idx+1}/${items.length})`:'');
+   if(pct)pct.textContent=Math.round(scale*100)+'%';
+   if(nav)nav.style.display=items.length>1?'inline-flex':'none';
+  };
+  const open=(list,startIdx)=>{
+   close();
+   items=list;idx=Math.max(0,Math.min(startIdx,list.length-1));scale=1;
+   overlay=document.createElement('div');
+   overlay.id='liv-lightbox';
+   overlay.setAttribute('role','dialog');
+   overlay.setAttribute('aria-modal','true');
+   overlay.setAttribute('aria-label','Visualização ampliada do gráfico');
+   overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(7,10,16,.96);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));box-sizing:border-box';
+   overlay.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex:0 0 auto;flex-wrap:wrap">'+
+     '<b data-liv-lb-title style="color:#F59E0B;font-size:13.5px;min-width:0;flex:1 1 auto"></b>'+
+     '<div style="display:inline-flex;align-items:center;gap:6px;flex:0 0 auto">'+
+      '<span data-liv-lb-nav style="display:inline-flex;gap:4px">'+
+       '<button type="button" data-liv-lb-act="prev" aria-label="Gráfico anterior" style="height:34px;min-width:34px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#F8FAFC;font-size:16px;font-weight:700;cursor:pointer">‹</button>'+
+       '<button type="button" data-liv-lb-act="next" aria-label="Próximo gráfico" style="height:34px;min-width:34px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#F8FAFC;font-size:16px;font-weight:700;cursor:pointer">›</button>'+
+      '</span>'+
+      '<button type="button" data-liv-lb-act="out" aria-label="Diminuir zoom" style="height:34px;min-width:34px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#F8FAFC;font-size:16px;font-weight:700;cursor:pointer">−</button>'+
+      '<button type="button" data-liv-lb-act="reset" data-liv-lb-pct style="height:34px;padding:0 10px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#F8FAFC;font-size:12px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums">100%</button>'+
+      '<button type="button" data-liv-lb-act="in" aria-label="Aumentar zoom" style="height:34px;min-width:34px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#F8FAFC;font-size:16px;font-weight:700;cursor:pointer">+</button>'+
+      '<button type="button" data-liv-lb-act="close" aria-label="Fechar" style="height:34px;min-width:34px;border-radius:8px;border:1px solid rgba(245,158,11,.55);background:rgba(245,158,11,.18);color:#FDE68A;font-size:18px;font-weight:700;cursor:pointer">✕</button>'+
+     '</div>'+
+    '</div>'+
+    '<div data-liv-lb-stage style="flex:1 1 auto;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch;touch-action:pinch-zoom pan-x pan-y">'+
+     '<img data-liv-lb-img alt="" style="max-width:none;height:auto;border-radius:10px;border:1px solid rgba(255,255,255,.12);display:block;margin:auto">'+
+    '</div>';
+   document.body.appendChild(overlay);
+   apply();
+  };
+  document.addEventListener('click',ev=>{
+   const actBtn=ev.target?.closest?.('#liv-lightbox [data-liv-lb-act]');
+   if(actBtn){
+    ev.preventDefault();
+    const act=actBtn.getAttribute('data-liv-lb-act');
+    if(act==='close')close();
+    else if(act==='in'){scale=Math.min(2.5,Number((scale+0.35).toFixed(2)));apply();}
+    else if(act==='out'){scale=Math.max(1,Number((scale-0.35).toFixed(2)));apply();}
+    else if(act==='reset'){scale=1;apply();}
+    else if(act==='prev'&&items.length>1){idx=(idx-1+items.length)%items.length;scale=1;apply();}
+    else if(act==='next'&&items.length>1){idx=(idx+1)%items.length;scale=1;apply();}
+    return;
+   }
+   if(overlay&&ev.target===overlay.querySelector('[data-liv-lb-stage]')){close();return;}
+   const trigger=ev.target?.closest?.('img[data-liv-zoom="1"], [data-liv-zoom-btn="1"]');
+   if(!trigger)return;
+   const card=trigger.closest('.liv-chart-card');
+   const img=trigger.matches('img[data-liv-zoom="1"]')?trigger:card?.querySelector('img[data-liv-zoom="1"]');
+   if(!img||!img.src)return;
+   ev.preventDefault();
+   const suite=img.closest('.liv-suite');
+   const imgs=suite?Array.from(suite.querySelectorAll('img[data-liv-zoom="1"]')):[img];
+   const list=imgs.map(el=>({src:el.src,title:el.getAttribute('data-liv-title')||el.alt||'Gráfico'}));
+   const start=Math.max(0,imgs.indexOf(img));
+   open(list,start);
+  });
+  document.addEventListener('keydown',ev=>{
+   if(!overlay)return;
+   if(ev.key==='Escape')close();
+   else if(ev.key==='ArrowLeft'&&items.length>1){idx=(idx-1+items.length)%items.length;scale=1;apply();}
+   else if(ev.key==='ArrowRight'&&items.length>1){idx=(idx+1)%items.length;scale=1;apply();}
+   else if(ev.key==='+'||ev.key==='='){scale=Math.min(2.5,Number((scale+0.35).toFixed(2)));apply();}
+   else if(ev.key==='-'){scale=Math.max(1,Number((scale-0.35).toFixed(2)));apply();}
+  });
+ }
+ bindLightbox();
 
  return Object.freeze({CHARTS,renderChart,renderAll,renderHtmlPanel,buildOperationalSynthesis,buildConfluenceMap,chartReading});
 });

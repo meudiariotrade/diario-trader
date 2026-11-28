@@ -76,3 +76,13 @@ test('v1065: Base fundamentalista nao quebra VALOR/numeros, oculta Amostra setor
  assert.ok(!/não certifica os indicadores acima/.test(fn),'Nao deve exibir disclaimer burocratico na linha CVM');
  assert.ok(!/insumos diretos, não certificados/.test(fn),'Nao deve exibir jargao burocratico no valuation');
 });
+
+test('v1067: 4 graficos do Livermore abrem ampliados ao clicar/tocar com zoom e navegacao (sem inline onclick)',()=>{
+ const src=read('src/analysis/livermore-graficos.js');
+ assert.match(src,/data-liv-zoom="1"/);
+ assert.match(src,/data-liv-zoom-btn="1"/);
+ assert.match(src,/id='liv-lightbox'/);
+ assert.match(src,/data-liv-lb-act="in"/);
+ assert.match(src,/data-liv-lb-act="next"/);
+ assert.ok(!/onclick=/i.test(src),'Nao pode usar inline onclick (CSP)');
+});
