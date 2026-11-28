@@ -142,11 +142,11 @@ async function build(m,rows,tf='1d'){
  }
  y+=22;
  for(const [head,paragraph] of [
-  ['DADOS / HISTÓRICO','Cálculos exclusivamente sobre candles OHLCV normalizados, descartando dados inconsistentes. Mínimo 210 candles e 100 candles com volume positivo. Timeframes intradiários são conferidos contra um período superior quando disponível. Histórico pode apresentar atraso ou ajustes.'],
-  ['FIBONACCING · IMPLEMENTAÇÃO HEURÍSTICA','Grade macro 0/23,6/38,2/50/61,8/76,4/100%; extensões 111/127,2/141,4/161,8% e negativos -11,8/-27,2/-41,4/-61,8%. Ancoragem em ZigZag dominante de até 250 candles, com dois candles posteriores de confirmação. A microperna só define o gatilho RMC/CISD. Não extrapolar histórico. A implementação não afirma reproduzir integralmente regras autorais dos instrutores.'],
-  ['PISANI · MINERVINI · ELLIOTT','SMA 20/50/150/200, OBV, volume relativo, volatilidade semanal, VCP e checagem direcional. Trend Template 8/8 requer histórico diário e RS válido. Elliott é hipótese de contagem sob regras mínimas de invalidação, nunca detecção inequívoca de ondas.'],
-  ['CÁLCULO CONFERE / ANTIARMADILHA','Selo atesta somente soma ponderada dos quatro pilares, 100% de pesos e histórico mínimo. Não certifica proveniência, atrasos, uma tese ou lucratividade. Top 10 bloqueia exaustão (extensões 141,4%–161,8%, afastamento 2,5 ATR), falta de volume ou OBV não confirmado.'],
-  ['IA E RESPONSABILIDADE','Este dossiê determinístico não faz requisições à IA nem ao Supabase. A pesquisa por IA é uma ação separada e depende de confirmação externa dos números. Liquidez, slippage, spreads, ajustes corporativos e regras locais de short selling devem ser conferidos antes de operar.']
+  ['DADOS / HISTÓRICO','Cálculos exclusivamente sobre candles fechados normalizados, descartando barras inconsistentes. Mínimo 210 candles e 100 candles com volume positivo. Timeframes intradiários são conferidos contra um período superior quando disponível.'],
+  ['FIBONACCING · ESTRUTURA','Retração 23,6/38,2/50/61,8/76,4/78,6% e projeção simétrica separada 100/127,2/141,4/161,8% a partir do pivô C nos pavios reais. Ancoragem em ZigZag dominante de até 250 candles fechados, com dois candles posteriores de confirmação.'],
+  ['MÉDIAS · FLUXO · ELLIOTT','MM20/50/150/200 diárias, MM10/40 semanais, OBV, volume relativo, volatilidade semanal, VCP e fractalidade Mensal/Semanal/Diário. Elliott é hipótese de contagem com cenário alternativo ou indefinição explícita.'],
+  ['CONFERÊNCIA / ANTIARMADILHA','Selo atesta soma ponderada dos quatro pilares, 100% de pesos e histórico mínimo de candles fechados. O ranking bloqueia sinais esticados, falta de volume ou OBV não confirmado.'],
+  ['ESCOPO DO ESTUDO','Leitura técnica condicional gerada localmente sobre candles fechados. Liquidez, custos, ajustes corporativos e gestão de risco devem ser conferidos antes de qualquer decisão.']
  ]){
   write(head,M,y,8.5,bold,col.gold);y+=16;y=wrap(paragraph,M,y,W-2*M,8.5,12,reg,col.ink,7)+12;
  }
@@ -205,7 +205,7 @@ function desenharGrafico(r,x,kind,tf,candles){
  ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,W,H);
  ctxText(r.ticker+' · '+tf.toUpperCase()+' · '+(kind==='trend'?'MÉDIAS E FLUXO':
   kind==='fibo'?'FIBONACCING E PLANO':'PIVÔS E ELLIOTT'),L,33,23);
- ctxText('Fonte: '+String(r.chartSource||r.source||'Não informada').slice(0,60),right,34,15,muted,'right');
+ ctxText('Último fechamento: '+new Date(view.at(-1).t).toLocaleDateString('pt-BR'),right,34,15,muted,'right');
  const side=r.pdfSide==='sell'?'sell':'buy';
  const additions=[];
  const fibLevels=Array.isArray(x.fib?.levels)?x.fib.levels.filter(z=>positivo(z.price)):[];
@@ -398,10 +398,107 @@ async function deliver(pdf,title,ticket=null){
  setTimeout(()=>URL.revokeObjectURL(url),300000);
  return {preview,downloaded:!preview,pages:pdf.pages};
 }
+async function buildLivermore(ticker,analysis,rawCandles,opts={}){
+ if(!w.DiarioLivermoreGraficos?.renderAll)throw Error('Renderizador dos 4 Gráficos do Livermore indisponível');
+ const tf=String(opts.tf||'1d'),tk=String(ticker||'ATIVO').toUpperCase();
+ const bundle=w.DiarioLivermoreGraficos.renderAll({ticker:tk,analysis,candles:rawCandles,tf,theme:'light',dir:opts.dir});
+ const P=await libs(),doc=await P.PDFDocument.create();doc.registerFontkit(w.fontkit);
+ const fonts=await Promise.all(['pdf-sans.ttf','pdf-sans-bold.ttf','pdf-serif-bold.ttf'].map(async f=>{const r=await fetch(f,{cache:'force-cache'});if(!r.ok)throw Error('Fonte do PDF indisponível: '+f);return doc.embedFont(new Uint8Array(await r.arrayBuffer()),{subset:true})}));
+ const [reg,bold,serif]=fonts,W=595.28,H=841.89,M=43,col=Object.fromEntries(Object.entries(C).map(([k,v])=>[k,color(P,v)]));
+ let page,y,pageCount=0;
+ const LOGOS=await (w.DiarioPDFLogos?.carregar(doc,[tk])||new Map());
+ const logo=(x,top,sz)=>w.DiarioPDFLogos?.desenhar(page,LOGOS,tk,x,top,sz,H)||0;
+ function rect(x,top,wd,h,fill){page.drawRectangle({x,y:H-top-h,width:wd,height:h,color:fill})}
+ function write(text,x,top,size=9,font=reg,fill=col.ink,right=false){
+  const value=String(text??'').replace(/[\r\n\t]+/g,' ').trim();if(!value)return;
+  let v=value;while(v.length>1&&font.widthOfTextAtSize(v,size)>W-M-x+((right?x:0)))v=v.slice(0,-2)+'…';
+  const measured=font.widthOfTextAtSize(v,size);
+  page.drawText(v,{x:right?x-measured:x,y:H-top-size,font,size,color:fill});
+ }
+ function wrap(text,x,top,width,size=9,leading=13.5,font=reg,fill=col.ink,limit=18){
+  const words=String(text??'').replace(/\s+/g,' ').trim().split(' ');let line='',printed=0;
+  for(const word of words){const next=line?line+' '+word:word;
+   if(font.widthOfTextAtSize(next,size)>width&&line){write(line,x,top,size,font,fill);top+=leading;printed++;line=word;if(printed>=limit)return top}
+   else line=next;
+  }if(line&&printed<limit){write(line,x,top,size,font,fill);top+=leading}
+  return top;
+ }
+ function footer(){
+  rect(M,791,W-2*M,.7,col.line);
+  write('Diário de Trader · Livermore · '+tk,M,802,7.5,reg,col.muted);
+  write(String(pageCount).padStart(2,'0'),W-M,802,8,reg,col.muted,true);
+ }
+ function newPage(title,subtitle,cover=false){
+  page=doc.addPage([W,H]);pageCount++;rect(0,0,W,cover?205:66,col.dark);
+  write('DIÁRIO DE TRADER',M,18,9,bold,col.gold);write('LIVERMORE · TÉCNICO',W-M,18,8,reg,col.paper,true);
+  rect(M,cover?194:63,56,2,col.gold);
+  if(cover){logo(W-M-44,82,42);write(tk,M,76,30,serif,col.paper);write(title,M,122,14,bold,col.gold);write(subtitle,M,148,9.5,reg,col.paper);y=236}
+  else{write(title,M,84,16,serif,col.ink);y=110;y=wrap(subtitle,M,y,W-2*M,9,13,reg,col.muted,2)+16}
+ }
+ const x=bundle.analysis||{},met=x.metrics||{},dow=x.structure?.dow||{},frac=x.structure?.fractality||{};
+ newPage('Relatório Técnico Completo · 4 Gráficos Oficiais','Período '+tf.toUpperCase()+' · Gerado em '+new Date().toLocaleDateString('pt-BR'),true);
+ write('RESUMO ESTRUTURAL',M,y,10,bold,col.gold);y+=22;
+ y=wrap(bundle.synthesis.fechamento,M,y,W-2*M,10,15,reg,col.ink,10)+18;
+ write('PAINEL DE REFERÊNCIAS',M,y,10,bold,col.gold);y+=22;
+ const rowsInfo=[
+  ['Último fechamento',n(x.price,2)],
+  ['Tendência Dow (Primária / Secundária)',(dow.primaryTrend||'indefinida')+' / '+(dow.secondaryTrend||'indefinida')],
+  ['Fractalidade (Mensal / Semanal / Diário)',frac.summary||'em avaliação'],
+  ['MM20 / MM50 / MM200 (diário)',[met.sma20,met.sma50,met.sma200].map(v=>n(v,2)).join(' · ')],
+  ['MM10 / MM40 (semanal)',[met.sma10w,met.sma40w].map(v=>n(v,2)).join(' · ')],
+  ['IFR 14 / ATR 14 / OBV',n(met.rsi14,1)+' · '+n(met.atr14,2)+' · '+(met.obvSignal||'em observação')]
+ ];
+ for(const [k,v] of rowsInfo){
+  rect(M,y-4,W-2*M,24,color(P,'#F8F9FA'));
+  write(k,M+8,y+2,8.5,reg,col.muted);write(v,W-M-8,y+2,8.5,bold,col.ink,true);y+=27;
+ }
+ footer();
+ // 1 página dedicada para cada um dos 4 Gráficos Oficiais do Livermore
+ for(const chart of bundle.charts){
+  newPage(chart.title,chart.subtitle);
+  if(chart.png){
+   const png=await doc.embedPng(chart.png);
+   const wChart=W-2*M,hChart=wChart*chart.height/chart.width;
+   page.drawImage(png,{x:M,y:H-y-hChart,width:wChart,height:hChart});
+   y+=hChart+22;
+  }
+  write('LEITURA TÉCNICA',M,y,10,bold,col.gold);y+=18;
+  y=wrap(chart.reading,M,y,W-2*M,9.5,14.5,reg,col.ink,14);
+  footer();
+ }
+ // Página final: Síntese Operacional
+ newPage('Síntese Operacional · '+tk,'Mapa de confluências, cenários condicionais e fechamento consolidado');
+ write('MAPA DE CONFLUÊNCIAS',M,y,10,bold,col.gold);y+=18;
+ if(bundle.synthesis.confluencias.length){
+  for(const c of bundle.synthesis.confluencias){
+   write(n(c.faixa[0],2)+' – '+n(c.faixa[1],2)+' ('+(c.distanciaPct>=0?'+':'')+n(c.distanciaPct,1)+'%)',M,y,9,bold,col.ink);
+   y=wrap(c.fatores.join(' + '),M+155,y,W-2*M-155,8.5,12.5,reg,col.muted,2)+8;
+  }
+ }else{
+  y=wrap('Nenhuma sobreposição densa de níveis identificada próximo ao fechamento atual.',M,y,W-2*M,9,13,reg,col.muted,2)+10;
+ }
+ y+=12;write('CENÁRIOS CONDICIONAIS',M,y,10,bold,col.gold);y+=20;
+ for(const key of ['comprador','neutro','vendedor']){
+  const sc=bundle.synthesis.cenarios[key];
+  const barCol=key==='comprador'?col.green:key==='vendedor'?col.red:col.gold;
+  rect(M,y-2,3,54,barCol);
+  write(sc.titulo,M+12,y,9.5,bold,barCol);y+=15;
+  y=wrap('Gatilho: '+sc.gatilho+' · Referência: '+sc.alvo+' · Invalidação: '+sc.invalidacao,M+12,y,W-2*M-12,8.5,12.5,reg,col.ink,4)+12;
+ }
+ y+=8;write('FECHAMENTO CONSOLIDADO',M,y,10,bold,col.gold);y+=18;
+ y=wrap(bundle.synthesis.fechamento,M,y,W-2*M,9.5,14.5,reg,col.ink,10);
+ footer();
+ doc.setTitle('Livermore Técnico '+tk+' · Diário de Trader');doc.setAuthor('Diário de Trader');
+ return {blob:new Blob([await doc.save()],{type:'application/pdf'}),name:'Livermore-Tecnico-'+tk+'-'+new Date().toISOString().slice(0,10)+'.pdf',pages:doc.getPageCount()};
+}
 async function share(m,rows,tf,ticket=null){
  try{return await deliver(await build(m,rows,tf),'Dossiê Técnico — Diário de Trader',ticket)}
  catch(e){ticket?.close?.();throw e}
 }
+async function shareLivermore(ticker,analysis,rawCandles,opts={},ticket=null){
+ try{return await deliver(await buildLivermore(ticker,analysis,rawCandles,opts),'Livermore Técnico '+ticker+' — Diário de Trader',ticket)}
+ catch(e){ticket?.close?.();throw e}
+}
 w.DiarioPDFiOS={prepare,deliver};
-w.DiarioTecnicoPDF={build,share};
+w.DiarioTecnicoPDF={build,share,buildLivermore,shareLivermore};
 })(window);

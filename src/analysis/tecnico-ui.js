@@ -85,7 +85,7 @@ async function candles(asset,tf,signal){
  // Se uma ponte já oferecer OHLCV validado, reaproveitar sem outra requisição.
  try{const local=w.DiarioTecnicoFeeds?.getCandles?.(asset.ticker,tf,asset.market);
   if(barrasRecentes(local,asset,tf)&&(tf!=='1d'||local.length>=400)){
-   const result={candles:local,source:'Feed local Profit/Finnhub/Binance',fetchedAt:new Date().toISOString()};
+   const result={candles:local,source:'Cache local validado',fetchedAt:new Date().toISOString()};
    void store(key,result);return result;
   }
  }catch{}
@@ -237,8 +237,11 @@ function detail(s,rows){
  '<p>Fibonaccing: '+(x.fib.zone?'zona de mitigação':'fora da zona')+' · '+(x.fib.cluster?'cluster presente':'sem cluster')+' · '+(x.fib.fibogap?'Fibogap na defesa '+(x.fib.gapZone||[]).map(v=>fmt(v,2)).join('–'):'sem Fibogap aberto')+' · RMC: '+(x.turn.confirmed?'confirmado':'aguardando')+' · CISD: '+(x.turn.cisd?'confirmado':'não confirmado')+'</p>'+
  '<p>Elliott: '+E(x.elliott.label)+' — '+E(x.elliott.reason)+'</p>'+
  '<button class="btn s" type="button" data-niv822="'+E(r.ticker)+'" data-e="'+(plan.entry??'')+'" data-s="'+(plan.stop??'')+'" data-a="'+[plan.target1,plan.target2a,plan.target2].filter(v=>v!=null).join('|')+'" data-o="tecnico">Levar para o plano</button> '+
+ '<button class="btn s" type="button" data-tech-livermore="'+E(r.ticker)+'">4 Gráficos Livermore</button> '+
+ '<button class="btn s" type="button" data-tech-liv-pdf="'+E(r.ticker)+'">PDF Livermore</button> '+
  '<button class="btn s" type="button" data-tech-conselho="ativo" data-tech-tk="'+E(r.ticker)+'">✦ Parecer Técnico</button> '+
- '<button class="btn s" type="button" data-tech-conselho="munger" data-tech-tk="'+E(r.ticker)+'">Testar com Munger</button></section>';
+ '<button class="btn s" type="button" data-tech-conselho="munger" data-tech-tk="'+E(r.ticker)+'">Testar com Munger</button>'+
+ '<div data-liv-panel="'+E(r.ticker)+'"></div></section>';
 }
 function view(m){
  const s=states[m],title=m==='br'?'Técnico Brasil':'Técnico EUA & Cripto',rows=selectedRows(s),top=autoTop(s);
@@ -400,6 +403,31 @@ d.addEventListener('click',async e=>{
    const pr=(ed==='munger'?'Ataque este setup técnico no modo crítico/inversão (o que invalida, risco de violinada/armadilha, qualidade do R/R e volume) sem citar livros e sem usar asteriscos de itálico:\n':'Faça um parecer técnico direto deste setup (força real da tendência, qualidade do ponto de entrada/stop/R-R, volume e riscos de execução) sem citar livros e sem usar asteriscos de itálico:\n')+ctx;
    w.DiarioConselhoIA(ed,titulo,pr);
   }
+  return;
+ }
+ if(el.dataset.techLivermore){
+  const tk=el.dataset.techLivermore,r=markHoldings(s.rows).find(x=>x.ticker===tk);
+  const host=d.querySelector('[data-liv-panel="'+tk+'"]');
+  if(!r||!host||!w.DiarioLivermoreGraficos?.renderHtmlPanel)return;
+  const [dir,x]=side(r,s);
+  const saved=await read('candles|'+r.market+'|'+r.ticker+'|'+s.tf,s.tf==='1d'?6*3600000:10*60000);
+  if(!saved?.candles?.length){host.innerHTML='<p style="margin-top:10px;color:#94A3B8;font-size:12px">Carregue os candles de '+E(tk)+' para renderizar os 4 gráficos oficiais.</p>';return}
+  host.innerHTML=w.DiarioLivermoreGraficos.renderHtmlPanel({ticker:r.ticker,analysis:x,candles:saved.candles,tf:s.tf,theme:'dark',dir:dir==='sell'?-1:1});
+  return;
+ }
+ if(el.dataset.techLivPdf&&!s.busyPDF){
+  const tk=el.dataset.techLivPdf,r=markHoldings(s.rows).find(x=>x.ticker===tk);
+  if(!r||!w.DiarioTecnicoPDF?.shareLivermore)return;
+  const ticket=w.DiarioPDFiOS?.prepare();
+  s.busyPDF=true;s.error='';render();
+  try{
+   const [dir,x]=side(r,s);
+   const saved=await read('candles|'+r.market+'|'+r.ticker+'|'+s.tf,s.tf==='1d'?6*3600000:10*60000);
+   if(!saved?.candles?.length)throw Error('Histórico de candles de '+tk+' indisponível no aparelho.');
+   const result=await w.DiarioTecnicoPDF.shareLivermore(r.ticker,x,saved.candles,{tf:s.tf,dir:dir==='sell'?-1:1},ticket);
+   if(!result.cancelled)s.info='Relatório Livermore de '+tk+': '+result.pages+' páginas.';
+  }catch(e){ticket?.close?.();s.error='PDF Livermore: '+String(e.message||e).slice(0,190)}
+  finally{s.busyPDF=false;render()}
   return;
  }
  if(el.dataset.techAi){w.DiarioAnalises?.command?.('TECNICO '+el.dataset.techAi);return}
