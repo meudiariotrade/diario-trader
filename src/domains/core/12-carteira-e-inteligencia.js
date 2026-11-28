@@ -1764,25 +1764,9 @@ Processo antes do resultado.`;
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ t: p }),
           };
-          try {
-            const f = await (
-              await rq("/functions/v1/parceiro-leitura", u, !1)
-            ).json();
-            if (!f || !f.resumo)
-              throw new Error("Link inválido ou desativado.");
-            return f;
-          } catch (m) {
-            const f = String((m && m.message) || "");
-            if (
-              !(
-                m &&
-                m.status === 404 &&
-                /function not found|requested function was not found/i.test(f)
-              )
-            )
-              throw m;
-            return await (await rq("/rest/v1/rpc/parceiro_ver", u, !1)).json();
-          }
+          // v1062: a função parceiro-leitura não existe mais (cada abertura gerava um 404);
+          // a leitura do link do parceiro é a RPC parceiro_ver (mesma resposta, protegida pelo token).
+          return await (await rq("/rest/v1/rpc/parceiro_ver", u, !1)).json();
         }
         const n = await s(e),
           r = n && n.resumo;

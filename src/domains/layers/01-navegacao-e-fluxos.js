@@ -10672,15 +10672,8 @@ Energia;30">${j(
         const F = SESS.uid;
         return (
           (l = (async () => {
-            try {
-              const e = await (
-                await rq(
-                  "/rest/v1/mercado_cache?id=eq.quotes&select=payload,fetched_at",
-                )
-              ).json();
-              if (SESS?.uid !== F || document.hidden) return;
-              (O(e[0]), tab === "term" && render());
-            } catch {}
+            // v1062: não lê mais mercado_cache no Supabase (a tabela não é alimentada desde o fim
+            // do pg_cron); as cotações do monitor vêm do Terminal na Cloudflare logo abaixo.
             SESS?.uid !== F ||
               document.hidden ||
               (await Promise.allSettled([
