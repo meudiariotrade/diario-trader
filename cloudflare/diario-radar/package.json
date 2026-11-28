@@ -1,0 +1,8 @@
+{
+  "name": "diario-radar",
+  "private": true,
+  "description": "Dependências do Worker diario-radar (rotinas que saíram do Supabase).",
+  "dependencies": {
+    "@supabase/supabase-js": "2.49.4"
+  }
+}

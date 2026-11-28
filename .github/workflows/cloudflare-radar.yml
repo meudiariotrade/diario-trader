@@ -4,6 +4,10 @@ on:
     branches: [main]
     paths:
       - 'cloudflare/diario-radar/**'
+      - 'supabase/functions/notificar/**'
+      - 'supabase/functions/rotina-cron/**'
+      - 'tests/cloudflare-webpush-v1062.test.cjs'
+      - 'tests/cloudflare-funcoes-locais-v1062.test.cjs'
       - '.github/workflows/cloudflare-radar.yml'
       - 'tests/cloudflare-agenda-preflight-v933.test.cjs'
       - 'tests/cloudflare-cron-cutover-v935.test.cjs'
@@ -11,6 +15,10 @@ on:
     paths:
       - 'tests/cloudflare-cron-cutover-v935.test.cjs'
       - 'cloudflare/diario-radar/**'
+      - 'supabase/functions/notificar/**'
+      - 'supabase/functions/rotina-cron/**'
+      - 'tests/cloudflare-webpush-v1062.test.cjs'
+      - 'tests/cloudflare-funcoes-locais-v1062.test.cjs'
       - 'tests/cloudflare-agenda-preflight-v933.test.cjs'
       - '.github/workflows/cloudflare-radar.yml'
   workflow_dispatch:
@@ -22,7 +30,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,7 +41,12 @@ jobs:
       - run: node --check cloudflare/diario-radar/agenda-preflight-v933.mjs
       - run: node --check cloudflare/diario-radar/agenda-health-v937.mjs
       - run: node --check cloudflare/diario-radar/segredos-v1041.mjs
-      - run: node --test tests/cloudflare-radar-v892.test.cjs tests/cloudflare-agenda-v932.test.cjs tests/cloudflare-agenda-preflight-v933.test.cjs tests/cloudflare-cron-cutover-v935.test.cjs tests/cloudflare-agenda-health-v937.test.cjs tests/cloudflare-segredos-v1041.test.cjs
+      - run: node --check cloudflare/diario-radar/webpush-v1062.mjs
+      - run: node --check cloudflare/diario-radar/funcoes-locais-v1062.mjs
+      - run: node --test tests/cloudflare-radar-v892.test.cjs tests/cloudflare-agenda-v932.test.cjs tests/cloudflare-agenda-preflight-v933.test.cjs tests/cloudflare-cron-cutover-v935.test.cjs tests/cloudflare-agenda-health-v937.test.cjs tests/cloudflare-segredos-v1041.test.cjs tests/cloudflare-webpush-v1062.test.cjs tests/cloudflare-funcoes-locais-v1062.test.cjs
+      - name: Empacotar (dry-run) com as rotinas do Supabase e o supabase-js
+        working-directory: cloudflare/diario-radar
+        run: npm ci --no-audit --no-fund && npx --yes wrangler@4.166.0 deploy --dry-run --config wrangler.jsonc --outdir /tmp/radar-dry
   publish:
     needs: [check]
     if: github.ref == 'refs/heads/main'
@@ -50,6 +63,12 @@ jobs:
         run: |
           test -n "$CF_TOKEN" || { echo "::error::Configure CLOUDFLARE_API_TOKEN no GitHub"; exit 1; }
           test -n "$CF_ACCOUNT" || { echo "::error::Configure CLOUDFLARE_ACCOUNT_ID no GitHub"; exit 1; }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Instalar dependências do Worker (supabase-js)
+        working-directory: cloudflare/diario-radar
+        run: npm ci --no-audit --no-fund
       - name: Publicar somente diario-radar, preservando os bindings
         uses: cloudflare/wrangler-action@v3
         with:

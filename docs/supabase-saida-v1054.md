@@ -51,6 +51,35 @@ Observação: segredos de outros Workers (ex.: `diario-screeners-quant`) não s�
 | `notificar` (inscrever/cancelar/testar push) | Continua no Supabase por escolha: poucas chamadas, só por ação manual. |
 | `aulas-voz`, `aulas-visuais`, `inbound-btg-note`, `adrs` (legado) | Dependem de pacotes `npm:` (resvg-wasm, unpdf, fflate, ws); ficam no Supabase até haver necessidade. |
 
+## Fase D (v1062) — o trabalho das rotinas sai do Supabase
+
+Na Fase C só o **horário** das rotinas tinha ido para a Cloudflare: o Worker `diario-radar`
+disparava `supabase.co/functions/v1/<nome>` ~600 vezes por dia e o código rodava no Supabase.
+Agora o código roda dentro do próprio `diario-radar`:
+
+| Rotina | Frequência | Onde roda |
+|---|---|---|
+| `notificar` (`tick_leve`, `noticias_urgentes`, `atualizar_calendario`) | a cada 5–15 min (~470/dia) | **Cloudflare** |
+| `rotina-cron` (matinal, almoço, tarde, fechamento, jornal) | ~7/dia | **Cloudflare** |
+| `movimentos` | a cada 5 min no pregão (~120/dia) | Supabase (em dia agitado passa de 50 chamadas externas por execução, limite do plano gratuito de Workers) |
+| `resumo` (tick), `email-semana`, `insiders` | 3/dia e semanais | Supabase |
+
+Como funciona (`cloudflare/diario-radar/funcoes-locais-v1062.mjs`):
+- O agendador chama `SELF /v1/fn-local/<nome>` (uma invocação própria, protegida pelo `CRON_SECRET`).
+  Se a Cloudflare responder erro ou faltar chave, a **mesma** rotina vai para o Supabase, como antes.
+- Mesmo código-fonte de `supabase/functions/<nome>/index.ts`; `npm:web-push` é trocado por
+  `webpush-v1062.mjs` (Web Crypto, confere byte a byte com o RFC 8291) e `npm:@supabase/supabase-js@2`
+  pelo pacote instalado no Worker (alias no `wrangler.jsonc`).
+- Chaves VAPID: as que já estão no D1 (`segredos-v1041`). Nenhuma consulta ao Vault.
+- Mercados/agenda/ADRs que as rotinas buscavam em `functions/v1/macro|adrs` vêm do cache público
+  do Worker `diario-trader` pela ligação interna `NOTICIAS`.
+- Para voltar tudo ao Supabase: variável `FUNCOES_LOCAIS_V1062=0` no Worker `diario-radar`.
+
+No app:
+- Removida a leitura de `mercado_cache` (cotações) pelo Terminal a cada 15 min: a tabela está vazia.
+- O link do parceiro chama direto a RPC `parceiro_ver` (a função `parceiro-leitura` não existe mais; cada abertura gerava um 404).
+- `insiders` (18 kB) e `movimentos` (≈30 linhas, cache de 10 min no aparelho) continuam lidos do Supabase: volume desprezível.
+
 ## Publicação dos Workers
 
 Quem publica os Workers é o **GitHub Actions** (`.github/workflows/cloudflare-*.yml`).

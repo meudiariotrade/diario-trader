@@ -4,6 +4,7 @@
  * A execução só é ativada após a desativação coordenada dos jobs antigos.
  * Os serviços legados continuam consumindo Supabase até a migração funcional própria.
  */
+import {rodaLocalV1062} from './funcoes-locais-v1062.mjs';
 const HTTP_TIMEOUT=27000;
 const iso=ms=>new Date(ms).toISOString();
 const every=(m,n)=>m%n===0;
@@ -69,6 +70,15 @@ async function invoke(j,ms,env){
  }else{
   target=base+'/functions/v1/'+j.fn;
   init.body=JSON.stringify(j.body||{});
+  // v1062: roda na Cloudflare (invocação própria via SELF); o Supabase fica só como reserva.
+  if(rodaLocalV1062(j.fn,env)){
+   try{
+    const rl=await env.SELF.fetch('https://diario-radar.interno/v1/fn-local/'+j.fn,{method:'POST',headers:h,body:init.body,signal:AbortSignal.timeout(HTTP_TIMEOUT)});
+    const st=rl.status;
+    try{await rl.body?.cancel()}catch{}
+    if(rl.ok)return st;
+   }catch{}
+  }
  }
  const r=await fetch(target,init);
  // Não registra mensagens privadas de erro, somente código HTTP.
