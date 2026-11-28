@@ -3345,10 +3345,9 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
           '<p><b>Convergências</b></p>'+((d.convergencias||[]).map(x=>'<p><b>'+s(x.ids.map(nome).join(" × "))+'</b> — '+s(x.texto)+'</p>').join("")||'<p>Nenhuma convergência sustentada identificada.</p>')+
           '<p><b>Divergências e réplicas</b></p>'+((d.divergencias||[]).map(x=>'<div><p><b>'+s(nome(x.a))+'</b> — '+s(x.tese_a)+'</p><p><b>'+s(nome(x.b))+'</b> — '+s(x.tese_b)+'</p><p><b>Réplica:</b> '+s(x.replica)+'</p></div>').join("")||'<p>Nenhuma divergência material sustentada identificada nesta rodada.</p>')+
           '<h3>Síntese da Áurea</h3><p>'+s(d.sintese)+'</p><p><b>Cenário alternativo:</b> '+s(d.alternativo)+'</p><p><b>Confirmação:</b> '+s(d.confirmacao)+'</p><p><b>Invalidação:</b> '+s(d.invalidacao)+'</p>'+
-          N("Lacunas",d.lacunas)+'<small>Modelo inicial: '+s(d.modelo_inicial||"não informado")+' · Síntese: '+s(d.modelo_sintese||"não informado")+'</small></section>';
+          N("Lacunas",d.lacunas)+'</section>';
       }
-      // v1048: veredito no topo e raio-x do ativo calculado no aparelho.
-      // v1050: leitura de Livermore refeita com o histórico real (números conferidos).
+      // v1061: cálculos do dossiê permanecem internos para alimentar os 4 gráficos automáticos e os pareceres; sem card expansível de Raio-X na interface.
       function revisaoAureaV1050(E){
         const r=E.revisao_v1050;if(!r||!r.resumo)return "";
         const li=l=>Array.isArray(l)&&l.length?'<ul>'+l.map(x=>'<li>'+s(x)+'</li>').join("")+'</ul>':"";
@@ -3356,21 +3355,27 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
       }
       function vereditoAureaV1048(E,M){
         const v=E.veredito;if(!v||!v.texto)return "";
-        const pl=window.DiarioPlacarAurea?.resumo?.(M?.por),plTxt=pl&&pl.acertos+pl.erros>0?' · Placar desta lente: '+pl.acertos+' acerto(s), '+pl.erros+' erro(s)'+(pl.abertos?', '+pl.abertos+' em aberto':''):'';
+        const pl=window.DiarioPlacarAurea?.resumo?.(M?.por),plTxt=pl&&pl.acertos+pl.erros>0?'Placar desta lente: '+pl.acertos+' acerto(s), '+pl.erros+' erro(s)'+(pl.abertos?', '+pl.abertos+' em aberto':''):'';
         const rot={favoravel:["Favorável","#067647"],desfavoravel:["Desfavorável","#b91c1c"],aguardar:["Aguardar","#b45309"],inconclusivo:["Inconclusivo","#475569"]}[v.decisao]||["Leitura","#475569"];
         const f=n=>Number(n).toLocaleString("pt-BR",{maximumFractionDigits:2});
-        return '<section class="wf-chat-parecer" data-aurea-veredito style="border-left:3px solid '+rot[1]+';padding-left:10px"><b style="color:'+rot[1]+'">Veredito · '+rot[0]+(v.direcao?' · viés de '+s(v.direcao):'')+'</b><p>'+s(v.texto)+'</p>'+((v.gatilho_preco||v.invalidacao_preco)?'<p style="font-variant-numeric:tabular-nums">'+(v.gatilho_preco?'Gatilho R$ '+f(v.gatilho_preco):'')+(v.gatilho_preco&&v.invalidacao_preco?' · ':'')+(v.invalidacao_preco?'Invalida em R$ '+f(v.invalidacao_preco):'')+'</p>':'')+(v.aviso?'<p style="color:#b45309">'+s(v.aviso)+'</p>':'')+'<small>Leitura condicional, não é recomendação.'+s(plTxt)+'</small></section>';
+        return '<section class="wf-chat-parecer" data-aurea-veredito style="border-left:3px solid '+rot[1]+';padding-left:10px"><b style="color:'+rot[1]+'">Veredito · '+rot[0]+(v.direcao?' · viés de '+s(v.direcao):'')+'</b><p>'+s(v.texto)+'</p>'+((v.gatilho_preco||v.invalidacao_preco)?'<p style="font-variant-numeric:tabular-nums">'+(v.gatilho_preco?'Gatilho R$ '+f(v.gatilho_preco):'')+(v.gatilho_preco&&v.invalidacao_preco?' · ':'')+(v.invalidacao_preco?'Invalida em R$ '+f(v.invalidacao_preco):'')+'</p>':'')+(v.aviso?'<p style="color:#b45309">'+s(v.aviso)+'</p>':'')+(plTxt?'<small>'+s(plTxt)+'</small>':'')+'</section>';
       }
-      function dossieAureaV1048(E){
-        const d=E.dossie_v1048;if(!d)return "";
-        const f=n=>n==null?"N/D":Number(n).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}),pc=n=>n==null?"N/D":(n>0?"+":"")+f(n)+"%",cor=n=>n==null?"":n>0?"color:#067647":n<0?"color:#b91c1c":"";
-        const lin=[["Fechamento ("+d.data+")","R$ "+f(d.fechamento),""],["Dia / 1 mês / 3 meses",pc(d.var_dia)+" · "+pc(d.var_1m)+" · "+pc(d.var_3m),cor(d.var_1m)],["Tendência primária / secundária",d.tendencia_primaria+" / "+d.tendencia_secundaria,""],...d.medias.map(m=>["MM"+m.n+" ("+m.inclinacao+")","R$ "+f(m.valor)+(m.preco_acima?" · preço acima":" · preço abaixo"),""]),["IFR 14",f(d.ifr14),d.ifr14>=70?"color:#b91c1c":d.ifr14<=30?"color:#067647":""],["ATR 14","R$ "+f(d.atr14)+" ("+f(d.atr_pct)+"%)",""],["Volatilidade 20d (a.a.)",f(d.vol_hist_20d_aa)+"%",""],["Máx / mín 52 sem.","R$ "+f(d.max_52s)+" / R$ "+f(d.min_52s),""],["Resistências",d.resistencias.map(x=>"R$ "+f(x)).join(" · ")||"—",""],["Suportes",d.suportes.map(x=>"R$ "+f(x)).join(" · ")||"—",""],...(d.obv_leitura||[]).map(t=>["OBV × pivô",t,/força|antecipa/.test(t)?"color:#067647":/fraco/.test(t)?"color:#b45309":""])];
-        return '<details class="wf-chat-parecer" open><summary><b>Raio-x de '+s(d.ticker)+'</b> · calculado no aparelho</summary><table style="width:100%;font-variant-numeric:tabular-nums;font-size:13px">'+lin.map(x=>'<tr><td style="color:var(--ui-muted,#64748B)">'+s(x[0])+'</td><td style="text-align:right;'+x[2]+'">'+s(x[1])+'</td></tr>').join("")+'</table><small>Histórico diário'+(d.fonte?' · '+s(d.fonte):'')+'. Médias simples; volatilidade histórica não substitui a implícita da opção.</small></details>';
+      function dossieAureaV1048(){
+        // Card expansível de Raio-X removido da interface (v1061); cálculos preservados em E.dossie_v1048.
+        return "";
+      }
+      function graficosAutomaticosLivermoreV1061(M,E){
+        const modo=M?.modo||(window.DiarioAureaUI?.modoConselho?.()||"objetivo");
+        if(modo!=="completo")return "";
+        const d=E?.dossie_v1048;
+        if(!d||!Array.isArray(d._candles)||d._candles.length<30||!window.DiarioLivermoreGraficos?.renderHtmlPanel)return "";
+        try{return window.DiarioLivermoreGraficos.renderHtmlPanel({ticker:d.ticker,candles:d._candles,tf:"1d",theme:"dark"});}
+        catch{return "";}
       }
       function e(M) {
         const E = M.r || {};
-        return `<article class="wf-chat-message" data-aurea-message="${s(String(M.id||""))}"><p class="wf-chat-question">${s(M.q)}</p>${graficosAureaV1011(M,E)}${aureaAcao(M)}${vereditoAureaV1048(E,M)}${revisaoAureaV1050(E)}${dossieAureaV1048(E)}${E.revisao_v1050?'<details class="wf-chat-parecer"><summary>Leitura visual inicial (antes de conferir com o histórico; pode citar números da régua do eixo)</summary>':''}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}${estruturaAureaV1007(E)}${M.por === "conselho"&&E.revisao_v1050 ? (E.visoes || []).map(v=>`<section class="wf-chat-parecer"><b>${s(v.escola)}</b><p style="white-space:pre-line">${s(v.argumento)}</p></section>`).join("")+'</details>' : ""}${comparacaoAureaV1011(E)}
-      ${N("Fatos apresentados pelo modelo — confira as fontes", E.fatos)}
+        return `<article class="wf-chat-message" data-aurea-message="${s(String(M.id||""))}"><p class="wf-chat-question">${s(M.q)}</p>${graficosAureaV1011(M,E)}${aureaAcao(M)}${vereditoAureaV1048(E,M)}${revisaoAureaV1050(E)}${dossieAureaV1048(E)}${E.revisao_v1050?'<details class="wf-chat-parecer"><summary>Leitura visual inicial</summary>':''}<h3>${s(E.titulo || "Resposta da Áurea")}</h3><p>${s(E.resumo || "")}</p>${(E.explicacao || []).map((u) => `<p>${s(u)}</p>`).join("")}${estruturaAureaV1007(E)}${M.por === "conselho"&&E.revisao_v1050 ? (E.visoes || []).map(v=>`<section class="wf-chat-parecer"><b>${s(v.escola)}</b><p style="white-space:pre-line">${s(v.argumento)}</p></section>`).join("")+'</details>' : ""}${comparacaoAureaV1011(E)}${graficosAutomaticosLivermoreV1061(M,E)}
+      ${N("Fatos relevantes", E.fatos)}
       ${N(
         "Impactos descritos",
         E.impactos?.map((u) => `${u.mercado}: ${u.direcao}. ${u.porque || ""}`),
@@ -3379,7 +3384,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         "Cenários condicionais",
         E.cenarios?.map(
           (u) =>
-            `${u.nome}: ${u.descricao || ""} Condições: ${u.gatilhos || "não informadas"}.${Number.isFinite(+u.probabilidade_pct) ? " Estimativa do modelo: " + u.probabilidade_pct + "%, sem calibração estatística informada." : ""}`,
+            `${u.nome}: ${u.descricao || ""} Condições: ${u.gatilhos || "não informadas"}.`,
         ),
       )}
       ${N("O que observar", E.o_que_observar)}${E.contraponto ? `<p><b>Contraponto:</b> ${s(E.contraponto)}</p>` : ""}
@@ -3387,7 +3392,7 @@ Não foram anexados saldos, posições, plano ou textos do diário.`
         "Glossário",
         E.glossario?.map((u) => `${u.termo}: ${u.significado}`),
       )}
-      ${opcoesAureaV1017(E)}${rendaFixaAureaV1016(E)}${commoditiesAureaV1015(E)}${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}${N("Fontes citadas na resposta", E.fontes)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))} · conteúdo gerado por IA${E.modelo ? " · " + s(E.modelo) : ""}</small></article>`;
+      ${opcoesAureaV1017(E)}${rendaFixaAureaV1016(E)}${commoditiesAureaV1015(E)}${fundamentosAureaV1014(E)}${debateAureaV1013(E)}${N("Lacunas da análise",E.lacunas)}<small>${s(new Date(M.em).toLocaleString("pt-BR"))}</small></article>`;
       }
       function i() {
         if (!O) return;

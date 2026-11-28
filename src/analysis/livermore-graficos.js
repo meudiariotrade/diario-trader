@@ -129,95 +129,113 @@
    .slice(0,5);
  }
 
+ function examineBoth(candles){
+  const eng=root.DiarioTecnicoEngine||(typeof require==='function'?require('./tecnico-engine.js'):null);
+  if(eng&&candles.length>=210)return eng.examine(candles,{tf:'1d',daily:candles});
+  return null;
+ }
+
  function buildOperationalSynthesis(ticker,analysisInput,rawCandles,tf='1d'){
   const candles=normalizeBars(rawCandles);
+  const both=examineBoth(candles);
   const x=ensureAnalysis(candles,analysisInput);
+  const buySide=both?.buy?.valid?both.buy:x;
+  const sellSide=both?.sell?.valid?both.sell:x;
   const met=x.metrics||{},fib=x.fib||{},dow=x.structure?.dow||{},ic=x.structure?.impulseCorrection||{},frac=x.structure?.fractality||{};
   const close=pos(x.price)?x.price:candles.at(-1)?.c;
   const pol=detectPolarity(candles,dow);
   const confluencias=buildConfluenceMap(x,candles);
-  const ret=fib.retracement,proj=fib.projection;
   const resTrigger=pos(dow.lastHigh?.p)?dow.lastHigh.p:pos(met.sma20)?met.sma20:close;
   const supTrigger=pos(dow.lastLow?.p)?dow.lastLow.p:pos(met.sma20)?met.sma20:close;
-  const buyTarget=proj?.ready&&proj.direction==='alta'&&proj.levels?.length?proj.levels[0].price:pos(x.plan?.target2a)&&x.dir===1?x.plan.target2a:null;
-  const sellTarget=proj?.ready&&proj.direction==='baixa'&&proj.levels?.length?proj.levels[0].price:pos(x.plan?.target2a)&&x.dir===-1?x.plan.target2a:null;
-  const buyInvalid=pos(ret?.defenseZone?.[0])?ret.defenseZone[0]:pos(dow.lastLow?.p)?dow.lastLow.p:null;
-  const sellInvalid=pos(ret?.defenseZone?.[1])?ret.defenseZone[1]:pos(dow.lastHigh?.p)?dow.lastHigh.p:null;
+  const projAlta=buySide?.fib?.projection?.ready?buySide.fib.projection:null;
+  const projBaixa=sellSide?.fib?.projection?.ready?sellSide.fib.projection:null;
+  const buyTarget=projAlta?.levels?.[0]?.price??(pos(buySide?.plan?.target2a)?buySide.plan.target2a:null);
+  const sellTarget=projBaixa?.levels?.[0]?.price??(pos(sellSide?.plan?.target2a)?sellSide.plan.target2a:null);
+  const buyInvalid=pos(buySide?.fib?.retracement?.defenseZone?.[0])?buySide.fib.retracement.defenseZone[0]:pos(dow.lastLow?.p)?dow.lastLow.p:null;
+  const sellInvalid=pos(sellSide?.fib?.retracement?.defenseZone?.[1])?sellSide.fib.retracement.defenseZone[1]:pos(dow.lastHigh?.p)?dow.lastHigh.p:null;
+  const obvBuy=!!buySide?.metrics?.obvConfirmed,obvSell=!!sellSide?.metrics?.obvConfirmed;
+  const obvResumo=obvBuy&&!obvSell?'OBV apoia a pressão compradora (sem equivaler isoladamente a prova de fluxo institucional)'
+   :obvSell&&!obvBuy?'OBV antecipa/confirma pressão vendedora (sem equivaler isoladamente a prova de fluxo institucional)'
+   :'OBV neutro ou divergente nos dois sentidos, exigindo confirmação do preço por fechamento';
 
   const cenarios={
    comprador:{
     titulo:'Cenário Comprador',
-    gatilho:'Fechamento acima de '+fmt(resTrigger)+' com sustentação do OBV',
-    alvo:buyTarget?'Projeção condicional em '+fmt(buyTarget):'Próximo topo estrutural relevante',
+    gatilho:'Fechamento acima de '+fmt(resTrigger)+' (ou defesa em pullback sobre suporte/polaridade com retomada)',
+    alvo:buyTarget?'Projeção condicional em '+fmt(buyTarget)+(projAlta?.levels?.[1]?' e '+fmt(projAlta.levels[1].price):''):'Próxima resistência estrutural relevante',
     invalidacao:buyInvalid?'Perda por fechamento abaixo de '+fmt(buyInvalid):'Perda do último fundo confirmado'
    },
    neutro:{
-    titulo:'Cenário Neutro (Faixa / Espera)',
-    gatilho:'Oscilação contida entre '+fmt(supTrigger)+' e '+fmt(resTrigger),
-    alvo:'Preservação de capital aguardando rompimento com candle fechado',
+    titulo:'Cenário Neutro (Faixa / Lateralização)',
+    gatilho:'Oscilação contida entre suporte em '+fmt(supTrigger)+' e resistência em '+fmt(resTrigger),
+    alvo:'Operações táticas nos extremos da faixa apenas com rejeição confirmada, ou espera pelo rompimento fechado',
     invalidacao:'Fechamento consistente fora dos extremos da faixa com expansão de volume'
    },
    vendedor:{
     titulo:'Cenário Vendedor',
-    gatilho:'Fechamento abaixo de '+fmt(supTrigger)+' com perda de momentum',
-    alvo:sellTarget?'Projeção condicional em '+fmt(sellTarget):'Próximo fundo estrutural relevante',
+    gatilho:'Fechamento abaixo de '+fmt(supTrigger)+' (ou rejeição em pullback na resistência/polaridade rompida)',
+    alvo:sellTarget?'Projeção condicional em '+fmt(sellTarget)+(projBaixa?.levels?.[1]?' e '+fmt(projBaixa.levels[1].price):''):'Próximo suporte estrutural relevante',
     invalidacao:sellInvalid?'Recuperação por fechamento acima de '+fmt(sellInvalid):'Superação do último topo confirmado'
    }
   };
 
   const trendLabel=dow.primaryTrend||'indefinida';
-  const obvText=met.obvConfirmed?'OBV confirma a pressão direcional':'OBV ainda não confirmou rompimento';
   const fracText=frac.summary||'fractalidade em avaliação';
   const phaseText=ic.phase==='retomada'?'retomada confirmada por fechamento':ic.phase==='impulso'?'movimento de impulso':ic.phase==='correcao'?'movimento corretivo':'estrutura em definição';
   const topConf=confluencias[0];
   const fechamento=`Em ${ticker||'Ativo'} (${String(tf||'1d').toUpperCase()}), o último fechamento em ${fmt(close)} mantém tendência primária ${trendLabel}, ${phaseText} e ${fracText.toLowerCase()}. `+
-   `A leitura combinada de médias (MM20 em ${fmt(met.sma20)}, MM50 em ${fmt(met.sma50)}, MM200 em ${fmt(met.sma200)}) e fluxo indica que ${obvText.toLowerCase()}, com IFR14 em ${fmt(met.rsi14,1)}. `+
+   `Nas médias (MM20 em ${fmt(met.sma20)}, MM50 em ${fmt(met.sma50)}, MM200 em ${fmt(met.sma200)}), ${obvResumo.toLowerCase()}, com IFR14 em ${fmt(met.rsi14,1)}. `+
    (topConf?`A confluência mais próxima concentra ${topConf.fatores.join(', ')} na faixa de ${fmt(topConf.faixa[0])} a ${fmt(topConf.faixa[1])}. `:'')+
    (pol?`${pol.kind} em ${fmt(pol.price)}. `:'')+
-   `A confirmação compradora exige fechamento acima de ${fmt(resTrigger)}, enquanto a invalidação estrutural passa pela perda de ${fmt(buyInvalid||supTrigger)}.`;
+   `Pelo lado comprador, fechamento acima de ${fmt(resTrigger)} libera projeção para ${buyTarget?fmt(buyTarget):'o topo seguinte'} (invalidação abaixo de ${fmt(buyInvalid||supTrigger)}). `+
+   `Pelo lado vendedor, perda fechada de ${fmt(supTrigger)} abre cenário baixista rumo a ${sellTarget?fmt(sellTarget):'o suporte seguinte'} (invalidação acima de ${fmt(sellInvalid||resTrigger)}).`;
 
-  return {ticker:ticker||'',tf,price:close,confluencias,cenarios,fechamento,polaridade:pol};
+  return {ticker:ticker||'',tf,price:close,confluencias,cenarios,fechamento,polaridade:pol,fractality:frac,projAlta,projBaixa,obvResumo};
  }
 
  function chartReading(kind,ticker,x,candles){
   const met=x.metrics||{},fib=x.fib||{},dow=x.structure?.dow||{},ic=x.structure?.impulseCorrection||{},frac=x.structure?.fractality||{};
+  const both=examineBoth(candles);
   const close=pos(x.price)?x.price:candles.at(-1)?.c;
   if(kind==='trend'){
    const pos20=pos(met.sma20)?(close>=met.sma20?'acima':'abaixo')+' da MM20 ('+fmt(met.sma20)+')':'sem MM20';
    const pos200=pos(met.sma200)?(close>=met.sma200?'acima':'abaixo')+' da MM200 ('+fmt(met.sma200)+')':'sem MM200';
    const sem=pos(met.sma10w)&&pos(met.sma40w)?` No semanal, MM10 em ${fmt(met.sma10w)} e MM40 em ${fmt(met.sma40w)}.`:'';
-   return `Fato: ${ticker} fechou em ${fmt(close)}, ${pos20} e ${pos200}; MM50 em ${fmt(met.sma50)} e IFR14 em ${fmt(met.rsi14,1)}.${sem} `+
-    `Interpretação: ${frac.summary||'alinhamento de tendência avaliado nas médias'} e ${met.obvSignal||'OBV em observação'}. `+
-    `Consequência: a sustentação da direção depende da continuidade do fluxo comprador/vendedor sem afastamento excessivo. `+
-    `Condição: fechamento mantendo-se do lado favorável da MM20 com OBV alinhado confirma força; perda da MM20 enfraquece o ritmo.`;
+   const obvBuy=!!both?.buy?.metrics?.obvConfirmed,obvSell=!!both?.sell?.metrics?.obvConfirmed;
+   const obvTxt=obvSell&&!obvBuy?'o OBV pressiona para baixo e pode antecipar perda de suporte, sem provar isoladamente fluxo institucional'
+    :obvBuy&&!obvSell?'o OBV acompanha a pressão compradora, sem provar isoladamente fluxo institucional'
+    :'o OBV segue sem rompimento decisivo e pede confirmação do preço';
+   return `${ticker} fechou em ${fmt(close)}, ${pos20} e ${pos200}, com MM50 em ${fmt(met.sma50)} e IFR14 em ${fmt(met.rsi14,1)}.${sem} `+
+    `Na leitura combinada de tendência e volume, ${frac.summary?.toLowerCase()||'o alinhamento segue em avaliação'} e ${obvTxt}. `+
+    `Isso define o terreno bilateral: sustentação acima da MM20 preserva o ritmo comprador, enquanto perda da MM20 com OBV cedendo aumenta a chance de aceleração vendedora. `+
+    `Confirmação compradora exige fechamento firme acima da média curta; invalidação do lado comprador e gatilho de pressão vendedora passam pela perda das médias com aumento de volume.`;
   }
   if(kind==='retracement'){
    const r=fib.retracement;
-   if(!r)return `Fato: ainda não há perna macro confirmada nos pavios fechados de ${ticker} para traçar retração limpa. Interpretação: estrutura sem amplitude dominante validada. Consequência: evita-se forçar níveis artificiais. Condição: aguardar formação de pivôs A e B confirmados.`;
+   if(!r)return `Ainda não há perna macro confirmada nos pavios fechados de ${ticker} para ancorar retração de Fibonacci sem distorção. Sem amplitude dominante validada, evita-se forçar níveis artificiais; o próximo passo é aguardar pivôs A e B confirmados para mapear defesa e polaridade nos dois sentidos.`;
    const def=r.defenseZone||[];
    const lv=r.levels.map(l=>l.label+' ('+fmt(l.price)+')').join(', ');
-   return `Fato: perna dominante de ${r.direction} ancorada nos pavios reais de A (${fmt(r.anchors.A.price)}) a B (${fmt(r.anchors.B.price)}), com retração em ${lv}`+(r.anchors.C?` e ponto C em ${fmt(r.anchors.C.price)} (${fmt(r.depthPct,1)}% de correção).`:'.')+
-    ` Interpretação: a zona de defesa entre 61,8% e 78,6% concentra-se de ${fmt(def[0])} a ${fmt(def[1])}`+(r.inDefenseZone?' e o preço atua dentro dela agora.':' e serve como último filtro estrutural da perna.')+
-    ` Consequência: defesa compradora/vendedora nessa faixa preserva a estrutura original. `+
-    `Condição: ${ic.resumption?.status||'retomada exige candle fechado na direção principal'}; fechamento além de A (${fmt(r.anchors.A.price)}) invalida a retração.`;
+   return `A perna dominante de ${r.direction} foi ancorada nos pavios reais de A (${fmt(r.anchors.A.price)}) a B (${fmt(r.anchors.B.price)}), demarcando retrações em ${lv}`+(r.anchors.C?` e ponto C em ${fmt(r.anchors.C.price)} (${fmt(r.depthPct,1)}% de correção).`:'.')+
+    ` A zona de defesa entre 61,8% e 78,6% concentra-se de ${fmt(def[0])} a ${fmt(def[1])}`+(r.inDefenseZone?', região onde o preço testa equilíbrio agora.':', funcionando como último filtro antes da reversão estrutural.')+
+    ` Se houver defesa nessa faixa, abre-se oportunidade condicional a favor da perna original; se perder a zona de defesa por fechamento, o fluxo tende a migrar para a ponta oposta até a origem A (${fmt(r.anchors.A.price)}).`;
   }
   if(kind==='projection'){
    const p=fib.projection;
-   if(!p||!p.ready)return `Fato: ainda não há ponto C confirmado nos pavios reais de ${ticker} para projetar a perna A–B. Interpretação: sem pivô de correção concluído, não se antecipa projeção. Consequência: alvos permanecem condicionais. Condição: aguardar formação e validação do ponto C em candles fechados.`;
+   const opp=x.dir===1?both?.sell?.fib?.projection:both?.buy?.fib?.projection;
+   if(!p||!p.ready)return `Ainda não há ponto C confirmado nos pavios fechados de ${ticker} para projetar a perna A–B. Sem pivô de correção concluído, não se antecipam alvos artificiais; aguardar validação de C em candles fechados para liberar projeções compradoras e vendedoras.`;
    const lv=p.levels.map(l=>l.label+' em '+fmt(l.price)).join(' · ');
-   return `Fato: projeção simétrica de ${p.direction} tomando a amplitude A–B (${fmt(p.legAmplitude)}) a partir do pivô C em ${fmt(p.anchors.C.price)}: ${lv}. `+
-    `Interpretação: trata-se de extensão separada da retração, indicando onde a expansão tende a encontrar realização ou exaustão. `+
-    `Consequência: os níveis de 100% e 127,2% funcionam como objetivos iniciais, enquanto 141,4%–161,8% sinalizam região de esticamento. `+
-    `Condição: projeções só ganham tração com fechamento além de B (${fmt(p.anchors.B.price)}); perda de C (${fmt(p.anchors.C.price)}) invalida a projeção.`;
+   const oppTxt=opp?.ready&&opp.levels?.length?` Pelo lado oposto (${opp.direction}), uma confirmação contrária a partir de ${fmt(opp.anchors.C.price)} projeta 100% em ${fmt(opp.levels[0].price)} e 127,2% em ${fmt(opp.levels[1]?.price)}.`:'';
+   return `A projeção simétrica de ${p.direction} replica a amplitude A–B (${fmt(p.legAmplitude)}) a partir do pivô C em ${fmt(p.anchors.C.price)}: ${lv}.${oppTxt} `+
+    `Separada da retração, essa escala delimita onde a expansão tende a encontrar realização parcial (100%–127,2%) ou risco de exaustão (141,4%–161,8%). `+
+    `A projeção ganha tração com fechamento além de B (${fmt(p.anchors.B.price)}) e é invalidada se o preço fechar além de C (${fmt(p.anchors.C.price)}), o que reabre o cenário na direção contrária.`;
   }
   const seq=(dow.sequence||[]).map(s=>`${s.tag} (${fmt(s.p)})`).join(' → ');
   const el=x.elliott||{};
   const pol=detectPolarity(candles,dow);
-  return `Fato: sequência de pivôs Dow em ${ticker} mostra ${seq||'pivôs em formação'}, tendência primária ${dow.primaryTrend||'indefinida'} e secundária ${dow.secondaryTrend||'indefinida'}. `+
-   `Interpretação: hipótese Elliott principal — ${el.hipotesePrincipal||el.label||'indefinida'}; alternativa — ${el.hipoteseAlternativa||'aguardar confirmação'}. `+
-   (pol?`Polaridade observada em ${fmt(pol.price)} (${pol.kind.toLowerCase()}). `:'')+
-   `Consequência: a estrutura permanece válida enquanto a sequência de topos e fundos não for quebrada por fechamento. `+
-   `Condição: pivô de reversão em ${fmt(dow.reversalPivot?.price)}; ${dow.brokenByClose?'o fechamento já violou essa referência e exige cautela estrutural':'fechamento além desse nível invalida a estrutura vigente'}.`;
+  return `A estrutura de Dow em ${ticker} registra sequência ${seq||'em formação'}, com tendência primária ${dow.primaryTrend||'indefinida'} e secundária ${dow.secondaryTrend||'indefinida'}. `+
+   `Em Elliott, a hipótese principal é ${String(el.hipotesePrincipal||el.label||'indefinida').toLowerCase()}, mantendo como alternativa ${String(el.hipoteseAlternativa||'aguardar definição').toLowerCase()}. `+
+   (pol?`Há referência de polaridade em ${fmt(pol.price)} (${pol.kind.toLowerCase()}), ponto-chave para avaliar pullback antes de qualquer entrada. `:'')+
+   `O pivô de reversão está em ${fmt(dow.reversalPivot?.price)}: ${dow.brokenByClose?'o fechamento já violou essa marca e abre espaço para a ponta oposta após pullback':'mantê-lo preserva a tendência vigente, enquanto fechamento além dele ativa o cenário contrário'}.`;
  }
 
  function renderChart(opts){
@@ -280,16 +298,11 @@
   const lo=Math.max(0.0001,minP-pad),hi=maxP+pad;
   const py=v=>mapY(v,T,chartBottom,lo,hi);
 
-  // v1061: escala de preços. Na tendência sempre; nos outros gráficos só quando não houver etiquetas
-  // de níveis (Fibonacci/pivôs ainda não confirmados) — antes esses gráficos ficavam sem nenhum preço.
-  const eixo=[];
   for(let z=0;z<=5;z++){
    const val=lo+(hi-lo)*(5-z)/5,y=py(val);
    trace([[L,y],[right,y]],pal.grid,1);
-   eixo.push([val,y]);
    if(metaDef.kind==='trend')text(fmt(val),right+12,y+5,15,pal.muted);
   }
-  const eixoSeVazio=()=>{if(metaDef.kind!=='trend'&&!labelQueue.length)for(const [val,y] of eixo)text(fmt(val),right+12,y+5,15,pal.muted);};
   trace([[right,T],[right,chartBottom]],pal.axis,1.2);
 
   for(let i=0;i<view.length;i++){
@@ -410,7 +423,6 @@
   }
 
   drawPriceLabels();
-  eixoSeVazio();
   for(const i of [0,Math.floor(view.length/3),Math.floor(view.length*2/3),view.length-1]){
    if(!view[i])continue;
    const lbl=new Date(view[i].t).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
@@ -449,11 +461,19 @@
     '<p style="margin:3px 0 0;font-size:12px;color:#E2E8F0"><b>Referência:</b> '+esc(sc.alvo)+'</p>'+
     '<p style="margin:3px 0 0;font-size:12px;color:#94A3B8"><b>Invalidação:</b> '+esc(sc.invalidacao)+'</p></div>';
   }).join('');
+  const frac=s.fractality||{};
+  const mtfHtml=[['Mensal',frac.mensal],['Semanal',frac.semanal],['Diário',frac.diario]].map(([lbl,fr])=>{
+   const tr=fr?.available?fr.trend:'indisponível';
+   const col=tr==='alta'?'#10B981':tr==='baixa'?'#EF4444':'#F59E0B';
+   return '<div style="background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px"><small style="color:#94A3B8">'+lbl+'</small><div style="color:'+col+';font-weight:700;font-size:12.5px;text-transform:capitalize">'+esc(tr)+'</div></div>';
+  }).join('');
   return '<section class="liv-suite" data-liv-suite="'+esc(bundle.ticker)+'" style="margin-top:14px;font-variant-numeric:tabular-nums">'+
    '<h4 style="margin:0 0 10px;color:#F59E0B;font-size:13px;letter-spacing:.04em;text-transform:uppercase">4 Gráficos Oficiais · Livermore</h4>'+
    chartsHtml+
    '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-top:12px">'+
    '<h5 style="margin:0;color:#F59E0B;font-size:12.5px;text-transform:uppercase">Mapa de Confluências</h5>'+confHtml+
+   '<h5 style="margin:14px 0 8px;color:#F59E0B;font-size:12.5px;text-transform:uppercase">Múltiplos Tempos Gráficos</h5>'+
+   '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">'+mtfHtml+'</div>'+
    '<h5 style="margin:14px 0 8px;color:#F59E0B;font-size:12.5px;text-transform:uppercase">Cenários Condicionais</h5>'+
    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px">'+scenHtml+'</div>'+
    '<h5 style="margin:14px 0 6px;color:#F59E0B;font-size:12.5px;text-transform:uppercase">Fechamento Consolidado</h5>'+

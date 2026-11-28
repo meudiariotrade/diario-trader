@@ -6,7 +6,7 @@ test('v1059 Etapa 06: Conselho suporta modos Objetivo e Completo com debate e di
  const debate=read('cloudflare/diario-screeners/aurea-debate-v1013.mjs');
  assert.match(debate,/MODO COMPLETO:/);
  assert.match(debate,/MODO OBJETIVO:/);
- assert.match(debate,/divergências materiais reais/);
+ assert.match(debate,/divergências materiais/);
  assert.match(debate,/return json\(\{ok:true,modo,resultado/);
 
  const ui=read('src/shared/ui-aurea.js');

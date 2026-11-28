@@ -251,36 +251,13 @@
     });
   }
   function fontes(a) {
-    var det = Array.prototype.slice.call(a.querySelectorAll('details')).filter(function (d) { var s = d.querySelector('summary'); return s && /^Fontes/.test(s.textContent); })[0];
-    if (!det || det.dataset.uim) return;
-    det.dataset.uim = '1';
-    var lis = det.querySelectorAll('li');
-    lis.forEach(function (li, i) {
-      var t = li.textContent;
-      var h = esc(t).replace(/(https?:\/\/[^\s<]+[^\s<.,;)])/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-      li.innerHTML = '<b>[' + (i + 1) + ']</b> ' + h;
+    Array.prototype.slice.call(a.querySelectorAll('details')).forEach(function (d) {
+      var s = d.querySelector('summary');
+      if (s && /^Fontes/i.test(s.textContent || '')) d.remove();
     });
-    var h3 = a.querySelector('h3');
-    if (h3 && lis.length) {
-      var c = doc.createElement('button'); c.type = 'button'; c.className = 'uim-fontes-chip';
-      c.textContent = 'Fontes (' + lis.length + ') ↓';
-      c.addEventListener('click', function () { det.open = true; det.scrollIntoView({ block: 'nearest', behavior: reduz ? 'auto' : 'smooth' }); });
-      h3.insertAdjacentElement('afterend', c);
-    }
   }
-  function bastidores(a, info) {
-    if (!info || a.querySelector('.uim-bast')) return;
-    var it = [];
-    if (info.rota) it.push('Encaminhada para: ' + info.rota);
-    if (info.nImg) it.push('Gráficos analisados: ' + info.nImg);
-    if (info.menc) it.push('Dados do diário anexados: ' + info.menc);
-    it.push('Contexto extra: ' + (info.ops.length ? info.ops.join(', ') : 'nenhum'));
-    var nf = a.querySelectorAll('.uim-fontes-chip').length ? (a.querySelector('.uim-fontes-chip').textContent.match(/\d+/) || [0])[0] : 0;
-    it.push('Fontes citadas: ' + nf);
-    if (info.fim) it.push('Tempo de resposta: ' + Math.max(1, Math.round((info.fim - info.t0) / 1000)) + ' s');
-    var d = doc.createElement('details'); d.className = 'uim-bast';
-    d.innerHTML = '<summary>Bastidores da análise</summary><ul>' + it.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
-    var sm = a.querySelector(':scope > small'); a.insertBefore(d, sm || null);
+  function bastidores() {
+    // Removido na v1061: sem informações de bastidores, fontes ou modelos na interface das IAs.
   }
   function revelar(a) {
     if (reduz) return;

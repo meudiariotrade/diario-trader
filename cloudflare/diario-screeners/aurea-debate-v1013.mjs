@@ -88,8 +88,8 @@ export async function debateV1013(request,env,deps={}){
  const lente=['schwartz','dalio','livermore','markowitz','munger'].includes(b.lente)?b.lente:fase==='opcoes'?'livermore':fase==='renda_fixa'?'markowitz':'schwartz';
  const modo=b?.modo==='completo'?'completo':'objetivo';
  const diretrizModo=modo==='completo'
-  ?' MODO COMPLETO: aprofunde o debate real entre Livermore (técnico), Graham (fundamentalista), Munger (inversão crítica), Schwartz/Dalio (macro), Markowitz (carteira) e Helmer (estratégia). Exponha divergências materiais reais com réplica específica entre os especialistas; nunca force consenso artificial.'
-  :' MODO OBJETIVO: seja direto e enxuto — priorize veredito condicional, o principal ponto de divergência material (se houver), gatilho de confirmação e condição de invalidação imediata.';
+  ?' MODO COMPLETO: aprofunde a leitura bilateral (cenário comprador, vendedor e neutro) cobrindo os 4 eixos gráficos (médias/OBV, retração de Fibonacci, projeção de Fibonacci A–B–C na alta e na baixa, Dow/Elliott/polaridade), confluências, múltiplos tempos gráficos (Mensal, Semanal, Diário) e debate real entre Livermore, Graham, Munger, Schwartz/Dalio, Markowitz e Helmer com divergências materiais e réplica específica; nunca force consenso artificial nem inclua Fear-Setting sem pedido.'
+  :' MODO OBJETIVO: seja direto e enxuto — apresente tendência, gatilhos compradores e vendedores, alvos condicionais e invalidações em ambos os sentidos, explorando oportunidades condicionais em vez de apenas mandar aguardar. Sem Fear-Setting salvo se pedido.';
  const contexto={pergunta,modo,perfis,commodities,lente,simulacao_opcoes:fase==='opcoes'?txt(JSON.stringify(b.simulacao_opcoes||{}),5000):'',grade_opcoes:['opcoes','pareceres','debate'].includes(fase)&&b.grade_opcoes?txt(JSON.stringify(b.grade_opcoes),6500):'',renda_fixa:rf,simulacao_rf:rf?txt(JSON.stringify(b.simulacao_rf||{}),5000):'',contexto_publico:txt(b.contexto_publico,5000),biblioteca,...(rodada?{rodada,relatorio_visual:txt(b.relatorio_visual,7000)}:{})};
  if(request.signal.aborted)return json({erro:'Consulta cancelada'},499);
  const fonte1048=JSON.stringify(contexto);
