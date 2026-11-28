@@ -39,7 +39,7 @@
  function obv(c){let n=0;const out=[0];for(let i=1;i<c.length;i++){if(c[i].c>c[i-1].c)n+=c[i].v;else if(c[i].c<c[i-1].c)n-=c[i].v;out.push(n)}return out}
  function std(v){if(v.length<2)return null;const m=mean(v);return Math.sqrt(mean(v.map(x=>(x-m)**2)))}
  function hvWeek(c,tf){const perWeek=tf==='15m'?130:tf==='1h'?33:5;const sample=c.slice(-Math.max(20,perWeek*3));if(sample.length<Math.min(20,perWeek*2))return null;const rets=sample.slice(1).map((x,i)=>Math.log(x.c/sample[i].c));return std(rets)*Math.sqrt(perWeek)*100}
- function pivot(c,i,d){if(i<2||i>c.length-3)return false;const k=d>0?'h':'l',val=c[i][k];return d>0?[i-2,i-1,i+1,i+2].every(j=>val>c[j][k]):[i-2,i-1,i+1,i+2].every(j=>val<c[j][k])}
+ function pivot(c,i,d){if(i<2||i>c.length-3)return false;const k=d>0?'h':'l',val=c[i][k];return d>0?val>=c[i-2][k]&&val>=c[i-1][k]&&val>c[i+1][k]&&val>c[i+2][k]:val<=c[i-2][k]&&val<=c[i-1][k]&&val<c[i+1][k]&&val<c[i+2][k]}
  function swings(c){const s=[];for(let i=2;i<c.length-2;i++){if(pivot(c,i,1))s.push({i,p:c[i].h,d:1,t:c[i].t,type:'H'});if(pivot(c,i,-1))s.push({i,p:c[i].l,d:-1,t:c[i].t,type:'L'})}s.sort((a,b)=>a.i-b.i);const out=[];for(const x of s){const last=out.at(-1);if(last?.d===x.d){if((x.d===1&&x.p>last.p)||(x.d===-1&&x.p<last.p))out[out.length-1]=x}else out.push(x)}return out}
  function zigzag(c,opts={}){
   const bars=Array.isArray(c)&&c.length&&valid(c[0]?.h)?c:normalize(c);

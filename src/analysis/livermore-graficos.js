@@ -50,14 +50,109 @@
   return out;
  }
 
+ function getEngine(){
+  return root.DiarioTecnicoEngine||(typeof require==='function'?require('./tecnico-engine.js'):null);
+ }
+
+ function patchFractality(eng,candles,frac){
+  if(!eng||!candles.length)return frac||{};
+  const out={...(frac||{})};
+  const patchFrame=(bars,minBars,fastCap)=>{
+   if(!Array.isArray(bars)||bars.length<minBars)return null;
+   const n=Math.min(fastCap,bars.length);
+   const avg=eng.sma(bars,n);
+   const close=bars.at(-1).c;
+   const first=bars[0].c;
+   let trend='lateral';
+   if(ok(avg)){
+    const diff=(close-avg)/Math.max(avg,0.01);
+    if(diff>0.015)trend='alta';
+    else if(diff<-0.015)trend='baixa';
+   }else if(ok(first)&&first>0){
+    const diff=(close-first)/first;
+    trend=diff>0.02?'alta':diff<-0.02?'baixa':'lateral';
+   }
+   return {available:true,bars:bars.length,close,trend,medias:{}};
+  };
+  if(!out.semanal?.available){
+   const w=eng.aggregateWeekly(candles);
+   const p=patchFrame(w,4,10);
+   if(p)out.semanal=p;
+  }
+  if(!out.mensal?.available){
+   const m=eng.aggregateMonthly(candles);
+   const p=patchFrame(m,3,6);
+   if(p)out.mensal=p;
+  }
+  const frames=[out.mensal,out.semanal,out.diario].filter(f=>f?.available);
+  if(frames.length>=2){
+   const up=frames.filter(f=>f.trend==='alta').length;
+   const down=frames.filter(f=>f.trend==='baixa').length;
+   out.alignment=up===frames.length?'alinhado_alta':down===frames.length?'alinhado_baixa':'misto';
+   out.alignedCount=Math.max(up,down);
+   out.totalAvailable=frames.length;
+   out.summary=out.alignment==='alinhado_alta'?'Mensal, semanal e diário alinhados em alta'
+    :out.alignment==='alinhado_baixa'?'Mensal, semanal e diário alinhados em baixa'
+    :`Fractalidade mista (Mensal: ${out.mensal?.trend||'indefinida'}, Semanal: ${out.semanal?.trend||'indefinida'}, Diário: ${out.diario?.trend||'indefinida'})`;
+  }
+  return out;
+ }
+
+ function buildFallbackSide(eng,candles,dir){
+  if(!eng||candles.length<20)return null;
+  const last=candles.at(-1),p=last.c;
+  const s20=eng.sma(candles,20),s50=eng.sma(candles,50),s200=eng.sma(candles,200);
+  const atr14=eng.atr(candles,14),rsi14=eng.rsi(candles,14);
+  const o=eng.obv(candles);
+  const prior=o.slice(-Math.min(26,o.length),-1);
+  const macroOBV=prior.length?(dir===1?o.at(-1)>Math.max(...prior):o.at(-1)<Math.min(...prior)):false;
+  const obvSignal=macroOBV?'OBV ROMPIDO (MACRO)':'OBV NÃO CONFIRMADO';
+  const sw=eng.swings(candles);
+  const fib=eng.fibo(candles,dir,sw);
+  const dow=eng.analyzeDow(candles,sw);
+  const weekly=eng.aggregateWeekly(candles);
+  const sma10w=weekly.length>=10?eng.sma(weekly,10):null;
+  const sma40w=weekly.length>=40?eng.sma(weekly,40):null;
+  const impulseCorrection=eng.analyzeImpulseCorrection(candles,sw,dir,atr14,fib);
+  const fractal=patchFractality(eng,candles,eng.fractality(candles,{weekly}));
+  const el=eng.elliott(sw,dir);
+  const trendOk=dir===1?(ok(s20)&&p>s20&&(ok(s50)?p>s50:true)):(ok(s20)&&p<s20&&(ok(s50)?p<s50:true));
+  const score=(trendOk?4:0)+(fib?.macroConfirmed?3:0)+(macroOBV?2:0)+(dow.primaryTrend===(dir===1?'alta':'baixa')?2:0);
+  return {
+   valid:true,dir,price:p,score,barCount:candles.length,closedValidated:true,
+   metrics:{sma20:s20,sma50:s50,sma200:s200,sma10w,sma40w,obv:o.at(-1),obvConfirmed:macroOBV,obvSignal,rsi14,atr14},
+   fib,structure:{dow,impulseCorrection,resumption:impulseCorrection.resumption,fractality:fractal},
+   elliott:el
+  };
+ }
+
+ function examineBoth(candles){
+  const eng=getEngine();
+  if(!eng||candles.length<20)return null;
+  let res=candles.length>=210?eng.examine(candles,{tf:'1d',daily:candles}):null;
+  const buy=res?.buy?.valid?{...res.buy,structure:{...res.buy.structure,fractality:patchFractality(eng,candles,res.buy.structure?.fractality)}}:buildFallbackSide(eng,candles,1);
+  const sell=res?.sell?.valid?{...res.sell,structure:{...res.sell.structure,fractality:patchFractality(eng,candles,res.sell.structure?.fractality)}}:buildFallbackSide(eng,candles,-1);
+  if(!buy&&!sell)return null;
+  return {buy,sell};
+ }
+
  function ensureAnalysis(candles,analysis,dirHint){
   if(analysis?.valid&&analysis?.structure&&analysis?.fib)return analysis;
-  const eng=root.DiarioTecnicoEngine||(typeof require==='function'?require('./tecnico-engine.js'):null);
-  if(eng&&candles.length>=210){
-   const res=eng.examine(candles,{tf:'1d',daily:candles});
-   if(dirHint===-1)return res.sell;
-   if(dirHint===1)return res.buy;
-   return (res.buy?.score??-1)>=(res.sell?.score??-1)?res.buy:res.sell;
+  const both=examineBoth(candles);
+  if(both){
+   if(dirHint===-1&&both.sell?.valid)return both.sell;
+   if(dirHint===1&&both.buy?.valid)return both.buy;
+   const b=both.buy,s=both.sell;
+   if(b?.valid&&!s?.valid)return b;
+   if(s?.valid&&!b?.valid)return s;
+   if(b?.valid&&s?.valid){
+    const bFib=b.fib?.retracement?1:0,sFib=s.fib?.retracement?1:0;
+    const dowTrend=b.structure?.dow?.primaryTrend||s.structure?.dow?.primaryTrend;
+    if(dowTrend==='baixa'&&sFib)return s;
+    if(dowTrend==='alta'&&bFib)return b;
+    if(bFib!==sFib)return bFib>sFib?b:s;
+    return (b.score??-1)>=(s.score??-1)?b:s;
+   }
   }
   return analysis||{};
  }
@@ -129,10 +224,19 @@
    .slice(0,5);
  }
 
- function examineBoth(candles){
-  const eng=root.DiarioTecnicoEngine||(typeof require==='function'?require('./tecnico-engine.js'):null);
-  if(eng&&candles.length>=210)return eng.examine(candles,{tf:'1d',daily:candles});
-  return null;
+ function pickBoundary(close,candidates,side,candles){
+  const eps=Math.max(close*0.002,0.01);
+  const filtered=candidates.filter(v=>pos(v)&&(side==='above'?v>close+eps:v<close-eps));
+  if(filtered.length){
+   filtered.sort((a,b)=>Math.abs(a-close)-Math.abs(b-close));
+   return filtered[0];
+  }
+  const recent=candles.slice(-20);
+  if(recent.length){
+   const ext=side==='above'?Math.max(...recent.map(b=>b.h)):Math.min(...recent.map(b=>b.l));
+   if(pos(ext)&&Math.abs(ext-close)>eps)return ext;
+  }
+  return close;
  }
 
  function buildOperationalSynthesis(ticker,analysisInput,rawCandles,tf='1d'){
@@ -145,14 +249,21 @@
   const close=pos(x.price)?x.price:candles.at(-1)?.c;
   const pol=detectPolarity(candles,dow);
   const confluencias=buildConfluenceMap(x,candles);
-  const resTrigger=pos(dow.lastHigh?.p)?dow.lastHigh.p:pos(met.sma20)?met.sma20:close;
-  const supTrigger=pos(dow.lastLow?.p)?dow.lastLow.p:pos(met.sma20)?met.sma20:close;
+  const seqPrices=(dow.sequence||[]).map(pt=>pt.p);
+  const abovePool=[dow.lastHigh?.p,dow.reversalPivot?.price,...seqPrices,met.sma20,met.sma50,met.sma200];
+  const belowPool=[dow.lastLow?.p,dow.reversalPivot?.price,...seqPrices,met.sma20,met.sma50,met.sma200];
+  const resTrigger=pickBoundary(close,abovePool,'above',candles);
+  const supTrigger=pickBoundary(close,belowPool,'below',candles);
   const projAlta=buySide?.fib?.projection?.ready?buySide.fib.projection:null;
   const projBaixa=sellSide?.fib?.projection?.ready?sellSide.fib.projection:null;
   const buyTarget=projAlta?.levels?.[0]?.price??(pos(buySide?.plan?.target2a)?buySide.plan.target2a:null);
   const sellTarget=projBaixa?.levels?.[0]?.price??(pos(sellSide?.plan?.target2a)?sellSide.plan.target2a:null);
-  const buyInvalid=pos(buySide?.fib?.retracement?.defenseZone?.[0])?buySide.fib.retracement.defenseZone[0]:pos(dow.lastLow?.p)?dow.lastLow.p:null;
-  const sellInvalid=pos(sellSide?.fib?.retracement?.defenseZone?.[1])?sellSide.fib.retracement.defenseZone[1]:pos(dow.lastHigh?.p)?dow.lastHigh.p:null;
+  const buyInvalid=pos(buySide?.fib?.retracement?.defenseZone?.[0])&&buySide.fib.retracement.defenseZone[0]<close
+   ?buySide.fib.retracement.defenseZone[0]
+   :supTrigger;
+  const sellInvalid=pos(sellSide?.fib?.retracement?.defenseZone?.[1])&&sellSide.fib.retracement.defenseZone[1]>close
+   ?sellSide.fib.retracement.defenseZone[1]
+   :resTrigger;
   const obvBuy=!!buySide?.metrics?.obvConfirmed,obvSell=!!sellSide?.metrics?.obvConfirmed;
   const obvResumo=obvBuy&&!obvSell?'OBV apoia a pressão compradora (sem equivaler isoladamente a prova de fluxo institucional)'
    :obvSell&&!obvBuy?'OBV antecipa/confirma pressão vendedora (sem equivaler isoladamente a prova de fluxo institucional)'
